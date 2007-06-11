@@ -1424,28 +1424,28 @@ obtainAdsFromCollector (
 	int newSequence, oldSequence, reevaluate_ad;
 	char    *remoteHost = NULL;
 	MyString buffer;
-	CollectorList* Collectors = daemonCore->getCollectorList();
+	CollectorList* collects = daemonCore->getCollectorList();
 
 	if ( want_simple_matching ) {
 		CondorQuery publicQuery(STARTD_AD);
 		CondorQuery submittorQuery(SUBMITTOR_AD);
 
 		dprintf(D_ALWAYS, "  Getting all startd ads ...\n");
-		result = Collectors->query(publicQuery,startdAds);
+		result = collects->query(publicQuery,startdAds);
 		if( result!=Q_OK ) {
 			dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 			return false;
 		}
 
 		dprintf(D_ALWAYS, "  Getting all submittor ads ...\n");
-		result = Collectors->query(submittorQuery,scheddAds);
+		result = collects->query(submittorQuery,scheddAds);
 		if( result!=Q_OK ) {
 			dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 			return false;
 		}
 
 		dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
-		result = Collectors->query(privateQuery,startdPvtAds);
+		result = collects->query(privateQuery,startdPvtAds);
 		if( result!=Q_OK ) {
 			dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 			return false;
@@ -1460,7 +1460,7 @@ obtainAdsFromCollector (
 
 	CondorQuery publicQuery(ANY_AD);
 	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
-	result = Collectors->query (publicQuery, allAds);
+	result = collects->query (publicQuery, allAds);
 	if( result!=Q_OK ) {
 		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 		return false;
@@ -1635,7 +1635,7 @@ obtainAdsFromCollector (
 	allAds.Close();
 
 	dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
-	result = Collectors->query (privateQuery, startdPvtAds);
+	result = collects->query (privateQuery, startdPvtAds);
 	if( result!=Q_OK ) {
 		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 		return false;
@@ -1999,7 +1999,7 @@ updateNegCycleEndTime(time_t startTime, ClassAd *submitter) {
 
 	endTime = time(NULL);
 	submitter->LookupInteger(ATTR_TOTAL_TIME_IN_CYCLE, oldTotalTime);
-	buffer.sprintf("%s = %d", ATTR_TOTAL_TIME_IN_CYCLE, (oldTotalTime + 
+	buffer.sprintf("%s = %ld", ATTR_TOTAL_TIME_IN_CYCLE, (oldTotalTime + 
 					(endTime - startTime)) );
 	submitter->InsertOrUpdate(buffer.Value());
 }
@@ -2603,7 +2603,6 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	free(tmp);
 	if(savedRequirements != NULL && savedRequirements->RArg() != NULL) {
 		char *savedReqStr, *replacementReqStr;
-		int length;
 		savedReqStr = NULL;
 		savedRequirements->RArg()->PrintToNewStr(&savedReqStr);
 		length = strlen(savedReqStr) + strlen(ATTR_REQUIREMENTS);
@@ -2953,8 +2952,8 @@ add_candidate(ClassAd * candidate,
 int Matchmaker::
 groupSortCompare(const void* elem1, const void* elem2)
 {
-	SimpleGroupEntry* Elem1 = (SimpleGroupEntry*) elem1;
-	SimpleGroupEntry* Elem2 = (SimpleGroupEntry*) elem2;
+	const SimpleGroupEntry* Elem1 = (const SimpleGroupEntry*) elem1;
+	const SimpleGroupEntry* Elem2 = (const SimpleGroupEntry*) elem2;
 
 	if ( Elem1->prio < Elem2->prio ) {
 		return -1;

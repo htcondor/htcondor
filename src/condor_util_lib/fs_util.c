@@ -92,10 +92,10 @@ detect_nfs_statvfs( const char *path, BOOLEAN *is_nfs )
 	status = statvfs( path, &buf );
 	if ( ( status < 0 ) && ( errno == ENOENT )) {
 			// file doesn't exist yet, so check parent directory.
-			char *dirname;
-			dirname = condor_dirname(path);
-			status = statvfs( dirname, &buf );
-			free(dirname);
+			char *_dir_name;
+			_dir_name = condor_dirname(path);
+			status = statvfs( _dir_name, &buf );
+			free(_dir_name);
 	}
 
 	if ( status < 0 ) {
@@ -135,19 +135,19 @@ detect_nfs_statfs( const char *path, BOOLEAN *is_nfs )
 
 	if ( ( status < 0 ) && ( errno == ENOENT )) {
 			// file doesn't exist yet, so check parent directory.
-			char *dirname;
-			dirname = condor_dirname(path);
+			char *_dir_name;
+			_dir_name = condor_dirname(path);
 # ifdef FS_UTIL_TEST
-			printf("checking %s instead...\n", dirname);
+			printf("checking %s instead...\n", _dir_name);
 # endif
 # if (STATFS_ARGS == 2)
-			status = statfs( dirname, &buf );
+			status = statfs( _dir_name, &buf );
 # elif (STATFS_ARGS == 4)
-			status = statfs( dirname, &buf, sizeof(buf), 0 );
+			status = statfs( _dir_name, &buf, sizeof(buf), 0 );
 # else
 #  error "Unknown statfs() implemenation"
 # endif
-			free(dirname);
+			free(_dir_name);
 	}
 
 	if ( status < 0 ) {

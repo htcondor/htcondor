@@ -2134,17 +2134,19 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		if ( ExecFile && !simple_init && (file_strcmp(ExecFile,filename)==0 )) {
 			// this file is the job executable
 			is_the_executable = true;
-			basefilename = (char *)CONDOR_EXEC ;
+			basefilename = strdup( CONDOR_EXEC );					//de-const
 		} else {
 			// this file is _not_ the job executable
 			is_the_executable = false;
-			basefilename = (char *)condor_basename(filename);
+			basefilename = strdup( condor_basename(filename) );		//de-const
 		}
 
 		if( !s->code(basefilename) ) {
+			free( basefilename );					//b/c of de-consting
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
+		free( basefilename );						//b/c of de-consting
 
 		if ( file_command == 4 ) {
 			if ( s->end_of_message() ) {

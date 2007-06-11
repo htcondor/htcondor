@@ -33,9 +33,11 @@
 #include "condor_debug.h"
 #include "syscall_numbers.h"
 
+int REMOTE_syscall( int syscall_num, ... );
+
 int
 REMOTE_syscall( int syscall_num, ... )
 {
-       	EXCEPT( "Linked for standalone checkpointing, but called REMOTE_syscall()");
-		return -1;
+	EXCEPT( "Linked for standalone checkpointing, but called REMOTE_syscall()");
+	return -1;
 }

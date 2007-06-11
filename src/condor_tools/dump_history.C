@@ -90,12 +90,7 @@ main(int argc, char* argv[])
   char *owner=NULL;
   bool readfromfile = false,remotequill=false;
 
-  char* JobHistoryFileName=NULL;
   char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL,*quillName=NULL;
-
-
-  char* constraint=NULL;
-  ExprTree *constraintExpr=NULL;
 
   AttrList *ad=0;
 

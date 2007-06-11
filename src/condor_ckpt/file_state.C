@@ -263,7 +263,7 @@ int CondorFileTable::find_url( char *url )
 If this logical name is already open, return its file descriptor.
 */
 
-int CondorFileTable::find_logical_name( char *logical_name )
+int CondorFileTable::find_logical_name( const char *logical_name )
 {
 	for( int i=0; i<length; i++ )
 		if( pointers[i] )
@@ -840,8 +840,10 @@ ssize_t CondorFileTable::write( int fd, const void *data, size_t nbyte )
 	CondorFile *f = fp->file;
 
 	// Write to the object at the current offset
-	int actual = f->write( fp->offset, (char *) data, nbyte );
-
+	char* _data_str = strdup ( (const char *)data );	//de-const more safely
+	int actual = f->write( fp->offset, _data_str, nbyte );
+	free( _data_str );									//b/c of strdup
+	
 	// If there is an error, don't touch the offset.
 	if(actual<0) return -1;
 
@@ -1138,7 +1140,7 @@ int CondorFileTable::stat( const char *name, struct stat *buf)
 	/* See if the file is open, if so, then just do an fstat. If it isn't open
 		then call the normal stat in unmapped mode with whatever the shadow
 		said the location of the file was. */
-	fd = find_logical_name((char*)name);
+	fd = find_logical_name( name );
 	if (fd == -1)
 	{
 		oscm = scm = GetSyscallMode();
@@ -1179,7 +1181,7 @@ int CondorFileTable::lstat( const char *name, struct stat *buf)
 	/* See if the file is open, if so, then just do an fstat. If it isn't open
 		then call the normal lstat in unmapped mode with whatever the shadow
 		said the location of the file was. */
-	fd = find_logical_name((char*)name);
+	fd = find_logical_name( name );
 	if (fd == -1)
 	{
 		oscm = scm = GetSyscallMode();

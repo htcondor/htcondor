@@ -38,8 +38,8 @@
 // DCCredd
 // // // // //
 
-DCCredd::DCCredd( const char* name, const char* pool ) 
-	: Daemon( DT_CREDD, name, pool )
+DCCredd::DCCredd( const char* tName, const char* tPool ) 
+	: Daemon( DT_CREDD, tName, tPool )
 {
 }
 
@@ -50,7 +50,7 @@ DCCredd::~DCCredd( void )
 
 bool 
 DCCredd::storeCredential (Credential * cred,
-						  CondorError & error) {
+						  CondorError & condor_error) {
 
 	bool rtnVal = false;
 	ReliSock *rsock = NULL;
@@ -63,13 +63,13 @@ DCCredd::storeCredential (Credential * cred,
 	classad::ClassAdUnParser unparser;
 
 	rsock = (ReliSock *)startCommand(
-			CREDD_STORE_CRED, Stream::reli_sock, 20, &error);
+			CREDD_STORE_CRED, Stream::reli_sock, 20, &condor_error);
 	if ( ! rsock ) {
 		goto EXIT;
 	}
 
 		// Force authentication
-	if (!forceAuthentication( rsock, &error )) {
+	if (!forceAuthentication( rsock, &condor_error )) {
 		goto EXIT;
 	}
 
@@ -89,14 +89,14 @@ DCCredd::storeCredential (Credential * cred,
 
 		// Send the metadata and data
 	if (! rsock->code (classad_str) ) {
-		error.pushf ("DC_CREDD", 3,
+		condor_error.pushf ("DC_CREDD", 3,
 				"Communication error, send credential metadata: %s",
 				strerror(errno) );
 		goto EXIT;
 	}
 
 	if (! rsock->code_bytes (data, size) ) {
-		error.pushf ("DC_CREDD", 4,
+		condor_error.pushf ("DC_CREDD", 4,
 				"Communication error, send credential data: %s",
 				strerror(errno) );
 		goto EXIT;
@@ -110,7 +110,7 @@ DCCredd::storeCredential (Credential * cred,
 
 	rsock->close();
 	if (rc) {
-		error.pushf ("DC_CREDD", 4, "Invalid CredD return code (%d)", rc);
+		condor_error.pushf ("DC_CREDD", 4, "Invalid CredD return code (%d)", rc);
 	}
 	rtnVal =  (rc==0) ? true : false;
 EXIT:
@@ -125,7 +125,7 @@ bool
 DCCredd::getCredentialData (const char * cred_name,
 							void *& cred_data,
 							int & cred_size,
-							CondorError & error) {
+							CondorError & condor_error) {
 	locate();
 	
 	ReliSock rsock;
@@ -134,18 +134,18 @@ DCCredd::getCredentialData (const char * cred_name,
 
 		// Connect
 	if( ! rsock.connect(_addr) ) {
-		error.pushf ( "DC_CREDD", 1, "Failed to connect to CredD %s", _addr);
+		condor_error.pushf ( "DC_CREDD", 1, "Failed to connect to CredD %s", _addr);
 		return false;
 	}
 
 		// Start command
 	if( ! startCommand(CREDD_GET_CRED, (Sock*)&rsock) ) {
-		error.push ( "DC_CREDD", 2, "Failed to start command CREDD_GET_CRED");
+		condor_error.push ( "DC_CREDD", 2, "Failed to start command CREDD_GET_CRED");
 		return false;
 	}
 
 		// Force authentication
-	if (!forceAuthentication( &rsock, &error )) {
+	if (!forceAuthentication( &rsock, &condor_error )) {
 		return false;
 	}
 
@@ -159,7 +159,7 @@ DCCredd::getCredentialData (const char * cred_name,
 	rsock.decode();
 
 	if (!(rsock.code(cred_size) && cred_size > 0)) {
-		error.push ("DC_CREDD", 3, "ERROR Receiving credential\n");
+		condor_error.push ("DC_CREDD", 3, "ERROR Receiving credential\n");
 		return false;
 	}
 
@@ -167,7 +167,7 @@ DCCredd::getCredentialData (const char * cred_name,
 	if (!rsock.code_bytes (cred_data, cred_size)) {
 		free (cred_data);
 		cred_data = NULL;
-		error.push ("DC_CREDD", 4, "ERROR Receiving credential\n");
+		condor_error.push ("DC_CREDD", 4, "ERROR Receiving credential\n");
 		return false;
 	}
 	
@@ -178,7 +178,7 @@ DCCredd::getCredentialData (const char * cred_name,
 bool
 DCCredd::listCredentials (SimpleList <Credential*> & result,  
 						  int & size,
-						  CondorError & error) {
+						  CondorError & condor_error) {
 
 	bool rtnVal = false;	// default
 	ReliSock *rsock = NULL;
@@ -188,13 +188,13 @@ DCCredd::listCredentials (SimpleList <Credential*> & result,
 	char * request = "_";
 
 	rsock = (ReliSock *)startCommand(
-			CREDD_QUERY_CRED, Stream::reli_sock, 20, &error);
+			CREDD_QUERY_CRED, Stream::reli_sock, 20, &condor_error);
 	if ( ! rsock ) {
 		goto EXIT;
 	}
 
 		// Force authentication
-	if (!forceAuthentication( rsock, &error )) {
+	if (!forceAuthentication( rsock, &condor_error )) {
 		goto EXIT;
 	}
 
@@ -215,13 +215,13 @@ DCCredd::listCredentials (SimpleList <Credential*> & result,
 	for (i=0; i<size; i++) {
 		char * classad_str = NULL;
 		if (!(rsock->code (classad_str))) {
-			error.push ("DC_CREDD", 3, "Unable to receive credential data");
+			condor_error.push ("DC_CREDD", 3, "Unable to receive credential data");
 			goto EXIT;
 		}
 
 		ad = parser.ParseClassAd (classad_str);
 		if (!ad) {
-			error.push ("DC_CREDD", 4, "Unable to parse credential data");
+			condor_error.push ("DC_CREDD", 4, "Unable to parse credential data");
 			goto EXIT;
 		}
 
@@ -239,7 +239,7 @@ EXIT:
 
 bool 
 DCCredd::removeCredential (const char * cred_name,
-						   CondorError & error) {
+						   CondorError & condor_error) {
 
 	bool rtnVal = false;
 	ReliSock *rsock = NULL;
@@ -247,13 +247,13 @@ DCCredd::removeCredential (const char * cred_name,
 	int rc=0;
 
 	rsock = (ReliSock *)startCommand(
-			CREDD_REMOVE_CRED, Stream::reli_sock, 20, &error);
+			CREDD_REMOVE_CRED, Stream::reli_sock, 20, &condor_error);
 	if ( ! rsock ) {
 		goto EXIT;
 	}
 
 		// Force authentication
-	if (!forceAuthentication( rsock, &error )) {
+	if (!forceAuthentication( rsock, &condor_error )) {
 		goto EXIT;
 	}
 
@@ -261,26 +261,26 @@ DCCredd::removeCredential (const char * cred_name,
 
 	_cred_name=strdup(cred_name); // de-const... fucking lame
 	if ( ! rsock->code (_cred_name) ) {
-		error.pushf ( "DC_CREDD", 3, "Error sending credential name: %s",
+		condor_error.pushf ( "DC_CREDD", 3, "Error sending credential name: %s",
 				strerror(errno) );
 		goto EXIT;
 	}
 
 	if ( ! rsock->eom() ) {
-		error.pushf ( "DC_CREDD", 3, "Error sending credential eom: %s",
+		condor_error.pushf ( "DC_CREDD", 3, "Error sending credential eom: %s",
 				strerror(errno) );
 		goto EXIT;
 	}
 	rsock->decode();
 
 	if ( ! rsock->code (rc) ) {
-		error.pushf ( "DC_CREDD", 3, "Error rcving credential rc: %s",
+		condor_error.pushf ( "DC_CREDD", 3, "Error rcving credential rc: %s",
 				strerror(errno) );
 		goto EXIT;
 	}
 
 	if (rc) {
-		error.push ( "DC_CREDD", 3, "Error removing credential");
+		condor_error.push ( "DC_CREDD", 3, "Error removing credential");
 		goto EXIT;
 	}
 

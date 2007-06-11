@@ -44,7 +44,7 @@
 
 extern char *CondorCertDir;
 
-static bool QmgmtMayAccessAttribute( int cluster_id, int proc_id, char const *attr_name ) {
+static bool QmgmtMayAccessAttribute( char const *attr_name ) {
 	return !ClassAd::ClassAdAttributeIsPrivate( attr_name );
 }
 
@@ -435,7 +435,7 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		if( QmgmtMayAccessAttribute( cluster_id, proc_id, attr_name ) ) {
+		if( QmgmtMayAccessAttribute( attr_name ) ) {
 			rval = GetAttributeFloat( cluster_id, proc_id, attr_name, &value );
 		}
 		else {
@@ -474,7 +474,7 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		if( QmgmtMayAccessAttribute( cluster_id, proc_id, attr_name ) ) {
+		if( QmgmtMayAccessAttribute( attr_name ) ) {
 			rval = GetAttributeInt( cluster_id, proc_id, attr_name, &value );
 		}
 		else {
@@ -518,7 +518,7 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		if( QmgmtMayAccessAttribute( cluster_id, proc_id, attr_name ) ) {
+		if( QmgmtMayAccessAttribute( attr_name ) ) {
 			rval = GetAttributeStringNew( cluster_id, proc_id, attr_name, &value );
 		}
 		else {
@@ -560,7 +560,7 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		if( QmgmtMayAccessAttribute( cluster_id, proc_id, attr_name ) ) {
+		if( QmgmtMayAccessAttribute( attr_name ) ) {
 			rval = GetAttributeExpr( cluster_id, proc_id, attr_name, value );
 		}
 		else {

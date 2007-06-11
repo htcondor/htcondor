@@ -89,7 +89,7 @@ extern char*		MasterName;
 ///////////////////////////////////////////////////////////////////////////
 // daemon Class
 ///////////////////////////////////////////////////////////////////////////
-daemon::daemon(char *name, bool is_daemon_core, bool is_ha )
+daemon::daemon(char *name, bool is_daemon_core, bool is_h )
 {
 	char	buf[1000];
 
@@ -114,7 +114,7 @@ daemon::daemon(char *name, bool is_daemon_core, bool is_ha )
 
 	// Store our HA state
 	this->ha_lock = NULL;
-	this->is_ha = is_ha;
+	this->is_ha = is_h;
 
 	// Default to not on hold (will be set to true if controlled (i.e by HAD))
 	on_hold = FALSE;
@@ -538,12 +538,12 @@ int daemon::RealStart( )
 		CollectorList* collectors = NULL;
 		if ((collectors = daemonCore->getCollectorList())) {
 			char * my_hostname = my_full_hostname();
-			Daemon * daemon;
+			Daemon * my_daemon;
 			collectors->rewind();
-			while (collectors->next (daemon)) {
+			while (collectors->next (my_daemon)) {
 				if (same_host (my_hostname, 
-							   daemon->fullHostname())) {
-					command_port = daemon->port();
+							   my_daemon->fullHostname())) {
+					command_port = my_daemon->port();
 					break;
 				}
 			}

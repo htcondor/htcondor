@@ -789,7 +789,6 @@ TDMan::transferd_reaper(long pid, int status)
 	MyString fquser;
 	MyString id;
 	TransferDaemon *dead_td = NULL;
-	TransferRequest *reaped_treq = NULL;
 	TdAction ret;
 
 	dprintf(D_ALWAYS, "TDMan: Reaped transferd pid %ld with status %d\n", 

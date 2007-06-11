@@ -90,19 +90,19 @@ CondorLockFile::CondorLockFile( )
 }
 
 // Basic CondorLockFile constructor
-CondorLockFile::CondorLockFile( const char	*lock_url,
-								const char	*lock_name,
-								Service		*app_service,
-								LockEvent	lock_event_acquired,
-								LockEvent	lock_event_lost,
-								time_t		poll_period,
-								time_t		lock_hold_time,
-								bool		auto_update )
-		: CondorLockImpl( app_service, lock_event_acquired, lock_event_lost,
-						  poll_period, lock_hold_time, auto_update )
+CondorLockFile::CondorLockFile( const char	*l_url,
+								const char	*l_name,
+								Service		*ap_service,
+								LockEvent	le_acquired,
+								LockEvent	le_lost,
+								time_t		poll_per,
+								time_t		lock_ht,
+								bool		auto_up )
+		: CondorLockImpl( ap_service, le_acquired, le_lost,
+						  poll_per, lock_ht, auto_up )
 {
-	if ( BuildLock( lock_url, lock_name ) ) {
-		EXCEPT( "Error building lock for URL '%s'", lock_url );
+	if ( BuildLock( l_url, l_name ) ) {
+		EXCEPT( "Error building lock for URL '%s'", l_url );
 	}
 }
 
@@ -114,8 +114,8 @@ CondorLockFile::~CondorLockFile( void )
 
 // Shared initialization code
 int
-CondorLockFile::BuildLock( const char	*lock_url,
-						   const char	*lock_name )
+CondorLockFile::BuildLock( const char	*l_url,
+						   const char	*l_name )
 {
 #ifdef WIN32
 	dprintf( D_ALWAYS, "File locks not supported under Windows\n" );
@@ -123,16 +123,16 @@ CondorLockFile::BuildLock( const char	*lock_url,
 #endif
 
 		// Verify the rank
-	if ( Rank( lock_url ) <= 0 ) {
+	if ( Rank( l_url ) <= 0 ) {
 		return -1;
 	}
 
 		// Copy the URL & name out
-	this->lock_url = lock_url;
-	this->lock_name = lock_name;
+	this->lock_url = l_url;
+	this->lock_name = l_name;
 
 		// Create the lock file name from it
-	lock_file.sprintf( "%s/%s.lock", lock_url + 5, lock_name );
+	lock_file.sprintf( "%s/%s.lock", l_url + 5, l_name );
 
 		// Build a temporary file name
 	char	hostname[128];
@@ -157,16 +157,16 @@ CondorLockFile::BuildLock( const char	*lock_url,
 //  -1: Fatal error
 //   1: Can't change w/o rebuilding
 int 
-CondorLockFile::ChangeUrlName( const char *lock_url,
-							   const char *lock_name )
+CondorLockFile::ChangeUrlName( const char *l_url,
+							   const char *l_name )
 {
 	// I don't handle any changes well, at least for now..
-	if ( this->lock_url != lock_url ) {
-		dprintf( D_ALWAYS, "Lock URL Changed -> '%s'\n", lock_name );
+	if ( this->lock_url != l_url ) {
+		dprintf( D_ALWAYS, "Lock URL Changed -> '%s'\n", l_name );
 		return 1;
 	}
-	if ( this->lock_name != lock_name ) {
-		dprintf( D_ALWAYS, "Lock name Changed -> '%s'\n", lock_name );
+	if ( this->lock_name != l_name ) {
+		dprintf( D_ALWAYS, "Lock name Changed -> '%s'\n", l_name );
 		return 1;
 	}
 
@@ -180,7 +180,7 @@ CondorLockFile::ChangeUrlName( const char *lock_url,
 //		 1: Ok, lock busy, not aquired
 //		-1: Failure
 int
-CondorLockFile::GetLock( time_t lock_hold_time )
+CondorLockFile::GetLock( time_t lock_ht )
 {
 #ifdef WIN32
 	return -1;
@@ -235,7 +235,7 @@ CondorLockFile::GetLock( time_t lock_hold_time )
 	close( fd );
 
 		// Step 3: Set the expiration time
-	status = SetExpireTime( temp_file.Value( ), lock_hold_time );
+	status = SetExpireTime( temp_file.Value( ), lock_ht );
 	if ( status ) {
 		dprintf( D_ALWAYS, "GetLock: Error setting expiration time" );
 		unlink( temp_file.Value( ) );
@@ -264,12 +264,12 @@ CondorLockFile::GetLock( time_t lock_hold_time )
 
 // Update the lock's timestamp
 int
-CondorLockFile::UpdateLock( time_t lock_hold_time )
+CondorLockFile::UpdateLock( time_t lock_ht )
 {
 #ifdef WIN32
 	return -1;
 #else
-	return SetExpireTime( lock_file.Value( ), lock_hold_time );
+	return SetExpireTime( lock_file.Value( ), lock_ht );
 #endif
 }
 
@@ -296,12 +296,12 @@ CondorLockFile::FreeLock( void )
 
 // Update the lock's timestamp
 int
-CondorLockFile::SetExpireTime( const char *file, time_t lock_hold_time )
+CondorLockFile::SetExpireTime( const char *file, time_t lock_ht )
 {
 #ifdef WIN32
 	return -1;
 #else
-	time_t			expire = time( NULL ) + lock_hold_time;
+	time_t			expire = time( NULL ) + lock_ht;
 	struct utimbuf	timebuf;
 
 		// First, update the file

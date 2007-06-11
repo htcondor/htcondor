@@ -35,13 +35,14 @@
 char *strnewp( const char * );
 
 // Like strstr(), but case-insensitive
-char *strcasestr( const char *string, const char *pattern )
+char *
+strcasestr( const char *string, const char *pattern )
 {
 	char	*str;
-	int		n;
+	int			n;
 
 	n = strlen( pattern );
-	for( str=(char*)string; *str; str++ ) {
+	for( str=(char *)string; *str; str++ ) {
 		if( strncasecmp(str,pattern,n) == 0 ) {
 			return str;
 		}
@@ -307,7 +308,7 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 			char *asterisk2 = strrchr(x,'*');
 			if ( asterisk2 && asterisk2[1] == '\0' && asterisk2 != asterisk) {
 				// asterisks at start and end behavior
-				char *pos;
+				const char *pos;
 				*asterisk2 = '\0';
 				if (anycase) {
 					pos = strcasestr(string,&x[1]);

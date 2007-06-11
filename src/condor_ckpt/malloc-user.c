@@ -34,8 +34,10 @@ file, because the Condor header file madness will confuse
 malloc.c badly.
 */
 
-extern void _condor_ckpt_disable();
-extern void _condor_ckpt_enable();
+extern void _condor_ckpt_disable(void);
+extern void _condor_ckpt_enable(void);
+static int malloc_preaction(void);
+static int malloc_postaction(void);
 
 static int malloc_preaction()
 {

@@ -58,7 +58,7 @@ _condor_vfprintf_va( int fd, const char* fmt, va_list args )
 	int c = 0;		/* number of output characters from conversion of fmt */
 	double f;		/* any float-like quantity from va_list */
 	long d;			/* any int-like quantity from va_list */
-	int index;		/* index usage in for loops */
+	int loopIndex;		/* loopIndex usage in for loops */
 #if 0
 		/* neither of these are used, i wonder why they're here */
 	int signedness;	/* is the int-like quantity signed or not? */
@@ -86,9 +86,9 @@ _condor_vfprintf_va( int fd, const char* fmt, va_list args )
 		tell me that the promotion happens, even in "new-style" function
 		declarations */
 
-	for(index = 0; index < VFPRINTF_LEN+1; index++)
+	for(loopIndex = 0; loopIndex < VFPRINTF_LEN+1; loopIndex++)
 	{
-		out[index] = 0;
+		out[loopIndex] = 0;
 	}
 
 	i = fmt;
@@ -267,7 +267,7 @@ _condor_itoa(long quantity, char *out, int base)
 	unsigned int octquant;
 	int numchars, maxchars;
 	char *p, *q;
-	int div, sum, mod;
+	int divi, sum, mod;
 	unsigned char basemap[16];
 
 	/* if it is zero, just fast quit */
@@ -399,10 +399,10 @@ _condor_itoa(long quantity, char *out, int base)
 		}
 		for( i = 1; i <= maxchars; i++ ) {
 			out[numchars] = 0;
-			div = quantity / sum;
+			divi = quantity / sum;
 			sum *= 10;
-			mod = div % 10;
-			if (div == 0) break;
+			mod = divi % 10;
+			if (divi == 0) break;
 			out[numchars] = basemap[ABS(mod)];
 			numchars++;
 		}

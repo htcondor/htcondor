@@ -419,13 +419,13 @@ int creat(const char *path, mode_t mode)
 		for the user program and we don't want to change the user programs
 		behavior.
 	*/
-	return open((char*)path, O_WRONLY | O_CREAT | O_TRUNC, mode);
+	return open(path, O_WRONLY | O_CREAT | O_TRUNC, mode);
 }
 
 #ifdef SYS_open64
 int creat64(const char *path, mode_t mode)
 {
-	return open64((char*)path, O_WRONLY | O_CREAT | O_TRUNC, mode );
+	return open64(path, O_WRONLY | O_CREAT | O_TRUNC, mode );
 }
 #endif
 

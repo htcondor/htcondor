@@ -161,7 +161,7 @@ main( int argc, char *argv[] )
 
 	// Open job queue
 	DaemonName = schedd.addr();
-	q = ConnectQ((char*)DaemonName.Value());
+	q = ConnectQ(DaemonName.Value());
 	if( !q ) {
 		fprintf( stderr, "Failed to connect to queue manager %s\n", 
 				 DaemonName.Value() );

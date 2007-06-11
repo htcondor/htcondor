@@ -106,7 +106,7 @@ InitComplex( const string &_attr,
 }
 
 bool Condition::
-GetAttr( string& attr )
+GetAttr( string& attribute )
 {
 	if( !initialized ) {
 		return false;
@@ -114,7 +114,7 @@ GetAttr( string& attr )
 	if( isComplex && multiAttr) {
 		return false;
 	}
-	attr = this->attr;
+	attribute = this->attr;
 	return true;
 }
 
@@ -145,7 +145,7 @@ GetOp2( classad::Operation::OpKind &result )
 }
 
 bool Condition::
-GetVal( classad::Value &val )
+GetVal( classad::Value &value )
 {
 	if( !initialized ) {
 		return false;
@@ -153,12 +153,12 @@ GetVal( classad::Value &val )
 	if( isComplex && multiAttr ) {
 		return false;
 	}
-	val.CopyFrom( this->val );
+	value.CopyFrom( this->val );
 	return true;
 }
 
 bool Condition::
-GetVal2( classad::Value &val )
+GetVal2( classad::Value &value )
 {
 	if( !initialized ) {
 		return false;
@@ -166,7 +166,7 @@ GetVal2( classad::Value &val )
 	if( !isComplex || multiAttr ) {
 		return false;
 	}
-	val.CopyFrom( this->val2 );
+	value.CopyFrom( this->val2 );
 	return true;
 }
 

@@ -172,18 +172,18 @@ static enum command _condor_find_cmd( const char *name );
 static BOOLEAN condor_iwd( const char *path );
 static BOOLEAN condor_fd( const char *num, const char *path, const char *open_mode );
 static BOOLEAN condor_ckpt( const char *path );
-static BOOLEAN condor_restart( );
+static BOOLEAN condor_restart( void );
 static BOOLEAN condor_migrate_to( const char *host_addr, const char *port_num );
 static BOOLEAN condor_migrate_from( const char *fd_no );
 static BOOLEAN condor_exit( const char *status );
 void display_ip_addr( unsigned int addr );
-void open_std_files();
-void _condor_set_iwd();
+void open_std_files( void );
+void _condor_set_iwd( void);
 int open_file_stream( const char *local_path, int flags, size_t *len );
 int open_ckpt_file( const char *name, int flags, size_t n_bytes );
-void get_ckpt_name();
+void get_ckpt_name( void );
 extern volatile int InRestart;
-void _condor_setup_dprintf();
+void _condor_setup_dprintf( void );
 
 /* These are the various remote system calls we need to worry about */
 extern int REMOTE_CONDOR_register_syscall_version(char *version);
@@ -643,7 +643,7 @@ condor_migrate_to( const char *host_name, const char *port_num )
 	}
 
 	dprintf( D_FULLDEBUG,
-		"condor_migrate_to: host = \"%s\", port = %d\n", host_name, port
+		"condor_migrate_to: host = \"%s\", port = %ld\n", host_name, port
 	);
 	return TRUE;
 }
@@ -659,7 +659,7 @@ condor_migrate_from( const char *fd_no )
 		return FALSE;
 	}
 	
-	dprintf( D_FULLDEBUG, "condor_migrate_from: fd = %d\n", fd );
+	dprintf( D_FULLDEBUG, "condor_migrate_from: fd = %ld\n", fd );
 	return TRUE;
 }
 
@@ -674,7 +674,7 @@ condor_exit( const char *status )
 		return FALSE;
 	}
 	
-	dprintf( D_FULLDEBUG, "condor_exit: status = %d\n", st );
+	dprintf( D_FULLDEBUG, "condor_exit: status = %ld\n", st );
 	return TRUE;
 }
 
@@ -767,8 +767,8 @@ display_ip_addr( unsigned int addr )
 	if( IN_CLASSB(addr) ) {
 		net_part = B_NET(addr);
 		host_part = B_HOST(addr);
-		dprintf( D_FULLDEBUG, "%d.%d", HI(B_NET(addr)), LO(B_NET(addr)) );
-		dprintf( D_FULLDEBUG, ".%d.%d\n", HI(B_HOST(addr)), LO(B_HOST(addr)) );
+		dprintf( D_FULLDEBUG, "%ld.%ld", HI(B_NET(addr)), LO(B_NET(addr)) );
+		dprintf( D_FULLDEBUG, ".%ld.%ld\n", HI(B_HOST(addr)), LO(B_HOST(addr)) );
 	} else {
 		dprintf( D_FULLDEBUG, "0x%x\n", addr );
 	}

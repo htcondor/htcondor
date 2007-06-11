@@ -798,7 +798,7 @@ HADStateMachine::sendNegotiatorCmdToMaster( int comm )
     }
 
     int cmd = comm;
-    char* subsys = (char*)daemonString( DT_NEGOTIATOR );
+    char* subsys = strdup( daemonString( DT_NEGOTIATOR ) );
     dprintf( D_FULLDEBUG,"send command %s(%d) [%s] to master %s\n",
                 utilToString(cmd), cmd, subsys, m_masterDaemon->addr() );
 
@@ -807,17 +807,19 @@ HADStateMachine::sendNegotiatorCmdToMaster( int comm )
         dprintf( D_ALWAYS,"cannot start command %s, addr %s\n",
                     utilToString(cmd), m_masterDaemon->addr() );
         sock.close();
+		free( subsys );
         return FALSE;
     }
 
     if( !sock.code(subsys) || !sock.eom() ) {
         dprintf( D_ALWAYS,"send to master , !sock.code false \n");
         sock.close();
+		free( subsys );
         return FALSE;
     } else {
         dprintf( D_FULLDEBUG,"send to master , !sock.code true \n");
     }
-                      
+	free( subsys );
     sock.close();     
     return TRUE;      
 }

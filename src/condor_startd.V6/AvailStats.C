@@ -193,9 +193,9 @@ AvailStats::serialize( MyString state )
 	as_birthdate -= prev_time;
 	int prev_avail_time = strtol(s, &s, 0);
 	as_tot_avail_time += prev_avail_time;
-	int last_avail_interval = strtol(s, &s, 0);
+	int last_available_interval = strtol(s, &s, 0);
 	if( !as_last_avail_interval ) {
-		as_last_avail_interval = last_avail_interval;
+		as_last_avail_interval = last_available_interval;
 	}
 	while( 1 ) {
 		char *new_s;

@@ -151,18 +151,18 @@ Starter::setAd( ClassAd* ad )
 
 
 void
-Starter::setPath( const char* path )
+Starter::setPath( const char* updated_path )
 {
 	if( s_path ) {
 		delete [] s_path;
 	}
-	s_path = strnewp( path );
+	s_path = strnewp( updated_path );
 }
 
 void
-Starter::setIsDC( bool is_dc )
+Starter::setIsDC( bool updated_is_dc )
 {
-	s_is_dc = is_dc;
+	s_is_dc = updated_is_dc;
 }
 
 void
@@ -829,19 +829,19 @@ Starter::execOldStarter( void )
 
 	// call Create_Process
 	//
-	int pid = daemonCore->Create_Process(s_path,       // path to binary
-	                                     args,         // arguments
-	                                     PRIV_ROOT,    // start as root
-	                                     main_reaper,  // reaper
-	                                     FALSE,        // no command port
-	                                     NULL,         // inherit our env
-	                                     NULL,         // inherit out cwd
-	                                     &family_info, // new family
-	                                     NULL,         // no inherited socks
-	                                     std,          // std FDs
-	                                     0,            // zero nice inc
-	                                     &full_mask,   // signal mask
-	                                     0);           // DC job opts
+	int new_pid = daemonCore->Create_Process(s_path,       // path to binary
+	        	                             args,         // arguments
+	            	                         PRIV_ROOT,    // start as root
+	                	                     main_reaper,  // reaper
+	                    	                 FALSE,        // no command port
+	                        	             NULL,         // inherit our env
+	                            	         NULL,         // inherit out cwd
+	                                	     &family_info, // new family
+	                                    	 NULL,         // no inherited socks
+		                                     std,          // std FDs
+		                                     0,            // zero nice inc
+	    	                                 &full_mask,   // signal mask
+	        	                             0);           // DC job opts
 
 	// clean up the "ports"
 	//
@@ -850,12 +850,12 @@ Starter::execOldStarter( void )
 
 	// check for error
 	//
-	if (pid == FALSE) {
+	if (new_pid == FALSE) {
 		dprintf(D_ALWAYS, "execOldStarter: Create_Process error\n");
 		return 0;
 	}
 
-	return pid;
+	return new_pid;
 #endif
 }
 

@@ -75,29 +75,29 @@ Daemon::common_init() {
 }
 
 
-Daemon::Daemon( daemon_t type, const char* name, const char* pool ) 
+Daemon::Daemon( daemon_t tType, const char* tName, const char* tPool ) 
 {
 		// We are no longer allowed to create a "default" collector
 		// since there can be more than one
 		// Use CollectorList::create()
-/*	if ((type == DT_COLLECTOR) && (name == NULL)) {
+/*	if ((tType == DT_COLLECTOR) && (tName == NULL)) {
 		EXCEPT ( "Daemon constructor (type=COLLECTOR, name=NULL) called" );
 		}*/
 
 	common_init();
-	_type = type;
+	_type = tType;
 
-	if( pool ) {
-		_pool = strnewp( pool );
+	if( tPool ) {
+		_pool = strnewp( tPool );
 	} else {
 		_pool = NULL;
 	}
 
-	if( name && name[0] ) {
-		if( is_valid_sinful(name) ) {
-			_addr = strnewp( name );
+	if( tName && tName[0] ) {
+		if( is_valid_sinful(tName) ) {
+			_addr = strnewp( tName );
 		} else {
-			_name = strnewp( name );
+			_name = strnewp( tName );
 		}
 	} 
 	dprintf( D_HOSTNAME, "New Daemon obj (%s) name: \"%s\", pool: "  
@@ -107,14 +107,14 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 }
 
 
-Daemon::Daemon( const ClassAd* ad, daemon_t type, const char* pool ) 
+Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool ) 
 {
-	if( ! ad ) {
+	if( ! tAd ) {
 		EXCEPT( "Daemon constructor called with NULL ClassAd!" );
 	}
 
 	common_init();
-	_type = type;
+	_type = tType;
 
 	switch( _type ) {
 	case DT_MASTER:
@@ -131,13 +131,13 @@ Daemon::Daemon( const ClassAd* ad, daemon_t type, const char* pool )
 				"Daemon object", (int)_type, daemonString(_type) );
 	}
 
-	if( pool ) {
-		_pool = strnewp( pool );
+	if( tPool ) {
+		_pool = strnewp( tPool );
 	} else {
 		_pool = NULL;
 	}
 
-	getInfoFromAd( ad );
+	getInfoFromAd( tAd );
 
 	dprintf( D_HOSTNAME, "New Daemon obj (%s) name: \"%s\", pool: "
 			 "\"%s\", addr: \"%s\"\n", daemonString(_type), 
@@ -464,12 +464,12 @@ struct StartCommandErrorStackCallback {
 	void *misc_data;
 	CondorError errstack;
 
-	StartCommandErrorStackCallback(StartCommandCallbackType *callback_fn, void *misc_data) {
-		this->callback_fn = callback_fn;
-		this->misc_data = misc_data;
+	StartCommandErrorStackCallback(StartCommandCallbackType *callbackfn, void *miscdata) {
+		this->callback_fn = callbackfn;
+		this->misc_data = miscdata;
 	}
 
-	static void CallbackFn(bool success,Sock *sock,CondorError *errstack,void *misc_data) {
+	static void CallbackFn(bool success,Sock *sock,CondorError *errstack,void *miscdata) {
 		// We get here when the caller of startCommand() didn't provide
 		// any error stack.  Therefore, the error stack is ours, and we
 		// should just print it out before calling the final callback.
@@ -482,7 +482,7 @@ struct StartCommandErrorStackCallback {
 		}
 
 		// Call the final callback and deallocate ourselves.
-		StartCommandErrorStackCallback *cb = (StartCommandErrorStackCallback *)misc_data;
+		StartCommandErrorStackCallback *cb = (StartCommandErrorStackCallback *)miscdata;
 		if(cb->callback_fn) {
 			(*cb->callback_fn)(success,sock,NULL,cb->misc_data);
 		}

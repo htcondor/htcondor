@@ -745,17 +745,17 @@ lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 int
 customLessThanFunc( AttrList *ad1, AttrList *ad2, void *)
 {
-	EvalResult 	result;
+	EvalResult 	lt_result;
 	int			last = sortLessThanExprs.getlast();
 
 	for( int i = 0 ; i <= last ; i++ ) {
-		sortLessThanExprs[i]->EvalTree( ad1, ad2, &result );
-		if( result.type == LX_INTEGER ) {
-			if( result.i ) {
+		sortLessThanExprs[i]->EvalTree( ad1, ad2, &lt_result );
+		if( lt_result.type == LX_INTEGER ) {
+			if( lt_result.i ) {
 				return 1;
 			} else {
-				sortEqualExprs[i]->EvalTree( ad1, ad2, &result );
-				if( result.type != LX_INTEGER || !result.i )
+				sortEqualExprs[i]->EvalTree( ad1, ad2, &lt_result );
+				if( lt_result.type != LX_INTEGER || !lt_result.i )
 					return 0;
 			}
 		} else {

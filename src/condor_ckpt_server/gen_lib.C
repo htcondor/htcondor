@@ -60,10 +60,10 @@ void MakeLine(char ch1,
 int OTStrLen(const char* s_ptr,
 	     int         max)
 {
-  char* ptr;
   int   count;
 
-  ptr = (char*) s_ptr;
+  const char* ptr = s_ptr;
+
   count = 0;
   while ((count < max) && (*ptr != '\0'))
     {

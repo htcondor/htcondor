@@ -38,9 +38,13 @@
 #	define EMAIL_POPEN_FLAGS "w"
 #endif
 
-/* how we actually get the FILE* for our mail program pipe various vastly
+/* how we actually get the FILE* for our mail program pipe varies vastly
 	between NT and unix */
+#ifdef WIN32
 static FILE *email_open_implementation(char *Mailer,char *const final_args[]);
+#else
+static FILE *email_open_implementation(char *const final_args[]);
+#endif
 
 #if defined(IRIX)
 extern char **_environ;
@@ -163,9 +167,13 @@ email_open( const char *email_addr, const char *subject )
 	final_args[arg_index] = NULL;
 
 /* NEW CODE */
-	/* open a FILE* so t_hat the mail we get will end up from condor,
+	/* open a FILE* so that the mail we get will end up from condor,
 		and not from root */
+#ifdef WIN32
 	mailerstream = email_open_implementation(Mailer, final_args);
+#else
+	mailerstream = email_open_implementation(final_args);
+#endif
 
 	if ( mailerstream ) {
 		fprintf(mailerstream,"This is an automated email from the Condor "
@@ -216,14 +224,12 @@ email_open_implementation(char *Mailer, char *const final_args[])
 #else /* unix */
 
 FILE *
-email_open_implementation(char * Mailer, char *const final_args[])
+email_open_implementation(char *const final_args[])
 {
+
 	FILE *mailerstream;
 	pid_t pid;
 	int pipefds[2];
-
-		/* Shut the compiler up */
-	Mailer;
 
 	/* The gist of this code is to exec a mailer whose stdin is dup2'ed onto
 		the write end of a pipe. The parent gets the fdopen'ed read end

@@ -70,6 +70,8 @@
 #define getrusage(a,b) syscall(SYS_getrusage,a,b)
 #endif
 
+double dtime(void);
+
 double dtime()
 {
 	double q;
@@ -97,6 +99,8 @@ double dtime()
 #include <windows.h>
 #include <sys/types.h>
 #include <sys/timeb.h>
+
+double dtime(void);
 
 double dtime()
 {

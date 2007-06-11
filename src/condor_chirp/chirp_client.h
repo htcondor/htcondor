@@ -58,7 +58,7 @@ Error codes:
 -12  UNKNOWN           An unknown error occurred.
 */
 
-DLLEXPORT struct chirp_client * chirp_client_connect_default();
+DLLEXPORT struct chirp_client * chirp_client_connect_default(void);
 /*chirp_client_connect_default()
   Opens connection to the default chirp server.  The default connection
   information is determined by reading ./chirp.config.  Under Condor,
@@ -109,6 +109,10 @@ DLLEXPORT void chirp_client_disconnect( struct chirp_client *c );
 DLLEXPORT int chirp_client_cookie( struct chirp_client *c, const char *cookie );
 /*chirp_client_cookie
   Authenticate with the server using the specified cookie.
+ */
+
+DLLEXPORT int chirp_client_login( struct chirp_client *c, const char *name, const char *password );
+/*chirp_client_login
  */
 
 DLLEXPORT int chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **url );

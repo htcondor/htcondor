@@ -248,11 +248,11 @@ int CollectorDaemon::receive_query_cedar(Service* s,
 										 int command,
 										 Stream* sock)
 {
-	ClassAd ad;
+	ClassAd cad;
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
-    if( !ad.initFromStream(*sock) || !sock->eom() )
+    if( !cad.initFromStream(*sock) || !sock->eom() )
     {
         dprintf(D_ALWAYS,"Failed to receive query on TCP: aborting\n");
         return FALSE;
@@ -274,7 +274,7 @@ int CollectorDaemon::receive_query_cedar(Service* s,
 			return 1;
 		} else {
 			// Child / Fork failed / busy
-			process_query_public (whichAds, &ad, &results);
+			process_query_public (whichAds, &cad, &results);
 		}
 	}
 
@@ -406,13 +406,13 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 {
     struct sockaddr_in *from;
 	AdTypes whichAds;
-	ClassAd ad;
+	ClassAd cad;
 
 	from = ((Sock*)sock)->endpoint();
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
-    if( !ad.initFromStream(*sock) || !sock->eom() )
+    if( !cad.initFromStream(*sock) || !sock->eom() )
     {
         dprintf( D_ALWAYS, 
 				 "Failed to receive invalidation on %s: aborting\n",
@@ -495,16 +495,16 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
     }
    
     if (whichAds != (AdTypes) -1)
-		process_invalidation (whichAds, ad, sock);
+		process_invalidation (whichAds, cad, sock);
 
 	// if the invalidation was for the STARTD ads, also invalidate startd
 	// private ads with the same query ad
 	if (command == INVALIDATE_STARTD_ADS)
-		process_invalidation (STARTD_PVT_AD, ad, sock);
+		process_invalidation (STARTD_PVT_AD, cad, sock);
 
 	if(View_Collector && ((command == INVALIDATE_STARTD_ADS) || 
 		(command == INVALIDATE_SUBMITTOR_ADS)) ) {
-		send_classad_to_sock(command, View_Collector, &ad);
+		send_classad_to_sock(command, View_Collector, &cad);
 	}	
 
 	if( sock_cache && sock->type() == Stream::reli_sock ) {
@@ -522,7 +522,7 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 {
     int	insert;
 	sockaddr_in *from;
-	ClassAd *ad;
+	ClassAd *cad;
 
 	/* assume the ad is malformed... other functions set this value */
 	insert = -3;
@@ -541,7 +541,7 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 	from = ((Sock*)sock)->endpoint();
 
     // process the given command
-	if (!(ad = collector.collect (command,(Sock*)sock,from,insert)))
+	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
 	{
 		if (insert == -2)
 		{
@@ -565,7 +565,7 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 
 	if(View_Collector && ((command == UPDATE_STARTD_AD) || 
 			(command == UPDATE_SUBMITTOR_AD)) ) {
-		send_classad_to_sock(command, View_Collector, ad);
+		send_classad_to_sock(command, View_Collector, cad);
 	}	
 
 	if( sock_cache && sock->type() == Stream::reli_sock ) {
@@ -685,14 +685,14 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 }
 
 
-int CollectorDaemon::query_scanFunc (ClassAd *ad)
+int CollectorDaemon::query_scanFunc (ClassAd *cad)
 {
-	if (ad < CollectorEngine::THRESHOLD) return 1;
+	if (cad < CollectorEngine::THRESHOLD) return 1;
 
-    if ((*ad) >= (*__query__))
+    if ((*cad) >= (*__query__))
     {
 		// Found a match --- append to our results list
-		__ClassAdResultList__->Append(ad);
+		__ClassAdResultList__->Append(cad);
         __numAds__++;
     }
 
@@ -705,14 +705,14 @@ If so, return zero, causing the scan to stop.
 Otherwise, return 1.
 */
 
-int CollectorDaemon::select_by_match( ClassAd *ad )
+int CollectorDaemon::select_by_match( ClassAd *cad )
 {
-	if(ad<CollectorEngine::THRESHOLD) {
+	if(cad<CollectorEngine::THRESHOLD) {
 		return 1;
 	}
 
-	if( query_any_request <= *ad ) {
-		query_any_result = ad;
+	if( query_any_request <= *cad ) {
+		query_any_result = cad;
 		return 0;
 	}
 	return 1;
@@ -761,17 +761,17 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	dprintf (D_ALWAYS, "(Sending %d ads in response to query)\n", __numAds__);
 }	
 
-int CollectorDaemon::invalidation_scanFunc (ClassAd *ad)
+int CollectorDaemon::invalidation_scanFunc (ClassAd *cad)
 {
 	static char buffer[64];
 	
 	sprintf( buffer, "%s = -1", ATTR_LAST_HEARD_FROM );
 
-	if (ad < CollectorEngine::THRESHOLD) return 1;
+	if (cad < CollectorEngine::THRESHOLD) return 1;
 
-    if ((*ad) >= (*__query__))
+    if ((*cad) >= (*__query__))
     {
-		ad->Insert( buffer );			
+		cad->Insert( buffer );			
         __numAds__++;
     }
 
@@ -805,16 +805,16 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 
 
 
-int CollectorDaemon::reportStartdScanFunc( ClassAd *ad )
+int CollectorDaemon::reportStartdScanFunc( ClassAd *cad )
 {
-	return normalTotals->update( ad );
+	return normalTotals->update( cad );
 }
 
-int CollectorDaemon::reportSubmittorScanFunc( ClassAd *ad )
+int CollectorDaemon::reportSubmittorScanFunc( ClassAd *cad )
 {
 	int tmp1, tmp2;
-	if( !ad->LookupInteger( ATTR_RUNNING_JOBS , tmp1 ) ||
-		!ad->LookupInteger( ATTR_IDLE_JOBS, tmp2 ) )
+	if( !cad->LookupInteger( ATTR_RUNNING_JOBS , tmp1 ) ||
+		!cad->LookupInteger( ATTR_IDLE_JOBS, tmp2 ) )
 			return 0;
 	submittorRunningJobs += tmp1;
 	submittorIdleJobs	 += tmp2;
@@ -822,11 +822,11 @@ int CollectorDaemon::reportSubmittorScanFunc( ClassAd *ad )
 	return 1;
 }
 
-int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *ad )
+int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *cad )
 {
     char buf[80];
 
-    if ( !ad->LookupString( ATTR_STATE, buf ) )
+    if ( !cad->LookupString( ATTR_STATE, buf ) )
         return 0;
     machinesTotal++;
     switch ( buf[0] ) {
@@ -843,7 +843,7 @@ int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *ad )
 
 	// Count the number of jobs in each universe
 	int		universe;
-	if ( ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) ) {
+	if ( cad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) ) {
 		ustatsAccum.accumulate( universe );
 	}
 

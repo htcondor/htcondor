@@ -58,10 +58,10 @@ StarterUserPolicy::~StarterUserPolicy()
  * @param jic - the JIC object that doAction() communicates with
  **/
 void
-StarterUserPolicy::init( ClassAd *job_ad, JobInfoCommunicator *jic )
+StarterUserPolicy::init( ClassAd *job_cad, JobInfoCommunicator *job_ic )
 {
-	BaseUserPolicy::init( job_ad );
-	this->jic = jic;
+	BaseUserPolicy::init( job_cad );
+	this->jic = job_ic;
 }
 
 /**

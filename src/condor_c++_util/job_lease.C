@@ -35,7 +35,7 @@ void SetDefaultJobLeaseDuration( int duration )
 bool CalculateJobLease( const ClassAd *job_ad, int &new_expiration,
 						int default_duration )
 {
-int cluster,proc;
+	//int cluster,proc;
 	int expire_received = -1;
 	int expire_sent = -1;
 	int lease_duration = defaultJobLeaseDuration;

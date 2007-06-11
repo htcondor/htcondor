@@ -36,6 +36,8 @@ int		(*_EXCEPT_Cleanup)(int,int,char*);
 
 extern	int		DebugFlags;
 
+void _condor_dprintf_va( int flags, const char* fmt, va_list args );
+void _EXCEPT_(char* fmt, ...);
 
 void
 _condor_dprintf_va( int flags, const char* fmt, va_list args )

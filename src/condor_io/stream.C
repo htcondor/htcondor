@@ -2218,26 +2218,26 @@ bool
 Stream::wrap(unsigned char* d_in,int l_in, 
                     unsigned char*& d_out,int& l_out)
 {    
-    bool code = false;
+    bool coded = false;
 #if defined(CONDOR_ENCRYPTION)
     if (get_encryption()) {
-        code = crypto_->encrypt(d_in, l_in, d_out, l_out);
+        coded = crypto_->encrypt(d_in, l_in, d_out, l_out);
     }
 #endif
-    return code;
+    return coded;
 }
 
 bool 
 Stream::unwrap(unsigned char* d_in,int l_in,
                       unsigned char*& d_out, int& l_out)
 {
-    bool code = false;
+    bool coded = false;
 #if defined(CONDOR_ENCRYPTION)
     if (get_encryption()) {
-        code = crypto_->decrypt(d_in, l_in, d_out, l_out);
+        coded = crypto_->decrypt(d_in, l_in, d_out, l_out);
     }
 #endif
-    return code;
+    return coded;
 }
 
 void Stream::resetCrypto()

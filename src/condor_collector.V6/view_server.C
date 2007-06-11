@@ -591,7 +591,7 @@ void ViewServer::WriteHistory()
 // Scan function for the submittor data
 //---------------------------------------------------------------------
 
-int ViewServer::SubmittorScanFunc(ClassAd* ad)
+int ViewServer::SubmittorScanFunc(ClassAd* cad)
 {
 	char Machine[200];
 	char Name[200];
@@ -600,13 +600,13 @@ int ViewServer::SubmittorScanFunc(ClassAd* ad)
 
 	// Get Data From Class Ad
 
-	if (ad->LookupString(ATTR_NAME,Name)<0) return 1;
-	if (ad->LookupString(ATTR_MACHINE,Machine)<0) return 1;
+	if (cad->LookupString(ATTR_NAME,Name)<0) return 1;
+	if (cad->LookupString(ATTR_MACHINE,Machine)<0) return 1;
 	GroupName=Name;
 	strcat(Name,"/");
 	strcat(Name,Machine);
-	if (ad->LookupInteger(ATTR_RUNNING_JOBS,JobsRunning)<0) JobsRunning=0;
-	if (ad->LookupInteger(ATTR_IDLE_JOBS,JobsIdle)<0) JobsIdle=0;
+	if (cad->LookupInteger(ATTR_RUNNING_JOBS,JobsRunning)<0) JobsRunning=0;
+	if (cad->LookupInteger(ATTR_IDLE_JOBS,JobsIdle)<0) JobsIdle=0;
 
 	// Add to group Totals
 
@@ -662,7 +662,7 @@ int ViewServer::SubmittorTotalFunc(void)
 // Scan function for the startd data
 //---------------------------------------------------------------------
 
-int ViewServer::StartdScanFunc(ClassAd* ad)
+int ViewServer::StartdScanFunc(ClassAd* cad)
 {
 	char Name[200] = "";
 	char StateDesc[50];
@@ -671,10 +671,10 @@ int ViewServer::StartdScanFunc(ClassAd* ad)
 	
 	// Get Data From Class Ad
 
-	if ( !ad->LookupString(ATTR_NAME,Name) ) return 1;
-	if ( !ad->LookupInteger(ATTR_KEYBOARD_IDLE,KbdIdle) ) KbdIdle=0;
-	if ( !ad->LookupFloat(ATTR_LOAD_AVG,LoadAvg) ) LoadAvg=0;
-	if ( !ad->LookupString(ATTR_STATE,StateDesc) ) strcpy(StateDesc,"");
+	if ( !cad->LookupString(ATTR_NAME,Name) ) return 1;
+	if ( !cad->LookupInteger(ATTR_KEYBOARD_IDLE,KbdIdle) ) KbdIdle=0;
+	if ( !cad->LookupFloat(ATTR_LOAD_AVG,LoadAvg) ) LoadAvg=0;
+	if ( !cad->LookupString(ATTR_STATE,StateDesc) ) strcpy(StateDesc,"");
 	State StateEnum=string_to_state( StateDesc );
 
 	// This block should be kept in sync with view_server.h and
@@ -714,9 +714,9 @@ int ViewServer::StartdScanFunc(ClassAd* ad)
 	// Get Group Name
 
 	char tmp[200];
-	if (ad->LookupString(ATTR_ARCH,tmp)<0) strcpy(tmp,"Unknown");
+	if (cad->LookupString(ATTR_ARCH,tmp)<0) strcpy(tmp,"Unknown");
 	MyString GroupName=MyString(tmp)+"/";
-	if (ad->LookupString(ATTR_OPSYS,tmp)<0) strcpy(tmp,"Unknown");
+	if (cad->LookupString(ATTR_OPSYS,tmp)<0) strcpy(tmp,"Unknown");
 	GroupName+=tmp;
 
 	// Add to group Totals
@@ -786,7 +786,7 @@ int ViewServer::StartdTotalFunc(void)
 // Scan function for the checkpoint server
 //---------------------------------------------------------------------
 
-int ViewServer::CkptScanFunc(ClassAd* ad)
+int ViewServer::CkptScanFunc(ClassAd* cad)
 {
 	char Name[200];
 	int Bytes;
@@ -795,14 +795,14 @@ int ViewServer::CkptScanFunc(ClassAd* ad)
 	
 	// Get Data From Class Ad
 
-	if (ad->LookupString(ATTR_NAME,Name)<0) return 1;
-	if (ad->LookupInteger("BytesReceived",Bytes)<0) Bytes=0;
+	if (cad->LookupString(ATTR_NAME,Name)<0) return 1;
+	if (cad->LookupInteger("BytesReceived",Bytes)<0) Bytes=0;
 	BytesReceived=float(Bytes)/(1024*1024);
-	if (ad->LookupInteger("BytesSent",Bytes)<0) Bytes=0;
+	if (cad->LookupInteger("BytesSent",Bytes)<0) Bytes=0;
 	BytesSent=float(Bytes)/(1024*1024);
-	if (ad->LookupFloat("AvgReceiveBandwidth",AvgReceiveBandwidth)<0) AvgReceiveBandwidth=0;
+	if (cad->LookupFloat("AvgReceiveBandwidth",AvgReceiveBandwidth)<0) AvgReceiveBandwidth=0;
 	AvgReceiveBandwidth=AvgReceiveBandwidth/1024;
-	if (ad->LookupFloat("AvgSendBandwidth",AvgSendBandwidth)<0) AvgSendBandwidth=0;
+	if (cad->LookupFloat("AvgSendBandwidth",AvgSendBandwidth)<0) AvgSendBandwidth=0;
 	AvgSendBandwidth=AvgSendBandwidth/1024;
 
 	// Add to accumulated data

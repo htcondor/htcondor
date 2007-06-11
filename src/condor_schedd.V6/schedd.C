@@ -225,10 +225,10 @@ match_rec::setStatus( int stat )
 }
 
 
-ContactStartdArgs::ContactStartdArgs( char* the_claim_id, char* sinful, bool is_dedicated ) 
+ContactStartdArgs::ContactStartdArgs( char* the_claim_id, char* sinfulstr, bool is_dedicated ) 
 {
 	csa_claim_id = strdup( the_claim_id );
-	csa_sinful = strdup( sinful );
+	csa_sinful = strdup( sinfulstr );
 	csa_is_dedicated = is_dedicated;
 }
 
@@ -501,7 +501,7 @@ Scheduler::timeout()
 	}
 
 	/* Reset our timer */
-	daemonCore->Reset_Timer(timeoutid,SchedDInterval.getDefaultInterval());
+	daemonCore->Reset_Timer(timeoutid,(int)SchedDInterval.getDefaultInterval());
 
 	SchedDInterval.setFinishTimeNow();
 }
@@ -718,7 +718,7 @@ Scheduler::count_jobs()
 	}
 
 	sprintf(tmp, "%s = %d", ATTR_JOB_QUEUE_BIRTHDATE,
-			 GetOriginalJobQueueBirthdate());
+			 (int)GetOriginalJobQueueBirthdate());
 	ad->Insert (tmp);
 
         // Tell negotiator to send us the startd ad
@@ -810,14 +810,14 @@ Scheduler::count_jobs()
 				Owners[i].JobsFlocked = 0;
 			}
 			matches->startIterations();
-			match_rec *rec;
-			while(matches->iterate(rec) == 1) {
-				char *at_sign = strchr(rec->user, '@');
+			match_rec *mRec;
+			while(matches->iterate(mRec) == 1) {
+				char *at_sign = strchr(mRec->user, '@');
 				if (at_sign) *at_sign = '\0';
-				int OwnerNum = insert_owner( rec->user );
+				int OwnerNum = insert_owner( mRec->user );
 				if (at_sign) *at_sign = '@';
-				if (rec->shadowRec && rec->pool &&
-					!strcmp(rec->pool, flock_neg->pool())) {
+				if (mRec->shadowRec && mRec->pool &&
+					!strcmp(mRec->pool, flock_neg->pool())) {
 					Owners[OwnerNum].JobsRunning++;
 				} else {
 						// This is a little weird.  We're sending an update
@@ -918,19 +918,18 @@ Scheduler::count_jobs()
 	  ad->InsertOrUpdate(tmp);
 
 		// Update collectors
-	  int num_updates = 
+	  int num_udates = 
 		  daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, ad, NULL, true);
 	  dprintf(D_ALWAYS, "Sent owner (0 jobs) ad to %d collectors\n",
-			  num_updates);
+			  num_udates);
 
 	  // also update all of the flock hosts
-	  int i;
-	  Daemon *d;
+	  Daemon *da;
 	  if( FlockCollectors ) {
 		  for( i=1, FlockCollectors->rewind();
 			   i <= OldOwners[i].OldFlockLevel &&
-				   FlockCollectors->next(d); i++ ) {
-			  ((DCCollector*)d)->sendUpdate( UPDATE_SUBMITTOR_AD, ad, NULL, true );
+				   FlockCollectors->next(da); i++ ) {
+			  ((DCCollector*)da)->sendUpdate( UPDATE_SUBMITTOR_AD, ad, NULL, true );
 		  }
 	  }
 	}
@@ -1438,9 +1437,9 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			// delete ATTR_GRID_JOB_ID from the ad and set Managed to
 			// ScheddDone.
 		if ( !job_managed && !job_managed_done && mode==REMOVED ) {
-			char job_id[20];
-			if ( job_ad->LookupString( ATTR_GRID_JOB_ID, job_id,
-									   sizeof(job_id) ) )
+			char jobID[20];
+			if ( job_ad->LookupString( ATTR_GRID_JOB_ID, jobID,
+									   sizeof(jobID) ) )
 			{
 				// looks like the job's remote job id is still valid,
 				// so there is still a job submitted remotely somewhere.
@@ -2394,11 +2393,11 @@ jobIsFinished( int cluster, int proc, void* )
 			uid_t dst_uid = get_condor_uid();
 			gid_t dst_gid = get_condor_gid();
 
-			MyString owner;
-			job_ad->LookupString( ATTR_OWNER, owner );
+			MyString jobOwner;
+			job_ad->LookupString( ATTR_OWNER, jobOwner );
 
 			passwd_cache* p_cache = pcache();
-			if( p_cache->get_user_uid( owner.Value(), src_uid ) ) {
+			if( p_cache->get_user_uid( jobOwner.Value(), src_uid ) ) {
 				if( ! recursive_chown(sandbox.Value(), src_uid,
 									  dst_uid, dst_gid, true) )
 				{
@@ -2412,7 +2411,7 @@ jobIsFinished( int cluster, int proc, void* )
 				dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID "
 						 "for user %s.  Cannot chown \"%s\".  User may "
 						 "run into permissions problems when fetching "
-						 "job sandbox.\n", cluster, proc, owner.Value(),
+						 "job sandbox.\n", cluster, proc, jobOwner.Value(),
 						 sandbox.Value() );
 			}
 		} else {
@@ -2634,9 +2633,9 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 		return true;
 	}
 
-	char* host;
+	const char* host;
 	if( sinful ) {
-		host = (char*)sinful;
+		host = sinful;
 	} else {
 		host = MySockName;
 	}
@@ -2957,7 +2956,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			// Backup the original IWD at submit time
 		if (buf) free(buf);
 		buf = NULL;
-		job_ad->LookupString(ATTR_JOB_IWD,&buf);
+		ad->LookupString(ATTR_JOB_IWD,&buf);
 		if ( buf ) {
 			sprintf(new_attr_value,"SUBMIT_%s",ATTR_JOB_IWD);
 			SetAttributeString(cluster,proc,new_attr_value,buf);
@@ -4107,13 +4106,13 @@ Scheduler::actOnJobs(int, Stream* s)
 					// authorized to vacate this job, and if so,
 					// record that we found this job_id and we're
 					// done.
-				ClassAd *ad = GetJobAd( tmp_id.cluster, tmp_id.proc, false );
-				if( ! ad ) {
+				ClassAd *cad = GetJobAd( tmp_id.cluster, tmp_id.proc, false );
+				if( ! cad ) {
 					EXCEPT( "impossible: GetJobAd(%d.%d) returned false "
 							"yet GetAttributeInt(%s) returned success",
 							tmp_id.cluster, tmp_id.proc, ATTR_JOB_STATUS );
 				}
-				if( !OwnerCheck(ad, rsock->getOwner()) ) {
+				if( !OwnerCheck(cad, rsock->getOwner()) ) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
 					continue;
 				}
@@ -4450,7 +4449,7 @@ Scheduler::negotiate(int command, Stream* s)
 	ContactStartdArgs * args = NULL;
 	match_rec *mrec;
 	ClassAd* my_match_ad;
-	ClassAd* ad;
+	ClassAd* cad;
 	char buffer[1024];
 	bool cant_spawn_shadow = false;
 
@@ -4701,19 +4700,19 @@ Scheduler::negotiate(int command, Stream* s)
 		}
 
 
-		ad = GetJobAd( id.cluster, id.proc );
-		if (!ad) {
+		cad = GetJobAd( id.cluster, id.proc );
+		if (!cad) {
 			dprintf(D_ALWAYS,"Can't get job ad %d.%d\n",
 					id.cluster, id.proc );
 			continue;
 		}	
 
 		cur_hosts = 0;
-		ad->LookupInteger(ATTR_CURRENT_HOSTS,cur_hosts);
+		cad->LookupInteger(ATTR_CURRENT_HOSTS,cur_hosts);
 		max_hosts = 1;
-		ad->LookupInteger(ATTR_MAX_HOSTS,max_hosts);
+		cad->LookupInteger(ATTR_MAX_HOSTS,max_hosts);
 		job_universe = 0;
-		ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
+		cad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
 
 			// Figure out if this request would result in another shadow
 			// process if matched.
@@ -4796,7 +4795,7 @@ Scheduler::negotiate(int command, Stream* s)
 							 id.cluster, id.proc, diagnostic_message);
 					 sprintf(buffer,"%s = \"%s\"",
 						 ATTR_LAST_REJ_MATCH_REASON, diagnostic_message);
-					 ad->Insert(buffer);
+					 cad->Insert(buffer);
 					 free(diagnostic_message);
 				 }
 					 // don't break: fall through to REJECTED case
@@ -4809,7 +4808,7 @@ Scheduler::negotiate(int command, Stream* s)
 					JobsRejected++;
 					sprintf(buffer,"%s = %d",
 									ATTR_LAST_REJ_MATCH_TIME,(int)time(0));
-					ad->Insert(buffer);
+					cad->Insert(buffer);
 					break;
 				case SEND_JOB_INFO: {
 						// The Negotiator wants us to send it a job. 
@@ -4823,17 +4822,17 @@ Scheduler::negotiate(int command, Stream* s)
 
 					// request match diagnostics
 					sprintf (buffer, "%s = True", ATTR_WANT_MATCH_DIAGNOSTICS);
-					ad->Insert (buffer);
+					cad->Insert (buffer);
 
 					// Send the ad to the negotiator
-					if( !ad->put(*s) ) {
+					if( !cad->put(*s) ) {
 						dprintf( D_ALWAYS,
 								"Can't send job ad to mgr\n" );
-						// FreeJobAd(ad);
+						// FreeJobAd(cad);
 						s->end_of_message();
 						return (!(KEEP_STREAM));
 					}
-					// FreeJobAd(ad);
+					// FreeJobAd(cad);
 					if( !s->end_of_message() ) {
 						dprintf( D_ALWAYS,
 								"Can't send job eom to mgr\n" );
@@ -4856,7 +4855,7 @@ Scheduler::negotiate(int command, Stream* s)
 
 					sprintf(buffer,"%s = %d",
 									ATTR_LAST_MATCH_TIME,(int)time(0));
-					ad->Insert(buffer);
+					cad->Insert(buffer);
 
 					if( !s->get(claim_id) ) {
 						dprintf( D_ALWAYS,
@@ -4910,7 +4909,7 @@ Scheduler::negotiate(int command, Stream* s)
 						int c = -1;
 						int p = -1;
 						int list_len = 0;
-						ad->LookupInteger(ATTR_LAST_MATCH_LIST_LENGTH,list_len);
+						cad->LookupInteger(ATTR_LAST_MATCH_LIST_LENGTH,list_len);
 						if ( list_len > 0 ) {								
 							int list_index;
 							char attr_buf[100];
@@ -4924,10 +4923,10 @@ Scheduler::negotiate(int command, Stream* s)
 								last_match = NULL;
 								sprintf(attr_buf,"%s%d",
 									ATTR_LAST_MATCH_LIST_PREFIX,list_index);
-								ad->LookupString(attr_buf,&last_match);
+								cad->LookupString(attr_buf,&last_match);
 								if ( c == -1 ) {
-									ad->LookupInteger(ATTR_CLUSTER_ID, c);
-									ad->LookupInteger(ATTR_PROC_ID, p);
+									cad->LookupInteger(ATTR_CLUSTER_ID, c);
+									cad->LookupInteger(ATTR_PROC_ID, p);
 									ASSERT( c != -1 );
 									ASSERT( p != -1 );
 									BeginTransaction();
@@ -4939,7 +4938,7 @@ Scheduler::negotiate(int command, Stream* s)
 						}
 							// Increment ATTR_NUM_MATCHES
 						int num_matches = 0;
-						ad->LookupInteger(ATTR_NUM_MATCHES,num_matches);
+						cad->LookupInteger(ATTR_NUM_MATCHES,num_matches);
 						num_matches++;
 							// If a transaction is already open, may as well
 							// use it to store ATTR_NUM_MATCHES.  If not,
@@ -4951,7 +4950,7 @@ Scheduler::negotiate(int command, Stream* s)
 							char tbuf[200];
 							sprintf(tbuf,"%s=%d",
 										ATTR_NUM_MATCHES,num_matches);
-							ad->Insert(tbuf);
+							cad->Insert(tbuf);
 						}
 					}
 
@@ -4975,9 +4974,9 @@ Scheduler::negotiate(int command, Stream* s)
 						}
 						// Update matched attribute in job ad
 						sprintf (buffer, "%s = True", ATTR_JOB_MATCHED);
-						ad->Insert (buffer);
+						cad->Insert (buffer);
 						sprintf (buffer, "%s = 1", ATTR_CURRENT_HOSTS);
-						ad->Insert(buffer);
+						cad->Insert(buffer);
 						// Break before we fall into the Claiming Logic section below...
 						FREE( claim_id );
 						claim_id = NULL;
@@ -6328,7 +6327,6 @@ Scheduler::StartJobHandler()
 	PROC_ID* job_id=NULL;
 	int cluster, proc;
 	int status;
-	bool use_privsep;
 
 		// clear out our timer id since the hander just went off
 	StartJobTimer = -1;
@@ -8231,16 +8229,16 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 	GetAttributeInt( cluster, proc, ATTR_JOB_STATUS, &job_status );
 
 	if( rec->universe == CONDOR_UNIVERSE_PVM ) {
-		ClassAd *ad;
-		ad = GetNextJob(1);
-		while (ad != NULL) {
+		ClassAd *cad;
+		cad = GetNextJob(1);
+		while (cad != NULL) {
 			PROC_ID tmp_id;
-			ad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
+			cad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
 			if (tmp_id.cluster == cluster) {
-				ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
+				cad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
 				update_remote_wall_clock(tmp_id.cluster, tmp_id.proc);
 			}
-			ad = GetNextJob(0);
+			cad = GetNextJob(0);
 		}
 	} else {
 		if( pid ) {
@@ -9934,7 +9932,7 @@ Scheduler::Init()
 		// that use it (job deferral, crontab). 
 		// Except that this update must be after the queue is initialized
 		//
-	int orig_SchedDInterval = SchedDInterval.getMaxInterval();;
+	double orig_SchedDInterval = SchedDInterval.getMaxInterval();
 
 	SchedDInterval.setDefaultInterval( param_integer( "SCHEDD_INTERVAL", 300 ) );
 	SchedDInterval.setMaxInterval( SchedDInterval.getDefaultInterval() );
@@ -11232,7 +11230,7 @@ Scheduler::HadException( match_rec* mrec )
 // Populates the ClassAd for the schedd
 //
 int
-Scheduler::publish( ClassAd *ad ) {
+Scheduler::publish( ClassAd *cad ) {
 	int ret = (int)true;
 	char *temp;
 	
@@ -11242,34 +11240,34 @@ Scheduler::publish( ClassAd *ad ) {
 		// general case of publish() and should probably be
 		// moved back into dumpState()
 		// -------------------------------------------------------
-	InsertIntoAd ( ad, "MySockName", MySockName );
-	InsertIntoAd ( ad, "MyShadowSockname", MyShadowSockName );
-	InsertIntoAd ( ad, "SchedDInterval", SchedDInterval.getDefaultInterval() );
-	InsertIntoAd ( ad, "QueueCleanInterval", QueueCleanInterval );
-	InsertIntoAd ( ad, "JobStartDelay", JobStartDelay );
-	InsertIntoAd ( ad, "JobStartCount", JobStartCount );
-	InsertIntoAd ( ad, "JobsThisBurst", JobsThisBurst );
-	InsertIntoAd ( ad, "MaxJobsRunning", MaxJobsRunning );
-	InsertIntoAd ( ad, "MaxJobsSubmitted", MaxJobsSubmitted );
-	InsertIntoAd ( ad, "JobsStarted", JobsStarted );
-	InsertIntoAd ( ad, "SwapSpace", SwapSpace );
-	InsertIntoAd ( ad, "ShadowSizeEstimate", ShadowSizeEstimate );
-	InsertIntoAd ( ad, "SwapSpaceExhausted", SwapSpaceExhausted );
-	InsertIntoAd ( ad, "ReservedSwap", ReservedSwap );
-	InsertIntoAd ( ad, "JobsIdle", JobsIdle );
-	InsertIntoAd ( ad, "JobsRunning", JobsRunning );
-	InsertIntoAd ( ad, "BadCluster", BadCluster );
-	InsertIntoAd ( ad, "BadProc", BadProc );
-	InsertIntoAd ( ad, "N_Owners", N_Owners );
-	InsertIntoAd ( ad, "NegotiationRequestTime", NegotiationRequestTime  );
-	InsertIntoAd ( ad, "ExitWhenDone", ExitWhenDone );
-	InsertIntoAd ( ad, "StartJobTimer", StartJobTimer );
-	InsertIntoAd ( ad, "CondorAdministrator", CondorAdministrator );
-	InsertIntoAd ( ad, "AccountantName", AccountantName );
-	InsertIntoAd ( ad, "UidDomain", UidDomain );
-	InsertIntoAd ( ad, "MaxFlockLevel", MaxFlockLevel );
-	InsertIntoAd ( ad, "FlockLevel", FlockLevel );
-	InsertIntoAd ( ad, "MaxExceptions", MaxExceptions );
+	InsertIntoAd ( cad, "MySockName", MySockName );
+	InsertIntoAd ( cad, "MyShadowSockname", MyShadowSockName );
+	InsertIntoAd ( cad, "SchedDInterval", SchedDInterval.getDefaultInterval() );
+	InsertIntoAd ( cad, "QueueCleanInterval", QueueCleanInterval );
+	InsertIntoAd ( cad, "JobStartDelay", JobStartDelay );
+	InsertIntoAd ( cad, "JobStartCount", JobStartCount );
+	InsertIntoAd ( cad, "JobsThisBurst", JobsThisBurst );
+	InsertIntoAd ( cad, "MaxJobsRunning", MaxJobsRunning );
+	InsertIntoAd ( cad, "MaxJobsSubmitted", MaxJobsSubmitted );
+	InsertIntoAd ( cad, "JobsStarted", JobsStarted );
+	InsertIntoAd ( cad, "SwapSpace", SwapSpace );
+	InsertIntoAd ( cad, "ShadowSizeEstimate", ShadowSizeEstimate );
+	InsertIntoAd ( cad, "SwapSpaceExhausted", SwapSpaceExhausted );
+	InsertIntoAd ( cad, "ReservedSwap", ReservedSwap );
+	InsertIntoAd ( cad, "JobsIdle", JobsIdle );
+	InsertIntoAd ( cad, "JobsRunning", JobsRunning );
+	InsertIntoAd ( cad, "BadCluster", BadCluster );
+	InsertIntoAd ( cad, "BadProc", BadProc );
+	InsertIntoAd ( cad, "N_Owners", N_Owners );
+	InsertIntoAd ( cad, "NegotiationRequestTime", NegotiationRequestTime  );
+	InsertIntoAd ( cad, "ExitWhenDone", ExitWhenDone );
+	InsertIntoAd ( cad, "StartJobTimer", StartJobTimer );
+	InsertIntoAd ( cad, "CondorAdministrator", CondorAdministrator );
+	InsertIntoAd ( cad, "AccountantName", AccountantName );
+	InsertIntoAd ( cad, "UidDomain", UidDomain );
+	InsertIntoAd ( cad, "MaxFlockLevel", MaxFlockLevel );
+	InsertIntoAd ( cad, "FlockLevel", FlockLevel );
+	InsertIntoAd ( cad, "MaxExceptions", MaxExceptions );
 	
 		// -------------------------------------------------------
 		// Basic Attributes
@@ -11277,58 +11275,58 @@ Scheduler::publish( ClassAd *ad ) {
 
 	temp = param( "ARCH" );
 	if ( temp ) {
-		InsertIntoAd( ad, ATTR_ARCH, temp );
+		InsertIntoAd( cad, ATTR_ARCH, temp );
 		free( temp );
 	}
 
 	temp = param( "OPSYS" );
 	if ( temp ) {
-		InsertIntoAd( ad, ATTR_OPSYS, temp );
+		InsertIntoAd( cad, ATTR_OPSYS, temp );
 		free( temp );
 	}
 	
 	unsigned long phys_mem = sysapi_phys_memory( );
-	InsertIntoAd( ad, ATTR_MEMORY, phys_mem );
+	InsertIntoAd( cad, ATTR_MEMORY, phys_mem );
 	
 	unsigned long disk_space = sysapi_disk_space( this->LocalUnivExecuteDir );
-	InsertIntoAd( ad, ATTR_DISK, disk_space );
+	InsertIntoAd( cad, ATTR_DISK, disk_space );
 	
 		// -------------------------------------------------------
 		// Local Universe Attributes
 		// -------------------------------------------------------
-	InsertIntoAd( ad, ATTR_TOTAL_LOCAL_IDLE_JOBS,
+	InsertIntoAd( cad, ATTR_TOTAL_LOCAL_IDLE_JOBS,
 				 this->LocalUniverseJobsIdle );
-	InsertIntoAd( ad, ATTR_TOTAL_LOCAL_RUNNING_JOBS,
+	InsertIntoAd( cad, ATTR_TOTAL_LOCAL_RUNNING_JOBS,
 				 this->LocalUniverseJobsRunning );
 	
 		//
 		// Limiting the # of local universe jobs allowed to start
 		//
 	if ( this->StartLocalUniverse ) {
-		MyString temp;
-		temp  = ATTR_START_LOCAL_UNIVERSE;
-		temp += " = ";
-		temp += this->StartLocalUniverse;
-		ad->Insert( temp.Value() );	
+		MyString tempstr;
+		tempstr  = ATTR_START_LOCAL_UNIVERSE;
+		tempstr += " = ";
+		tempstr += this->StartLocalUniverse;
+		cad->Insert( tempstr.Value() );	
 	}
 
 		// -------------------------------------------------------
 		// Scheduler Universe Attributes
 		// -------------------------------------------------------
-	InsertIntoAd( ad, ATTR_TOTAL_SCHEDULER_IDLE_JOBS,
+	InsertIntoAd( cad, ATTR_TOTAL_SCHEDULER_IDLE_JOBS,
 				 this->SchedUniverseJobsIdle );
-	InsertIntoAd( ad, ATTR_TOTAL_SCHEDULER_RUNNING_JOBS,
+	InsertIntoAd( cad, ATTR_TOTAL_SCHEDULER_RUNNING_JOBS,
 				 this->SchedUniverseJobsRunning );
 	
 		//
 		// Limiting the # of scheduler universe jobs allowed to start
 		//
 	if ( this->StartSchedulerUniverse ) {
-		MyString temp;
-		temp  = ATTR_START_SCHEDULER_UNIVERSE;
-		temp += " = ";
-		temp += this->StartSchedulerUniverse;
-		ad->Insert( temp.Value() );	
+		MyString tempstr;
+		tempstr  = ATTR_START_SCHEDULER_UNIVERSE;
+		tempstr += " = ";
+		tempstr += this->StartSchedulerUniverse;
+		cad->Insert( tempstr.Value() );	
 	}
 	
 	return ( ret );
@@ -12178,24 +12176,24 @@ Scheduler::claimLocalStartd()
 		}
 
 			// now get the location of the claim id file
-		char *filename = startdClaimIdFile(slot_id);
-		if (!filename) continue;
+		char *file_name = startdClaimIdFile(slot_id);
+		if (!file_name) continue;
 			// now open it as user condor and read out the claim
 		claim_id[0] = '\0';	// so we notice if we fail to read
 			// note: claim file written w/ condor priv by the startd
 		priv_state old_priv = set_condor_priv(); 
-		FILE* fp=safe_fopen_wrapper(filename,"r");
+		FILE* fp=safe_fopen_wrapper(file_name,"r");
 		if ( fp ) {
 			fscanf(fp,"%150s\n",claim_id);
 			fclose(fp);
 		}
 		set_priv(old_priv);	// switch our priv state back
-		free(filename);
+		free(file_name);
 		claim_id[150] = '\0';	// make certain it is null terminated
 			// if we failed to get the claim, move on
 		if ( !claim_id[0] ) {
 			dprintf(D_ALWAYS,"Failed to read startd claim id from file %s\n",
-				filename);
+				file_name);
 			continue;
 		}
 

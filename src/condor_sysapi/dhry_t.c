@@ -99,7 +99,7 @@ int mips_test(int test_blocksize,
 		"\tis considered a failure.\n");
 	dprintf(D_ALWAYS, 
 		"\tI will run %d test blocks, and if more than %2f%% of those blocks\n",
-		ratio_failed_test_blocks_ok*100);
+		test_blocksize, ratio_failed_test_blocks_ok*100);
 	dprintf(D_ALWAYS, 
 		"\tfail, this entire test fails.\n");
 

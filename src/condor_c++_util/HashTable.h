@@ -111,7 +111,7 @@ HashTable<Index,Value>::HashTable( int tableSz,
 								   duplicateKeyBehavior_t behavior ) :
 	tableSize(tableSz), hashfcn(hashF)
 {
-  int i,j,k;
+  int i;
 
 
   // You MUST specify a hash function.

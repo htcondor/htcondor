@@ -427,17 +427,17 @@ bool transfer_dap(char *dap_id, char *src_url, char *dest_url, const ArgList &ar
 	src_url_value.sprintf("\"%s\"", src_url);
 	dest_url_value.sprintf("\"%s\"", dest_url);
 	// FIXME delete this old userlog writer
+
 	write_xml_user_log(userlogfilename, "MyType", "\"GenericEvent\"", 
 					   "EventTypeNumber", "8", 
 					   "Cluster", dap_id,
 					   "Proc", "-1",
 					   "Subproc", "-1",
 					   "Type", "transfer",
-					   "SrcUrl", (char *)src_url_value.Value(),
-					   "DestUrl", (char *)dest_url_value.Value(),
-					   "Arguments", (char *)args_string.Value(),
+					   "SrcUrl", src_url_value.Value(),
+					   "DestUrl", dest_url_value.Value(),
+					   "Arguments", args_string.Value(),
 					   "CredFile", cred_file_name);
-
 
 	// Open file descriptors for child module.
 	module_stdio_t module_stdio;
@@ -765,18 +765,18 @@ void process_request(classad::ClassAd *currentAd)
 
 			// Create file as user
 			//priv_state old_priv = set_root_priv();
-			std::string owner;
-			if	(	! currentAd->EvaluateAttrString("owner", owner) ||
-					owner.empty()
+			std::string job_owner;
+			if	(	! currentAd->EvaluateAttrString("owner", job_owner) ||
+					job_owner.empty()
 				)
 			{
 				dprintf (D_ALWAYS, "Unable to extract owner for job %s\n",
 						dap_id);
 				return;
 			}
-			if ( ! init_user_ids( owner.c_str(), NULL) ) {
+			if ( ! init_user_ids( job_owner.c_str(), NULL) ) {
 				dprintf (D_ALWAYS, "Unable to switch to owner %s for job %s\n",
-						owner.c_str(), dap_id);
+						job_owner.c_str(), dap_id);
 				return;
 			}
 			priv_state old_priv = set_user_priv();
@@ -1684,9 +1684,9 @@ int list_queue(ReliSock * sock)
 		do {
 			classad::ClassAd * job_ad = dapcollection->GetClassAd (key);
 			if (job_ad) {
-				std::string adbuffer = "";
-				unparser.Unparse(adbuffer, job_ad);
-				result_list.append (adbuffer.c_str());
+				std::string ad_buffer = "";
+				unparser.Unparse(ad_buffer, job_ad);
+				result_list.append (ad_buffer.c_str());
 			}
 		} while (query.Next(key));
 	}

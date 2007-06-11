@@ -451,10 +451,10 @@ CollectorClassStatsList::setHistorySize( int new_size )
 // **********************************************
 
 // Constructor
-CollectorDaemonStatsList::CollectorDaemonStatsList( bool enable,
+CollectorDaemonStatsList::CollectorDaemonStatsList( bool nable,
 													int history_size )
 {
-	enabled = enable;
+	enabled = nable;
 	historySize = history_size;
 	if ( enabled ) {
 		hashTable = new StatsHashTable( STATS_TABLE_SIZE, &hashFunction );
@@ -594,13 +594,13 @@ CollectorDaemonStatsList::setHistorySize( int new_size )
 
 // Enable / disable daemon statistics
 int 
-CollectorDaemonStatsList::enable( bool enable )
+CollectorDaemonStatsList::enable( bool nable )
 {
-	enabled = enable;
-	if ( ( enable ) && ( ! hashTable ) ) {
+	enabled = nable;
+	if ( ( enabled ) && ( ! hashTable ) ) {
 		dprintf( D_ALWAYS, "enable: Creating stats hash table\n" );
 		hashTable = new StatsHashTable( STATS_TABLE_SIZE, &hashFunction );
-	} else if ( ( ! enable ) && ( hashTable ) ) {
+	} else if ( ( ! enabled ) && ( hashTable ) ) {
 		dprintf( D_ALWAYS, "enable: Destroying stats hash table\n" );
 		delete hashTable;
 		hashTable = NULL;

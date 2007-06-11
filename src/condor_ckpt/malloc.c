@@ -1262,9 +1262,9 @@ size_t   public_mUSABLe();
 
 */
 #if __STD_C
-void     public_mSTATs();
+void     public_mSTATs(void);
 #else
-void     public_mSTATs();
+void     public_mSTATs(void);
 #endif
 
 /* mallopt tuning options */
@@ -1506,7 +1506,7 @@ static Void_t** iCOMALLOc(size_t, size_t*, Void_t**);
 static void     cFREe(Void_t*);
 static int      mTRIm(size_t);
 static size_t   mUSABLe(Void_t*);
-static void     mSTATs();
+static void     mSTATs(void);
 static int      mALLOPt(int, int);
 static struct mallinfo mALLINFo(void);
 #else
@@ -2826,7 +2826,7 @@ static Void_t* sYSMALLOc(nb, av) INTERNAL_SIZE_T nb; mstate av;
   char*           old_end;        /* its end address */
 
   long            size;           /* arg to first MORECORE or mmap call */
-  char*           brk;            /* return value from MORECORE */
+  char*           fst_brk;            /* return value from MORECORE */
 
   long            correction;     /* arg to 2nd MORECORE call */
   char*           snd_brk;        /* 2nd return val */
@@ -2918,7 +2918,7 @@ static Void_t* sYSMALLOc(nb, av) INTERNAL_SIZE_T nb; mstate av;
   old_size = chunksize(old_top);
   old_end  = (char*)(chunk_at_offset(old_top, old_size));
 
-  brk = snd_brk = (char*)(MORECORE_FAILURE); 
+  fst_brk = snd_brk = (char*)(MORECORE_FAILURE); 
 
   /* 
      If not the first time through, we require old_size to be
@@ -2966,7 +2966,7 @@ static Void_t* sYSMALLOc(nb, av) INTERNAL_SIZE_T nb; mstate av;
   */
 
   if (size > 0) 
-    brk = (char*)(MORECORE(size));
+    fst_brk = (char*)(MORECORE(size));
 
   /*
     If have mmap, try using it as a backup when MORECORE fails or
@@ -2978,7 +2978,7 @@ static Void_t* sYSMALLOc(nb, av) INTERNAL_SIZE_T nb; mstate av;
   */
 
 #if HAVE_MMAP
-  if (brk == (char*)(MORECORE_FAILURE)) {
+  if (fst_brk == (char*)(MORECORE_FAILURE)) {
 
     /* Cannot merge with old top, so add its size back in */
     if (contiguous(av))
@@ -2991,12 +2991,12 @@ static Void_t* sYSMALLOc(nb, av) INTERNAL_SIZE_T nb; mstate av;
     /* Don't try if size wraps around 0 */
     if ((unsigned long)(size) > (unsigned long)(nb)) {
 
-      brk = (char*)(MMAP(0, size, PROT_READ|PROT_WRITE, MAP_PRIVATE));
+      fst_brk = (char*)(MMAP(0, size, PROT_READ|PROT_WRITE, MAP_PRIVATE));
       
-      if (brk != (char*)(MORECORE_FAILURE)) {
+      if (fst_brk != (char*)(MORECORE_FAILURE)) {
         
         /* We do not need, and cannot use, another sbrk call to find end */
-        snd_brk = brk + size;
+        snd_brk = fst_brk + size;
         
         /* 
            Record that we no longer have a contiguous sbrk region. 
@@ -3010,14 +3010,14 @@ static Void_t* sYSMALLOc(nb, av) INTERNAL_SIZE_T nb; mstate av;
   }
 #endif
 
-  if (brk != (char*)(MORECORE_FAILURE)) {
+  if (fst_brk != (char*)(MORECORE_FAILURE)) {
     av->sbrked_mem += size;
 
     /*
       If MORECORE extends previous space, we can likewise extend top size.
     */
     
-    if (brk == old_end && snd_brk == (char*)(MORECORE_FAILURE)) {
+    if (fst_brk == old_end && snd_brk == (char*)(MORECORE_FAILURE)) {
       set_head(old_top, (size + old_size) | PREV_INUSE);
     }
     
@@ -3044,14 +3044,14 @@ static Void_t* sYSMALLOc(nb, av) INTERNAL_SIZE_T nb; mstate av;
       front_misalign = 0;
       end_misalign = 0;
       correction = 0;
-      aligned_brk = brk;
+      aligned_brk = fst_brk;
       
       /* handle contiguous cases */
       if (contiguous(av)) { 
         
         /* Guarantee alignment of first new chunk made from this space */
 
-        front_misalign = (INTERNAL_SIZE_T)chunk2mem(brk) & MALLOC_ALIGN_MASK;
+        front_misalign = (INTERNAL_SIZE_T)chunk2mem(fst_brk) & MALLOC_ALIGN_MASK;
         if (front_misalign > 0) {
 
           /*
@@ -3074,7 +3074,7 @@ static Void_t* sYSMALLOc(nb, av) INTERNAL_SIZE_T nb; mstate av;
         correction += old_size;
         
         /* Extend the end address to hit a page boundary */
-        end_misalign = (INTERNAL_SIZE_T)(brk + size + correction);
+        end_misalign = (INTERNAL_SIZE_T)(fst_brk + size + correction);
         correction += ((end_misalign + pagemask) & ~pagemask) - end_misalign;
         
         assert(correction >= 0);
@@ -3099,7 +3099,7 @@ static Void_t* sYSMALLOc(nb, av) INTERNAL_SIZE_T nb; mstate av;
       /* handle non-contiguous cases */
       else { 
         /* MORECORE/mmap must correctly align */
-        assert(((unsigned long)chunk2mem(brk) & MALLOC_ALIGN_MASK) == 0);
+        assert(((unsigned long)chunk2mem(fst_brk) & MALLOC_ALIGN_MASK) == 0);
         
         /* Find out current end of memory */
         if (snd_brk == (char*)(MORECORE_FAILURE)) {
@@ -4132,7 +4132,7 @@ Void_t* mEMALIGn(alignment, bytes) size_t alignment; size_t bytes;
   INTERNAL_SIZE_T nb;             /* padded  request size */
   char*           m;              /* memory returned by malloc call */
   mchunkptr       p;              /* corresponding chunk */
-  char*           brk;            /* alignment point within p */
+  char*           ali_brk;        /* alignment point within p */
   mchunkptr       newp;           /* chunk to return */
   INTERNAL_SIZE_T newsize;        /* its size */
   INTERNAL_SIZE_T leadsize;       /* leading space before alignment point */
@@ -4181,13 +4181,13 @@ Void_t* mEMALIGn(alignment, bytes) size_t alignment; size_t bytes;
       total room so that this is always possible.
     */
 
-    brk = (char*)mem2chunk(((unsigned long)(m + alignment - 1)) &
+    ali_brk = (char*)mem2chunk(((unsigned long)(m + alignment - 1)) &
                            -((signed long) alignment));
-    if ((unsigned long)(brk - (char*)(p)) < MINSIZE)
-      brk += alignment;
+    if ((unsigned long)(ali_brk - (char*)(p)) < MINSIZE)
+      ali_brk += alignment;
 
-    newp = (mchunkptr)brk;
-    leadsize = brk - (char*)(p);
+    newp = (mchunkptr)ali_brk;
+    leadsize = ali_brk - (char*)(p);
     newsize = chunksize(p) - leadsize;
 
     /* For mmapped chunks, just adjust offset */

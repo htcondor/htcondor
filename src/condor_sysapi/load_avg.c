@@ -107,6 +107,8 @@ static float kernel_load_avg();
 
 float lookup_load_avg_via_uptime();
 
+void get_k_vars(void);
+
 /*
 ** Where is FSCALE defined on IRIX ?  Apparently nowhere...
 ** The SGI folks apparently use a scaled integer, but where is the scale
@@ -187,11 +189,14 @@ kernel_load_avg(void)
 }
 
 /* just adding get_k_vars to avoid runtime errors */
-get_k_vars()
+void get_k_vars()
 {
 }
 
 #elif defined(IRIX65)
+
+//prototype
+void get_k_vars(void);
 
 /*
 ** Where is FSCALE defined on IRIX ?  Apparently nowhere...
@@ -219,11 +224,14 @@ sysapi_load_avg_raw(void)
 }
 
 /* just adding get_k_vars to avoid runtime errors */
-get_k_vars()
+void get_k_vars()
 {
 }
 
 #elif defined(LINUX)
+
+//prototype
+void get_k_vars(void);
 
 float
 sysapi_load_avg_raw(void)
@@ -320,6 +328,8 @@ static int KernelLookupFailed = 0;
 double kstat_load_avg();
 float lookup_load_avg_via_uptime();
 
+void get_k_vars(void);
+
 float
 sysapi_load_avg_raw(void)
 {
@@ -383,7 +393,7 @@ kstat_load_avg(void)
 }
 
 /* just adding get_k_vars to avoid runtime errors */
-get_k_vars()
+void get_k_vars()
 {
 }
 

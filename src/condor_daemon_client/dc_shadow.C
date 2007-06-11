@@ -33,7 +33,7 @@
 #include "internet.h"
 
 
-DCShadow::DCShadow( const char* name ) : Daemon( DT_SHADOW, name, NULL )
+DCShadow::DCShadow( const char* tName ) : Daemon( DT_SHADOW, tName, NULL )
 {
 	is_initialized = false;
 	shadow_safesock = NULL;

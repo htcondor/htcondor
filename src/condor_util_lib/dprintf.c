@@ -529,8 +529,8 @@ debug_unlock(int debug_level)
 
 	if( DebugFile[debug_level] ) {
 		if (DebugFP) {
-			int result = fclose( DebugFP );
-			if (result < 0) {
+			int close_result = fclose( DebugFP );
+			if (close_result < 0) {
 				DebugUnlockBroken = 1;
 				_condor_dprintf_exit(errno, "Can't fclose debug log file\n");
 			}

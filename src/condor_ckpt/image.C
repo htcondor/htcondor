@@ -289,7 +289,7 @@ SegMap::MSync()
 	int pagesize = getpagesize();
 	for (int i = 0; i < len; i += pagesize) {
 		if (msync((char *)core_loc+i, pagesize, MS_SYNC) < 0) {
-			dprintf( D_ALWAYS, "msync(%x, %d) failed with errno = %d\n",
+			dprintf( D_ALWAYS, "msync(%lx, %d) failed with errno = %d\n",
 					 (unsigned long)core_loc+i, pagesize, errno );
 		}
 	}
@@ -299,9 +299,15 @@ void
 SegMap::Display()
 {
 	DUMP( " ", name, %s );
-	printf( " file_loc = %Lu (0x%X)\n", file_loc, file_loc );
-	printf( " core_loc = %Lu (0x%X)\n", core_loc, core_loc );
-	printf( " len = %d (0x%X)\n", len, len );
+
+	printf(	" file_loc = %lld (0x%llX)\n",
+			(long long)file_loc,
+			(long long)file_loc );
+	printf(	" core_loc = %lu (0x%lX)\n",
+			(unsigned long)core_loc,
+			(unsigned long)core_loc );
+
+	printf( " len = %ld (0x%lX)\n", len, len );
 }
 
 
@@ -490,7 +496,7 @@ Image::Save()
 	int             numsegs, prot, rtn, stackseg=-1;
 #endif
 	RAW_ADDR	data_start, data_end;
-	ssize_t		pos;
+	ssize_t		position;
 	int			i;
 
 #if defined(COMPRESS_CKPT)
@@ -508,13 +514,13 @@ Image::Save()
 		// Set up data segment
 	data_start = data_start_addr();
 	data_end = data_end_addr();
-	dprintf(D_CKPT, "Adding a DATA segment: start[0x%x], end [0x%x]\n",
+	dprintf(D_CKPT, "Adding a DATA segment: start[0x%lx], end [0x%lx]\n",
 		(unsigned long)data_start, (unsigned long)data_end);
 	AddSegment( "DATA", data_start, data_end, 0 );
 
 		// Set up stack segment
 	find_stack_location( stack_start, stack_end );
-	dprintf(D_CKPT, "Adding a STACK segment: start[0x%x], end [0x%x]\n",
+	dprintf(D_CKPT, "Adding a STACK segment: start[0x%lx], end [0x%lx]\n",
 		(unsigned long)stack_start, (unsigned long)stack_end);
 	AddSegment( "STACK", stack_start, stack_end, 0 );
 
@@ -610,19 +616,20 @@ Image::Save()
 #endif
 
 		// Calculate positions of segments in ckpt file
-	pos = sizeof(Header) + head.N_Segs() * sizeof(SegMap);
+	position = sizeof(Header) + head.N_Segs() * sizeof(SegMap);
 	for( i=0; i<head.N_Segs(); i++ ) {
-		pos = map[i].SetPos( pos );
-		dprintf( D_CKPT,"Pos: %d\n",pos);
+		position = map[i].SetPos( position );
+		dprintf( D_CKPT,"Pos: %d\n",position);
 	}
 
-	if( pos < 0 ) {
-		dprintf( D_ALWAYS, "Internal error, ckpt size calculated is %d\n", pos );
+	if( position < 0 ) {
+		dprintf( D_ALWAYS, "Internal error, ckpt size calculated is %d\n",
+													position );
 		Suicide();
 	}
 
-	dprintf( D_ALWAYS, "Size of ckpt image = %d bytes\n", pos );
-	len = pos;
+	dprintf( D_ALWAYS, "Size of ckpt image = %d bytes\n", position );
+	len = position;
 
 	valid = TRUE;
 }
@@ -652,7 +659,7 @@ Image::Display()
 void
 Image::AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end, int prot )
 {
-	RAW_ADDR	len = end - start;
+	RAW_ADDR	length = end - start;
 	int idx = head.N_Segs();
 
 	if( idx >= MAX_SEGS ) {
@@ -661,12 +668,12 @@ Image::AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end, int prot )
 	}
 
 	dprintf(D_CKPT, 
-		"Image::AddSegment: name=[%s], start=[%p], end=[%p], len=[0x%x], "
+		"Image::AddSegment: name=[%s], start=[%p], end=[%p], length=[0x%lx], "
 		"prot=[0x%x]\n", 
-		name, (void*)start, (void*)end, (unsigned long)len, prot);
+		name, (void*)start, (void*)end, (unsigned long)length, prot);
 
 	head.IncrSegs();
-	map[idx].Init( name, start, len, prot );
+	map[idx].Init( name, start, length, prot );
 }
 
 char *
@@ -966,16 +973,9 @@ Image::MSync()
 int
 Image::Write( const char *ckpt_file )
 {
-	int	fd;
-	int	status;
+	int	file_d;
 	int	scm;
-	int bytes_read;
 	char	tmp_name[ _POSIX_PATH_MAX ];
-#if defined(ALPHA)
-	unsigned int  nbytes;		// 32 bit unsigned
-#else
-	unsigned long  nbytes;		// 32 bit unsigned
-#endif
 
 	if( ckpt_file == 0 ) {
 		ckpt_file = file_name;
@@ -994,17 +994,17 @@ Image::Write( const char *ckpt_file )
 	 * in a signal handler; open_url calls malloc() and this messes up
 	 * checkpointing on SGI IRIX6 bigtime!!  so it is commented out for
 	 * now until we get rid of all mallocs in open_url() -Todd T, 2/97 */
-	// if( (fd=open_url(ckpt_file,O_WRONLY|O_TRUNC|O_CREAT)) < 0 ) {
+	// if( (file_d=open_url(ckpt_file,O_WRONLY|O_TRUNC|O_CREAT)) < 0 ) {
 		sprintf( tmp_name, "%s.tmp", ckpt_file );
 		dprintf( D_ALWAYS, "Tmp name is \"%s\"\n", tmp_name );
 #if defined(COMPRESS_CKPT)
 		/* If we are writing a compressed checkpoint, we don't send the file
 		   size, since we don't know it yet.  The file transfer code accepts
 		   a file size of -1 to mean that the size is unknown. */
-		if ((fd = open_ckpt_file(tmp_name, O_WRONLY|O_TRUNC|O_CREAT,
+		if ((file_d = open_ckpt_file(tmp_name, O_WRONLY|O_TRUNC|O_CREAT,
 								 condor_compress_ckpt ? -1 : len)) < 0)  {
 #else
-		if ((fd = open_ckpt_file(tmp_name, O_WRONLY|O_TRUNC|O_CREAT,
+		if ((file_d = open_ckpt_file(tmp_name, O_WRONLY|O_TRUNC|O_CREAT,
 								 len)) < 0)  {
 #endif
 			dprintf( D_ALWAYS, "ERROR:open_ckpt_file failed, aborting ckpt\n");
@@ -1014,14 +1014,14 @@ Image::Write( const char *ckpt_file )
 	// }  // this is the matching brace to the open_url; see comment above
 
 		// Write out the checkpoint
-	if( Write(fd) < 0 ) {
+	if( Write(file_d) < 0 ) {
 		SetSyscalls(scm);
 		return -1;
 	}
 
 		// Have to check close() in AFS
-	dprintf( D_ALWAYS, "About to close ckpt fd (%d)\n", fd );
-	if( close(fd) < 0 ) {
+	dprintf( D_ALWAYS, "About to close ckpt fd (%d)\n", file_d );
+	if( close(file_d) < 0 ) {
 		dprintf( D_ALWAYS, "Close failed!\n" );
 		SetSyscalls(scm);
 		return -1;
@@ -1053,10 +1053,10 @@ Image::Write( const char *ckpt_file )
   file, a remote file, or another process (for direct migration).
 */
 int
-Image::Write( int fd )
+Image::Write( int file_d )
 {
 	int		i;
-	int		pos = 0;
+	int		position = 0;
 	int		nbytes;
 	int		ack;
 	int		status;
@@ -1068,18 +1068,18 @@ Image::Write( int fd )
 #endif
 
 		// Write out the header
-	if( (nbytes=write(fd,&head,sizeof(head))) < 0 ) {
+	if( (nbytes=write(file_d,&head,sizeof(head))) < 0 ) {
 		return -1;
 	}
-	pos += nbytes;
+	position += nbytes;
 	dprintf( D_ALWAYS, "Wrote headers OK\n" );
 
 		// Write out the SegMaps
-	if( (nbytes=write(fd,map,sizeof(SegMap)*head.N_Segs()))
+	if( (nbytes=write(file_d,map,sizeof(SegMap)*head.N_Segs()))
 		!= sizeof(SegMap)*head.N_Segs() ) {
 		return -1;
 	}
-	pos += nbytes;
+	position += nbytes;
 	dprintf( D_ALWAYS, "Wrote all SegMaps OK\n" );
 
 #if defined(COMPRESS_CKPT)
@@ -1108,13 +1108,13 @@ Image::Write( int fd )
 		// Write out the Segments
 	for( i=0; i<head.N_Segs(); i++ ) {
 /*		map[i].Display();*/
-		if( (nbytes=map[i].Write(fd,pos)) < 0 ) {
+		if( (nbytes=map[i].Write(file_d,position)) < 0 ) {
 			dprintf( D_ALWAYS, "Write() Segment[%d] of type %s -> FAILED\n", i,
 				map[i].GetName() );
 			dprintf( D_ALWAYS, "errno = %d, nbytes = %d\n", errno, nbytes );
 			return -1;
 		}
-		pos += nbytes;
+		position += nbytes;
 		dprintf( D_ALWAYS, "Wrote Segment[%d] of type %s -> OK\n", i, map[i].GetName() );
 	}
 
@@ -1132,7 +1132,7 @@ Image::Write( int fd )
 		for (bytes_to_go = (zbufsize-zstr->avail_out), ptr = zbuf;
 			 bytes_to_go > 0;
 			 bytes_to_go -= rval, ptr += rval, zstr->avail_out += rval) {
-			rval = write(fd,ptr,bytes_to_go);
+			rval = write(file_d,ptr,bytes_to_go);
 			if (rval < 0) {
 				dprintf(D_ALWAYS, "write failed with errno %d in "
 						"SegMap::Write\n", errno);
@@ -1172,7 +1172,7 @@ Image::Write( int fd )
 #else
 	if( _condor_in_file_stream ) {
 #endif
-		status = net_read( fd, &ack, sizeof(ack) );
+		status = net_read( file_d, &ack, sizeof(ack) );
 		if( status < 0 ) {
 			dprintf( D_ALWAYS, "Can't read final ack from the shadow\n" );
 			return -1;
@@ -1256,12 +1256,9 @@ SegMap::Read( int fd, ssize_t pos )
 	int		read_size;
 	long	saved_len = len;
 	RAW_ADDR	saved_core_loc = core_loc;
-	int segSize;
-	int zfd;
-	char *segLoc;
-
+	
 	if( pos != file_loc ) {
-		dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %d)\n", pos,
+		dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %lld)\n", pos,
 				 file_loc );
 		Suicide();
 	}
@@ -1281,7 +1278,11 @@ SegMap::Read( int fd, ssize_t pos )
 
 #if defined(HAS_DYNAMIC_USER_JOBS)
 	else if ( mystrcmp(name,"SHARED LIB") == 0) {
-		segSize = len;
+		//these variables declared here b/c only used in this $if defined
+		int segSize = len;
+		int zfd;
+		char *segLoc;
+		
 		segLoc = (char *)core_loc;
 		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
 			dprintf( D_ALWAYS,
@@ -1426,8 +1427,8 @@ SegMap::Read( int fd, ssize_t pos )
 		if( nbytes <= 0 ) {
 			dprintf(D_ALWAYS, "in Segmap::Read(): fd = %d, read_size=%d\n", fd,
 				read_size);
-			dprintf(D_ALWAYS, "core_loc=%x, nbytes=%d, errno=%d(%s)\n",
-				core_loc, nbytes, errno, strerror(errno));
+			dprintf(D_ALWAYS, "core_loc=%lx, nbytes=%d, errno=%d(%s)\n",
+				(unsigned long)core_loc, nbytes, errno, strerror(errno));
 			return -1;
 		}
 		bytes_to_go -= nbytes;
@@ -1441,7 +1442,7 @@ ssize_t
 SegMap::Write( int fd, ssize_t pos )
 {
 	if( pos != file_loc ) {
-		dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %d)\n",
+		dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %lld)\n",
 				 pos, file_loc );
 		Suicide();
 	}
@@ -1485,7 +1486,7 @@ SegMap::Write( int fd, ssize_t pos )
 		return len;
 	}
 #endif
-	dprintf( D_ALWAYS, "write(fd=%d,core_loc=0x%x,len=0x%x)\n",
+	dprintf( D_ALWAYS, "write(fd=%d,core_loc=0x%lx,len=0x%lx)\n",
 			fd, core_loc, len );
 
 	int bytes_to_go = len, nbytes;

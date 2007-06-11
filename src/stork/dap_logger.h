@@ -43,13 +43,17 @@ void write_collection_log(classad::ClassAdCollection *dapcollection, char *dap_i
 
 void write_xml_log(char *logfilename, classad::ClassAd *classad, const char *status);
 
-void write_xml_user_log(char *logfilename,char *param1, char *value1, char
-		*param2 = NULL, char *value2 = NULL, char *param3 = NULL, char *value3
-		= NULL, char *param4 = NULL, char *value4 = NULL, char *param5 = NULL,
-		char *value5 = NULL, char *param6 = NULL, char *value6 = NULL, char
-		*param7 = NULL, char *value7 = NULL,char *param8 = NULL, char *value8 =
-		NULL,char *param9 = NULL, char *value9 = NULL,
-		char *param10 = NULL, char *value10 = NULL);
+void write_xml_user_log(char *logfilename,
+			const char *param1, const char *value1,
+			const char *param2 = NULL, const char *value2 = NULL,
+			const char *param3 = NULL, const char *value3 = NULL,
+			const char *param4 = NULL, const char *value4 = NULL,
+			const char *param5 = NULL, const char *value5 = NULL,
+			const char *param6 = NULL, const char *value6 = NULL,
+			const char *param7 = NULL, const char *value7 = NULL,
+			const char *param8 = NULL, const char *value8 = NULL,
+			const char *param9 = NULL, const char *value9 = NULL,
+			const char *param10 = NULL, const char *value10 = NULL);
 bool
 user_log(	const classad::ClassAd *ad,
 			const enum ULogEventNumber eventNum);

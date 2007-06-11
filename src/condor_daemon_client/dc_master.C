@@ -33,7 +33,7 @@
 #include "internet.h"
 
 
-DCMaster::DCMaster( const char* name ) : Daemon( DT_MASTER, name, NULL )
+DCMaster::DCMaster( const char* tName ) : Daemon( DT_MASTER, tName, NULL )
 {
 	m_is_initialized = false;
 	m_master_safesock = NULL;

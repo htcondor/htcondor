@@ -96,11 +96,11 @@ Credential::GetData (void *& pData, int & size) {
   if (data == NULL)
     return FALSE;
 
-  int data_size = GetDataSize();
+  int dataSize = GetDataSize();
 
-  pData = malloc (data_size);
-  memcpy (pData, data, data_size);
-  size = data_size;
+  pData = malloc (dataSize);
+  memcpy (pData, data, dataSize);
+  size = dataSize;
   return TRUE;
 }
 

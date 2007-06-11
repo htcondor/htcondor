@@ -55,7 +55,7 @@ int idle_time_test(int trials, int interval, int tolerance, double warn_ok_ratio
 	dprintf(D_ALWAYS, "        If the new idle time is something other than the old idle time "
 					"+/- %d seconds,\n", tolerance);
 	dprintf(D_ALWAYS, "        a warning is issued. If warnings are issued more than %d%% of the "
-					"time this test fails.\n");
+					"time this test fails.\n", (int)(warn_ok_ratio * 100) );
 	for (i=0; i<trials; i++) {
 		// Make sure to sleep for interval seconds
 		unslept = interval;

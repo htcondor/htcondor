@@ -81,10 +81,10 @@ stork_print_usage(
 	bool remote_connect
 )
 {
-	char *my_name = NULL;
+	const char *my_name = NULL;
 	my_name = strrchr( argv0, DIR_DELIM_CHAR );
 	if( !my_name ) {
-		my_name = (char *)argv0;
+		my_name = argv0;
 	} else {
 		my_name++;
 	}
@@ -241,8 +241,10 @@ stork_submit (
 		return FALSE;
 	}
 	free (_request);
+	
+	int _cred_size = cred_size;		//de-const
 
-	sock->code ((int*)&cred_size);
+	sock->code (&_cred_size);
 	if (cred_size) {
 		char * _cred = strdup (cred);  
 		sock->code_bytes (_cred, cred_size);

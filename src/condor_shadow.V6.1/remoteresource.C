@@ -139,8 +139,8 @@ RemoteResource::activateClaim( int starterVersion )
 	    (jobAd->LookupString( ATTR_X509_USER_PROXY, &proxy ) == 1) ) {
 		dprintf( D_FULLDEBUG,
 	                 "trying early delegation (for glexec) of proxy: %s\n", proxy );
-		int reply = dc_startd->delegateX509Proxy( proxy );
-		if( reply == OK ) {
+		int dReply = dc_startd->delegateX509Proxy( proxy );
+		if( dReply == OK ) {
 			// early delegation was successful. this means the startd
 			// is going to launch the starter using glexec, so we need
 			// to add the user to our ALLOW_DAEMON list. for now, we'll
@@ -157,7 +157,7 @@ RemoteResource::activateClaim( int starterVersion )
 			dprintf( D_FULLDEBUG,
 			         "successfully delegated user proxy to the startd\n" );
 		}
-		else if( reply == NOT_OK ) {
+		else if( dReply == NOT_OK ) {
 			dprintf( D_FULLDEBUG,
 			         "proxy delegation waived by startd\n" );
 		}
@@ -1102,10 +1102,10 @@ RemoteResource::printSuspendStats( int debug_level )
 
 
 void
-RemoteResource::resourceExit( int exit_reason, int exit_status )
+RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 {
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::resourceExit()\n" );
-	setExitReason( exit_reason );
+	setExitReason( reason_for_exit );
 
 	if( exit_value == -1 ) {
 			/* 
@@ -1605,8 +1605,8 @@ RemoteResource::checkX509Proxy( void )
 	
 	StatInfo si(proxy_path.Value());
 	time_t lastmod = si.GetModifyTime();
-	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %d, local %d (%d difference)\n",
-		last_proxy_timestamp, lastmod, lastmod - last_proxy_timestamp);
+	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %ld, local %ld (%ld difference)\n",
+		(long)last_proxy_timestamp, (long)lastmod, lastmod - last_proxy_timestamp);
 	if(lastmod <= last_proxy_timestamp) {
 		// No change.
 		return;

@@ -351,15 +351,15 @@ main(int argc, char* argv[])
 	  if(st == FAILURE) {
 	        printf( "-- Database at %s not reachable\n", dbIpAddr);
 		if(!remotequill) {
-		  char *tmp = param("HISTORY");
-	  if (!customFormat) {
-		  printf( "--Failing over to the history file at %s instead --\n",
-				  tmp ? tmp : "(null)" );
-	  }
-		  if(!tmp) {
-			free(tmp);
-		  }
-		  readfromfile = true;
+			char *tmp_hist = param("HISTORY");
+			if (!customFormat) {
+				printf( "--Failing over to the history file at %s instead --\n",
+						tmp_hist ? tmp_hist : "(null)" );
+			}
+			if(!tmp_hist) {
+				free(tmp_hist);
+			}
+			readfromfile = true;
 	  	}
 	  }
 		  // query history table

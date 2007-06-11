@@ -153,8 +153,9 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 			filename += "_XXXXXXXXX";
 			new_dir = strdup( filename.Value() );
 			dprintf( D_SECURITY, "FS_REMOTE: client template is %s\n", new_dir );
-			mktemp(new_dir);
-			if (!*new_dir) {
+
+			int sync_fd = condor_mkstemp(new_dir);
+			if( sync_fd < 0 ) {
 				// path must be invalid?
 				//
 				// this means that mktemp set new_dir to the empty string.  we
@@ -164,9 +165,14 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 				// empty.
 				int en = errno;  // strerror could replace errno!
 				errstack->pushf("FS_REMOTE", 1002,
-						"mktemp(%s) failed: %s (%i)",
+						"condor_mkstemp(%s) failed: %s (%i)",
 						filename.Value(), strerror(en), en);
+				*new_dir = 0;				//the other process will expect an
+											//empty string on failure, so make
+											//the first char be null
 			} else {
+				::close( sync_fd );
+				unlink( new_dir );
 				dprintf( D_SECURITY, "FS_REMOTE: client filename is %s\n", new_dir );
 			}
 		} else {
@@ -181,8 +187,9 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 			filename += "/FS_XXXXXXXXX";
 			new_dir = strdup( filename.Value() );
 			dprintf( D_SECURITY, "FS: client template is %s\n", new_dir );
-			mktemp(new_dir);
-			if (!*new_dir) {
+
+			int sync_fd = condor_mkstemp(new_dir);
+			if( sync_fd < 0 ) {
 				// path must be invalid?
 				//
 				// this means that mktemp set new_dir to the empty string.  we
@@ -192,9 +199,14 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 				// empty.
 				int en = errno;  // strerror could replace errno!
 				errstack->pushf("FS", 1002,
-						"mktemp(%s) failed: %s (%i)",
+						"condor_mkstemp(%s) failed: %s (%i)",
 						filename.Value(), strerror(en), en);
+				*new_dir = 0;				//the other process will expect an
+											//empty string on failure, so make
+											//the first char be null
 			} else {
+				::close( sync_fd );
+				unlink( new_dir );
 				dprintf( D_SECURITY, "FS: client filename is %s\n", new_dir );
 			}			
 		}

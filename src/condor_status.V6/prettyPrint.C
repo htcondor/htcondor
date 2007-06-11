@@ -171,7 +171,7 @@ void
 printStartdNormal (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static AttrListPrintMask alpm; 
 	int    now;
 	int	   actvty;
 
@@ -197,18 +197,18 @@ printStartdNormal (ClassAd *ad)
 					ATTR_NAME, opsys_name, arch_name, ATTR_STATE, ATTR_ACTIVITY, 
 					ATTR_LOAD_AVG, "Mem", "ActvtyTime");
 		
-			pm.registerFormat("%-18.18s ", ATTR_NAME, "[???????????] ");
-			pm.registerFormat("%-10.10s " , opsys_attr, "[?????????] ");
-			pm.registerFormat("%-6.6s " , arch_attr, "[????] ");
-			pm.registerFormat("%-9.9s ",  ATTR_STATE), "[????????] ";
-			pm.registerFormat("%-8.8s ",  ATTR_ACTIVITY, "[????????] ");
-			pm.registerFormat("%.3f  ",  ATTR_LOAD_AVG, "[???]  ");
-			pm.registerFormat("%4d",  ATTR_MEMORY, "[??]  ");
+			alpm.registerFormat("%-18.18s ", ATTR_NAME, "[???????????] ");
+			alpm.registerFormat("%-10.10s " , opsys_attr, "[?????????] ");
+			alpm.registerFormat("%-6.6s " , arch_attr, "[????] ");
+			alpm.registerFormat("%-9.9s ",  ATTR_STATE), "[????????] ";
+			alpm.registerFormat("%-8.8s ",  ATTR_ACTIVITY, "[????????] ");
+			alpm.registerFormat("%.3f  ",  ATTR_LOAD_AVG, "[???]  ");
+			alpm.registerFormat("%4d",  ATTR_MEMORY, "[??]  ");
 
 			first = false;
 		}
 
-		pm.display(stdout, ad);
+		alpm.display(stdout, ad);
 		if (ad->LookupInteger(ATTR_ENTERED_CURRENT_ACTIVITY, actvty)
 			&& (ad->LookupInteger(ATTR_MY_CURRENT_TIME, now) ||
 				ad->LookupInteger(ATTR_LAST_HEARD_FROM, now))) {
@@ -225,7 +225,7 @@ void
 printServer (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static AttrListPrintMask alpm;
 
 	if (ad)
 	{
@@ -237,19 +237,19 @@ printServer (ClassAd *ad)
 				ATTR_NAME, ATTR_OPSYS, ATTR_ARCH, ATTR_LOAD_AVG, ATTR_MEMORY, 
 				ATTR_DISK, ATTR_MIPS, ATTR_KFLOPS);
 		
-			pm.registerFormat("%-13.13s ", ATTR_NAME, "[???????????] ");
-			pm.registerFormat("%-11.11s " , ATTR_OPSYS, "[?????????] ");
-			pm.registerFormat("%-6.6s " , ATTR_ARCH, "[????] ");
-			pm.registerFormat("%.3f  ",  ATTR_LOAD_AVG, "[???]  ");
-			pm.registerFormat("%6d  ",  ATTR_MEMORY, "[????]  ");
-			pm.registerFormat("%7d ",  ATTR_DISK, "[?????]");
-			pm.registerFormat("%10d ", ATTR_MIPS, "[????????] ");
-			pm.registerFormat("%10d\n", ATTR_KFLOPS, "[????????]\n");
+			alpm.registerFormat("%-13.13s ", ATTR_NAME, "[???????????] ");
+			alpm.registerFormat("%-11.11s " , ATTR_OPSYS, "[?????????] ");
+			alpm.registerFormat("%-6.6s " , ATTR_ARCH, "[????] ");
+			alpm.registerFormat("%.3f  ",  ATTR_LOAD_AVG, "[???]  ");
+			alpm.registerFormat("%6d  ",  ATTR_MEMORY, "[????]  ");
+			alpm.registerFormat("%7d ",  ATTR_DISK, "[?????]");
+			alpm.registerFormat("%10d ", ATTR_MIPS, "[????????] ");
+			alpm.registerFormat("%10d\n", ATTR_KFLOPS, "[????????]\n");
 
 			first = false;
 		}
 
-		pm.display (stdout, ad);
+		alpm.display (stdout, ad);
 	}
 }
 
@@ -257,7 +257,7 @@ void
 printState (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static AttrListPrintMask alpm; 
 
 	if (ad)
 	{
@@ -271,27 +271,27 @@ printState (ClassAd *ad)
 				"KbdIdle", ATTR_STATE, "StateTime",
 				ATTR_ACTIVITY, "ActvtyTime");
 		
-			pm.registerFormat("%-10.10s ", ATTR_NAME, "[????????] ");
-			pm.registerFormat("%3d " , ATTR_CPUS, "[??] ");
-			pm.registerFormat("%5d " , ATTR_MEMORY, "[???] ");
-			pm.registerFormat("%.3f ", ATTR_LOAD_AVG, "[???]  ");
-			pm.registerFormat( (IntCustomFmt) format_time,
+			alpm.registerFormat("%-10.10s ", ATTR_NAME, "[????????] ");
+			alpm.registerFormat("%3d " , ATTR_CPUS, "[??] ");
+			alpm.registerFormat("%5d " , ATTR_MEMORY, "[???] ");
+			alpm.registerFormat("%.3f ", ATTR_LOAD_AVG, "[???]  ");
+			alpm.registerFormat( (IntCustomFmt) format_time,
 									ATTR_KEYBOARD_IDLE,
 									"[??????????] ");
-			pm.registerFormat(" %-7.7s ",  ATTR_STATE, "[????????]  ");
-			pm.registerFormat( (IntCustomFmt) formatElapsedTime, 
+			alpm.registerFormat(" %-7.7s ",  ATTR_STATE, "[????????]  ");
+			alpm.registerFormat( (IntCustomFmt) formatElapsedTime, 
 									ATTR_ENTERED_CURRENT_STATE,
 									"[??????????] ");
-			pm.registerFormat(" %-4.4s ",  ATTR_ACTIVITY, "[????????]  ");
-			pm.registerFormat( (IntCustomFmt) formatElapsedTime, 
+			alpm.registerFormat(" %-4.4s ",  ATTR_ACTIVITY, "[????????]  ");
+			alpm.registerFormat( (IntCustomFmt) formatElapsedTime, 
 									ATTR_ENTERED_CURRENT_ACTIVITY,
 									"[??????????] ");
-			pm.registerFormat("\n", "*bogus*", "\n");  // force newline
+			alpm.registerFormat("\n", "*bogus*", "\n");  // force newline
 
 			first = false;
 		}
 
-		pm.display (stdout, ad);
+		alpm.display (stdout, ad);
 	}
 }
 
@@ -299,7 +299,7 @@ void
 printRun (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static AttrListPrintMask alpm; 
 
 	char *opsys_attr, *arch_attr;
 	char *opsys_name, *arch_name;
@@ -322,19 +322,19 @@ printRun (ClassAd *ad)
 				ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG, 
 				ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
 		
-			pm.registerFormat("%-13.13s ", ATTR_NAME, "[???????????] ");
-			pm.registerFormat("%-11.11s " , opsys_attr, "[?????????] ");
-			pm.registerFormat("%-6.6s " , arch_attr, "[????] ");
-			pm.registerFormat("%-.3f  ",  ATTR_LOAD_AVG, "[???]  ");
-			pm.registerFormat("%-20.20s ", ATTR_REMOTE_USER, 
+			alpm.registerFormat("%-13.13s ", ATTR_NAME, "[???????????] ");
+			alpm.registerFormat("%-11.11s " , opsys_attr, "[?????????] ");
+			alpm.registerFormat("%-6.6s " , arch_attr, "[????] ");
+			alpm.registerFormat("%-.3f  ",  ATTR_LOAD_AVG, "[???]  ");
+			alpm.registerFormat("%-20.20s ", ATTR_REMOTE_USER, 
 													"[??????????????????] ");
-			pm.registerFormat("%-15.15s\n", ATTR_CLIENT_MACHINE, 
+			alpm.registerFormat("%-15.15s\n", ATTR_CLIENT_MACHINE, 
 													"[?????????????]\n");
 
 			first = false;
 		}
 
-		pm.display (stdout, ad);
+		alpm.display (stdout, ad);
 	}
 }
 
@@ -416,7 +416,7 @@ printCOD (ClassAd *ad)
 void
 printQuillNormal (ClassAd *ad) {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static AttrListPrintMask alpm; 
 
 	if (ad)
 	{
@@ -427,18 +427,18 @@ printQuillNormal (ClassAd *ad) {
 				ATTR_NAME, ATTR_MACHINE, ATTR_QUILL_SQL_TOTAL, 
 				ATTR_QUILL_SQL_LAST_BATCH);
 		
-			pm.registerFormat("%-20.20s ", ATTR_NAME, 
+			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
 													"[??????????????????] ");
-			pm.registerFormat("%-10.10s ", ATTR_MACHINE, 
+			alpm.registerFormat("%-10.10s ", ATTR_MACHINE, 
 													"[????????] ");
-			pm.registerFormat("%16d ",ATTR_QUILL_SQL_TOTAL,
+			alpm.registerFormat("%16d ",ATTR_QUILL_SQL_TOTAL,
 													"[??????????????] ");
-			pm.registerFormat("%18d\n",ATTR_QUILL_SQL_LAST_BATCH, 
+			alpm.registerFormat("%18d\n",ATTR_QUILL_SQL_LAST_BATCH, 
 													"[???????????]\n");
 			first = false;
 		}
 
-		pm.display (stdout, ad);
+		alpm.display (stdout, ad);
 	}
 }
 #endif /* WANT_QUILL */
@@ -447,7 +447,7 @@ void
 printScheddNormal (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static AttrListPrintMask alpm; 
 
 	if (ad)
 	{
@@ -458,20 +458,20 @@ printScheddNormal (ClassAd *ad)
 				ATTR_NAME, ATTR_MACHINE, ATTR_TOTAL_RUNNING_JOBS, 
 				ATTR_TOTAL_IDLE_JOBS, ATTR_TOTAL_HELD_JOBS);
 		
-			pm.registerFormat("%-20.20s ", ATTR_NAME, 
+			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
 													"[??????????????????] ");
-			pm.registerFormat("%-10.10s ", ATTR_MACHINE, 
+			alpm.registerFormat("%-10.10s ", ATTR_MACHINE, 
 													"[????????] ");
-			pm.registerFormat("%16d ",ATTR_TOTAL_RUNNING_JOBS,
+			alpm.registerFormat("%16d ",ATTR_TOTAL_RUNNING_JOBS,
 													"[??????????????] ");
-			pm.registerFormat("%13d ",ATTR_TOTAL_IDLE_JOBS, 
+			alpm.registerFormat("%13d ",ATTR_TOTAL_IDLE_JOBS, 
 													"[???????????] ");
-			pm.registerFormat("%14d\n",ATTR_TOTAL_HELD_JOBS,"[????????????]\n");
+			alpm.registerFormat("%14d\n",ATTR_TOTAL_HELD_JOBS,"[????????????]\n");
 
 			first = false;
 		}
 
-		pm.display (stdout, ad);
+		alpm.display (stdout, ad);
 	}
 }
 
@@ -480,7 +480,7 @@ void
 printScheddSubmittors (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static AttrListPrintMask alpm; 
 
 	if (ad)
 	{
@@ -491,18 +491,18 @@ printScheddSubmittors (ClassAd *ad)
 				ATTR_NAME, ATTR_MACHINE, "Running", ATTR_IDLE_JOBS, 
 				ATTR_HELD_JOBS);
 		
-			pm.registerFormat("%-20.20s ", ATTR_NAME, 
+			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
 													"[??????????????????] ");
-			pm.registerFormat("%-10.10s  ", ATTR_MACHINE, 
+			alpm.registerFormat("%-10.10s  ", ATTR_MACHINE, 
 													"[????????]  ");
-			pm.registerFormat("%8d ", ATTR_RUNNING_JOBS, "[??????] ");
-			pm.registerFormat("%8d ", ATTR_IDLE_JOBS, "[??????] ");
-			pm.registerFormat("%8d\n", ATTR_HELD_JOBS, "[???????]\n");
+			alpm.registerFormat("%8d ", ATTR_RUNNING_JOBS, "[??????] ");
+			alpm.registerFormat("%8d ", ATTR_IDLE_JOBS, "[??????] ");
+			alpm.registerFormat("%8d\n", ATTR_HELD_JOBS, "[???????]\n");
 
 			first = false;
 		}
 
-		pm.display (stdout, ad);
+		alpm.display (stdout, ad);
 	}
 }
 
@@ -510,7 +510,7 @@ void
 printCollectorNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static AttrListPrintMask alpm; 
 
 	if (ad)
 	{
@@ -521,18 +521,18 @@ printCollectorNormal(ClassAd *ad)
 				ATTR_NAME, ATTR_MACHINE, "Running", ATTR_IDLE_JOBS, 
 				ATTR_NUM_HOSTS_TOTAL);
 		
-			pm.registerFormat("%-20.20s ", ATTR_NAME, 
+			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
 													"[??????????????????] ");
-			pm.registerFormat("%-20.20s ", ATTR_MACHINE, 
+			alpm.registerFormat("%-20.20s ", ATTR_MACHINE, 
 													"[??????????????????] ");
-			pm.registerFormat("%8d ", ATTR_RUNNING_JOBS, " [?????] ");
-			pm.registerFormat("%8d  ", ATTR_IDLE_JOBS, " [?????]  ");
-			pm.registerFormat("%8d\n", ATTR_NUM_HOSTS_TOTAL, "[?????]\n");
+			alpm.registerFormat("%8d ", ATTR_RUNNING_JOBS, " [?????] ");
+			alpm.registerFormat("%8d  ", ATTR_IDLE_JOBS, " [?????]  ");
+			alpm.registerFormat("%8d\n", ATTR_NUM_HOSTS_TOTAL, "[?????]\n");
 
 			first = false;
 		}
 
-		pm.display (stdout, ad);
+		alpm.display (stdout, ad);
 	}
 }
 
@@ -540,19 +540,19 @@ void
 printMasterNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm;
+	static AttrListPrintMask alpm;
 
 	if (ad)
 	{
 		// print header if necessary
 		if (first)
 		{
-			pm.registerFormat("%s\n",ATTR_NAME,"[??????????????????]");
+			alpm.registerFormat("%s\n",ATTR_NAME,"[??????????????????]");
 			first = false;
 		}
 	}
 
-	pm.display (stdout, ad);
+	alpm.display (stdout, ad);
 }
 
 
@@ -560,7 +560,7 @@ void
 printCkptSrvrNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm;
+	static AttrListPrintMask alpm;
 
 	if (ad)
 	{
@@ -569,14 +569,14 @@ printCkptSrvrNormal(ClassAd *ad)
 		{
 			printf ("\n%-20.20s %-9.9s %-11.11s\n\n", ATTR_NAME,
 					"AvailDisk", ATTR_SUBNET);
-			pm.registerFormat("%-20.20s ", ATTR_NAME, "[??????????????????]");
-			pm.registerFormat("%9d ", ATTR_DISK, "[?????]");
-			pm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
+			alpm.registerFormat("%-20.20s ", ATTR_NAME, "[??????????????????]");
+			alpm.registerFormat("%9d ", ATTR_DISK, "[?????]");
+			alpm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
 			first = false;
 		}
 	}
 
-	pm.display (stdout, ad);
+	alpm.display (stdout, ad);
 }
 
 
@@ -584,7 +584,7 @@ void
 printStorageNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm;
+	static AttrListPrintMask alpm;
 
 	if (ad)
 	{
@@ -593,21 +593,21 @@ printStorageNormal(ClassAd *ad)
 		{
 			printf ("\n%-30.30s %-9.9s %-11.11s\n\n", ATTR_NAME,
 					"AvailDisk", ATTR_SUBNET);
-			pm.registerFormat("%-30.30s ", ATTR_NAME, "[??????????????????]");
-			pm.registerFormat("%9d ", ATTR_DISK, "[?????]");
-			pm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
+			alpm.registerFormat("%-30.30s ", ATTR_NAME, "[??????????????????]");
+			alpm.registerFormat("%9d ", ATTR_DISK, "[?????]");
+			alpm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
 			first = false;
 		}
 	}
 
-	pm.display (stdout, ad);
+	alpm.display (stdout, ad);
 }
 
 void
 printNegotiatorNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm;
+	static AttrListPrintMask alpm;
 
 	if (ad)
 	{
@@ -617,16 +617,16 @@ printNegotiatorNormal(ClassAd *ad)
 			printf ("\n%-20.20s %-20.20s\n\n",
 				ATTR_NAME, ATTR_MACHINE);
 		
-			pm.registerFormat("%-20.20s ", ATTR_NAME, 
+			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
 													"[??????????????????] ");
-			pm.registerFormat("%-20.20s ", ATTR_MACHINE, 
+			alpm.registerFormat("%-20.20s ", ATTR_MACHINE, 
 													"[??????????????????] ");
 
 			first = false;
 		}
 	}
 
-	pm.display (stdout, ad);
+	alpm.display (stdout, ad);
 }
 
 /*

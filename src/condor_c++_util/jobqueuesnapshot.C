@@ -146,7 +146,7 @@ JobQueueSnapshot::getNextClusterAd(const char*& cluster_id, ClassAd*& ad)
 		//same goes for the case where cluster_id is not equal to cid - 
 		//this case comes up when we get a new cluster ad
 	if (cluster_id == NULL || strcmp(cluster_id, cid) != 0) {
-		cluster_id = (char*)cid;
+		cluster_id = cid;
 		curProcId = NULL;
 	}
 		//FAILURE case as each time we consume all attributes of the ad

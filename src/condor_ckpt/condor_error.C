@@ -48,8 +48,10 @@ static void _condor_message( const char *text )
 		syscall( SYS_write, 2, "\n", 1 );
 		SetSyscalls(scm);
 	} else {
-		REMOTE_CONDOR_report_error( (char*)text );
-		dprintf(D_ALWAYS,(char*)text);
+		char* _text = strdup( text );		//de-const
+		REMOTE_CONDOR_report_error( _text );
+		dprintf(D_ALWAYS, _text);
+		free( _text );						//b/c of strdup
 	}
 }
 

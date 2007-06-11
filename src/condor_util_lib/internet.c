@@ -44,7 +44,7 @@ int bindWithin(const int fd, const int low_port, const int high_port);
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  TCP */
 /* (Also allow strings of the form "<hostname>:pppp>")  */
 int
-string_to_sin( const char *addr, struct sockaddr_in *sin )
+string_to_sin( const char *addr, struct sockaddr_in *sa_in )
 {
 	char    *cur_byte;
 	char    *end_string;
@@ -71,14 +71,14 @@ string_to_sin( const char *addr, struct sockaddr_in *sin )
 	if ( is_ipaddr(string,NULL) != TRUE &&	// only call gethostbyname if not numbers
 		((hostptr=condor_gethostbyname(string)) != NULL && hostptr->h_addrtype==AF_INET) )
 	{
-			sin->sin_addr = *(struct in_addr *)(hostptr->h_addr_list[0]);
+			sa_in->sin_addr = *(struct in_addr *)(hostptr->h_addr_list[0]);
 			string = colon + 1;
 	}
 	else
 	{	
 		/* parse the string in the traditional <xxx.yyy.zzz.aaa> form ... */	
 		*colon = ':';
-		cur_byte = (char *) &(sin->sin_addr);
+		cur_byte = (char *) &(sa_in->sin_addr);
 		for(end_string = string; end_string != 0; ) {
 			end_string = strchr(string, '.');
 			if (end_string == 0) {
@@ -96,8 +96,8 @@ string_to_sin( const char *addr, struct sockaddr_in *sin )
 	}
 	
 	string[strlen(string) - 1] = '\0'; /* Chop off the trailing '>' */
-	sin->sin_port = htons((short)atoi(string));
-	sin->sin_family = AF_INET;
+	sa_in->sin_port = htons((short)atoi(string));
+	sa_in->sin_family = AF_INET;
 	string[temp-1] = '>';
 	string[temp] = '\0';
 	*colon = ':';
@@ -107,20 +107,20 @@ string_to_sin( const char *addr, struct sockaddr_in *sin )
 
 
 char *
-sin_to_string(const struct sockaddr_in *sin)
+sin_to_string(const struct sockaddr_in *sa_in)
 {
 	static  char    buf[SINFUL_STRING_BUF_SIZE];
 
 	buf[0] = '\0';
-	if (!sin) return buf;
+	if (!sa_in) return buf;
 	buf[0] = '<';
 	buf[1] = '\0';
-    if (sin->sin_addr.s_addr == INADDR_ANY) {
+    if (sa_in->sin_addr.s_addr == INADDR_ANY) {
         strcat(buf, my_ip_string());
     } else {
-        strcat(buf, inet_ntoa(sin->sin_addr));
+        strcat(buf, inet_ntoa(sa_in->sin_addr));
     }
-    sprintf(&buf[strlen(buf)], ":%d>", ntohs(sin->sin_port));
+    sprintf(&buf[strlen(buf)], ":%d>", ntohs(sa_in->sin_port));
     return buf;
 }
 
@@ -231,7 +231,7 @@ struct sockaddr_in  *from;
 }
 
 char *
-calc_subnet_name()
+calc_subnet_name(void)
 {
 	char			subnetname[MAXHOSTNAMELEN];
 	char			*subnet_ptr;
@@ -569,14 +569,14 @@ string_to_hostname( const char* addr )
 {
 	char *tmp;
 	static char result[MAXHOSTNAMELEN];
-    struct sockaddr_in sin;
+    struct sockaddr_in sa_in;
 
 	if( ! (addr && is_valid_sinful(addr)) ) {
 		return NULL;
 	}
 
-    string_to_sin( addr, &sin );
-	if( (tmp = sin_to_hostname(&sin, NULL)) ) {
+    string_to_sin( addr, &sa_in );
+	if( (tmp = sin_to_hostname(&sa_in, NULL)) ) {
 		strncpy( result, tmp, MAXHOSTNAMELEN );
 	} else {
 		return NULL;
@@ -604,11 +604,11 @@ _condor_local_bind( int is_outgoing, int fd )
         else
 			return FALSE;
 	} else {
-		struct sockaddr_in sin;
+		struct sockaddr_in sa_in;
 
-		memset( (char *)&sin, 0, sizeof(sin) );
-		sin.sin_family = AF_INET;
-		sin.sin_port = 0;
+		memset( (char *)&sa_in, 0, sizeof(sa_in) );
+		sa_in.sin_family = AF_INET;
+		sa_in.sin_port = 0;
 			/*
 			  we don't want to honor BIND_ALL_INTERFACES == true in
 			  here.  this code is only used in the ckpt server (which
@@ -618,11 +618,11 @@ _condor_local_bind( int is_outgoing, int fd )
 			  binding to all interfaces in here...
 			  Derek <wright@cs.wisc.edu> 2005-09-20
 			*/
-		sin.sin_addr.s_addr = htonl(INADDR_ANY);
+		sa_in.sin_addr.s_addr = htonl(INADDR_ANY);
 
-		if( bind(fd, (struct sockaddr*)&sin, sizeof(sin)) < 0 ) {
+		if( bind(fd, (struct sockaddr*)&sa_in, sizeof(sa_in)) < 0 ) {
 			dprintf( D_ALWAYS, "ERROR: bind(%s:%d) failed, errno: %d\n",
-					 inet_ntoa(sin.sin_addr), sin.sin_port, errno );
+					 inet_ntoa(sa_in.sin_addr), sa_in.sin_port, errno );
 			return FALSE;
 		}
 	}
@@ -644,14 +644,14 @@ int bindWithin(const int fd, const int low_port, const int high_port)
 
     this_trial = start_trial;
 	do {
-		struct sockaddr_in sin;
+		struct sockaddr_in sa_in;
 		priv_state old_priv;
 		int bind_return_value;
 
-		memset(&sin, 0, sizeof(sin));
-		sin.sin_family = AF_INET;
-		sin.sin_addr.s_addr = htonl(INADDR_ANY);
-		sin.sin_port = htons((u_short)this_trial++);
+		memset(&sa_in, 0, sizeof(sa_in));
+		sa_in.sin_family = AF_INET;
+		sa_in.sin_addr.s_addr = htonl(INADDR_ANY);
+		sa_in.sin_port = htons((u_short)this_trial++);
 
 // windows doesn't have privileged ports.
 #ifndef WIN32
@@ -661,7 +661,7 @@ int bindWithin(const int fd, const int low_port, const int high_port)
 			old_priv = set_root_priv();
 		}
 #endif
-		bind_return_value = bind(fd, (struct sockaddr *)&sin, sizeof(sin));
+		bind_return_value = bind(fd, (struct sockaddr *)&sa_in, sizeof(sa_in));
 #ifndef WIN32
 		if (this_trial <= 1024) {
 			set_priv (old_priv);
@@ -698,20 +698,20 @@ int
 in_same_net(uint32_t ipA, uint32_t ipB)
 {
     unsigned char *byteA, *fA, *byteB;
-    int i, index;
+    int i, index_to;
 
     fA = byteA = (char *)&ipA;
     byteB = (char *)&ipB;
 
     if (*fA < 128) { // A class
-        index = 1;
+        index_to = 1;
     } else if(*fA < 192) { // B class
-        index = 2;
+        index_to = 2;
     } else {    // C class
-        index = 3;
+        index_to = 3;
     }
 
-    for (i = 0; i < index; i++) {
+    for (i = 0; i < index_to; i++) {
         if (*byteA != *byteB) {
             return 0;
         }
@@ -871,16 +871,16 @@ struct sockaddr_in *
 getSockAddr(int sockfd)
 {
     // do getsockname
-    static struct sockaddr_in sin;
-    SOCKET_LENGTH_TYPE namelen = sizeof(sin);
-    if (getsockname(sockfd, (struct sockaddr *)&sin, &namelen) < 0) {
+    static struct sockaddr_in sa_in;
+    SOCKET_LENGTH_TYPE namelen = sizeof(sa_in);
+    if (getsockname(sockfd, (struct sockaddr *)&sa_in, &namelen) < 0) {
         dprintf(D_ALWAYS, "failed getsockname(%d): %s\n", sockfd, strerror(errno));
         return NULL;
     }
     // if getsockname returns INADDR_ANY, we rely upon my_ip_addr() since returning
     // 0.0.0.0 is not a good idea.
-    if (sin.sin_addr.s_addr == ntohl(INADDR_ANY)) {
-        sin.sin_addr.s_addr = htonl(my_ip_addr());
+    if (sa_in.sin_addr.s_addr == ntohl(INADDR_ANY)) {
+        sa_in.sin_addr.s_addr = htonl(my_ip_addr());
     }
-    return &sin;
+    return &sa_in;
 }

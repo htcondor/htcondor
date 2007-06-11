@@ -30,7 +30,10 @@
 #include "condor_netdb.h"
 #include <string.h>
 
-static char* getserveraddr();
+static char* getserveraddr(void);
+void StripPrefix(const char* pathname,
+				char filename[MAX_CONDOR_FILENAME_LENGTH]);
+int get_ckpt_server_count(void);
 
 
 void StripPrefix(const char* pathname,

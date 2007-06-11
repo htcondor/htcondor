@@ -208,10 +208,10 @@ void Accountant::Initialize()
 			// for now, skip records that are "group" customer records. 
 			// TODO: we should fix the below sanity check code so it understands
 			// fixing up group customer records as well.
-		char *user = &(key[CustomerRecord.Length()]);
-		if (GroupNamesList && GroupNamesList->contains_anycase(user)) continue;
+		char *thisUser = &(key[CustomerRecord.Length()]);
+		if (GroupNamesList && GroupNamesList->contains_anycase(thisUser)) continue;
 			// if we made it here, append to our list of users
-		users.append( user );
+		users.append( thisUser );
 	  }
 		// ok, now StringList users has all the users.  for each user,
 		// compare what the customer record claims for usage -vs- actual

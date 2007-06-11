@@ -39,7 +39,7 @@ ReliSock *qmgmt_sock = NULL;
 static Qmgr_connection connection;
 
 Qmgr_connection *
-ConnectQ(char *qmgr_location, int timeout, bool read_only, CondorError* errstack )
+ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* errstack )
 {
 	int		rval, ok;
 

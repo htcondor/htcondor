@@ -215,7 +215,7 @@ produce_output()
 void
 check_spool_dir()
 {
-    int             history_length;
+    unsigned int	history_length;
 	const char  	*f;
     const char      *history;
 	Directory  		dir(Spool, PRIV_ROOT);
@@ -277,7 +277,7 @@ check_spool_dir()
 			// StringList, instead of actually deleting it.  This way,
 			// if DisconnectQ() fails, we can abort and not actually
 			// delete any of these files.  -Derek Wright 3/31/99
-		bad_spool_files.append( (char*)f );
+		bad_spool_files.append( f );
 	}
 
 	if( DisconnectQ(qmgr) ) {

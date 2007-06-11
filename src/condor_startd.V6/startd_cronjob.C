@@ -41,7 +41,7 @@ StartdCronJob::~StartdCronJob( )
 }
 
 int
-StartdCronJob::Publish( const char *name, ClassAd *ad )
+StartdCronJob::Publish( const char *ad_name, ClassAd *ad )
 {
 		// first, update the ad in the ResMgr, so we have the new
 		// values.  we only want to do the (somewhat expensive)
@@ -51,7 +51,7 @@ StartdCronJob::Publish( const char *name, ClassAd *ad )
 	if( auto_publish == CAP_IF_CHANGED ) { 
 		report_diff = true;
 	}
-	int rval = resmgr->adlist_replace( name, ad, report_diff );
+	int rval = resmgr->adlist_replace( ad_name, ad, report_diff );
 
 		// now, figure out if we need to update the collector based on
 		// the startd_cron_autopublish stuff and if the ad changed...

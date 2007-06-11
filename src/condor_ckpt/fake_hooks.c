@@ -21,7 +21,10 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
+//prototypes
+int user_restore_pre(char*, int);
+int user_restore_post(char*, int);
+
 
 int user_restore_pre(char *a, int b) {return 0;}
 

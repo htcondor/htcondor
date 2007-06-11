@@ -1694,19 +1694,19 @@ SetImageSize()
 void SetFileOptions()
 {
 	char *tmp;
-	MyString buffer;
+	MyString strbuffer;
 
 	tmp = condor_param( FileRemaps, ATTR_FILE_REMAPS );
 	if(tmp) {
-		buffer.sprintf("%s = %s",ATTR_FILE_REMAPS,tmp);
-		InsertJobExpr(buffer.Value());
+		strbuffer.sprintf("%s = %s",ATTR_FILE_REMAPS,tmp);
+		InsertJobExpr(strbuffer.Value());
 		free(tmp);
 	}
 
 	tmp = condor_param( BufferFiles, ATTR_BUFFER_FILES );
 	if(tmp) {
-		buffer.sprintf("%s = %s",ATTR_BUFFER_FILES,tmp);
-		InsertJobExpr(buffer.Value());
+		strbuffer.sprintf("%s = %s",ATTR_BUFFER_FILES,tmp);
+		InsertJobExpr(strbuffer.Value());
 		free(tmp);
 	}
 
@@ -1719,8 +1719,8 @@ void SetFileOptions()
 			tmp = strdup("524288");
 		}
 	}
-	buffer.sprintf("%s = %s",ATTR_BUFFER_SIZE,tmp);
-	InsertJobExpr(buffer.Value());
+	strbuffer.sprintf("%s = %s",ATTR_BUFFER_SIZE,tmp);
+	InsertJobExpr(strbuffer.Value());
 	free(tmp);
 
 	/* If not buffer block size is given, use 32 KB */
@@ -1732,8 +1732,8 @@ void SetFileOptions()
 			tmp = strdup("32768");
 		}
 	}
-	buffer.sprintf("%s = %s",ATTR_BUFFER_BLOCK_SIZE,tmp);
-	InsertJobExpr(buffer.Value());
+	strbuffer.sprintf("%s = %s",ATTR_BUFFER_BLOCK_SIZE,tmp);
+	InsertJobExpr(strbuffer.Value());
 	free(tmp);
 }
 
@@ -2459,7 +2459,7 @@ SetJavaVMArgs()
 {
 	ArgList args;
 	MyString error_msg;
-	MyString buffer;
+	MyString strbuffer;
 	MyString value;
 	char *args1 = condor_param(JavaVMArgs); // for backward compatibility
 	char *args1_ext=condor_param(JavaVMArguments1,ATTR_JOB_JAVA_VM_ARGS1);
@@ -2511,17 +2511,17 @@ SetJavaVMArgs()
 	if(args.InputWasV1() || args.CondorVersionRequiresV1(MySchedd->version())) {
 		args_success = args.GetArgsStringV1Raw(&value,&error_msg);
 		if(!value.IsEmpty()) {
-			buffer.sprintf("%s = \"%s\"",ATTR_JOB_JAVA_VM_ARGS1,
+			strbuffer.sprintf("%s = \"%s\"",ATTR_JOB_JAVA_VM_ARGS1,
 						   value.EscapeChars("\"",'\\').Value());
-			InsertJobExpr (buffer.Value());
+			InsertJobExpr (strbuffer.Value());
 		}
 	}
 	else {
 		args_success = args.GetArgsStringV2Raw(&value,&error_msg);
 		if(!value.IsEmpty()) {
-			buffer.sprintf("%s = \"%s\"",ATTR_JOB_JAVA_VM_ARGS2,
+			strbuffer.sprintf("%s = \"%s\"",ATTR_JOB_JAVA_VM_ARGS2,
 						   value.EscapeChars("\"",'\\').Value());
-			InsertJobExpr (buffer.Value());
+			InsertJobExpr (strbuffer.Value());
 		}
 	}
 
@@ -2562,7 +2562,7 @@ SetStdFile( int which_file )
 	char	*macro_value = NULL;
 	char	*macro_value2 = NULL;
 	char	*generic_name;
-	char	 buffer[_POSIX_PATH_MAX + 32];
+	char	 strbuffer[_POSIX_PATH_MAX + 32];
 
 	switch( which_file ) 
 	{
@@ -2638,41 +2638,41 @@ SetStdFile( int which_file )
 	switch( which_file ) 
 	{
 	case 0:
-		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_INPUT, macro_value);
-		InsertJobExpr (buffer);
+		(void) sprintf (strbuffer, "%s = \"%s\"", ATTR_JOB_INPUT, macro_value);
+		InsertJobExpr (strbuffer);
 		if ( transfer_it ) {
 			check_open( macro_value, O_RDONLY );
-			sprintf( buffer, "%s = %s", ATTR_STREAM_INPUT, stream_it ? "TRUE" : "FALSE" );
-			InsertJobExpr( buffer );
+			sprintf( strbuffer, "%s = %s", ATTR_STREAM_INPUT, stream_it ? "TRUE" : "FALSE" );
+			InsertJobExpr( strbuffer );
 		} else {
-			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_INPUT );
-			InsertJobExpr( buffer );
+			sprintf( strbuffer, "%s = FALSE", ATTR_TRANSFER_INPUT );
+			InsertJobExpr( strbuffer );
 		}
 		break;
 	case 1:
-		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_OUTPUT, macro_value);
-		InsertJobExpr (buffer);
+		(void) sprintf (strbuffer, "%s = \"%s\"", ATTR_JOB_OUTPUT, macro_value);
+		InsertJobExpr (strbuffer);
 		if ( transfer_it ) {
 			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
-			sprintf( buffer, "%s = %s", ATTR_STREAM_OUTPUT, stream_it ? "TRUE" : "FALSE" );
-			InsertJobExpr( buffer );
+			sprintf( strbuffer, "%s = %s", ATTR_STREAM_OUTPUT, stream_it ? "TRUE" : "FALSE" );
+			InsertJobExpr( strbuffer );
 			stream_stdout_toggle = stream_it;
 		} else {
-			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_OUTPUT );
-			InsertJobExpr( buffer );
+			sprintf( strbuffer, "%s = FALSE", ATTR_TRANSFER_OUTPUT );
+			InsertJobExpr( strbuffer );
 		}
 		break;
 	case 2:
-		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ERROR, macro_value);
-		InsertJobExpr (buffer);
+		(void) sprintf (strbuffer, "%s = \"%s\"", ATTR_JOB_ERROR, macro_value);
+		InsertJobExpr (strbuffer);
 		if ( transfer_it ) {
 			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
-			sprintf( buffer, "%s = %s", ATTR_STREAM_ERROR, stream_it ? "TRUE" : "FALSE" );
-			InsertJobExpr( buffer );
+			sprintf( strbuffer, "%s = %s", ATTR_STREAM_ERROR, stream_it ? "TRUE" : "FALSE" );
+			InsertJobExpr( strbuffer );
 			stream_stderr_toggle = stream_it;
 		} else {
-			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_ERROR );
-			InsertJobExpr( buffer );
+			sprintf( strbuffer, "%s = FALSE", ATTR_TRANSFER_ERROR );
+			InsertJobExpr( strbuffer );
 		}
 		break;
 	}
@@ -3263,16 +3263,16 @@ SetArguments()
 		exit(1);
 	}
 
-	MyString buffer;
+	MyString strbuffer;
 	MyString value;
 	if(arglist.InputWasV1() || arglist.CondorVersionRequiresV1(MySchedd->version())) {
 		args_success = arglist.GetArgsStringV1Raw(&value,&error_msg);
-		buffer.sprintf("%s = \"%s\"",ATTR_JOB_ARGUMENTS1,
+		strbuffer.sprintf("%s = \"%s\"",ATTR_JOB_ARGUMENTS1,
 					   value.EscapeChars("\"",'\\').Value());
 	}
 	else {
 		args_success = arglist.GetArgsStringV2Raw(&value,&error_msg);
-		buffer.sprintf("%s = \"%s\"",ATTR_JOB_ARGUMENTS2,
+		strbuffer.sprintf("%s = \"%s\"",ATTR_JOB_ARGUMENTS2,
 					   value.EscapeChars("\"",'\\').Value());
 	}
 
@@ -3283,7 +3283,7 @@ SetArguments()
 		exit(1);
 	}
 
-	InsertJobExpr (buffer.Value());
+	InsertJobExpr (strbuffer.Value());
 
 	if( JobUniverse == CONDOR_UNIVERSE_JAVA && arglist.Count() == 0)
 	{

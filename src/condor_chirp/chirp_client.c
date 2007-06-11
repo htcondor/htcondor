@@ -58,7 +58,7 @@ for details.
 
 static SOCKET tcp_connect( const char *host, int port );
 static void chirp_fatal_request( const char *name );
-static void chirp_fatal_response();
+static void chirp_fatal_response(void);
 static int get_result( FILE *s );
 static int convert_result( int response );
 static int simple_command(struct chirp_client *c,char const *fmt,...);
@@ -66,7 +66,7 @@ static void vsprintf_chirp(char *command,char const *fmt,va_list args);
 static char const *read_url_param(char const *url,char *buffer,size_t length);
 
 static int sockets_initialized = 0;
-static int initialize_sockets();
+static int initialize_sockets(void);
 //static int shutdown_sockets();
 
 

@@ -28,6 +28,9 @@
 #include "stdio.h"
 #include "math.h"
 
+int virt_memory_test(int test_blocksize, double max_sd_varation_ratio,
+					 					double max_failed_test_ratio);
+
 int virt_memory_test(int	test_blocksize,
 					 double max_sd_varation_ratio, 
 					 double max_failed_test_ratio)
@@ -68,7 +71,7 @@ int virt_memory_test(int	test_blocksize,
 
 			raw_mean += raw_test[j];
 
-			dprintf(D_ALWAYS, "SysAPI: Testblock %d, test %d: Raw swap space: %d KB\n", 
+			dprintf(D_ALWAYS, "SysAPI: Testblock %d, test %d: Raw swap space: %ld KB\n", 
 							i, j, raw_test[j]);
 
 			if (raw_test[j] <= 0) {
@@ -129,7 +132,7 @@ int virt_memory_test(int	test_blocksize,
 
 			mean += test[j];
 
-			dprintf(D_ALWAYS, "SysAPI: Testblock %d, test %d: cooked swap space: %d\n", 
+			dprintf(D_ALWAYS, "SysAPI: Testblock %d, test %d: cooked swap space: %ld\n", 
 							i, j, test[j]);
 
 			if (raw_test[j] <= 0) {

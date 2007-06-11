@@ -1468,7 +1468,7 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 	if ( filetrans ) {
 		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
 		execsz = starter_dir.GetDirectorySize();
-		sprintf( buf, "%s=%u", ATTR_DISK_USAGE, (execsz+1023)/1024 ); 
+		sprintf( buf, "%s=%lu", ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) ); 
 		ad->InsertOrUpdate( buf );
 	}
 

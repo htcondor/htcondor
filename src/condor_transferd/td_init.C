@@ -247,7 +247,6 @@ int
 TransferD::setup_transfer_request_handler(int cmd, Stream *sock)
 {
 	ReliSock *rsock = (ReliSock*)sock;
-	int hello = -1;
 	MyString sock_id;
 
 	dprintf(D_ALWAYS, "Got TRANSFER_CONTROL_CHANNEL!\n");
@@ -291,11 +290,15 @@ TransferD::setup_transfer_request_handler(int cmd, Stream *sock)
 
 	sock_id += "<TreqChannel-Socket>";
 
+	char* _sock_id = strdup( sock_id.Value() );		//de-const
+
 	// register the handler for any future transfer requests on this socket.
-	daemonCore->Register_Socket((Sock*)rsock, (char*)sock_id.Value(),
+	daemonCore->Register_Socket((Sock*)rsock, _sock_id,
 		(SocketHandlercpp)&TransferD::accept_transfer_request_handler,
 		"TransferD::accept_transfer_request_handler", this, ALLOW);
-
+	
+	free( _sock_id );
+	
 	dprintf(D_ALWAYS, "Treq channel established.\n");
 	dprintf(D_ALWAYS, "Accepting Transfer Requests.\n");
 
@@ -376,7 +379,6 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 	ClassAd *ad = NULL;
 	TransferRequest *treq = NULL;
 	MyString cap;
-	char *tmp = NULL;
 	ClassAd respad;
 
 	dprintf(D_ALWAYS,

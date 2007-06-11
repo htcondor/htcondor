@@ -28,7 +28,7 @@
 #include "self_draining_queue.h"
 
 
-SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int period,
+SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int per,
 									  ServiceDataCompare fn_ptr )
 	: queue( 32, fn_ptr )
 {
@@ -46,7 +46,7 @@ SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int period,
 	this->compare_fn = fn_ptr;
 	service_ptr = NULL;
 
-	this->period = period;
+	this->period = per;
 	tid = -1;
 }
 
@@ -72,7 +72,7 @@ SelfDrainingQueue::~SelfDrainingQueue()
 
 
 bool
-SelfDrainingQueue::registerHandler( ServiceDataHandler handler_fn )
+SelfDrainingQueue::registerHandler( ServiceDataHandler handle_fn )
 {
 	if( handlercpp_fn ) {
 		handlercpp_fn = NULL;
@@ -80,29 +80,29 @@ SelfDrainingQueue::registerHandler( ServiceDataHandler handler_fn )
 	if( service_ptr ) {
 		service_ptr = NULL;
 	}
-	this->handler_fn = handler_fn;
+	this->handler_fn = handle_fn;
 	return true;
 }
 
 
 bool
 SelfDrainingQueue::registerHandlercpp( ServiceDataHandlercpp 
-									   handlercpp_fn, 
-									   Service* service_ptr )
+									   handlecpp_fn, 
+									   Service* serve_ptr )
 {
 	if( handler_fn ) {
 		handler_fn = NULL;
 	}
-	this->handlercpp_fn = handlercpp_fn;
-	this->service_ptr = service_ptr;
+	this->handlercpp_fn = handlecpp_fn;
+	this->service_ptr = serve_ptr;
 	return true;
 }
 
 
 bool
-SelfDrainingQueue::registerCompareFunc( ServiceDataCompare compare_fn )
+SelfDrainingQueue::registerCompareFunc( ServiceDataCompare compare_reg_fn )
 {
-	this->compare_fn = compare_fn;
+	this->compare_fn = compare_reg_fn;
 	return true;
 }
 

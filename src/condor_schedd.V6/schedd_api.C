@@ -40,10 +40,10 @@
 
 
 
-Job::Job(PROC_ID id):
+Job::Job(PROC_ID pro_id):
 	declaredFiles(64, MyStringHash, rejectDuplicateKeys)
 {
-	this->id = id;
+	this->id = pro_id;
 }
 
 Job::~Job()
@@ -164,10 +164,10 @@ FileInfo::~FileInfo()
 }
 
 int
-FileInfo::initialize(const char *name, filesize_t size)
+FileInfo::initialize(const char *fName, filesize_t fSize)
 {
-	this->size = size;
-	this->name = strdup(name);
+	this->size = fSize;
+	this->name = strdup(fName);
 
 	return NULL == this->name;
 }
@@ -554,10 +554,10 @@ ScheddTransactionManager::destroyTransaction(int id)
 }
 
 
-ScheddTransaction::ScheddTransaction(const char *owner):
+ScheddTransaction::ScheddTransaction(const char *trans_owner):
 	jobs(32, hashFuncPROC_ID, rejectDuplicateKeys)
 {
-	this->owner = owner ? strdup(owner) : NULL;
+	this->owner = trans_owner ? strdup(trans_owner) : NULL;
 	duration = 0;
 	trans_timer_id = -1;
 	qmgmt_state = NULL;
@@ -624,8 +624,8 @@ ScheddTransaction::newJob(int clusterId, int &id, CondorError &errstack)
 		PROC_ID pid; pid.cluster = clusterId; pid.proc = id;
 		Job *job = new Job(pid);
 		ASSERT(job);
-		CondorError errstack;
-		if (job->initialize(errstack)) {
+		CondorError error_stack;
+		if (job->initialize(error_stack)) {
 			return -2; // XXX: Cleanup? How do you undo NewProc?
 		} else {
 			if (this->jobs.insert(pid, job)) {
@@ -699,7 +699,7 @@ ScheddTransaction::getOwner()
 	   NullScheddTransaction, used when no ScheddTransaction is available...
 *****************************************************************************/
 
-NullScheddTransaction::NullScheddTransaction(const char *owner):
+NullScheddTransaction::NullScheddTransaction(const char *trans_owner):
 	ScheddTransaction(NULL)
 {
 }

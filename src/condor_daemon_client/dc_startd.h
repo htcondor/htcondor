@@ -130,7 +130,7 @@ public:
 
 	bool checkpointJob( const char* name );
 
-	bool getAds( ClassAdList &adsList, const char* name );
+	bool getAds( ClassAdList &adsList );
 
  private:
 	char* claim_id;

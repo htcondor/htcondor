@@ -341,7 +341,7 @@ int CondorFileCompress::write( int offset, char *data, int length )
 
 /* Write data to the current logical offset.  If flush==Z_FINISH, push all the data out. */
 
-int CondorFileCompress::write_data( char *data, int length, int flush )
+int CondorFileCompress::write_data( char *data, int length, int flushData )
 {
 	int result;
 	int failure=0;
@@ -351,9 +351,9 @@ int CondorFileCompress::write_data( char *data, int length, int flush )
 	stream.avail_in = length;
 
 	while(1) {
-		deflate( &stream, flush );
+		deflate( &stream, flushData );
 
-		if( flush==Z_NO_FLUSH ) {
+		if( flushData==Z_NO_FLUSH ) {
 			if( stream.avail_in==0 ) break;
 		} else {
 			if( stream.avail_out==COMPRESS_BUFFER_SIZE ) break;

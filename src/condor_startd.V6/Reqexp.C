@@ -31,9 +31,9 @@
 #include "condor_common.h"
 #include "startd.h"
 
-Reqexp::Reqexp( Resource* rip )
+Reqexp::Reqexp( Resource* res_ip )
 {
-	this->rip = rip;
+	this->rip = res_ip;
 	MyString tmp;
 
 	tmp.sprintf("%s = (%s) && (%s)", 

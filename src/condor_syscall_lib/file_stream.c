@@ -147,7 +147,7 @@ open_file_stream( const char *file, int flags, size_t *len )
 int
 open_tcp_stream( unsigned int ip_addr, unsigned short port )
 {
-	struct sockaddr_in	sin;
+	struct sockaddr_in	sa_in;
 	int		fd;
 	int		status;
 	int		scm;
@@ -169,12 +169,12 @@ open_tcp_stream( unsigned int ip_addr, unsigned short port )
 
 		/* Now, set the remote address. */
 	ip_addr = htonl( ip_addr );
-	memset( &sin, '\0', sizeof sin );
-	memcpy( &sin.sin_addr, &ip_addr, sizeof(ip_addr) );
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons( port );
+	memset( &sa_in, '\0', sizeof sa_in );
+	memcpy( &sa_in.sin_addr, &ip_addr, sizeof(ip_addr) );
+	sa_in.sin_family = AF_INET;
+	sa_in.sin_port = htons( port );
 	dprintf( D_FULLDEBUG, "Internet address structure set up\n" );
-	status = connect( fd, (struct sockaddr *)&sin, sizeof(sin) );
+	status = connect( fd, (struct sockaddr *)&sa_in, sizeof(sa_in) );
 	if( status < 0 ) {
 		dprintf( D_ALWAYS, "connect() failed - errno = %d\n", errno );
 		SetSyscalls( scm );

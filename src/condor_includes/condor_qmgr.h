@@ -59,7 +59,7 @@ int InitializeReadOnlyConnection(const char * );
 	       authenticate step for connections which don't modify the queue
 	@return opaque Qmgr_connection structure
 */		 
-Qmgr_connection *ConnectQ(char *qmgr_location, int timeout=0, 
+Qmgr_connection *ConnectQ(const char *qmgr_location, int timeout=0, 
 				bool read_only=false, CondorError* errstack=NULL );
 
 /** Close the connection to the schedd job queue, and optionally commit

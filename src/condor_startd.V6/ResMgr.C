@@ -1803,15 +1803,15 @@ ResMgr::processAllocList( void )
 void
 ResMgr::check_use( void ) 
 {
-	int now = time(NULL);
+	int cur_time = time(NULL);
 	if( hasAnyClaim() ) {
-		last_in_use = now;
+		last_in_use = cur_time;
 	}
 	if( ! startd_noclaim_shutdown ) {
 			// Nothing to do.
 		return;
 	}
-	if( now - last_in_use > startd_noclaim_shutdown ) {
+	if( cur_time - last_in_use > startd_noclaim_shutdown ) {
 			// We've been unused for too long, send a SIGTERM to our
 			// parent, the condor_master. 
 		dprintf( D_ALWAYS, 

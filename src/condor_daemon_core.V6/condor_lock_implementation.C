@@ -39,33 +39,33 @@ CondorLockImpl::CondorLockImpl( void )
 }
 
 // Basic CondorLockImpl constructor
-CondorLockImpl::CondorLockImpl( Service		*app_service,
-								LockEvent	lock_event_acquired,
-								LockEvent	lock_event_lost,
-								time_t		poll_period,
-								time_t		lock_hold_time,
-								bool		auto_refresh )
+CondorLockImpl::CondorLockImpl( Service		*ap_service,
+								LockEvent	le_acquired,
+								LockEvent	le_lost,
+								time_t		poll_per,
+								time_t		lock_ht,
+								bool		auto_re )
 {
 		// Quick sanity check
-	if ( (!app_service) && ( lock_event_acquired || lock_event_lost ) ) {
+	if ( (!ap_service) && ( le_acquired || le_lost ) ) {
 		EXCEPT( "CondorLockImpl constructed with c++ pointer "
 				"and NULL Service!\n" );
 	}
 
 		// Set the event handler
-	this->app_service = app_service;
-	this->lock_event_acquired = lock_event_acquired;
-	this->lock_event_lost = lock_event_lost;
+	this->app_service = ap_service;
+	this->lock_event_acquired = le_acquired;
+	this->lock_event_lost = le_lost;
 
 		// Do the rest of the initializations
-	Init( poll_period, lock_hold_time, auto_refresh );
+	Init( poll_per, lock_ht, auto_re );
 }
 
 // Shared initialization code
 int
-CondorLockImpl::Init( time_t		poll_period,
-					  time_t		lock_hold_time,
-					  bool			auto_refresh )
+CondorLockImpl::Init( time_t		poll_per,
+					  time_t		lock_ht,
+					  bool			auto_re )
 {
 		// Initialize some stuff
 	this->timer = -1;
@@ -80,7 +80,7 @@ CondorLockImpl::Init( time_t		poll_period,
 	this->auto_refresh = false;
 
 		// Store off lock periods, etc
-	return SetPeriods( poll_period, lock_hold_time, auto_refresh );
+	return SetPeriods( poll_per, lock_ht, auto_re );
 
 		// Done
 	return 0;
@@ -110,21 +110,21 @@ CondorLockImpl::ImplementLock( void )
 
 // Set period information
 int
-CondorLockImpl::SetPeriods( time_t	poll_period,
-							time_t	lock_hold_time,
-							bool	auto_refresh )
+CondorLockImpl::SetPeriods( time_t	poll_per,
+							time_t	lock_ht,
+							bool	auto_re )
 {
 		// Note if some things have changed....
-	bool	hold_changed = ( this->lock_hold_time != lock_hold_time );
+	bool	hold_changed = ( this->lock_hold_time != lock_ht );
 
 		// Store the new parameters
-	this->poll_period = poll_period;
-	this->lock_hold_time = lock_hold_time;
-	this->auto_refresh = auto_refresh;
+	this->poll_period = poll_per;
+	this->lock_hold_time = lock_ht;
+	this->auto_refresh = auto_re;
 
 		// Refresh the lock
-	if ( have_lock && hold_changed && auto_refresh ) {
-		int status = UpdateLock( lock_hold_time );
+	if ( have_lock && hold_changed && auto_re ) {
+		int status = UpdateLock( lock_ht );
 		if ( status ) {
 			(void) LockLost( LOCK_SRC_POLL );
 		}

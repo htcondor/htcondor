@@ -174,11 +174,11 @@ void
 printOutput( ClassAd* reply, DCStartd* startd )
 {
 
-	char* claim_id = NULL;
+	char* claimid = NULL;
 	char* last_state = NULL;
 
 	if( cmd == CA_REQUEST_CLAIM ) {
-		reply->LookupString( ATTR_CLAIM_ID, &claim_id );
+		reply->LookupString( ATTR_CLAIM_ID, &claimid );
 	}
 
 	if( CA_PATH ) {
@@ -188,8 +188,8 @@ printOutput( ClassAd* reply, DCStartd* startd )
 				getCommandString(cmd), startd->addr() ); 
 		printf( "Result ClassAd written to %s\n", classad_path );
 		if( cmd == CA_REQUEST_CLAIM ) {
-			printf( "ID of new claim is: \"%s\"\n", claim_id );
-			free( claim_id );
+			printf( "ID of new claim is: \"%s\"\n", claimid );
+			free( claimid );
 		}
 		return;
 	}
@@ -200,8 +200,8 @@ printOutput( ClassAd* reply, DCStartd* startd )
 		fprintf( stderr, "WARNING: You did not specify "
 				 "-classad, printing to STDOUT\n" );
 		reply->fPrint( stdout );
-		fprintf( stderr, "ID of new claim is: \"%s\"\n", claim_id );
-		free( claim_id );
+		fprintf( stderr, "ID of new claim is: \"%s\"\n", claimid );
+		free( claimid );
 		return;
 	}
 
@@ -489,7 +489,7 @@ parseCOpt( char* opt, char* arg )
 
 	char _cpath[] = "-classad";
 	char _clust[] = "-cluster";
-	char* target = NULL;
+	char* parse_target = NULL;
 
 		// we already checked these, make sure we're not crazy
 	assert( opt[0] == '-' && opt[1] == 'c' );  
@@ -506,14 +506,14 @@ parseCOpt( char* opt, char* arg )
 			if( strncmp(_cpath, opt, strlen(opt)) ) {
 				invalid( opt );
 			} 
-			target = _cpath;
+			parse_target = _cpath;
 			break;
 
 		case 'u':
 			if( strncmp(_clust, opt, strlen(opt)) ) {
 				invalid( opt );
 			} 
-			target = _clust;
+			parse_target = _clust;
 			break;
 
 		default:
@@ -524,14 +524,14 @@ parseCOpt( char* opt, char* arg )
 		if( strncmp(_cpath, opt, strlen(opt)) ) {
 			invalid( opt );
 		}
-		target = _cpath;
+		parse_target = _cpath;
 	}
 
 		// now, make sure we got the arg
 	if( ! arg ) {
-		another( target );
+		another( parse_target );
 	}
-	if( target == _clust ) {
+	if( parse_target == _clust ) {
 			// we can check like that, since we're setting target to
 			// point to it, so we don't have to do a strcmp().
 		cluster_id = atoi( arg );
@@ -551,7 +551,7 @@ parsePOpt( char* opt, char* arg )
 
 	char _pool[] = "-pool";
 	char _proc[] = "-proc";
-	char* target = NULL;
+	char* parse_target = NULL;
 
 		// we already checked these, make sure we're not crazy
 	assert( opt[0] == '-' && opt[1] == 'p' );  
@@ -565,14 +565,14 @@ parsePOpt( char* opt, char* arg )
 			if( strncmp(_pool, opt, strlen(opt)) ) {
 				invalid( opt );
 			} 
-			target = _pool;
+			parse_target = _pool;
 			break;
 
 		case 'r':
 			if( strncmp(_proc, opt, strlen(opt)) ) {
 				invalid( opt );
 			} 
-			target = _proc;
+			parse_target = _proc;
 			break;
 
 		default:
@@ -583,15 +583,15 @@ parsePOpt( char* opt, char* arg )
 		if( strncmp(_pool, opt, strlen(opt)) ) {
 			invalid( opt );
 		} 
-		target = _pool;
+		parse_target = _pool;
 	}
 
 		// now, make sure we got the arg
 	if( ! arg ) {
-		another( target );
+		another( parse_target );
 	}
 
-	if( target == _pool ) {
+	if( parse_target == _pool ) {
 		pool = new DCCollector( arg );
 		if( ! pool->addr() ) {
 			fprintf( stderr, "%s: %s\n", my_name, pool->error() );
@@ -890,9 +890,9 @@ parseArgv( int argc, char* argv[] )
 
 
 void
-printCmd( int cmd )
+printCmd( int command )
 {
-	switch( cmd ) {
+	switch( command ) {
 	case CA_REQUEST_CLAIM:
 		fprintf( stderr, "   request\t\tCreate a new COD claim\n" );
 		break;
@@ -936,7 +936,7 @@ void
 usage( char *str )
 {
 	bool has_cmd_opt = true;
-	bool needs_id = true;
+	bool needsID = true;
 
 	if( ! str ) {
 		fprintf( stderr, "Use \"-help\" to see usage information\n" );
@@ -960,7 +960,7 @@ usage( char *str )
 
 	switch( cmd ) {
 	case CA_REQUEST_CLAIM:
-		needs_id = false;
+		needsID = false;
 		break;
 	case CA_SUSPEND_CLAIM:
 	case CA_RESUME_CLAIM:
@@ -973,7 +973,7 @@ usage( char *str )
 
 	printCmd( cmd );
 	
-	if( needs_id ) { 
+	if( needsID ) { 
 		fprintf( stderr, "\nWhere [target] must include:\n" );
 		fprintf( stderr, "   -id ClaimId\t\tAct on the given COD claim\n" );
 	} else {

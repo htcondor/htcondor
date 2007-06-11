@@ -265,7 +265,7 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 }
 
 QueryResult
-CollectorList::query(CondorQuery & query, ClassAdList & adList, CondorError *errstack) {
+CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *errstack) {
 
 	int total_size = this->number();
 	if (total_size < 1) {
@@ -297,7 +297,7 @@ CollectorList::query(CondorQuery & query, ClassAdList & adList, CondorError *err
 				 daemon->addr());
 
 		result = 
-			query.fetchAds (adList, daemon->addr(), errstack);
+			cQuery.fetchAds (adList, daemon->addr(), errstack);
 		
 		if (result == Q_OK) {
 			return result;

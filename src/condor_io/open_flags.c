@@ -25,6 +25,9 @@
 #include "condor_common.h"
 #include <fcntl.h>
 
+int open_flags_encode(int old_flags);
+int open_flags_decode(int old_flags);
+
 #define CONDOR_O_RDONLY 0x0000
 #define CONDOR_O_WRONLY 0x0001
 #define CONDOR_O_RDWR	0x0002
@@ -56,7 +59,7 @@ extern "C" {
 
 int open_flags_encode(int old_flags)
 {
-	int i;
+	unsigned int i;
 	int new_flags = 0;
 
 	for (i = 0; i < (sizeof(FlagList) / sizeof(FlagList[0])); i++) {
@@ -69,7 +72,7 @@ int open_flags_encode(int old_flags)
 
 int open_flags_decode(int old_flags)
 {
-	int i;
+	unsigned int i;
 	int new_flags = 0;
 
 	for (i = 0; i < (sizeof(FlagList) / sizeof(FlagList[0])); i++) {

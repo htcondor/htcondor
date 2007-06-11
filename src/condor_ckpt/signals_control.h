@@ -52,14 +52,14 @@ enable() before signals are enabled again.
 
 BEGIN_C_DECLS
 
-sigset_t	_condor_signals_disable();
+sigset_t	_condor_signals_disable(void);
 void		_condor_signals_enable( sigset_t mask );
 
-void		_condor_ckpt_disable();
-void		_condor_ckpt_enable();
+void		_condor_ckpt_disable(void);
+void		_condor_ckpt_enable(void);
 
-int		_condor_ckpt_is_disabled();
-int		_condor_ckpt_is_deferred();
+int		_condor_ckpt_is_disabled(void);
+int		_condor_ckpt_is_deferred(void);
 void		_condor_ckpt_defer( int sig );
 
 END_C_DECLS

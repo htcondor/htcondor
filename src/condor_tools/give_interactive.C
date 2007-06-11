@@ -356,7 +356,7 @@ fetchSubmittorPrios()
 	AttrList	al;
 	char  	attrName[32], attrPrio[32];
   	char  	name[128];
-  	float 	priority;
+  	float 	sub_priority;
 	int		i = 1;
 
 		// Minor hack, if we're talking to a remote pool, assume the
@@ -391,12 +391,12 @@ fetchSubmittorPrios()
     	sprintf( attrPrio , "Priority%d", i );
 
     	if( !al.LookupString( attrName, name ) || 
-			!al.LookupFloat( attrPrio, priority ) )
+			!al.LookupFloat( attrPrio, sub_priority ) )
             break;
 
 		prioTable[i-1].name = name;
-		prioTable[i-1].prio = priority;
-		// printf("DEBUG: Prio   %s %f\n",name,priority);
+		prioTable[i-1].prio = sub_priority;
+		// printf("DEBUG: Prio   %s %f\n",name,sub_priority);
 		i++;
 	}
 

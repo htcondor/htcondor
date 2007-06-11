@@ -36,10 +36,10 @@
 // Instantiate things
 template class ExtArray<DCCollectorAdSeq *>;
 
-DCCollector::DCCollector( const char* name, UpdateType type ) 
-	: Daemon( DT_COLLECTOR, name, NULL )
+DCCollector::DCCollector( const char* dcName, UpdateType uType ) 
+	: Daemon( DT_COLLECTOR, dcName, NULL )
 {
-	up_type = type;
+	up_type = uType;
 	init( true );
 	adSeqMan = new DCCollectorAdSeqMan();
 }
@@ -406,24 +406,24 @@ public:
 	DCCollector *dc_collector;
 	UpdateData *next_in_list;
 
-	UpdateData(ClassAd *ad1,ClassAd *ad2,DCCollector *dc_collector) {
+	UpdateData(ClassAd *cad1, ClassAd *cad2, DCCollector *dc_collect) {
 		this->ad1 = NULL;
 		this->ad2 = NULL;
-		this->dc_collector = dc_collector;
+		this->dc_collector = dc_collect;
 			// In case the collector object gets destructed before this
 			// update is finished, we need to register ourselves with
 			// the dc_collector object so that it can null out our
 			// pointer to it.  This is done using a linked-list of
 			// UpdateData objects.
 
-		next_in_list = dc_collector->pending_update_list;
-		dc_collector->pending_update_list = this;
+		next_in_list = dc_collect->pending_update_list;
+		dc_collect->pending_update_list = this;
 
-		if(ad1) {
-			this->ad1 = new ClassAd(*ad1);
+		if(cad1) {
+			this->ad1 = new ClassAd(*cad1);
 		}
-		if(ad2) {
-			this->ad2 = new ClassAd(*ad2);
+		if(cad2) {
+			this->ad2 = new ClassAd(*cad2);
 		}
 	}
 	~UpdateData() {

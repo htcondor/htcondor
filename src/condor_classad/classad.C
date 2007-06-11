@@ -814,14 +814,14 @@ int ClassAd::put(Stream& s)
 
 	// send the types; if a type does not exist, send "(unknown type)" instead
 	{
-		char *type = "(unknown type)";
+		char *adType = "(unknown type)";
     	if(myType && myType->name)
 		{
 			if (!s.code(myType->name))
 				return 0;
 		}
 		else
-		if (!s.code (type))
+		if (!s.code (adType))
 			return 0;
 
 		if(targetType && targetType->name)
@@ -830,7 +830,7 @@ int ClassAd::put(Stream& s)
         		return 0;
 		}
 		else
-		if (!s.code(type))
+		if (!s.code(adType))
 			return 0;
 	}
 
@@ -1069,7 +1069,7 @@ SortCompare(const void* v1, const void* v2)
 
 void ClassAdList::
 Sort( SortFunctionType UserSmallerThan, void* UserInfo, 
-		AttrListAbstract*& head)
+		AttrListAbstract*& listHead)
 {
 	AttrListAbstract* ad;
 	int i;
@@ -1087,7 +1087,7 @@ Sort( SortFunctionType UserSmallerThan, void* UserInfo,
 
 	// so first create our array
 	AttrListAbstract** array = new AttrListAbstract*[len];
-	ad = head;
+	ad = listHead;
 	i = 0;
 	while (ad) {
 		array[i++] = ad;
@@ -1102,7 +1102,7 @@ Sort( SortFunctionType UserSmallerThan, void* UserInfo,
 	qsort(array,len,sizeof(AttrListAbstract*),SortCompare);
 
 	// and finally fixup the order of the double linked list
-	head = ad = array[0];
+	listHead = ad = array[0];
 	ad->prev = NULL;
 	for (i=1;i<len;i++) {
 		ad->next = array[i];

@@ -47,7 +47,7 @@ class CollectorUniverseStats {
 	int getCount( void );
 	int setMax( CollectorUniverseStats & );
 	const char *getName( int univ );
-	int publish( const char *label, ClassAd *ad );
+	int publish( const char *label, ClassAd *cad );
 
   private:
 	int perUniverse[CONDOR_UNIVERSE_MAX];
@@ -76,7 +76,7 @@ public:
 
 	static void process_query_public(AdTypes, ClassAd*, List<ClassAd>*);
 	static ClassAd * process_global_query( const char *constraint, void *arg );
-	static int select_by_match( ClassAd *ad );
+	static int select_by_match( ClassAd *cad );
 	static void process_invalidation(AdTypes, ClassAd&, Stream*);
 
 	static int query_scanFunc(ClassAd*);
@@ -84,7 +84,7 @@ public:
 
 	static int reportStartdScanFunc(ClassAd*);
 	static int reportSubmittorScanFunc(ClassAd*);
-	static int reportMiniStartdScanFunc(ClassAd *ad);
+	static int reportMiniStartdScanFunc(ClassAd *cad);
 
 	static void reportToDevelopers();
 

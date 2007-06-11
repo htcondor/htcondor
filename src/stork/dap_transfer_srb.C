@@ -88,7 +88,7 @@ transfer_from_file_to_srb(const char *_src, const char *_dest)
 		goto EXIT;
 	}
 
-	resource = (char *)srbResource();
+	resource = strdup(srbResource());		//de-const
 	if (! resource) {
 		fprintf(stderr,
 				"unable to read defaultResource from $HOME/.srb/.MdasEnv\n");
@@ -150,7 +150,7 @@ transfer_from_file_to_srb(const char *_src, const char *_dest)
 		catType,				// catType, HARD-CODED! FIXME
 		destParsed.basename(),	// objID
 		DATATYPE,				// dataTypeName, HARD-CODED! FIXME
-		(char *)resource,		// resourceName
+		resource,				// resourceName
 		destParsed.dirname(),	// collectionName
 		NULL,					// pathName
 		filesize				// dataSize
@@ -460,7 +460,7 @@ EXIT:
 int
 main(int argc, char *argv[])
 {
-	int status;
+	int transfer_status;
 
 	if (argc < 3){
 		fprintf(stderr,
@@ -495,11 +495,11 @@ main(int argc, char *argv[])
 
   if (!strcmp(srcParsed.scheme(), "srb") &&
 		  !strcmp(destParsed.scheme() , "file")){
-    status = transfer_from_srb_to_file(_src, _dest);
+    transfer_status = transfer_from_srb_to_file(_src, _dest);
   }
   else if (!strcmp(srcParsed.scheme(), "file") &&
 		  !strcmp(destParsed.scheme(), "srb")){
-    status = transfer_from_file_to_srb(_src, _dest);
+    transfer_status = transfer_from_file_to_srb(_src, _dest);
   }
   else{
     fprintf(stderr,
@@ -507,7 +507,7 @@ main(int argc, char *argv[])
 	    srcParsed.scheme(), destParsed.scheme());
     exit(-1);
   }
-  return status;
+  return transfer_status;
   
 }
 

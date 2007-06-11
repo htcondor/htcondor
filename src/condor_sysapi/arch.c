@@ -129,7 +129,7 @@ char* get_aix_arch( struct utsname* );
 #endif
 
 void
-init_arch() 
+init_arch(void) 
 {
 	struct utsname buf;	
 

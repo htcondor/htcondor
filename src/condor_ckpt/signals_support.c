@@ -57,6 +57,8 @@ extern void _sigreturn();
 #endif
 
 void display_sigstate( int line, const char * file );
+void _condor_save_sigstates(void);
+void _condor_restore_sigstates(void);
 
 #if defined(LINUX)
 typedef int				SS_TYPE;
@@ -430,7 +432,7 @@ _SIGPROCMASK( int how, const sigset_t *set, sigset_t *oset)
 #endif
 
 #if defined(SYS_sigprocmask)
-sigprocmask( int how, const sigset_t *set, sigset_t *oset)
+int sigprocmask( int how, const sigset_t *set, sigset_t *oset)
 {
 	sigset_t tmp, *my_set;
 

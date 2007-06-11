@@ -247,7 +247,7 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
 // If there are only white spaces between the last delimitor and the end of 
 // string, they are to be ignored, no parse error.
 //
-AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTENTITY)
+AttrList::AttrList(char *AttrLists, char delimitor) : AttrListAbstract(ATTRLISTENTITY)
 {
     ExprTree *tree;
 
@@ -273,14 +273,14 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
 		EXCEPT("Warning : you ran out of memory");
     }
     int i=0;
-    while(isspace(c = AttrList[i]))
+    while(isspace(c = AttrLists[i]))
     {
         i++;                                 // skip white spaces.
     }    
 
     while(1)                                 // loop character by character 
     {                                        // to the end of the stirng to
-        c = AttrList[i];                      // construct a AttrList object.
+        c = AttrLists[i];                    // construct a AttrList object.
         if(c == delimitor || c == '\0')                 
 		{                                    // end of an expression.
 			if(current)
@@ -305,11 +305,11 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
 				break;
 			}
 			i++;                             // look at the next character.
-			while(isspace(c = AttrList[i]))
+			while(isspace(c = AttrLists[i]))
 			{
 				i++;                         // skip white spaces.
 			}
-            if((c = AttrList[i]) == '\0')
+            if((c = AttrLists[i]) == '\0')
 			{
 				break;                       // end of input.
 			}
@@ -912,7 +912,7 @@ int AttrList::InsertOrUpdate(char* attr)
 ////////////////////////////////////////////////////////////////////////////////
 int AttrList::Delete(const char* name)
 {
-    AttrListElem*	prev = exprList;
+    AttrListElem*	previous = exprList;
     AttrListElem*	cur = exprList;
 	int found = FALSE;
 
@@ -934,10 +934,10 @@ int AttrList::Delete(const char* name)
 			}
 			else
 			{
-				prev->next = cur->next;
+				previous->next = cur->next;
 				if(tail == cur)
 				{
-					tail = prev;
+					tail = previous;
 				}
 			}
 
@@ -958,7 +958,7 @@ int AttrList::Delete(const char* name)
 		else
 		// expression to be deleted not found, continue search
 		{
-			prev = cur;
+			previous = cur;
 			cur = cur->next;
 		}
     }	// end of while loop to search the expression to be deleted

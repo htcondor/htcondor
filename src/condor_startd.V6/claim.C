@@ -40,12 +40,12 @@
 // Claim
 ///////////////////////////////////////////////////////////////////////////
 
-Claim::Claim( Resource* rip, bool is_cod, int lease_duration )
+Claim::Claim( Resource* res_ip, bool is_cod, int lease_duration )
 {
 	c_client = new Client;
 	c_id = new ClaimId( is_cod );
 	if( ! is_cod ) {
-		c_id->dropFile( rip->r_id );
+		c_id->dropFile( res_ip->r_id );
 	}
 	c_ad = NULL;
 	c_starter = NULL;
@@ -62,7 +62,7 @@ Claim::Claim( Resource* rip, bool is_cod, int lease_duration )
 	c_global_job_id = NULL;
 	c_job_start = -1;
 	c_last_pckpt = -1;
-	c_rip = rip;
+	c_rip = res_ip;
 	c_is_cod = is_cod;
 	c_cod_keyword = NULL;
 	c_has_job_ad = 0;
@@ -132,7 +132,7 @@ Claim::vacate()
 
 
 void
-Claim::publish( ClassAd* ad, amask_t how_much )
+Claim::publish( ClassAd* cad, amask_t how_much )
 {
 	MyString line;
 	char* tmp;
@@ -156,18 +156,18 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 		*/
 
 	line.sprintf( "%s = %f", ATTR_CURRENT_RANK, c_rank );
-	ad->Insert( line.Value() );
+	cad->Insert( line.Value() );
 
 	if( c_client ) {
 		remoteUser = c_client->user();
 		if( remoteUser ) {
 			line.sprintf( "%s=\"%s\"", ATTR_REMOTE_USER, remoteUser );
-			ad->Insert( line.Value() );
+			cad->Insert( line.Value() );
 		}
 		tmp = c_client->owner();
 		if( tmp ) {
 			line.sprintf( "%s=\"%s\"", ATTR_REMOTE_OWNER, tmp );
-			ad->Insert( line.Value() );
+			cad->Insert( line.Value() );
 		}
 		tmp = c_client->accountingGroup();
 		if( tmp ) {
@@ -182,33 +182,33 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 			} else {
 				line.sprintf("%s=\"%s\"", ATTR_ACCOUNTING_GROUP, tmp );
 			}
-			ad->Insert( line.Value() );
+			cad->Insert( line.Value() );
 		}
 		tmp = c_client->host();
 		if( tmp ) {
 			line.sprintf( "%s=\"%s\"", ATTR_CLIENT_MACHINE, tmp );
-			ad->Insert( line.Value() );
+			cad->Insert( line.Value() );
 		}
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
 		line.sprintf( "%s=\"%d.%d\"", ATTR_JOB_ID, c_cluster, c_proc );
-		ad->Insert( line.Value() );
+		cad->Insert( line.Value() );
 	}
 
 	if( c_global_job_id ) {
 		line.sprintf( "%s=\"%s\"", ATTR_GLOBAL_JOB_ID, c_global_job_id );
-		ad->Insert( line.Value() );
+		cad->Insert( line.Value() );
 	}
 
 	if( c_job_start > 0 ) {
 		line.sprintf( "%s=%d", ATTR_JOB_START, c_job_start );
-		ad->Insert( line.Value() );
+		cad->Insert( line.Value() );
 	}
 
 	if( c_last_pckpt > 0 ) {
 		line.sprintf( "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, c_last_pckpt );
-		ad->Insert( line.Value() );
+		cad->Insert( line.Value() );
 	}
 
 		// update ImageSize attribute from procInfo (this is
@@ -216,15 +216,15 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 	if( isActive() ) {
 		unsigned long imgsize = imageSize();
 		line.sprintf( "%s = %lu", ATTR_IMAGE_SIZE, imgsize );
-		ad->Insert( line.Value() );
+		cad->Insert( line.Value() );
 	}
 
-	publishStateTimes( ad );
+	publishStateTimes( cad );
 
 }
 
 void
-Claim::publishPreemptingClaim( ClassAd* ad, amask_t how_much )
+Claim::publishPreemptingClaim( ClassAd* cad, amask_t how_much )
 {
 	MyString line;
 	char* tmp;
@@ -237,17 +237,17 @@ Claim::publishPreemptingClaim( ClassAd* ad, amask_t how_much )
 
 	if( c_client && c_client->user() ) {
 		line.sprintf( "%s = %f", ATTR_PREEMPTING_RANK, c_rank );
-		ad->Insert( line.Value() );
+		cad->Insert( line.Value() );
 
 		remoteUser = c_client->user();
 		if( remoteUser ) {
 			line.sprintf( "%s=\"%s\"", ATTR_PREEMPTING_USER, remoteUser );
-			ad->Insert( line.Value() );
+			cad->Insert( line.Value() );
 		}
 		tmp = c_client->owner();
 		if( tmp ) {
 			line.sprintf( "%s=\"%s\"", ATTR_PREEMPTING_OWNER, tmp );
-			ad->Insert( line.Value() );
+			cad->Insert( line.Value() );
 		}
 		tmp = c_client->accountingGroup();
 		if( tmp ) {
@@ -262,20 +262,20 @@ Claim::publishPreemptingClaim( ClassAd* ad, amask_t how_much )
 			} else {
 				line.sprintf("%s=\"%s\"", ATTR_PREEMPTING_ACCOUNTING_GROUP, tmp );
 			}
-			ad->Insert( line.Value() );
+			cad->Insert( line.Value() );
 		}
 	}
 	else {
-		ad->Delete(ATTR_PREEMPTING_RANK);
-		ad->Delete(ATTR_PREEMPTING_OWNER);
-		ad->Delete(ATTR_PREEMPTING_USER);
-		ad->Delete(ATTR_PREEMPTING_ACCOUNTING_GROUP);
+		cad->Delete(ATTR_PREEMPTING_RANK);
+		cad->Delete(ATTR_PREEMPTING_OWNER);
+		cad->Delete(ATTR_PREEMPTING_USER);
+		cad->Delete(ATTR_PREEMPTING_ACCOUNTING_GROUP);
 	}
 }
 
 
 void
-Claim::publishCOD( ClassAd* ad )
+Claim::publishCOD( ClassAd* cad )
 {
 	MyString line;
 	char* tmp;
@@ -286,7 +286,7 @@ Claim::publishCOD( ClassAd* ad )
 	line += "=\"";
 	line += id();
 	line += '"';
-	ad->Insert( line.Value() );
+	cad->Insert( line.Value() );
 
 	line = codId();
 	line += '_';
@@ -294,14 +294,14 @@ Claim::publishCOD( ClassAd* ad )
 	line += "=\"";
 	line += getClaimStateString( c_state );
 	line += '"';
-	ad->Insert( line.Value() );
+	cad->Insert( line.Value() );
 
 	line = codId();
 	line += '_';
 	line += ATTR_ENTERED_CURRENT_STATE;
 	line += '=';
 	line += (int)c_entered_state;
-	ad->Insert( line.Value() );
+	cad->Insert( line.Value() );
 
 	if( c_client ) {
 		tmp = c_client->user();
@@ -312,7 +312,7 @@ Claim::publishCOD( ClassAd* ad )
 			line += "=\"";
 			line += tmp;
 			line += '"';
-			ad->Insert( line.Value() );
+			cad->Insert( line.Value() );
 		}
 		tmp = c_client->accountingGroup();
 		if( tmp ) {
@@ -322,7 +322,7 @@ Claim::publishCOD( ClassAd* ad )
 			line += "=\"";
 			line += tmp;
 			line += '"';
-			ad->Insert( line.Value() );
+			cad->Insert( line.Value() );
 		}
 		tmp = c_client->host();
 		if( tmp ) {
@@ -332,7 +332,7 @@ Claim::publishCOD( ClassAd* ad )
 			line += "=\"";
 			line += tmp;
 			line += '"';
-			ad->Insert( line.Value() );
+			cad->Insert( line.Value() );
 		}
 	}
 
@@ -344,7 +344,7 @@ Claim::publishCOD( ClassAd* ad )
 			line += "=\"";
 			line += c_cod_keyword;
 			line += '"';
-			ad->Insert( line.Value() );
+			cad->Insert( line.Value() );
 		}
 		char buf[128];
 		if( (c_cluster > 0) && (c_proc >= 0) ) {
@@ -358,7 +358,7 @@ Claim::publishCOD( ClassAd* ad )
 		line += "=\"";
 		line += buf;
 		line += '"';
-		ad->Insert( line.Value() );
+		cad->Insert( line.Value() );
 		
 		if( c_job_start > 0 ) {
 			line = codId();
@@ -366,7 +366,7 @@ Claim::publishCOD( ClassAd* ad )
 			line += ATTR_JOB_START;
 			line += '=';
 			line += c_job_start; 
-			ad->Insert( line.Value() );
+			cad->Insert( line.Value() );
 		}	
 	}
 }
@@ -384,7 +384,7 @@ Claim::getJobTotalRunTime()
 }
 
 void
-Claim::publishStateTimes( ClassAd* ad )
+Claim::publishStateTimes( ClassAd* cad )
 {
 	MyString line;
 	time_t now, time_dif = 0;
@@ -411,20 +411,20 @@ Claim::publishStateTimes( ClassAd* ad )
 
 		// Now that we have all the right values, publish them.
 	if( my_job_run > 0 ) {
-		line.sprintf( "%s=%d", ATTR_TOTAL_JOB_RUN_TIME, my_job_run );
-		ad->Insert( line.Value() );
+		line.sprintf( "%s=%ld", ATTR_TOTAL_JOB_RUN_TIME, (long)my_job_run );
+		cad->Insert( line.Value() );
 	}
 	if( my_job_sus > 0 ) {
-		line.sprintf( "%s=%d", ATTR_TOTAL_JOB_SUSPEND_TIME, my_job_sus );
-		ad->Insert( line.Value() );
+		line.sprintf( "%s=%ld", ATTR_TOTAL_JOB_SUSPEND_TIME, (long)my_job_sus );
+		cad->Insert( line.Value() );
 	}
 	if( my_claim_run > 0 ) {
-		line.sprintf( "%s=%d", ATTR_TOTAL_CLAIM_RUN_TIME, my_claim_run );
-		ad->Insert( line.Value() );
+		line.sprintf( "%s=%ld", ATTR_TOTAL_CLAIM_RUN_TIME, (long)my_claim_run );
+		cad->Insert( line.Value() );
 	}
 	if( my_claim_sus > 0 ) {
-		line.sprintf( "%s=%d", ATTR_TOTAL_CLAIM_SUSPEND_TIME, my_claim_sus );
-		ad->Insert( line.Value() );
+		line.sprintf( "%s=%ld", ATTR_TOTAL_CLAIM_SUSPEND_TIME, (long)my_claim_sus );
+		cad->Insert( line.Value() );
 	}
 }
 
@@ -524,16 +524,16 @@ Claim::match_timed_out()
 		return FALSE;
 	}
 		
-	Resource* rip = resmgr->get_by_any_id( my_id );
-	if( !rip ) {
+	Resource* res_ip = resmgr->get_by_any_id( my_id );
+	if( !res_ip ) {
 		::dprintf( D_FAILURE|D_ALWAYS,
 				   "ERROR: Can't find resource of expired match\n" );
 		return FALSE;
 	}
 
-	if( rip->r_cur->idMatches( id() ) ) {
+	if( res_ip->r_cur->idMatches( id() ) ) {
 #if HAVE_BACKFILL
-		if( rip->state() == backfill_state ) {
+		if( res_ip->state() == backfill_state ) {
 				/*
 				  If the resource is in the backfill state when the
 				  match timed out, it means that the backfill job is
@@ -549,12 +549,12 @@ Claim::match_timed_out()
 					 "your MATCH_TIMEOUT setting (%d) is too small, "
 					 "or that there's a problem with how quickly your "
 					 "backfill jobs can evict themselves.\n", 
-					 state_to_string(rip->state()), match_timeout );
-			rip->set_destination_state( owner_state );
+					 state_to_string(res_ip->state()), match_timeout );
+			res_ip->set_destination_state( owner_state );
 			return FALSE;
 		}
 #endif /* HAVE_BACKFILL */
-		if( rip->state() != matched_state ) {
+		if( res_ip->state() != matched_state ) {
 				/* 
 				   This used to be an EXCEPT(), since it really
 				   shouldn't ever happen.  However, it kept happening,
@@ -570,33 +570,33 @@ Claim::match_timed_out()
 				*/
 			dprintf( D_FAILURE|D_FULLDEBUG, 
 					 "WARNING: Current match timed out but in %s state.\n",
-					 state_to_string(rip->state()) );
+					 state_to_string(res_ip->state()) );
 			return FALSE;
 		}
-		delete rip->r_cur;
+		delete res_ip->r_cur;
 			// once we've done this delete, the this pointer is now in
 			// a weird, invalid state.  don't rely on using any member
 			// functions or data until we return.
-		rip->r_cur = new Claim( rip );
-		rip->dprintf( D_FAILURE|D_ALWAYS, "State change: match timed out\n" );
-		rip->change_state( owner_state );
+		res_ip->r_cur = new Claim( res_ip );
+		res_ip->dprintf( D_FAILURE|D_ALWAYS, "State change: match timed out\n" );
+		res_ip->change_state( owner_state );
 	} else {
 			// The match that timed out was the preempting claim.
 		Claim *c = NULL;
-		if( rip->r_pre && rip->r_pre->idMatches( id() ) ) {
-			c = rip->r_pre;
+		if( res_ip->r_pre && res_ip->r_pre->idMatches( id() ) ) {
+			c = res_ip->r_pre;
 		}
-		else if( rip->r_pre_pre && rip->r_pre_pre->idMatches( id() ) ) {
-			c = rip->r_pre_pre;
+		else if( res_ip->r_pre_pre && res_ip->r_pre_pre->idMatches( id() ) ) {
+			c = res_ip->r_pre_pre;
 		}
 		else {
 			EXCEPT("Unexpected timeout of claim id: %s\n",id());
 		}
 			// We need to generate a new preempting claim object,
 			// restore our reqexp, and update the CM. 
-		rip->removeClaim( c );
-		rip->r_reqexp->restore();
-		rip->update();
+		res_ip->removeClaim( c );
+		res_ip->r_reqexp->restore();
+		res_ip->update();
 	}		
 	return TRUE;
 }
@@ -667,37 +667,37 @@ Claim::beginActivation( time_t now )
 		return;
 	}
 
-	int universe;
-	if( c_ad->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0 ) {
+	int univ;
+	if( c_ad->LookupInteger(ATTR_JOB_UNIVERSE, univ) == 0 ) {
 		if( c_is_cod ) {
-			universe = CONDOR_UNIVERSE_VANILLA;
+			univ = CONDOR_UNIVERSE_VANILLA;
 		} else {
-			universe = CONDOR_UNIVERSE_STANDARD;
+			univ = CONDOR_UNIVERSE_STANDARD;
 		}
 		c_rip->dprintf( D_ALWAYS, "Default universe \"%s\" (%d) "
 						"since not in classad\n",
-						CondorUniverseName(universe), universe );
+						CondorUniverseName(univ), univ );
 	} else {
 		c_rip->dprintf( D_ALWAYS, "Got universe \"%s\" (%d) "
 						"from request classad\n",
-						CondorUniverseName(universe), universe );
+						CondorUniverseName(univ), univ );
 	}
-	c_universe = universe;
+	c_universe = univ;
 
-	if( universe == CONDOR_UNIVERSE_STANDARD ) {
+	if( univ == CONDOR_UNIVERSE_STANDARD ) {
 		c_last_pckpt = (int)now;
 	}
 }
 
 
 void
-Claim::setaliveint( int alive )
+Claim::setaliveint( int new_alive )
 {
-	c_aliveint = alive;
+	c_aliveint = new_alive;
 		// for now, set our lease_duration, too, just so it's
 		// initalized to something reasonable.  once we get the job ad
 		// we'll reset it to the real value if it's defined.
-	c_lease_duration = max_claim_alives_missed * alive;
+	c_lease_duration = max_claim_alives_missed * new_alive;
 }
 
 void
@@ -812,8 +812,8 @@ Claim::leaseExpired()
 		return TRUE;
 	}
 
-	Resource* rip = resmgr->get_by_cur_id( id() );
-	if( !rip ) {
+	Resource* res_ip = resmgr->get_by_cur_id( id() );
+	if( !res_ip ) {
 		EXCEPT( "Can't find resource of expired claim" );
 	}
 		// Note that this claim timed out so we don't try to send a 
@@ -827,7 +827,7 @@ Claim::leaseExpired()
 			 "(condor_schedd gone?)\n" );
 
 		// Kill the claim.
-	rip->kill_claim();
+	res_ip->kill_claim();
 	return TRUE;
 }
 
@@ -848,12 +848,12 @@ Claim::alive()
 
 // Set our ad to the given pointer
 void
-Claim::setad(ClassAd *ad) 
+Claim::setad(ClassAd *cad) 
 {
 	if( c_ad ) {
 		delete( c_ad );
 	}
-	c_ad = ad;
+	c_ad = cad;
 }
 
 
@@ -889,10 +889,10 @@ Claim::publicClaimId( void )
 
 
 bool
-Claim::idMatches( const char* id )
+Claim::idMatches( const char* req_id )
 {
 	if( c_id ) {
-		return c_id->matches( id );
+		return c_id->matches( req_id );
 	}
 	return false;
 }
@@ -1238,7 +1238,7 @@ Claim::verifyCODAttrs( ClassAd* req )
 
 
 bool
-Claim::publishStarterAd( ClassAd* ad )
+Claim::publishStarterAd( ClassAd* cad )
 {
 	MyString line;
 	
@@ -1252,22 +1252,22 @@ Claim::publishStarterAd( ClassAd* ad )
 		line += "=\"";
 		line += ip_addr;
 		line += '"';
-		ad->Insert( line.Value() );
+		cad->Insert( line.Value() );
 	}
 
 		// stuff in everything we know about from the Claim object
-	this->publish( ad, A_PUBLIC );
+	this->publish( cad, A_PUBLIC );
 
 		// stuff in starter-specific attributes, if we have them.
 	StringList ability_list;
-	c_starter->publish( ad, A_STATIC | A_PUBLIC, &ability_list );
+	c_starter->publish( cad, A_STATIC | A_PUBLIC, &ability_list );
 	char* ability_str = ability_list.print_to_string();
 	if( ability_str ) {
 		line = ATTR_STARTER_ABILITY_LIST;
 		line += "=\"";
 		line += ability_str;
 		line += '"';
-		ad->Insert( line.Value() );
+		cad->Insert( line.Value() );
 		free( ability_str );
 	}
 
@@ -1302,9 +1302,9 @@ Claim::ownerMatches( const char* owner )
 
 
 bool
-Claim::globalJobIdMatches( const char* id )
+Claim::globalJobIdMatches( const char* req_id )
 {
-	if( c_global_job_id && !strcmp(c_global_job_id, id) ) {
+	if( c_global_job_id && !strcmp(c_global_job_id, req_id) ) {
 		return true;
 	}
 	return false;
@@ -1562,13 +1562,13 @@ Client::~Client()
 
 
 void
-Client::setuser( const char* user )
+Client::setuser( const char* updated_user )
 {
 	if( c_user ) {
 		free( c_user);
 	}
-	if( user ) {
-		c_user = strdup( user );
+	if( updated_user ) {
+		c_user = strdup( updated_user );
 	} else {
 		c_user = NULL;
 	}
@@ -1576,13 +1576,13 @@ Client::setuser( const char* user )
 
 
 void
-Client::setowner( const char* owner )
+Client::setowner( const char* updated_owner )
 {
 	if( c_owner ) {
 		free( c_owner);
 	}
-	if( owner ) {
-		c_owner = strdup( owner );
+	if( updated_owner ) {
+		c_owner = strdup( updated_owner );
 	} else {
 		c_owner = NULL;
 	}
@@ -1604,13 +1604,13 @@ Client::setAccountingGroup( const char* grp )
 
 
 void
-Client::setaddr( const char* addr )
+Client::setaddr( const char* updated_addr )
 {
 	if( c_addr ) {
 		free( c_addr);
 	}
-	if( addr ) {
-		c_addr = strdup( addr );
+	if( updated_addr ) {
+		c_addr = strdup( updated_addr );
 	} else {
 		c_addr = NULL;
 	}
@@ -1618,13 +1618,13 @@ Client::setaddr( const char* addr )
 
 
 void
-Client::sethost( const char* host )
+Client::sethost( const char* updated_host )
 {
 	if( c_host ) {
 		free( c_host);
 	}
-	if( host ) {
-		c_host = strdup( host );
+	if( updated_host ) {
+		c_host = strdup( updated_host );
 	} else {
 		c_host = NULL;
 	}
@@ -1727,13 +1727,13 @@ ClaimId::~ClaimId()
 
 
 bool
-ClaimId::matches( const char* id )
+ClaimId::matches( const char* req_id )
 {
 	// When we send the claim ID, the IP in it may get rewritten, depending
 	// on which interface we use to talk to the collector.  Therefore,
 	// do not compare the IP portion of the claim ID.
 
-	char const *id_after_ip = strchr(id,':');
+	char const *id_after_ip = strchr(req_id,':');
 	char const *c_id_after_ip = strchr(c_id,':');
 
 	if(!id_after_ip) return false; //caller gave us a bogus claim id

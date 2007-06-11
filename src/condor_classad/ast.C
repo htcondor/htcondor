@@ -106,46 +106,46 @@ EvalResult & EvalResult::operator=(const EvalResult & rhs)
 }
 
 
-void EvalResult::fPrintResult(FILE *f)
+void EvalResult::fPrintResult(FILE *fi)
 {
     switch(type)
     {
 	case LX_INTEGER :
 
-	     fprintf(f, "%d", this->i);
+	     fprintf(fi, "%d", this->i);
 	     break;
 
 	case LX_FLOAT :
 
-	     fprintf(f, "%f", this->f);
+	     fprintf(fi, "%f", this->f);
 	     break;
 
 	case LX_STRING :
 
-	     fprintf(f, "%s", this->s);
+	     fprintf(fi, "%s", this->s);
 	     break;
 
 	case LX_NULL :
 
-	     fprintf(f, "NULL");
+	     fprintf(fi, "NULL");
 	     break;
 
 	case LX_UNDEFINED :
 
-	     fprintf(f, "UNDEFINED");
+	     fprintf(fi, "UNDEFINED");
 	     break;
 
 	case LX_ERROR :
 
-	     fprintf(f, "ERROR");
+	     fprintf(fi, "ERROR");
 	     break;
 
 	default :
 
-	     fprintf(f, "type unknown");
+	     fprintf(fi, "type unknown");
 	     break;
     }
-    fprintf(f, "\n");
+    fprintf(fi, "\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -361,11 +361,11 @@ If there is no scope, evaluate it simply.
 Otherwise, identify the ClassAd corresponding to the scope, and re-evaluate.
 */
 
-int Variable::_EvalTreeRecursive( const char *name, const AttrList* my_classad, const AttrList* target_classad, EvalResult* val, bool restrict_search)
+int Variable::_EvalTreeRecursive( const char *adName, const AttrList* my_classad, const AttrList* target_classad, EvalResult* val, bool restrict_search)
 {
-	if( !val || !name ) return FALSE;
+	if( !val || !adName ) return FALSE;
 
-	MyString n(name);
+	MyString n(adName);
 	MyString prefix;
 	MyString rest;
 	
@@ -429,23 +429,23 @@ Once it has been reduced to a simple name, resolve the variable by
 looking it up first in MY, then TARGET, and finally, the environment.
 */
 
-int Variable::_EvalTreeSimple( const char *name, const AttrList *my_classad, const AttrList *target_classad, EvalResult *val, bool restrict_search )
+int Variable::_EvalTreeSimple( const char *adName, const AttrList *my_classad, const AttrList *target_classad, EvalResult *val, bool restrict_search )
 {
 	ExprTree *tmp;
 
 	if(my_classad)
 	{
-		tmp = my_classad->Lookup(name);
+		tmp = my_classad->Lookup(adName);
 		if(tmp) return (tmp->EvalTree(my_classad, target_classad, val));
 	}
 
 	if(!restrict_search && target_classad)
 	{
-		tmp = target_classad->Lookup(name);
+		tmp = target_classad->Lookup(adName);
 		if(tmp) return (tmp->EvalTree(target_classad, my_classad, val));
 	}
 
-    evalFromEnvironment(name,val);
+    evalFromEnvironment(adName,val);
 	return TRUE;
 }
 

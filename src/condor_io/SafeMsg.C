@@ -1011,7 +1011,7 @@ bool _condorInMsg::addPacket(const bool last,
 
 bool _condorInMsg :: verifyMD(Condor_MD_MAC * mdChecker)
 {
-    int curPacket;
+    int currentPacket;
     _condorDirPage * start = headDir;
 
     if (!verified_) {
@@ -1021,11 +1021,11 @@ bool _condorInMsg :: verifyMD(Condor_MD_MAC * mdChecker)
 
         if (mdChecker && md_) {
             while (start != NULL) {
-                curPacket = 0;
-                while(curPacket != SAFE_MSG_NO_OF_DIR_ENTRY) {
-                    mdChecker->addMD((unsigned char *)curDir->dEntry[curPacket].dGram, 
-                                     curDir->dEntry[curPacket].dLen);
-                    if(++curPacket == SAFE_MSG_NO_OF_DIR_ENTRY) {
+                currentPacket = 0;
+                while(currentPacket != SAFE_MSG_NO_OF_DIR_ENTRY) {
+                    mdChecker->addMD((unsigned char *)curDir->dEntry[currentPacket].dGram, 
+                                     curDir->dEntry[currentPacket].dLen);
+                    if(++currentPacket == SAFE_MSG_NO_OF_DIR_ENTRY) {
                         // was the last of the current dir
                         start = start->nextDir;
                     }

@@ -253,7 +253,7 @@ int Condor_Auth_X509 :: isValid() const
 
 void Condor_Auth_X509 :: print_log(OM_uint32 major_status,
                                    OM_uint32 minor_status,
-                                   int       token_status, 
+                                   int       token_stat, 
                                    char *    comment)
 {
     char* buffer;
@@ -261,7 +261,7 @@ void Condor_Auth_X509 :: print_log(OM_uint32 major_status,
                                          comment,
                                          major_status,
                                          minor_status,
-                                         token_status);
+                                         token_stat);
     if (buffer){
         dprintf(D_ALWAYS,"%s\n",buffer);
         free(buffer);
@@ -646,17 +646,17 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
     if (major_status != GSS_S_COMPLETE)	{
 		if (major_status == 655360 && minor_status == 6) {
 			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
-				"Failed to authenticate.  Globus is reporting error (%i:%i).  ",
+				"Failed to authenticate.  Globus is reporting error (%i:%i).  "
 				"This indicates that it was unable to find the issuer "
 				"certificate for your credential", major_status, minor_status);
 		} else if (major_status == 655360 && minor_status == 9) {
 			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
-				"Failed to authenticate.  Globus is reporting error (%i:%i).  ",
+				"Failed to authenticate.  Globus is reporting error (%i:%i).  "
 				"This indicates that it was unable to verify the server's "
 				"credential", major_status, minor_status);
 		} else if (major_status == 655360 && minor_status == 11) {
 			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
-				"Failed to authenticate.  Globus is reporting error (%i:%i).  ",
+				"Failed to authenticate.  Globus is reporting error (%i:%i).  "
 				"This indicates that it was unable verify the server's "
 				"credentials because a signing policy file was not found or "
 				"could not be read.", major_status, minor_status);

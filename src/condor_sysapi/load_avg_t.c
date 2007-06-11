@@ -29,6 +29,8 @@
 
 #define ITERATIONS_PER_SECOND 10000000
 
+int load_avg_test(int trials, int interval, int num_children, double warn_ok_ratio);
+
 int load_avg_test(int trials, int interval, int num_children, double warn_ok_ratio) {
 	float		foo = 0;
 	float		foo2 = 0;

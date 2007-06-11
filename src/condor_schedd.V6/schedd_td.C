@@ -1001,7 +1001,6 @@ Scheduler::treq_download_post_push_callback(TransferRequest *treq,
 {
 	ReliSock *rsock = NULL;
 	MyString sinful;
-	char *val = NULL;
 	MyString capability;
 	ClassAd respad;
 	MyString jids;

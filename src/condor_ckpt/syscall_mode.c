@@ -36,6 +36,8 @@
 
 static int		SyscallMode = 1; /* LOCAL and UNMAPPED */
 
+void DisplaySyscallMode(void);
+
 int
 SetSyscalls( int mode )
 {

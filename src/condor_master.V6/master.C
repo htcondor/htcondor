@@ -269,7 +269,7 @@ main_init( int argc, char* argv[] )
         env_name   = EnvGetName(ENV_DAEMON_DEATHTIME);
         death_time = time(NULL) + (runfor * 60);
 
-        runfor_env_source.sprintf("%s=%d\n", env_name, death_time);
+        runfor_env_source.sprintf("%s=%d\n", env_name, (int)death_time);
         runfor_env = strdup(runfor_env_source.Value());
         putenv(runfor_env);
         // Note that we don't free runfor_env, because it lives on 

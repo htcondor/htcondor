@@ -127,8 +127,8 @@ main_init( int argc, char ** const argv )
 
 	dprintf(D_FULLDEBUG, "C-GAHP IO thread\n");
 
-	MyString ScheddAddr;
-	MyString ScheddPool;
+	MyString schedd_addr;
+	MyString schedd_pool;
 
 	// handle specific command line args
 	int i = 1;
@@ -141,14 +141,14 @@ main_init( int argc, char ** const argv )
 			// don't check parent for schedd addr. use this one instead
 			if ( argc <= i + 1 )
 				usage( argv[0] );
-			ScheddAddr = argv[i + 1];
+			schedd_addr = argv[i + 1];
 			i++;
 			break;
 		case 'P':
 			// specify what pool (i.e. collector) to lookup the schedd name
 			if ( argc <= i + 1 )
 				usage( argv[0] );
-			ScheddPool = argv[i + 1];
+			schedd_pool = argv[i + 1];
 			i++;
 			break;
 		default:
@@ -277,14 +277,14 @@ main_init( int argc, char ** const argv )
 		args.AppendArg(exec_name.Value());
 		args.AppendArg("-f");
 
-		if (ScheddAddr.Length()) {
+		if (schedd_addr.Length()) {
 			args.AppendArg("-s");
-			args.AppendArg(ScheddAddr.Value());
+			args.AppendArg(schedd_addr.Value());
 		}
 
-		if (ScheddPool.Length()) {
+		if (schedd_pool.Length()) {
 			args.AppendArg("-P");
-			args.AppendArg(ScheddPool.Value());
+			args.AppendArg(schedd_pool.Value());
 		}
 
 		MyString args_string;

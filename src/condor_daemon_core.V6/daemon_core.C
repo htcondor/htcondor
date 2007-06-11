@@ -1436,9 +1436,9 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 
 	// Shut the compiler up
 	// These parameters are needed on Windows
-	can_register_read;
-	can_register_write;
-	psize;
+	if(can_register_read) {}
+	if(can_register_write) {}
+	if(psize == 0) {}
 
 	bool failed = false;
 	int filedes[2];
@@ -1506,10 +1506,10 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 #else
 		// Shut the compiler up
 		// These parameters are needed on Windows
-	is_write;
-	can_register;
-	nonblocking;
-	psize;
+	if(is_write) {}
+	if(can_register) {}
+	if(nonblocking) {}
+	if(psize == 0) {}
 
 	pipe_handle = fd;
 #endif
@@ -3295,7 +3295,7 @@ int DaemonCore::HandleReq(Stream *insock)
 	memset(tmpbuf,0,sizeof(tmpbuf));
 	if ( is_tcp ) {
 			// TODO Should we be ignoring the return value of condor_read?
-		int nro = condor_read(((Sock*)stream)->get_file_desc(),
+		condor_read(((Sock*)stream)->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
 	}
 	if ( strstr(tmpbuf,"GET") ) {
@@ -4304,12 +4304,12 @@ char const *DCSignalMsg::signalName()
 
 		// If it is not a system-defined signal, it must be a DC signal.
 
-	char const *name = getCommandString(theSignal());
-	if(!name) {
+	char const *sigName = getCommandString(theSignal());
+	if(!sigName) {
 			// Always return something, because this goes straight to sprintf.
 		return "";
 	}
-	return name;
+	return sigName;
 }
 
 bool DaemonCore::Send_Signal(pid_t pid, int sig)
@@ -4352,7 +4352,6 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	PidEntry * pidinfo = NULL;
 	int same_thread, is_local;
 	char *destination;
-	Stream* sock;
 	int target_has_dcpm = TRUE;		// is process pid a daemon core process?
 
 	// sanity check on the pid.  we don't want to do something silly like

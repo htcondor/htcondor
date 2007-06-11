@@ -308,12 +308,14 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 	}
 
 		// Send the constraint
-	char * nc_constraint = (char*) constraint;	// cast away const... sigh.
+	char * nc_constraint = strdup( constraint );	// de-const
 	if ( !rsock.code(nc_constraint) ) {
+		free( nc_constraint );
 		dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
 				"Can't send JobAdsArrayLen to the schedd\n");
 		return false;
 	}
+	free( nc_constraint );
 
 	rsock.eom();
 
@@ -418,7 +420,6 @@ DCSchedd::register_transferd(MyString sinful, MyString id, int timeout,
 {
 	ReliSock *rsock;
 	int invalid_request = 0;
-	char *tmp = NULL;
 	ClassAd regad;
 	ClassAd respad;
 	MyString errstr;

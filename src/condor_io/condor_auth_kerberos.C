@@ -191,8 +191,8 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
     out_data.ciphertext.data = (char*)encrypted_data;
 	out_data.ciphertext.length = encrypted_length;
 
-    if (code = krb5_c_encrypt(krb_context_, sessionKey_, 1024 /* key usage */,
-				0 /* no ivec */, &in_data, &out_data)) {
+    if (code = krb5_c_encrypt(krb_context_, sessionKey_, 1024, /* key usage */
+				0, &in_data, &out_data)) {			/* 0 = no ivec */
         output     = 0;
         output_len = 0;
         if (out_data.ciphertext.data) {    
@@ -270,8 +270,8 @@ int Condor_Auth_Kerberos :: unwrap(char*  input,
     out_data.length = enc_data.ciphertext.length;
 	out_data.data = (char*)malloc(out_data.length);
 
-	if (code = krb5_c_decrypt(krb_context_, sessionKey_, 1024 /* key usage */,
-				0 /* no ivec */, &enc_data, &out_data)) {
+	if (code = krb5_c_decrypt(krb_context_, sessionKey_, 1024, /* key usage */
+				0, &enc_data, &out_data)) {			/* 0 = no ivec */
 
 	//if (code = krb5_decrypt_data(krb_context_, sessionKey_, 0, &enc_data, &out_data)) {
         output_len = 0;
@@ -307,13 +307,10 @@ int Condor_Auth_Kerberos :: init_daemon()
 	krb5_creds    *l_outcreds = (krb5_creds *) malloc(sizeof(krb5_creds));
 
     krb5_keytab    keytab = 0;
-	krb5_ccache    ccache = 0;
 
 	// init some member vars
     creds_ = (krb5_creds *) malloc(sizeof(krb5_creds));
     keytabName_ = param(STR_KERBEROS_SERVER_KEYTAB);
-
-	char*           ccnam = NULL;
 
 	// needed for extracting service name
 	char * tmpsname = 0;
@@ -656,14 +653,14 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
 
  priv = set_root_priv();   // Get the old privilige
     
-    if (code = krb5_rd_req(krb_context_,
+    if ((code = krb5_rd_req(krb_context_,
                            &auth_context_,
                            &request,
                            //krb_principal_,
 						   NULL,
                            keytab,
                            &flags,
-                           &ticket)) {
+                           &ticket))) {
         set_priv(priv);   // Reset
         dprintf( D_ALWAYS, "2: Kerberos server authentication error:%s\n",
 				 error_message(code) );
@@ -677,7 +674,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     // See if mutual authentication is required
     //------------------------------------------
     if (flags & AP_OPTS_MUTUAL_REQUIRED) {
-        if (code = krb5_mk_rep(krb_context_, auth_context_, &reply)) {
+        if ((code = krb5_mk_rep(krb_context_, auth_context_, &reply))) {
             dprintf( D_ALWAYS, "3: Kerberos server authentication error:%s\n",
 					 error_message(code) );
             goto error;
@@ -714,9 +711,9 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     }
 
     // copy the session key
-    if (code = krb5_copy_keyblock(krb_context_, 
+    if ((code = krb5_copy_keyblock(krb_context_, 
                                   ticket->enc_part2->session, 
-                                  &sessionKey_)){
+                                  &sessionKey_))){
         dprintf(D_SECURITY, "4: Kerberos server authentication error:%s\n", error_message(code));
         goto error;
     }
@@ -785,7 +782,7 @@ int Condor_Auth_Kerberos :: client_mutual_authenticate()
         return KERBEROS_DENY;
     }
     
-    if (code = krb5_rd_rep(krb_context_, auth_context_, &request, &rep)) {
+    if ((code = krb5_rd_rep(krb_context_, auth_context_, &request, &rep))) {
         goto error;
     }
     
@@ -825,34 +822,34 @@ int Condor_Auth_Kerberos :: init_kerberos_context()
 
     // kerberos context_
     if (krb_context_ == NULL) {
-        if (code = krb5_init_context(&krb_context_)) {
+        if ((code = krb5_init_context(&krb_context_))) {
             goto error;
         }
     }
 
-    if (code = krb5_auth_con_init(krb_context_, &auth_context_)) {
+    if ((code = krb5_auth_con_init(krb_context_, &auth_context_))) {
         goto error;
     }
 
-    if (code = krb5_auth_con_setflags(krb_context_, 
+    if ((code = krb5_auth_con_setflags(krb_context_, 
                                       auth_context_, 
-                                      KRB5_AUTH_CONTEXT_DO_SEQUENCE)) {
+                                      KRB5_AUTH_CONTEXT_DO_SEQUENCE))) {
         goto error;
     }
         
-    if (code = krb5_auth_con_genaddrs(krb_context_, 
+    if ((code = krb5_auth_con_genaddrs(krb_context_, 
                                       auth_context_, 
                                       mySock_->get_file_desc(),
                                       KRB5_AUTH_CONTEXT_GENERATE_LOCAL_FULL_ADDR|
                                       KRB5_AUTH_CONTEXT_GENERATE_REMOTE_FULL_ADDR
-                                      )) {
+                                      ))) {
         goto error;
     }
 
-    if (code = krb5_auth_con_getaddrs(krb_context_, 
+    if ((code = krb5_auth_con_getaddrs(krb_context_, 
                                       auth_context_,
                                       localAddr, 
-                                      remoteAddr)) {
+                                      remoteAddr))) {
         goto error;
     }
 
@@ -878,9 +875,9 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
     //------------------------------------------
     // Decode the client name
     //------------------------------------------    
-    if (code = krb5_unparse_name(krb_context_, 
+    if ((code = krb5_unparse_name(krb_context_, 
                                  *princ_to_map, 
-                                 &client)){
+                                 &client))){
     	dprintf(D_ALWAYS, "%s\n", error_message(code));
 		return FALSE;
     } 
@@ -1010,7 +1007,7 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 		return FALSE;
     } else {
     
-    	while (buffer = getline(fd)) {
+    	while ((buffer = getline(fd))) {
         	char * token;
         	token = strtok(buffer, "= ");
         	if(token) {
@@ -1181,14 +1178,14 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
                        sizeof (struct in_addr), 
                        mySock_->endpoint()->sin_family);
     
-    if (code = krb5_fwd_tgt_creds(krb_context_, 
+    if ((code = krb5_fwd_tgt_creds(krb_context_, 
                                   auth_context_,
                                   hp->h_name,
                                   cred->client, 
                                   cred->server,
                                   ccache, 
                                   KDC_OPT_FORWARDABLE,
-                                  &request)) {
+                                  &request))) {
         goto error;
     }
     
@@ -1382,10 +1379,10 @@ void Condor_Auth_Kerberos :: setRemoteAddress()
     
     // Get remote host's address first
     
-    if (code = krb5_auth_con_getaddrs(krb_context_, 
+    if ((code = krb5_auth_con_getaddrs(krb_context_, 
                                       auth_context_, 
                                       localAddr, 
-                                      remoteAddr)) {
+                                      remoteAddr))) {
         goto error;
     }
     

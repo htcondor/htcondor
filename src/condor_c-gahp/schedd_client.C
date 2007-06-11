@@ -532,16 +532,16 @@ doContactSchedd()
 					 ScheddAddr, errstack.getFullText() );
 			dprintf (D_ALWAYS, "%s\n", error_msg);
 
-			const char * result[] = {
+			const char * result_to_queue[] = {
 				GAHP_RESULT_FAILURE,
 				error_msg };
-			enqueue_result (current_command->request_id, result, 2);
+			enqueue_result (current_command->request_id, result_to_queue, 2);
 
 		} else {
-			const char * result[] = {
+			const char * result_to_queue[] = {
 				GAHP_RESULT_SUCCESS,
 				NULL };
-			enqueue_result (current_command->request_id, result, 2);
+			enqueue_result (current_command->request_id, result_to_queue, 2);
 		}
 
 	}
@@ -710,7 +710,6 @@ update_report_result:
 				goto contact_schedd_disconnect;
 			}
 		
-			int i;
 			for (i=0; i<current_command->num_jobs; i++) {
 			
 				time_t time_now = time(NULL);
@@ -849,14 +848,14 @@ update_report_result:
 		// of the schedd we are talking to.
 
 		if( error == FALSE) {
-			CondorVersionInfo ver_info(dc_schedd.version());
+			CondorVersionInfo version_info(dc_schedd.version());
 			ArgList arglist;
 			MyString arg_error_msg;
 			Env env_obj;
 			MyString env_error_msg;
 
 			if(!arglist.AppendArgsFromClassAd(current_command->classad,&arg_error_msg) ||
-		   !	arglist.InsertArgsIntoClassAd(current_command->classad,&ver_info,&arg_error_msg))
+		   !	arglist.InsertArgsIntoClassAd(current_command->classad,&version_info,&arg_error_msg))
 			{
 				sprintf(error_msg,
 						"ERROR: ClassAd problem in converting arguments to syntax "
@@ -868,7 +867,7 @@ update_report_result:
 			}	
 
 			if(!env_obj.MergeFrom(current_command->classad,&env_error_msg) ||
-			   !env_obj.InsertEnvIntoClassAd(current_command->classad,&env_error_msg,NULL,&ver_info))
+			   !env_obj.InsertEnvIntoClassAd(current_command->classad,&env_error_msg,NULL,&version_info))
 			{
 				sprintf(error_msg,
 						"ERROR: Failed to convert environment to target syntax"
@@ -895,7 +894,7 @@ update_report_result:
 						failure_errno = errno;
 						goto contact_schedd_disconnect;
 					}
-					sprintf (error_msg, "ERROR: Failed to SetTimerAttribute %s=%c for job %d.%d",
+					sprintf (error_msg, "ERROR: Failed to SetTimerAttribute %s=%ld for job %d.%d",
 							 ATTR_TIMER_REMOVE_CHECK, expire_time - time(NULL), ClusterId, ProcId );
 					dprintf ( D_ALWAYS, "%s\n", error_msg);
 					error = TRUE;

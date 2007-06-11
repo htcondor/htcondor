@@ -64,26 +64,26 @@ JobQueueCollection::~JobQueueCollection()
 {
 	int i;
 
-	ClassAdBucket *pCurBucket;
+	ClassAdBucket *pThisBucket;
 	ClassAdBucket *pPreBucket;
 	for (i = 0; i < _iBucketSize; i++) {
-		pCurBucket = _ppProcAdBucketList[i];
-		while (pCurBucket != NULL) {
-			pPreBucket = pCurBucket;
-			pCurBucket = pCurBucket->pNext;
+		pThisBucket = _ppProcAdBucketList[i];
+		while (pThisBucket != NULL) {
+			pPreBucket = pThisBucket;
+			pThisBucket = pThisBucket->pNext;
 			delete pPreBucket;
 		}
 
-		pCurBucket = _ppClusterAdBucketList[i];
-		while (pCurBucket != NULL) {
-			pPreBucket = pCurBucket;
-			pCurBucket = pCurBucket->pNext;
+		pThisBucket = _ppClusterAdBucketList[i];
+		while (pThisBucket != NULL) {
+			pPreBucket = pThisBucket;
+			pThisBucket = pThisBucket->pNext;
 			delete pPreBucket;
 		}
-		pCurBucket = _ppHistoryAdBucketList[i];
-		while (pCurBucket != NULL) {
-			pPreBucket = pCurBucket;
-			pCurBucket = pCurBucket->pNext;
+		pThisBucket = _ppHistoryAdBucketList[i];
+		while (pThisBucket != NULL) {
+			pPreBucket = pThisBucket;
+			pThisBucket = pThisBucket->pNext;
 			delete pPreBucket;
 		}
 	}
@@ -153,30 +153,30 @@ JobQueueCollection::find(char* cid, char* pid)
 	}
 
 	// find a bucket with a index
-	ClassAdBucket *pCurBucket;
+	ClassAdBucket *pThisBucket;
 	if (ad_type == ClassAdBucket::CLUSTER_AD)
-		pCurBucket = _ppClusterAdBucketList[index];
+		pThisBucket = _ppClusterAdBucketList[index];
 	else 
-		pCurBucket = _ppProcAdBucketList[index];
+		pThisBucket = _ppProcAdBucketList[index];
 
 
 	// find ClassAd 
 	// if there is a chain, follow it
-	while(pCurBucket != NULL)
+	while(pThisBucket != NULL)
 	{
 		if (
 			((ad_type == ClassAdBucket::CLUSTER_AD) && 
-		    (strcmp(cid, pCurBucket->cid) == 0)) 
+		    (strcmp(cid, pThisBucket->cid) == 0)) 
 			||
 			((ad_type == ClassAdBucket::PROC_AD) &&
-		     (strcmp(cid, pCurBucket->cid) == 0) &&
-		     (strcmp(pid, pCurBucket->pid) == 0))
+		     (strcmp(cid, pThisBucket->cid) == 0) &&
+		     (strcmp(pid, pThisBucket->pid) == 0))
 		   )
 		{
-			return pCurBucket->ad; 
+			return pThisBucket->ad; 
 		}
 		else {
-			pCurBucket = pCurBucket->pNext;
+			pThisBucket = pThisBucket->pNext;
 		}
 	}
 
@@ -268,9 +268,9 @@ JobQueueCollection::insert(char* id, ClassAdBucket* pBucket, ClassAdBucket **ppB
 	int index = hashfunction(id);
 
 	// find and delete in a bucket list
-	ClassAdBucket *pCurBucket = ppBucketList[index];
+	ClassAdBucket *pThisBucket = ppBucketList[index];
 
-	if (pCurBucket == NULL) {
+	if (pThisBucket == NULL) {
 		ppBucketList[index] = pBucket;
 		return 1;
 	}
@@ -278,24 +278,24 @@ JobQueueCollection::insert(char* id, ClassAdBucket* pBucket, ClassAdBucket **ppB
 	while(1)
 	{
 		// duplicate check
-		if (pCurBucket->pid == NULL && pBucket->pid == NULL) {
-			if (strcasecmp(pCurBucket->cid, pBucket->cid) == 0) {
+		if (pThisBucket->pid == NULL && pBucket->pid == NULL) {
+			if (strcasecmp(pThisBucket->cid, pBucket->cid) == 0) {
 					return 0;
 			}
 		}
-		else if (pCurBucket->pid != NULL && pBucket->pid != NULL) {
-			if ((strcasecmp(pCurBucket->cid, pBucket->cid) == 0) &&
-				(strcasecmp(pCurBucket->pid, pBucket->pid) == 0)) {
+		else if (pThisBucket->pid != NULL && pBucket->pid != NULL) {
+			if ((strcasecmp(pThisBucket->cid, pBucket->cid) == 0) &&
+				(strcasecmp(pThisBucket->pid, pBucket->pid) == 0)) {
 					return 0;
 			}
 		}
 
-		if (pCurBucket->pNext == NULL) {
-			pCurBucket->pNext = pBucket;
+		if (pThisBucket->pNext == NULL) {
+			pThisBucket->pNext = pBucket;
 			return 1;
 		}
 		else {
-			pCurBucket = pCurBucket->pNext;
+			pThisBucket = pThisBucket->pNext;
 		}
 	}
 
@@ -356,40 +356,40 @@ JobQueueCollection::remove(char* cid, char* pid)
 
 	// find and delete in a bucket list
 	ClassAdBucket *pPreBucket;
-	ClassAdBucket *pCurBucket;
+	ClassAdBucket *pThisBucket;
 	ClassAdBucket **ppBucketList;
 	if (ad_type == ClassAdBucket::CLUSTER_AD) {
-		pPreBucket = pCurBucket = _ppClusterAdBucketList[index];
+		pPreBucket = pThisBucket = _ppClusterAdBucketList[index];
 		ppBucketList = _ppClusterAdBucketList;
 	}
 	else {
-		pPreBucket = pCurBucket = _ppProcAdBucketList[index];
+		pPreBucket = pThisBucket = _ppProcAdBucketList[index];
 		ppBucketList = _ppProcAdBucketList;
 	}
 
 	
-	for (i = 0; pCurBucket != NULL; i++)
+	for (i = 0; pThisBucket != NULL; i++)
 	{
 		if (((ad_type == ClassAdBucket::CLUSTER_AD) && 
-		    (strcmp(cid, pCurBucket->cid) == 0)) 
+		    (strcmp(cid, pThisBucket->cid) == 0)) 
 			||
 			((ad_type == ClassAdBucket::PROC_AD) &&
-		     (strcmp(cid, pCurBucket->cid) == 0) &&
-		     (strcmp(pid, pCurBucket->pid) == 0)))
+		     (strcmp(cid, pThisBucket->cid) == 0) &&
+		     (strcmp(pid, pThisBucket->pid) == 0)))
 		{
 			if (i == 0) {
-				ppBucketList[index] = pCurBucket->pNext;
+				ppBucketList[index] = pThisBucket->pNext;
 			}
 			else {
-				pPreBucket->pNext = pCurBucket->pNext;
+				pPreBucket->pNext = pThisBucket->pNext;
 			}
 
-			delete pCurBucket;
+			delete pThisBucket;
 			return 1;
 		}
 		else {
-			pPreBucket = pCurBucket;
-			pCurBucket = pCurBucket->pNext;
+			pPreBucket = pThisBucket;
+			pThisBucket = pThisBucket->pNext;
 		}
 	}
 

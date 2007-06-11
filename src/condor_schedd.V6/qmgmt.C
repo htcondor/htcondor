@@ -2838,11 +2838,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 				// to the job ad.  These attributes were inserted by the
 				// negotiator.
 			startd_ad->ResetName();
-			char const *name;
+			char const *c_name;
 			size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
-			while( (name=startd_ad->NextNameOriginal()) ) {
-				if( !strncmp(name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-					ExprTree *expr = startd_ad->Lookup(name);
+			while( (c_name=startd_ad->NextNameOriginal()) ) {
+				if( !strncmp(c_name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+					ExprTree *expr = startd_ad->Lookup(c_name);
 					ASSERT(expr);
 					expr = expr->RArg();
 					if( !expr ) {
@@ -2851,10 +2851,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 					char *new_value = NULL;
 					expr->PrintToNewStr( &new_value );
 					ASSERT(new_value);
-					expanded_ad->AssignExpr(name,new_value);
+					expanded_ad->AssignExpr(c_name,new_value);
 
 					MyString match_exp_name = MATCH_EXP;
-					match_exp_name += name;
+					match_exp_name += c_name;
 					if ( SetAttribute(cluster_id,proc_id,match_exp_name.Value(),new_value) < 0 )
 					{
 						EXCEPT("Failed to store '%s=%s' into job ad %d.%d",

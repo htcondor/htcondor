@@ -27,6 +27,8 @@
 #include "startup.h"
 #include "proc.h"
 
+void display_startup_info( const STARTUP_INFO *s, int flags );
+
 void
 display_startup_info( const STARTUP_INFO *s, int flags )
 {

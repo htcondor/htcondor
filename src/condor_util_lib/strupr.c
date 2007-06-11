@@ -38,7 +38,6 @@
 #define _toupper(c) ((c) + 'A' - 'a')
 #endif
 
-
 /*
 ** Convert a string, in place, to the uppercase version of it. 
 */

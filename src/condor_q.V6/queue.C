@@ -92,8 +92,8 @@ static 	char * buffer_io_display (ClassAd *);
 static 	void displayJobShort (ClassAd *);
 static 	char * bufferJobShort (ClassAd *);
 
-/* if useDB is false, then v1 =scheddAddr, v2=scheddName, v3=scheddMachine, v4 ignored;
-   if useDB is true,  then v1 =quillName,  v2=dbIpAddr,   v3=dbName, v4=dbPassword
+/* if useDB is false, then v1 =scheddAddress, v2=scheddName, v3=scheddMachine, v4 ignored;
+   if useDB is true,  then v1 =quill_name,  v2=db_ipAddr,   v3=db_name, v4=db_password
 */
 static	bool show_queue (char* v1, char* v2, char* v3, char* v4, bool useDB);
 static	bool show_queue_buffered (char* v1, char* v2, char* v3, char* v4, bool useDB);
@@ -108,13 +108,13 @@ unsigned int process_direct_argument(char *arg);
 
 #if WANT_QUILL
 /* execute a database query directly */ 
-static void exec_db_query(char *quillName, char *dbIpAddr, char *dbName,char *queryPassword);
+static void exec_db_query(char *quill_name, char *db_ipAddr, char *db_name,char *query_password);
 
 /* build database connection string */
 static char * getDBConnStr(char *&, char *&, char *&, char *&);
 
-/* get the quill address for the quillName specified */
-static QueryResult getQuillAddrFromCollector(char *quillName, char *&quillAddr);
+/* get the quill address for the quill_name specified */
+static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr);
 
 /* avgqueuetime is used to indicate a request to query average wait time for uncompleted jobs in queue */
 static  bool avgqueuetime = false;
@@ -448,17 +448,17 @@ int main (int argc, char **argv)
 					if (useDB) {
 
 						Daemon quill( DT_QUILL, 0, 0 );
-						char tmp[8];
-						strcpy(tmp, "Unknown");
+						char tmp_char[8];
+						strcpy(tmp_char, "Unknown");
 
 						/* query the quill daemon */
 						if ( quill.locate() &&
 					 		( (retval = 
 					 			sqfp( quill.addr(), 
 						  		(quill.name())?
-									(quill.name()):tmp,
+									(quill.name()):tmp_char,
 						  		(quill.fullHostname())?
-									(quill.fullHostname()):tmp,
+									(quill.fullHostname()):tmp_char,
 						  		NULL, FALSE) ) ) )
 						{
 							/* if the queue was retrieved, then I am done */
@@ -1496,7 +1496,7 @@ short_header (void)
 static char *
 format_remote_host (char *, AttrList *ad)
 {
-	static char result[MAXHOSTNAMELEN];
+	static char host_result[MAXHOSTNAMELEN];
 	static char unknownHost [] = "[????????????????]";
 	char* tmp;
 	struct sockaddr_in sin;
@@ -1506,8 +1506,8 @@ format_remote_host (char *, AttrList *ad)
 	if (universe == CONDOR_UNIVERSE_SCHEDULER &&
 		string_to_sin(scheddAddr, &sin) == 1) {
 		if( (tmp = sin_to_hostname(&sin, NULL)) ) {
-			strcpy( result, tmp );
-			return result;
+			strcpy( host_result, tmp );
+			return host_result;
 		} else {
 			return unknownHost;
 		}
@@ -1515,29 +1515,29 @@ format_remote_host (char *, AttrList *ad)
 		int current_hosts;
 		if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
 			if (current_hosts == 1) {
-				sprintf(result, "1 host");
+				sprintf(host_result, "1 host");
 			} else {
-				sprintf(result, "%d hosts", current_hosts);
+				sprintf(host_result, "%d hosts", current_hosts);
 			}
-			return result;
+			return host_result;
 		}
 	} else if (universe == CONDOR_UNIVERSE_GRID) {
-		if (ad->LookupString(ATTR_GRID_RESOURCE,result) == 1 )
-			return result;
+		if (ad->LookupString(ATTR_GRID_RESOURCE,host_result) == 1 )
+			return host_result;
 		else
 			return unknownHost;
 	}
 
-	if (ad->LookupString(ATTR_REMOTE_HOST, result) == 1) {
-		if( is_valid_sinful(result) && 
-			(string_to_sin(result, &sin) == 1) ) {  
+	if (ad->LookupString(ATTR_REMOTE_HOST, host_result) == 1) {
+		if( is_valid_sinful(host_result) && 
+			(string_to_sin(host_result, &sin) == 1) ) {  
 			if( (tmp = sin_to_hostname(&sin, NULL)) ) {
-				strcpy( result, tmp );
+				strcpy( host_result, tmp );
 			} else {
 				return unknownHost;
 			}
 		}
-		return result;
+		return host_result;
 	}
 	return unknownHost;
 }
@@ -1551,7 +1551,7 @@ format_cpu_time (float utime, AttrList *ad)
 static char *
 format_goodput (int job_status, AttrList *ad)
 {
-	static char result[9];
+	static char put_result[9];
 	int ckpt_time = 0, shadow_bday = 0, last_ckpt = 0;
 	float wall_clock = 0.0;
 	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time );
@@ -1562,17 +1562,17 @@ format_goodput (int job_status, AttrList *ad)
 		wall_clock += last_ckpt - shadow_bday;
 	}
 	if (wall_clock <= 0.0) return " [?????]";
-	float goodput = ckpt_time/wall_clock*100.0;
-	if (goodput > 100.0) goodput = 100.0;
-	else if (goodput < 0.0) return " [?????]";
-	sprintf(result, " %6.1f%%", goodput);
-	return result;
+	float goodput_time = ckpt_time/wall_clock*100.0;
+	if (goodput_time > 100.0) goodput_time = 100.0;
+	else if (goodput_time < 0.0) return " [?????]";
+	sprintf(put_result, " %6.1f%%", goodput_time);
+	return put_result;
 }
 
 static char *
 format_mbps (float bytes_sent, AttrList *ad)
 {
-	static char result[10];
+	static char result_format[10];
 	float wall_clock=0.0, bytes_recvd=0.0, total_mbits;
 	int shadow_bday = 0, last_ckpt = 0, job_status = IDLE;
 	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
@@ -1585,28 +1585,28 @@ format_mbps (float bytes_sent, AttrList *ad)
 	ad->LookupFloat(ATTR_BYTES_RECVD, bytes_recvd);
 	total_mbits = (bytes_sent+bytes_recvd)*8/(1024*1024); // bytes to mbits
 	if (total_mbits <= 0) return " [????]";
-	sprintf(result, " %6.2f", total_mbits/wall_clock);
-	return result;
+	sprintf(result_format, " %6.2f", total_mbits/wall_clock);
+	return result_format;
 }
 
 static char *
 format_cpu_util (float utime, AttrList *ad)
 {
-	static char result[10];
+	static char result_format[10];
 	int ckpt_time = 0;
 	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time);
 	if (ckpt_time == 0) return " [??????]";
 	float util = (ckpt_time) ? utime/ckpt_time*100.0 : 0.0;
 	if (util > 100.0) util = 100.0;
 	else if (util < 0.0) return " [??????]";
-	sprintf(result, "  %6.1f%%", util);
-	return result;
+	sprintf(result_format, "  %6.1f%%", util);
+	return result_format;
 }
 
 static char *
 format_owner (char *owner, AttrList *ad)
 {
-	static char result[15] = "";
+	static char result_format[15] = "";
 
 	// [this is a somewhat kludgey place to implement DAG formatting,
 	// but for a variety of reasons (maintainability, allowing future
@@ -1628,9 +1628,9 @@ format_owner (char *owner, AttrList *ad)
 				// -- don't worry about what type the DAGMan job ID is.
 			char *dag_node_name;
 			if ( ad->LookupString( ATTR_DAG_NODE_NAME, &dag_node_name ) ) {
-				sprintf( result, " |-%-11.11s", dag_node_name );
+				sprintf( result_format, " |-%-11.11s", dag_node_name );
 				free(dag_node_name);
-				return result;
+				return result_format;
 			} else {
 				fprintf(stderr, "DAG node job with no %s attribute!\n",
 						ATTR_DAG_NODE_NAME);
@@ -1644,21 +1644,21 @@ format_owner (char *owner, AttrList *ad)
 		strncpy(tmp,NiceUserName,99);
 		strcat(tmp, ".");
 		strcat(tmp, owner);
-		sprintf(result, "%-14.14s", tmp);
+		sprintf(result_format, "%-14.14s", tmp);
 	} else {
-		sprintf(result, "%-14.14s", owner);
+		sprintf(result_format, "%-14.14s", owner);
 	}
-	return result;
+	return result_format;
 }
 
 static char *
 format_globusStatus( int globusStatus, AttrList *ad )
 {
-	static char result[64];
+	static char result_format[64];
 
-	strcpy( result, GlobusJobStatusName( globusStatus ) );
+	strcpy( result_format, GlobusJobStatusName( globusStatus ) );
 
-	return result;
+	return result_format;
 }
 
 // The remote hostname may be in GlobusResource or GridResource.
@@ -1670,7 +1670,7 @@ format_globusStatus( int globusStatus, AttrList *ad )
 static char *
 format_globusHostAndJM( char  *ignore_me, AttrList *ad )
 {
-	static char result[64];
+	static char result_format[64];
 	char	host[80] = "[?????]";
 	char	jm[80] = "fork";
 	char	*tmp;
@@ -1771,8 +1771,8 @@ format_globusHostAndJM( char  *ignore_me, AttrList *ad )
 	}
 
 	// done --- pack components into the result string and return
-	sprintf( result, " %-8.8s %-18.18s  ", jm, host );
-	return( result );
+	sprintf( result_format, " %-8.8s %-18.18s  ", jm, host );
+	return( result_format );
 }
 
 
@@ -1864,14 +1864,14 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 	static bool	setup_mask = false;
 	clusterProcString **the_output;
 
-	char *scheddAddr;
+	char *scheddAddress;
 	char *scheddName;
 	char *scheddMachine;
 
-	char *quillName;
-	char *dbIpAddr;
-	char *dbName;
-	char *queryPassword;
+	char *quill_name;
+	char *db_ipAddr;
+	char *db_name;
+	char *query_password;
 	char *dbconn=NULL;
 	int i;
 
@@ -1879,13 +1879,13 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 
 		/* intepret the parameters accordingly based on whether we are querying database */
 	if (useDB) {
-		quillName = v1;
-		dbIpAddr = v2;
-		dbName = v3;		
-		queryPassword = v4;
+		quill_name = v1;
+		db_ipAddr = v2;
+		db_name = v3;		
+		query_password = v4;
 	}
 	else {
-		scheddAddr = v1;
+		scheddAddress = v1;
 		scheddName = v2;
 		scheddMachine = v3;		
 	}
@@ -1974,7 +1974,7 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 	if (useDB) {
 #if WANT_QUILL
 
-		dbconn = getDBConnStr(quillName, dbIpAddr, dbName, queryPassword);
+		dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
 
 		if( Q.fetchQueueFromDBAndProcess( dbconn,
 											process_buffer_line,
@@ -1982,7 +1982,7 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 			fprintf( stderr, 
 					"\n-- Failed to fetch ads from db [%s] at database "
 					"server %s\n%s\n",
-					dbName, dbIpAddr, errstack.getFullText(true) );
+					db_name, db_ipAddr, errstack.getFullText(true) );
 
 			delete output_buffer;
 
@@ -1999,13 +1999,13 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 		CondorVersionInfo v(version);
 		bool useFastPath = v.built_since_version(6,9,3);
 
-		if( Q.fetchQueueFromHostAndProcess( scheddAddr, attrs,
+		if( Q.fetchQueueFromHostAndProcess( scheddAddress, attrs,
 											process_buffer_line,
 											useFastPath,
 											&errstack) != Q_OK ) {
 			fprintf(stderr,
 				"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-				scheddAddr, scheddMachine, errstack.getFullText(true) );
+				scheddAddress, scheddMachine, errstack.getFullText(true) );
 
 			delete output_buffer;
 
@@ -2026,13 +2026,13 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 
 		if (! customFormat ) {
 			if (useDB) {
-				printf ("\n\n-- Quill: %s : %s : %s\n", quillName, 
-						dbIpAddr, dbName);
+				printf ("\n\n-- Quill: %s : %s : %s\n", quill_name, 
+						db_ipAddr, db_name);
 			} else if( querySchedds ) {
-				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
+				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
 			} else {
 				printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
-						scheddAddr, scheddMachine);	
+						scheddAddress, scheddMachine);	
 			}
 			// Print the output header
 		
@@ -2170,14 +2170,14 @@ process_buffer_line( ClassAd *job )
 static bool
 show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 {
-	char *scheddAddr;
+	char *scheddAddress;
 	char *scheddName;
 	char *scheddMachine;
 
-	char *quillName;
-	char *dbIpAddr;
-	char *dbName;
-	char *queryPassword;
+	char *quill_name;
+	char *db_ipAddr;
+	char *db_name;
+	char *query_password;
 
 	char *dbconn=NULL;
 
@@ -2186,7 +2186,7 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 	static bool	setup_mask = false;
 
 	/* assume this will be true. And it will be if we aren't using the DB */
-	scheddAddr = v1;
+	scheddAddress = v1;
 	scheddName = v2;
 	scheddMachine = v3;		
 
@@ -2205,10 +2205,10 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 		/* interpret the parameters accordingly based on whether
 			we are querying a database */
 		if (useDB) {
-			quillName = v1;
-			dbIpAddr = v2;
-			dbName = v3;		
-			queryPassword = v4;
+			quill_name = v1;
+			db_ipAddr = v2;
+			db_name = v3;		
+			query_password = v4;
 		}
 
 		CondorError errstack;
@@ -2217,22 +2217,22 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 		if (useDB) {
 #if WANT_QUILL
 
-			dbconn = getDBConnStr(quillName, dbIpAddr, dbName, queryPassword);
+			dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
 
 				// fetch queue from database
 			if( Q.fetchQueueFromDB(jobs, dbconn, &errstack) != Q_OK ) {
 				fprintf( stderr,
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						dbIpAddr, dbName, errstack.getFullText(true) );
+						db_ipAddr, db_name, errstack.getFullText(true) );
 				return false;
 			}
 #endif /* WANT_QUILL */
 		} else {
 				// fetch queue from schedd	
-			if( Q.fetchQueueFromHost(jobs, attrs,scheddAddr, &errstack) != Q_OK ) {
+			if( Q.fetchQueueFromHost(jobs, attrs,scheddAddress, &errstack) != Q_OK ) {
 				fprintf( stderr,
 					"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-					scheddAddr, scheddMachine, errstack.getFullText(true) );
+					scheddAddress, scheddMachine, errstack.getFullText(true) );
 				return false;
 			}
 		}
@@ -2247,13 +2247,13 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 	if( analyze ) {
 			// print header
 		if (useDB) {
-			printf ("\n\n-- Quill: %s : %s : %s\n", quillName, 
-					dbIpAddr, dbName);
+			printf ("\n\n-- Quill: %s : %s : %s\n", quill_name, 
+					db_ipAddr, db_name);
 		} else if( querySchedds ) {
-			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
+			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
 		} else {
 			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
-					scheddAddr, scheddMachine);	
+					scheddAddress, scheddMachine);	
 		}
 
 		jobs.Open();
@@ -2270,13 +2270,13 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 			// print header
 		if ( ! customFormat ) {
 			if (useDB) {
-				printf ("\n\n-- Quill: %s : %s : %s\n", quillName, 
-						dbIpAddr, dbName);
+				printf ("\n\n-- Quill: %s : %s : %s\n", quill_name, 
+						db_ipAddr, db_name);
 			} else if( querySchedds ) {
-				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
+				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
 			} else {
 				printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
-					scheddAddr, scheddMachine);	
+					scheddAddress, scheddMachine);	
 			}
 		}
 
@@ -2538,7 +2538,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 	char	buffer[128];
 	int		index;
 	ClassAd	*offer;
-	EvalResult	result;
+	EvalResult	eval_result;
 	int		cluster, proc;
 	int		jobState;
 	int		niceUser;
@@ -2625,8 +2625,8 @@ doRunAnalysisToBuffer( ClassAd *request )
 			
 		// 3. Is there a remote user?
 		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
-			if( stdRankCondition->EvalTree( offer, request, &result ) &&
-					result.type == LX_INTEGER && result.i == TRUE ) {
+			if( stdRankCondition->EvalTree( offer, request, &eval_result ) &&
+					eval_result.type == LX_INTEGER && eval_result.i == TRUE ) {
 				// both sides satisfied and no remote user
 				if( verbose ) sprintf( return_buff, "%sAvailable\n",
 					return_buff );
@@ -2645,12 +2645,12 @@ doRunAnalysisToBuffer( ClassAd *request )
 		}
 
 		// 4. Satisfies preemption priority condition?
-		if( preemptPrioCondition->EvalTree( offer, request, &result ) &&
-			result.type == LX_INTEGER && result.i == TRUE ) {
+		if( preemptPrioCondition->EvalTree( offer, request, &eval_result ) &&
+			eval_result.type == LX_INTEGER && eval_result.i == TRUE ) {
 
 			// 5. Satisfies standard rank condition?
-			if( stdRankCondition->EvalTree( offer , request , &result ) &&
-				result.type == LX_INTEGER && result.i == TRUE )  
+			if( stdRankCondition->EvalTree( offer , request , &eval_result ) &&
+				eval_result.type == LX_INTEGER && eval_result.i == TRUE )  
 			{
 				if( verbose )
 					sprintf( return_buff, "%sAvailable\n", return_buff );
@@ -2658,12 +2658,12 @@ doRunAnalysisToBuffer( ClassAd *request )
 				continue;
 			} else {
 				// 6.  Satisfies preemption rank condition?
-				if( preemptRankCondition->EvalTree( offer, request, &result ) &&
-					result.type == LX_INTEGER && result.i == TRUE )
+				if( preemptRankCondition->EvalTree( offer, request, &eval_result ) &&
+					eval_result.type == LX_INTEGER && eval_result.i == TRUE )
 				{
 					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
-					if( preemptionReq->EvalTree( offer , request , &result ) &&
-						result.type == LX_INTEGER && result.i == FALSE ) 
+					if( preemptionReq->EvalTree( offer , request , &eval_result ) &&
+						eval_result.type == LX_INTEGER && eval_result.i == FALSE ) 
 					{
 						fPreemptReqTest++;
 						if( verbose ) {
@@ -2959,39 +2959,39 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
 #if WANT_QUILL
 
 /* get the quill address for the quillName specified */
-static QueryResult getQuillAddrFromCollector(char *quillName, char *&quillAddr) {
-	QueryResult result = Q_OK;
-	char		constraint[1024];
+static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr) {
+	QueryResult query_result = Q_OK;
+	char		query_constraint[1024];
 	CondorQuery	quillQuery(QUILL_AD);
 	ClassAdList quillList;
 	ClassAd		*ad;
 
-	sprintf (constraint, "%s == \"%s\"", ATTR_NAME, quillName);
-	quillQuery.addORConstraint (constraint);
+	sprintf (query_constraint, "%s == \"%s\"", ATTR_NAME, quill_name);
+	quillQuery.addORConstraint (query_constraint);
 
-	result = Collectors->query ( quillQuery, quillList );
+	query_result = Collectors->query ( quillQuery, quillList );
 
 	quillList.Open();	
 	while ((ad = quillList.Next())) {
-		ad->LookupString(ATTR_MY_ADDRESS, &quillAddr);
+		ad->LookupString(ATTR_MY_ADDRESS, &quill_addr);
 	}
 	quillList.Close();
-	return result;
+	return query_result;
 }
 
 
-static char * getDBConnStr(char *&quillName,
+static char * getDBConnStr(char *&quill_name,
                            char *&databaseIp,
                            char *&databaseName,
-                           char *&queryPassword) {
+                           char *&query_password) {
 	char            *host, *port, *dbconn, *ptr_colon;
 	char            *tmpquillname, *tmpdatabaseip, *tmpdatabasename, *tmpquerypassword;
 	int             len, tmp1, tmp2, tmp3;
 
-	if((!quillName && !(tmpquillname = param("QUILL_NAME"))) ||
+	if((!quill_name && !(tmpquillname = param("QUILL_NAME"))) ||
 	   (!databaseIp && !(tmpdatabaseip = param("QUILL_DB_IP_ADDR"))) ||
 	   (!databaseName && !(tmpdatabasename = param("QUILL_DB_NAME"))) ||
-	   (!queryPassword && !(tmpquerypassword = param("QUILL_DB_QUERY_PASSWORD")))) {
+	   (!query_password && !(tmpquerypassword = param("QUILL_DB_QUERY_PASSWORD")))) {
 		fprintf( stderr, "Error: Could not find database related parameter\n");
 		fprintf(stderr, "\n");
 		print_wrapped_text("Extra Info: "
@@ -3005,8 +3005,8 @@ static char * getDBConnStr(char *&quillName,
 		exit( 1 );
 	}
 
-	if(!quillName) {
-		quillName = tmpquillname;
+	if(!quill_name) {
+		quill_name = tmpquillname;
 	}
 	if(!databaseIp) {
 		if(tmpdatabaseip[0] != '<') {
@@ -3023,12 +3023,12 @@ static char * getDBConnStr(char *&quillName,
 	if(!databaseName) {
 		databaseName = tmpdatabasename;
 	}
-	if(!queryPassword) {
-		queryPassword = tmpquerypassword;
+	if(!query_password) {
+		query_password = tmpquerypassword;
 	}
 
 	tmp1 = strlen(databaseName);
-	tmp2 = strlen(queryPassword);
+	tmp2 = strlen(query_password);
 	len = strlen(databaseIp);
 
 		//the 6 is for the string "host= " or "port= "
@@ -3055,20 +3055,20 @@ static char * getDBConnStr(char *&quillName,
 	tmp3 = (2 * len) + tmp1 + tmp2 + 1024;
 	dbconn = (char *) malloc(tmp3 * sizeof(char));
 	sprintf(dbconn, "%s %s user=quillreader password=%s dbname=%s",
-			host, port, queryPassword, databaseName);
+			host, port, query_password, databaseName);
 
 	free(host);
 	free(port);
 	return dbconn;
 }
 
-static void exec_db_query(char *quillName, char *dbIpAddr, char *dbName, char *queryPassword) {
+static void exec_db_query(char *quill_name, char *db_ipAddr, char *db_name, char *query_password) {
 	char *dbconn=NULL;
 	
-	dbconn = getDBConnStr(quillName, dbIpAddr, dbName, queryPassword);
+	dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
 
-	printf ("\n\n-- Quill: %s : %s : %s\n", quillName, 
-			dbIpAddr, dbName);
+	printf ("\n\n-- Quill: %s : %s : %s\n", quill_name, 
+			db_ipAddr, db_name);
 
 	if (avgqueuetime) {
 		Q.rawDBQuery(dbconn, AVG_TIME_IN_QUEUE);

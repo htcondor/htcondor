@@ -26,8 +26,8 @@
 #include "mpiresource.h"
 #include "classad_helpers.h"
 
-MpiResource::MpiResource( BaseShadow *shadow ) :
-	RemoteResource( shadow ) 
+MpiResource::MpiResource( BaseShadow *base_shadow ) :
+	RemoteResource( base_shadow ) 
 {
 	node_num = -1;
 }

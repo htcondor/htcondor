@@ -51,7 +51,7 @@ ProcFamilyInterface* ProcFamilyInterface::create(char* subsys)
 		dprintf(D_ALWAYS,
 		        "PrivSep requires use of ProcD; "
 		            "ignoring USE_PROCD setting\n");
-		char* address_suffix = is_master ? NULL : subsys;
+		// char* address_suffix = is_master ? NULL : subsys;
 		ptr = new ProcFamilyProxy;
 	}
 	else {

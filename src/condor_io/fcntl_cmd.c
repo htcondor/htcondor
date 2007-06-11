@@ -22,6 +22,9 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include <fcntl.h>
 
+int fcntl_cmd_encode(int cmd);
+int fcntl_cmd_decode(int cmd);
+
 int
 fcntl_cmd_encode(int cmd)
 {

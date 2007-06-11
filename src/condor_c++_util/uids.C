@@ -775,7 +775,7 @@ init_condor_ids()
 	/* If we're root, set the Condor Uid and Gid to the value
 	   specified in the "CONDOR_IDS" environment variable */
 	if( can_switch_ids() ) {
-		const char	*envName = EnvGetName( ENV_UG_IDS ); 
+		const char	*enviName = EnvGetName( ENV_UG_IDS ); 
 		if( envCondorUid != MAXINT ) {	
 			/* CONDOR_IDS are set, use what it said */
 				CondorUid = envCondorUid;
@@ -798,7 +798,7 @@ init_condor_ids()
 						 "Can't find \"%s\" in the password file and "
 						 "%s not defined in %s_config or as an "
 						 "environment variable.\n", myDistro->Get(),
-						 myDistro->Get(), envName );
+						 myDistro->Get(), enviName );
 				exit(1);
 			}
 		}

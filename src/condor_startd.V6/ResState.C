@@ -24,14 +24,14 @@
 #include "condor_common.h"
 #include "startd.h"
 
-ResState::ResState( Resource* rip )
+ResState::ResState( Resource* res_ip )
 {
 	r_state = owner_state;
 	r_destination = no_state;
 	r_act = idle_act;
 	atime = (int)time(NULL);
 	stime = atime;
-	this->rip = rip;
+	this->rip = res_ip;
 }
 
 

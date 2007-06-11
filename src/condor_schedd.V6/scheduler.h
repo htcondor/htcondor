@@ -386,7 +386,7 @@ class Scheduler : public Service
 	// Callbacks to handle transfer requests for clients uploading files into
 	// Condor's control.
 	// These functions DO NOT own the memory passed to them.
-	TreqAction treq_upload_pre_push_callback(TransferRequest *treq, 
+	TreqAction treq_upload_pre_push_callback(TransferRequest *treq,
 		TransferDaemon *td);
 	TreqAction treq_upload_post_push_callback(TransferRequest *treq, 
 		TransferDaemon *td);

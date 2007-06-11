@@ -73,8 +73,14 @@
 #include "condor_debug.h"
 
 /* P R O T O T Y P E S */
-char *param();
-
+char *param(void);
+char *GetIPName(struct in_addr machine_IP);
+int I_bind(int socket_desc, struct sockaddr_in* addr, int is_well_known);
+char* gethostnamebyaddr(struct in_addr* addr);
+int I_socket(void);
+int I_listen(int socket_desc, int queue_len);
+int I_accept(int socket_desc, struct sockaddr_in* addr, int* addr_len);
+int net_write(int socket_desc, char* buffer, int size);
 
 char* GetIPName(struct in_addr machine_IP)
 {

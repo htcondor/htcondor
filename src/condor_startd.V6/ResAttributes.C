@@ -325,8 +325,8 @@ MachAttributes::benchmark( Resource* rip, int force )
 	if ( new_mips_calc <= 0 ) {
 		dprintf( D_ALWAYS, "Non-positive MIPS calculated!\n" );
 #ifndef WIN32
-		dprintf( D_ALWAYS, "   ticks before: %d, ticks after: %d\n",
-			 before.tms_utime, after.tms_utime );
+		dprintf( D_ALWAYS, "   ticks before: %ld, ticks after: %ld\n",
+			 (long)before.tms_utime, (long)after.tms_utime );
 #endif
 	}
 
@@ -406,9 +406,9 @@ CpuAttributes::CpuAttributes( MachAttributes* map,
 
 
 void
-CpuAttributes::attach( Resource* rip )
+CpuAttributes::attach( Resource* res_ip )
 {
-	this->rip = rip;
+	this->rip = res_ip;
 }
 
 

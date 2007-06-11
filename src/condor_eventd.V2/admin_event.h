@@ -128,7 +128,7 @@ class AdminEvent : public Service
 	int check_Shutdown( bool init = false );
 	int do_checkpoint_shutdown( bool init = false );
 	int process_ShutdownTime( char *req_time );
-	int FetchAds_ByConstraint( char *constraint );
+	int FetchAds_ByConstraint( const char *constraint );
 	int changeState( int howsoon = EVENT_NOW, int newstate = EVENT_INIT );
 	int loadCheckPointHash( int megs );
 	int getShutdownDelta( void );
@@ -153,8 +153,7 @@ class AdminEvent : public Service
 		Place a benchmark statistic(classad) into a list of benchmarks 
 		into the m_CkptBenchMarks hash.
 		*/
-	int benchmark_insert( float megspersec, int megs, int time, 
-		char *name, char *where);
+	int benchmark_insert( float megspersec, int megs, int time, char *name);
 		/*
 		This routine first shows the current benchmarks being collected
 		on a particular image size amount from hash m_CkptBenchMarks and 

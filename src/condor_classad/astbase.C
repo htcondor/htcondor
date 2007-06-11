@@ -44,16 +44,16 @@ int ExprTree::string_space_references = 0;
 // Tree node constructors.                                                    //
 ////////////////////////////////////////////////////////////////////////////////
 
-VariableBase::VariableBase(char* name)
+VariableBase::VariableBase(char* varName)
 {
 #ifdef USE_STRING_SPACE_IN_CLASSADS
-	this->stringSpaceIndex = string_space->getCanonical(name, SS_DUP);
+	this->stringSpaceIndex = string_space->getCanonical(varName, SS_DUP);
 	// I apologize for casting away the const-ness of the char * here
 	// I'm trying to make minimal changes in the code to add string space,
 	// and it is safe. 
 	this->name = (char *) (*string_space)[stringSpaceIndex];
 #else
-    this->name = name;
+    this->name = varName;
 #endif
     this->type = LX_VARIABLE;
 }
@@ -1127,16 +1127,16 @@ int BooleanBase::Value()
 	return value;
 }
 
-FunctionBase::FunctionBase(char *name)
+FunctionBase::FunctionBase(char *tName)
 {
 #ifdef USE_STRING_SPACE_IN_CLASSADS
-	this->stringSpaceIndex = string_space->getCanonical(name, SS_DUP);
+	this->stringSpaceIndex = string_space->getCanonical(tName, SS_DUP);
 	// I apologize for casting away the const-ness of the char * here
 	// I'm trying to make minimal changes in the code to add string space,
 	// and it is safe. 
 	this->name = (char *) (*string_space)[stringSpaceIndex];
 #else
-    this->name = name;
+    this->name = tName;
 #endif
     this->type = LX_FUNCTION;
 	return;

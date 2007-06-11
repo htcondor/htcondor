@@ -31,25 +31,25 @@
 #include "dc_startd.h"
 
 
-DCStartd::DCStartd( const char* name, const char* pool ) 
-	: Daemon( DT_STARTD, name, pool )
+DCStartd::DCStartd( const char* tName, const char* tPool ) 
+	: Daemon( DT_STARTD, tName, tPool )
 {
 	claim_id = NULL;
 }
 
 
-DCStartd::DCStartd( const char* name, const char* pool, const char* addr,
-					const char* id )
-	: Daemon( DT_STARTD, name, pool )
+DCStartd::DCStartd( const char* tName, const char* tPool, const char* tAddr,
+					const char* tId )
+	: Daemon( DT_STARTD, tName, tPool )
 {
-	if( addr ) {
-		New_addr( strnewp(addr) );
+	if( tAddr ) {
+		New_addr( strnewp(tAddr) );
 	}
 		// claim_id isn't initialized by Daemon's constructor, so we
 		// have to treat it slightly differently 
 	claim_id = NULL;
-	if( id ) {
-		claim_id = strnewp( id );
+	if( tId ) {
+		claim_id = strnewp( tId );
 	}
 }
 
@@ -231,19 +231,19 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 
 
 bool
-DCStartd::requestClaim( ClaimType type, const ClassAd* req_ad, 
+DCStartd::requestClaim( ClaimType cType, const ClassAd* req_ad, 
 						ClassAd* reply, int timeout )
 {
 	setCmdStr( "requestClaim" );
 
 	MyString err_msg;
-	switch( type ) {
+	switch( cType ) {
 	case CLAIM_COD:
 	case CLAIM_OPPORTUNISTIC:
 		break;
 	default:
 		err_msg = "Invalid ClaimType (";
-		err_msg += (int)type;
+		err_msg += (int)cType;
 		err_msg += ')';
 		newError( CA_INVALID_REQUEST, err_msg.Value() );
 		return false;
@@ -257,7 +257,7 @@ DCStartd::requestClaim( ClaimType type, const ClassAd* req_ad,
 			 getCommandString(CA_REQUEST_CLAIM) );
 	req.Insert( buf );
 
-	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_TYPE, getClaimTypeString(type) );
+	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_TYPE, getClaimTypeString(cType) );
 	req.Insert( buf );
 
 	return sendCACmd( &req, reply, true, timeout );
@@ -334,14 +334,14 @@ DCStartd::resumeClaim( ClassAd* reply, int timeout )
 
 
 bool
-DCStartd::deactivateClaim( VacateType type, ClassAd* reply,
+DCStartd::deactivateClaim( VacateType vType, ClassAd* reply,
 						   int timeout )
 {
 	setCmdStr( "deactivateClaim" );
 	if( ! checkClaimId() ) {
 		return false;
 	}
-	if( ! checkVacateType(type) ) {
+	if( ! checkVacateType(vType) ) {
 		return false;
 	}
 
@@ -357,7 +357,7 @@ DCStartd::deactivateClaim( VacateType type, ClassAd* reply,
 	req.Insert( buf );
 
 	sprintf( buf, "%s = \"%s\"", ATTR_VACATE_TYPE,
-			 getVacateTypeString(type) ); 
+			 getVacateTypeString(vType) ); 
 	req.Insert( buf );
 
  		// since deactivate could take a while, if we didn't already
@@ -372,14 +372,14 @@ DCStartd::deactivateClaim( VacateType type, ClassAd* reply,
 
 
 bool
-DCStartd::releaseClaim( VacateType type, ClassAd* reply, 
+DCStartd::releaseClaim( VacateType vType, ClassAd* reply, 
 						int timeout ) 
 {
 	setCmdStr( "releaseClaim" );
 	if( ! checkClaimId() ) {
 		return false;
 	}
-	if( ! checkVacateType(type) ) {
+	if( ! checkVacateType(vType) ) {
 		return false;
 	}
 
@@ -395,7 +395,7 @@ DCStartd::releaseClaim( VacateType type, ClassAd* reply,
 	req.Insert( buf );
 
 	sprintf( buf, "%s = \"%s\"", ATTR_VACATE_TYPE,
-			 getVacateTypeString(type) );
+			 getVacateTypeString(vType) );
 	req.Insert( buf );
 
  		// since release could take a while, if we didn't already get
@@ -435,7 +435,7 @@ DCStartd::renewLeaseForClaim( ClassAd* reply, int timeout )
 
 bool
 DCStartd::locateStarter( const char* global_job_id, 
-						 const char *claim_id,
+						 const char *claimId,
 						 ClassAd* reply,
 						 int timeout )
 {
@@ -459,7 +459,7 @@ DCStartd::locateStarter( const char* global_job_id,
 
 	line = ATTR_CLAIM_ID;
 	line += "=\"";
-	line += claim_id;
+	line += claimId;
 	line += '"';
 	req.Insert( line.Value() );
 
@@ -602,7 +602,7 @@ DCStartd::delegateX509Proxy( const char* proxy )
 }
 
 bool 
-DCStartd::vacateClaim( const char* name )
+DCStartd::vacateClaim( const char* name_vacate )
 {
 	setCmdStr( "vacateClaim" );
 
@@ -630,7 +630,7 @@ DCStartd::vacateClaim( const char* name )
 		return false;
 	}
 
-	if( ! reli_sock.code((unsigned char *)name) ) {
+	if( ! reli_sock.code((unsigned char *)name_vacate) ) {
 		MyString err = "DCStartd::vacateClaim: ";
 		err += "Failed to send Name to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
@@ -647,10 +647,10 @@ DCStartd::vacateClaim( const char* name )
 }
 
 bool 
-DCStartd::checkpointJob( const char* name )
+DCStartd::checkpointJob( const char* name_ckpt )
 {
 	dprintf( D_FULLDEBUG, "Entering DCStartd::checkpointJob(%s)\n",
-			 name );
+			 name_ckpt );
 
 	setCmdStr( "checkpointJob" );
 
@@ -679,7 +679,7 @@ DCStartd::checkpointJob( const char* name )
 	}
 
 		// Now, send the name
-	if( ! reli_sock.code((unsigned char *)name) ) {
+	if( ! reli_sock.code((unsigned char *)name_ckpt) ) {
 		MyString err = "DCStartd::checkpointJob: ";
 		err += "Failed to send Name to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
@@ -699,14 +699,13 @@ DCStartd::checkpointJob( const char* name )
 
 
 bool 
-DCStartd::getAds( ClassAdList &adsList, const char* name )
+DCStartd::getAds( ClassAdList &adsList )
 {
 	CondorError errstack;
 	// fetch the query
 	QueryResult q;
 	CondorQuery* query;
-	ClassAd *ad;
-	char* addr;
+	char* ad_addr;
 
 	// instantiate query object
 	if (!(query = new CondorQuery (STARTD_AD))) {
@@ -715,8 +714,8 @@ DCStartd::getAds( ClassAdList &adsList, const char* name )
 	}
 
 	if( this->locate() ){
-		addr = this->addr();
-		q = query->fetchAds(adsList, addr, &errstack);
+		ad_addr = this->addr();
+		q = query->fetchAds(adsList, ad_addr, &errstack);
 		if (q != Q_OK) {
         	if (q == Q_COMMUNICATION_ERROR) {
             	dprintf( D_ALWAYS, "%s\n", errstack.getFullText(true) );

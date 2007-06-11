@@ -28,8 +28,8 @@
 
 
 // Basic CondorLock constructor
-CondorLock::CondorLock( const char	*lock_url,
-						const char	*lock_name,
+CondorLock::CondorLock( const char	*l_url,
+						const char	*l_name,
 						Service		*app_service,
 						LockEvent	lock_event_acquired,
 						LockEvent	lock_event_lost,
@@ -40,8 +40,8 @@ CondorLock::CondorLock( const char	*lock_url,
 {
 
 		// BuildLock does the real work of building the lock
-	BuildLock( lock_url,
-			   lock_name,
+	BuildLock( l_url,
+			   l_name,
 			   app_service,
 			   lock_event_acquired,
 			   lock_event_lost,
@@ -123,8 +123,8 @@ CondorLock::EventSrcString( LockEventSrc src )
 
 // Set (change) lock parameters
 int
-CondorLock::SetLockParams( const char	*lock_url,
-						   const char	*lock_name,
+CondorLock::SetLockParams( const char	*l_url,
+						   const char	*l_name,
 						   time_t		poll_period,
 						   time_t		lock_hold_time,
 						   bool			auto_refresh ) 
@@ -132,7 +132,7 @@ CondorLock::SetLockParams( const char	*lock_url,
 
 		// See if the URL or name has changed; if so, we need to rebuild
 		// the lock from scratch
-	if ( real_lock->ChangeUrlName( lock_url, lock_name ) ) {
+	if ( real_lock->ChangeUrlName( l_url, l_name ) ) {
 
 			// Delete & rebuild the lock anew
 		dprintf( D_ALWAYS,
@@ -148,8 +148,8 @@ CondorLock::SetLockParams( const char	*lock_url,
 
 			// Finally, reconstruct the new lock with the new params &
 			// old service & handler info
-		return BuildLock ( lock_url,
-						   lock_name,
+		return BuildLock ( l_url,
+						   l_name,
 						   app_service,
 						   lock_event_acquired,
 						   lock_event_lost,
@@ -167,8 +167,8 @@ CondorLock::SetLockParams( const char	*lock_url,
 
 // Do the real work of "building" a lock
 int
-CondorLock::BuildLock( const char	*lock_url,
-					   const char	*lock_name,
+CondorLock::BuildLock( const char	*l_url,
+					   const char	*l_name,
 					   Service		*app_service,
 					   LockEvent	lock_event_acquired,
 					   LockEvent	lock_event_lost,
@@ -181,13 +181,13 @@ CondorLock::BuildLock( const char	*lock_url,
 		// once choice; the file lock.  If it says no, give up!!
 
 		// First, get the rank.
-	if ( CondorLockFile::Rank( lock_url ) <= 0 ) {
+	if ( CondorLockFile::Rank( l_url ) <= 0 ) {
 		return -1;
 	}
 
 		// Now, let it build itself
-	real_lock = CondorLockFile::Construct( lock_url,
-										   lock_name,
+	real_lock = CondorLockFile::Construct( l_url,
+										   l_name,
 										   app_service,
 										   lock_event_acquired,
 										   lock_event_lost,

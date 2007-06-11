@@ -366,7 +366,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 									 sortedIS );
 				buffer += "  conditions: ";
 				bool firstNum = true;
-				for( int i = 0; i < numConds; i++ ) {
+				for( i = 0; i < numConds; i++ ) {
 					if( sortedIS.HasIndex( i ) ) {
 						if( !firstNum ) {
 							buffer += ", ";
@@ -939,7 +939,7 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 	int currentColTotalTrue = 0;
 	int numberOfMatches = 0;
 	bool match = false;
-	classad::MatchClassAd mad;
+	classad::MatchClassAd mcad;
 
 	if( !BuildBoolTable( p, rg, bt ) ) {
 		return false;
@@ -1070,13 +1070,13 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 				condition->GetAttr( currAttr );
 				if( EqualsIgnoreCase( currAttr, attr ) ) {
 					classad::Operation::OpKind op;
-					classad::Value val;
+					classad::Value c_val;
 					condition->GetOp( op );
-					condition->GetVal( val );
+					condition->GetVal( c_val );
 					vt.SetOp( row, op );
 					if( condition->IsComplex( ) ) {
 						condition->GetOp2( op );
-						condition->GetVal2( val );
+						condition->GetVal2( c_val );
 						vt.SetOp( row, op );
 					}
 				}
@@ -1086,21 +1086,21 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 		contexts.Rewind( );
 		for( int col = 0; col < numContexts; col++ ) {
 			contexts.Next( context );
-			classad::Value val;
+			classad::Value c_val;
 			if( tooComplex[row] ){
 				BoolValue result;
-				conds[row]->EvalInContext( mad, context, result );
+				conds[row]->EvalInContext( mcad, context, result );
 				switch( result ) {
-				case TRUE_VALUE: { val.SetBooleanValue( true ); break; }
-				case FALSE_VALUE: { val.SetBooleanValue( false ); break; }
-				case UNDEFINED_VALUE: { val.SetUndefinedValue( ); break; }
-				default: val.SetErrorValue( );
+				case TRUE_VALUE: { c_val.SetBooleanValue( true ); break; }
+				case FALSE_VALUE: { c_val.SetBooleanValue( false ); break; }
+				case UNDEFINED_VALUE: { c_val.SetUndefinedValue( ); break; }
+				default: c_val.SetErrorValue( );
 				}
 			}
 			else {
-				context->EvaluateAttr( attr, val );
+				context->EvaluateAttr( attr, c_val );
 			}
-			vt.SetValue( col, row, val );
+			vt.SetValue( col, row, c_val );
 		}
 	}
 
@@ -1690,7 +1690,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 			if( bval != TRUE_VALUE ) {
 				ValueRange *vr = NULL;
 				int context;
-				bool firstContext = true;
+				bool firstContextBool = true;
 
 					// - go through all contexts corresponding to current ABV
 					// - merge the ValueRanges into one multiply indexed 
@@ -1701,10 +1701,10 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 					if( hasContext ) {
 						vrt.GetValueRange( j, i, vr );
 						context = j;
-						if( firstContext ) {
+						if( firstContextBool ) {
 							if( vr != NULL ) {
 								mergedVR->Init( vr, context, numContexts );
-								firstContext = false;
+								firstContextBool = false;
 							}
 						}
 						else if( vr != NULL ) {							

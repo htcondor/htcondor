@@ -29,7 +29,6 @@
 int getProcInfo_test(bool verbose) {
 
   int success = 1;
-  unsigned long approx_mem;
   int status;
   
   
@@ -86,26 +85,26 @@ int getProcInfo_test(bool verbose) {
     if(pi->rssize != 0 &&   /* Maybe process done, entirely paged out */
        pi->rssize < rss){
       printf("Error process %d:\n", pid);
-      printf("rssize as returned by getProcInfo %d is less than was allocated %d\n", pi->rssize, rss);
+      printf("rssize as returned by getProcInfo %lu is less than was allocated %d\n", pi->rssize, rss);
       success = -1;
     }
     if(pi->rssize > rss + rss*PROC_INFO_RSS_MARGIN){
       printf("Error process %d:\n", pid);
-      printf("rssize as returned by getProcInfo %d is much larger than was allocated %d\n", pi->rssize, rss);
+      printf("rssize as returned by getProcInfo %lu is much larger than was allocated %d\n", pi->rssize, rss);
       success = -1;
     }
 
     // the image size should be greater than the resident set size
     if(pi->rssize > pi->imgsize){
       printf("Error process %d:\n", pid);
-      printf("imgsize %d as returned by getProcInfo is less than rssize %d\n", pi->imgsize, pi->rssize);
+      printf("imgsize %lu as returned by getProcInfo is less than rssize %lu\n", pi->imgsize, pi->rssize);
       success = -1;
     }
 
     // time in user mode + system mode should not be greater then age
     if((pi->user_time + pi->sys_time) > pi->age){
       printf("Error process %d:\n", pid);
-      printf("time in user mode %d + sys mode %d is greater than total age %d\n", pi->user_time, pi->sys_time, pi->age);
+      printf("time in user mode %ld + sys mode %ld is greater than total age %ld\n", pi->user_time, pi->sys_time, pi->age);
       success = -1;
     }
     
@@ -119,13 +118,13 @@ int getProcInfo_test(bool verbose) {
     // the parent must be older than the child
     if(ppi->age < pi->age){
       printf("Error process %d:\n", pid);
-      printf("parent age as returned by getProcInfo %d is less than child age %d\n", ppi->age, pi->age);
+      printf("parent age as returned by getProcInfo %ld is less than child age %ld\n", ppi->age, pi->age);
       success = -1;
     }
     // the parent should have been created first also
     if(ppi->creation_time > pi->creation_time){
       printf("Error process %d:\n", pid);
-      printf("parent creation time %d is after child creation time %d\n", ppi->creation_time, pi->creation_time );
+      printf("parent creation time %ld is after child creation time %ld\n", ppi->creation_time, pi->creation_time );
       success = -1;
     }
 

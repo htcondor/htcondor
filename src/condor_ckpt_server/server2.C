@@ -104,7 +104,6 @@ Server::~Server()
 void Server::Init()
 {
 	char		*ckpt_server_dir, *collection_log;
-	char		*tmp;
 	char        log_msg[256];
 	char        hostname[100];
 	int         buf_size;
@@ -170,6 +169,8 @@ void Server::Init()
 	max_replicate_xfers = max_store_xfers/5;
 
 #ifdef WANT_NETMAN
+	char		*tmp;				//declare this down here
+									//so the compiler doesn't argue
 	tmp = param( "MANAGE_BANDWIDTH" );
 	if (!tmp) {
 		ManageBandwidth = false;

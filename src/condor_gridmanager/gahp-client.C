@@ -3526,7 +3526,7 @@ GahpClient::gt4_set_termination_time(const char *resource_uri,
 		// Generate request line
 	if (!resource_uri) resource_uri=NULLSTRING;
 	MyString reqline;
-	bool x = reqline.sprintf("%s %d",escapeGahpString(resource_uri),
+	bool x = reqline.sprintf("%s %ld",escapeGahpString(resource_uri),
 							 new_termination_time);
 	ASSERT( x == true );
 	const char *buf = reqline.Value();

@@ -43,12 +43,12 @@ const int ProcessId::MAX_INIT_PID = 300;
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-ProcessId::ProcessId(pid_t pid, pid_t ppid, 
-					 int precision_range, 
-					 double time_units_in_sec,
-					 long bday, long ctltime)
+ProcessId::ProcessId(pid_t p_id, pid_t pp_id, 
+					 int prec_range, 
+					 double time_units_sec,
+					 long b_day, long ctltime)
 {
-	init(pid, ppid, precision_range, time_units_in_sec, bday, ctltime);
+	init(p_id, pp_id, prec_range, time_units_sec, b_day, ctltime);
 }
 
 ProcessId::ProcessId(FILE* fp, int& status)
@@ -132,16 +132,16 @@ ProcessId::~ProcessId()
 }
 
 void 
-ProcessId::init(pid_t pid, pid_t ppid, 
-				int precision_range, 
-				double time_units_in_sec,
-				long bday, long ctltime)
+ProcessId::init(pid_t p_id, pid_t pp_id, 
+				int prec_range, 
+				double time_units_sec,
+				long b_day, long ctltime)
 {
-	this->pid = pid;
-	this->ppid = ppid;
-	this->precision_range = precision_range;
-	this->time_units_in_sec = time_units_in_sec;
-	this->bday = bday;
+	this->pid = p_id;
+	this->ppid = pp_id;
+	this->precision_range = prec_range;
+	this->time_units_in_sec = time_units_sec;
+	this->bday = b_day;
 	this->ctl_time = ctltime;
 
 
@@ -543,7 +543,7 @@ ProcessId::getPid() const
 }
 
 int
-ProcessId::confirm(long confirm_time, long ctl_time)
+ProcessId::confirm(long confirmtime, long ctltime)
 {
 		// ensure all the fields are filled
 		// it is an error to confirm a partial id
@@ -560,7 +560,7 @@ ProcessId::confirm(long confirm_time, long ctl_time)
 		// shift the confirm time into this process ids
 		// control time that way we don't need to store
 		// 2 control times
-	this->confirm_time = shiftTime(confirm_time, this->ctl_time, ctl_time);
+	this->confirm_time = shiftTime(confirmtime, this->ctl_time, ctltime);
 
 		// set this process id confirmed
 	this->confirmed = true;

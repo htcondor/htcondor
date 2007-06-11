@@ -146,7 +146,7 @@ int free_fs_blocks_test(int trials, double tolerance, double warn_ok_ratio) {
 			/* write out the gigs worth */
 			if (gigs > 0)
 			{
-				dprintf(D_ALWAYS, "Writing %d gigs in 1 meg chunks\n", gigs);
+				dprintf(D_ALWAYS, "Writing %ld gigs in 1 meg chunks\n", gigs);
 				for (i = 0; i < gigs*KILO; i++)
 				{
 					rval = fwrite(empty_megs, 1 * MEG, 1, stream);
@@ -163,7 +163,7 @@ int free_fs_blocks_test(int trials, double tolerance, double warn_ok_ratio) {
 			/* write out megs second */
 			if (megs > 0)
 			{
-				dprintf(D_ALWAYS, "Writing %d megs in 1 meg chunks\n", megs);
+				dprintf(D_ALWAYS, "Writing %ld megs in 1 meg chunks\n", megs);
 				for (i = 0; i < megs; i++)
 				{
 					rval = fwrite(empty_megs, 1 * MEG, 1, stream);
@@ -180,7 +180,7 @@ int free_fs_blocks_test(int trials, double tolerance, double warn_ok_ratio) {
 			/* write out left over kilos */
 			if (kilo > 0)
 			{
-				dprintf(D_ALWAYS, "Writing %d kilos\n", kilo);
+				dprintf(D_ALWAYS, "Writing %ld kilos\n", kilo);
 				rval = fwrite(empty_kilo, kilo, 1, stream);
 				if (rval == 0)
 				{
@@ -197,10 +197,10 @@ int free_fs_blocks_test(int trials, double tolerance, double warn_ok_ratio) {
 		}
 	
     	dfree2_raw = sysapi_disk_space_raw("/tmp");
-    	dprintf(D_ALWAYS, "SysAPI: After %dKB write: "
+    	dprintf(D_ALWAYS, "SysAPI: After %ldKB write: "
 							"sysapi_disk_space_raw() -> %d\n", write_size, dfree2_raw);
     	dfree2 = sysapi_disk_space("/tmp");
-    	dprintf(D_ALWAYS, "SysAPI: After %dKB write: "
+    	dprintf(D_ALWAYS, "SysAPI: After %ldKB write: "
 							"sysapi_disk_space() -> %d\n", write_size, dfree2_raw);
 		num_tests += 2;
 	

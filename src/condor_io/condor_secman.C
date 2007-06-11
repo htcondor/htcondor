@@ -1349,10 +1349,10 @@ SecManStartCommand::startCommand_inner()
 				sprintf(buf, "%s", enc_key->id());
 
 				// stick our command socket sinful string in there
-				char* dcss = global_dc_sinful();
-				if (dcss) {
+				char* dcsss = global_dc_sinful();
+				if (dcsss) {
 					strcat (buf, ",");
-					strcat (buf, dcss);
+					strcat (buf, dcsss);
 				}
 
 				m_sock->encode();
@@ -1379,10 +1379,10 @@ SecManStartCommand::startCommand_inner()
 				sprintf(buf, "%s", enc_key->id());
 
 				// stick our command socket sinful string in there
-				char* dcss = global_dc_sinful();
-				if (dcss) {
+				char* dcsss = global_dc_sinful();
+				if (dcsss) {
 					strcat (buf, ",");
-					strcat (buf, dcss);
+					strcat (buf, dcsss);
 				}
 
 
@@ -1715,9 +1715,9 @@ SecManStartCommand::startCommand_inner()
 				auth_info.dPrint(D_SECURITY);
 			}
 
-			char *sid = NULL;
-			auth_info.LookupString(ATTR_SEC_SID, &sid);
-			if (sid == NULL) {
+			char *sesid = NULL;
+			auth_info.LookupString(ATTR_SEC_SID, &sesid);
+			if (sesid == NULL) {
 				dprintf (D_ALWAYS, "SECMAN: session id is NULL, failing\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Failed to lookup session id");
@@ -1730,7 +1730,7 @@ SecManStartCommand::startCommand_inner()
 				dprintf (D_ALWAYS, "SECMAN: valid commands is NULL, failing\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Protocol Failure: Unable to lookup valid commands");
-				delete sid;
+				delete sesid;
 				return StartCommandFailed;
 			}
 
@@ -1746,9 +1746,9 @@ SecManStartCommand::startCommand_inner()
 
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
-			KeyCacheEntry tmp_key( sid, m_sock->endpoint(), ki,
+			KeyCacheEntry tmp_key( sesid, m_sock->endpoint(), ki,
 								   &auth_info, expiration_time ); 
-			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds.\n", sid, dur);
+			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds.\n", sesid, dur);
 
             if (dur) {
                 free(dur);
@@ -1759,7 +1759,7 @@ SecManStartCommand::startCommand_inner()
 
 
 			// now add entrys which map all the {<sinful_string>,<command>} pairs
-			// to the same key id (which is in the variable sid)
+			// to the same key id (which is in the variable sesid)
 
 			StringList coms(cmd_list);
 			char *p;
@@ -1769,10 +1769,10 @@ SecManStartCommand::startCommand_inner()
 				sprintf (keybuf, "{%s,<%s>}", sin_to_string(m_sock->endpoint()), p);
 
 				// NOTE: HashTable returns ZERO on SUCCESS!!!
-				if (m_sec_man.command_map->insert(keybuf, sid) == 0) {
+				if (m_sec_man.command_map->insert(keybuf, sesid) == 0) {
 					// success
 					if (DebugFlags & D_FULLDEBUG) {
-						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf, sid);
+						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf, sesid);
 					}
 				} else {
 					// perhaps there is an old entry under the same name.  we should
@@ -1781,9 +1781,12 @@ SecManStartCommand::startCommand_inner()
 					// NOTE: HashTable's remove returns ZERO on SUCCESS!!!
 					if (m_sec_man.command_map->remove(keybuf) == 0) {
 						// now let's try to insert again (zero on success)
-						if (m_sec_man.command_map->insert(keybuf, sid) == 0) {
+						if (m_sec_man.command_map->insert(keybuf, sesid) == 0) {
 							if (DebugFlags & D_FULLDEBUG) {
-								dprintf (D_SECURITY, "SECMAN: command %s remapped to session %s!\n", keybuf, sid);
+								dprintf (D_SECURITY,
+										"SECMAN: command %s remapped to "
+										"session %s!\n",
+										keybuf, sesid);
 							}
 						} else {
 							if (DebugFlags & D_FULLDEBUG) {
@@ -1798,7 +1801,7 @@ SecManStartCommand::startCommand_inner()
 				}
 			}
 			
-			free( sid );
+			free( sesid );
             free( cmd_list );
 
 		} // if (new_session)

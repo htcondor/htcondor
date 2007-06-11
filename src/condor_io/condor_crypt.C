@@ -31,11 +31,11 @@
 #include "condor_debug.h"
 
 
-Condor_Crypt_Base :: Condor_Crypt_Base(Protocol protocol, const KeyInfo& keyInfo)
+Condor_Crypt_Base :: Condor_Crypt_Base(Protocol prot, const KeyInfo& keyInfo)
     : keyInfo_ (keyInfo)
 {
 #if defined(CONDOR_ENCRYPTION)
-    ASSERT(keyInfo_.getProtocol() == protocol);
+    ASSERT(keyInfo_.getProtocol() == prot);
 #endif
 }
 

@@ -181,8 +181,8 @@ store_cred_handler(Service * service, int i, Stream *stream) {
 			   cred_wrapper->cred->GetOwner());
 	  delete cred_wrapper;
 	  socket->encode();
-	  int rc=CREDD_ERROR_CREDENTIAL_ALREADY_EXISTS;
-	  socket->code(rc);
+	  int rcred=CREDD_ERROR_CREDENTIAL_ALREADY_EXISTS;
+	  socket->code(rcred);
 	  goto EXIT;
   }
 
@@ -195,8 +195,8 @@ store_cred_handler(Service * service, int i, Stream *stream) {
   init_user_id_from_FQN (user);
   if (!StoreData(temp_file_name,data,data_size)) {
     socket->encode();
-    int rc = CREDD_UNABLE_TO_STORE;
-    socket->code(rc);
+    int rcred = CREDD_UNABLE_TO_STORE;
+    socket->code(rcred);
     goto EXIT;
   }
 

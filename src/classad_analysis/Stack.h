@@ -69,10 +69,10 @@ class StackItem {
 
 /* StackItem methods */
 template <class ObjType> StackItem<ObjType>::
-StackItem( ObjType *obj )
+StackItem( ObjType *newObj )
 {
 	this->next = this;
-	this->obj = obj;
+	this->obj = newObj;
 }
 
 template <class ObjType> StackItem<ObjType>::

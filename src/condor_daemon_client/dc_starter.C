@@ -33,7 +33,7 @@
 #include "internet.h"
 
 
-DCStarter::DCStarter( const char* name ) : Daemon( DT_STARTER, name, NULL )
+DCStarter::DCStarter( const char* sName ) : Daemon( DT_STARTER, sName, NULL )
 {
 	is_initialized = false;
 }
@@ -142,8 +142,8 @@ DCStarter::updateX509Proxy( const char * filename)
 	if ( rsock.put_file(&file_size,filename) < 0 ) {
 		dprintf(D_ALWAYS,
 			"DCStarter::updateX509Proxy "
-			"failed to send proxy file %s (size=%d)\n",
-			filename, file_size);
+			"failed to send proxy file %s (size=%ld)\n",
+			filename, (long int)file_size);
 		return XUS_Error;
 	}
 
@@ -188,8 +188,8 @@ DCStarter::delegateX509Proxy( const char * filename)
 	if ( rsock.put_x509_delegation(&file_size,filename) < 0 ) {
 		dprintf(D_ALWAYS,
 			"DCStarter::delegateX509Proxy "
-			"failed to delegate proxy file %s (size=%d)\n",
-			filename, file_size);
+			"failed to delegate proxy file %s (size=%ld)\n",
+			filename, (long int)file_size);
 		return XUS_Error;
 	}
 

@@ -77,8 +77,6 @@ int getValue(classad::ClassAd *currentAd, char *attr, char *attrval)
       //read the argumant from file
       classad::ClassAd *newAd = 0;
       classad::ClassAdParser parser;
-      classad::ClassAdUnParser unparser;
-	  std::string adbuffer = "";
       FILE *f;
       
       f = safe_fopen_wrapper(filename, "r");

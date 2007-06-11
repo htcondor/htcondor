@@ -34,8 +34,8 @@
 #include "my_popen.h"
 
 /* static function declarations */
-static int reserve_for_afs_cache();
-static int reserve_for_fs();
+static int reserve_for_afs_cache(void);
+static int reserve_for_fs(void);
 
 /* the code starts here */
 

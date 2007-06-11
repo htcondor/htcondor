@@ -24,15 +24,15 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 
-SocketCache::SocketCache( int size )
+SocketCache::SocketCache( int cSize )
 {
-	cacheSize = size;
+	cacheSize = cSize;
 	timeStamp = 0;
-	sockCache = new sockEntry[size];
+	sockCache = new sockEntry[cSize];
 	if( !sockCache ) {
 		EXCEPT( "SocketCache: Out of memory" );
 	}
-	for( int i = 0; i < size; i++ ) {
+	for( int i = 0; i < cSize; i++ ) {
 		initEntry( &(sockCache[i]) );
 	}
 }
@@ -46,13 +46,13 @@ SocketCache::~SocketCache()
 
 
 void
-SocketCache::resize( int size )
+SocketCache::resize( int newSize )
 {
-	if( size == cacheSize ) {
+	if( newSize == cacheSize ) {
 			// nothing to do!
 		return;
 	}
-	if( size < cacheSize ) {
+	if( newSize < cacheSize ) {
 			// we don't gracefully support this yet.  if we really
 			// supported this in a SocketCache where each socket is
 			// registered with DaemonCore, we'd have to have a way to
@@ -62,10 +62,10 @@ SocketCache::resize( int size )
 		return;
 	}
 	dprintf( D_FULLDEBUG, "Resizing SocketCache - old: %d new: %d\n",
-			 cacheSize, size ); 
-	sockEntry* new_cache = new sockEntry[size];
+			 cacheSize, newSize ); 
+	sockEntry* new_cache = new sockEntry[newSize];
 	int i;
-	for( i=0; i<size; i++ ) {
+	for( i=0; i<newSize; i++ ) {
 		if( i<cacheSize && sockCache[i].valid ) {
 			new_cache[i].valid = true;
 			new_cache[i].sock = sockCache[i].sock;
@@ -76,7 +76,7 @@ SocketCache::resize( int size )
 		}
 	}
 	delete [] sockCache;
-	cacheSize = size;
+	cacheSize = newSize;
 	sockCache = new_cache;
 }
 

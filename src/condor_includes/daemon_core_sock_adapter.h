@@ -47,7 +47,7 @@ class DaemonCoreSockAdapterClass {
 	DaemonCoreSockAdapterClass(): m_daemonCore(0) {}
 
 	void EnableDaemonCore(
-		DaemonCore *daemonCore,
+		DaemonCore *dC,
 		Register_Socket_fnptr Register_Socket_fptr,
 		Cancel_Socket_fnptr Cancel_Socket_fptr,
 		Register_DataPtr_fnptr Register_DataPtr_fptr,
@@ -55,7 +55,7 @@ class DaemonCoreSockAdapterClass {
 		Register_Timer_fnptr Register_Timer_fptr,
 		TooManyRegisteredSockets_fnptr TooManyRegisteredSockets_fptr)
 	{
-		m_daemonCore = daemonCore;
+		m_daemonCore = dC;
 		m_Register_Socket_fnptr = Register_Socket_fptr;
 		m_Cancel_Socket_fnptr = Cancel_Socket_fptr;
 		m_Register_DataPtr_fnptr = Register_DataPtr_fptr;

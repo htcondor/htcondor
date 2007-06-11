@@ -961,7 +961,6 @@ void
 BaseShadow::checkSwap( void )
 {
 	int	reserved_swap, free_swap;
-	char* tmp;
 		// Reserved swap is specified in megabytes
 	reserved_swap = param_integer( "RESERVED_SWAP", 5 );
 	reserved_swap *= 1024;
