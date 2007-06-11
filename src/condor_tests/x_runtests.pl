@@ -3,7 +3,7 @@ use Cwd;
 use POSIX ":sys_wait_h";
 
 ######################################################################
-# $Id: x_runtests.pl,v 1.2 2007-03-01 18:25:18 zmiller Exp $
+# x_runtests.pl
 # generate list of all tests to run
 ######################################################################
 
