@@ -28,7 +28,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Improved speed of the \Condor{schedd} writing to its database
+file job\_queue.log and the job history file.  In our tests, this
+roughly doubles the maximum throughput rate to ~20 jobs/s, though actual
+performance will depend on the specific hardware being used.
 
 \end{itemize}
 
