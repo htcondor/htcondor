@@ -69,11 +69,11 @@ be the case.
 
 \item Added the \Macro{START\_LOCAL\_UNIVERSE} and \Macro{START\_SCHEDULER\_UNIVERSE}
 parameters for the \Condor{schedd}. This allows administrators to control whether
-a Local/Scheduler universe job will be started. This expression is evaulated
-against the job's ClassAD before the \AdAttr{Requirements} expression.
+a Local/Scheduler universe job will be started. This expression is evaluated
+against the job's ClassAd before the \AdAttr{Requirements} expression.
 
 \item All Local and Scheduler universe jobs now have their \AdAttr{Requirements} 
-expressions evaulated before execution. If the expression evalulates to false, the
+expressions evaluated before execution. If the expression evaluates to false, the
 job will not be allowed to begin running. In previous versions of Condor, Local 
 and Scheduler universe jobs could begin execution without the \Condor{schedd} checking
 the validity of the AdAttr{Requirements}.
