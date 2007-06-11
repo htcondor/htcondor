@@ -475,19 +475,25 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 			return NULL;
 		}
 		MyString constraint;
-		MyString full_owner_name(owner);
 		if ( !attr_name  ) {
 			constraint.sprintf("(%s=?=\"%s\"&&%s==%d)",
-				ATTR_OWNER,full_owner_name.Value(),
+				ATTR_OWNER,owner,
 				ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
 		} else {
 			constraint.sprintf("(%s=?=\"%s\"&&%s=?=\"%s\")",
-				ATTR_OWNER,full_owner_name.Value(),
+				ATTR_OWNER,owner,
 				attr_name,attr_value);
 		}
 		args.AppendArg("-C");
 		args.AppendArg(constraint.Value());
 	}
+
+	MyString full_owner_name(owner);
+	if ( domain && *domain ) {
+		full_owner_name.sprintf_cat( "@%s", domain );
+	}
+	args.AppendArg("-o");
+	args.AppendArg(full_owner_name.Value());
 
 	if (!init_user_ids(owner, domain)) {
 		dprintf(D_ALWAYS,"ERROR - init_user_ids() failed in GRIDMANAGER\n");
@@ -579,7 +585,8 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	pid = daemonCore->Create_Process( 
 		gman_binary,			// Program to exec
 		args,					// Command-line args
-		PRIV_USER_FINAL,		// Run as the Owner
+		PRIV_ROOT,				// Run as root, so it can switch to
+		                        //   PRIV_CONDOR
 		rid						// Reaper ID
 		);
 
