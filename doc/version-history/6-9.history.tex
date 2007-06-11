@@ -298,6 +298,11 @@ suspended. This problem was most likely to be seen when using the
 \item In Condor 6.9.2 for Tru64 UNIX, the \Condor{master} would
 immediately fail if started as root. This problem has been fixed.
 
+\item Condor 6.9.2 introduced a problem where the \Condor{master}
+would fail if started as root with the UID part of the
+\Macro{CONDOR\_IDS} parameter set to 0 (root). This issue has been
+fixed.
+
 \end{itemize}
 
 \noindent Known Bugs:
