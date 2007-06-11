@@ -241,10 +241,6 @@ Condor's behavior on most other Unix-like operating systems, including
   \Env{CONDOR\_VM} environment variable, which was only defined for
   standard universe jobs.
 
-\item Fixed the known issue in Condor 6.9.2 where using the
-\Macro{EXECUTE\_LOGIN\_IS\_DEDICATED} setting on UNIX platforms would
-cause the \Condor{procd} to crash.
-
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -281,6 +277,10 @@ network connection.
 \item \Condor{status} will now accurately report the \Attr{ActvtyTime}
   (activity time) value in Condor pools where not all machines are in
   the same timezone, or if there is clock-skew between the hosts.
+
+\item Fixed the known issue in Condor 6.9.2 where using the
+\Macro{EXECUTE\_LOGIN\_IS\_DEDICATED} setting on UNIX platforms would
+cause the \Condor{procd} to crash.
 
 \end{itemize}
 
