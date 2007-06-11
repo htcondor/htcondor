@@ -290,6 +290,11 @@ network connection.
 \Macro{EXECUTE\_LOGIN\_IS\_DEDICATED} setting on UNIX platforms would
 cause the \Condor{procd} to crash.
 
+\item Failure when activating a COD claim no longer will result in an
+opportunistic job running on the same \Condor{startd} being left
+suspended. This problem was most likely to be seen when using the
+\Macro{GLEXEC\_STARTER} feature.
+
 \end{itemize}
 
 \noindent Known Bugs:
