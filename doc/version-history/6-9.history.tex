@@ -39,7 +39,12 @@ performance will depend on the specific hardware being used.
 
 \begin{itemize}
 
-\item None.
+% Gnats PR 857/condor-admin 15687
+\item Fixed a bug in \Condor{dagman}: if a DAG run with a per-DAG
+configuration file specification generated a rescue DAG, the rescue
+DAG file did not contain the appropriate DAG configuration file line.
+(This bug was introduced when the per-DAG configuration file option
+was added in version 6.9.2.)
 
 \end{itemize}
 
@@ -366,7 +371,7 @@ fixed.
 %% level release note) because it will surprise anyone upgrading
 %% an existing pool or repackaging Condor binaries (say, for
 %% custom glideins, or as .deb packages for a local pool.)
-% This is part of the privilege seperation work, but the procd
+% This is part of the privilege separation work, but the procd
 % is required even if you're not turning privsep on.
 % Questions should go to the privsep team: psilord, zmiller, etc.
 \item As part of ongoing security enhancements, Condor now has a
@@ -391,7 +396,7 @@ if you update any of the other Condor daemons.
 % a bug, just a change.  It is a change that may surprise some
 % users.  The full list of settings impacted is
 % pretty long.  So far the below is just a small fraction,
-% primarily being added because an external user was suprised by
+% primarily being added because an external user was surprised by
 % this when testing a 6.9.2-prerelease. For anyone curious or
 % inspired to flesh out the list, here's the checkin that caused
 % this:
@@ -431,7 +436,7 @@ if you update any of the other Condor daemons.
   For more information about GCB, see section~\ref{sec:GCB} on
   page~\pageref{sec:GCB}. 
 
-% I'm checking this in commented since I'm not surewhat disclosure
+% I'm checking this in commented since I'm not sure what disclosure
 % policy we want to use. Only CDF (Igor) uses the GLEXEC_STARTER
 % functionality, so I think it'd be wise to run it by him before
 % documenting this publicly.
