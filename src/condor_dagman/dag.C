@@ -153,6 +153,7 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	_nextSubmitDelay = 1;
 	_recovery = false;
 	_abortOnScarySubmit = true;
+	_configFile = NULL;
 
 	return;
 }
@@ -1825,6 +1826,14 @@ void Dag::Rescue (const char * rescue_file, const char * datafile,
         }
     }
     fprintf (fp, "<ENDLIST>\n\n");
+
+	//
+	// Print the CONFIG file, if any.
+	//
+	if ( _configFile ) {
+    	fprintf ( fp, "CONFIG %s\n\n", _configFile );
+		
+	}
 
     //
     // Print JOBS and SCRIPTS

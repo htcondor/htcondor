@@ -408,6 +408,11 @@ class Dag {
 	const int MAX_SIGNAL;
 
 	bool ProhibitMultiJobs() const { return _prohibitMultiJobs; }
+
+		/** Set the config file used for this DAG.
+			@param configFile The configuration file for this DAG.
+		*/
+	void SetConfigFile( const char *configFile ) { _configFile = configFile; }
 	
   protected:
 
@@ -652,6 +657,12 @@ class Dag {
 		// the PR 554 fix in PostScriptReaper -- otherwise it gets passed
 		// down thru the call stack.
 	bool		_recovery;
+
+		// The config file (if any) specified for this DAG.  As of 2007-06-08,
+		// this is only used when writing a rescue DAG -- we already
+		// parse the given config file (if any) before the Dag object
+		// is created.
+	const char *	_configFile;
 
 		// Default Condor ID to use in reseting a node's Condor ID on
 		// retry.

@@ -128,20 +128,20 @@ Dagman::Config()
 
 		// Get and process the DAGMan-specific config file (if any)
 		// before getting any of the other parameters.
-	char *dagman_config_file = param( "DAGMAN_CONFIG_FILE" );
-	if ( dagman_config_file ) {
+	_dagmanConfigFile = param( "DAGMAN_CONFIG_FILE" );
+	if ( _dagmanConfigFile ) {
 		debug_printf( DEBUG_NORMAL, "Using DAGMan config file: %s\n",
-					dagman_config_file );
+					_dagmanConfigFile );
 			// We do this test here because the corresponding error
 			// message from the config code doesn't show up in dagman.out.
-		if ( access( dagman_config_file, R_OK ) != 0 &&
-					!is_piped_command( dagman_config_file ) ) {
+		if ( access( _dagmanConfigFile, R_OK ) != 0 &&
+					!is_piped_command( _dagmanConfigFile ) ) {
 			debug_printf( DEBUG_NORMAL,
 						"ERROR: Can't read DAGMan config file: %s\n",
-						dagman_config_file );
+						_dagmanConfigFile );
     		DC_Exit( EXIT_ERROR );
 		}
-		process_config_source( dagman_config_file, "DAGMan config",
+		process_config_source( _dagmanConfigFile, "DAGMan config",
 					NULL, true );
 	}
 
@@ -597,13 +597,14 @@ int main_init (int argc, char ** const argv) {
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  dagman.storkRmExe, &dagman.DAGManJobId,
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst );
-	dagman.dag->SetAbortOnScarySubmit( dagman.abortOnScarySubmit );
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
     }
 
+	dagman.dag->SetAbortOnScarySubmit( dagman.abortOnScarySubmit );
 	dagman.dag->SetAllowEvents( dagman.allow_events );
+	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
 
     //
     // Parse the input files.  The parse() routine

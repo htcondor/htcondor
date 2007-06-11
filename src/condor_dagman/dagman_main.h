@@ -137,6 +137,9 @@ class Dagman {
 	CondorID DAGManJobId;
 
     bool Config();
+
+		// The DAGMan configuration file (NULL if none is specified).
+	char *_dagmanConfigFile;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H
