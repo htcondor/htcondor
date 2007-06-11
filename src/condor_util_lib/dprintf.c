@@ -938,7 +938,7 @@ _condor_dprintf_saved_lines( void )
 			   get the locking, potentially different log files, all
 			   that stuff handled for us automatically.
 			*/
-		dprintf( node->level, "%s\n", node->line );
+		dprintf( node->level, "%s", node->line );
 
 			/* save the next node so we don't loose it */
 		next = node->next;
