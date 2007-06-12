@@ -211,38 +211,49 @@ $success = sub {
 	## being updated properly. We have to look into the history because
 	## at this point the job is no longer in the queue
 	##
-	my @result;
-	my $h_cmd = "condor_history -l $cluster.$job";
-	if ( ! CondorTest::runCondorTool($h_cmd, \@result, 3) ) {
-		print "ERROR: Unable to get JobRunCount due to Condor Tool Failure<$h_cmd>\n";
-	    exit(1);
-	}
-	my $temp = "@result";
+	## 06/12/2007
+	## Getting the JobRunCount has proven to be unreliable for some reason
+	## So we're going to 
+	##
+	my $try = 3;
 	my $h_runcount = -1;
-	if ( $temp =~ /JobRunCount = (\d+)/ ) {
-		$h_runcount = $1;
-	}
-	if ( $h_runcount < 0 ) { 
-		print "Bad - Unable to get JobRunCount for Job $cluster.$job!\n";
-		print "$h_cmd\n";
-		print "+-----------------------------------------------+\n";
-		print "$temp\n";
-		print "+-----------------------------------------------+\n\n";
-		
-		##
-		## Check if the job is still in the queue?
-		##
-		$h_cmd = "condor_q";
+	while ($try-- > 0 && $h_runcount == -1) {
+		my @result;
+		my $h_cmd = "condor_history -l $cluster.$job";
 		if ( ! CondorTest::runCondorTool($h_cmd, \@result, 3) ) {
-			print "ERROR: Unable get job queue information<$h_cmd>\n";
+			print "ERROR: Unable to get JobRunCount due to Condor Tool Failure<$h_cmd>\n";
 			exit(1);
 		}
-		print "$h_cmd\n";
-		print "+-----------------------------------------------+\n";
-		print "@result\n";
-		print "+-----------------------------------------------+\n";
+		my $temp = "@result";
+		if ( $temp =~ /JobRunCount = (\d+)/ ) {
+			$h_runcount = $1;
+		}
+		if ( $h_runcount < 0 ) { 
+			print "$h_cmd\n";
+			print "+-----------------------------------------------+\n";
+			print "$temp\n";
+			print "+-----------------------------------------------+\n\n";
+			
+			##
+			## Check if the job is still in the queue?
+			##
+			$h_cmd = "condor_q";
+			if ( ! CondorTest::runCondorTool($h_cmd, \@result, 3) ) {
+				print "ERROR: Unable get job queue information<$h_cmd>\n";
+				exit(1);
+			}
+			print "$h_cmd\n";
+			print "+-----------------------------------------------+\n";
+			print "@result\n";
+			print "+-----------------------------------------------+\n";
+			sleep(10);
+		}
+	} # WHILE
+	if ($h_runcount == -1) { 
+		print "Bad - Unable to get JobRunCount for Job $cluster.$job!\n";
 		exit(1);
 	}
+	
 	##
 	## Make sure what we have and what the job's ad has is the same
 	##
