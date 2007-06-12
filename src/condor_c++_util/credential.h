@@ -82,7 +82,7 @@ public:
   MyString orig_owner;
 
   void * data;
-  int data_size;
+  int m_data_size;
 
   void SetDataSize(int);
 

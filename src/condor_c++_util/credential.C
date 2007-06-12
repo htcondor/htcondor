@@ -37,7 +37,7 @@ Credential::Credential(const classad::ClassAd& class_ad) {
 	}
 
 	class_ad.EvaluateAttrInt (CREDATTR_TYPE, type);
-	class_ad.EvaluateAttrInt (CREDATTR_DATA_SIZE, data_size);
+	class_ad.EvaluateAttrInt (CREDATTR_DATA_SIZE, m_data_size);
 	data = NULL;
 }
 
@@ -71,14 +71,14 @@ Credential::GetMetadata() {
 	class_ad->InsertAttr (CREDATTR_NAME, name.Value());
 	class_ad->InsertAttr (CREDATTR_TYPE, type);
 	class_ad->InsertAttr (CREDATTR_OWNER, owner.Value());
-	class_ad->InsertAttr (CREDATTR_DATA_SIZE, data_size);
+	class_ad->InsertAttr (CREDATTR_DATA_SIZE, m_data_size);
 
 	return class_ad;
 }
 
 int
 Credential::GetDataSize() {
-	return data_size;
+	return m_data_size;
 }
 
 void
@@ -88,7 +88,7 @@ Credential::SetData (const void * buff, int buff_size) {
   }
   data = malloc(buff_size);
   memcpy (data, buff, buff_size);
-  data_size = buff_size;
+  m_data_size = buff_size;
 }
 
 int
@@ -96,17 +96,17 @@ Credential::GetData (void *& pData, int & size) {
   if (data == NULL)
     return FALSE;
 
-  int dataSize = GetDataSize();
+  int data_size = GetDataSize();
 
-  pData = malloc (dataSize);
-  memcpy (pData, data, dataSize);
-  size = dataSize;
+  pData = malloc (data_size);
+  memcpy (pData, data, data_size);
+  size = data_size;
   return TRUE;
 }
 
 void
 Credential::SetDataSize (int size) {
-	data_size = size;
+	m_data_size = size;
 }
 
 void
