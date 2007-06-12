@@ -850,7 +850,7 @@ sub TunePersonalCondor
 
 	# as of 6.9.3 we need unique pipes for each nested personal condor
 	if( $ENV{NMI_PLATFORM} =~ /win/ ){
-		print NEW "PROCD_ADDRESS = \\\\.\\$procdpipe\n";
+		print NEW "PROCD_ADDRESS = \\\\.\\pipe\\$procdpipe\n";
 	}
 
 	close(NEW);
