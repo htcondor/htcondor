@@ -32,11 +32,11 @@ $success = sub
 
 	my $done = 0;
 	my $retrycount = 0;
-	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\" ClusterId -format \" Status = %d\n\" JobStatus";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	while($done == 0) {
+		my @adarray;
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status) {
 			print "Test failure due to Condor Tool Failure<$cmd>\n";
 			exit(1)
@@ -52,8 +52,8 @@ $success = sub
 						print "Can not find the cluster completed in the queue\n";
 						last;
 					} else {
+						sleep((10 * $retrycount));
 						next;
-						sleep((2 * $retrycount));
 					}
 				}
 				print "Found the cluster completed in the queue\n";
