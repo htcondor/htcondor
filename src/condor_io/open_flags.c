@@ -25,8 +25,18 @@
 #include "condor_common.h"
 #include <fcntl.h>
 
-int open_flags_encode(int old_flags);
-int open_flags_decode(int old_flags);
+// Ugh. On Windows, this file is compiled as C++ (since that's a
+// per-project setting). We want to make sure to get the linkage
+// right.
+//
+#if defined(WIN32)
+#define OPEN_FLAGS_LINKAGE extern "C"
+#else
+#define OPEN_FLAGS_LINKAGE
+#endif
+
+OPEN_FLAGS_LINKAGE int open_flags_encode(int old_flags);
+OPEN_FLAGS_LINKAGE int open_flags_decode(int old_flags);
 
 #define CONDOR_O_RDONLY 0x0000
 #define CONDOR_O_WRONLY 0x0001
@@ -53,11 +63,7 @@ static struct {
 	{O_APPEND, CONDOR_O_APPEND}
 };
 
-#ifdef WIN32
-extern "C" {
-#endif
-
-int open_flags_encode(int old_flags)
+OPEN_FLAGS_LINKAGE int open_flags_encode(int old_flags)
 {
 	unsigned int i;
 	int new_flags = 0;
@@ -70,7 +76,7 @@ int open_flags_encode(int old_flags)
 	return new_flags;
 }
 
-int open_flags_decode(int old_flags)
+OPEN_FLAGS_LINKAGE int open_flags_decode(int old_flags)
 {
 	unsigned int i;
 	int new_flags = 0;
@@ -86,7 +92,4 @@ int open_flags_decode(int old_flags)
 	return new_flags;
 }
 
-#ifdef WIN32
-}  /* end of extern "C" */
-#endif
 
