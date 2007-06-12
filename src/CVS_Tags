@@ -14,6 +14,11 @@
 05/21/07 V6_8-merge-7
   State of V6_8 at the point where all 6.8.5-branch changes (plus whatever
   else is hanging out on the 6.8 branch) are merged back to the trunk.
+  Update on 6/12/07: four files were touched after this tag was made
+  and these changes did make it into the merge, so I have moved the tag
+  to the correct versions of the following files in src/condor_c++_util:
+  check_events.C (1.2.2.2), check_events.h (1.2.2.2),
+  read_multiple_logs.C (1.6.2.8), and read_multiple_logs.h (1.5.2.4).
 
 05/21/07 V6_8-merge_pre-V6_8_5 and V6_8-merge_post-V6_8_5
   Merge tags on V6_8-branch before and after merging V6_8_5.
