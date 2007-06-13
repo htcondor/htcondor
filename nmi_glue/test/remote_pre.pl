@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.9 2007-05-01 20:22:56 jfrey Exp $
+# $Id: remote_pre.pl,v 1.10 2007-06-13 21:19:48 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -287,6 +287,7 @@ if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	# insure path from framework is injected into the new pool
 	print FIX "environment=\"PATH=\'$mypath\'\"\n";
 	print FIX "SUBMIT_EXPRS=environment\n";
+	print FIX "PROCD_ADDRESS = \\\\.\\pipe\\buildandtestprocd\n";
 }
 
 close ORIG;
