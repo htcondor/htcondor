@@ -29,9 +29,22 @@ ResState::ResState( Resource* res_ip )
 	r_state = owner_state;
 	r_destination = no_state;
 	r_act = idle_act;
-	atime = (int)time(NULL);
-	stime = atime;
+	m_atime = time(NULL);
+	m_stime = m_atime;
 	this->rip = res_ip;
+	m_time_owner_idle = 0;
+	m_time_unclaimed_idle = 0;
+	m_time_unclaimed_benchmarking = 0;
+	m_time_matched_idle = 0;
+	m_time_backfill_idle = 0;
+	m_time_backfill_busy = 0;
+	m_time_backfill_killing = 0;
+	m_time_claimed_idle = 0;
+	m_time_claimed_busy = 0;
+	m_time_claimed_suspended = 0;
+	m_time_claimed_retiring = 0;
+	m_time_preempting_vacating = 0;
+	m_time_preempting_killing = 0;
 }
 
 
@@ -48,14 +61,30 @@ ResState::publish( ClassAd* cp, amask_t how_much )
 	sprintf( tmp, "%s=\"%s\"", ATTR_STATE, state_to_string(r_state) );
 	cp->InsertOrUpdate( tmp );
 
-	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_STATE, stime );
+	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_STATE, (int)m_stime );
 	cp->InsertOrUpdate( tmp );
 
 	sprintf( tmp, "%s=\"%s\"", ATTR_ACTIVITY, activity_to_string(r_act) );
 	cp->InsertOrUpdate( tmp );
 
-	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_ACTIVITY, atime );
+	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_ACTIVITY, (int)m_atime );
 	cp->InsertOrUpdate(tmp);
+
+		// Conditionally publish any attributes about time spent in
+		// each of the following state/activity combinations.
+	publishHistoryInfo(cp, owner_state, idle_act);
+	publishHistoryInfo(cp, unclaimed_state, idle_act);
+	publishHistoryInfo(cp, unclaimed_state, benchmarking_act);
+	publishHistoryInfo(cp, matched_state, idle_act);
+	publishHistoryInfo(cp, claimed_state, idle_act);
+	publishHistoryInfo(cp, claimed_state, busy_act);
+	publishHistoryInfo(cp, claimed_state, suspended_act);
+	publishHistoryInfo(cp, claimed_state, retiring_act);
+	publishHistoryInfo(cp, preempting_state, vacating_act);
+	publishHistoryInfo(cp, preempting_state, killing_act);
+	publishHistoryInfo(cp, backfill_state, idle_act);
+	publishHistoryInfo(cp, backfill_state, busy_act);
+	publishHistoryInfo(cp, backfill_state, killing_act);
 }
 
 
@@ -99,11 +128,15 @@ ResState::change( State new_state, Activity new_act )
 				 activity_to_string(new_act) );
 	}
 
- 	now = (int)time( NULL );
+ 	now = time( NULL );
+
+		// Record the time we spent in the previous state
+	updateHistoryTotals(now);
+
 	if( statechange ) {
-		stime = now;
+		m_stime = now;
 			// Also reset activity time
-		atime = now;
+		m_atime = now;
 		r_state = new_state;
 		if( r_state == r_destination ) {
 				// We've reached our destination, so we can reset it.
@@ -112,7 +145,7 @@ ResState::change( State new_state, Activity new_act )
 	}
 	if( actchange ) {
 		r_act = new_act;
-		atime = now;
+		m_atime = now;
 	}
 
 	if( enter_action( r_state, r_act, statechange, actchange ) ) {
@@ -838,3 +871,144 @@ ResState::starterExited( void )
 }
 
 
+void
+ResState::updateHistoryTotals( time_t now )
+{
+		// We just have to see what state/activity we're leaving, and
+		// increment the right counter variable.
+	time_t* history_ptr = getHistoryTotalPtr(r_state, r_act);
+	*history_ptr += (now - m_atime);
+}
+
+
+time_t*
+ResState::getHistoryTotalPtr( State _state, Activity _act ) {
+	ResState::HistoryInfo info = getHistoryInfo(_state, _act);
+	return info.time_ptr;
+}
+
+
+const char*
+ResState::getHistoryTotalAttr( State _state, Activity _act ) {
+	ResState::HistoryInfo info = getHistoryInfo(_state, _act);
+	return info.attr_name;
+}
+
+
+ResState::HistoryInfo
+ResState::getHistoryInfo( State _state, Activity _act ) {
+	ResState::HistoryInfo info;
+	time_t* var_ptr = NULL;
+	const char* attr_name = NULL;
+	switch (_state) {
+	case owner_state:
+		var_ptr = &m_time_owner_idle;
+		attr_name = ATTR_TOTAL_TIME_OWNER_IDLE;
+		break;
+	case unclaimed_state:
+		switch (_act) {
+		case idle_act:
+			var_ptr = &m_time_unclaimed_idle;
+			attr_name = ATTR_TOTAL_TIME_UNCLAIMED_IDLE;
+			break;
+		case benchmarking_act:
+			var_ptr = &m_time_unclaimed_benchmarking;
+			attr_name = ATTR_TOTAL_TIME_UNCLAIMED_BENCHMARKING;
+			break;
+		default:
+			EXCEPT("Unexpected activity (%s: %d) in getHistoryInfo() for %s",
+				   activity_to_string(_act), (int)_act,
+				   state_to_string(_state));
+		}
+		break;
+	case matched_state:
+		var_ptr = &m_time_matched_idle;
+		attr_name = ATTR_TOTAL_TIME_MATCHED_IDLE;
+		break;
+	case claimed_state:
+		switch (_act) {
+		case idle_act:
+			var_ptr = &m_time_claimed_idle;
+			attr_name = ATTR_TOTAL_TIME_CLAIMED_IDLE;
+			break;
+		case busy_act:
+			var_ptr = &m_time_claimed_busy;
+			attr_name = ATTR_TOTAL_TIME_CLAIMED_BUSY;
+			break;
+		case suspended_act:
+			var_ptr = &m_time_claimed_suspended;
+			attr_name = ATTR_TOTAL_TIME_CLAIMED_SUSPENDED;
+			break;
+		case retiring_act:
+			var_ptr = &m_time_claimed_retiring;
+			attr_name = ATTR_TOTAL_TIME_CLAIMED_RETIRING;
+			break;
+		default:
+			EXCEPT("Unexpected activity (%s: %d) in getHistoryInfo() for %s",
+				   activity_to_string(_act), (int)_act,
+				   state_to_string(_state));
+		}
+		break;
+	case preempting_state:
+		switch (_act) {
+		case vacating_act:
+			var_ptr = &m_time_preempting_vacating;
+			attr_name = ATTR_TOTAL_TIME_PREEMPTING_VACATING;
+			break;
+		case killing_act:
+			var_ptr = &m_time_preempting_killing;
+			attr_name = ATTR_TOTAL_TIME_PREEMPTING_KILLING;
+			break;
+		default:
+			EXCEPT("Unexpected activity (%s: %d) in getHistoryInfo() for %s",
+				   activity_to_string(_act), (int)_act,
+				   state_to_string(_state));
+		}
+		break;
+	case backfill_state:
+		switch (_act) {
+		case idle_act:
+			var_ptr = &m_time_backfill_idle;
+			attr_name = ATTR_TOTAL_TIME_BACKFILL_IDLE;
+			break;
+		case busy_act:
+			var_ptr = &m_time_backfill_busy;
+			attr_name = ATTR_TOTAL_TIME_BACKFILL_BUSY;
+			break;
+		case killing_act:
+			var_ptr = &m_time_backfill_killing;
+			attr_name = ATTR_TOTAL_TIME_BACKFILL_KILLING;
+			break;
+		default:
+			EXCEPT("Unexpected activity (%s: %d) in getHistoryInfo() for %s",
+				   activity_to_string(_act), (int)_act,
+				   state_to_string(_state));
+		}
+		break;
+	default:
+		EXCEPT("Unexpected state (%s: %d) in getHistoryInfo()",
+			   state_to_string(_state), (int)_state);
+
+	}
+	info.time_ptr = var_ptr;
+	info.attr_name = attr_name;
+	return info;
+}
+
+
+bool
+ResState::publishHistoryInfo( ClassAd* cap, State _state, Activity _act )
+{
+	ResState::HistoryInfo info = getHistoryInfo(_state, _act);
+	time_t total = *info.time_ptr;
+
+		// Add in the time spent in the current state/activity
+	if (_state == r_state && _act == r_act) {
+		total += (time(NULL) - m_atime);
+	}
+	if (total) {
+		cap->Assign(info.attr_name, (int)total);
+		return true;
+	}
+	return false;
+}

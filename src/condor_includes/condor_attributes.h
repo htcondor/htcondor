@@ -413,17 +413,15 @@ extern const char * ATTR_SUSPEND;
 extern const char * ATTR_SUSPEND_JOB_AT_EXEC;
 extern const char * ATTR_TARGET_TYPE;
 extern const char * ATTR_TIME_TO_LIVE;
-extern const char * ATTR_TOTAL_CLAIM_RUN_TIME;
-extern const char * ATTR_TOTAL_CLAIM_SUSPEND_TIME;
-#define ATTR_TOTAL_CONDOR_LOAD_AVG			AttrGetName( ATTRE_TOTAL_LOAD )
-
 extern const char * ATTR_TOOL_DAEMON_ARGS1;
 extern const char * ATTR_TOOL_DAEMON_ARGS2;
 extern const char * ATTR_TOOL_DAEMON_CMD;
 extern const char * ATTR_TOOL_DAEMON_ERROR;
 extern const char * ATTR_TOOL_DAEMON_INPUT;
 extern const char * ATTR_TOOL_DAEMON_OUTPUT;
-
+extern const char * ATTR_TOTAL_CLAIM_RUN_TIME;
+extern const char * ATTR_TOTAL_CLAIM_SUSPEND_TIME;
+#define ATTR_TOTAL_CONDOR_LOAD_AVG			AttrGetName( ATTRE_TOTAL_LOAD )
 extern const char * ATTR_TOTAL_CPUS;
 extern const char * ATTR_TOTAL_DISK;
 extern const char * ATTR_TOTAL_FLOCKED_JOBS;
@@ -442,6 +440,19 @@ extern const char * ATTR_TOTAL_SCHEDULER_RUNNING_JOBS;
 extern const char * ATTR_TOTAL_SCHEDULER_IDLE_JOBS;
 extern const char * ATTR_TOTAL_SLOTS;
 extern const char * ATTR_TOTAL_TIME_IN_CYCLE;
+extern const char * ATTR_TOTAL_TIME_BACKFILL_BUSY;
+extern const char * ATTR_TOTAL_TIME_BACKFILL_IDLE;
+extern const char * ATTR_TOTAL_TIME_BACKFILL_KILLING;
+extern const char * ATTR_TOTAL_TIME_CLAIMED_BUSY;
+extern const char * ATTR_TOTAL_TIME_CLAIMED_IDLE;
+extern const char * ATTR_TOTAL_TIME_CLAIMED_RETIRING;
+extern const char * ATTR_TOTAL_TIME_CLAIMED_SUSPENDED;
+extern const char * ATTR_TOTAL_TIME_MATCHED_IDLE;
+extern const char * ATTR_TOTAL_TIME_OWNER_IDLE;
+extern const char * ATTR_TOTAL_TIME_PREEMPTING_KILLING;
+extern const char * ATTR_TOTAL_TIME_PREEMPTING_VACATING;
+extern const char * ATTR_TOTAL_TIME_UNCLAIMED_BENCHMARKING;
+extern const char * ATTR_TOTAL_TIME_UNCLAIMED_IDLE;
 // Deprecated (cruft) -- use: ATTR_TOTAL_SLOTS;
 extern const char * ATTR_TOTAL_VIRTUAL_MACHINES;
 extern const char * ATTR_TOTAL_VIRTUAL_MEMORY;

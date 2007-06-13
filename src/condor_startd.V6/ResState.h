@@ -47,13 +47,39 @@ private:
 	State 		r_destination;
 	Activity	r_act;		
 
-	int		stime;		// time we entered the current state
-	int		atime;		// time we entered the current activitiy
-
 	int		enter_action( State, Activity, bool, bool );
 	int		leave_action( State cur_s, Activity cur_a, 
 						  State new_s, Activity new_a, 
 						  bool statechange );
+
+	time_t	m_stime;	// time we entered the current state
+	time_t	m_atime;	// time we entered the current activitiy
+
+		// Timestamps for history statistics
+	time_t	m_time_owner_idle;
+	time_t	m_time_unclaimed_idle;
+	time_t	m_time_unclaimed_benchmarking;
+	time_t	m_time_matched_idle;
+	time_t	m_time_claimed_idle;
+	time_t	m_time_claimed_busy;
+	time_t	m_time_claimed_suspended;
+	time_t	m_time_claimed_retiring;
+	time_t	m_time_preempting_vacating;
+	time_t	m_time_preempting_killing;
+	time_t	m_time_backfill_idle;
+	time_t	m_time_backfill_busy;
+	time_t	m_time_backfill_killing;
+
+	struct HistoryInfo {
+		time_t*		time_ptr;
+		const char*	attr_name;
+	};
+
+	void	updateHistoryTotals( time_t now );
+	time_t*		getHistoryTotalPtr( State _state, Activity _act );
+	const char*	getHistoryTotalAttr( State _state, Activity _act );
+	HistoryInfo	getHistoryInfo( State _state, Activity _act );
+	bool	publishHistoryInfo( ClassAd* cap, State _state, Activity _act );
 
 };
 
