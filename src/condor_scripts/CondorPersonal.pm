@@ -849,6 +849,8 @@ sub TunePersonalCondor
 	}
 
 	# as of 6.9.3 we need unique pipes for each nested personal condor
+	# and a unique log file within this personal condor
+	print NEW "PROCD_LOG = \$(LOG)/ProcLog";
 	if( $ENV{NMI_PLATFORM} =~ /win/ ){
 		print NEW "PROCD_ADDRESS = \\\\.\\pipe\\$procdpipe\n";
 	}
