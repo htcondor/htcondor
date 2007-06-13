@@ -346,32 +346,9 @@ JICLocalSchedd::notifyJobExit( int exit_status, int reason,
 							   UserProc* user_proc )
 {
 		// Remember what steps we've completed, in case we need to retry.
-	static bool did_local_notify = false;
 	static bool did_final_ad_publish = false;
 	static bool did_schedd_update = false;
 	bool rval = true;
-
-		// Call our parent's version of this method to handle all the
-		// common-case stuff, like writing to the local userlog,
-		// writing an output classad (if desired, etc).  
-	if (!did_local_notify) {
-		//
-		// We used to call JICLocal::notifyJobExit() here but 
-		// it interferes with our new policy expressions because
-		// it doesn't allow us to fine tune the log event
-		// Everything that this method used to do for us has been
-		// broken out and tailored to do the different actions
-		// that we may need to do using policy expressions. Thus,
-		// it has been commented out and should remain so
-		//
-		//if (!JICLocal::notifyJobExit(exit_status, reason, user_proc)) {
-		//	dprintf( D_ALWAYS, "JICLocal::notifyJobExit() failed - "
-		//			 "scheduling retry\n" );
-		//	retryJobCleanup();
-		//	return false;
-		//}
-		did_local_notify = true;
-	}
 
 	if (!did_final_ad_publish) {
 			// Prepare to update the job queue.  In this case, we want
@@ -447,11 +424,20 @@ JICLocalSchedd::notifyJobExit( int exit_status, int reason,
 			// going to be consistent with ourself in the local universe
 			// and ALWAYS send an eviction notice when the job is 
 			// removed
-		rval = this->u_log->logEvict( this->job_ad, (reason == JOB_CKPTED) );
+		if ( reason == JOB_COREDUMPED || reason == JOB_EXITED) { 
+			rval = this->u_log->logTerminate( this->job_ad );
+		} else {
+			rval = this->u_log->logEvict( this->job_ad, (reason == JOB_CKPTED) );
+		}
 
 			// Now that we've logged the event, we can update the job queue
-		this->job_updater->updateJob( up_type );
-		
+		if ( ! this->job_updater->updateJob( up_type ) ) { 
+			dprintf( D_ALWAYS, "job_updater->updateJob( up_type ) failed - "
+						 "Scheduling retry\n" );
+			retryJobCleanup();
+			return ( false );
+		}
+
 		did_schedd_update = true;
 	}
 
