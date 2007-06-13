@@ -8,7 +8,6 @@ $testname = 'cmd_q_shows-analyze  ';
 $whoami = `whoami`;
 chomp($whoami);
 
-
 @adarray;
 
 $submit = sub {
@@ -16,18 +15,53 @@ $submit = sub {
 
 	my $foundcluster = 0;
 	my $foundanalyze = 0;
-	my $cmd = "condor_q -analyze";
+	my $foundnegotiator = 0;
+	my $cmd = "";
+	my $timecollector = 0;
+	my $maxwait = 600;
+	my $interval = 30;
 
 	# This is the first test run, so we need to make sure that
 	# the negotiator has reported to the collector.  If it started
 	# before the collector was ready, it takes five minutes
 	# for it to show up in the collector.
 
-	sleep(300);
+	#Condor::DebugOn();
 
-	Condor::DebugOn();
+	$cmd = "condor_status -negotiator";
 
+	while($timecollector < $maxwait) {
+		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+		print "runCondorTool returned <<$cmdstatus>>\n";
+		if(!$cmdstatus)
+		{
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			exit(1);
+		}
+		foreach $line (@adarray) {
+			chomp($line);
+			print "Examing line $line\n";
+			if($line =~ /^\s*(\w+).*\s*(\w+)\s*.*$/) {
+				print "Score!!!!! something for a negotiator <<$1/$2>>\n";
+				$foundnegotiator = 1;
+				last;
+			}
+		}
+		if($foundnegotiator == 1) {
+			last;
+		} else {
+			sleep($interval);
+		}
+		$timecollector = $timecollector + $interval;
+	}
+
+	if($timecollector == $maxwait) {
+		die "Failed to ever find a usable negotiator!!!!\n";
+	}
+
+	$cmd = "condor_q -analyze";
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	print "runCondorTool returned <<$cmdstatus>>\n";
 	if(!$cmdstatus)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
@@ -61,15 +95,15 @@ $submit = sub {
 		chomp($line);
 		print "Examing line $line\n";
 		if($line =~ /^\s*(\d+)\.(\d+):\s*Run\s+analysis\s+summary\.\s+.*$/) {
-				print "Score!!!!! found cluster $1\n";
-				print "$line\n";
-				$foundcluster = 1;
+			print "Score!!!!! found cluster $1\n";
+			print "$line\n";
+			$foundcluster = 1;
 		}
 		if($line =~ /^\s*Requirements\s+=\s+.*$/) {
-				print "Score!!!!! found -analyze\n";
-				print "$line\n";
-				print "condor_q -analyse prints Requirements like this\n";
-				$foundanalyze = 1;
+			print "Score!!!!! found -analyze\n";
+			print "$line\n";
+			print "condor_q -analyse prints Requirements like this\n";
+			$foundanalyze = 1;
 		}
 	}
 
