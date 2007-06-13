@@ -33,6 +33,28 @@ file job\_queue.log and the job history file.  In our tests, this
 roughly doubles the maximum throughput rate to ~20 jobs/s, though actual
 performance will depend on the specific hardware being used.
 
+\item The \Condor{startd} now records historical statistics about the
+  total time (in seconds) that it spends in every state and activity.
+  If a given slot spent more than 0 seconds in any of the possible
+  state/activity pairs, the \AdAttr{TotalTime...} attribute for that
+  pair will be defined in the slot's classified ad.
+  The list of possible new machine attributes (alphebetically):
+\begin{verbatim}
+TotalTimeBackfillBusy
+TotalTimeBackfillIdle
+TotalTimeBackfillKilling
+TotalTimeClaimedBusy
+TotalTimeClaimedIdle
+TotalTimeClaimedRetiring
+TotalTimeClaimedSuspended
+TotalTimeMatchedIdle
+TotalTimeOwnerIdle
+TotalTimePreemptingKilling
+TotalTimePreemptingVacating
+TotalTimeUnclaimedBenchmarking
+TotalTimeUnclaimedIdle
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
