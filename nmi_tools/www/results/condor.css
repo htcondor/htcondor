@@ -1,0 +1,20 @@
+body { font-family: Sans-Serif; font-size: 11px; }
+a:link { color: #1C3F75; }
+.passed {
+   background-color: #4E9A06;
+}
+.failed {
+   background-color: #CC0000;
+}
+.pending {
+   background-color: #FCE94F;
+}
+.details {
+   font-size: 10px;
+}
+.detail_url {
+   font-weight: bold;
+}
+.title {
+   color: black;
+}
