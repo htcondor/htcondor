@@ -14,7 +14,7 @@ CONDOROUTPUTDIR=$(BASE)\\public
 #PATH=C:\Windows\system32;C:\condor\workspaces\v67\NTconfig;C:\Perl\bin
 
 
-all: clean license condor_setup condor_set_acls config_file version_file msi 
+all: clean license condor_setup condor_set_acls condor_set_perms_masker config_file version_file msi 
 	"mkdir" -p $(CONDOROUTPUTDIR)
 	cmd /c copy /y out\\condor.mm\\MSI\\*.msi $(CONDOROUTPUTDIR)
 
@@ -25,6 +25,10 @@ condor_setup: condor_setup.c
 # Build the utility for calling cacls in a language-independent way
 condor_set_acls: condor_set_acls.c
 	cl /nologo condor_set_acls.c /link /nologo advapi32.lib user32.lib 
+
+# Build the utility to hide the set_perms.exe utility from the users view
+condor_set_perms_masker: condor_set_perms_masker.c
+	cl /nologo condor_set_perms_masker.c /link /nologo user32.lib
 
 # build the actual MSI package
 msi: condor_setup condor.mm
@@ -51,7 +55,8 @@ version_file:
 # Windows-happy
 config_file:
 	cmd /c copy /Y condor_setup.exe    $(CONDORRELEASEDIR)
-	cmd /c copy /Y condor_set_acls.exe $(CONDORRELEASEDIR)	
+	cmd /c copy /Y condor_set_acls.exe $(CONDORRELEASEDIR)
+	cmd /c copy /Y condor_set_perms_masker.exe $(CONDORRELEASEDIR)
 	cmd /c copy /Y set_perms   $(CONDORRELEASEDIR)\\set_perms.exe
 	cmd /c copy /Y condor_config.local $(CONDORRELEASEDIR)
 	cmd /c awk -f $(BASE)\\src\\condor_examples\\convert_config_to_win32.awk $(BASE)\\src\\condor_examples\\condor_config.generic > $(CONDORRELEASEDIR)\\condor_config

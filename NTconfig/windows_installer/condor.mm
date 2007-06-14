@@ -174,7 +174,8 @@
 ; one little bit.  The rest of our customs steps required some modification to get working on Vista ... not 
 ; sure what kind of magic this one does ... maybe it's a Windows app, rather than a console app?? well, we don't 
 ; have the source, so we can't tell for now.
-<$ExeCa EXE=^[INSTALLDIR]set_perms.exe^ Args=^^ WorkDir="INSTALLDIR" Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
+;<$ExeCa EXE=^[INSTALLDIR]set_perms.exe^ Args=^^ WorkDir="INSTALLDIR" Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
+<$ExeCa EXE=^[INSTALLDIR]condor_set_perms_masker.exe^ Args=^^ WorkDir="INSTALLDIR" Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
 
 ;--- Install the Condor Service ----------------------------------------
 <$Component "Condor" Create="Y" Directory_="[INSTALLDIR]bin" Condition=^STARTSERVICE = "Y"^>
@@ -211,7 +212,7 @@
 ;--- Set Config file parameters ---------------------------------------------
 ;-- we split into two calls because the arglist can only be 255 characters.
 #(
-<$ExeCa EXE=^condor_setup.exe^
+<$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^
 Args=^
 -n "[NEWPOOL]"
 -r "[RUNJOBS]"
@@ -224,13 +225,13 @@ Args=^
 WorkDir=^INSTALLDIR^   
 Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
 Seq="InstallServices-"
-Rc0="N"       ;; On Vista this will not return any useful results, so ignore them
+Rc0="N"       ;; On Vista this app will not return any useful results
 Type="System" ;; run as the System account
 >
 #)
 
 #(
-<$ExeCa EXE=^condor_setup.exe^
+<$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^
 Args=^
 -p "[POOLNAME]"
 -o "[POOLHOSTNAME]"
@@ -241,7 +242,7 @@ Args=^
 WorkDir=^INSTALLDIR^   
 Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
 Seq="InstallServices-"
-Rc0="N"       ;; On Vista this will not return any useful results, so ignore them
+Rc0="N"       ;; On Vista this app will not return any useful results
 Type="System" ;; run as the System account	
 >
 #)
@@ -249,9 +250,10 @@ Type="System" ;; run as the System account
 ;--- Set directory Permissions ----------------------------------------------
 ;-------- Set INSTALLDIR perms first ---
 #(
-<$ExeCa EXE=^condor_set_acls.exe^ Args=^[INSTALLDIR_NTS]^ WorkDir="INSTALLDIR" 
-Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-"
-Rc0="N"       ;; On Vista this will not return any useful results, so ignore them
+<$ExeCa EXE=^[INSTALLDIR]condor_set_acls.exe^ Args=^[INSTALLDIR_NTS]^ 
+WorkDir="INSTALLDIR" Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
+Seq="InstallServices-"
+Rc0="N"       ;; On Vista this app will not return any useful results
 Type="System" ;; run as the System account			
 >
 #)
