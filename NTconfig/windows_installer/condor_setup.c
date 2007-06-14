@@ -1,3 +1,27 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include <windows.h>
 #include <stdio.h>
 #include <errno.h>
 #define CONDOR_COMMON_H
@@ -10,6 +34,9 @@
 #endif
 #define BUFFERSIZE (1024*5)
 typedef enum { false=0, true=1 } bool;
+
+/* get rid of some boring warnings */
+#define UNUSED_VARIABLE(x) x;
 
 struct Options {
 	char newpool;    /* Y/N */
@@ -72,26 +99,31 @@ void set_jvmlocation();
 void set_mailoptions();
 void set_hostpermissions();
 
-int 
-main(int argc, char**argv) {
+int WINAPI WinMain( HINSTANCE hInstance, 
+		    HINSTANCE hPrevInstance, 
+		    LPSTR     lpCmdLine, 
+		    int       nShowCmd ) {
 
-	// parse arguments
-	
-	int i;
-	if (! parse_args(argc, argv) ) {
-		exit(1);
-	}
+  UNUSED_VARIABLE ( hInstance );
+  UNUSED_VARIABLE ( hPrevInstance );
+  UNUSED_VARIABLE ( lpCmdLine );
+  UNUSED_VARIABLE ( nShowCmd ); 
+  
+  if ( !parse_args ( __argc, __argv ) ) {
+    exit ( 1 );
+  }
+  
+  set_release_dir ();
+  set_daemonlist ();
+  set_poolinfo (); /* name; hostname */
+  set_startdpolicy ();
+  set_jvmlocation ();
+  set_mailoptions ();
+  set_hostpermissions ();
+  
+  // getc ( stdin );
+  return 0;
 
-	set_release_dir();
-	set_daemonlist();
-	set_poolinfo(); /* name; hostname */
-	set_startdpolicy();
-	set_jvmlocation();
-	set_mailoptions();
-	set_hostpermissions();
-
-//	getc(stdin);
-	return 0;
 }
 
 void

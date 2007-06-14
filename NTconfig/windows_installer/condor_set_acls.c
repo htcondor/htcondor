@@ -31,6 +31,9 @@
 
 #define BUFFER_SIZE 256
 
+/* get rid of some boring warnings */
+#define UNUSED_VARIABLE(x) x;
+
 TCHAR administrators_buf[BUFFER_SIZE];
 TCHAR everyone_buf[BUFFER_SIZE];
 
@@ -97,24 +100,64 @@ get_names(void)
 	return 0;
 }
 
-int
-_tmain(int argc, TCHAR *argv[])
+int WINAPI 
+wWinMain( HINSTANCE hInstance, 
+	  HINSTANCE hPrevInstance, 
+	  LPTSTR    lpCmdLine, 
+	  int       nShowCmd ) 
 {
-	TCHAR cmd_buf[1024];
+  
+  STARTUPINFO si;
+  PROCESS_INFORMATION pi;
+  TCHAR cmd_buf[1024];  
+  
+  UNUSED_VARIABLE ( hInstance );
+  UNUSED_VARIABLE ( hPrevInstance );
+  UNUSED_VARIABLE ( lpCmdLine );
+  UNUSED_VARIABLE ( nShowCmd ); 	
+  
+  if ( __argc != 2 ) {    
+    MessageBoxW ( NULL, 
+		  TEXT ( "condor_set_acls <directory>" ), 
+		  TEXT ( "Usage" ), MB_OK ); 
+    return EXIT_FAILURE;
+  }
+  
+  // get the names for "Everyone" (S-1-1-0) and "Administrators" (S-1-5-32-544)
+  get_names ();
+  
+  _stprintf ( cmd_buf, 
+	      TEXT ( "cmd.exe /c echo y|cacls \"%s\" /t /g \"%s:F\" \"%s:R\"" )
+	      ,
+	      __wargv[1], 
+	      administrators_buf, 
+	      everyone_buf );
 
-	if (argc != 2) {
-		_ftprintf(stderr, TEXT("usage: condor_set_acls <directory>\n"));
-		return EXIT_FAILURE;
-	}
+  ZeroMemory( &si, sizeof(si) );
+  si.cb = sizeof(si);
+  ZeroMemory( &pi, sizeof(pi) );
+  
+  /* Start the child process. Since we are using the cmd command, we
+     use CREATE_NO_WINDOW to hide the ugly black window from the user
+  */
+  if ( !CreateProcessW ( NULL, cmd_buf,	NULL, NULL, FALSE, 
+			 CREATE_NO_WINDOW, NULL, NULL, &si, &pi ) ) {
+    /* silently die ... */
+    return EXIT_FAILURE;
+  }
+  
+  // Wait until child process exits.
+  WaitForSingleObject( pi.hProcess, INFINITE );
+  
+  // Close process and thread handles. 
+  CloseHandle( pi.hProcess );
+  CloseHandle( pi.hThread );
+  
+  /*
+    if ( _tsystem ( cmd_buf ) ) {
+    return EXIT_FAILURE;
+    }*/
+  
+  return EXIT_SUCCESS;
 
-	// get the names for "Everyone" (S-1-1-0) and "Administrators" (S-1-5-32-544)
-	get_names();
-
-	_stprintf(cmd_buf, TEXT("echo y|cacls \"%s\" /t /g \"%s:F\" \"%s:R\""),
-			  argv[1], administrators_buf, everyone_buf);
-	if (_tsystem(cmd_buf)) {
-		return EXIT_FAILURE;
-	}
-
-	return EXIT_SUCCESS;
 }

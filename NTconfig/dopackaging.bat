@@ -38,4 +38,7 @@ set PATH=%PATH_SAVE%
 zip -r condor.zip %CONDORRELEASEDIR%
 move /y condor.zip %CONDOROUTPUTDIR%
 
+REM rename the zip file to match that of the msi
+forfiles -p %CONDOROUTPUTDIR% -m *.MSI -c "cmd /c move /y condor.zip @FNAME.zip"
+
 echo Done.
