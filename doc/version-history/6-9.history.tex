@@ -68,6 +68,10 @@ DAG file did not contain the appropriate DAG configuration file line.
 (This bug was introduced when the per-DAG configuration file option
 was added in version 6.9.2.)
 
+\item Fixed a bug introduced in 6.9.3 when handling local universe jobs.
+The starter ignored failures in contacting the \Condor{schedd} in the
+final update to the job queue.
+
 \end{itemize}
 
 \noindent Known Bugs:
