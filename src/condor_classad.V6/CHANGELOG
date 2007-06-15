@@ -1,3 +1,12 @@
+Changes for version 0.9.9:
+
+* Fixed a crash when a ClassAd has more than one attribute and an
+  attribute other than the first has an && with no second expression.
+
+* ClassAds with multiple semicolons in a row used to cause a parse
+  error because an empty expression was not allowed. They are now
+  allowed. 
+
 Changes for version 0.9.8:
 
 * Added support for compiling with stlport (known to work with stlport5.0RC6).
