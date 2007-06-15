@@ -1206,7 +1206,10 @@ parseClassAd( ClassAd &ad , bool full )
 			return( false );
 		}
 
-		if( tt == Lexer::LEX_SEMICOLON ) {
+        // Slurp up any extra semicolons. This does not duplicate the work at the top of the loop
+        // because it accounts for the case where the last expression has extra semicolons,
+        // while the first case accounts for optional beginning semicolons. 
+		while( tt == Lexer::LEX_SEMICOLON ) {
 			lexer.ConsumeToken();
 			tt = lexer.PeekToken();
 		} 
