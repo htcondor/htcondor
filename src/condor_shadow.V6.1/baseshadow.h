@@ -171,6 +171,14 @@ class BaseShadow : public Service
 		*/
 	void terminateJob( update_style_t kind = US_NORMAL );
 
+		/** Set a timer to call terminateJob() so we retry
+		    our attempts to update the job queue etc.
+		*/
+	void retryJobCleanup( void );
+
+		/// DaemonCore timer handler to actually do the retry.
+	int retryJobCleanupHandler( void );
+
 		/** The job exited but it's not ready to leave the queue.  
 			We still want to log an evict event, possibly email the
 			user, etc.  We want to update the job queue, but not with
@@ -401,6 +409,18 @@ class BaseShadow : public Service
 	char *scheddAddr;
 	bool jobExitedGracefully;
 	char *core_file_name;
+
+		/// Timer id for the job cleanup retry handler.
+	int m_cleanup_retry_tid;
+
+		/// Number of times we have retried job cleanup.
+	int m_num_cleanup_retries;
+
+		/// Maximum number of times we will retry job cleanup.
+	int m_max_cleanup_retries;
+
+		/// How long to delay between attempts to retry job cleanup.
+	int m_cleanup_retry_delay;
 
 		// This makes this class un-copy-able:
 	BaseShadow( const BaseShadow& );

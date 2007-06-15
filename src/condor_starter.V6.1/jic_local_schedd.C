@@ -58,6 +58,9 @@ JICLocalSchedd::JICLocalSchedd( const char* classad_filename,
 	job_updater = NULL;
 	m_cleanup_retry_tid = -1;
 	m_num_cleanup_retries = 0;
+		// NOTE: these config knobs are very similar to
+		// SHADOW_MAX_JOB_CLEANUP_RETRIES and
+		// SHADOW_JOB_CLEANUP_RETRY_DELAY in the shadow.
 	m_max_cleanup_retries = param_integer("LOCAL_UNIVERSE_MAX_JOB_CLEANUP_RETRIES", 5);
 	m_cleanup_retry_delay = param_integer("LOCAL_UNIVERSE_JOB_CLEANUP_RETRY_DELAY", 30);
 	this->starter_user_policy = NULL;

@@ -335,6 +335,14 @@ void BaseShadow::config()
 	if( !reconnect_e_factor ) {
     	reconnect_e_factor = 2.0;
     }
+
+	m_cleanup_retry_tid = -1;
+	m_num_cleanup_retries = 0;
+		// NOTE: these config knobs are very similar to
+		// LOCAL_UNIVERSE_MAX_JOB_CLEANUP_RETRIES and
+		// LOCAL_UNIVERSE_JOB_CLEANUP_RETRY_DELAY in the local starter.
+	m_max_cleanup_retries = param_integer("SHADOW_MAX_JOB_CLEANUP_RETRIES", 5);
+	m_cleanup_retry_delay = param_integer("SHADOW_JOB_CLEANUP_RETRY_DELAY", 30);
 }
 
 
@@ -372,14 +380,13 @@ BaseShadow::shutDown( int reason )
 		// Only if the job is trying to leave the queue should we
 		// evaluate the user job policy...
 	if( reason == JOB_EXITED || reason == JOB_COREDUMPED ) {
-			// This will not return.  it'll take all desired actions
-			// and will eventually call DC_Exit()...
 		shadow_user_policy.checkAtExit();
 	}
-
+	else {
 		// if we aren't trying to evaluate the user's policy, we just
 		// want to evict this job.
-	evictJob( reason );
+		evictJob( reason );
+	}
 }
 
 
@@ -482,6 +489,37 @@ BaseShadow::removeJob( const char* reason )
 }
 
 void
+BaseShadow::retryJobCleanup( void )
+{
+	m_num_cleanup_retries++;
+	if (m_num_cleanup_retries > m_max_cleanup_retries) {
+		dprintf(D_ALWAYS,
+		        "Maximum number of job cleanup retry attempts "
+		        "(SHADOW_MAX_JOB_CLEANUP_RETRIES=%d) reached"
+		        "; Forcing job requeue!\n",
+		        m_max_cleanup_retries);
+		DC_Exit(JOB_SHOULD_REQUEUE);
+	}
+	ASSERT(m_cleanup_retry_tid == -1);
+	m_cleanup_retry_tid = daemonCore->Register_Timer(m_cleanup_retry_delay, 0,
+					(TimerHandlercpp)&BaseShadow::retryJobCleanupHandler,
+					"retry job cleanup", this);
+	dprintf(D_FULLDEBUG, "Will retry job cleanup in "
+	        "SHADOW_JOB_CLEANUP_RETRY_DELAY=%d seconds\n",
+	        m_cleanup_retry_delay);
+}
+
+
+int
+BaseShadow::retryJobCleanupHandler( void )
+{
+	m_cleanup_retry_tid = -1;
+	dprintf(D_ALWAYS, "Retrying job cleanup, calling terminateJob()\n");
+	terminateJob();
+	return TRUE;
+}
+
+void
 BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_NORMAL
 {
 	int reason;
@@ -568,9 +606,9 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	// condor_history...
 	if( !updateJobInQueue(U_TERMINATE) ) {
 		dprintf( D_ALWAYS, 
-			"Failed to perform final update to job queue! "
-			"Forcing job requeue!\n" );
-		DC_Exit(JOB_SHOULD_REQUEUE);
+				 "Failed to perform final update to job queue!\n");
+		retryJobCleanup();
+		return;
 	}
 
 	// Let's maximize the effectiveness of that queue synchronization and
