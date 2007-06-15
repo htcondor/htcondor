@@ -104,6 +104,14 @@ same $x[2], "c"
 same $x[3], error
 
 /////////////////////////////////
+echo Testing multiple semicolons...
+eval x = [
+           ;;
+           a = 3;;
+           b = 4;;
+         ]
+
+/////////////////////////////////
 echo Testing functions...
 same int(3), 3
 same int(3.9), 3
