@@ -4275,6 +4275,18 @@ Defaults to 900 (15 minutes).
   checkpoints slowly can avoid overwhelming the remote machine with
   swapping activity.
 
+\item[\Macro{SHADOW\_JOB\_CLEANUP\_RETRY\_DELAY}]
+ \label{param:ShadowJobCleanupRetryDelay}
+ This is an integer specifying the number of seconds to wait between tries
+ to commit the final update to the job ClassAd in the \Condor{schedd}'s
+ job queue.  The default is 30.
+
+\item[\Macro{SHADOW\_MAX\_JOB\_CLEANUP\_RETRIES}]
+ \label{param:ShadowMaxJobCleanupRetries}
+ This is an integer specifying the number of times to try committing
+ the final update to the job ClassAd in the \Condor{schedd}'s
+ job queue.  The default is 5.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -55,6 +55,13 @@ TotalTimeUnclaimedBenchmarking
 TotalTimeUnclaimedIdle
 \end{verbatim}
 
+\item The \Condor{shadow} now waits and retries after failing to
+commit the final update to the job ClassAd in the \Condor{schedd}'s
+job queue, rather than immediately aborting and causing the job to be
+requeued to run again.  See
+page~\pageref{param:ShadowMaxJobCleanupRetries} for the related
+configuration options.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
