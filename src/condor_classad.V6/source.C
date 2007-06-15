@@ -958,9 +958,9 @@ parsePrimaryExpression(ExprTree *&tree)
 				lexer.ConsumeToken();
 				parseExpression(treeL);
 				if( !treeL ) {
-					tree = NULL;
-					return( false );
-				}
+                    tree = NULL;
+                    return( false );
+                }
 
 				if( ( tt = lexer.ConsumeToken() ) != Lexer::LEX_CLOSE_PAREN ) {
 					CondorErrno = ERR_PARSE_ERROR;
@@ -1162,7 +1162,14 @@ parseClassAd( ClassAd &ad , bool full )
 	tt = lexer.PeekToken();
 	while( tt != Lexer::LEX_CLOSE_BOX ) {
 		// Get the name of the expression
-		if( ( tt = lexer.ConsumeToken( &tv ) ) != Lexer::LEX_IDENTIFIER ) {
+        tt = lexer.ConsumeToken( &tv );
+        if( tt == Lexer::LEX_SEMICOLON ) {
+            // We allow empty expressions, so if someone give a double semicolon, it doesn't 
+            // hurt. Technically it's not right, but we shouldn't make users pay the price for
+            // a meaningless mistake. See condor-support #1881 for a user that was bitten by this.
+            continue;
+        }
+		if( tt != Lexer::LEX_IDENTIFIER ) {
 			CondorErrno = ERR_PARSE_ERROR;
 			CondorErrMsg = "while parsing classad:  expected LEX_IDENTIFIER " 
 				" but got " + string( Lexer::strLexToken( tt ) );
@@ -1178,7 +1185,6 @@ parseClassAd( ClassAd &ad , bool full )
 		}
 
 		// parse the expression
-		tree = NULL;
 		parseExpression( tree );
 		if( tree == NULL ) {
 			return false;
