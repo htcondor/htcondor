@@ -1,4 +1,4 @@
-Changes for version 0.9.9:
+Changes for version 0.9.9: (released 15-Jun-2007)
 
 * Fixed a crash when a ClassAd has more than one attribute and an
   attribute other than the first has an && with no second expression.
@@ -7,7 +7,11 @@ Changes for version 0.9.9:
   error because an empty expression was not allowed. They are now
   allowed. 
 
-Changes for version 0.9.8:
+Changes for version 0.9.8: (released 14-Jun-2006)
+
+* The build now uses implicit template instantiation by
+  default. Explicit template instantiation is still available by providing the
+  --use-explicit-templates option to configure.
 
 * Added support for compiling with stlport (known to work with stlport5.0RC6).
 
