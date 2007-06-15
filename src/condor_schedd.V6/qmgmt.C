@@ -542,7 +542,7 @@ QmgmtPeer::unset()
 		fquser = NULL;
 	}
 	if (myendpoint) {
-		delete myendpoint;
+		free(myendpoint);
 		myendpoint = NULL;
 	}
 	if (sock) sock=NULL;	// note: do NOT delete sock!!!!!

@@ -570,7 +570,8 @@ ScheddTransaction::~ScheddTransaction()
 		this->owner = NULL;
 	}
 	if (qmgmt_state) {
-		delete qmgmt_state;
+			// Leak instead of crash
+		//delete qmgmt_state;
 		qmgmt_state = NULL;
 	}
 	if ( trans_timer_id != -1 ) {
