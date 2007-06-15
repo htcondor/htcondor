@@ -146,7 +146,7 @@ public:
 			any) have completed.  This deals with everything on the
 			CleanedUpJobList, notifies the JIC, etc.
 		*/
-	virtual void allJobsDone( void );
+	virtual bool allJobsDone( void );
 
 		/** Handles the exiting of user jobs.  If we're shutting down
 			and there are no jobs left alive, we exit ourselves.

@@ -86,10 +86,7 @@ public:
 	virtual bool removeJob( const char* );
 	
 		/*
-		 * The job exited on its own accord and its not to be requeued,
-		 * so we need to update the job and write a TERMINATE event 
-		 * into the user log. It is important that we do NOT set the
-		 * exit_code in here like we do in the other methods.
+		 * The job exited on its own accord and its not to be requeued.
 		 * 
 		 * @param reason - why the job is being terminated
 		 * @return true if the job was set to be terminated

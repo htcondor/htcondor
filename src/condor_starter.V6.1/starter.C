@@ -1266,7 +1266,9 @@ CStarter::Reaper(int pid, int exit_status)
 				// if there's no post script, we're basically done.
 				// so, we can directly call allJobsDone() to do final
 				// cleanup.
-			allJobsDone();
+			if( !allJobsDone() ) {
+				return 0;
+			}
 		}
 	}
 
@@ -1278,7 +1280,7 @@ CStarter::Reaper(int pid, int exit_status)
 }
 
 
-void
+bool
 CStarter::allJobsDone( void )
 {
 		// No more jobs, notify our JobInfoCommunicator
@@ -1295,7 +1297,7 @@ CStarter::allJobsDone( void )
 
 		dprintf( D_ALWAYS, "JIC::allJobsDone() failed, waiting for job "
 				 "lease to expire or for a reconnect attempt\n" );
-		return;
+		return false;
 	}
 	needs_jic_allJobsDone = false;
 
@@ -1317,11 +1319,12 @@ CStarter::allJobsDone( void )
 				// e.g. by adding a JIC method to print this?
 			dprintf( D_ALWAYS, "JobExit() failed, waiting for job "
 					 "lease to expire or for a reconnect attempt\n" );
-			return;
+			return false;
 		}
 	}
 		// No more jobs, all cleanup done, notify our JIC
 	jic->allJobsGone();
+	return true;
 }
 
 
