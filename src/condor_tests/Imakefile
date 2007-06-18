@@ -623,6 +623,7 @@ DESC(job_core_err_van,"Vanilla: Does requested error file get used?")
 RUN(job_core_err_van)
 TESTCLASS(job_core_err_van,core)
 TESTCLASS(job_core_err_van,quick)
+TESTCLASS(job_core_err_van,simple)
 
 DESC(job_core_hold_sched,"Scheduler: job is told to begin on hold. So we test for that state when we get the submitted event")
 RUN(job_core_hold_sched)
@@ -658,6 +659,7 @@ DESC(job_core_input_van,"Vanilla: Verify the specified input file is used")
 RUN(job_core_input_van)
 TESTCLASS(job_core_input_van,core)
 TESTCLASS(job_core_input_van,quick)
+TESTCLASS(job_core_input_van,simple)
 
 DESC(job_core_leaveinqueue_sched,"Scheduler: verify true and false classads do leave_in_queue right")
 RUN(job_core_leaveinqueue_sched)
@@ -688,6 +690,7 @@ DESC(job_core_output_van,"Vanilla: Verify trivially simple output from an input 
 RUN(job_core_output_van)
 TESTCLASS(job_core_output_van,core)
 TESTCLASS(job_core_output_van,quick)
+TESTCLASS(job_core_output_van,simple)
 
 DESC(job_core_perhold_sched,"Scheduler: verify true and false triggers for periodic hold")
 RUN(job_core_perhold_sched)
