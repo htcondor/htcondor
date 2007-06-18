@@ -38,7 +38,7 @@ performance will depend on the specific hardware being used.
   If a given slot spent more than 0 seconds in any of the possible
   state/activity pairs, the \AdAttr{TotalTime...} attribute for that
   pair will be defined in the slot's classified ad.
-  The list of possible new machine attributes (alphebetically):
+  The list of possible new machine attributes (alphabetically):
 \begin{verbatim}
 TotalTimeBackfillBusy
 TotalTimeBackfillIdle
@@ -61,6 +61,10 @@ job queue, rather than immediately aborting and causing the job to be
 requeued to run again.  See
 page~\pageref{param:ShadowMaxJobCleanupRetries} for the related
 configuration options.
+
+\item If the \Condor{starter} fails with a core dump on Unix, the
+core dump file is now put in the LOG directory.  Previously, it
+was deleted by the \Condor{startd}.
 
 \end{itemize}
 
