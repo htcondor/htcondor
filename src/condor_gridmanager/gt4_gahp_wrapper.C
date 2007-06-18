@@ -124,6 +124,9 @@ main( int argc, char* argv[] ) {
 		command_line.append( buff.Value() );
 	}
   
+	command_line.append( "-Dlog4j.appender.A1=org.apache.log4j.ConsoleAppender" );
+	command_line.append( "-Dlog4j.appender.A1.target=System.err" );
+
 	java_extra_args.rewind();
 	while ( (tmp = java_extra_args.next()) != NULL ) {
 		command_line.append( tmp );
