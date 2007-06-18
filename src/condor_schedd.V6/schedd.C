@@ -8263,8 +8263,6 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		}
 	}
 
-	DeleteAttribute( cluster, proc, ATTR_REMOTE_HOST );
-
 	if( pid ) {
 		char* last_claim = NULL;
 		GetAttributeStringNew( cluster, proc, ATTR_PUBLIC_CLAIM_ID, &last_claim );
@@ -8298,6 +8296,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_SLOT_ID );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_VIRTUAL_MACHINE_ID ); // CRUFT
+
 	} else {
 		dprintf( D_FULLDEBUG, "Job %d.%d has keepClaimAttributes set to true. "
 					    "Not removing %s and %s attributes.\n",
