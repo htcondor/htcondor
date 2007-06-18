@@ -529,6 +529,8 @@ handle_dynamic_dirs()
 	}
 }
 
+static char *core_dir = NULL;
+
 #if HAVE_EXT_COREDUMPER
 void
 linux_sig_coredump(int signum)
@@ -536,6 +538,11 @@ linux_sig_coredump(int signum)
 		// Just in case we're running as condor or a user.
 	setuid(0);
 	setgid(0);
+
+	if (core_dir != NULL) {
+		chdir(core_dir);
+	}
+
 	WriteCoreDump("core");
 
 		// It would be idea to actually terminate for the same reason.
@@ -551,6 +558,7 @@ linux_sig_coredump(int signum)
 	exit(1); // Just in case.
 }
 #endif
+
 
 void
 install_core_dump_handler()
@@ -570,7 +578,6 @@ install_core_dump_handler()
 #	endif // of ifdef HAVE_EXT_COREDUMPER
 }
 
-
 void
 drop_core_in_log( void )
 {
@@ -589,6 +596,8 @@ drop_core_in_log( void )
 				 "not calling chdir()\n" );
 		return;
 	}
+
+	core_dir = strdup(ptmp);
 
 	// in some case we need to hook up our own handler to generate
 	// core files.
