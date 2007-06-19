@@ -8621,7 +8621,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 						//
 					bool skip_vacate = false;
 					if ( ExitWhenDone ) {
-						int lease;
+						int lease = 0;
 						GetAttributeInt( cluster, proc,
 									ATTR_JOB_LEASE_DURATION, &lease );
 						skip_vacate = ( lease > 0 );
@@ -9523,7 +9523,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 	SetAttributeInt( job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0, NONDURABLE ); 
 
 	switch( status ) {
-	case RUNNING:
+	case RUNNING: {
 			//
 			// If the job is running, we are in middle of executing
 			// a graceful shutdown, and the job has a lease, then we 
@@ -9532,7 +9532,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 			// comes back up we will reconnect the shadow to it if the
 			// lease is still valid.
 			//
-		int lease;
+		int lease = 0;
 		GetAttributeInt( job_id->cluster, job_id->proc, ATTR_JOB_LEASE_DURATION, &lease );
 		if ( ExitWhenDone && lease > 0 ) {
 			dprintf( D_FULLDEBUG,	"Not marking job %d.%d as stopped because "
@@ -9545,6 +9545,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 			kill_zombie( pid, job_id );
 		}
 		break;
+	}
 	case HELD:
 		if( !scheduler.WriteHoldToUserLog(*job_id)) {
 			dprintf( D_ALWAYS, 
