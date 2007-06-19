@@ -23,10 +23,17 @@
 #include "condor_common.h"
 #include "MyString.h"
 #include "HashTable.h"
+#include "extArray.h"
 #include "view_server.h"
 
 template class HashTable<MyString,ClassAd*>;
 template class HashTable<MyString, GeneralRecord*>;
+template class HashTable<MyString, int>;
 template class HashBucket<MyString, GeneralRecord*>;
+template class HashBucket<MyString, int>;
+template class ExtArray<fpos_t*>;
+template class ExtArray<int>;
+template class ExtArray<ExtArray<fpos_t*>*>;
+template class ExtArray<ExtArray<int>*>;
 template class List<ClassAd>;
 template class Item<ClassAd>; 

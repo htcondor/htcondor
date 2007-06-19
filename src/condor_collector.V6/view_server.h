@@ -28,6 +28,7 @@
 #include "collector.h"
 #include "Set.h"
 #include "HashTable.h"
+#include "extArray.h"
 
 //---------------------------------------------------
 
@@ -62,6 +63,8 @@ struct GeneralRecord {
 //---------------------------------------------------
 
 typedef HashTable<MyString, GeneralRecord*> AccHash;
+typedef ExtArray< int > ExtIntArray;
+typedef ExtArray< fpos_t* > ExtOffArray;
 
 //---------------------------------------------------
 
@@ -122,12 +125,23 @@ private:
 
 	static GeneralRecord* GetAccData(AccHash* AccData,const MyString& Key);
 
+	// Variables used for quick searches by condor_stats
+
+	static HashTable< MyString, int >* FileHash;
+	static ExtArray< ExtIntArray* >* TimesArray;
+	static ExtArray< ExtOffArray* >* OffsetsArray;
+
 	// misc variables
 
 	static int HistoryTimer;
 	static int KeepHistory;
 
 	// Utility functions
+
+	static void addNewOffset(FILE*, int &offset_ctr, int read_time,
+						ExtIntArray* times_array, ExtOffArray* offsets);
+	static fpos_t* findOffset(FILE*, int FromDate, int ToDate,
+						ExtIntArray* times_array, ExtOffArray* offsets);
 
 	static int ReadTime(char* Line);
 	static int ReadTimeAndName(char* Line, MyString& Name);

@@ -29,6 +29,7 @@
 #include "Set.h"
 #include "directory.h"
 #include "view_server.h"
+#include "extArray.h"
 
 //-------------------------------------------------------------------
 
@@ -44,6 +45,9 @@ int ViewServer::HistoryTimer;
 MyString ViewServer::DataFormat[DataSetCount];
 AccHash* ViewServer::GroupHash;
 int ViewServer::KeepHistory;
+HashTable< MyString, int >* ViewServer::FileHash;
+ExtArray< ExtIntArray* >* ViewServer::TimesArray;
+ExtArray< ExtOffArray* >* ViewServer::OffsetsArray;
 
 //-----------------------
 // Constructor
@@ -123,7 +127,10 @@ void ViewServer::Init()
 			DataSet[i][j].AccData=new AccHash(1000,MyStringHash);
 		}
 	}
-	GroupHash=new AccHash(100,MyStringHash);
+	GroupHash = new AccHash(100,MyStringHash);
+	FileHash = new HashTable< MyString, int >(100,MyStringHash);
+	OffsetsArray = new ExtArray< ExtOffArray* >(30);
+	TimesArray = new ExtArray< ExtIntArray* >(30);
 
 	// File data format
 
@@ -352,17 +359,55 @@ int ViewServer::SendListReply(Stream* sock,const MyString& FileName, int FromDat
 	char* OutLinePtr=OutLine;
 	MyString Arg;
 	int T;
+	int file_array_index;
+	ExtIntArray* times_array = new ExtIntArray(100);
+	ExtOffArray* offsets = new ExtOffArray(100);
+	
+		// first find out which ExtArray to use, by checking the hash
+	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
+		
+			// FileName was not found in the FileHash
+			// Create the necessary arrays and set the index appropriately
+		file_array_index = OffsetsArray->length();
+		FileHash->insert( FileName, file_array_index );
+		TimesArray->add( times_array );
+		OffsetsArray->add( offsets );
+	} else {
+		
+			// otherwise just get the appropriate array
+		times_array = (TimesArray->getElementAt( file_array_index ));
+		offsets = (OffsetsArray->getElementAt( file_array_index ));
+	}
 
 	// dprintf(D_ALWAYS,"Filename=%s\n",(const char*)FileName);
 	FILE* fp=safe_fopen_wrapper(FileName.Value(),"r");
 	if (!fp) return -1;
 
+		//find the offset to search at
+	fpos_t* search_offset = findOffset(fp, FromDate, ToDate, times_array, offsets);
+
+		// set the seek to the correct spot and begin searching the file
+	fsetpos(fp, search_offset);
+	int new_offset_counter = 1;		// every fifty loops, mark an offset
 	while(fgets(InpLine,sizeof(InpLine),fp)) {
+		
 		// dprintf(D_ALWAYS,"Line read: %s\n",InpLine);
 		T=ReadTimeAndName(InpLine,Arg);
 		// dprintf(D_ALWAYS,"T=%d\n",T);
+		if( times_array->length() < offsets->length() ) {
+				// a file offset was recorded before this line was read; now
+				// store the time that was on the marked line
+			times_array->add( T );
+		}
+		
 		if (T>ToDate) break;
-		if (T<FromDate) continue;
+		if (T<FromDate) {
+				// continue to the next loop; but first, if 50 times have been
+				// checked, mark the position in the file and the time
+			addNewOffset(fp, new_offset_counter, T, times_array, offsets);
+			continue;
+		}
+		
 		if (!Names.Exist(Arg)) {
 			// dprintf(D_ALWAYS,"Adding Name=%s\n",Arg.Value());
 			Names.Add(Arg);
@@ -373,16 +418,12 @@ int ViewServer::SendListReply(Stream* sock,const MyString& FileName, int FromDat
 				return -1;
 			}
 		}
+		addNewOffset(fp, new_offset_counter, T, times_array, offsets);
 	}
 
 	fclose(fp);
 	return 0;
 }
-
-//---------------------------------------------------------------------
-// Send the actual data from the specified file for the
-// requested time range and name
-//---------------------------------------------------------------------
 
 int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDate, int ToDate, int Options, const MyString& Arg) 
 {
@@ -395,17 +436,55 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 	int NewTime, OldTime;
 	float OutTime;
 	int T;
+	int file_array_index;
+	ExtIntArray* times_array = new ExtIntArray(100);
+	ExtOffArray* offsets = new ExtOffArray(100);
+
+		// first find out which ExtArray to use, by checking the hash
+	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
+		
+			// FileName was not found in the FileHash
+			// Create the necessary arrays and set the index appropriately
+		file_array_index = OffsetsArray->length();
+		FileHash->insert( FileName, file_array_index );
+		TimesArray->add( times_array );
+		OffsetsArray->add( offsets );
+	} else {
+		
+			// otherwise just get the appropriate array
+		times_array = (TimesArray->getElementAt( file_array_index ));
+		offsets = (OffsetsArray->getElementAt( file_array_index ));
+	}
 
 	OldTime = 0;
 	FILE* fp=safe_fopen_wrapper(FileName.Value(),"r");
 	if (!fp) return -1;
 
+		//find the offset to search at
+	fpos_t* search_offset = findOffset(fp, FromDate, ToDate, times_array, offsets);
+
+		// set the seek to the correct spot and begin searching the file
+	fsetpos(fp, search_offset);
+	int new_offset_counter = 1;		// every fifty loops, mark an offset
 	while(fgets(InpLine,sizeof(InpLine),fp)) {
+
 		// dprintf(D_ALWAYS,"Line read: %s\n",InpLine);
 		T=ReadTimeChkName(InpLine,Arg);
+		if( times_array->length() < offsets->length() ) {
+				// a file offset was recorded before this line was read; now
+				// store the time that was on the marked line
+			times_array->add( T );
+		}
 		// dprintf(D_ALWAYS,"T=%d\n",T);
+		
 		if (T>ToDate) break;
-		if (T<FromDate) continue;
+		if (T<FromDate) {
+				// continue to the next loop; but first, if 50 times have been
+				// checked, mark the position in the file and the time
+			addNewOffset(fp, new_offset_counter, T, times_array, offsets);
+			continue;
+		}
+		
 		if (Options) {
 			if (!sock->code(InpLinePtr)) {
 				dprintf(D_ALWAYS,"Can't send information to client!\n");
@@ -426,11 +505,87 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 				break;
 			}
 		} 
+		addNewOffset(fp, new_offset_counter, T, times_array, offsets);
 	}
 
 	fclose(fp);
 	return Status;
-} 
+}
+
+//*******************************************************************
+// Utility files for recording offsets in the condor_stats files.
+//*******************************************************************
+
+//-------------------------------------------------------------------
+// Increments the counter, and then if it's reached 50, adds the
+// offset to the list.
+//-------------------------------------------------------------------
+
+void
+ViewServer::addNewOffset(FILE* fp, int &offset_ctr, int read_time, ExtIntArray* times_array, ExtOffArray* offsets) {
+	if( ++offset_ctr == 50 && read_time > times_array->getElementAt( times_array->getlast() )) {
+			// mark the position in the file now, but wait to mark the time
+			// until after the line is read
+		offset_ctr = 0;
+		fgetpos(fp, (*offsets)[ offsets->length() ]);	//does this work?
+	}
+}
+
+//-------------------------------------------------------------------
+// Sets the offset to the appropriate spot in the file to minimize
+// linear searching of the file.
+//-------------------------------------------------------------------
+
+fpos_t*
+ViewServer::findOffset(FILE* fp, int FromDate, int ToDate, ExtIntArray* times_array, ExtOffArray* offsets) {
+	fpos_t search_offset;
+	fpos_t* search_offset_ptr = &search_offset;
+	if( times_array->length() == 0 ) {
+
+			// linear progression, set the offset to the beginning of the file
+		fgetpos(fp, search_offset_ptr);
+
+	} else if( times_array->getElementAt( 0 ) > FromDate ) {
+		
+		if( times_array->getElementAt( 0 ) > ToDate ) {
+				// if this is the case then the record won't be found, so end
+				// to-do:  how to exit the program and possibly print an error?
+		} else {
+				// this file begins in the middle of the requested interval, so
+				// start at the beginning of the file.
+			fgetpos(fp, search_offset_ptr);
+		}
+
+	} else if( times_array->getElementAt( times_array->getlast() ) < FromDate ) {
+
+			// linear progression, but start with the latest known offset
+		search_offset_ptr = offsets->getElementAt( offsets->getlast() );
+
+	} else {
+
+			// binary search through times_array[] for the latest time not
+			// greater than FromDate
+		int low = 0;
+		int high = times_array->getlast();
+		int mid;
+		while( high - low > 1 ) {
+			mid = (high - low) / 2;
+			if( times_array->getElementAt( mid ) < FromDate ) {
+				low = mid;
+			} else {
+				high = mid;
+			}
+		}
+			// now we've found the approximate spot in the array; time to find
+			// the exact location and set the appropriate offset
+		if( times_array->getElementAt( low + 1 ) < FromDate ) {
+			search_offset_ptr = offsets->getElementAt( low + 1 );
+		} else if( times_array->getElementAt( low ) < FromDate ) {
+			search_offset_ptr = offsets->getElementAt( low );
+		}
+	}
+	return search_offset_ptr;
+}
 
 //*******************************************************************
 // Utility functions for reading the history files & data
@@ -578,6 +733,34 @@ void ViewServer::WriteHistory()
 			}
 			if (statbuf.st_size>MaxFileSize) {
 				rename(DataSet[i][j].NewFileName.Value(),DataSet[i][j].OldFileName.Value());
+				int newFileIndex = -1;
+				int oldFileIndex = -1;
+				if(FileHash->lookup(DataSet[i][j].OldFileName.Value(),
+														oldFileIndex) != -1) {
+						// get rid of the old arrays and make new ones
+					delete (*TimesArray)[oldFileIndex];
+					delete (*OffsetsArray)[oldFileIndex];
+					(*TimesArray)[oldFileIndex] = new ExtIntArray;
+					(*OffsetsArray)[oldFileIndex] = new ExtOffArray;
+					if(FileHash->lookup(DataSet[i][j].NewFileName.Value(),
+														newFileIndex) != -1) {
+							// switch the indices to avoid copying data
+						FileHash->remove(DataSet[i][j].OldFileName.Value());
+						FileHash->remove(DataSet[i][j].NewFileName.Value());
+						FileHash->insert(DataSet[i][j].OldFileName.Value(),
+															newFileIndex);
+						FileHash->insert(DataSet[i][j].NewFileName.Value(),
+															oldFileIndex);
+					}
+				}
+				else if(FileHash->lookup(DataSet[i][j].NewFileName.Value(),
+													newFileIndex) != -1) {
+						// if no file got overwritten, then just add to the
+						// hash and arrays
+					FileHash->remove(DataSet[i][j].NewFileName.Value());
+					FileHash->insert(DataSet[i][j].OldFileName.Value(),
+															newFileIndex);
+				}
 				DataSet[i][j].OldStartTime=DataSet[i][j].NewStartTime;
 				DataSet[i][j].NewStartTime=-1;
 			}
