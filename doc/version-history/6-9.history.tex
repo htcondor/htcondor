@@ -83,8 +83,19 @@ was added in version 6.9.2.)
 The starter ignored failures in contacting the \Condor{schedd} in the
 final update to the job queue.
 
-\item Fixed a bug introduced in 6.9.3 that caused failure to reconnect to jobs
-that were left running when the \Condor{schedd} shut down.
+\item When the \Condor{schedd} is issued a graceful shutdown command, any jobs
+that running with a job lease are allowed to keep running. When the \Condor{schedd}
+starts back up at a later time, it will spawn \Condor{shadow} to reconnect
+to the jobs if they are still executing. This mimics the same behavior as
+a fast shutdown.  This also fixes a bug in 6.9.3 in which the \Condor{schedd}
+would fail to reconnect to jobs that were left running during a graceful
+shutdown.
+
+\item When the \Condor{starter} is gracefully shutting down and if it
+has become disconnected from the \Condor{shadow}, it will wait for the
+job lease time to expire before giving up on telling the \Condor{shadow}
+that the job was evicted.  Previously, the \Condor{starter} would exit
+as soon as it was done evicting the job.
 
 % Gnat PR 652
 \item Trailing commas in the configuration parameters \Attr{DAEMON\_LIST},
