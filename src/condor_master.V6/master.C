@@ -687,6 +687,8 @@ init_daemon_list()
 	} else {
 		dc_daemon_names.initializeFromString(default_dc_daemon_list);
 	}
+		// Tolerate a trailing comma in the list
+	dc_daemon_names.remove( "" );
 
 	char* ha_list = param("MASTER_HA_LIST");
 	if( ha_list ) {
@@ -696,6 +698,8 @@ init_daemon_list()
 		ha_list = strupr( ha_list );
 		ha_names.initializeFromString(ha_list);
 		free( ha_list );
+			// Tolerate a trailing comma in the list
+		ha_names.remove( "" );
 
 		ha_names.rewind();
 		while( (daemon_name = ha_names.next()) ) {
@@ -716,6 +720,8 @@ init_daemon_list()
 		daemon_list = strupr( daemon_list );
 		daemon_names.initializeFromString(daemon_list);
 		free( daemon_list );
+			// Tolerate a trailing comma in the list
+		daemon_names.remove( "" );
 
 			/*
 			  Make sure that if COLLECTOR is in the list, put it at
@@ -778,6 +784,8 @@ check_daemon_list()
 
 	daemon_names.initializeFromString(daemon_list);
 	free( daemon_list );
+		// Tolerate a trailing comma in the list
+	daemon_names.remove( "" );
 
 	daemon_names.rewind();
 	while( (daemon_name = daemon_names.next()) ) {
