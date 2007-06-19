@@ -317,14 +317,18 @@ GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 	}
 
 	MyString owner_safe;
+	MyString exit_reason;
 	if(gman_node) { owner_safe = owner; }
 	else { owner_safe = "Unknown"; }
-	dprintf(D_ALWAYS, "condor_gridmanager (PID %d, owner %s) exited %s %d.\n",
-		pid, owner_safe.Value(), 
-		WIFEXITED(exit_status)?"with return code":"because of signal",
-		WIFEXITED(exit_status)?WEXITSTATUS(exit_status):WTERMSIG(exit_status)
-		);
-
+	if ( WIFEXITED( exit_status ) ) {
+		exit_reason.sprintf( "with return code %d",
+							 WEXITSTATUS( exit_status ) );
+	} else {
+		exit_reason.sprintf( "due to %s",
+							 daemonCore->GetExceptionString( exit_status ) );
+	}
+	dprintf(D_ALWAYS, "condor_gridmanager (PID %d, owner %s) exited %s.\n",
+			pid, owner_safe.Value(), exit_reason.Value() );
 	if(WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == DPRINTF_ERROR) {
 		dprintf(D_ALWAYS, "The gridmanager may have had a problem writing its log.  Check the permissions of the file specified by GRIDMANAGER_LOG; it usually needs to be writable by the owner of the job.\n");
 	}
