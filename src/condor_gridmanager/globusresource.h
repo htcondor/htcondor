@@ -99,9 +99,25 @@ class GlobusResource : public BaseResource
 	List<GlobusJob> jmsWanted;
 	int jmLimit;		// max number of running jobmanagers
 
+		// When true, we'll try to run a grid monitor on each gt2
+		// gatekeeper.
 	static bool enableGridMonitor;
 	int checkMonitorTid;
+
+		// monitorStarting and monitorActive should not be true at the
+		// same time.
+
+		// When true, the grid monitor is deemed a viable source of job
+		// status information and jobmanager processes can be killed.
 	bool monitorActive;
+		// When true, we are trying to start the grid monitor for the
+		// first time or after abandoning a previous attempt to run it.
+		// The monitor is not yet ready for use.
+	bool monitorStarting;
+		// When true, a gram job request is in progress to launch the
+		// grid monitor.
+	bool monitorSubmitActive;
+
 	char *monitorDirectory;
 	char *monitorJobStatusFile;
 	char *monitorLogFile;
@@ -110,6 +126,11 @@ class GlobusResource : public BaseResource
 		// is resubmitted or when the time in question is read.
 	int jobStatusFileLastReadTime;
 	int logFileLastReadTime;
+
+		// After giving up on the grid monitor (i.e. calling
+		// AbandonMonitor()), this is the time at which we should try
+		// again.
+	int monitorRetryTime;
 
 		// Very simily to logFileLastReadTime, but not updated every time the
 		// grid_monitor is resubmitted.  As a result it reliably reports on the
@@ -123,12 +144,11 @@ class GlobusResource : public BaseResource
 		// grid-monitor is (re)submitted.
 	time_t jobStatusFileLastUpdate;
 
-		// When true, the monitor is submitted as if it was from scratch.
-		// (Say, the first time, or after a _long_ delay after encountering
-		// problems.)
-	bool initialMonitorStart;
+		// This is the gram job contact string for the grid monitor job.
+	char *monitorGramJobId;
 
 	GahpClient *gahp;
+	GahpClient *monitorGahp;
 };
 
 #endif
