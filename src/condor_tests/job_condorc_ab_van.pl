@@ -28,6 +28,11 @@ $held = sub {
 	my $holdreason = $info{"holdreason"};
 
 	print "Held event not expected: $holdreason \n";
+	system("condor_status -any -l");
+	system("ps auxww | grep schedd");
+	system("cat `condor_config_val LOG`/SchedLog");
+	system("cat `condor_config_val LOG`/MasterLog");
+
 	exit(1);
 };
 
