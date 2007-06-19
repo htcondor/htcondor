@@ -1571,9 +1571,7 @@ MyString *GT3Job::buildSubmitRSL()
 	buff.sprintf( ")(proxy_timeout=%d", JM_MIN_PROXY_TIME );
 	*rsl += buff;
 
-	buff.sprintf( ")(remote_io_url=$(GRIDMANAGER_GASS_URL))",
-				  JM_COMMIT_TIMEOUT );
-	*rsl += buff;
+	*rsl += ")(remote_io_url=$(GRIDMANAGER_GASS_URL))";
 
 	if ( rsl_suffix != NULL ) {
 		*rsl += rsl_suffix;
