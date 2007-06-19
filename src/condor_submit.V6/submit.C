@@ -4015,12 +4015,7 @@ SetUserLog()
 				DoCleanup(0,0,NULL);
 				exit( 1 );
 
-			} else {
-				fprintf(stderr,
-					"\nWARNING: Log file %s is on NFS.\nThis could cause"
-					" log file corruption and is _not_ recommended.\n",
-					ulog.Value() );
-			}
+			} 
 		}
 
 		check_and_universalize_path(ulog, UserLogFile);
