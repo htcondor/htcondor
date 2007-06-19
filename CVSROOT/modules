@@ -841,8 +841,14 @@ V6_9_3_EXT	-a V6_9_COMMON_EXT \
                    externals/bundles/gt4gahp/1.6 \
                    externals/bundles/globus/4.0.3-2
 
-# Externals needed for 6.9.4. (same a 6.9.3)
-V6_9_4_EXT	-a V6_9_3_EXT
+# Externals needed for 6.9.4.
+V6_9_4_EXT	-a V6_9_COMMON_EXT \
+                   externals/bundles/classads/0.9.8-b4 \
+                   externals/bundles/gsoap/2.7.6c-p1 \
+                   externals/bundles/gcb/1.4.2 \
+                   externals/bundles/drmaa/1.5 \
+                   externals/bundles/gt4gahp/1.7 \
+                   externals/bundles/globus/4.0.3-2
 
 # Externals needed for the head of the V6_9-branch (a.k.a. the TRUNK)
 V6_9_EXT	-a V6_9_4_EXT
