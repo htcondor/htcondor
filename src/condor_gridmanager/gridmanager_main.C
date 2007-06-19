@@ -111,7 +111,7 @@ main_init( int argc, char ** const argv )
 }
 
 int
-main_config( bool is_full )
+main_config( bool )
 {
 	Reconfig();
 	return TRUE;

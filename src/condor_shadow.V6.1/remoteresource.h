@@ -262,7 +262,7 @@ class RemoteResource : public Service {
 
 	FileTransfer filetrans;
 
-	virtual void resourceExit( int exit_reason, int exit_status );
+	virtual void resourceExit( int reason_for_exit, int exit_status );
 
 	virtual void updateFromStarter( ClassAd* update_ad );
 

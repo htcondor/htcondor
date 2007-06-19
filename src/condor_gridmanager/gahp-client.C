@@ -304,7 +304,7 @@ GahpClient::GahpClient(const char *id, const char *path, const ArgList *args)
 	deleg_proxy = NULL;
 	error_string = "";
 
-	server->AddGahpClient( this );
+	server->AddGahpClient();
 }
 
 GahpClient::~GahpClient()
@@ -312,7 +312,7 @@ GahpClient::~GahpClient()
 		// call clear_pending to remove this object from hash table,
 		// and deallocate any memory associated w/ a pending command.
 	clear_pending();
-	server->RemoveGahpClient( this );
+	server->RemoveGahpClient();
 	server->m_reference_count--;
 	if ( normal_proxy != NULL ) {
 		server->UnregisterProxy( normal_proxy->proxy );
@@ -560,13 +560,13 @@ GahpServer::new_reqid()
 }
 
 void
-GahpServer::AddGahpClient( GahpClient *client )
+GahpServer::AddGahpClient()
 {
 	m_reference_count++;
 }
 
 void
-GahpServer::RemoveGahpClient( GahpClient *client )
+GahpServer::RemoveGahpClient()
 {
 	m_reference_count--;
 		// TODO arrange to de-allocate GahpServer when this hits zero
@@ -723,7 +723,7 @@ GahpServer::Startup()
 	m_gahp_writefd = stdin_pipefds[1];
 
 		// Read in the initial greeting from the GAHP, which is the version.
-	if ( command_version(true) == false ) {
+	if ( command_version() == false ) {
 		dprintf(D_ALWAYS,"Failed to read GAHP server version\n");
 		// consider this a bad situation...
 		return false;
@@ -1378,9 +1378,11 @@ GahpServer::command_commands()
 
 	return true;
 }
-	
+
+// This assumes it's reading the gahp's startup greeting.
+// It doesn't issue a VERSION command.
 bool
-GahpServer::command_version(bool banner_string)
+GahpServer::command_version()
 {
 	int i,j,result;
 	bool ret_val = false;
@@ -1508,7 +1510,7 @@ int
 GahpClient::globus_gram_client_job_request(
 	const char * resource_manager_contact,
 	const char * description,
-	const int job_state_mask,
+	const int /* job_state_mask */,
 	const char * callback_contact,
 	char ** job_contact)
 {
@@ -1758,7 +1760,7 @@ GahpClient::globus_gram_client_job_signal(const char * job_contact,
 
 int
 GahpClient::globus_gram_client_job_callback_register(const char * job_contact,
-	const int job_state_mask,
+	const int /* job_state_mask */,
 	const char * callback_contact,
 	int * job_status,
 	int * failure_code)
@@ -1931,7 +1933,7 @@ GahpClient::globus_gram_client_job_refresh_credentials(const char *job_contact)
 
 
 bool
-GahpClient::is_pending(const char *command, const char *buf) 
+GahpClient::is_pending(const char *command, const char * /* buf */) 
 {
 		// note: do _NOT_ check pending reqid here.
 // MirrorResource doesn't exactly recreate all the arguments when checking

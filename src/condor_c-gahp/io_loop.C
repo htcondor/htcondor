@@ -112,7 +112,7 @@ unsigned __stdcall pipe_forward_thread(void *)
 #endif
 
 void
-usage( char *name )
+usage()
 {
 	dprintf( D_ALWAYS,
 		"Usage: condor_gahp -s <schedd name> [-P <pool name>]\n"
@@ -134,25 +134,25 @@ main_init( int argc, char ** const argv )
 	int i = 1;
 	while ( i < argc ) {
 		if ( argv[i][0] != '-' )
-			usage( argv[0] );
+			usage();
 
 		switch( argv[i][1] ) {
 		case 's':
 			// don't check parent for schedd addr. use this one instead
 			if ( argc <= i + 1 )
-				usage( argv[0] );
+				usage();
 			schedd_addr = argv[i + 1];
 			i++;
 			break;
 		case 'P':
 			// specify what pool (i.e. collector) to lookup the schedd name
 			if ( argc <= i + 1 )
-				usage( argv[0] );
+				usage();
 			schedd_pool = argv[i + 1];
 			i++;
 			break;
 		default:
-			usage( argv[0] );
+			usage();
 			break;
 		}
 
@@ -332,7 +332,7 @@ main_init( int argc, char ** const argv )
 
 
 int
-stdin_pipe_handler(Service*, int pipe) {
+stdin_pipe_handler(Service*, int) {
 
 	MyString* line;
 	while ((line = stdin_buffer.GetNextLine()) != NULL) {
@@ -741,7 +741,7 @@ void Reconfig() {}
 
 
 int
-main_config( bool is_full )
+main_config( bool )
 {
 	Reconfig();
 	return TRUE;
@@ -767,7 +767,7 @@ main_shutdown_graceful()
 }
 
 void
-main_pre_dc_init( int argc, char* argv[] )
+main_pre_dc_init( int, char** )
 {
 }
 

@@ -240,7 +240,7 @@ orphanCallbackHandler()
 }
 
 void
-gramCallbackHandler( void *user_arg, char *job_contact, int state,
+gramCallbackHandler( void * /* user_arg */, char *job_contact, int state,
 					 int errorcode )
 {
 	int rc;

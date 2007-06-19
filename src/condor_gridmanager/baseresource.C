@@ -556,7 +556,7 @@ dprintf(D_FULLDEBUG,"    %d.%d is not in succeeded list\n",curr_job->procID.clus
 
 void BaseResource::DoUpdateLeases( time_t& update_delay,
 								   bool& update_complete,
-								   SimpleList<PROC_ID>& update_succeeded )
+								   SimpleList<PROC_ID>& /* update_succeeded */ )
 {
 dprintf(D_FULLDEBUG,"*** BaseResource::DoUpdateLeases called\n");
 	update_delay = 0;

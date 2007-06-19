@@ -103,7 +103,7 @@ main_shutdown_fast()
 // soft reconfiguration - for rereading configuration values from $CONDOR_CONFIG
 //						  without changing the state machine
 int
-main_config( bool is_full )
+main_config( bool /* is_full */ )
 {
 	int returnValue = 0;
 	
@@ -120,7 +120,7 @@ main_config( bool is_full )
 
 
 void
-main_pre_dc_init( int argc, char* argv[] )
+main_pre_dc_init( int /* argc */, char** /* argv */ )
 {
 }
 

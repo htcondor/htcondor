@@ -162,7 +162,7 @@ BaseResource *BaseJob::GetResource()
 	return NULL;
 }
 
-void BaseJob::JobSubmitted( const char *remote_host)
+void BaseJob::JobSubmitted( const char * /* remote_host */)
 {
 }
 
@@ -647,7 +647,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 
 }
 
-int BaseJob::EvalAllPeriodicJobExprs(Service *ignore)
+int BaseJob::EvalAllPeriodicJobExprs(Service *)
 {
 	BaseJob *curr_job;
 

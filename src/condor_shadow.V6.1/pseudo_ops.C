@@ -359,17 +359,17 @@ static int attr_list_has_file( const char *attr, const char *path )
 	}
 }
 
-static int use_append( char *method, char *path )
+static int use_append( char * /* method */, char *path )
 {
 	return attr_list_has_file( ATTR_APPEND_FILES, path );
 }
 
-static int use_compress( char *method, char *path )
+static int use_compress( char * /* method */, char *path )
 {
 	return attr_list_has_file( ATTR_COMPRESS_FILES, path );
 }
 
-static int use_fetch( char *method, char *path )
+static int use_fetch( char * /* method */, char *path )
 {
 	return attr_list_has_file( ATTR_FETCH_FILES, path );
 }
@@ -420,7 +420,7 @@ static int use_special_access( const char *file )
 		!strcmp(file,"/dev/ip");	
 }
 
-static int access_via_afs( const char *file )
+static int access_via_afs( const char * /* file */ )
 {
 	char *my_fs_domain=0;
 	char *remote_fs_domain=0;
@@ -465,7 +465,7 @@ static int access_via_afs( const char *file )
 	return result;
 }
 
-static int access_via_nfs( const char *file )
+static int access_via_nfs( const char * /* file */ )
 {
 	char *my_uid_domain=0;
 	char *my_fs_domain=0;

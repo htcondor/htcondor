@@ -131,7 +131,7 @@ static char *GMStateNames[] = {
 }
 
 void
-gt4GramCallbackHandler( void *user_arg, const char *job_contact,
+gt4GramCallbackHandler( void * /* user_arg */, const char *job_contact,
 						const char *state, const char *fault,
 						const int exit_code )
 {

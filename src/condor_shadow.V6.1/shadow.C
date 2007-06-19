@@ -44,7 +44,7 @@ UniShadow::~UniShadow() {
 
 
 int
-UniShadow::updateFromStarter(int command, Stream *s)
+UniShadow::updateFromStarter(int /* command */, Stream *s)
 {
 	ClassAd updateAd;
 	ClassAd *jobad = getJobAd();

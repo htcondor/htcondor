@@ -446,7 +446,7 @@ MPIShadow::startMaster()
 #if (MPI_USES_RSH) 
 
 int
-MPIShadow::startComrade( int cmd, Stream* s )
+MPIShadow::startComrade( int /* cmd */, Stream* s )
 {
 /* This command made by sneaky rsh:  condor_starter.V6.1/condor_rsh.C */
 
@@ -1003,7 +1003,7 @@ MPIShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 
 
 int
-MPIShadow::updateFromStarter(int command, Stream *s)
+MPIShadow::updateFromStarter(int /* command */, Stream *s)
 {
 	ClassAd update_ad;
 	MpiResource* mpi_res = NULL;
@@ -1168,6 +1168,9 @@ MPIShadow::setMpiMasterInfo( char* str )
 	}
 	return true;
 #else /* ! MPI_USES_RSH */
+		// Shut the compiler up
+	str = str;
+
 	return false;
 #endif /* ! MPI_USES_RSH */
 }
@@ -1204,7 +1207,7 @@ MPIShadow::exitCode( void )
 
 
 void
-MPIShadow::resourceBeganExecution( RemoteResource* rr )
+MPIShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 {
 	bool all_executing = true;
 
@@ -1233,14 +1236,14 @@ MPIShadow::resourceBeganExecution( RemoteResource* rr )
 
 
 void
-MPIShadow::resourceReconnected( RemoteResource* rr )
+MPIShadow::resourceReconnected( RemoteResource* /* rr */ )
 {
 	EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
 }
 
 
 void
-MPIShadow::logDisconnectedEvent( const char* reason )
+MPIShadow::logDisconnectedEvent( const char* /* reason */ )
 {
 	EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
 }
@@ -1254,7 +1257,7 @@ MPIShadow::logReconnectedEvent( void )
 
 
 void
-MPIShadow::logReconnectFailedEvent( const char* reason )
+MPIShadow::logReconnectFailedEvent( const char* /* reason */ )
 {
 	EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
 }

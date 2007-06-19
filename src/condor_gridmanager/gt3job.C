@@ -108,7 +108,7 @@ static char *GMStateNames[] = {
 
 
 void
-gt3GramCallbackHandler( void *user_arg, char *job_contact, int state,
+gt3GramCallbackHandler( void * /* user_arg */, char *job_contact, int state,
 					 int errorcode )
 {
 	int rc;

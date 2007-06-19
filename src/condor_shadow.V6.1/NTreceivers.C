@@ -42,8 +42,8 @@ extern RemoteResource *thisRemoteResource;
 	// a perm object on windows, but since the shadow runs as
 	// the user now, we don't need to do that stuff.
 static void initialize_perm_checks() { return; }
-static bool read_access(const char *filename) { return true; }
-static bool write_access(const char *filename) { return true; }
+static bool read_access(const char * /* filename */) { return true; }
+static bool write_access(const char * /* filename */) { return true; }
 
 static const char * shadow_syscall_name(int condor_sysnum)
 {

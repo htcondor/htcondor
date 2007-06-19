@@ -312,7 +312,7 @@ RemoteResource::dprintfSelf( int debugLevel )
 
 
 int
-RemoteResource::handleSysCalls( Stream *sock )
+RemoteResource::handleSysCalls( Stream * /* sock */ )
 {
 
 		// change value of the syscall_sock to correspond with that of
@@ -1015,7 +1015,7 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 
 
 bool
-RemoteResource::recordResumeEvent( ClassAd* update_ad )
+RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 {
 	char *rt = NULL;
 	bool rval = true;

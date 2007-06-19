@@ -446,7 +446,7 @@ Reconfig()
 }
 
 int
-ADD_JOBS_signalHandler( int signal )
+ADD_JOBS_signalHandler( int )
 {
 	dprintf(D_FULLDEBUG,"Received ADD_JOBS signal\n");
 
@@ -459,7 +459,7 @@ ADD_JOBS_signalHandler( int signal )
 }
 
 int
-REMOVE_JOBS_signalHandler( int signal )
+REMOVE_JOBS_signalHandler( int )
 {
 	dprintf(D_FULLDEBUG,"Received REMOVE_JOBS signal\n");
 
@@ -527,7 +527,7 @@ initJobExprs()
 }
 
 int
-CHECK_LEASES_signalHandler( int signal )
+CHECK_LEASES_signalHandler( int )
 {
 	dprintf(D_FULLDEBUG,"Received CHECK_LEASES signal\n");
 

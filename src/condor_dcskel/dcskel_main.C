@@ -41,7 +41,7 @@ char* mySubSystem = "DCSKEL";		// used by Daemon Core
 
 //-------------------------------------------------------------
 
-int main_init(int argc, char *argv[])
+int main_init(int /* argc */, char * /* argv */ [])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 	return TRUE;
@@ -50,7 +50,7 @@ int main_init(int argc, char *argv[])
 //-------------------------------------------------------------
 
 int 
-main_config( bool is_full )
+main_config( bool /* is_full */ )
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
 	return TRUE;
@@ -77,7 +77,7 @@ int main_shutdown_graceful()
 //-------------------------------------------------------------
 
 void
-main_pre_dc_init( int argc, char* argv[] )
+main_pre_dc_init( int /* argc */, char* /* argv */ [] )
 {
 		// dprintf isn't safe yet...
 }

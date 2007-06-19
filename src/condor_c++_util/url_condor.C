@@ -25,8 +25,6 @@
 #include "url_condor.h"
 #include "condor_debug.h"
 
-extern "C" int open_ckpt_file( const char *name, int flags, size_t n_bytes );
-
 extern void include_urls();
 
 static URLProtocol *protocol_list = 0;

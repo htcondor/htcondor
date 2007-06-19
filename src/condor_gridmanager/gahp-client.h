@@ -98,8 +98,8 @@ class GahpServer : public Service {
 	int pipe_ready();
 	int err_pipe_ready();
 
-	void AddGahpClient( GahpClient *client );
-	void RemoveGahpClient( GahpClient *client );
+	void AddGahpClient();
+	void RemoveGahpClient();
 
 	int doProxyCheck();
 	GahpProxyInfo *RegisterProxy( Proxy *proxy );
@@ -147,7 +147,7 @@ class GahpServer : public Service {
 	bool command_use_cached_proxy( GahpProxyInfo *new_proxy );
 
 		// Methods for private GAHP commands
-	bool command_version(bool banner_string = false);
+	bool command_version();
 	bool command_initialize_from_file(const char *proxy_path,
 									  const char *command=NULL);
 	bool command_commands();

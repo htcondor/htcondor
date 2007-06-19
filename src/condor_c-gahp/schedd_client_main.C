@@ -54,7 +54,7 @@ extern int schedd_loop( void* arg, Stream * s);
 
 
 void
-usage( char *name )
+usage()
 {
 	dprintf( D_ALWAYS, "Usage: c-gahp_worker_thread -s <schedd> [-P <pool>] -I <fd> -O <fd> \n");
 	DC_Exit( 1 );
@@ -72,25 +72,25 @@ main_init( int argc, char ** const argv )
 	int i = 1;
 	while ( i < argc ) {
 		if ( argv[i][0] != '-' )
-			usage( argv[0] );
+			usage();
 
 		switch( argv[i][1] ) {
 		case 's':
 			// don't check parent for schedd addr. use this one instead
 			if ( argc <= i + 1 )
-				usage( argv[0] );
+				usage();
 			ScheddAddr = strdup( argv[i + 1] );
 			i++;
 			break;
 		case 'P':
 			// specify what pool (i.e. collector) to lookup the schedd name
 			if ( argc <= i + 1 )
-				usage( argv[0] );
+				usage();
 			ScheddPool = strdup( argv[i + 1] );
 			i++;
 			break;
 		default:
-			usage( argv[0] );
+			usage();
 			break;
 		}
 
@@ -187,7 +187,7 @@ Reconfig()
 
 
 int
-main_config( bool is_full )
+main_config( bool )
 {
 	Reconfig();
 	return TRUE;
@@ -216,7 +216,7 @@ main_shutdown_graceful()
 }
 
 void
-main_pre_dc_init( int argc, char* argv[] )
+main_pre_dc_init( int, char** )
 {
 }
 

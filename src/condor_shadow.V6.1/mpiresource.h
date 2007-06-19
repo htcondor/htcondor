@@ -35,7 +35,7 @@ class MpiResource : public RemoteResource {
 
 		/** See the RemoteResource's constructor.
 		*/
-	MpiResource( BaseShadow *shadow );
+	MpiResource( BaseShadow *base_shadow );
 
 		/// Destructor
 	~MpiResource() {};
