@@ -92,6 +92,9 @@ that were left running when the \Condor{schedd} shut down.
 Before, they could cause the \Condor{master} to misbehave, including exiting
 with an error.
 
+\item when \Attr{LOG\_ON\_NFS\_IS\_ERROR} is set to false, do not emit
+a warning about user logs files being on NFS.
+
 \end{itemize}
 
 \noindent Known Bugs:
