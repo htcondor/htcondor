@@ -3999,6 +3999,14 @@ Scheduler::actOnJobs(int, Stream* s)
 						continue;
 					}
 				}
+				if( action == JA_HOLD_JOBS ) {
+					if( SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+										 ATTR_HOLD_REASON_CODE,
+										 CONDOR_HOLD_CODE_UserRequest ) < 0 ) {
+						results.record( tmp_id, AR_PERMISSION_DENIED );
+						continue;
+					}
+				}
 				if( SetAttribute(tmp_id.cluster, tmp_id.proc,
 								 ATTR_JOB_STATUS, status_str) < 0 ) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
@@ -4090,6 +4098,12 @@ Scheduler::actOnJobs(int, Stream* s)
 			case JA_HOLD_JOBS:
 				if( status == HELD ) {
 					results.record( tmp_id, AR_ALREADY_DONE );
+					continue;
+				}
+				if( SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+									 ATTR_HOLD_REASON_CODE,
+									 CONDOR_HOLD_CODE_UserRequest ) < 0 ) {
+					results.record( tmp_id, AR_PERMISSION_DENIED );
 					continue;
 				}
 				break;

@@ -81,4 +81,10 @@ const int CONDOR_HOLD_CODE_UploadFileError = 13;
 //The subcode will contain the unix errno.
 const int CONDOR_HOLD_CODE_IwdError = 14;
 
+//The user requested the job be submitted on hold.
+const int CONDOR_HOLD_CODE_SubmittedOnHold = 15;
+
+//Input files are being spooled.
+const int CONDOR_HOLD_CODE_SpoolingInput = 16;
+
 #endif

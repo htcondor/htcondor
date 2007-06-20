@@ -77,6 +77,7 @@
 #include "condor_ftp.h"
 #include "condor_crontab.h"
 #include "../condor_schedd.V6/scheduler.h"
+#include "condor_holdcodes.h"
 
 #include "list.h"
 
@@ -2694,6 +2695,10 @@ SetJobStatus()
 		(void)sprintf( buffer, "%s=\"submitted on hold at user's request\"", 
 					   ATTR_HOLD_REASON );
 		InsertJobExpr( buffer );
+
+		sprintf( buffer, "%s = %d", ATTR_HOLD_REASON_CODE,
+				 CONDOR_HOLD_CODE_SubmittedOnHold );
+		InsertJobExpr( buffer );
 	} else 
 	if ( Remote ) {
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, HELD);
@@ -2701,6 +2706,10 @@ SetJobStatus()
 
 		(void)sprintf( buffer, "%s=\"Spooling input data files\"", 
 					   ATTR_HOLD_REASON );
+		InsertJobExpr( buffer );
+
+		sprintf( buffer, "%s = %d", ATTR_HOLD_REASON_CODE,
+				 CONDOR_HOLD_CODE_SpoolingInput );
 		InsertJobExpr( buffer );
 	} else {
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, IDLE);
