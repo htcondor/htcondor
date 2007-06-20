@@ -103,6 +103,10 @@ as soon as it was done evicting the job.
 Before, they could cause the \Condor{master} to misbehave, including exiting
 with an error.
 
+% Gnat PR 718
+\item Job ad attribute \Attr{HoldReasonCode} is now properly set when
+\Condor{hold} is called and when jobs are submitted on hold.
+
 \item when \Attr{LOG\_ON\_NFS\_IS\_ERROR} is set to false, do not emit
 a warning about user logs files being on NFS.
 
