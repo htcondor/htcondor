@@ -571,7 +571,10 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 			  set.  in this case, want to call out to the Starter
 			  object to tell it to try to clean up the job again.
 			*/
-		Starter->allJobsDone();
+		if( Starter->allJobsDone() ) {
+			dprintf(D_ALWAYS,"Job cleanup finished, now Starter is exiting\n");
+			Starter->StarterExit(0);
+		}
 	}
 
 		// Now that we're holding onto the ReliSock, we can't let
