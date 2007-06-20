@@ -90,6 +90,11 @@ value containing the reference to \MacroNI{RANDOM\_INTEGER} was being
 replaced by the chosen random integer, rather than just having
 \MacroNI{RANDOM\_INTEGER}() itself be replaced.
 
+\item Fixed a bug in the GSI configuration parameters. 
+If \Attr{GSI\_DAEMON\_DIRECTORY} was set and \Attr{GRIDMAP} wasn't set, 
+then Condor would look in the wrong location for the GSI private key and 
+mapfile.
+
 \end{itemize}
 
 \noindent Known Bugs:
