@@ -625,7 +625,9 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 			char	buf[128];
 			snprintf( buf, sizeof(buf)-1, "%ld", random_value );
 			buf[sizeof(buf)-1] = '\0';
-			rval = strdup( buf );
+			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(buf) +
+											  strlen(right) + 1));
+			(void)sprintf( rval, "%s%s%s", left, buf, right );
 			FREE( tmp );
 			tmp = rval;
 		}
