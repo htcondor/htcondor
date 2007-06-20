@@ -84,6 +84,12 @@ of nodes).
 with VARS lines specifying more than one macroname (this bug was
 introduced in version 6.8.5).
 
+\item Fixed a bug in the configuration macro \MacroNI{RANDOM\_INTEGER}
+when used as part of a larger expression.  The entire configuration
+value containing the reference to \MacroNI{RANDOM\_INTEGER} was being
+replaced by the chosen random integer, rather than just having
+\MacroNI{RANDOM\_INTEGER}() itself be replaced.
+
 \end{itemize}
 
 \noindent Known Bugs:
