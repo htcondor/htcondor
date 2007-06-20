@@ -30,6 +30,8 @@ IMPORTANT NOTE: Don't dprintf() in here, unless its a fatal error! */
 #include "passwd_cache.h"
 #include "condor_config.h"
 #include "HashTable.h"
+#include "condor_random_num.h"
+
 
 unsigned int compute_user_hash(const MyString &key) {
     return key.Hash();
@@ -41,7 +43,10 @@ passwd_cache::passwd_cache() {
 	group_table = new 
 		GroupHashTable(10, compute_user_hash, updateDuplicateKeys);
 		/* set the number of seconds until a cache entry expires */
-	Entry_lifetime = param_integer("PASSWD_CACHE_REFRESH", 300);
+		// Randomize this timer a bit to decrease chances of lots of
+		// processes all pounding on NIS at the same time.
+	int default_lifetime = 300 + get_random_int() % 60;
+	Entry_lifetime = param_integer("PASSWD_CACHE_REFRESH", default_lifetime );
 }
 void
 passwd_cache::reset() {

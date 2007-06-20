@@ -708,17 +708,20 @@ UWCS_KILL = $(ActivityTimer) > $(MaxVacateTime)
 #                     || (SUSPEND_VANILLA && (WANT_SUSPEND == False)) )
 #KILL_VANILLA    = $(ActivityTimer) > $(MaxVacateTime)
 
-##  We use a simple Periodic checkpointing mechanism, but then
-##  again we have a very fast network.
-UWCS_PERIODIC_CHECKPOINT	= $(LastCkpt) > (3 * $(HOUR))
+##  Checkpoint every 3 hours on average, with a +-30 minute random
+##  factor to avoid having many jobs hit the checkpoint server at
+##  the same time.
+UWCS_PERIODIC_CHECKPOINT	= $(LastCkpt) > (3 * $(HOUR) + \
+                                  $RANDOM_INTEGER(-30,30,1) * $(MINUTE) )
 
 ##  You might want to checkpoint a little less often.  A good
 ##  example of this is below.  For jobs smaller than 60 megabytes, we
 ##  periodic checkpoint every 6 hours.  For larger jobs, we only
 ##  checkpoint every 12 hours.
-#UWCS_PERIODIC_CHECKPOINT	= ( (TARGET.ImageSize < 60000) && \
-#			    ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
-#			  ( $(LastCkpt) > (12 * $(HOUR)) )
+#UWCS_PERIODIC_CHECKPOINT	= \
+#          ( (TARGET.ImageSize < 60000) && \
+#            ($(LastCkpt) > (6  * $(HOUR) + $RANDOM_INTEGER(-30,30,1))) ) || \ 
+#          (  $(LastCkpt) > (12 * $(HOUR) + $RANDOM_INTEGER(-30,30,1)) )
 
 ##  The rank expressions used by the negotiator are configured below.
 ##  This is the order in which ranks are applied by the negotiator:
