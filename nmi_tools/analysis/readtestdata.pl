@@ -156,6 +156,12 @@ while(<DATA>) {
 			$cbuilderr = $2;
 			$pbuilderr = $3;
 			$fbuilderr = $4;
+		#print "**************************** hit Lost Tests ************************************\n";
+			#print "Branch hit <$tbranch>\n";
+			#print "framework:$4, Platform:$3, Condor:$2\n";
+			$tcondor = $cbuilderr + $tcondor;
+			$tplatform = $pbuilderr + $tplatform;
+			$tframework = $fbuilderr + $tframework;
 			$totbuildc = $totbuildc + $cbuilderr;
 			$totbuildp = $totbuildp + $pbuilderr;
 			$totbuildf = $totbuildf + $fbuilderr;
@@ -268,6 +274,7 @@ sub Store_stats
 	$entry->condor_build_errs("$condorbt");
 	$entry->platform_build_errs("$platformbt");
 	$entry->framework_build_errs("$frameworkbt");
+	#print "Store lost test from builds c:p:f($condorbt:$platformbt:$frameworkbt)\n";
 
 #	allbuilds => '$',
 #	goodbuilds => '$',
