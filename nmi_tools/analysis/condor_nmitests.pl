@@ -99,6 +99,7 @@ chomp($TopDir);
 
 my %TestPlatforms;
 my %RunPlatforms;
+my %ProblemTestRun;
 my @TestRuns;
 my %BuildTargets;
 my $line = "";
@@ -235,6 +236,7 @@ if($losttests) {
 }
 
 if($perror) {
+	print "Call CrunchErrors for a platform issue<$perror>\n";
 	CrunchErrors( "platform", $perror );
 }
 
@@ -267,21 +269,86 @@ if( $totalcounterr  > 0 ) {
 
 exit 0;
 
+# So we can have a test run which fails prior to when there
+# is a platform associated with it
+
 sub FindTestPlatforms
 {
+	my $platformknown = 0;
 	foreach $run (@TestRuns) {
+		$platformknown = 0;
 		my $extraction = $db->prepare("SELECT * FROM Task where 
 			runid = '$run'\
 			and name = 'platform_job'");
     	$extraction->execute();
     	while( my $sumref = $extraction->fetchrow_hashref() ){
-			$platform = $sumref->{'platform'};
+			$dbplatform = $sumref->{'platform'};
+			$TestPlatforms{"$dbplatform"}= 1;
+			$RunPlatforms{"$run"}= $dbplatform;
+			$platformknown = 1;
+			#print "Runid $run is platform <<$dbplatform>>\n";
+		}
+		if($platformknown != 1) {
+			# something failed prior to the platform job
+			# and without looking in the run dir we do not
+			# know what the platform is OR if its early in the
+			# run and will be fine later. We could verify an error
+			# by looking up all the tasks and we can check
+			# in the run directory for platforms in "platform_list".
+			my $platform = GetPlatformFromRun($run);
+			$ProblemTestRun{"$run"} = $platform;
 			$TestPlatforms{"$platform"}= 1;
 			$RunPlatforms{"$run"}= $platform;
-			#print "Runid $run is platform <<$platform>>\n";
+			if(HaveRunError("$run") eq "") {
+				#print "No real error\n";
+				#print "Early in run....\n";
+				$ProblemTestRun{"$run"} = 1;
+			}
 		}
 	}
 }
+
+# Do we actually have an error or an early stage run
+# with no platform data soon.
+
+sub HaveRunError
+{
+	$targetrun = shift;
+	my $extraction = $db->prepare("SELECT * FROM Task where 
+		runid = '$run'\
+		");
+    $extraction->execute();
+    while( my $sumref = $extraction->fetchrow_hashref() ){
+		$result = $sumref->{'result'};
+		$name = $sumref->{'name'};
+		if($result ne 0) {
+			print "**************** Error on Test run stage <<$name>>*****************\n";
+			return ($name);
+		}
+	}
+	return("");
+}
+
+# run failed prior to a platform task. Go to
+# rundir and get platform from platform_list
+
+sub GetPlatformFromRun
+{
+	$targetrun = shift;
+	$plats = "";
+	$pathtorun = "";
+	$pathtorun = FindBuildRunDir($targetrun);
+	$pathtorun = $pathtorun . "/platform_list";
+	open(PLATFORMLIST,"<$pathtorun") || die "Can not open $pathtorun:$! \n";
+	while(<PLATFORMLIST>) {
+		chomp();
+		$plats = $_;
+		print "**************** Error on Test run platform <<$plats>>*****************\n";
+	}
+	return($plats);
+}
+
+# this only means that there was a test run attempted
 
 sub FindTestRuns
 {
@@ -312,7 +379,7 @@ sub FindBuildRunDir
         $gid = $sumref->{'gid'};
         #print "<<<$filepath>>><<<$gid>>>\n";
         $url = $filepath . "/" . $gid;
-        print "Runid <$runid> is <$url>\n";
+        #print "Runid <$runid> is <$url>\n";
 		return($url);
     }
 }
@@ -397,6 +464,7 @@ sub CrunchErrors
 			$blame = 0;
 			$phost = "";
 
+			#print "Parsing $test\n";
 			# entire platform or some tests
 			@partial = split /:/, $test;
 			$index = GetPlatformData($partial[0]);
@@ -419,7 +487,7 @@ sub CrunchErrors
 					$totalexpected = $totalexpected + $pexpected;
 					#$totaltests = $totaltests + $pexpected;
 					$p->expected($pexpected);
-					print "CrunchErrors: platform $phost expected still 0 adding $pexpected\n";
+					#print "CrunchErrors: platform $phost expected still 0 adding $pexpected\n";
 				}
 
 				if(($pbad == 0) && ($pgood == 0)) {
@@ -432,8 +500,10 @@ sub CrunchErrors
 				if(($#partial > 0) && ($type ne "losttests")) {
 					$blame = $partial[1];
 					#print "partial blame $partial[1]\n";
+					#print "blame $blame\n";
 				} else {
 					$blame = ($pexpected - $pgood);
+					#print "Full blame $blame\n";
 				}
 
 				#print "Blame amount now <<<$blame>>>\n";
@@ -447,8 +517,10 @@ sub CrunchErrors
 					#print "Blame to <<$type>>\n";
 				} elsif($type eq "platform") {
 					$p->platform_errs($blame);
+					#print "Platform errors before <<$totalplatformerr>>\n";
 					$totalplatformerr = $totalplatformerr + $blame;
 					#print "Blame to <<$type>>\n";
+					#print "Platform errors after <<$totalplatformerr>>\n";
 				} elsif(($type eq "framework") || ($type eq "losttests")) {
 					$p->framework_errs($blame);
 					$totalframeworkerr = $totalframeworkerr + $blame;
@@ -476,16 +548,26 @@ sub GetPlatformData
 
 	my $pformcount = $#platformresults;
 	my $contrl = 0;
+	my $result = -1;
 	my $p;
+	my $host = "";
 	while($contrl <= $pformcount) {
 		$p = $platformresults[$contrl];
-		if($p->platform() eq $goal) {
-			#printf "Found it.....%s \n",$p->platform(); 
-			return($contrl);
+		$host = $p->platform();
+		if($host eq $goal) {
+			#printf "Found it.....%s<<%d>> \n",$host; 
+			$result = $contrl;
+			#return($contrl);
+		} else {
+			#print "Looking for $goal current choice $host\n";
+
 		}
 		$contrl = $contrl + 1;
 	}
-	return(-1);
+	if($result == -1) {
+		print "GetPlatformData failed to find host <<<$goal>>>!!!\n";
+	}
+	return($result);
 }
 
 sub PrintResults() 
@@ -504,6 +586,9 @@ sub PrintResults()
 		$p = $platformresults[$contrl];
 	my $framecount = $p->framework_errs( );
 	#print "Into PrintResults and framework errors currently <<$framecount>>\n";
+
+		my $Platformerrors = $p->platform_errs( );
+	#print "Into PrintResults and platform errors currently <<$Platformerrors>>\n";
 		printf "%-16s (%d):		Passed = %d	Failed = %d	",$p->platform(),$p->expected(),
 			$p->passed(),$p->failed();
 		if($p->build_errs( ) > 0) {
@@ -665,6 +750,13 @@ sub AnalyseTestRuns
         $filepath = $sumref->{'filepath'};
         $gid = $sumref->{'gid'};
 		$platform = $RunPlatforms{"$run"};
+		if(exists $ProblemTestRun{"$run"}) {
+			print "Whats with this run????\n";
+			if($ProblemTestRun{"$run"} == 1) {
+				# just not far enough along yet
+				next;
+			}
+		} 
 		my $entry = Platform_info->new();
 		$testdir = $filepath  . "/" . $gid . "/" . "userdir/" . $platform;
         #print "TestDir <$run> is <$testdir>\n";
@@ -697,6 +789,7 @@ sub AnalyseTestRuns
 		# Did we get what we expected??????
 		# We have to have expected and the tests need to have
 		# either $bad or $good not zero. They both are 0 while
+
 		# the tests are still running.
 		if(($expected > 0) && (($bad > 0) || ($good > 0))) {
 			$counttest = $bad + $good;
@@ -708,6 +801,9 @@ sub AnalyseTestRuns
 			}
 		} else {
 			$entry->count_errs(0);
+			if(exists $ProblemTestRun{"$run"}) {
+				$bad = $expected;
+			}
 		}
 			
 		AddHistExpected($platform, $good, $bad, $expected);
