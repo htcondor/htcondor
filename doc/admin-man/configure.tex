@@ -1004,10 +1004,12 @@ File System Configuration File Entries''.
   Condor caches UID and group information internally. This setting allows
   pool administrators to specify (in seconds) how long Condor should wait
   until refreshes a cache entry. The default is set to 300 seconds, or
-  5 minutes. This means that if a pool administrator updates the user
+  5 minutes, plus a random number of seconds between 0 and 60 to avoid
+  having lots of processes refreshing at the same time.
+  This means that if a pool administrator updates the user
   or group database (for example, \File{/etc/passwd} or \File{/etc/group}),
   it can take up
-  to 5 minutes before Condor will have the updated information. This
+  to 6 minutes before Condor will have the updated information. This
   caching feature can be disabled by setting the refresh interval to
   0. In addition, the cache can also be flushed explicitly by running
   the command

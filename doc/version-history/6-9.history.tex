@@ -66,6 +66,12 @@ configuration options.
 core dump file is now put in the LOG directory.  Previously, it
 was deleted by the \Condor{startd}.
 
+\item Added a small amount of randomization to the default values of
+\MacroNI{PERIODIC\_CHECKPOINT} (in the example config file) and
+\MacroNI{PASSWD\_CACHE\_REFRESH} (in Condor's internal default) in
+order to decreases the chances of synchronized timing across many
+processes causing overloading of servers.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
