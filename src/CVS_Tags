@@ -1,3 +1,7 @@
+06/21/07 V6_9-dag-node-priority-{root,branch}
+  A branch for implementing DAG node priorities.  Branched from 
+  BUILD-V6_9-trunk-2007-6-21      
+
 06/12/07 V6_9-dagman-for-ligo-{root,branch}
   A branch to create a special pre-release DAGMan for LIGO.  The reason
   for the branch is to get the latest goodness from both 6.8 and 6.9, so
