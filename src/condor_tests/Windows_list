@@ -1,10 +1,21 @@
 # Test List for Windows Tests
+job_core_onexithold_local
+job_core_onexitrem_local
+job_core_perhold_local
+job_core_perrelease_local
+#job_core_perremove_local
+job_core_crontab_local
+job_core_time-deferral_local
+job_core_time-deferral-hold_local
+job_core_time-deferral-remove_local
+job_filexfer_sandbox-empty_van
+cmd_q_shows-sub
+# next set
 cmd_q_shows-hold
 cmd_q_shows-run
 cmd_q_shows-global
 cmd_q_shows-name
 cmd_q_shows-pool
-#cmd_q_shows-sub
 cmd_q_shows-analyze
 cmd_q_shows-xml
 cmd_q_shows-cputime
