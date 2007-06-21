@@ -83,7 +83,7 @@ my $totbuildf = 0;
 
 my $line = "";
 my $mydate = "";
-my $tbranch = "";
+my $currentbranch = "";
 
 my $passed = 0;
 my $failed = 0;
@@ -102,32 +102,26 @@ my $allbuilds = 0;
 my $failedbuilds = 0;
 
 $framework = 0;
+$limitloop = 0;
 open(DATA,"<$datafile") || die "Can not open <<$datafile>>: $!\n";
 while(<DATA>) {
 	#print "$_";
 	chomp($_);
 	$line = $_;
 	$gotdate = 0;
-	$got68 = 0;
-	$got69 = 0;
 
-	if( $line =~ /^(\d+)\-(\d+)\-(\d+)$/) {
+	if( $line =~ /^(\d+)\-(\d+)\-(\d+)\s*$/) {
 		#print "got a date <<$1 $2 $3>>\n";
 		$gotdate = 1;
 		$mydate = $2 . " " . $months{$1} . " " . $3;
 		#print "New style Date <<$mydate>>\n";
 	} elsif( $line =~ /^\s*Tests V(\d+_\d+).*$/) {
 		#print "found a branch <<$1>>\n";
-		$tbranch = $1;
-		if($1 eq "6_8") {
-			$got68 = 1;
-		} elsif($1 eq "6_9") {
-			$got69 = 1;
-		} else {
-			print "Unexpected branch\n";
-		}
+		$currentbranch = $1;
 	} elsif( $line =~ /^\s*Totals Passed\s*=\s*(\d+),\s*Failed\s*=\s*(\d+),.*Expected\s*=\s*(\d+)[,]*\s*Missing\s*=\s*(\d+).*$/ ) {
-		if($targetbranch eq $tbranch) {
+		if($targetbranch eq $currentbranch) {
+		#print "**************************** hit Lost Tests ************************************\n";
+			#print "Branch hit <$currentbranch><$targetbranch>\n";
 			$passed = $1;
 			$failed = $2;
 			$expected = $3;
@@ -139,7 +133,9 @@ while(<DATA>) {
 		}
 		#print "$mydate, $branch, $passed, $failed, $expected, $missing, ";
 	} elsif( $line =~ /^\s*Test\s*=\s*(\d+),\s*Condor\s*=\s*(\d+),\s*Platform\s*=\s*(\d+),\s*Framework\s*=\s*(\d+).*$/) {
-		if($targetbranch eq $tbranch) {
+		if($targetbranch eq $currentbranch) {
+		#print "**************************** hit Lost Tests ************************************\n";
+			#print "Branch hit <$currentbranch><$targetbranch>\n";
 			$test = $1;
 			$condor = $2;
 			$platform = $3;
@@ -150,14 +146,14 @@ while(<DATA>) {
 			$tframework = $framework + $tframework;
 		}
 		#print "$test, $condor, $platform, $framework\n";
-		#Store_stats($mydate, $tbranch, $passed, $failed, $expected, $missing, $test, $condor, $platform, $framework);
+		#Store_stats($mydate, $currentbranch, $passed, $failed, $expected, $missing, $test, $condor, $platform, $framework);
 	} elsif( $line =~ /^\s*Lost\s+Tests\((\d+)\)\s+Condor\s*=\s*(\d+)\s*Platform\s*=\s*(\d+)\s*Framework\s*=\s*(\d+).*$/) {
-		if($targetbranch eq $tbranch) {
+		if($targetbranch eq $currentbranch) {
 			$cbuilderr = $2;
 			$pbuilderr = $3;
 			$fbuilderr = $4;
 		#print "**************************** hit Lost Tests ************************************\n";
-			#print "Branch hit <$tbranch>\n";
+			#print "Branch hit <$currentbranch><$targetbranch>\n";
 			#print "framework:$4, Platform:$3, Condor:$2\n";
 			$tcondor = $cbuilderr + $tcondor;
 			$tplatform = $pbuilderr + $tplatform;
@@ -167,9 +163,16 @@ while(<DATA>) {
 			$totbuildf = $totbuildf + $fbuilderr;
 		}
 		#print "c = $cbuilderr, p = $pbuilderr, f = $fbuilderr\n";
-		Store_stats($mydate, $tbranch, $passed, $failed, $expected, $missing, $test, $condor, $platform, $framework, $cbuilderr, $pbuilderr, $fbuilderr, $allbuilds, $goodbuilds, $failedbuilds);
+		Store_stats($mydate, $currentbranch, $passed, $failed, $expected, $missing, $test, $condor, $platform, $framework, $cbuilderr, $pbuilderr, $fbuilderr, $allbuilds, $goodbuilds, $failedbuilds);
+
+		#$limitloop = $limitloop + 1;
+		#print "bump limit to <<$limitloop>>\n";
+		#if($limitloop == 3) { last; }
+
 	} elsif( $line =~ /^\s*Lost\s+Builds\((\d+)\/(\d+)\)\s+Condor\s*=\s*(\d+)\s*Platform\s*=\s*(\d+)\s*Framework\s*=\s*(\d+).*$/) {
-		if($targetbranch eq $tbranch) {
+		if($targetbranch eq $currentbranch) {
+		#print "**************************** hit Lost Tests ************************************\n";
+			#print "Branch hit <$currentbranch><$targetbranch>\n";
 			$goodbuilds = ($2 - $1);
 			$allbuilds = $2;
 			$failedbuilds = $1;
@@ -215,7 +218,7 @@ exit(0);
 #};
 #
 #};
-		#Store_stats($mydate, $tbranch, $passed, $failed, $expected, $missing, $test, $condor, $platform, $framework, $cbuilderr, $pbuilderr, $fbuilderr, $allbuilds, $goodbuilds, $failedbuilds);
+		#Store_stats($mydate, $currentbranch, $passed, $failed, $expected, $missing, $test, $condor, $platform, $framework, $cbuilderr, $pbuilderr, $fbuilderr, $allbuilds, $goodbuilds, $failedbuilds);
 # =================================
 
 sub Store_stats
