@@ -1631,6 +1631,7 @@ AC_CHECK_TYPES([__int64])
 # checks for library functions
 ############################################################
 
+AC_CHECK_FUNCS([strsignal])
 AC_CHECK_FUNCS([stat64])
 AC_CHECK_FUNCS([lchown])
 AC_CHECK_FUNC(dlopen, ,AC_CHECK_LIB(dl, dlopen))

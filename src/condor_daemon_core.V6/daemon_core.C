@@ -7746,7 +7746,11 @@ const char* DaemonCore::GetExceptionString(int sig)
 	if ( sig > 64 ) {
 		sig = WTERMSIG(sig);
 	}
+#ifdef HAVE_STRSIGNAL
 	sprintf(exception_string,"signal %d (%s)",sig,strsignal(sig));
+#else
+	sprintf(exception_string,"signal %d",sig);
+#endif
 #endif
 
 	return exception_string;
