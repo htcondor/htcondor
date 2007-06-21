@@ -461,12 +461,15 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	## way we expected it to 
 	##
 	$ABORTING = 0;
-	CondorTest::RunTest( $test, $cmdFile, 0);
-	if ($testFailure) {
-		print "$test: CondorTest::RunTest() failed - $testFailure\n";
-		$success = false;
+	if( CondorTest::RunTest( $test, $cmdFile, 0)) {
+		if ($testFailure) {
+			print "$test: CondorTest::RunTest() failed - $testFailure\n";
+			$success = false;
+		} else {
+			print "$test: SUCCESS\n";
+		}
 	} else {
-		print "$test: SUCCESS\n";
+		die "$testname: CondorTest::RunTest() failed\n";
 	}
 	CondorTest::RemoveTimed( $test );
 	
