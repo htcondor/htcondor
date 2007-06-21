@@ -32,7 +32,6 @@ template class HashTable<MyString, int>;
 template class HashBucket<MyString, GeneralRecord*>;
 template class HashBucket<MyString, int>;
 template class ExtArray<fpos_t*>;
-template class ExtArray<int>;
 template class ExtArray<ExtArray<fpos_t*>*>;
 template class ExtArray<ExtArray<int>*>;
 template class List<ClassAd>;
