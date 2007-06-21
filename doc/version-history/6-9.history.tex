@@ -74,6 +74,26 @@ processes causing overloading of servers.
 
 \end{itemize}
 
+\noindent Configuration Variable Additions and Changes:
+
+\begin{itemize}
+
+\item The existing configuration variable \Macro{LOG\_ON\_NFS\_IS\_ERROR} has 
+changed behavior. When set to \Expr{False},
+\Condor{submit} does not emit a warning about user logs files being on NFS.
+
+% Gnat PR 652
+\item The existing 
+configuration variables \Macro{DAEMON\_LIST},
+\Macro{DC\_DAEMON\_LIST}, and \Macro{MASTER\_HA\_LIST} 
+have changed behavior.
+Trailing commas are now ignored.
+Previously, trailing commas could cause the \Condor{master} to misbehave,
+including exiting with an error.
+
+\end{itemize}
+
+
 \noindent Bugs Fixed:
 
 \begin{itemize}
@@ -103,18 +123,9 @@ job lease time to expire before giving up on telling the \Condor{shadow}
 that the job was evicted.  Previously, the \Condor{starter} would exit
 as soon as it was done evicting the job.
 
-% Gnat PR 652
-\item Trailing commas in the configuration parameters \Attr{DAEMON\_LIST},
-\Attr{DC\_DAEMON\_LIST}, and \Attr{MASTER\_HA\_LIST} are now ignored.
-Before, they could cause the \Condor{master} to misbehave, including exiting
-with an error.
-
 % Gnat PR 718
 \item Job ad attribute \Attr{HoldReasonCode} is now properly set when
 \Condor{hold} is called and when jobs are submitted on hold.
-
-\item when \Attr{LOG\_ON\_NFS\_IS\_ERROR} is set to false, do not emit
-a warning about user logs files being on NFS.
 
 \end{itemize}
 
