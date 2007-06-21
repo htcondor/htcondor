@@ -767,7 +767,7 @@ main_shutdown_graceful()
 }
 
 void
-main_pre_dc_init( int, char** )
+main_pre_dc_init( int, char*[] )
 {
 }
 
