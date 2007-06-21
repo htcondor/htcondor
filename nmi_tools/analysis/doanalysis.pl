@@ -4,21 +4,7 @@ use File::Path;
 use Getopt::Long;
 
 my $datalocation = "../testblog/";
-my $datadefault = "testblog_current.txt";
-my $detailcmd = " --view=testdetail ";
-my $regcmd = " --view=testsum";
-my $crunchprog = "./readtestdata.pl";
-my $imageprog = "./make-graphs";
-
-my @branches = ("6_8", "6_9");
-my @views = ( $regcmd, $detailcmd);
-my %transfiles = (
-
-    "1" => "6_8regdata",
-    "2" => "6_8detaildata",
-    "3" => "6_9regdata",
-    "4" => "6_9detaildata",
-);
+my $data = $datalocation . "testblog_current.txt";
 
 GetOptions (
 		'help' => \$help,
@@ -36,28 +22,20 @@ if( $datafile ) {
 	$datafile = $datadefault;
 }
 
-my $count = 1;
-foreach $branch (@branches) {
-	#print "$branch\n";
-	foreach	$view (@views) {
-		print "Transition file is <<$transfiles{\"$count\"}>>\n";
-		my $detail = " --detail analdetail";
-		my $output = $transfiles{"$count"} . ".png";
-		#$cmd = $crunchprog . " " . "--data=" . $datalocation . $datafile . " " . $view . " --branch=" . $branch . " --out=";
-		if(!$plot) {
-			$cmd = $crunchprog . " " . "--data=" . $datalocation . $datafile . " " . $view . " --branch=" . $branch . " --out=" . $transfiles{"$count"};
-			print "$cmd\n";
-			system("$cmd");
-			if(!($transfiles{"$count"} =~ /detail/)) {
-				$detail = " ";
-			}
-		}
-		$mkimg = $imageprog . $detail . " --daily --input " .  $transfiles{"$count"} . " --output " . $datalocation . "/" . $output; 
-		print "$mkimg\n";
-		system("$mkimg");
-		$count = $count + 1;
-	}
-}
+
+print "Transition file is <<6_8regdata>>\n";
+system("./readtestdata.pl --data=$data --view=testsum --branch=6_8 --out=6_8regdata");
+system("./make-graphs  --daily --input 6_8regdata --output ../testblog/6_8regdata.png");
+print "Transition file is <<6_8detaildata>>\n";
+system("./readtestdata.pl --data=$data --view=testdetail  --branch=6_8 --out=6_8detaildata");
+system("./make-graphs --detail analdetail --daily --input 6_8detaildata --output ../testblog/6_8detaildata.png");
+print "Transition file is <<6_9regdata>>\n";
+system("./readtestdata.pl --data=$data --view=testsum --branch=6_9 --out=6_9regdata");
+system("./make-graphs  --daily --input 6_9regdata --output ../testblog/6_9regdata.png");
+print "Transition file is <<6_9detaildata>>\n";
+system("./readtestdata.pl --data=$data --view=testdetail  --branch=6_9 --out=6_9detaildata");
+system("./make-graphs --detail analdetail --daily --input 6_9detaildata --output ../testblog/6_9detaildata.png");
+
 
 # =================================
 # print help
