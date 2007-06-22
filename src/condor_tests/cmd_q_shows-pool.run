@@ -6,7 +6,7 @@ CondorPersonal::DebugOff();
 Condor::DebugOff();
 
 $cmd_template = "cmd_q_multi.template";
-$testname = 'cmd_q_shows-pool - Simple condor_q -name';
+$testname = 'cmd_q_shows-pool ';
 $corename = "cmd_q_shows-pool";
 
 # where am I running
@@ -165,7 +165,7 @@ if($bail != 1) {
 	}
 }
 
-system("cp *cmd_q_shows-global* $mysaveme");
+system("cp *cmd_q_shows-pool* $mysaveme");
 
 if( -e "$mysubmitnm" )
 {
@@ -213,6 +213,6 @@ if( $done == 0 )
 	exit(1);
 }
 
-print "cmd_q_shows-global SUCCESS\n";
+print "cmd_q_shows-pool SUCCESS\n";
 system("date");
 exit(0);
