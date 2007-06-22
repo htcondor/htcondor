@@ -378,15 +378,113 @@ using the ProcD is that it is newer, less-hardened code.
 
 \end{itemize}
 
-\noindent Bugs Fixed:
+\noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
 
-\item When the \Condor{schedd} is issued a graceful shutdown command, any jobs
-that running with a job lease are allowed to keep running. When the \Condor{schedd}
-starts back up at a later time, it will spawn \Condor{shadow} to reconnect
-to the jobs if they are still executing. This mimics the same behavior as
-a fast shutdown.
+\item The \Macro{SECONDARY\_COLLECTOR\_LIST} configuration variable has
+  been removed.
+  Sites relying on this variable should instead use the configuration
+  variable \Macro{COLLECTOR\_HOST} to
+  define a list of \Condor{collector} daemon hosts.
+
+\item Added new configuration variables \Macro{START\_LOCAL\_UNIVERSE}
+  and \Macro{START\_SCHEDULER\_UNIVERSE} for the \Condor{schedd} daemon.
+  These boolean expressions default to \Expr{True}.
+  \MacroNI{START\_LOCAL\_UNIVERSE} is relevant only to local universe jobs.
+  \MacroNI{START\_SCHEDULER\_UNIVERSE} is relevant only to scheduler 
+  universe jobs.
+  These new variables allow an administrator to define
+  a \MacroNI{START} expression specific to these jobs. 
+  The expression is evaluated
+  against the job's ClassAd before the \AdAttr{Requirements} expression.
+
+\item Added new configuration variables \Macro{SCHEDD\_INTERVAL\_TIMESLICE}
+  and \Macro{PERIODIC\_EXPR\_TIMESLICE}.  These configuration variables
+  address a scalability issue for very large job queues.
+  Previously, the \Condor{schedd} daemon handled an activity related
+  to counting jobs, as well as the activity related to evaluating
+  periodic expressions for jobs at the fixed time interval of 5 minutes.
+  With large job queues, the fraction of the \Condor{schedd} daemon
+  execution time devoted to these two activities became excessive,
+  such that it could be doing little else.
+  The fixed time interval is now gone, and Condor calculates the amount
+  of time spent on the two activities, using these new configuration
+  variables to calculate an appropriate time interval.
+  
+  Each is a floating point value within the range
+  (noninclusive) 0.0 to 1.0.
+  Each determines the maximum fraction of the time interval that the 
+  \Condor{schedd} daemon  will spend on the respective
+  activity.
+  \MacroNI{SCHEDD\_INTERVAL\_TIMESLICE} defaults to the value 0.05,
+  such that the calculated time interval will be 20 * the amount
+  of time spent on the counting jobs activity.
+  \MacroNI{PERIODIC\_EXPR\_TIMESLICE} defaults to the value 0.01,
+  such that the calculated time interval will be 100 * the amount
+  of time spent on the periodic expression evaluation activity.
+
+\item Added new configuration variable 
+  \Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES}, relevant only to the
+  Intel Linux platform.  
+  This boolean value defaults to \Expr{True}, and it results in scalability
+  improvements for Condor processes using large amounts of memory.
+  These processes may clone themselves instead of forking themselves.
+  An example of the improvement occurs for a \Condor{schedd}
+  deamon with a lot of jobs in the queue.
+
+\item Added new configuration variable \Macro{STARTER\_UPLOAD\_TIMEOUT},
+  which allows a configurable time (in seconds) for a timeout used by the 
+  \Condor{starter}.
+  The default value of 200 seconds replaces the previously hardcoded
+  value of 20 seconds.
+  This timeout before job failure is to upload output files to the
+  \Condor{shadow} upon job exit.
+  The default value should be sufficient for serial jobs.
+  For parallel jobs, it may need to
+  be increased if there are many large output files.
+
+\item Added new configuration variable \Macro{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT}.
+  This boolean variable defaults to \Expr{True}, and causes
+  \Condor{dagman} to abort the DAG on ``scary'' submit events.
+  These are submit events in which
+  the Condor ID of the event does not match the expected value.
+  Previously, \Condor{dagman} printed a warning, but continued.
+  To restore Condor to the previous behavior,
+  set \MacroNI{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} to \Expr{False}.
+
+\item Added new configuration variable \Macro{NEGOTIATOR\_MATCH\_EXPRS}.
+  It causes the \Condor{negotiator} to
+  insert expressions into the matched ClassAd.  See
+  page~\pageref{param:NegotiatorMatchExprs} for details.
+
+\item Added new configuration variable
+  \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} to replace the retired 
+  \Macro{EXECUTE\_LOGIN\_IS\_DEDICATED},
+  because \MacroNI{EXECUTE\_LOGIN\_IS\_DEDICATED} could not
+  handle a policy where some jobs run as the job owner and others run as
+  dedicated execution accounts.  Also added support for
+  the existing configuration variable
+  \Macro{STARTER\_ALLOW\_RUNAS\_OWNER} under Unix.  See
+  Section~\ref{param:DedicatedExecuteAccountRegexp} and
+  Section~\ref{sec:RunAsNobody} for more information.
+
+\item Added new configuration variable \Macro{USE\_PROCD}.
+  This boolean variable defaults to \Expr{False} for the
+  \Condor{master}, and \Expr{True} for all other daemons.
+  When \Expr{True}, the daemon will use the
+  \Condor{procd} program to monitor process families.
+  When \Expr{False}, a daemon will execute process family
+  monitoring logic on its own.
+  The \Condor{procd} is more scalable and is also an essential
+  piece in the ongoing privilege separation effort. The disadvantage of
+  using the \Condor{procd} is that it is newer, less-hardened code.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
 
 \item On Unix systems, Condor can now handle file descriptors larger than
 FD\_SETSIZE when using the select system call. Previously, file descriptors
@@ -436,7 +534,15 @@ fixed.
 
 \begin{itemize}
 
-\item None.
+\item The 6.9.3 \Condor{schedd} daemon incorrectly handles jobs with leases
+(true by default for vanilla, java, and parallel universe jobs) when
+shutting down gracefully.  These jobs are allowed to continue running,
+but when the \Condor{schedd} daemon is started back up, it fails to reconnect
+to them.  The result is that the orphaned jobs are left running for
+the duration of the job's lease time (a default time of 20 minutes).
+The state of the jobs in the restarted queue is independent of any
+orphaned running jobs, so these queued jobs may begin running on another
+machine while orphans are still running.
 
 \end{itemize}
 
