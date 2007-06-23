@@ -337,7 +337,7 @@ RUN(job_filexfer_streamerr_van)
 TESTCLASS(job_filexfer_streamerr_van,core)
 TESTCLASS(job_filexfer_streamerr_van,quick)
 
-#if !defined( IS_ALPHA_LINUX) && !defined(IS_HPUX10) && !defined(IS_HPUX11)
+#if !defined( IS_ALPHA_LINUX) && !defined(IS_HPUX10) && !defined(IS_HPUX11) && !defined(IS_IA64_LINUX_SLES81) && !defined(IS_IA64_LINUX_RHEL3)
 /* 
    NOTE: this is an unfortunate way to do this selection.  we should
    have reliable HAVE_GLOBUS, HAVE_CONDOR_C, and HAVE_CONDOR_G macros
