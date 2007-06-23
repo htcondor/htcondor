@@ -28,9 +28,7 @@
 
 template class HashTable<MyString,ClassAd*>;
 template class HashTable<MyString, GeneralRecord*>;
-template class HashTable<MyString, int>;
 template class HashBucket<MyString, GeneralRecord*>;
-template class HashBucket<MyString, int>;
 template class ExtArray<fpos_t*>;
 template class ExtArray<ExtArray<fpos_t*>*>;
 template class ExtArray<ExtArray<int>*>;
