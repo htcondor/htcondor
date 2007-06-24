@@ -65,6 +65,7 @@ $submit = sub {
 	}
 
 	foreach $line (@adarray) {
+	    print "output: $line";
 		chomp($line);
 
 		if($line =~ /^\s*(\d+).\d+\s+([\w\-]+).*$/) {
