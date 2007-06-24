@@ -54,7 +54,7 @@ $submit = sub {
 		# other wise we can never finish and might hang.....
 	}
 	
-	$cmd = "condor_q -sub $whoami ";
+	$cmd = "condor_q -sub $whoami -format \"%d.\" ClusterId -format \"%d \" ProcId -format \" %s\" Owner -format \" %s\n\" Cmd";
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
@@ -65,7 +65,7 @@ $submit = sub {
 	}
 
 	foreach $line (@adarray) {
-	    print "output: $line";
+	    print "output: $line\n";
 		chomp($line);
 
 		if($line =~ /^\s*(\d+).\d+\s+([\w\-]+).*$/) {
