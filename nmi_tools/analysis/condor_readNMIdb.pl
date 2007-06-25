@@ -245,7 +245,17 @@ sub FindBuildAndTestTimes
 			$ttime = 0;
 		}
 		$together = ($ttime + $btime);
-		$output = sprintf("%s, %s, %.2f, %.2f, %.2f",$plotdate, $key, $btime, $ttime, $together);
+		# scale back large values and change color key by moving
+		# where we record the data
+		if($together > 50) {
+			$ttime = $ttime / 10.0;
+			$btime = $btime / 10.0;
+			$together = ($ttime + $btime);
+			$output = sprintf("%s, %s, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f",$plotdate, $key, 0, 0, 0, $btime, $ttime, $together);
+		} else {
+			$output = sprintf("%s, %s, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f",$plotdate, $key, $btime, $ttime, $together, 0, 0, 0);
+		}
+
 		print  DATA "$output\n";
 	}
 }

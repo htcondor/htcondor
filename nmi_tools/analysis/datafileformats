@@ -23,7 +23,9 @@ we plot in this order: 6, 4, 2
 
 
 Auto Duration Plots
+Note we scale and shift 3 columns for large values and plot a different color
 
-16 May 2007, 	sun4u_sol_5.8, 2.70, 	      2.70, 		5.41
-plotdate,   	platform,      build time(b), test time(t), (b&t)
-we plot in this order: 5, 3
+16 May 2007, 	sun4u_sol_5.8, 2.70, 	      2.70, 		5.41,  val/10,         val/10,        val/10
+1,              2,             3,             4,            5,     6,              7,             8
+plotdate,   	platform,      build time(b), test time(t), (b&t), build time(Lb), test time(Lt), (Lb&t)
+we plot in this order: 8, 6, 5, 3
