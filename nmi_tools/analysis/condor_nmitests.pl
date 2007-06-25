@@ -354,6 +354,7 @@ sub FindTestRuns
 {
     my $runid = shift;
     my $trid = "";
+	my @temprunids;
 
     my $extraction = $db->prepare("SELECT * FROM Method_nmi WHERE  \
                 input_runid = '$runid'");
@@ -361,8 +362,25 @@ sub FindTestRuns
     $TestRuns = ();
     while( my $sumref = $extraction->fetchrow_hashref() ){
         $trid = $sumref->{'runid'};
+		# now we have to screen these runs for being cndrauto test
+		# runs and not independent tests by me or someone else.
 		#print "Test Run: $trid\n";
-        push(@TestRuns,$trid);
+        push(@temprunids,$trid);
+	}
+	foreach $run (@temprunids) {
+    	my $extraction = $db->prepare("SELECT * FROM Run WHERE  \
+                runid = '$run'");
+    	$extraction->execute();
+		my $user = "";
+    	while( my $sumref = $extraction->fetchrow_hashref() ){
+        	$user = $sumref->{'user'};
+			#print "User for run $run is $user\n";
+			if($user eq "cndrauto") {
+				push(@TestRuns,$run);
+			} else {
+				print "Skipping test run by $user\n";
+			}
+		}
     }
 }
 
@@ -761,6 +779,7 @@ sub AnalyseTestRuns
 		$testdir = $filepath  . "/" . $gid . "/" . "userdir/" . $platform;
         #print "TestDir <$run> is <$testdir>\n";
 
+		#print "<<<<run $run platform $platform path $path gid $gid>>>>\n";
 		opendir PD, $testdir or die "Can not open Test Results<$testdir>:$!\n";
 		foreach $file (readdir PD) {
 			chomp($file);
