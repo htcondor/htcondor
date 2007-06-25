@@ -36,7 +36,7 @@ $OutputTest = sub
 	if( -d $sandbox_dir ) {
 	    sleep( 1 );
 	} else {
-	    return;
+	    exit(0);
 	}
     }
     die "$testname: FAILURE: $sandbox_dir still exists after " . $i . 
