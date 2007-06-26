@@ -31,6 +31,7 @@
 #define WANT_ORACLE_UNIVERSE   NO
 #define WANT_DRMAA		YES
 #define WANT_QUILL		YES
+#define WANT_TT			YES
 
 #define USE_GLOBUS_OPENSSL YES
 #define NEEDS_PRELINKER	NO
