@@ -133,11 +133,11 @@ TESTCLASS(lib_auth_protocol-negot-prt2,quick)
 
 /* Turned off on Free BSD port GNATS 766 */
 
-DESC(cmd_status_shows-avail.run,"Condor_status shows a pool")
-RUN(cmd_status_shows-avail.run)
-TESTCLASS(cmd_status_shows-avail.run,core)
-TESTCLASS(cmd_status_shows-avail.run,quick)
-TESTCLASS(cmd_status_shows-avail.run,btdebug)
+DESC(cmd_status_shows-avail,"Condor_status shows a pool")
+RUN(cmd_status_shows-avail)
+TESTCLASS(cmd_status_shows-avail,core)
+TESTCLASS(cmd_status_shows-avail,quick)
+TESTCLASS(cmd_status_shows-avail,btdebug)
 
 DESC(cmd_q_shows-hold,"Condor_q shows hold")
 RUN(cmd_q_shows-hold)
