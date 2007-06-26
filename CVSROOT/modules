@@ -277,7 +277,9 @@ V6_9_SRC		-a \
 			src/condor_eventd.V2 \
 			src/condor_procd \
 			src/condor_transferd \
-			src/condor_privsep
+			src/condor_privsep \
+			src/condor_dbmsd \
+			src/condor_tt
 
 
 ######################################################################
