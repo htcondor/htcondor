@@ -317,6 +317,10 @@ SOURCE=..\src\h\syscall_numbers.tmpl
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\truncate.WIN32.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\win32_posix.c
 # End Source File
 # End Target
