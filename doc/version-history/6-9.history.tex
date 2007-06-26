@@ -91,6 +91,20 @@ Trailing commas are now ignored.
 Previously, trailing commas could cause the \Condor{master} to misbehave,
 including exiting with an error.
 
+\item The \Macro{<SUBSYS>\_DAEMON\_AD\_FILE} was defined for the \Condor{schedd}.
+This setting was first made available in Condor 6.9.1 but was not used for
+any daemon.  
+It appears in the configuration file as \Macro{SCHEDD\_DAEMON\_AD\_FILE} and
+is set to the file .schedd\_classad in the LOG directory. This setting is 
+not necessary unless you are using the Quill functionality, and pools may 
+upgrade to 6.9.4 without setting it if they are not using Quill. 
+  
+\item Set default parameters for the \Condor{dbmsd}. The new settings
+are \Macro{DBMSD}, which is set to ``\Code{DBMSD = \$(SBIN)/condor\_dbmsd}''
+, \Macro{DBMSD\_ARGS}, which is set to ``\Code{DBMSD\_ARGS = -f}'', and
+\Macro{DBMSD\_LOG}, which is set to ``\Code{DBMSD\_LOG = \$(LOG)/DbmsdLog}''
+They are not necessary unless you plan to use Quill, and even then are
+only necessary on one machine in your Condor pool. 
 \end{itemize}
 
 
