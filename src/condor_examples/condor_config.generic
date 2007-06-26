@@ -1891,3 +1891,13 @@ QUILL_ADDRESS_FILE = $(LOG)/.quill_address
 #QUILL_DEBUG = D_FULLDEBUG
 
 
+##
+##--------------------------------------------------------------------
+##  Database Management Daemon settings
+##--------------------------------------------------------------------
+##  Where is the DBMSd binary installed and what arguments should be passed?
+DBMSD = $(SBIN)/condor_dbmsd
+DBMSD_ARGS = -f
+
+# Where is the log file for the quill daemon?
+DBMSD_LOG = $(LOG)/DbmsdLog
