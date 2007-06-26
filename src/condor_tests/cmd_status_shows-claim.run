@@ -10,8 +10,8 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testname = 'cmd_status_shows-avail';
-$corename = "cmd_status_shows-avail";
+$testname = 'cmd_status_shows-claimed';
+$corename = "cmd_status_shows-claimed";
 
 # where am I running
 $dummyhost = "gamgee.cs.wisc.edu";
@@ -217,19 +217,19 @@ if($bail != 1) {
 	}
 }
  
-my $numavail = 0;
+my $numclaimed = 0;
 
 if($bail == 1) {
 	# allow time for all the nodes to update the collector
 	# by allowing N attempts
-	# with 4 run forever jobs we are not stable until -avail finds exactly 5
+	# with 4 run forever jobs we are not stable until -claimed finds exactly 4
 	$nattempts = 5;
 	$count = 0;
 	$done = 0;
 
 	while($count < $nattempts) {
-		$cmd = "condor_status -avail";
-		print "Looking for exactly 5 available slots\n";
+		$cmd = "condor_status -claimed -format \"%s\\n\" name";
+		print "Looking for exactly 4 claimed slots\n";
 		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
     	if(!$cmdstatus)
     	{
@@ -237,27 +237,25 @@ if($bail == 1) {
         	exit(1)
     	}
 	
-		# 4 are busy so 5 should be available....
+		# 4 are busy so 4 should be claimed....
 	
-		$numavail = 0;
+		$numclaimed = 0;
 		foreach $line (@adarray) {
-			if($line =~ /^\s*Total.*Unclaimed.*$/) {
-				#print "skip: $line\n";
-			} elsif($line =~ /^.*Unclaimed.*$/) {
-				#print "found available slot: $line\n";
-				$numavail = $numavail + 1;;
-				print "found available slot: $numavail of 5\n";
+			if($line =~ /^\s*slot(\d+)@master.*@.*$/) {
+				#print "found claimed slot: $line\n";
+				$numclaimed = $numclaimed + 1;;
+				print "found claimed slot: $numclaimed of 4\n";
 			} else {
 				#print "skip: $line\n";
 			}
 		}
 
-		if($numavail == 5) {
-			print "Condor_status -avail found the expected 5 slots\n";
+		if($numclaimed == 4) {
+			print "Condor_status -claimed found the expected 4 slots\n";
 			$done = 1;
 			last;
 		} else {
-			print "Condor_status -avail found incorrect available slot count<$numavail>\n";
+			print "Condor_status -claimed found incorrect claimed slot count<$numclaimed>\n";
 		}
 
 		$count = $count + 1;
@@ -268,7 +266,7 @@ if($bail == 1) {
 
 print "Saving things and cleaning up....\n";
 
-system("cp *cmd_status_shows-avail* $mysaveme");
+system("cp *cmd_status_shows-claimed* $mysaveme");
 
 if( -e "$mysubmitnm" )
 {
@@ -336,6 +334,6 @@ if( $done == 0 )
 	exit(1);
 }
 
-print "cmd_status_shows-avail SUCCESS\n";
+print "cmd_status_shows-claimed SUCCESS\n";
 system("date");
 exit(0);
