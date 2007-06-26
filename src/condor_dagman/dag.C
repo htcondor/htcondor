@@ -1639,7 +1639,7 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		UserLog ulog;
 		ulog.setUseXML( useXml );
 		ulog.initialize( job->_logFile, job->_CondorID._cluster,
-					 	0, 0 );
+					 	0, 0, NULL );
 
 		if( !ulog.writeEvent( &e ) ) {
 			debug_printf( DEBUG_QUIET,

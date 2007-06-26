@@ -30,7 +30,7 @@ ClassAdLogEntry::ClassAdLogEntry()
 {
 		// initialization
 	key = mytype = targettype = name = value = NULL;	
-	offset = next_offset = 0;
+	offset = next_offset = op_type = 0;
 
 }
 

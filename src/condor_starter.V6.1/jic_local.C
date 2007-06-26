@@ -349,6 +349,8 @@ JICLocal::initUserPriv( void )
 bool
 JICLocal::initJobInfo( void ) 
 {
+	char *orig_job_iwd;
+
 	if( ! job_ad ) {
 		EXCEPT( "JICLocal::initJobInfo() called with NULL job ad!" );
 	}
@@ -358,6 +360,26 @@ JICLocal::initJobInfo( void )
 		dprintf( D_ALWAYS, "Error in JICLocal::initJobInfo(): "
 				 "Can't find %s in job ad\n", ATTR_JOB_CMD );
 		return false;
+	} else {
+		char tmp[_POSIX_PATH_MAX];
+			// put the orig job name in class ad
+		sprintf(tmp, "%s=\"%s\"", ATTR_ORIG_JOB_CMD, orig_job_name);
+		dprintf(D_ALWAYS, "setting the orig job name in starter\n");
+		job_ad->InsertOrUpdate (tmp);
+	}
+
+		// stash the iwd name in orig_job_iwd
+	if( ! job_ad->LookupString(ATTR_JOB_IWD, &orig_job_iwd) ) {
+		dprintf( D_ALWAYS, "Error in JICLocal::initJobInfo(): "
+				 "Can't find %s in job ad\n", ATTR_JOB_IWD );
+		return false;
+	} else {
+		char tmp[_POSIX_PATH_MAX];
+			// put the orig job iwd in class ad
+		sprintf(tmp, "%s=\"%s\"", ATTR_ORIG_JOB_IWD, orig_job_iwd);
+		dprintf(D_ALWAYS, "setting the orig job iwd in starter\n");
+		job_ad->InsertOrUpdate (tmp);
+		free(orig_job_iwd);
 	}
 
 	if( job_ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe) < 1 ) {

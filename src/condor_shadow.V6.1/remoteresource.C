@@ -369,6 +369,27 @@ RemoteResource::getStartdAddress( char *& sinful )
 	}
 }
 
+void
+RemoteResource::getStartdName( char *& remoteName )
+{
+	if( remoteName ) {
+		remoteName[0] = '\0';
+	}
+	if( ! dc_startd ) {
+		return;
+	}
+	char* localName = dc_startd->name();
+	if( ! localName ) {
+		return;
+	}
+	if( ! remoteName ) {
+		remoteName = strnewp( localName );
+	} else {
+		strcpy( remoteName, localName );
+	}
+}
+
+
 
 void
 RemoteResource::getClaimId( char *& id )

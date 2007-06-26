@@ -21,10 +21,10 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifdef WIN32
-
 #include "condor_common.h"
 #include "truncate.h"
+
+#ifdef WIN32
 
 /* gives us the truncate() and ftruncate() functions on Win32 */
 
@@ -38,12 +38,15 @@ int ftruncate( int file_handle, long size ) {
 }
 
 int truncate( const char *path, long size ) {
-	int fh;
+	int fh, ret;
 	
 	if ( fh = safe_open_wrapper(path, O_RDWR | O_CREAT, S_IREAD | S_IWRITE) != -1 ) {
-		return ftruncate(fh, size);
+		ret = ftruncate(fh, size);
+		close(fh);
+		return ret;
 	} else {
 		return -1; // couldn't open file, and _open has set errno.
 	}
 }
+
 #endif /* WIN32 */

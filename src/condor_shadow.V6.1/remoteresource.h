@@ -156,6 +156,14 @@ class RemoteResource : public Service {
        */ 
    void getStartdAddress( char *& sinful );
 
+		/** Return the name of the remote startd.
+			@param remote_name Will contain the host's name.  If
+			NULL, this will be a string allocated with new().  If
+			remote_name already exists, we assume it's a buffer and print
+			into it.
+       */ 
+   void getStartdName( char *& remote_name );
+
 		/** Return the ClaimId string of the remote startd.
 			@param id Will contain the ClaimId string.  If NULL,
 			this will be a string allocated with new().  If id

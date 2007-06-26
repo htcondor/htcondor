@@ -197,7 +197,7 @@ main(int argc, char* argv[])
 	  st = historySnapshot->sendQuery(&queryhor, &queryver, longformat, true);
 		  //if there's a failure here and if we're not posing a query on a 
 		  //remote quill daemon, we should instead query the local file
-	  if(st == FAILURE) {
+	  if(st == QUILL_FAILURE) {
 		  printf( "-- Database at %s not reachable\n", dbIpAddr);
 	  }
 		  // query history table

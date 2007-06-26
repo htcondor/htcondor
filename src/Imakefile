@@ -59,6 +59,12 @@
 #define QuillProgs
 #endif
 
+#if WANT_TT
+#define TTProgs tt dbmsd
+#else
+#define TTProgs
+#endif
+
 #define Programs \
 		procapi sysapi accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
@@ -66,7 +72,7 @@
 		tools KbddProgs collector.V6 PvmProgs dagman userlog Eventd \
 		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp had \
 		CreddProgs StorkProgs \
-		QuillProgs DeploymentTools \
+		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep
 
 #define Libraries \
@@ -76,7 +82,7 @@
 		condor_schedd.V6/libqmgmt.a				\
 		condor_accountant.V6/libacct.a StdUnvLibs NetmanLibs	\
 		condor_procd/procd_client.a \
-		condor_privsep/privsep_client.a \
+		condor_privsep/privsep_client.a condor_quill/libquill.a \
 		chirp AnalysisLibs
 
 #if HAS_STATIC
@@ -89,15 +95,18 @@
 	static_unstrip_dir/src/chirp static_unstrip_dir/src/drmaa \
 	static_unstrip_dir/man static_unstrip_dir/man/man1 \
 	static_unstrip_dir/lib/webservice \
+	static_unstrip_dir/sql \
 	static_dir static_dir/bin static_dir/sbin static_dir/lib \
 	static_dir/libexec static_dir/libexec/glite \
 	static_dir/etc static_dir/etc/examples static_dir/include \
 	static_dir/src static_dir/src/chirp static_dir/src/drmaa \
 	static_dir/man static_dir/man/man1 \
 	static_dir/lib/webservice \
+	static_dir/sql \
 	static_contrib static_contrib/bin static_contrib/lib \
 	static_contrib/sbin static_contrib/etc \
-	static_contrib/etc/examples static_contrib/include 
+	static_contrib/etc/examples static_contrib/include \
+	static_contrib/sql
 #else
 #define StaticDirectories
 #endif
@@ -111,14 +120,17 @@
 	release_dir/man release_dir/man/man1 pure_bin \
 	release_dir/lib/webservice \
 	release_dir/etc release_dir/etc/examples \
+	release_dir/sql \
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
 	strip_dir/libexec strip_dir/libexec/glite \
 	strip_dir/etc strip_dir/etc/examples strip_dir/include \
 	strip_dir/src strip_dir/src/chirp strip_dir/src/drmaa \
 	strip_dir/man strip_dir/man/man1 \
 	strip_dir/lib/webservice \
+	strip_dir/sql \
 	strip_contrib strip_contrib/bin strip_contrib/lib \
 	strip_contrib/sbin strip_contrib/etc \
+	strip_contrib/sql \
 	strip_contrib/etc/examples strip_contrib/include StaticDirectories
 
 all: h h_all externals condor_includes makefiles Directories Libraries \
@@ -143,6 +155,7 @@ simple_dir_target(release_dir/src/drmaa)
 simple_dir_target(release_dir/man)
 simple_dir_target(release_dir/man/man1)
 simple_dir_target(release_dir/lib/webservice)
+simple_dir_target(release_dir/sql)
 
 simple_dir_target(pure_bin)
 
@@ -161,6 +174,7 @@ simple_dir_target(strip_dir/src/drmaa)
 simple_dir_target(strip_dir/man)
 simple_dir_target(strip_dir/man/man1)
 simple_dir_target(strip_dir/lib/webservice)
+simple_dir_target(strip_dir/sql)
 
 simple_dir_target(strip_contrib)
 simple_dir_target(strip_contrib/bin)
@@ -170,6 +184,7 @@ simple_dir_target(strip_contrib/sbin)
 simple_dir_target(strip_contrib/etc)
 simple_dir_target(strip_contrib/etc/examples)
 simple_dir_target(strip_contrib/include)
+simple_dir_target(strip_contrib/sql)
 
 #if HAS_STATIC
 simple_dir_target(static_unstrip_dir)
@@ -187,6 +202,7 @@ simple_dir_target(static_unstrip_dir/src/drmaa)
 simple_dir_target(static_unstrip_dir/man)
 simple_dir_target(static_unstrip_dir/man/man1)
 simple_dir_target(static_unstrip_dir/lib/webservice)
+simple_dir_target(static_unstrip_dir/sql)
 simple_dir_target(static_dir)
 simple_dir_target(static_dir/bin)
 simple_dir_target(static_dir/lib)
@@ -202,6 +218,7 @@ simple_dir_target(static_dir/src/drmaa)
 simple_dir_target(static_dir/man)
 simple_dir_target(static_dir/man/man1)
 simple_dir_target(static_dir/lib/webservice)
+simple_dir_target(static_dir/sql)
 simple_dir_target(static_contrib)
 simple_dir_target(static_contrib/bin)
 simple_dir_target(static_contrib/lib)
@@ -211,6 +228,7 @@ simple_dir_target(static_contrib/etc)
 simple_dir_target(static_contrib/etc/examples)
 simple_dir_target(static_contrib/include)
 simple_dir_target(static_contrib/src)
+simple_dir_target(static_contrib/sql)
 #endif /* HAS_STATIC */
 
 condor_object_target(util_lib)
@@ -233,12 +251,18 @@ condor_object_target(starter.V5)
 condor_object_target(quill)
 #endif
 
+#if WANT_TT
+condor_object_target(tt)
+condor_object_target(dbmsd)
+#endif
+
 condor_object_target(startd.V6)
 condor_object_target(schedd.V6)
 condor_object_target(had)
 condor_object_target(status.V6)
 condor_object_target(dagman)
 condor_object_target(userlog)
+
 #if NEEDS_KBDD
    condor_object_target(kbdd)
 #endif
@@ -310,6 +334,7 @@ single_target(condor_sysapi,libsysapi.a)
 single_target(condor_schedd.V6,libqmgmt.a)
 single_target(condor_accountant.V6,libacct.a)
 single_target(condor_ckpt_server,ckpt_server_api.a)
+single_target(condor_quill,libquill.a)
 
 condor_object_target(tests)
 
@@ -358,6 +383,7 @@ pure_target(condor_collector.V6,condor_collector.pure)
 pure_target(condor_negotiator.V6,condor_negotiator.pure)
 pure_target(condor_dagman,condor_dagman.pure)
 
+pure_target(condor_tt,condor_tt.pure)
 ext_target(EXT_ZLIB_VERSION,$(NULL))
 
 #if WANT_EXT_GLIBC

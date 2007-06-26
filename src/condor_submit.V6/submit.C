@@ -88,6 +88,8 @@
 //   either completely case-sensitive (and use MyStringHash()) or
 //   completely case-insensitive (and use AttrKey and AttrKeyHashFunction).
 static unsigned int hashFunction( const MyString& );
+#include "file_sql.h"
+
 HashTable<AttrKey,MyString> forcedAttributes( 64, AttrKeyHashFunction );
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
 HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
@@ -5966,11 +5968,13 @@ log_submit()
 				delete[] jobSubmit.submitEventUserNotes;
 			}
 			jobSubmit.submitEventUserNotes = strnewp( SubmitInfo[i].usernotes );
-
-			usr_log.initialize(owner, ntdomain, simple_name, 0, 0, 0);
+			
+			// we don't know the gjid here, so pass in NULL as the last 
+			// parameter - epaulson 2/09/2007
+			usr_log.initialize(owner, ntdomain, simple_name, 0, 0, 0, NULL);
 			// Output the information
 			for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob; j++) {
-				usr_log.initialize(SubmitInfo[i].cluster, j, 0);
+				usr_log.initialize(SubmitInfo[i].cluster, j, 0, NULL);
 				if( ! usr_log.writeEvent(&jobSubmit) ) {
 					fprintf(stderr, "\nERROR: Failed to log submit event.\n");
 				}

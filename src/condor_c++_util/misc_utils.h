@@ -40,6 +40,8 @@ char*	num_string( int );
 */
 char* startdClaimIdFile( int slot_id );  
 
+/* return the timezone on the local host */
+char* my_timezone(int isdst);
 
 #if defined( __cplusplus )
 }

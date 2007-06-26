@@ -6,7 +6,7 @@ CFLAGS =  -I../condor_daemon_core.V6 $(STD_C_FLAGS)
 
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
-QMGMT_OBJ = qmgmt.o qmgmt_receivers.o qmgmt_common.o
+QMGMT_OBJ = qmgmt.o qmgmt_receivers.o qmgmt_common.o schedd_files.o
 QMGMT_LIB_OBJ = qmgmt_send_stubs.o qmgr_lib_support.o qmgmt_common.o \
 	qmgr_job_updater.o
 

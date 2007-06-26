@@ -199,6 +199,7 @@ private:
 	int master;  		// index of the master in our daemon table
 	AllGoneT all_daemons_gone_action;
 	ReaperT reaper;
+	int prevLHF;
 };
 
 #endif /* _CONDOR_MASTER_H */

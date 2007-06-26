@@ -173,6 +173,8 @@ UniShadow::logExecuteEvent( void )
 	ExecuteEvent event;
 	char* sinful = event.executeHost;
 	remRes->getStartdAddress( sinful );
+	char* remote_name = event.remoteName;
+	remRes->getStartdName(remote_name);
 	if( !uLog.writeEvent(&event) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "
 				 "can't write to UserLog!\n" );
@@ -325,6 +327,8 @@ UniShadow::resourceBeganExecution( RemoteResource* rr )
 		// executing, we can safely log our execute event
 	logExecuteEvent();
 
+	began_execution = TRUE;
+	
 		// Start the timer for the periodic user job policy  
 	shadow_user_policy.startTimer();
 

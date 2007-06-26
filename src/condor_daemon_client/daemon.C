@@ -69,6 +69,7 @@ Daemon::common_init() {
 	_hostname = NULL;
 	_full_hostname = NULL;
 	_cmd_str = NULL;
+	m_daemon_ad_ptr = NULL;
 	char buf[200];
 	sprintf(buf,"%s_TIMEOUT_MULTIPLIER",mySubSystem);
 	Sock::set_timeout_multiplier( param_integer(buf,0) );
@@ -143,6 +144,10 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 			 "\"%s\", addr: \"%s\"\n", daemonString(_type), 
 			 _name ? _name : "NULL", _pool ? _pool : "NULL",
 			 _addr ? _addr : "NULL" );
+
+	// let's have our own copy of the daemon's ad in this case.
+	m_daemon_ad_ptr = new ClassAd(*tAd);	
+
 }
 
 
@@ -212,7 +217,9 @@ Daemon::deepCopy( const Daemon &copy )
 	_tried_init_hostname = copy._tried_init_hostname;
 	_tried_init_version = copy._tried_init_version;
 	_is_configured = copy._is_configured;
-
+	if(copy.m_daemon_ad_ptr) {
+		m_daemon_ad_ptr = new ClassAd(*copy.m_daemon_ad_ptr);
+	}
 		/*
 		  there's nothing to copy for _sec_man... it'll already be
 		  instantiated at this point, and the SecMan object is really
@@ -242,6 +249,7 @@ Daemon::~Daemon()
 	if( _version ) delete [] _version;
 	if( _platform ) { delete [] _platform; }
 	if( _cmd_str ) { delete [] _cmd_str; }
+	if( m_daemon_ad_ptr) { delete m_daemon_ad_ptr; }
 }
 
 
@@ -361,7 +369,6 @@ Daemon::idStr( void )
 	_id_str = strnewp( buf );
 	return _id_str;
 }
-
 
 void
 Daemon::display( int debugflag ) 
@@ -1322,6 +1329,17 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 		if ( ! getInfoFromAd( scan ) ) {
 			return false;
 		}
+		if( !m_daemon_ad_ptr) {
+			// I don't think we can ever get into a case where we already
+			// have located the daemon and have a copy of its ad, but just
+			// in case, don't stash another copy of it if we can't find it.
+			// I hope this is a deep copy wiht no chaining bullshit
+			m_daemon_ad_ptr = new ClassAd(*scan);	
+		}
+			// The version and platfrom aren't critical, so don't
+			// return failure if we can't find them...
+		initStringFromAd( scan, ATTR_VERSION, &_version );
+		initStringFromAd( scan, ATTR_PLATFORM, &_platform );
 	}
 
 		// Now that we have the sinful string, fill in the port. 
@@ -1790,6 +1808,9 @@ Daemon::readLocalClassAd( const char* subsys )
 	int adIsEOF, errorReadingAd, adEmpty = 0;
 	adFromFile = new ClassAd(addr_fp, "...", adIsEOF, errorReadingAd, adEmpty);
 	ASSERT(adFromFile);
+	if(!m_daemon_ad_ptr) {
+		m_daemon_ad_ptr = new ClassAd(*adFromFile);
+	}
 	counted_ptr<ClassAd> smart_ad_ptr(adFromFile);
 	
 	fclose(addr_fp);

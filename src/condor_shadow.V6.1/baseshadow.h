@@ -354,6 +354,8 @@ class BaseShadow : public Service
 	float prev_run_bytes_sent;
 	float prev_run_bytes_recvd;
 
+	bool began_execution;
+
 	void emailHoldEvent( const char* reason );
 
 	void emailRemoveEvent( const char* reason );

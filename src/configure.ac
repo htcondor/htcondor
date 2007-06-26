@@ -1763,6 +1763,25 @@ AC_CHECK_FUNC(dirname,,AC_CHECK_LIB(gen,dirname,
 AC_DEFINE(HAVE_LIBGEN,1,[Define to 1 if you have the `gen' library (-lgen)])))
 
 AC_CHECK_FUNCS(mkstemp tmpnam)
+##############################################################################
+AC_CHECK_LIB(c,crypt,ac_has_crypt=1,ac_has_crypt=0)
+
+if test "$ac_has_crypt" = "1" ; then
+    _cv_crypt_lib=""
+    AC_MSG_RESULT([-lc])
+else
+    AC_CHECK_LIB(crypt,crypt,ac_has_crypt=1,ac_has_crypt=0)
+
+    if test "$ac_has_crypt" = "1" ; then
+        _cv_crypt_lib="-lcrypt"
+    else
+        AC_MSG_ERROR([You need to find a crypt definition])
+    fi
+fi
+AC_SUBST([crypt_lib],$_cv_crypt_lib)
+
+##############################################################################
+
 
 # checks for system services
 
@@ -1972,7 +1991,6 @@ CONDOR_EXTERNAL_VERSION([gsoap],[2.7.6c-p1])
 
 CONDOR_EXTERNAL_VERSION([pcre],[5.0])
 
-CONDOR_EXTERNAL_VERSION([postgresql],[8.0.2])
 
 CONDOR_EXTERNAL_VERSION([blahp],[1.7.0])
 
@@ -1987,6 +2005,16 @@ AC_DEFINE(HAVE_BOINC,1,[are we compiling support for backfill with BOINC])
 if test x$_cv_ld_is_gnu = xyes; then
   CONDOR_EXTERNAL_VERSION([gcb],[1.4.2])
 fi
+
+AX_LIB_ORACLE_OCI("10.0.0")
+if test $HAVE_ORACLE_OCI = yes; then
+  AC_DEFINE(HAVE_ORACLE,1,[Do we have Oracle support])
+fi
+
+CONDOR_EXTERNAL_VERSION([postgresql],[8.0.2])
+#AC_MSG_CHECKING([postgresql])
+#AC_MSG_RESULT([$_cv_ext_postgresql_version])
+#AC_SUBST(ext_postgresql_version,$_cv_ext_postgresql_version)
 
 else
 # if there's no externals at all, we still need to define these to

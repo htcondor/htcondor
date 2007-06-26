@@ -69,7 +69,8 @@ private:
 	int	curProcId_ver;	   //!< current Proc Id
 
 	ClassAd		*curAd;	//!< current Job Ad
-	JobQueueDatabase	*jqDB;	//!< Job Queue Database object
+	JobQueueDatabase	*jqDB;	//!< Database object
+	dbtype	dt;	/* database type */
 
 	QuillErrCode getNextAd_Ver(AttrList *&ad, SQLQuery *queryhor);
 	QuillErrCode getNextAd_Hor(AttrList *&ad, SQLQuery *queryver);

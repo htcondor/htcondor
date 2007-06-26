@@ -1,0 +1,14 @@
+1. ClassAdLogParser::readLogEntry(bool ex) always does open/seek/close for each log entry. This may causes the tt to read from both an old job queue log and a new job queue log for the same log processing pass if the job queue log is rotated. What's bad about this is that an inconsistent transaction with part from the old job queue log and part from the new job queue log may be committed to the database without having the tt noticing all of this!
+
+Here are some solutions to this problem:
+1) Have the readLogEntry use the same file descriptor for each log processing pass. Before reading a log entry, implement some mechanism to check whether the file has been rotated (how to do this is still open). If the file has been rotated, the function should return with an error.
+
+2) Have the readLogEntry use the same file descriptor for each log processing pass. But we don't check whether the file has been rotated before reading a log entry. The implication of this is that we will continue to read  from the old data blocks of the file if it has been rotated. The bad side is that we are reading old data blocks or even garbage if the old data blocks have been reclaimed by the system. On the other hand eventually the tt will either reach an EOF or realize that the data is not in the right format and return an error. When the tt comes to the next log processing pass, it will notice that the log file has been rotated and reload the whole job queue rectify the situation.
+
+3) Another clean solution would be to have a system parameter called JOB_Q_SYNC_INTERVAL or something like that which specifies that after X amount of time has passed we automatically delete the whole job queue and do a bulk load from the current job_queue_log. That way even if something were to arise, it would be guaranteed to be corrected within at most JOB_Q_SYNC_INTERVAL time.
+
+2. JobQueueDBManager::addJobQueueTables() has a problem in the following scenario:
+
+It sees a 'begin tranx' log record and processes some more log records. And for some reason, e.g. if the tt processes faster than the schedd writing to the job queue log, it doesn't see an 'end tranx' record before reaching an EOF. In this case, the function will first advance the polling position so that all records processed so far will not be reprocessed again, and then automatically rollback the tranx when disconnecting from the database. Essentially we lost the records we see after the 'begin tranx' here.
+
+Hopefully there is a clean solution for this. We can use the xactState to track whether we have opened a transaction, but not ended it before reaching an EOF. If so, we will not advance the polling position. This wayt the records will be reprocessed again during the next log processing pass.

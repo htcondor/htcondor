@@ -28,6 +28,9 @@
 #include "classad_merge.h"
 #include "vm_common.h"
 #include "VMRegister.h"
+#include "file_sql.h"
+
+extern FILESQL *FILEObj;
 
 Resource::Resource( CpuAttributes* cap, int rid )
 {
@@ -45,6 +48,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	}
 	r_id_str = strdup( tmp.Value() );
 	
+	prevLHF = 0;
 	r_classad = NULL;
 	r_state = new ResState( this );
 	r_cur = new Claim( this );
@@ -861,6 +865,9 @@ Resource::do_update( void )
 	}
 
 	this->publish( &private_ad, A_PRIVATE | A_ALL );
+
+		// log classad into sql log so that it can be updated to DB
+	FILESQL::daemonAdInsert(&public_ad, "Machines", FILEObj, prevLHF);
 
 		// Send class ads to collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
@@ -1797,4 +1804,3 @@ Resource::endCODLoadHack( void )
 	r_pre_cod_total_load = 0.0;
 	r_pre_cod_condor_load = 0.0;
 }
-

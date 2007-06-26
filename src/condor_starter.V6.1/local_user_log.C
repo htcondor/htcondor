@@ -62,13 +62,13 @@ LocalUserLog::init( const char* filename, bool is_xml,
 		uid_t uid;
 		gid_t gid;
 		privsep_helper.get_user_ids(uid, gid);
-		ret = u_log.initialize(uid, gid, filename, cluster, proc, subproc);
+		ret = u_log.initialize(uid, gid, filename, cluster, proc, subproc, NULL);
 	}
 	else {
-		ret = u_log.initialize(filename, cluster, proc, subproc);
+		ret = u_log.initialize(filename, cluster, proc, subproc, NULL);
 	}
 #else
-	ret = u_log.initialize(filename, cluster, proc, subproc);
+	ret = u_log.initialize(filename, cluster, proc, subproc, NULL);
 #endif
 	if( ! ret ) {
 		dprintf( D_ALWAYS, 

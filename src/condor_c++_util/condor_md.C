@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_md.h"
+#include "condor_open.h"
 
 #if defined(CONDOR_MD)
 #include <openssl/md5.h>
@@ -135,6 +136,36 @@ void Condor_MD_MAC::addMD(const unsigned char * buffer, unsigned long length)
 {
 #if defined(CONDOR_MD)
    MD5_Update(&(context_->md5_), buffer, length); 
+#endif
+}
+
+void Condor_MD_MAC::addMDFile(const char * filePathName)
+{
+#if defined(CONDOR_MD)
+	int fd;
+
+    fd = safe_open_wrapper(filePathName, O_RDONLY | O_LARGEFILE, 0);
+    if (fd < 0) {
+        //dprintf(D_FULLDEBUG, "addMDFile: can't open %s\n", filePathName);
+        return;
+    }
+
+	unsigned char *buffer;	
+
+	buffer = (unsigned char *)calloc(1024*1024, 1);
+	if( !buffer) {
+		return; // I could just assert and take out the process, but nah
+	}
+
+	ssize_t count = read(fd, buffer, 1024*1024); 
+	while( count > 0) {
+		MD5_Update(&(context_->md5_), buffer, count); 
+		memset(buffer, 0, 1024*1024);
+		count = read(fd, buffer, 1024*1024); 
+	}
+
+	close(fd);
+	free(buffer);
 #endif
 }
 

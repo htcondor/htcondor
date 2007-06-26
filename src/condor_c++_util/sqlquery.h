@@ -23,7 +23,7 @@
 #ifndef __SQL_QUERY_H__
 #define __SQL_QUERY_H__
 
-#define MAX_QUERY_SIZE 1024
+#define MAX_QUERY_SIZE 4096
 
 //forward definition
 class JobQueueDatabase;
@@ -56,7 +56,11 @@ class SQLQuery
 	char * getFetchCursorStmt();
 	char * getCloseCursorStmt();
 	void setQuery(query_types qtype, void **parameters);
+	void setScheddname(char *name);
+	void setJobqueuebirthdate(time_t birthdate);
 	query_types getType();
+
+	void prepareQuery(); // Prepares the query string(s)
 
 	//print
 	void Print();
@@ -72,15 +76,11 @@ class SQLQuery
 	char *fetch_cursor_str; 
 	char *close_cursor_str; 
 	query_types type;
+	void **query_predicates;
+	char *scheddname;
+	time_t jobqueuebirthdate;
 
 	int createQueryString(query_types qtype, void **parameters);
 };
 
 #endif
-
-
-
-
-
-
-

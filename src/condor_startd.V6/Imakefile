@@ -17,6 +17,7 @@ BACKFILL_OBJS = $(BOINC_OBJS) backfill_mgr.o
 #endif /* HAVE_BACKFILL */
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
 soapobjs(startd)

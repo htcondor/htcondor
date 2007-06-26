@@ -51,6 +51,8 @@
 #include "fileno.h"
 #include "exit.h"
 
+#include "file_sql.h"
+
 /* XXX This should not be here */
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
@@ -59,6 +61,7 @@
 int	UsePipes;
 
 char* mySubSystem = "SHADOW";
+extern FILESQL *FILEObj;
 
 extern "C" {
 #if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
@@ -314,6 +317,8 @@ main(int argc, char *argv[] )
 	dprintf_config( mySubSystem );
 	DebugId = whoami;
 
+	// create a database connection object
+	
 	dprintf( D_ALWAYS, "******* Standard Shadow starting up *******\n" );
 	dprintf( D_ALWAYS, "** %s\n", CondorVersion() );
 	dprintf( D_ALWAYS, "** %s\n", CondorPlatform() );
@@ -322,12 +327,19 @@ main(int argc, char *argv[] )
 	reserved_swap = param_integer("RESERVED_SWAP", 5);
 	reserved_swap *= 1024; /* megabytes -> kb */
 
+	bool use_sql_log = param_boolean("QUILL_USE_SQL_LOG", false);
+    FILEObj = FILESQL::createInstance(use_sql_log);
+	
 	free_swap = sysapi_swap_space();
 
 	dprintf( D_FULLDEBUG, "*** Reserved Swap = %d\n", reserved_swap );
 	dprintf( D_FULLDEBUG, "*** Free Swap = %d\n", free_swap );
 	if( free_swap < reserved_swap ) {
 		dprintf( D_ALWAYS, "Not enough reserved swap space\n" );
+		if(FILEObj) {
+		  delete FILEObj;
+		}
+
 		exit( JOB_NO_MEM );
 	}
 
@@ -531,6 +543,10 @@ main(int argc, char *argv[] )
     if( My_Filesystem_Domain ) {
         free( My_Filesystem_Domain );
     }
+        if(FILEObj) {
+                delete FILEObj;
+        }
+
 	dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
 		ExitReason );
 	exit( ExitReason );

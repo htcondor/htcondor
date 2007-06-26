@@ -236,6 +236,14 @@ public:
 		  */
 	bool isLocal( void )			{ return _is_local; }
 
+		/** Return the classad for this daemon. We may not have the
+			ad, if we found the daemon from the config file or the 
+			address file, or it doesn't have a classad. 
+			The caller must copy the classad it gets back!
+		  */
+	ClassAd *daemonAd() { return m_daemon_ad_ptr; }
+
+
 		/** Returns a descriptive string for error messages.  This has
 		  all the logic about printing out an appropriate string to
 		  describe the daemon, it's type, and it's location.  For
@@ -457,6 +465,7 @@ protected:
 	bool _tried_init_hostname;
 	bool _tried_init_version;
 	bool _is_configured; 
+	ClassAd *m_daemon_ad_ptr;
 	SecMan _sec_man;
 
 

@@ -1,0 +1,29 @@
+NAME = condor_quillpp
+
+all_target( $(NAME))
+
+
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(TT_INC)
+LDFLAGS = $(STD_LDFLAGS) $(LIBCRYPT)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(TT_LIB) ../condor_quill/libquill.a
+
+OBJ = tt_main.o ttmanager.o jobqueuecollection.o jobqueuedbmanager.o condor_ttdb.o
+
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),sbin,EXECUTABLE_MODE)
+strip_target($(NAME),sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+#pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+#purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+
+public_copy_target(common_createddl.sql,sql,common_createddl.sql,TEXT_MODE)
+public_copy_target(oracle_createddl.sql,sql,oracle_createddl.sql,TEXT_MODE)
+public_copy_target(pgsql_createddl.sql,sql,pgsql_createddl.sql,TEXT_MODE)
+public_copy_target(oracle_dropddl.sql,sql,oracle_dropddl.sql,TEXT_MODE)
+public_copy_target(pgsql_dropddl.sql,sql,pgsql_dropddl.sql,TEXT_MODE)
+#html:
+#release:: all
+#stripped:: all
+#static:: all
+#clean::

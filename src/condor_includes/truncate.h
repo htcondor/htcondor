@@ -24,9 +24,9 @@
 #ifndef __TRUNCATE_H
 #define __TRUNCATE_H
 
-#ifdef WIN32
-
 #include "condor_common.h"
+
+#ifdef WIN32
 
 /* gives us the truncate() and ftruncate() functions on Win32 */
 #if defined(__cplusplus)

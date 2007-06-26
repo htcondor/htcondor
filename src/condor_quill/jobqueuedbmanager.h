@@ -79,6 +79,7 @@ class JobQueueDBManager : public Service
 		// accessors
 		//
 	void	            setJobQueueFileName(const char* jqName);
+	JobQueueDatabase* 	getJobQueueDBObj() { return DBObj; }
 	const char*         getJobQueueDBConn() { return jobQueueDBConn; }
 	ClassAdLogParser*	getClassAdLogParser();
 	
@@ -236,11 +237,11 @@ class JobQueueDBManager : public Service
 		//
 		// members
 		//
-	Prober*	            prober;	//!< Prober
-	ClassAdLogParser*   caLogParser;//!< ClassAd Log Parser
-	JobQueueDatabase*   jqDatabase;	//!< Job Queue Database
-	
-	XactState	xactState;	//!< current XACT state
+	Prober*	            prober;			//!< Prober
+	ClassAdLogParser*   caLogParser;	//!< ClassAd Log Parser
+	JobQueueDatabase*   DBObj;		//!< Database object
+
+	XactState	xactState;		    //!< current XACT state
 
 		//together these constitute the dynamic attributes that are inserted
 		//into the quill ad sent to the collector

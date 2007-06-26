@@ -239,6 +239,7 @@ class Scheduler : public Service
 	void			shutdown_graceful();
 	void			schedd_exit();
 	void			invalidate_ads();
+	void			update_local_ad_file(); // warning, may be removed
 	
 	// negotiation
 	int				doNegotiate(int, Stream *);
@@ -643,6 +644,7 @@ private:
 	char *quill_db_name;
 	char *quill_db_ip_addr;
 	char *quill_db_query_password;
+	int prevLHF;
 #endif
 
 };

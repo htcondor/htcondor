@@ -1,0 +1,34 @@
+The Condor DBMSD is responsible for representing the databases that a Quill++ 
+instance uses. The DBMS advertises the databases to the Condor Collector. The
+DBMSD is also responsible for purging old data from the databases, per the
+adminsitrators policy.
+
+In the normal case, the DBMSD will be create two ClassAds: the DBMSD ad, for
+the DBMS daemon itself, and a Database ad, for the Database Qull++ daemons
+should store data into and the tools should use to retrieve data.
+
+The DBMSD ad will allow tools such as condor_on and condor_off to manage
+the daemon. Most things will never need to contact the DBMSD directly.
+
+The database ad will contain the contact information for the database,
+including what type of database it is, the necessary passwords to update it,
+etc. It may also someday include the location of a proxy that tools can use
+to contact it via a Condor/CEDAR connection, but not at first. 
+
+It is possible for a DBMSD to advertise more than one Database, though it is
+not common. The most likely reason to have more than one Database ad is 
+for duplicating a Quill setup, where each schedd is mirrored into one 
+database. 
+
+The DBMSD has a main object, the DBMSManager. Inside of the DBMSManager, 
+there is an array of ManagedDatabase objects, one for each Database the 
+DBMSManager is maintaining. The ManagedDatabase object in turn has a
+JobQueueDatabase object to talk to the database, as well as policy 
+information for that database. 
+
+The DBMSManager sets timers with DaemonCore to periodically walk 
+its list of ManagedDatabase objects. For each ManagedDatabase, it 
+sends an appopriate ClassAd to the Collector, and performs any
+mantainace that is required. 
+
+

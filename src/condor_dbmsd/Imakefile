@@ -1,0 +1,24 @@
+NAME = condor_dbmsd
+all_target( $(NAME) )
+
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(TT_INC)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(TT_LIB)
+
+soapobjs(dbmsd)
+
+OBJ = dbmsd_main.o DBMSManager.o ManagedDatabase.o \
+../condor_tt/condor_ttdb.o $(SOAP_OBJS)
+
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),sbin,EXECUTABLE_MODE)
+strip_target($(NAME),sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+
+html:
+release:: all
+stripped:: all
+static:: all
+clean::
+
+gen_soapfiles(dbmsd,condorDbmsd)

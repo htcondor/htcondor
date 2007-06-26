@@ -55,6 +55,9 @@
 #include "utc_time.h"
 #include "condor_crontab.h"
 
+#include "file_sql.h"
+extern FILESQL *FILEObj;
+
 extern char *Spool;
 extern char *Name;
 extern char* JobHistoryFileName;
@@ -72,8 +75,7 @@ extern "C" {
 	int	prio_compar(prio_rec*, prio_rec*);
 }
 
-
-
+extern	int		Parse(const char*, ExprTree*&);
 extern  void    cleanup_ckpt_files(int, int, const char*);
 extern	bool	service_this_universe(int, ClassAd *);
 static QmgmtPeer *Q_SOCK = NULL;
@@ -888,7 +890,6 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		}
 		next_cluster_num = stored_cluster_num;
 	}
-
 		// Some of the conversions done in ConvertOldJobAdAttrs need to be
 		// persisted to disk. Particularly, GlobusContactString/RemoteJobId.
 	CleanJobQueue();
@@ -3896,6 +3897,10 @@ static void AppendHistory(ClassAd* ad)
   ad_size = ad_string.Length();
 
   MaybeRotateHistory(ad_size);
+
+  if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
+	  dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
+  }
 
   // save job ad to the log
   FILE *LogFile = OpenHistoryFile();

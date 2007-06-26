@@ -36,11 +36,11 @@ enum    XactState {    NOT_IN_XACT,
                         COMMIT_XACT,
                         ABORT_XACT};
 
-enum QuillErrCode {	FAILURE,
-						FAILURE_QUERY_PROCADS_STR,
-						FAILURE_QUERY_PROCADS_NUM,
-						FAILURE_QUERY_CLUSTERADS_STR,
-						FAILURE_QUERY_CLUSTERADS_NUM,
+enum QuillErrCode {	    QUILL_FAILURE,
+						FAILURE_QUERY_PROCADS_HOR,
+						FAILURE_QUERY_PROCADS_VER,
+						FAILURE_QUERY_CLUSTERADS_HOR,
+						FAILURE_QUERY_CLUSTERADS_VER,
 						FAILURE_QUERY_HISTORYADS_HOR,
 						FAILURE_QUERY_HISTORYADS_VER,
 						JOB_QUEUE_EMPTY,
@@ -51,7 +51,7 @@ enum QuillErrCode {	FAILURE,
 						DONE_CLUSTERADS_CURSOR,
 						DONE_PROCADS_CURSOR,
 						DONE_PROCADS_CUR_CLUSTERAD,
-						SUCCESS};
+						QUILL_SUCCESS};
 
 
 enum ProbeResultType {  PROBE_ERROR, 
@@ -67,6 +67,24 @@ enum FileOpErrCode {    FILE_OPEN_ERROR,
                         FILE_READ_SUCCESS,
                         FILE_OP_SUCCESS};
 
+
+typedef enum
+	{
+		T_ORACLE, 
+		T_PGSQL, 
+		T_DB2, 
+		T_SQLSERVER,
+		T_MYSQL
+	} dbtype;
+
+enum QuillAttrDataType {
+	CONDOR_TT_TYPE_CLOB,
+	CONDOR_TT_TYPE_STRING,
+	CONDOR_TT_TYPE_NUMBER,
+	CONDOR_TT_TYPE_TIMESTAMP,
+	CONDOR_TT_TYPE_BOOL,
+	CONDOR_TT_TYPE_UNKNOWN
+};
 #endif
 
 

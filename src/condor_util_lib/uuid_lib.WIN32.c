@@ -48,3 +48,4 @@ const IID IID_IClassFactory = { 1, 0, 0, {0xc0, 0, 0, 0, 0, 0, 0, 0x46} };
 const IID IID_IDropTarget = { 290, 0, 0, {0xc0, 0, 0, 0, 0, 0, 0, 0x46} };
 const IID IID_IStream = { 12, 0, 0, {0xc0, 0, 0, 0, 0, 0, 0, 0x46} };
 const IID IID_IUnknown = { 0, 0, 0, {0xc0, 0, 0, 0, 0, 0, 0, 0x46} };
+

@@ -97,6 +97,7 @@ extern "C" void
 initializeUserLog ()
 {
 	char tmp[_POSIX_PATH_MAX], logfilename[_POSIX_PATH_MAX];
+	char gjid[_POSIX_PATH_MAX];
 	int use_xml;
 	if (JobAd->LookupString(ATTR_ULOG_FILE, tmp) == 1) {
 		if (tmp[0] == '/') {
@@ -104,8 +105,13 @@ initializeUserLog ()
 		} else {
 			sprintf(logfilename, "%s/%s", Proc->iwd, tmp);
 		}
+		if(JobAd->LookupString(ATTR_GLOBAL_JOB_ID, tmp) == 1) {
+            strcpy(gjid, tmp);
+        } else {
+            sprintf(gjid, "Unknown");
+        }
 		if (!ULog.initialize (Proc->owner, NULL, logfilename,
-							  Proc->id.cluster, Proc->id.proc, 0)) {
+							  Proc->id.cluster, Proc->id.proc, 0, gjid)) {
 			EXCEPT("Failed to initialize user log!\n");
 		}
 		if (JobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)

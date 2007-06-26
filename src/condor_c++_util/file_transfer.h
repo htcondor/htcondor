@@ -32,6 +32,7 @@
 #endif
 #include "condor_uid.h"
 #include "condor_ver_info.h"
+#include "condor_classad.h"
 
 class FileTransfer;	// forward declatation
 
@@ -292,6 +293,7 @@ class FileTransfer {
 
 	// Report information about completed transfer from child thread.
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
+	ClassAd *jobAd;
 };
 
 #endif

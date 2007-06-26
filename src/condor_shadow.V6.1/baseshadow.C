@@ -66,6 +66,7 @@ BaseShadow::BaseShadow() {
 	ASSERT( !myshadow_ptr );	// make cetain we're only instantiated once
 	myshadow_ptr = this;
 	exception_already_logged = false;
+	began_execution = FALSE;
 }
 
 BaseShadow::~BaseShadow() {
@@ -745,7 +746,7 @@ void BaseShadow::initUserLog()
 		} else {
 			sprintf(logfilename, "%s/%s", iwd, tmp);
 		}
-		uLog.initialize (owner, domain, logfilename, cluster, proc, 0);
+		uLog.initialize (owner, domain, logfilename, cluster, proc, 0, gjid);
 		if (jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
 			&& use_xml) {
 			uLog.setUseXML(true);
@@ -1041,6 +1042,11 @@ BaseShadow::log_except(const char *msg)
 		event.recvd_bytes = shadow->bytesSent();
 		event.sent_bytes = shadow->bytesReceived();
 		exception_already_logged = shadow->exception_already_logged;
+
+		if (shadow->began_execution) {
+			event.began_execution = TRUE;
+		}
+
 	} else {
 		event.recvd_bytes = 0.0;
 		event.sent_bytes = 0.0;

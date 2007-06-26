@@ -365,13 +365,13 @@ ClassAdLogParser::getNewClassAdBody(char*& key,
 									char*& targettype)
 {
 	if (curCALogEntry.op_type != CondorLogOp_NewClassAd) {
-		return FAILURE;
+		return QUILL_FAILURE;
 	}
 	key = strdup(curCALogEntry.key);
 	mytype = strdup(curCALogEntry.mytype);
 	targettype = strdup(curCALogEntry.targettype);
 	
-	return SUCCESS;
+	return QUILL_SUCCESS;
 }
 
 /*!
@@ -381,12 +381,12 @@ QuillErrCode
 ClassAdLogParser::getDestroyClassAdBody(char*& key)
 {
 	if (curCALogEntry.op_type != CondorLogOp_DestroyClassAd) {
-		return FAILURE;
+		return QUILL_FAILURE;
 	}
 
 	key = strdup(curCALogEntry.key);
 
-	return SUCCESS;
+	return QUILL_SUCCESS;
 }
 
 /*!
@@ -396,14 +396,14 @@ QuillErrCode
 ClassAdLogParser::getSetAttributeBody(char*& key, char*& name, char*& value)
 {
 	if (curCALogEntry.op_type != CondorLogOp_SetAttribute) {
-		return FAILURE;
+		return QUILL_FAILURE;
 	}
 
 	key = strdup(curCALogEntry.key);
 	name = strdup(curCALogEntry.name);
 	value = strdup(curCALogEntry.value);
 
-	return SUCCESS;
+	return QUILL_SUCCESS;
 }
 
 /*!
@@ -413,13 +413,13 @@ QuillErrCode
 ClassAdLogParser::getDeleteAttributeBody(char*& key, char*& name)
 {
 	if (curCALogEntry.op_type != CondorLogOp_DeleteAttribute) {
-		return FAILURE;
+		return QUILL_FAILURE;
 	}
 
 	key = strdup(curCALogEntry.key);
 	name = strdup(curCALogEntry.name);
 
-	return SUCCESS;
+	return QUILL_SUCCESS;
 }
 
 /*!
@@ -429,13 +429,13 @@ QuillErrCode
 ClassAdLogParser::getLogHistoricalSNBody(char*& seqnum, char*& timestamp)
 {
 	if (curCALogEntry.op_type != CondorLogOp_LogHistoricalSequenceNumber) {
-		return FAILURE;
+		return QUILL_FAILURE;
 	}
 
 	seqnum = strdup(curCALogEntry.key);
 	timestamp = strdup(curCALogEntry.value);
 
-	return SUCCESS;
+	return QUILL_SUCCESS;
 }
 
 int

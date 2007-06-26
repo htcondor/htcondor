@@ -26,7 +26,8 @@ C_PLUS_FLAGS =	\
 		$(STD_C_PLUS_FLAGS) \
 		New_classads_defines \
 		New_classads_includes \
-		$(QUILL_INC)
+		$(QUILL_INC) \
+		$(TT_INC) -I../condor_tt
 
 CFLAGS = $(STD_C_FLAGS) New_classads_includes
 LIB = $(STD_LIBS)
@@ -61,9 +62,21 @@ SETEGID_OBJ =
 #endif
 
 #if WANT_QUILL
-QUILL_OBJS = jobqueuesnapshot.o historysnapshot.o pgsqldatabase.o sqlquery.o
+#if HAVE_ORACLE
+ORACLE_OBJS = oracledatabase.o
+#else
+ORACLE_OBJS = 
+#endif
+
+QUILL_OBJS = jobqueuesnapshot.o historysnapshot.o pgsqldatabase.o sqlquery.o $(ORACLE_OBJS) dbms_utils.o
 #else
 QUILL_OBJS =
+#endif
+
+#if WANT_TT
+TT_OBJS = pgsqldatabase.o file_sql.o file_transfer_db.o 
+#else
+TT_OBJS =
 #endif
 
 /* Bring in the old classad library because the user log parsing code
@@ -99,6 +112,8 @@ CLASSAD_OBJ = \
 	functions we could not bring in from another place. */
 CONLIBAPI_OBJ = \
 	condor_event.o \
+	file_sql.o \
+	misc_utils.o \
 	user_log.o \
 	iso_dates.o \
 	file_lock.o \
@@ -166,7 +181,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	condor_arglist.o store_cred.o \
 	exponential_backoff.o \
 	my_popen.o condor_open.o transfer_request.o condor_ftp.o \
-	proc_family_interface.o proc_family_proxy.o proc_family_direct.o killfamily.o
+	proc_family_interface.o proc_family_proxy.o proc_family_direct.o killfamily.o $(TT_OBJS) file_xml.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))

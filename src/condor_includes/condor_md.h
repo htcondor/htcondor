@@ -66,6 +66,12 @@ class Condor_MD_MAC {
     //------------------------------------------
     
     void addMD(const unsigned char * buffer, unsigned long length);
+
+	// Add the contents of a file to the MD5 checksum. It handles opening
+	// the file, reading it in (in chunks of 1 meg), and adding it to the
+	// md5 object
+
+    void addMDFile(const char * path);
     //------------------------------------------
     // PURPOSE: If you want to compute the MAC/MD over
     //          multiple steps, use this method

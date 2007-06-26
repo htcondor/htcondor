@@ -192,6 +192,7 @@ public:
 	int				r_id;		// CPU id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
 	AvailStats		r_avail_stats; // computes resource availability stats
+	int             prevLHF;
 
 	int				type( void ) { return r_attr->type(); };
 

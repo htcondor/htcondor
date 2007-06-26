@@ -258,6 +258,7 @@ const char *ATTR_JOB_ACTION               = "JobAction";
 const char *ATTR_JOB_ARGUMENTS1			 = "Args";
 const char *ATTR_JOB_ARGUMENTS2			 = "Arguments";
 const char *ATTR_JOB_CMD					 = "Cmd";
+const char *ATTR_ORIG_JOB_CMD				= "OrigCmd"; 
 const char *ATTR_JOB_CMDEXT				 = "CmdExt";
 const char *ATTR_JOB_CORE_DUMPED			 = "JobCoreDumped";
 const char *ATTR_JOB_CORE_FILENAME		 = "JobCoreFileName";
@@ -281,6 +282,7 @@ const char *ATTR_JOB_INPUT				 = "In";
 const char *ATTR_JOB_IWD					 = "Iwd";
 const char *ATTR_JOB_JAVA_VM_ARGS1        = "JavaVMArgs";
 const char *ATTR_JOB_JAVA_VM_ARGS2        = "JavaVMArguments";
+const char *ATTR_ORIG_JOB_IWD				 = "OrigIwd";
 const char *ATTR_JOB_REMOTE_IWD			 = "RemoteIwd";
 const char *ATTR_JOB_RUNAS_OWNER			 = "RunAsOwner";
 const char *ATTR_JOB_LOCAL_CPU			 = "LocalCpu";
@@ -696,5 +698,5 @@ const char *MANAGED_EXTERNAL				 = "External";
 const char *MANAGED_SCHEDD				 = "Schedd";
 	// Schedd should manage as normal.  External process doesn't want back.
 const char *MANAGED_DONE				 = "ScheddDone";
-
 const char * COLLECTOR_REQUIREMENTS = "COLLECTOR_REQUIREMENTS";
+const char *ATTR_PREV_LAST_HEARD_FROM	= "PrevLastHeardFrom";

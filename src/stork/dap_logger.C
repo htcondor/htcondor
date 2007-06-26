@@ -621,7 +621,8 @@ user_log(			const classad::ClassAd *ad,
 				userLogFile.c_str(),
 				cluster_id,
 				proc_id,
-				-1)
+				-1,
+				NULL)
 		)
 	{
 		dprintf(D_ALWAYS,

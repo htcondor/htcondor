@@ -46,7 +46,8 @@ public:
 					     int *procarray, 
 					     int numprocs,
 				    	     char *owner, 
-					     bool isfullscan);
+					     bool isfullscan,
+						time_t scheddBirthdate);
 	//! iterate one by one
 	QuillErrCode iterateAllClassAds(ClassAd*& ad);
 	//! release snapshot
@@ -56,24 +57,26 @@ private:
 		// 
 		// helper functions
 		//
-	QuillErrCode getNextClusterAd(const char*&, ClassAd*&);
+	QuillErrCode getNextClusterAd(char*, ClassAd*&);
 	QuillErrCode getNextProcAd(ClassAd*&);
 
 	int job_num;
-	int cur_procads_str_index;
-	int	procads_str_num;
-	int cur_procads_num_index;
-	int	procads_num_num;
-	int cur_clusterads_str_index;
-	int	clusterads_str_num;
-	int cur_clusterads_num_index;
-	int	clusterads_num_num;
 
-	const char*	curClusterId;		//!< current Cluster Id
-	const char*	curProcId;			//!< current Proc Id
+	int cur_procads_hor_index;
+	int	procads_hor_num;
+	int cur_procads_ver_index;
+	int	procads_ver_num;
+	int cur_clusterads_hor_index;
+	int	clusterads_hor_num;
+	int cur_clusterads_ver_index;
+	int	clusterads_ver_num;
+
+	char curClusterId[20];		//!< current Cluster Id
+	char curProcId[20];			//!< current Proc Id
 
 	ClassAd				*curClusterAd;	//!< current Job Ad
-	JobQueueDatabase	*jqDB;			//!< Job Queue Databse object
+	JobQueueDatabase	*jqDB;			//!< Databse object
+	dbtype 				 dt;
 };
 
 #endif

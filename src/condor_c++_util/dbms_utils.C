@@ -1,0 +1,821 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
+#include <string.h>
+#include "condor_config.h"
+#include "dbms_utils.h"
+#include "condor_attributes.h"
+#include "MyString.h"
+
+#include "pgsqldatabase.h"
+#include "condor_ttdb.h"
+#include "jobqueuecollection.h"
+
+extern "C" {
+
+//! Gets the writer password required by the quill++
+//  daemon to access the database
+static char * getWritePassword(char *write_passwd_fname, 
+							   const char *host, const char *port, 
+							   const char *db,
+							   const char *dbuser) {
+	FILE *fp = NULL;
+	char *passwd = (char *) malloc(64 * sizeof(char));
+	int len;
+	char *prefix;
+	MyString *msbuf = 0;
+	const char *buf;
+	bool found = FALSE;
+
+		// prefix is for the prefix of the entry in the .pgpass
+		// it is in the format of the following:
+		// host:port:db:user:password
+	len = 10+strlen(host) + strlen(port) + strlen(db) + strlen(dbuser);
+
+	prefix = (char  *) malloc (len * sizeof(char));
+
+	snprintf(prefix, len, "%s:%s:%s:%s:", host, port, db, dbuser);
+
+	len = strlen(prefix);
+
+	fp = safe_fopen_wrapper(write_passwd_fname, "r");
+
+	if(fp == NULL) {
+		EXCEPT("Unable to open password file %s\n", write_passwd_fname);
+	}
+	
+		//dprintf(D_ALWAYS, "prefix: %s\n", prefix);
+
+	msbuf = new MyString();
+	while(msbuf->readLine(fp, true)) {
+		buf = msbuf->Value();
+
+			//dprintf(D_ALWAYS, "line: %s\n", buf);
+
+			// check if the entry matches the prefix
+		if (strncmp(buf, prefix, len) == 0) {
+				// extract the password
+			strncpy(passwd, &buf[len], 64);
+			delete msbuf;
+			found = TRUE;
+			
+				// remove the new line in the end
+			if (passwd[strlen(passwd)-1] == '\n') {
+				passwd[strlen(passwd)-1] = '\0';
+			}
+
+			break;
+		}
+
+		delete msbuf;
+		msbuf = new MyString();
+	}
+
+    fclose(fp);
+	if (!found) {
+		EXCEPT("Unable to find password from file %s\n", write_passwd_fname);
+	}
+
+	return passwd;
+}
+
+dbtype getConfigDBType() 
+{
+	char *tmp;
+	dbtype dt;
+
+	tmp = param("QUILL_DB_TYPE");
+	if (tmp) {
+		if (strcasecmp(tmp, "ORACLE") == 0) {
+			dt = T_ORACLE;
+		} else if (strcasecmp(tmp, "PGSQL") == 0) {
+			dt = T_PGSQL;
+		}
+		free (tmp);
+	} else {
+		dt = T_PGSQL; // assume PGSQL by default
+	}
+	
+	return dt;
+}
+
+char *getDBConnStr(
+const char* jobQueueDBIpAddress,
+const char* jobQueueDBName,
+const char* jobQueueDBUser,
+const char* spool
+)
+{
+	char *host = NULL, *port = NULL;
+	char *writePassword;
+	char *writePasswordFile;
+	int len, tmp1, tmp2, tmp3;
+	char *jobQueueDBConn;
+
+	ASSERT(jobQueueDBIpAddress);
+	ASSERT(jobQueueDBName);
+	ASSERT(jobQueueDBUser);
+	ASSERT(spool);
+
+		//parse the ip address and get host and port
+	len = strlen(jobQueueDBIpAddress);
+	host = (char *) malloc(len * sizeof(char));
+	port = (char *) malloc(len * sizeof(char));
+	
+		//split the <ipaddress:port> into its two parts accordingly
+	char *ptr_colon = strchr(jobQueueDBIpAddress, ':');
+	strncpy(host, jobQueueDBIpAddress, 
+			ptr_colon - jobQueueDBIpAddress);
+		// terminate the string properly
+	host[ptr_colon - jobQueueDBIpAddress] = '\0';
+	strncpy(port, ptr_colon+1, len);
+		// terminate the string properyly
+	port[strlen(ptr_colon+1)] = '\0';
+
+		// get the password from the .pgpass file
+	writePasswordFile = (char *) malloc(_POSIX_PATH_MAX * sizeof(char));
+	snprintf(writePasswordFile, _POSIX_PATH_MAX, "%s/.pgpass", spool);
+
+	writePassword = getWritePassword(writePasswordFile, 
+										   host?host:"", port?port:"", 
+										   jobQueueDBName?jobQueueDBName:"", 
+										   jobQueueDBUser);
+
+	free(writePasswordFile);
+
+	tmp1 = jobQueueDBName?strlen(jobQueueDBName):0;
+	tmp2 = strlen(writePassword);
+	
+		//tmp3 is the size of dbconn - its size is estimated to be
+		//(2 * len) for the host/port part, tmp1 + tmp2 for the
+		//password and dbname part and 1024 as a cautiously
+		//overestimated sized buffer
+	tmp3 = (2 * len) + tmp1 + tmp2 + 1024;
+
+	jobQueueDBConn = (char *) malloc(tmp3 * sizeof(char));
+
+	snprintf(jobQueueDBConn, tmp3, 
+			 "host=%s port=%s user=%s password=%s dbname=%s", 
+			 host?host:"", port?port:"", 
+			 jobQueueDBUser?jobQueueDBUser:"", 
+			 writePassword?writePassword:"", 
+			 jobQueueDBName?jobQueueDBName:"");
+
+	free(writePassword);
+	
+	if(host) {
+		free(host);
+		host = NULL;
+	}
+
+	if(port) {
+		free(port);
+		port = NULL;
+	}
+	
+	return jobQueueDBConn;
+}
+
+bool stripdoublequotes(char *attVal) {
+	int attValLen;
+
+	if (!attVal) {
+		return FALSE;
+	}
+
+	attValLen = strlen(attVal);
+
+		/* strip enclosing double quotes
+		*/
+	if (attVal[attValLen-1] == '"' && attVal[0] == '"') {
+		strncpy(attVal, &attVal[1], attValLen-2);
+		attVal[attValLen-2] = '\0';
+		return TRUE;	 
+	} else {
+		return FALSE;
+	}	
+}
+
+bool stripdoublequotes_MyString(MyString &value) {
+	int attValLen;
+
+	if (value.IsEmpty()) {
+		return FALSE;
+	}
+	
+	attValLen = value.Length();
+
+		/* strip enclosing double quotes
+		*/
+	if (value[attValLen-1] == '"' && value[0] == '"') {
+		value = value.Substr(1, attValLen-2);
+		return TRUE;
+	} else {
+		return FALSE;
+	}
+}
+
+/* The following attributes are treated as horizontal daemon attributes.
+   Notice that if you add more attributes to the following list, the horizontal
+   schema for Daemons_Horizontal needs to revised accordingly.
+*/
+bool isHorizontalDaemonAttr(
+char *attName, 
+QuillAttrDataType &attr_type) {
+	if (!(strcasecmp(attName, ATTR_NAME) &&
+		  strcasecmp(attName, ATTR_UPDATESTATS_HISTORY))) {
+		attr_type = CONDOR_TT_TYPE_STRING;
+		return TRUE;
+
+	} else if (!(strcasecmp(attName, "monitorselfcpuusage") &&
+				 strcasecmp(attName, "monitorselfimagesize") && 
+				 strcasecmp(attName, "monitorselfresidentsetsize") && 
+				 strcasecmp(attName, "monitorselfage") &&
+				 strcasecmp(attName, ATTR_UPDATE_SEQUENCE_NUMBER) && 
+				 strcasecmp(attName, ATTR_UPDATESTATS_TOTAL) &&
+				 strcasecmp(attName, ATTR_UPDATESTATS_SEQUENCED) && 
+				 strcasecmp(attName, ATTR_UPDATESTATS_LOST))) {
+		attr_type = CONDOR_TT_TYPE_NUMBER;
+		return TRUE;
+
+	} else if (!(strcasecmp(attName, "lastreportedtime") &&
+				 strcasecmp(attName, "MonitorSelfTime"))) {
+		attr_type = CONDOR_TT_TYPE_TIMESTAMP;
+		return TRUE;
+
+	}
+				 
+	attr_type = CONDOR_TT_TYPE_UNKNOWN;
+	return FALSE;
+}
+
+/* An attribute is treated as a static one if it is not one of the following
+   Notice that if you add more attributes to the following list, the horizontal
+   schema for Machines_Horizontal needs to revised accordingly.
+*/
+bool isHorizontalMachineAttr(
+char *attName, 
+QuillAttrDataType &attr_type) {
+	if (!(strcasecmp(attName, ATTR_NAME) &&
+		  strcasecmp(attName, ATTR_OPSYS) && 
+		  strcasecmp(attName, ATTR_ARCH) &&		  
+		  strcasecmp(attName, ATTR_STATE) && 
+		  strcasecmp(attName, ATTR_ACTIVITY) &&		 
+		  strcasecmp(attName, ATTR_GLOBAL_JOB_ID))) {
+		attr_type = CONDOR_TT_TYPE_STRING;
+		return TRUE;
+
+	} else if (!strcasecmp(attName, ATTR_CPU_IS_BUSY)) {
+		attr_type = CONDOR_TT_TYPE_BOOL;
+		return TRUE;
+
+	} else if (!(strcasecmp(attName, ATTR_KEYBOARD_IDLE) && 
+				 strcasecmp(attName, ATTR_CONSOLE_IDLE) &&
+				 strcasecmp(attName, ATTR_LOAD_AVG) && 
+				 strcasecmp(attName, "CondorLoadAvg") &&
+				 strcasecmp(attName, ATTR_TOTAL_LOAD_AVG) && 
+				 strcasecmp(attName, ATTR_VIRTUAL_MEMORY) &&
+				 strcasecmp(attName, ATTR_MEMORY ) &&
+				 strcasecmp(attName, ATTR_TOTAL_VIRTUAL_MEMORY) &&
+				 strcasecmp(attName, ATTR_CPU_BUSY_TIME) &&
+				 strcasecmp(attName, ATTR_CURRENT_RANK) &&
+				 strcasecmp(attName, ATTR_CLOCK_MIN) && 
+				 strcasecmp(attName, ATTR_CLOCK_DAY) &&
+				 strcasecmp(attName, ATTR_UPDATE_SEQUENCE_NUMBER) &&
+				 strcasecmp(attName, ATTR_UPDATESTATS_TOTAL) &&
+				 strcasecmp(attName, ATTR_UPDATESTATS_SEQUENCED) &&
+				 strcasecmp(attName, ATTR_UPDATESTATS_LOST))) {
+		attr_type = CONDOR_TT_TYPE_NUMBER;
+		return TRUE;
+	} else if (!(strcasecmp(attName, "LastReportedTime") &&
+				 strcasecmp(attName, ATTR_ENTERED_CURRENT_ACTIVITY) &&
+				 strcasecmp(attName, ATTR_ENTERED_CURRENT_STATE))) {
+		attr_type = CONDOR_TT_TYPE_TIMESTAMP;
+		return TRUE;
+	}
+
+	attr_type = CONDOR_TT_TYPE_UNKNOWN;
+	return FALSE;
+}
+
+bool isHorizontalProcAttribute(
+const char *attName, 
+QuillAttrDataType &attr_type) {
+	if (!(strcasecmp(attName, "args"))) {
+		attr_type = CONDOR_TT_TYPE_CLOB;
+		return TRUE;
+
+	} else if (!(strcasecmp(attName, "remotehost") && 
+				 strcasecmp(attName, "globaljobid"))) {
+		attr_type = CONDOR_TT_TYPE_STRING;
+		return TRUE;
+
+	} else if (!(strcasecmp(attName, "jobstatus") &&
+				 strcasecmp(attName, "imagesize") &&
+				 strcasecmp(attName, "remoteusercpu") &&
+				 strcasecmp(attName, "remotewallclocktime") &&
+				 strcasecmp(attName, "jobprio") &&
+				 strcasecmp(attName, "numrestarts"))) {
+		attr_type = CONDOR_TT_TYPE_NUMBER;
+		return TRUE;
+
+	} else if (!(strcasecmp(attName, "shadowbday") && 
+				 strcasecmp(attName, "enteredcurrentstatus"))) {
+		attr_type = CONDOR_TT_TYPE_TIMESTAMP;
+		return TRUE;
+	}
+
+	attr_type = CONDOR_TT_TYPE_UNKNOWN;
+	return FALSE;
+}
+
+bool isHorizontalClusterAttribute(
+const char *attName, 
+QuillAttrDataType &attr_type) {
+	if (!(strcasecmp(attName, "cmd") && 
+		  strcasecmp(attName, "args"))
+		) {
+		attr_type = CONDOR_TT_TYPE_CLOB;
+		return TRUE;
+
+	} else if (!strcasecmp(attName, "owner")) {
+		attr_type = CONDOR_TT_TYPE_STRING;
+		return TRUE;
+
+	} else if (!(strcasecmp(attName, "jobstatus") &&
+				 strcasecmp(attName, "jobprio") &&
+				 strcasecmp(attName, "imagesize") &&
+				 strcasecmp(attName, "remoteusercpu") &&
+				 strcasecmp(attName, "remotewallclocktime") &&
+				 strcasecmp(attName, "jobuniverse"))) {
+		attr_type = CONDOR_TT_TYPE_NUMBER;
+		return TRUE;
+
+	} else if (!strcasecmp(attName, "qdate")) {
+		attr_type = CONDOR_TT_TYPE_TIMESTAMP;
+		return TRUE;
+	}
+
+	attr_type = CONDOR_TT_TYPE_UNKNOWN;
+	return FALSE;
+}
+
+bool isHorizontalHistoryAttribute(
+const char *attName, 
+QuillAttrDataType &attr_type) {
+
+	if (!(strcasecmp(attName, "cmd") && 
+		  strcasecmp(attName, "env") &&
+		  strcasecmp(attName, "args"))
+		) {
+		attr_type = CONDOR_TT_TYPE_CLOB;
+		return TRUE;
+
+	} else if (!(strcasecmp(attName, "transferin") && 
+				 strcasecmp(attName, "transferout") &&
+				 strcasecmp(attName, "transfererr"))
+			   ) {
+		
+		attr_type = CONDOR_TT_TYPE_BOOL;
+		return TRUE;
+
+	} else if (!(strcasecmp(attName, "owner") &&
+				 strcasecmp(attName, "globaljobid") &&				 
+				 strcasecmp(attName, "condorversion") &&
+				 strcasecmp(attName, "condorplatform") &&
+				 strcasecmp(attName, "rootdir") &&
+				 strcasecmp(attName, "Iwd") &&
+				 strcasecmp(attName, "user") &&
+				 strcasecmp(attName, "userlog")	&&
+				 strcasecmp(attName, "killsig") &&
+				 strcasecmp(attName, "in") &&
+				 strcasecmp(attName, "out") &&
+				 strcasecmp(attName, "err") &&
+				 strcasecmp(attName, "shouldtransferfiles")  &&
+				 strcasecmp(attName, "transferfiles") &&
+				 strcasecmp(attName, "filesystemdomain") &&
+				 strcasecmp(attName, "lastremotehost") 
+				 )) {
+		attr_type = CONDOR_TT_TYPE_STRING;
+		return TRUE;
+
+	} else if (!(strcasecmp(attName, "numckpts") && 
+				 strcasecmp(attName, "numrestarts") &&
+				 strcasecmp(attName, "numsystemholds") &&
+				 strcasecmp(attName, "jobuniverse") &&
+				 strcasecmp(attName, "minhosts") &&
+				 strcasecmp(attName, "maxhosts") &&
+				 strcasecmp(attName, "jobprio") &&
+				 strcasecmp(attName, "coresize") &&
+				 strcasecmp(attName, "executablesize") &&
+				 strcasecmp(attName, "diskusage") &&
+				 strcasecmp(attName, "numjobmatches") &&
+				 strcasecmp(attName, "jobruncount") &&
+				 strcasecmp(attName, "filereadcount") &&
+				 strcasecmp(attName, "filereadbytes") &&
+				 strcasecmp(attName, "filewritecount") &&
+				 strcasecmp(attName, "filewritebytes") &&
+				 strcasecmp(attName, "fileseekcount") &&
+				 strcasecmp(attName, "totalsuspensions") &&
+				 strcasecmp(attName, "imagesize") &&
+				 strcasecmp(attName, "exitstatus") && 
+				 strcasecmp(attName, "localusercpu") &&
+				 strcasecmp(attName, "localsyscpu") &&
+				 strcasecmp(attName, "remoteusercpu") &&
+				 strcasecmp(attName, "remotesyscpu") &&
+				 strcasecmp(attName, "bytessent") &&
+				 strcasecmp(attName, "bytesrecvd") && 
+				 strcasecmp(attName, "rscbytessent") &&
+				 strcasecmp(attName, "rscbytesrecvd") &&
+				 strcasecmp(attName, "exitcode") && 
+				 strcasecmp(attName, "jobstatus") &&
+				 strcasecmp(attName, "remotewallclocktime")
+				 )) {
+		attr_type = CONDOR_TT_TYPE_NUMBER;
+		return TRUE;
+
+	} else if (!(strcasecmp(attName, "qdate") &&
+		  strcasecmp(attName, "lastmatchtime") &&		  
+		  strcasecmp(attName, "jobstartdate") &&	
+		  strcasecmp(attName, "jobcurrentstartdate") &&	
+		  strcasecmp(attName, "enteredcurrentstatus") && 
+		  strcasecmp(attName, "completiondate"))) {
+		attr_type = CONDOR_TT_TYPE_TIMESTAMP;
+		return TRUE;
+	}
+
+	attr_type = CONDOR_TT_TYPE_UNKNOWN;
+	return FALSE;
+}
+
+QuillErrCode insertHistoryJobCommon(AttrList *ad, JobQueueDatabase* DBObj, dbtype dt, MyString &errorSqlStmt, 
+									const char*scheddname, const time_t scheddbirthdate) {
+  int        cid, pid;
+  MyString sql_stmt;
+  MyString sql_stmt2;
+  ExprTree *expr;
+  ExprTree *L_expr;
+  ExprTree *R_expr;
+  MyString value = "";
+  MyString name = "";
+  MyString newvalue;
+  char *tmp = NULL;
+  int bndcnt1 = 0;
+  const char* data_arr1[7];
+  QuillAttrDataType data_typ1[7];
+
+  int bndcnt2 = 0;
+  const char* data_arr2[7];
+  QuillAttrDataType data_typ2[7];
+
+  QuillAttrDataType  attr_type;
+
+  MyString scheddbirthdate_str;
+  MyString ts_expr_val;
+
+  bool flag1=false, flag2=false,flag3=false, flag4=false;
+	  //const char *scheddname = jqDBManager.getScheddname();
+	  //const time_t scheddbirthdate = jqDBManager.getScheddbirthdate();
+
+  ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cid);
+  ad->EvalInteger (ATTR_PROC_ID, NULL, pid);
+
+  scheddbirthdate_str.sprintf("%lu", scheddbirthdate);
+
+  if (dt == T_ORACLE) {
+	  data_arr1[0] = scheddname;
+	  data_typ1[0] = CONDOR_TT_TYPE_STRING;
+
+	  data_arr1[1] = scheddbirthdate_str.Value();
+	  data_typ1[1] = CONDOR_TT_TYPE_STRING;
+
+	  data_arr1[2] = (char *)&cid;
+	  data_typ1[2] = CONDOR_TT_TYPE_NUMBER;
+
+	  data_arr1[3] = (char *)&pid;
+	  data_typ1[3] = CONDOR_TT_TYPE_NUMBER;
+	  
+	  bndcnt1 = 4;
+
+	  sql_stmt.sprintf(
+					   "DELETE FROM Jobs_Horizontal_History WHERE scheddname = :1 AND scheddbirthdate = :2 AND cluster_id = :3 AND proc_id = :4");
+
+	  if (DBObj->execCommandWithBind(sql_stmt.Value(),
+							 bndcnt1,
+							 data_arr1,
+							 data_typ1) == QUILL_FAILURE) {
+		  dprintf(D_ALWAYS, "Executing Statement --- Error\n");
+		  dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());
+		  errorSqlStmt = sql_stmt;
+		  return QUILL_FAILURE;	  
+	  }
+
+	  sql_stmt2.sprintf(
+						"INSERT INTO Jobs_Horizontal_History(scheddname, scheddbirthdate, cluster_id, proc_id, enteredhistorytable) VALUES(:1, :2, :3, :4, current_timestamp)");
+
+	  if (DBObj->execCommandWithBind(sql_stmt2.Value(),
+							 bndcnt1,
+							 data_arr1,
+							 data_typ1) == QUILL_FAILURE) {
+		  dprintf(D_ALWAYS, "Executing Statement --- Error\n");
+		  dprintf(D_ALWAYS, "sql = %s\n", sql_stmt2.Value());
+		  errorSqlStmt = sql_stmt2;
+		  return QUILL_FAILURE;	  
+	  }	  
+  } else {
+	  sql_stmt.sprintf(
+					   "DELETE FROM Jobs_Horizontal_History WHERE scheddname = '%s' AND scheddbirthdate = %lu AND cluster_id = %d AND proc_id = %d", scheddname, (unsigned long)scheddbirthdate, cid, pid);
+	  sql_stmt2.sprintf(
+						"INSERT INTO Jobs_Horizontal_History(scheddname, scheddbirthdate, cluster_id, proc_id, enteredhistorytable) VALUES('%s', %lu, %d, %d, current_timestamp)", scheddname, (unsigned long)scheddbirthdate, cid, pid);
+
+	  if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
+		  dprintf(D_ALWAYS, "Executing Statement --- Error\n");
+		  dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());
+		  errorSqlStmt = sql_stmt;
+		  return QUILL_FAILURE;	  
+	  }
+
+	  if (DBObj->execCommand(sql_stmt2.Value()) == QUILL_FAILURE) {
+		  dprintf(D_ALWAYS, "Executing Statement --- Error\n");
+		  dprintf(D_ALWAYS, "sql = %s\n", sql_stmt2.Value());
+		  errorSqlStmt = sql_stmt2;
+		  return QUILL_FAILURE;	  
+	  }
+  }
+
+  ad->ResetExpr(); // for iteration initialization
+  while((expr=ad->NextExpr()) != NULL) {
+	  L_expr = expr->LArg();
+	  L_expr->PrintToNewStr(&tmp);
+
+	  if (tmp == NULL) break;
+	  
+	  name = tmp;
+	  free(tmp);
+
+	  R_expr = expr->RArg();
+	  R_expr->PrintToNewStr(&tmp);
+	  
+	  if (tmp == NULL) {
+		  break;	  	  
+	  }
+
+	  value = tmp;
+	  free(tmp);
+
+		  /* the following are to avoid overwriting the attr values. The hack 
+			 is based on the fact that an attribute of a job ad comes before 
+			 the attribute of a cluster ad. And this is because 
+		     attribute list of cluster ad is chained to a job ad.
+		   */
+	  if(strcasecmp(name.Value(), "jobstatus") == 0) {
+		  if(flag4) continue;
+		  flag4 = true;
+	  }
+
+	  if(strcasecmp(name.Value(), "remotewallclocktime") == 0) {
+		  if(flag1) continue;
+		  flag1 = true;
+	  }
+	  else if(strcasecmp(name.Value(), "completiondate") == 0) {
+		  if(flag2) continue;
+		  flag2 = true;
+	  }
+	  else if(strcasecmp(name.Value(), "committedtime") == 0) {
+		  if(flag3) continue;
+		  flag3 = true;
+	  }
+
+		  // initialize variables for detecting and inserting long clob 
+		  // columns
+	  bndcnt1 = 0;
+	  bndcnt2 = 0;
+
+	  if(isHorizontalHistoryAttribute(name.Value(), attr_type)) {
+			  /* change the names for the following attributes
+				 because they conflict with keywords of some
+				 databases 
+			  */
+		  if (strcasecmp(name.Value(), "out") == 0) {
+			  name = "stdout";
+		  }
+
+		  if (strcasecmp(name.Value(), "err") == 0) {
+			  name = "stderr";
+		  }
+
+		  if (strcasecmp(name.Value(), "in") == 0) {
+			  name = "stdin";
+		  }		
+
+		  if (strcasecmp(name.Value(), "user") == 0) {
+			  name = "negotiation_user_name";
+		  }		  
+  
+		  sql_stmt2 = "";
+		  
+		  if(attr_type == CONDOR_TT_TYPE_TIMESTAMP) {
+			  time_t clock;
+			  MyString ts_expr;
+
+			  clock = atoi(value.Value());
+
+			  if (dt == T_ORACLE) {
+				  ts_expr_val = condor_ttdb_buildtsval(&clock, dt);
+				  
+				  data_arr1[0] = ts_expr_val.Value();
+				  data_typ1[0] = CONDOR_TT_TYPE_TIMESTAMP;
+
+				  data_arr1[1] = scheddname;
+				  data_typ1[1] = CONDOR_TT_TYPE_STRING;
+
+				  data_arr1[2] = scheddbirthdate_str.Value();
+				  data_typ1[2] = CONDOR_TT_TYPE_STRING;
+
+				  data_arr1[3] = (char *)&cid;
+				  data_typ1[3] = CONDOR_TT_TYPE_NUMBER;
+
+				  data_arr1[4] = (char *)&pid;
+				  data_typ1[4] = CONDOR_TT_TYPE_NUMBER;
+
+				  bndcnt1 = 5;
+
+				  sql_stmt.sprintf(
+								   "UPDATE Jobs_Horizontal_History SET %s = (:1) WHERE scheddname = :2 and scheddbirthdate = :3 and cluster_id = :4 and proc_id = :5", name.Value());
+			  } else {
+				  ts_expr = condor_ttdb_buildts(&clock, dt);	
+				  
+				  sql_stmt.sprintf(
+								   "UPDATE Jobs_Horizontal_History SET %s = (%s) WHERE scheddname = '%s' and scheddbirthdate = %lu and cluster_id = %d and proc_id = %d", name.Value(), ts_expr.Value(), scheddname, (unsigned long)scheddbirthdate, cid, pid);
+			  }
+		  }	else {
+				  /* strip double quotes for string values */
+			  if (attr_type == CONDOR_TT_TYPE_CLOB ||
+				  attr_type == CONDOR_TT_TYPE_STRING) {
+				  
+				  if (!stripdoublequotes_MyString(value)) {
+					  dprintf(D_ALWAYS, "ERROR: string constant not double quoted for attribute %s in TTManager::insertHistoryJob\n", name.Value());
+				  }
+			  }
+			  
+			  newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
+
+			  if (dt != T_ORACLE) {
+				  sql_stmt.sprintf( 
+								   "UPDATE Jobs_Horizontal_History SET %s = '%s' WHERE scheddname = '%s' and scheddbirthdate = %lu and cluster_id = %d and proc_id = %d", name.Value(), newvalue.Value(), scheddname, (unsigned long)scheddbirthdate, cid, pid);
+			  } else {
+				  data_arr1[0] = (char *)newvalue.Value();
+				  data_typ1[0] = CONDOR_TT_TYPE_STRING;
+
+				  data_arr1[1] = scheddname;
+				  data_typ1[1] = CONDOR_TT_TYPE_STRING;
+
+				  data_arr1[2] = scheddbirthdate_str.Value();
+				  data_typ1[2] = CONDOR_TT_TYPE_STRING;
+
+				  data_arr1[3] = (char *)&cid;
+				  data_typ1[3] = CONDOR_TT_TYPE_NUMBER;
+
+				  data_arr1[4] = (char *)&pid;
+				  data_typ1[4] = CONDOR_TT_TYPE_NUMBER;
+
+				  bndcnt1 = 5;
+				  
+				  sql_stmt.sprintf( 
+								   "UPDATE Jobs_Horizontal_History SET %s = :1 WHERE scheddname = :2 and scheddbirthdate = :3 and cluster_id = :4 and proc_id = :5", name.Value());
+			  }
+		  }
+	  } else {
+		  newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
+		  
+		  if (dt == T_ORACLE) {
+			  data_arr1[0] = scheddname;
+			  data_typ1[0] = CONDOR_TT_TYPE_STRING;
+
+			  data_arr1[1] = scheddbirthdate_str.Value();
+			  data_typ1[1] = CONDOR_TT_TYPE_STRING;
+
+			  data_arr1[2] = (char *)&cid;
+			  data_typ1[2] = CONDOR_TT_TYPE_NUMBER;
+
+			  data_arr1[3] = (char *)&pid;
+			  data_typ1[3] = CONDOR_TT_TYPE_NUMBER;
+
+			  data_arr1[4] = name.Value();
+			  data_typ1[4] = CONDOR_TT_TYPE_STRING;
+	  
+			  bndcnt1 = 5;
+			  
+			  sql_stmt.sprintf(
+							   "DELETE FROM Jobs_Vertical_History WHERE scheddname = :1 AND scheddbirthdate = :2 AND cluster_id = :3 AND proc_id = :4 AND attr = :5");
+		  } else {
+			  sql_stmt.sprintf(
+							   "DELETE FROM Jobs_Vertical_History WHERE scheddname = '%s' AND scheddbirthdate = %lu AND cluster_id = %d AND proc_id = %d AND attr = '%s'", scheddname, (unsigned long)scheddbirthdate, cid, pid, name.Value());
+		  }
+			
+		  if (dt != T_ORACLE) {
+			  sql_stmt2.sprintf( 
+								"INSERT INTO Jobs_Vertical_History(scheddname, scheddbirthdate, cluster_id, proc_id, attr, val) VALUES('%s', %lu, %d, %d, '%s', '%s')", scheddname, (unsigned long)scheddbirthdate, cid, pid, name.Value(), newvalue.Value());
+		  } else {
+			  data_arr2[0] = scheddname;
+			  data_typ2[0] = CONDOR_TT_TYPE_STRING;
+
+			  data_arr2[1] = scheddbirthdate_str.Value();
+			  data_typ2[1] = CONDOR_TT_TYPE_STRING;
+
+			  data_arr2[2] = (char *)&cid;
+			  data_typ2[2] = CONDOR_TT_TYPE_NUMBER;
+
+			  data_arr2[3] = (char *)&pid;
+			  data_typ2[3] = CONDOR_TT_TYPE_NUMBER;
+
+			  data_arr2[4] = name.Value();
+			  data_typ2[4] = CONDOR_TT_TYPE_STRING;
+	  
+			  data_arr2[5] = newvalue.Value();
+			  data_typ2[5] = CONDOR_TT_TYPE_STRING;
+
+			  bndcnt2 = 6;			  
+
+			  sql_stmt2.sprintf( 
+								"INSERT INTO Jobs_Vertical_History(scheddname, scheddbirthdate, cluster_id, proc_id, attr, val) VALUES(:1, :2, :3, :4, :5, :6)");
+		  }
+	  }
+
+	  if (bndcnt1 == 0) {
+		  if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
+			  dprintf(D_ALWAYS, "Executing Statement --- Error\n");
+			  dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());
+		  
+			  errorSqlStmt = sql_stmt;
+
+			  return QUILL_FAILURE;
+		  }
+	  } else {
+		  if (DBObj->execCommandWithBind(sql_stmt.Value(), 
+										 bndcnt1,
+										 data_arr1,
+										 data_typ1) == QUILL_FAILURE) {
+			  dprintf(D_ALWAYS, "Executing Statement --- Error\n");
+			  dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());
+		  
+			  errorSqlStmt = sql_stmt;
+
+			  return QUILL_FAILURE;
+		  }		  
+	  }
+
+	  if (!sql_stmt2.IsEmpty()) {
+		  
+		if (bndcnt2 == 0) {		  
+			if ((DBObj->execCommand(sql_stmt2.Value()) == QUILL_FAILURE)) {
+				dprintf(D_ALWAYS, "Executing Statement --- Error\n");
+				dprintf(D_ALWAYS, "sql = %s\n", sql_stmt2.Value());
+		  
+				errorSqlStmt = sql_stmt2;
+
+				return QUILL_FAILURE;			  
+			}
+		} else {
+			if ((DBObj->execCommandWithBind(sql_stmt2.Value(),
+											bndcnt2,
+											data_arr2,
+											data_typ2) == QUILL_FAILURE)) {
+				dprintf(D_ALWAYS, "Executing Statement --- Error\n");
+				dprintf(D_ALWAYS, "sql = %s\n", sql_stmt2.Value());
+		  
+				errorSqlStmt = sql_stmt2;
+
+				return QUILL_FAILURE;			  
+			}			
+		}
+	  }
+	  
+	  name = "";
+	  value = "";
+  }  
+
+  return QUILL_SUCCESS;
+} // insertHistoryJobCommon
+
+} // extern "C"

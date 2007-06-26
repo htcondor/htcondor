@@ -33,7 +33,7 @@
 
 #include "condor_attributes.h"
 
-#define return_on_fail(x) if (!(x)) return FAILURE;
+#define return_on_fail(x) if (!(x)) return QUILL_FAILURE;
 
 //! constructor
 /*! \param DBConn DB connection string
@@ -80,7 +80,7 @@ RequestService::service(ReliSock *syscall_sock) {
 			  InitializeConnection(NULL, NULL);
 			  
 			  end of the original code ---- */
-      return SUCCESS;
+      return QUILL_SUCCESS;
   }
   case CONDOR_CloseConnection: {
       int terrno;
@@ -99,7 +99,7 @@ RequestService::service(ReliSock *syscall_sock) {
       }
       return_on_fail( syscall_sock->end_of_message() );;
       
-      return FAILURE;
+      return QUILL_FAILURE;
   }
 	  
   case CONDOR_GetNextJobByConstraint: {
@@ -117,7 +117,7 @@ RequestService::service(ReliSock *syscall_sock) {
 			  free(constraint);
 			  constraint = NULL;
 		  }
-		  return FAILURE;
+		  return QUILL_FAILURE;
       }
       return_on_fail( syscall_sock->end_of_message() );
 	  
@@ -125,7 +125,7 @@ RequestService::service(ReliSock *syscall_sock) {
 	  
       ret_st = this->getNextJobByConstraint( constraint, initScan, ad);
 	  
-      if(ret_st == FAILURE) {
+      if(ret_st == QUILL_FAILURE) {
 			  /* If the DB is down, but condor_quill is up, then set ETIMEDOUT
 				 so that condor_q can failover to the schedd
 			  */
@@ -149,12 +149,12 @@ RequestService::service(ReliSock *syscall_sock) {
       free( (char *)constraint );
       return_on_fail( syscall_sock->end_of_message() );;
       
-      return SUCCESS;
+      return QUILL_SUCCESS;
   } 
 	  
   }
   
-  return FAILURE;
+  return QUILL_FAILURE;
 }
 
 /* parseConstraint takes a constraint string and gets the interesting
@@ -291,7 +291,7 @@ RequestService::getNextJobByConstraint(const char* constraint,
 	      free(procarray);
 	      procarray = NULL;
 	   }
-	   if (ret_st != SUCCESS) {
+	   if (ret_st != QUILL_SUCCESS) {
 	      return ret_st;
 	   }
 
@@ -306,7 +306,7 @@ RequestService::getNextJobByConstraint(const char* constraint,
 		freeJobAd(ad);
 	}
 
-	return SUCCESS;
+	return QUILL_SUCCESS;
 }
 
 
@@ -326,5 +326,5 @@ RequestService::freeJobAd(ClassAd*& ad)
 QuillErrCode
 RequestService::closeConnection()
 {
-    return SUCCESS;
+    return QUILL_SUCCESS;
 }

@@ -22,4 +22,5 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 //gsoap condor service name: condorQuill
 
+#include "condor_common.h"
 #import "gsoap_daemon_core.h"

@@ -27,6 +27,9 @@
 #define __CONDOR_ADTYPES__
 
 #define QUILL_ADTYPE		"Database"
+#define DATABASE_ADTYPE		"Database"
+#define DBMSD_ADTYPE		"DbmsDaemon"
+#define TT_ADTYPE		"TTProcess"
 #define STARTD_ADTYPE		"Machine"
 #define SCHEDD_ADTYPE		"Scheduler"
 #define MASTER_ADTYPE		"DaemonMaster"

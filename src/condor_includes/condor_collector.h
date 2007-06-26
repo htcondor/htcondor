@@ -43,7 +43,10 @@ enum AdTypes
 	NEGOTIATOR_AD,
 	HAD_AD,
 	GENERIC_AD,
-	CREDD_AD
+	CREDD_AD,
+	DATABASE_AD,
+	DBMSD_AD,
+	TT_AD
 };
 
 #include "condor_commands.h"   // collector commands
