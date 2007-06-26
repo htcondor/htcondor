@@ -477,7 +477,7 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-help")) {
 			usage ();
-			exit (1);
+			exit (0);
 		} else
 		if (matchPrefix (argv[i],"-long") || matchPrefix (argv[i],"-verbose")) {
 			setPPstyle (PP_VERBOSE, i, argv[i]);
