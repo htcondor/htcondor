@@ -334,7 +334,7 @@ sub parseOptions
            'externals=s'   => \$opt_externals,
            'without-tests' => \$opt_without_tests,
 # test-specific options
-           'buildid=s'     => \$opt_buildid,
+           'buildid=i'     => \$opt_buildid,
            'test-src=s'    => \$opt_test_src,
            'test-timeout=i' => \$opt_test_timeout,
            'test-args=s'   => \$opt_test_args,
