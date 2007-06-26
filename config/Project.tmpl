@@ -443,10 +443,26 @@ COREDUMPER_LINK_LIB =
 PCRE_FLAGS = -I$(PCRE_INC)
 PCRE_LIB = $(PCRE_DIR)/lib/libpcre.a
 
+#if WANT_TT
+/*
+TT_LIB = $(POSTGRESQL_LIB)/libpq.a $(ORACLE_HOME)/lib/libocci10.a $(ORACLE_HOME)/lib/libclntst10.a $(ORACLE_HOME)/lib/libnnz10.a -lirc -lpthread
+*/
+
+POSTGRESQL_LIBS = $(POSTGRESQL_LIB)/libpq.a 
+
+TT_LIB = $(POSTGRESQL_LIBS) $(ORACLE_LIB)
+TT_INC = -I$(POSTGRESQL_INC) $(ORACLE_INC)
+TT_FLAGS = -DWANT_TT  
+#else
+TT_LIB =
+TT_INC =
+TT_FLAGS =
+#endif
+
 #if WANT_QUILL
-QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a
-QUILL_INC = -I$(POSTGRESQL_INC)
-QUILL_FLAGS = -DWANT_QUILL
+QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a 
+QUILL_INC = -I$(POSTGRESQL_INC) 
+QUILL_FLAGS = -DWANT_QUILL 
 #else
 QUILL_LIB =
 QUILL_INC =
@@ -472,7 +488,7 @@ VENDOR_C_FLAGS = CFlags -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 $(CONFIGURE_DEFS) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) $(CONDOR_G_FLAGS) \
 		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) $(SNPRINTF_FLAGS) \
-		 $(QUILL_FLAGS) $(GCB_FLAGS)
+		 $(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS)
 
 
 /* This flag is a bad idea since when this stuff eventually goes truly obselete
