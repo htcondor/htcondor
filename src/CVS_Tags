@@ -1,3 +1,7 @@
+06/26/07  V6_9-{pre,pos}t_merge_quillpp
+	pre and post tags on the trunk for the quill merge 
+	from V6_9-quillpp-8-branch
+
 06/21/07 V6_9-dag-node-priority-{root,branch}
   A branch for implementing DAG node priorities.  Branched from 
   BUILD-V6_9-trunk-2007-6-21      
