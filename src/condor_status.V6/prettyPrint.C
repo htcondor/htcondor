@@ -31,6 +31,7 @@ extern ppOption				ppStyle;
 extern AttrListPrintMask 	pm;
 extern int					wantOnlyTotals;
 extern bool javaMode;
+extern bool vmMode;
 
 extern char *format_time( int );
 
@@ -175,13 +176,25 @@ printStartdNormal (ClassAd *ad)
 	int    now;
 	int	   actvty;
 
-	char *opsys_attr, *arch_attr;
-	char *opsys_name, *arch_name;
+	char *opsys_attr, *arch_attr, *mem_attr;
+	char *opsys_name, *arch_name, *mem_name;
+
+	mem_name = "Mem";
+	mem_attr = (char*) ATTR_MEMORY;
 
 	if(javaMode) {
 		opsys_name = opsys_attr = (char*) ATTR_JAVA_VENDOR;
 		arch_name = "Ver";
 		arch_attr = (char*) ATTR_JAVA_VERSION;	
+	} else if(vmMode) {
+		// For vm universe, we will print ATTR_VM_MEMORY 
+		// instead of ATTR_MEMORY
+		opsys_name = "VMType";
+		opsys_attr = (char*) ATTR_VM_TYPE;
+		arch_name = "Ver";
+		arch_attr = (char*) ATTR_VM_VERSION;	
+		mem_name = "VMMem";
+		mem_attr = (char*) ATTR_VM_MEMORY;
 	} else {
 		opsys_name = opsys_attr = (char*) ATTR_OPSYS;
 		arch_name = arch_attr = (char*) ATTR_ARCH;
@@ -192,18 +205,32 @@ printStartdNormal (ClassAd *ad)
 		// print header if necessary
 		if (first)
 		{
-			printf ("\n%-18.18s %-10.10s %-6.6s %-9.9s %-8.8s %-6.6s "
+			if( vmMode ) {
+				printf ("\n%-18.18s %-6.6s %-10.10s %-9.9s %-8.8s %-6.6s "
+						"%-4.4s %-12.12s  %s\n\n", 
+						ATTR_NAME, opsys_name, arch_name, ATTR_STATE, ATTR_ACTIVITY, 
+						ATTR_LOAD_AVG, mem_name, "ActvtyTime", "VMNetworking");
+			}else {
+				printf ("\n%-18.18s %-10.10s %-6.6s %-9.9s %-8.8s %-6.6s "
 						"%-4.4s  %s\n\n", 
-					ATTR_NAME, opsys_name, arch_name, ATTR_STATE, ATTR_ACTIVITY, 
-					ATTR_LOAD_AVG, "Mem", "ActvtyTime");
+						ATTR_NAME, opsys_name, arch_name, ATTR_STATE, ATTR_ACTIVITY, 
+						ATTR_LOAD_AVG, mem_name, "ActvtyTime");
+			}
 		
 			alpm.registerFormat("%-18.18s ", ATTR_NAME, "[???????????] ");
-			alpm.registerFormat("%-10.10s " , opsys_attr, "[?????????] ");
-			alpm.registerFormat("%-6.6s " , arch_attr, "[????] ");
+
+			if( vmMode ) {
+				alpm.registerFormat("%-6.6s " , opsys_attr, "[????] ");
+				alpm.registerFormat("%-10.10s " , arch_attr, "[????????] ");
+			}else {
+				alpm.registerFormat("%-10.10s " , opsys_attr, "[?????????] ");
+				alpm.registerFormat("%-6.6s " , arch_attr, "[????] ");
+			}
+
 			alpm.registerFormat("%-9.9s ",  ATTR_STATE), "[????????] ";
 			alpm.registerFormat("%-8.8s ",  ATTR_ACTIVITY, "[????????] ");
 			alpm.registerFormat("%.3f  ",  ATTR_LOAD_AVG, "[???]  ");
-			alpm.registerFormat("%4d",  ATTR_MEMORY, "[??]  ");
+			alpm.registerFormat("%4d",  mem_attr, "[??]  ");
 
 			first = false;
 		}
@@ -213,10 +240,25 @@ printStartdNormal (ClassAd *ad)
 			&& (ad->LookupInteger(ATTR_MY_CURRENT_TIME, now) ||
 				ad->LookupInteger(ATTR_LAST_HEARD_FROM, now))) {
 			actvty = now - actvty;
-			printf("%s\n", format_time(actvty));
+			printf("%s", format_time(actvty));
 		} else {
-			printf(" [Unknown]\n");
+			printf("   [Unknown]");
 		}
+
+		if( vmMode ) {
+			bool vm_networking = false;
+			MyString networking_types;
+
+			ad->LookupBool(ATTR_VM_NETWORKING, vm_networking);
+			if( vm_networking && ( ad->LookupString( ATTR_VM_NETWORKING_TYPES, 
+							networking_types) == 1 )) {
+				printf( " %s", networking_types.Value());
+			}else {
+				printf(" [Not-Supported]");
+			}
+		}
+
+		printf("\n");
 	}
 }
 
@@ -308,6 +350,11 @@ printRun (ClassAd *ad)
 		opsys_name = opsys_attr = (char*) ATTR_JAVA_VENDOR;
 		arch_name = "Ver";
 		arch_attr = (char*) ATTR_JAVA_VERSION;	
+	} else if(vmMode) {
+		opsys_name = "VMType";
+		opsys_attr = (char*) ATTR_VM_TYPE;
+		arch_name = "Ver";
+		arch_attr = (char*) ATTR_VM_VERSION;	
 	} else {
 		opsys_name = opsys_attr = (char*) ATTR_OPSYS;
 		arch_name = arch_attr = (char*) ATTR_ARCH;
@@ -318,13 +365,27 @@ printRun (ClassAd *ad)
 		// print header if necessary
 		if (first)
 		{
-			printf ("\n%-13.13s %-11.11s %-6.6s %-6.6s %-20.20s %-15.15s\n\n",
-				ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG, 
-				ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
+			if(vmMode) {
+				printf ("\n%-13.13s %-11.11s %-6.6s %-6.6s %-20.20s %-15.15s\n\n",
+						ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG, 
+						ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
+			}else {
+				printf ("\n%-13.13s %-6.6s %-11.11s %-6.6s %-20.20s %-15.15s\n\n",
+						ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG, 
+						ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
+			}
 		
 			alpm.registerFormat("%-13.13s ", ATTR_NAME, "[???????????] ");
-			alpm.registerFormat("%-11.11s " , opsys_attr, "[?????????] ");
-			alpm.registerFormat("%-6.6s " , arch_attr, "[????] ");
+
+
+			if(vmMode) {
+				alpm.registerFormat("%-6.6s " , opsys_attr, "[????] ");
+				alpm.registerFormat("%-11.11s " , arch_attr, "[?????????] ");
+			}else {
+				alpm.registerFormat("%-11.11s " , opsys_attr, "[?????????] ");
+				alpm.registerFormat("%-6.6s " , arch_attr, "[????] ");
+			}
+
 			alpm.registerFormat("%-.3f  ",  ATTR_LOAD_AVG, "[???]  ");
 			alpm.registerFormat("%-20.20s ", ATTR_REMOTE_USER, 
 													"[??????????????????] ");

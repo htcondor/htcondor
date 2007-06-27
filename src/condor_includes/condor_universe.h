@@ -46,7 +46,8 @@ with the strings in condor_universe.c
 #define CONDOR_UNIVERSE_JAVA      10 /* Jobs for the Java Virtual Machine */
 #define CONDOR_UNIVERSE_PARALLEL  11 /* Generalized parallel jobs */
 #define CONDOR_UNIVERSE_LOCAL     12 /* Job run locally by the schedd */
-#define CONDOR_UNIVERSE_MAX       13 /* A placeholder, not a universe. */
+#define CONDOR_UNIVERSE_VM        13 /* Job run under virtual machine (xen,vmware) */
+#define CONDOR_UNIVERSE_MAX       14 /* A placeholder, not a universe. */
 
 /* To get the name of a universe, call this function */
 const char *CondorUniverseName( int universe );

@@ -184,6 +184,13 @@ public:
 		*/
 	void addToOutputFiles( const char* filename );
 
+		/** Send modified files in a job working direcotry 
+		    to shadow by using file transfer
+		*/
+	bool uploadWorkingFiles(void);
+	
+		/* Update Job ClassAd with checkpoint info and log it */
+	void updateCkptInfo(void);
 
 private:
 

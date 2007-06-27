@@ -201,6 +201,7 @@ typedef enum {
 	NO_SHADOW_RECONNECT,
 	NO_SHADOW_MPI,
 	NO_SHADOW_PRE_6_8_5_STD,
+	NO_SHADOW_VM,
 } NoShadowFailure_t;
 
 // These are the args to contactStartd that get stored in the queue.

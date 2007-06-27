@@ -588,6 +588,9 @@ bool
 MyString::chomp( void )
 {
 	bool chomped = false;
+	if( Len == 0 ) {
+		return chomped;
+	}
 	if( Data[Len-1] == '\n' ) {
 		Data[Len-1] = '\0';
 		Len--;
@@ -606,6 +609,9 @@ MyString::chomp( void )
 void
 MyString::trim( void )
 {
+	if( Len == 0 ) {
+		return;
+	}
 	int		begin = 0;
 	while ( isspace(Data[begin]) ) { ++begin; }
 

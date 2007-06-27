@@ -52,6 +52,8 @@ typedef enum {
 	RR_STARTUP,
 		/// Trying to reconnect to the starter
 	RR_RECONNECT,
+		/// job is checkpointed
+	RR_CHECKPOINTED,
 		/// The threshold must be last!
 	_RR_STATE_THRESHOLD
 } ResourceState;
@@ -300,6 +302,14 @@ class RemoteResource : public Service {
 		*/
 	virtual bool recordResumeEvent( ClassAd* update_ad );
 
+		/** Record the fact that our starter checkpointed the job.  This
+			includes updating our in-memory job ad, logging an event
+			to the UserLog, etc.
+			@param update_ad ClassAd with update info from the starter
+			@return true on success, false on failure
+		*/
+	virtual bool recordCheckpointEvent( ClassAd* update_ad );
+
 		/** Write the given event to the UserLog.  This is virtual so
 			each kind of RemoteResource can define its own version.
 			@param event Pointer to ULogEvent to write
@@ -419,6 +429,12 @@ private:
 			@param debug_level What dprintf level to use
 		*/
 	void printSuspendStats( int debug_level );
+		/** For debugging, print out the values of various statistics
+			related to our bookkeeping of checkpointing activity for
+			the job.
+			@param debug_level What dprintf level to use
+		*/
+	void printCheckpointStats( int debug_level );
 
 		// Making these private PREVENTS copying.
 	RemoteResource( const RemoteResource& );

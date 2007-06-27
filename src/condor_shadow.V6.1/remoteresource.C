@@ -53,6 +53,7 @@ static char *Resource_State_String [] = {
 	"SUSPENDED",
 	"STARTUP",
 	"RECONNECT",
+	"CHECKPOINTED",
 };
 
 
@@ -940,6 +941,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			new_state = RR_SUSPENDED;
 		} else if ( stricmp(job_state, "Running") == MATCH ) {
 			new_state = RR_EXECUTING;
+		} else if ( stricmp(job_state, "Checkpointed") == MATCH ) {
+			new_state = RR_CHECKPOINTED;
 		} else { 
 				// For our purposes in here, we don't care about any
 				// other possible states at the moment.  If the job
@@ -963,6 +966,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				break;
 			case RR_EXECUTING:
 				recordResumeEvent( update_ad );
+				break;
+			case RR_CHECKPOINTED:
+				recordCheckpointEvent( update_ad );
 				break;
 			default:
 				EXCEPT( "Trying to log state change for invalid state %s",
@@ -1059,7 +1065,10 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 						  cumulative_suspension_time );
 	jobAd->LookupInteger( ATTR_LAST_SUSPENSION_TIME,
 						  last_suspension_time );
-	cumulative_suspension_time += now - last_suspension_time;
+	if( last_suspension_time > 0 ) {
+		// There was a real job suspension.
+		cumulative_suspension_time += now - last_suspension_time;
+	}
 
 	sprintf( tmp, "%s = %d", ATTR_CUMULATIVE_SUSPENSION_TIME,
 			 cumulative_suspension_time );
@@ -1082,6 +1091,89 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 		free(rt);
 		rt = NULL;
 	}
+
+	return rval;
+}
+
+
+bool
+RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
+{
+	bool rval = true;
+	MyString string_value;
+	int int_value = 0;
+	static float last_recv_bytes = 0.0;
+
+		// First, log this to the UserLog
+	CheckpointedEvent event;
+
+	event.run_remote_rusage = getRUsage();
+
+	float recv_bytes = bytesReceived();
+
+	// Received Bytes for checkpoint
+	event.sent_bytes = recv_bytes - last_recv_bytes;
+	last_recv_bytes = recv_bytes;
+
+	if( !writeULogEvent(&event) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_CHECKPOINTED event\n" );
+		rval = false;
+	}
+
+	// Now, update our in-memory copy of the job ClassAd
+	int now = (int)time(NULL);
+
+	// Increase the total count of checkpoint
+	// by default, we round ATTR_NUM_CKPTS, so fetch the raw value
+	// here (if available) for us to increment later.
+	int ckpt_count = 0;
+	if( !jobAd->LookupInteger(ATTR_NUM_CKPTS_RAW, ckpt_count) || !ckpt_count ) {
+		jobAd->LookupInteger(ATTR_NUM_CKPTS, ckpt_count );
+	}
+	ckpt_count++;
+	jobAd->Assign(ATTR_NUM_CKPTS, ckpt_count);
+
+	int last_ckpt_time = 0;
+	jobAd->LookupInteger(ATTR_LAST_CKPT_TIME, last_ckpt_time);
+
+	int current_start_time = 0;
+	jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, current_start_time);
+
+	int_value = (last_ckpt_time > current_start_time) ? 
+						last_ckpt_time : current_start_time;
+
+	// Update Job committed time
+	if( int_value > 0 ) {
+		int job_committed_time = 0;
+		jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, job_committed_time);
+		job_committed_time += now - int_value;
+		jobAd->Assign(ATTR_JOB_COMMITTED_TIME, job_committed_time);
+	}
+
+	// Update timestamp of the last checkpoint
+	jobAd->Assign(ATTR_LAST_CKPT_TIME, now);
+
+	// Update CkptArch and CkptOpSys
+	if( starterArch ) {
+		jobAd->Assign(ATTR_CKPT_ARCH, starterArch);
+	}
+	if( starterOpsys ) {
+		jobAd->Assign(ATTR_CKPT_OPSYS, starterOpsys);
+	}
+
+	// Update Ckpt MAC and IP address of VM
+	if( update_ad->LookupString(ATTR_VM_CKPT_MAC,string_value) ) {
+		jobAd->Assign(ATTR_VM_CKPT_MAC, string_value.Value());
+	}
+	if( update_ad->LookupString(ATTR_VM_CKPT_IP,string_value) ) {
+		jobAd->Assign(ATTR_VM_CKPT_IP, string_value.Value());
+	}
+
+		// Log stuff so we can check our sanity
+	printCheckpointStats( D_FULLDEBUG );
+
+	// We update the schedd right now
+	shadow->updateJobInQueue(U_CHECKPOINT);
 
 	return rval;
 }
@@ -1119,6 +1211,49 @@ RemoteResource::printSuspendStats( int debug_level )
 	dprintf( debug_level, "%s = %d\n",
 			 ATTR_CUMULATIVE_SUSPENSION_TIME,
 			 cumulative_suspension_time );
+}
+
+
+void
+RemoteResource::printCheckpointStats( int debug_level )
+{
+	int int_value = 0;
+	MyString string_attr;
+
+	dprintf( debug_level, "Statistics about job checkpointing:\n" );
+
+	// total count of the number of checkpoint
+	int_value = 0;
+	jobAd->LookupInteger( ATTR_NUM_CKPTS, int_value );
+	dprintf( debug_level, "%s = %d\n", ATTR_NUM_CKPTS, int_value );
+
+	// Total Job committed time
+	int_value = 0;
+	jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, int_value);
+	dprintf( debug_level, "%s = %d\n", ATTR_JOB_COMMITTED_TIME, int_value);
+
+	// timestamp of the last checkpoint
+	int_value = 0;
+	jobAd->LookupInteger( ATTR_LAST_CKPT_TIME, int_value);
+	dprintf( debug_level, "%s = %d\n", ATTR_LAST_CKPT_TIME, int_value);
+
+	// CkptArch and CkptOpSys
+	string_attr = "";
+	jobAd->LookupString(ATTR_CKPT_ARCH, string_attr);
+	dprintf( debug_level, "%s = %s\n", ATTR_CKPT_ARCH, string_attr.Value());
+
+	string_attr = "";
+	jobAd->LookupString(ATTR_CKPT_OPSYS, string_attr);
+	dprintf( debug_level, "%s = %s\n", ATTR_CKPT_OPSYS, string_attr.Value());
+
+	// MAC and IP address of VM
+	string_attr = "";
+	jobAd->LookupString(ATTR_VM_CKPT_MAC, string_attr);
+	dprintf( debug_level, "%s = %s\n", ATTR_VM_CKPT_MAC, string_attr.Value());
+
+	string_attr = "";
+	jobAd->LookupString(ATTR_VM_CKPT_IP, string_attr);
+	dprintf( debug_level, "%s = %s\n", ATTR_VM_CKPT_IP, string_attr.Value());
 }
 
 

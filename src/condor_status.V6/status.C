@@ -57,6 +57,7 @@ StringList	*sortConstraints = NULL;
 ExtArray<ExprTree*> sortLessThanExprs( 4 );
 ExtArray<ExprTree*> sortEqualExprs( 4 );
 bool            javaMode = false;
+bool			vmMode = false;
 
 // instantiate templates
 template class ExtArray<ExprTree*>;
@@ -203,6 +204,14 @@ main (int argc, char *argv[])
 
 	if(javaMode) {
 		sprintf( buffer, "TARGET.%s == TRUE", ATTR_HAS_JAVA );
+		if (diagnose) {
+			printf ("Adding constraint [%s]\n", buffer);
+		}
+		query->addANDConstraint (buffer);
+	}
+
+	if(vmMode) {
+		sprintf( buffer, "TARGET.%s == TRUE", ATTR_HAS_VM);
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
@@ -355,6 +364,7 @@ usage ()
 		"\t-debug\t\t\tDisplay debugging info to console\n"
 		"\t-direct <host>\t\tGet attributes directly from the given daemon\n"
 		"\t-java\t\t\tDisplay Java-capable hosts\n"
+		"\t-vm\t\t\tDisplay VM-capable hosts\n"
 		"\t-license\t\tDisplay attributes of licenses\n"
 		"\t-master\t\t\tDisplay daemon master attributes\n"
 		"\t-pool <name>\t\tGet information from collector <name>\n"
@@ -493,6 +503,9 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-java") || matchPrefix(argv[i], "-java")) {
 			javaMode = true;
+		} else
+		if (matchPrefix (argv[i], "-vm")) {
+			vmMode = true;
 		} else
 		if (matchPrefix (argv[i], "-server")) {
 			setPPstyle (PP_STARTD_SERVER, i, argv[i]);

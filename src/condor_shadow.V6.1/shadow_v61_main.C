@@ -217,6 +217,7 @@ initShadow( ClassAd* ad )
 		break;
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_JAVA:
+	case CONDOR_UNIVERSE_VM:
 		Shadow = new UniShadow();
 		break;
 	case CONDOR_UNIVERSE_MPI:
@@ -327,6 +328,7 @@ printClassAd( void )
 	printf( "%s = True\n", ATTR_HAS_JAVA );
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
 	printf( "%s = True\n", ATTR_HAS_JOB_AD_FROM_FILE );
+	printf( "%s = True\n", ATTR_HAS_VM );
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 }
 

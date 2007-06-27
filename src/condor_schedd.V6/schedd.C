@@ -94,6 +94,7 @@ extern GridUniverseLogic* _gridlogic;
 
 #include "condor_qmgr.h"
 #include "qmgmt.h"
+#include "condor_vm_universe_types.h"
 
 extern "C"
 {
@@ -1984,6 +1985,7 @@ jobIsSandboxed( ClassAd * ad )
 	case CONDOR_UNIVERSE_JAVA:
 	case CONDOR_UNIVERSE_MPI:
 	case CONDOR_UNIVERSE_PARALLEL:
+	case CONDOR_UNIVERSE_VM:
 		return true;
 		break;
 
@@ -6473,6 +6475,7 @@ Scheduler::jobNeedsTransferd( int cluster, int proc, int univ )
 		case CONDOR_UNIVERSE_JAVA:
 		case CONDOR_UNIVERSE_MPI:
 		case CONDOR_UNIVERSE_PARALLEL:
+		case CONDOR_UNIVERSE_VM:
 			return true;
 			break;
 
@@ -6764,6 +6767,16 @@ Scheduler::spawnShadow( shadow_rec* srec )
 				return;
 			}
 			break;
+		case CONDOR_UNIVERSE_VM:
+			shadow_obj = shadow_mgr.findShadow( ATTR_HAS_VM);
+			if( ! shadow_obj ) {
+				dprintf( D_ALWAYS, "Trying to run a VM job but you "
+						"do not have a condor_shadow that will work, "
+						"aborting.\n" );
+				noShadowForJob( srec, NO_SHADOW_VM );
+				return;
+			}
+			break;
 		default:
 			EXCEPT( "StartJobHandler() does not support %d universe jobs",
 					universe );
@@ -6820,6 +6833,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 			case CONDOR_UNIVERSE_JAVA:
 			case CONDOR_UNIVERSE_MPI:
 			case CONDOR_UNIVERSE_PARALLEL:
+			case CONDOR_UNIVERSE_VM:
 				if (! availableTransferd(job_id->cluster, job_id->proc, td) )
 				{
 					dprintf(D_ALWAYS,
@@ -8008,6 +8022,38 @@ add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false)
 		count = 0;
 	}
 	SetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, ++count);
+
+	int job_univ = CONDOR_UNIVERSE_STANDARD;
+	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &job_univ);
+	if( job_univ == CONDOR_UNIVERSE_VM ) {
+		// check if this run is a restart from checkpoint
+		int lastckptTime = 0;
+		GetAttributeInt(cluster, proc, ATTR_LAST_CKPT_TIME, &lastckptTime);
+		if( lastckptTime > 0 ) {
+			// There was a checkpoint.
+			// Update restart count from a checkpoint 
+			char vmtype[512];
+			int num_restarts = 0;
+			GetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, &num_restarts);
+			SetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, ++num_restarts);
+
+			memset(vmtype, 0, sizeof(vmtype));
+			GetAttributeString(cluster, proc, ATTR_JOB_VM_TYPE, vmtype);
+			if( stricmp(vmtype, CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
+				// In vmware vm universe, vmware disk may be 
+				// a sparse disk or snapshot disk. So we can't estimate the disk space 
+				// in advanace because the sparse disk or snapshot disk will 
+				// grow up while running a VM.
+				// So we will just add 100MB to disk space.
+				int vm_disk_space = 0;
+				GetAttributeInt(cluster, proc, ATTR_DISK_USAGE, &vm_disk_space);
+				if( vm_disk_space > 0 ) {
+					vm_disk_space += 100*1024;
+				}
+				SetAttributeInt(cluster, proc, ATTR_DISK_USAGE, vm_disk_space);
+			}
+		}
+	}
 }
 
 

@@ -1132,6 +1132,17 @@ Starter::percentCpuUsage( void )
 		        "info for the starter and decendents" ); 
 	}
 
+	// In vm universe, there may be a process dealing with a VM.
+	// Unfortunately, such a process is created by a specific 
+	// running daemon for virtual machine program(such as vmware-serverd).
+	// So our Get_Family_Usage is unable to get usage for the process.
+	// Here, we call a function in vm universe manager.
+	// If this starter is for vm universe, s_usage will be updated.
+	// Otherwise, s_usage will not change.
+	if ( resmgr ) {
+		resmgr->m_vmuniverse_mgr.getUsageForVM(s_pid, s_usage);
+	}
+
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
 		dprintf( D_FULLDEBUG,
 		        "Starter::percentCpuUsage(): Percent CPU usage "
@@ -1243,8 +1254,18 @@ Starter::startKillTimer( void )
 			// Timer already started.
 		return TRUE;
 	}
+
+	int tmp_killing_timeout = killing_timeout;
+	if( s_claim && (s_claim->universe() == CONDOR_UNIVERSE_VM) ) {
+		// For vm universe, we need longer killing_timeout
+		int vm_killing_timeout = param_integer( "VM_KILLING_TIMEOUT", 60);
+		if( killing_timeout < vm_killing_timeout ) {
+			tmp_killing_timeout = vm_killing_timeout;
+		}
+	}
+
 	s_kill_tid = 
-		daemonCore->Register_Timer( killing_timeout,
+		daemonCore->Register_Timer( tmp_killing_timeout,
 						0, 
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );

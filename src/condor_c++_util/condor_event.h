@@ -569,6 +569,9 @@ class CheckpointedEvent : public ULogEvent
 
     /** Local  Usage for the run */  rusage  run_local_rusage;
     /** Remote Usage for the run */  rusage  run_remote_rusage;
+
+	/// bytes sent by the job over network for checkpoint
+	float sent_bytes;
 };
 
 

@@ -213,6 +213,26 @@ LocalUserLog::logContinue( ClassAd*  /* ad */ )
 
 
 bool
+LocalUserLog::logCheckpoint( ClassAd*  /* ad */ )
+{
+	if( ! is_initialized ) {
+		EXCEPT( "LocalUserLog::logCheckpoint() called before init()" );
+	}
+	if( ! should_log ) {
+		return true;
+	}
+
+	CheckpointedEvent event;
+
+	if( !u_log.writeEvent(&event) ) {
+        dprintf( D_ALWAYS, "Unable to log ULOG_CHECKPOINTED event\n" );
+		return false;
+    }
+	return true;
+}
+
+
+bool
 LocalUserLog::logStarterError( const char* err_msg, bool critical )
 {
 	if( ! is_initialized ) {

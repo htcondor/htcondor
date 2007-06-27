@@ -62,6 +62,7 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
 	remove_job_queue_attrs = NULL;
 	requeue_job_queue_attrs = NULL;
 	terminate_job_queue_attrs = NULL;
+	checkpoint_job_queue_attrs = NULL;
 	initJobQueueAttrLists();
 
 		// finally, clear all the dirty bits on this jobAd, so we only
@@ -84,6 +85,7 @@ QmgrJobUpdater::~QmgrJobUpdater()
 	if( remove_job_queue_attrs ) { delete remove_job_queue_attrs; }
 	if( requeue_job_queue_attrs ) { delete requeue_job_queue_attrs; }
 	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
+	if( checkpoint_job_queue_attrs ) { delete checkpoint_job_queue_attrs; }
 }
 
 
@@ -96,6 +98,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	if( remove_job_queue_attrs ) { delete remove_job_queue_attrs; }
 	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
 	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
+	if( checkpoint_job_queue_attrs ) { delete checkpoint_job_queue_attrs; }
 
 	common_job_queue_attrs = new StringList();
 	common_job_queue_attrs->insert( ATTR_IMAGE_SIZE );
@@ -108,6 +111,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_BYTES_SENT );
 	common_job_queue_attrs->insert( ATTR_BYTES_RECVD );
 	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
+	common_job_queue_attrs->insert( ATTR_JOB_COMMITTED_TIME );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
@@ -135,6 +139,14 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_NAME );
 	terminate_job_queue_attrs->insert( ATTR_TERMINATION_PENDING );
 	terminate_job_queue_attrs->insert( ATTR_JOB_CORE_FILENAME );
+
+	checkpoint_job_queue_attrs = new StringList();
+	checkpoint_job_queue_attrs->insert( ATTR_NUM_CKPTS );
+	checkpoint_job_queue_attrs->insert( ATTR_LAST_CKPT_TIME );
+	checkpoint_job_queue_attrs->insert( ATTR_CKPT_ARCH );
+	checkpoint_job_queue_attrs->insert( ATTR_CKPT_OPSYS );
+	checkpoint_job_queue_attrs->insert( ATTR_VM_CKPT_MAC );
+	checkpoint_job_queue_attrs->insert( ATTR_VM_CKPT_IP );
 }
 
 
@@ -248,6 +260,9 @@ QmgrJobUpdater::updateJob( update_t type )
 		break;
 	case U_EVICT:
 		job_queue_attrs = evict_job_queue_attrs;
+		break;
+	case U_CHECKPOINT:
+		job_queue_attrs = checkpoint_job_queue_attrs;
 		break;
 	case U_PERIODIC:
 			// No special attributes needed...
@@ -381,6 +396,9 @@ QmgrJobUpdater::watchAttribute( const char* attr, update_t type  )
 		break;
 	case U_EVICT:
 		job_queue_attrs = evict_job_queue_attrs;
+		break;
+	case U_CHECKPOINT:
+		job_queue_attrs = checkpoint_job_queue_attrs;
 		break;
 	case U_PERIODIC:
 		EXCEPT( "Programmer error: QmgrJobUpdater::watchAttribute() called "

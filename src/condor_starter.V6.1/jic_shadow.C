@@ -42,6 +42,7 @@
 #include "nullfile.h"
 #include "stream_handler.h"
 #include "starter_privsep_helper.h"
+#include "condor_vm_universe_types.h"
 
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
@@ -799,6 +800,57 @@ JICShadow::addToOutputFiles( const char* filename )
 }
 
 bool
+JICShadow::uploadWorkingFiles(void)
+{
+	if( ! filetrans ) {
+		return false;
+	}
+
+	// make sure we can access the files
+	if( privsep_enabled() ){
+		privsep_helper.chown_sandbox_to_condor();
+	}
+
+	// The shadow may block on disk I/O for long periods of
+	// time, so set a big timeout on the starter's side of the
+	// file transfer socket.
+
+	int timeout = param_integer( "STARTER_UPLOAD_TIMEOUT", 200 );
+	filetrans->setClientSocketTimeout(timeout);
+
+	// The user job may have created files only readable
+	// by the user, so set_user_priv here.
+	priv_state saved_priv = set_user_priv();
+
+	// this will block
+	bool rval = filetrans->UploadFiles( true, false );
+	set_priv(saved_priv);
+
+	if( !rval ) {
+		// Failed to transfer.
+		dprintf(D_ALWAYS,"JICShadow::uploadWorkingFiles() failed.\n");
+		return false;
+	}
+	dprintf(D_FULLDEBUG,"JICShadow::uploadWorkingFiles() succeeds.\n");
+	return true;
+}
+
+void
+JICShadow::updateCkptInfo(void)
+{
+	// We need the update ad for our job. 
+	ClassAd update_ad;
+	publishUpdateAd( &update_ad );
+
+	// See if the LocalUserLog wants it
+	u_log->logCheckpoint( &update_ad );
+
+	// Now we want to send another update to the shadow.
+	// To confirm this update, we pass in "true" to updateShadow() for that.
+	updateShadow( &update_ad, true );
+}
+
+bool
 JICShadow::initUserPriv( void )
 {
 
@@ -958,8 +1010,17 @@ JICShadow::initUserPriv( void )
 		if( ! slot ) {
 			slot = 1;
 		}
-        sprintf( paramer, "SLOT%d_USER", slot );
-        nobody_user = param(paramer);
+
+		if( job_universe == CONDOR_UNIVERSE_VM ) {
+			// If "VM_UNIV_USER" is defined in Condor configuration file, 
+			// we will use it. 
+        	nobody_user = param("VM_UNIV_USER");
+		}
+
+		if( nobody_user == NULL ) {
+			sprintf( paramer, "SLOT%d_USER", slot );
+			nobody_user = param(paramer);
+		}
 
         if ( nobody_user != NULL ) {
             if ( strcmp(nobody_user, "root") == MATCH ) {
@@ -974,6 +1035,20 @@ JICShadow::initUserPriv( void )
         } else {
             nobody_user = strdup("nobody");
         }
+
+		if( job_universe == CONDOR_UNIVERSE_VM ) {
+			MyString vm_type;
+			job_ad->LookupString(ATTR_JOB_VM_TYPE, vm_type);
+
+			// VMware doesn't support that "nobody" creates a VM.
+			// So for VMware vm universe, we will "condor" instead of "nobody".
+			if( strcasecmp(vm_type.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == MATCH ) {
+				if( strcmp(nobody_user, "nobody") == MATCH ) {
+					free(nobody_user);
+					nobody_user = strdup(get_condor_username());
+				}
+			}
+		}
 
 			// passing NULL for the domain is ok here since this is
 			// UNIX code

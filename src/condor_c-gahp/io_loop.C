@@ -467,7 +467,7 @@ result_pipe_handler(int id) {
 		delete line;
 	}
 
-	if (workers[id].result_buffer.IsError() || workers[id].request_buffer.IsEOF()) {
+	if (workers[id].result_buffer.IsError() || workers[id].result_buffer.IsEOF()) {
 		DC_Exit(1);
 	}
 
@@ -760,7 +760,7 @@ main_shutdown_graceful()
 	daemonCore->Cancel_And_Close_All_Pipes();
 
 	for (int i=0; i<NUMBER_WORKERS; i++) {
-		daemonCore->Send_Signal (SIGKILL, workers[i].pid);
+		daemonCore->Send_Signal (workers[i].pid, SIGKILL);
 	}
 
 	return TRUE;	// to satify c++

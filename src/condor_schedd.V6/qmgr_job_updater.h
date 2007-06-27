@@ -39,7 +39,8 @@ typedef enum {
 	U_HOLD,
 	U_REMOVE,
 	U_REQUEUE,
-	U_EVICT
+	U_EVICT,
+	U_CHECKPOINT
 } update_t;
 
 
@@ -118,6 +119,7 @@ private:
 	StringList* remove_job_queue_attrs;
 	StringList* requeue_job_queue_attrs;
 	StringList* terminate_job_queue_attrs;
+	StringList* checkpoint_job_queue_attrs;
 
 	ClassAd* job_ad;
 	char* schedd_addr;

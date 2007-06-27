@@ -54,6 +54,7 @@ OsProc::OsProc( ClassAd* ad )
     dprintf ( D_FULLDEBUG, "In OsProc::OsProc()\n" );
 	JobAd = ad;
 	is_suspended = false;
+	is_checkpointed = false;
 	num_pids = 0;
 	dumped_core = false;
 	UserProc::initialize();
@@ -648,6 +649,8 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 
 	if( exit_status >= 0 ) {
 		buf.sprintf( "%s=\"Exited\"", ATTR_JOB_STATE );
+	} else if( is_checkpointed ) {
+		buf.sprintf( "%s=\"Checkpointed\"", ATTR_JOB_STATE );
 	} else if( is_suspended ) {
 		buf.sprintf( "%s=\"Suspended\"", ATTR_JOB_STATE );
 	} else {

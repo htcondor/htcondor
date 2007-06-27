@@ -37,6 +37,7 @@
 #include "jic_local_config.h"
 #include "jic_local_file.h"
 #include "jic_local_schedd.h"
+#include "vm_proc.h"
 
 
 extern "C" int exception_cleanup(int,int,char*);	/* Our function called by EXCEPT */
@@ -128,6 +129,16 @@ printClassAd( void )
 		}
 		if(gotone>0) printf( "%s = True\n",ATTR_HAS_JAVA);		
 		delete ad;
+	}
+
+	// VM universe stuff
+	if( VMProc::vm_univ_detect() ) {
+		// This doesn't mean that vm universe is really available.
+		// This just means that starter has codes for vm universe.
+		// Actual testing for vm universe will be 
+		//  done by vmuniverse manager in startd.
+		// ATTR_HAS_VM may be overwritten by vmuniverse manager in startd
+		printf( "%s = True\n",ATTR_HAS_VM);		
 	}
 
 #if defined(WIN32)

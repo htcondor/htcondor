@@ -6,6 +6,8 @@ FILES = README condor_config.local.central.manager \
 	condor_config.local.ha_condor_had \
 	condor_config.local.root.ckpt.server \
 	condor_config.local.view_server \
+	condor_vmgahp_config.xen \
+	condor_vmgahp_config.vmware \
 	lamscript \
 	mp1script
 

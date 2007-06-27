@@ -1718,6 +1718,8 @@ CheckpointedEvent()
 	run_remote_rusage = run_local_rusage;
 
 	eventNumber = ULOG_CHECKPOINTED;
+
+    sent_bytes = 0.0;
 }
 
 CheckpointedEvent::
@@ -1758,10 +1760,16 @@ writeEvent (FILE *file)
 
 	if (fprintf (file, "Job was checkpointed.\n") < 0  		||
 		(!writeRusage (file, run_remote_rusage)) 			||
-		(fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
+		(fprintf (file, "  -  Run Remote Usage\n") < 0) 	||
 		(!writeRusage (file, run_local_rusage)) 			||
 		(fprintf (file, "  -  Run Local Usage\n") < 0))
 		return 0;
+
+    if( fprintf(file, "\t%.0f  -  Run Bytes Sent By Job For Checkpoint\n",
+                sent_bytes) < 0 ) {
+        return 0;
+    }
+
 
 	return 1;
 }
@@ -1798,7 +1806,11 @@ toClassAd()
 	free(rs);
 	buf0[511] = 0;
 	if( !myad->Insert(buf0) ) return NULL;
-		
+
+	snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+
 	return myad;
 }
 
@@ -1819,6 +1831,8 @@ initFromClassAd(ClassAd* ad)
 		strToRusage(usageStr, run_remote_rusage);
 		free(usageStr);
 	}
+
+	ad->LookupFloat("SentBytes", sent_bytes);
 }
 
 // ----- the JobEvictedEvent class

@@ -2836,6 +2836,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 		case CONDOR_UNIVERSE_PVM:
 		case CONDOR_UNIVERSE_PVMD:
 		case CONDOR_UNIVERSE_PARALLEL:
+		case CONDOR_UNIVERSE_VM:
 			break;
 
 			// Maybe

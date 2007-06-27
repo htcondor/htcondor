@@ -27,8 +27,13 @@
 #include "MyString.h"
 #include "file_transfer.h"
 #include "user_proc.h"
+#include "vm_gahp_request.h"
+#include "gahp_common.h"
 
 template class List<UserProc>;
 template class HashBucket<MyString, FileTransfer *>;
 template class HashBucket<int, FileTransfer *>;
 template class Item<UserProc>;
+
+template class ExtArray<Gahp_Args*>;
+template class HashTable<int,VMGahpRequest*>;

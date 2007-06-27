@@ -1,0 +1,78 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ *
+ * Condor Software Copyright Notice
+ * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ *
+ * This source code is covered by the Condor Public License, which can
+ * be found in the accompanying LICENSE.TXT file, or online at
+ * www.condorproject.org.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+ * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+ * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+ * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+ * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+ * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+ * RIGHT.
+ *
+ ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#ifndef CONDOR_VM_UNIVERSE_TYPES_H_INCLUDE
+#define CONDOR_VM_UNIVERSE_TYPES_H_INCLUDE
+
+#define CONDOR_VM_UNIVERSE_XEN "xen"
+#define CONDOR_VM_UNIVERSE_VMWARE "vmware"
+
+
+#define VM_CKPT_FILE_EXTENSION	".cckpt"
+#define VM_AVAIL_UNLIMITED_NUM	10000
+
+#define VM_UNIV_ARGUMENT_FILE	"condor.arg"
+
+/* Running modes for VM GAHP Server */
+#define VMGAHP_TEST_MODE 0
+#define VMGAHP_IO_MODE 1
+#define VMGAHP_WORKER_MODE 2
+#define VMGAHP_STANDALONE_MODE 3
+#define VMGAHP_KILL_MODE 4
+#define VMGAHP_MODE_MAX 5
+
+/* Parameters in a result of VM GAHP STATUS command  */
+#define VMGAHP_STATUS_COMMAND_STATUS	"STATUS"
+#define VMGAHP_STATUS_COMMAND_PID		"PID"
+#define VMGAHP_STATUS_COMMAND_MAC		"MAC"
+#define VMGAHP_STATUS_COMMAND_IP		"IP"
+#define VMGAHP_STATUS_COMMAND_CPUTIME	"CPUTIME"
+
+/* Parameters for Xen kernel */
+#define XEN_KERNEL_ANY			"any"
+#define XEN_KERNEL_INCLUDED		"included"
+#define XEN_KERNEL_HW_VT		"vmx"
+
+/* ClassAd Attributes for Xen */
+#define VMPARAM_XEN_KERNEL			"VMPARAM_Xen_Kernel"
+#define VMPARAM_XEN_RAMDISK			"VMPARAM_Xen_Ramdisk"
+#define VMPARAM_XEN_ROOT			"VMPARAM_Xen_Root"
+#define VMPARAM_XEN_DISK			"VMPARAM_Xen_Disk"
+#define VMPARAM_XEN_EXTRA			"VMPARAM_Xen_Extra"
+#define VMPARAM_XEN_CDROM_DEVICE	"VMPARAM_Xen_CDROM_Device"
+#define VMPARAM_XEN_TRANSFER_FILES	"VMPARAM_Xen_Transfer_Files"
+
+/* ClassAd Attributes for VMware */
+#define VMPARAM_VMWARE_TRANSFER		"VMPARAM_VMware_Transfer"
+#define VMPARAM_VMWARE_SNAPSHOTDISK "VMPARAM_VMware_SnapshotDisk"
+#define VMPARAM_VMWARE_DIR			"VMPARAM_VMware_Dir"
+#define VMPARAM_VMWARE_VMX_FILE		"VMPARAM_VMware_VMX_File"
+#define VMPARAM_VMWARE_VMDK_FILES	"VMPARAM_VMware_VMDK_Files"
+
+/* Extra ClassAd Attributes for VM */
+#define VMPARAM_NO_OUTPUT_VM			"VMPARAM_No_Output_VM"
+#define VMPARAM_CDROM_FILES				"VMPARAM_CDROM_Files"
+#define VMPARAM_TRANSFER_CDROM_FILES	"VMPARAM_Transfer_CDROM_Files"
+
+#endif
+

@@ -602,6 +602,22 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 		jobAd->Insert(str.Value());
 	}
 
+    // Update final Job committed time
+    int last_ckpt_time = 0;
+    jobAd->LookupInteger(ATTR_LAST_CKPT_TIME, last_ckpt_time);
+    int current_start_time = 0;
+    jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, current_start_time);
+    int int_value = (last_ckpt_time > current_start_time) ?
+                        last_ckpt_time : current_start_time;
+
+    if( int_value > 0 ) {
+        int job_committed_time = 0;
+        jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, job_committed_time);
+        job_committed_time += (int)time(NULL) - int_value;
+        jobAd->Assign(ATTR_JOB_COMMITTED_TIME, job_committed_time);
+    }
+
+
 	// update the job ad in the queue with some important final
 	// attributes so we know what happened to the job when using
 	// condor_history...

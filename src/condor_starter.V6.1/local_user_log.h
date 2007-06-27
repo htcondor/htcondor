@@ -98,6 +98,10 @@ public:
 		*/
 	bool logContinue( ClassAd* ad );
 
+		/** Log a checkpoint event for this job.
+		*/
+	bool logCheckpoint( ClassAd* ad );
+
 		/** Log an event about a fatal starter error
 		 */
 	bool logStarterError( const char* err_msg, bool critical );

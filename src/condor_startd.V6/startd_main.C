@@ -163,6 +163,17 @@ main_init( int, char* argv[] )
 		// find all the starters we care about and get their classads. 
 	resmgr->starter_mgr.init();
 
+	ClassAd tmp_classad;
+	MyString starter_ability_list;
+	resmgr->starter_mgr.publish(&tmp_classad, A_STATIC | A_PUBLIC);
+	tmp_classad.LookupString(ATTR_STARTER_ABILITY_LIST, starter_ability_list);
+	if( starter_ability_list.find(ATTR_HAS_VM) >= 0 ) {
+		// Now starter has codes for vm universe.
+		resmgr->m_vmuniverse_mgr.setStarterAbility(true);
+		// check whether vm universe is available through vmgahp server
+		resmgr->m_vmuniverse_mgr.init();
+	}
+
 		// Read in global parameters from the config file.
 		// We do this after we instantiate the resmgr, so we can know
 		// what num_cpus is, but before init_resources(), so we can
@@ -338,6 +349,29 @@ main_init( int, char* argv[] )
 				"command_vm_register", 0, DAEMON,
 				D_FULLDEBUG );
 	}
+
+		// Commands from starter for VM universe
+	daemonCore->Register_Command( VM_UNIV_GAHP_ERROR, 
+								"VM_UNIV_GAHP_ERROR",
+								(CommandHandler)command_vm_universe, 
+								"command_vm_universe", 0, DAEMON, 
+								D_FULLDEBUG );
+	daemonCore->Register_Command( VM_UNIV_VMPID, 
+								"VM_UNIV_VMPID",
+								(CommandHandler)command_vm_universe, 
+								"command_vm_universe", 0, DAEMON, 
+								D_FULLDEBUG );
+	daemonCore->Register_Command( VM_UNIV_GUEST_IP, 
+								"VM_UNIV_GUEST_IP",
+								(CommandHandler)command_vm_universe, 
+								"command_vm_universe", 0, DAEMON, 
+								D_FULLDEBUG );
+	daemonCore->Register_Command( VM_UNIV_GUEST_MAC, 
+								"VM_UNIV_GUEST_MAC",
+								(CommandHandler)command_vm_universe, 
+								"command_vm_universe", 0, DAEMON, 
+								D_FULLDEBUG );
+
 
 		//////////////////////////////////////////////////
 		// Reapers 
@@ -669,6 +703,10 @@ reaper(Service *, int pid, int status)
 		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d exited with status %d\n",
 				pid, WEXITSTATUS(status));
 	}
+
+	// Adjust info for vm universe
+	resmgr->m_vmuniverse_mgr.freeVM(pid);
+
 	foo = resmgr->getClaimByPid(pid);
 	if( foo ) {
 		foo->starterExited();

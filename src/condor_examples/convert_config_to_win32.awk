@@ -75,7 +75,7 @@ BEGIN {
 
 # There's no reasonable default place to put log files for
 # daemons that run as a user (on Unix we use /tmp). Use NUL.
-/(^GRIDMANAGER_LOG)|(^C_GAHP_LOG)|(^C_GAHP_WORKER_THREAD_LOG)/ {
+/(^GRIDMANAGER_LOG)|(^C_GAHP_LOG)|(^C_GAHP_WORKER_THREAD_LOG)|(^VM_GAHP_LOG)/ {
 	printf "%s = NUL\n", $1
 	next
 }

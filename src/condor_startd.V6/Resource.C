@@ -947,6 +947,15 @@ Resource::wants_vacate( void )
 			unknown = false;
 		}
 	} 
+	if( r_cur->universe() == CONDOR_UNIVERSE_VM ) {
+		if( r_classad->EvalBool("WANT_VACATE_VM",
+								r_cur->ad(),
+								want_vacate ) ) { 
+			dprintf( D_ALWAYS, "State change: WANT_VACATE_VM is %s\n",
+					 want_vacate ? "TRUE" : "FALSE" );
+			unknown = false;
+		}
+	} 
 	if( unknown ) {
 		if( r_classad->EvalBool( "WANT_VACATE",
 								 r_cur->ad(),
@@ -987,6 +996,13 @@ Resource::wants_suspend( void )
 			unknown = false;
 		}
 	}
+	if( r_cur->universe() == CONDOR_UNIVERSE_VM ) {
+		if( r_classad->EvalBool("WANT_SUSPEND_VM",
+								r_cur->ad(),
+								want_suspend) ) {  
+			unknown = false;
+		}
+	}
 	if( unknown ) { 
 		if( r_classad->EvalBool( "WANT_SUSPEND",
 								   r_cur->ad(),
@@ -1005,16 +1021,27 @@ int
 Resource::wants_pckpt( void )
 {
 	int want_pckpt; 
+	bool unknown = true;
 
-	if( r_cur->universe() != CONDOR_UNIVERSE_STANDARD ) {
+	if( (r_cur->universe() != CONDOR_UNIVERSE_STANDARD) && 
+			(r_cur->universe() != CONDOR_UNIVERSE_VM)) {
 		return FALSE;
 	}
 
-	if( r_classad->EvalBool( "PERIODIC_CHECKPOINT",
-							 r_cur->ad(),
-							 want_pckpt ) == 0) { 
+	if( r_cur->universe() == CONDOR_UNIVERSE_VM ) {
+		if( r_classad->EvalBool("PERIODIC_CHECKPOINT_VM",
+					r_cur->ad(),
+					want_pckpt) ) {  
+			unknown = false;
+		}
+	}
+	if( unknown ) {
+		if( r_classad->EvalBool( "PERIODIC_CHECKPOINT",
+					r_cur->ad(),
+					want_pckpt ) == 0) { 
 			// Default to no, if not defined.
-		want_pckpt = 0;
+			want_pckpt = 0;
+		}
 	}
 	return want_pckpt;
 }
@@ -1142,6 +1169,16 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 			return tmp;
 		}
 			// otherwise, fall through and try the non-vanilla version
+	}
+	if( check_vanilla && r_cur->universe() == CONDOR_UNIVERSE_VM ) {
+		MyString tmp_expr_name = expr_name;
+		tmp_expr_name += "_VM";
+		tmp = eval_expr( tmp_expr_name.Value(), false, false );
+		if( tmp >= 0 ) {
+				// found it, just return the value;
+			return tmp;
+		}
+			// otherwise, fall through and try the non-vm version
 	}
 	if( (r_classad->EvalBool(expr_name, r_cur->ad(), tmp) ) == 0 ) { 
 		if( fatal ) {

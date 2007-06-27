@@ -592,6 +592,104 @@ command_vm_register( Service*, int, Stream* s )
 	return TRUE;
 }
 
+int
+command_vm_universe( Service*, int cmd, Stream* stream )
+{
+	char *value = NULL; // Pid of Starter
+	int starter_pid = 0;
+	int vm_pid = 0;
+
+	stream->decode();
+	stream->timeout(5);
+	if( !stream->code(value) ) {
+		dprintf( D_ALWAYS, "command_vm_universe: "
+							"Can't read PID of local starter\n");
+		if( value ) {
+			free(value);
+		}
+		return FALSE;
+	}
+	starter_pid = (int)strtol(value, (char **)NULL, 10);
+	if( starter_pid <= 0 ) {
+		dprintf( D_ALWAYS, "command_vm_universe: "
+							"Invalid PID of starter\n");
+		free(value);
+		return FALSE;
+	}
+	free(value);
+	value = NULL;
+
+	switch( cmd ) {
+		case VM_UNIV_GAHP_ERROR:
+			resmgr->m_vmuniverse_mgr.checkVMUniverse();
+			break;
+		case VM_UNIV_VMPID:
+			// Read vm pid
+			value = NULL;
+			if( !stream->code(value) ) {
+				dprintf( D_ALWAYS, "command_vm_universe: "
+						"Can't read PID of process for a VM\n");
+				if( value ) {
+					free(value);
+				}
+				return FALSE;
+			}
+			vm_pid = (int)strtol(value, (char **)NULL, 10);
+			if( vm_pid < 0 ) {
+				dprintf( D_ALWAYS, "command_vm_universe: "
+						"Invalid PID(%s) of process for a VM\n", value);
+				free(value);
+				return FALSE;
+			}
+			free(value);
+			value = NULL;
+
+			resmgr->m_vmuniverse_mgr.addProcessForVM(starter_pid, vm_pid);
+			break;
+		case VM_UNIV_GUEST_IP:
+			value = NULL;
+			if( !stream->code(value) ) {
+				dprintf( D_ALWAYS, "command_vm_universe: "
+						"Can't read IP of VM\n");
+				if( value ) {
+					free(value);
+				}
+				return FALSE;
+			}
+			resmgr->m_vmuniverse_mgr.addIPForVM(starter_pid, value);
+			free(value);
+			value = NULL;
+			break;
+		case VM_UNIV_GUEST_MAC:
+			value = NULL;
+			if( !stream->code(value) ) {
+				dprintf( D_ALWAYS, "command_vm_universe: "
+						"Can't read MAC of VM\n");
+				if( value ) {
+					free(value);
+				}
+				return FALSE;
+			}
+			resmgr->m_vmuniverse_mgr.addMACForVM(starter_pid, value);
+			free(value);
+			value = NULL;
+			break;
+		default:
+			dprintf( D_ALWAYS, "command_vm_universe(command=%d) is "
+							"not supported\n", cmd);
+	}
+
+	dprintf( D_FULLDEBUG, "command_vm_universe(%s) is called from "
+			"local starter(pid=%d).\n", getCommandString(cmd), starter_pid);
+
+	if( !stream->end_of_message() ){
+		dprintf( D_ALWAYS, "command_vm_universe: Can't read end_of_message\n");
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 #if !defined(WIN32)
 int
 command_delegate_gsi_cred( Service*, int, Stream* stream )
@@ -1323,6 +1421,24 @@ activate_claim( Resource* rip, Stream* stream )
 	    ABORT;
 	}
 
+	int job_univ = 0;
+	if( req_classad->LookupInteger(ATTR_JOB_UNIVERSE, job_univ) != 1 ) {
+		rip->dprintf(D_ALWAYS, "Can't find Job Universe in Job ClassAd\n");
+		refuse(stream);
+		ABORT;
+	}
+
+	ClassAd vm_classad = *req_classad;
+	if( job_univ == CONDOR_UNIVERSE_VM ) {
+		if( resmgr->m_vmuniverse_mgr.canCreateVM(&vm_classad) == false ) {
+			// Not enough memory or reaches to max number of VMs
+			rip->dprintf( D_ALWAYS, "Cannot execute a VM universe job "
+					"due to insufficient resource\n");
+			refuse(stream);
+			ABORT;
+		}
+	}
+
 		// now, try to satisfy the job.  while we're at it, we'll
 		// figure out what starter they want to use
 	Starter* tmp_starter;
@@ -1428,6 +1544,8 @@ activate_claim( Resource* rip, Stream* stream )
 		// it's there, we no longer control this memory so we should
 		// clear out our pointer to avoid confusion/problems.
 	rip->r_cur->setStarter( tmp_starter );
+	// this variable will be used to know the IP of Starter later.
+	Starter* vm_starter = tmp_starter;
 	tmp_starter = NULL;
 
 		// update the current rank on this claim
@@ -1451,6 +1569,17 @@ activate_claim( Resource* rip, Stream* stream )
 		// Grab everything we need/want out of the request and store
 		// it in our current claim 
 	rip->r_cur->beginActivation( now );
+
+	if( job_univ == CONDOR_UNIVERSE_VM ) {
+		if( resmgr->m_vmuniverse_mgr.allocVM(vm_starter->pid(), vm_classad) 
+				== false ) {
+			ABORT;
+		}
+		vm_starter = NULL;
+
+		// update VM related info
+		resmgr->walk( &Resource::update);
+	}
 
 		// Finally, update all these things into the resource classad.
 	rip->r_cur->publish( rip->r_classad, A_PUBLIC );

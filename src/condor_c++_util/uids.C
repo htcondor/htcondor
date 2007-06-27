@@ -857,7 +857,10 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username,
 		// So if we are not root, trying to use any user id is bogus
 		// since the OS will disallow it.  So if we are not running as
 		// root, may as well just set the user id to be the real id.
-	if ( get_my_uid() != ROOT ) {
+	// For setuid-root
+	// -jaeyoung 05/22/07
+	//if ( get_my_uid() != ROOT ) {
+	if ( !can_switch_ids() ) {
 		uid = get_my_uid();
 		gid = get_my_gid();
 	}
@@ -987,7 +990,11 @@ init_user_ids_implementation( const char username[], int is_quiet )
 		// So if we are not root, trying to use any user id is bogus
 		// since the OS will disallow it.  So if we are not running as
 		// root, may as well just set the user id to be the real id.
-	if ( get_my_uid() != ROOT ) {
+	
+	// For setuid-root
+	// -jaeyoung 05/22/07
+	//if ( get_my_uid() != ROOT ) {
+	if ( !can_switch_ids() ) {
 		return set_user_ids_implementation( get_my_uid(), get_my_gid(),
 										NULL, is_quiet ); 
 	}
@@ -1462,7 +1469,12 @@ set_condor_rgid()
 int
 is_root( void ) 
 {
-	return (! getuid() );
+	// If a program has setuid-root in Linux, 
+	// the program will have non-zero uid and zero euid.
+	// We need to make sure that other OSs have the same behavior.
+	// -jaeyoung 05/21/07
+	//return (! getuid() );
+	return ( !getuid() || !geteuid() );
 }
 
 

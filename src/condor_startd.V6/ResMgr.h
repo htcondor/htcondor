@@ -37,6 +37,7 @@
 #include "Resource.h"
 #include "claim.h"
 #include "starter_mgr.h"
+#include "vmuniverse_mgr.h"
 
 #if HAVE_BACKFILL
 #include "backfill_mgr.h"
@@ -176,6 +177,8 @@ public:
 	bool		isShuttingDown() { return is_shutting_down; };
 
 	StarterMgr starter_mgr;
+
+	VMUniverseMgr m_vmuniverse_mgr;
 
 #if HAVE_BACKFILL
 	BackfillMgr* m_backfill_mgr;

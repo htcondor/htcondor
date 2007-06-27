@@ -1,0 +1,454 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ *
+ * Condor Software Copyright Notice
+ * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ *
+ * This source code is covered by the Condor Public License, which can
+ * be found in the accompanying LICENSE.TXT file, or online at
+ * www.condorproject.org.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+ * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+ * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+ * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+ * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+ * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+ * RIGHT.
+ *
+ ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_string.h"
+#include "condor_attributes.h"
+#include "condor_uid.h"
+#include "vmgahp_common.h"
+#include "vmgahp.h"
+#include "vmware_type.h"
+#include "xen_type.h"
+
+#define VMGAHP_VERSION	"0.0.1"
+const char *vmgahp_version = "$VMGahpVersion " VMGAHP_VERSION " May 1 2007 Condor\\ VMGAHP $";
+
+char *mySubSystem = "VM_GAHP";
+
+VMGahp *vmgahp = NULL;
+int vmgahp_stdout_pipe = -1;
+int vmgahp_stderr_pipe = -1;
+int vmgahp_mode = VMGAHP_TEST_MODE;
+
+PBuffer vmgahp_stderr_buffer;
+int vmgahp_stderr_tid = -1;
+int	oriDebugFlags = 0;
+
+MyString workingdir;
+
+void
+vm_cleanup(void)
+{
+	if(vmgahp) {
+		delete vmgahp;
+		vmgahp = NULL;
+		sleep(2);
+	}
+	return;
+}
+
+void Init() {}
+void Register() {}
+void Reconfig() 
+{
+	// DaemonCore library changes current working directory to 
+	// LOG directory defined in Condor config file.
+	// However, because vmgahp server is usually executed by starter
+	// we will change current working directory to job directory
+	if( !workingdir.IsEmpty() ) {
+		if( chdir(workingdir.Value()) < 0 ) {
+			DC_Exit(1);
+		}
+	}
+
+	// If we use Termlog, 
+	// we don't want logs from DaemonCore
+	oriDebugFlags = DebugFlags;
+	if( Termlog ) {
+		DebugFlags = 0;
+	}else {
+		if( isOwnSwitchUid() ) {
+			// Because we use our own priv swithcing, 
+			// dprintf will be broken.
+			// Stopping all logging.
+			oriDebugFlags = 0;
+			DebugFlags = 0;
+			Termlog = 1;
+		}
+	}
+
+	if( (vmgahp_mode != VMGAHP_TEST_MODE) &&
+			(vmgahp_mode != VMGAHP_KILL_MODE) ) {
+		char *gahp_log_file = param("VM_GAHP_LOG");
+		if( gahp_log_file ) {
+			if( !strcmp(gahp_log_file, NULL_FILE) ) {
+				// We don't want log from vm-gahp
+				oriDebugFlags = 0;
+				DebugFlags = 0;
+			}
+			free(gahp_log_file);
+		}
+	}
+}
+
+int
+main_config( bool is_full )
+{
+	Reconfig();
+	return TRUE;
+}
+
+int 
+main_shutdown_fast()
+{
+	vmprintf(D_ALWAYS, "Received Signal for shutdown fast\n");
+	vm_cleanup();
+	DC_Exit(0);
+	return TRUE; // to satisfy c++
+}
+
+int 
+main_shutdown_graceful()
+{
+	vmprintf(D_ALWAYS, "Received Signal for shutdown gracefully\n");
+	vm_cleanup();
+	DC_Exit(0);
+	return TRUE; // to satisfy c++
+}
+
+void 
+main_pre_dc_init(int argc, char* argv[]) 
+{
+}
+
+void 
+main_pre_command_sock_init()
+{
+}
+
+static void
+usage( char *name)
+{
+	vmprintf(D_ALWAYS, 
+			"Usage: \n"
+			"\tTestMode: %s -f -t -M 0 gahpconfig <configfile> vmtype <vmtype> \n"
+			"\tIOMode: %s -f -t -M 1\n"
+			"\tWorkerMode: %s -f -t -M 2\n"
+			"\tStandAlone: %s -f -t -M 3\n", name, name, name, name);
+	DC_Exit(1);
+
+}
+
+int main_init(int argc, char *argv[])
+{
+	MyString configfile;
+	MyString vmtype;
+	MyString matchstring;
+
+	// save DebugFlags for vmprintf
+	oriDebugFlags = DebugFlags;
+
+	// handle specific command line args
+	if( argc < 3 ) {
+		usage(argv[0]);
+	}
+
+	// Read the first argument
+	if( strcmp(argv[1], "-M")) {
+		usage(argv[0]);
+	}
+
+	vmgahp_mode = atoi(argv[2]);
+	if( vmgahp_mode >= VMGAHP_MODE_MAX ) {
+		usage(argv[0]);
+	}
+
+	vmgahp_stdout_pipe = daemonCore->Inherit_Pipe(fileno(stdout),
+			true,		//write pipe
+			false,		//nonregisterable
+			false);		//blocking
+
+	if( vmgahp_stdout_pipe == -1 ) {
+			vmprintf(D_ALWAYS,"Can't get stdout pipe");
+			DC_Exit(1);
+	}
+
+	if( Termlog && (vmgahp_mode != VMGAHP_TEST_MODE ) && 
+			(vmgahp_mode != VMGAHP_KILL_MODE )) {
+		// Initialize pipe for stderr 
+		vmgahp_stderr_pipe = daemonCore->Inherit_Pipe(fileno(stderr),
+				true,		//write pipe
+				false,		//nonregisterable
+				true);		//non-blocking
+
+		if( vmgahp_stderr_pipe == -1 ) {
+			vmprintf(D_ALWAYS,"Can't get stderr pipe");
+			DC_Exit(1);
+		}
+		vmgahp_stderr_buffer.setPipeEnd(vmgahp_stderr_pipe);
+
+		vmgahp_stderr_tid = daemonCore->Register_Timer(2, 2,
+				(TimerHandler)&write_stderr_to_pipe,
+				"write_stderr_to_pipe",
+				NULL);
+		if( vmgahp_stderr_tid == -1 ) {
+			vmprintf(D_ALWAYS,"Can't register stderr timer");
+			DC_Exit(1);
+		}
+	}else {
+		vmgahp_stderr_pipe = -1;
+		vmgahp_stderr_tid = -1;
+	}
+
+	vmprintf(D_ALWAYS, "VM-GAHP initialized with run-mode %d\n", vmgahp_mode);
+
+	if( (vmgahp_mode == VMGAHP_TEST_MODE) || (vmgahp_mode == VMGAHP_KILL_MODE )) {
+		char _gahpconfig[] = "gahpconfig";
+		char _vmtype[] = "vmtype";
+		char _match[] = "match";
+
+		// This program is called in test mode
+		char *opt = NULL, *arg = NULL;
+		int opt_len = 0;
+		char **tmp = argv + 2;
+
+		for( tmp++ ; *tmp; tmp++ ) {
+			opt = tmp[0];
+			arg = tmp[1];
+			opt_len = strlen(opt);
+
+			if( ! strncmp(opt, _gahpconfig, opt_len) ) {
+				// path of config file
+				if( !arg ) {
+					usage(argv[0]);
+				}
+				configfile = arg;
+				tmp++; //consume the arg so we don't get confused
+				continue;
+			}
+
+			if( ! strncmp(opt, _vmtype, opt_len) ) {
+				// vm type
+				if( !arg ) {
+					usage(argv[0]);
+				}
+				vmtype = arg;
+				tmp++; //consume the arg so we don't get confused
+				continue;
+			}
+
+			if( ! strncmp(opt, _match, opt_len) ) {
+				// match string
+				if( !arg ) {
+					usage(argv[0]);
+				}
+				matchstring = arg;
+				tmp++; //consume the arg so we don't get confused
+				continue;
+			}
+
+			usage(argv[0]);
+		}
+
+		if( vmgahp_mode == VMGAHP_TEST_MODE ) {
+			if( ( configfile.Length() == 0 ) || ( vmtype.Length() == 0 ) ) {
+				usage(argv[0]);
+			}
+		}else if( vmgahp_mode == VMGAHP_KILL_MODE ) {
+			if( ( configfile.Length() == 0 ) || ( vmtype.Length() == 0 ) ||
+					( matchstring.Length() == 0 )) {
+				usage(argv[0]);
+			}
+		}
+	}else {
+		// Read parameters from environment variables
+		configfile = getenv("VMGAHP_CONFIG");
+		if( configfile.IsEmpty() ) {
+			vmprintf(D_ALWAYS, "cannot find gahp config file\n");
+			DC_Exit(1);
+		}
+
+		vmtype = getenv("VMGAHP_VMTYPE");
+		if( vmtype.IsEmpty() ) {
+			vmprintf(D_ALWAYS, "cannot find vmtype\n");
+			DC_Exit(1);
+		}
+	
+		workingdir = getenv("VMGAHP_WORKING_DIR");
+		if( workingdir.IsEmpty() ) {
+			vmprintf(D_ALWAYS, "cannot find vmgahp working dir\n");
+			DC_Exit(1);
+		}
+	}
+
+	Init();
+	Register();
+	Reconfig();
+
+	// change vmtype to lowercase
+	vmtype.strlwr();
+
+	// check whether vmtype is supported by this gahp server
+	if( verify_vm_type(vmtype.Value()) == false ) {
+		DC_Exit(1);
+	}
+
+	initialize_uids(vmtype.Value());
+
+#if defined(LINUX)
+	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
+		// Xen requires root priviledge 
+		if( !canSwitchUid() ) {
+			vmprintf(D_ALWAYS, "VMGahp server for Xen requires "
+					"root privilege\n");
+			DC_Exit(1);
+		}
+	}
+#endif
+
+	// check permissions of vmgahp config file
+	vmgahp_set_root_priv();
+	if( check_vmgahp_config_permission(configfile.Value(), 
+				vmtype.Value()) == false ) {
+		DC_Exit(1);
+	}
+
+	// Read config file
+	vmgahp_set_root_priv();
+	if( read_vmgahp_configfile(configfile.Value()) < 0 ) {
+		vmprintf( D_ALWAYS, "\nERROR: Failed to parse vmgahp "
+				"config file(%s)\n", configfile.Value()); 
+		DC_Exit(1);
+	}
+
+	// create VMGahpConfig and fill it with vmgahp config parameters
+	VMGahpConfig *gahpconfig = new VMGahpConfig;
+	ASSERT(gahpconfig);
+	vmgahp_set_root_priv();
+	if( gahpconfig->init(vmtype.Value(), configfile.Value()) == false ) {
+		DC_Exit(1);
+	}
+
+	if( isSetUidRoot() ) {
+		// If vmgahp has setuid-root,  
+		// check if a local user calling this vmgahp is allowed
+		if( gahpconfig->isAllowUser(get_caller_name()) == false ) {
+			vmprintf( D_ALWAYS, "\nERROR: Local user(%s) is not allowed "
+					"to execute vmgahp server\n", get_caller_name());
+			DC_Exit(1);
+		}
+	}
+
+	vmgahp_set_condor_priv();
+
+	// Check if vm specific paramaters are valid in vmgahp config file
+#if defined(LINUX)
+	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
+		priv_state priv = vmgahp_set_root_priv();
+		if( XenType::checkXenParams(gahpconfig) == false ) {
+			DC_Exit(1);
+		}
+		vmgahp_set_priv(priv);
+	}else
+#endif
+	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
+		priv_state priv = vmgahp_set_user_priv();
+		if( VMwareType::checkVMwareParams(gahpconfig) == false ) {
+			DC_Exit(1);
+		}
+		vmgahp_set_priv(priv);
+	}
+
+	if( vmgahp_mode == VMGAHP_TEST_MODE ) {
+		// Try to test
+#if defined(LINUX)
+		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
+			priv_state priv = vmgahp_set_root_priv();
+			if( XenType::testXen(gahpconfig) == false ) {
+				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
+						"be used.\n", vmtype.Value());
+				DC_Exit(0);
+			}
+			vmgahp_set_priv(priv);
+		}else
+#endif
+		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
+			priv_state priv = vmgahp_set_user_priv();
+			if( VMwareType::testVMware(gahpconfig) == false ) {
+				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
+						"be used.\n", vmtype.Value());
+				DC_Exit(0);
+			}
+			vmgahp_set_priv(priv);
+		}
+
+		// print information to stdout
+		write_to_daemoncore_pipe("VM_GAHP_VERSION = \"%s\"\n", VMGAHP_VERSION); 
+		write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_TYPE, 
+				gahpconfig->m_vm_type.Value());
+		write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_VERSION, 
+				gahpconfig->m_vm_version.Value());
+		write_to_daemoncore_pipe("%s = %d\n", ATTR_VM_MEMORY, 
+				gahpconfig->m_vm_max_memory);
+		write_to_daemoncore_pipe("%s = %s\n", ATTR_VM_NETWORKING, 
+				gahpconfig->m_vm_networking? "TRUE":"FALSE");
+		if( gahpconfig->m_vm_networking ) {
+			write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_NETWORKING_TYPES, 
+				gahpconfig->m_vm_networking_types.print_to_string());
+		}
+		if( gahpconfig->m_vm_hardware_vt ) {
+			write_to_daemoncore_pipe("%s = TRUE\n", ATTR_VM_HARDWARE_VT);
+		}
+		DC_Exit(0);
+	}
+
+	if( vmgahp_mode == VMGAHP_KILL_MODE ) {
+		if( matchstring.IsEmpty() ) {
+			DC_Exit(0);
+		}
+
+		// With root privilege, 
+		// we will try to kill the VM that matches with given "matchstring".
+		vmgahp_set_root_priv();
+
+#if defined(LINUX)
+		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN ) == 0 ) {
+			XenType::killVMFast(gahpconfig->m_vm_script.Value(), 
+					matchstring.Value());
+		}else
+#endif
+		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
+			VMwareType::killVMFast(gahpconfig->m_prog_for_script.Value(), 
+					gahpconfig->m_vm_script.Value(), matchstring.Value(), true);
+		}
+		DC_Exit(0);
+	}
+
+	vmgahp = new VMGahp(gahpconfig, workingdir.Value());
+	ASSERT(vmgahp);
+
+	if( vmgahp_mode == VMGAHP_IO_MODE ) {
+		vmgahp->startWorker();
+	}
+
+	/* Wait for command */
+	vmgahp->startUp();
+
+	if( vmgahp_mode != VMGAHP_WORKER_MODE ) {
+		write_to_daemoncore_pipe("%s\n", vmgahp_version);
+	}
+
+	return TRUE;
+}
+

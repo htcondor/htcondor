@@ -30,6 +30,7 @@
 #include "domain_tools.h"
 #include "basename.h"
 #include "../condor_privsep/condor_privsep.h"
+#include "condor_vm_universe_types.h"
 
 extern CStarter *Starter;
 
@@ -466,9 +467,47 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	bool init_priv_succeeded = true;
 	bool run_as_owner = allowRunAsOwner( false, false );
 
-	if ( run_as_owner ) {
-		job_ad->LookupString(ATTR_OWNER,&name);
-		job_ad->LookupString(ATTR_NT_DOMAIN,&domain);
+	// TODO.. 
+	// Currently vmgahp for VMware VM universe can't run as user on Windows.
+	// It seems like a bug of VMware. VMware command line tool such as "vmrun" 
+	// requires Administrator privilege.
+	// So here we set name and domain with my_username and my_domainname
+	// -jaeyoung 06/15/07
+	if( job_universe == CONDOR_UNIVERSE_VM ) {
+#if 0
+		// If "VM_UNIV_USER" is defined in Condor configuration file, 
+		// wee will use it.
+		char *vm_jobs_as = param("VM_UNIV_USER");
+		if (vm_jobs_as) {		
+			getDomainAndName(vm_jobs_as, domain, name);
+			/* 
+			 * name and domain are now just pointers into vm_jobs_as
+			 * buffer.  copy these values into their own buffer so we
+			 * deallocate below.
+			 */
+			if ( name ) {
+				name = strdup(name);
+			}
+			if ( domain ) {
+				domain = strdup(domain);
+			}
+			free(vm_jobs_as);
+		}
+#endif
+		MyString vm_type;
+		job_ad->LookupString(ATTR_JOB_VM_TYPE, vm_type);
+
+		if( strcasecmp(vm_type.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
+			name = my_username();
+			domain = my_domainname();
+		}
+	}
+
+	if( !name ) {	
+		if ( run_as_owner ) {
+			job_ad->LookupString(ATTR_OWNER,&name);
+			job_ad->LookupString(ATTR_NT_DOMAIN,&domain);
+		}
 	}
 
 	if ( !name ) {

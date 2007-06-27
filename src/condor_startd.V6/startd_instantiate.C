@@ -30,6 +30,7 @@ class CpuAttributes;
 class Starter;
 class Claim;
 class VMMachine;
+class VMStarterInfo;
 
 template class ExtArray<bool>;
 template class SimpleList<Claim*>;
@@ -37,6 +38,7 @@ template class SimpleList<Starter*>;
 template class SimpleList<Resource*>;
 template class SimpleList<CpuAttributes*>;
 template class SimpleList<VMMachine*>;
+template class SimpleList<VMStarterInfo*>;
 
 
 #if HAVE_BACKFILL

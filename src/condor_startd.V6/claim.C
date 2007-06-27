@@ -219,6 +219,14 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 		cad->Insert( line.Value() );
 	}
 
+	// If this claim is for vm universe, update some info about VM
+	if( c_starter ) {
+		pid_t s_pid = c_starter->pid();
+		if( s_pid > 0 ) {
+			resmgr->m_vmuniverse_mgr.publishVMInfo(s_pid, cad, how_much);
+		}
+	}
+
 	publishStateTimes( cad );
 
 }
@@ -684,7 +692,8 @@ Claim::beginActivation( time_t now )
 	}
 	c_universe = univ;
 
-	if( univ == CONDOR_UNIVERSE_STANDARD ) {
+	if( (univ == CONDOR_UNIVERSE_STANDARD) || 
+			(univ == CONDOR_UNIVERSE_VM)) {
 		c_last_pckpt = (int)now;
 	}
 }

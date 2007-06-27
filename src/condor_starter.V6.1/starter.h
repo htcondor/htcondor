@@ -85,7 +85,7 @@ public:
 	virtual int RemoteContinue( int );
 	virtual bool Continue( void );
 
-		/** To do */
+		/** Call Ckpt() on all elements in JobList */
 	virtual int RemotePeriodicCkpt( int );
 	virtual bool PeriodicCkpt( void );
 

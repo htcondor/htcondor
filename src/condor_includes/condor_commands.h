@@ -159,6 +159,10 @@
 #define DELEGATE_GSI_CRED_STARTER (SCHED_VERS+100) // delegate refreshed gsi proxy to starter
 #define DELEGATE_GSI_CRED_STARTD (SCHED_VERS+101) // delegate gsi proxy to startd
 #define REQUEST_SANDBOX_LOCATION (SCHED_VERS+102) // get the sinful of a transferd
+#define VM_UNIV_GAHP_ERROR   (SCHED_VERS+103) // report the error of vmgahp to startd
+#define VM_UNIV_VMPID		(SCHED_VERS+104) // PID of process for a VM
+#define VM_UNIV_GUEST_IP	(SCHED_VERS+105) // IP address of VM
+#define VM_UNIV_GUEST_MAC	(SCHED_VERS+106) // MAC address of VM
 
 // HAD-related commands
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)

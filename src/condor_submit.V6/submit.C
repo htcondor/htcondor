@@ -80,6 +80,9 @@
 #include "condor_holdcodes.h"
 
 #include "list.h"
+#include "condor_vm_universe_types.h"
+#include "vm_univ_utils.h"
+
 
 // TODO: hashFunction() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
@@ -154,6 +157,16 @@ char* tdp_input = NULL;
 #if defined(WIN32)
 char* RunAsOwnerCredD = NULL;
 #endif
+
+// For vm universe
+MyString VMType;
+int VMMemory = 0;
+bool VMCheckpoint = false;
+bool VMNetworking = false;
+StringList VMNetworkTypes;
+bool VMHardwareVT = false;
+bool vm_need_fsdomain = false;
+bool xen_has_file_to_be_transferred = false;
 
 //
 // The default polling interval for the schedd
@@ -322,6 +335,16 @@ char	*CronPrepTime	= "cron_prep_time";
 char	*RunAsOwner = "run_as_owner";
 #endif
 
+//
+// VM universe Parameters
+//
+char    *VM_Type = "vm_type";
+char    *VM_Memory = "vm_memory";
+char    *VM_Checkpoint = "vm_checkpoint";
+char    *VM_Networking = "vm_networking";
+char    *VM_Networking_Type = "vm_networking_type";
+
+
 const char * REMOTE_PREFIX="Remote_";
 
 #if !defined(WIN32)
@@ -416,6 +439,12 @@ void SetParallelStartupScripts(); //JDB
 void SetMaxJobRetirementTime();
 bool mightTransfer( int universe );
 bool isTrue( const char* attr );
+void SetVMParams();
+void SetVMRequirements();
+bool parse_vm_option(char *value, bool& onoff);
+void transfer_vm_file(const char *filename, const char *lhs );
+bool make_vm_file_path(const char *filename, const char* param, MyString& fixedname);
+bool validate_xen_disk_parm(const char *xen_disk, MyString &fixedname);
 
 char *owner = NULL;
 char *ntdomain = NULL;
@@ -1254,6 +1283,16 @@ SetExecutable()
 		free( macro_value );
 	}
 
+	// In vm universe, 'Executable' parameter is not a real file 
+	// but just the name of job.
+	if ( JobUniverse == CONDOR_UNIVERSE_VM) {
+		if( transfer_it == true ) {
+			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
+			InsertJobExpr( buffer );
+			transfer_it = false;
+		}
+	}
+
 	// If we're not transfering the executable, leave a relative pathname
 	// unresolved. This is mainly important for the Globus universe.
 	if ( transfer_it ) {
@@ -1261,7 +1300,9 @@ SetExecutable()
 	} else {
 		full_ename = ename;
 	}
-	check_and_universalize_path(full_ename, Executable);
+	if ( JobUniverse != CONDOR_UNIVERSE_VM) {
+		check_and_universalize_path(full_ename, Executable);
+	}
 
 	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, full_ename.Value());
 	InsertJobExpr (buffer);
@@ -1294,6 +1335,7 @@ SetExecutable()
 	case CONDOR_UNIVERSE_PARALLEL:
 	case CONDOR_UNIVERSE_GRID:
 	case CONDOR_UNIVERSE_JAVA:
+	case CONDOR_UNIVERSE_VM:
 		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_REMOTE_SYSCALLS);
 		InsertJobExpr (buffer);
 		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
@@ -1305,10 +1347,14 @@ SetExecutable()
 		exit( 1 );
 	}
 
-	copySpool = condor_param( CopyToSpool, "CopyToSpool" );
-	if( copySpool == NULL)
-	{
+	// In vm universe, there is no executable file.
+	if ( JobUniverse == CONDOR_UNIVERSE_VM) {
 		copySpool = (char *)strdup("FALSE");
+	}else {
+		copySpool = condor_param( CopyToSpool, "CopyToSpool" );
+		if( copySpool == NULL ) {
+			copySpool = (char *)strdup("FALSE");
+		}
 	}
 
 	// generate initial checkpoint file
@@ -1539,6 +1585,94 @@ SetUniverse()
 		return;
 	}
 
+	if( univ && stricmp(univ,"vm") == MATCH ) {
+		JobUniverse = CONDOR_UNIVERSE_VM;
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VM);
+		InsertJobExpr (buffer);
+		free(univ);
+
+		// virtual machine type ( xen, vmware )
+		char *vm_tmp = NULL;
+		vm_tmp = condor_param(VM_Type, ATTR_JOB_VM_TYPE);
+		if( !vm_tmp ) {
+			fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
+					"Please specify '%s' for vm universe "
+					"in your submit description file.\n", VM_Type, VM_Type);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		VMType = vm_tmp;
+		VMType.strlwr();
+		free(vm_tmp);
+
+		// need vm checkpoint?
+		VMCheckpoint = false;
+		vm_tmp = condor_param(VM_Checkpoint, ATTR_JOB_VM_CHECKPOINT);
+		if( vm_tmp ) {
+			parse_vm_option(vm_tmp, VMCheckpoint);
+			free(vm_tmp);
+		}
+	
+		// need vm networking?
+		VMNetworking = false;
+		vm_tmp = condor_param(VM_Networking, ATTR_JOB_VM_NETWORKING);
+		if( vm_tmp ) {
+			parse_vm_option(vm_tmp, VMNetworking);
+			free(vm_tmp);
+		}
+
+		if( VMCheckpoint ) {
+			if( VMNetworking ) {
+				/*
+				 * User explicitly requested vm_checkpoint = true, 
+				 * but they also turned on vm_networking, 
+				 * For now, vm_networking is not conflict with vm_checkpoint.
+				 * If user still wants to use both vm_networking 
+				 * and vm_checkpoint, they explicitly need to define 
+				 * when_to_transfer_output = ON_EXIT_OR_EVICT.
+				 */
+				FileTransferOutput_t when_output = FTO_NONE;
+				vm_tmp = condor_param( ATTR_WHEN_TO_TRANSFER_OUTPUT, 
+						"when_to_transfer_output" );
+				if( vm_tmp ) {
+					when_output = getFileTransferOutputNum(vm_tmp);
+					free(vm_tmp);
+				}
+				if( when_output != FTO_ON_EXIT_OR_EVICT ) {
+					MyString err_msg;
+					err_msg = "\nERROR: You explicitly requested "
+						"both VM checkpoint and VM networking. "
+						"However, VM networking is currently conflict "
+						"with VM checkpoint. If you still want to use "
+						"both VM networking and VM checkpoint, "
+						"you explicitly must define "
+						"\"when_to_transfer_output = ON_EXIT_OR_EVICT\"\n";
+					print_wrapped_text( err_msg.Value(), stderr );
+					DoCleanup(0,0,NULL);
+					exit( 1 );
+				}
+			}
+			// For vm checkpoint, we turn on condor file transfer
+			set_condor_param( ATTR_SHOULD_TRANSFER_FILES, "YES");
+			set_condor_param( ATTR_WHEN_TO_TRANSFER_OUTPUT, "ON_EXIT_OR_EVICT");
+		}else {
+			// Even if we don't use vm_checkpoint, 
+			// we always turn on condor file transfer for VM universe.
+			// Here there are several reasons.
+			// For example, because we may use snapshot disks in vmware, 
+			// those snapshot disks need to be transferred back 
+			// to this submit machine.
+			// For another example, a job user want to transfer vm_cdrom_files 
+			// but doesn't want to transfer disk files.
+			// If we need the same file system domain, 
+			// we will add the requirement of file system domain later as well.
+			set_condor_param( ATTR_SHOULD_TRANSFER_FILES, "YES");
+			set_condor_param( ATTR_WHEN_TO_TRANSFER_OUTPUT, "ON_EXIT");
+		}
+
+		return;
+	};
+
 
 #if defined( CLIPPED )
 		// If we got this far, we must be a standard job.  Since we're
@@ -1652,7 +1786,11 @@ SetImageSize()
 	// proc in the cluster, since the executable cannot change.
 	if ( ProcId < 1 ) {
 		ASSERT (job->LookupString (ATTR_JOB_CMD, buff));
-		executablesize = calc_image_size( buff );
+		if( JobUniverse == CONDOR_UNIVERSE_VM ) { 
+			executablesize = 0;
+		}else {
+			executablesize = calc_image_size( buff );
+		}
 	}
 
 	size = executablesize;
@@ -1689,8 +1827,24 @@ SetImageSize()
 					executablesize);
 	InsertJobExpr (buffer);
 
-	(void)sprintf (buffer, "%s = %u", ATTR_DISK_USAGE, 
-					executablesize + TransferInputSize);
+	if( JobUniverse == CONDOR_UNIVERSE_VM) {
+		// In vm universe, when a VM is suspended, 
+		// memory being used by the VM will be saved into a file. 
+		// So we need as much disk space as the memory.
+		int vm_disk_space = executablesize + TransferInputSize + VMMemory*1024;
+
+		// In vmware vm universe, vmware disk may be a sparse disk or 
+		// snapshot disk. So we can't estimate the disk space in advanace 
+		// because the sparse disk or snapshot disk will grow up 
+		// as a VM runs. So we will add 100MB to disk space.
+		if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
+			vm_disk_space += 100*1024;
+		}
+		(void)sprintf (buffer, "%s = %u", ATTR_DISK_USAGE, vm_disk_space);
+	}else {
+		(void)sprintf (buffer, "%s = %u", ATTR_DISK_USAGE, 
+				executablesize + TransferInputSize);
+	}
 	InsertJobExpr (buffer);
 }
 
@@ -2057,7 +2211,8 @@ SetTransferFiles()
 
 	if( should_transfer == STF_NO && 
 		JobUniverse != CONDOR_UNIVERSE_GRID &&
-		JobUniverse != CONDOR_UNIVERSE_JAVA )
+		JobUniverse != CONDOR_UNIVERSE_JAVA &&
+		JobUniverse != CONDOR_UNIVERSE_VM )
 	{
 		char *transfer_exe;
 		transfer_exe = condor_param( TransferExecutable,
@@ -2621,6 +2776,14 @@ SetStdFile( int which_file )
 		stream_it = false;
 		// always canonicalize to the UNIX null file (i.e. /dev/null)
 		macro_value = strdup(UNIX_NULL_FILE);
+	}else {
+		if( JobUniverse == CONDOR_UNIVERSE_VM ) {
+			fprintf( stderr,"\nERROR: You cannot use input, ouput, "
+					"and error parameters in the submit description "
+					"file for vm universe\n");
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
 	}
 	
 	if( whitespace(macro_value) ) 
@@ -5222,6 +5385,7 @@ queue(int num)
 		SetJarFiles();
 		SetJavaVMArgs();
 		SetParallelStartupScripts(); //JDB
+		SetVMParams();
 
 			// SetForcedAttributes should be last so that it trumps values
 			// set by normal submit attributes
@@ -5356,6 +5520,9 @@ check_requirements( char *orig )
 	case CONDOR_UNIVERSE_STANDARD:
 		ptr = param( "APPEND_REQ_STANDARD" );
 		break;
+	case CONDOR_UNIVERSE_VM:
+		ptr = param( "APPEND_REQ_VM" );
+		break;
 	default:
 		ptr = NULL;
 		break;
@@ -5456,6 +5623,43 @@ check_requirements( char *orig )
 		}
 		(void)strcat( answer, ATTR_HAS_JAVA );
 		(void)strcat( answer, ")" );
+	} else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
+		// For vm universe, we require the same archicture.
+		if( !checks_arch ) {
+			if( answer[0] ) {
+				(void)strcat( answer, " && (Arch == \"" );
+			} else {
+				(void)strcpy( answer, "(Arch == \"" );
+			}
+			(void)strcat( answer, Architecture );
+			(void)strcat( answer, "\")" );
+		}
+		// add HasVM to requirements
+		bool checks_vm = false;
+		checks_vm = findClause( answer, ATTR_HAS_VM );
+		if( !checks_vm ) {
+			(void)strcat( answer, "&& (" );
+			(void)strcat( answer, ATTR_HAS_VM );
+			(void)strcat( answer, ")" );
+		}
+		// add vm_type to requirements
+		bool checks_vmtype = false;
+		checks_vmtype = findClause( answer, ATTR_VM_TYPE);
+		if( !checks_vmtype ) {
+			(void)strcat( answer, " && (" );
+			(void)strcat( answer, ATTR_VM_TYPE );
+			(void)strcat( answer, " == \"" );
+			(void)strcat( answer, VMType.Value());
+			(void)strcat( answer, "\")" );
+		}
+		// check if the number of executable VM is more than 0
+		bool checks_avail = false;
+		checks_avail = findClause(answer, ATTR_VM_AVAIL_NUM);
+		if( !checks_avail ) {
+			(void)strcat( answer, " && (" );
+			(void)strcat( answer, ATTR_VM_AVAIL_NUM );
+			(void)strcat( answer, " > 0)" );
+		}
 	} else {
 		if( !checks_arch ) {
 			if( answer[0] ) {
@@ -5482,11 +5686,21 @@ check_requirements( char *orig )
 	}
 
 	if( !checks_disk ) {
-		(void)strcat( answer, " && (Disk >= DiskUsage)" );
+		if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
+			// VM universe uses Total Disk 
+			// instead of Disk for Condor slot
+			(void)strcat( answer, " && (TotalDisk >= DiskUsage)" );
+		}else {
+			(void)strcat( answer, " && (Disk >= DiskUsage)" );
+		}
 	}
 
-	if ( !checks_mem ) {
-		(void)strcat( answer, " && ( (Memory * 1024) >= ImageSize )" );
+	if ( JobUniverse != CONDOR_UNIVERSE_VM ) {
+		// The memory requirement for VM universe will be 
+		// added in SetVMRequirements 
+		if ( !checks_mem ) {
+			(void)strcat( answer, " && ( (Memory * 1024) >= ImageSize )" );
+		}
 	}
 
 	if( HasTDP && !checks_tdp ) {
@@ -6208,6 +6422,7 @@ mightTransfer( int universe )
 	case CONDOR_UNIVERSE_MPI:
 	case CONDOR_UNIVERSE_PARALLEL:
 	case CONDOR_UNIVERSE_JAVA:
+	case CONDOR_UNIVERSE_VM:
 		return true;
 		break;
 	default:
@@ -6236,5 +6451,924 @@ isTrue( const char* attr )
 	}
 	return false;
 }
+
+// add a vm file to transfer_input_files
+void transfer_vm_file(const char *filename, const char *lhs ) 
+{
+	MyString fixedname;
+
+	if( !filename ) {
+		return;
+	}
+
+	fixedname = delete_quotation_marks(filename);
+
+	StringList transfer_file_list(NULL, ",");
+	MyString transfer_input_files;
+
+	// check whether the file is in transfer_input_files
+	if( job->LookupString(ATTR_TRANSFER_INPUT_FILES,transfer_input_files) 
+				== 1 ) {
+		transfer_file_list.initializeFromString(transfer_input_files.Value());
+		if( filelist_contains_file(fixedname.Value(), 
+					&transfer_file_list, true) ) {
+			// this file is already in transfer_input_files
+			return;
+		}
+	}
+
+	// we need to add it
+	char *tmp_ptr = NULL;
+	check_and_universalize_path(fixedname, lhs);
+	check_open(fixedname.Value(), O_RDONLY);
+	TransferInputSize += calc_image_size(fixedname.Value());
+
+	transfer_file_list.append(fixedname.Value());
+	tmp_ptr = transfer_file_list.print_to_string();
+
+	sprintf(buffer, "%s = \"%s\"", ATTR_TRANSFER_INPUT_FILES, tmp_ptr);
+	InsertJobExpr(buffer, false);
+	free(tmp_ptr);
+
+	SetImageSize();
+}
+
+bool parse_vm_option(char *value, bool& onoff)
+{
+	if( !value ) {
+		return false;
+	}
+
+	onoff = isTrue(value);
+	return true;
+}
+
+// If a file is in transfer_input_files, the file will have just basename.
+// Otherwise, it will have full path. To get full path, iwd is used.
+bool 
+make_vm_file_path(const char *filename, const char* param, MyString& fixedname)
+{
+	if( filename == NULL ) {
+		return false;
+	}
+
+	fixedname = delete_quotation_marks(filename);
+
+	MyString transfer_input_files;
+	// check whether the file will be transferred
+	if( job->LookupString(ATTR_TRANSFER_INPUT_FILES,transfer_input_files) 
+				== 1 ) {
+		StringList transfer_file_list(NULL, ",");
+		transfer_file_list.initializeFromString(transfer_input_files.Value() );
+
+		if( filelist_contains_file(fixedname.Value(), 
+					&transfer_file_list, true) ) {
+			// this file is already in transfer_input_files
+			// filename should have only basename
+			fixedname = condor_basename(fixedname.Value());
+			return true;
+		}
+	}
+
+	// filename should have absolute path
+	fixedname = full_path(fixedname.Value());
+	check_and_universalize_path(fixedname, param);
+	check_open(fixedname.Value(), O_RDONLY);
+	
+	// we need the same file system for this file
+	vm_need_fsdomain = true;
+	return true;
+}
+
+// this function parses and checks xen disk parameters
+bool
+validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
+{
+	if( !xen_disk ) {
+		return false;
+	}
+
+	const char *ptr = xen_disk;
+	// skip leading white spaces
+	while( *ptr && ( *ptr == ' ' )) {
+		ptr++;
+	}
+
+	// parse each disk
+	// e.g.) xen_disk = filename1:hda1:w, filename2:hda2:w
+	StringList disk_files(ptr, ",");
+	if( disk_files.isEmpty() ) {
+		return false;
+	}
+
+	fixed_disk = "";
+
+	disk_files.rewind();
+	const char *one_disk = NULL;
+	while( (one_disk = disk_files.next() ) != NULL ) {
+
+		// found disk file
+		StringList single_disk_file(one_disk, ":");
+		if( single_disk_file.number() != 3 ) {
+			return false;
+		}
+
+		// check filename
+		single_disk_file.rewind();
+		MyString filename = single_disk_file.next();
+		filename.trim();
+
+		MyString fixedname;
+		if( make_vm_file_path(filename.Value(), "xen_disk", fixedname) 
+				== false ) {
+			return false;
+		}else {
+			if( fullpath(fixedname.Value()) == false ) {
+				// This file will be transferred
+				xen_has_file_to_be_transferred = true;
+			}
+
+			if( fixed_disk.Length() > 0 ) {
+				fixed_disk += ",";
+			}
+			// file name
+			fixed_disk += fixedname;
+			fixed_disk += ":";
+			// device
+			fixed_disk += single_disk_file.next();
+			fixed_disk += ":";
+			// permission
+			fixed_disk += single_disk_file.next();
+		}
+	}
+	return true;
+}
+
+// this function should be called after SetVMParams() and SetRequirements
+void SetVMRequirements()
+{
+	if ( JobUniverse != CONDOR_UNIVERSE_VM ) {
+		return;
+	}
+
+	char *orig = JobRequirements;
+	static char	vmanswer[4096];
+
+	if( strlen(orig) ) {
+		(void) sprintf( vmanswer, "(%s)", orig );
+	} else {
+		vmanswer[0] = '\0';
+	}
+
+	// check OS
+	if( (stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) || 
+			vm_need_fsdomain ) {
+		bool checks_opsys = false;
+		checks_opsys = findClause( vmanswer, ATTR_OPSYS );
+
+		if( !checks_opsys ) {
+			(void)strcat( vmanswer, " && (OpSys == \"" );
+			(void)strcat( vmanswer, OperatingSystem );
+			(void)strcat( vmanswer, "\")" );
+		}
+	}
+
+	// check file system domain
+	if( vm_need_fsdomain ) {
+		// some files don't use file transfer.
+		// so we need the same file system domain
+		bool checks_fsdomain = false;
+		checks_fsdomain = findClause( vmanswer, ATTR_FILE_SYSTEM_DOMAIN ); 
+
+		if( !checks_fsdomain ) {
+			(void)strcat( vmanswer, " && (TARGET." );
+			(void)strcat( vmanswer, ATTR_FILE_SYSTEM_DOMAIN );
+			(void)strcat( vmanswer, " == MY." );
+			(void)strcat( vmanswer, ATTR_FILE_SYSTEM_DOMAIN );
+			(void)strcat( vmanswer, ")" );
+		}
+		MyString my_fsdomain;
+		if(job->LookupString(ATTR_FILE_SYSTEM_DOMAIN, my_fsdomain) != 1) {
+			sprintf( buffer, "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, 
+					My_fs_domain ); 
+			InsertJobExpr( buffer );
+		}
+	}
+
+	if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) != MATCH ) {
+		// For most virtual machine programs except Xen, 
+		// it's reasonable to expect the physical memory is 
+		// larger than the memory for VM.
+		// Especially VM universe uses Total Memory 
+		// instead of Memory for Condor slot.
+		// The reason why we use Total Memory is that 
+		// we may want to run smaller VM universe jobs than the number of 
+		// Condor slots.
+		// The maximum number of VM universe jobs on a execute machine is 
+		// the number of ATTR_VM_AVAIL_NUM.
+		// Generally ATTR_VM_AVAIL_NUM must be less than the number of 
+		// Condor slot.
+		(void)strcat( vmanswer, " && (" );
+		(void)strcat( vmanswer, ATTR_TOTAL_MEMORY );
+		(void)strcat( vmanswer, " >= " );
+
+		MyString mem_tmp;
+		mem_tmp.sprintf("%d", VMMemory);
+		(void)strcat( vmanswer, mem_tmp.Value());
+		(void)strcat( vmanswer, ")" );
+	}
+
+	// add vm_memory to requirements
+	bool checks_vmmemory = false;
+	checks_vmmemory = findClause(vmanswer, ATTR_VM_MEMORY);
+	if( !checks_vmmemory ) {
+		(void)strcat( vmanswer, " && (" );
+		(void)strcat( vmanswer, ATTR_VM_MEMORY );
+		(void)strcat( vmanswer, " >= " );
+
+		MyString mem_tmp;
+		mem_tmp.sprintf("%d", VMMemory);
+		(void)strcat( vmanswer, mem_tmp.Value());
+		(void)strcat( vmanswer, ")" );
+	}
+
+	if( VMHardwareVT ) {
+		bool checks_hardware_vt = false;
+		checks_hardware_vt = findClause( vmanswer, ATTR_VM_HARDWARE_VT);
+
+		if( !checks_hardware_vt ) {
+			// add hardware vt to requirements
+			(void)strcat( vmanswer, " && (" );
+			(void)strcat( vmanswer, ATTR_VM_HARDWARE_VT);
+			(void)strcat( vmanswer, ")" );
+		}
+	}
+
+	if( VMNetworking && (VMNetworkTypes.isEmpty() == false) ) {
+		bool checks_vmnetworking = false;
+		checks_vmnetworking = findClause( vmanswer, ATTR_VM_NETWORKING);
+
+		if( !checks_vmnetworking ) {
+			// add vm_networking to requirements
+			(void)strcat( vmanswer, " && (" );
+			(void)strcat( vmanswer, ATTR_VM_NETWORKING);
+			(void)strcat( vmanswer, ")" );
+
+			// add vm_networking_type to requirements
+			(void)strcat( vmanswer, " && ( stringListIMember(\"" );
+			(void)strcat( vmanswer, VMNetworkTypes.print_to_string());
+			(void)strcat( vmanswer, "\",");
+			(void)strcat( vmanswer, "TARGET.");
+			(void)strcat( vmanswer, ATTR_VM_NETWORKING_TYPES);
+			(void)strcat( vmanswer, ",\",\")) ");
+		}
+	}
+
+	if( VMCheckpoint ) {
+		bool checks_ckpt_arch = false;
+		bool checks_vm_ckpt_mac = false;
+		checks_ckpt_arch = findClause( vmanswer, ATTR_CKPT_ARCH );
+		checks_vm_ckpt_mac = findClause( vmanswer, ATTR_VM_CKPT_MAC );
+
+		if( !checks_ckpt_arch ) {
+			// VM checkpoint files created on AMD 
+			// can not be used in INTEL. vice versa.
+			(void)strcat( vmanswer, " && ((MY.CkptArch == Arch) ||" );
+			(void)strcat( vmanswer, " (MY.CkptArch =?= UNDEFINED))" );
+		}
+		if( !checks_vm_ckpt_mac ) { 
+			// VMs with the same MAC address cannot run 
+			// on the same execute machine
+			(void)strcat( vmanswer, " && ((MY.VM_CkptMac =?= UNDEFINED) || " );
+			(void)strcat( vmanswer, "(TARGET.VM_All_Guest_Macs =?= UNDEFINED) || " );
+			(void)strcat( vmanswer, "( stringListIMember(MY.VM_CkptMac, ");
+			(void)strcat( vmanswer, "TARGET.VM_All_Guest_Macs, \",\") == FALSE )) ");
+		}
+	}
+
+	(void) sprintf (buffer, "%s = %s", ATTR_REQUIREMENTS, vmanswer);
+	strcpy (JobRequirements, vmanswer);
+	InsertJobExpr (buffer);
+}
+
+// this function must be called after SetUniverse
+void
+SetVMParams()
+{
+	if ( JobUniverse != CONDOR_UNIVERSE_VM ) {
+		return;
+	}
+
+	char* tmp_ptr = NULL;
+	bool has_vm_cdrom_files = false;
+	bool has_vm_iso_file = false;
+	bool vm_should_transfer_cdrom_files = false;
+	MyString final_cdrom_files;
+
+	// VM type is already set in SetUniverse
+	sprintf( buffer, "%s = \"%s\"", ATTR_JOB_VM_TYPE, VMType.Value());
+	InsertJobExpr(buffer);
+
+	// VM checkpoint is already set in SetUniverse
+	sprintf( buffer, "%s = %s", ATTR_JOB_VM_CHECKPOINT, 
+			VMCheckpoint? "TRUE":"FALSE");
+	InsertJobExpr(buffer);
+
+	// VM networking is already set in SetUniverse
+	sprintf( buffer, "%s = %s", ATTR_JOB_VM_NETWORKING, 
+			VMNetworking? "TRUE":"FALSE");
+	InsertJobExpr(buffer);
+
+	// Here we need to set networking type
+	if( VMNetworking ) {
+		tmp_ptr = condor_param(VM_Networking_Type, ATTR_JOB_VM_NETWORKING_TYPE);
+		if( tmp_ptr ) {
+			VMNetworkTypes.initializeFromString(tmp_ptr);
+			free(tmp_ptr);
+
+			if( VMNetworkTypes.number() > 1 ) {
+				fprintf( stderr, "\nERROR: Currently VM Universe supports "
+						"only one vm networking type\n");
+				DoCleanup(0,0,NULL);
+				exit(1);
+			}
+		}else {
+			fprintf( stderr, "\nERROR: In order to use VM networking, "
+					"you should define '%s'\n", VM_Networking_Type);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+	}
+	if( VMNetworking && (VMNetworkTypes.isEmpty() == false) ) {
+		tmp_ptr = VMNetworkTypes.print_to_string();
+		sprintf(buffer, "%s = \"%s\"", ATTR_JOB_VM_NETWORKING_TYPE, tmp_ptr);
+		InsertJobExpr(buffer, false );
+		free(tmp_ptr);
+	}
+
+	// Set memory for virtual machine
+	tmp_ptr = condor_param(VM_Memory, ATTR_JOB_VM_MEMORY);
+	if( !tmp_ptr ) {
+		fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
+				"Please specify '%s' for vm universe "
+				"in your submit description file.\n", VM_Memory, VM_Memory);
+		DoCleanup(0,0,NULL);
+		exit(1);
+	}else {
+		VMMemory = (int)strtol(tmp_ptr, (char **)NULL, 10);
+		free(tmp_ptr);
+	}
+	if( VMMemory <= 0 ) {
+		fprintf( stderr, "\nERROR: '%s' is incorrectly specified\n"
+				"For example, for vm memroy of 128 Megabytes,\n"
+				"you need to use 128 in your submit description file.\n", 
+				VM_Memory);
+		DoCleanup(0,0,NULL);
+		exit(1);
+	}
+	sprintf( buffer, "%s = %d", ATTR_JOB_VM_MEMORY, VMMemory);
+	InsertJobExpr( buffer, false );
+
+	/* 
+	 * When the parameter of "vm_no_output_vm" is TRUE, 
+	 * Condor will not transfer VM files back to a job user. 
+	 * This parameter could be used if a job user uses 
+	 * explict method to get output files from VM. 
+	 * For example, if a job user uses a ftp program 
+	 * to send output files inside VM to his/her dedicated machine for ouput, 
+	 * Maybe the job user doesn't want to get modified VM files back. 
+	 * So the job user can use this parameter
+	 */
+	bool vm_no_output_vm = false;
+	tmp_ptr = condor_param("vm_no_output_vm");
+	if( tmp_ptr ) {
+		parse_vm_option(tmp_ptr, vm_no_output_vm);
+		free(tmp_ptr);
+		if( vm_no_output_vm ) {
+			sprintf( buffer, "%s = TRUE", VMPARAM_NO_OUTPUT_VM);
+			InsertJobExpr( buffer, false );
+		}
+	}
+
+	// 'vm_cdrom_files' defines files which will be shown in CDROM inside a VM.
+	// That is, vm-gahp on the execute machine will create a ISO file with 
+	// the defined files. The ISO file will be viewed as a CDROM in a VM.
+	char *vm_cdrom_files = NULL;
+	vm_cdrom_files = condor_param("vm_cdrom_files");
+	if( vm_cdrom_files ) {
+		vm_should_transfer_cdrom_files = false;
+		tmp_ptr = condor_param("vm_should_transfer_cdrom_files");
+		if( parse_vm_option(tmp_ptr, vm_should_transfer_cdrom_files) 
+				== false ) {
+			MyString err_msg;
+			err_msg = "\nERROR: You must explicitly specify "
+				"\"vm_should_transfer_cdrom_files\" "
+				"in your submit description file. "
+				"You need to define either "
+				"\"vm_should_transfer_cdrom_files = YES\" or "
+				" \"vm_should_transfer_cdrom_files = NO\". "
+				"If you define \"vm_should_transfer_cdrom_files = YES\", " 
+				"all files in \"vm_cdrom_files\" will be "
+				"transfered to an execute machine. "
+				"If you define \"vm_should_transfer_cdrom_files = NO\", "
+				"all files in \"vm_cdrom_files\" should be "
+				"accessible with a shared file system\n";
+			print_wrapped_text( err_msg.Value(), stderr );
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		free(tmp_ptr);
+
+		sprintf( buffer, "%s = %s", VMPARAM_TRANSFER_CDROM_FILES,
+				vm_should_transfer_cdrom_files ? "TRUE" : "FALSE");
+		InsertJobExpr( buffer, false);
+
+		if( vm_should_transfer_cdrom_files == false ) {
+			vm_need_fsdomain = true;
+		}
+
+		StringList cdrom_file_list(NULL, ",");
+		cdrom_file_list.initializeFromString(vm_cdrom_files);
+		final_cdrom_files = "";
+
+		cdrom_file_list.rewind();
+
+		has_vm_iso_file = false;
+		MyString cdrom_file;
+		const char *tmp_file = NULL;
+		while( (tmp_file = cdrom_file_list.next() ) != NULL ) {
+			cdrom_file = delete_quotation_marks(tmp_file);
+			if( cdrom_file.Length() == 0 ) {
+				continue;
+			}
+			cdrom_file.trim();
+			if( has_suffix(cdrom_file.Value(), ".iso") ) {
+				has_vm_iso_file = true;
+			}
+
+			// convert file name to full path that uses iwd
+			cdrom_file = full_path(cdrom_file.Value());
+			check_and_universalize_path(cdrom_file,"vm_cdrom_files");
+
+			if( vm_should_transfer_cdrom_files ) {
+				// add this cdrom file to transfer_input_files
+				transfer_vm_file(cdrom_file.Value(), "vm_cdrom_files");
+			}
+
+			if( final_cdrom_files.Length() > 0 ) {
+				final_cdrom_files += ",";
+			}
+			if( vm_should_transfer_cdrom_files ) {
+				// A file will be transferred. 
+				// So we use basename.
+				final_cdrom_files += condor_basename(cdrom_file.Value());
+			}else {
+				final_cdrom_files += cdrom_file.Value();
+			}
+		}
+
+		if( has_vm_iso_file && (cdrom_file_list.number() > 1)) {
+			fprintf( stderr, "\nERROR: You cannot define an iso file "
+					"with other files. You should define either "
+					"only one iso file or multiple non-iso files in %s\n", 
+					"vm_cdrom_files");
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+
+		sprintf( buffer, "%s = \"%s\"", VMPARAM_CDROM_FILES, 
+				final_cdrom_files.Value());
+		InsertJobExpr( buffer, false );
+		has_vm_cdrom_files = true;
+		free(vm_cdrom_files);
+	}
+
+	if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
+		bool real_xen_kernel_file = false;
+		bool need_xen_root_device = false;
+
+		// Read the parameter of xen_transfer_files 
+		char *xen_transfer_files = NULL;
+		xen_transfer_files = condor_param("xen_transfer_files");
+		if( xen_transfer_files ) {
+			MyString final_output;
+			StringList xen_file_list(NULL, ",");
+			xen_file_list.initializeFromString(xen_transfer_files);
+
+			xen_file_list.rewind();
+
+			MyString one_file;
+			const char *tmp_file = NULL;
+			while( (tmp_file = xen_file_list.next() ) != NULL ) {
+				one_file = delete_quotation_marks(tmp_file);
+				if( one_file.Length() == 0 ) {
+					continue;
+				}
+				one_file.trim();
+				// convert file name to full path that uses iwd
+				one_file = full_path(one_file.Value());
+				check_and_universalize_path(one_file,"xen_transfer_files");
+
+				// add this file to transfer_input_files
+				transfer_vm_file(one_file.Value(), "xen_transfer_files");
+
+				if( final_output.Length() > 0 ) {
+					final_output += ",";
+				}
+				// VMPARAM_XEN_TRANSFER_FILES will include 
+				// basenames for files to be transferred.
+				final_output += condor_basename(one_file.Value());
+			}
+			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_TRANSFER_FILES, 
+					final_output.Value());
+			InsertJobExpr( buffer, false );
+			free(xen_transfer_files);
+		}
+
+		// xen_kernel is a required parameter
+		char *xen_kernel = NULL;
+		xen_kernel = condor_param("xen_kernel");
+		if( !xen_kernel ) {
+			fprintf( stderr, "\nERROR: 'xen_kernel' cannot be found.\n"
+					"Please specify 'xen_kernel' for the xen virtual machine "
+					"in your submit description file.\n"
+					"xen_kernel must be one of "
+					"\"%s\", \"%s\", \"%s\", <file-name>.\n", 
+					XEN_KERNEL_ANY, XEN_KERNEL_INCLUDED, XEN_KERNEL_HW_VT);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}else {
+			MyString fixedname = delete_quotation_marks(xen_kernel);
+
+			if( stricmp(fixedname.Value(), XEN_KERNEL_ANY ) == 0 ) {
+				// Condor will use a default kernel defined 
+				// in a vmgahp config file on an execute machine
+				real_xen_kernel_file = false;
+				need_xen_root_device = true;
+			}else if ( stricmp(fixedname.Value(), XEN_KERNEL_INCLUDED) == 0) {
+				// kernel image is included in a disk image file
+				// so we will use bootloader(pygrub etc.) defined 
+				// in a vmgahp config file on an excute machine 
+				real_xen_kernel_file = false;
+				need_xen_root_device = false;
+			}else if ( stricmp(fixedname.Value(), XEN_KERNEL_HW_VT) == 0) {
+				// A job user want to use an unmodified OS in Xen.
+				// so we require hardware virtualization.
+				real_xen_kernel_file = false;
+				need_xen_root_device = false;
+				VMHardwareVT = true;
+				sprintf( buffer, "%s = TRUE", ATTR_JOB_VM_HARDWARE_VT);
+				InsertJobExpr( buffer, false );
+			}else {
+				// real kernel file
+				if( make_vm_file_path(xen_kernel, "xen_kernel", fixedname) 
+						== false ) {
+					DoCleanup(0,0,NULL);
+					exit(1);
+				}
+				real_xen_kernel_file = true;
+				need_xen_root_device = true;
+			}
+			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_KERNEL, 
+					fixedname.Value());
+			InsertJobExpr(buffer, false);
+			free(xen_kernel);
+		}
+
+		// xen_ramdisk is an optional parameter
+		char *xen_ramdisk = NULL;
+		xen_ramdisk = condor_param("xen_ramdisk");
+		if( xen_ramdisk ) {
+			if( !real_xen_kernel_file ) {
+				fprintf( stderr, "\nERROR: To use xen_ramdisk, "
+						"xen_kernel should be a real kernel file.\n");
+				DoCleanup(0,0,NULL);
+				exit(1);
+			}
+			MyString fixedname;
+			if( make_vm_file_path(xen_ramdisk, "xen_ramdisk", fixedname) 
+					== false ) {
+				DoCleanup(0,0,NULL);
+				exit(1);
+			}
+			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_RAMDISK, 
+					fixedname.Value());
+			InsertJobExpr(buffer, false);
+			free(xen_ramdisk);
+		}
+
+		if( need_xen_root_device ) {
+			char *xen_root = NULL;
+			xen_root = condor_param("xen_root");
+			if( !xen_root ) {
+				fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
+						"Please specify '%s' for the xen virtual machine "
+						"in your submit description file.\n", "xen_root", 
+						"xen_root");
+				DoCleanup(0,0,NULL);
+				exit(1);
+			}else {
+				MyString fixedvalue = delete_quotation_marks(xen_root);
+				sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_ROOT, 
+						fixedvalue.Value());
+				InsertJobExpr(buffer, false);
+				free(xen_root);
+			}
+		}
+
+		// xen_disk is a required parameter
+		char *xen_disk = NULL;
+		xen_disk = condor_param("xen_disk");
+		if( !xen_disk ) {
+			fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
+					"Please specify '%s' for the xen virtual machine "
+					"in your submit description file.\n", 
+					"xen_disk", "xen_disk");
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}else {
+			MyString fixedvalue = delete_quotation_marks(xen_disk);
+			if( validate_xen_disk_parm(fixedvalue.Value(), fixedvalue) 
+					== false ) {
+				fprintf(stderr, "\nERROR: 'xen_disk' has incorrect format.\n"
+						"The format shoud be like "
+						"\"<filename>:<devicename>:<permission>\"\n"
+						"e.g.> For single disk: xen_disk = filename1:hda1:w\n"
+						"      For multiple disks: xen_disk = "
+						"filename1:hda1:w,filename2:hda2:w\n");
+				DoCleanup(0,0,NULL);
+				exit(1);
+			}
+
+			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_DISK, fixedvalue.Value());
+			InsertJobExpr( buffer, false);
+			free(xen_disk);
+		}
+
+		// xen_extra is a optional parameter
+		char *xen_extra = NULL;
+		xen_extra = condor_param("xen_extra");
+		if( xen_extra ) {
+			MyString fixedvalue = delete_quotation_marks(xen_extra);
+			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_EXTRA, fixedvalue.Value());
+			InsertJobExpr( buffer, false);
+			free(xen_extra);
+		}
+
+		if( has_vm_cdrom_files ) {
+			MyString xen_cdrom_string;
+			char *xen_cdrom_device = NULL; 
+			xen_cdrom_device = condor_param("xen_cdrom_device");
+			if( !xen_cdrom_device ) {
+				fprintf(stderr, "\nERROR: To use 'vm_cdrom_files', "
+						"you must also define 'xen_cdrom_device'.\n");
+				DoCleanup(0,0,NULL);
+				exit(1);
+			}
+			xen_cdrom_string = xen_cdrom_device;
+			free(xen_cdrom_device);
+
+			if( xen_cdrom_string.find(":", 0 ) >= 0 ) {
+				fprintf(stderr, "\nERROR: 'xen_cdrom_device' should include "
+						"just device name.\n"
+						"e.g.) 'xen_cdrom_device = hdc'\n");
+				DoCleanup(0,0,NULL);
+				exit(1);
+			}
+
+			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_CDROM_DEVICE, 
+					xen_cdrom_string.Value());
+			InsertJobExpr( buffer, false );
+		}
+
+	}else if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
+		bool vmware_should_transfer_files = false;
+		tmp_ptr = condor_param("vmware_should_transfer_files");
+		if( parse_vm_option(tmp_ptr, vmware_should_transfer_files) == false ) {
+			MyString err_msg;
+			err_msg = "\nERROR: You must explicitly specify "
+				"\"vmware_should_transfer_files\" "
+				"in your submit description file. "
+				"You need to define either: "
+				"\"vmware_should_transfer_files = YES\" or "
+				" \"vmware_should_transfer_files = NO\". "
+				"If you define \"vmware_should_transfer_files = YES\", " 
+				"vmx and vmdk files in the directory of \"vmware_dir\" "
+				"will be transfered to an execute machine. "
+				"If you define \"vmware_should_transfer_files = NO\", "
+				"all files in the directory of \"vmware_dir\" should be "
+				"accessible with a shared file system\n";
+			print_wrapped_text( err_msg.Value(), stderr );
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		free(tmp_ptr);
+
+		sprintf( buffer, "%s = %s", VMPARAM_VMWARE_TRANSFER, 
+				vmware_should_transfer_files ? "TRUE" : "FALSE");
+		InsertJobExpr( buffer, false);
+
+		if( vmware_should_transfer_files == false ) {
+			vm_need_fsdomain = true;
+		}
+
+		/* In default, vmware vm universe uses snapshot disks.
+		 * However, when a user job is so IO-sensitive that 
+		 * the user doesn't want to use snapshot, 
+		 * the user must use both 
+		 * vmware_should_transfer_files = YES and 
+		 * vmware_snapshot_disk = FALSE
+		 * In vmware_should_transfer_files = NO 
+		 * snapshot disks is always used.
+		 */
+		bool vmware_snapshot_disk = true;
+		tmp_ptr = condor_param("vmware_snapshot_disk");
+		if( tmp_ptr ) {
+			parse_vm_option(tmp_ptr, vmware_snapshot_disk);
+			free(tmp_ptr);
+		}
+
+		if(	!vmware_should_transfer_files && !vmware_snapshot_disk ) {
+			MyString err_msg;
+			err_msg = "\nERROR: You should not use both "
+				"vmware_should_transfer_files = FALSE and "
+				"vmware_snapshot_disk = FALSE. "
+				"Not using snapshot disk in a shared file system may cause "
+				"problems when multiple jobs share the same disk\n";
+			print_wrapped_text( err_msg.Value(), stderr );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+
+		sprintf( buffer, "%s = %s", VMPARAM_VMWARE_SNAPSHOTDISK,
+				vmware_snapshot_disk? "TRUE" : "FALSE");
+		InsertJobExpr( buffer, false );
+
+		// vmware_dir is a directory that includes vmx file and vmdk files.
+		char *vmware_dir = NULL;
+		vmware_dir = condor_param("vmware_dir");
+		if( !vmware_dir ) {
+			fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
+					"Please specify the directory including "
+					"vmx and vmdk files for vmware virtual machine "
+					"in your submit description file.\n",
+					"vmware_dir");
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+
+		MyString f_dirname = delete_quotation_marks(vmware_dir);
+		free(vmware_dir);
+
+		f_dirname = full_path(f_dirname.Value(), false);
+		check_and_universalize_path(f_dirname,"vmware_dir");
+
+		sprintf( buffer, "%s = \"%s\"", VMPARAM_VMWARE_DIR, f_dirname.Value());
+		InsertJobExpr( buffer, false );
+
+		// find vmx file in the given directory
+		StringList vmxfiles;
+		if( suffix_matched_files_in_dir(f_dirname.Value(), vmxfiles, 
+					".vmx", true) == false ) {
+			fprintf( stderr, "\nERROR: no vmx file for vmware can be found "
+					"in %s.\n", f_dirname.Value());
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}else {
+			if( vmxfiles.number() > 1 ) {
+				fprintf( stderr, "\nERROR: multiple vmx files exist. "
+						"Only one vmx file must be in %s.\n", 
+						f_dirname.Value());
+				DoCleanup(0,0,NULL);
+				exit(1);
+			}
+			vmxfiles.rewind();
+			MyString vmxfile = vmxfiles.next();
+
+			// add vmx file to transfer_input_files
+			// vmx file will be always transfered to an execute machine
+			transfer_vm_file(vmxfile.Value(), "vmware_vmx");
+			sprintf( buffer, "%s = \"%s\"", VMPARAM_VMWARE_VMX_FILE,
+					condor_basename(vmxfile.Value()));
+			InsertJobExpr( buffer, false );
+		}
+
+		// find vmdk files in the given directory
+		StringList vmdk_files;
+		if( suffix_matched_files_in_dir(f_dirname.Value(), vmdk_files, 
+					".vmdk", true) == true ) {
+			MyString vmdks;
+			vmdk_files.rewind();
+			const char *tmp_file = NULL;
+			while( (tmp_file = vmdk_files.next() ) != NULL ) {
+				if( vmware_should_transfer_files ) {
+					// add vmdk files to transfer_input_files
+					transfer_vm_file(tmp_file, "vmware_vmdk");
+				}
+				if( vmdks.Length() > 0 ) {
+					vmdks += ",";
+				}
+				// VMPARAM_VMWARE_VMDK_FILES will include 
+				// basenames for vmdks files
+				vmdks += condor_basename(tmp_file);
+			}
+			sprintf( buffer, "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, 
+					vmdks.Value());
+			InsertJobExpr( buffer, false );
+		}
+	}
+
+	// Check if a job user defines 'Argument'.
+	// If 'Argument' parameter is defined, 
+	// we will create a file called "condor.arg" on an execute machine 
+	// and add the file to input CDROM.
+	ArgList arglist;
+	MyString arg_err_msg;
+	MyString arg_str;
+	if(!arglist.GetArgsStringV1or2Raw(job, &arg_str, &arg_err_msg)) {
+		arg_str = "";
+	}
+
+	// Here we check if this job submit description file is 
+	// correct for vm checkpoint
+	if( VMCheckpoint ) {
+		if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
+			// For vm checkpoint in Xen
+			// 1. all disk files should be in a shared file system
+			// 2. If a job uses CDROM files, it should be 
+			// 	  single ISO file and be in a shared file system
+			if( xen_has_file_to_be_transferred || 
+				(has_vm_cdrom_files && 
+				 (!has_vm_iso_file || vm_should_transfer_cdrom_files)) ||
+				!arg_str.IsEmpty() ) {
+				MyString err_msg;
+				err_msg = "\nERROR: To use checkpoint in Xen, "
+					"You need to make sure the followings.\n"
+					"1. All xen disk files should be in a shared file system\n"
+					"2. If you use 'vm_cdrom_files', "
+					"only single ISO file is allowed and the ISO file "
+					"should also be in a shared file system\n"
+					"3. You cannot use 'arguments' in a job description file\n\n";
+
+				if( xen_has_file_to_be_transferred ) {
+					err_msg += "ERROR: You requested to transfer at least one Xen "
+						"disk file\n";
+				}
+				if( has_vm_cdrom_files ) {
+					if( !has_vm_iso_file ) {
+						err_msg += "ERROR: You defined non-iso CDROM files\n";
+					}else if( vm_should_transfer_cdrom_files ) {
+						err_msg += "ERROR: You requested to transfer a ISO file\n";
+					}
+				}
+				if( !arg_str.IsEmpty() ) {
+					err_msg += "ERROR: You defined 'arguments'.\n";
+				}
+
+				fprintf( stderr, "%s", err_msg.Value());
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+			}
+		}
+		// For vmware, there is no limitation.
+	}
+
+	if( !arg_str.IsEmpty() && has_vm_cdrom_files ) {
+		if( has_vm_iso_file ) {
+			// A job user cannot use a iso file for input CDROM and 
+			// 'Argument' parameter together, 
+			MyString err_msg;
+			err_msg = "\nERROR: You cannot use single iso file for "
+				"'vm_cdrom_files' and 'arguments' in a job description "
+				"file together. To use 'arguments' you need to use "
+				"non-iso files in 'vm_cdrom_files'\n";
+			print_wrapped_text( err_msg.Value(), stderr );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}else {
+			// Because a file called "condor.arg" will be created and 
+			// be added to input CDROM on an execute machine,
+			// 'vm_cdrom_files' should not contain "condor.arg".
+			if( final_cdrom_files.find(VM_UNIV_ARGUMENT_FILE, 0) >= 0 ) {
+				MyString err_msg;
+				err_msg.sprintf("\nERROR: The file name '%s' is reserved for "
+					"'arguments' in vm universe. String in 'arguments' will "
+					"be saved into a file '%s'. And '%s' will be added to "
+					"input CDROM. So 'vm_cdrom_files' should not "
+					"contain '%s'\n", VM_UNIV_ARGUMENT_FILE,
+					VM_UNIV_ARGUMENT_FILE, VM_UNIV_ARGUMENT_FILE,
+					VM_UNIV_ARGUMENT_FILE);
+				print_wrapped_text( err_msg.Value(), stderr );
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+			}
+		}
+	}
+			
+	// Now all VM parameters are set
+	// So we need to add necessary VM attributes to Requirements
+	SetVMRequirements();
+}
+
 
 #include "../condor_daemon_core.V6/daemon_core_stubs.h"

@@ -551,10 +551,12 @@ STANDARD	= 1
 PVM		= 4
 VANILLA		= 5
 MPI		= 8
+VM		= 13
 IsPVM           = (TARGET.JobUniverse == $(PVM))
 IsMPI           = (TARGET.JobUniverse == $(MPI))
 IsVanilla       = (TARGET.JobUniverse == $(VANILLA))
 IsStandard      = (TARGET.JobUniverse == $(STANDARD))
+IsVM            = (TARGET.JobUniverse == $(VM))
 
 NonCondorLoadAvg	= (LoadAvg - CondorLoadAvg)
 BackgroundLoad		= 0.3
@@ -1908,3 +1910,89 @@ DBMSD_ARGS = -f
 
 # Where is the log file for the quill daemon?
 DBMSD_LOG = $(LOG)/DbmsdLog
+
+##
+##--------------------------------------------------------------------
+##  VM Universe Parameters
+##--------------------------------------------------------------------
+## Where is the condor VM-GAHP installed? (Required)
+#VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp
+
+## Where is the configuration file for condor VM-GAHP? (Required)
+#VM_GAHP_CONFIG = /full/path/to/condor_vmgahp_config.vmware
+
+## If you want VM-GAHP has it's own log, you need to define 
+## the location of log file.
+## Like the Gridmanager and C-GAHP, the VM-GAHP is run as the User, 
+## not a Condor daemon, so all users must have write permssion 
+## to the directory used for the logfile. Our suggestion is to create 
+## a directory called VMGahpLogs in $(LOG) with 
+## UNIX permissions 1777 (just like /tmp )
+## Another option is to use /tmp as the location of the VM-GAHP log.
+##
+## Optionally, if you do NOT define VM_GAHP_LOG, logs of VM-GAHP will 
+## be stored in the log file of Starter together. 
+## However, on Windows machine you must always define VM_GAHP_LOG. 
+#
+#VM_GAHP_LOG	= $(LOG)/VMGahpLogs/VMGahpLog.$(USERNAME)
+VM_GAHP_LOG	= /tmp/VMGAHPLog.$(USERNAME)
+MAX_VM_GAHP_LOG	= 1000000
+#VM_GAHP_DEBUG = D_FULLDEBUG
+
+## What kind of virtual machine program will be used for VM universe? (Required)
+#VM_TYPE = vmware
+
+## How much memory can be used for VM universe? (Optional)
+## If you don't define this parameter, the value will be 
+## obtained from vmgahp
+##
+## If the defined value is larger than VM_MAX_MEMORY defined 
+## in vmgahp config file, 
+## VM_MAX_MEMORY will be used instead of the value.
+## If the defined  value is smaller than VM_MAX_MEMORY defined 
+## in vmgahp config file, the value will be used.
+#VM_MEMORY = 128
+
+## Want to support networking for VM universe?
+## Default value is FALSE
+#VM_NETWORKING = FALSE
+
+## In default, the number of possible virtual machines is same to 
+## the number of possible vanilla jobs.
+## However, many virtual machines cause system too slow and unexpected problems.
+## You can limit the number of running virtual machines on this machine, 
+#VM_MAX_NUMBER = 2
+
+## When VM universe job is claimed and started, 
+## how often should we send status command to vmgahp to see if 
+## the job is finished. If the interval is too short, it will consume 
+## much CPU. If vmgahp fails to get status 5 times in a row, 
+## error will be reported to startd and then startd will check 
+## the availability of vm universe.
+## Default value is 60 seconds and minimum value is 30 seconds
+#VM_STATUS_INTERVAL        = 60
+
+## How long will we wait for a request sent to vmgahp to be completed?
+## If a request is not completed within the timeout, error will be reported 
+## to startd and then startd will check the availability of vm universe.
+## Default value is 5 mins.
+#VM_GAHP_REQ_TIMEOUT = 300
+
+## When vmware or Xen causes an error, startd will disable vm universe. 
+## However, because some errors are just transient, we will test one more
+## whether vm universe is still unavailable after some time.
+## In default, startd will recheck vm universe after 10 minutes.
+## If the test also fails, vm universe will be disabled. 
+#VM_RECHECK_INTERVAL = 600
+
+## Usually, when we suspend a VM, the memory being used by the VM will be 
+## freed and the memory will be saved into a file.
+## However, when we use soft suspend, the memory being used by the VM will 
+## not be freed and no file for the memory will be created.
+## Here is how we implement soft suspension.
+## In VMware, we send SIGSTOP to a process for VM in order to 
+## stop the VM temporarily and send SIGCONT to resume the VM.
+## In Xen, we pause CPU. Pausing CPU doesn't save the memory of VM 
+## into a file. It just stops the execution of a VM temporarily.
+#VM_SOFT_SUSPEND = TRUE
+  

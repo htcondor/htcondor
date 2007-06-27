@@ -32,6 +32,7 @@
 #include "mpi_master_proc.h"
 #include "mpi_comrade_proc.h"
 #include "parallel_proc.h"
+#include "vm_proc.h"
 #include "my_hostname.h"
 #include "internet.h"
 #include "condor_string.h"  // for strnewp
@@ -1011,6 +1012,10 @@ CStarter::SpawnJob( void )
 			}
 			break;
 		}
+		case CONDOR_UNIVERSE_VM:
+			job = new VMProc( jobAd );
+			ASSERT(job);
+			break;
 		default:
 			dprintf( D_ALWAYS, "Starter doesn't support universe %d (%s)\n",
 					 jobUniverse, CondorUniverseName(jobUniverse) ); 
@@ -1173,11 +1178,11 @@ CStarter::Continue( void )
 }
 
 /**
- * DC Peroidic Checkpoint Job Wrapper
- * Currently does nothing
- * 
+ * DC Periodic Checkpoint Job Wrapper
+ * Currently only vm universe is supported.
+ *
  * @param command (not used)
- * @return false
+ * @return true if jobs were checkpointed
  */ 
 int
 CStarter::RemotePeriodicCkpt(int)
@@ -1186,17 +1191,51 @@ CStarter::RemotePeriodicCkpt(int)
 }
 
 /**
- * Currently does nothing
+ * Periodically checkpoints all the jobs in the queue. 
+ * Currently only vm universe is supported.
  * 
- * @todo implement!
- * @return false
- */ 
+ * @return true if the jobs were successfully checkpointed
+ */
 bool
 CStarter::PeriodicCkpt( void )
-{	
-	// TODO
-	return ( false );
+{
+	dprintf(D_ALWAYS, "Periodic Checkpointing all jobs.\n");
+
+	if( jobUniverse != CONDOR_UNIVERSE_VM ) {
+		return false;
+	}
+
+	UserProc *job;
+	JobList.Rewind();
+	while ((job = JobList.Next()) != NULL) {
+		if( job->Ckpt() ) {
+			// checkpoint files are successfully generated
+			// We need to upload those files by using condor file transfer.
+			if( jic->uploadWorkingFiles() == false ) {
+				// Failed to transfer ckpt files
+				// What should we do?
+				// For now, do nothing.
+				dprintf(D_ALWAYS, "Periodic Checkpointing failed.\n");
+
+				// notify ckpt failed
+				job->CkptDone(false);
+			}else {
+				// sending checkpoint files succeeds.
+				dprintf(D_ALWAYS, "Periodic Checkpointing is done.\n");
+
+				// update job classAd
+				jic->updateCkptInfo();	
+
+				// notify ckpt succeeded.
+				job->CkptDone(true);
+
+			}
+		}
+	}
+
+	return true;
 }
+
 
 int
 CStarter::Reaper(int pid, int exit_status)

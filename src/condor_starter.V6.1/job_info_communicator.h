@@ -282,6 +282,11 @@ public:
 		return m_execute_account_is_dedicated;
 	}
 
+		/* Upload files in a job working directory */
+	virtual bool uploadWorkingFiles(void) { return false; }
+	
+		/* Update Job ClassAd with checkpoint info and log it */
+	virtual void updateCkptInfo(void) {};
 
 
 protected:

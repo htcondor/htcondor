@@ -241,6 +241,7 @@ const char *ATTR_HAS_RECONNECT            = "HasReconnect";
 const char *ATTR_HAS_REMOTE_SYSCALLS      = "HasRemoteSyscalls";
 const char *ATTR_HAS_TDP                  = "HasTDP";
 const char *ATTR_HAS_SOAP_API            = "HasSOAPInterface";
+const char *ATTR_HAS_VM                   = "HasVM";
 const char *ATTR_HAS_WIN_RUN_AS_OWNER     = "HasWindowsRunAsOwner";
 const char *ATTR_HELD_JOBS				 = "HeldJobs";
 const char *ATTR_HOLD_KILL_SIG            = "HoldKillSig";
@@ -318,6 +319,14 @@ const char *ATTR_JOB_UNIVERSE             = "JobUniverse";
 const char *ATTR_JOB_GRID_TYPE			 = "JobGridType";
 const char *ATTR_JOB_WALL_CLOCK_CKPT		 = "WallClockCheckpoint";
 const char *ATTR_JOB_QUEUE_BIRTHDATE		 = "JobQueueBirthdate";
+// VM universe
+const char *ATTR_JOB_VM_TYPE				= "JobVMType";
+const char *ATTR_JOB_VM_MEMORY				= "JobVMMemory";
+const char *ATTR_JOB_VM_CHECKPOINT			= "JobVMCheckpoint";
+const char *ATTR_JOB_VM_NETWORKING			= "JobVMNetworking";
+const char *ATTR_JOB_VM_NETWORKING_TYPE		= "JobVMNetworkingType";
+const char *ATTR_JOB_VM_HARDWARE_VT			= "JobVMHardwareVT";
+// End VM universe
 const char *ATTR_KEYBOARD_IDLE            = "KeyboardIdle";
 const char *ATTR_KEYSTORE_FILE            = "KeystoreFile";
 const char *ATTR_KEYSTORE_ALIAS           = "KeystoreAlias";
@@ -690,6 +699,23 @@ const char *ATTR_NEGOTIATOR_MATCH_EXPR = "NegotiatorMatchExpr";
 // put this value in the job ad.
 const char *ATTR_WAITPID_STATUS	= "WaitpidStatus";
 const char *ATTR_TERMINATION_REASON	= "TerminationReason";
+
+// VM universe
+const char *ATTR_VM_TYPE    = "VM_Type";
+const char *ATTR_VM_VERSION = "VM_Version";
+const char *ATTR_VM_MEMORY = "VM_Memory";
+const char *ATTR_VM_NETWORKING = "VM_Networking";
+const char *ATTR_VM_NETWORKING_TYPES = "VM_Networking_Types";
+const char *ATTR_VM_HARDWARE_VT = "VM_HardwareVT";
+const char *ATTR_VM_AVAIL_NUM = "VM_AvailNum";
+const char *ATTR_VM_ALL_GUEST_MACS = "VM_All_Guest_Macs";
+const char *ATTR_VM_ALL_GUEST_IPS = "VM_All_Guest_IPs";
+const char *ATTR_VM_GUEST_MAC = "VM_Guest_Mac";
+const char *ATTR_VM_GUEST_IP = "VM_Guest_IP";
+const char *ATTR_VM_GUEST_MEM = "VM_Guest_Mem";
+const char *ATTR_VM_CKPT_MAC = "VM_CkptMac";
+const char *ATTR_VM_CKPT_IP = "VM_CkptIP";
+// End VM universe
 
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)

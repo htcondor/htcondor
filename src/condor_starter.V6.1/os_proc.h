@@ -101,6 +101,7 @@ public:
 protected:
 
 	bool is_suspended;
+	bool is_checkpointed;
 	
 		/// Number of pids under this OsProc
 	int num_pids;

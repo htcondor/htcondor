@@ -182,6 +182,7 @@ extern const char * ATTR_HAS_REMOTE_SYSCALLS;
 extern const char * ATTR_HAS_TDP;
 extern const char * ATTR_HAS_SOAP_API;
 extern const char * ATTR_HAS_WIN_RUN_AS_OWNER;
+extern const char * ATTR_HAS_VM;
 extern const char * ATTR_HELD_JOBS;
 extern const char * ATTR_HOLD_KILL_SIG;
 extern const char * ATTR_IDLE_JOBS;
@@ -258,6 +259,12 @@ extern const char * ATTR_JOB_UNIVERSE;
 extern const char * ATTR_JOB_GRID_TYPE;
 extern const char * ATTR_JOB_WALL_CLOCK_CKPT;
 extern const char * ATTR_JOB_QUEUE_BIRTHDATE;
+extern const char * ATTR_JOB_VM_TYPE;
+extern const char * ATTR_JOB_VM_MEMORY;
+extern const char * ATTR_JOB_VM_CHECKPOINT;
+extern const char * ATTR_JOB_VM_NETWORKING;
+extern const char * ATTR_JOB_VM_NETWORKING_TYPE;
+extern const char * ATTR_JOB_VM_HARDWARE_VT;
 extern const char * ATTR_KEYBOARD_IDLE;
 extern const char * ATTR_KEYSTORE_FILE;
 extern const char * ATTR_KEYSTORE_ALIAS;
@@ -615,6 +622,21 @@ extern const char *ATTR_TREQ_SIGNALED;
 extern const char *ATTR_TREQ_SIGNAL;
 extern const char *ATTR_TREQ_EXIT_CODE;
 extern const char * ATTR_NEGOTIATOR_MATCH_EXPR;
+
+extern const char *ATTR_VM_TYPE;
+extern const char *ATTR_VM_VERSION;
+extern const char *ATTR_VM_MEMORY;
+extern const char *ATTR_VM_NETWORKING;
+extern const char *ATTR_VM_NETWORKING_TYPES;
+extern const char *ATTR_VM_HARDWARE_VT;
+extern const char *ATTR_VM_AVAIL_NUM;
+extern const char *ATTR_VM_ALL_GUEST_MACS;
+extern const char *ATTR_VM_ALL_GUEST_IPS;
+extern const char *ATTR_VM_GUEST_MAC;
+extern const char *ATTR_VM_GUEST_IP;
+extern const char *ATTR_VM_GUEST_MEM;
+extern const char *ATTR_VM_CKPT_MAC;
+extern const char *ATTR_VM_CKPT_IP;
 
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending

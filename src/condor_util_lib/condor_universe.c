@@ -50,7 +50,8 @@ static const UniverseName names [] =
 	{ "GLOBUS", "Globus" },
 	{ "JAVA", "Java" },
 	{ "PARALLEL", "Parallel" },
-	{ "LOCAL", "Local" }
+	{ "LOCAL", "Local" },
+	{ "VM", "VM" },
 };
 
 const char*
@@ -118,6 +119,9 @@ CondorUniverseNumber( const char* univ )
 	if( stricmp(univ,"local") == MATCH ) {
 		return CONDOR_UNIVERSE_LOCAL;
 	}
+	if( stricmp(univ,"vm") == MATCH ) {
+		return CONDOR_UNIVERSE_VM;
+	}
 	return 0;
 }
 
@@ -136,6 +140,7 @@ universeCanReconnect( int universe )
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_JAVA:
 	case CONDOR_UNIVERSE_PARALLEL:
+	case CONDOR_UNIVERSE_VM:
 		return TRUE;
 	default:
 		EXCEPT( "Unknown universe (%d) in universeCanReconnect()", universe );

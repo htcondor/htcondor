@@ -213,10 +213,21 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 	   time via /proc/interrupts.  Update user_idle appropriately too.
 	*/
 	m_interrupt_idle = km_idle_time(now);
-	m_console_idle = MIN(m_interrupt_idle, m_console_idle);
+
+	/* If m_console_idle is still -1, MIN will always return -1 
+	   So we need to check whether m_console_idle is -1 
+	   - jaeyoung 2007/04/10
+	*/
+	if( m_console_idle != -1 ) {
+		m_console_idle = MIN(m_interrupt_idle, m_console_idle);
+	}else {
+		m_console_idle = m_interrupt_idle;
+	}
 #endif
 
-	m_idle = MIN(m_console_idle, m_idle);
+	if( m_console_idle != -1 ) {
+		m_idle = MIN(m_console_idle, m_idle);
+	}
 
 	if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
 		dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n", 
