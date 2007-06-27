@@ -602,6 +602,13 @@ VMType::isTransferedFile(const char* file_name, MyString& fullname)
 	return false;
 }
 
+// macos 10.3 is the only known platform to be missing chown, and it
+// seems unlikely that we'll ever run xen or vmware on it.
+ 
+#ifndef HAVE_LCHOWN
+#define lchown chown
+#endif
+
 void
 VMType::chownWorkingFiles(uid_t dst_uid)
 {
