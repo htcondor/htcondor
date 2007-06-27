@@ -766,10 +766,12 @@ sub TunePersonalCondor
 		# For simulated pools, we need schedds and master to have unique names
 		if(exists $control{"nameschedd"}) {
 			$mastername = "master" . "_" . $version;
+			$scheddname = $mastername . "_schd";
+			$startdname = $mastername . "_strtd";
 			debug("MASTERNAME now master + $version($mastername)\n");
-			print NEW "SCHEDD_NAME = $mastername\n";
+			print NEW "SCHEDD_NAME = $scheddname\n";
 			print NEW "MASTER_NAME = $mastername\n";
-			print NEW "STARTD_NAME = $mastername\n";
+			print NEW "STARTD_NAME = $startdname\n";
 		} else {
 			print NEW "SCHEDD_NAME = schedd$mpid$version\n";
 		}
