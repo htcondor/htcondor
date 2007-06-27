@@ -39,7 +39,7 @@ $mycorenmlog = $corename . ".log";
 print "Master PID is $mypid\n";
 print "Master PID submit file is $mysubmitnm\n";
 
-my $version = $mypid . "local";
+my $version = "local";
 # get a local scheduler running (side a)
 my $configloc = CondorPersonal::StartCondor("x_param.cmdq-multi" ,$version);
 my @local = split /\+/, $configloc;
@@ -74,7 +74,7 @@ while(<SCHEDDSRC>) {
 close(SCHEDDSRC);
 close(SCHEDDONE);
 
-$version = $mypid . "scheddone";
+$version = "scheddone";
 # my $configscheddone = CondorPersonal::DebugOn();
 # get another node running
 my $configscheddone = CondorPersonal::StartCondor("x_param.cmdq-multi-one" ,$version);
@@ -109,8 +109,8 @@ if($bail != 1) {
 
 my $cmdstatus;
 my @adarray;
-my $sched1 = "master_" . $mypid . "local" . "@" . $currenthost;;
-my $sched2 = "master_" . $mypid . "scheddone" . "@" . $currenthost;;
+my $sched1 = "master_local_schd" . "@" . $currenthost;;
+my $sched2 = "master_scheddone_schd" . "@" . $currenthost;;
 
 print "Looking for sched1($sched1) and sched2($sched2)\n";
 
