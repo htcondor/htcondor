@@ -164,6 +164,7 @@ CLEAN :
 	-@erase "$(INTDIR)\vc60.pdb"
 	-@erase "$(INTDIR)\which.obj"
 	-@erase "$(INTDIR)\windows_firewall.obj"
+    -@erase "$(INTDIR)\vm_univ_utils.obj"
 	-@erase "$(OUTDIR)\condor_cpp_util.lib"
 	-@erase "..\Debug\condor_common.obj"
 	-@erase "..\Debug\condor_common.pch"
@@ -301,7 +302,9 @@ LIB32_OBJS= \
 	"$(INTDIR)\windows_firewall.obj" \
 	"$(INTDIR)\file_sql.obj" \
 	"$(INTDIR)\file_xml.obj" \
-	"$(INTDIR)\file_transfer_db.obj"
+	"$(INTDIR)\file_transfer_db.obj" \
+    "$(INTDIR)\vm_univ_utils.obj"
+
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -443,6 +446,7 @@ CLEAN :
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\which.obj"
 	-@erase "$(INTDIR)\windows_firewall.obj"
++   -@erase "$(INTDIR)\vm_univ_utils.obj"
 	-@erase "$(OUTDIR)\condor_cpp_util.lib"
 	-@erase "..\Release\condor_common.obj"
 	-@erase "..\Release\condor_common.pch"
@@ -580,7 +584,9 @@ LIB32_OBJS= \
 	"$(INTDIR)\windows_firewall.obj" \
 	"$(INTDIR)\file_sql.obj" \
 	"$(INTDIR)\file_xml.obj" \
-	"$(INTDIR)\file_transfer_db.obj"
+	"$(INTDIR)\file_transfer_db.obj" \
+    "$(INTDIR)\vm_univ_utils.obj"
+
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -1437,6 +1443,11 @@ SOURCE="..\src\condor_c++_util\which.C"
 SOURCE="..\src\condor_c++_util\windows_firewall.C"
 
 "$(INTDIR)\windows_firewall.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+SOURCE="..\src\condor_c++_util\vm_univ_utils.C"
+
+"$(INTDIR)\vm_univ_utils.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

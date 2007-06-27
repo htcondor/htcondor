@@ -302,5 +302,29 @@ SOURCE=..\src\condor_starter.V6.1\vanilla_proc.C
 
 SOURCE=..\src\condor_starter.V6.1\vanilla_proc.h
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\vm_proc.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\vm_proc.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\vm_gahp_request.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\vm_gahp_request.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\vm_gahp_server.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\vm_gahp_server.h
+# End Source File
 # End Target
 # End Project

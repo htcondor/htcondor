@@ -1003,6 +1003,14 @@ SOURCE="..\src\condor_c++_util\which.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\vm_univ_utils.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\vm_univ_utils.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\windows_firewall.C"
 # End Source File
 # Begin Source File

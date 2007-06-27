@@ -304,5 +304,13 @@ SOURCE=..\src\condor_startd.V6\VMRegister.C
 
 SOURCE=..\src\condor_startd.V6\VMRegister.h
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\vmuniverse_mgr.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\vmuniverse_mgr.h
+# End Source File
 # End Target
 # End Project

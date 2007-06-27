@@ -24,6 +24,10 @@ copy ..\src\condor_starter.V6.1\*.class %1\lib
 copy ..\src\condor_starter.V6.1\*.jar %1\lib
 copy ..\src\condor_chirp\Chirp.jar %1\lib
 copy ..\src\condor_examples\condor_config.* %1\etc
+copy ..\src\condor_examples\condor_vmgahp_config.vmware %1\etc
+copy ..\src\condor_vm-gahp\condor_vm_vmware.pl %1\bin
+copy ..\src\condor_vm-gahp\*.dll %1\bin
+copy ..\src\condor_vm-gahp\mkisofs.exe %1\bin
 copy msvcrt.dll %1\bin
 copy msvcirt.dll %1\bin
 copy pdh.dll %1\bin

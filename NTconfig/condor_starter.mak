@@ -76,6 +76,9 @@ CLEAN :
 	-@erase "$(INTDIR)\tool_daemon_proc.obj"
 	-@erase "$(INTDIR)\user_proc.obj"
 	-@erase "$(INTDIR)\vanilla_proc.obj"
+    -@erase "$(INTDIR)\vm_proc.obj"
+    -@erase "$(INTDIR)\vm_gahp_request.obj"
+    -@erase "$(INTDIR)\vm_gahp_server.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
 	-@erase "$(OUTDIR)\condor_starter.exe"
@@ -154,6 +157,9 @@ LINK32_OBJS= \
 	"$(INTDIR)\tool_daemon_proc.obj" \
 	"$(INTDIR)\user_proc.obj" \
 	"$(INTDIR)\vanilla_proc.obj" \
+    "$(INTDIR)\vm_proc.obj" \
+    "$(INTDIR)\vm_gahp_request.obj" \
+    "$(INTDIR)\vm_gahp_server.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -221,7 +227,10 @@ CLEAN :
 	-@erase "$(INTDIR)\tool_daemon_proc.obj"
 	-@erase "$(INTDIR)\user_proc.obj"
 	-@erase "$(INTDIR)\vanilla_proc.obj"
-	-@erase "$(INTDIR)\vc60.idb"
+    -@erase "$(INTDIR)\vm_proc.obj"
+    -@erase "$(INTDIR)\vm_gahp_request.obj"
+    -@erase "$(INTDIR)\vm_gahp_server.obj"
+    -@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_starter.exe"
 	-@erase "$(OUTDIR)\condor_starter.map"
 
@@ -297,6 +306,9 @@ LINK32_OBJS= \
 	"$(INTDIR)\tool_daemon_proc.obj" \
 	"$(INTDIR)\user_proc.obj" \
 	"$(INTDIR)\vanilla_proc.obj" \
+    "$(INTDIR)\vm_proc.obj" \
+    "$(INTDIR)\vm_gahp_request.obj" \
+    "$(INTDIR)\vm_gahp_server.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -824,6 +836,23 @@ SOURCE=..\src\condor_starter.V6.1\user_proc.C
 SOURCE=..\src\condor_starter.V6.1\vanilla_proc.C
 
 "$(INTDIR)\vanilla_proc.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+SOURCE=..\src\condor_starter.V6.1\vm_proc.C
+
+"$(INTDIR)\vm_proc.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_starter.V6.1\vm_gahp_request.C
+
+"$(INTDIR)\vm_gahp_request.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_starter.V6.1\vm_gahp_server.C
+
+"$(INTDIR)\vm_gahp_server.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

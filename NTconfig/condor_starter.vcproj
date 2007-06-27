@@ -199,6 +199,24 @@
 		<File
 			RelativePath="..\src\condor_starter.V6.1\vanilla_proc.h">
 		</File>
+		<File
+			RelativePath="..\src\condor_starter.V6.1\vm_proc.C">
+		</File>
+		<File
+			RelativePath="..\src\condor_starter.V6.1\vm_proc.h">
+		</File>
+		<File
+			RelativePath="..\src\condor_starter.V6.1\vm_gahp_request.C">
+		</File>
+		<File
+			RelativePath="..\src\condor_starter.V6.1\vm_gahp_request.h">
+		</File>
+		<File
+			RelativePath="..\src\condor_starter.V6.1\vm_gahp_server.C">
+		</File>
+		<File
+			RelativePath="..\src\condor_starter.V6.1\vm_gahp_server.h">
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

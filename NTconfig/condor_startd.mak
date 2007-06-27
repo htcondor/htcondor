@@ -77,6 +77,7 @@ CLEAN :
 	-@erase "$(INTDIR)\VMMachine.obj"
 	-@erase "$(INTDIR)\VMManager.obj"
 	-@erase "$(INTDIR)\VMRegister.obj"
+    -@erase "$(INTDIR)\vmuniverse_mgr.obj"
 	-@erase "$(OUTDIR)\condor_startd.exe"
 	-@erase "$(OUTDIR)\condor_startd.ilk"
 	-@erase "$(OUTDIR)\condor_startd.map"
@@ -153,6 +154,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\VMMachine.obj" \
 	"$(INTDIR)\VMManager.obj" \
 	"$(INTDIR)\VMRegister.obj" \
+    "$(INTDIR)\vmuniverse_mgr.obj" \
 	"..\src\condor_util_lib\condor_util.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_classad.lib" \
@@ -219,6 +221,7 @@ CLEAN :
 	-@erase "$(INTDIR)\VMMachine.obj"
 	-@erase "$(INTDIR)\VMManager.obj"
 	-@erase "$(INTDIR)\VMRegister.obj"
++   -@erase "$(INTDIR)\vmuniverse_mgr.obj"
 	-@erase "$(OUTDIR)\condor_startd.exe"
 	-@erase "$(OUTDIR)\condor_startd.map"
 
@@ -293,6 +296,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\VMMachine.obj" \
 	"$(INTDIR)\VMManager.obj" \
 	"$(INTDIR)\VMRegister.obj" \
+    "$(INTDIR)\vmuniverse_mgr.obj" \
 	"..\src\condor_util_lib\condor_util.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_classad.lib" \
@@ -771,6 +775,10 @@ SOURCE=..\src\condor_startd.V6\VMRegister.C
 "$(INTDIR)\VMRegister.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
+SOURCE=..\src\condor_startd.V6\vmuniverse_mgr.C
+
+"$(INTDIR)\vmuniverse_mgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 !ENDIF 
