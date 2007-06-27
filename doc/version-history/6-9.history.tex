@@ -78,6 +78,9 @@ processes causing overloading of servers.
 
 \begin{itemize}
 
+\item A new parameter \Macro{CronWindow} has been added. It is an alias
+to \Macro{DeferralWindow}.
+
 \item The existing configuration variable \Macro{LOG\_ON\_NFS\_IS\_ERROR} has 
 changed behavior. When set to \Expr{False},
 \Condor{submit} does not emit a warning about user logs files being on NFS.
@@ -111,6 +114,9 @@ only necessary on one machine in your Condor pool.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item The \Condor{configure} installation script now allows Condor
+to be installed on hosts without a fully-qualified domain name.
 
 % Gnats PR 857/condor-admin 15687
 \item Fixed a bug in \Condor{dagman}: if a DAG run with a per-DAG
