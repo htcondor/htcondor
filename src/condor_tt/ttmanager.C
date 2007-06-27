@@ -3402,7 +3402,8 @@ static QuillErrCode append(char *destF, char *srcF)
 // hash function for strings
 static unsigned attHashFunction (const MyString &str)
 {
-        unsigned i = str.Length() - 1, hashVal = 0;
+        int i = str.Length() - 1;
+		unsigned hashVal = 0;
         while (i >= 0)
         {
                 hashVal += str[i];
