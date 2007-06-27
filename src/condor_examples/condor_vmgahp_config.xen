@@ -1,0 +1,191 @@
+######################################################################
+##
+## condor_vmgahp_config
+##
+## This is the configuration file of condor vmgahp for Xen
+## 
+######################################################################
+
+##
+##  Which local users are eligible to execute this vmgahp ? (Required)
+##
+##  For Xen, vmgahp has setuid-root because Xen requires root privilege.  
+##  ALLOW_USERS is the list of local users able to execute vmgahp.
+##	(e.g.) ALLOW_USERS = condor, todd
+##  It means the users "condor" and "todd" can execute this vmgahp.
+##  If other users try to execute vmgahp, the program will exit.
+ALLOW_USERS = condor
+
+
+#######################################################################
+##
+##	Global Setting for Virtual machine program
+##
+#######################################################################
+
+##
+##  What kind of virtual machine program is installed? (Required)
+##
+##  Usually it is the name of virtual machine program (xen, vmware)
+##
+VM_TYPE = xen
+
+##
+##  Which version of the above virtual machine program is installed? (Required)
+##
+VM_VERSION = 3.0.4
+
+##
+##  How much memory can be used for virtual machine program? (Required)
+##
+##  This value is the maximum amount of memory that can be used by the 
+##  virtual machine program.
+##
+VM_MAX_MEMORY = 256
+
+##
+##  Want networking for virtual machines? (Optional)
+##
+##  Default value is FALSE
+##
+VM_NETWORKING = FALSE
+
+##
+##  What kind of networking types are supported?
+##
+##  If you set VM_NETWORKING to TRUE, you must define this parameter.
+##  (e.g.) VM_NETWORKING_TYPE = nat_dhcp
+##  (e.g.) VM_NETWORKING_TYPE = bridge_dhcp
+##
+#VM_NETWORKING_TYPE = nat_dhcp
+
+##
+##  Does this machine support hardware virtualization such as Intel VT 
+##  and AMD-V ?
+#VM_HARDWARE_VT = TRUE
+
+
+#######################################################################
+##
+##	Setting for Xen specific parameters 
+##
+#######################################################################
+
+##
+##  Where is the condor script program to control Xen? (Required)
+##
+XEN_SCRIPT = /full/path/to/condor_vm_xen.sh
+
+##
+##  Where is the default kernel image for Xen domainU? (Required)
+##
+##  This kernel image will be used when a job submission user doesn't
+##  define a kernel image explicitly. 
+##  If a job submission user defines an own kernel image in submission 
+##  description file, it will be used instead of this default kernel.
+##  (e.g.) XEN_DEFAULT_KERNEL = /boot/vmlinuz-2.6.16-xen
+##
+XEN_DEFAULT_KERNEL = /full/path/to/<kernel-image-file>
+
+##
+##  Where is the default initrd image for Xen domainU? (Optional)
+##
+##  If you want to use initrd image for Xen domainU together with 
+##  Xen default kernel image, you need to define this parameter.
+##  (e.g.) XEN_DEFAULT_RAMDISK = /boot/initrd-2.6.16-xen0.img
+## 
+#XEN_DEFAULT_RAMDISK = /full/path/to/<initrd-image-file>
+
+##
+##  Where is bootloader for Xen domainU? (Required)
+##
+##  The bootloader will be used in case that kernel image is included
+##  a disk image
+XEN_BOOTLOADER = /usr/bin/pygrub
+
+
+#######################################################################
+## Networking parameters for Xen
+#######################################################################
+##
+##  If you want to use networking for Xen domainU, 
+##  you may need to define this parameter.
+##
+##  Values in this parameter are the same to that of "vif" parameter in 
+##  Xen virtual machine(vm) config file.
+##  For example, if you want to use "vif = [ 'script=vif-nat' ]" 
+##  in Xen vm config file, you need to define 
+##  "XEN_VIF_PARAMETER = [ 'script=vif-nat' ]".
+##  Then, vmgahp will insert "vif = [ 'script=vif-nat' ]" 
+##  into Xen vm config file, 
+##  If you don't define anything, 
+##  "vif = ['']" will be used for Xen vm config file.
+##
+##  NOTICE: When you use Xen checkpoint, you need to make sure that 
+##  all machines in a shared file system use the same vif parameter.
+##
+## Examples
+## (e.g.) XEN_VIF_PARAMETER = [ 'script=vif-nat' ]
+## (e.g.) XEN_VIF_PARAMETER = [ 'script=vif-bridge, bridge=xen-br0' ]
+XEN_VIF_PARAMETER = ['']
+
+
+#######################################################################
+## Disk IO type for Xen domainU
+#######################################################################
+##
+##  You can define which file IO device need to be used for Xen domainU.
+##  Default is to use loopback device for Xen domainU disk files.
+##  (e.g.) To use loopback device, use "XEN_IMAGE_IO_TYPE = file:"
+##  (e.g.) To use tap:aio device, use "XEN_IMAGE_IO_TYPE = tap:aio:"
+## 
+##  NOTICE: When you use Xen checkpoint, you need to make sure that 
+##  all machines in a shared file system use the same file IO type.
+XEN_IMAGE_IO_TYPE = file:
+
+
+#######################################################################
+##  Settings for Hardware Virtualization
+##  For hardware virtualization, all parameters starting with XEN_VT 
+##  will be inserted into a Xen config file.
+##  For example, if "XEN_VT_BUILDER = 'hvm'" is defined, builder='hvm' 
+##  will be inserted into a Xen config file.
+##  If "XEN_VT_SHADOW_MEMORY = 8" is defined, 
+##  shadow_memory=8 will be inserted into a Xen config file.
+##  If "XEN_VT_DEVICE_MODEL = /usr/lib/xen/bin/qemu-dm" is defined,
+##  device_model=/usr/lib/xen/bin/qemu-dm will be inserted into 
+##  a Xen config file.
+#######################################################################
+XEN_VT_KERNEL = "/usr/lib/xen/boot/hvmloader"
+XEN_VT_BUILDER = 'hvm'
+XEN_VT_SHADOW_MEMORY = 8
+XEN_VT_DEVICE_MODEL = '/usr/lib/xen/bin/qemu-dm'
+#XEN_VT_SDL = 0
+#XEN_VT_VNC = 1
+#XEN_VT_STDVGA = 0
+#XEN_VT_SERIAL = 'pty'
+
+##
+## Use ioemu to virtualize unmodified guest domains
+## If not using ioemu, it uses vbd like paravirtualized guests.
+#XEN_DEVICE_TYPE_FOR_VT = ioemu:
+
+##
+##  This parameter is for future.
+##  Hardware VT guests currently cannot be saved and restored in Xen. 
+##  These features are currently under active development by Xen developers.
+#XEN_ALLOW_HARDWARE_VT_SUSPEND = FALSE
+
+#######################################################################
+##
+##	Other parameters to be inserted into a virtual machine config file 
+##
+#######################################################################
+
+##
+##  If you want to insert some parameters into a virtual machine config file
+##  you need to define those parameters with leading "+"
+##  (e.g.) +vcpus = 1
+##
+##  The above example will insert "vcpu = 1" into a virtual machine config file
+#+vcpus=1
