@@ -133,11 +133,41 @@ TESTCLASS(lib_auth_protocol-negot-prt2,quick)
 
 /* Turned off on Free BSD port GNATS 766 */
 
-DESC(cmd_status_shows-avail,"Condor_status shows a pool")
+DESC(cmd_status_shows-avail,"Condor_status -avail works as expected")
 RUN(cmd_status_shows-avail)
 TESTCLASS(cmd_status_shows-avail,core)
 TESTCLASS(cmd_status_shows-avail,quick)
 TESTCLASS(cmd_status_shows-avail,btdebug)
+
+DESC(cmd_status_shows-claim,"Condor_status -claim works as expected")
+RUN(cmd_status_shows-claim)
+TESTCLASS(cmd_status_shows-claim,core)
+TESTCLASS(cmd_status_shows-claim,quick)
+TESTCLASS(cmd_status_shows-claim,btdebug)
+
+DESC(cmd_status_shows-help,"Condor_status -help works as expected")
+RUN(cmd_status_shows-help)
+TESTCLASS(cmd_status_shows-help,core)
+TESTCLASS(cmd_status_shows-help,quick)
+TESTCLASS(cmd_status_shows-help,btdebug)
+
+DESC(cmd_status_shows-master,"Condor_status -master works as expected")
+RUN(cmd_status_shows-master)
+TESTCLASS(cmd_status_shows-master,core)
+TESTCLASS(cmd_status_shows-master,quick)
+TESTCLASS(cmd_status_shows-master,btdebug)
+
+DESC(cmd_status_shows-schedd,"Condor_status -schedd works as expected")
+RUN(cmd_status_shows-schedd)
+TESTCLASS(cmd_status_shows-schedd,core)
+TESTCLASS(cmd_status_shows-schedd,quick)
+TESTCLASS(cmd_status_shows-schedd,btdebug)
+
+DESC(cmd_status_shows-startd,"Condor_status -startd works as expected")
+RUN(cmd_status_shows-startd)
+TESTCLASS(cmd_status_shows-startd,core)
+TESTCLASS(cmd_status_shows-startd,quick)
+TESTCLASS(cmd_status_shows-startd,btdebug)
 
 DESC(cmd_q_shows-hold,"Condor_q shows hold")
 RUN(cmd_q_shows-hold)
@@ -214,19 +244,24 @@ DEPS(lib_userlog,x_write_joblog.exe)
 TESTCLASS(lib_userlog,lib)
 TESTCLASS(lib_userlog,quick)
 
+/*
+*************************************************************************
+rewrite for quill plusplus
+
 #if defined(IS_I386_LINUX_RH9) || defined(IS_I386_LINUX_RH80) || defined(IS_I386_LINUX_RH72) || defined(IS_I386_LINUX_RHEL3) || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_PPC_OSX_10_3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_IA64_LINUX_SLES81) || defined(IS_IA64_LINUX_RHEL3) 
 DESC(job_quill_basic,"Basic Quill Test")
 RUN(job_quill_basic)
 TESTCLASS(job_quill_basic,core)
 TESTCLASS(job_quill_basic,quick)
-TESTCLASS(job_quill_basic,btdebug)
 #endif
+
+*************************************************************************
+*/
 
 DESC(job_core_basic_par,"Basic Parallel Universe")
 RUN(job_core_basic_par)
 TESTCLASS(job_core_basic_par,core)
 TESTCLASS(job_core_basic_par,quick)
-TESTCLASS(job_core_basic_par,btdebug)
 
 /*
 ****************** Tests being readied for prime time **********************
@@ -235,25 +270,21 @@ DESC(job_core_basic-security_par,"Basic Parallel Universe w/security on")
 RUN(job_core_basic-security_par)
 TESTCLASS(job_core_basic-security_par,core)
 TESTCLASS(job_core_basic-security_par,quick)
-TESTCLASS(job_core_basic-security_par,btdebug)
 
 DESC(job_stork_file-file,"Basic stork Test")
 RUN(job_stork_file-file)
 TESTCLASS(job_stork_file-file,core)
 TESTCLASS(job_stork_file-file,quick)
-TESTCLASS(job_stork_file-file,btdebug)
 
 DESC(job_dagman_stork-file-file,"Basic stork dag Test")
 RUN(job_dagman_stork-file-file)
 TESTCLASS(job_dagman_stork-file-file,core)
 TESTCLASS(job_dagman_stork-file-file,quick)
-TESTCLASS(job_dagman_stork-file-file,btdebug)
 
 DESC(job_dagman_stork-remove,"Basic stork dag w/remove Test")
 RUN(job_dagman_stork-remove)
 TESTCLASS(job_dagman_stork-remove,core)
 TESTCLASS(job_dagman_stork-remove,quick)
-TESTCLASS(job_dagman_stork-remove,btdebug)
 
 ****************** Tests being readied for prime time **********************
 */
@@ -738,7 +769,6 @@ DESC(job_core_priority_van,"Vanilla: Verify respect for job priority")
 RUN(job_core_priority_van)
 TESTCLASS(job_core_priority_van,core)
 TESTCLASS(job_core_priority_van,quick)
-TESTCLASS(job_core_priority_van,btdebug)
 */
 
 DESC(job_core_queue_sched,"Scheduler: Verify the  queue command")
