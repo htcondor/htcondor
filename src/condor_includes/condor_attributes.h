@@ -90,6 +90,7 @@ extern const char * ATTR_CRON_DAYS_OF_WEEK;
 extern const char * ATTR_CRON_NEXT_RUNTIME;
 extern const char * ATTR_CRON_CURRENT_TIME_RANGE;
 extern const char * ATTR_CRON_PREP_TIME;
+extern const char * ATTR_CRON_WINDOW;
 extern const char * ATTR_CPU_BUSY;
 extern const char * ATTR_CPU_BUSY_TIME;
 extern const char * ATTR_CPU_IS_BUSY;

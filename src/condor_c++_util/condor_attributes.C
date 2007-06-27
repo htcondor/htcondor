@@ -150,6 +150,7 @@ const char *ATTR_CRON_DAYS_OF_WEEK		 = "CronDayOfWeek";
 const char *ATTR_CRON_NEXT_RUNTIME		 = "CronNextRunTime";
 const char *ATTR_CRON_CURRENT_TIME_RANGE	 = "CronCurrentTimeRange";
 const char *ATTR_CRON_PREP_TIME			 = "CronPrepTime";
+const char *ATTR_CRON_WINDOW			 = "CronWindow";
 const char *ATTR_CPU_BUSY                 = "CpuBusy";
 const char *ATTR_CPU_BUSY_TIME            = "CpuBusyTime";
 const char *ATTR_CPU_IS_BUSY              = "CpuIsBusy";

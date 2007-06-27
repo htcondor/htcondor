@@ -329,6 +329,7 @@ char	*CronHour		= "cron_hour";
 char	*CronDayOfMonth	= "cron_day_of_month";
 char	*CronMonth		= "cron_month";
 char	*CronDayOfWeek	= "cron_day_of_week";
+char	*CronWindow		= "cron_window";
 char	*CronPrepTime	= "cron_prep_time";
 
 #if defined(WIN32)
@@ -3505,15 +3506,37 @@ SetJobDeferral() {
 			// The window allows for some slack if the Starter
 			// misses the exact execute time for a job
 			//
-		temp = condor_param( DeferralWindow, ATTR_DEFERRAL_WINDOW );
-		if ( temp != NULL ) {
+			// NOTE: There are two separate attributes, CronWindow and
+			// DeferralWindow, but they are mapped to the same attribute
+			// in the job's classad (ATTR_DEFERRAL_WINDOW). This is just
+			// it is less confusing for users that are using one feature but
+			// not the other. CronWindow overrides DeferralWindow if they
+			// both are set. The manual should talk about this.
+			//
+		const char *windowParams[] = { CronWindow, DeferralWindow };
+		const char *windowAltParams[]  = { ATTR_CRON_WINDOW, ATTR_DEFERRAL_WINDOW };
+		int ctr;
+		for (ctr = 0; ctr < 2; ctr++) {
+			temp = condor_param( windowParams[ctr], windowAltParams[ctr] );
+			if ( temp != NULL ) {
+				break;
+			}
+		} // FOR
+			//
+			// If we have a parameter from the job file, use that value
+			//
+		if ( temp != NULL ){
 			sprintf (buffer, "%s = %s", ATTR_DEFERRAL_WINDOW, temp );	
 			free( temp );
+			//
+			// Otherwise, use the default value
+			//
 		} else {
-			sprintf( buffer, "%s = 0", ATTR_DEFERRAL_WINDOW );
+			sprintf( buffer, "%s = %d",
+				   ATTR_DEFERRAL_WINDOW, JOB_DEFERRAL_WINDOW_DEFAULT );
 		}
 		InsertJobExpr (buffer);
-	
+		
 			//
 			// Job Deferral Prep Time
 			// This is how many seconds before the job should run it is
@@ -3527,10 +3550,9 @@ SetJobDeferral() {
 			// both are set. The manual should talk about this.
 			//
 		const char *prepParams[] = { CronPrepTime, DeferralPrepTime };
-		const char *altParams[]  = { ATTR_CRON_PREP_TIME, ATTR_DEFERRAL_PREP_TIME };
-		int ctr;
+		const char *prepAltParams[]  = { ATTR_CRON_PREP_TIME, ATTR_DEFERRAL_PREP_TIME };
 		for (ctr = 0; ctr < 2; ctr++) {
-			temp = condor_param( prepParams[ctr], altParams[ctr] );
+			temp = condor_param( prepParams[ctr], prepAltParams[ctr] );
 			if ( temp != NULL ) {
 				break;
 			}
