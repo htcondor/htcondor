@@ -4813,28 +4813,50 @@ These macros affect the \Condor{negotiator}.
 
 \item[\Macro{NEGOTIATOR\_PRE\_JOB\_RANK}]
   \label{param:NegotiatorPreJobRank} Resources that match a request
-  are first sorted by this expression, then by the user-supplied rank
-  in the job ClassAd, then by \MacroNI{NEGOTIATOR\_POST\_JOB\_RANK}, then by
-  \MacroNI{PREEMPTION\_RANK} (if the match would cause preemption).  The purpose
-  of the pre job rank is to allow the pool administrator to override any
-  other rankings, in order to optimize overall throughput.  For example,
-  it is generally used to prevent preemption when possible, even if the job
-  rank prefers a machine that is busy.
-  The default value is undefined, which causes this rank
-  to have no effect on the ranking of matches.
+  are first sorted by this expression.  If there are any ties in the
+  rank of the top choice, the top resources are sorted by the
+  user-supplied rank in the job ClassAd, then by
+  \MacroNI{NEGOTIATOR\_POST\_JOB\_RANK}, then by
+  \MacroNI{PREEMPTION\_RANK} (if the match would cause preemption and
+  there are still any ties in the top choice).  \verb@MY@ refers to
+  attributes of the machine ClassAd and \verb@TARGET@ refers to the
+  job ClassAd.  The purpose of the pre job rank is to allow the pool
+  administrator to override any other rankings, in order to optimize
+  overall throughput.  For example, it is commonly used to minimize
+  preemption, even if the job rank prefers a machine that is busy.  If
+  undefined, this expression has no effect on the ranking of matches.
+  The standard configuration file shipped with Condor specifies an
+  expression to steer jobs away from busy resources:
+
+\begin{verbatim}
+NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
+\end{verbatim}
 
 \item[\Macro{NEGOTIATOR\_POST\_JOB\_RANK}]
-  \label{param:NegotiatorPostJobRank} Resources that match a request
-  are first sorted by the \Macro{NEGOTIATOR\_PRE\_JOB\_RANK}
-  expression, then by the user-supplied rank in the job ClassAd, then
-  by \MacroNI{NEGOTIATOR\_POST\_JOB\_RANK}, then by
-  \MacroNI{PREEMPTION\_RANK} (if the match would cause preemption).  The
-  purpose of the post job rank is to allow the pool administrator to
-  choose between machines that the job ranks equally.  For example,
-  you might want breadth-first instead of depth-first filling of a
-  cluster of multi-processor machines.
-  The default value is undefined, which causes this rank
-  to have no effect on the ranking of matches.
+  \label{param:NegotiatorPostJobRank}
+  Resources that match a request are first sorted by
+  \MacroNI{NEGOTIATOR\_PRE\_JOB\_RANK}.  If there are any ties in the
+  rank of the top choice, the top resources are sorted by the
+  user-supplied rank in the job ClassAd, then by
+  \MacroNI{NEGOTIATOR\_POST\_JOB\_RANK}, then by
+  \MacroNI{PREEMPTION\_RANK} (if the match would cause preemption and
+  there are still any ties in the top choice).  \verb@MY@ refers to
+  attributes of the machine ClassAd and \verb@TARGET@ refers to the
+  job ClassAd.  The purpose of the post job rank is to allow the pool
+  administrator to choose between machines that the job ranks equally.
+  The default value is undefined, which causes this rank to have no
+  effect on the ranking of matches.  The following example expression
+  steers jobs toward faster machines and tends to fill a cluster of
+  multi-processors by spreading across all machines before filling up
+  individual machines.  In this example, the expression is chosen to
+  have no effect when preemption would take place, allowing control to
+  pass on to \MacroNI{PREEMPTION\_RANK}.
+
+\begin{verbatim}
+UWCS_NEGOTIATOR_POST_JOB_RANK = \
+ (RemoteOwner =?= UNDEFINED) * (KFlops - VirtualMachineID)
+\end{verbatim}
+
 
 \item[\Macro{PREEMPTION\_REQUIREMENTS}]
   \label{param:PreemptionRequirements} When considering user priorities, the negotiator will not preempt
@@ -4855,16 +4877,19 @@ These macros affect the \Condor{negotiator}.
   section \ref{sec:Disabling Preemption} for a general discussion of
   limiting preemption.
 
-\item[\Macro{PREEMPTION\_RANK}] \label{param:PreemptionRank}
-  Resources that match a request are first sorted by the
-  \MacroNI{NEGOTIATOR\_POST\_JOB\_RANK} expression, then by the
+\item[\Macro{PREEMPTION\_RANK}] \label{param:PreemptionRank} Resources
+  that match a request are first sorted by
+  \MacroNI{NEGOTIATOR\_PRE\_JOB\_RANK}.  If there are any ties in the
+  rank of the top choice, the top resources are sorted by the
   user-supplied rank in the job ClassAd, then by
   \MacroNI{NEGOTIATOR\_POST\_JOB\_RANK}, then by
-  \MacroNI{PREEMPTION\_RANK} (if the match would cause preemption).
-  This expression is used to rank machines that the job and the other
-  negotiation expressions rank the same.  For example, if the job has
-  no preference, it is usually preferable to preempt a job with a
-  small \AdAttr{ImageSize} instead of a job with a large
+  \MacroNI{PREEMPTION\_RANK} (if the match would cause preemption and
+  there are still any ties in the top choice).  \verb@MY@ refers to
+  attributes of the machine ClassAd and \verb@TARGET@ refers to the
+  job ClassAd.  This expression is used to rank machines that the job
+  and the other negotiation expressions rank the same.  For example,
+  if the job has no preference, it is usually preferable to preempt a
+  job with a small \AdAttr{ImageSize} instead of a job with a large
   \AdAttr{ImageSize}.  The default is to rank all preemptable matches
   the same.  However, the negotiator will always prefer to match the
   job with an idle machine over a preemptable machine, if none of the
