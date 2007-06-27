@@ -434,9 +434,21 @@ e.g. mymachine.mydomain.com \n";
 
 	# Lookup the full hostname.
 	if (!gethostbyname($host)) {
-	    die "\nInvalid host name \"$host\". Please set the \
- environment variable \$HOSTNAME to the full name of this machine \
- e.g. mymachine.mydomain.com \n";
+	   ##
+	   ## We use to die right here when we couldn't get the hostname.
+	   ## But the FreeBSD testers run Condor in a jail without a real hostname, so 
+	   ## we need to be able to still install when gethostbyname() fails
+	   ## This is why we just set the fullhost to the host, and blank out the domain
+	   ## Andy Pavlo - 06/27/2007
+	   ##
+	   $fullhost = $host;
+	   $domain = "";
+         my $msg = "WARNING: Unable to determine full hostname for host '$host'. ".
+                   "Condor may not work properly\n".
+                   "Please set the environment variable \$HOSTNAME to the full name ".
+                   "of this machine (e.g., mymachine.mydomain.com)\n";
+         warn($msg);
+         return;
 	}
 
 	$fullhost=(gethostbyname($host))[0];
@@ -455,7 +467,11 @@ e.g. mymachine.mydomain.com \n";
 	if( ! ($fullhost =~ /.*\..*/) ) { 
 	    $fullhost=$host;
 	    $domain="";
-	    warn "\nWARNING: Unable to determine full hostname.\n Condor may not work properly\n";
+         my $msg = "WARNING: Unable to determine full hostname for host '$host'. ".
+         "Condor may not work properly\n".
+         "Please set the environment variable \$HOSTNAME to the full name ".
+         "of this machine (e.g., mymachine.mydomain.com)\n";
+         warn($msg);
 	} else {
 	    # Grab just the domain, so we have it.
 	    $fullhost =~ /\w*\.(.*)/;
