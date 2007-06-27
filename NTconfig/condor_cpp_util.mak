@@ -446,7 +446,7 @@ CLEAN :
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\which.obj"
 	-@erase "$(INTDIR)\windows_firewall.obj"
-+   -@erase "$(INTDIR)\vm_univ_utils.obj"
+    -@erase "$(INTDIR)\vm_univ_utils.obj"
 	-@erase "$(OUTDIR)\condor_cpp_util.lib"
 	-@erase "..\Release\condor_common.obj"
 	-@erase "..\Release\condor_common.pch"
