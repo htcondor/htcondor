@@ -769,6 +769,7 @@ sub TunePersonalCondor
 			debug("MASTERNAME now master + $version($mastername)\n");
 			print NEW "SCHEDD_NAME = $mastername\n";
 			print NEW "MASTER_NAME = $mastername\n";
+			print NEW "STARTD_NAME = $mastername\n";
 		} else {
 			print NEW "SCHEDD_NAME = schedd$mpid$version\n";
 		}
