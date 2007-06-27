@@ -62,6 +62,7 @@ extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
 const	int			SCHEDD_INTERVAL_DEFAULT = 300;
 const	int			JOB_DEFERRAL_PREP_TIME_DEFAULT = 300; // seconds
+const	int			JOB_DEFERRAL_WINDOW_DEFAULT = 0; // seconds
 
 #define DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS 1
 
