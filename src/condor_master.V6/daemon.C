@@ -640,11 +640,6 @@ int daemon::RealStart( )
 
 	free(daemon_args);
 
-	if( (strcmp(name_in_config_file,"SCHEDD") == 0) && MasterName ) {
-		args.AppendArg("-n");
-		args.AppendArg(MasterName);
-	}
-
     // The below chunk is for HAD support
 
     // take command port from arguments( buf )
