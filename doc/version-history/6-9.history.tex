@@ -28,6 +28,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Implemented completely new version of Quill.  Quill can now
+record information about all the daemons into a relational database.
+See the quill chapter for more details.
+
+\item Added VM universe, to allow running of jobs under the xen or
+VMware virtual machines.
+
 \item Improved speed of the \Condor{schedd} writing to its database
 file job\_queue.log and the job history file.  In our tests, this
 roughly doubles the maximum throughput rate to ~20 jobs/s, though actual
