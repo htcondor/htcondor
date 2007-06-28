@@ -221,7 +221,7 @@ CLEAN :
 	-@erase "$(INTDIR)\VMMachine.obj"
 	-@erase "$(INTDIR)\VMManager.obj"
 	-@erase "$(INTDIR)\VMRegister.obj"
-+   -@erase "$(INTDIR)\vmuniverse_mgr.obj"
+    -@erase "$(INTDIR)\vmuniverse_mgr.obj"
 	-@erase "$(OUTDIR)\condor_startd.exe"
 	-@erase "$(OUTDIR)\condor_startd.map"
 
