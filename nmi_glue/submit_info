@@ -96,13 +96,6 @@ prereqs   = gcc-3.3
 # globus external, gcc-3.3 can now build all our externals. 
 ]
 
-[
-platforms = x86_macos_10.4
-prereqs   = gcc-4.0
-# gcc-3.1 is documented on the apple site as not working.
-]
-
-
 ########################################
 # Platforms with no prereqs at all
 ########################################
