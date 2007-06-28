@@ -122,6 +122,11 @@ only necessary on one machine in your Condor pool.
 
 \begin{itemize}
 
+\item The submit file entry ``coresize'' was not being honored properly on
+many universe. It is now honored on all universes except pvm and the grid
+universes (except where the grid type is Condor). For the java universe,
+it controls the core file size for the JVM itself.
+
 \item The \Condor{configure} installation script now allows Condor
 to be installed on hosts without a fully-qualified domain name.
 
