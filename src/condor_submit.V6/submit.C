@@ -4262,12 +4262,9 @@ SetCoreSize()
 			EXCEPT("getrlimit failed");
 		}
 
-		/* RLIM_INFINITY is a magic cookie, don't try converting to kbytes */
-		if( rl.rlim_cur == RLIM_INFINITY) {
-			coresize = (long)rl.rlim_cur;
-		} else {
-			coresize = (long)rl.rlim_cur/1024;
-		}
+		// this will effectively become the hard limit for core files when
+		// the job is executed
+		coresize = (long)rl.rlim_cur;
 #endif
 	} else {
 		coresize = atoi(size);

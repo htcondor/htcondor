@@ -59,6 +59,7 @@
 #include "env.h"
 #include "daemon.h"
 #include "daemon_list.h"
+#include "limit.h"
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -892,7 +893,8 @@ class DaemonCore : public Service
         int           std[]                = NULL,
         int           nice_inc             = 0,
         sigset_t      *sigmask             = NULL,
-        int           job_opt_mask         = 0
+        int           job_opt_mask         = 0,
+		size_t        *core_hard_limit      = NULL
         );
 
     //@}

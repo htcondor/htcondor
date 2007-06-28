@@ -5014,7 +5014,8 @@ public:
 		int the_nice_inc,
 		const priv_state &the_priv,
 		int the_want_command_port,
-		const sigset_t *the_sigmask
+		const sigset_t *the_sigmask,
+		size_t *core_hard_limit
 	): m_errorpipe(the_errorpipe), m_args(the_args),
 	   m_job_opt_mask(the_job_opt_mask), m_env(the_env),
 	   m_inheritbuf(the_inheritbuf), m_forker_pid(the_forker_pid),
@@ -5025,7 +5026,8 @@ public:
 	   m_numInheritSockFds(the_numInheritSockFds),
 	   m_inheritSockFds(the_inheritSockFds), m_nice_inc(the_nice_inc),
 	   m_priv(the_priv), m_want_command_port(the_want_command_port),
-	   m_sigmask(the_sigmask), m_unix_args(0), m_unix_env(0)
+	   m_sigmask(the_sigmask), m_unix_args(0), m_unix_env(0),
+	   m_core_hard_limit(core_hard_limit)
 	{
 	}
 
@@ -5072,6 +5074,7 @@ private:
 		// case where parent and child share the same address space.
 	char **m_unix_args;
 	char **m_unix_env;
+	size_t *m_core_hard_limit;
 	Env m_envobject;
 	PidEnvID m_penvid;
 };
@@ -5535,6 +5538,15 @@ void CreateProcessForkit::exec() {
 	}
 	dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
 
+	// Set up the hard limit core size this process should get.
+	// Of course, if I'm asking for a limit larger than this process'
+	// current hard limit, it will be limited to the current hard limit.
+	// This is done here because limit() may do dprintfs and this happens
+	// before we lose our rootly powers, if any.
+	if (m_core_hard_limit != NULL) {
+		limit(RLIMIT_CORE, *m_core_hard_limit, CONDOR_HARD_LIMIT);
+	}
+
 	dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", m_executable_fullpath );
 
 		// !! !! !! !! !! !! !! !! !! !! !! !!
@@ -5645,6 +5657,7 @@ void CreateProcessForkit::exec() {
 	}
 #endif
 
+
 	pidenvid_optimize_final_env(m_unix_env);
 
 		// and ( finally ) exec:
@@ -5675,7 +5688,8 @@ int DaemonCore::Create_Process(
 			int           std[],
 			int           nice_inc,
 			sigset_t      *sigmask,
-			int           job_opt_mask
+			int           job_opt_mask,
+			size_t        *core_hard_limit
             )
 {
 	int i;
@@ -6376,7 +6390,8 @@ int DaemonCore::Create_Process(
 			nice_inc,
 			priv,
 			want_command_port,
-			sigmask);
+			sigmask,
+			core_hard_limit);
 
 		newpid = forkit.fork_exec();
 	}

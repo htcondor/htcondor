@@ -43,11 +43,11 @@ sysapi_set_resource_limits()
 		lim = (int) core_lim;
 	}
 
-    limit( RLIMIT_CORE, lim );
-	limit( RLIMIT_CPU, RLIM_INFINITY );
-	limit( RLIMIT_FSIZE, RLIM_INFINITY );
-	limit( RLIMIT_DATA, RLIM_INFINITY );
-	limit( RLIMIT_STACK, RLIM_INFINITY );
+    limit( RLIMIT_CORE, lim, CONDOR_SOFT_LIMIT );
+	limit( RLIMIT_CPU, RLIM_INFINITY, CONDOR_SOFT_LIMIT );
+	limit( RLIMIT_FSIZE, RLIM_INFINITY, CONDOR_SOFT_LIMIT );
+	limit( RLIMIT_DATA, RLIM_INFINITY, CONDOR_SOFT_LIMIT );
+	limit( RLIMIT_STACK, RLIM_INFINITY, CONDOR_SOFT_LIMIT );
 
 	dprintf( D_ALWAYS, "Done setting resource limits\n" );
 }
@@ -59,10 +59,10 @@ sysapi_set_resource_limits()
 void
 sysapi_set_resource_limits()
 {
-	limit( RLIMIT_CPU, RLIM_INFINITY );
-	limit( RLIMIT_FSIZE, RLIM_INFINITY );
-	limit( RLIMIT_DATA, RLIM_INFINITY );
-	limit( RLIMIT_VMEM, RLIM_INFINITY ); 
+	limit( RLIMIT_CPU, RLIM_INFINITY, CONDOR_SOFT_LIMIT );
+	limit( RLIMIT_FSIZE, RLIM_INFINITY, CONDOR_SOFT_LIMIT );
+	limit( RLIMIT_DATA, RLIM_INFINITY, CONDOR_SOFT_LIMIT );
+	limit( RLIMIT_VMEM, RLIM_INFINITY, CONDOR_SOFT_LIMIT ); 
 	/* VMEM seems to be analogous to RSS on Sun ..dhaval 7/2 */
 
 /*
@@ -84,7 +84,7 @@ sysapi_set_resource_limits()
 	to accomodate the actual size of the file.  We therefore set the
 	stack limit to a default of 8 megabytes.
 */
-	limit( RLIMIT_STACK, 8 * MEG );
+	limit( RLIMIT_STACK, 8 * MEG, CONDOR_SOFT_LIMIT );
 
 /*
 	We would like to limit the size of the coredump to something less than
@@ -98,7 +98,7 @@ sysapi_set_resource_limits()
 	2 meg!!  For this reason, we don't limit the core file size on
 	Suns.
 */
-	limit( RLIMIT_CORE, RLIM_INFINITY );
+	limit( RLIMIT_CORE, RLIM_INFINITY, CONDOR_SOFT_LIMIT );
 
 	dprintf( D_ALWAYS, "Done setting resource limits\n" );
 }

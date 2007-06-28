@@ -7644,6 +7644,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	bool cannot_open_files = false;
 	priv_state priv;
 	int i;
+	size_t *core_size_ptr = NULL;
 
 	is_executable = false;
 
@@ -7886,11 +7887,28 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
         // get the job's nice increment
 	niceness = param_integer( "SCHED_UNIV_RENICE_INCREMENT",niceness );
+
+		// If there is a requested coresize for this job,
+		// enforce it.  It is truncated because you can't put an
+		// unsigned integer into a classad. I could rewrite condor's
+		// use of ATTR_CORE_SIZE to be a float, but then when that
+		// attribute is read/written to the job queue log by/or
+		// shared between versions of Condor which view the type
+		// of that attribute differently, calamity would arise.
+	int core_size_truncated;
+	size_t core_size;
+	if (GetAttributeInt(job_id->cluster, job_id->proc, 
+						   ATTR_CORE_SIZE, &core_size_truncated) == 0) {
+		// make the hard limit be what is specified.
+		core_size = (size_t)core_size_truncated;
+		core_size_ptr = &core_size;
+	}
 	
 	pid = daemonCore->Create_Process( a_out_name, args, PRIV_USER_FINAL, 
 									  shadowReaperId, FALSE,
 									  &envobject, iwd, NULL, NULL, inouterr,
-									  niceness, NULL, DCJOBOPT_NO_ENV_INHERIT );
+									  niceness, NULL, DCJOBOPT_NO_ENV_INHERIT,
+									  core_size_ptr );
 	
 	// now close those open fds - we don't want them here.
 	for ( i=0 ; i<3 ; i++ ) {

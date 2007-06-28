@@ -361,6 +361,20 @@ OsProc::StartJob(FamilyInfo* family_info)
 		job_opt_mask |= DCJOBOPT_SUSPEND_ON_EXEC;
 	}
 
+	// If there is a requested coresize for this job, enforce it.
+	// It is truncated because you can't put an unsigned integer
+	// into a classad. I could rewrite condor's use of ATTR_CORE_SIZE to
+	// be a float, but then when that attribute is read/written to the
+	// job queue log by/or shared between versions of Condor which view the
+	// type of that attribute differently, calamity would arise.
+	int core_size_truncated;
+	size_t core_size;
+	size_t *core_size_ptr = NULL;
+	if ( JobAd->LookupInteger( ATTR_CORE_SIZE, core_size_truncated ) ) {
+		core_size = (size_t)core_size_truncated;
+		core_size_ptr = &core_size;
+	}
+
 	set_priv ( priv );
 
 	if (privsep_enabled()) {
@@ -372,7 +386,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 
 	JobPid = daemonCore->Create_Process( JobName, args, PRIV_USER_FINAL,
 					     1, FALSE, &job_env, job_iwd, family_info,
-					     NULL, fds, nice_inc, NULL, job_opt_mask );
+					     NULL, fds, nice_inc, NULL, job_opt_mask, 
+						 core_size_ptr );
 
 	//NOTE: Create_Process() saves the errno for us if it is an
 	//"interesting" error.

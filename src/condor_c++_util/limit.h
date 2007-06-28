@@ -21,14 +21,24 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#ifndef LIMIT_H
+#define LIMIT_H
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
+enum thingy {
+	CONDOR_SOFT_LIMIT = 0,
+	CONDOR_HARD_LIMIT = 1
+};
+
 #ifndef WIN32
-void limit( int, rlim_t );
+void limit( int, rlim_t, int type );
 #endif
 
 #if defined(__cplusplus)
 }
+#endif
+
 #endif

@@ -652,9 +652,9 @@ check_core_files()
 	if( (tmp = param("CREATE_CORE_FILES")) ) {
 #ifndef WIN32	
 		if( *tmp == 't' || *tmp == 'T' ) {
-			limit( RLIMIT_CORE, RLIM_INFINITY );
+			limit( RLIMIT_CORE, RLIM_INFINITY, CONDOR_SOFT_LIMIT );
 		} else {
-			limit( RLIMIT_CORE, 0 );
+			limit( RLIMIT_CORE, 0, CONDOR_SOFT_LIMIT );
 		}
 #endif
 		if( *tmp == 'f' || *tmp == 'F' ) {

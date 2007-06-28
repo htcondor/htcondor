@@ -29,6 +29,10 @@
  * ==========================================================================*/
 
 #include "condor_common.h"
+#include "env.h"
+#include "daemon.h"
+#include "condor_config.h"
+#include "internet.h"
 #include "dap_server.h"
 #include "dap_server_interface.h"
 #include "dap_classad_reader.h"
@@ -36,10 +40,6 @@
 #include "dap_utility.h"
 #include "dap_error.h"
 #include "dap_scheduler.h"
-#include "env.h"
-#include "daemon.h"
-#include "condor_config.h"
-#include "internet.h"
 
 #ifndef WANT_NAMESPACES
 #define WANT_NAMESPACES

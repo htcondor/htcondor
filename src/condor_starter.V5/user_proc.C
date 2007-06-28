@@ -560,6 +560,14 @@ UserProc::execute()
 		if ( new_reli ) {
 			new_reli->timeout(0);
 		}
+		
+			// If there is a requested coresize for this job, enforce it.
+			// Do it before the set_priv_final to ensure root can alter 
+			// the coresize to the requested amount. Otherwise, just
+			// use whatever the current default is.
+		if (coredump_limit_exists == TRUE) {
+			limit( RLIMIT_CORE, coredump_limit, CONDOR_HARD_LIMIT );
+		}
 
 			// child process should have only it's submitting uid, and cannot
 			// switch back to root or some other uid.  

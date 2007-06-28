@@ -24,12 +24,12 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_syscall_mode.h"
-
+#include "limit.h"
 
 extern "C" {
 
 void
-limit( int resource, rlim_t new_limit )
+limit( int resource, rlim_t new_limit, int kind )
 {
 	int		scm;
 	struct	rlimit current = {0,0};
@@ -43,13 +43,57 @@ limit( int resource, rlim_t new_limit )
 					resource, errno, strerror(errno));
 	}
 
-	/* Make a new rlimit structure that holds what I desire to be true */
-	desired.rlim_cur = new_limit;
-	desired.rlim_max = current.rlim_max;
+	switch(kind) {
+		case CONDOR_SOFT_LIMIT:
+			/* Make a new rlimit structure that holds what I desire to be 
+				true */
+			desired.rlim_cur = new_limit;
+			desired.rlim_max = current.rlim_max;
 
-	/* Don't try to exceed the hard max as supplied by getrlimit() */
-	if( desired.rlim_cur > desired.rlim_max ) {
-		desired.rlim_cur = desired.rlim_max;
+			/* Don't try to exceed the hard max as supplied by getrlimit() */
+			if( desired.rlim_cur > desired.rlim_max ) {
+				desired.rlim_cur = desired.rlim_max;
+			}
+
+			break;
+
+		case CONDOR_HARD_LIMIT:
+			desired.rlim_cur = new_limit;
+			desired.rlim_max = new_limit;
+
+			if ((desired.rlim_max > current.rlim_max) && (getuid() != (pid_t)0))
+			{
+				/* Due to the fact that this code
+					path will happen a lot as a non
+					root user due to the the behavior
+					in Create_Process where we always
+					try to set the core hard limit to
+					the maximum of size_t by default,
+					we will by default ALWAYS ask
+					for a limit which may be larger
+					than the current hard max of
+					this limit. Especially in the
+					case of a personal Condor this
+					will result in whatever message
+					being written here being printed
+					out *all the time*. So, instead
+					of doing a dprintf for SNAFU
+					behavior, we silently truncate
+					the asked for limit the to
+					current hard max if it is greater.
+				*/
+
+				desired = current;
+
+				desired.rlim_cur = desired.rlim_max;
+			}
+
+			break;
+
+		default:
+			EXCEPT("do_limit() unknown limit enforcment policy. Programmer "
+				"Error.");
+			break;
 	}
 
 	/* Set the new limit */
