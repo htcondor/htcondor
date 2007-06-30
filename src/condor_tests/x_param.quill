@@ -6,5 +6,5 @@ condor = nightlies
 condorconfig = condor_config
 condorlocal = condor_config.local
 localpostsrc = x_quill_config_postsrc
-condordaemons = master,schedd,collector,startd,negotiator,quill
+condordaemons = master,schedd,collector,startd,negotiator,quill,dbmsd
 slots	= 10

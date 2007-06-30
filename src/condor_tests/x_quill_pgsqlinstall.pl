@@ -56,7 +56,8 @@ system("date");
 print "Configuring Postgres Source.....\n";
 
 chdir("$pgsqlversion");
-$doconfigure = system("./configure --prefix=$prefix --without-readline --disable-shared");
+#$doconfigure = system("./configure --prefix=$prefix --without-readline --disable-shared");
+$doconfigure = system("./configure --prefix=$prefix --without-readline ");
 if($doconfigure != 0) {
 	die "Configure failed\n";
 }
@@ -247,8 +248,6 @@ unless($command->expect(10,"Shall the new role be allowed to create more new rol
 print $command "n\n";
 $command->soft_close();
 
-#system("$prefix/bin/createuser quillwriter --createdb --no-adduser --pwprompt");
-
 system("date");
 print "Create DB for Quil\n";
 
@@ -256,6 +255,29 @@ $docreatedb = system("$prefix/bin/createdb --port $startpostmasterport test");
 if($docreatedb != 0) {
 	die "Failed to create test db\n";
 }
+system("date");
+
+print "Run psql program\n";
+$command = Expect->spawn("$prefix/bin/psql test")||
+	die "Could not start program: $!\n";
+$command->log_stdout(0);
+unless($command->expect(10,"test=#")) {
+	die "Expected psql prompt for test db\n";
+}
+print $command "\\i $testsrc/../condor_tt/common_createddl.sql\n";
+
+unless($command->expect(10,"test=#")) {
+	die "Prompt after attempted install of common schema failed\n";
+}
+print $command "\\i $testsrc/../condor_tt/pgsql_createddl.sql\n";
+
+unless($command->expect(10,"test=#")) {
+	die "Prompt after attempted install of postgress schema failed\n";
+}
+print $command "\quit\n";
+$command->soft_close();
+
+#system("$prefix/bin/createuser quillwriter --createdb --no-adduser --pwprompt");
 
 print "Postgress built and set up: ";
 system("date");
