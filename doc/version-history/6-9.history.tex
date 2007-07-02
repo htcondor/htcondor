@@ -159,6 +159,15 @@ as soon as it was done evicting the job.
 \item Job ad attribute \Attr{HoldReasonCode} is now properly set when
 \Condor{hold} is called and when jobs are submitted on hold.
 
+\item If a job specified a job lease duration, and the \Condor{schedd}
+  was killed or crashed, the \Condor{shadow} used to notice when the
+  \Condor{schedd} was gone, and gracefully shutdown the job (evicting
+  the job at the remote site).
+  Now, the \Condor{shadow} honors the job lease duration, and if the
+  lease has not yet expired, it simply exists without evicting the
+  job, in the hopes that the \Condor{schedd} will be restarted in time
+  to reconnect to the still-running job and resume computation.
+
 \end{itemize}
 
 \noindent Known Bugs:
