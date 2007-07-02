@@ -327,7 +327,7 @@ class DaemonCore : public Service
 
     /** Returns the Sinful String <host:port> of the DaemonCore
 		command socket of this process
-		@param noGCB 
+		@param usePrivateAddress
 			- If false, return whatever getpeername provides,
 		       which may be a white lie if GCB is involved.
 			- If true, return the "real" local address, no GCB
@@ -337,7 +337,7 @@ class DaemonCore : public Service
 			   is provided only for passing to other processes on the
 			   same machine as an optimization.
         @return A pointer into a <b>static buffer</b>, or NULL on error */
-	char * InfoCommandSinfulStringMyself(bool noGCB);
+	char * InfoCommandSinfulStringMyself(bool usePrivateAddress);
 
 		/**
 		   @return Pointer to a static buffer containing the daemon's

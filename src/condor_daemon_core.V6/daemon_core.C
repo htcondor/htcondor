@@ -95,6 +95,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "HashTable.h"
 #include "selector.h"
 #include "proc_family_interface.h"
+#include "condor_netdb.h"
 
 // Make this the last include to fix assert problems on Win32 -- see
 // the comments about assert at the end of condor_debug.h to understand
@@ -886,36 +887,62 @@ char * DaemonCore::InfoCommandSinfulString(int pid)
 // NOTE: InfoCommandSinfulStringMyself always returns a pointer to a _static_ buffer!
 // This means you'd better copy or strdup the result if you expect it to never
 // change on you.  Plus, realize static buffers aren't exactly thread safe!
-char * DaemonCore::InfoCommandSinfulStringMyself(bool noGCB)
+char * DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 {
-	static char * sinful_gcb_yes = NULL;
-	static char * sinful_gcb_no = NULL;
+	static char * sinful_public = NULL;
+	static char * sinful_private = NULL;
 
 	if ( initial_command_sock == -1 ) {
 		// there is no command sock!
 		return NULL;
 	}
 
+	// if TCP_FORWARDING_HOST is defined, we will advertize our local
+	// IP address for daemons that have the same PRIVATE_NETWORK_NAME as
+	// us. for everyone else, we advertize the address of the TCP
+	// forwarder
+	//
+	if (!usePrivateAddress) {
+		char* tmp = param("TCP_FORWARDING_HOST");
+		if (tmp != NULL) {
+			MyString tcp_forwarding_host = tmp;
+			free(tmp);
+			if (sinful_public == NULL) {
+				struct sockaddr_in sin;
+				if (!is_ipaddr(tcp_forwarding_host.Value(), &sin.sin_addr)) {
+					struct hostent *he = condor_gethostbyname(tcp_forwarding_host.Value());
+					if (he == NULL) {
+						EXCEPT("failed to resolve address of SSH_BROKER");
+					}
+					sin.sin_addr.s_addr = *(u_int32_t*)(he->h_addr_list[0]);;
+				}
+				sin.sin_port = htons(((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port());
+				sinful_public = strdup(sin_to_string(&sin));
+			}
+			return sinful_public;
+		}
+	}
+
 #	if HAVE_EXT_GCB
-		if( noGCB ) {
-			if( sinful_gcb_no == NULL ) {
+		if( usePrivateAddress ) {
+			if( sinful_private == NULL ) {
 				struct sockaddr_in addr;
 				SOCKET_LENGTH_TYPE addr_len = sizeof(addr);
 				SOCKET sockd = (*sockTable)[initial_command_sock].sockd;
 				if( GCB_real_getsockname(sockd, (struct sockaddr *)&addr, &addr_len) < 0 ) {
 					return "";
 				}
-				sinful_gcb_no = strdup( sin_to_string( &addr ) );
+				sinful_private = strdup( sin_to_string( &addr ) );
 			}
-			return sinful_gcb_no;
+			return sinful_private;
 		}
 #	endif
 
-	if( sinful_gcb_yes == NULL ) {
-		sinful_gcb_yes = strdup(
+	if( sinful_public == NULL ) {
+		sinful_public = strdup(
 			sock_to_string( (*sockTable)[initial_command_sock].sockd ) );
 	}
-	return sinful_gcb_yes;
+	return sinful_public;
 }
 
 const char*
