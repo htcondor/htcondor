@@ -76,7 +76,7 @@ sub get_hostnames {
 		return;
 	}
 	while ( <IN> ) {
-		if ( s|^\s*CEid *= *\"([\w.]*).*\";\s*$|$1| ) {
+		if ( s|^\s*CEid *= *\"([^\s:\/]+).*voblah.*\";\s*$|$1| ) {
 			print "Found match: $_\n";
 			push @all_hostnames, $_;
 		}
