@@ -1424,9 +1424,8 @@ RemoteResource::reconnect( void )
 	}
 
 		// each time we get here, see how much time remains...
-	time_t now = time(0);
-	int remaining = lease_duration - (now - last_job_lease_renewal);
-	if( remaining <= 0 ) {
+	int remaining = remainingLeaseDuration();
+	if( !remaining ) {
 	dprintf( D_ALWAYS, "%s remaining: EXPIRED!\n",
 			 ATTR_JOB_LEASE_DURATION );
 		MyString reason = "Job disconnected too long: ";
@@ -1485,6 +1484,19 @@ RemoteResource::attemptReconnect( void )
 		// if we got here, we already know the starter's address, so
 		// we can go on to directly request a reconnect... 
 	requestReconnect(); 
+}
+
+
+int
+RemoteResource::remainingLeaseDuration( void )
+{
+	if (lease_duration < 0) {
+			// No lease, nothing remains.
+		return 0;
+	}
+	int now = (int)time(0);
+	int remaining = lease_duration - (now - last_job_lease_renewal);
+	return ((remaining < 0) ? 0 : remaining);
 }
 
 
