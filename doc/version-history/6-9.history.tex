@@ -177,6 +177,10 @@ as soon as it was done evicting the job.
   job, in the hopes that the \Condor{schedd} will be restarted in time
   to reconnect to the still-running job and resume computation.
 
+\item Fixed a bug from 6.9.3 in which \Condor{q} \Opt{-format} no longer
+worked when given an expression (as opposed to simple attribute reference).
+The expression was always treated as being undefined.
+
 \end{itemize}
 
 \noindent Known Bugs:
