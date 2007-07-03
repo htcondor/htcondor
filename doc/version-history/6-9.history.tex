@@ -89,6 +89,13 @@ to \SubmitCmd{deferral\_window}.
 
 \begin{itemize}
 
+\item When set to \Expr{True}, the new configuration variable
+\Macro{LOGS\_USE\_TIMESTAMP} will cause Condor to print all daemon
+log messages using a Unix timestamp instead of a formatted date
+string. This feature is useful for debugging Condor Glideins that may
+be executing in different timezones. It should be noted that this does
+not affect job user logs. The default is \Expr{False}.
+
 \item The existing configuration variable \Macro{LOG\_ON\_NFS\_IS\_ERROR} has 
 changed behavior. When set to \Expr{False},
 \Condor{submit} does not emit a warning about user logs files being on NFS.
