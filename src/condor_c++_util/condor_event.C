@@ -1777,13 +1777,18 @@ writeEvent (FILE *file)
 int CheckpointedEvent::
 readEvent (FILE *file)
 {
-	int retval = fscanf (file, "Job was checkpointed.");
+	int retval = fscanf (file, "Job was checkpointed.\n");
 
 	char buffer[128];
 	if (retval == EOF ||
 		!readRusage(file,run_remote_rusage) || fgets (buffer,128,file) == 0  ||
 		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
 		return 0;
+
+    if( !fscanf(file, "\t%.0f  -  Run Bytes Sent By Job For Checkpoint\n",
+                &sent_bytes)) {
+        return 1;		//backwards compatibility
+    }
 
 	return 1;
 }
