@@ -352,6 +352,20 @@ h/syscall_numbers.h: h/syscall_numbers.tmpl h/Makefile
 h/syscall_numbers.o: h/syscall_numbers.tmpl h/Makefile
 	cd h; $(MAKE) syscall_numbers.o
 
+#if HAVE_CC_SHARED_FLAG
+LIBCONDORAPI = libcondorapi.a libcondorapi.so
+TEST_LIBCONDORAPI = test_libcondorapi test_libcondorapi_shared
+#else
+LIBCONDORAPI = libcondorapi.a
+TEST_LIBCONDORAPI = test_libcondorapi
+#endif
+
+libcondorapi: h h_all externals condor_includes makefiles Directories
+	cd condor_c++_util && $(MAKE) $(LIBCONDORAPI) $(TEST_LIBCONDORAPI)
+
+libcondorapi-release: libcondorapi
+	cd condor_c++_util && $(MAKE) libcondorapi-release
+
 check_platform_target
 
 clean:: 

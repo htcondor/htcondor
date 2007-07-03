@@ -246,9 +246,11 @@ import(../condor_util_lib,mkargv.o)
 import(../condor_daemon_client,$(DAEMON_CLIENT_OBJ))
 
 public_library(libcondorapi.a,lib)
+libcondorapi-release:: $(RELEASE_DIR)/lib/libcondorapi.a
 
 #if HAVE_CC_SHARED_FLAG
 public_shared_library(libcondorapi.so,lib)
+libcondorapi-release:: $(RELEASE_DIR)/lib/libcondorapi.so
 #endif
 
 public_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
