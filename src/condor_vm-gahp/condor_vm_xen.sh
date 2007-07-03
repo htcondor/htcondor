@@ -504,6 +504,14 @@ createiso() {
 	sync
 }
 
+createconfig() {
+# $1: configuration file
+	if [ ! -f "$1" ]; then
+		echo "Usage: $PROG createconfig <configfile>" 1>&2
+		return 1
+	fi
+}
+
 #### Program starts from here #####
 
 if [ ! -x "$XM" ]; then
@@ -556,8 +564,11 @@ case "$1" in
   createiso)
   	createiso "$2" "$3"
 	;;
+  createconfig)
+  	createconfig "$2"
+	;;
    *)
-        echo $"Usage: $0 {start|stop|suspend|resume|pause|unpause|status|getvminfo|check|killvm|createiso}" 1>&2
+        echo $"Usage: $0 {start|stop|suspend|resume|pause|unpause|status|getvminfo|check|killvm|createiso|createconfig}" 1>&2
         exit 1
 esac
 

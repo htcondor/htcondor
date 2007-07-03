@@ -35,6 +35,7 @@ use File::Copy;
 # program version information
 my $APPNAME = "VMWare Control Tool";
 my $VERSION = "0.1";
+my $verbose = undef;
 
 # Location of "vmrun" and "vmware-cmd" program
 # If these programs are in $PATH, just use basename. Otherwise use a full path
@@ -62,6 +63,15 @@ if (lc($^O) eq "mswin32") {
 	$mkisofs = 'mkisofs';
 }
 
+# Location of dhcpd.lease
+# If dhcpd_lease is defined, we will use the file to find IP address of guest VM.
+# Otherwise, we will send a request to vmware tool.
+# If vmware tool is not installed inside VM, we can't get IP address of the VM.
+my $dhcpd_lease = undef;
+#$dhcpd_lease = '/etc/vmware/vmnet8/dhcpd/dhcpd.leases';
+#$dhcpd_lease = 'C:\Documents and Settings\All Users\Application Data\VMware\vmnetdhcp.leases';
+
+
 # stdout will be directed to stderr
 #open STDOUT, ">&STDERR" or die "Can't dup STDERR: $!";
 #select STDERR; $| = 1;  # make unbuffered
@@ -79,23 +89,24 @@ $APPNAME (version $VERSION)
 
 Usage: $progname command [parameters]
 
-Command     Parameters         Description
-list                           List all running VMs
-check                          Check if vmware is installed
-register    [vmconfig]         Register a VM
-unregister  [vmconfig]         Unregister a VM
-start       [vmconfig] [file]  Start a VM and save PID into file
-stop        [vmconfig]         Shutdown a VM
-killvm      [string]           Kill a VM
-suspend     [vmconfig]         Suspend a VM
-resume      [vmconfig] [file]  Resume a suspended VM and save PID into file
-status      [vmconfig] [file]  Save the status of a VM into file
-getpid      [vmconfig] [file]  Save PID of VM into file
-getvminfo   [vmconfig] [file]  Save info about VM into file
-snapshot    [vmconfig]         Create a snapshot of a VM
-commit      [vmconfig]         Commit COW disks and delete the COW
-revert      [vmconfig]         Set VM state to a snapshot
-createiso   [listfile] [ISO]   Create an ISO image with files in a listfile
+Command      Parameters         Description
+list                            List all running VMs
+check                           Check if vmware is installed
+register     [vmconfig]         Register a VM
+unregister   [vmconfig]         Unregister a VM
+start        [vmconfig] [file]  Start a VM and save PID into file
+stop         [vmconfig]         Shutdown a VM
+killvm       [string]           Kill a VM
+suspend      [vmconfig]         Suspend a VM
+resume       [vmconfig] [file]  Resume a suspended VM and save PID into file
+status       [vmconfig] [file]  Save the status of a VM into file
+getpid       [vmconfig] [file]  Save PID of VM into file
+getvminfo    [vmconfig] [file]  Save info about VM into file
+snapshot     [vmconfig]         Create a snapshot of a VM
+commit       [vmconfig]         Commit COW disks and delete the COW
+revert       [vmconfig]         Set VM state to a snapshot
+createiso    [listfile] [ISO]   Create an ISO image with files in a listfile
+createconfig [configfile]       Modify configuration file created by vm-gahp
 
 Note:
   vmconfig must be an absolute pathname, e.g. /vm/testvm1.vmx
@@ -122,6 +133,13 @@ sub printerror
 sub printwarn
 {
 	print STDERR "(WARN) @_\n";
+}
+
+sub printverbose
+{
+	if( defined($verbose) ) {
+		print STDERR "VMwareTool: @_\n";
+	}
 }
 
 sub checkvmconfig
@@ -188,7 +206,7 @@ sub check
 sub register
 {
 #register    [vmconfig]         Register a VM
-	print STDERR "VMwareTool: register is called\n";
+	printverbose "register is called";
 	my $vmconfig = checkvmconfig($_[0]);
 	if( ! checkregister($vmconfig) ) {
 		#!system $vmwarecmd_prog, "-s", "register", $vmconfig
@@ -200,7 +218,7 @@ sub register
 sub unregister
 {
 #unregister    [vmconfig]         Unregister a VM
-	print STDERR "VMwareTool: unregister is called\n";
+	printverbose "unregister is called";
 	my $vmconfig = checkvmconfig($_[0]);
 	#if( checkregister($vmconfig) ) {
 		#!system $vmwarecmd_prog, "-s", "unregister", $vmconfig
@@ -281,7 +299,7 @@ sub status
 sub pidofvm
 {
 #getpid      [vmconfig] [file]  Save PID of VM to file
-	print STDERR "VMwareTool: pidofvm is called\n";
+	printverbose "pidofvm is called";
 	my $vmconfig = checkvmconfig($_[0]);
 	if( ! defined($_[1]) ) {
 		usage();
@@ -306,7 +324,7 @@ sub pidofvm
 sub getvminfo
 {
 #getvminfo     [vmconfig] [file]  Save info about VM to file
-	print STDERR "VMwareTool: getvminfo is called\n";
+	printverbose "getvminfo is called";
 	my $vmconfig = checkvmconfig($_[0]);
 	if( ! defined($_[1]) ) {
 		usage();
@@ -324,6 +342,7 @@ sub getvminfo
 		or printerror "Cannot create the file($infofile) : $!";
 
 	# Get mac address of VM
+	my $mac_address = undef;
 	my $resultline = `"$vmwarecmd_prog" "$vmconfig" getconfig ethernet0.generatedAddress`;
 	chomp($resultline);
 	if( $resultline ) {
@@ -331,38 +350,78 @@ sub getvminfo
 		# "getconfig(ethernet0.generatedAddress) = 00:0c:29:cb:40:bb"
 		my @fields = split /=/, $resultline;
 		shift @fields;
-		my $second_field = shift @fields; 
+		$mac_address = shift @fields; 
 		# delete leading/trailing whitespace
-		$second_field =~ s/^\s+|\s+$//g;
-		if( ! defined($second_field) ) {
-			printwarn "Invalid format of getconfig($resultline)";
+		$mac_address =~ s/^\s+|\s+$//g;
+		if( ! defined($mac_address) ) {
+			printwarn "Invalid format of getconfig for mac($resultline)";
+			$mac_address = undef;
 		}else {
-			print VMINFO "MAC=$second_field\n";
+			print VMINFO "MAC=$mac_address\n";
 		}
 	}
-	# Get IP address of VM
-	$resultline = `"$vmwarecmd_prog" "$vmconfig" getguestinfo ip`;
-	chomp($resultline);
-	if( $resultline ) {
-		# result must be like "getguestinfo(ip) = 172.16.123.143"
-		my @fields = split /=/, $resultline;
-		shift @fields;
-		my $second_field = shift @fields;
-		# delete leading/trailing whitespace
-		$second_field =~ s/^\s+|\s+$//g;
-		if( ! defined($second_field) ) {
-			printwarn "Invalid format of getguestinfo ip($resultline)";
+
+	my $ip_address = undef;
+	if( defined($mac_address) ) {
+		# Get IP address of VM
+
+		# If dhcpd_lease file is defined, use it.
+		# Otherwise, use vmware tool.
+		if( defined($dhcpd_lease) && -r $dhcpd_lease ) {
+			my $tmp_lease_file = "dhcpd_lease";
+			copy( "$dhcpd_lease", "$tmp_lease_file") 
+				or printwarn "Cannot copy file($dhcpd_lease) into working directory: $!";
+
+			if( -r $tmp_lease_file && open(LEASEFILE, $tmp_lease_file) ) {
+				my $tmp_ip;
+				while (<LEASEFILE>) {
+					next if /^#|^$/;
+					if( /^lease (\d+\.\d+\.\d+\.\d+)/) {
+						$tmp_ip = $1;
+					}
+					if( /$mac_address/ ) {
+						$ip_address = $tmp_ip;
+					}
+				}
+				close LEASEFILE;
+			}
+			unlink $tmp_lease_file;
+		}
+		if( defined($ip_address) ) {
+			printverbose "getting IP address using lease file($dhcpd_lease)";
 		}else {
-			print VMINFO "IP=$second_field\n";
+			# We failed to get IP address of guest VM
+			# We will retry to get it by using vmware tool
+
+			$resultline = `"$vmwarecmd_prog" "$vmconfig" getguestinfo ip`;
+			chomp($resultline);
+			if( $resultline ) {
+				# result must be like "getguestinfo(ip) = 172.16.123.143"
+				my @fields = split /=/, $resultline;
+				shift @fields;
+				$ip_address = shift @fields;
+				# delete leading/trailing whitespace
+				$ip_address =~ s/^\s+|\s+$//g;
+				if( ! defined($ip_address) ) {
+					$ip_address = undef;
+					printwarn "Invalid format of getguestinfo ip($resultline)";
+				}
+			}
+		}
+
+		if( defined($ip_address) ) {
+			print VMINFO "IP=$ip_address\n";
 		}
 	}
+
 	close VMINFO;
 }
 
 sub start
 {
 #start       [vmconfig] [file]	Start a VM
-	print STDERR "VMwareTool: start is called\n";
+	printverbose "start is called";
+
 	my $vmconfig = checkvmconfig($_[0]);
 
 	if( ! checkregister($vmconfig) ) {
@@ -393,7 +452,7 @@ sub start
 sub stop
 {
 #stop        [vmconfig]         Shutdown a VM
-	print STDERR "VMwareTool: stop is called\n";
+	printverbose "stop is called";
 	my $vmconfig = checkvmconfig($_[0]);
 
 	# Get status
@@ -411,14 +470,14 @@ sub stop
 sub killvm
 {
 #killvm        [vmconfig]         kill a VM
-	print STDERR "VMwareTool: killvm is called\n";
+	printverbose "killvm is called";
 	my $matchstring = $_[0];
 
 	if( ! defined($matchstring) ) {
 		usage();
 	}
 
-	print STDERR "VMwareTool: matching string is '$matchstring'\n";
+	printverbose "matching string is '$matchstring'";
 
 	my $os = $^O;
 
@@ -451,7 +510,7 @@ sub killvm
 			my $vmpid = getvmpid($ori_line);
 
 			if( defined($vmpid) ) {
-				print STDERR "VMwareTool: Killing process(pid=$vmpid)\n";
+				printverbose "Killing process(pid=$vmpid)";
 				kill "KILL", $vmpid;
 			}
 
@@ -471,7 +530,7 @@ sub killvm
 			{
 				@pidarr = split (/ +/, $psline);
 				if( defined($pidarr[1]) ) {
-					print STDERR "VMWareTool: Killing process(pid=$pidarr[1])\n";
+					printverbose "Killing process(pid=$pidarr[1])";
 					kill 9, $pidarr[1];
 				}
 			}
@@ -482,7 +541,7 @@ sub killvm
 sub suspend
 {
 #suspend     [vmconfig]         Suspend a VM
-	print STDERR "VMwareTool: suspend is called\n";
+	printverbose "suspend is called";
 	my $vmconfig = checkvmconfig($_[0]);
 
 	# Get status
@@ -503,7 +562,7 @@ sub suspend
 sub resume
 {
 #resume      [vmconfig]         Restore a suspended VM
-	print STDERR "VMwareTool: resume is called\n";
+	printverbose "resume is called";
 	my $vmconfig = checkvmconfig($_[0]);
 	my $pidfile = $_[1];
 
@@ -517,7 +576,7 @@ sub resume
 sub snapshot
 {
 #snapshot    [vmconfig]         Create a snapshot of a VM
-	print STDERR "VMwareTool: snapshot is called\n";
+	printverbose "snapshot is called";
 	my $vmconfig = checkvmconfig($_[0]);
 	if( ! checkregister($vmconfig) ) {
 		#!system $vmwarecmd_prog, "-s", "register", $vmconfig
@@ -534,7 +593,7 @@ sub snapshot
 sub commit
 {
 #commit      [vmconfig]         Commit COW disks and delete the COW
-	print STDERR "VMwareTool: commit is called\n";
+	printverbose "commit is called";
 	my $vmconfig = checkvmconfig($_[0]);
 	if( ! checkregister($vmconfig) ) {
 		#!system $vmwarecmd_prog, "-s", "register", $vmconfig
@@ -551,7 +610,7 @@ sub commit
 sub revert
 {
 #revert      [vmconfig]         Set VM state to a snapshot
-	print STDERR "VMwareTool: revert is called\n";
+	printverbose "revert is called";
 	my $vmconfig = checkvmconfig($_[0]);
 
 	if( ! checkregister($vmconfig) ) {
@@ -569,7 +628,7 @@ sub revert
 sub createiso
 {
 #createiso   [listfile] [ISO]   Create an ISO image with files in a listfile
-	print STDERR "VMwareTool: createiso is called\n";
+	printverbose "createiso is called";
 
 	my $isoconfig = $_[0];
 	my $isofile = $_[1];
@@ -616,6 +675,8 @@ sub createiso
 	sleep(1);
 }
 
+sub createconfig {}
+
 if ($#ARGV < 0 || $ARGV[0] eq "--help") { usage(); }
 elsif ($ARGV[0] eq "list")	{ list(); }
 elsif ($ARGV[0] eq "check")	{ check(); }
@@ -633,4 +694,5 @@ elsif ($ARGV[0] eq "snapshot")	{ snapshot($ARGV[1]); }
 elsif ($ARGV[0] eq "commit")	{ commit($ARGV[1]); }
 elsif ($ARGV[0] eq "revert")	{ revert($ARGV[1]); }
 elsif ($ARGV[0] eq "createiso")	{ createiso($ARGV[1], $ARGV[2]); }
+elsif ($ARGV[0] eq "createconfig")	{ createconfig($ARGV[1]); }
 else { printerror "Unknown command \"$ARGV[0]\". See $progname --help."; }

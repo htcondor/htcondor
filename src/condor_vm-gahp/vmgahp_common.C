@@ -237,7 +237,7 @@ vmgahp_param_integer( const char* name, int default_value, int min_value, int ma
 
 	string = vmgahp_param( name );
 	if( !string ) {
-		vmprintf( D_ALWAYS, "%s is undefined, using default value of %d\n",
+		vmprintf( D_FULLDEBUG, "%s is undefined, using default value of %d\n",
 				 name, default_value );
 		return default_value;
 	}

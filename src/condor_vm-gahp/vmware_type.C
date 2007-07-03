@@ -288,7 +288,7 @@ VMwareType::adjustConfigDiskPath()
 	}
 
 	MyString iwd;
-	if( m_classAd.LookupString(ATTR_JOB_IWD, iwd) == 1 ) {
+	if( m_classAd.LookupString(ATTR_ORIG_JOB_IWD, iwd) == 1 ) {
 		if( strcmp(iwd.Value(), m_vmware_dir.Value()) == 0 ) {
 			vmprintf(D_FULLDEBUG, "job_iwd(%s) is the same to vmware dir "
 					"so we will still use basename for parent disk of snapshot disk\n", 
@@ -1587,7 +1587,7 @@ VMwareType::CreateConfigFile()
 	}
 
 	// Add uuid option
-	m_configVars.append("uuid.action = \"create\"");
+	m_configVars.append("uuid.action = \"keep\"");
 
 	// Don't create lock file for disks
 	m_configVars.append("disk.locking = \"FALSE\"");
