@@ -802,6 +802,7 @@ do_Q_request(ReliSock *syscall_sock)
 			return -1;
 		}
 		dprintf( D_SYSCALLS, "	constraint = %s\n", constraint );
+		dprintf( D_SYSCALLS, "	projection = %s\n", projection );
 
 		assert( syscall_sock->end_of_message() );;
 
@@ -836,15 +837,17 @@ do_Q_request(ReliSock *syscall_sock)
 						StringList internals;
 						StringList externals; // shouldn't have any
 
-						ad->GetReferences(attr, internals, externals);
+						if( !ad->GetExprReferences(attr, internals, externals) ) {
+							dprintf(D_FULLDEBUG,
+									"GetAllJobsByConstraint failed to parse "
+									"requested ClassAd expression: %s\n",attr);
+						}
 						internals.rewind();
 
 						while (char *indirect_attr = internals.next()) {
 							ExprTree *tree = ad->Lookup(indirect_attr);
 							if (tree) shortAd.Insert(tree->DeepCopy());
 						}
-						ExprTree *tree = ad->Lookup(attr);
-						if (tree) shortAd.Insert(tree->DeepCopy());
 					}
 
 					shortAd.SetPrivateAttributesInvisible( true );

@@ -2403,6 +2403,32 @@ void AttrList::GetReferences(const char *attribute,
 	return;
 }
 
+bool AttrList::GetExprReferences(const char *expr, 
+							 StringList &internal_references, 
+							 StringList &external_references) const
+{
+	ExprTree  *tree = NULL;
+
+		// A common case is that the expression is a simple attribute
+		// reference.  For efficiency, handle that case specially.
+	tree = Lookup(expr);
+	if (tree != NULL) {
+			// Unlike AttrList::GetReferences(), the attribute name
+			// passed to this function is added to the list of
+			// internal references.
+		internal_references.append( expr );
+		tree->GetReferences(this, internal_references, external_references);
+	}
+	else {
+		if( ParseClassAdRvalExpr( expr, tree ) != 0 || tree == NULL ) {
+			return false;
+		}
+		tree->GetReferences(this, internal_references, external_references);
+		delete tree;
+	}
+	return true;
+}
+
 bool AttrList::IsExternalReference(const char *name, char **simplified_name) const
 {
 	// There are two ways to know if this is an internal or external

@@ -34,6 +34,10 @@
 
 #include "condor_ast.h"
 
+// parse an assignment expression: name = expression
 int Parse(const char*, ExprTree*&);
+
+// parse an rval (i.e. anything that could appear on the rhs of an assignment)
+int ParseClassAdRvalExpr(const char*, ExprTree*&);
 
 #endif

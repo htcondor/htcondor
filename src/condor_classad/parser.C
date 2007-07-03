@@ -660,6 +660,26 @@ ParseExpr(const char *& s, ExprTree*& newTree, int& count)
 }
 
 int 
+ParseClassAdRvalExpr(const char* s, ExprTree*& tree)
+{
+	int    count;
+
+	tree = NULL;
+
+	count = 0;
+    alreadyRead = TRUE;
+    if(ParseExpr(s, tree, count))
+    {
+		count = 0;
+    } else if (tree != NULL) {
+		delete tree;
+		tree = NULL;
+	}
+	nextToken().reset();
+    return count;
+}
+
+int 
 ParseAssignExpr(const char *& s, ExprTree*& newTree, int& count)
 {
     Token*	t;

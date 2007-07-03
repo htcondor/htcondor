@@ -258,9 +258,19 @@ class AttrList : public AttrListAbstract
 
 		void clear( void );
 
+			// Create a list of all ClassAd attribute references made
+			// by the value of the specified attribute.  Note that
+			// the attribute itself will not be listed as one of the
+			// references--only things that it refers to.
 		void GetReferences(const char *attribute, 
 						   StringList &internal_references, 
 						   StringList &external_references) const;
+			// Create a list of all ClassAd attribute references made
+			// by the given expression.  Returns false if the expression
+			// could not be parsed.
+		bool GetExprReferences(const char *expr, 
+							   StringList &internal_references, 
+							   StringList &external_references) const;
 		bool IsExternalReference(const char *name, char **simplified_name) const;
 
 #if defined(USE_XDR)
