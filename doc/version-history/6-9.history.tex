@@ -28,23 +28,24 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Implemented completely new version of Quill.  Quill can now
+\item Implemented a completely new version of Quill.  Quill can now
 record information about all the daemons into a relational database.
-See the quill chapter for more details.
+See section~\ref{sec:Quill} for details on Quill.
 
-\item Added VM universe, to allow running of jobs under the xen or
-VMware virtual machines.
+\item Added the \SubmitCmd{vm} universe, to facilitate
+running jobs under Xen or VMware virtual machines.
 
-\item Improved speed of the \Condor{schedd} writing to its database
-file job\_queue.log and the job history file.  In our tests, this
-roughly doubles the maximum throughput rate to ~20 jobs/s, though actual
-performance will depend on the specific hardware being used.
+\item Improved the speed at which the \Condor{schedd} writes to its database
+file \File{job\_queue.log} and the job history file.  In benchmark tests,
+this roughly doubles the maximum throughput rate to approximately 
+20 jobs per second, although actual
+performance depends on the specific hardware used.
 
 \item The \Condor{startd} now records historical statistics about the
-  total time (in seconds) that it spends in every state and activity.
+  total time (in seconds) that it spends in every state/activity pair.
   If a given slot spent more than 0 seconds in any of the possible
-  state/activity pairs, the \AdAttr{TotalTime...} attribute for that
-  pair will be defined in the slot's classified ad.
+  pairs, the specifically-named ClassAd attribute for that
+  pair is defined in the slot's ClassAd.
   The list of possible new machine attributes (alphabetically):
 \begin{verbatim}
 TotalTimeBackfillBusy
@@ -79,14 +80,14 @@ was deleted by the \Condor{startd}.
 order to decreases the chances of synchronized timing across many
 processes causing overloading of servers.
 
+\item Added the new submit command \SubmitCmd{CronWindow}. It is an alias
+to \SubmitCmd{DeferralWindow}.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
-
-\item A new parameter \Macro{CronWindow} has been added. It is an alias
-to \Macro{DeferralWindow}.
 
 \item The existing configuration variable \Macro{LOG\_ON\_NFS\_IS\_ERROR} has 
 changed behavior. When set to \Expr{False},
@@ -109,12 +110,20 @@ is set to the file .schedd\_classad in the LOG directory. This setting is
 not necessary unless you are using the Quill functionality, and pools may 
 upgrade to 6.9.4 without setting it if they are not using Quill. 
   
-\item Set default parameters for the \Condor{dbmsd}. The new settings
-are \Macro{DBMSD}, which is set to ``\Code{DBMSD = \$(SBIN)/condor\_dbmsd}''
-, \Macro{DBMSD\_ARGS}, which is set to ``\Code{DBMSD\_ARGS = -f}'', and
-\Macro{DBMSD\_LOG}, which is set to ``\Code{DBMSD\_LOG = \$(LOG)/DbmsdLog}''
-They are not necessary unless you plan to use Quill, and even then are
-only necessary on one machine in your Condor pool. 
+\item Added new configuration variables
+\Macro{DBMSD}, \Macro{DBMSD\_ARGS}, and \Macro{DBMSD\_LOG},
+which define the location of the \Condor{dbmsd} daemon,
+the command line arguments to that daemon,
+and the location of the daemon's log.
+Default values are
+\begin{verbatim}
+DBMSD = $(SBIN)/condor_dbmsd
+DBMSD_ARGS = -f
+DBMSD_LOG = $(LOG)/DbmsdLog
+\end{verbatim}
+These configuration variables are only necessary when using Quill,
+and then must be defined on only one machine in the Condor pool.
+
 \end{itemize}
 
 
