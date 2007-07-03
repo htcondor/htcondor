@@ -914,7 +914,7 @@ char * DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 					if (he == NULL) {
 						EXCEPT("failed to resolve address of SSH_BROKER");
 					}
-					sin.sin_addr.s_addr = *(u_int32_t*)(he->h_addr_list[0]);;
+					sin.sin_addr = *(in_addr*)(he->h_addr_list[0]);;
 				}
 				sin.sin_port = htons(((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port());
 				sinful_public = strdup(sin_to_string(&sin));
