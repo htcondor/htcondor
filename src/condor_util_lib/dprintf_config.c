@@ -43,6 +43,7 @@ extern char		*DebugLock;
 extern char		*_condor_DebugFlagNames[];
 extern int		_condor_dprintf_works;
 extern time_t	DebugLastMod;
+extern int		DebugUseTimestamps;
 
 extern void		_condor_set_debug_flags( char *strflags );
 extern void		_condor_dprintf_saved_lines( void );
@@ -200,6 +201,13 @@ dprintf_config( char *subsys )
         Generic_set_log_va(_condor_gcb_dprintf_va);
     }
 #endif
+
+		/*
+		  If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
+		  instead of the standard date format in all the log messages
+		*/
+	DebugUseTimestamps = param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
+
 	_condor_dprintf_saved_lines();
 }
 

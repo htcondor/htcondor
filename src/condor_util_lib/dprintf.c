@@ -90,6 +90,12 @@ FILE	*DebugFP = 0;
 time_t	DebugLastMod = 0;
 
 /*
+ * If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
+ * instead of the standard date format in all the log messages
+ */
+int		DebugUseTimestamps = 0;
+
+/*
 ** These arrays must be D_NUMLEVELS+1 in size since we can have a
 ** debug file for each level plus an additional catch-all debug file
 ** at index 0.
@@ -234,8 +240,10 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 		   loop.  -Derek 9/14 */
 	memset((void*)&clock_now,0,sizeof(time_t)); // just to stop Purify UMR errors
 	(void)time(  &clock_now );
-	tm = localtime( &clock_now );
-
+	if ( ! DebugUseTimestamps ) {
+		tm = localtime( &clock_now );
+      }
+	
 		/* print debug message to catch-all debug file plus files */
 		/* registered for other debug levels */
 	for (debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++) {
@@ -251,9 +259,13 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 
 				/* Print the message with the time and a nice identifier */
 				if( ((saved_flags|flags) & D_NOHEADER) == 0 ) {
-					fprintf( DebugFP, "%d/%d %02d:%02d:%02d ", 
-							 tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
-							 tm->tm_min, tm->tm_sec );
+					if ( DebugUseTimestamps ) {
+						fprintf( DebugFP, "(%d) ", clock_now );
+					} else {
+						fprintf( DebugFP, "%d/%d %02d:%02d:%02d ", 
+								tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
+								tm->tm_min, tm->tm_sec );
+					}
 
 					if ( (saved_flags|flags) & D_FDS ) {
 						fprintf ( DebugFP, "(fd:%d) ", fileno(DebugFP) );
@@ -786,12 +798,16 @@ _condor_dprintf_exit( int error_code, const char* msg )
 	time_t clock_now;
 
 	(void)time( &clock_now );
-	tm = localtime( &clock_now );
 
-	sprintf( header, "%d/%d %02d:%02d:%02d "
-			 "dprintf() had a fatal error in pid %d\n", 
-			 tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
-			 tm->tm_min, tm->tm_sec, (int)getpid() );
+	if ( DebugUseTimestamps ) {
+		sprintf( header, "(%d) ", clock_now );
+	} else {
+		tm = localtime( &clock_now );
+		sprintf( header, "%d/%d %02d:%02d:%02d ",
+				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
+				tm->tm_min, tm->tm_sec );
+	}
+	sprintf( header, "dprintf() had a fatal error in pid %d\n", (int)getpid() );
 	tail[0] = '\0';
 	if( error_code ) {
 		sprintf( tail, "errno: %d (%s)\n", error_code,

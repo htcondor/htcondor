@@ -72,6 +72,11 @@ int param_integer(const char *, int default_value)
 	return default_value;
 }
 
+int param_boolean_int(const char *, int default_value)
+{
+	return default_value;
+}
+
 END_C_DECLS
 int param_integer(const char *, int default_value, int, int)
 {
