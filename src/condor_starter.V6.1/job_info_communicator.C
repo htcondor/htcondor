@@ -475,9 +475,9 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	// -jaeyoung 06/15/07
 	if( job_universe == CONDOR_UNIVERSE_VM ) {
 #if 0
-		// If "VM_UNIV_USER" is defined in Condor configuration file, 
+		// If "VM_UNIV_NOBODY_USER" is defined in Condor configuration file, 
 		// wee will use it.
-		char *vm_jobs_as = param("VM_UNIV_USER");
+		char *vm_jobs_as = param("VM_UNIV_NOBODY_USER");
 		if (vm_jobs_as) {		
 			getDomainAndName(vm_jobs_as, domain, name);
 			/* 
