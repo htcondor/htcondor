@@ -1725,6 +1725,18 @@ The number of seconds prior to a job's deferral time that
 the job may be matched and sent to an execution machine.
 
 %%%%%%%%%%%%%%%%%%%
+%% cron_window
+%%%%%%%%%%%%%%%%%%%
+
+\item[cron\_window = $<$ClassAd Integer Expression$>$]
+\index{submit commands!cron\_window}
+Analogous to the submit command \SubmitCmd{deferral\_window}.
+It allows cron jobs that
+miss their deferral time to begin execution.
+
+See section~\ref{sec:JobDeferral} for further details and examples.
+
+%%%%%%%%%%%%%%%%%%%
 %% deferral_prep_time
 %%%%%%%%%%%%%%%%%%%
 

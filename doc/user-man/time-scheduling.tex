@@ -354,10 +354,12 @@ once it is 9:55am.
 
 As the CronTab scheduling calculates and uses deferral time,
 jobs may also make use of the deferral window.
+The submit command \SubmitCmd{cron\_window} is analogous to
+the submit command \SubmitCmd{deferral\_window}.
 Consider the submit description file example that includes 
 \begin{verbatim}
    cron_hour = *
-   deferral_window = 360
+   cron_window = 360
 \end{verbatim}
 As the previous example, the job is scheduled to begin execution
 at the top of every hour.
