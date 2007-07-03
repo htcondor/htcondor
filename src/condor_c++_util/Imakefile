@@ -254,10 +254,18 @@ libcondorapi-release:: $(RELEASE_DIR)/lib/libcondorapi.so
 #endif
 
 public_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/user_log.README
+
 public_copy_target(user_log.c++.h,include,user_log.c++.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/user_log.c++.h
+
 public_copy_target(condor_event.h,include,condor_event.h,TEXT_MODE)
-public_copy_target(condor_holdcodes.h,include,condor_holdcodes.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_event.h
+
 public_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_event.h
+
+public_copy_target(condor_holdcodes.h,include,condor_holdcodes.h,TEXT_MODE)
 public_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
 
 foo.o: user_log.h
