@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.4 2007-03-01 18:21:39 zmiller Exp $
+# $Id: remote_post.pl,v 1.5 2007-07-04 17:57:52 bt Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -164,6 +164,13 @@ while( <TASKFILE> ) {
     #copy_file( "$testname*.err*", $resultdir, false );
     #copy_file( "$testname*.log", $resultdir, false );
     #copy_file( "$testname*.cmd.out", $resultdir, false );
+
+	# some tests are sent in with a number for an optional time out
+	# remove it before considering the saveme directory
+	my $realname = $testname;
+	if($realname =~ /(\w*)\s+(\d)+/) {
+		$testname = $1;
+	}
 
     # if it exists, tarup the 'saveme' subdirectory for this test, which
     # may contain test debug info etc.
