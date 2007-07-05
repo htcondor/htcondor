@@ -9,10 +9,10 @@ REM totally lame but there's nothing we can do about it.
 REM ======================================================================
 
 REM Set paths to Visual C++, the Platform SDKs, and Perl
-set VC_DIR=E:\Program Files\Microsoft Visual Studio\VC98\Bin
-set SDK_DIR=E:\Program Files\Microsoft Platform SDK
-set SDK_XP_DIR=E:\Program Files\Microsoft Platform SDK for Windows XP SP2
-set PERL_DIR=E:\Perl\bin
+set VC_DIR=C:\Program Files\Microsoft Visual Studio\VC98\Bin
+set SDK_DIR=C:\Program Files\Microsoft Platform SDK
+set SDK_XP_DIR=C:\Program Files\Microsoft Platform SDK for Windows XP SP2
+set PERL_DIR=C:\Perl\bin
 
 REM Where do the completed externals live?
 if A%EXTERN_DIR%==A  set EXTERN_DIR=%cd%\..\externals
