@@ -471,7 +471,7 @@ one submit description file.
 %%%%%%%%%%%%%%%%%%%
 
 \item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler
-\Bar\ local \Bar\ grid \Bar\ mpi \Bar\ java$>$]
+\Bar\ local \Bar\ grid \Bar\ mpi \Bar\ java \Bar\ vm$>$]
 \index{submit commands!universe}
 \label{man-condor-submit-universe}
 Specifies which Condor Universe to use when running this job.  The Condor
@@ -492,7 +492,9 @@ Further specification of the \SubmitCmd{grid} universe is done with the
 \SubmitCmd{grid\_resource} command.
 The \SubmitCmd{mpi} universe is
 for running mpi jobs made with the MPICH package.
-The \SubmitCmd{java} Universe is for programs written to the Java Virtual Machine.
+The \SubmitCmd{java} universe is for programs written to the Java Virtual Machine.
+The \SubmitCmd{vm} universe facilitates the execution of a virtual
+machine.
 
 \end{description} 
 
@@ -1646,6 +1648,95 @@ If this command is not present,
 the value of \SubmitCmd{kill\_sig} is used.
 
 \end{description} 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\emph{COMMANDS FOR THE VM UNIVERSE}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description} 
+
+%%%%%%%%%%%%%%%%%%%
+%% vm_cdrom_files
+%%%%%%%%%%%%%%%%%%%
+
+\item[vm\_cdrom\_files = file1, file2, \Dots]
+\index{submit commands!vm\_cdrom\_files}
+Description of vm\_cdrom\_files.
+
+%%%%%%%%%%%%%%%%%%%
+%% vm_checkpoint
+%%%%%%%%%%%%%%%%%%%
+
+\item[vm\_checkpoint = $<$True \Bar\ False$>$]
+\index{submit commands!vm\_checkpoint}
+Description of vm\_checkpoint.
+
+%%%%%%%%%%%%%%%%%%%
+%% vm_memory
+%%%%%%%%%%%%%%%%%%%
+
+\item[vm\_memory = $<$number-of-?$>$]
+\index{submit commands!vm\_memory}
+Description of vm\_memory.
+
+%%%%%%%%%%%%%%%%%%%
+%% vm_networking
+%%%%%%%%%%%%%%%%%%%
+
+\item[vm\_networking = $<$True \Bar\ False$>$]
+\index{submit commands!vm\_networking}
+Description of vm\_networking.
+
+%%%%%%%%%%%%%%%%%%%
+%% vm_networking_type
+%%%%%%%%%%%%%%%%%%%
+
+\item[vm\_networking\_type = $<$nat\_dhcp \Bar\ bridge\_dhcp \Bar\ dhcp$>$]
+\index{submit commands!vm\_networking\_type}
+Description of vm\_networking\_type.
+
+%%%%%%%%%%%%%%%%%%%
+%% vm_should_transfer_cdrom_files
+%%%%%%%%%%%%%%%%%%%
+
+\item[vm\_should\_transfer\_cdrom\_files = $<$True \Bar\ False$>$]
+\index{submit commands!vm\_should\_transfer\_cdrom\_files}
+Description of vm\_should\_transfer\_cdrom\_files.
+
+%%%%%%%%%%%%%%%%%%%
+%% vm_type
+%%%%%%%%%%%%%%%%%%%
+
+\item[vm\_type = $<$vmware \Bar\ xen$>$]
+\index{submit commands!vm\_type}
+Description of vm\_type.
+
+%%%%%%%%%%%%%%%%%%%
+%% vmware_dir
+%%%%%%%%%%%%%%%%%%%
+
+\item[vmware\_dir = $<$vmware \Bar\ xen$>$]
+\index{submit commands!vmware\_dir}
+Description of vmware\_dir.
+
+%%%%%%%%%%%%%%%%%%%
+%% vmware_should_transfer_files
+%%%%%%%%%%%%%%%%%%%
+
+\item[vmware\_should\_transfer\_files = $<$True \Bar\ False$>$]
+\index{submit commands!vmware\_should\_transfer\_files}
+Description of vmware\_should\_transfer\_files.
+
+%%%%%%%%%%%%%%%%%%%
+%% vmware_snapshot_disk
+%%%%%%%%%%%%%%%%%%%
+
+\item[vmware\_snapshot\_disk = $<$True \Bar\ False$>$]
+\index{submit commands!vmware\_snapshot\_disk}
+Description of vmware\_snapshot\_disk.
+
+
+\end{description} 
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \emph{ADVANCED COMMANDS}

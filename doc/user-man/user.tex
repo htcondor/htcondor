@@ -362,9 +362,11 @@ universes for user jobs:
 	\item Scheduler
 	\item Local
  	\item Parallel
+ 	\item VM
 \end{itemize}
 
-The \AdAttr{universe} attribute is specified in the submit description file.
+The \SubmitCmd{universe} under which a job runs
+is specified in the submit description file.
 If a universe is not specified, the default is standard.
 
 \index{universe!standard}
@@ -395,9 +397,13 @@ to be spawned by the \Condor{schedd} daemon on the submit host itself.
 \index{universe!parallel}
 The parallel universe is for programs that require multiple machines
 for one job.
-See section~\ref{sec:Parallel} for more about the Parallel universe
+See section~\ref{sec:Parallel} for more about the Parallel universe.
 %\index{universe!Local}
 %The local universe . . .
+\index{universe!vm}
+The vm universe allows users to run jobs where the job is
+no longer a simple executable, but a disk image, facilitating
+the execution of a virtual machine.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:standard-universe}Standard Universe}
@@ -573,15 +579,6 @@ consistent with other universes such as the vanilla universe.
 The scheduler universe may be retired in the future, in
 favor of the newer local universe.
 
-%%%%%%%%%%%%
-\subsubsection{Parallel Universe}
-%%%%%%%%%%%%
-\index{universe!parallel}
-\index{parallel universe}
-The parallel universe allows parallel programs, such as MPI jobs,
-to be run within the opportunistic Condor environment.
-Please see section~\ref{sec:Parallel} for more details.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:local-universe}Local Universe}
@@ -598,6 +595,25 @@ is submitted.
 The job will never be preempted.
 The machine requirements are not considered for local universe
 jobs.
+
+%%%%%%%%%%%%
+\subsubsection{Parallel Universe}
+%%%%%%%%%%%%
+\index{universe!parallel}
+\index{parallel universe}
+The parallel universe allows parallel programs, such as MPI jobs,
+to be run within the opportunistic Condor environment.
+Please see section~\ref{sec:Parallel} for more details.
+
+%%%%%%%%%%%%
+\subsubsection{VM Universe}
+%%%%%%%%%%%%
+\index{universe!vm}
+\index{vm universe}
+Condor facilitates the execution of VMWare and Xen
+virtual machines with the vm universe.
+
+Please see section~\ref{sec:vmuniverse} for details.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2177,6 +2193,10 @@ the usual method to nicely terminate a Unix program.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/dagman.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/vm.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
