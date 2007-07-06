@@ -9113,7 +9113,6 @@ Scheduler::child_exit(int pid, int status)
 	shadow_rec*		srec;
 	int				StartJobsFlag=TRUE;
 	PROC_ID			job_id;
-	ClassAd        *jobad;
 
 	srec = FindSrecByPid(pid);
 	job_id.cluster = srec->job_id.cluster;
