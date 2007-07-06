@@ -6175,6 +6175,10 @@ log_submit()
 
 	 usr_log.setUseXML(UseXMLInLog);
 
+		// don't write to the EVENT_LOG in condor_submit; that is done by 
+		// the condor_schedd (since submit likely does not have permission).
+	 usr_log.setWriteGlobalLog(false);
+
 	if( Quiet ) {
 		fprintf(stdout, "Logging submit event(s)");
 	}
@@ -6208,7 +6212,7 @@ log_submit()
 			// Output the information
 			for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob; j++) {
 				usr_log.initialize(SubmitInfo[i].cluster, j, 0, NULL);
-				if( ! usr_log.writeEvent(&jobSubmit) ) {
+				if( ! usr_log.writeEvent(&jobSubmit,job) ) {
 					fprintf(stderr, "\nERROR: Failed to log submit event.\n");
 				}
 				if( Quiet ) {

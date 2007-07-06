@@ -33,6 +33,7 @@
 #include "condor_ver_info.h"
 #include "enum_utils.h"
 #include "condor_holdcodes.h"
+#include "classad_helpers.h"
 
 #include <math.h>
 
@@ -756,7 +757,7 @@ void BaseShadow::initUserLog()
 {
 	char tmp[_POSIX_PATH_MAX], logfilename[_POSIX_PATH_MAX];
 	int  use_xml;
-	if (jobAd->LookupString(ATTR_ULOG_FILE, tmp) == 1) {
+	if ( getPathToUserLog(jobAd, tmp, sizeof(tmp)) ) {
 		if ( tmp[0] == '/' || tmp[0]=='\\' || (tmp[1]==':' && tmp[2]=='\\') ) {
 			strcpy(logfilename, tmp);
 		} else {
@@ -873,7 +874,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 			event.setCoreFile( corefile.Value() );
 		}
 
-		if (!uLog.writeEvent (&event)) {
+		if (!uLog.writeEvent (&event,jobAd)) {
 			dprintf (D_ALWAYS,"Unable to log "
 				 	"ULOG_JOB_TERMINATED event\n");
 		}
@@ -914,7 +915,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		event.setCoreFile( core_file_name );
 	}
 	
-	if (!uLog.writeEvent (&event)) {
+	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
 				 "ULOG_JOB_TERMINATED event\n");
 	}
@@ -958,7 +959,7 @@ BaseShadow::logEvictEvent( int exitReason )
 	event.recvd_bytes = bytesSent();
 	event.sent_bytes = bytesReceived();
 	
-	if (!uLog.writeEvent (&event)) {
+	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
 	}
 }
@@ -1005,7 +1006,7 @@ BaseShadow::logRequeueEvent( const char* reason )
 	event.recvd_bytes = bytesSent();
 	event.sent_bytes = bytesReceived();
 	
-	if (!uLog.writeEvent (&event)) {
+	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED "
 				 "(and requeued) event\n" );
 	}
@@ -1068,7 +1069,7 @@ BaseShadow::log_except(const char *msg)
 		event.sent_bytes = 0.0;
 	}
 
-	if (!exception_already_logged && !uLog.writeEvent (&event))
+	if (!exception_already_logged && !uLog.writeEvent (&event,NULL))
 	{
 		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
 	}

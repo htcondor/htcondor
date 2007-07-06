@@ -142,7 +142,7 @@ LocalUserLog::initNoLogging( void )
 
 
 bool
-LocalUserLog::logExecute( ClassAd*  /* ad */ )
+LocalUserLog::logExecute( ClassAd*  ad  )
 {
 	if( ! is_initialized ) {
 		EXCEPT( "LocalUserLog::logExecute() called before init()" );
@@ -154,7 +154,7 @@ LocalUserLog::logExecute( ClassAd*  /* ad */ )
 	ExecuteEvent event;
 	strcpy( event.executeHost, daemonCore->InfoCommandSinfulString() ); 
 
-	if( !u_log.writeEvent(&event) ) {
+	if( !u_log.writeEvent(&event,ad) ) {
         dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "
                  "can't write to UserLog!\n" );
 		return false;
@@ -184,7 +184,7 @@ LocalUserLog::logSuspend( ClassAd* ad )
 	}
     event.num_pids = num;
 
-	if( !u_log.writeEvent(&event) ) {
+	if( !u_log.writeEvent(&event,ad) ) {
         dprintf( D_ALWAYS, "Unable to log ULOG_JOB_SUSPENDED event\n" );
 		return false;
     }
@@ -193,7 +193,7 @@ LocalUserLog::logSuspend( ClassAd* ad )
 
 
 bool
-LocalUserLog::logContinue( ClassAd*  /* ad */ )
+LocalUserLog::logContinue( ClassAd*  ad  )
 {
 	if( ! is_initialized ) {
 		EXCEPT( "LocalUserLog::logContinue() called before init()" );
@@ -204,7 +204,7 @@ LocalUserLog::logContinue( ClassAd*  /* ad */ )
 
 	JobUnsuspendedEvent event;
 
-	if( !u_log.writeEvent(&event) ) {
+	if( !u_log.writeEvent(&event,ad) ) {
         dprintf( D_ALWAYS, "Unable to log ULOG_JOB_UNSUSPENDED event\n" );
 		return false;
     }
@@ -339,7 +339,7 @@ LocalUserLog::logTerminate( ClassAd* ad )
 
 		// TODO corefile name?!?!
 
-	if( !u_log.writeEvent(&event) ) {
+	if( !u_log.writeEvent(&event,ad) ) {
         dprintf( D_ALWAYS, "Unable to log ULOG_JOB_CONTINUED event\n" );
 		return false;
     }
@@ -369,7 +369,7 @@ LocalUserLog::logEvict( ClassAd* ad, bool checkpointed )
 	event.recvd_bytes = jic->bytesReceived();
     event.sent_bytes = jic->bytesSent();
     
-	if( !u_log.writeEvent(&event) ) {
+	if( !u_log.writeEvent(&event,ad) ) {
         dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n" );
 		return false;
     }
@@ -446,7 +446,7 @@ LocalUserLog::logRequeueEvent( ClassAd* ad, bool checkpointed )
 	event.recvd_bytes = jic->bytesReceived();
     event.sent_bytes = jic->bytesSent();
     
-	if ( ! this->u_log.writeEvent(&event) ) {
+	if ( ! this->u_log.writeEvent(&event,ad) ) {
         dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n" );
 		return ( false );
     }

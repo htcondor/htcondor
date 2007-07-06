@@ -28,6 +28,11 @@
 void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from, 
 				   bool merge_conflicts)
 {
+
+	if (!merge_into || !merge_from) {
+		return;
+	}
+
 	merge_from->ResetName();
 	merge_from->ResetExpr();
 

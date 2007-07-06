@@ -34,6 +34,7 @@
 #include "basejob.h"
 #include "condor_config.h"
 #include "condor_email.h"
+#include "classad_helpers.h"
 
 #define HASH_TABLE_SIZE			500
 
@@ -873,7 +874,7 @@ InitializeUserLog( ClassAd *job_ad )
 	bool use_xml = false;
 
 	userLogFile[0] = '\0';
-	job_ad->LookupString( ATTR_ULOG_FILE, userLogFile );
+	getPathToUserLog(job_ad, userLogFile, sizeof(userLogFile));
 	if ( userLogFile[0] == '\0' ) {
 		// User doesn't want a log
 		return NULL;
@@ -917,7 +918,7 @@ WriteExecuteEventToUserLog( ClassAd *job_ad )
 
 	ExecuteEvent event;
 	strcpy( event.executeHost, hostname );
-	int rc = ulog->writeEvent(&event);
+	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
 
 	if (!rc) {
@@ -956,7 +957,7 @@ WriteAbortEventToUserLog( ClassAd *job_ad )
 
 	event.setReason( removeReason );
 
-	int rc = ulog->writeEvent(&event);
+	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
 
 	if (!rc) {
@@ -1051,7 +1052,7 @@ WriteTerminateEventToUserLog( ClassAd *job_ad )
 		event.total_remote_rusage.ru_stime.tv_sec = (int)float_val;
 	}
 
-	int rc = ulog->writeEvent(&event);
+	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
 
 	if (!rc) {
@@ -1094,7 +1095,7 @@ WriteEvictEventToUserLog( ClassAd *job_ad )
 
 	event.checkpointed = false;
 
-	int rc = ulog->writeEvent(&event);
+	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
 
 	if (!rc) {
@@ -1129,7 +1130,7 @@ WriteHoldEventToUserLog( ClassAd *job_ad )
 
 	event.initFromClassAd(job_ad);
 
-	int rc = ulog->writeEvent(&event);
+	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
 
 	if (!rc) {
@@ -1173,7 +1174,7 @@ WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
 	contact.GetNextToken( " ", false );
 	event.rmContact =  strnewp(contact.GetNextToken( " ", false ));
 
-	int rc = ulog->writeEvent(&event);
+	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
 
 	if (!rc) {
@@ -1217,7 +1218,7 @@ WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
 	contact.GetNextToken( " ", false );
 	event.rmContact =  strnewp(contact.GetNextToken( " ", false ));
 
-	int rc = ulog->writeEvent(&event);
+	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
 
 	if (!rc) {
@@ -1269,7 +1270,7 @@ WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 	job_ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, version );
 	event.restartableJM = version >= GRAM_V_1_5;
 
-	int rc = ulog->writeEvent(&event);
+	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
 
 	if (!rc) {
@@ -1308,7 +1309,7 @@ WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code,
 			  failure_mesg ? failure_mesg : "");
 	event.reason =  strnewp(buf);
 
-	int rc = ulog->writeEvent(&event);
+	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
 
 	if (!rc) {
@@ -1349,7 +1350,7 @@ WriteGridResourceUpEventToUserLog( ClassAd *job_ad )
 	}
 	event.resourceName =  strnewp( contact.Value() );
 
-	int rc = ulog->writeEvent( &event );
+	int rc = ulog->writeEvent( &event, job_ad );
 	delete ulog;
 
 	if ( !rc ) {
@@ -1390,7 +1391,7 @@ WriteGridResourceDownEventToUserLog( ClassAd *job_ad )
 	}
 	event.resourceName =  strnewp( contact.Value() );
 
-	int rc = ulog->writeEvent(&event);
+	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
 
 	if (!rc) {
@@ -1429,7 +1430,7 @@ WriteGridSubmitEventToUserLog( ClassAd *job_ad )
 	job_ad->LookupString( ATTR_GRID_JOB_ID, contact );
 	event.jobId = strnewp( contact.Value() );
 
-	int rc = ulog->writeEvent( &event );
+	int rc = ulog->writeEvent( &event,job_ad );
 	delete ulog;
 
 	if ( !rc ) {

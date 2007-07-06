@@ -32,6 +32,7 @@
 #include "exit.h"
 #include "enum_utils.h"
 #include "condor_adtypes.h"
+#include "condor_config.h"
 
 
 /*
@@ -323,4 +324,28 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_JOB_LEAVE_IN_QUEUE, false );
 
 	return job_ad;
+}
+
+bool getPathToUserLog(ClassAd *job_ad, char *result, int max_result_len,
+					   const char* ulog_path_attr = ATTR_ULOG_FILE)
+{
+	bool ret_val = true;
+	char *global_log = NULL;
+
+	if ( job_ad == NULL || 
+	     job_ad->LookupString(ulog_path_attr,result,max_result_len) == 0 ) 
+	{
+		// failed to find attribute, check config file
+		global_log = param("EVENT_LOG");
+		if ( global_log && max_result_len > (sizeof(UNIX_NULL_FILE) + 1) ) {
+			// canonicalize to UNIX_NULL_FILE even on Win32
+			strcpy(result,UNIX_NULL_FILE);
+		} else {
+			ret_val = false;
+		}
+	}
+
+	if ( global_log ) free(global_log);
+	
+	return ret_val;
 }

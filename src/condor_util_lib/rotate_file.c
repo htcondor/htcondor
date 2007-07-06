@@ -33,8 +33,9 @@ rotate_file(const char *old_filename, const char *new_filename)
 	   an existing file. */
 	if (MoveFileEx(old_filename, new_filename,
 				   MOVEFILE_REPLACE_EXISTING) == 0) {
+		DWORD err = GetLastError();
 		dprintf(D_ALWAYS, "MoveFileEx(%s,%s) failed with error %d\n",
-				old_filename, new_filename, GetLastError());
+				old_filename, new_filename, err);
 		return -1;
 	}
 #else

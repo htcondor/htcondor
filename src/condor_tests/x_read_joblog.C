@@ -242,6 +242,9 @@ int main(int argc, char* argv[])
 				  case ULOG_GENERIC:
 					printf("Job Generic.........\n");
 					break;
+				  case ULOG_JOB_AD_INFORMATION:
+					printf("Job Ad Information.........\n");
+					break;
 				  case ULOG_JOB_ABORTED:
 					printf("Job ABORTED by user.........\n");
 					break;

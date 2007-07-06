@@ -1224,7 +1224,7 @@ MPIShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 			// can finally log the execute event.
 		ExecuteEvent event;
 		strcpy( event.executeHost, "MPI_job" );
-		if ( !uLog.writeEvent( &event )) {
+		if ( !uLog.writeEvent( &event, jobAd )) {
 			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
 		}
 		

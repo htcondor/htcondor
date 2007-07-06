@@ -37,6 +37,7 @@
 #include "condor_io.h"
 #include "condor_config.h"
 #include "condor_qmgr.h"
+#include "classad_helpers.h"
 
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
@@ -99,7 +100,7 @@ initializeUserLog ()
 	char tmp[_POSIX_PATH_MAX], logfilename[_POSIX_PATH_MAX];
 	char gjid[_POSIX_PATH_MAX];
 	int use_xml;
-	if (JobAd->LookupString(ATTR_ULOG_FILE, tmp) == 1) {
+	if ( getPathToUserLog(JobAd, tmp, sizeof(tmp)) ) {
 		if (tmp[0] == '/') {
 			strcpy(logfilename, tmp);
 		} else {

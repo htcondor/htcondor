@@ -125,6 +125,7 @@ CONLIBAPI_OBJ = \
 	../condor_util_lib/except.o \
 	../condor_util_lib/strupr.o \
 	../condor_util_lib/lock_file.NON_POSIX.o \
+	../condor_util_lib/rotate_file.o \
 	$(FLOCK_OBJ) \
 	strnewp.o \
 	condor_environ.o \

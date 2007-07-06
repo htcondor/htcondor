@@ -617,7 +617,7 @@ pseudo_ulog( ClassAd *ad )
 		}
 	}
 
-	if( !event_already_logged && !Shadow->uLog.writeEvent( event ) ) {
+	if( !event_already_logged && !Shadow->uLog.writeEvent( event, ad ) ) {
 		MyString add_str;
 		ad->sPrint(add_str);
 		dprintf(

@@ -38,6 +38,7 @@ static const char SynchDelimiter[] = "...\n";
 
 extern "C" char *find_env (const char *, const char *);
 extern "C" char *get_env_val (const char *);
+extern "C" int rotate_file(const char *old_filename, const char *new_filename);
 
 UserLog::UserLog (const char *owner,
                   const char *domain,
@@ -57,6 +58,14 @@ UserLog::UserLog (const char *owner,
 #endif
 	UserLog();
 	use_xml = xml;
+
+	global_path = NULL;
+	global_fp = NULL;
+	global_lock = NULL;
+
+	write_user_log = true;
+	write_global_log = true;
+
 	initialize (owner, domain, file, c, p, s, gjid);
 }
 
@@ -81,6 +90,11 @@ UserLog::UserLog (const char *owner,
 #endif
 	UserLog();
 	use_xml = xml;
+
+	global_path = NULL;
+	global_fp = NULL;
+	global_lock = NULL;
+
 	initialize (owner, NULL, file, c, p, s, NULL);
 }
 
@@ -141,10 +155,120 @@ get_env_val( const char *str )
 }
 
 bool UserLog::
-initialize( const char *file, int c, int p, int s, const char *gjid)
+open_file(const char *file, 
+		  bool log_as_user, // if false, we are logging to the global file
+		  FileLock* & lock, 
+		  FILE* & fp )
 {
 	int 			fd;
 
+	if ( file && strcmp(file,UNIX_NULL_FILE)==0 ) {
+		// special case - deal with /dev/null.  we don't really want
+		// to open /dev/null, but we don't want to fail in this case either
+		// because this is common when the user does not want a log, but
+		// the condor admin desires a global event log.
+		// Note: we always check UNIX_NULL_FILE, since we canonicalize
+		// to this even on Win32.
+		fp = NULL;
+		lock = NULL;
+		return true;
+	}
+	
+#ifndef WIN32
+	// Unix
+	if (privsep_enabled() && log_as_user) {
+		ASSERT(m_privsep_uid != 0);
+		ASSERT(m_privsep_gid != 0);
+		fd = privsep_open(m_privsep_uid,
+		                  m_privsep_gid,
+		                  file,
+		                  O_WRONLY | O_CREAT,
+		                  0664);
+		if (fd == -1) {
+			dprintf(D_ALWAYS,
+		            "UserLog::initialize: privsep_open(\"%s\") failed\n",
+			        file);
+			return false;
+		}
+	}
+	else {
+		fd = safe_open_wrapper( file, O_CREAT | O_WRONLY, 0664 );
+		if( fd < 0 ) {
+			dprintf( D_ALWAYS,
+			         "UserLog::initialize: "
+			             "safe_open_wrapper(\"%s\") failed - errno %d (%s)\n",
+			         file,
+			         errno,
+			         strerror(errno) );
+			return false;
+		}
+	}
+
+		// attach it to stdio stream
+	if( (fp = fdopen(fd,"a")) == NULL ) {
+		dprintf( D_ALWAYS, "UserLog::initialize: "
+				 "fdopen(%i) failed - errno %d (%s)\n", fd, errno,
+				 strerror(errno) );
+		close( fd );
+		return false;
+	}
+#else
+	// Windows (Visual C++)
+	if( (fp = safe_fopen_wrapper(file,"a+tc")) == NULL ) {
+		dprintf( D_ALWAYS, "UserLog::initialize: "
+				 "safe_fopen_wrapper(\"%s\") failed - errno %d (%s)\n", 
+				 file, errno, strerror(errno) );
+		return false;
+	}
+
+	fd = _fileno(fp);
+#endif
+
+		// set the stdio stream for line buffering
+	if( setvbuf(fp,NULL,_IOLBF,BUFSIZ) < 0 ) {
+		dprintf( D_ALWAYS, "setvbuf failed in UserLog::initialize\n" );
+	}
+
+	// prepare to lock the file.	
+	if ( param_boolean("ENABLE_USERLOG_LOCKING",true) ) {
+		lock = new FileLock( fd, fp, file );
+	} else {
+		lock = new FileLock( -1 );
+	}
+
+	return true;
+}
+
+bool UserLog::
+initialize_global_log()
+{
+	bool ret_val = true;
+
+	if (global_path) {
+		free(global_path);
+		global_path = NULL;
+	}
+	if (global_lock) {
+		delete global_lock;
+		global_lock = NULL;
+	}
+	if (global_fp != NULL) {
+		fclose(global_fp);
+		global_fp = NULL;
+	}
+
+	global_path = param("EVENT_LOG");
+
+	if ( global_path ) {
+		 ret_val = open_file(global_path,false,global_lock,global_fp);
+	}
+
+	return ret_val;
+}
+
+bool UserLog::
+initialize( const char *file, int c, int p, int s, const char *gjid)
+{
 		// Save parameter info
 	path = new char[ strlen(file) + 1 ];
 	strcpy( path, file );
@@ -158,67 +282,9 @@ initialize( const char *file, int c, int p, int s, const char *gjid)
 		}
 		fp = NULL;
 	}
-	
-#ifndef WIN32
-	// Unix
-	if (privsep_enabled()) {
-		ASSERT(m_privsep_uid != 0);
-		ASSERT(m_privsep_gid != 0);
-		fd = privsep_open(m_privsep_uid,
-		                  m_privsep_gid,
-		                  path,
-		                  O_WRONLY | O_CREAT,
-		                  0664);
-		if (fd == -1) {
-			dprintf(D_ALWAYS,
-		            "UserLog::initialize: privsep_open(\"%s\") failed\n",
-			        path);
-			return FALSE;
-		}
-	}
-	else {
-		fd = safe_open_wrapper( path, O_CREAT | O_WRONLY, 0664 );
-		if( fd < 0 ) {
-			dprintf( D_ALWAYS,
-			         "UserLog::initialize: "
-			             "safe_open_wrapper(\"%s\") failed - errno %d (%s)\n",
-			         path,
-			         errno,
-			         strerror(errno) );
-			return FALSE;
-		}
-	}
 
-		// attach it to stdio stream
-	if( (fp = fdopen(fd,"a")) == NULL ) {
-		dprintf( D_ALWAYS, "UserLog::initialize: "
-				 "fdopen(%i) failed - errno %d (%s)\n", fd, errno,
-				 strerror(errno) );
-		close( fd );
-		return FALSE;
-	}
-#else
-	// Windows (Visual C++)
-	if( (fp = safe_fopen_wrapper(path,"a+tc")) == NULL ) {
-		dprintf( D_ALWAYS, "UserLog::initialize: "
-				 "safe_fopen_wrapper(\"%s\") failed - errno %d (%s)\n", path, errno, 
-				 strerror(errno) );
-		return FALSE;
-	}
-
-	fd = _fileno(fp);
-#endif
-
-		// set the stdio stream for line buffering
-	if( setvbuf(fp,NULL,_IOLBF,BUFSIZ) < 0 ) {
-		dprintf( D_ALWAYS, "setvbuf failed in UserLog::initialize\n" );
-	}
-
-	// prepare to lock the file
-	if ( param_boolean("ENABLE_USERLOG_LOCKING",true) ) {
-		lock = new FileLock( fd );
-	} else {
-		lock = new FileLock( -1 );
+	if ( write_user_log && !open_file(file,true,lock,fp) ) {
+		return false;
 	}
 
 	return initialize(c, p, s, gjid);
@@ -275,20 +341,33 @@ initialize( int c, int p, int s, const char *gjid )
 	cluster = c;
 	proc = p;
 	subproc = s;
+
+		// Important for performance : note we do not re-open the global log
+		// if we already have done so (i.e. if global_fp is not NULL).
+	if ( write_global_log && !global_fp ) {
+		initialize_global_log();
+	}
+
 	if(gjid) {
 		m_gjid = strdup(gjid);
 	}
+
 	return TRUE;
 }
 
 UserLog::~UserLog()
 {
-	delete [] path;
-	delete lock;
+	if (path) delete [] path;
+	if (lock) delete lock;
 	if(m_gjid) free(m_gjid);
-	if (fp != 0) fclose( fp );
+	if (fp != NULL) fclose( fp );
+
+	if (global_path) free(global_path);
+	if (global_lock) delete global_lock;
+	if (global_fp != NULL) fclose(global_fp);
 }
 
+#if 0 /* deprecated cruft */
 void
 UserLog::display()
 {
@@ -298,31 +377,94 @@ UserLog::display()
 	lock->display();
 	dprintf( D_ALWAYS, "in_block = %s\n", in_block ? "TRUE" : "FALSE" );
 }
+#endif
+
+	// This method is called from doWriteEvent() - we expect the file to
+	// be locked, seeked to the end of the file, and in condor priv state.
+	// return true if log was rotated, either by us or someone else.
+bool UserLog::
+handleGlobalLogRotation()
+{
+	bool rotated = false;
+	static long previous_filesize = 0L;
+	long current_filesize = 0L;
+
+	if (!global_fp) return false;
+
+	current_filesize = ftell(global_fp);
+
+	int global_max_filesize = param_integer("MAX_EVENT_LOG",1000000);
+	if ( global_path && current_filesize > global_max_filesize ) {
+		MyString old_name(global_path);
+		old_name += ".old";
+		if ( global_fp) {
+			fclose(global_fp);	// on win32, cannot rename an open file
+			global_fp = NULL;
+		}
+		if ( rotate_file(global_path,old_name.Value()) == 0 ) {
+			rotated = true;
+			dprintf(D_ALWAYS,"Rotated event log %s at size %d bytes\n",
+					global_path, current_filesize);
+		}
+	}
+
+	if  ( rotated == true ||						// we rotated the log
+		  current_filesize < previous_filesize )	// someone else rotated it
+	{
+			// log was rotated, so we need to reopen/create it and also
+			// recreate our lock.
+		initialize_global_log();	// this will re-open and re-create locks
+		rotated = true;
+		if ( global_lock ) {
+			global_lock->obtain(WRITE_LOCK);
+			fseek (global_fp, 0, SEEK_END);
+			current_filesize = ftell(global_fp);
+		}
+	}
+
+	previous_filesize = current_filesize;
+
+	return rotated;
+}
 
 int UserLog::
-writeEvent (ULogEvent *event)
+doWriteEvent(ULogEvent *event, bool is_global_event, ClassAd *)
 {
-	// the the log is not initialized, don't bother --- just return OK
-	if (!fp) return 1;
-	if (!lock) return 0;
-	if (!event) return 0;
-
 	int success;
-	priv_state priv = set_user_priv();
+	FILE* local_fp;
+	FileLock* local_lock;
+	bool local_use_xml;
+	priv_state priv;
+	ClassAd* eventAd = NULL;
 
-	// fill in event context
-	event->cluster = cluster;
-	event->proc = proc;
-	event->subproc = subproc;
-	event->setGlobalJobId(m_gjid);
+	if (is_global_event) {
+		local_fp = global_fp;
+		local_lock = global_lock;
+		local_use_xml = param_boolean("EVENT_LOG_USE_XML",false);
+		priv = set_condor_priv();
+	} else {
+		local_fp = fp;
+		local_lock = lock;
+		local_use_xml = use_xml;
+		priv = set_user_priv();
+	}
 
-	lock->obtain (WRITE_LOCK);
-	fseek (fp, 0, SEEK_END);
+	local_lock->obtain (WRITE_LOCK);
+	fseek (local_fp, 0, SEEK_END);
 
-	if( use_xml ) {
+		// rotate the global event log if it is too big
+	if ( is_global_event ) {
+		if ( handleGlobalLogRotation() ) {
+				// if we rotated the log, we have a new fp and lock
+			local_fp = global_fp;
+			local_lock = global_lock;
+		}
+	}
+
+	if( local_use_xml ) {
 		dprintf( D_ALWAYS, "Asked to write event of number %d.\n",
 				 event->eventNumber);
-		ClassAd* eventAd = event->toClassAd();
+		eventAd = event->toClassAd();	// must delete eventAd eventually
 		MyString adXML;
 		if (!eventAd) {
 			success = FALSE;
@@ -331,40 +473,148 @@ writeEvent (ULogEvent *event)
 			xmlunp.SetUseCompactSpacing(FALSE);
 			xmlunp.SetOutputTargetType(FALSE);
 			xmlunp.Unparse(eventAd, adXML);
-			if (fprintf (fp, adXML.GetCStr()) < 0) {
+			if (fprintf (local_fp, adXML.GetCStr()) < 0) {
 				success = FALSE;
 			} else {
 				success = TRUE;
 			}
-			delete eventAd;
 		}
 	} else {
-		success = event->putEvent (fp);
+		success = event->putEvent (local_fp);
 		if (!success) {
-			fputc ('\n', fp);
+			fputc ('\n', local_fp);
 		}
-		if (fprintf (fp, SynchDelimiter) < 0) {
+		if (fprintf (local_fp, SynchDelimiter) < 0) {
 			success = FALSE;
 		}
 	}
 
-	if ( fflush(fp) != 0 ) {
-		dprintf( D_ALWAYS, "fflush() failed in UserLog::writeEvent - "
+	if ( eventAd ) {
+		delete eventAd;
+	}		
+
+	if ( fflush(local_fp) != 0 ) {
+		dprintf( D_ALWAYS, "fflush() failed in UserLog::doWriteEvent - "
 				"errno %d (%s)\n", errno, strerror(errno) );
 		// Note:  should we set success to false here?
 	}
+
 	// Now that we have flushed the stdio stream, sync to disk
 	// *before* we release our write lock!
-	if ( fsync( fileno( fp ) ) != 0 ) {
-		dprintf( D_ALWAYS, "fsync() failed in UserLog::writeEvent - "
-				"errno %d (%s)\n", errno, strerror(errno) );
-		// Note:  should we set success to false here?
+	// For now, for performance, do not sync the global event log.
+	if ( is_global_event == false ) {
+		if ( fsync( fileno( local_fp ) ) != 0 ) {
+			dprintf( D_ALWAYS, "fsync() failed in UserLog::writeEvent - "
+					"errno %d (%s)\n", errno, strerror(errno) );
+			// Note:  should we set success to false here?
+		}
 	}
-	lock->release ();
+	local_lock->release ();
 	set_priv( priv );
 	return success;
 }
+
+
+
+// Return FALSE(0) on error, TRUE(1) on goodness
+int UserLog::
+writeEvent (ULogEvent *event, ClassAd *param_jobad)
+{
+	// the the log is not initialized, don't bother --- just return OK
+	if (!fp && !global_fp) {
+		return TRUE;
+	}
 	
+	// make certain some parameters we will need are initialized
+	if (!event) {
+		return FALSE;
+	}
+	if (fp) {
+		if (!lock) return FALSE;
+	}
+	if (global_fp) {
+		if (!global_lock) return FALSE;
+	}
+
+	// fill in event context
+	event->cluster = cluster;
+	event->proc = proc;
+	event->subproc = subproc;
+	event->setGlobalJobId(m_gjid);
+	
+	// write global event
+	if ( write_global_log && global_fp && 
+		 doWriteEvent(event,true,param_jobad)==FALSE ) 
+	{
+		return FALSE;
+	}
+
+	char *attrsToWrite = param("EVENT_LOG_JOB_AD_INFORMATION_ATTRS");
+	if ( write_global_log && global_fp && attrsToWrite ) {
+		ExprTree *tree;
+		EvalResult result;
+		char *curr;
+
+		ClassAd *eventAd = event->toClassAd();
+
+		StringList attrs(attrsToWrite);
+		attrs.rewind();
+		while ( eventAd && (curr=attrs.next()) ) 
+		{
+			if ( (tree=param_jobad->Lookup(curr)) ) {
+				// found the attribute.  now evaluate it before
+				// we put it into the eventAd.
+				if ( tree->RArg()->EvalTree(param_jobad,&result) ) {
+					// now inserted evaluated expr
+					switch (result.type) {
+					case LX_BOOL:
+					case LX_INTEGER:
+						eventAd->Assign(((Variable*)tree->LArg())->Name(),result.i);
+						break;
+					case LX_FLOAT:
+						eventAd->Assign(((Variable*)tree->LArg())->Name(),result.f);
+						break;
+					case LX_STRING:
+						eventAd->Assign(((Variable*)tree->LArg())->Name(),result.s);
+						break;
+					default:
+						break;
+					}
+				}
+			}
+		}
+		
+		// The EventTypeNumber will get overwritten to be a JobAdInformationEvent,
+		// so preserve the event that triggered us to write out the info in 
+		// another attribute name called TriggerEventTypeNumber.
+		if ( eventAd  ) {			
+			eventAd->Assign("TriggerEventTypeNumber",event->eventNumber);
+			eventAd->Assign("TriggerEventTypeName",event->eventName());
+			// Now that the eventAd has everything we want, write it. 
+			JobAdInformationEvent info_event;
+			eventAd->Assign("EventTypeNumber",info_event.eventNumber);
+			info_event.initFromClassAd(eventAd);
+			info_event.cluster = cluster;
+			info_event.proc = proc;
+			info_event.subproc = subproc;
+			doWriteEvent(&info_event,true,param_jobad);
+			delete eventAd;
+		}
+	}
+
+	if ( attrsToWrite ) {
+		free(attrsToWrite);
+	}
+		
+	// write ulog event
+	if ( write_user_log && fp && doWriteEvent(event,false,param_jobad)==FALSE ) {
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+#if 0 /* deprecated cruft */	
 void
 UserLog::put( const char *fmt, ... )
 {
@@ -494,6 +744,7 @@ EndUserLogBlock( LP *lp )
 	((UserLog *)lp) -> end_block();
 }
 
+#endif  /* deprecated cruft */
 
 // ReadUserLog class
 
@@ -528,7 +779,7 @@ initialize (const char *filename)
 
 	// prepare to lock the file
 	if ( param_boolean("ENABLE_USERLOG_LOCKING",true) ) {
-    	lock = new FileLock( _fd, _fp );
+    	lock = new FileLock( _fd, _fp, filename );
 	} else {
 		lock = new FileLock( -1 );
 	}

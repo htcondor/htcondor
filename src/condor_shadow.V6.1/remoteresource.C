@@ -1182,7 +1182,7 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 bool
 RemoteResource::writeULogEvent( ULogEvent* event )
 {
-	if( !shadow->uLog.writeEvent(event) ) {
+	if( !shadow->uLog.writeEvent(event, jobAd) ) {
 		return false;
 	}
 	return true;

@@ -885,7 +885,7 @@ ParallelShadow::resourceBeganExecution( RemoteResource*   /*rr*/ )
 			// can finally log the execute event.
 		ExecuteEvent event;
 		strcpy( event.executeHost, "MPI_job" );
-		if ( !uLog.writeEvent( &event )) {
+		if ( !uLog.writeEvent( &event, jobAd )) {
 			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
 		}
 		
@@ -919,7 +919,7 @@ ParallelShadow::logDisconnectedEvent( const char* reason )
 	event.setStartdName( dc_startd->name() );
 */
 
-	if( !uLog.writeEvent(&event) ) {
+	if( !uLog.writeEvent(&event,jobAd) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
 	}
 }
@@ -945,7 +945,7 @@ ParallelShadow::logReconnectedEvent( void )
 	starter = NULL;
 
 */
-	if( !uLog.writeEvent(&event) ) {
+	if( !uLog.writeEvent(&event,jobAd) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECTED event\n" );
 	}
 
@@ -967,7 +967,7 @@ ParallelShadow::logReconnectFailedEvent( const char* reason )
 	event.setStartdName( dc_startd->name() );
 */
 
-	if( !uLog.writeEvent(&event) ) {
+	if( !uLog.writeEvent(&event,jobAd) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
 	}
 		//EXCEPT( "impossible: MPIShadow doesn't support reconnect" );

@@ -83,7 +83,7 @@ UniShadow::updateFromStarter(int /* command */, Stream *s)
 			// also update the User Log with an image size event
 		JobImageSizeEvent event;
 		event.size = int_val;
-		if (!uLog.writeEvent (&event)) {
+		if (!uLog.writeEvent (&event,jobad)) {
 			dprintf( D_ALWAYS, "Unable to log ULOG_IMAGE_SIZE event\n" );
 		}
 	}
@@ -175,7 +175,7 @@ UniShadow::logExecuteEvent( void )
 	remRes->getStartdAddress( sinful );
 	char* remote_name = event.remoteName;
 	remRes->getStartdName(remote_name);
-	if( !uLog.writeEvent(&event) ) {
+	if( !uLog.writeEvent(&event, getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "
 				 "can't write to UserLog!\n" );
 	}
@@ -381,7 +381,7 @@ UniShadow::logDisconnectedEvent( const char* reason )
 	event.setStartdAddr( dc_startd->addr() );
 	event.setStartdName( dc_startd->name() );
 
-	if( !uLog.writeEvent(&event) ) {
+	if( !uLog.writeEvent(&event,getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
 	}
 }
@@ -405,7 +405,7 @@ UniShadow::logReconnectedEvent( void )
 	delete [] starter;
 	starter = NULL;
 
-	if( !uLog.writeEvent(&event) ) {
+	if( !uLog.writeEvent(&event,getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECTED event\n" );
 	}
 }
@@ -424,7 +424,7 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 	}
 	event.setStartdName( dc_startd->name() );
 
-	if( !uLog.writeEvent(&event) ) {
+	if( !uLog.writeEvent(&event,getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
 	}
 }

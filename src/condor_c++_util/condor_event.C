@@ -30,6 +30,7 @@
 #include "condor_classad.h"
 #include "iso_dates.h"
 #include "condor_attributes.h"
+#include "classad_merge.h"
 
 #include "misc_utils.h"
 
@@ -78,6 +79,7 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_GRID_RESOURCE_UP",		// Grid machine UP 
 	"ULOG_GRID_RESOURCE_DOWN",		// Grid machine Down
 	"ULOG_GRID_SUBMIT",				// Job submitted to grid resource
+	"ULOG_JOB_AD_INFORMATION"		// Job Ad information update
 };
 
 const char * ULogEventOutcomeNames[] = {
@@ -188,6 +190,9 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_GRID_SUBMIT:
 		return new GridSubmitEvent;
+
+	case ULOG_JOB_AD_INFORMATION:
+		return new JobAdInformationEvent;
 
 	default:
 		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
@@ -402,6 +407,9 @@ toClassAd()
 		break;
 	case ULOG_GRID_SUBMIT:
 		myad->SetMyTypeName("GridSubmitEvent");
+		break;
+	case ULOG_JOB_AD_INFORMATION:
+		myad->SetMyTypeName("JobAdInformationEvent");
 		break;
 	  default:
 		return NULL;
@@ -5017,3 +5025,121 @@ initFromClassAd(ClassAd* ad)
 	}
 }
 
+// ----- the JobAdInformationEvent class
+JobAdInformationEvent::
+JobAdInformationEvent()
+{	
+	jobad = NULL;
+	eventNumber = ULOG_JOB_AD_INFORMATION;
+}
+
+JobAdInformationEvent::
+~JobAdInformationEvent()
+{
+	if ( jobad ) delete jobad;
+}
+
+int JobAdInformationEvent::
+writeEvent(FILE *file)
+{
+	return writeEvent(file,jobad);
+}
+
+int JobAdInformationEvent::
+writeEvent(FILE *file, ClassAd *jobad)
+{
+    int retval = 0;	 // 0 == FALSE == failure
+
+	fprintf(file,"Job ad information event triggered.\n");
+
+	if ( jobad ) {
+		retval = jobad->fPrint(file);
+	}
+    
+    return retval;
+}
+
+int JobAdInformationEvent::
+readEvent(FILE *file)
+{
+    int retval = 0;	// 0 == FALSE == failure
+	int EndFlag, ErrorFlag, EmptyFlag;
+
+	EndFlag =  ErrorFlag =  EmptyFlag = 0;
+
+	if( fscanf(file, "Job ad information event triggered.") == EOF ) {
+		return 0;
+	}
+
+	if ( jobad ) delete jobad;
+
+	if( !( jobad=new ClassAd(file,"***", EndFlag, ErrorFlag, EmptyFlag) ) )
+	{
+		// Out of memory?!?!
+		return 0;
+	} 
+
+	retval = ! (ErrorFlag || EmptyFlag);
+
+	return retval;
+}
+	
+ClassAd* JobAdInformationEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	MergeClassAds(myad,jobad,false);
+
+		// Reset MyType in case MergeClassAds() clobbered it.
+	myad->SetMyTypeName("JobAdInformationEvent");
+
+	return myad;
+}
+
+void JobAdInformationEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	if ( !jobad ) delete jobad;
+
+	jobad = new ClassAd( *ad );	// invoke copy constructor to make deep copy
+
+	return;
+}
+
+int JobAdInformationEvent::
+LookupString (const char *attributeName, char **value) const
+{
+	if ( !jobad ) return 0;		// 0 = failure
+
+	return jobad->LookupString(attributeName,value);
+}
+
+int JobAdInformationEvent::
+LookupInteger (const char *attributeName, int & value) const
+{
+	if ( !jobad ) return 0;		// 0 = failure
+
+	return jobad->LookupInteger(attributeName,value);
+}
+
+int JobAdInformationEvent::
+LookupFloat (const char *attributeName, float & value) const
+{
+	if ( !jobad ) return 0;		// 0 = failure
+
+	return jobad->LookupFloat(attributeName,value);
+}
+
+int JobAdInformationEvent::
+LookupBool  (const char *attributeName, bool & value) const
+{
+	if ( !jobad ) return 0;		// 0 = failure
+
+	return jobad->LookupBool(attributeName,value);
+}

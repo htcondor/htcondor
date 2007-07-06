@@ -559,6 +559,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 			case ULOG_NODE_EXECUTE:
 			case ULOG_NODE_TERMINATED:
 			case ULOG_GENERIC:
+			case ULOG_JOB_AD_INFORMATION:
 			default:
 				break;
 			}

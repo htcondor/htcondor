@@ -80,6 +80,7 @@ enum ULogEventNumber {
 	/** Grid Resource Up          */  ULOG_GRID_RESOURCE_UP         = 25,
 	/** Grid Resource Down        */  ULOG_GRID_RESOURCE_DOWN       = 26,
 	/** Job Submitted remotely    */  ULOG_GRID_SUBMIT 	    	    = 27,
+	/** Report job ad information */  ULOG_JOB_AD_INFORMATION		= 28
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -352,7 +353,7 @@ class RemoteErrorEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
-	/** Return a ClassAd representation of this GenericEvent.
+	/** Return a ClassAd representation of this RemoteErrorEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
 	virtual ClassAd* toClassAd();
@@ -1627,6 +1628,51 @@ class GridSubmitEvent : public ULogEvent
 
 	/// Job ID on the remote resource (GridJobId attribute)
     char* jobId;
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a Job Ad Information object.
+*/
+class JobAdInformationEvent : public ULogEvent
+{
+  public:
+    ///
+    JobAdInformationEvent();
+    ///
+    ~JobAdInformationEvent();
+
+    /** Read the body of the next Generic event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next Generic event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	int writeEvent (FILE *, ClassAd *jobad);
+
+	/** Return a ClassAd representation of this GenericEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
+	// Methods for accessing the info.
+	int LookupString (const char *attributeName, char **value) const;
+	int LookupInteger (const char *attributeName, int &value) const;
+	int LookupFloat (const char *attributeName, float &value) const;
+	int LookupBool  (const char *attributeName, bool &value) const;
+
+  protected:
+	  ClassAd *jobad;
 };
 
 

@@ -2289,12 +2289,24 @@ CloseConnection()
 
 	// Now that the transaction has been commited, we need to chain proc
 	// ads to cluster ads if any new clusters have been submitted.
+	// Also, if EVENT_LOG is defined in condor_config, we will write
+	// submit events into the EVENT_LOG here.
 	if ( old_cluster_num != next_cluster_num ) {
 		int cluster_id;
 		int 	*numOfProcs = NULL;	
 		int i;
 		ClassAd *procad;
 		ClassAd *clusterad;
+		bool write_submit_events = false;
+			// keep usr_log in outer scope so we don't open/close the 
+			// event log over and over.
+		UserLog usr_log;	
+
+		char *eventlog = param("EVENT_LOG");
+		if ( eventlog ) {
+			write_submit_events = true;
+			free(eventlog);
+		}
 
 		for ( cluster_id=old_cluster_num; cluster_id < next_cluster_num; cluster_id++ ) {
 			if ( (JobQueue->LookupClassAd(IdToStr(cluster_id,-1), clusterad)) &&
@@ -2302,8 +2314,22 @@ CloseConnection()
 			{
 				for ( i = 0; i < *numOfProcs; i++ ) {
 					if (JobQueue->LookupClassAd(IdToStr(cluster_id,i),procad)) {
+							// chain proc ads to cluster ad
 						procad->ChainToAd(clusterad);
+
+							// convert any old attributes for backwards compatbility
 						ConvertOldJobAdAttrs(procad, false);
+
+							// write submit event to global event log
+						if ( write_submit_events ) {
+							SubmitEvent jobSubmit;
+								// don't write to the user log here, since
+								// hopefully condor_submit already did.
+							usr_log.setWriteUserLog(false);
+							usr_log.initialize(cluster_id,i,0);
+							jobSubmit.initFromClassAd(procad);
+							usr_log.writeEvent(&jobSubmit,procad);
+						}
 					}
 				}	// end of loop thru all proc in cluster cluster_id
 			}	

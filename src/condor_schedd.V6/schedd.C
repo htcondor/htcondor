@@ -2480,8 +2480,10 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 {
 	char tmp[_POSIX_PATH_MAX];
 	
-	if( GetAttributeString(job_id.cluster, job_id.proc, ATTR_ULOG_FILE,
-							tmp) < 0 ) {
+	if( (GetAttributeString(job_id.cluster,job_id.proc,ATTR_ULOG_FILE,tmp) 
+		 < 0) && 
+		(getPathToUserLog(NULL, tmp, sizeof(tmp))==false) )
+	{			
 			// if there is no userlog file defined, then our work is
 			// done...  
 		return NULL;
@@ -2549,7 +2551,7 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 		// regardless of the return value.
 	free( reason );
 
-	int status = ULog->writeEvent(&event);
+	int status = ULog->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!status) {
@@ -2599,7 +2601,7 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 		event.setReasonSubCode(hold_reason_subcode);
 	}
 
-	int status = ULog->writeEvent(&event);
+	int status = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!status) {
@@ -2630,7 +2632,7 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 		// regardless of the return value.
 	free( reason );
 
-	int status = ULog->writeEvent(&event);
+	int status = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!status) {
@@ -2661,7 +2663,7 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 
 	ExecuteEvent event;
 	strcpy( event.executeHost, host );
-	int status = ULog->writeEvent(&event);
+	int status = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 	
 	if (!status) {
@@ -2683,7 +2685,7 @@ Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
 	}
 	JobEvictedEvent event;
 	event.checkpointed = checkpointed;
-	int status = ULog->writeEvent(&event);
+	int status = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 	if (!status) {
 		dprintf( D_ALWAYS,
@@ -2726,7 +2728,7 @@ Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status )
 		event.normal = false;
 		event.signalNumber = WTERMSIG(status);
 	}
-	int rval = ULog->writeEvent(&event);
+	int rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!rval) {
@@ -2768,7 +2770,7 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 	if(reason) {
 		event.setReason(reason);
 	}
-	int rval = ULog->writeEvent(&event);
+	int rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!rval) {
@@ -5821,7 +5823,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		event.setStartdAddr( startd_addr );
 		event.setStartdName( startd_name );
 
-		if( !ULog->writeEvent(&event) ) {
+		if( !ULog->writeEvent(&event,GetJobAd(cluster,proc)) ) {
 			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
 		}
 		delete ULog;

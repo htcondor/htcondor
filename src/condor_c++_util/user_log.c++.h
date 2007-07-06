@@ -82,7 +82,9 @@ class UserLog {
   public:
     ///
     UserLog() : cluster(-1), proc(-1), subproc(-1), in_block(FALSE), path(0),
-				fp(0), lock(NULL), use_xml(XML_USERLOG_DEFAULT), m_gjid(0) {}
+				fp(0), lock(NULL), use_xml(XML_USERLOG_DEFAULT), m_gjid(0),
+				global_path(0), global_fp(0), global_lock(NULL),
+				write_user_log(true), write_global_log(true) {}
     
     /** Constructor
         @param owner Username of the person whose job is being logged
@@ -146,6 +148,9 @@ class UserLog {
 
 	void setUseXML(bool new_use_xml){ use_xml = new_use_xml; }
 
+	void setWriteUserLog(bool b){ write_user_log = b; }
+	void setWriteGlobalLog(bool b){ write_global_log = b; }
+
     /** Write an event to the log file.  Caution: if the log file is
         not initialized, then no event will be written, and this function
         will return a successful value.
@@ -153,15 +158,30 @@ class UserLog {
         @param event the event to be written
         @return 0 for failure, 1 for success
     */
-    int writeEvent (ULogEvent *event);
-    
+    int writeEvent (ULogEvent *event, ClassAd *jobad = NULL);
+
+#if 0 /* deprecated cruft */    
     /** Deprecated Function. */  void put( const char *fmt, ... );
     /** Deprecated Function. */  void display();
     /** Deprecated Function. */  void begin_block();
     /** Deprecated Function. */  void end_block();
+#endif
+
   private:
+
+	bool initialize_global_log();
+
+	bool open_file( const char *file, bool log_as_user, FileLock* & lock, 
+					FILE* & fp );
+
+	int doWriteEvent(ULogEvent *event, bool is_global_event, ClassAd *ad);
+
+	bool handleGlobalLogRotation();
+
+#if 0 /* deprecated cruft */
     /// Deprecated Function.  Print the header to the log.
     void        output_header();
+#endif
     
     /// Deprecated.  condorID cluster of the next event.
     int         cluster;
@@ -175,9 +195,16 @@ class UserLog {
     /// Deprecated.  Are we currently in a block?
     int         in_block;
 
+	/** Write to the user log? */		 bool		write_user_log;
     /** Copy of path to the log file */  char     * path;
     /** The log file                 */  FILE     * fp;
     /** The log file lock            */  FileLock * lock;
+
+	/** Write to the global log? */		 bool		write_global_log;
+    /** Copy of path to global log   */  char     * global_path;
+    /** The global log file          */  FILE     * global_fp;
+    /** The global log file lock     */  FileLock * global_lock;
+
 	/** Whether we use XML or not    */  bool       use_xml;
 
 #if !defined(WIN32)
@@ -327,6 +354,7 @@ class ReadUserLog
 
 #endif /* __cplusplus */
 
+#if 0 /* deprecated cruft */
 typedef void LP;
 
 #if defined(__cplusplus)
@@ -349,6 +377,7 @@ extern "C" {
     void EndUserLogBlock( LP *lp );
 #if defined(__cplusplus)
 }
+#endif
 #endif
 
 #endif /* _CONDOR_USER_LOG_CPP_H */
