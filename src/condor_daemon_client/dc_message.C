@@ -418,6 +418,8 @@ int DCMessenger::startCommandAfterDelay_alarm()
 	delete qc;
 	decRefCount();
 
+
+
 	return TRUE;
 }
 
