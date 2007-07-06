@@ -2326,7 +2326,7 @@ CloseConnection()
 								// don't write to the user log here, since
 								// hopefully condor_submit already did.
 							usr_log.setWriteUserLog(false);
-							usr_log.initialize(cluster_id,i,0);
+							usr_log.initialize(cluster_id,i,0,NULL);
 							jobSubmit.initFromClassAd(procad);
 							usr_log.writeEvent(&jobSubmit,procad);
 						}
