@@ -27,9 +27,15 @@ typedef enum { READ_LOCK, WRITE_LOCK, UN_LOCK } LOCK_TYPE;
 
 #if defined(__cplusplus)
 
+	// C++ wrapper for lock_file.  Note that the constructor takes 
+	// the path to the file - if the path is supplied, then this class
+	// will attempt to use a mutex instead of a filesystem lock unless
+	// the config file says otherwise.  We do this because (a) filesystem
+	// locks are often broken over NFS, and (b) filesystem locks are often
+	// not FIFO, so some lock waiters can starve.  -Todd Tannenbaum 7/2007
 class FileLock {
 public:
-	FileLock( int fd, FILE *fp = NULL );
+	FileLock( int fd, FILE *fp = NULL, const char* path = NULL );
 	~FileLock();
 
 		// Read only access functions
@@ -47,6 +53,12 @@ private:
 	FILE		*fp;
 	bool		blocking;	// Whether or not to block
 	LOCK_TYPE	state;		// Type of lock we are holding
+	char*		m_path;		// Path to the file being locked, or NULL
+	int			use_kernel_mutex;	// -1=unitialized,0=false,1=true
+	int			lock_via_mutex(LOCK_TYPE type);
+#ifdef WIN32
+	HANDLE		debug_win32_mutex;
+#endif
 };
 
 #endif	/* cpluscplus */

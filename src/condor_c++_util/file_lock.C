@@ -23,20 +23,28 @@
 
  
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_debug.h"
+#include "condor_config.h"
 #include "file_lock.h"
-#include <stdio.h>
 
 extern "C" int lock_file( int fd, LOCK_TYPE type, bool do_block );
 
-FileLock::FileLock( int f, FILE *fp_arg ) : fd(f), fp(fp_arg)
+FileLock::FileLock( int f, FILE *fp_arg, const char* path )
 {
+	fd = f;
+	fp = fp_arg;
 	blocking = TRUE;
 	state = UN_LOCK;
+	m_path = NULL;
+	use_kernel_mutex = -1;
+#ifdef WIN32
+	debug_win32_mutex = NULL;
+#endif
+	if (path) {
+		m_path = strdup(path);
+	}
 }
 
 FileLock::~FileLock()
@@ -44,6 +52,14 @@ FileLock::~FileLock()
 	if( state != UN_LOCK ) {
 		release();
 	}
+	use_kernel_mutex = -1;
+#ifdef WIN32
+	if (debug_win32_mutex) {
+		::CloseHandle(debug_win32_mutex);
+		debug_win32_mutex = NULL;
+	}
+#endif
+	if ( m_path) free(m_path);
 }
 
 void
@@ -82,6 +98,86 @@ FileLock::set_blocking( bool val )
 	blocking = val;
 }
 
+int
+FileLock::lock_via_mutex(LOCK_TYPE type)
+{
+	int result = -1;
+
+#ifdef WIN32	// only implemented on Win32 so far...
+	char * filename = NULL;
+	int filename_len;
+	char *ptr = NULL;
+	char mutex_name[MAX_PATH];
+
+	
+		// If we made it here, we want to use a kernel mutex.
+		//
+		// We use a kernel mutex by default to fix a major shortcoming
+		// with using Win32 file locking: file locking on Win32 is
+		// non-deterministic.  Thus, we have observed processes
+		// starving to get the lock.  The Win32 mutex object,
+		// on the other hand, is FIFO --- thus starvation is avoided.
+
+		// first, open a handle to the mutex if we haven't already
+	if ( debug_win32_mutex == NULL && m_path ) {
+			// Create the mutex name based upon the lock file
+			// specified in the config file.  				
+		char * filename = strdup(m_path);
+		filename_len = strlen(filename);
+			// Note: Win32 will not allow backslashes in the name, 
+			// so get rid of em here.
+		ptr = strchr(filename,'\\');
+		while ( ptr ) {
+			*ptr = '/';
+			ptr = strchr(filename,'\\');
+		}
+			// The mutex name is case-sensitive, but the NTFS filesystem
+			// is not.  So to avoid user confusion, strlwr.
+		strlwr(filename);
+			// Now, we pre-append "Global\" to the name so that it
+			// works properly on systems running Terminal Services
+		_snprintf(mutex_name,MAX_PATH,"Global\\%s",filename);
+		free(filename);
+		filename = NULL;
+			// Call CreateMutex - this will create the mutex if it does
+			// not exist, or just open it if it already does.  Note that
+			// the handle to the mutex is automatically closed by the
+			// operating system when the process exits, and the mutex
+			// object is automatically destroyed when there are no more
+			// handles... go win32 kernel!  Thus, although we are not
+			// explicitly closing any handles, nothing is being leaked.
+			// Note: someday, to make BoundsChecker happy, we should
+			// add a dprintf subsystem shutdown routine to nicely
+			// deallocate this stuff instead of relying on the OS.
+		debug_win32_mutex = ::CreateMutex(0,FALSE,mutex_name);
+	}
+
+		// now, if we have mutex, grab it or release it as needed
+	if ( debug_win32_mutex ) {
+		if ( type == UN_LOCK ) {
+				// release mutex
+			ReleaseMutex(debug_win32_mutex);
+			result = 0;	// 0 means success
+		} else {
+				// grab mutex
+				// block 10 secs if do_block is false, else block forever
+			result = WaitForSingleObject(debug_win32_mutex, 
+				blocking ? INFINITE : 10 * 1000);	// time in milliseconds
+				// consider WAIT_ABANDONED as success so we do not EXCEPT
+			if ( result==WAIT_OBJECT_0 || result==WAIT_ABANDONED ) {
+				result = 0;
+			} else {
+				result = -1;
+			}
+		}
+
+	}
+#endif
+
+	return result;
+}
+
+
 bool
 FileLock::obtain( LOCK_TYPE t )
 {
@@ -91,21 +187,34 @@ FileLock::obtain( LOCK_TYPE t )
 // so if the user has given us a FILE *, we need to make sure we don't ruin
 // their current position.  The lesson here is don't use fseeks and lseeks
 // interchangeably...
+	int		status = -1;
 
-	long lPosBeforeLock;
-	if (fp) // if the user has a FILE * as well as an fd
-	{
-		// save their FILE*-based current position
-		lPosBeforeLock = ftell(fp); 
+	if ( use_kernel_mutex == -1 ) {
+		use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
 	}
-	
-	int		status = 0;
-	status = lock_file( fd, t, blocking );
-	
-	if (fp)
-	{
-		// restore their FILE*-position
-		fseek(fp, lPosBeforeLock, SEEK_SET); 	
+
+		// If we have the path, we can try to lock via a mutex.  
+	if ( m_path && use_kernel_mutex ) {
+		status = lock_via_mutex(t);
+	}
+
+		// We cannot lock via a mutex, or we tried and failed.
+		// Try via filesystem lock.
+	if ( status < 0) {
+		long lPosBeforeLock;
+		if (fp) // if the user has a FILE * as well as an fd
+		{
+			// save their FILE*-based current position
+			lPosBeforeLock = ftell(fp); 
+		}
+		
+		status = lock_file( fd, t, blocking );
+		
+		if (fp)
+		{
+			// restore their FILE*-position
+			fseek(fp, lPosBeforeLock, SEEK_SET); 	
+		}
 	}
 
 	if( status == 0 ) {
