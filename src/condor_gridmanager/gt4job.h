@@ -94,7 +94,6 @@ class GT4Job : public BaseJob
 	time_t jmProxyExpireTime;
 	time_t jmLifetime;
 	char *resourceManagerString;
-	char * submit_id;
 	char * jobmanagerType;
 	GridftpServer *gridftpServer;
 

@@ -2985,7 +2985,7 @@ GahpClient::gt4_gram_client_job_create(
 	const char * jobmanager_type,
 	const char * callback_contact,
 	const char * rsl,
-	const char * gass_url,
+	time_t termination_time,
 	char ** job_contact)
 {
 
@@ -3007,17 +3007,15 @@ GahpClient::gt4_gram_client_job_create(
 	char * _jobmanager_type = strdup (escapeGahpString(jobmanager_type));
 	char * _callback_contact = strdup (escapeGahpString(callback_contact));
 	char * _rsl = strdup (escapeGahpString(rsl));
-	char * _gass_url = 
-		gass_url?strdup (escapeGahpString(gass_url)):strdup(NULLSTRING);
 
 	MyString reqline;
-	bool x = reqline.sprintf("%s %s %s %s %s %s", 
+	bool x = reqline.sprintf("%s %s %s %s %s %d", 
 							 _submit_id,
 							 _resource_manager_contact,
 							 _jobmanager_type,
 							 _callback_contact,
 							 _rsl,
-							 _gass_url);
+							 termination_time);
 
 
 	free (_submit_id);
@@ -3025,7 +3023,6 @@ GahpClient::gt4_gram_client_job_create(
 	free (_jobmanager_type);
 	free (_callback_contact);
 	free (_rsl);
-	free (_gass_url);
 
 	ASSERT( x == true );
 	const char *buf = reqline.Value();

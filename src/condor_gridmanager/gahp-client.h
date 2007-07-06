@@ -456,7 +456,7 @@ class GahpClient : public Service {
 								   const char * jobmanager_type,
 								   const char * callback_contact,
 								   const char * rsl,
-								   const char * gass_url,
+								   time_t termination_time,
 								   char ** job_contact);
 
 		int 
