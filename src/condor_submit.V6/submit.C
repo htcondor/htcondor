@@ -5047,7 +5047,6 @@ read_condor_file( FILE *fp )
 						 "in: %s\n", name );
 				return( -1 );
 			}
-			name = expand_macro( name, ProcVars, PROCVARSIZE );
 			int rval = sscanf(name+strlen("queue"), "%d", &queue_modifier); 
 			if( rval == EOF || rval == 0 ) {
 				queue_modifier = 1;

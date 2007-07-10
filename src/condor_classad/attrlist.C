@@ -835,6 +835,7 @@ int AttrList::Insert(const char* str, bool check_for_dups)
 
 	if(Parse(str, tree) != 0)
 	{
+		delete tree;
 		return FALSE;
 	}
 	result = Insert(tree, check_for_dups);

@@ -134,5 +134,8 @@ main(int argc, char *argv[])
 	} else { 
 		printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 	}
+
+	delete( version );
+
 	return 0;
 }

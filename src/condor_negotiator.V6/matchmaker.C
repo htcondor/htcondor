@@ -251,6 +251,8 @@ reinitialize ()
 			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS expression: %s",
 					tmp);
 		}
+		free( tmp );
+		tmp = NULL;
 	}
 
 	NegotiatorMatchExprNames.clearAll();
@@ -2845,6 +2847,7 @@ addRemoteUserPrios( ClassAdList &cal )
 				ad->Assign(buffer.Value(), prio);
 			}
 		}
+		free( resource_prefix );
 	}
 	cal.Close();
 }

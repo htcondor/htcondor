@@ -985,6 +985,8 @@ void CollectorDaemon::Config()
 		}
 	}
 
+	free( tmp );
+	
 	tmp = param(COLLECTOR_REQUIREMENTS);
 	MyString collector_req_err;
 	if( !collector.setCollectorRequirements( tmp, collector_req_err ) ) {

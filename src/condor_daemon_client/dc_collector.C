@@ -895,6 +895,9 @@ DCCollector::~DCCollector( void )
 	if( update_rsock ) {
 		delete( update_rsock );
 	}
+	if( adSeqMan ) {
+		delete( adSeqMan );
+	}
 	if( tcp_collector_addr ) {
 		delete [] tcp_collector_addr;
 	}
@@ -907,6 +910,7 @@ DCCollector::~DCCollector( void )
 	if( tcp_update_destination ) {
 		delete [] tcp_update_destination;
 	}
+
 		// In case there are any nonblocking updates in progress,
 		// let them know this DCCollector object is going away.
 	if(pending_update_list) {
