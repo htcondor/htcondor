@@ -6495,6 +6495,18 @@ quill-for-schedd_name@machinename.fully.qualified.address
   containing the IP address and port number of the Quill daemon.
   By using the file, tools executed on the local machine do not need
   to query the central manager in order to find the Quill daemon.
+
+\item[\Macro{DBMSD}] \label{param:DBMSD}  The full path name to the
+  \Condor{dbmsd} daemon.
+  The default location is \File{\$(SBIN)/condor\_dbmsd}.
+
+\item[\Macro{DBMSD\_ARGS}] \label{param:DBMSDArgs} Arguments
+  to be passed to the \Condor{dbmsd} daemon upon its invocation.
+  The default arguments are \verb@-f@.
+
+\item[\Macro{DBMSD\_LOG}] \label{param:DBMSDLog}
+  Path to the \Condor{dbmsd} daemon's log file.
+  The default log location is \File{\$(LOG)/DbmsdLog}.
 \end{description}
 
 
