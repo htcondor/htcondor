@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.6 2007-07-10 19:57:14 wright Exp $
+# $Id: remote_post.pl,v 1.7 2007-07-10 20:14:31 wright Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -138,7 +138,8 @@ if( $? ) {
 open (TASKFILE, "tasklist.nmi") || die "Can't tasklist.nmi: $!\n";
 while( <TASKFILE> ) {
     chomp;
-    my ($testname, $compiler) = split(/\./);
+    my ($taskname, $timeout) = split(/ /);
+    my ($testname, $compiler) = split(/\./, $taskname);
     if( $compiler eq "." ) {
         $resultdir = "$BaseDir/results/base";
     } else {
@@ -159,13 +160,6 @@ while( <TASKFILE> ) {
     @savefiles = glob "$testname*.out* $testname*.err* $testname*.log $testname*.cmd.out";
     foreach $target (@savefiles) {
         copy_file( $target, $resultdir, false );
-    }
-
-    # some tests are sent in with a number for an optional time out
-    # remove it before considering the saveme directory
-    my $realname = $testname;
-    if($realname =~ /(\w*)\s+(\d)+/) {
-        $testname = $1;
     }
 
     # if it exists, tarup the 'saveme' subdirectory for this test, which
