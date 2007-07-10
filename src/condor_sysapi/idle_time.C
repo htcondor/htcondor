@@ -497,7 +497,12 @@ dev_idle_time( char *path, time_t now )
 	}
 
 	/* XXX The signedness problem in this comparison is hard to fix properly */
-	if ( null_major_device > -1 && null_major_device == major(buf.st_rdev) ) {
+	/*
+		The first argument is there in case buf is uninitialized here.
+		In this case, buf.st_atime would already be set to 0 above.
+	*/
+	if ( buf.st_atime != 0 && null_major_device > -1 &&
+							null_major_device == major(buf.st_rdev) ) {
 		// this device is related to /dev/null, it should not count
 		buf.st_atime = 0;
 	}
