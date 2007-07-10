@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.5 2007-07-04 17:57:52 bt Exp $
+# $Id: remote_post.pl,v 1.6 2007-07-10 19:57:14 wright Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -156,21 +156,17 @@ while( <TASKFILE> ) {
     # these files are all optional.  if they exist, we'll save 'em, if
     # they do not, we don't worry about it.
 
-	@savefiles = glob "$testname*.out* $testname*.err* $testname*.log $testname*.cmd.out";
-	foreach $target (@savefiles) {
-		copy_file( $target, $resultdir, false );
-	}
-    #copy_file( "$testname*.out*", $resultdir, false );
-    #copy_file( "$testname*.err*", $resultdir, false );
-    #copy_file( "$testname*.log", $resultdir, false );
-    #copy_file( "$testname*.cmd.out", $resultdir, false );
+    @savefiles = glob "$testname*.out* $testname*.err* $testname*.log $testname*.cmd.out";
+    foreach $target (@savefiles) {
+        copy_file( $target, $resultdir, false );
+    }
 
-	# some tests are sent in with a number for an optional time out
-	# remove it before considering the saveme directory
-	my $realname = $testname;
-	if($realname =~ /(\w*)\s+(\d)+/) {
-		$testname = $1;
-	}
+    # some tests are sent in with a number for an optional time out
+    # remove it before considering the saveme directory
+    my $realname = $testname;
+    if($realname =~ /(\w*)\s+(\d)+/) {
+        $testname = $1;
+    }
 
     # if it exists, tarup the 'saveme' subdirectory for this test, which
     # may contain test debug info etc.
