@@ -470,6 +470,7 @@ real_config(char* host, int wantsQuiet)
 			// Clear out everything in our config hash table so we can
 			// rebuild it from scratch.
 		clear_config();
+		extra_info = new ExtraParamTable();
 	}
 
 		/*
@@ -1228,7 +1229,7 @@ clear_config()
 	}
 	if (extra_info != NULL) {
 		delete extra_info;
-		extra_info = new ExtraParamTable();
+		extra_info = NULL;
 	}
 	global_config_source       = "";
 	global_root_config_source  = "";

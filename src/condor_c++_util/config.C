@@ -341,6 +341,12 @@ Read_config( const char* config_source, BUCKET** table,
 			fclose( conf_fp );
 		}
 	}
+	if(name) {
+		FREE( name );
+	}
+	if(value) {
+		FREE( value );
+	}
 	return retval;
 }
 

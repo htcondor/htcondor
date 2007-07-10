@@ -65,6 +65,7 @@ int SetEnv( const char *key, const char *value)
 	{
 		dprintf(D_ALWAYS, "putenv failed: %s (errno=%d)\n",
 				strerror(errno), errno);
+		delete[] buf;
 		return FALSE;
 	}
 

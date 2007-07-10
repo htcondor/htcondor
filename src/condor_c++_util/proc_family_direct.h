@@ -34,7 +34,9 @@ class ProcFamilyDirect : public ProcFamilyInterface {
 
 public:
 
+	//constructor and destructor
 	ProcFamilyDirect();
+	~ProcFamilyDirect();
 
 	// all the real register_subfamily work is done in the
 	// parent when we are doing direct (as opposed to ProcD-

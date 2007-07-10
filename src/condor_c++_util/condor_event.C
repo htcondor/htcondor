@@ -1160,7 +1160,7 @@ RemoteErrorEvent::RemoteErrorEvent()
 
 RemoteErrorEvent::~RemoteErrorEvent()
 {
-	delete error_str;
+	delete[] error_str;
 }
 
 void

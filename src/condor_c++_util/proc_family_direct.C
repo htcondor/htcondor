@@ -38,6 +38,18 @@ ProcFamilyDirect::ProcFamilyDirect() :
 {
 }
 
+ProcFamilyDirect::~ProcFamilyDirect() {
+	// delete all pfdc's in the table, as they won't be removed by
+	// HashTable's destructor
+	m_table.startIterations();
+	pid_t currpid;
+	ProcFamilyDirectContainer *pfdc = NULL;
+	while(m_table.iterate(currpid, pfdc)) {
+		delete pfdc->family;
+		delete pfdc;
+	}
+}
+
 bool
 ProcFamilyDirect::register_subfamily_parent(pid_t pid,
                                             pid_t,
@@ -85,6 +97,7 @@ ProcFamilyDirect::register_subfamily_parent(pid_t pid,
 		        pid);
 		daemonCore->Cancel_Timer(timer_id);
 		delete family;
+		delete container;
 		return false;
 	}
 
@@ -113,7 +126,7 @@ ProcFamilyDirect::get_usage(pid_t pid, ProcFamilyUsage& usage, bool full)
 		int status;
 		int ret = ProcAPI::getProcSetInfo(family_array,
 		                                  family_size,
-		                                  proc_info_ptr,
+                                          proc_info_ptr,
 		                                  status);
 		delete[] family_array;
 		if (ret != PROCAPI_FAILURE) {

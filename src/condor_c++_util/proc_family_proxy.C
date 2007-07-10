@@ -349,7 +349,7 @@ ProcFamilyProxy::start_procd()
 	set_priv(priv);
 	MyString root_birthday_arg;
 	root_birthday_arg.sprintf(PROCAPI_BIRTHDAY_FORMAT, pi->birthday);
-	free(pi);
+	delete pi;
 	args.AppendArg("-P");
 	args.AppendArg(root_pid_arg.Value());
 	args.AppendArg(root_birthday_arg.Value());
