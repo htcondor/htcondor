@@ -593,7 +593,7 @@ pseudo_ulog( ClassAd *ad )
 			char *execute_host = NULL;
 			thisRemoteResource->getMachineName(execute_host);
 			err->setExecuteHost(execute_host);
-			delete execute_host;
+			delete[] execute_host;
 		}
 
 		if(err->isCriticalError()) {

@@ -565,6 +565,10 @@ RemoteResource::setStartdInfo( ClassAd* ad )
 	}
 
 	initStartdInfo( name, pool, addr, claim_id );
+	free(name);
+	if(pool) free(pool);
+	free(addr);
+	free(claim_id);
 }
 
 
