@@ -194,6 +194,13 @@ as soon as it was done evicting the job.
 worked when given an expression (as opposed to simple attribute reference).
 The expression was always treated as being undefined.
 
+\item When a condor daemon such as the \Condor{schedd} or
+\Condor{negotiator} tried to establish many new security sessions for
+UDP messages in a short span of time, it was possible for the daemon
+to run out of file descriptors, causing it to abort execution and be
+restarted by the \Condor{master}.  A problem was found and fixed in the
+mechanism that protects against this.
+
 \end{itemize}
 
 \noindent Known Bugs:
