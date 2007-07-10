@@ -101,7 +101,7 @@ the \Condor{quill} daemon needs to connect to the database.
 \item Start the \Prog{PostgreSQL} server service. See the URL for the
 installation instructions for the appropriate method to start the service.
 
-\item The \Condor{quill} and \Condor{dbmsds} daemons and client tools connect
+\item The \Condor{quill} and \Condor{dbmsd} daemons and client tools connect
 to the database as users \Username{quillreader} and 
 \Username{quillwriter}.
 These are database users, not operating system users.
@@ -156,7 +156,8 @@ machinename.cs.wisc.edu:5432:quill:quillwriter:password
 
 \end{enumerate}
 
-After the postgres database is initialized and running, the quill schema
+After the \Prog{PostgreSQL} database is initialized and running, 
+the Quill schema
 must be loaded into it.  First, load the plsql programming language
 into the server:
 
@@ -164,8 +165,8 @@ into the server:
 createlang plpgsql [databasename]
 \end{verbatim}
 
-Then, load the quill schema, from the sql files in the sql subdirectory
-of the condor release directory:
+Then, load the Quill schema, from the sql files in the sql subdirectory
+of the Condor release directory:
 
 \begin{verbatim}
 psql < common_createddl.sql
