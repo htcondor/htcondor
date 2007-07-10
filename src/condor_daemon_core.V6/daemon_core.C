@@ -237,7 +237,9 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		&DaemonCore::Register_DataPtr,
 		&DaemonCore::GetDataPtr,
 		(DaemonCoreSockAdapterClass::Register_Timer_fnptr)&DaemonCore::Register_Timer,
-		&DaemonCore::TooManyRegisteredSockets);
+		&DaemonCore::TooManyRegisteredSockets,
+		&DaemonCore::incrementPendingSockets,
+		&DaemonCore::decrementPendingSockets);
 
 	if ( PidSize == 0 )
 		PidSize = DEFAULT_PIDBUCKETS;
@@ -297,6 +299,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		EXCEPT("Out of memory!");
 	}
 	nSock = 0;
+	nPendingSockets = 0;
 	SockEnt blankSockEnt;
 	memset(&blankSockEnt,'\0',sizeof(SockEnt));
 	sockTable->fill(blankSockEnt);
@@ -575,7 +578,7 @@ int	DaemonCore::Register_Signal(int sig, char *sig_descrip,
 
 int DaemonCore::RegisteredSocketCount()
 {
-	return nSock;
+	return nSock + nPendingSockets;
 }
 
 int DaemonCore::FileDescriptorSafetyLimit()

@@ -1240,6 +1240,15 @@ class DaemonCore : public Service
                         DCpermission perm,
                         int is_cpp);
 
+		// This function is called in order to have
+		// TooManyRegisteredSockets() take into account an extra socket
+		// that is waiting for a timer or other callback to complete.
+	void incrementPendingSockets() { nPendingSockets++; }
+
+		// This function must be called after incrementPendingSockets()
+		// when the socket is being (or about to be) destroyed.
+	void decrementPendingSockets() { nPendingSockets--; }
+
     int Register_Pipe(int pipefd,
                         char *pipefd_descrip,
                         PipeHandler handler, 
@@ -1329,6 +1338,7 @@ class DaemonCore : public Service
     void              DumpSocketTable(int, const char* = NULL);
     int               maxSocket;  // number of socket handlers to start with
     int               nSock;      // number of socket handlers used
+	int               nPendingSockets; // number of sockets waiting on timers or any other callbacks
     ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
     int               initial_command_sock;  
   	struct soap		  *soap;

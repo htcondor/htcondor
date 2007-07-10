@@ -790,6 +790,7 @@ class SecManStartCommand: Service {
 		m_callback_fn(callback_fn),
 		m_misc_data(misc_data),
 		m_nonblocking(nonblocking),
+		m_pending_socket_registered(false),
 		m_sec_man(*sec_man)
 	{
 		m_refcount = 1;
@@ -811,8 +812,22 @@ class SecManStartCommand: Service {
 			delete this;
 		}
 	}
+	void incrementPendingSockets() {
+			// This is called to let daemonCore know that we are holding
+			// onto a socket which is waiting for some callback other than
+			// the obvious Register_Socket() callback, which handles this
+			// case automatically.
+		if( !m_pending_socket_registered ) {
+			m_pending_socket_registered = true;
+			daemonCoreSockAdapter.incrementPendingSockets();
+		}
+	}
 
 	~SecManStartCommand() {
+		if( m_pending_socket_registered ) {
+			m_pending_socket_registered = false;
+			daemonCoreSockAdapter.decrementPendingSockets();
+		}
 		if(m_nonblocking && !m_callback_fn) {
 			DestructCallerData();
 		}
@@ -831,6 +846,7 @@ class SecManStartCommand: Service {
 	StartCommandCallbackType *m_callback_fn;
 	void *m_misc_data;
 	bool m_nonblocking;
+	bool m_pending_socket_registered;
 	SecMan m_sec_man; // We create a copy of the original sec_man, so we
 	                  // don't have to worry about longevity of it.  It's
 	                  // all static data anyway, so this is no big deal.
@@ -1140,6 +1156,10 @@ SecManStartCommand::startCommand_inner()
 					// ResumeAfterTCPAuth() is called.
 				IncRefCount();
 
+					// Make daemonCore aware that we are holding onto this
+					// UDP socket while waiting for other events to complete.
+				incrementPendingSockets();
+
 				sc->m_waiting_for_tcp_auth.Append(this);
 
 				if(DebugFlags & D_FULLDEBUG) {
@@ -1212,6 +1232,11 @@ SecManStartCommand::startCommand_inner()
 			// Do not allow ourselves to be deleted until after
 			// ConnectCallbackFn is called.
 			IncRefCount();
+
+				// Make daemonCore aware that we are holding onto this
+				// UDP socket while waiting for the (registered) TCP
+				// socket to connect etc.
+			incrementPendingSockets();
 
 				// Make note that this operation to do the TCP
 				// auth operation is in progress, so others

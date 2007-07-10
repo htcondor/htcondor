@@ -42,7 +42,8 @@ class DaemonCoreSockAdapterClass {
     typedef void *(DaemonCore::*GetDataPtr_fnptr)();
 	typedef int (DaemonCore::*Register_Timer_fnptr)(unsigned deltawhen,Eventcpp event,char * event_descrip,Service* s);
 	typedef bool (DaemonCore::*TooManyRegisteredSockets_fnptr)(int fd,MyString *msg);
-
+	typedef void (DaemonCore::*incrementPendingSockets_fnptr)();
+	typedef void (DaemonCore::*decrementPendingSockets_fnptr)();
 
 	DaemonCoreSockAdapterClass(): m_daemonCore(0) {}
 
@@ -53,7 +54,9 @@ class DaemonCoreSockAdapterClass {
 		Register_DataPtr_fnptr Register_DataPtr_fptr,
 		GetDataPtr_fnptr GetDataPtrFun_fptr,
 		Register_Timer_fnptr Register_Timer_fptr,
-		TooManyRegisteredSockets_fnptr TooManyRegisteredSockets_fptr)
+		TooManyRegisteredSockets_fnptr TooManyRegisteredSockets_fptr,
+		incrementPendingSockets_fnptr incrementPendingSockets_fptr,
+		decrementPendingSockets_fnptr decrementPendingSockets_fptr)
 	{
 		m_daemonCore = dC;
 		m_Register_Socket_fnptr = Register_Socket_fptr;
@@ -62,6 +65,8 @@ class DaemonCoreSockAdapterClass {
 		m_GetDataPtr_fnptr = GetDataPtrFun_fptr;
 		m_Register_Timer_fnptr = Register_Timer_fptr;
 		m_TooManyRegisteredSockets_fnptr = TooManyRegisteredSockets_fptr;
+		m_incrementPendingSockets_fnptr = incrementPendingSockets_fptr;
+		m_decrementPendingSockets_fnptr = decrementPendingSockets_fptr;
 	}
 
 		// These functions all have the same interface as the corresponding
@@ -74,6 +79,8 @@ class DaemonCoreSockAdapterClass {
 	GetDataPtr_fnptr m_GetDataPtr_fnptr;
 	Register_Timer_fnptr m_Register_Timer_fnptr;
 	TooManyRegisteredSockets_fnptr m_TooManyRegisteredSockets_fnptr;
+	incrementPendingSockets_fnptr m_incrementPendingSockets_fnptr;
+	decrementPendingSockets_fnptr m_decrementPendingSockets_fnptr;
 
     int Register_Socket (Stream*              iosock,
                          const char *         iosock_descrip,
@@ -123,6 +130,16 @@ class DaemonCoreSockAdapterClass {
 	bool isEnabled()
 	{
 		return m_daemonCore != NULL;
+	}
+
+	void incrementPendingSockets() {
+		ASSERT(m_daemonCore);
+		return (m_daemonCore->*m_incrementPendingSockets_fnptr)();
+	}
+
+	void decrementPendingSockets() {
+		ASSERT(m_daemonCore);
+		return (m_daemonCore->*m_decrementPendingSockets_fnptr)();
 	}
 };
 
