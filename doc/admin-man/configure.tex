@@ -1641,6 +1641,55 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   % Default definition in config file: N/A
   % Result if not defined or RHS is empty: Condor binds to first interface found
 
+\item[\Macro{PRIVATE\_NETWORK\_NAME}] \label{param:PrivateNetworkName}
+  If two Condor daemons are trying to communicate with each other, and
+  they both belong to the same private network, this setting will
+  allow them to communicate directly using the private network
+  interface, instead of having to use the Generic Connection Broker
+  (GCB) or to go through a public IP address.
+  Each private network should be assigned a unique network name.
+  This string can have any form, but it must be unique for a
+  particular private network.
+  If another Condor daemon or tool is configured with the same
+  \MacroNI{PRIVATE\_NETWORK\_NAME}, it will attempt to contact this
+  daemon using the \Attr{PrivateIpAddr} attribute from the classified
+  ad.
+  Even for sites using GCB, this is an important optimization, since
+  it means that two daemons on the same network can communicate
+  directly, without having to go through the GCB broker.
+  If GCB is enabled, and the \MacroNI{PRIVATE\_NETWORK\_NAME} is
+  defined, the \Attr{PrivateIpAddr} will be defined automatically.
+  Otherwise, you can specify a particular private IP address to use by
+  defining the \MacroNI{PRIVATE\_NETWORK\_INTERFACE} setting
+  (described below).
+  There is no default for this setting.
+  % DWW
+  % Described in default config file: NO
+  % Defined in the default config file: NO
+  % Default definition in config file: N/A
+  % Result if not defined or RHS is empty: No change in behavior.
+
+\item[\Macro{PRIVATE\_NETWORK\_INTERFACE}] \label{param:PrivateNetworkInterface}
+  For systems with multiple network interfaces, if this configuration
+  setting and \MacroNI{PRIVATE\_NETWORK\_NAME} are both defined,
+  Condor daemons will advertise some additional attributes in their
+  ClassAds to help other Condor daemons and tools in the same private
+  network to communicate directly.
+  The \MacroNI{PRIVATE\_NETWORK\_INTERFACE} defines what IP address a
+  given multi-homed machine should use for the private network.
+  If another Condor daemon or tool is configured with the same
+  \MacroNI{PRIVATE\_NETWORK\_NAME}, it will attempt to contact this
+  daemon using the IP address specified here.
+  Sites using the Generic Connection Broker (GCB) only need to define
+  the \MacroNI{PRIVATE\_NETWORK\_NAME}, and the 
+  \MacroNI{PRIVATE\_NETWORK\_INTERFACE} will be defined automatically.
+  Unless GCB is enabled, there is no default for this setting.
+  % DWW
+  % Described in default config file: NO
+  % Defined in the default config file: NO
+  % Default definition in config file: N/A
+  % Result if not defined or RHS is empty: No change in behavior.
+
 \item[\Macro{HIGHPORT}] \label{param:HighPort}
   Specifies an upper limit of given port numbers for Condor to use,
   such that Condor is restricted to a range of port numbers.

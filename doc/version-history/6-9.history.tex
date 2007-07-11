@@ -89,6 +89,14 @@ to \SubmitCmd{deferral\_window}.
 \item Optimized the submission of grid-type gt4 grid universe jobs to the
 remote resource.Submission now takes one operation instead of three.
 
+\item Added new functionality for multi-homed machines (those with
+  multiple network interfaces) to allow Condor to handle private
+  networks in some cases without having to use the Generic Connection
+  Broker (GCB).
+  See the entries below that describe the new
+  \MacroNI{PRIVATE\_NETWORK\_NAME} and
+  \MacroNI{PRIVATE\_NETWORK\_INTERFACE} configuration variables.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -136,6 +144,18 @@ DBMSD_LOG = $(LOG)/DbmsdLog
 \end{verbatim}
 These configuration variables are only necessary when using Quill,
 and then must be defined on only one machine in the Condor pool.
+
+\item Added new configuration variables
+\Macro{PRIVATE\_NETWORK\_NAME} and
+\Macro{PRIVATE\_NETWORK\_INTERFACE},
+which allow Condor daemons to function more properly on multi-homed
+machines and in certain network configurations that involve private
+networks.
+There are no default values, both must be explicitly defined to have
+any effect.
+See section~\ref{param:PrivateNetworkName} on
+page~\pageref{param:PrivateNetworkName} for more information about
+these two new settings.
 
 \end{itemize}
 
