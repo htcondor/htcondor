@@ -14,6 +14,21 @@ my $testsrc = $ARGV[6];
 
 my $startpostmasterport = 5432;
 my $postmasterinc = int(rand(100) + 13);
+$currenthost = `hostname`;
+CondorTest::fullchomp($currenthost);
+
+# for quill this must be the fully qualified name which
+# is what quill uses to builds its search string for the
+# db writing password.
+
+if($currenthost =~ /^(.*)\.cs\.wisc\.edu$/) {
+	# fine we got a fully qualified name.....
+	print "Fully qualified name already<<$currenthost>>\n";
+} else {
+	# fine add our domain for madison
+	$currenthost = $currenthost . "cs.wisc.edu";
+	print "Fully qualified name now<<$currenthost>>\n";
+}
 
 print "Original port request is <<$startpostmasterport>>\n";
 print "Random increment if needed will be <<$postmasterinc>>\n";
@@ -36,12 +51,14 @@ my $mypostgresqlconf = $prefix . "/postgres-data/postgresql.conf";
 my $mynewpostgresqlconf = $prefix . "/postgres-data/postgresql.new";
 my $myquillchanges = $testsrc . "/x_postgress_quill.conf";
 
-my $condorchanges = "$condorconfigadd";
-my $newcondorchanges = "$condorconfigadd" . ".new";
+my $condorchanges = "$condorconfigadd" . ".template";
+my $newcondorchanges = "$condorconfigadd";
 
 my $mypgfile = $prefix . "/postgres-data/pg_hba.conf";
 my $mynewpgfile = $prefix . "/postgres-data/pg_hba.new";
+my $pgpass = $prefix . "/../pgpass";
 
+print "Saving PGPASS date to <<$pgpass>>\n";
 
 system("date");
 print "Extracting Postgres Source.....\n";
@@ -74,6 +91,7 @@ if($doinstall != 0) {
 	die "Install failed\n";
 }
 system("mkdir $prefix/postgres-data");
+
 
 system("date");
 print "Build of postgres done......\n";
@@ -117,6 +135,7 @@ while(<OLD>) {
 close(OLD);
 print NEW "host all quillreader 0.0.0.0 0.0.0.0 password\n";
 print NEW "host all quillwriter 0.0.0.0 0.0.0.0 password\n";
+print NEW "host test all 0.0.0.0 0.0.0.0 md5\n";
 close(NEW);
 
 system("rm -f $mypgfile");
@@ -128,6 +147,9 @@ if($mvconf != 0) {
 my $dbup = "no";
 my $trylimit = 1;
 # start db
+
+print "Setting PGDATA to $prefix/postgres-data\n";
+$ENV{PGDATA} = "$prefix/postgres-data";
 
 while (( $dbup ne "yes") && ($trylimit <= 10) ) {
 	$pmaster_start = system("$prefix/bin/pg_ctl -D $prefix/postgres-data -l $prefix/postgres-data/logfile start");
@@ -197,11 +219,6 @@ if($trylimit > 10) {
 	}
 	close(OLD);
 	close(NEW);
-	system("rm -f $condorchanges");
-	$mvconf = system("cp $newcondorchanges $condorchanges");
-	if($mvconf != 0) {
-		die "INstalling modified configuration file <<$condorchanges>> failed\n";
-	}
 }
 
 system("date");
@@ -248,6 +265,11 @@ unless($command->expect(10,"Shall the new role be allowed to create more new rol
 print $command "n\n";
 $command->soft_close();
 
+#save PGPASS date for Condor to grab......
+open(PG,">$pgpass") || die "Could not open file<$pgpass> for .pgpass data!:$!\n";
+print PG "$currenthost:$startpostmasterport:test:quillwriter:biqN9ihm\n";
+close(PG);
+
 system("date");
 print "Create DB for Quil\n";
 
@@ -258,30 +280,28 @@ if($docreatedb != 0) {
 system("date");
 
 print "Run psql program\n";
-$command = Expect->spawn("$prefix/bin/psql test")||
+$command = Expect->spawn("$prefix/bin/psql test quillwriter --port $startpostmasterport")||
 	die "Could not start program: $!\n";
+#$command->debug(1);
 $command->log_stdout(0);
-unless($command->expect(10,"test=#")) {
+unless($command->expect(10,"test=>")) {
 	die "Expected psql prompt for test db\n";
 }
 print $command "\\i $testsrc/../condor_tt/common_createddl.sql\n";
 
-unless($command->expect(10,"test=#")) {
+unless($command->expect(10,"test=>")) {
 	die "Prompt after attempted install of common schema failed\n";
 }
 print $command "\\i $testsrc/../condor_tt/pgsql_createddl.sql\n";
 
-unless($command->expect(10,"test=#")) {
+unless($command->expect(10,"test=>")) {
 	die "Prompt after attempted install of postgress schema failed\n";
 }
 print $command "\quit\n";
 $command->soft_close();
 
-#system("$prefix/bin/createuser quillwriter --createdb --no-adduser --pwprompt");
-
 print "Postgress built and set up: ";
 system("date");
-#system("$prefix/bin/psql test");
 
 
 exit(0);

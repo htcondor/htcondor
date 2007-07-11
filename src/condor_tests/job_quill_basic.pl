@@ -4,7 +4,7 @@ use CondorTest;
 Condor::DebugOff();
 
 $cmd      = 'job_quill_basic.cmd';
-$testname = 'Verify same data from schedd, quilld and rdbms';
+$testname = 'Verify same data from schedd and rdbms';
 
 sub HELD{5};
 sub RUNNING{2};
@@ -12,7 +12,7 @@ sub RUNNING{2};
 my $alreadydone=0;
 my $result;
 
-my $submithandled = "no";
+my $submitcount = 0;
 my $releasehandled = "no";
 my $successhandled = "no";
 my $aborthandled = "no";
@@ -85,6 +85,73 @@ sub compare_3arrays_byrows
 	return(0);
 };
 
+#######################
+#
+# compare_2arrays_byrows
+#
+#   We examine each line from an array and verify that each array has the same contents
+#   by having a value for each key equalling the number of arrays. First used to
+#   compare output from condor_q -direct quilld, schedd and rdbms
+
+sub compare_2arrays_byrows
+{
+	$location = 0;
+
+	my $harray1, $harray2;
+	$harray1 = shift;
+	$harray2 = shift;
+	$href = shift;
+
+	print "Make sure they all have the same number of entries\n";
+
+	my $count1, $count2;
+
+	$count1 = $#{$harray1};
+	$count2 = $#{$harray2};
+
+	if($count1 == $count2){
+		print "Good the sizes<<$count1>> match up!!!!\n";
+	} else {
+		print "Compare failed because $count1 and $count2 are not the same\n";
+		return(1);
+	}
+
+	$current = "";
+
+	#print "Skip items follow:\n";
+	#while (($key, $value) = each %{$href}) {
+		#print "$key => $value\n";
+	#}
+
+	while( $location < ($count1 + 1)) {
+		# look at current item
+		$current = ${$harray1}[$location];
+		$current =~ /^\s*(\w*)\s*=\s*(.*)\s*$/;
+		$thiskey = $1;
+		#print "Current<<$current>> Thiskey<<$thiskey>>\n";
+		#print "${$href}{$thiskey}\n";
+		if($current =~ /^.*Submitter.*$/) {
+			print "Skip Submitter entry\n";
+			#print "${$harray1}[$location] vs ${$harray2}[$location]\n";
+		} elsif( exists ${$href}{$thiskey}) {
+			#print "Skip compare of -$thiskey-\n";
+			#print "${$harray1}[$location] vs ${$harray2}[$location]\n";
+		} else {
+			if(${$harray1}[$location] eq ${$harray2}[$location]){
+				#print "Good match:${$harray1}[$location] at entry $location\n";
+			} else {
+				print "Match FAIL position <<$location>>: 1: ${$harray1}[$location] 2: ${$harray2}[$location]\n";
+				return(1);
+			}
+		}
+
+		$location = $location + 1;
+		#print "Location now <<$location>>\n";
+	}
+
+	return(0);
+};
+
 $abort = sub
 {
 	if($aborthandled eq "no") {
@@ -117,12 +184,13 @@ $submitted = sub
 	my $doneyet = "no";
 
 
-	if($submithandled eq "no") {
-		$submithandled = "yes";
+	$submitcount = $submitcount + 1;
 
-sleep(30);
+	if($submitcount == 750) {
 
-		print "submitted: <<<";
+	sleep(30);
+
+		print "750 submitted: <<<";
 		system("date");
 		print ">>>\n";
 		print "Collecting queue details from schedd\n";
@@ -140,10 +208,10 @@ sleep(30);
 		#{
 			#print "$line\n";
 		#}
-		print "Collecting queue details from quilld\n";
+		print "Collecting queue details from rdbms\n";
 		my @bdarray;
 		my $bdstatus = 1;
-		my $bdcmd = "condor_q -long  -direct quilld $cluster";
+		my $bdcmd = "condor_q -long  -direct rdbms $cluster";
 		$bdstatus = CondorTest::runCondorTool($bdcmd,\@bdarray,2);
 		if(!$bdstatus)
 		{
@@ -155,34 +223,18 @@ sleep(30);
 		#{
 			#print "$line\n";
 		#}
-		print "Collecting rdbms details from quilld\n";
-		my @cdarray;
-		my $cdstatus = 1;
-		my $cdcmd = "condor_q -long  -direct quilld $cluster";
-		$cdstatus = CondorTest::runCondorTool($cdcmd,\@cdarray,2);
-		if(!$cdstatus)
-		{
-			print "Test failure due to Condor Tool Failure<$cdcmd>\n";
-			exit(1)
-		}
-
-		#foreach my $line (@cdarray)
-		#{
-			#print "$line\n";
-		#}
-		$startrow = CondorTest::find_pattern_in_array("MyType", \@cdarray);
+		$startrow = CondorTest::find_pattern_in_array("MyType", \@adarray);
 		print "Start row returned is $startrow\n";
-		print "Size of array is $#cdarray\n";
+		print "Size of array is $#adarray\n";
 		%skip = ("Submitter", 1, "LocalSysCpu", 1, "LocalUserCpu", 1,
 					"Rank", 1, "RemoteSysCpu", 1, "RemoteWallClockTime", 1,
 					"ServerTime", 1, "RemoteUserCpu", 1);
 		system("date");
 		@adarray = sort(@adarray);
 		@bdarray = sort(@bdarray);
-		@cdarray = sort(@cdarray);
 		print "Done sorting arrays\n";
 		system("date");
-		$result = compare_3arrays_byrows(\@adarray, \@bdarray, \@cdarray, \%skip);
+		$result = compare_2arrays_byrows(\@adarray, \@bdarray, \%skip);
 		# save the time and leave the jobs behind before stopping condor
 		if( $result != 0 ) {
 			die "Ads from all three sources were not the same!!!\n";

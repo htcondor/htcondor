@@ -3,7 +3,7 @@ use CondorTest;
 use CondorPersonal;
 use Cwd;
 $quillpassword = "x_job_quill_basic.template";
-$testname = 'job_quill_basic - Simple parallel job with security on';
+$testname = 'job_quill_basic - install postgress and test quillpp';
 $cmd = "job_quill_basic.cmd";
 $corename = "job_quill_basic";
 $supwfile = "x_job_quill_supw";
@@ -168,6 +168,13 @@ $cmdforsys = "cp " . $quillpassword . " " . $spool . "/.quillwritepassword";
 print "Command to create quill password file is <<<$cmdforsys>>>\n";
 
 system("$cmdforsys");
+#$pgpassdata = $topdir . "/" . $mypid . "/pgpass";
+
+#$cmdforsys = "cp " . $pgpassdata . " " . $spool . "/.pgpass";
+#print "Command to create quill password file is <<<$cmdforsys>>>\n";
+
+#system("$cmdforsys");
+
 print "Set config to $quillconfig\n";
 
 my $pcresult = 0;
@@ -178,9 +185,6 @@ system("date");
 if($pgresult == 0) {
 	$pcresult = system("./job_quill_basic.pl $mysubmitnm");
 	print "Result of job_quill_basic job is  $pcresult\n";
-
-	#$result = system("./x_quill_pgsqlstop.pl $myfullpgsqlloc ");
-	#print "Result of Quill Postgresssql db stop job is  $result\n";
 }
 
 system("cp *quill_basic* $mysaveme");
@@ -209,8 +213,13 @@ if(!$status)
 	print "Test failure due to Condor Tool Failure<$cmd>\n";
 	exit(1)
 }
+
 if($pcresult == 0) {
 	print "Setup allowed test which then WORKED!!!......\n";
+	# now shutdown postgress when not in use....
+
+	$result = system("./x_quill_pgsqlstop.pl $myfullpgsqlloc ");
+	print "Result of Quill Postgresssql db stop job is  $result\n";
 } else {
 	print "Setup allowed test which then failed......\n";
 	exit(1);
@@ -218,3 +227,4 @@ if($pcresult == 0) {
 
 system("date");
 
+exit(0);
