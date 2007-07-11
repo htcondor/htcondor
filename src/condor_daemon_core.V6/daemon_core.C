@@ -956,9 +956,16 @@ DaemonCore::publicNetworkIpAddr(void) {
 
 const char*
 DaemonCore::privateNetworkIpAddr(void) {
-# if HAVE_EXT_GCB
+	static char private_network[32];
+	char* tmp;
+	if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
+		snprintf(private_network, 32, "%s", tmp);
+		free(tmp);
+		return (const char*)private_network;
+	}
+#if HAVE_EXT_GCB
 	return (const char*) InfoCommandSinfulStringMyself(true);
-# endif /* HAVE_EXT_GCB */
+#endif /* HAVE_EXT_GCB */
 	return NULL;
 }
 
