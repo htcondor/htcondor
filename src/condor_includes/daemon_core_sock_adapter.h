@@ -134,12 +134,12 @@ class DaemonCoreSockAdapterClass {
 
 	void incrementPendingSockets() {
 		ASSERT(m_daemonCore);
-		return (m_daemonCore->*m_incrementPendingSockets_fnptr)();
+		(m_daemonCore->*m_incrementPendingSockets_fnptr)();
 	}
 
 	void decrementPendingSockets() {
 		ASSERT(m_daemonCore);
-		return (m_daemonCore->*m_decrementPendingSockets_fnptr)();
+		(m_daemonCore->*m_decrementPendingSockets_fnptr)();
 	}
 };
 
