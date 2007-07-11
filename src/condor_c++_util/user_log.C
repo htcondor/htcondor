@@ -559,7 +559,7 @@ writeEvent (ULogEvent *event, ClassAd *param_jobad)
 
 		StringList attrs(attrsToWrite);
 		attrs.rewind();
-		while ( eventAd && (curr=attrs.next()) ) 
+		while ( eventAd && param_jobad && (curr=attrs.next()) ) 
 		{
 			if ( (tree=param_jobad->Lookup(curr)) ) {
 				// found the attribute.  now evaluate it before
