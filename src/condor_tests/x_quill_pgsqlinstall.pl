@@ -26,7 +26,7 @@ if($currenthost =~ /^(.*)\.cs\.wisc\.edu$/) {
 	print "Fully qualified name already<<$currenthost>>\n";
 } else {
 	# fine add our domain for madison
-	$currenthost = $currenthost . "cs.wisc.edu";
+	$currenthost = $currenthost . ".cs.wisc.edu";
 	print "Fully qualified name now<<$currenthost>>\n";
 }
 
