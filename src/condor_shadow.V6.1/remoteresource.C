@@ -195,7 +195,7 @@ RemoteResource::activateClaim( int starterVersion )
 			break;
 		case CONDOR_TRY_AGAIN:
 			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s was DELAYED\n",
+							 "Request to run on %s was DELAYED (previous job still being vacated)\n",
 							 dc_startd->addr() ); 
 			num_retries++;
 			if( num_retries > max_retries ) {
