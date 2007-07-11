@@ -530,6 +530,25 @@ sub InstallPersonalCondor
 		$sbinloc = "";
 	}
 	debug( "InstallPersonalCondor returning $sbinloc for LOCAL_DIR setting\n");
+
+	# I hate to do this but....
+	# The quill daemon really wants to see the passwd file .pgpass
+	# when it starts and IF this is a quill test, then quill is within
+	# $personal_daemons AND $topleveldir/../pgpass wants to  be 
+	# $topleveldir/spool/.pgpass
+	my %control = %personal_condor_params;
+	# was a special daemon list called out?
+	if( exists $control{"condordaemons"} )
+	{
+		$personal_daemons = $control{"condordaemons"};
+	}
+
+	debug( "Looking to see if this is a quill test..........\n");
+	debug( "Daemonlist requested is <<$personal_daemons>>\n");
+	if($personal_daemons =~ /.*quill.*/) {
+		my $cmd = "cp $topleveldir/../pgpass $topleveldir/spool/.pgpass";
+	}
+
 	return($sbinloc);
 }
 
