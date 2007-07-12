@@ -546,7 +546,9 @@ sub InstallPersonalCondor
 	debug( "Looking to see if this is a quill test..........\n");
 	debug( "Daemonlist requested is <<$personal_daemons>>\n");
 	if($personal_daemons =~ /.*quill.*/) {
+		debug( "Yup it is a quill test..........copy in .pgpass file\n");
 		my $cmd = "cp $topleveldir/../pgpass $topleveldir/spool/.pgpass";
+		system("$cmd");
 	}
 
 	return($sbinloc);
