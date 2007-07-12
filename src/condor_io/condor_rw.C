@@ -55,6 +55,7 @@ static int errno_is_temporary( int e )
 /* Generic read/write wrappers for condor.  These function emulate the 
  * read/write system calls under unix except that they are portable, use
  * a timeout, and make sure that all data is read or written.
+ * Returns < 0 on failure.  -1 = general error, -2 = peer closed socket.
  */
 int
 condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
@@ -149,8 +150,8 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 						 "Socket closed when trying to read %d bytes from %s\n",
 						 sz,
 						 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
-				return -1;
-			}
+				return -2;
+	}
 
 			int the_error;
 #ifdef WIN32

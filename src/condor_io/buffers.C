@@ -142,7 +142,7 @@ int Buf::read(
 	}
 
     nr = condor_read(sockd,&_dta[num_used()],sz,timeout);	
-	if (nr == -1) {
+	if (nr < 0) {
 		dprintf( D_ALWAYS, "Buf::read(): condor_read() failed\n" );
 		return -1;
 	}

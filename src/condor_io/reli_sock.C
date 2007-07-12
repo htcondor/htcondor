@@ -959,7 +959,14 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 
 	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 
-	if ( condor_read(_sock,hdr,header_size,_timeout) < 0 ) {
+	int retval = condor_read(_sock,hdr,header_size,_timeout);
+	if ( retval < 0 && 
+		 retval != -2 ) // -2 means peer just closed the socket
+	{
+		dprintf(D_ALWAYS,"IO: Failed to read packet header\n");
+		return FALSE;
+	}
+	if ( retval == -2 ) {	// -2 means peer just closed the socket
 		dprintf(D_FULLDEBUG,"IO: EOF reading packet header\n");
 		return FALSE;
 	}
