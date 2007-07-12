@@ -31,7 +31,7 @@
 struct hostent *NameEnt;
 /*
 **#define NUL		"\0";
-*/
+ */
 
 void usage(char* myname, FILE* puthere)
 {
@@ -142,10 +142,13 @@ int main(int argc, char* argv[])
 	}
 
     ULogEvent* e = NULL;
+	int myjobstatus = 0;
+	char whichattr[512];
 
 	while( !done ) {
         ULogEventOutcome outcome = rul->readEvent(e);
 		//cout << ULogEventOutcomeNames[outcome] << endl;
+		//printf("Outcome from rul->readEvent(e) is %d\n",outcome);
         switch( outcome ) {
 		  case ULOG_NO_EVENT:
 		  case ULOG_RD_ERROR:
@@ -153,7 +156,7 @@ int main(int argc, char* argv[])
 			done++;
 			break;
 		  case ULOG_OK:
-		  	//printf("ULOG OK\n");
+			//printf("ULOG OK cluster %d\n",e->cluster);
 			if( current_cluster != e->cluster && !strcmp(action, "TRACE"))
 			{
 				current_cluster = e->cluster;
@@ -212,7 +215,7 @@ int main(int argc, char* argv[])
 			}
 			else if( strcmp(action, "TRACE") == 0 )
 			{
-				//printf("TRACE\n");
+				//printf("TRACE Looking at event # %d \n",e->eventNumber);
 				switch( e->eventNumber ) 
 				{
 				  case ULOG_SUBMIT:
@@ -244,6 +247,10 @@ int main(int argc, char* argv[])
 					break;
 				  case ULOG_JOB_AD_INFORMATION:
 					printf("Job Ad Information.........\n");
+					// print a attribute which is always there
+					strcpy(whichattr, "JobStatus");
+					((JobAdInformationEvent*)e)->LookupInteger(whichattr,myjobstatus);
+					printf("JobStatus currently %d\n",myjobstatus);
 					break;
 				  case ULOG_JOB_ABORTED:
 					printf("Job ABORTED by user.........\n");
