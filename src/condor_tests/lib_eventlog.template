@@ -1,0 +1,9 @@
+universe   = vanilla
+executable = x_sleep.pl
+log = lib_eventlog.log
+output = lib_eventlog.out
+error = lib_eventlog.err
+Notification = NEVER
+arguments  = 9
+queue
+

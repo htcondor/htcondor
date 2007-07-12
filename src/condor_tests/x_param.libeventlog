@@ -1,0 +1,12 @@
+
+universe = vanilla
+type = jobs
+
+ports = dynamic
+condor = nightlies
+condorconfig = condor_config
+condorlocal = condor_config.local
+localpostsrc = x_lib_eventlog_config_postsrc
+condordaemons = master,schedd,collector,negotiator,startd
+condordomain = cs.wisc.edu
+slots	= 2
