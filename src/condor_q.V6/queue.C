@@ -901,7 +901,10 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			}
 			Collectors = new CollectorList();
-			Collectors->append (pool);
+				// Add a copy of our DCCollector object, because
+				// CollectorList() takes ownership and may even delete
+				// this object before we are done.
+			Collectors->append ( new DCCollector( *pool ) );
 		} 
 		else
 		if (match_prefix (arg, "D")) {
