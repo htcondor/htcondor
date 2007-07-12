@@ -5,6 +5,110 @@
 \index{universe!vm}
 \index{vm universe}
 
-About the vm universe here.
+The \SubmitCmd{vm} universe facilitates a Condor job
+that matches and then lands a disk image on an execute machine
+within a Condor pool.
+This disk image is intended to be a virtual machine.
+
+This section describes this Condor job.
+See section~\ref{sec:Config-VMs}
+for details of configuration variables.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:vm-submitfile}The Submit Description File}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Different than all other universe jobs,
+the \SubmitCmd{vm} universe job specifies a disk image,
+not an executable.
+Therefore, the submit commands \SubmitCmd{input}, \SubmitCmd{output},
+and \SubmitCmd{error} do not apply.
+If specified, \Condor{submit} rejects the job with an error.
+The \SubmitCmd{executable} command changes definition within a
+\SubmitCmd{vm} universe job.
+It no longer specifies an executable file, but instead
+provides a string that identifies the job for tools such
+as \Condor{q}.
+
+The \SubmitCmd{args} command creates a file named \File{condor.arg},
+which is added to the disk image.
+The contents of this file are the arguments specified.
+
+VMware and Xen virtual machine software are supported.
+As the two differ from each other, the submit description file
+specifies either
+\begin{verbatim}
+  vm_type = vmware
+\end{verbatim}
+or
+\begin{verbatim}
+  vm_type = xen
+\end{verbatim}
+
+The job specifies its memory needs 
+for the disk image with \SubmitCmd{vm\_memory},
+which is given in Mbytes.
+Condor uses this number to assure a match with a machine
+that can provide the needed memory space.
+
+Creating a checkpoint is straightforward for a virtual machine,
+as a checkpoint is the disk image.
+The checkpoint is created and remains on the execute machine;
+this differs from checkpoints for jobs executing under other
+universes, where the checkpoint is returned to the machine
+from which the job was submitted or to a checkpoint server.
+The submit command to create checkpoints is
+\begin{verbatim}
+  vm_checkpoint = true
+\end{verbatim}
+Without this command, no checkpoints are created (by default).
+
+Virtual machine networking is enabled with the command
+\begin{verbatim}
+  vm_networking = true
+\end{verbatim}
+And, when networking is enabled, further define the command
+\SubmitCmd{vm\_networking\_type} to be 
+\SubmitCmd{bridge\_dhcp} for bridge networking,
+\SubmitCmd{nat\_dhcp} for NAT networking,
+and \SubmitCmd{dhcp} when the type may be decided at a different level.
+
+A current limitation restricts the use of networking to
+\SubmitCmd{vm} universe jobs that do not create checkpoints
+such that the job may migrate to another machine.
+
+When both checkpoints and networking are enabled,
+the job further specifies
+\begin{verbatim}
+  when_to_transfer_output = ON_EXIT_OR_EVICT
+\end{verbatim}
+Should the job not want any files transferred back,
+for example because the job explicitly transferred its own files,
+the submit command is
+\begin{verbatim}
+  vm_no_output_vm = true
+\end{verbatim}
+
+Further commands specify information that is specific to the
+virtual machine type targeted.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:vm-VMwaresubmitfile}VMware-Specific Submit Commands}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\Todo
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:vm-Xensubmitfile}Xen-Specific Submit Commands}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:vm-checkpoints}Checkpoints}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:vm-disk-image-details}Disk Images}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\Todo
+
 
 \index{virtual machine universe|)}
