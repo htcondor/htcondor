@@ -95,6 +95,9 @@ If \Attr{GSI\_DAEMON\_DIRECTORY} was set and \Attr{GRIDMAP} wasn't set,
 then Condor would look in the wrong location for the GSI private key and 
 mapfile.
 
+\item \Condor{q} would produce garbage output in its error message when
+failing to contact the collector specified via \Opt{-pool}.
+
 \end{itemize}
 
 \noindent Known Bugs:
