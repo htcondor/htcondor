@@ -553,6 +553,8 @@ readEvent (FILE *file)
 	// in this case, the submit host would be the event delimiter
 	if ( strncmp(submitHost,"...",3)==0 ) {
 		submitHost[0] = '\0';
+		// Backup to leave event delimiter unread go past \n too
+		fseek( file, -4, SEEK_CUR );
 		return 1;
 	}
 
@@ -5085,6 +5087,9 @@ readEvent(FILE *file)
 		// Out of memory?!?!
 		return 0;
 	} 
+
+	// Backup to leave event delimiter unread go past \n too
+	fseek( file, -4, SEEK_CUR );
 
 	retval = ! (ErrorFlag || EmptyFlag);
 
