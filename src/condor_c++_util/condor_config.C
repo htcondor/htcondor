@@ -1615,6 +1615,30 @@ reinsert_specials( char* host )
 		}
 	}
 
+	// Insert real-uid and real-gid as "real_uid" and "real_gid".
+	// Now these values are meaningless on Win32, but leaving
+	// them undefined can be undesireable, and setting them
+	// to "0" could be dangerous (that is root uid on unix),
+	// so we set them to something....
+	{
+		uid_t myruid;
+		gid_t myrgid;
+#ifdef WIN32
+			// Hmmm...
+		myruid = 666;
+		myrgid = 666;
+#else
+		myruid = getuid();
+		myrgid = getgid();
+#endif
+		sprintf(buf,"%u",myruid);
+		insert( "real_uid", buf, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("real_uid");
+		sprintf(buf,"%u",myrgid);
+		insert( "real_gid", buf, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("real_gid");
+	}
+		
 	// Insert values for "pid" and "ppid".  Use static values since
 	// this is expensive to re-compute on Windows.
 	// Note: we have to resort to ifdef WIN32 junk even though 
