@@ -549,6 +549,13 @@ readEvent (FILE *file)
 		return 0;
 	}
 
+	// check if event ended without specifying submit host.
+	// in this case, the submit host would be the event delimiter
+	if ( strncmp(submitHost,"...",3)==0 ) {
+		submitHost[0] = '\0';
+		return 1;
+	}
+
 	// see if the next line contains an optional event notes string,
 	// and, if not, rewind, because that means we slurped in the next
 	// event delimiter looking for it...
@@ -5073,7 +5080,7 @@ readEvent(FILE *file)
 
 	if ( jobad ) delete jobad;
 
-	if( !( jobad=new ClassAd(file,"***", EndFlag, ErrorFlag, EmptyFlag) ) )
+	if( !( jobad=new ClassAd(file,"...", EndFlag, ErrorFlag, EmptyFlag) ) )
 	{
 		// Out of memory?!?!
 		return 0;
