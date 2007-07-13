@@ -1083,7 +1083,6 @@ recursive_chown(const char *, const char *, const char *) {
 
 	return false;
 }
-
 #endif
 
 #ifdef WIN32

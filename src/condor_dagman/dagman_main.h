@@ -133,6 +133,10 @@ class Dagman {
 		// match expected value).
 	bool abortOnScarySubmit;
 
+		// The interval (in seconds) between reports on what nodes
+		// are pending.
+	int pendingReportInterval;
+
 		// the Condor job id of the DAGMan job
 	CondorID DAGManJobId;
 

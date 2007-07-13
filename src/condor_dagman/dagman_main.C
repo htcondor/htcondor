@@ -272,6 +272,12 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_ON_SCARY_SUBMIT setting: %d\n",
 				abortOnScarySubmit );
 
+	const int PENDING_REPORT_INT_DEFAULT = 10 * 60; // 10 minutes
+	pendingReportInterval = param_integer( "DAGMAN_PENDING_REPORT_INTERVAL",
+				PENDING_REPORT_INT_DEFAULT );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
+				pendingReportInterval );
+
 	return true;
 }
 
@@ -683,11 +689,15 @@ int main_init (int argc, char ** const argv) {
         }
     }
 
+
 	ASSERT( condorLogName || dapLogName );
 
     dprintf( D_ALWAYS, "Registering condor_event_timer...\n" );
     daemonCore->Register_Timer( 1, 5, (TimerHandler)condor_event_timer,
 				"condor_event_timer" );
+
+	dagman.dag->SetPendingNodeReportInterval(
+				dagman.pendingReportInterval );
 
     return 0;
 }

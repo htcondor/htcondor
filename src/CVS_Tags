@@ -1,3 +1,7 @@
+07/13/07 V6_8-merge-8
+  The state of the V6_8-branch for another merge back to the trunk
+  so 6.9.4 may be released.
+
 06/26/07  V6_9-{pre,pos}t_merge_quillpp
 	pre and post tags on the trunk for the quill merge 
 	from V6_9-quillpp-8-branch
@@ -13,9 +17,18 @@
   BUILD-V6_9-trunk-2007-6-12.
   THIS BRANCH SHOULD NEVER GET MERGED BACK TO THE TRUNK!!
 
-01/08/07 V6_9_3-{root,branch}
-  The branch for V6_9_3 off of the trunk. Branched from
-  BUILD-V6_9-trunk-2007-6-7.
+06/12/07 V6_8-dagman-for-ligo-merge-end
+  State of V6_8 at the *end* of what I need to merge to
+  V6_9-dagman-for-ligo-branch.
+
+06/12/07 V6_8-dagman-for-ligo-merge-start
+  State of V6_8 at the beginning of what I need to merge to
+  V6_9-dagman-for-ligo-branch to make a special pre-release DAGMan for
+  LIGO.  This tag is almost the same as V6_8-merge-7, except that
+  V6_8-merge-7 seems to be at the wrong place on
+  condor_c++_util/check_events.[Ch] and
+  condor_c++_util/read_multiple_logs.[Ch] (there are changes just past
+  the tag in those files that have already been merged to V6_9/trunk).
 
 05/22/07 V6_9-pre_merge_V6_8-merge-7 V6_9-post_merge-V6_8-merge-7
   Merge tags for mergine from V6_8-merge-7 (V6_8_5 changes).
@@ -23,6 +36,11 @@
 05/21/07 V6_8-merge-7
   State of V6_8 at the point where all 6.8.5-branch changes (plus whatever
   else is hanging out on the 6.8 branch) are merged back to the trunk.
+  Update on 6/12/07: four files were touched after this tag was made
+  and these changes did make it into the merge, so I have moved the tag
+  to the correct versions of the following files in src/condor_c++_util:
+  check_events.C (1.2.2.2), check_events.h (1.2.2.2),
+  read_multiple_logs.C (1.6.2.8), and read_multiple_logs.h (1.5.2.4).
 
 05/21/07 V6_8-merge_pre-V6_8_5 and V6_8-merge_post-V6_8_5
   Merge tags on V6_8-branch before and after merging V6_8_5.
@@ -164,6 +182,10 @@
 01/12/07 V6_9-quillpp-6-{root,branch}
   The start of the 6th development branch for quill++. The root of this
   branch is the same as V6_9_1-root
+
+01/08/07 V6_9_3-{root,branch}
+  The branch for V6_9_3 off of the trunk. Branched from
+  BUILD-V6_9-trunk-2007-6-7.
 
 01/04/07 V6_9-GCB_optimization-merge-1
   The state of the V6_9-GCB_optimization-branch for an initial merge

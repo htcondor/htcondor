@@ -133,6 +133,7 @@ public_copy_target(condorc-advertiser,libexec/glite,condorc-advertiser,EXECUTABL
 public_copy_target(condorc-authorizer,libexec/glite,condorc-authorizer,EXECUTABLE_MODE)
 public_copy_target(condorc-initialize,libexec/glite,condorc-initialize,EXECUTABLE_MODE)
 public_copy_target(condorc-launcher,libexec/glite,condorc-launcher,EXECUTABLE_MODE)
+public_copy_target(condorc-vo-advertiser,libexec/glite,condorc-vo-advertiser,EXECUTABLE_MODE)
 public_copy_target(grid_monitor.sh-glite,libexec/glite,grid_monitor.sh,EXECUTABLE_MODE)
 
 clean::

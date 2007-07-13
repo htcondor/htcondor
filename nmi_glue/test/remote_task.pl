@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.4 2007-05-01 20:22:56 jfrey Exp $
+# $Id: remote_task.pl,v 1.5 2007-07-13 19:27:38 psilord Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -22,6 +22,11 @@ if( ! defined $ENV{_NMI_TASKNAME} ) {
     die "_NMI_TASKNAME not in environment, can't test anything!\n";
 }
 my $fulltestname = $ENV{_NMI_TASKNAME};
+
+if( $fulltestname =~ /remote_task/) {
+	die "_NMI_TASKNAME set to remote_task meaning 0 tests seen!\n";
+}
+
 if( ! $fulltestname ) {
     # if we have no task, just return success immediately
     print "No tasks specified, returning SUCCESS\n";

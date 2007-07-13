@@ -154,6 +154,10 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	_recovery = false;
 	_abortOnScarySubmit = true;
 	_configFile = NULL;
+		
+		// Don't print any waiting node reports until we're done with
+		// recovery mode.
+	_pendingReportInterval = -1;
 
 	return;
 }
@@ -361,6 +365,28 @@ Dag::DetectCondorLogGrowth () {
 	bool growth = _condorLogRdr.detectLogGrowth();
     debug_printf( DEBUG_DEBUG_4, "%s\n",
 				  growth ? "Log GREW!" : "No log growth..." );
+
+		//
+		// Print the nodes we're waiting for if the time threshold
+		// since the last event has been exceeded, and we also haven't
+		// printed a report in that time.
+		//
+	time_t		currentTime;
+	time( &currentTime );
+
+	if ( growth ) _lastEventTime = currentTime;
+	time_t		elapsedEventTime = currentTime - _lastEventTime;
+	time_t		elapsedPrintTime = currentTime - _lastPendingNodePrintTime;
+
+	if ( (int)elapsedEventTime >= _pendingReportInterval &&
+				(int)elapsedPrintTime >= _pendingReportInterval ) {
+		dprintf( D_ALWAYS, "%d seconds since last log event\n",
+					(int)elapsedEventTime );
+		PrintPendingNodes();
+
+		_lastPendingNodePrintTime = currentTime;
+	}
+
     return growth;
 }
 
@@ -416,7 +442,6 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 			outcome = _storkLogRdr.readEvent(e);
 		}
 
-		//TEMP -- probably need to pass into here whether this is Condor or Stork
 		bool tmpResult = ProcessOneEvent( logsource, outcome, e, recovery,
 					done );
 			// If ProcessOneEvent returns false, the result here must
@@ -1586,6 +1611,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 	return true;
 }
 
+//---------------------------------------------------------------------------
 // Note that the actual handling of the post script's exit status is
 // done not when the reaper is called, but in ProcessLogEvents when
 // the log event (written by the reaper) is seen...
@@ -1660,6 +1686,7 @@ void Dag::PrintJobList() const {
     dprintf( D_ALWAYS, "---------------------------------------\t<END>\n" );
 }
 
+//---------------------------------------------------------------------------
 void
 Dag::PrintJobList( Job::status_t status ) const
 {
@@ -1673,6 +1700,7 @@ Dag::PrintJobList( Job::status_t status ) const
     dprintf( D_ALWAYS, "---------------------------------------\t<END>\n" );
 }
 
+//---------------------------------------------------------------------------
 void
 Dag::PrintReadyQ( debug_level_t level ) const {
 	if( DEBUG_LEVEL( level ) ) {
@@ -2328,6 +2356,40 @@ Dag::PrintDeferrals( debug_level_t level, bool force ) const
 					_postScriptQ->GetScriptDeferredCount(),
 					_maxPostScripts );
 	}
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::PrintPendingNodes() const
+{
+	dprintf( D_ALWAYS, "Pending DAG nodes:\n" );
+
+    Job* node;
+    ListIterator<Job> iList( _jobs );
+    while( ( node = iList.Next() ) != NULL ) {
+		switch ( node->GetStatus() ) {
+		case Job::STATUS_PRERUN:
+		case Job::STATUS_SUBMITTED:
+		case Job::STATUS_POSTRUN:
+			dprintf( D_ALWAYS, "  Node %s, Condor ID %d, status %s\n",
+						node->GetJobName(), node->_CondorID._cluster,
+						Job::status_t_names[ node->GetStatus() ] );
+			break;
+
+		default:
+			// No op.
+			break;
+		}
+    }
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::SetPendingNodeReportInterval( int interval )
+{
+	_pendingReportInterval = interval;
+	time( &_lastEventTime );
+	time( &_lastPendingNodePrintTime );
 }
 
 //-------------------------------------------------------------------------

@@ -10,6 +10,36 @@
 # about valid attributes you can use here.
 ###########################################################################
 
+###########################################################################
+# For every platform specified in this file, please state whether or not it
+# is "released to public" or "maintenance build only (with a reason)".
+###########################################################################
+
+# These platforms are released to the public.
+# x86_rh_7.2
+# x86_rh_8.0
+# x86_rh_9
+# x86_rhas_3
+# x86_deb_4.0
+# x86_winnt_5.1
+# x86_macos_10.4
+# x86_freebsd_6
+# x86_64_rhas_3
+# ia64_sles_8
+# ia64_rhas_3
+# alpha_osf_V5.1
+# hppa_hpux_11
+# sun4u_sol_5.8
+# sun4u_sol_5.9
+# ppc_macos_10.3
+# ppc_aix_5.2
+# ppc_ydl_3.0
+# ppc_macos_10.4
+# ppc64_sles_9
+
+# These platforms are in maintenance build only
+#N/A
+
 
 ########################################
 # global settings
@@ -55,7 +85,7 @@ prereqs   = tar-1.14, m4-1.4.1, flex-2.5.4a, make-3.80, bison-1.25, perl-5.8.5
 ]
 
 ########################################
-# On OSX we must specify the gcc version
+# On various OSX platforms we must specify the gcc version
 ########################################
 [
 platforms = ppc_macos_10.3
@@ -64,7 +94,6 @@ prereqs   = gcc-3.3
 # causes gcc-3.1 to seg fault.  since we're using a newer
 # globus external, gcc-3.3 can now build all our externals. 
 ]
-
 
 ########################################
 # Platforms with no prereqs at all
@@ -99,6 +128,11 @@ test_append_prereqs = java-1.4.2_09
 ]
 
 [
+platforms = x86_macos_10.4
+test_append_prereqs = java-1.4.2_09
+]
+
+[
 platforms = x86_winnt_5.1
 test_append_prereqs = java-1.5.0_07
 ]
@@ -122,3 +156,7 @@ test_append_prereqs = java-1.4.2
 platforms = x86_deb_4.0
 test_append_prereqs = java-1.4.2_05
 ]
+
+
+
+

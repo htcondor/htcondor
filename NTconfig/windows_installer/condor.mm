@@ -170,7 +170,12 @@
 <$Access "AdminOnly" Users="Administrators SYSTEM" Access="GENERIC_ALL">
 <$Registry HKEY="LOCAL_MACHINE" KEY="software\Condor"  VALUE="[INSTALLDIR_NTS]\condor_config" MsiFormatted="VALUE" Name="CONDOR_CONFIG" Access="AdminOnly">
 
-<$ExeCa EXE=^[INSTALLDIR]set_perms.exe^ Args=^^ WorkDir="INSTALLDIR"   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
+; There is something fancy about this app that MS Vista likes because it lets it do it's thing without complaining 
+; one little bit.  The rest of our customs steps required some modification to get working on Vista ... not 
+; sure what kind of magic this one does ... maybe it's a Windows app, rather than a console app?? well, we don't 
+; have the source, so we can't tell for now.
+;<$ExeCa EXE=^[INSTALLDIR]set_perms.exe^ Args=^^ WorkDir="INSTALLDIR" Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
+<$ExeCa EXE=^[INSTALLDIR]condor_set_perms_masker.exe^ Args=^^ WorkDir="INSTALLDIR" Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
 
 ;--- Install the Condor Service ----------------------------------------
 <$Component "Condor" Create="Y" Directory_="[INSTALLDIR]bin" Condition=^STARTSERVICE = "Y"^>
@@ -204,12 +209,11 @@
    <$ServiceControl Name="Condor" AtInstall="" AtUninstall="stop delete">
 <$/Component>
 
-
-
 ;--- Set Config file parameters ---------------------------------------------
 ;-- we split into two calls because the arglist can only be 255 characters.
 #(
-<$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^ Args=^
+<$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^
+Args=^
 -n "[NEWPOOL]"
 -r "[RUNJOBS]"
 -v "[VACATEJOBS]"
@@ -217,21 +221,41 @@
 -c "[CONDOREMAIL]"
 -e "[HOSTALLOWREAD]"
 -t "[HOSTALLOWWRITE]"
--i "[HOSTALLOWADMINISTRATOR]"
-^ WorkDir=^INSTALLDIR^   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
+-i "[HOSTALLOWADMINISTRATOR]"^ 
+WorkDir=^INSTALLDIR^   
+Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
+Seq="InstallServices-"
+Rc0="N"       ;; On Vista this app will not return any useful results
+Type="System" ;; run as the System account
+>
 #)
 
 #(
-<$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^ Args=^
+<$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^
+Args=^
 -p "[POOLNAME]"
 -o "[POOLHOSTNAME]"
 -d "[INSTALLDIR_NTS]"
 -a "[ACCOUNTINGDOMAIN]"
 -j "[JVMLOCATION]"
--m "[SMTPSERVER]"
-^ WorkDir=^INSTALLDIR^   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
+-m "[SMTPSERVER]"^ 
+WorkDir=^INSTALLDIR^   
+Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
+Seq="InstallServices-"
+Rc0="N"       ;; On Vista this app will not return any useful results
+Type="System" ;; run as the System account	
+>
 #)
 
 ;--- Set directory Permissions ----------------------------------------------
 ;-------- Set INSTALLDIR perms first ---
-<$ExeCa EXE=^cmd.exe^ Args=^/c condor_set_acls.exe "[INSTALLDIR_NTS]"^ WorkDir="INSTALLDIR"   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
+#(
+<$ExeCa EXE=^[INSTALLDIR]condor_set_acls.exe^ Args=^[INSTALLDIR_NTS]^ 
+WorkDir="INSTALLDIR" Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
+Seq="InstallServices-"
+Rc0="N"       ;; On Vista this app will not return any useful results
+Type="System" ;; run as the System account			
+>
+#)
+
+

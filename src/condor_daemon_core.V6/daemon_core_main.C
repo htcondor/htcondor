@@ -1178,7 +1178,7 @@ dc_config_auth()
 
 		if (!mapfile_buf ) {
 			sprintf( buffer, "%s%cgrid-mapfile", pbuf, DIR_DELIM_CHAR);
-        	SetEnv( STR_GSI_USER_KEY, buffer );
+        	SetEnv( STR_GSI_MAPFILE, buffer );
 		}
 
         free( pbuf );

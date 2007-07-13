@@ -92,6 +92,8 @@ sub main {
 	} else {
 		submit($glite_path,'condorc-vo-advertiser');
 	}
+
+	return 0;
 }
 
 sub check {
