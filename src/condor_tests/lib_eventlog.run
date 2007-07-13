@@ -98,8 +98,41 @@ close(CSUB);
 my $result = system("./lib_eventlog.pl $mysubmitnm");
 print "Result of basic eventlog  test is  $result\n";
 
+if( $result == 0 ) {
+	# well did we get out the results into the log we wanted?
+	# determine where the log went
+	# run log reader and compare with expected values.
 
-exit(0);
+	print "Checking Results!!!\n";
+	my $elog = `condor_config_val log`;
+	my $expected = "x_lib_eventlog.expected";
+	my @want;
+	my @got;
+	chomp($elog);
+	$elog = $elog . "/EventLog";
+	open(ELOG,"./x_read_joblog.exe $elog TRACE 2>&1 |") || die "Could not read log <<$elog>>: $!\n";
+	open(EXP,"<$expected") || die "Could not read expected values <<$expected>>: $!\n";
+	while(<ELOG>) {
+		push  @got, $_;
+	}
+	close(ELOG);
+	while(<EXP>) {
+		push  @want, $_;
+	}
+	close(EXP);
+	foreach $line (@got) {
+		my $desired = shift(@want);
+		if($desired ne $line) {
+			print "Result Mismatch!:$desired ne $line!!!!\n";
+			$result = 1;
+			last;
+		} else {
+			#print "Result Match!:$desired eq $line!!!!\n";
+		}
+	}
+	print "Results all Match! Test is a success.\n";
+}
+
 system("cp *lib_eventlog* $mysaveme");
 
 if( -e "$mysubmitnm" )

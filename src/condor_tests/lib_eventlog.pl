@@ -9,7 +9,7 @@ print "Submit file for this test is $cmd\n";
 #print "looking at env for condor config\n";
 #system("printenv | grep CONDOR_CONFIG");
 
-$testname = 'Basic Parallel - Parallel U';
+$testname = 'Basic EventLog Test';
 
 $aborted = sub {
 	my %info = @_;
@@ -30,7 +30,7 @@ $executed = sub
 	my $cluster = $args{"cluster"};
 
 	CondorTest::RegisterTimed($testname, $timed, 600);
-	print "Parallel job executed\n";
+	print "EventLog test executed\n";
 };
 
 $timed = sub
@@ -40,7 +40,7 @@ $timed = sub
 
 $success = sub
 {
-	print "Success: Parallel Test ok\n";
+	print "Success: EventLog Test ok\n";
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);

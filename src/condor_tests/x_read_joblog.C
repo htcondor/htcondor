@@ -143,7 +143,9 @@ int main(int argc, char* argv[])
 
     ULogEvent* e = NULL;
 	int myjobstatus = 0;
+	bool mybool = 0;
 	char whichattr[512];
+	char *eventtestval;
 
 	while( !done ) {
         ULogEventOutcome outcome = rul->readEvent(e);
@@ -250,7 +252,17 @@ int main(int argc, char* argv[])
 					// print a attribute which is always there
 					strcpy(whichattr, "JobStatus");
 					((JobAdInformationEvent*)e)->LookupInteger(whichattr,myjobstatus);
-					printf("JobStatus currently %d\n",myjobstatus);
+					printf("JobStatus is %d\n",myjobstatus);
+					strcpy(whichattr, "BillString");
+					((JobAdInformationEvent*)e)->LookupString(whichattr,&eventtestval);
+					printf("BillString is %s\n",eventtestval);
+					free(eventtestval);
+					strcpy(whichattr, "BillInt");
+					((JobAdInformationEvent*)e)->LookupInteger(whichattr,myjobstatus);
+					printf("BillInt is %d\n",myjobstatus);
+					strcpy(whichattr, "BillBool");
+					((JobAdInformationEvent*)e)->LookupInteger(whichattr,myjobstatus);
+					printf("BillBool is %d\n",myjobstatus);
 					break;
 				  case ULOG_JOB_ABORTED:
 					printf("Job ABORTED by user.........\n");
