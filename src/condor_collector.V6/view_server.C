@@ -358,16 +358,20 @@ int ViewServer::SendListReply(Stream* sock,const MyString& FileName, int FromDat
 	char OutLine[200];
 	char* OutLinePtr=OutLine;
 	MyString Arg;
-	int T;
+	int T = 0;
 	int file_array_index;
-	ExtIntArray* times_array = new ExtIntArray(100);
-	ExtOffArray* offsets = new ExtOffArray(100);
+	ExtIntArray* times_array = NULL;
+	ExtOffArray* offsets = NULL;
+	// dprintf(D_ALWAYS, "Caches found=%d, looking for correct one...\n", TimesArray->length());
 	
 		// first find out which ExtArray to use, by checking the hash
 	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
 		
 			// FileName was not found in the FileHash
 			// Create the necessary arrays and set the index appropriately
+		// dprintf(D_ALWAYS, "No cache found for this file, generating new one...\n");
+		times_array = new ExtIntArray(100);
+		offsets = new ExtOffArray(100);
 		file_array_index = OffsetsArray->length();
 		FileHash->insert( FileName, file_array_index );
 		TimesArray->add( times_array );
@@ -377,6 +381,7 @@ int ViewServer::SendListReply(Stream* sock,const MyString& FileName, int FromDat
 			// otherwise just get the appropriate array
 		times_array = (TimesArray->getElementAt( file_array_index ));
 		offsets = (OffsetsArray->getElementAt( file_array_index ));
+		// dprintf(D_ALWAYS, "Cache found for this file, %d indices\n", offsets->length());
 	}
 
 	// dprintf(D_ALWAYS,"Filename=%s\n",(const char*)FileName);
@@ -385,9 +390,14 @@ int ViewServer::SendListReply(Stream* sock,const MyString& FileName, int FromDat
 
 		//find the offset to search at
 	fpos_t* search_offset = findOffset(fp, FromDate, ToDate, times_array, offsets);
-
-		// set the seek to the correct spot and begin searching the file
-	fsetpos(fp, search_offset);
+	if(search_offset != NULL) {
+			// set the seek to the correct spot and begin searching the file
+		if(fsetpos(fp, search_offset) < 0) {
+				// something failed, so get out of here
+			return -1;
+		}
+	}
+	
 	int new_offset_counter = 1;		// every fifty loops, mark an offset
 	while(fgets(InpLine,sizeof(InpLine),fp)) {
 		
@@ -397,6 +407,7 @@ int ViewServer::SendListReply(Stream* sock,const MyString& FileName, int FromDat
 		if( times_array->length() < offsets->length() ) {
 				// a file offset was recorded before this line was read; now
 				// store the time that was on the marked line
+			// dprintf(D_ALWAYS, "Adding time=%d to the cache", T);
 			times_array->add( T );
 		}
 		
@@ -435,16 +446,20 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 	int Status=0;
 	int NewTime, OldTime;
 	float OutTime;
-	int T;
+	int T = 0;
 	int file_array_index;
-	ExtIntArray* times_array = new ExtIntArray(100);
-	ExtOffArray* offsets = new ExtOffArray(100);
+	ExtIntArray* times_array = NULL;
+	ExtOffArray* offsets = NULL;
+	// dprintf(D_ALWAYS, "Caches found=%d, looking for correct one...\n", TimesArray->length());
 
 		// first find out which ExtArray to use, by checking the hash
 	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
 		
 			// FileName was not found in the FileHash
 			// Create the necessary arrays and set the index appropriately
+		// dprintf(D_ALWAYS, "No cache found for this file, generating new one...\n");
+		times_array = new ExtIntArray(100);
+		offsets = new ExtOffArray(100);
 		file_array_index = OffsetsArray->length();
 		FileHash->insert( FileName, file_array_index );
 		TimesArray->add( times_array );
@@ -454,6 +469,7 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 			// otherwise just get the appropriate array
 		times_array = (TimesArray->getElementAt( file_array_index ));
 		offsets = (OffsetsArray->getElementAt( file_array_index ));
+		// dprintf(D_ALWAYS, "Cache found for this file, %d indices\n", times_array->length());
 	}
 
 	OldTime = 0;
@@ -462,9 +478,14 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 
 		//find the offset to search at
 	fpos_t* search_offset = findOffset(fp, FromDate, ToDate, times_array, offsets);
-
-		// set the seek to the correct spot and begin searching the file
-	fsetpos(fp, search_offset);
+	if(search_offset != NULL) {
+			// set the seek to the correct spot and begin searching the file
+		if(fsetpos(fp, search_offset) < 0) {
+				// something failed, so get out of here
+			return -1;
+		}
+	}
+	
 	int new_offset_counter = 1;		// every fifty loops, mark an offset
 	while(fgets(InpLine,sizeof(InpLine),fp)) {
 
@@ -473,6 +494,7 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 		if( times_array->length() < offsets->length() ) {
 				// a file offset was recorded before this line was read; now
 				// store the time that was on the marked line
+			// dprintf(D_ALWAYS, "Adding time=%d to the cache", T);
 			times_array->add( T );
 		}
 		// dprintf(D_ALWAYS,"T=%d\n",T);
@@ -522,12 +544,19 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 //-------------------------------------------------------------------
 
 void
-ViewServer::addNewOffset(FILE* fp, int &offset_ctr, int read_time, ExtIntArray* times_array, ExtOffArray* offsets) {
-	if( ++offset_ctr == 50 && read_time > times_array->getElementAt( times_array->getlast() )) {
-			// mark the position in the file now, but wait to mark the time
-			// until after the line is read
+ViewServer::addNewOffset(FILE* &fp, int &offset_ctr, int read_time, ExtIntArray* times_array, ExtOffArray* offsets) {
+	if( ++offset_ctr == 50) {
 		offset_ctr = 0;
-		fgetpos(fp, (*offsets)[ offsets->length() ]);	//does this work?
+		if(times_array->length() == 0 || read_time > times_array->getElementAt( times_array->getlast() )) {
+				// mark the position in the file now, but wait to mark the time
+				// until after the line is read
+			// dprintf(D_ALWAYS, "Adding new offset to the cache\n");
+			fpos_t *tmp_offset_ptr = new fpos_t;
+			fgetpos(fp, tmp_offset_ptr);
+			offsets->add(tmp_offset_ptr);
+		} else {
+			// dprintf(D_ALWAYS, "I would mark an offset, but it would most likely be a duplicate.\n");
+		}
 	}
 }
 
@@ -537,39 +566,44 @@ ViewServer::addNewOffset(FILE* fp, int &offset_ctr, int read_time, ExtIntArray* 
 //-------------------------------------------------------------------
 
 fpos_t*
-ViewServer::findOffset(FILE* fp, int FromDate, int ToDate, ExtIntArray* times_array, ExtOffArray* offsets) {
-	fpos_t search_offset;
-	fpos_t* search_offset_ptr = &search_offset;
+ViewServer::findOffset(FILE* &fp, int FromDate, int ToDate, ExtIntArray* times_array, ExtOffArray* offsets) {
+	fpos_t* search_offset_ptr = NULL;
 	if( times_array->length() == 0 ) {
 
-			// linear progression, set the offset to the beginning of the file
-		fgetpos(fp, search_offset_ptr);
+			// linear progression, return null to inform the rest of the code
+			// to start at the beginning
+		// dprintf(D_ALWAYS, "No cache, starting at the beginning of the file...\n");
+		return NULL;
 
 	} else if( times_array->getElementAt( 0 ) > FromDate ) {
 		
 		if( times_array->getElementAt( 0 ) > ToDate ) {
 				// if this is the case then the record won't be found, so end
-				// to-do:  how to exit the program and possibly print an error?
+			// dprintf(D_ALWAYS, "Impossible request\n");
+			return NULL;
 		} else {
 				// this file begins in the middle of the requested interval, so
 				// start at the beginning of the file.
-			fgetpos(fp, search_offset_ptr);
+			// dprintf(D_ALWAYS, "Carrying over from previous file at the beginning\n");
+			return NULL;
 		}
 
 	} else if( times_array->getElementAt( times_array->getlast() ) < FromDate ) {
 
 			// linear progression, but start with the latest known offset
+		// dprintf(D_ALWAYS, "Requesting time at the end of where the current cache knows\n");
 		search_offset_ptr = offsets->getElementAt( offsets->getlast() );
 
 	} else {
 
 			// binary search through times_array[] for the latest time not
 			// greater than FromDate
+		// dprintf(D_ALWAYS, "Binary searching the cache table, request should be quick\n");
 		int low = 0;
 		int high = times_array->getlast();
 		int mid;
 		while( high - low > 1 ) {
-			mid = (high - low) / 2;
+			mid = (high - low) / 2 + low;
 			if( times_array->getElementAt( mid ) < FromDate ) {
 				low = mid;
 			} else {
@@ -582,6 +616,8 @@ ViewServer::findOffset(FILE* fp, int FromDate, int ToDate, ExtIntArray* times_ar
 			search_offset_ptr = offsets->getElementAt( low + 1 );
 		} else if( times_array->getElementAt( low ) < FromDate ) {
 			search_offset_ptr = offsets->getElementAt( low );
+		} else {
+			return NULL;
 		}
 	}
 	return search_offset_ptr;
@@ -739,6 +775,10 @@ void ViewServer::WriteHistory()
 														oldFileIndex) != -1) {
 						// get rid of the old arrays and make new ones
 					delete (*TimesArray)[oldFileIndex];
+					int iter;
+					for(iter = 0; iter < (*(*OffsetsArray)[oldFileIndex]).length(); iter++) {
+						delete (*(*OffsetsArray)[oldFileIndex])[iter];
+					}
 					delete (*OffsetsArray)[oldFileIndex];
 					(*TimesArray)[oldFileIndex] = new ExtIntArray;
 					(*OffsetsArray)[oldFileIndex] = new ExtOffArray;
