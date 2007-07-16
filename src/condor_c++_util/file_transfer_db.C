@@ -88,22 +88,10 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 			ad->LookupString(ATTR_JOB_IWD, src_path);
 	}
 
-  // Get the file status (contains last modified time)
-  // Get this info from the schedd/shadow side
-  if (inStarter) { // use src info
-    src_fullname = src_path;
-    src_fullname += "/";
-    src_fullname += src_name;
-    if (stat(src_fullname.GetCStr(), &file_status) < 0) {
-      dprintf(D_ALWAYS, "ERROR: File %s can not be accessed.\n", 
-			  src_fullname.GetCStr());
-    }
-  } else { // use dst info
-    if (stat(rp->fullname, &file_status) < 0) {
-      dprintf(D_ALWAYS, "ERROR: File %s can not be accessed.\n", rp->fullname);
-    }
-  }
-
+	if (stat(rp->fullname, &file_status) < 0) {
+		dprintf( D_ALWAYS, 
+		"WARNING: File %s can not be accessed by Quill file transfer tracking.\n", rp->fullname);
+	}
 	tmp.sprintf("globalJobId = \"%s\"", globalJobId.GetCStr());
 	tmpClP1->Insert(tmp.GetCStr());			
 	
