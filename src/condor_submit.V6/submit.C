@@ -1354,7 +1354,19 @@ SetExecutable()
 	}else {
 		copySpool = condor_param( CopyToSpool, "CopyToSpool" );
 		if( copySpool == NULL ) {
-			copySpool = (char *)strdup("FALSE");
+			if ( JobUniverse == CONDOR_UNIVERSE_STANDARD ) {
+					// Standard universe jobs can't restore from a checkpoint
+					// if the executable changes.  Therefore, it is deemed
+					// too risky to have copy_to_spool=false by default
+					// for standard universe.
+				copySpool = (char *)strdup("TRUE");
+			}
+			else {
+					// In so many cases, copy_to_spool=true would just add
+					// needless overhead.  Therefore, (as of 6.9.3), the
+					// default is false.
+				copySpool = (char *)strdup("FALSE");
+			}
 		}
 	}
 
