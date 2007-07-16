@@ -1808,7 +1808,10 @@ Description of xen\_transfer\_files.
 \Expr{True}, then \Condor{submit} will copy the executable to the local spool 
 directory before running it on a remote host. Oftentimes this can be quite
 time consuming and unnecessary. By setting it to \Expr{False}, \Condor{submit}
-will skip this step. The default is \Expr{False}.
+will skip this step. The default is \Expr{False} in all universes except for
+standard universe.  The default is \Expr{True} in standard universe, because
+resuming execution from a checkpoint can only be guaranteed to work using
+the precisely the same executable that created the checkpoint.
 
 %%%%%%%%%%%%%%%%%%%
 %% coresize

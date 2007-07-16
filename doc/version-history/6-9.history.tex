@@ -19,7 +19,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The default in standard universe for \SubmitCmd{copy\_to\_spool}
+is now \Expr{true}.  In 6.9.3, it was changed to \Expr{false} for all
+universes for performance reasons, but this is deemed too risky for
+standard universe, because any modification of the executable is
+likely to make it impossible to resume execution using checkpoint
+files made from the original version of the executable.
 
 \end{itemize}
 
