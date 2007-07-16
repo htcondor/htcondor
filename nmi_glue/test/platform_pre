@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_pre,v 1.2 2006-07-25 18:15:42 wright Exp $
+# $Id: platform_pre,v 1.3 2007-07-16 16:19:45 bt Exp $
 # Submit-side NMI build system infrastructure to setup platform
 # specific input for test jobs.  All we have to do is trim down the
 # architecture-dependent results.tar.gz file to remove all the
@@ -16,6 +16,9 @@ use Cwd;
 $| = 1;
 
 my $BaseDir = getcwd();
+
+print "Currently in $BaseDir which contains the following:\n";
+system("ls -l");
 
 my $tarball_file = "CONDOR-TARBALL-NAME";
 my $results = "results.tar.gz";
@@ -107,9 +110,10 @@ if( $? ) {
 
 # Finally, blow away anything still in public and the results.tar.gz
 print "Removing all other arch-dependent data\n";
-system( "rm -rf public $results" );
+#system( "rm -rf public $results" );
+system( "rm -rf public" );
 if( $? ) {
-    die "'rm -rf public $results' failed with status $?\n";
+    die "'rm -rf public ' failed with status $?\n";
 }
 
 print "Writing tarball filename to $tarball_file\n";
