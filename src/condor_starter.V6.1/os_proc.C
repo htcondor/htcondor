@@ -378,10 +378,10 @@ OsProc::StartJob(FamilyInfo* family_info)
 	set_priv ( priv );
 
 	if (privsep_enabled()) {
-		
-		privsep_helper.setup_exec_as_user(args);
-		ASSERT(strlen(args.GetArg(0)) < sizeof(JobName));
-		strcpy(JobName, args.GetArg(0));
+		MyString exe;
+		privsep_helper.setup_exec_as_user(exe, args);
+		ASSERT(exe.Length() < sizeof(JobName));
+		strcpy(JobName, exe.Value());
 	}
 
 	JobPid = daemonCore->Create_Process( JobName, args, PRIV_USER_FINAL,

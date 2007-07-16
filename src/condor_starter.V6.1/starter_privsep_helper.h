@@ -83,7 +83,7 @@ public:
 
 	// setup the input ArgList to start a process as the user
 	//
-	void setup_exec_as_user(ArgList&);
+	void setup_exec_as_user(MyString&, ArgList&);
 
 	// do a rename operation as the user
 	//

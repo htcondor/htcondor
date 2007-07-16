@@ -27,6 +27,8 @@
 #include "condor_privsep.h"
 #include "condor_uid.h"
 #include "condor_arglist.h"
+#include "basename.h"
+#include "MyString.h"
 #include "my_popen.h"
 #include "privsep_open.h"
 
@@ -51,7 +53,7 @@ privsep_enabled()
 }
 
 bool
-privsep_setup_exec_as_user(uid_t uid, gid_t gid, ArgList& args)
+privsep_setup_exec_as_user(uid_t uid, gid_t gid, MyString& exe, ArgList& args)
 {
 	char* privsep_executable = param("PRIVSEP_EXECUTABLE");
 	if (privsep_executable == NULL) {
@@ -59,8 +61,10 @@ privsep_setup_exec_as_user(uid_t uid, gid_t gid, ArgList& args)
 		        "privsep open: PRIVSEP_EXECUTABLE not defined\n");
 		return false;
 	}
-	args.InsertArg(privsep_executable, 0);
+	exe = privsep_executable;
 	free(privsep_executable);
+	
+	args.InsertArg(condor_basename(exe.Value()), 0);
 	args.InsertArg("3", 1);
 	MyString tmp;
 	tmp.sprintf("%u", (unsigned)uid);

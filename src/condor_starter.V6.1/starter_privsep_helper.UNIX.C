@@ -214,10 +214,10 @@ StarterPrivSepHelper::chown_sandbox_to_condor()
 }
 
 void
-StarterPrivSepHelper::setup_exec_as_user(ArgList& args)
+StarterPrivSepHelper::setup_exec_as_user(MyString& exe, ArgList& args)
 {
 	ASSERT(m_user_initialized);
-	if (!privsep_setup_exec_as_user(m_uid, m_gid, args)) {
+	if (!privsep_setup_exec_as_user(m_uid, m_gid, exe, args)) {
 		EXCEPT("StarterPrivSepHelper::setup_exec_as_user: "
 		           "privsep_setup_exec_as_user error");
 	}

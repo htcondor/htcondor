@@ -24,6 +24,7 @@
 #ifndef _CONDOR_PRIVSEP_H
 #define _CONDOR_PRIVSEP_H
 
+class MyString;
 class ArgList;
 
 // are we running in PrivSep mode?
@@ -34,7 +35,7 @@ bool privsep_enabled();
 
 // setup an ArgList for running a program as a given user
 //
-bool privsep_setup_exec_as_user(uid_t, gid_t, ArgList&);
+bool privsep_setup_exec_as_user(uid_t, gid_t, MyString&, ArgList&);
 
 // open a file as the given user
 //
