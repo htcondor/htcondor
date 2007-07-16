@@ -104,12 +104,11 @@ if( $result == 0 ) {
 	# run log reader and compare with expected values.
 
 	print "Checking Results!!!\n";
-	my $elog = `condor_config_val log`;
+	my $elog = `condor_config_val EVENT_LOG`;
+	chomp($elog);
 	my $expected = "x_lib_eventlog.expected";
 	my @want;
 	my @got;
-	chomp($elog);
-	$elog = $elog . "/EventLog";
 	open(ELOG,"./x_read_joblog.exe $elog TRACE 2>&1 |") || die "Could not read log <<$elog>>: $!\n";
 	open(EXP,"<$expected") || die "Could not read expected values <<$expected>>: $!\n";
 	while(<ELOG>) {
