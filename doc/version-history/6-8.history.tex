@@ -98,6 +98,10 @@ mapfile.
 \item \Condor{q} would produce garbage output in its error message when
 failing to contact the collector specified via \Opt{-pool}.
 
+\item In unix, when \Condor{schedd} did not have enough memory to create
+a process to handle file transfers, many repetitions of this error would
+result in \Condor{schedd} running out of file descriptors.
+
 \end{itemize}
 
 \noindent Known Bugs:
