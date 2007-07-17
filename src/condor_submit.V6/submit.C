@@ -78,6 +78,7 @@
 #include "condor_crontab.h"
 #include "../condor_schedd.V6/scheduler.h"
 #include "condor_holdcodes.h"
+#include "submit_special.h"
 
 #include "list.h"
 #include "condor_vm_universe_types.h"
@@ -1342,6 +1343,26 @@ SetExecutable()
 		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
 		InsertJobExpr (buffer);
 		break;
+      	
+      	//
+      	// Special Nam's Universe
+      	// Andy Pavlo (with help from Ray) - 07-17-07
+      	//
+	case CONDOR_UNIVERSE_NAMS:
+			//
+			// If the executable matches what we want, we'll exit with our message
+			// Otherwise, we will pretend that this universe doesn't exist...
+			//
+		if ( strcmp( ename, "29" ) == 0 ) {
+			MyString message = SubmitSpecialMessage();
+			fprintf( stdout, message.GetCStr() );
+		} else {
+			fprintf( stderr, "\nERROR: I don't know about the '%s' universe.\n",
+			 		CondorUniverseName(JobUniverse) );
+		}
+		DoCleanup(0,0,NULL);
+		exit( 1 );
+
 	default:
 		fprintf(stderr, "\nERROR: Unknown universe %d (%s)\n", JobUniverse, CondorUniverseName(JobUniverse) );
 		DoCleanup(0,0,NULL);
@@ -1594,6 +1615,12 @@ SetUniverse()
 		JobUniverse = CONDOR_UNIVERSE_JAVA;
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_JAVA);
 		InsertJobExpr (buffer);
+		free(univ);
+		return;
+	}
+	
+	if( univ && stricmp(univ,"nams") == MATCH ) {
+		JobUniverse = CONDOR_UNIVERSE_NAMS;
 		free(univ);
 		return;
 	}
@@ -5690,6 +5717,7 @@ check_requirements( char *orig )
 			(void)strcat( answer, ATTR_VM_AVAIL_NUM );
 			(void)strcat( answer, " > 0)" );
 		}
+		// Nam's
 	} else {
 		if( !checks_arch ) {
 			if( answer[0] ) {

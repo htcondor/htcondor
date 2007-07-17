@@ -9,7 +9,7 @@ CFLAGS = $(STD_C_FLAGS) $(CLIPPED)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CLIPPED) 
 LIB = $(STD_LIBS)
 
-OBJ = submit.o
+OBJ = submit.o submit_special.o
 
 public_c_plus_target($(NAME),bin,$(OBJ),$(LIB))
 
