@@ -29,6 +29,7 @@
 #include "../condor_procd/proc_family_client.h"
 #include "setenv.h"
 #include "directory.h"
+#include "basename.h"
 
 // this class is just used to forward reap events to the real
 // ProcFamilyProxy object; we do this in a separate class to
@@ -288,8 +289,8 @@ ProcFamilyProxy::start_procd()
 
 	// now, we build up an ArgList for the procd
 	//
+	MyString exe;
 	ArgList args;
-	args.SetArgV1SyntaxToCurrentPlatform();
 
 	// path to the executable
 	//
@@ -318,14 +319,8 @@ ProcFamilyProxy::start_procd()
 			return false;
 		}
 	}
-	MyString err;
-	if (!args.AppendArgsV1RawOrV2Quoted(path, &err)) {
-		dprintf(D_ALWAYS,
-		        "start_procd: error constructing procd command line: %s",
-		        err.Value());
-		free(path);
-		return false;
-	}
+	exe = path;
+	args.AppendArg(condor_basename(path));
 	free(path);
 
 	// the procd's address
@@ -454,7 +449,7 @@ ProcFamilyProxy::start_procd()
 
 	// use Create_Process to start the procd
 	//
-	m_procd_pid = daemonCore->Create_Process(args.GetArg(0),
+	m_procd_pid = daemonCore->Create_Process(exe.Value(),
 	                                         args,
 	                                         PRIV_ROOT,
 	                                         m_reaper_id,
