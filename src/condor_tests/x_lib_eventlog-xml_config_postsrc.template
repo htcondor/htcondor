@@ -1,0 +1,7 @@
+EVENT_LOG = $(LOG)/EventLog
+MAX_EVENT_LOG = 1000000
+EVENT_LOG_USE_XML = true
+EVENT_LOG_JOB_AD_INFORMATION_ATTRS =  BillString, JobStatus, BillInt , BillBool , StreamErr
+
+
+ALL_DEBUG = D_FULLDEBUG
