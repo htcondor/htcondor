@@ -21,7 +21,7 @@
    // This is a hack for now and there's no way to differentiate between different
    // branchs. But you know, life is funny that way -- you never really get what you want
    //
-   $no_test_platforms = Array( "ppc_macos_10.4" );
+   $no_test_platforms = Array( "ppc_macos_10.4", "x86_macos_10.4" );
 ?>
 <html>
 <head>
