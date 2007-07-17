@@ -99,7 +99,7 @@ StarterPrivSepHelper::chown_sandbox_to_condor()
 }
 
 void
-StarterPrivSepHelper::setup_exec_as_user(ArgList& args)
+StarterPrivSepHelper::setup_exec_as_user(MyString&, ArgList& args)
 {
 	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
 }
