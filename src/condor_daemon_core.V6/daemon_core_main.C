@@ -302,8 +302,13 @@ drop_addr_file()
 
 	if( addrFile ) {
 		if( (ADDR_FILE = safe_fopen_wrapper(addrFile, "w")) ) {
-			fprintf( ADDR_FILE, "%s\n", 
-					 daemonCore->InfoCommandSinfulString() );
+			// Always prefer the local, private address if possible.
+			const char* addr = daemonCore->privateNetworkIpAddr();
+			if (!addr) {
+				// And if not, fall back to the public.
+				addr = daemonCore->publicNetworkIpAddr();
+			}
+			fprintf( ADDR_FILE, "%s\n", addr );
 			fprintf( ADDR_FILE, "%s\n", CondorVersion() );
 			fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
 			fclose( ADDR_FILE );
