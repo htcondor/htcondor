@@ -6721,6 +6721,8 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 		dprintf( D_ALWAYS, "Create_Thread: fork() failed: %s (%d)\n",
 				 strerror(errno), errno );
 		num_pid_collisions = 0;
+        close( errorpipe[0] );
+        close( errorpipe[1] );
 		return FALSE;
 	}
 		// if we got here, there's no collision, so reset our counter
