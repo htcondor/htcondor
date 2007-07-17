@@ -52,7 +52,6 @@ static const UniverseName names [] =
 	{ "PARALLEL", "Parallel" },
 	{ "LOCAL", "Local" },
 	{ "VM", "VM" },
-	{ "NAMS", "Nam's" },
 };
 
 const char*
@@ -123,9 +122,6 @@ CondorUniverseNumber( const char* univ )
 	if( stricmp(univ,"vm") == MATCH ) {
 		return CONDOR_UNIVERSE_VM;
 	}
-	if( stricmp(univ,"nams") == MATCH ) {
-		return CONDOR_UNIVERSE_NAMS;
-	}
 	return 0;
 }
 
@@ -140,7 +136,6 @@ universeCanReconnect( int universe )
 	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_MPI:
 	case CONDOR_UNIVERSE_GRID:
-	case CONDOR_UNIVERSE_NAMS:
 		return FALSE;
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_JAVA:
