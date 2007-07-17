@@ -234,6 +234,13 @@ TESTCLASS(lib_eventlog,core)
 TESTCLASS(lib_eventlog,quick)
 TESTCLASS(lib_eventlog,btdebug)
 
+DESC(lib_eventlog-xml,"Basic XML Event Log Test")
+RUN(lib_eventlog-xml)
+DEPS(lib_eventlog-xml,x_read_joblog.exe)
+TESTCLASS(lib_eventlog-xml,core)
+TESTCLASS(lib_eventlog-xml,quick)
+TESTCLASS(lib_eventlog-xml,btdebug)
+
 #if defined(IS_I386_LINUX_RH80) || defined(IS_I386_LINUX_RHEL3) || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_PPC_OSX_10_3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_IA64_LINUX_SLES81) || defined(IS_IA64_LINUX_RHEL3) || defined(IS_CONDOR_FREEBSD) || defined(IS_CONDOR_PPC_LINUX_YD30)
 DESC(job_quill_basic,"Basic Quill Test")
 RUN(job_quill_basic)
