@@ -15,6 +15,15 @@ General Rules of Thumb:
   Condor's style is heavily inconsistant; at least try to
   minimize inconsistancies within a single file.
 
+Memory ownership
+
+If a function takes a pointer, then in the comment for the prototype, note
+whether or not the function:
+	1) assumes ownership of the pointer with no memory copy and how
+		this memory ultimately gets freed.
+	2) Copies the contents of the pointer and cleans it up itself.
+	3) Just inspects the pointer.
+
 Forward Declarations
 
 If a C++ header file uses a struct or object in a way that it doesn't
