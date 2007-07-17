@@ -927,20 +927,30 @@ char * DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		}
 	}
 
-#	if HAVE_EXT_GCB
-		if( usePrivateAddress ) {
-			if( sinful_private == NULL ) {
-				struct sockaddr_in addr;
-				SOCKET_LENGTH_TYPE addr_len = sizeof(addr);
-				SOCKET sockd = (*sockTable)[initial_command_sock].sockd;
-				if( GCB_real_getsockname(sockd, (struct sockaddr *)&addr, &addr_len) < 0 ) {
-					return "";
-				}
-				sinful_private = strdup( sin_to_string( &addr ) );
+	if (usePrivateAddress) {
+		if (sinful_private == NULL) {
+			MyString private_sinful_string;
+			char* tmp;
+			if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
+				int port = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port();
+				private_sinful_string.sprintf("<%s:%d>", tmp, port);
+				free(tmp);
+				sinful_private = strdup(private_sinful_string.Value());
 			}
-			return sinful_private;
 		}
-#	endif
+#if HAVE_EXT_GCB
+		if (sinful_private == NULL) {
+			struct sockaddr_in addr;
+			SOCKET_LENGTH_TYPE addr_len = sizeof(addr);
+			SOCKET sockd = (*sockTable)[initial_command_sock].sockd;
+			if( GCB_real_getsockname(sockd, (struct sockaddr *)&addr, &addr_len) < 0 ) {
+				return "";
+			}
+			sinful_private = strdup( sin_to_string( &addr ) );
+		}
+#endif /* HAVE_EXT_GCB */
+		return sinful_private;
+	}
 
 	if( sinful_public == NULL ) {
 		sinful_public = strdup(
@@ -951,23 +961,13 @@ char * DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 
 const char*
 DaemonCore::publicNetworkIpAddr(void) {
-	return (const char*) InfoCommandSinfulString();
+	return (const char*) InfoCommandSinfulStringMyself(false);
 }
 
 
 const char*
 DaemonCore::privateNetworkIpAddr(void) {
-	static char private_network[32];
-	char* tmp;
-	if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
-		snprintf(private_network, 32, "%s", tmp);
-		free(tmp);
-		return (const char*)private_network;
-	}
-#if HAVE_EXT_GCB
 	return (const char*) InfoCommandSinfulStringMyself(true);
-#endif /* HAVE_EXT_GCB */
-	return NULL;
 }
 
 
