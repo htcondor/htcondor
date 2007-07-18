@@ -1417,7 +1417,7 @@ param_double( const char *name, double default_value,
 */
 
 bool
-param_boolean( const char *name, const bool default_value )
+param_boolean( const char *name, const bool default_value, bool do_log )
 {
 	bool result;
 	char *string;
@@ -1426,9 +1426,11 @@ param_boolean( const char *name, const bool default_value )
 
 	ASSERT( name );
 	string = param( name );
-	if( ! string ) {
-		dprintf( D_CONFIG, "%s is undefined, using default value of %s\n",
-				 name, default_value ? "True" : "False" );
+	if (!string) {
+		if (do_log) {
+			dprintf( D_CONFIG, "%s is undefined, using default value of %s\n",
+					 name, default_value ? "True" : "False" );
+		}
 		return default_value;
 	}
 

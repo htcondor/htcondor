@@ -88,6 +88,11 @@ bool param_boolean( const char *, const bool default_value )
 	return default_value;
 }
 
+bool param_boolean( const char *, const bool default_value, bool do_log )
+{
+	return default_value;
+}
+
 /* stub out the various cedar and daemoncore calls I don't need since noone
 	should be using them with libcondorapi. Notice: This is gross
 	since the header file itself includes partial implementations
