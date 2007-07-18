@@ -162,4 +162,8 @@ if(!$status)
 	exit(1)
 }
 
+if($result != 0) {
+	exit(1);
+}
+
 exit(0);
