@@ -1738,6 +1738,19 @@ int main( int argc, char** argv )
 #endif	// of else of ifdef WIN32
 	}	// if if !Foreground
 
+	// See if the config tells us to wait on startup for a debugger to attach.
+	MyString debug_wait_param;
+	debug_wait_param.sprintf("%s_DEBUG_WAIT", mySubSystem);
+	if (param_boolean(debug_wait_param.Value(), false, false)) {
+		int debug_wait = 1;
+		dprintf(D_ALWAYS,
+				"%s is TRUE, waiting for debugger to attach to pid %d.\n", 
+				debug_wait_param.Value(), (int)::getpid());
+		while (debug_wait) {
+			sleep(1);
+		}
+	}
+
 		// Now that we've potentially forked, we have our real pid, so
 		// we can instantiate a daemon core and it'll have the right
 		// pid.  Have lots of pid table hash buckets if we're the
