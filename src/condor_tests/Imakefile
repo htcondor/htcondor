@@ -133,6 +133,26 @@ TESTCLASS(lib_auth_protocol-negot-prt2,quick)
 
 /* Turned off on Free BSD port GNATS 766 */
 
+DESC(cmd_status_shows-negotiator,"Condor_status -negotiator works as expected")
+RUN(cmd_status_shows-negotiator)
+TESTCLASS(cmd_status_shows-negotiator,core)
+TESTCLASS(cmd_status_shows-negotiator,quick)
+
+DESC(cmd_status_shows-state,"Condor_status -state works as expected")
+RUN(cmd_status_shows-state)
+TESTCLASS(cmd_status_shows-state,core)
+TESTCLASS(cmd_status_shows-state,quick)
+
+DESC(cmd_status_shows-format,"Condor_status -format works as expected")
+RUN(cmd_status_shows-format)
+TESTCLASS(cmd_status_shows-format,core)
+TESTCLASS(cmd_status_shows-format,quick)
+
+DESC(cmd_status_shows-constraint,"Condor_status -constraint works as expected")
+RUN(cmd_status_shows-constraint)
+TESTCLASS(cmd_status_shows-constraint,core)
+TESTCLASS(cmd_status_shows-constraint,quick)
+
 DESC(cmd_status_shows-avail,"Condor_status -avail works as expected")
 RUN(cmd_status_shows-avail)
 TESTCLASS(cmd_status_shows-avail,core)
