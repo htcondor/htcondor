@@ -164,6 +164,8 @@ protected:
 
 private:
 	virtual void send_sig( int );
+	virtual void send_sig_no_privsep( int );
+	virtual void send_sig_privsep( int );
 	int  estimate_image_size();
 	int  is_restart() { return restart; };
 	void accumulate_cpu_time();

@@ -36,6 +36,8 @@
 #include "fileno.h"
 #include "renice_self.h"
 #include "condor_environ.h"
+#include "../condor_privsep/condor_privsep.h"
+#include "../condor_procd/proc_family_client.h"
 
 
 #if defined(AIX32)
@@ -499,6 +501,22 @@ UserProc::execute()
 		// take care of USER_JOB_WRAPPER
 	support_job_wrapper(a_out_name,&new_args);
 
+	MyString exec_name;
+	exec_name = a_out_name;
+
+	// If privsep is turned on, then modify the arguments to allow execing
+	// of the user job as the correct userid as dictated by the 
+	// privledge switchboard program.
+	if (privsep_enabled() == true) {
+		// set up for execing the privledge separation tool.
+		// remove the shortname for the job
+		new_args.RemoveArg(0);
+		// replace it with the fully qualified name
+		new_args.InsertArg(exec_name.Value(),0);
+
+		privsep_setup_exec_as_user(uid, gid, exec_name, new_args);
+	}
+
 	argv = new_args.GetStringArray();
 
 		// Set an environment variable that tells the job where it may put scratch data
@@ -515,7 +533,7 @@ UserProc::execute()
 	}
 
 		// print out arguments to execve
-	dprintf( D_ALWAYS, "Calling execve( \"%s\"", a_out_name );
+	dprintf( D_ALWAYS, "Calling execve( \"%s\"", exec_name.Value() );
 	for( argp = argv; *argp; argp++ ) {							// argv
 		dprintf( D_ALWAYS | D_NOHEADER, ", \"%s\"", *argp );
 	}
@@ -560,7 +578,37 @@ UserProc::execute()
 		if ( new_reli ) {
 			new_reli->timeout(0);
 		}
-		
+
+			// If I'm using privledge separation, connect to the procd
+		if (privsep_enabled() == true) {
+			char *tmp = NULL;
+			bool response;
+			bool ret;
+			ProcFamilyClient pfc;
+
+			tmp = param("PROCD_ADDRESS");
+			if (tmp != NULL) {
+				ret = pfc.initialize(tmp);
+				if (ret == false) {
+					EXCEPT("Failure to initialize the ProcFamilyClient object");
+				}
+				free(tmp);
+			} else {
+				EXCEPT("privsep is enabled, but PROCD_ADDRESS is not defined!");
+			}
+
+			ret = pfc.register_subfamily(getpid(), getppid(), 60, NULL, NULL, 
+					response);
+
+			if (ret == false) {
+				EXCEPT("Could not communicate with procd. Aborting.");
+			}
+
+			if (response == false) {
+				EXCEPT("Procd refused to register job subfamily. Aborting.");
+			}
+		}
+
 			// If there is a requested coresize for this job, enforce it.
 			// Do it before the set_priv_final to ensure root can alter 
 			// the coresize to the requested amount. Otherwise, just
@@ -648,7 +696,7 @@ UserProc::execute()
 
 			// Everything's ready, start it up...
 		errno = 0;
-		execve( a_out_name, argv, envp );
+		execve( exec_name.Value(), argv, envp );
 
 			// A successful call to execve() never returns, so it is an
 			// error if we get here.  A number of errors are possible
@@ -880,15 +928,88 @@ UserProc::handle_termination( int exit_st )
 void
 UserProc::send_sig( int sig )
 {
-	priv_state	priv;
- 
 	if( !pid ) {
-		dprintf( D_FULLDEBUG,
-		"UserProc::send_signal() called, but user job pid NULL\n" );
+		dprintf( D_FULLDEBUG, "UserProc::send_sig(): "
+			"Can't send signal to user job pid 0!\n");
 		return;
 	}
 
-//	priv = set_root_priv();
+	if (privsep_enabled() == true) {
+		send_sig_privsep(sig);
+	} else {
+		send_sig_no_privsep(sig);
+	}
+
+	/* record the fact we unsuspended the job. */
+	if (sig == SIGCONT) {
+		pids_suspended = 0;
+	}
+
+	if (SigNames.get_name(sig) != NULL) {
+		dprintf( D_ALWAYS, "UserProc::send_sig(): "
+			"Sent signal %s to user job %d\n",
+			SigNames.get_name(sig), pid);
+	} else {
+		dprintf( D_ALWAYS, "UserProc::send_sig(): "
+			"Unknown signum %d sent to user job %d\n",
+			sig, pid);
+	}
+}
+
+
+// This function assumes that privledge separation has already been determined
+// to be available.
+void
+UserProc::send_sig_privsep( int sig )
+{
+	ProcFamilyClient pfc;
+	char *tmp = NULL;
+	bool response;
+	bool ret;
+
+	tmp = param("PROCD_ADDRESS");
+	if (tmp != NULL) {
+		ret = pfc.initialize(tmp);
+		if (ret == false) {
+			EXCEPT("Failure to initialize the ProcFamilyClient object");
+		}
+		free(tmp);
+	} else {
+		EXCEPT("privsep is enabled, but PROCD_ADDRESS is not defined!");
+	}
+
+	// continue the family first
+	ret = pfc.continue_family(pid, response);
+	if (ret == false) {
+		EXCEPT("UserProc::send_sig_privsep(): Couldn't talk to procd while "
+			"trying to continue the user job.");
+	}
+
+	if (response == false) {
+		EXCEPT("UserProc::send_sig_privsep(): "
+			"Procd refused to continue user job");
+	}
+
+	// now (unless it is a continue) send the requested signal
+	if (sig != SIGCONT) {
+		ret = pfc.signal_process(pid, sig, response);
+
+		if (ret == false) {
+			EXCEPT("UserProc::send_sig_privsep(): Couldn't talk to procd while "
+				"trying to send signal %d to the user job.", sig);
+		}
+
+		if (response == false) {
+			EXCEPT("UserProc::send_sig_privsep(): "
+				"Procd refused to send signal %d to user job", sig);
+		}
+	}
+}
+
+void
+UserProc::send_sig_no_privsep( int sig )
+{
+	priv_state	priv;
 
 		// We don't want to be root going around killing things or we
 		// might do something we'll regret in the morning. -Derek 8/29/97
@@ -899,48 +1020,41 @@ UserProc::send_sig( int sig )
 	ASSERT(job_class != CONDOR_UNIVERSE_VANILLA);
 
 	if ( job_class != CONDOR_UNIVERSE_VANILLA )
-	if( sig != SIGCONT ) {
-		if( kill(pid,SIGCONT) < 0 ) {
+	{
+		// Make sure the process can receive the signal. So let's send it a
+		// SIGCONT first if applicable.
+		if( sig != SIGCONT ) {
+			if( kill(pid,SIGCONT) < 0 ) {
+				set_priv(priv);
+				if( errno == ESRCH ) {	// User proc already exited
+					dprintf( D_ALWAYS, "UserProc::send_sig_no_privsep(): "
+						"Tried to send signal SIGCONT to user "
+						"job %d, but that process doesn't exist.\n", pid);
+					return;
+				}
+				perror("kill");
+				EXCEPT( "kill(%d,SIGCONT)", pid  );
+			}
+			/* standard jobs can't fork, so.... */
+			pids_suspended = 1;
+			dprintf( D_ALWAYS, "UserProc::send_sig_no_privsep(): "
+				"Sent signal SIGCONT to user job %d\n", pid);
+		}
+
+		if( kill(pid,sig) < 0 ) {
 			set_priv(priv);
 			if( errno == ESRCH ) {	// User proc already exited
-				dprintf( D_ALWAYS, "Tried to send signal SIGCONT to user job "
-						 "%d, but that process doesn't exist.\n", pid);
+				dprintf( D_ALWAYS, "UserProc::send_sig_no_privsep(): "
+					"Tried to send signal %d to user job "
+				 	"%d, but that process doesn't exist.\n", sig, pid);
 				return;
 			}
 			perror("kill");
-			EXCEPT( "kill(%d,SIGCONT)", pid  );
+			EXCEPT( "kill(%d,%d)", pid, sig );
 		}
-		/* standard jobs can't fork, so.... */
-		pids_suspended = 1;
-		dprintf( D_ALWAYS, "Sent signal SIGCONT to user job %d\n", pid);
-	}
-
-	if ( job_class != CONDOR_UNIVERSE_VANILLA )
-	if( kill(pid,sig) < 0 ) {
-		set_priv(priv);
-		if( errno == ESRCH ) {	// User proc already exited
-			dprintf( D_ALWAYS, "Tried to send signal %d to user job "
-					 "%d, but that process doesn't exist.\n", sig, pid);
-			return;
-		}
-		perror("kill");
-		EXCEPT( "kill(%d,%d)", pid, sig );
-	}
-	
-	/* record the fact we unsuspended the job. */
-	if (sig == SIGCONT)
-	{
-		pids_suspended = 0;
 	}
 
 	set_priv(priv);
-
-	if (SigNames.get_name(sig) != NULL)
-		dprintf( D_ALWAYS, "Sent signal %s to user job %d\n",
-				SigNames.get_name(sig), pid);
-	else
-		dprintf( D_ALWAYS, "Unknown signum %d sent to user job %d\n",
-				sig, pid);
 }
 
 
