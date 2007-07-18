@@ -102,6 +102,10 @@ failing to contact the collector specified via \Opt{-pool}.
 a process to handle file transfers, many repetitions of this error would
 result in \Condor{schedd} running out of file descriptors.
 
+\item File transfer failures for spooled jobs would sometimes result in
+\Condor{schedd} child processes hanging around for 8 hours before finally
+exiting.  Too many such processes could result in memory exhaustion.
+
 \end{itemize}
 
 \noindent Known Bugs:
