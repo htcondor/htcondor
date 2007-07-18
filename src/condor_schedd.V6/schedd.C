@@ -3126,6 +3126,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
 					 "failed to send JobAdsArrayLen (%d) \n",
 					 JobAdsArrayLen );
+			s->timeout( 10 ); // avoid hanging due to huge timeout
 			refuse(s);
 			return FALSE;
 		}
@@ -3138,6 +3139,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		if ( !ad ) {
 			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
 					 "job ad %d.%d not found\n",cluster,proc );
+			s->timeout( 10 ); // avoid hanging due to huge timeout
 			refuse(s);
 			s->timeout(old_timeout);
 			return FALSE;
@@ -3152,6 +3154,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
 					 "failed to init filetransfer for job %d.%d \n",
 					 cluster,proc );
+			s->timeout( 10 ); // avoid hanging due to huge timeout
 			refuse(s);
 			s->timeout(old_timeout);
 			return FALSE;
@@ -3184,6 +3187,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
 					 "failed to transfer files for job %d.%d \n",
 					 cluster,proc );
+			s->timeout( 10 ); // avoid hanging due to huge timeout
 			refuse(s);
 			s->timeout(old_timeout);
 			return FALSE;
