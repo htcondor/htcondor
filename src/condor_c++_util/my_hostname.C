@@ -305,6 +305,25 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 {
 	*new_expr_string = NULL;
 
+	/*
+	  Woe is us. If GCB is enabled, we should *NOT* be re-writing IP
+	  addresses in the ClassAds we send out. :(  We already go
+	  through a lot of trouble to make sure they're all set how they
+	  should be.  This only used to work at all because of a bug in
+	  GCB + CEDAR where all outbound connections were hitting
+	  GCB_bind() and so we thought my_sock_ip below was the GCB
+	  broker's IP, and it all "worked".  Once we're not longer
+	  pounding the GCB broker for all outbound connections, this bug
+	  becomes visible.  Note that we use the optional 3rd argument to
+	  param_boolean() to get it to shut up, even if NET_REMAP_ENABLE
+	  isn't defined in the config file, since otherwise, this would
+	  completely FILL a log file at D_CONFIG or D_ALL, since we hit
+	  this for *every* attribute in every ClassAd that's sent.
+	*/
+	if (param_boolean("NET_REMAP_ENABLE", false, false)) {
+		return;
+	}
+
     if(is_sender_ip_attr(attr_name)) {
         char const *my_default_ip = my_ip_string();
         char const *my_sock_ip = s.sender_ip_str();
