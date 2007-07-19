@@ -47,3 +47,4 @@
 #define CONDOR_SetTimerAttribute	10025			/* Jaime */
 #define CONDOR_GetAllJobsByConstraint 10026
 #define	CONDOR_SetAttribute2 		10027
+#define CONDOR_CloseSocket			10028

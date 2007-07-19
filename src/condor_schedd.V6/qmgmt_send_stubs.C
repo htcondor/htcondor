@@ -764,3 +764,15 @@ GetAllJobsByConstraint( char const *constraint, char const *projection, ClassAdL
 {
 	GetAllJobsByConstraint_imp(constraint,projection,list);
 }
+
+int
+CloseSocket()
+{
+	CurrentSysCall = CONDOR_CloseSocket;
+
+	qmgmt_sock->encode();
+	assert( qmgmt_sock->code(CurrentSysCall) );
+	assert( qmgmt_sock->end_of_message() );
+
+	return 0;
+}

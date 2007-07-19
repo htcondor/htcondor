@@ -163,8 +163,21 @@ int SetTimerAttribute(int cluster, int proc, const char *attr_name, int dur);
 int SetMyProxyPassword (int cluster, int proc, const char * pwd);
 
 
+/** Tell the schedd that we're about to close the network socket. This
+	call will not commit an active transaction. Callers of DisconnectQ()
+	should not use this call.
+	@return -1 on failure; 0 on success
+*/
+int CloseSocket();
+/** Commit the current transaction, but keep the network connection open.
+	@return -1 on failure; 0 on success
+*/
 int CloseConnection();
 bool InTransaction();
+/** Begin a new transaction over an existing network connection to the
+	schedd.
+	@return -1 on failurer; 0 on success
+*/
 void BeginTransaction();
 void CommitTransaction(SetAttributeFlags_t flags=0);
 void AbortTransaction();

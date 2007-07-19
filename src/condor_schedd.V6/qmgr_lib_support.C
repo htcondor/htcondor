@@ -173,6 +173,7 @@ DisconnectQ(Qmgr_connection *,bool commit_transactions)
 	if ( commit_transactions ) {
 		rval = CloseConnection();
 	}
+	CloseSocket();
 	delete qmgmt_sock;
 	qmgmt_sock = NULL;
 	return( rval >= 0 );

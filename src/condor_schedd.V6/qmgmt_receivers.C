@@ -868,6 +868,12 @@ do_Q_request(ReliSock *syscall_sock)
 		return 0; 
 	}
 
+	case CONDOR_CloseSocket:
+	{
+		assert( syscall_sock->end_of_message() );;
+		return -1;
+	}
+
 	} /* End of switch */
 
 	return -1;
