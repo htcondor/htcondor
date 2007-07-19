@@ -787,6 +787,16 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 	// XXX TODO
 	// Assume this update is because the file were transferred correctly.
 
+	// XXX TODO
+	// Ensure that if the STAGE_IN variable is already set, I bail with
+	// an error since the job might be running. Later, we might give the 
+	// user the possibility of wiping
+	// clean the stage in sandbox and reinitializing it, in which case the
+	// job should be put back on hold during that operation if it is not
+	// atomic. TO IMPLEMENTOR: Look at the old usage of the STAGE_IN
+	// variable in the other code path and check to make sure the usage over
+	// here is the same.
+
 	////////////////////////////////////////////////////////////////////////
 	// The Mojo to get the job off of hold now that the transfer is complete
 	////////////////////////////////////////////////////////////////////////
