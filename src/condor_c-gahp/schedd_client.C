@@ -398,7 +398,7 @@ doContactSchedd()
 										  array,
 										  &errstack )) {
 				error = TRUE;
-				sprintf (error_msg, "Error connecting to schedd %s: %s", ScheddAddr, errstack.getFullText());
+				sprintf (error_msg, "Error sending files to schedd %s: %s", ScheddAddr, errstack.getFullText());
 				dprintf (D_ALWAYS, "%s\n", error_msg);
 			}
 			delete [] array;

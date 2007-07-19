@@ -771,23 +771,34 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 
 	rsock.timeout(20);   // years of research... :)
 	if( ! rsock.connect(_addr) ) {
-		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
-				 "Failed to connect to schedd (%s)\n", _addr );
+		MyString errmsg;
+		errmsg.sprintf("Failed to connect to schedd (%s)", _addr );
+
+		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: %s\n", errmsg.Value() );
+
+		if( errstack ) {
+			errstack->push(
+				"DCSchedd::spoolJobFiles",CEDAR_ERR_CONNECT_FAILED,
+				errmsg.Value() );
+		}
 		return false;
 	}
 	if ( use_new_command ) {
 		if( ! startCommand(SPOOL_JOB_FILES_WITH_PERMS, (Sock*)&rsock, 0,
 						   errstack) ) {
+
 			dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
-					 "Failed to send command (SPOOL_JOB_FILES_WITH_PERMS) "
-					 "to the schedd\n" );
+				"Failed to send command (SPOOL_JOB_FILES_WITH_PERMS) "
+				"to the schedd (%s)\n", _addr );
+
 			return false;
 		}
 	} else {
 		if( ! startCommand(SPOOL_JOB_FILES, (Sock*)&rsock, 0, errstack) ) {
 			dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
 					 "Failed to send command (SPOOL_JOB_FILES) "
-					 "to the schedd\n" );
+					 "to the schedd (%s)\n", _addr );
+
 			return false;
 		}
 	}
@@ -795,7 +806,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( &rsock, errstack )) {
 		dprintf( D_ALWAYS, "DCSchedd: authentication failure: %s\n",
-				 errstack->getFullText() );
+				 errstack ? errstack->getFullText() : "" );
 		return false;
 	}
 
@@ -822,7 +833,22 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		return false;
 	}
 
-	rsock.eom();
+	if( !rsock.eom() ) {
+		MyString errmsg;
+		errmsg.sprintf(
+			"Can't send initial message (version + count) to schedd (%s)",
+			_addr );
+
+		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: %s\n", errmsg.Value() );
+
+		if( errstack ) {
+			errstack->push(
+				"DCSchedd::spoolJobFiles",
+				CEDAR_ERR_EOM_FAILED,
+				errmsg.Value());
+		}
+		return false;
+	}
 
 		// Now, put the job ids onto the wire
 	PROC_ID jobid;
@@ -840,18 +866,57 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		rsock.code(jobid);
 	}
 
-	rsock.eom();
+	if( !rsock.eom() ) {
+		MyString errmsg;
+		errmsg.sprintf("Failed while sending job ids to schedd (%s)", _addr);
+
+		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: %s\n", errmsg.Value());
+
+		if( errstack ) {
+			errstack->push(
+				"DCSchedd::spoolJobFiles",
+				CEDAR_ERR_EOM_FAILED,
+				errmsg.Value());
+		}
+		return false;
+	}
 
 		// Now send all the files via the file transfer object
 	for (i=0; i<JobAdsArrayLen; i++) {
 		FileTransfer ftrans;
 		if ( !ftrans.SimpleInit(JobAdsArray[i], false, false, &rsock) ) {
+			if( errstack ) {
+				int cluster = -1, proc = -1;
+				if(JobAdsArray[i]) {
+					JobAdsArray[i]->LookupInteger(ATTR_CLUSTER_ID,cluster);
+					JobAdsArray[i]->LookupInteger(ATTR_PROC_ID,proc);
+				}
+				errstack->pushf(
+					"DCSchedd::spoolJobFiles",
+					FILETRANSFER_INIT_FAILED,
+					"File transfer initialization failed for target job %d.%d",
+					cluster, proc );
+			}
 			return false;
 		}
 		if ( use_new_command ) {
 			ftrans.setPeerVersion( version() );
 		}
 		if ( !ftrans.UploadFiles(true,false) ) {
+			if( errstack ) {
+				FileTransfer::FileTransferInfo ft_info = ftrans.GetInfo();
+
+				int cluster = -1, proc = -1;
+				if(JobAdsArray[i]) {
+					JobAdsArray[i]->LookupInteger(ATTR_CLUSTER_ID,cluster);
+					JobAdsArray[i]->LookupInteger(ATTR_PROC_ID,proc);
+				}
+				errstack->pushf(
+					"DCSchedd::spoolJobFiles",
+					FILETRANSFER_UPLOAD_FAILED,
+					"File transfer failed for target job %d.%d: %s",
+					cluster, proc, ft_info.error_desc.Value() );
+			}
 			return false;
 		}
 	}	
