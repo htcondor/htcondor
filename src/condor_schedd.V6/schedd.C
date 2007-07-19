@@ -3404,6 +3404,23 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					// is allowed to transfer data to/from a job.
 				if (OwnerCheck(a_job.cluster,a_job.proc)) {
 					(*jobs)[i] = a_job;
+
+						// Must not allow stagein to happen more than
+						// once, because this could screw up
+						// subsequent operations, such as rewriting of
+						// paths in the ClassAd and the job being in
+						// the middle of using the files.
+					int finish_time;
+					if( GetAttributeInt(a_job.cluster,a_job.proc,
+					    ATTR_STAGE_IN_FINISH,&finish_time) >= 0 ) {
+						dprintf( D_ALWAYS, "spoolJobFiles(): cannot allow"
+						         " stagein for job %d.%d, because stagein"
+						         " already finished for this job.\n",
+						         a_job.cluster, a_job.proc);
+						unsetQSock();
+						return FALSE;
+					}
+
 					SetAttributeInt(a_job.cluster,a_job.proc,
 									ATTR_STAGE_IN_START,now);
 				}
