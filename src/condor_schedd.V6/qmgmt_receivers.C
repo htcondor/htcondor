@@ -865,7 +865,7 @@ do_Q_request(ReliSock *syscall_sock)
 
 		free( (char *)constraint );
 		free( (char *)projection );
-		return -1; 
+		return 0; 
 	}
 
 	} /* End of switch */
