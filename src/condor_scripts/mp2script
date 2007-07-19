@@ -1,0 +1,100 @@
+#!/bin/sh
+
+##/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+##
+## Condor Software Copyright Notice
+## Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## This source code is covered by the Condor Public License, which can
+## be found in the accompanying LICENSE.TXT file, or online at
+## www.condorproject.org.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+## AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+## IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+## WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+## FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+## HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+## MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+## ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+## PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+## RIGHT.
+##
+##***************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+# Set this to the bin directory of MPICH installation
+MPDIR=/usr/local/mpich2/bin
+PATH=$MPDIR:.:$PATH
+export PATH
+
+_CONDOR_PROCNO=$_CONDOR_PROCNO
+_CONDOR_NPROCS=$_CONDOR_NPROCS
+
+PATH=`condor_config_val libexec`/:$PATH
+
+# MPP needs a conf file, and it must be
+# 0700
+mkdir tmp
+MPD_CONF_FILE=`pwd`/tmp/mpd_conf_file
+export MPD_CONF_FILE
+
+ulimit -c 0
+
+# If you have a shared filesystem, maybe you
+# want to put the mpd.conf file in your home
+# directory
+
+echo "password=somepassword" > $MPD_CONF_FILE
+chmod 0700 $MPD_CONF_FILE
+
+# If on the head node, start mpd, get the port
+# it, and condor_chirp it back into the ad
+# so others can see
+# sshds run
+
+if [ $_CONDOR_PROCNO -eq 0 ]
+then
+	mpd > mpd.out.$_CONDOR_PROCNO 2>&1 &
+	sleep 1
+	host=`mpdtrace -l | sed 1q | tr '_' ' ' | awk '{print $1}'`
+	port=`mpdtrace -l | sed 1q | tr '_' ' ' | awk '{print $2}'`
+
+	condor_chirp set_job_attr MPICH_PORT $port
+	condor_chirp set_job_attr MPICH_HOST \"$host\"
+	
+	num_hosts=1
+	retries=0
+	while [ $num_hosts -ne $_CONDOR_NPROCS ]
+	do
+		num_hosts=`mpdtrace | wc -l`
+		sleep 2
+		retries=`expr $retries + 1`
+		if [ $retries -gt 100 ]
+		then
+			echo "Too many retries, could not start all $_CONDOR_NPROCS nodes, only started $num_hosts, giving up.  Here are the hosts I could start "
+			mpdtrace
+			exit 1
+		fi
+	done
+
+	## run the actual mpijob
+	mpiexec -n $_CONDOR_NPROCS $EXECUTABLE $@
+	e=$?
+
+	mpdallexit
+	sleep 20
+	echo $e
+else
+	e=1
+	while [ $e -ne 0 ]
+	do
+		host=`condor_chirp get_job_attr MPICH_HOST`
+		e=$?
+		sleep 2
+	done
+
+	port=`condor_chirp get_job_attr MPICH_PORT`
+	host=`echo $host | tr -d '"'`
+	mpd --host=$host --port=$port > mpd.out.$_CONDOR_PROCNO 2>&1
+fi
