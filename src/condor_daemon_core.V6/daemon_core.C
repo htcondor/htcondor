@@ -35,7 +35,6 @@
 #include "GCB.h"
 extern "C" {
 void Generic_stop_logging();
-void Generic_resume_logging();
 }
 #endif
 
@@ -2240,8 +2239,14 @@ DaemonCore::reconfig(void) {
 	InitSettableAttrsLists();
 
 #if HAVE_CLONE
-	m_use_clone_to_create_processes = param_boolean("USE_CLONE_TO_CREATE_PROCESSES",true);
-#endif
+    if (param_boolean("NET_REMAP_ENABLE", false, false)) {
+		m_use_clone_to_create_processes = false;
+		dprintf(D_CONFIG, "NET_REMAP_ENABLE is TRUE, forcing USE_CLONE_TO_CREATE_PROCESSES to FALSE.\n");
+	}
+	else {
+		m_use_clone_to_create_processes = param_boolean("USE_CLONE_TO_CREATE_PROCESSES", true);
+	}
+#endif /* HAVE CLONE */
 }
 
 
@@ -5187,17 +5192,6 @@ pid_t CreateProcessForkit::fork_exec() {
 
 			// Since we used the CLONE_VFORK flag, the child has exited
 			// or called exec by now.
-
-#if HAVE_EXT_GCB
-		/*
-		  Due to the fact that the clone()'ed child ran in the
-		  same address space as the parent, once it disables logging,
-		  all GCB logging is killed.  So, back here in the parent(),
-		  now that the child exited or called exec(), we can (and
-		  must) resume GCB logging again.
-		*/
-	Generic_resume_logging();
-#endif /* HAVE_EXT_GCB */
 
 		return newpid;
 	}
