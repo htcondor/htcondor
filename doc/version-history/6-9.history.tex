@@ -232,6 +232,11 @@ mechanism that protects against this.
 \item Improved error descriptions when Condor-C encounters failures when
 sending input files to the remote schedd.
 
+\item Rare failure conditions during stagein would cause Condor-C to put
+the state of the job in the remote schedd into an invalid state in which
+it would run but later fail during stage out.  This now results in the
+job on the submit side going on hold with a stagein failure.
+
 \end{itemize}
 
 \noindent Known Bugs:
