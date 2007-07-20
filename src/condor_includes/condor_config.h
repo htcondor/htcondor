@@ -114,7 +114,7 @@ class ParamValue {
 	odd since if a .c file includes this, these prototypes technically don't
 	exist.... */
 extern "C" {
-	void config( int wantsQuiet=0 );
+	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false );
 	void config_host( char* host=NULL );
 	void config_fill_ad( ClassAd*, const char* prefix=NULL );
 	void condor_net_remap_config( bool force_param=false );

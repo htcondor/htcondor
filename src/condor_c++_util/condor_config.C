@@ -213,7 +213,7 @@ system probably isn't working yet.
 */
 const char * FORBIDDEN_CONFIG_VAL = "YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE";
 static void
-validate_entries() {
+validate_entries( bool ignore_invalid_entry ) {
 	HASHITER it = hash_iter_begin( ConfigTab, TABLESIZE );
 	unsigned int invalid_entries = 0;
 	MyString tmp;
@@ -233,7 +233,11 @@ validate_entries() {
 	}
 	hash_iter_delete(&it);
 	if(invalid_entries > 0) {
-		EXCEPT(output.Value());
+		if(ignore_invalid_entry) {
+			dprintf(D_ALWAYS, "%s", output.Value());
+		} else {
+			EXCEPT(output.Value());
+		}
 	}
 }
 
@@ -318,13 +322,13 @@ static int ParamValueNameAscendingSort(const void *l, const void *r)
 
 
 void
-config( int wantsQuiet )
+config( int wantsQuiet, bool ignore_invalid_entry )
 {
 #ifdef WIN32
 	setlocale( LC_ALL, "English" );
 #endif
 	real_config( NULL, wantsQuiet );
-	validate_entries();
+	validate_entries( ignore_invalid_entry );
 }
 
 
