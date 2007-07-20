@@ -259,7 +259,7 @@ main( int argc, char* argv[] )
 	if( host ) {
 		config_host( host );
 	} else {
-		config();
+		config( 0, true );
 		if (print_config_sources) {
 			PrintConfigSources();
 		}
@@ -649,15 +649,15 @@ static void PrintConfigSources(void)
 		// something like xargs...
 
 	if (global_config_source.Length() > 0) {
-		fprintf( stderr, "Config source:\n" );
+		fprintf( stderr, "Configuration source:\n" );
 		fflush( stderr );
 		fprintf( stdout, "\t%s\n", global_config_source.Value() );
 		fflush( stdout );
 	} else {
-		fprintf( stderr, "Can't find the config source.\n" );
+		fprintf( stderr, "Can't find the configuration source.\n" );
 	}
 	if (global_root_config_source.Length() > 0) {
-		fprintf( stderr, "Root config source:\n" );
+		fprintf( stderr, "Root configuration source:\n" );
 		fflush( stderr );
 		fprintf( stdout, "\t%s\n", global_root_config_source.Value() );
 		fflush( stdout );
@@ -666,9 +666,9 @@ static void PrintConfigSources(void)
 	unsigned int numSources = local_config_sources.number();
 	if (numSources > 0) {
 		if (numSources == 1) {
-			fprintf( stderr, "Local config source:\n" );
+			fprintf( stderr, "Local configuration source:\n" );
 		} else {
-			fprintf( stderr, "Local config sources:\n" );
+			fprintf( stderr, "Local configuration sources:\n" );
 		}
 		fflush( stderr );
 
