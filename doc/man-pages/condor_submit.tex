@@ -108,7 +108,7 @@ Example:
 arguments = one \"two\" 'three'
 \end{verbatim}
 
-Produces in unix vanilla universe:
+Produces in Unix vanilla universe:
 
 \begin{verbatim}
 argument 1: one
@@ -1076,7 +1076,7 @@ These options only apply to standard-universe jobs.
 
 If needed, you may set the buffer controls individually for each file using
 the buffer\_files option. For example, to set the buffer size to 1 Mbyte and
-the block size to 256 KBytes for the file \File{input.data}, use this command:
+the block size to 256 Kbytes for the file \File{input.data}, use this command:
 
 \begin{verbatim}
 buffer_files = "input.data=(1000000,256000)"
@@ -1114,7 +1114,7 @@ Condor will automatically compress them (if writing) or decompress them (if read
 The compress format is the same as used by GNU gzip.
 
 The files given in this list may be simple file names or complete paths and may
-include $*$ as a wildcard.  For example, this list causes the file /tmp/data.gz,
+include $*$ as a wild card.  For example, this list causes the file /tmp/data.gz,
 any file named event.gz, and any file ending in .gzip to be automatically
 compressed or decompressed as needed:
 
@@ -1660,7 +1660,7 @@ the value of \SubmitCmd{kill\_sig} is used.
 
 \item[vm\_cdrom\_files = file1, file2, \Dots]
 \index{submit commands!vm\_cdrom\_files}
-Description of vm\_cdrom\_files.
+A comma-separated list of input CDROM files.
 
 %%%%%%%%%%%%%%%%%%%
 %% vm_checkpoint
@@ -1668,7 +1668,14 @@ Description of vm\_cdrom\_files.
 
 \item[vm\_checkpoint = $<$True \Bar\ False$>$]
 \index{submit commands!vm\_checkpoint}
-Description of vm\_checkpoint.
+A boolean value specifying whether or not to take checkpoints.
+If not specified, the default value is \Expr{False}.
+In the current implementation, setting both
+\SubmitCmd{vm\_checkpoint} and \SubmitCmd{vm\_networking}
+to \Expr{True} does not yet work in all cases.
+Networking cannot be used if a vm universe job uses a
+checkpoint in order to continue execution after migration
+to another machine.
 
 %%%%%%%%%%%%%%%%%%%
 %% vm_memory
@@ -1685,7 +1692,14 @@ requires.
 
 \item[vm\_networking = $<$True \Bar\ False$>$]
 \index{submit commands!vm\_networking}
-Description of vm\_networking.
+Specifies whether to use networking or not.
+In the current implementation, setting both
+\SubmitCmd{vm\_checkpoint} and \SubmitCmd{vm\_networking}
+to \Expr{True} does not yet work in all cases.
+Networking cannot be used if a vm universe job uses a
+checkpoint in order to continue execution after migration
+to another machine.
+
 
 %%%%%%%%%%%%%%%%%%%
 %% vm_networking_type
@@ -1693,7 +1707,19 @@ Description of vm\_networking.
 
 \item[vm\_networking\_type = $<$nat\_dhcp \Bar\ bridge\_dhcp \Bar\ dhcp$>$]
 \index{submit commands!vm\_networking\_type}
-Description of vm\_networking\_type.
+When \SubmitCmd{vm\_networking} is \Expr{True},
+the type of networking must be specified.
+
+%%%%%%%%%%%%%%%%%%%
+%% vm_no_output_vm
+%%%%%%%%%%%%%%%%%%%
+
+\item[vm\_no\_output\_vm = $<$True \Bar\ False$>$]
+\index{submit commands!vm\_no\_output\_vm}
+When \Expr{True}, prevents Condor from transferring output
+files back to the machine from which the vm universe job
+was submitted.
+If not specified, the default value is \Expr{False}.
 
 %%%%%%%%%%%%%%%%%%%
 %% vm_should_transfer_cdrom_files
@@ -1701,7 +1727,9 @@ Description of vm\_networking\_type.
 
 \item[vm\_should\_transfer\_cdrom\_files = $<$True \Bar\ False$>$]
 \index{submit commands!vm\_should\_transfer\_cdrom\_files}
-Description of vm\_should\_transfer\_cdrom\_files.
+Specifies whether Condor will transfer CDROM files to
+the execute machine (\Expr{True}) or rely on access through 
+a shared file system (\Expr{False}).
 
 %%%%%%%%%%%%%%%%%%%
 %% vm_type
@@ -1709,7 +1737,8 @@ Description of vm\_should\_transfer\_cdrom\_files.
 
 \item[vm\_type = $<$vmware \Bar\ xen$>$]
 \index{submit commands!vm\_type}
-Description of vm\_type.
+Specifies the underlying virtual machine software that this
+job expects.
 
 %%%%%%%%%%%%%%%%%%%
 %% vmware_dir
@@ -1951,7 +1980,7 @@ estimate about its size and adjust this estimate as your program runs.
 If the image size of your job is underestimated, it may crash due to
 inability to acquire more address space, e.g. malloc() fails. If the image
 size is overestimated, Condor may have difficulty finding machines which
-have the required resources. \Arg{size} must be in kbytes, e.g. for
+have the required resources. \Arg{size} must be in Kbytes, e.g. for
 an image size of 8 megabytes, use a \Arg{size} of 8000.
 
 %%%%%%%%%%%%%%%%%%%
@@ -2190,7 +2219,7 @@ directory.
 
 \item[+$<$attribute$>$ = $<$value$>$] A line which begins with a '+'
 (plus) character instructs \Condor{submit} to insert the
-following \Arg{attribute} into the job ClasssAd with the given 
+following \Arg{attribute} into the job ClassAd with the given 
 \Arg{value}. 
 
 \end{description} 
