@@ -136,7 +136,7 @@ public:
 #if defined(WIN32) && defined(_WINSOCK2API_)
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
-	int bind(int, int =0);
+	int bind(bool outbound, int port=0);
     int setsockopt(int, int, const char*, int); 
 
 	/**  Set the size of the operating system buffers (in the IP stack) for
@@ -152,7 +152,7 @@ public:
 
 	static int set_timeout_multiplier(int secs);
 	
-	inline int bind(int is_outgoing, char *s) { return bind(is_outgoing, getportbyserv(s)); }
+	inline int bind(bool outbound, char *s) { return bind(outbound, getportbyserv(s)); }
 	int close();
 	/** if any operation takes more than sec seconds, timeout
         call timeout(0) to set blocking mode (default)
@@ -320,7 +320,7 @@ protected:
 private:
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
 	int _condor_write(SOCKET fd, char *buf, int sz, int timeout);
-	int bindWithin(const int low, const int high);
+	int bindWithin(const int low, const int high, bool outbound);
 	///
 	// Buffer to hold the string version of our endpoint's IP address. 
 	char _endpoint_ip_buf[IP_STRING_BUF_SIZE];	
@@ -393,6 +393,14 @@ private:
 	   connection attempt.
 	 **/
 	void cancel_connect();
+
+	/**
+	   Private helper that sees if we're GCB enabled, if we're doing
+	   an outbound connection, and if so, uses GCB_local_bind() to
+	   avoid pounding the GCB broker for all outbound connections.
+	*/
+	int _bind_helper(int fd, struct sockaddr *addr, socklen_t len,
+					 bool outbound);
 
 };
 

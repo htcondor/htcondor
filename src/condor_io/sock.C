@@ -36,6 +36,10 @@
 #include "daemon_core_sock_adapter.h"
 #include "selector.h"
 
+#if HAVE_EXT_GCB
+#include "GCB.h"
+#endif
+
 #if !defined(WIN32)
 #define closesocket close
 #endif
@@ -383,7 +387,8 @@ int Sock::assign(SOCKET sockd)
 }
 
 
-int Sock::bindWithin(const int low_port, const int high_port)
+int
+Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 {
 	bool bind_all = (bool)_condor_bind_all_interfaces();
 
@@ -423,7 +428,9 @@ int Sock::bindWithin(const int low_port, const int high_port)
 			old_priv = set_root_priv();
 		}
 #endif
-		bind_return_val = ::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in));
+
+		bind_return_val = _bind_helper(_sock, (sockaddr *)&sin, sizeof(sockaddr_in), outbound);
+
 #ifndef WIN32
 		if (this_trial <= 1024) {
 			set_priv (old_priv);
@@ -454,7 +461,7 @@ int Sock::bindWithin(const int low_port, const int high_port)
 }
 
 
-int Sock::bind(int is_outgoing, int port)
+int Sock::bind(bool outbound, int port)
 {
 	sockaddr_in		sin;
 	int bind_return_value;
@@ -488,7 +495,7 @@ int Sock::bind(int is_outgoing, int port)
 	// ports for outgoing connections, and this will work for that setup.
 	// if the firewall doesn't allow it, the connect will just fail anyways.
 	//
-	// this is why there is an is_outgoing flag passed in.  when this is true,
+	// this is part of why there is an outbound flag.  when this is true,
 	// we know to check OUT_LOWPORT and OUT_HIGHPORT first, and then fall back
 	// to LOWPORT and HIGHPORT.
 	//
@@ -502,9 +509,9 @@ int Sock::bind(int is_outgoing, int port)
 	// printed to D_ALWAYS in get_port_range.
 
 	int lowPort, highPort;
-	if ( port == 0 && get_port_range(is_outgoing, &lowPort, &highPort) == TRUE ) {
+	if ( port == 0 && get_port_range((int)outbound, &lowPort, &highPort) == TRUE ) {
 			// Bind in a specific port range.
-		if ( bindWithin(lowPort, highPort) != TRUE ) {
+		if ( bindWithin(lowPort, highPort, outbound) != TRUE ) {
 			return FALSE;
 		}
 	} else {
@@ -527,7 +534,9 @@ int Sock::bind(int is_outgoing, int port)
 			old_priv = set_root_priv();
 		}
 #endif
-		bind_return_value = ::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in));
+
+		bind_return_value = _bind_helper(_sock, (sockaddr *)&sin, sizeof(sockaddr_in), outbound);
+
 #ifndef WIN32
 		if(port < 1024) {
 			set_priv (old_priv);
@@ -646,7 +655,9 @@ int Sock::do_connect(
 		/* we bind here so that a sock may be	*/
 		/* assigned to the stream if needed		*/
 		/* TRUE means this is an outgoing connection */
-	if (_state == sock_virgin || _state == sock_assigned) bind( TRUE );
+	if (_state == sock_virgin || _state == sock_assigned) {
+		bind(true);
+	}
 
 	if (_state != sock_bound) return FALSE;
 
@@ -1092,7 +1103,7 @@ Sock::cancel_connect()
 
 	// finally, bind the socket
 	/* TRUE means this is an outgoing connection */
-	if( !bind( TRUE ) ) {
+	if( !bind(true) ) {
 		connect_state.connect_refused = true; // better give up
 	}
 #endif
@@ -1834,3 +1845,19 @@ bool Sock :: is_encrypt()
 }
 
 
+int
+Sock::_bind_helper(int fd, struct sockaddr *addr, socklen_t len, bool outbound)
+{
+	int rval;
+#if HAVE_EXT_GCB
+	if (outbound) {
+		rval = GCB_local_bind(fd, addr, len);
+	}
+	else {
+		rval = ::bind(fd, addr, len);
+	}
+#else
+	rval = ::bind(fd, addr, len);
+#endif /* HAVE_EXT_GCB */
+	return rval;
+}
