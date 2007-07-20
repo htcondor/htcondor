@@ -890,70 +890,71 @@ char * DaemonCore::InfoCommandSinfulString(int pid)
 // NOTE: InfoCommandSinfulStringMyself always returns a pointer to a _static_ buffer!
 // This means you'd better copy or strdup the result if you expect it to never
 // change on you.  Plus, realize static buffers aren't exactly thread safe!
-char * DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
+char *
+DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 {
 	static char * sinful_public = NULL;
 	static char * sinful_private = NULL;
+	static bool initialized_sinful_private = false;
 
 	if ( initial_command_sock == -1 ) {
 		// there is no command sock!
 		return NULL;
 	}
 
-	// if TCP_FORWARDING_HOST is defined, we will advertize our local
-	// IP address for daemons that have the same PRIVATE_NETWORK_NAME as
-	// us. for everyone else, we advertize the address of the TCP
-	// forwarder
-	//
-	if (!usePrivateAddress) {
+		// If we haven't initialized our address(es), do so now.
+	if (sinful_public == NULL) {
 		char* tmp = param("TCP_FORWARDING_HOST");
+			// If TCP_FORWARDING_HOST is defined, we will advertize
+			// our local IP address for daemons that have the same
+			// PRIVATE_NETWORK_NAME as us.  For everyone else, we
+			// advertize the address of the TCP forwarder.
 		if (tmp != NULL) {
 			MyString tcp_forwarding_host = tmp;
 			free(tmp);
-			if (sinful_public == NULL) {
-				struct sockaddr_in sin;
-				if (!is_ipaddr(tcp_forwarding_host.Value(), &sin.sin_addr)) {
-					struct hostent *he = condor_gethostbyname(tcp_forwarding_host.Value());
-					if (he == NULL) {
-						EXCEPT("failed to resolve address of SSH_BROKER");
-					}
-					sin.sin_addr = *(in_addr*)(he->h_addr_list[0]);;
+			struct sockaddr_in sin;
+			if (!is_ipaddr(tcp_forwarding_host.Value(), &sin.sin_addr)) {
+				struct hostent *he = condor_gethostbyname(tcp_forwarding_host.Value());
+				if (he == NULL) {
+					EXCEPT("failed to resolve address of SSH_BROKER");
 				}
-				sin.sin_port = htons(((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port());
-				sinful_public = strdup(sin_to_string(&sin));
+				sin.sin_addr = *(in_addr*)(he->h_addr_list[0]);;
 			}
-			return sinful_public;
+			sin.sin_port = htons(((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port());
+			sinful_public = strdup(sin_to_string(&sin));
+		}
+		else {
+			sinful_public = strdup(
+			    sock_to_string( (*sockTable)[initial_command_sock].sockd ) );
 		}
 	}
 
-	if (usePrivateAddress) {
-		if (sinful_private == NULL) {
-			MyString private_sinful_string;
-			char* tmp;
-			if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
-				int port = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port();
-				private_sinful_string.sprintf("<%s:%d>", tmp, port);
-				free(tmp);
-				sinful_private = strdup(private_sinful_string.Value());
-			}
+	if (!initialized_sinful_private) {
+		MyString private_sinful_string;
+		char* tmp;
+		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
+			int port = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port();
+			private_sinful_string.sprintf("<%s:%d>", tmp, port);
+			free(tmp);
+			sinful_private = strdup(private_sinful_string.Value());
 		}
 #if HAVE_EXT_GCB
-		if (sinful_private == NULL) {
+		if (sinful_private == NULL
+			&& (param_boolean("NET_REMAP_ENABLE", false, false))) {
+				// If the knob wasn't defined, and GCB is enabled, ask GCB.
 			struct sockaddr_in addr;
 			SOCKET_LENGTH_TYPE addr_len = sizeof(addr);
 			SOCKET sockd = (*sockTable)[initial_command_sock].sockd;
-			if( GCB_real_getsockname(sockd, (struct sockaddr *)&addr, &addr_len) < 0 ) {
-				return "";
+			if (GCB_real_getsockname(sockd, (struct sockaddr *)&addr, &addr_len) >= 0) {
+				sinful_private = strdup(sin_to_string(&addr));
 			}
-			sinful_private = strdup( sin_to_string( &addr ) );
 		}
 #endif /* HAVE_EXT_GCB */
-		return sinful_private;
+		initialized_sinful_private = true;
 	}
 
-	if( sinful_public == NULL ) {
-		sinful_public = strdup(
-			sock_to_string( (*sockTable)[initial_command_sock].sockd ) );
+	if (usePrivateAddress && sinful_private) {
+		return sinful_private;
 	}
 	return sinful_public;
 }
