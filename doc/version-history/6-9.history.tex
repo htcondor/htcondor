@@ -26,6 +26,34 @@ standard universe, because any modification of the executable is
 likely to make it impossible to resume execution using checkpoint
 files made from the original version of the executable.
 
+\item Version 1.5.0 of the Generic Connection Broker (GCB) is
+  now used for building Condor.
+  This version of GCB fixes a few critical bugs.
+  \begin{itemize}
+    \item GCB was unable to pass information about sockets registered
+      at a GCB broker to child processes due to a bug in the way a
+      special environment variable was being set.
+    \item All sockets for outbound connections were being registered
+      at the GCB broker, which was putting severe strain on the GCB
+      broker even under relatively low load.
+      Now, only sockets that are listening for inbound connections are
+      registered at the broker.
+    \item The \Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES} setting was
+      causing havoc for applications linked with GCB.
+      This configuration setting is now always disabled if GCB is enabled.
+  \end{itemize}
+
+  Additionally, there was a bug in how Condor was publishing the
+  classified ads for GCB-enabled daemons.
+  Condor used to be re-writing any attributes containing an IP address
+  when a classified ad was sent over a network connection (in an
+  effort to provide correct behavior for multi-homed machines).
+  Now, this re-writing is disabled whenever GCB is enabled, since GCB
+  already has logic to determine the correct IP addresses to advertise.
+
+  For more information about GCB, see section~\ref{sec:GCB} on
+  page~\pageref{sec:GCB}. 
+
 \end{itemize}
 
 
@@ -171,6 +199,9 @@ these two new settings.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Numerous bugs in GCB and the interaction between Condor and GCB.
+  See the release notes above for details.
 
 \item The submit file entry ``coresize'' was not being honored properly on
 many universe. It is now honored on all universes except pvm and the grid
