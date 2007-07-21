@@ -99,14 +99,12 @@ After the configuration step, build and install ClassAds with:
   make
   make install
 
-Notice that when the library builds, there is a program called
-"test_classads". This program is used to verify the ClassAd library
-works as we expect it to. Run it with the command:
-
-     ./test_classads tests.txt
-
-When you are learning about ClassAds, you may find it useful to modify
-the tests in "tests.txt" and to look at the code in test_classads.C. 
+Notice that when the library builds, there are two programs to test
+Classads. The first is called "classad_unit_tester". Running it
+requires no parameters. The second is called
+"classad_functional_tester" and it takes a text file as input: try
+functional_tests.txt. You might it useful to modify these tests or to
+look at the source code for both of these program.
 
 ===== Building on Windows =====
 In order to build on Windows, you must have Microsoft Visual Studio 6.0
