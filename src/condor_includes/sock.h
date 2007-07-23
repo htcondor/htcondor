@@ -25,6 +25,7 @@
 #define SOCK_H
 
 #include "condor_common.h"
+#include "condor_socket_types.h"
 #include "stream.h"
 #include "CondorError.h"
 
@@ -399,8 +400,8 @@ private:
 	   an outbound connection, and if so, uses GCB_local_bind() to
 	   avoid pounding the GCB broker for all outbound connections.
 	*/
-	int _bind_helper(int fd, struct sockaddr *addr, socklen_t len,
-					 bool outbound);
+	int _bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
+		SOCKET_LENGTH_TYPE len, bool outbound);
 
 };
 
