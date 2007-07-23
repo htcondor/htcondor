@@ -5,6 +5,7 @@
 #include "condor_constants.h"
 #include "pgsqldatabase.h"
 #include "basename.h"
+#include "nullfile.h"
 #include "my_hostname.h"
 #include "internet.h"
 #include "file_sql.h"
@@ -15,6 +16,16 @@ extern FILESQL *FILEObj;
 #define MAXSQLLEN 500
 #define MAXMACHNAME 128
 
+// Filenames are case sensitive on UNIX, but not Win32
+#ifdef WIN32
+#   define file_contains contains_anycase
+#   define file_contains_withwildcard contains_anycase_withwildcard
+#else
+#   define file_contains contains
+#   define file_contains_withwildcard contains_withwildcard
+#endif
+
+
 void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 {
 	MyString dst_host = "", 
@@ -22,9 +33,14 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 		globalJobId = "",
 		src_name = "",
 		src_path = "",
+		iwd_path = "",
 		job_name = "",
 		dst_name = "",
 		src_fullname = "";
+
+	char *dynamic_buf = NULL;
+	char buf[ATTRLIST_MAX_EXPRESSION];
+	StringList *InputFiles = NULL;
 
 	char src_host[MAXMACHNAME];
 	bool inStarter  = FALSE;
@@ -67,6 +83,7 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 		isEncrypted = (rp->sockp->is_encrypt()==FALSE)?"FALSE":"TRUE";
 	}
 
+	bool found = false;
 		// src_name, src_path
 	if (inStarter && !dst_name.IsEmpty() &&
 		(strcmp(dst_name.GetCStr(), CONDOR_EXEC) == 0)) {
@@ -74,18 +91,64 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 		if (!job_name.IsEmpty() && fullpath(job_name.GetCStr())) {
 			src_name = condor_basename(job_name.GetCStr());
 			src_path = condor_dirname(job_name.GetCStr());
+			found = true;
 		} else
 			src_name = job_name;
 		
 	}
 	else 
 		src_name = dst_name;
-	
+
+	dynamic_buf = NULL;
+	if (ad->LookupString(ATTR_TRANSFER_INPUT_FILES, &dynamic_buf) == 1) {
+		InputFiles = new StringList(dynamic_buf,",");
+		free(dynamic_buf);
+		dynamic_buf = NULL;
+	} else {
+		InputFiles = new StringList(NULL,",");
+	}
+	if (ad->LookupString(ATTR_JOB_INPUT, buf) == 1) {
+        // only add to list if not NULL_FILE (i.e. /dev/null)
+        if ( ! nullFile(buf) ) {
+            if ( !InputFiles->file_contains(buf) )
+                InputFiles->append(buf);
+        }
+    }
+
 	if (src_path.IsEmpty()) {
 		if (inStarter)
-			ad->LookupString(ATTR_ORIG_JOB_IWD, src_path);
+			ad->LookupString(ATTR_ORIG_JOB_IWD, iwd_path);
 		else 
-			ad->LookupString(ATTR_JOB_IWD, src_path);
+			ad->LookupString(ATTR_JOB_IWD, iwd_path);
+	}
+
+	char *inputFile = NULL;
+
+	InputFiles->rewind();
+	while( !found && (inputFile = InputFiles->next()) ) {	
+		const char *inputBaseName = condor_basename(inputFile);
+		if(strncmp(inputBaseName, src_name.GetCStr(), _POSIX_PATH_MAX) == 0) {
+			found = true;
+			if(fullpath(inputFile)) {
+				src_path = condor_dirname(inputFile);
+			} else {
+				src_path = iwd_path;
+				const char *inputDirName = condor_dirname(inputFile);
+				// if dirname gives back '.', don't bother sticking it on
+				if(!(inputDirName[0] == '.' && inputDirName[1] == '\0')) {
+					src_path += DIR_DELIM_CHAR;
+					src_path += inputDirName;
+				}
+			}	
+		}
+	}
+
+	if(!found) {
+		src_path = iwd_path;	
+	}
+	if(InputFiles) {
+		delete InputFiles;
+		InputFiles = NULL;
 	}
 
 	if (stat(rp->fullname, &file_status) < 0) {
