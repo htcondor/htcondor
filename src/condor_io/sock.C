@@ -429,7 +429,9 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 		}
 #endif
 
-		bind_return_val = _bind_helper(_sock, (SOCKET_ADDR_TYPE)&sin, sizeof(sockaddr_in), outbound);
+		bind_return_val = _bind_helper(_sock, 
+			(SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)&sin, 
+			sizeof(sockaddr_in), outbound);
 
 #ifndef WIN32
 		if (this_trial <= 1024) {
@@ -1852,7 +1854,11 @@ Sock::_bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
 	int rval;
 #if HAVE_EXT_GCB
 	if (outbound) {
-		rval = GCB_local_bind(fd, addr, len);
+		/* XXX Here we might cast away the const on some platforms, resulting
+			in a warning. It might be ugly to continue down the call chain
+			parameterizing with the #define types, so we'll let this warning 
+			live for now. */
+		rval = GCB_local_bind(fd, (SOCKET_ADDR_TYPE)addr, len);
 	}
 	else {
 		rval = ::bind(fd, addr, len);
