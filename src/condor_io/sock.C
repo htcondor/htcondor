@@ -429,7 +429,7 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 		}
 #endif
 
-		bind_return_val = _bind_helper(_sock, (sockaddr *)&sin, sizeof(sockaddr_in), outbound);
+		bind_return_val = _bind_helper(_sock, (SOCKET_ADDR_TYPE)&sin, sizeof(sockaddr_in), outbound);
 
 #ifndef WIN32
 		if (this_trial <= 1024) {
