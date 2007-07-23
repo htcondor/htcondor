@@ -3042,6 +3042,10 @@ QuillErrCode TTManager::insertTransfers(AttrList *ad) {
   } else {
     strncpy(path, dst_path, _POSIX_PATH_MAX);
     strncpy(name, dst_name, _POSIX_PATH_MAX);
+
+	// Temporary hack - src_path is never right when downloading in the shadow
+	// so always make this NULL
+	src_path[0] = '\0';
   }
 
   sprintf(pathname, "%s/%s", path, name);
