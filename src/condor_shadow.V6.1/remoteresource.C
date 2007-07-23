@@ -790,6 +790,10 @@ RemoteResource::setJobAd( ClassAd *jA )
 		disk_usage = int_value;
 	}
 
+	if ( jA->LookupInteger(ATTR_JOB_LEASE_DURATION, int_value) ) {
+		lease_duration = int_value;
+	}
+
 	if( jA->LookupInteger(ATTR_LAST_JOB_LEASE_RENEWAL, int_value) ) {
 		last_job_lease_renewal = (time_t)int_value;
 	}
@@ -1193,30 +1197,33 @@ RemoteResource::reconnect( void )
 		EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
 				ATTR_GLOBAL_JOB_ID );
 	}
-	if( lease_duration < 0 ) { 
-			// if it's our first time, figure out what we've got to
-			// work with...
-		dprintf( D_FULLDEBUG, "Trying to reconnect job %s\n", gjid );
-		if( ! jobAd->LookupInteger(ATTR_JOB_LEASE_DURATION,
-								   lease_duration) ) {
-			EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
-					ATTR_JOB_LEASE_DURATION );
-		}
-		if( ! last_job_lease_renewal ) {
-				// if we were spawned in reconnect mode, this should
-				// be set.  if we're just trying a reconnect because
-				// the syscall socket went away, we'll already have
-				// initialized last_job_lease_renewal when we started
-				// the job
-			EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
-					ATTR_LAST_JOB_LEASE_RENEWAL );
-		}
-		dprintf( D_ALWAYS, "Trying to reconnect to disconnected job\n" );
-		dprintf( D_ALWAYS, "%s: %d %s", ATTR_LAST_JOB_LEASE_RENEWAL,
+	if( lease_duration < 0 ) {
+		EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
+		        ATTR_JOB_LEASE_DURATION );
+	}
+	if( ! last_job_lease_renewal ) {
+			// if we were spawned in reconnect mode, this should
+			// be set.  if we're just trying a reconnect because
+			// the syscall socket went away, we'll already have
+			// initialized last_job_lease_renewal when we started
+			// the job
+		EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
+		        ATTR_LAST_JOB_LEASE_RENEWAL );
+	}
+
+	if (reconnect_attempts == 0) {
+		dprintf( D_ALWAYS,
+		         "Trying to reconnect to disconnected job %s\n",
+		         gjid );
+		dprintf( D_ALWAYS,
+		         "%s: %d %s",
+		         ATTR_LAST_JOB_LEASE_RENEWAL,
 				 (int)last_job_lease_renewal, 
 				 ctime(&last_job_lease_renewal) );
-		dprintf( D_ALWAYS, "%s: %d seconds\n",
-				 ATTR_JOB_LEASE_DURATION, lease_duration );
+		dprintf( D_ALWAYS,
+		         "%s: %d seconds\n",
+				 ATTR_JOB_LEASE_DURATION,
+		         lease_duration );
 	}
 
 		// If we got here, we're trying to reconnect.  keep track of
@@ -1226,11 +1233,10 @@ RemoteResource::reconnect( void )
 	}
 
 		// each time we get here, see how much time remains...
-	time_t now = time(0);
-	int remaining = lease_duration - (now - last_job_lease_renewal);
-	if( remaining <= 0 ) {
-	dprintf( D_ALWAYS, "%s remaining: EXPIRED!\n",
-			 ATTR_JOB_LEASE_DURATION );
+	int remaining = remainingLeaseDuration();
+	if( !remaining ) {
+		dprintf( D_ALWAYS, "%s remaining: EXPIRED!\n",
+		         ATTR_JOB_LEASE_DURATION );
 		MyString reason = "Job disconnected too long: ";
 		reason += ATTR_JOB_LEASE_DURATION;
 		reason += " (";
@@ -1289,6 +1295,17 @@ RemoteResource::attemptReconnect( void )
 	requestReconnect(); 
 }
 
+int
+RemoteResource::remainingLeaseDuration( void )
+{
+	if (lease_duration < 0) {
+			// No lease, nothing remains.
+		return 0;
+	}
+	int now = (int)time(0);
+	int remaining = lease_duration - (now - last_job_lease_renewal);
+	return ((remaining < 0) ? 0 : remaining);
+}
 
 bool
 RemoteResource::locateReconnectStarter( void )
