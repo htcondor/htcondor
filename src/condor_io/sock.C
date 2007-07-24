@@ -1853,21 +1853,23 @@ Sock::_bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
 {
 	int rval;
 
-	/* bind()'s addr parameter on many platforms is wildly defined from
-		a void*, to a const sockaddr*, to an int*. So, were going to force
-		the pointer into something that ::bind() or the  GCB_local_bind can
-		accept. This will most likely cause some warnings during 
-		compilations but we'll live with those for now. */
-
 #if HAVE_EXT_GCB
 	if (outbound) {
-		rval = GCB_local_bind(fd, (SOCKET_ADDR_TYPE)addr, len);
+		rval = GCB_local_bind(fd, 
+			/* XXX This evil, evil typecast is here because
+				this codepath only exists on linux. The
+				real way to fix this is to parameterize
+				the functions signatures all the way down to the
+				the Generic_bind() call in the GCB
+				external. */
+			(struct sockaddr*)addr, 
+			len);
 	}
 	else {
-		rval = ::bind(fd, (SOCKET_ADDR_TYPE)addr, len);
+		rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
 	}
 #else
-	rval = ::bind(fd, (SOCKET_ADDR_TYPE)addr, len);
+	rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
 #endif /* HAVE_EXT_GCB */
 	return rval;
 }
