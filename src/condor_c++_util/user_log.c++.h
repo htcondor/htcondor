@@ -81,10 +81,20 @@ typedef int BOOL_T;
 class UserLog {
   public:
     ///
-    UserLog() : cluster(-1), proc(-1), subproc(-1), in_block(FALSE), path(0),
-				fp(0), lock(NULL), use_xml(XML_USERLOG_DEFAULT), m_gjid(0),
-				global_path(0), global_fp(0), global_lock(NULL),
-				write_user_log(true), write_global_log(true) {}
+    UserLog() : cluster(-1), 
+				proc(-1), 
+				subproc(-1), 
+				in_block(FALSE), 
+				write_user_log(true), 
+				path(0),
+				fp(0), 
+				lock(NULL), 
+				write_global_log(true), 
+				global_path(0), 
+				global_fp(0), 
+				global_lock(NULL),
+				use_xml(XML_USERLOG_DEFAULT), 
+				m_gjid(0) {}
     
     /** Constructor
         @param owner Username of the person whose job is being logged
