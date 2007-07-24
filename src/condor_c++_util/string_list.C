@@ -87,6 +87,9 @@ StringList::initializeFromString (const char *s)
 					&& *walk_ptr != '\0') 
 			walk_ptr++;
 
+		if (*walk_ptr == '\0')
+			break;
+
 		// mark the beginning of this String in the list.
 		const char *begin_ptr = walk_ptr;
 
