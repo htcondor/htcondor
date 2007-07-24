@@ -87,8 +87,14 @@ if( $type eq "builds") {
 	#ShowBuildRuns();
 
 	foreach $buildrun (@buildruns) {
+		# we want to massage the data if we are looking for long
+		# term build and test results. So try to wean out framework
+		# issues where we get multiple entries pre branch per day
+		# but leave the zero entry if a better one does not exist
+		# we know we are in that mode when $branch is unset.
+		# third arg is branch..
 		my @args = split /:/,$buildrun;
-		FindBuildTasks($args[0],$args[1]);
+		FindBuildTasks($args[0],$args[1],$args[2]);
 	}
 } elsif($type eq "tests") {
 	CollectTestResults();
@@ -113,8 +119,8 @@ sub CollectTimeResults
 		#print "Platforms for $run\n";
 		FindPlatforms($run);
 	}
-	print "Done looking for platform list\n";
-	print "save it as we go....\n";
+	#print "Done looking for platform list\n";
+	#print "save it as we go....\n";
 	if( !$savefile ) {
 		die "--save must be set for collecting image list\n";
 	}
@@ -303,7 +309,7 @@ sub FindBuildTasks
 {
 	my $runid = shift;
 	my $plotdate = shift;
-	my $method = shift;
+	my $branch = shift;
 
 	my $nullresult = 0;
 	my $goodresult = 0;
@@ -317,18 +323,11 @@ sub FindBuildTasks
 	}
 
 	#print "FindBuildTasks: args are <$runid,$plotdate>\n";
-	if(!defined($method)) {
-		#print "restricting look at platform_job only\n";
-		$extraction = $db->prepare("SELECT * FROM Task WHERE  \
-				runid = $runid \
-				and name =  'platform_job' \
-				");
-	} else { #assume all tasks are to be exposed on this find....
-		#print "non-restricting look at run\n";
-		$extraction = $db->prepare("SELECT * FROM Task WHERE  \
-				runid = $runid \
-				");
-	}
+	#print "restricting look at platform_job only\n";
+	$extraction = $db->prepare("SELECT * FROM Task WHERE  \
+			runid = $runid \
+			and name =  'platform_job' \
+			");
     $extraction->execute();
 
 	# we really only care about the results for the automatics
@@ -338,10 +337,7 @@ sub FindBuildTasks
 		$res = $sumref->{'result'};
 		$name = $sumref->{'name'};
 		$platform = $sumref->{'platform'};
-		if( defined($method)) {
-			#print "$name for platform $platform is <<$res>>\n";
-		}
-			#print "<$res>\n";
+		#print "<$res>\n";
 		if( defined($res)) { 
 			#print "<$res>\n";
 			if($res == 0) {
@@ -360,7 +356,11 @@ sub FindBuildTasks
 	my $pandb = $nullresult + $badresult;
 	my $pandbandf = $pandb + $goodresult;
 	 
-	print DROP "$plotdate, $nullresult, $badresult, $pandb, $goodresult, $pandbandf\n"; 
+	if( defined($branch) ) {
+		print DROP "$plotdate, $nullresult, $badresult, $pandb, $goodresult, $pandbandf, $branch\n"; 
+	} else {
+		print DROP "$plotdate, $nullresult, $badresult, $pandb, $goodresult, $pandbandf\n"; 
+	}
 }
 
 sub FindBuildRuns
@@ -409,7 +409,11 @@ sub FindBuildRuns
 				#print "Did not findd <$branch> in <$des>\n";
 			}
 		} else {
-			push(@buildruns,$rid  . ":" . $plotdateform);
+			if( $des =~ /^.*(V\d+_\d+-(trunk|branch)).*$/ ) {
+				push(@buildruns,$rid . ":" . $plotdateform . ":" . $1);
+			} else {
+				#print "Did not findd <$branch> in <$des>\n";
+			}
 		}
 	}
 }
@@ -426,7 +430,8 @@ sub FindTestRuns
 	$testruns = ();
 	while( my $sumref = $extraction->fetchrow_hashref() ){
         $trid = $sumref->{'runid'};
-		push(@testruns,$trid . ":" . $args[1]);
+		# if a branch were not called out we pass the branch along.
+		push(@testruns,$trid . ":" . $args[1] . ":" . $args[2]);
 	}
 }
 
@@ -449,6 +454,7 @@ sub FindTestTasks
 
 		my @args = split /:/, $runid;
 		$builddate = $args[1];
+		$thisbranch = $args[2];
 
 		#print "Find tests for runid $args[0] builddate <<$builddate>>\n";
 		$extraction = $db->prepare("SELECT * FROM Task WHERE  \
@@ -499,7 +505,7 @@ sub FindTestTasks
 	#print "Runs for tests = <<$#testruns>>\n";
 	# more then 2 platforms
 	if($#testruns > 1) {
-		print DROP "$plotdateform, $nullresult, $badresult, $pandb, $goodresult, $pandbandf\n"; 
+		print DROP "$plotdateform, $nullresult, $badresult, $pandb, $goodresult, $pandbandf, $thisbranch\n"; 
 	}
 }
 
