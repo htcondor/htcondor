@@ -1852,19 +1852,22 @@ Sock::_bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
 	SOCKET_LENGTH_TYPE len, bool outbound)
 {
 	int rval;
+
+	/* bind()'s addr parameter on many platforms is wildly defined from
+		a void*, to a const sockaddr*, to an int*. So, were going to force
+		the pointer into something that ::bind() or the  GCB_local_bind can
+		accept. This will most likely cause some warnings during 
+		compilations but we'll live with those for now. */
+
 #if HAVE_EXT_GCB
 	if (outbound) {
-		/* XXX Here we might cast away the const on some platforms, resulting
-			in a warning. It might be ugly to continue down the call chain
-			parameterizing with the #define types, so we'll let this warning 
-			live for now. */
 		rval = GCB_local_bind(fd, (SOCKET_ADDR_TYPE)addr, len);
 	}
 	else {
-		rval = ::bind(fd, addr, len);
+		rval = ::bind(fd, (SOCKET_ADDR_TYPE)addr, len);
 	}
 #else
-	rval = ::bind(fd, addr, len);
+	rval = ::bind(fd, (SOCKET_ADDR_TYPE)addr, len);
 #endif /* HAVE_EXT_GCB */
 	return rval;
 }
