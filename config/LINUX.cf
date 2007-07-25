@@ -17,6 +17,8 @@
 #    define GlibCFlag		-DGLIBC=GLIBC -DGLIBC22=GLIBC22
 #  elif defined( IS_GLIBC23 )
 #    define GlibCFlag		-DGLIBC=GLIBC -DGLIBC23=GLIBC23
+#  elif defined( IS_GLIBC24 )
+#    define GlibCFlag		-DGLIBC=GLIBC -DGLIBC23=GLIBC24
 #  endif
 #else /* Non IS_GLIBC */
 #  define GlibCFlag

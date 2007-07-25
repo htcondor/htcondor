@@ -36,7 +36,7 @@ all_target()
 
 /* Common build flags. */
 NEW_CLASSADS_LINK =  -L$(NEW_CLASSADS_LIB) -lclassad_ns
-#if IS_GLIBC23
+#if IS_GLIBC23 || IS_GLIBC24
 /* FIXME: this define will be better when fixed to: #if IS_LINUX_RH9 */
 /* Stork must support large file (> 2GB) transfers. */
 LARGEFILE_DEFS	= \

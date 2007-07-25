@@ -127,7 +127,7 @@ END_C_DECLS
 #endif /* GLIBC */
 
 
-#if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))
+#if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24))
 #include <search.h>
 #endif
 
@@ -177,7 +177,7 @@ END_C_DECLS
 #define HAS_U_TYPES	1
 #define SIGSET_CONST	/* nothing */
 
-#if defined(GLIBC22) || defined(GLIBC23)
+#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24)
 	#define SYNC_RETURNS_VOID 1
 #endif
 

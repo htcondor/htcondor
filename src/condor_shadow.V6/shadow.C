@@ -64,7 +64,7 @@ char* mySubSystem = "SHADOW";
 extern FILESQL *FILEObj;
 
 extern "C" {
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24))) || defined(HPUX11) || defined(AIX) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
 	/* XXX These should really be selected in a better fashion */
 	void reaper(int);
 	void handle_sigusr1(int);
@@ -1464,7 +1464,7 @@ open_named_pipe( const char *name, int mode, int target_fd )
 	}
 }
 
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24))) || defined(HPUX11) || defined(AIX) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
 void
 reaper(int unused)
 #else
@@ -1525,7 +1525,7 @@ display_uids()
   the schedd already knows this job should be removed.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24))) || defined(HPUX11) || defined(AIX) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
 void
 handle_sigusr1( int unused )
 #else
@@ -1550,7 +1550,7 @@ handle_sigusr1( void )
   startd, to force the job to quickly vacate.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24))) || defined(HPUX11) || defined(AIX) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
 void
 handle_sigquit( int unused )
 #else
@@ -1569,7 +1569,7 @@ handle_sigquit( void )
   If we get a SIGTERM (from the schedd, a shutdown, etc), we want to
   try to do a graceful shutdown and allow our job to checkpoint. 
 */
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24))) || defined(HPUX11) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
 void
 handle_sigterm( int unused )
 #else

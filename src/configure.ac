@@ -194,6 +194,21 @@ elif test $os = "Linux" ; then
        _cv_linux_distro="TAO_UNKNOWN"
        ;;
     esac
+  elif test -f "/etc/yellowdog-release" ; then
+    _yd_vers=`cat /etc/yellowdog-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
+    case "$_yd_vers" in
+     "3.0" )
+       _cv_linux_distro="YD30"
+       ;;
+     "5.0" )
+       _cv_linux_distro="YD50"
+       ;;
+     * )
+       AC_MSG_WARN([Condor is not yet ported to yellowdog version $_yd_vers])
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor])
+       _cv_linux_distro="YD_UNKNOWN"
+       ;;
+    esac
   elif test -f "/etc/redhat-release" ; then 
     _rh_vers=`cat /etc/redhat-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
     case "$_rh_vers" in
@@ -228,18 +243,6 @@ elif test $os = "Linux" ; then
        AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
        _cv_linux_distro="RH_UNKNOWN"
-       ;;
-    esac
-  elif test -f "/etc/yellowdog-release" ; then
-    _yd_vers=`cat /etc/yellowdog-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
-    case "$_yd_vers" in
-     "3.0" )
-       _cv_linux_distro="YD30"
-       ;;
-     * )
-       AC_MSG_WARN([Condor is not yet ported to yellowdog version $_yd_vers])
-       AC_MSG_WARN([You may have trouble building and/or packaging Condor])
-       _cv_linux_distro="YD_UNKNOWN"
        ;;
     esac
   elif test -f "/etc/SuSE-release" ; then
