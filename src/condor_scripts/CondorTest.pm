@@ -722,7 +722,8 @@ sub getJobStatus
 	my @status;
 	my $qstatcluster = shift;
 	my $cmd = "condor_q $qstatcluster -format %d JobStatus";
-	my $qstat = CondorTest::runCondorTool($cmd,\@status,3);
+	# shhhhhhhh third arg 0 makes it hush its output
+	my $qstat = CondorTest::runCondorTool($cmd,\@status,0);
 	if(!$qstat)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
@@ -757,14 +758,17 @@ sub runCondorTool
 	my $done = 0;
 	my $cmd = shift;
 	my $arrayref = shift;
-	my $multiplier = shift;
+	# use unused third arg to skip the noise like the time
+	my $quiet = shift;
 	my $force = "";
 	$force = shift;
 	my $count = 0;
 	my $catch = "runCTool$$";
 
 	# clean array before filling
-	system("date");
+	if($quiet != 0) {
+		system("date");
+	}
 
 	my $attempts = 4;
 	my $count = 0;
