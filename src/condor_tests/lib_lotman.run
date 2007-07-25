@@ -1,0 +1,63 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+use Cwd;
+$testname = 'lib_lotman - build and test lotmanpp';
+$cmd = "lib_lotman.cmd";
+$corename = "lib_lotman";
+$topdir = getcwd();
+$ourtarfile = "";
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+CondorTest::fullchomp($currenthost);
+
+system("date");
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+
+$mylotmanname = "lotman" . $mypid;
+$myfulllotmanloc = $topdir . "/" . $mylotmanname;
+
+system("mkdir $mysaveme");
+$mypiddir = $mysaveme . "/" . $mypid;
+$mylotmanpiddir = $mysaveme . "/" . $mypid . "/" . $mylotmanname;
+system("mkdir $mypiddir");
+system("mkdir $mylotmanpiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $mypid");
+system("ln -s $mylotmanpiddir $mylotmanname");
+
+# get lotman sources and place them in $mylotmanpiddir
+system("cp -r ../lotman $mylotmanpiddir");
+system("pwd");
+chdir("$mylotmanpiddir/lotman");
+system("pwd");
+system("ls");
+$buildstatus = system("make");
+if($buildstatus != 0) {
+	die "Lotman build faild!!\n";
+}
+$builtlotman = $mylotmanpiddir . "/lotman";
+
+chdir("$topdir");
+
+my $result = 0;
+
+print "Everything ready to test lotman\n";
+system("date");
+$result = system("./lib_lotman.pl $builtlotman");
+print "Result of lib_lotman job is  $result\n";
+
+system("cp *lotman* $mysaveme");
+
+system("date");
+if($result != 0) {
+	die "Lotman test FAILED\n";
+}
+
+print "Lotman test Success!\n";
+exit(0);
