@@ -1,9 +1,12 @@
+% Define a registered trademark sign for something
+\newcommand{\Reg}[1]{{#1}\textsuperscript{\scriptsize{\textregistered}}}
+
 %
 %  Set up version, author and copyright notices
 %
 \newcommand{\AuthorNotice}{Condor Team, University of Wisconsin--Madison}
 \newcommand{\VersionNotice}{Version 6.9.4}
-\newcommand{\CondorR}{Condor\textsuperscript{\scriptsize{\textregistered}}}
+\newcommand{\CondorR}{\Reg{Condor}}
 \newcommand{\CopyrightNotice}{Copyright \copyright\ 1990-2007 Condor Team, Computer Sciences Department, 
   University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
   No use of the Condor Software Program is authorized 
@@ -23,6 +26,7 @@
 
   See the \emph{Condor \VersionNotice\ Manual} for
   additional notices. }
+
 
 %
 %  Common motifs
@@ -129,4 +133,13 @@
 %    e.g., stork_submit == \Stork{submit}
 \newcommand{\Stork}[1]{\Prog{stork\_#1}}
 \newcommand{\stork}[1]{stork\_#1}
+
+%
+% Registered brand names referenced in our manual
+%
+% The" Sony Playstation N" registered trademark
+\newcommand{\PSR}[1]{Sony \Reg{Playstation} #1}
+%
+% The "Sony Playstation N" abbreviation trademark for "PSN"
+\newcommand{\PSTM}[1]{\Reg{PS#1}}
 
