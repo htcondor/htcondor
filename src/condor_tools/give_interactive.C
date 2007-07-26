@@ -249,8 +249,6 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 void
 make_request_ad(ClassAd & requestAd, const char *rank)
 {
-	char buffer[2048];
-
 	requestAd.SetMyTypeName (JOB_ADTYPE);
 	requestAd.SetTargetTypeName (STARTD_ADTYPE);
 
@@ -259,37 +257,29 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 	mySubSystem = "INTERACTIVE";
 	config_fill_ad(&requestAd);
 
-	(void) sprintf (buffer, "Interactive = TRUE");	
-	requestAd.Insert (buffer);
+	requestAd.Assign(ATTR_INTERACTIVE, true);
+	requestAd.Assign(ATTR_SUBMITTOR_PRIO, priority);
 
-	(void) sprintf( buffer , "%s = %f" , ATTR_SUBMITTOR_PRIO , priority );
-	requestAd.Insert (buffer);
 
 	// Always set Requirements to True - we can do this because we only
 	// fetch the startd ads which match the user's constraint in the first place.
-	(void)sprintf( buffer, "%s = TRUE", ATTR_REQUIREMENTS );
-	requestAd.Insert (buffer);
+	requestAd.Assign(ATTR_REQUIREMENTS, true);
 
 	if( !rank ) {
-		(void)sprintf( buffer, "%s = 0", ATTR_RANK );
-		requestAd.Insert (buffer);
+		requestAd.Assign(ATTR_RANK, 0);
 	} else {
-		(void)sprintf( buffer, "%s = %s", ATTR_RANK, rank );
-		requestAd.Insert (buffer);
+		/* Tricksy use of AssignExpr here since rank will be a rhs expr */
+		requestAd.AssignExpr(ATTR_RANK, rank);
 	}
 
-	(void) sprintf (buffer, "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));	
-	requestAd.Insert (buffer);
-
-	(void) sprintf (buffer, "%s = 0", ATTR_COMPLETION_DATE);
-	requestAd.Insert (buffer);
+	requestAd.Assign(ATTR_Q_DATE, (int)time ((time_t *) 0));
+	requestAd.Assign(ATTR_COMPLETION_DATE, 0);
 
 	char *owner = my_username();
 	if( !owner ) {
 		owner = "unknown";
 	}
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, owner);
-	requestAd.Insert (buffer);
+	requestAd.Assign(ATTR_OWNER, owner);
 
 #ifdef WIN32
 	// put the NT domain into the ad as well
@@ -303,50 +293,26 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 					fprintf(stderr,"NT DOMAIN OVERFLOW (%s)\n",ntdomain);
 					exit(1);
 				}
-				(void) sprintf (buffer, "%s = \"%s\"", ATTR_NT_DOMAIN, 
-										ntdomain);
-				requestAd.Insert (buffer);
+				requestAd.Assign(ATTR_NT_DOMAIN, ntdomain);
 			}
 		}
 		delete [] ntdomain;
 	}
 #endif
 		
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_USER_CPU);
-	requestAd.Insert (buffer);
-
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_SYS_CPU);
-	requestAd.Insert (buffer);
-
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_USER_CPU);
-	requestAd.Insert (buffer);
-
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_SYS_CPU);
-	requestAd.Insert (buffer);
-
-	(void) sprintf (buffer, "%s = 0", ATTR_JOB_EXIT_STATUS);
-	requestAd.Insert (buffer);
-
-	(void) sprintf (buffer, "%s = 0", ATTR_NUM_CKPTS);
-	requestAd.Insert (buffer);
-
-	(void) sprintf (buffer, "%s = 0", ATTR_NUM_RESTARTS);
-	requestAd.Insert (buffer);
-
-	(void) sprintf (buffer, "%s = 0", ATTR_JOB_COMMITTED_TIME);
-	requestAd.Insert (buffer);
-
-	(void)sprintf (buffer, "%s = 0", ATTR_IMAGE_SIZE);
-	requestAd.Insert (buffer);
-
-	(void)sprintf (buffer, "%s = 0", ATTR_EXECUTABLE_SIZE);
-	requestAd.Insert (buffer);
-
-	(void)sprintf (buffer, "%s = 0", ATTR_DISK_USAGE);
-	requestAd.Insert (buffer);
+	requestAd.Assign(ATTR_JOB_LOCAL_USER_CPU, 0.0);
+	requestAd.Assign(ATTR_JOB_LOCAL_SYS_CPU, 0.0);
+	requestAd.Assign(ATTR_JOB_REMOTE_USER_CPU, 0.0);
+	requestAd.Assign(ATTR_JOB_REMOTE_SYS_CPU, 0.0);
+	requestAd.Assign(ATTR_JOB_EXIT_STATUS, 0);
+	requestAd.Assign(ATTR_NUM_CKPTS, 0);
+	requestAd.Assign(ATTR_NUM_RESTARTS, 0);
+	requestAd.Assign(ATTR_JOB_COMMITTED_TIME, 0);
+	requestAd.Assign(ATTR_IMAGE_SIZE, 0);
+	requestAd.Assign(ATTR_EXECUTABLE_SIZE, 0);
+	requestAd.Assign(ATTR_DISK_USAGE, 0);
 
 	// what else?
-
 }
 
 

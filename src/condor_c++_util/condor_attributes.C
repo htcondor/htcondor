@@ -248,6 +248,7 @@ const char *ATTR_HELD_JOBS				 = "HeldJobs";
 const char *ATTR_HOLD_KILL_SIG            = "HoldKillSig";
 const char *ATTR_IDLE_JOBS                = "IdleJobs";
 const char *ATTR_IMAGE_SIZE				 = "ImageSize";
+const char *ATTR_INTERACTIVE			 = "Interactive";
 const char *ATTR_IS_DAEMON_CORE           = "IsDaemonCore";
 const char *ATTR_IS_OWNER                 = "IsOwner";
 const char *ATTR_IS_QUEUE_SUPER_USER      = "IsQueueSuperUser";

@@ -188,6 +188,7 @@ extern const char * ATTR_HELD_JOBS;
 extern const char * ATTR_HOLD_KILL_SIG;
 extern const char * ATTR_IDLE_JOBS;
 extern const char * ATTR_IMAGE_SIZE;
+extern const char * ATTR_INTERACTIVE;
 extern const char * ATTR_IS_DAEMON_CORE;
 extern const char * ATTR_IS_OWNER;
 extern const char * ATTR_IS_QUEUE_SUPER_USER;

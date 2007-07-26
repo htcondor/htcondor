@@ -2639,6 +2639,7 @@ void AttrList::RestoreChain(const ChainedPair &p)
 	this->chained_hash = p.exprHash;
 }
 
+/* This is used for %s = %s style constructs */
 int AttrList::
 AssignExpr(char const *variable,char const *value)
 {
@@ -2656,12 +2657,14 @@ AssignExpr(char const *variable,char const *value)
 	return Insert(buf.GetCStr());
 }
 
+/* This is used for %s = "%s" style constructs */
 int AttrList::
 Assign(char const *variable, MyString &value)
 {
 	return Assign(variable, value.Value());
 }
 
+/* This is used for %s = "%s" style constructs */
 int AttrList::
 Assign(char const *variable,char const *value)
 {
@@ -2705,6 +2708,17 @@ int AttrList::
 Assign(char const *variable,float value)
 {
 	MyString buf;
+	buf.sprintf("%s = %f",variable,value);
+	return Insert(buf.GetCStr());
+}
+int AttrList::
+Assign(char const *variable,double value)
+{
+	MyString buf;
+	/* WARNING: The internal representation may only store float sized 
+		quantities. but if this is ever fixed, the whole source base doesn't
+		need to be updated to deal with assigning double values due to the
+		existance of this call. */
 	buf.sprintf("%s = %f",variable,value);
 	return Insert(buf.GetCStr());
 }

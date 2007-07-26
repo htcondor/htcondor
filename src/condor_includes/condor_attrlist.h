@@ -163,6 +163,7 @@ class AttrList : public AttrListAbstract
 		int Assign(char const *variable,char const *value);
 		int Assign(char const *variable,int value);
 		int Assign(char const *variable,float value);
+		int Assign(char const *variable,double value);
 		int Assign(char const *variable,bool value);
 
 		// Make an expression invisible when serializing the ClassAd.
