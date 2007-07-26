@@ -326,9 +326,6 @@ class RemoteResource : public Service {
 		*/
 	virtual void attemptReconnect( void );
 
-		/// If this resource has a lease, how much time until it expires?
-	virtual int remainingLeaseDuration( void );
-
 		/** Check if the X509 has been updated, if so upload it to the shadow
 
 			Intended for use as a DaemonCore timer handler (thus, it's public),
