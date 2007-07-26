@@ -96,7 +96,7 @@ main(int argc, char* argv[])
 
   int flag = 1;
 
-  char tmp[512];
+  MyString tmp;
 
   int i;
   parameters = (void **) malloc(NUM_PARAMETERS * sizeof(void *));
@@ -129,11 +129,11 @@ main(int argc, char* argv[])
 							   stderr);
 			exit(1);
 		}
-		sprintf (tmp, "%s == \"%s\"", ATTR_NAME, quillName);      		
-		quillQuery.addORConstraint (tmp);
+		tmp.sprintf ("%s == \"%s\"", ATTR_NAME, quillName);      		
+		quillQuery.addORConstraint (tmp.Value());
 
-                sprintf (tmp, "%s == \"%s\"", ATTR_SCHEDD_NAME, quillName);
-                quillQuery.addORConstraint (tmp);
+                tmp.sprintf ("%s == \"%s\"", ATTR_SCHEDD_NAME, quillName);
+                quillQuery.addORConstraint (tmp.Value());
 
 		remotequill = true;
 		readfromfile = false;
