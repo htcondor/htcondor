@@ -1744,9 +1744,11 @@ job expects.
 %% vmware_dir
 %%%%%%%%%%%%%%%%%%%
 
-\item[vmware\_dir = $<$vmware \Bar\ xen$>$]
+\item[vmware\_dir = $<$pathname$>$]
 \index{submit commands!vmware\_dir}
-Description of vmware\_dir.
+The complete path and name of the directory where VMware-specific
+files and applications such as the VMDK (Virtual Machine Disk Format) and
+VMX (Virtual Machine Configuration) reside.
 
 %%%%%%%%%%%%%%%%%%%
 %% vmware_should_transfer_files
@@ -1754,7 +1756,10 @@ Description of vmware\_dir.
 
 \item[vmware\_should\_transfer\_files = $<$True \Bar\ False$>$]
 \index{submit commands!vmware\_should\_transfer\_files}
-Description of vmware\_should\_transfer\_files.
+Specifies whether Condor will transfer VMware-specific files 
+located in the \SubmitCmd{vmware\_dir} to
+the execute machine (\Expr{True}) or rely on access through 
+a shared file system (\Expr{False}).
 
 %%%%%%%%%%%%%%%%%%%
 %% vmware_snapshot_disk
@@ -1762,7 +1767,9 @@ Description of vmware\_should\_transfer\_files.
 
 \item[vmware\_snapshot\_disk = $<$True \Bar\ False$>$]
 \index{submit commands!vmware\_snapshot\_disk}
-Description of vmware\_snapshot\_disk.
+When \Expr{True}, causes Condor to utilize
+a VMware snapshot disk for new or modified files.
+If not specified, the default value is \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_cdrom_device
@@ -1770,7 +1777,8 @@ Description of vmware\_snapshot\_disk.
 
 \item[xen\_cdrom\_device = $<$device$>$]
 \index{submit commands!xen\_cdrom\_device}
-Description of xen\_cdrom\_device.
+Describes the Xen cdrom device when
+\SubmitCmd{vm\_cdrom\_files} is defined.
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_disk
@@ -1778,6 +1786,7 @@ Description of xen\_cdrom\_device.
 
 \item[xen\_disk = $<$list-of-disk-files$>$]
 \index{submit commands!xen\_disk}
+%% A list of colon separated disk files
 Description of xen\_disk.
 
 %%%%%%%%%%%%%%%%%%%
