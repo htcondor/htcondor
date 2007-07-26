@@ -280,7 +280,6 @@ V6_9_SRC		-a \
 			src/condor_privsep \
 			src/condor_dbmsd \
 			src/condor_tt \
-			lotman \
 			src/condor_vm-gahp
 
 
