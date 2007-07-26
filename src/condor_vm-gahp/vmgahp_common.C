@@ -360,10 +360,20 @@ write_specific_vm_params_to_file(const char *prefix, FILE *file)
 }
 
 bool
-write_forced_vm_params_to_file(FILE *file) 
+write_forced_vm_params_to_file(FILE *file, const char* startmark, const char* endmark)
 {
 	if( !file ) {
 		return false;
+	}
+
+	if( forcedConfigParams.isEmpty() ) {
+		return true;
+	}
+
+	if( startmark ) {
+		if( fprintf(file, "%s\n", startmark) < 0 ) {
+			return false;
+		}
 	}
 
 	char *tmp = NULL;
@@ -373,6 +383,13 @@ write_forced_vm_params_to_file(FILE *file)
 			return false;
 		}
 	}
+
+	if( endmark ) {
+		if( fprintf(file, "%s\n", endmark) < 0 ) {
+			return false;
+		}
+	}
+
 	return true;
 }
 

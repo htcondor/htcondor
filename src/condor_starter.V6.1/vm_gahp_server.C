@@ -262,12 +262,12 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	}else {
 		int null_fd = safe_open_wrapper(NULL_FILE, O_WRONLY | O_APPEND, 0666);
 		if( null_fd < 0 ) {
-			io_redirect[2] = -2;
 			start_err_msg = "unable to open null file for stderr of VM gahp";
 			dprintf(D_ALWAYS,"Failed to open '%s':%s (errno %d)\n", 
 					NULL_FILE, strerror(errno), errno);
 			return false;
 		}
+		io_redirect[2] = null_fd;
 	}
 
 	// Set Arguments
@@ -397,6 +397,8 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	daemonCore->Close_Pipe(io_redirect[1]);
 	if( m_include_gahp_log ) {
 		daemonCore->Close_Pipe(io_redirect[2]);
+	}else {
+		close(io_redirect[2]);
 	}
 
 	if ( m_vmgahp_pid == FALSE ) {
@@ -1400,6 +1402,8 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 				!strncasecmp( vmAttr.Value(), ATTR_CLUSTER_ID, strlen(ATTR_CLUSTER_ID)) ||
 				!strncasecmp( vmAttr.Value(), ATTR_PROC_ID, strlen(ATTR_PROC_ID)) ||
 				!strncasecmp( vmAttr.Value(), ATTR_USER, strlen(ATTR_USER)) ||
+				!strncasecmp( vmAttr.Value(), ATTR_ORIG_JOB_IWD, 
+					strlen(ATTR_ORIG_JOB_IWD)) ||
 				!strncasecmp( vmAttr.Value(), ATTR_JOB_ARGUMENTS1, 
 					strlen(ATTR_JOB_ARGUMENTS1)) ||
 				!strncasecmp( vmAttr.Value(), ATTR_JOB_ARGUMENTS2, 

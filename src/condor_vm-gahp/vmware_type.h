@@ -67,6 +67,7 @@ private:
 	bool createCkptFiles();
 	bool CombineDisks();
 	void adjustConfigDiskPath();
+	bool adjustCkptConfig(const char* vmconfig);
 	bool Snapshot();
 	bool Unregister();
 	bool ShutdownFast();

@@ -593,15 +593,24 @@ XenType::Status()
 
 		if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_STATUS) ) {
 			vm_status = value;
-		}else if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_CPUTIME) ) {
+			continue;
+		}
+		if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_CPUTIME) ) {
 			cputime = (float)strtod(value.Value(), (char **)NULL);
 			if( cputime <= 0 ) {
 				cputime = 0;
 			}
-		}else if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_MAC) ) {
-			m_vm_mac = value;
-		}else if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_IP) ) {
-			m_vm_ip = value;
+			continue;
+		}
+		if( m_vm_networking ) {
+			if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_MAC) ) {
+				m_vm_mac = value;
+				continue;
+			}
+			if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_IP) ) {
+				m_vm_ip = value;
+				continue;
+			}
 		}
 	}
 	fclose(file);
@@ -615,22 +624,24 @@ XenType::Status()
 
 	m_result_msg = "";
 
-	if( m_vm_mac.IsEmpty() == false ) {
-		if( m_result_msg.IsEmpty() == false ) {
-			m_result_msg += " ";
+	if( m_vm_networking ) {
+		if( m_vm_mac.IsEmpty() == false ) {
+			if( m_result_msg.IsEmpty() == false ) {
+				m_result_msg += " ";
+			}
+			m_result_msg += VMGAHP_STATUS_COMMAND_MAC;
+			m_result_msg += "=";
+			m_result_msg += m_vm_mac;
 		}
-		m_result_msg += VMGAHP_STATUS_COMMAND_MAC;
-		m_result_msg += "=";
-		m_result_msg += m_vm_mac;
-	}
 
-	if( m_vm_ip.IsEmpty() == false ) {
-		if( m_result_msg.IsEmpty() == false ) {
-			m_result_msg += " ";
+		if( m_vm_ip.IsEmpty() == false ) {
+			if( m_result_msg.IsEmpty() == false ) {
+				m_result_msg += " ";
+			}
+			m_result_msg += VMGAHP_STATUS_COMMAND_IP;
+			m_result_msg += "=";
+			m_result_msg += m_vm_ip;
 		}
-		m_result_msg += VMGAHP_STATUS_COMMAND_IP;
-		m_result_msg += "=";
-		m_result_msg += m_vm_ip;
 	}
 
 	if( m_result_msg.IsEmpty() == false ) {
@@ -1007,7 +1018,7 @@ XenType::CreateConfigFile()
 		}
 	}
 
-	if( write_forced_vm_params_to_file(fp) == false ) {
+	if( write_forced_vm_params_to_file(fp, NULL, NULL) == false ) {
 		goto writeerror;
 	}
 	fclose(fp);

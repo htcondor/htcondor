@@ -7,6 +7,8 @@
 #include "vm_univ_utils.h"
 #include "vmgahp.h"
 
+#define CONDOR_VMGAHP_VERSION	"0.0.1"
+
 #define ROOT_UID	0
 
 extern int vmgahp_stdout_pipe;
@@ -30,7 +32,7 @@ bool vmgahp_param_boolean( const char* name, const bool default_value );
 int read_vmgahp_configfile( const char *config );
 bool check_vmgahp_config_permission(const char* configfile, const char* vmtype);
 bool write_specific_vm_params_to_file(const char *prefix, FILE *file);
-bool write_forced_vm_params_to_file(FILE *file);
+bool write_forced_vm_params_to_file(FILE *file, const char* startmark, const char* endmark);
 
 MyString parse_result_string( const char *result_string, int field_num);
 bool verify_digit_arg(const char *s);

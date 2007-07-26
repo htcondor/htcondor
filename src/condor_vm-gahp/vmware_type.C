@@ -39,7 +39,10 @@
 #define VMWARE_TMP_CONFIG_SUFFIX	"_condor.vmx"
 #define VMWARE_VMX_FILE_PERM	0770
 #define VMWARE_VMDK_FILE_PERM	0660
-		
+
+#define VMWARE_VM_CONFIG_LOCAL_PARAMS_START "### Start local parameters ###"
+#define VMWARE_VM_CONFIG_LOCAL_PARAMS_END "### End local parameters ###"
+
 // "parent_filenames" will have basenames for parent files
 static void
 change_snapshot_vmdk_file(const char* file, bool use_fullpath, const char* dirpath, StringList &parent_filenames)
@@ -425,6 +428,114 @@ VMwareType::findCkptConfig(MyString &vmconfig)
 		}
 	}
 	return false;
+}
+
+bool 
+VMwareType::adjustCkptConfig(const char* vmconfig)
+{
+	if( !vmconfig ) {
+		return false;
+	}
+
+	FILE *fp = NULL;
+	char linebuf[2048];
+	MyString tmp_line;
+	StringList configVars;
+
+	fp = safe_fopen_wrapper(vmconfig, "r");
+	if( !fp ) {
+		vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper ckpt vmx file(%s) : "
+				"safe_fopen_wrapper returns %s\n", vmconfig, strerror(errno));
+		return false;
+	}
+
+	// Read all lines
+	bool in_local_param = false;
+	while( fgets(linebuf, 2048, fp) ) {
+		MyString one_line(linebuf);
+		one_line.chomp(); 
+
+		// remove local parameters between VMWARE_VM_CONFIG_LOCAL_PARAMS_START 
+		// and VMWARE_VM_CONFIG_LOCAL_PARAMS_END
+		if( !strncasecmp(one_line.Value(), VMWARE_VM_CONFIG_LOCAL_PARAMS_START,
+					strlen(VMWARE_VM_CONFIG_LOCAL_PARAMS_START)) ) {
+			in_local_param = true;
+			continue;
+		}
+		if( !strncasecmp(one_line.Value(), VMWARE_VM_CONFIG_LOCAL_PARAMS_END,
+					strlen(VMWARE_VM_CONFIG_LOCAL_PARAMS_END)) ) {
+			in_local_param = false;
+			continue;
+		}
+
+		if( in_local_param ) {
+			continue;
+		}
+
+		// adjust networking type
+		if( m_vm_networking ) {
+			if( !strncasecmp(one_line.Value(), "ethernet0.connectionType", 
+						strlen("ethernet0.connectionType")) ) {
+
+				MyString networking_type;
+				char *net_type = vmgahp_param("VMWARE_NETWORKING_TYPE");
+				if( net_type ) {
+					networking_type = delete_quotation_marks(net_type);
+					free(net_type);
+				}else {
+					// default networking type is nat
+					networking_type = "nat";
+				}
+
+				tmp_line.sprintf("ethernet0.connectionType = \"%s\"", 
+						networking_type.Value());
+				configVars.append(tmp_line.Value());
+				continue;
+			}
+		}
+
+		configVars.append(one_line.Value());
+	}
+	fclose(fp);
+	fp = NULL;
+
+	fp = safe_fopen_wrapper(vmconfig, "w");
+	if( !fp ) {
+		vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper ckpt vmx file(%s) : "
+				"safe_fopen_wrapper returns %s\n", vmconfig, strerror(errno));
+		return false;
+	}
+
+	// write config parameters
+	configVars.rewind();
+	char *oneline = NULL;
+	while( (oneline = configVars.next()) != NULL ) {
+		if( fprintf(fp, "%s\n", oneline) < 0 ) {
+			vmprintf(D_ALWAYS, "failed to fprintf in adjustCkptConfig (%s:%s)\n",
+					vmconfig, strerror(errno));
+			fclose(fp);
+			return false;
+		}
+	}
+
+	// Insert local parameters
+	if( write_forced_vm_params_to_file(fp,
+			VMWARE_VM_CONFIG_LOCAL_PARAMS_START, 
+			VMWARE_VM_CONFIG_LOCAL_PARAMS_END) == false ) {
+		vmprintf(D_ALWAYS, "failed to fprintf in adjustCkptConfig (%s:%s)\n",
+				vmconfig, strerror(errno));
+		fclose(fp);
+		return false;
+	}
+	fclose(fp);
+
+	// change permission
+	int retval = chmod(vmconfig, VMWARE_VMX_FILE_PERM);
+	if( retval < 0 ) {
+		vmprintf(D_ALWAYS, "Failed to chmod %s\n", vmconfig);
+		return false;
+	}
+	return true;
 }
 
 bool
@@ -1275,15 +1386,24 @@ VMwareType::Status()
 
 		if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_STATUS)) {
 			vm_status = value;
-		}else if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_PID) ) {
+			continue;
+		}
+		if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_PID) ) {
 			vm_pid = (int)strtol(value.Value(), (char **)NULL, 10);
 			if( vm_pid <= 0 ) {
 				vm_pid = 0;
 			}
-		}else if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_MAC) ) {
-			m_vm_mac = value;
-		}else if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_IP) ) {
-			m_vm_ip = value;
+			continue;
+		}
+		if( m_vm_networking ) {
+			if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_MAC) ) {
+				m_vm_mac = value;
+				continue;
+			}
+			if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_IP) ) {
+				m_vm_ip = value;
+				continue;
+			}
 		}
 	}
 	fclose(file);
@@ -1297,22 +1417,24 @@ VMwareType::Status()
 
 	m_result_msg = "";
 
-	if( m_vm_mac.IsEmpty() == false ) {
-		if( m_result_msg.IsEmpty() == false ) {
-			m_result_msg += " ";
+	if( m_vm_networking ) {
+		if( m_vm_mac.IsEmpty() == false ) {
+			if( m_result_msg.IsEmpty() == false ) {
+				m_result_msg += " ";
+			}
+			m_result_msg += VMGAHP_STATUS_COMMAND_MAC;
+			m_result_msg += "=";
+			m_result_msg += m_vm_mac;
 		}
-		m_result_msg += VMGAHP_STATUS_COMMAND_MAC;
-		m_result_msg += "=";
-		m_result_msg += m_vm_mac;
-	}
 
-	if( m_vm_ip.IsEmpty() == false ) {
-		if( m_result_msg.IsEmpty() == false ) {
-			m_result_msg += " ";
+		if( m_vm_ip.IsEmpty() == false ) {
+			if( m_result_msg.IsEmpty() == false ) {
+				m_result_msg += " ";
+			}
+			m_result_msg += VMGAHP_STATUS_COMMAND_IP;
+			m_result_msg += "=";
+			m_result_msg += m_vm_ip;
 		}
-		m_result_msg += VMGAHP_STATUS_COMMAND_IP;
-		m_result_msg += "=";
-		m_result_msg += m_vm_ip;
 	}
 
 	if( m_result_msg.IsEmpty() == false ) {
@@ -1496,10 +1618,11 @@ VMwareType::CreateConfigFile()
 			deleteNonTransferredFiles();
 			m_restart_with_ckpt = false;
 		}else {
-			int retval = chmod(ckpt_config_file.Value(), VMWARE_VMX_FILE_PERM);
-			if( retval < 0 ) {
-				vmprintf(D_ALWAYS, "Failed to chmod %s in "
-						"VMwareType::CreateConfigFile()\n", 
+			// We found a valid vm configuration file with checkpointed files
+			// Now, we need to adjust the configuration file, if necessary.
+			if( adjustCkptConfig(ckpt_config_file.Value()) == false ) {
+				vmprintf(D_ALWAYS, "Failed to adjust vm config file(%s) for ckpt files "
+						"in VMwareType::CreateConfigFile()\n", 
 						ckpt_config_file.Value());
 				deleteNonTransferredFiles();
 				m_restart_with_ckpt = false;
@@ -1619,7 +1742,10 @@ VMwareType::CreateConfigFile()
 			return false;
 		}
 	}
-	if( write_forced_vm_params_to_file(config_fp) == false ) {
+
+	if( write_forced_vm_params_to_file(config_fp,
+			VMWARE_VM_CONFIG_LOCAL_PARAMS_START, 
+			VMWARE_VM_CONFIG_LOCAL_PARAMS_END) == false ) {
 		vmprintf(D_ALWAYS, "failed to fprintf in CreateConfigFile(%s:%s)\n",
 				tmp_config_name.Value(), strerror(errno));
 
@@ -1629,6 +1755,7 @@ VMwareType::CreateConfigFile()
 		m_result_msg += VMGAHP_ERR_INTERNAL;
 		return false;
 	}
+
 	fclose(config_fp);
 	config_fp = NULL;
 

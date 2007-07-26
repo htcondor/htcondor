@@ -878,10 +878,12 @@ VMUniverseMgr::allocVM(pid_t s_pid, ClassAd &ad)
 	if( ad.LookupString(ATTR_VM_CKPT_MAC, string_value) == 1 ) {
 		newinfo->m_vm_mac = string_value;
 	}
+	/*
 	string_value = "";
 	if( ad.LookupString(ATTR_VM_CKPT_IP, string_value) == 1 ) {
 		newinfo->m_vm_ip = string_value;
 	}
+	*/
 
 	m_vm_starter_list.Append(newinfo);
 	return true;

@@ -318,10 +318,12 @@ VMProc::StartJob()
 	if( JobAd->LookupString(ATTR_VM_CKPT_MAC, string_value) == 1 ) {
 		m_vm_mac = string_value;
 	}
+	/*
 	string_value = "";
 	if( JobAd->LookupString(ATTR_VM_CKPT_IP, string_value) == 1 ) {
 		m_vm_ip = string_value;
 	}
+	*/
 
 	// //
 	// Now everything is ready to start a vmgahp server 

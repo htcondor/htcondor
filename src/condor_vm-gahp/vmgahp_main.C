@@ -31,8 +31,7 @@
 #include "vmware_type.h"
 #include "xen_type.h"
 
-#define VMGAHP_VERSION	"0.0.1"
-const char *vmgahp_version = "$VMGahpVersion " VMGAHP_VERSION " May 1 2007 Condor\\ VMGAHP $";
+const char *vmgahp_version = "$VMGahpVersion " CONDOR_VMGAHP_VERSION " May 1 2007 Condor\\ VMGAHP $";
 
 char *mySubSystem = "VM_GAHP";
 
@@ -394,7 +393,7 @@ int main_init(int argc, char *argv[])
 		}
 
 		// print information to stdout
-		write_to_daemoncore_pipe("VM_GAHP_VERSION = \"%s\"\n", VMGAHP_VERSION); 
+		write_to_daemoncore_pipe("VM_GAHP_VERSION = \"%s\"\n", CONDOR_VMGAHP_VERSION); 
 		write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_TYPE, 
 				gahpconfig->m_vm_type.Value());
 		write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_VERSION, 
