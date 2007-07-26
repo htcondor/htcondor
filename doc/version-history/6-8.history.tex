@@ -63,6 +63,13 @@ any node job events.  (This is to help diagnose the problem if
 
 \begin{itemize}
 
+\item Fixed a bug that prevented dollar dollar expansions with a default 
+argument that contained forward slashes, e.g., 
+\begin{verbatim}
+$$(SomeVariable:/path/to/file)
+\end{verbatim}
+from expanding properly.
+
 \item The Windows installer now works on MS Vista.  Also, it does not 
 pop-up any of those annoying command windows.
 
