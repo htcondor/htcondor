@@ -458,6 +458,10 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 					opts->mode = ADD_MODE;
 					break;
 #endif
+				case 'd':
+					Termlog = 1;
+					dprintf_config ("TOOL");
+					break;
 				case 'h':
 					opts->help = true;
 					break;
@@ -511,6 +515,7 @@ usage()
 #if !defined(WIN32)
 	fprintf( stderr, "    -f filename       (generate a pool password file)\n" );
 #endif
+	fprintf( stderr, "    -d                (display debugging messages)\n" );
 	fprintf( stderr, "    -h                (display this message)\n" );
 	fprintf( stderr, "\n" );
 
