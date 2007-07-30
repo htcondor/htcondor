@@ -113,6 +113,10 @@ result in \Condor{schedd} running out of file descriptors.
 \Condor{schedd} child processes hanging around for 8 hours before finally
 exiting.  Too many such processes could result in memory exhaustion.
 
+% Gnats PR 868/condor-admin 15848
+\item Fixed a bug in \Condor{dagman}: \Attr{DIR} and \Attr{ABORT-DAG-ON}
+specifications were not propagated to rescue DAGs.
+
 \end{itemize}
 
 \noindent Known Bugs:
