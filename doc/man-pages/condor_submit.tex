@@ -1660,7 +1660,7 @@ the value of \SubmitCmd{kill\_sig} is used.
 
 \item[vm\_cdrom\_files = file1, file2, \Dots]
 \index{submit commands!vm\_cdrom\_files}
-A comma-separated list of input CDROM files.
+A comma-separated list of input CD-ROM files.
 
 %%%%%%%%%%%%%%%%%%%
 %% vm_checkpoint
@@ -1727,7 +1727,7 @@ If not specified, the default value is \Expr{False}.
 
 \item[vm\_should\_transfer\_cdrom\_files = $<$True \Bar\ False$>$]
 \index{submit commands!vm\_should\_transfer\_cdrom\_files}
-Specifies whether Condor will transfer CDROM files to
+Specifies whether Condor will transfer CD-ROM files to
 the execute machine (\Expr{True}) or rely on access through 
 a shared file system (\Expr{False}).
 
@@ -1780,7 +1780,7 @@ If not specified, the default value is \Expr{True}.
 
 \item[xen\_cdrom\_device = $<$device$>$]
 \index{submit commands!xen\_cdrom\_device}
-Describes the Xen cdrom device when
+Describes the Xen CD-ROM device when
 \SubmitCmd{vm\_cdrom\_files} is defined.
 
 %%%%%%%%%%%%%%%%%%%
@@ -1812,9 +1812,17 @@ Description of xen\_extra.
 %% xen_kernel
 %%%%%%%%%%%%%%%%%%%
 
-\item[xen\_kernel = $<$any \Bar\ included \Bar\ vmx \Bar\ path-to-kernel$>$]
+\item[xen\_kernel = $<$included \Bar\ any \Bar\ vmx \Bar\ path-to-kernel$>$]
 \index{submit commands!xen\_kernel}
-Description of xen\_kernel.
+A value of \SubmitCmd{included} specifies that the kernel is
+included in the disk file.
+A value of \SubmitCmd{any} specifies that the kernel is
+deployed on the execute mancine, and its location is given
+by configuration.
+A value of \SubmitCmd{vmx} specifies that hardware virtualization
+is required.
+If not one of these three values, then the value is a path and
+file name of the kernel to be used.
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_ram_disk
