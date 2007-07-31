@@ -73,6 +73,22 @@ sub new( $$ )
 # ******************************************************
 
 # ******************************************************
+# Override values
+# ******************************************************
+sub OverRide( $$ )
+{
+    my $self = shift;
+    my $Hash = shift;
+
+    foreach my $Var ( keys %{$Hash} )
+    {
+	$self->Set( $Var, $Hash->{$Var} ) ;
+    } 
+
+} # OverRide()
+# ******************************************************
+
+# ******************************************************
 # Dump all macros for Debuging
 # ******************************************************
 sub Dump( $ )
@@ -132,7 +148,7 @@ sub SetFromConfig( $$ )
     while( <CONFIG> )
     {
 	chomp;
-	if ( ! /(^Not defined:)|(^ERROR: Can't)/ )
+	if ( ! /(^Not defined:)|(^ERROR: Can\'t)/ )
 	{
 	    $Value .= $_;
 	}
@@ -181,7 +197,7 @@ sub SetWithFile( $$$$$ )
 # ******************************************************
 # Get a macro without expanding it
 # ******************************************************
-sub Get( $ )
+sub Get( $$ )
 {
     my $self = shift;
     my $Var = uc( shift );
@@ -408,10 +424,18 @@ sub FindConfig( $$$$ )
     $self->{ConfigProg} = $Distribution . "_config_val";
 
     # Fallbacks...
-    my @FallbackConfigs = [ "/home/$Distribution", ];
+    my $Home = "/home/$Distribution";
+    my @PwEnt = getpwnam( $Distribution );
+    if ( $#PwEnt >= 0 ) {
+	$Home = $PwEnt[7];
+    }
+    my @FallbackConfigs;
+    push( @FallbackConfigs, "$Home/condor_config" );
     my $RootEnv = uc $Distribution . "_ROOT_DIR";
-    unshift @FallbackConfigs, $ENV{$RootEnv}
-	if ( exists $ENV{$RootEnv} );
+    if ( exists $ENV{$RootEnv} )
+    {
+	unshift @FallbackConfigs, $ENV{$RootEnv};
+    }
     foreach my $TempConfig ( @FallbackConfigs )
     {
 	if (  ( $BaseFile eq "" ) && ( -f $TempConfig )  )
@@ -534,9 +558,10 @@ sub NewTextLines( $ )
 # ******************************************************
 # Read all of the config files
 # ******************************************************
-sub ReadAll( $ )
+sub ReadAll( $$ )
 {
     my $self = shift;
+    my $Errors = shift;
 
     # Walk through the list
     foreach my $File ( @{$self->{Files}} )
@@ -544,14 +569,17 @@ sub ReadAll( $ )
 	# Read it...
 	if ( ! $self->ReadFile( $File ) )
 	{
-	    if ( $File->{Required} )
+	    my $Message = "Can't read config file '" . $File->{File} . "'";
+	    if ( $Errors )
 	    {
-		die "Can't read config @ " . $File->{File};
+		push( @{$Errors}, $Message );
 	    }
 	    else
 	    {
-		print "WARNING: Can't read config file '$File->{File}'\n";
+		print STDERR "$Message\n";
+		return 0 if ( $File->{Required} );
 	    }
+	    next;
 	}
 
 	# Evaluate the local configs
@@ -580,8 +608,10 @@ sub ReadAll( $ )
 	}
 	$self->{FilesRead}++;
     }
-    print "\n";
-}
+
+    return 1;
+
+}	# ReadAll()
 # ******************************************************
 
 # ******************************************************
@@ -607,6 +637,7 @@ sub ReadFile( $$ )
 	$File = $Name if ( ! $File );
     }
     $FileRef->{File} = $File;
+    $FileRef->{Errors} = 0;
 
     # Open it for reading
     open( CONFIG, $File ) || return 0;
@@ -615,7 +646,7 @@ sub ReadFile( $$ )
     my @StatBuf = stat( CONFIG );
     if ( $#StatBuf < 0 )
     {
-	print STDERR "Error stating $File!\n";
+	$FileRef->{Errors}++;
 	close CONFIG;
 	return 0
     }
@@ -623,7 +654,6 @@ sub ReadFile( $$ )
     $FileRef->{Inode} = $StatBuf[1];
 
     # Read it in
-    print "Reading config file $Name ... ";
     $FileRef->{Text} = [];
     my $Line = "";
     while( <CONFIG> )
@@ -655,7 +685,6 @@ sub ReadFile( $$ )
 	}
     }
     close( CONFIG );
-    print "Done\n";
 
     return 1;
 

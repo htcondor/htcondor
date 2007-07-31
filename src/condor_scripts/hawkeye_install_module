@@ -324,7 +324,7 @@ sub ReadConfigFiles( )
 {
 
     # Read them all in
-    $ConfigFiles->ReadAll( );
+    $ConfigFiles->ReadAll( undef ) or die "Failed reading config files";
 
     # Add basic things to the config if they're not defined...
     $Config{CronName} = $ConfigMacros->Expand( "STARTD_CRON_NAME" );

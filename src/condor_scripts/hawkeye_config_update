@@ -251,7 +251,7 @@ sub ReadConfigFiles( )
 {
 
     # Read them all in
-    $ConfigFiles->ReadAll( );
+    $ConfigFiles->ReadAll( undef ) or die "Failed reading config files";
 
     # Get list of cron name variables
     foreach my $Var ( $ConfigMacros->GrepName( "(?i:_cron_name)\$" ) )
