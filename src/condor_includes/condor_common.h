@@ -57,7 +57,6 @@
 **********************************************************************/
 #if defined(__cplusplus)
 
-#include <iosfwd>
 
 #endif /* __cplusplus */
 

@@ -21,6 +21,7 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "constants2.h"
+#include <iosfwd>
 
 
 void MakeLongLine(char ch1,

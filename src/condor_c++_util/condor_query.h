@@ -24,7 +24,6 @@
 #define __CONDOR_QUERY_H__
 
 #include "condor_common.h"
-#include <iosfwd>
 #include "condor_classad.h"
 #include "list.h"
 #include "simplelist.h"
@@ -138,9 +137,6 @@ class CondorQuery
 
 	// get the query filter ad --- useful for debugging
 	QueryResult getQueryAd (ClassAd &);
-
-	// overloaded operators
-	friend std::ostream &operator<< (std::ostream &, CondorQuery &); 	// display
 
   private:
 		// These are unimplemented, so make them private so that they

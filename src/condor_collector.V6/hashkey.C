@@ -32,8 +32,6 @@
 #include <netinet/in.h>
 #endif
 
-#include "condor_fix_iostream.h"
-
 extern "C" char * sin_to_string(struct sockaddr_in *);
 
 template class HashTable<AdNameHashKey, ClassAd *>;
@@ -50,13 +48,6 @@ void AdNameHashKey::sprint (MyString &s)
 bool operator== (const AdNameHashKey &lhs, const AdNameHashKey &rhs)
 {
     return (  ( lhs.name == rhs.name ) && ( lhs.ip_addr == rhs.ip_addr ) );
-}
-
-ostream &operator<< (ostream &out, const AdNameHashKey &hk)
-{
-	out << "Hashkey: (" << hk.name << "," << hk.ip_addr;
-	out << ")" << endl;
-	return out;
 }
 
 static int sumOverString(const MyString &str)

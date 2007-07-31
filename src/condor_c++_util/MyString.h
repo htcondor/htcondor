@@ -27,8 +27,6 @@
 #ifndef _MyString_H_
 #define _MyString_H_
 
-#include <iosfwd>
-
 /** The MyString class is a C++ representation of a string. It was
  * written before we could reliably use the standard string class.
  * For an example of how to use it, see test_mystring.C.
@@ -297,14 +295,6 @@ class MyString
 	// ----------------------------------------
 	//           I/O
 	// ----------------------------------------
-	/**@name I/O */
-	//@{ 
-	/** Output a string to a stream */
-	friend std::ostream& operator<<(std::ostream& os, const MyString& S);
-
-	/** Input a string from a stream */
-	friend std::istream& operator>>(std::istream& is, MyString& S);
-	//@}
   
 	/** Safely read from the given file until we've hit a newline or
 		an EOF.  We use fgets() in a loop to make sure we've read data
