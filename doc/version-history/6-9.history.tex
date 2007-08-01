@@ -693,6 +693,9 @@ The state of the jobs in the restarted queue is independent of any
 orphaned running jobs, so these queued jobs may begin running on another
 machine while orphans are still running.
 
+\item \Condor{q} \Opt{-format} in 6.9.3 does not work with expressions.  It
+behaves as if the expression evaluates to an undefined result.
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

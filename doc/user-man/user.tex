@@ -2387,11 +2387,6 @@ the execute machines, how quickly submit machines come  back up,
 and how much work would be lost if the lease expires,
 the job is killed, and the job must start over from its beginning.
 
-\Attr{job\_lease\_duration}
-is only valid for vanilla and java universe jobs.
-Chirp I/O and streaming I/O (which uses Chirp I/O) may not
-be used in conjunction with a defined \Attr{job\_lease\_duration}.
-
 A current limitation
 is that jobs with a defined \Attr{job\_lease\_duration} will not
 reconnect if the jobs flock to a remote pool.

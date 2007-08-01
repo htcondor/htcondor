@@ -51,11 +51,27 @@ The details of each version are described below.
 debug symbol files are now supported. This allows meaningful debugging of
 core files in addition to attaching to stripped executables during runtime.
 
+\item \Condor{dagman} now prints reports of pending nodes to the
+\File{dagman.out}, if it has been waiting more than
+\MacroNI{DAGMAN\_PENDING\_REPORT\_INTERVAL} seconds without seeing
+any node job events.  (This is to help diagnose the problem if
+\Condor{dagman} gets "stuck".)
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug that prevented dollar dollar expansions with a default 
+argument that contained forward slashes, e.g., 
+\begin{verbatim}
+$$(SomeVariable:/path/to/file)
+\end{verbatim}
+from expanding properly.
+
+\item The Windows installer now works on MS Vista.  Also, it does not 
+pop up any command windows.
 
 \item The \Condor{ckpt\_server} was fixed to honor \MacroNI{HIGHPORT}
 and \MacroNI{LOWPORT}. While the well-known ports for the checkpoint
@@ -69,6 +85,37 @@ available ports.
 \item Fixed a bug in \Condor{dagman} that caused recovery/bootstrap
 mode to be very slow on large DAGs (i.e., ones with hundreds of thousands
 of nodes).
+
+% Gnats PR 854/condor-support 2012
+\item Fixed a bug that caused \Condor{dagman} to incorrectly deal
+with VARS lines specifying more than one macroname (this bug was
+introduced in version 6.8.5).
+
+\item Fixed a bug in the configuration macro \MacroNI{RANDOM\_INTEGER}
+when used as part of a larger expression.  The entire configuration
+value containing the reference to \MacroNI{RANDOM\_INTEGER} was being
+replaced by the chosen random integer, rather than just having
+\MacroNI{RANDOM\_INTEGER}() itself be replaced.
+
+\item Fixed a bug in the GSI configuration parameters. 
+If \Attr{GSI\_DAEMON\_DIRECTORY} was set and \Attr{GRIDMAP} wasn't set, 
+then Condor would look in the wrong location for the GSI private key and 
+mapfile.
+
+\item \Condor{q} would produce garbage output in its error message when
+failing to contact the collector specified via \Opt{-pool}.
+
+\item In unix, when \Condor{schedd} did not have enough memory to create
+a process to handle file transfers, many repetitions of this error would
+result in \Condor{schedd} running out of file descriptors.
+
+\item File transfer failures for spooled jobs would sometimes result in
+\Condor{schedd} child processes hanging around for 8 hours before finally
+exiting.  Too many such processes could result in memory exhaustion.
+
+% Gnats PR 868/condor-admin 15848
+\item Fixed a bug in \Condor{dagman}: \Attr{DIR} and \Attr{ABORT-DAG-ON}
+specifications were not propagated to rescue DAGs.
 
 \end{itemize}
 
