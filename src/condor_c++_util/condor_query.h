@@ -137,6 +137,9 @@ class CondorQuery
 
 	// get the query filter ad --- useful for debugging
 	QueryResult getQueryAd (ClassAd &);
+	
+	// set the type for the next generic query
+	void setGenericQueryType(const char*);
 
   private:
 		// These are unimplemented, so make them private so that they
@@ -147,6 +150,7 @@ class CondorQuery
 	int         command;
 	AdTypes     queryType;
 	GenericQuery query;
+	char*		genericQueryType;
 };
 
 #endif

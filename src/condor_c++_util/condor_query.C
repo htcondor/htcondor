@@ -81,6 +81,7 @@ const char *StartdFloatKeywords [] =
 CondorQuery::
 CondorQuery (AdTypes qType)
 {
+	genericQueryType = NULL;
 	queryType = qType;
 	switch (qType)
 	{
@@ -189,6 +190,13 @@ CondorQuery (AdTypes qType)
 		command = QUERY_ANY_ADS;
 		break;
 
+	  case GENERIC_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_ANY_ADS;
+		break;
+
 	  case ANY_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
@@ -236,6 +244,9 @@ CondorQuery (const CondorQuery & /* from */)
 CondorQuery::
 ~CondorQuery ()
 {	
+	if(genericQueryType) {
+		free(genericQueryType);
+	}
 }
 
 // assignment
@@ -396,6 +407,10 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 		queryAd.SetTargetTypeName (CREDD_ADTYPE);
 		break;
 
+	  case GENERIC_AD:
+		queryAd.SetTargetTypeName (genericQueryType);
+		break;
+
 	  case ANY_AD:
 		queryAd.SetTargetTypeName (ANY_ADTYPE);
 		break;
@@ -462,6 +477,13 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	return (Q_OK);
 }
 
+void CondorQuery::
+setGenericQueryType(const char* genericType) {
+	if(genericQueryType) {
+		free(genericQueryType);
+	}
+	genericQueryType = strdup(genericType);
+}
 
 QueryResult CondorQuery::
 getQueryAd (ClassAd &queryAd)
@@ -503,6 +525,9 @@ getQueryAd (ClassAd &queryAd)
 	  case NEGOTIATOR_AD:
 		queryAd.SetTargetTypeName (NEGOTIATOR_ADTYPE);
 		break;
+
+	  case GENERIC_AD:
+		queryAd.SetTargetTypeName (genericQueryType);
 
 	  default:
 		return Q_INVALID_QUERY;
