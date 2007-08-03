@@ -1804,9 +1804,9 @@ xen_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
 %% xen_extra
 %%%%%%%%%%%%%%%%%%%
 
-\item[xen\_extra = ]
+\item[xen\_extra = $<$string$>$]
 \index{submit commands!xen\_extra}
-Description of xen\_extra.
+A string that is appended to the Xen kernel command line.
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_kernel
@@ -1817,7 +1817,7 @@ Description of xen\_extra.
 A value of \SubmitCmd{included} specifies that the kernel is
 included in the disk file.
 A value of \SubmitCmd{any} specifies that the kernel is
-deployed on the execute mancine, and its location is given
+deployed on the execute machine, and its location is given
 by configuration.
 A value of \SubmitCmd{vmx} specifies that hardware virtualization
 is required.
@@ -1830,15 +1830,19 @@ file name of the kernel to be used.
 
 \item[xen\_ram\_disk = $<$image-file$>$]
 \index{submit commands!xen\_ram\_disk}
-Description of xen\_ram\_disk.
+When \SubmitCmd{xen\_kernel} gives a path and file name for
+the kernel image to use, 
+this optional command may specify a path to and ramdisk 
+(\File{initrd}) image file.
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_root
 %%%%%%%%%%%%%%%%%%%
 
-\item[xen\_root = $<$root-device$>$]
+\item[xen\_root = $<$string$>$]
 \index{submit commands!xen\_root}
-Description of xen\_root.
+A string that is appended to the Xen kernel command line
+to specify the root device.
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_transfer_files
@@ -1846,7 +1850,8 @@ Description of xen\_root.
 
 \item[xen\_transfer\_files = $<$list-of-files$>$]
 \index{submit commands!xen\_transfer\_files}
-Description of xen\_transfer\_files.
+A comma separated list of all files that Condor is to transfer
+to the execute machine.
 
 \end{description} 
 
