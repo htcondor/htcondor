@@ -1843,6 +1843,11 @@ this optional command may specify a path to and ramdisk
 \index{submit commands!xen\_root}
 A string that is appended to the Xen kernel command line
 to specify the root device.
+This string is required when \SubmitCmd{xen\_kernel} 
+is \SubmitCmd{any} or gives a path to a kernel. 
+Omission for this required case
+results in an error message from \Condor{submit}, and the
+job will not be submitted.
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_transfer_files
