@@ -7778,11 +7778,31 @@ int DaemonCore::Was_Not_Responding(pid_t pid)
 
 int DaemonCore::SendAliveToParent()
 {
-    SafeSock sock;
 	char parent_sinful_string[30];
 	char *tmp;
+	int ret_val;
+	static bool first_time = true;
+	int number_of_tries;
 
 	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent()\n");
+
+	if ( !ppid ) {
+		// no daemon core parent, nothing to send
+		return FALSE;
+	}
+
+		/* Before we possibly block trying to send this alive message to our 
+		   parent, lets see if this parent pid (ppid) exists on this system.
+		   This protects, for instance, against us acting a bogus CONDOR_INHERIT
+		   environment variable that perhaps just got inherited down through
+		   the ages.
+		*/
+	if ( !Is_Pid_Alive(ppid) ) {
+		dprintf(D_FULLDEBUG,
+			"DaemonCore: in SendAliveToParent() - ppid %ul disappeared!\n",
+			ppid);
+		return FALSE;
+	}
 
 	tmp = InfoCommandSinfulString(ppid);
 	if ( tmp ) {
@@ -7790,32 +7810,84 @@ int DaemonCore::SendAliveToParent()
 			// stack, because the pointer we got back is a static buffer
 		strcpy(parent_sinful_string,tmp);
 	} else {
-		dprintf(D_FULLDEBUG,"DaemonCore: No parent_sinful_string. SendAliveToParent() failed.\n");
+		dprintf(D_FULLDEBUG,"DaemonCore: No parent_sinful_string. "
+			"SendAliveToParent() failed.\n");
 			// parent already gone?
 		return FALSE;
 	}
 
-	dprintf(D_FULLDEBUG,"DaemonCore: attempting to connect to '%s'\n", parent_sinful_string);
-	if (!sock.connect(parent_sinful_string)) {
-		dprintf(D_FULLDEBUG,"DaemonCore: Could not connect to parent. SendAliveToParent() failed.\n");
-		return FALSE;
+		// If we are using glexec, then keepalives from the starter
+		// to the startd will likely fail unless the user really went out
+		// of their way to set things up so the starter and startd can authenticate
+		// over the network.  So in the event that glexec
+		// is being used, clear our first time flag so we do not
+		// EXCEPT on failure and so we only try once.
+	if ( strcmp(mySubSystem,"STARTER")==0 && 
+		 param_boolean("GLEXEC_STARTER",false) )
+	{
+		first_time = false;
 	}
 
-	Daemon d( DT_ANY, parent_sinful_string );
-	if (!d.startCommand(DC_CHILDALIVE, &sock, 0)) {
-		dprintf(D_FULLDEBUG,"DaemonCore: startCommand() failed. SendAliveToParent() failed.\n");
-		return FALSE;
+		// If this is our first keepalive, try three times.
+	if ( first_time ) {
+		number_of_tries = 3;
+	} else {
+		number_of_tries = 1;
 	}
 
-	dprintf( D_DAEMONCORE, "DaemonCore: Sending alive to %s\n",
-			 parent_sinful_string );
+	for (;;) {
+		SafeSock sock;
+		ret_val = TRUE;
 
-	sock.encode();
-	sock.code(mypid);
-	sock.code(max_hang_time);
-	sock.end_of_message();
+		if (!sock.connect(parent_sinful_string)) {
+			dprintf(D_ALWAYS,"DaemonCore: Could not connect to parent %s. "
+				"SendAliveToParent() failed.\n",parent_sinful_string);
+			ret_val = FALSE;
+		}
 
-	return TRUE;
+		Daemon d( DT_ANY, parent_sinful_string );
+		if (!d.startCommand(DC_CHILDALIVE, &sock, 0)) {
+			dprintf(D_FULLDEBUG,"DaemonCore: startCommand() to %s failed. "
+				"SendAliveToParent() failed.\n",parent_sinful_string);
+			ret_val = FALSE;
+		}
+
+		sock.encode();
+		if ( !sock.code(mypid) || !sock.code(max_hang_time) 
+				|| !sock.end_of_message())
+		{
+			dprintf(D_FULLDEBUG,"DaemonCore: Could not connect to parent %s. "
+				"SendAliveToParent() failed.\n",parent_sinful_string);
+			ret_val = FALSE;
+		}
+
+		number_of_tries--;
+		if ( number_of_tries == 0 || ret_val == TRUE ) {
+			break;	// if we were success, or out of tries, break
+		}
+
+		dprintf(D_ALWAYS,"Failed to send alive to %s, will try again...\n",
+			parent_sinful_string);
+		sleep(5);	// block for 5 seconds before trying again
+	}	// end of loop
+
+	if ( first_time ) {
+		first_time = false;
+		if ( ret_val == FALSE ) {
+			EXCEPT("FAILED TO SEND INITIAL KEEP ALIVE TO OUR PARENT %s",
+				parent_sinful_string);
+		}
+	}
+
+	if (ret_val == FALSE) {
+		dprintf(D_ALWAYS,"DaemonCore: Leaving SendAliveToParent() - "
+			"FAILED sending to %s\n",
+			parent_sinful_string);
+	} else {
+		dprintf(D_FULLDEBUG,"DaemonCore: Leaving SendAliveToParent() - success\n");
+	}
+
+	return ret_val;
 }
 
 #ifndef WIN32
