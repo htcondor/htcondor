@@ -49,6 +49,7 @@ bool        expert = false;
 Mode		mode	= MODE_NOTSET;
 int			diagnose = 0;
 char*		direct = NULL;
+char*		genericType = NULL;
 CondorQuery *query;
 char		buffer[1024];
 ClassAdList result;
@@ -67,7 +68,7 @@ void usage 		();
 void firstPass  (int, char *[]);
 void secondPass (int, char *[]);
 void prettyPrint(ClassAdList &, TrackTotals *);
-int  matchPrefix(const char *, const char *);
+int  matchPrefix(const char *, const char *, int min_len);
 int  lessThanFunc(AttrList*,AttrList*,void*);
 int  customLessThanFunc(AttrList*,AttrList*,void*);
 
@@ -148,6 +149,10 @@ main (int argc, char *argv[])
 		setPPstyle(PP_ANY_NORMAL, 0, DEFAULT);
 		break;
 
+	  case GENERIC_AD:
+		setPPstyle(PP_GENERIC, 0, DEFAULT);
+		break;
+
 	  default:
 		setPPstyle(PP_VERBOSE, 0, DEFAULT);
 	}
@@ -169,6 +174,12 @@ main (int argc, char *argv[])
 	  case MODE_ANY_NORMAL:
 		break;
 
+	  case MODE_GENERIC:
+			// tell the query object what the type we're querying is
+		query->setGenericQueryType(genericType);
+		free(genericType);
+		genericType = NULL;
+		break;
 
 	  case MODE_STARTD_AVAIL:
 			  // For now, -avail shows you machines avail to anyone.
@@ -280,6 +291,7 @@ main (int argc, char *argv[])
 		case MODE_COLLECTOR_NORMAL:
 		case MODE_LICENSE_NORMAL:
 		case MODE_STORAGE_NORMAL:
+		case MODE_GENERIC:
 		case MODE_ANY_NORMAL:
 				// These have to go to the collector, anyway.
 			break;
@@ -375,6 +387,7 @@ usage ()
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
+		"\t-subsystem\t\tDisplay resources for a given subsystem\n"
 		"\t-negotiator\t\tDisplay negotiator attributes\n"
 		"\t-storage\t\tDisplay network storage resources\n"
 		"\t-any\t\t\tDisplay any resources\n"
@@ -406,10 +419,10 @@ firstPass (int argc, char *argv[])
 	// o since -c can be processed only after the query has been instantiated,
 	//   constraints are added on the second pass
 	for (int i = 1; i < argc; i++) {
-		if (matchPrefix (argv[i], "-avail")) {
+		if (matchPrefix (argv[i], "-avail", 3)) {
 			setMode (MODE_STARTD_AVAIL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-pool")) {
+		if (matchPrefix (argv[i], "-pool", 2)) {
 			if( pool ) {
 				delete pool;
 				had_pool_error = 1;
@@ -443,7 +456,7 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			} 
 		} else
-		if (matchPrefix (argv[i], "-format")) {
+		if (matchPrefix (argv[i], "-format", 2)) {
 			setPPstyle (PP_CUSTOM, i, argv[i]);
 			if( !argv[i+1] || !argv[i+2] ) {
 				fprintf( stderr, "%s: -format requires two other arguments\n", 
@@ -453,7 +466,7 @@ firstPass (int argc, char *argv[])
 			}
 			i += 2;			
 		} else
-		if (matchPrefix (argv[i], "-constraint")) {
+		if (matchPrefix (argv[i], "-constraint", 4)) {
 			// can add constraints on second pass only
 			i++;
 			if( ! argv[i] ) {
@@ -463,7 +476,7 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			}
 		} else
-		if (matchPrefix (argv[i], "-direct")) {
+		if (matchPrefix (argv[i], "-direct", 4)) {
 			if( direct ) {
 				free( direct );
 				had_direct_error = 1;
@@ -477,66 +490,102 @@ firstPass (int argc, char *argv[])
 			}
 			direct = strdup( argv[i] );
 		} else
-		if (matchPrefix (argv[i], "-diagnose")) {
+		if (matchPrefix (argv[i], "-diagnose", 4)) {
 			diagnose = 1;
 		} else
-		if (matchPrefix (argv[i], "-debug")) {
+		if (matchPrefix (argv[i], "-debug", 3)) {
 			// dprintf to console
 			Termlog = 1;
 			dprintf_config ("TOOL");
 		} else
-		if (matchPrefix (argv[i], "-help")) {
+		if (matchPrefix (argv[i], "-help", 2)) {
 			usage ();
 			exit (0);
 		} else
-		if (matchPrefix (argv[i],"-long") || matchPrefix (argv[i],"-verbose")) {
+		if (matchPrefix (argv[i], "-long", 2) || matchPrefix (argv[i],"-verbose", 3)) {
 			setPPstyle (PP_VERBOSE, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i],"-xml")){
+		if (matchPrefix (argv[i],"-xml", 2)){
 			setPPstyle (PP_XML, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-run") || matchPrefix(argv[i], "-claimed")) {
+		if (matchPrefix (argv[i], "-run", 2) || matchPrefix(argv[i], "-claimed", 3)) {
 			setMode (MODE_STARTD_RUN, i, argv[i]);
 		} else
-		if( matchPrefix (argv[i], "-cod") ) {
+		if( matchPrefix (argv[i], "-cod", 4) ) {
 			setMode (MODE_STARTD_COD, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-java") || matchPrefix(argv[i], "-java")) {
+		if (matchPrefix (argv[i], "-java", 2)) {
 			javaMode = true;
 		} else
-		if (matchPrefix (argv[i], "-vm")) {
+		if (matchPrefix (argv[i], "-vm", 3)) {
 			vmMode = true;
 		} else
-		if (matchPrefix (argv[i], "-server")) {
+		if (matchPrefix (argv[i], "-server", 3)) {
 			setPPstyle (PP_STARTD_SERVER, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-state")) {
+		if (matchPrefix (argv[i], "-state", 5)) {
 			setPPstyle (PP_STARTD_STATE, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-startd")) {
+		if (matchPrefix (argv[i], "-startd", 5)) {
 			setMode (MODE_STARTD_NORMAL,i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-schedd")) {
+		if (matchPrefix (argv[i], "-schedd", 3)) {
 			setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
 		} else
+		if (matchPrefix (argv[i], "-subsystem", 5)) {
+			i++;
+			if( !argv[i] ) {
+				fprintf( stderr, "%s: -subsystem requires another argument\n", 
+						 myName ); 
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
+				exit( 1 );
+			}
+			if (matchPrefix (argv[i], "schedd", 6)) {
+				setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
+			} else
+			if (matchPrefix (argv[i], "startd", 6)) {
+				setMode (MODE_STARTD_NORMAL, i, argv[i]);
+			} else
+			if (matchPrefix (argv[i], "quill", 5)) {
+				setMode (MODE_QUILL_NORMAL, i, argv[i]);
+			} else
+			if (matchPrefix (argv[i], "negotiator", 10)) {
+				setMode (MODE_NEGOTIATOR_NORMAL, i, argv[i]);
+			} else
+			if (matchPrefix (argv[i], "master", 6)) {
+				setMode (MODE_MASTER_NORMAL, i, argv[i]);
+			} else
+			if (matchPrefix (argv[i], "collector", 9)) {
+				setMode (MODE_COLLECTOR_NORMAL, i, argv[i]);
+			} else
+			if (*argv[i] == '-') {
+				fprintf(stderr, "%s: -subsystem requires another argument\n",
+						myName);
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
+				exit(1);
+			} else {
+				genericType = strdup(argv[i]);
+				setMode (MODE_GENERIC, i, argv[i]);
+			}
+		} else
 #if WANT_QUILL 
-		if (matchPrefix (argv[i], "-quill")) {
+		if (matchPrefix (argv[i], "-quill", 2)) {
 			setMode (MODE_QUILL_NORMAL, i, argv[i]);
 		} else
 #endif /* WANT_QUILL */
-		if (matchPrefix (argv[i], "-license")) {
+		if (matchPrefix (argv[i], "-license", 3)) {
 			setMode (MODE_LICENSE_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-storage")) {
+		if (matchPrefix (argv[i], "-storage", 4)) {
 			setMode (MODE_STORAGE_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-negotiator")) {
+		if (matchPrefix (argv[i], "-negotiator", 2)) {
 			setMode (MODE_NEGOTIATOR_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-any")) {
+		if (matchPrefix (argv[i], "-any", 3)) {
 			setMode (MODE_ANY_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-sort")) {
+		if (matchPrefix (argv[i], "-sort", 3)) {
 			i++;
 			if( ! argv[i] ) {
 				fprintf( stderr, "%s: -sort requires another argument\n", 
@@ -563,25 +612,25 @@ firstPass (int argc, char *argv[])
 				// the silent constraint TARGET.%s =!= UNDEFINED is added
 				// as a customAND constraint on the second pass
 		} else
-		if (matchPrefix (argv[i], "-submitters")) {
+		if (matchPrefix (argv[i], "-submitters", 5)) {
 			setMode (MODE_SCHEDD_SUBMITTORS, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-master")) {
+		if (matchPrefix (argv[i], "-master", 2)) {
 			setMode (MODE_MASTER_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-collector")) {
+		if (matchPrefix (argv[i], "-collector", 4)) {
 			setMode (MODE_COLLECTOR_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-world")) {
+		if (matchPrefix (argv[i], "-world", 2)) {
 			setMode (MODE_COLLECTOR_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-ckptsrvr")) {
+		if (matchPrefix (argv[i], "-ckptsrvr", 3)) {
 			setMode (MODE_CKPT_SRVR_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-total")) {
+		if (matchPrefix (argv[i], "-total", 2)) {
 			wantOnlyTotals = 1;
 		} else
-		if (matchPrefix(argv[i], "-expert")) {
+		if (matchPrefix(argv[i], "-expert", 2)) {
 			expert = true;
 		} else
 		if (*argv[i] == '-') {
@@ -609,11 +658,15 @@ secondPass (int argc, char *argv[])
 	char *daemonname;
 	for (int i = 1; i < argc; i++) {
 		// omit parameters which qualify switches
-		if( matchPrefix(argv[i],"-pool") || matchPrefix(argv[i],"-direct") ) {
+		if( matchPrefix(argv[i],"-pool", 2) || matchPrefix(argv[i],"-direct", 4) ) {
 			i++;
 			continue;
 		}
-		if (matchPrefix (argv[i], "-format")) {
+		if( matchPrefix(argv[i],"-subsystem", 5) ) {
+			i++;
+			continue;
+		}
+		if (matchPrefix (argv[i], "-format", 2)) {
 			pm.registerFormat (argv[i+1], argv[i+2]);
 			if (diagnose) {
 				printf ("Arg %d --- register format [%s] for [%s]\n", 
@@ -622,7 +675,7 @@ secondPass (int argc, char *argv[])
 			i += 2;
 			continue;
 		}
-		if( matchPrefix(argv[i], "-sort") ) {
+		if( matchPrefix(argv[i], "-sort", 3) ) {
 			i++;
 			sprintf( buffer, "TARGET.%s =!= UNDEFINED", argv[i] );
 			query->addANDConstraint( buffer );
@@ -667,6 +720,7 @@ secondPass (int argc, char *argv[])
   			  case MODE_NEGOTIATOR_NORMAL:
 			  case MODE_STORAGE_NORMAL:
 			  case MODE_ANY_NORMAL:
+			  case MODE_GENERIC:
     		  case MODE_STARTD_AVAIL:
 				sprintf(buffer,"(TARGET.%s==\"%s\") || (TARGET.%s==\"%s\")", 
 						 ATTR_NAME, daemonname, ATTR_MACHINE, daemonname );
@@ -690,7 +744,7 @@ secondPass (int argc, char *argv[])
 			delete [] daemonname;
 			daemonname = NULL;
 		} else 
-		if (matchPrefix (argv[i], "-constraint")) {
+		if (matchPrefix (argv[i], "-constraint", 4)) {
 			if (diagnose) {
 				printf ("[%s]\n", argv[i+1]);
 			}
@@ -702,11 +756,14 @@ secondPass (int argc, char *argv[])
 
 
 int
-matchPrefix (const char *s1, const char *s2)
+matchPrefix (const char *s1, const char *s2, int min_len)
 {
 	int lenS1 = strlen (s1);
 	int lenS2 = strlen (s2);
 	int len = (lenS1 < lenS2) ? lenS1 : lenS2;
+	if(len < min_len) {
+		return 0;
+	}
 
 	return (strncmp (s1, s2, len) == 0);
 }

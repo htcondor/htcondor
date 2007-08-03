@@ -29,14 +29,13 @@ extern AdTypes	type;
 extern Mode		mode;
 extern ppOption	ppStyle;
 
-int matchPrefix (const char *, const char *);
-
 char *
 getPPStyleStr ()
 {
 	switch (ppStyle)
 	{
     	case PP_NOTSET:			return "<Not set>";
+		case PP_GENERIC:		return "Generic";
     	case PP_STARTD_NORMAL:	return "Normal (Startd)";
     	case PP_SCHEDD_NORMAL:	return "Normal (Schedd)";
     	case PP_SCHEDD_SUBMITTORS:return "Normal (Schedd)";
@@ -103,8 +102,9 @@ getTypeStr ()
 		case COLLECTOR_AD:	return "COLLECTOR";
 	    case NEGOTIATOR_AD: return "NEGOTIATOR";
 		case LICENSE_AD:	return "LICENSE";
-		case STORAGE_AD:		return "STORAGE";
+		case STORAGE_AD:	return "STORAGE";
 		case ANY_AD:		return "ANY";
+		case GENERIC_AD:	return "GENERIC";
 		default: 			return "<Unknown type!>";
 	}
 	// should never get here
@@ -130,45 +130,48 @@ setType (char *dtype, int i, char *argv)
 		return;
 
     if (setArg == NULL) {
-        if (matchPrefix (dtype, "STARTD")) {
+        if (strcmp (dtype, "STARTD") == 0) {
             type = STARTD_AD;
         } else
-        if (matchPrefix (dtype, "LICENSE")) {
+        if (strcmp (dtype, "LICENSE") == 0) {
             type = LICENSE_AD;
         } else
 
 #if WANT_QUILL
-        if (matchPrefix (dtype, "QUILL")) {
+        if (strcmp (dtype, "QUILL") == 0) {
             type = QUILL_AD;
         } else
 #endif /* WANT_QUILL */
 
-        if (matchPrefix (dtype, "SCHEDD")) {
+        if (strcmp (dtype, "SCHEDD") == 0) {
             type = SCHEDD_AD;
         } else
-		if (matchPrefix (dtype, "SUBMITTOR")) {
+		if (strcmp (dtype, "SUBMITTOR") == 0) {
 			type = SUBMITTOR_AD;
 		} else
-        if (matchPrefix (dtype, "MASTER")) {
+        if (strcmp (dtype, "MASTER") == 0) {
             type = MASTER_AD;
         } else
-        if (matchPrefix (dtype, "CKPT_SRVR")) {
+        if (strcmp (dtype, "CKPT_SRVR") == 0) {
             type = CKPT_SRVR_AD;
         } else
-        if (matchPrefix (dtype, "COLLECTOR")) {
+        if (strcmp (dtype, "COLLECTOR") == 0) {
             type = COLLECTOR_AD;
 		} else
-        if (matchPrefix (dtype, "NEGOTIATOR")) {
+        if (strcmp (dtype, "NEGOTIATOR") == 0) {
             type = NEGOTIATOR_AD;
         } else
-        if (matchPrefix (dtype, "GATEWAYS")) {
+        if (strcmp (dtype, "GATEWAYS") == 0) {
             type = GATEWAY_AD;
         } else
-        if (matchPrefix (dtype, "STORAGE")) {
+        if (strcmp (dtype, "STORAGE") == 0) {
             type = STORAGE_AD;
         } else
-        if (matchPrefix (dtype, "ANY")) {
+        if (strcmp(dtype, "ANY") == 0) {
             type = ANY_AD;
+		} else
+		if (strcmp(dtype, "GENERIC") == 0) {
+			type = GENERIC_AD;
         } else {
             fprintf (stderr, "Error:  Unknown entity type: %s\n", dtype);
             exit (1);
@@ -188,6 +191,7 @@ getModeStr()
 	switch (mode)
 	{
 		case MODE_NOTSET:				return "Not set";
+		case MODE_GENERIC:				return "Generic";
 		case MODE_STARTD_NORMAL:		return "Normal (Startd)";
 		case MODE_STARTD_AVAIL:			return "Available (Startd)";
 		case MODE_STARTD_RUN:			return "Run (Startd)";
@@ -295,6 +299,11 @@ setMode (Mode mod, int i, char *argv)
 		  case MODE_ANY_NORMAL:
 			setType ("ANY", i, argv);
 			setPPstyle (PP_ANY_NORMAL, i, argv);
+			break;
+
+		  case MODE_GENERIC:
+			setType ("GENERIC", i, argv);
+			setPPstyle (PP_GENERIC, i, argv);
 			break;
 
           default:

@@ -139,6 +139,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				printStorageNormal(ad);
 				break;
 
+			  case PP_GENERIC:
 			  case PP_ANY_NORMAL:
 				printAnyNormal(ad);
 				break;
@@ -762,7 +763,6 @@ printCustom (ClassAd *ad)
 {
 	(void) pm.display (stdout, ad);
 }
-
 
 char *
 formatElapsedTime( int t , AttrList *al )
