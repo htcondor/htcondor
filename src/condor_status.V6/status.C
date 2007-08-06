@@ -387,7 +387,7 @@ usage ()
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
-		"\t-subsystem\t\tDisplay resources for a given subsystem\n"
+		"\t-subsystem <type>\t\tDisplay classads of the given type\n"
 		"\t-negotiator\t\tDisplay negotiator attributes\n"
 		"\t-storage\t\tDisplay network storage resources\n"
 		"\t-any\t\t\tDisplay any resources\n"
@@ -835,8 +835,3 @@ customLessThanFunc( AttrList *ad1, AttrList *ad2, void *)
 
 	return 0;
 }
-
-
-
-
-
