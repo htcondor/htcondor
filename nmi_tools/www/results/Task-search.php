@@ -1,8 +1,9 @@
 <html>
-<body bgcolor="orange" text="navy" link="#666699"  alink=#000000 vlink="#333333">
+<body bgcolor="#d9d9ff" text="navy" link="#666699"  alink=#000000 vlink="#333333">
 
 <center><h2>UW NMI build and test system</h2>
 <title>NWO task results</title>
+<LINK REL="StyleSheet" HREF="condor.css" TYPE="text/css">
 
 <?php
 
@@ -111,7 +112,7 @@ $main_server = WEBSERVER;
   $result1 = mysql_query($query1) or die ("Query failed : " . mysql_error());
 
   # set up main table headings  
-  echo "<table width=100% border=1 bgcolor=darkorange>";
+  echo "<table width=100%  bgcolor=#d9d9ff>";
   echo "<tr bgcolor=white>";
   echo "<td width=70><a href=\"http://$storage_hostname/$currentDir/Task-search.php?gid=$gid&runid=$runid&order=ASC&column=task_id\">task id</a></td>";  
   echo "<td width=20><a href=\"http://$storage_hostname/$currentDir/Task-search.php?gid=$gid&runid=$runid&order=DESC&column=result\">result</a></td>";  
@@ -153,14 +154,14 @@ $main_server = WEBSERVER;
     if ( is_null($currTaskObj->getResult() ) ) {
       $tempplat = $currTaskObj->getPlatform();
       if ( in_array( "$tempplat", $remote_task_list ) ) {  # $remote_task is running )
-        printf("<td bgcolor=yellow>%s</td>", "running");
+        printf("<td bgcolor=#ffff55>%s</td>", "running");
       } else {
         printf("<td bgcolor=brown>%s</td>", "queued");
       }
     } else if ( $currTaskObj->getResult() == 0) {
-      printf("<td bgcolor=green>%s</td>", $currTaskObj->getResult() );
+      printf("<td bgcolor=#55ff55>%s</td>", $currTaskObj->getResult() );
     }  else {  # result is non-zero and therefore failed
-      printf("<td bgcolor=red>%s</td>", $currTaskObj->getResult() );
+      printf("<td bgcolor=#ff5555>%s</td>", $currTaskObj->getResult() );
     }
  
     $baseDir = "";

@@ -1,13 +1,13 @@
 body { font-family: Sans-Serif; font-size: 11px; }
 a:link { color: #1C3F75; }
 .passed {
-   background-color: #4E9A06;
+   background-color: #55ff55;
 }
 .failed {
-   background-color: #CC0000;
+   background-color: #ff5555;
 }
 .pending {
-   background-color: #FCE94F;
+   background-color: #ffff55;
 }
 .details {
    font-size: 10px;
@@ -17,4 +17,13 @@ a:link { color: #1C3F75; }
 }
 .title {
    color: black;
+}
+TABLE {
+	border-collapse: collapse;
+	cellspacing: 0;
+	cellpadding: 0;
+	border: 1px solid grey;
+}
+TD {
+	border: 1px solid grey;
 }

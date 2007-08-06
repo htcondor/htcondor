@@ -146,7 +146,7 @@
    
 ?>
 
-<table border="1">
+<table border="0" cellspacing="0" >
 <tr>
    <td>Name</td>
 <?php
