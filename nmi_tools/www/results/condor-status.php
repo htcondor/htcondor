@@ -1,5 +1,9 @@
 <html>
-<body bgcolor="orange" text="navy" link="#666699"  alink=#000000 vlink="#333333">
+<head>
+<Title>NMI - Condor Usage</TITLE>
+<LINK REL="StyleSheet" HREF="condor.css" TYPE="text/css">
+</HEAD>
+<body bgcolor="#d9d9ff" text="navy" link="#666699"  alink=#000000 vlink="#333333">
 
 <center>
 <h2>UW NMI build and test system</h2>
@@ -7,7 +11,7 @@
 <br>
 
 <table cellspacing=1 cellpadding=3 border=1>
-  <tr bgcolor=#999999>
+  <tr bgcolor=#cdcdcd>
     <td>Host</td>
     <td>Platform</td>
     <td>State</td>
@@ -27,7 +31,7 @@
         {
             if ($state == "Unclaimed")
             {
-                $color = "#bbffbb";
+                $color = "#cdcdcd";
             }
             else if ($state == "Owner")
             {
