@@ -5,8 +5,9 @@ include "last.inc";
 ?>
 
 <html>
-<body bgcolor="orange" text="navy" link="#666699"  alink=#000000 vlink="#333333">
+<body bgcolor="#d9d9ff" text="navy" link="#666699"  alink=#000000 vlink="#333333">
 <title>NWO run results</title>
+<LINK REL="StyleSheet" HREF="condor.css" TYPE="text/css">
 
 <center><h2>UW NMI build and test system</h2><br>
 Select a run id from the left column or a run dir from the right to view more details, or use the search options below to refine your view. 
@@ -224,10 +225,10 @@ load_config();
 
 ?> 
 <br><br>
-  <table width=750 border=0 bgcolor=orange>
+  <table width=750 border=0 bgcolor=#d9d9ff>
 
 <!-- User Area -->
-  <tr bgcolor=orange width=750 valign=middle>
+  <tr bgcolor=#d9d9ff width=750 valign=middle>
   <td width=200 align=center valign=middle> 
   <form method="get" action="Run-main.php">
     <SELECT name="user">
@@ -269,7 +270,7 @@ load_config();
   </td></tr>
 
 <!-- RunType Area -->
-  <tr bgcolor=orange width=750>
+  <tr bgcolor=#d9d9ff width=750>
   <td width=200 align=center>
     <SELECT name="runtype">
 <?php
@@ -297,7 +298,7 @@ load_config();
   </td></tr>
 
 <!-- Day Area -->
-  <tr bgcolor=orange width=600>
+  <tr bgcolor=#d9d9ff width=600>
   <td width="50" align=center> 
     <SELECT name="day">
 <?php
@@ -331,7 +332,7 @@ load_config();
  </td></tr>
 
 <!-- Button for today's date -->
-  <tr bgcolor=orange width=600>
+  <tr bgcolor=#d9d9ff width=600>
   <td width="50" align=center>
     <input type="submit" name="today" value="Today"></input>
   </td>
@@ -494,7 +495,7 @@ load_config();
   }
  
   # display the statistics
-  echo "<table bgcolor='lightgray' bordercolordark='black'>";
+  echo "<table bgcolor='#cdcdcd' bordercolordark='black'>";
   echo "<tr><td>Total number of distinct users is " .$buildsub ."</td></tr>";
   echo "<tr><td>Total number of runs submitted is " . $builds1 ."</td></tr>";
   echo "<tr><td>Total number of runs in-progress is ".$buidsprog;
@@ -507,7 +508,7 @@ load_config();
   echo "</td><td width='6'></td><td> Percentage of successful runs: ".$psuc . "% </td></tr></table>";
 
   # display the results table
-  echo "<table width=100% border=1 bgcolor=darkorange>";
+  echo "<table width=100% border=1 bgcolor=#d9d9ff>";
   echo "<tr bgcolor=white>";
   echo "<td width=50>RunID</td>";  
   echo "<td width=20>Result</td>";  
@@ -557,21 +558,21 @@ load_config();
     echo "<td><a href=\"http://$webserver/$currentDir/Task-search.php?runid=$runid&gid=$gid\">$runid</a></td>";
     # figure out the result
     if (  is_null($result) ) {
-      printf("<td bgcolor=yellow>%s</td>", "running");
+      printf("<td bgcolor=#ffff55>%s</td>", "running");
     } else if ( $result == 0) {
-       printf("<td bgcolor=green>%s</td>", $result);
+       printf("<td bgcolor=#55ff55>%s</td>", $result);
     } else if ( $result == -1) {
-       printf("<td bgcolor=maroon>%s</td>", "removed");
+       printf("<td bgcolor=#cd5c5c>%s</td>", "removed");
     } else { 
       if ($component == 'condor' && preg_match('/^BUILD/', $run_type)) {
          $link = getLastGoodBuild($runid, 0);
          if ($link != '') {
-           echo "<td bgcolor=red><a href=\"$link\">$result</a></td>";
+           echo "<td bgcolor=#ff5555><a href=\"$link\">$result</a></td>";
          } else {
-           printf("<td bgcolor=red>%s</td>",$result);   
+           printf("<td bgcolor=#ff5555>%s</td>",$result);   
          }
       } else {
-         printf("<td bgcolor=red>%s</td>",$result);   
+         printf("<td bgcolor=#ff5555>%s</td>",$result);   
       }
     }
     printf("<td>%s</td>", $user);
@@ -628,7 +629,7 @@ load_config();
 
  
     if ( $archived == 1 ) { 
-        echo "<td bgcolor=lightgray><center><a href=\"http://$local_hostname/$base\">Y</a></center></td>";
+        echo "<td bgcolor=#cdcdcd><center><a href=\"http://$local_hostname/$base\">Y</a></center></td>";
         printf("<td>%s</td>", $archived_until);
     } else { 
         printf("<td><center>%s</center></td>", "N");
