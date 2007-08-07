@@ -51,6 +51,7 @@ $test_dir = ".";            # directory in which to find test programs
 $test_retirement = 1800;	# seconds for an individual test timeout - 30 minutes
 $hush = 0;
 $timestamp = 0;
+$kindwait;
 
 # set up to recover from tests which hang
 $SIG{ALRM} = sub { die "timeout" };
@@ -76,6 +77,7 @@ $ENV{PATH} = $ENV{PATH} . ":" . $Basedir;
 # -t[estname] <test-name>: just run this test
 # -q[uiet]: hush
 # -m[arktime]: time stamp
+# -k[ind]: be kind and submit slowly
 #
 while( $_ = shift( @ARGV ) ) {
   SWITCH: {
@@ -93,6 +95,10 @@ while( $_ = shift( @ARGV ) ) {
         }
         if( /-r.*/ ) { #retirement timeout
                 $test_retirement = shift(@ARGV);
+                next SWITCH;
+        }
+        if( /-k.*/ ) {
+                $kindwait = 1;
                 next SWITCH;
         }
         if( /-t.*/ ) {
@@ -169,11 +175,15 @@ foreach $name (@testlist) {
     }
 } elsif( $testfile ) {
     # if we were given a file, let's read it in and use it.
-    print "found a runfile: $testfile\n";
+    #print "found a runfile: $testfile\n";
     open(TESTFILE, $testfile) || die "Can't open $testfile\n";
     while( <TESTFILE> ) {
 	CondorTest::fullchomp($_);
 	$test = $_;
+	if($test =~ /^#.*$/) {
+		#print "skip comment\n";
+		next;
+	}
 	#//($compiler, $test) = split('\/');
 	if( ! ($test =~ /(.*)\.run$/) ) {
 	    $test = "$test.run";
@@ -256,7 +266,7 @@ foreach $compiler (@compilers)
 	}
     foreach $test_program (@{$test_suite{"$compiler"}})
     {
-		if($hush == 0) { 
+		if(($hush == 0) && (! defined $kindwait)) { 
         	print ".";
 		}
 
@@ -269,7 +279,71 @@ foreach $compiler (@compilers)
         {
             $test{$pid} = "$test_program";
             # wait a moment so as not to overwhelm condor_submit
-            sleep 1;
+			if( defined $kindwait ) {
+				# Wait for job before starting the next one
+				#print "Waiting on test\n";
+    			$child = wait();
+				#print "Done Waiting on test\n";
+        		# if there are no more children, we're done
+        		last if $child == -1;
+
+        		# record the child's return status
+        		$status = $?;
+
+        		($test_name) = $test{$child} =~ /(.*)\.run$/;
+
+        		if ($isXML){
+          			print XML "<test_result>\n<name>$compiler.$test_name</name>\n<description></description>\n";
+          			printf( "\n%-40s ", $test_name );
+        		} else {
+          			printf( "\n%-40s ", $test_name );
+        		}
+
+        		if( WIFEXITED( $status ) && WEXITSTATUS( $status ) == 0 )
+        		{
+                	if ($isXML){
+                  		print XML "<status>SUCCESS</status>\n";
+                  		print "succeeded";
+                	} else {
+                  		print "succeeded";
+                	}
+                	$num_success++;
+                	@successful_tests = (@successful_tests, "$compiler/$test_name");
+        		}
+        		else
+        		{
+                	$failure = `grep 'FAILURE' $test{$child}.out`;
+                	$failure =~ s/^.*FAILURE[: ]//;
+                	CondorTest::fullchomp($failure);
+                	$failure = "failed" if $failure =~ /^\s*$/;
+	
+                	if ($isXML){
+                  		print XML "<status>FAILURE</status>\n";
+                  		print "$failure";
+                	} else {
+                  		print "$failure";
+                	}
+                	$num_failed++;
+                	@failed_tests = (@failed_tests, "$compiler/$test_name");
+        		}
+
+        		if ($isXML){
+          			print "Copying to $ResultDir/$compiler ...\n";
+       		 
+          			# possibly specify exact files in future - for now bring back all 
+          			#system ("cp $test_name.run.out $ResultDir/$compiler/.");
+          			system ("cp $test_name.* $ResultDir/$compiler/.");
+		
+          			# uncomment this when we decide to have each test tar itself up when it finishes
+          			#system ("cp $test_name.tar $ResultDir/$compiler/.");
+       
+          			print XML "<data_file>$compiler.$test_name.run.out</data_file>\n<error>";
+          			print XML "</error>\n<output>";
+          			print XML "</output>\n</test_result>\n";
+        		}
+			} else {
+            	sleep 1;
+			}
             next;
         }
 
@@ -278,6 +352,7 @@ foreach $compiler (@compilers)
 		my $res;
  		eval {
             alarm($test_retirement);
+			#print "Starting:perl $test_program > $test_program.out\n";
 			$res = system("perl $test_program > $test_program.out 2>&1");
 			if($res != 0) { 
 				#print "Perl test($test_program) returned <<$res>>!!! \n"; 
@@ -288,7 +363,7 @@ foreach $compiler (@compilers)
 
 		if($@) {
             if($@ =~ /timeout/) {
-                print "$test_program            Timeout\n";
+                print "\n$test_program            Timeout\n";
 				exit(1);
             } else {
                 alarm(0);
