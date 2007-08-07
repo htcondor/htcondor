@@ -91,7 +91,7 @@ QuillErrCode FILESQL::file_open()
     if (is_dummy) return QUILL_SUCCESS;
     
 	if (!outfilename) {
-		dprintf(D_ALWAYS,"No SQL log file specified");
+		dprintf(D_ALWAYS,"No SQL log file specified\n");
 		return QUILL_FAILURE;
 	}
 
@@ -99,7 +99,7 @@ QuillErrCode FILESQL::file_open()
 
 	if(outfiledes < 0)
 	{
-		dprintf(D_ALWAYS,"Error opening SQL log file %s : %s",outfilename,strerror(errno));
+		dprintf(D_ALWAYS,"Error opening SQL log file %s : %s\n",outfilename,strerror(errno));
 		is_open = false;
 		return QUILL_FAILURE;
 	}
@@ -137,7 +137,7 @@ QuillErrCode FILESQL::file_close()
 	else {
 		retval = close(outfiledes);
 		if(retval < 0)
-			dprintf(D_ALWAYS,"Error closing SQL log file %s : %s",outfilename,strerror(errno));
+			dprintf(D_ALWAYS, "Error closing SQL log file %s : %s\n",outfilename,strerror(errno));
 	}
 
 	is_open = false;
@@ -158,7 +158,7 @@ QuillErrCode FILESQL::file_lock()
 	
 	if(!is_open)
 	{
-		dprintf(D_ALWAYS,"Error locking :SQL log file %s not open yet",outfilename);
+		dprintf(D_ALWAYS,"Error locking :SQL log file %s not open yet\n",outfilename);
 		return QUILL_FAILURE;
 	}
 
@@ -167,7 +167,7 @@ QuillErrCode FILESQL::file_lock()
 
 	if(lock->obtain(WRITE_LOCK) == 0) /* 0 means an unsuccessful lock */
 	{
-		dprintf(D_ALWAYS,"Error locking SQL log file %s ",outfilename);
+		dprintf(D_ALWAYS,"Error locking SQL log file %s\n",outfilename);
 		return QUILL_FAILURE;
 	}
 	else
@@ -182,7 +182,7 @@ QuillErrCode FILESQL::file_unlock()
 	
 	if(!is_open)
 	{
-		dprintf(D_ALWAYS,"Error unlocking :SQL log file %s not open yet",outfilename);
+		dprintf(D_ALWAYS,"Error unlocking :SQL log file %s not open yet\n",outfilename);
 		return QUILL_FAILURE;
 	}
 
@@ -191,7 +191,7 @@ QuillErrCode FILESQL::file_unlock()
 
 	if(lock->release() == 0) /* 0 means an unsuccessful lock */
 	{
-		dprintf(D_ALWAYS,"Error unlocking SQL log file %s ",outfilename);
+		dprintf(D_ALWAYS,"Error unlocking SQL log file %s\n",outfilename);
 		return QUILL_FAILURE;
 	}
 	else
@@ -251,7 +251,7 @@ QuillErrCode FILESQL::file_newEvent(const char *eventType, AttrList *info) {
     if (is_dummy) return QUILL_SUCCESS;
 	if(!is_open)
 	{
-		dprintf(D_ALWAYS,"Error in logging to file : File not open");
+		dprintf(D_ALWAYS,"Error in logging new event to Quill SQL log : File not open\n");
 		return QUILL_FAILURE;
 	}
 
@@ -298,7 +298,7 @@ QuillErrCode FILESQL::file_updateEvent(const char *eventType,
     if (is_dummy) return QUILL_SUCCESS;
 	if(!is_open)
 	{
-		dprintf(D_ALWAYS,"Error in logging to file : File not open");
+		dprintf(D_ALWAYS,"Error in logging event to Quill SQL Log : File not open\n");
 		return QUILL_FAILURE;
 	}
 
@@ -351,7 +351,7 @@ QuillErrCode FILESQL::file_deleteEvent(const char *eventType,
 
 	if(!is_open)
 	{
-		dprintf(D_ALWAYS,"Error in logging to file : File not open");
+		dprintf(D_ALWAYS,"Error in logging to file : File not open\n");
 		return QUILL_FAILURE;
 	}
 
