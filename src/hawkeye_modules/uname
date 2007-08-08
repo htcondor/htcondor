@@ -1,5 +1,6 @@
-#! /usr/bin/env perl 
+#!/usr/bin/env perl 
 use strict;
+use warnings;
 use Config;
 
 # Update the module include path
@@ -22,28 +23,6 @@ my %uname_cmd =
     "arch", "uname -m",
     "os", "uname -s",
     "os_ver", "uname -r",
-);
-
-my %short_os = 
-(
-    "SunOS", "sol",
-    "IRIX64", "irix",
-    "Darwin", "macosx",
-    "OSF1", "osf",
-    "AIX", "aix",
-    "HP-UX", "hpux",
-);
-
-my %short_arch = 
-(
-    "sun4u", "sun4u",
-    "powerpc", "ppc",
-    "i686", "x86",
-    "i386", "x86",
-    "x86", "x86",
-    "ia32", "ia32",
-    "ia64", "ia64",
-    "x86_64", "x86_64",
 );
 
 # Override the flags based on a system
