@@ -1883,6 +1883,25 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm) {
 	MyString res;
 	char tbuf[16];
 
+	// there is now a heirarchy of authorization levels.
+	// DAEMON and ADMINISTRATOR imply WRITE.
+	// WRITE, NEGOTIATOR, and CONFIG_PERM imply READ.
+	//
+	// conveniently, we can call this function recursively to fill in
+	// the implied levels before appending more.  e.g. DAEMON calls it
+	// with WRITE, which calls it with READ, building up the list.
+	
+	if ( (perm==DAEMON) || (perm==ADMINISTRATOR) ) {
+		res = GetCommandsInAuthLevel(WRITE);
+	}
+
+	if ( (perm==WRITE) || (perm==NEGOTIATOR) || (perm==CONFIG_PERM) ) {
+		res = GetCommandsInAuthLevel(READ);
+	}
+
+	// end of heirarchy recursion.  the following code just gets the
+	// values from the actual authorization level requested.
+
 	for (i = 0; i < maxCommand; i++) {
 		if( (comTable[i].handler || comTable[i].handlercpp) &&
 			(comTable[i].perm == perm) )
