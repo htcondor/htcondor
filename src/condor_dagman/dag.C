@@ -1865,34 +1865,39 @@ void Dag::Rescue (const char * rescue_file, const char * datafile,
 	}
 
     //
-    // Print JOBS and SCRIPTS
+    // Print per-node information.
     //
     it.ToBeforeFirst();
     while (it.Next(job)) {
+
+			// Print the JOB/DATA line.
+		const char *keyword;
         if( job->JobType() == Job::TYPE_CONDOR ) {
-            fprintf (fp, "JOB %s %s ", job->GetJobName(), job->GetCmdFile());
-			if ( useDagDir ) {
-				fprintf(fp, "DIR %s ", job->GetDirectory());
-			}
-			fprintf (fp, "%s\n",
-					job->_Status == Job::STATUS_DONE ? "DONE" : "");
+			keyword = "JOB";
+        } else if( job->JobType() == Job::TYPE_STORK ) {
+			keyword = "DATA";
         }
-        else if( job->JobType() == Job::TYPE_STORK ) {
-            fprintf (fp, "DATA %s %s ", job->GetJobName(), job->GetCmdFile());
-			if ( useDagDir ) {
-				fprintf(fp, "DIR %s ", job->GetDirectory());
-			}
-			fprintf (fp, "%s\n",
-					job->_Status == Job::STATUS_DONE ? "DONE" : "");
-        }
+        fprintf (fp, "%s %s %s ", keyword, job->GetJobName(),
+					job->GetCmdFile());
+		if ( strcmp( job->GetDirectory(), "" ) ) {
+			fprintf(fp, "DIR %s ", job->GetDirectory());
+		}
+		fprintf (fp, "%s\n",
+				job->_Status == Job::STATUS_DONE ? "DONE" : "");
+
+			// Print the SCRIPT PRE line, if any.
         if (job->_scriptPre != NULL) {
             fprintf (fp, "SCRIPT PRE  %s %s\n", 
                      job->GetJobName(), job->_scriptPre->GetCmd());
         }
+
+			// Print the SCRIPT POST line, if any.
         if (job->_scriptPost != NULL) {
             fprintf (fp, "SCRIPT POST %s %s\n", 
                      job->GetJobName(), job->_scriptPost->GetCmd());
         }
+
+			// Print the RETRY line, if any.
         if( job->retry_max > 0 ) {
             int retriesLeft = (job->retry_max - job->retries);
 
@@ -1921,10 +1926,9 @@ void Dag::Rescue (const char * rescue_file, const char * datafile,
                 fprintf( fp, " UNLESS-EXIT %d", job->retry_abort_val );
             }
             fprintf( fp, "\n" );
-            fprintf( fp, "\n" );
         }
-        fprintf( fp, "\n" );
 
+			// Print the VARS line, if any.
         if(!job->varNamesFromDag->IsEmpty()) {
             fprintf(fp, "VARS %s", job->GetJobName());
 	
@@ -1950,6 +1954,18 @@ void Dag::Rescue (const char * rescue_file, const char * datafile,
             }
             fprintf(fp, "\n");
         }
+
+			// Print the ABORT-DAG-ON line, if any.
+        if ( job->have_abort_dag_val ) {
+			fprintf( fp, "ABORT-DAG-ON %s %d", job->GetJobName(),
+						job->abort_dag_val );
+			if ( job->have_abort_dag_return_val ) {
+				fprintf( fp, " RETURN %d", job->abort_dag_return_val );
+			}
+            fprintf(fp, "\n");
+		}
+
+        fprintf( fp, "\n" );
     }
 
     //

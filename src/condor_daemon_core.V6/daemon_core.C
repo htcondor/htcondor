@@ -2014,6 +2014,25 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm) {
 	MyString res;
 	char tbuf[16];
 
+	// there is now a heirarchy of authorization levels.
+	// DAEMON and ADMINISTRATOR imply WRITE.
+	// WRITE, NEGOTIATOR, and CONFIG_PERM imply READ.
+	//
+	// conveniently, we can call this function recursively to fill in
+	// the implied levels before appending more.  e.g. DAEMON calls it
+	// with WRITE, which calls it with READ, building up the list.
+	
+	if ( (perm==DAEMON) || (perm==ADMINISTRATOR) ) {
+		res = GetCommandsInAuthLevel(WRITE);
+	}
+
+	if ( (perm==WRITE) || (perm==NEGOTIATOR) || (perm==CONFIG_PERM) ) {
+		res = GetCommandsInAuthLevel(READ);
+	}
+
+	// end of heirarchy recursion.  the following code just gets the
+	// values from the actual authorization level requested.
+
 	for (i = 0; i < maxCommand; i++) {
 		if( (comTable[i].handler || comTable[i].handlercpp) &&
 			(comTable[i].perm == perm) )
@@ -6825,6 +6844,8 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 		dprintf( D_ALWAYS, "Create_Thread: fork() failed: %s (%d)\n",
 				 strerror(errno), errno );
 		num_pid_collisions = 0;
+        close( errorpipe[0] );
+        close( errorpipe[1] );
 		return FALSE;
 	}
 		// if we got here, there's no collision, so reset our counter
@@ -7941,11 +7962,31 @@ int DaemonCore::Was_Not_Responding(pid_t pid)
 
 int DaemonCore::SendAliveToParent()
 {
-    SafeSock sock;
 	char parent_sinful_string[30];
 	char *tmp;
+	int ret_val;
+	static bool first_time = true;
+	int number_of_tries;
 
 	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent()\n");
+
+	if ( !ppid ) {
+		// no daemon core parent, nothing to send
+		return FALSE;
+	}
+
+		/* Before we possibly block trying to send this alive message to our 
+		   parent, lets see if this parent pid (ppid) exists on this system.
+		   This protects, for instance, against us acting a bogus CONDOR_INHERIT
+		   environment variable that perhaps just got inherited down through
+		   the ages.
+		*/
+	if ( !Is_Pid_Alive(ppid) ) {
+		dprintf(D_FULLDEBUG,
+			"DaemonCore: in SendAliveToParent() - ppid %ul disappeared!\n",
+			ppid);
+		return FALSE;
+	}
 
 	tmp = InfoCommandSinfulString(ppid);
 	if ( tmp ) {
@@ -7953,32 +7994,84 @@ int DaemonCore::SendAliveToParent()
 			// stack, because the pointer we got back is a static buffer
 		strcpy(parent_sinful_string,tmp);
 	} else {
-		dprintf(D_FULLDEBUG,"DaemonCore: No parent_sinful_string. SendAliveToParent() failed.\n");
+		dprintf(D_FULLDEBUG,"DaemonCore: No parent_sinful_string. "
+			"SendAliveToParent() failed.\n");
 			// parent already gone?
 		return FALSE;
 	}
 
-	dprintf(D_FULLDEBUG,"DaemonCore: attempting to connect to '%s'\n", parent_sinful_string);
-	if (!sock.connect(parent_sinful_string)) {
-		dprintf(D_FULLDEBUG,"DaemonCore: Could not connect to parent. SendAliveToParent() failed.\n");
-		return FALSE;
+		// If we are using glexec, then keepalives from the starter
+		// to the startd will likely fail unless the user really went out
+		// of their way to set things up so the starter and startd can authenticate
+		// over the network.  So in the event that glexec
+		// is being used, clear our first time flag so we do not
+		// EXCEPT on failure and so we only try once.
+	if ( strcmp(mySubSystem,"STARTER")==0 && 
+		 param_boolean("GLEXEC_STARTER",false) )
+	{
+		first_time = false;
 	}
 
-	Daemon d( DT_ANY, parent_sinful_string );
-	if (!d.startCommand(DC_CHILDALIVE, &sock, 0)) {
-		dprintf(D_FULLDEBUG,"DaemonCore: startCommand() failed. SendAliveToParent() failed.\n");
-		return FALSE;
+		// If this is our first keepalive, try three times.
+	if ( first_time ) {
+		number_of_tries = 3;
+	} else {
+		number_of_tries = 1;
 	}
 
-	dprintf( D_DAEMONCORE, "DaemonCore: Sending alive to %s\n",
-			 parent_sinful_string );
+	for (;;) {
+		SafeSock sock;
+		ret_val = TRUE;
 
-	sock.encode();
-	sock.code(mypid);
-	sock.code(max_hang_time);
-	sock.end_of_message();
+		if (!sock.connect(parent_sinful_string)) {
+			dprintf(D_ALWAYS,"DaemonCore: Could not connect to parent %s. "
+				"SendAliveToParent() failed.\n",parent_sinful_string);
+			ret_val = FALSE;
+		}
 
-	return TRUE;
+		Daemon d( DT_ANY, parent_sinful_string );
+		if (!d.startCommand(DC_CHILDALIVE, &sock, 0)) {
+			dprintf(D_FULLDEBUG,"DaemonCore: startCommand() to %s failed. "
+				"SendAliveToParent() failed.\n",parent_sinful_string);
+			ret_val = FALSE;
+		}
+
+		sock.encode();
+		if ( !sock.code(mypid) || !sock.code(max_hang_time) 
+				|| !sock.end_of_message())
+		{
+			dprintf(D_FULLDEBUG,"DaemonCore: Could not connect to parent %s. "
+				"SendAliveToParent() failed.\n",parent_sinful_string);
+			ret_val = FALSE;
+		}
+
+		number_of_tries--;
+		if ( number_of_tries == 0 || ret_val == TRUE ) {
+			break;	// if we were success, or out of tries, break
+		}
+
+		dprintf(D_ALWAYS,"Failed to send alive to %s, will try again...\n",
+			parent_sinful_string);
+		sleep(5);	// block for 5 seconds before trying again
+	}	// end of loop
+
+	if ( first_time ) {
+		first_time = false;
+		if ( ret_val == FALSE ) {
+			EXCEPT("FAILED TO SEND INITIAL KEEP ALIVE TO OUR PARENT %s",
+				parent_sinful_string);
+		}
+	}
+
+	if (ret_val == FALSE) {
+		dprintf(D_ALWAYS,"DaemonCore: Leaving SendAliveToParent() - "
+			"FAILED sending to %s\n",
+			parent_sinful_string);
+	} else {
+		dprintf(D_FULLDEBUG,"DaemonCore: Leaving SendAliveToParent() - success\n");
+	}
+
+	return ret_val;
 }
 
 #ifndef WIN32

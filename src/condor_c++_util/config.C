@@ -39,22 +39,37 @@ static char *getline_implementation( FILE *, int );
 
 int		ConfigLineNo;
 
-#if defined(LINUX)
+/* WARNING: When we mean alphanumeric in this snippet of code, we really mean 
+	characters that are legal in a C indentifier plus period and forward slash.
+	It looks like what character set is allowable to be in the default value
+	of the $$ expansion hasn't been thought about very well....
+
+	XXX: If you've come here looking to add \ so windows paths may be
+	substituted as the default value in a $$ expansion with a default
+	value, be very careful. The $$() expansion algorithm is deep in
+	the parsing of the RHS of the attr/value pair, and at the writing
+	of this comment, it is unknown if \ substitution would happen
+	before/during/after the $$ expansion would happen, in which case
+	you'd be screwed and have to understand/alter much more code.
+	If you perform these code alterings to support \ in this manner,
+	then remove this XXX comment.
+*/
 int
-condor_isalnum(int c)
+condor_isidchar(int c)
 {
 	if( ('a' <= c && c <= 'z') ||
 		('A' <= c && c <= 'Z') ||
-		('0' <= c && c <= '9') ) {
+		('0' <= c && c <= '9') ||
+		/* See the above comment for this function and about the next line. */
+		(strchr("_./", c) != NULL) )
+	{
 		return 1;
-	} else {
-		return 0;
-	}
+	} 
+
+	return 0;
 }
-#define ISIDCHAR(c)		(condor_isalnum(c) || ((c) == '_') || ((c)=='.') )
-#else
-#define ISIDCHAR(c)		(isalnum(c) || ((c) == '_') || ((c)=='.') )
-#endif
+
+#define ISIDCHAR(c)		( condor_isidchar(c) )
 
 // $$ expressions may also contain a colon
 #define ISDDCHAR(c) ( ISIDCHAR(c) || ((c)==':') )
