@@ -1,3 +1,6 @@
+08/09/07 V6_9_4-{root,branch}
+  The tags which create the offical 6.9.4 release of Condor.
+
 08/08/07 V6_8-merge-9
   The state of the V6_8-branch for another merge back to the trunk
   so 6.9.4 may really be released.
