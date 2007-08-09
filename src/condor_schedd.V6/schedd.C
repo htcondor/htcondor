@@ -9400,7 +9400,10 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			CronTab *cronTab = NULL;
 			if ( this->cronTabs->lookup( job_id, cronTab ) >= 0 ) {
 					// Delete the cached object				
-				if ( cronTab ) delete cronTab;
+				if ( cronTab ) {
+					delete cronTab;
+					this->cronTabs->remove(job_id);
+				}
 			} // CronTab
 			break;
 		}
@@ -12140,7 +12143,10 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 	id.proc    = proc;
 	CronTab *cronTab;
 	if ( this->cronTabs->lookup( id, cronTab ) >= 0 ) {
-		if ( cronTab != NULL) delete cronTab;
+		if ( cronTab != NULL) {
+			delete cronTab;
+			this->cronTabs->remove(id);
+		}
 	}
 	
 	if( jobCleanupNeedsThread(cluster, proc) ) {
