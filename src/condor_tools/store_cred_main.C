@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
 					result = store_cred(full_name, pw, options.mode, daemon, true);
 				}
 				if (pw) {
-					SecureZeroMemory(pw, MAX_PASSWORD_LENGTH);
+					SecureZeroMemory(pw, strlen(pw));
 					delete[] pw;
 				}
 			}
