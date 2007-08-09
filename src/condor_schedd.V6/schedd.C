@@ -9134,6 +9134,7 @@ Scheduler::child_exit(int pid, int status)
 	shadow_rec*		srec;
 	int				StartJobsFlag=TRUE;
 	PROC_ID			job_id;
+	bool			srec_was_local_universe = false;
 
 	srec = FindSrecByPid(pid);
 	job_id.cluster = srec->job_id.cluster;
@@ -9152,13 +9153,13 @@ Scheduler::child_exit(int pid, int status)
 		if( SchedUniverseJobsRunning > 0 ) {
 			SchedUniverseJobsRunning--;
 		}
-		
 	} else if (srec) {
 		char* name = NULL;
 			//
 			// Local Universe
 			//
 		if( IsLocalUniverse(srec) ) {
+			srec_was_local_universe = true;
 			name = "Local starter";
 				//
 				// Following the scheduler universe example, we need
@@ -9231,7 +9232,7 @@ Scheduler::child_exit(int pid, int status)
 		// call count on it so that it can be marked idle again
 		// if need be.
 		//
-	if ( srec != NULL && IsLocalUniverse(srec) ) {
+	if ( srec_was_local_universe == true ) {
 		ClassAd *job_ad = GetJobAd( job_id.cluster, job_id.proc );
 		count( job_ad );
 	}
