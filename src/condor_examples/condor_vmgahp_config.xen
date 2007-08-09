@@ -2,18 +2,18 @@
 ##
 ## condor_vmgahp_config
 ##
-## This is the configuration file of condor vmgahp for Xen
+## This is the configuration file of Condor VM-GAHP for Xen
 ## 
 ######################################################################
 
 ##
-##  Which local users are eligible to execute this vmgahp ? (Required)
+##  Which local users are eligible to execute this VM-GAHP ? (Required)
 ##
-##  For Xen, vmgahp has setuid-root because Xen requires root privilege.  
-##  ALLOW_USERS is the list of local users able to execute vmgahp.
+##  For Xen, the VM-GAHP has setuid-root because Xen requires root privilege.  
+##  ALLOW_USERS is the list of local users able to execute the VM-GAHP.
 ##	(e.g.) ALLOW_USERS = condor, todd
-##  It means the users "condor" and "todd" can execute this vmgahp.
-##  If other users try to execute vmgahp, the program will exit.
+##  This means the users "condor" and "todd" can execute the VM-GAHP.
+##  If other users try to execute the VM-GAHP, the program will exit.
 ALLOW_USERS = condor
 
 
@@ -54,8 +54,8 @@ VM_NETWORKING = FALSE
 ##  What kind of networking types are supported?
 ##
 ##  If you set VM_NETWORKING to TRUE, you must define this parameter.
-##  (e.g.) VM_NETWORKING_TYPE = nat_dhcp
-##  (e.g.) VM_NETWORKING_TYPE = bridge_dhcp
+##  VM_NETWORKING_TYPE = nat_dhcp
+##  VM_NETWORKING_TYPE = bridge_dhcp
 ##
 #VM_NETWORKING_TYPE = nat_dhcp
 
@@ -72,7 +72,7 @@ VM_NETWORKING = FALSE
 #######################################################################
 
 ##
-##  Where is the condor script program to control Xen? (Required)
+##  Where is the Condor script program to control Xen? (Required)
 ##
 XEN_SCRIPT = /full/path/to/condor_vm_xen.sh
 
@@ -81,7 +81,7 @@ XEN_SCRIPT = /full/path/to/condor_vm_xen.sh
 ##
 ##  This kernel image will be used when a job submission user doesn't
 ##  define a kernel image explicitly. 
-##  If a job submission user defines an own kernel image in submission 
+##  If a job submission user defines its own kernel image in the submit
 ##  description file, it will be used instead of this default kernel.
 ##  (e.g.) XEN_DEFAULT_KERNEL = /boot/vmlinuz-2.6.16-xen
 ##
@@ -99,7 +99,7 @@ XEN_DEFAULT_KERNEL = /full/path/to/<kernel-image-file>
 ##
 ##  Where is bootloader for Xen domainU? (Required)
 ##
-##  The bootloader will be used in case that kernel image is included
+##  The bootloader will be used in the case that a kernel image includes
 ##  a disk image
 XEN_BOOTLOADER = /usr/bin/pygrub
 
@@ -116,7 +116,7 @@ XEN_BOOTLOADER = /usr/bin/pygrub
 ##  For example, if you want to use "vif = [ 'script=vif-nat' ]" 
 ##  in Xen vm config file, you need to define 
 ##  "XEN_VIF_PARAMETER = [ 'script=vif-nat' ]".
-##  Then, vmgahp will insert "vif = [ 'script=vif-nat' ]" 
+##  Then, the VM-GAHP will insert "vif = [ 'script=vif-nat' ]" 
 ##  into Xen vm config file, 
 ##  If you don't define anything, 
 ##  "vif = ['']" will be used for Xen vm config file.
@@ -134,7 +134,7 @@ XEN_VIF_PARAMETER = ['']
 ## Disk IO type for Xen domainU
 #######################################################################
 ##
-##  You can define which file IO device need to be used for Xen domainU.
+##  You can define which file IO device needs to be used for Xen domainU.
 ##  Default is to use loopback device for Xen domainU disk files.
 ##  (e.g.) To use loopback device, use "XEN_IMAGE_IO_TYPE = file:"
 ##  (e.g.) To use tap:aio device, use "XEN_IMAGE_IO_TYPE = tap:aio:"
@@ -166,12 +166,12 @@ XEN_VT_DEVICE_MODEL = '/usr/lib/xen/bin/qemu-dm'
 #XEN_VT_SERIAL = 'pty'
 
 ##
-## Use ioemu to virtualize unmodified guest domains
+## Use ioemu to virtualize unmodified guest domains.
 ## If not using ioemu, it uses vbd like paravirtualized guests.
 #XEN_DEVICE_TYPE_FOR_VT = ioemu:
 
 ##
-##  This parameter is for future.
+##  This parameter is for use in the future.
 ##  Hardware VT guests currently cannot be saved and restored in Xen. 
 ##  These features are currently under active development by Xen developers.
 #XEN_ALLOW_HARDWARE_VT_SUSPEND = FALSE

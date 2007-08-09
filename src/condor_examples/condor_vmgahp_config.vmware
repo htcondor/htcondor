@@ -12,10 +12,10 @@
 ##
 ##  Which local users are eligible to execute this vmgahp ?
 ##
-##  ALLOW_USERS is the list of local users able to execute vmgahp.
+##  ALLOW_USERS is the list of local users able to execute VM-GAHP.
 ##	(e.g.) ALLOW_USERS = condor, todd
-##  It means the users "condor" and "todd" can execute this vmgahp.
-##  If other users try to execute vmgahp, the program will exit.
+##  It means the users "condor" and "todd" can execute this VM-GAHP.
+##  If other users try to execute VM-GAHP, the program will exit.
 #ALLOW_USERS = condor
 
 
@@ -56,8 +56,8 @@ VM_NETWORKING = FALSE
 ##  What kind of networking types are supported?
 ##
 ##  If you set VM_NETWORKING to TRUE, you must define this parameter.
-##  (e.g.) VM_NETWORKING_TYPE = nat_dhcp
-##  (e.g.) VM_NETWORKING_TYPE = bridge_dhcp
+##  VM_NETWORKING_TYPE = nat_dhcp
+##  VM_NETWORKING_TYPE = bridge_dhcp
 ##
 #VM_NETWORKING_TYPE = nat_dhcp
 
@@ -73,7 +73,7 @@ VM_NETWORKING = FALSE
 VMWARE_PERL = perl
 
 ##
-##  Where is the condor script program to control VMware? (Required)
+##  Where is the Condor script program to control VMware? (Required)
 ##
 VMWARE_SCRIPT = /full/path/to/condor_vm_vmware.pl
 
