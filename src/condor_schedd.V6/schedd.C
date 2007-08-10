@@ -2977,7 +2977,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			// Backup the original IWD at submit time
 		if (buf) free(buf);
 		buf = NULL;
-		ad->LookupString(ATTR_JOB_IWD,&buf);
+		job_ad->LookupString(ATTR_JOB_IWD,&buf);
 		if ( buf ) {
 			sprintf(new_attr_value,"SUBMIT_%s",ATTR_JOB_IWD);
 			SetAttributeString(cluster,proc,new_attr_value,buf);
