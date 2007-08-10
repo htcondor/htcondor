@@ -350,6 +350,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 #endif
 	async_pipe_empty = TRUE;
 
+		// Note: this cannot be modified on reconfig, requires restart.
+	m_wants_dc_udp = param_boolean("WANT_UDP_COMMAND_SOCKET", true);
 	dc_rsock = NULL;
 	dc_ssock = NULL;
 
@@ -5879,57 +5881,15 @@ int DaemonCore::Create_Process(
 	// the info into the inheritbuf.
 	if ( want_command_port != FALSE ) {
 		inherit_handles = TRUE;
-		if ( want_command_port == TRUE ) {
-			// choose any old port (dynamic port)
-			if (!BindAnyCommandPort(&rsock, &ssock)) {
-				// dprintf with error message already in BindAnyCommandPort
-				goto wrapup;
-			}
-			if ( !rsock.listen() ) {
-				dprintf( D_ALWAYS, "Create_Process:Failed to post listen "
-						 "on command ReliSock\n");
-				goto wrapup;
-			}
-		} else {
-			// use well-known port specified by command_port
-			int on = 1;
-
-			/* Set options on this socket, SO_REUSEADDR, so that
-			   if we are binding to a well known port, and we crash,
-			   we can be restarted and still bind ok back to
-			   this same port. -Todd T, 11/97
-			*/
-			if( (!rsock.setsockopt(SOL_SOCKET, SO_REUSEADDR,
-									(char*)&on, sizeof(on)))    ||
-				(!ssock.setsockopt(SOL_SOCKET, SO_REUSEADDR,
-									(char*)&on, sizeof(on))) )
-		    {
-				dprintf(D_ALWAYS,"ERROR: setsockopt() SO_REUSEADDR failed\n");
-				goto wrapup;
-			}
-
-			/* Set no delay to disable Nagle, since we buffer all our 
-			   relisock output and it degrades performance of our 
-			   various chatty protocols. -Todd T, 9/05
-			 */
-			if( !rsock.setsockopt(IPPROTO_TCP, TCP_NODELAY,
-									(char*)&on, sizeof(on)) )
-		    {
-				dprintf(D_ALWAYS,"Warning: setsockopt() TCP_NODELAY failed\n");
-			}
-
-			/* bind(FALSE,...) means this is an incoming connection */
-			if ( (!rsock.listen( want_command_port)) ||
-				 (!ssock.bind(FALSE, want_command_port)) ) {
-				dprintf(D_ALWAYS,"Create_Process:Failed to post listen "
-						"on command socket(s) (port %d)\n", want_command_port );
-				goto wrapup;
-			}
+		SafeSock* ssock_ptr = m_wants_dc_udp ? &ssock : NULL;
+		if (!InitCommandSockets(want_command_port, &rsock, ssock_ptr, false)) {
+				// error messages already printed by InitCommandSockets()
+			goto wrapup;
 		}
 
 		// now duplicate the underlying SOCKET to make it inheritable
-		if ( (!(rsock.set_inheritable(TRUE))) ||
-			 (!(ssock.set_inheritable(TRUE))) ) {
+		if ( (!rsock.set_inheritable(TRUE)) ||
+			 (m_wants_dc_udp && !ssock.set_inheritable(TRUE)) ) {
 			dprintf(D_ALWAYS,"Create_Process:Failed to set command "
 					"socks inheritable\n");
 			goto wrapup;
@@ -5940,14 +5900,18 @@ int DaemonCore::Create_Process(
 		ptmp = rsock.serialize();
 		inheritbuf += ptmp;
 		delete []ptmp;
-		inheritbuf += " ";
-		ptmp = ssock.serialize();
-		inheritbuf += ptmp;
-		delete []ptmp;
+		if (m_wants_dc_udp) {
+			inheritbuf += " ";
+			ptmp = ssock.serialize();
+			inheritbuf += ptmp;
+			delete []ptmp;
+		}
 
             // now put the actual fds into the list of fds to inherit
         inheritSockFds[numInheritSockFds++] = rsock.get_file_desc();
-        inheritSockFds[numInheritSockFds++] = ssock.get_file_desc();
+		if (m_wants_dc_udp) {
+			inheritSockFds[numInheritSockFds++] = ssock.get_file_desc();
+		}
 	}
 	inheritbuf += " 0";
 
@@ -7108,7 +7072,7 @@ DaemonCore::Inherit( void )
 
 
 void
-DaemonCore::InitCommandSocket( int command_port )
+DaemonCore::InitDCCommandSocket( int command_port )
 {
 	if( command_port == 0 ) {
 			// No command port wanted, just bail.
@@ -7123,55 +7087,22 @@ DaemonCore::InitCommandSocket( int command_port )
 
 		// If dc_rsock/dc_ssock are still NULL, we need to create our
 		// own udp and tcp sockets, bind them, etc.
-	if( dc_rsock == NULL && dc_ssock == NULL ) {
+	if( dc_rsock == NULL || (m_wants_dc_udp && dc_ssock == NULL) ) {
 		dc_rsock = new ReliSock;
-		dc_ssock = new SafeSock;
 		if( !dc_rsock ) {
 			EXCEPT( "Unable to create command Relisock" );
 		}
-		if( !dc_ssock ) {
-			EXCEPT( "Unable to create command SafeSock" );
-		}
-		if( command_port == -1 ) {
-				// choose any old port (dynamic port)
-			if( !BindAnyCommandPort(dc_rsock, dc_ssock) ) {
-				EXCEPT("BindAnyCommandPort failed");
-			}
-			if( !dc_rsock->listen() ) {
-				EXCEPT( "Failed to post listen on command ReliSock" );
-			}
-		} else {
-				// use well-known port specified by command_port
-			int on = 1;
-
-				// Set options on this socket, SO_REUSEADDR, so that
-				// if we are binding to a well known port, and we
-				// crash, we can be restarted and still bind ok back
-				// to this same port. -Todd T, 11/97
-
-			if( (!dc_rsock->setsockopt(SOL_SOCKET, SO_REUSEADDR,
-									   (char*)&on, sizeof(on))) ||
-				(!dc_ssock->setsockopt(SOL_SOCKET, SO_REUSEADDR,
-									   (char*)&on, sizeof(on))) ) {
-				EXCEPT( "setsockopt() SO_REUSEADDR failed" );
-			}
-
-			/* Set no delay to disable Nagle, since we buffer all our 
-			   relisock output and it degrades performance of our 
-			   various chatty protocols. -Todd T, 9/05
-			 */
-			if( !dc_rsock->setsockopt(IPPROTO_TCP, TCP_NODELAY,
-									(char*)&on, sizeof(on)) )
-		    {
-				dprintf(D_ALWAYS,"Warning: setsockopt() TCP_NODELAY failed\n");
-			}
-
-			/* bind(FALSE,...) means this is an incoming connection */
-			if( (!dc_rsock->listen(command_port)) ||
-				(!dc_ssock->bind(FALSE, command_port)) ) {
-				EXCEPT("Failed to bind to or post listen on command socket(s)");
+		if (m_wants_dc_udp) {
+			dc_ssock = new SafeSock;
+			if( !dc_ssock ) {
+				EXCEPT( "Unable to create command SafeSock" );
 			}
 		}
+		else {
+			ASSERT(dc_ssock == NULL);
+		}
+			// Final bool indicates any error should be considered fatal.
+		InitCommandSockets(command_port, dc_rsock, dc_ssock, true);
 	}
 
 		// If we are the collector, increase the socket buffer size.  This
@@ -7180,12 +7111,18 @@ DaemonCore::InitCommandSocket( int command_port )
 	if( strcmp(mySubSystem,"COLLECTOR") == 0 ) {
 		int desired_size;
 
-			// set the UDP (ssock) read size to be large, so we do not
-			// drop incoming updates.
-		desired_size = param_integer( "COLLECTOR_SOCKET_BUFSIZE",
-									  10000 * 1024, 1024 );
-		int final_udp = dc_ssock->set_os_buffers( desired_size );
+			// Dynamically construct the log message.
+		MyString msg = "Reset OS socket buffer size to ";
 
+		if (dc_ssock) {
+				// set the UDP (ssock) read size to be large, so we do
+				// not drop incoming updates.
+			desired_size = param_integer("COLLECTOR_SOCKET_BUFSIZE",
+										 10000 * 1024, 1024);
+			int final_udp = dc_ssock->set_os_buffers(desired_size);
+			msg += (int)(final_udp / 1024);
+			msg += "k (UDP), ";
+		}
 
 			// and also set the outgoing TCP write size to be large so the
 			// collector is not blocked on the network when answering queries
@@ -7193,9 +7130,9 @@ DaemonCore::InitCommandSocket( int command_port )
 									 128 * 1024, 1024 );
 		int final_tcp = dc_rsock->set_os_buffers( desired_size, true );
 
-		dprintf( D_FULLDEBUG,
-				 "Reset OS socket buffer size to %dk (UDP), %dk (TCP).\n",
-				 final_udp / 1024, final_tcp / 1024 );
+		msg += (int)(final_tcp / 1024);
+		msg += "k (TCP)";
+		dprintf(D_FULLDEBUG, "%s\n", msg.Value());
 	}
 
 #ifdef WANT_NETMAN
@@ -7221,10 +7158,14 @@ DaemonCore::InitCommandSocket( int command_port )
 		// first command socket registered is TCP, so we must
 		// register the rsock socket first.
 	Register_Command_Socket( (Stream*)dc_rsock );
-	Register_Command_Socket( (Stream*)dc_ssock );
-
+	if (dc_ssock) {
+		Register_Command_Socket( (Stream*)dc_ssock );
+	}
 	dprintf( D_ALWAYS,"DaemonCore: Command Socket at %s\n",
 			 InfoCommandSinfulString() );
+	if (!dc_ssock) {
+		dprintf( D_FULLDEBUG, "DaemonCore: UDP Command socket not created.\n");
+	}
 
 		// check if our command socket is on 127.0.0.1, and spit out a
 		// warning if it is, since it probably means that /etc/hosts
@@ -8020,25 +7961,38 @@ int DaemonCore::SendAliveToParent()
 	}
 
 	for (;;) {
-		SafeSock sock;
+		Sock* sock;
+		SafeSock ssock;
+		ReliSock rsock;
+		if (m_wants_dc_udp) {
+			sock = &ssock;
+		}
+		else {
+			sock = &rsock;
+			if (first_time) {
+				dprintf(D_FULLDEBUG, "DaemonCore::SendAliveToParent(): "
+						"Using TCP to connect to parent %s.\n",
+						parent_sinful_string);
+			}
+		}
 		ret_val = TRUE;
 
-		if (!sock.connect(parent_sinful_string)) {
+		if (!sock->connect(parent_sinful_string)) {
 			dprintf(D_ALWAYS,"DaemonCore: Could not connect to parent %s. "
 				"SendAliveToParent() failed.\n",parent_sinful_string);
 			ret_val = FALSE;
 		}
 
 		Daemon d( DT_ANY, parent_sinful_string );
-		if (!d.startCommand(DC_CHILDALIVE, &sock, 0)) {
+		if (!d.startCommand(DC_CHILDALIVE, sock, 0)) {
 			dprintf(D_FULLDEBUG,"DaemonCore: startCommand() to %s failed. "
 				"SendAliveToParent() failed.\n",parent_sinful_string);
 			ret_val = FALSE;
 		}
 
-		sock.encode();
-		if ( !sock.code(mypid) || !sock.code(max_hang_time) 
-				|| !sock.end_of_message())
+		sock->encode();
+		if ( !sock->code(mypid) || !sock->code(max_hang_time) 
+				|| !sock->end_of_message())
 		{
 			dprintf(D_FULLDEBUG,"DaemonCore: Could not connect to parent %s. "
 				"SendAliveToParent() failed.\n",parent_sinful_string);
@@ -8142,9 +8096,10 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 
 			return FALSE;
 		}
-		// now open a SafeSock _on the same port_ chosen above
-		/* bind(FALSE,...) means this is an incoming connection */
-		if ( !ssock->bind(FALSE, rsock->get_port()) ) {
+		// Now open a SafeSock _on the same port_ chosen above,
+		// assuming the caller wants a SafeSock (UDP) at all.
+		// bind(FALSE,...) means this is an incoming connection.
+		if (ssock && !ssock->bind(FALSE, rsock->get_port())) {
 			rsock->close();
 			continue;
 		}
@@ -8153,6 +8108,112 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 	dprintf(D_ALWAYS, "Error: BindAnyCommandPort failed!\n");
 	return FALSE;
 }
+
+bool
+InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock, bool fatal)
+{
+		/*
+		  DaemonCore::Create_Process has a rather stupid handling of
+		  the want_command_port argument.  If it's set to FALSE (0),
+		  it means no port.  If it's -1, or 1, it means "we want one,
+		  and we don't care about the port".  If it's > 1, it means
+		  "we want one on this specific port".  However, we can assume
+		  this function is never called if port is 0, so we just have
+		  to see if the port is <= 1 (which handles both -1 or 1) to
+		  grab any old port, and if it's bigger than 1, we do
+		  everything for a specifically requested port. *sigh*
+		  Derek Wright 2007-08-09
+		*/
+	ASSERT(port != 0);
+	if (port <= 1) {
+			// Choose any old port (dynamic port)
+		if( !BindAnyCommandPort(rsock, ssock) ) {
+			if (fatal) {
+				EXCEPT("BindAnyCommandPort() failed");
+			}
+			else {
+				dprintf(D_ALWAYS | D_FAILURE, "BindAnyCommandPort() failed\n");
+				return false;
+			}
+
+		}
+		if( !rsock->listen() ) {
+			if (fatal) {
+				EXCEPT( "Failed to post listen on command ReliSock" );
+			}
+			else {
+				dprintf(D_ALWAYS | D_FAILURE,
+						"Failed to post listen on command ReliSock\n");
+				return false;
+			}
+		}
+	}
+	else {
+			// Use the well-known port specified in the arguments.
+		int on = 1;
+
+			// Set options on this socket, SO_REUSEADDR, so that
+			// if we are binding to a well known port, and we
+			// crash, we can be restarted and still bind ok back
+			// to this same port. -Todd T, 11/97
+		if( !rsock->setsockopt(SOL_SOCKET, SO_REUSEADDR,
+							   (char*)&on, sizeof(on)) ) {
+			if (fatal) {
+				EXCEPT("setsockopt() SO_REUSEADDR failed on TCP command port");
+			}
+			else {
+				dprintf(D_ALWAYS | D_FAILURE,
+						"setsockopt() SO_REUSEADDR failed on TCP command port\n");
+				return false;
+			}
+		}
+		if( ssock &&
+			!ssock->setsockopt(SOL_SOCKET, SO_REUSEADDR,
+							   (char*)&on, sizeof(on)) ) {
+			if (fatal) {
+				EXCEPT("setsockopt() SO_REUSEADDR failed on UDP command port");
+			}
+			else {
+				dprintf(D_ALWAYS | D_FAILURE,
+						"setsockopt() SO_REUSEADDR failed on UDP command port\n");
+				return false;
+			}
+		}
+
+			/* Set no delay to disable Nagle, since we buffer all our 
+			   relisock output and it degrades performance of our 
+			   various chatty protocols. -Todd T, 9/05
+			*/
+		if( !rsock->setsockopt(IPPROTO_TCP, TCP_NODELAY,
+							   (char*)&on, sizeof(on)) ) {
+			dprintf(D_ALWAYS, "Warning: setsockopt() TCP_NODELAY failed\n");
+		}
+
+		if (!rsock->listen(port)) {
+			if (fatal) {
+				EXCEPT("Failed to listen(%d) on TCP command socket.", port);
+			}
+			else {
+				dprintf(D_ALWAYS | D_FAILURE,
+						"Failed to listen(%d) on TCP command socket.\n", port);
+				return false;
+			}
+		}
+			/* bind(FALSE,...) means this is an incoming connection */
+		if (ssock && !ssock->bind(FALSE, port)) {
+			if (fatal) {
+				EXCEPT("Failed to bind(%d) on UDP command socket.", port);
+			}
+			else {
+				dprintf(D_ALWAYS | D_FAILURE,
+						"Failed to bind(%d) on UDP command socket.\n", port);
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
 
 /**  Is_Pid_Alive() returns TRUE is pid lives, FALSE is that pid has exited.
      By Alive, (at least on UNIX), we mean either the process is still running,

@@ -168,6 +168,33 @@ typedef void sigset_t;
     TCP and UDP command socket */
 int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
 
+/**
+ * Helper function to initialize command ports.
+ *
+ * This function is call for both the initial command sockets and when
+ * creating sockets to inherit before DC:Create_Process().  It calls
+ * bind() or BindAnyCommandPort()  as needed, listen() and
+ * setsockopt() (for SO_REUSEADDR and TCP_NODELAY).
+ *
+ * @param port
+ *   What port you want to bind to, or -1 if you don't care.
+ * @param rsock
+ *   Pointer to a ReliSock object for the TCP command socket.
+ * @param ssock
+ *   Pointer to a SafeSock object for the UDP command socket.
+ * @param fatal
+ *   Should errors be considered fatal (EXCEPT) or not (dprintf).
+ *
+ * @return
+ *   true if everything worked, false if there were any errors.
+ *
+ * @see BindAnyCommandPort()
+ * @see DaemonCore::InitDCCommandSock
+ * @see DaemonCore::Create_Process
+ */
+bool InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock,
+						bool fatal);
+
 /** This global should be defined in your subsystems's main.C file.
     Here are some examples:<p>
 
@@ -1195,11 +1222,12 @@ class DaemonCore : public Service
 
   private:      
 
+	bool m_wants_dc_udp; // do we want a udp comment socket at all?
 	ReliSock* dc_rsock;	// tcp command socket
 	SafeSock* dc_ssock;	// udp command socket
 
     void Inherit( void );  // called in main()
-	void InitCommandSocket( int command_port );  // called in main()
+	void InitDCCommandSocket( int command_port );  // called in main()
 
     int HandleSigCommand(int command, Stream* stream);
     int HandleReq(int socki);

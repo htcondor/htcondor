@@ -1880,7 +1880,7 @@ int main( int argc, char** argv )
 	main_pre_command_sock_init();
 
 		// SETUP COMMAND SOCKET
-	daemonCore->InitCommandSocket( command_port );
+	daemonCore->InitDCCommandSocket( command_port );
 
 		// Install DaemonCore signal handlers common to all daemons.
 	daemonCore->Register_Signal( SIGHUP, "SIGHUP", 

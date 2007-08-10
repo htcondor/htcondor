@@ -882,6 +882,15 @@ RESERVED_DISK		= 5
 ##  user@UID_DOMAIN won't work.
 #EMAIL_DOMAIN = $(FULL_HOSTNAME)
 
+##  Should Condor daemons create a UDP command socket (for incomming
+##  UDP-based commands) in addition to the TCP command socket?  By
+##  default, classified ad updates sent to the collector use UDP, in
+##  addition to certain keep alive messages and other non-essential
+##  communication.  However, in certain situations, it might be
+##  desirable to disable the UDP command port (for example, to reduce
+##  the number of ports represented by a GCB broker, etc).
+#WANT_UDP_COMMAND_SOCKET = True
+
 ##  If your site needs to use TCP updates to the collector, instead of
 ##  UDP, you can enable this feature.  HOWEVER, WE DO NOT RECOMMEND
 ##  THIS FOR MOST SITES!  In general, the only sites that might want
