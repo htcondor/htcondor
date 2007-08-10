@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.10 2007-06-13 21:19:48 bt Exp $
+# $Id: remote_pre.pl,v 1.11 2007-08-10 02:50:37 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -369,8 +369,10 @@ close PIDFILE;
 
 # Give the master time to start before jobs are submitted.
 $scheddadr = `$BaseDir/condor/bin/condor_config_val SCHEDD_ADDRESS_FILE`;
-print "<<SCHEDD_ADDRESS_FILE is $scheddadr\n";
-if(!$scheddadr =~/Not defined/) {
+$scheddadr =~ s/\012+$//;
+$scheddadr =~ s/\015+$//;
+print "SCHEDD_ADDRESS_FILE is <<<<<$scheddadr>>>>>\n";
+if(!($scheddadr =~/Not defined/)) {
 	print "We are waiting for the file to exist\n";
 	# Where is the schedd address file? wait for it to exist
 	$havescheddaddr = "no";
