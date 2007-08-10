@@ -1037,6 +1037,32 @@ File System Configuration File Entries''.
   Unix, the default for this parameter is eighty percent of the process file
   descriptor limit.  On windows, the default is 1600.
 
+\item[\Macro{WANT\_UDP\_COMMAND\_SOCKET}] \label{param:WantUDPCommandSocket}
+  This setting, added in version 6.9.5, controls if Condor daemons
+  should create a UDP command socket in addition to the TCP command
+  socket (which is required).
+  The default is \Expr{True}, and modifying it requires restarting all
+  Condor daemons, not just a \Condor{reconfig} or SIGHUP.
+
+  Normally, updates sent to the \Condor{collector} use UDP, in
+  addition to certain keep alive messages and other non-essential
+  communication.
+  However, in certain situations, it might be desirable to disable the
+  UDP command port (for example, to reduce the number of ports
+  represented by a GCB broker, etc).
+
+  Unfortunately, due to a limitation in how these command sockets are
+  created, it is not possible to define this setting on a per-daemon
+  basis, for example, by trying to set
+  \MacroNI{STARTD.WANT\_UDP\_COMMAND\_SOCKET}.
+  At least for now, this setting must be defined machine wide to
+  function correctly.
+
+  If this setting is set to true on a machine running a
+  \Condor{collector}, the pool should be configured to use TCP updates
+  to that collector (see section~\ref{sec:tcp-collector-update} on
+  page~\pageref{sec:tcp-collector-update} for more information).
+
 \end{description}
 
 % Default value check end here: PKK 8 Jan 2004

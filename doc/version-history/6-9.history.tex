@@ -36,7 +36,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new variable \Macro{WANT\_UDP\_COMMAND\_SOCKET} controls
+  if Condor daemons should create a UDP command socket in addition to
+  the TCP command socket (which is required).
+  The deault is \Expr{True}, but it is now possible to completely
+  disable UDP command sockets by defining this to \Expr{False}.
+  See section~\ref{param:WantUDPCommandSocket} on
+  page~\pageref{param:WantUDPCommandSocket} for more information.
 
 \end{itemize}
 
