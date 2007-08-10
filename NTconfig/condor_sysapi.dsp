@@ -174,6 +174,10 @@ SOURCE=..\src\condor_sysapi\ncpus.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_sysapi\partition_id.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_sysapi\phys_mem.c
 # End Source File
 # Begin Source File

@@ -49,6 +49,7 @@ CLEAN :
 	-@erase "$(INTDIR)\last_x_event.obj"
 	-@erase "$(INTDIR)\load_avg.obj"
 	-@erase "$(INTDIR)\ncpus.obj"
+	-@erase "$(INTDIR)\partition_id.obj"
 	-@erase "$(INTDIR)\phys_mem.obj"
 	-@erase "$(INTDIR)\reconfig.obj"
 	-@erase "$(INTDIR)\resource_limits.obj"
@@ -118,7 +119,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\reconfig.obj" \
 	"$(INTDIR)\resource_limits.obj" \
 	"$(INTDIR)\timers_b.obj" \
-	"$(INTDIR)\virt_mem.obj"
+	"$(INTDIR)\virt_mem.obj" \
+	"$(INTDIR)\partition_id.obj"
 
 "$(OUTDIR)\condor_sysapi.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -149,6 +151,7 @@ CLEAN :
 	-@erase "$(INTDIR)\last_x_event.obj"
 	-@erase "$(INTDIR)\load_avg.obj"
 	-@erase "$(INTDIR)\ncpus.obj"
+	-@erase "$(INTDIR)\partition_id.obj"
 	-@erase "$(INTDIR)\phys_mem.obj"
 	-@erase "$(INTDIR)\reconfig.obj"
 	-@erase "$(INTDIR)\resource_limits.obj"
@@ -217,7 +220,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\reconfig.obj" \
 	"$(INTDIR)\resource_limits.obj" \
 	"$(INTDIR)\timers_b.obj" \
-	"$(INTDIR)\virt_mem.obj"
+	"$(INTDIR)\virt_mem.obj" \
+	"$(INTDIR)\partition_id.obj"
 
 "$(OUTDIR)\condor_sysapi.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -360,6 +364,12 @@ SOURCE=..\src\condor_sysapi\load_avg.c
 SOURCE=..\src\condor_sysapi\ncpus.c
 
 "$(INTDIR)\ncpus.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_sysapi\partition_id.C
+
+"$(INTDIR)\partition_id.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

@@ -30,15 +30,43 @@
 
 int sysapi_partition_id(char const *path,char **result)
 {
-		// TODO: implement this for windows.  For now, we just
-		// return the path as the result.
+	const int VOLUME_PATH_BUFFER_SIZE = 1024;
+	const int RESULT_BUFFER_SIZE = 1024;
 
-	*result = (char *)malloc( strlen(path)+1 );
-	if( *result == NULL ) {
+	BOOL ret;
+	char* volume_path_name;
+
+	// basic idea:
+	//   1) call GetVolumePathName to get the mount point for the
+	//      the volume containing path
+	//   2) call GetVolumeNameForVolumeMountPoint to get the name
+	//      of the volume
+	//
+	volume_path_name = (char*)malloc(VOLUME_PATH_BUFFER_SIZE);
+	ASSERT(volume_path_name != NULL);
+	ret = GetVolumePathName(path, volume_path_name, VOLUME_PATH_BUFFER_SIZE);
+	if (ret == FALSE) {
+		dprintf(D_ALWAYS,
+		        "sysapi_partition_id: GetVolumePathName error: %u\n",
+		        GetLastError());
+		free(volume_path_name);
+		return 0;
+	}
+	*result = (char*)malloc(RESULT_BUFFER_SIZE);
+	ASSERT(*result != NULL);
+	ret = GetVolumeNameForVolumeMountPoint(volume_path_name,
+	                                       *result,
+	                                       RESULT_BUFFER_SIZE);
+	free(volume_path_name);
+	if (ret == FALSE) {
+		dprintf(D_ALWAYS,
+		        "sysapi_partition_id: "
+		            "GetVolumeNameForVolumeMountPoint error: %u\n",
+		        GetLastError());
+		free(*result);
 		return 0;
 	}
 
-	strcpy( path, *result );
 	return 1;
 }
 
