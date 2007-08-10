@@ -888,7 +888,12 @@ RESERVED_DISK		= 5
 ##  addition to certain keep alive messages and other non-essential
 ##  communication.  However, in certain situations, it might be
 ##  desirable to disable the UDP command port (for example, to reduce
-##  the number of ports represented by a GCB broker, etc).
+##  the number of ports represented by a GCB broker, etc).  If not
+##  defined, the UDP command socket is enabled by default, and to
+##  modify this, you must restart your Condor daemons. Also, this
+##  setting must be true machine-wide.  For example, setting
+##  "STARTD.WANT_UDP_COMMAND_SOCKET = False" while the global setting
+##  is "True" will still result in the startd creating a UDP socket.
 #WANT_UDP_COMMAND_SOCKET = True
 
 ##  If your site needs to use TCP updates to the collector, instead of
