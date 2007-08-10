@@ -274,6 +274,12 @@ class BaseShadow : public Service
 		*/
 	virtual int updateFromStarter(int command, Stream *s) = 0;
 
+		/** Method to process an update from the starter with info 
+			about the job.  This is shared by both the daemoncore
+			command handler and the CONDOR_register_job_info RSC. 
+		 */
+	virtual int updateFromStarterClassAd(ClassAd* update_ad) = 0;
+
 	virtual int getImageSize( void ) = 0;
 
 	virtual int getDiskUsage( void ) = 0;

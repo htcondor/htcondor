@@ -127,6 +127,48 @@ REMOTE_CONDOR_register_starter_info( ClassAd* ad )
 
 
 int
+REMOTE_CONDOR_register_job_info( ClassAd* ad )
+{
+	condor_errno_t		terrno;
+	int		rval=-1;
+	int result = 0;
+
+	dprintf ( D_SYSCALLS, "Doing CONDOR_register_job_info\n" );
+
+	CurrentSysCall = CONDOR_register_job_info;
+
+	if( ! ad ) {
+		EXCEPT( "CONDOR_register_job_info called with NULL ClassAd!" ); 
+		return -1;
+	}
+
+	syscall_sock->encode();
+	result = syscall_sock->code(CurrentSysCall);
+	ASSERT( result );
+	result = ad->put(*syscall_sock);
+	ASSERT( result );
+	result = syscall_sock->end_of_message();
+	ASSERT( result );
+
+	syscall_sock->decode();
+	result =  syscall_sock->code(rval);
+	ASSERT( result );
+	if( rval < 0 ) {
+		result = syscall_sock->code(terrno);
+		ASSERT( result );
+		result = syscall_sock->end_of_message();
+		ASSERT( result );
+		errno = terrno;
+		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		return rval;
+	}
+	result = syscall_sock->end_of_message();
+	ASSERT( result );
+	return rval;
+}
+
+
+int
 REMOTE_CONDOR_get_job_info(ClassAd *ad)
 {
 	condor_errno_t terrno;

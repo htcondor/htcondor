@@ -100,6 +100,7 @@ class UniShadow : public BaseShadow
 	float bytesReceived();
 
 	int updateFromStarter(int command, Stream *s);
+	int updateFromStarterClassAd(ClassAd* update_ad);
 
 	struct rusage getRUsage( void );
 

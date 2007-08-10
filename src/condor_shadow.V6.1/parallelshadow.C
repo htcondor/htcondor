@@ -667,20 +667,21 @@ int
 ParallelShadow::updateFromStarter(int  /*command*/, Stream *s)
 {
 	ClassAd update_ad;
-    ClassAd *jobad = getJobAd();
-
-	MpiResource* mpi_res = NULL;
-	int mpi_node = -1;
-	
-	// get info from the starter encapsulated in a ClassAd
 	s->decode();
 	update_ad.initFromStream(*s);
 	s->end_of_message();
+	return updateFromStarterClassAd(&update_ad);
+}
 
-		// First, figure out what remote resource this info belongs
-		// to. 
+int
+ParallelShadow::updateFromStarterClassAd(ClassAd* update_ad)
+{
+	ClassAd *job_ad = getJobAd();
+	MpiResource* mpi_res = NULL;
+	int mpi_node = -1;
 
-	if( ! update_ad.LookupInteger(ATTR_NODE, mpi_node) ) {
+		// First, figure out what remote resource this info belongs to. 
+	if( ! update_ad->LookupInteger(ATTR_NODE, mpi_node) ) {
 			// No ATTR_NODE in the update ad!
 		dprintf( D_ALWAYS, "ERROR in ParallelShadow::updateFromStarter: "
 				 "no %s defined in update ad, can't process!\n",
@@ -694,37 +695,32 @@ ParallelShadow::updateFromStarter(int  /*command*/, Stream *s)
 		return FALSE;
 	}
 
-	struct rusage prev_rusage = getRUsage();;
 	int prev_disk = getDiskUsage();
+	struct rusage prev_rusage = getRUsage();
+
+
 		// Now, we're in good shape.  Grab all the info we care about
 		// and put it in the appropriate place.
-	mpi_res->updateFromStarter( &update_ad );
+	mpi_res->updateFromStarter(update_ad);
 
 		// XXX TODO: Do we want to update our local job ad?  Do we
 		// want to store the maximum in there?  Seperate stuff for
 		// each node?  
 
-    int diskUsage = getDiskUsage();
-	char buf[256];
-    if( diskUsage > prev_disk ) {
-        sprintf( buf, "%s=%d", ATTR_DISK_USAGE, diskUsage );
-        jobad->Insert( buf );
+    int cur_disk = getDiskUsage();
+    if( cur_disk > prev_disk ) {
+		job_ad->Assign(ATTR_DISK_USAGE, cur_disk);
     }
 
-    struct rusage rusage_val = getRUsage();
-
-    if( rusage_val.ru_stime.tv_sec > prev_rusage.ru_stime.tv_sec ) {
-        sprintf( buf, "%s=%f", ATTR_JOB_REMOTE_SYS_CPU,
-                 (float)rusage_val.ru_stime.tv_sec );
-        jobad->Insert( buf );
+    struct rusage cur_rusage = getRUsage();
+    if( cur_rusage.ru_stime.tv_sec > prev_rusage.ru_stime.tv_sec ) {
+        job_ad->Assign(ATTR_JOB_REMOTE_SYS_CPU,
+					   (float)cur_rusage.ru_stime.tv_sec);
     }
-    if( rusage_val.ru_utime.tv_sec > prev_rusage.ru_utime.tv_sec ) {
-        sprintf( buf, "%s=%f", ATTR_JOB_REMOTE_USER_CPU,
-                 (float)rusage_val.ru_utime.tv_sec );
-        jobad->Insert( buf );
+    if( cur_rusage.ru_utime.tv_sec > prev_rusage.ru_utime.tv_sec ) {
+        job_ad->Assign(ATTR_JOB_REMOTE_USER_CPU,
+					   (float)cur_rusage.ru_utime.tv_sec);
     }
-
-
 	return TRUE;
 }
 

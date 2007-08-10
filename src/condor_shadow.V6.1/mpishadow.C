@@ -1007,18 +1007,21 @@ int
 MPIShadow::updateFromStarter(int /* command */, Stream *s)
 {
 	ClassAd update_ad;
-	MpiResource* mpi_res = NULL;
-	int mpi_node = -1;
-	
-	// get info from the starter encapsulated in a ClassAd
 	s->decode();
 	update_ad.initFromStream(*s);
 	s->end_of_message();
+	return updateFromStarterClassAd(&update_ad);
+}
 
-		// First, figure out what remote resource this info belongs
-		// to. 
 
-	if( ! update_ad.LookupInteger(ATTR_NODE, mpi_node) ) {
+int
+MPIShadow::updateFromStarterClassAd(ClassAd* update_ad)
+{
+	MpiResource* mpi_res = NULL;
+	int mpi_node = -1;
+	
+		// First, figure out what remote resource this info belongs to. 
+	if( ! update_ad->LookupInteger(ATTR_NODE, mpi_node) ) {
 			// No ATTR_NODE in the update ad!
 		dprintf( D_ALWAYS, "ERROR in MPIShadow::updateFromStarter: "
 				 "no %s defined in update ad, can't process!\n",
@@ -1034,7 +1037,7 @@ MPIShadow::updateFromStarter(int /* command */, Stream *s)
 
 		// Now, we're in good shape.  Grab all the info we care about
 		// and put it in the appropriate place.
-	mpi_res->updateFromStarter( &update_ad );
+	mpi_res->updateFromStarter(update_ad);
 
 		// XXX TODO: Do we want to update our local job ad?  Do we
 		// want to store the maximum in there?  Seperate stuff for

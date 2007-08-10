@@ -48,6 +48,7 @@ static bool write_access(const char * /* filename */) { return true; }
 static const char * shadow_syscall_name(int condor_sysnum)
 {
 	switch(condor_sysnum) {
+        case CONDOR_register_job_info: return "register_job_info";
         case CONDOR_register_machine_info: return "register_machine_info";
         case CONDOR_register_starter_info: return "register_starter_info";
         case CONDOR_get_job_info: return "get_job_info";
@@ -195,6 +196,31 @@ do_REMOTE_syscall()
 
 		errno = 0;
 		rval = pseudo_register_starter_info( &ad );
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		result = ( syscall_sock->code(rval) );
+		ASSERT( result );
+		if( rval < 0 ) {
+			result = ( syscall_sock->code( terrno ) );
+			ASSERT( result );
+		}
+		result = ( syscall_sock->end_of_message() );
+		ASSERT( result );
+		return 0;
+	}
+
+	case CONDOR_register_job_info:
+	{
+		ClassAd ad;
+		result = ( ad.initFromStream(*syscall_sock) );
+		ASSERT( result );
+		result = ( syscall_sock->end_of_message() );
+		ASSERT( result );
+
+		errno = 0;
+		rval = pseudo_register_job_info( &ad );
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 

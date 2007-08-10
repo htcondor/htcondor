@@ -1643,6 +1643,7 @@ bool
 JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 {
 	dprintf( D_FULLDEBUG, "Entering JICShadow::updateShadow()\n" );
+	static bool first_time = true;
 
 	ClassAd local_ad;
 	ClassAd* ad;
@@ -1659,13 +1660,35 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 		}
 	}
 
+	bool rval;
+
 		// Try to send it to the shadow
-	if( shadow->updateJobInfo(ad, insure_update) ) {
-		dprintf( D_FULLDEBUG, "Leaving JICShadow::updateShadow(): success\n" );
+	if (shadow_version && shadow_version->built_since_version(6,9,5)) {
+			// Newer shadows understand the CONDOR_register_job_info
+			// RSC, so we should just always use that, regardless of
+			// insure_update, since we already have the socket open,
+			// and we want to use it (e.g. to prevent firewalls from
+			// closing it due to non-activity).
+		rval = (REMOTE_CONDOR_register_job_info(ad) == 0);
+	}
+	else {
+			// If it's an older shadow, the RSC would cause it to
+			// EXCEPT(), so we just use the out-of-band DC message to
+			// its command port, handled via the DCShadow object.
+		if (first_time) {
+			dprintf(D_FULLDEBUG, "Communicating with a shadow older than "
+					"version 6.9.5, using command port to send job info "
+					"instead of CONDOR_register_job_info RSC\n");
+		}
+		rval = shadow->updateJobInfo(ad, insure_update);
+	}
+
+	first_time = false;
+	if (rval) {
+		dprintf(D_FULLDEBUG, "Leaving JICShadow::updateShadow(): success\n");
 		return true;
 	}
-	dprintf( D_FULLDEBUG, "JICShadow::updateShadow(): "
-			 "failed to send update\n" );
+	dprintf(D_FULLDEBUG, "JICShadow::updateShadow(): failed to send update\n");
 	return false;
 }
 

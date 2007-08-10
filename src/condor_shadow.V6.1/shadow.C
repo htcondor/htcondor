@@ -46,69 +46,50 @@ UniShadow::~UniShadow() {
 int
 UniShadow::updateFromStarter(int /* command */, Stream *s)
 {
-	ClassAd updateAd;
-	ClassAd *jobad = getJobAd();
-	char buf[300];
-	int int_val;
-	struct rusage rusage_val;
-	
+	ClassAd update_ad;
+
 	// get info from the starter encapsulated in a ClassAd
 	s->decode();
-	if( ! updateAd.initFromStream(*s) ) {
+	if( ! update_ad.initFromStream(*s) ) {
 		dprintf( D_ALWAYS, "ERROR in UniShadow::updateFromStarter:"
 				 "Can't read ClassAd, aborting.\n" );
 		return FALSE;
 	}
 	s->end_of_message();
 
-	if ( !jobad ) {
+	return updateFromStarterClassAd(&update_ad);
+}
+
+
+int
+UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
+	ClassAd *job_ad = getJobAd();
+	if (!job_ad) {
 		// should never really happen...
 		return FALSE;
 	}
 
-	int prev_image = remRes->getImageSize();
-	int prev_disk = remRes->getDiskUsage();
-	struct rusage prev_rusage = remRes->getRUsage();
+		// Save the current image size, so that if it changes as a
+		// result of this update, we can log an event to the userlog.
+	int prev_image = getImageSize();
 
-		// Stick everything we care about in our RemoteResource. 
-	remRes->updateFromStarter( &updateAd );
+		// Stick everything we care about into our RemoteResource.
+		// For the UniShadow (with only 1 RemoteResource) it has a
+		// pointer to the identical copy of the job classad, so when
+		// it updates its copy, it's really updating ours, too.
+	remRes->updateFromStarter(update_ad);
 
-		// Now, update our local copy of the job classad for
-		// anything that's changed. 
-	int_val = remRes->getImageSize();
-	if( int_val > prev_image ) {
-		sprintf( buf, "%s=%d", ATTR_IMAGE_SIZE, int_val );
-		jobad->Insert( buf );
-
-			// also update the User Log with an image size event
+	int cur_image = getImageSize();
+	if (cur_image > prev_image) {
 		JobImageSizeEvent event;
-		event.size = int_val;
-		if (!uLog.writeEvent (&event,jobad)) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_IMAGE_SIZE event\n" );
+		event.size = cur_image;
+		if (!uLog.writeEvent(&event, job_ad)) {
+			dprintf(D_ALWAYS, "Unable to log ULOG_IMAGE_SIZE event\n");
 		}
-	}
-
-	int_val = remRes->getDiskUsage();
-	if( int_val > prev_disk ) {
-		sprintf( buf, "%s=%d", ATTR_DISK_USAGE, int_val );
-		jobad->Insert( buf );
-	}
-
-	rusage_val = remRes->getRUsage();
-	if( rusage_val.ru_stime.tv_sec > prev_rusage.ru_stime.tv_sec ) {
-		sprintf( buf, "%s=%f", ATTR_JOB_REMOTE_SYS_CPU,
-				 (float)rusage_val.ru_stime.tv_sec );
-		jobad->Insert( buf );
-	}
-	if( rusage_val.ru_utime.tv_sec > prev_rusage.ru_utime.tv_sec ) {
-		sprintf( buf, "%s=%f", ATTR_JOB_REMOTE_USER_CPU,
-				 (float)rusage_val.ru_utime.tv_sec );
-		jobad->Insert( buf );
 	}
 
 	return TRUE;
 }
-
 
 
 void

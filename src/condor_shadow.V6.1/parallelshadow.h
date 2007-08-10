@@ -78,6 +78,7 @@ class ParallelShadow : public BaseShadow
 	int handleJobRemoval( int sig );
 
 	int updateFromStarter(int command, Stream *s);
+	int updateFromStarterClassAd(ClassAd* update_ad);
 
 	struct rusage getRUsage( void );
 

@@ -78,6 +78,14 @@ pseudo_register_starter_info( ClassAd* ad )
 
 
 int
+pseudo_register_job_info(ClassAd* ad)
+{
+	Shadow->updateFromStarterClassAd(ad);
+	return 0;
+}
+
+
+int
 pseudo_begin_execution()
 {
 	thisRemoteResource->beginExecution();
