@@ -835,7 +835,11 @@ do_REMOTE_syscall()
 
 	default:
 	{
-		EXCEPT( "unknown syscall %d received\n", condor_sysnum );
+		dprintf(D_ALWAYS, "ERROR: unknown syscall %d received\n", condor_sysnum );
+			// If we return failure, the shadow will shutdown, so
+			// pretend everything's cool...
+		return 0;
+		
 	}
 
 	}	/* End of switch on system call number */
