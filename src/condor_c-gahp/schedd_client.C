@@ -995,8 +995,35 @@ submit_report_result:
 
 			error = FALSE;
 			
-			ClassAd * next_ad = GetNextJobByConstraint( current_command->constraint, 1 );
-			while (next_ad != NULL) {
+			ClassAd *next_ad;
+			ClassAdList adlist;
+				// Only use GetAllJobsByConstraint if remote schedd is
+				// 6.9.5 or newer.  Previous versions either did not
+				// support this call, or they closed the Qmgmt connection
+				// as a side-effect of this call.
+			if( ver_info.built_since_version(6,9,5) ) {
+				dprintf( D_FULLDEBUG, "Calling GetAllJobsByConstraint(%s)\n",
+						 current_command->constraint );
+					// NOTE: this could be made more efficient if we knew
+					// the list of attributes to query.  For lack of that,
+					// we just get all attributes.
+				GetAllJobsByConstraint( current_command->constraint, "", adlist);
+			}
+			else {
+					// This is the old latency-prone method.
+				dprintf( D_FULLDEBUG, "Calling GetNextJobByConstraint(%s)\n",
+						 current_command->constraint );
+				next_ad = GetNextJobByConstraint( current_command->constraint, 1 );
+				while( next_ad != NULL ) {
+					adlist.Insert( next_ad );
+					next_ad = GetNextJobByConstraint( current_command->constraint, 0 );
+				}
+			}
+
+				// NOTE: ClassAdList will deallocate the ClassAds in it
+
+			adlist.Rewind();
+			while( (next_ad=adlist.Next()) ) {
 				MyString * da_buffer = new MyString();	// Use a ptr to avoid excessive copying
 				if ( useXMLClassads ) {
 					ClassAdXMLUnparser unparser;
@@ -1008,10 +1035,6 @@ submit_report_result:
 					unparser.Unparse (next_ad, *da_buffer);
 				}
 				matching_ads.Append (da_buffer);
-				if ( next_ad ) {
-					FreeJobAd(next_ad);
-				}
-				next_ad = GetNextJobByConstraint( current_command->constraint, 0 );
 			}
 			if ( errno == ETIMEDOUT ) {
 				failure_line_num = __LINE__;
