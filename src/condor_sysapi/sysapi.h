@@ -111,6 +111,14 @@ const char* sysapi_kernel_memory_model( void );
 const char* sysapi_ckptpltfrm_raw( void );
 const char* sysapi_ckptpltfrm( void );
 
+/* Produce a unique identifier for the disk partition containing the
+   specified path.  Caller should free result.  The caller could use
+   the result, for example, to see if two paths are on the same disk
+   partition or not.
+   Returns true on success.
+*/
+int sysapi_partition_id(char const *path,char **result);
+
 END_C_DECLS
 
 #endif
