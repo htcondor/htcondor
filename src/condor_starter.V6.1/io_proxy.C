@@ -106,8 +106,12 @@ bool IOProxy::init( const char *config_file )
 		return false;
 	}
 
-	/* FALSE means this is an incomming connection */
-	if(!server->bind(FALSE)) {
+	/* passing FALSE to bind means this is an incomming connection.
+	 * however, here we are going to pass TRUE because only machines
+	 * on this host need to connect to the ioproxy (chirp) socket,
+	 * so there is no need to register it with a gcb broker. 
+	 **/
+	if(!server->bind(TRUE)) {
 		dprintf(D_ALWAYS,"IOProxy: couldn't bind: %s\n",strerror(errno));
 		return false;
 	}
