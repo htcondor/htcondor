@@ -2,15 +2,8 @@
 
 #define PlatformFlags			-DHPUX10=HPUX10
 
-#define HAS_ADJTIME			YES
-#define HAS_GETHOSTNAME			YES
 #define HAS_GETPAGESIZE			YES
-#define HAS_GETPGRP			YES
-#define HAS_KILLPG			YES
-#define HAS_SETHOSTNAME			YES
-#define HAS_UTIMES			YES
 #define HAS_GETWD			YES
-#define HAS_INSQUE			YES
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 
