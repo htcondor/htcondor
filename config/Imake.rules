@@ -2,7 +2,6 @@
 /* This section is for helper utility functions and shared common rules and
 	definitions. */
 
-#define SET_GID_MODE		02775
 #define EXECUTABLE_MODE		0755
 #define OBJECT_MODE		0644
 #define TEXT_MODE		OBJECT_MODE

@@ -11,10 +11,7 @@
 /* Put all of your #defines up here do you can turn them off/redefine
 	them selectively for an architecture if you desire. */
 #define WANT_MAN_PAGES	YES
-#define IS_V6			YES
-#define USE_QMGMT		YES
 
-#define WANT_JAVA       YES
 #define WANT_PVM		YES
 #define WANT_CONDOR_G	YES
 #define WANT_NETMAN	NO
@@ -28,7 +25,6 @@
 #define WANT_DAGMAN_HELPER     YES
 #define WANT_NEST	NO		/* the NeST I/O module */
 #define WANT_ORACLE_UNIVERSE   NO
-#define WANT_DRMAA		YES
 #define WANT_QUILL		YES
 #define WANT_TT			YES
 

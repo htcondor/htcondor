@@ -6,22 +6,16 @@
 
 #define DebugFlag -ggdb
 
-#define IS_V5				YES
-
 #define DOES_CHECKPOINTING		YES
 #define DOES_COMPRESS_CKPT		NO
 #define DOES_REMOTE_SYSCALLS		YES
 #define DOES_SAVE_SIGSTATE		YES
-#define DO_BENCHMARKING			YES
 
 #define NEEDS_KBDD			YES
-#define NEEDS_GROW_STACK		NO
-#define NEEDS_SPECIAL_SIGVEC		NO
 #define NEEDS_FAKE_GETMNT		YES
 #define HAS_AR_S_OPTION			YES
 #define HAS_RANLIB_TOUCH		YES
 #define HAS_CP_PRESERVE			YES
-#define NEEDS_SPECIAL_SETJMP		NO
 #define HAS_FLOCK			YES
 #define HAS_GETDIRENTRIES		YES
 #define HAS_GETDTABLESIZE		YES
@@ -30,7 +24,6 @@
 #define HAS_SETEUID			YES
 #define HAS_GETWD			YES
 #define HAS_SETLINEBUF			YES
-#define USE_GCC				YES
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 

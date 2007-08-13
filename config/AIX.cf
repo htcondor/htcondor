@@ -15,8 +15,6 @@ PRELINK_CPP_FLAGS = -Ur -u main
 /* we also need to link test suite jobs with the same mess */
 #define TestPlatformLdFlags PlatformLdFlags
 
-#define IS_V5				YES
-
 #define MALLOC_DEBUG 			NO
 
 #define NEEDS_KBDD			NO
@@ -28,25 +26,18 @@ PRELINK_CPP_FLAGS = -Ur -u main
 #define NEEDS_64BIT_SYSCALLS	NO
 #define NEEDS_64BIT_STRUCTS		YES
 
-#define NEEDS_GROW_STACK		NO
-#define NEEDS_SPECIAL_SIGVEC		NO
 #define NEEDS_FAKE_GETMNT		YES
 #define HAS_SETLINEBUF			YES
 #define HAS_AR_S_OPTION			YES
 #define HAS_RANLIB_TOUCH		YES
 #define HAS_CP_PRESERVE			YES
-#define NEEDS_SPECIAL_SETJMP		NO
 #define HAS_FLOCK			NO
 #define HAS_GETDIRENTRIES		YES
 #define HAS_GETDTABLESIZE		NO
 #define HAS_SETEGID			NO
 #define HAS_SETEUID			YES
-#define DO_BENCHMARKING			YES
 #define HAS_PVM				NO
 #define PVM_ARCH			RS6K
-
-#undef WANT_DRMAA
-#define WANT_DRMAA	NO
 
 #define ShadowSizeEstimate 200
 
