@@ -47,6 +47,7 @@
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
+void gcbBrokerDownCallback();
 #endif
 
 #ifdef WIN32
