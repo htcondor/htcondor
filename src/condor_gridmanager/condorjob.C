@@ -192,11 +192,6 @@ CondorJob::CondorJob( ClassAd *classad )
 
 	gahp = NULL;
 
-	// This is a BaseJob variable. At no time do we want BaseJob mucking
-	// around with job runtime attributes, so set it to false and leave it
-	// that way.
-	calcRuntimeStats = false;
-
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
 	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
