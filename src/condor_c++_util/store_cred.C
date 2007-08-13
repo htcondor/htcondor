@@ -676,7 +676,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 			dprintf(D_ALWAYS, "store_cred: user not in user@domain format\n");
 			return FAILURE;
 		}
-		if ((mode == ADD_MODE) &&
+		if (((mode == ADD_MODE) || (mode == DELETE_MODE)) &&
 		    (tmp - user == strlen(POOL_PASSWORD_USERNAME)) &&
 		    (memcmp(POOL_PASSWORD_USERNAME, user, tmp - user) == 0))
 		{
