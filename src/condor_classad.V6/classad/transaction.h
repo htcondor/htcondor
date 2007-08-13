@@ -26,8 +26,8 @@
 
 #include <list>
 #include <string>
-#include "sink.h"
-#include "view.h"
+#include "classad/sink.h"
+#include "classad/view.h"
 
 BEGIN_NAMESPACE( classad )
 
@@ -37,8 +37,8 @@ class ClassAdCollection;
 class XactionRecord {
 public:
 	XactionRecord( ) { op = -1; key = ""; rec = 0; }
-	bool operator==( const XactionRecord &xrec ) const { return false; }
-	bool operator< ( const XactionRecord &xrec ) const { return false; }
+	bool operator==( const XactionRecord & ) const { return false; }
+	bool operator< ( const XactionRecord & ) const { return false; }
 
 	int 	op;
 	std::string	key;

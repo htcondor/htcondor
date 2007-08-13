@@ -21,9 +21,9 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "exprTree.h"
-#include "util.h"
+#include "classad/common.h"
+#include "classad/exprTree.h"
+#include "classad/util.h"
 
 using namespace std;
 

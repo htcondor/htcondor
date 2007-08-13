@@ -1,5 +1,4 @@
-This is version 0.9.7 of the Condor Classad library, released on
-28-Oct-2004.
+This is version 1.0rc2 of the Condor Classad library, released on [XXX].
 
 ===== What is it? =====
 
@@ -43,10 +42,8 @@ everyday use and experience with the original code provided much of the
 guidance and inspiration for this version.
 
 ===== Status ===== 
-Version 0.9.7 is an early release. We hope to release version 1.0 in
-the near future. Version 1.0 will be more thoroughly tested and will
-have better documentation. Please be aware that some of the public
-interfaces may change before version 1.0 is released.
+Please see the CHANGELOG for information about this and previous
+versions.
 
 ===== Documentation and Help =====
 There is some documentation online at: 
@@ -89,22 +86,21 @@ can skip the following section and proceed to the next section entitled,
 "Building on Windows".
 
 Building is a two step process: configure and make. The configure
-script takes only one argument, --prefix, which specifies where
-ClassAds should be installed:
+script is generated from autoconf and has the usual arguments.
 
-  ./configure --prefix /usr/local/classads/
+Note: On old version of gcc you may need to add CC=g++ to configure.
+
+  ./configure --enable-namespace CC=g++
 
 After the configuration step, build and install ClassAds with:
 
   make
+  make check (optional)
   make install
 
-Notice that when the library builds, there are two programs to test
-Classads. The first is called "classad_unit_tester". Running it
-requires no parameters. The second is called
-"classad_functional_tester" and it takes a text file as input: try
-functional_tests.txt. You might it useful to modify these tests or to
-look at the source code for both of these program.
+Notice that when the library builds, there are a number of programs to
+test Classads. You can run them with "make check". You might find
+these programs useful as examples.
 
 ===== Building on Windows =====
 In order to build on Windows, you must have Microsoft Visual Studio 6.0

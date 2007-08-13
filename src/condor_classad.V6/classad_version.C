@@ -22,7 +22,7 @@
  *********************************************************************/
 
 #if defined(CLASSAD_DISTRIBUTION)
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 #else
 #include "condor_classad.h"
 #endif
@@ -30,11 +30,11 @@
 #include <iostream>
 
 using namespace std;
-#ifdef WANT_NAMESPACES
+#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
 #endif
 
-int main(int argc, char **argv)
+int main(int, char **)
 {
     string classad_version;
 
@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 
     /* ----- Namespace support ----- */
     cout << "  Classad namespace:               ";
-#if defined WANT_NAMESPACES
+#if defined WANT_CLASSAD_NAMESPACE
     cout << "yes\n";
 #else
     cout << "no\n";
@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 
     /* ----- Shared library function support ----- */
     cout << "  Shared library function support: ";
-#if defined ENABLE_SHARED_LIBRARY_FUNCTIONS
+#if defined(HAVE_DLOPEN)
     cout << "yes\n";
 #else
     cout << "no\n";

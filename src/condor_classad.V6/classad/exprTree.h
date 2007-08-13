@@ -24,9 +24,9 @@
 #ifndef __EXPR_TREE_H__
 #define __EXPR_TREE_H__
 
-#include "classad_stl.h"
-#include "common.h"
-#include "value.h"
+#include "classad/classad_stl.h"
+#include "classad/common.h"
+#include "classad/value.h"
 
 BEGIN_NAMESPACE( classad )
 
@@ -191,11 +191,11 @@ std::ostream& operator<<(std::ostream &os, const ExprTree &expr);
 
 END_NAMESPACE // classad
 
-#include "literals.h"
-#include "attrrefs.h"
-#include "operators.h"
-#include "exprList.h"
-#include "classad.h"
-#include "fnCall.h"
+#include "classad/literals.h"
+#include "classad/attrrefs.h"
+#include "classad/operators.h"
+#include "classad/exprList.h"
+#include "classad/classad.h"
+#include "classad/fnCall.h"
 
 #endif//__EXPR_TREE_H__

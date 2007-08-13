@@ -21,11 +21,11 @@
  *
  *********************************************************************/
 
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 #include <iostream>
 
 using namespace std;
-#ifdef WANT_NAMESPACES
+#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
 #endif
 

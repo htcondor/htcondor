@@ -21,13 +21,13 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "indexfile.h"
+#include "classad/common.h"
+#include "classad/indexfile.h"
 #include <iostream>
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 int IndexFile::
 dump_index()
@@ -125,7 +125,7 @@ Next(string &key)
 }
 
 string IndexFile::
-GetClassadFromFile(string key, int offset)
+GetClassadFromFile(string, int offset)
 {
 	if (filed != 0){
 		int curset;
@@ -199,9 +199,9 @@ FindInFile(string key,tag &ptr)
 bool IndexFile::
 DeleteFromStorageFile(string key)
 {
-	hash_map<string,int,StringHash>::iterator m=Index.find(key);
-	if (m!=Index.end()){
-		int offset=m->second; 
+	hash_map<string,int,StringHash>::iterator i=Index.find(key);
+	if (i!=Index.end()){
+		int offset=i->second; 
 		lseek(filed,offset,SEEK_SET);
 		char  k[1];
 		string m;

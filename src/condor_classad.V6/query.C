@@ -21,9 +21,9 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "collectionBase.h"
-#include "query.h"
+#include "classad/common.h"
+#include "classad/collectionBase.h"
+#include "classad/query.h"
 
 using namespace std;
 

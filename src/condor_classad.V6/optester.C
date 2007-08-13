@@ -23,7 +23,7 @@
 
 #include <stdio.h>
 #include "predefContexts.h"
-#include "source.h"
+#include "classad/source.h"
 
 using namespace std;
 

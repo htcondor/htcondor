@@ -21,11 +21,11 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "source.h"
-#include "classad.h"
-#include "lexer.h"
-#include "util.h"
+#include "classad/common.h"
+#include "classad/source.h"
+#include "classad/classad.h"
+#include "classad/lexer.h"
+#include "classad/util.h"
 
 using namespace std;
 

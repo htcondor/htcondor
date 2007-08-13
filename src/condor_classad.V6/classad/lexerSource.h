@@ -24,8 +24,10 @@
 #ifndef __LEXER_SOURCE_H__
 #define __LEXER_SOURCE_H__
 
-#include "common.h"
+#include "classad/common.h"
 #include <iosfwd>
+
+BEGIN_NAMESPACE(classad)
 
 /*
  * LexerSource is a class that provides an abstract interface to the
@@ -71,8 +73,8 @@ private:
     // to be private so we don't have to write them, or worry about
     // them being inappropriately used. The day we want them, we can 
     // write them. 
-    LexerSource(const LexerSource &source)            { return;       }
-    LexerSource &operator=(const LexerSource &source) { return *this; }
+    LexerSource(const LexerSource &)            { return;       }
+    LexerSource &operator=(const LexerSource &) { return *this; }
 };
 
 // This source allows input from a traditional C FILE *
@@ -90,8 +92,8 @@ public:
 
 private:
 	FILE *_file;
-    FileLexerSource(const FileLexerSource &source) : LexerSource() { return;  }
-    FileLexerSource &operator=(const FileLexerSource &source) { return *this; }
+    FileLexerSource(const FileLexerSource &) : LexerSource() { return;  }
+    FileLexerSource &operator=(const FileLexerSource &) { return *this; }
 };
 
 // This source allows input from a C++ stream. Note that
@@ -110,8 +112,8 @@ public:
 
 private:
 	std::istream *_stream;
-    InputStreamLexerSource(const InputStreamLexerSource &source) : LexerSource() { return;       }
-    InputStreamLexerSource &operator=(const InputStreamLexerSource &source) { return *this; }
+    InputStreamLexerSource(const InputStreamLexerSource &) : LexerSource() { return;       }
+    InputStreamLexerSource &operator=(const InputStreamLexerSource &) { return *this; }
 };
 
 // This source allows input from a traditional C string.
@@ -130,8 +132,8 @@ public:
 private:
 	const char *_string;
 	int         _offset;
-    CharLexerSource(const CharLexerSource &source) : LexerSource() { return;       }
-    CharLexerSource &operator=(const CharLexerSource &source) { return *this; }
+    CharLexerSource(const CharLexerSource &) : LexerSource() { return;       }
+    CharLexerSource &operator=(const CharLexerSource &) { return *this; }
 };
 
 // This source allows input from a C++ string.
@@ -151,8 +153,10 @@ public:
 private:
 	const std::string *_string;
 	int                _offset;
-    StringLexerSource(const StringLexerSource &source) : LexerSource() { return;       }
-    StringLexerSource &operator=(const StringLexerSource &source) { return *this; }
+    StringLexerSource(const StringLexerSource &) : LexerSource() { return;       }
+    StringLexerSource &operator=(const StringLexerSource &) { return *this; }
 };
+
+END_NAMESPACE
 
 #endif /* __LEXER_SOURCE_H__ */

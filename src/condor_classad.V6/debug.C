@@ -21,8 +21,8 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "debug.h"
+#include "classad/common.h"
+#include "classad/debug.h"
 #include <stdarg.h>
 
 using namespace std;

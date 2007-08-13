@@ -21,10 +21,10 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "operators.h"
-#include "sink.h"
-#include "util.h"
+#include "classad/common.h"
+#include "classad/operators.h"
+#include "classad/sink.h"
+#include "classad/util.h"
 
 using namespace std;
 
@@ -280,7 +280,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		// subscripting from a list (strict)
 
 		if (vt1 == Value::CLASSAD_VALUE && vt2 == Value::STRING_VALUE) {
-			ClassAd  *classad;
+			ClassAd  *classad = NULL;
 			string   index;
 			
 			val1.IsClassAdValue(classad);
@@ -298,7 +298,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		} else if (vt1 == Value::LIST_VALUE && vt2 == Value::INTEGER_VALUE) {
 			int            index;
-			const ExprList *elist;
+			const ExprList *elist = NULL;
 
 			val1.IsListValue( elist );		
 			val2.IsIntegerValue( index );
@@ -681,13 +681,13 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 			return true;
 		} else {
 			// rightson makes a tree contribution
-			Operation *newOp = MakeOperation( op, tree1, tree2 );
-			if( !newOp ) {
+			Operation *local_newOp = MakeOperation( op, tree1, tree2 );
+			if( !local_newOp ) {
 				tree = NULL; op = __NO_OP__;	
 				return false;
 			}
 			val.CopyFrom( val1 );
-			tree = newOp;	// NAC - BUG FIX
+			tree = local_newOp;	// NAC - BUG FIX
 			return true;
 		}
 	} else if( op == op2 ) {
@@ -699,12 +699,12 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 			return true;
 		} else {
 			// leftson makes a tree contribution
-			Operation *newOp = MakeOperation( op, tree1, tree2 );
-			if( !newOp ) {
+			Operation *local_newOp = MakeOperation( op, tree1, tree2 );
+			if( !local_newOp ) {
 				tree = NULL; op = __NO_OP__;	
 				return false;
 			}
-			tree = newOp;	// NAC BUG FIX
+			tree = local_newOp;	// NAC BUG FIX
 			val.CopyFrom( val2 );
 			return true;
 		}
@@ -1252,7 +1252,7 @@ asecs2.secs = 0;
 void Operation::
 compareStrings (OpKind op, Value &v1, Value &v2, Value &result, bool exact)
 {
-	const char *s1, *s2;
+	const char *s1 = NULL, *s2 = NULL;
 	int  cmp;
 	
 	v1.IsStringValue (s1);

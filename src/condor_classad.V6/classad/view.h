@@ -28,9 +28,9 @@
 #include <string>
 #include <set>
 
-#include "classad_stl.h"
-#include "exprTree.h"
-#include "matchClassad.h"
+#include "classad/classad_stl.h"
+#include "classad/exprTree.h"
+#include "classad/matchClassad.h"
 
 BEGIN_NAMESPACE( classad )
 

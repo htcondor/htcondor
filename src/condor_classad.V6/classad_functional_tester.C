@@ -22,12 +22,12 @@
  *********************************************************************/
 
 #if defined(CLASSAD_DISTRIBUTION)
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 #else
 #include "condor_classad.h"
 #endif
-#include "lexerSource.h"
-#include "xmlSink.h"
+#include "classad/lexerSource.h"
+#include "classad/xmlSink.h"
 #include <fstream>
 #include <iostream>
 #include <ctype.h>
@@ -35,7 +35,7 @@
 #include "classad_functional_tester.h"
 
 using namespace std;
-#ifdef WANT_NAMESPACES
+#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
 #endif
 
@@ -339,7 +339,7 @@ bool read_line(
 bool read_line_stdin(
     string     &line, 
     State      &state, 
-    Parameters &parameters)
+    Parameters &)
 {
     bool have_input;
 
@@ -540,7 +540,7 @@ bool replace_variables(
  *********************************************************************/
 Command get_command(
     string     &line, 
-    Parameters &parameters)
+    Parameters &)
 {
     int      current_position;
     int      length;
@@ -1028,7 +1028,6 @@ void handle_readxml(
 {
     string    variable_name;
     string    file_name;
-    ofstream  xml_file;
 
     if (get_variable_name(line, false, variable_name, state, parameters)) {
         if (get_file_name(line, file_name, state, parameters)) {
@@ -1071,8 +1070,8 @@ void handle_readxml(
  *********************************************************************/
 void handle_echo(
     string     &line, 
-    State      &state, 
-    Parameters &parameters)
+    State      &, 
+    Parameters &)
 {
     string new_line = "";
     int    index;
@@ -1247,7 +1246,7 @@ bool get_file_name(
 ExprTree *get_expr(
     string     &line, 
     State      &state, 
-    Parameters &parameters)
+    Parameters &)
 {
     int               offset;
     ExprTree          *tree;
@@ -1330,7 +1329,7 @@ void get_two_exprs(
 void print_expr(
     ExprTree   *tree, 
     State      &state,
-    Parameters &parameters)
+    Parameters &)
 {
     string output;
 
@@ -1362,7 +1361,7 @@ void print_expr(
 bool evaluate_expr(
     ExprTree   *tree, 
     Value      &value, 
-    Parameters &parameters)
+    Parameters &)
 {
     ClassAd classad;
     bool    success;
@@ -1476,7 +1475,7 @@ bool line_is_comment(
 bool expr_okay_for_xml_file(
     ExprTree   *tree,
     State      &state,
-    Parameters &parameters)
+    Parameters &)
 {
     bool is_okay;
 

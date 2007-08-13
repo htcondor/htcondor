@@ -26,7 +26,7 @@
 
 #include <vector>
 #include <iosfwd>
-#include "lexer.h"
+#include "classad/lexer.h"
 
 BEGIN_NAMESPACE( classad )
 

@@ -25,7 +25,7 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
-#if defined( WANT_NAMESPACES ) && defined(__cplusplus)
+#if defined( WANT_CLASSAD_NAMESPACE ) && defined(__cplusplus)
 #define BEGIN_NAMESPACE( x ) namespace x {
 #define END_NAMESPACE }
 #else
@@ -109,8 +109,7 @@
 #include "condor_attributes.h"
 #endif /* CLASSAD_DISTRIBUTION */
 
-#include "classad_features.h"
-#include "debug.h"
+#include "classad/debug.h"
 
 #ifdef __cplusplus
 #include <string>
@@ -197,7 +196,7 @@ END_NAMESPACE // classad
 char* strnewp( const char* );
 
 #if defined(CLASSAD_DISTRIBUTION)
-#include "classadErrno.h"
+#include "classad/classadErrno.h"
 #else
 #include "condor_errno.h"
 #endif

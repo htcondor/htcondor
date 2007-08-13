@@ -21,11 +21,11 @@
  *
  *********************************************************************/
 
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 #include <iostream>
 
 using namespace std;
-#ifdef WANT_NAMESPACES
+#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
 #endif
 
@@ -43,7 +43,7 @@ string machine_classad_text =
 "Memory = 5000;"
 "]";
 
-int main(int argc, char **argv)
+int main(int, char **)
 {
 	// First we turn the textual description of the ClassAd into 
 	// our internal representation of the ClassAd. 

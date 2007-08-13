@@ -24,8 +24,8 @@
 #ifndef __NO_COLLECTIONS_H__
 #define __NO_COLLECTIONS_H__
 
-#include "source.h"
-#include "sink.h"
-#include "matchClassad.h"
+#include "classad/source.h"
+#include "classad/sink.h"
+#include "classad/matchClassad.h"
 
 #endif // NOCOLLECTIONS_H

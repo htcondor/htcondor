@@ -22,9 +22,9 @@
  *********************************************************************/
 
 // Includes 
-#include "common.h"
-#include "lexer.h"
-#include "util.h"
+#include "classad/common.h"
+#include "classad/lexer.h"
+#include "classad/util.h"
 
 using namespace std;
 

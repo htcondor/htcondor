@@ -22,9 +22,9 @@
  *********************************************************************/
 #include "condor_common.h"
 #include "condor_io.h"
-#include "common.h"
+#include "classad/common.h"
 #include "collectionClient.h"
-#include "transaction.h"
+#include "classad/transaction.h"
 
 using namespace std;
 

@@ -21,10 +21,10 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "exprTree.h"
-#include "sink.h"
-#include "util.h"
+#include "classad/common.h"
+#include "classad/exprTree.h"
+#include "classad/sink.h"
+#include "classad/util.h"
 
 #include <math.h>
 
@@ -229,7 +229,7 @@ Unparse( string &buffer, const Value &val )
 			return;
 		}
 		case Value::CLASSAD_VALUE: {
-			const ClassAd *ad;
+			const ClassAd *ad = NULL;
 			vector< pair<string,ExprTree*> > attrs;
 			val.IsClassAdValue( ad );
 			ad->GetComponents( attrs );
@@ -237,7 +237,7 @@ Unparse( string &buffer, const Value &val )
 			return;
 		}
 		case Value::LIST_VALUE: {
-			const ExprList *el;
+			const ExprList *el = NULL;
 			vector<ExprTree*> exprs;
 			val.IsListValue( el );
 			el->GetComponents( exprs );

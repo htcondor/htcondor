@@ -21,12 +21,15 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "lexer.h"
-#include "exprTree.h"
-#include "collection.h"
-#include "collectionBase.h"
-#include "classad.h"
+#include <fstream>
+#include <iostream>
+
+#include "classad/common.h"
+#include "classad/lexer.h"
+#include "classad/exprTree.h"
+#include "classad/collection.h"
+#include "classad/collectionBase.h"
+#include "classad/classad.h"
 
 using namespace std;
 

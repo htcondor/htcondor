@@ -22,10 +22,10 @@
  *********************************************************************/
 
 #include "condor_common.h"
-#include "common.h"
-#include "exprTree.h"
-#include "collection.h"
-#include "transaction.h"
+#include "classad/common.h"
+#include "classad/exprTree.h"
+#include "classad/collection.h"
+#include "classad/transaction.h"
 
 using namespace std;
 

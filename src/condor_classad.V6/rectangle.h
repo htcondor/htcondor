@@ -26,7 +26,7 @@
 
 #include <map>
 #include <set>
-#include "value.h"
+#include "classad/value.h"
 
 
 class KeySet {

@@ -1,7 +1,6 @@
 SRC_DIR = $(SRC_TREE)/condor_classad.V6
 
 /* select required features */
-#include "classad_features.h"
 
 
 C_PLUS_FLAGS 		= -Wall $(STD_C_PLUS_FLAGS)
@@ -87,29 +86,39 @@ template_inst( coll-client-inst.C,coll-client-inst.o) 	/* collection client*/
 template_inst( exp-inst.C, exp-inst.o )					/* experimental */
 
 /* Standalone distribution of classads/collections */
-DIST_VERSION = 0.9.9
+DIST_VERSION = 1.0rc2
 DISTRIBUTION_DIR = classads-$(DIST_VERSION)
 
-DIST_FILES = attrrefs.C attrrefs.h classad.C classad.h					\
-classad_functional_tester.C classad_functional_tester.h					\
-classad_unit_tester.C classad_version.C collection.C collection.h		\
-collectionBase.C collectionBase.h common.h classadErrno.h				\
-classadItor.h cxi.C debug.C debug.h exprList.C exprList.h exprTree.C	\
-exprTree.h extra_tests.C fnCall.C fnCall.h indexfile.h indexfile.C		\
-instantiations.C lexer.C lexer.h lexerSource.C lexerSource.h			\
-literals.C literals.h matchClassad.C matchClassad.h operators.C			\
-operators.h query.C query.h sample.C shared.C sink.C sink.h source.C	\
-source.h test_instantiations.C test_xml.C tests.txt transaction.C		\
-transaction.h util.C util.h value.C value.h view.C view.h xmlLexer.C	\
-xmlLexer.h xmlSink.h xmlSink.C xmlSource.h xmlSource.C					\
-classad_distribution.h cclassad.C cclassad.h classad_stl.h LICENSE		\
-README CHANGELOG configure functional_tests.txt ClassAd.swg
+DIST_FILES = 								\
+	attrrefs.C classad.C classad_functional_tester.C		\
+	classad_unit_tester.C classad_version.C collection.C		\
+	collectionBase.C cxi.C debug.C exprList.C exprTree.C		\
+	extra_tests.C fnCall.C indexfile.C instantiations.C lexer.C	\
+	lexerSource.C literals.C matchClassad.C operators.C query.C	\
+	sample.C shared.C sink.C source.C test_instantiations.C		\
+	test_xml.C tests.txt transaction.C util.C value.C view.C	\
+	xmlLexer.C xmlSink.C xmlSource.C cclassad.C LICENSE README	\
+	CHANGELOG configure.ac Makefile.am.m4 functional_tests.txt	\
+	ClassAd.swg classads.spec classad_functional_tester.h
 
-WIN32_FILES = win32/classad_dist.dsw						\
-win32/classad_functional_tester.dep							\
-win32/classad_functional_tester.dsp							\
+H_FILES = 								\
+	classad/attrrefs.h classad/cclassad.h				\
+	classad/classad_distribution.h classad/classadErrno.h		\
+	classad/classad.h classad/classadItor.h classad/classad_stl.h	\
+	classad/collectionBase.h classad/collection.h classad/common.h	\
+	classad/debug.h classad/exprList.h classad/exprTree.h		\
+	classad/fnCall.h classad/indexfile.h classad/lexer.h		\
+	classad/lexerSource.h classad/literals.h			\
+	classad/matchClassad.h classad/operators.h classad/query.h	\
+	classad/sink.h classad/source.h classad/transaction.h		\
+	classad/util.h classad/value.h classad/view.h			\
+	classad/xmlLexer.h classad/xmlSink.h classad/xmlSource.h
+
+WIN32_FILES = win32/classad_dist.dsw				\
+win32/classad_functional_tester.dep				\
+win32/classad_functional_tester.dsp				\
 win32/classad_functional_tester.mak win32/classad_lib.dep	\
-win32/classad_lib.dsp win32/classad_lib.mak					\
+win32/classad_lib.dsp win32/classad_lib.mak			\
 win32/classad_unit_tester.dep win32/classad_unit_tester.dsp	\
 win32/classad_unit_tester.mak win32/make.bat
 
@@ -117,7 +126,7 @@ dist: $(DIST_FILES)
 	cp build_external build_classads-$(DIST_VERSION)
 	chmod 755 build_classads-$(DIST_VERSION)
 	chmod 664 $(DIST_FILES)
-	chmod 775 configure
+#	chmod 775 configure
 	chmod 664 $(WIN32_FILES)
 	chmod 775 win32/make.bat
 	rm -rf $(DISTRIBUTION_DIR) *.gz
@@ -125,14 +134,19 @@ dist: $(DIST_FILES)
 	mkdir $(DISTRIBUTION_DIR)/win32
 	mkdir -p $(DISTRIBUTION_DIR)/perl/lib/ClassAd
 	mkdir $(DISTRIBUTION_DIR)/perl/t
+	mkdir $(DISTRIBUTION_DIR)/classad
 	cp $(DIST_FILES) $(DISTRIBUTION_DIR)
-	cp makefile-dist $(DISTRIBUTION_DIR)/Makefile
+	cp $(H_FILES) $(DISTRIBUTION_DIR)/classad
+#	cp makefile-dist $(DISTRIBUTION_DIR)/Makefile
 	cp $(WIN32_FILES) $(DISTRIBUTION_DIR)/win32
 # Originally this line was simpler, but it ended in an asterisk,
 # and that caused condor_imake problems.
 	find $(DISTRIBUTION_DIR)/win32/ -type f | xargs unix2dos
 	cp perl/Simple.pm $(DISTRIBUTION_DIR)/perl/lib/ClassAd
 	cp perl/basic.t $(DISTRIBUTION_DIR)/perl/t
+	(cd $(DISTRIBUTION_DIR) ; m4 Makefile.am.m4 > Makefile.am)
+	(cd $(DISTRIBUTION_DIR) ; chmod a-w Makefile.am)
+	(cd $(DISTRIBUTION_DIR) ; autoreconf --install)
 	tar cf $(DISTRIBUTION_DIR).tar $(DISTRIBUTION_DIR)
 	gzip $(DISTRIBUTION_DIR).tar
 	chmod 664 $(DISTRIBUTION_DIR).tar.gz

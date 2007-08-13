@@ -24,8 +24,8 @@
 #ifndef __COLLECTION_BASE_H__
 #define __COLLECTION_BASE_H__
 
-#include "collection.h"
-#include "indexfile.h"
+#include "classad/collection.h"
+#include "classad/indexfile.h"
 
 #ifndef WIN32
   #include <sys/time.h>
@@ -224,8 +224,8 @@ protected:
     int test_checkpoint;
     
  private:
-    ClassAdCollection(const ClassAdCollection &collection) : ClassAdCollectionInterface(), viewTree(NULL) { return; }
-    ClassAdCollection &operator=(const ClassAdCollection &collection) { return *this; }
+    ClassAdCollection(const ClassAdCollection &) : ClassAdCollectionInterface(), viewTree(NULL) { return; }
+    ClassAdCollection &operator=(const ClassAdCollection &) { return *this; }
 
     bool AddClassAd_Transaction(const std::string &key, ClassAd *newAd);
     bool AddClassAd_NoTransaction(const std::string &key, ClassAd *newAd);

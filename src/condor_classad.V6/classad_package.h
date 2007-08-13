@@ -35,11 +35,11 @@
 	// if this file is being included, it must be a standalone implementation
 #define  STANDALONE
 
-#include "common.h"
-#include "exprTree.h"
-#include "matchClassad.h"
-#include "source.h"
-#include "sink.h"
+#include "classad/common.h"
+#include "classad/exprTree.h"
+#include "classad/matchClassad.h"
+#include "classad/source.h"
+#include "classad/sink.h"
 
 #if defined(COLLECTIONS)
 #include "collectionServer.h"

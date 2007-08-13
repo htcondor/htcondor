@@ -24,7 +24,7 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
-#include "common.h"
+#include "classad/common.h"
 
 BEGIN_NAMESPACE( classad )
 

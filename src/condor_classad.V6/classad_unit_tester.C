@@ -36,19 +36,19 @@
  *-------------------------------------------------------------------*/
 
 #if defined(CLASSAD_DISTRIBUTION)
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 #else
 #include "condor_classad.h"
 #endif
-#include "lexerSource.h"
-#include "xmlSink.h"
+#include "classad/lexerSource.h"
+#include "classad/xmlSink.h"
 #include <fstream>
 #include <iostream>
 #include <ctype.h>
 #include <assert.h>
 
 using namespace std;
-#ifdef WANT_NAMESPACES
+#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
 #endif
 
@@ -330,7 +330,7 @@ int main(
  *           is in test_clasad
  *
  *********************************************************************/
-static void test_parsing(const Parameters &parameters, Results &results)
+static void test_parsing(const Parameters &, Results &results)
 {
     ClassAdParser parser;
     ExprTree  *tree;
@@ -375,7 +375,7 @@ static void test_parsing(const Parameters &parameters, Results &results)
  * Purpose:  Test the ClassAd class.
  *
  *********************************************************************/
-static void test_classad(const Parameters &parameters, Results &results)
+static void test_classad(const Parameters &, Results &results)
 {
     ClassAdParser parser;
     bool have_attribute;
@@ -558,7 +558,7 @@ static void test_classad(const Parameters &parameters, Results &results)
  * Purpose:  Test the ExprList class.
  *
  *********************************************************************/
-static void test_exprlist(const Parameters &parameters, Results &results)
+static void test_exprlist(const Parameters &, Results &results)
 {
     cout << "Testing the ExprList class...\n";
 
@@ -689,7 +689,7 @@ static void test_exprlist(const Parameters &parameters, Results &results)
  * Purpose:  Test the Value class.
  *
  *********************************************************************/
-static void test_value(const Parameters &parameters, Results &results)
+static void test_value(const Parameters &, Results &results)
 {
     Value v;
     bool  is_expected_type;
@@ -730,7 +730,7 @@ static void test_value(const Parameters &parameters, Results &results)
     TEST("GetType gives INTEGER_VALUE", (v.GetType() == Value::INTEGER_VALUE));
     TEST("Integer is a number", v.IsNumber());
 
-    const char *s;
+    const char *s = NULL;
     v.SetStringValue("Robert-Houdin");
     is_expected_type = v.IsStringValue(s);
     TEST("Value is string", is_expected_type);
@@ -782,7 +782,7 @@ static void test_value(const Parameters &parameters, Results &results)
  *           ClassAdCollectionClient.
  *
  *********************************************************************/
-static void test_collection(const Parameters &parameters, Results &results)
+static void test_collection(const Parameters &, Results &results)
 {
     bool               success;
     static const char  *collection_log_file_name = "collection.log";
@@ -957,7 +957,7 @@ static bool check_in_view(
  * Purpose:  Test utils
  *
  *********************************************************************/
-static void test_utils(const Parameters &parameters, Results &results)
+static void test_utils(const Parameters &, Results &results)
 {
     cout << "Testing little utilities...\n";
 

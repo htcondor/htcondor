@@ -21,14 +21,14 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "xmlSource.h"
-#include "xmlLexer.h"
-#include "lexerSource.h"
-#include "classad.h"
-#include "source.h"
-#include "lexer.h"
-#include "util.h"
+#include "classad/common.h"
+#include "classad/xmlSource.h"
+#include "classad/xmlLexer.h"
+#include "classad/lexerSource.h"
+#include "classad/classad.h"
+#include "classad/source.h"
+#include "classad/lexer.h"
+#include "classad/util.h"
 #include <assert.h>
 
 using namespace std;
@@ -56,7 +56,7 @@ ParseClassAd( const string &buffer, ClassAd &classad)
 }
 
 bool ClassAdXMLParser::
-ParseClassAd( const string &buffer, ClassAd &classad, int &offset)
+ParseClassAd( const string &, ClassAd &, int &)
 {
 	return false;
 }

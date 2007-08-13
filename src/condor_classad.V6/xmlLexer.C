@@ -21,10 +21,10 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "xmlLexer.h"
-#include "lexer.h"
-#include "util.h"
+#include "classad/common.h"
+#include "classad/xmlLexer.h"
+#include "classad/lexer.h"
+#include "classad/util.h"
 
 using namespace std;
 
@@ -388,9 +388,9 @@ BreakdownTag(const char *complete_tag)
 					index++;
 					str += value[index];
 				} while(value[index] != ';');
-				for (unsigned int i = 0; i < NUMBER_OF_ENTITIES; i++){
-					if (!strcmp(str.c_str(), entities[i].name)) {
-						value.replace(k, str.length(), entities[i].replacement_text);
+				for (unsigned int j = 0; j < NUMBER_OF_ENTITIES; j++){
+					if (!strcmp(str.c_str(), entities[j].name)) {
+						value.replace(k, str.length(), entities[j].replacement_text);
 					}
 				}
 			}

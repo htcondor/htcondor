@@ -25,8 +25,10 @@
 #if !defined( COMPRESS_H )
 #define COMPRESS_H
 
-#include "classad_stl.h"
-#include "classad.h"
+#include "classad/classad_stl.h"
+#include "classad/classad.h"
+
+BEGIN_NAMESPACE(classad)
 
 class ClassAdBin
 {
@@ -45,4 +47,5 @@ bool Compress( ClassAdCollectionServer *server, LocalCollectionQuery *query,
 			   const References &refs, CompressedAds& comp, 
 			   std::list<ClassAd*> &rest);
 
+END_NAMESPACE
 #endif

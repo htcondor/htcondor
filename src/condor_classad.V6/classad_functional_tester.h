@@ -23,12 +23,12 @@
 
 #include <map>
 #if defined( CLASSAD_DISTRIBUTION )
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 #else
 #include "condor_classad.h"
 #endif
 
-#ifdef WANT_NAMESPACES
+#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
 #endif
 

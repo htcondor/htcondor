@@ -25,8 +25,8 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "condor_io.h"
-#include "common.h"
-#include "transaction.h"
+#include "classad/common.h"
+#include "classad/transaction.h"
 #include "collectionServer.h"
 
 using namespace std;

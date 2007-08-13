@@ -24,8 +24,8 @@
 #if !defined COLLECTION_CLIENT_H
 #define COLLECTION_CLIENT_H
 
-#include "view.h"
-#include "collection.h"
+#include "classad/view.h"
+#include "classad/collection.h"
 
 class Sock;
 class ClientTransaction;

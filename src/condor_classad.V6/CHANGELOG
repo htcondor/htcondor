@@ -1,3 +1,35 @@
+Changes for version 1.0rc2
+* The WANT_NAMESPACES define is now WANT_CLASSAD_NAMESPACE
+* New warning flags were added to the distribution build
+ - A number of minor changes were made to eliminate warnings
+  + shadowed variables, possible uninitialized variables
+* Fixed an apparent leak (valgrind found) in attrref.C:426, leaking attrRef
+* Fixed some rpmlint errors and warnings
+* Updated the build_external script for building as a Condor external
+...(in progress)...
+
+Changes for version 1.0rc1
+* Build now uses autotools, and has the following changes:
+  - The --lib-name option no longer exists
+  - The SWIG interface isn't compiled (previously it was never
+    installed)
+  - The --prefix <dir> option is now --prefix=DIR
+  - The --use-pcre <dir> option is now --with-pcre=DIR
+  - The --use-stlport <dir> option no longer exists
+  - The --use-explicit-templates option is now
+    --enable-explicit-templates, and really should not be used
+  - configure no longer creates a classad_features.h
+  - The --enable-shlib option has been removed, it is compiled
+    whenever available. Also, the _sh suffix is no longer used
+  - configure detects DLOPEN and will not compile shlib if it is not
+    available
+  - Note: Makefile.am should not be edited, edit Makefile.am.m4
+    instead
+* Header files are now installed in a classad/ directory, either
+  #include <classad/*.h> or add an appropriate -I to your build
+* All ClassAd structures/classes are now placed in the "classad"
+  namespace if namespaces are requested
+
 Changes for version 0.9.9: (released 15-Jun-2007)
 
 * Fixed a crash when a ClassAd has more than one attribute and an
@@ -58,8 +90,8 @@ Changes for version 0.9.7: (released 28-Oct-2004)
   Name               | Classad Namespace? | Shared Library Functions?
   -------------------+--------------------+---------------------------
   libclassad.a       |       No           |            No
-  libclassad_ns.a    |       Yes          |            Yes
-  libclassad_sh.a    |       No           |            No
+  libclassad_ns.a    |       Yes          |            No
+  libclassad_sh.a    |       No           |            YES
   libclassad_sh_ns.a |       Yes          |            Yes
 
   If you don't want these names, you can use the --libname argument to

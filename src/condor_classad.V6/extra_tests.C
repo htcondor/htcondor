@@ -25,18 +25,17 @@
 // without user input, like in test_classads.
 
 #if defined( CLASSAD_DISTRIBUTION )
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 #else
 #include "condor_classad.h"
 #endif
-#include "classad_features.h"
-#include "lexerSource.h"
+#include "classad/lexerSource.h"
 #include <fstream>
 #include <iostream>
 #include <ctype.h>
 
 using namespace std;
-#ifdef WANT_NAMESPACES
+#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
 #endif
 
@@ -87,7 +86,7 @@ static bool triple(
  *
  *********************************************************************/
 int 
-main(int argc, char **argv)
+main(int, char **)
 {
     test_quoting_bug();
 	test_parsing();
@@ -582,14 +581,15 @@ static void test_user_functions(void)
 
 	FunctionCall::RegisterFunction(name, triple);
 
-#ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
+#if defined(HAVE_DLOPEN)
 	bool opened_library;
 	char path[10240];
 	string libname;
 	path[0] = 0;
 	getcwd(path, 10239);
 	libname = path;
-	libname += "/libshared.so";
+	libname += "/";
+	libname += TEST_LIBNAME; // TEST_LIBNAME is #define'd
 	opened_library = FunctionCall::RegisterSharedLibraryFunctions(libname.c_str());
 	if (!opened_library) {
 		cout << "  Failed to open libshared.so: " << CondorErrMsg << endl;
@@ -610,7 +610,7 @@ static void test_user_functions(void)
 		cout << test << ") correctly.\n";
 	}
 
-#ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
+#if defined(HAVE_DLOPEN)
 	if (opened_library) {
 		// The library defines triple, but it shouldn't be allowed to
 		// overwrite the original defintion, so we verify that the
@@ -653,7 +653,7 @@ static void test_user_functions(void)
 
 
 static bool triple(
-	const char         *name,
+	const char         *,
 	const ArgumentList &arguments,
 	EvalState          &state,
 	Value              &result)

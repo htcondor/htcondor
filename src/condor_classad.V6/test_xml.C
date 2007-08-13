@@ -21,17 +21,17 @@
  *
  *********************************************************************/
 
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 #include <iostream>
 
 using namespace std;
-#ifdef WANT_NAMESPACES
+#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
 #endif
 
 void test_old_time(void);
 
-int main(int argc, char **argv)
+int main(int, char **)
 {
 	ClassAdXMLParser  parser;
 	ClassAd  *classad;

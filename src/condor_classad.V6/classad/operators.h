@@ -24,7 +24,7 @@
 #ifndef __OPERATORS_H__
 #define __OPERATORS_H__
 
-#include "exprTree.h"
+#include "classad/exprTree.h"
 
 BEGIN_NAMESPACE( classad )
 

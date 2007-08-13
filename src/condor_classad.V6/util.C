@@ -21,9 +21,9 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "util.h"
-#include "limits.h"
+#include "classad/common.h"
+#include "classad/util.h"
+#include <limits.h>
 
 using namespace std;
 
@@ -125,7 +125,7 @@ void convert_escapes(string &text, bool &validStr)
 			case '\"':	new_char = '\"'; break;
 			default:   
 				if (isodigit(text[source])) {
-					int  number;
+					unsigned int  number;
 					// There are three allowed ways to have octal escape characters:
 					//  \[0..3]nn or \nn or \n. We check for them in that order.
 					if (   source <= length - 3

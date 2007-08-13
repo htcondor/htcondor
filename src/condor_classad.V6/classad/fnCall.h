@@ -26,8 +26,7 @@
 
 #include <map>
 #include <vector>
-#include "classad.h"
-#include "classad_features.h"
+#include "classad/classad.h"
 
 BEGIN_NAMESPACE( classad )
 
@@ -49,7 +48,7 @@ typedef struct
 	int          flags;
 } ClassAdFunctionMapping;
 
-#ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
+#ifdef HAVE_DLOPEN
 // If you create a shared library, you have to provide a function
 // named "Initialize" that conforms to this prototype. You will return
 // a table of function mappings.  The last mapping in the table should
@@ -98,7 +97,7 @@ class FunctionCall : public ExprTree
 	static void RegisterFunction(std::string &functionName, ClassAdFunc function);
 	static void RegisterFunctions(ClassAdFunctionMapping *functions);
 
-#ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
+#ifdef HAVE_DLOPEN
 	static bool RegisterSharedLibraryFunctions(const char *shared_library_path);
 #endif
 

@@ -24,7 +24,7 @@
 #ifndef __CLASSAD_DEBUG_H__
 #define __CLASSAD_DEBUG_H__
 
-#include "common.h"
+#include "classad/common.h"
 
 BEGIN_NAMESPACE( classad )
 

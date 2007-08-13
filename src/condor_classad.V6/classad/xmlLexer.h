@@ -24,8 +24,8 @@
 #ifndef __XMLLEXER_H__
 #define __XMLLEXER_H__
 
-#include "common.h"
-#include "lexerSource.h"
+#include "classad/common.h"
+#include "classad/lexerSource.h"
 #include <map>
 
 BEGIN_NAMESPACE( classad )
@@ -110,8 +110,8 @@ class XMLLexer
     // to be private so we don't have to write them, or worry about
     // them being inappropriately used. The day we want them, we can 
     // write them. 
-    XMLLexer(const XMLLexer &lexer)            { return;       }
-    XMLLexer &operator=(const XMLLexer &lexer) { return *this; }
+    XMLLexer(const XMLLexer &)            { return;       }
+    XMLLexer &operator=(const XMLLexer &) { return *this; }
 };
 
 struct xml_tag_mapping

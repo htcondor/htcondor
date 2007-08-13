@@ -24,8 +24,8 @@
 #if !defined( COLLECTION_SERVER_H )
 #define COLLECTION_SERVER_H
 
-#include "collection.h"
-#include "collectionBase.h"
+#include "classad/collection.h"
+#include "classad/collectionBase.h"
 #include "condor_io.h"
 
 

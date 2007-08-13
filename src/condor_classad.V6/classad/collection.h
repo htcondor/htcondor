@@ -24,9 +24,9 @@
 #ifndef __COLLECTION_H__
 #define __COLLECTION_H__
 
-#include "view.h"
-#include "source.h"
-#include "sink.h"
+#include "classad/view.h"
+#include "classad/source.h"
+#include "classad/sink.h"
 
 BEGIN_NAMESPACE( classad )
 
@@ -201,8 +201,8 @@ protected:
 	virtual bool LogState( FILE * ) = 0;
 
 private:
-    ClassAdCollectionInterface(const ClassAdCollectionInterface &i)            { return;       }
-    ClassAdCollectionInterface &operator=(const ClassAdCollectionInterface &i) { return *this; }
+    ClassAdCollectionInterface(const ClassAdCollectionInterface &)            { return;       }
+    ClassAdCollectionInterface &operator=(const ClassAdCollectionInterface &) { return *this; }
 };
 
 

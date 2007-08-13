@@ -21,8 +21,8 @@
  *
  *********************************************************************/
 
-#include "classad_distribution.h"
-#include "fnCall.h"
+#include "classad/classad_distribution.h"
+#include "classad/fnCall.h"
 #include <time.h>
 
 /***************************************************************************
@@ -36,7 +36,7 @@
  ***************************************************************************/
 
 using namespace std;
-#ifdef WANT_NAMESPACES
+#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
 #endif
 
@@ -95,9 +95,9 @@ extern "C"
  *
  ****************************************************************************/
 static bool todays_date(
-	const char         *name,
+	const char         *, // name
 	const ArgumentList &arguments,
-	EvalState          &state,
+	EvalState          &, // state
 	Value              &result)
 {
 	bool    eval_successful;
@@ -137,7 +137,7 @@ static bool todays_date(
  *
  ****************************************************************************/
 static bool doublenum(
-	const char         *name,
+	const char         *, // name
 	const ArgumentList &arguments,
 	EvalState          &state,
 	Value              &result)

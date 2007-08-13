@@ -28,8 +28,8 @@
 #include <set>
 #include <map>
 #include <vector>
-#include "classad_stl.h"
-#include "exprTree.h"
+#include "classad/classad_stl.h"
+#include "classad/exprTree.h"
 
 BEGIN_NAMESPACE( classad )
 
@@ -37,11 +37,11 @@ typedef std::set<std::string, CaseIgnLTStr> References;
 typedef std::map<const ClassAd*, References> PortReferences;
 
 #if defined( EXPERIMENTAL )
-#include "rectangle.h"
+#include "classad/rectangle.h"
 #endif
 
 #ifdef CLASSAD_DEPRECATED
-#include "stream.h"
+#include "classad/stream.h"
 #endif
 
 typedef classad_hash_map<std::string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
@@ -814,6 +814,6 @@ e		*/
 
 END_NAMESPACE // classad
 
-#include "classadItor.h"
+#include "classad/classadItor.h"
 
 #endif//__CLASSAD_H__

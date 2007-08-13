@@ -29,6 +29,8 @@
 
 using namespace std;
 
+BEGIN_NAMESPACE(classad)
+
 int QueryProcessor::numQueries = 0;
 //extern KeySet givenAway;
 
@@ -721,3 +723,6 @@ ClassAdBooleanIndex::FilterAll( KeySet &result )
 	}
 	return( true );
 }
+
+
+END_NAMESPACE

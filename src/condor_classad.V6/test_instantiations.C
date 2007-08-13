@@ -21,9 +21,9 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "classad.h"
-#include "classad_functional_tester.h"
+#include "classad/common.h"
+#include "classad/classad.h"
+#include "classad/classad_functional_tester.h"
 
 using namespace std;
 

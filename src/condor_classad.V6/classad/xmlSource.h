@@ -24,7 +24,7 @@
 #ifndef __XMLSOURCE_H__
 #define __XMLSOURCE_H__
 
-#include "xmlLexer.h"
+#include "classad/xmlLexer.h"
 
 BEGIN_NAMESPACE( classad )
 
@@ -48,8 +48,8 @@ class ClassAdXMLParser
         // to be private so we don't have to write them, or worry about
         // them being inappropriately used. The day we want them, we can 
         // write them. 
-        ClassAdXMLParser(const ClassAdXMLParser &parser)            { return;       }
-        ClassAdXMLParser &operator=(const ClassAdXMLParser &parser) { return *this; }
+        ClassAdXMLParser(const ClassAdXMLParser &)            { return;       }
+        ClassAdXMLParser &operator=(const ClassAdXMLParser &) { return *this; }
 
 		ClassAd  *ParseClassAd(void);
 		ExprTree *ParseAttribute(std::string &attribute_name);

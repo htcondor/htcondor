@@ -24,7 +24,7 @@
 #if !defined( STANDALONE ) 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "collection.h"
+#include "classad/collection.h"
 #include "collectionServer.h"
 #else
 #include <ctype.h>

@@ -21,12 +21,12 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "collection.h"
-#include "collectionBase.h"
-#include "transaction.h"
+#include "classad/common.h"
+#include "classad/collection.h"
+#include "classad/collectionBase.h"
+#include "classad/transaction.h"
 #include <iostream>
-#include "sink.h"
+#include "classad/sink.h"
 
 #ifdef WIN32
 #include <sys/timeb.h>
@@ -88,16 +88,15 @@ bool ClassAdCollection::
 InitializeFromLog( const string &logfile, const string storagefile, const string checkpointfile )
 {
         int     storagefd;
-	string  StorageFileName=storagefile;
         CheckFileName=checkpointfile; 
 	// open the file
 	if (Cache==true){
           //Read all the ClassAd from storage file and build up the index
-	  if( ( storagefd = open( StorageFileName.c_str( ), O_RDWR | O_CREAT, 0600 ) ) < 0 ) {	    
+	  if( ( storagefd = open( storagefile.c_str( ), O_RDWR | O_CREAT, 0600 ) ) < 0 ) {	    
 	    CondorErrno = ERR_CACHE_FILE_ERROR;
 	    char buf[10];
 	    sprintf( buf, "%d", errno );
-	    CondorErrMsg = "failed to open storage file " + StorageFileName + " errno=" +string(buf);
+	    CondorErrMsg = "failed to open storage file " + storagefile + " errno=" +string(buf);
 	    return( false );
 	  };
 	  
@@ -206,8 +205,8 @@ ReadCheckPointFile(){
 	    
 	    if (OneLine!=""){
 	      string buf;
-	      ClassAdParser parser;
-	      ClassAd* cla=parser.ParseClassAd(OneLine,true);;
+	      ClassAdParser local_parser;
+	      ClassAd* cla=local_parser.ParseClassAd(OneLine,true);;
 	      string name="Time";
 	      cla->EvaluateAttrString(name,buf);
 	      
@@ -256,7 +255,6 @@ OperateInRecoveryMode( ClassAd *logRec )
 	      CheckPoint=1;             
 	   //in order to recover views, we should re-insert all the classads in the storage into views
             string key;
-	    ClassAdParser parser;
 	    if ((ClassAdStorage.First(key))<0){
 	      
 	    }else{
@@ -270,7 +268,8 @@ OperateInRecoveryMode( ClassAd *logRec )
 		  CondorErrMsg = "No classad " + key + " can be found from storage file";
 		  return( false );	     
 		}
-		ClassAd *cla=parser.ParseClassAd(oneentry,true);
+	    ClassAdParser local_parser;
+		ClassAd *cla=local_parser.ParseClassAd(oneentry,true);
 		ClassAd *content = (ClassAd*)(cla->Lookup("Ad"));
 		if( !viewTree.ClassAdInserted( this, key, content ) ) {
 		  CondorErrMsg += "; could not insert classad";
@@ -495,7 +494,7 @@ PlayViewOp( int opType, ClassAd *logRec )
             ViewRegistry::iterator itr;
             string	parentViewName;
             View    *parentView;
-			ClassAd	*viewInfo;
+			ClassAd	*local_viewInfo;
 
             if( !logRec->EvaluateAttrString(ATTR_PARENT_VIEW_NAME,
 					parentViewName) || 
@@ -508,11 +507,11 @@ PlayViewOp( int opType, ClassAd *logRec )
             parentView = itr->second;
 
 				// make the viewInfo classad --- mostly the logRec itself
-			if( !( viewInfo = (ClassAd*) logRec->Copy( ) ) ) {
+			if( !( local_viewInfo = (ClassAd*) logRec->Copy( ) ) ) {
 				return( false );
 			}
-			viewInfo->Delete( "OpType" );
-			return( parentView->InsertSubordinateView( this, viewInfo ) );
+			local_viewInfo->Delete( "OpType" );
+			return( parentView->InsertSubordinateView( this, local_viewInfo ) );
         }
 
         case ClassAdCollOp_CreatePartition: {
@@ -520,7 +519,7 @@ PlayViewOp( int opType, ClassAd *logRec )
             string  parentViewName;
             View    *parentView;
 			Value	val;
-			ClassAd	*rep;
+			ClassAd	*rep = NULL;
 
             if( !logRec->EvaluateAttrString(ATTR_PARENT_VIEW_NAME,
 					parentViewName) ||
@@ -572,7 +571,7 @@ PlayViewOp( int opType, ClassAd *logRec )
         case ClassAdCollOp_SetViewInfo: {
             ViewRegistry::iterator itr;
             string	viewName;
-            ClassAd *tmp;
+            ClassAd *tmp = NULL;
             View    *view;
             Value   cv;
 
@@ -695,7 +694,7 @@ PlayClassAdOp( int opType, ClassAd *rec )
 		case ClassAdCollOp_UpdateClassAd: {
 			ClassAdTable::iterator itr;
 			string		key;
-			ClassAd		*ad, *update;
+			ClassAd		*ad, *update = NULL;
 			Value		cv;
 
 			if( !rec->EvaluateAttrString( "Key", key ) ) {
@@ -745,7 +744,7 @@ PlayClassAdOp( int opType, ClassAd *rec )
 		case ClassAdCollOp_ModifyClassAd: {
 			ClassAdTable::iterator itr;
 			string		key;
-			ClassAd		*ad, *update;
+			ClassAd		*ad, *update = NULL;
 			Value		cv;
 
 			if( !rec->EvaluateAttrString( "Key", key ) ) {
@@ -1575,7 +1574,6 @@ LogState( FILE *fp )
 		WriteCheckPoint();
 
 		//dump all the ClassAd into new log file
-		ClassAdParser parser;
 		sf_offset=ClassAdStorage.First(cla_key);
 		while (sf_offset !=- 1) {
 			cla_s=ClassAdStorage.GetClassadFromFile(cla_key,sf_offset);
@@ -1585,7 +1583,8 @@ LogState( FILE *fp )
 					+ " can be found from storage file";
 				return( false );	     
 			}
-			ClassAd *cla=parser.ParseClassAd(cla_s,true);
+			ClassAdParser local_parser;
+			ClassAd *cla=local_parser.ParseClassAd(cla_s,true);
 			if (!cla->InsertAttr("OpType", ClassAdCollOp_AddClassAd )) {
 				CondorErrMsg += "; failed to log state";
 				return( false );
@@ -1612,15 +1611,15 @@ LogState( FILE *fp )
 		  string dd(itr->first);
 		  tmp = GetClassAd(dd);
 		  string buff;
-		  ClassAdUnParser unparser;
-		  unparser.Unparse(buff,tmp);
+		  ClassAdUnParser local_unparser;
+		  local_unparser.Unparse(buff,tmp);
 		  
 		  logRec.InsertAttr( "Key", itr->first );
 		  ad = GetClassAd( itr->first );
 		  logRec.Insert( "Ad", ad );
 		  
 		  buff="";
-		  unparser.Unparse(buff, &logRec);
+		  local_unparser.Unparse(buff, &logRec);
 		  
 		  if(!WriteLogEntry(fp, &logRec, true)) {
 			  CondorErrMsg += "; failed to log ad, could not log state";
@@ -1628,7 +1627,7 @@ LogState( FILE *fp )
 			  return( false );
 		  }
 		  buff = "";            
-		  unparser.Unparse(buff,&logRec);
+		  local_unparser.Unparse(buff,&logRec);
 		  logRec.Remove( "Ad" );
 	  }
 	}
@@ -1728,8 +1727,8 @@ SwitchInClassAd(string key){
   };
   string theclassad=ClassAdStorage.GetClassadFromFile(key,ptr.offset);
   if (theclassad!=""){
-           ClassAdParser parser;
-	   ClassAd *storage_cla=parser.ParseClassAd(theclassad,true);
+           ClassAdParser local_parser;
+	   ClassAd *storage_cla=local_parser.ParseClassAd(theclassad,true);
 	   if (storage_cla == NULL){
 	          CondorErrno = ERR_PARSE_ERROR;
 	          CondorErrMsg = "internal error:  unable to parse the classad";
@@ -1820,14 +1819,14 @@ WriteCheckPoint(){
 }
 //Given a offset, we read the key for the classad out
 int ClassAdCollection::
-ReadStorageEntry(int sfiled, int &offset,string &ckey){
+ReadStorageEntry(int local_sfiled, int &offset,string &ckey){
          string OneLine;  
 	 do{
-	        offset=lseek(sfiled,0,SEEK_CUR);
+	        offset=lseek(local_sfiled,0,SEEK_CUR);
 		char  OneCharactor[1];
 		OneLine = "";
 		int l;
-		while ((l=read(sfiled,OneCharactor,1))>0){
+		while ((l=read(local_sfiled,OneCharactor,1))>0){
 		  string n(OneCharactor ,1);
 		  if (n=="\n"){
 		    break; 
@@ -1842,8 +1841,8 @@ ReadStorageEntry(int sfiled, int &offset,string &ckey){
 	        return 1; //end of file
 	 }else{
 	   
-	        ClassAdParser parser;
-		ClassAd *cla=parser.ParseClassAd(OneLine ,true);
+	        ClassAdParser local_parser;
+		ClassAd *cla=local_parser.ParseClassAd(OneLine ,true);
 		
 		cla->EvaluateAttrString("Key",ckey);  
 		delete cla;    
@@ -1939,7 +1938,7 @@ GetStringClassAd(string key, string &ad){
          ClassAdTable::iterator	itr;
 	 ClassAd classad;
 	 ClassAd *newad;
-	 ClassAdUnParser unparser;
+	 ClassAdUnParser local_unparser;
 	 
 	 classad.InsertAttr( "Key", key );
 	 if( ( itr = classadTable.find( key ) ) != classadTable.end( ) ) {
@@ -1948,7 +1947,7 @@ GetStringClassAd(string key, string &ad){
 	 }else{
 	   return false;
 	 };
-	 unparser.Unparse(ad,&classad);
+	 local_unparser.Unparse(ad,&classad);
 	 //delete newad;
 	 return true;
 }

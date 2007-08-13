@@ -21,8 +21,8 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "exprTree.h"
+#include "classad/common.h"
+#include "classad/exprTree.h"
 
 using namespace std;
 
@@ -303,9 +303,9 @@ ExprListIterator( )
 
 
 ExprListIterator::
-ExprListIterator( const ExprList* l )
+ExprListIterator( const ExprList* list )
 {
-	Initialize( l );
+	Initialize( list );
 }
 
 
@@ -389,7 +389,7 @@ GetValue( Value& val, const ExprTree *tree, EvalState *es )
 {
 	Value				cv;
 	EvalState			*currentState;
-    EvalCache::iterator	itr;
+    EvalCache::iterator	itrator;
 
 	if( !tree ) return false;
 
@@ -397,11 +397,11 @@ GetValue( Value& val, const ExprTree *tree, EvalState *es )
 	currentState = es ? es : &state;
 
 	// lookup in cache
-	itr = currentState->cache.find( tree );
+	itrator = currentState->cache.find( tree );
 
 	// if found, return cached value
-	if( itr != currentState->cache.end( ) ) {
-		val.CopyFrom( itr->second );
+	if( itrator != currentState->cache.end( ) ) {
+		val.CopyFrom( itrator->second );
 		return true;
 	} 
 
@@ -450,7 +450,7 @@ GetValue( Value& val, ExprTree*& sig, const ExprTree *tree, EvalState *es )
 {
 	Value				cv;
 	EvalState			*currentState;
-    EvalCache::iterator	itr;
+    EvalCache::iterator	itrator;
 
 	if( !tree ) return false;
 
@@ -458,11 +458,11 @@ GetValue( Value& val, ExprTree*& sig, const ExprTree *tree, EvalState *es )
 	currentState = es ? es : &state;
 
 	// lookup in cache
-	itr = currentState->cache.find( tree );
+	itrator = currentState->cache.find( tree );
 
 	// if found, return cached value
-	if( itr != currentState->cache.end( ) ) {
-		val.CopyFrom( itr->second );
+	if( itrator != currentState->cache.end( ) ) {
+		val.CopyFrom( itrator->second );
 		return true;
 	} 
 

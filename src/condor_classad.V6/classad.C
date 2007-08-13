@@ -21,11 +21,11 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "classad.h"
-#include "classadItor.h"
-#include "source.h"
-#include "sink.h"
+#include "classad/common.h"
+#include "classad/classad.h"
+#include "classad/classadItor.h"
+#include "classad/source.h"
+#include "classad/sink.h"
 
 using namespace std;
 
@@ -51,7 +51,7 @@ void ClassAdLibraryVersion(int &major, int &minor, int &patch)
 
 void ClassAdLibraryVersion(string &version_string)
 {
-    version_string = "0.9.9";
+    version_string = "1.0rc2";
     return;
 }
 

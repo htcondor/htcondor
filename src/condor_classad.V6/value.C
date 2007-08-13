@@ -21,10 +21,10 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "operators.h"
-#include "sink.h"
-#include "value.h"
+#include "classad/common.h"
+#include "classad/operators.h"
+#include "classad/sink.h"
+#include "classad/value.h"
 #include <iostream>
 
 using namespace std;

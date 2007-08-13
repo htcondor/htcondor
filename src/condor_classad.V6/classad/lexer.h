@@ -24,9 +24,9 @@
 #ifndef __LEXER_H__
 #define __LEXER_H__
 
-#include "common.h"
-#include "value.h"
-#include "lexerSource.h"
+#include "classad/common.h"
+#include "classad/value.h"
+#include "classad/lexerSource.h"
 
 BEGIN_NAMESPACE( classad )
 
@@ -221,8 +221,8 @@ class Lexer
         // to be private so we don't have to write them, or worry about
         // them being inappropriately used. The day we want them, we can 
         // write them. 
-        Lexer(const Lexer &lexer)            { return;       }
-        Lexer &operator=(const Lexer &lexer) { return *this; }
+        Lexer(const Lexer &)            { return;       }
+        Lexer &operator=(const Lexer &) { return *this; }
 
 		// internal state of lexical analyzer
         bool        initialized;

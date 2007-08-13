@@ -21,9 +21,9 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "exprTree.h"
-#include "sink.h"
+#include "classad/common.h"
+#include "classad/exprTree.h"
+#include "classad/sink.h"
 
 using namespace std;
 

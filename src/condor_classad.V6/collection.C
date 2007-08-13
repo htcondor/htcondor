@@ -21,8 +21,8 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "collection.h"
+#include "classad/common.h"
+#include "classad/collection.h"
 #include <fcntl.h>
 
 using namespace std;

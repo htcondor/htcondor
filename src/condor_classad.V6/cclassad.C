@@ -21,12 +21,12 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "cclassad.h"
-#include "classad.h"
-#include "source.h"
-#include "sink.h"
-#include "xmlSink.h"
+#include "classad/common.h"
+#include "classad/cclassad.h"
+#include "classad/classad.h"
+#include "classad/source.h"
+#include "classad/sink.h"
+#include "classad/xmlSink.h"
 
 using namespace std;
 

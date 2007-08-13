@@ -21,20 +21,24 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "exprTree.h"
-#include "source.h"
-#include "sink.h"
-#include "util.h"
+#include "classad/common.h"
+#include "classad/exprTree.h"
+#include "classad/source.h"
+#include "classad/sink.h"
+#include "classad/util.h"
 
 #if defined USE_POSIX_REGEX 
-    #include <regex.h>
+  #include <regex.h>
 #elif defined USE_PCRE
+  #ifdef HAVE_PCRE_H
     #include <pcre.h>
+  #elif defined HAVE_PCRE_PCRE_H
+    #include <pcre/pcre.h>
+  #endif
 #endif
 
-#ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
-#include "dlfcn.h"
+#if defined(HAVE_DLFCN_H)
+#include <dlfcn.h>
 #endif
 
 using namespace std;
@@ -288,7 +292,7 @@ void FunctionCall::RegisterFunctions(
 	return;
 }
 
-#ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
+#ifdef HAVE_DLOPEN
 bool FunctionCall::RegisterSharedLibraryFunctions(
 	const char *shared_library_path)
 {
@@ -341,7 +345,7 @@ bool FunctionCall::RegisterSharedLibraryFunctions(
 
 	return success;
 }
-#endif /* ENABLE_SHARED_LIBRARY_FUNCTIONS */
+#endif /* HAVE_DLOPEN */
 
 void FunctionCall::
 _SetParentScope( const ClassAd* parent )
@@ -757,7 +761,7 @@ boundFrom (char *fn, const ArgumentList &argList, EvalState &state, Value &val)
 
 // The size of a list, ClassAd, etc. 
 bool FunctionCall::
-size(const char *name, const ArgumentList &argList, 
+size(const char *, const ArgumentList &argList, 
 	 EvalState &state, Value &val)
 {
 	Value             arg;
@@ -1363,7 +1367,7 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 }
 
 bool FunctionCall::
-splitTime(const char* name, const ArgumentList &argList, EvalState &state, 
+splitTime(const char*, const ArgumentList &argList, EvalState &state, 
 	Value &result )
 {
 	Value 	arg;
@@ -1388,7 +1392,7 @@ splitTime(const char* name, const ArgumentList &argList, EvalState &state,
 }
 
 bool FunctionCall::
-formatTime(const char* name, const ArgumentList &argList, EvalState &state, 
+formatTime(const char*, const ArgumentList &argList, EvalState &state, 
 	Value &result )
 {
 	Value 	   time_arg;
@@ -2088,7 +2092,7 @@ doMath( const char* name,const ArgumentList &argList,EvalState &state,
 }
 
 bool FunctionCall::
-random( const char* name,const ArgumentList &argList,EvalState &state,
+random( const char*,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
 	Value	arg;

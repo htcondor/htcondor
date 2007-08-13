@@ -27,6 +27,8 @@
 
 using namespace std;
 
+BEGIN_NAMESPACE(classad)
+
 ClassAdBin::ClassAdBin( )
 {
     count = 0;
@@ -109,3 +111,5 @@ Compress( ClassAdCollectionServer *server, LocalCollectionQuery *query,
 
     return( true );
 }
+
+END_NAMESPACE

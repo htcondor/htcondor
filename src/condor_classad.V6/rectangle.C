@@ -22,12 +22,13 @@
  *********************************************************************/
 
 #include "condor_common.h"
-#include "common.h"
-#include "operators.h"
+#include "classad/common.h"
+#include "classad/operators.h"
 #include "rectangle.h"
-#include "sink.h"
+#include "classad/sink.h"
 
 using namespace std;
+BEGIN_NAMESPACE(classad)
 
 //const int  KeySet::size  = 32;
 const int  KeySet::SUINT = sizeof(unsigned int)*8;//in bits
@@ -1185,3 +1186,5 @@ Augment( Rectangles &rec1, Rectangles &rec2, const ClassAd *ad,
 		// done
 	return( true );
 }
+
+END_NAMESPACE

@@ -21,10 +21,10 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "collection.h"
-#include "collectionBase.h"
-#include "transaction.h"
+#include "classad/common.h"
+#include "classad/collection.h"
+#include "classad/collectionBase.h"
+#include "classad/transaction.h"
 
 using namespace std;
 

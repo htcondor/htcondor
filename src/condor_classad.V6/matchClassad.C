@@ -21,9 +21,9 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "source.h"
-#include "matchClassad.h"
+#include "classad/common.h"
+#include "classad/source.h"
+#include "classad/matchClassad.h"
 
 using namespace std;
 

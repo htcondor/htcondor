@@ -21,12 +21,12 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "exprTree.h"
-#include "xmlSink.h"
-#include "sink.h"
-#include "xmlLexer.h"
-#include "util.h"
+#include "classad/common.h"
+#include "classad/exprTree.h"
+#include "classad/xmlSink.h"
+#include "classad/sink.h"
+#include "classad/xmlLexer.h"
+#include "classad/util.h"
 
 using namespace std;
 
@@ -227,7 +227,7 @@ Unparse(
 			break;
 		}
 		case Value::CLASSAD_VALUE: {
-			ClassAd *ad;
+			ClassAd *ad = NULL;
 			vector< pair<string,ExprTree*> > attrs;
 			val.IsClassAdValue(ad);
 			ad->GetComponents(attrs);
@@ -235,7 +235,7 @@ Unparse(
 			break;
 		}
 		case Value::LIST_VALUE: {
-			const ExprList *el;
+			const ExprList *el = NULL;
 			vector<ExprTree*> exprs;
 			val.IsListValue(el);
 			el->GetComponents(exprs);

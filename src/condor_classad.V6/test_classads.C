@@ -34,19 +34,19 @@
  *--------------------------------------------------------------------*/
 
 #if defined( CLASSAD_DISTRIBUTION )
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 #else
 #include "condor_classad.h"
 #endif
-#include "lexerSource.h"
-#include "xmlSink.h"
+#include "classad/lexerSource.h"
+#include "classad/xmlSink.h"
 #include <fstream>
 #include <iostream>
 #include <ctype.h>
 #include <assert.h>
 
 using namespace std;
-#ifdef WANT_NAMESPACES
+#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
 #endif
 

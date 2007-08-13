@@ -24,8 +24,8 @@
 #ifndef __XMLSINK_H__
 #define __XMLSINK_H__
 
-#include "common.h"
-#include "exprTree.h"
+#include "classad/common.h"
+#include "classad/exprTree.h"
 #include <vector>
 #include <utility>	// for pair template
 #include <string>

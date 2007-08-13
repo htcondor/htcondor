@@ -21,10 +21,10 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "view.h"
-#include "collection.h"
-#include "collectionBase.h"
+#include "classad/common.h"
+#include "classad/view.h"
+#include "classad/collection.h"
+#include "classad/collectionBase.h"
 
 using namespace std;
 
@@ -1082,7 +1082,7 @@ makePartitionSignature( ClassAd *ad )
 	string				signature;
     Value   			value;
 	ClassAd				*oad, *info;
-	const ExprList		*el;
+	const ExprList		*el = NULL;
 
 		// stash the old ad from the environment and insert the new ad in
 	oad = evalEnviron.RemoveRightAd( );

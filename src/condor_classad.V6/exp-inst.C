@@ -22,8 +22,8 @@
  *********************************************************************/
 
 #include "condor_common.h"
-#include "common.h"
-#include "exprTree.h"
+#include "classad/common.h"
+#include "classad/exprTree.h"
 #include "queryProcessor.h"
 #include <list>
 

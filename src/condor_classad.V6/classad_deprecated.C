@@ -21,13 +21,15 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "classad.h"
+#include "classad/common.h"
+#include "classad/classad.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
 #include "condor_classad.h"
 
 using namespace std;
+
+BEGIN_NAMESPACE(classad)
 
 // AttrList methods
 
@@ -773,3 +775,5 @@ AddExplicitTargetRefs( ExprTree *tree, set<string,CaseIgnLTStr> &definedAttrs )
 	}
 }
 
+
+END_NAMESPACE

@@ -21,10 +21,11 @@
  *
  *********************************************************************/
 
-#include "common.h"
-#include "lexerSource.h"
+#include "classad/common.h"
+#include "classad/lexerSource.h"
 #include <iostream>
 using namespace std;
+BEGIN_NAMESPACE(classad)
 
 /*--------------------------------------------------------------------
  *
@@ -280,3 +281,5 @@ StringLexerSource::GetCurrentLocation(void) const
 {
 	return _offset;
 }
+
+END_NAMESPACE

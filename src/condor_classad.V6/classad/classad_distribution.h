@@ -21,49 +21,22 @@
  *
  *********************************************************************/
 
-#include <fcntl.h>
-#include <stdio.h>
-#include <string>
-#include <map>
-#include "classad_stl.h"
-#include <sys/types.h>
+#ifndef __CLASSAD_DISTRIBUTION_H__
+#define __CLASSAD_DISTRIBUTION_H__
 
-BEGIN_NAMESPACE( classad )
+#ifndef CLASSAD_DISTRIBUTION
+#define CLASSAD_DISTRIBUTION
+#endif
 
-typedef struct{
-	int offset;
-} tag; 
+#include "classad/common.h"
+#include "classad/classad.h"
+#include "classad/source.h"
+#include "classad/sink.h"
+#include "classad/xmlSource.h"
+#include "classad/xmlSink.h"
+#include "classad/matchClassad.h"
+#include "classad/collection.h"
+#include "classad/collectionBase.h"
+#include "classad/query.h"
 
-struct eqstr
-{
-	bool operator()(const char* s1, const char* s2) const
-	{
-		return strcmp(s1, s2) == 0;
-	}
-};
-
-class IndexFile {
- public:
-	void Init(int file_handler);
-	bool FindInFile(std::string key,tag &offset);
-	/** the cache in mem is full, so we write one classad back to file
-		and wri
-		@param s_id  the pointer to the ID
-	*/
-	bool UpdateIndex(std::string key);
-	bool WriteBack(std::string key, std::string ad);  
-	//should delete it from file and index
-	bool DeleteFromStorageFile(std::string key);
-	bool UpdateIndex(std::string key, int offset);
-	int First(std::string &key);
-	int Next(std::string &key);
-	std::string GetClassadFromFile(std::string key, int offset);
-	bool  TruncateStorageFile();
-	int  dump_index();
- private:
-	classad_hash_map<std::string,int,StringHash> Index;
-	classad_hash_map<std::string,int,StringHash>::iterator index_itr;
-	int filed;
-};
-
-END_NAMESPACE
+#endif
