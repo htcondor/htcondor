@@ -671,6 +671,13 @@ init_params()
 	}
 	FS_Preen = param( "PREEN" );
 
+#if HAVE_EXT_GCB
+	if ( GetEnv("GCB_INAGENT") ) {
+		GCB_Broker_down_callback_set( gcbBrokerDownCallback, 
+			param_integer("MASTER_GCB_RECONNECT_TIMEOUT", 300) );
+	}
+#endif
+
 }
 
 
@@ -1176,8 +1183,8 @@ main_pre_command_sock_init()
 #if HAVE_EXT_GCB
 	if ( GetEnv("GCB_INAGENT") ) {
 			// Set up our master-specific GCB failure callbacks
-			// TODO The timeout should be configurable
-		GCB_Broker_down_callback_set( gcbBrokerDownCallback, 300 );
+		GCB_Broker_down_callback_set( gcbBrokerDownCallback, 
+			param_integer("MASTER_GCB_RECONNECT_TIMEOUT", 300) );
 		GCB_Recovery_failed_callback_set( gcbRecoveryFailedCallback );
 	}
 
