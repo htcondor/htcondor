@@ -137,33 +137,50 @@ REMOTE_CONDOR_register_job_info( ClassAd* ad )
 
 	CurrentSysCall = CONDOR_register_job_info;
 
+		/*
+		  This RSC is a special-case.  If there are any network
+		  failures at all, instead of blowing an ASSERT(), we want to
+		  just return an error code.  The shadow never returns failure
+		  for this pseudo call, so if the starter sees -1 from this,
+		  it knows there was a network error.  in this case, it sets a
+		  timer to wait for the DisconnectedRunTimeout to expire,
+		  hoping to get a request for a reconnect.
+		*/
+
 	if( ! ad ) {
 		EXCEPT( "CONDOR_register_job_info called with NULL ClassAd!" ); 
 		return -1;
 	}
 
 	syscall_sock->encode();
-	result = syscall_sock->code(CurrentSysCall);
-	ASSERT( result );
-	result = ad->put(*syscall_sock);
-	ASSERT( result );
-	result = syscall_sock->end_of_message();
-	ASSERT( result );
+	if (!syscall_sock->code(CurrentSysCall)) {
+		return -1;
+	}
+	if (!ad->put(*syscall_sock)) {
+		return -1;
+	}
+	if (!syscall_sock->end_of_message()) {
+		return -1;
+	}
 
 	syscall_sock->decode();
-	result =  syscall_sock->code(rval);
-	ASSERT( result );
+	if (!syscall_sock->code(rval)) {
+		return -1;
+	}
 	if( rval < 0 ) {
-		result = syscall_sock->code(terrno);
-		ASSERT( result );
-		result = syscall_sock->end_of_message();
-		ASSERT( result );
+		if (!syscall_sock->code(terrno)) {
+			return -1;
+		}
+		if (!syscall_sock->end_of_message()) {
+			return -1;
+		}
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	result = syscall_sock->end_of_message();
-	ASSERT( result );
+	if (!syscall_sock->end_of_message()) {
+		return -1;
+	}
 	return rval;
 }
 
