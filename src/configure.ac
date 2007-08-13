@@ -649,7 +649,14 @@ CHECK_PATH_PROG(gcc,gcc)
 # supported gcc version, we might as well catch them here, before they
 # get very far.
 AC_MSG_CHECKING([for exact version of gcc])
-gcc_vers=`gcc -v 2>&1 |$PERL -ne '{if(/.*gcc version\s*(\S*).*/){ print "$1\n";}}'`
+GCC=gcc
+# "Sometimes the user knows what he is doing" If a user specifies CC
+# we don't want configure to use it and Condor to use a hard-coded
+# "gcc"
+if test -n "$CC"; then
+  GCC=$CC
+fi
+gcc_vers=`$GCC -v 2>&1 |$PERL -ne '{if(/.*gcc version\s*(\S*).*/){ print "$1\n";}}'`
 
 case "$gcc_vers" in
  "egcs-2.91.66" )
@@ -765,6 +772,12 @@ case "$gcc_vers" in
     CompilerMajor="3"
     CompilerMinor="4"
     CompilerPatch="4"
+    ;;
+ "3.4.6" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="4"
+    CompilerPatch="6"
     ;;
  "4.0.0" )
     CompilerKind="GCC"
@@ -1909,6 +1922,7 @@ fi
 # need an external glibc for anything...
 if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch" = "xX86_64" \) ; then
 
+  including_glibc_ext=YES
   _cv_libc_full_vers="$_cv_libc_major.$_cv_libc_minor.$_cv_libc_patch"
   case "$_cv_libc_full_vers" in
   "2.2.4" )
@@ -1935,12 +1949,20 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
   "2.3.6" )
     CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
     ;;
+  "2.5." )
+    including_glibc_ext=NO
+    ;;
   * )  
     AC_MSG_CHECKING(glibc)
     AC_MSG_RESULT([ERROR])
     AC_MSG_ERROR([Condor does NOT know what glibc external to use with glibc-$_cv_libc_full_vers])
   esac
-  AC_SUBST(want_ext_glibc,YES)
+  if test "x$including_glibc_ext" = "xYES"; then
+    AC_SUBST(want_ext_glibc,YES)
+  else
+    AC_SUBST(want_ext_glibc,NO)
+    AC_SUBST(ext_glibc_version,UNUSED)
+  fi    
 else
   AC_SUBST(want_ext_glibc,NO)
   AC_SUBST(ext_glibc_version,UNUSED)
