@@ -73,23 +73,10 @@ NEST_INC = $(NEST_DIR)/include
 
 #if WANT_KERBEROS && HAS_EXTERNALS
 KERBEROS_INC = $(KERBEROS_DIR)/include
-/* so long as we're building it ourselves, we know it's krb5, so we
-   probably don't need to keep this variable around.  however, for
-   now, just turn it on in all cases. */ 
-#ifndef KERBEROS_K5
-#define KERBEROS_K5 YES
-#endif
-#if KERBEROS_K5
 KERBEROS_LIB = $(KERBEROS_DIR)/lib/libkrb5.a \
    $(KERBEROS_DIR)/lib/libk5crypto.a \
    $(KERBEROS_DIR)/lib/libcom_err.a \
    $(KERBEROS_DIR)/lib/libkrb5support.a
-#else
-KERBEROS_LIB = $(KERBEROS_DIR)/lib/libkrb5.a \
-   $(KERBEROS_DIR)/lib/libcrypto.a \
-   $(KERBEROS_DIR)/lib/libcom_err.a
-#endif /* KERBEROS_K5 */
-
 #else /* WANT_KERBEROS */
 KERBEROS_LIB = 
 KERBEROS_INC = 
