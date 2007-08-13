@@ -105,20 +105,22 @@ TESTCLASS(lib_auth_protocol-ctb,quick)
 
 /* GNATS 764 - SSL missing on Dux 5.1 and HPUX 11 machines */
 #if !defined( IS_ALPHA_DUX5) && !defined( IS_HPUX11 )
-DESC(lib_auth_protocol-ssl,"SSL authentication test")
-RUN(lib_auth_protocol-ssl)
-TESTCLASS(lib_auth_protocol-ssl,core)
-TESTCLASS(lib_auth_protocol-ssl,quick)
-
 DESC(lib_auth_protocol-pw,"PW authentication test")
 RUN(lib_auth_protocol-pw)
 TESTCLASS(lib_auth_protocol-pw,core)
 TESTCLASS(lib_auth_protocol-pw,quick)
 
+/* turn off till certs fixed
+DESC(lib_auth_protocol-ssl,"SSL authentication test")
+RUN(lib_auth_protocol-ssl)
+TESTCLASS(lib_auth_protocol-ssl,core)
+TESTCLASS(lib_auth_protocol-ssl,quick)
+
 DESC(lib_auth_protocol-gsi,"GSI authentication test")
 RUN(lib_auth_protocol-gsi)
 TESTCLASS(lib_auth_protocol-gsi,core)
 TESTCLASS(lib_auth_protocol-gsi,quick)
+*/
 #endif
 
 DESC(lib_auth_protocol-negot,"16 way negotiation test - frist 8")
