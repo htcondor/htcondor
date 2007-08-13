@@ -61,7 +61,7 @@ class ClassList
 		ClassList() { classes = NULL; numOfClasses = 0; tail = NULL; }
 		~ClassList();
 
-		int		BuildClassList(char*, char*);
+		//int		BuildClassList(char*, char*);
 		int		NumOfClasses() { return numOfClasses; }
 		int		ClassRequired(int, ExprTree*);
 		int		ClassIndex(ExprTree*);	// index of the class defined

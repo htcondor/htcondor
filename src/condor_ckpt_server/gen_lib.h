@@ -36,8 +36,3 @@ int OTStrLen(const char* s_ptr,
 	     int         max);
 
 
-void PrintTime(std::ofstream& outfile);
-
-
-
-

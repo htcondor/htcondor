@@ -28,7 +28,6 @@
 #define _CONDOR_ALLOW_OPEN 1	// because fstream interface defines open
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "condor_fix_fstream.h"
 #include "condor_classifiedjobs.h"
 
 
@@ -74,6 +73,7 @@ ClassList::~ClassList()
     }
 }
 
+/*
 int ClassList::BuildClassList(char* classDefFile, char* contextsFile)
 {
 	if(!classDefFile)
@@ -115,6 +115,7 @@ int ClassList::BuildClassList(char* classDefFile, char* contextsFile)
 	iFile.close();
 	return TRUE;
 }
+*/
 
 int ClassList::ClassRequired(int index, ExprTree* requirement)
 {

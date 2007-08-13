@@ -24,22 +24,18 @@
 #include "gen_lib.h"
 #include "constants2.h"
 
-#include "condor_fix_iostream.h"
-#include "condor_fix_fstream.h"
-#include "condor_fix_iomanip.h"
-
 void MakeLongLine(char ch1,
                   char ch2)
 {
   int ch_count;
 
-  cout << setw(6) << " ";
+  printf("      ");
   for (ch_count=7; ch_count<124; ch_count++)
     if (ch_count%2)
-      cout << ch1;
+      printf("%c", ch1);
     else
-      cout << ch2;
-  cout << endl;
+      printf("%c", ch2);
+  printf("\n");
 }
 
 
@@ -50,48 +46,11 @@ void MakeLine(char ch1,
 
   for (ch_count=0; ch_count<79; ch_count++)
     if (ch_count%2)
-      cout << ch1;
+      printf("%c", ch1);
     else
-      cout << ch2;
-  cout << endl;
+      printf("%c", ch2);
+  printf("\n");
 }
-
-
-int OTStrLen(const char* s_ptr,
-	     int         max)
-{
-  int   count;
-
-  const char* ptr = s_ptr;
-
-  count = 0;
-  while ((count < max) && (*ptr != '\0'))
-    {
-      count++;
-      ptr++;
-    }
-  return count;
-}
-
-
-void PrintTime(ofstream& outfile)
-{
-  time_t current_time;
-  char*  time_ptr;
-  char   print_time[26];
-
-  current_time = time(NULL);
-  time_ptr = ctime(&current_time);
-  if (time_ptr != NULL)
-    {
-      strncpy(print_time, time_ptr, 26);
-      print_time[19] = '\0';
-      outfile << print_time+4;
-    }
-  else
-    outfile << "** CANNOT ACCESS TIME **";
-}
-
 
 extern "C" {
 /* XXX This should prolly be documented for why it is here.... */
