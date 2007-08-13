@@ -35,6 +35,7 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "condor_crypt.h"
+#include "dc_schedd.h"
 
 ///////////////////////////////////////////////////////////////////////////
 // Claim
@@ -55,6 +56,8 @@ Claim::Claim( Resource* res_ip, bool is_cod, int lease_duration )
 	c_request_stream = NULL;
 	c_match_tid = -1;
 	c_lease_tid = -1;
+	c_sendalive_tid = -1;
+	c_alive_inprogress_sock = NULL;
 	c_aliveint = -1;
 	c_lease_duration = lease_duration;
 	c_cluster = -1;
@@ -93,9 +96,17 @@ Claim::~Claim()
 				 c_client->owner() ? c_client->owner() : "unknown" );  
 	}
 
-		// Cancel any timers associated with this claim
+		// Cancel any daemonCore events associated with this claim
 	this->cancel_match_timer();
 	this->cancelLeaseTimer();
+	if ( c_sendalive_tid != -1 ) {
+		daemonCore->Cancel_Timer(c_sendalive_tid);
+		c_sendalive_tid = -1;
+	}
+	if ( c_alive_inprogress_sock ) {
+		daemonCore->Cancel_Socket(c_alive_inprogress_sock);
+		c_alive_inprogress_sock = NULL;
+	}
 
 		// Free up memory that's been allocated
 	if( c_ad ) {
@@ -751,7 +762,7 @@ Claim::saveJobInfo( ClassAd* request_ad )
 				 c_aliveint, max_claim_alives_missed );
 	}
 		/* 
-		   This resets the timer for us, and also, we should consider
+		   This resets the timers for us, and also, we should consider
 		   a request to activate a claim (which is what just happened
 		   if we're in this function) as another keep-alive...
 		*/
@@ -782,6 +793,22 @@ Claim::startLeaseTimer()
 	if( c_lease_tid == -1 ) {
 		EXCEPT( "Couldn't register timer (out of memory)." );
 	}
+	
+	if ( param_boolean("STARTD_SENDS_ALIVES",false) &&
+		 !c_is_cod &&		
+		 c_lease_duration > 0 )	// prevent divide by zero
+	{
+		if ( c_sendalive_tid != -1 ) {
+			daemonCore->Cancel_Timer(c_sendalive_tid);
+		}
+		
+		c_sendalive_tid =
+			daemonCore->Register_Timer( c_lease_duration / 3, 
+				c_lease_duration / 3, 
+				(TimerHandlercpp)&Claim::sendAlive,
+				"Claim::sendAlive", this );
+	}
+
 	dprintf( D_FULLDEBUG, "Started ClaimLease timer (%d) w/ %d second "
 			 "lease duration\n", c_lease_tid, c_lease_duration );
 }
@@ -802,6 +829,184 @@ Claim::cancelLeaseTimer()
 		}
 		c_lease_tid = -1;
 	}
+}
+
+int
+Claim::sendAlive()
+{
+	const char* c_addr = NULL;
+
+	if ( c_client ) {
+		c_addr = c_client->addr();
+	}
+
+	if( !c_addr ) {
+			// Client not really set, nothing to do.
+		return FALSE;
+	}
+
+	if ( c_alive_inprogress_sock ) {
+			// already did it
+		return FALSE;
+	}
+
+	DCSchedd matched_schedd ( c_addr, NULL );
+	Sock* sock = NULL;
+
+	dprintf( D_PROTOCOL, "Sending alive to schedd %s...\n", c_addr); 
+
+	int connect_timeout = MAX(20, ((c_lease_duration / 3)-3) );
+
+	if (!(sock = matched_schedd.reliSock( connect_timeout, NULL, true ))) {
+		dprintf( D_FAILURE|D_ALWAYS, 
+				"Alive failed - couldn't initiate connection to %s\n",
+		         c_addr );
+		return FALSE;
+	}
+
+	char to_schedd[256];
+	sprintf ( to_schedd, "Alive to schedd %s", c_addr );
+
+	int reg_rc = daemonCore->
+			Register_Socket( sock, "<Alive Contact Socket>",
+			  (SocketHandlercpp)&Claim::sendAliveConnectHandler,
+			  to_schedd, this, ALLOW );
+
+	if(reg_rc < 0) {
+		dprintf( D_ALWAYS,
+		         "Failed to register socket for alive to schedd at %s.  "
+		         "Register_Socket returned %d.\n",
+		         c_addr,reg_rc);
+		delete sock;
+		return FALSE;
+	}
+
+	c_alive_inprogress_sock = sock;
+
+	return TRUE;
+}
+
+/* ALIVE_BAILOUT def:
+   before each bad return we reset the alive timer to try again
+   soon, since the heartbeat failed */
+#define ALIVE_BAILOUT									\
+	daemonCore->Reset_Timer(c_sendalive_tid, 5, 5 );	\
+	c_alive_inprogress_sock = NULL;						\
+	return FALSE;
+
+int
+Claim::sendAliveConnectHandler(Stream *s)
+{
+	char* c_addr = "(unknown)";
+	if ( c_client ) {
+		c_addr = c_client->addr();
+	}
+
+	char *claimId = id();
+
+	if ( !claimId ) {
+		dprintf( D_ALWAYS, "ERROR In Claim::sendAliveConnectHandler, id unknown\n");
+		ALIVE_BAILOUT;
+	}
+
+	Sock *sock = (Sock *)s;
+	DCSchedd matched_schedd( c_addr, NULL );
+
+	dprintf( D_PROTOCOL, "In Claim::sendAliveConnectHandler id %s\n", publicClaimId());
+
+	if (!sock) {
+		dprintf( D_FAILURE|D_ALWAYS, 
+				 "NULL sock when connecting to schedd %s\n",
+				 c_addr );
+		ALIVE_BAILOUT;  // note daemonCore will close sock for us
+	}
+
+	ASSERT(c_alive_inprogress_sock == sock);
+
+	if (!sock->is_connected()) {
+		dprintf( D_FAILURE|D_ALWAYS, "Failed to connect to schedd %s\n",
+				 c_addr );
+		ALIVE_BAILOUT;  // note daemonCore will close sock for us
+	}
+
+		// Protocl of sending an alive to the schedd: we send
+		// the claim id, and schedd responds with an int ack.
+
+	if (!matched_schedd.startCommand(ALIVE, sock, 20  )) {
+		dprintf( D_FAILURE|D_ALWAYS, 
+				"Couldn't send ALIVE to schedd at %s\n",
+				 c_addr );
+		ALIVE_BAILOUT;  // note daemonCore will close sock for us
+	}
+
+	sock->encode();
+
+	if ( !sock->code( claimId ) || !sock->end_of_message() ) {
+			dprintf( D_FAILURE|D_ALWAYS, 
+				 "Failed to send Alive to schedd %s for job %d.%d id \n",
+				 c_addr, c_cluster, c_proc, publicClaimId() );
+		ALIVE_BAILOUT;  // note daemonCore will close sock for us
+	}
+
+	daemonCore->Cancel_Socket( sock ); //Allow us to re-register this socket.
+
+	char to_schedd[256];
+	sprintf ( to_schedd, "Alive to schedd %s", c_addr );
+	int reg_rc = daemonCore->
+			Register_Socket( sock, "<Alive Contact Socket>",
+			  (SocketHandlercpp)&Claim::sendAliveResponseHandler,
+			  to_schedd, this, ALLOW );
+
+	if(reg_rc < 0) {
+		dprintf( D_ALWAYS,
+		         "Failed to register socket for alive to schedd at %s.  "
+		         "Register_Socket returned %d.\n",
+		         c_addr,reg_rc);
+		ALIVE_BAILOUT;  // note daemonCore will close sock for us
+	}
+
+	dprintf( D_PROTOCOL, 
+		"Leaving Claim::sendAliveConnectHandler success id %s\n",publicClaimId());
+
+	// The stream will be closed when we get a callback
+	// in sendAliveResponseHandler.  Keep it open for now.
+	c_alive_inprogress_sock = sock;
+	return KEEP_STREAM;
+}
+
+int
+Claim::sendAliveResponseHandler( Stream *sock )
+{
+	int reply;
+	char* c_addr = "(unknown)";
+
+	if ( c_client ) {
+		c_addr = c_client->addr();
+	}
+
+	// Now, we set the timeout on the socket to 1 second.  Since we 
+	// were called by as a Register_Socket callback, this should not 
+	// block if things are working as expected.  
+	sock->timeout(1);
+
+ 	if( !sock->rcv_int(reply, TRUE) ) {
+		dprintf( D_ALWAYS, 
+			"Response problem from schedd on ALIVE job %d.%d.\n", 
+			c_addr, c_cluster, c_proc );	
+		ALIVE_BAILOUT;  // note daemonCore will close sock for us
+	}
+
+		// So here we got a response from the schedd.  
+	dprintf(D_PROTOCOL,
+		"Received Alive response of %d from schedd %d job %d.%d\n",
+		reply, c_addr, c_cluster, c_proc);
+
+	alive();	// this will push forward the lease & alive expiration timer
+
+		// and now clear c_alive_inprogress_sock since this alive is done.
+	c_alive_inprogress_sock = NULL;
+
+	return TRUE;
 }
 
 
@@ -844,13 +1049,32 @@ Claim::leaseExpired()
 void
 Claim::alive()
 {
-	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s\n", publicClaimId() );
-		// Process a keep alive command
+	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s job %d.%d\n", 
+		publicClaimId(), c_cluster, c_proc );
+
+		// Process an alive command.  This is called whenever we
+		// "heard" from the schedd since a claim was created, 
+		// for instance:
+		//  1 - an alive send from the schedd
+		//  2 - an acknowledgement from the schedd to an alive
+		//      sent by the startd.
+		//  3 - a claim activation.
+
+		// First push forward our lease timer.
 	if( c_lease_tid == -1 ) {
 		startLeaseTimer();
 	}
 	else {
 		daemonCore->Reset_Timer( c_lease_tid, c_lease_duration, 0 );
+	}
+
+		// And now push forward our send alives timer.  Plus,
+		// it is possible that c_lease_duration changed on activation
+		// of a claim, so our timer reset here will handle that case
+		// as well since alive() is called upon claim activation.
+	if ( c_sendalive_tid ) {
+		daemonCore->Reset_Timer(c_sendalive_tid, c_lease_duration / 3, 
+							c_lease_duration / 3);
 	}
 }
 
@@ -892,7 +1116,7 @@ Claim::publicClaimId( void )
 	if( c_id ) {
 		return c_id->publicClaimId();
 	} else {
-		return "";
+		return "<unknown>";
 	}
 }
 

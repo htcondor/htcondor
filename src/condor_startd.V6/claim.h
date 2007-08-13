@@ -165,6 +165,9 @@ public:
 	void cancelLeaseTimer();
 	int  leaseExpired();		// We were claimed, but didn't get a
 								// keep alive in time from the schedd
+	int sendAlive();
+	int sendAliveConnectHandler(Stream *sock);
+	int sendAliveResponseHandler( Stream *sock );
 
 		// Functions that return data
 	float		rank()			{return c_rank;};
@@ -282,7 +285,9 @@ private:
 			get a keepalive before the job lease expires, schedd has
 			died and we need to release the claim.
 		*/
-	int			c_lease_tid;	
+	int			c_lease_tid;
+	int			c_sendalive_tid;
+	Sock*		c_alive_inprogress_sock;	// NULL if no alive in progress
 	int			c_lease_duration; // Duration of our claim/job lease
 	int			c_aliveint;		// Alive interval for this claim
 

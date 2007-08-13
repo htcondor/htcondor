@@ -304,6 +304,7 @@ Scheduler::Scheduler() :
 	Mail = NULL;
 	filename = NULL;
 	alive_interval = 0;
+	startd_sends_alives = false;
 	leaseAliveInterval = 500000;	// init to a nice big number
 	aliveid = -1;
 	ExitWhenDone = FALSE;
@@ -5242,7 +5243,7 @@ Scheduler::vacate_service(int, Stream *sock)
 		dprintf (D_ALWAYS, "Failed to get ClaimId\n");
 		return;
 	}
-	if( matches->lookup(claim_id, mrec) != 0 ) {
+	if( matches->lookup(HashKey(claim_id), mrec) != 0 ) {
 			// We couldn't find this match in our table, perhaps it's
 			// from a dedicated resource.
 		dedicated_scheduler.DelMrec( claim_id );
@@ -6240,7 +6241,8 @@ Scheduler::StartJobs()
 		        rec->publicClaimId(), id.cluster, id.proc);
 			// If we're reusing a match to start another job, then cluster
 			// and proc may have changed, so we keep them up-to-date here.
-			// This is important for Scheduler::AlreadyMatched().
+			// This is important for Scheduler::AlreadyMatched(), and also
+			// for when we receive an alive command from the startd.
 		SetMrecJobID(rec,id);
 			// Now that the shadow has spawned, consider this match "ACTIVE"
 		rec->setStatus( M_ACTIVE );
@@ -10235,6 +10237,8 @@ Scheduler::Init()
 	/* Value specified in kilobytes */
 	ShadowSizeEstimate = param_integer( "SHADOW_SIZE_ESTIMATE",DEFAULT_SHADOW_SIZE );
 
+	startd_sends_alives = param_boolean("STARTD_SENDS_ALIVES",false);
+
 	alive_interval = param_integer("ALIVE_INTERVAL",300,0,leaseAliveInterval);
 		// Don't allow the user to specify an alive interval larger
 		// than leaseAliveInterval, or the startd may start killing off
@@ -10531,6 +10535,10 @@ Scheduler::Register()
 			"REQUEST_SANDBOX_LOCATION",
 			(CommandHandlercpp)&Scheduler::requestSandboxLocation,
 			"requestSandboxLocation", this, WRITE);
+	daemonCore->Register_Command( ALIVE, "ALIVE", 
+			(CommandHandlercpp)&Scheduler::receive_startd_alive,
+			"receive_startd_alive", this, DAEMON,
+			D_PROTOCOL ); 
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
@@ -11278,6 +11286,58 @@ sendAlive( match_rec* mrec )
 	return true;
 }
 
+int
+Scheduler::receive_startd_alive(int cmd, Stream *s)
+{
+	// Received a keep-alive from a startd.  
+	// Protocol: startd sends up the match id, and we send back 
+	// the current alive_interval, or -1 if we cannot find an active 
+	// match for this job.  
+	
+	ASSERT( cmd == ALIVE );
+
+	char *claim_id = NULL;
+	int ret_value;
+	match_rec* match = NULL;
+	ClassAd *job_ad = NULL;
+
+	s->decode();
+	s->timeout(1);	// its a short message so data should be ready for us
+	s->code(claim_id);	// must free this; CEDAR will malloc cuz claimid=NULL
+	if ( !s->end_of_message() ) {
+		if (claim_id) free(claim_id);
+		return FALSE;
+	}
+	
+	if ( claim_id ) {
+		matches->lookup( HashKey(claim_id), match );
+		free(claim_id);
+	}
+
+	if ( match ) {
+		ret_value = alive_interval;
+			// If this match is active, i.e. we have a shadow, then
+			// update the ATTR_LAST_JOB_LEASE_RENEWAL in RAM.  We will
+			// commit it to disk in a big transaction batch via the timer
+			// handler method sendAlives().  We do this for scalability; we
+			// may have thousands of startds sending us updates...
+		if ( match->status == M_ACTIVE ) {
+			job_ad = GetJobAd(match->cluster, match->proc, false);
+			if (job_ad) {
+				job_ad->Assign(ATTR_LAST_JOB_LEASE_RENEWAL, (int)time(0));
+			}
+		}
+	} else {
+		ret_value = -1;
+	}
+
+	s->encode();
+	s->code(ret_value);
+	s->end_of_message();
+
+	return TRUE;
+}
+
 void
 Scheduler::sendAlives()
 {
@@ -11313,29 +11373,42 @@ Scheduler::sendAlives()
 	matches->startIterations();
 	while (matches->iterate(mrec) == 1) {
 		if( mrec->status == M_ACTIVE ) {
+			if ( startd_sends_alives ) {
+				// if the startd sends alives, then the ATTR_LAST_JOB_LEASE_RENEWAL
+				// is updated someplace else in RAM only when we receive a keepalive
+				// ping from the startd.  So here
+				// we just want to read it out of RAM and set it via SetAttributeInt
+				// so it is written to disk.  Doing things this way allows us
+				// to update the queue persistently all in one transaction, even
+				// if startds are sending updates asynchronously.  -Todd Tannenbaum 
+				GetAttributeInt(mrec->cluster,mrec->proc,
+								ATTR_LAST_JOB_LEASE_RENEWAL,&now);
+			}
 			SetAttributeInt( mrec->cluster, mrec->proc, 
 							 ATTR_LAST_JOB_LEASE_RENEWAL, now ); 
 		}
 	}
 	CommitTransaction();
 
-	matches->startIterations();
-	while (matches->iterate(mrec) == 1) {
-		if( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) {
-			if( sendAlive( mrec ) ) {
-				numsent++;
+	if ( !startd_sends_alives ) {
+		matches->startIterations();
+		while (matches->iterate(mrec) == 1) {
+			if( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) {
+				if( sendAlive( mrec ) ) {
+					numsent++;
+				}
 			}
 		}
-	}
-	if( numsent ) { 
-		dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
-				 "%d startds)\n", numsent );
-	}
+		if( numsent ) { 
+			dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
+					 "%d startds)\n", numsent );
+		}
 
 		// Just so we don't have to deal with a seperate DC timer for
 		// this, just call the dedicated_scheduler's version of the
 		// same thing so we keep all of those claims alive, too.
-	dedicated_scheduler.sendAlives();
+		dedicated_scheduler.sendAlives();
+	}
 }
 
 void
