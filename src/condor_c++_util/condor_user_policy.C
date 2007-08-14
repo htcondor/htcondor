@@ -106,6 +106,8 @@ BaseUserPolicy::startTimer( void )
 		if ( this->tid < 0 ) {
 			EXCEPT( "Can't register DC timer!" );
 		}
+		dprintf(D_FULLDEBUG, "Started timer to evaluate periodic user "
+				"policy expressions every %d seconds\n", this->interval);
 	}
 }
 
