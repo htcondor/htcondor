@@ -372,11 +372,43 @@ submission into Globus.
 \Condor{schedd} each time the job is matched with a resource ad by the
 negotiator.
 
+%%% ClassAd attribute: NumJobStarts
+\index{ClassAd job attribute!NumJobStarts}
+\index{NumJobStarts!job ClassAd attribute}
+\item[\AdAttr{NumJobStarts}:]  A count of the number of times the
+  job started executing.
+  This is not (yet) defined for Standard universe jobs.
+
+%%% ClassAd attribute: NumJobReconnects
+\index{ClassAd job attribute!NumJobReconnects}
+\index{NumJobReconnects!job ClassAd attribute}
+\item[\AdAttr{NumJobReconnects}:]  A count of the number of times a
+  job successfully reconnected after being disconnected (when the
+  \Condor{shadow} and \Condor{starter} lose contact, e.g. because of
+  transient network failures or a \Condor{shadow} or \Condor{schedd}
+  restart).
+  This is only defined for jobs that can reconnected (Vanilla and Java
+  universes).
+
 %%% ClassAd attribute: NumRestarts
 \index{ClassAd job attribute!NumRestarts}
 \index{NumRestarts!job ClassAd attribute}
 \item[\AdAttr{NumRestarts}:]  A count of the number of restarts from a
 checkpoint attempted by this job during its lifetime.
+
+%%% ClassAd attribute: NumShadowExceptions
+\index{ClassAd job attribute!NumShadowExceptions}
+\index{NumShadowExceptions!job ClassAd attribute}
+\item[\AdAttr{NumShadowExceptions}:]  A count of the number of
+  times the \Condor{shadow} for a given job had a fatal error.
+
+%%% ClassAd attribute: NumShadowStarts
+\index{ClassAd job attribute!NumShadowStarts}
+\index{NumShadowStarts!job ClassAd attribute}
+\item[\AdAttr{NumShadowStarts}:]  A count of the number of
+  times a \Condor{shadow} was started for a given job.
+  This is not defined for Local and Scheduler universe jobs since
+  those do not have a \Condor{shadow} associated with them.
 
 %%% ClassAd attribute: NumSystemHolds
 \index{ClassAd job attribute!NumSystemHolds}

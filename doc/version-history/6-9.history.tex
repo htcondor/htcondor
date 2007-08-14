@@ -31,6 +31,16 @@ The details of each version are described below.
 \item Condor-C now uses a more efficient protocol when querying the
 status of jobs from 6.9.5 and newer schedds.
 
+\item Added 4 new counters to the job classified ad:
+ \begin{itemize}
+ \item \AdAttr{NumJobStarts}
+ \item \AdAttr{NumJobReconnects}
+ \item \AdAttr{NumShadowExceptions}
+ \item \AdAttr{NumShadowStarts}
+ \end{itemize}
+For more information, please see their descriptions in
+section~\ref{user-man-jobad} on page~\pageref{user-man-jobad}.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
