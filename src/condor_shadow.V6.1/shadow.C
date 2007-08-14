@@ -314,10 +314,6 @@ UniShadow::resourceBeganExecution( RemoteResource* rr )
 		// executing, we can safely log our execute event
 	logExecuteEvent();
 
-		// Start the timer for updating the job queue for this job.
-		// TODO: This should move to the BaseShadow!
-	startQueueUpdateTimer();
-
 		// Invoke the base copy of this function to handle shared code.
 	BaseShadow::resourceBeganExecution(rr);
 }

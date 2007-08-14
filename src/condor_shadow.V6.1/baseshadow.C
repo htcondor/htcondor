@@ -1137,8 +1137,8 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 		// Start the timer for the periodic user job policy evaluation.
 	shadow_user_policy.startTimer();
 		
-		// TODO: Start the timer for updating the job queue for this job.
-		// startQueueUpdateTimer();
+		// Start the timer for updating the job queue for this job.
+	startQueueUpdateTimer();
 
 		// Update our copy of NumJobStarts, so that the periodic user
 		// policy expressions, etc, all have the correct value.
