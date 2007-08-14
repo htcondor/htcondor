@@ -2634,7 +2634,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 
-	if ( want_claiming ) {
+	if ( want_claiming && param_boolean("NEGOTIATOR_INFORM_STARTD",true)) {
 			// The following sends a message to the startd to inform it
 			// of the match.  Although it is a UDP message, it still may
 			// block, because if there is no cached security session,
