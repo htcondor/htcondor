@@ -1120,6 +1120,42 @@ BaseShadow::evalPeriodicUserPolicy( void )
 }
 
 
+/**
+ * Shared code that should be run once the shadow is sure that
+ * everything it's watching over has actually started running.  In the
+ * uni-shadow case (vanilla, java, etc) this is called immediately
+ * as soon as the starter sends the CONDOR_begin_execution RSC.  For
+ * multi-shadow (parallel, MPI), this is invoked once all of the
+ * starters have reported in.
+ */
+void
+BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
+{
+		// Set our flag to remember we've really started.
+	began_execution = true;
+
+		// Start the timer for the periodic user job policy evaluation.
+	shadow_user_policy.startTimer();
+		
+		// TODO: Start the timer for updating the job queue for this job.
+		// startQueueUpdateTimer();
+
+		// Update our copy of NumJobStarts, so that the periodic user
+		// policy expressions, etc, all have the correct value.
+	int job_start_cnt = 0;
+	jobAd->LookupInteger(ATTR_NUM_JOB_STARTS, job_start_cnt);
+	job_start_cnt++;
+	jobAd->Assign(ATTR_NUM_JOB_STARTS, job_start_cnt);
+	dprintf(D_FULLDEBUG, "Set %s to %d\n", ATTR_NUM_JOB_STARTS, job_start_cnt);
+
+		// Update NumJobStarts in the schedd.  We want to do this
+		// immediately since this attribute might be used for peridoic
+		// expressions or scripts that want to know as soon as the job
+		// is really executing (e.g. via Quill, etc).
+	updateJobAttr(ATTR_NUM_JOB_STARTS, job_start_cnt);
+}
+
+
 const char*
 BaseShadow::getCoreName( void )
 {

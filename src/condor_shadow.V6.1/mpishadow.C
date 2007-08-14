@@ -1211,7 +1211,7 @@ MPIShadow::exitCode( void )
 
 
 void
-MPIShadow::resourceBeganExecution( RemoteResource* /* rr */ )
+MPIShadow::resourceBeganExecution( RemoteResource* rr )
 {
 	bool all_executing = true;
 
@@ -1231,18 +1231,9 @@ MPIShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
 		}
 		
-			// Now that the whole job is running, start up a few
-			// timers we need.
-		shadow_user_policy.startTimer();
-		
-			// Update NumJobStarts in the schedd
-			// TODO Should we do the update through the job_updater? The
-			//   MPI and Parallel shadows don't start the job_updaters
-			//   timer.
-		int job_start_cnt = 0;
-		jobAd->LookupInteger(ATTR_NUM_JOB_STARTS, job_start_cnt);
-		job_start_cnt++;
-		updateJobAttr(ATTR_NUM_JOB_STARTS, job_start_cnt);
+			// Now that everything is started, we can finally invoke
+			// the base copy of this function to handle shared code.
+		BaseShadow::resourceBeganExecution(rr);
 	}
 }
 

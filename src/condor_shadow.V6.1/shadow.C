@@ -314,22 +314,12 @@ UniShadow::resourceBeganExecution( RemoteResource* rr )
 		// executing, we can safely log our execute event
 	logExecuteEvent();
 
-	began_execution = TRUE;
-	
-		// Start the timer for the periodic user job policy  
-	shadow_user_policy.startTimer();
-
-		// Start the timer for updating the job queue for this job 
+		// Start the timer for updating the job queue for this job.
+		// TODO: This should move to the BaseShadow!
 	startQueueUpdateTimer();
 
-		// Update NumJobStarts in the schedd.  We want to do this
-		// immediately since this attribute might be used for peridoic
-		// expressions or scripts that want to know as soon as the job
-		// is really executing (e.g. via Quill, etc).
-	int job_start_cnt = 0;
-	jobAd->LookupInteger(ATTR_NUM_JOB_STARTS, job_start_cnt);
-	job_start_cnt++;
-	updateJobAttr(ATTR_NUM_JOB_STARTS, job_start_cnt);
+		// Invoke the base copy of this function to handle shared code.
+	BaseShadow::resourceBeganExecution(rr);
 }
 
 
