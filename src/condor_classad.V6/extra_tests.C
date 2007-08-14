@@ -34,6 +34,10 @@
 #include <iostream>
 #include <ctype.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 using namespace std;
 #ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;

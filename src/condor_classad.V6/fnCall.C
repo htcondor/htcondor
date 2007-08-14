@@ -27,6 +27,10 @@
 #include "classad/sink.h"
 #include "classad/util.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #if defined USE_POSIX_REGEX 
   #include <regex.h>
 #elif defined USE_PCRE
@@ -292,10 +296,10 @@ void FunctionCall::RegisterFunctions(
 	return;
 }
 
-#ifdef HAVE_DLOPEN
 bool FunctionCall::RegisterSharedLibraryFunctions(
 	const char *shared_library_path)
 {
+#ifdef HAVE_DLOPEN
 	bool success;
 	void *dynamic_library_handle;
 		
@@ -344,8 +348,12 @@ bool FunctionCall::RegisterSharedLibraryFunctions(
 	}
 
 	return success;
+#else /* end HAVE_DLOPEN */
+    CondorErrno = ERR_CANT_LOAD_DYNAMIC_LIBRARY;
+    CondorErrMsg = "Shared library support not available.";
+    return false;
+#endif /* end !HAVE_DLOPEN */
 }
-#endif /* HAVE_DLOPEN */
 
 void FunctionCall::
 _SetParentScope( const ClassAd* parent )

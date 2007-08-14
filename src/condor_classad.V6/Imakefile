@@ -86,7 +86,7 @@ template_inst( coll-client-inst.C,coll-client-inst.o) 	/* collection client*/
 template_inst( exp-inst.C, exp-inst.o )					/* experimental */
 
 /* Standalone distribution of classads/collections */
-DIST_VERSION = 1.0rc2
+DIST_VERSION = 1.0-rc2
 DISTRIBUTION_DIR = classads-$(DIST_VERSION)
 
 DIST_FILES = 								\
@@ -123,10 +123,7 @@ win32/classad_unit_tester.dep win32/classad_unit_tester.dsp	\
 win32/classad_unit_tester.mak win32/make.bat
 
 dist: $(DIST_FILES)
-	cp build_external build_classads-$(DIST_VERSION)
-	chmod 755 build_classads-$(DIST_VERSION)
 	chmod 664 $(DIST_FILES)
-#	chmod 775 configure
 	chmod 664 $(WIN32_FILES)
 	chmod 775 win32/make.bat
 	rm -rf $(DISTRIBUTION_DIR) *.gz
@@ -135,9 +132,10 @@ dist: $(DIST_FILES)
 	mkdir -p $(DISTRIBUTION_DIR)/perl/lib/ClassAd
 	mkdir $(DISTRIBUTION_DIR)/perl/t
 	mkdir $(DISTRIBUTION_DIR)/classad
+	cp build_external $(DISTRIBUTION_DIR)/build_classads-$(DIST_VERSION)
+	chmod 755 $(DISTRIBUTION_DIR)/build_classads-$(DIST_VERSION)
 	cp $(DIST_FILES) $(DISTRIBUTION_DIR)
 	cp $(H_FILES) $(DISTRIBUTION_DIR)/classad
-#	cp makefile-dist $(DISTRIBUTION_DIR)/Makefile
 	cp $(WIN32_FILES) $(DISTRIBUTION_DIR)/win32
 # Originally this line was simpler, but it ended in an asterisk,
 # and that caused condor_imake problems.

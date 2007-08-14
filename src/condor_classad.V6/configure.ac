@@ -34,12 +34,12 @@ AC_DEFUN([gl_COMPILER_FLAGS],
 
 
 AC_PREREQ(2.57)
-AC_INIT([classad], [1.0rc2], [condor-admin@cs.wisc.edu])
+AC_INIT([classad], [1.0-rc2], [condor-admin@cs.wisc.edu])
 #AC_CONFIG_AUX_DIR([build-aux])
 #AM_INIT_AUTOMAKE([1.6.3 -Wall -Werror foreign])
 AM_INIT_AUTOMAKE([1.6.3 foreign])
 AC_CONFIG_SRCDIR([classad.C])
-#AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADER([config.h])
 AC_CONFIG_FILES([Makefile])
 
 # Checks for programs.
@@ -84,10 +84,10 @@ AC_FUNC_STRTOD
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([floor ftime getcwd gettimeofday localtime_r memset regcomp rint strcasecmp strdup strtol tzset])
 AC_CHECK_FUNC(dlopen,
-  AC_DEFINE([HAVE_DLOPEN]),
+  AC_DEFINE([HAVE_DLOPEN], [], [dlopen available]),
   AC_CHECK_LIB(dl, dlopen,
     [LIBS="$LIBS -ldl"
-     AC_DEFINE([HAVE_DLOPEN])]))
+     AC_DEFINE([HAVE_DLOPEN], [], [dlopen available])]))
 AC_CHECK_FUNC([regcomp], [HAVE_POSIX_REGEX=yes])
 
 
@@ -155,3 +155,7 @@ AS_IF([test "x$enable_flexible_member" = xyes],
 CPPFLAGS="$CPPFLAGS -DCLASSAD_DISTRIBUTION"
 
 AC_OUTPUT
+
+# Remove rpath junk from libtool
+sed -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
+sed -i 's|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool

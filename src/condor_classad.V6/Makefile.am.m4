@@ -70,7 +70,6 @@ dnl
 dnl END M4 CORE
 dnl
 
-
 if ENABLE_EXPLICIT_TEMPLATES
   _libclassad_la_SOURCES = instantiations.C
 endif
@@ -113,6 +112,9 @@ TESTS =									\
 	$(_test_xml)							\
 	$(_sample)							\
 	$(_extra_tests)
+# This must be set because we are patching libtool to remove rpaths
+TESTS_ENVIRONMENT=LD_LIBRARY_PATH=.libs
+
 
 check_PROGRAMS =							\
 	$(_classad_functional_tester)					\

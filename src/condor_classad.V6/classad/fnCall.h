@@ -48,13 +48,11 @@ typedef struct
 	int          flags;
 } ClassAdFunctionMapping;
 
-#ifdef HAVE_DLOPEN
 // If you create a shared library, you have to provide a function
 // named "Initialize" that conforms to this prototype. You will return
 // a table of function mappings.  The last mapping in the table should
 // have a NULL function pointer. It will be ignored.
 typedef	 ClassAdFunctionMapping *(*ClassAdSharedLibraryInit)(void);
-#endif
 
 /// Node of the expression which represents a call to an function
 class FunctionCall : public ExprTree
@@ -97,9 +95,7 @@ class FunctionCall : public ExprTree
 	static void RegisterFunction(std::string &functionName, ClassAdFunc function);
 	static void RegisterFunctions(ClassAdFunctionMapping *functions);
 
-#ifdef HAVE_DLOPEN
 	static bool RegisterSharedLibraryFunctions(const char *shared_library_path);
-#endif
 
  protected:
 	/// Constructor

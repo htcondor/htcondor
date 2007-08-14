@@ -51,7 +51,7 @@ void ClassAdLibraryVersion(int &major, int &minor, int &patch)
 
 void ClassAdLibraryVersion(string &version_string)
 {
-    version_string = "1.0rc2";
+    version_string = "1.0-rc2";
     return;
 }
 
