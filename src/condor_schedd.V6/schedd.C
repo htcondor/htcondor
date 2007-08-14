@@ -2978,7 +2978,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			// Backup the original IWD at submit time
 		if (buf) free(buf);
 		buf = NULL;
-		ad->LookupString(ATTR_JOB_IWD,&buf);
+		job_ad->LookupString(ATTR_JOB_IWD,&buf);
 		if ( buf ) {
 			sprintf(new_attr_value,"SUBMIT_%s",ATTR_JOB_IWD);
 			SetAttributeString(cluster,proc,new_attr_value,buf);
@@ -8848,9 +8848,19 @@ send_vacate(match_rec* match,int cmd)
 
 	msg->setSuccessDebugLevel(D_ALWAYS);
 
-	dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d )\n", match->peer, cmd );
-
-	startd->sendMsg( msg.get(), Stream::safe_sock, STARTD_CONTACT_TIMEOUT );
+		// Eventually we should keep info in the match record about if 
+		// the startd is able to receive incoming UDP (it will know
+		// because of the claim keepalive heartbeat).
+		// But for now, it is a knob.
+	if ( param_boolean("SCHEDD_SEND_VACATE_VIA_TCP",false) ) {
+		dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d ) via TCP\n", 
+				 match->peer, cmd );
+		startd->sendMsg( msg.get(), Stream::reli_sock, STARTD_CONTACT_TIMEOUT );
+	} else {
+		dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d ) via UDP\n", 
+				 match->peer, cmd );
+		startd->sendMsg( msg.get(), Stream::safe_sock, STARTD_CONTACT_TIMEOUT );
+	}
 }
 
 void
