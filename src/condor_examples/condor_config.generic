@@ -1402,6 +1402,16 @@ QUEUE_SUPER_USERS	= root, condor
 ##  be written, in kilobytes per second.
 #SLOW_CKPT_SPEED = 0
 
+##  How often should the shadow update the job queue with job
+##  attributes that periodically change?  Specified in seconds.
+#SHADOW_QUEUE_UPDATE_INTERVAL = 15 * 60
+
+##  Should the shadow wait to update certain job attributes for the
+##  next periodic update, or should it immediately these update
+##  attributes as they change?  Due to performance concerns of
+##  aggressive updates to a busy condor_schedd, the default is True.
+#SHADOW_LAZY_QUEUE_UPDATE = TRUE
+
 
 ##--------------------------------------------------------------------
 ##  condor_shadow.pvm

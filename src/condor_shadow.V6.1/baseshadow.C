@@ -1148,11 +1148,29 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 	jobAd->Assign(ATTR_NUM_JOB_STARTS, job_start_cnt);
 	dprintf(D_FULLDEBUG, "Set %s to %d\n", ATTR_NUM_JOB_STARTS, job_start_cnt);
 
-		// Update NumJobStarts in the schedd.  We want to do this
-		// immediately since this attribute might be used for peridoic
-		// expressions or scripts that want to know as soon as the job
-		// is really executing (e.g. via Quill, etc).
-	updateJobAttr(ATTR_NUM_JOB_STARTS, job_start_cnt);
+		// Update NumJobStarts in the schedd.  We honor a config knob
+		// for this since there's a big trade-off: if we update
+		// agressively and fsync() it to the job queue as soon as we
+		// hear from the starter, the semantics are about as solid as
+		// we can hope for, but it's a schedd scalability problem.  If
+		// we do a lazy update, there's no additional cost to the
+		// schedd, but it means that condor_q and quill won't see the
+		// change for N minutes, and if we happen to crash during that
+		// time, the attribute is never incremented.  However, the
+		// semantics aren't 100% solid, even if we don't update lazy,
+		// and since the copy in RAM is already updated, all the
+		// periodic user policy expressions will work right, so the
+		// default is to do it lazy.
+	if (param_boolean("SHADOW_LAZY_QUEUE_UPDATE", true)) {
+			// For lazy update, we just want to make sure the
+			// job_updater object knows about this attribute (which we
+			// already updated our copy of).
+		job_updater->watchAttribute(ATTR_NUM_JOB_STARTS);
+	}
+	else {
+			// They want it now, so do the qmgmt operation directly.
+		updateJobAttr(ATTR_NUM_JOB_STARTS, job_start_cnt);
+	}
 }
 
 
