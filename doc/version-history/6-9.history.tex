@@ -41,6 +41,15 @@ files made from the original version of the executable.
     \item The \Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES} setting was
       causing havoc for applications linked with GCB.
       This configuration setting is now always disabled if GCB is enabled.
+    \item Fixed a race condition in GCB\_connect() that would
+      frequently cause connect() attempts to fail, especially
+      non-blocking connections.
+    \item Fixed bugs in GCB\_select() when GCB changes the direction
+      of a connection from active to passive (for example, so that a
+      Condor daemon running behind a firewall will use an outbound
+      connection to communicate with a public client that had
+      attempted to initiate contact via the GCB broker).
+    \item Also improved logging at the GCB broker.
   \end{itemize}
 
   Additionally, there was a bug in how Condor was publishing the
