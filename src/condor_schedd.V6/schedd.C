@@ -6900,8 +6900,14 @@ Scheduler::spawnShadow( shadow_rec* srec )
 
 			if(wants_reconnect) {
 				args.AppendArg("--reconnect");
+				// pass the public ip/port of the schedd (used w/ reconnect)
+				argbuf.sprintf("--schedd%s", daemonCore->publicNetworkIpAddr());
+				args.AppendArg(argbuf.Value());
 			}
+			
+				// pass the private socket ip/port for use just by shadows
 			args.AppendArg(MyShadowSockName);
+				
 			args.AppendArg("-");
 		} else {
 			args.AppendArg(MyShadowSockName);

@@ -1837,12 +1837,17 @@ caRequestClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 int
 caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 {
-		char* global_job_id = NULL;
-		char* claimid = NULL;
-		Claim* claim = NULL;
+	char* global_job_id = NULL;
+	char* claimid = NULL;
+	char* schedd_addr = NULL;
+	Claim* claim = NULL;
+	int rval = TRUE;
+	MyString line;
+	ClassAd reply;
 
 	req_ad->LookupString(ATTR_CLAIM_ID, &claimid);
 	req_ad->LookupString(ATTR_GLOBAL_JOB_ID, &global_job_id);
+	req_ad->LookupString(ATTR_SCHEDD_IP_ADDR, &schedd_addr);
 	claim = resmgr->getClaimByGlobalJobIdAndId(global_job_id, claimid);
 
 	if( ! claim ) {
@@ -1854,13 +1859,25 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 		err_msg += " ( ";
 		err_msg += global_job_id;
 		err_msg += " ) not found";
-
 		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
-		free( global_job_id );
-		return FALSE;
+		rval = FALSE;
+		goto cleanup;
 	}
 
-	ClassAd reply;
+		// if startd is sending keepalives to the schedd,
+		// then we _must_ be passed the address of the schedd
+		// since it likely changed.
+	if ( (!schedd_addr) && 
+		 (param_boolean("STARTD_SENDS_ALIVES",false)) )
+	{
+		MyString err_msg;
+		err_msg.sprintf("Require %s, not found in request",
+						ATTR_SCHEDD_IP_ADDR);
+		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
+		rval = FALSE;
+		goto cleanup;
+	}
+
 	if( ! claim->publishStarterAd(&reply) ) {
 		MyString err_msg = "No starter found for ";
 		err_msg += ATTR_GLOBAL_JOB_ID;
@@ -1868,24 +1885,36 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 		err_msg += global_job_id;
 		err_msg += ")";
 		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
-		free( global_job_id );
-		return FALSE;
+		rval = FALSE;
+		goto cleanup;
+	}
+	
+		// if we are passed an updated schedd addr, stash it
+	if ( schedd_addr ) {
+		Client *client = claim->client();
+		if ( client ) {
+			client->setaddr(schedd_addr);
+		}
 	}
 
 		// if we're still here, everything worked, so we can reply
 		// with success...
-	MyString line;
 	line = ATTR_RESULT;
 	line += " = \"";
 	line += getCAResultString( CA_SUCCESS );
 	line += '"';
 	reply.Insert( line.Value() );
 
-	int rval = sendCAReply( s, cmd_str, &reply );
+	rval = sendCAReply( s, cmd_str, &reply );
 	if( ! rval ) {
 		dprintf( D_ALWAYS, "Failed to reply to request\n" );
 	}
-	free( global_job_id );
+
+cleanup:
+	if ( global_job_id ) free( global_job_id );
+	if ( claimid ) free( claimid );
+	if ( schedd_addr ) free( schedd_addr );
+
 	return rval;
 }
 

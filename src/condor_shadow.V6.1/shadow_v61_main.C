@@ -36,6 +36,7 @@ BaseShadow *Shadow = NULL;
 
 // settings we're given on the command-line
 static const char* schedd_addr = NULL;
+const char* public_schedd_addr = NULL;
 static const char* job_ad_file = NULL;
 static bool is_reconnect = false;
 static int cluster = -1;
@@ -83,6 +84,7 @@ parseArgs( int argc, char *argv[] )
 	char** tmp = argv;
 	for( tmp++; *tmp; tmp++ ) {
 		opt = tmp[0];
+		
 		if( sscanf(opt, "%d.%d", &cluster, &proc) == 2 ) {
 			if( cluster < 0 || proc < 0 ) {
 				dprintf(D_ALWAYS, 
@@ -93,6 +95,7 @@ parseArgs( int argc, char *argv[] )
 			args_handled++;
 			continue;
 		}
+		
 		if( opt[0] == '<' ) { 
 				// might be the schedd's address
 			if( is_valid_sinful(opt) ) {
@@ -101,14 +104,29 @@ parseArgs( int argc, char *argv[] )
 				continue;
 			} else {
 				dprintf(D_ALWAYS, 
-						"ERROR: invalid schedd_addr specified: %s\n", opt);
+						"ERROR: invalid shadow-private schedd_addr specified: %s\n", opt);
 				usage(argc, argv);
 			}
 		}
+
 		if( !strcmp(opt, "--reconnect") || !strcmp(opt, "-reconnect") ) {
 			is_reconnect = true;
 			args_handled++;
 			continue;
+		}
+
+		if ( strncmp(opt,"--schedd",8)==0 ) {
+			char *ptr = strchr(opt,'<');
+			if ( ptr && is_valid_sinful(ptr) ) {
+				dprintf(D_ALWAYS,"TODD GOOD ptr=%s opt=%s\n",ptr,opt);
+				public_schedd_addr = ptr;
+				args_handled++;
+				continue;
+			} else {
+				dprintf(D_ALWAYS, 
+						"ERROR: invalid public schedd_addr specified: %s\n", opt);
+				usage(argc, argv);
+			}
 		}
 			// the only other argument we understand is the
 			// filename we should read our ClassAd from, "-" for

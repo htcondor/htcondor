@@ -35,6 +35,8 @@
 #include "directory.h"
 #include "condor_claimid_parser.h"
 
+extern const char* public_schedd_addr;	// in shadow_v61_main.C
+
 // for remote syscalls, this is currently in NTreceivers.C.
 extern int do_REMOTE_syscall();
 
@@ -1515,7 +1517,7 @@ RemoteResource::locateReconnectStarter( void )
 	ClaimIdParser idp( claimid );
 	dprintf( D_FULLDEBUG, "gjid is %s claimid is %s\n", gjid, idp.publicClaimId());
 	ClassAd reply;
-	if( dc_startd->locateStarter(gjid, claimid, &reply, 20) ) {
+	if( dc_startd->locateStarter(gjid, claimid, public_schedd_addr, &reply, 20) ) {
 			// it worked, save the results and return success.
 		char* tmp = NULL;
 		if( reply.LookupString(ATTR_STARTER_IP_ADDR, &tmp) ) {

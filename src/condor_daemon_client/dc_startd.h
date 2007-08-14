@@ -123,6 +123,7 @@ public:
 
 	bool locateStarter( const char* global_job_id, 
 						const char* claim_id,
+						const char* schedd_public_addr,
 						ClassAd* reply, 
 						int timeout = -1 );
 

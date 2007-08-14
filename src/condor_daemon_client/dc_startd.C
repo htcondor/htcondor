@@ -436,6 +436,7 @@ DCStartd::renewLeaseForClaim( ClassAd* reply, int timeout )
 bool
 DCStartd::locateStarter( const char* global_job_id, 
 						 const char *claimId,
+						 const char *schedd_public_addr,
 						 ClassAd* reply,
 						 int timeout )
 {
@@ -463,6 +464,9 @@ DCStartd::locateStarter( const char* global_job_id,
 	line += '"';
 	req.Insert( line.Value() );
 
+	if ( schedd_public_addr ) {
+		req.Assign(ATTR_SCHEDD_IP_ADDR,schedd_public_addr);
+	}
 
 	return sendCACmd( &req, reply, false, timeout );
 }
