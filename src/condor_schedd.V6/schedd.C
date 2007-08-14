@@ -8059,15 +8059,33 @@ add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false)
 						current_time);
 	}
 
-	// Update the job run count
-	int count;
-	if ( GetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, &count ) < 0 ) {
-		count = 0;
-	}
-	SetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, ++count);
-
 	int job_univ = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &job_univ);
+
+
+		// Update the job's counter for the number of times a shadow
+		// was started (if this job has a shadow at all, that is).
+	int num;
+	switch (job_univ) {
+	case CONDOR_UNIVERSE_SCHEDULER:
+	case CONDOR_UNIVERSE_LOCAL:
+			// CRUFT: ATTR_JOB_RUN_COUNT is deprecated
+		if (GetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, &num) < 0) {
+			num = 0;
+		}
+		SetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, num);
+		break;
+
+	default:
+		if (GetAttributeInt(cluster, proc, ATTR_NUM_SHADOW_STARTS, &num) < 0) {
+			num = 0;
+		}
+		num++;
+		SetAttributeInt(cluster, proc, ATTR_NUM_SHADOW_STARTS, num);
+			// CRUFT: ATTR_JOB_RUN_COUNT is deprecated
+		SetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, num);
+	}
+
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
 		// check if this run is a restart from checkpoint
 		int lastckptTime = 0;
@@ -8489,6 +8507,21 @@ _mark_job_running(PROC_ID* job_id)
 	SetAttributeInt(job_id->cluster, job_id->proc,
 					ATTR_LAST_SUSPENSION_TIME, 0 );
 
+
+		// If this is a scheduler universe job, increment the
+		// job counter for the number of times it started executing.
+	int univ = CONDOR_UNIVERSE_STANDARD;
+	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE, &univ);
+	if (univ == CONDOR_UNIVERSE_SCHEDULER) {
+		int num;
+		if (GetAttributeInt(job_id->cluster, job_id->proc,
+							ATTR_NUM_JOB_STARTS, &num) < 0) {
+			num = 0;
+		}
+		num++;
+		SetAttributeInt(job_id->cluster, job_id->proc,
+						ATTR_NUM_JOB_STARTS, num);
+	}
 }
 
 /*
@@ -9448,13 +9481,22 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// This used to be in the default case in the switch statement
 		// above, but we might need to do this in other cases in
 		// the future
-	if ( reportException && srec != NULL &&
-		 ( ! srec->removed && srec->match ) ) {
-			// Record that we had an exception.  This function will
-			// relinquish the match if we get too many exceptions 
-		HadException(srec->match);
+	if (reportException && srec != NULL) {
+			// Record the shadow exception in the job ad.
+		int num_excepts = 0;
+		GetAttributeInt(job_id.cluster, job_id.proc,
+						ATTR_NUM_SHADOW_EXCEPTIONS, &num_excepts);
+		num_excepts++;
+		SetAttributeInt(job_id.cluster, job_id.proc,
+						ATTR_NUM_SHADOW_EXCEPTIONS, num_excepts);
+
+		if (!srec->removed && srec->match) {
+				// Record that we had an exception.  This function will
+				// relinquish the match if we get too many exceptions 
+			HadException(srec->match);
+		}
 	}
-	return ( ret );	
+	return (ret);	
 }
 
 void

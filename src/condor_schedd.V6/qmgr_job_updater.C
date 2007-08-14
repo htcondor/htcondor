@@ -223,6 +223,15 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 
 
 bool
+QmgrJobUpdater::updateAttr( const char *name, int value, bool updateMaster )
+{
+	MyString buf;
+    buf.sprintf("%d", value);
+	return updateAttr(name, buf.Value(), updateMaster);
+}
+
+
+bool
 QmgrJobUpdater::updateJob( update_t type )
 {
 	ExprTree* tree = NULL;

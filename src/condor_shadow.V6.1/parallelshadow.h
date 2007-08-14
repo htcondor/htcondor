@@ -133,6 +133,8 @@ class ParallelShadow : public BaseShadow
 
 	virtual bool updateJobAttr(const char*, const char*);
 
+	virtual bool updateJobAttr(const char*, int);
+
  protected:
 
 	virtual void logReconnectedEvent( void );

@@ -127,6 +127,13 @@ public:
 	virtual bool getLocalJobAd( void );
 
 		/**
+		 * Notify our controller that the job is about to spawn.  This
+		 * is where ATTR_NUM_JOB_STARTS gets incremented for local
+		 * universe jobs.
+		 */
+	virtual void notifyJobPreSpawn( void );
+
+		/**
 		 * A job is exiting the Starter and we need to take necessary
 		 * actions. First we will update the job's ad file with various
 		 * information about what the job did. Next, if the job completed on

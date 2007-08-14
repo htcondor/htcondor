@@ -71,6 +71,9 @@ public:
 		*/
 	bool updateAttr( const char *name, const char *expr, bool updateMaster );
 
+		/// Helper version that takes an int value instead of a string expr.
+	bool updateAttr( const char *name, int value, bool updateMaster );
+
 		/** Add the given attribute to our list of attributes we
 			should watch for changes and update.  The type specifies
 			if it's a special attribute that should only be updated on

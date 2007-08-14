@@ -300,6 +300,9 @@ class BaseShadow : public Service
 		/** Connect to the job queue and update one attribute */
 	virtual bool updateJobAttr( const char *name, const char *expr );
 
+		/** Connect to the job queue and update one integer attribute */
+	virtual bool updateJobAttr( const char *name, int value );
+
 		/** Do whatever cleanup (like killing starter(s)) that's
 			required before the shadow can exit.
 		*/

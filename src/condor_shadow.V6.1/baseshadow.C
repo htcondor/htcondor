@@ -1084,6 +1084,13 @@ BaseShadow::updateJobAttr( const char *name, const char *expr )
 
 
 bool
+BaseShadow::updateJobAttr( const char *name, int value )
+{
+	return job_updater->updateAttr( name, value, false );
+}
+
+
+bool
 BaseShadow::updateJobInQueue( update_t type )
 {
 		// insert the bytes sent/recv'ed by this job into our job ad.

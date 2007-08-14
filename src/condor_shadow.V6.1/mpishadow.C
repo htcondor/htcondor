@@ -1235,6 +1235,14 @@ MPIShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 			// timers we need.
 		shadow_user_policy.startTimer();
 		
+			// Update NumJobStarts in the schedd
+			// TODO Should we do the update through the job_updater? The
+			//   MPI and Parallel shadows don't start the job_updaters
+			//   timer.
+		int job_start_cnt = 0;
+		jobAd->LookupInteger(ATTR_NUM_JOB_STARTS, job_start_cnt);
+		job_start_cnt++;
+		updateJobAttr(ATTR_NUM_JOB_STARTS, job_start_cnt);
 	}
 }
 

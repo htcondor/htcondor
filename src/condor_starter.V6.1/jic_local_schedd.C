@@ -255,6 +255,17 @@ JICLocalSchedd::getLocalJobAd( void )
 	return true;
 }
 
+void
+JICLocalSchedd::notifyJobPreSpawn( void )
+{
+	JICLocal::notifyJobPreSpawn();
+
+    int job_start_cnt = 0;
+    job_ad->LookupInteger(ATTR_NUM_JOB_STARTS, job_start_cnt);
+    job_start_cnt++;
+    job_updater->updateAttr(ATTR_NUM_JOB_STARTS, job_start_cnt, false);
+}
+
 /**
  * A job is exiting the Starter and we need to take necessary
  * actions. First we will update the job's ad file with various
