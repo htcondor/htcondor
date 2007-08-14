@@ -5077,6 +5077,22 @@ These macros affect the \Condor{negotiator}.
   \Condor{restart} and not just \Condor{reconfig} for the change to
   take effect.
 
+\item[\Macro{NEGOTIATOR\_INFORM\_STARTD}]
+  \label{param:NegotiatorInformStartd}
+  Boolean setting that controls if the \Condor{negotiator} should
+  inform the \Condor{startd} when it has been matched with a job.
+  The default is \Expr{True}.
+  When this is set to \Expr{False}, the \Condor{startd} will never
+  enter the Matched state, and will go directly from Unclaimed to
+  Claimed.
+  Because this notification is done via UDP, if a pool is configured
+  so that the execute hosts do not create UDP command sockets (see the
+  \Macro{WANT\_UDP\_COMMAND\_SOCKET} setting described in
+  section~\ref{param:WantUDPCommandSocket} on
+  page~\pageref{param:WantUDPCommandSocket} for details), the
+  \Condor{negotiator} should be configured not to attempt to contact
+  these \Condor{startds} by configuring this setting to \Expr{False}.
+
 \item[\Macro{NEGOTIATOR\_PRE\_JOB\_RANK}]
   \label{param:NegotiatorPreJobRank} Resources that match a request
   are first sorted by this expression.  If there are any ties in the
