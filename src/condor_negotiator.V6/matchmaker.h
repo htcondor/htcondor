@@ -171,6 +171,9 @@ class Matchmaker : public Service
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
 		bool want_matchlist_caching;	// should we cache matches per autocluster?
 		bool ConsiderPreemption; // if false, negotiation is faster (default=true)
+		/// Should the negotiator inform startds of matches?
+		bool want_inform_startd;	
+		/// Should the negotiator use non-blocking connect to contact startds?
 		bool want_nonblocking_startd_contact;
         ExprTree *DynQuotaMachConstraint;   // Filter machineAds by this
                                             // constraint before calculating

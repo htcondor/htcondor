@@ -361,6 +361,7 @@ reinitialize ()
 	want_simple_matching = param_boolean("NEGOTIATOR_SIMPLE_MATCHING",false);
 	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",true);
 	ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
+	want_inform_startd = param_boolean("NEGOTIATOR_INFORM_STARTD", true);
 	want_nonblocking_startd_contact = param_boolean("NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT",true);
 
 	if (DynQuotaMachConstraint) delete DynQuotaMachConstraint;
@@ -2634,7 +2635,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 
-	if ( want_claiming && param_boolean("NEGOTIATOR_INFORM_STARTD",true)) {
+	if (want_claiming && want_inform_startd) {
 			// The following sends a message to the startd to inform it
 			// of the match.  Although it is a UDP message, it still may
 			// block, because if there is no cached security session,
