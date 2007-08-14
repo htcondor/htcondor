@@ -4329,6 +4329,35 @@ The amount of time (in seconds) between ClassAd updates that the
 \Condor{shadow} daemon sends to the \Condor{schedd} daemon.
 Defaults to 900 (15 minutes).
 
+\item[\Macro{SHADOW\_LAZY\_QUEUE\_UPDATE}]
+\label{param:ShadowLazyQueueUpdate}
+  This boolean macro specifies if the \Condor{shadow} should
+  immediately update the job queue for certain attributes (at this
+  time, it only effects the \AdAttr{NumJobStarts} counter) or if it
+  should wait and only update the job queue on the next periodic
+  update.
+  There is a trade-off between performance and the semantics of these
+  attributes, which is why the behavior is controlled by a
+  configuration macro.
+  If the \Condor{shadow} do not use a lazy update, and immediately
+  ensures the changes to the job attributes are written to the job
+  queue on disk, the semantics for the attributes are very solid
+  (there's only a tiny chance that the counters will be out of sync
+  with reality), but this introduces a potentially large performance
+  and scalability problem for a busy \Condor{schedd}.
+  If the \Condor{shadow} uses a lazy update, there's no additional cost
+  to the \Condor{schedd}, but it means that \Condor{q} and Quill won't
+  immediately see the changes to the job attributes, and if the
+  \Condor{shadow} happens to crash or be killed during that time, the
+  attributes are never incremented.
+  Given that the most obvious usage of these counter attributes is for
+  the periodic user policy expressions (which are evaluated directly
+  by the \Condor{shadow} using its own copy of the job's classified
+  ad, which is immediately updated in either case), and since the
+  additional cost for aggressive updates to a busy \Condor{schedd}
+  could potentially cause major problems, the default is \Expr{True}
+  to do lazy, periodic updates.
+
 \item[\Macro{COMPRESS\_PERIODIC\_CKPT}]
   \label{param:CompressPeriodicCkpt} This boolean macro specifies
   whether the shadow should instruct applications to compress periodic
