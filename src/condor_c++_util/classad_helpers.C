@@ -251,6 +251,7 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 
 	job_ad->Assign( ATTR_NUM_CKPTS, 0 );
+	job_ad->Assign( ATTR_NUM_JOB_STARTS, 0 );
 	job_ad->Assign( ATTR_NUM_RESTARTS, 0 );
 	job_ad->Assign( ATTR_NUM_SYSTEM_HOLDS, 0 );
 	job_ad->Assign( ATTR_JOB_COMMITTED_TIME, 0 );

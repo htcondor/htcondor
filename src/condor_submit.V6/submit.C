@@ -608,6 +608,9 @@ init_job_ad()
 	(void) sprintf (buffer, "%s = 0", ATTR_NUM_CKPTS);
 	InsertJobExpr (buffer);
 
+	(void) sprintf (buffer, "%s = 0", ATTR_NUM_JOB_STARTS);
+	InsertJobExpr (buffer);
+
 	(void) sprintf (buffer, "%s = 0", ATTR_NUM_RESTARTS);
 	InsertJobExpr (buffer);
 
