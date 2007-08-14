@@ -6248,23 +6248,25 @@ When not defined, the default value is the same \MacroNI{NUM\_CPUS}.
 \item[\Macro{VM\_STATUS\_INTERVAL}]
 \label{param:VMStatusInterval}
 An integer number of seconds that defaults to 60,
-representing the interval between job status checks to see
-if the job has finished.
+representing the interval between job status checks by the
+\Condor{starter} to see if the job has finished.
 A minimum value of 30 seconds is enforced.
 
 \item[\Macro{VM\_GAHP\_REQ\_TIMEOUT}]
 \label{param:VMGAHPReqTimeout}
 An integer number of seconds that defaults to 300 (five minutes),
 representing the amount of time Condor will wait for a command issued
-to the \Condor{vm-gahp} to be completed.
+from the \Condor{starter} to the \Condor{vm-gahp} to be completed.
 When a command times out, an error is reported to the \Condor{startd}.
 
 \item[\Macro{VM\_RECHECK\_INTERVAL}]
 \label{param:VMRecheckInterval}
 An integer number of seconds that defaults to 600 (ten minutes),
-representing the amount of time Condor waits after a
-virtual machine error, and before rechecking.
-If the recheck fails, Condor disables the vm universe.
+representing the amount of time the \Condor{startd} waits after a
+virtual machine error as reported by the \Condor{starter},
+and before checking a final time on the status of the virtual machine.
+If the check fails, Condor disables starting any new vm universe jobs
+by removing the \Attr{VM\_Type} attribute from the machine ClassAd.
 
 \item[\Macro{VM\_SOFT\_SUSPEND}]
 \label{param:VMSoftSuspend}
