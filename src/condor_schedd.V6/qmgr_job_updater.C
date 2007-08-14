@@ -167,7 +167,7 @@ QmgrJobUpdater::startUpdateTimer( void )
         EXCEPT( "Can't register DC timer!" );
     }
 	dprintf( D_FULLDEBUG, "QmgrJobUpdater: started timer to update queue "
-			 "(tid=%d)\n", q_update_tid );
+			 "every %d seconds (tid=%d)\n", q_interval, q_update_tid );
 }
 
 
