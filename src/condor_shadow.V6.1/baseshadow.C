@@ -345,6 +345,8 @@ void BaseShadow::config()
 		// LOCAL_UNIVERSE_JOB_CLEANUP_RETRY_DELAY in the local starter.
 	m_max_cleanup_retries = param_integer("SHADOW_MAX_JOB_CLEANUP_RETRIES", 5);
 	m_cleanup_retry_delay = param_integer("SHADOW_JOB_CLEANUP_RETRY_DELAY", 30);
+
+	m_lazy_queue_update = param_boolean("SHADOW_LAZY_QUEUE_UPDATE", true);
 }
 
 
@@ -1161,7 +1163,7 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 		// and since the copy in RAM is already updated, all the
 		// periodic user policy expressions will work right, so the
 		// default is to do it lazy.
-	if (param_boolean("SHADOW_LAZY_QUEUE_UPDATE", true)) {
+	if (m_lazy_queue_update) {
 			// For lazy update, we just want to make sure the
 			// job_updater object knows about this attribute (which we
 			// already updated our copy of).

@@ -333,7 +333,18 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 	int job_reconnect_cnt = 0;
 	jobAd->LookupInteger(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
 	job_reconnect_cnt++;
-	updateJobAttr(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
+	jobAd->Assign(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
+
+	if (m_lazy_queue_update) {
+			// For lazy update, we just want to make sure the
+			// job_updater object knows about this attribute (which we
+			// already updated our copy of).
+		job_updater->watchAttribute(ATTR_NUM_JOB_RECONNECTS);
+	}
+	else {
+			// They want it now, so do the qmgmt operation directly.
+		updateJobAttr(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
+	}
 
 		// if we're trying to remove this job, now that connection is
 		// reestablished, we can kill the starter, evict the job, and
