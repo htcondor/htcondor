@@ -9,6 +9,7 @@ Changes for version 1.0-rc2
 * configure.ac now removes all rpath junk from libtool
  - a side-effect is the need to set LD_LIBRARY_PATH=.libs
    if you want to run the compiled programs before they are installed
+* memory leak in fnCall.C:regex_helper fixed (PCRE only issue)
 ...(in progress)...
 
 Changes for version 1.0-rc1

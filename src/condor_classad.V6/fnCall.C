@@ -2382,6 +2382,8 @@ static bool regexp_helper(
         } else {
             result.SetBooleanValue( false );
         }
+
+		pcre_free(re);
     }
     return true;
 #endif

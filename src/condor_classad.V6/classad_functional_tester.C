@@ -785,6 +785,7 @@ void handle_same(
             print_error_message("the expressions are different.", state);
         }
     }
+
     if (tree != NULL) {
         delete tree;
     } 
