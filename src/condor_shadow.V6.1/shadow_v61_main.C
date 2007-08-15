@@ -115,16 +115,17 @@ parseArgs( int argc, char *argv[] )
 			continue;
 		}
 
-		if ( strncmp(opt,"--schedd",8)==0 ) {
-			char *ptr = strchr(opt,'<');
-			if ( ptr && is_valid_sinful(ptr) ) {
-				dprintf(D_ALWAYS,"TODD GOOD ptr=%s opt=%s\n",ptr,opt);
+		if (strncmp(opt, "--schedd", 8) == 0) {
+			char *ptr = strchr(opt, '<');
+			if (ptr && is_valid_sinful(ptr)) {
 				public_schedd_addr = ptr;
 				args_handled++;
 				continue;
-			} else {
+			}
+			else {
 				dprintf(D_ALWAYS, 
-						"ERROR: invalid public schedd_addr specified: %s\n", opt);
+						"ERROR: invalid public schedd_addr specified: %s\n",
+						opt);
 				usage(argc, argv);
 			}
 		}
