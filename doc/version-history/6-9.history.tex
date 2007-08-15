@@ -64,9 +64,9 @@ section~\ref{user-man-jobad} on page~\pageref{user-man-jobad}.
 
 \item The new variable \Macro{SHADOW\_LAZY\_QUEUE\_UPDATE} controls if
   the \Condor{shadow} should immediately update the job queue for
-  certain attributes (for example, the new \AdAttr{NumJobStarts}
-  counter) or if it should wait and only update the job queue on the
-  next periodic update.
+  certain attributes (for example, the new \AdAttr{NumJobStarts} and
+  \AdAttr{NumJobReconnects} counters) or if it should wait and only
+  update the job queue on the next periodic update.
   The default is \Expr{True} to do lazy, periodic updates.
   See section~\ref{param:ShadowLazyQueueUpdate} on
   page~\pageref{param:ShadowLazyQueueUpdate} for more information.

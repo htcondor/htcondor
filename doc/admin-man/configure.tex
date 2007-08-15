@@ -4333,9 +4333,9 @@ Defaults to 900 (15 minutes).
 \label{param:ShadowLazyQueueUpdate}
   This boolean macro specifies if the \Condor{shadow} should
   immediately update the job queue for certain attributes (at this
-  time, it only effects the \AdAttr{NumJobStarts} counter) or if it
-  should wait and only update the job queue on the next periodic
-  update.
+  time, it only effects the \AdAttr{NumJobStarts} and
+  \AdAttr{NumJobReconnects} counters) or if it should wait and only
+  update the job queue on the next periodic update.
   There is a trade-off between performance and the semantics of these
   attributes, which is why the behavior is controlled by a
   configuration macro.
