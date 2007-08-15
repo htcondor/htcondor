@@ -313,7 +313,7 @@ class Scheduler : public Service
 	bool			WriteExecuteToUserLog( PROC_ID job_id, const char* sinful = NULL );
 	bool			WriteEvictToUserLog( PROC_ID job_id, bool checkpointed = false );
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
-	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );	
+	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
 	int				receive_startd_alive(int cmd, Stream *s);
 #ifdef WANT_NETMAN
 	void			RequestBandwidth(int cluster, int proc, match_rec *rec);
