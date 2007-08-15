@@ -6378,56 +6378,162 @@ hardware virtualization such as Intel VT and AMD-V.
 When not defined, the default value is \Expr{False}.
 
 \item[\Macro{XEN\_SCRIPT}]
-\label{param:XenScript}
+  \label{param:XenScript}
+  The complete path and file name of the script that controls Xen.
+  There is no default value for this required variable.
 
 \item[\Macro{XEN\_DEFAULT\_KERNEL}]
-\label{param:XenDefaultKernel}
+  \label{param:XenDefaultKernel}
+  The complete path and executable name of a Xen kernel to be utilized
+  if the job's submission does not specify its own kernel image.
 
 \item[\Macro{XEN\_DEFAULT\_RAMDISK}]
-\label{param:XenDefaultRAMDisk}
+  \label{param:XenDefaultRAMDisk}
+  The complete path and image file name for the initrd image,
+  if used with the default kernel image.
 
 \item[\Macro{XEN\_BOOTLOADER}]
-\label{param:XenBootloader}
+  \label{param:XenBootloader}
+  A required full path and executable for the Xen bootloader,
+  if the kernel image includes a disk image.
 
 \item[\Macro{XEN\_VIF\_PARAMETER}]
-\label{param:XenVIFParameter}
+  \label{param:XenVIFParameter}
+  An optional string used in networking that the \Condor{vm-gahp}
+  inserts into the Xen configuration file for a vif parameter.
+  If not defined, then the inserted string will be
+  \begin{verbatim}
+  vif = ['']
+  \end{verbatim}
 
 \item[\Macro{XEN\_IMAGE\_IO\_TYPE}]
-\label{param:XenImageIOType}
+  \label{param:XenImageIOType}
+  An optional string that defines a file I/O device.
+  For Xen checkpoints, all machines with a shared file system must
+  use the same file I/O type.
+  When not defined, the default value uses a loopback device:
+  \begin{verbatim}
+  XEN_IMAGE_IO_TYPE = file:
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_KERNEL}]
-\label{param:XenVTKernel}
+  \label{param:XenVTKernel}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  kernel="/usr/lib/xen/boot/hvmloader"
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_KERNEL = "/usr/lib/xen/boot/hvmloader"
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_BUILDER}]
-\label{param:XenVTBuilder}
+  \label{param:XenVTBuilder}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  builder='hvm'
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_BUILDER = 'hvm'
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_SHADOW\_MEMORY}]
-\label{param:XenVTShadowMemory}
+  \label{param:XenVTShadowMemory}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  shadow_memory=8
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_SHADOW_MEMORY = 8
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_DEVICE\_MODEL}]
-\label{param:XenVTDeviceModel}
+  \label{param:XenVTDeviceModel}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  device_model=/usr/lib/xen/bin/qemu-dm
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_DEVICE_MODEL = '/usr/lib/xen/bin/qemu-dm'
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_SDL}]
-\label{param:XenVTSDL}
+  \label{param:XenVTSDL}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  sdl=0
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_SDL = 0
+  \end{verbatim}
 
-\item[\Macro{XEN\_VT\_VMC}]
-\label{param:XenVTVMC}
+\item[\Macro{XEN\_VT\_VNC}]
+  \label{param:XenVTVNC}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  vnc=1
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_VNC = 1
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_STDVGA}]
-\label{param:XenVTSTDVGA}
+  \label{param:XenVTSTDVGA}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  stdvga=0
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_STDVGA = 0
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_SERIAL}]
-\label{param:XenVTSerial}
+  \label{param:XenVTSerial}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  serial='pty'
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_SERIAL = 'pty'
+  \end{verbatim}
 
 \item[\Macro{XEN\_DEVICE\_TYPE\_FOR\_VT}]
-\label{param:XenDeviceTypeForVT}
+  \label{param:XenDeviceTypeForVT}
+  Defaults to the string \verb@vbd:@ for paravirtualized guests.
+  Use the string \verb@ioemu:@ for unmodified guest domains. 
 
 \item[\Macro{XEN\_ALLOW\_HARDWARE\_VT\_SUSPEND}]
-\label{param:XenAllowHardwareVTSuspend}
+  \label{param:XenAllowHardwareVTSuspend}
+  A boolean value that defaults to \Expr{False}.
+  In the future, as Xen hardware virtualization guests may be saved
+  and restored, this configuration variable may be utilized.
 
 \end{description}
 
-These macros affect the configuration of Condor where Condor is
+The following two macros affect the configuration of Condor where Condor is
 running on a host machine, the host machine is running an
 inner virtual machine,
 and Condor is also running on that inner virtual machine.
