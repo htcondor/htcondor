@@ -70,6 +70,9 @@ dnl
 dnl END M4 CORE
 dnl
 
+# This assists when working on a UW CS CSL machine
+ACLOCAL_AMFLAGS = -I /s/libtool/share/aclocal
+
 if ENABLE_EXPLICIT_TEMPLATES
   _libclassad_la_SOURCES = instantiations.C
 endif
