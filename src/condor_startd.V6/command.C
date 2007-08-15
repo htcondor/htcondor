@@ -1871,7 +1871,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 		 (param_boolean("STARTD_SENDS_ALIVES",false)) )
 	{
 		MyString err_msg;
-		err_msg.sprintf("Require %s, not found in request",
+		err_msg.sprintf("Required %s, not found in request",
 						ATTR_SCHEDD_IP_ADDR);
 		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
 		rval = FALSE;
