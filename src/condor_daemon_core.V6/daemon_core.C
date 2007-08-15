@@ -28,7 +28,9 @@
 // //////////////////////////////////////////////////////////////////////
 
 #include "condor_common.h"
+#ifdef HAVE_EXT_GSOAP
 #include "stdsoap2.h"
+#endif
 #include "condor_socket_types.h"
 
 #if HAVE_EXT_GCB
@@ -90,7 +92,9 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #endif
 #include "directory.h"
 #include "../condor_io/condor_rw.h"
-#include "httpget.h"
+#ifdef HAVE_EXT_GSOAP
+#  include "httpget.h"
+#endif
 #include "daemon_core_sock_adapter.h"
 #include "HashTable.h"
 #include "selector.h"
@@ -200,7 +204,9 @@ int ZZZ_always_increase() {
 
 static int _condor_exit_with_exec = 0;
 
+#ifdef HAVE_EXT_GSOAP
 extern int soap_serve(struct soap*);
+#endif
 extern int LockFd;
 extern void drop_addr_file( void );
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD
@@ -305,7 +311,9 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	sockTable->fill(blankSockEnt);
 
 	initial_command_sock = -1;
+#ifdef HAVE_EXT_GSOAP
 	soap_ssl_sock = -1;
+#endif
 
 	if(maxPipe == 0)
 		maxPipe = DEFAULT_MAXPIPES;
@@ -374,13 +382,17 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	only_allow_soap = 0;
 
+#ifdef HAVE_EXT_GSOAP
 #ifdef COMPILE_SOAP_SSL
 	mapfile =  NULL;
+#endif
 #endif
 
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
+#ifdef HAVE_EXT_GSOAP
 	soap = new struct soap;
+#endif
 	
 	localAdFile = NULL;
 
@@ -511,8 +523,9 @@ DaemonCore::~DaemonCore()
 		free(_cookie_data_old);
 	}
 
+#ifdef HAVE_EXT_GSOAP
 	delete soap;
-
+#endif
 		
 	if(localAdFile) {
 		free(localAdFile);
@@ -2201,6 +2214,7 @@ DaemonCore::ReInit()
 		}
 	}
 
+#ifdef HAVE_EXT_GSOAP
 #ifdef COMPILE_SOAP_SSL
 	MyString subsys = MyString(mySubSystem);
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
@@ -2234,6 +2248,7 @@ DaemonCore::ReInit()
 		}
 	}
 #endif // COMPILE_SOAP_SSL
+#endif // HAVE_EXT_GSOAP
 
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
@@ -3058,8 +3073,10 @@ int DaemonCore::HandleReq(Stream *insock)
     KeyInfo *the_key        = NULL;
     char    *the_sid        = NULL;
     char    * who = NULL;   // Remote user
+#ifdef HAVE_EXT_GSOAP
 	bool is_http_post = false;	// must initialize to false
 	bool is_http_get = false;   // must initialize to false
+#endif
 
 	ASSERT(insock);
 
@@ -3363,6 +3380,7 @@ int DaemonCore::HandleReq(Stream *insock)
 		condor_read(((Sock*)stream)->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
 	}
+#ifdef HAVE_EXT_GSOAP
 	if ( strstr(tmpbuf,"GET") ) {
 		if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
 			// mini-web server requires READ authorization.
@@ -3441,6 +3459,7 @@ int DaemonCore::HandleReq(Stream *insock)
 		result = TRUE;
 		goto finalize;
 	}
+#endif // HAVE_EXT_GSOAP
 
 	if (only_allow_soap) {
 		dprintf(D_ALWAYS,

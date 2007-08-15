@@ -30,16 +30,14 @@
 #include "grid_universe.h"
 #include "simplelist.h"
 #include "list.h"
-#include "schedd_api.h"
+#ifdef HAVE_EXT_GSOAP
+#  include "schedd_api.h"
+#endif
 #include "tdman.h"
 #include "condor_crontab.h"
 
 template class SimpleList<TransferRequest*>;
 template class HashTable<MyString, TransferRequest*>;
-
-template class HashTable<MyString, JobFile>;
-template class List<FileInfo>;
-template class Item<FileInfo>;
 
 class Shadow;
 
@@ -93,5 +91,10 @@ template class Queue<PROC_ID>;
 // where you'd expect to find it *sigh*)
 
 // schedd_api
+#ifdef HAVE_EXT_GSOAP
+template class HashTable<MyString, JobFile>;
+template class List<FileInfo>;
+template class Item<FileInfo>;
 template class HashTable<int, ScheddTransaction*>;
 template class HashTable<PROC_ID, Job*>;
+#endif
