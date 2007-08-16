@@ -415,6 +415,7 @@ XCOMM End translation of func(jar_target)
 ** mechanisms.
 ***********************************************************************/
 
+#ifdef HAVE_EXT_GSOAP
 /* given the name of the daemon, produce a list of object files for the
 	generated sources from soapcpp2 
 */
@@ -452,6 +453,10 @@ XCOMM .o files. Otherwise, the suffix rules do not get the dependencies @@\
 XCOMM right. @@\
 $(SOAP_OBJS): $(SOAP_SRC) @@\
 $(SOAP_SRC): soapfiles
+#else // no HAVE_EXT_GSOAP
+#define soapobjs(daemon)
+#define gen_soapfiles(daemon,service)
+#endif // HAVE_EXT_GSOAP
 
 /***********************************************************************
 ** release targets
