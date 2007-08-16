@@ -1502,10 +1502,11 @@ AssignOp::DeepCopy(void) const
 	CopyBaseExprTree(copy);
 	return copy;
 }
-#ifdef CLASSAD_FUNCTIONS
-#include "dlfcn.h"
-#include "classad_shared.h"
+#ifdef HAVE_DLFCN_H
+#include <dlfcn.h>
 #endif
+
+#include "classad_shared.h"
 
 int Function::CalcPrintToStr(void)
 {
@@ -1713,7 +1714,7 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 		} else if (!strcasecmp(name, "regexps")) {
 			successful_eval = FunctionRegexps(number_of_args, evaluated_args, result);
 		}
-#ifdef CLASSAD_FUNCTIONS
+#ifdef HAVE_DLOPEN
         else {
 			successful_eval = FunctionSharedLibrary(number_of_args, 
 													evaluated_args, result);
@@ -1780,7 +1781,7 @@ bool string_is_all_whitespace(char *s)
 	return is_all_whitespace;
 }
 
-#ifdef CLASSAD_FUNCTIONS
+#ifdef HAVE_DLOPEN
 int Function::FunctionSharedLibrary(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function

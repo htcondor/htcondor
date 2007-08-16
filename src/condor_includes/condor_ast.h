@@ -404,7 +404,7 @@ class Function: public FunctionBase
 
 	int FunctionScript(int number_of_arguments, EvalResult *arguments, 
 					   EvalResult *result);
-#ifdef CLASSAD_FUNCTIONS
+#ifdef HAVE_DLOPEN
 	int FunctionSharedLibrary(int number_of_arguments, EvalResult *arguments, 
 					   EvalResult *result);
 #endif

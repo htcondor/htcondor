@@ -1631,6 +1631,7 @@ AC_CHECK_HEADERS([sys/statvfs.h])
 AC_CHECK_HEADERS([sys/vfs.h])
 AC_CHECK_HEADERS([sys/mount.h])
 AC_CHECK_HEADERS([ustat.h])
+AC_CHECK_HEADERS([dlfcn.h])
 AC_CHECK_HEADERS([resolv.h],[],[],[
 #include<sys/types.h>
 #include<netinet/in.h>
@@ -1656,8 +1657,9 @@ AC_CHECK_TYPES([__int64])
 AC_CHECK_FUNCS([strsignal])
 AC_CHECK_FUNCS([stat64])
 AC_CHECK_FUNCS([lchown])
-AC_CHECK_FUNC(dlopen, ,AC_CHECK_LIB(dl, dlopen))
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
+AC_SEARCH_LIBS([dlopen], [dl],
+  AC_DEFINE([HAVE_DLOPEN], [1], [dlopen function is available]))
 
 # If we can't find clone() on linux (for fast forking from large
 # processes), then somebody better understand why; so produce a fatal
@@ -1950,6 +1952,9 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
     CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
     ;;
   "2.5." )
+    including_glibc_ext=NO
+    ;;
+  "2.6." ) # F7 uses glibc 2.6-4
     including_glibc_ext=NO
     ;;
   * )  

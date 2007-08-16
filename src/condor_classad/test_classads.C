@@ -27,7 +27,7 @@
 #include "stringSpace.h"
 #include "condor_scanner.h" 
 #include "iso_dates.h"
-#ifdef CLASSAD_FUNCTIONS
+#ifdef HAVE_DLOPEN // Used to be CLASSAD_FUNCTIONS
 #include "condor_config.h"
 #endif
 
@@ -46,7 +46,7 @@ extern StringSpace classad_string_space; // for debugging only!
 #define NUMBER_OF_CLASSAD_STRINGS (sizeof(classad_strings)/sizeof(char *))
 char *classad_strings[] = 
 {
-#ifdef CLASSAD_FUNCTIONS
+#ifdef HAVE_DLOPEN
 	"A = 1, B=2, C = 3, D='2001-04-05T12:14:15', G=GetTime(1), H=foo(1)",
 #else
 	"A = 1, B=2, C = 3, D='2001-04-05T12:14:15', E=TRUE",
@@ -206,7 +206,7 @@ void test_not_in_references(char *name,	StringList &references,
     int line_number, TestResults *results);
 void test_dirty_attribute(
     TestResults *results);
-#ifdef CLASSAD_FUNCTIONS
+#ifdef HAVE_DLOPEN
 static void test_functions( TestResults  *results);
 static void test_function_int( TestResults  *results);
 static void test_function_real( TestResults  *results);
@@ -478,7 +478,7 @@ main(
 		test_dirty_attribute(&test_results);
 	}
 
-#ifdef CLASSAD_FUNCTIONS
+#ifdef HAVE_DLOPEN
 	if (parameters.test_functions) {
 		test_functions(&test_results);
 	}
@@ -1498,7 +1498,7 @@ test_dirty_attribute(
 	return;
 }
 
-#ifdef CLASSAD_FUNCTIONS
+#ifdef HAVE_DLOPEN
 static void test_functions(
 	TestResults  *results)     // OUT: Modified to reflect result of test
 {
