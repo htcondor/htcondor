@@ -31,7 +31,7 @@ provides a string that identifies the job for tools such
 as \Condor{q}.
 
 The \SubmitCmd{args} command creates a file named \File{condor.arg},
-which is added to the disk image.
+which is added to the set of CD-ROM files.
 The contents of this file are the arguments specified.
 
 VMware and Xen virtual machine software are supported.
@@ -52,11 +52,12 @@ Condor uses this number to assure a match with a machine
 that can provide the needed memory space.
 
 Creating a checkpoint is straightforward for a virtual machine,
-as a checkpoint is the disk image.
-The checkpoint is created and remains on the execute machine;
-this differs from checkpoints for jobs executing under other
-universes, where the checkpoint is returned to the machine
-from which the job was submitted or to a checkpoint server.
+as a checkpoint is a set of files that represent
+a snapshot of both disk image and memory.
+The checkpoint is created and all files are transferred back
+to the \MacroUNI{SPOOL} directory on the machine from which
+the job was submitted.
+\SubmitCmd{vm} universe jobs can not use a checkpoint server.
 The submit command to create checkpoints is
 \begin{verbatim}
   vm_checkpoint = true
@@ -67,11 +68,19 @@ Virtual machine networking is enabled with the command
 \begin{verbatim}
   vm_networking = true
 \end{verbatim}
-And, when networking is enabled, further define the command
-\SubmitCmd{vm\_networking\_type} to be 
-\SubmitCmd{bridge\_dhcp} for bridge networking,
-\SubmitCmd{nat\_dhcp} for NAT networking,
-and \SubmitCmd{dhcp} when the type may be decided at a different level.
+And, when networking is enabled, a definition of
+\SubmitCmd{vm\_networking\_type} as \SubmitCmd{bridge\_dhcp}
+matches the job with a machine that is configured to use
+bridge networking.
+A definition of
+\SubmitCmd{vm\_networking\_type} as \SubmitCmd{nat\_dhcp}
+matches the job with a machine that is configured to use
+NAT networking.
+A definition of
+\SubmitCmd{vm\_networking\_type} as \SubmitCmd{dhcp}
+matches with a machine
+that enables networking, and the choice of bridge or NAT networking
+is determined the machine's configuration.
 
 A current limitation restricts the use of networking to
 \SubmitCmd{vm} universe jobs that do not create checkpoints
@@ -82,9 +91,15 @@ the job further specifies
 \begin{verbatim}
   when_to_transfer_output = ON_EXIT_OR_EVICT
 \end{verbatim}
-Should the job not want any files transferred back,
+
+Modified disk images are transferred back to the machine from which
+the job was submitted as the \SubmitCmd{vm} universe job completes.
+Job completion for a \SubmitCmd{vm} universe job occurs when 
+the virtual machine is shut down, and Condor notices 
+(as the result of a periodic check on the state of the virtual machine).
+Should the job not want any files transferred back (modified or not),
 for example because the job explicitly transferred its own files,
-the submit command is
+the submit command to prevent the transfer is
 \begin{verbatim}
   vm_no_output_vm = true
 \end{verbatim}
@@ -107,6 +122,11 @@ virtual machine type targeted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:vm-disk-image-details}Disk Images}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:vm-job-completion-details}Job Completion in the vm Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \Todo
 
