@@ -294,7 +294,11 @@ job on the submit side going on hold with a stagein failure.
 
 \begin{itemize}
 
-\item None.
+\item The \Macro{STARTD\_RESOURCE\_PREFIX} setting on Windows results
+in broken behavior on both Condor 6.9.3 and 6.9.4. Specifically, when
+this setting is given a value other than its default (``slot''), all
+jobs will run using the ``condor-reuse-slot1'' user account,
+regardless of the actual slot used for execution.
 
 \end{itemize}
 
