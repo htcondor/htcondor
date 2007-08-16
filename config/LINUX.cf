@@ -85,7 +85,6 @@
 #define HAS_GETWD			YES
 #define HAS_SETLINEBUF			YES
 #define MALLOC_DEBUG			NO
-#define HAS_DLOPEN			YES
 
 /**************************************************************************
 ** Include Arch-specific config files
