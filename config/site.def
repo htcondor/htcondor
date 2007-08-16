@@ -21,7 +21,6 @@
 #define WANT_MD         YES
 #define WANT_3DES       YES
 #define WANT_BLOWFISH   YES
-#define WANT_CLASSAD_FUNCTIONS YES
 #define WANT_DAGMAN_HELPER     YES
 #define WANT_NEST	NO		/* the NeST I/O module */
 #define WANT_ORACLE_UNIVERSE   NO
