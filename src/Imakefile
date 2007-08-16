@@ -428,7 +428,9 @@ ext_nodep_target(EXT_MAN_VERSION,$(NULL))
 #if WANT_NEW_CLASSADS
 ext_target(EXT_CLASSADS_VERSION, $(NULL))
 #endif
+#if HAVE_EXT_GSOAP
 ext_target(EXT_GSOAP_VERSION,$(NULL))
+#endif
 ext_target(EXT_PCRE_VERSION,$(NULL))
 #if HAVE_EXT_GCB
 ext_target(EXT_GCB_VERSION,$(NULL))
