@@ -1,4 +1,4 @@
-Changes for version 1.0-rc2
+Changes for version 1.0rc2
 * The WANT_NAMESPACES define is now WANT_CLASSAD_NAMESPACE
 * New warning flags were added to the distribution build
  - A number of minor changes were made to eliminate warnings
@@ -12,7 +12,7 @@ Changes for version 1.0-rc2
 * memory leak in fnCall.C:regex_helper fixed (PCRE only issue)
 ...(in progress)...
 
-Changes for version 1.0-rc1
+Changes for version 1.0rc1
 * Build now uses autotools, and has the following changes:
   - The --lib-name option no longer exists
   - The SWIG interface isn't compiled (previously it was never

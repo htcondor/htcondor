@@ -3,7 +3,7 @@
 Summary: Condor's ClassAd Library
 Name: classads
 Version: 1.0
-Release: rc2
+Release: 0.1.rc2
 License: Condor Public License
 Group: Development/Libraries
 URL: http://www.cs.wisc.edu/condor/classad/
@@ -136,6 +136,8 @@ make check
 
 
 %changelog
+* Fri Aug 17 2007  <mfarrellee@redhat> - 1.0-0.1.rc2
+- Fixed Release tag
 
 * Tue Aug 14 2007  <mfarrellee@redhat> - 1.0-rc2
 - See CHANGELOG
