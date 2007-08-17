@@ -411,7 +411,7 @@ bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 }
 
 
-static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	FailObj failobj;
 	failobj.SetNames(schedd_name, pool_name);
@@ -459,26 +459,17 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	src.Assign(ATTR_Q_DATE, (int)time(0));
 
 	// Things to set because we want to spool/sandbox input files
-	{
+	if( is_sandboxed ) {
 		// we need to submit on hold (taken from condor_submit.V6/submit.C)
 		src.Assign(ATTR_JOB_STATUS, 5); // 5==HELD
 		src.Assign(ATTR_HOLD_REASON, "Spooling input data files");
 
-		// we want the job to hang around (taken from condor_submit.V6/submit.C)
-		MyString leaveinqueue;
-		leaveinqueue.sprintf("%s == %d", ATTR_JOB_STATUS, COMPLETED);
-		/*
-		leaveinqueue.sprintf("%s == %d && (%s =?= UNDEFINED || %s == 0 || ((CurrentTime - %s) < %d))",
-			ATTR_JOB_STATUS,
-			COMPLETED,
-			ATTR_COMPLETION_DATE,
-			ATTR_COMPLETION_DATE,
-			ATTR_COMPLETION_DATE,
-			60 * 60 * 24 * 10);
-		*/
-
-		src.AssignExpr(ATTR_JOB_LEAVE_IN_QUEUE, leaveinqueue.Value());
 	}
+
+		// we want the job to hang around (taken from condor_submit.V6/submit.C)
+	MyString leaveinqueue;
+	leaveinqueue.sprintf("%s == %d", ATTR_JOB_STATUS, COMPLETED);
+	src.AssignExpr(ATTR_JOB_LEAVE_IN_QUEUE, leaveinqueue.Value());
 
 	ExprTree * tree;
 	src.ResetExpr();
@@ -507,12 +498,14 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		return false;
 	}
 
-	failobj.SetQmgr(0);
-	ClassAd * adlist[1];
-	adlist[0] = &src;
-	if( ! schedd.spoolJobFiles(1, adlist, &errstack) ) {
-		failobj.fail("Failed to spool job files: %s\n",errstack.getFullText(true));
-		return false;
+	if( is_sandboxed ) {
+		failobj.SetQmgr(0);
+		ClassAd * adlist[1];
+		adlist[0] = &src;
+		if( ! schedd.spoolJobFiles(1, adlist, &errstack) ) {
+			failobj.fail("Failed to spool job files: %s\n",errstack.getFullText(true));
+			return false;
+		}
 	}
 
 	if(cluster_out) { *cluster_out = cluster; }
@@ -521,26 +514,26 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	return true;
 }
 
-bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	bool success;
 	priv_state priv = set_user_priv_from_ad(src);
 
-	success = submit_job_with_current_priv(src,schedd_name,pool_name,cluster_out,proc_out);
+	success = submit_job_with_current_priv(src,schedd_name,pool_name,is_sandboxed,cluster_out,proc_out);
 
 	set_priv(priv);
 
 	return success;
 }
 
-bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	ClassAd src2;
 	if( ! new_to_old(src, src2) ) {
 		dprintf(D_ALWAYS, "submit_job failed to convert job ClassAd from new to old form\n");
 		return false;
 	}
-	return submit_job(src2, schedd_name, pool_name, cluster_out, proc_out);
+	return submit_job(src2, schedd_name, pool_name, is_sandboxed, cluster_out, proc_out);
 }
 
 /*
@@ -646,8 +639,9 @@ bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, con
 	return success;
 }
 
-static bool finalize_job_with_current_privs(int cluster, int proc, const char * schedd_name, const char * pool_name)
+static bool finalize_job_with_current_privs(int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
 {
+	CondorError errstack;
 	DCSchedd schedd(schedd_name,pool_name);
 	if( ! schedd.locate() ) {
 		if(!schedd_name) { schedd_name = "local schedd"; }
@@ -660,18 +654,19 @@ static bool finalize_job_with_current_privs(int cluster, int proc, const char * 
 	constraint.sprintf("(ClusterId==%d&&ProcId==%d)", cluster, proc);
 
 
-	// Get our sandbox back
-	CondorError errstack;
-	int jobssent;
-	bool success = schedd.receiveJobSandbox(constraint.Value(), &errstack, &jobssent);
-	if( ! success ) {
-		dprintf(D_ALWAYS, "(%d.%d) Failed to retrieve sandbox.\n", cluster, proc);
-		return false;
-	}
+	if( is_sandboxed ) {
+			// Get our sandbox back
+		int jobssent;
+		bool success = schedd.receiveJobSandbox(constraint.Value(), &errstack, &jobssent);
+		if( ! success ) {
+			dprintf(D_ALWAYS, "(%d.%d) Failed to retrieve sandbox.\n", cluster, proc);
+			return false;
+		}
 
-	if(jobssent != 1) {
-		dprintf(D_ALWAYS, "(%d.%d) Failed to retrieve sandbox (got %d, expected 1).\n", cluster, proc, jobssent);
-		return false;
+		if(jobssent != 1) {
+			dprintf(D_ALWAYS, "(%d.%d) Failed to retrieve sandbox (got %d, expected 1).\n", cluster, proc, jobssent);
+			return false;
+		}
 	}
 
 
@@ -695,12 +690,12 @@ static bool finalize_job_with_current_privs(int cluster, int proc, const char * 
 	return true;
 }
 
-bool finalize_job(classad::ClassAd const &ad,int cluster, int proc, const char * schedd_name, const char * pool_name)
+bool finalize_job(classad::ClassAd const &ad,int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
 {
 	bool success;
 	priv_state priv = set_user_priv_from_ad(ad);
 
-	success = finalize_job_with_current_privs(cluster,proc,schedd_name,pool_name);
+	success = finalize_job_with_current_privs(cluster,proc,schedd_name,pool_name,is_sandboxed);
 
 	set_priv(priv);
 	return success;
@@ -767,6 +762,7 @@ bool InitializeUserLog( classad::ClassAd const &job_ad, UserLog *ulog, bool *no_
 	std::string owner;
 	std::string userLogFile;
 	std::string domain;
+	std::string gjid;
 	bool use_xml = false;
 
 	ASSERT(ulog);
@@ -786,8 +782,9 @@ bool InitializeUserLog( classad::ClassAd const &job_ad, UserLog *ulog, bool *no_
 	job_ad.EvaluateAttrInt( ATTR_PROC_ID, proc );
 	job_ad.EvaluateAttrString( ATTR_NT_DOMAIN, domain );
 	job_ad.EvaluateAttrBool( ATTR_ULOG_USE_XML, use_xml );
+	job_ad.EvaluateAttrString( ATTR_GLOBAL_JOB_ID, gjid );
 
-	if(!ulog->initialize(owner.c_str(), domain.c_str(), userLogFile.c_str(), cluster, proc, 0)) {
+	if(!ulog->initialize(owner.c_str(), domain.c_str(), userLogFile.c_str(), cluster, proc, 0, gjid.c_str())) {
 		return false;
 	}
 	ulog->setUseXML( use_xml );

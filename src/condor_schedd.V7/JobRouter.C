@@ -53,6 +53,7 @@ const char JR_ATTR_ROUTE_NAME[] = "RouteName";
 //it possible to have jobs get routed multiple times.
 const char JR_ATTR_FAILURE_RATE_THRESHOLD[] = "FailureRateThreshold";
 const char JR_ATTR_JOB_FAILURE_TEST[] = "JobFailureTest";
+const char JR_ATTR_JOB_SANDBOXED_TEST[] = "JobShouldBeSandboxed";
 const char JR_ATTR_USE_SHARED_X509_USER_PROXY[] = "UseSharedX509UserProxy";
 const char JR_ATTR_SHARED_X509_USER_PROXY[] = "SharedX509UserProxy";
 
@@ -380,6 +381,7 @@ RoutedJob::RoutedJob() {
 	is_done = false;
 	is_running = false;
 	is_success = false;
+	is_sandboxed = false;
 	submission_time = 0;
 	proxy_file_copy_chowned = false;
 }
@@ -527,17 +529,41 @@ JobRouter::AdoptOrphans() {
 		//If we get here, we have enough information to recover the routed job.
 		RoutedJob *job = new RoutedJob();
 		job->state = RoutedJob::SUBMITTED;
+		job->dest_key = dest_key;
+		job->dest_proc_id = getProcByString(dest_key.c_str());
+		job->route_name = route_name;
+		job->submission_time = time(NULL); //not true; but good enough
+		job->is_claimed = true;
 		if(!job->SetSrcJobAd(src_key.c_str(),src_ad,ad_collection)) {
 			dprintf(D_ALWAYS,"JobRouter failure (%s): error processing orphan src job ad\n",job->JobDesc().c_str());
 			delete job;
 			continue;
 		}
 		job->SetDestJobAd(dest_ad);
-		job->dest_key = dest_key;
-		job->dest_proc_id = getProcByString(dest_key.c_str());
-		job->route_name = route_name;
-		job->submission_time = time(NULL); //not true; but good enough
-		job->is_claimed = true;
+
+		bool is_sandboxed_test = TestJobSandboxed(job);
+
+		std::string submit_iwd;
+		std::string submit_iwd_attr = "SUBMIT_";
+		submit_iwd_attr += ATTR_JOB_IWD;
+		if(dest_ad->EvaluateAttrString(submit_iwd_attr, submit_iwd)) {
+			job->is_sandboxed = true;
+		}
+		else {
+			job->is_sandboxed = false;
+		}
+		if( job->is_sandboxed != is_sandboxed_test ) {
+			dprintf(D_ALWAYS,
+					"JobRouter warning (%s): %s evaluated to %s, "
+					"but %s is %s target job, so assuming job "
+					"is %ssandboxed.\n",
+					job->JobDesc().c_str(),
+					JR_ATTR_JOB_SANDBOXED_TEST,
+					is_sandboxed_test ? "true" : "false",
+					submit_iwd_attr.c_str(),
+					job->is_sandboxed ? "present in" : "missing from",
+					job->is_sandboxed ? "" : "not ");
+		}
 
 		if(!AddJob(job)) {
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to add orphaned job to my routed job list; aborting it.\n",job->JobDesc().c_str());
@@ -753,6 +779,7 @@ JobRouter::GetCandidateJobs() {
 			delete job;
 			continue;
 		}
+		job->is_sandboxed = TestJobSandboxed(job);
 
 		/*
 		dprintf(D_FULLDEBUG,"JobRouter DEBUG (%s): parent = %s\n",job->JobDesc().c_str(),ClassAdToString(parent).c_str());
@@ -900,7 +927,7 @@ JobRouter::SubmitJob(RoutedJob *job) {
 	int dest_cluster_id = -1;
 	int dest_proc_id = -1;
 	bool rc;
-	rc = submit_job(job->dest_ad,NULL,NULL,&dest_cluster_id,&dest_proc_id);
+	rc = submit_job(job->dest_ad,NULL,NULL,job->is_sandboxed,&dest_cluster_id,&dest_proc_id);
 
 		// Now that the job is submitted, we can clean up any temporary
 		// x509 proxy files, because these will have been copied into
@@ -945,6 +972,15 @@ RoutedJob::PrepareSharedX509UserProxy(JobRoute *route)
 				JobDesc().c_str(),
 				JR_ATTR_USE_SHARED_X509_USER_PROXY,
 				JR_ATTR_SHARED_X509_USER_PROXY);
+		return false;
+	}
+
+	if(!is_sandboxed) {
+		dprintf(D_ALWAYS,
+				"JobRouter failure (%s): %s is true, but %s is false.\n",
+				JobDesc().c_str(),
+				JR_ATTR_USE_SHARED_X509_USER_PROXY,
+				JR_ATTR_JOB_SANDBOXED_TEST);
 		return false;
 	}
 
@@ -1131,7 +1167,7 @@ void
 JobRouter::FinalizeJob(RoutedJob *job) {
 	if(job->state != RoutedJob::FINISHED) return;
 
-	if(!finalize_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,NULL,NULL)) {
+	if(!finalize_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,NULL,NULL,job->is_sandboxed)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to finalize job\n",job->JobDesc().c_str());
 
 			// Put the src job back in idle state to prevent it from
@@ -1195,6 +1231,45 @@ JobRouter::TestJobSuccess(RoutedJob *job)
 	mad.RemoveRightAd();
 
 	return !test_result;
+}
+
+bool
+JobRouter::TestJobSandboxed(RoutedJob *job)
+{
+	JobRoute *route = GetRouteByName(job->route_name.c_str());
+	if(!route) {
+			// It doesn't matter what we decide here, because there is no longer
+			// any route associated with this job.
+		return true;
+	}
+	classad::MatchClassAd mad;
+	bool test_result = false;
+
+	mad.ReplaceLeftAd(route->RouteAd());
+	mad.ReplaceRightAd(&job->src_ad);
+
+	classad::ClassAd *upd;
+	classad::ClassAdParser parser;
+	std::string upd_str;
+	upd_str = "[leftJobSandboxedTest = adcl.ad.";
+	upd_str += JR_ATTR_JOB_SANDBOXED_TEST;
+	upd_str += " ;]";
+	upd = parser.ParseClassAd(upd_str);
+	ASSERT(upd);
+
+	mad.Update(*upd);
+	delete upd;
+
+	bool rc = mad.EvaluateAttrBool("leftJobSandboxedTest", test_result);
+	if(!rc) {
+			// UNDEFINED etc. are treated as NOT sandboxed
+		test_result = false;
+	}
+
+	mad.RemoveLeftAd();
+	mad.RemoveRightAd();
+
+	return test_result;
 }
 
 bool

@@ -154,6 +154,9 @@ class JobRouter: public Service {
 	// Return true if job exit state indicates that it was a success.
 	bool TestJobSuccess(RoutedJob *job);
 
+	// Return true if job should be spooled.
+	bool TestJobSandboxed(RoutedJob *job);
+
 	//Produce a default JobRouter name.
 	std::string DaemonIdentityString();
 
@@ -272,6 +275,8 @@ class RoutedJob {
 	bool is_done;     // true if src job should be marked finished
 	bool is_running;  // true if job status is RUNNING
 	bool is_success;  // true if job finished successfully
+
+	bool is_sandboxed;// true if dest copy of job has a separate sandbox
 
 	time_t submission_time;
 	time_t retirement_time;
