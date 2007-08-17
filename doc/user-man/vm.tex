@@ -106,10 +106,43 @@ the submit command to prevent the transfer is
 
 Further commands specify information that is specific to the
 virtual machine type targeted.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:vm-VMwaresubmitfile}VMware-Specific Submit Commands}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\Todo
+
+Specific to VMware, the submit description file command
+\SubmitCmd{vmware\_dir} gives the path and directory
+(on the machine from which the job is submitted)
+where VMware-specific files and applications reside.
+Examples of these VMware-specific applications are VMDK and VMX.
+
+Condor must be told whether or not the contents of the \SubmitCmd{vmware\_dir}
+directory must be transferred to the machine where the job is
+to be executed.
+This required information is given with the submit command
+\SubmitCmd{vmware\_should\_transfer\_files}.
+With a value of \Expr{True},
+Condor does transfer the contents of the directory.
+With a value of \Expr{False},
+Condor does not transfer the contents of the directory,
+and instead presumes that access to this directory is
+available through a shared file system.
+
+By default, Condor uses a snapshot disk for new and modified files.
+They may also be utilized for checkpoints.
+The snapshot disk is initially quite small,
+growing only as new files are created or files are modified.
+When \SubmitCmd{vmware\_should\_transfer\_files} is \Expr{True},
+a job may specify that a snapshot disk is \emph{not} to be
+used with the command
+\begin{verbatim}
+  vmware_snapshot_disk = False
+\end{verbatim}
+In this case, Condor will utilize original disk files in producing
+checkpoints.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:vm-Xensubmitfile}Xen-Specific Submit Commands}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
