@@ -2205,12 +2205,10 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	// scan the offer ads
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
-		dprintf(D_FULLDEBUG,"Checking with startdad \n");
 
 			// the candidate offer and request must match
 		if( !( *candidate == request ) ) {
 				// they don't match; continue
-			dprintf(D_FULLDEBUG,"They don't match \n");
 			continue;
 		}
 
@@ -2238,14 +2236,12 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 					// startd rank yet because it does not make sense (the
 					// startd has nothing to compare against).  
 					// So try the next offer...
-				dprintf(D_FULLDEBUG,"No remote user\n");
 				continue;
 			}
 			if ( !(rankCondStd->EvalTree(candidate, &request, &result) && 
 					result.type == LX_INTEGER && result.i == TRUE) ) {
 					// offer does not strictly prefer this request.
 					// try the next offer since only_for_statdrank flag is set
-					dprintf(D_FULLDEBUG,"Only for startd rank \n");
 
 				continue;
 			}
