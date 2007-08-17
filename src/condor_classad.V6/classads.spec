@@ -1,3 +1,5 @@
+# NOTE: When updating the version change the Source0 and %setup lines
+
 Summary: Condor's ClassAd Library
 Name: classads
 Version: 1.0
@@ -5,7 +7,7 @@ Release: rc2
 License: Condor Public License
 Group: Development/Libraries
 URL: http://www.cs.wisc.edu/condor/classad/
-Source0: ftp://ftp.cs.wisc.edu/condor/classad/c++/%{name}-%{version}-%{release}.tar.gz
+Source0: ftp://ftp.cs.wisc.edu/condor/classad/c++/classads-1.0rc2.tar.gz
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 #BuildRequires: libtool
@@ -54,7 +56,7 @@ Static versions of Condor's ClassAd Library's libraries, a powerful
 and flexible, semi-structured representation of data.
 
 %prep
-%setup -q -n %{name}-%{version}-%{release}
+%setup -q -n classads-1.0rc2
 
 %build
 %configure --enable-namespace --enable-flexible-member CC=g++
