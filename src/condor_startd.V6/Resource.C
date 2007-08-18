@@ -867,7 +867,7 @@ Resource::do_update( void )
 	this->publish( &private_ad, A_PRIVATE | A_ALL );
 
 		// log classad into sql log so that it can be updated to DB
-	if (FILEObj)
+	if (FILEObj) {
 		FILESQL::daemonAdInsert(&public_ad, "Machines", FILEObj, prevLHF);
 	}	
 
