@@ -44,6 +44,11 @@ section~\ref{user-man-jobad} on page~\pageref{user-man-jobad}.
 \item \Condor{q} \Opt{-analyze} now shows the full hold reason for jobs
 that are on hold.
 
+\item Increased efficiency of \Condor{preen} when there are large
+numbers of jobs in the job queue.  Without this, the \Condor{schedd}
+would become unresponsive for a long time (e.g. 10 minutes with 20,000
+jobs in the queue) whenever \Condor{preen} was activated.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
