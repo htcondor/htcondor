@@ -1,0 +1,33 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\Condor{shadow} Exit Codes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%detailed in Table~\ref{shadow-exit-codes}. 
+
+% shadow error codes
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|c|c|c|} \hline
+\emph{Value} & \emph{Error Name} & \emph{Description} \\ \hline \hline
+4   &   JOB\_EXCEPTION    & the job exited with an exception \\ \hline
+44  &   DPRINTF\_ERROR    & there was a fatal error with dprintf() \\ \hline
+100 &   JOB\_EXITED       & the job exited (not killed)  \\ \hline
+101 &   JOB\_CKPTED       & the job did produce a checkpoint  \\ \hline
+102 &   JOB\_KILLED       & the job was killed     \\ \hline
+103 &   JOB\_COREDUMPED   & the job was killed and a core file was produced  \\ \hline
+105 &   JOB\_NO\_MEM      & not enough memory to start the condor\_shadow \\ \hline
+106 &   JOB\_SHADOW\_USAGE & incorrect arguments to condor\_shadow \\ \hline
+107 &   JOB\_NOT\_CKPTED  & the job vacated without a checkpoint \\ \hline
+107 &   JOB\_SHOULD\_REQUEUE  & (!) same number used, to achieve the same behavior. However, JOB\_NOT\_CKPTED is irrelevant unless it is a standard universe job. This exit code implies that we want the job to be put back in the job queue and run again. \\ \hline
+108 &   JOB\_NOT\_STARTED  & can not connect to the \Condor{startd} or request refused \\ \hline
+109 &   JOB\_BAD\_STATUS  & job status != RUNNING on start up \\ \hline
+110 &   JOB\_EXEC\_FAILED & exec failed for some reason other than ENOMEM \\ \hline
+111 &   JOB\_NO\_CKPT\_FILE & there is no checkpoint file (as it was lost) \\ \hline
+112 &   JOB\_SHOULD\_HOLD & the job should be put on hold \\ \hline
+113 &   JOB\_SHOULD\_REMOVE & the job should be removed \\ \hline
+\end{tabular}
+%\caption{\label{shadow-exit-codes}\Condor{shadow} exit codes}
+\label{shadow-exit-codes}
+\end{table}
+\end{center}
+
