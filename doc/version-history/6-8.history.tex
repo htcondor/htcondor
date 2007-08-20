@@ -117,6 +117,10 @@ exiting.  Too many such processes could result in memory exhaustion.
 \item Fixed a bug in \Condor{dagman}: \Attr{DIR} and \Attr{ABORT-DAG-ON}
 specifications were not propagated to rescue DAGs.
 
+\item Added a workaround for a bug in the Globus GRAM JobManager
+(\URL{http://bugzilla.mcs.anl.gov/globus/show\_bug.cgi?id=5467})
+that can cause very short jobs' standard output and error to be lost.
+
 \end{itemize}
 
 \noindent Known Bugs:
