@@ -2592,6 +2592,12 @@ doRunAnalysisToBuffer( ClassAd *request )
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request is held.\n\n", cluster, 
 			proc );
+		MyString hold_reason;
+		request->LookupString( ATTR_HOLD_REASON, hold_reason );
+		if( hold_reason.Length() ) {
+			size_t offset = strlen(return_buff);
+			snprintf( return_buff + offset, sizeof(return_buff)-offset, "Hold reason: %s\n\n", hold_reason.Value() );
+		}
 		return return_buff;
 	}
 	if( jobState == REMOVED ) {
