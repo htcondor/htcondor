@@ -387,40 +387,23 @@ is_v3_ckpt( const char *name )
 
 /*
   Check to see whether a given cluster number exists in the job queue.
-  Assume a higher level routine has already assembled a list of jobs in
-  the list ProcList..
 */
 BOOLEAN
 cluster_exists( int cluster )
 {
-	ClassAd *ad;
-	char constraint[60];
-
-	sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, cluster);
-
-	if ((ad = GetJobByConstraint(constraint)) != NULL) {
-		FreeJobAd(ad);
-		return TRUE;
-	}
-
-	return FALSE;
+	return proc_exists( cluster, -1 );
 }
 
 /*
   Check to see whether a given cluster and process number exist in the
-  job queue.  Assume a higher level routine has already assembled a
-  list of jobs in ProcList.
+  job queue.
 */
 BOOLEAN
 proc_exists( int cluster, int proc )
 {
 	ClassAd *ad;
-	char constraint[120];
 
-	sprintf(constraint, "(%s == %d) && (%s == %d)", ATTR_CLUSTER_ID, cluster,
-		ATTR_PROC_ID, proc);
-
-	if ((ad = GetJobByConstraint(constraint)) != NULL) {
+	if ((ad = GetJobAd(cluster,proc)) != NULL) {
 		FreeJobAd(ad);
 		return TRUE;
 	}
