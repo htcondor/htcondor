@@ -2874,7 +2874,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				MyString hold_reason;
 				hold_reason.sprintf(
 					"Failed to convert arguments to target syntax"
-					" for starter: %s\n",
+					" for starter: %s",
 					arg_error_msg.Value());
 
 
