@@ -32,7 +32,6 @@
 ** versions of Digital Unix.
 */
 #define HAS_GSI		YES
-#define HAS_OPENSSL	YES
 
 #define VendorCTestFlags -std
 

@@ -2071,7 +2071,7 @@ fi
 #-----------------------------------------------------------------
 # determine whether we will be using globus on this platform (i.e. determine
 # HAS_GLOBUS). this logic used to be in the individual <platform>.cf
-# files; the variables HAS_GSI and HAS_OPENSSL are still determined there
+# files; the variable HAS_GSI is still determined there
 AC_MSG_CHECKING([if build uses globus])
 case "$os" in
   "HP-UX" )
@@ -2112,9 +2112,14 @@ fi
 # currently, if we are using globus (and the openssl
 # within), we define HAVE_OPENSSL_SSL_H (meaning we
 # have ssl.h) to make gsoap happy
+# ALSO, since OpenSSL isn't really an external yet we need to make
+# sure HAVE_EXT_OPENSSL is defined, basically having Globus gives us
+# OpenSSL. -matt 082107
 if test "$_cv_has_globus" = "YES" ; then
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl (via globus)])
+  AC_DEFINE([HAVE_EXT_OPENSSL], [1], [if openssl external (via globus)])
 fi
+
 
 
 ############################################################

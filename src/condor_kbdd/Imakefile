@@ -24,7 +24,7 @@ c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),sbin,EXECUTABLE_MODE)
 strip_target($(NAME),sbin,EXECUTABLE_MODE)
 
-#if IS_DUX5 && NEEDS_OPENSSL
+#if IS_DUX5 && HAVE_EXT_OPENSSL
 
 XCOMM On Digital Unix 5.0, if we are using OpenSSL security, statically 
 XCOMM linking against libX11.a causes additional problems.  libX11.a

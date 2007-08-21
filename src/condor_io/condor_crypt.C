@@ -25,7 +25,7 @@
 #include "condor_crypt.h"
 #include "condor_md.h"
 #include "condor_random_num.h"
-#if defined(CONDOR_ENCRYPTION)
+#ifdef HAVE_EXT_OPENSSL
 #include <openssl/rand.h>              // SSLeay rand function
 #endif
 #include "condor_debug.h"
@@ -34,7 +34,7 @@
 Condor_Crypt_Base :: Condor_Crypt_Base(Protocol prot, const KeyInfo& keyInfo)
     : keyInfo_ (keyInfo)
 {
-#if defined(CONDOR_ENCRYPTION)
+#ifdef HAVE_EXT_OPENSSL
     ASSERT(keyInfo_.getProtocol() == prot);
 #endif
 }
@@ -50,7 +50,7 @@ Condor_Crypt_Base :: ~Condor_Crypt_Base()
 
 int Condor_Crypt_Base :: encryptedSize(int inputLength, int blockSize)
 {
-#if defined(CONDOR_ENCRYPTION)
+#ifdef HAVE_EXT_OPENSSL
     int size = inputLength % blockSize;
     return (inputLength + ((size == 0) ? blockSize : (blockSize - size)));
 #else
@@ -60,7 +60,7 @@ int Condor_Crypt_Base :: encryptedSize(int inputLength, int blockSize)
 
 Protocol Condor_Crypt_Base :: protocol()
 {
-#if defined(CONDOR_ENCRYPTION)
+#ifdef HAVE_EXT_OPENSSL
     return keyInfo_.getProtocol();
 #else
     return (Protocol)0;
@@ -73,7 +73,7 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
 
 	memset(key, 0, length);
 
-#if defined(CONDOR_ENCRYPTION)
+#ifdef HAVE_EXT_OPENSSL
 	static bool already_seeded = false;
     int size = 128;
     if( ! already_seeded ) {
@@ -106,7 +106,7 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
 
 unsigned char * Condor_Crypt_Base :: oneWayHashKey(const char * initialKey)
 {
-#if defined(CONDOR_ENCRYPTION)
+#ifdef HAVE_EXT_OPENSSL
     return Condor_MD_MAC::computeOnce((unsigned char *)initialKey, strlen(initialKey));
 #else 
     return 0;

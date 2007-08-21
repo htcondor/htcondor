@@ -1,7 +1,6 @@
 /* Things that are specific to IRIX 6.5 */
 
 #define HAS_GSI			YES
-#define HAS_OPENSSL		YES
 
 #define HAS_DYNAMIC_USER_JOBS	YES
 

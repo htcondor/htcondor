@@ -23,7 +23,7 @@
 
 #include "condor_common.h"
 
-#if !defined(SKIP_AUTHENTICATION) && defined(SSL_AUTHENTICATION)
+#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)
 #define ouch(x) dprintf(D_ALWAYS,x)
 #include "condor_auth_ssl.h"
 #include "condor_string.h"

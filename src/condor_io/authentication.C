@@ -151,12 +151,12 @@ Condor_Auth_Base * auth = NULL;
 				break;
 #endif /* GSI_AUTHENTICATION */
 
-#if defined(SSL_AUTHENTICATION)
+#ifdef HAVE_EXT_OPENSSL
             case CAUTH_SSL:
                 auth = new Condor_Auth_SSL(mySock);
                 method_name = strdup("SSL");
                 break;
-#endif /* defined(SSL_AUTHENTICATION) */
+#endif
 
 #if defined(KERBEROS_AUTHENTICATION) 
 			case CAUTH_KERBEROS:
@@ -165,7 +165,7 @@ Condor_Auth_Base * auth = NULL;
 				break;
 #endif
 
-#if defined(CONDOR_3DES_ENCRYPTION)  // 3DES is the prequisite for passwd auth
+#ifdef HAVE_EXT_OPENSSL  // 3DES is the prequisite for passwd auth
 			case CAUTH_PASSWORD:
 				auth = new Condor_Auth_Passwd(mySock);
 				method_name = strdup("PASSWORD");

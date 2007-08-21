@@ -27,14 +27,9 @@
 #include "condor_io.h"
 #include "condor_debug.h"
 
-#if defined(CONDOR_BLOWFISH_ENCRYPTION)
+#ifdef HAVE_EXT_OPENSSL
 #include "condor_crypt_blowfish.h"
-#endif 
-#if defined(CONDOR_3DES_ENCRYPTION)
 #include "condor_crypt_3des.h"
-#endif
-
-#if defined(CONDOR_MD)
 #include "condor_md.h"                // Message authentication stuff
 #endif
 
@@ -2219,7 +2214,7 @@ Stream::wrap(unsigned char* d_in,int l_in,
                     unsigned char*& d_out,int& l_out)
 {    
     bool coded = false;
-#if defined(CONDOR_ENCRYPTION)
+#ifdef HAVE_EXT_OPENSSL
     if (get_encryption()) {
         coded = crypto_->encrypt(d_in, l_in, d_out, l_out);
     }
@@ -2232,7 +2227,7 @@ Stream::unwrap(unsigned char* d_in,int l_in,
                       unsigned char*& d_out, int& l_out)
 {
     bool coded = false;
-#if defined(CONDOR_ENCRYPTION)
+#ifdef HAVE_EXT_OPENSSL
     if (get_encryption()) {
         coded = crypto_->decrypt(d_in, l_in, d_out, l_out);
     }
@@ -2242,7 +2237,7 @@ Stream::unwrap(unsigned char* d_in,int l_in,
 
 void Stream::resetCrypto()
 {
-#if defined(CONDOR_ENCRYPTION)
+#ifdef HAVE_EXT_OPENSSL
   if (get_encryption()) {
     crypto_->resetState();
   }
@@ -2260,12 +2255,10 @@ Stream::initialize_crypto(KeyInfo * key)
     if (key) {
         switch (key->getProtocol()) 
         {
-#ifdef CONDOR_BLOWFISH_ENCRYPTION
+#ifdef HAVE_EXT_OPENSSL
         case CONDOR_BLOWFISH :
             crypto_ = new Condor_Crypt_Blowfish(*key);
             break;
-#endif
-#ifdef CONDOR_3DES_ENCRYPTION
         case CONDOR_3DES:
             crypto_ = new Condor_Crypt_3des(*key);
             break;
@@ -2292,7 +2285,7 @@ bool Stream::set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
 
 const KeyInfo& Stream :: get_crypto_key() const
 {
-#if defined(CONDOR_ENCRYPTION)
+#ifdef HAVE_EXT_OPENSSL
     if (crypto_) {
         return crypto_->get_key();
     }
@@ -2303,7 +2296,7 @@ const KeyInfo& Stream :: get_crypto_key() const
 
 const KeyInfo& Stream :: get_md_key() const
 {
-#if defined(CONDOR_ENCRYPTION)
+#ifdef HAVE_EXT_OPENSSL
     if (mdKey_) {
         return *mdKey_;
     }
@@ -2317,7 +2310,7 @@ bool
 Stream::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
 {
     bool inited = true;
-#if defined(CONDOR_ENCRYPTION)
+#ifdef HAVE_EXT_OPENSSL
 
     if (key != 0) {
         inited = initialize_crypto(key);
@@ -2383,7 +2376,7 @@ Stream::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
         } 
     }
     */
-#endif /* CONDOR_3DES_ENCRYPTION or CONDOR_BLOWFISH_ENCRYPTION */
+#endif /* HAVE_EXT_OPENSSL */
 
     return inited;
 }

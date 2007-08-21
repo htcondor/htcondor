@@ -43,7 +43,7 @@ API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 			condor_event.o user_log.o strnewp.o \
 			read_multiple_logs.o CondorError.o check_events.o tmp_dir.o
 
-#if HAS_OPENSSL
+#if HAVE_EXT_OPENSSL
 DH_OBJ = condor_dh.o
 #endif
 

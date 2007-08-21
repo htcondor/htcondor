@@ -21,8 +21,10 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#if defined(CONDOR_BLOWFISH_ENCRYPTION) && !defined(CONDOR_CRYPTO_BLOWFISH)
-#define CONDOR_CRYPTO_BLOWFISH
+#ifndef CONDOR_CRYPTO_BLOWFISH_H
+#define CONDOR_CRYPTO_BLOWFISH_H
+
+#ifdef HAVE_EXT_OPENSSL
 
 #include "condor_crypt.h"          // base class
 #include <openssl/blowfish.h>
@@ -68,5 +70,7 @@ class Condor_Crypt_Blowfish : public Condor_Crypt_Base {
     unsigned char   ivec_[8];
 
 };
+
+#endif
 
 #endif

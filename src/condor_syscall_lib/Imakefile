@@ -209,17 +209,10 @@ CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
 IO_OBJ = stream.o sock.o safe_sock.o reli_sock.o buffers.o $(CONDOR_TYPE_OBJ) condor_rw.o SafeMsg.o
 
-#if CONDOR_ENCRYPTION
-
-#if CONDOR_3DES_ENCRYPTION
+#if HAVE_EXT_OPENSSL
    CONDOR_DES_OBJ = condor_crypt_3des.o
-#endif
-
-#if CONDOR_BLOWFISH_ENCRYPTION
    CONDOR_BLOWFISH_OBJ = condor_crypt_blowfish.o
-#endif /* CONDOR_BLOWFISH_ENCRYPTION */
-
-#endif /* CONDOR_ENCRYPTION */
+#endif
 
 OPENSSL_OBJ = md5_dgst.o md5_one.o rand_lib.o md_rand.o sha1dgst.o cryptlib.o \
 	buffer.o stack.o err.o lhash.o mem.o rand_win.o mem_dbg.o b_print.o \
@@ -233,7 +226,7 @@ OPENSSL_OBJ = md5_dgst.o md5_one.o rand_lib.o md_rand.o sha1dgst.o cryptlib.o \
 	bn_add.o bn_asm.o bn_sqr.o bn_exp.o rsa_none.o rsa_pk1.o rsa_oaep.o \
 	rsa_ssl.o a_dup.o bn_recp.o bn_mul.o
 
-#if defined(CONDOR_ENCRYPTION) || defined(CONDOR_MD)
+#if HAVE_EXT_OPENSSL
 CONDOR_CRYPT_OBJ = CryptKey.o condor_crypt.o condor_md.o ../condor_util_lib/get_random_num.o \
 	$(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ) $(OPENSSL_OBJ)
 #else 
@@ -583,7 +576,7 @@ remote_syscall.C switches.special.C syscall_connect.C xfer_file.c
 
 depend_source_target($(DEPEND_SRC))
 
-#if CONDOR_ENCRYPTION
+#if HAVE_EXT_OPENSSL
 obj_extract($(OPENSSL_MD_LIB),$(OPENSSL_OBJ))
 #endif
 

@@ -24,7 +24,7 @@
 #ifndef CONDOR_AUTH_PASSWD
 #define CONDOR_AUTH_PASSWD
 
-#if !defined(SKIP_AUTHENTICATION) && defined(CONDOR_3DES_ENCRYPTION)
+#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "condor_crypt_3des.h"

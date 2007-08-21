@@ -18,7 +18,6 @@ arguments. XXX figure out how I'm going to model this parameter... */
 	compile on the opteron, but it isn't officially in Condor's externals
 	yet. */
 #define HAS_GSI         YES
-#define HAS_OPENSSL     YES
 
 /* pvm was never ported (cause it is old and dead) to this architecture */
 #undef WANT_PVM

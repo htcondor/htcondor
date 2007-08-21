@@ -9,7 +9,7 @@
 #include "internet.h"
 // for MD5
 #include "condor_md.h"
-#ifdef CONDOR_MD
+#ifdef HAVE_EXT_OPENSSL
 #include <openssl/md5.h>
 #endif
 #include "condor_netdb.h"
@@ -20,8 +20,6 @@
 #define FILE_CHUNK_SIZE               (100)
 
 extern int main_shutdown_graceful();
-
-//#undef CONDOR_MD
 
 MyString
 utilNoParameterError( const char* parameter, const char* daemonName )
@@ -201,7 +199,7 @@ utilClearList( StringList& list )
     }
 }
 
-#ifdef CONDOR_MD
+#ifdef HAVE_EXT_OPENSSL
 bool
 utilSafePutFile( ReliSock& socket, const MyString& filePath )
 {

@@ -33,4 +33,3 @@
 #define PVM_ARCH	LINUX
 
 #define HAS_GSI		YES
-#define HAS_OPENSSL	YES

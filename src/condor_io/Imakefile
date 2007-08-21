@@ -4,21 +4,11 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DHEADER_DES_LOCL_H
 LIB = libcedar.a $(STD_LIBS)
 
-#if CONDOR_ENCRYPTION
-
-#if CONDOR_3DES_ENCRYPTION
+#if HAVE_EXT_OPENSSL
 CONDOR_DES_OBJ = condor_crypt_3des.o
 AUTH_PASSWD_OBJ = condor_auth_passwd.o
-#endif
-
-#if CONDOR_BLOWFISH_ENCRYPTION
 CONDOR_BLOWFISH_OBJ = condor_crypt_blowfish.o
-#endif
-
 CONDOR_CRYPT_OBJ = $(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ)
-#endif
-
-#if HAS_OPENSSL
 AUTH_SSL_OBJ = condor_auth_ssl.o
 #endif
 

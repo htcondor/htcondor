@@ -6,6 +6,5 @@
 #define IS_CLIPPED              YES
 #define HAS_DYNAMIC_USER_JOBS   NO
 #define WANT_PVM                NO
-#define HAS_OPENSSL             YES
 #define HAS_GSI                 YES
 

@@ -24,7 +24,7 @@
 #ifndef CONDOR_AUTHENTICATOR_OPENSSL
 #define CONDOR_AUTHENTICATOR_OPENSSL
 
-#if !defined(SKIP_AUTHENTICATION) && defined(SSL_AUTHENTICATION)
+#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)
 
 #include <openssl/ssl.h>
 #include <openssl/x509.h>

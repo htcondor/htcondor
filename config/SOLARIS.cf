@@ -23,7 +23,6 @@
 #define	HAS_DYNAMIC_USER_JOBS	YES
 
 #define HAS_GSI				YES
-#define HAS_OPENSSL			YES
 
 #define NEEDS_FAKE_GETMNT		YES
 #define HAS_AR_S_OPTION			YES

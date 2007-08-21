@@ -254,21 +254,6 @@ stuff, even if the rest of the imake configuration things we want it.
 #endif
 #define WANT_KERBEROS	NO
 
-#ifdef WANT_MD
-#undef WANT_MD
-#endif
-#define WANT_MD		NO
-
-#ifdef WANT_3DES
-#undef WANT_3DES
-#endif
-#define WANT_3DES	NO
-
-#ifdef WANT_BLOWFISH
-#undef WANT_BLOWFISH
-#endif
-#define WANT_BLOWFISH	NO
-
 #ifdef USE_GLOBUS_OPENSSL
 #undef USE_GLOBUS_OPENSSL
 #endif
@@ -309,42 +294,6 @@ stuff, even if the rest of the imake configuration things we want it.
 #endif /* !defined(WANT_KERBEROS) */
 
 /* Encryption */
-#if WANT_3DES && HAS_OPENSSL
-#  define CONDOR_3DES_ENCRYPTION YES
-  3DES_FLAGS = -DCONDOR_3DES_ENCRYPTION
-#  define NEEDS_OPENSSL YES
-#  define WANT_ENCRYPTION YES
-#else
-  3DES_FLAGS =
-#endif
-
-#if WANT_BLOWFISH && HAS_OPENSSL
-#  define CONDOR_BLOWFISH_ENCRYPTION YES
-  BLOWFISH_FLAGS = -DCONDOR_BLOWFISH_ENCRYPTION
-#  define NEEDS_OPENSSL YES
-#  define WANT_ENCRYPTION YES
-#else
-  BLOWFISH_FLAGS =
-#endif
-
-#if WANT_ENCRYPTION
-#  define CONDOR_ENCRYPTION YES
-  ENCRYPTION_FLAGS = -DCONDOR_ENCRYPTION $(3DES_FLAGS) $(BLOWFISH_FLAGS)
-  ENCRYPTION_LIB =
-#else
-  ENCRYPTION_FLAGS =
-  ENCRYPTION_LIB =
-#endif
-
-#if WANT_MD && HAS_OPENSSL
-#  define NEEDS_OPENSSL YES
-#  define CONDOR_MD YES
-  MD_FLAGS = -DCONDOR_MD
-  MD_LIB =
-#else
-  MD_FLAGS = 
-  MD_LIB =
-#endif
 
 
 /* This is an ugly hack to get NMI R5 released on AIX 5.1 with no lead
@@ -365,8 +314,6 @@ NOTE: we also need the same crap for libpcre.a...
 
 
 #if NEEDS_GSI && HAS_GSI
-  /* Make sure that USE_GLOBUS_OPENSSL is set */
-#  define NEEDS_OPENSSL YES
   GSI_FLAGS = -DCONDOR_GSI $(GSI_AUTH_FLAGS)
   GSI_LIB   = \
 	      $(GLOBUS_DIR)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
@@ -389,8 +336,7 @@ NOTE: we also need the same crap for libpcre.a...
   GSI_LIB   =
 #endif
 
-#if NEEDS_OPENSSL && HAS_OPENSSL
-
+#if HAVE_EXT_OPENSSL
 #  if USE_GLOBUS_OPENSSL
     OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include/$(GlobusFlavor) -DSSL_AUTHENTICATION
     OPENSSL_LIB = $(PRE_GLOBUS_LIBS) \
@@ -409,15 +355,16 @@ NOTE: we also need the same crap for libpcre.a...
   OPENSSL_MD_LIB =
 #endif
 
-#if HAS_GLOBUS
+#if HAVE_EXT_OPENSSL
+/* WITH_OPENSSL is used inside gSOAP's stdsoap2.h/C, it's important */
     GSOAP_FLAGS = -DWITH_OPENSSL -DCOMPILE_SOAP_SSL
 #endif
 
 /* Collect all the security-related variables into a single variable */
-SECURITY_FLAGS = $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
-		 $(MD_FLAGS) $(GSI_FLAGS) $(OPENSSL_FLAGS)
-SECURITY_LIB   = $(KERBEROS_LIB) $(ENCRYPTION_LIB) \
-		 $(MD_LIB) $(GSI_LIB) $(OPENSSL_LIB)
+SECURITY_FLAGS = $(KERBEROS_FLAG) \
+		 $(GSI_FLAGS) $(OPENSSL_FLAGS)
+SECURITY_LIB   = $(KERBEROS_LIB) \
+		 $(GSI_LIB) $(OPENSSL_LIB)
 
 #if WANT_NETMAN
 NETMAN_LIB = ../condor_netman/libnetman.a

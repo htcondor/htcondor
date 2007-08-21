@@ -5,7 +5,6 @@
 #define IS_CLIPPED YES
 
 #define HAS_GSI		YES
-#define HAS_OPENSSL 	YES
 
 #undef WANT_PVM
 #define WANT_PVM	NO

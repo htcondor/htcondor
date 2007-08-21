@@ -2460,25 +2460,11 @@ MyString SecMan::getDefaultAuthenticationMethods() {
 
 
 MyString SecMan::getDefaultCryptoMethods() {
-
-	return ""
-
-/* 3DES */
-#ifdef CONDOR_3DES_ENCRYPTION
-#define ENCRYPTION_LIST_EXISTS
-		"3DES"
-#endif /* 3DES */
-
-/* BLOWFISH */
-#ifdef CONDOR_BLOWFISH_ENCRYPTION
-#ifdef ENCRYPTION_LIST_EXISTS
-		","
-#endif /* ENCRYPTION_LIST_EXISTS */
-		"BLOWFISH"
-#endif /* BLOWFISH */
-
-		;
-
+#ifdef HAVE_EXT_OPENSSL
+	return "3DES,BLOWFISH";
+#else
+	return "";
+#endif
 }
 
 void SecMan::send_invalidate_packet ( char* sinful, char* sessid ) {

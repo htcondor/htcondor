@@ -12,4 +12,3 @@
 #define WANT_KERBEROS NO
 
 #define HAS_GSI		YES
-#define HAS_OPENSSL	YES
