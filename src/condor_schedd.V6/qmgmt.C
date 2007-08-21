@@ -2841,7 +2841,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				MyString hold_reason;
 				hold_reason.sprintf(
 					"Failed to convert environment to target syntax"
-					" for starter (opsys=%s): %s\n",
+					" for starter (opsys=%s): %s",
 					opsys ? opsys : "NULL",env_error_msg.Value());
 
 
