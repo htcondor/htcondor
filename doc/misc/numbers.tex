@@ -18,7 +18,7 @@
 105 &   JOB\_NO\_MEM      & not enough memory to start the condor\_shadow \\ \hline
 106 &   JOB\_SHADOW\_USAGE & incorrect arguments to condor\_shadow \\ \hline
 107 &   JOB\_NOT\_CKPTED  & the job vacated without a checkpoint \\ \hline
-107 &   JOB\_SHOULD\_REQUEUE  & (!) same number used, to achieve the same behavior. However, JOB\_NOT\_CKPTED is irrelevant unless it is a standard universe job. This exit code implies that we want the job to be put back in the job queue and run again. \\ \hline
+107 &   JOB\_SHOULD\_REQUEUE  & same number as JOB\_NOT\_CKPTED, to achieve the same behavior. However, JOB\_NOT\_CKPTED is irrelevant unless it is a standard universe job. This exit code implies that we want the job to be put back in the job queue and run again. \\ \hline
 108 &   JOB\_NOT\_STARTED  & can not connect to the \Condor{startd} or request refused \\ \hline
 109 &   JOB\_BAD\_STATUS  & job status != RUNNING on start up \\ \hline
 110 &   JOB\_EXEC\_FAILED & exec failed for some reason other than ENOMEM \\ \hline
@@ -31,3 +31,52 @@
 \end{table}
 \end{center}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Well-Known Ports}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|l|c|} \hline
+\emph{Server} & \emph{Port Number}   \\ \hline \hline
+\Condor{negotiator}   &   9614 (obsolete, now dynamically allocated)   \\ \hline
+\Condor{collector}    &   9618  \\ \hline
+GT2 gatekeeper        &   2119  \\ \hline
+gridftp               &   2811  \\ \hline
+GT4 web services      &   8443  \\ \hline
+\end{tabular}
+%\caption{\label{well-known-port-numbers}Well-Known Port Numbers}
+\label{well-known-port-numbers}
+\end{table}
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{DaemonCore Commands and Signals}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|l|c|} \hline
+\emph{Number} & \emph{Name}   \\ \hline \hline
+60000  &   DC\_RAISESIGNAL                 \\ \hline
+60001  &   DC\_PROCESSEXIT                 \\ \hline
+60002  &   DC\_CONFIG\_PERSIST             \\ \hline
+60003  &   DC\_CONFIG\_RUNTIME             \\ \hline
+60004  &   DC\_RECONFIG                    \\ \hline
+60005  &   DC\_OFF\_GRACEFUL               \\ \hline
+60006  &   DC\_OFF\_FAST                   \\ \hline
+60007  &   DC\_CONFIG\_VAL                 \\ \hline
+60008  &   DC\_CHILDALIVE                  \\ \hline
+60009  &   DC\_SERVICEWAITPIDS             \\ \hline
+60010  &   DC\_AUTHENTICATE                \\ \hline
+60011  &   DC\_NOP                         \\ \hline
+60012  &   DC\_RECONFIG\_FULL              \\ \hline
+60013  &   DC\_FETCH\_LOG                  \\ \hline
+60014  &   DC\_INVALIDATE\_KEY             \\ \hline
+60015  &   DC\_OFF\_PEACEFUL               \\ \hline
+60016  &   DC\_SET\_PEACEFUL\_SHUTDOWN     \\ \hline
+60017  &   DC\_TIME\_OFFSET                \\ \hline
+\end{tabular}
+\label{daemoncore-commands}
+\end{table}
+\end{center}
