@@ -468,5 +468,6 @@ int &prevLHF)
 	tmp.sprintf("%s = %d", "LastReportedTime", prevLHF);
 	(&clCopy)->Insert(tmp.GetCStr());
 
+	ASSERT( dbh );
 	dbh->file_newEvent(adType, &clCopy);	
 }
