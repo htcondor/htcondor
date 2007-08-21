@@ -242,6 +242,16 @@ DC_Exit( int status )
 		// address file or the pid file.
 	clean_files();
 
+	if(FILEObj) {
+		delete FILEObj;
+		FILEObj = NULL;
+	}
+	if(XMLObj) {
+		delete XMLObj;
+		XMLObj = NULL;
+	}
+
+
 		// See if this daemon wants to be restarted (true by
 		// default).  If so, use the given status.  Otherwise, use the
 		// special code to tell our parent not to restart us.
@@ -1238,19 +1248,6 @@ handle_dc_sigterm( Service*, int )
 
 	dprintf(D_ALWAYS, "Got SIGTERM. Performing graceful shutdown.\n");
 
-/*
-	if(DBObj) {
-		delete DBObj;
-	}
-*/
-
-	if(FILEObj) {
-		delete FILEObj;
-	}
-    if(XMLObj) {
-        delete XMLObj;
-    }
-
 #if defined(WIN32) && 0
 	if ( line_where_service_stopped != 0 ) {
 		dprintf(D_ALWAYS,"Line where service stopped = %d\n",
@@ -1291,19 +1288,6 @@ handle_dc_sigquit( Service*, int )
 		return TRUE;
 	}
 	been_here = TRUE;
-
-/*
-	if(DBObj) {
-		delete DBObj;
-	}
-*/
-
-	if(FILEObj) {
-		delete FILEObj;
-	}
-	if(XMLObj) {
-		delete XMLObj;
-	}
 
 	dprintf(D_ALWAYS, "Got SIGQUIT.  Performing fast shutdown.\n");
 	main_shutdown_fast();
