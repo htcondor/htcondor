@@ -3,7 +3,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Quill|(}
 
-Quill maintains a mirror of Condor operational data
+Quill is an optional component of Condor that maintains a mirror 
+of Condor operational data
 in a relational database.  The \Condor{quill} daemon updates
 the data in the relation database, and the \Condor{dbmsd} daemon
 maintains the database itself.
@@ -354,194 +355,6 @@ for the various time stamp formats.
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Quill-Schema}Quill and Its RDBMS Schema}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-With only 7 tables and 2 views, Quill uses a relatively simple database
-schema.  These can be broadly divided into tables used to store job
-queue information and those used to store historical information.
-
-The job queue part of the schema closely follows Condor's ClassAd data
-model. For example, each row in these tables describe an <attribute,value>
-pair of the classad.  Additionally, just as how Condor distinguishes a
-ClusterAd from a ProcAd where the former stores attributes common to all
-jobs within a cluster whereas the latter stores attributes specific to
-each job, the schema also makes this distinction.  Finally, numerical
-and string valued attributes are stored separately.
-
-Thus, there are four tables:
-
-\begin{itemize}
-
-\item 
-	\SQLTableDef{ClusterAds\_Str}
-		{cid int, 
-		attr text, 
-		val text, 
-		primary key (cid, attr)}
-
-\item 
-	\SQLTableDef{ClusterAds\_Num}
-		{cid int, 
-		attr text, 
-		val double precision, 
-		primary key (cid, attr)}
-
-\item 
-	\SQLTableDef{ProcAds\_Str}
-		{cid int, 
-		pid int, 
-		attr text, 
-		val text, 
-		primary key (cid, pid, attr)}
-
-\item 
-	\SQLTableDef{ProcAds\_Num}
-		{cid int, 
-		pid int, 
-		attr text, 
-		val double precision,
-		primary key (cid, pid, attr)}
-
-\end{itemize}
-
-In addition to the <attribute, value>, each row contains the cluster-id
-(cid) and in the case of the ProcAd tables, also the proc-id (pid).
-
-Since each ClassAd would be split into potentially two tables (string
-and numeric), there are views that unify them into a single entity in
-order to simplify queries.
-
-Here are the view definitions:
-
-\begin{itemize}
-\item Definition of ClusterAds view\\
-	\SQLViewDef{ClusterAds}
-		{select cid, 
-		attr, 
-		val from ClusterAds\_Str UNION ALL
-		select cid, 
-		attr, 
-		cast(val as text) from ClusterAds\_Num}
-
-
-\item Definition of ProcAds view\\
-	\SQLViewDef{ProcAds}
-		{select cid, 
-		pid, 
-		attr, 
-		val from ProcAds\_Str UNION ALL
-		select cid, 
-		pid, 
-		attr, 
-		cast(val as text) from ProcAds\_Num}
-
-\end{itemize}
-
-Finally, the job queue part of the schema also contains a table that
-stores metadata information related to the \File{job\_queue.log} file.
-
-\begin{itemize}
-\item \SQLTableDef{JobQueuePollingInfo}
-        {last\_file\_mtime         BIGINT,
-        last\_file\_size          BIGINT,
-        last\_next\_cmd\_offset    BIGINT,
-        last\_cmd\_offset         BIGINT,
-        last\_cmd\_type           SMALLINT,
-        last\_cmd\_key            text,
-        last\_cmd\_mytype         text,
-        last\_cmd\_targettype     text,
-        last\_cmd\_name           text,
-        last\_cmd\_value          text,
-        log\_seq\_num             BIGINT,
-        log\_creation\_time       BIGINT}
-\end{itemize}
-	
-At all times, there is only 1 row in this table and it describes
-information related to the last time Quill polled the \File{job\_queue.log} file.
-
-\begin{itemize}
-\item \Bold{last\_file\_mtime} and \Bold{last\_file\_size}\\
-	The last modified time and size of the file.
-
-\item \Bold{last\_cmd\_offset} and \Bold{last\_next\_cmd\_offset}\\
-	The offsets of the record last read from the file and its successive record.
-
-\item \Bold{last\_cmd\_type}\\
-	The command type (101, 102, etc.) of the record.
-
-\item	\Bold{last\_cmd\_key}, 
-		\Bold{last\_cmd\_mytype}, 
-		\Bold{last\_cmd\_targettype},
-		\Bold{last\_cmd\_name},
-		and
-		\Bold{last\_cmd\_value}\\
-	Together, these attributes define the record itself.	The key
-	refers to the combined "cid.pid" pair, mytype and target usually
-	contains Job and Machine respectively, and finally the name and
-	value contains the <attribute,value> pair.
-
-\item \Bold{log\_seq\_num} and \Bold{log\_creation\_time}\\
-	Together, these form the first record of the job queue log file. They 
-	describe the sequence number of the next historical job queue log file
-	and the creation time of the current job queue log file respectively.
-	Together, they help Quill detect whether the schedd has rotated the 
-	job queue log file and, if so, take appropriate actions. 
-
-\end{itemize}
-
-The historical information on the other hand is slightly differently
-designed.  Instead of a purely vertical data model (each row is a
-$<$attribute,value$>$ pair), we have two tables that together represent the
-complete job classad.  Their schema is as follows:
-
-\begin{enumerate}
-
-\item \SQLTableDef{History\_Horizontal}
-        {cid                  int,
-        pid                  int,
-	EnteredHistoryTable  timestamp with time zone,
-        Owner                text,
-        QDate                int,
-        RemoteWallClockTime  int,
-        RemoteUserCpu        float,
-        RemoteSysCpu         float,
-        ImageSize            int,
-        JobStatus            int,
-        JobPrio              int,
-        Cmd                  text,
-        CompletionDate       int,
-        LastRemoteHost       text,
-        primary key(cid,pid)}
-
-\item \SQLTableDef{History\_Vertical}
-	{cid int, pid int, attr text, val text, primary key
-	(cid, pid, attr)}
-
-\end{enumerate}
-
-Each historical job ad is divided into its horizontal and vertical
-counterparts.  This division was made because of query performance
-reasons.  While its easier to store ClassAds in a vertical table,
-queries on vertical tables generally perform worse than those on
-horizontal tables since the latter has lot fewer records.  However, in
-Condor, since job ads do not have a fixed schema (users can define their
-own attributes), a purely horizontal schema would end up having a lot
-of null values. As such, we have a hybrid schema where attributes on
-which queries are frequently performed (via \Condor{history}) are put
-in the \SQLTable{History\_Horizontal} table and the other attributes
-are stored vertically (just as in the Cluster/Proc tables above) in the
-\SQLTable{History\_Vertical} table. Also \SQLTable{History\_Horizontal}
-contains all the attributes needed to service the short form of the
-\Condor{history} command (that is, without the -l option).
-
-The resulting hybrid schema has proven to be the most efficient in
-servicing \Condor{history} queries.  The job queue tables (Cluster and
-Proc) were not designed in this hybrid manner because job queues aren't
-as large as history; just a vertical schema worked great.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Quill-Security}Quill and Security}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -580,3 +393,8 @@ to disallow the database from being read by all remote Condor query tools.
 
 \end{enumerate}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Quill-Schema}Quill and Its RDBMS Schema}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{admin-man/quill-schema.tex}
