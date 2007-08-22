@@ -171,7 +171,7 @@ stork_contrib_module_link_target($(UNITREE_COPY),$(MODULE)transfer.file-unitree)
 stork_contrib_module_link_target($(UNITREE_COPY),$(MODULE)transfer.unitree-file)
 #endif /* WANT_STORK_UNITREE */
 
-#if WANT_STORK_SRB && HAS_GLOBUS
+#if WANT_STORK_SRB && HAVE_EXT_GLOBUS
 SRB_COPY = $(MODULE)transfer.srb
 SRB_ROOT   = $(EXT_INSTALL)/$(EXT_SRB_VERSION)
 SRB_LIB    = $(SRB_ROOT)/obj

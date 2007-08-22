@@ -1120,7 +1120,7 @@ dc_reconfig( bool is_full )
 void
 dc_config_auth()
 {
-#if !defined(SKIP_AUTHENTICATION) && defined(GSI_AUTHENTICATION)
+#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_GLOBUS)
 
     // First, if there is X509_USER_PROXY, we clear it.
 	UnsetEnv( "X509_USER_PROXY" );

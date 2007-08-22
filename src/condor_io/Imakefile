@@ -16,7 +16,7 @@ AUTH_SSL_OBJ = condor_auth_ssl.o
 AUTH_KERB_OBJ = condor_auth_kerberos.o
 #endif
 
-#if WANT_GSI && HAS_GSI
+#if HAVE_EXT_GLOBUS
 AUTH_X509_OBJ = condor_auth_x509.o
 #endif
 

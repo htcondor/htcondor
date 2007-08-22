@@ -7,7 +7,5 @@
 
 #define WANT_PVM NO
 
-#define HAS_GSI YES
-
 #undef WANT_KERBEROS
 #define WANT_KERBEROS NO

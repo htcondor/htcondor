@@ -239,11 +239,6 @@ stuff, even if the rest of the imake configuration things we want it.
 #endif
 #define WANT_CONDOR_G	NO
 
-#ifdef WANT_GSI
-#undef WANT_GSI
-#endif
-#define WANT_GSI	NO
-
 #ifdef WANT_X509
 #undef WANT_X509
 #endif
@@ -253,12 +248,6 @@ stuff, even if the rest of the imake configuration things we want it.
 #undef WANT_KERBEROS
 #endif
 #define WANT_KERBEROS	NO
-
-#ifdef USE_GLOBUS_OPENSSL
-#undef USE_GLOBUS_OPENSSL
-#endif
-#define USE_GLOBUS_OPENSSL	NO
-
 
 #endif /* ! HAS_EXTERNALS */
 
@@ -275,16 +264,6 @@ stuff, even if the rest of the imake configuration things we want it.
 #else
  CONDOR_G_FLAGS =
 #endif /* WantCondorG */
-
-/* GSI Authentication requires globus*/
-#if WANT_GSI && HAS_GSI
-#  define NEEDS_GSI YES
-  GSI_AUTH_FLAGS = -DGSI_AUTHENTICATION
-  GSI_AUTH_LIB =
-#else
-  GSI_AUTH_FLAGS =
-  GSI_AUTH_LIB   = 
-#endif /* WANT_GSI && HAS_GSI */
 
 /* Kerberos */
 #if WANT_KERBEROS
@@ -313,8 +292,7 @@ NOTE: we also need the same crap for libpcre.a...
 #endif
 
 
-#if NEEDS_GSI && HAS_GSI
-  GSI_FLAGS = -DCONDOR_GSI $(GSI_AUTH_FLAGS)
+#if HAVE_EXT_GLOBUS
   GSI_LIB   = \
 	      $(GLOBUS_DIR)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_gsi_cert_utils_$(GlobusFlavor).a \
@@ -332,7 +310,6 @@ NOTE: we also need the same crap for libpcre.a...
 	      $(GLOBUS_DIR)/lib/libglobus_common_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libltdl_$(GlobusFlavor).a
 #else
-  GSI_FLAGS =
   GSI_LIB   =
 #endif
 
@@ -362,7 +339,7 @@ NOTE: we also need the same crap for libpcre.a...
 
 /* Collect all the security-related variables into a single variable */
 SECURITY_FLAGS = $(KERBEROS_FLAG) \
-		 $(GSI_FLAGS) $(OPENSSL_FLAGS)
+		 $(OPENSSL_FLAGS)
 SECURITY_LIB   = $(KERBEROS_LIB) \
 		 $(GSI_LIB) $(OPENSSL_LIB)
 

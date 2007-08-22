@@ -28,7 +28,7 @@
 
 #include "globus_utils.h"
 
-#if defined(CONDOR_GSI)
+#if defined(HAVE_EXT_GLOBUS)
 #     include "globus_gsi_credential.h"
 #     include "globus_gsi_system_config.h"
 #     include "globus_gsi_system_config_constants.h"
@@ -96,7 +96,7 @@ static
 int
 activate_globus_gsi( void )
 {
-#if !defined(CONDOR_GSI)
+#if !defined(HAVE_EXT_GLOBUS)
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 #else
@@ -144,7 +144,7 @@ char *
 get_x509_proxy_filename( void )
 {
 	char *proxy_file = NULL;
-#if defined(CONDOR_GSI)
+#if defined(HAVE_EXT_GLOBUS)
 	globus_gsi_proxy_file_type_t     file_type    = GLOBUS_PROXY_FILE_INPUT;
 
 	if ( activate_globus_gsi() != 0 ) {
@@ -168,7 +168,7 @@ get_x509_proxy_filename( void )
 char *
 x509_proxy_subject_name( const char *proxy_file )
 {
-#if !defined(CONDOR_GSI)
+#if !defined(HAVE_EXT_GLOBUS)
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return NULL;
 #else
@@ -244,7 +244,7 @@ x509_proxy_subject_name( const char *proxy_file )
 char *
 x509_proxy_identity_name( const char *proxy_file )
 {
-#if !defined(CONDOR_GSI)
+#if !defined(HAVE_EXT_GLOBUS)
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return NULL;
 #else
@@ -311,7 +311,7 @@ x509_proxy_identity_name( const char *proxy_file )
 time_t
 x509_proxy_expiration_time( const char *proxy_file )
 {
-#if !defined(CONDOR_GSI)
+#if !defined(HAVE_EXT_GLOBUS)
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 #else
@@ -383,7 +383,7 @@ x509_proxy_expiration_time( const char *proxy_file )
 int
 x509_proxy_seconds_until_expire( const char *proxy_file )
 {
-#if !defined(CONDOR_GSI)
+#if !defined(HAVE_EXT_GLOBUS)
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 #else
@@ -417,7 +417,7 @@ x509_proxy_seconds_until_expire( const char *proxy_file )
 int
 x509_proxy_try_import( const char *proxy_file )
 {
-#if !defined(CONDOR_GSI)
+#if !defined(HAVE_EXT_GLOBUS)
 
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
@@ -474,13 +474,13 @@ x509_proxy_try_import( const char *proxy_file )
     }
 
 	return 0;
-#endif /* !defined(CONDOR_GSI) */
+#endif /* !defined(HAVE_EXT_GLOBUS) */
 }
 
 int
 check_x509_proxy( const char *proxy_file )
 {
-#if !defined(CONDOR_GSI)
+#if !defined(HAVE_EXT_GLOBUS)
 
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
@@ -528,7 +528,7 @@ check_x509_proxy( const char *proxy_file )
 }
 
 
-#if defined(CONDOR_GSI)
+#if defined(HAVE_EXT_GLOBUS)
 
 static int
 buffer_to_bio( char *buffer, int buffer_len, BIO **bio )
@@ -572,7 +572,7 @@ bio_to_buffer( BIO *bio, char **buffer, int *buffer_len )
 	return TRUE;
 }
 
-#endif /* defined(CONDOR_GSI) */
+#endif /* defined(HAVE_EXT_GLOBUS) */
 
 int
 x509_send_delegation( const char *source_file,
@@ -581,7 +581,7 @@ x509_send_delegation( const char *source_file,
 					  int (*send_data_func)(void *, void *, size_t),
 					  void *send_data_ptr )
 {
-#if !defined(CONDOR_GSI)
+#if !defined(HAVE_EXT_GLOBUS)
 
 	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
 	return -1;
@@ -783,7 +783,7 @@ x509_receive_delegation( const char *destination_file,
 						 int (*send_data_func)(void *, void *, size_t),
 						 void *send_data_ptr )
 {
-#if !defined(CONDOR_GSI)
+#if !defined(HAVE_EXT_GLOBUS)
 
 	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
 	return -1;

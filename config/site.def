@@ -15,7 +15,6 @@
 #define WANT_PVM		YES
 #define WANT_CONDOR_G	YES
 #define WANT_NETMAN	NO
-#define WANT_GSI		YES
 #define WANT_X509       YES
 #define WANT_KERBEROS   YES
 #define WANT_DAGMAN_HELPER     YES
@@ -24,7 +23,6 @@
 #define WANT_QUILL		YES
 #define WANT_TT			YES
 
-#define USE_GLOBUS_OPENSSL YES
 #define NEEDS_PRELINKER	NO
 #endif  /* BeforeVendorCF */
 

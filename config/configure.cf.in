@@ -152,8 +152,6 @@ CONDOR_ANALYZE_STRIP = @condor_analyze_strip@
 
 #define HAS_STATIC @_cv_has_static@
 
-#define HAS_GLOBUS @_cv_has_globus@
-
 GlobusFlavor = @globus_flavor@
 
 LIBCRYPT = @crypt_lib@

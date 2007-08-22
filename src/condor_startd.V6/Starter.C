@@ -1025,7 +1025,7 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	// SSL_CLIENT_CERT - cert to use for the mapping
 	glexec_env.SetEnv( "SSL_CLIENT_CERT", pem_str.Value() );
 
-#if defined(GSI_AUTHENTICATION) && !defined(SKIP_AUTHENTICATION)
+#if defined(HAVE_EXT_GLOBUS) && !defined(SKIP_AUTHENTICATION)
 	// GLEXEC_SOURCE_PROXY -  proxy to provide to the child
 	//                        (file is owned by us)
 	glexec_env.SetEnv( "GLEXEC_SOURCE_PROXY", s_claim->client()->proxyFile() );

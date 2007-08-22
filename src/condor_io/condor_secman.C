@@ -2450,7 +2450,7 @@ MyString SecMan::getDefaultAuthenticationMethods() {
 	methods += ",KERBEROS";
 #endif
 
-#if defined(GSI_AUTHENTICATION)
+#if defined(HAVE_EXT_GLOBUS)
 	methods += ",GSI";
 #endif
 

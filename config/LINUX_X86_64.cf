@@ -13,12 +13,6 @@ arguments. XXX figure out how I'm going to model this parameter... */
 
 #define IS_CLIPPED NO
 
-/* These are turned off because globus 2.4.3 and gpt 3.0 don't compile on 
-	the opteron. gpt 3.2 will compile, though. It looks like gt4 will
-	compile on the opteron, but it isn't officially in Condor's externals
-	yet. */
-#define HAS_GSI         YES
-
 /* pvm was never ported (cause it is old and dead) to this architecture */
 #undef WANT_PVM
 #define WANT_PVM NO

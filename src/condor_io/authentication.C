@@ -144,12 +144,12 @@ Condor_Auth_Base * auth = NULL;
 
 		char* method_name = NULL;
 		switch ( firm ) {
-#if defined(GSI_AUTHENTICATION)
+#if defined(HAVE_EXT_GLOBUS)
 			case CAUTH_GSI:
 				auth = new Condor_Auth_X509(mySock);
 				method_name = strdup("GSI");
 				break;
-#endif /* GSI_AUTHENTICATION */
+#endif /* HAVE_EXT_GLOBUS */
 
 #ifdef HAVE_EXT_OPENSSL
             case CAUTH_SSL:
@@ -385,7 +385,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 			// mapfile.
 			//
 			if ((authentication_type == CAUTH_GSI) && (canonical_user == "GSS_ASSIST_GRIDMAP")) {
-#if defined(GSI_AUTHENTICATION)
+#if defined(HAVE_EXT_GLOBUS)
 				// it's already been done.  we just need to return here so we don't
 				// set anything below.
 

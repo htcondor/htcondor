@@ -21,7 +21,7 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#if !defined(SKIP_AUTHENTICATION) && defined(GSI_AUTHENTICATION)
+#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_GLOBUS)
 
 #include "condor_common.h"
 #include "condor_auth_x509.h"

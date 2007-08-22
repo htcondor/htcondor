@@ -20,16 +20,14 @@
 #define WANT_NEW_CLASSADS          YES
 #endif
 
-#if IS_GLIBC23 && HAS_GLOBUS && WANT_NEW_CLASSADS
+#if IS_GLIBC23 && HAVE_EXT_GLOBUS && WANT_NEW_CLASSADS
 	/* Currently, Stork only builds on RH9. */
 #	define WANT_STORK                     YES
 #endif
 
-#if WANT_NEW_CLASSADS && HAS_GLOBUS
+#if WANT_NEW_CLASSADS && HAVE_EXT_GLOBUS
 #define WANT_BLAHP	YES
 #endif
 
 #define WANT_PVM	YES
 #define PVM_ARCH	LINUX
-
-#define HAS_GSI		YES

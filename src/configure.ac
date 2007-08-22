@@ -1994,17 +1994,6 @@ fi
 
 CONDOR_EXTERNAL_VERSION([krb5],[1.4.3])
 
-CONDOR_EXTERNAL_VERSION([globus],[4.0.3-2])
-AC_MSG_CHECKING([globus flavor])
-_cv_globus_flavor=gcc32dbg
-if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" -o "$_cv_arch" = "X86_64"; then
-  _cv_globus_flavor=gcc64dbg
-elif test "$_cv_arch" = "SGI" -o "$_cv_opsys" = "AIX" ; then
-  _cv_globus_flavor=vendorcc32dbg
-fi
-AC_MSG_RESULT([$_cv_globus_flavor])
-AC_SUBST(globus_flavor,$_cv_globus_flavor)
-
 CONDOR_EXTERNAL_VERSION([gahp],[1.0.15])
 
 CONDOR_EXTERNAL_VERSION([gt3gahp],[2.0])
@@ -2069,9 +2058,8 @@ fi
 # or not.  for example, the test suite needs to know these things, 
 # even though it's being configured using --without-externals.
 #-----------------------------------------------------------------
-# determine whether we will be using globus on this platform (i.e. determine
-# HAS_GLOBUS). this logic used to be in the individual <platform>.cf
-# files; the variable HAS_GSI is still determined there
+# determine whether we will be using globus on this platform. this
+# logic used to be in the individual <platform>.cf files;
 AC_MSG_CHECKING([if build uses globus])
 case "$os" in
   "HP-UX" )
@@ -2104,20 +2092,32 @@ case "$os" in
 esac
 AC_MSG_RESULT([$_cv_has_globus])
 if test "$_cv_has_globus" = "yes" ; then
-  AC_SUBST(_cv_has_globus,YES)
-else
-  AC_SUBST(_cv_has_globus,NO)
-fi
 
-# currently, if we are using globus (and the openssl
-# within), we define HAVE_OPENSSL_SSL_H (meaning we
-# have ssl.h) to make gsoap happy
-# ALSO, since OpenSSL isn't really an external yet we need to make
-# sure HAVE_EXT_OPENSSL is defined, basically having Globus gives us
-# OpenSSL. -matt 082107
-if test "$_cv_has_globus" = "YES" ; then
+  # currently, if we are using globus (and the openssl
+  # within), we define HAVE_OPENSSL_SSL_H (meaning we
+  # have ssl.h) to make gsoap happy
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl (via globus)])
-  AC_DEFINE([HAVE_EXT_OPENSSL], [1], [if openssl external (via globus)])
+
+  # ALSO, since OpenSSL isn't really an external yet we need to make
+  # sure HAVE_EXT_OPENSSL is defined, basically having Globus gives us
+  # OpenSSL. -matt 082107
+  AC_DEFINE([HAVE_EXT_OPENSSL], [1], [if openssl external])
+  AC_DEFINE([USE_GLOBUS_OPENSSL], [1], [if openssl is from globus])
+
+  # ALSO ALSO, to eliminate HAS_GLOBUS in anything but this configure
+  # script, if we know we will have globus then we will do
+  # CONDOR_EXTERNAL_VERSION([globus]...), which defines HAVE_EXT_GLOBUS
+  # that we can use instead of HAS_GLOBUS -matt 082207
+  CONDOR_EXTERNAL_VERSION([globus],[4.0.3-2])
+  AC_MSG_CHECKING([globus flavor])
+  _cv_globus_flavor=gcc32dbg
+  if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" -o "$_cv_arch" = "X86_64"; then
+    _cv_globus_flavor=gcc64dbg
+  elif test "$_cv_arch" = "SGI" -o "$_cv_opsys" = "AIX" ; then
+    _cv_globus_flavor=vendorcc32dbg
+  fi
+  AC_MSG_RESULT([$_cv_globus_flavor])
+  AC_SUBST(globus_flavor,$_cv_globus_flavor)
 fi
 
 

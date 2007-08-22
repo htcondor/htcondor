@@ -4,8 +4,6 @@
 
 #define IS_CLIPPED YES
 
-#define HAS_GSI		YES
-
 #undef WANT_PVM
 #define WANT_PVM	NO
 

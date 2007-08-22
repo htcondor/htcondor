@@ -20,8 +20,6 @@
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 
-#define HAS_GSI				NO
-
 #undef WANT_PVM
 #define WANT_PVM			NO
 #undef WANT_KERBEROS

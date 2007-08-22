@@ -19,13 +19,13 @@
 #define StdUnvProgs shadow.V6 starter.V5 
 #define StdUnvLibs ckpt syscall_lib
 
-#if WANT_CONDOR_G && HAS_GLOBUS
+#if WANT_CONDOR_G && HAVE_EXT_GLOBUS
 #define GlobusProgs gridmanager globus
 #else
 #define GlobusProgs
 #endif
 
-#if WANT_NEW_CLASSADS && HAS_GLOBUS
+#if WANT_NEW_CLASSADS && HAVE_EXT_GLOBUS
 #define CreddProgs credd
 #else
 #define CreddProgs
@@ -290,11 +290,11 @@ condor_object_target(daemon_client)
 #endif
 condor_object_target(prio)
 condor_object_target(scripts)
-#if WANT_CONDOR_G && HAS_GLOBUS
+#if WANT_CONDOR_G && HAVE_EXT_GLOBUS
     condor_object_target(gridmanager)
 	condor_object_target(globus)
 #endif
-#if WANT_NEW_CLASSADS && HAS_GLOBUS
+#if WANT_NEW_CLASSADS && HAVE_EXT_GLOBUS
 	condor_object_target(credd)
 #endif
 condor_object_target(starter.V6.1)
@@ -413,7 +413,7 @@ ext_target(EXT_GLIBC_VERSION,$(NULL))
 #if WANT_KERBEROS
 ext_target(EXT_KERBEROS_VERSION,$(NULL))
 #endif
-#if HAS_GLOBUS
+#if HAVE_EXT_GLOBUS
 ext_target(EXT_GLOBUS_VERSION,$(NULL))
 ext_target(EXT_GAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
 ext_target(EXT_GT3GAHP_VERSION,$(NULL))
