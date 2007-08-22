@@ -98,11 +98,13 @@ class FileTransfer {
 		ClassAd has the neccesary read/write permission.
 		@return 1 on success, 0 on failure */
 	int Init( ClassAd *Ad, bool check_file_perms = false, 
-			  priv_state priv = PRIV_UNKNOWN );
+			  priv_state priv = PRIV_UNKNOWN,
+			  bool use_file_catalog = true);
 
 	int SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server, 
 						 ReliSock *sock_to_use = NULL, 
-						 priv_state priv = PRIV_UNKNOWN);
+						 priv_state priv = PRIV_UNKNOWN,
+						 bool use_file_catalog = true);
 
 	/** @param Ad contains filename remaps for downloaded files.
 		       If NULL, turns off remaps.
@@ -275,6 +277,7 @@ class FileTransfer {
 	bool simple_init;
 	ReliSock *simple_sock;
 	MyString download_filename_remaps;
+	bool m_use_file_catalog;
 
 	// called to construct the catalog of files in a direcotry
 	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable **catalog = NULL);

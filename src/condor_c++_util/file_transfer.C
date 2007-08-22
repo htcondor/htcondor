@@ -139,6 +139,7 @@ FileTransfer::FileTransfer()
 	clientSockTimeout = 30;
 	simple_init = true;
 	simple_sock = NULL;
+	m_use_file_catalog = true;
 }
 
 FileTransfer::~FileTransfer()
@@ -202,7 +203,8 @@ FileTransfer::~FileTransfer()
 
 int
 FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server, 
-						 ReliSock *sock_to_use, priv_state priv ) 
+						 ReliSock *sock_to_use, priv_state priv,
+						 bool use_file_catalog) 
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
@@ -217,6 +219,10 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	user_supplied_key = is_server ? FALSE : TRUE;
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::SimpleInit\n");
+
+	/* in the case of SimpleINit being called inside of Init, this will
+		simply assign the same value to itself. */
+	m_use_file_catalog = use_file_catalog;
 
 	desired_priv_state = priv;
     if ( priv == PRIV_UNKNOWN ) {
@@ -561,7 +567,8 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	return 1;
 }
 int
-FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv ) 
+FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
+	bool use_file_catalog) 
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
@@ -574,6 +581,8 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 	}
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::Init\n");
+
+	m_use_file_catalog = use_file_catalog;
 
 	simple_init = false;
 
@@ -651,7 +660,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 
 		// Init all the file lists, etc.
 	if ( !SimpleInit(Ad, want_check_perms, IsServer(),
-			NULL, priv ) ) 
+			NULL, priv, m_use_file_catalog ) ) 
 	{
 		return 0;
 	}
@@ -2514,8 +2523,17 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 		delete (*catalog);
 	}
 
-	// years of careful research shows that 19 is a prime number close to 20
-	(*catalog) = new FileCatalogHashTable(19, compute_filename_hash);
+	// If we're going to stick a prime number in here, then let's make it
+	// big enough that the chains are decent sized. Suppose you might
+	// have 50,000 files. In the case for 997 buckets and even distribution, 
+	// the chains would be ~50 entries long. Good enough.
+	(*catalog) = new FileCatalogHashTable(997, compute_filename_hash);
+
+	/* If we've decided not to use a file catalog, then leave it empty. */
+	if (m_use_file_catalog == false) {
+		/* just leave the catalog empty. */
+		return true;
+	}
 
 	// now, iterate the directory and put the relavant info into the catalog.
 	// this currently excludes directories, and only stores the modification

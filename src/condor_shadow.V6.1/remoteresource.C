@@ -1621,7 +1621,7 @@ RemoteResource::requestReconnect( void )
 		// one already exists, the FileTransfer object will just
 		// quickly and quietly return success in that case.
 	ASSERT(jobAd);
-	filetrans.Init( jobAd, true, PRIV_USER );
+	filetrans.Init( jobAd, true, PRIV_USER, false );
 	char* value = NULL;
 	jobAd->LookupString(ATTR_TRANSFER_KEY,&value);
 	if (value) {

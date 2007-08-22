@@ -107,7 +107,7 @@ pseudo_get_job_info(ClassAd *&ad)
 		// Since the shadow runs as the submitting user, we
 		// let the OS enforce permissions instead of relying on
 		// the pesky perm object to get it right.
-	thisRemoteResource->filetrans.Init( the_ad, false, PRIV_USER );
+	thisRemoteResource->filetrans.Init( the_ad, false, PRIV_USER, false );
 
 	Shadow->publishShadowAttrs( the_ad );
 
