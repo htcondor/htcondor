@@ -527,7 +527,9 @@ import(../h,syscall_numbers.c)
 import(../condor_util_lib,stub_gen)
 import(../condor_shadow.V6,pseudo_ops.h)
 import(../condor_ckpt,libcondorc++support.a)
+#if DOES_COMPRESS_CKPT
 all_symlink_target($(ZLIB_LIB)/libz.a,libcondor_z.a)
+#endif
 
 authentication.o: ../condor_io/authentication.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
