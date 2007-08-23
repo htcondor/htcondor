@@ -295,17 +295,17 @@ NOTE: we also need the same crap for libpcre.a...
 #if HAVE_EXT_GLOBUS
   GSI_LIB   = \
 	      $(GLOBUS_DIR)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
-	      $(GLOBUS_DIR)/lib/libglobus_gsi_cert_utils_$(GlobusFlavor).a \
-	      $(GLOBUS_DIR)/lib/libglobus_proxy_ssl_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_gssapi_gsi_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_gsi_proxy_core_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_gsi_credential_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_gsi_callback_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libssl_$(GlobusFlavor).a \
    	      $(GLOBUS_DIR)/lib/libglobus_gsi_sysconfig_$(GlobusFlavor).a \
+	      $(GLOBUS_DIR)/lib/libglobus_oldgaa_$(GlobusFlavor).a \
+	      $(GLOBUS_DIR)/lib/libglobus_gsi_cert_utils_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_openssl_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_openssl_error_$(GlobusFlavor).a \
-	      $(GLOBUS_DIR)/lib/libglobus_oldgaa_$(GlobusFlavor).a \
+	      $(GLOBUS_DIR)/lib/libglobus_proxy_ssl_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_callout_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_common_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libltdl_$(GlobusFlavor).a
