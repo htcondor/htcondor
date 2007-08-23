@@ -136,6 +136,8 @@ static char *GMStateNames[] = {
 
 #define OUTPUT_WAIT_POLL_INTERVAL 1
 
+#define CANCEL_AFTER_RESTART_DELAY	30
+
 #define LOG_GLOBUS_ERROR(func,error) \
     dprintf(D_ALWAYS, \
 		"(%d.%d) gmState %s, globusState %d: %s returned Globus error %d\n", \
@@ -1889,6 +1891,16 @@ int GlobusJob::doEvaluateState()
 				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 				GOTO_RESTART_IF_JM_DOWN;
 				CHECK_PROXY;
+				if ( now < lastRestartAttempt + CANCEL_AFTER_RESTART_DELAY ) {
+					// After a restart, wait a bit before attempting a
+					// cancel. If the job is done but the jobmanager
+					// hasn't noticed yet, then we'll get GRAM error
+					// JOB_CANCEL_FAILED.
+dprintf(D_ALWAYS,"JEF: waiting after restart to do a cancel\n");
+					daemonCore->Reset_Timer( evaluateStateTid,
+								(lastRestartAttempt + CANCEL_AFTER_RESTART_DELAY) - now );
+					break;
+				}
 				rc = gahp->globus_gram_client_job_cancel( jobContact );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
