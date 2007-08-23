@@ -88,6 +88,10 @@ jobs in the queue) whenever \Condor{preen} was activated.
 \item When grid universe jobs of grid-type condor, lsf, or pbs are running,
 \Condor{q} will now show the correct accumulated runtime.
 
+\item When removing grid universe jobs of type gt2 that have just finished
+executing, the chance of encountering Globus GRAM error 31 (the job manager
+failed to cancel the job as requested) is now much reduced.
+
 \end{itemize}
 
 \noindent Known Bugs:
