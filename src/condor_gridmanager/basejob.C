@@ -374,6 +374,11 @@ void BaseJob::UpdateRuntimeStats()
 		int current_time = (int)time(NULL);
 		jobAd->Assign( ATTR_SHADOW_BIRTHDATE, current_time );
 
+		int num_job_starts = 0;
+		jobAd->LookupInteger( ATTR_NUM_JOB_STARTS, num_job_starts );
+		num_job_starts++;
+		jobAd->Assign( ATTR_NUM_JOB_STARTS, num_job_starts );
+
 		requestScheddUpdate( this );
 
 	} else if ( condorState != RUNNING && shadowBirthdate != 0 ) {
