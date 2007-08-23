@@ -257,7 +257,7 @@ Scheduler::Scheduler() :
 	job_is_finished_queue( "job_is_finished_queue", 1,
 						   &CondorID::ServiceDataCompare )
 {
-	ad = NULL;
+	m_ad = NULL;
 	MySockName = NULL;
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
@@ -359,7 +359,7 @@ Scheduler::Scheduler() :
 
 Scheduler::~Scheduler()
 {
-	delete ad;
+	delete m_ad;
 	if (MySockName)
 		free(MySockName);
 	if (MyShadowSockName)
@@ -677,73 +677,73 @@ Scheduler::count_jobs()
 	grow_prio_recs( JobsRunning + JobsIdle + 5 );
 	
 	sprintf(tmp, "%s = %d", ATTR_NUM_USERS, N_Owners);
-	ad->InsertOrUpdate(tmp);
+	m_ad->InsertOrUpdate(tmp);
 	
 	sprintf(tmp, "%s = %d", ATTR_MAX_JOBS_RUNNING, MaxJobsRunning);
-	ad->InsertOrUpdate(tmp);
+	m_ad->InsertOrUpdate(tmp);
 	
 	sprintf(tmp, "%s = %s", ATTR_START_LOCAL_UNIVERSE,
 							this->StartLocalUniverse );
-	ad->InsertOrUpdate(tmp);
+	m_ad->InsertOrUpdate(tmp);
 	
 	sprintf(tmp, "%s = %s", ATTR_START_SCHEDULER_UNIVERSE,
 							this->StartSchedulerUniverse );
-	ad->InsertOrUpdate(tmp);
+	m_ad->InsertOrUpdate(tmp);
 	
 	
 	 sprintf(tmp, "%s = \"%s\"", ATTR_NAME, Name);
-	 ad->InsertOrUpdate(tmp);
+	 m_ad->InsertOrUpdate(tmp);
 
 	 sprintf(tmp, "%s = %d", ATTR_VIRTUAL_MEMORY, SwapSpace );
-	 ad->InsertOrUpdate(tmp);
+	 m_ad->InsertOrUpdate(tmp);
 
 	// The schedd's ad should not have idle and running job counts --- 
 	// only the per user queue ads should.  Instead, the schedd has
 	// TotalIdleJobs and TotalRunningJobs.
-	ad->Delete (ATTR_IDLE_JOBS);
-	ad->Delete (ATTR_RUNNING_JOBS);
-	ad->Delete (ATTR_HELD_JOBS);
-	ad->Delete (ATTR_FLOCKED_JOBS);
+	m_ad->Delete (ATTR_IDLE_JOBS);
+	m_ad->Delete (ATTR_RUNNING_JOBS);
+	m_ad->Delete (ATTR_HELD_JOBS);
+	m_ad->Delete (ATTR_FLOCKED_JOBS);
 	// The schedd's ad doesn't need ATTR_SCHEDD_NAME either.
-	ad->Delete (ATTR_SCHEDD_NAME);
+	m_ad->Delete (ATTR_SCHEDD_NAME);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_IDLE_JOBS, JobsIdle);
-	ad->Insert (tmp);
+	m_ad->Insert (tmp);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_RUNNING_JOBS, JobsRunning);
-	ad->Insert (tmp);
+	m_ad->Insert (tmp);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_JOB_ADS, JobsTotalAds);
-	ad->Insert (tmp);
+	m_ad->Insert (tmp);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_HELD_JOBS, JobsHeld);
-	ad->Insert (tmp);
+	m_ad->Insert (tmp);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_FLOCKED_JOBS, JobsFlocked);
-	ad->Insert (tmp);
+	m_ad->Insert (tmp);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_REMOVED_JOBS, JobsRemoved);
-	ad->Insert (tmp);
+	m_ad->Insert (tmp);
 
-    daemonCore->publish(ad);
-    daemonCore->monitor_data.ExportData(ad);
-	extra_ads.Publish( ad );
+    daemonCore->publish(m_ad);
+    daemonCore->monitor_data.ExportData(m_ad);
+	extra_ads.Publish( m_ad );
     
 	if ( param_boolean("ENABLE_SOAP", false) ) {
 			// If we can support the SOAP API let's let the world know!
 		sprintf(tmp, "%s = True", ATTR_HAS_SOAP_API);
-		ad->Insert(tmp);
+		m_ad->Insert(tmp);
 	}
 
 	sprintf(tmp, "%s = %d", ATTR_JOB_QUEUE_BIRTHDATE,
 			 (int)GetOriginalJobQueueBirthdate());
-	ad->Insert (tmp);
+	m_ad->Insert (tmp);
 
         // Tell negotiator to send us the startd ad
 	sprintf(tmp, "%s = True", ATTR_WANT_RESOURCE_AD );
-	ad->InsertOrUpdate(tmp);
+	m_ad->InsertOrUpdate(tmp);
 
-	daemonCore->UpdateLocalAd(ad);
+	daemonCore->UpdateLocalAd(m_ad);
 
 		// log classad into sql log so that it can be updated to DB
-	FILESQL::daemonAdInsert(ad, "ScheddAd", FILEObj, prevLHF);
+	FILESQL::daemonAdInsert(m_ad, "ScheddAd", FILEObj, prevLHF);
 	
 		// Update collectors
-	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, ad, NULL, true);
+	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, m_ad, NULL, true);
 	dprintf( D_FULLDEBUG, 
 			 "Sent HEART BEAT ad to %d collectors. Number of submittors=%d\n",
 			 num_updates, N_Owners );   
@@ -757,7 +757,7 @@ Scheduler::count_jobs()
 		FlockCollectors->next(d);
 		for( i=0; d && i < FlockLevel; i++ ) {
 			col = (DCCollector*)d;
-			col->sendUpdate( UPDATE_SCHEDD_AD, ad, NULL, true );
+			col->sendUpdate( UPDATE_SCHEDD_AD, m_ad, NULL, true );
 			FlockCollectors->next( d );
 		}
 	}
@@ -765,43 +765,43 @@ Scheduler::count_jobs()
 	// The per user queue ads should not have NumUsers in them --- only
 	// the schedd ad should.  In addition, they should not have
 	// TotalRunningJobs and TotalIdleJobs
-	ad->Delete (ATTR_NUM_USERS);
-	ad->Delete (ATTR_TOTAL_RUNNING_JOBS);
-	ad->Delete (ATTR_TOTAL_IDLE_JOBS);
-	ad->Delete (ATTR_TOTAL_JOB_ADS);
-	ad->Delete (ATTR_TOTAL_HELD_JOBS);
-	ad->Delete (ATTR_TOTAL_FLOCKED_JOBS);
-	ad->Delete (ATTR_TOTAL_REMOVED_JOBS);
+	m_ad->Delete (ATTR_NUM_USERS);
+	m_ad->Delete (ATTR_TOTAL_RUNNING_JOBS);
+	m_ad->Delete (ATTR_TOTAL_IDLE_JOBS);
+	m_ad->Delete (ATTR_TOTAL_JOB_ADS);
+	m_ad->Delete (ATTR_TOTAL_HELD_JOBS);
+	m_ad->Delete (ATTR_TOTAL_FLOCKED_JOBS);
+	m_ad->Delete (ATTR_TOTAL_REMOVED_JOBS);
 	sprintf(tmp, "%s = \"%s\"", ATTR_SCHEDD_NAME, Name);
-	ad->InsertOrUpdate(tmp);
+	m_ad->InsertOrUpdate(tmp);
 
 
 	for ( i=0; i<N_Owners; i++) {
 	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
-	  ad->InsertOrUpdate(tmp);
+	  m_ad->InsertOrUpdate(tmp);
 
 	  sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, Owners[i].JobsIdle);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
-	  ad->InsertOrUpdate(tmp);
+	  m_ad->InsertOrUpdate(tmp);
 
 	  sprintf(tmp, "%s = %d", ATTR_HELD_JOBS, Owners[i].JobsHeld);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
-	  ad->InsertOrUpdate(tmp);
+	  m_ad->InsertOrUpdate(tmp);
 
 	  sprintf(tmp, "%s = %d", ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
-	  ad->InsertOrUpdate(tmp);
+	  m_ad->InsertOrUpdate(tmp);
 
 	  sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name, UidDomain);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
-	  ad->InsertOrUpdate(tmp);
+	  m_ad->InsertOrUpdate(tmp);
 
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   Owners[i].Name, UidDomain );
 
 		// Update collectors
-	  num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, ad, NULL, true);
+	  num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, m_ad, NULL, true);
 	  dprintf( D_ALWAYS, "Sent ad to %d collectors for %s@%s\n", 
 			   num_updates, Owners[i].Name, UidDomain );
 	}
@@ -860,17 +860,17 @@ Scheduler::count_jobs()
 					// an update
 					continue;
 				}
-				ad->InsertOrUpdate(tmp);
+				m_ad->InsertOrUpdate(tmp);
 				sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS,
 						Owners[i].JobsRunning);
-				ad->InsertOrUpdate(tmp);
+				m_ad->InsertOrUpdate(tmp);
 				sprintf(tmp, "%s = %d", ATTR_FLOCKED_JOBS,
 						Owners[i].JobsFlocked);
-				ad->InsertOrUpdate(tmp);
+				m_ad->InsertOrUpdate(tmp);
 				sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name,
 						UidDomain);
-				ad->InsertOrUpdate(tmp);
-				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, ad, NULL, true );
+				m_ad->InsertOrUpdate(tmp);
+				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, m_ad, NULL, true );
 			}
 		}
 	}
@@ -902,9 +902,9 @@ Scheduler::count_jobs()
 	 // put 0 for idle & running jobs
 
 	sprintf(tmp, "%s = 0", ATTR_RUNNING_JOBS);
-	ad->InsertOrUpdate(tmp);
+	m_ad->InsertOrUpdate(tmp);
 	sprintf(tmp, "%s = 0", ATTR_IDLE_JOBS);
-	ad->InsertOrUpdate(tmp);
+	m_ad->InsertOrUpdate(tmp);
 
  	// send ads for owner that don't have jobs idle
 	// This is done by looking at the old owners list and searching for owners
@@ -932,11 +932,11 @@ Scheduler::count_jobs()
 		if (k<N_Owners) continue;
 
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
-	  ad->InsertOrUpdate(tmp);
+	  m_ad->InsertOrUpdate(tmp);
 
 		// Update collectors
 	  int num_udates = 
-		  daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, ad, NULL, true);
+		  daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, m_ad, NULL, true);
 	  dprintf(D_ALWAYS, "Sent owner (0 jobs) ad to %d collectors\n",
 			  num_udates);
 
@@ -946,7 +946,7 @@ Scheduler::count_jobs()
 		  for( i=1, FlockCollectors->rewind();
 			   i <= OldOwners[i].OldFlockLevel &&
 				   FlockCollectors->next(da); i++ ) {
-			  ((DCCollector*)da)->sendUpdate( UPDATE_SUBMITTOR_AD, ad, NULL, true );
+			  ((DCCollector*)da)->sendUpdate( UPDATE_SUBMITTOR_AD, m_ad, NULL, true );
 		  }
 	  }
 	}
@@ -4017,7 +4017,7 @@ Scheduler::actOnJobs(int, Stream* s)
 						// authorized to vacate this job, and if so,
 						// record that we found this job_id and we're
 						// done.
-					if( !OwnerCheck(ad, rsock->getOwner()) ) {
+					if( !OwnerCheck(m_ad, rsock->getOwner()) ) {
 						results.record( tmp_id, AR_PERMISSION_DENIED );
 						job_ad = GetNextJobByConstraint( constraint, 0 );
 						continue;
@@ -10444,56 +10444,56 @@ Scheduler::Init()
 		//////////////////////////////////////////////////////////////
 		// Initialize our classad
 		//////////////////////////////////////////////////////////////
-	if( ad ) delete ad;
-	ad = new ClassAd();
+	if( m_ad ) delete m_ad;
+	m_ad = new ClassAd();
 
-	ad->SetMyTypeName(SCHEDD_ADTYPE);
-	ad->SetTargetTypeName("");
+	m_ad->SetMyTypeName(SCHEDD_ADTYPE);
+	m_ad->SetTargetTypeName("");
 
-    daemonCore->publish(ad);
+    daemonCore->publish(m_ad);
 
 		// Throw name and machine into the classad.
 	sprintf( expr, "%s = \"%s\"", ATTR_NAME, Name );
-	ad->Insert(expr);
+	m_ad->Insert(expr);
 
 	// This is foul, but a SCHEDD_ADTYPE _MUST_ have a NUM_USERS attribute
 	// (see condor_classad/classad.C
 	// Since we don't know how many there are yet, just say 0, it will get
 	// fixed in count_job() -Erik 12/18/2006
 	sprintf(expr, "%s = %d", ATTR_NUM_USERS, 0);
-    ad->Insert(expr);
+    m_ad->Insert(expr);
 
 #if WANT_QUILL
 	// Put the quill stuff into the add as well
 	if (quill_enabled == TRUE) {
 		sprintf( expr, "%s = TRUE", ATTR_QUILL_ENABLED ); 
-		ad->Insert(expr);
+		m_ad->Insert(expr);
 
 		sprintf( expr, "%s = \"%s\"", ATTR_QUILL_NAME, quill_name ); 
-		ad->Insert(expr);
+		m_ad->Insert(expr);
 
 		sprintf( expr, "%s = \"%s\"", ATTR_QUILL_DB_NAME, quill_db_name ); 
-		ad->Insert(expr);
+		m_ad->Insert(expr);
 
 		sprintf( expr, "%s = \"<%s>\"", ATTR_QUILL_DB_IP_ADDR, 
 			quill_db_ip_addr ); 
-		ad->Insert(expr);
+		m_ad->Insert(expr);
 
 		sprintf( expr, "%s = \"%s\"", ATTR_QUILL_DB_QUERY_PASSWORD, 
 			quill_db_query_password); 
-		ad->Insert(expr);
+		m_ad->Insert(expr);
 
 		if (quill_is_remotely_queryable == TRUE) {
 			sprintf( expr, "%s = TRUE", ATTR_QUILL_IS_REMOTELY_QUERYABLE);
 		} else {
 			sprintf( expr, "%s = FALSE", ATTR_QUILL_IS_REMOTELY_QUERYABLE);
 		}
-		ad->Insert(expr);
+		m_ad->Insert(expr);
 
 	} else {
 
 		sprintf( expr, "%s = FALSE", ATTR_QUILL_ENABLED ); 
-		ad->Insert(expr);
+		m_ad->Insert(expr);
 	}
 #endif
 
@@ -10503,7 +10503,7 @@ Scheduler::Init()
 		MySockName = strdup( daemonCore->InfoCommandSinfulString() );
 	}
 	sprintf( expr, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, MySockName );
-	ad->Insert(expr);
+	m_ad->Insert(expr);
 
 		// Now create another command port to be used exclusively by shadows.
 		// Stash the sinfull string of this new command port in MyShadowSockName.
@@ -10776,7 +10776,7 @@ Scheduler::reconfig()
 void
 Scheduler::update_local_ad_file() 
 {
-	daemonCore->UpdateLocalAd(ad);
+	daemonCore->UpdateLocalAd(m_ad);
 	return;
 }
 
@@ -10921,35 +10921,35 @@ Scheduler::invalidate_ads()
 
 		// The ClassAd we need to use is totally different from the
 		// regular one, so just delete it and start over again.
-	delete ad;
-	ad = new ClassAd;
-    ad->SetMyTypeName( QUERY_ADTYPE );
-    ad->SetTargetTypeName( SCHEDD_ADTYPE );
+	delete m_ad;
+	m_ad = new ClassAd;
+    m_ad->SetMyTypeName( QUERY_ADTYPE );
+    m_ad->SetTargetTypeName( SCHEDD_ADTYPE );
 
         // Invalidate the schedd ad
     sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, 
              Name );
-    ad->Insert( line );
+    m_ad->Insert( line );
 
 
 		// Update collectors
-	daemonCore->sendUpdates(INVALIDATE_SCHEDD_ADS, ad, NULL, false);
+	daemonCore->sendUpdates(INVALIDATE_SCHEDD_ADS, m_ad, NULL, false);
 
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
 		// Invalidate all our submittor ads.
 	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_SCHEDD_NAME,
 			 Name );
-    ad->InsertOrUpdate( line );
+    m_ad->InsertOrUpdate( line );
 
-	daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, ad, NULL, false);
+	daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, m_ad, NULL, false);
 
 
 	Daemon* d;
 	if( FlockCollectors && FlockLevel > 0 ) {
 		for( i=1, FlockCollectors->rewind();
 			 i <= FlockLevel && FlockCollectors->next(d); i++ ) {
-			((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, ad, NULL, false );
+			((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, m_ad, NULL, false );
 		}
 	}
 }
@@ -12514,7 +12514,7 @@ Scheduler::claimLocalStartd()
 void
 Scheduler::addCronTabClassAd( ClassAd *jobAd )
 {
-	if ( ad == NULL ) return;
+	if ( m_ad == NULL ) return;
 	CronTab *cronTab = NULL;
 	PROC_ID id;
 	jobAd->LookupInteger( ATTR_CLUSTER_ID, id.cluster );

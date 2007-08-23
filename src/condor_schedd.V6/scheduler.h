@@ -433,7 +433,7 @@ class Scheduler : public Service
 private:
 	
 	// information about this scheduler
-	ClassAd*		ad;
+	ClassAd*		m_ad;
 	char*			MySockName;		// dhaval
 	Scheduler*		myself;
 
