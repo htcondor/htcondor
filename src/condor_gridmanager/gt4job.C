@@ -1026,7 +1026,13 @@ int GT4Job::doEvaluateState()
 				if ( fault ) {
 					free( fault );
 				}
-				ClearCallbacks();
+				// Globus folks reporting a frequent case where
+				// callback for Done arrives at the same time
+				// as the results of a poll saying StageOut.
+				// Try not clearing callbacks, since old
+				// job statuses will be rejected by
+				// AllowTransition().
+				//ClearCallbacks();
 				lastProbeTime = time(NULL);
 				gmState = GM_SUBMITTED;
 			}
