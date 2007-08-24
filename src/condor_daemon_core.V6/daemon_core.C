@@ -30,7 +30,9 @@
 #include "condor_common.h"
 #ifdef HAVE_EXT_GSOAP
 #include "stdsoap2.h"
+#include "soap_core.h"
 #endif
+
 #include "condor_socket_types.h"
 
 #if HAVE_EXT_GCB
@@ -390,10 +392,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
-#ifdef HAVE_EXT_GSOAP
-	soap = new struct soap;
-#endif
-	
+	soap = NULL;
+
 	localAdFile = NULL;
 
 	m_collector_list = NULL;
@@ -523,10 +523,11 @@ DaemonCore::~DaemonCore()
 		free(_cookie_data_old);
 	}
 
-#ifdef HAVE_EXT_GSOAP
-	delete soap;
-#endif
-		
+	if( soap ) {
+		delete soap;
+		soap = NULL;
+	}
+
 	if(localAdFile) {
 		free(localAdFile);
 		localAdFile = NULL;
@@ -2284,6 +2285,26 @@ DaemonCore::reconfig(void) {
 		m_use_clone_to_create_processes = param_boolean("USE_CLONE_TO_CREATE_PROCESSES", true);
 	}
 #endif /* HAVE CLONE */
+
+	if( param_boolean("ENABLE_SOAP",false) ||
+		param_boolean("ENABLE_WEB_SERVER",false) )
+	{
+			// Only allocate soap structure if we need it, because
+			// it is big.
+		if( !soap ) {
+			soap = new struct soap;
+#ifdef HAVE_EXT_GSOAP
+				// SETUP SOAP SOCKET
+			init_soap(soap);
+#endif
+		}
+	}
+	else {
+		// Do not have to deallocate soap if it was enabled and has
+		// now been disabled.  Access to it will be disallowed, even
+		// though the structure is still allocated.
+	}
+
 }
 
 
@@ -3424,6 +3445,7 @@ int DaemonCore::HandleReq(Stream *insock)
 			sin_to_string(((Sock*)stream)->endpoint()) );
 
 
+		ASSERT( soap );
 		cursoap = soap_copy(soap);
 		ASSERT(cursoap);
 

@@ -34,9 +34,6 @@
 #include "condor_debug.h"
 #include "condor_distribution.h"
 #include "condor_environ.h"
-#ifdef HAVE_EXT_GSOAP
-#  include "soap_core.h"
-#endif
 #include "setenv.h"
 #include "time_offset.h"
 #include "exit.h"
@@ -2041,11 +2038,6 @@ int main( int argc, char** argv )
 	// now re-set the identity so that any children we spawn will have it
 	// in their environment
 	SetEnv( envName, daemonCore->sec_man->my_unique_id() );
-
-#ifdef HAVE_EXT_GSOAP
-		// SETUP SOAP SOCKET
-	init_soap(daemonCore->soap);
-#endif
 
 	// create a database connection object
 	//DBObj = createConnection();
