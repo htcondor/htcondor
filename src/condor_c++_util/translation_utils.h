@@ -41,8 +41,8 @@ struct Translation {
 	int number;
 };
 
-const char* getNameFromNum( int num, struct Translation *table );
-int         getNumFromName( const char* str, struct Translation *table );
+const char* getNameFromNum( int num, const struct Translation *table );
+int         getNumFromName( const char* str, const struct Translation *table );
 
 
 #endif /* TRANSLATION_UTIL_H */

@@ -26,7 +26,7 @@
 
 
 const char *
-getNameFromNum( int num, struct Translation *table )
+getNameFromNum( int num, const struct Translation *table )
 {
 	if( num < 0 ) {
 		return NULL;
@@ -44,7 +44,7 @@ getNameFromNum( int num, struct Translation *table )
 
 
 int
-getNumFromName( const char* str, struct Translation *table )
+getNumFromName( const char* str, const struct Translation *table )
 {
 
 	if( !str ) {

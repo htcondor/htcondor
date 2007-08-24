@@ -24,7 +24,7 @@
 #include "condor_common.h"
 #include "command_strings.h"
 
-struct Translation DCTranslation[] = {
+const struct Translation DCTranslation[] = {
 	{ "QMGMT_CMD", QMGMT_CMD }, 
 	{ "CONTINUE_FRGM_JOB", CONTINUE_FRGN_JOB },
 	{ "CONTINUE_CLAIM", CONTINUE_CLAIM },
@@ -171,7 +171,7 @@ struct Translation DCTranslation[] = {
 	{ "NULL", 0 }
 };
 
-struct Translation CollectorTranslation[] = {
+const struct Translation CollectorTranslation[] = {
 	{ "UPDATE_STARTD_AD", UPDATE_STARTD_AD },
 	{ "UPDATE_SCHEDD_AD", UPDATE_SCHEDD_AD },
 	{ "UPDATE_MASTER_AD", UPDATE_MASTER_AD },
@@ -223,7 +223,7 @@ struct Translation CollectorTranslation[] = {
 };
 
 
-struct Translation CAResultTranslation[] = {
+const struct Translation CAResultTranslation[] = {
 	{ "Success", CA_SUCCESS },
 	{ "Failure", CA_FAILURE },
 	{ "NotAuthenticated", CA_NOT_AUTHENTICATED },
