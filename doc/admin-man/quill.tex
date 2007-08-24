@@ -107,7 +107,7 @@ to the database as users \Username{quillreader} and
 \Username{quillwriter}.
 These are database users, not operating system users.
 The two types of users are quite different from each other.
-If these data base users do not exist,
+If these database users do not exist,
 add them using the 
 \Prog{createuser} command supplied with the installation.
 Assign them with appropriate passwords;
@@ -137,7 +137,7 @@ Answer ``no'' to the question about the ability for role creation.
 \item The \Condor{quill} and \Condor{dbmsd} daemons need read and write access
 to the database.
 They connects as user \Username{quillwriter},
-who has owner privileges to the database.
+which has owner privileges to the database.
 Since this gives all access to the \Username{quillwriter} user,
 this password cannot be stored in a public place 
 (such as the \Condor{collector}).
@@ -146,9 +146,11 @@ in a file named \File{.pgpass} in the Condor spool directory.
 Appropriate protections on this file guarantee secure access to the database.
 This file must be created and protected by the site administrator;
 if this file does not exist as and where expected, the \Condor{quill}
-daemons log an error and exits.  The \File{.pgpass} is a colon-separated file
-with one line, containing, in order, the name of the server running
-the database, following by the TCP port number, followed by the
+and \Condor{dbmsd} daemons log an error and exit.
+The \File{.pgpass} is a colon-separated file
+with exactly one line. 
+This line contains the name of the server running
+the database, followed by the TCP port number, followed by the
 name of the database, followed by "quillwriter", followed by the password.
 Example:
 \begin{verbatim}
@@ -166,7 +168,7 @@ into the server:
 createlang plpgsql [databasename]
 \end{verbatim}
 
-Then, load the Quill schema, from the sql files in the sql subdirectory
+Then, load the Quill schema from the sql files in the \File{sql} subdirectory
 of the Condor release directory:
 
 \begin{verbatim}
@@ -176,7 +178,7 @@ psql < pgsql_createddl.sql
 
 
 After \Prog{PostgreSQL} is configured and running, Condor must also be
-configured to use Quill since by default Quill is configured to be off.
+configured to use Quill, since by default Quill is configured to be off.
 
 \begin{description}
 \item Add the file \File{.pgpass} to the 

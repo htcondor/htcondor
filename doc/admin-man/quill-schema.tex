@@ -19,7 +19,7 @@ schema document is for future reference.
 \vspace{24pt}
 
 %%% ADMINISTRATIVE TABLES
-\subsection{Administrative Tables}
+\subsubsection{Administrative Tables}
 \begin{center}
 % currencies
   \begin{tabular}{|l|l|l|p{3.3in}|}\hline
@@ -86,7 +86,7 @@ schema document is for future reference.
 
 
 %%% DAEMON TABLES
-\subsection{Daemon Tables}
+\subsubsection{Daemon Tables}
 \begin{center}
 % daemons_horizontal
   \begin{tabular}{|l|l|l|p{2.3in}|}\hline
@@ -191,7 +191,7 @@ schema document is for future reference.
 
 
 %%% FILES TABLES
-\subsection{Files Tables}
+\subsubsection{Files Tables}
 \begin{center}
 % files
   \begin{tabular}{|l|l|l|p{3.2in}|}\hline
@@ -257,7 +257,7 @@ schema document is for future reference.
 
 
 %%% INTERFACE TABLES
-\subsection{Interface Tables}
+\subsubsection{Interface Tables}
 \begin{center}
 % cdb_users
   \begin{tabular}{|l|l|l|p{3.4in}|}\hline
@@ -293,7 +293,7 @@ schema document is for future reference.
 
 
 %%% JOBS TABLES
-\subsection{Jobs Tables}
+\subsubsection{Jobs Tables}
 \begin{center}
 % clusterads_horizontal
   \begin{tabular}{|l|l|l|p{2.6in}|}\hline
@@ -475,7 +475,7 @@ schema document is for future reference.
 
 
 %%% MACHINES TABLES
-\subsection{Machines Tables}
+\subsubsection{Machines Tables}
 \begin{center}
 % machines_horizontal Part 1 of 2
   \begin{tabular}{|l|l|l|p{2.4in}|}\hline
@@ -590,7 +590,7 @@ schema document is for future reference.
 
 
 %%% MATCHMAKING TABLES
-\subsection{Matchmaking Tables}
+\subsubsection{Matchmaking Tables}
 \begin{center}
 % matches
   \begin{tabular}{|l|l|l|p{3.0in}|}\hline
@@ -624,7 +624,7 @@ schema document is for future reference.
 
 
 %%% RUNTIME TABLES
-\subsection{Runtime Tables}
+\subsubsection{Runtime Tables}
 \begin{center}
 % events
   \begin{tabular}{|l|l|l|p{3.2in}|}\hline
@@ -664,7 +664,7 @@ schema document is for future reference.
     scheddname & varchar(4000) & varchar(4000) & Name of the schedd that submitted the job.\\ \hline
     cluster\_id & integer & integer & Cluster identifier for the job.\\ \hline
     proc\_id & integer & integer & Process identifier for the job.\\ \hline
-    spid & integer & integer & \\ \hline
+    spid & integer & integer & Subprocess identifier for the job. \\ \hline
     globaljobid & varchar(4000) & varchar(4000) & Identifier of the job that was run.\\ \hline 
     startts & ts(3) w tz & ts(3) w tz & Time when the job started.\\ \hline
     endts & ts(3) w tz & ts(3) w tz & Time when the job ended.\\ \hline
@@ -686,7 +686,7 @@ schema document is for future reference.
 
 
 %%% SYSTEM TABLES
-\subsection{System Tables}
+\subsubsection{System Tables}
 \begin{center}
 % dummy_single_row_table
   \begin{tabular}{|l|l|l|p{4in}|}\hline
