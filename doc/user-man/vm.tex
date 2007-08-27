@@ -140,7 +140,10 @@ used with the command
   vmware_snapshot_disk = False
 \end{verbatim}
 In this case, Condor will utilize original disk files in producing
-checkpoints.
+checkpoints. 
+Note that \Condor{submit} issues an error message and does not
+submit the job if both \SubmitCmd{vmware\_should\_transfer\_files}
+and \SubmitCmd{vmware\_snapshot\_disk} are \Expr{False}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -161,7 +164,37 @@ checkpoints.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:vm-job-completion-details}Job Completion in the vm Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\Todo
+
+Job completion for a \SubmitCmd{vm} universe job occurs when 
+the virtual machine is shut down, and Condor notices 
+(as the result of a periodic check on the state of the virtual machine).
+This is different from jobs executed under the environment of other 
+universes.
+
+Shut down of a virtual machine occurs from within the virtual
+machine environment.
+Under a Windows 2000, Windows XP, or Vista virtual machine,
+an administrator issues the command
+\begin{verbatim}
+  shutdown -s -t 01
+\end{verbatim}
+For older versions of Windows operating systems, 
+directions are given at
+\URL{http://www.aumha.org/win4/a/shutcut.php}.
+
+Under a Linux virtual machine,
+the \Login{root} user executes
+\begin{verbatim}
+  /sbin/poweroff
+\end{verbatim}
+The command \verb@/sbin/halt@ will not completely
+shut down some Linux distributions, and instead
+causes the job to hang.
+
+Since the successful completion of the \SubmitCmd{vm} universe job
+requires the successful shut down of the virtual machine,
+it is good advice to try the shut down procedure outside of
+Condor, before a \SubmitCmd{vm} universe job is submitted.
 
 
 \index{virtual machine universe|)}
