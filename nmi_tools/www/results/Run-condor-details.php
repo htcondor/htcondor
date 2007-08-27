@@ -142,7 +142,7 @@
       mysql_free_result($task_result);
    } // WHILE
    mysql_free_result($result);
-   mysql_close($db);
+   // need to lookup location later.....mysql_close($db);
    
 ?>
 
@@ -154,8 +154,16 @@
       $display = $platform;
       $idx = strpos($display, "_");
       $display[$idx] = " ";
+		$filepath = "";
    
-      $display = "<a href=\"http://$host/rundir/$gid/userdir/$platform/\" ".
+   	// have to lookup the file location now
+		$loc_query = "SELECT * FROM Run WHERE runid='$platform_runids[$platform]'";
+		$loc_query_res = mysql_query($loc_query) or die ("Query failed : " . mysql_error());
+		while( $locrow = mysql_fetch_array($loc_query_res) ) {
+			$filepath = $locrow["filepath"];
+		}
+
+      $display = "<a href=\"$filepath/$gid/userdir/$platform/\" ".
                  "title=\"View Run Directory\">$display</a>";
       echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display</td>\n";
    } // FOREACH
@@ -192,6 +200,8 @@
       return ($str);
    }
 
+   // done looking up locations.....mysql_close($db);
+   mysql_close($db);
 ?>
 </body>
 </html>
