@@ -85,6 +85,9 @@ jobs in the queue) whenever \Condor{preen} was activated.
 
 \noindent Bugs Fixed:
 
+\item Removed race condition that was causing the \Condor{schedd} to core
+  dump on Windows when the Condor service was stoped.
+
 \begin{itemize}
 
 \item When grid universe jobs of grid-type condor, lsf, or pbs are running,
