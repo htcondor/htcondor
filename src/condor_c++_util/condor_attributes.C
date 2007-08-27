@@ -217,6 +217,7 @@ const char *ATTR_REQUESTED_GRIDFTP_URL_BASE = "RequestedGridftpUrlBase";
 const char *ATTR_GRID_RESOURCE			 = "GridResource";
 const char *ATTR_GRID_RESOURCE_UNAVAILABLE_TIME = "GridResourceUnavailableTime";
 const char *ATTR_GRID_JOB_ID				 = "GridJobId";
+const char *ATTR_GRID_JOB_STATUS			 = "GridJobStatus";
 // ckireyev myproxy
 const char *ATTR_MYPROXY_SERVER_DN		 = "MyProxyServerDN";
 const char *ATTR_MYPROXY_HOST_NAME		 = "MyProxyHost";

@@ -419,6 +419,26 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 	requestScheddUpdate( this );
 }
 
+void BaseJob::SetRemoteJobStatus( const char *job_status )
+{
+	MyString old_job_status;
+	MyString new_job_status;
+	jobAd->LookupString( ATTR_GRID_JOB_STATUS, old_job_status );
+	if ( job_status != NULL && job_status[0] != '\0' ) {
+		new_job_status = job_status;
+	}
+	if ( old_job_status == new_job_status ) {
+		return;
+	}
+	if ( !old_job_status.IsEmpty() ) {
+		jobAd->AssignExpr( ATTR_GRID_JOB_STATUS, "Undefined" );
+	}
+	if ( !new_job_status.IsEmpty() ) {
+		jobAd->Assign( ATTR_GRID_JOB_STATUS, new_job_status.Value() );
+	}
+	requestScheddUpdate( this );
+}
+
 void BaseJob::SetJobLeaseTimers()
 {
 dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);

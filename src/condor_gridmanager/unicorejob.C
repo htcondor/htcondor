@@ -639,6 +639,7 @@ if ( unicoreState != COMPLETED ) {
 
 			errorString = "";
 			SetRemoteJobId( NULL );
+			SetRemoteJobStatus( NULL );
 			JobIdle();
 
 			// If there are no updates to be done when we first enter this
@@ -774,6 +775,7 @@ void UnicoreJob::UpdateUnicoreState( ClassAd *update_ad )
 			int status = 0;
 			update_ad->LookupInteger( ATTR_JOB_STATUS, status );
 			unicoreState = status;
+			SetRemoteJobStatus( getJobStatusString( unicoreState ) );
 			if ( unicoreState == RUNNING ) {
 				JobRunning();
 			}

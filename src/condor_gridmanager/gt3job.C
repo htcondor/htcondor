@@ -953,6 +953,7 @@ rc=0;
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 			}
+			SetRemoteJobStatus( NULL );
 			globusStateErrorCode = 0;
 			globusError = 0;
 			errorString = "";
@@ -1016,6 +1017,7 @@ rc=0;
 				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN ) {
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
 				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
+				//SetRemoteJobStatus( GlobusJobStatusName( globusState ) );
 				//UpdateGlobusState( GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN, 0 );
 			}
 			// If the condor state is already HELD, then someone already
@@ -1209,6 +1211,7 @@ void GT3Job::UpdateGlobusState( int new_state, int new_error_code )
 			globusStateBeforeFailure = globusState;
 		} else {
 			jobAd->Assign( ATTR_GLOBUS_STATUS, new_state );
+			SetRemoteJobStatus( GlobusJobStatusName( new_state ) );
 		}
 
 		globusState = new_state;

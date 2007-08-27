@@ -87,16 +87,15 @@ static char *GMStateNames[] = {
 	"GM_SUBMIT_ID_SAVE",
 };
 
-#define GT4_JOB_STATE_PENDING		1
-#define GT4_JOB_STATE_ACTIVE		2
-#define GT4_JOB_STATE_FAILED		4
-#define GT4_JOB_STATE_DONE			8
-#define GT4_JOB_STATE_SUSPENDED		16
-#define GT4_JOB_STATE_UNSUBMITTED	32
-#define GT4_JOB_STATE_STAGE_IN		64
-#define GT4_JOB_STATE_STAGE_OUT		128
-#define GT4_JOB_STATE_CLEAN_UP		256
-#define GT4_JOB_STATE_UNKNOWN		0
+#define GT4_JOB_STATE_PENDING		"Pending"
+#define GT4_JOB_STATE_ACTIVE		"Active"
+#define GT4_JOB_STATE_FAILED		"Failed"
+#define GT4_JOB_STATE_DONE			"Done"
+#define GT4_JOB_STATE_SUSPENDED		"Suspended"
+#define GT4_JOB_STATE_UNSUBMITTED	"Unsubmitted"
+#define GT4_JOB_STATE_STAGE_IN		"StageIn"
+#define GT4_JOB_STATE_STAGE_OUT		"StageOut"
+#define GT4_JOB_STATE_CLEAN_UP		"CleanUp"
 
 
 // TODO: once we can set the jobmanager's proxy timeout, we should either
@@ -112,8 +111,8 @@ static char *GMStateNames[] = {
 
 #define LOG_GLOBUS_ERROR(func,error) \
     dprintf(D_ALWAYS, \
-		"(%d.%d) gmState %s, globusState %d: %s %s\n", \
-        procID.cluster,procID.proc,GMStateNames[gmState],globusState, \
+		"(%d.%d) gmState %s, globusState %s: %s %s\n", \
+        procID.cluster,procID.proc,GMStateNames[gmState],globusState.Value(), \
         func,error==GAHPCLIENT_COMMAND_TIMED_OUT?"timed out":"failed")
 
 #define CHECK_PROXY \
@@ -229,55 +228,27 @@ const char *xml_stringify( const MyString& src )
 
 int Gt4JobStateToInt( const char *status ) {
 	if ( status == NULL ) {
-		return GT4_JOB_STATE_UNKNOWN;
-	} else if ( !strcmp( status, "Pending" ) ) {
-		return GT4_JOB_STATE_PENDING;
-	} else if ( !strcmp( status, "Active" ) ) {
-		return GT4_JOB_STATE_ACTIVE;
-	} else if ( !strcmp( status, "Failed" ) ) {
-		return GT4_JOB_STATE_FAILED;
-	} else if ( !strcmp( status, "Done" ) ) {
-		return GT4_JOB_STATE_DONE;
-	} else if ( !strcmp( status, "Suspended" ) ) {
-		return GT4_JOB_STATE_SUSPENDED;
-	} else if ( !strcmp( status, "Unsubmitted" ) ) {
-		return GT4_JOB_STATE_UNSUBMITTED;
-	} else if ( !strcmp( status, "StageIn" ) ) {
-		return GT4_JOB_STATE_STAGE_IN;
-	} else if ( !strcmp( status, "StageOut" ) ) {
-		return GT4_JOB_STATE_STAGE_OUT;
-	} else if ( !strcmp( status, "CleanUp" ) ) {
-		return GT4_JOB_STATE_CLEAN_UP;
+		return 0;
+	} else if ( !strcmp( status, GT4_JOB_STATE_PENDING ) ) {
+		return 1;
+	} else if ( !strcmp( status, GT4_JOB_STATE_ACTIVE ) ) {
+		return 2;
+	} else if ( !strcmp( status, GT4_JOB_STATE_FAILED ) ) {
+		return 4;
+	} else if ( !strcmp( status, GT4_JOB_STATE_DONE ) ) {
+		return 8;
+	} else if ( !strcmp( status, GT4_JOB_STATE_SUSPENDED ) ) {
+		return 16;
+	} else if ( !strcmp( status, GT4_JOB_STATE_UNSUBMITTED ) ) {
+		return 32;
+	} else if ( !strcmp( status, GT4_JOB_STATE_STAGE_IN ) ) {
+		return 64;
+	} else if ( !strcmp( status, GT4_JOB_STATE_STAGE_OUT ) ) {
+		return 128;
+	} else if ( !strcmp( status, GT4_JOB_STATE_CLEAN_UP ) ) {
+		return 256;
 	} else {
-		return GT4_JOB_STATE_UNKNOWN;
-	}
-}
-
-const char *Gt4JobStateToString( int status )
-{
-	switch ( status ) {
-	case GT4_JOB_STATE_PENDING:
-		return "Pending";
-	case GT4_JOB_STATE_ACTIVE:
-		return "Active";
-	case GT4_JOB_STATE_FAILED:
-		return "Failed";
-	case GT4_JOB_STATE_DONE:
-		return "Done";
-	case GT4_JOB_STATE_SUSPENDED:
-		return "Suspended";
-	case GT4_JOB_STATE_UNSUBMITTED:
-		return "Unsubmitted";
-	case GT4_JOB_STATE_STAGE_IN:
-		return "StageIn";
-	case GT4_JOB_STATE_STAGE_OUT:
-		return "StageOut";
-	case GT4_JOB_STATE_CLEAN_UP:
-		return "CleanUp";
-	case GT4_JOB_STATE_UNKNOWN:
-		return "Unknown";
-	default:
-		return "??????";
+		return 0;
 	}
 }
 
@@ -307,11 +278,7 @@ GT4Job::GT4Job( ClassAd *classad )
 	streamError = false;
 	stageOutput = false;
 	stageError = false;
-	globusStateFaultString = 0;
-	callbackGlobusState = 0;
-	callbackGlobusStateFaultString = "";
 	gmState = GM_INIT;
-	globusState = GT4_JOB_STATE_UNSUBMITTED;
 	lastProbeTime = 0;
 	probeNow = false;
 	enteredCurrentGmState = time(NULL);
@@ -442,7 +409,7 @@ GT4Job::GT4Job( ClassAd *classad )
 		myResource->registerDelegationURI( delegatedCredentialURI, jobProxy );
 	}
 
-	jobAd->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
+	jobAd->LookupString( ATTR_GRID_JOB_STATUS, globusState );
 
 	globusErrorString = "";
 
@@ -567,7 +534,7 @@ int GT4Job::doEvaluateState()
 {
 	bool connect_failure = false;
 	int old_gm_state;
-	int old_globus_state;
+	MyString old_globus_state;
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
@@ -577,8 +544,9 @@ int GT4Job::doEvaluateState()
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
 
     dprintf(D_ALWAYS,
-			"(%d.%d) doEvaluateState called: gmState %s, globusState %d\n",
-			procID.cluster,procID.proc,GMStateNames[gmState],globusState);
+			"(%d.%d) doEvaluateState called: gmState %s, globusState %s\n",
+			procID.cluster,procID.proc,GMStateNames[gmState],
+			globusState.Value());
 
 	if ( gahp ) {
 		if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
@@ -1019,7 +987,9 @@ int GT4Job::doEvaluateState()
 					}
 					break;
 				}
-				UpdateGlobusState( Gt4JobStateToInt( status ), fault );
+				MyString new_status = status;
+				MyString new_fault = fault;
+				UpdateGlobusState( new_status, new_fault );
 				if ( status ) {
 					free( status );
 				}
@@ -1072,8 +1042,9 @@ int GT4Job::doEvaluateState()
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
 				if ( jobContact != NULL ) {
 					SetRemoteJobId( NULL );
-					globusState = GT4_JOB_STATE_UNSUBMITTED;
-					jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
+					globusState = "";
+					jobAd->Assign( ATTR_GLOBUS_STATUS, 32 );
+					SetRemoteJobStatus( NULL );
 					requestScheddUpdate( this );
 				}
 				gmState = GM_CLEAR_REQUEST;
@@ -1129,8 +1100,9 @@ int GT4Job::doEvaluateState()
 
 			SetRemoteJobId( NULL );
 			myResource->CancelSubmit( this );
-			globusState = GT4_JOB_STATE_UNSUBMITTED;
-			jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
+			globusState = "";
+			jobAd->Assign( ATTR_GLOBUS_STATUS, 32 );
+			SetRemoteJobStatus( NULL );
 			requestScheddUpdate( this );
 
 			if ( condorState == REMOVED ) {
@@ -1184,9 +1156,10 @@ int GT4Job::doEvaluateState()
 					"(%d.%d) Resubmitting to Globus (last submit failed)\n",
 						procID.cluster, procID.proc );
 			}
-			if ( globusState != GT4_JOB_STATE_UNSUBMITTED ) {
-				globusState = GT4_JOB_STATE_UNSUBMITTED;
-				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
+			if ( globusState != "" ) {
+				globusState = "";
+				SetRemoteJobStatus( NULL );
+				jobAd->Assign( ATTR_GLOBUS_STATUS, 32 );
 			}
 			globusStateFaultString = "";
 			globusErrorString = "";
@@ -1260,16 +1233,6 @@ int GT4Job::doEvaluateState()
 		case GM_HOLD: {
 			// Put the job on hold in the schedd.
 			// TODO: what happens if we learn here that the job is removed?
-			if ( jobContact &&
-				 globusState != GT4_JOB_STATE_UNKNOWN ) {
-				globusState = GT4_JOB_STATE_UNKNOWN;
-				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
-				//UpdateGlobusState( GT4_JOB_STATE_UNKNOWN, NULL );
-			} else if ( !jobContact &&
-						globusState != GT4_JOB_STATE_UNSUBMITTED ) {
-				globusState = GT4_JOB_STATE_UNSUBMITTED;
-				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
-			}
 			// If the condor state is already HELD, then someone already
 			// HELD it, so don't update anything else.
 			if ( condorState != HELD ) {
@@ -1325,8 +1288,8 @@ int GT4Job::doEvaluateState()
 		if ( globusState != old_globus_state ) {
 //			dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
 //					procID.cluster, procID.proc,
-//					Gt4JobStateToString(old_globus_state),
-//					Gt4JobStateToString(globusState));
+//					old_globus_state.Value(),
+//					globusState.Value());
 			enteredCurrentGlobusState = time(NULL);
 		}
 		if ( gmState != old_gm_state ) {
@@ -1373,12 +1336,16 @@ int GT4Job::doEvaluateState()
 	return TRUE;
 }
 
-bool GT4Job::AllowTransition( int new_state, int old_state )
+bool GT4Job::AllowTransition( const MyString &new_state,
+							  const MyString &old_state )
 {
 
 	// Prevent non-transitions or transitions that go backwards in time.
 	// The jobmanager shouldn't do this, but notification of events may
 	// get re-ordered (callback and probe results arrive backwards).
+	if ( old_state == "" ) {
+		return true;
+	}
     if ( new_state == old_state ||
 		 new_state == GT4_JOB_STATE_UNSUBMITTED ||
 		 old_state == GT4_JOB_STATE_DONE ||
@@ -1398,7 +1365,8 @@ bool GT4Job::AllowTransition( int new_state, int old_state )
 }
 
 
-void GT4Job::UpdateGlobusState( int new_state, const char *new_fault )
+void GT4Job::UpdateGlobusState( const MyString &new_state, 
+								const MyString &new_fault )
 {
 	bool allow_transition;
 
@@ -1408,8 +1376,7 @@ void GT4Job::UpdateGlobusState( int new_state, const char *new_fault )
 		// where to put logging of events: here or in EvaluateState?
 		dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
 				procID.cluster, procID.proc,
-				Gt4JobStateToString(globusState),
-				Gt4JobStateToString(new_state));
+				globusState.Value(), new_state.Value());
 
 		if ( ( new_state == GT4_JOB_STATE_ACTIVE ||
 			   new_state == GT4_JOB_STATE_STAGE_OUT ) &&
@@ -1422,14 +1389,15 @@ void GT4Job::UpdateGlobusState( int new_state, const char *new_fault )
 			JobIdle();
 		}
 
-		if ( globusState == GT4_JOB_STATE_UNSUBMITTED &&
+		if ( ( globusState == GT4_JOB_STATE_UNSUBMITTED ||
+			   globusState == "" ) &&
 			 !submitLogged && !submitFailedLogged ) {
 			if ( new_state == GT4_JOB_STATE_FAILED ) {
 					// TODO: should SUBMIT_FAILED_EVENT be used only on
 					//   certain errors (ones we know are submit-related)?
 				if ( !submitFailedLogged ) {
 					WriteGlobusSubmitFailedEventToUserLog( jobAd, 0,
-														   new_fault );
+														   new_fault.Value() );
 					submitFailedLogged = true;
 				}
 			} else {
@@ -1457,11 +1425,14 @@ void GT4Job::UpdateGlobusState( int new_state, const char *new_fault )
 			executeLogged = true;
 		}
 
-		jobAd->Assign( ATTR_GLOBUS_STATUS, new_state );
+		jobAd->Assign( ATTR_GLOBUS_STATUS,
+					   Gt4JobStateToInt( new_state.Value() ) );
 
 		globusState = new_state;
 		globusStateFaultString = new_fault;
 		enteredCurrentGlobusState = time(NULL);
+
+		SetRemoteJobStatus( globusState.Value() );
 
 		requestScheddUpdate( this );
 
@@ -1472,17 +1443,16 @@ void GT4Job::UpdateGlobusState( int new_state, const char *new_fault )
 void GT4Job::GramCallback( const char *new_state, const char *new_fault,
 						   const int new_exit_code )
 {
-	int new_state_int = Gt4JobStateToInt( new_state );
-	if ( AllowTransition(new_state_int,
-						 callbackGlobusState ?
+	MyString new_state_str = new_state;
+	if ( AllowTransition(new_state_str,
+						 callbackGlobusState != "" ?
 						 callbackGlobusState :
 						 globusState ) ) {
 
-		callbackGlobusState = new_state_int;
-		callbackGlobusStateFaultString = new_fault ? new_fault : "";
+		callbackGlobusState = new_state_str;
+		callbackGlobusStateFaultString = new_fault;
 
-//		if ( new_exit_code != GT4_NO_EXIT_CODE ) {
-		if ( new_state_int == GT4_JOB_STATE_DONE ) {
+		if ( new_state_str == GT4_JOB_STATE_DONE ) {
 			jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 			jobAd->Assign( ATTR_ON_EXIT_CODE, new_exit_code );
 		}
@@ -1493,9 +1463,9 @@ void GT4Job::GramCallback( const char *new_state, const char *new_fault,
 
 bool GT4Job::GetCallbacks()
 {
-	if ( callbackGlobusState != 0 ) {
+	if ( callbackGlobusState != "" ) {
 		UpdateGlobusState( callbackGlobusState,
-						   callbackGlobusStateFaultString.Value() );
+						   callbackGlobusStateFaultString );
 
 		ClearCallbacks();
 		return true;
@@ -1506,7 +1476,7 @@ bool GT4Job::GetCallbacks()
 
 void GT4Job::ClearCallbacks()
 {
-	callbackGlobusState = 0;
+	callbackGlobusState = "";
 	callbackGlobusStateFaultString = "";
 }
 

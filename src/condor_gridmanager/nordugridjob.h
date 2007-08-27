@@ -79,7 +79,7 @@ class NordugridJob : public BaseJob
 	char *resourceManagerString;
 
 	char *remoteJobId;
-	int remoteJobState;
+	MyString remoteJobState;
 
 	Proxy *jobProxy;
 	NordugridResource *myResource;

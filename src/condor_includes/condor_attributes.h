@@ -157,6 +157,7 @@ extern const char * ATTR_REQUESTED_GRIDFTP_URL_BASE;
 extern const char * ATTR_GRID_RESOURCE;
 extern const char * ATTR_GRID_RESOURCE_UNAVAILABLE_TIME;
 extern const char * ATTR_GRID_JOB_ID;
+extern const char * ATTR_GRID_JOB_STATUS;
 // ckireyev myproxy
 extern const char * ATTR_MYPROXY_SERVER_DN;
 extern const char * ATTR_MYPROXY_HOST_NAME;

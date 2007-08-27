@@ -56,7 +56,8 @@ class GT4Job : public BaseJob
 
 	void Reconfig();
 	int doEvaluateState();
-	void UpdateGlobusState( int new_state, const char *new_fault );
+	void UpdateGlobusState( const MyString &new_state,
+							const MyString &new_fault );
 	void GramCallback( const char *new_state, const char *new_fault,
 					   const int new_exit_code );
 	bool GetCallbacks();
@@ -80,9 +81,9 @@ class GT4Job : public BaseJob
 
 	// New variables
 	int gmState;
-	int globusState;
+	MyString globusState;
 	MyString globusStateFaultString;
-	int callbackGlobusState;
+	MyString callbackGlobusState;
 	MyString callbackGlobusStateFaultString;
 	GT4Resource *myResource;
 	time_t lastProbeTime;
@@ -129,7 +130,8 @@ class GT4Job : public BaseJob
  protected:
 	bool callbackRegistered;
 	int connect_failure_counter;
-	bool AllowTransition( int new_state, int old_state );
+	bool AllowTransition( const MyString &new_state,
+						  const MyString &old_state );
 	const char * printXMLParam (const char * name, const char * value);
 	const char * getDummyJobScratchDir();
 };

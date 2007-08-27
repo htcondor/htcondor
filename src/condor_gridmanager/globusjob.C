@@ -1876,6 +1876,7 @@ int GlobusJob::doEvaluateState()
 							procID.cluster, procID.proc, GlobusJobStatusName(status) );
 					globusState = status;
 					jobAd->Assign( ATTR_GLOBUS_STATUS, status );
+					SetRemoteJobStatus( GlobusJobStatusName( status ) );
 					enteredCurrentGlobusState = time(NULL);
 					requestScheddUpdate( this );
 				}
@@ -2112,6 +2113,7 @@ dprintf(D_ALWAYS,"JEF: waiting after restart to do a cancel\n");
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 			}
+			SetRemoteJobStatus( NULL );
 			globusStateErrorCode = 0;
 			globusError = 0;
 			lastRestartReason = 0;
@@ -2186,6 +2188,7 @@ dprintf(D_ALWAYS,"JEF: waiting after restart to do a cancel\n");
 				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN ) {
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
 				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
+				//SetRemoteJobStatus( GlobusJobStatusName( globusState ) );
 				//UpdateGlobusState( GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN, 0 );
 			}
 			// If the condor state is already HELD, then someone already
@@ -2372,6 +2375,7 @@ dprintf(D_ALWAYS,"JEF: waiting after restart to do a cancel\n");
 					SetRemoteJobId( NULL );
 					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 					jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
+					SetRemoteJobStatus( NULL );
 					gmState = GM_CLEAR_REQUEST;
 				}
 			}
@@ -2437,6 +2441,7 @@ dprintf(D_ALWAYS,"JEF: waiting after restart to do a cancel\n");
 						SetRemoteJobId( NULL );
 						globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 						jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
+						SetRemoteJobStatus( NULL );
 						gmState = GM_CLEAR_REQUEST;
 					}
 					UpdateGlobusState( status, error );
@@ -2459,6 +2464,7 @@ dprintf(D_ALWAYS,"JEF: waiting after restart to do a cancel\n");
 				SetRemoteJobId( NULL );
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
+				SetRemoteJobStatus( NULL );
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
@@ -2683,6 +2689,7 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 			globusStateBeforeFailure = globusState;
 		} else {
 			jobAd->Assign( ATTR_GLOBUS_STATUS, new_state );
+			SetRemoteJobStatus( GlobusJobStatusName( new_state ) );
 		}
 
 		globusState = new_state;

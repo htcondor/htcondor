@@ -79,15 +79,14 @@ static char *GMStateNames[] = {
 	"GM_START"
 };
 
-#define REMOTE_STATE_UNKNOWN		0
-#define REMOTE_STATE_ACCEPTED		1
-#define REMOTE_STATE_PREPARING		2
-#define REMOTE_STATE_SUBMITTING		3
-#define REMOTE_STATE_INLRMS			4
-#define REMOTE_STATE_CANCELLING		5
-#define REMOTE_STATE_FINISHING		6
-#define REMOTE_STATE_FINISHED		7
-#define REMOTE_STATE_PENDING		8
+#define REMOTE_STATE_ACCEPTED		"ACCEPTED"
+#define REMOTE_STATE_PREPARING		"PREPARING"
+#define REMOTE_STATE_SUBMITTING		"SUBMITTING"
+#define REMOTE_STATE_INLRMS			"INLRMS"
+#define REMOTE_STATE_CANCELLING		"CANCELLING"
+#define REMOTE_STATE_FINISHING		"FINISHING"
+#define REMOTE_STATE_FINISHED		"FINISHED"
+#define REMOTE_STATE_PENDING		"PENDING:PREPARING"
 
 #define REMOTE_STDOUT_NAME	"_condor_stdout"
 #define REMOTE_STDERR_NAME	"_condor_stderr"
@@ -106,30 +105,6 @@ static char *GMStateNames[] = {
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
-
-static
-int remoteStateNameConvert( const char *name )
-{
-	if ( strcmp( name, "ACCEPTED" ) == 0 ) {
-		return REMOTE_STATE_ACCEPTED;
-	} else if ( strcmp( name, "PREPARING" ) == 0 ) {
-		return REMOTE_STATE_PREPARING;
-	} else if ( strcmp( name, "SUBMITTING" ) == 0 ) {
-		return REMOTE_STATE_SUBMITTING;
-	} else if ( strcmp( name, "INLRMS" ) == 0 ) {
-		return REMOTE_STATE_INLRMS;
-	} else if ( strcmp( name, "CANCELLING" ) == 0 ) {
-		return REMOTE_STATE_CANCELLING;
-	} else if ( strcmp( name, "FINISHING" ) == 0 ) {
-		return REMOTE_STATE_FINISHING;
-	} else if ( strcmp( name, "FINISHED" ) == 0 ) {
-		return REMOTE_STATE_FINISHED;
-	} else if ( strcmp( name, "PENDING:PREPARING" ) == 0 ) {
-		return REMOTE_STATE_PENDING;
-	} else {
-		return REMOTE_STATE_UNKNOWN;
-	}
-}
 
 void NordugridJobInit()
 {
@@ -183,7 +158,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	char *gahp_path = NULL;
 
 	remoteJobId = NULL;
-	remoteJobState = REMOTE_STATE_UNKNOWN;
+	remoteJobState = "";
 	gmState = GM_INIT;
 	lastProbeTime = 0;
 	probeNow = false;
@@ -268,6 +243,8 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	} else {
 		SetRemoteJobId( NULL );
 	}
+
+	jobAd->LookupString( ATTR_GRID_JOB_STATUS, remoteJobState );
 
 	return;
 
@@ -397,8 +374,8 @@ int NordugridJob::doEvaluateState()
 					gmState = GM_CANCEL;
 					break;
 				} else {
-					remoteJobState = remoteStateNameConvert( new_status );
-					//requestScheddUpdate( this );
+					remoteJobState = new_status;
+					SetRemoteJobStatus( new_status );
 				}
 				if ( new_status ) {
 					free( new_status );
@@ -549,8 +526,8 @@ int NordugridJob::doEvaluateState()
 							 procID.cluster, procID.proc,
 							 errorString.Value() );
 				} else {
-					remoteJobState = remoteStateNameConvert( new_status );
-					//requestScheddUpdate( this );
+					remoteJobState = new_status;
+					SetRemoteJobStatus( new_status );
 				}
 				if ( new_status ) {
 					free( new_status );
@@ -762,7 +739,10 @@ int NordugridJob::doEvaluateState()
 			if ( !done ) {
 				break;
 			}
-			remoteJobState = REMOTE_STATE_UNKNOWN;
+			if ( remoteJobState != "" ) {
+				remoteJobState = "";
+				SetRemoteJobStatus( NULL );
+			}
 			submitLogged = false;
 			executeLogged = false;
 			submitFailedLogged = false;

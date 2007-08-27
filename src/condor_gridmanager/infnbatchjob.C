@@ -596,6 +596,7 @@ int INFNBatchJob::doEvaluateState()
 			evictLogged = false;
 			gmState = GM_UNSUBMITTED;
 			remoteState = JOB_STATE_UNSUBMITTED;
+			SetRemoteJobStatus( NULL );
 			} break;
 		case GM_HOLD: {
 			// Put the job on hold in the schedd.
@@ -748,6 +749,7 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 		}
 	}
 	remoteState = new_remote_state;
+	SetRemoteJobStatus( getJobStatusString( remoteState ) );
 
 
 	index = -1;
