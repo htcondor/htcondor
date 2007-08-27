@@ -543,9 +543,6 @@ DaemonCore::~DaemonCore()
 		m_private_network_name = NULL;
 	}
 
-#ifdef WIN32
-	 DeleteCriticalSection(&Big_fat_mutex);
-#endif
 }
 
 void DaemonCore::Set_Default_Reaper( int reaper_id )
