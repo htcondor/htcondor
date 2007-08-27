@@ -1305,11 +1305,11 @@ unsigned int process_direct_argument(char *arg)
 	if (strcasecmp(arg, "rdbms") == MATCH) {
 		return DIRECT_RDBMS;
 	}
-/*
+
 	if (strcasecmp(arg, "quilld") == MATCH) {
 		return DIRECT_QUILLD;
 	}
-*/
+
 #endif
 
 	if (strcasecmp(arg, "schedd") == MATCH) {
@@ -1318,8 +1318,8 @@ unsigned int process_direct_argument(char *arg)
 
 #if WANT_QUILL
 	fprintf( stderr, 
-/*		"Error: Argument -direct requires [rdbms | quilld | schedd]\n" ); */
-		"Error: Argument -direct requires [rdbms | schedd]\n" );
+		"Error: Argument -direct requires [rdbms | quilld | schedd]\n" ); 
+/*		"Error: Argument -direct requires [rdbms | schedd]\n" ); */
 #else
 	fprintf( stderr, 
 		"Error: Quill feature set is not available.\n"
