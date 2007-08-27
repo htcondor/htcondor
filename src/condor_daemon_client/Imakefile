@@ -1,4 +1,4 @@
-#if WANT_NEW_CLASSADS
+#if HAVE_EXT_CLASSADS
 #define New_classads_includes	-I$(NEW_CLASSADS_INC)
 #define New_classads_obj		dc_credd.o
 #else

@@ -2446,7 +2446,7 @@ MyString SecMan::getDefaultAuthenticationMethods() {
 	methods = "FS";
 #endif
 
-#if defined(KERBEROS_AUTHENTICATION) 
+#if defined(HAVE_EXT_KRB5) 
 	methods += ",KERBEROS";
 #endif
 

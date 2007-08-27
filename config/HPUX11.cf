@@ -20,11 +20,6 @@
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 
-#undef WANT_PVM
-#define WANT_PVM			NO
-#undef WANT_KERBEROS
-#define WANT_KERBEROS       NO
-
 #define IS_CLIPPED YES
 
 #define VendorCTestFlags -Aa -Ae

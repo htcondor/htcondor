@@ -446,7 +446,9 @@ libcondorsyscall.a: libtmp.a ToUpper
 
 #if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
 public_library(libcondorsyscall.a,lib)
+#if DOES_COMPRESS_CKPT
 public_library(libcondor_z.a,lib)
+#endif
 #endif
 
 #if DOES_COMPRESS_CKPT

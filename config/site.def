@@ -10,13 +10,7 @@
 
 /* Put all of your #defines up here do you can turn them off/redefine
 	them selectively for an architecture if you desire. */
-#define WANT_MAN_PAGES	YES
-
-#define WANT_PVM		YES
-#define WANT_CONDOR_G	YES
 #define WANT_NETMAN	NO
-#define WANT_X509       YES
-#define WANT_KERBEROS   YES
 #define WANT_DAGMAN_HELPER     YES
 #define WANT_NEST	NO		/* the NeST I/O module */
 #define WANT_ORACLE_UNIVERSE   NO
@@ -31,7 +25,7 @@
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top /full/path/to/your/source/workspace
+#define Top /home/matt/Condor/V6_9
 
 #if MALLOC_DEBUG
 #define CFlags -DMALLOC_DEBUG

@@ -4,9 +4,4 @@
 #define IS_CLIPPED              YES
 #define HAS_DYNAMIC_USER_JOBS   NO
 
-#undef WANT_KERBEROS
-#define WANT_KERBEROS           YES
-
-#undef WANT_PVM
-#define WANT_PVM                YES
 #define PVM_ARCH                FREEBSD

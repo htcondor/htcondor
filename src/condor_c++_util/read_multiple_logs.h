@@ -68,7 +68,7 @@ public:
     static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
 			const MyString &directory);
 
-#ifdef WANT_NEW_CLASSADS
+#ifdef HAVE_EXT_CLASSADS
 	    /** Gets the log files from a Stork submit file.
 		 * @param The submit file line.
 		 * @param The directory containing the submit file.
@@ -155,7 +155,7 @@ private:
 	static MyString CombineLines(StringList &listIn, char continuation,
 			const MyString &filename, StringList &listOut);
 
-#ifdef WANT_NEW_CLASSADS
+#ifdef HAVE_EXT_CLASSADS
 		/**
 		 * Skip whitespace in a std::string buffer.  This is a helper function
 		 * for loadLogFileNamesFromStorkSubFile().  When the new ClassAds

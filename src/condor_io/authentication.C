@@ -158,7 +158,7 @@ Condor_Auth_Base * auth = NULL;
                 break;
 #endif
 
-#if defined(KERBEROS_AUTHENTICATION) 
+#if defined(HAVE_EXT_KRB5) 
 			case CAUTH_KERBEROS:
 				auth = new Condor_Auth_Kerberos(mySock);
 				method_name = strdup("KERBEROS");

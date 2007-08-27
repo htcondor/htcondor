@@ -523,10 +523,12 @@ DaemonCore::~DaemonCore()
 		free(_cookie_data_old);
 	}
 
+#ifdef HAVE_EXT_GSOAP
 	if( soap ) {
 		delete soap;
 		soap = NULL;
 	}
+#endif
 
 	if(localAdFile) {
 		free(localAdFile);
@@ -2283,6 +2285,7 @@ DaemonCore::reconfig(void) {
 	}
 #endif /* HAVE CLONE */
 
+#ifdef HAVE_EXT_GSOAP
 	if( param_boolean("ENABLE_SOAP",false) ||
 		param_boolean("ENABLE_WEB_SERVER",false) )
 	{
@@ -2290,10 +2293,8 @@ DaemonCore::reconfig(void) {
 			// it is big.
 		if( !soap ) {
 			soap = new struct soap;
-#ifdef HAVE_EXT_GSOAP
 				// SETUP SOAP SOCKET
 			init_soap(soap);
-#endif
 		}
 	}
 	else {
@@ -2301,6 +2302,7 @@ DaemonCore::reconfig(void) {
 		// now been disabled.  Access to it will be disallowed, even
 		// though the structure is still allocated.
 	}
+#endif
 
 }
 

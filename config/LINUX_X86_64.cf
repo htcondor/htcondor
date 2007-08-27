@@ -13,11 +13,3 @@ arguments. XXX figure out how I'm going to model this parameter... */
 
 #define IS_CLIPPED NO
 
-/* pvm was never ported (cause it is old and dead) to this architecture */
-#undef WANT_PVM
-#define WANT_PVM NO
-
-#if IS_GLIBC23
-#define WANT_NEW_CLASSADS          YES
-#endif
-

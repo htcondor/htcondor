@@ -44,7 +44,7 @@ static char * _globus_error_message = NULL;
 
 char *GlobusJobStatusName( int status )
 {
-#if defined(CONDOR_G)
+#if defined(HAVE_EXT_GLOBUS)
 	switch ( status ) {
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING:
 		return "PENDING";
@@ -902,7 +902,7 @@ x509_receive_delegation( const char *destination_file,
 int
 have_condor_g()
 {
-#if defined(CONDOR_G)
+#if defined(HAVE_EXT_GLOBUS)
 	
 	// Our Condor-G test will be to see if we've defined a GRIDMANAGER. 
 	// If we don't have one, then this install does not support Condor-G.	

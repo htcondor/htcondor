@@ -4,8 +4,3 @@
 
 /* For now, try a "clipped" version */
 #define IS_CLIPPED YES
-
-#define WANT_PVM NO
-
-#undef WANT_KERBEROS
-#define WANT_KERBEROS NO

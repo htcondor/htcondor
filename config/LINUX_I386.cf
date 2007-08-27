@@ -10,24 +10,9 @@
 # endif
 #endif
 
-#ifdef IS_GLIBC23
-/*#define NEEDS_64BIT_SYSCALLS            YES*/
-/*#define NEEDS_64BIT_STRUCTS             YES*/
-/*#	define WANT_NEW_CLASSADS          YES*/
-#endif
-
-#if IS_GLIBC23
-#define WANT_NEW_CLASSADS          YES
-#endif
-
-#if IS_GLIBC23 && HAVE_EXT_GLOBUS && WANT_NEW_CLASSADS
+#if IS_GLIBC23 && HAVE_EXT_GLOBUS && HAVE_EXT_CLASSADS
 	/* Currently, Stork only builds on RH9. */
 #	define WANT_STORK                     YES
 #endif
 
-#if WANT_NEW_CLASSADS && HAVE_EXT_GLOBUS
-#define WANT_BLAHP	YES
-#endif
-
-#define WANT_PVM	YES
 #define PVM_ARCH	LINUX

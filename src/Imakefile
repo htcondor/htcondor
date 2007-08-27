@@ -10,7 +10,7 @@
 #   define standalone
 #endif
 
-#if WANT_PVM
+#if HAVE_EXT_PVM
 #define PvmProgs starter.jim shadow.jim 
 #else
 #define PvmProgs
@@ -19,13 +19,13 @@
 #define StdUnvProgs shadow.V6 starter.V5 
 #define StdUnvLibs ckpt syscall_lib
 
-#if WANT_CONDOR_G && HAVE_EXT_GLOBUS
+#if HAVE_EXT_GLOBUS
 #define GlobusProgs gridmanager globus
 #else
 #define GlobusProgs
 #endif
 
-#if WANT_NEW_CLASSADS && HAVE_EXT_GLOBUS
+#if HAVE_EXT_CLASSADS && HAVE_EXT_GLOBUS
 #define CreddProgs credd
 #else
 #define CreddProgs
@@ -139,6 +139,7 @@ release:: all
 stripped:: all
 static:: all
 libs:: h h_all externals condor_includes makefiles Directories Libraries
+externals::
 
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
@@ -284,17 +285,17 @@ condor_object_target(io)
 condor_object_target(classad)
 condor_object_target(daemon_core.V6)
 condor_object_target(daemon_client)
-#if WANT_PVM
+#if HAVE_EXT_PVM
    condor_object_target(starter.jim)
    condor_object_target(shadow.jim)
 #endif
 condor_object_target(prio)
 condor_object_target(scripts)
-#if WANT_CONDOR_G && HAVE_EXT_GLOBUS
+#if HAVE_EXT_GLOBUS
     condor_object_target(gridmanager)
 	condor_object_target(globus)
 #endif
-#if WANT_NEW_CLASSADS && HAVE_EXT_GLOBUS
+#if HAVE_EXT_CLASSADS && HAVE_EXT_GLOBUS
 	condor_object_target(credd)
 #endif
 condor_object_target(starter.V6.1)
@@ -399,10 +400,15 @@ pure_target(condor_negotiator.V6,condor_negotiator.pure)
 pure_target(condor_dagman,condor_dagman.pure)
 
 pure_target(condor_tt,condor_tt.pure)
-ext_target(EXT_ZLIB_VERSION,$(NULL))
 
-#if WANT_EXT_GLIBC
-#if WANT_EXT_LINUXLIBCHEADERS
+#if HAS_EXTERNALS
+
+#if HAVE_EXT_ZLIB
+ext_target(EXT_ZLIB_VERSION,$(NULL))
+#endif
+
+#if HAVE_EXT_GLIBC
+#if HAVE_EXT_LINUXLIBCHEADERS
 ext_target(EXT_LINUXLIBCHEADERS_VERSION,$(NULL))
 ext_target(EXT_GLIBC_VERSION,$(EXT_TRIGGER)/$(EXT_LINUXLIBCHEADERS_VERSION))
 #else
@@ -410,35 +416,63 @@ ext_target(EXT_GLIBC_VERSION,$(NULL))
 #endif
 #endif
 
-#if WANT_KERBEROS
+#if HAVE_EXT_KRB5
 ext_target(EXT_KERBEROS_VERSION,$(NULL))
 #endif
+
 #if HAVE_EXT_GLOBUS
 ext_target(EXT_GLOBUS_VERSION,$(NULL))
+#endif
+
+#if HAVE_EXT_GAHP
 ext_target(EXT_GAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
+#endif
+
+#if HAVE_EXT_GT3GAHP
 ext_target(EXT_GT3GAHP_VERSION,$(NULL))
+#endif
+
+#if HAVE_EXT_GT4GAHP
 ext_target(EXT_GT4GAHP_VERSION,$(NULL))
+#endif
+
+#if HAVE_EXT_UNICOREGAHP
 ext_target(EXT_UNICOREGAHP_VERSION,$(NULL))
+#endif
+
+#if HAVE_EXT_NORDUGRIDGAHP
 ext_target(EXT_NORDUGRIDGAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
 #endif
-#if WANT_PVM
+
+#if HAVE_EXT_BLAHP
+ext_target(EXT_BLAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION) $(EXT_TRIGGER)/$(EXT_CLASSADS_VERSION))
+#endif
+
+#if HAVE_EXT_PVM
 ext_target(EXT_PVM_VERSION,$(NULL))
 #endif
+
+#if HAVE_EXT_MAN
 ext_nodep_target(EXT_MAN_VERSION,$(NULL))
-#if WANT_NEW_CLASSADS
+#endif
+
+#if HAVE_EXT_CLASSADS
 ext_target(EXT_CLASSADS_VERSION, $(NULL))
 #endif
+
 #if HAVE_EXT_GSOAP
 ext_target(EXT_GSOAP_VERSION,$(NULL))
 #endif
+
+#if HAVE_EXT_PCRE
 ext_target(EXT_PCRE_VERSION,$(NULL))
+#endif
+
 #if HAVE_EXT_GCB
 ext_target(EXT_GCB_VERSION,$(NULL))
 #endif
-#if WANT_BLAHP
-ext_target(EXT_BLAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION) $(EXT_TRIGGER)/$(EXT_CLASSADS_VERSION))
-#endif
-#if WANT_COREDUMPER
+
+#if HAVE_EXT_COREDUMPER
 ext_target(EXT_COREDUMPER_VERSION,$(NULL))
 #endif
 
@@ -446,7 +480,11 @@ ext_target(EXT_COREDUMPER_VERSION,$(NULL))
 ext_target(EXT_DRMAA_VERSION,$(NULL))
 #endif
 
+#if HAVE_EXT_POSTGRESQL
 ext_target(EXT_POSTGRESQL_VERSION,$(NULL))
+#endif
+
+#endif /* HAS_EXTERNALS */
 
 clean::
 	rm -rf $(PURE_DIR)
@@ -502,7 +540,7 @@ public: release all_tarballs
 	perl condor_scripts/make_final_tarballs --sys=$(SYSNAME) --tarcmd="$(TAR_CMD)" --cpcmd="$(CP_CMD)" --target=../public
 	$(MakeRPMs)
 
-#if WANT_MAN_PAGES
+#if HAVE_EXT_MAN
 man_target(condor_advertise.1)
 man_target(condor_checkpoint.1)
 man_target(condor_compile.1)

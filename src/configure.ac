@@ -32,7 +32,6 @@ AC_PREREQ(2.59)
 AC_INIT
 AC_CONFIG_HEADERS([config.h])
 
-
 AC_MSG_NOTICE([checking for critical tools used by configure]) 
 AC_PROG_AWK
 REQUIRE_PATH_PROG([GREP],[grep])
@@ -522,6 +521,21 @@ AC_SUBST(_cv_ext_config_sh,"$_root_dir/config/config.sh")
 # Check for command-line arguments and environment variables
 ############################################################
 
+AC_ARG_WITH(proper,
+  [AS_HELP_STRING([--with-proper],
+     [Force this configure script to work in the proper (non-Condor) way])],
+  [PROPER=$withval],
+  [PROPER=no])
+
+AC_ARG_WITH(soft-is-hard,
+  [AS_HELP_STRING([--with-soft-is-hard],
+     [Force all SOFT requirements into HARD requirements])],
+  [SOFT_IS_HARD=$withval],
+  [SOFT_IS_HARD=no])
+
+# If we are being proper we don't want to look for "externals"
+AS_IF([test "x$PROPER" != xyes],
+[
 ac_cv_has_externals=YES
 ac_cv_externals=none
 AC_ARG_WITH(externals,
@@ -552,6 +566,10 @@ AC_ARG_WITH(externals,
 )
 AC_SUBST(has_externals,$ac_cv_has_externals)
 AC_SUBST(ext_root,$ac_cv_externals)
+],
+[
+AC_SUBST(has_externals,NO)
+])
 
 # Now, try to find condor_analyze binaries.  In any directory we're
 # searching, we look for condor_analyze.(strip|static|release).  If
@@ -573,7 +591,7 @@ AC_ARG_WITH(condor_analyze,
  [if test $withval = no ; then
     ac_has_condor_analyze=NO
   else
-    if test -d $withval ; then
+    if test -d "$withval" ; then
       CONDOR_VERIFY_ANALYZE_DIR([$withval])
       if test $ac_has_condor_analyze = "NO" ; then
         AC_MSG_RESULT([ERROR])
@@ -586,16 +604,16 @@ AC_ARG_WITH(condor_analyze,
   fi
  ],
  [
-  if test $ac_cv_has_externals = "YES" ; then
+  if test "x$ac_cv_has_externals" = "xYES" ; then
     CONDOR_VERIFY_ANALYZE_DIR([$ac_cv_externals/install/condor_analyze])
   fi
-  if test $ac_has_condor_analyze = "NO" ; then
+  if test "x$ac_has_condor_analyze" = "xNO" ; then
     CONDOR_VERIFY_ANALYZE_DIR([/usr/local/condor/analyze])
   fi
  ]
 )
 AC_SUBST(has_condor_analyze,$ac_has_condor_analyze)
-if test $ac_has_condor_analyze = "YES" ; then
+if test "x$ac_has_condor_analyze" = "xYES" ; then
   AC_MSG_RESULT([$ac_condor_analyze_dir])
   CONDOR_SET_ANALYZE([release],fatal)
   CONDOR_SET_ANALYZE([strip],fatal)
@@ -1857,8 +1875,78 @@ fi
 ############################################################
 # What versions of what externals do we need
 ############################################################
-if test $ac_cv_has_externals = "YES" ; then
-AC_MSG_NOTICE([determining versions of external packages])
+
+#
+# Check for externals, if we are going to use them
+#
+
+if test "x$ac_cv_has_externals" = "xYES" -o "x$PROPER" = xyes ; then
+
+AC_MSG_NOTICE([determining availability of external packages])
+
+#
+# Define a number of _cv_has_<external>s for externals that are not
+# available on all platforms
+#
+
+#-----------------------------------------------------------------
+# NOTE: the checks for globus and SSL here must happen *outside*
+# the check for $ac_cv_has_externals, since we want these to be
+# set whether or not we're actually trying to build the externals
+# or not.  for example, the test suite needs to know these things, 
+# even though it's being configured using --without-externals.
+#-----------------------------------------------------------------
+# determine whether we will be using globus on this platform. this
+# logic used to be in the individual <platform>.cf files;
+AC_MSG_CHECKING([if globus is supported])
+case "$os" in
+  HP-UX ) _cv_has_globus=no ;;
+  OSF1|Linux|SunOS|IRIX|Darwin|FreeBSD|AIX ) _cv_has_globus=yes ;;
+  * )
+    AC_MSG_RESULT([error])
+    AC_MSG_ERROR([Unrecognized platform: $os])
+  ;;
+esac
+AC_MSG_RESULT([$_cv_has_globus])
+
+AC_MSG_CHECKING([if krb5 is supported])
+case "$os-$_cv_arch" in
+  OSF1-*|HP-UX-*|Linux-ALPHA|Linux-CONDOR_PPC ) _cv_has_krb5=no ;;
+  Linux-*|SunOS-*|IRIX-*|Darwin-*|FreeBSD-*|AIX-* ) _cv_has_krb5=yes ;;
+  * )
+    AC_MSG_RESULT([error])
+    AC_MSG_ERROR([Unrecognized platform: $os-$_cv_arch])
+  ;;
+esac
+AC_MSG_RESULT([$_cv_has_krb5])
+
+AC_MSG_CHECKING([if pvm is supported])
+case "$os-$_cv_arch-$_cv_opsys_vers" in
+  HP-UX-*-HPUX11|Linux-ALPHA-*|Linux-CONDOR_PPC-*|Linux-X86_64-*|Linux-IA64-*|Darwin-* )
+    _cv_has_pvm=no
+  ;;
+  HP-UX-*-HPUX10|OSF1-*|Linux-*|SunOS-*|IRIX-*|FreeBSD-*|AIX-* )
+    _cv_has_pvm=yes
+  ;;
+  * )
+    AC_MSG_RESULT([error])
+    AC_MSG_ERROR([Unrecognized platform: $os-$_cv_arch-$_cv_opsys_vers])
+  ;;
+esac
+AC_MSG_RESULT([$_cv_has_pvm])
+
+AC_MSG_CHECKING([if classads is supported])
+_cv_has_classads=no
+AS_IF([test "x$_cv_libc_kind-$_cv_libc_major-$_cv_libc_minor" = xGLIBC-2-3],
+  [AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -o "x$os-$_cv_arch" = xLinux-X86_64],
+    [_cv_has_classads=yes])])
+AC_MSG_RESULT([$_cv_has_classads])
+
+AC_MSG_CHECKING([if blahp is supported])
+AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_has_globus" = xyes -a "x$_cv_has_classads" = xyes],
+  [_cv_has_blahp=yes],
+  [_cv_has_blahp=no])
+AC_MSG_RESULT([$_cv_has_blahp])
 
 #
 # Figure out if I need to use the linuclibcheaders package to build glibc.
@@ -1875,34 +1963,34 @@ if test "x$os" = "xLinux" ; then
 
 	case "x$_cv_kernel_rev" in
 		"x2.6.3" )
-			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.3.0])
+			CHECK_EXTERNAL([linuxlibcheaders],[2.6.3.0], [soft])
 			;;
 		"x2.6.4" )
-			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.4.0])
+			CHECK_EXTERNAL([linuxlibcheaders],[2.6.4.0], [soft])
 			;;
 		"x2.6.5" )
-			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.5.2])
+			CHECK_EXTERNAL([linuxlibcheaders],[2.6.5.2], [soft])
 			;;
 		"x2.6.6" )
-			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.6.0])
+			CHECK_EXTERNAL([linuxlibcheaders],[2.6.6.0], [soft])
 			;;
 		"x2.6.7" )
-			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.7.0])
+			CHECK_EXTERNAL([linuxlibcheaders],[2.6.7.0], [soft])
 			;;
 		"x2.6.8" )
-			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.8.1])
+			CHECK_EXTERNAL([linuxlibcheaders],[2.6.8.1], [soft])
 			;;
 		"x2.6.9" )
-			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.9.1])
+			CHECK_EXTERNAL([linuxlibcheaders],[2.6.9.1], [soft])
 			;;
 		"x2.6.10" )
-			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.10.0])
+			CHECK_EXTERNAL([linuxlibcheaders],[2.6.10.0], [soft])
 			;;
 		"x2.6.11" )
-			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.11.2])
+			CHECK_EXTERNAL([linuxlibcheaders],[2.6.11.2], [soft])
 			;;
 		"x2.6.12" )
-			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.12.0])
+			CHECK_EXTERNAL([linuxlibcheaders],[2.6.12.0], [soft])
 			;;
 		*)
 			llh_use=NO
@@ -1928,28 +2016,28 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
   _cv_libc_full_vers="$_cv_libc_major.$_cv_libc_minor.$_cv_libc_patch"
   case "$_cv_libc_full_vers" in
   "2.2.4" )
-    CONDOR_EXTERNAL_VERSION([glibc],[2.2.2])
+    CHECK_EXTERNAL([glibc],[2.2.2], [soft])
     ;;
   "2.2.5" )
-    CONDOR_EXTERNAL_VERSION([glibc],[2.2.2])
+    CHECK_EXTERNAL([glibc],[2.2.2], [soft])
     ;;
   "2.2.93" )
-    CONDOR_EXTERNAL_VERSION([glibc],[2.2.93])
+    CHECK_EXTERNAL([glibc],[2.2.93], [soft])
     ;;
   "2.3.2" )
     # the glibc 2.3.2 from redhat's source rpms are very different than the
 	# stock 2.3.2 you can download off of the web.
 	# This external is used both for x86 and x86_64
-    CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
+    CHECK_EXTERNAL([glibc],[2.3.2.27.9.7], [soft])
     ;;
   "2.3.4" )
 	# I'm using this here to avoid a full port of Condor to the centos 4 OS.
 	# XXX Also, one must use gcc 3.2.2 instead of as shipped gcc 3.4.4 to 
 	# compile this package.
-    CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
+    CHECK_EXTERNAL([glibc],[2.3.2.27.9.7], [soft])
     ;;
   "2.3.6" )
-    CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
+    CHECK_EXTERNAL([glibc],[2.3.2.27.9.7], [soft])
     ;;
   "2.5." )
     including_glibc_ext=NO
@@ -1976,7 +2064,7 @@ fi
 # Google's coredumper is Linux specific and only officially supports
 # a few architectures.
 if test "$os" = "Linux" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch" = "xX86_64" \); then
-    CONDOR_EXTERNAL_VERSION([coredumper],[0.2])
+    CHECK_EXTERNAL([coredumper],[0.2], [soft])
 	AC_SUBST(want_coredumper,YES)
 else
 	AC_MSG_CHECKING(coredumper)
@@ -1988,36 +2076,50 @@ fi
 # platforms where the build is known to fail
 if test x$_cv_sysname != "xppc_aix52" -a x$_cv_linux_distro != "xRH72" -a  x$_cv_sysname != "xsun4x_58" -a x$_cv_sysname != "xsun4x_59" -a x$_cv_sysname != "xalpha_dux51" ; then
   if test x$_cv_sysname = "xppc_macosx" -o $ac_pthreads = "yes"; then
-   CONDOR_EXTERNAL_VERSION([drmaa],[1.5])
+   CHECK_EXTERNAL([drmaa],[1.5], [soft])
   fi
 fi
 
-CONDOR_EXTERNAL_VERSION([krb5],[1.4.3])
+CHECK_EXTERNAL([krb5], [1.4.3], [soft],
+               [use krb5 (provides Kerberos support)],
+               MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
 
-CONDOR_EXTERNAL_VERSION([gahp],[1.0.15])
+_cv_has_gahp=$_cv_has_globus
+CHECK_EXTERNAL([gahp],[1.0.15], [soft])
 
-CONDOR_EXTERNAL_VERSION([gt3gahp],[2.0])
+_cv_has_gt3gahp=$_cv_has_globus
+CHECK_EXTERNAL([gt3gahp],[2.0], [soft])
 
-CONDOR_EXTERNAL_VERSION([gt4gahp],[1.7])
+_cv_has_gt4gahp=$_cv_has_globus
+CHECK_EXTERNAL([gt4gahp],[1.7], [soft])
 
-CONDOR_EXTERNAL_VERSION([unicoregahp],[1.2.0])
+_cv_has_unicoregahp=$_cv_has_globus
+CHECK_EXTERNAL([unicoregahp],[1.2.0], [soft])
 
-CONDOR_EXTERNAL_VERSION([nordugridgahp],[1.1.0])
+_cv_has_nordugridgahp=$_cv_has_globus
+CHECK_EXTERNAL([nordugridgahp],[1.1.0], [soft])
 
-CONDOR_EXTERNAL_VERSION([zlib],[1.1.3])
+CHECK_EXTERNAL([zlib], [1.1.3], [soft],
+               [use zlib (provides compression support)],
+               MF_LIB_CHECK([zlib], [[z deflate]]))
 
-CONDOR_EXTERNAL_VERSION([pvm],[3.4.2])
+CHECK_EXTERNAL([pvm], [3.4.2], [soft])
 
-CONDOR_EXTERNAL_VERSION([classads],[0.9.8-b4])
+CHECK_EXTERNAL([classads], [0.9.8-b4], [soft])
 
-CONDOR_EXTERNAL_VERSION([srb],[3.2.1])
+CHECK_EXTERNAL([srb], [3.2.1], [soft])
 
-CONDOR_EXTERNAL_VERSION([gsoap],[2.7.6c-p1])
+CHECK_EXTERNAL([gsoap], [2.7.6c-p1], [soft])
 
-CONDOR_EXTERNAL_VERSION([pcre],[5.0])
+CHECK_EXTERNAL([pcre], [5.0], [hard],
+               [use PCRE (provides regular expression support)],
+               MF_LIB_CHECK([pcre], [[pcre pcre_compile]]))
+AS_IF([test "x$cv_ext_pcre" = xyes],
+  [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
 
+CHECK_EXTERNAL([blahp], [1.7.0], [soft])
 
-CONDOR_EXTERNAL_VERSION([blahp],[1.7.0])
+CHECK_EXTERNAL([man], [current], [soft])
 
 # temporary hack until we can reliably build BOINC everywhere.  for
 # now, just enable it manually, and pretend we've got it.  since we're
@@ -2028,7 +2130,7 @@ AC_DEFINE(HAVE_BOINC,1,[are we compiling support for backfill with BOINC])
 
 # GCB only matters and works if we have GNU ld...
 if test x$_cv_ld_is_gnu = xyes; then
-  CONDOR_EXTERNAL_VERSION([gcb],[1.5.0])
+  CHECK_EXTERNAL([gcb], [1.5.0], [soft])
 fi
 
 AX_LIB_ORACLE_OCI("10.0.0")
@@ -2036,63 +2138,17 @@ if test $HAVE_ORACLE_OCI = yes; then
   AC_DEFINE(HAVE_ORACLE,1,[Do we have Oracle support])
 fi
 
-CONDOR_EXTERNAL_VERSION([postgresql],[8.0.2])
+CHECK_EXTERNAL([postgresql], [8.0.2], [hard],
+               [use PostgreSQL (provides Quill and other support)],
+               MF_LIB_CHECK([postgresql], [[pq PQconnectdb]]))
 #AC_MSG_CHECKING([postgresql])
 #AC_MSG_RESULT([$_cv_ext_postgresql_version])
 #AC_SUBST(ext_postgresql_version,$_cv_ext_postgresql_version)
 
-else
-# if there's no externals at all, we still need to define these to
-# avoid imake troubles...
-  AC_SUBST([want_ext_linuxlibcheaders],[NO])
-  AC_SUBST([ext_linuxlibcheaders_version],[UNUSED])
-  AC_SUBST(want_ext_glibc,NO)
-  AC_SUBST(ext_glibc_version,UNUSED)
-fi
-# end of if $ac_cv_has_externals = "YES" 
+CHECK_EXTERNAL([globus],[4.0.3-2], [soft])
 
-#-----------------------------------------------------------------
-# NOTE: the checks for globus and SSL here must happen *outside*
-# the check for $ac_cv_has_externals, since we want these to be
-# set whether or not we're actually trying to build the externals
-# or not.  for example, the test suite needs to know these things, 
-# even though it's being configured using --without-externals.
-#-----------------------------------------------------------------
-# determine whether we will be using globus on this platform. this
-# logic used to be in the individual <platform>.cf files;
-AC_MSG_CHECKING([if build uses globus])
-case "$os" in
-  "HP-UX" )
-    _cv_has_globus=no
-    ;;
-  "OSF1" )
-    _cv_has_globus=yes
-    ;;
-  "Linux" )
-    _cv_has_globus=yes
-    ;;
-  "SunOS" )
-    _cv_has_globus=yes
-    ;;
-  "IRIX" )
-    _cv_has_globus=yes
-    ;;
-  "Darwin" )
-    _cv_has_globus=yes
-    ;;
-  "FreeBSD" )
-    _cv_has_globus=yes
-    ;;
-  "AIX" )
-    _cv_has_globus=yes
-    ;;
-  * )
-    AC_MSG_RESULT([error])
-    AC_MSG_ERROR([Unrecognized platform: $os])
-esac
-AC_MSG_RESULT([$_cv_has_globus])
-if test "$_cv_has_globus" = "yes" ; then
-
+# if globus is available on this platform and we actually have it
+if test "x$_cv_has_globus" = xyes -a "x$_cv_ext_globus_version" != x; then
   # currently, if we are using globus (and the openssl
   # within), we define HAVE_OPENSSL_SSL_H (meaning we
   # have ssl.h) to make gsoap happy
@@ -2104,11 +2160,6 @@ if test "$_cv_has_globus" = "yes" ; then
   AC_DEFINE([HAVE_EXT_OPENSSL], [1], [if openssl external])
   AC_DEFINE([USE_GLOBUS_OPENSSL], [1], [if openssl is from globus])
 
-  # ALSO ALSO, to eliminate HAS_GLOBUS in anything but this configure
-  # script, if we know we will have globus then we will do
-  # CONDOR_EXTERNAL_VERSION([globus]...), which defines HAVE_EXT_GLOBUS
-  # that we can use instead of HAS_GLOBUS -matt 082207
-  CONDOR_EXTERNAL_VERSION([globus],[4.0.3-2])
   AC_MSG_CHECKING([globus flavor])
   _cv_globus_flavor=gcc32dbg
   if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" -o "$_cv_arch" = "X86_64"; then
@@ -2118,7 +2169,23 @@ if test "$_cv_has_globus" = "yes" ; then
   fi
   AC_MSG_RESULT([$_cv_globus_flavor])
   AC_SUBST(globus_flavor,$_cv_globus_flavor)
+else # else if no globus
+  CHECK_EXTERNAL([openssl], [0.9.8], [soft],
+                 [use OpenSSL (provides authentication and encryption support)],
+                 MF_LIB_CHECK([openssl],
+                              [[ssl SSL_connect], [crypto BF_encrypt]]))
 fi
+
+else
+# if there's no externals at all, we still need to define these to
+# avoid imake troubles...
+  AC_SUBST([want_ext_linuxlibcheaders],[NO])
+  AC_SUBST([ext_linuxlibcheaders_version],[UNUSED])
+  AC_SUBST(want_ext_glibc,NO)
+  AC_SUBST(ext_glibc_version,UNUSED)
+
+fi
+# END of if $ac_cv_has_externals = "YES" or $PROPER = yes
 
 
 

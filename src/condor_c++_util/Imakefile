@@ -1,14 +1,12 @@
-#if WANT_NEW_CLASSADS
+#if HAVE_EXT_CLASSADS
 #define New_classads_includes	-I$(NEW_CLASSADS_INC)
 #define New_classads_obj		credential.o X509credential.o
 #define New_classads_dc_obj		dc_credd.o
-#define New_classads_defines	-DWANT_NEW_CLASSADS
 #define New_classads_lib		-L$(NEW_CLASSADS_LIB) -lclassad_ns
 #else
 #define New_classads_includes
 #define New_classads_obj
 #define New_classads_dc_obj
-#define New_classads_defines
 #define New_classads_lib
 #endif
 
@@ -24,7 +22,6 @@ all_target(cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI))
 
 C_PLUS_FLAGS =	\
 		$(STD_C_PLUS_FLAGS) \
-		New_classads_defines \
 		New_classads_includes \
 		$(QUILL_INC) \
 		$(TT_INC) -I../condor_tt

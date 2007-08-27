@@ -27,7 +27,7 @@
 //----------------------------------------------------------------------
 
 #include "condor_credential.h"
-#ifdef KERBEROS_AUTHENTICATION
+#ifdef HAVE_EXT_KRB5
 #include "condor_cred_kerberos.h"     // Condor_Kerberos
 #endif
 #include "HashTable.h"                // Condor HashTable
@@ -256,7 +256,7 @@ Condor_Credential_B * Condor_Credential_M :: create_new_cred(Credential_t type)
     break;
   case CONDOR_CRED_FILESYSTEM_REMOTE:
     break;
-#ifdef KERBEROS_AUTHENTICATION
+#ifdef HAVE_EXT_KRB5
   case CONDOR_CRED_KERBEROS:
       newCred = new Condor_Kerberos();
     break;

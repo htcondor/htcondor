@@ -26,8 +26,11 @@
 #include "condor_common.h"
 #include "MyString.h"
 #include "extArray.h"
-#include "pcre.h"
-
+#ifdef HAVE_PCRE_PCRE_H
+#  include "pcre/pcre.h"
+#else
+#  include "pcre.h"
+#endif
 
 //Regex NULLRegex;
 

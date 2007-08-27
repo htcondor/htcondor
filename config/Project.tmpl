@@ -202,7 +202,7 @@ DEBUG_FLAG = DebugFlag $(COMP_DEBUG_FLAGS)
 #define VendorFTestFlags
 #endif
 
-#if WANT_NEW_CLASSADS
+#if HAVE_EXT_CLASSADS
 #	define WANT_CLASSAD_ANALYSIS YES
 #endif
 
@@ -217,39 +217,8 @@ DEBUG_FLAG = DebugFlag $(COMP_DEBUG_FLAGS)
 
 /**********************************************************************
 A whole bunch of settings related to things included in the Condor
-externals tree.  First, we make sure this particular build has been
-configured to use the externals, and if not, we disable a bunch of
-stuff, even if the rest of the imake configuration things we want it.
+externals tree.
 **********************************************************************/
-
-#if ! HAS_EXTERNALS
-
-#ifdef WANT_MAN_PAGES
-#undef WANT_MAN_PAGES
-#endif
-#define WANT_MAN_PAGES	NO
-
-#ifdef WANT_PVM
-#undef WANT_PVM
-#endif
-#define WANT_PVM	NO
-
-#ifdef WANT_CONDOR_G
-#undef WANT_CONDOR_G
-#endif
-#define WANT_CONDOR_G	NO
-
-#ifdef WANT_X509
-#undef WANT_X509
-#endif
-#define WANT_X509	NO
-
-#ifdef WANT_KERBEROS
-#undef WANT_KERBEROS
-#endif
-#define WANT_KERBEROS	NO
-
-#endif /* ! HAS_EXTERNALS */
 
 /****************************************
  Now that all that is taken care of, we
@@ -257,20 +226,12 @@ stuff, even if the rest of the imake configuration things we want it.
  depending on what features are enabled
 ****************************************/
 
-#if WANT_CONDOR_G
-
-  CONDOR_G_FLAGS = -DCONDOR_G
-
-#else
- CONDOR_G_FLAGS =
-#endif /* WantCondorG */
-
 /* Kerberos */
-#if WANT_KERBEROS
-  KERBEROS_FLAG = -DKERBEROS_AUTHENTICATION -I$(KERBEROS_INC)
+#if HAVE_EXT_KRB5
+  KERBEROS_FLAG = -I$(KERBEROS_INC)
 #else
   KERBEROS_FLAG = 
-#endif /* !defined(WANT_KERBEROS) */
+#endif
 
 /* Encryption */
 
@@ -351,12 +312,9 @@ NETMAN_LIB =
 NETMAN_FLAGS =
 #endif
 
-#if WANT_COREDUMPER
+#if HAVE_EXT_COREDUMPER
 COREDUMPER_FLAGS = -I$(COREDUMPER_INC)
 COREDUMPER_LINK_LIB = $(COREDUMPER_LIB)/libcoredumper.a
-#else
-COREDUMPER_FLAGS =
-COREDUMPER_LINK_LIB =
 #endif
 
 /* PCRE is sorta required everywhere at the moment */
@@ -406,9 +364,9 @@ GCB_FLAGS = -I$(GCB_INC)
 VENDOR_C_FLAGS = CFlags -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) -I$(DAEMONCLIENT_INCLUDE) \
 		 $(CONFIGURE_DEFS) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
-		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) $(CONDOR_G_FLAGS) \
+		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) \
 		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) $(SNPRINTF_FLAGS) \
-		 $(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS)
+		 $(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS) $(CONFIGURE_CFLAGS)
 
 
 /* This flag is a bad idea since when this stuff eventually goes truly obselete
@@ -475,7 +433,8 @@ PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
 
 
 /* common ld flags which should be first in the list */
-COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) $(GCC_STACK_PROTECTOR) -lm $(LDFLAGS) $(CONFIGURE_LIBS)
+COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) $(GCC_STACK_PROTECTOR) -lm \
+                $(LDFLAGS) $(CONFIGURE_LIBS) $(CONFIGURE_LDFLAGS)
 
 /* common ld flags which should be last in the list */
 COM_LDFLAGS_L = 

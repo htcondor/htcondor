@@ -1,15 +1,13 @@
-#if WANT_NEW_CLASSADS
-#define New_classads_defines    -DWANT_NEW_CLASSADS
+#if HAVE_EXT_CLASSADS
 #define New_classads_lib		-L$(NEW_CLASSADS_LIB) -lclassad_ns
 #else
-#define New_classads_defines
 #define New_classads_lib
 #endif
 
 all_target(condor_userlog condor_check_userlogs condor_userlog_job_counter)
 
-CFLAGS = $(STD_C_FLAGS) New_classads_defines
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) New_classads_defines
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(STD_LIBS) New_classads_lib
 
 OBJ = userlog.o

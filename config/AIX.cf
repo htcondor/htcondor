@@ -36,7 +36,6 @@ PRELINK_CPP_FLAGS = -Ur -u main
 #define HAS_GETDTABLESIZE		NO
 #define HAS_SETEGID			NO
 #define HAS_SETEUID			YES
-#define HAS_PVM				NO
 #define PVM_ARCH			RS6K
 
 #define ShadowSizeEstimate 200

@@ -26,7 +26,7 @@
 #include "read_multiple_logs.h"
 #include "condor_string.h" // for strnewp()
 #include "tmp_dir.h"
-#ifdef WANT_NEW_CLASSADS
+#ifdef HAVE_EXT_CLASSADS
 #ifndef WANT_NAMESPACES
 #define WANT_NAMESPACES
 #endif
@@ -540,7 +540,7 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifdef WANT_NEW_CLASSADS
+#ifdef HAVE_EXT_CLASSADS
 
 // Skip whitespace in a std::string buffer.
 void
@@ -688,7 +688,7 @@ MultiLogFiles::loadLogFileNamesFromStorkSubFile(
 
 	return rtnVal;
 }
-#endif /* WANT_NEW_CLASSADS */
+#endif /* HAVE_EXT_CLASSADS */
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -808,7 +808,7 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 					// get the log = value from the sub file
 				MyString strLogFilename;
 				if ( !stricmp(jobKeyword.Value(), "data") ) {
-#ifdef WANT_NEW_CLASSADS
+#ifdef HAVE_EXT_CLASSADS
 						// Warning!  For the moment we are only supporting
 						// one log file per Stork submit file.
 						// wenger 2006-01-17.

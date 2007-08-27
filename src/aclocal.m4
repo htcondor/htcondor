@@ -1,3 +1,8 @@
+dnl Using mf_ for non Autoconf macros.
+m4_pattern_forbid([^mf_]])dnl
+m4_pattern_forbid([^MF_])dnl
+
+
 #######################################################################
 # CHECK_PROG_IS_GNU is based loosely on the CHECK_GNU_MAKE macro 
 # available from the GNU Autoconf Macro Archive at:
@@ -65,6 +70,172 @@ fi
 
 
 
+#
+# CHECK_EXTERNAL(name,
+#                version,
+#                requirement_level,
+#                help string,
+#                test)
+#
+# Check for an external. If $PROPER is defined to "yes" perform the
+# external check with the provided test function ($5), otherwise use
+# the default check for an external directory. The help string ($4) is
+# also ignored if $PROPER is not "yes". _cv_has_<name> is checked to
+# see if the external should detected. If _cv_has_<name> is no and the
+# requirement is hard an error is raised.
+#
+# Example usage:
+#  CHECK_EXTERNAL([pcre], [5.0], [hard],
+#                 [use PCRE (provides regular expression support)],
+#                 MF_LIB_CHECK([pcre], [[pcre pcre_compile]]))
+#
+# Arguments:
+#  * name: The externals name, e.g. [pcre]
+#  * version: The externals desired version, e.g. [5.0]
+#  * requirement_level: [yes]|[no]|[optional], should be [yes]|[no]
+#          [yes]: This external is a HARD requirement, it must exist
+#           [no]: This external is a SOFT requirement, it would be nice
+#     [optional]: This external is an OPTIONAL requirement, who cares
+#  * help string: Message provided with --with-<name> in --help
+#  * test: A function to determine if the external is available. It
+#          will have access to _dir, which is set if
+#          --with-<name>[=DIR] is given a DIR. When the function
+#          completes it must define cv_ext_<name>=yes|no depending on
+#          if the external is available or not. If none is given the
+#          external is assumed to not be available.
+#
+# Results:
+#  * On successful location/identification of the external:
+#   _cv_ext_<name>_version=<name>-<version> | NA
+#   AC_SUBST([ext_<name>_version], [$_cv_ext_<name>_version])
+#   AC_DEFINE([HAVE_EXT_<NAME>], [1])
+#
+AC_DEFUN([CHECK_EXTERNAL],
+  [AS_IF([test "x$_cv_has_]m4_tolower($1)[" = xno],
+     [AS_IF([test "x$3" = xhard],
+       [AC_MSG_FAILURE([$1 required but unsupported])],
+       [AC_MSG_CHECKING([for $1])
+        AC_MSG_RESULT([unsupported])])],
+     [AS_IF([test "x$PROPER" = xyes],
+       [MF_EXTERNAL_CHECK($1, $2, $4, $3, $5)],
+       [MF_EXTERNAL_CHECK($1, $2, $4, $3, CONDOR_EXTERNAL_VERSION($1, $2))])])])
+
+#
+# MF_EXTERNAL_CHECK(external_name,
+#                   external_version,
+#                   help string,
+#                   requierment_level,
+#                   test)
+#
+# This function is the framework for detecting externals PROPERly,
+# i.e. externals present on the system not in special directories
+# waiting to be built. The test function ($5) does the work of
+# actually detecting an external, while this function worries about
+# the requirement_level ($4), if --with-<name> or --without-<name> is
+# given, if --enable-soft-is-hard is given, and what should happen
+# when the external is found or not.
+#
+# Arguments:
+#  Exactly the same as those given to CHECK_EXTERNAL
+#
+# Results:
+#  Exactly the same as CHECK_EXTERNAL's
+#
+AC_DEFUN([MF_EXTERNAL_CHECK],
+  [AC_ARG_WITH(m4_tolower($1),
+    AS_HELP_STRING([--with-]m4_tolower($1)[@<:@=DIR@:>@],
+                   [$3 ($4 requirement)]),
+    [_with=$withval],
+    [_with=check])
+   # if not yes|no|check --with-<name>[=DIR] was given a DIR
+   AS_IF([test "x$_with" != xyes -a "x$_with" != xno -a "x$_with" != xcheck],
+     [_dir=$_with],
+     [_dir=])
+   # if a hard requirement, it is always required
+   # note: --without-<name> makes no sense on a hard requirement
+   AS_IF([test "x$4" = xhard],
+     [_required=yes],
+     # if --with-<name> is given
+     AS_IF([test "x$_with" != xcheck -a "x$_with" != xno],
+       [_required=yes],
+       # if a soft requirement
+       AS_IF([test "x$4" = xsoft],
+         # external is a soft requirement, but soft->hard turned on
+         [AS_IF([test "x$SOFT_IS_HARD" = xyes],
+           [_required=yes],
+           # else, just a soft requirement
+           [_required=no])],
+         # else, completely optional
+         [_required=no])))
+   # if --without-<name>
+   AS_IF([test "x$_with" = xno],
+     [cv_ext_]m4_tolower($1)[=no],
+     [dnl invoke the test program or if it is not given just assume the
+      dnl external is not available
+      m4_if(x$5, x, [cv_ext_]m4_tolower($1)[=no], $5)])
+   AC_MSG_CHECKING([for $1])
+   AC_MSG_RESULT([$cv_ext_]m4_tolower($1))
+   # if the external is not available
+   AS_IF([test "x$cv_ext_]m4_tolower($1)[" = xno],
+     [AS_IF([test "x$_required" = xyes],
+       [AC_MSG_FAILURE([$1 is required])])],
+     [# Strictly backwards compatible with CONDOR_EXTERNAL_VERSION
+      _cv_ext_$1_version="$1-$2"
+      AC_SUBST([ext_$1_version], [$_cv_ext_$1_version])
+      AC_DEFINE([HAVE_EXT_]m4_toupper($1), [1], [Do we have the $1 external])])])
+
+
+# Helper functions, basically car and cadr, pulling the first and
+# second items out of a space separated pair, e.g. [first second]
+AC_DEFUN([mf_first],
+  [m4_normalize(m4_substr($1, 0, m4_index($1, [ ])))])
+AC_DEFUN([mf_second],
+  [m4_normalize(m4_substr($1,
+                          m4_index($1, [ ]),
+                          m4_eval(m4_len($1) - m4_index($1, [ ]))))])
+
+#
+# MF_LIB_CHECK(name,
+#              lib&func list)
+#
+# This is a useful function that can be provided as a test to
+# CHECK_EXTERNAL. It checks for a set of functions in a set of
+# libraries to determine if the external is available.
+#
+# Arguments:
+#  * name: The externals name 
+#  * lib&func list: A list of library and function pairs that enumerate
+#                   all required libraries for the external and a function
+#                   to identify each,
+#                    e.g. [[ssl SSL_connect], [crypto BF_encrypt]]
+#
+# Results:
+# * cv_ext_<name> set to yes, if all libraries are found
+#                        no, otherwise
+#
+# Note: This function uses _dir if it is set. It should be set to a
+# path that includes a lib/ and include/ directory.
+#
+AC_DEFUN([MF_LIB_CHECK],
+  [AS_IF([test "x$_dir" != x],
+    [_ldflags_save="$LDFLAGS"
+     _cflags_save="$CFLAGS"
+     LDFLAGS="$LDFLAGS -L$_dir/lib"
+     CFLAGS="$CFLAGS -I$_dir/include"])
+     _libs=
+     _failure=
+     m4_foreach([ls], [$2],
+      [AC_CHECK_LIB(mf_first(ls), mf_second(ls),
+        [_libs="-l]mf_first(ls)[ $_libs"],
+        [_failure="]mf_first(ls)[ $_failure"])])
+     AS_IF([test "x$_failure" != x],
+       [cv_ext_]m4_tolower($1)[=no
+        LDFLAGS=$_ldflags_save
+        CFLAGS=$_cflags_save
+        AC_MSG_WARN([$1: could not find $_failure])],
+       [cv_ext_]m4_tolower($1)[=yes
+        LIBS="$LIBS $_libs"])])
+
 
 #######################################################################
 # CONDOR_EXTERNAL_VERSION written by Derek Wright
@@ -81,21 +252,30 @@ fi
 #  the variable $_cv_ext_<name>_version is set to hold the value, we
 #  print out "checking <name> ... <version>, and we do a variable
 #  substitution in our output files for "ext_<name>_version".
+#
+# Modifications by Matt, for use in CHECK_EXTERNAL when PROPER is off:
+#  * Sets cv_ext_<name> to yes or no if the external is available or not
+#  * All exit points via a failure are changed to warnings, because
+#    MF_EXTERNAL_CHECK will properly exit based on how required the
+#    external is
+#  * Side Effects no longer occur, they are handled by MF_EXTERNAL_CHECK
 #######################################################################
 AC_DEFUN([CONDOR_EXTERNAL_VERSION],
 [CONDOR_EXTERNAL_VERSION_($1,$2,m4_toupper($1))])
 
 AC_DEFUN([CONDOR_EXTERNAL_VERSION_],
-[AC_MSG_CHECKING([$1])
- _err_msg="The requested version of [$1] ([$1]-[$2]) does not exist in $ac_cv_externals"
- _condor_VERIFY_DIR([$ac_cv_externals/bundles/[$1]],$_err_msg)
- _condor_VERIFY_DIR([$ac_cv_externals/bundles/[$1]/[$2]],$_err_msg)
- _condor_VERIFY_FILE([$ac_cv_externals/bundles/[$1]/[$2]/build_[$1]-[$2]],$_err_msg)
- _cv_ext_$1_version="[$1]-[$2]"
- AC_MSG_RESULT([$_cv_ext_$1_version])
- AC_SUBST([ext_$1_version],$_cv_ext_$1_version)
- AC_DEFINE([HAVE_EXT_$3],[1],[Do we have the $3 external package])
-])
+[_bundle="$ac_cv_externals/bundles/$1"
+ _bundle_version="$ac_cv_externals/bundles/$1/$2"
+ _bundle_build="$ac_cv_externals/bundles/$1/$2/build_$1-$2"
+ AC_MSG_CHECKING([for $1-$2])
+ AS_IF([test -d "$_bundle" -a \
+             -d "$_bundle_version" -a \
+             -f "$_bundle_build"],
+   [AC_MSG_RESULT([yes])
+    cv_ext_$1=yes],
+   [AC_MSG_RESULT([no])
+    AC_MSG_WARN([$_bundle_build unavailable])
+    cv_ext_$1=no])])
 
 
 #######################################################################
@@ -486,7 +666,7 @@ dnl The license on the macro is listed as "AllPermissive" which according to
 dnl http://ac-archive.sourceforge.net/doc/contribute.html
 dnl means "assumed MIT-style"
 dnl
-dnl $Id: aclocal.m4,v 1.6 2007-06-26 17:56:14 gthain Exp $
+dnl $Id: aclocal.m4,v 1.7 2007-08-27 21:11:50 matt Exp $
 dnl
 dnl @synopsis AX_LIB_ORACLE_OCI([MINIMUM-VERSION])
 dnl
@@ -520,7 +700,7 @@ dnl
 dnl @category InstalledPackages
 dnl @category Cxx
 dnl @author Mateusz Loskot <mateusz@loskot.net>
-dnl @version $Date: 2007-06-26 17:56:14 $
+dnl @version $Date: 2007-08-27 21:11:50 $
 dnl @license AllPermissive
 dnl
 AC_DEFUN([AX_LIB_ORACLE_OCI],

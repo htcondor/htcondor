@@ -11,8 +11,6 @@
 #define HAS_DYNAMIC_USER_JOBS	NO
 
 #define HAS_DAGMAN_HELPER   YES
-#undef WANT_PVM
-#define WANT_PVM        YES
 
 #undef WANT_DAGMAN_HELPER
 #define WANT_DAGMAN_HELPER     YES
