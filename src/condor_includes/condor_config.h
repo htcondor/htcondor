@@ -36,6 +36,7 @@
 typedef struct bucket {
 	char	*name;
 	char	*value;
+	int		used;	
 	struct bucket	*next;
 } BUCKET;
 
@@ -195,6 +196,11 @@ extern "C" {
 	*/
 	char * hash_iter_value(HASHITER iter);
 
+	/** Returns 1 if the current entry in the hash table is used in 
+		an expression; otherwise, returns 0.
+	*/
+	int hash_iter_used_value(HASHITER iter);
+
 	/** Destroy iterator and reclaim memory.
 	You must pass in a pointer to the hash iterator.
 	After calling the HASHITER is no longer valid.
@@ -224,6 +230,10 @@ BEGIN_C_DECLS
 	insert keeps copies of the name and value.
 	*/
 	void insert ( const char *name, const char *value, BUCKET *table[], int table_size );
+	
+	/** Sets the whether or not a macro has actually been used
+	*/
+	void set_macro_used ( const char *name, int used, BUCKET *table[], int table_size );
 
 	/** Look up a value by the name 'name' from the table 'table' which is table_size big.
 	
@@ -233,6 +243,7 @@ BEGIN_C_DECLS
 	value is owned by the table; do not free it.
 	*/
 	char * lookup_macro ( const char *name, BUCKET *table[], int table_size );
+
 	/*
 	As expand_macro() (above), but assumes the table 'ConfigTab' which is
 	of size TABLESIZE.

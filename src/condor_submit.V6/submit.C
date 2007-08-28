@@ -131,6 +131,7 @@ char	IckptName[_POSIX_PATH_MAX];	/* Pathname of spooled initial ckpt file */
 unsigned int TransferInputSize;	/* total size of files transfered to exec machine */
 const char	*MyName;
 int		Quiet = 1;
+int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
 int		MaxProcsPerCluster;
 int	  ClusterId = -1;
@@ -404,7 +405,8 @@ void 	check_iwd( char *iwd );
 int	read_condor_file( FILE *fp );
 char * 	condor_param( const char* name, const char* alt_name );
 char * 	condor_param( const char* name ); // call param with NULL as the alt
-void 	set_condor_param( const char* name, char* value );
+void 	set_condor_param( const char* name, char* value);
+void 	set_condor_param_used( const char* name);
 void 	queue(int num);
 char * 	check_requirements( char *orig );
 void 	check_open( const char *name, int flags );
@@ -768,6 +770,9 @@ main( int argc, char *argv[] )
 				}
 				method = *ptr;
 				string_to_stm(method, STMethod);
+			} else if ( match_prefix( ptr[0], "-unused" ) ) {
+				WarnOnUnusedMacros = WarnOnUnusedMacros == 1 ? 0 : 1;
+				// TOGGLE?
 			} else if ( match_prefix( ptr[0], "-help" ) ) {
 				usage();
 				exit( 0 );
@@ -1025,6 +1030,21 @@ main( int argc, char *argv[] )
 	// Deallocate some memory just to keep Purify happy
 	for (i=0;i<JobAdsArrayLen;i++) {
 		delete JobAdsArray[i];
+	}
+
+	/*	print all of the parameters that were not actually expanded/used 
+		in the submit file */
+	if (WarnOnUnusedMacros) {
+		if (!Quiet) { fprintf(stdout, "\n"); }
+		HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+		for ( ; !hash_iter_done(it); hash_iter_next(it) ) {
+			if(0 == hash_iter_used_value(it)) {
+				char *key = hash_iter_key(it),
+					 *val = hash_iter_value(it);
+				fprintf(stderr, "WARNING: a macro was not used or expanded: `%s = %s'\n", key, val);
+			}
+		}
+		
 	}
 
 	return 0;
@@ -5221,6 +5241,11 @@ set_condor_param( const char *name, char *value )
 	insert( name, tval, ProcVars, PROCVARSIZE );
 }
 
+void
+set_condor_param_used( const char *name ) 
+{
+	set_macro_used(name, 1, ProcVars, PROCVARSIZE);
+}
 
 int
 strcmpnull(const char *str1, const char *str2)
@@ -5324,8 +5349,10 @@ queue(int num)
 		GotQueueCommand = 1;
 		(void)sprintf(tmp, "%d", ClusterId);
 		set_condor_param(Cluster, tmp);
+		set_condor_param_used(Cluster); // we don't show system macros as "unused"
 		(void)sprintf(tmp, "%d", ProcId);
 		set_condor_param(Process, tmp);
+		set_condor_param_used(Process);
 
 #if !defined(WIN32)
 		SetRootDir();	// must be called very early
@@ -5345,8 +5372,10 @@ queue(int num)
 		corresponding to the mpi node's number. */
 		if ( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 			set_condor_param ( "NODE", "#MpInOdE#" );
+			set_condor_param_used ( "NODE" );
 		} else if ( JobUniverse == CONDOR_UNIVERSE_PARALLEL ) {
 			set_condor_param ( "NODE", "#pArAlLeLnOdE#" );
+			set_condor_param_used ( "NODE" );
 		}
 
 		// Note: Due to the unchecked use of global variables everywhere in
@@ -6025,6 +6054,9 @@ usage()
 	fprintf( stderr, "Usage: %s [options] [cmdfile]\n", MyName );
 	fprintf( stderr, "	Valid options:\n" );
 	fprintf( stderr, "	-verbose\t\tverbose output\n" );
+	fprintf( stderr, 
+			 "	-unused\t\t\ttoggles unused or unexpanded macro warnings\n"
+			 "         \t\t\t(overrides config file; multiple -u flags ok)\n" );
 	fprintf( stderr, "	-name <name>\t\tsubmit to the specified schedd\n" );
 	fprintf( stderr,
 			 "	-remote <name>\t\tsubmit to the specified remote schedd\n"
@@ -6127,6 +6159,14 @@ init_params()
 		free( tmp );
 		string_to_stm( method, STMethod );
 	}
+
+	tmp = param( "WARN_ON_UNUSED_SUBMIT_FILE_MACROS" );
+	if ( NULL != tmp ) {
+		if( (*tmp == 'f' || *tmp == 'F') ) {
+			WarnOnUnusedMacros = 0;
+		}
+	}
+
 }
 
 int

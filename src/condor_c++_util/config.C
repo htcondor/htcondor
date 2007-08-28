@@ -413,10 +413,32 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 	bucket = (BUCKET *)MALLOC( sizeof(BUCKET) );
 	bucket->name = strdup( tmp_name );
 	bucket->value = strdup( value );
+	bucket->used = 0;
 	bucket->next = table[ loc ];
 	table[loc] = bucket;
 }
 
+/*
+** Sets the given macro's state to used
+*/
+void 
+set_macro_used ( const char *name, int used, BUCKET *table[], int table_size )
+{
+	register BUCKET	*ptr;
+	int		loc;
+	char	tmp_name[ 1024 ];
+	
+	/* find the macro in the hash table */
+	strcpy( tmp_name, name );
+	strlwr( tmp_name );
+	loc = condor_hash( tmp_name, table_size );
+	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
+		if( strcmp(tmp_name,ptr->name) == 0 ) {
+			ptr->used = used;
+			return;
+		}
+	}
+}
 
 /*
 ** Read one line and any continuation lines that go with it.  Lines ending
@@ -752,6 +774,15 @@ hash_iter_value(HASHITER iter)
 	return iter->current->value;
 }
 
+int
+hash_iter_used_value(HASHITER iter)
+{
+	ASSERT(iter);
+	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
+	ASSERT( ! hash_iter_done(iter) );
+	return iter->current->used;
+}
+
 void 
 hash_iter_delete(HASHITER * iter)
 {
@@ -987,6 +1018,7 @@ lookup_macro( const char *name, BUCKET **table, int table_size )
 	loc = condor_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( !strcmp(tmp_name,ptr->name) ) {
+			ptr->used = 1;
 			return ptr->value;
 		}
 	}
