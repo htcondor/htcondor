@@ -58,6 +58,9 @@ for job information.
 
 \item Reduced memory requirements of \Condor{shadow}.
 
+\item Added the ability to \Condor{submit} to list unused or unexpanded 
+  variables in submission file.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -87,6 +90,11 @@ for job information.
   The default is \Expr{True} to do lazy, periodic updates.
   See section~\ref{param:ShadowLazyQueueUpdate} on
   page~\pageref{param:ShadowLazyQueueUpdate} for more information.
+
+\item The new variable \Macro{WARN\_ON\_UNUSED\_SUBMIT\_FILE\_MACROS} 
+  controls if \Condor{submit} should warn when there are unused or
+  unexpanded variables in a submit file.  The default is \Expr{True}
+  to list unused or unexpanded variables.
 
 \end{itemize}
 
