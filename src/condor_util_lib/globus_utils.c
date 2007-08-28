@@ -42,8 +42,12 @@
 
 static char * _globus_error_message = NULL;
 
-char *GlobusJobStatusName( int status )
+#define GRAM_STATUS_STR_LEN		8
+
+const char *
+GlobusJobStatusName( int status )
 {
+	static char buf[GRAM_STATUS_STR_LEN];
 #if defined(HAVE_EXT_GLOBUS)
 	switch ( status ) {
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING:
@@ -65,10 +69,12 @@ char *GlobusJobStatusName( int status )
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN:
 		return "UNKNOWN";
 	default:
-		return "??????";
+		snprintf( buf, GRAM_STATUS_STR_LEN, "%d", status );
+		return buf;
 	}
 #else
-	return "??????";
+	snprintf( buf, GRAM_STATUS_STR_LEN, "%d", status );
+	return buf;
 #endif
 }
 
