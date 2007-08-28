@@ -63,11 +63,13 @@
 # ifdef HAVE_SYS_STATFS_H
 #  include <sys/statfs.h>
 # endif
-# ifdef HAVE_LINUX_NFSD_CONST_H
+# ifdef HAVE_LINUX_MAGIC_H
+#  include <linux/magic.h>
+# elif defined(HAVE_LINUX_NFSD_CONST_H)
 #  include <linux/nfsd/const.h>
-#  ifndef NFS_SUPER_MAGIC
-#   undef USE_STATFS
-#  endif
+# endif
+# ifndef NFS_SUPER_MAGIC
+#  undef USE_STATFS
 # endif
 #endif
 

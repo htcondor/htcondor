@@ -29,8 +29,6 @@ DAEMONCLIENT_INCLUDE =	../condor_daemon_client
 
 #ifdef NEED_SNPRINTF
 SNPRINTF_FLAGS = -DNEED_SNPRINTF
-#else
-SNPRINTF_FLAGS = 
 #endif
 
 
@@ -228,9 +226,9 @@ externals tree.
 
 /* Kerberos */
 #if HAVE_EXT_KRB5
-  KERBEROS_FLAG = -I$(KERBEROS_INC)
-#else
-  KERBEROS_FLAG = 
+# if HAS_EXTERNALS
+   KERBEROS_FLAG = -I$(KERBEROS_INC)
+# endif
 #endif
 
 /* Encryption */
@@ -254,6 +252,7 @@ NOTE: we also need the same crap for libpcre.a...
 
 
 #if HAVE_EXT_GLOBUS
+# if HAS_EXTERNALS
   GSI_LIB   = \
 	      $(GLOBUS_DIR)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_gssapi_gsi_$(GlobusFlavor).a \
@@ -270,27 +269,24 @@ NOTE: we also need the same crap for libpcre.a...
 	      $(GLOBUS_DIR)/lib/libglobus_callout_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_common_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libltdl_$(GlobusFlavor).a
-#else
-  GSI_LIB   =
+# endif
 #endif
 
 #if HAVE_EXT_OPENSSL
 #  if USE_GLOBUS_OPENSSL
-    OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include/$(GlobusFlavor) -DSSL_AUTHENTICATION
+    OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include/$(GlobusFlavor)
     OPENSSL_LIB = $(PRE_GLOBUS_LIBS) \
 		  $(OPENSSL_DIR)/lib/libssl_$(GlobusFlavor).a \
 		  $(OPENSSL_DIR)/lib/libcrypto_$(GlobusFlavor).a \
 		  $(POST_GLOBUS_LIBS)
     OPENSSL_MD_LIB = $(OPENSSL_DIR)/lib/libcrypto_$(GlobusFlavor).a 
 #  else
-    OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include -DSSL_AUTHENTICATION
-    OPENSSL_LIB = $(OPENSSL_DIR)/lib/libssl.a $(OPENSSL_DIR)/lib/libcrypto.a
-    OPENSSL_MD_LIB = $(OPENSSL_DIR)/lib/libcrypto.a 
+#   if HAS_EXTERNALS
+      OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include
+      OPENSSL_LIB = $(OPENSSL_DIR)/lib/libssl.a $(OPENSSL_DIR)/lib/libcrypto.a
+      OPENSSL_MD_LIB = $(OPENSSL_DIR)/lib/libcrypto.a 
+#   endif
 #  endif
-#else
-  OPENSSL_FLAGS =
-  OPENSSL_LIB =
-  OPENSSL_MD_LIB =
 #endif
 
 #if HAVE_EXT_OPENSSL
@@ -307,9 +303,6 @@ SECURITY_LIB   = $(KERBEROS_LIB) \
 #if WANT_NETMAN
 NETMAN_LIB = ../condor_netman/libnetman.a
 NETMAN_FLAGS = -DWANT_NETMAN
-#else
-NETMAN_LIB =
-NETMAN_FLAGS =
 #endif
 
 #if HAVE_EXT_COREDUMPER
@@ -318,33 +311,31 @@ COREDUMPER_LINK_LIB = $(COREDUMPER_LIB)/libcoredumper.a
 #endif
 
 /* PCRE is sorta required everywhere at the moment */
+#if HAVE_EXT_PCRE
+#if HAS_EXTERNALS
 PCRE_FLAGS = -I$(PCRE_INC)
 PCRE_LIB = $(PCRE_DIR)/lib/libpcre.a
+#endif
+#endif
 
 #if WANT_TT
 /*
 TT_LIB = $(POSTGRESQL_LIB)/libpq.a $(ORACLE_HOME)/lib/libocci10.a $(ORACLE_HOME)/lib/libclntst10.a $(ORACLE_HOME)/lib/libnnz10.a -lirc -lpthread
 */
-
+#if HAS_EXTERNALS
 POSTGRESQL_LIBS = $(POSTGRESQL_LIB)/libpq.a 
-
 TT_LIB = $(POSTGRESQL_LIBS) $(ORACLE_LIB)
 TT_INC = -I$(POSTGRESQL_INC) $(ORACLE_INC)
+#endif
 TT_FLAGS = -DWANT_TT  
-#else
-TT_LIB =
-TT_INC =
-TT_FLAGS =
 #endif
 
 #if WANT_QUILL
+#if HAS_EXTERNALS
 QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a 
 QUILL_INC = -I$(POSTGRESQL_INC) 
+#endif
 QUILL_FLAGS = -DWANT_QUILL 
-#else
-QUILL_LIB =
-QUILL_INC =
-QUILL_FLAGS =
 #endif
 
 
