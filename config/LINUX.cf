@@ -71,7 +71,7 @@
 #define NEEDS_FAKE_GETMNT		YES
 #define HAS_AR_S_OPTION			YES
 #define HAS_RANLIB_TOUCH		NO
-/*?????*/
+/*??????*/
 #define HAS_CP_PRESERVE			NO
 #ifndef FORTRAN_HAS_RECURSION
 #  define FORTRAN_HAS_RECURSION		NO
