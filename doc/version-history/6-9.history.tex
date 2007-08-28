@@ -288,6 +288,21 @@ the state of the job in the remote schedd into an invalid state in which
 it would run but later fail during stage out.  This now results in the
 job on the submit side going on hold with a stagein failure.
 
+\item Fixed a bug which could cause \Condor{store\_cred} to crash during
+common use.
+
+\item Fixed a bug where the vanilla universe \Condor{starter} would possibly
+crash when running a job not as the owner of the job.
+
+\item Fixed a bug which would cause a \Condor{starter} being used for
+the local universe to coredump.
+
+\item Fixed a bug which caused the \Condor{schedd} to coredump while
+processing a job's crontab entries in the submit description file.
+
+\item Fixed a priviledge separation bug in the standard universe 
+\Condor{starter}.
+
 \end{itemize}
 
 \noindent Known Bugs:
