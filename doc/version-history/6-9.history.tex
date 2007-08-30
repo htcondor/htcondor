@@ -61,6 +61,10 @@ for job information.
 \item Added the ability to \Condor{submit} to list unused or unexpanded 
   variables in submission file.
 
+% Gnats PR 372.
+\item Added the capability to assign priorities to DAG nodes.  Ready nodes
+within a DAG are submitted in priority order by \Condor{dagman}.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -70,7 +74,7 @@ for job information.
 \item The new variable \Macro{WANT\_UDP\_COMMAND\_SOCKET} controls
   if Condor daemons should create a UDP command socket in addition to
   the TCP command socket (which is required).
-  The deault is \Expr{True}, but it is now possible to completely
+  The default is \Expr{True}, but it is now possible to completely
   disable UDP command sockets by defining this to \Expr{False}.
   See section~\ref{param:WantUDPCommandSocket} on
   page~\pageref{param:WantUDPCommandSocket} for more information.
@@ -103,7 +107,7 @@ for job information.
 \begin{itemize}
 
 \item Removed race condition that was causing the \Condor{schedd} to core
-  dump on Windows when the Condor service was stoped.
+  dump on Windows when the Condor service was stopped.
 
 \item When grid universe jobs of grid-type condor, lsf, or pbs are running,
 \Condor{q} will now show the correct accumulated runtime.
