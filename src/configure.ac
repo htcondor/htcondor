@@ -1,4 +1,4 @@
-# Configure template for Condor.                             -*-Autoconf-*- 
+# Configure template for Condor.                             -*-Autoconf-*-
 # Process this file with autoconf to produce a configure script.
 ############################Copyright-DO-NOT-REMOVE-THIS-LINE##
 #
@@ -25,14 +25,14 @@
 
 # We need a recent autoconf for many of the macros and tests we're using
 # NOTE: 2.57 has a bug when testing for functions, which we now hit by
-# testing for mkstemp(), so we need at least 2.59... 
+# testing for mkstemp(), so we need at least 2.59...
 AC_PREREQ(2.59)
 
 # Initialize autoconf
 AC_INIT
 AC_CONFIG_HEADERS([config.h])
 
-AC_MSG_NOTICE([checking for critical tools used by configure]) 
+AC_MSG_NOTICE([checking for critical tools used by configure])
 AC_PROG_AWK
 REQUIRE_PATH_PROG([GREP],[grep])
 REQUIRE_PATH_PROG([CUT],[cut])
@@ -43,11 +43,11 @@ AC_PATH_PROG([WHICH],[which],[no],[$PATH])
 # anything, it just lets perl die with a require statement.  So, we
 # test for the right version here and fail in an early and obvious way
 # if there's a problem.  Also, we check for this early, so we can use
-# perl in the rest of the tests in here, if we want it. 
+# perl in the rest of the tests in here, if we want it.
 AC_PROG_PERL_VERSION([5.005_03], [],
    [AC_MSG_ERROR([perl version 5.005_03 or higher is required])])
 
-AC_MSG_NOTICE([verifying build environment ]) 
+AC_MSG_NOTICE([verifying build environment ])
 
 # first, if we notice we're being run at UW-Madison CS on a
 # CSL-supported machine, and the PATH doesn't include
@@ -64,7 +64,7 @@ _found_s_std_bin=no
 _found_p_build_bin=no
 _p_build_bin="/p/condor/workspaces/build/bin"
 if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
-  AC_MSG_CHECKING([if PATH on CSL-supported machine is ok]) 
+  AC_MSG_CHECKING([if PATH on CSL-supported machine is ok])
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
   for as_dir in $PATH
   do
@@ -73,16 +73,16 @@ if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
     do
       if test $as_dir = $test_dir ; then
         _found_bad_dir=yes
-	if test "x$_which_bad_dir" = "x" ; then 
+	if test "x$_which_bad_dir" = "x" ; then
           _which_bad_dir="$test_dir"
 	else
           _which_bad_dir="$_which_bad_dir, $test_dir"
-	fi  
+	fi
       fi
-    done  
+    done
     if test $as_dir = $_p_build_bin ; then
       if test $_found_bad_dir = "yes" ; then
-        AC_MSG_RESULT([no]) 
+        AC_MSG_RESULT([no])
         AC_MSG_ERROR([You are compiling on a UW-Madison CSL-supported machine and $_p_build_bin is *NOT* near the front of your PATH.  This configure script will not be able to find the right versions of the programs it needs to build Condor.  Please fix your PATH by putting $_p_build_bin *BEFORE* any of these directories in your PATH: $_which_bad_dir])
       fi
       _found_p_build_bin=yes
@@ -90,11 +90,11 @@ if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
     fi
   done
   if test $_found_p_build_bin = "no" ; then
-    AC_MSG_RESULT([no]) 
+    AC_MSG_RESULT([no])
     AC_MSG_ERROR([You are compiling on a UW-Madison CSL-supported machine and $_p_build_bin is *NOT* in your PATH.  This configure script will not be able to find the right versions of programs it needs to build Condor.  Please fix your PATH by adding $_p_build_bin (it must be before any of these directories: $_bad_path_dirs) and re-run configure])
   fi
   AC_MSG_RESULT([yes])
-fi   
+fi
 
 
 ############################################################
@@ -181,7 +181,7 @@ elif test $os = "Linux" ; then
   fi
 
   # next, figure out what linux distribution this is
-  if test -f "/etc/tao-release" ; then 
+  if test -f "/etc/tao-release" ; then
     _tao_vers=`cat /etc/tao-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
     case "$_tao_vers" in
      "1" )
@@ -189,7 +189,7 @@ elif test $os = "Linux" ; then
        ;;
      * )
        AC_MSG_WARN([Condor is not yet ported to Tao version $_tao_vers])
-       AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor])
        _cv_linux_distro="TAO_UNKNOWN"
        ;;
     esac
@@ -208,7 +208,7 @@ elif test $os = "Linux" ; then
        _cv_linux_distro="YD_UNKNOWN"
        ;;
     esac
-  elif test -f "/etc/redhat-release" ; then 
+  elif test -f "/etc/redhat-release" ; then
     _rh_vers=`cat /etc/redhat-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
     case "$_rh_vers" in
      "7.2" )
@@ -243,7 +243,7 @@ elif test $os = "Linux" ; then
      ;;
      * )
        AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
-       AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor])
        _cv_linux_distro="RH_UNKNOWN"
        ;;
     esac
@@ -258,7 +258,7 @@ elif test $os = "Linux" ; then
        ;;
      * )
        AC_MSG_WARN([Condor is not yet ported to SuSE version $_suse_vers])
-       AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor])
        _cv_linux_distro="SuSE_UNKNOWN"
        ;;
     esac
@@ -270,13 +270,13 @@ elif test $os = "Linux" ; then
        ;;
      * )
        AC_MSG_WARN([Condor is not yet ported to Debian version $_suse_vers])
-       AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor])
        _cv_linux_distro="DEBIAN_UNKNOWN"
        ;;
 	 esac
   else
     AC_MSG_WARN([Unrecognised Linux distribution])
-    AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+    AC_MSG_WARN([You may have trouble building and/or packaging Condor])
     _cv_linux_distro="UNKNOWN"
   fi
   # this perl 1-liner takes all space-delimited input, sticks it
@@ -348,13 +348,13 @@ elif test $os = "AIX" ; then
 	else
       _cv_sysname="ppc_aix5unknown"
       AC_MSG_WARN([Unrecognised AIX version])
-      AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+      AC_MSG_WARN([You may have trouble building and/or packaging Condor])
 	fi
   else
     _cv_opsys_vers="AIXUNKNOWN"
     _cv_sysname="ppc_aixunknown"
     AC_MSG_WARN([Unrecognised AIX version])
-    AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+    AC_MSG_WARN([You may have trouble building and/or packaging Condor])
   fi
 
   # now figure out the kernel revision. Under aix this will have
@@ -367,27 +367,27 @@ elif test $os = "AIX" ; then
 # Darwin
 # --------------------------------------------
 elif test $os = "Darwin" ; then
-	##	
+	##
 	## Figure out the architecture
 	##
 	if test "$arch" = "i386"; then
-		_cv_arch="I386" 
+		_cv_arch="I386"
 		_cv_sysname="i386_macosx"
 	elif test "$arch" = "Power Macintosh"; then
 		_cv_arch="PPC"
 		_cv_sysname="ppc_macosx"
-	else 
+	else
 		AC_MSG_WARN([Unrecognised Darwin Architecture])
-		AC_MSG_WARN([You may have trouble building and/or packaging Condor])  
+		AC_MSG_WARN([You may have trouble building and/or packaging Condor])
 		_cv_sysname="unknown_macosx"
 	fi
 	_cv_op_sys="Darwin"
 	_cv_opsys="DARWIN"
-	
+
 	AC_PATH_PROG([SW_VERS],[sw_vers],[no],[$PATH])
-	if test $SW_VERS = "no" ; then   
+	if test $SW_VERS = "no" ; then
     	_cv_opsys_vers="OSX_UNKNOWN"
-	else 
+	else
 		_cv_osx_vers=`$SW_VERS | $GREP ^ProductVersion | $PERL -pe 's/^ProductVersion\:\s+(\d+)\.(\d+).*$/$1_$2/'`
 		_cv_opsys_vers="OSX_$_cv_osx_vers"
 	fi
@@ -396,7 +396,7 @@ elif test $os = "Darwin" ; then
 	# between different ports
 	tmp=`echo $_cv_osx_vers | $PERL -pe 's/_//g'`
 	_cv_sysname="${_cv_sysname}${tmp}"
-	
+
 	# now figure out the kernel revision. Under macosx this will have
 	# the form: major.minor.patch
 	_cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
@@ -405,7 +405,7 @@ elif test $os = "Darwin" ; then
 # FreeBSD
 # --------------------------------------------
 elif test $os = "FreeBSD" ; then
-   ##	
+   ##
    ## Figure out the architecture
    ##
    if test $arch = "i686" -o $arch = "i586" -o $arch = "i486" -o $arch = "i386" ; then
@@ -429,7 +429,7 @@ elif test $os = "FreeBSD" ; then
    _cv_kernel_rev=`uname -r | sed -e 's#[0-9]*\.\([0-9]*\).*#\1#'`
 
    _cv_op_sys=CONDOR_FREEBSD
-   _cv_opsys=${_cv_op_sys}   
+   _cv_opsys=${_cv_op_sys}
    _cv_sysname=`echo ${_cv_arch}_freebsd${_cv_opsys_vers} | $PERL -ane 'print lc'`
 
    ##
@@ -463,10 +463,10 @@ AC_MSG_RESULT([$_cv_kernel_rev])
 AC_SUBST(_cv_kernel_rev,$_cv_kernel_rev)
 
 # check out the libc
-if test "$_cv_opsys" = "LINUX" ; then 
+if test "$_cv_opsys" = "LINUX" ; then
   AC_MSG_CHECKING([exact libc version])
   for _libc in "/lib/libc.so.6" "/lib/libc.so.6.1" ; do
-    if test -f "$_libc" && test -L "$_libc" ; then 
+    if test -f "$_libc" && test -L "$_libc" ; then
       _libc_ver=`echo $_libc|$PERL -nle '$f=readlink;$f=~/libc-(.*)\.so/;print $1;'`
       break;
     elif test -f "$_libc" ; then
@@ -517,7 +517,7 @@ _root_dir=`AS_DIRNAME(["$_src_dir"])`
 
 CONDOR_VERIFY_CONFIG_DIR([$_root_dir/config],
                          [config directory is not valid])
-AC_SUBST(_cv_ext_config_sh,"$_root_dir/config/config.sh") 
+AC_SUBST(_cv_ext_config_sh,"$_root_dir/config/config.sh")
 
 
 ############################################################
@@ -556,7 +556,7 @@ AC_ARG_WITH(externals,
   # nothing specified, try ../externals.  using this as a default
   # makes it possible to just run "./configure" most of the time.
   _local_ext_dir="$_root_dir/externals"
-  if test -d $_local_ext_dir ; then 
+  if test -d $_local_ext_dir ; then
     CONDOR_VERIFY_EXTERNALS_DIR([$_local_ext_dir],
     [$_local_ext_dir exists but is not a valid directory tree for external programs needed to build Condor, you must use --with-externals=DIR to specify the path])
   else
@@ -599,7 +599,7 @@ AC_ARG_WITH(condor_analyze,
       if test $ac_has_condor_analyze = "NO" ; then
         AC_MSG_RESULT([ERROR])
         AC_MSG_ERROR([directory specified with --with-condor_analyze ($withval) does not contain any condor_analyze binaries])
-      fi 
+      fi
     else
       AC_MSG_RESULT([ERROR])
       AC_MSG_ERROR([directory specified with --with-condor_analyze ($withval) does not exist])
@@ -655,12 +655,12 @@ AC_LANG(C)
 AC_PROG_CC
 if test $ac_cv_c_compiler_gnu != yes; then
    AC_MSG_ERROR( [GNU CC (gcc) is required] )
-fi   
+fi
 
 CHECK_PATH_PROG(gcc,gcc)
 
 
-# Figure out the version of gcc. 
+# Figure out the version of gcc.
 # This probably seems like a job for a regular expression, not a big
 # case statement.  however, in our experience, there's enough variation
 # in how these version strings look that explicitly listing the ones
@@ -858,7 +858,7 @@ fi
 
 # Find/define crt[01].o for each architecture we support
 AC_MSG_CHECKING([for crt0.o])
-case "$os" in 
+case "$os" in
   "SunOS" | "Linux" )
     CRT_BEGIN=`gcc -print-file-name=crt1.o`
     ;;
@@ -911,7 +911,7 @@ AC_LANG(C++)
 AC_PROG_CXX
 if test $ac_cv_cxx_compiler_gnu != yes; then
    AC_MSG_ERROR( [GNU C++ (g++) is required] )
-fi   
+fi
 CHECK_PATH_PROG([g++],[gpp])
 
 
@@ -941,7 +941,7 @@ gcc_static_ld_flag=""
 # determine the flags...
 if test $os = "AIX" ; then
   # AIX static linking with respect to Condor is not pretty. In effect,
-  # we must perform a dynamic link ALWAYS, except in the case of the 
+  # we must perform a dynamic link ALWAYS, except in the case of the
   # C++ compiler support libraries, which must be linked in statically
   # so the executables can be run on machines that they weren't built on.
   AC_MSG_NOTICE([using a pre-determined AIX static linking algorithm])
@@ -958,10 +958,10 @@ else
   for arg in "-Bstatic" "-B,static" "-a,archive" "-no_so" ; do
     # we always want to prepend "-Wl,"
     arg="-Wl,$arg"
-    AC_MSG_CHECKING([$arg])    
+    AC_MSG_CHECKING([$arg])
     _test_output=`gcc -o static_test $arg static_test.o 2>&1`
     _test_status=$?
-    if test $_test_status -eq 0 && test "x$_test_output" = "x"; then 
+    if test $_test_status -eq 0 && test "x$_test_output" = "x"; then
       gcc_static_ld_flag=$arg
       AC_MSG_RESULT([yes])
       break
@@ -978,7 +978,7 @@ else
     else
       AC_MSG_WARN([$msg])
     fi
-  else 
+  else
     AC_SUBST([gcc_static_ld_flag],[$gcc_static_ld_flag])
   fi
 fi
@@ -1046,7 +1046,7 @@ C_CXX_OPTION(gcc, -Wvolatile-register-var, comp_option_Wvolatile_register_var, [
 # Commented out since it is a bit spurious in its errors. It makes an
 # assumption that we've been careful about using const everywhere when
 # declaring write-only strings. Since I'm not confident we've been doing
-# that, I took it out. Make sure to add the @comp_option_Wwrite_strings@ 
+# that, I took it out. Make sure to add the @comp_option_Wwrite_strings@
 # variable back into COMP_DEBUG_FLAGS if you want to enable it again.
 #C_CXX_OPTION(gcc, -Wwrite-strings, comp_option_Wwrite_strings, [])
 
@@ -1086,7 +1086,7 @@ echo "int main(void) { return 0; }" > fpic_test.c
 _test_output=`gcc -fPIC fpic_test.c -o fpic_test 2>&1`
 _test_status=$?
 # AIX and HPUX have idiotic problems, so turn them off for now
-if test $_test_status -eq 0 -a "x$_test_output" = "x" -a \( "x$os" != "xAIX" -a "x$os" != "xHP-UX" \); then 
+if test $_test_status -eq 0 -a "x$_test_output" = "x" -a \( "x$os" != "xAIX" -a "x$os" != "xHP-UX" \); then
   cc_pic_flags="-fPIC -DPIC"
   AC_MSG_RESULT([yes])
   AC_DEFINE([HAVE_CC_PIC_FLAG], [1], [does gcc support the -fPIC flag])
@@ -1106,7 +1106,7 @@ echo "int bar(void) { return 0; }" > fpic_test.c
 _test_output=`gcc -shared -fPIC -DPIC fpic_test.c -o libfpic_test.so 2>&1`
 _test_status=$?
 # AIX and HPUX have idiotic problems, so turn them off for now
-if test $_test_status -eq 0 -a "x$_test_output" = "x" -a \( "x$os" != "xAIX" -a "x$os" != "xHP-UX" \); then 
+if test $_test_status -eq 0 -a "x$_test_output" = "x" -a \( "x$os" != "xAIX" -a "x$os" != "xHP-UX" \); then
   AC_MSG_RESULT([yes])
   cc_shared_flags="-shared"
   AC_DEFINE([HAVE_CC_SHARED_FLAG], [1], [does gcc support the -shared flag])
@@ -1259,7 +1259,7 @@ if test $ac_byacc = "no"; then
   AC_PATH_PROG([ac_yacc],[yacc],[no],[$PATH])
   if test $ac_yacc = no; then
     AC_MSG_ERROR( [byacc or yacc is required] )
-  else 
+  else
     YACC=$ac_yacc
   fi
 else
@@ -1284,7 +1284,7 @@ fi
 # and see if it works.  If we only found 1 working version, we use it.
 # If both versions exist and both work, we see which one produced the
 # smallest output program and use that.
-AC_MSG_CHECKING([for GNU strip]) 
+AC_MSG_CHECKING([for GNU strip])
 _cv_gnu_strip="no"
 _cv_gnu_strip_works="no"
 _try_gnu_strip="$STRIP strip gstrip gnustrip"
@@ -1305,18 +1305,18 @@ for as_dir in $PATH ; do
   fi
 done;
 if test "$_cv_gnu_strip" = "no" ; then
-  AC_MSG_RESULT([no]) 
-  if ! test "$os" = "Darwin" && ! test "$os" = "OSF1" ; then 
-    AC_MSG_WARN([GNU strip is recommended]) 
+  AC_MSG_RESULT([no])
+  if ! test "$os" = "Darwin" && ! test "$os" = "OSF1" ; then
+    AC_MSG_WARN([GNU strip is recommended])
   fi
 else
-  CONDOR_TEST_STRIP([GNU strip], [_cv_gnu_strip]) 
+  CONDOR_TEST_STRIP([GNU strip], [_cv_gnu_strip])
   if test "$_cv_gnu_strip_works" = "no" ; then
-    AC_MSG_WARN([GNU strip is installed but doesn't work]) 
+    AC_MSG_WARN([GNU strip is installed but doesn't work])
   fi
 fi
 
-AC_MSG_CHECKING([for vendor strip]) 
+AC_MSG_CHECKING([for vendor strip])
 _cv_vendor_strip="no"
 _try_vendor_strip="$STRIP strip"
 as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
@@ -1328,7 +1328,7 @@ for as_dir in $PATH ; do
     then
       continue;
     fi
-    if test -x "$_try" ; then 
+    if test -x "$_try" ; then
       AC_MSG_RESULT([$_try])
       _cv_vendor_strip="$_try";
       break;
@@ -1339,9 +1339,9 @@ for as_dir in $PATH ; do
   fi
 done;
 if test "$_cv_vendor_strip" = "no" ; then
-  AC_MSG_RESULT([no]) 
+  AC_MSG_RESULT([no])
 else
-  CONDOR_TEST_STRIP([vendor strip], [_cv_vendor_strip]) 
+  CONDOR_TEST_STRIP([vendor strip], [_cv_vendor_strip])
 fi
 
 AC_MSG_CHECKING([which strip we should use])
@@ -1361,7 +1361,7 @@ else
   else
     # have both versions and both work, see which one does a better
     # job of shriking the output.  in case of a tie, use vendor strip
-    if test "$_cv_gnu_strip_outsize" -lt "$_cv_vendor_strip_outsize" ; 
+    if test "$_cv_gnu_strip_outsize" -lt "$_cv_vendor_strip_outsize" ;
     then
       STRIP=$_cv_gnu_strip
     else
@@ -1390,13 +1390,13 @@ else
 fi
 
 # If objcopy is available, then figure out if it can do the debuglink
-# feature to allow us seperate debugging symbols and executables on 
+# feature to allow us seperate debugging symbols and executables on
 # unix builds ala windows.
 _cv_objcopy_keepdebug_flag=""
 _cv_objcopy_stripunneeded_flag=""
 _cv_objcopy_debuglink_flag=""
 if test ! $ac_objcopy = "no"; then
-	AC_MSG_CHECKING([if objcopy supports --add-gnu-debuglink]) 
+	AC_MSG_CHECKING([if objcopy supports --add-gnu-debuglink])
 	`$ac_objcopy --help 2>&1 | $GREP add-gnu-debuglink > /dev/null 2>&1`
 	if test $? = 0; then
 		# If this flag exists, then the other ones I need should exist as well.
@@ -1469,11 +1469,11 @@ if test "x$TarCmd" = "x"; then
   AC_MSG_ERROR([you system does not support tar features Condor requires for packaging our releases.  you must install a version of GNU tar which supports numeric arguments to --group and --owner (such as version 1.13 or higher), or add a $tar_err_msg, then re-run configure])
 fi
 
-# Tar uses an idiotic 10KB default io buffer block size, which makes for 
-# hideously slow tar operations. This isn't 1975 anymore, so I'm upping it 
+# Tar uses an idiotic 10KB default io buffer block size, which makes for
+# hideously slow tar operations. This isn't 1975 anymore, so I'm upping it
 # to 2MB. This is 4096 * 512 (the default block size) and the size of most
 # drive caches these days. This option will
-# also make the smallest tarfile which can be made be padded to 2MB. However, 
+# also make the smallest tarfile which can be made be padded to 2MB. However,
 # we compress all of our tar files, so those fluffy zeros will compact nicely.
 # I wish tar wasn't so stupid about the read/write block sizes... :(
 CHECK_TAR_OPTION(["-b 4096"],[_cv_gnu_tar_blocksize_flag])
@@ -1515,7 +1515,7 @@ AC_CACHE_CHECK([what options to cp recursively copy and follow symlinks],
     CONDOR_TRY_CP_RECURSIVE_SYMLINK_FLAG([$_cv_cp],[$a],[_cv_cp_flags])
     if ! test "$_cv_cp_flags" = "none" ; then
       break;
-    fi  
+    fi
   done;
  ]
 )
@@ -1523,9 +1523,9 @@ if test "$_cv_cp_flags" = "none" ; then
   AC_MSG_ERROR([The cp in your PATH does not work, try installing GNU cp])
 else
   AC_SUBST(CpCmd,"$_cv_cp $_cv_cp_flags")
-fi  
+fi
 
-# gzip is required for packaging up Condor releases. 
+# gzip is required for packaging up Condor releases.
 AC_PATH_PROG(ac_gzip,gzip,no,[$PATH])
 if test $ac_gzip = no; then
     AC_MSG_ERROR( [gzip is required] )
@@ -1537,7 +1537,7 @@ if test $ac_m4prog = no; then
     AC_MSG_ERROR( [m4 is required] )
 fi
 
-# true is used in the imake build system, esp. in condor_tests 
+# true is used in the imake build system, esp. in condor_tests
 REQUIRE_PATH_PROG([TRUE],[true])
 AC_SUBST(TRUE,$TRUE)
 
@@ -1572,6 +1572,11 @@ fi
 AC_SUBST(HAVE_JAR,$_cv_have_jar)
 AC_SUBST(JAR,$ac_jar)
 
+AC_ARG_ENABLE([rpm],
+  AC_HELP_STRING([--enable-rpm],
+    [determine if we try to make rpms (default: yes)]),
+  [],
+  [enable_rpm=yes])
 # there might be two kinds of rpm on a machine, 'rpm' and 'rpmbuild'
 # use the latter if we have it.
 if test "x$_cv_linux_distro" = "xSLES9"; then
@@ -1598,12 +1603,14 @@ else
 	AC_SUBST(RpmCmd,$ac_rpmcmd)
 	fi
 fi
-AC_SUBST(HAVE_RPM,$_cv_have_rpm)
+AS_IF([test "x$enable_rpm" != xno],
+  [AC_SUBST(HAVE_RPM,$_cv_have_rpm)],
+  [AC_SUBST(HAVE_RPM,"NO")])
 
 # Here we figure out whether or not the circumstances are correct for us
 # to be able to separate the debugging symbols from the executables and
 # package them into a tarball. for example, if say objcopy's debuglink flag
-# is available, but we can't exclude the files when making the tarballs, 
+# is available, but we can't exclude the files when making the tarballs,
 # then turn the whole thing off.
 # NOTE: There is some problem with OSF1 that executables subjected to this
 # form of stripping become not executable anymore. I haven't looked into it
@@ -1755,7 +1762,7 @@ AC_CHECK_MEMBERS([struct statvfs.f_basetype], , , [#ifdef HAVE_SYS_TYPES_H
 #ifdef HAVE_SYS_STATVFS_H
 #include <sys/statvfs.h>
 #endif])
- 
+
 dnl
 dnl if statfs() takes 2 arguments or 4 (Solaris)
 dnl
@@ -1804,7 +1811,7 @@ if test "$ac_cv_func_statfs" = yes ; then
 fi dnl test "$ac_cv_func_statfs" = yes
 
 # we don't actually want to add -lgen to our link line, but we do want
-# HAVE_LIBGEN defined correctly for our test suite builds... 
+# HAVE_LIBGEN defined correctly for our test suite builds...
 AC_CHECK_FUNC(dirname,,AC_CHECK_LIB(gen,dirname,
 AC_DEFINE(HAVE_LIBGEN,1,[Define to 1 if you have the `gen' library (-lgen)])))
 
@@ -1832,6 +1839,12 @@ AC_SUBST([crypt_lib],$_cv_crypt_lib)
 # checks for system services
 
 # checks for platform-specific settings we don't yet auto-detect
+
+AC_ARG_ENABLE([static],
+  AC_HELP_STRING([--enable-static],
+    [determine if we do static linking (default: yes)]),
+  [],
+  [enable_static=yes])
 
 AC_MSG_CHECKING([if Condor can also build a statically linked release])
 case "$os" in
@@ -1869,11 +1882,13 @@ case "$os" in
     AC_MSG_ERROR([Unrecognized platform: $os])
 esac
 AC_MSG_RESULT([$_cv_has_static])
-if test "$_cv_has_static" = "yes" ; then
-  AC_SUBST(_cv_has_static,YES)
-else
-  AC_SUBST(_cv_has_static,NO)
-fi
+AC_MSG_CHECKING([if we are going to statically link])
+AS_IF([test "x$enable_static" != xno -a "$_cv_has_static" = "yes"],
+  [AC_MSG_RESULT([yes])
+   AC_SUBST(_cv_has_static,YES)],
+  [AC_MSG_RESULT([no])
+   AC_SUBST(_cv_has_static,NO)])
+
 
 
 ############################################################
@@ -1897,7 +1912,7 @@ AC_MSG_NOTICE([determining availability of external packages])
 # NOTE: the checks for globus and SSL here must happen *outside*
 # the check for $ac_cv_has_externals, since we want these to be
 # set whether or not we're actually trying to build the externals
-# or not.  for example, the test suite needs to know these things, 
+# or not.  for example, the test suite needs to know these things,
 # even though it's being configured using --without-externals.
 #-----------------------------------------------------------------
 # determine whether we will be using globus on this platform. this
@@ -2036,7 +2051,7 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
     ;;
   "2.3.4" )
 	# I'm using this here to avoid a full port of Condor to the centos 4 OS.
-	# XXX Also, one must use gcc 3.2.2 instead of as shipped gcc 3.4.4 to 
+	# XXX Also, one must use gcc 3.2.2 instead of as shipped gcc 3.4.4 to
 	# compile this package.
     CHECK_EXTERNAL([glibc],[2.3.2.27.9.7], [soft])
     ;;
@@ -2049,7 +2064,7 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
   "2.6." ) # F7 uses glibc 2.6-4
     including_glibc_ext=NO
     ;;
-  * )  
+  * )
     AC_MSG_CHECKING(glibc)
     AC_MSG_RESULT([ERROR])
     AC_MSG_ERROR([Condor does NOT know what glibc external to use with glibc-$_cv_libc_full_vers])
@@ -2059,7 +2074,7 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
   else
     AC_SUBST(want_ext_glibc,NO)
     AC_SUBST(ext_glibc_version,UNUSED)
-  fi    
+  fi
 else
   AC_SUBST(want_ext_glibc,NO)
   AC_SUBST(ext_glibc_version,UNUSED)
@@ -2123,7 +2138,20 @@ AS_IF([test "x$cv_ext_pcre" = xyes],
 
 CHECK_EXTERNAL([blahp], [1.7.0], [soft])
 
-CHECK_EXTERNAL([man], [current], [soft])
+# When --with-proper the detection of the man pages is a little
+# ugly. The value added to the end of $_dir must be what
+# man-current.tar.gz extracts to, ugh. The manual is a very unique
+# external. -matt 083107
+CHECK_EXTERNAL([man], [current], [soft],
+               [include the man pages (required for a release)],
+               [AS_IF([test "x$_dir" = x],
+                 [_dir="../externals/bundles/man/current"])
+                AS_IF([test -f "$_dir/man-current.tar.gz"],
+                 [cv_ext_man=yes],
+                 [AC_MSG_WARN([unable to find $_dir/man-current.tar.gz])
+                  cv_ext_man=no])
+                AC_SUBST([man_dir], [$_dir/man])])
+
 
 # temporary hack until we can reliably build BOINC everywhere.  for
 # now, just enable it manually, and pretend we've got it.  since we're
@@ -2152,7 +2180,7 @@ CHECK_EXTERNAL([postgresql], [8.0.2], [hard],
 CHECK_EXTERNAL([globus],[4.0.3-2], [soft])
 
 # if globus is available on this platform and we actually have it
-if test "x$_cv_has_globus" = xyes -a "x$_cv_ext_globus_version" != x; then
+if test "x$_cv_has_globus" = xyes -a "x$cv_ext_globus" = xyes; then
   # currently, if we are using globus (and the openssl
   # within), we define HAVE_OPENSSL_SSL_H (meaning we
   # have ssl.h) to make gsoap happy

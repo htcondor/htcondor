@@ -145,7 +145,8 @@ COREDUMPER_INC = $(COREDUMPER_DIR)/include
 
 #else /* if not HAS_EXTERNALS */
 
-MAN_DIR =
+MAN_DIR = @man_dir@
+
 OPENSSL_DIR =
 GLOBUS_DIR =
 GAHP_DIR =

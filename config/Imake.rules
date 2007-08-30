@@ -453,10 +453,10 @@ XCOMM .o files. Otherwise, the suffix rules do not get the dependencies @@\
 XCOMM right. @@\
 $(SOAP_OBJS): $(SOAP_SRC) @@\
 $(SOAP_SRC): soapfiles
-#else // no HAVE_EXT_GSOAP
+#else /* no HAVE_EXT_GSOAP */
 #define soapobjs(daemon)
 #define gen_soapfiles(daemon,service)
-#endif // HAVE_EXT_GSOAP
+#endif /* HAVE_EXT_GSOAP */
 
 /***********************************************************************
 ** release targets
@@ -1392,7 +1392,7 @@ XCOMM End translation of func(CLINK)
 XCOMM Begin translation of func(CLINK)		@@\
 all:: name.cndr.exe				@@\
 name:: name.cndr.exe				@@\
-       @$(TRUE)					@@\
+	@$(TRUE)				@@\
 name.cndr.exe: $(CONDOR_COMPILE) $(PRE_BUILT_RELEASE)/lib obj	@@\
 	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o name.cndr.exe obj $(TEST_LDFLAGS) @@\
 	$(CONDOR_ARCH_LINK) name.cndr.exe		@@\
@@ -1412,7 +1412,7 @@ XCOMM End translation of func(CLINK)
 XCOMM Begin translation of func(CLINK_NOSTD)	@@\
 all:: name.exe					@@\
 name:: name.exe					@@\
-       @$(TRUE)					@@\
+	@$(TRUE)				@@\
 name.exe: obj x_fake_ckpt.o			@@\
 	compiler -o name.exe obj x_fake_ckpt.o $(TEST_LDFLAGS)	@@\
 clean::						@@\
@@ -1442,7 +1442,7 @@ XCOMM End translation of func(LINK)
 XCOMM Begin translation of func(LINK_LIB)	@@\
 all:: name.exe					@@\
 name:: name.exe					@@\
-       @$(TRUE)					@@\
+	@$(TRUE)				@@\
 name.exe: obj					@@\
 	compiler -o name.exe obj lib $(TEST_LDFLAGS)  @@\
 clean::						@@\
@@ -1676,7 +1676,7 @@ XCOMM End translation of func(DEP_SYMLINK_EXT)
 XCOMM Begin translation of func(DEPS)		@@\
 all:: deps					@@\
 name:: deps					@@\
-       @$(TRUE)					@@\
+	@$(TRUE)				@@\
 XCOMM End translation of func(DEPS)
 #endif /* DEPS */
 
@@ -2102,11 +2102,23 @@ depend:	ALWAYS				               @@\
 XCOMM End translation of func(depend_c_objects_target)
 #endif /* depend_c_objects_target */
 
+/* 
+ * This isn't pretty, if we have externals we depend on the
+ * man-current trigger, otherwise (i.e. --with-proper) we depend on
+ * having the $(MAN_DIR) and a new target will create it for
+ * us. Ideally, HAS_EXTERNALS should never be used. -matt 083107
+ */
+#if HAS_EXTERNALS
+manpage_dependency=$(EXT_TRIGGER)/man-current
+#else
+manpage_dependency=man-current
+#endif
+
 #ifndef man_full_target
 #define man_full_target(name,type)				@@\
 XCOMM BEGIN translation of func(man_full_target)		@@\
 manpages:: sufdir(type)/man/man1/name				@@\
-sufdir(type)/man/man1/name: $(EXT_TRIGGER)/man-current		@@\
+sufdir(type)/man/man1/name: $(manpage_dependency)		@@\
 	/bin/rm -f sufdir(type)/man/man1/name			@@\
 	cp $(MAN_DIR)/man1/name sufdir(type)/man/man1/name	@@\
 	chmod 0644 sufdir(type)/man/man1/name			@@\
