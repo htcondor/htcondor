@@ -25,6 +25,8 @@
 #include "procapi.h"
 #include "procapi_internal.h"
 #include "condor_debug.h"
+#include "condor_arglist.h"
+#include "my_popen.h"
 
 unsigned int hashFunc( const pid_t& pid );
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
@@ -1249,6 +1251,9 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	int mib[4];
 	struct kinfo_proc *kp, *kprocbuf;
 	size_t bufSize = 0;
+	task_port_t task;
+	task_basic_info 	ti;
+	unsigned int 		count;	
 
 		// assume success
 	status = PROCAPI_OK;
@@ -1308,64 +1313,87 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
         return PROCAPI_FAILURE;
     }
 
-	// Now, for some things, we're going to have to go to Mach and ask
-	// it what it knows - for example, the image size and friends
-	task_port_t task;
+	// If we are root, we have a kernel interface we can use to gather
+	// some additional information
+	if (is_root()) {
 
-	kern_return_t results;
-	results = task_for_pid(mach_task_self(), pid, &task);
-	if(results != KERN_SUCCESS) {
-		status = PROCAPI_UNSPECIFIED;
+		// figure out the image,rss size and the sys/usr time for the process.
 
-		dprintf( D_FULLDEBUG, 
-			"ProcAPI: task_port_pid() on pid %d failed with %d(%s)\n",
-			pid, results, mach_error_string(results) );
+		kern_return_t results;
+		results = task_for_pid(mach_task_self(), pid, &task);
+		if(results != KERN_SUCCESS) {
+			status = PROCAPI_UNSPECIFIED;
 
-		free(kp);
+			dprintf( D_FULLDEBUG, 
+				"ProcAPI: task_port_pid() on pid %d failed with %d(%s)\n",
+				pid, results, mach_error_string(results) );
 
-        return PROCAPI_FAILURE;
-	}
+			free(kp);
 
-	task_basic_info 	ti;
-	unsigned int 		count;	
+        	return PROCAPI_FAILURE;
+		}
 	
-	count = TASK_BASIC_INFO_COUNT;	
-	results = task_info(task, TASK_BASIC_INFO, (task_info_t)&ti, &count);  
-	if(results != KERN_SUCCESS) {
-		status = PROCAPI_UNSPECIFIED;
+		count = TASK_BASIC_INFO_COUNT;	
+		results = task_info(task, TASK_BASIC_INFO, (task_info_t)&ti, &count);  
+		if(results != KERN_SUCCESS) {
+			status = PROCAPI_UNSPECIFIED;
 
-		dprintf( D_FULLDEBUG, 
-			"ProcAPI: task_info() on pid %d failed with %d(%s)\n",
-			pid, results, mach_error_string(results) );
+			dprintf( D_FULLDEBUG, 
+				"ProcAPI: task_info() on pid %d failed with %d(%s)\n",
+				pid, results, mach_error_string(results) );
 
+			mach_port_deallocate(mach_task_self(), task);
+			free(kp);
+
+        	return PROCAPI_FAILURE;
+		}
+
+
+		// fill in the values we got from the kernel
+		procRaw.imgsize = (u_long)ti.virtual_size;
+		procRaw.rssize = ti.resident_size;
+		procRaw.user_time_1 = ti.user_time.seconds;
+		procRaw.user_time_2 = 0;
+		procRaw.sys_time_1 = ti.system_time.seconds;
+		procRaw.sys_time_2 = 0;
+
+		// clean up our port
 		mach_port_deallocate(mach_task_self(), task);
-		free(kp);
 
-        return PROCAPI_FAILURE;
+	} else {
+		// We're running as a personal Condor, so get image,rss,sys/user time
+		// some other way if possible.
+
+		// This will be set to zero at this time due to there being a LOT of
+		// code change for a stable series to make it efficient when we invoke
+		// /bin/ps to get this information.
+		procRaw.imgsize = 0;
+		procRaw.rssize = 0;
+
+		// XXX This sucks, but there is *no* method to get this which doesn't
+		// involve a privledge escalation or hacky and not recommended dynamic
+		// library injection in the program being tracked. Either this 
+		// process must be escalated or another escalated program invoked 
+		// which gets this for me.
+		procRaw.user_time_1 = 0;
+		procRaw.user_time_2 = 0;
+		procRaw.sys_time_1 = 0;
+		procRaw.sys_time_2 = 0;
 	}
 
-		// Fill in procRaw
-	procRaw.imgsize = (u_long)ti.virtual_size;
-	procRaw.rssize = ti.resident_size;
-	procRaw.user_time_1 = ti.user_time.seconds;
-	procRaw.user_time_2 = 0;
-	procRaw.sys_time_1 = ti.system_time.seconds;
-	procRaw.sys_time_2 = 0;
+	// add in the rest
 	procRaw.creation_time = kp->kp_proc.p_starttime.tv_sec;
 	procRaw.pid = pid;
 	procRaw.ppid = kp->kp_eproc.e_ppid;
 	procRaw.owner = kp->kp_eproc.e_pcred.p_ruid; 
 
-		// We don't know the page faults
+	// We don't know the page faults
 	procRaw.majfault = 0;
 	procRaw.minfault = 0;
-
-		// clean up
-	mach_port_deallocate(mach_task_self(), task);
 	
 	free(kp);
 
-		// success
+	// success
 	return PROCAPI_SUCCESS;
 }
 
