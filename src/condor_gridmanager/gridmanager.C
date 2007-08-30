@@ -50,6 +50,7 @@
 #include "gt3job.h"
 #include "gt4job.h"
 #include "infnbatchjob.h"
+#include "creamjob.h"
 
 #define QMGMT_TIMEOUT 15
 
@@ -322,6 +323,14 @@ Init()
 	new_type->CreateFunc = OracleJobCreate;
 	jobTypes.Append( new_type );
 #endif
+
+	new_type = new JobType;
+	new_type->Name = strdup( "Cream" );
+	new_type->InitFunc = CreamJobInit;
+	new_type->ReconfigFunc = CreamJobReconfig;
+	new_type->AdMatchFunc = CreamJobAdMatch;
+	new_type->CreateFunc = CreamJobCreate;
+	jobTypes.Append( new_type );
 
 	new_type = new JobType;
 	new_type->Name = strdup( "Nordugrid" );

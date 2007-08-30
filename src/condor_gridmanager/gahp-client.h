@@ -617,6 +617,30 @@ class GahpClient : public Service {
 		int
 		unicore_job_callback(unicore_gahp_callback_func_t callback_func);
 
+		int cream_delegate(const char *delg_service, const char *delg_id);
+		
+		int cream_job_register(const char *service, const char *delg_service, const char *delg_id, 
+							   ClassAd *jdl, time_t lease_time, char **job_id, char **upload_url);
+		
+		int cream_job_start(const char *service, const char *job_id);
+		
+		int cream_job_purge(const char *service, const char *job_id);
+
+		int cream_job_cancel(const char *service, const char *job_id);
+
+		int cream_job_suspend(const char *service, const char *job_id);
+
+		int cream_job_resume(const char *service, const char *job_id);
+
+		int cream_job_status(const char *service, const char *job_id, 
+							 char **job_status, int *exit_code, char **failure_reason);
+		
+		int cream_proxy_renew(const char *service, const char *delg_service, const char *delg_id, StringList &job_ids);
+		
+		int cream_ping(const char * service);
+		
+		int cream_job_lease(const char *service, const char *job_id, time_t &lease_incr);
+
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...
 	globus_duroc_control_barrier_release();

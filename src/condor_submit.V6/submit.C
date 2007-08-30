@@ -1566,7 +1566,8 @@ SetUniverse()
 				(stricmp (JobGridType, "condor") == MATCH) ||
 				(stricmp (JobGridType, "nordugrid") == MATCH) ||
 				(stricmp (JobGridType, "unicore") == MATCH) ||
-				(stricmp (JobGridType, "oracle") == MATCH)) {
+				(stricmp (JobGridType, "oracle") == MATCH) ||
+				(stricmp (JobGridType, "cream") == MATCH)){
 				// We're ok	
 				// Values are case-insensitive for gridmanager, so we don't need to change case			
 			} else if ( stricmp( JobGridType, "globus" ) == MATCH ) {

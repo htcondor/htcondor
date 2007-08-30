@@ -45,6 +45,8 @@
 #include "nordugridjob.h"
 #include "nordugridresource.h"
 #include "unicorejob.h"
+#include "creamjob.h"
+#include "creamresource.h"
 
 template class List<NordugridJob>;
 template class Item<NordugridJob>;
@@ -98,6 +100,9 @@ template class HashBucket<HashKey, GT3Resource *>;
 
 template class HashTable<HashKey, GT4Resource *>;
 template class HashBucket<HashKey, GT4Resource *>;
+
+template class HashTable<HashKey, CreamResource *>;
+template class HashBucket<HashKey, CreamResource *>;
 
 template class HashTable<HashKey, MirrorJob *>;
 template class HashBucket<HashKey, MirrorJob *>;
