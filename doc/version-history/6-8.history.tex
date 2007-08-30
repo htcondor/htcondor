@@ -57,6 +57,10 @@ core files in addition to attaching to stripped executables during runtime.
 any node job events.  (This is to help diagnose the problem if
 \Condor{dagman} gets "stuck".)
 
+% This is a back-port from 6.9
+\item Optimized the submission of grid-type gt4 grid universe jobs to the
+remote resource. Submission now takes one operation instead of three.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
