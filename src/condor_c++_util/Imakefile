@@ -221,6 +221,8 @@ c_plus_target(test_multi_log,test_multi_log.o,$(LIB) New_classads_lib)
 c_plus_target(test_log_writer,test_log_writer.o,$(LIB))
 c_plus_target(test_log_reader,test_log_reader.o,$(LIB))
 c_plus_target(test_write_term,test_write_term.o,$(LIB))
+c_plus_target(test_prioritysimplelist,test_prioritysimplelist.o,)
+c_plus_target(test_binarysearch,test_binarysearch.o,)
 
 c_plus_target(cat_url,cat_url.o,liburl.a)
 c_plus_target(access.t,access.t.o,$(LIB))

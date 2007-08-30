@@ -27,6 +27,8 @@
 #include "script.h"
 #include "MyString.h"
 #include "read_multiple_logs.h"
+#include "prioritysimplelist.h"
+#include "binary_search.h"
 
 template class List<Job>;
 template class List<MyString>;
@@ -39,6 +41,8 @@ template class HashTable<int, Script*>;
 template class Queue<Script*>;
 template class Queue<Job*>;
 template class SimpleList<Job*>;
+template class PrioritySimpleList<Job*>;
+template class BinarySearch<int>;
 CHECK_EVENTS_HASH_INSTANCE;
 template class HashTable<MyString, Job *>;
 template class HashTable<JobID_t, Job *>;

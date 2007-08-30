@@ -135,6 +135,9 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
 
 	_queuedNodeJobProcs = 0;
 
+	_hasNodePriority = false;
+	_nodePriority = 0;
+
 		// Note: we use "" for the directory here because when this method
 		// is called we should *already* be in the directory from which
 		// this job is to be run.

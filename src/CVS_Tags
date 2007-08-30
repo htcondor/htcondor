@@ -1,3 +1,8 @@
+08/9/07 V6_9-dag_node_priority-merge-1
+  The state of V6_9-dag_node_priority-branch after code review & associated
+  fixes.  Ready to merge to the trunk; no further development should happen
+  on this branch.
+
 08/29/07 V6_9-cream-merge-1
   The state of the V6_9-cream-branch for merge to the TRUNK.
 

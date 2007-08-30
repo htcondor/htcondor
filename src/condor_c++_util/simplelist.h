@@ -43,11 +43,11 @@ class SimpleList
     /// Copy Constructor
     SimpleList (const SimpleList<ObjType> & list);
 
-    inline ~SimpleList () { delete [] items; }
+    virtual inline ~SimpleList () { delete [] items; }
 
     // General
-    bool Append (const ObjType &);
-	bool Prepend (const ObjType &);
+    virtual bool Append (const ObjType &);
+	virtual bool Prepend (const ObjType &);
     inline bool IsEmpty() const { return (size == 0); }
 	inline int Number(void) const { return size; }
 	inline int Length(void) const { return Number(); }
@@ -60,13 +60,13 @@ class SimpleList
     bool    Next(ObjType &);
     bool    Next(ObjType *&);
     inline bool    AtEnd() const { return (current >= size-1); }
-    void    DeleteCurrent();
-	bool Delete(const ObjType &, bool delete_all = false);
+    virtual void    DeleteCurrent();
+	virtual bool Delete(const ObjType &, bool delete_all = false);
 	bool	ReplaceCurrent(const ObjType &);
 	bool IsMember( const ObjType & ) const;
 
-    private:
-	bool resize (int);
+    protected:
+	virtual bool resize (int);
 	int maximum_size;
     ObjType *items;
     int size;

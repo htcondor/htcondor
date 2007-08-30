@@ -21,6 +21,11 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+//----------------------------------------------------------------
+// IMPORTANT NOTE:  Any changes in the DAG file implemented here
+// must also be reflected in Dag::Rescue().
+//----------------------------------------------------------------
+
 #include "condor_common.h"
 
 #include "job.h"
@@ -56,6 +61,8 @@ static bool parse_abort(Dag *dag,
 static bool parse_dot(Dag *dag, 
 		const char *filename, int lineNumber);
 static bool parse_vars(Dag *dag, 
+		const char *filename, int lineNumber);
+static bool parse_priority(Dag *dag, 
 		const char *filename, int lineNumber);
 static MyString munge_job_name(const char *jobName);
 
@@ -219,6 +226,13 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Example syntax is: Vars JobName var1="val1" var2="val2"
 		else if(strcasecmp(token, "VARS") == 0) {
 			parsed_line_successfully = parse_vars(dag, filename, lineNumber);
+		}
+
+		// Handle a Priority spec
+		// Example syntax is: Priority JobName 2
+		else if(strcasecmp(token, "PRIORITY") == 0) {
+			parsed_line_successfully = parse_priority(dag, filename,
+						lineNumber);
 		}
 
 		// Allow a CONFIG spec, but ignore it here because it
@@ -980,6 +994,88 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 		debug_printf(DEBUG_QUIET, "%s (line %d): No valid name-value pairs\n", filename, lineNumber);
 		return false;
 	}
+
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_priority
+// Purpose:  Parses a line specifying the priority of a node
+//           submit description file
+//           The format of this line must be
+//           Priority JobName Value
+//-----------------------------------------------------------------------------
+static bool 
+parse_priority(
+	Dag  *dag, 
+	const char *filename, 
+	int  lineNumber)
+{
+	const char * example = "PRIORITY JobName Value";
+	Job * job = NULL;
+
+	//
+	// Next token is the JobName
+	//
+	const char *jobName = strtok(NULL, DELIMITERS);
+	const char *jobNameOrig = jobName; // for error output
+	const char * rest = jobName; // For subsequent tokens
+	if (jobName == NULL) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
+					  filename, lineNumber );
+		exampleSyntax (example);
+		return false;
+	} else if (isReservedWord(jobName)) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): JobName cannot be a reserved word\n",
+					  filename, lineNumber );
+		exampleSyntax (example);
+		return false;
+	} else {
+		debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
+		MyString tmpJobName = munge_job_name(jobName);
+		jobName = tmpJobName.Value();
+
+		job = dag->FindNodeByName( jobName );
+		if (job == NULL) {
+			debug_printf( DEBUG_QUIET, 
+						  "%s (line %d): Unknown Job %s\n",
+						  filename, lineNumber, jobNameOrig );
+			return false;
+		}
+	}
+
+	//
+	// Next token is the priority value.
+	//
+	const char *valueStr = strtok(NULL, DELIMITERS);
+
+	int priorityVal;
+	char *tmp;
+	priorityVal = (int)strtol( valueStr, &tmp, 10 );
+	if( tmp == valueStr ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Invalid PRIORITY value \"%s\"\n",
+					  filename, lineNumber, valueStr );
+		exampleSyntax( example );
+		return false;
+	}
+
+	//
+	// Check for illegal extra tokens.
+	//
+	valueStr = strtok(NULL, DELIMITERS);
+	if ( valueStr != NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Extra token (%s) on PRIORITY line\n",
+					  filename, lineNumber, valueStr );
+		exampleSyntax( example );
+		return false;
+	}
+
+	job->_hasNodePriority = true;
+	job->_nodePriority = priorityVal;
 
 	return true;
 }

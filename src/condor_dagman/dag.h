@@ -35,6 +35,7 @@
 #include "read_multiple_logs.h"
 #include "check_events.h"
 #include "condor_id.h"
+#include "prioritysimplelist.h"
 
 // NOTE: must be kept in sync with Job::job_type_t
 enum Log_source{
@@ -599,7 +600,7 @@ class Dag {
 	const CondorID *	_DAGManJobId;
 
 	// queue of jobs ready to be submitted to Condor
-	SimpleList<Job*>* _readyQ;
+	PrioritySimpleList<Job*>* _readyQ;
 
 	// queue of submitted jobs not yet matched with submit events in
 	// the Condor job log

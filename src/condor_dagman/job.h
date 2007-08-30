@@ -348,6 +348,13 @@ class Job {
 		// queue for this node.
 	int _queuedNodeJobProcs;
 
+		// Whether the _nodePriority value is meaningful.
+	bool _hasNodePriority;
+
+		// Node priority (only really matters for sibling nodes).  Lower
+		// number is better priority (run first).
+	int _nodePriority;
+
 private:
 
 		// Note: Init moved to private section because calling int more than
