@@ -47,23 +47,21 @@
 #define GM_UNSUBMITTED			3
 #define GM_SUBMIT				4
 #define GM_SUBMIT_SAVE			5
-#define GM_SUBMIT_COMMIT		6
-#define GM_SUBMITTED			7
-#define GM_DONE_SAVE			8
-#define GM_DONE_COMMIT			9
-#define GM_CANCEL				10
-#define GM_FAILED				11
-#define GM_DELETE				12
-#define GM_CLEAR_REQUEST		13
-#define GM_HOLD					14
-#define GM_PROXY_EXPIRED		15
-#define GM_EXTEND_LIFETIME		16
-#define GM_PROBE_JOBMANAGER		17
-#define GM_START				18
-#define GM_GENERATE_ID			19
-#define GM_DELEGATE_PROXY		20
-#define GM_SUBMIT_ID_SAVE		21
-#define GM_SUBMIT_SET_LIFETIME	22
+#define GM_SUBMITTED			6
+#define GM_DONE_SAVE			7
+#define GM_DONE_COMMIT			8
+#define GM_CANCEL				9
+#define GM_FAILED				10
+#define GM_DELETE				11
+#define GM_CLEAR_REQUEST		12
+#define GM_HOLD					13
+#define GM_PROXY_EXPIRED		14
+#define GM_EXTEND_LIFETIME		15
+#define GM_PROBE_JOBMANAGER		16
+#define GM_START				17
+#define GM_GENERATE_ID			18
+#define GM_DELEGATE_PROXY		19
+#define GM_SUBMIT_ID_SAVE		20
 
 static char *GMStateNames[] = {
 	"GM_INIT",
@@ -72,7 +70,6 @@ static char *GMStateNames[] = {
 	"GM_UNSUBMITTED",
 	"GM_SUBMIT",
 	"GM_SUBMIT_SAVE",
-	"GM_SUBMIT_COMMIT",
 	"GM_SUBMITTED",
 	"GM_DONE_SAVE",
 	"GM_DONE_COMMIT",
@@ -88,7 +85,6 @@ static char *GMStateNames[] = {
 	"GM_GENERATE_ID",
 	"GM_DELEGATE_PROXY",
 	"GM_SUBMIT_ID_SAVE",
-	"GM_SUBMIT_SET_LIFETIME"
 };
 
 #define GT4_JOB_STATE_PENDING		1
@@ -294,6 +290,7 @@ GT4Job::GT4Job( ClassAd *classad )
 	: BaseJob( classad )
 {
 	int bool_value;
+	int int_value;
 	char buff[4096];
 	char buff2[_POSIX_PATH_MAX];
 	char iwd[_POSIX_PATH_MAX];
@@ -330,7 +327,6 @@ GT4Job::GT4Job( ClassAd *classad )
 	jobProxy = NULL;
 	gramCallbackContact = NULL;
 	gahp = NULL;
-	submit_id = NULL;
 	delegatedCredentialURI = NULL;
 	gridftpServer = NULL;
 
@@ -430,21 +426,18 @@ GT4Job::GT4Job( ClassAd *classad )
 		myResource->AlreadySubmitted( this );
 	}
 
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, buff );
-
 	gridftpServer = GridftpServer::FindOrCreateServer( jobProxy );
 
-		// TODO It would be nice to register only after going through
-		//   GM_CLEAR_REQUEST, so that a ATTR_GRIDFTP_URL_BASE from a
-		//   previous submission isn't requested here.
-	gridftpServer->RegisterClient( evaluateStateTid, buff[0] ? buff : NULL );
-
-	if (jobAd->LookupString ( ATTR_GLOBUS_SUBMIT_ID, buff )) {
-		submit_id = strdup ( buff );
+	buff[0] = '\0';
+	if ( jobContact ) {
+		jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, buff );
 	}
 
-	if ( jobAd->LookupString( ATTR_GLOBUS_DELEGATION_URI, buff ) ) {
+	gridftpServer->RegisterClient( evaluateStateTid, buff[0] ? buff : NULL );
+
+	if ( jobContact &&
+		 jobAd->LookupString( ATTR_GLOBUS_DELEGATION_URI, buff ) ) {
+
 		delegatedCredentialURI = strdup( buff );
 		myResource->registerDelegationURI( delegatedCredentialURI, jobProxy );
 	}
@@ -452,6 +445,10 @@ GT4Job::GT4Job( ClassAd *classad )
 	jobAd->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
 
 	globusErrorString = "";
+
+	if ( jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, int_value ) ) {
+		jmLifetime = int_value;
+	}
 
 	iwd[0] = '\0';
 	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
@@ -551,9 +548,6 @@ GT4Job::~GT4Job()
 	if ( gahp != NULL ) {
 		delete gahp;
 	}
-	if ( submit_id != NULL ) {
-		free( submit_id );
-	}
 	if ( jobmanagerType != NULL ) {
 		free( jobmanagerType );
 	}
@@ -651,22 +645,31 @@ int GT4Job::doEvaluateState()
 			} else if ( wantResubmit || doResubmit ) {
 				gmState = GM_CLEAR_REQUEST;
 			} else {
-				if ( globusState == GT4_JOB_STATE_STAGE_IN ||
-					 globusState == GT4_JOB_STATE_PENDING ||
-					 globusState == GT4_JOB_STATE_ACTIVE ||
-					 globusState == GT4_JOB_STATE_SUSPENDED ||
-					 globusState == GT4_JOB_STATE_STAGE_OUT ||
-					 globusState == GT4_JOB_STATE_DONE ) {
-					submitLogged = true;
-				}
-				if ( globusState == GT4_JOB_STATE_ACTIVE ||
-					 globusState == GT4_JOB_STATE_SUSPENDED ||
-					 globusState == GT4_JOB_STATE_STAGE_OUT ||
-					 globusState == GT4_JOB_STATE_DONE ) {
-					executeLogged = true;
-				}
+				if ( strncmp( jobContact, "uuid:", 5 ) == 0 ) {
+						// JEF Make sure our proxy delegation and lease time
+						//   are set up correctly. This may require going
+						//   to a different state. Also, make sure we try
+						//   to cancel the remote job if the local status
+						//   is HELD or REMOVED
+					gmState = GM_GENERATE_ID;
+				} else {
+					if ( globusState == GT4_JOB_STATE_STAGE_IN ||
+						 globusState == GT4_JOB_STATE_PENDING ||
+						 globusState == GT4_JOB_STATE_ACTIVE ||
+						 globusState == GT4_JOB_STATE_SUSPENDED ||
+						 globusState == GT4_JOB_STATE_STAGE_OUT ||
+						 globusState == GT4_JOB_STATE_DONE ) {
+						submitLogged = true;
+					}
+					if ( globusState == GT4_JOB_STATE_ACTIVE ||
+						 globusState == GT4_JOB_STATE_SUSPENDED ||
+						 globusState == GT4_JOB_STATE_STAGE_OUT ||
+						 globusState == GT4_JOB_STATE_DONE ) {
+						executeLogged = true;
+					}
 
-				gmState = GM_REGISTER;
+					gmState = GM_REGISTER;
+				}
 			}
 			} break;
 		case GM_REGISTER: {
@@ -783,9 +786,10 @@ int GT4Job::doEvaluateState()
 						   delegatedCredentialURI );
 		} break;
 		case GM_GENERATE_ID: {
+			char *submit_id = NULL;
 
 			// TODO: allow REMOVED or HELD jobs to break out of this state
-			if (submit_id) {
+			if (jobContact) {
 				gmState = GM_SUBMIT_ID_SAVE;
 				break;
 			}
@@ -801,9 +805,18 @@ int GT4Job::doEvaluateState()
 				errorString = "Failed to generate submit id";
 				gmState = GM_HOLD;
 			} else {
-				jobAd->Assign( ATTR_GLOBUS_SUBMIT_ID, submit_id );
+					// Calculate the lease we want to give to the remote job
+				int new_lease;	// CalculateJobLease needs an int
+				ASSERT( CalculateJobLease( jobAd, new_lease,
+										   DEFAULT_LEASE_DURATION ) );
+				jmLifetime = new_lease;
+				UpdateJobLeaseSent( jmLifetime );
+
+				SetRemoteJobId( submit_id );
+				//jobAd->Assign( ATTR_GLOBUS_SUBMIT_ID, submit_id );
 				gmState = GM_SUBMIT_ID_SAVE;
 			}
+			free( submit_id );
 		} break;
 		case GM_SUBMIT_ID_SAVE: {
 			if ( condorState == REMOVED || condorState == HELD ) {
@@ -850,12 +863,12 @@ int GT4Job::doEvaluateState()
 				}
 
 				rc = gahp->gt4_gram_client_job_create( 
-													  submit_id,
+													  jobContact,
 										resourceManagerString,
 										jobmanagerType,
 										gramCallbackContact,
 										RSL->Value(),
-										NULL,
+										jmLifetime,
 										&job_contact );
 
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -870,7 +883,7 @@ int GT4Job::doEvaluateState()
 					callbackRegistered = true;
 					SetRemoteJobId( job_contact );
 					free( job_contact );
-					gmState = GM_SUBMIT_SET_LIFETIME;
+					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "gt4_gram_client_job_create()", rc );
@@ -893,42 +906,6 @@ int GT4Job::doEvaluateState()
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}
 			} break;
-		case GM_SUBMIT_SET_LIFETIME: {
-			if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_CANCEL;
-				break;
-			}
-			if ( jmLifetime == 0 ) {
-				int new_lease;	// CalculateJobLease needs an int
-				if ( CalculateJobLease( jobAd, new_lease,
-										DEFAULT_LEASE_DURATION ) == false ) {
-					dprintf( D_ALWAYS, "(%d.%d) No lease for gt4 job!?\n",
-							 procID.cluster, procID.proc );
-					jmLifetime = now + DEFAULT_LEASE_DURATION;
-				} else {
-					jmLifetime = new_lease;
-				}
-			}
-			time_t new_lifetime = jmLifetime - now;
-			CHECK_PROXY;
-			rc = gahp->gt4_set_termination_time( jobContact,
-												 new_lifetime );
-
-			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-				 rc == GAHPCLIENT_COMMAND_PENDING ) {
-				break;
-			}
-			if ( rc != GLOBUS_SUCCESS ) {
-				// unhandled error
-				LOG_GLOBUS_ERROR("refresh_credentials()",rc);
-				globusErrorString = gahp->getErrorString();
-				gmState = GM_CANCEL;
-				break;
-			}
-			jmLifetime = new_lifetime;
-			UpdateJobLeaseSent( jmLifetime );
-			gmState = GM_SUBMIT_SAVE;
-		} break;
 		case GM_SUBMIT_SAVE: {
 			// Save the jobmanager's contact for a new gram submission.
 			if ( condorState == REMOVED || condorState == HELD ) {
@@ -938,35 +915,7 @@ int GT4Job::doEvaluateState()
 				if ( !done ) {
 					break;
 				}
-				gmState = GM_SUBMIT_COMMIT;
-			}
-			} break;
-		case GM_SUBMIT_COMMIT: {
-			// Now that we've saved the jobmanager's contact, commit the
-			// gram job submission.
-			if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_CANCEL;
-			} else {
-				CHECK_PROXY;
-				rc = gahp->gt4_gram_client_job_start( jobContact );
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					 rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				}
-				if ( rc != GLOBUS_SUCCESS ) {
-					// unhandled error
-					LOG_GLOBUS_ERROR( "gt4_gram_client_job_start()", rc );
-					globusErrorString = gahp->getErrorString();
-					WriteGlobusSubmitFailedEventToUserLog( jobAd, 0,
-													gahp->getErrorString() );
-					gmState = GM_CANCEL;
-				} else {
-						// We don't want an old or zeroed lastProbeTime
-						// make us do a probe immediately after submitting
-						// the job, so set it to now
-					lastProbeTime = time(NULL);
-					gmState = GM_SUBMITTED;
-				}
+				gmState = GM_SUBMITTED;
 			}
 			} break;
 		case GM_SUBMITTED: {
@@ -1251,7 +1200,12 @@ int GT4Job::doEvaluateState()
 					evictLogged = true;
 				}
 			}
+			free( delegatedCredentialURI );
+			delegatedCredentialURI = NULL;
 			MyString val;
+			if ( jobAd->LookupString( ATTR_GLOBUS_DELEGATION_URI, val ) ) {
+				jobAd->AssignExpr( ATTR_GLOBUS_DELEGATION_URI, "Undefined" );
+			}
 			if ( jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, val ) ) {
 				jobAd->AssignExpr( ATTR_GRIDFTP_URL_BASE, "Undefined" );
 			}
@@ -1557,28 +1511,6 @@ BaseResource *GT4Job::GetResource()
 
 void GT4Job::SetRemoteJobId( const char *job_id )
 {
-		// TODO We shouldn't have to clear the delegation and gridftp
-		//   server URIs here. We do so because they get looked up in
-		//   our constructor and registered with other parts of the code,
-		//   even if GridJobId is undefined. We don't want values for old
-		//   submissions to be used. The registrations in the constructor
-		//   should only happen if the job id is defined.
-		// Clear the delegation URI whenever the job contact string
-		// is cleared
-	if ( job_id == NULL && delegatedCredentialURI != NULL ) {
-		free( delegatedCredentialURI );
-		delegatedCredentialURI = NULL;
-		jobAd->AssignExpr( ATTR_GLOBUS_DELEGATION_URI, "Undefined" );
-	}
-	if ( job_id == NULL ) {
-		jobAd->AssignExpr( ATTR_GRIDFTP_URL_BASE, "Undefined" );
-	}
-	if ( job_id == NULL && submit_id != NULL ) {
-		free( submit_id );
-		submit_id = NULL;
-		jobAd->AssignExpr( ATTR_GLOBUS_SUBMIT_ID, "Undefined" );
-	}
-
 	free( jobContact );
 	if ( job_id ) {
 		jobContact = strdup( job_id );
@@ -1670,18 +1602,18 @@ MyString *GT4Job::buildSubmitRSL()
 		// Instead we'll upload an empty directory to be our scratch dir
 		
 		create_remote_iwd = true;
-		ASSERT (submit_id);	// append submit_id for uniqueness, fool
-		char *my_submit_id = submit_id;
+		ASSERT (jobContact);	// append job id for uniqueness, fool
+		char *unique_id = jobContact;
 			// Avoid having a colon in our job scratch directory name, for
 			// any systems that may not like that.
-		if ( strncmp( my_submit_id, "uuid:", 5 ) == 0 ) {
-			my_submit_id = &my_submit_id[5];
+		if ( strncmp( unique_id, "uuid:", 5 ) == 0 ) {
+			unique_id = &unique_id[5];
 		}
 		// The GT4 server expects a leading slash *before* variable
 		// substitution is completed for some reason. See globus bugzilla
 		// ticket 2846 for details. To keep it happy, throw in an extra
 		// slash, even though this'll result in file:////....
-		remote_iwd.sprintf ("/${GLOBUS_SCRATCH_DIR}/job_%s", my_submit_id);
+		remote_iwd.sprintf ("/${GLOBUS_SCRATCH_DIR}/job_%s", unique_id);
 		// The default GLOBUS_SCRATCH_DIR (~/.globus/scratch) is not
 		// created by Globus, so our attempt to create a sub-directory
 		// will fail. As a work-around, try to create it. This will
@@ -2124,13 +2056,6 @@ MyString *GT4Job::buildSubmitRSL()
 //	*rsl += "<stagingCredentialEndpoint>";
 	*rsl += delegation_epr;
 	*rsl += "</stagingCredentialEndpoint>";
-
-		// Start the job on hold
-	if ( staging_input ) {
-		*rsl += printXMLParam( "holdState", "StageIn" );
-	} else {
-		*rsl += printXMLParam( "holdState", "Pending" );
-	}
 
 	if ( jobAd->LookupString( ATTR_GLOBUS_XML, &rsl_suffix ) ) {
 		*rsl += rsl_suffix;
