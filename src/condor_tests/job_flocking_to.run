@@ -1,0 +1,147 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+
+CondorPersonal::DebugOff();
+Condor::DebugOff();
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+$testname = 'job_flocking_to';
+$corename = "job_flocking_to";
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+chomp($currenthost);
+$primarycollector = $currenthost;
+my @adarray;
+
+CondorTest::fullchomp($currenthost);
+
+system("date");
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+system("mkdir $mysaveme");
+$mypiddir = $mysaveme . "/" . $mypid;
+system("mkdir $mypiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $mypid");
+
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmout = $corename . $mypid . ".out";
+$mycorenm = $corename . ".cmd";
+$mycorenmout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
+
+print "Master PID is $mypid\n";
+print "Master PID submit file is $mysubmitnm\n";
+
+my $version = "flockto";
+# get a local scheduler running (side a)
+my $configloc = CondorPersonal::StartCondor("x_param.flocktestflockto" ,$version);
+my @local = split /\+/, $configloc;
+my $locconfig = shift @local;
+my $locport = shift @local;
+
+print "---local config is $locconfig and local port is $locport---\n";
+
+$primarycollector = $primarycollector . ":" . $locport;
+
+print "Primary collector for other nodes <<$primarycollector>>\n";
+
+$ENV{CONDOR_CONFIG} = $locconfig;
+print "New collector is this:\n";
+system("condor_config_val COLLECTOR_HOST");
+
+my $line;
+open(PARAMSRC,"<x_flockto_configpostsrc.template") || die "Could not open x_param.x_flockto_configpostsrc.template: $!\n";
+open(PASRAMDONE,">x_flockto_configpostsrc") || die "Could not open x_flockto_configpostsrc: $!\n";
+while(<PARAMSRC>) {
+	$line = $_;
+	chomp($line);
+	if($line =~ /^\s*FLOCK_TO\s*=.*$/) {
+		print PASRAMDONE "FLOCK_TO  = $primarycollector\n";
+	} else {
+		print PASRAMDONE "$line\n";
+	}
+}
+close(PASRAMSRC);
+close(PASRAMDONE);
+
+$version = "flockfrom";
+# my $configflockto = CondorPersonal::DebugOn();
+# get another node running
+my $configflockto = CondorPersonal::StartCondor("x_param.flocktestlocal" ,$version);
+my @flockto = split /\+/, $configflockto;
+my $flocktoconfig = shift @flockto;
+my $flocktoport = shift @flockto;
+
+print "---home collector config is $flocktoconfig and collector port is $flocktoport---\n";
+
+my $bail = 0;
+
+my $flockstatus = CondorTest::verbose_system("./job_flocking_to.pl");
+print "Status of flocked job is \"$flockstatus\"\n";
+
+print "Saving things and cleaning up....\n";
+
+system("cp *job_flocking_to* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmout $mycorenmout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+# still set to local config
+ $ENV{CONDOR_CONFIG} = $locconfig;
+
+
+$cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
+
+$ENV{CONDOR_CONFIG} = $flocktoconfig;
+
+
+$cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
+
+system("date");
+
+if( $flockstatus != 0 )
+{
+	# actual test failed but we allowed cleanup
+	print "job_flocking_to FAILED\n";
+	system("date");
+	exit(1);
+}
+
+system("date");
+exit(0);
