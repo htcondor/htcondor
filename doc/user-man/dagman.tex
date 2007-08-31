@@ -149,7 +149,7 @@ that begins with the key word
 \Arg{JOB}.
 The syntax used for each \Arg{JOB} entry is
 
-\Arg{JOB} \Arg{JobName} \Arg{SubmitDescriptionFileName} \oArg{DONE}
+\Opt{JOB} \Arg{JobName} \Arg{SubmitDescriptionFileName} \oOpt{DONE}
 
 A \Arg{JOB} entry maps a \Arg{JobName} to a Condor submit description file.
 The \Arg{JobName} uniquely identifies nodes within the
@@ -182,7 +182,7 @@ The \Arg{DATA} key word specifies a job to be managed by the Stork data
 placement server.  
 The syntax used for each \Arg{DATA} entry is
 
-\Arg{DATA} \Arg{JobName} \Arg{SubmitDescriptionFileName} \oArg{DONE}
+\Opt{DATA} \Arg{JobName} \Arg{SubmitDescriptionFileName} \oOpt{DONE}
 
 A \Arg{DATA} entry maps a \Arg{JobName} to a Stork submit description file.
 In all other respects, the \Arg{DATA} key word is identical to the
@@ -230,9 +230,9 @@ A node in the DAG is comprised of the job together with
 \Arg{PRE} and \Arg{POST} script lines within the DAG input file
 use the syntax:
 
-\Arg{SCRIPT} \Arg{PRE} \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
+\Opt{SCRIPT} \Opt{PRE} \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
-\Arg{SCRIPT} \Arg{POST}  \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
+\Opt{SCRIPT} \Opt{POST}  \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
 The \Arg{SCRIPT} key word identifies the type of line within
 the DAG input file.
@@ -375,7 +375,7 @@ all its parents have successfully completed.
 
 The syntax of a dependency line within the DAG input file:
 
-\Arg{PARENT} \Arg{ParentJobName\Dots} \Arg{CHILD} \Arg{ChildJobName\Dots}
+\Opt{PARENT} \Arg{ParentJobName\Dots} \Opt{CHILD} \Arg{ChildJobName\Dots}
 
 The \Arg{PARENT} key word is followed by one or more
 \Arg{ParentJobName}s.
@@ -405,7 +405,7 @@ way to retry failed nodes.
 Use of retry is optional.
 The syntax for retry is
 
-\Arg{RETRY} \Arg{JobName} \Arg{NumberOfRetries} \oArg{UNLESS-EXIT \textless{value}\textgreater}
+\Opt{RETRY} \Arg{JobName} \Arg{NumberOfRetries} \oOptArg{UNLESS-EXIT}{value}
 
 where \Arg{JobName} identifies the node.
 \Arg{NumberOfRetries} is an integer
@@ -456,7 +456,7 @@ file.
 These macros are defined on a per-node basis, using the
 following format.
 
-\Arg{VARS} \Arg{JobName} \Arg{macroname="string"} \oArg{macroname="string"\Dots}
+\Opt{VARS} \Arg{JobName} \OptArg{macroname=}{"string"} \oOptArg{macroname=}{"string"\Dots}
 
 The macro may be used within the
 submit description file.  A \Arg{macroname}
@@ -520,8 +520,8 @@ The seventh type of item in the DAG input file provides a way
 to abort the entire DAG if a given node returns a specific exit
 code.  The syntax for ABORT-DAG-ON:
 
-\Arg{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
-\oArg{RETURN DAGReturnValue}
+\Opt{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
+\oOptArg{RETURN}{DAGReturnValue}
 
 If the node specified by \Arg{JobName} returns the specified
 \Arg{AbortExitValue}, the
