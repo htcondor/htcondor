@@ -93,6 +93,12 @@ TESTCLASS(lib_procapi_pidtracking-snapshot,core)
 TESTCLASS(lib_procapi_pidtracking-snapshot,quick)
 #endif
 
+DESC(job_flocking_to,"Simple flocking test")
+RUN(job_flocking_to)
+TESTCLASS(job_flocking_to,core)
+TESTCLASS(job_flocking_to,quick)
+TESTCLASS(job_flocking_to,btdebug)
+
 DESC(lib_auth_protocol-fs,"FS authentication test")
 RUN(lib_auth_protocol-fs)
 TESTCLASS(lib_auth_protocol-fs,core)
@@ -102,6 +108,11 @@ DESC(lib_auth_protocol-ctb,"CTB authentication test")
 RUN(lib_auth_protocol-ctb)
 TESTCLASS(lib_auth_protocol-ctb,core)
 TESTCLASS(lib_auth_protocol-ctb,quick)
+
+DESC(job_flocking_to,"Simple flocking test")
+RUN(job_flocking_to)
+TESTCLASS(job_flocking_to,core)
+TESTCLASS(job_flocking_to,quick)
 
 /* GNATS 764 - SSL missing on Dux 5.1 and HPUX 11 machines */
 #if !defined( IS_ALPHA_DUX5) && !defined( IS_HPUX11 )
