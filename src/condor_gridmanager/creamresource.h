@@ -35,7 +35,7 @@
 
 class CreamJob;
 class CreamResource;
-struct ProxyDelegation;
+struct CreamProxyDelegation;
 
 class CreamResource : public BaseResource
 {
@@ -75,10 +75,10 @@ class CreamResource : public BaseResource
 
 	char *proxySubject;
 	int delegationTimerId;
-	ProxyDelegation *activeDelegationCmd;
+	CreamProxyDelegation *activeDelegationCmd;
 	char *serviceUri;
 	char *delegationServiceUri;
-	List<ProxyDelegation> delegatedProxies;
+	List<CreamProxyDelegation> delegatedProxies;
 	static int gahpCallTimeout;
 	MyString delegation_uri;
 	GahpClient *gahp;

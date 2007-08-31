@@ -32,8 +32,8 @@
 #define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 
-template class List<ProxyDelegation>;
-template class Item<ProxyDelegation>;
+template class List<GT4ProxyDelegation>;
+template class Item<GT4ProxyDelegation>;
 
 int GT4Resource::gahpCallTimeout = 300;	// default value
 
@@ -47,7 +47,7 @@ HashTable <HashKey, GT4Resource *>
 #define LIFETIME_EXTEND_INTERVAL	300
 #define PROXY_REFRESH_INTERVAL		300
 
-struct ProxyDelegation {
+struct GT4ProxyDelegation {
 	char *deleg_uri;
 	time_t lifetime;
 	time_t last_lifetime_extend;
@@ -123,7 +123,7 @@ GT4Resource::GT4Resource( const char *resource_name,
 GT4Resource::~GT4Resource()
 {
 dprintf(D_FULLDEBUG,"*** ~GT4Resource\n");
-	ProxyDelegation *next_deleg;
+	GT4ProxyDelegation *next_deleg;
 	delegatedProxies.Rewind();
 	while ( (next_deleg = delegatedProxies.Next()) != NULL ) {
 dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
@@ -234,7 +234,7 @@ void GT4Resource::UnregisterJob( GT4Job *job )
 dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 			bool reacquire_proxy = false;
 			Proxy *proxy_to_reacquire = job->jobProxy;
-			ProxyDelegation *next_deleg;
+			GT4ProxyDelegation *next_deleg;
 			delegatedProxies.Rewind();
 			while ( (next_deleg = delegatedProxies.Next()) != NULL ) {
 				if ( strcmp( job->delegatedCredentialURI,
@@ -266,19 +266,19 @@ void GT4Resource::registerDelegationURI( const char *deleg_uri,
 										 Proxy *job_proxy )
 {
 dprintf(D_FULLDEBUG,"*** registerDelegationURI(%s,%s)\n",deleg_uri,job_proxy->proxy_filename);
-	ProxyDelegation *next_deleg;
+	GT4ProxyDelegation *next_deleg;
 
 	delegatedProxies.Rewind();
 
 	while ( ( next_deleg = delegatedProxies.Next() ) != NULL ) {
 		if ( strcmp( deleg_uri, next_deleg->deleg_uri ) == 0 ) {
-dprintf(D_FULLDEBUG,"    found ProxyDelegation\n");
+dprintf(D_FULLDEBUG,"    found GT4ProxyDelegation\n");
 			return;
 		}
 	}
 
-dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
-	next_deleg = new ProxyDelegation;
+dprintf(D_FULLDEBUG,"    creating new GT4ProxyDelegation\n");
+	next_deleg = new GT4ProxyDelegation;
 	next_deleg->deleg_uri = strdup( deleg_uri );
 	next_deleg->proxy_expire = 0;
 	next_deleg->lifetime = 0;
@@ -296,7 +296,7 @@ dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
 const char *GT4Resource::getDelegationURI( Proxy *job_proxy )
 {
 dprintf(D_FULLDEBUG,"*** getDelegationURI(%s)\n",job_proxy->proxy_filename);
-	ProxyDelegation *next_deleg;
+	GT4ProxyDelegation *next_deleg;
 
 	delegatedProxies.Rewind();
 
@@ -304,13 +304,13 @@ dprintf(D_FULLDEBUG,"*** getDelegationURI(%s)\n",job_proxy->proxy_filename);
 		if ( next_deleg->proxy == job_proxy ) {
 				// If the delegation hasn't happened yet, this will return
 				// NULL, which tells the caller to continue to wait.
-dprintf(D_FULLDEBUG,"    found ProxyDelegation\n");
+dprintf(D_FULLDEBUG,"    found GT4ProxyDelegation\n");
 			return next_deleg->deleg_uri;
 		}
 	}
 
-dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
-	next_deleg = new ProxyDelegation;
+dprintf(D_FULLDEBUG,"    creating new GT4ProxyDelegation\n");
+	next_deleg = new GT4ProxyDelegation;
 	next_deleg->deleg_uri = NULL;
 	next_deleg->proxy_expire = 0;
 	next_deleg->lifetime = 0;
@@ -329,7 +329,7 @@ dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
 
 const char *GT4Resource::getDelegationError( Proxy *job_proxy )
 {
-	ProxyDelegation *next_deleg;
+	GT4ProxyDelegation *next_deleg;
 
 	delegatedProxies.Rewind();
 
@@ -344,7 +344,7 @@ const char *GT4Resource::getDelegationError( Proxy *job_proxy )
 	}
 
 	dprintf( D_FULLDEBUG, "getDelegationError(): failed to find "
-			 "ProxyDelegation for proxy %s\n", job_proxy->proxy_filename );
+			 "GT4ProxyDelegation for proxy %s\n", job_proxy->proxy_filename );
 	return NULL;
 }
 
@@ -352,7 +352,7 @@ int GT4Resource::checkDelegation()
 {
 dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
 	bool signal_jobs;
-	ProxyDelegation *next_deleg;
+	GT4ProxyDelegation *next_deleg;
 	time_t now = time( NULL );
 
 	if ( deleg_gahp->isInitialized() == false ) {

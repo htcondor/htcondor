@@ -32,8 +32,8 @@
 #define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 
-template class List<ProxyDelegation>;
-template class Item<ProxyDelegation>;
+template class List<CreamProxyDelegation>;
+template class Item<CreamProxyDelegation>;
 
 int CreamResource::gahpCallTimeout = 300;	// default value
 
@@ -61,7 +61,7 @@ HashTable <HashKey, CreamResource *>
 #define CREAM_JOB_STATE_UNKNOWN			"UNKNOWN"
 #define CREAM_JOB_STATE_PURGED			"PURGED"
 
-struct ProxyDelegation {
+struct CreamProxyDelegation {
 	char *deleg_uri;
 	time_t lifetime;
 	time_t last_lifetime_extend;
@@ -148,7 +148,7 @@ CreamResource::CreamResource( const char *resource_name,
 CreamResource::~CreamResource()
 {
 dprintf(D_FULLDEBUG,"*** ~CreamResource\n");
-	ProxyDelegation *next_deleg;
+	CreamProxyDelegation *next_deleg;
 	delegatedProxies.Rewind();
 	while ( (next_deleg = delegatedProxies.Next()) != NULL ) {
 dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
@@ -263,7 +263,7 @@ void CreamResource::UnregisterJob( CreamJob *job )
 dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 			bool reacquire_proxy = false;
 			Proxy *proxy_to_reacquire = job->jobProxy;
-			ProxyDelegation *next_deleg;
+			CreamProxyDelegation *next_deleg;
 			delegatedProxies.Rewind();
 			while ( (next_deleg = delegatedProxies.Next()) != NULL ) {
 				if ( strcmp( job->delegatedCredentialURI,
@@ -295,19 +295,19 @@ void CreamResource::registerDelegationURI( const char *deleg_uri,
 										 Proxy *job_proxy )
 {
 dprintf(D_FULLDEBUG,"*** registerDelegationURI(%s,%s)\n",deleg_uri,job_proxy->proxy_filename);
-	ProxyDelegation *next_deleg;
+	CreamProxyDelegation *next_deleg;
 
 	delegatedProxies.Rewind();
 
 	while ( ( next_deleg = delegatedProxies.Next() ) != NULL ) {
 		if ( strcmp( deleg_uri, next_deleg->deleg_uri ) == 0 ) {
-dprintf(D_FULLDEBUG,"    found ProxyDelegation\n");
+dprintf(D_FULLDEBUG,"    found CreamProxyDelegation\n");
 			return;
 		}
 	}
 
-dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
-	next_deleg = new ProxyDelegation;
+dprintf(D_FULLDEBUG,"    creating new CreamProxyDelegation\n");
+	next_deleg = new CreamProxyDelegation;
 	next_deleg->deleg_uri = strdup( deleg_uri );
 	next_deleg->proxy_expire = 0;
 	next_deleg->lifetime = 0;
@@ -325,7 +325,7 @@ dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
 const char *CreamResource::getDelegationURI( Proxy *job_proxy )
 {
 dprintf(D_FULLDEBUG,"*** getDelegationURI(%s)\n",job_proxy->proxy_filename);
-	ProxyDelegation *next_deleg;
+	CreamProxyDelegation *next_deleg;
 
 	delegatedProxies.Rewind();
 
@@ -333,13 +333,13 @@ dprintf(D_FULLDEBUG,"*** getDelegationURI(%s)\n",job_proxy->proxy_filename);
 		if ( next_deleg->proxy == job_proxy ) {
 				// If the delegation hasn't happened yet, this will return
 				// NULL, which tells the caller to continue to wait.
-dprintf(D_FULLDEBUG,"    found ProxyDelegation\n");
+dprintf(D_FULLDEBUG,"    found CreamProxyDelegation\n");
 			return next_deleg->deleg_uri;
 		}
 	}
 
-dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
-	next_deleg = new ProxyDelegation;
+dprintf(D_FULLDEBUG,"    creating new CreamProxyDelegation\n");
+	next_deleg = new CreamProxyDelegation;
 	next_deleg->deleg_uri = NULL;
 	next_deleg->proxy_expire = 0;
 	next_deleg->lifetime = 0;
@@ -358,7 +358,7 @@ dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
 
 const char *CreamResource::getDelegationError( Proxy *job_proxy )
 {
-	ProxyDelegation *next_deleg;
+	CreamProxyDelegation *next_deleg;
 
 	delegatedProxies.Rewind();
 
@@ -373,7 +373,7 @@ const char *CreamResource::getDelegationError( Proxy *job_proxy )
 	}
 
 	dprintf( D_FULLDEBUG, "getDelegationError(): failed to find "
-			 "ProxyDelegation for proxy %s\n", job_proxy->proxy_filename );
+			 "CreamProxyDelegation for proxy %s\n", job_proxy->proxy_filename );
 	return NULL;
 }
 
@@ -381,7 +381,7 @@ int CreamResource::checkDelegation()
 {
 dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
 	bool signal_jobs;
-	ProxyDelegation *next_deleg;
+	CreamProxyDelegation *next_deleg;
 	time_t now = time( NULL );
 	CreamJob *next_job;
 	

@@ -35,7 +35,7 @@
 
 class GT4Job;
 class GT4Resource;
-struct ProxyDelegation;
+struct GT4ProxyDelegation;
 
 class GT4Resource : public BaseResource
 {
@@ -74,9 +74,9 @@ class GT4Resource : public BaseResource
 
 	char *proxySubject;
 	int delegationTimerId;
-	ProxyDelegation *activeDelegationCmd;
+	GT4ProxyDelegation *activeDelegationCmd;
 	char *delegationServiceUri;
-	List<ProxyDelegation> delegatedProxies;
+	List<GT4ProxyDelegation> delegatedProxies;
 	static int gahpCallTimeout;
 
 	GahpClient *gahp;
