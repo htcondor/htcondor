@@ -358,21 +358,21 @@ sub gnuplot_commands {
 
 	if($details eq "analdetail") {
 		$ylabel = "Tests per $binsize";
-		$xtics = "345600";
+		$xtics = "604800";
 	} elsif($details eq "autobuilds") {
 		$title = "Condor Build Results";
 		$ylabel = "Builds per $binsize";
-		$xtics = "345600";
+		$xtics = "604800";
 	} elsif($details eq "autotests") {
 		$ylabel = "Tests per $binsize";
-		$xtics = "345600";
+		$xtics = "604800";
 	} elsif($details eq "times") {
 		$title = "Condor Build & Test Times";
 		$ylabel = "Hours";
-		$xtics = "345600";
+		$xtics = "604800";
 	} else {
 		$ylabel = "Tests per $binsize";
-		$xtics = "345600";
+		$xtics = "604800";
 	}
 
 	# Load the common setup
