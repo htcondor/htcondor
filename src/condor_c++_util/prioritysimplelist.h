@@ -72,7 +72,7 @@ template <class ObjType>
 PrioritySimpleList<ObjType>::
 PrioritySimpleList() : SimpleList<ObjType>()
 {
-	priorities = new int[maximum_size];
+	priorities = new int[this->maximum_size];
 }
 
 template <class ObjType>
@@ -80,8 +80,8 @@ PrioritySimpleList<ObjType>::
 PrioritySimpleList (const PrioritySimpleList<ObjType> & list) :
 	SimpleList<ObjType>(list)
 {
-	priorities = new int[maximum_size];
-    memcpy( priorities, list.priorities, sizeof( int ) * size );
+	priorities = new int[this->maximum_size];
+    memcpy( priorities, list.priorities, sizeof( int ) * this->size );
 }
 
 template <class ObjType>
@@ -109,13 +109,13 @@ void
 PrioritySimpleList<ObjType>::
 DeleteCurrent()
 {
-    if ( current >= size || current < 0 ) {
+    if ( this->current >= this->size || this->current < 0 ) {
 		return;
 	}
 
 		// Note: we may want to change this around to be faster -- wenger
 		// 2007-08-07.
-    for ( int i = current; i < size - 1; i++ ) {
+    for ( int i = this->current; i < this->size - 1; i++ ) {
 		priorities [i] = priorities [i+1];
 	}
 
@@ -129,18 +129,18 @@ Delete( const ObjType &item, bool delete_all )
 {
 	bool found_it = false;
 
-	for ( int i = 0; i < size; i++ ) {
-		if ( items[i] == item ) {
+	for ( int i = 0; i < this->size; i++ ) {
+		if ( this->items[i] == item ) {
 			found_it = true;
 				// Note: we may want to change this around to be faster --
 				// wenger 2007-08-07.
-			for ( int j = i; j < size - 1; j++ ) {
-				items[j] = items[j+1];
+			for ( int j = i; j < this->size - 1; j++ ) {
+				this->items[j] = this->items[j+1];
 				priorities[j] = priorities[j+1];
 			}
-			size--;
-			if ( current >= i ) {
-				current--;
+			this->size--;
+			if ( this->current >= i ) {
+				this->current--;
 			}
 			if ( delete_all == false ) {
 				return true;
@@ -160,7 +160,7 @@ resize( int newsize )
 	int		*buf = new int[newsize];
 	if ( !buf ) return false;
 
-	int smaller = (newsize < size) ? newsize : size;
+	int smaller = (newsize < this->size) ? newsize : this->size;
 	for ( int i = 0; i < smaller; i++ ) {
 		buf[i] = priorities[i];
 	}
@@ -177,11 +177,11 @@ PrioritySimpleList<ObjType>::
 FindInsertBefore( int priority )
 {
 		// Make the most common case fast.
-	if ( size == 0 || priorities[0] >= priority) return 0;
+	if ( this->size == 0 || priorities[0] >= priority) return 0;
 
 	int		index;
-	bool	found = BinarySearch<int>::Search( priorities, size, priority,
-				index );
+	bool	found = BinarySearch<int>::Search( priorities, this->size,
+				priority, index );
 	if ( found ) {
 		for ( ; index >= 0; index-- ) {
 			if ( priorities[index] < priority ) break;
@@ -198,13 +198,14 @@ PrioritySimpleList<ObjType>::
 FindInsertAfter( int priority )
 {
 		// Make the most common case fast.
-	if ( size == 0 || priorities[size-1] <= priority) return size;
+	if ( this->size == 0 || priorities[this->size-1] <= priority)
+				return this->size;
 
 	int		index;
-	bool	found = BinarySearch<int>::Search( priorities, size, priority,
-				index );
+	bool	found = BinarySearch<int>::Search( priorities, this->size,
+				priority, index );
 	if ( found ) {
-		for ( ; index < size; index++ ) {
+		for ( ; index < this->size; index++ ) {
 			if ( priorities[index] > priority ) break;
 		}
 	}
@@ -218,8 +219,8 @@ PrioritySimpleList<ObjType>::
 InsertAt( int index, const ObjType &item, int prio )
 {
 		// Enlarge if necessary.
-    if (size >= maximum_size) {
-		if ( !resize( 2 * maximum_size ) ) {
+    if (this->size >= this->maximum_size) {
+		if ( !resize( 2 * this->maximum_size ) ) {
 			return false;
 		}
 	}
@@ -227,15 +228,15 @@ InsertAt( int index, const ObjType &item, int prio )
 		// Move following stuff back one slot.
 		// Note: we may want to change this around to be faster -- wenger
 		// 2007-08-07.
-	for ( int i = size; i > index; i-- ) {
-		items[i] = items[i-1];
+	for ( int i = this->size; i > index; i-- ) {
+		this->items[i] = this->items[i-1];
 		priorities[i] = priorities[i-1];
 	}
 
 		// Insert the new item.
-	items[index] = item;
+	this->items[index] = item;
 	priorities[index] = prio;
-	size++;
+	this->size++;
 
 	return true;
 }
