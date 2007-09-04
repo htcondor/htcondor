@@ -4004,7 +4004,10 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		ClassAd* job_ad;
 		job_ad = GetNextJobByConstraint( constraint, 1 );
-		while( job_ad ) {
+		for( job_ad = GetNextJobByConstraint( constraint, 1 );
+		     job_ad;
+		     job_ad = GetNextJobByConstraint( constraint, 0 ))
+		{
 			if(	job_ad->LookupInteger(ATTR_CLUSTER_ID,tmp_id.cluster) &&
 				job_ad->LookupInteger(ATTR_PROC_ID,tmp_id.proc) ) 
 			{
@@ -4019,13 +4022,11 @@ Scheduler::actOnJobs(int, Stream* s)
 						// done.
 					if( !OwnerCheck(m_ad, rsock->getOwner()) ) {
 						results.record( tmp_id, AR_PERMISSION_DENIED );
-						job_ad = GetNextJobByConstraint( constraint, 0 );
 						continue;
 					}
 					results.record( tmp_id, AR_SUCCESS );
 					jobs[num_matches] = tmp_id;
 					num_matches++;
-					job_ad = GetNextJobByConstraint( constraint, 0 );
 					continue;
 				}
 
@@ -4053,7 +4054,6 @@ Scheduler::actOnJobs(int, Stream* s)
 				if( SetAttribute(tmp_id.cluster, tmp_id.proc,
 								 ATTR_JOB_STATUS, status_str) < 0 ) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
-					job_ad = GetNextJobByConstraint( constraint, 0 );
 					continue;
 				}
 				if( reason ) {
@@ -4069,7 +4069,6 @@ Scheduler::actOnJobs(int, Stream* s)
 				jobs[num_matches] = tmp_id;
 				num_matches++;
 			} 
-			job_ad = GetNextJobByConstraint( constraint, 0 );
 		}
 		free( constraint );
 		constraint = NULL;
