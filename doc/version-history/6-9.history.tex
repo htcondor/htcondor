@@ -116,6 +116,10 @@ within a DAG are submitted in priority order by \Condor{dagman}.
 executing, the chance of encountering Globus GRAM error 31 (the job manager
 failed to cancel the job as requested) is now much reduced.
 
+\item Fixed a problem introduced in 6.9.4: the \Condor{schedd} would hang
+when given a constraint with \Condor{hold} that included jobs that the user
+did not have permission to modify.
+
 \end{itemize}
 
 \noindent Known Bugs:
