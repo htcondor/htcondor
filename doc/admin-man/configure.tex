@@ -4574,30 +4574,24 @@ do not specify their own with:
 \item[\Macro{DEFAULT\_RANK}] \label{param:DefaultRank}
   Default rank expression for any job that does not specify
   its own rank expression in the submit description file.  
-  Defaults to
-  \begin{verbatim}
-     ((Memory*1024) > Imagesize)
-  \end{verbatim}
-  which states that the job prefers machines where there is
-  more main memory than the image size of the job.
+  There is no default value, such that when undefined,
+  the value used will be 0.0.
 
 \item[\Macro{DEFAULT\_RANK\_VANILLA}] \label{param:DefaultRankVanilla}
   Default rank for vanilla universe jobs.  
-  Defaults to
-  \begin{verbatim}
-     ((Memory*1024) > Imagesize)
-  \end{verbatim}
-  which states that the job prefers machines where there is
-  more main memory than the image size of the job.
+  There is no default value, such that when undefined,
+  the value used will be 0.0.
+  When both \MacroNI{DEFAULT\_RANK} and \MacroNI{DEFAULT\_RANK\_VANILLA}
+  are defined, the value for \MacroNI{DEFAULT\_RANK\_VANILLA} is
+  used for vanilla universe jobs.
 
 \item[\Macro{DEFAULT\_RANK\_STANDARD}] \label{param:DefaultRankStandard}
   Default rank for standard universe jobs.
-  Defaults to
-  \begin{verbatim}
-     ((Memory*1024) > Imagesize)
-  \end{verbatim}
-  which states that the job prefers machines where there is
-  more main memory than the image size of the job.
+  There is no default value, such that when undefined,
+  the value used will be 0.0.
+  When both \MacroNI{DEFAULT\_RANK} and \MacroNI{DEFAULT\_RANK\_STANDARD}
+  are defined, the value for \MacroNI{DEFAULT\_RANK\_STANDARD} is
+  used for standard universe jobs.
 
 \item[\Macro{DEFAULT\_IO\_BUFFER\_SIZE}] \label{param:DefaultBufferSize}
   Condor keeps a buffer of recently-used data for each file an
