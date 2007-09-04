@@ -309,6 +309,11 @@ processing a job's crontab entries in the submit description file.
 
 \begin{itemize}
 
+\item \SubmitCmd{grid} universe jobs for the gt4 grid type do not work, 
+if Condor daemons are started as root
+and there is file transfer associated with or specified by the job.
+These jobs are placed on hold.
+
 \item The \Macro{STARTD\_RESOURCE\_PREFIX} setting on Windows results
 in broken behavior on both Condor 6.9.3 and 6.9.4. Specifically, when
 this setting is given a value other than its default (``slot''), all
@@ -317,6 +322,19 @@ regardless of the actual slot used for execution.
 
 \end{itemize}
 
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item New documentation for the new \SubmitCmd{vm} universe
+in the User's Manual, section~\ref{sec:vmuniverse}.
+Definitions of configuration variables for the \SubmitCmd{vm} universe are in
+section~\ref{sec:Config-VMs}.
+
+\item New RDBMS schema tables added for Quill in
+section~\ref{sec:Quill-Schema}.
+
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-6-9-3}Version 6.9.3}
