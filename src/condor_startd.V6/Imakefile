@@ -33,7 +33,9 @@ template_inst( startd_instantiate.C, startd_instantiate.o )
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
+#if HAVE_EXT_GLOBUS
 public_copy_target(glexec_starter_setup.sh,libexec,glexec_starter_setup.sh,EXECUTABLE_MODE)
+#endif
 
 c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o startd_instantiate.o,$(LIB))
 
