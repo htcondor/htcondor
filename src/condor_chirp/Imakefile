@@ -16,6 +16,7 @@ public_copy_target($(NAME),lib,$(NAME),EXECUTABLE_MODE)
 public_copy_target($(CONDOR_CHIRP_NAME),libexec,$(CONDOR_CHIRP_NAME),EXECUTABLE_MODE)
 public_copy_target(chirp_client.c,src/chirp,chirp_client.c,TEXT_MODE)
 public_copy_target(chirp_client.h,src/chirp,chirp_client.h,TEXT_MODE)
+public_copy_target(chirp_protocol.h,src/chirp,chirp_protocol.h,TEXT_MODE)
 
 public_symlink_target(../src/chirp/chirp_client.h,include,chirp_client.h)
 
