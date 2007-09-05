@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.2.2.2 2007-04-23 17:44:40 pavlo Exp $
+# $Id: platform_post,v 1.2.2.3 2007-09-05 15:59:14 bt Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -63,7 +63,7 @@ $runid || die "Can't find runid from gid, NOT submitting tests\n";
 
 # Skip MacOS 10.4 for now
 my $status;
-unless ($platform =~ /macos_10\.4/) {
+#unless ($platform =~ /macos_10\.4/) {
     print "Attempting to submit test job for platform: '$platform' "
         . "runid: '$runid' ...\n";
 
@@ -86,7 +86,7 @@ unless ($platform =~ /macos_10\.4/) {
     }
     close( CNS );
     $status = $?;
-} # UNLESS
+#} # UNLESS
 
 if( ! $status ) {
     # exited with status 0, we're happy
