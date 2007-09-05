@@ -26,7 +26,6 @@
 #include "procapi_internal.h"
 #include "condor_debug.h"
 #include "condor_arglist.h"
-#include "my_popen.h"
 
 unsigned int hashFunc( const pid_t& pid );
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
@@ -1255,6 +1254,52 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	task_basic_info 	ti;
 	unsigned int 		count;	
 
+	/*
+		Depending upon how the user machine is configured, task_for_pid() could
+		work or not work when a process is not running as root. As of macos
+		10.4, the default is 0. However, since an admin may configure their
+		machine to have a process utilize task_for_pid when it isn't running
+		as root, we allow the admin to tell Condor about this.
+
+		As for 09/05/2007 for macosx 10.3 & 10.4, these are the 
+		applicable values.
+
+		Old policy is:
+			- the caller is running as root (EUID 0)
+			- if the caller is running as the
+				same UID as the target (and the target's
+				EUID matches its RUID, that is, it's not
+				running a setuid binary)
+		New policy is:
+			- if the caller was running as root (EUID 0)
+			- if the pid is that of the caller
+			- if the caller is running as the same UID
+				as the target and the target's EUID matches
+				its RUID, that is, it's not a setuid binary
+				AND the caller is in group "procmod" or
+				"procview"
+
+				The long term goal of having both "procmod"
+				and "procview" is that task_for_pid would
+				return a send right for the task control
+				port only to those processes in "procmod";
+				the callers in "procview" would only get a
+				send right to a task inspection port.  This
+				distinction is not currently implemented.
+
+		To actually set the policy, do this:
+
+		$ sudo sysctl -w kern.tfp.policy=1 #set old policy
+		$ sudo sysctl -w kern.tfp.policy=2 #set new policy
+		$ sudo sysctl -w kern.tfp.policy=0 #disable task_for_pid except for root
+
+		Since I can't seem to find a man page for task_for_pid() *anywhere*,
+		which is odd, I'm going to declare that if it comes back not a 
+		KERN_SUCCESS, then I don't have permission to see the pid. Sadly,
+		I can't tell if a pid is not there, or I don't have a permission
+		to see it using this method.
+	*/
+
 		// assume success
 	status = PROCAPI_OK;
 
@@ -1313,15 +1358,28 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
         return PROCAPI_FAILURE;
     }
 
-	// If we are root, we have a kernel interface we can use to gather
-	// some additional information
-	if (is_root()) {
+	// figure out the image,rss size and the sys/usr time for the process.
 
-		// figure out the image,rss size and the sys/usr time for the process.
+	kern_return_t results;
+	results = task_for_pid(mach_task_self(), pid, &task);
+	if(results != KERN_SUCCESS) {
+		// Since we weren't able to get a mach port, we're going to assume that
+		// we don't have permission to attach to the pid.  (I can't seem to
+		// find a man page for this function in the vast wasteland of the
+		// internet or on any machine on which I have access. So, I'm also
+		// going to mash the no such process error into this case, which is
+		// slightly wrong, but that should have already been caught above with
+		// sysctl()). XXX I'm sure this function call has all sorts of error
+		// edge cases I am not handling due to the opaqueness of this
+		// function. :(
 
-		kern_return_t results;
-		results = task_for_pid(mach_task_self(), pid, &task);
-		if(results != KERN_SUCCESS) {
+		// Ok, if we are root, and this call failed (when in the normal case it
+		// wasn't supposed to), then fail. Otherwise, we're non-root, so squash
+		// the error and keep going. This sadly hides the case where the
+		// machine was configured to allow task_for_pid for non-root users, but
+		// the invocation failed for some reason. This is the best we have...
+		if (getuid() == 0 || geteuid() == 0) { 
+		
 			status = PROCAPI_UNSPECIFIED;
 
 			dprintf( D_FULLDEBUG, 
@@ -1330,11 +1388,34 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 			free(kp);
 
-        	return PROCAPI_FAILURE;
+       		return PROCAPI_FAILURE;
 		}
-	
+
+		// This will be set to zero at this time due to there being a LOT of
+		// code change for a stable series to make it efficient when we invoke
+		// /bin/ps to get this information. But if a better way to call ps is
+		// created, the function call to fill this stuff in goes right here.
+
+		procRaw.imgsize = 0;
+		procRaw.rssize = 0;
+
+		// XXX This sucks, but there is *no* method to get this which doesn't
+		// involve a privledge escalation or hacky and not recommended dynamic
+		// library injection in the program being tracked. Either this process
+		// must be escalated or another escalated program invoked which gets
+		// this for me.
+
+		procRaw.user_time_1 = 0;
+		procRaw.user_time_2 = 0;
+		procRaw.sys_time_1 = 0;
+		procRaw.sys_time_2 = 0;
+
+	} else {
+
+		/* We successfully got a mach port... */
+
 		count = TASK_BASIC_INFO_COUNT;	
-		results = task_info(task, TASK_BASIC_INFO, (task_info_t)&ti, &count);  
+		results = task_info(task, TASK_BASIC_INFO, (task_info_t)&ti,&count);  
 		if(results != KERN_SUCCESS) {
 			status = PROCAPI_UNSPECIFIED;
 
@@ -1345,9 +1426,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 			mach_port_deallocate(mach_task_self(), task);
 			free(kp);
 
-        	return PROCAPI_FAILURE;
+       		return PROCAPI_FAILURE;
 		}
-
 
 		// fill in the values we got from the kernel
 		procRaw.imgsize = (u_long)ti.virtual_size;
@@ -1359,27 +1439,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 		// clean up our port
 		mach_port_deallocate(mach_task_self(), task);
-
-	} else {
-		// We're running as a personal Condor, so get image,rss,sys/user time
-		// some other way if possible.
-
-		// This will be set to zero at this time due to there being a LOT of
-		// code change for a stable series to make it efficient when we invoke
-		// /bin/ps to get this information.
-		procRaw.imgsize = 0;
-		procRaw.rssize = 0;
-
-		// XXX This sucks, but there is *no* method to get this which doesn't
-		// involve a privledge escalation or hacky and not recommended dynamic
-		// library injection in the program being tracked. Either this 
-		// process must be escalated or another escalated program invoked 
-		// which gets this for me.
-		procRaw.user_time_1 = 0;
-		procRaw.user_time_2 = 0;
-		procRaw.sys_time_1 = 0;
-		procRaw.sys_time_2 = 0;
 	}
+
 
 	// add in the rest
 	procRaw.creation_time = kp->kp_proc.p_starttime.tv_sec;
