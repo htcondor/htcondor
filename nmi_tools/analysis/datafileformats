@@ -29,3 +29,8 @@ Note we scale and shift 3 columns for large values and plot a different color
 1,              2,             3,             4,            5,     6,              7,             8
 plotdate,   	platform,      build time(b), test time(t), (b&t), build time(Lb), test time(Lt), (Lb&t)
 we plot in this order: 8, 6, 5, 3
+
+Download Plots
+plotdate, good, bad, good/20, bad/20, good/200, bad/200     ( for scaling )
+we plot in this order: 2, 3, 4, 5, 6, 7
+
