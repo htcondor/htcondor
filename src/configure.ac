@@ -1919,7 +1919,7 @@ fi
 
 CONDOR_EXTERNAL_VERSION([krb5],[1.4.3])
 
-CONDOR_EXTERNAL_VERSION([globus],[4.0.3-2])
+CONDOR_EXTERNAL_VERSION([globus],[4.0.5])
 AC_MSG_CHECKING([globus flavor])
 _cv_globus_flavor=gcc32dbg
 if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" -o "$_cv_arch" = "X86_64"; then
@@ -1938,7 +1938,7 @@ CONDOR_EXTERNAL_VERSION([gt4gahp],[1.7])
 
 CONDOR_EXTERNAL_VERSION([unicoregahp],[1.2.0])
 
-CONDOR_EXTERNAL_VERSION([nordugridgahp],[1.1.0])
+CONDOR_EXTERNAL_VERSION([nordugridgahp],[1.1.1])
 
 CONDOR_EXTERNAL_VERSION([zlib],[1.1.3])
 
