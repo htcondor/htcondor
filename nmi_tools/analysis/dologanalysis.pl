@@ -3,11 +3,25 @@ use File::Copy;
 use File::Path;
 use Getopt::Long;
 
+my $dbtimelog = "/tmp/btplots/dodownloads.log";
+#print "Trying to open logfile... $dbtimelog\n";
+open(OLDOUT, ">&STDOUT");
+open(OLDERR, ">&STDERR");
+open(STDOUT, ">$dbtimelog") or die "Could not open $dbtimelog: $!";
+open(STDERR, ">&STDOUT");
+select(STDERR);
+ $| = 1;
+ select(STDOUT);
+  $| = 1;
+
+chdir("/p/condor/public/html/developers/download_stats");
+
+my $tooldir = "/p/condor/home/tools/build-test-plots/";
 my $datalocation = "/p/condor/public/license/";
 my $datacruncher = "filter_sendfile";
 my $crunch = $datalocation . $datacruncher;
-#my @datafiles = ( "sendfile-v6.0", "sendfile-v6.1", "sendfile-v6.2", "sendfile-v6.3", "sendfile-v6.4", "sendfile-v6.5", "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9" );
-my @datafiles = ( "sendfile-v6.8" );
+my @datafiles = ( "sendfile-v6.0", "sendfile-v6.1", "sendfile-v6.2", "sendfile-v6.3", "sendfile-v6.4", "sendfile-v6.5", "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9" );
+#my @datafiles = ( "sendfile-v6.8" );
 
 GetOptions (
 		'help' => \$help,
@@ -58,7 +72,7 @@ $year;
 $skip = "true";
 $trimdata = "no";
 
-print "$crunch\n";
+#print "$crunch\n";
 foreach $log (@datafiles) {
 	$datafile = $datalocation . $log;
 	print "$log\n";
@@ -71,7 +85,7 @@ foreach $log (@datafiles) {
 	while(<LOGDATA>) {
 		chomp;
 		$line = $_;
-		print "$_\n";
+		#print "$_\n";
 		if($line =~ /^\s+[\?MB]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):.*/) {
 			if( $skip eq "true" )  {
 				$skip = "false";
@@ -90,7 +104,7 @@ foreach $log (@datafiles) {
 			$month = $2;
 			$year = $5;
 			$totalgood = $totalgood + 1;
-			print "Good $2 $3 $5\n";
+			#print "Good $2 $3 $5\n";
 		} elsif($line =~ /^\*[\?MB]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):.*/) {
 			if( $skip eq "true" )  {
 				$skip = "false";
@@ -109,9 +123,9 @@ foreach $log (@datafiles) {
 			$month = $2;
 			$year = $5;
 			$totalbad = $totalbad + 1;
-			print "Bad $2 $3 $5\n";
+			#print "Bad $2 $3 $5\n";
 		} else {
-			print "Can not determine\n";
+			#print "Can not determine\n";
 		}
 
 		if($trimdata eq "yes") {
@@ -129,9 +143,9 @@ foreach $log (@datafiles) {
 	#close the date file and generate image
 	close(LOGDATA);
 	close(OUT);
-	$graphcmd = "./make-graphs-hist --firstdate \"$firstdate\" --detail downloadlogs --daily --input $outfile --output $image";
-	print "About to execute this:\n";
-	print "$graphcmd\n";
+	$graphcmd = "$tooldir/./make-graphs-hist --firstdate \"$firstdate\" --detail downloadlogs --daily --input $outfile --output $image";
+	#print "About to execute this:\n";
+	#print "$graphcmd\n";
 	system("$graphcmd");
 
 }
@@ -197,7 +211,7 @@ sub DoOutput
 sub CheckForEnd
 {
 	# $trimdata = CheckForEnd( $month, $2 );
-	print "last month was $month and now $2\n";
+	#print "last month was $month and now $2\n";
 	$lastmonth = shift;
 	$thismonth = shift;
 	$thisday = shift;
@@ -222,43 +236,43 @@ sub CheckForEnd
 
 	if( $lastmonth == 12 ) {
 		if($thismonth == 1) {
-			print "January after December\n";
+			#print "January after December\n";
 			return("no");
 		} else {
-			print "NOT January after December\n";
+			#print "NOT January after December\n";
 			# end of month reversion to last month?
 			# sometimes we have previous day events after
 			# we change days....... assume this is the case 
 			# and it is not an 11 month skip....
 			if( $thismonth == 11 ) {
 				# assume nov 30/Dec 1
-				print "Late  november\n";
+				#print "Late  november\n";
 				return("no");
 			} else {
-				print "stopping on last <$lastmonth> this <$thismonth>\n";
+				#print "stopping on last <$lastmonth> this <$thismonth>\n";
 				return("yes");
 			}
 		}
 	} else {
 		if( $thismonth != ($lastmonth + 1)) {
-			print "Increment of NOT 1 $lastmonth/$thismonth\n";
+			#print "Increment of NOT 1 $lastmonth/$thismonth\n";
 			# end of month reversion to last month?
 			# sometimes we have previous day events after
 			# we change days....... assume this is the case 
 			# and it is not an 11 month skip....
 			if(($lastmonth == 1) && ($thismonth == 12)) {
 				# dec 31/Jan 1
-				print "dec 31/Jan 1\n";
+				#print "dec 31/Jan 1\n";
 				return("no");
 			} elsif( $thismonth < $lastmonth ) {
 				return("no");
-				print "This less then last\n";
+				#print "This less then last\n";
 			} else {
-				print "stopping on last <$lastmonth> this <$thismonth>\n";
+				#print "stopping on last <$lastmonth> this <$thismonth>\n";
 				return("yes");
 			}
 		} else {
-			print "Increment of 1 $lastmonth/$thismonth\n";
+			#print "Increment of 1 $lastmonth/$thismonth\n";
 			return("no");
 		}
 	}
