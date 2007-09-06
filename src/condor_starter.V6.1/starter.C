@@ -257,6 +257,9 @@ CStarter::ShutdownGraceful(int)
 	if (!jobRunning) {
 		dprintf(D_FULLDEBUG, 
 				"Got ShutdownGraceful when no jobs running.\n");
+		// This one following line is a backport of code already
+		// in 6.9, and should not need to be merged forward
+		this->allJobsDone();
 		return 1;
 	}	
 	return 0;
@@ -301,6 +304,9 @@ CStarter::ShutdownFast(int)
 	if (!jobRunning) {
 		dprintf(D_FULLDEBUG, 
 				"Got ShutdownFast when no jobs running.\n");
+		// This one following line is a backport of code already
+		// in 6.9, and should not need to be merged forward
+		this->allJobsDone();
 		return 1;
 	}	
 	return 0;
