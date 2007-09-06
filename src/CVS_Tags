@@ -1,3 +1,8 @@
+09/06/07 V6_9-PR852-{root,branch}
+  This branch has changes related to implementing the feature requested
+  in PR 852 (have different maxjobs limits for different types of jobs
+  in a DAG).
+
 08/9/07 V6_9-dag_node_priority-merge-1
   The state of V6_9-dag_node_priority-branch after code review & associated
   fixes.  Ready to merge to the trunk; no further development should happen
