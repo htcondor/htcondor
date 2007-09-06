@@ -43,6 +43,7 @@ int bindWithin(const int fd, const int low_port, const int high_port);
 
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  TCP */
 /* (Also allow strings of the form "<hostname>:pppp>")  */
+/* This function has a unit test. */
 int
 string_to_sin( const char *addr, struct sockaddr_in *sa_in )
 {
@@ -106,6 +107,7 @@ string_to_sin( const char *addr, struct sockaddr_in *sa_in )
 }
 
 
+/* This function has a unit test. */
 char *
 sin_to_string(const struct sockaddr_in *sa_in)
 {
@@ -323,6 +325,12 @@ host_in_domain( const char *host, const char *domain )
 NOTE: it looks like sin_addr may be modified even if the return
   value is FALSE.  -zmiller
 */
+/* XXX:  Known problems:  This function succeeds even if something with less
+ * than four octets is passed in without a wildcard.  Also, strings with
+ * multiple wildcards (such as 192.168.*.*) are not allowed, perhaps those
+ * should be considered the same as 192.168.*  ~tristan 8/16/07
+ */
+/* This function has a unit test. */
 int
 is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
 {
@@ -405,6 +413,12 @@ is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
 
 // checks to see if 'network' is a valid ip/netmask.  if given pointers to
 // ip_addr structs, they will be filled in.
+/* XXX:  Known Problems:  This function simply checks to see if the string is
+   <ip address>/<ip address> using the is_ipaddr() function call.  This means
+   either may have wildcards, and the netmask doesn't have to be a valid
+   netmask, as long as it looks something like an IP address.  ~tristan 8/16/07
+ */
+/* This function has a unit test. */
 int
 is_valid_network( const char *network, struct in_addr *ip, struct in_addr *mask)
 {
@@ -461,7 +475,11 @@ is_valid_network( const char *network, struct in_addr *ip, struct in_addr *mask)
 	return FALSE;
 }
 
-
+/*
+	XXX:  known problems:  This function allows anything after the :, it
+	doesn't have to be a port number.  ~tristan 8/20/07
+*/
+/* This function has a unit test. */
 int
 is_valid_sinful( const char *sinful )
 {
@@ -489,7 +507,14 @@ is_valid_sinful( const char *sinful )
 	return TRUE;
 }
 
-
+/*
+	XXX:  known problems:  is_valid_sinful() doesn't do error checking on the
+	port number, this function doesn't, and neither does atoi().  Possible fix
+	would be to migrate all uses of this function to getPortFromAddr(), which
+	does at least basic error checking.
+		  ~tristan 8/20/07
+*/
+/* This function has a unit test. */
 int
 string_to_port( const char* addr )
 {
@@ -512,7 +537,11 @@ string_to_port( const char* addr )
 	return port;
 }
 
-
+/* XXX:  known problems:  string_to_ip() uses is_ipaddr(), and so has the same
+ * flaws.  Mainly, input like 66.199 is assumed to be followed by ".*" even
+ * though that's a badly formed IP address.  ~tristan 8/22/07
+ */
+/* This function has a unit test. */
 unsigned int
 string_to_ip( const char* addr )
 {
@@ -563,7 +592,7 @@ string_to_ipstr( const char* addr )
 	return NULL;
 }
 
-
+/* This function has a unit test. */
 char*
 string_to_hostname( const char* addr ) 
 {
@@ -685,6 +714,7 @@ int bindWithin(const int fd, const int low_port, const int high_port)
 
 /* Check if the ip is in private ip address space */
 /* ip: in host byte order */
+/* This function has a unit test. */
 int
 is_priv_net(uint32_t ip)
 {
@@ -761,6 +791,7 @@ prt_fds(int maxfd, fd_set *fds)
     return buf;
 }
 
+/* This function has a unit test. */
 int
 getPortFromAddr( const char* addr )
 {
@@ -802,6 +833,7 @@ getPortFromAddr( const char* addr )
 }
 
 
+/* This function has a unit test. */
 char*
 getHostFromAddr( const char* addr )
 {

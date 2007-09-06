@@ -66,7 +66,7 @@
 #endif
 
 #define Programs \
-		procapi sysapi accountant.V6 ckpt_server \
+		procapi sysapi unit_tests accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools KbddProgs collector.V6 PvmProgs dagman userlog Eventd \
@@ -236,6 +236,7 @@ condor_object_target(util_lib)
 condor_object_target(c++_util)
 condor_object_target(procapi)
 condor_object_target(sysapi)
+condor_object_target(unit_tests)
 condor_object_target(tools)
 condor_object_target(examples)
 #if WANT_NETMAN

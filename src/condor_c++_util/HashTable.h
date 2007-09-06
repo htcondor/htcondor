@@ -353,7 +353,9 @@ int HashTable<Index,Value>::lookup(const Index &index, Value* &value ) const
 // is NULL. Upon subsequent calls, caller should set
 // current = next before calling again. If Index not found,
 // returns -1.
-
+/*	This function doesn't appear to be used the the Condor sources,
+	no unit test written.
+*/
 template <class Index, class Value>
 int HashTable<Index,Value>::getNext(Index &index, void *current,
 				    Value &value, void *&next) const

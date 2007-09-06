@@ -1,0 +1,101 @@
+HOW TO ADD A UNIT TEST
+
+A test for any given function should be in a file called FTEST_<function name>.  Unit tests for objects are named as OTEST_<object>.  To add a new unit test, the easiest thing to do is to copy an existing one and clear out the test_ functions and include only the ones you need, this way the driver is all set up for you.  Each test function should end with emit_test_break() and your entire test of the function should end with emit_function_break().  The rest of the function calls should be self-explanatory.
+There are several changes you need to make to add a new test.  First, go to the Imakefile and add your test to the correct line.  Then go to unit_tests.C.  To get your test to run with all the rest of the tests, you need to add a prototype for your test and register the function with the function driver, just follow the same format as existing unit tests.
+Sometimes it may be useful to add a function you will use several times in your unit tests, in this case it can go in unit_test_utils.C.  Be sure to check the functions in there to avoid adding duplicates.
+
+Format of the Tests
+
+There are two parts to the output of each test; the function header and the actual tests.  The function header is displayed once for each function that is being tested, while the test output will show up once each time you test the function.
+In all, the test ends up looking like this:
+
+FUNCTION:  prototype of function, printed out once
+COMMENT:  detailed comments may be put anywhere, but here is best
+KNOWN PROBLEM:  comments about known problems, may be anywhere, but here is best
+TEST:  test string for what the test does, there may be multiples of test blocks
+INPUT:
+    emission of input parameters
+EXPECTED OUTPUT:
+    expected return value and other expected output of test
+ACTUAL OUTPUT:
+    actual return value and other actual output of test
+RESULT:  SUCCESS|FAILURE, test passed|failed at line 72
+
+TEST: <more like the above>
+    ...
+
+
+Assume you had a function, ints_are_equal(), that you wanted to write a unit test for.  A singles test would look something like this:
+	// function header
+emit_function("bool ints_are_equal(int x, int y)");
+emit_comment("Determines if two given ints are equal");
+emit_problem("None");
+
+	// first test
+emit_test("Are two equivalent ints considered equal?");
+emit_input_header();
+emit_param("x", "3");
+emit_param("y", "3");
+emit_output_expected_header();
+emit_retval("TRUE");
+emit_output_actual_header();
+bool result = ints_are_equal(3, 3);
+if(result == NULL) {					// not possible in this case, but the idea holds
+	emit_alert("ints_are_equal(3, 3) returned NULL");
+	emit_result_abort(__LINE__);
+	return false;
+}
+emit_retval("%s", tfstr(result));		// tfstr() comes from unit_test_utils
+if(result) {
+	emit_result_success(__LINE__);
+} else {
+	emit_result_failure(__LINE__);
+}
+return result;
+
+The output from that test would look something like this...
+FUNCTION:  bool ints_are_equal(int x, int y)
+COMMENT:  Determines if two given ints are equal
+KNOWN PROBLEM:  None
+TEST:  Are two equivalent ints considered equal?
+INPUT:
+	x:  3
+	y:  3
+EXPECTED OUTPUT:
+	RETURN:  TRUE
+ACTUAL OUTPUT:
+	RETURN:  TRUE
+RESULT:  SUCCESS, test passed at line 72
+
+If your test were to fail, the result line would indicate failure instead of success.  When you write your tests, every test you write should pass.  If there is a specific test you know won't pass, that's what the "known problems" section is for.  This test program is here to help us notice when something that works perfectly now stops working.
+
+After all tests for a function have been run, your function that controls all your tests should call emit_function_break().
+After all functions and tests have been added, the output looks something like this:
+
+FUNCTION:  bool ints_are_equal(int x, int y)
+COMMENT:  Determines if two given ints are equal
+KNOWN PROBLEM:  None
+TEST:  Are two equivalent ints considered equal?
+INPUT:
+	x:  3
+	y:  3
+EXPECTED OUTPUT:
+	RETURN:  TRUE
+ACTUAL OUTPUT:
+	RETURN:  TRUE
+RESULT:  SUCCESS, test passed at line 72
+
+TEST:  Are two non-equivalent ints considered not equal?
+INPUT:
+	x:  3
+	y:  4
+EXPECTED OUTPUT:
+	RETURN:  FALSE
+ACTUAL OUTPUT:
+	RETURN:  FALSE
+RESULT:  SUCCESS, test passed at line 72
+
+-----------------------------------------------------------------------------------
+MODIFYING THE UNIT TEST SUITE
+
+All output is managed in emit.C and emit.h, those files contain all of the unit test suite's dependencies (at this point in time, dprintf and MyString).  unit_test_utils.C has helper functions common to many tests.  unit_tests.C contains the main() function, it runs the program.  The driver code is handled by function_test_driver.C.  All FTEST_ and OTEST_ files are actual tests (although be careful, they're not necessarily run unless they're in unit_tests.C).
