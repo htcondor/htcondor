@@ -67,6 +67,10 @@ remote resource. Submission now takes one operation instead of three.
 
 \begin{itemize}
 
+\item Fixed bug in the local universe where the local universe 
+execute directory was not removed when the job could not start.  The most
+common case was an incorrectly named executable file.
+
 \item Fixed a bug that prevented dollar dollar expansions with a default 
 argument that contained forward slashes, e.g., 
 \begin{verbatim}
