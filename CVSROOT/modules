@@ -280,7 +280,8 @@ V6_9_SRC		-a \
 			src/condor_privsep \
 			src/condor_dbmsd \
 			src/condor_tt \
-			src/condor_vm-gahp
+			src/condor_vm-gahp \
+			src/condor_unit_tests
 
 
 ######################################################################
