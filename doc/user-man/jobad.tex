@@ -115,6 +115,12 @@ Instead, see the attributes: \AdAttr{ExitBySignal},
 \AdAttr{ExitCode}, and
 \AdAttr{ExitSignal}.
 
+%%% ClassAd attribute: GridJobStatus
+\index{ClassAd job attribute!GridJobStatus}
+\index{GridJobStatus!job ClassAd attribute}
+\item[\AdAttr{GridJobStatus}:] A string containing the job's status as
+reported by the remote job management system.
+
 %%% ClassAd attribute: HoldReasonCode
 \index{ClassAd job attribute!HoldReasonCode}
 \index{HoldReasonCode!job ClassAd attribute}
@@ -375,20 +381,22 @@ negotiator.
 %%% ClassAd attribute: NumJobStarts
 \index{ClassAd job attribute!NumJobStarts}
 \index{NumJobStarts!job ClassAd attribute}
-\item[\AdAttr{NumJobStarts}:]  A count of the number of times the
+\item[\AdAttr{NumJobStarts}:]  An integer count of the number of times the
   job started executing.
-  This is not (yet) defined for Standard universe jobs.
+  This is not (yet) defined for \SubmitCmd{standard} universe jobs.
 
 %%% ClassAd attribute: NumJobReconnects
 \index{ClassAd job attribute!NumJobReconnects}
 \index{NumJobReconnects!job ClassAd attribute}
-\item[\AdAttr{NumJobReconnects}:]  A count of the number of times a
-  job successfully reconnected after being disconnected (when the
-  \Condor{shadow} and \Condor{starter} lose contact, e.g. because of
+\item[\AdAttr{NumJobReconnects}:]  An integer count of the number of times a
+  job successfully reconnected after being disconnected.
+  This occurs when the
+  \Condor{shadow} and \Condor{starter} lose contact, 
+  for example because of
   transient network failures or a \Condor{shadow} or \Condor{schedd}
-  restart).
-  This is only defined for jobs that can reconnected (Vanilla and Java
-  universes).
+  restart.
+  This attribute is only defined for jobs that can reconnected:
+  those in the \SubmitCmd{vanilla} and \SubmitCmd{java} universes.
 
 %%% ClassAd attribute: NumRestarts
 \index{ClassAd job attribute!NumRestarts}
@@ -399,16 +407,17 @@ checkpoint attempted by this job during its lifetime.
 %%% ClassAd attribute: NumShadowExceptions
 \index{ClassAd job attribute!NumShadowExceptions}
 \index{NumShadowExceptions!job ClassAd attribute}
-\item[\AdAttr{NumShadowExceptions}:]  A count of the number of
-  times the \Condor{shadow} for a given job had a fatal error.
+\item[\AdAttr{NumShadowExceptions}:]  An integer count of the number of
+  times the \Condor{shadow} daemon had a fatal error for a given job.
 
 %%% ClassAd attribute: NumShadowStarts
 \index{ClassAd job attribute!NumShadowStarts}
 \index{NumShadowStarts!job ClassAd attribute}
-\item[\AdAttr{NumShadowStarts}:]  A count of the number of
-  times a \Condor{shadow} was started for a given job.
-  This is not defined for Local and Scheduler universe jobs since
-  those do not have a \Condor{shadow} associated with them.
+\item[\AdAttr{NumShadowStarts}:]  An integer count of the number of
+  times a \Condor{shadow} daemon was started for a given job.
+  This attribute is not defined for \SubmitCmd{local} and
+  \SubmitCmd{scheduler} universe jobs, since
+  they do not have a \Condor{shadow} daemon associated with them.
 
 %%% ClassAd attribute: NumSystemHolds
 \index{ClassAd job attribute!NumSystemHolds}
