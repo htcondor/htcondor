@@ -30,6 +30,7 @@
 #include "list.h"
 
 
+
 /** This is the Parallel Shadow class.  It acts as a shadow for
 	Condor's parallel jobs.<p>
 
@@ -144,6 +145,9 @@ class ParallelShadow : public BaseShadow
 
  private:
 
+	enum ParallelShutdownPolicy {
+		WAIT_FOR_NODE0, WAIT_FOR_ALL, WAIT_FOR_ANY
+	};
         /** After the schedd claims a resource, it puts it in a queue
             and then sends us a RESOURCE_AVAILABLE signal.  Upon
             receipt of that signal (it's registered in init()), we
@@ -207,6 +211,8 @@ class ParallelShadow : public BaseShadow
 	int info_tid;	// DC id for our timer to get resource info 
 
 	bool is_reconnect; 
+
+	ParallelShutdownPolicy shutdownPolicy;
 };
 
 

@@ -382,6 +382,7 @@ const char *ATTR_MPI_IS_MASTER            = "MPIIsMaster";
 const char *ATTR_MPI_MASTER_ADDR       	 = "MPIMasterAddr";
 const char *ATTR_PARALLEL_IS_MASTER       = "ParallelIsMaster";   
 const char *ATTR_PARALLEL_MASTER_ADDR   	 = "ParallelMasterAddr"; 
+const char *ATTR_PARALLEL_SHUTDOWN_POLICY = "ParallelShutdownPolicy"; 
 const char *ATTR_MY_CURRENT_TIME		 = "MyCurrentTime";
 const char *ATTR_MY_TYPE					 = "MyType";
 const char *ATTR_NAME                     = "Name";

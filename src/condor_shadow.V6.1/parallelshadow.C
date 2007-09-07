@@ -47,6 +47,7 @@ ParallelShadow::ParallelShadow() {
 	actualExitReason = -1;
 	info_tid = -1;
 	is_reconnect = false;
+	shutdownPolicy = ParallelShadow::WAIT_FOR_NODE0;
 }
 
 ParallelShadow::~ParallelShadow() {
@@ -114,6 +115,14 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr )
 		// exit status, info about the run, etc, etc.
 	shadow_user_policy.init( temp, this );
 
+	shutdownPolicy = ParallelShadow::WAIT_FOR_NODE0;
+
+	MyString policy;
+	job_ad->LookupString(ATTR_PARALLEL_SHUTDOWN_POLICY, policy);
+	if (policy == "WAIT_FOR_ALL") {
+		dprintf(D_ALWAYS, "Setting parallel shutdown policy to WAIT_FOR_ALL\n");
+		shutdownPolicy= WAIT_FOR_ALL;
+	}
 }
 
 
@@ -494,6 +503,18 @@ ParallelShadow::shutDown( int exitReason )
 	}
 */
 
+	if (shutdownPolicy == WAIT_FOR_ALL) {
+    	for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
+			RemoteResource *r = ResourceList[i];
+			// If the policy is wait for all nodes to exit
+			// see if any are still running.  If so,
+			// just return, and wait for them all to go
+			if (r->getResourceState() == RR_EXECUTING) {
+				return;
+			}
+		}
+		
+	}
 		// If node0 is still running, don't really shut down
 	RemoteResource *r =  ResourceList[0];
 	if (r->getResourceState() == RR_EXECUTING) {
