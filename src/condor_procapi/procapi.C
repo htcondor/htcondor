@@ -1369,26 +1369,21 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 		// internet or on any machine on which I have access. So, I'm also
 		// going to mash the no such process error into this case, which is
 		// slightly wrong, but that should have already been caught above with
-		// sysctl()). XXX I'm sure this function call has all sorts of error
-		// edge cases I am not handling due to the opaqueness of this
-		// function. :(
+		// sysctl())--except for the race where the sysctl can succeed, then the
+		// process exit, then the tfp() call happens.
+		// XXX I'm sure this function call has all sorts of error edge cases I
+		// am not handling due to the opaqueness of this function. :(
 
-		// Ok, if we are root, and this call failed (when in the normal case it
-		// wasn't supposed to), then fail. Otherwise, we're non-root, so squash
-		// the error and keep going. This sadly hides the case where the
-		// machine was configured to allow task_for_pid for non-root users, but
-		// the invocation failed for some reason. This is the best we have...
+		// If root, then give a warning about it, but continue anyway. I've
+		// seen this function fail due to the pid not being present on the
+		// machine and sometimes "just because".  Also, there isn't a
+		// difference when a non-root user may not call task_for_pid() and when
+		// they may, but the pid isn't actually there.
 		if (getuid() == 0 || geteuid() == 0) { 
-		
-			status = PROCAPI_UNSPECIFIED;
-
 			dprintf( D_FULLDEBUG, 
-				"ProcAPI: task_port_pid() on pid %d failed with %d(%s)\n",
-				pid, results, mach_error_string(results) );
-
-			free(kp);
-
-       		return PROCAPI_FAILURE;
+				"ProcAPI: task_port_pid() on pid %d failed with "
+				"%d(%s), Marking imgsize, rsssize, cpu/sys time as zero for "
+				"the pid.\n", pid, results, mach_error_string(results) );
 		}
 
 		// This will be set to zero at this time due to there being a LOT of
