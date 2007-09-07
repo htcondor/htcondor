@@ -29,9 +29,9 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Condor-C now uses a more efficient protocol when querying the
-status of jobs from 6.9.5 and newer schedds.
+status of jobs from Condor 6.9.5 and newer \Condor{schedd} daemons.
 
-\item Added 4 new counters to the job classified ad:
+\item Added 4 new counters to the job ClassAd:
  \begin{itemize}
  \item \AdAttr{NumJobStarts}
  \item \AdAttr{NumJobReconnects}
@@ -41,8 +41,8 @@ status of jobs from 6.9.5 and newer schedds.
 For more information, please see their descriptions in
 section~\ref{user-man-jobad} on page~\pageref{user-man-jobad}.
 
-\item Added attribute \AdAttr{GridJobStatus} to the classified ads of
-grid universe jobs. This string shows the job's status as reported
+\item Added a new attribute, \AdAttr{GridJobStatus}, to the ClassAds of
+\SubmitCmd{grid} universe jobs. This string shows the job's status as reported
 by the remote job management system.
 
 \item \Condor{q} \Opt{-analyze} now shows the full hold reason for jobs
