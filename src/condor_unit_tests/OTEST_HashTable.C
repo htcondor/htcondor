@@ -40,16 +40,6 @@ HashTable< int, int >* table;
 unsigned int intHash(const int &myInt);
 int isOdd(int num);
 
-	// driver functions
-bool insertlookup(void);
-bool test_walk(void);
-bool test_iterate(void);
-bool test_remove(void);
-bool test_copy_constructor(void);
-bool test_equals(void);
-bool test_num_elems(void);
-bool test_table_size(void);
-
 	// test functions
 bool insertlookup_normal(void);
 bool insertlookup_collision(void);
@@ -66,6 +56,7 @@ bool test_equals_depth(void);
 bool test_num_elems_normal(void);
 bool test_num_elems_collision(void);
 bool test_table_size_normal(void);
+bool test_clear_normal(void);
 
 bool OTEST_HashTable() {
 		// beginning junk
@@ -76,152 +67,25 @@ bool OTEST_HashTable() {
 	e.emit_comment("Index=int, Value=int, hash function returns its input");
 	
 		// driver to run the tests and all required setup
-	FunctionDriver driver;
-	driver.register_function(&insertlookup);
-	driver.register_function(&test_walk);
-	driver.register_function(&test_iterate);
-	driver.register_function(&test_remove);
-	driver.register_function(&test_copy_constructor);
-	driver.register_function(&test_equals);
-	driver.register_function(&test_num_elems);
-	driver.register_function(&test_table_size);
-	
-		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
-}
-
-bool insertlookup() {
-		// beginning junk
-	e.emit_test("Tests of insert and lookup for general hash table procedures");
-	e.emit_comment("This test uses insert() and lookup()");
-	e.emit_problem("None");
-	
-		// driver to run the tests and all required setup
-	FunctionDriver driver;
+	FunctionDriver driver(20);
 	driver.register_function(&insertlookup_normal);
 	driver.register_function(&insertlookup_collision);
-
-		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
-}
-
-bool test_walk() {
-		// beginning junk
-	e.emit_test("Does walk() give us results we would expect?");
-	e.emit_comment("This test uses walk() and insert()");
-	e.emit_problem("None");
-	
-		// driver to run the tests and all required setup
-	FunctionDriver driver;
 	driver.register_function(&test_walk_normal);
 	driver.register_function(&test_walk_failed);
-
-		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
-}
-
-bool test_iterate() {
-		// beginning junk
-	e.emit_test("Does iterate() give us values we would expect?");
-	e.emit_comment("This function uses startIterations(), iterate(), and insert()");
-	e.emit_problem("None");
-	
-		// driver to run the tests and all required setup
-	FunctionDriver driver;
 	driver.register_function(&test_iterate_first);
 	driver.register_function(&test_get_current_key);
 	driver.register_function(&test_iterate_other);
-	driver.register_function(&test_iterate_other);	// call this twice
+	driver.register_function(&test_iterate_other);		// run this twice
 	driver.register_function(&test_iterate_null);
-
-		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
-}
-
-bool test_remove() {
-		// beginning junk
-	e.emit_test("Tests removing of items via remove()");
-	e.emit_comment("This test uses insert() remove() and lookup()");
-	e.emit_problem("None");
-	
-		// driver to run the tests and all required setup
-	FunctionDriver driver;
 	driver.register_function(&test_remove_normal);
 	driver.register_function(&test_remove_failed);
-
-		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
-}
-
-bool test_copy_constructor() {
-		// beginning junk
-	e.emit_test("HashTable(const HashTable &copy)");
-	e.emit_comment("Make a new HashTable as a copy of another");
-	e.emit_problem("None");
-	
-		// driver to run the tests and all required setup
-	FunctionDriver driver;
 	driver.register_function(&test_copy_constructor_depth);
-
-		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
-}
-
-bool test_equals() {
-		// beginning junk
-	e.emit_test("operator=");
-	e.emit_comment("Make a new HashTable as a copy of another");
-	e.emit_problem("None");
-	
-		// driver to run the tests and all required setup
-	FunctionDriver driver;
 	driver.register_function(&test_equals_depth);
-
-		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
-}
-
-bool test_num_elems() {
-		// beginning junk
-	e.emit_test("Does getNumElements report the correct number of elements?");
-	e.emit_comment("Find out how many elements are in the HashTable.");
-	e.emit_problem("None");
-	
-		// driver to run the tests and all required setup
-	FunctionDriver driver;
 	driver.register_function(&test_num_elems_normal);
 	driver.register_function(&test_num_elems_collision);
-
-		// run the tests
-	bool test_result = driver.do_all_functions();
-	e.emit_function_break();
-	return test_result;
-}
-
-bool test_table_size() {
-		// beginning junk
-	e.emit_test("Does getTableSize report the correct size of the table, given at initialization?");
-	e.emit_comment("Find out how big the hash table is.");
-	e.emit_problem("None");
-	
-		// driver to run the tests and all required setup
-	FunctionDriver driver;
 	driver.register_function(&test_table_size_normal);
-
+	driver.register_function(&test_clear_normal);
+	
 		// run the tests
 	bool test_result = driver.do_all_functions();
 	e.emit_function_break();
@@ -229,7 +93,7 @@ bool test_table_size() {
 }
 
 bool insertlookup_normal() {
-	e.emit_test("Normal insert and lookup of values");
+	e.emit_test("Normal insert() and lookup() of values");
 	table = new HashTable< int, int >(10, intHash);
 	int insert_result = table->insert(150, 37);
 	e.emit_input_header();
@@ -254,7 +118,7 @@ bool insertlookup_normal() {
 }
 
 bool insertlookup_collision() {
-	e.emit_test("Insert/lookup with a collision");
+	e.emit_test("insert()/lookup() with a collision");
 	int insert_result = table->insert(30, 197);
 	e.emit_input_header();
 	e.emit_param("Index", "30");
@@ -385,7 +249,7 @@ bool test_iterate_null() {
 }
 
 bool test_remove_normal() {
-	e.emit_test("Remove something and make sure it's not there.");
+	e.emit_test("remove() something and make sure it's not there.");
 	int remove_result = table->remove(30);
 	if(remove_result != 0) {
 		e.emit_alert("Insert operation failed on the HashTable.");
@@ -409,7 +273,7 @@ bool test_remove_normal() {
 }
 
 bool test_remove_failed() {
-	e.emit_test("Remove something that doesn't exist and make sure an error is thrown.");
+	e.emit_test("remove() something that doesn't exist and make sure an error is thrown.");
 	e.emit_input_header();
 	e.emit_param("Index", "527");
 	e.emit_output_expected_header();
@@ -426,7 +290,7 @@ bool test_remove_failed() {
 }
 
 bool test_copy_constructor_depth() {
-	e.emit_test("Does the copy constructor copy the table deeply?");
+	e.emit_test("Does the copy constructor HashTable(const HashTable &copy) copy the table deeply?");
 	int value;
 	HashTable<int, int> *copy = new HashTable<int, int>(*table);
 	copy->insert(42, 120);
@@ -506,6 +370,24 @@ bool test_table_size_normal() {
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
 	if(result != 10) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_clear_normal() {
+	e.emit_test("clear() the HashTable and make sure it's empty");
+	int result = table->clear();
+	int numElems = table->getNumElements();
+	e.emit_output_expected_header();
+	e.emit_param("clear()'s RETURN", "%d", 0);
+	e.emit_param("getNumElements()'s RETURN", "%d", 0);
+	e.emit_output_actual_header();
+	e.emit_param("clear()'s RETURN", "%d", result);
+	e.emit_param("getNumElements()'s RETURN", "%d", numElems);
+	if(result != 0 || numElems != 0) {
 		e.emit_result_failure(__LINE__);
 		return false;
 	}
