@@ -354,6 +354,7 @@ extern const char * ATTR_OWNER;
 extern const char * ATTR_PARALLEL_SCHEDULING_GROUP;
 extern const char * ATTR_PARALLEL_SCRIPT_SHADOW;
 extern const char * ATTR_PARALLEL_SCRIPT_STARTER;
+extern const char * ATTR_PARALLEL_SHUTDOWN_POLICY;
 extern const char * ATTR_PERIODIC_CHECKPOINT;
 #define ATTR_PLATFORM					AttrGetName( ATTRE_PLATFORM )
 extern const char * ATTR_PREEMPTING_ACCOUNTING_GROUP;
