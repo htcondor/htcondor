@@ -71,12 +71,14 @@ remote resource. Submission now takes one operation instead of three.
 execute directory was not removed when the job could not start.  The most
 common case was an incorrectly named executable file.
 
-\item Fixed a bug that prevented dollar dollar expansions with a default 
-argument that contained forward slashes, e.g., 
+\item 
+Fixed a bug that prevented dollar dollar expansions with a default 
+argument that contained forward slashes from expanding properly.
+An example that now works correctly, but exhibited the incorrect
+behavior:
 \begin{verbatim}
 $$(SomeVariable:/path/to/file)
 \end{verbatim}
-from expanding properly.
 
 \item The Windows installer now works on MS Vista.  Also, it does not 
 pop up any command windows.
@@ -96,7 +98,7 @@ of nodes).
 
 % Gnats PR 854/condor-support 2012
 \item Fixed a bug that caused \Condor{dagman} to incorrectly deal
-with VARS lines specifying more than one macroname (this bug was
+with VARS lines specifying more than one macro name (this bug was
 introduced in version 6.8.5).
 
 \item Fixed a bug in the configuration macro \MacroNI{RANDOM\_INTEGER}
@@ -106,20 +108,20 @@ replaced by the chosen random integer, rather than just having
 \MacroNI{RANDOM\_INTEGER}() itself be replaced.
 
 \item Fixed a bug in the GSI configuration parameters. 
-If \Attr{GSI\_DAEMON\_DIRECTORY} was set and \Attr{GRIDMAP} wasn't set, 
+If \Attr{GSI\_DAEMON\_DIRECTORY} was set and \Attr{GRIDMAP} was not set, 
 then Condor would look in the wrong location for the GSI private key and 
 mapfile.
 
 \item \Condor{q} would produce garbage output in its error message when
 failing to contact the collector specified via \Opt{-pool}.
 
-\item In unix, when \Condor{schedd} did not have enough memory to create
-a process to handle file transfers, many repetitions of this error would
-result in \Condor{schedd} running out of file descriptors.
+\item In Unix only, 
+fixed a file descriptor leak that caused the \Condor{schedd}
+daemon to crash.
 
-\item File transfer failures for spooled jobs would sometimes result in
+\item File transfer failures for spooled jobs no longer result in
 \Condor{schedd} child processes hanging around for 8 hours before finally
-exiting.  Too many such processes could result in memory exhaustion.
+exiting.  Too many such processes occasionally resulted in memory exhaustion.
 
 % Gnats PR 868/condor-admin 15848
 \item Fixed a bug in \Condor{dagman}: \Attr{DIR} and \Attr{ABORT-DAG-ON}
@@ -135,6 +137,14 @@ starts to perform file transfers for grid-type gt4 grid universe jobs.
 \end{itemize}
 
 \noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
 
 \begin{itemize}
 
