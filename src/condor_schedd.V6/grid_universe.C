@@ -33,6 +33,8 @@
 #include "condor_attributes.h"
 #include "exit.h"
 #include "HashTable.h"
+#include "condor_uid.h"
+#include "condor_email.h"
 
 // Initialize static data members
 const int GridUniverseLogic::job_added_delay = 3;
@@ -330,8 +332,37 @@ GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 	dprintf(D_ALWAYS, "condor_gridmanager (PID %d, owner %s) exited %s.\n",
 			pid, owner_safe.Value(), exit_reason.Value() );
 	if(WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == DPRINTF_ERROR) {
-		dprintf(D_ALWAYS, "The gridmanager may have had a problem writing its log.  Check the permissions of the file specified by GRIDMANAGER_LOG; it usually needs to be writable by the owner of the job.\n");
-	}
+		const char *condorUserName = get_condor_username();
+
+		dprintf(D_ALWAYS, 
+			"The gridmanager had a problem writing its log. "
+			"Check the permissions of the file specified by GRIDMANAGER_LOG; "
+			"it needs to be writable by Condor.\n");
+
+			/* send email to the admin about this, but only
+			 * every six hours - enough to not be ignored, but
+			 * not enough to be a pest.  If only my children were
+			 * so helpful and polite.  Ah, well, we can always dream...
+			 */
+		static time_t last_email_re_gridmanlog = 0;
+		if ( time(NULL) - last_email_re_gridmanlog > 6 * 60 * 60 ) {
+			last_email_re_gridmanlog = time(NULL);
+			FILE *email = email_admin_open("Unable to launch grid universe jobs.");
+			if ( email ) {
+				fprintf(email,
+					"The condor_gridmanager had an error writing its log file.  Check the  \n"
+					"permissions/ownership of the file specified by the GRIDMANAGER_LOG setting in \n"
+					"the condor_config file.  This file needs to be writable as user %s to enable\n"
+					"the condor_gridmanager daemon to write to it. \n\n"
+					"Until this problem is fixed, grid universe jobs submitted from this machine cannot "
+					"be launched.\n", condorUserName ? condorUserName : "*unknown*" );
+				email_close(email);
+			} else {
+					// Error sending an email message
+				dprintf(D_ALWAYS,"ERROR: Cannot send email to the admin\n");
+			}
+		}	
+	}	// end if(WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == DPRINTF_ERROR)
 
 	if (!gman_node) {
 		// nothing more to do, so return

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.4 2007-04-20 14:28:59 pavlo Exp $
+# $Id: platform_post,v 1.5 2007-09-11 16:13:57 psilord Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -42,10 +42,16 @@ my $tag = $ENV{NMI_tag};
 my $module = $ENV{NMI_module};
 my $notify = $ENV{NMI_notify};
 my $gid = $ENV{_NMI_GID};
+my $failed = $ENV{_NMI_STEP_FAILED};
 print "ENV: NMI_tag = $tag\n";
 print "ENV: NMI_module = $module\n";
 print "ENV: NMI_notify = $notify\n";
 print "ENV: _NMI_GID = $gid\n";
+print "ENV: _NMI_STEP_FAILED = $failed\n";
+
+if(defined $failed) {
+	die "Stopping testing since step \"$failed\" failed\n";
+}
 
 my $notify_arg = '';
 if( $notify ) {

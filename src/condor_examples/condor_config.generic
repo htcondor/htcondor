@@ -1624,8 +1624,8 @@ GRID_MONITOR			= $(SBIN)/grid_monitor.sh
 MAX_GRIDMANAGER_LOG	= 1000000
 GRIDMANAGER_DEBUG	= 
 
-#GRIDMANAGER_LOG = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)
-GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
+GRIDMANAGER_LOG = $(LOG)/GridmanagerLog.$(USERNAME)
+GRIDMANAGER_LOCK = $(LOCK)/GridmanagerLock.$(USERNAME)
 
 ##--------------------------------------------------------------------
 ##  Various other settings that the Condor-G can use. 
@@ -1696,7 +1696,9 @@ MAX_C_GAHP_LOG	= 1000000
 
 #C_GAHP_LOG = $(LOG)/GridLogs/CGAHPLog.$(USERNAME)
 C_GAHP_LOG = /tmp/CGAHPLog.$(USERNAME)
+C_GAHP_LOCK = /tmp/CGAHPLock.$(USERNAME)
 C_GAHP_WORKER_THREAD_LOG = /tmp/CGAHPWorkerLog.$(USERNAME)
+C_GAHP_WORKER_THREAD_LOCK = /tmp/CGAHPWorkerLock.$(USERNAME)
 
 ##
 ## The location of the wrapper for invoking

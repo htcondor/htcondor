@@ -1024,7 +1024,7 @@ JICShadow::initUserPriv( void )
 	if( !run_as_owner) {
 
        // first see if we define SLOTx_USER in the config file
-        char *nobody_user;
+        char *nobody_user = NULL;
         char paramer[20];
 		int slot = Starter->getMySlotNumber();
 		if( ! slot ) {
@@ -1035,9 +1035,7 @@ JICShadow::initUserPriv( void )
 			// If "VM_UNIV_NOBODY_USER" is defined in Condor configuration file, 
 			// we will use it. 
         	nobody_user = param("VM_UNIV_NOBODY_USER");
-		}
-
-		if( nobody_user == NULL ) {
+		} else {
 			sprintf( paramer, "SLOT%d_USER", slot );
 			nobody_user = param(paramer);
 		}

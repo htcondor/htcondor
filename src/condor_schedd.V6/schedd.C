@@ -943,9 +943,10 @@ Scheduler::count_jobs()
 	  // also update all of the flock hosts
 	  Daemon *da;
 	  if( FlockCollectors ) {
-		  for( i=1, FlockCollectors->rewind();
-			   i <= OldOwners[i].OldFlockLevel &&
-				   FlockCollectors->next(da); i++ ) {
+		  int flock_level;
+		  for( flock_level=1, FlockCollectors->rewind();
+			   flock_level <= OldOwners[i].OldFlockLevel &&
+				   FlockCollectors->next(da); flock_level++ ) {
 			  ((DCCollector*)da)->sendUpdate( UPDATE_SUBMITTOR_AD, m_ad, NULL, true );
 		  }
 	  }

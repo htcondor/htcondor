@@ -1,3 +1,7 @@
+09/10/07 V6_9_4-merge-1
+  The state of the V6_9_4-branch before the first (and probably only)
+  merge back into the trunk.
+
 09/06/07 V6_9-PR852-{root,branch}
   This branch has changes related to implementing the feature requested
   in PR 852 (have different maxjobs limits for different types of jobs

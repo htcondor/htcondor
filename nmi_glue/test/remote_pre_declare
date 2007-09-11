@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre_declare,v 1.3 2007-08-10 02:50:37 bt Exp $
+# $Id: remote_pre_declare,v 1.4 2007-09-11 16:14:01 psilord Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -94,6 +94,7 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 
 print ENVSETUP "export PATH\n";
 print ENVSETUP "export CONDOR_CONFIG\n";
+
 close(ENVSETUP);
 
 if( ($ENV{NMI_PLATFORM} =~ /winnt/) ){
