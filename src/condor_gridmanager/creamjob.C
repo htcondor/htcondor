@@ -1299,17 +1299,17 @@ void CreamJob::SetRemoteJobState( const char *new_state, int exit_code,
 // Build submit classad
 ClassAd *CreamJob::buildSubmitAd()
 {
-	const char *ATTR_EXECUTABLE = "EXECUTABLE";
-	const char *ATTR_ARGS = "ARGUMENTS";
-	const char *ATTR_STD_INPUT = "STDINPUT";
-	const char *ATTR_STD_OUTPUT = "STDOUTPUT";
-	const char *ATTR_STD_ERROR = "STDERROR";
-	const char *ATTR_INPUT_SB = "INPUTSANDBOX";
-	const char *ATTR_OUTPUT_SB = "OUTPUTSANDBOX";
-	const char *ATTR_OUTPUT_SB_BASE_DEST_URI = "OUTPUTSANDBOXBASEDESTURI";
-	const char *ATTR_VIR_ORG = "VIRTUALORGANISATION";
-	const char *ATTR_BATCH_SYSTEM = "BATCHSYSTEM";
-	const char *ATTR_QUEUE_NAME = "QUEUENAME";
+	const char *ATTR_EXECUTABLE = "Executable";
+	const char *ATTR_ARGS = "Arguments";
+	const char *ATTR_STD_INPUT = "StdInput";
+	const char *ATTR_STD_OUTPUT = "StdOutput";
+	const char *ATTR_STD_ERROR = "StdError";
+	const char *ATTR_INPUT_SB = "InputSandbox";
+	const char *ATTR_OUTPUT_SB = "OutputSandbox";
+	const char *ATTR_OUTPUT_SB_BASE_DEST_URI = "OutputSandboxBaseDestURI";
+	const char *ATTR_VIR_ORG = "VirtualOrganization";
+	const char *ATTR_BATCH_SYSTEM = "BatchSystem";
+	const char *ATTR_QUEUE_NAME = "QueueName";
 	
 	ClassAd *submitAd = new ClassAd();
 
