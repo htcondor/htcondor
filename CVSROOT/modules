@@ -789,8 +789,11 @@ V6_8_6_EXT	-a V6_8_COMMON_EXT \
                    externals/bundles/nordugridgahp/1.1.1 \
                    externals/bundles/gt4gahp/1.7
 
+# Externals needed for V6_8_7 (same as 6.8.6)
+V6_8_7_EXT	-a V6_8_6_EXT
+
 # Externals needed for the head of the V6_8-branch
-V6_8_EXT	-a V6_8_6_EXT
+V6_8_EXT	-a V6_8_7_EXT
 
 
 #---------------------------------------------------------------------
