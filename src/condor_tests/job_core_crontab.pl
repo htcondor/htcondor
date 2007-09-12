@@ -6,7 +6,7 @@
 ## job so that we know the following:
 ##	1) The jobs are submitted with the proper preptime
 ##	2) The jobs are only running every 2 minutes
-##	3) The JobRunCount properly reflects how many times we ran
+##	3) The NumJobStarts properly reflects how many times we ran
 ## 	4) The job runs when it was suppose to
 ##
 ## When a job finishes but gets rescheduled, we will get
@@ -209,7 +209,7 @@ $success = sub {
 	$job = $info{"job"};
 	
 	##
-	## One final check to make sure that the JobRunCount is 
+	## One final check to make sure that the NumJobStarts is 
 	## being updated properly. We have to look into the history because
 	## at this point the job is no longer in the queue
 	##
@@ -227,7 +227,7 @@ $success = sub {
 			exit(1);
 		}
 		my $temp = "@result";
-		if ( $temp =~ /JobRunCount = (\d+)/ ) {
+		if ( $temp =~ /NumJobStarts = (\d+)/ ) {
 			$h_runcount = $1;
 		}
 		if ( $h_runcount < 0 ) { 
@@ -260,7 +260,7 @@ $success = sub {
 	## Make sure what we have and what the job's ad has is the same
 	##
 	if ( $run_ctr != $h_runcount ) {
-		print "Bad - Job $cluster.$job finished execution but its JobRunCount ".
+		print "Bad - Job $cluster.$job finished execution but its NumJobStarts ".
 			  "is $h_runcount. It should be $run_ctr!\n";
 		exit(1);
 	}

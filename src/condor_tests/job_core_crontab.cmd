@@ -24,4 +24,4 @@ CronPrepTime	= 90
 ##
 ## We only want to run it 2 times
 ##
-OnExitRemove	= JobRunCount >= 2
+OnExitRemove	= NumJobStarts >= 1
