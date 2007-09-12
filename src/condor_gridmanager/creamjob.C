@@ -1299,8 +1299,6 @@ void CreamJob::SetRemoteJobState( const char *new_state, int exit_code,
 // Build submit classad
 ClassAd *CreamJob::buildSubmitAd()
 {
-	const char *ATTR_TYPE = "TYPE";
-	const char *ATTR_JOB_TYPE = "JOBTYPE";
 	const char *ATTR_EXECUTABLE = "EXECUTABLE";
 	const char *ATTR_ARGS = "ARGUMENTS";
 	const char *ATTR_STD_INPUT = "STDINPUT";
@@ -1311,7 +1309,7 @@ ClassAd *CreamJob::buildSubmitAd()
 	const char *ATTR_OUTPUT_SB_BASE_DEST_URI = "OUTPUTSANDBOXBASEDESTURI";
 	const char *ATTR_VIR_ORG = "VIRTUALORGANISATION";
 	const char *ATTR_BATCH_SYSTEM = "BATCHSYSTEM";
-	const char *ATTR_QUEUE = "QUEUE";
+	const char *ATTR_QUEUE_NAME = "QUEUENAME";
 	
 	ClassAd *submitAd = new ClassAd();
 
@@ -1347,16 +1345,10 @@ ClassAd *CreamJob::buildSubmitAd()
 		return NULL;
 	}
 	
-		//TYPE
-	buf.sprintf("%s = \"%s\"", ATTR_TYPE, "Job");
-	submitAd->Insert(buf.Value());
-
-		//JOBTYPE
-	buf.sprintf("%s = \"%s\"", ATTR_JOB_TYPE, "Normal");
-	submitAd->Insert(buf.Value());
-
 		//EXECUTABLE can either be STAGED or TRANSFERED
-	if (!jobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE, result)) { //TRANSFERED
+	result = true;
+	jobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE, result);
+	if (result) { //TRANSFERED
 		
 			//here, JOB_CMD = full path to executable
 		jobAd->LookupString(ATTR_JOB_CMD, tmp_str);
@@ -1389,7 +1381,9 @@ ClassAd *CreamJob::buildSubmitAd()
 	}
 	
 		//STDINPUT can be either be STAGED or TRANSFERED
-	if (!jobAd->LookupBool(ATTR_TRANSFER_INPUT, result)) { //TRANSFERED
+	result = true;
+	jobAd->LookupBool(ATTR_TRANSFER_INPUT, result);
+	if (result) { //TRANSFERED
 		
 		if (jobAd->LookupString(ATTR_JOB_INPUT, tmp_str)) {
 
@@ -1451,7 +1445,9 @@ ClassAd *CreamJob::buildSubmitAd()
 		buf.sprintf("%s = \"%s\"", ATTR_STD_OUTPUT, tmp_str.Value());
 		submitAd->Insert(buf.Value());
 
-		if (!jobAd->LookupBool(ATTR_TRANSFER_OUTPUT, result)) {
+		result = true;
+		jobAd->LookupBool(ATTR_TRANSFER_OUTPUT, result);
+		if (result) {
 			osb->insert(tmp_str.Value());
 		}
 	}
@@ -1461,7 +1457,9 @@ ClassAd *CreamJob::buildSubmitAd()
 		buf.sprintf("%s = \"%s\"", ATTR_STD_ERROR, tmp_str.Value());
 		submitAd->Insert(buf.Value());
 		
-		if (!jobAd->LookupBool(ATTR_TRANSFER_ERROR, result)) {
+		result = true;
+		jobAd->LookupBool(ATTR_TRANSFER_ERROR, result);
+		if (result) {
 			osb->insert(tmp_str.Value());
 		}
 	}
@@ -1515,15 +1513,18 @@ ClassAd *CreamJob::buildSubmitAd()
 
 		//VIRTUALORGANISATION. CREAM requires this attribute, but it doesn't
 		//need to have a value
-	buf.sprintf("%s = \"%s\"", ATTR_VIR_ORG, "");
+		// TODO This needs to be extracted from the VOMS extension in the
+		//   job's credential.
+//	buf.sprintf("%s = \"%s\"", ATTR_VIR_ORG, "");
+	buf.sprintf("%s = \"%s\"", ATTR_VIR_ORG, "infngrid");
 	submitAd->Insert(buf.Value());
 	
 		//BATCHSYSTEM
 	buf.sprintf("%s = \"%s\"", ATTR_BATCH_SYSTEM, resourceBatchSystemString);
 	submitAd->Insert(buf.Value());
 	
-		//QUEUE
-	buf.sprintf("%s = \"%s\"", ATTR_QUEUE, resourceQueueString);
+		//QUEUENAME
+	buf.sprintf("%s = \"%s\"", ATTR_QUEUE_NAME, resourceQueueString);
 	submitAd->Insert(buf.Value());
 	
 /*
