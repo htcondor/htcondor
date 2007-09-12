@@ -113,6 +113,8 @@ $executed = sub {
 	##
 	if ( ++$run_ctr > $max_run_ctr ) {
 		print "Bad - Job $cluster.$job has been executed $run_ctr times!\n";
+		my @result;
+		CondorTest::runCondorTool("condor_rm $cluster.$job", \@result, 3);
 		exit(1);
 	##
 	## It's good that we ran, so print a message 
