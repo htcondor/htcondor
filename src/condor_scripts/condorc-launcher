@@ -296,14 +296,12 @@ sub submit_schedd_job
 	my $env;
 	my $setup_script = "/$LOG_DIR/condorc-launcher-starter.$$";
 	my $mapfile = "condorc-launcher-mapfile.$$";
-	my $mapfile_path = "/$LOG_DIR/$mapfile";
 	my $schedd_name;
 	my $exec;
 	my $args;
 	my $job_x509_subject;
 	my $my_x509_cert;
 	my $my_x509_subject;
-	my $my_username;
 
 	chomp( $job_x509_subject = `openssl x509 -in $group->{proxyfile} -subject -noout` );
 	$job_x509_subject =~ s/^subject *= *//;
@@ -313,7 +311,6 @@ sub submit_schedd_job
 	chomp( $my_x509_subject = `openssl x509 -in $my_x509_cert -subject -noout` );
 	$my_x509_subject =~ s/^subject *= *//;
 
-	chomp( $my_username = `/usr/bin/whoami` );
 
 	debug_print(2, "Submitting schedd to $group->{sitegatekeeper} with $group->{proxyfile}\n");
 
@@ -399,20 +396,20 @@ export X509_DUPLICATE_USER_PROXY
 _condor_GRIDMAP=`pwd`/$mapfile
 export _condor_GRIDMAP
 
+# Write the grid-mapfile
+my_username=`/usr/bin/whoami`
+
+_condor_QUEUE_SUPER_USERS=\$my_username
+export _condor_QUEUE_SUPER_USERS
+
+echo "\\\"$job_x509_subject\\\"" \$my_username > \$_condor_GRIDMAP
+echo "\\\"$my_x509_subject\\\"" \$my_username >> \$_condor_GRIDMAP
+
 exec \$my_condor_master -f -r \$runfor "\$@"
 
 EOF
 
 	close( SCRIPT );
-
-        # Write the grid-mapfile that will be used on the remote machine
-        open( MAPFILE, ">$mapfile_path" ) || die "error opening $mapfile_path";
-
-        print MAPFILE <<EOF;
-"$job_x509_subject" $my_username
-"$my_x509_subject" $my_username
-EOF
-	close( MAPFILE );
 
 	# For now, we assume that binaries and a bare-bones config file
 	# (ala glidein) are pre-installed at the execution site
@@ -425,7 +422,6 @@ EOF
 
 	$env .= "_condor_MAIL=$config_mail;";
 
-	$env .= "_condor_QUEUE_SUPER_USERS=$my_username;";
 
 	$env .= "_condor_GSI_DAEMON_NAME=$my_x509_subject;";
 
@@ -469,7 +465,6 @@ log = /$LOG_DIR/condorc-launcher.log.\$(cluster).\$(process)
 x509userproxy = ${$group}{'proxyfile'}
 should_transfer_files=YES
 when_to_transfer_output=ON_EXIT
-transfer_input_files=$mapfile_path
 +DynamicScheddJob = True
 +SiteName = "${$group}{'sitename'}"
 +daemon_unique_name = "${$group}{'uniquename'}"
