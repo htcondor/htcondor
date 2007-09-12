@@ -32,6 +32,7 @@
 #include "condor_ckpt_name.h"
 #include "filename_tools.h"
 #include "job_lease.h"
+#include "condor_new_classads.h"
 
 #include "gridmanager.h"
 #include "creamjob.h"
@@ -191,7 +192,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	MyString error_string = "";
 	char *gahp_path = NULL;
 
-	gahpAd = NULL;
+	creamAd = NULL;
 	remoteJobId = NULL;
 	remoteState = CREAM_JOB_STATE_UNSET;
 	localOutput = NULL;
@@ -442,8 +443,8 @@ CreamJob::~CreamJob()
 	if ( remoteJobId ) {
 		free( remoteJobId );
 	}
-	if ( gahpAd ) {
-		delete gahpAd;
+	if ( creamAd ) {
+		free( creamAd );
 	}
 	if ( localOutput ) {
 		free( localOutput );
@@ -603,7 +604,7 @@ int CreamJob::doEvaluateState()
 		} break;
 		case GM_SUBMIT: {
 			// Start a new cream submission for this job.
- 			char *job_id = NULL;
+			char *job_id = NULL;
 			char *upload_url = NULL;
 			if ( condorState == REMOVED || condorState == HELD ) {
 				myResource->CancelSubmit(this);
@@ -626,10 +627,10 @@ int CreamJob::doEvaluateState()
 				if ( myResource->RequestSubmit(this) == false ) {
 					break;
 				}
-				if ( gahpAd == NULL ) {
-					gahpAd = buildSubmitAd();
+				if ( creamAd == NULL ) {
+					creamAd = buildSubmitAd();
 				}
-				if ( gahpAd == NULL) {
+				if ( creamAd == NULL) {
 					myResource->CancelSubmit(this);
 					gmState = GM_HOLD;
 					break;
@@ -652,7 +653,7 @@ int CreamJob::doEvaluateState()
 										resourceManagerString,
 										myResource->getDelegationService(),
 										delegatedCredentialURI,
-										gahpAd, new_lifetime,  
+										creamAd, new_lifetime,  
 										&job_id, &upload_url );
 				
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -1186,11 +1187,11 @@ int CreamJob::doEvaluateState()
 			if ( gahp ) {
 				gahp->purgePendingRequests();
 			}
-			// If we were calling a gahp call that usedgahpAd, we're done
+			// If we were calling a gahp call that creamAd, we're done
 			// with it now, so free it.
-			if ( gahpAd ) {
-				delete gahpAd;
-				gahpAd = NULL;
+			if ( creamAd ) {
+				free( creamAd );
+				creamAd = NULL;
 			}
 			connect_failure_counter = 0;
 		}
@@ -1297,7 +1298,7 @@ void CreamJob::SetRemoteJobState( const char *new_state, int exit_code,
 
 
 // Build submit classad
-ClassAd *CreamJob::buildSubmitAd()
+char *CreamJob::buildSubmitAd()
 {
 	const char *ATTR_EXECUTABLE = "Executable";
 	const char *ATTR_ARGS = "Arguments";
@@ -1311,15 +1312,15 @@ ClassAd *CreamJob::buildSubmitAd()
 	const char *ATTR_BATCH_SYSTEM = "BatchSystem";
 	const char *ATTR_QUEUE_NAME = "QueueName";
 	
-	ClassAd *submitAd = new ClassAd();
+	ClassAd submitAd;
 
 	MyString tmp_str = "";
 	MyString tmp_str2 = "";
 	MyString buf = "";
 	MyString iwd_str = "";
 	MyString gridftp_url = "";
-	StringList *isb = new StringList();
-	StringList *osb = new StringList();
+	StringList isb;
+	StringList osb;
 	bool result;
 
 		// Once we add streaming support, remove this
@@ -1353,7 +1354,7 @@ ClassAd *CreamJob::buildSubmitAd()
 			//here, JOB_CMD = full path to executable
 		jobAd->LookupString(ATTR_JOB_CMD, tmp_str);
 		tmp_str = gridftp_url + tmp_str;
-		isb->insert(tmp_str.Value());
+		isb.insert(tmp_str.Value());
 
 			//CREAM only accepts absolute path | simple filename only
 		if (tmp_str[0] != '/') { //not absolute path
@@ -1366,18 +1367,18 @@ ClassAd *CreamJob::buildSubmitAd()
 		}
 
 		buf.sprintf("%s = \"%s\"", ATTR_EXECUTABLE, tmp_str.Value());
-		submitAd->Insert(buf.Value());
+		submitAd.Insert(buf.Value());
 	}
 	else { //STAGED
 		jobAd->LookupString(ATTR_JOB_CMD, tmp_str);
 		buf.sprintf("%s = \"%s\"", ATTR_EXECUTABLE, tmp_str.Value());
-		submitAd->Insert(buf.Value());
+		submitAd.Insert(buf.Value());
 	}
 
 		//ARGUMENTS
 	if (jobAd->LookupString(ATTR_JOB_ARGUMENTS1, tmp_str)) {
 		buf.sprintf("%s = \"%s\"", ATTR_ARGS, tmp_str.Value());
-		submitAd->Insert(buf.Value());
+		submitAd.Insert(buf.Value());
 	}
 	
 		//STDINPUT can be either be STAGED or TRANSFERED
@@ -1392,7 +1393,7 @@ ClassAd *CreamJob::buildSubmitAd()
 			else 
 				tmp_str2 = gridftp_url + tmp_str;
 			
-			isb->insert(tmp_str2.Value());
+			isb.insert(tmp_str2.Value());
 			
 				//get simple filename
 			StringList strlist(tmp_str.Value(), "/");
@@ -1401,14 +1402,14 @@ ClassAd *CreamJob::buildSubmitAd()
 				tmp_str = strlist.next();
 		}
 			buf.sprintf("%s = \"%s\"", ATTR_STD_INPUT, tmp_str.Value());
-			submitAd->Insert(buf.Value());
+			submitAd.Insert(buf.Value());
 	}
 	else { //STAGED. Be careful, if stdin is not found in WN, job will not
 			//complete successfully.
 		if (jobAd->LookupString(ATTR_JOB_INPUT, tmp_str)) {
 			if (tmp_str[0] == '/') { //Only add absolute path
 				buf.sprintf("%s = \"%s\"", ATTR_STD_INPUT, tmp_str.Value());
-				submitAd->Insert(buf.Value());
+				submitAd.Insert(buf.Value());
 			}
 		}
 	}
@@ -1426,7 +1427,7 @@ ClassAd *CreamJob::buildSubmitAd()
 			else 
 				tmp_str2 = gridftp_url + tmp_str;
 
-			isb->insert(tmp_str2.Value());
+			isb.insert(tmp_str2.Value());
 		}
 	}
 
@@ -1436,79 +1437,39 @@ ClassAd *CreamJob::buildSubmitAd()
 		strlist.rewind();
 		
 		for (int i = 0; i < strlist.number(); i++) {
-			osb->insert(strlist.next());
+			osb.insert(strlist.next());
 		}
 	}
 	
 		//STDOUTPUT TODO: handle absolute ?
 	if (jobAd->LookupString(ATTR_JOB_OUTPUT, tmp_str)) {
 		buf.sprintf("%s = \"%s\"", ATTR_STD_OUTPUT, tmp_str.Value());
-		submitAd->Insert(buf.Value());
+		submitAd.Insert(buf.Value());
 
 		result = true;
 		jobAd->LookupBool(ATTR_TRANSFER_OUTPUT, result);
 		if (result) {
-			osb->insert(tmp_str.Value());
+			osb.insert(tmp_str.Value());
 		}
 	}
 
 		//STDERROR TODO: handle absolute ?
 	if (jobAd->LookupString(ATTR_JOB_ERROR, tmp_str)) {
 		buf.sprintf("%s = \"%s\"", ATTR_STD_ERROR, tmp_str.Value());
-		submitAd->Insert(buf.Value());
+		submitAd.Insert(buf.Value());
 		
 		result = true;
 		jobAd->LookupBool(ATTR_TRANSFER_ERROR, result);
 		if (result) {
-			osb->insert(tmp_str.Value());
+			osb.insert(tmp_str.Value());
 		}
 	}
 
-		//INPUT SANDBOX
-	if (isb->number() > 0) {
-		buf.sprintf("%s = \"", ATTR_INPUT_SB);
-		for (int i = 0; i < isb->number(); i++) {
-			if (i == 0)
-				buf.sprintf_cat("%s", isb->next());
-			else
-				buf.sprintf_cat(",%s", isb->next());
-		}
-		buf.sprintf_cat("\"");
-		submitAd->Insert(buf.Value());
-	}
-	
-		//OUTPUT SANDBOX
-	if (osb->number() > 0) {
-		buf.sprintf("%s = \"", ATTR_OUTPUT_SB);
-		for (int i = 0; i < osb->number(); i++) {
-			if (i == 0)
-				buf.sprintf_cat("%s", osb->next());
-			else
-				buf.sprintf_cat(",%s", osb->next());
-		}
-		buf.sprintf_cat("\"");
-		submitAd->Insert(buf.Value());
-
-			//OUTPUTSANDBOXBASEDESTURI
+		//OUTPUTSANDBOXBASEDESTURI
+	if (osb.number() > 0) {
 		tmp_str = gridftp_url + iwd_str;
 		buf.sprintf("%s = \"%s\"", ATTR_OUTPUT_SB_BASE_DEST_URI, tmp_str.Value());
-		submitAd->Insert(buf.Value());
-	}
-
-		//ENVIRONMENT
-	if (jobAd->LookupString(ATTR_JOB_ENVIRONMENT1, tmp_str)) {
-		jobAd->LookupString(ATTR_JOB_ENVIRONMENT1_DELIM, tmp_str2);
-		
-		int pos;
-		pos = tmp_str.FindChar(tmp_str2[0], 0);
-		
-		while (pos != -1 && pos != tmp_str.Length()-1) {
-			tmp_str.setChar(pos, ',');
-			pos = tmp_str.FindChar(';', pos+1);
-		}
-		
-		buf.sprintf("%s = \"%s\"", ATTR_JOB_ENVIRONMENT2, tmp_str.Value());
-		submitAd->Insert(buf.Value());
+		submitAd.Insert(buf.Value());
 	}
 
 		//VIRTUALORGANISATION. CREAM requires this attribute, but it doesn't
@@ -1517,20 +1478,91 @@ ClassAd *CreamJob::buildSubmitAd()
 		//   job's credential.
 //	buf.sprintf("%s = \"%s\"", ATTR_VIR_ORG, "");
 	buf.sprintf("%s = \"%s\"", ATTR_VIR_ORG, "infngrid");
-	submitAd->Insert(buf.Value());
+	submitAd.Insert(buf.Value());
 	
 		//BATCHSYSTEM
 	buf.sprintf("%s = \"%s\"", ATTR_BATCH_SYSTEM, resourceBatchSystemString);
-	submitAd->Insert(buf.Value());
+	submitAd.Insert(buf.Value());
 	
 		//QUEUENAME
 	buf.sprintf("%s = \"%s\"", ATTR_QUEUE_NAME, resourceQueueString);
-	submitAd->Insert(buf.Value());
+	submitAd.Insert(buf.Value());
 	
+
+	MyString ad_string;
+
+	NewClassAdUnparser unparser;
+	unparser.SetUseCompactSpacing( true );
+	unparser.SetOutputType( false );
+	unparser.SetOutputTargetType( false );
+	unparser.Unparse( &submitAd, ad_string );
+
+		// Attributes that use new ClassAd lists have to be manually
+		// inserted after unparsing the ad.
+
+		//INPUT SANDBOX
+	if (isb.number() > 0) {
+		buf.sprintf("%s = {", ATTR_INPUT_SB);
+		isb.rewind();
+		for (int i = 0; i < isb.number(); i++) {
+			if (i == 0)
+				buf.sprintf_cat("\"%s\"", isb.next());
+			else
+				buf.sprintf_cat(",\"%s\"", isb.next());
+		}
+		buf.sprintf_cat("}; ]");
+
+		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
+		ad_string.replaceString( "]", buf.Value(), insert_pos );
+	}
+
+		//OUTPUT SANDBOX
+	if (osb.number() > 0) {
+		buf.sprintf("%s = {", ATTR_OUTPUT_SB);
+		osb.rewind();
+		for (int i = 0; i < osb.number(); i++) {
+			if (i == 0)
+				buf.sprintf_cat("\"%s\"", osb.next());
+			else
+				buf.sprintf_cat(",\"%s\"", osb.next());
+		}
+		buf.sprintf_cat("}; ]");
+
+		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
+		ad_string.replaceString( "]", buf.Value(), insert_pos );
+	}
+
+		//ENVIRONMENT
+	Env envobj;
+	MyString env_errors;
+	if(!envobj.MergeFrom(jobAd,&env_errors)) {
+		dprintf(D_ALWAYS,"(%d.%d) Failed to read job environment: %s\n",
+				procID.cluster, procID.proc, env_errors.Value());
+		errorString.sprintf("Failed to read job environment: %s\n",
+							env_errors.Value());
+		return NULL;
+	}
+	char **env_vec = envobj.getStringArray();
+
+	if ( env_vec[0] ) {
+		buf.sprintf( "%s = {", ATTR_JOB_ENVIRONMENT2 );
+
+		for ( int i = 0; env_vec[i]; i++ ) {
+			if ( i == 0 ) {
+				buf.sprintf_cat( "\"%s\"", env_vec[i] );
+			} else {
+				buf.sprintf_cat( ",\"%s\"", env_vec[i] );
+			}
+		}
+		buf.sprintf_cat( "}; ]" );
+
+		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
+		ad_string.replaceString( "]", buf.Value(), insert_pos );
+	}
+	deleteStringArray(env_vec);
+
 /*
-	MyString jobAdValue = "";
-	submitAd->sPrint(jobAdValue);
-	dprintf(D_FULLDEBUG, "SUBMITAD:\n%s\n",jobAdValue.Value()); 
+	dprintf(D_FULLDEBUG, "SUBMITAD:\n%s\n",ad_string.Value()); 
 */
-	return submitAd;
+	return strdup( ad_string.Value() );
 }

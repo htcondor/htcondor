@@ -5666,9 +5666,8 @@ GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
 
 int 
 GahpClient::cream_job_register(const char *service, const char *delg_service, const char *delg_id, 
-							   ClassAd *jdl, time_t lease_time, char **job_id, char **upload_url)
+							   const char *jdl, time_t lease_time, char **job_id, char **upload_url)
 {
-	MyString ad_string;
 	static const char* command = "CREAM_JOB_REGISTER";
 
 		// Check if this command is supported
@@ -5680,29 +5679,13 @@ GahpClient::cream_job_register(const char *service, const char *delg_service, co
 	if (!service) service=NULLSTRING;
 	if (!delg_service) delg_service=NULLSTRING;
 	if (!delg_id) delg_id=NULLSTRING;
-	if (!jdl)
-		ad_string=NULLSTRING;
-	else {
-		if ( useXMLClassads ) {
-			ClassAdXMLUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( jdl, ad_string );
-		} else {
-			NewClassAdUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( jdl, ad_string );
-		}
-	}
-		
+	if (!jdl) jdl = NULLSTRING;
+
 	MyString reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(delg_service) );
 	char *esc3 = strdup( escapeGahpString(delg_id) );
-	char *esc4 = strdup( escapeGahpString(ad_string.Value()) );
+	char *esc4 = strdup( escapeGahpString(jdl) );
 	bool x = reqline.sprintf("%s %s %s %s %d", esc1, esc2, esc3, esc4, lease_time );
 	free( esc1 );
 	free( esc2 );

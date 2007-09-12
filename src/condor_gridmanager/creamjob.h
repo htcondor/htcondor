@@ -97,14 +97,14 @@ class CreamJob : public BaseJob
 	Proxy *jobProxy;
 	GahpClient *gahp;
 
-	ClassAd *buildSubmitAd();
+	char *buildSubmitAd();
 
 	char *remoteJobId;
 		// If we're in the middle of a gahp call that requires a classad,
 		// the ad is stored here (so that we don't have to reconstruct the
 		// ad every time we test the call for completion). It should be
 		// freed and reset to NULL once the call completes.
-	ClassAd *gahpAd;
+	char *creamAd;
 	MyString errorString;
 	char *localOutput;
 	char *localError;
