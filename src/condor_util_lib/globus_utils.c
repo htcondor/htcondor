@@ -904,29 +904,6 @@ x509_receive_delegation( const char *destination_file,
 #endif
 }
 
-
-int
-have_condor_g()
-{
-#if defined(HAVE_EXT_GLOBUS)
-	
-	// Our Condor-G test will be to see if we've defined a GRIDMANAGER. 
-	// If we don't have one, then this install does not support Condor-G.	
-	char *gridmanager;
-
-	gridmanager = NULL;
-	gridmanager = param("GRIDMANAGER");
-	if(gridmanager) {
-		free(gridmanager);
-		return 1;
-	} else {
-		return 0;
-	}
-#else
-	return 0;
-#endif
-}
-
 void parse_resource_manager_string( const char *string, char **host,
 									char **port, char **service,
 									char **subject )

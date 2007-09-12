@@ -1499,10 +1499,6 @@ SetUniverse()
 
 	if( univ && 
 		((stricmp(univ,"globus") == MATCH) || (stricmp(univ,"grid") == MATCH))) {
-		if ( (!Remote) && (have_condor_g() == 0) ) {
-			fprintf( stderr, "This version of Condor doesn't support Globus Universe jobs.\n" );
-			exit( 1 );
-		}
 		JobUniverse = CONDOR_UNIVERSE_GRID;
 		
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID);

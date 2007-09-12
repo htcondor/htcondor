@@ -268,8 +268,6 @@ x509_receive_delegation( const char *destination_file,
 						 int (*send_data_func)(void *, void *, size_t),
 						 void *send_data_ptr );
 
-int have_condor_g( void );
-
 void parse_resource_manager_string( const char *string, char **host,
 									char **port, char **service,
 									char **subject );
