@@ -115,7 +115,7 @@ ReliSock::put_file_with_permissions( filesize_t *size, const char *source )
 		this->encode();
 		if( this->code( file_mode) == FALSE ||
 			this->end_of_message() == FALSE ) {
-			dprintf( D_ALWAYS, "ReliSock:;put_file_with_permissions(): "
+			dprintf( D_ALWAYS, "ReliSock::put_file_with_permissions(): "
 			         "Failed to send dummy permissions\n" );
 			return -1;
 		}
@@ -140,7 +140,7 @@ ReliSock::put_file_with_permissions( filesize_t *size, const char *source )
 	this->encode();
 	if ( this->code( file_mode ) == FALSE ||
 		 this->end_of_message() == FALSE ) {
-		dprintf( D_ALWAYS, "ReliSock:;put_file_with_permissions(): "
+		dprintf( D_ALWAYS, "ReliSock::put_file_with_permissions(): "
 				 "Failed to send permissions\n" );
 		return -1;
 	}
@@ -217,7 +217,7 @@ ReliSock::put_x509_delegation( filesize_t *size, const char *source )
 
 	if ( !prepare_for_nobuffering( stream_unknown ) ||
 		 !end_of_message() ) {
-		dprintf( D_ALWAYS, "ReliSock::get_x509_delegation(): failed to "
+		dprintf( D_ALWAYS, "ReliSock::put_x509_delegation(): failed to "
 				 "flush buffers\n" );
 		return -1;
 	}
@@ -236,7 +236,7 @@ ReliSock::put_x509_delegation( filesize_t *size, const char *source )
 		decode();
 	}
 	if ( !prepare_for_nobuffering( stream_unknown ) ) {
-		dprintf( D_ALWAYS, "ReliSock::get_x509_delegation(): failed to "
+		dprintf( D_ALWAYS, "ReliSock::put_x509_delegation(): failed to "
 				 "flush buffers afterwards\n" );
 		return -1;
 	}
