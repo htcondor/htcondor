@@ -92,7 +92,7 @@ ref.html: clean $(TARGETDIR)
 	rmdir ref.new
 	touch ref.html
 
-local.html: clean
+local.html: $(wildcard *.tex) $(wildcard */*.tex)
 	echo "% do not want times" > timesfont.tex
 	rm -f fontsize.tex
 	rm -f symbol.tex
@@ -109,6 +109,7 @@ local.html: clean
 	makeindex ref
 	latex ref.tex -interaction=batchmode
 	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
+	touch local.html
 
 release-html: ref.html $(TARGETDIR)
 	rm -rf $(MANDIR).old
