@@ -40,9 +40,6 @@ $executed = sub
 {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
-
-	print "Start test timer from execution time\n";
-	CondorTest::RegisterTimed($testname, $timed, 1800);
 };
 
 $timed = sub
@@ -105,6 +102,7 @@ CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterRelease( $testname, $release );
 CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterTimed($testname, $timed, 900);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "$testname: SUCCESS\n";
