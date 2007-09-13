@@ -120,8 +120,10 @@ failed to cancel the job as requested) is now much reduced.
 when given a constraint with \Condor{hold} that included jobs that the user
 did not have permission to modify.
 
-\item Fixed a problem from 6.9.4 in which the schedd would not relinquish
-a claimed startd in a flocked pool after reconnecting to a disconnected job.
+\item Fixed a problem from 6.9.4 in which the schedd would not
+relinquish a claimed startd after reconnecting to a disconnected job.
+After the job finished, the startd would remain in the claimed idle
+state until the claim lease expired (20 minutes by default).
 
 \end{itemize}
 
