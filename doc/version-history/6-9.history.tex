@@ -125,6 +125,13 @@ relinquish a claimed startd after reconnecting to a disconnected job.
 After the job finished, the startd would remain in the claimed idle
 state until the claim lease expired (20 minutes by default).
 
+\item Applied the \MacroNI{QUERY\_TIMEOUT} to fix problem where the schedd 
+would block for a long time when doing negotiation with flocked or HAD 
+negotiator, and one of the collectors was not routeable (for instance, when 
+the machine is powered off). Previously, there was no time-out and would
+result in a the schedd waiting for the connection attempt to fail, which may
+take a long time.
+
 \end{itemize}
 
 \noindent Known Bugs:
