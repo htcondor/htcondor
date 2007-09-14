@@ -438,7 +438,9 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 		dprintf( D_HOSTNAME, " --- End of Query ClassAd ---\n" );
 	}
 
-	if (!(sock = my_collector.startCommand(command, Stream::reli_sock, 0, errstack)) ||
+
+	int mytimeout = param_integer ("QUERY_TIMEOUT",60); 
+	if (!(sock = my_collector.startCommand(command, Stream::reli_sock, mytimeout, errstack)) ||
 	    !queryAd.put (*sock) || !sock->end_of_message()) {
 
 		if (sock) {
