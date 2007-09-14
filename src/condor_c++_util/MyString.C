@@ -777,7 +777,7 @@ MyString::readLine( FILE* fp, bool append )
 		} else {
 			*this += buf;
 		}
-		if( strrchr((const char *)buf,'\n') ) {
+		if( Len && Data[Len-1] == '\n' ) {
 				// we found a newline, return success
 			return true;
 		}
