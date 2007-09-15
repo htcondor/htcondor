@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: pre_all,v 1.3 2006-07-31 18:59:38 wright Exp $ 
+# $Id: pre_all,v 1.4 2007-09-15 13:48:34 gthain Exp $ 
 # Submit-side NMI build system infrastructure to prepare sources for
 # the Condor build
 #
@@ -12,6 +12,8 @@
 # 3) build the nroff source for the man pages so that the man-current
 #    external package will work
 # 4) Setup the sources as a release-able source tarball
+# 5) Make the platform-independent results.tar.gz
+# 6) Save the cvs diffs between this builds and the previous
 ######################################################################
 
 ######################################################################
@@ -176,6 +178,70 @@ if( $? ) {
     die "Tar failed with status $?\n";
 }
 print "tar completed successfully\n";
+
+
+
+######################################################################
+# 6) Record some cvs archeology
+######################################################################
+
+print "Checking if this build came from CVS, and if so, from which tags\n";
+chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
+
+my $tagname = "";
+open( TAGFILE, "src/CVS/Tag"); # if it doesn't exist, that's ok
+while (<TAGFILE>) {
+	# If there's a tag entry, read it in,
+	$tagname = $_;
+
+	# remove the newline
+	chomp $tagname;
+
+	# Remove the leading "T" for tag
+	$tagname =~ s/^T//;
+}
+
+# Tagname must have something in it to continue
+if ($tagname ne "") {
+
+	print "This build uses tag $tagname \n";
+
+	my $buildName = "";
+	open(CURRENT, "/space/cvs/nwo-build-tags");
+	while(<CURRENT>) {
+		if (/^([^\t]+)\t$tagname/) {
+			$buildName = $1;
+		}
+	}
+
+	if ($buildName ne "") {
+		print "$tagname is build named $buildName \n";
+
+		my $prevtagname = "";
+		open(PREVIOUS, "/space/cvs/nwo-build-tags.old");
+		while(<PREVIOUS>) {
+			if (/^$buildName\t(.+)/) {
+				$prevtagname = $1;
+			}
+		}
+
+		if ($prevtagname ne "") {
+
+		print "Previous tag was $prevtagname \n";
+
+		# cd into src directory to get saved CVSROOT
+		chdir("$CommonDir/src") || die ("Can't chdir into src");
+
+		print "Running cvs log -r ${prevtagname}::${tagname}\n";
+
+		system("cvs -q log -N -S -r${prevtagname}::${tagname} 2>/dev/null > ${CommonDir}/cvslog.txt");
+
+		print "Running cvs diff -r ${prevtagname} -r ${tagname}\n";
+		system("cvs -q diff -r ${prevtagname} -r ${tagname} 2>/dev/null > ${CommonDir}/cvsdiffs.txt");
+		}
+	}
+
+}
 
 print "All steps completed successfully!\n";
 exit 0;
