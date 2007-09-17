@@ -137,6 +137,10 @@ the machine is powered off). Previously, there was no time-out and would
 result in a the schedd waiting for the connection attempt to fail, which may
 take a long time.
 
+\item If both \MacroNI{EXECUTE\_LOGIN\_IS\_DEDICATED} and
+\MacroNI{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} are defined, the latter
+now takes precedence, whereas previously the reverse was true.
+
 \end{itemize}
 
 \noindent Known Bugs:
