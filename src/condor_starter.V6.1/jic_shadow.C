@@ -1038,6 +1038,10 @@ JICShadow::initUserPriv( void )
 		} else {
 			sprintf( paramer, "SLOT%d_USER", slot );
 			nobody_user = param(paramer);
+			if (!nobody_user && param_boolean("ALLOW_VM_CRUFT", true)) {
+				sprintf( paramer, "VM%d_USER", slot );
+				nobody_user = param(paramer);
+			}
 		}
 
         if ( nobody_user != NULL ) {
@@ -1156,7 +1160,7 @@ JICShadow::initJobInfo( void )
 bool
 JICShadow::initFileTransfer( void )
 {
-	bool rval;
+	bool rval = false;
 
 		// first, figure out if the job supports the new file transfer
 		// attributes.  if so, we can see if it wants optional file
