@@ -409,19 +409,32 @@ JobInfoCommunicator::checkDedicatedExecuteAccounts( char const *name )
 {
 	char const *EXECUTE_LOGIN_IS_DEDICATED = "EXECUTE_LOGIN_IS_DEDICATED";
 	char const *DEDICATED_EXECUTE_ACCOUNT_REGEXP = "DEDICATED_EXECUTE_ACCOUNT_REGEXP";
+
 	char *old_param_val = param(EXECUTE_LOGIN_IS_DEDICATED);
-	if( old_param_val ) {
-		dprintf(D_ALWAYS,
-		        "WARNING: %s is deprecated.  Please use %s instead.\n",
-		        EXECUTE_LOGIN_IS_DEDICATED,
-		        DEDICATED_EXECUTE_ACCOUNT_REGEXP);
-		free(old_param_val);
-		return param_boolean(EXECUTE_LOGIN_IS_DEDICATED,false);
-	}
 	char *pattern_string = param(DEDICATED_EXECUTE_ACCOUNT_REGEXP);
+
 	if( !pattern_string || !*pattern_string ) {
 		free(pattern_string);
+
+		if( old_param_val ) {
+			dprintf(D_ALWAYS,
+					"WARNING: %s is deprecated.  Please use %s instead.\n",
+					EXECUTE_LOGIN_IS_DEDICATED,
+					DEDICATED_EXECUTE_ACCOUNT_REGEXP);
+			free(old_param_val);
+			return param_boolean(EXECUTE_LOGIN_IS_DEDICATED,false);
+		}
 		return false;
+	}
+
+	if( old_param_val ) {
+		free( old_param_val );
+		dprintf(D_ALWAYS,
+				"WARNING: You have defined both %s and %s. "
+				"Ignoring %s.\n",
+				EXECUTE_LOGIN_IS_DEDICATED,
+				DEDICATED_EXECUTE_ACCOUNT_REGEXP,
+				EXECUTE_LOGIN_IS_DEDICATED);
 	}
 
 		// force the matching of the whole string
