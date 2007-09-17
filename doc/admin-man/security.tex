@@ -2663,12 +2663,12 @@ In this example:
 Then tell Condor that these accounts are intended only to be used by Condor,
 so Condor can kill all the processes belonging to these users upon
 job completion.
-The configuration variable \Macro{DEDICATED\_EXECUTION\_ACCOUNT\_REGEXP}
+The configuration variable \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP}
 is introduced and set to a regular expression that matches the account
 names we have just created.
 
 \begin{verbatim}
-   DEDICATED_EXECUTION_ACCOUNT_REGEXP = cndrusr[0-9]+
+   DEDICATED_EXECUTE_ACCOUNT_REGEXP = cndrusr[0-9]+
 \end{verbatim}
 
 Finally, tell Condor not to run jobs as the job owner:
