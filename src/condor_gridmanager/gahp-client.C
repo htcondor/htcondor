@@ -6274,10 +6274,23 @@ GahpClient::cream_ping(const char * service)
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 			// command completed.
-		if (result->argc != 2) {
+		int rc = 0;
+		if (result->argc < 2 || result->argc > 3) {
 			EXCEPT("Bad %s Result",command);
 		}
-		int rc = atoi(result->argv[1]);
+			// We don't distinguish between the ping() call having an
+			// exception and it returning false.
+		if (strcmp(result->argv[1], NULLSTRING) == 0) {
+			if ( strcasecmp( result->argv[2], "true" ) ) {
+				rc = 0;
+			} else {
+				rc = 1;
+				error_string = "";
+			}
+		} else {
+			rc = 1;
+			error_string = result->argv[1];
+		}
 		delete result;
 		return rc;
 	}
