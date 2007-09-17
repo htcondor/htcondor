@@ -4001,22 +4001,18 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
 \item[\Macro{SHADOW\_RENICE\_INCREMENT}]
   \label{param:ShadowReniceIncrement} When the \Condor{schedd} spawns a new
   \Condor{shadow}, it can do so with a \Term{nice-level}.  A
-  nice-level is a
-  Unix mechanism that allows users to assign their own processes a lower 
-  priority so that the processes do not interfere with interactive use of the
-  machine.  This is very handy for keeping a submit machine with lots
-  of shadows running still useful to the owner of the machine.  The
-  value can be any integer between 0 and 19, with a value of 19 being
-  the lowest priority.  It defaults to 10.
+  nice-level is a Unix mechanism that allows users to assign their own
+  processes a lower priority so that the processes run with less
+  priority than other tasks on the machine.  The value can be any
+  integer between 0 and 19, with a value of 19 being the lowest
+  priority.  It defaults to 0.
 
 \item[\Macro{SCHED\_UNIV\_RENICE\_INCREMENT}]
   \label{param:SchedUnivReniceIncrement} Analogous to 
   \MacroNI{JOB\_RENICE\_INCREMENT} and
-  \MacroNI{SHADOW\_RENICE\_INCREMENT}, scheduler universe jobs can
-  be given a nice-level.
-  See  \MacroNI{JOB\_RENICE\_INCREMENT} in
-  section~\ref{param:JobReniceIncrement} for further explanation;
-  default value and range of legal values are the same.
+  \MacroNI{SHADOW\_RENICE\_INCREMENT}, scheduler universe jobs can be
+  given a nice-level.  The value can be any integer between 0 and 19,
+  with a value of 19 being the lowest priority.  It defaults to 0.
 
 \item[\Macro{QUEUE\_CLEAN\_INTERVAL}] \label{param:QueueCleanInterval}
   The \Condor{schedd} maintains the job queue on a given machine.  It does so

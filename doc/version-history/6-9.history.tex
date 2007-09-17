@@ -19,7 +19,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The suggested configuration value for
+\MacroNI{SHADOW\_RENICE\_INCREMENT} has been changed from 10 to 0.  If
+you have the old value in an existing configuration file, we recommend
+changing it.  This improves performance of Condor on busy submit nodes
+where other processes would cause low priority shadows to become
+starved for CPU time.
 
 \end{itemize}
 
