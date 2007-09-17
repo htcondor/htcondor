@@ -5644,10 +5644,12 @@ GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) 
+		if (strcmp(result->argv[1], NULLSTRING) == 0) {
 			rc = 0;
-		else
+		} else {
 			rc = 1;
+			error_string = result->argv[1];
+		}
 
 		delete result;
 		return rc;
@@ -5712,22 +5714,27 @@ GahpClient::cream_job_register(const char *service, const char *delg_service, co
 
 	if ( result ) {
 		// command completed.
-		if (result->argc != 4) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) 
-			rc = 0;
-		else
+		int rc = 0;
+		if ( result->argc == 2 ) {
+			if ( !strcmp( result->argv[1], NULLSTRING ) ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			error_string = result->argv[1];
 			rc = 1;
+		} else if ( result->argc == 4 ) {
+			if ( strcmp( result->argv[1], NULLSTRING ) ) {
+				EXCEPT( "Bad %s result", command );
+			}
 
-		if (rc == 0) {
 			if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 				*job_id = strdup(result->argv[2]);
 			}
 			if ( strcasecmp(result->argv[3], NULLSTRING) ) {
 				*upload_url = strdup(result->argv[3]);
 			}
+			rc = 0;
+		} else {
+			EXCEPT( "Bad %s result", command );
 		}
 		
 		delete result;
@@ -5788,10 +5795,12 @@ GahpClient::cream_job_start(const char *service, const char *job_id)
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) 
+		if (strcmp(result->argv[1], NULLSTRING) == 0) {
 			rc = 0;
-		else
+		} else {
 			rc = 1;
+			error_string = result->argv[1];
+		}
 
 		delete result;
 		return rc;
@@ -5852,11 +5861,13 @@ GahpClient::cream_job_purge(const char *service, const char *job_id)
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) 
+		if (strcmp(result->argv[1], NULLSTRING) == 0) {
 			rc = 0;
-		else
+		} else {
 			rc = 1;
-		
+			error_string = result->argv[1];
+		}
+
 		delete result;
 		return rc;
 	}
@@ -5916,10 +5927,12 @@ GahpClient::cream_job_cancel(const char *service, const char *job_id)
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) 
+		if (strcmp(result->argv[1], NULLSTRING) == 0) {
 			rc = 0;
-		else
+		} else {
 			rc = 1;
+			error_string = result->argv[1];
+		}
 		
 		delete result;
 		return rc;
@@ -5980,11 +5993,13 @@ GahpClient::cream_job_suspend(const char *service, const char *job_id)
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) 
+		if (strcmp(result->argv[1], NULLSTRING) == 0) {
 			rc = 0;
-		else
+		} else {
 			rc = 1;
-		
+			error_string = result->argv[1];
+		}
+
 		delete result;
 		return rc;
 	}
@@ -6044,11 +6059,13 @@ GahpClient::cream_job_resume(const char *service, const char *job_id)
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) 
+		if (strcmp(result->argv[1], NULLSTRING) == 0) {
 			rc = 0;
-		else
+		} else {
 			rc = 1;
-		
+			error_string = result->argv[1];
+		}
+
 		delete result;
 		return rc;
 	}
@@ -6115,16 +6132,17 @@ GahpClient::cream_job_status(const char *service, const char *job_id,
 		}
 		
 		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) 
+		if (strcmp(result->argv[1], NULLSTRING) == 0) {
 			rc = 0;
-		else
+		} else {
 			rc = 1;
+			error_string = result->argv[1];
+		}
 		
-		*failure_reason = strdup(result->argv[6]);
-
 		if ( rc == 0 ) {
 			*job_status = strdup(result->argv[4]);
 			*exit_code = atoi(result->argv[5]);
+			*failure_reason = strdup(result->argv[6]);
 		}
 		delete result;
 		return rc;
@@ -6200,10 +6218,12 @@ GahpClient::cream_proxy_renew(const char *service, const char *delg_service, con
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) 
+		if (strcmp(result->argv[1], NULLSTRING) == 0) {
 			rc = 0;
-		else
+		} else {
 			rc = 1;
+			error_string = result->argv[1];
+		}
 		
 		delete result;
 		return rc;
@@ -6322,10 +6342,12 @@ GahpClient::cream_job_lease(const char *service, const char *job_id, time_t &lea
 		}
 		
 		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) 
+		if (strcmp(result->argv[1], NULLSTRING) == 0) {
 			rc = 0;
-		else
+		} else {
 			rc = 1;
+			error_string = result->argv[1];
+		}
 		
 		if (rc == 0) {
 			lease_incr = atoi(result->argv[4]);
