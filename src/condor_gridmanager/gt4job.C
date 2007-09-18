@@ -2168,7 +2168,7 @@ GT4Job::getDummyJobScratchDir() {
 		goto error_exit;
 	}
 #ifndef WIN32 
-	if ( dir_stat->GetOwner() != get_my_uid() ) {
+	if ( dir_stat->GetOwner() != get_user_uid() ) {
 		dprintf( D_ALWAYS, "Scratch directory %s not owned by user\n",
 				 dirname.Value() );
 		goto error_exit;
