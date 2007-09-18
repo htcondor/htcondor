@@ -205,10 +205,12 @@ The number of slots within the SMP machine is the only attribute
 that needs to be defined.
 Its definition is accomplished by setting the configuration
 variable \Macro{NUM\_SLOTS} to the
-integer number of machines desired.
+integer number of slots desired.
 If variable \MacroNI{NUM\_SLOTS} is not defined,
 it defaults to the number of CPUs within the SMP machine.
-
+You cannot use \MacroNI{NUM\_SLOTS} to make Condor advertise more
+slots than there are CPUs on the machine.
+To do that, use \Macro{NUM\_CPUS}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-SMP-Policy}

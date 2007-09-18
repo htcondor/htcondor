@@ -3299,7 +3299,9 @@ search for the corresponding attribute names using ``slot'', instead.
   macro controls how many slots will be reported.  
   The default is one slot for each CPU.
   This setting can be used to reserve some CPUs on an SMP which would
-  not be reported to the Condor pool.
+  not be reported to the Condor pool. You cannot use this parameter to
+  make Condor advertise more slots than there are CPUs on the machine.
+  To do that, use \Macro{NUM\_CPUS}.
 
 \end{description}
 
