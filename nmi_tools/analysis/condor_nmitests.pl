@@ -3,6 +3,7 @@ use Class::Struct;
 use Cwd;
 use Getopt::Long;
 use File::Copy;
+#use CSL::mysql;
 use DBI;
 
 
@@ -24,6 +25,20 @@ struct Platform_info =>
 	count_errs => '$',
 };
 
+my %metrotask = (
+    "fetch.test_glue.src" => "1",
+    "fetch.input_build_runid.src" => "1",
+    "pre_all" => "1",
+    "platform_pre" => "1",
+    "platform_post" => "1",
+    "platform_job" => "1",
+    "common.put" => "1",
+    "remote_pre_declare" => "1",
+    "remote_declare" => "1",
+    "remote_pre" => "1",
+    "remote_task" => "1",
+    "remote_post" => "1",
+);
 
 GetOptions (
 		'arch=s' => \$arch,
@@ -117,9 +132,9 @@ my $histnew = "";
 if((!$singletest) && (!($berror =~ /all/))) {
 	print "Opening build output for RunId <$requestrunid>\n";
 	$builddir = $basedir;;
-	#print "Testing <<$basedir>>\n";
+	print "Testing <<$basedir>>\n";
 	if(!(-d $basedir )) {
-		die "<<$basedir>> Does not exist\n";
+		print "<<$basedir>> Does not exist\n";
 	}
 	opendir DH, $builddir or die "Can not open Build Results<$builddir>:$!\n";
 	foreach $file (readdir DH) {
@@ -755,6 +770,11 @@ sub LoadAll4BuildResults
 
 sub AnalyseTestRuns
 {
+	my $runcount = 0;
+	my $rungood = 0;
+	my $runbad = 0;
+	my $runnull = 0;
+	my $platform = "";
 	foreach $run (@TestRuns) {
 		my $extraction = $db->prepare("SELECT * FROM Run WHERE  \
                 runid = '$run' \
@@ -767,7 +787,6 @@ sub AnalyseTestRuns
     	my $sumref = $extraction->fetchrow_hashref() ;
         $filepath = $sumref->{'filepath'};
         $gid = $sumref->{'gid'};
-		$platform = $RunPlatforms{"$run"};
 		if(exists $ProblemTestRun{"$run"}) {
 			print "Whats with this run????\n";
 			if($ProblemTestRun{"$run"} == 1) {
@@ -776,34 +795,56 @@ sub AnalyseTestRuns
 			}
 		} 
 		my $entry = Platform_info->new();
-		$testdir = $filepath  . "/" . $gid . "/" . "userdir/" . $platform;
-        #print "TestDir <$run> is <$testdir>\n";
 
-		#print "<<<<run $run platform $platform path $path gid $gid>>>>\n";
-		opendir PD, $testdir or die "Can not open Test Results<$testdir>:$!\n";
-		foreach $file (readdir PD) {
-			chomp($file);
-			$testresults = $testdir . "/" . $file;
-			if($file =~ /^successful_tests_summary$/) {
-				$good = CountLines($testresults);
-				StoreInAnalysisCache($testresults,$platform);
-				#print "$platform: $good passed\n";
-			} elsif($file =~ /^failed_tests_summary$/) {
-				$bad = CountLines($testresults);
-				StoreInAnalysisCache($testresults,$platform);
-				#print "$platform: $bad failed\n";
-			} elsif($file =~ /^tasklist.nmi$/) {
-				$expected = CountLines($testresults);
-				StoreInAnalysisCache($testresults,$platform);
-				$totalexpected = $totalexpected + $expected;
-			}
-		}
+		$runcount = 0;
+		$rungood = 0;
+		$runbad = 0;
+		$runnull = 0;
+		#print "Find tests for runid $args[0] builddate <<$builddate>>\n";
+        $testextraction = $db->prepare("SELECT * FROM Task WHERE  \
+                    runid = $run
+                    ");
+
+        $testextraction->execute();
+
+		# we really only care about the results for the automatics
+        # null(not defined()) means still in never never land, 0 is good and all else bad.
+
+        while( my $sumref = $testextraction->fetchrow_hashref() ){
+            $res = $sumref->{'result'};
+            $name = $sumref->{'name'};
+            $start = $sumref->{'start'};
+            if(!(exists $metrotask{"$name"})) {
+                #print "TestRun $runid Task $name Time $start Platform $platform<$res>\n";
+            	$platform = $sumref->{'platform'};
+                if( defined($res)) {
+                    #print "<$res>\n";
+                    if($res == 0) {
+                        #print "GOOD\n";
+                        $rungood = $rungood + 1;
+                    } else {
+                        # we are left with the positive and negative failures
+                        #print "BAD\n";
+                        $runbad = $runbad + 1;
+                    }
+                } else {
+                    #print "NULL\n";
+                    $runnull = $runnull + 1; # pending
+                }
+				$runcount = $runcount + 1;
+            }
+        }
+
+		$good = $rungood;
+		$bad = $runbad;
+		$expected = $runcount;
+
 		#print "$platform:	Passed = $good	Failed = $bad	Expected = $expected\n";
 		if($expected == 0) { 
 			# no tasklist.nmi
 			$expected = GetHistExpected($platform);
-			$totalexpected = $totalexpected + $expected;
 		}
+		$totalexpected = $totalexpected + $expected;
 
 		# Did we get what we expected??????
 		# We have to have expected and the tests need to have
@@ -839,7 +880,7 @@ sub AnalyseTestRuns
 
 		push @platformresults, $entry;
 
-		$totaltests = $totaltests + $good + $bad;
+		$totaltests = $totaltests + $runcount;
 		close PD;
 	}
 }
@@ -1110,9 +1151,10 @@ sub SetupAnalysisCache
 
 sub DbConnect
 {
-    $db = DBI->connect("DBI:mysql:database=nmi_history;host=nmi-db", "nmipublic", "nmiReadOnly!"
-) || die "Could not connect to database: $!\n";
-    #print "Connected to db!\n";
+    $db = DBI->connect("DBI:mysql:database=nmi_history;host=nmi-db", "nmipublic", "nmiReadOnly!") 	
+    #$db = DBI->connect("DBI:mysql:database=nmi_history;host=nmi-build25", "nmipublic", "nmiReadOnly!") 	
+		|| die "Could not connect to database: $!\n";
+    print "Connected to db!\n";
 }
 
 sub DbDisconnect
