@@ -168,8 +168,18 @@ bool dynuser::init_user() {
 	 
 		if ( reuse_account ) {
 	
+			MyString prefix;
+			char* resource_prefix = param("STARTD_RESOURCE_PREFIX");
+			if (resource_prefix != NULL) {
+				prefix.sprintf(".%s", resource_prefix);
+				free(resource_prefix);
+			}
+			else {
+				prefix = ".slot";
+			}
+				
 			logappend = param("STARTER_LOG");
-			tmp = strstr(logappend, ".slot");
+			tmp = strstr(logappend, prefix.Value());
 			
 			if ( tmp ) {
 				
