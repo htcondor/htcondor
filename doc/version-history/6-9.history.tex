@@ -111,6 +111,10 @@ within a DAG are submitted in priority order by \Condor{dagman}.
 
 \begin{itemize}
 
+\item Fixed a bug introduced in Condor 6.9.4 that caused grid universe
+jobs of type gt4 to not work when the Condor daemons were started as
+root and any file transfer was associated with the job.
+
 \item Removed race condition that was causing the \Condor{schedd} to core
   dump on Windows when the Condor service was stopped.
 
