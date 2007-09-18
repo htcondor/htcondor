@@ -145,6 +145,13 @@ take a long time.
 \MacroNI{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} are defined, the latter
 now takes precedence, whereas previously the reverse was true.
 
+\item Fixed a problem on Windows where if
+\Macro{STARTD\_RESOURCE\_PREFIX} was set to anything besides
+\texttt{slot} (the default), all jobs would run using the
+\Username{condor-reuse-slot1} account, regardless of the actual slot
+used for execution. This problem existed in versions 6.9.3 and 6.9.4
+of Condor.
+
 \end{itemize}
 
 \noindent Known Bugs:
