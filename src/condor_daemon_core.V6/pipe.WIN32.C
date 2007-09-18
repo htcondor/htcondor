@@ -260,6 +260,10 @@ int ReadPipeEnd::read(void* buffer, int len)
 					ret += 1;
 				}
 			}
+			else {
+				// no more data on the pipe; just 1 byte was read
+				ret = 1;
+			}
 			m_async_io_state = IO_UNSTARTED;
 		}
 	}
@@ -551,3 +555,4 @@ bool WritePipeEnd::complete_async_write(bool nonblocking)
 
 	return true;
 }
+
