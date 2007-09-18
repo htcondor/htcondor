@@ -383,7 +383,6 @@ dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
 	bool signal_jobs;
 	CreamProxyDelegation *next_deleg;
 	time_t now = time( NULL );
-	CreamJob *next_job;
 	
 	if ( deleg_gahp->isInitialized() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying checkDelegation\n" );
@@ -446,6 +445,7 @@ dprintf(D_FULLDEBUG,"      %s\n",delegation_uri.Value());
 			 now >= next_deleg->last_proxy_refresh + PROXY_REFRESH_INTERVAL ) {
 dprintf(D_FULLDEBUG,"    refreshing %s\n",next_deleg->deleg_uri);
 			int rc;
+			CreamJob *next_job;
 			deleg_gahp->setDelegProxy( next_deleg->proxy );
 			
 				//create a list of jobIds using the proxy
