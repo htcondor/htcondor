@@ -798,7 +798,7 @@ init_condor_ids()
 						 "Can't find \"%s\" in the password file and "
 						 "%s not defined in %s_config or as an "
 						 "environment variable.\n", myDistro->Get(),
-						 myDistro->Get(), enviName );
+						 enviName, myDistro->Get() );
 				exit(1);
 			}
 		}
