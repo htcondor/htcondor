@@ -1928,6 +1928,17 @@ case "$os" in
 esac
 AC_MSG_RESULT([$_cv_has_globus])
 
+AC_MSG_CHECKING([if gsoap is supported])
+case "$os" in
+  HP-UX ) _cv_has_gsoap=yes ;;
+  OSF1|Linux|SunOS|IRIX|Darwin|FreeBSD|AIX ) _cv_has_gsoap=yes ;;
+  * )
+    AC_MSG_RESULT([error])
+    AC_MSG_ERROR([Unrecognized platform: $os])
+  ;;
+esac
+AC_MSG_RESULT([$_cv_has_gsoap])
+
 AC_MSG_CHECKING([if krb5 is supported])
 case "$os-$_cv_arch" in
   OSF1-*|HP-UX-*|Linux-ALPHA|Linux-CONDOR_PPC ) _cv_has_krb5=no ;;
@@ -2128,8 +2139,6 @@ CHECK_EXTERNAL([classads], [0.9.8-b4], [soft])
 
 CHECK_EXTERNAL([srb], [3.2.1], [soft])
 
-CHECK_EXTERNAL([gsoap], [2.7.6c-p1], [soft])
-
 CHECK_EXTERNAL([pcre], [5.0], [hard],
                [use PCRE (provides regular expression support)],
                MF_LIB_CHECK([pcre], [[pcre pcre_compile]]))
@@ -2207,6 +2216,80 @@ else # else if no globus
                  MF_LIB_CHECK([openssl],
                               [[ssl SSL_connect], [crypto BF_encrypt]]))
 fi
+
+# The test for gsoap needs to happen after the openssl check, so
+# openssl libs, if found, will be in LIBS. Also, if we do not have
+# openssl or globus, which gives us openssl, then we need to link with
+# a non ssl version of the gSOAP libraries.
+
+# The gsoap shared libraries contain unresolved symbols they expect
+# the program they are linking with to implement. To avoid errors
+# because of this we need to provide some extra linker flags.
+
+# NOTE: We don't need the --unresolved-symbols flag in the non-proper
+# case because in that case Condor links with the static libraries,
+# and the linker does not complain as much.
+CHECK_EXTERNAL([gsoap], [2.7.6c-p2], [soft],
+               [use gSOAP (enables Birdbath interface)],
+               [_ldflags_save="$LDFLAGS"
+                LDFLAGS="$LDFLAGS -Wl[,]--unresolved-symbols=ignore-in-shared-libs"
+                AS_IF([test "x$cv_ext_globus" = xyes -o "x$cv_ext_openssl" = xyes],
+                  [MF_LIB_CHECK([gsoap],
+                                [[gsoapssl++ soap_ssl_accept]])],
+                  [MF_LIB_CHECK([gsoap],
+                                [[gsoap++ soap_accept]])])
+                AS_IF([test "x$cv_ext_gsoap" = xno],
+                  [LDFLAGS="$_ldflags_save"])])
+
+# We need to make sure HAVE_OPENSSL_SSL_H is defined otherwise
+# programs will not link properly as stdsoap2.h will not include ssl
+# structures. This is set manually if using Globus's OpenSSL.
+AS_IF([test "x$cv_ext_gsoap" = xyes -a "x$PROPER" = xyes],
+  [AC_CHECK_HEADERS([openssl/ssl.h], [],
+    [AC_MSG_ERROR([gsoap in proper mode requires openssl/ssl.h])])])
+
+# Before the --unresolved-symbols flag was founded we needed to use
+# the following test. We will keep it around incase it is needed
+# again, for linkers that do not support --unresolved-symbols, or
+# --allow-shlibs-undefined. Note, this test does not let all Condor
+# programs compile that have gsoap on the link line, because of the
+# undefined symbols.
+#
+## Also, gSOAP is special in that its libraries are really frameworks,
+## so we need to define symbols the library expects or configure cannot
+## tell the difference between a missing symbol we are testing for or a
+## missing expected symbol. We cannot define these symbols with
+## ac_check_lib so we have to use ac_link_ifelse.
+##               [
+##  _libs_save=$LIBS
+##  LIBS="$LIBS -lgsoapssl++"
+##  AC_LINK_IFELSE([
+##    #ifdef __cplusplus
+##    extern "C" {
+##    #endif
+##    int soap_putheader;
+##    int soap_serializeheader;
+##    int soap_faultstring;
+##    int soap_faultsubcode;
+##    int soap_faultcode;
+##    int soap_getheader;
+##    int soap_getfault;
+##    int soap_faultdetail;
+##    int soap_putfault;
+##    int soap_serializefault;
+##    char soap_ssl_accept();
+##    int main() {
+##      return soap_ssl_accept();
+##    }
+##    #ifdef __cplusplus
+##    }
+##    #endif
+##    ],
+##   [cv_ext_gsoap=yes],
+##   [cv_ext_gsoap=no])
+##  LIBS=$_libs_save])
+
+
 
 else
 # if there's no externals at all, we still need to define these to

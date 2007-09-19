@@ -462,7 +462,7 @@ ext_target(EXT_CLASSADS_VERSION, $(NULL))
 #endif
 
 #if HAVE_EXT_GSOAP
-ext_target(EXT_GSOAP_VERSION,$(NULL))
+ext_target(EXT_GSOAP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
 #endif
 
 #if HAVE_EXT_PCRE
