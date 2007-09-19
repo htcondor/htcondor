@@ -92,9 +92,9 @@ fi
 # Arguments:
 #  * name: The externals name, e.g. [pcre]
 #  * version: The externals desired version, e.g. [5.0]
-#  * requirement_level: [yes]|[no]|[optional], should be [yes]|[no]
-#          [yes]: This external is a HARD requirement, it must exist
-#           [no]: This external is a SOFT requirement, it would be nice
+#  * requirement_level: [hard]|[soft]|[optional], should be [hard]|[soft]
+#         [hard]: This external is a HARD requirement, it must exist
+#         [soft]: This external is a SOFT requirement, it would be nice
 #     [optional]: This external is an OPTIONAL requirement, who cares
 #  * help string: Message provided with --with-<name> in --help
 #  * test: A function to determine if the external is available. It
@@ -117,7 +117,7 @@ AC_DEFUN([CHECK_EXTERNAL],
        [AC_MSG_CHECKING([for $1])
         AC_MSG_RESULT([unsupported])])],
      [AS_IF([test "x$PROPER" = xyes],
-       [MF_EXTERNAL_CHECK($1, $2, $4, $3, $5)],
+       [MF_EXTERNAL_CHECK($1, $2, $4, $3, [$5])],
        [MF_EXTERNAL_CHECK($1, $2, $4, $3, CONDOR_EXTERNAL_VERSION($1, $2))])])])
 
 #
@@ -666,7 +666,7 @@ dnl The license on the macro is listed as "AllPermissive" which according to
 dnl http://ac-archive.sourceforge.net/doc/contribute.html
 dnl means "assumed MIT-style"
 dnl
-dnl $Id: aclocal.m4,v 1.7 2007-08-27 21:11:50 matt Exp $
+dnl $Id: aclocal.m4,v 1.8 2007-09-19 18:47:25 matt Exp $
 dnl
 dnl @synopsis AX_LIB_ORACLE_OCI([MINIMUM-VERSION])
 dnl
@@ -700,7 +700,7 @@ dnl
 dnl @category InstalledPackages
 dnl @category Cxx
 dnl @author Mateusz Loskot <mateusz@loskot.net>
-dnl @version $Date: 2007-08-27 21:11:50 $
+dnl @version $Date: 2007-09-19 18:47:25 $
 dnl @license AllPermissive
 dnl
 AC_DEFUN([AX_LIB_ORACLE_OCI],
