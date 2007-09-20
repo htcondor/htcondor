@@ -28,6 +28,7 @@
 #include "condor_socket_types.h"
 #include "stream.h"
 #include "CondorError.h"
+#include "condor_perms.h"
 
 // retry failed connects for CONNECT_TIMEOUT seconds
 #define CONNECT_TIMEOUT 10
@@ -219,6 +220,11 @@ public:
 	Sock(const Sock &);
 
 	void doNotEnforceMinimalCONNECT_TIMEOUT() ;		// Used by HA Daemon
+
+		/// Authenticate the peer for access in the specified perm level
+	int authenticate_perm(DCpermission perm, CondorError* errstack);
+		/// Authenticate the peer for access in the specified perm level
+	int authenticate_perm(KeyInfo *&ki, DCpermission perm, CondorError* errstack);
 
 //	PRIVATE INTERFACE TO ALL SOCKS
 //

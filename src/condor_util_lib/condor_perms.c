@@ -47,6 +47,16 @@ PermString( DCpermission perm )
 		return "CONFIG";
 	case SOAP_PERM:
 		return "SOAP";
+	case DEFAULT_PERM:
+		return "DEFAULT";
+	case CLIENT_PERM:
+		return "CLIENT";
+	case ADVERTISE_STARTD_PERM:
+		return "ADVERTISE_STARTD";
+	case ADVERTISE_SCHEDD_PERM:
+		return "ADVERTISE_SCHEDD";
+	case ADVERTISE_MASTER_PERM:
+		return "ADVERTISE_MASTER";
 	default:
 		return "Unknown";
 	}

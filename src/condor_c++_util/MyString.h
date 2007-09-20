@@ -239,6 +239,12 @@ class MyString
 	/** Like vsprintf, but this appends to existing data. */
 	bool vsprintf_cat(const char *format, va_list args);
 
+	/** Append str.  If we are non-empty, append delim before str. */
+	void append_to_list(char const *str,char const *delim=",");
+
+	/** Append str.  If we are non-empty, append delim before str. */
+	void append_to_list(MyString const &str,char const *delim=",");
+
 	void lower_case(void);
 	void upper_case(void);
 	void strlwr( void );

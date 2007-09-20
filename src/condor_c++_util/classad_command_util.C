@@ -112,17 +112,8 @@ getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
     s->timeout( 10 );  
     s->decode();
     if( force_auth && ! s->isAuthenticated() ) {
-		char* p = SecMan::getSecSetting( "SEC_%s_AUTHENTICATION_METHODS",
-										 "WRITE" );
-        MyString methods;
-        if( p ) {
-            methods = p;
-            free( p );
-        } else {
-            methods = SecMan::getDefaultAuthenticationMethods();
-        }
 		CondorError errstack;
-        if( ! s->authenticate(methods.Value(), &errstack) ) {
+        if( ! s->authenticate_perm(WRITE, &errstack) ) {
                 // we failed to authenticate, we should bail out now
                 // since we don't know what user is trying to perform
                 // this action.

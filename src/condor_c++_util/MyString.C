@@ -259,6 +259,19 @@ MyString::operator+=(const char *s)
     return *this;
 }
 
+void
+MyString::append_to_list(char const *str,char const *delim /* = "," */) {
+	if( Len ) {
+		(*this) += delim;
+	}
+	(*this) += str;
+}
+
+void
+MyString::append_to_list(MyString const &str,char const *delim /* ="," */) {
+	append_to_list(str.Value(),delim);
+}
+
 MyString& 
 MyString::operator+=(const char c) 
 {

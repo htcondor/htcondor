@@ -1819,6 +1819,22 @@ bool Sock :: is_hdr_encrypt(){
 	return FALSE;
 }
 
+int
+Sock::authenticate_perm(DCpermission perm, CondorError* errstack)
+{
+	MyString methods;
+	SecMan::getAuthenticationMethods( perm, &methods );
+	authenticate(methods.Value(),errstack);
+}
+
+int
+Sock::authenticate_perm(KeyInfo *&ki, DCpermission perm, CondorError* errstack)
+{
+	MyString methods;
+	SecMan::getAuthenticationMethods( perm, &methods );
+	authenticate(ki,methods.Value(),errstack);
+}
+
 int Sock :: authenticate(KeyInfo *&, const char * methods, CondorError* errstack)
 {
 	return -1;

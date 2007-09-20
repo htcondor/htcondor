@@ -55,9 +55,10 @@ static const int USERVERIFY_USE_TABLE = 1;
 static const int USERVERIFY_ONLY_DENIES = 2;
 /// Not_Yet_Ducumented
 static const int USERVERIFY_DENY = 3;
-///	Not_Yet_Ducumented.  15 is max for 32-bit mask
-static const int USERVERIFY_MAX_PERM_TYPES = 15;
-		
+
+/// type used for permission bit-mask; see allow_mask() and deny_mask()
+typedef unsigned long long perm_mask_t;
+
 	/** PermString() converts the given DCpermission into the
 		human-readable string version of the name.
 		@param perm The permission you want to convert
@@ -112,7 +113,7 @@ public:
 		*/
 private:
 
-    typedef HashTable <MyString, int> UserPerm_t;     // <userid, perm> pair
+    typedef HashTable <MyString, perm_mask_t> UserPerm_t;     // <userid, mask> pair
     /* This is for listing users per host */
     typedef HashTable <MyString, StringList *>    UserHash_t;
 
@@ -133,32 +134,29 @@ private:
 		}
 		~PermTypeEntry(); 
 	};
-	
 
-	// perm_names and perm_ints must match up.	this is to map
-	// permission enums (ints) with their human-readable string name.
-	static const char* perm_names[];
-	static const int perm_ints[];
-    bool has_user(UserPerm_t * , const char *, int & , MyString &);
-	int add_hash_entry(const struct in_addr & sin_addr, const char * user, int new_mask);
-	void fill_table( PermTypeEntry * pentry, int mask, char * list, bool allow);
+    bool has_user(UserPerm_t * , const char *, perm_mask_t & , MyString &);
+	int add_hash_entry(const struct in_addr & sin_addr, const char * user, perm_mask_t new_mask);
+	void fill_table( PermTypeEntry * pentry, perm_mask_t mask, char * list, bool allow);
 	int cache_DNS_results;
     void split_entry(const char * entry, char ** host, char ** user);
-	inline int allow_mask(int perm) { return (1 << (1+2*perm)); }
-	inline int deny_mask(int perm) { return (1 << (2+2*perm)); }
+	inline perm_mask_t allow_mask(DCpermission perm) { return (1 << (1+2*perm)); }
+	inline perm_mask_t deny_mask(DCpermission perm) { return (1 << (2+2*perm)); }
+
+	void PermMaskToString(perm_mask_t mask, MyString &mask_str);
 	bool lookup_user(StringList * list, const char * user);
 	char * merge(char * newPerm, char * oldPerm);
 	int did_init;
 
-	bool add_host_entry( const char* addr, int new_mask );
+	bool add_host_entry( const char* addr, perm_mask_t new_mask );
 	void process_allow_users( void );
 
-	PermTypeEntry* PermTypeArray[USERVERIFY_MAX_PERM_TYPES];
+	PermTypeEntry* PermTypeArray[LAST_PERM];
 
 	typedef HashTable <struct in_addr, UserPerm_t *> PermHashTable_t;
 	PermHashTable_t* PermHashTable;
 
-	typedef HashTable <MyString, int> HostHashTable_t; // <host, Perm_t> pair
+	typedef HashTable <MyString, perm_mask_t> HostHashTable_t; // <host, mask> pair
 	HostHashTable_t* AllowHostsTable;
 };
 	

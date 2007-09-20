@@ -84,16 +84,8 @@ store_cred_handler(Service * service, int i, Stream *stream) {
   CredentialWrapper * cred_wrapper;
 
   if (!socket->isAuthenticated()) { 
-    char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "WRITE");
-    MyString methods;
-    if (p) {
-      methods = p;
-      free (p);
-    } else {
-     methods = SecMan::getDefaultAuthenticationMethods();
-    }
     CondorError errstack;
-    if( ! socket->authenticate(methods.Value(), &errstack) ) {
+    if( ! socket->authenticate_perm(WRITE, &errstack) ) {
       dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
       goto EXIT;
     }
@@ -246,16 +238,8 @@ get_cred_handler(Service * service, int i, Stream *stream) {
 
   // Authenticate
   if (!socket->isAuthenticated()) {
-    char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "READ");
-    MyString methods;
-    if (p) {
-      methods = p;
-      free (p);
-    } else {
-      methods = SecMan::getDefaultAuthenticationMethods();
-    }
     CondorError errstack;
-    if( ! socket->authenticate(methods.Value(), &errstack) ) {
+    if( ! socket->authenticate_perm(READ, &errstack) ) {
       dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
       goto EXIT;
     }
@@ -369,16 +353,8 @@ query_cred_handler(Service * service, int i, Stream *stream) {
 
 
   if (!socket->isAuthenticated()) {
-    char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "READ");
-    MyString methods;
-    if (p) {
-      methods = p;
-      free (p);
-    } else {
-      methods = SecMan::getDefaultAuthenticationMethods();
-    }
     CondorError errstack;
-    if( ! socket->authenticate(methods.Value(), &errstack) ) {
+    if( ! socket->authenticate_perm(READ, &errstack) ) {
       dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
       goto EXIT;
     }
@@ -452,16 +428,8 @@ rm_cred_handler(Service * service, int i, Stream *stream) {
   ReliSock * socket = (ReliSock*)stream;
 
   if (!socket->isAuthenticated()) {
-    char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "READ");
-    MyString methods;
-    if (p) {
-      methods = p;
-      free (p);
-    } else {
-      methods = SecMan::getDefaultAuthenticationMethods();
-    }
     CondorError errstack;
-    if( ! socket->authenticate(methods.Value(), &errstack) ) {
+    if( ! socket->authenticate_perm(READ, &errstack) ) {
       dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
       goto EXIT;
     }

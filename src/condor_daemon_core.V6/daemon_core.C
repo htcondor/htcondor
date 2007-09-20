@@ -2024,45 +2024,24 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 }
 
 MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm) {
-	int		i;
-
 	MyString res;
-	char tbuf[16];
+	int		i;
+	DCpermissionHierarchy hierarchy( perm );
+	DCpermission const *perms = hierarchy.getImpliedPerms();
 
-	// there is now a heirarchy of authorization levels.
-	// DAEMON and ADMINISTRATOR imply WRITE.
-	// WRITE, NEGOTIATOR, and CONFIG_PERM imply READ.
-	//
-	// conveniently, we can call this function recursively to fill in
-	// the implied levels before appending more.  e.g. DAEMON calls it
-	// with WRITE, which calls it with READ, building up the list.
-	
-	if ( (perm==DAEMON) || (perm==ADMINISTRATOR) ) {
-		res = GetCommandsInAuthLevel(WRITE);
-	}
-
-	if ( (perm==WRITE) || (perm==NEGOTIATOR) || (perm==CONFIG_PERM) ) {
-		res = GetCommandsInAuthLevel(READ);
-	}
-
-	// end of heirarchy recursion.  the following code just gets the
-	// values from the actual authorization level requested.
-
-	for (i = 0; i < maxCommand; i++) {
-		if( (comTable[i].handler || comTable[i].handlercpp) &&
-			(comTable[i].perm == perm) )
-		{
-
-			sprintf (tbuf, "%i", comTable[i].num);
-			if (res.Length()) {
-				res += ",";
+		// iterate through a list of this perm and all perms implied by it
+	for (perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
+		for (i = 0; i < maxCommand; i++) {
+			if( (comTable[i].handler || comTable[i].handlercpp) &&
+				(comTable[i].perm == perm) )
+			{
+				char const *comma = res.Length() ? "," : "";
+				res.sprintf_cat( "%s%i", comma, comTable[i].num );
 			}
-			res += tbuf;
 		}
 	}
 
 	return res;
-
 }
 
 void DaemonCore::DumpReapTable(int flag, const char* indent)
@@ -3689,7 +3668,7 @@ int DaemonCore::HandleReq(Stream *insock)
 					// want to start one.  look at our security policy.
 				ClassAd our_policy;
 				if( ! sec_man->FillInSecurityPolicyAd(
-					  PermString(comTable[cmd_index].perm), &our_policy) ) {
+					  comTable[cmd_index].perm, &our_policy) ) {
 						// our policy is invalid even without the other
 						// side getting involved.
 					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
@@ -4101,7 +4080,9 @@ int DaemonCore::HandleReq(Stream *insock)
 			if (comTable[index].perm != ALLOW) {
 
 				ClassAd our_policy;
-				if( ! sec_man->FillInSecurityPolicyAd( PermString(comTable[index].perm), &our_policy) ) {
+				if( ! sec_man->FillInSecurityPolicyAd(
+					comTable[index].perm, &our_policy) )
+				{
 					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
 							 "Our security policy is invalid!\n" );
 					result = FALSE;
@@ -4124,12 +4105,14 @@ int DaemonCore::HandleReq(Stream *insock)
 					// yep, they were.  deny.
 
 					dprintf(D_ALWAYS,
-						"DaemonCore: PERMISSION DENIED for %d via %s%s%s from host %s\n",
+						"DaemonCore: PERMISSION DENIED for %d (%s) via %s%s%s from host %s (access level %s)\n",
 						req,
+						comTable[index].command_descrip,
 						(is_tcp) ? "TCP" : "UDP",
 						(user[0] != '\0') ? " from " : "",
 						(user[0] != '\0') ? user : "",
-						sin_to_string(((Sock*)stream)->endpoint()) );
+						sin_to_string(((Sock*)stream)->endpoint()),
+						PermString(comTable[index].perm));
 
 					result = FALSE;
 					goto finalize;
@@ -4163,20 +4146,22 @@ int DaemonCore::HandleReq(Stream *insock)
 			// make result != to KEEP_STREAM, so we blow away this socket below
 			result = 0;
 			dprintf( D_ALWAYS,
-                     "DaemonCore: PERMISSION DENIED to %s from host %s for command %d (%s)\n",
+                     "DaemonCore: PERMISSION DENIED to %s from host %s for command %d (%s), access level %s\n",
                      (user[0] == '\0')? "unknown user" : user, sin_to_string(((Sock*)stream)->endpoint()), req,
-                     comTable[index].command_descrip );
+                     comTable[index].command_descrip,
+					 PermString(comTable[index].perm));
 			// if UDP, consume the rest of this message to try to stay "in-sync"
 			if ( !is_tcp)
 				stream->end_of_message();
 
 		} else {
 			dprintf(comTable[index].dprintf_flag,
-					"DaemonCore: Command received via %s%s%s from host %s\n",
+					"DaemonCore: Command received via %s%s%s from host %s, access level %s\n",
 					(is_tcp) ? "TCP" : "UDP",
 					(user[0] != '\0') ? " from " : "",
 					(user[0] != '\0') ? user : "",
-					sin_to_string(((Sock*)stream)->endpoint()) );
+					sin_to_string(((Sock*)stream)->endpoint()),
+					PermString(comTable[index].perm));
 			dprintf(comTable[index].dprintf_flag,
                     "DaemonCore: received command %d (%s), calling handler (%s)\n",
                     req, comTable[index].command_descrip,
@@ -4184,7 +4169,7 @@ int DaemonCore::HandleReq(Stream *insock)
 		}
 
 	} else {
-		dprintf(comTable[index].dprintf_flag,
+		dprintf(D_ALWAYS,
 				"DaemonCore: Command received via %s%s%s from host %s\n",
 				(is_tcp) ? "TCP" : "UDP",
 				(user[0] != '\0') ? " from " : "",
@@ -8434,7 +8419,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 
 #if (DEBUG_SETTABLE_ATTR_LISTS)
 				dprintf( D_ALWAYS, "CheckConfigSecurity: "
-						 "found %s at perm level %s\n", name,
+						 "found %s at access level %s\n", name,
 						 PermString((DCpermission)i) );
 #endif
 

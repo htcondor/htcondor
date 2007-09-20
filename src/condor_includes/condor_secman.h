@@ -105,8 +105,8 @@ public:
 
 	void					send_invalidate_packet ( char* sinful, char* sessid );
 
-	bool	FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
-									bool otherside_can_neg = true);
+	bool	FillInSecurityPolicyAd( DCpermission auth_level,
+									ClassAd* ad, bool otherside_can_neg=true);
 	ClassAd * 				ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
 	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, ClassAd &cli_ad, ClassAd &srv_ad);
@@ -116,7 +116,8 @@ public:
 	static  void			key_printf(int debug_levels, KeyInfo *k);
 
 	static	int 			getAuthBitmask ( const char * methods );
-	static	char* 			getSecSetting( const char* fmt, const char* authorization_level );
+	static void             getAuthenticationMethods( DCpermission perm, MyString *result );
+
 	static	MyString 		getDefaultAuthenticationMethods();
 	static	MyString 		getDefaultCryptoMethods();
 	static	SecMan::sec_req 		sec_alpha_to_sec_req(char *b);
@@ -124,7 +125,18 @@ public:
 	static	SecMan::sec_req 		sec_lookup_req( ClassAd &ad, const char* pname );
 	static	SecMan::sec_feat_act 	sec_lookup_feat_act( ClassAd &ad, const char* pname );
 
-	SecMan::sec_req 		sec_param( char* pname, sec_req def = SEC_REQ_UNDEFINED );
+		// For each auth level in config hierarchy, look up config value
+		// and return first one found.  Optionally, set param_name to the
+		// name of the config parameter that was found.  If check_subsystem
+		// is specified, look first for param specific to specified
+		// subsystem.
+		// Caller should free the returned string.
+	static char*            getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name=NULL, char const *check_subsystem=NULL );
+
+		// for each auth level in the hierarchy, look up config value,
+		// and parse it as REQUIRED, OPTIONAL, etc.
+	sec_req         sec_req_param( const char* fmt, DCpermission auth_level, sec_req def );
+
 	bool 					sec_is_negotiable (sec_req r);
 	SecMan::sec_feat_act 	sec_req_to_feat_act (sec_req r);
 

@@ -68,17 +68,13 @@ do_Q_request(ReliSock *syscall_sock)
 	
 			// Authenticate socket, if not already done by daemonCore
 		if( !syscall_sock->isAuthenticated() ) {
-			char * p = SecMan::getSecSetting( "SEC_%s_AUTHENTICATION_METHODS", "WRITE" );
-			MyString methods;
-			if (p) {
-				methods = p;
-				free (p);
-			} else {
-				methods = SecMan::getDefaultAuthenticationMethods();
+			if( DebugFlags & D_SECURITY ) {
+				MyString methods;
+				SecMan::getAuthenticationMethods( WRITE, &methods );
+				dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.Value());
 			}
-			dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.Value());
 			CondorError errstack;
-			if( ! syscall_sock->authenticate(methods.Value(), &errstack) ) {
+			if( ! syscall_sock->authenticate_perm(WRITE, &errstack) ) {
 					// Failed to authenticate
 				dprintf( D_ALWAYS, "SCHEDD: authentication failed: %s\n", 
 						 errstack.getFullText() );

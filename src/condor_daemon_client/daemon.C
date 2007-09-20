@@ -2088,16 +2088,7 @@ Daemon::forceAuthentication( ReliSock* rsock, CondorError* errstack )
 		return true;
 	}
 
-	char *p = SecMan::getSecSetting( "SEC_%s_AUTHENTICATION_METHODS",
-									 "CLIENT" ); 
-	MyString methods;
-	if( p ) {
-		methods = p;
-		free(p);
-	} else {
-		methods = SecMan::getDefaultAuthenticationMethods();
-	}
-	return rsock->authenticate( methods.Value(), errstack );
+	return rsock->authenticate_perm( CLIENT_PERM, errstack );
 }
 
 

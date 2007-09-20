@@ -28,23 +28,12 @@
 #include "condor_netdb.h"
 
 #include "HashTable.h"
+#include "sock.h"
+#include "condor_secman.h"
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
 
-/*
-  The "order" of entries in perm_names and perm_ints must match.
-
-  These arrays are only for use inside condor_userverify.C, and they
-  include all the permission levels that we want userverify to handle,
-  not neccessarily all of the permission levels DaemonCore itself
-  cares about (for example, there's nothing in here for
-  "IMMEDIATE_FAMILY").  They can *not* be used to convert DCpermission
-  enums into strings, you need to use PermString() (in the util lib) for
-  that.
-*/
-const char* IpVerify::perm_names[] = {"READ","WRITE","DAEMON", "ADMINISTRATOR","OWNER","NEGOTIATOR","CONFIG","SOAP",NULL};
-const int IpVerify::perm_ints[] = {READ,WRITE,DAEMON,ADMINISTRATOR,OWNER,NEGOTIATOR,CONFIG_PERM,SOAP_PERM,-1};  // must end with -1
 const char TotallyWild[] = "*";
 
 
@@ -71,11 +60,11 @@ bool operator==(const struct in_addr a, const struct in_addr b) {
 // Constructor
 IpVerify::IpVerify() 
 {
-	int i;
-
 	did_init = FALSE;
-	for (i=0;i<USERVERIFY_MAX_PERM_TYPES;i++) {
-		PermTypeArray[i] = NULL;
+
+	DCpermission perm;
+	for (perm=FIRST_PERM; perm<LAST_PERM; perm=NEXT_PERM(perm)) {
+		PermTypeArray[perm] = NULL;
 	}
 
 	cache_DNS_results = TRUE;
@@ -88,7 +77,6 @@ IpVerify::IpVerify()
 // Destructor
 IpVerify::~IpVerify()
 {
-	int i;
 
 	// Clear the Permission Hash Table
 	if (PermHashTable) {
@@ -109,25 +97,27 @@ IpVerify::~IpVerify()
 	}
 
 	// Clear the Permission Type Array
-	for (i=0;i<USERVERIFY_MAX_PERM_TYPES;i++) {
-		if ( PermTypeArray[i] )
-			delete PermTypeArray[i];
+	DCpermission perm;
+	for (perm=FIRST_PERM; perm<LAST_PERM; perm=NEXT_PERM(perm)) {
+		if ( PermTypeArray[perm] )
+			delete PermTypeArray[perm];
 	}
 }
 
 
-// this function needs an enema.
 int
 IpVerify::Init()
 {
-	char buf[50];
 	char *pAllow, *pDeny, *pOldAllow, *pOldDeny, *pNewAllow = NULL, *pNewDeny = NULL;
-    char *pCopyAllow=NULL, *pCopyDeny=NULL ;
-	int i;
+	DCpermission perm;
     bool useOldPermSetup = true;
 	
 	did_init = TRUE;
-	
+
+		// Make sure that perm_mask_t is big enough to hold all possible
+		// results of allow_mask() and deny_mask().
+	ASSERT( sizeof(perm_mask_t)*8 - 2 > LAST_PERM );
+
 	// Clear the Permission Hash Table in case re-initializing
 	if (PermHashTable) {
 		// iterate through the table and delete the entries
@@ -143,41 +133,26 @@ IpVerify::Init()
 	}
 
 	// and Clear the Permission Type Array
-	for (i=0;i<USERVERIFY_MAX_PERM_TYPES;i++) {
-		if ( PermTypeArray[i] ) {
-			delete PermTypeArray[i];
-			PermTypeArray[i] = NULL;
+	for (perm=FIRST_PERM; perm<LAST_PERM; perm=NEXT_PERM(perm)) {
+		if ( PermTypeArray[perm] ) {
+			delete PermTypeArray[perm];
+			PermTypeArray[perm] = NULL;
 		}
 	}
 
     // This is the new stuff
-	for ( i=0; perm_ints[i] >= 0; i++ ) {
-			// We're broken if either: there's no name for this kind
-			// of DC permission, _or_ there _is_ an entry for it
-			// already (since we thought we just deleted them all). 
-		if ( !perm_names[i] || PermTypeArray[perm_ints[i]] ) {
-			EXCEPT("IP VERIFY code misconfigured");
-		}
+	for ( perm=FIRST_PERM; perm < LAST_PERM; perm=NEXT_PERM(perm) ) {
 
 		PermTypeEntry* pentry = new PermTypeEntry();
-		if ( !pentry ) {
-			EXCEPT("IP VERIFY out of memory");
-		} else {
-			PermTypeArray[perm_ints[i]] = pentry;
-		}
-		
-        sprintf(buf,"ALLOW_%s_%s",perm_names[i],mySubSystem);
-		if ( (pNewAllow = param(buf)) == NULL ) {
-			sprintf(buf,"ALLOW_%s", perm_names[i]);
-			pNewAllow = param(buf);
-		}
+		ASSERT( pentry );
+		PermTypeArray[perm] = pentry;
+
+		MyString allow_param, deny_param;
+
+		pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param,mySubSystem);
 
         // This is the old stuff, eventually it will be gone
-        sprintf(buf,"HOSTALLOW_%s_%s",perm_names[i],mySubSystem);
-        if ( (pOldAllow = param(buf)) == NULL ) {
-            sprintf(buf,"HOSTALLOW_%s",perm_names[i]);
-            pOldAllow = param(buf);
-        }
+		pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param,mySubSystem);
 
         // Treat a "*", "*/*" for USERALLOW_XXX as if it's just
         // undefined. 
@@ -195,65 +170,22 @@ IpVerify::Init()
 		// concat the two
 		pAllow = merge(pNewAllow, pOldAllow);
 
-		// if this is the WRITE authorization level, store a copy of the list
-		// in case the DAEMON level is undefined.  DAEMON happens to follow
-		// WRITE in the perm_ints[i] array we are stepping through.
-		if ((perm_ints[i] == WRITE) && pAllow) {
-			pCopyAllow = strdup(pAllow); 
-		}
+		pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param,mySubSystem);
 
-		// likewise, if this is the DAEMON level, and we don't have a value
-		// in pAllow, it means nothing was defined in the condor_config file
-		// and we should copy the value in pCopyAllow if that exists.
-		if ((perm_ints[i] == DAEMON) && pCopyAllow) {
-			if (!pAllow) {
-				pAllow = strdup(pCopyAllow);
-			}
-
-			// free the memory now, nothing else will use it other
-			// than this hack.
-			free(pCopyAllow);
-			pCopyAllow = NULL;
-		}
-
-		sprintf(buf,"DENY_%s_%s",perm_names[i],mySubSystem);
-		if ( (pNewDeny = param(buf)) == NULL ) {
-			sprintf(buf,"DENY_%s",perm_names[i]);
-			pNewDeny = param(buf);
-		}
-
-        sprintf(buf,"HOSTDENY_%s_%s",perm_names[i],mySubSystem);
-        if ( (pOldDeny = param(buf)) == NULL ) {
-            sprintf(buf,"HOSTDENY_%s",perm_names[i]);
-            pOldDeny = param(buf);
-        }
+		pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param,mySubSystem);
 
 		// concat the two
 		pDeny = merge(pNewDeny, pOldDeny);
 
-		// see above comments in Allow
-		if ((perm_ints[i] == WRITE) && pDeny) {
-			pCopyDeny = strdup(pDeny); 
+		if( pAllow ) {
+			dprintf ( D_SECURITY, "IPVERIFY: allow %s : %s (from config value %s)\n", PermString(perm),pAllow,allow_param.Value());
 		}
-
-		// see above comments in Allow
-		if ((perm_ints[i] == DAEMON) && pCopyDeny) {
-			if (!pDeny) {
-				pDeny = strdup(pCopyDeny); 
-			}
-			free(pCopyDeny);
-			pCopyDeny = NULL;
-		}
-
-		if (pAllow && (DebugFlags & D_FULLDEBUG)) {
-			dprintf ( D_SECURITY, "IPVERIFY: allow: %s\n", pAllow);
-		}
-		if (pDeny && (DebugFlags & D_FULLDEBUG)) {
-			dprintf ( D_SECURITY, "IPVERIFY: deny: %s\n", pDeny);
+		if( pDeny ) {
+			dprintf ( D_SECURITY, "IPVERIFY: deny %s: %s (from config value %s)\n", PermString(perm),pDeny,deny_param.Value());
 		}
 
 		if ( !pAllow && !pDeny ) {
-			if (perm_ints[i] == CONFIG_PERM) { 	  // deny all CONFIG requests 
+			if (perm == CONFIG_PERM) { 	  // deny all CONFIG requests 
 				pentry->behavior = USERVERIFY_DENY; // by default
 			} else {
 				pentry->behavior = USERVERIFY_ALLOW;
@@ -266,12 +198,12 @@ IpVerify::Init()
 				pentry->behavior = USERVERIFY_USE_TABLE;
 			}
 			if ( pAllow ) {
-                fill_table( pentry, allow_mask(perm_ints[i]), pAllow, true );
+                fill_table( pentry, allow_mask(perm), pAllow, true );
 				free(pAllow);
                 pAllow = NULL;
 			}
 			if ( pDeny ) {
-				fill_table( pentry,	deny_mask(perm_ints[i]), pDeny, false );
+				fill_table( pentry,	deny_mask(perm), pDeny, false );
 				free(pDeny);
                 pDeny = NULL;
 			}
@@ -331,7 +263,7 @@ char * IpVerify :: merge(char * pNewList, char * pOldList)
     return pList;
 }
 
-bool IpVerify :: has_user(UserPerm_t * perm, const char * user, int & mask, MyString & userid)
+bool IpVerify :: has_user(UserPerm_t * perm, const char * user, perm_mask_t & mask, MyString & userid)
 {
     // Now, let's see if the user is there
     int             found = -1;
@@ -370,10 +302,10 @@ bool IpVerify :: has_user(UserPerm_t * perm, const char * user, int & mask, MySt
 }   
 
 int
-IpVerify::add_hash_entry(const struct in_addr & sin_addr, const char * user, int new_mask)
+IpVerify::add_hash_entry(const struct in_addr & sin_addr, const char * user, perm_mask_t new_mask)
 {
     UserPerm_t * perm = NULL;
-    int old_mask = 0;  // must init old_mask to zero!!!
+    perm_mask_t old_mask = 0;  // must init old_mask to zero!!!
     MyString userid;
 
 	// assert(PermHashTable);
@@ -407,6 +339,22 @@ IpVerify::add_hash_entry(const struct in_addr & sin_addr, const char * user, int
     return TRUE;
 }
 
+void
+IpVerify::PermMaskToString(perm_mask_t mask, MyString &mask_str)
+{
+	DCpermission perm;
+	for(perm=FIRST_PERM; perm<LAST_PERM; perm=NEXT_PERM(perm)) {
+		if( mask & allow_mask(perm) ) {
+			mask_str.append_to_list(PermString(perm));
+		}
+		if( mask & deny_mask(perm) ) {
+			mask_str.append_to_list("DENY(");
+			mask_str += PermString(perm);
+			mask_str += ")";
+		}
+	}
+}
+
 
 // The form of the addr is: joe@some.domain.name/host.name
 // For example, joe@cs.wisc.edu/perdita.cs.wisc.edu
@@ -424,7 +372,7 @@ IpVerify::add_hash_entry(const struct in_addr & sin_addr, const char * user, int
 // contains a wildcard, in which case we want to keep that in the
 // string list.
 bool
-IpVerify::add_host_entry( const char* addr, int mask ) 
+IpVerify::add_host_entry( const char* addr, perm_mask_t mask ) 
 {
 	struct hostent	*hostptr;
 	struct in_addr	sin_addr;
@@ -465,18 +413,22 @@ IpVerify::add_host_entry( const char* addr, int mask )
         } else {
             // No wildcards; resolve the name
 			if ( (hostptr=condor_gethostbyname(host)) != NULL) {
+				bool added = false;
 				if ( hostptr->h_addrtype == AF_INET ) {
 					for (int i=0; hostptr->h_addr_list[i]; i++) {
 						add_hash_entry( (*(struct in_addr *)
                                          (hostptr->h_addr_list[i])),
                                         user, mask );
+						added = true;
 					}   
 				}
-				if (DebugFlags & D_FULLDEBUG) {
-					dprintf (D_SECURITY, "IPVERIFY: succesfully added %s\n", host);
+				if ( added && (DebugFlags & D_FULLDEBUG) ) {
+					MyString mask_str;
+					PermMaskToString( mask, mask_str );
+					dprintf (D_SECURITY, "IPVERIFY: successfully resolved and added %s to %s\n", host, mask_str.Value());
 				}
 			} else {
-				dprintf (D_SECURITY, "IPVERIFY: unable to resolve %s\n", host);
+				dprintf (D_ALWAYS, "IPVERIFY: unable to resolve IP address of %s\n", host);
 			}
 		}
 	}	
@@ -491,7 +443,7 @@ IpVerify::add_host_entry( const char* addr, int mask )
 
 
 void
-IpVerify::fill_table(PermTypeEntry * pentry, int mask, char * list, bool allow)
+IpVerify::fill_table(PermTypeEntry * pentry, perm_mask_t mask, char * list, bool allow)
 {
     NetStringList * whichHostList = NULL;
     UserHash_t * whichUserHash = NULL;
@@ -633,7 +585,8 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 int
 IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char * user )
 {
-	int mask, found_match, i, temp_mask, j;
+	perm_mask_t mask, temp_mask, subnet_mask;
+	int found_match, i;
 	struct in_addr sin_addr;
 	char *thehost;
 	char **aliases;
@@ -654,7 +607,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		break;
 
 	default:
-		if ( perm >= USERVERIFY_MAX_PERM_TYPES || !PermTypeArray[perm] ) {
+		if ( !PermTypeArray[perm] ) {
 			EXCEPT("IpVerify::Verify: called with unknown permission %d\n",perm);
 		}
 		
@@ -695,13 +648,13 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 
 				if ( PermHashTable->lookup(sin_addr, ptable) != -1 ) {
                     if (has_user(ptable, who, temp_mask, userid)) {
-                        j = (temp_mask & ( allow_mask(perm) | deny_mask(perm) ));
-                        if ( j != 0 ) {
+                        subnet_mask = (temp_mask & ( allow_mask(perm) | deny_mask(perm) ));
+                        if ( subnet_mask != 0 ) {
                             // We found a subnet match.  Logical-or it into our mask.
                             // But only add in the bits that relate to this perm, else
                             // we may not check the hostname strings for a different
                             // perm.
-                            mask |= j;
+                            mask |= subnet_mask;
                             break;
                         }
                     }
@@ -772,6 +725,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
                       string_anycase_withwildcard(thehost))) {
                     if (PermTypeArray[perm]->deny_users->lookup(hoststring, userList) != -1) {
                         if (lookup_user(userList, who)) {  
+							dprintf ( D_SECURITY, "IPVERIFY: matched %s at %s to deny list\n", who,hoststring);
                             mask |= deny_mask(perm);
                         }
                     }
@@ -790,23 +744,26 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			// WRITE, NEGOTIATOR, and CONFIG_PERM imply READ.
 			if ( mask == 0 ) {
 				if ( PermTypeArray[perm]->behavior == USERVERIFY_ONLY_DENIES ) {
-					mask |= allow_mask(perm);
-				} else if ( perm == READ &&
-							( Verify( WRITE, sin,
-									  user ) == USER_AUTH_SUCCESS ||
-							  Verify( NEGOTIATOR, sin,
-									  user ) == USER_AUTH_SUCCESS ||
-							  Verify( CONFIG_PERM, sin,
-									  user ) == USER_AUTH_SUCCESS ) ) {
-					mask |= allow_mask(perm);
-				} else if ( perm == WRITE &&
-							( Verify( ADMINISTRATOR, sin,
-									  user ) == USER_AUTH_SUCCESS ||
-							  Verify( DAEMON, sin,
-									  user ) == USER_AUTH_SUCCESS ) ) {
+					dprintf(D_SECURITY,"IPVERIFY: %s at %s not matched to deny list, so allowing.\n",who,sin_to_string(sin));
 					mask |= allow_mask(perm);
 				} else {
-					mask |= deny_mask(perm);
+					DCpermissionHierarchy hierarchy( perm );
+					DCpermission const *parent_perms =
+						hierarchy.getPermsIAmDirectlyImpliedBy();
+					bool parent_allowed = false;
+					for( ; *parent_perms != LAST_PERM; parent_perms++ ) {
+						if( Verify( *parent_perms, sin, user) == USER_AUTH_SUCCESS ) {
+							parent_allowed = true;
+							dprintf(D_SECURITY,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who,sin_to_string(sin),PermString(perm),PermString(*parent_perms));
+							break;
+						}
+					}
+					if( parent_allowed ) {
+						mask |= allow_mask(perm);
+					}
+					else {
+						mask |= deny_mask(perm);
+					}
 				}
 			}
 
@@ -853,7 +810,7 @@ void
 IpVerify::process_allow_users( void )
 {
 	MyString user;
-	int mask;
+	perm_mask_t mask;
 	AllowHostsTable->startIterations();
 	while( AllowHostsTable->iterate(user, mask) ) {
 		add_host_entry( user.Value(), mask );
@@ -871,8 +828,8 @@ IpVerify::process_allow_users( void )
 bool
 IpVerify::AddAllowHost( const char* host, DCpermission perm )
 {
-	int new_mask = allow_mask(perm);
-	int *mask_p = NULL;
+	perm_mask_t new_mask = allow_mask(perm);
+	perm_mask_t *mask_p = NULL;
     int len = strlen(host);
 
     char * buf = (char *) malloc(len+3); // 2 for */
@@ -892,7 +849,7 @@ IpVerify::AddAllowHost( const char* host, DCpermission perm )
 				// The host was in there, but we need to add more bits
 				// to the mask
 			dprintf( D_DAEMONCORE, 
-					 "IpVerify::AddAllowHost: Changing mask, was %d, adding %d)\n",
+					 "IpVerify::AddAllowHost: Changing mask, was %llu, adding %llu)\n",
 					 *mask_p, new_mask );
 			new_mask = *mask_p | new_mask;
 			*mask_p = new_mask;
@@ -904,7 +861,7 @@ IpVerify::AddAllowHost( const char* host, DCpermission perm )
 			}
 		} else {
 			dprintf( D_DAEMONCORE, 
-					 "IpVerify::AddAllowHost: Already have %s with %d\n", 
+					 "IpVerify::AddAllowHost: Already have %s with %llu\n", 
 					 host, new_mask );
 		}
 		return true;

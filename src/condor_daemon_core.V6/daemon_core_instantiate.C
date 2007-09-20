@@ -29,9 +29,10 @@
 
 extern bool operator==(const struct in_addr a, const struct in_addr b);
 
+template class HashTable<MyString, perm_mask_t>;
 template class HashTable<pid_t, DaemonCore::PidEntry*>;
-template class HashTable<struct in_addr, int>;
-template class HashTable<struct in_addr, HashTable<MyString, int> *>;
+template class HashTable<struct in_addr, perm_mask_t>;
+template class HashTable<struct in_addr, HashTable<MyString, perm_mask_t> *>;
 template class ExtArray<DaemonCore::SockEnt>;
 template class ExtArray<DaemonCore::PipeEnt>;
 template class Queue<DaemonCore::WaitpidEntry>;

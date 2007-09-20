@@ -179,17 +179,8 @@ start_stork_command_and_authenticate (
 	ReliSock * reli_sock = (ReliSock*)sock;
 
 	if (!reli_sock->isAuthenticated()) { 
-		char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "CLIENT");
-		MyString methods;
-		if (p) {
-			methods = p;
-			free (p);
-		} else {
-			methods = SecMan::getDefaultAuthenticationMethods();
-		}
 		CondorError errstack;
-
-		if( ! reli_sock->authenticate(methods.Value(), &errstack) ) {
+		if( ! reli_sock->authenticate_perm(CLIENT_PERM, &errstack) ) {
 			error_reason = "Authentication error";
 			delete reli_sock;
 			return NULL;

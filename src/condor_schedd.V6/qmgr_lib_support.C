@@ -135,16 +135,7 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
         }
 
         if ( !read_only ) {
-			char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "CLIENT");
-			MyString methods;
-			if (p) {
-				methods = p;
-				free(p);
-			} else {
-				methods = SecMan::getDefaultAuthenticationMethods();
-			}
-
-            if (!qmgmt_sock->authenticate(methods.Value(), errstack_select)) {
+            if (!qmgmt_sock->authenticate_perm(CLIENT_PERM, errstack_select)) {
                 delete qmgmt_sock;
                 qmgmt_sock = NULL;
 				if (!errstack) {

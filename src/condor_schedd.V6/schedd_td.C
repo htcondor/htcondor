@@ -80,17 +80,8 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	////////////////////////////////////////////////////////////////////////
 
 	if( ! rsock->isAuthenticated() ) {
-		char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", 
-			"WRITE");
-		MyString methods;
-		if (p) {
-			methods = p;
-			free (p);
-		} else {
-			methods = SecMan::getDefaultAuthenticationMethods();
-		}
 		CondorError errstack;
-		if( ! rsock->authenticate(methods.Value(), &errstack) ) {
+		if( ! rsock->authenticate_perm(WRITE, &errstack) ) {
 				// we failed to authenticate, we should bail out now
 				// since we don't know what user is trying to perform
 				// this action.
@@ -1535,16 +1526,8 @@ Scheduler::downloadJobFiles(int mode, Stream* s)
 	rsock->decode();
 
 	if( ! rsock->isAuthenticated() ) {
-		char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "WRITE");
-		MyString methods;
-		if (p) {
-			methods = p;
-			free (p);
-		} else {
-			methods = SecMan::getDefaultAuthenticationMethods();
-		}
 		CondorError errstack;
-		if( ! rsock->authenticate(methods.Value(), &errstack) ) {
+		if( ! rsock->authenticate_perm(WRITE, &errstack) ) {
 				// we failed to authenticate, we should bail out now
 				// since we don't know what user is trying to perform
 				// this action.

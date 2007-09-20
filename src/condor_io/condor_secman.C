@@ -192,6 +192,7 @@ SecMan::sec_lookup_act( ClassAd &ad, const char* pname ) {
 	if (res) {
 		char buf[2];
 		strncpy (buf, res, 1);
+		buf[1] = 0;
 		free (res);
 
 		return sec_alpha_to_sec_act(buf);
@@ -241,21 +242,31 @@ SecMan::sec_is_negotiable (sec_req r) {
 
 
 SecMan::sec_req
-SecMan::sec_param( char* pname, sec_req def) {
-	char *paramer = param(pname);
-	if (paramer) {
+SecMan::sec_req_param( const char* fmt, DCpermission auth_level, sec_req def ) {
+	char *config_value = getSecSetting( fmt, auth_level );
+
+	if (config_value) {
 		char buf[2];
-		strncpy (buf, paramer, 1);
-		free (paramer);
+		strncpy (buf, config_value, 1);
+		buf[1] = 0;
+		free (config_value);
 
 		sec_req res = sec_alpha_to_sec_req(buf);
 
 		if (res == SEC_REQ_UNDEFINED || res == SEC_REQ_INVALID) {
-			if (DebugFlags & D_FULLDEBUG) {
-				dprintf (D_SECURITY,
-						"SECMAN: %s is invalid, using %s!\n",
-						pname, SecMan::sec_req_rev[def] );
+			MyString param_name;
+			char *value = getSecSetting( fmt, auth_level, &param_name );
+			if( res == SEC_REQ_INVALID ) {
+				EXCEPT( "SECMAN: %s=%s is invalid!\n",
+				        param_name.Value(), value ? value : "(null)" );
 			}
+			if( DebugFlags & D_FULLDEBUG ) {
+				dprintf (D_SECURITY,
+				         "SECMAN: %s is undefined; using %s.\n",
+				         param_name.Value(), SecMan::sec_req_rev[def]);
+			}
+			free(value);
+
 			return def;
 		}
 
@@ -265,6 +276,58 @@ SecMan::sec_param( char* pname, sec_req def) {
 	return def;
 }
 
+void SecMan::getAuthenticationMethods( DCpermission perm, MyString *result ) {
+	ASSERT( result );
+
+	char * p = getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", perm);
+
+	if (p) {
+		*result = p;
+		free (p);
+	} else {
+		*result = SecMan::getDefaultAuthenticationMethods();
+	}
+}
+
+char* 
+SecMan::getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name /* = NULL */, char const *check_subsystem /* = NULL */ ) {
+	DCpermission const *perms = auth_level.getConfigPerms();
+	char *result;
+
+		// Now march through the list of config settings to look for.  The
+		// last one in the list will be DEFAULT_PERM, which we only use
+		// if nothing else is found first.
+
+	for( ; *perms != LAST_PERM; perms++ ) {
+		MyString buf;
+		if( check_subsystem ) {
+				// First see if there is a specific config entry for the
+				// specified condor subsystem.
+			buf.sprintf( fmt, PermString(*perms) );
+			buf.sprintf_cat("_%s",check_subsystem);
+			result = param( buf.Value() );
+			if( result ) {
+				if( param_name ) {
+						// Caller wants to know the param name.
+					param_name->append_to_list(buf);
+				}
+				return result;
+			}
+		}
+
+		buf.sprintf( fmt, PermString(*perms) );
+		result = param( buf.Value() );
+		if( result ) {
+			if( param_name ) {
+					// Caller wants to know the param name.
+				param_name->append_to_list(buf);
+			}
+			return result;
+		}
+	}
+
+	return NULL;
+}
 
 
 
@@ -281,45 +344,25 @@ SecMan::sec_param( char* pname, sec_req def) {
 // private key if we don't authenticate)
 
 bool
-SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad, 
+SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad, 
 								bool other_side_can_negotiate )
 {
-	char buf[1024];
-
 	if( ! ad ) {
 		EXCEPT( "SecMan::FillInSecurityPolicyAd called with NULL ad!" );
 	}
 
-	// if auth_level is empty, use the default
-	char def[] = "DEFAULT";
-	if (auth_level == NULL || *auth_level == 0) {
-		auth_level = def;
-	}
+	// get values from config file, trying each auth level in the
+	// list in turn.  The final level in the list will be "DEFAULT".
+	// if that fails, the default value (OPTIONAL) is used.
 
-	// get values from config file
-	// first lookup SEC_<AUTHLEVEL>_BLAH.  if that fails,
-	// lookup SEC_DEFAULT_BLAH instead.  if that fails, the
-	// default value (OPTIONAL) is used.
+	sec_req sec_authentication = sec_req_param(
+		"SEC_%s_AUTHENTICATION", auth_level, SEC_REQ_OPTIONAL);
 
-	sprintf (buf, "SEC_%s_AUTHENTICATION", auth_level);
-	sec_req sec_authentication = sec_param(buf);
-	if (sec_authentication == SEC_REQ_UNDEFINED) {
-		sec_authentication = sec_param("SEC_DEFAULT_AUTHENTICATION", SEC_REQ_OPTIONAL);
-	}
+	sec_req sec_encryption = sec_req_param(
+		"SEC_%s_ENCRYPTION", auth_level, SEC_REQ_OPTIONAL);
 
-
-	sprintf (buf, "SEC_%s_ENCRYPTION", auth_level);
-	sec_req sec_encryption = sec_param(buf);
-	if (sec_encryption == SEC_REQ_UNDEFINED) {
-		sec_encryption = sec_param("SEC_DEFAULT_ENCRYPTION", SEC_REQ_OPTIONAL);
-	}
-
-
-	sprintf (buf, "SEC_%s_INTEGRITY", auth_level);
-	sec_req sec_integrity = sec_param(buf);
-	if (sec_integrity == SEC_REQ_UNDEFINED) {
-		sec_integrity = sec_param("SEC_DEFAULT_INTEGRITY", SEC_REQ_OPTIONAL);
-	}
+	sec_req sec_integrity = sec_req_param(
+		 "SEC_%s_INTEGRITY", auth_level, SEC_REQ_OPTIONAL);
 
 
 	// regarding SEC_NEGOTIATE values:
@@ -334,11 +377,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 
 	// as of 6.5.0, the default is PREFERRED
 
-	sprintf (buf, "SEC_%s_NEGOTIATION", auth_level);
-	sec_req sec_negotiation = sec_param(buf);
-	if (sec_negotiation == SEC_REQ_UNDEFINED) {
-		sec_negotiation = sec_param("SEC_DEFAULT_NEGOTIATION", SEC_REQ_PREFERRED);
-	}
+	sec_req sec_negotiation = sec_req_param ("SEC_%s_NEGOTIATION", auth_level, SEC_REQ_PREFERRED);
 
 
 	if (!ReconcileSecurityDependency (sec_authentication, sec_encryption) ||
@@ -380,10 +419,9 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	}
 
 	if (paramer) {
-		sprintf(buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS, paramer);
+		ad->Assign (ATTR_SEC_AUTHENTICATION_METHODS, paramer);
 		free(paramer);
-
-		ad->Insert(buf);
+		paramer = NULL;
 	} else {
 		if( sec_authentication == SEC_REQ_REQUIRED ) {
 			dprintf( D_SECURITY, "SECMAN: no auth methods, "
@@ -410,10 +448,9 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	}
 
 	if (paramer) {
-		sprintf(buf, "%s=\"%s\"", ATTR_SEC_CRYPTO_METHODS, paramer);
+		ad->Assign (ATTR_SEC_CRYPTO_METHODS, paramer);
 		free(paramer);
-
-		ad->Insert(buf);
+		paramer = NULL;
 	} else {
 		if( sec_encryption == SEC_REQ_REQUIRED || 
 			sec_integrity == SEC_REQ_REQUIRED ) {
@@ -428,34 +465,23 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	}
 
 
-	sprintf( buf, "%s=\"%s\"", ATTR_SEC_NEGOTIATION,
-			 SecMan::sec_req_rev[sec_negotiation] );
-	ad->Insert(buf);
+	ad->Assign( ATTR_SEC_NEGOTIATION, SecMan::sec_req_rev[sec_negotiation] );
 
-	sprintf( buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION,
-			 SecMan::sec_req_rev[sec_authentication] ); 
-	ad->Insert(buf);
+	ad->Assign ( ATTR_SEC_AUTHENTICATION, SecMan::sec_req_rev[sec_authentication] );
 
-	sprintf( buf, "%s=\"%s\"", ATTR_SEC_ENCRYPTION,
-			 SecMan::sec_req_rev[sec_encryption] ); 
-	ad->Insert(buf);
+	ad->Assign (ATTR_SEC_ENCRYPTION, SecMan::sec_req_rev[sec_encryption] );
 
-	sprintf( buf, "%s=\"%s\"", ATTR_SEC_INTEGRITY,
-			 SecMan::sec_req_rev[sec_integrity] ); 
-	ad->Insert(buf);
+	ad->Assign ( ATTR_SEC_INTEGRITY, SecMan::sec_req_rev[sec_integrity] );
 
-	sprintf( buf, "%s=\"%s\"", ATTR_SEC_ENACT, "NO" );
-	ad->Insert(buf);
+	ad->Assign ( ATTR_SEC_ENACT, "NO" );
 
 
 	// subsystem
-	sprintf(buf, "%s=\"%s\"", ATTR_SEC_SUBSYSTEM, mySubSystem);
-	ad->Insert(buf);
+	ad->Assign ( ATTR_SEC_SUBSYSTEM, mySubSystem );
 
     char * parent_id = my_parent_unique_id();
     if (parent_id) {
-		sprintf(buf, "%s=\"%s\"", ATTR_SEC_PARENT_UNIQUE_ID, parent_id);
-		ad->Insert(buf);
+		ad->Assign ( ATTR_SEC_PARENT_UNIQUE_ID, parent_id );
 	}
 
 	// pid
@@ -465,8 +491,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 #else
 	mypid = ::getpid();
 #endif
-	sprintf(buf, "%s=%i", ATTR_SEC_SERVER_PID, mypid);
-	ad->Insert(buf);
+	ad->Assign ( ATTR_SEC_SERVER_PID, mypid );
 
 	// key duration
 	// ZKM TODO HACK
@@ -484,51 +509,27 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 
 	if (paramer) {
 		// take whichever value we found and put it in the ad.
-		sprintf(buf, "%s=\"%s\"", ATTR_SEC_SESSION_DURATION, paramer);
+		ad->Assign ( ATTR_SEC_SESSION_DURATION, paramer );
 		free( paramer );
 		paramer = NULL;
-
-		ad->Insert(buf);
 	} else {
 		// no value defined, use defaults.
 		if (strcmp(mySubSystem, "TOOL") == 0) {
 			// default for tools is 1 minute.
-			sprintf(buf, "%s=\"60\"", ATTR_SEC_SESSION_DURATION);
+			ad->Assign ( ATTR_SEC_SESSION_DURATION, "60" );
 		} else if (strcmp(mySubSystem, "SUBMIT") == 0) {
 			// default for submit is 1 hour.  yeah, that's a long submit
 			// but you never know with file transfer and all.
-			sprintf(buf, "%s=\"3600\"", ATTR_SEC_SESSION_DURATION);
+			ad->Assign ( ATTR_SEC_SESSION_DURATION, "3600" );
 		} else {
 			// default for daemons is 100 days.  this is a temporary workaround
 			// for 6.6.X until automatic re-negotiation is implemented.
-			sprintf(buf, "%s=\"8640000\"", ATTR_SEC_SESSION_DURATION);
+			ad->Assign ( ATTR_SEC_SESSION_DURATION, "8640000" );
 		}
-		ad->Insert(buf);
 	}
 
 	return true;
 }
-
-char* 
-SecMan::getSecSetting( const char* fmt, const char* authorization_level ) {
-
-	// for those of you reading this code, a 'paramer'
-	// is a thing that param()s.
-	char *paramer = NULL;
-	char buf[1024];
-
-	if (authorization_level && authorization_level[0]) {
-		sprintf(buf, fmt, authorization_level);
-		paramer = param(buf);
-	}
-	if (!paramer) {
-		sprintf(buf, fmt, "DEFAULT");
-		paramer = param(buf);
-	}
-	// it is up to the caller to free the result (just like param)
-	return paramer;
-}
-
 
 bool
 SecMan::ReconcileSecurityDependency (sec_req &a, sec_req &b) {
@@ -1027,7 +1028,7 @@ SecManStartCommand::startCommand_inner()
 
 		new_session = false;
 	} else {
-		if( !m_sec_man.FillInSecurityPolicyAd( "CLIENT", &auth_info,
+		if( !m_sec_man.FillInSecurityPolicyAd( CLIENT_PERM, &auth_info,
 									 m_can_negotiate) ) {
 				// security policy was invalid.  bummer.
 			dprintf( D_ALWAYS, 
