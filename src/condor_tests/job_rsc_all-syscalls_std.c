@@ -224,6 +224,7 @@ void *xmalloc(size_t len)
 	vec = malloc(len);
 	if (vec == NULL) {
 		printf("Out of Memory. Exiting.\n");
+		fflush(NULL);
 		exit(EXIT_FAILURE);
 	}
 	memset(vec, 0, len);
@@ -237,6 +238,7 @@ char *xtmpnam(char *space)
 	errno = 0;
 	if ((buf = tmpnam(space)) == NULL) {
 		printf("Could not determine unique file name.(%s)\n", strerror(errno));
+		fflush(NULL);
 		exit(EXIT_FAILURE);
 	}
 	return buf;
@@ -4596,7 +4598,7 @@ int main(int argc, char **argv)
 		{BasicGetSetlimit, "BasicGetSetLimit: Can I change proc limits?"},
 	};
 
-	printf("Condor System Call Tester $Revision: 1.2.2.1 $\n\n");
+	printf("Condor System Call Tester $Revision: 1.2.2.2 $\n\n");
 
 	printf("The length of the string:\n'%s'\nIs: %d\n\n", 
 		STR(passage), strlen(passage));
