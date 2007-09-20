@@ -570,7 +570,8 @@ Starter::exited()
 	}
 
 		// Now, delete any files lying around.
-	cleanup_execute_dir( s_pid );
+	ASSERT( s_claim && s_claim->rip() );
+	cleanup_execute_dir( s_pid, s_claim->rip()->executeDir() );
 
 #if !defined(WIN32)
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {

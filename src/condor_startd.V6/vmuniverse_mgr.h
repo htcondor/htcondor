@@ -59,6 +59,7 @@ private:
 
 	MyString m_vm_mac;
 	MyString m_vm_ip;
+	MyString m_execute_dir;
 };
 
 class VMUniverseMgr : public Service {
@@ -72,7 +73,7 @@ public:
 	void publishVMInfo(pid_t s_pid, ClassAd* ad, amask_t mask );
 	void printVMGahpInfo( int debug_level );
 
-	bool allocVM(pid_t pid, ClassAd &ad); 
+	bool allocVM(pid_t pid, ClassAd &ad, char const *execute_dir); 
 	void freeVM(pid_t pid); // pid for exited starter
 
 	void checkVMUniverse(void); // check whether vm universe is available

@@ -196,6 +196,8 @@ public:
 
 	int				type( void ) { return r_attr->type(); };
 
+	char const *executeDir() { return r_attr->executeDir(); }
+
 private:
 	int			update_tid;	// DaemonCore timer id for update delay
 	unsigned	update_sequence;	// Update sequence number
@@ -215,6 +217,8 @@ private:
 	void	endCODLoadHack( void );
 	int		eval_expr( const char* expr_name, bool fatal, bool check_vanilla );
 
+	MyString m_execute_dir;
+	MyString m_execute_partition_id;
 };
 
 

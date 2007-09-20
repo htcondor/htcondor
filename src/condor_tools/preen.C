@@ -54,7 +54,7 @@ State get_machine_state();
 
 int			MaxCkptInterval;	// max time between ckpts on this machine
 char		*Spool;				// dir for condor job queue
-char		*Execute;			// dir for execution of condor jobs
+StringList   ExecuteDirs;		// dirs for execution of condor jobs
 char		*Log;				// dir for condor program logs
 char		*PreenAdmin;		// who to send mail to in case of trouble
 char		*MyName;			// name this program was invoked by
@@ -65,7 +65,6 @@ BOOLEAN		MailFlag;			// true if we should send mail about problems
 BOOLEAN		VerboseFlag;		// true if we should produce verbose output
 BOOLEAN		RmFlag;				// true if we should remove extraneous files
 StringList	*BadFiles;			// list of files which don't belong
-
 
 // prototypes of local interest
 void usage();
@@ -417,8 +416,8 @@ proc_exists( int cluster, int proc )
 void
 check_execute_dir()
 {
+	time_t now = time(NULL);
 	const char	*f;
-	Directory dir( Execute, PRIV_ROOT );
 	bool	busy;
 	State	s = get_machine_state();
 
@@ -443,11 +442,28 @@ check_execute_dir()
 		return;
 	}
 
-	while( (f = dir.Next()) ) {
-		if( busy ) {
-			good_file( Execute, f );	// let anything go here
-		} else {
-			bad_file( Execute, f, dir );	// directory should be empty
+	ExecuteDirs.rewind();
+	char const *Execute;
+	while( (Execute=ExecuteDirs.next()) ) {
+		Directory dir( Execute, PRIV_ROOT );
+		while( (f = dir.Next()) ) {
+			if( busy ) {
+				good_file( Execute, f );	// let anything go here
+			} else {
+				if( dir.GetCreateTime() < now ) {
+					bad_file( Execute, f, dir ); // junk it
+				}
+				else {
+						// In case the startd just started up a job, we
+						// avoid removing very recently created files.
+						// (So any files forward dated in time will have
+						// to wait for the startd to restart before they
+						// are cleaned up.)
+					dprintf(D_FULLDEBUG, "In %s, found %s with recent "
+					        "creation time.  Not removing.\n", Execute, f );
+					good_file( Execute, f ); // too young to kill
+				}
+			}
 		}
 	}
 }
@@ -494,10 +510,30 @@ init_params()
         EXCEPT( "LOG not specified in config file\n" );
     }
 
-	Execute = param("EXECUTE");
-    if( Execute == NULL ) {
-        EXCEPT( "EXECUTE not specified in config file\n" );
-    }
+	char *Execute = param("EXECUTE");
+	if( Execute ) {
+		ExecuteDirs.append(Execute);
+		free(Execute);
+		Execute = NULL;
+	}
+		// In addition to EXECUTE, there may be SLOT1_EXECUTE, ...
+	ExtArray<ParamValue> *params = param_all();
+	for( int p=params->length(); p--; ) {
+		char const *name = (*params)[p].name.Value();
+		char *tail = NULL;
+		if( strncasecmp( name, "SLOT", 4 ) != 0 ) continue;
+		strtol( name+4, &tail, 10 );
+		if( tail <= name || strcasecmp( tail, "_EXECUTE" ) != 0 ) continue;
+
+		Execute = param(name);
+		if( Execute ) {
+			if( !ExecuteDirs.contains( Execute ) ) {
+				ExecuteDirs.append( Execute );
+			}
+			free( Execute );
+		}
+	}
+	delete params;
 
     if( (PreenAdmin = param("PREEN_ADMIN")) == NULL ) {
 		if( (PreenAdmin = param("CONDOR_ADMIN")) == NULL ) {

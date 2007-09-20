@@ -221,10 +221,15 @@ CStarter::StarterExit( int code )
 void
 CStarter::Config()
 {
+	MyString execute_param;
+	execute_param.sprintf("SLOT%d_EXECUTE",getMySlotNumber());
 	if( Execute ) {
 		free( Execute );
 	}
-	if( (Execute = param("EXECUTE")) == NULL ) {
+	if( (Execute = param(execute_param.Value())) ) {
+			// This batch slot has its own execute directory.
+	}
+	else if( (Execute = param("EXECUTE")) == NULL ) {
 		if( is_gridshell ) {
 			Execute = strdup( orig_cwd );
 		} else {

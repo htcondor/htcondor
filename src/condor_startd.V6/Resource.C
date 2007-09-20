@@ -47,7 +47,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 		tmp.sprintf( "slot%d", rid );
 	}
 	r_id_str = strdup( tmp.Value() );
-	
+
 	prevLHF = 0;
 	r_classad = NULL;
 	r_state = new ResState( this );

@@ -93,9 +93,6 @@ extern	int		polling_interval;	// Interval for polling when
 									// running a job
 extern	int		update_interval;	// Interval to update CM
 
-// Paths
-extern	char*	exec_path;
-
 // String Lists
 extern	StringList* console_devices;
 extern	StringList* startd_job_exprs;

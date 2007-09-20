@@ -27,8 +27,8 @@
 #include "dynuser.h"	// used in cleanup_execute_dir() for WinNT
 #include "daemon.h"
 
-void
-check_perms()
+static void
+check_execute_dir_perms( char const *exec_path )
 {
 	struct stat st;
 	mode_t mode;
@@ -54,82 +54,93 @@ check_perms()
 	}
 }
 
+void
+check_execute_dir_perms( StringList &list )
+{
+	char const *exec_path;
+
+	list.rewind();
+
+	while( (exec_path = list.next()) ) {
+		check_execute_dir_perms( exec_path );
+	}
+}
 
 void
-cleanup_execute_dir(int pid)
+cleanup_execute_dirs( StringList &list )
 {
+	char const *exec_path;
+
+	list.rewind();
+
+	while( (exec_path = list.next()) ) {
 #if defined(WIN32)
-	char buf[2048];
-	dynuser nobody_login;
-
-	if( pid ) {
-		if ( nobody_login.reuse_accounts() == false ) {
-		// before removing subdir, remove any nobody-user account associtated
-		// with this starter pid.  this account might have been left around
-		// if the starter did not clean up completely.
-		//sprintf(buf,"condor-run-dir_%d",pid);
-			sprintf(buf,"condor-run-%d",pid);
-			if ( nobody_login.deleteuser(buf) ) {
-				dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf);
-			}
-		}
-
-		// now remove the subdirectory.  NOTE: we only remove the 
-		// subdirectory _after_ removing the nobody account, because the
-		// existence of the subdirectory persistantly tells us that the
-		// account may still exist [in case the startd blows up as well].
-
-		sprintf( buf, "%.256s\\dir_%d", exec_path, pid );
- 
- 		Directory dir( buf );
- 		dir.Remove_Full_Path(buf);
-
-	} else {
-		// get rid of everything in the execute directory
-		Directory dir(exec_path);
-
 		// remove all users matching this prefix
 		nobody_login.cleanup_condor_users("condor-run-");
 
-		// now that we took care of any old nobody accounts, blow away
-		// everything in the execute directory.
-		dir.Remove_Entire_Directory();
+		// get rid of everything in the execute directory
+		Directory execute_dir(exec_path);
+		execute_dir.Remove_Entire_Directory();
+
+#else
+
+		Directory execute_dir( exec_path, PRIV_ROOT );
+		execute_dir.Remove_Entire_Directory();
+
+#endif
 	}
+}
+
+void
+cleanup_execute_dir(int pid, char const *exec_path)
+{
+	ASSERT( pid );
+
+#if defined(WIN32)
+	MyString buf;
+	dynuser nobody_login;
+
+	if ( nobody_login.reuse_accounts() == false ) {
+	// before removing subdir, remove any nobody-user account associtated
+	// with this starter pid.  this account might have been left around
+	// if the starter did not clean up completely.
+	//sprintf(buf,"condor-run-dir_%d",pid);
+		buf.sprintf("condor-run-%d",pid);
+		if ( nobody_login.deleteuser(buf.Value()) ) {
+			dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf.Value());
+		}
+	}
+
+	// now remove the subdirectory.  NOTE: we only remove the 
+	// subdirectory _after_ removing the nobody account, because the
+	// existence of the subdirectory persistantly tells us that the
+	// account may still exist [in case the startd blows up as well].
+
+	buf.sprintf( "%s\\dir_%d", exec_path, pid );
+ 
+	Directory dir( buf.Value() );
+	dir.Remove_Full_Path(buf.Value());
+
+
 
 #else /* UNIX */
 
 	// Instantiate a directory object pointing at the execute directory
 	Directory execute_dir( exec_path, PRIV_ROOT );
 
-	if( pid ) {
-		char	pid_dir[_POSIX_PATH_MAX];
+	char	pid_dir[_POSIX_PATH_MAX];
 
-			// We're trying to delete a specific subdirectory, either
-			// b/c a starter just exited and we might need to clean up
-			// after it, or because we're in a recursive call.
-		sprintf( pid_dir, "dir_%d", pid );
+		// We're trying to delete a specific subdirectory, either
+		// b/c a starter just exited and we might need to clean up
+		// after it, or because we're in a recursive call.
+	sprintf( pid_dir, "dir_%d", pid );
 
-			// Look for it
-		if ( execute_dir.Find_Named_Entry( pid_dir ) ) {
+		// Look for it
+	if ( execute_dir.Find_Named_Entry( pid_dir ) ) {
 
-				// Remove the execute directory
-			execute_dir.Remove_Current_File();
-		}
-
-		return;
-
-	} else {
-			// We were called in cleanup-everything mode and we're not
-			// trying to get rid of a specific directory.  So, we've
-			// got to iterate through the entire execute directory,
-			// and try to delete each subdirectory individually.
-			// recursion to the rescue...
-		sleep( 1 );
-		execute_dir.Remove_Entire_Directory();
-
-			// nothing left in the directory, we're done.
-		return;
-	} // end of else clause for if(pid)
+			// Remove the execute directory
+		execute_dir.Remove_Current_File();
+	}
 #endif  /* UNIX */
 }
 

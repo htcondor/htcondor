@@ -46,9 +46,6 @@ ResMgr*	resmgr;			// Pointer to the resource manager object
 int	polling_interval = 0;	// Interval for polling when there are resources in use
 int	update_interval = 0;	// Interval to update CM
 
-// Paths
-char*	exec_path = NULL;
-
 // String Lists
 StringList *startd_job_exprs = NULL;
 StringList *startd_slot_attrs = NULL;
@@ -190,12 +187,14 @@ main_init( int, char* argv[] )
 	command_x_event( 0, 0, 0 );
 #endif
 
-		// Do a little sanity checking and cleanup
-	check_perms();
-	cleanup_execute_dir( 0 );	// 0 indicates we should clean everything.
-
 		// Instantiate Resource objects in the ResMgr
 	resmgr->init_resources();
+
+		// Do a little sanity checking and cleanup
+	StringList execute_dirs;
+	resmgr->FillExecuteDirsList( &execute_dirs );
+	check_execute_dir_perms( execute_dirs );
+	cleanup_execute_dirs( execute_dirs );
 
 		// Compute all attributes
 	resmgr->compute( A_ALL );
@@ -447,25 +446,6 @@ init_params( int first_time)
 
 
 	resmgr->init_config_classad();
-
-	if( exec_path ) {
-		free( exec_path );
-	}
-	exec_path = param( "EXECUTE" );
-	if( exec_path == NULL ) {
-		EXCEPT( "No Execute file specified in config file" );
-	}
-
-#if defined(WIN32)
-	int i;
-	// switch delimiter char in exec path on WIN32
-	for (i=0; exec_path[i]; i++) {
-		if (exec_path[i] == '/') {
-			exec_path[i] = '\\';
-		}
-	}
-#endif
-
 
 	polling_interval = param_integer( "POLLING_INTERVAL", 5 );
 

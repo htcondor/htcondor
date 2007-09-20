@@ -32,6 +32,7 @@
 #define _RES_ATTRIBUTES_H
 
 class Resource;
+class ClassAd;
 
 typedef int amask_t;
 
@@ -70,6 +71,19 @@ const amask_t A_ALL_PUB	= (A_PUBLIC | A_ALL | A_EVALUATED | A_SHARED_SLOT);
 #define IS_SHARED_SLOT(mask) ((mask) & A_SHARED_SLOT)
 #define IS_ALL(mask)		((mask) & A_ALL)
 
+// This is used as a place-holder value when configuring slot shares of
+// system resources.  It is later updated by dividing the remaining resources
+// evenly between slots using AUTO_SHARE.
+const float AUTO_SHARE = 123;
+
+// The following avoids compiler warnings about == being dangerous
+// for floats.
+#define IS_AUTO_SHARE(share) ((int)share == (int)AUTO_SHARE)
+
+// This is used as a place-holder value when configuring memory share
+// for a slot.  It is later updated by dividing the remaining resources
+// evenly between slots using AUTO_MEM.
+const int AUTO_MEM = -123;
 
 // Machine-wide attributes.  
 class MachAttributes
@@ -95,7 +109,6 @@ public:
 	int				num_real_cpus()	{ return m_num_real_cpus; };
 	int				phys_mem()	{ return m_phys_mem; };
 	unsigned long   virt_mem()	{ return m_virt_mem; };
-	unsigned long   disk()		{ return m_disk; };
 	float		load()			{ return m_load; };
 	float		condor_load()	{ return m_condor_load; };
 	time_t		keyboard_idle() { return m_idle; };
@@ -108,7 +121,6 @@ private:
 	float			m_condor_load;
 	float			m_owner_load;
 	unsigned long   m_virt_mem;
-	unsigned long   m_disk;
 	time_t			m_idle;
 	time_t			m_console_idle;
 	int				m_mips;
@@ -139,8 +151,9 @@ public:
 	friend class AvailAttributes;
 
 	CpuAttributes( MachAttributes*, int slot_type, int num_cpus, 
-				   int num_phys_mem, float virt_mem_percent,
-				   float disk_percent );
+				   int num_phys_mem, float virt_mem_fraction,
+				   float disk_fraction,
+				   MyString &execute_dir, MyString &execute_partition_id );
 
 	void attach( Resource* );	// Attach to the given Resource
 									   
@@ -165,6 +178,10 @@ public:
 	void dprintf( int, char*, ... );
 	void show_totals( int );
 
+	float get_disk_fraction() { return c_disk_fraction; }
+	char const *executeDir() { return c_execute_dir.Value(); }
+	char const *executePartitionID() { return c_execute_partition_id.Value(); }
+
 private:
 	Resource*	 	rip;
 	MachAttributes*	map;
@@ -176,19 +193,38 @@ private:
 	time_t			c_console_idle;
 	unsigned long   c_virt_mem;
 	unsigned long   c_disk;
+		// total_disk here means total disk space on the partition containing
+		// this slot's execute directory.  Since each slot may have an
+		// execute directory on a different partition, we have to store this
+		// here in the per-slot data structure, rather than in the machine-wide
+		// data structure.
+	unsigned long   c_total_disk;
 
 		// Static info
 	int				c_phys_mem;
 	int				c_num_cpus;
 
-		// These hold the percentages of shared, dynamic resources
+		// These hold the fractions of shared, dynamic resources
 		// that are allocated to this CPU.
-	float			c_virt_mem_percent;
-	float			c_disk_percent;
+	float			c_virt_mem_fraction;
+
+	float			c_disk_fraction; // share of execute dir partition
+	MyString        c_execute_dir;
+	MyString        c_execute_partition_id;  // unique id for partition
 
 	int				c_type;		// The type of this resource
 };	
 
+class AvailDiskPartition
+{
+ public:
+	AvailDiskPartition() {
+		m_disk_fraction = 1.0;
+		m_auto_count = 0;
+	}
+	float m_disk_fraction; // share of this partition that is not taken yet
+	int m_auto_count; // number of slots using "auto" share of this partition
+};
 
 // Available machine-wide attributes
 class AvailAttributes
@@ -197,13 +233,20 @@ public:
 	AvailAttributes( MachAttributes* map );
 
 	bool decrement( CpuAttributes* cap );
-	void show_totals( int );
+	bool computeAutoShares( CpuAttributes* cap );
+	void show_totals( int dprintf_mask, CpuAttributes *cap );
 
 private:
 	int				a_num_cpus;
 	int				a_phys_mem;
-	float			a_virt_mem_percent;
-	float			a_disk_percent;
+	int             a_phys_mem_auto_count; // number of slots specifying "auto"
+	float			a_virt_mem_fraction;
+	int             a_virt_mem_auto_count; // number of slots specifying "auto"
+
+		// number of slots using "auto" for disk share in each partition
+	HashTable<MyString,AvailDiskPartition> m_execute_partitions;
+
+	AvailDiskPartition &GetAvailDiskPartition(MyString const &execute_partition_id);
 };
 
 

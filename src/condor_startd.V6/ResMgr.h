@@ -187,6 +187,8 @@ public:
 
 	time_t	now( void ) { return cur_time; };
 
+	void FillExecuteDirsList( class StringList *list );
+
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
@@ -219,14 +221,19 @@ private:
 
 		// Builds a CpuAttributes object to represent the slot
 		// described by the given machine type.
-	CpuAttributes*	buildSlot( int type, bool except = false );	
+	CpuAttributes*	buildSlot( int slot_id, int type, bool except = false );
 
-	    // Returns the percentage represented by the given fraction or
+		// Look up the configured value for the execute directory
+		// for a given slot.  Also get a unique identifier for the
+		// disk partition containing the execute directory.
+	void GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *partition_id );
+
+	    // Returns the fraction represented by the given fraction or
 		// percent string.
 	float		parse_value( const char*, bool except = false );
 
 		// All the logic of computing an integer number of cpus or
-		// physical memory out of a percentage share.   
+		// physical memory out of a fractional share.   
 	int			compute_cpus( float share );
 	int			compute_phys_mem( float share );
 

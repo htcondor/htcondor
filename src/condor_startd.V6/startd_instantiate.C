@@ -24,6 +24,9 @@
 #include "condor_common.h"
 #include "simplelist.h"
 #include "extArray.h"
+#include "MyString.h"
+#include "HashTable.h"
+#include "ResAttributes.h"
 
 class Resource;
 class CpuAttributes;
@@ -39,6 +42,7 @@ template class SimpleList<Resource*>;
 template class SimpleList<CpuAttributes*>;
 template class SimpleList<VMMachine*>;
 template class SimpleList<VMStarterInfo*>;
+template class HashTable<MyString,AvailDiskPartition>;
 
 
 #if HAVE_BACKFILL

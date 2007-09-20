@@ -1571,7 +1571,7 @@ activate_claim( Resource* rip, Stream* stream )
 	rip->r_cur->beginActivation( now );
 
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
-		if( resmgr->m_vmuniverse_mgr.allocVM(vm_starter->pid(), vm_classad) 
+		if( resmgr->m_vmuniverse_mgr.allocVM(vm_starter->pid(), vm_classad, rip->executeDir()) 
 				== false ) {
 			ABORT;
 		}

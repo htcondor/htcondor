@@ -378,7 +378,6 @@ ResMgr::init_resources( void )
 
 }
 
-
 bool
 ResMgr::reconfig_resources( void )
 {
@@ -529,7 +528,7 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 		if( type_num_array[i] ) {
 			m_current_slot_type = i;
 			for( j=0; j<type_num_array[i]; j++ ) {
-				cap = buildSlot( i, except );
+				cap = buildSlot( num+1, i, except );
 				if( avail.decrement(cap) ) {
 					cap_array[num] = cap;
 					num++;
@@ -541,7 +540,7 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 					dprintf( D_ALWAYS | D_NOHEADER, "\tRequesting: " );
 					cap->show_totals( D_ALWAYS );
 					dprintf( D_ALWAYS | D_NOHEADER, "\tAvailable:  " );
-					avail.show_totals( D_ALWAYS );
+					avail.show_totals( D_ALWAYS, cap );
 					delete cap;	// This isn't in our array yet.
 					if( except ) {
 						EXCEPT( "Ran out of system resources" );
@@ -557,6 +556,34 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 			}
 		}
 	}
+
+		// now replace "auto" shares with final value
+	for( i=0; i<num; i++ ) {
+		cap = cap_array[i];
+		if( !avail.computeAutoShares(cap) ) {
+
+				// We ran out of system resources.  
+			dprintf( D_ALWAYS, 
+					 "ERROR: Can't allocate slot id %d during auto "
+					 "allocation of resources\n", i+1 );
+			dprintf( D_ALWAYS | D_NOHEADER, "\tRequesting: " );
+			cap->show_totals( D_ALWAYS );
+			dprintf( D_ALWAYS | D_NOHEADER, "\tAvailable:  " );
+			avail.show_totals( D_ALWAYS, cap );
+			delete cap;	// This isn't in our array yet.
+			if( except ) {
+				EXCEPT( "Ran out of system resources in auto allocation" );
+			} else {
+					// Gracefully cleanup and abort
+				for( i=0; i<num; i++ ) {
+					delete cap_array[i];
+				}
+				delete [] cap_array;
+				return NULL;
+			}
+		}					
+	}
+
 	return cap_array;
 }
 	
@@ -589,8 +616,7 @@ ResMgr::initTypes( bool except )
 	if (! type_strings[0]) {
 			// Type 0 is the special type for evenly divided slots. 
 		type_strings[0] = new StringList();
-		buf.sprintf("1/%d", num_cpus());
-		type_strings[0]->initializeFromString(buf.Value());
+		type_strings[0]->initializeFromString("auto");
 	}	
 
 	for( i=1; i < max_types; i++ ) {
@@ -620,7 +646,6 @@ int
 ResMgr::countTypes( int** array_ptr, bool except )
 {
 	int i, num=0, num_set=0;
-	char* tmp;
     MyString param_name;
     MyString cruft_name;
 	int* new_type_nums = new int[max_types];
@@ -685,16 +710,24 @@ ResMgr::typeNumCmp( int* a, int* b )
 
 
 CpuAttributes*
-ResMgr::buildSlot( int type, bool except )
+ResMgr::buildSlot( int slot_id, int type, bool except )
 {
 	StringList* list = type_strings[type];
 	char *attr, *val;
 	int cpus=0, ram=0;
 	float disk=0, swap=0, share;
+	float default_share = AUTO_SHARE;
+
+	MyString execute_dir, partition_id;
+	GetConfigExecuteDir( slot_id, &execute_dir, &partition_id );
 
 		// For this parsing code, deal with the following example
 		// string list:
 		// "c=1, r=25%, d=1/4, s=25%"
+		// There may be a bare number (no equals sign) that specifies
+		// the default share for any items not explicitly defined.  Example:
+		// "c=1, 25%"
+
 	list->rewind();
 	while( (attr = list->next()) ) {
 		if( ! (val = strchr(attr, '=')) ) {
@@ -702,8 +735,8 @@ ResMgr::buildSlot( int type, bool except )
 				// percentage or fraction for all attributes.
 				// For example "1/4" or "25%".  So, we can just parse
 				// it as a percentage and use that for everything.
-			share = parse_value( attr, except );
-			if( share <= 0 ) {
+			default_share = parse_value( attr, except );
+			if( default_share <= 0 && !IS_AUTO_SHARE(default_share) ) {
 				dprintf( D_ALWAYS, "ERROR: Bad description of slot type %d: ",
 						 m_current_slot_type );
 				dprintf( D_ALWAYS | D_NOHEADER,  "\"%s\" is invalid.\n", attr );
@@ -720,12 +753,9 @@ ResMgr::buildSlot( int type, bool except )
 					return NULL;
 				}
 			}
-				// We want to be a little smart about CPUs and RAM, so put all
-				// the brains in seperate functions.
-			cpus = compute_cpus( share );
-			ram = compute_phys_mem( share );
-			return new CpuAttributes( m_attr, type, cpus, ram, share, share );
+			continue;
 		}
+
 			// If we're still here, this is part of a string that
 			// lists out seperate attributes and the share for each one.
 		
@@ -758,7 +788,7 @@ ResMgr::buildSlot( int type, bool except )
 			break;
 		case 's':
 		case 'v':
-			if( share > 0 ) {
+			if( share > 0 || IS_AUTO_SHARE(share) ) {
 				swap = share;
 			} else {
 				dprintf( D_ALWAYS,
@@ -772,7 +802,7 @@ ResMgr::buildSlot( int type, bool except )
 			}
 			break;
 		case 'd':
-			if( share > 0 ) {
+			if( share > 0 || IS_AUTO_SHARE(share) ) {
 				disk = share;
 			} else {
 				dprintf( D_ALWAYS, 
@@ -798,39 +828,81 @@ ResMgr::buildSlot( int type, bool except )
 	}
 
 		// We're all done parsing the string.  Any attribute not
-		// listed defaults to an even share.
-	share = (float)1 / num_cpus();
+		// listed will get the default share.
 	if( ! cpus ) {
-		cpus = compute_cpus( share );
-	}
-	if( ! swap ) {
-		swap = share;
-	}
-	if( ! disk ) {
-		disk = share;
+		cpus = compute_cpus( default_share );
 	}
 	if( ! ram ) {
-		ram = compute_phys_mem( share );
+		ram = compute_phys_mem( default_share );
+	}
+	if( ! swap ) {
+		swap = default_share;
+	}
+	if( ! disk ) {
+		disk = default_share;
 	}
 
 		// Now create the object.
-	return new CpuAttributes( m_attr, type, cpus, ram, swap, disk );
+	return new CpuAttributes( m_attr, type, cpus, ram, swap, disk, execute_dir, partition_id );
 }
 
+void
+ResMgr::GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *partition_id )
+{
+	MyString execute_param;
+	char *execute_value = NULL;
+	execute_param.sprintf("SLOT%d_EXECUTE",slot_id);
+	execute_value = param( execute_param.Value() );
+	if( !execute_value ) {
+		execute_value = param( "EXECUTE" );
+	}
+	if( !execute_value ) {
+		EXCEPT("EXECUTE (or %s) is not defined in the configuration.",
+			   execute_param.Value());
+	}
+
+#if defined(WIN32)
+	int i;
+		// switch delimiter char in exec path on WIN32
+	for (i=0; exec_path[i]; i++) {
+		if (exec_path[i] == '/') {
+			exec_path[i] = '\\';
+		}
+	}
+#endif
+
+	*execute_dir = execute_value;
+	free( execute_value );
+
+		// Get a unique identifier for the partition containing the execute dir
+	char *partition_value = NULL;
+	bool partition_rc = sysapi_partition_id( execute_dir->Value(), &partition_value );
+	if( !partition_rc ) {
+		EXCEPT("Failed to get partition id for %s=%s\n",
+			   execute_param.Value(), execute_dir->Value());
+	}
+	ASSERT( partition_value );
+	*partition_id = partition_value;
+}
 
 /* 
    Parse a string in one of a few formats, and return a float that
-   represents the value.  Either it's a fraction, like "1/4", or it's
-   a percent, like "25%" (in both cases we'd return .25), or it's a
-   regular value, like "64", in which case, we return the negative
-   value, so that our caller knows it's a value, not a percentage. 
+   represents the value.  Either it's "auto", or it's a fraction, like
+   "1/4", or it's a percent, like "25%" (in both cases we'd return
+   .25), or it's a regular value, like "64", in which case, we return
+   the negative value, so that our caller knows it's an absolute
+   value, not a fraction.
 */
 float
 ResMgr::parse_value( const char* str, bool except )
 {
 	char *tmp, *foo = strdup( str );
 	float val;
-	if( (tmp = strchr(foo, '%')) ) {
+	if( stricmp(foo,"auto") == 0 || stricmp(foo,"automatic") == 0 ) {
+		free( foo );
+		return AUTO_SHARE;
+	}
+	else if( (tmp = strchr(foo, '%')) ) {
 			// It's a percent
 		*tmp = '\0';
 		val = (float)atoi(foo) / 100;
@@ -852,8 +924,8 @@ ResMgr::parse_value( const char* str, bool except )
 		free( foo );
 		return val;
 	} else {
-			// This must just be a value.  Return it as a negative
-			// float, so the caller knows it's not a percentage.
+			// This must just be an absolute value.  Return it as a negative
+			// float, so the caller knows it's not a fraction.
 		val = -(float)atoi(foo);
 		free( foo );
 		return val;
@@ -864,13 +936,17 @@ ResMgr::parse_value( const char* str, bool except )
 /*
   Generally speaking, we want to round down for fractional amounts of
   a CPU.  However, we never want to advertise less than 1.  Plus, if
-  the share in question is negative, it means it's a real value, not a
-  percentage.
+  the share in question is negative, it means it's an absolute value, not a
+  fraction.
 */
 int
 ResMgr::compute_cpus( float share )
 {
 	int cpus;
+	if( IS_AUTO_SHARE(share) ) {
+			// Currently, "auto" for cpus just means 1 cpu per slot.
+		return 1;
+	}
 	if( share > 0 ) {
 		cpus = (int)floor( share * num_cpus() );
 	} else {
@@ -886,13 +962,18 @@ ResMgr::compute_cpus( float share )
 /*
   Generally speaking, we want to round down for fractional amounts of
   physical memory.  However, we never want to advertise less than 1.
-  Plus, if the share in question is negative, it means it's a real
-  value, not a percentage.
+  Plus, if the share in question is negative, it means it's an absolute
+  value, not a fraction.
 */
 int
 ResMgr::compute_phys_mem( float share )
 {
 	int phys_mem;
+	if( IS_AUTO_SHARE(share) ) {
+			// This will be replaced later with an even share of whatever
+			// memory is left over.
+		return AUTO_MEM;
+	}
 	if( share > 0 ) {
 		phys_mem = (int)floor( share * m_attr->phys_mem() );
 	} else {
@@ -1981,4 +2062,18 @@ IdDispenser::insert( int id )
 		EXCEPT( "IdDispenser::insert: %d is already free", id );
 	}
 	free_ids[id] = true;
+}
+
+void
+ResMgr::FillExecuteDirsList( class StringList *list )
+{
+	ASSERT( list );
+	for( int i=0; i<nresources; i++ ) {
+		if( resources[i] ) {
+			char const *execute_dir = resources[i]->executeDir();
+			if( !list->contains( execute_dir ) ) {
+				list->append(execute_dir);
+			}
+		}
+	}
 }

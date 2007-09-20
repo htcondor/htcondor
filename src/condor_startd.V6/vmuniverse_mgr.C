@@ -842,7 +842,7 @@ VMUniverseMgr::canCreateVM(ClassAd *jobAd)
 }
 
 bool
-VMUniverseMgr::allocVM(pid_t s_pid, ClassAd &ad)
+VMUniverseMgr::allocVM(pid_t s_pid, ClassAd &ad, char const *execute_dir)
 {
 	if( canCreateVM(&ad) == false ) {
 		return false;
@@ -871,6 +871,7 @@ VMUniverseMgr::allocVM(pid_t s_pid, ClassAd &ad)
 	newinfo->m_pid = s_pid;
 	newinfo->m_memory = vm_mem;
 	newinfo->m_job_ad = ad; 
+	newinfo->m_execute_dir = execute_dir;
 
 	// If there exists MAC or IP address for a checkpointed VM,
 	// we use them as initial values.
@@ -898,7 +899,7 @@ VMUniverseMgr::freeVM(pid_t s_pid)
 	}
 
 	char pid_dir[_POSIX_PATH_MAX];
-	Directory execute_dir(exec_path, PRIV_ROOT);
+	Directory execute_dir(info->m_execute_dir.Value(), PRIV_ROOT);
 	sprintf(pid_dir, "dir_%ld", (long)s_pid);
 
 	if( execute_dir.Find_Named_Entry( pid_dir ) ) {
@@ -1064,12 +1065,8 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 	MyString matchstring;
 	MyString workingdir;
 
-	if( !exec_path ) {
-		dprintf(D_ALWAYS, "VMUniverseMgr::killVM() : no exec_path\n");
-		return;
-	}
-	workingdir.sprintf("%s%cdir_%ld", exec_path, DIR_DELIM_CHAR, 
-				(long)info->m_pid);
+	workingdir.sprintf("%s%cdir_%ld", info->m_execute_dir.Value(),
+	                   DIR_DELIM_CHAR, (long)info->m_pid);
 
 	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
 		if( create_name_for_VM(&info->m_job_ad, matchstring) == false ) {

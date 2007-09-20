@@ -147,9 +147,6 @@ MachAttributes::compute( amask_t how_much )
 	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
 		m_virt_mem = sysapi_swap_space();
 		dprintf( D_FULLDEBUG, "Swap space: %lu\n", m_virt_mem );
-		
-		m_disk = sysapi_disk_space(exec_path);
-		dprintf( D_FULLDEBUG, "Disk space: %lu\n", m_disk );
 	}
 
 
@@ -243,9 +240,6 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
 
 		sprintf( line, "%s=%lu", ATTR_TOTAL_VIRTUAL_MEMORY, m_virt_mem );
-		cp->Insert( line ); 
-
-		sprintf( line, "%s=%lu", ATTR_TOTAL_DISK, m_disk );
 		cp->Insert( line ); 
 
 		sprintf( line, "%s=%lu", ATTR_TOTAL_CPUS, (unsigned long)m_num_cpus );
@@ -391,17 +385,23 @@ CpuAttributes::CpuAttributes( MachAttributes* map,
 							  int slot_type,
 							  int num_cpus, 
 							  int num_phys_mem,
-							  float virt_mem_percent,
-							  float disk_percent )
+							  float virt_mem_fraction,
+							  float disk_fraction,
+							  MyString &execute_dir,
+							  MyString &execute_partition_id )
 {
 	this->map = map;
 	c_type = slot_type;
 	c_num_cpus = num_cpus;
 	c_phys_mem = num_phys_mem;
-	c_virt_mem_percent = virt_mem_percent;
-	c_disk_percent = disk_percent;
+	c_virt_mem_fraction = virt_mem_fraction;
+	c_disk_fraction = disk_fraction;
+	c_execute_dir = execute_dir;
+	c_execute_partition_id = execute_partition_id;
 	c_idle = -1;
 	c_console_idle = -1;
+	c_disk = 0;
+	c_total_disk = 0;
 }
 
 
@@ -420,6 +420,9 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
 
 		sprintf( line, "%s=%lu", ATTR_VIRTUAL_MEMORY, c_virt_mem );
+		cp->Insert( line ); 
+
+		sprintf( line, "%s=%lu", ATTR_TOTAL_DISK, c_total_disk );
 		cp->Insert( line ); 
 
 		sprintf( line, "%s=%lu", ATTR_DISK, c_disk );
@@ -464,21 +467,23 @@ CpuAttributes::compute( amask_t how_much )
 
 	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
 
-			// Shared attributes that we only get a percentage of
-		val = map->virt_mem() * c_virt_mem_percent;
+			// Shared attributes that we only get a fraction of
+		val = map->virt_mem() * c_virt_mem_fraction;
 		c_virt_mem = (unsigned long)floor( val );
-		
-		val = map->disk() * c_disk_percent;
-		c_disk = (unsigned long)floor( val );
 	}
 
 	if( IS_TIMEOUT(how_much) && !IS_SHARED(how_much) ) {
 
 		// Dynamic, non-shared attributes we need to actually compute
 		c_condor_load = rip->compute_condor_load();
+
+		c_total_disk = sysapi_disk_space(rip->executeDir());
+		dprintf( D_FULLDEBUG, "Total execute space: %lu\n", c_total_disk );
+
+		val = c_total_disk * c_disk_fraction;
+		c_disk = (unsigned long)floor( val );
 	}	
 }
-
 
 void
 CpuAttributes::display( amask_t how_much )
@@ -516,9 +521,36 @@ void
 CpuAttributes::show_totals( int dflag )
 {
 	::dprintf( dflag | D_NOHEADER, 
-			 "Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%\n",
-			 c_num_cpus, c_phys_mem, 100*c_virt_mem_percent, 
-			 100*c_disk_percent );
+			 "Cpus: %d", c_num_cpus);
+
+	if( c_phys_mem == AUTO_MEM ) {
+		::dprintf( dflag | D_NOHEADER, 
+				   ", Memory: auto" );
+	}
+	else {
+		::dprintf( dflag | D_NOHEADER, 
+				   ", Memory: %d",c_phys_mem );
+	}
+	
+
+	if( IS_AUTO_SHARE(c_virt_mem_fraction) ) {
+		::dprintf( dflag | D_NOHEADER, 
+				   ", Swap: auto" );
+	}
+	else {
+		::dprintf( dflag | D_NOHEADER, 
+				   ", Swap: %.2f%%", 100*c_virt_mem_fraction );
+	}
+	
+
+	if( IS_AUTO_SHARE(c_disk_fraction) ) {
+		::dprintf( dflag | D_NOHEADER, 
+				   ", Disk: auto\n" );
+	}
+	else {
+		::dprintf( dflag | D_NOHEADER, 
+				   ", Disk: %.2f%%\n", 100*c_disk_fraction );
+	}
 }
 
 
@@ -532,14 +564,28 @@ CpuAttributes::dprintf( int flags, char* fmt, ... )
 }
 
 
-AvailAttributes::AvailAttributes( MachAttributes* map )
+AvailAttributes::AvailAttributes( MachAttributes* map ):
+	m_execute_partitions(500,MyStringHash,updateDuplicateKeys)
 {
 	a_num_cpus = map->num_cpus();
 	a_phys_mem = map->phys_mem();
-	a_virt_mem_percent = 1.0;
-	a_disk_percent = 1.0;
+	a_phys_mem_auto_count = 0;
+	a_virt_mem_fraction = 1.0;
+	a_virt_mem_auto_count = 0;
 }
 
+AvailDiskPartition &
+AvailAttributes::GetAvailDiskPartition(MyString const &execute_partition_id)
+{
+	AvailDiskPartition *a = NULL;
+	if( m_execute_partitions.lookup(execute_partition_id,a) < 0 ) {
+			// No entry found for this partition.  Create one.
+		m_execute_partitions.insert( execute_partition_id, AvailDiskPartition() );
+		m_execute_partitions.lookup(execute_partition_id,a);
+		ASSERT(a);
+	}
+	return *a;
+}
 
 bool
 AvailAttributes::decrement( CpuAttributes* cap ) 
@@ -548,28 +594,87 @@ AvailAttributes::decrement( CpuAttributes* cap )
 	float new_virt_mem, new_disk, floor = -0.000001f;
 	
 	new_cpus = a_num_cpus - cap->c_num_cpus;
-	new_phys_mem = a_phys_mem - cap->c_phys_mem;
-	new_virt_mem = a_virt_mem_percent - cap->c_virt_mem_percent;
-	new_disk = a_disk_percent - cap->c_disk_percent;
+
+	new_phys_mem = a_phys_mem;
+	if( cap->c_phys_mem != AUTO_MEM ) {
+		new_phys_mem -= cap->c_phys_mem;
+	}
+
+	new_virt_mem = a_virt_mem_fraction;
+	if( !IS_AUTO_SHARE(cap->c_virt_mem_fraction) ) {
+		new_virt_mem -= cap->c_virt_mem_fraction;
+	}
+
+	AvailDiskPartition &partition = GetAvailDiskPartition( cap->executePartitionID() );
+	new_disk = partition.m_disk_fraction;
+	if( !IS_AUTO_SHARE(cap->c_disk_fraction) ) {
+		new_disk -= cap->c_disk_fraction;
+	}
 
 	if( new_cpus < floor || new_phys_mem < floor || 
 		new_virt_mem < floor || new_disk < floor ) {
 		return false;
 	} else {
 		a_num_cpus = new_cpus;
+
 		a_phys_mem = new_phys_mem;
-		a_virt_mem_percent = new_virt_mem;
-		a_disk_percent = new_disk;
+		if( cap->c_phys_mem == AUTO_MEM ) {
+			a_phys_mem_auto_count += 1;
+		}
+
+		a_virt_mem_fraction = new_virt_mem;
+		if( IS_AUTO_SHARE(cap->c_virt_mem_fraction) ) {
+			a_virt_mem_auto_count += 1;
+		}
+
+		partition.m_disk_fraction = new_disk;
+		if( IS_AUTO_SHARE(cap->c_disk_fraction) ) {
+			partition.m_auto_count += 1;
+		}
+	}
+	return true;
+}
+
+bool
+AvailAttributes::computeAutoShares( CpuAttributes* cap )
+{
+	if( cap->c_phys_mem == AUTO_MEM ) {
+		ASSERT( a_phys_mem_auto_count > 0 );
+		int new_value = a_phys_mem / a_phys_mem_auto_count;
+		if( new_value < 1 ) {
+			return false;
+		}
+		cap->c_phys_mem = new_value;
+	}
+
+	if( IS_AUTO_SHARE(cap->c_virt_mem_fraction) ) {
+		ASSERT( a_virt_mem_auto_count > 0 );
+		float new_value = a_virt_mem_fraction / a_virt_mem_auto_count;
+		if( new_value <= 0 ) {
+			return false;
+		}
+		cap->c_virt_mem_fraction = new_value;
+	}
+
+	if( IS_AUTO_SHARE(cap->c_disk_fraction) ) {
+		AvailDiskPartition &partition = GetAvailDiskPartition( cap->c_execute_partition_id );
+		ASSERT( partition.m_auto_count > 0 );
+		float new_value = partition.m_disk_fraction / partition.m_auto_count;
+		if( new_value <= 0 ) {
+			return false;
+		}
+		cap->c_disk_fraction = new_value;
 	}
 	return true;
 }
 
 
 void
-AvailAttributes::show_totals( int dflag )
+AvailAttributes::show_totals( int dflag, CpuAttributes *cap )
 {
+	AvailDiskPartition &partition = GetAvailDiskPartition( cap->c_execute_partition_id );
 	::dprintf( dflag | D_NOHEADER, 
 			 "Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%\n",
-			 a_num_cpus, a_phys_mem, 100*a_virt_mem_percent, 
-			 100*a_disk_percent );
+			 a_num_cpus, a_phys_mem, 100*a_virt_mem_fraction,
+			 100*partition.m_disk_fraction );
 }
