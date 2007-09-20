@@ -206,11 +206,15 @@ a \DCPerm{READ} or both a
    is used for commands that are internal to the operation of
    Condor.  An example of this internal operation is when the
    \Condor{startd} daemon sends
-   its ClassAd updates to the \Condor{collector} daemon.
+   its ClassAd updates to the \Condor{collector} daemon (which may be
+   more specifically controlled by the \DCPerm{ADVERTISE\_STARTD}
+   access level).
    Authorization at this access level should only be given to
    the user account under which the Condor daemons run.
    The \DCPerm{DAEMON} level of access implies both
-   \DCPerm{READ} and \DCPerm{WRITE} access.
+   \DCPerm{READ} and \DCPerm{WRITE} access.  Any setting for this access
+   level that is not defined will default to the corresponding setting
+   in the \DCPerm{WRITE} access level.
 
 \item[\DCPerm{NEGOTIATOR}] \label{sec-level-negotiator} This 
    access level is used specifically to verify that commands are
@@ -222,6 +226,24 @@ a \DCPerm{READ} or both a
    negotiating, and those that tell an available \Condor{startd} daemon
    that it has been matched to a \Condor{schedd} with jobs to run.
    The \DCPerm{NEGOTIATOR} level of access implies \DCPerm{READ} access. 
+
+\item[\DCPerm{ADVERTISE\_MASTER}] \label{sec-level-advertise-master} This
+   access level is used specifically for commands used to advertise a
+   \Condor{master} daemon to the collector.  Any setting for this access
+   level that is not defined will default to the corresponding setting
+   in the \DCPerm{DAEMON} access level.
+
+\item[\DCPerm{ADVERTISE\_STARTD}] \label{sec-level-advertise-master} This
+   access level is used specifically for commands used to advertise a
+   \Condor{startd} daemon to the collector.  Any setting for this access
+   level that is not defined will default to the corresponding setting
+   in the \DCPerm{DAEMON} access level.
+
+\item[\DCPerm{ADVERTISE\_SCHEDD}] \label{sec-level-advertise-master} This
+   access level is used specifically for commands used to advertise a
+   \Condor{schedd} daemon to the collector.  Any setting for this access
+   level that is not defined will default to the corresponding setting
+   in the \DCPerm{DAEMON} access level.
 
 \end{description}
 
@@ -295,6 +317,9 @@ communication taking place.
     OWNER
     DAEMON
     NEGOTIATOR
+    ADVERTISE_MASTER
+    ADVERTISE_STARTD
+    ADVERTISE_SCHEDD
     DEFAULT
 \end{verbatim}
 
@@ -422,6 +447,11 @@ The \verb@DEFAULT@ value for \verb@<context>@ provides a way
 to set a policy for all access levels
 (\verb@READ@, \verb@WRITE@, etc.)
 that do not have a specific configuration variable defined.
+In addition, some access levels will default to the settings specified
+for other access levels.  For example, \DCPerm{ADVERTISE\_STARTD}
+defaults to \DCPerm{DAEMON}, and \DCPerm{DAEMON} defaults to
+\DCPerm{WRITE}, which then defaults to the general \verb@DEFAULT@
+setting.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:security-negotiation-methods}Configuration for 
@@ -466,7 +496,7 @@ to specify whether authentication is to occur:
     SEC_CLIENT_AUTHENTICATION
 \end{verbatim}
 
-For the daemon side, there are seven macros to specify whether
+For the daemon side, there are a larger number of macros to specify whether
 authentication is to take place, based upon the necessary
 access level:
 \index{SEC\_DEFAULT\_AUTHENTICATION macro@\texttt{SEC\_DEFAULT\_AUTHENTICATION} macro}
@@ -485,6 +515,12 @@ access level:
 \index{configuration macro!\texttt{SEC\_DAEMON\_AUTHENTICATION}}
 \index{SEC\_NEGOTIATOR\_AUTHENTICATION macro@\texttt{SEC\_NEGOTIATOR\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_NEGOTIATOR\_AUTHENTICATION}}
+\index{SEC\_ADVERTISE\_MASTER\_AUTHENTICATION macro@\texttt{SEC\_ADVERTISE\_MASTER\_AUTHENTICATION} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_MASTER\_AUTHENTICATION}}
+\index{SEC\_ADVERTISE\_STARTD\_AUTHENTICATION macro@\texttt{SEC\_ADVERTISE\_STARTD\_AUTHENTICATION} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_STARTD\_AUTHENTICATION}}
+\index{SEC\_ADVERTISE\_SCHEDD\_AUTHENTICATION macro@\texttt{SEC\_ADVERTISE\_SCHEDD\_AUTHENTICATION} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_SCHEDD\_AUTHENTICATION}}
 \begin{verbatim}
     SEC_DEFAULT_AUTHENTICATION
     SEC_READ_AUTHENTICATION
@@ -494,6 +530,9 @@ access level:
     SEC_OWNER_AUTHENTICATION
     SEC_DAEMON_AUTHENTICATION
     SEC_NEGOTIATOR_AUTHENTICATION
+    SEC_ADVERTISE_MASTER_AUTHENTICATION
+    SEC_ADVERTISE_STARTD_AUTHENTICATION
+    SEC_ADVERTISE_SCHEDD_AUTHENTICATION
 \end{verbatim}
 
 As an example, the macro defined in the configuration file
@@ -545,6 +584,12 @@ macros
 \index{configuration macro!\texttt{SEC\_OWNER\_AUTHENTICATION\_METHODS}}
 \index{SEC\_NEGOTIATOR\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_NEGOTIATOR\_AUTHENTICATION\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_NEGOTIATOR\_AUTHENTICATION\_METHODS}}
+\index{SEC\_ADVERTISE\_MASTER\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_ADVERTISE\_MASTER\_AUTHENTICATION\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_MASTER\_AUTHENTICATION\_METHODS}}
+\index{SEC\_ADVERTISE\_STARTD\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_ADVERTISE\_STARTD\_AUTHENTICATION\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_STARTD\_AUTHENTICATION\_METHODS}}
+\index{SEC\_ADVERTISE\_SCHEDD\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_ADVERTISE\_SCHEDD\_AUTHENTICATION\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_SCHEDD\_AUTHENTICATION\_METHODS}}
 \begin{verbatim}
     SEC_DEFAULT_AUTHENTICATION_METHODS
     SEC_READ_AUTHENTICATION_METHODS
@@ -554,6 +599,9 @@ macros
     SEC_OWNER_AUTHENTICATION_METHODS
     SEC_DAEMON_AUTHENTICATION_METHODS
     SEC_NEGOTIATOR_AUTHENTICATION_METHODS
+    SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS
+    SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS
+    SEC_ADVERTISE_SCHEDD_AUTHENTICATION_METHODS
 \end{verbatim}
 The methods are
 given as a comma-separated list of acceptable values.
@@ -1243,7 +1291,13 @@ For the daemon, there are seven macros to enable or disable encryption:
 \index{SEC\_OWNER\_ENCRYPTION macro@\texttt{SEC\_OWNER\_ENCRYPTION} macro}
 \index{configuration macro!\texttt{SEC\_OWNER\_ENCRYPTION}}
 \index{SEC\_NEGOTIATOR\_ENCRYPTION macro@\texttt{SEC\_NEGOTIATOR\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_ENCRYPTION}}
+\index{configuration macro!\texttt{SEC\_OWNER\_ENCRYPTION}}
+\index{SEC\_ADVERTISE\_MASTER\_ENCRYPTION macro@\texttt{SEC\_ADVERTISE\_MASTER\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_MASTER\_ENCRYPTION}}
+\index{SEC\_ADVERTISE\_STARTD\_ENCRYPTION macro@\texttt{SEC\_ADVERTISE\_STARTD\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_STARTD\_ENCRYPTION}}
+\index{SEC\_ADVERTISE\_SCHEDD\_ENCRYPTION macro@\texttt{SEC\_ADVERTISE\_SCHEDD\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_SCHEDD\_ENCRYPTION}}
 \begin{verbatim}
     SEC_DEFAULT_ENCRYPTION
     SEC_READ_ENCRYPTION
@@ -1253,6 +1307,9 @@ For the daemon, there are seven macros to enable or disable encryption:
     SEC_OWNER_ENCRYPTION
     SEC_DAEMON_ENCRYPTION
     SEC_NEGOTIATOR_ENCRYPTION
+    SEC_ADVERTISE_MASTER_ENCRYPTION
+    SEC_ADVERTISE_STARTD_ENCRYPTION
+    SEC_ADVERTISE_SCHEDD_ENCRYPTION
 \end{verbatim}
 
 As an example, the macro defined in the configuration file
@@ -1303,6 +1360,12 @@ macros
 \index{configuration macro!\texttt{SEC\_OWNER\_CRYPTO\_METHODS}}
 \index{SEC\_NEGOTIATOR\_CRYPTO\_METHODS macro@\texttt{SEC\_NEGOTIATOR\_CRYPTO\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_NEGOTIATOR\_CRYPTO\_METHODS}}
+\index{SEC\_ADVERTISE\_MASTER\_CRYPTO\_METHODS macro@\texttt{SEC\_ADVERTISE\_MASTER\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_MASTER\_CRYPTO\_METHODS}}
+\index{SEC\_ADVERTISE\_STARTD\_CRYPTO\_METHODS macro@\texttt{SEC\_ADVERTISE\_STARTD\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_STARTD\_CRYPTO\_METHODS}}
+\index{SEC\_ADVERTISE\_SCHEDD\_CRYPTO\_METHODS macro@\texttt{SEC\_ADVERTISE\_SCHEDD\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_SCHEDD\_CRYPTO\_METHODS}}
 \begin{verbatim}
     SEC_DEFAULT_CRYPTO_METHODS
     SEC_READ_CRYPTO_METHODS
@@ -1312,6 +1375,9 @@ macros
     SEC_OWNER_CRYPTO_METHODS
     SEC_DAEMON_CRYPTO_METHODS
     SEC_NEGOTIATOR_CRYPTO_METHODS
+    SEC_ADVERTISE_MASTER_CRYPTO_METHODS
+    SEC_ADVERTISE_STARTD_CRYPTO_METHODS
+    SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS
 \end{verbatim}
 
 The methods are
@@ -1357,15 +1423,20 @@ For the daemon, there are seven macros to enable or disable an integrity check:
 \index{configuration macro!\texttt{SEC\_WRITE\_INTEGRITY}}
 \index{SEC\_ADMINISTRATOR\_INTEGRITY macro@\texttt{SEC\_ADMINISTRATOR\_INTEGRITY} macro}
 \index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_INTEGRITY}}
-% commented out June 04, as it has not been implemented
-%\index{SEC\_DAEMON\_INTEGRITY macro@\texttt{SEC\_DAEMON\_INTEGRITY} macro}
-%\index{configuration macro!\texttt{SEC\_DAEMON\_INTEGRITY}}
+\index{SEC\_DAEMON\_INTEGRITY macro@\texttt{SEC\_DAEMON\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_DAEMON\_INTEGRITY}}
 \index{SEC\_CONFIG\_INTEGRITY macro@\texttt{SEC\_CONFIG\_INTEGRITY} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_INTEGRITY}}
 \index{SEC\_OWNER\_INTEGRITY macro@\texttt{SEC\_OWNER\_INTEGRITY} macro}
 \index{configuration macro!\texttt{SEC\_OWNER\_INTEGRITY}}
 \index{SEC\_NEGOTIATOR\_INTEGRITY macro@\texttt{SEC\_NEGOTIATOR\_INTEGRITY} macro}
 \index{configuration macro!\texttt{SEC\_NEGOTIATOR\_INTEGRITY}}
+\index{SEC\_ADVERTISE\_MASTER\_INTEGRITY macro@\texttt{SEC\_ADVERTISE\_MASTER\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_MASTER\_INTEGRITY}}
+\index{SEC\_ADVERTISE\_STARTD\_INTEGRITY macro@\texttt{SEC\_ADVERTISE\_STARTD\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_STARTD\_INTEGRITY}}
+\index{SEC\_ADVERTISE\_SCHEDD\_INTEGRITY macro@\texttt{SEC\_ADVERTISE\_SCHEDD\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_ADVERTISE\_SCHEDD\_INTEGRITY}}
 \begin{verbatim}
     SEC_DEFAULT_INTEGRITY
     SEC_READ_INTEGRITY
@@ -1373,10 +1444,12 @@ For the daemon, there are seven macros to enable or disable an integrity check:
     SEC_ADMINISTRATOR_INTEGRITY
     SEC_CONFIG_INTEGRITY
     SEC_OWNER_INTEGRITY
+    SEC_DAEMON_INTEGRITY
     SEC_NEGOTIATOR_INTEGRITY
+    SEC_ADVERTISE_MASTER_INTEGRITY
+    SEC_ADVERTISE_STARTD_INTEGRITY
+    SEC_ADVERTISE_SCHEDD_INTEGRITY
 \end{verbatim}
-% commented out June 04, as it has not been implemented
-%   SEC_DAEMON_INTEGRITY
 
 As an example, the macro defined in the configuration file
 for a daemon as
@@ -1484,9 +1557,8 @@ A complete list of the authorization macros:
 \index{configuration macro!\texttt{ALLOW\_ADMINISTRATOR}}
 \index{ALLOW\_CONFIG macro@\texttt{ALLOW\_CONFIG} macro}
 \index{configuration macro!\texttt{ALLOW\_CONFIG}}
-% commented out June 04, as it has not been implemented
-%\index{ALLOW\_DAEMON macro@\texttt{ALLOW\_DAEMON} macro}
-%\index{configuration macro!\texttt{ALLOW\_DAEMON}}
+\index{ALLOW\_DAEMON macro@\texttt{ALLOW\_DAEMON} macro}
+\index{configuration macro!\texttt{ALLOW\_DAEMON}}
 \index{ALLOW\_OWNER macro@\texttt{ALLOW\_OWNER} macro}
 \index{configuration macro!\texttt{ALLOW\_OWNER}}
 \index{ALLOW\_NEGOTIATOR macro@\texttt{ALLOW\_NEGOTIATOR} macro}
@@ -1499,9 +1571,8 @@ A complete list of the authorization macros:
 \index{configuration macro!\texttt{DENY\_ADMINISTRATOR}}
 \index{DENY\_CONFIG macro@\texttt{DENY\_CONFIG} macro}
 \index{configuration macro!\texttt{DENY\_CONFIG}}
-% commented out June 04, as it has not been implemented
-%\index{DENY\_DAEMON macro@\texttt{DENY\_DAEMON} macro}
-%\index{configuration macro!\texttt{DENY\_DAEMON}}
+\index{DENY\_DAEMON macro@\texttt{DENY\_DAEMON} macro}
+\index{configuration macro!\texttt{DENY\_DAEMON}}
 \index{DENY\_OWNER macro@\texttt{DENY\_OWNER} macro}
 \index{configuration macro!\texttt{DENY\_OWNER}}
 \index{DENY\_NEGOTIATOR macro@\texttt{DENY\_NEGOTIATOR} macro}
@@ -1513,16 +1584,41 @@ A complete list of the authorization macros:
     ALLOW_CONFIG
     ALLOW_OWNER
     ALLOW_NEGOTIATOR
+    ALLOW_DAEMON
     DENY_READ
     DENY_WRITE
     DENY_ADMINISTRATOR
     DENY_CONFIG
     DENY_OWNER
     DENY_NEGOTIATOR
+    DENY_DAEMON
 \end{verbatim}
-% commented out June 04, as it has not been implemented
-%   ALLOW_DAEMON
-%   DENY_DAEMON
+
+In addition, the following are used to control authorizationi of
+specific types of Condor daemons when advertising themselves to the
+pool.  If unspecified, these default to the broader
+\MacroNI{ALLOW\_DAEMON} and \MacroNI{DENY\_DAEMON} settings.
+
+\index{ALLOW\_ADVERTISE\_MASTER macro@\texttt{ALLOW\_ADVERTISE\_MASTER} macro}
+\index{configuration macro!\texttt{ALLOW\_ADVERTISE\_MASTER}}
+\index{ALLOW\_ADVERTISE\_STARTD macro@\texttt{ALLOW\_ADVERTISE\_STARTD} macro}
+\index{configuration macro!\texttt{ALLOW\_ADVERTISE\_STARTD}}
+\index{ALLOW\_ADVERTISE\_SCHEDD macro@\texttt{ALLOW\_ADVERTISE\_SCHEDD} macro}
+\index{configuration macro!\texttt{ALLOW\_ADVERTISE\_SCHEDD}}
+\index{DENY\_ADVERTISE\_MASTER macro@\texttt{DENY\_ADVERTISE\_MASTER} macro}
+\index{configuration macro!\texttt{DENY\_ADVERTISE\_MASTER}}
+\index{DENY\_ADVERTISE\_STARTD macro@\texttt{DENY\_ADVERTISE\_STARTD} macro}
+\index{configuration macro!\texttt{DENY\_ADVERTISE\_STARTD}}
+\index{DENY\_ADVERTISE\_SCHEDD macro@\texttt{DENY\_ADVERTISE\_SCHEDD} macro}
+\index{configuration macro!\texttt{DENY\_ADVERTISE\_SCHEDD}}
+\begin{verbatim}
+    ALLOW_ADVERTISE_MASTER
+    ALLOW_ADVERTISE_STARTD
+    ALLOW_ADVERTISE_SCHEDD
+    DENY_ADVERTISE_MASTER
+    DENY_ADVERTISE_STARTD
+    DENY_ADVERTISE_SCHEDD
+\end{verbatim}
 
 Each macro is defined by a comma-separated list of fully qualified
 users.
@@ -1696,15 +1792,14 @@ with the
 And, the last line of the example presumes that there is a
 user called condor, and that the daemons have all been started
 up as this user.
-% commented out June 04, as it has not been implemented
-%It authorizes only programs (which will be the daemons)
-%running as 
-%\verb@condor@ to
-%carry out requests that require the 
-%\DCPerm{DAEMON} access level,
-%where the commands originate from
-%any machine in the
-%\verb@cs.wisc.edu@ domain.
+It authorizes only programs (which will be the daemons)
+running as 
+\verb@condor@ to
+carry out requests that require the 
+\DCPerm{DAEMON} access level,
+where the commands originate from
+any machine in the
+\verb@cs.wisc.edu@ domain.
 
 In the local configuration file for each host, the host's
 owner should be authorized
@@ -1945,6 +2040,38 @@ Condor can be registered with:
    Because of the implications caused by \DCPerm{CONFIG} privileges,
    it is disabled by default for all hosts.
 
+\item[\DCPerm{DAEMON}] \label{dcperm:daemon} This access level
+   is used for commands that are internal to the operation of
+   Condor.  An example of this internal operation is when the
+   \Condor{startd} daemon sends
+   its ClassAd updates to the \Condor{collector} daemon (which may be
+   more specifically controlled by the \DCPerm{ADVERTISE\_STARTD}
+   access level).
+   Authorization at this access level should only be given to
+   hosts that actually run Condor in your pool.
+   The \DCPerm{DAEMON} level of access implies both
+   \DCPerm{READ} and \DCPerm{WRITE} access.  Any setting for this access
+   level that is not defined will default to the corresponding setting
+   in the \DCPerm{WRITE} access level.
+
+\item[\DCPerm{ADVERTISE\_MASTER}] \label{dcperm:advertise-master} This
+   access level is used specifically for commands used to advertise a
+   \Condor{master} daemon to the collector.  Any setting for this access
+   level that is not defined will default to the corresponding setting
+   in the \DCPerm{DAEMON} access level.
+
+\item[\DCPerm{ADVERTISE\_STARTD}] \label{dcperm:advertise-startd} This
+   access level is used specifically for commands used to advertise a
+   \Condor{startd} daemon to the collector.  Any setting for this access
+   level that is not defined will default to the corresponding setting
+   in the \DCPerm{DAEMON} access level.
+
+\item[\DCPerm{ADVERTISE\_SCHEDD}] \label{dcperm:advertise-schedd} This
+   access level is used specifically for commands used to advertise a
+   \Condor{schedd} daemon to the collector.  Any setting for this access
+   level that is not defined will default to the corresponding setting
+   in the \DCPerm{DAEMON} access level.
+
 \end{description}
 
 Starting with version 6.3.2, Condor provides a mechanism for more
@@ -2111,8 +2238,21 @@ The command that can set the current
 COLLECTOR:
 
 \begin{description}
-\item[\DCPerm{WRITE}]
-All commands that update the \Condor{collector} daemon with new ClassAds.
+
+\item[\DCPerm{ADVERTISE\_MASTER}]
+Commands that update the \Condor{collector} daemon with new \Condor{master} ClassAds.
+
+\item[\DCPerm{ADVERTISE\_SCHEDD}]
+Commands that update the \Condor{collector} daemon with new \Condor{schedd} ClassAds.
+
+\item[\DCPerm{ADVERTISE\_STARTD}]
+Commands that update the \Condor{collector} daemon with new \Condor{startd} ClassAds.
+
+\item[\DCPerm{DAEMON}]
+All other commands that update the \Condor{collector} daemon with new
+ClassAds.  Note that the specific access levels such as
+\DCPerm{ADVERTISE\_STARTD} default to the \DCPerm{DAEMON} settings,
+which in turn defaults to \DCPerm{WRITE}.
 
 \item[\DCPerm{READ}]
 All commands that query the \Condor{collector} daemon for ClassAds.

@@ -33,6 +33,16 @@ starved for CPU time.
 
 \begin{itemize}
 
+\item Added new authorization levels to allow fine-grained control
+over the security settings that are used by the collector when
+receiving ClassAd updates by different types of daemons:
+\DCPerm{ADVERTISE\_MASTER}, \DCPerm{ADVERTISE\_STARTD}, and
+\DCPerm{ADVERTISE\_SCHEDD}.  An example of what you can do with this
+is to require that all \Condor{startds} that join the pool be
+authenticated with a pool password and exist within a restricted set
+of IP addresses, while schedds may join the pool from a broader set
+of IP addresses and must authenticate with X509 credentials.
+
 \item Condor-C now uses a more efficient protocol when querying the
 status of jobs from Condor 6.9.5 and newer \Condor{schedd} daemons.
 
