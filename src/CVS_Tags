@@ -1,3 +1,6 @@
+09/20/07 V6_8-merge-10
+  The state of the V6_8-branch for a merge back to the trunk.
+
 09/20/07 V6_9-amazon_ec2-{root,branch}
   A new branch off of the trunk for work to support submitting to Amazon's
   EC2 in the grid universe.

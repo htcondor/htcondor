@@ -1697,6 +1697,25 @@ int GlobusJob::doEvaluateState()
 				daemonCore->Reset_Timer( evaluateStateTid,
 								(lastRestartAttempt + restartInterval) - now );
 			} else {
+				if ( jmShouldBeStoppingTime ) {
+					// If the jobmanager is shutting down (because either
+					// we told it to stop or we got a callback saying it
+					// was stopping), give it some time to finish up and
+					// exit. A bug in older jobmanagers causes a loss of
+					// data if a restarted jobmanager finds an old one
+					// still alive.
+					// See Globus Bugzilla Bug #5467
+					int jm_gone_timeout = param_integer( "GRIDMANAGER_JM_EXIT_LIMIT", 30 );
+					if ( jmShouldBeStoppingTime + jm_gone_timeout > now ) {
+						unsigned int delay = 0;
+						delay = (jmShouldBeStoppingTime + jm_gone_timeout) - now;
+						daemonCore->Reset_Timer( evaluateStateTid, delay );
+dprintf(D_FULLDEBUG,"(%d.%d) JEF: delaying restart for %d seconds\n",procID.cluster,procID.proc,delay);
+						break;
+					}
+else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",procID.cluster,procID.proc);}
+				}
+
 				char *job_contact = NULL;
 
 				CHECK_PROXY;
@@ -1778,30 +1797,12 @@ int GlobusJob::doEvaluateState()
 					// it was stopping), give it a little time to finish
 					// exiting. If it's still around then, assume it's
 					// hosed.
-					if ( jmShouldBeStoppingTime ) {
-						int jm_gone_timeout = param_integer( "GRIDMANAGER_JM_EXIT_LIMIT", 30 );
-						if ( jmShouldBeStoppingTime + jm_gone_timeout < now ) {
-							dprintf( D_ALWAYS, "(%d.%d) Found old jobmanager "
-									 "still alive when it should be stopped\n",
-									 procID.cluster, procID.proc );
-							myResource->JMComplete( this );
-							globusError = rc;
-							gmState = GM_CLEAR_REQUEST;
-							break;
-						} else {
-							unsigned int delay = 0;
-							if ( (jmShouldBeStoppingTime + jm_gone_timeout) > now ) {
-								delay = (jmShouldBeStoppingTime + jm_gone_timeout) - now;;
-							}
-							dprintf( D_ALWAYS, "(%d.%d) Found old jobmanager "
-									 "still alive, will wait %d seconds for "
-									 "it to stop.\n", procID.cluster,
-									 procID.proc, delay );
-							myResource->JMComplete( this );
-							daemonCore->Reset_Timer( evaluateStateTid, delay );
-							break;
-						}
-					}
+					//
+					// NOTE: A bug in older jobmanagers causes a loss of
+					// data if a restarted jobmanager finds an old one
+					// still alive.
+					// See Globus Bugzilla Bug #5467
+					//
 					// TODO: need to avoid an endless loop of old jm not
 					// responding, start new jm, new jm says old one still
 					// running, try to contact old jm again. How likely is

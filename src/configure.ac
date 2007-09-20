@@ -2127,7 +2127,7 @@ _cv_has_unicoregahp=$_cv_has_globus
 CHECK_EXTERNAL([unicoregahp],[1.2.0], [soft])
 
 _cv_has_nordugridgahp=$_cv_has_globus
-CHECK_EXTERNAL([nordugridgahp],[1.1.0], [soft])
+CHECK_EXTERNAL([nordugridgahp],[1.1.1], [soft])
 
 CHECK_EXTERNAL([zlib], [1.1.3], [soft],
                [use zlib (provides compression support)],
@@ -2186,7 +2186,7 @@ CHECK_EXTERNAL([postgresql], [8.0.2], [hard],
 #AC_MSG_RESULT([$_cv_ext_postgresql_version])
 #AC_SUBST(ext_postgresql_version,$_cv_ext_postgresql_version)
 
-CHECK_EXTERNAL([globus],[4.0.3-2], [soft])
+CHECK_EXTERNAL([globus],[4.0.5], [soft])
 
 # if globus is available on this platform and we actually have it
 if test "x$_cv_has_globus" = xyes -a "x$cv_ext_globus" = xyes; then

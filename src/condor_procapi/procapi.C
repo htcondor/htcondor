@@ -1197,6 +1197,55 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	int mib[4];
 	struct kinfo_proc *kp, *kprocbuf;
 	size_t bufSize = 0;
+	task_port_t task;
+	task_basic_info 	ti;
+	unsigned int 		count;	
+
+	/*
+		Depending upon how the user machine is configured, task_for_pid() could
+		work or not work when a process is not running as root. As of macos
+		10.4, the default is 0. However, since an admin may configure their
+		machine to have a process utilize task_for_pid when it isn't running
+		as root, we allow the admin to tell Condor about this.
+
+		As for 09/05/2007 for macosx 10.3 & 10.4, these are the 
+		applicable values.
+
+		Old policy is:
+			- the caller is running as root (EUID 0)
+			- if the caller is running as the
+				same UID as the target (and the target's
+				EUID matches its RUID, that is, it's not
+				running a setuid binary)
+		New policy is:
+			- if the caller was running as root (EUID 0)
+			- if the pid is that of the caller
+			- if the caller is running as the same UID
+				as the target and the target's EUID matches
+				its RUID, that is, it's not a setuid binary
+				AND the caller is in group "procmod" or
+				"procview"
+
+				The long term goal of having both "procmod"
+				and "procview" is that task_for_pid would
+				return a send right for the task control
+				port only to those processes in "procmod";
+				the callers in "procview" would only get a
+				send right to a task inspection port.  This
+				distinction is not currently implemented.
+
+		To actually set the policy, do this:
+
+		$ sudo sysctl -w kern.tfp.policy=1 #set old policy
+		$ sudo sysctl -w kern.tfp.policy=2 #set new policy
+		$ sudo sysctl -w kern.tfp.policy=0 #disable task_for_pid except for root
+
+		Since I can't seem to find a man page for task_for_pid() *anywhere*,
+		which is odd, I'm going to declare that if it comes back not a 
+		KERN_SUCCESS, then I don't have permission to see the pid. Sadly,
+		I can't tell if a pid is not there, or I don't have a permission
+		to see it using this method.
+	*/
 
 		// assume success
 	status = PROCAPI_OK;
@@ -1256,64 +1305,98 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
         return PROCAPI_FAILURE;
     }
 
-	// Now, for some things, we're going to have to go to Mach and ask
-	// it what it knows - for example, the image size and friends
-	task_port_t task;
+	// figure out the image,rss size and the sys/usr time for the process.
 
 	kern_return_t results;
 	results = task_for_pid(mach_task_self(), pid, &task);
 	if(results != KERN_SUCCESS) {
-		status = PROCAPI_UNSPECIFIED;
+		// Since we weren't able to get a mach port, we're going to assume that
+		// we don't have permission to attach to the pid.  (I can't seem to
+		// find a man page for this function in the vast wasteland of the
+		// internet or on any machine on which I have access. So, I'm also
+		// going to mash the no such process error into this case, which is
+		// slightly wrong, but that should have already been caught above with
+		// sysctl())--except for the race where the sysctl can succeed, then the
+		// process exit, then the tfp() call happens.
+		// XXX I'm sure this function call has all sorts of error edge cases I
+		// am not handling due to the opaqueness of this function. :(
 
-		dprintf( D_FULLDEBUG, 
-			"ProcAPI: task_port_pid() on pid %d failed with %d(%s)\n",
-			pid, results, mach_error_string(results) );
+		// If root, then give a warning about it, but continue anyway. I've
+		// seen this function fail due to the pid not being present on the
+		// machine and sometimes "just because".  Also, there isn't a
+		// difference when a non-root user may not call task_for_pid() and when
+		// they may, but the pid isn't actually there.
+		if (getuid() == 0 || geteuid() == 0) { 
+			dprintf( D_FULLDEBUG, 
+				"ProcAPI: task_port_pid() on pid %d failed with "
+				"%d(%s), Marking imgsize, rsssize, cpu/sys time as zero for "
+				"the pid.\n", pid, results, mach_error_string(results) );
+		}
 
-		free(kp);
+		// This will be set to zero at this time due to there being a LOT of
+		// code change for a stable series to make it efficient when we invoke
+		// /bin/ps to get this information. But if a better way to call ps is
+		// created, the function call to fill this stuff in goes right here.
 
-        return PROCAPI_FAILURE;
-	}
+		procRaw.imgsize = 0;
+		procRaw.rssize = 0;
 
-	task_basic_info 	ti;
-	unsigned int 		count;	
-	
-	count = TASK_BASIC_INFO_COUNT;	
-	results = task_info(task, TASK_BASIC_INFO, (task_info_t)&ti, &count);  
-	if(results != KERN_SUCCESS) {
-		status = PROCAPI_UNSPECIFIED;
+		// XXX This sucks, but there is *no* method to get this which doesn't
+		// involve a privledge escalation or hacky and not recommended dynamic
+		// library injection in the program being tracked. Either this process
+		// must be escalated or another escalated program invoked which gets
+		// this for me.
 
-		dprintf( D_FULLDEBUG, 
-			"ProcAPI: task_info() on pid %d failed with %d(%s)\n",
-			pid, results, mach_error_string(results) );
+		procRaw.user_time_1 = 0;
+		procRaw.user_time_2 = 0;
+		procRaw.sys_time_1 = 0;
+		procRaw.sys_time_2 = 0;
 
+	} else {
+
+		/* We successfully got a mach port... */
+
+		count = TASK_BASIC_INFO_COUNT;	
+		results = task_info(task, TASK_BASIC_INFO, (task_info_t)&ti,&count);  
+		if(results != KERN_SUCCESS) {
+			status = PROCAPI_UNSPECIFIED;
+
+			dprintf( D_FULLDEBUG, 
+				"ProcAPI: task_info() on pid %d failed with %d(%s)\n",
+				pid, results, mach_error_string(results) );
+
+			mach_port_deallocate(mach_task_self(), task);
+			free(kp);
+
+       		return PROCAPI_FAILURE;
+		}
+
+		// fill in the values we got from the kernel
+		procRaw.imgsize = (u_long)ti.virtual_size;
+		procRaw.rssize = ti.resident_size;
+		procRaw.user_time_1 = ti.user_time.seconds;
+		procRaw.user_time_2 = 0;
+		procRaw.sys_time_1 = ti.system_time.seconds;
+		procRaw.sys_time_2 = 0;
+
+		// clean up our port
 		mach_port_deallocate(mach_task_self(), task);
-		free(kp);
-
-        return PROCAPI_FAILURE;
 	}
 
-		// Fill in procRaw
-	procRaw.imgsize = (u_long)ti.virtual_size;
-	procRaw.rssize = ti.resident_size;
-	procRaw.user_time_1 = ti.user_time.seconds;
-	procRaw.user_time_2 = 0;
-	procRaw.sys_time_1 = ti.system_time.seconds;
-	procRaw.sys_time_2 = 0;
+
+	// add in the rest
 	procRaw.creation_time = kp->kp_proc.p_starttime.tv_sec;
 	procRaw.pid = pid;
 	procRaw.ppid = kp->kp_eproc.e_ppid;
 	procRaw.owner = kp->kp_eproc.e_pcred.p_ruid; 
 
-		// We don't know the page faults
+	// We don't know the page faults
 	procRaw.majfault = 0;
 	procRaw.minfault = 0;
-
-		// clean up
-	mach_port_deallocate(mach_task_self(), task);
 	
 	free(kp);
 
-		// success
+	// success
 	return PROCAPI_SUCCESS;
 }
 

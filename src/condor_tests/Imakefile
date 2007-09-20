@@ -93,6 +93,12 @@ TESTCLASS(lib_procapi_pidtracking-snapshot,core)
 TESTCLASS(lib_procapi_pidtracking-snapshot,quick)
 #endif
 
+DESC(job_flocking_to,"Simple flocking test")
+RUN(job_flocking_to)
+TESTCLASS(job_flocking_to,core)
+TESTCLASS(job_flocking_to,quick)
+TESTCLASS(job_flocking_to,btdebug)
+
 DESC(lib_auth_protocol-fs,"FS authentication test")
 RUN(lib_auth_protocol-fs)
 TESTCLASS(lib_auth_protocol-fs,core)
@@ -105,6 +111,7 @@ TESTCLASS(lib_auth_protocol-ctb,quick)
 
 /* GNATS 764 - SSL missing on Dux 5.1 and HPUX 11 machines */
 #if !defined( IS_ALPHA_DUX5) && !defined( IS_HPUX11 )
+
 /* Turn off till certs fixed 8/13/7
 DESC(lib_auth_protocol-pw,"PW authentication test")
 RUN(lib_auth_protocol-pw)
@@ -121,6 +128,7 @@ RUN(lib_auth_protocol-gsi)
 TESTCLASS(lib_auth_protocol-gsi,core)
 TESTCLASS(lib_auth_protocol-gsi,quick)
 */
+
 #endif
 
 DESC(lib_auth_protocol-negot,"16 way negotiation test - frist 8")

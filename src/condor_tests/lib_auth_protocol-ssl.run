@@ -115,6 +115,9 @@ while(<CONFIGTPLATE>)
 	} elsif($line =~ /^AUTH_SSL_CLIENT_KEYFILE\s*=\s*XXXXX(\/.*)$/) {
 		$tmp = $pidleveldir . $1;
 		print CONFIG "AUTH_SSL_CLIENT_KEYFILE = $tmp\n";
+	} elsif($line =~ /^CERTIFICATE_MAPFILE\s*=\s*XXXXX(\/.*)$/) {
+		$tmp = $pidleveldir . $1;
+		print CONFIG "CERTIFICATE_MAPFILE = $tmp\n";
 	} else {
 		print CONFIG "$line\n";
 	}

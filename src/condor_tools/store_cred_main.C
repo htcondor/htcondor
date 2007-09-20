@@ -170,29 +170,24 @@ int main(int argc, char *argv[]) {
 		//printf("sending command to local daemon\n");
 	}
 
-	// flag the case where we're deleting the pool password.
-	// for this case, we'll use a STORE_POOL_CRED command
-	// with a NULL password argument - so we munge the
-	// options as needed
+	// flag the case where we're deleting the pool password
 	if (pool_password_arg && (options.mode == DELETE_MODE)) {
 		pool_password_delete = true;
-		options.mode = ADD_MODE;
-		options.pw[0] = '\0';
 	}
 
 	switch (options.mode) {
 		case ADD_MODE:
 		case DELETE_MODE:
-			if ( strcmp(options.pw, "") == 0 ) {
-				if (!pool_password_delete) {
+			if (!pool_password_delete) {
+				if ( strcmp(options.pw, "") == 0 ) {
 					// get password from the user.
 					pw = get_password();
 					printf("\n\n");
+				} else {
+					// got the passwd from the command line.
+					pw = strnewp(options.pw);
+					SecureZeroMemory(options.pw, MAX_PASSWORD_LENGTH);
 				}
-			} else {
-				// got the passwd from the command line.
-				pw = strnewp(options.pw);
-				SecureZeroMemory(options.pw, MAX_PASSWORD_LENGTH);
 			}
 			if ( pw || pool_password_delete) {
 				result = store_cred(full_name, pw, options.mode, daemon);

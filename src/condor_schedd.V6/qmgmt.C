@@ -2969,7 +2969,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 				MyString hold_reason;
 				hold_reason.sprintf(
 					"Failed to convert environment to target syntax"
-					" for starter (opsys=%s): %s\n",
+					" for starter (opsys=%s): %s",
 					opsys ? opsys : "NULL",env_error_msg.Value());
 
 
@@ -3002,7 +3002,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 				MyString hold_reason;
 				hold_reason.sprintf(
 					"Failed to convert arguments to target syntax"
-					" for starter: %s\n",
+					" for starter: %s",
 					arg_error_msg.Value());
 
 

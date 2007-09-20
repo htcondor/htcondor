@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre_declare,v 1.4 2007-09-11 16:14:01 psilord Exp $
+# $Id: remote_pre_declare,v 1.5 2007-09-20 18:38:30 gquinn Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -94,6 +94,14 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 
 print ENVSETUP "export PATH\n";
 print ENVSETUP "export CONDOR_CONFIG\n";
+close(ENVSETUP);
+
+if( ($ENV{NMI_PLATFORM} =~ /winnt/) ){
+	$res = system("d2u  setup_test_env");
+	if($res != 0) {
+		die "Failed to convert environment variable file\n";
+	}
+}
 
 close(ENVSETUP);
 
