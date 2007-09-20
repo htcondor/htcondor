@@ -308,6 +308,23 @@ remote resource.Submission now takes one operation instead of three.
 
 \begin{itemize}
 
+\item Added \MacroNI{SLOTx\_EXECUTE}.  This allows the execute directory
+to be configured independently for each batch slot.  You could use this,
+for example, to have jobs on a multi-CPU machine using scratch space on
+different disks so that there is less chance of them interfering with
+each other.  See page~\pageref{param:SlotXExecute} for more details.
+
+\item The semantics of \MacroNI{SLOT\_TYPE\_<N>} has changed slightly.
+Previously, any resource shares left undefined would default to a fractional
+share equal to \Expr{1/NUM\_CPUS}.  Now, the default is \Expr{auto}, which
+causes all remaining resources to be evenly divided.  This is more convenient
+in cases where some slots are configured to take more or less than their
+``fair'' share and the rest are desired to evenly split the remainder.
+The underlying reason for this change was to be able to better support
+the specification of disk partition shares in all the possible cases:
+The \Expr{auto} share takes into account how many slots are sharing the
+same disk partition.
+
 \item When set to \Expr{True}, the new configuration variable
 \Macro{LOGS\_USE\_TIMESTAMP} will cause Condor to print all daemon
 log messages using a Unix timestamp instead of a formatted date

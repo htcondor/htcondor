@@ -665,14 +665,33 @@ File System Configuration File Entries''.
   \MacroUNI{SPOOL} is defined in terms of \MacroUNI{LOCAL\_DIR}.
   
 \item[\Macro{EXECUTE}] \label{param:Execute} This directory acts as
-  the current working directory of any Condor job that is executing on
-  the local machine.  If a given machine is only set up to only submit
-  jobs and not execute them, it would not need an execute directory
-  (or this macro defined).  There is no default value for
+  a place to create the scratch directory of any Condor job that is executing
+  on
+  the local machine.  The scratch directory is the destination of
+  any input files that were specified for transfer.  It also serves
+  as the job's working directory if the job is using file transfer
+  mode and no other working directory was specified.
+  If a given machine is set up to only submit
+  jobs and not execute them, it would not need an execute directory,
+  and this macro need not be defined.  There is no default value for
   \MacroNI{EXECUTE}, and the \Condor{startd} will not function if
-  \MacroNI{EXECUTE} is not defined.  Normally, \MacroUNI{EXECUTE} is
-  defined in terms of \MacroUNI{LOCAL\_DIR}.
-  
+  \MacroNI{EXECUTE} is undefined.  Normally, \MacroUNI{EXECUTE} is
+  defined in terms of \MacroUNI{LOCAL\_DIR}.  To customize the execute
+  directory independently for each batch slot, use \MacroNI{SLOTx\_EXECUTE}.
+
+\item[\Macro{SLOTx\_EXECUTE}] \label{param:SlotXExecute} Specifies an
+  execute directory for use by a specific batch slot.  (\emph{x}
+  should be the number of the batch slot, such as 1, 2, 3, etc.)  This
+  execute directory serves the same purpose as \Macro{EXECUTE}, but it
+  allows you to configure the directory independently for each batch
+  slot.  Having slots each using a different partition would be
+  useful, for example, in preventing one job from filling up the same
+  disk that other jobs are trying to write to.  If this parameter is
+  undefined for a given batch slot, it will use \MacroNI{EXECUTE} as
+  the default.  Note that each slot will advertise \AdAttr{TotalDisk}
+  and \AdAttr{Disk} for the partition containing its execute
+  directory.
+
 \item[\Macro{LOCAL\_CONFIG\_FILE}] \label{param:LocalConfigFile}
   Identifies the
   location of the local, machine-specific configuration

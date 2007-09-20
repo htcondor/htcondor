@@ -37,7 +37,7 @@ All shared system resources (like RAM, disk space, swap space, etc.)
 can either be divided evenly among all the slots, with each
 CPU getting its own slot, or you can define your own
 \Term{slot types}, so that resources can be unevenly
-partitioned.  Regardless of the partioning scheme used, is important
+partitioned.  Regardless of the partioning scheme used, it is important
 to remember the goal is to create a representative slot
 ClassAd, to be used for matchmaking with jobs.  Condor does not
 directly enforce slot shared resource allocations, and jobs
@@ -111,8 +111,9 @@ variables of the form
 \Macro{SLOT\_TYPE\_<N>}.
 The \verb@<N>@ represents an integer (for example, 
 \MacroNI{SLOT\_TYPE\_1}), which specifies the slot type defined.
-This number is used to configure how many slots of this type
-are advertised.
+Note that there may be multiple slots of each type.  The number created
+is configured with \MacroNI{NUM\_SLOTS\_TYPE\_<N>} as described later in
+this section.
 
 A type describes what share of the total system resources a given
 slot has available to it.
@@ -124,7 +125,9 @@ The type can be defined by:
   \item A simple fraction, such as 1/4
   \item A simple percentage, such as 25\Percent
   \item A comma-separated list of attributes, with a percentage,
-	fraction, or value for each one.
+	fraction, numerical value, or \Expr{auto} for each one.
+  \item A comma-separated list including a blanket value that serves
+        as a default for any resources not explicitly specified in the list.
 \end{itemize}
 A simple fraction or percentage causes an allocation
 of the total system resources.
@@ -136,13 +139,14 @@ The attributes that specify the number of CPUs
 and the total amount of RAM in
 the SMP machine do not change.
 For these attributes, specify either absolute values or
-percentages of the total available amount.  
+percentages of the total available amount (or \Expr{auto}).  
 For example, in a machine with 128 Mbytes of RAM,
 all the following definitions result in the same allocation amount.
 \begin{verbatim}
 mem=64
 mem=1/2
 mem=50%
+mem=auto
 \end{verbatim}
 
 Other attributes are dynamic, such as disk space and swap space.
@@ -151,6 +155,13 @@ value that is allocated to each slot, instead of specifying absolute values.
 As the total values of these resources change on your machine, each
 slot will take its fraction of the total and report that as its
 available amount.
+
+The disk space allocated to each slot is taken from the disk partition
+containing the slots execute directory (configured with
+\Macro{EXECUTE} or \Macro{SLOTx\_EXECUTE}).  If every slot is in a
+different partition, then each one may be defined with up to
+100\Percent for its disk share.  If some slots are in the same
+partition, then their total is not allowed to exceed 100\Percent.
 
 The four attribute names are case insensitive when defining slot types.
 The first letter of the attribute name distinguishes between
@@ -180,6 +191,24 @@ Types 1-3 are all equivalent to each other, as are types 4-6
 \MacroNI{SLOT\_TYPE\_5} = 25\%
 
 \MacroNI{SLOT\_TYPE\_6} = 1/4
+
+
+The default value for each resource share is \Expr{auto}.  The share
+may also be explicitly set to \Expr{auto}.  All slots with the value
+\Expr{auto} for a given type of resource will evenly divide
+whatever remains after subtracting out whatever was explicitly
+allocated in other slot definitions.  For example, if one slot is
+defined to use 10\Percent of the memory and the rest define it as
+\Expr{auto} (or leave it undefined), then the rest of the slots will
+evenly divide 90\Percent of the memory between themselves.
+
+In both of the following examples, the disk share is set to \Expr{auto},
+cpus is 1, and everything else is 50\Percent:
+
+\MacroNI{SLOT\_TYPE\_1} = cpus=1, ram=1/2, swap=50\%
+
+\MacroNI{SLOT\_TYPE\_1} = cpus=1, disk=auto, 50\%
+
 
 
 The number of slots of each type is set with the
