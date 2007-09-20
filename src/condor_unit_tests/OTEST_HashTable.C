@@ -34,11 +34,13 @@
 
 // variable declaration
 HashTable< int, int >* table;
+HashTable< int, short int >* table_two;
 
 // function prototypes
 	// helper functions
 unsigned int intHash(const int &myInt);
 int isOdd(int num);
+bool cleanup(void);
 
 	// test functions
 bool insertlookup_normal(void);
@@ -57,6 +59,10 @@ bool test_num_elems_normal(void);
 bool test_num_elems_collision(void);
 bool test_table_size_normal(void);
 bool test_clear_normal(void);
+bool test_auto_resize_normal(void);
+bool test_auto_resize_sizes(void);
+bool test_auto_resize_check_numelems(void);
+bool test_auto_resize_timing(void);
 
 bool OTEST_HashTable() {
 		// beginning junk
@@ -67,7 +73,7 @@ bool OTEST_HashTable() {
 	e.emit_comment("Index=int, Value=int, hash function returns its input");
 	
 		// driver to run the tests and all required setup
-	FunctionDriver driver(20);
+	FunctionDriver driver(30);
 	driver.register_function(&insertlookup_normal);
 	driver.register_function(&insertlookup_collision);
 	driver.register_function(&test_walk_normal);
@@ -85,6 +91,11 @@ bool OTEST_HashTable() {
 	driver.register_function(&test_num_elems_collision);
 	driver.register_function(&test_table_size_normal);
 	driver.register_function(&test_clear_normal);
+	driver.register_function(&test_auto_resize_normal);
+	driver.register_function(&test_auto_resize_sizes);
+	driver.register_function(&test_auto_resize_check_numelems);
+	driver.register_function(&test_auto_resize_timing);
+	driver.register_function(&cleanup);
 	
 		// run the tests
 	bool test_result = driver.do_all_functions();
@@ -366,10 +377,10 @@ bool test_table_size_normal() {
 	e.emit_test("Does getTableSize() return correctly?");
 	int result = table->getTableSize();
 	e.emit_output_expected_header();
-	e.emit_retval("%d", 10);
+	e.emit_retval("%d", 7);
 	e.emit_output_actual_header();
 	e.emit_retval("%d", result);
-	if(result != 10) {
+	if(result != 7) {
 		e.emit_result_failure(__LINE__);
 		return false;
 	}
@@ -392,6 +403,121 @@ bool test_clear_normal() {
 		return false;
 	}
 	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_auto_resize_normal() {
+	e.emit_test("Add 501 items to the list and make sure it looks some of them up correctly");
+	int i;
+	int insert_result;
+	for(i = 0; i <= 500; i++) {
+		insert_result = table->insert(i, i);
+	}
+	int value500;
+	int value237;
+	int lookup_result500 = table->lookup(500, value500);
+	int lookup_result237 = table->lookup(237, value237);
+	e.emit_output_expected_header();
+	e.emit_param("insert()'s RETURN", "%s", tfnze(0));
+	e.emit_param("lookup(500)'s RETURN", "%s", tfnze(0));
+	e.emit_param("lookup(500)'s VALUE", "%d", 500);
+	e.emit_param("lookup(237)'s RETURN", "%s", tfnze(0));
+	e.emit_param("lookup(237)'s VALUE", "%d", 237);
+	e.emit_output_actual_header();
+	e.emit_param("insert()'s RETURN", "%s", tfnze(insert_result));
+	e.emit_param("lookup(500)'s RETURN", "%s", tfnze(lookup_result500));
+	e.emit_param("lookup(500)'s VALUE", "%d", value500);
+	e.emit_param("lookup(237)'s RETURN", "%s", tfnze(lookup_result237));
+	e.emit_param("lookup(237)'s VALUE", "%d", value237);
+	if(!(insert_result == 0 && lookup_result500 == 0 && lookup_result237 == 0 && value500 == 500 && value237 == 237)) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_auto_resize_sizes() {
+	e.emit_test("Does the modified and hopefully resized table still have the correct number of elements and the correct tableSize?");
+	int numElems = table->getNumElements();
+	int tableSize = table->getTableSize();
+	e.emit_output_expected_header();
+	e.emit_param("numElems", "%d", 501);
+	e.emit_param("tableSize", "%d", 1023);
+	e.emit_output_actual_header();
+	e.emit_param("numElems", "%d", numElems);
+	e.emit_param("tableSize", "%d", tableSize);
+	if(!(numElems == 501 && tableSize == 1023)) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_auto_resize_check_numelems() {
+	e.emit_test("Is numElems reporting the correct number of elements?");
+	table->startIterations();
+	int numElems = table->getNumElements();
+	int value;
+	int num_of_entries = 0;
+	while(table->iterate(value)) {
+		num_of_entries++;
+	}
+	e.emit_output_expected_header();
+	e.emit_param("num_of_entries", "%d", numElems);
+	e.emit_output_actual_header();
+	e.emit_param("num_of_entries", "%d", num_of_entries);
+	if(!(numElems == num_of_entries)) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_auto_resize_timing() {
+	e.emit_test("How long does it take to add five million entries into the table?");
+	table_two = new HashTable<int, short int>(10, intHash);
+	int i;
+	int insert_result;
+	struct timeval time;
+	gettimeofday(&time, NULL);
+	double starttime = time.tv_sec + (time.tv_usec / 1000000.0);
+	for(i = 0; i <= 5000000; i++) {
+		insert_result = table_two->insert(i, i%30000);
+	}
+	gettimeofday(&time, NULL);
+	double midtime = time.tv_sec + (time.tv_usec / 1000000.0);
+	short int value;
+	for(i = 0; i <= 5000000; i++) {
+		insert_result = table_two->lookup(i, value);
+	}
+	gettimeofday(&time, NULL);
+	double endtime = time.tv_sec + (time.tv_usec / 1000000.0);
+	int numElems = table_two->getNumElements();
+	int tableSize = table_two->getTableSize();
+	e.emit_output_expected_header();
+	e.emit_param("numElems", "%d", 5000001);
+	e.emit_param("tableSize", ">%d", 1000000);
+	e.emit_output_actual_header();
+	e.emit_param("numElems", "%d", numElems);
+	e.emit_param("tableSize", "%d", tableSize);
+	double insertdur = midtime - starttime;
+	double lookupdur = endtime - midtime;
+	e.emit_param("Insert Time", "%f", insertdur);
+	e.emit_param("Lookup Time", "%f", lookupdur);
+	if(!(numElems == 5000001 && tableSize >= 1000000)) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool cleanup() {
+	delete table;
+	delete table_two;
 	return true;
 }
 

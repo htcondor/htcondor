@@ -42,7 +42,7 @@ class HashBucket {
 // various options for what we do when someone tries to insert a new
 // bucket with a key (index) that already exists in the table
 typedef enum {
-	allowDuplicateKeys,   // original (arguably broken) default behavior
+	allowDuplicateKeys,   // original (inarguably broken) default behavior
 	rejectDuplicateKeys,
 	updateDuplicateKeys,
 } duplicateKeyBehavior_t;
@@ -50,14 +50,26 @@ typedef enum {
 template <class Index, class Value>
 class HashTable {
  public:
+    // the first constructor takes a tableSize that isn't used, it's left in
+	// for compatibility reasons
   HashTable( int tableSize,
 			 unsigned int (*hashfcn)( const Index &index ),
 			 duplicateKeyBehavior_t behavior = allowDuplicateKeys );
+    // with this constructor, duplicateKeyBehavior_t is ALWAYS set to
+    // rejectDuplicateKeys.  To have it work like updateDuplicateKeys,
+    // use replace() instead of insert().
+  HashTable( unsigned int (*hashfcn)( const Index &index ));
+  void initialize( unsigned int (*hashfcn)( const Index &index ),
+			 duplicateKeyBehavior_t behavior );
   HashTable( const HashTable &copy);
   const HashTable& operator=(const HashTable &copy);
   ~HashTable();
 
   int insert(const Index &index, const Value &value);
+  /*
+  Replace the old value with a new one.  Returns the old value, or NULL if it
+  didn't previously exist.
+  */
   int lookup(const Index &index, Value &value) const;
   int lookup(const Index &index, Value* &value) const;
   int getNext(Index &index, void *current, Value &value,
@@ -84,7 +96,21 @@ class HashTable {
 
 
  private:
+  /* Deeply copy the hash table. */
   void copy_deep(const HashTable<Index, Value> &copy);
+  /*
+  Determines if the table needs to be resized based on the current load factor.
+  */
+  int needs_resizing();
+  /*
+  Resize the hash table to the given size, or a default of the next (2^n)-1.
+  */
+  void resize_hash_table(int newsize = -1);
+  /*
+  Adds an item, ignoring the possibility of duplicates.  Used in insert() and
+  replace() internally.
+  */
+  int addItem(const Index &index, const Value &value);
 #ifdef DEBUGHASH
   void dump();                                  // dump contents of hash table
 #endif
@@ -92,6 +118,7 @@ class HashTable {
   int tableSize;                                // size of hash table
   HashBucket<Index, Value> **ht;                // actual hash table
   unsigned int (*hashfcn)(const Index &index);  // user-provided hash function
+  double maxLoadFactor;			// average number of elements per bucket list
   duplicateKeyBehavior_t duplicateKeyBehavior;        // duplicate key behavior
   int currentBucket;
   HashBucket<Index, Value> *currentItem;
@@ -102,38 +129,51 @@ class HashTable {
   int endOfFreeList;
 };
 
+// The two normal hash table constructors call initialize() to set everything up
+// In the first constructor, tableSz is ignored as it is no longer used, it is
+// left in for compatability reasons.
+template <class Index, class Value>
+HashTable<Index,Value>::HashTable( int tableSz,
+								   unsigned int (*hashF)( const Index &index ),
+								   duplicateKeyBehavior_t behavior ) {
+	initialize(hashF, behavior);
+}
+
+template <class Index, class Value>
+HashTable<Index,Value>::HashTable( unsigned int (*hashF)( const Index &index )) {
+	initialize(hashF, rejectDuplicateKeys);
+}
+
+
+
+
 // Construct hash table. Allocate memory for hash table and
 // initialize its elements.
 
 template <class Index, class Value>
-HashTable<Index,Value>::HashTable( int tableSz,
-								   unsigned int (*hashF)( const Index &index ),
-								   duplicateKeyBehavior_t behavior ) :
-	tableSize(tableSz), hashfcn(hashF)
-{
+void HashTable<Index,Value>::initialize( unsigned int (*hashF)( const Index &index ),
+								         duplicateKeyBehavior_t behavior ) {
   int i;
 
+  hashfcn = hashF;
+
+  maxLoadFactor = 0.8;		// default "table density"
 
   // You MUST specify a hash function.
   // Try hashFuncInt (int), hashFuncUInt (uint), hashFuncJobIdStr (string of "cluster.proc"),
   // or MyStringHash (MyString)
   ASSERT(hashfcn != 0);
 
-  // Do not allow tableSize=0 since that is likely to
-  // result in a divide by zero in many hash functions.
-  // If the user specifies an illegal table size, use
-  // a default value of 5.
-  if ( tableSize < 1 ) {
-	  tableSize = 5;
-  }
+  // if the value for maxLoadFactor is negative or 0, use the default of 50
+
+  // set tableSize before everything else b/c it's needed for the array declarations
+  tableSize = 7;
 
   if (!(ht = new HashBucket<Index, Value>* [tableSize])) {
-    fprintf(stderr, "Insufficient memory for hash table\n");
-    exit(1);
+    EXCEPT("Insufficient memory for hash table");
   }
   if (!(chainsUsed = new int[tableSize])) {
-    fprintf(stderr, "Insufficient memory for hash table (chainsUsed array)\n");
-    exit(1);
+    EXCEPT("Insufficient memory for hash table (chainsUsed array)");
   }
   for(i = 0; i < tableSize; i++) {
     ht[i] = NULL;
@@ -180,12 +220,10 @@ void HashTable<Index,Value>::copy_deep( const HashTable<Index,Value>& copy ) {
   tableSize = copy.tableSize;
 
   if (!(ht = new HashBucket<Index, Value>* [tableSize])) {
-    fprintf(stderr, "Insufficient memory for hash table");
-    exit(1);
+    EXCEPT("Insufficient memory for hash table");
   }
   if (!(chainsUsed = new int[tableSize])) {
-    fprintf(stderr, "Insufficient memory for hash table (chainsUsed array)");
-    exit(1);
+    EXCEPT("Insufficient memory for hash table (chainsUsed array)");
   }
   for(int i = 0; i < tableSize; i++) {
     // duplicate this chain
@@ -223,12 +261,12 @@ void HashTable<Index,Value>::copy_deep( const HashTable<Index,Value>& copy ) {
 }
 
 // Insert entry into hash table mapping Index to Value.
-// Returns 0 if OK, an error code otherwise.
+// Returns 0 if OK, -1 if rejectDuplicateKeys is set (the default for the
+// single-argument constructor) and the item already exists.
 
 template <class Index, class Value>
 int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 {
-  int temp;
   int idx = (int)(hashfcn(index) % tableSize);
 
   HashBucket<Index, Value> *bucket;
@@ -251,22 +289,32 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
   // table with this key, update the bucket's value
 
   else if( duplicateKeyBehavior == updateDuplicateKeys ) {
-	  bucket = ht[idx];
-	  while( bucket ) {
-          if( bucket->index == index ) {
-			  bucket->value = value;
-			  return 0;
-          }
-          bucket = bucket->next;
+
+    bucket = ht[idx];
+    while( bucket ) {
+      if( bucket->index == index ) {
+        bucket->value = value;
+        return 1;
       }
+      bucket = bucket->next;
+    }
   }
+
+  addItem(index, value);
+  return 0;
+}
+
+template <class Index, class Value>
+int HashTable<Index,Value>::addItem(const Index &index,const  Value &value) {
+  int idx = (int)(hashfcn(index) % tableSize);
+
+  HashBucket<Index, Value> *bucket;
 
   // don't worry about whether a bucket already exists with this key,
   // just go ahead and insert another one...
 
   if (!(bucket = new HashBucket<Index, Value>)) {
-    fprintf(stderr, "Insufficient memory\n");
-    return -1;
+    EXCEPT("Insufficient memory");
   }
 
   bucket->index = index;
@@ -277,7 +325,7 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 	if ( chainsUsedFreeList == endOfFreeList ) {
 		chainsUsed[chainsUsedLen++] = idx;
 	} else {
-		temp = chainsUsedFreeList + tableSize;
+		int temp = chainsUsedFreeList + tableSize;
 		chainsUsedFreeList = chainsUsed[temp];
 		chainsUsed[temp] = idx;
 	}
@@ -289,6 +337,10 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 #endif
 
   numElems++;
+   // bucket successfully added, now check to see if the table is too full
+  if(needs_resizing()) {
+    resize_hash_table();
+  }
   return 0;
 }
 
@@ -621,6 +673,68 @@ HashTable<Index,Value>::~HashTable()
   delete [] ht;
   delete [] chainsUsed;
 }
+
+// Determine if the hash table should be resized and reindexed
+template <class Index, class Value>
+int HashTable<Index, Value>::needs_resizing() {
+	if(((double) numElems / (double) tableSize) >= maxLoadFactor) {
+		return 1;
+	}
+	return 0;
+}
+
+// Resize and reindex the hash table
+template <class Index, class Value>
+void HashTable<Index, Value>::resize_hash_table(int newsize) {
+	if(newsize <= 0) {
+			// default to next 2^n-1 value
+		newsize = tableSize + 1;
+		newsize *= 2;
+		newsize--;
+	}
+	HashBucket<Index, Value> **htcopy;
+	if (!(htcopy = new HashBucket<Index, Value>* [newsize])) {
+		EXCEPT("Insufficient memory for hash table resizing");
+	}
+	int *cucopy;
+	if (!(cucopy = new int[newsize])) {
+		EXCEPT("Insufficient memory for hash table resizing (chainsUsed array)");
+	}
+	int i;
+	for(i = 0; i < newsize; i++) {
+		htcopy[i] = NULL;
+		cucopy[i] = -1;
+	}
+
+	int culen = 0;
+	HashBucket<Index, Value> *temp = NULL;
+	HashBucket<Index, Value> *cur= NULL;
+	for( i=0; i<tableSize; i++ ) {
+		for( cur=ht[i]; cur; cur=temp ) {
+			int idx = (int)(hashfcn(cur->index) % newsize);
+				// put it at htcopy[idx]
+				// if htcopy[idx] wasn't NULL then put whatever was there as its next value...
+				// if it was NULL then set current->next to NULL, so I guess just copy the value no matter what
+			temp = cur->next;
+			cur->next = htcopy[idx];
+			if(!htcopy[idx]) {
+				// this is the first item being added to the chain
+				cucopy[culen++] = idx;
+			}
+			htcopy[idx] = cur;
+		}
+	}
+	delete[] ht;
+	delete[] chainsUsed;
+	ht = htcopy;
+	chainsUsed = cucopy;
+	endOfFreeList = 0 - tableSize - 10;
+	chainsUsedFreeList = endOfFreeList;
+	chainsUsedLen = culen;
+	currentItem = 0;
+	currentBucket = -1;
+	tableSize = newsize;
+} 
 
 #ifdef DEBUGHASH
 // Dump hash table contents.

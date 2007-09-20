@@ -24,3 +24,4 @@
 #include "HashTable.h"
 
 template class HashTable<int, int>;
+template class HashTable<int, short int>;
