@@ -75,6 +75,7 @@ cleanup_execute_dirs( StringList &list )
 
 	while( (exec_path = list.next()) ) {
 #if defined(WIN32)
+		dynuser nobody_login;
 		// remove all users matching this prefix
 		nobody_login.cleanup_condor_users("condor-run-");
 
