@@ -864,9 +864,9 @@ ResMgr::GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *parti
 #if defined(WIN32)
 	int i;
 		// switch delimiter char in exec path on WIN32
-	for (i=0; exec_path[i]; i++) {
-		if (exec_path[i] == '/') {
-			exec_path[i] = '\\';
+	for (i=0; execute_value[i]; i++) {
+		if (execute_value[i] == '/') {
+			execute_value[i] = '\\';
 		}
 	}
 #endif
