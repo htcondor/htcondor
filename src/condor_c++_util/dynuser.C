@@ -748,7 +748,7 @@ bool dynuser::update_psid() {
 }
 
 
-bool dynuser::deleteuser(char* username ) {
+bool dynuser::deleteuser(char const * username ) {
 
 	bool retval = true;
 

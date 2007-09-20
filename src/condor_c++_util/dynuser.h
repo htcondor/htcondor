@@ -55,7 +55,7 @@ public:
 	~dynuser();
 
 	bool init_user();
-	bool deleteuser(char * username);
+	bool deleteuser(char const * username);
 	const char* get_accountname();
 
 	HANDLE get_token();
