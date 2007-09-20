@@ -1,3 +1,7 @@
+09/20/07 V6_9-amazon_ec2-{root,branch}
+  A new branch off of the trunk for work to support submitting to Amazon's
+  EC2 in the grid universe.
+
 09/17/07 V6_9-userlog_rotation-{root,branch}
   The root & branch for the user log rotation work.
 
