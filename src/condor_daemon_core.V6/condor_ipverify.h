@@ -57,7 +57,7 @@ static const int USERVERIFY_ONLY_DENIES = 2;
 static const int USERVERIFY_DENY = 3;
 
 /// type used for permission bit-mask; see allow_mask() and deny_mask()
-typedef unsigned long long perm_mask_t;
+typedef uint64_t perm_mask_t;
 
 	/** PermString() converts the given DCpermission into the
 		human-readable string version of the name.
