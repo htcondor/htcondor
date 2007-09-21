@@ -135,7 +135,7 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
         }
 
         if ( !read_only ) {
-            if (!qmgmt_sock->authenticate_perm(CLIENT_PERM, errstack_select)) {
+            if (!SecMan::authenticate_sock(qmgmt_sock, CLIENT_PERM, errstack_select)) {
                 delete qmgmt_sock;
                 qmgmt_sock = NULL;
 				if (!errstack) {

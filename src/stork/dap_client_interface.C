@@ -180,7 +180,7 @@ start_stork_command_and_authenticate (
 
 	if (!reli_sock->isAuthenticated()) { 
 		CondorError errstack;
-		if( ! reli_sock->authenticate_perm(CLIENT_PERM, &errstack) ) {
+		if( ! SecMan::authenticate_sock(reli_sock, CLIENT_PERM, &errstack) ) {
 			error_reason = "Authentication error";
 			delete reli_sock;
 			return NULL;

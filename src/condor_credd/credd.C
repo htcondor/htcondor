@@ -85,7 +85,7 @@ store_cred_handler(Service * service, int i, Stream *stream) {
 
   if (!socket->isAuthenticated()) { 
     CondorError errstack;
-    if( ! socket->authenticate_perm(WRITE, &errstack) ) {
+    if( ! SecMan::authenticate_sock(socket, WRITE, &errstack) ) {
       dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
       goto EXIT;
     }
@@ -239,7 +239,7 @@ get_cred_handler(Service * service, int i, Stream *stream) {
   // Authenticate
   if (!socket->isAuthenticated()) {
     CondorError errstack;
-    if( ! socket->authenticate_perm(READ, &errstack) ) {
+    if( ! SecMan::authenticate_sock(socket, READ, &errstack) ) {
       dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
       goto EXIT;
     }
@@ -354,7 +354,7 @@ query_cred_handler(Service * service, int i, Stream *stream) {
 
   if (!socket->isAuthenticated()) {
     CondorError errstack;
-    if( ! socket->authenticate_perm(READ, &errstack) ) {
+    if( ! SecMan::authenticate_sock(socket, READ, &errstack) ) {
       dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
       goto EXIT;
     }
@@ -429,7 +429,7 @@ rm_cred_handler(Service * service, int i, Stream *stream) {
 
   if (!socket->isAuthenticated()) {
     CondorError errstack;
-    if( ! socket->authenticate_perm(READ, &errstack) ) {
+    if( ! SecMan::authenticate_sock(socket, READ, &errstack) ) {
       dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
       goto EXIT;
     }

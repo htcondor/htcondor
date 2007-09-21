@@ -48,7 +48,7 @@ TransferD::read_files_handler(int cmd, Stream *sock)
 	/////////////////////////////////////////////////////////////////////////
 	if( ! rsock->isAuthenticated() ) {
 		CondorError errstack;
-		if( ! rsock->authenticate_perm(WRITE, &errstack) ) {
+		if( ! SecMan::authenticate_sock(rsock, WRITE, &errstack) ) {
 			// we failed to authenticate, we should bail out now
 			// since we don't know what user is trying to perform
 			// this action.

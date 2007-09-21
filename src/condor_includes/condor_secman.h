@@ -94,6 +94,12 @@ public:
 
 	StartCommandResult startCommand( int cmd, Sock* sock, bool can_neg, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking);
 
+		// Authenticate a socket using whatever authentication methods
+		// have been configured for the specified perm level.
+	static int authenticate_sock(Sock *s,DCpermission perm, CondorError* errstack);
+	static int authenticate_sock(Sock *s,KeyInfo *&ki, DCpermission perm, CondorError* errstack);
+
+
     //------------------------------------------
     // invalidate cache
     //------------------------------------------

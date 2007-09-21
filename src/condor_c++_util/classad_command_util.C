@@ -113,7 +113,7 @@ getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
     s->decode();
     if( force_auth && ! s->isAuthenticated() ) {
 		CondorError errstack;
-        if( ! s->authenticate_perm(WRITE, &errstack) ) {
+        if( ! SecMan::authenticate_sock(s, WRITE, &errstack) ) {
                 // we failed to authenticate, we should bail out now
                 // since we don't know what user is trying to perform
                 // this action.

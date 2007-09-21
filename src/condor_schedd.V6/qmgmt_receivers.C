@@ -74,7 +74,7 @@ do_Q_request(ReliSock *syscall_sock)
 				dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.Value());
 			}
 			CondorError errstack;
-			if( ! syscall_sock->authenticate_perm(WRITE, &errstack) ) {
+			if( ! SecMan::authenticate_sock(syscall_sock, WRITE, &errstack) ) {
 					// Failed to authenticate
 				dprintf( D_ALWAYS, "SCHEDD: authentication failed: %s\n", 
 						 errstack.getFullText() );

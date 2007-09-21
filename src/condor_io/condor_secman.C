@@ -2553,6 +2553,20 @@ char* SecMan::my_parent_unique_id() {
 	return _my_parent_unique_id;
 }
 
+int
+SecMan::authenticate_sock(Sock *s,DCpermission perm, CondorError* errstack)
+{
+	MyString methods;
+	getAuthenticationMethods( perm, &methods );
+	ASSERT(s);
+	return s->authenticate(methods.Value(),errstack);
+}
 
-// testing commit, ignore
-
+int
+SecMan::authenticate_sock(Sock *s,KeyInfo *&ki, DCpermission perm, CondorError* errstack)
+{
+	MyString methods;
+	getAuthenticationMethods( perm, &methods );
+	ASSERT(s);
+	return s->authenticate(ki,methods.Value(),errstack);
+}

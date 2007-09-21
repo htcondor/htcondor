@@ -2088,7 +2088,7 @@ Daemon::forceAuthentication( ReliSock* rsock, CondorError* errstack )
 		return true;
 	}
 
-	return rsock->authenticate_perm( CLIENT_PERM, errstack );
+	return SecMan::authenticate_sock(rsock, CLIENT_PERM, errstack );
 }
 
 
