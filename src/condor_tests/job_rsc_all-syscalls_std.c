@@ -4382,10 +4382,29 @@ int BasicGetSetlimit(void)
 
 	passed = expect_zng(SUCCESS, getrlimit_test(&orlim));
 	EXPECTED_RESP;
+
 	/* if orlim is zero, then this will function correctly, since I'll be
 		setting the limit to something it is alread yset to. */
-	nrlim.rlim_cur = orlim.rlim_cur / 2; 
-	nrlim.rlim_max = orlim.rlim_max / 2; 
+	if (nrlim.rlim_cur == RLIM_INFINITY) {
+		/* this branch implies that the max must also be this value */
+		nrlim.rlim_cur = INT_MAX / 2;
+	} else {
+		nrlim.rlim_cur = orlim.rlim_cur / 2;
+	}
+
+	if (nrlim.rlim_max == RLIM_INFINITY) {
+		nrlim.rlim_max = INT_MAX / 2;
+	} else {
+		nrlim.rlim_max = orlim.rlim_max / 2; 
+	}
+
+	/* just in case though... I'm not going to print out a warning since I
+		was just looking for a valid rlimit configuration under certain
+		restrictions, and any will do. */
+	if (nrlim.rlim_cur > nrlim.rlim_max) {
+		nrlim.rlim_cur = nrlim.rlim_max;
+	}
+
 	passed = expect_zng(SUCCESS, setrlimit_test(&nrlim));
 	EXPECTED_RESP;
 	passed = expect_zng(SUCCESS, getrlimit_test(&crlim));
@@ -4600,7 +4619,7 @@ int main(int argc, char **argv)
 		{BasicGetSetlimit, "BasicGetSetLimit: Can I change proc limits?"},
 	};
 
-	printf("Condor System Call Tester $Revision: 1.2.2.3 $\n\n");
+	printf("Condor System Call Tester $Revision: 1.2.2.4 $\n\n");
 
 	printf("The length of the string:\n'%s'\nIs: %d\n\n", 
 		STR(passage), strlen(passage));
