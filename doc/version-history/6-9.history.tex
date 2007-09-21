@@ -80,6 +80,11 @@ for job information.
 \item Added the capability to assign priorities to DAG nodes.  Ready nodes
 within a DAG are submitted in priority order by \Condor{dagman}.
 
+\item \MacroNI{USE\_CLONE\_TO\_CREATE\_PROCESSES} (which defaults to
+True) is now supported on ppc64, SUSE 9.  This also fixes a bug in which
+the Yellow Dog Linux version of Condor installed on a ppc64 SUSE 9 machine
+would fail to start jobs.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
