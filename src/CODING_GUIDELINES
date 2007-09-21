@@ -15,6 +15,14 @@ General Rules of Thumb:
   Condor's style is heavily inconsistant; at least try to
   minimize inconsistancies within a single file.
 
+- If you find yourself using types that might not be in the C/++
+  standard, such as long long, you should look for a typedef
+  equivalent, such as int64_t and uint64_t.
+
+- If you are writing code that depends on an external be sure your
+  code is wrapped in a pre-processor check for HAVE_EXT_<name>, where
+  <name> is the name of the external you depend on.
+
 Memory ownership
 
 If a function takes a pointer, then in the comment for the prototype, note
