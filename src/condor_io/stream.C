@@ -209,28 +209,9 @@ Stream::code( unsigned long	&l)
 	return FALSE;	/* will never get here	*/
 }
 
-#ifndef WIN32		// MS VC++ does not understand long long's
-int 
-Stream::code( long long	&l)
-{
-	switch(_coding){
-		case stream_encode:
-			return put(l);
-		case stream_decode:
-			return get(l);
-		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(long long &l) has unknown direction!");
-			break;
-		default:
-			EXCEPT("ERROR: Stream::code(long long &l)'s _coding is illegal!");
-			break;
-	}
-
-	return FALSE;	/* will never get here	*/
-}
 
 int 
-Stream::code( unsigned long long	&l)
+Stream::code( int64_t	&l)
 {
 	switch(_coding){
 		case stream_encode:
@@ -238,29 +219,10 @@ Stream::code( unsigned long long	&l)
 		case stream_decode:
 			return get(l);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(unsigned long long &l) has unknown direction!");
+			EXCEPT("ERROR: Stream::code(int64_t &l) has unknown direction!");
 			break;
 		default:
-			EXCEPT("ERROR: Stream::code(unsigned long long &l)'s _coding is illegal!");
-			break;
-	}
-
-	return FALSE;	/* will never get here	*/
-}
-#else  // Windows
-
-Stream::code( LONGLONG &l)
-{
-	switch(_coding){
-		case stream_encode:
-			return put(l);
-		case stream_decode:
-			return get(l);
-		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(LONGLONG &l) has unknown direction!");
-			break;
-		default:
-			EXCEPT("ERROR: Stream::code(LONGLONG &l)'s _coding is illegal!");
+			EXCEPT("ERROR: Stream::code(int64_t &l)'s _coding is illegal!");
 			break;
 	}
 
@@ -268,7 +230,7 @@ Stream::code( LONGLONG &l)
 }
 
 int 
-Stream::code( ULONGLONG &l)
+Stream::code( uint64_t	&l)
 {
 	switch(_coding){
 		case stream_encode:
@@ -276,16 +238,16 @@ Stream::code( ULONGLONG &l)
 		case stream_decode:
 			return get(l);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(ULONGLONG &l) has unknown direction!");
+			EXCEPT("ERROR: Stream::code(uint64_t &l) has unknown direction!");
 			break;
 		default:
-			EXCEPT("ERROR: Stream::code(ULONGLONG &l)'s _coding is illegal!");
+			EXCEPT("ERROR: Stream::code(uint64_t &l)'s _coding is illegal!");
 			break;
 	}
 
 	return FALSE;	/* will never get here	*/
 }
-#endif
+
 
 int 
 Stream::code( short	&s)
@@ -1061,59 +1023,31 @@ static unsigned long ntohL(unsigned long netint)
 }
 
 // no hton function is provided for ints > 4 bytes by any OS.
-#ifndef WIN32		// MS VC++ does not understand long long's
-static unsigned long long htonLL(unsigned long long hostint)
+static uint64_t htonLL(uint64_t hostint)
 {
-	unsigned long long netint;
+	uint64_t netint;
 	char *hostp = (char *)&hostint;
 	char *netp = (char *)&netint;
 
-	for (unsigned int i=0, j=sizeof(long long)-1; i < sizeof(long long); i++, j--) {
+	for (unsigned int i=0, j=sizeof(uint64_t)-1; i < sizeof(uint64_t); i++, j--) {
 		netp[i] = hostp[j];
 	}
 	return netint;
 }
 
 // no ntoh function is provided for ints > 4 bytes by any OS.
-static unsigned long long ntohLL(unsigned long long netint)
+static uint64_t ntohLL(uint64_t netint)
 {
-	unsigned long long hostint;
+	uint64_t hostint;
 	char *hostp = (char *)&hostint;
 	char *netp = (char *)&netint;
 
-	for (unsigned int i=0, j=sizeof(long long)-1; i < sizeof(long long); i++, j--) {
-		hostp[i] = netp[j];
-	}
-	return hostint;
-}
-#else
-// WINDOWS
-static ULONGLONG htonLL(ULONGLONG hostint)
-{
-	ULONGLONG netint;
-	char *hostp = (char *)&hostint;
-	char *netp = (char *)&netint;
-
-	for (unsigned int i=0, j=sizeof(LONGLONG)-1; i < sizeof(LONGLONG); i++, j--) {
-		netp[i] = hostp[j];
-	}
-	return netint;
-}
-
-// no ntoh function is provided for ints > 4 bytes by any OS.
-static ULONGLONG ntohLL(ULONGLONG netint)
-{
-	ULONGLONG hostint;
-	char *hostp = (char *)&hostint;
-	char *netp = (char *)&netint;
-
-	for (unsigned int i=0, j=sizeof(LONGLONG)-1; i < sizeof(LONGLONG); i++, j--) {
+	for (unsigned int i=0, j=sizeof(uint64_t)-1; i < sizeof(uint64_t); i++, j--) {
 		hostp[i] = netp[j];
 	}
 	return hostint;
 }
 
-#endif
 
 int 
 Stream::put( long	l)
@@ -1187,32 +1121,31 @@ Stream::put( unsigned long	l)
 	return TRUE;
 }
 
-#ifndef WIN32		// MS VC++ does not understand long long's
 int 
-Stream::put( long long	l)
+Stream::put( int64_t	l)
 {
 	char	pad;
-  NETWORK_TRACE("put long long" << l);
+  NETWORK_TRACE("put int64_t" << l);
 
 	switch(_code){
 		case internal:
-			if (put_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+			if (put_bytes(&l, sizeof(int64_t)) != sizeof(int64_t)) return FALSE;
 			break;
 
 		case external:
-			if ((sizeof(int) == sizeof(long long)) || (sizeof(long long) > INT_SIZE)) {
+			if ((sizeof(int) == sizeof(int64_t)) || (sizeof(int64_t) > INT_SIZE)) {
 				return put((long)l);
 			} else {
 				if (!hton_is_noop()) { // need to convert to network order
 					l = htonLL(l);
 				}
-				if (sizeof(long long) < INT_SIZE) {
+				if (sizeof(int64_t) < INT_SIZE) {
 					pad = (l >= 0) ? 0 : 0xff; // sign extend value
-					for (int s=0; s < INT_SIZE-(int)sizeof(long long); s++) {
+					for (int s=0; s < INT_SIZE-(int)sizeof(int64_t); s++) {
 						if (put_bytes(&pad, 1) != 1) return FALSE;
 					}
 				}
-				if (put_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+				if (put_bytes(&l, sizeof(int64_t)) != sizeof(int64_t)) return FALSE;
 			}
 			break;
 
@@ -1224,32 +1157,31 @@ Stream::put( long long	l)
 }
 
 
-
 int 
-Stream::put( long long unsigned	l)
+Stream::put( uint64_t	l)
 {
 	char	pad;
-  NETWORK_TRACE("put long long" << l);
+  NETWORK_TRACE("put uint64_t" << l);
 
 	switch(_code){
 		case internal:
-			if (put_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+			if (put_bytes(&l, sizeof(uint64_t)) != sizeof(uint64_t)) return FALSE;
 			break;
 
 		case external:
-			if ((sizeof(int) == sizeof(long long)) || (sizeof(long long) > INT_SIZE)) {
+			if ((sizeof(int) == sizeof(uint64_t)) || (sizeof(uint64_t) > INT_SIZE)) {
 				return put((unsigned long)l);
 			} else {
 				if (!hton_is_noop()) { // need to convert to network order
 					l = htonLL(l);
 				}
-				if (sizeof(long long) < INT_SIZE) {
+				if (sizeof(uint64_t) < INT_SIZE) {
 					pad = 0;
-					for (int s=0; s < INT_SIZE-(int)sizeof(long long); s++) {
+					for (int s=0; s < INT_SIZE-(int)sizeof(uint64_t); s++) {
 						if (put_bytes(&pad, 1) != 1) return FALSE;
 					}
 				}
-				if (put_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+				if (put_bytes(&l, sizeof(uint64_t)) != sizeof(uint64_t)) return FALSE;
 			}
 			break;
 
@@ -1259,81 +1191,6 @@ Stream::put( long long unsigned	l)
 
 	return TRUE;
 }
-#else
-// WINDOWS
-int 
-Stream::put( LONGLONG l)
-{
-	char	pad;
-  NETWORK_TRACE("put LONGLONG " << l);
-
-	switch(_code){
-		case internal:
-			if (put_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
-			break;
-
-		case external:
-			if ((sizeof(int) == sizeof(LONGLONG)) || (sizeof(LONGLONG) > INT_SIZE)) {
-				return put((long)l);
-			} else {
-				if (!hton_is_noop()) { // need to convert to network order
-					l = htonLL(l);
-				}
-				if (sizeof(LONGLONG) < INT_SIZE) {
-					pad = (l >= 0) ? 0 : 0xff; // sign extend value
-					for (int s=0; s < INT_SIZE-sizeof(LONGLONG); s++) {
-						if (put_bytes(&pad, 1) != 1) return FALSE;
-					}
-				}
-				if (put_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
-			}
-			break;
-
-		case ascii:
-			return FALSE;
-	}
-
-	return TRUE;
-}
-
-
-
-int 
-Stream::put( ULONGLONG l)
-{
-	char	pad;
-  NETWORK_TRACE("put ULONGLONG " << l);
-
-	switch(_code){
-		case internal:
-			if (put_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
-			break;
-
-		case external:
-			if ((sizeof(int) == sizeof(LONGLONG)) || (sizeof(LONGLONG) > INT_SIZE)) {
-				return put((unsigned long)l);
-			} else {
-				if (!hton_is_noop()) { // need to convert to network order
-					l = htonLL(l);
-				}
-				if (sizeof(LONGLONG) < INT_SIZE) {
-					pad = 0;
-					for (int s=0; s < INT_SIZE-sizeof(LONGLONG); s++) {
-						if (put_bytes(&pad, 1) != 1) return FALSE;
-					}
-				}
-				if (put_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
-			}
-			break;
-
-		case ascii:
-			return FALSE;
-	}
-
-	return TRUE;
-}
-
-#endif
 
 
 int 
@@ -1738,164 +1595,108 @@ Stream::get( unsigned long	&l)
 	return TRUE;
 }
 
-#ifndef WIN32		// MS VC++ does not understand long long's
+
 int 
-Stream::get( long long	&l)
+Stream::get( int64_t	&l)
 {
 	int		i;
-	char	pad[INT_SIZE-sizeof(long long)], sign;
+	char	sign;
+	// On Windows, INT_SIZE == sizeof(int64_t).
+	// MSVC won't allocate an array of size 0, so just skip it.
+	#ifndef WIN32
+	char pad[INT_SIZE-sizeof(int64_t)];
+	#endif
 
 	switch(_code){
 		case internal:
-			if (get_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+			if (get_bytes(&l, sizeof(int64_t)) != sizeof(int64_t)) return FALSE;
 			break;
 
 		case external:
-			if ((sizeof(int) == sizeof(long long)) || (sizeof(long long) > INT_SIZE)) {
+			if ((sizeof(int) == sizeof(int64_t)) || (sizeof(int64_t) > INT_SIZE)) {
 				if (!get(i)) return FALSE;
 				l = (long) i;
 			} else {
-				if (sizeof(long long) < INT_SIZE) {
-					if (get_bytes(pad, INT_SIZE-sizeof(long long))
-						!= INT_SIZE-sizeof(long long)) {
+				#ifndef WIN32
+				if (sizeof(int64_t) < INT_SIZE) {
+					if (get_bytes(pad, INT_SIZE-sizeof(int64_t))
+						!= INT_SIZE-sizeof(int64_t)) {
 						return FALSE;
 					}
 				}
-				if (get_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+				#endif
+				if (get_bytes(&l, sizeof(int64_t)) != sizeof(int64_t)) return FALSE;
 				if (!hton_is_noop()) { // need to convert to host order
 					l = ntohLL(l);
 				}
 				sign = (l >= 0) ? 0 : 0xff;
-				for (int s=0; s < INT_SIZE-(int)sizeof(long long); s++) { // overflow?
+				#ifndef WIN32
+				for (int s=0; s < INT_SIZE-(int)sizeof(int64_t); s++) { // overflow?
 					if (pad[s] != sign) {
 						return FALSE; // overflow
 					}
 				}
+				#endif
 			}
 			break;
 
 		case ascii:
 			return FALSE;
 	}
-    NETWORK_TRACE("get long long " << l);
+    NETWORK_TRACE("get int64_t " << l);
 	return TRUE;
 }
 
 
-
 int 
-Stream::get( unsigned long long	&l)
+Stream::get( uint64_t	&l)
 {
 	unsigned int		i;
-	char	pad[INT_SIZE-sizeof(long long)];
+	// On Windows, INT_SIZE == sizeof(uint64_t).
+	// MSVC won't allow us to allocate an array of size 0,
+	// so skip it.
+	#ifndef WIN32
+	char	pad[INT_SIZE-sizeof(uint64_t)];
+	#endif
 
 	switch(_code){
 		case internal:
-			if (get_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+			if (get_bytes(&l, sizeof(uint64_t)) != sizeof(uint64_t)) return FALSE;
 			break;
 
 		case external:
-			if ((sizeof(int) == sizeof(long long)) || (sizeof(long long) > INT_SIZE)) {
+			if ((sizeof(int) == sizeof(uint64_t)) || (sizeof(uint64_t) > INT_SIZE)) {
 				if (!get(i)) return FALSE;
-				l = (unsigned long long) i;
+				l = (uint64_t) i;
 			} else {
-				if (sizeof(long long) < INT_SIZE) {
-					if (get_bytes(pad, INT_SIZE-sizeof(long long))
-						!= INT_SIZE-sizeof(long long)) {
+				#ifndef WIN32
+				if (sizeof(uint64_t) < INT_SIZE) {
+					if (get_bytes(pad, INT_SIZE-sizeof(uint64_t))
+						!= INT_SIZE-sizeof(uint64_t)) {
 						return FALSE;
 					}
 				}
-				if (get_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+				#endif
+				if (get_bytes(&l, sizeof(uint64_t)) != sizeof(uint64_t)) return FALSE;
 				if (!hton_is_noop()) { // need to convert to host order
 					l = ntohLL(l);
 				}
-				for (int s=0; s < INT_SIZE-(int)sizeof(long long); s++) { // overflow?
+				#ifndef WIN32
+				for (int s=0; s < INT_SIZE-(int)sizeof(uint64_t); s++) { // overflow?
 					if (pad[s] != 0) {
 						return FALSE; // overflow
 					}
 				}
+				#endif
 			}
 			break;
 
 		case ascii:
 			return FALSE;
 	}
-    NETWORK_TRACE("get long long " << l);
+    NETWORK_TRACE("get uint64_t " << l);
 	return TRUE;
 }
-#else
-// WINDOWS
-int 
-Stream::get( LONGLONG &l)
-{
-	int		i;
-	// On Windows, INT_SIZE == sizeof(LONGLONG).
-	// MSVC won't allocate an array of size 0, so just skip it.
-	//	char	pad[INT_SIZE-sizeof(LONGLONG)], sign;
-	char sign;
-
-	switch(_code){
-		case internal:
-			if (get_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
-			break;
-
-		case external:
-			if ((sizeof(int) == sizeof(LONGLONG)) || (sizeof(LONGLONG) > INT_SIZE)) {
-				if (!get(i)) return FALSE;
-				l = (long) i;
-			} else {
-
-				if (get_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
-				if (!hton_is_noop()) { // need to convert to host order
-					l = ntohLL(l);
-				}
-				sign = (l >= 0) ? 0 : 0xff;
-			}
-			break;
-
-		case ascii:
-			return FALSE;
-	}
-    NETWORK_TRACE("get LONGLONG " << l);
-	return TRUE;
-}
-
-
-
-int 
-Stream::get( ULONGLONG	&l)
-{
-	unsigned int		i;
-	// On Windows, INT_SIZE == sizeof(LONGLONG).
-	// MSVC won't allow us to allocate an array of size 0,
-	// so skip it.
-	// char	pad[INT_SIZE-sizeof(LONGLONG)];
-
-	switch(_code){
-		case internal:
-			if (get_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
-			break;
-
-		case external:
-			if ((sizeof(int) == sizeof(LONGLONG)) || (sizeof(LONGLONG) > INT_SIZE)) {
-				if (!get(i)) return FALSE;
-				l = (ULONGLONG) i;
-			} else {
-				
-				if (get_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
-				if (!hton_is_noop()) { // need to convert to host order
-					l = ntohLL(l);
-				}
-			}
-			break;
-
-		case ascii:
-			return FALSE;
-	}
-    NETWORK_TRACE("get LONGLONG " << l);
-	return TRUE;
-}
-#endif
 
 
 int 

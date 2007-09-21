@@ -222,17 +222,10 @@ public:
 	int code(long &);
     ///
 	int code(unsigned long &);
-#ifndef WIN32
     ///
-	int code(long long &);
+	int code(int64_t &);
     ///
-	int code(unsigned long long &);
-#else
-	 // windows
-	int code( LONGLONG &);
-	///
-	int code( ULONGLONG &);
-#endif
+	int code(uint64_t &);
     ///
 	int code(short &);
     ///
@@ -387,14 +380,8 @@ public:
 	int put(unsigned int);
 	int put(long);
 	int put(unsigned long);
-#ifndef WIN32
-	int put(long long);
-	int put(unsigned long long);
-#else
-	// Windows
-	int put(LONGLONG);
-	int put(ULONGLONG);
-#endif
+	int put(int64_t);
+	int put(uint64_t);
 	int put(short);
 	int put(unsigned short);
 	int put(float);
@@ -412,14 +399,8 @@ public:
 	int get(unsigned int &);
 	int get(long &);
 	int get(unsigned long &);
-#ifndef WIN32
-	int get(long long &);
-	int get(unsigned long long &);
-#else
-	// Windows
-	int get(LONGLONG &);
-	int get(ULONGLONG &);
-#endif
+	int get(int64_t &);
+	int get(uint64_t &);
 	int get(short &);
 	int get(unsigned short &);
 	int get(float &);
