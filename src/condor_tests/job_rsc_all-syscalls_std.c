@@ -4382,8 +4382,10 @@ int BasicGetSetlimit(void)
 
 	passed = expect_zng(SUCCESS, getrlimit_test(&orlim));
 	EXPECTED_RESP;
-	nrlim.rlim_cur = 0; 
-	nrlim.rlim_max = 0; /* This should always work even when hard limit is 0 */
+	/* if orlim is zero, then this will function correctly, since I'll be
+		setting the limit to something it is alread yset to. */
+	nrlim.rlim_cur = orlim.rlim_cur / 2; 
+	nrlim.rlim_max = orlim.rlim_max / 2; 
 	passed = expect_zng(SUCCESS, setrlimit_test(&nrlim));
 	EXPECTED_RESP;
 	passed = expect_zng(SUCCESS, getrlimit_test(&crlim));
@@ -4598,7 +4600,7 @@ int main(int argc, char **argv)
 		{BasicGetSetlimit, "BasicGetSetLimit: Can I change proc limits?"},
 	};
 
-	printf("Condor System Call Tester $Revision: 1.2.2.2 $\n\n");
+	printf("Condor System Call Tester $Revision: 1.2.2.3 $\n\n");
 
 	printf("The length of the string:\n'%s'\nIs: %d\n\n", 
 		STR(passage), strlen(passage));
