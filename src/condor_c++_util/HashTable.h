@@ -294,7 +294,7 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
     while( bucket ) {
       if( bucket->index == index ) {
         bucket->value = value;
-        return 1;
+        return 0;
       }
       bucket = bucket->next;
     }
