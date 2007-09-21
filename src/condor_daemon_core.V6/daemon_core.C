@@ -44,6 +44,7 @@ void Generic_stop_logging();
 
 #if HAVE_CLONE
 #include <sched.h>
+#include <sys/syscall.h>
 #endif
 
 static const int DEFAULT_MAXCOMMANDS = 255;
@@ -5132,6 +5133,9 @@ public:
 	void exec();
 	static int clone_fn( void *arg );
 
+	pid_t clone_safe_getpid();
+	pid_t clone_safe_getppid();
+
 private:
 		// Data passed to us from the parent:
 		// The following are mostly const, just to avoid accidentally
@@ -5181,6 +5185,28 @@ static int stack_direction(volatile int *ptr=NULL) {
     }
 
     return STACK_GROWS_DOWN;
+}
+
+pid_t CreateProcessForkit::clone_safe_getpid() {
+#if HAVE_CLONE
+		// In some broken threading implementations (e.g. PPC SUSE 9 tls),
+		// getpid() in the child branch of clone(CLONE_VM) returns
+		// the pid of the parent process (presumably due to internal
+		// caching in libc).  Therefore, use the syscall to get
+		// the answer directly.
+	return syscall(SYS_getpid);
+#else
+	return ::getpid();
+#endif
+}
+pid_t CreateProcessForkit::clone_safe_getppid() {
+#if HAVE_CLONE
+		// See above comment for clone_safe_getpid() for explanation of
+		// why we need to do this.
+	return syscall(SYS_getppid);
+#else
+	return ::getppid();
+#endif
 }
 
 pid_t CreateProcessForkit::fork_exec() {
@@ -5315,7 +5341,8 @@ void CreateProcessForkit::exec() {
 			  Derek Wright <wright@cs.wisc.edu> 2004-12-15
 		********************************************************/
 
-	pid_t pid = ::getpid();   // must use the real getpid, not DC's
+	pid_t pid = clone_safe_getpid();
+	pid_t ppid = clone_safe_getppid();
 	DaemonCore::PidEntry* pidinfo = NULL;
 	if( (daemonCore->pidTable->lookup(pid, pidinfo) >= 0) ) {
 			// we've already got this pid in our table! we've got
@@ -5513,7 +5540,7 @@ void CreateProcessForkit::exec() {
 		bool ok =
 			daemonCore->m_proc_family->register_subfamily_child(
 				pid,
-				::getppid(),
+				ppid,
 				m_family_info->max_snapshot_interval,
 				penvid_ptr,
 				m_family_info->login
