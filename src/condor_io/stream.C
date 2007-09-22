@@ -210,6 +210,7 @@ Stream::code( unsigned long	&l)
 }
 
 
+#if !defined(__LP64__)
 int 
 Stream::code( int64_t	&l)
 {
@@ -247,6 +248,7 @@ Stream::code( uint64_t	&l)
 
 	return FALSE;	/* will never get here	*/
 }
+#endif
 
 
 int 
@@ -1121,6 +1123,8 @@ Stream::put( unsigned long	l)
 	return TRUE;
 }
 
+
+#if !defined(__LP64__)
 int 
 Stream::put( int64_t	l)
 {
@@ -1191,6 +1195,7 @@ Stream::put( uint64_t	l)
 
 	return TRUE;
 }
+#endif
 
 
 int 
@@ -1596,6 +1601,7 @@ Stream::get( unsigned long	&l)
 }
 
 
+#if !defined(__LP64__)
 int 
 Stream::get( int64_t	&l)
 {
@@ -1697,6 +1703,7 @@ Stream::get( uint64_t	&l)
     NETWORK_TRACE("get uint64_t " << l);
 	return TRUE;
 }
+#endif
 
 
 int 

@@ -111,9 +111,10 @@ Stream::~Stream(){};
 	int Stream::code(unsigned int &){ return not_impl(); }
 	int Stream::code(long &){ return not_impl(); }
 	int Stream::code(unsigned long &){ return not_impl(); }
+#if !defined(__LP64__)
 	int Stream::code(int64_t &){ return not_impl(); }
 	int Stream::code(uint64_t &){ return not_impl(); }
-
+#endif
 	int Stream::code(short &){ return not_impl(); }
 	int Stream::code(unsigned short &){ return not_impl(); }
 	int Stream::code(float &){ return not_impl(); }

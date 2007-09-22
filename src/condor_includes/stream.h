@@ -222,10 +222,12 @@ public:
 	int code(long &);
     ///
 	int code(unsigned long &);
+#if !defined(__LP64__)
     ///
 	int code(int64_t &);
     ///
 	int code(uint64_t &);
+#endif
     ///
 	int code(short &);
     ///
@@ -380,8 +382,10 @@ public:
 	int put(unsigned int);
 	int put(long);
 	int put(unsigned long);
+#if !defined(__LP64__)
 	int put(int64_t);
 	int put(uint64_t);
+#endif
 	int put(short);
 	int put(unsigned short);
 	int put(float);
@@ -399,8 +403,10 @@ public:
 	int get(unsigned int &);
 	int get(long &);
 	int get(unsigned long &);
+#if !defined(__LP64__)
 	int get(int64_t &);
 	int get(uint64_t &);
+#endif
 	int get(short &);
 	int get(unsigned short &);
 	int get(float &);

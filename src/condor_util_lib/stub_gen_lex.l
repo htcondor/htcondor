@@ -55,6 +55,7 @@ long{WHITE}long		return grab( TYPE_NAME );
 u_short				return grab( TYPE_NAME );
 ulong_t				return grab( TYPE_NAME );
 u_long				return grab( TYPE_NAME );
+int64_t				return grab( TYPE_NAME );
 size_t				return grab( TYPE_NAME );
 ssize_t				return grab( TYPE_NAME );
 off_t				return grab( TYPE_NAME );

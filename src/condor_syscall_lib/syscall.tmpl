@@ -1212,8 +1212,8 @@ they should be built in the special "clipped" version.
 	}
 	int report_file_info_new(
 		char *name,
-		long long open_count, long long read_count, long long write_count,
-		long long seek_count, long long read_bytes, long long write_bytes ) : pseudo {
+		int64_t open_count, int64_t read_count, int64_t write_count,
+		int64_t seek_count, int64_t read_bytes, int64_t write_bytes ) : pseudo {
 
 		SEND_PATH(name);
 		ALLOC_PATH(name);
