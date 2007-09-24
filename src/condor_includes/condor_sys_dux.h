@@ -170,6 +170,38 @@ END_C_DECLS
 #define SYNC_RETURNS_VOID	1
 #define NO_VOID_SIGNAL_RETURN	1
 
+/* This is a hack. The DUX port is supposed to be end-of-lifed and
+   only exists in a cluster in Pittsburg. If another DUX platform,
+   different from Pitt's, ever appears this issue should be properly
+   fixed. This hack only works when DUX machines are LP64, meaning
+   their longs and pointers are 64 bits (8 byte), which we know to be
+   true (for now).
+
+   Problem: The condor_include/stream.h overloads some functions on
+   int, long and int64_t. Some platforms define int64_t to be just a
+   long, which results in duplicate method definitions.
+
+   Solution: On reasonable systems that have longs and pointers of 64
+   bits the __LP64__ macro is defined, by gcc, but not on DUX. When we
+   can rely on __LP64__, we can avoid duplicate method definitions by
+   conditionally compiling int64_t versions of methods.
+
+   Again, our DUX systems are LP64, they have longs and pointers that
+   are 8 bytes. Therefore, we are going to define __LP64__ ourselves
+   and be happy that everything will work.
+
+   NOTE: Two better solutions exist, but are not deemed worthwhile
+   because of the nature of the DUX port. 1) Use configure to
+   determine the size of the ints, longs, and pointers and make sure
+   that the platform is LP64. This is a good all-around solution that
+   should be implemented. 2) Figure out why stream.h overloads on
+   int/long/etc, maybe it would be better overloading on int16_t,
+   int32_t, int64_t etc.
+
+   - matt 24 Sept 2007
+*/
+#define __LP64__ 1
+
 typedef long long off64_t;
 typedef caddr_t MMAP_T;
 
