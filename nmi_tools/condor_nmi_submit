@@ -819,6 +819,10 @@ sub writeCommonInfo
     print $fh "private_web_users = condor-team\n";
     print $fh "priority = 1\n";
 
+	# The following is a short-termhack to work around some condor
+	# problems.  This allows our tests to generate core files
+	print $fh "+coresize = 100000000\n";
+
     # print the tag and module in the cmdfile as the user variables
     if( defined $tag ) {
         print $fh "tag = $tag\n";
