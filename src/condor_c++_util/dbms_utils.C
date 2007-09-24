@@ -93,7 +93,7 @@ static char * getWritePassword(char *write_passwd_fname,
 
     fclose(fp);
 	if (!found) {
-		EXCEPT("Unable to find password from file %s\n", write_passwd_fname);
+		EXCEPT("Unable to find password from file %s with prefix %s\n", write_passwd_fname, prefix);
 	}
 
 	return passwd;
@@ -102,7 +102,7 @@ static char * getWritePassword(char *write_passwd_fname,
 dbtype getConfigDBType() 
 {
 	char *tmp;
-	dbtype dt;
+	dbtype dt = T_PGSQL;
 
 	tmp = param("QUILL_DB_TYPE");
 	if (tmp) {
@@ -112,9 +112,7 @@ dbtype getConfigDBType()
 			dt = T_PGSQL;
 		}
 		free (tmp);
-	} else {
-		dt = T_PGSQL; // assume PGSQL by default
-	}
+	} 
 	
 	return dt;
 }
