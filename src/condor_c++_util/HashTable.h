@@ -133,7 +133,7 @@ class HashTable {
 // In the first constructor, tableSz is ignored as it is no longer used, it is
 // left in for compatability reasons.
 template <class Index, class Value>
-HashTable<Index,Value>::HashTable( int tableSz,
+HashTable<Index,Value>::HashTable( int /* tableSz */,
 								   unsigned int (*hashF)( const Index &index ),
 								   duplicateKeyBehavior_t behavior ) {
 	initialize(hashF, behavior);

@@ -56,7 +56,7 @@ int util_popen (ArgList &args) {
 
 	FILE *fp = my_popen( args, "r", TRUE );
 
-    int r;
+    int r = 0;
     if (fp == NULL || (r = my_pclose(fp) & 0xff) != 0) {
 		debug_printf( DEBUG_QUIET, "WARNING: failure: %s\n", cmd.Value() );
 		if( fp != NULL ) {

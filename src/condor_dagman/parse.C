@@ -1020,7 +1020,6 @@ parse_priority(
 	//
 	const char *jobName = strtok(NULL, DELIMITERS);
 	const char *jobNameOrig = jobName; // for error output
-	const char * rest = jobName; // For subsequent tokens
 	if (jobName == NULL) {
 		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
 					  filename, lineNumber );

@@ -434,7 +434,7 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 	while (!done) {
 
 		ULogEvent* e = NULL;
-		ULogEventOutcome outcome;
+		ULogEventOutcome outcome = ULOG_NO_EVENT;
 
 		if ( logsource == CONDORLOG ) {
 			outcome = _condorLogRdr.readEvent(e);
@@ -1409,7 +1409,6 @@ Dag::SubmitReadyJobs(const Dagman &dm)
     }
 #endif //BUILD_HELPER
 
-	bool submit_success;
     CondorID condorID(0,0,0);
 
 		// Note: we're checking for a missing log file spec here instead of
@@ -1427,6 +1426,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		continue;
 	}
 
+	bool submit_success = false;
     if( job->JobType() == Job::TYPE_CONDOR ) {
 	  job->_submitTries++;
       submit_success =
@@ -1824,8 +1824,7 @@ void Dag::RemoveRunningScripts ( ) const {
 }
 
 //-----------------------------------------------------------------------------
-void Dag::Rescue (const char * rescue_file, const char * datafile,
-			bool useDagDir) const {
+void Dag::Rescue (const char * rescue_file, const char * datafile) const {
     FILE *fp = safe_fopen_wrapper(rescue_file, "w");
     if (fp == NULL) {
         debug_printf( DEBUG_QUIET, "Could not open %s for writing.\n",
@@ -1871,12 +1870,14 @@ void Dag::Rescue (const char * rescue_file, const char * datafile,
     while (it.Next(job)) {
 
 			// Print the JOB/DATA line.
-		const char *keyword;
+		const char *keyword = "";
         if( job->JobType() == Job::TYPE_CONDOR ) {
 			keyword = "JOB";
         } else if( job->JobType() == Job::TYPE_STORK ) {
 			keyword = "DATA";
-        }
+        } else {
+			EXCEPT( "Illegal node type (%d)\n", job->JobType() );
+		}
         fprintf (fp, "%s %s %s ", keyword, job->GetJobName(),
 					job->GetCmdFile());
 		if ( strcmp( job->GetDirectory(), "" ) ) {
@@ -2855,7 +2856,7 @@ Dag::EventSanityCheck( int logsource, const ULogEvent* event,
 	ASSERT( node );
 
 	MyString eventError;
-	CheckEvents::check_event_result_t checkResult;
+	CheckEvents::check_event_result_t checkResult = CheckEvents::EVENT_OKAY;
 
 	if ( logsource == CONDORLOG ) {
 		checkResult = _checkCondorEvents.CheckAnEvent( event, eventError );

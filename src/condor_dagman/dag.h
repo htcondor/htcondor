@@ -342,8 +342,7 @@ class Dag {
 		@param useDagDir run DAGs in directories from DAG file paths 
 			if true
     */
-    void Rescue (const char * rescue_file, const char * datafile,
-    			bool useDagDir) const;
+    void Rescue (const char * rescue_file, const char * datafile) const;
 
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );
