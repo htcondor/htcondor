@@ -14,12 +14,14 @@ $OutputCheck = sub
 	my $line;
 	my %existence;
 	my $count;
-	# all of these lines must be present exactly as is in the output.
-	# Any other lines (addition arguments or environment variables)
-	# may be ignored.
-	my @present = (	'environ[0] = "alpha=a"',
-					'environ[1] = "bravo=b"',
-					'environ[2] = "charlie=c"',
+
+	# These values represent actual lines (or transformed lines) from the
+	# output file of the job. Each one of these keys must have been found for
+	# the test to have succeeded. Lines (transformed or not) outside of this
+	# set may be ignored.
+	my @present = (	'ENV "alpha=a"',
+					'ENV "bravo=b"',
+					'ENV "charlie=c"',
 					'argv[1] = "foo"',
 					'argv[2] = "bar"',
 					'argv[3] = "glarch"',
@@ -35,11 +37,20 @@ $OutputCheck = sub
 	die "No output file '$info{\"output\"}' when one was expected.\n"
 		if (! -f $info{"output"});
 
-	# Grab the output, and use each line as a key to show what is present in
-	# the file.
+	# Grab the output and mark whether or not I saw it. When processing the
+	# env vars, manipulate them a little bit so it is easy to see if I saw
+	# exactly what I'm looking for. This is like this because the env vars
+	# can come out in any order in the job and all of them are considered
+	# correct.
 	@lines = `cat $info{"output"}`;
 	foreach $line (@lines) {
 		chomp $line;
+
+		# For environment variables, we get rid of their positional value
+		# in the output and just look up the fact they were env vars in general.
+		if ($line =~ m/^environ\[\d+\]/) {
+			$line =~ s/^environ\[\d+\] = /ENV /g;
+		}
 		$existence{$line} = 1;
 	}
 
