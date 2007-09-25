@@ -10,8 +10,6 @@
 ** Shared Linux Settings
 **************************************************************************/
 
-#define HAS_DAGMAN_HELPER YES
-
 #if defined( IS_GLIBC )
 #  if defined( IS_GLIBC22 )
 #    define GlibCFlag		-DGLIBC=GLIBC -DGLIBC22=GLIBC22
@@ -24,7 +22,6 @@
 #  endif
 #else /* Non IS_GLIBC */
 #  define GlibCFlag
-#  define HAS_DAGMAN_HELPER NO
 #endif
 
 #define PlatformFlags		ArchOptimizeFlag GlibCFlag

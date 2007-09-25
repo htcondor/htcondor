@@ -7,8 +7,6 @@
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 
-#define HAS_DAGMAN_HELPER   NO
-
 #define PVM_ARCH			HPPA
 
 #define VendorCTestFlags -Aa -Ae

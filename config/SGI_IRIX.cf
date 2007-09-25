@@ -32,7 +32,6 @@
 #define HAS_SETEUID			YES
 #define HAS_GETWD			YES
 #define PVM_ARCH			SGI64
-#define HAS_DAGMAN_HELPER   NO
 
 
 /**************************************************************************
