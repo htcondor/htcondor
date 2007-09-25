@@ -2,11 +2,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Java}Java Applications}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Java}
 
 Condor allows users to access a wide variety of
 machines distributed around the world.
 The Java Virtual Machine (JVM)
-\index{Java}
 \index{Java Virtual Machine}
 \index{JVM}
 provides a uniform platform on any machine, regardless of the
@@ -47,8 +47,9 @@ for more information on getting Condor to work together
 with Java.
 
 %%%%%
-\subsection{Example Java Program}
+\subsection{A Simple Example Java Application}
 %%%%%
+\index{Java!job example}
 
 Here is a complete, if simple, example.
 Start with a simple Java program, \File{Hello.java}:
@@ -131,29 +132,48 @@ condor_submit Hello.cmd
 To monitor the job, the commands \Condor{q} and \Condor{rm}
 are used as with all jobs.
 
+%%%%%
+\subsection{Less Simple Java Specifications}
+%%%%%
+
+\begin{description}
+\item[Specifying more than 1 class file.]
+\index{Java!multiple class files}
 For programs that 
 consist of more than one \Code{.class} file,
-one option that tells Condor of the additional files adds
-this line to the submit description file:
+identify the files in the submit description file:
 
 \begin{verbatim}
+executable = Stooges.class
 transfer_input_files = Larry.class,Curly.class,Moe.class
 \end{verbatim}
 
+The \SubmitCmd{executable} command does not change.
+It still identifies the class file that contains the program's
+entry point.
+
+\item[JAR files.]
+\index{Java!using JAR files}
 If the program consists of a large number of class files,
 it may be easier to collect them all together into
 a single Java Archive (JAR) file.
 A JAR can be created with:
 
 \begin{verbatim}
-% jar cvf Library.jar Larry.class Curly.class Moe.class
+% jar cvf Library.jar Larry.class Curly.class Moe.class Stooges.class
 \end{verbatim}
 
-Condor must then be told where to find the JAR by
-adding the 
-following to the submit description file:
+Condor must then be told where to find the JAR as well
+as to use the JAR. 
+The JAR file that contains the entry point
+is specified with the \SubmitCmd{executable} command.
+All JAR files are specified with the \SubmitCmd{jar\_files}
+command.
+For this example that collected all the class files
+into a single JAR file, the submit description file contains:
 
 \begin{verbatim}
+executable = Library.jar
 jar_files = Library.jar
 \end{verbatim}
 
@@ -165,8 +185,56 @@ That is why there is a difference in submit description file commands
 for the two ways of specifying files (\verb@transfer_input_files@
 and \verb@jar_files@).
 
+If there are multiple JAR files,
+the \SubmitCmd{executable} command specifies the JAR file
+that contains the program's entry point.
+This file is also listed with the \SubmitCmd{jar\_files} command:
+\begin{verbatim}
+executable = sortmerge.jar
+jar_files = sortmerge.jar,statemap.jar
+\end{verbatim}
+
+\item[Using a third-party JAR file.]
+As Condor requires that all JAR files (third-party or not)
+be available,
+specification of a third-party JAR file is no different than
+other JAR files.
+If the sortmerge example above also relies on
+version 2.1 from http://jakarta.apache.org/commons/lang/,
+and this JAR file has been placed in the same directory with
+the other JAR files, then the submit description file contains
+\begin{verbatim}
+executable = sortmerge.jar
+jar_files = sortmerge.jar,statemap.jar,commons-lang-2.1.jar
+\end{verbatim}
+
+\item[Packages.]
+\index{Java!using packages}
+An example of a Java class that is declared in a non-default
+package is
+\begin{verbatim}
+package hpc;
+
+ public class CondorDriver
+ {
+     // class definition here
+ }
+\end{verbatim}
+The JVM needs to know the location of this package.
+It is passed as a command-line argument, implying the use
+of the naming convention and directory structure.
+
+Therefore, the submit description file for this example will contain
+\begin{verbatim}
+arguments = hpc.CondorDriver
+\end{verbatim}
+
+\item[JVM-version specific features.]
 If the program uses Java features found only in certain
-JVMs, then inform Condor by adding a \Code{requirements}
+JVMs, then the Java application submitted to Condor
+must only run on those machines within the
+pool that run the needed JVM.
+Inform Condor by adding a \Code{requirements}
 statement to the submit description file.
 For example, to require version 3.2, add to the submit description
 file:
@@ -175,6 +243,7 @@ file:
 requirements = (JavaVersion=="3.2")
 \end{verbatim}
 
+\item[Benchmark speeds.]
 Each machine with Java capability in a Condor pool
 will execute a benchmark to determine its speed.
 The benchmark is taken when Condor is started on
@@ -194,7 +263,8 @@ As an example, to execute only on machines of a minimum speed:
 requirements = (JavaMFlops>4.5)
 \end{verbatim}
 
-Options to the Java VM itself can be set in the 
+\item[JVM options.]
+Options to the JVM itself are specified in the 
 submit description file:
 
 \begin{verbatim}
@@ -206,6 +276,8 @@ the user's main class.  Do not use this to set the classpath, as
 Condor handles that itself.  Setting these options is useful for
 setting system properties, system assertions and debugging certain
 kinds of problems.
+
+\end{description}
 
 %%%%%
 \subsection{Chirp I/O}

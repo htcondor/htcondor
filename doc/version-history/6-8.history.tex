@@ -84,6 +84,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Condor is now officially supported on Microsoft Vista.
+
+\item Condor is now officially supported on MacOS running natively on Intel CPUs.  (and Condor bianries for Intel MacOS are now available for download).
+
 \item Condor now uses Globus 4.0.5 for GSI, pre-WS GRAM, and GridFTP support.
 
 \end{itemize}
@@ -107,11 +111,19 @@ any node job events.  (This is to help diagnose the problem if
 \item Optimized the submission of grid-type gt4 grid universe jobs to the
 remote resource. Submission now takes one operation instead of three.
 
+\item The \Condor{shadow} will obtain a session key to the \Condor{schedd}
+at the start of the job instead of potentially waiting until the job
+completes.  This reduces the chances of re-running already completed jobs
+in the event of authentication failures (for instance, if a Kerberos KDC is
+down or overloaded).
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item On MacOS, Condor is more robust about how it monitors characteristics (such as image size) of a running job.  Fixed several issues that would cause the \Condor{startd} to exit on MacOS 10.4 running on Intel processors.
 
 \item Fixed bug in the local universe where the local universe 
 execute directory was not removed when the job could not start.  The most
@@ -162,7 +174,7 @@ mapfile.
 failing to contact the collector specified via \Opt{-pool}.
 
 \item In Unix only, 
-fixed a file descriptor leak that caused the \Condor{schedd}
+fixed a file descriptor leak that could cause the \Condor{schedd}
 daemon to crash.
 
 \item File transfer failures for spooled jobs no longer result in
@@ -173,6 +185,7 @@ exiting.  Too many such processes occasionally resulted in memory exhaustion.
 \item Fixed a bug in \Condor{dagman}: \Attr{DIR} and \Attr{ABORT-DAG-ON}
 specifications were not propagated to rescue DAGs.
 
+% condor-admin #15710
 \item Added a workaround for a bug in the Globus GRAM JobManager
 (\URL{http://bugzilla.mcs.anl.gov/globus/show\_bug.cgi?id=5467})
 that can cause very short jobs' standard output and error to be lost.
@@ -186,7 +199,7 @@ starts to perform file transfers for grid-type gt4 grid universe jobs.
 
 \begin{itemize}
 
-\item None.
+\item Grid universe type GT4 (web services GRAM) does not work properly on Itanium-based machines, because it requies Java 1.5, which is not available on the Itanium (ia\_64).
 
 \end{itemize}
 
@@ -194,7 +207,7 @@ starts to perform file transfers for grid-type gt4 grid universe jobs.
 
 \begin{itemize}
 
-\item None.
+\item Several updates to the DAGMan documentation (section~\ref{sec:DAGMan}).
 
 \end{itemize}
 
@@ -206,6 +219,10 @@ starts to perform file transfers for grid-type gt4 grid universe jobs.
 \noindent Release Notes:
 
 \begin{itemize}
+
+\item This release is not fully compatible with the 6.6 series (or
+anything earlier than that).  Specifically, a 6.6 schedd will be rejected when
+it tries to contact a 6.8.5 startd to make use of a claim.
 
 \item The Globus libraries used by Condor now include the following advisory
 packages:
@@ -473,7 +490,11 @@ perform hold, release, or remove commands on jobs in the remote
 
 \begin{itemize}
 
-\item None.
+% Gnats PR 954/condor-support 2012.
+\item \Condor{dagman} incorrectly parses DAG file VARS lines specifying
+more than one macroname/value pair.  You can work around this problem
+by specifying each macroname/value pair on a separate line.  (This bug
+was introduced in version 6.8.5.)
 
 \end{itemize}
 
