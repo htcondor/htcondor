@@ -25,12 +25,6 @@
 #define HAS_RANLIB_TOUCH		NO
 #define HAS_CP_PRESERVE			YES
 #define HAS_FLOCK			YES
-#define HAS_GETDIRENTRIES		NO
-#define HAS_GETDTABLESIZE		YES
-#define HAS_GETPAGESIZE			YES
-#define HAS_SETEGID			YES
-#define HAS_SETEUID			YES
-#define HAS_GETWD			YES
 #define PVM_ARCH			SGI64
 
 

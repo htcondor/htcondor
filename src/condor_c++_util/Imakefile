@@ -46,13 +46,13 @@ DH_OBJ = condor_dh.o
 
 /* Machines that do not have the seteuid call need this particular object file
 	to allow proper linkage in libcondorapi.a */
-#if !HAS_SETEUID
+#if !HAVE_SETEUID
 SETEUID_OBJ = ../condor_util_lib/seteuid.o
 #else
 SETEUID_OBJ = 
 #endif
 
-#if !HAS_SETEGID
+#if !HAVE_SETEGID
 SETEGID_OBJ = ../condor_util_lib/setegid.o
 #else
 SETEGID_OBJ = 

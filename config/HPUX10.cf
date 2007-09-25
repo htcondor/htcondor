@@ -2,9 +2,6 @@
 
 #define PlatformFlags			-DHPUX10=HPUX10
 
-#define HAS_GETPAGESIZE			YES
-#define HAS_GETWD			YES
-
 #define HAS_DYNAMIC_USER_JOBS	NO
 
 #define PVM_ARCH			HPPA

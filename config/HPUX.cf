@@ -19,10 +19,6 @@
 #define HAS_RANLIB_TOUCH		YES
 #define HAS_CP_PRESERVE			YES
 #define HAS_FLOCK			NO
-#define HAS_GETDIRENTRIES		YES
-#define HAS_GETDTABLESIZE		NO
-#define HAS_SETEGID			NO
-#define HAS_SETEUID			NO
 
 #define ShadowSizeEstimate 200
 

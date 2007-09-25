@@ -1691,9 +1691,16 @@ AC_CHECK_TYPES([__int64])
 # checks for library functions
 ############################################################
 
-AC_CHECK_FUNCS([strsignal])
-AC_CHECK_FUNCS([stat64])
-AC_CHECK_FUNCS([lchown])
+AC_CHECK_FUNCS_ONCE([strsignal					\
+		     stat64					\
+		     lchown					\
+		     getdirentries				\
+		     getdtablesize				\
+		     getpagesize				\
+		     getwd					\
+		     setegid					\
+		     seteuid					\
+		     setlinebuf])
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 AC_SEARCH_LIBS([dlopen], [dl],
   AC_DEFINE([HAVE_DLOPEN], [1], [dlopen function is available]))

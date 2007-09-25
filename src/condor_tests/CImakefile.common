@@ -56,7 +56,7 @@ RUN(job_rsc_truncate_std)
 TESTCLASS(job_rsc_truncate_std,framework)
 TESTCLASS(job_rsc_truncate_std,quick)
 
-#if HAS_GETDIRENTRIES && ! IS_HPUX
+#if HAVE_GETDIRENTRIES && ! IS_HPUX
 /* even though HPUX has getdirentries(), our test program doesn't
    build a valid test for it and the code is all #ifdef'ed out.  so,
    until someone fixes the test, there's no reason to run it here.
@@ -66,7 +66,7 @@ CBUILD($(CC),job_rsc_getdirentries_std,c)
 DEP_SYMLINK_EXT(job_rsc_getdirentries_std,cmd)
 RUN(job_rsc_getdirentries_std)
 TESTCLASS(job_rsc_getdirentries_std,quick)
-#endif /* HAS_GETDIRENTRIES */
+#endif /* HAVE_GETDIRENTRIES */
 
 DESC(job_rsc_fgets_std,"Does fgets() work remotely?")
 CBUILD($(CC),job_rsc_fgets_std,c)

@@ -27,15 +27,10 @@ PRELINK_CPP_FLAGS = -Ur -u main
 #define NEEDS_64BIT_STRUCTS		YES
 
 #define NEEDS_FAKE_GETMNT		YES
-#define HAS_SETLINEBUF			YES
 #define HAS_AR_S_OPTION			YES
 #define HAS_RANLIB_TOUCH		YES
 #define HAS_CP_PRESERVE			YES
 #define HAS_FLOCK			NO
-#define HAS_GETDIRENTRIES		YES
-#define HAS_GETDTABLESIZE		NO
-#define HAS_SETEGID			NO
-#define HAS_SETEUID			YES
 #define PVM_ARCH			RS6K
 
 #define ShadowSizeEstimate 200

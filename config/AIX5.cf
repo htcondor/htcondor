@@ -2,10 +2,6 @@
 
 #define PlatformFlags		-DAIX5=AIX5
 
-/* XXX This stuff is borkened */
-#define HAS_GETPAGESIZE		YES
-#define HAS_GETWD			YES
-
 #define NEED_SNPRINTF	YES
 
 #define HAS_DYNAMIC_USER_JOBS	NO

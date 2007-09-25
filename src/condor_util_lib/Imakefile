@@ -10,27 +10,27 @@ MALLOC_OBJ = malloc.o
 FLOCK_OBJ = flock.o
 #endif
 
-#if !HAS_SETEUID
+#if !HAVE_SETEUID
 SETEUID_OBJ = seteuid.o
 #endif
 
-#if !HAS_SETEGID
+#if !HAVE_SETEGID
 SETEGID_OBJ = setegid.o
 #endif
 
-#if !HAS_GETDTABLESIZE
+#if !HAVE_GETDTABLESIZE
 GETDTABLESIZE_OBJ = getdtablesize.o
 #endif
 
-#if !HAS_GETWD
+#if !HAVE_GETWD
 GETWD_OBJ = getwd.o
 #endif
 
-#if !HAS_GETPAGESIZE
+#if !HAVE_GETPAGESIZE
 GETPAGESIZE_OBJ = getpagesize.o
 #endif
 
-#if !HAS_SETLINEBUF
+#if !HAVE_SETLINEBUF
 SETLINEBUF_OBJ = setlinebuf.o
 #endif
 
