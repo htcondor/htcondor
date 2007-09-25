@@ -456,6 +456,21 @@ sub FindTestTasks
 		$builddate = $args[1];
 		$thisbranch = $args[2];
 
+		# verify that the user is cndrauto unless another is called out
+		# I for one am known to run entire sets of tests on nightly builds
+		# and we do not want to mix these results.
+		$extraction = $db->prepare("SELECT * FROM Run WHERE  \
+					runid = $args[0] ");
+
+	    $extraction->execute();
+
+		my $ownref = $extraction->fetchrow_hashref();
+		$testuser = $ownref->{'user'};
+		if($testuser ne "cndrauto") {
+			# do not add these results in cause its a different user
+			next;
+		}
+
 		#print "Find tests for runid $args[0] builddate <<$builddate>>\n";
 		$extraction = $db->prepare("SELECT * FROM Task WHERE  \
 					runid = $args[0] \
