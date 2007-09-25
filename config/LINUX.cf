@@ -67,7 +67,6 @@
 #define HAS_DYNAMIC_USER_JOBS		NO
 
 #define NEEDS_KBDD			NO	
-#define NEEDS_FAKE_GETMNT		YES
 #define HAS_AR_S_OPTION			YES
 #define HAS_RANLIB_TOUCH		NO
 /*??????*/

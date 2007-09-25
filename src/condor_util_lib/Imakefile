@@ -34,10 +34,6 @@ GETPAGESIZE_OBJ = getpagesize.o
 SETLINEBUF_OBJ = setlinebuf.o
 #endif
 
-#if NEEDS_FAKE_GETMNT
-GETMNT_OBJ = getmnt.o
-#endif
-
 #if !HAS_INET_NTOA
 INET_NTOA_OBJ = inet_ntoa.o
 #endif
@@ -53,7 +49,7 @@ INET_NTOA_OBJ = inet_ntoa.o
 	$(GETDTABLESIZE_OBJ) $(MALLOC_OBJ)\
 	$(SETEGID_OBJ) $(SETEUID_OBJ) $(GETPAGESIZE_OBJ) $(SETLINEBUF_OBJ) \
 	$(GETWD_OBJ) ckpt_name.o \
-	lock_file.NON_POSIX.o $(GETMNT_OBJ) $(INET_NTOA_OBJ) \
+	lock_file.NON_POSIX.o getmnt.o $(INET_NTOA_OBJ) \
 	syscall_numbers.o sig_install.o internet.o startup_info.o escapes.o\
 	ckpt_util.o get_random_num.o fdprintf.o rotate_file.o \
 	setsyscalls.o match_prefix.o sleep.o basename.o strcmp_until.o\

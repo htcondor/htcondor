@@ -1,7 +1,5 @@
 /* shared BSD-specific settings... */
 
-#define NEEDS_FAKE_GETMNT		YES
-
 #if defined (IS_DARWIN)
 #include <DARWIN.cf>
 #endif
