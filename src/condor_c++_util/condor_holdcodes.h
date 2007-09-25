@@ -87,4 +87,8 @@ const int CONDOR_HOLD_CODE_SubmittedOnHold = 15;
 //Input files are being spooled.
 const int CONDOR_HOLD_CODE_SpoolingInput = 16;
 
+//In the standard universe, the job and shadows versions aren't
+//compatible.
+const int CONDOR_HOLD_CODE_JobShadowMismatch = 17;
+
 #endif

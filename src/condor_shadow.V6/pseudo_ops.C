@@ -46,6 +46,7 @@
 #include "string_list.h"
 #include "condor_socket_types.h"
 #include "classad_helpers.h"
+#include "condor_holdcodes.h"
 
 
 extern "C" {
@@ -60,7 +61,8 @@ extern "C" {
 	int use_compress( char *method, char *path );
 	int use_fetch( char *method, char *path );
 	int use_append( char *method, char *path );
-	void HoldJob( const char* buf );
+	void HoldJob( const char* long_reason, const char* short_reason,
+				  int reason_code, int reason_subcode );
 	void reaper();
 	#if defined(DUX4)
 		int statfs(const char *, struct statfs*);
@@ -2601,8 +2603,10 @@ pseudo_register_syscall_version( const char *version )
 	sprintf( line, "can release your job with \"condor_release %d.%d\".\n",
 			 Proc->id.cluster, Proc->id.proc );
 	strcat( buf, line );
-	
-	HoldJob( buf );  // This sends the email and exits with JOB_SHOULD_HOLD. 
+
+		// This sends the email and exits with JOB_SHOULD_HOLD. 
+	HoldJob( buf, "Job and shadow versions aren't compatible",
+			 CONDOR_HOLD_CODE_JobShadowMismatch, 0 );
 	return 0;
 }
 

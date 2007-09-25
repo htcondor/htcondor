@@ -40,6 +40,7 @@
 #include "../condor_c++_util/directory.h"
 #include "condor_distribution.h"
 #include "condor_environ.h"
+#include "condor_holdcodes.h"
 
 #include "user_job_policy.h"
 
@@ -99,7 +100,8 @@ extern "C" {
 	int DoCleanup();
 	int unlink_local_or_ckpt_server( char* );
 	int update_rusage( struct rusage*, struct rusage* );
-	void HoldJob( const char * );
+	void HoldJob( const char* long_reason, const char* short_reason,
+				  int reason_code, int reason_subcode );
 }
 
 extern int part_send_job( int test_starter, char *host, int &reason,
@@ -819,6 +821,7 @@ bool periodic_policy(void)
 	int val;
 	int action;
 	char buf[4096];
+	char buf2[4096];
 
 	/* See what the user job policy has in store for me. */
 	result = user_job_policy(JobAd);
@@ -855,11 +858,13 @@ bool periodic_policy(void)
 
 				sprintf(buf, "Your job has been held because %s has become "
 					"true\n", ATTR_PERIODIC_HOLD_CHECK);
+				sprintf(buf2, "Your job has been held because %s has become "
+					"true", ATTR_PERIODIC_HOLD_CHECK);
 
 				delete result;
 
 				/* This exits */
-				HoldJob(buf);
+				HoldJob(buf, buf2, CONDOR_HOLD_CODE_JobPolicy, 0);
 				break;
 
 			default:
@@ -883,6 +888,7 @@ void static_policy(void)
 	int val;
 	int action;
 	char buf[4096];
+	char buf2[4096];
 
 	/* See what the user job policy has in store for me. */
 	result = user_job_policy(JobAd);
@@ -921,9 +927,11 @@ void static_policy(void)
 
 				sprintf(buf, "Your job has been held because %s has become "
 					"true\n", ATTR_PERIODIC_HOLD_CHECK);
+				sprintf(buf2, "Your job has been held because %s has become "
+					"true", ATTR_PERIODIC_HOLD_CHECK);
 
 				/* This exits */
-				HoldJob(buf);
+				HoldJob(buf, buf2, CONDOR_HOLD_CODE_JobPolicy, 0);
 				return;
 				break;
 

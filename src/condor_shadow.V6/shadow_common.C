@@ -61,7 +61,8 @@ extern "C" {
 	void NotifyUser( char *buf, PROC *proc );
 	int terminate_is_pending(void);
 	void publishNotifyEmail( FILE* mailer, char* buf, PROC* proc );
-	void HoldJob( const char* buf );
+	void HoldJob( const char* long_reason, const char* short_reason,
+				  int reason_code, int reason_subcode );
 	char *d_format_time( double dsecs );
 	int unlink_local_or_ckpt_server( char *file );
 	int whoami( FILE *fp );
@@ -369,7 +370,8 @@ JobIsStandard()
 
 
 void
-HoldJob( const char* buf )
+HoldJob( const char* long_reason, const char* short_reason, int reason_code,
+		 int reason_subcode )
 {
     char subject[ BUFSIZ ];	
 	FILE *mailer;
@@ -381,6 +383,21 @@ HoldJob( const char* buf )
 		dprintf( D_ALWAYS, "In HoldJob() w/ NULL JobAd!\n" );
 		exit( JOB_SHOULD_HOLD );
 	}
+
+	ExitReason = JOB_SHOULD_HOLD;
+	if ( !ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT) ) {
+		dprintf( D_ALWAYS, "Failed to connect to schedd!\n" );
+	}
+	SetAttributeString( Proc->id.cluster, Proc->id.proc, ATTR_HOLD_REASON,
+						short_reason );
+	SetAttributeInt( Proc->id.cluster, Proc->id.proc, ATTR_HOLD_REASON_CODE,
+					 reason_code );
+	SetAttributeInt( Proc->id.cluster, Proc->id.proc, ATTR_HOLD_REASON_SUBCODE,
+					 reason_subcode );
+	if ( !DisconnectQ(0) ) {
+		dprintf( D_ALWAYS, "Failed to commit updated job queue status!\n" );
+	}
+
 	mailer = email_user_open(JobAd, subject);
 	if( ! mailer ) {
 			// User didn't want email, so just exit now with the right
@@ -403,7 +420,7 @@ HoldJob( const char* buf )
 		fprintf( mailer, "%s ", Proc->cmd[0] );
 	}
 	fprintf( mailer, "\nis being put on hold.\n\n" );
-	fprintf( mailer, "%s", buf );
+	fprintf( mailer, "%s", long_reason );
 	email_close(mailer);
 
 		// Now that the user knows why, exit with the right code. 
