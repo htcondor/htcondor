@@ -684,9 +684,11 @@ sub AddTestGids
 			$entry = Platform_info->new();
 			$expected = GetHistExpected($buildblame[0]);
 			$entry->platform("$buildblame[0]");
+			#print "Crunch errors for \"$buildblame[0] & $buildblame[1]\"\n";
 			if($testorbuild eq "build") {
 				$entry->build_errs(1);
 				$entry->expected($expected);
+				#print "We were expecting $expected tests\n";
 			} else {
 				$entry->expected(0);
 			}
@@ -810,6 +812,7 @@ sub AnalyseTestRuns
 		# we really only care about the results for the automatics
         # null(not defined()) means still in never never land, 0 is good and all else bad.
 
+		$platform = "";
         while( my $sumref = $testextraction->fetchrow_hashref() ){
             $res = $sumref->{'result'};
             $name = $sumref->{'name'};
@@ -832,17 +835,29 @@ sub AnalyseTestRuns
                     $runnull = $runnull + 1; # pending
                 }
 				$runcount = $runcount + 1;
-            }
+            } else {
+				$plat = $sumref->{'platform'};
+				if($platform eq "") {
+					#print "looking for platform: $name & $plat\n";
+				}
+				if( $plat ne "local") {
+            		$platform = $plat;
+				}
+			}
+
         }
 
 		$good = $rungood;
 		$bad = $runbad;
+		# with our now accumulating during test runs we can be partially done
+		# and need to look at the REAL historic expected and use that.
+		$histexpected = GetHistExpected($platform); # 
 		$expected = $runcount;
 
 		#print "$platform:	Passed = $good	Failed = $bad	Expected = $expected\n";
-		if($expected == 0) { 
+		if($expected < $histexpected ) { 
 			# no tasklist.nmi
-			$expected = GetHistExpected($platform);
+			$expected = $histexpected;
 		}
 		$totalexpected = $totalexpected + $expected;
 
@@ -919,12 +934,15 @@ sub GetHistExpected {
 		return(0);
 	}
 
+	#print "Want history expaected value for << $platform>>\n";
+
 	open(OLD,"<$histold") || die "Can not open history file<$histold>:$!\n";
 	while(<OLD>) {
 		chomp($_);
 		$line = $_;
 		if($line =~ /^$platform:\s*Passed\s*=\s*(\d+)\s*Failed\s*=\s*(\d+)\s*Expected\s*=\s*(\d+)*$/) {
 			close(OLD);
+			#print "GetHistExpected: returning $3\n";
 			return($3);
 		}
 	}
@@ -964,9 +982,12 @@ sub AddHistExpected {
 		$line = $_;
 		if($line =~ /^\s*$platform:\s*Passed\s*=\s*(\d+)\s+Failed\s*=\s*([\-]*\d+)\s+Expected\s*=\s*(\d+).*$/) {
 				$found = 1;
-				if(($expected != $3) && ($expected != 0)) {
+				if(($expected > $3) && ($expected != 0)) {
+					#print "Old expected was $3\n";
+					#print "$platform: Passed = $pass Failed = $fail Expected = $expected\n";
 					print NEW "$platform: Passed = $pass Failed = $fail Expected = $expected\n";
 				} elsif(($expected <= 0) && ($newexpected > 0)) {
+					#print "Replaced HistExpected\n";
 					print NEW "$platform: Passed = $pass Failed = $fail Expected = $newexpected\n";
 				} else {
 					print NEW "$line\n"; # keep  old values
@@ -1154,7 +1175,7 @@ sub DbConnect
     $db = DBI->connect("DBI:mysql:database=nmi_history;host=nmi-db", "nmipublic", "nmiReadOnly!") 	
     #$db = DBI->connect("DBI:mysql:database=nmi_history;host=nmi-build25", "nmipublic", "nmiReadOnly!") 	
 		|| die "Could not connect to database: $!\n";
-    print "Connected to db!\n";
+    #print "Connected to db!\n";
 }
 
 sub DbDisconnect
