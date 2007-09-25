@@ -202,26 +202,6 @@ XCOMM End translation of func(shared_library_target)
 /*
 ** Build a C program from .o files and libraries.
 */
-#if NEEDS_PRELINKER
-
-/* under AIX, we need a special prelink phase which links the GNU CC generated
-	.o files with GNU ld, but then uses the vendor linker the compiler should
-	have been installed to use to link the prelinked object and the system
-	libraries. */
-#ifndef program_target
-#define	program_target(program,objlist,libs)		@@\
-XCOMM Begin translation of func(program_target) @@\
-program: $(filter DEP_FILTER,objlist libs)						@@\
-	$(PRELINK_C) $(PRELINK_C_FLAGS) -o __prelink__.o objlist libs @@\
-	$(C_LINK) $(CFLAGS) -o program __prelink__.o $(ALL_LDFLAGS)	@@\
-	rm -f __prelink__.o @@\
-clean::								@@\
-	rm -f program objlist			@@\
-XCOMM End translation of func(program_target)
-#endif /* program_target */
-
-#else
-
 /* everyone else gets a normal link rule */
 #ifndef program_target
 #define	program_target(program,objlist,libs)		@@\
@@ -233,30 +213,11 @@ clean::								@@\
 XCOMM End translation of func(program_target)
 #endif /* program_target */
 
-#endif
-
 
 /*
 ** Build a C program from .o files and libraries supplying the compile time
 ** and link time flags. For building utilites with special flags.
 */
-#if NEEDS_PRELINKER
-
-#ifndef program_target_complex
-#define	program_target_complex(program,objlist,comflags,linkflags,libs)	@@\
-XCOMM Begin translation of func(program_target_complex) @@\
-program: $(filter DEP_FILTER,objlist libs)						@@\
-	$(PRELINK_C) $(PRELINK_C_FLAGS) comflags -o __prelink__.o \
-		objlist libs @@\
-	$(C_LINK) comflags -o program __prelink__.o linkflags	@@\
-	rm -f __prelink__.o @@\
-clean::								@@\
-	rm -f program objlist		@@\
-XCOMM End translation of func(program_target_complex)
-#endif  /* program_target_complex */
-
-#else
-
 #ifndef program_target_complex
 #define	program_target_complex(program,objlist,comflags,linkflags,libs)	@@\
 XCOMM Begin translation of func(program_target_complex) @@\
@@ -267,44 +228,10 @@ clean::								@@\
 XCOMM End translation of func(program_target_complex)
 #endif  /* program_target_complex */
 
-#endif
 
 /*
 ** Build a C++ program from .o files and libraries.
 */
-#if NEEDS_PRELINKER
-
-#ifndef c_plus_target
-#define	c_plus_target(program,objlist,libs)			@@\
-XCOMM Begin translation of func(c_plus_target) @@\
-program: $(filter DEP_FILTER,objlist libs)						@@\
-	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) -o __prelink__.o objlist libs @@\
-	$(CC_LINK) $(C_PLUS_FLAGS) -o program __prelink__.o \
-		$(ALL_LDFLAGS) $(DEMANGLE)			@@\
-	rm -f __prelink__.o @@\
-clean::								@@\
-	rm -f program objlist @@\
-XCOMM End translation of func(c_plus_target)
-#endif  /* c_plus_target */
-
-
-#ifndef c_plus_nowrap_target
-#define	c_plus_nowrap_target(program,objlist,libs)		@@\
-XCOMM Begin translation of func(c_plus_target)			@@\
-program: $(filter DEP_FILTER,objlist libs)			@@\
-	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) -o __prelink__.o objlist libs @@\
-	$(CC_LINK) $(C_PLUS_FLAGS) -o program __prelink__.o \
-		$(NOWRAP_LDFLAGS) $(DEMANGLE)			@@\
-	rm -f __prelink__.o					@@\
-clean::								@@\
-	rm -f program objlist					@@\
-XCOMM End translation of func(c_plus_nowrap_target)
-#endif  /* c_plus_nowarp_target */
-
-
-#else  /* ! NEEDS_PRELINKER */
-
-
 #ifndef c_plus_target_real
 #define c_plus_target_real(program,objlist,libs,ldflags)	@@\
 XCOMM Begin translation of func(c_plus_target_real)		@@\
@@ -330,30 +257,11 @@ XCOMM End translation of func(c_plus_nowrap_target)
 #endif  /* c_plus_nowrap_target */
 
 
-#endif  /* NEEDS_PRELINKER */
-
 
 /*
 ** Build a C++ program from .o files and libraries supplying the compile and
 ** link flags. For building utility programs with special flags.
 */
-#if NEEDS_PRELINKER
-
-#ifndef c_plus_target_complex
-#define	c_plus_target_complex(program,objlist,comflags,linkflags,libs)	@@\
-XCOMM Begin translation of func(c_plus_target_complex) @@\
-program: $(filter DEP_FILTER,objlist libs)						@@\
-	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) comflags -o __prelink__.o \
-		objlist libs @@\
-	$(CC_LINK) comflags -o program __prelink__.o linkflags $(DEMANGLE)	@@\
-	rm -f __prelink__.o @@\
-clean::								@@\
-	rm -f program objlist			@@\
-XCOMM End translation of func(c_plus_target_complex)
-#endif  /* c_plus_target_complex */
-
-#else
-
 #ifndef c_plus_target_complex
 #define	c_plus_target_complex(program,objlist,comflags,linkflags,libs)	@@\
 XCOMM Begin translation of func(c_plus_target_complex) @@\
@@ -364,7 +272,6 @@ clean::								@@\
 XCOMM End translation of func(c_plus_target_complex)
 #endif  /* c_plus_target_complex */
 
-#endif
 
 /*
 ** Build a template instantiation object
@@ -733,40 +640,6 @@ XCOMM End translation of func(strip_symlink_target)
 ** Target to build a statically linked, stripped binary, placed in the
 ** specified directory.
 */
-#if NEEDS_PRELINKER 
-
-#ifndef	static_target
-#if HAS_STATIC
-#define	static_target(program,objlist,libs,dir)		@@\
-XCOMM Begin translation of func(static_target) @@\
-$(STATIC_DIR)dir/program: program.static		@@\
-	/bin/rm -f $(STATIC_DIR)/dir/program		@@\
-	cp program.static $(STATIC_DIR)/dir/program	@@\
-	chmod EXECUTABLE_MODE $(STATIC_DIR)/dir/program	@@\
-	strip_file($(STATIC_DIR)/dir/program)		@@\
-$(STATIC_UNSTRIP_DIR)dir/program: program.static	@@\
-	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/program	@@\
-	cp program.static $(STATIC_UNSTRIP_DIR)/dir/program	@@\
-	chmod EXECUTABLE_MODE $(STATIC_UNSTRIP_DIR)/dir/program	@@\
-program.static: $(filter DEP_FILTER,objlist libs)					@@\
-	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) -o __prelink__.o objlist libs @@\
-	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program.static __prelink__.o $(ALL_LDFLAGS) $(DEMANGLE) @@\
-	rm -f __prelink__.o @@\
-clean:: 							@@\
-	rm -f program.static objlist				@@\
-static:: $(STATIC_DIR)/dir/program $(STATIC_UNSTRIP_DIR)/dir/program	@@\
-XCOMM End translation of func(static_target)
-#else  /* ! HAS_STATIC */
-#define	static_target(program,objlist,libs,dir)		@@\
-XCOMM Begin translation of func(static_target) @@\
-static::				       @@\
-XCOMM End translation of func(static_target)
-#endif  /* HAS_STATIC */
-#endif  /* static_target */
-
-#else  /* ! NEEDS_PRELINKER */
-
-
 #ifndef static_target_real
 #if HAS_STATIC
 #define static_target_real(program,objlist,libs,dir,ldflags)	@@\
@@ -808,8 +681,6 @@ static_target_real(program,objlist,libs,dir,$(NOWRAP_LDFLAGS))	@@\
 XCOMM End translation of func(static_nowrap_target)
 #endif  /* static_target */
 
-
-#endif  /* NEEDS_PRELINKER */
 
 
 /*
