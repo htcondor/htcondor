@@ -2,4 +2,3 @@
 #define PlatformFlags	-DDUX=DUX -DDUX4=DUX4 -DTRU64
 
 #define PVM_ARCH	ALPHA
-#define NEED_SNPRINTF	YES

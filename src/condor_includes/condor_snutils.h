@@ -29,7 +29,7 @@
 
 BEGIN_C_DECLS
 
-#ifdef NEED_SNPRINTF
+#ifndef HAVE_SNPRINTF
 int snprintf(char *output, size_t buffer_size, const char *format, ...);
 #endif
 

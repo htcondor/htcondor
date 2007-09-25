@@ -1700,7 +1700,8 @@ AC_CHECK_FUNCS([strsignal				\
 		getwd					\
 		setegid					\
 		seteuid					\
-		setlinebuf])
+		setlinebuf				\
+		snprintf])
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 AC_SEARCH_LIBS([dlopen], [dl],
   AC_DEFINE([HAVE_DLOPEN], [1], [dlopen function is available]))

@@ -30,7 +30,7 @@
 ** Compatibility routine for systems that don't have an snprintf
 */
 
-#ifdef NEED_SNPRINTF
+#ifndef HAVE_SNPRINTF
 int 
 snprintf(
 	char       *output, 
