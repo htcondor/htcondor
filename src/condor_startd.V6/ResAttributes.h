@@ -141,6 +141,12 @@ private:
 	char*			m_subnet;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
 	char*			m_ckptpltfrm;
+
+#if defined ( WIN32 )
+	int				m_got_windows_version_info;
+	OSVERSIONINFO	m_window_version_info;
+#endif
+
 };	
 
 

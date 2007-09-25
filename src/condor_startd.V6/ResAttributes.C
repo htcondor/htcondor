@@ -68,6 +68,18 @@ MachAttributes::MachAttributes()
 
 		// identification of the checkpointing platform signature
 	m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
+
+#if defined ( WIN32 )
+	// get the version information of the copy of Windows we are running
+	ZeroMemory ( &m_window_version_info, sizeof ( OSVERSIONINFO ) );
+	m_window_version_info.dwOSVersionInfoSize = sizeof ( OSVERSIONINFO );	
+	m_got_windows_version_info = GetVersionEx ( &m_window_version_info );
+	if ( m_got_windows_version_info ) {
+		dprintf ( D_ALWAYS, "MachAttributes::publish: failed to get "
+			"Windows version information\n" );			
+	}
+#endif
+
 }
 
 
@@ -235,6 +247,29 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 		sprintf( line, "%s = \"%s\"", ATTR_CHECKPOINT_PLATFORM, m_ckptpltfrm );
 		cp->Insert( line );
+
+#if defined ( WIN32 )
+		// publish the Windows version information
+		if ( m_got_windows_version_info ) {
+			sprintf ( line, "%s = %lu", ATTR_WINDOWS_MAJOR_VERSION, 
+				m_window_version_info.dwMajorVersion );
+			cp->Insert ( line ); 
+			sprintf ( line, "%s = %lu", ATTR_WINDOWS_MINOR_VERSION, 
+				m_window_version_info.dwMinorVersion );
+			cp->Insert ( line ); 
+			sprintf(line, "%s = %lu", ATTR_WINDOWS_BUILD_NUMBER, 
+				m_window_version_info.dwBuildNumber );
+			cp->Insert ( line ); 
+		} else {
+			sprintf ( line, "%s = \"Undefined\"", ATTR_WINDOWS_MAJOR_VERSION );
+			cp->Insert ( line ); 
+			sprintf ( line, "%s = \"Undefined\"", ATTR_WINDOWS_MINOR_VERSION );
+			cp->Insert ( line ); 
+			sprintf ( line, "%s = \"Undefined\"", ATTR_WINDOWS_BUILD_NUMBER );
+			cp->Insert ( line ); 
+		}
+#endif
+
 	}
 
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
@@ -281,6 +316,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		sprintf(line, "%s=%d", ATTR_CLOCK_DAY, m_clock_day );
 		cp->Insert(line); 
 	}
+
 }
 
 

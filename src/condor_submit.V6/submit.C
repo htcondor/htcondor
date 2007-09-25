@@ -587,6 +587,27 @@ init_job_ad()
 	ntdomain = my_domainname();
 	(void) sprintf (buffer, "%s = \"%s\"", ATTR_NT_DOMAIN, ntdomain);
 	InsertJobExpr (buffer);
+
+	// Publish the version of Windows we are running
+	OSVERSIONINFO os_version_info;
+	ZeroMemory ( &os_version_info, sizeof ( OSVERSIONINFO ) );
+	os_version_info.dwOSVersionInfoSize = sizeof ( OSVERSIONINFO );	
+	if ( GetVersionEx ( &os_version_info ) > 0 ) {
+		(void) sprintf (buffer, "%s = %u\n", ATTR_WINDOWS_MAJOR_VERSION, 
+			os_version_info.dwMajorVersion );
+		(void) sprintf (buffer, "%s = %u\n", ATTR_WINDOWS_MINOR_VERSION, 
+			os_version_info.dwMinorVersion );
+		(void) sprintf (buffer, "%s = %u\n", ATTR_WINDOWS_BUILD_NUMBER, 
+			os_version_info.dwBuildNumber );
+	} else {
+		(void) sprintf (buffer, "%s = \"Undefined\"\n", 
+			ATTR_WINDOWS_MAJOR_VERSION );
+		(void) sprintf (buffer, "%s = \"Undefined\"\n", 
+			ATTR_WINDOWS_MINOR_VERSION );
+		(void) sprintf (buffer, "%s = \"Undefined\"\n", 
+			ATTR_WINDOWS_BUILD_NUMBER );
+	}
+	InsertJobExpr ( buffer );
 #endif
 
 	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_WALL_CLOCK);
