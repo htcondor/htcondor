@@ -1612,8 +1612,7 @@ else
 	fi
 fi
 AS_IF([test "x$enable_rpm" != xno],
-  [AC_SUBST(HAVE_RPM,$_cv_have_rpm)],
-  [AC_SUBST(HAVE_RPM,"NO")])
+  [AC_DEFINE([HAVE_RPM],[1],[Define if making rpms])])
 
 AC_ARG_ENABLE([malloc-debug],
   AC_HELP_STRING([--enable-malloc-debug],
