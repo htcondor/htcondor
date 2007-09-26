@@ -652,8 +652,8 @@ delete_passwd_cache() {
 
 #define ROOT 0
 
-static uid_t CondorUid, UserUid, MyUid, RealCondorUid, OwnerUid;
-static gid_t CondorGid, UserGid, MyGid, RealCondorGid, OwnerGid;
+static uid_t CondorUid, UserUid, RealCondorUid, OwnerUid;
+static gid_t CondorGid, UserGid, RealCondorGid, OwnerGid;
 static int CondorIdsInited = FALSE;
 static char* UserName = NULL;
 static char* OwnerName = NULL;
@@ -720,8 +720,8 @@ init_condor_ids()
         */
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
-	MyUid = getuid();
-	MyGid = getgid();
+	uid_t MyUid = get_my_uid();
+	gid_t MyGid = get_my_gid();
 	
 		/* if either of the following get_user_*() functions fail,
 		 * the default is MAXINT */
@@ -1105,15 +1105,6 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 	}
 	CurrentPrivState = s;
 
-		// If we haven't already done so, we want to try to init the
-		// condor ids, since that's where we figure out if we're root
-		// or not, and therefore, initialize the SwitchIds variable
-		// to the right thing (there's no need to try switching unless
-		// we were started as root).
-	if( !CondorIdsInited ) {
-		init_condor_ids();
-	}
-
 	if (can_switch_ids()) {
 		switch (s) {
 		case PRIV_ROOT:
@@ -1253,22 +1244,14 @@ get_file_owner_gid()
 uid_t
 get_my_uid()
 {
-	if( !CondorIdsInited ) {
-		init_condor_ids();
-	}
-
-	return MyUid;
+	return getuid();
 }
 
 
 gid_t
 get_my_gid()
 {
-	if( !CondorIdsInited ) {
-		init_condor_ids();
-	}
-
-	return MyGid;
+	return getgid();
 }
 
 
