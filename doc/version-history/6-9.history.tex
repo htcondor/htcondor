@@ -139,6 +139,10 @@ would fail to start jobs.
 jobs of type gt4 to not work when the Condor daemons were started as
 root and any file transfer was associated with the job.
 
+\item Fixed a bug introduced in Condor 6.9.4 that caused the
+\Condor{gridmanager} to exit immediately on startup when the Condor
+daemons were started as root and a condor username didn't exist.
+
 \item Removed race condition that was causing the \Condor{schedd} to core
   dump on Windows when the Condor service was stopped.
 
