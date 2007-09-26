@@ -12,7 +12,6 @@
 	them selectively for an architecture if you desire. */
 #define DOES_COMPRESS_CKPT	YES
 #define WANT_NEST	NO		/* the NeST I/O module */
-#define WANT_ORACLE_UNIVERSE   NO
 #define WANT_QUILL		YES
 #define WANT_TT			YES
 
