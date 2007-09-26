@@ -28,7 +28,7 @@ HAS_64BIT_STRUCTS = -DHAS_64BIT_STRUCTS
 #       endif
 #endif
 
-#if WANT_NEST
+#ifdef WANT_NEST
 NEST_CC_FLAGS = -DENABLE_NEST -I$(NEST_INC)
 NEST_OBJ = nest_client_pool.o nest_consistency_manager.o nest_speak.o nest_common.o nest_filetransfer.o nest_statistics.o
 #endif
@@ -566,7 +566,7 @@ clean::
 	rm -f $(COMPRESS_LIB) $(COMPRESS_OBJ)
 #endif
 
-#if WANT_NEST
+#ifdef WANT_NEST
 $(NEST_OBJ)::
 	ar xv $(NEST_LIB)/libnest-client.a $@
 clean::

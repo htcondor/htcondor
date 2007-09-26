@@ -23,7 +23,7 @@ html:
   NOTE: since we're using a different input file depending on where
   we're copying to, we can't use the unified public_copy_target().
 */ 
-#if HAS_CONDOR_ANALYZE
+#ifdef HAS_CONDOR_ANALYZE
 release_copy_target($(CONDOR_ANALYZE_RELEASE),bin,condor_analyze,EXECUTABLE_MODE)
 strip_copy_target($(CONDOR_ANALYZE_STRIP),bin,condor_analyze,EXECUTABLE_MODE)
 #if HAS_STATIC

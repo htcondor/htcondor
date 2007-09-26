@@ -615,8 +615,8 @@ AC_ARG_WITH(condor_analyze,
   fi
  ]
 )
-AC_SUBST(has_condor_analyze,$ac_has_condor_analyze)
 if test "x$ac_has_condor_analyze" = "xYES" ; then
+  AC_DEFINE([HAS_CONDOR_ANALYZE],[1],[Define if condor_analyze is available])
   AC_MSG_RESULT([$ac_condor_analyze_dir])
   CONDOR_SET_ANALYZE([release],fatal)
   CONDOR_SET_ANALYZE([strip],fatal)
@@ -1626,6 +1626,14 @@ AC_ARG_ENABLE([netman],
   [enable_netman=no])
 AS_IF([test "x$enable_netman" = xyes],
   [AC_DEFINE([ENABLE_NETMAN], [1], [Define if enabling NETMAM])])
+
+AC_ARG_ENABLE([nest],
+  AC_HELP_STRING([--enable-nest],
+    [enable Nest functionality (default: no)]),
+  [],
+  [enable_nest=no])
+AS_IF([test "x$enable_nest" = xyes],
+  [AC_DEFINE([WANT_NEST], [1], [Define if enabling Nest])])
 
 # Here we figure out whether or not the circumstances are correct for us
 # to be able to separate the debugging symbols from the executables and
