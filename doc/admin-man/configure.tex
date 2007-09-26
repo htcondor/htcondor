@@ -405,8 +405,6 @@ determined automatically at runtime but which can be overwritten.
 
 \item[\MacroU{USERNAME}] \label{param:Username}
   The user name of the UID of the daemon or tool.
-  It is useful for setting \MacroNI{GRIDMANAGER\_LOG},
-  as that needs to be done on a per-user basis.
   For daemons started as root, but running under another UID
   (typically the user condor), this will be the other UID.
 
@@ -1604,7 +1602,8 @@ server, shadow, and starter, none of which use DaemonCore yet).
   Starting with Condor version 6.9.3, whenever a daemon is about to
   publish a ClassAd update to the \Condor{collector}, it will evaluate
   this expression.
-  If it evaluates to TRUE, the daemon will gracefully shut itself down
+  If it evaluates to \Expr{True}, the daemon will gracefully shut itself down,
+  exit with the exit code 99,
   and will not be restarted by the \Condor{master} (as if it sent
   itself a \Condor{off} command).
   The expression is evaluated in the context of the ClassAd that is
@@ -4646,30 +4645,24 @@ do not specify their own with:
 \item[\Macro{DEFAULT\_RANK}] \label{param:DefaultRank}
   Default rank expression for any job that does not specify
   its own rank expression in the submit description file.  
-  Defaults to
-  \begin{verbatim}
-     ((Memory*1024) > Imagesize)
-  \end{verbatim}
-  which states that the job prefers machines where there is
-  more main memory than the image size of the job.
+  There is no default value, such that when undefined,
+  the value used will be 0.0.
 
 \item[\Macro{DEFAULT\_RANK\_VANILLA}] \label{param:DefaultRankVanilla}
   Default rank for vanilla universe jobs.  
-  Defaults to
-  \begin{verbatim}
-     ((Memory*1024) > Imagesize)
-  \end{verbatim}
-  which states that the job prefers machines where there is
-  more main memory than the image size of the job.
+  There is no default value, such that when undefined,
+  the value used will be 0.0.
+  When both \MacroNI{DEFAULT\_RANK} and \MacroNI{DEFAULT\_RANK\_VANILLA}
+  are defined, the value for \MacroNI{DEFAULT\_RANK\_VANILLA} is
+  used for vanilla universe jobs.
 
 \item[\Macro{DEFAULT\_RANK\_STANDARD}] \label{param:DefaultRankStandard}
   Default rank for standard universe jobs.
-  Defaults to
-  \begin{verbatim}
-     ((Memory*1024) > Imagesize)
-  \end{verbatim}
-  which states that the job prefers machines where there is
-  more main memory than the image size of the job.
+  There is no default value, such that when undefined,
+  the value used will be 0.0.
+  When both \MacroNI{DEFAULT\_RANK} and \MacroNI{DEFAULT\_RANK\_STANDARD}
+  are defined, the value for \MacroNI{DEFAULT\_RANK\_STANDARD} is
+  used for standard universe jobs.
 
 \item[\Macro{DEFAULT\_IO\_BUFFER\_SIZE}] \label{param:DefaultBufferSize}
   Condor keeps a buffer of recently-used data for each file an
@@ -5440,17 +5433,9 @@ These macros affect the \Condor{gridmanager}.
 \begin{description}
 
 \item[\Macro{GRIDMANAGER\_LOG}]
-\label{param:GridmanagerLog} Logs for the \Condor{gridmanager} 
-  will be written as the user who submitted the individual jobs.
-  As a result \MacroNI{GRIDMANAGER\_LOG} should defined to incorporate
-  \MacroUNI{USERNAME} to specify a different file for each user
-  in a directory that users will be able to write into.
-  An example definition:
-\footnotesize
-\begin{verbatim}
-  GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
-\end{verbatim}
-\normalsize
+\label{param:GridmanagerLog} Defines the path and file name
+  for the log of the \Condor{gridmanager}. 
+  The owner of the file is the \Login{condor} user.
 
 \item[\Macro{GRIDMANAGER\_CHECKPROXY\_INTERVAL}]
 \label{param:GridmanagerCheckproxyInterval} The number of seconds
@@ -6290,82 +6275,92 @@ They specify items related to the \Condor{vm-gahp}.
 
 \begin{description}
 \item[\Macro{VM\_GAHP\_SERVER}]
-\label{param:VMGAHPServer}
-The complete path and file name of the \Condor{vm-gahp}.
-There is no default value for this required configuration variable.
+  \label{param:VMGAHPServer}
+  The complete path and file name of the \Condor{vm-gahp}.
+  There is no default value for this required configuration variable.
 
 \item[\Macro{VM\_GAHP\_CONFIG}]
-\label{param:VMGAHPConfig}
-The complete path and file name of a separate and required
-Condor configuration file containing settings specific
-to the execution of either a VMware or Xen virtual machine.
-There is no default value for this required configuration variable.
+  \label{param:VMGAHPConfig}
+  The complete path and file name of a separate and required
+  Condor configuration file containing settings specific
+  to the execution of either a VMware or Xen virtual machine.
+  There is no default value for this required configuration variable.
 
 \item[\Macro{VM\_GAHP\_LOG}]
-\label{param:VMGAHPLog}
-The complete path and file name of the \Condor{vm-gahp} log.
-If not specified on a Unix platform, the \Condor{starter}
-log will be used for \Condor{vm-gahp} log items. 
-There is no default value for this required configuration variable
-on Windows platforms.
+  \label{param:VMGAHPLog}
+  The complete path and file name of the \Condor{vm-gahp} log.
+  If not specified on a Unix platform, the \Condor{starter}
+  log will be used for \Condor{vm-gahp} log items. 
+  There is no default value for this required configuration variable
+  on Windows platforms.
 
 \item[\Macro{MAX\_VM\_GAHP\_LOG}]
-\label{param:MaxVMGAHPLog}
-Controls the maximum length (in bytes) to which the \Condor{vm-gahp} log
-will be allowed to grow.
+  \label{param:MaxVMGAHPLog}
+  Controls the maximum length (in bytes) to which the \Condor{vm-gahp} log
+  will be allowed to grow.
 
 \item[\Macro{VM\_TYPE}]
-\label{param:VMType}
-Specifies the type of supported virtual machine software.
-It will be the value \verb@xen@ or \verb@vmware@.
-There is no default value for this required configuration variable.
+  \label{param:VMType}
+  Specifies the type of supported virtual machine software.
+  It will be the value \verb@xen@ or \verb@vmware@.
+  There is no default value for this required configuration variable.
 
 \item[\Macro{VM\_MEMORY}]
-\label{param:VMMaxMemory}
-An integer to specify the maximum amount of memory in Mbytes
-that will be allowed to the virtual machine program.
-The amount of memory allowed will be the smaller of this
-variable and the value set by \MacroNI{VM\_MAX\_MEMORY}, as defined within
-the separate configuration file used by the \Condor{vm-gahp}.
+  \label{param:VMMaxMemory}
+  An integer to specify the maximum amount of memory in Mbytes
+  that will be allowed to the virtual machine program.
+  The amount of memory allowed will be the smaller of this
+  variable and the value set by \MacroNI{VM\_MAX\_MEMORY}, as defined within
+  the separate configuration file used by the \Condor{vm-gahp}.
 
 \item[\Macro{VM\_MAX\_NUMBER}]
-\label{param:VMMaxNumber}
-An integer limit on the number of executing virtual machines.
-When not defined, the default value is the same \MacroNI{NUM\_CPUS}.
+  \label{param:VMMaxNumber}
+  An integer limit on the number of executing virtual machines.
+  When not defined, the default value is the same \MacroNI{NUM\_CPUS}.
 
 \item[\Macro{VM\_STATUS\_INTERVAL}]
-\label{param:VMStatusInterval}
-An integer number of seconds that defaults to 60,
-representing the interval between job status checks to see
-if the job has finished.
-A minimum value of 30 seconds is enforced.
+  \label{param:VMStatusInterval}
+  An integer number of seconds that defaults to 60,
+  representing the interval between job status checks by the
+  \Condor{starter} to see if the job has finished.
+  A minimum value of 30 seconds is enforced.
 
 \item[\Macro{VM\_GAHP\_REQ\_TIMEOUT}]
-\label{param:VMGAHPReqTimeout}
-An integer number of seconds that defaults to 300 (five minutes),
-representing the amount of time Condor will wait for a command issued
-to the \Condor{vm-gahp} to be completed.
-When a command times out, an error is reported to the \Condor{startd}.
+  \label{param:VMGAHPReqTimeout}
+  An integer number of seconds that defaults to 300 (five minutes),
+  representing the amount of time Condor will wait for a command issued
+  from the \Condor{starter} to the \Condor{vm-gahp} to be completed.
+  When a command times out, an error is reported to the \Condor{startd}.
 
 \item[\Macro{VM\_RECHECK\_INTERVAL}]
-\label{param:VMRecheckInterval}
-An integer number of seconds that defaults to 600 (ten minutes),
-representing the amount of time Condor waits after a
-virtual machine error, and before rechecking.
-If the recheck fails, Condor disables the vm universe.
+  \label{param:VMRecheckInterval}
+  An integer number of seconds that defaults to 600 (ten minutes),
+  representing the amount of time the \Condor{startd} waits after a
+  virtual machine error as reported by the \Condor{starter},
+  and before checking a final time on the status of the virtual machine.
+  If the check fails, Condor disables starting any new vm universe jobs
+  by removing the \Attr{VM\_Type} attribute from the machine ClassAd.
 
 \item[\Macro{VM\_SOFT\_SUSPEND}]
-\label{param:VMSoftSuspend}
-A boolean value that defaults to \Expr{False},
-causing Condor to free the memory of a vm universe job when
-the job is suspended.
-When \Expr{True}, the memory is not freed.
+  \label{param:VMSoftSuspend}
+  A boolean value that defaults to \Expr{False},
+  causing Condor to free the memory of a vm universe job when
+  the job is suspended.
+  When \Expr{True}, the memory is not freed.
 
 \item[\Macro{VM\_UNIV\_NOBODY\_USER}]
-\label{param:VMUnivNobodyUser}
+  \label{param:VMUnivNobodyUser}
+  Identifies a login name of a user with a home directory that
+  may be used for job owner of a vm universe job.
+  The \Login{nobody} user normally utilized when the job arrives
+  from a different UID domain will not be allowed to invoke a VMware
+  virtual machine.
 
 \item[\Macro{ALWAYS\_VM\_UNIV\_USE\_NOBODY}]
-\label{param:AlwaysVMUnivUseNobody}
+  \label{param:AlwaysVMUnivUseNobody}
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, all vm universe jobs (independent of their
+  UID domain) will run as the user defined in \MacroNI{VM\_UNIV\_NOBODY\_USER}.
 \end{description}
 
 The following configuration variable may be specified in both
@@ -6374,13 +6369,13 @@ virtual machine-specific configuration file used by the \Condor{vm-gahp}.
 
 \begin{description}
 \item[\Macro{VM\_NETWORKING}]
-\label{param:VMNetworking}
-A boolean variable describing if networking is supported.
-When not defined, the default value is \Expr{False}.
-When defined in both configuration files,
-the value used is a logical AND of both values,
-implying that the value will only be \Expr{True} when
-both files define \MacroNI{VM\_NETWORKING} to be \Expr{True}.
+  \label{param:VMNetworking}
+  A boolean variable describing if networking is supported.
+  When not defined, the default value is \Expr{False}.
+  When defined in both configuration files,
+  the value used is a logical AND of both values,
+  implying that the value will only be \Expr{True} when
+  both files define \MacroNI{VM\_NETWORKING} to be \Expr{True}.
 \end{description}
 
 The following configuration variables are not specific to either the VMware
@@ -6388,27 +6383,34 @@ or the Xen virtual machine software, but will appear in the
 virtual machine-specific configuration file used by the \Condor{vm-gahp}.
 
 \begin{description}
+
+\item[\Macro{VM\_TYPE}]
+  \label{param:VMType}
+  Specifies the type of supported virtual machine software.
+  It will be the value \verb@xen@ or \verb@vmware@.
+  There is no default value for this required configuration variable.
+
 \item[\Macro{VM\_VERSION}]
-\label{param:VMVersion}
-Specifies the version of supported virtual machine software
-defined by \MacroNI{VM\_TYPE}.
-There is no default value for this required configuration variable.
+  \label{param:VMVersion}
+  Specifies the version of supported virtual machine software
+  defined by \MacroNI{VM\_TYPE}.
+  There is no default value for this required configuration variable.
 
 \item[\Macro{VM\_MAX\_MEMORY}]
-\label{param:VMMaxMemory}
-An integer to specify the maximum amount of memory in Mbytes
-that may be used by the supported virtual machine program.
-There is no default value for this required configuration variable.
+  \label{param:VMMaxMemory}
+  An integer to specify the maximum amount of memory in Mbytes
+  that may be used by the supported virtual machine program.
+  There is no default value for this required configuration variable.
 
 \item[\Macro{VM\_NETWORKING\_TYPE}]
-\label{param:VMNetworkingType}
-A string describing the type of networking,
-required and relevant only when \MacroNI{VM\_NETWORKING} is \Expr{True}.
-Defined strings are
-\begin{verbatim}
-  bridge_dhcp
-  nat_dhcp
-\end{verbatim}
+  \label{param:VMNetworkingType}
+  A string describing the type of networking,
+  required and relevant only when \MacroNI{VM\_NETWORKING} is \Expr{True}.
+  Defined strings are
+  \begin{verbatim}
+    bridge_dhcp
+    nat_dhcp
+  \end{verbatim}
 
 \end{description}
 
@@ -6419,13 +6421,20 @@ correctly interface with the VMware software.
 
 \begin{description}
 \item[\Macro{VMWARE\_PERL}]
-\label{param:VMwarePerl}
+  \label{param:VMwarePerl}
+  The complete path and file name to \Prog{Perl}.
+  There is no default value for this required variable.
 
 \item[\Macro{VMWARE\_SCRIPT}]
-\label{param:VMwareScript}
+  \label{param:VMwareScript}
+  The complete path and file name of the script that controls VMware.
+  There is no default value for this required variable.
 
 \item[\Macro{VMWARE\_NETWORKING\_TYPE}]
-\label{param:VMwareNetworkingType}
+  \label{param:VMwareNetworkingType}
+  A string that defaults to the value \verb@nat@,
+  identifying the type of VMware networking used.
+  Defined types are \verb@nat@ or \verb@bridged@.
 \end{description}
 
 The following configuration variables are specific to the Xen
@@ -6442,56 +6451,162 @@ hardware virtualization such as Intel VT and AMD-V.
 When not defined, the default value is \Expr{False}.
 
 \item[\Macro{XEN\_SCRIPT}]
-\label{param:XenScript}
+  \label{param:XenScript}
+  The complete path and file name of the script that controls Xen.
+  There is no default value for this required variable.
 
 \item[\Macro{XEN\_DEFAULT\_KERNEL}]
-\label{param:XenDefaultKernel}
+  \label{param:XenDefaultKernel}
+  The complete path and executable name of a Xen kernel to be utilized
+  if the job's submission does not specify its own kernel image.
 
 \item[\Macro{XEN\_DEFAULT\_RAMDISK}]
-\label{param:XenDefaultRAMDisk}
+  \label{param:XenDefaultRAMDisk}
+  The complete path and image file name for the initrd image,
+  if used with the default kernel image.
 
 \item[\Macro{XEN\_BOOTLOADER}]
-\label{param:XenBootloader}
+  \label{param:XenBootloader}
+  A required full path and executable for the Xen bootloader,
+  if the kernel image includes a disk image.
 
 \item[\Macro{XEN\_VIF\_PARAMETER}]
-\label{param:XenVIFParameter}
+  \label{param:XenVIFParameter}
+  An optional string used in networking that the \Condor{vm-gahp}
+  inserts into the Xen configuration file for a vif parameter.
+  If not defined, then the inserted string will be
+  \begin{verbatim}
+  vif = ['']
+  \end{verbatim}
 
 \item[\Macro{XEN\_IMAGE\_IO\_TYPE}]
-\label{param:XenImageIOType}
+  \label{param:XenImageIOType}
+  An optional string that defines a file I/O device.
+  For Xen checkpoints, all machines with a shared file system must
+  use the same file I/O type.
+  When not defined, the default value uses a loopback device:
+  \begin{verbatim}
+  XEN_IMAGE_IO_TYPE = file:
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_KERNEL}]
-\label{param:XenVTKernel}
+  \label{param:XenVTKernel}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  kernel="/usr/lib/xen/boot/hvmloader"
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_KERNEL = "/usr/lib/xen/boot/hvmloader"
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_BUILDER}]
-\label{param:XenVTBuilder}
+  \label{param:XenVTBuilder}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  builder='hvm'
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_BUILDER = 'hvm'
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_SHADOW\_MEMORY}]
-\label{param:XenVTShadowMemory}
+  \label{param:XenVTShadowMemory}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  shadow_memory=8
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_SHADOW_MEMORY = 8
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_DEVICE\_MODEL}]
-\label{param:XenVTDeviceModel}
+  \label{param:XenVTDeviceModel}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  device_model=/usr/lib/xen/bin/qemu-dm
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_DEVICE_MODEL = '/usr/lib/xen/bin/qemu-dm'
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_SDL}]
-\label{param:XenVTSDL}
+  \label{param:XenVTSDL}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  sdl=0
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_SDL = 0
+  \end{verbatim}
 
-\item[\Macro{XEN\_VT\_VMC}]
-\label{param:XenVTVMC}
+\item[\Macro{XEN\_VT\_VNC}]
+  \label{param:XenVTVNC}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  vnc=1
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_VNC = 1
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_STDVGA}]
-\label{param:XenVTSTDVGA}
+  \label{param:XenVTSTDVGA}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  stdvga=0
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_STDVGA = 0
+  \end{verbatim}
 
 \item[\Macro{XEN\_VT\_SERIAL}]
-\label{param:XenVTSerial}
+  \label{param:XenVTSerial}
+  An optional string that the \Condor{vm-gahp}
+  inserts into the Xen configuration file, relating to hardware virtualization.
+  As an example, the string inserted is
+  \begin{verbatim}
+  serial='pty'
+  \end{verbatim}
+  for a configuration variable definition of
+  \begin{verbatim}
+  XEN_VT_SERIAL = 'pty'
+  \end{verbatim}
 
 \item[\Macro{XEN\_DEVICE\_TYPE\_FOR\_VT}]
-\label{param:XenDeviceTypeForVT}
+  \label{param:XenDeviceTypeForVT}
+  Defaults to the string \verb@vbd:@ for paravirtualized guests.
+  Use the string \verb@ioemu:@ for unmodified guest domains. 
 
 \item[\Macro{XEN\_ALLOW\_HARDWARE\_VT\_SUSPEND}]
-\label{param:XenAllowHardwareVTSuspend}
+  \label{param:XenAllowHardwareVTSuspend}
+  A boolean value that defaults to \Expr{False}.
+  In the future, as Xen hardware virtualization guests may be saved
+  and restored, this configuration variable may be utilized.
 
 \end{description}
 
-These macros affect the configuration of Condor where Condor is
+The following two macros affect the configuration of Condor where Condor is
 running on a host machine, the host machine is running an
 inner virtual machine,
 and Condor is also running on that inner virtual machine.

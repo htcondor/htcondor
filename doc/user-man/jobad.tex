@@ -209,7 +209,7 @@ See section~\ref{sec:Job-Lease} for details on job leases.
 \index{JobPrio!job ClassAd attribute}
 \item[\AdAttr{JobPrio}:]  Integer priority for this job, set by
 \Condor{submit} or \Condor{prio}.  The default value is 0.  The higher
-the number, the worse the priority.
+the number, the greater (better) the priority.
 
 %%% ClassAd attribute: JobStartDate
 \index{ClassAd job attribute!JobStartDate}
@@ -257,6 +257,9 @@ universe.
 8 & MPI \\ \hline
 9 & grid \\ \hline
 10 & java \\ \hline
+11 & parallel \\ \hline
+12 & local \\ \hline
+13 & vm \\ \hline
 \end{tabular}
 \end{table}
 \end{center}

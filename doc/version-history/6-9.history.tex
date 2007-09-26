@@ -224,6 +224,15 @@ files made from the original version of the executable.
     \item The \Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES} setting was
       causing havoc for applications linked with GCB.
       This configuration setting is now always disabled if GCB is enabled.
+    \item Fixed a race condition in GCB\_connect() that would
+      frequently cause connect() attempts to fail, especially
+      non-blocking connections.
+    \item Fixed bugs in GCB\_select() when GCB changes the direction
+      of a connection from active to passive (for example, so that a
+      Condor daemon running behind a firewall will use an outbound
+      connection to communicate with a public client that had
+      attempted to initiate contact via the GCB broker).
+    \item Also improved logging at the GCB broker.
   \end{itemize}
 
   Additionally, there was a bug in how Condor was publishing the
@@ -236,6 +245,24 @@ files made from the original version of the executable.
 
   For more information about GCB, see section~\ref{sec:GCB} on
   page~\pageref{sec:GCB}. 
+
+\item The owner of the log file for the \Condor{gridmanager}
+  has changed to the \Login{condor} user.
+  In Condor 6.9.3 and previous versions, it was owned by the
+  user submitting the job.
+  Therefore, the owner of and permissions on an existing log file 
+  are likely to be incorrect.
+  Condor issues an error if the \Condor{gridmanager} is unable
+  to read and write the existing file.
+  To correct the problem, an administrator may modify file 
+  permissions such that the \Login{condor} user may read and
+  write the log file. 
+  Alternatively, an administrator may delete the file, and
+  Condor will create a new file with the expected owner and
+  permissions.
+  In addition, the definition for \Macro{GRIDMANAGER\_LOG}
+  in the \File{condor\_config.generic} file has changed for
+  Condor 6.9.4.
 
 \end{itemize}
 
@@ -474,10 +501,25 @@ mechanism that protects against this.
 \item Improved error descriptions when Condor-C encounters failures when
 sending input files to the remote schedd.
 
-\item Rare failure conditions during stagein would cause Condor-C to put
+\item Rare failure conditions during stage in would cause Condor-C to put
 the state of the job in the remote schedd into an invalid state in which
 it would run but later fail during stage out.  This now results in the
-job on the submit side going on hold with a stagein failure.
+job on the submit side going on hold with a staging failure.
+
+\item Fixed a bug which could cause \Condor{store\_cred} to crash during
+common use.
+
+\item Fixed a bug where the vanilla universe \Condor{starter} would possibly
+crash when running a job not as the owner of the job.
+
+\item Fixed a bug which would cause a \Condor{starter} being used for
+the local universe to core dump.
+
+\item Fixed a bug which caused the \Condor{schedd} to core dump while
+processing a job's crontab entries in the submit description file.
+
+\item Fixed a privilege separation bug in the standard universe 
+\Condor{starter}.
 
 \end{itemize}
 
@@ -485,10 +527,32 @@ job on the submit side going on hold with a stagein failure.
 
 \begin{itemize}
 
-\item None.
+\item \SubmitCmd{grid} universe jobs for the gt4 grid type do not work, 
+if Condor daemons are started as root
+and there is file transfer associated with or specified by the job.
+These jobs are placed on hold.
+
+\item The \Macro{STARTD\_RESOURCE\_PREFIX} setting on Windows results
+in broken behavior on both Condor 6.9.3 and 6.9.4. Specifically, when
+this setting is given a value other than its default (``slot''), all
+jobs will run using the ``condor-reuse-slot1'' user account,
+regardless of the actual slot used for execution.
 
 \end{itemize}
 
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item New documentation for the new \SubmitCmd{vm} universe
+in the User's Manual, section~\ref{sec:vmuniverse}.
+Definitions of configuration variables for the \SubmitCmd{vm} universe are in
+section~\ref{sec:Config-VMs}.
+
+\item New RDBMS schema tables added for Quill in
+section~\ref{sec:Quill-Schema}.
+
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-6-9-3}Version 6.9.3}
@@ -788,7 +852,7 @@ using the ProcD is that it is newer, less-hardened code.
 \item Added new configuration variable \Macro{STARTER\_UPLOAD\_TIMEOUT},
   which allows a configurable time (in seconds) for a timeout used by the 
   \Condor{starter}.
-  The default value of 200 seconds replaces the previously hardcoded
+  The default value of 200 seconds replaces the previously hard coded
   value of 20 seconds.
   This timeout before job failure is to upload output files to the
   \Condor{shadow} upon job exit.

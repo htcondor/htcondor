@@ -209,6 +209,97 @@ priority job or because the machine owner wants the machine back.
 Always set to the string literal \AdStr{Job}, because machine ClassAds
 always want to be matched with jobs, and vice-versa.
 %
+\index{ClassAd machine attribute!TotalTimeBackfillBusy}
+\item[\AdAttr{TotalTimeBackfillBusy}:] The number of seconds
+that this machine (slot) has accumulated within the
+backfill busy state and activity pair since the \Condor{startd}
+began executing.
+This attribute will only be defined if it has a value greater than 0.
+%
+\index{ClassAd machine attribute!TotalTimeBackfillIdle}
+\item[\AdAttr{TotalTimeBackfillIdle}:] The number of seconds
+that this machine (slot) has accumulated within the
+backfill idle state and activity pair since the \Condor{startd}
+began executing.
+This attribute will only be defined if it has a value greater than 0.
+%
+\index{ClassAd machine attribute!TotalTimeBackfillKilling}
+\item[\AdAttr{TotalTimeBackfillKilling}:] The number of seconds
+that this machine (slot) has accumulated within the
+backfill killing state and activity pair since the \Condor{startd}
+began executing.
+This attribute will only be defined if it has a value greater than 0.
+%
+\index{ClassAd machine attribute!TotalTimeClaimedBusy}
+\item[\AdAttr{TotalTimeClaimedBusy}:] The number of seconds
+that this machine (slot) has accumulated within the
+claimed busy state and activity pair since the \Condor{startd}
+began executing.
+This attribute will only be defined if it has a value greater than 0.
+%
+\index{ClassAd machine attribute!TotalTimeClaimedIdle}
+\item[\AdAttr{TotalTimeClaimedIdle}:] The number of seconds
+that this machine (slot) has accumulated within the
+claimed idle state and activity pair since the \Condor{startd}
+began executing.
+This attribute will only be defined if it has a value greater than 0.
+%
+\index{ClassAd machine attribute!TotalTimeClaimedRetiring}
+\item[\AdAttr{TotalTimeClaimedRetiring}:] The number of seconds
+that this machine (slot) has accumulated within the
+claimed retiring state and activity pair since the \Condor{startd}
+began executing.
+This attribute will only be defined if it has a value greater than 0.
+%
+\index{ClassAd machine attribute!TotalTimeClaimedSuspended}
+\item[\AdAttr{TotalTimeClaimedSuspended}:] The number of seconds
+that this machine (slot) has accumulated within the
+claimed suspended state and activity pair since the \Condor{startd}
+began executing.
+This attribute will only be defined if it has a value greater than 0.
+%
+\index{ClassAd machine attribute!TotalTimeMatchedIdle}
+\item[\AdAttr{TotalTimeMatchedIdle}:] The number of seconds
+that this machine (slot) has accumulated within the
+matched idle state and activity pair since the \Condor{startd}
+began executing.
+This attribute will only be defined if it has a value greater than 0.
+%
+\index{ClassAd machine attribute!TotalTimeOwnerIdle}
+\item[\AdAttr{TotalTimeOwnerIdle}:] The number of seconds
+that this machine (slot) has accumulated within the
+owner idle state and activity pair since the \Condor{startd}
+began executing.
+This attribute will only be defined if it has a value greater than 0.
+%
+\index{ClassAd machine attribute!TotalTimePreemptingKilling}
+\item[\AdAttr{TotalTimePreemptingKilling}:] The number of seconds
+that this machine (slot) has accumulated within the
+preempting killing state and activity pair since the \Condor{startd}
+began executing.
+This attribute will only be defined if it has a value greater than 0.
+%
+\index{ClassAd machine attribute!TotalTimePreemptingVacating}
+\item[\AdAttr{TotalTimePreemptingVacating}:] The number of seconds
+that this machine (slot) has accumulated within the
+preempting vacating state and activity pair since the \Condor{startd}
+began executing.
+This attribute will only be defined if it has a value greater than 0.
+%
+\index{ClassAd machine attribute!TotalTimeUnclaimedBenchmarking}
+\item[\AdAttr{TotalTimeUnclaimedBenchmarking}:] The number of seconds
+that this machine (slot) has accumulated within the
+unclaimed benchmarking state and activity pair since the \Condor{startd}
+began executing.
+This attribute will only be defined if it has a value greater than 0.
+%
+\index{ClassAd machine attribute!TotalTimeUnclaimedIdle}
+\item[\AdAttr{TotalTimeUnclaimedIdle}:] The number of seconds
+that this machine (slot) has accumulated within the
+unclaimed idle state and activity pair since the \Condor{startd}
+began executing.
+This attribute will only be defined if it has a value greater than 0.
+%
 \index{ClassAd machine attribute!UidDomain}
 \item[\AdAttr{UidDomain}:] a domain name configured by the Condor 
 administrator which describes a cluster of machines which all have 
@@ -216,8 +307,8 @@ the same \File{passwd} file entries, and therefore all have the same logins.
 %
 \index{ClassAd machine attribute!VirtualMachineID}
 \item[\AdAttr{VirtualMachineID}:] 
-Starting with Condor version 6.9.3, this attribute is deprecated in
-favor of \AdAttr{SlotID} described above.
+Starting with Condor version 6.9.3, this attribute is now longer used.
+Instead, use \AdAttr{SlotID}, as described above.
 This will only be present if \Macro{ALLOW\_VM\_CRUFT} is TRUE.
 %
 \index{ClassAd machine attribute!VirtualMemory}

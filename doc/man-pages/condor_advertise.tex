@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-advertise}\Condor{advertise}}{1}
-{Send a classad to the collector daemon}
+{Send a ClassAd to the \Condor{collector} daemon}
 \Synopsis \SynProg{\Condor{advertise}}
 \ToolArgsBase
 \oOptArg{-pool}{centralmanagerhostname[:portname]}
@@ -12,13 +12,11 @@
 \index{condor\_advertise command}
 
 \Description
-\Condor{advertise} sends a classad to the collector daemon on
+\Condor{advertise} sends a ClassAd to the \Condor{collector} daemon on
 the central manager machine.
-The classad may be contained in a file,
-whose name is given as the final argument. If the file
-argument is missing or equal to ``-'', then the classad is read
-from standard input.
-Which daemon's classad to update is specified by the first
+The ClassAd is contained in a file,
+which is specified by the second required argument.
+Which daemon's ClassAd to update is specified by the first
 required argument.
 The \Arg{update-command} may be one of the following strings:
 \begin{description}
@@ -37,7 +35,7 @@ The \Arg{update-command} may be one of the following strings:
 \end{description}
 
 \Condor{advertise} can also be used to invalidate and delete
-classads currently held by the collector daemon.  In this case
+ClassAds currently held by the \Condor{collector} daemon.  In this case
 the \Arg{update-command} will be one of the following strings:
 \begin{description}
 \item[INVALIDATE\_STARTD\_ADS]
@@ -54,19 +52,26 @@ the \Arg{update-command} will be one of the following strings:
 \item[INVALIDATE\_STORAGE\_ADS]
 \end{description}
 
-When an INVALIDATE command is given the provided classad consists
-of only three entries.  "MyType" should always be set to "Query."
-"TargetType" should be set to the MyType of the ad you want to
-delete.  "Requirements" is an expression evaluated in the context
-of ads of TargetType.  When Requirements evaluates to TRUE, the
-matching ad is invalidated.  For example, the following ad, when
-used with INVALIDATE\_STARTD\_ADS will delete the classad for the
-machine named condor.example.com.
+For any of these INVALIDATE commands, the ClassAd in the required file
+consists of three entries.
+The file contents will be similar to:
 \begin{verbatim}
 MyType = "Query"
 TargetType = "Machine"
 Requirements = Name == "condor.example.com"
 \end{verbatim}
+The definition for \Attr{MyType} is always \Expr{Query}.
+\Attr{TargetType} is set to the \Attr{MyType} of the ad to be deleted.
+This \Attr{MyType} is
+\Expr{DaemonMaster} for the \Condor{master} ClassAd,
+\Expr{Machine} for the \Condor{startd} ClassAd,
+\Expr{Scheduler} for the \Condor{schedd} ClassAd, and
+\Expr{Negotiator} for the \Condor{negotiator} ClassAd.
+\Attr{Requirements} is an expression evaluated within the context
+of ads of \Attr{TargetType}.
+When \Attr{Requirements} evaluates to \Expr{True},
+the matching ad is invalidated.  
+A full example is given below.
 
 
 \begin{Options}
@@ -83,12 +88,12 @@ Requirements = Name == "condor.example.com"
 \end{Options}
 
 \GenRem
-The job and machine classads are regularly updated.
+The job and machine ClassAds are regularly updated.
 Therefore, the result of \Condor{advertise} is likely to be
 overwritten in a very short time.
 It is unlikely that either Condor users (those who submit jobs)
 or administrators will ever have a use for this command.
-If it is desired to update or set a classad attribute, the
+If it is desired to update or set a ClassAd attribute, the
 \Condor{config\_val} command is the proper command to use.
 
 For those administrators who do need \Condor{advertise}, you can 
@@ -104,15 +109,34 @@ If both of the above are included, the \Condor{collector} will
 automatically include the following attributes:
 
 UpdatesTotal - The actual number of advertisements for this
-daemon that the collector has seen.
+daemon that the \Condor{collector} has seen.
 
 UpdatesLost - The number of advertisements that for this daemon
-that the collector expected to see, but didn't.
+that the \Condor{collector} expected to see, but did not.
 
 UpdatesSequenced - The total of UpdatesTotal and UpdatesLost.
 
 UpdatesHistory - See \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE} in
 section~\ref{sec:Collector-Config-File-Entries}.
+
+\Examples
+
+Assume that a machine called condor.example.com is turned off,
+yet its \Condor{startd} ClassAd does not expire for another 20 minutes.
+To avoid this machine being matched, an administrator chooses
+to delete the machine's \Condor{startd} ClassAd.
+Create a file (called \File{remove\_file} in this example)
+with the three required attributes:
+\begin{verbatim}
+MyType = "Query"
+TargetType = "Machine"
+Requirements = Name == "condor.example.com"
+\end{verbatim}
+
+This file is used with the command:
+\begin{verbatim}
+% condor_advertise INVALIDATE_STARTD_ADS remove_file 
+\end{verbatim}
 
 \ExitStatus
 

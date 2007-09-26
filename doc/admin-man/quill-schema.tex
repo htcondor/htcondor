@@ -1,0 +1,727 @@
+\newcommand{\cd}{{C}ondor}
+\newcommand{\qp}{{Q}uill}
+\newcommand{\ca}{{C}lass{A}d}
+\newcommand{\cas}{{C}lass{A}ds}
+\newcommand{\pg}{{P}ostgre{SQL}}
+\newcommand{\oc}{{O}racle}
+\newcommand{\db}{{D}bmsd}
+
+\noindent \textbf{Notes:}
+\begin{itemize}
+\item The type ``timestamp(\textit{precision}) with timezone'' is
+abbreviated ``ts(\textit{precision}) w tz.''
+\item The column O. Type is an abbreviation for Oracle Type.
+\item The column P. Type is an abbreviation for {PostgreSQL} Type.
+\end{itemize}
+Although the current version of Condor does not support Oracle, we
+anticipate supporting it in the future, so Oracle support in this
+schema document is for future reference.
+\vspace{24pt}
+
+%%% ADMINISTRATIVE TABLES
+\subsubsection{Administrative Tables}
+\begin{center}
+% currencies
+  \begin{tabular}{|l|l|l|p{3.3in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of currencies Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    datasource & varchar(4000) & varchar(4000) & Identifier of the data source.\\ \hline
+    lastupdate & ts(3) w tz & ts(3) w tz & Time of the last update sent to the database from the data source.\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% error_sqllogs
+  \begin{tabular}{|l|l|l|p{3.2in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of error\_sqllogs Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    logname & varchar(100) & varchar(100) & Name of the {SQL} log file causing a {SQL} error. \\ \hline
+    host & varchar(50) & varchar(50) & The host where the {SQL} log resides.\\ \hline
+    lastmodified & ts(3) w tz & ts(3) w tz & The last modified time of the {SQL} log. \\ \hline
+    errorsql & varchar(4000) & text & The {SQL} statement causing an error.\\ \hline
+    logbody & clob & text & The body of the {SQL} log.\\ \hline
+    errormessage & varchar(4000) & varchar(4000) & The description of the error.\\
+    \multicolumn{4}{|l|}{\textbf{INDEX:} Index named error\_sqllog\_idx on (logname, host, lastmodified)}\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% maintenance_log
+  \begin{tabular}{|l|l|l|p{3.4in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of maintenance\_log Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    eventts & ts(3) w tz & ts(3) w tz & Time the event occurred.\\ \hline
+    eventmsg & varchar(4000) & varchar(4000) & Message describing the event.\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% quilldbmonitor
+  \begin{tabular}{|l|l|l|p{4.1in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of quilldbmonitor Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    dbsize & integer & integer & Size of the database in megabytes.\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% quill_schema_version
+  \begin{tabular}{|l|l|l|p{3.6in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of quill\_schema\_version Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    major & int & int & Major version number. \\ \hline
+    minor & int & int & Minor version number. \\ \hline
+    back\_to\_major & int & int & The major number of the old version this version is compatible to. \\ \hline
+    back\_to\_minor & int & int & The minor number of the old version this version is compatible to. \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% throwns
+  \begin{tabular}{|l|l|l|p{3.2in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of throwns Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    filename & varchar(4000) & varchar(4000) & The name of the log that was truncated. \\ \hline
+    machine\_id & varchar(4000) & varchar(4000) & The machine where the truncated log resides. \\ \hline
+    log\_size & numeric(38) & numeric(38) & The size of the truncated log. \\ \hline
+    throwtime & ts(3) w tz & ts(3) w tz & The time when the truncation occurred. \\ \hline
+  \end{tabular}
+\vspace{24pt}
+\end{center}
+
+
+%%% DAEMON TABLES
+\subsubsection{Daemon Tables}
+\begin{center}
+% daemons_horizontal
+  \begin{tabular}{|l|l|l|p{2.3in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of daemons\_horizontal Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    mytype & varchar(100) & varchar(100) & The type of daemon \ca, e.g. ``Master'' \\ \hline
+    name & varchar(500) & varchar(500) & The name identifier of the daemon \ca. \\ \hline
+    lastreportedtime & ts(3) w tz & ts(3) w tz & Time when the daemon last reported to \qp. \\ \hline
+    monitorselftime & ts(3) w tz & ts(3) w tz & The time when the daemon last collected information about itself. \\ \hline
+    monitorselfcpuusage & numeric(38) & numeric(38) & The amount of {CPU} this daemon has used. \\ \hline
+    monitorselfimagesize & numeric(38) & numeric(38) & The amount of virtual memory this daemon has used. \\ \hline
+    monitorselfresidentsetsize & numeric(38) & numeric(38) & The amount of physical memory this daemon has used. \\ \hline
+    monitorselfage & integer & integer & How long the daemon has been running. \\ \hline
+    updatesequencenumber & integer & integer & The sequence number associated with the update. \\ \hline
+    updatestotal & integer & integer & The number of updates received from the daemon. \\ \hline
+    updatessequenced & integer & integer & The number of updates that were in order. \\ \hline
+    updateslost & integer & integer & The number of updates that were lost. \\ \hline
+    updateshistory & varchar(4000) & varchar(4000) & Bitmask of the last 32 updates. \\ \hline
+    lastreportedtime\_epoch & integer & integer & The equivalent epoch time of last heard from. \\ \hline
+    \multicolumn{4}{|l|}{\textbf{PRIMARY KEY:} (mytype, name)} \\ \hline
+    \multicolumn{4}{|l|}{\textbf{NOT NULL:} mytype and name cannot be null} \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% daemons_horizontal_history
+  \begin{tabular}{|l|l|l|p{2.3in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of daemons\_horizontal\_history Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    mytype & varchar(100) & varchar(100) & The type of daemon \ca, e.g. ``Master'' \\ \hline
+    name & varchar(500) & varchar(500) & The name identifier of the daemon \ca. \\ \hline
+    lastreportedtime & ts(3) w tz & ts(3) w tz &  Time when the daemon last reported to \qp. \\ \hline
+    monitorselftime & ts(3) w tz & ts(3) w tz & The time when the daemon last collected information about itself. \\ \hline
+    monitorselfcpuusage & numeric(38) & numeric(38) & The amount of {CPU} this daemon has used. \\ \hline
+    monitorselfimagesize & numeric(38) & numeric(38) & The amount of virtual memory this daemon has used. \\ \hline
+    monitorselfresidentsetsize & numeric(38) & numeric(38) & The amount of physical memory this daemon has used. \\ \hline
+    monitorselfage & integer & integer & How long the daemon has been running. \\ \hline
+    updatesequencenumber & integer & integer & The sequence number associated with the update. \\ \hline
+    updatestotal & integer & integer & The number of updates received from the daemon. \\ \hline
+    updatessequenced & integer & integer & The number of updates that were in order. \\ \hline
+    updateslost & integer & integer & The number of updates that were lost. \\ \hline
+    updateshistory & varchar(4000) & varchar(4000) &  Bitmask of the last 32 updates. \\ \hline
+    endtime & ts(3) w tz & ts(3) w tz & End of when the \ca\ is valid. \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% daemons_vertical
+  \begin{tabular}{|l|l|l|p{3.1in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of daemons\_vertical Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    mytype & varchar(100) & varchar(100) & The type of daemon \ca, e.g. ``Master'' \\ \hline
+    name & varchar(500) & varchar(500) &  The name identifier of the daemon \ca. \\ \hline
+    attr & varchar(4000) & varchar(4000) & Attribute name.\\ \hline
+    val & clob & text & Attribute value.\\ \hline
+    lastreportedtime & ts(3) w tz & ts(3) w tz & Time when the daemon last reported to \qp.\\ \hline
+    \multicolumn{4}{|l|}{\textbf{PRIMARY KEY:} (mytype, name, attr)} \\ \hline
+    \multicolumn{4}{|l|}{\textbf{NOT NULL:} mytype, name, and attr cannot be null} \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% daemons_vertical_history
+  \begin{tabular}{|l|l|l|p{3.1in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of daemons\_vertical\_history Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    mytype & varchar(100) & varchar(100) & The type of daemon \ca, e.g. ``Master'' \\ \hline
+    name & varchar(500) & varchar(500) & The name identifier of the daemon \ca. \\ \hline
+    lastreportedtime & ts(3) w tz & ts(3) w tz &  Time when the daemon last reported to \qp.\\ \hline
+    attr & varchar(4000) & varchar(4000) & Attribute name.\\ \hline
+    val & clob & text & Attribute value.\\ \hline
+    endtime & ts(3) w tz & ts(3) w tz & End of when the \ca\ is valid. \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% submitters_horizontal
+  \begin{tabular}{|l|l|l|p{3.1in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of submitters\_horizontal table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    name & varchar(500) & varchar(500) & Name of the submitter \ca. \\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd where the submitter ad is from. \\ \hline
+    lastreportedtime & ts(3) w tz & ts(3) w tz & Last time a submitter \ca\ was sent to \qp. \\ \hline
+    idlejobs & integer & integer & Number of idle jobs of the submitter. \\ \hline
+    runningjobs & integer & integer & Number of running jobs of the submitter. \\ \hline
+    heldjobs & integer & integer & Number of held jobs of the submitter. \\ \hline
+    flockedjobs & integer & integer & Number of flocked jobs of the submitter. \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% submitters_horizontal_history
+  \begin{tabular}{|l|l|l|p{3.1in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of submitters\_horizontal\_history table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    name & varchar(500) & varchar(500) & Name of the submitter \ca. \\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd where the submitter ad is from. \\ \hline
+    lastreportedtime & ts(3) w tz & ts(3) w tz & Last time a submitter \ca\ was sent to \qp. \\ \hline
+    idlejobs & integer & integer & Number of idle jobs of the submitter. \\ \hline
+    runningjobs & integer & integer & Number of running jobs of the submitter. \\ \hline
+    heldjobs & integer & integer & Number of held jobs of the submitter. \\ \hline
+    flockedjobs & integer & integer & Number of flocked jobs of the submitter. \\ \hline
+    endtime & ts(3) w tz & ts(3) w tz & End of when the \ca\ is valid. \\ \hline
+  \end{tabular}
+\vspace{24pt}
+\end{center}
+
+
+%%% FILES TABLES
+\subsubsection{Files Tables}
+\begin{center}
+% files
+  \begin{tabular}{|l|l|l|p{3.2in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of files Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    file\_id & int & int & Unique numeric identifier of the file.\\ \hline
+    name & varchar(4000) & varchar(4000) & File name.\\ \hline
+    host & varchar(4000) & varchar(4000) & Name of machine where the file is located.\\ \hline
+    path & varchar(4000) & varchar(4000) & Directory path to the file.\\ \hline
+    acl\_id & integer & integer & Not yet used, null.\\ \hline
+    lastmodified & ts(3) w tz & ts(3) w tz & Timestamp of the file.\\ \hline
+    filesize & numeric(38) & numeric(38) & Size of the file in bytes.\\ \hline
+    checksum & varchar(32) & varchar(32) & MD5 checksum of the file.\\ \hline
+    \multicolumn{4}{|l|}{\textbf{PRIMARY KEY:} file\_id} \\ \hline
+    \multicolumn{4}{|l|}{\textbf{NOT NULL:} file\_id cannot be null} \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% fileusages
+  \begin{tabular}{|l|l|l|p{3.2in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of fileusages Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    globaljobid & varchar(4000) & varchar(4000) & Global identifier of the job that used the file.\\ \hline
+    file\_id & int & int & Numeric identifier of the file.\\ \hline
+    usagetype & varchar(4000) & varchar(4000) & Type of use of the file by the job, e.g., input, output, command.\\ \hline
+    \multicolumn{4}{|l|}{\textbf{REFERENCE:} file\_id references files(file\_id)} \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% transfers
+  \begin{tabular}{|l|l|l|p{2.4in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of transfers Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    globaljobid & varchar(4000) & varchar(4000) & Unique global identifier for the job.\\ \hline
+    src\_name & varchar(4000) & varchar(4000) & Name of the file on the source machine.\\ \hline
+    src\_host & varchar(4000) & varchar(4000) & Name of the source machine.\\ \hline
+    src\_port & integer & integer & Source port number used for the transfer.\\ \hline
+    src\_path & varchar(4000) & varchar(4000) & Path to the file on the source machine.\\ \hline
+    src\_daemon & varchar(30) & varchar(30) & \cd\ demon performing the transfer on the source machine.\\ \hline
+    src\_protocol & varchar(30) & varchar(30) & The protocol used on the source machine.\\ \hline
+    src\_credential\_id & integer & integer & Not yet used, null.\\ \hline
+    src\_acl\_id & integer & integer & Not yet used, null.\\ \hline
+    dst\_name & varchar(4000) & varchar(4000) & Name of the file on the destination machine.\\ \hline
+    dst\_host & varchar(4000) & varchar(4000) & Name of the destination machine.\\ \hline
+    dst\_port & integer & integer & Destination port number used for the transfer.\\ \hline
+    dst\_path & varchar(4000) & varchar(4000) & Path to the file on the destination machine.\\ \hline
+    dst\_daemon & varchar(30) & varchar(30) & \cd\ daemon receiving the transfer on the destination machine.\\ \hline
+    dst\_protocol & varchar(30) & varchar(30) & The protocol used on the destination machine.\\ \hline
+    dst\_credential\_id & integer & integer & Not yet used, null.\\ \hline
+    dst\_acl\_id & integer & integer &  Not yet used, null.\\ \hline
+    transfer\_intermediary\_id & integer & integer &  Not yet used, null; will use someday if a proxy is used.\\ \hline
+    transfer\_size\_bytes & numeric(38) & numeric (38) & Size of the data transfered in bytes.\\ \hline
+    elapsed & numeric(38) & numeric(38) & Number of seconds that elapsed during the transfer.\\ \hline
+    checksum & varchar(256) & varchar(256) & Checksum of the file.\\ \hline
+    transfer\_time & ts(3) w tz & ts(3) w tz & Time when the transfer took place.\\ \hline
+    last\_modified & ts(3) w tz & ts(3) w tz & Last modified time for the file that was transfered.\\ \hline
+    is\_encrypted & varchar(5) & varchar(5) & (boolean) True if the file is encrypted.\\ \hline
+    delegation\_method\_id & integer & integer & Not yet used, null.\\ \hline
+    completion\_code & integer & integer & Indicates whether the transfer failed or succeeded.\\ \hline
+  \end{tabular}
+\vspace{24pt}
+\end{center}
+
+
+%%% INTERFACE TABLES
+\subsubsection{Interface Tables}
+\begin{center}
+% cdb_users
+  \begin{tabular}{|l|l|l|p{3.4in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of cdb\_users Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    userid & varchar(30) & varchar(30) & Unique identifier of the user\\ \hline
+    password & character(32) & character(32) & Encrypted password\\ \hline
+    admin & varchar(5) & varchar(5) & (boolean) True if the user has administrator privileges\\ \hline
+  \end{tabular}\\
+\vspace{24pt}
+
+% l_eventtype
+  \begin{tabular}{|l|l|l|p{3.2in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of l\_eventtype Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    eventtype & integer & integer & Numeric type code of the event.\\ \hline
+    description & varchar(4000) & varchar(4000) & Description of the type of event associated with the eventtype code.\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% l_jobstatus
+  \begin{tabular}{|l|l|l|p{3.2in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of l\_jobstatus Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    jobstatus & integer & integer & Numeric code for job status.\\ \hline
+    abbrev & char(1) & char(1) & Single letter code for job status.\\ \hline
+    description & varchar(4000) & varchar(4000) & Description of job status.\\ \hline
+    \multicolumn{4}{|l|}{\textbf{PRIMARY KEY:} jobstatus} \\ \hline
+    \multicolumn{4}{|l|}{\textbf{NOT NULL:} jobstatus cannot be null} \\ \hline
+  \end{tabular}
+\vspace{24pt}
+\end{center}
+
+
+%%% JOBS TABLES
+\subsubsection{Jobs Tables}
+\begin{center}
+% clusterads_horizontal
+  \begin{tabular}{|l|l|l|p{2.6in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of clusterads\_horizontal Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd the job is submitted to.\\ \hline
+    cluster\_id & integer & integer & Cluster identifier for the job.\\ \hline
+    owner & varchar(30) & varchar(30) & User who submitted the job.\\ \hline
+    jobstatus & integer & integer & Current status of the job.\\ \hline
+    jobprio & integer & integer & Priority for this job.\\ \hline
+    imagesize & numeric(38) & numeric(38) & Estimate of memory image size of the job in kilobytes.\\ \hline
+    qdate & ts(3) w tz & ts(3) w tz & Time the job was submitted to the job queue.\\ \hline
+    remoteusercpu & numeric(38) & numeric(38) & Total number of seconds of user CPU time the job used on remote machines.\\ \hline
+    remotewallclocktime & numeric(38) & numeric(38) & Committed cumulative number of seconds the job has been allocated to a machine.\\ \hline
+    cmd & clob & text & Path to and filename of the job to be executed.\\ \hline
+    args & clob & text & Arguments passed to the job.\\ \hline
+    jobuniverse & integer & integer & The \cd\ universe used by the job.\\ \hline
+    \multicolumn{4}{|l|}{\textbf{PRIMARY KEY:} (scheddname, cluster\_id)} \\ \hline
+    \multicolumn{4}{|l|}{\textbf{NOT NULL:} scheddname and cluster\_id cannot be null} \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% clusterads_vertical
+\begin{tabular}{|l|l|l|p{3.2in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of clusterads\_vertical Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd that the job is submitted to.\\ \hline
+    cluster\_id & integer & integer & Cluster identifier for the job.\\ \hline
+    attr & varchar(2000) & varchar(2000) & Attribute name.\\ \hline
+    val & clob & text & Attribute value.\\ \hline
+    \multicolumn{4}{|l|}{\textbf{PRIMARY KEY:} (scheddname, cluster\_id, attr)} \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% jobs_horizontal_history Part 1
+  \begin{tabular}{|l|l|l|p{2.4in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of jobs\_horizontal\_history Table -- Part 1 of 3}}
+\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd that submitted the job.\\ \hline
+    scheddbirthdate & integer & integer & The birth date of the schedd where the job is submitted.\\ \hline
+    cluster\_id & integer & integer & Cluster identifier for the job.\\ \hline
+    proc\_id & integer & integer & Process identifier for the job.\\ \hline
+    qdate & ts(3) w tz & ts(3) w tz & Time the job was submitted to the job queue.\\ \hline
+    owner & varchar(30) & varchar(30) & User who submitted the job.\\ \hline
+    globaljobid & varchar(4000) & varchar(4000) & Unique global identifier for the job.\\ \hline
+    numckpts & integer & integer & Number of checkpoints written by the job during its lifetime.\\ 
+\hline
+    numrestarts & integer & integer & Number of restarts from a checkpoint attempted by the job in its lifetime.\\ \hline
+    numsystemholds & integer & integer & Number of times Condor-G placed the job on hold.\\ \hline
+    condorversion & varchar(4000) & varchar(4000) & Version of \cd\ that ran the job.\\ \hline
+    condorplatform & varchar(4000) & varchar(4000) & Platform of the computer where the schedd runs.\\ \hline
+    rootdir & varchar(4000) & varchar(4000) & Root directory on the system where the job is submitted from.\\ \hline
+    iwd & varchar(4000) & varchar(4000) & Initial working directory of the job.\\ \hline
+    jobuniverse & integer & integer & The Condor universe used by the job.\\ \hline
+    cmd & clob & text & Path to and filename of the job to be executed.\\ \hline
+    minhosts & integer & integer & Minimum number of hosts that must be in the claimed state for this job, before the job may enter the running state.\\ \hline
+    maxhosts & integer & integer & Maximum number of hosts this job would like to claim.\\ \hline
+    jobprio & integer & integer & Priority for this job.\\ \hline
+    negotiation\_user\_name & varchar(4000) & varchar(4000) & User name in which the job is negotiated.\\ \hline
+    env & clob & text & Environment under which the job ran.\\ \hline
+    userlog & varchar(4000) & varchar(4000) & User log where the job events are written to.\\ \hline
+    coresize & numeric(38) & numeric(38) & Maximum allowed size of the core file.\\ \hline
+    \multicolumn{4}{|c|}{\textbf{Table Continues on Next Page}}\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% jobs_horizontal_history Part 2
+  \begin{tabular}{|l|l|l|p{2.6in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of jobs\_horizontal\_history Table -- Part 2 of 3}}
+\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    killsig & varchar(4000) & varchar(4000) & Signal to be sent if the job is put on hold.\\ \hline
+    stdin & varchar(4000) & varchar(4000) & The file used as stdin.\\ \hline
+    transferin & varchar(5) & varchar(5) & (boolean) For globus universe jobs. True if input should be transferred to the remote machine.\\ \hline
+    stdout & varchar(4000) & varchar(4000) & The file used as stdout.\\ \hline
+    transferout & varchar(5) & varchar(5) & (boolean) For globus universe jobs. True if output should be transferred back to the submit machine.\\ \hline
+    stderr & varchar(4000) & varchar(4000) & The file used as stderr.\\ \hline
+    transfererr & varchar(5) & varchar(5) & (boolean) For globus universe jobs. True if error output should be transferred back to the submit machine.\\ \hline
+    shouldtransferfiles & varchar (4000) & varchar(4000) & Whether \cd\ should transfer files to and from the machine where the job runs.\\ \hline
+    transferfiles & varchar(4000) & varchar(4000) & Depreciated. Similar to shouldtransferfiles.\\ \hline
+    executablesize & numeric(38) & numeric(38) & Size of the executable in kilobytes.\\ \hline
+    diskusage & integer & integer & Size of the executable and input files to be transferred.\\ \hline
+    filesystemdomain & varchar(4000) & varchar(4000) & Name of the networked file system used by the job.\\ \hline
+    args & clob & text & Arguments passed to the job.\\ \hline
+    lastmatchtime & ts(3) w tz & ts(3) w tz & Time when the job was last successfully matched with a resource.\\ \hline
+    numjobmatches & integer & integer & Number of times the negotiator matches the job with a resource.\\ \hline
+    jobstartdate & ts(3) w tz & ts(3) w tz & Time when the job first began running.\\ \hline
+    jobcurrentstartdate & ts(3) w tz & ts(3) w tz & Time when the job's current run started.\\ \hline
+    jobruncount & integer & integer & Number of times a shadow has been started for the job.\\ \hline
+    filereadcount & numeric(38) & numeric(38) & Number of read(2) calls the job made (only standard universe).\\ \hline
+    filereadbytes & numeric(38) & numeric(38) & Number of bytes read by the job (only standard universe).\\ \hline
+    filewritecount & numeric(38) & numeric(38) & Number of write calls the job made (only standard universe).\\ \hline
+    filewritebytes & numeric(38) & numeric(38) & Number of bytes written by the job (only standard universe).\\ \hline
+    \multicolumn{4}{|c|}{\textbf{Table Continues on Next Page}}\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% jobs_horizontal_history Part 3
+  \begin{tabular}{|l|l|l|p{2.6in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of jobs\_horizontal\_history Table -- Part 3 of 3}}
+\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    fileseekcount & numeric(38) & numeric(38) & Number of seek calls that this job made (only standard universe).\\ \hline
+    totalsuspensions & integer & integer & Number of times the job has been suspended during its lifetime\\ \hline
+    imagesize & numeric(38) & numeric(38) & Estimate of memory image size of the job in kilobytes.\\ \hline
+    exitstatus & integer & integer & No longer used by Condor.\\ \hline
+    localusercpu & numeric(38) & numeric(38) & Number of seconds of user CPU time the job used on the submit machine.\\ \hline
+    localsyscpu & numeric(38) & numeric(38) & Number of seconds of system CPU time the job used on the submit machine.\\ \hline
+    remoteusercpu & numeric(38) & numeric(38) & Number of seconds of user CPU time the job used on remote machines.\\ \hline
+    remotesyscpu & numeric(38) & numeric(38) & Number of seconds of system CPU time the job used on remote machines.\\ \hline
+    bytessent & numeric(38) & numeric(38) & Number of bytes sent to the job.\\ \hline
+    bytesrecvd & numeric(38) & numeric(38) & Number of bytes received by the job.\\ \hline
+    rscbytessent & numeric(38) & numeric(38) & Number of remote system call bytes sent to the job.\\ \hline
+    rscbytesrecvd & numeric(38) & numeric(38) & Number of remote system call bytes received by the job.\\ \hline
+    exitcode & integer & integer & Exit return code of the user job. Used when a job exits by means other than a signal.\\ \hline
+    jobstatus & integer & integer & Current status of the job.\\ \hline
+    enteredcurrentstatus & ts(3) w tz & ts(3) w tz & Time the job entered into its current status.\\ \hline
+    remotewallclocktime & numeric(38) & numeric(38) & Cumulative number of seconds the job has been allocated to a machine.\\ \hline
+    lastremotehost & varchar(4000) & varchar(4000) & The remote host for the last run of the job.\\ \hline
+    completiondate & ts(3) w tz & ts(3) w tz & Time when the job completed; 0 if job has not yet completed.\\ \hline
+    enteredhistorytable & ts(3) w tz & ts(3) w tz & Time when the job entered the history table.\\ \hline
+    \multicolumn{4}{|l|}{\textbf{PRIMARY KEY:} (scheddname, scheddbirthdate, cluster\_id, proc\_id)}\\ \hline
+    \multicolumn{4}{|l|}{\textbf{NOT NULL:} scheddname, scheddbirthdate, cluster\_id, and proc\_id cannot be null}\\ \hline
+    \multicolumn{4}{|l|}{\textbf{INDEX:} Index named hist\_h\_i\_owner on owner}\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% jobs_vertical_history
+  \begin{tabular}{|l|l|l|p{2.9in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of jobs\_vertical\_history Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd that submitted the job.\\ \hline
+    scheddbirthdate & integer & integer & The birth date of the schedd where the job is submitted.\\ \hline
+    cluster\_id & integer & integer & Cluster identifier for the job.\\ \hline
+    proc\_id & integer & integer & Process identifier for the job.\\ \hline
+    attr & varchar(2000) & varchar(2000) & Attribute name.\\ \hline
+    val & clob & text & Attribute value.\\ \hline
+    \multicolumn{4}{|l|}{\textbf{PRIMARY KEY:} (scheddname, scheddbirthdate, cluster\_id, proc\_id, attr)}\\ \hline
+    \multicolumn{4}{|l|}{\textbf{NOT NULL:} scheddname, scheddbirthdate, cluster\_id, proc\_id, and attr cannot be null}\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% procads_horizontal
+  \begin{tabular}{|l|l|l|p{2.6in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of procads\_horizontal Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd that submitted the job.\\ \hline
+    cluster\_id & integer & integer & Cluster identifier for the job.\\ \hline
+    proc\_id & integer & integer & Process identifier for the job.\\ \hline
+    jobstatus & integer & integer & Current status of the job.\\ \hline
+    imagesize & numeric(38) & numeric(38) & Estimate of memory image size of the job in kilobytes.\\ \hline
+    remoteusercpu & numeric(38) & numeric(38) & Total number of seconds of user CPU time the job used on remote machines.\\ \hline
+    remotewallclocktime & numeric(38) & numeric(38) & Cumulative number of seconds the job has been allocated to a machine.\\ \hline
+    remotehost & varchar(4000) & varchar(4000) & Name of the machine running the job.\\ \hline
+    globaljobid & varchar(4000) & varchar(4000) & Unique global identifier for the job.\\ \hline
+    jobprio & integer & integer & Priority of the job.\\ \hline
+    args & clob & text & Arguments passed to the job.\\ \hline
+    shadowbday & ts(3) w tz & ts(3) w tz & The time when the shadow was started.\\ \hline
+    enteredcurrentstatus & ts(3) w tz & ts(3) w tz & Time the job entered its current status.\\ \hline
+    numrestarts & integer & integer & Number of times the job has restarted.\\ \hline
+    \multicolumn{4}{|l|}{\textbf{PRIMARY KEY:} (scheddname, cluster\_id, proc\_id)} \\ \hline
+    \multicolumn{4}{|l|}{\textbf{NOT NULL:} scheddname, cluster\_id, and proc\_id cannot be null} \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% procads_vertical
+  \begin{tabular}{|l|l|l|p{3.2in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of procads\_vertical Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd that submitted the job.\\ \hline
+    cluster\_id & integer & integer & Cluster identifier for the job.\\ \hline
+    proc\_id & integer & integer & Process identifier for the job.\\ \hline
+    attr & varchar(2000) & varchar(2000) & Attribute name.\\ \hline
+    val & clob & text & Attribute value.\\ \hline
+  \end{tabular}
+\vspace{24pt}
+\end{center}
+
+
+%%% MACHINES TABLES
+\subsubsection{Machines Tables}
+\begin{center}
+% machines_horizontal Part 1 of 2
+  \begin{tabular}{|l|l|l|p{2.4in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of machines\_horizontal Table -- Part 1 of 2}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    machine\_id & varchar(4000) & varchar(4000) & Unique identifier of the machine.\\ \hline
+    opsys & varchar(4000) & varchar(4000) & Operating system running on the machine.\\ \hline
+    arch & varchar(4000) & varchar(4000) & Architecture of the machine.\\ \hline
+    state & varchar(4000) & varchar(4000) & Condor state of the machine.\\ \hline
+    activity & varchar(4000) & varchar(4000) & Condor job activity on the machine.\\ \hline
+    keyboardidle & integer & integer & Number of seconds since activity has been detected on any keyboard or mouse associated with the machine.\\ \hline
+    consoleidle & integer & integer & Number of seconds since activity has been detected on the console keyboard or mouse.\\ \hline
+    loadavg & real & real & Current load average of the machine.\\ \hline
+    condorloadavg & real & real & Portion of load average generated by Condor\\ \hline
+    totalloadavg & real & real & \\ \hline
+    virtualmemory & integer & integer & Amount of currently available virtual memory in kilobytes.\\ \hline
+    memory & integer & integer & Amount of {RAM} in megabytes.\\ \hline
+    totalvirtualmemory & integer & integer & \\ \hline
+    cpubusytime & integer & integer & Time in seconds since cpuisbusy became true.\\ \hline
+    cpuisbusy & varchar(5) & varchar(5) & (boolean) True when the CPU is busy.\\ \hline
+    currentrank & real & real & The machine owner's affinity for running the Condor job which it is currently hosting.\\ \hline
+    clockmin & integer & integer & Number of minutes passed since midnight.\\ \hline
+    clockday & integer & integer & The day of the week.\\ \hline
+    lastreportedtime & ts(3) w tz & ts(3) w tz & Time when the Condor central manager last received a status update from this machine.\\ \hline
+    enteredcurrentactivity & ts(3) w tz & ts(3) w tz & Time when the machine entered the current activity.\\ \hline
+    enteredcurrentstate & ts(3) w tz & ts(3) w tz & Time when the machine entered the current state.\\ \hline
+    updatesequencenumber & integer & integer & Each update includes a sequence number.\\ \hline
+    \multicolumn{4}{|c|}{\textbf{Table Continues on Next Page}}\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% machines_horizontal Part 2 of 2
+  \begin{tabular}{|l|l|l|p{2.4in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of machines\_horizontal Table -- Part 2 of 2}}\\ \hline
+    updatestotal & integer & integer & The number of updates received from the daemon.\\ \hline
+    updatessequenced & integer & integer & The number of updates that were in order.\\ \hline
+    updateslost & integer & integer & The number of updates that were lost.\\ \hline
+    globaljobid & varchar(4000) & varchar(4000) & Unique global identifier for the job.\\ \hline
+    lastreportedtime\_epoch & integer & integer & The equivalent epoch time of lastreportedtime.\\ \hline
+    \multicolumn{4}{|l|}{\textbf{PRIMARY KEY:} machine\_id} \\ \hline    
+  \end{tabular}
+\vspace{24pt}
+
+% machines_horizontal_history Part 1 of 2
+  \begin{tabular}{|l|l|l|p{2.4in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of machines\_horizontal\_history Table -- Part 1 of 2}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    machine\_id & varchar(4000) & varchar(4000) & Unique identifier of the machine.\\ \hline
+    opsys & varchar(4000) & varchar(4000) & Operating system running on the machine.\\ \hline
+    arch & varchar(4000) & varchar(4000) & Architecture of the machine.\\ \hline
+    state & varchar(4000) & varchar(4000) & Condor state of the machine.\\ \hline
+    activity & varchar(4000) & varchar(4000) & Condor job activity on the machine.\\ \hline
+    keyboardidle & integer & integer & Number of seconds since activity has been detected on any keyboard or mouse associated with the machine.\\ \hline
+    consoleidle & integer & integer & Number of seconds since activity has been detected on the console keyboard or mouse.\\ \hline
+    loadavg & real & real & Current load average of the machine.\\ \hline
+    condorloadavg & real & real & Portion of load average generated by Condor\\ \hline
+    totalloadavg & real & real & \\ \hline
+    virtualmemory & integer & integer & Amount of currently available virtual memory in kilobytes.\\ \hline
+    memory & integer & integer & Amount of {RAM} in megabytes.\\ \hline
+    totalvirtualmemory & integer & integer & \\ \hline
+    cpubusytime & integer & integer & Time in seconds since cpuisbusy became true.\\ \hline
+    cpuisbusy & varchar(5) & varchar(5) & (boolean) True when the CPU is busy.\\ \hline
+    currentrank & real & real & The machine owner's affinity for running the Condor job which it is currently hosting.\\ \hline
+    clockmin & integer & integer & Number of minutes passed since midnight.\\ \hline
+    clockday & integer & integer & The day of the week.\\ \hline
+    lastreportedtime & ts(3) w tz & ts(3) w tz & Time when the Condor central manager last received a status update from this machine.\\ \hline
+    enteredcurrentactivity & ts(3) w tz & ts(3) w tz & Time when the machine entered the current activity.\\ \hline
+    enteredcurrentstate & ts(3) w tz & ts(3) w tz & Time when the machine entered the current state.\\ \hline
+    updatesequencenumber & integer & integer & Each update includes a sequence number.\\ \hline
+    \multicolumn{4}{|c|}{\textbf{Table Continues on Next Page}}\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% machines_horizontal_history Part 2 of 2
+  \begin{tabular}{|l|l|l|p{2.7in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of machines\_horizontal\_history Table -- Part 2 of 2}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    updatestotal & integer & integer & The number of updates received from the daemon.\\ \hline
+    updatessequenced & integer & integer & The number of updates that were in order.\\ \hline
+    updateslost & integer & integer & The number of updates that were lost.\\ \hline
+    globaljobid & varchar(4000) & varchar(4000) & Unique global identifier for the job.\\ \hline
+    end\_time & ts(3) w tz & ts(3) w tz & The end of when the \ca\ is valid.\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+
+% machines_vertical
+  \begin{tabular}{|l|l|l|p{3.2in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of machines\_vertical Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    machine\_id & varchar(4000) & varchar(4000) & Unique identifier of the machine.\\ \hline
+    attr & varchar(2000) & varchar(2000) & Attribute name.\\ \hline
+    val & clob & text & Attribute value.\\ \hline
+    start\_time & ts(3) w tz & ts(3) w tz & Time when this attribute--value pair became valid.\\ \hline
+    \multicolumn{4}{|l|}{\textbf{PRIMARY KEY:} (machine\_id, attr)} \\ \hline
+    \multicolumn{4}{|l|}{\textbf{NOT NULL:} machine\_id and attr cannot be null} \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% machines_vertical_history
+  \begin{tabular}{|l|l|l|p{3.2in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of machines\_vertical\_history Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    machine\_id & varchar(4000) & varchar(4000) & Unique identifier of the machine.\\ \hline
+    attr & varchar(4000) & varchar(4000) & Attribute name.\\ \hline
+    val & clob & text & Attribute value.\\ \hline
+    start\_time & ts(3) w tz & ts(3) w tz & Time when this attribute--value pair became valid.\\ \hline
+    end\_time & ts(3) w tz & ts(3) w tz & Time when this attribute--value pair became invalid.\\ \hline
+  \end{tabular}
+\vspace{24pt}
+\end{center}
+
+
+%%% MATCHMAKING TABLES
+\subsubsection{Matchmaking Tables}
+\begin{center}
+% matches
+  \begin{tabular}{|l|l|l|p{3.0in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of matches Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    match\_time & ts(3) w tz & ts(3) w tz & Time the match was made.\\ \hline
+    username & varchar(4000) & varchar(4000) & User who submitted the job.\\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd that the job is submitted to.\\ \hline
+    cluster\_id & integer & integer & Cluster identifier for the job.\\ \hline
+    proc\_id & integer & integer & Process identifier for the job.\\ \hline
+    globaljobid & varchar(4000) & varchar(4000) & Unique global identifier for the job.\\ \hline
+    machine\_id & varchar(4000) & varchar(4000) & Identifier of the machine the job matched with.\\ \hline
+    remote\_user & varchar(4000) & varchar(4000) & User that was preempted.\\ \hline
+    remote\_priority & real & real & The preempted user's priority.\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% rejects
+  \begin{tabular}{|l|l|l|p{3.2in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of rejects Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    reject\_time & ts(3) w tz & ts(3) w tz & Time when the job was rejected.\\ \hline
+    username & varchar(4000) & varchar(4000) & User who submitted the job.\\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd that submitted the job.\\ \hline
+    cluster\_id & integer & integer & Cluster identifier for the job.\\ \hline
+    proc\_id & integer & integer & Process identifier for the job.\\ \hline    
+    globaljobid & varchar(4000) & varchar(4000) & Unique global identifier for the job.\\ \hline
+  \end{tabular}
+\vspace{24pt}
+\end{center}
+
+
+%%% RUNTIME TABLES
+\subsubsection{Runtime Tables}
+\begin{center}
+% events
+  \begin{tabular}{|l|l|l|p{3.2in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of events Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd that submitted the job.\\ \hline
+    cluster\_id & integer & integer & Cluster identifier for the job.\\ \hline
+    proc\_id & integer & integer & Process identifier for the job.\\ \hline
+    globaljobid & varchar(4000) & varchar(4000) & Global identifier of the job that generated the event.\\ \hline
+    run\_id & numeric(12,0) & numeric(12,0) & Identifier of the run that the event is associated with.\\ \hline
+    eventtype & integer & integer & Numeric type code of the event.\\ \hline
+    eventtime & ts(3) w tz & ts(3) w tz & Time the event occurred.\\ \hline
+    description & varchar(4000) & varchar(4000) & Description of the event.\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% generic_messages
+  \begin{tabular}{|l|l|l|p{3.3in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of generic\_messages Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    eventtype & varchar(4000) & varchar(4000) & The type of event.\\ \hline
+    eventkey & varchar(4000) & varchar(4000) & The key of the event.\\ \hline
+    eventtime & ts(3) w tz & ts(3) w tz & The time of the event.\\ \hline
+    eventloc & varchar(4000) & varchar(4000) & The location of the event.\\ \hline
+    attname & varchar(4000) & varchar(4000) & The attribute name.\\ \hline
+    attval & clob & text & The attribute value.\\ \hline
+    attrtype & varchar(4000) & varchar(4000) & The attribute type.\\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% runs
+  \begin{tabular}{|l|l|l|p{2.5in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of runs Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    run\_id & numeric(12) & numeric(12) & Unique identifier of the run.\\ \hline
+    machine\_id & varchar(4000) & varchar(4000) & Identifier of the machine where the job ran.\\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd that submitted the job.\\ \hline
+    cluster\_id & integer & integer & Cluster identifier for the job.\\ \hline
+    proc\_id & integer & integer & Process identifier for the job.\\ \hline
+    spid & integer & integer & Subprocess identifier for the job. \\ \hline
+    globaljobid & varchar(4000) & varchar(4000) & Identifier of the job that was run.\\ \hline 
+    startts & ts(3) w tz & ts(3) w tz & Time when the job started.\\ \hline
+    endts & ts(3) w tz & ts(3) w tz & Time when the job ended.\\ \hline
+    endtype & smallint & smallint & The type of ending event.\\ \hline
+    endmessage & varchar(4000) & varchar(4000) & The ending message.\\ \hline
+    wascheckpointed & varchar(7) & varchar(7) & Whether the run was checkpointed.\\ \hline
+    imagesize & numeric(38) & numeric(38) & The image size of the executable.\\ \hline
+    runlocalusageuser & integer & integer & The time the job spent in usermode on execute machines (only standard universe).\\ \hline
+    runlocalusagesystem & integer & integer & The time the job was in system calls.\\ \hline
+    runremoteusageuser & integer & integer & The time the shadow spent working for the job.\\ \hline
+    runremoteusagesystem & integer & integer & The time the shadow spent in system calls for the job.\\ \hline
+    runbytessent & numeric(38) & numeric(38) & Number of bytes sent to the run.\\ \hline
+    runbytesreceived & numeric(38) & numeric(38) & Number of bytes received from the run.\\ \hline
+    \multicolumn{4}{|l|}{\textbf{PRIMARY KEY:} run\_id} \\ \hline    
+    \multicolumn{4}{|l|}{\textbf{NOT NULL:} run\_id cannot be null} \\ \hline    
+  \end{tabular}
+\vspace{24pt}
+\end{center}
+
+
+%%% SYSTEM TABLES
+\subsubsection{System Tables}
+\begin{center}
+% dummy_single_row_table
+  \begin{tabular}{|l|l|l|p{4in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of dummy\_single\_row\_table Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    a & varchar(1) & varchar(1) & A dummy column. \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% history_jobs_to_purge
+  \begin{tabular}{|l|l|l|p{3.2in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of history\_jobs\_to\_purge Table}}\\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd that submitted the job. \\ \hline
+    cluster\_id & integer & integer & Cluster identifier for the job. \\ \hline
+    proc\_id & integer & integer & Process identifier for the job. \\ \hline
+    globaljobid & varchar(4000) & varchar(4000) & Unique global identifier for the job. \\ \hline
+  \end{tabular}
+\vspace{24pt}
+
+% jobqueuepollinginfo
+  \begin{tabular}{|l|l|l|p{2.6in}|}\hline
+    \multicolumn{4}{|c|}{\textbf{Attributes of jobqueuepollinginfo Table}}\\ \hline
+    \textbf{Name} & \textbf{O. Type} & \textbf{P. Type} & \textbf{Description}\\ \hline
+    scheddname & varchar(4000) & varchar(4000) & Name of the schedd that submitted the job.\\ \hline
+    last\_file\_mtime & integer & integer & The last modification time of the file.\\ \hline
+    last\_file\_size & numeric(38) & numeric(38) & The last size of the file in bytes.\\ \hline
+    last\_next\_cmd\_offset & integer & integer & The last offset for the next command.\\ \hline
+    last\_cmd\_offset & integer & integer & The last offset of the current command.\\ \hline
+    last\_cmd\_type & smallint & smallint & The last type of command.\\ \hline
+    last\_cmd\_key & varchar(4000) & varchar(4000) & The last key of the command.\\ \hline
+    last\_cmd\_mytype & varchar(4000) & varchar(4000) & The last my \ca\ type of the command.\\ \hline
+    last\_cmd\_targettype & varchar(4000) & varchar(4000) & The last target \ca\ type.\\ \hline
+    last\_cmd\_name & varchar(4000) & varchar(4000) & The attribute name of the command.\\ \hline
+    last\_cmd\_value & varchar(4000) & varchar(4000) & The attribute value of the command.\\ \hline
+  \end{tabular}
+\end{center}
+
+%\end{document}
