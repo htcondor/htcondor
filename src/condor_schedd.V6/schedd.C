@@ -11672,31 +11672,19 @@ abortJobRaw( int cluster, int proc, const char *reason )
 	job_id.cluster = cluster;
 	job_id.proc = proc;
 
-	if( reason ) {
-		MyString fixed_reason;
-		if( reason[0] == '"' ) {
-			fixed_reason += reason;
-		} else {
-			fixed_reason += '"';
-			fixed_reason += reason;
-			fixed_reason += '"';
-		}
-		if( SetAttribute(cluster, proc, ATTR_REMOVE_REASON, 
-						 fixed_reason.Value()) < 0 ) {
-			dprintf( D_ALWAYS, "WARNING: Failed to set %s to \"%s\" for "
-					 "job %d.%d\n", ATTR_REMOVE_REASON, reason, cluster,
-					 proc );
-		}
-	}
-
 	if( SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, REMOVED) < 0 ) {
 		dprintf(D_ALWAYS,"Couldn't change state of job %d.%d\n",cluster,proc);
 		return false;
 	}
 
 	// Add the remove reason to the job's attributes
-	if ( reason && *reason ) {
-		SetAttributeString( cluster, proc, ATTR_REMOVE_REASON, reason );
+	if( reason && *reason ) {
+		if ( SetAttributeString( cluster, proc, ATTR_REMOVE_REASON,
+								 reason ) < 0 ) {
+			dprintf( D_ALWAYS, "WARNING: Failed to set %s to \"%s\" for "
+					 "job %d.%d\n", ATTR_REMOVE_REASON, reason, cluster,
+					 proc );
+		}
 	}
 
 	// Abort the job now
