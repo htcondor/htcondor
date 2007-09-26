@@ -4,8 +4,6 @@
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC
 
-#define DebugFlag -ggdb
-
 #define DOES_CHECKPOINTING		YES
 #define DOES_COMPRESS_CKPT		NO
 #define DOES_REMOTE_SYSCALLS		YES

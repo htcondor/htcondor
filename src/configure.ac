@@ -999,6 +999,10 @@ fi
 # These options are shared between gcc and g++
 #
 
+AS_IF([test "x$_cv_arch" = xALPHA -a "x$_cv_op_sys" = xOSF1],
+  [debug_flags="-ggdb"])
+AC_SUBST([DEBUG_FLAGS], $debug_flags)
+
 # The standard warnings
 C_CXX_OPTION(gcc, -Wall, comp_option_Wall, [])
 
