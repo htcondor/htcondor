@@ -659,7 +659,7 @@ AC_LANG(C)
 # -O2 is specified, instead of regular symbols. As a result the symbol
 # interposition in the standard universe fails to find all the symbols
 # it needs to.
-CFLAGS=-g
+CFLAGS="-g $CFLAGS"
 AC_PROG_CC
 if test $ac_cv_c_compiler_gnu != yes; then
    AC_MSG_ERROR( [GNU CC (gcc) is required] )
