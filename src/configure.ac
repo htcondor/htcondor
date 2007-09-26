@@ -1202,6 +1202,39 @@ AC_SUBST([has_vendor_f77],[$_cv_has_vendor_f77])
 AC_SUBST([has_vendor_f90],[$_cv_has_vendor_f90])
 
 
+###############################################################
+# Check for functionality availability on different platforms #
+###############################################################
+
+# Question, is DOES_REMOTE_SYSCALLS even useful? It seems that
+# IS_CLIPPED overrides it
+AC_MSG_CHECKING([if DOES_REMOTE_SYSCALLS is supported])
+case "$_cv_op_sys" in
+  HPUX | LINUX | DUX | SOLARIS )
+    _cv_does_remote_syscalls=yes
+  ;;
+  * )
+    _cv_does_remote_syscalls=no
+  ;;
+esac
+AC_MSG_RESULT([$_cv_does_remote_syscalls])
+AS_IF([test "x$_cv_does_remote_syscalls" = xyes],
+  AC_DEFINE([DOES_REMOTE_SYSCALLS], [1], [Define if we can do remote syscalls]))
+
+AC_MSG_CHECKING([if DOES_CHECKPOINTING is supported])
+case "$_cv_op_sys" in
+  HPUX | LINUX | DUX | SOLARIS )
+    _cv_does_checkpointing=yes
+  ;;
+  * )
+    _cv_does_checkpointing=no
+  ;;
+esac
+AC_MSG_RESULT([$_cv_does_checkpointing])
+AS_IF([test "x$_cv_does_checkpointing" = xyes],
+  AC_DEFINE([DOES_CHECKPOINTING], [1], [Define if we can do checkpointing]))
+
+
 #####################
 # everything else
 #####################
@@ -1684,7 +1717,9 @@ fi
 # In the build system which is then used to add the correct threading
 # flags to the compile line for drmaa code.
 AC_CHECK_LIB([pthread], [pthread_create],
-  [AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available])])
+  [ac_pthreads=yes
+   AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available])],
+  [ac_pthreads=no])
 
 
 ############################################################

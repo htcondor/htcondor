@@ -6,7 +6,7 @@
 #   define KbddProgs
 #endif
 
-#if !DOES_CHECKPOINTING
+#if !defined(DOES_CHECKPOINTING)
 #   define standalone
 #endif
 

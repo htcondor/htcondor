@@ -4,7 +4,7 @@ XCOMM Unlike libckpt, the syscall library uses
 XCOMM all of the features.
 XCOMM
 
-#if DOES_REMOTE_SYSCALLS
+#ifdef DOES_REMOTE_SYSCALLS
 	REMOTE_SYSCALLS = -DREMOTE_SYSCALLS
 #else
 	CLIP = -DCLIP
@@ -61,7 +61,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STUB_CLUMPS_FLAG) $(DL_EXTRACT) \
 	$(FILE_TABLE) $(REMOTE_SYSCALLS) $(SAVE_SIGSTATE) -I../condor_ckpt \
 	-fno-exceptions -DHEADER_DES_LOCL_H
 
-#if DOES_CHECKPOINTING  /* ========= DOES CHECKPOINTING ============ */
+#ifdef DOES_CHECKPOINTING  /* ========= DOES CHECKPOINTING ============ */
 
 #if IS_LINUX
 #if IS_GLIBC22 || IS_GLIBC23
@@ -170,11 +170,11 @@ SRC = \
 	file_stream.c \
         ios_stub.C \
         ios_msg.C
-	 
+
 URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 	cfilter_url.o filter_url.o mailto_url.o ftp_url.o
 
-#if DOES_CHECKPOINTING
+#ifdef DOES_CHECKPOINTING
 CKPT_OBJ = $(FILE_TABLE_OBJ)\
 	image.o tmp_stack.o machdep.$(DEP_OS).o malloc-user.o \
 	syscall_mode.o fake_hooks.o $(LONGJMP) $(HP_CKPT) \
@@ -204,7 +204,6 @@ UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
 	internet.o $(PLATFORM_UTIL_OBJ) mkargv.o filename_tools.o
 
 CPP_UTIL_OBJ = condor_version.o stat_wrapper.o condor_open.o selector.o
-
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
 IO_OBJ = stream.o sock.o safe_sock.o reli_sock.o buffers.o $(CONDOR_TYPE_OBJ) condor_rw.o SafeMsg.o
@@ -245,7 +244,7 @@ LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
 SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o libcondorc++support.a
 SYSCALL_LIB = libcondorsyscall.a
 
-#if DOES_REMOTE_SYSCALLS
+#ifdef DOES_REMOTE_SYSCALLS
 all_target(tmp_dir $(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) syscall-list)
 #else 
 all_target(tmp_dir $(SYSCALL_SUPPORT_OBJ) extern_path.o file_stream.o)
@@ -428,7 +427,7 @@ uppercase_target($(SIMPLE_LIBC),getpagesize.o,GETPAGESIZE.o,getpagesize,GETPAGES
 uppercase_target($(SIMPLE_LIBC),waitpid.o,WAITPID.o,waitpid,WAITPID)
 #endif
 
-#if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
+#if defined(DOES_CHECKPOINTING) || defined(DOES_REMOTE_SYSCALLS)
 public_copy_target(condor_rt0.o,lib,condor_rt0.o,OBJECT_MODE)
 #endif
 
@@ -444,7 +443,7 @@ libcondorsyscall.a: libtmp.a ToUpper
 	library_target(libcondorsyscall.a,$(LIB_OBJ))
 #endif
 
-#if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
+#if defined(DOES_CHECKPOINTING) || defined(DOES_REMOTE_SYSCALLS)
 public_library(libcondorsyscall.a,lib)
 #if DOES_COMPRESS_CKPT
 public_library(libcondor_z.a,lib)
@@ -457,7 +456,7 @@ public_library($(COMPRESS_LIB),lib)
 
 XCOMM If no remote syscalls & no checkpointing support, then no need
 XCOMM to release anything into RELEASEDIR/lib, since we only do VANILLA jobs
-#if (!DOES_CHECKPOINTING) && (!DOES_REMOTE_SYSCALLS)
+#if !defined(DOES_CHECKPOINTING) && !defined(DOES_REMOTE_SYSCALLS)
 release:: all
 stripped:: all
 static:: all
