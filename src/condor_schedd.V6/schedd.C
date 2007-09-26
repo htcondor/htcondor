@@ -11390,34 +11390,34 @@ Scheduler::publish( ClassAd *cad ) {
 		// general case of publish() and should probably be
 		// moved back into dumpState()
 		// -------------------------------------------------------
-	InsertIntoAd ( cad, "MySockName", MySockName );
-	InsertIntoAd ( cad, "MyShadowSockname", MyShadowSockName );
-	InsertIntoAd ( cad, "SchedDInterval", (int)SchedDInterval.getDefaultInterval() );
-	InsertIntoAd ( cad, "QueueCleanInterval", QueueCleanInterval );
-	InsertIntoAd ( cad, "JobStartDelay", JobStartDelay );
-	InsertIntoAd ( cad, "JobStartCount", JobStartCount );
-	InsertIntoAd ( cad, "JobsThisBurst", JobsThisBurst );
-	InsertIntoAd ( cad, "MaxJobsRunning", MaxJobsRunning );
-	InsertIntoAd ( cad, "MaxJobsSubmitted", MaxJobsSubmitted );
-	InsertIntoAd ( cad, "JobsStarted", JobsStarted );
-	InsertIntoAd ( cad, "SwapSpace", SwapSpace );
-	InsertIntoAd ( cad, "ShadowSizeEstimate", ShadowSizeEstimate );
-	InsertIntoAd ( cad, "SwapSpaceExhausted", SwapSpaceExhausted );
-	InsertIntoAd ( cad, "ReservedSwap", ReservedSwap );
-	InsertIntoAd ( cad, "JobsIdle", JobsIdle );
-	InsertIntoAd ( cad, "JobsRunning", JobsRunning );
-	InsertIntoAd ( cad, "BadCluster", BadCluster );
-	InsertIntoAd ( cad, "BadProc", BadProc );
-	InsertIntoAd ( cad, "N_Owners", N_Owners );
-	InsertIntoAd ( cad, "NegotiationRequestTime", NegotiationRequestTime  );
-	InsertIntoAd ( cad, "ExitWhenDone", ExitWhenDone );
-	InsertIntoAd ( cad, "StartJobTimer", StartJobTimer );
-	InsertIntoAd ( cad, "CondorAdministrator", CondorAdministrator );
-	InsertIntoAd ( cad, "AccountantName", AccountantName );
-	InsertIntoAd ( cad, "UidDomain", UidDomain );
-	InsertIntoAd ( cad, "MaxFlockLevel", MaxFlockLevel );
-	InsertIntoAd ( cad, "FlockLevel", FlockLevel );
-	InsertIntoAd ( cad, "MaxExceptions", MaxExceptions );
+	cad->Assign( "MySockName", MySockName );
+	cad->Assign( "MyShadowSockname", MyShadowSockName );
+	cad->Assign( "SchedDInterval", (int)SchedDInterval.getDefaultInterval() );
+	cad->Assign( "QueueCleanInterval", QueueCleanInterval );
+	cad->Assign( "JobStartDelay", JobStartDelay );
+	cad->Assign( "JobStartCount", JobStartCount );
+	cad->Assign( "JobsThisBurst", JobsThisBurst );
+	cad->Assign( "MaxJobsRunning", MaxJobsRunning );
+	cad->Assign( "MaxJobsSubmitted", MaxJobsSubmitted );
+	cad->Assign( "JobsStarted", JobsStarted );
+	cad->Assign( "SwapSpace", SwapSpace );
+	cad->Assign( "ShadowSizeEstimate", ShadowSizeEstimate );
+	cad->Assign( "SwapSpaceExhausted", SwapSpaceExhausted );
+	cad->Assign( "ReservedSwap", ReservedSwap );
+	cad->Assign( "JobsIdle", JobsIdle );
+	cad->Assign( "JobsRunning", JobsRunning );
+	cad->Assign( "BadCluster", BadCluster );
+	cad->Assign( "BadProc", BadProc );
+	cad->Assign( "N_Owners", N_Owners );
+	cad->Assign( "NegotiationRequestTime", (int)NegotiationRequestTime  );
+	cad->Assign( "ExitWhenDone", ExitWhenDone );
+	cad->Assign( "StartJobTimer", StartJobTimer );
+	cad->Assign( "CondorAdministrator", CondorAdministrator );
+	cad->Assign( "AccountantName", AccountantName );
+	cad->Assign( "UidDomain", UidDomain );
+	cad->Assign( "MaxFlockLevel", MaxFlockLevel );
+	cad->Assign( "FlockLevel", FlockLevel );
+	cad->Assign( "MaxExceptions", MaxExceptions );
 	
 		// -------------------------------------------------------
 		// Basic Attributes
@@ -11425,58 +11425,51 @@ Scheduler::publish( ClassAd *cad ) {
 
 	temp = param( "ARCH" );
 	if ( temp ) {
-		InsertIntoAd( cad, ATTR_ARCH, temp );
+		cad->Assign( ATTR_ARCH, temp );
 		free( temp );
 	}
 
 	temp = param( "OPSYS" );
 	if ( temp ) {
-		InsertIntoAd( cad, ATTR_OPSYS, temp );
+		cad->Assign( ATTR_OPSYS, temp );
 		free( temp );
 	}
 	
 	unsigned long phys_mem = sysapi_phys_memory( );
-	InsertIntoAd( cad, ATTR_MEMORY, phys_mem );
+	cad->Assign( ATTR_MEMORY, (int)phys_mem );
 	
 	unsigned long disk_space = sysapi_disk_space( this->LocalUnivExecuteDir );
-	InsertIntoAd( cad, ATTR_DISK, disk_space );
+	cad->Assign( ATTR_DISK, (int)disk_space );
 	
 		// -------------------------------------------------------
 		// Local Universe Attributes
 		// -------------------------------------------------------
-	InsertIntoAd( cad, ATTR_TOTAL_LOCAL_IDLE_JOBS,
+	cad->Assign( ATTR_TOTAL_LOCAL_IDLE_JOBS,
 				 this->LocalUniverseJobsIdle );
-	InsertIntoAd( cad, ATTR_TOTAL_LOCAL_RUNNING_JOBS,
+	cad->Assign( ATTR_TOTAL_LOCAL_RUNNING_JOBS,
 				 this->LocalUniverseJobsRunning );
 	
 		//
 		// Limiting the # of local universe jobs allowed to start
 		//
 	if ( this->StartLocalUniverse ) {
-		MyString tempstr;
-		tempstr  = ATTR_START_LOCAL_UNIVERSE;
-		tempstr += " = ";
-		tempstr += this->StartLocalUniverse;
-		cad->Insert( tempstr.Value() );	
+		cad->AssignExpr( ATTR_START_LOCAL_UNIVERSE, this->StartLocalUniverse );
 	}
 
 		// -------------------------------------------------------
 		// Scheduler Universe Attributes
 		// -------------------------------------------------------
-	InsertIntoAd( cad, ATTR_TOTAL_SCHEDULER_IDLE_JOBS,
+	cad->Assign( ATTR_TOTAL_SCHEDULER_IDLE_JOBS,
 				 this->SchedUniverseJobsIdle );
-	InsertIntoAd( cad, ATTR_TOTAL_SCHEDULER_RUNNING_JOBS,
+	cad->Assign( ATTR_TOTAL_SCHEDULER_RUNNING_JOBS,
 				 this->SchedUniverseJobsRunning );
 	
 		//
 		// Limiting the # of scheduler universe jobs allowed to start
 		//
 	if ( this->StartSchedulerUniverse ) {
-		MyString tempstr;
-		tempstr  = ATTR_START_SCHEDULER_UNIVERSE;
-		tempstr += " = ";
-		tempstr += this->StartSchedulerUniverse;
-		cad->Insert( tempstr.Value() );	
+		cad->AssignExpr( ATTR_START_SCHEDULER_UNIVERSE,
+						 this->StartSchedulerUniverse );
 	}
 	
 	return ( ret );
@@ -11499,14 +11492,14 @@ Scheduler::dumpState(int, Stream* s) {
 		// These items we want to keep in here because they're
 		// not needed for the general info produced by publish()
 		//
-	InsertIntoAd ( &job_ad, "num_reg_contacts", num_reg_contacts );
-	InsertIntoAd ( &job_ad, "leaseAliveInterval", leaseAliveInterval );
-	InsertIntoAd ( &job_ad, "alive_interval", alive_interval );
-	InsertIntoAd ( &job_ad, "startjobsid", startjobsid );
-	InsertIntoAd ( &job_ad, "startJobsDelayBit", startJobsDelayBit );
-	InsertIntoAd ( &job_ad, "timeoutid", timeoutid );
-	InsertIntoAd ( &job_ad, "Mail", Mail );
-	InsertIntoAd ( &job_ad, "filename", filename );
+	job_ad.Assign( "num_reg_contacts", num_reg_contacts );
+	job_ad.Assign( "leaseAliveInterval", leaseAliveInterval );
+	job_ad.Assign( "alive_interval", alive_interval );
+	job_ad.Assign( "startjobsid", startjobsid );
+	job_ad.Assign( "startJobsDelayBit", startJobsDelayBit );
+	job_ad.Assign( "timeoutid", timeoutid );
+	job_ad.Assign( "Mail", Mail );
+	job_ad.Assign( "filename", filename );
 	
 	int cmd;
 	s->code( cmd );

@@ -134,9 +134,8 @@ specific to classads themselves, and don't really depend on the rest
 of the condor source.  therefore, condor_classad/classad_util.[Ch]
 should be for utilities that don't belong as actual member functions
 of the ClassAd object itself, but are useful utilities for
-manipulating classads, unrelated to condor.  since InsertIntoAd() just
-takes a classad and some strings (or ints, or whatever), and builds up
-a valid thing to insert into that classad, that's independent of
+manipulating classads, unrelated to condor.  Since ClassAdsAreSame()
+just takes two classads and compares them, that's independent of
 condor, and is really a utility of the classad library.
 
 condor_c++_util/classad_helpers.[Ch], on the other hand, are things

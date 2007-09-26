@@ -135,7 +135,7 @@ JICLocalSchedd::holdJob( const char *reason ) {
 		//
 		// Insert the reason into the job ad 
 		//
-	InsertIntoAd( this->job_ad, ATTR_HOLD_REASON, reason );
+	this->job_ad->Assign( ATTR_HOLD_REASON, reason );
 	return true;
 }
 
@@ -162,7 +162,7 @@ JICLocalSchedd::removeJob( const char *reason ) {
 		//
 		// Insert the reason into the job ad 
 		//
-	InsertIntoAd( this->job_ad, ATTR_REMOVE_REASON, reason );
+	this->job_ad->Assign( ATTR_REMOVE_REASON, reason );
 	return true;
 }
 
@@ -192,7 +192,7 @@ JICLocalSchedd::requeueJob( const char *reason ) {
 		//
 		// Insert the reason into the job ad 
 		//
-	InsertIntoAd( this->job_ad, ATTR_REQUEUE_REASON, reason );
+	this->job_ad->Assign( ATTR_REQUEUE_REASON, reason );
 		//
 		// We set the proper exit_code for the schedd
 		// to do the action that we want it to

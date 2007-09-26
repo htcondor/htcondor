@@ -32,14 +32,4 @@ bool EvalBool(ClassAd *ad, const char *constraint);
 bool ClassAdsAreSame( ClassAd* ad1, ClassAd* ad2, 
 					  StringList* ignored_attrs=NULL, bool verbose=false );
 
-//
-// Convenience methods for inserting info an ad
-// This was moved from the scheduler
-//
-bool InsertIntoAd ( ClassAd *ad, const char *lhs, const char *rhs );
-bool InsertIntoAd ( ClassAd *ad, const char *lhs, char *rhs );
-bool InsertIntoAd ( ClassAd *ad, char *lhs, char *rhs );
-bool InsertIntoAd ( ClassAd *ad, const char *lhs, int rhs );
-bool InsertIntoAd ( ClassAd *ad, char *lhs, int rhs );
-
 #endif

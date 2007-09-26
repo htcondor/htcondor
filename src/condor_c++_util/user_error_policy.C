@@ -103,7 +103,7 @@ ErrorPolicy::setDefaults( )
 			// our default value
 			//
 		if ( this->ad->Lookup( ATTR_ERROR_ACTION ) == NULL) {
-			InsertIntoAd( this->ad, ATTR_ERROR_ACTION, ERROR_ACTION_DEFAULT );
+			this->ad->Assign( ATTR_ERROR_ACTION, ERROR_ACTION_DEFAULT );
 		}
 	}
 }
