@@ -4,8 +4,6 @@
 /* we also need to link test suite jobs with the same mess */
 #define TestPlatformLdFlags PlatformLdFlags
 
-#define MALLOC_DEBUG 			NO
-
 #define NEEDS_KBDD			NO
 
 #define DOES_CHECKPOINTING		NO

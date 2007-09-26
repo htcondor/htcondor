@@ -1615,6 +1615,15 @@ AS_IF([test "x$enable_rpm" != xno],
   [AC_SUBST(HAVE_RPM,$_cv_have_rpm)],
   [AC_SUBST(HAVE_RPM,"NO")])
 
+AC_ARG_ENABLE([malloc-debug],
+  AC_HELP_STRING([--enable-malloc-debug],
+    [enable memory allocation debugging (default: no)]),
+  [],
+  [enable_malloc_debug=no])
+
+AS_IF([test "x$enable_malloc_debug" = xyes],
+  [CPPFLAGS="$CPPFLAGS -DMALLOC_DEBUG"])
+
 # Here we figure out whether or not the circumstances are correct for us
 # to be able to separate the debugging symbols from the executables and
 # package them into a tarball. for example, if say objcopy's debuglink flag

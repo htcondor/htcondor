@@ -75,7 +75,6 @@
 #  define FORTRAN_HAS_RECURSION		NO
 #endif
 #define HAS_FLOCK			NO
-#define MALLOC_DEBUG			NO
 
 /**************************************************************************
 ** Include Arch-specific config files

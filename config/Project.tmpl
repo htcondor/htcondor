@@ -344,12 +344,13 @@ GCB_FLAGS = -I$(GCB_INC)
  end of externals-specific settings and flags
 ********************************************/
 
-VENDOR_C_FLAGS = CFlags -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
+VENDOR_C_FLAGS = -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) -I$(DAEMONCLIENT_INCLUDE) \
 		 $(CONFIGURE_DEFS) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) \
 		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) \
-		 $(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS) $(CONFIGURE_CFLAGS)
+		 $(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS) \
+		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS)
 
 
 /* This flag is a bad idea since when this stuff eventually goes truly obselete

@@ -3,8 +3,6 @@
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC
 
-#define MALLOC_DEBUG 			NO
-
 #define NEEDS_KBDD			NO
 
 #define DOES_CHECKPOINTING		YES
