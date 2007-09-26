@@ -11,8 +11,6 @@
 /* Put all of your #defines up here do you can turn them off/redefine
 	them selectively for an architecture if you desire. */
 #define DOES_COMPRESS_CKPT	YES
-#define WANT_QUILL		YES
-#define WANT_TT			YES
 
 #endif  /* BeforeVendorCF */
 
