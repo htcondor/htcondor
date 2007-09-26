@@ -74,9 +74,6 @@ GCC_DEBUG_FLAGS = @comp_option_Wnested_externs@ @comp_option_Wstrict_prototypes@
 /* C++ specific debugging flags */
 GPP_DEBUG_FLAGS = 
 
-/* Used for DRMAA */
-#define HAS_PTHREADS @has_pthreads@
-
 /* Used for -fPIC */
 #if HAVE_CC_PIC_FLAG
 CC_PIC_FLAGS = @cc_pic_flags@
