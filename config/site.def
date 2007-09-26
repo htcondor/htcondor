@@ -11,7 +11,6 @@
 /* Put all of your #defines up here do you can turn them off/redefine
 	them selectively for an architecture if you desire. */
 #define DOES_COMPRESS_CKPT	YES
-#define WANT_NETMAN	NO
 #define WANT_NEST	NO		/* the NeST I/O module */
 #define WANT_ORACLE_UNIVERSE   NO
 #define WANT_QUILL		YES
@@ -25,12 +24,6 @@
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
 #define Top /full/path/to/your/source/workspace
-
-#if MALLOC_DEBUG
-#define CFlags -DMALLOC_DEBUG
-#else
-#define CFlags
-#endif
 
 #define CondorAdministrator	condor-admin
 
