@@ -39,7 +39,7 @@
 
 #include "pgsqldatabase.h"
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 
 #include "jobqueuesnapshot.h"
 
@@ -295,7 +295,7 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, char *host, CondorErro
 int CondorQ::
 fetchQueueFromDB (ClassAdList &list, char *dbconn, CondorError*  /*errstack*/)
 {
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	ClassAd 		filterAd;
 	int     		result;
 	JobQueueSnapshot	*jqSnapshot;
@@ -390,7 +390,7 @@ fetchQueueFromHostAndProcess ( char *host, StringList &attrs, process_function p
 int CondorQ::
 fetchQueueFromDBAndProcess ( char *dbconn, process_function process_func, CondorError*  /*errstack*/ )
 {
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	ClassAd 		filterAd;
 	int     		result;
 	JobQueueSnapshot	*jqSnapshot;
@@ -462,7 +462,7 @@ fetchQueueFromDBAndProcess ( char *dbconn, process_function process_func, Condor
 }
 
 void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
-#if WANT_QUILL
+#ifdef WANT_QUILL
 
 	JobQueueDatabase *DBObj;
 	const char    *rowvalue;
@@ -711,7 +711,7 @@ short_print(
 	);
 }
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 
 ClassAd* getDBNextJobByConstraint(const char* constraint, JobQueueSnapshot	*jqSnapshot)
 {

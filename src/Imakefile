@@ -53,13 +53,13 @@
 #define StorkProgs
 #endif
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 #define QuillProgs quill
 #else
 #define QuillProgs
 #endif
 
-#if WANT_TT
+#ifdef WANT_TT
 #define TTProgs tt dbmsd
 #else
 #define TTProgs
@@ -249,11 +249,11 @@ condor_object_target(shadow.V6)
 condor_object_target(transferd)
 condor_object_target(starter.V5)
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 condor_object_target(quill)
 #endif
 
-#if WANT_TT
+#ifdef WANT_TT
 condor_object_target(tt)
 condor_object_target(dbmsd)
 #endif

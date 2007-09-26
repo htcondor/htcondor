@@ -40,7 +40,7 @@ static int stashed_now = 0;
 void printStartdNormal 	(ClassAd *);
 void printScheddNormal 	(ClassAd *);
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 void printQuillNormal 	(ClassAd *);
 #endif /* WANT_QUILL */
 
@@ -95,7 +95,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				printState( ad );
 				break;
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 			  case PP_QUILL_NORMAL:
 				printQuillNormal (ad);
 				break;
@@ -474,7 +474,7 @@ printCOD (ClassAd *ad)
 	}
 }
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 void
 printQuillNormal (ClassAd *ad) {
 	static bool first = true;

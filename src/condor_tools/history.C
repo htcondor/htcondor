@@ -40,7 +40,7 @@
 
 #include "history_utils.h"
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 #include "sqlquery.h"
 #include "historysnapshot.h"
 #endif /* WANT_QUILL */
@@ -60,7 +60,7 @@ static void Usage(char* name)
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"		
 		"\t\t-long\t\t\tVerbose output (entire classads)\n"
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
-#if WANT_QUILL
+#ifdef WANT_QUILL
 		"\t\t-name <quill-name>\tRead history data from Quill database\n"
 		"\t\t-completedsince <time>\tDisplay jobs completed on/after time\n"
 #endif
@@ -73,7 +73,7 @@ static void Usage(char* name)
   exit(1);
 }
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 static char * getDBConnStr(char *&quillName, char *&databaseIp, char *&databaseName, char *&queryPassword);
 static bool checkDBconfig();
 #endif /* WANT_QUILL */
@@ -104,7 +104,7 @@ main(int argc, char* argv[])
 {
   Collectors = NULL;
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
   HistorySnapshot *historySnapshot;
   SQLQuery queryhor;
   SQLQuery queryver;
@@ -136,7 +136,7 @@ main(int argc, char* argv[])
 
   config();
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
   queryhor.setQuery(HISTORY_ALL_HOR, NULL);
   queryver.setQuery(HISTORY_ALL_VER, NULL);
 #endif /* WANT_QUILL */
@@ -166,7 +166,7 @@ main(int argc, char* argv[])
         specifiedMatch = atoi(argv[i]);
     }
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
     else if(match_prefix(argv[i], "-name")) {
 		i++;
 		if (argc <= i) {
@@ -228,7 +228,7 @@ main(int argc, char* argv[])
 		i++;
 		readfromfile = true;
     }
-#if WANT_QUILL
+#ifdef WANT_QUILL
     else if (match_prefix(argv[i],"-completedsince")) {
 		i++;
 		if (argc <= i) {
@@ -256,7 +256,7 @@ main(int argc, char* argv[])
 		constraint=tmp;
 		parameters[0] = &cluster;
 		parameters[1] = &proc;
-#if WANT_QUILL
+#ifdef WANT_QUILL
 		queryhor.setQuery(HISTORY_CLUSTER_PROC_HOR, parameters);
 		queryver.setQuery(HISTORY_CLUSTER_PROC_VER, parameters);
 #endif /* WANT_QUILL */
@@ -266,7 +266,7 @@ main(int argc, char* argv[])
 		sprintf (tmp, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
 		constraint=tmp;
 		parameters[0] = &cluster;
-#if WANT_QUILL
+#ifdef WANT_QUILL
 		queryhor.setQuery(HISTORY_CLUSTER_HOR, parameters);
 		queryver.setQuery(HISTORY_CLUSTER_VER, parameters);
 #endif /* WANT_QUILL */
@@ -283,7 +283,7 @@ main(int argc, char* argv[])
 		sprintf(tmp, "(%s == \"%s\")", ATTR_OWNER, owner);
 		constraint=tmp;
 		parameters[0] = owner;
-#if WANT_QUILL
+#ifdef WANT_QUILL
 		queryhor.setQuery(HISTORY_OWNER_HOR, parameters);
 		queryver.setQuery(HISTORY_OWNER_VER, parameters);
 #endif /* WANT_QUILL */
@@ -297,7 +297,7 @@ main(int argc, char* argv[])
 	  exit( 1 );
   }
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	/* This call must happen AFTER config() is called */
   if (checkDBconfig() == true && !readfromfile) {
   	readfromfile = false;
@@ -309,7 +309,7 @@ main(int argc, char* argv[])
 #endif /* WANT_QUILL */
 
   if(readfromfile == false) {
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	  if(remotequill) {
 		  if (Collectors == NULL) {
 			  Collectors = CollectorList::create();
@@ -427,7 +427,7 @@ main(int argc, char* argv[])
 
 //------------------------------------------------------------------------
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 
 /* this function for checking whether database can be used for 
    querying in local machine */

@@ -331,7 +331,7 @@ Scheduler::Scheduler() :
 	startjobsid = -1;
 	periodicid = -1;
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	quill_enabled = FALSE;
 	quill_is_remotely_queryable = 0; //false
 	quill_name = NULL;
@@ -10247,7 +10247,7 @@ Scheduler::Init()
 
 	RequestClaimTimeout = param_integer("REQUEST_CLAIM_TIMEOUT",60*30);
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 
 	/* See if QUILL is configured for this schedd */
 	if (param_boolean("QUILL_ENABLED", false) == false) {
@@ -10353,7 +10353,7 @@ Scheduler::Init()
 	sprintf(expr, "%s = %d", ATTR_NUM_USERS, 0);
     m_ad->Insert(expr);
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	// Put the quill stuff into the add as well
 	if (quill_enabled == TRUE) {
 		sprintf( expr, "%s = TRUE", ATTR_QUILL_ENABLED ); 

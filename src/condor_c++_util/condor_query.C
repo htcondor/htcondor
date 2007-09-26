@@ -105,7 +105,7 @@ CondorQuery (AdTypes qType)
 		command = QUERY_STARTD_PVT_ADS;
 		break;
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	  case QUILL_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
@@ -363,7 +363,7 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	// fix types
 	queryAd.SetMyTypeName (QUERY_ADTYPE);
 	switch (queryType) {
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	  case QUILL_AD:
 		queryAd.SetTargetTypeName (QUILL_ADTYPE);
 		break;

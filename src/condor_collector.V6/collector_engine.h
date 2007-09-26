@@ -73,7 +73,7 @@ class CollectorEngine : public Service
 	enum {GREATER_TABLE_SIZE = 1024};
 	CollectorHashTable StartdAds;
 	CollectorHashTable StartdPrivateAds;
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	CollectorHashTable QuillAds;
 #endif /* WANT_QUILL */
 	CollectorHashTable ScheddAds;

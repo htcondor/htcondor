@@ -1635,6 +1635,22 @@ AC_ARG_ENABLE([nest],
 AS_IF([test "x$enable_nest" = xyes],
   [AC_DEFINE([WANT_NEST], [1], [Define if enabling Nest])])
 
+AC_ARG_ENABLE([quill],
+  AC_HELP_STRING([--enable-quill],
+    [enable Quill functionality (default: yes)]),
+  [],
+  [enable_quill=yes])
+AS_IF([test "x$enable_quill" = xyes],
+  [AC_DEFINE([WANT_QUILL], [1], [Define if enabling Quill])])
+
+AC_ARG_ENABLE([tt],
+  AC_HELP_STRING([--enable-tt],
+    [enable TT functionality (default: yes)]),
+  [],
+  [enable_tt=yes])
+AS_IF([test "x$enable_tt" = xyes],
+  [AC_DEFINE([WANT_TT], [1], [Define if enabling TT])])
+
 # Here we figure out whether or not the circumstances are correct for us
 # to be able to separate the debugging symbols from the executables and
 # package them into a tarball. for example, if say objcopy's debuglink flag

@@ -20,7 +20,7 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#if WANT_QUILL
+#ifdef WANT_QUILL
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_classad.h"

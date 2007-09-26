@@ -65,7 +65,7 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	StartdAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
 	StartdPrivateAds(GREATER_TABLE_SIZE, &adNameHashFunction),
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	QuillAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
 #endif /* WANT_QUILL */
 
@@ -95,7 +95,7 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 CollectorEngine::
 ~CollectorEngine ()
 {
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	killHashTable (QuillAds);
 #endif /* WANT_QUILL */
 
@@ -203,7 +203,7 @@ invokeHousekeeper (AdTypes adtype)
 			cleanHashTable (StartdAds, now, makeStartdAdHashKey);
 			break;
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 		case QUILL_AD: 
 			cleanHashTable (QuillAds, now, makeQuillAdHashKey);
 			break;
@@ -330,7 +330,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &ScheddAds;
 		break;
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	  case QUILL_AD:
 		table = &QuillAds;
 		break;
@@ -382,7 +382,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 			MasterAds.walk(scanFunction) &&
 			SubmittorAds.walk(scanFunction) &&
 			NegotiatorAds.walk(scanFunction) &&
-#if WANT_QUILL
+#ifdef WANT_QUILL
 			QuillAds.walk(scanFunction) &&
 #endif
 			HadAds.walk(scanFunction) &&
@@ -736,7 +736,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		break;
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	  case UPDATE_QUILL_AD:
 		if (!makeQuillAdHashKey (hk, clientAd, from))
 		{
@@ -958,7 +958,7 @@ lookup (AdTypes adType, AdNameHashKey &hk)
 				return 0;
 			break;
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 		case QUILL_AD:
 			if (QuillAds.lookup (hk, val) == -1)
 				return 0;
@@ -1031,7 +1031,7 @@ remove (AdTypes adType, AdNameHashKey &hk)
 		case STARTD_AD:
 			return !StartdAds.remove (hk);
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 		case QUILL_AD:
 			return !QuillAds.remove (hk);
 #endif /* WANT_QUILL */
@@ -1205,7 +1205,7 @@ housekeeper()
 	dprintf (D_ALWAYS, "\tCleaning StartdPrivateAds ...\n");
 	cleanHashTable (StartdPrivateAds, now, makeStartdAdHashKey);
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	dprintf (D_ALWAYS, "\tCleaning QuillAds ...\n");
 	cleanHashTable (QuillAds, now, makeQuillAdHashKey);
 #endif /* WANT_QUILL */

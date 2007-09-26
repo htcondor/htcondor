@@ -58,7 +58,7 @@ SETEGID_OBJ = ../condor_util_lib/setegid.o
 SETEGID_OBJ = 
 #endif
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 #if HAVE_ORACLE
 ORACLE_OBJS = oracledatabase.o
 #else
@@ -70,7 +70,7 @@ QUILL_OBJS = jobqueuesnapshot.o historysnapshot.o pgsqldatabase.o sqlquery.o $(O
 QUILL_OBJS =
 #endif
 
-#if WANT_TT
+#ifdef WANT_TT
 TT_OBJS = pgsqldatabase.o file_sql.o file_transfer_db.o 
 #else
 TT_OBJS =

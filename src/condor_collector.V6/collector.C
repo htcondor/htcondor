@@ -130,7 +130,7 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_STARTD_PVT_ADS,"QUERY_STARTD_PVT_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,NEGOTIATOR);
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	daemonCore->Register_Command(QUERY_QUILL_ADS,"QUERY_QUILL_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 #endif /* WANT_QUILL */
@@ -166,7 +166,7 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_STARTD_PERM);
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	daemonCore->Register_Command(INVALIDATE_QUILL_ADS,"INVALIDATE_QUILL_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
 #endif /* WANT_QUILL */
@@ -208,7 +208,7 @@ void CollectorDaemon::Init()
 
 	// install command handlers for updates
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	daemonCore->Register_Command(UPDATE_QUILL_AD,"UPDATE_QUILL_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 #endif /* WANT_QUILL */
@@ -335,7 +335,7 @@ CollectorDaemon::receive_query_public( int command )
 		whichAds = SCHEDD_AD;
 		break;
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	  case QUERY_QUILL_ADS:
 		dprintf (D_ALWAYS, "Got QUERY_QUILL_ADS\n");
 		whichAds = QUILL_AD;
@@ -436,7 +436,7 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 		whichAds = SCHEDD_AD;
 		break;
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	  case INVALIDATE_QUILL_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_QUILL_ADS\n");
 		whichAds = QUILL_AD;
@@ -637,7 +637,7 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	}
 
 	switch( cmd ) {
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	case UPDATE_QUILL_AD:
 #endif /* WANT_QUILL */
 	case UPDATE_STARTD_AD:
@@ -655,7 +655,7 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 		return receive_update( NULL, cmd, sock );
 		break;
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	case INVALIDATE_QUILL_ADS:
 #endif /* WANT_QUILL */
 	case INVALIDATE_STARTD_ADS:

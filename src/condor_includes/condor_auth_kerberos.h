@@ -37,7 +37,7 @@ extern "C" {
 // building with externals the check cannot look into the external
 // because it hasn't been built/installed yet. Right now, in my
 // workspace I'm just commenting com_err.h out.
-#include "com_err.h"            // error_message is defined here
+//#include "com_err.h"            // error_message is defined here
 }
 
 class Condor_Auth_Kerberos : public Condor_Auth_Base {

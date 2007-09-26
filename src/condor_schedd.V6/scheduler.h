@@ -641,7 +641,7 @@ private:
 	int sent_shadow_failure_email;
 
 	// some stuff about Quill that should go into the ad
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	int quill_enabled;
 	int quill_is_remotely_queryable;
 	char *quill_name;

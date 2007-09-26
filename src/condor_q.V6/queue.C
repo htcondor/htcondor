@@ -55,7 +55,7 @@
 #include "../classad_analysis/analysis.h"
 #endif
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 #include "sqlquery.h"
 #endif /* WANT_QUILL */
 
@@ -69,7 +69,7 @@ enum {
 	DIRECT_UNKNOWN = 0,
 	/* start at the rdbms and fail over like normal */
 	DIRECT_ALL = 1,
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	/* talk directly to the rdbms system */
 	DIRECT_RDBMS = 2,
 	/* talk directly to the quill daemon */
@@ -106,7 +106,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads);
 /* convert the -direct aqrgument prameter into an enum */
 unsigned int process_direct_argument(char *arg);
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 /* execute a database query directly */ 
 static void exec_db_query(char *quill_name, char *db_ipAddr, char *db_name,char *query_password);
 
@@ -141,7 +141,7 @@ static  char *machineads_file = NULL;
 static	CondorQ 	Q;
 static	QueryResult result;
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 static  QueryResult result2;
 #endif
 
@@ -256,7 +256,7 @@ static void freeConnectionStrings() {
 	}
 }
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 /* this function for checking whether database can be used for querying in local machine */
 static bool checkDBconfig() {
 	char *tmp;
@@ -313,7 +313,7 @@ int main (int argc, char **argv)
 	myDistro->Init( argc, argv );
 	config();
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 		/* by default check the configuration for local database */
 	useDB = checkDBconfig();
 #else 
@@ -366,7 +366,7 @@ int main (int argc, char **argv)
 			
 			if ( directDBquery ) {				
 				/* perform direct DB query if indicated and exit */
-#if WANT_QUILL
+#ifdef WANT_QUILL
 
 					/* check if database is available */
 				if (!useDB) {
@@ -406,7 +406,7 @@ int main (int argc, char **argv)
 
 					/* FALL THROUGH */
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 				case DIRECT_RDBMS:
 					if (useDB) {
 
@@ -618,7 +618,7 @@ int main (int argc, char **argv)
 	while ((ad = scheddList.Next()))
 	{
 		/* default to true for remotely queryable */
-#if WANT_QUILL
+#ifdef WANT_QUILL
 		int flag=1;
 #endif
 
@@ -632,7 +632,7 @@ int main (int argc, char **argv)
 			continue;
 		}
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 			// get the address of the database
 		if (ad->LookupString(ATTR_QUILL_DB_IP_ADDR, &dbIpAddr) &&
 			ad->LookupString(ATTR_QUILL_NAME, &quillName) &&
@@ -657,7 +657,7 @@ int main (int argc, char **argv)
 
 			/* check if direct DB query is indicated */
 		if ( directDBquery ) {				
-#if WANT_QUILL
+#ifdef WANT_QUILL
 			if (!useDB) {
 				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
 				fprintf(stderr, "Database query not supported on schedd: %s\n",
@@ -692,7 +692,7 @@ int main (int argc, char **argv)
 		{
 			case DIRECT_ALL:
 				/* FALL THROUGH */
-#if WANT_QUILL
+#ifdef WANT_QUILL
 			case DIRECT_RDBMS:
 				if (useDB) {
 					if (sqfp(quillName, dbIpAddr, dbName, queryPassword, TRUE ))
@@ -1239,7 +1239,7 @@ processCommandLineArguments (int argc, char *argv[])
                 machineads_file = strdup(argv[i]);
             }
         }
-#if WANT_QUILL
+#ifdef WANT_QUILL
 		else if (match_prefix(arg, "avgqueuetime")) {
 				/* if user want average wait time, we will perform direct DB query */
 			avgqueuetime = true;
@@ -1301,7 +1301,7 @@ job_time(float cpu_time,ClassAd *ad)
 
 unsigned int process_direct_argument(char *arg)
 {
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	if (strcasecmp(arg, "rdbms") == MATCH) {
 		return DIRECT_RDBMS;
 	}
@@ -1316,7 +1316,7 @@ unsigned int process_direct_argument(char *arg)
 		return DIRECT_SCHEDD;
 	}
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 	fprintf( stderr, 
 		"Error: Argument -direct requires [rdbms | quilld | schedd]\n" ); 
 /*		"Error: Argument -direct requires [rdbms | schedd]\n" ); */
@@ -1825,7 +1825,7 @@ usage (char *myName)
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 		"\t\t-jobads <file>\t\tFile of job ads to display\n"
 		"\t\t-machineads <file>\tFile of machine ads for analysis\n"
-#if WANT_QUILL
+#ifdef WANT_QUILL
 		"\t\t-direct <rdbms | schedd>\n"
 		"\t\t\tPerform a direct query to the rdbms\n"
 		"\t\t\tor to the schedd without falling back to the queue\n"
@@ -1986,7 +1986,7 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 
 		/* get the job ads from database if database can be queried */
 	if (useDB) {
-#if WANT_QUILL
+#ifdef WANT_QUILL
 
 		dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
 
@@ -2232,7 +2232,7 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 
 			/* get the job ads from a database if available */
 		if (useDB) {
-#if WANT_QUILL
+#ifdef WANT_QUILL
 
 			dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
 
@@ -2980,7 +2980,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
     return success;
 }
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 
 /* get the quill address for the quillName specified */
 static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr) {

@@ -219,7 +219,7 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 	return true;
 }
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 bool
 makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from) {
 

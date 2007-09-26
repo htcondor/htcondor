@@ -306,7 +306,7 @@ PCRE_LIB = $(PCRE_DIR)/lib/libpcre.a
 #endif
 #endif
 
-#if WANT_TT
+#ifdef WANT_TT
 /*
 TT_LIB = $(POSTGRESQL_LIB)/libpq.a $(ORACLE_HOME)/lib/libocci10.a $(ORACLE_HOME)/lib/libclntst10.a $(ORACLE_HOME)/lib/libnnz10.a -lirc -lpthread
 */
@@ -318,7 +318,7 @@ TT_INC = -I$(POSTGRESQL_INC) $(ORACLE_INC)
 TT_FLAGS = -DWANT_TT  
 #endif
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 #if HAS_EXTERNALS
 QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a 
 QUILL_INC = -I$(POSTGRESQL_INC) 

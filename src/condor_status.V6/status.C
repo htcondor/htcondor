@@ -111,7 +111,7 @@ main (int argc, char *argv[])
 	// can override it
 	switch (type)
 	{
-#if WANT_QUILL 
+#ifdef WANT_QUILL 
 	  case QUILL_AD:
 		setPPstyle(PP_QUILL_NORMAL, 0, DEFAULT);
 		break;
@@ -159,7 +159,7 @@ main (int argc, char *argv[])
 
 	// set the constraints implied by the mode
 	switch (mode) {
-#if WANT_QUILL 
+#ifdef WANT_QUILL 
 	  case MODE_QUILL_NORMAL:
 #endif /* WANT_QUILL */
 
@@ -274,7 +274,7 @@ main (int argc, char *argv[])
 			d = new Daemon( DT_STARTD, direct, addr );
 			break;
 
-#if WANT_QUILL 
+#ifdef WANT_QUILL 
 		case MODE_QUILL_NORMAL: 
 			d = new Daemon( DT_QUILL, direct, addr );
 			break;
@@ -381,7 +381,7 @@ usage ()
 		"\t-master\t\t\tDisplay daemon master attributes\n"
 		"\t-pool <name>\t\tGet information from collector <name>\n"
 		"\t-run\t\t\tSame as -claimed [deprecated]\n"
-#if WANT_QUILL 
+#ifdef WANT_QUILL 
 		"\t-quill\t\t\tDisplay attributes of quills\n"
 #endif /* WANT_QUILL */
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
@@ -568,7 +568,7 @@ firstPass (int argc, char *argv[])
 				setMode (MODE_GENERIC, i, argv[i]);
 			}
 		} else
-#if WANT_QUILL 
+#ifdef WANT_QUILL 
 		if (matchPrefix (argv[i], "-quill", 2)) {
 			setMode (MODE_QUILL_NORMAL, i, argv[i]);
 		} else
@@ -709,7 +709,7 @@ secondPass (int argc, char *argv[])
 			switch (mode) {
 			  case MODE_STARTD_NORMAL:
 			  case MODE_STARTD_COD:
-#if WANT_QUILL 
+#ifdef WANT_QUILL 
 			  case MODE_QUILL_NORMAL:
 #endif /* WANT_QUILL */
 			  case MODE_SCHEDD_NORMAL:

@@ -103,7 +103,7 @@ displayTotals (FILE *file, int keyLength)
 		case PP_STARTD_STATE:
     	case PP_STARTD_COD:
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
     	case PP_QUILL_NORMAL:
 #endif /* WANT_QUILL */
 
@@ -676,7 +676,7 @@ makeTotalObject (ppOption ppo)
 		case PP_STARTD_COD:			ct = new StartdCODTotal;	break;
 		case PP_SCHEDD_NORMAL:		ct = new ScheddNormalTotal; break;
 
-#if WANT_QUILL
+#ifdef WANT_QUILL
 		case PP_QUILL_NORMAL:		ct = new QuillNormalTotal; break;
 #endif /* WANT_QUILL */
 
@@ -726,7 +726,7 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 
 		//here we might want a separate case for QUILL_NORMAL 
 		//but we keep it here for now
-#if WANT_QUILL
+#ifdef WANT_QUILL
 		case PP_QUILL_NORMAL:
 #endif /* WANT_QUILL */
 
