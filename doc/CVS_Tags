@@ -8,6 +8,55 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+09/26/07 trunk-pre-merge-V6_9_4-merge-1
+         trunk-post-merge-V6_9_4-merge-1
+   The state of the doc directory in trunk before and after
+   merging changes from the V6_9_4-branch as tagged V6_9_4-merge-1.
+
+09/26/07 V6_9_4-merge-1
+   The state of the doc directory in the V6_9_4-branch for a
+   first time merge into the trunk.
+
+09/26/07  V6_9_4-pre-merge-V6_8-merge-15
+          V6_9_4-post-merge-V6_8-merge-15
+   The state of the doc directory in V6_9_4-branch before and after
+   merging changes from the V6_8-branch as tagged V6_8-merge-15.
+
+09/26/07 V6_8-merge-15
+   The state of the doc directory in the V6_8-branch for a merge
+   into V6_9_4-branch.
+
+09/24/07 V6_8-pre-merge-V6_8_6-merge-1
+         V6_8-post-merge-V6_8_6-merge-1
+   The state of the doc directory in V6_8_6-branch before and after
+   merging changes from the V6_8-branch as tagged V6_8_6-merge-1.
+
+09/24/07 V6_8_6-merge-1
+   The state of the doc directory in the V6_8_6-branch for a 
+   first-time merge into V6_8-branch.
+
+09/20/07 V6_8_6-pre-merge-V6_8_5-merge-2
+         V6_8_6-post-merge-V6_8_5-merge-2
+   The state of the doc directory in V6_8_6-branch before and after
+   merging changes from the V6_8_5-branch as tagged V6_8_5-merge-2.
+
+09/20/07 V6_8_5-merge-2
+   The state of the doc directory in the V6_8_5-branch for a 
+   merge into V6_8-6-branch.
+
+09/11/07 V6_8_6-root and V6_8_6-branch
+   A branch for the 6.8.6 doc series of the manual, created from
+   V6_8_6-root on the V6_8-branch of doc.
+
+09/05/07 V6_9_4-pre-merge-V6_8-merge-14
+         V6_9_4-post-merge-V6_8-merge-14
+   The state of the doc directory in V6_9_4-branch before and after
+   merging changes from the V6_8-branch as tagged V6_8-merge-14.
+
+09/05/07 V6_8-merge-14
+   The state of the doc directory in the V6_8-branch for a merge
+   into V6_9_4-branch.
+
 08/09/07 V6_9_4-root and V6_9_4-branch
    A branch for the 6.9.4 manual, created from
    V6_9_4-root on the trunk for doc.
