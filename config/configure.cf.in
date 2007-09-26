@@ -122,7 +122,6 @@ YACC = @YACC@
 STRIP = @STRIP@
 TRUE = @TRUE@
 JAVAC = @JAVAC@
-#define HAVE_JAR @HAVE_JAR@
 JAR = @JAR@
 FIND = @FindCmd@
 
