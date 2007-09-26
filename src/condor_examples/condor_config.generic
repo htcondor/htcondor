@@ -1923,6 +1923,10 @@ QUILL_ADDRESS_FILE = $(LOG)/.quill_address
 # information from the database about the queue.
 #QUILL_DB_QUERY_PASSWORD = foobar
 
+# What kind of database server is this?
+# For now, only PGSQL is supported
+#QUILL_DB_TYPE = "PGSQL"
+
 # The machine and port of the postgres server.
 # Although this says IP Addr, it can be a DNS name. 
 # It must match whatever format you used for the .pgpass file, however
