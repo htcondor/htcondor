@@ -121,7 +121,7 @@ Job::initialize(CondorError &errstack)
 }
 
 int
-Job::abort(CondorError &errstack)
+Job::abort(CondorError & /* errstack */)
 {
 	MyString currentKey;
 	JobFile jobFile;
@@ -615,7 +615,7 @@ ScheddTransaction::newCluster(int &id)
 }
 
 int
-ScheddTransaction::newJob(int clusterId, int &id, CondorError &errstack)
+ScheddTransaction::newJob(int clusterId, int &id, CondorError & /* errstack */)
 {
 	id = NewProc(clusterId);
 	if (-1 == id) {
@@ -700,7 +700,7 @@ ScheddTransaction::getOwner()
 	   NullScheddTransaction, used when no ScheddTransaction is available...
 *****************************************************************************/
 
-NullScheddTransaction::NullScheddTransaction(const char *trans_owner):
+NullScheddTransaction::NullScheddTransaction(const char * /* trans_owner */):
 	ScheddTransaction(NULL)
 {
 }
@@ -723,31 +723,31 @@ NullScheddTransaction::commit()
 }
 
 int
-NullScheddTransaction::newCluster(int &id)
+NullScheddTransaction::newCluster(int & /* id */)
 {
 	return -2;
 }
 
 int
-NullScheddTransaction::newJob(int clusterId, int &id, CondorError &errstack)
+NullScheddTransaction::newJob(int /* clusterId */, int & /* id */, CondorError & /* errstack */)
 {
 	return -4;
 }
 
 int
-NullScheddTransaction::getJob(PROC_ID id, Job *&job)
+NullScheddTransaction::getJob(PROC_ID /* id */, Job *& /* job */)
 {
 	return 0;
 }
 
 int
-NullScheddTransaction::removeJob(PROC_ID id)
+NullScheddTransaction::removeJob(PROC_ID /* id */)
 {
 	return 0;
 }
 
 int
-NullScheddTransaction::removeCluster(int clusterId)
+NullScheddTransaction::removeCluster(int /* clusterId */)
 {
 	return 0;
 }

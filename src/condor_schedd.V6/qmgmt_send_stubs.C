@@ -575,6 +575,18 @@ SendSpoolFile( char *filename )
 	return rval;
 }
 
+int
+CloseSocket()
+{
+	CurrentSysCall = CONDOR_CloseSocket;
+
+	qmgmt_sock->encode();
+	assert( qmgmt_sock->code(CurrentSysCall) );
+	assert( qmgmt_sock->end_of_message() );
+
+	return 0;
+}
+
 #if defined(assert)
 #undef assert
 #endif
@@ -763,16 +775,4 @@ void
 GetAllJobsByConstraint( char const *constraint, char const *projection, ClassAdList &list)
 {
 	GetAllJobsByConstraint_imp(constraint,projection,list);
-}
-
-int
-CloseSocket()
-{
-	CurrentSysCall = CONDOR_CloseSocket;
-
-	qmgmt_sock->encode();
-	assert( qmgmt_sock->code(CurrentSysCall) );
-	assert( qmgmt_sock->end_of_message() );
-
-	return 0;
 }

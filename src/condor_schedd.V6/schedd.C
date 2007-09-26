@@ -1840,7 +1840,7 @@ Scheduler::PeriodicExprHandler( void )
 
 
 bool
-jobPrepNeedsThread( int cluster, int proc )
+jobPrepNeedsThread( int /* cluster */, int /* proc */ )
 {
 #ifdef WIN32
 	// we never want to run in a thread on Win32, since
@@ -1868,7 +1868,7 @@ jobPrepNeedsThread( int cluster, int proc )
 
 
 bool
-jobCleanupNeedsThread( int cluster, int proc )
+jobCleanupNeedsThread( int /* cluster */, int /* proc */ )
 {
 
 #ifdef WIN32
@@ -5655,12 +5655,9 @@ void
 Scheduler::checkReconnectQueue( void ) 
 {
 	PROC_ID job;
-	ClassAd *job_ad = NULL, *scan = NULL;
 	CondorQuery query(STARTD_AD);
 	ClassAdList job_ads;
 	MyString constraint;
-	char* remote_host = NULL;
-	char* remote_pool = NULL;
 
 		// clear out the timer tid, since we made it here.
 	checkReconnectQueue_tid = -1;
@@ -6145,7 +6142,7 @@ Scheduler::StartJobs()
 	}
 
 	/* Reset our Timer */
-	daemonCore->Reset_Timer(startjobsid,SchedDInterval.getDefaultInterval());
+	daemonCore->Reset_Timer(startjobsid,(int)SchedDInterval.getDefaultInterval());
 
 	dprintf(D_FULLDEBUG, "-------- Done starting jobs --------\n");
 }
@@ -6884,7 +6881,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 
 
 void
-Scheduler::tryNextJob( int secs )
+Scheduler::tryNextJob()
 {
 		// Re-set timer if there are any jobs left in the queue
 	if( !RunnableJobQueue.IsEmpty() ) {
@@ -11395,7 +11392,7 @@ Scheduler::publish( ClassAd *cad ) {
 		// -------------------------------------------------------
 	InsertIntoAd ( cad, "MySockName", MySockName );
 	InsertIntoAd ( cad, "MyShadowSockname", MyShadowSockName );
-	InsertIntoAd ( cad, "SchedDInterval", SchedDInterval.getDefaultInterval() );
+	InsertIntoAd ( cad, "SchedDInterval", (int)SchedDInterval.getDefaultInterval() );
 	InsertIntoAd ( cad, "QueueCleanInterval", QueueCleanInterval );
 	InsertIntoAd ( cad, "JobStartDelay", JobStartDelay );
 	InsertIntoAd ( cad, "JobStartCount", JobStartCount );
