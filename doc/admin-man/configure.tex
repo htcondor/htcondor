@@ -3694,6 +3694,11 @@ These macros control the \Condor{schedd}.
   your \MacroUNI{RESERVED\_SWAP} limit.
   This macro has a default value of 200.
 
+\item[\Macro{MAX\_JOBS\_SUBMITTED}] \label{param:MaxJobsSubmitted}
+  This macro limits the number of jobs that can be in a
+  \Condor{schedd}'s queue. Any attempted job submissions that would
+  exceed this limit will be refused.
+
 \item[\Macro{MAX\_SHADOW\_EXCEPTIONS}]
   \label{param:MaxShadowExceptions} This macro controls the maximum
   number of times that \Condor{shadow} processes can have a fatal
