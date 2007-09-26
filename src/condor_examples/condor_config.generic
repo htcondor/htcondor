@@ -1911,6 +1911,8 @@ QUILL_ADDRESS_FILE = $(LOG)/.quill_address
 #QUILL_DB_QUERY_PASSWORD = foobar
 
 # The machine and port of the postgres server.
+# Although this says IP Addr, it can be a DNS name. 
+# It must match whatever format you used for the .pgpass file, however
 #QUILL_DB_IP_ADDR = machine.domain.com:5432
 
 # Polling period, in seconds, for when quill reads transactions out of the
