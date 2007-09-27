@@ -1207,7 +1207,7 @@ AC_SUBST([has_vendor_f90],[$_cv_has_vendor_f90])
 ###############################################################
 
 AC_MSG_CHECKING([if DOES_REMOTE_SYSCALLS is supported])
-case "$_cv_op_sys" in
+case "$_cv_opsys" in
   HPUX | LINUX | DUX | SOLARIS )
     _cv_does_remote_syscalls=yes
   ;;
@@ -1220,7 +1220,7 @@ AS_IF([test "x$_cv_does_remote_syscalls" = xyes],
   AC_DEFINE([DOES_REMOTE_SYSCALLS], [1], [Define if we can do remote syscalls]))
 
 AC_MSG_CHECKING([if DOES_CHECKPOINTING is supported])
-case "$_cv_op_sys" in
+case "$_cv_opsys" in
   HPUX | LINUX | DUX | SOLARIS )
     _cv_does_checkpointing=yes
   ;;
@@ -1234,7 +1234,7 @@ AS_IF([test "x$_cv_does_checkpointing" = xyes],
 
 AC_MSG_CHECKING([if DOES_COMPRESS_CKPT is supported])
 # Turned off on LINUX-X86_64: due to thaineryconcerning void* and int, don't compile this in for now...
-case "$_cv_op_sys-$_cv_arch" in
+case "$_cv_opsys-$_cv_arch" in
   LINUX-X86_64 | DUX-* )
     _cv_does_compress_ckpt=no
   ;;
