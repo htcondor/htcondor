@@ -1,3 +1,7 @@
+09/27/07 V6_9-privsep_switchboard-{root,branch}
+  A branch for integrating Jim K's changes to the PrivSep Switchboard
+  into Condor.
+
 09/20/07 V6_8-merge-10
   The state of the V6_8-branch for a merge back to the trunk.
 
