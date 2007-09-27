@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: pre_all,v 1.4 2007-09-15 13:48:34 gthain Exp $ 
+# $Id: pre_all,v 1.5 2007-09-27 15:24:01 gthain Exp $ 
 # Submit-side NMI build system infrastructure to prepare sources for
 # the Condor build
 #
@@ -140,49 +140,7 @@ print "Done removing doc directory\n";
 
 
 ######################################################################
-# 4) Setup the sources as a release-able source tarball
-######################################################################
-
-print "Creating source tarball\n";
-chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
-my $src_tar_dir = "condor-$version";
-my $src_tarball = "$src_tar_dir.tar.gz";
-mkdir( "$src_tar_dir" ) || die "Can't mkdir($src_tar_dir): $!\n";
-
-safe_sys( "cp $SrcDir/README.building $src_tar_dir" );
-safe_sys( "cp src/condor_release/LICENSE.TXT $src_tar_dir" );
-safe_sys( "mv NTconfig config imake src externals $src_tar_dir" );
-safe_sys( "tar --exclude=CVS -zcf $src_tarball $src_tar_dir" );
-print "Done creating source tarball\n";
-
-print "Removing all source directories\n";
-safe_sys( "rm -rf $src_tar_dir" );
-print "Done removing all source directories\n";
-
-
-######################################################################
-# 5) Create platform-independent results.tar.gz file
-######################################################################
-
-# All we want to do is tar the files in common into
-# common/results.tar.gz so that we can save them.
-print "Tarring up contents of common to save for later\n";
-chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
-open( TAR, "tar -zcvf $result $vers_file $src_tarball|" ) ||
-    die "Can't open(tar -zcvf $result $vers_file $src_tarball): $!\n";
-while( <TAR> ) {
-    print $_;
-}
-close( TAR );
-if( $? ) {
-    die "Tar failed with status $?\n";
-}
-print "tar completed successfully\n";
-
-
-
-######################################################################
-# 6) Record some cvs archeology
+# 4) Record some cvs archeology
 ######################################################################
 
 print "Checking if this build came from CVS, and if so, from which tags\n";
@@ -190,9 +148,14 @@ chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
 
 my $tagname = "";
 open( TAGFILE, "src/CVS/Tag"); # if it doesn't exist, that's ok
+
+print ("Opened src/CVS/Tag\n");
+
 while (<TAGFILE>) {
 	# If there's a tag entry, read it in,
 	$tagname = $_;
+
+	print("Found tag named $tagname \n");
 
 	# remove the newline
 	chomp $tagname;
@@ -242,6 +205,46 @@ if ($tagname ne "") {
 	}
 
 }
+
+######################################################################
+# 5) Setup the sources as a release-able source tarball
+######################################################################
+
+print "Creating source tarball\n";
+chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
+my $src_tar_dir = "condor-$version";
+my $src_tarball = "$src_tar_dir.tar.gz";
+mkdir( "$src_tar_dir" ) || die "Can't mkdir($src_tar_dir): $!\n";
+
+safe_sys( "cp $SrcDir/README.building $src_tar_dir" );
+safe_sys( "cp src/condor_release/LICENSE.TXT $src_tar_dir" );
+safe_sys( "mv NTconfig config imake src externals $src_tar_dir" );
+safe_sys( "tar --exclude=CVS -zcf $src_tarball $src_tar_dir" );
+print "Done creating source tarball\n";
+
+print "Removing all source directories\n";
+safe_sys( "rm -rf $src_tar_dir" );
+print "Done removing all source directories\n";
+
+
+######################################################################
+# 6) Create platform-independent results.tar.gz file
+######################################################################
+
+# All we want to do is tar the files in common into
+# common/results.tar.gz so that we can save them.
+print "Tarring up contents of common to save for later\n";
+chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
+open( TAR, "tar -zcvf $result $vers_file $src_tarball|" ) ||
+    die "Can't open(tar -zcvf $result $vers_file $src_tarball): $!\n";
+while( <TAR> ) {
+    print $_;
+}
+close( TAR );
+if( $? ) {
+    die "Tar failed with status $?\n";
+}
+print "tar completed successfully\n";
 
 print "All steps completed successfully!\n";
 exit 0;
