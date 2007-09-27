@@ -1943,6 +1943,12 @@ QUILL_ADDRESS_FILE = $(LOG)/.quill_address
 # Add debugging flags to here if you need to debug quill for some reason.
 #QUILL_DEBUG = D_FULLDEBUG
 
+# Number of seconds the master should wait for the Quill daemon to respond 
+# before killing it. This number might need to be increased for very 
+# large  logfiles.
+# The default is 3600 (one hour), but kicking it up to a few hours won't hurt
+#QUILL_NOT_RESPONDING_TIMEOUT = 3600
+
 
 ##
 ##--------------------------------------------------------------------
@@ -1954,6 +1960,36 @@ DBMSD_ARGS = -f
 
 # Where is the log file for the quill daemon?
 DBMSD_LOG = $(LOG)/DbmsdLog
+
+# Interval between consecutive purging calls (in seconds)
+#DATABASE_PURGE_INTERVAL = 86400
+
+# Interval between consecutive database reindexing operations
+# This is only used when dbtype = PGSQL
+#DATABASE_REINDEX_INTERVAL = 86400
+
+# Number of days before purging resource classad history
+# This includes things like machine ads, daemon ads, submitters
+#QUILL_RESOURCE_HISTORY_DURATION = 7
+
+# Number of days before purging job run information 
+# This includes job events, file transfers, matchmaker matches, etc
+# This does NOT include the final job ad. condor_history does not need
+# any of this information to work.
+#QUILL_RUN_HISTORY_DURATION = 7
+
+# Number of days before purging job classad history
+# This is the information needed to run condor_history
+#QUILL_JOB_HISTORY_DURATION = 3650
+
+# DB size threshold for warning the condor administrator. This is checked
+# after every purge. The size is given in gigabytes.
+#QUILL_DBSIZE_LIMIT = 20
+
+# Number of seconds the master should wait for the DBMSD to respond before 
+# killing it. This number might need to be increased for very large databases
+# The default is 3600 (one hour). 
+#DBMSD_NOT_RESPONDING_TIMEOUT = 3600
 
 ##
 ##--------------------------------------------------------------------
