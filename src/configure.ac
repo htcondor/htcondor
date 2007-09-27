@@ -1206,8 +1206,6 @@ AC_SUBST([has_vendor_f90],[$_cv_has_vendor_f90])
 # Check for functionality availability on different platforms #
 ###############################################################
 
-# Question, is DOES_REMOTE_SYSCALLS even useful? It seems that
-# IS_CLIPPED overrides it
 AC_MSG_CHECKING([if DOES_REMOTE_SYSCALLS is supported])
 case "$_cv_op_sys" in
   HPUX | LINUX | DUX | SOLARIS )
@@ -1233,6 +1231,20 @@ esac
 AC_MSG_RESULT([$_cv_does_checkpointing])
 AS_IF([test "x$_cv_does_checkpointing" = xyes],
   AC_DEFINE([DOES_CHECKPOINTING], [1], [Define if we can do checkpointing]))
+
+AC_MSG_CHECKING([if DOES_COMPRESS_CKPT is supported])
+# Turned off on LINUX-X86_64: due to thaineryconcerning void* and int, don't compile this in for now...
+case "$_cv_op_sys-$_cv_arch" in
+  LINUX-X86_64 | DUX-* )
+    _cv_does_compress_ckpt=no
+  ;;
+  * )
+    _cv_does_compress_ckpt=yes
+  ;;
+esac
+AC_MSG_RESULT([$_cv_does_compress_ckpt])
+AS_IF([test "x$_cv_does_compress_ckpt" = xyes],
+  AC_DEFINE([DOES_COMPRESS_CKPT], [1], [Define if we can compress checkpoints]))
 
 
 #####################

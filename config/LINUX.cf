@@ -60,7 +60,6 @@
 
 #define LibC SimpleLibC
 
-#define DOES_COMPRESS_CKPT		YES
 #define DOES_SAVE_SIGSTATE		YES
 #define HAS_DYNAMIC_USER_JOBS		NO
 

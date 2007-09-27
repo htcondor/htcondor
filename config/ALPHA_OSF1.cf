@@ -4,7 +4,6 @@
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC
 
-#define DOES_COMPRESS_CKPT		NO
 #define DOES_SAVE_SIGSTATE		YES
 
 #define NEEDS_KBDD			YES

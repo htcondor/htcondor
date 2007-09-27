@@ -184,7 +184,7 @@ CKPT_OBJ = $(FILE_TABLE_OBJ)\
 CKPT_OBJ = $(FILE_TABLE_OBJ) syscall_mode.o eprintf.o shared_utils.o condor_error.o
 #endif
 
-#if DOES_COMPRESS_CKPT
+#ifdef DOES_COMPRESS_CKPT
 #if IS_SUN4X_SOLARIS
 #if IS_SOLARIS29
 /* _rem.o, _div.o, umultiply.o were consolidated into hwmuldiv.o in sol 2.9 */
@@ -445,12 +445,12 @@ libcondorsyscall.a: libtmp.a ToUpper
 
 #if defined(DOES_CHECKPOINTING) || defined(DOES_REMOTE_SYSCALLS)
 public_library(libcondorsyscall.a,lib)
-#if DOES_COMPRESS_CKPT
+#ifdef DOES_COMPRESS_CKPT
 public_library(libcondor_z.a,lib)
 #endif
 #endif
 
-#if DOES_COMPRESS_CKPT
+#ifdef DOES_COMPRESS_CKPT
 public_library($(COMPRESS_LIB),lib)
 #endif
 
@@ -528,7 +528,7 @@ import(../h,syscall_numbers.c)
 import(../condor_util_lib,stub_gen)
 import(../condor_shadow.V6,pseudo_ops.h)
 import(../condor_ckpt,libcondorc++support.a)
-#if DOES_COMPRESS_CKPT
+#ifdef DOES_COMPRESS_CKPT
 all_symlink_target($(ZLIB_LIB)/libz.a,libcondor_z.a)
 #endif
 
@@ -556,7 +556,7 @@ condor_crypt.o: ../condor_io/condor_crypt.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
 		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt.C
 
-#if DOES_COMPRESS_CKPT
+#ifdef DOES_COMPRESS_CKPT
 $(COMPRESS_LIB) : $(SYSCALL_LIB) $(COMPRESS_OBJ)
 	cp $(SYSCALL_LIB) $(COMPRESS_LIB)
 	ar -d $(COMPRESS_LIB) image.o

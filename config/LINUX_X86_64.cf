@@ -7,9 +7,5 @@
 arguments. XXX figure out how I'm going to model this parameter... */
 /*#define NEEDS_64BIT_SYSCALLS            YES*/
 
-/* due to thaineryconcerning void* and int, don't compile this in for now... */
-#undef DOES_COMPRESS_CKPT
-#define DOES_COMPRESS_CKPT	NO
-
 #define IS_CLIPPED NO
 

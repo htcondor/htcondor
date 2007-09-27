@@ -56,7 +56,7 @@ PLATFORM_EXTRACT = PIPE.o
 
 EXTRACT = $(SIG_EXTRACT) $(PLATFORM_EXTRACT)
 
-#if DOES_COMPRESS_CKPT
+#ifdef DOES_COMPRESS_CKPT
 #  if IS_SUN4X_SOLARIS
 #    if IS_SOLARIS29
 /* _rem.o, _div.o, umultiply.o were consolidated into hwmuldiv.o in sol 2.9 */
@@ -263,7 +263,7 @@ program_target_complex(ToUpper,ToUpper.o,$(NULL),$(NULL),$(NULL))
 clean::
 	rm -f ToUpper ToUpper.o
 
-#if DOES_COMPRESS_CKPT
+#ifdef DOES_COMPRESS_CKPT
 malloc-condor.o : malloc-condor.c malloc.c
 	$(CC) -O2 -g -DMORECORE=condor_morecore -DHAVE_MMAP=0 -Dmalloc_getpagesize=8192 -c malloc-condor.c
 zimage.o : image.C
