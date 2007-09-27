@@ -1949,6 +1949,11 @@ QUILL_ADDRESS_FILE = $(LOG)/.quill_address
 # The default is 3600 (one hour), but kicking it up to a few hours won't hurt
 #QUILL_NOT_RESPONDING_TIMEOUT = 3600
 
+# Should Quill hold open a database connection to the DBMSD? 
+# Each open connection consumes resources at the server, so large pools
+# (100 or more machines) should set this variable to FALSE. Note the
+# default is TRUE.
+#QUILL_MAINTAIN_DB_CONN = TRUE
 
 ##
 ##--------------------------------------------------------------------
