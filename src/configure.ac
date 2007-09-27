@@ -1656,7 +1656,7 @@ else
 	AC_SUBST(RpmCmd,$ac_rpmcmd)
 	fi
 fi
-AS_IF([test "x$enable_rpm" != xno],
+AS_IF([test "x$enable_rpm" != xno -a "x$_cv_have_rpm" != xNO],
   [AC_DEFINE([HAVE_RPM],[1],[Define if making rpms])])
 
 AC_ARG_ENABLE([malloc-debug],
