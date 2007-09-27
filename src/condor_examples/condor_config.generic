@@ -1943,6 +1943,10 @@ QUILL_ADDRESS_FILE = $(LOG)/.quill_address
 # Number of hours between scans of QUILL_HISTORY_DURATION.
 #QUILL_HISTORY_CLEANING_INTERVAL = 24
 
+# Allows or disallows a remote query to the quill daemon and database
+# which is reading this log file. Defaults to true.
+#QUILL_IS_REMOTELY_QUERYABLE = TRUE
+
 # Add debugging flags to here if you need to debug quill for some reason.
 #QUILL_DEBUG = D_FULLDEBUG
 
