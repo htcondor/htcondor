@@ -1936,13 +1936,6 @@ QUILL_ADDRESS_FILE = $(LOG)/.quill_address
 # schedd's job queue log file and puts them into the database.
 #QUILL_POLLING_PERIOD = 10
 
-# Number of days that historical information about previous jobs will be kept.
-# It defaults to 180 days
-#QUILL_HISTORY_DURATION  = 180
-
-# Number of hours between scans of QUILL_HISTORY_DURATION.
-#QUILL_HISTORY_CLEANING_INTERVAL = 24
-
 # Allows or disallows a remote query to the quill daemon and database
 # which is reading this log file. Defaults to true.
 #QUILL_IS_REMOTELY_QUERYABLE = TRUE
