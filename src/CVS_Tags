@@ -1,3 +1,7 @@
+09/28/07 V6_9-procd_osg-{root,branch}
+  A branch for making some improvements to the ProcD to make it
+  suitable for deployment as a general service in OSG.
+
 09/27/07 V6_9-privsep_switchboard-{root,branch}
   A branch for integrating Jim K's changes to the PrivSep Switchboard
   into Condor.
