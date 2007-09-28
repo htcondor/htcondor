@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.13 2007-09-28 18:21:17 gthain Exp $
+# $Id: remote_pre.pl,v 1.14 2007-09-28 21:02:46 gthain Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -252,11 +252,6 @@ print FIX "NUM_CPUS 			= 1\n";
 # May address some of the other machines with Java turned off also
 print FIX "JAVA_MAXHEAP_ARGUMENT = \n";
 
-# Tell condor to use the current directory for temp.  This way,
-# if we get preempted/killed, we don't pollute the global /tmp
-mkdir( "$BaseDir/tmp", 0777 ) || die "Can't mkdir($BaseDir/tmp): $!\n";
-print FIX "TMP_DIR = $BaseDir/tmp\n";
-
 if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
 {
     # evil hack b/c our ARCH-detection code is stupid on HPUX, and our
@@ -293,6 +288,12 @@ if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	print FIX "environment=\"PATH=\'$mypath\'\"\n";
 	print FIX "SUBMIT_EXPRS=environment\n";
 	print FIX "PROCD_ADDRESS = \\\\.\\pipe\\buildandtestprocd\n";
+
+	# Tell condor to use the current directory for temp.  This way,
+	# if we get preempted/killed, we don't pollute the global /tmp
+	mkdir( "$Win32BaseDir/tmp", 0777 ) || die "Can't mkdir($BaseDir/tmp): $!\n";
+	print FIX "TMP_DIR = $Win32BaseDir\\tmp\n";
+
 }
 
 close ORIG;
