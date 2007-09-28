@@ -182,8 +182,8 @@ Then, load the Quill schema from the sql files in the \File{sql} subdirectory
 of the Condor release directory:
 
 \begin{verbatim}
-psql < common_createddl.sql
-psql < pgsql_createddl.sql
+psql -d databasename < common_createddl.sql
+psql -d databasename < pgsql_createddl.sql
 \end{verbatim}
 
 
@@ -390,13 +390,14 @@ GRANT command when it first creates the tables in the database.  Note that
 access to the \Username{quillreader} password itself can be blocked by
 blocking access to the collector, a feature already supported in Condor.
 
-\item The \Condor{quill} daemon, on the other hand, needs read and write access
-to the database.  As such, it connects as user \Username{quillwriter},
+\item The \Condor{quill} and \Condor{dbmsd} daemons, on the other hand, 
+need read and write access
+to the database.  As such, they connect as user \Username{quillwriter},
 who has owner privileges to the database.  Since this gives all
 access to the \Username{quillwriter} user, this password cannot
 be stored in a public place (such as the collector).  For this
 reason, the \Username{quillwriter} password is stored in a file called
-\File{.quillwritepassword} in the Condor spool directory.
+\File{.pgpass} in the Condor spool directory.
 Appropriate protections on this file guarantee secure access to the database.
 This file must be created and protected by the site administrator;
 if this file does not exist as and where expected, the \Condor{quill}
