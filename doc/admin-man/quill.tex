@@ -32,6 +32,8 @@ Configure \Prog{PostgreSQL} after installation:
 
 \begin{enumerate}
 
+\item Initialize a database with the \Prog{PostgresSQL} \Code{initdb} command.
+
 \item Configure to accept TCP/IP connections.
 For \Prog{PostgreSQL} version 8,
 use the \Code{listen\_addresses} variable in 
@@ -134,6 +136,10 @@ and be ready to enter the corresponding passwords when prompted.
 
 Answer ``no'' to the question about the ability for role creation.
 
+\item Create the quill database with the \Prog{createdb} command.  Make
+the quillwriter user the owner of the database.  If the database will
+be named quill, run \Prog{createdb -O quillwriter quill}
+
 \item The \Condor{quill} and \Condor{dbmsd} daemons need read and write access
 to the database.
 They connects as user \Username{quillwriter},
@@ -156,6 +162,10 @@ Example:
 \begin{verbatim}
 machinename.cs.wisc.edu:5432:quill:quillwriter:password
 \end{verbatim}
+Note that the first column is the name of the database name given by
+the QUILL\_DB\_IP\_ADDR config entry, described later.  Thus, if this
+is a dotted quad address, the exact same address must be given in the
+.pgpass file, no DNS name translation happens here.
 
 \end{enumerate}
 
@@ -202,6 +212,9 @@ QUILL_MANAGE_VACUUM = FALSE
 QUILL_IS_REMOTELY_QUERYABLE = TRUE
 QUILL_DB_QUERY_PASSWORD =  password-for-database-user-quillreader
 QUILL_ADDRESS_FILE      = $(LOG)/.quill_address
+USE_SQL_LOG_FILE = TRUE
+SCHEDD_SQLLOG = $(LOG)/schedd_sql.log
+SCHEDD_DAEMON_AD_FILE = $(LOG)/.schedd_classad
 \end{verbatim}
 \normalsize
 
