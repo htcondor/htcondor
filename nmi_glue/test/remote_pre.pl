@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.12 2007-09-11 16:14:00 psilord Exp $
+# $Id: remote_pre.pl,v 1.13 2007-09-28 18:21:17 gthain Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -251,6 +251,11 @@ print FIX "NUM_CPUS 			= 1\n";
 # Allow a default heap size for java(addresses issues on x86_rhas_3)
 # May address some of the other machines with Java turned off also
 print FIX "JAVA_MAXHEAP_ARGUMENT = \n";
+
+# Tell condor to use the current directory for temp.  This way,
+# if we get preempted/killed, we don't pollute the global /tmp
+mkdir( "$BaseDir/tmp", 0777 ) || die "Can't mkdir($BaseDir/tmp): $!\n";
+print FIX "TMP_DIR = $BaseDir/tmp\n";
 
 if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
 {
