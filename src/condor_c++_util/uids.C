@@ -1536,7 +1536,8 @@ priv_identifier( priv_state s )
 
 	case PRIV_CONDOR:
 		snprintf( id, id_sz, "Condor daemon user '%s' (%d.%d)", 
-				  CondorUserName, CondorUid, CondorGid );
+				  CondorUserName ? CondorUserName : "unknown", 
+						CondorUid, CondorGid );
 		break;
 #endif /* WIN32 vs. UNIX */
 
