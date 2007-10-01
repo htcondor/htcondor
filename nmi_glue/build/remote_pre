@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.2 2006-07-25 18:15:40 wright Exp $
+# $Id: remote_pre,v 1.3 2007-10-01 20:09:01 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -74,7 +74,7 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 
 chdir( $SrcDir ) || die "Can't chdir($SrcDir): $!\n";
 print "running CONFIGURE ...\n"; 
-open( CONFIG, "./configure 2>&1 |") ||
+open( CONFIG, "./configure --with-soft-is-hard 2>&1 |") ||
     die "Can't open configure as a pipe: $!\n";
 while ( <CONFIG> ) {
   print $_;
