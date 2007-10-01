@@ -8,6 +8,15 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+10/01/07 V6_8-pre-merge-V6_8_6-merge-2
+         V6_8-post-merge-V6_8_6-merge-2
+   The state of the doc directory in V6_8_6-branch before and after
+   merging changes from the V6_8-branch as tagged V6_8_6-merge-2.
+
+10/01/07 V6_8_6-merge-2
+   The state of the doc directory in the V6_8_6-branch for a 
+   merge into V6_8-branch.
+
 09/26/07 V6_8-merge-15
    The state of the doc directory in the V6_8-branch for a merge
    into V6_9_4-branch.
