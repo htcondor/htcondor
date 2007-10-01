@@ -70,7 +70,7 @@ performed within the Condor system (although all current matches
 remain in effect until they are broken by either party involved in the
 match).  Therefore, choose for central manager
 a machine that is likely to be
-online all the time, or at least one that will be rebooted quickly if
+up and running all the time, or at least one that will be rebooted quickly if
 something goes wrong.
 The central manager will
 ideally have a good network connection to all the
@@ -277,6 +277,45 @@ It services requests to store and retrieve checkpoint files.  If your
 pool is configured to use a checkpoint server but that machine (or the
 server itself is down) Condor will revert to sending the checkpoint
 files for a given job back to the submit machine.
+
+\item[\Condor{quill}] This daemon
+\index{Condor daemon!condor\_quill@\Condor{quill}}
+\index{daemon!condor\_quill@\Condor{quill}}
+\index{condor\_quill daemon}
+builds and manages a database that represents a copy of the 
+Condor job queue.
+The \Condor{q} and \Condor{history} tools can then query the database.
+
+\item[\Condor{gridmanager}] This daemon
+\index{Condor daemon!condor\_gridmanager@\Condor{gridmanager}}
+\index{daemon!condor\_gridmanager@\Condor{gridmanager}}
+\index{condor\_gridmanager daemon}
+handles management and execution of all \SubmitCmd{grid}
+universe jobs.
+The \Condor{schedd} invokes the \Condor{gridmanager} when
+there are \SubmitCmd{grid} universe jobs in the queue,
+and the \Condor{gridmanager} exits when there are no more
+\SubmitCmd{grid} universe jobs in the queue.
+
+\item[\Condor{had}] This daemon
+\index{Condor daemon!condor\_had@\Condor{had}}
+\index{daemon!condor\_had@\Condor{had}}
+\index{condor\_had daemon}
+implements the high availability of a pool's central manager
+through monitoring the communication of necessary daemons.
+If the current, functioning, central manager machine
+stops working, then this daemon ensures that another 
+machine takes its place, and becomes the central manager of
+the pool.
+
+\item[\Condor{replication}] This daemon
+\index{Condor daemon!condor\_replication@\Condor{replication}}
+\index{daemon!condor\_replication@\Condor{replication}}
+\index{condor\_replication daemon}
+assists the \Condor{had} daemon by keeping an updated copy of the
+pool's state. This state provides a better transition
+from one machine to the next, in the event 
+that the central manager machine stops working.
 
 \end{description} 
 
