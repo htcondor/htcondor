@@ -3695,9 +3695,11 @@ These macros control the \Condor{schedd}.
   This macro has a default value of 200.
 
 \item[\Macro{MAX\_JOBS\_SUBMITTED}] \label{param:MaxJobsSubmitted}
-  This macro limits the number of jobs that can be in a
-  \Condor{schedd}'s queue. Any attempted job submissions that would
-  exceed this limit will be refused.
+  This integer value limits the number of jobs permitted in 
+  a \Condor{schedd} daemon's queue. Submission of a new cluster
+  of jobs fails, if the total number of jobs would exceed this limit. 
+  The default value for this variable is the largest positive
+  integer value.
 
 \item[\Macro{MAX\_SHADOW\_EXCEPTIONS}]
   \label{param:MaxShadowExceptions} This macro controls the maximum
