@@ -1,0 +1,76 @@
+#! /usr/bin/env perl
+use strict;
+use warnings;
+
+die "usage: run_cpuinfo_tests <cpuinfo file>" if ( $#ARGV < 0 );
+my $CpuInfoFile = shift;
+
+# First pass: count the # of UNAME entries
+my $NumUnames = 0;
+open( IN, $CpuInfoFile ) or die "Can't read $CpuInfoFile";
+while(<IN>)
+{
+    chomp;
+    if( /^UNAME:(.*)/ )
+    {
+	$NumUnames++ if ( defined($1) and ( $1 ne "" ) );
+    }
+}
+close(IN);
+
+my @Failed;
+foreach my $i ( 1 .. $NumUnames )
+{
+    my $Cmd = "./condor_sysapi --ncpus --proc_cpuinfo $CpuInfoFile $i";
+    my $Passed = 0;
+    my $Failed = 0;
+    my $Error = 0;
+    my $Line = -1;
+    my $Uname;
+    open( TEST, "$Cmd 2>&1 |" ) or die "Can't run '$Cmd'";
+    while( <TEST> )
+    {
+	chomp;
+	if ( /line (\d+):/ )
+	{
+	    $Line = $1;
+	}
+	elsif ( /^linux/i )
+	{
+	    $Uname = $_;
+	}
+	elsif ( /Passed/ )
+	{
+	    $Passed++;
+	}
+	elsif ( /SysAPI\/Linux:/ )
+	{
+	    $Error++;
+	}
+    }
+    close( TEST );
+    $Failed = !$Passed;
+    printf
+	"%3d %5d %-60.60s\n\t%s\n",
+	$i, $Line, $Uname,
+	( $Failed ? "FAILED" : ($Error ? "ERROR" : "PASSED" ) );
+
+    push( @Failed, $i ) if ( not $Passed or $Error);
+}
+
+print "\n\n" . scalar(@Failed) . " tests failed\n\n";
+
+foreach my $i ( @Failed )
+{
+    print "\nTest $i failed -- re-running with FULLDEBUG\n";
+
+    my $Cmd = "./condor_sysapi --ncpus --proc_cpuinfo $CpuInfoFile $i";
+    $Cmd .= " --debug D_FULLDEBUG";
+    open( TEST, "$Cmd 2>&1 |" ) or die "Can't run '$Cmd'";
+    while( <TEST> )
+    {
+	print;
+    }
+    close( TEST );
+    
+}

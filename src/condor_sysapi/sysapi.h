@@ -27,6 +27,18 @@
 
 BEGIN_C_DECLS
 
+/* For debugging */
+#if defined(LINUX)
+typedef struct {
+	const char	*file;
+	long		offset;
+	int			found_processors;
+	int			found_hthreads;
+	int			found_ncpus;
+} SysapiProcCpuinfo;
+extern SysapiProcCpuinfo	_SysapiProcCpuinfo;
+#endif
+
 /* How to get the physical memory on a machine, answer in Megs */
 int sysapi_phys_memory_raw(void);
 int sysapi_phys_memory(void);

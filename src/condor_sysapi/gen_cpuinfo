@@ -1,0 +1,85 @@
+#! /usr/bin/env perl
+use strict;
+use warnings;
+
+my $Usage =
+    "usage: gen_cpuinfo <physical> <cores> <htreads> <siblings> <file> [opts]";
+die $Usage if ( $#ARGV < 4 );
+
+my $NumPhys = shift;
+my $NumCores = shift;
+my $NumHthreads = shift;
+my $Siblings = shift;
+my $PatFile = shift;
+
+open( IN, $PatFile ) or die "Can't read $PatFile";
+my %CpuInfo;
+my @Order;
+while(<IN>)
+{
+    chomp;
+    if ( /(.*?)\s*:\s*(.*)/ )
+    {
+	push( @Order, $1 );
+	$CpuInfo{$1} = $2;
+    }
+    else
+    {
+	die "Error parsing '$_'\n";
+    }
+}
+close(IN);
+
+# Process optional "attr=value" args
+foreach my $Arg ( @ARGV )
+{
+    if ( $Arg =~ /(.+)=(.*)/ )
+    {
+	if ( (!defined $2) or ($2 eq "") ) {
+	    delete $CpuInfo{$1};
+	}
+	else {
+	    $CpuInfo{$1} = $2;
+	}
+    }
+    else
+    {
+	print STDERR "Unknown argument '$Arg'\n";
+	die $Usage;
+    }
+}
+
+sub SetCpuInfo( $$$ )
+{
+    my $CpuInfo = shift;
+    my $Attr = shift;
+    my $Value = shift;
+    if ( exists $CpuInfo->{$Attr} ) {
+	$CpuInfo->{$Attr} = $Value;
+    }
+}
+SetCpuInfo( \%CpuInfo, "siblings", $Siblings );
+SetCpuInfo( \%CpuInfo, "cpu cores", $NumCores );
+
+my $ProcNum = 0;
+foreach my $Phys ( 0 .. $NumPhys-1 )
+{
+    SetCpuInfo( \%CpuInfo, "physical id", $Phys );
+    foreach my $Core ( 0 .. $NumCores-1 )
+    {
+	SetCpuInfo( \%CpuInfo, "core id", $Core );
+	foreach my $Ht ( 0 .. $NumHthreads-1 )
+	{
+	    SetCpuInfo( \%CpuInfo, "processor", $ProcNum );
+	    $ProcNum++;
+	    foreach my $Attr ( @Order )
+	    {
+		if ( exists $CpuInfo{$Attr} )
+		{
+		    printf "%-15s : %s\n", $Attr, $CpuInfo{$Attr};
+		}
+	    }
+	    print "\n";
+	}
+    }
+}
