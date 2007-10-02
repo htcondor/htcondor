@@ -527,7 +527,7 @@ count_cpus_siblings( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 		Processor		*proc = &cpuinfo->processors[pnum];
 		
 		/* If this one is a non-primary sibling, count it as such */
-		if ( np_siblings > 0 ) {
+		if ( np_siblings > 1 ) {
 			dprintf( D_FULLDEBUG,
 					 "Processor %d: %d siblings (np_siblings %d >  0) [%s]\n",
 					 pnum, proc->siblings, np_siblings,
@@ -543,7 +543,7 @@ count_cpus_siblings( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 					 "Processor %d: %d siblings (np_siblings %d <= 0) [%s]\n",
 					 pnum, proc->siblings, np_siblings, "adding" );
 			cpuinfo->num_cpus++;
-			np_siblings = proc->siblings - 1;
+			np_siblings = proc->siblings;
 		}
 	}
 	return 0;
