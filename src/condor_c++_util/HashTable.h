@@ -122,11 +122,7 @@ class HashTable {
   duplicateKeyBehavior_t duplicateKeyBehavior;        // duplicate key behavior
   int currentBucket;
   HashBucket<Index, Value> *currentItem;
-  int *chainsUsed;	// array which says which chains have items; speeds iterating
-  int chainsUsedLen;	// index to end of chainsUsed array
   int numElems; // number of elements in the hashtable
-  int chainsUsedFreeList;	// head of free list of deleted items in chainsUsed
-  int endOfFreeList;
 };
 
 // The two normal hash table constructors call initialize() to set everything up
@@ -172,19 +168,12 @@ void HashTable<Index,Value>::initialize( unsigned int (*hashF)( const Index &ind
   if (!(ht = new HashBucket<Index, Value>* [tableSize])) {
     EXCEPT("Insufficient memory for hash table");
   }
-  if (!(chainsUsed = new int[tableSize])) {
-    EXCEPT("Insufficient memory for hash table (chainsUsed array)");
-  }
   for(i = 0; i < tableSize; i++) {
     ht[i] = NULL;
-	chainsUsed[i] = -1;
   }
   currentBucket = -1;
   currentItem = 0;
-  chainsUsedLen = 0;
   numElems = 0;
-  endOfFreeList = 0 - tableSize - 10;
-  chainsUsedFreeList = endOfFreeList;
   duplicateKeyBehavior = behavior;
 }
 
@@ -203,7 +192,6 @@ const HashTable<Index,Value>& HashTable<Index,Value>::operator=( const HashTable
   if (this != &copy) {
     clear();
     delete [] ht;
-    delete [] chainsUsed;
     copy_deep(copy);
   }
 
@@ -221,9 +209,6 @@ void HashTable<Index,Value>::copy_deep( const HashTable<Index,Value>& copy ) {
 
   if (!(ht = new HashBucket<Index, Value>* [tableSize])) {
     EXCEPT("Insufficient memory for hash table");
-  }
-  if (!(chainsUsed = new int[tableSize])) {
-    EXCEPT("Insufficient memory for hash table (chainsUsed array)");
   }
   for(int i = 0; i < tableSize; i++) {
     // duplicate this chain
@@ -247,15 +232,11 @@ void HashTable<Index,Value>::copy_deep( const HashTable<Index,Value>& copy ) {
     // terminate the chain
     *our_next = NULL;
 
-    chainsUsed[i] = copy.chainsUsed[i];
   }
 
   // take the rest of the object (it's all shallow data)
   currentBucket = copy.currentBucket;
-  chainsUsedLen = copy.chainsUsedLen;
   numElems = copy.numElems;
-  endOfFreeList = copy.endOfFreeList;
-  chainsUsedFreeList = copy.chainsUsedFreeList;
   hashfcn = copy.hashfcn;
   duplicateKeyBehavior = copy.duplicateKeyBehavior;
 }
@@ -320,16 +301,6 @@ int HashTable<Index,Value>::addItem(const Index &index,const  Value &value) {
   bucket->index = index;
   bucket->value = value;
   bucket->next = ht[idx];
-  if ( !ht[idx] ) {
-	// this is the first item we are adding to this chain
-	if ( chainsUsedFreeList == endOfFreeList ) {
-		chainsUsed[chainsUsedLen++] = idx;
-	} else {
-		int temp = chainsUsedFreeList + tableSize;
-		chainsUsedFreeList = chainsUsed[temp];
-		chainsUsed[temp] = idx;
-	}
-  }
   ht[idx] = bucket;
 
 #ifdef DEBUGHASH
@@ -445,7 +416,6 @@ template <class Index, class Value>
 int HashTable<Index,Value>::remove(const Index &index)
 {
   	int idx = (int)(hashfcn(index) % tableSize);
-	int i;
 
   	HashBucket<Index, Value> *bucket = ht[idx];
   	HashBucket<Index, Value> *prevBuc = ht[idx];
@@ -479,19 +449,6 @@ int HashTable<Index,Value>::remove(const Index &index)
 
       		delete bucket;
 
-			if ( !ht[idx] ) {
-				// We have removed the last bucket in this chain.
-				// Remove this idx from our chainsUsed array.
-				for (i=0;i<chainsUsedLen;i++) {
-					if ( chainsUsed[i] == idx ) {
-						// chainsUsed[i] = chainsUsed[--chainsUsedLen];
-						chainsUsed[i] = chainsUsedFreeList;
-						chainsUsedFreeList = i - tableSize;
-						break;
-					}
-				}
-			}
-
 #			ifdef DEBUGHASH
       		dump();
 #			endif
@@ -521,8 +478,6 @@ int HashTable<Index,Value>::clear()
     }
   }
 
-  chainsUsedLen = 0;
-  chainsUsedFreeList = endOfFreeList;
   numElems = 0;
 
   return 0;
@@ -532,22 +487,8 @@ template <class Index, class Value>
 void HashTable<Index,Value>::
 startIterations (void)
 {
-	int temp, temp1;
-
     currentBucket = -1;
 	currentItem = 0;
-						
-	// compress the chainsUsed list if needed
-	while ( chainsUsedFreeList != endOfFreeList ) {
-		temp = chainsUsedFreeList + tableSize;
-		chainsUsedFreeList = chainsUsed[temp];
-		temp1 = -1;
-		while ( temp < chainsUsedLen && temp1 < 0 ) {
-			temp1 = chainsUsed[--chainsUsedLen];
-		}
-		chainsUsed[temp] = temp1;
-	}
-
 }
 
 
@@ -555,41 +496,33 @@ template <class Index, class Value>
 int HashTable<Index,Value>::
 iterate (Value &v)
 {
-    // try to get next item in chain ...
-    if (currentItem)
-    {
+    	// try to get next item in the current bucket chain ...
+    if (currentItem) {
         currentItem = currentItem->next;
     
         // ... if successful, return OK
-        if (currentItem)
-        {
+        if (currentItem) {
             v = currentItem->value;
             return 1;
        }
     }
 
-	// try next bucket ...
+		// the current bucket chain is expended, so find the next non-NULL
+		// bucket and continue from there
 	do {
-		currentBucket ++;
-	} while ( (currentBucket < chainsUsedLen) && 
-			  (chainsUsed[currentBucket] < 0) );
+		currentBucket++;
+		if (currentBucket >= tableSize) {
+			// end of hash table ... no more entries
+			currentBucket = -1;
+			currentItem = 0;
 
-	// must use >= here instead of == since chainsUsedLen could decrement
-	// if the user call remove()
-	if (currentBucket >= chainsUsedLen)
-	{
-    	// end of hash table ... no more entries
-    	currentBucket = -1;
-    	currentItem = 0;
+			return 0;
+		}
+		currentItem = ht[currentBucket];
+	} while ( !currentItem );
 
-    	return 0;
-	}
-	else
-	{
-		currentItem = ht[ chainsUsed[currentBucket] ];
-		v = currentItem->value;
-		return 1;
-	}
+	v = currentItem->value;
+	return 1;
 }
 
 template <class Index, class Value>
@@ -606,44 +539,35 @@ template <class Index, class Value>
 int HashTable<Index,Value>::
 iterate (Index &index, Value &v)
 {
-    // try to get next item in chain ...
-    if (currentItem)
-    {
+    	// try to get next item in the current bucket chain ...
+    if (currentItem) {
         currentItem = currentItem->next;
     
         // ... if successful, return OK
-        if (currentItem)
-        {
-            index = currentItem->index;
+        if (currentItem) {
+			index = currentItem->index;
             v = currentItem->value;
             return 1;
        }
     }
 
-	// try next bucket ...
+		// the current bucket chain is expended, so find the next non-NULL
+		// bucket and continue from there
 	do {
-		currentBucket ++;
-	} while ( (currentBucket < chainsUsedLen) && 
-			  (chainsUsed[currentBucket] < 0) );
+		currentBucket++;
+		if (currentBucket >= tableSize) {
+			// end of hash table ... no more entries
+			currentBucket = -1;
+			currentItem = 0;
 
+			return 0;
+		}
+		currentItem = ht[currentBucket];
+	} while ( !currentItem );
 
-	// must use >= here instead of == since chainsUsedLen could decrement
-	// if the user call remove()
-	if (currentBucket >= chainsUsedLen)
-	{
-    	// end of hash table ... no more entries
-    	currentBucket = -1;
-    	currentItem = 0;
-
-    	return 0;
-	}
-	else
-	{
-		currentItem = ht[ chainsUsed[currentBucket] ];
-		index = currentItem->index;
-		v = currentItem->value;
-		return 1;
-	}
+	index = currentItem->index;
+	v = currentItem->value;
+	return 1;
 }
 
 
@@ -671,7 +595,6 @@ HashTable<Index,Value>::~HashTable()
 {
   clear();
   delete [] ht;
-  delete [] chainsUsed;
 }
 
 // Determine if the hash table should be resized and reindexed
@@ -696,17 +619,11 @@ void HashTable<Index, Value>::resize_hash_table(int newsize) {
 	if (!(htcopy = new HashBucket<Index, Value>* [newsize])) {
 		EXCEPT("Insufficient memory for hash table resizing");
 	}
-	int *cucopy;
-	if (!(cucopy = new int[newsize])) {
-		EXCEPT("Insufficient memory for hash table resizing (chainsUsed array)");
-	}
 	int i;
 	for(i = 0; i < newsize; i++) {
 		htcopy[i] = NULL;
-		cucopy[i] = -1;
 	}
 
-	int culen = 0;
 	HashBucket<Index, Value> *temp = NULL;
 	HashBucket<Index, Value> *cur= NULL;
 	for( i=0; i<tableSize; i++ ) {
@@ -717,20 +634,11 @@ void HashTable<Index, Value>::resize_hash_table(int newsize) {
 				// if it was NULL then set current->next to NULL, so I guess just copy the value no matter what
 			temp = cur->next;
 			cur->next = htcopy[idx];
-			if(!htcopy[idx]) {
-				// this is the first item being added to the chain
-				cucopy[culen++] = idx;
-			}
 			htcopy[idx] = cur;
 		}
 	}
 	delete[] ht;
-	delete[] chainsUsed;
 	ht = htcopy;
-	chainsUsed = cucopy;
-	endOfFreeList = 0 - tableSize - 10;
-	chainsUsedFreeList = endOfFreeList;
-	chainsUsedLen = culen;
 	currentItem = 0;
 	currentBucket = -1;
 	tableSize = newsize;

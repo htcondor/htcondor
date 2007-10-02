@@ -63,6 +63,7 @@ bool test_auto_resize_normal(void);
 bool test_auto_resize_sizes(void);
 bool test_auto_resize_check_numelems(void);
 bool test_auto_resize_timing(void);
+bool test_iterate_timing(void);
 
 bool OTEST_HashTable() {
 		// beginning junk
@@ -95,6 +96,7 @@ bool OTEST_HashTable() {
 	driver.register_function(&test_auto_resize_sizes);
 	driver.register_function(&test_auto_resize_check_numelems);
 	driver.register_function(&test_auto_resize_timing);
+	driver.register_function(&test_iterate_timing);
 	driver.register_function(&cleanup);
 	
 		// run the tests
@@ -508,6 +510,54 @@ bool test_auto_resize_timing() {
 	e.emit_param("Insert Time", "%f", insertdur);
 	e.emit_param("Lookup Time", "%f", lookupdur);
 	if(!(numElems == 5000001 && tableSize >= 1000000)) {
+		e.emit_result_failure(__LINE__);
+		return false;
+	}
+	e.emit_result_success(__LINE__);
+	return true;
+}
+
+bool test_iterate_timing() {
+	e.emit_test("How long does it take to iterate through list elements?");
+		// we're interested in HashTables with lots of missing values, so
+		// delete 5 million random values (some will remain because rand()
+		// is a really bad random number generator, but that's what we want).
+	srand((unsigned)time(0));
+
+	struct timeval time;
+	gettimeofday(&time, NULL);
+	double starttime = time.tv_sec + (time.tv_usec / 1000000.0);
+
+	for(int i = 0; i < 5000000; i++) {
+		int random = rand() % 5000001;
+		table_two->remove(random);
+	}
+
+	gettimeofday(&time, NULL);
+	double midtime = time.tv_sec + (time.tv_usec / 1000000.0);
+	double deletedur = midtime - starttime;
+	e.emit_param("Delete Time", "%f", deletedur);
+
+	table_two->startIterations();
+	
+	int numTableTwoElems = 0;
+	short int value = 0;
+
+
+	while(table_two->iterate(value)) {
+		numTableTwoElems++;
+	}
+
+	gettimeofday(&time, NULL);
+	double endtime = time.tv_sec + (time.tv_usec / 1000000.0);
+	double iterdur = endtime - midtime;
+	e.emit_param("Iterate Time", "%f", iterdur);
+	int numElems = table_two->getNumElements();
+	e.emit_output_expected_header();
+	e.emit_param("numElems", "%d", numElems);
+	e.emit_output_actual_header();
+	e.emit_param("numElems", "%d", numTableTwoElems);
+	if(!(numElems == numTableTwoElems)) {
 		e.emit_result_failure(__LINE__);
 		return false;
 	}
