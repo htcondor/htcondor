@@ -2075,6 +2075,18 @@ AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_has_globus" = xyes -a "x$_c
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
 
+# This check is a bit of a hack. We need to checkout the OpenSSL
+# external on platforms other than Windows. OpenSSL is only checked
+# when Globus is not available, so when Globus is not available then
+# OpenSSL must be (artificially) turned off, since it is not checked
+# out as part of the externals. This breaks --with-proper on HP-UX,
+# since OpenSSL is available on the system but Globus is not
+# supported, which begs the question: Should _cv_has_EXT only apply to
+# the --without-proper case? Probably. - matt 2 oct 2007
+AC_MSG_CHECKING([if openssl is supported])
+_cv_has_openssl=$_cv_has_globus
+AC_MSG_RESULT([$_cv_has_openssl])
+
 #
 # Figure out if I need to use the linuclibcheaders package to build glibc.
 #
