@@ -250,7 +250,10 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 
 	/* Look at each line */
 	while( fgets( buf, sizeof(buf)-1, fp) ) {
-		char	*tmp;
+		char		*tmp;
+		const char	*attr;
+		char		*colon;
+		char		*value = NULL;
 
 		/* Clip the buffer */
 		buf[sizeof(buf)-1] = '\0';
@@ -264,10 +267,8 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 		}
 
 		strcpy( buf_copy, buf );
-
-		const char	*attr = buf_copy;
-		char		*colon = strchr( buf_copy, ':' );
-		char		*value = NULL;
+		attr = buf_copy;
+		colon = strchr( buf_copy, ':' );
 
 		/* Empty line ends the current processor */
 		if( strlen( buf ) < 2 ) {
