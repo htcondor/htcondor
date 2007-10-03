@@ -1,5 +1,6 @@
 #! /usr/bin/env perl
 use CondorTest;
+Condor::DebugOn();
 
 $cmd = 'job_core_leaveinqueue-true_van.cmd';
 $testname = 'Condor submit with test for policy trigger of leave_in_queue - vanilla U';
@@ -96,7 +97,7 @@ $submitted = sub
 
 	print "submitted: \n";
 	{
-		print "good job $job expected submitted.\n";
+		print "good job $cluster expected submitted.\n";
 	}
 };
 
