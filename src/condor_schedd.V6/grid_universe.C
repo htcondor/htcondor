@@ -596,8 +596,8 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		priv_state saved_priv = set_user_priv();
 		if ( (mkdir(finalpath,0700)) < 0 ) {
 			// mkdir failed.  
-			dprintf(D_ALWAYS,"ERROR - mkdir(%s,0700) failed in GRIDMANAGER\n",
-				finalpath);
+			dprintf(D_ALWAYS,"ERROR - mkdir(%s,0700) failed in GRIDMANAGER, errno=%d (%s)\n",
+				finalpath, errno, strerror(errno));
 			failed = true;
 		}
 		set_priv(saved_priv);
