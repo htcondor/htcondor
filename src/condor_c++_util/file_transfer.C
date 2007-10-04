@@ -1829,7 +1829,10 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 void
 FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason)
 {
-	if(!PeerDoesTransferAck) return;
+	if(!PeerDoesTransferAck) {
+		dprintf(D_FULLDEBUG,"SendTransferAck: skipping transfer ack, because peer does not support it.\n");
+		return;
+	}
 
 	ClassAd ad;
 	int result;
@@ -2456,6 +2459,12 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 	}
 	else {
 		PeerDoesTransferAck = false;
+		dprintf(D_FULLDEBUG,
+			"FileTransfer: peer (version %d.%d.%d) does not support "
+			"transfer ack.  Will use older (unreliable) protocol.\n",
+			peer_version.getMajorVer(),
+			peer_version.getMinorVer(),
+			peer_version.getSubMinorVer());
 	}
 }
 
