@@ -2505,8 +2505,10 @@ AttrList::initFromStream(Stream& s)
 	// Now, read our new set of attributes off the given stream 
     s.decode();
 
-    if(!s.code(numExprs)) 
+    if(!s.code(numExprs)) {
+		dprintf(D_FULLDEBUG,"Failed to read ClassAd size.\n");
         return 0;
+	}
     
     for(int i = 0; i < numExprs; i++) {
 
@@ -2514,11 +2516,13 @@ AttrList::initFromStream(Stream& s)
 			// internal stream buffer that we should not free.
 		line = NULL;
         if(!s.get(line,bytes_read)) {
+			dprintf(D_FULLDEBUG,"Failed to read ClassAd expression.\n");
             succeeded = 0;
 			break;
         }
         
 		if (!Insert(line)) {
+			dprintf(D_FULLDEBUG,"Failed to parse ClassAd expression: %s.\n",line);
 			succeeded = 0;
 			break;
 		}

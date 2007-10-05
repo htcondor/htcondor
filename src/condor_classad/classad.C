@@ -872,6 +872,7 @@ ClassAd::initFromStream(Stream& s)
 		// Now, if there's also type info on the wire, read that,
 		// too. 
     if(!s.code(name)) {
+		dprintf(D_FULLDEBUG,"Failed to read ClassAd type.\n");
         return 0;
     }
     SetMyTypeName(name);
@@ -881,6 +882,7 @@ ClassAd::initFromStream(Stream& s)
 	}
 
     if(!s.code(name)) {
+		dprintf(D_FULLDEBUG,"Failed to read ClassAd target type.\n");
         return 0;
     }
     SetTargetTypeName(name);

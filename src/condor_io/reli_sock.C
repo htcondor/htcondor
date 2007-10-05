@@ -772,8 +772,13 @@ ReliSock::end_of_message()
 				return TRUE;
 			}
 			if ( rcv_msg.ready ) {
-				if ( rcv_msg.buf.consumed() )
+				if ( rcv_msg.buf.consumed() ) {
 					ret_val = TRUE;
+				}
+				else if( !allow_empty_message_flag ) {
+					char const *ip = get_sinful_peer();
+					dprintf(D_FULLDEBUG,"Failed to read end of message from %s.\n",ip ? ip : "(null)");
+				}
 				rcv_msg.ready = FALSE;
 				rcv_msg.buf.reset();
 			}
