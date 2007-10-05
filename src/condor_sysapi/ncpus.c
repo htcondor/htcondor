@@ -312,6 +312,7 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 				int		new_size = array_size * 2;
 				dprintf( D_FULLDEBUG, "Growing processor array to %d\n",
 						 new_size );
+				{
 				Processor	*new_array = (Processor *)
 					realloc( array, new_size * sizeof(Processor) );
 				if ( ! new_array ) {
@@ -322,6 +323,7 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 				}
 				array = new_array;
 				array_size = new_size;
+				}
 			}
 
 			/* Now, point at the new array element */
@@ -376,14 +378,16 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 			else if( !strcmp( attr, "flags" ) ) {
 				cur_processor->have_flags = TRUE;
 				cur_processor->flag_ht = FALSE;
-				char	*t, *save;
-				t = strtok_r( value, " ", &save );
-				while( t ) {
-					if ( !strcmp( t, "ht" ) ) {
-						cur_processor->flag_ht = TRUE;
-						break;
+				{
+					char	*t, *save;
+					t = strtok_r( value, " ", &save );
+					while( t ) {
+						if ( !strcmp( t, "ht" ) ) {
+							cur_processor->flag_ht = TRUE;
+							break;
+						}
+						t = strtok_r( NULL, " ", &save );
 					}
-					t = strtok_r( NULL, " ", &save );
 				}
 				if ( ! cpuinfo->have_flags ) {
 					cpuinfo->have_flags = TRUE;
@@ -572,41 +576,43 @@ count_cpus( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 			 cpuinfo->have_physical_id, cpuinfo->have_core_id );
 
 	/* If we have physical ID or core ID, use that */
-	const	char	*ana_type = "";
-	if (  ( cpuinfo->flag_ht ) &&
-		  ( cpuinfo->num_cpus <= 0 ) &&
-		  ( cpuinfo->have_physical_id || cpuinfo->have_core_id )  ) {
-		count_cpus_id( cpuinfo, count_hthreads );
-		ana_type = "IDs";
+	{
+		const	char	*ana_type = "";
+		if (  ( cpuinfo->flag_ht ) &&
+			  ( cpuinfo->num_cpus <= 0 ) &&
+			  ( cpuinfo->have_physical_id || cpuinfo->have_core_id )  ) {
+			count_cpus_id( cpuinfo, count_hthreads );
+			ana_type = "IDs";
+		}
+
+		/* Still no answer?  Try using the # of siblings */
+		if (  ( cpuinfo->num_cpus <= 0 ) &&
+			  ( cpuinfo->flag_ht ) &&
+			  ( cpuinfo->have_siblings )  ) {
+			count_cpus_siblings( cpuinfo, count_hthreads );
+			ana_type = "siblings";
+		}
+
+		/* No HT flag?  Don't bother counting 'em */
+		if (  cpuinfo->num_cpus <= 0 ) {
+			cpuinfo->num_cpus = cpuinfo->num_processors;
+			ana_type = "processor count";
+		}
+
+		/* Final sanity check -- make sure we return at least 1 CPU */
+		if( cpuinfo->num_cpus <= 0 ) {
+			dprintf( D_ALWAYS, "Unable to determine CPU count -- using 1\n" );
+			ana_type = "none";
+			cpuinfo->num_cpus = 1;
+		}
+
+		dprintf( D_FULLDEBUG, "Using %s: %d processors, %d CPUs, %d HTs\n",
+				 ana_type,
+				 cpuinfo->num_processors,
+				 cpuinfo->num_cpus,
+				 cpuinfo->num_hthreads );
+
 	}
-
-	/* Still no answer?  Try using the # of siblings */
-	if (  ( cpuinfo->num_cpus <= 0 ) &&
-		  ( cpuinfo->flag_ht ) &&
-		  ( cpuinfo->have_siblings )  ) {
-		count_cpus_siblings( cpuinfo, count_hthreads );
-		ana_type = "siblings";
-	}
-
-	/* No HT flag?  Don't bother counting 'em */
-	if (  cpuinfo->num_cpus <= 0 ) {
-		cpuinfo->num_cpus = cpuinfo->num_processors;
-		ana_type = "processor count";
-	}
-
-	/* Final sanity check -- make sure we return at least 1 CPU */
-	if( cpuinfo->num_cpus <= 0 ) {
-		dprintf( D_ALWAYS, "Unable to determine CPU count -- using 1\n" );
-		ana_type = "none";
-		cpuinfo->num_cpus = 1;
-	}
-
-	dprintf( D_FULLDEBUG, "Using %s: %d processors, %d CPUs, %d HTs\n",
-			 ana_type,
-			 cpuinfo->num_processors,
-			 cpuinfo->num_cpus,
-			 cpuinfo->num_hthreads );
-
 	return cpuinfo->num_cpus;
 }
 
