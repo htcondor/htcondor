@@ -408,9 +408,12 @@ TimerManager::Timeout()
 		// Initialize our flag so we know if ResetTimer was called.
 		did_reset = current_id;
 
-		// Log a message before calling handler
-		dprintf(D_COMMAND,"Calling Timer handler %d (%s)\n",
-			current_id, event_descrip);
+		// Log a message before calling handler, but only if
+		// D_FULLDEBUG is also enabled.
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf(D_COMMAND, "Calling Timer handler %d (%s)\n",
+					current_id, event_descrip);
+		}
 
 		// Now we call the registered handler.  If we were told that the handler
 		// is a c++ method, we call the handler from the c++ object referenced 
@@ -422,8 +425,10 @@ TimerManager::Timeout()
 			(*handler)(s);				// typedef int (*Event)(Service*,int)
 		}
 
-		dprintf(D_COMMAND,"Return from Timer handler %d (%s)\n",
-			current_id, event_descrip);
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf(D_COMMAND, "Return from Timer handler %d (%s)\n",
+					current_id, event_descrip);
+		}
 
 		// Make sure we didn't leak our priv state
 		daemonCore->CheckPrivState();
