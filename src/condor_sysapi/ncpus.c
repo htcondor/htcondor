@@ -275,12 +275,12 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 			if( _SysapiProcCpuinfo.file && cur_processor ) {
 				dprintf( D_FULLDEBUG,
 						 "Processor %d:  "
-						 "Proc#:%d PhysID:%d Sibs:%d CoreID:%d Cores:%d\n",
+						 "Proc#:%d PhysID:%d CoreID:%d Sibs:%d Cores:%d\n",
 						 cur_processor_num,
 						 cur_processor->processor,
 						 cur_processor->physical_id,
-						 cur_processor->siblings,
 						 cur_processor->core_id,
+						 cur_processor->siblings,
 						 cur_processor->cpu_cores );
 			}
 			cur_processor = NULL;
