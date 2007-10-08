@@ -42,6 +42,7 @@ all_symlink_target(../condor_scripts/batch_test.pl,batch_test.pl)
 BUILD_DEP($(CC),x_return-n,c,x_waste_second.o)
 BUILD($(CC),x_dumpcore,c)
 BUILD($(CC),x_trapsig,c)
+BUILD($(CC),x_tightloop,c)
 
 /************************************************************************
    Rules for all the single-compiler (or no compiler) tests
@@ -147,7 +148,6 @@ DESC(cmd_q_shows-hold,"Condor_q shows hold")
 RUN(cmd_q_shows-hold)
 TESTCLASS(cmd_q_shows-hold,core)
 TESTCLASS(cmd_q_shows-hold,quick)
-TESTCLASS(cmd_q_shows-hold,btdebug)
 
 DESC(cmd_q_shows-run,"Condor_q shows run")
 RUN(cmd_q_shows-run)
@@ -351,6 +351,17 @@ DESC(job_condorc_abc_van,"Condor-C ABC test")
 RUN(job_condorc_abc_van)
 TESTCLASS(job_condorc_abc_van,condorc)
 TESTCLASS(job_condorc_abc_van,quick)
+#endif
+
+/* Gnats bug 895 for aix returning too much user cpu usage and
+for the three mac platforms returning no cpu usage - Gnats bug 896 */
+#if !defined(IS_PPC_AIX5) && !defined(IS_PPC_OSX_10_3) && !defined(IS_PPC_OSX_10_4) && !defined(IS_I386_OSX_10_4)
+DESC(lib_procapi_cputracking-snapshot,"Scheduler: Verify the specified input file is used")
+RUN(lib_procapi_cputracking-snapshot)
+DEPS(lib_procapi_cputracking-snapshot,x_tightloop.exe)
+TESTCLASS(lib_procapi_cputracking-snapshot,core)
+TESTCLASS(lib_procapi_cputracking-snapshot,quick)
+TESTCLASS(lib_procapi_cputracking-snapshot,btdebug)
 #endif
 
 DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is used")
