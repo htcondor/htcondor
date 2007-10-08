@@ -5946,16 +5946,23 @@ find_idle_local_jobs( ClassAd *job )
 			if ( job->EvalBool(ATTR_REQUIREMENTS, &scheddAd, requirements) ) {
 				requirementsMet = (bool)requirements;
 				if ( !requirements ) {
-					dprintf( D_FULLDEBUG, "The %s attribute for job %d.%d "
-							 "did not evaluate to true. Unable to start job\n",
+					dprintf( D_ALWAYS, "The %s attribute for job %d.%d "
+							 "evaluated to false. Unable to start job\n",
 							 ATTR_REQUIREMENTS, id.cluster, id.proc );
 				}
 			} else {
 				requirementsMet = false;
-				dprintf( D_FULLDEBUG, "The %s attribute for job %d.%d did "
-						 "not evaluate to true. Unable to start job\n",
+				dprintf( D_ALWAYS, "The %s attribute for job %d.%d did "
+						 "not evaluate. Unable to start job\n",
 						 ATTR_REQUIREMENTS, id.cluster, id.proc );
 			}
+
+			dprintf(D_FULLDEBUG, "=============================\n");
+			dprintf(D_FULLDEBUG, "The job ad is\n");
+			job->dPrint(D_FULLDEBUG);
+			dprintf(D_FULLDEBUG, "The schedd ad is\n");
+			scheddAd.dPrint(D_FULLDEBUG);
+			dprintf(D_FULLDEBUG, "=============================\n");
 		}
 			//
 			// If the job's requirements failed up above, we will want to 
