@@ -54,6 +54,7 @@ package CondorPersonal;
 #	----------------------------------------------------------------------------------------------
 #	condortemplate	Core config file					condor_config_template		$personal_template
 #	condorlocalsrc	Name for condor local config src 								$personal_local_src
+#   daemonwait      Wait for startd/schedd to be seen	true						$personal_startup_wait
 #   localpostsrc    New end of local config file                                    $personal_local_post_src
 #   secprepostsrc	New security settings 											$personal_sec_prepost_src
 #	condordaemon	daemon list to start				contents of config template $personal_daemons
@@ -90,6 +91,19 @@ package CondorPersonal;
 #	This module is in a very early stage supporting current testing.
 #
 
+#	Notes from efforts 10/10/2007
+#	This module continues to grow and complicated tests combining multiple
+#	pools continue to be added for testing of anything to flocking, had, security modes
+#	and a run through of all 16 protocol negotions. We have just finshed being much
+#	more strict about when we decide the pool we are creating is actually up. This has created
+#	more consistent results. The daemons(main 5 -Col, Neg, Mas, Strt, Schd) all are configured
+#	with address files and we wait until those files exist if that daemon is configured.
+#	We will adjust for daemons controlled by HAD. We also wait for the collector(if we have one)
+#	to see the schedd or the startd if those daemons are configured. HOWEVER, I am adding a 
+# 	bypass for this for the 16 variations of the authentication protocol negotiations.
+#	If "daemonwait" is set to false, we will only wait for the address files to exist and not
+#	require inter-daemon communication.
+
 require 5.0;
 use Carp;
 use Cwd;
@@ -120,6 +134,7 @@ BEGIN
 	$personal_local_post_src = "";
 	$personal_sec_prepost_src = "";
 	$personal_universe = "";
+	$personal_startup_wait = "true";
 	$portchanges = "dynamic";
 	$DEBUG = 0;
 	$collector_port = "0";
@@ -228,6 +243,7 @@ sub Reset
 	$personal_local_post_src = "";
 	$personal_sec_prepost_src = "";
 	$personal_universe = "";
+	$personal_startup_wait = "true";
 
 	$topleveldir = getcwd();
 	$home = $topleveldir;
@@ -907,7 +923,15 @@ sub StartPersonalCondor
 		$personalmaster = $localdir . "sbin/condor_master -f &";
 	}
 
-	#set up to use the existing generated configfile
+	# We may not want to wait for certain daemons to talk
+	# to each other on startup.
+
+	my $waitparam = $control{"daemonwait"};
+	if($waitparam eq "false") {
+		$personal_startup_wait = "false";
+	}
+
+	# set up to use the existing generated configfile
 	$ENV{CONDOR_CONFIG} = $fullconfig;
 	my $condorstate = IsPersonalRunning($fullconfig);
 	debug( "Condor state is $condorstate\n");
@@ -1078,7 +1102,7 @@ sub IsRunningYet
     	while($havemasteraddr ne "yes") {
         	debug( "Looking for $masteradr\n");
         	if( -f $masteradr ) {
-            	print "Found it!!!! master address file\n";
+            	debug( "Found it!!!! master address file\n");
             	$havemasteraddr = "yes";
 				sleep 1;
         	} else {
@@ -1087,7 +1111,7 @@ sub IsRunningYet
     	}
 	}
 
-	if($daemonlist =~ /.*COLLECTOR.*/i) {
+	if($daemonlist =~ /.*COLLECTOR.*/i){
 		# now wait for the collector to start running... get address file loc
 		# and wait for file to exist
 		# Give the master time to start before jobs are submitted.
@@ -1101,7 +1125,7 @@ sub IsRunningYet
     	while($havecollectoraddr ne "yes") {
         	debug( "Looking for $collectoradr\n");
         	if( -f $collectoradr ) {
-            	print "Found it!!!! collector address file\n";
+            	debug( "Found it!!!! collector address file\n");
             	$havecollectoraddr = "yes";
 				sleep 1;
         	} else {
@@ -1124,7 +1148,7 @@ sub IsRunningYet
     	while($havenegotiatoraddr ne "yes") {
         	debug( "Looking for $negotiatoradr\n");
         	if( -f $negotiatoradr ) {
-            	print "Found it!!!! negotiator address file\n";
+            	debug( "Found it!!!! negotiator address file\n");
             	$havenegotiatoraddr = "yes";
 				sleep 1;
         	} else {
@@ -1147,7 +1171,7 @@ sub IsRunningYet
     	while($havestartdaddr ne "yes") {
         	debug( "Looking for $startdadr\n");
         	if( -f $startdadr ) {
-            	print "Found it!!!! startd address file\n";
+            	debug( "Found it!!!! startd address file\n");
             	$havestartdaddr = "yes";
 				sleep 1;
         	} else {
@@ -1160,14 +1184,14 @@ sub IsRunningYet
 		my $done = "no";
 		$currenthost = `hostname`;
 		chomp($currenthost);
-		if($daemonlist =~ /.*COLLECTOR.*/i) {
+		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
 			while( $done eq "no") {
 				my $cmd = "condor_status -startd -format \"%s\\n\" name";
     			my $qstat = CondorTest::runCondorTool($cmd,\@status,3,"CondorPersonal");
     			if(!$qstat)
     			{
         			print "Test failure due to Condor Tool Failure<$cmd>\n";
-        			next;
+        			last;
     			}
 
     			foreach $line (@status)
@@ -1198,7 +1222,7 @@ sub IsRunningYet
     	while($havescheddaddr ne "yes") {
         	debug( "Looking for $scheddadr\n");
         	if( -f $scheddadr ) {
-            	print "Found it!!!! schedd address file\n";
+            	debug( "Found it!!!! schedd address file\n");
             	$havescheddaddr = "yes";
 				sleep 1;
         	} else {
@@ -1211,14 +1235,14 @@ sub IsRunningYet
 		my $done = "no";
 		$currenthost = `hostname`;
 		chomp($currenthost);
-		if($daemonlist =~ /.*COLLECTOR.*/i) {
+		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
 			while( $done eq "no") {
 				my $cmd = "condor_status -schedd -format \"%s\\n\" name";
     			my $qstat = CondorTest::runCondorTool($cmd,\@status,3,"CondorPersonal");
     			if(!$qstat)
     			{
         			print "Test failure due to Condor Tool Failure<$cmd>\n";
-        			next;
+        			last;
     			}
 
     			foreach $line (@status)
