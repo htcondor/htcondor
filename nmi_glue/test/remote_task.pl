@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.2.2.9 2007-10-09 02:39:59 bt Exp $
+# $Id: remote_task.pl,v 1.2.2.10 2007-10-09 21:11:06 bt Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -126,7 +126,11 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 }
 print "About to run batch_test.pl\n";
 
-system("perl ./batch_test.pl -d $compiler -t $testname");
+# -b means build & test and ensures the first time that
+# we have our testing personal condor configered from
+# release generic config files.
+
+system("perl ./batch_test.pl -d $compiler -t $testname -b");
 $batchteststatus = $?;
 
 # figure out here if the test passed or failed.  

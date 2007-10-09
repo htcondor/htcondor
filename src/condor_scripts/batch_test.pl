@@ -1,8 +1,5 @@
 #!/usr/bin/env perl
 
-use File::Copy;
-use Cwd;
-
 ##/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
 ##
 ## Condor Software Copyright Notice
@@ -56,6 +53,7 @@ use Cwd;
 #
 
 #require 5.0;
+use File::Copy;
 use FileHandle;
 use POSIX "sys_wait_h";
 use Cwd;
@@ -100,6 +98,8 @@ $configmain;
 $configlocal;
 $iswindows = 0;
 
+$wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/TestingPersonalCondor
+
 # set up to recover from tests which hang
 $SIG{ALRM} = sub { die "timeout" };
 
@@ -124,6 +124,7 @@ $ENV{PATH} = $ENV{PATH} . ":" . $Basedir;
 # -q[uiet]: hush
 # -m[arktime]: time stamp
 # -k[ind]: be kind and submit slowly
+# -b[buildandtest]: set up a personal condor and generic configs
 #
 while( $_ = shift( @ARGV ) ) {
   SWITCH: {
@@ -145,6 +146,11 @@ while( $_ = shift( @ARGV ) ) {
         }
         if( /-k.*/ ) {
                 $kindwait = 1;
+                next SWITCH;
+        }
+        if( /-b.*/ ) {
+				# start with fresh environment
+                $wantcurrentdaemons = 0;
                 next SWITCH;
         }
         if( /-t.*/ ) {
@@ -175,40 +181,70 @@ while( $_ = shift( @ARGV ) ) {
 
 DebugOff();
 
-$iswindows = IsThisWindows();
-$awkscript = "../condor_examples/convert_config_to_win32.awk";
-$genericconfig = "../condor_examples/condor_config.generic";
-$genericlocalconfig = "../condor_examples/condor_config.local.central.manager";
+my $iswindows =  0;
+my $awkscript = "";
+my $genericconfig = "";
+my $genericlocalconfig = "";
+my $nightly =  0;
+my $res = 0;
+
+if(!($wantcurrentdaemons)) {
+
+	$iswindows = IsThisWindows();
+	$awkscript = "../condor_examples/convert_config_to_win32.awk";
+	$genericconfig = "../condor_examples/condor_config.generic";
+	$genericlocalconfig = "../condor_examples/condor_config.local.central.manager";
 
 
-$nightly = IsThisNightly($basedir);
-if($nightly == 1) {
-	print "This is a nightly test run\n";
-}
+	$nightly = IsThisNightly($basedir);
+	if($nightly == 1) {
+		print "This is a nightly test run\n";
+	}
 
-$res = IsPersonalTestDirThere();
-if($res != 0) {
-	die "Could not establish directory for personal condor\n";
-}
+	$res = IsPersonalTestDirThere();
+	if($res != 0) {
+		die "Could not establish directory for personal condor\n";
+	}
 
-WhereIsInstallDir();
+	WhereIsInstallDir();
 
-$res = IsPersonalTestDirSetup();
-if($res == 0) {
-	print "Need to set up config files for test condor\n";
-	CreateConfig();
-	CreateLocalConfig();
-	CreateLocal();
-}
+	$res = IsPersonalTestDirSetup();
+	if($res == 0) {
+		print "Need to set up config files for test condor\n";
+		CreateConfig();
+		CreateLocalConfig();
+		CreateLocal();
+	}
 
-if($iswindows == 1) {
-	$tmp = `cygpath -w $targetconfig`;
-	chomp($tmp);
-	$ENV{CONDOR_CONFIG} = $tmp;
-	$res = IsPersonalRunning($tmp);
-} else {
-	$ENV{CONDOR_CONFIG} = $targetconfig;
-	$res = IsPersonalRunning($targetconfig);
+	if($iswindows == 1) {
+		$tmp = `cygpath -w $targetconfig`;
+		chomp($tmp);
+		$ENV{CONDOR_CONFIG} = $tmp;
+		$res = IsPersonalRunning($tmp);
+	} else {
+		$ENV{CONDOR_CONFIG} = $targetconfig;
+		$res = IsPersonalRunning($targetconfig);
+	}
+
+	# capture pid for master
+	chdir("$BaseDir");
+
+	if($res == 0) {
+		print "Starting Personal Condor\n";
+		if($iswindows == 1) {
+			$mcmd = "$wininstalldir/bin/condor_master.exe -f &";
+			$mcmd =~ s/\\/\//g;
+			debug( "Starting master like this:\n");
+			debug( "\"$mcmd\"\n");
+			system("$mcmd");
+		} else {
+			system("$installdir/sbin/condor_master -f &");
+		}
+		print "Done Starting Personal Condor\n";
+	}
+		
+	IsRunningYet();
+
 }
 
 @myfig = `condor_config_val -config`;
@@ -216,25 +252,6 @@ debug("Current config settings are:\n");
 foreach $fig (@myfig) {
 	debug("$fig\n");
 }
-
-# capture pid for master
-chdir("$BaseDir");
-
-if($res == 0) {
-	print "Starting Personal Condor\n";
-	if($iswindows == 1) {
-		$mcmd = "$wininstalldir/bin/condor_master.exe -f &";
-		$mcmd =~ s/\\/\//g;
-		debug( "Starting master like this:\n");
-		debug( "\"$mcmd\"\n");
-		system("$mcmd");
-	} else {
-		system("$installdir/sbin/condor_master -f &");
-	}
-	print "Done Starting Personal Condor\n";
-}
-	
-IsRunningYet();
 
 print "Ready for Testing\n";
 
