@@ -134,7 +134,6 @@ TESTCLASS(lib_auth_protocol-gsi,quick)
 */
 #endif
 
-/*
 DESC(lib_auth_protocol-negot,"16 way negotiation test - frist 8")
 RUN(lib_auth_protocol-negot)
 TESTCLASS(lib_auth_protocol-negot,core)
@@ -144,7 +143,6 @@ DESC(lib_auth_protocol-negot-prt2,"16 way negotiation test - last 8")
 RUN(lib_auth_protocol-negot-prt2)
 TESTCLASS(lib_auth_protocol-negot-prt2,core)
 TESTCLASS(lib_auth_protocol-negot-prt2,quick)
-*/
 
 /* Turned off on Free BSD port GNATS 766 */
 
