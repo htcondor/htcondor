@@ -469,7 +469,7 @@ foreach $module ( sort keys %modules ) {
 		# Create full archive 
 		print "Creating the full archive $skel/$release.tar\n";
 		# This runs in a subshell as to not distub the cwd of the script
-		print runcmd("(cd $skel && $tar_cmd -cvf $release.tar $release)");
+		print runcmd("(cd $skel && time $tar_cmd -cvf $release.tar $release)");
 
 		# Delete the release.tar we're now done with.
 		print "Cleaning up some files...\n";
@@ -501,7 +501,7 @@ foreach $module ( sort keys %modules ) {
 		# we already check for gzip (but not compress) on our build
 		# machines @ configure time, and some of our platforms don't
 		# put compress in a reasonable location... :(
-		runcmd("gzip $skel/$release-$platform.tar");
+		runcmd("time gzip $skel/$release-$platform.tar");
 
 		print "Moving $release-$platform.tar.gz into $targetdir\n";
 		runcmd("mv $skel/$release-$platform.tar.gz $targetdir");
