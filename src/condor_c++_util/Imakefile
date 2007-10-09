@@ -20,6 +20,11 @@ TEST_LIBCONDORAPI = test_libcondorapi
 
 all_target(cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI))
 
+testbin_target(test_libcondorapi,755)
+testbin_target(libcondorapi.so,755)
+testbin_target(test_libcondorapi_shared,755)
+testbin_target(test_condor.log,644)
+
 C_PLUS_FLAGS =	\
 		$(STD_C_PLUS_FLAGS) \
 		New_classads_includes \
@@ -274,3 +279,5 @@ test.o: user_log.h
 
 condor_version.o: condor_version.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c -DPLATFORM=$(PLATFORM) condor_version.C
+
+testbin:: all

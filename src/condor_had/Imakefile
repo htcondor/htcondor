@@ -28,3 +28,4 @@ TRANSFERER_OBJ =  BaseReplicaTransferer.o UploadReplicaTransferer.o DownloadRepl
 
 public_c_plus_target($(TRANSFERER_NAME),bin,$(TRANSFERER_OBJ),$(LIB))
 
+testbin:: all

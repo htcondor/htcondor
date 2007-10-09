@@ -18,6 +18,9 @@ pure_c_plus_target(condor_procapi.pure,$(TEST_OBJS),$(LIB))
 c_plus_target(testprocapi,testprocapi.o,$(LIB))
 html_target( procapi.h procinterface.h )
 
+testbin_target(condor_procapi,755)
+
 release:: all
 stripped:: all
 static:: all
+testbin:: all

@@ -88,6 +88,7 @@ void check_vector( char	**vec, StrVector &saved, const char *name );
 
 #include "x_fake_ckpt.h"
 
+// The argument vector must be distinct.
 int
 main( int argc, char *argv[] )
 {

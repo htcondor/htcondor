@@ -22,3 +22,5 @@ static:: all
 clean::
 
 gen_soapfiles(dbmsd,condorDbmsd)
+
+testbin:: all

@@ -15,3 +15,4 @@ library_target(ckpt_server_api.a,$(SERVER_API_OBJ))
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 html:
+testbin:: all

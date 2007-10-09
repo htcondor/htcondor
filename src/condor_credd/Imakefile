@@ -20,3 +20,4 @@ public_c_plus_target(condor_credd,sbin,$(OBJ), $(DAEMONCORE_LIB) $(LIB))
 
 html:
 clean::
+testbin:: all

@@ -27,3 +27,4 @@ public_copy_target(pgsql_dropddl.sql,sql,pgsql_dropddl.sql,TEXT_MODE)
 #stripped:: all
 #static:: all
 #clean::
+testbin:: all

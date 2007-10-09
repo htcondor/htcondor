@@ -45,3 +45,5 @@ IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, setsyscalls.o )
 
 gen_soapfiles(startd,condorStartd)
+
+testbin:: all

@@ -258,6 +258,8 @@ clean::
 
 stubs: switches.C senders.C receivers.C
 
+testbin:: all
+
 ToUpper:
 	ln -s ../condor_ckpt/ToUpper ToUpper
 

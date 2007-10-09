@@ -19,3 +19,4 @@ public_c_plus_target(condor_check_userlogs,bin,condor_check_userlogs.o,$(LIB))
 public_c_plus_target(condor_userlog_job_counter,bin,condor_userlog_job_counter.o,$(LIB))
 
 html:
+testbin:: all

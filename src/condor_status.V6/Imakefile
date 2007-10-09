@@ -10,3 +10,4 @@ OBJ = setflags.o status.o totals.o prettyPrint.o
 public_c_plus_target($(NAME),bin,$(OBJ),$(LIB))
 
 html:
+testbin:: all

@@ -42,3 +42,4 @@ html_target( documentation )
 
 gen_soapfiles(schedd,condorSchedd)
 
+testbin:: all

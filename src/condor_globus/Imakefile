@@ -4,3 +4,4 @@ public_copy_target(condor_glidein,bin,condor_glidein,EXECUTABLE_MODE)
 
 html:
 clean:
+testbin:: all

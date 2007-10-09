@@ -18,3 +18,5 @@ static:: all
 clean::
 
 gen_soapfiles(dcskel,condorDcskel)
+
+testbin:: all

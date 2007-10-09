@@ -6,6 +6,7 @@ syscall_numbers.o: syscall_numbers.c syscall_numbers.h
 	gcc $(STD_C_FLAGS) -c syscall_numbers.c 
 
 html:
+testbin:: all
 
 clean::
 	rm -f syscall_numbers.o

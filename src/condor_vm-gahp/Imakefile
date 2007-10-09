@@ -24,6 +24,7 @@ public_copy_target(condor_vm_xen.sh,sbin,condor_vm_xen.sh,EXECUTABLE_MODE)
 public_copy_target(condor_vm_vmware.pl,sbin,condor_vm_vmware.pl,EXECUTABLE_MODE)
 
 html:
+testbin:: all
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, setsyscalls.o)

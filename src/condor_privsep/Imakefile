@@ -15,3 +15,4 @@ c_plus_target(test_privsep_open,$(TEST_OBJ),$(STD_LIBS))
 release:: all
 stripped:: all
 static:: all
+testbin:: all

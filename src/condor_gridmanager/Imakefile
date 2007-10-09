@@ -76,5 +76,6 @@ $(GAHP_DIR)/gahp_server:
 	/bin/true
 
 html:
+testbin:: all
 
 gen_soapfiles(gridmanager,condorGridmanager)

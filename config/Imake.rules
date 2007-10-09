@@ -106,6 +106,8 @@ clean:: obj_name					@@\
 	cd obj_name; $(MAKE) clean			@@\
 docs:: obj_name					@@\
 	cd obj_name; $(MAKE) html				@@\
+testbin:: obj_name					@@\
+	cd obj_name; $(MAKE) testbin				@@\
 makefiles:: obj_name obj_name/Makefile	@@\
 obj_name/Makefile:					@@\
 	cd obj_name; ../condor_imake 	@@\
@@ -135,6 +137,8 @@ clean:: precon(obj_name)					@@\
 	cd precon(obj_name); $(MAKE) clean			@@\
 docs:: precon(obj_name)					@@\
 	cd precon(obj_name); $(MAKE) html				@@\
+testbin:: precon(obj_name)					@@\
+	cd precon(obj_name); $(MAKE) testbin				@@\
 makefiles:: precon(obj_name) precon(obj_name)/Makefile	@@\
 precon(obj_name)/Makefile:					@@\
 	cd precon(obj_name); ../condor_imake 	@@\
@@ -364,6 +368,27 @@ $(SOAP_SRC): soapfiles
 #define soapobjs(daemon)
 #define gen_soapfiles(daemon,service)
 #endif /* HAVE_EXT_GSOAP */
+
+/***********************************************************************
+** testbin targets
+**
+** This rule simply copies a file to the testbin directory with the permissions
+** specified.
+***********************************************************************/
+
+/*
+** Copy the given file to the testbin directory
+*/
+#ifndef testbin_target
+#define testbin_target(file,mode)		@@\
+XCOMM Begin translation of func(testbin_target) @@\
+$(TESTBIN_DIR)/file: file			@@\
+	/bin/rm -f $(TESTBIN_DIR)/file	@@\
+	cp file $(TESTBIN_DIR)			@@\
+	chmod mode $(TESTBIN_DIR)/file	@@\
+testbin:: $(TESTBIN_DIR)/file			@@\
+XCOMM End translation of func(testbin_target)
+#endif /* testbin_target */
 
 /***********************************************************************
 ** release targets

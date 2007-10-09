@@ -111,4 +111,5 @@ static::
 #endif  /* HAS_STATIC */
 
 html:
+testbin:: all
 

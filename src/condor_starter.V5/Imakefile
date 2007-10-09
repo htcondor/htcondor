@@ -35,6 +35,7 @@ OBJ = starter.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(REMOTE_SYSCALL_OBJ)
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 html:
+testbin:: all
 
 starter_state_diagram.dot: $(NAME)
 	./$(NAME) -dot > starter_state_diagram.dot

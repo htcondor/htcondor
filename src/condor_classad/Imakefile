@@ -16,9 +16,11 @@ library_target(libclassad.a,$(OBJ))
 
 c_plus_target(test,test.o,libclassad.a $(LIB))
 c_plus_target(test_classads,test_classads.o,$(LIB))
-c_plus_target(test_functions,test_functions.o,$(LIB))
+
 pure_c_plus_target(test_classads.pure,test_classads.o,$(LIB))
 pure_c_plus_target(test.pure,test.o,libclassad.a $(CUTIL_LIB))
+
+testbin_target(test_classads,755)
 
 shared:
 	gcc -fPIC -shared -o libshared.so shared.C
@@ -30,3 +32,4 @@ release:: all
 stripped:: all
 static:: all
 html:
+testbin:: all

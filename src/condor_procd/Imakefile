@@ -48,3 +48,4 @@ release:: all
 stripped:: all
 static:: all
 clean::
+testbin:: all

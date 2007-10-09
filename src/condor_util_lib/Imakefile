@@ -114,4 +114,4 @@ release:: all
 stripped:: all
 static:: all
 html:
-
+testbin::

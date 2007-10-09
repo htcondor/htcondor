@@ -101,4 +101,4 @@ clean::
 	rm -f condor_kill condor_master_on *.o
 
 html:
-
+testbin: all

@@ -35,5 +35,4 @@ public_copy_target(FileLock.pm,lib,FileLock.pm,OBJECT_MODE)
 
 html:
 clean::
-
-
+testbin:: all

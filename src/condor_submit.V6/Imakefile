@@ -14,3 +14,4 @@ OBJ = submit.o
 public_c_plus_target($(NAME),bin,$(OBJ),$(LIB))
 
 html:
+testbin:: all

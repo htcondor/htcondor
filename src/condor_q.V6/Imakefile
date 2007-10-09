@@ -30,3 +30,5 @@ strip_copy_target($(CONDOR_ANALYZE_STRIP),bin,condor_analyze,EXECUTABLE_MODE)
 static_copy_target($(CONDOR_ANALYZE_STATIC),bin,condor_analyze,EXECUTABLE_MODE)
 #endif /* HAS_STATIC */
 #endif /* HAS_CONDOR_ANALYZE */
+
+testbin:: all

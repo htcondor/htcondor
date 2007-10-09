@@ -28,3 +28,5 @@ html_target( ChirpClient.java ChirpInputStream.java ChirpOutputStream.java )
 /* chirp isn't (for now) going to be linked with GCB, so we don't want
 to include the --wrap options on the link-line for it */
 public_c_plus_nowrap_target($(CONDOR_CHIRP_NAME),libexec,$(CONDOR_CHIRP_OBJ),$(LIBNAME) $(STD_LIBS))
+
+testbin:: all

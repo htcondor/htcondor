@@ -13,6 +13,7 @@ FILES = README condor_config.local.central.manager \
 
 all::
 
+testbin:: all
 clean::
 
 release:: $(RELEASE_DIR)/etc/examples/README

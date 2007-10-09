@@ -69,6 +69,7 @@ static_copy_target($(GCB_BIN)/gcb_broker_query_static,sbin,gcb_broker_query,EXEC
 release:: all
 stripped:: all
 static:: all
+testbin:: all
 
 /* reli_sock_no_auth.o: reli_sock.C */
 /* $(CPlusPlus) $(C_PLUS_FLAGS) -DNO_AUTHENTICATION \ */

@@ -23,7 +23,10 @@ library_target(libsysapi.a,$(OBJ))
 
 c_plus_target(condor_sysapi,$(TEST_OBJS),$(LIB))
 
+testbin_target(condor_sysapi,755)
+
 html:
 release:: all
 stripped:: all
 static:: all
+testbin:: all

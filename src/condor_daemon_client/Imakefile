@@ -31,3 +31,4 @@ html_target( documentation )
 release:: all
 stripped:: all
 static:: all
+testbin:: all

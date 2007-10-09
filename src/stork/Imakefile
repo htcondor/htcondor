@@ -301,3 +301,5 @@ static_library($(CLIENT_LIB),lib)
 XCOMM Uncomment to build contrib modules as part of default build
 all:: contrib
 
+
+testbin:: all

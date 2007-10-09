@@ -47,6 +47,8 @@ public_copy_target($(WRAPPER_CLASS),lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
 public_copy_target($(INFO_CLASS),lib,$(INFO_CLASS),EXECUTABLE_MODE)
 public_copy_target($(BENCHMARK_CLASS),lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
 
+testbin:: all
+
 clean::
 	rm -f condor_gridshell
 

@@ -138,3 +138,4 @@ public_copy_target(grid_monitor.sh-glite,libexec/glite,grid_monitor.sh,EXECUTABL
 
 clean::
 html:
+testbin:: all

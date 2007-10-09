@@ -1,6 +1,7 @@
 all::
 clean::
 html:
+testbin:: all
 
 #if HAVE_EXT_DRMAA
 

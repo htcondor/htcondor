@@ -14,6 +14,9 @@ UNIT_TEST_DEPENDENCY_OBJ = emit.o function_test_driver.o unit_tests.o \
 
 c_plus_target(condor_unit_tests,$(UNIT_TEST_DEPENDENCY_OBJ) $(OBJ),$(LIB))
 
+testbin_target(condor_unit_tests,755)
+
 release:: all
 stripped:: all
 static:: all
+testbin:: all

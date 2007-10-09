@@ -24,3 +24,5 @@ import(../condor_syscall_lib,extern_path.o)
 clean::
 
 gen_soapfiles(shadow,condorShadow)
+
+testbin:: all
