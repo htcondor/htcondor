@@ -81,10 +81,12 @@ BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a)
 */
 
 #if !defined( IS_HPUX10 )
+/*
 DESC(job_had_basic," Basic High Availability Daemon Test")
 RUN(job_had_basic)
 TESTCLASS(job_had_basic,core)
 TESTCLASS(job_had_basic,quick)
+*/
 #endif
 
 #if !defined(IS_PPC_AIX)
@@ -132,6 +134,7 @@ TESTCLASS(lib_auth_protocol-gsi,quick)
 */
 #endif
 
+/*
 DESC(lib_auth_protocol-negot,"16 way negotiation test - frist 8")
 RUN(lib_auth_protocol-negot)
 TESTCLASS(lib_auth_protocol-negot,core)
@@ -141,6 +144,7 @@ DESC(lib_auth_protocol-negot-prt2,"16 way negotiation test - last 8")
 RUN(lib_auth_protocol-negot-prt2)
 TESTCLASS(lib_auth_protocol-negot-prt2,core)
 TESTCLASS(lib_auth_protocol-negot-prt2,quick)
+*/
 
 /* Turned off on Free BSD port GNATS 766 */
 
