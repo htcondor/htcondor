@@ -48,7 +48,7 @@ BEGIN
     $vacates = 0;
     %test;
 	%machine_ads;
-	#Condor::DebugOn();
+	Condor::DebugOn();
 }
 
 sub Reset
@@ -758,7 +758,7 @@ sub runCondorTool
 	# clean array before filling
 	system("date");
 
-	my $attempts = 4;
+	my $attempts = 7;
 	my $count = 0;
 	while( $count < $attempts) {
 		@{$arrayref} = (); #empty return array...
