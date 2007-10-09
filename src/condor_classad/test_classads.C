@@ -644,7 +644,7 @@ test_scanner(
 {
 	Token token;
 	char  *input = "Rank = ((Owner == \"Alain\") || (Memory < 500)) 5.4 '2001-10-10'";
-	char  *current;
+	const char  *current;
 
 	current = input;
 
@@ -723,7 +723,8 @@ test_scanner(
 	test_token_type(&token, LX_EOF, __LINE__, results);
 
 	// Test some big strings.
-	char *big_string, *quoted_big_string, *scanner_text;
+	char *big_string, *quoted_big_string; 
+	const char *scanner_text;
 	
 	make_big_string(30000, &big_string, &quoted_big_string);
 	scanner_text = quoted_big_string;
