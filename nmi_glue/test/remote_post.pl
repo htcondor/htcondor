@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.2.2.6 2007-02-13 21:28:50 bt Exp $
+# $Id: remote_post.pl,v 1.2.2.7 2007-10-09 02:39:58 bt Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -27,24 +27,11 @@ if( defined $ENV{_NMI_STEP_FAILED} ) {
 # kill test suite personal condor daemons
 ######################################################################
 
-$pid_file = "$BaseDir/condor_master_pid";
 
-if( -f "$pid_file" ) {
-    # Get master PID from file
-    open (PIDFILE, "$pid_file") || die "Can't open $pid_file: $!\n";
-    while( <PIDFILE> ) {
-        chomp;
-        $master_pid = $_;
-    }
-    close PIDFILE;
-
-    # probably try to stop more gracefully, then wait 30 seconds and
-    # kill if necessary
-    print "KILLING Personal condor_master (pid: $master_pid)\n";
-    if( ! kill(15, $master_pid) ) {
-        print "ERROR: Can't kill condor_master (pid: $master_pid): $!\n";
-        $exit_status = 1;
-    }
+if( -f "$SrcDir/condor_tests/TestingPersonalCondor/local/log/.scheduler_address" ) {
+    #  Came up and had a scheduler running. good
+	$ENV{"CONDOR_CONFIG"} = "$SrcDir/condor_tests/TestingPersonalCondor/condor_config";
+	system("$BaseDir/userdir/condor/sbin/condor_off -master");
 } else {
     # if there's no pid_file, there must be no personal condor running
     # which we'd have to kill.  this would be caused by an empty
@@ -97,14 +84,14 @@ if( ! -d $etc_dir ) {
 }
 if( -d $etc_dir ) {
     print "Copying config files to $etc_dir\n";
-    system( "cp $BaseDir/condor/etc/condor_config $etc_dir" );
+    system( "cp $SrcDir/condor_tests/TestingPersonalCondor/condor_config $etc_dir" );
     if( $? >> 8 ) {
-        print "Can't copy $BaseDir/condor/etc/condor_config to $etc_dir\n";
+        print "Can't copy $SrcDir/condor_tests/TestingPersonalCondor/condor_config to $etc_dir\n";
         $exit_status = 1;
     }
-    system( "cp $BaseDir/local/condor_config.local $etc_dir" );
+    system( "cp $SrcDir/condor_tests/TestingPersonalCondor/condor_config.local $etc_dir" );
     if( $? >> 8 ) {
-        print "Can't copy $BaseDir/local/condor_config.local to $etc_dir\n";
+        print "Can't copy $SrcDir/condor_tests/TestingPersonalCondor/condor_config.local to $etc_dir\n";
         $exit_status = 1;
     }
 }
@@ -117,9 +104,9 @@ if( ! -d $log_dir ) {
 }
 if( -d $log_dir ) {
     print "Copying log files to $log_dir\n";
-    system( "cp $BaseDir/local/log/* $log_dir" );
+    system( "cp -r $SrcDir/condor_tests/TestingPersonalCondor/local/log $log_dir" );
     if( $? >> 8 ) {
-        print "Can't copy $BaseDir/local/log/* to $log_dir\n";
+        print "Can't copy $SrcDir/condor_tests/TestingPersonalCondor/local/log/ to $log_dir\n";
         $exit_status = 1;
     }
 }
@@ -160,10 +147,6 @@ while( <TASKFILE> ) {
 	foreach $target (@savefiles) {
 		copy_file( $target, $resultdir, false );
 	}
-    #copy_file( "$testname*.out*", $resultdir, false );
-    #copy_file( "$testname*.err*", $resultdir, false );
-    #copy_file( "$testname*.log", $resultdir, false );
-    #copy_file( "$testname*.cmd.out", $resultdir, false );
 
     # if it exists, tarup the 'saveme' subdirectory for this test, which
     # may contain test debug info etc.

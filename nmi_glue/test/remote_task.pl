@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.2.2.8 2007-07-03 22:59:36 bt Exp $
+# $Id: remote_task.pl,v 1.2.2.9 2007-10-09 02:39:59 bt Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -126,12 +126,7 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 }
 print "About to run batch_test.pl\n";
 
-open(BATCHTEST, "perl ./batch_test.pl -d $compiler -t $testname 2>&1 |" ) || 
-    c_die("Can't open \"batch_test.pl -d $compiler -t $testname\": $!\n");
-while ( <BATCHTEST> ) {
-    print $_;
-}
-close (BATCHTEST);
+system("perl ./batch_test.pl -d $compiler -t $testname");
 $batchteststatus = $?;
 
 # figure out here if the test passed or failed.  
@@ -147,8 +142,13 @@ if( $batchteststatus != 0 ) {
 
 chdir( "$SrcDir/$testdir/$compiler" ) || 
   c_die("Can't chdir($SrcDir/$testdir/$compiler): $!\n");
+
 $run_out = "$testname.run.out";
 $run_out_full = "$SrcDir/$testdir/$compiler/$run_out";
+$test_out = "$testname.out";
+$test_out_full = "$SrcDir/$testdir/$compiler/$test_out";
+$test_err = "$testname.err";
+$test_err_full = "$SrcDir/$testdir/$compiler/$test_err";
 
 if( ! -f $run_out_full ) {
     if( $teststatus == 0 ) {
@@ -174,27 +174,31 @@ if( ! -f $run_out_full ) {
         print "\n\nERROR: failed to open $run_out_full: $!\n";
     }
 }
+# add test.out and test.err to run output if they exist
 
-# if the status is unusual (not 0 or 1 ) edit the failed summary file
-my $line = "";
-#if(($teststatus != 0) && ($teststatus != 1)){
-	#open(ERRORS,"<failed_tests_summary") || die "Can't open failed_tests_summary: !$\n";
-	#open(NEWERRORS,">failed_tests_summary.new") || die "Can't open failed_tests_summary.new: !$\n";
-	#while(<ERRORS>){
-		#chomp($_);
-		#$line = $_;
-		#if($line =~ /^(.*$testname)\s+\d*.*$/) {
-			#print NEWERRORS "$1 $teststatus\n";
-		#} else {
-			#print NEWERRORS "$line\n";
-		#}
-	#}
-#}
-#copy_file("failed_tests_summary.new", "failed_tests_summary");
+# spit out the contents of the test.out file to the stdout of the task
+if( open(RES, "<$test_out_full") ) {
+    print "\n\n----- Start of $test_out -----\n";
+    while(<RES>) {
+        print "$_";
+    }
+    close RES;
+    print "\n----- End of $test_out -----\n";
+} else {
+    print "\n\nERROR: failed to open $test_out_full: $!\n";
+}
 
-# Save current passed and failed summary
-copy_file("failed_tests_summary", "$BaseDir/../failed_tests_summary");
-copy_file("successful_tests_summary", "$BaseDir/../successful_tests_summary");
+# spit err the contents of the test.err file to the stdout of the task
+if( open(RES, "<$test_err_full") ) {
+    print "\n\n----- Start of $test_err -----\n";
+    while(<RES>) {
+        print "$_";
+    }
+    close RES;
+    print "\n----- End of $test_err -----\n";
+} else {
+    print "\n\nERROR: failed to open $test_err_full: $!\n";
+}
 
 exit $teststatus;
 
