@@ -1,3 +1,6 @@
+09/17/07 V6_9-userlog_rotation_2-{root,branch}
+  The new root & branch for the user log rotation work.
+
 09/28/07 V6_9-procd_osg-{root,branch}
   A branch for making some improvements to the ProcD to make it
   suitable for deployment as a general service in OSG.
@@ -14,7 +17,8 @@
   EC2 in the grid universe.
 
 09/17/07 V6_9-userlog_rotation-{root,branch}
-  The root & branch for the user log rotation work.
+  The root & branch for the user log rotation work.  Abandoned & replaced by
+  V6_9-userlog_rotation_2-{root,branch}.
 
 09/10/07 V6_9_4-merge-1
   The state of the V6_9_4-branch before the first (and probably only)
