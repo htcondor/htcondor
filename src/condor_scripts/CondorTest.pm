@@ -758,7 +758,7 @@ sub runCondorTool
 	# clean array before filling
 	system("date");
 
-	my $attempts = 7;
+	my $attempts = 4;
 	my $count = 0;
 	while( $count < $attempts) {
 		@{$arrayref} = (); #empty return array...
