@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.4 2007-10-10 02:56:11 matt Exp $
+# $Id: remote_pre,v 1.5 2007-10-10 17:37:58 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -76,6 +76,15 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 # - matt 9 oct 2007
 ###
 
+# People need to be somewhat careful if they are going to use the
+# externals cache. At a minimum they need to make sure they are not
+# updating an external without changing its version, all the externals
+# they are building should succeed, and they should not remove their
+# build jobs while an external is building.
+#if (! $ENV{'USE_EXTERNALS_CACHE')) {
+#    goto bail;
+#}
+
 # Problems:
 #  Multiple writers? Two builds on the same system when the cache
 #  either does not exist or has stale data could try to update the
@@ -109,9 +118,11 @@ print "Updating externals in '$old' with externals from '$new'...\n";
     print "'$old' is a file, not a directory" &&
     goto bail;
 
+# If we want to clear the cache or if the script used to build
+# externals changes we better clear the cache
 if ($ENV['CLEAR_EXTERNALS_CACHE'] ||
     system("diff $old/build_external $new/build_external 2>&1/dev/null")) {
-    print "Clearing cache...";
+    print "Clearing cache...\n";
     system("rm -r $old") &&
 	print "Failed to remove cache" &&
 	goto bail;
