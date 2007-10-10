@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.8 2007-10-10 20:07:20 matt Exp $
+# $Id: remote_pre,v 1.9 2007-10-10 23:37:36 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -105,10 +105,10 @@ $new = "$BaseDir/externals"; # the new version. likely ./externals
 # updating an external without changing its version, all the externals
 # they are building should succeed, and they should not remove their
 # build jobs while an external is building.
-print "use_externals_cache: $opt_use_externals_cache\n";
-if (!defined($opt_use_externals_cache)) {
-    goto bail;
-}
+#print "use_externals_cache: $opt_use_externals_cache\n";
+#if (!defined($opt_use_externals_cache)) {
+#    goto bail;
+#}
 
 print "Updating externals in '$old' with externals from '$new'...\n";
 
