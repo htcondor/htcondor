@@ -851,6 +851,7 @@ sub writeBuildGlue
 {
     my ( $fh, $tag, $module ) = @_;
     my $post_args = '';
+    my $pre_args = '';
     # tag and module may be null (if $src_workspace is defined)
 
     # define the glue scripts we want
@@ -862,7 +863,6 @@ sub writeBuildGlue
     print $fh "platform_post = nmi_glue/build/platform_post\n";
 
     # Pass arguments to remote_pre script
-    $pre_args = '';
     if( defined($opt_use_externals_cache) ) {
 	$pre_args .= ' --use_externals_cache';
     }
