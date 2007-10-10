@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.3 2007-10-01 20:09:01 matt Exp $
+# $Id: remote_pre,v 1.4 2007-10-10 02:56:11 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -63,18 +63,160 @@ if( $? ) {
 print "Move completed successfully\n";
 
 
+### EXIT POINT FOR WINDOWS ### 
+
+if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+    print "SKIPPING external caching and configure step for windows\n";
+    exit 0;
+}
+
+###
+# Update the external cache
+#
+# - matt 9 oct 2007
+###
+
+# Problems:
+#  Multiple writers? Two builds on the same system when the cache
+#  either does not exist or has stale data could try to update the
+#  cache at the same time. Is the multiple writer situation likely?
+#   Solution: Put a lock on the cache and retry + fail over to no
+#    cache.
+#   Problems: Stale locks? A stale lock would have to be manually
+#    removed.
+#  External changes? A workspace/branch build that changes an external
+#  without changing its version could change the externals seen by an
+#  already running build on the same system.
+#   Solution: Do not change externals without changing their version.
+
+$old = "/scratch/externals"; # the cache, likely /scratch/externals
+$new = "$BaseDir/externals"; # the new version. likely ./externals
+
+print "Updating externals in '$old' with externals from '$new'...\n";
+
+#
+# Perform sanity checks to get a good idea if we can properly access
+# the cache
+#
+
+# Permissions...
+(! -r "$old" || ! -w "$old") &&
+    print "No permissions to write '$old'" &&
+    goto bail;
+
+# Actually a directory...
+(-e "$old" && ! -d "$old") &&
+    print "'$old' is a file, not a directory" &&
+    goto bail;
+
+if ($ENV['CLEAR_EXTERNALS_CACHE'] ||
+    system("diff $old/build_external $new/build_external 2>&1/dev/null")) {
+    print "Clearing cache...";
+    system("rm -r $old") &&
+	print "Failed to remove cache" &&
+	goto bail;
+}
+
+#
+# Start updating the cache, or creating it
+#
+# If the old (cache) directory does not exist we will just create
+# it from the new directory
+if (! -d "$old") {
+    print "'$old' does not exist, initializing from '$new'...\n";
+    system("mkdir -p $old") &&
+	print "Failed to create '$old'" && 
+	goto bail;
+    system("cp -r $new/* $old") &&
+	print "Failed to initialize '$old'" &&
+	goto bail;
+
+# Update the cache
+} else {
+    # This might not be closed
+    open(BUNDLES, "ls $new/bundles|") ||
+	print "Could not list '$new/bundles'" &&
+	goto bail;
+    while (<BUNDLES>) {
+	$bundle = $_; $bundle =~ s/^\s*(.*?)\s*$/$1/; # strip/trim
+	# This might not be closed
+	open(VERSIONS, "ls $new/bundles/$bundle|") ||
+	    print "Can't get a list of $new/bundles/$bundle versions" &&
+	    goto bail;
+	while (<VERSIONS>) {
+	    $version = $_; $version =~ s/^\s*(.*?)\s*$/$1/; # strip/trim
+	    # We only care if there is any difference, not what
+	    # the difference is
+	    if (system("diff -r $old/bundles/$bundle/$version " .
+		       "$new/bundles/$bundle/$version 2>&1/dev/nul")) {
+		print "Updating $bundle $version...\n";
+		# Make sure the destination exists, which is
+		# important to catch the case of new externals
+		system("mkdir -p $old/bundles/$bundle/$version") &&
+		    print "Failed to ensure cache location exists" &&
+		    goto bail;
+		# To be completely safe we want to just blow away
+		# the old version before copying the new into
+		# place
+		system("rm -r $old/bundles/$bundle/$version") &&
+		    print "Failed to remove old cache version" &&
+		    goto bail;
+		system("cp -r $new/bundles/$bundle/$version " .
+		       "$old/bundles/$bundle") &&
+		       print "Failed to populate cache" &&
+		       goto bail;
+		# Make sure future builds can access this
+		# external, even for deletion
+		system("chmod -R a+rwX $old/bundles/$bundle/$version") &&
+		    print "Failed to change permissions on cache" &&
+		    goto bail;
+		# Remove the fact that we have built this external
+		# in the past. This will result in the external
+		# being rebuilt
+		(-e "$old/triggers/$bundle-$version") &&
+		    unlink "$old/triggers/$bundle-$version" &&
+		    print "Failed to remove cached trigger" &&
+		    goto bail;
+		(-d "$old/install/$bundle-$version") &&
+		    system("rm -r $old/install/$bundle-$version") &&
+		    print "Failed to remove cached external install" &&
+		    goto bail;
+	    } else {
+		print "$bundle $version is up to date...\n";
+	    }
+	}
+	close(VERSIONS);
+    }
+    close(BUNDLES);
+}
+
+success:
+{
+    # We want to always make sure that the cache directory is
+    # maximally permissive, this also cleans up cases where
+    # permissions were too restrictive in the past
+    system("chmod -f -R a+rwX $old");
+    $externals = $old;
+    goto configure; # skip bail label
+}
+
+bail:
+{
+    print "...skipping cache...\n";
+    $externals = $new;
+}
+
+configure:
 ######################################################################
 # run configure on the source tree
 ######################################################################
 
-if ($ENV{NMI_PLATFORM} =~ /winnt/) {
-    print "SKIPPING configure step for windows\n";
-    exit 0;
-}
-
 chdir( $SrcDir ) || die "Can't chdir($SrcDir): $!\n";
 print "running CONFIGURE ...\n"; 
-open( CONFIG, "./configure --with-soft-is-hard 2>&1 |") ||
+open( CONFIG,
+      "./configure " .
+      " --with-soft-is-hard " .
+      " --with-externals=$externals 2>&1 |") ||
     die "Can't open configure as a pipe: $!\n";
 while ( <CONFIG> ) {
   print $_;
