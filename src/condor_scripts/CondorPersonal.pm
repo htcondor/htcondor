@@ -798,7 +798,7 @@ sub TunePersonalCondor
 		}
 
 
-		print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST):0\n";
+		print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST)\n";
 		print NEW "MASTER_ADDRESS_FILE = \$(LOG)/.master_address\n";
 		print NEW "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
 		print NEW "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
