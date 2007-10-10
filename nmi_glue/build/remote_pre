@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.7 2007-10-10 19:10:29 matt Exp $
+# $Id: remote_pre,v 1.8 2007-10-10 20:07:20 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -84,16 +84,6 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 # - matt 9 oct 2007
 ###
 
-# People need to be somewhat careful if they are going to use the
-# externals cache. At a minimum they need to make sure they are not
-# updating an external without changing its version, all the externals
-# they are building should succeed, and they should not remove their
-# build jobs while an external is building.
-print "use_externals_cache: $opt_use_externals_cache\n";
-if (!defined($opt_use_externals_cache)) {
-    goto bail;
-}
-
 # Problems:
 #  Multiple writers? Two builds on the same system when the cache
 #  either does not exist or has stale data could try to update the
@@ -109,6 +99,16 @@ if (!defined($opt_use_externals_cache)) {
 
 $old = "/scratch/externals"; # the cache, likely /scratch/externals
 $new = "$BaseDir/externals"; # the new version. likely ./externals
+
+# People need to be somewhat careful if they are going to use the
+# externals cache. At a minimum they need to make sure they are not
+# updating an external without changing its version, all the externals
+# they are building should succeed, and they should not remove their
+# build jobs while an external is building.
+print "use_externals_cache: $opt_use_externals_cache\n";
+if (!defined($opt_use_externals_cache)) {
+    goto bail;
+}
 
 print "Updating externals in '$old' with externals from '$new'...\n";
 
