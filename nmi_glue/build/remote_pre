@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.6 2007-10-10 19:06:24 matt Exp $
+# $Id: remote_pre,v 1.7 2007-10-10 19:10:29 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -89,7 +89,8 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 # updating an external without changing its version, all the externals
 # they are building should succeed, and they should not remove their
 # build jobs while an external is building.
-if (defined($opt_use_externals_cache)) {
+print "use_externals_cache: $opt_use_externals_cache\n";
+if (!defined($opt_use_externals_cache)) {
     goto bail;
 }
 
@@ -130,7 +131,8 @@ print "Updating externals in '$old' with externals from '$new'...\n";
 # externals changes we better clear the cache
 if (defined($opt_clear_externals_cache) ||
     system("diff $old/build_external $new/build_external 2>&1/dev/null")) {
-    print "Clearing cache...\n";
+    print "Clearing cache " .
+	"(clear_externals_cache: $opt_clear_externals_cache)...\n";
     system("rm -r $old") &&
 	print "Failed to remove cache" &&
 	goto bail;
