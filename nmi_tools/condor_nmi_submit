@@ -83,6 +83,7 @@ use vars qw/ $opt_build $opt_test
     $opt_nightly $opt_externals $opt_without_tests
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args
     $opt_input_platform
+    $opt_clear_externals_cache $opt_use_externals_cache
     /;
 
 
@@ -333,6 +334,8 @@ sub parseOptions
            'nightly'       => \$opt_nightly,
            'externals=s'   => \$opt_externals,
            'without-tests' => \$opt_without_tests,
+           'use_externals_cache' => \$opt_use_externals_cache,
+           'clear_externals_cache' => \$opt_clear_externals_cache,
 # test-specific options
            'buildid=i'     => \$opt_buildid,
            'test-src=s'    => \$opt_test_src,
@@ -390,6 +393,14 @@ sub parseOptions
         }
         if( defined($opt_nightly) ) {
             print "ERROR: --nightly is not valid with --test\n";
+            printUsage( 1 );
+        }
+        if( defined($opt_use_externals_cache) ) {
+            print "ERROR: --use_externals_cache is not valid with --test\n";
+            printUsage( 1 );
+        }
+        if( defined($opt_clear_externals_cache) ) {
+            print "ERROR: --clear_externals_cache is not valid with --test\n";
             printUsage( 1 );
         }
     } else {
@@ -849,6 +860,18 @@ sub writeBuildGlue
     print $fh "remote_task = nmi_glue/build/remote_task\n";
     print $fh "remote_post = nmi_glue/build/remote_post\n";
     print $fh "platform_post = nmi_glue/build/platform_post\n";
+
+    # Pass arguments to remote_pre script
+    $pre_args = '';
+    if( defined($opt_use_externals_cache) ) {
+	$pre_args .= ' --use_externals_cache';
+    }
+    if( defined($opt_clear_externals_cache) ) {
+	$pre_args .= ' --clear_externals_cache';
+    }
+    if( $pre_args ) {
+	print $fh "remote_pre_args = $pre_args\n";
+    }
 
     if( defined($opt_without_tests) ) {
         $post_args = '--without-tests';

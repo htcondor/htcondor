@@ -1,11 +1,19 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.5 2007-10-10 17:37:58 matt Exp $
+# $Id: remote_pre,v 1.6 2007-10-10 19:06:24 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
 use Cwd;
+
+use Getopt::Long;
+use vars qw/ $opt_use_externals_cache $opt_clear_externals_cache /;
+GetOptions(
+            'use_externals_cache' => \$opt_use_externals_cache,
+            'clear_externals_cache' => \$opt_clear_externals_cache,
+);
+
 
 my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
@@ -81,9 +89,9 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 # updating an external without changing its version, all the externals
 # they are building should succeed, and they should not remove their
 # build jobs while an external is building.
-#if (! $ENV{'USE_EXTERNALS_CACHE')) {
-#    goto bail;
-#}
+if (defined($opt_use_externals_cache)) {
+    goto bail;
+}
 
 # Problems:
 #  Multiple writers? Two builds on the same system when the cache
@@ -120,7 +128,7 @@ print "Updating externals in '$old' with externals from '$new'...\n";
 
 # If we want to clear the cache or if the script used to build
 # externals changes we better clear the cache
-if ($ENV['CLEAR_EXTERNALS_CACHE'] ||
+if (defined($opt_clear_externals_cache) ||
     system("diff $old/build_external $new/build_external 2>&1/dev/null")) {
     print "Clearing cache...\n";
     system("rm -r $old") &&
@@ -145,17 +153,15 @@ if (! -d "$old") {
 # Update the cache
 } else {
     # This might not be closed
-    open(BUNDLES, "ls $new/bundles|") ||
-	print "Could not list '$new/bundles'" &&
+    opendir(BUNDLES, "$new/bundles") ||
+	print "Could not open '$new/bundles'" &&
 	goto bail;
-    while (<BUNDLES>) {
-	$bundle = $_; $bundle =~ s/^\s*(.*?)\s*$/$1/; # strip/trim
+    while (defined($bundle = readdir(BUNDLES))) {
 	# This might not be closed
-	open(VERSIONS, "ls $new/bundles/$bundle|") ||
+	opendir(VERSIONS, "$new/bundles/$bundle") ||
 	    print "Can't get a list of $new/bundles/$bundle versions" &&
 	    goto bail;
-	while (<VERSIONS>) {
-	    $version = $_; $version =~ s/^\s*(.*?)\s*$/$1/; # strip/trim
+	while (defined($version = readdir(VERSIONS))) {
 	    # We only care if there is any difference, not what
 	    # the difference is
 	    if (system("diff -r $old/bundles/$bundle/$version " .
