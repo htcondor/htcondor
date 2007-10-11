@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.10 2007-10-11 13:35:32 matt Exp $
+# $Id: remote_pre,v 1.11 2007-10-11 15:41:00 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -105,10 +105,10 @@ $new = "$BaseDir/externals"; # the new version. likely ./externals
 # updating an external without changing its version, all the externals
 # they are building should succeed, and they should not remove their
 # build jobs while an external is building.
-#print "use_externals_cache: $opt_use_externals_cache\n";
-#if (!defined($opt_use_externals_cache)) {
-#    goto bail;
-#}
+print "use_externals_cache: $opt_use_externals_cache\n";
+if (!defined($opt_use_externals_cache)) {
+    goto bail;
+}
 
 print "Updating externals in '$old' with externals from '$new'...\n";
 
@@ -160,11 +160,15 @@ if (! -d "$old") {
 	print "Could not open '$new/bundles'" &&
 	goto bail;
     while (defined($bundle = readdir(BUNDLES))) {
+	# Skip . or .. files
+	if ($bundle =~ /^\.\.?/) { next; }
 	# This might not be closed
 	opendir(VERSIONS, "$new/bundles/$bundle") ||
 	    print "Can't get a list of $new/bundles/$bundle versions" &&
 	    goto bail;
 	while (defined($version = readdir(VERSIONS))) {
+	    # Skip . or .. files
+	    if ($version =~ /^\.\.?/) { next; }
 	    # We only care if there is any difference, not what
 	    # the difference is
 	    if (system("diff -r $old/bundles/$bundle/$version " .
