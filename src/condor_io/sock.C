@@ -1821,7 +1821,7 @@ void Sock :: setFullyQualifiedUser(char *)
 	return;
 }
 
-const char * Sock :: getFullyQualifiedUser()
+const char * Sock :: getFullyQualifiedUser() const
 {
 	return NULL;
 }

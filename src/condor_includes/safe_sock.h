@@ -94,7 +94,7 @@ public:
     const char * isIncomingDataEncrypted();
 
 	virtual void         setFullyQualifiedUser(char * u);
-	virtual const char * getFullyQualifiedUser();
+	virtual const char * getFullyQualifiedUser() const;
     virtual int          isAuthenticated() const;
     void                 setAuthenticated(bool authenticated = true);
 
