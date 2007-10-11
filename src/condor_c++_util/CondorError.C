@@ -113,6 +113,7 @@ void CondorError::pushf( const char* the_subsys, int the_code, const char* the_f
 	vsprintf ( tmp->_message, the_format, ap );
 	tmp->_next = _next;
 	_next = tmp;
+	va_end(ap);
 }
 
 const char*
