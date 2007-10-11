@@ -5957,12 +5957,6 @@ find_idle_local_jobs( ClassAd *job )
 						 ATTR_REQUIREMENTS, id.cluster, id.proc );
 			}
 
-			dprintf(D_FULLDEBUG, "=============================\n");
-			dprintf(D_FULLDEBUG, "The job ad is\n");
-			job->dPrint(D_FULLDEBUG);
-			dprintf(D_FULLDEBUG, "The schedd ad is\n");
-			scheddAd.dPrint(D_FULLDEBUG);
-			dprintf(D_FULLDEBUG, "=============================\n");
 		}
 			//
 			// If the job's requirements failed up above, we will want to 
