@@ -1812,16 +1812,17 @@ A string that is appended to the Xen kernel command line.
 %% xen_kernel
 %%%%%%%%%%%%%%%%%%%
 
-\item[xen\_kernel = $<$included \Bar\ any \Bar\ vmx \Bar\ path-to-kernel$>$]
+% \item[xen\_kernel = $<$included \Bar\ any \Bar\ vmx \Bar\ path-to-kernel$>$]
+\item[xen\_kernel = $<$included \Bar\ any \Bar\  path-to-kernel$>$]
 \index{submit commands!xen\_kernel}
 A value of \SubmitCmd{included} specifies that the kernel is
 included in the disk file.
 A value of \SubmitCmd{any} specifies that the kernel is
 deployed on the execute machine, and its location is given
 by configuration.
-A value of \SubmitCmd{vmx} specifies that hardware virtualization
-is required.
-If not one of these three values, then the value is a path and
+% A value of \SubmitCmd{vmx} specifies that hardware virtualization
+% is required.
+If not one of these values, then the value is a path and
 file name of the kernel to be used.
 
 %%%%%%%%%%%%%%%%%%%

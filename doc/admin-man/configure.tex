@@ -1089,8 +1089,8 @@ File System Configuration File Entries''.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!daemon logging configuration variables}
-These entries control how and where the Condor daemons write their log
-files.  Each of the entries in this section represents multiple
+These entries control how and where the Condor daemons write to log
+files.  Many of the entries in this section represents multiple
 macros. There is one for each subsystem (listed
 in section~\ref{sec:Condor-Subsystem-Names}).
 The macro name for each substitutes \MacroNI{<SUBSYS>} with the name
@@ -1391,6 +1391,38 @@ Log files may optionally be specified per debug level as follows:
 \item[\Macro{TRUNC\_<SUBSYS>\_<LEVEL>\_LOG\_ON\_OPEN}]
   \label{param:TruncSubsysLevelLogOnOpen} Similar to
   \Macro{TRUNC\_<SUBSYS>\_LOG\_ON\_OPEN}.
+
+\end{description}
+
+The following macros control where and what is written to the 
+event log,
+a file that receives job user log events, 
+but across all users and user's jobs.
+
+\begin{description}
+
+\item[\Macro{EVENT\_LOG}] \label{param:EventLog}
+  The full path and file name of the event log.
+  There is no default value for this variable,
+  so no event log will be written, if not defined.
+
+\item[\Macro{MAX\_EVENT\_LOG}] \label{param:MaxEventLog}
+  Controls the maximum length in bytes to which the event log
+  will be allowed to grow. The log file will grow to the specified length,
+  then be saved to a file with the suffix .old.
+  The .old  files are overwritten each time the log is saved.
+  A value of 0 specifies that the file may grow without bounds.
+  The default is 1 Mbyte.
+  
+\item[\Macro{EVENT\_LOG\_USE\_XML}] \label{param:EventLogUseXML}
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, events are logged in XML format.
+
+\item[\Macro{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS}]
+  \label{param:EventLogJobAdInformationAttrs}
+  A comma-separated list of job ClassAd attributes,
+  whose evaluated values form a new event, the JobAdInformationEvent.
+  This new event is placed in the event log in addition to each logged event.
 
 \end{description}
 
@@ -3910,6 +3942,13 @@ These macros control the \Condor{schedd}.
   your \MacroUNI{RESERVED\_SWAP} limit.
   This macro has a default value of 200.
 
+\item[\Macro{MAX\_JOBS\_SUBMITTED}] \label{param:MaxJobsSubmitted}
+  This integer value limits the number of jobs permitted in 
+  a \Condor{schedd} daemon's queue. Submission of a new cluster
+  of jobs fails, if the total number of jobs would exceed this limit. 
+  The default value for this variable is the largest positive
+  integer value.
+
 \item[\Macro{MAX\_SHADOW\_EXCEPTIONS}]
   \label{param:MaxShadowExceptions} This macro controls the maximum
   number of times that \Condor{shadow} processes can have a fatal
@@ -6366,6 +6405,18 @@ They specify items related to the \Condor{vm-gahp}.
 The following configuration variable may be specified in both
 the Condor configuration file and in the separate
 virtual machine-specific configuration file used by the \Condor{vm-gahp}.
+Please note that this machine-specific configuration file 
+used by the \Condor{vm-gahp} does not inherit configuration
+from Condor.  Therefore, definitions may not utilize the values
+of configuration variables set outside this file.
+For example,
+a setting of \File{\$(BIN)/condor\_vm\_vmware.pl} for
+\Macro{VMWARE\_PERL} cannot work,
+as \MacroUNI{BIN} is defined within Condor's configuration,
+and not in the machine-specific configuration file
+used by the \Condor{vm-gahp}.
+Instead, \MacroNI{BIN} must be redefined,
+or a full path must be used in every case.
 
 \begin{description}
 \item[\Macro{VM\_NETWORKING}]
@@ -6381,6 +6432,18 @@ virtual machine-specific configuration file used by the \Condor{vm-gahp}.
 The following configuration variables are not specific to either the VMware
 or the Xen virtual machine software, but will appear in the
 virtual machine-specific configuration file used by the \Condor{vm-gahp}.
+Please note that this machine-specific configuration file 
+used by the \Condor{vm-gahp} does not inherit configuration
+from Condor.  Therefore, definitions may not utilize the values
+of configuration variables set outside this file.
+For example,
+a setting of \File{\$(BIN)/condor\_vm\_vmware.pl} for
+\Macro{VMWARE\_PERL} cannot work,
+as \MacroUNI{BIN} is defined within Condor's configuration,
+and not in the machine-specific configuration file
+used by the \Condor{vm-gahp}.
+Instead, \MacroNI{BIN} must be redefined,
+or a full path must be used in every case.
 
 \begin{description}
 
@@ -6393,8 +6456,11 @@ virtual machine-specific configuration file used by the \Condor{vm-gahp}.
 \item[\Macro{VM\_VERSION}]
   \label{param:VMVersion}
   Specifies the version of supported virtual machine software
-  defined by \MacroNI{VM\_TYPE}.
+  defined by \MacroNI{VM\_TYPE}.  
   There is no default value for this required configuration variable.
+  This configuration variable does not currently alter the behavior of
+  the \Condor{vm-gahp}; instead, it is used in \Condor{status} when
+  printing VM-capable hosts and slots.
 
 \item[\Macro{VM\_MAX\_MEMORY}]
   \label{param:VMMaxMemory}
@@ -6418,6 +6484,18 @@ The following configuration variables are specific to the VMware
 virtual machine software.  They are specified within the separate configuration
 file read by the \Condor{vm-gahp} and allow the \Condor{vm-gahp} to
 correctly interface with the VMware software.
+Please note that this machine-specific configuration file 
+used by the \Condor{vm-gahp} does not inherit configuration
+from Condor.  Therefore, definitions may not utilize the values
+of configuration variables set outside this file.
+For example,
+a setting of \File{\$(BIN)/condor\_vm\_vmware.pl} for
+\Macro{VMWARE\_PERL} cannot work,
+as \MacroUNI{BIN} is defined within Condor's configuration,
+and not in the machine-specific configuration file
+used by the \Condor{vm-gahp}.
+Instead, \MacroNI{BIN} must be redefined,
+or a full path must be used in every case.
 
 \begin{description}
 \item[\Macro{VMWARE\_PERL}]
@@ -6441,14 +6519,26 @@ The following configuration variables are specific to the Xen
 virtual machine software.  They are specified within the separate configuration
 file read by the \Condor{vm-gahp} and allow the \Condor{vm-gahp} to
 correctly interface with the Xen software.
+Please note that this machine-specific configuration file 
+used by the \Condor{vm-gahp} does not inherit configuration
+from Condor.  Therefore, definitions may not utilize the values
+of configuration variables set outside this file.
+For example,
+a setting of \File{\$(BIN)/condor\_vm\_vmware.pl} for
+\Macro{VMWARE\_PERL} cannot work,
+as \MacroUNI{BIN} is defined within Condor's configuration,
+and not in the machine-specific configuration file
+used by the \Condor{vm-gahp}.
+Instead, \MacroNI{BIN} must be redefined,
+or a full path must be used in every case.
 
 \begin{description}
 
-\item[\Macro{VM\_HARDWARE\_VT}]
-\label{param:VMHardwareVT}
-A boolean variable describing whether a machine supports
-hardware virtualization such as Intel VT and AMD-V.
-When not defined, the default value is \Expr{False}.
+% \item[\Macro{VM\_HARDWARE\_VT}]
+% \label{param:VMHardwareVT}
+% A boolean variable describing whether a machine supports
+% hardware virtualization such as Intel VT and AMD-V.
+% When not defined, the default value is \Expr{False}.
 
 \item[\Macro{XEN\_SCRIPT}]
   \label{param:XenScript}
@@ -6489,120 +6579,120 @@ When not defined, the default value is \Expr{False}.
   XEN_IMAGE_IO_TYPE = file:
   \end{verbatim}
 
-\item[\Macro{XEN\_VT\_KERNEL}]
-  \label{param:XenVTKernel}
-  An optional string that the \Condor{vm-gahp}
-  inserts into the Xen configuration file, relating to hardware virtualization.
-  As an example, the string inserted is
-  \begin{verbatim}
-  kernel="/usr/lib/xen/boot/hvmloader"
-  \end{verbatim}
-  for a configuration variable definition of
-  \begin{verbatim}
-  XEN_VT_KERNEL = "/usr/lib/xen/boot/hvmloader"
-  \end{verbatim}
+% \item[\Macro{XEN\_VT\_KERNEL}]
+%   \label{param:XenVTKernel}
+%  An optional string that the \Condor{vm-gahp}
+%  inserts into the Xen configuration file, relating to hardware virtualization.
+%  As an example, the string inserted is
+%  \begin{verbatim}
+%  kernel="/usr/lib/xen/boot/hvmloader"
+%  \end{verbatim}
+%  for a configuration variable definition of
+%  \begin{verbatim}
+%  XEN_VT_KERNEL = "/usr/lib/xen/boot/hvmloader"
+%  \end{verbatim}
 
-\item[\Macro{XEN\_VT\_BUILDER}]
-  \label{param:XenVTBuilder}
-  An optional string that the \Condor{vm-gahp}
-  inserts into the Xen configuration file, relating to hardware virtualization.
-  As an example, the string inserted is
-  \begin{verbatim}
-  builder='hvm'
-  \end{verbatim}
-  for a configuration variable definition of
-  \begin{verbatim}
-  XEN_VT_BUILDER = 'hvm'
-  \end{verbatim}
+%\item[\Macro{XEN\_VT\_BUILDER}]
+%  \label{param:XenVTBuilder}
+%  An optional string that the \Condor{vm-gahp}
+%  inserts into the Xen configuration file, relating to hardware virtualization.
+%  As an example, the string inserted is
+%  \begin{verbatim}
+%  builder='hvm'
+%  \end{verbatim}
+%  for a configuration variable definition of
+%  \begin{verbatim}
+%  XEN_VT_BUILDER = 'hvm'
+%  \end{verbatim}
 
-\item[\Macro{XEN\_VT\_SHADOW\_MEMORY}]
-  \label{param:XenVTShadowMemory}
-  An optional string that the \Condor{vm-gahp}
-  inserts into the Xen configuration file, relating to hardware virtualization.
-  As an example, the string inserted is
-  \begin{verbatim}
-  shadow_memory=8
-  \end{verbatim}
-  for a configuration variable definition of
-  \begin{verbatim}
-  XEN_VT_SHADOW_MEMORY = 8
-  \end{verbatim}
+%\item[\Macro{XEN\_VT\_SHADOW\_MEMORY}]
+%  \label{param:XenVTShadowMemory}
+%  An optional string that the \Condor{vm-gahp}
+%  inserts into the Xen configuration file, relating to hardware virtualization.
+%  As an example, the string inserted is
+%  \begin{verbatim}
+%  shadow_memory=8
+%  \end{verbatim}
+%  for a configuration variable definition of
+%  \begin{verbatim}
+%  XEN_VT_SHADOW_MEMORY = 8
+%  \end{verbatim}
 
-\item[\Macro{XEN\_VT\_DEVICE\_MODEL}]
-  \label{param:XenVTDeviceModel}
-  An optional string that the \Condor{vm-gahp}
-  inserts into the Xen configuration file, relating to hardware virtualization.
-  As an example, the string inserted is
-  \begin{verbatim}
-  device_model=/usr/lib/xen/bin/qemu-dm
-  \end{verbatim}
-  for a configuration variable definition of
-  \begin{verbatim}
-  XEN_VT_DEVICE_MODEL = '/usr/lib/xen/bin/qemu-dm'
-  \end{verbatim}
+%\item[\Macro{XEN\_VT\_DEVICE\_MODEL}]
+%  \label{param:XenVTDeviceModel}
+%  An optional string that the \Condor{vm-gahp}
+%  inserts into the Xen configuration file, relating to hardware virtualization.
+%  As an example, the string inserted is
+%  \begin{verbatim}
+%  device_model=/usr/lib/xen/bin/qemu-dm
+%  \end{verbatim}
+%  for a configuration variable definition of
+%  \begin{verbatim}
+%  XEN_VT_DEVICE_MODEL = '/usr/lib/xen/bin/qemu-dm'
+%  \end{verbatim}
 
-\item[\Macro{XEN\_VT\_SDL}]
-  \label{param:XenVTSDL}
-  An optional string that the \Condor{vm-gahp}
-  inserts into the Xen configuration file, relating to hardware virtualization.
-  As an example, the string inserted is
-  \begin{verbatim}
-  sdl=0
-  \end{verbatim}
-  for a configuration variable definition of
-  \begin{verbatim}
-  XEN_VT_SDL = 0
-  \end{verbatim}
+%\item[\Macro{XEN\_VT\_SDL}]
+%  \label{param:XenVTSDL}
+%  An optional string that the \Condor{vm-gahp}
+%  inserts into the Xen configuration file, relating to hardware virtualization.
+%  As an example, the string inserted is
+%  \begin{verbatim}
+%  sdl=0
+%  \end{verbatim}
+%  for a configuration variable definition of
+%  \begin{verbatim}
+%  XEN_VT_SDL = 0
+%  \end{verbatim}
 
-\item[\Macro{XEN\_VT\_VNC}]
-  \label{param:XenVTVNC}
-  An optional string that the \Condor{vm-gahp}
-  inserts into the Xen configuration file, relating to hardware virtualization.
-  As an example, the string inserted is
-  \begin{verbatim}
-  vnc=1
-  \end{verbatim}
-  for a configuration variable definition of
-  \begin{verbatim}
-  XEN_VT_VNC = 1
-  \end{verbatim}
+%\item[\Macro{XEN\_VT\_VNC}]
+%  \label{param:XenVTVNC}
+%  An optional string that the \Condor{vm-gahp}
+%  inserts into the Xen configuration file, relating to hardware virtualization.
+%  As an example, the string inserted is
+%  \begin{verbatim}
+%  vnc=1
+%  \end{verbatim}
+%  for a configuration variable definition of
+%  \begin{verbatim}
+%  XEN_VT_VNC = 1
+%  \end{verbatim}
 
-\item[\Macro{XEN\_VT\_STDVGA}]
-  \label{param:XenVTSTDVGA}
-  An optional string that the \Condor{vm-gahp}
-  inserts into the Xen configuration file, relating to hardware virtualization.
-  As an example, the string inserted is
-  \begin{verbatim}
-  stdvga=0
-  \end{verbatim}
-  for a configuration variable definition of
-  \begin{verbatim}
-  XEN_VT_STDVGA = 0
-  \end{verbatim}
+%\item[\Macro{XEN\_VT\_STDVGA}]
+%  \label{param:XenVTSTDVGA}
+%  An optional string that the \Condor{vm-gahp}
+%  inserts into the Xen configuration file, relating to hardware virtualization.
+%  As an example, the string inserted is
+%  \begin{verbatim}
+%  stdvga=0
+%  \end{verbatim}
+%  for a configuration variable definition of
+%  \begin{verbatim}
+%  XEN_VT_STDVGA = 0
+%  \end{verbatim}
 
-\item[\Macro{XEN\_VT\_SERIAL}]
-  \label{param:XenVTSerial}
-  An optional string that the \Condor{vm-gahp}
-  inserts into the Xen configuration file, relating to hardware virtualization.
-  As an example, the string inserted is
-  \begin{verbatim}
-  serial='pty'
-  \end{verbatim}
-  for a configuration variable definition of
-  \begin{verbatim}
-  XEN_VT_SERIAL = 'pty'
-  \end{verbatim}
+%\item[\Macro{XEN\_VT\_SERIAL}]
+%  \label{param:XenVTSerial}
+%  An optional string that the \Condor{vm-gahp}
+%  inserts into the Xen configuration file, relating to hardware virtualization.
+%  As an example, the string inserted is
+%  \begin{verbatim}
+%  serial='pty'
+%  \end{verbatim}
+%  for a configuration variable definition of
+%  \begin{verbatim}
+%  XEN_VT_SERIAL = 'pty'
+%  \end{verbatim}
 
-\item[\Macro{XEN\_DEVICE\_TYPE\_FOR\_VT}]
-  \label{param:XenDeviceTypeForVT}
-  Defaults to the string \verb@vbd:@ for paravirtualized guests.
-  Use the string \verb@ioemu:@ for unmodified guest domains. 
+%\item[\Macro{XEN\_DEVICE\_TYPE\_FOR\_VT}]
+%  \label{param:XenDeviceTypeForVT}
+%  Defaults to the string \verb@vbd:@ for paravirtualized guests.
+%  Use the string \verb@ioemu:@ for unmodified guest domains. 
 
-\item[\Macro{XEN\_ALLOW\_HARDWARE\_VT\_SUSPEND}]
-  \label{param:XenAllowHardwareVTSuspend}
-  A boolean value that defaults to \Expr{False}.
-  In the future, as Xen hardware virtualization guests may be saved
-  and restored, this configuration variable may be utilized.
+%\item[\Macro{XEN\_ALLOW\_HARDWARE\_VT\_SUSPEND}]
+%  \label{param:XenAllowHardwareVTSuspend}
+%  A boolean value that defaults to \Expr{False}.
+%  In the future, as Xen hardware virtualization guests may be saved
+%  and restored, this configuration variable may be utilized.
 
 \end{description}
 
@@ -6982,11 +7072,33 @@ quill-for-schedd_name@machinename.fully.qualified.address
 \end{verbatim}
 \normalsize
 
+\item[\Macro{QUILL\_USE\_SQL\_LOG}] \label{param:QuillUseSQLLog}
+  In order for Quill to store historical job information or resource
+  information, the Condor daemons must write information to the SQL logfile.
+  By default, this is set to \Expr{False}, and the only information Quill
+  stores in the database is the current job queue.
+  This can be set on a per daemon basis. For example, to store information
+  about historical jobs, but not store execute resource information, set
+  \MacroNI{QUILL\_USE\_SQL\_LOG} to \Expr{False} and set
+  \MacroNI{SCHEDD.\_QUILL\_USE\_SQL\_LOG} to \Expr{True}.
+
 \item[\Macro{QUILL\_DB\_NAME}] \label{param:QuillDBName}
   A string that identifies a database within a database server.
 
+\item[\Macro{QUILL\_DB\_USER}]
+	A string that identifies the \Prog{PostgreSQL} user that Quill will
+    connect to the database as.
+	We recommend \Username{quillwriter} for this setting. 
+
+\item[\Macro{QUILL\_DB\_TYPE}] \label{param:QuillDBType}
+  A string that distinguishes between database system types.
+  Defaults to the only database system currently defined,
+  \verb@"PGSQL"@.
+
 \item[\Macro{QUILL\_DB\_IP\_ADDR}] \label{param:QuillDBIPAddr}
-  An IP address of the database server.
+  The host address of the database server. It can be either an IP address
+  or an IP address.
+  It must match exactly what is used in the \File{.pgpass} file.
 
 \item[\Macro{QUILL\_POLLING\_PERIOD}] \label{param:QuillPollingPeriod}
   The frequency, in number of seconds, at which the Quill daemon
@@ -6994,24 +7106,82 @@ quill-for-schedd_name@machinename.fully.qualified.address
   New information in the log file is sent to the database.
   The default value is 10.
 
-\item[\Macro{QUILL\_HISTORY\_CLEANING\_INTERVAL}] 
-  \label{param:QuillHistoryCleaningInterval}
-  The interval, in hours, between scans of the database to identify and
-  delete jobs that are beyond their \MacroNI{QUILL\_HISTORY\_DURATION}
-  time. The default value is 24.
+\item[\Macro{QUILL\_NOT\_RESPONDING\_TIMEOUT}]
+  \label{param:QuillNotRespondingTimeout}
+  The length of time, in seconds, before the \Condor{master}
+  may decide that the \Condor{quill} daemon is hung due to 
+  a lack of communication,
+  potentially causing  the \Condor{master} to kill and
+  restart the \Condor{quill} daemon.
+  When the \Condor{quill} daemon is processing a very long log file, it 
+  may not be able to communicate with the master. 
+  The default is 3600 seconds, or one hour. It may be
+  advisable to increase this to several hours. 
 
-\item[\Macro{QUILL\_HISTORY\_DURATION}] \label{param:QuillHistoryDuration}
+\item[\Macro{QUILL\_MAINTAIN\_DB\_CONN}] \label{param:QuillMaintainDBConn}
+  A boolean variable that defaults to \Expr{True}.
+  When \Expr{True}, the \Condor{quill} daemon
+  maintains an open connection the database server,
+  which speeds up updates to the database.
+  As each open connection consumes resources at the database server,
+  we recommend a setting of \Expr{False} for large pools.
+
+\item[\Macro{DATABASE\_PURGE\_INTERVAL}] 
+  \label{param:QuillDatabasePurgeInterval}
+  The interval, in seconds, between scans of the database to identify and
+  delete records that are beyond their history durations. 
+  The default value is 86400, or one day.
+
+\item[\Macro{DATABASE\_REINDEX\_INTERVAL}] 
+  \label{param:QuillDatabaseReindexInterval}
+  The interval, in seconds, between reindex commands on the database.
+  The default value is 86400, or one day.
+  This is only used when the \MacroNI{QUILL\_DB\_TYPE} is set to
+  \verb@"PGSQL"@.
+
+\item[\Macro{QUILL\_JOB\_HISTORY\_DURATION}]
+  \label{param:QuillJobHistoryDuration}
   The number of days after entry into the database that a job will
   remain in the database.
-  After \MacroNI{QUILL\_HISTORY\_DURATION} days, the job is deleted.
+  After \MacroNI{QUILL\_JOB\_HISTORY\_DURATION} days, the job is deleted.
+  The job history is the final ClassAd, and contains all information 
+  necessary for \Condor{history} to succeed.
+  The default is 3650, or about 10 years. 
+
+\item[\Macro{QUILL\_RUN\_HISTORY\_DURATION}]
+  \label{param:QuillRunHistoryDuration}
+  The number of days after entry into the database that extra information 
+  about the job will remain in the database.
+  After \MacroNI{QUILL\_RUN\_HISTORY\_DURATION} days, the records are deleted.
+  This data includes matches made for the job, file transfers the job 
+  performed, and user log events.
+  The default is 7 days, or one week. 
+
+\item[\Macro{QUILL\_RESOURCE\_HISTORY\_DURATION}]
+  \label{param:QuillResourceHistoryDuration}
+  The number of days after entry into the database that a resource record will
+  remain in the database.
+  After \MacroNI{QUILL\_RESOURCE\_HISTORY\_DURATION} days, the record is 
+  deleted.
+  The resource history data includes the ClassAd of a compute slot,
+  submitter ClassAds, and daemon ClassAds.
+  The default is 7 days, or one week. 
+
+\item[\Macro{QUILL\_DBSIZE\_LIMIT}] \label{param:QuillDBSizeLimit}
+  After each purge, the \Condor{quill} daemon estimates 
+  the size of the database. 
+  If the size of the database exceeds this limit, 
+  the \Condor{quill} daemon will e-mail the administrator a warning. 
+  This size is given in gigabytes, and defaults to 20. 
 
 \item[\Macro{QUILL\_MANAGE\_VACUUM}]
   \label{param:QuillManageVacuum}
   A boolean value that defaults to \Expr{False}.
-  When \Expr{True}, Quill takes on the maintenance task of vacuuming
-  the database. As of \Prog{PostgreSQL} version 8.1, the database
-  can perform this task automatically; therefore having Quill vacuum
-  is not necessary.
+  When \Expr{True}, the \Condor{quill} daemon takes on 
+  the maintenance task of vacuuming the database.
+  As of \Prog{PostgreSQL} version 8.1, the database
+  can perform this task automatically; 
+  therefore, having the \Condor{quill} daemon vacuum is not necessary.
   A value of \Expr{True} causes warnings to be written to the log file.
 
 \item[\Macro{QUILL\_IS\_REMOTELY\_QUERYABLE}]
@@ -7028,10 +7198,10 @@ quill-for-schedd_name@machinename.fully.qualified.address
   When defined, it specifies the path and file name of a local file
   containing the IP address and port number of the Quill daemon.
   By using the file, tools executed on the local machine do not need
-  to query the central manager in order to find the Quill daemon.
+  to query the central manager in order to find the \Condor{quill} daemon.
 
-\item[\Macro{DBMSD}] \label{param:DBMSD}  The full path name to the
-  \Condor{dbmsd} daemon.
+\item[\Macro{DBMSD}] \label{param:DBMSD} 
+  The full path name to the \Condor{dbmsd} daemon.
   The default location is \File{\$(SBIN)/condor\_dbmsd}.
 
 \item[\Macro{DBMSD\_ARGS}] \label{param:DBMSDArgs} Arguments
@@ -7041,6 +7211,17 @@ quill-for-schedd_name@machinename.fully.qualified.address
 \item[\Macro{DBMSD\_LOG}] \label{param:DBMSDLog}
   Path to the \Condor{dbmsd} daemon's log file.
   The default log location is \File{\$(LOG)/DbmsdLog}.
+
+\item[\Macro{DBMSD\_NOT\_RESPONDING\_TIMEOUT}]
+  The length of time, in seconds, before the \Condor{master}
+  may decide that the \Condor{dbmsd} is hung due to a lack of communication,
+  potentially causing  the \Condor{master} to kill and
+  restart the \Condor{dbmsd} daemon.
+  When the \Condor{dbmsd} is purging or reindexing a very large database, it 
+  may not be able to communicate with the master. 
+  The default is 3600 seconds, or one hour. It may be
+  advisable to increase this to several hours. 
+
 \end{description}
 
 

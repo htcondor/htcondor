@@ -195,7 +195,7 @@ job will execute) must be listed.
 A Xen \SubmitCmd{vm} universe job requires specification of the
 guest kernel. 
 The \SubmitCmd{xen\_kernel} command accomplishes this, 
-utilizing one of four definitions.
+utilizing one of the following definitions.
 \begin{enumerate}
 \item \SubmitCmd{xen\_kernel = any}
   tells Condor that the kernel is pre-staged, and its location is
@@ -205,14 +205,14 @@ utilizing one of four definitions.
   is to be found in disk image given by the definition of the single file
   specified in \SubmitCmd{xen\_disk}. 
 
-\item \SubmitCmd{xen\_kernel = vmx} implies that the kernel
-  is to be found in disk image given by the definition of the single file
-  specified in \SubmitCmd{xen\_disk}.  This is the same assumption
-  as in \SubmitCmd{xen\_kernel = included}.
+% \item \SubmitCmd{xen\_kernel = vmx} implies that the kernel
+%  is to be found in disk image given by the definition of the single file
+%  specified in \SubmitCmd{xen\_disk}.  This is the same assumption
+%  as in \SubmitCmd{xen\_kernel = included}.
 
-  \SubmitCmd{xen\_kernel = vmx} further implies that the job must be
-  matched with a machine that supports hardware virtualization. 
-  Such a machine would be configured with \Expr{VM\_HARDWARE\_VT = True}.
+%  \SubmitCmd{xen\_kernel = vmx} further implies that the job must be
+%  matched with a machine that supports hardware virtualization. 
+%  Such a machine would be configured with \Expr{VM\_HARDWARE\_VT = True}.
 
 \item \SubmitCmd{xen\_kernel = path-to-kernel} gives a full path and
   file name of the required kernel.  If this kernel must be transferred
@@ -249,6 +249,26 @@ where the last line of this example defines the device.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:vm-disk-image-details}Disk Images}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:vm-disk-image-details-vmware}
+VMware on Windows and Linux}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%Obtain \Prog{VMware Server} from 
+%\URL{http://www.vmware.com/download/server/}
+
+%VMware Server installation instructions are detailed in:
+%\URL{http://pubs.vmware.com/server1/}
+
+Following the platfom-specific
+guest OS installation instructions found at
+\URL{http://pubs.vmware.com/guestnotes},
+creates a VMware disk image.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:vm-disk-image-details-xen}Xen}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \Todo
 
