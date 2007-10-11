@@ -38,7 +38,7 @@ extern "C" char *metric_units( double bytes )
 
 	value = bytes;
 
-	while( (value>1024.0) && (power<METRIC_POWER_COUNT) ) {
+	while( (value>1024.0) && (power<(METRIC_POWER_COUNT-1)) ) {
 		value = value / 1024.0;
 		power++;
 	}
