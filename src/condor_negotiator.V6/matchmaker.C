@@ -251,8 +251,11 @@ reinitialize ()
 			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS expression: %s",
 					tmp);
 		}
+		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = %s\n", tmp);
 		free( tmp );
 		tmp = NULL;
+	} else {
+		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = None\n");
 	}
 
 	NegotiatorMatchExprNames.clearAll();
@@ -297,7 +300,6 @@ reinitialize ()
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT = %d sec\n",NegotiatorTimeout);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_SUBMITTER = %d sec\n",MaxTimePerSubmitter);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_PIESPIN = %d sec\n",MaxTimePerSpin);
-	dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = %s\n", (tmp?tmp:"None"));
 
 	if( tmp ) free( tmp );
 
