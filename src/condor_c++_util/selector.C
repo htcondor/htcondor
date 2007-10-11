@@ -161,7 +161,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 	if( fd > max_fd ) {
 		max_fd = fd;
 	}
-	if ( fd < 0 || fd > fd_select_size() ) {
+	if ( fd < 0 || fd >= fd_select_size() ) {
 		EXCEPT( "Selector::add_fd(): fd %d outside valid range 0-%d",
 				fd, _fd_select_size-1 );
 	}
