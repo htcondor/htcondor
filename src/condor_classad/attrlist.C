@@ -835,11 +835,19 @@ int AttrList::Insert(const char* str, bool check_for_dups)
 
 	if(Parse(str, tree) != 0)
 	{
+			// this debug message for tracking down initFromStream() bug
+		dprintf(D_FULLDEBUG,"AttrList::Insert(%s) failed in call to Parse()\n",
+				str);
 		delete tree;
 		return FALSE;
 	}
 	result = Insert(tree, check_for_dups);
 	if ( result == FALSE ) {
+			// this debug message for tracking down initFromStream() bug
+		dprintf(D_FULLDEBUG,"AttrList::Insert(%s) failed in call to Insert() "
+				"(MyType=%d, LArg()->MyType=%d)\n",
+				str,
+				tree->MyType(),tree->LArg() ? (int)tree->LArg()->MyType() : -1);
 		delete tree;
 	}
 	return result;
@@ -2522,7 +2530,9 @@ AttrList::initFromStream(Stream& s)
         }
         
 		if (!Insert(line)) {
-			dprintf(D_FULLDEBUG,"Failed to parse ClassAd expression: %s.\n",line);
+				// this debug message for tracking down initFromStream() bug
+			dprintf(D_FULLDEBUG,"Failed to parse ClassAd expression: '%s' "
+					"(len=%d, try 2 result=%d).\n",line,strlen(line),Insert(line));
 			succeeded = 0;
 			break;
 		}
