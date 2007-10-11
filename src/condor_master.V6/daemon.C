@@ -549,6 +549,15 @@ int daemon::RealStart( )
 					break;
 				}
 			}
+				// If the user explicitly asked for command port 0,
+				// meaning "pick an ephemeral port", we need to pass
+				// 1 to CreateProcess, as the command_port is overloaded
+				// to mean "is this a DC process", and if we pass 0 in
+				// DC will start the collector as a non DC process.
+				// DC special cases command_port = 1 to mean "any"
+			if (command_port == 0) {
+				command_port = 1;
+			}
 		}
 
 		if (command_port == -1) {
