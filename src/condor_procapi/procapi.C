@@ -1175,6 +1175,31 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 		// convert the number of page faults into a rate
 	do_usage_sampling(pi, cpu_time, procRaw.majfault, procRaw.minfault);
 
+	/* Byzantine kernel. :(
+		It turns out that even though a non-root process
+		may have the ability to call task_for_pid (either
+		through configuration by the admin or default
+		behavior) the kernel simply gives back very wrong
+		information. This has been seen with the image size
+		value and its relation with the rsssize. So for
+		now, those are just plainly set to zero until a
+		better solution comes along. If the process is root,
+		and the kernel lied, then we'll believe it since
+		this is the behavior I've seen. If sometimes this
+		policy is wrong and the rootly process gets a Byzantine
+		failure from the kernel, then it is simply wrong.
+
+		This seems to only happen for ppc macosx 10.4 kernels,
+		so that is where we make this policy. 
+
+	*/
+#if defined(PPC) && defined(Darwin_10_4)
+	if (getuid() != 0) {
+		pi->imgsize = 0;
+		pi->rssize = 0;
+	}
+#endif
+
 	return PROCAPI_SUCCESS;
 }
 

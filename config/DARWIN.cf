@@ -6,3 +6,8 @@
 #define IS_CLIPPED              YES
 #define HAS_DYNAMIC_USER_JOBS   NO
 
+#if defined(IS_OSX_10_3)
+#define PlatformFlags -DDarwin_10_3=Darwin_10_3
+#elif defined(IS_OSX_10_4)
+#define PlatformFlags -DDarwin_10_4=Darwin_10_4
+#endif
