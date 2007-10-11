@@ -191,10 +191,10 @@ void KeyCache::delete_storage()
 				delete key_entry;
 			}
 		}
-		delete key_table;
 		if( DebugFlags & D_FULLDEBUG ) {
 			dprintf( D_SECURITY, "KEYCACHE: deleted: %p\n", key_table );
 		}
+		delete key_table;
 		key_table = NULL;
 	}
 }
