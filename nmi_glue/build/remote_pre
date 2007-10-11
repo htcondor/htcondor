@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.9 2007-10-10 23:37:36 matt Exp $
+# $Id: remote_pre,v 1.10 2007-10-11 13:35:32 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -130,7 +130,8 @@ print "Updating externals in '$old' with externals from '$new'...\n";
 # If we want to clear the cache or if the script used to build
 # externals changes we better clear the cache
 if (defined($opt_clear_externals_cache) ||
-    system("diff $old/build_external $new/build_external 2>&1/dev/null")) {
+    system("diff $old/build_external $new/build_external")) {
+#    system("diff $old/build_external $new/build_external 2>&1/dev/null")) {
     print "Clearing cache " .
 	"(clear_externals_cache: $opt_clear_externals_cache)...\n";
     system("rm -r $old") &&
