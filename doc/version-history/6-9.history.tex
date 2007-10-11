@@ -135,6 +135,10 @@ would fail to start jobs.
 
 \begin{itemize}
 
+\item The \Condor{negotiator} now prints out the value of the configuration
+	parameter \MacroNI{PREEMPTION\_REQUIREMENTS} if it is set.  Previously,
+	it always logged that it was unset, even when it was.
+
 \item Fixed bug in the master that occurred if the collector
 	was configured to use an ephemeral command port 
 	(i.e. by explicitly setting the port to 0).	  The collector
