@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.13 2007-10-11 17:46:28 matt Exp $
+# $Id: remote_pre,v 1.14 2007-10-11 21:57:26 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -172,7 +172,7 @@ if (! -d "$old") {
 	    # We only care if there is any difference, not what
 	    # the difference is
 	    if (system("diff -r $old/bundles/$bundle/$version " .
-		       "$new/bundles/$bundle/$version 2>&1/dev/nul")) {
+		       "$new/bundles/$bundle/$version 2>&1/dev/null")) {
 		print "Updating $bundle $version...\n";
 		# Make sure the destination exists, which is
 		# important to catch the case of new externals
