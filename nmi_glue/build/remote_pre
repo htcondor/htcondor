@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.12 2007-10-11 17:39:06 matt Exp $
+# $Id: remote_pre,v 1.13 2007-10-11 17:46:28 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -119,12 +119,12 @@ print "Updating externals in '$old' with externals from '$new'...\n";
 
 # Permissions...
 (! -r "$old" || ! -w "$old") &&
-    print "No permissions to write '$old'" &&
+    print "No permissions to write '$old'\n" &&
     goto bail;
 
 # Actually a directory...
 (-e "$old" && ! -d "$old") &&
-    print "'$old' is a file, not a directory" &&
+    print "'$old' is a file, not a directory\n" &&
     goto bail;
 
 # If we want to clear the cache or if the script used to build
@@ -135,7 +135,7 @@ if (defined($opt_clear_externals_cache) ||
     print "Clearing cache " .
 	"(clear_externals_cache: $opt_clear_externals_cache)...\n";
     system("rm -r $old") &&
-	print "Failed to remove cache" &&
+	print "Failed to remove cache\n" &&
 	goto bail;
 }
 
@@ -147,24 +147,24 @@ if (defined($opt_clear_externals_cache) ||
 if (! -d "$old") {
     print "'$old' does not exist, initializing from '$new'...\n";
     system("mkdir -p $old") &&
-	print "Failed to create '$old'" && 
+	print "Failed to create '$old'\n" && 
 	goto bail;
     system("cp -r $new/* $old") &&
-	print "Failed to initialize '$old'" &&
+	print "Failed to initialize '$old'\n" &&
 	goto bail;
 
 # Update the cache
 } else {
     # This might not be closed
     opendir(BUNDLES, "$new/bundles") ||
-	print "Could not open '$new/bundles'" &&
+	print "Could not open '$new/bundles'\n" &&
 	goto bail;
     while (defined($bundle = readdir(BUNDLES))) {
 	# Skip . or .. files
 	if ($bundle =~ /^\.\.?/) { next; }
 	# This might not be closed
 	opendir(VERSIONS, "$new/bundles/$bundle") ||
-	    print "Can't get a list of $new/bundles/$bundle versions" &&
+	    print "Can't get a list of $new/bundles/$bundle versions\n" &&
 	    goto bail;
 	while (defined($version = readdir(VERSIONS))) {
 	    # Skip . or .. files
@@ -177,33 +177,33 @@ if (! -d "$old") {
 		# Make sure the destination exists, which is
 		# important to catch the case of new externals
 		system("mkdir -p $old/bundles/$bundle/$version") &&
-		    print "Failed to ensure cache location exists" &&
+		    print "Failed to ensure cache location exists\n" &&
 		    goto bail;
 		# To be completely safe we want to just blow away
 		# the old version before copying the new into
 		# place
 		system("rm -r $old/bundles/$bundle/$version") &&
-		    print "Failed to remove old cache version" &&
+		    print "Failed to remove old cache version\n" &&
 		    goto bail;
 		system("cp -r $new/bundles/$bundle/$version " .
 		       "$old/bundles/$bundle") &&
-		       print "Failed to populate cache" &&
+		       print "Failed to populate cache\n" &&
 		       goto bail;
 		# Make sure future builds can access this
 		# external, even for deletion
 		system("chmod -R a+rwX $old/bundles/$bundle/$version") &&
-		    print "Failed to change permissions on cache" &&
+		    print "Failed to change permissions on cache\n" &&
 		    goto bail;
 		# Remove the fact that we have built this external
 		# in the past. This will result in the external
 		# being rebuilt
 		(-e "$old/triggers/$bundle-$version") &&
 		    unlink "$old/triggers/$bundle-$version" &&
-		    print "Failed to remove cached trigger" &&
+		    print "Failed to remove cached trigger\n" &&
 		    goto bail;
 		(-d "$old/install/$bundle-$version") &&
 		    system("rm -r $old/install/$bundle-$version") &&
-		    print "Failed to remove cached external install" &&
+		    print "Failed to remove cached external install\n" &&
 		    goto bail;
 	    } else {
 		print "$bundle $version is up to date...\n";
