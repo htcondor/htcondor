@@ -1489,8 +1489,29 @@ char * Sock::serialize(char *buf)
 	// is currently invalid.  if it is not invalid, it has already
 	// been initialized (probably via the Sock copy constructor) and
 	// therefore we should _not mess with it_.
+	// On unix, if the inherited fd is larger than our fd limit, then
+	// dup() it to a lower fd. Otherwise, our Selector class won't
+	// handle it. This can happen if our parent has a larger fd limit
+	// than us.
 	if ( _sock == INVALID_SOCKET ) {
+#if !defined(WIN32)
+		if ( passed_sock < Selector::fd_select_size() ) {
+			_sock = passed_sock;
+		} else {
+			_sock = dup( passed_sock );
+			if ( _sock < 0 ) {
+				EXCEPT( "Sock::serialize(): Dup'ing of high fd %d failed, "
+						"errno=%d (%s)", passed_sock, errno,
+						strerror( errno ) );
+			} else if ( _sock >= Selector::fd_select_size() ) {
+				EXCEPT( "Sock::serialize(): Dup'ing of high fd %d resulted "
+						"in new high fd %d", passed_sock, _sock );
+			}
+			::close( passed_sock );
+		}
+#else
 		_sock = passed_sock;
+#endif
 	}
 
 	// call the timeout method to make certain socket state set via
