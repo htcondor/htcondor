@@ -21,11 +21,11 @@ TEST_LIBCONDORAPI = test_libcondorapi
 all_target(cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI))
 
 testbin_target(test_libcondorapi,755)
-testbin_target(libcondorapi.so,755)
+testbin_target(test_condor.log,644)
 
 #if HAVE_CC_SHARED_FLAG
 testbin_target(test_libcondorapi_shared,755)
-testbin_target(test_condor.log,644)
+testbin_target(libcondorapi.so,755)
 #endif
 
 C_PLUS_FLAGS =	\
