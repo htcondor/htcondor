@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.14 2007-10-11 21:57:26 matt Exp $
+# $Id: remote_pre,v 1.15 2007-10-12 13:37:32 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -117,21 +117,25 @@ print "Updating externals in '$old' with externals from '$new'...\n";
 # the cache
 #
 
+(! -e "$old") &&
+    system("mkdir -m 0777 -p $old") &&
+    print "Failed to create '$old'\n" &&
+    goto bail;
+
 # Permissions...
 (! -r "$old" || ! -w "$old") &&
     print "No permissions to write '$old'\n" &&
     goto bail;
 
 # Actually a directory...
-(-e "$old" && ! -d "$old") &&
+(! -d "$old") &&
     print "'$old' is a file, not a directory\n" &&
     goto bail;
 
 # If we want to clear the cache or if the script used to build
 # externals changes we better clear the cache
 if (defined($opt_clear_externals_cache) ||
-    system("diff $old/build_external $new/build_external")) {
-#    system("diff $old/build_external $new/build_external 2>&1/dev/null")) {
+    system("diff $old/build_external $new/build_external 2>&1 > /dev/null")) {
     print "Clearing cache " .
 	"(clear_externals_cache: $opt_clear_externals_cache)...\n";
     system("rm -r $old") &&
@@ -172,7 +176,7 @@ if (! -d "$old") {
 	    # We only care if there is any difference, not what
 	    # the difference is
 	    if (system("diff -r $old/bundles/$bundle/$version " .
-		       "$new/bundles/$bundle/$version 2>&1/dev/null")) {
+		       "$new/bundles/$bundle/$version 2>&1 > /dev/null")) {
 		print "Updating $bundle $version...\n";
 		# Make sure the destination exists, which is
 		# important to catch the case of new externals
