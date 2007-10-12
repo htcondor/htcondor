@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.16 2007-10-12 13:48:33 matt Exp $
+# $Id: remote_pre,v 1.17 2007-10-12 21:25:15 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -199,7 +199,7 @@ if (! -e "$old/build_external") {
 		# in the past. This will result in the external
 		# being rebuilt
 		(-e "$old/triggers/$bundle-$version") &&
-		    unlink "$old/triggers/$bundle-$version" &&
+		    system("rm $old/triggers/$bundle-$version") &&
 		    print "Failed to remove cached trigger\n" &&
 		    goto bail;
 		(-d "$old/install/$bundle-$version") &&
