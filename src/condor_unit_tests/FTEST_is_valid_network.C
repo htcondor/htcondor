@@ -45,9 +45,9 @@ bool FTEST_is_valid_network(void) {
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
-	driver.register_function(&test_normal_case);
-	driver.register_function(&test_slash_notation);
-	driver.register_function(&test_classless_mask);
+	driver.register_function(test_normal_case);
+	driver.register_function(test_slash_notation);
+	driver.register_function(test_classless_mask);
 	
 		// run the tests
 	bool test_result = driver.do_all_functions();

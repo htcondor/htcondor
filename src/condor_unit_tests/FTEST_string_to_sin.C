@@ -44,8 +44,8 @@ bool FTEST_string_to_sin(void) {
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
-	driver.register_function(&test_normal_case);
-	driver.register_function(&test_alpha_input);
+	driver.register_function(test_normal_case);
+	driver.register_function(test_alpha_input);
 	
 		// run the tests
 	bool test_result = driver.do_all_functions();

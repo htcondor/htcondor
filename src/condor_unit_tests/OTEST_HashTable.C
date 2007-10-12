@@ -75,29 +75,29 @@ bool OTEST_HashTable() {
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver(30);
-	driver.register_function(&insertlookup_normal);
-	driver.register_function(&insertlookup_collision);
-	driver.register_function(&test_walk_normal);
-	driver.register_function(&test_walk_failed);
-	driver.register_function(&test_iterate_first);
-	driver.register_function(&test_get_current_key);
-	driver.register_function(&test_iterate_other);
-	driver.register_function(&test_iterate_other);		// run this twice
-	driver.register_function(&test_iterate_null);
-	driver.register_function(&test_remove_normal);
-	driver.register_function(&test_remove_failed);
-	driver.register_function(&test_copy_constructor_depth);
-	driver.register_function(&test_equals_depth);
-	driver.register_function(&test_num_elems_normal);
-	driver.register_function(&test_num_elems_collision);
-	driver.register_function(&test_table_size_normal);
-	driver.register_function(&test_clear_normal);
-	driver.register_function(&test_auto_resize_normal);
-	driver.register_function(&test_auto_resize_sizes);
-	driver.register_function(&test_auto_resize_check_numelems);
-	driver.register_function(&test_auto_resize_timing);
-	driver.register_function(&test_iterate_timing);
-	driver.register_function(&cleanup);
+	driver.register_function(insertlookup_normal);
+	driver.register_function(insertlookup_collision);
+	driver.register_function(test_walk_normal);
+	driver.register_function(test_walk_failed);
+	driver.register_function(test_iterate_first);
+	driver.register_function(test_get_current_key);
+	driver.register_function(test_iterate_other);
+	driver.register_function(test_iterate_other);		// run this twice
+	driver.register_function(test_iterate_null);
+	driver.register_function(test_remove_normal);
+	driver.register_function(test_remove_failed);
+	driver.register_function(test_copy_constructor_depth);
+	driver.register_function(test_equals_depth);
+	driver.register_function(test_num_elems_normal);
+	driver.register_function(test_num_elems_collision);
+	driver.register_function(test_table_size_normal);
+	driver.register_function(test_clear_normal);
+	driver.register_function(test_auto_resize_normal);
+	driver.register_function(test_auto_resize_sizes);
+	driver.register_function(test_auto_resize_check_numelems);
+	driver.register_function(test_auto_resize_timing);
+	driver.register_function(test_iterate_timing);
+	driver.register_function(cleanup);
 	
 		// run the tests
 	bool test_result = driver.do_all_functions();

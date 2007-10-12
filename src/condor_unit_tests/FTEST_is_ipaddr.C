@@ -47,12 +47,12 @@ bool FTEST_is_ipaddr(void) {
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
-	driver.register_function(&test_normal_case);
-	driver.register_function(&test_one_octet_wildcard);
-	driver.register_function(&test_upper_bound);
-	driver.register_function(&test_lower_bound);
-	driver.register_function(&test_only_wildcard);
-	driver.register_function(&test_start_wildcard);
+	driver.register_function(test_normal_case);
+	driver.register_function(test_one_octet_wildcard);
+	driver.register_function(test_upper_bound);
+	driver.register_function(test_lower_bound);
+	driver.register_function(test_only_wildcard);
+	driver.register_function(test_start_wildcard);
 	
 		// run the tests
 	bool test_result = driver.do_all_functions();

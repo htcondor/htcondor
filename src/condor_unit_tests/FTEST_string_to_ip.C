@@ -43,8 +43,8 @@ bool FTEST_string_to_ip(void) {
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
-	driver.register_function(&test_normal_case);
-	driver.register_function(&test_invalid_ip);
+	driver.register_function(test_normal_case);
+	driver.register_function(test_invalid_ip);
 	
 		// run the tests
 	bool test_result = driver.do_all_functions();

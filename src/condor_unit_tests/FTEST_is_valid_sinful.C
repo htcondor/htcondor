@@ -44,9 +44,9 @@ bool FTEST_is_valid_sinful(void) {
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
-	driver.register_function(&test_normal_case);
-	driver.register_function(&test_hostname);
-	driver.register_function(&test_no_angle_brackets);
+	driver.register_function(test_normal_case);
+	driver.register_function(test_hostname);
+	driver.register_function(test_no_angle_brackets);
 	
 		// run the tests
 	bool test_result = driver.do_all_functions();
