@@ -35,8 +35,10 @@ print LOG "Starting: ". `date` ."\n";
 
 chdir $cvs_dir || die "Can't chdir($cvs_dir): $!\n";
 
-print LOG "Updating copy of condor_nmi_submit\n";
-$checkout_cmd = "$CVS co nmi_tools/condor_nmi_submit";
+$CNS = "nmi_tools/condor_nmi_submit";
+
+print LOG "Updating copy of $CNS\n";
+$checkout_cmd = "$CVS co $CNS";
 open( CVS, "$checkout_cmd 2>&1|" ) || die "Can't execute $checkout_cmd: $!\n";
 while (<CVS>) {
   print LOG $_;
@@ -44,7 +46,7 @@ while (<CVS>) {
 
 print LOG "Running condor_nmi_submit\n";
 
-$cns_cmd = "./nmi_tools/condor_nmi_submit --build --nightly --notify=condor-build@cs.wisc.edu";
+$cns_cmd = "./$CNS --build --nightly --use_externals_cache --notify=condor-build@cs.wisc.edu";
 
 open( CNS, "$cns_cmd 2>&1|" ) || die "Can't execute $cns_cmd: $!\n";
 while (<CNS>) {
