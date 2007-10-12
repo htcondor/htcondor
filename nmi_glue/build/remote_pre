@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.15 2007-10-12 13:37:32 matt Exp $
+# $Id: remote_pre,v 1.16 2007-10-12 13:48:33 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -138,7 +138,7 @@ if (defined($opt_clear_externals_cache) ||
     system("diff $old/build_external $new/build_external 2>&1 > /dev/null")) {
     print "Clearing cache " .
 	"(clear_externals_cache: $opt_clear_externals_cache)...\n";
-    system("rm -r $old") &&
+    system("rm -r $old/*") &&
 	print "Failed to remove cache\n" &&
 	goto bail;
 }
@@ -148,11 +148,8 @@ if (defined($opt_clear_externals_cache) ||
 #
 # If the old (cache) directory does not exist we will just create
 # it from the new directory
-if (! -d "$old") {
-    print "'$old' does not exist, initializing from '$new'...\n";
-    system("mkdir -p $old") &&
-	print "Failed to create '$old'\n" && 
-	goto bail;
+if (! -e "$old/build_external") {
+    print "'$old/build_external' does not exist, initializing from '$new'...\n";
     system("cp -r $new/* $old") &&
 	print "Failed to initialize '$old'\n" &&
 	goto bail;
