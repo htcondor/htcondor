@@ -5,10 +5,8 @@
 # 2) Invokes condor_nmi_submit with the right arguments.
 
 # Configuration
-$home = '/home/cndrauto';
-$cvs_dir = $home .'/cvs';
-$log_dir = $home .'/log';
-$log_file = $log_dir .'/nightly.log';
+$home = '/home/cndrauto/condor';
+$log_file = $home .'/nightly.log';
 $CVS="/usr/bin/cvs -d /space/cvs/CONDOR_SRC";
 
 
@@ -33,7 +31,7 @@ $SIG{__DIE__} = sub {
 
 print LOG "Starting: ". `date` ."\n";
 
-chdir $cvs_dir || die "Can't chdir($cvs_dir): $!\n";
+chdir $home || die "Can't chdir($home): $!\n";
 
 $CNS = "nmi_tools/condor_nmi_submit";
 
