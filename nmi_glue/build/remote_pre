@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.18 2007-10-13 16:58:10 matt Exp $
+# $Id: remote_pre,v 1.19 2007-10-13 17:01:19 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -138,13 +138,20 @@ if (defined($opt_clear_externals_cache) ||
     system("diff $old/build_external $new/build_external 2>&1 > /dev/null")) {
     print "Clearing cache " .
 	"(clear_externals_cache: $opt_clear_externals_cache)...\n";
-    (-e "$old/bundles" ||
-     -e "$old/install" ||
-     -e "$old/build" ||
-     -e "$old/triggers" ||
-     -e "$old/build_external") &&
-	system("rm -r $old/*") &&
-	print "Failed to remove cache\n" &&
+    (-e "$old/bundles" ) &&
+	print "Failed to remove '$old/bundles'\n" &&
+	goto bail;
+    (-e "$old/build" ) &&
+	print "Failed to remove '$old/build'\n" &&
+	goto bail;
+    (-e "$old/install" ) &&
+	print "Failed to remove '$old/install'\n" &&
+	goto bail;
+    (-e "$old/triggers" ) &&
+	print "Failed to remove '$old/triggers'\n" &&
+	goto bail;
+    (-e "$old/build_external" ) &&
+	print "Failed to remove '$old/build_external'\n" &&
 	goto bail;
 }
 
