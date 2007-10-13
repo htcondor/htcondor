@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.17 2007-10-12 21:25:15 matt Exp $
+# $Id: remote_pre,v 1.18 2007-10-13 16:58:10 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -138,7 +138,12 @@ if (defined($opt_clear_externals_cache) ||
     system("diff $old/build_external $new/build_external 2>&1 > /dev/null")) {
     print "Clearing cache " .
 	"(clear_externals_cache: $opt_clear_externals_cache)...\n";
-    system("rm -r $old/*") &&
+    (-e "$old/bundles" ||
+     -e "$old/install" ||
+     -e "$old/build" ||
+     -e "$old/triggers" ||
+     -e "$old/build_external") &&
+	system("rm -r $old/*") &&
 	print "Failed to remove cache\n" &&
 	goto bail;
 }
