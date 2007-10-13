@@ -36,7 +36,7 @@ chdir $home || die "Can't chdir($home): $!\n";
 $CNS = "nmi_tools/condor_nmi_submit";
 
 print LOG "Updating copy of $CNS\n";
-$checkout_cmd = "$CVS co nmi_tools -l";
+$checkout_cmd = "$CVS co -l nmi_tools";
 open( CVS, "$checkout_cmd 2>&1|" ) || die "Can't execute $checkout_cmd: $!\n";
 while (<CVS>) {
   print LOG $_;
