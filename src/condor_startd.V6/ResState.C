@@ -204,10 +204,19 @@ ResState::eval( void )
 				// opportunistic claim "checkpointed to swap"
 			return 0;
 		}
-		if( rip->inRetirement() ) {
+		if( rip->inRetirement() ) { // have we been preempted?
 			if( rip->retirementExpired() ) {
-					// This case may apply to any activity,
-					// (e.g. retiring, busy, idle, suspended)
+					// Normally, when we are in retirement, we will
+					// also be in the "retiring" activity.  However,
+					// it is also possible to be in the suspended
+					// activity.  Just to simplify things, we have one
+					// catch-all state transition here.  We may also
+					// get here in some other activity (e.g. idle or
+					// busy) if we just got preempted and haven't had
+					// time to transition into some other state.  No
+					// matter.  Whatever activity we were in, the
+					// retirement time has expired, so it is time to
+					// change to the preempting state.
 				dprintf( D_ALWAYS, "State change: claim retirement ended/expired\n" );
 				// STATE TRANSITION #18
 				return change( preempting_state );
