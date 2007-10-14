@@ -174,6 +174,7 @@ public:
 	bool    claimWorklifeExpired();
 	int		retirementExpired( void );
 	int		mayUnretire( void );
+	bool    inRetirement( void );
 	int		hasPreemptingClaim( void );
 	int     preemptWasTrue( void ) const; //PREEMPT was true in current claim
 	void    preemptIsTrue();              //records that PREEMPT was true

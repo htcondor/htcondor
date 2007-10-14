@@ -1032,6 +1032,12 @@ Resource::mayUnretire()
 	return 0;
 }
 
+bool
+Resource::inRetirement()
+{
+	return hasPreemptingClaim() || !mayUnretire();
+}
+
 int
 Resource::preemptWasTrue() const
 {

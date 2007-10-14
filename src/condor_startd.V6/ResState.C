@@ -204,6 +204,15 @@ ResState::eval( void )
 				// opportunistic claim "checkpointed to swap"
 			return 0;
 		}
+		if( rip->inRetirement() ) {
+			if( rip->retirementExpired() ) {
+					// This case may apply to any activity,
+					// (e.g. retiring, busy, idle, suspended)
+				dprintf( D_ALWAYS, "State change: claim retirement ended/expired\n" );
+				// STATE TRANSITION #18
+				return change( preempting_state );
+			}
+		}
 		want_suspend = rip->wants_suspend();
 		if( (r_act==busy_act && !want_suspend) ||
 			(r_act==retiring_act && !rip->preemptWasTrue() && !want_suspend) ||
@@ -232,7 +241,6 @@ ResState::eval( void )
 			}
 			if( rip->retirementExpired() ) {
 				dprintf( D_ALWAYS, "State change: retirement ended/expired\n" );
-				// STATE TRANSITION #18
 				return change( preempting_state );
 			}
 		}
@@ -247,23 +255,12 @@ ResState::eval( void )
 			if( rip->eval_continue() ) {
 				// STATE TRANSITION #15
 				dprintf( D_ALWAYS, "State change: CONTINUE is TRUE\n" );
-				if( rip->mayUnretire() ) {
+				if( !rip->inRetirement() ) {
 					return change( busy_act );
 				}
 				else {
 					// STATE TRANSITION #16
 					return change( retiring_act );
-				}
-			}
-			else if( !rip->mayUnretire() ) {
-				// We are in suspended retirement.  It is possible
-				// for the retirement time to expire in this case,
-				// but only if MaxJobRetirementTime decreases
-				// for some reason.
-				if( rip->retirementExpired() ) {
-					dprintf( D_ALWAYS, "State change: retirement ended/expired during suspension\n" );
-					// STATE TRANSITION #18b
-					return change( preempting_state );
 				}
 			}
 		}
@@ -272,6 +269,10 @@ ResState::eval( void )
 			// reversible retirement (e.g. if preempting claim goes away)
 			// STATE TRANSITION #12
 			return change( retiring_act );
+		}
+		if( (r_act == idle_act) && rip->hasPreemptingClaim() ) {
+			dprintf( D_ALWAYS, "State change: preempting idle claim\n" );
+			return change( preempting_state );
 		}
 		if( (r_act == idle_act) && (rip->eval_start() == 0) ) {
 				// START evaluates to False, so return to the owner
@@ -546,7 +547,7 @@ ResState::enter_action( State s, Activity a,
 		if( a == busy_act ) {
 			resmgr->start_poll_timer();
 
-			if( rip->hasPreemptingClaim() || !rip->mayUnretire() ) {
+			if( rip->inRetirement() ) {
 
 				// We have returned to a busy state (e.g. from
 				// suspension) and there is a preempting claim or we
