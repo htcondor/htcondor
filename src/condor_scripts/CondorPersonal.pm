@@ -956,17 +956,6 @@ sub StartPersonalCondor
 		die "Can not continue because condor is not running!!!!\n";
 	}
 
-	# If any of the daemons send their ad to the collector before it is
-	# ready, they will be invisible for 5 minutes.  Send a reconfig
-	# to the master to help things settle.
-
-	system("condor_reconfig");
-
-	$res = IsRunningYet();
-	if($res == 0) {
-		die "Can not continue because condor is not running!!!!\n";
-	}
-
 	# if this was a dynamic port startup, return the port which
 	# the collector is listening on...
 
@@ -1178,6 +1167,51 @@ sub IsRunningYet
             	sleep 1;
         	}
     	}
+	}
+
+	# this is supposed to be not needed after the merge
+	# for the trunk... Give the collect some quicker access
+	# to seeing the other daemons.
+
+	####################################################################
+	# If any of the daemons send their ad to the collector before it is
+	# ready, they will be invisible for 5 minutes.  Send a reconfig
+	# to the master to help things settle.
+
+	my $cmd = "condor_reconfig";
+    my $qstat = CondorTest::runCondorTool($cmd,\@status,3,"CondorPersonal");
+    if(!$qstat)
+    {
+        print "Test failure due to Condor Tool Failure<$cmd>\n";
+		die "Reconfig should have worked in IsRunningYet\n";
+    }
+
+	####################################################################
+
+	if($daemonlist =~ /.*SCHEDD.*/i) {
+		# now wait for the schedd to start running... get address file loc
+		# and wait for file to exist
+		# Give the master time to start before jobs are submitted.
+		$scheddadr = `condor_config_val SCHEDD_ADDRESS_FILE`;
+		$scheddadr =~ s/\012+$//;
+		$scheddadr =~ s/\015+$//;
+		debug( "SCHEDD_ADDRESS_FILE is <<<<<$scheddadr>>>>>\n");
+    	debug( "We are waiting for the file to exist\n");
+    	# Where is the schedd address file? wait for it to exist
+    	$havescheddaddr = "no";
+    	while($havescheddaddr ne "yes") {
+        	debug( "Looking for $scheddadr\n");
+        	if( -f $scheddadr ) {
+            	debug( "Found it!!!! schedd address file\n");
+            	$havescheddaddr = "yes";
+				sleep 1;
+        	} else {
+            	sleep 1;
+        	}
+    	}
+	}
+
+	if($daemonlist =~ /.*STARTD.*/i) {
 		# lets wait for the collector to know about it
 		# if we have a collector
 		$havestartd = "";
@@ -1209,26 +1243,6 @@ sub IsRunningYet
 	}
 
 	if($daemonlist =~ /.*SCHEDD.*/i) {
-		# now wait for the schedd to start running... get address file loc
-		# and wait for file to exist
-		# Give the master time to start before jobs are submitted.
-		$scheddadr = `condor_config_val SCHEDD_ADDRESS_FILE`;
-		$scheddadr =~ s/\012+$//;
-		$scheddadr =~ s/\015+$//;
-		debug( "SCHEDD_ADDRESS_FILE is <<<<<$scheddadr>>>>>\n");
-    	debug( "We are waiting for the file to exist\n");
-    	# Where is the schedd address file? wait for it to exist
-    	$havescheddaddr = "no";
-    	while($havescheddaddr ne "yes") {
-        	debug( "Looking for $scheddadr\n");
-        	if( -f $scheddadr ) {
-            	debug( "Found it!!!! schedd address file\n");
-            	$havescheddaddr = "yes";
-				sleep 1;
-        	} else {
-            	sleep 1;
-        	}
-    	}
 		# lets wait for the collector to know about it
 		# if we have a collector
 		$haveschedd = "";
