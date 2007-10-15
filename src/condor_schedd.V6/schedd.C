@@ -1835,6 +1835,10 @@ Scheduler::PeriodicExprHandler( void )
 	WalkJobQueue(PeriodicExprEval);
 
 	PeriodicExprInterval.setFinishTimeNow();
+	dprintf(D_FULLDEBUG,"Evaluated periodic expressions in %.3fs, "
+			"scheduling next run in %ds\n",
+			PeriodicExprInterval.getLastDuration(),
+			PeriodicExprInterval.getTimeToNextRun());
 	daemonCore->Reset_Timer( periodicid, PeriodicExprInterval.getTimeToNextRun() );
 }
 
