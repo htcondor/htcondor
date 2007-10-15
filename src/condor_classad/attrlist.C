@@ -847,7 +847,8 @@ int AttrList::Insert(const char* str, bool check_for_dups)
 		dprintf(D_FULLDEBUG,"AttrList::Insert(%s) failed in call to Insert() "
 				"(MyType=%d, LArg()->MyType=%d)\n",
 				str,
-				tree->MyType(),tree->LArg() ? (int)tree->LArg()->MyType() : -1);
+				(int)tree->MyType(),
+				(tree->MyType() == LX_ASSIGN) && tree->LArg() ? (int)tree->LArg()->MyType() : -1);
 		delete tree;
 	}
 	return result;
