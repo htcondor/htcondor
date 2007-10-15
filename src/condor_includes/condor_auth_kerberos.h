@@ -32,12 +32,6 @@
 
 extern "C" {
 #include "krb5.h"
-// XXX MATT: Not sure what to do here. com_err.h doesn't exist in krb5
-// anymore, but I can't do an AC_CHECK_HEADER for it because if we are
-// building with externals the check cannot look into the external
-// because it hasn't been built/installed yet. Right now, in my
-// workspace I'm just commenting com_err.h out.
-//#include "com_err.h"            // error_message is defined here
 }
 
 class Condor_Auth_Kerberos : public Condor_Auth_Base {
