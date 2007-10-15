@@ -48,7 +48,7 @@ $ExitSuccess = sub {
 		die "expecting 11 data values and got $counter\n";
 	}
 
-	print "Total usage for children is  $total\n";
+	print "Total usage reported by children is  $total\n";
 
 	my @adarray;
 	my $spoolloc;
@@ -69,7 +69,9 @@ $ExitSuccess = sub {
 
 	print "Spool directory is \"$spoolloc\"\n";
 
-	my $historyfile = $spoolloc . "/history";
+	#my $historyfile = $spoolloc . "/history";
+	my $historyfile = `condor_config_val HISTORY`;
+	chomp($historyfile);
 	my $remcpu = 0.0;
 	my $remwallclock = 0.0;
 
@@ -77,6 +79,16 @@ $ExitSuccess = sub {
 
 	# look for RemoteWallClockTime and RemoteUserCpu and comparee
 	# them to our calculated results
+
+	system("cat lib_procapi_cputracking-snapshot.data.log");
+
+	print "Possibly waiting on history file \"$historyfile\":";
+	# make sure history file has been written yet
+	while(!(-f $historyfile)) {
+		print ".";
+		sleep 3;
+	}
+	print "\n";
 
 	open(HIST,"<$historyfile") || die "Could not open historyfile:($historyfile) : !$\n";
 	while(<HIST>) {
@@ -114,12 +126,13 @@ $ExitSuccess = sub {
 		$snapshot = $findx;
 	}
 
+	$low = $total - (3 * $snapshot);
 	# so what range do we insist on for the test to pass???
-	if(($total - $snapshot) < $remcpu) {
-		die "We wanted $remcpu less then 20 seconds off $total\n";
+	if($low > $remcpu) {
+		die "We wanted $remcpu in the range of  $low to $total\n";
 	} else {
 		print "Good: Tasks totaled to $total subtract snapshot interval($snapshot)\n";
-		print "This value IS less then Condor Reported $remcpu\n";
+		print "This Reported $remcpu which is in range of $low to $total\n";
 		exit(0);
 	}
 
