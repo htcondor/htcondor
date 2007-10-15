@@ -336,24 +336,16 @@ bool IpVerify :: has_user(UserPerm_t * perm, const char * user, int & mask, MySt
     assert(perm);
 
     if (user && *user && (strcmp("*", user) != 0)) {
-        userid = MyString(user);
+        userid = user;
         if ( (found = perm->lookup(userid, mask)) == -1 ) {
             // try *@..../...
             char *tmp;
-            char buf[256];
-            memset(buf, 0, 256);
             if ((tmp = strchr( user, '@')) == NULL) {
                 dprintf(D_SECURITY, "IPVERIFY: Malformed user name: %s\n", user);
             }      
             else {
-                if (strlen(tmp) > 255) {
-                    dprintf(D_SECURITY, "IPVERIFY: User name is too long (over 255): %s\n", user);
-                }  
-                else {
-                    sprintf(buf, "*%s", tmp);
-                    userid = MyString(buf);
-                    found = perm->lookup(user, mask);
-                }
+				userid.sprintf("*%s", tmp);
+				found = perm->lookup(userid, mask);
             }
         }
     }
