@@ -48,18 +48,18 @@ int main() {
 	e.init();
 		// set up the function driver
 	FunctionDriver driver(15);
-	driver.register_function(&FTEST_host_in_domain);
-	driver.register_function(&FTEST_getHostFromAddr);
-	driver.register_function(&FTEST_getPortFromAddr);
-	driver.register_function(&FTEST_is_ipaddr);
-	driver.register_function(&FTEST_is_valid_sinful);
-	driver.register_function(&FTEST_is_valid_network);
-	driver.register_function(&FTEST_sin_to_string);
-	driver.register_function(&FTEST_string_to_hostname);
-	driver.register_function(&FTEST_string_to_ip);
-	driver.register_function(&FTEST_string_to_sin);
-	driver.register_function(&FTEST_string_to_port);
-	driver.register_function(&OTEST_HashTable);
+	driver.register_function(FTEST_host_in_domain);
+	driver.register_function(FTEST_getHostFromAddr);
+	driver.register_function(FTEST_getPortFromAddr);
+	driver.register_function(FTEST_is_ipaddr);
+	driver.register_function(FTEST_is_valid_sinful);
+	driver.register_function(FTEST_is_valid_network);
+	driver.register_function(FTEST_sin_to_string);
+	driver.register_function(FTEST_string_to_hostname);
+	driver.register_function(FTEST_string_to_ip);
+	driver.register_function(FTEST_string_to_sin);
+	driver.register_function(FTEST_string_to_port);
+	driver.register_function(OTEST_HashTable);
 
 		// run all the functions and return the result
 	bool result = driver.do_all_functions();

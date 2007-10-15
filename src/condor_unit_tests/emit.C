@@ -184,10 +184,12 @@ void Emitter::emit_test_break() {
 }
 
 void Emitter::emit_summary() {
-	dprintf(D_ALWAYS, "Total Tested Objects:  %d\n", object_tests);
-	dprintf(D_ALWAYS, "Total Unit Tests:  %d\n", function_tests);
-	dprintf(D_ALWAYS, "Passed Unit Tests:  %d\n", passed_tests);
-	dprintf(D_ALWAYS, "Failed Unit Tests:  %d\n", failed_tests);
-	dprintf(D_ALWAYS, "Aborted Unit Tests:  %d\n", aborted_tests);
-	dprintf(D_ALWAYS, "Skipped Unit Tests:  %d\n", skipped_tests);
+	dprintf(D_ALWAYS, "SUMMARY:\n");
+	dprintf(D_ALWAYS, "========\n");
+	dprintf(D_ALWAYS, "    Total Tested Objects:  %d\n", object_tests);
+	dprintf(D_ALWAYS, "    Total Unit Tests:      %d\n", function_tests);
+	dprintf(D_ALWAYS, "    Passed Unit Tests:     %d\n", passed_tests);
+	dprintf(D_ALWAYS, "    Failed Unit Tests:     %d\n", failed_tests);
+	dprintf(D_ALWAYS, "    Aborted Unit Tests:    %d\n", aborted_tests);
+	dprintf(D_ALWAYS, "    Skipped Unit Tests:    %d\n", skipped_tests);
 }
