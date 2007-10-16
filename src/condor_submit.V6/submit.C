@@ -1062,7 +1062,7 @@ main( int argc, char *argv[] )
 			if(0 == hash_iter_used_value(it)) {
 				char *key = hash_iter_key(it),
 					 *val = hash_iter_value(it);
-				fprintf(stderr, "WARNING: a macro was not used or expanded: `%s = %s'\n", key, val);
+				fprintf(stderr, "WARNING: the line `%s = %s' was unused by condor_submit. Is it a typo?\n", key, val);
 			}
 		}
 		
