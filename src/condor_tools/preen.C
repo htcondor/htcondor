@@ -163,11 +163,14 @@ produce_output()
 {
 	char	*str;
 	FILE	*mailer;
-	char	*subject = "condor_preen results";
+	MyString subject;
+	subject.sprintf("condor_press results %s: %d old file%s found", 
+		my_full_hostname(), BadFiles->number(), 
+		(BadFiles->number() > 1)?"s":"");
 
 	if( MailFlag ) {
-		if( (mailer=email_open(PreenAdmin, subject)) == NULL ) {
-			EXCEPT( "Can't do email_open(\"%s\", \"%s\")\n",PreenAdmin,subject);
+		if( (mailer=email_open(PreenAdmin, subject.Value())) == NULL ) {
+			EXCEPT( "Can't do email_open(\"%s\", \"%s\")\n",PreenAdmin,subject.Value());
 		}
 	} else {
 		mailer = stdout;
@@ -195,7 +198,7 @@ produce_output()
 "backup method to ensure reasonable file system cleanliness in the face of\n"
 "errors. This is done automatically by default by the condor_master daemon.\n"
 "It may also be explicitly invoked on an as needed basis.\n\n"
-"See the condor manual section on condor_preen for more details.\n";
+"See the Condor manual section on condor_preen for more details.\n";
 
 		fprintf( mailer, "%s\n", explanation );
 		email_close( mailer );
