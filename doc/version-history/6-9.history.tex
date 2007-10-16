@@ -135,6 +135,11 @@ would fail to start jobs.
 
 \begin{itemize}
 
+\item Fixed a bad bug in the standard universe--introduced in Condor
+6.9.4,  which would cause corruption of any binary data being written to
+any fd the application opened. If an application only writes ASCII data
+to an fd, the application will not encounter this bug.
+
 \item The \Condor{negotiator} now prints out the value of the configuration
 	parameter \MacroNI{PREEMPTION\_REQUIREMENTS} if it is set.  Previously,
 	it always logged that it was unset, even when it was.
