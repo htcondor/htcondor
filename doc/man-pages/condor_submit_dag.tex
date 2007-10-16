@@ -49,11 +49,15 @@ description.
      jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
      idle jobs start to run, \Condor{dagman} will resume submitting jobs.
      \Arg{NumberOfJobs} is a positive integer. If the option is
-          omitted, the number of idle jobs is unlimited.}
+     omitted, the number of idle jobs is unlimited.   Note that for
+     this argument, each individual process within a cluster counts as a 
+     job, which is inconsistent with \OptArg{-maxjobs}.}
   \OptItem{\OptArg{-maxjobs}{NumberOfJobs}}{Sets the maximum number of jobs
      within the DAG that will be submitted to Condor at one time.
      \Arg{NumberOfJobs} is a positive integer. If the option is
-     omitted, the default number of jobs is unlimited.}
+     omitted, the default number of jobs is unlimited.  Note that for
+     this argument, each cluster counts as one job, no matter how many
+     individual processes are in the cluster.}
   \OptItem{\OptArg{-dagman}{DagmanExecutable}}{Allows the specification of an 
      alternate \Condor{dagman} executable to be used instead of the one found 
      in the user's path. This must be a fully qualified path.}

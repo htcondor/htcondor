@@ -5873,8 +5873,11 @@ allowed within the DAG before \Condor{dagman} temporarily stops
 submitting jobs.  Once idle jobs start to run, \Condor{dagman} will
 resume submitting jobs.  If both the command-line flag and the
 configuration parameter are specified, the command-line flag overrides
-the configuration parameter.  The default is that there is no limit
-on the maximum number of idle jobs.
+the configuration parameter.  Unfortunately,
+\MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} currently counts each individual
+process within a cluster as a job, which is inconsistent with
+\MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}.  The default is that there is
+no limit on the maximum number of idle jobs.
 
 \item[\Macro{DAGMAN\_MAX\_JOBS\_SUBMITTED}]
 \label{param:DAGManMaxJobsSubmitted}
@@ -5883,8 +5886,10 @@ DAG that will  be submitted to Condor at one time.  Note that this
 parameter is the same as the \OptArg{-maxjobs} command-line flag
 to condor\_submit\_dag.  If both the command-line flag and the
 configuration parameter are specified, the command-line flag overrides
-the configuration parameter.  The default is that there is no limit
-on the maximum number of jobs run at one time.
+the configuration parameter.  A single invocation of \Condor{submit}
+counts as one job, even if the submit file produces a multi-job cluster.
+The default is that there is no limit on the maximum number of jobs
+run at one time.
 
 \item[\Macro{DAGMAN\_MUNGE\_NODE\_NAMES}]
 \label{param:DAGManMungeNodeNames}
