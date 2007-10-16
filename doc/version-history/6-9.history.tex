@@ -197,6 +197,11 @@ of Condor.
 \item Undocumented ``DAGMan helper'' functionality has been removed
   due to disuse
 
+\item Reworked Condor's detection of CPUs and ``Hyper Threads'' under
+  Linux.  It now correctly detects these on all machines that we've
+  been able to test against.  No configuration changes are involved in
+  this fix.
+
 % Gnats PR 668
 \item When a standard universe job becomes held due to user job policy or
 a version mismatch, a hold reason is now set in the job ad.
