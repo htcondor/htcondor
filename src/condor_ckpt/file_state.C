@@ -840,9 +840,13 @@ ssize_t CondorFileTable::write( int fd, const void *data, size_t nbyte )
 	CondorFile *f = fp->file;
 
 	// Write to the object at the current offset
-	char* _data_str = strdup ( (const char *)data );	//de-const more safely
-	int actual = f->write( fp->offset, _data_str, nbyte );
-	free( _data_str );									//b/c of strdup
+
+	// XXX Don't fix the warning on this line. There is a semantic breakdown
+	// between char* and const void* in the file table API itself, and
+	// between that and the UNIX system API. It will take a pretty serious
+	// rewrite of the function signatures to make everything conform, and
+	// there is a chance there is no such conforming API.
+	int actual = f->write( fp->offset, (char*)data, nbyte );
 	
 	// If there is an error, don't touch the offset.
 	if(actual<0) return -1;
