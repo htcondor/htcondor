@@ -36,7 +36,7 @@ typedef unsigned char BOOL_T;
 typedef int BOOLEAN;
 typedef int BOOL_T;
 #endif
-#define BOOLAN_TYPE_DEFINED
+#define BOOLEAN_TYPE_DEFINED
 #endif
 
 #ifndef _CONDOR_NO_TRUE_FALSE
