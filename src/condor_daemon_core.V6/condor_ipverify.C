@@ -122,7 +122,6 @@ IpVerify::Init()
 	char *pAllow, *pDeny, *pOldAllow, *pOldDeny, *pNewAllow = NULL, *pNewDeny = NULL;
     char *pCopyAllow=NULL, *pCopyDeny=NULL ;
 	int i;
-    bool useOldPermSetup = true;
 	
 	did_init = TRUE;
 	
@@ -257,7 +256,6 @@ IpVerify::Init()
 				pentry->behavior = USERVERIFY_ALLOW;
 			}
 		} else {
-            useOldPermSetup = false;        // new permission setup!
 			if ( pDeny && !pAllow ) {
 				pentry->behavior = USERVERIFY_ONLY_DENIES;
 			} else {
