@@ -41,64 +41,82 @@ my $level3 = 4;	# run this many tasks
 
 $toppid = fork();
 if($toppid == 0) {
-	$count = 0;
 	# second level spawns two tasks
-	while ($count < $level2)  {
-		$count = $count + 1;
-		#print "Main loop counter at $count\n";
 
-		$pid = fork();
-		$innercount = 0;
-		if ($pid == 0) {
-			# child code....
+	$pid = fork();
+	if ($pid == 0) {
+		# child 1 code....
 
-			while ($innercount < $level3) {
-				$innercount = $innercount + 1;
-				#print "Innerloop counter at $innercount\n";
-				$innerpid = fork();
-				if ($innerpid == 0) {
-					# child code....
-			
-					#print "$count:$innercount pid $$ crunch now\n";
-					system("$childcmd");
-					# child waits until a signal shows up
-					exit(0);
-				} else {
-					# parent code...
-		
-				}
-			}
-			# clean up the kids
-			while( $child = wait() ) {
-				# if there are no more children, we're done
-				last if $child == -1;
-			}
-
-			exit 0;
-		} else {
-			# parent code...
-
-			#print "$count:$innercount pid $$ crunch now\n";
+		$innerpid = fork();
+		if ($innerpid == 0) {
+			#spin
 			system("$childcmd");
+			exit(0);
 		}
-	}
+
+		$innerpid = fork();
+		if ($innerpid == 0) {
+			#spin
+			system("$childcmd");
+			exit(0);
+		}
+
+		#spin
+		system("$childcmd");
+
+		# clean up the kids
+		while( $child = wait() ) {
+			last if $child == -1;
+		}
+
+		exit 0;
+	} 
+
+	$pid = fork();
+	if ($pid == 0) {
+		# child 1 code....
+
+		$innerpid = fork();
+		if ($innerpid == 0) {
+			#spin
+			system("$childcmd");
+			exit(0);
+		}
+
+		$innerpid = fork();
+		if ($innerpid == 0) {
+			#spin
+			system("$childcmd");
+			exit(0);
+		}
+
+		#spin
+		system("$childcmd");
+
+		# clean up the kids
+		while( $child = wait() ) {
+			last if $child == -1;
+		}
+
+		exit 0;
+	} 
+
+	#spin
+	system("$childcmd");
+
+
 	# clean up the kids
 	while( $child = wait() ) {
-		# if there are no more children, we're done
 		last if $child == -1;
 	}
 
 	exit 0;
-} else {
-	# parent code...
+} 
 	
-	#print "Father pid $$ crunch now\n";
-	system("$childcmd");
-}
+system("$childcmd");
 
 # clean up the kids
 while( $child = wait() ) {
-	# if there are no more children, we're done
 	last if $child == -1;
 }
 
