@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.14 2007-09-28 21:02:46 gthain Exp $
+# $Id: remote_pre.pl,v 1.15 2007-10-17 14:09:22 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -60,6 +60,18 @@ while( <UNTAR> ) {
 }
 close UNTAR;
 
+######################################################################
+# move prebuilt test programs into the source tree to their normal
+# location. "src/testbin_dir"
+######################################################################
+
+$testdir = "$BaseDir/testbin/testbin_dir";
+if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+	system("mv $testdir $SrcDir");
+	if( $? ) {
+    	die "Problem moving pre-built test programs: $?\n";
+	}
+}
 
 ######################################################################
 # setup the personal condor

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post,v 1.2 2006-07-25 18:15:40 wright Exp $
+# $Id: remote_post,v 1.3 2007-10-17 14:09:08 bt Exp $
 # post script to cleanup after a Condor build, successful or not
 ######################################################################
 
@@ -13,6 +13,7 @@ my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
 my $pub_dir = "$BaseDir/public";
 my $pub_logs = "$pub_dir/logs";
+my $pub_testbin = "$pub_dir/testbin";
 
 # This is debugging output for the sake of the NWO infrastructure.
 # However, it might be useful to us some day so we can see what's
@@ -35,6 +36,9 @@ if( ! -d $pub_dir ) {
 }
 if( ! -d $pub_logs ) {
     mkdir( "$pub_logs", 0777 ) || die("Can't mkdir($pub_logs): $!\n");
+}
+if( ! -d $pub_testbin ) {
+    mkdir( "$pub_testbin", 0777 ) || die("Can't mkdir($pub_testbin): $!\n");
 }
 
 my $ext_build = "$BaseDir/externals/build";
@@ -73,6 +77,11 @@ if( $ENV{NMI_PLATFORM} ne "x86_winnt_5.1" ) {
         # don't die if one of these isn't there...
         system( "cp $SrcDir/$file $pub_logs_ac" );
     }
+}
+
+# move test unix binaries to public/testbin
+if( $ENV{NMI_PLATFORM} ne "x86_winnt_5.1" ) {
+        system( "cp -r $SrcDir/testbin_dir $pub_testbin" );
 }
 
 
