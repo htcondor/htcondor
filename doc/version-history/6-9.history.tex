@@ -217,6 +217,9 @@ a version mismatch, a hold reason is now set in the job ad.
 segmentation fault in \Condor{q}. 
 Condor now ignores invalid settings and assumes \Prog{PostgreSQL}.
 
+\item In rare cases, \Condor{reconfig} could cause \Condor{master} and
+one of its children to become deadlocked.
+
 \item Fixed a potential crash in the \Condor{starter} if it's told to
 shutdown while it's disconnected from the \Condor{shadow}.
  
