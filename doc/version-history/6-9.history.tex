@@ -213,6 +213,10 @@ of Condor.
 \item When a standard universe job becomes held due to user job policy or
 a version mismatch, a hold reason is now set in the job ad.
 
+\item Invalid \MacroNI{QUILL\_DB\_TYPE} settings could result in a 
+segmentation fault in \Condor{q}. 
+Condor now ignores invalid settings and assumes \Prog{PostgreSQL}.
+ 
 \end{itemize}
 
 \noindent Known Bugs:
