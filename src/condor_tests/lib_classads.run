@@ -1,0 +1,28 @@
+#! /usr/bin/env perl
+
+my @got;
+$testname = 'lib_classad - runs prebuilt classad tests from testbin_dir';
+$test = "../testbin_dir/test_classads";
+
+system("date");
+
+open(ELOG,"$test 2>&1 |") || die "Could not run test<<$test>>: $!\n";
+while(<ELOG>) {
+	push  @got, $_;
+}
+close(ELOG);
+
+my $lastsave = "";
+foreach $line (@got) {
+	chomp($line);
+	$lastsave = $line;
+	print "$line\n";
+}
+
+
+if($lastsave =~ /^.*All\s+322\s+tests\s+passed.*$/) {
+	print "ClassAd Test passed with 322 successful tests!\n";
+} else {
+	die "322 tests were expected to pass <$lastsave>\n";
+}
+
