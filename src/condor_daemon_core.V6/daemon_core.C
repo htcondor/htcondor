@@ -4537,7 +4537,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 			}
 			else if( target_has_dcpm == TRUE &&
 			         (sig == SIGUSR1 || sig == SIGUSR2 || sig == SIGQUIT ||
-			          sig == SIGTERM) )
+			          sig == SIGTERM || sig == SIGHUP) )
 			{
 					// Try using kill(), even though this is a
 					// daemon-core process we are signalling.  We do
