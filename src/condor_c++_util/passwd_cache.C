@@ -159,7 +159,8 @@ passwd_cache::cache_uid(const char* user) {
 	if ( pwent == NULL ) {
 			// unix is lame: getpwnam() sets errno to ENOENT ("No such
 			// file or directory") when it means "user not found"
-		if( errno == ENOENT ) {
+			// Under linux, it sets errno to 0 in this case.
+		if( errno == ENOENT || errno == 0 ) {
 			static char *errno_clarification = "user not found";
 			err_string = errno_clarification;
 		} else {
