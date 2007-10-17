@@ -40,6 +40,7 @@ JobQueueSnapshot::JobQueueSnapshot(const char* dbcon_str)
 {
 	char *tmp;
 
+	dt = T_PGSQL; // assume PGSQL by default
 	tmp = param("QUILL_DB_TYPE");
 	if (tmp) {
 		if (strcasecmp(tmp, "ORACLE") == 0) {
@@ -47,8 +48,6 @@ JobQueueSnapshot::JobQueueSnapshot(const char* dbcon_str)
 		} else if (strcasecmp(tmp, "PGSQL") == 0) {
 			dt = T_PGSQL;
 		}
-	} else {
-		dt = T_PGSQL; // assume PGSQL by default
 	}
 
 	switch (dt) {				
