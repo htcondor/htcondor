@@ -1596,6 +1596,9 @@ static void test_functions(
 			results->AddResult(false);
 		}
 
+		/*
+		** turn off shared values till testing concerns are met
+		**
 		if (classad->EvalString("E", NULL, big_string)) {
 			printf("Passed: Evaluating sharedstring function gives: '%s' in line %d\n", 
 				   big_string, __LINE__);
@@ -1625,6 +1628,7 @@ static void test_functions(
 				   __LINE__);
 			results->AddResult(false);
 		}
+		*/
 
 		if (classad->EvalString("L", NULL, big_string) && 
 				(strcmp(big_string, "ABCDEFG") == 0)) {
@@ -4019,8 +4023,7 @@ static void test_function_stringlists_regexpmember(
 							"U1=stringlist_regexpMember(\"green\", \"red; blue; green\",\"; \"):"
 							"U2=stringlist_regexpMember(\"([e]+)\", \"red, blue, green\"):"
 							"U3=stringlist_regexpMember(\"([p]+)\", \"red, blue, green\"):"
-							"W0=stringlist_regexpMember(\"[Mm]atcH.i\", 
-									\"thisisamatchlist\", \" ,\", \"i\"):"
+							"W0=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\", \" ,\", \"i\"):"
 							"W1=stringlist_regexpMember(20, \"thisisamatchlist\", \"i\"):"
 							"E1=isError(W1):" 
 							"W2=stringlist_regexpMember(\"[Mm]atcH.i\", 20, \"i\"):"
@@ -4031,8 +4034,7 @@ static void test_function_stringlists_regexpmember(
 							"E4=isError(W7):" 
 							"W4=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisalist\", \" ,\", \"i\"):"
 							"W5=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\"):"
-							"W6=stringlist_regexpMember(\"([Mm]+[Nn]+)\", 
-									\"aaaaaaaaaabbbmmmmmNNNNNN\", \" ,\", \"i\"):"
+							"W6=stringlist_regexpMember(\"([Mm]+[Nn]+)\", \"aaaaaaaaaabbbmmmmmNNNNNN\", \" ,\", \"i\"):"
 							"";
 
 	ClassAd  *classad;
