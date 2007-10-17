@@ -152,6 +152,10 @@ REMOTE_CONDOR_register_job_info( ClassAd* ad )
 		return -1;
 	}
 
+	if( ! syscall_sock->is_connected() ) {
+		return -1;
+	}
+
 	syscall_sock->encode();
 	if (!syscall_sock->code(CurrentSysCall)) {
 		return -1;
@@ -318,6 +322,9 @@ REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 		  timer to wait for the DisconnectedRunTimeout to expire,
 		  hoping to get a request for a reconnect.
 		*/
+	if( ! syscall_sock->is_connected() ) {
+		return -1;
+	}
 
 	syscall_sock->encode();
 	if( ! syscall_sock->code(CurrentSysCall) ) {
