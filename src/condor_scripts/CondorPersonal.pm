@@ -959,12 +959,6 @@ sub StartPersonalCondor
 	# Give us 5 seconds to at least get the master ready
 	sleep 5;
 
-	# If any of the daemons send their ad to the collector before it is
-	# ready, they will be invisible for 5 minutes.  Send a reconfig
-	# to the master to help things settle.
-
-	system("condor_reconfig");
-
 	# if this was a dynamic port startup, return the port which
 	# the collector is listening on...
 
