@@ -2045,7 +2045,7 @@ SecManStartCommand::TCPAuthConnected_inner( Sock *tcp_auth_sock, bool *auth_succ
 
 	if (auth_result != StartCommandSucceeded) {
 		dprintf ( D_SECURITY,"SECMAN: unable to start session to %s via TCP, "
-		          "failing.",m_sock->get_sinful_peer());
+		          "failing.\n",m_sock->get_sinful_peer());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
 		                 "Failed to start a session to %s with TCP",
 		                 m_sock->get_sinful_peer());
