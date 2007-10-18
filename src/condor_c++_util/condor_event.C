@@ -86,6 +86,7 @@ const char * ULogEventOutcomeNames[] = {
   "ULOG_OK       ",
   "ULOG_NO_EVENT ",
   "ULOG_RD_ERROR ",
+  "ULOG_MISSED_EVENT ",
   "ULOG_UNK_ERROR"
 };
 

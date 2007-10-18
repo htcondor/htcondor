@@ -1,5 +1,6 @@
-09/17/07 V6_9-userlog_rotation_2-{root,branch}
-  The new root & branch for the user log rotation work.
+10/18/07 V6_9-userlog_rotation_2-merge-1
+  The state of the user log rotation branch at the first (and
+  hopefully only) merge to the trunk.
 
 09/28/07 V6_9-procd_osg-{root,branch}
   A branch for making some improvements to the ProcD to make it
@@ -15,6 +16,9 @@
 09/20/07 V6_9-amazon_ec2-{root,branch}
   A new branch off of the trunk for work to support submitting to Amazon's
   EC2 in the grid universe.
+
+09/17/07 V6_9-userlog_rotation_2-{root,branch}
+  The new root & branch for the user log rotation work.
 
 09/17/07 V6_9-userlog_rotation-{root,branch}
   The root & branch for the user log rotation work.  Abandoned & replaced by

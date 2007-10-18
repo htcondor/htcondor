@@ -1776,6 +1776,8 @@ AC_CHECK_TYPES([__int64])
 
 AC_CHECK_FUNCS([strsignal				\
 		stat64					\
+		fseeko					\
+		ftello					\
 		lchown					\
 		getdirentries				\
 		getdtablesize				\

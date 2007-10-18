@@ -31,17 +31,19 @@
 
 extern "C" int lock_file( int fd, LOCK_TYPE type, bool do_block );
 
-FileLock::FileLock( int f, FILE *fp_arg, const char* path )
+FileLock::FileLock( int fd, FILE *fp_arg, const char* path )
 {
-	fd = f;
-	fp = fp_arg;
-	blocking = TRUE;
-	state = UN_LOCK;
-	m_path = NULL;
-	use_kernel_mutex = -1;
-#ifdef WIN32
-	debug_win32_mutex = NULL;
-#endif
+	Reset( );
+	m_fd = fd;
+	m_fp = fp_arg;
+	if (path) {
+		m_path = strdup(path);
+	}
+}
+
+FileLock::FileLock( const char *path )
+{
+	Reset( );
 	if (path) {
 		m_path = strdup(path);
 	}
@@ -63,19 +65,40 @@ FileLock::~FileLock()
 }
 
 void
+FileLock::Reset( void )
+{
+	m_fd = -1;
+	m_fp = NULL;
+	blocking = true;
+	state = UN_LOCK;
+	m_path = NULL;
+	use_kernel_mutex = -1;
+#ifdef WIN32
+	debug_win32_mutex = NULL;
+#endif
+}
+
+void
+FileLock::SetFdFp( int fd, FILE *fp )
+{
+	m_fd = fd;
+	m_fp = fp;
+}
+
+void
 FileLock::display()
 {
-	printf( "fd = %d\n", fd );
-	printf( "blocking = %s\n", blocking ? "TRUE" : "FALSE" );
+	dprintf( D_FULLDEBUG, "fd = %d\n", m_fd );
+	dprintf( D_FULLDEBUG, "blocking = %s\n", blocking ? "TRUE" : "FALSE" );
 	switch( state ) {
 	  case READ_LOCK:
-		printf( "state = READ\n" );
+		dprintf( D_FULLDEBUG, "state = READ\n" );
 		break;
 	  case WRITE_LOCK:
-		printf( "state = WRITE\n" );
+		dprintf( D_FULLDEBUG, "state = WRITE\n" );
 		break;
 	  case UN_LOCK:
-		printf( "state = UNLOCKED\n" );
+		dprintf( D_FULLDEBUG, "state = UNLOCKED\n" );
 		break;
 	}
 }
@@ -101,6 +124,7 @@ FileLock::set_blocking( bool val )
 int
 FileLock::lock_via_mutex(LOCK_TYPE type)
 {
+	(void) type;
 	int result = -1;
 
 #ifdef WIN32	// only implemented on Win32 so far...
@@ -201,19 +225,19 @@ FileLock::obtain( LOCK_TYPE t )
 		// We cannot lock via a mutex, or we tried and failed.
 		// Try via filesystem lock.
 	if ( status < 0) {
-		long lPosBeforeLock;
-		if (fp) // if the user has a FILE * as well as an fd
+		long lPosBeforeLock = 0;
+		if (m_fp) // if the user has a FILE * as well as an fd
 		{
 			// save their FILE*-based current position
-			lPosBeforeLock = ftell(fp); 
+			lPosBeforeLock = ftell(m_fp); 
 		}
 		
-		status = lock_file( fd, t, blocking );
+		status = lock_file( m_fd, t, blocking );
 		
-		if (fp)
+		if (m_fp)
 		{
 			// restore their FILE*-position
-			fseek(fp, lPosBeforeLock, SEEK_SET); 	
+			fseek(m_fp, lPosBeforeLock, SEEK_SET); 	
 		}
 	}
 

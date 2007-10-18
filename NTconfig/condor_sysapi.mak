@@ -115,12 +115,12 @@ LIB32_OBJS= \
 	"$(INTDIR)\last_x_event.obj" \
 	"$(INTDIR)\load_avg.obj" \
 	"$(INTDIR)\ncpus.obj" \
+	"$(INTDIR)\partition_id.obj" \
 	"$(INTDIR)\phys_mem.obj" \
 	"$(INTDIR)\reconfig.obj" \
 	"$(INTDIR)\resource_limits.obj" \
 	"$(INTDIR)\timers_b.obj" \
-	"$(INTDIR)\virt_mem.obj" \
-	"$(INTDIR)\partition_id.obj"
+	"$(INTDIR)\virt_mem.obj"
 
 "$(OUTDIR)\condor_sysapi.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -216,12 +216,12 @@ LIB32_OBJS= \
 	"$(INTDIR)\last_x_event.obj" \
 	"$(INTDIR)\load_avg.obj" \
 	"$(INTDIR)\ncpus.obj" \
+	"$(INTDIR)\partition_id.obj" \
 	"$(INTDIR)\phys_mem.obj" \
 	"$(INTDIR)\reconfig.obj" \
 	"$(INTDIR)\resource_limits.obj" \
 	"$(INTDIR)\timers_b.obj" \
-	"$(INTDIR)\virt_mem.obj" \
-	"$(INTDIR)\partition_id.obj"
+	"$(INTDIR)\virt_mem.obj"
 
 "$(OUTDIR)\condor_sysapi.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<

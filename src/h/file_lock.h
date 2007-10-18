@@ -36,8 +36,12 @@ typedef enum { READ_LOCK, WRITE_LOCK, UN_LOCK } LOCK_TYPE;
 class FileLock {
 public:
 	FileLock( int fd, FILE *fp = NULL, const char* path = NULL );
+	FileLock( const char* path );
 	~FileLock();
 
+		// Set the file descriptor  & pointer
+	void SetFdFp( int fd, FILE *fp = NULL );
+	
 		// Read only access functions
 	bool		is_blocking();		// whether or not operations will block
 	LOCK_TYPE	get_state();		// cur state READ_LOCK, WRITE_LOCK, UN_LOCK
@@ -49,8 +53,10 @@ public:
 	bool		release();					// release a lock
 
 private:
-	int			fd;			// File descriptor to deal with
-	FILE		*fp;
+	void Reset( void );
+
+	int			m_fd;		// File descriptor to deal with
+	FILE		*m_fp;
 	bool		blocking;	// Whether or not to block
 	LOCK_TYPE	state;		// Type of lock we are holding
 	char*		m_path;		// Path to the file being locked, or NULL
@@ -59,6 +65,7 @@ private:
 #ifdef WIN32
 	HANDLE		debug_win32_mutex;
 #endif
+
 };
 
 #endif	/* cpluscplus */

@@ -48,6 +48,7 @@ class ClassAd;
 //----------------------------------------------------------------------------
 /** Enumeration of all possible events.
     If you modify this enum, you must also modify ULogEventNumberNames array
+	(in condor_event.C)
 	WARNING: DO NOT CHANGE THE NUMBERS OF EXISTING EVENTS !!!
 	         ^^^^^^           
 */
@@ -89,12 +90,14 @@ extern const char * ULogEventNumberNames[];
 //----------------------------------------------------------------------------
 /** Enumeration of possible outcomes after attempting to read an event.
     If you modify this enum, you must also modify ULogEventOutcomeNames array
+	(in condor_event.C)
 */
 enum ULogEventOutcome
 {
     /** Event is valid               */ ULOG_OK,
     /** No event occured (like EOF)  */ ULOG_NO_EVENT,
     /** Error reading log file       */ ULOG_RD_ERROR,
+    /** Missed event                 */ ULOG_MISSED_EVENT,
     /** Unknown Error                */ ULOG_UNK_ERROR
 };
 

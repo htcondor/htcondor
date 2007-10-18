@@ -24,7 +24,11 @@ The ReadUserLog class has the following interface:
   class ReadUserLog
   {
     public:
-      int initialize (const char *file);
+      int initialize (const char *file,
+		      bool handle_rotation = false,
+		      bool check_for_rotated = false );
+      bool initialize (const ReadUserLog::FileState &state,
+			bool handle_rotation = true );
       ULogEventOutcome readEvent (ULogEvent *&event);
   };
 
@@ -40,6 +44,42 @@ ULogEvent is a base class for the different event classes
 (SubmitEvent, ExecuteEvent, CheckpointedEvent, etc.).  Use the
 eventNumber member to determine the appropriate type for the
 ULogEvent.
+
+The ReadUserLog object can now export it's current state to an object that
+the application can save off to disk.  To use this:
+
+Always use InitFileState() to initialize this structure.  All of these
+methods take a reference to a state buffer as their only parameter.
+All of these methods return true upon success.
+
+To save the state, do something like this:
+	ReadUserLog		reader;
+	ReadUserLog::FileState	statebuf;
+
+	status = ReadUserLog::InitFileState( statebuf );
+
+	status = reader.GetFileState( statebuf );
+	write( fd, statebuf.buf, statebuf.size );
+	...
+	status = reader.GetFileState( statebuf );
+	write( fd, statebuf.buf, statebuf.size );
+	...
+
+	status = UninitFileState( statebuf );
+
+
+To restore the state, do something like this:
+	ReadUserLog::FileState	statebuf;
+	status = ReadUserLog::InitFileState( statebuf );
+
+	read( fd, statebuf.buf, statebuf.size );
+
+	ReadUserLog  		reader;
+	status = userlog.initialize( statebuf );
+
+	status = UninitFileState( statebuf );
+	....
+
 
 3. Writing User Logs
 
