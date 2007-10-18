@@ -98,6 +98,18 @@ would fail to start jobs.
 now includes the name of the machine and the number of files found in the
 subject of the message.
 
+\item The user log reading code is now able to handle global event log
+  rotations correctly.  The API is backwards compatible, but with
+  several new method, it is able to invisibly handle rotated eventlog
+  files.
+
+\item The user log writer code now generates a header record (as a
+  ``generic'' event) with some meta information to the event log.
+  This header is not written to the ``user log'', only to the global
+  event log.  Some of the information stored in this header is used by
+  the enhanced log reader (see above) to more reliably detect rotated
+  log files.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -225,6 +237,11 @@ added.
 
 \item Fixed a potential crash in the \Condor{starter} if it's told to
 shutdown while it's disconnected from the \Condor{shadow}.
+
+\item Fixed the global event log rotation code.  Previously, if two or
+  more processes were concurrently writing to the event log, they
+  didn't correctly detect that another writer process had rotated the
+  file, and would do their own rotation, resulting in data loss.
  
 \end{itemize}
 
