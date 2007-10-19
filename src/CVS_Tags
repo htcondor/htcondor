@@ -1,3 +1,8 @@
+10/19/07 V6_9-ian_osca-{root,branch}
+  Branch for research code involving signed ClassAds (sca), using 
+  OpenSSL (o) rather than GSI.  This branch was made from 
+  BUILD-V6_9-trunk-2007-10-17.
+
 10/18/07 V6_9-userlog_rotation_2-merge-1
   The state of the user log rotation branch at the first (and
   hopefully only) merge to the trunk.
