@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.3 2007-05-01 20:22:56 jfrey Exp $
+# $Id: remote_declare.pl,v 1.4 2007-10-19 21:16:21 bt Exp $
 # generate list of all tests to run
 ######################################################################
 
@@ -19,13 +19,30 @@ if( -f "$TimeoutFile") {
 	while(<TIMEOUTS>) {
 		chomp($_);
 		$line = $_;
-		if($line =~ /^\s*(\w*)\s+(\d*)\s*$/) {
+		if($line =~ /^\s*([\w\-]+)\s+(\d*)\s*$/) {
 			print "Custom Timeout: $1:$2\n";
 			$CustomTimeouts{"$1"} = $2;
 		}
 	}
+	close(TIMEOUTS);
 }
 
+my %RuncountChanges;
+my $RuncountFile = "$SrcDir/condor_tests/RuncountChanges";
+# Do we have a file with non-default runtimes for some tests?
+if( -f "$RuncountFile") {
+    open(RUNCOUNT,"<$RuncountFile") || die "Failed to open $RuncountFile: $!\n";
+    my $line;
+    while(<RUNCOUNT>) {
+        chomp($_);
+        $line = $_;
+        if($line =~ /^\s*([\w\-]+)\s+(\d*)\s*$/) {
+            print "Custom Runcount: $1:$2\n";
+            $RuncountChanges{"$1"} = $2;
+        }
+    }
+    close(RUNCOUNT);
+}
 # file which contains the list of tests to run on Windows
 my $WinTestList = "$SrcDir/condor_tests/Windows_list";
 
@@ -163,18 +180,31 @@ print "****************************************************\n";
 print "**** Writing out tests to tasklist.nmi\n";
 print "****************************************************\n";
 $unique_tests = 0;
+my $repeat_test;
 foreach $task (sort keys %tasklist ) {
-	$temp = $CustomTimeouts{"$task"};
+	$tempt = $CustomTimeouts{"$task"};
+    $tempr = $RuncountChanges{"$task"};
+    if( exists $RuncountChanges{"$task"} ) {
+        $repeat_test = $tempr;
+    } else {
+        $repeat_test = 1;
+    }
+
 	if( exists $CustomTimeouts{"$task"} ) {
-    	print TASKFILE $task . " " . $CustomTimeouts{"$task"} . "\n";
-    	print USERTASKFILE $task . " " . $CustomTimeouts{"$task"} . "\n";
-    	print "CustomTimeout:$task $temp\n";
-	} else {
-    	print TASKFILE $task . "\n";
-    	print USERTASKFILE $task . "\n";
-	}
+        foreach(1..$repeat_test) {
+            print TASKFILE $task . "-" . $_ . " " . $CustomTimeouts{"$task"} . "\n";
+            print USERTASKFILE $task . "-" . $_ .  " " . $CustomTimeouts{"$task"} . "\n";
+        }
+        print "CustomTimeout:$task $tempt\n";
+    } else {
+        foreach(1..$repeat_test) {
+            print TASKFILE $task . "-" . $_ . "\n";
+            print USERTASKFILE $task . "-" . $_ . "\n";
+        }
+    }
     $unique_tests++;
 }
+
 close( TASKFILE );
 close( USERTASKFILE );
 print "Wrote $unique_tests unique tests\n";
