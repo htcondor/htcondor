@@ -1891,62 +1891,55 @@ Stream::get( char	*&s, int		&l)
 {
 	char	c;
 	void	*tmp_ptr = 0;
-        int     len;
+	int     len;
+
+	if (s == NULL) {
+		return FALSE;
+	}
 
 	switch(_code){
 		case internal:
 		case external:
-                    if (!get_encryption()) {
-			if (!peek(c)) return FALSE;
-			if (c == '\255'){
-				/* s = (char *)0; */
-                            if (get_bytes(&c, 1) != 1) return FALSE;
-                            if (s) s[0] = '\0';
+			if (!get_encryption()) {
+				if (!peek(c)) return FALSE;
+				if (c == '\255') {
+					/* s = (char *)0; */
+					if (get_bytes(&c, 1) != 1) return FALSE;
+					s[0] = '\0';
+				}
+				else{
+					/* tmp_ptr = s; */
+					if ((l = get_ptr(tmp_ptr, '\0')) <= 0) return FALSE;
+					strcpy(s, (char *)tmp_ptr);
+					//cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
+				}
 			}
-			else{
-				/* tmp_ptr = s; */
-                            if ((l = get_ptr(tmp_ptr, '\0')) <= 0) return FALSE;
-                            if (s) {
-                                strcpy(s, (char *)tmp_ptr);
-                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
-                            } else {
-                                s = (char *)tmp_ptr;
-                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
-                            }
+			else { // 6.3 with encryption support
+				// First, get length
+				if (get(len) == FALSE) {
+					return FALSE;
+				}
+                        
+				tmp_ptr = malloc(len);
+				if (get_bytes((char *)tmp_ptr, len) != len) {
+					return FALSE;
+				}
+                        
+				if (*((char*)tmp_ptr) == '\255') {
+					s[0] = '\0';
+				}
+				else {
+					strcpy(s, (char *)tmp_ptr);
+					//cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
+				}
+				free(tmp_ptr);
 			}
-                    }
-                    else { // 6.3 with encryption support
-                        // First, get length
-                        if (get(len) == FALSE) {
-                            return FALSE;
-                        }
-                        
-                        tmp_ptr = malloc(len);
-                        if (get_bytes((char *)tmp_ptr, len) != len) {
-                            return FALSE;
-                        }
-                        
-                        if (*((char*)tmp_ptr) == '\255') {
-                            if (s) s[0] = '\0';
-                        }
-                        else {
-                            if (s) {
-                                strcpy(s, (char *)tmp_ptr);
-                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
-                            }
-                            else {
-                                s = strdup((char *)tmp_ptr);
-                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
-                            }
-                        }
-                        free(tmp_ptr);
-                    }
-                    break;
+			break;
 
 		case ascii:
 			return FALSE;
 	}
-        NETWORK_TRACE("get string and int " <<   l);
+	NETWORK_TRACE("get string and int " <<   l);
 	return TRUE;
 }
 

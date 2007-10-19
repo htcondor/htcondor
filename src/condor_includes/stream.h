@@ -415,11 +415,8 @@ public:
 		// If arg is not NULL, this function blindly writes into caller's
 		// buffer without doing any bounds checking.
 	int get(char *&);
-		// If arg is NULL, this function points callers pointer to internal
-		// buffer that caller MUST NOT FREE.  This buffer may become invalid
-		// on subsequent call.
-		// If arg is not NULL, this function blindly writes into caller's
-		// buffer without doing any bounds checking.
+		// arg must not be NULL, and this function will blindly write into caller's
+		// buffer without doing any bounds checking. (so don't use this)
 	int get(char *&, int &);
 
 	/*

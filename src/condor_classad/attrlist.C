@@ -2500,7 +2500,6 @@ AttrList::initFromStream(Stream& s)
 	char *line;
     int numExprs;
 	int succeeded;
-	int bytes_read = 0;
 	
 	succeeded = 1;
 
@@ -2521,22 +2520,21 @@ AttrList::initFromStream(Stream& s)
     
     for(int i = 0; i < numExprs; i++) {
 
-			// The following Stream::get() call will point 'line' to an
-			// internal stream buffer that we should not free.
 		line = NULL;
-        if(!s.get(line,bytes_read)) {
+        if(!s.get(line) || (line == NULL)) {
 			dprintf(D_FULLDEBUG,"Failed to read ClassAd expression.\n");
             succeeded = 0;
 			break;
         }
-        
 		if (!Insert(line)) {
 				// this debug message for tracking down initFromStream() bug
 			dprintf(D_FULLDEBUG,"Failed to parse ClassAd expression: '%s' "
 					"(len=%d, try 2 result=%d).\n",line,strlen(line),Insert(line));
+			free(line);
 			succeeded = 0;
 			break;
 		}
+		free(line);
     }
 
     return succeeded;
