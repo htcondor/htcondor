@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.2.2.10 2007-10-09 21:11:06 bt Exp $
+# $Id: remote_task.pl,v 1.2.2.11 2007-10-19 21:17:18 bt Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -47,6 +47,16 @@ my $compiler = $testinfo[1];
 
 if( ! $testname ) {
     c_die("Invalid input for testname\n");
+}
+
+# iterations have numbers placed at the end of the name 
+# for unique db tracking in nmi for now.
+if($testname =~ /([\w\-]+)-\d+/) {
+	my $matchingtest = $testname . ".run";
+	if(!(-f $matchingtest)) {
+		# if we don't have a test called this, strip iterator off
+		$testname = $1;
+	}
 }
 
 #track time.....
