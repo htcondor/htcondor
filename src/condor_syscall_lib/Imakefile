@@ -447,7 +447,14 @@ libcondorsyscall.a: libtmp.a ToUpper
 
 #if defined(DOES_CHECKPOINTING) || defined(DOES_REMOTE_SYSCALLS)
 public_library(libcondorsyscall.a,lib)
+#if defined(DOES_CHECKPOINTING)
+XCOMM Always needed for the file table compressed files feature set.
+XCOMM Sometimes needed for checkpoint page compression.
+XCOMM It is copied to <release>/lib and given a new name to stop library name
+XCOMM pollution when people put -L<release>/lib into their path when trying
+XCOMM to link against libcondorapi.a, which lives in the same place.
 public_library(libcondor_z.a,lib)
+#endif
 #endif
 
 #ifdef DOES_COMPRESS_CKPT
@@ -528,7 +535,14 @@ import(../h,syscall_numbers.c)
 import(../condor_util_lib,stub_gen)
 import(../condor_shadow.V6,pseudo_ops.h)
 import(../condor_ckpt,libcondorc++support.a)
+#if defined(DOES_CHECKPOINTING)
+XCOMM Always needed for the file table compressed files feature.
+XCOMM If checkpoints may be compressed, it is needed for that too.
+XCOMM It is copied to <release>/lib and given a new name to stop library name
+XCOMM pollution when people put -L<release>/lib into their path when trying
+XCOMM to link against libcondorapi.a, which lives in the same place.
 all_symlink_target($(ZLIB_LIB)/libz.a,libcondor_z.a)
+#endif
 
 authentication.o: ../condor_io/authentication.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
