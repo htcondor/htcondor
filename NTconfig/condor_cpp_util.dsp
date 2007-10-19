@@ -839,6 +839,18 @@ SOURCE="..\src\condor_c++_util\read_multiple_logs.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\read_user_log.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\read_user_log_state.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\read_user_log_state.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\Regex.C"
 # End Source File
 # Begin Source File
@@ -995,19 +1007,19 @@ SOURCE="..\src\condor_c++_util\utc_time.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c++_util\which.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\which.h"
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\condor_c++_util\vm_univ_utils.C"
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\vm_univ_utils.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\which.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\which.h"
 # End Source File
 # Begin Source File
 
