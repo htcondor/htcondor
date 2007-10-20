@@ -425,7 +425,7 @@ SYSCONF.o :  $(SIMPLE_LIBC)  ToUpper
 uppercase_target($(SIMPLE_LIBC),getpagesize.o,GETPAGESIZE.o,getpagesize,GETPAGESIZE)
 #endif
 
-#if IS_AOLRIS27 || IS_SOLARIS28 || IS_SOLARIS29
+#if IS_SOLARIS27 || IS_SOLARIS28 || IS_SOLARIS29
 uppercase_target($(SIMPLE_LIBC),waitpid.o,WAITPID.o,waitpid,WAITPID)
 #endif
 
