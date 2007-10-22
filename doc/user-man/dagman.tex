@@ -549,8 +549,8 @@ scripts can affect the order in which jobs run, so DAGs containing
 PRE scripts may not run the nodes in exact priority order, even if
 doing so would satisfy the DAG dependencies.
 
-The priority value is an integer (which can be negative).  A smaller
-numerical priority is better (will be run before a higher numerical
+The priority value is an integer (which can be negative).  A larger
+numerical priority is better (will be run before a smaller numerical
 value).  The default priority is 0.
 
 Adding \Arg{PRIORITY} for node C in the diamond-shaped
@@ -566,7 +566,7 @@ DAG
     PARENT A CHILD B C
     PARENT B C CHILD D
     Retry  C 3
-    PRIORITY C -1
+    PRIORITY C 1
 \end{verbatim}
 \normalsize
 
