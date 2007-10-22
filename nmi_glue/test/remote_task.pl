@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.7 2007-10-20 13:51:39 gthain Exp $
+# $Id: remote_task.pl,v 1.8 2007-10-22 20:34:36 bt Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -36,6 +36,17 @@ if( ! $fulltestname ) {
 my $BaseDir = $ENV{BASE_DIR} || c_die("BASE_DIR is not in environment!\n");
 my $SrcDir = $ENV{SRC_DIR} || c_die("SRC_DIR is not in environment!\n");
 my $testdir = "condor_tests";
+
+# iterations have numbers placed at the end of the name
+# for unique db tracking in nmi for now.
+if($fulltestname =~ /([\w\-\.\+]+)-\d+/) {
+    my $matchingtest = $fulltestname . ".run";
+    if(!(-f $matchingtest)) {
+        # if we don't have a test called this, strip iterator off
+        $fulltestname = $1;
+    }
+}
+
 
 ######################################################################
 # get the testname and group
