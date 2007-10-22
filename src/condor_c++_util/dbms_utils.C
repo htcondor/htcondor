@@ -91,6 +91,7 @@ static char * getWritePassword(char *write_passwd_fname,
 		msbuf = new MyString();
 	}
 
+	free(prefix);
     fclose(fp);
 	if (!found) {
 		EXCEPT("Unable to find password from file %s with prefix %s\n", write_passwd_fname, prefix);
@@ -206,7 +207,8 @@ bool stripdoublequotes(char *attVal) {
 		/* strip enclosing double quotes
 		*/
 	if (attVal[attValLen-1] == '"' && attVal[0] == '"') {
-		strncpy(attVal, &attVal[1], attValLen-2);
+		//strncpy(attVal, &attVal[1], attValLen-2);
+		memmove(attVal, &attVal[1], attValLen-2);
 		attVal[attValLen-2] = '\0';
 		return TRUE;	 
 	} else {

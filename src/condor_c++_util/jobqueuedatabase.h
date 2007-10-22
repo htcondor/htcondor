@@ -196,7 +196,7 @@ public:
 				EXCEPT("schema version not correct\n");
 			}
 		}
-
+		free(sql_str);
 		this->releaseQueryResult();		
 	}
 
