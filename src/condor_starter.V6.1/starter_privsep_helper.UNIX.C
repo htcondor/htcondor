@@ -25,6 +25,8 @@
 #include "condor_debug.h"
 #include "starter_privsep_helper.h"
 #include "condor_uid.h"
+#include "condor_arglist.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 StarterPrivSepHelper privsep_helper;
 
@@ -47,17 +49,15 @@ StarterPrivSepHelper::~StarterPrivSepHelper()
 }
 
 void
-StarterPrivSepHelper::initialize_user(uid_t uid, gid_t gid)
+StarterPrivSepHelper::initialize_user(uid_t uid)
 {
 	ASSERT(!m_user_initialized);
 
 	dprintf(D_FULLDEBUG,
-	        "PrivSep: initializing UID %u and GID %u\n",
-	        (unsigned)uid,
-	        (unsigned)gid);
+	        "PrivSep: initializing UID %u\n",
+	        (unsigned)uid);
 
 	m_uid = uid;
-	m_gid = gid;
 
 	m_user_initialized = true;
 }
@@ -66,13 +66,12 @@ void
 StarterPrivSepHelper::initialize_user(const char* name)
 {
 	uid_t uid;
-	gid_t gid;
-	if (!pcache()->get_user_ids(name, uid, gid)) {
+	if (!pcache()->get_user_uid(name, uid)) {
 		EXCEPT("StarterPrivSepHelper::initialize_user: "
 		           "%s not found in passwd cache",
 		       name);
 	}
-	initialize_user(uid, gid);
+	initialize_user(uid);
 }
 
 void
@@ -83,7 +82,7 @@ StarterPrivSepHelper::initialize_sandbox(const char* path)
 
 	dprintf(D_FULLDEBUG, "PrivSep: initializing sandbox: %s\n", path);
 
-	if (!privsep_create_dir(m_uid, m_gid, path)) {
+	if (!privsep_create_dir(m_uid, path)) {
 		EXCEPT("StarterPrivSepHelper::initialize_sandbox: "
 		           "privsep_create_dir error on %s",
 		       path);
@@ -96,79 +95,11 @@ StarterPrivSepHelper::initialize_sandbox(const char* path)
 	m_sandbox_initialized = true;
 }
 
-void
-StarterPrivSepHelper::get_user_ids(uid_t& uid, gid_t& gid)
+uid_t
+StarterPrivSepHelper::get_uid()
 {
 	ASSERT(m_user_initialized);
-	uid = m_uid;
-	gid = m_gid;
-}
-
-int
-StarterPrivSepHelper::open_user_file(const char* path,
-                                     int flags,
-                                     mode_t mode)
-{
-	ASSERT(m_user_initialized);
-	dprintf(D_FULLDEBUG,
-	        "PrivSep: using Switchboard to open user file '%s'\n",
-	        path);
-	return privsep_open(m_uid, m_gid, path, flags, mode);
-}
-
-int
-StarterPrivSepHelper::open_sandbox_file(const char* path,
-                                        int flags,
-                                        mode_t mode)
-{
-	ASSERT(m_sandbox_initialized);
-
-	if (m_sandbox_owned_by_user) {
-		dprintf(D_FULLDEBUG,
-		        "PrivSep: using Switchboard to open sandbox file '%s'\n",
-		        path);
-		return privsep_open(m_uid, m_gid, path, flags, mode);
-	}
-	else {
-		dprintf(D_FULLDEBUG,
-		        "PrivSep: directly opening sandbox file '%s'\n",
-		        path);
-		return safe_open_wrapper(path, flags, mode);
-	}
-}
-
-FILE*
-StarterPrivSepHelper::fopen_sandbox_file(const char* path, const char* mode)
-{
-	int flags;
-	if (mode[0] == 'r') {
-		flags = O_RDONLY;
-	}
-	else if (mode[0] == 'w') {
-		flags = O_WRONLY;
-	}
-	else {
-		EXCEPT("StarterPrivSepHelper::fopen_sandbox_file: "
-		           "unable to handle mode: %s",
-		       mode);
-	}
-
-	int fd = open_sandbox_file(path, flags, 0644);
-	if (fd == -1) {
-		return NULL;
-	}
-	FILE* fp = fdopen(fd, mode);
-	if (fp == NULL) {
-		dprintf(D_ALWAYS,
-		        "PrivSepStarterHelper::fopen_sandbox_file: "
-		            "fdopen error: %s (%d)\n",
-		        strerror(errno),
-		        errno);
-		close(fd);
-		return NULL;
-	}
-
-	return fp;
+	return m_uid;
 }
 
 void
@@ -184,7 +115,7 @@ StarterPrivSepHelper::chown_sandbox_to_user()
 	}
 
 	dprintf(D_FULLDEBUG, "changing sandbox ownership to the user\n");
-	if (!privsep_chown_dir(m_uid, m_gid, m_sandbox_path)) {
+	if (!privsep_chown_dir(m_uid, m_sandbox_path)) {
 		EXCEPT("error changing sandbox ownership to the user");
 	}
 
@@ -204,44 +135,37 @@ StarterPrivSepHelper::chown_sandbox_to_condor()
 	}
 
 	dprintf(D_FULLDEBUG, "changing sandbox ownership to condor\n");
-	if (!privsep_chown_dir(get_condor_uid(),
-	                       get_condor_gid(),
-	                       m_sandbox_path)) {
+	if (!privsep_chown_dir(get_condor_uid(), m_sandbox_path)) {
 		EXCEPT("error changing sandbox ownership to condor");
 	}
 
 	m_sandbox_owned_by_user = false;
 }
 
-void
-StarterPrivSepHelper::setup_exec_as_user(MyString& exe, ArgList& args)
+int
+StarterPrivSepHelper::create_process(const char* path,
+                                     ArgList&    args,
+                                     Env&        env,
+                                     const char* iwd,
+									 int         std_fds[3],
+                                     const char* std_file_names[3],
+                                     int         nice_inc,
+                                     size_t*     core_size_ptr,
+                                     int         reaper_id,
+                                     int         dc_job_opts,
+                                     FamilyInfo* family_info)
 {
 	ASSERT(m_user_initialized);
-	if (!privsep_setup_exec_as_user(m_uid, m_gid, exe, args)) {
-		EXCEPT("StarterPrivSepHelper::setup_exec_as_user: "
-		           "privsep_setup_exec_as_user error");
-	}
+	return privsep_launch_user_job(m_uid,
+	                               path,
+	                               args,
+	                               env,
+	                               iwd,
+	                               std_fds,
+	                               std_file_names,
+	                               nice_inc,
+	                               core_size_ptr,
+	                               reaper_id,
+	                               dc_job_opts,
+	                               family_info);
 }
-
-bool
-StarterPrivSepHelper::rename(const char* old_path, const char* new_path)
-{
-	ASSERT(m_user_initialized);
-	dprintf(D_FULLDEBUG,
-	        "PrivSep: renaming %s to %s as the user\n",
-	        old_path,
-	        new_path);
-	return privsep_rename(m_uid, m_gid, old_path, new_path);
-}
-
-bool
-StarterPrivSepHelper::chmod(const char* path, mode_t mode)
-{
-	ASSERT(m_user_initialized);
-	dprintf(D_FULLDEBUG,
-	        "PrivSep: about to chmod %s to 0%o as the user\n",
-	        path,
-	        (unsigned)mode);
-	return privsep_chmod(m_uid, m_gid, path, mode);
-}
-

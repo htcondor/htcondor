@@ -56,20 +56,7 @@ LocalUserLog::init( const char* filename, bool is_xml,
 	priv_state priv;
 	priv = set_user_priv();
 
-	bool ret;
-#if !defined(WIN32)
-	if (privsep_enabled()) {
-		uid_t uid;
-		gid_t gid;
-		privsep_helper.get_user_ids(uid, gid);
-		ret = u_log.initialize(uid, gid, filename, cluster, proc, subproc, NULL);
-	}
-	else {
-		ret = u_log.initialize(filename, cluster, proc, subproc, NULL);
-	}
-#else
-	ret = u_log.initialize(filename, cluster, proc, subproc, NULL);
-#endif
+	bool ret = u_log.initialize(filename, cluster, proc, subproc, NULL);
 	if( ! ret ) {
 		dprintf( D_ALWAYS, 
 				 "Failed to initialize Starter's UserLog, aborting\n" );

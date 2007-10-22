@@ -918,10 +918,11 @@ class DaemonCore : public Service
         FamilyInfo    *family_info         = NULL,
         Stream        *sock_inherit_list[] = NULL,
         int           std[]                = NULL,
+        int           fd_inherit_list[]    = NULL,
         int           nice_inc             = 0,
         sigset_t      *sigmask             = NULL,
         int           job_opt_mask         = 0,
-		size_t        *core_hard_limit      = NULL
+        size_t        *core_hard_limit     = NULL
         );
 
     //@}
@@ -1667,6 +1668,7 @@ int Create_Thread_With_Data(DataThreadWorkerFunc Worker, DataThreadReaperFunc Re
 	int data_n1 = 0, int data_n2 = 0, void * data_vp = 0);
 
 #define MAX_INHERIT_SOCKS 10
+#define MAX_INHERIT_FDS   32
 
 // Prototype to get sinful string.
 char *global_dc_sinful( void );

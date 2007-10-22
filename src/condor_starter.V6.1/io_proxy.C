@@ -126,17 +126,9 @@ bool IOProxy::init( const char *config_file )
 		dprintf(D_ALWAYS,"IOProxy: couldn't create cookie: %s\n",strerror(errno));
 		goto failure;
 	}
-
-	if (privsep_enabled()) {
-		fd = privsep_helper.open_sandbox_file(config_file,
-		                                      O_CREAT|O_TRUNC|O_WRONLY,
-		                                      0700);
-	}
-	else {
-		fd = safe_open_wrapper(config_file,
-		                       O_CREAT|O_TRUNC|O_WRONLY,
-		                       0700);
-	}
+	fd = safe_open_wrapper(config_file,
+	                       O_CREAT|O_TRUNC|O_WRONLY,
+	                       0700);
 	if(fd<0) {
 		dprintf(D_ALWAYS,
 		        "IOProxy: couldn't write to %s: %s\n",

@@ -492,6 +492,9 @@ UserProc::execute()
 		break;
 
 	  case CONDOR_UNIVERSE_VANILLA:
+	  	if (privsep_enabled()) {
+			EXCEPT("Don't know how to deal with Vanilla jobs");
+		}
 		new_args.AppendArg(shortname);
 		break;
 	}
@@ -504,17 +507,23 @@ UserProc::execute()
 	MyString exec_name;
 	exec_name = a_out_name;
 
-	// If privsep is turned on, then modify the arguments to allow execing
-	// of the user job as the correct userid as dictated by the 
-	// privledge switchboard program.
-	if (privsep_enabled() == true) {
-		// set up for execing the privledge separation tool.
-		// remove the shortname for the job
-		new_args.RemoveArg(0);
-		// replace it with the fully qualified name
-		new_args.InsertArg(exec_name.Value(),0);
+	// If privsep is turned on, then we need to use the PrivSep
+	// Switchboard to launch the job
+	//
+	FILE* switchboard_in_fp;
+	FILE* switchboard_err_fp;
+	int switchboard_child_in_fd;
+	int switchboard_child_err_fd;
+	if (privsep_enabled()) {
 
-		privsep_setup_exec_as_user(uid, gid, exec_name, new_args);
+		// create the pipes that we'll use to communicate
+		//
+		if (!privsep_create_pipes(switchboard_in_fp,
+		                          switchboard_child_in_fd,
+		                          switchboard_err_fp,
+		                          switchboard_child_err_fd)) {
+			EXCEPT("can't launch job: privsep_create_pipes failure");
+		}
 	}
 
 	argv = new_args.GetStringArray();
@@ -579,7 +588,11 @@ UserProc::execute()
 			new_reli->timeout(0);
 		}
 
-			// If I'm using privledge separation, connect to the procd
+			// If I'm using privledge separation, connect to the procd.
+			// we need to register a family with the procd for the newly
+			// created process, so that the ProcD will allow us to send
+			// signals to it
+			//
 		if (privsep_enabled() == true) {
 			char *tmp = NULL;
 			bool response;
@@ -628,8 +641,13 @@ UserProc::execute()
 		switch( job_class ) {
 		  
 		  case CONDOR_UNIVERSE_STANDARD:
-			if( chdir(local_dir) < 0 ) {
-				EXCEPT( "chdir(%s)", local_dir );
+			// if we're using PrivSep, the chdir here could fail. instead,
+			// we pass the job's IWD to the switchboard via pipe
+			//
+		  	if (!privsep_enabled()) {
+				if( chdir(local_dir) < 0 ) {
+					EXCEPT( "chdir(%s)", local_dir );
+				}
 			}
 			close( pipe_fds[WRITE_END] );
 			break;
@@ -694,6 +712,22 @@ UserProc::execute()
 		}
 #endif
 
+			// if we're using privsep, we'll exec the PrivSep Switchboard
+			// first, which is setuid; it will then setuid to the user we
+			// give it and exec the real job
+			//
+		if (privsep_enabled()) {
+			close(fileno(switchboard_in_fp));
+			close(fileno(switchboard_err_fp));
+			privsep_get_switchboard_command("exec",
+			                                switchboard_child_in_fd,
+			                                switchboard_child_err_fd,
+			                                exec_name,
+			                                new_args);
+			deleteStringArray(argv);
+			argv = new_args.GetStringArray();
+		}
+
 			// Everything's ready, start it up...
 		errno = 0;
 		execve( exec_name.Value(), argv, envp );
@@ -708,6 +742,34 @@ UserProc::execute()
 	}
 
 		// The parent
+
+		// PrivSep - we have at this point only spawned the switchboard
+		// with the "exec" command. we need to use our pipe to it in
+		// order to tell it how to execute the user job, and then use
+		// the error pipe to make sure everything worked
+		//
+	if (privsep_enabled()) {
+
+		close(switchboard_child_in_fd);
+		close(switchboard_child_err_fd);
+
+		privsep_exec_set_uid(switchboard_in_fp, uid);
+		privsep_exec_set_path(switchboard_in_fp, exec_name.Value());
+		privsep_exec_set_args(switchboard_in_fp, new_args);
+		privsep_exec_set_env(switchboard_in_fp, env_obj);
+		privsep_exec_set_iwd(switchboard_in_fp, local_dir);
+		privsep_exec_set_inherit_fd(switchboard_in_fp, pipe_fds[0]);
+		privsep_exec_set_inherit_fd(switchboard_in_fp, RSC_SOCK);
+		privsep_exec_set_inherit_fd(switchboard_in_fp, CLIENT_LOG);
+		privsep_exec_set_is_std_univ(switchboard_in_fp);
+		fclose(switchboard_in_fp);
+
+		if (!privsep_get_switchboard_response(switchboard_err_fp)) {
+			EXCEPT("error starting job: "
+			           "privsep get_switchboard_response failure");
+		}
+	}
+
 	dprintf( D_ALWAYS, "Started user job - PID = %d\n", pid );
 	if( job_class != CONDOR_UNIVERSE_VANILLA ) {
 			// Send the user process its startup environment conditions

@@ -1765,6 +1765,7 @@ AC_CHECK_HEADERS([resolv.h],[],[],[
 AC_CHECK_TYPES([int64_t])
 AC_CHECK_TYPES([long long])
 AC_CHECK_TYPES([__int64])
+AC_CHECK_TYPES([id_t])
 
 # checks for structures
 
@@ -1779,6 +1780,7 @@ AC_CHECK_FUNCS([strsignal				\
 		fseeko					\
 		ftello					\
 		lchown					\
+		dirfd					\
 		getdirentries				\
 		getdtablesize				\
 		getpagesize				\
@@ -1786,7 +1788,10 @@ AC_CHECK_FUNCS([strsignal				\
 		setegid					\
 		seteuid					\
 		setlinebuf				\
-		snprintf])
+		snprintf				\
+		setenv					\
+		unsetenv					\
+		clearenv])
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 AC_SEARCH_LIBS([dlopen], [dl],
   AC_DEFINE([HAVE_DLOPEN], [1], [dlopen function is available]))

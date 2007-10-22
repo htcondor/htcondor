@@ -297,7 +297,21 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 
 	if(privsep_enabled()) {
 		// vmgahp must have setuid-root
-		privsep_helper.get_user_ids(vmgahp_user_uid, vmgahp_user_gid);
+		//
+		// TODO: better error propagation
+		//
+		vmgahp_user_uid = privsep_helper.get_uid();
+		char* user_name;
+		if (!pcache()->get_user_name(vmgahp_user_uid, user_name)) {
+			EXCEPT("VMGahpServer::startUp: "
+			           "cannot lookup user name for UID %u",
+			       (unsigned)vmgahp_user_uid);
+		}
+		if (!pcache()->get_user_gid(user_name, vmgahp_user_gid)) {
+			EXCEPT("VMGahpServer::startUp: "
+			           "cannot lookup GID for user name %s",
+			       user_name);
+		}
 		vmgahp_condor_uid = get_condor_uid();
 		vmgahp_condor_gid = get_condor_gid();
 	}else if( can_switch_ids() ) {
@@ -382,6 +396,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 			family_info,		//family_info
 			NULL, 		//network sockets to inherit
 			io_redirect,	//redirect stdin/out/err
+			NULL,
 			nice_inc
 			);
 

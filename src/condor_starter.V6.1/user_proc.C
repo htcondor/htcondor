@@ -193,25 +193,30 @@ UserProc::PublishToEnv( Env* proc_env )
 	}
 }
 
-
-int
-UserProc::openStdFile( std_file_type type,
-                       const char* attr, 
-                       bool allow_dash,
-                       const char* log_header)
+bool
+UserProc::getStdFile( std_file_type type,
+                      const char* attr,
+                      bool allow_dash,
+                      const char* log_header,
+                      int* out_fd,
+                      MyString* out_name)
 {
-		// initialize this to -2 to mean "not specified".  if we have
-		// success, we'll have a valid fd (>=0).  if there's an error
-		// opening something, we'll return -1 which our callers
-		// consider a failed safe_open_wrapper().
-	int fd = -2;
+		// we're going to return true on success, false on error.
+		// if we succeed, then if we have an open FD that should
+		// be passed down to the job, return it in the descriptor
+		// argument. otherwise, return -1 in the descriptor
+		// argument and return the name of the file that should
+		// be opened for the child in the name argument
+	ASSERT(out_fd != NULL);
+	ASSERT(out_name != NULL);
+	*out_fd = -1;
+
 	const char* filename;
 	bool wants_stream = false;
 	const char* stream_name = NULL;
 	const char* phrase = NULL;
 	bool is_output = true;
 	bool is_null_file = false;
-
 
 		///////////////////////////////////////////////////////
 		// Initialize some settings depending on the type
@@ -234,7 +239,6 @@ UserProc::openStdFile( std_file_type type,
 		stream_name = "stderr";
 		break;
 	}
-
 
 		///////////////////////////////////////////////////////
 		// Figure out what we're trying to open, if anything
@@ -270,7 +274,6 @@ UserProc::openStdFile( std_file_type type,
 		is_null_file = true;
 	}
 
-
 		///////////////////////////////////////////////////////
 		// Deal with special cases
 		///////////////////////////////////////////////////////
@@ -286,12 +289,12 @@ UserProc::openStdFile( std_file_type type,
 			Starter->jic->notifyStarterError( err_msg.Value(), true,
 			    is_output ? CONDOR_HOLD_CODE_UnableToOpenOutputStream :
 			                CONDOR_HOLD_CODE_UnableToOpenInputStream, 0 );
-			return -1;
+			return false;
 		}
-		fd = handler->GetJobPipe();
+		*out_fd = handler->GetJobPipe();
 		dprintf( D_ALWAYS, "%s: streaming from remote file %s\n",
 				 log_header, filename );
-		return fd;
+		return true;
 	}
 
 		////////////////////////////////////
@@ -302,65 +305,97 @@ UserProc::openStdFile( std_file_type type,
 			// use the starter's fd
 		switch( type ) {
 		case SFT_IN:
-			fd = Starter->starterStdinFd();
+			*out_fd = Starter->starterStdinFd();
 			dprintf( D_ALWAYS, "%s: using STDIN of %s\n", log_header,
 					 mySubSystem );
 			break;
 		case SFT_OUT:
-			fd = Starter->starterStdoutFd();
+			*out_fd = Starter->starterStdoutFd();
 			dprintf( D_ALWAYS, "%s: using STDOUT of %s\n", log_header,
 					 mySubSystem );
 			break;
 		case SFT_ERR:
-			fd = Starter->starterStderrFd();
+			*out_fd = Starter->starterStderrFd();
 			dprintf( D_ALWAYS, "%s: using STDERR of %s\n", log_header,
 					 mySubSystem );
 			break;
 		}
-		return fd;
+		return true;
 	}
 
 		///////////////////////////////////////////////////////
 		// The regular case of a local file 
 		///////////////////////////////////////////////////////
+	*out_name = filename;
+	return true;
+}
 
+int
+UserProc::openStdFile( std_file_type type,
+                       const char* attr, 
+                       bool allow_dash,
+                       const char* log_header)
+{
+		// most of the work gets done by our helper, getStdFile
+	int fd;
+	MyString filename;
+	if (!getStdFile(type,
+	                attr,
+	                allow_dash,
+	                log_header,
+	                &fd,
+	                &filename))
+	{
+		return -1;
+	}
+
+		// if getStdFile came back with an FD, just return it
+	if (fd != -1) {
+		return fd;
+	}
+
+		// otherwise, we need to perform an open on the name
+		// we got back
+	bool is_output = (type != SFT_IN);
 	if( is_output ) {
 		int flags = O_WRONLY | O_CREAT | O_TRUNC | O_APPEND;
-		if (privsep_enabled()) {
-			fd = privsep_helper.open_user_file(filename,
-			                                   flags,
-			                                   0666);
-		}
-		else {
-			fd = safe_open_wrapper( filename, flags, 0666 );
-			if( fd < 0 ) {
-					// if failed, try again without O_TRUNC
-				flags &= ~O_TRUNC;
-				fd = safe_open_wrapper( filename, flags, 0666 );
-			}
+		fd = safe_open_wrapper( filename.Value(), flags, 0666 );
+		if( fd < 0 ) {
+				// if failed, try again without O_TRUNC
+			flags &= ~O_TRUNC;
+			fd = safe_open_wrapper( filename.Value(), flags, 0666 );
 		}
 	} else {
-		if (privsep_enabled()) {
-			fd = privsep_helper.open_user_file(filename, O_RDONLY);
-		}
-		else {
-			fd = safe_open_wrapper( filename, O_RDONLY );
-		}
+		fd = safe_open_wrapper( filename.Value(), O_RDONLY );
 	}
 	if( fd < 0 ) {
 		int open_errno = errno;
 		char const *errno_str = strerror( errno );
 		MyString err_msg;
+		const char* phrase;
+		if (type == SFT_IN) {
+			phrase = "standard input";
+		}
+		else if (type == SFT_OUT) {
+			phrase = "standard output";
+		}
+		else {
+			phrase = "standard error";
+		}
 		err_msg.sprintf( "Failed to open '%s' as %s: %s (errno %d)",
-						 filename, phrase, errno_str, errno );
+		                 filename.Value(),
+		                 phrase,
+		                 errno_str,
+		                 errno );
 		dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
 		Starter->jic->notifyStarterError( err_msg.Value(), true,
 		  is_output ? CONDOR_HOLD_CODE_UnableToOpenOutput :
 		              CONDOR_HOLD_CODE_UnableToOpenInput, open_errno );
 		return -1;
 	}
-	dprintf( is_null_file ? D_FULLDEBUG : D_ALWAYS,
-			 "%s: %s\n", log_header, filename );
+	dprintf( (filename == NULL_FILE) ? D_FULLDEBUG : D_ALWAYS,
+	         "%s: %s\n", log_header,
+	         filename.Value() );
 	return fd;
 }
 

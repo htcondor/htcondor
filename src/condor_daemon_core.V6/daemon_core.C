@@ -5100,8 +5100,8 @@ public:
 		const char *the_executable,
 		const char *the_executable_fullpath,
 		const int *the_std,
-		int the_numInheritSockFds,
-		const int (&the_inheritSockFds)[MAX_INHERIT_SOCKS],
+		int the_numInheritFds,
+		const int (&the_inheritFds)[MAX_INHERIT_FDS],
 		int the_nice_inc,
 		const priv_state &the_priv,
 		int the_want_command_port,
@@ -5114,8 +5114,8 @@ public:
 	   m_family_info(the_family_info), m_cwd(the_cwd),
 	   m_executable(the_executable),
 	   m_executable_fullpath(the_executable_fullpath), m_std(the_std),
-	   m_numInheritSockFds(the_numInheritSockFds),
-	   m_inheritSockFds(the_inheritSockFds), m_nice_inc(the_nice_inc),
+	   m_numInheritFds(the_numInheritFds),
+	   m_inheritFds(the_inheritFds), m_nice_inc(the_nice_inc),
 	   m_priv(the_priv), m_want_command_port(the_want_command_port),
 	   m_sigmask(the_sigmask), m_unix_args(0), m_unix_env(0),
 	   m_core_hard_limit(core_hard_limit)
@@ -5155,8 +5155,8 @@ private:
 	const char *m_executable;
 	const char *m_executable_fullpath;
 	const int *m_std;
-	const int m_numInheritSockFds;
-	const int (&m_inheritSockFds)[MAX_INHERIT_SOCKS];
+	const int m_numInheritFds;
+	const int (&m_inheritFds)[MAX_INHERIT_FDS];
 	int m_nice_inc;
 	const priv_state &m_priv;
 	const int m_want_command_port;
@@ -5598,8 +5598,8 @@ void CreateProcessForkit::exec() {
 		int	closed_fds[3];
 		for ( int q=0 ; (q<openfds) && (q<3) ; q++ ) {
 			bool found = FALSE;
-			for ( int k=0 ; k < m_numInheritSockFds ; k++ ) {
-				if ( m_inheritSockFds[k] == q ) {
+			for ( int k=0 ; k < m_numInheritFds ; k++ ) {
+				if ( m_inheritFds[k] == q ) {
 					found = TRUE;
 					break;
 				}
@@ -5649,8 +5649,8 @@ void CreateProcessForkit::exec() {
 	}
 
 	MyString msg = "Printing fds to inherit: ";
-	for ( int a=0 ; a<m_numInheritSockFds ; a++ ) {
-		msg += m_inheritSockFds[a];
+	for ( int a=0 ; a<m_numInheritFds ; a++ ) {
+		msg += m_inheritFds[a];
 		msg += ' ';
 	}
 	dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
@@ -5703,8 +5703,8 @@ void CreateProcessForkit::exec() {
 		if ( j == m_errorpipe[1] ) continue; // don't close our errorpipe!
 
 		found = FALSE;
-		for ( int k=0 ; k < m_numInheritSockFds ; k++ ) {
-			if ( m_inheritSockFds[k] == j ) {
+		for ( int k=0 ; k < m_numInheritFds ; k++ ) {
+			if ( m_inheritFds[k] == j ) {
 				found = TRUE;
 				break;
 			}
@@ -5803,6 +5803,7 @@ int DaemonCore::Create_Process(
 			FamilyInfo    *family_info,
 			Stream        *sock_inherit_list[],
 			int           std[],
+			int           fd_inherit_list[],
 			int           nice_inc,
 			sigset_t      *sigmask,
 			int           job_opt_mask,
@@ -5811,8 +5812,8 @@ int DaemonCore::Create_Process(
 {
 	int i;
 	char *ptmp;
-	int inheritSockFds[MAX_INHERIT_SOCKS];
-	int numInheritSockFds = 0;
+	int inheritFds[MAX_INHERIT_FDS];
+	int numInheritFds = 0;
 	extern char **environ;
 	MyString executable_buf;
 
@@ -5895,8 +5896,8 @@ int DaemonCore::Create_Process(
 //            Sock *tempSock = dynamic_cast<Sock *>( sock_inherit_list[i] );
             Sock *tempSock = ((Sock *) sock_inherit_list[i] );
             if ( tempSock ) {
-                inheritSockFds[numInheritSockFds] = tempSock->get_file_desc();
-                numInheritSockFds++;
+                inheritFds[numInheritFds] = tempSock->get_file_desc();
+                numInheritFds++;
                     // make certain that this socket is inheritable
                 if ( !(tempSock->set_inheritable(TRUE)) ) {
 					goto wrapup;
@@ -5960,12 +5961,30 @@ int DaemonCore::Create_Process(
 		}
 
             // now put the actual fds into the list of fds to inherit
-        inheritSockFds[numInheritSockFds++] = rsock.get_file_desc();
+        inheritFds[numInheritFds++] = rsock.get_file_desc();
 		if (m_wants_dc_udp) {
-			inheritSockFds[numInheritSockFds++] = ssock.get_file_desc();
+			inheritFds[numInheritFds++] = ssock.get_file_desc();
 		}
 	}
 	inheritbuf += " 0";
+
+	// now process fd_inherit_list, which allows the caller the specify
+	// arbitrary file descriptors to be passed through to the child process
+	// (currently only implemented on UNIX)
+	if (fd_inherit_list != NULL) {
+#if defined(WIN32)
+		EXCEPT("Create_Process: fd_inherit_list specified, "
+		           "but not implemented on Windows: programmer error");
+#else
+		for (int* fd_ptr = fd_inherit_list; *fd_ptr != 0; fd_ptr++) {
+			inheritFds[numInheritFds++] = *fd_ptr;
+			if (numInheritFds > MAX_INHERIT_FDS) {
+				EXCEPT("Create_Process: MAX_INHERIT_FDS (%d) reached",
+				       MAX_INHERIT_FDS);
+			}
+		}
+#endif
+	}
 
 	/* this stuff ends up in the child's environment to help processes
 		identify children/grandchildren/great-grandchildren/etc. */
@@ -6464,8 +6483,8 @@ int DaemonCore::Create_Process(
 			executable,
 			executable_fullpath,
 			std,
-			numInheritSockFds,
-			inheritSockFds,
+			numInheritFds,
+			inheritFds,
 			nice_inc,
 			priv,
 			want_command_port,
@@ -6559,10 +6578,10 @@ int DaemonCore::Create_Process(
 				dprintf( D_ALWAYS, "Re-trying Create_Process() to avoid "
 						 "PID re-use\n" );
 				return Create_Process( executable, args, priv, reaper_id,
-									   want_command_port, env, cwd,
-									   family_info,
-									   sock_inherit_list, std,
-									   nice_inc, sigmask, job_opt_mask );
+				                       want_command_port, env, cwd,
+				                       family_info,
+				                       sock_inherit_list, std, fd_inherit_list,
+				                       nice_inc, sigmask, job_opt_mask );
 				break;
 
 			default:

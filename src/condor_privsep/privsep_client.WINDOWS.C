@@ -25,6 +25,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_privsep.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 // PrivSep on Windows: check back in a little while...
 
@@ -35,4 +36,10 @@ privsep_enabled()
 		EXCEPT("PRIVSEP_ENABLED not supported on this platform");
 	}
 	return false;
+}
+
+int
+privsep_spawn_procd(const char*, ArgList&, int[3], int)
+{
+	return FALSE;
 }

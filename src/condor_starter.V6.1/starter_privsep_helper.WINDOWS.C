@@ -61,31 +61,6 @@ StarterPrivSepHelper::initialize_sandbox(const char* path)
 	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
 }
 
-int
-StarterPrivSepHelper::open_user_file(const char* path,
-                                     int flags,
-                                     mode_t mode)
-{
-	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
-	return -1;
-}
-
-int
-StarterPrivSepHelper::open_sandbox_file(const char* path,
-                                        int flags,
-                                        mode_t mode)
-{
-	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
-	return -1;
-}
-
-FILE*
-StarterPrivSepHelper::fopen_sandbox_file(const char* path, const char* mode)
-{
-	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
-	return NULL;
-}
-
 void
 StarterPrivSepHelper::chown_sandbox_to_user()
 {
@@ -98,22 +73,19 @@ StarterPrivSepHelper::chown_sandbox_to_condor()
 	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
 }
 
-void
-StarterPrivSepHelper::setup_exec_as_user(MyString&, ArgList& args)
+int
+StarterPrivSepHelper::create_process(const char*,
+                                     ArgList&,
+                                     Env&,
+                                     const char*,
+                                     int[3],
+                                     const char*[3],
+                                     int,
+                                     size_t*,
+                                     int,
+                                     int,
+                                     FamilyInfo*)
 {
 	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
-}
-
-bool
-StarterPrivSepHelper::rename(const char* old_path, const char* new_path)
-{
-	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
-	return false;
-}
-
-bool
-StarterPrivSepHelper::chmod(const char* path, mode_t mode)
-{
-	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
-	return false;
+	return 0;
 }

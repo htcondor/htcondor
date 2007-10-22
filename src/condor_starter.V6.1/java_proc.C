@@ -250,23 +250,13 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 		dprintf(D_ALWAYS,
 		        "JavaProc: JVM exited normally with code %d\n",
 		        exit_code);
-		if (privsep_enabled()) {
-			file = privsep_helper.fopen_sandbox_file(startfile, "r");
-		}
-		else {
-			file = safe_fopen_wrapper(startfile,"r");
-		}
+		file = safe_fopen_wrapper(startfile,"r");
 		if(file) {
 			dprintf(D_ALWAYS,
 			        "JavaProc: Wrapper left start record %s\n",
 			        startfile);
 			fclose(file);
-			if (privsep_enabled()) {
-				file = privsep_helper.fopen_sandbox_file(endfile, "r");
-			}
-			else {
-				file = safe_fopen_wrapper(endfile,"r");
-			}
+			file = safe_fopen_wrapper(endfile,"r");
 			if(file) {
 				dprintf(D_ALWAYS,
 				        "JavaProc: Wrapper left end record %s\n",

@@ -30,6 +30,7 @@
 #include "setenv.h"
 #include "directory.h"
 #include "basename.h"
+#include "../condor_privsep/condor_privsep.h"
 
 // this class is just used to forward reap events to the real
 // ProcFamilyProxy object; we do this in a separate class to
@@ -449,16 +450,24 @@ ProcFamilyProxy::start_procd()
 
 	// use Create_Process to start the procd
 	//
-	m_procd_pid = daemonCore->Create_Process(exe.Value(),
-	                                         args,
-	                                         PRIV_ROOT,
-	                                         m_reaper_id,
-	                                         FALSE,
-	                                         NULL,
-	                                         NULL,
-	                                         NULL,
-	                                         NULL,
-	                                         std_io);
+	if (privsep_enabled()) {
+		m_procd_pid = privsep_spawn_procd(exe.Value(),
+		                                  args,
+		                                  std_io,
+		                                  m_reaper_id);
+	}
+	else {
+		m_procd_pid = daemonCore->Create_Process(exe.Value(),
+		                                         args,
+		                                         PRIV_ROOT,
+		                                         m_reaper_id,
+		                                         FALSE,
+		                                         NULL,
+		                                         NULL,
+		                                         NULL,
+		                                         NULL,
+		                                         std_io);
+	}
 	if (m_procd_pid == FALSE) {
 		dprintf(D_ALWAYS, "start_procd: unable to execute the procd\n");
 		daemonCore->Close_Pipe(pipe_ends[0]);

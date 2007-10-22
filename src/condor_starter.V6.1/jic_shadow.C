@@ -1015,8 +1015,7 @@ JICShadow::initUserPriv( void )
 			}
 
 			if (privsep_enabled()) {
-				privsep_helper.initialize_user((uid_t)user_uid,
-				                               (gid_t)user_gid);
+				privsep_helper.initialize_user((uid_t)user_uid);
 			}
 		}
 	} 

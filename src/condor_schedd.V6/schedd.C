@@ -7008,8 +7008,8 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	   Someday, hopefully soon, we'll fix this and spawn the
 	   shadow/handler with PRIV_USER_FINAL... */
 	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
-									  is_dc, env, NULL, NULL, NULL, 
-									  std_fds_p, niceness );
+	                                  is_dc, env, NULL, NULL, NULL, 
+	                                  std_fds_p, NULL, niceness );
 	if( pid == FALSE ) {
 		MyString arg_string;
 		args.GetArgsStringForDisplay(&arg_string);
@@ -7831,10 +7831,11 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 	
 	pid = daemonCore->Create_Process( a_out_name, args, PRIV_USER_FINAL, 
-									  shadowReaperId, FALSE,
-									  &envobject, iwd, NULL, NULL, inouterr,
-									  niceness, NULL, DCJOBOPT_NO_ENV_INHERIT,
-									  core_size_ptr );
+	                                  shadowReaperId, FALSE,
+	                                  &envobject, iwd, NULL, NULL, inouterr,
+	                                  NULL, niceness, NULL,
+	                                  DCJOBOPT_NO_ENV_INHERIT,
+	                                  core_size_ptr );
 	
 	// now close those open fds - we don't want them here.
 	for ( i=0 ; i<3 ; i++ ) {

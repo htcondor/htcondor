@@ -35,6 +35,8 @@
 //
 
 class ArgList;
+class Env;
+struct FamilyInfo;
 
 class StarterPrivSepHelper {
 
@@ -46,7 +48,7 @@ public:
 	// initialize the UID
 	//
 #if !defined(WIN32)
-	void initialize_user(uid_t, gid_t);
+	void initialize_user(uid_t);
 #endif
 	void initialize_user(const char* name);
 
@@ -55,23 +57,10 @@ public:
 	void initialize_sandbox(const char* path);
 
 #if !defined(WIN32)
-	// get the user's UID and GID
+	// get the initialized UID
 	//
-	void get_user_ids(uid_t&, gid_t&);
+	uid_t get_uid();
 #endif
-
-	// open a file as the user
-	//
-	int open_user_file(const char*, int, mode_t = 0);
-
-	// open a file in the sandbox (which could be owned
-	// by the user or condor)
-	//
-	int open_sandbox_file(const char*, int, mode_t = 0);
-
-	// convenience function to get a FILE*
-	//
-	FILE* fopen_sandbox_file(const char*, const char*);
 
 	// change ownership of the sandbox to the user
 	//
@@ -81,17 +70,19 @@ public:
 	//
 	void chown_sandbox_to_condor();
 
-	// setup the input ArgList to start a process as the user
+	// launch the job as the user
 	//
-	void setup_exec_as_user(MyString&, ArgList&);
-
-	// do a rename operation as the user
-	//
-	bool rename(const char*, const char*);
-
-	// do a chmod operation as the user
-	//
-	bool chmod(const char*, mode_t);
+	int create_process(const char* path,
+	                   ArgList&    args,
+	                   Env&        env,
+	                   const char* iwd,
+					   int         std_fds[3],
+	                   const char* std_file_names[3],
+	                   int         nice_inc,
+	                   size_t*     core_size_ptr,
+	                   int         reaper_id,
+					   int         dc_job_opts,
+	                   FamilyInfo* family_info);
 
 private:
 
@@ -108,10 +99,9 @@ private:
 	bool m_sandbox_initialized;
 
 #if !defined(WIN32)
-	// the "user priv" UID and GID
+	// the "user priv" UID
 	//
 	uid_t m_uid;
-	gid_t m_gid;
 #endif
 
 	// the sandbox directory name

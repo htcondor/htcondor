@@ -24,13 +24,15 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_privsep.h"
 #include "condor_uid.h"
-#include "condor_arglist.h"
 #include "basename.h"
 #include "MyString.h"
-#include "my_popen.h"
-#include "privsep_open.h"
+#include "condor_arglist.h"
+#include "env.h"
+#include "condor_privsep.h"
+
+static const char* switchboard_path = NULL;
+static const char* switchboard_file = NULL;
 
 bool
 privsep_enabled()
@@ -39,362 +41,366 @@ privsep_enabled()
 	static bool answer;
 
 	if (first_time) {
-		answer = (param_boolean("PRIVSEP_ENABLED", false) && !is_root());
-		first_time = false;
-	}
 
-#if defined(HPUX)
-	if (answer) {
-		EXCEPT("PRIVSEP_ENABLED not supported on this platform");
+		first_time = false;
+
+		if (is_root()) {
+			answer = false;
+		}
+		else {
+			answer = param_boolean("PRIVSEP_ENABLED", false);
+		}
+
+		if (answer) {
+			switchboard_path = param("PRIVSEP_SWITCHBOARD");
+			if (switchboard_path == NULL) {
+				EXCEPT("PRIVSEP_ENABLED is true, but "
+				           "PRIVSEP_SWITCHBOARD is undefined");
+			}
+			switchboard_file = condor_basename(switchboard_path);
+		}
 	}
-#endif
 
 	return answer;
 }
 
 bool
-privsep_setup_exec_as_user(uid_t uid, gid_t gid, MyString& exe, ArgList& args)
+privsep_create_pipes(FILE*& in_writer,
+                     int& in_reader,
+                     FILE*& err_reader,
+                     int& err_writer)
 {
-	char* privsep_executable = param("PRIVSEP_EXECUTABLE");
-	if (privsep_executable == NULL) {
-		dprintf(D_ALWAYS,
-		        "privsep open: PRIVSEP_EXECUTABLE not defined\n");
-		return false;
-	}
-	exe = privsep_executable;
-	free(privsep_executable);
-	
-	args.InsertArg(condor_basename(exe.Value()), 0);
-	args.InsertArg("3", 1);
-	MyString tmp;
-	tmp.sprintf("%u", (unsigned)uid);
-	args.InsertArg(tmp.Value(), 2);
-	tmp.sprintf("%u", (unsigned)gid);
-	args.InsertArg(tmp.Value(), 3);
+	int in_pipe[2] = {-1, -1};
+	int err_pipe[2] = {-1, -1};
+	FILE* in_fp = NULL;
+	FILE* err_fp = NULL;
 
+	// make the pipes at the OS-level
+	//
+	if (pipe(in_pipe) == -1) {
+		dprintf(D_ALWAYS,
+		        "privsep_create_pipes: pipe error: %s (%d)\n",
+		        strerror(errno),
+		        errno);
+		goto PRIVSEP_CREATE_PIPES_FAILURE;
+	}
+	if (pipe(err_pipe) == -1) {
+		dprintf(D_ALWAYS,
+		        "privsep_create_pipes: pipe error: %s (%d)\n",
+		        strerror(errno),
+		        errno);
+		goto PRIVSEP_CREATE_PIPES_FAILURE;
+	}
+
+	// make FILE*'s for convenience
+	//
+	in_fp = fdopen(in_pipe[1], "w");
+	if (in_fp == NULL) {
+		dprintf(D_ALWAYS,
+		        "privsep_create_pipes: pipe error: %s (%d)\n",
+		        strerror(errno),
+		        errno);
+		goto PRIVSEP_CREATE_PIPES_FAILURE;
+	}
+	err_fp = fdopen(err_pipe[0], "r");
+	if (err_fp == NULL) {
+		dprintf(D_ALWAYS,
+		        "privsep_create_pipes: pipe error: %s (%d)\n",
+		        strerror(errno),
+		        errno);
+		goto PRIVSEP_CREATE_PIPES_FAILURE;
+	}
+
+	// set the return arguments and return success
+	//
+	in_writer = in_fp;
+	in_reader = in_pipe[0];
+	err_reader = err_fp;
+	err_writer = err_pipe[1];
 	return true;
-}
 
-// helper function for privsep_open
-//
-static int
-receive_fd(int switchboard_fd)
-{
-	int received_fd;
-
-	// set up a msghdr structure for our call to recvmsg
-	//
-	struct msghdr msg;
-
-	// don't care about the address
-	//
-	msg.msg_name = NULL;
-	msg.msg_namelen = 0;
-
-	// we should receive a single null byte of in-band data
-	//
-	char buf[1];
-	struct iovec iov[1];
-	iov[0].iov_base = buf;
-	iov[0].iov_len = 1;
-	msg.msg_iov = iov;
-	msg.msg_iovlen = 1;
-
-#if !defined(PRIVSEP_OPEN_USE_ACCRIGHTS)
-	// control data (this is where we receive the FD)
-	//
-	char cmsg_buf[CMSG_SPACE(sizeof(int))];
-	msg.msg_control = cmsg_buf;
-	msg.msg_controllen = CMSG_SPACE(sizeof(int));
-	struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
-#else
-	// set up the variable received_fd to get the
-	// file descriptor
-	//
-	msg.msg_accrights = (caddr_t)&received_fd;
-	msg.msg_accrightslen = sizeof(int);
-#endif
-
-	// receive it!
-	//
-	int bytes = recvmsg(switchboard_fd, &msg, 0);
-	if (bytes == -1) {
-		dprintf(D_ALWAYS, "recvmsg error: %s\n", strerror(errno));
-		return -1;
+PRIVSEP_CREATE_PIPES_FAILURE:
+	if (in_fp != NULL) {
+		fclose(in_fp);
+		in_pipe[1] = -1;
 	}
-	if (bytes == 0) {
-		dprintf(D_ALWAYS,
-		        "privsep_open: error: connection closed by server\n");
-		return -1;
+	if (err_fp != NULL) {
+		fclose(err_fp);
+		err_pipe[0] = -1;
 	}
-	if (bytes != 1) {
-		dprintf(D_ALWAYS,
-		        "privsep_open: error: too many bytes received on socket\n");
-		return -1;
+	if (in_pipe[0] != -1) {
+		close(in_pipe[0]);
 	}
-	if (*(char*)msg.msg_iov[0].iov_base != '\0') {
-		dprintf(D_ALWAYS,
-		        "privsep_open: protocol error: didn't receive null byte\n");
-		return -1;
+	if (in_pipe[1] != -1) {
+		close(in_pipe[1]);
 	}
-#if !defined(PRIVSEP_OPEN_USE_ACCRIGHTS)
-	if (msg.msg_controllen != CMSG_LEN(sizeof(int))) {
-#else
-	if (msg.msg_accrightslen != sizeof(int)) {
-#endif
-		dprintf(D_ALWAYS,
-		        "privsep_open: protocol error: wrong control data size\n");
-		return -1;
+	if (err_pipe[0] != -1) {
+		close(err_pipe[0]);
 	}
-
-	// holy shit, it worked!
-	//
-#if !defined(PRIVSEP_OPEN_USE_ACCRIGHTS)
-	memcpy(&received_fd, CMSG_DATA(cmsg), sizeof(int));
-#endif
-
-	return received_fd;
-}
-
-int
-privsep_open(uid_t uid, gid_t gid, const char* path, int flags, mode_t mode)
-{
-	ArgList switchboard_args;
-
-	// make sure we have a binary we can use
-	//
-	char* privsep_executable = param("PRIVSEP_EXECUTABLE");
-	if (privsep_executable == NULL) {
-		dprintf(D_ALWAYS,
-		        "privsep open: PRIVSEP_EXECUTABLE not defined\n");
-		return -1;
+	if (err_pipe[1] != -1) {
+		close(err_pipe[1]);
 	}
-	switchboard_args.AppendArg(privsep_executable);
-	free(privsep_executable);
-
-	// create a connected pair of UNIX domain sockets to use for FD passing
-	//
-	int socket_fds[2];
-	if (socketpair(AF_UNIX, SOCK_STREAM, 0, socket_fds) == -1) {
-		dprintf(D_ALWAYS, "socketpair error: %s\n", strerror(errno));
-		return -1;
-	}
-
-	// fork a new process in which to invoke the PrivSep Switchboard
-	//
-	pid_t child_pid = fork();
-	if (child_pid == -1) {
-		dprintf(D_ALWAYS, "fork error: %s\n", strerror(errno));
-		return -1;
-	}
-
-	// child
-	//
-	if (child_pid == 0) {
-
-		// close the FD for the parent's side of the socket pair
-		//
-		close(socket_fds[0]);
-
-		// dup our side of the socket pair to FD 0
-		// (which is where the privsep_open server expects it)
-		//
-		if (dup2(socket_fds[1], 0) == -1) {
-			_exit(1);
-		}
-
-		// now close the original, since it is no longer needed
-		//
-		close(socket_fds[1]);
-
-		// setup the arguments for the Switchboard's "open" operation
-
-		// operation "7" means "open"
-		//
-		switchboard_args.AppendArg("7");
-
-		// pass the target UID and GID
-		//
-		switchboard_args.AppendArg(uid);
-		switchboard_args.AppendArg(gid);
-	
-		// the path to open, open flags, and mode
-		//
-		switchboard_args.AppendArg(path);
-		switchboard_args.AppendArg(flags);
-		switchboard_args.AppendArg(mode);
-
-		char** args = switchboard_args.GetStringArray();
-
-		// exec the privsep_open server
-		//
-		execv(args[0], args);
-
-		// error occurred if we got here
-		//
-		_exit(2);
-	}
-
-	// close the FD for the child's side of the socket pair
-	//
-	close(socket_fds[1]);
-
-	// attempt to receive the requested FD from the server
-	//
-	int fd = receive_fd(socket_fds[0]);
-
-	// UNIX domain socket no longer needed
-	//
-	close(socket_fds[0]);
-
-	// wait for child to exit
-	//
-	int status;
-	if (waitpid(child_pid, &status, 0) == -1) {
-		dprintf(D_ALWAYS, "privsep_open: waitpid error: %s\n", strerror(errno));
-	}
-	if ((!WIFEXITED(status)) || (WEXITSTATUS(status) != 0)) {
-		dprintf(D_ALWAYS,
-		        "privsep_open: unexpected status from server: %d\n",
-		        status);
-	}
-
-	// return the opened fd
-	//
-	return fd;
-}
-
-bool
-privsep_create_dir(uid_t uid, gid_t gid, const char* pathname)
-{
-	ArgList privsep_mkdir_args;
-
-	char* privsep_executable = param("PRIVSEP_EXECUTABLE");
-	if (privsep_executable == NULL) {
-		dprintf(D_ALWAYS,
-		        "privsep_mkdir_dir: PRIVSEP_EXECUTABLE not defined\n");
-		return false;
-	}
-	privsep_mkdir_args.AppendArg(privsep_executable);
-	free(privsep_executable);
-	privsep_mkdir_args.AppendArg(5);
-	privsep_mkdir_args.AppendArg(uid);
-	privsep_mkdir_args.AppendArg(gid);
-	privsep_mkdir_args.AppendArg(pathname);
-
-	MyString args_string;
-	int retval = my_system(privsep_mkdir_args);
-
-	if (retval != 0) {
-		dprintf(D_ALWAYS,
-		        "privsep_mkdir: unexpected return from switchboard: %d\n",
-		        retval);
-		return false;
-	}
-
-	return true;
-}
-
-bool
-privsep_remove_dir(const char*)
-{
-	ASSERT(0);
 	return false;
 }
 
-bool
-privsep_chown_dir(uid_t uid, gid_t, const char* pathname)
+void
+privsep_get_switchboard_command(const char* op,
+                                int in_fd,
+                                int err_fd,
+                                MyString& cmd,
+                                ArgList& arg_list)
 {
-	ArgList privsep_chown_args;
-
-	char* privsep_executable = param("PRIVSEP_EXECUTABLE");
-	if (privsep_executable == NULL) {
-		dprintf(D_ALWAYS,
-		        "privsep_chown_dir: PRIVSEP_EXECUTABLE not defined\n");
-		return false;
-	}
-	privsep_chown_args.AppendArg(privsep_executable);
-	free(privsep_executable);
-	privsep_chown_args.AppendArg(6);
-	privsep_chown_args.AppendArg(uid);
-	privsep_chown_args.AppendArg(pathname);
-
-	MyString args_string;
-	int retval = my_system(privsep_chown_args);
-
-	if (retval != 0) {
-		dprintf(D_ALWAYS,
-		        "privsep_chown_dir: unexpected return from switchboard: %d\n",
-		        retval);
-		return false;
-	}
-
-	return true;
+	cmd = switchboard_path;
+	arg_list.Clear();
+	arg_list.AppendArg(switchboard_file);
+	arg_list.AppendArg(op);
+	arg_list.AppendArg(in_fd);
+	arg_list.AppendArg(err_fd);
 }
 
 bool
-privsep_rename(uid_t uid,
-               gid_t gid,
-               const char* old_path,
-               const char* new_path)
+privsep_get_switchboard_response(FILE* err_fp)
 {
-	ArgList privsep_rename_args;
-
-	char* privsep_executable = param("PRIVSEP_EXECUTABLE");
-	if (privsep_executable == NULL) {
+	// first read everything off the error pipe and close
+	// the error pipe
+	//
+	MyString err;
+	while (err.readLine(err_fp, true));
+	fclose(err_fp);
+	
+	// if there was something there, print it out and return
+	// an indication that something went wrong
+	//
+	if (err.Length() != 0) {
 		dprintf(D_ALWAYS,
-		        "privsep_rename_dir: PRIVSEP_EXECUTABLE not defined\n");
-		return false;
-	}
-	privsep_rename_args.AppendArg(privsep_executable);
-	free(privsep_executable);
-	privsep_rename_args.AppendArg(8);
-	privsep_rename_args.AppendArg(uid);
-	privsep_rename_args.AppendArg(gid);
-	privsep_rename_args.AppendArg(old_path);
-	privsep_rename_args.AppendArg(new_path);
-
-	MyString args_string;
-	int retval = my_system(privsep_rename_args);
-
-	if (retval != 0) {
-		dprintf(D_ALWAYS,
-		        "privsep_rename_dir: unexpected return from switchboard: %d\n",
-		        retval);
+		        "privsep_get_switchboard_response: error received: %s\n",
+			err.Value());
 		return false;
 	}
 
+	// otherwise, indicate that everything's fine
+	//
 	return true;
 }
 
-bool
-privsep_chmod(uid_t uid, gid_t gid, const char* path, mode_t mode)
+static pid_t
+privsep_launch_switchboard(const char* op, FILE*& in_fp, FILE*& err_fp)
 {
-	ArgList privsep_chmod_args;
+	ASSERT(switchboard_path != NULL);
+	ASSERT(switchboard_file != NULL);
 
-	char* privsep_executable = param("PRIVSEP_EXECUTABLE");
-	if (privsep_executable == NULL) {
-		dprintf(D_ALWAYS,
-		        "privsep_chmod_dir: PRIVSEP_EXECUTABLE not defined\n");
-		return false;
-	}
-	privsep_chmod_args.AppendArg(privsep_executable);
-	free(privsep_executable);
-	privsep_chmod_args.AppendArg(9);
-	privsep_chmod_args.AppendArg(uid);
-	privsep_chmod_args.AppendArg(gid);
-	privsep_chmod_args.AppendArg(path);
-	privsep_chmod_args.AppendArg(mode);
-
-	MyString args_string;
-	int retval = my_system(privsep_chmod_args);
-
-	if (retval != 0) {
-		dprintf(D_ALWAYS,
-		        "privsep_chmod_dir: unexpected return from switchboard: %d\n",
-		        retval);
-		return false;
+	// create the pipes for communication with the switchboard
+	//
+	int child_in_fd;
+	int child_err_fd;
+	if (!privsep_create_pipes(in_fp, child_in_fd, err_fp, child_err_fd)) {
+		return 0;
 	}
 
-	return true;
+	pid_t switchboard_pid = fork();
+	if (switchboard_pid == -1) {
+		dprintf(D_ALWAYS,
+		        "privsep_launch_switchboard: fork error: %s (%d)\n",
+		        strerror(errno),
+		        errno);
+		return 0;
+	}
+
+	// in the parent, we just return back to the caller so they can
+	// start sending commands to the switchboard's input pipe; but
+	// make sure to close the clients sides of our pipes first
+	//
+	if (switchboard_pid != 0) {
+		close(child_in_fd);
+		close(child_err_fd);
+		return switchboard_pid;
+	}
+
+	// in the child, we need to exec the switchboard binary with the
+	// appropriate arguments
+	//
+	close(fileno(in_fp));
+	close(fileno(err_fp));
+	MyString cmd;
+	ArgList arg_list;
+	privsep_get_switchboard_command(op,
+	                                child_in_fd,
+	                                child_err_fd,
+	                                cmd,
+	                                arg_list);
+	execv(cmd.Value(), arg_list.GetStringArray());
+
+	// exec failed; tell our parent using the error pipe that something
+	// went wrong before exiting
+	//
+	MyString err;
+	err.sprintf("exec error on %s: %s (%d)\n",
+	            cmd.Value(),
+	            strerror(errno),
+	            errno);
+	write(child_err_fd, err.Value(), err.Length());
+	_exit(1);
+}
+
+static bool
+privsep_reap_switchboard(pid_t switchboard_pid, FILE* err_fp)
+{
+	// first check the error pipe
+	//
+	bool error_received = !privsep_get_switchboard_response(err_fp);
+		
+	// now call waitpid on the switchboard pid
+	//
+	int status;
+	if (waitpid(switchboard_pid, &status, 0) == -1) {
+		dprintf(D_ALWAYS,
+		        "privsep_reap_switchboard: waitpid error: %s (%d)\n",
+		        strerror(errno),
+		        errno);
+		return false;
+	}
+	
+	// now return; the operation was a success if the return code
+	// was zero and no message was recieved
+	//
+	return (!error_received &&
+	        (WIFEXITED(status) && (WEXITSTATUS(status) == 0)));
+}
+
+void
+privsep_exec_set_uid(FILE* fp, uid_t uid)
+{
+	fprintf(fp, "user-uid=%u\n", (unsigned)uid);
+}
+
+void
+privsep_exec_set_path(FILE* fp, const char* path)
+{
+	fprintf(fp, "exec-path=%s\n", path);
+}
+
+void
+privsep_exec_set_args(FILE* fp, ArgList& args)
+{
+	int num_args = args.Count();
+	for (int i = 0; i < num_args; i++) {
+		fprintf(fp, "exec-arg=%s\n", args.GetArg(i));
+	}
+}
+
+void
+privsep_exec_set_env(FILE* fp, Env& env)
+{
+	char** env_array = env.getStringArray();
+	for (char** ptr = env_array; *ptr != NULL; ptr++) {
+		fprintf(fp, "exec-env=%s\n", *ptr);
+	}
+	deleteStringArray(env_array);
+}
+
+void
+privsep_exec_set_iwd(FILE* fp, const char* iwd)
+{
+	fprintf(fp, "exec-init-dir=%s\n", iwd);
+}
+
+void
+privsep_exec_set_inherit_fd(FILE* fp, int fd)
+{
+	fprintf(fp, "exec-keep-open-fd=%d\n", fd);
+}
+
+void
+privsep_exec_set_std_file(FILE* fp, int target_fd, const char* path)
+{
+	ASSERT((target_fd >= 0) && (target_fd <= 2));
+	static const char* handle_name_array[3] = {"stdin", "stdout", "stderr"};
+	fprintf(fp, "exec-%s=%s\n", handle_name_array[target_fd], path);
+}
+
+void
+privsep_exec_set_is_std_univ(FILE* fp)
+{
+	fprintf(fp, "exec-is-std-univ\n");
+}
+
+bool
+privsep_create_dir(uid_t uid, const char* pathname)
+{
+	// launch the privsep switchboard with the "mkdir" operation
+	//
+	FILE* in_fp;
+	FILE* err_fp;
+	pid_t switchboard_pid = privsep_launch_switchboard("mkdir",
+	                                                   in_fp,
+	                                                   err_fp);
+	if (switchboard_pid == 0) {
+		dprintf(D_ALWAYS, "privsep_create_dir: "
+		                      "error launching switchboard\n");
+		return false;
+	}
+
+	// feed it the uid and pathname via its input pipe
+	//
+	fprintf(in_fp, "user-uid = %u\n", (unsigned)uid);
+	fprintf(in_fp, "user-dir = %s\n", pathname);
+	fclose(in_fp);
+
+	// now reap it and return
+	//
+	return privsep_reap_switchboard(switchboard_pid, err_fp);
+}
+
+bool
+privsep_remove_dir(uid_t uid, const char* pathname)
+{
+	// launch the privsep switchboard with the "rmdir" operation
+	//
+	FILE* in_fp;
+	FILE* err_fp;
+	pid_t switchboard_pid = privsep_launch_switchboard("rmdir",
+	                                                   in_fp,
+	                                                   err_fp);
+	if (switchboard_pid == 0) {
+		dprintf(D_ALWAYS, "privsep_remove_dir: "
+		                      "error launching switchboard\n");
+		return false;
+	}
+
+	// feed it the uid and pathname via its input pipe
+	//
+	fprintf(in_fp, "user-uid = %u\n", (unsigned)uid);
+	fprintf(in_fp, "user-dir = %s\n", pathname);
+	fclose(in_fp);
+
+	// now reap it and return
+	//
+	return privsep_reap_switchboard(switchboard_pid, err_fp);
+}
+
+bool
+privsep_chown_dir(uid_t uid, const char* pathname)
+{
+	// launch the privsep switchboard with the "chowndir" operation
+	//
+	FILE* in_fp;
+	FILE* err_fp;
+	pid_t switchboard_pid = privsep_launch_switchboard("chowndir",
+	                                                   in_fp,
+	                                                   err_fp);
+	if (switchboard_pid == 0) {
+		dprintf(D_ALWAYS, "privsep_chown_dir: "
+		                      "error launching switchboard\n");
+		return false;
+	}
+
+	// feed it the uid and pathname via its input pipe
+	//
+	fprintf(in_fp, "user-uid = %u\n", (unsigned)uid);
+	fprintf(in_fp, "user-dir = %s\n", pathname);
+	fclose(in_fp);
+
+	// now reap it and return
+	//
+	return privsep_reap_switchboard(switchboard_pid, err_fp);
 }

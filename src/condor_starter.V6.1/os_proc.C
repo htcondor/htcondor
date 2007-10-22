@@ -95,7 +95,13 @@ OsProc::StartJob(FamilyInfo* family_info)
 
 	// if name is condor_exec, we transferred it, so make certain
 	// it is executable.
-	if ( strcmp(CONDOR_EXEC,JobName) == 0 ) {
+	//
+	// unless we're in PrivSep mode, since we won't be able to
+	// do the chmod. this should NOT be a problem though, since
+	// the file should have been transferred with the execute
+	// bit set
+	//
+	if ( (strcmp(CONDOR_EXEC,JobName) == 0) && !privsep_enabled() ) {
 			// also, prepend the full path to this name so that we
 			// don't have to rely on the PATH inside the
 			// USER_JOB_WRAPPER or for exec().
@@ -103,16 +109,9 @@ OsProc::StartJob(FamilyInfo* family_info)
 				 DIR_DELIM_CHAR, CONDOR_EXEC );
 
 		priv_state old_priv = set_user_priv();
-		bool ret;
-		if (privsep_enabled()) {
-			ret = privsep_helper.chmod(JobName, 0755);
-		}
-		else {
-			int retval = chmod( JobName, 0755 );
-			ret = (retval == 0);
-		}
+		int retval = chmod( JobName, 0755 );
 		set_priv( old_priv );
-		if( !ret ) {
+		if( retval != 0 ) {
 			dprintf ( D_ALWAYS, "Failed to chmod %s!\n",JobName );
 			return 0;
 		}
@@ -148,15 +147,12 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// First, put "condor_exec" at the front of Args, since that
 		// will become argv[0] of what we exec(), either the wrapper
 		// or the actual job.
-
+		//
 		// The Java universe cannot tolerate an incorrect argv[0].
 		// For Java, set it correctly.  In a future version, we
 		// may consider removing the CONDOR_EXEC feature entirely.
 		//
-		// PrivSep currently cannot handle an incorrect argv[0] either,
-		// since the Switchboard uses it as the file to exec
-		//
-	if( (job_universe == CONDOR_UNIVERSE_JAVA) || privsep_enabled() ) {
+	if( (job_universe == CONDOR_UNIVERSE_JAVA) ) {
 		args.AppendArg(JobName);
 	} else {
 		args.AppendArg(CONDOR_EXEC);
@@ -241,23 +237,57 @@ OsProc::StartJob(FamilyInfo* family_info)
 	priv_state priv;
 	priv = set_user_priv();
 
-	fds[0] = openStdFile( SFT_IN,
-	                      NULL,
-	                      true,
-	                      "Input file");
-
-	fds[1] = openStdFile( SFT_OUT,
-	                      NULL,
-	                      true,
-	                      "Output file");
-
-	fds[2] = openStdFile( SFT_ERR,
-	                      NULL,
-	                      true,
-	                      "Error file");
+		// if we're in PrivSep mode, we won't necessarily be able to
+		// open the files for the job. getStdFile will return us an
+		// open FD in some situations, but otherwise will give us
+		// a filename that we'll pass to the PrivSep Switchboard
+		//
+	bool stdin_ok;
+	bool stdout_ok;
+	bool stderr_ok;
+	MyString privsep_stdin_name;
+	MyString privsep_stdout_name;
+	MyString privsep_stderr_name;
+	if (privsep_enabled()) {
+		stdin_ok = getStdFile(SFT_IN,
+		                      NULL,
+		                      true,
+		                      "Input file",
+		                      &fds[0],
+		                      &privsep_stdin_name);
+		stdout_ok = getStdFile(SFT_OUT,
+		                       NULL,
+		                       true,
+		                       "Output file",
+		                       &fds[1],
+		                       &privsep_stdout_name);
+		stderr_ok = getStdFile(SFT_ERR,
+		                       NULL,
+		                       true,
+		                       "Error file",
+		                       &fds[2],
+		                       &privsep_stderr_name);
+	}
+	else {
+		fds[0] = openStdFile( SFT_IN,
+		                      NULL,
+		                      true,
+		                      "Input file");
+		stdin_ok = (fds[0] != -1);
+		fds[1] = openStdFile( SFT_OUT,
+		                      NULL,
+		                      true,
+		                      "Output file");
+		stdout_ok = (fds[1] != -1);
+		fds[2] = openStdFile( SFT_ERR,
+		                      NULL,
+		                      true,
+		                      "Error file");
+		stderr_ok = (fds[2] != -1);
+	}
 
 	/* Bail out if we couldn't open the std files correctly */
-	if( fds[0] == -1 || fds[1] == -1 || fds[2] == -1 ) {
+	if( !stdin_ok || !stdout_ok || !stderr_ok ) {
 			/* only close ones that had been opened correctly */
 		if( fds[0] >= 0 && !starter_stdin ) {
 			close(fds[0]);
@@ -378,16 +408,40 @@ OsProc::StartJob(FamilyInfo* family_info)
 	set_priv ( priv );
 
 	if (privsep_enabled()) {
-		MyString exe;
-		privsep_helper.setup_exec_as_user(exe, args);
-		ASSERT(exe.Length() < sizeof(JobName));
-		strcpy(JobName, exe.Value());
+		const char* std_file_names[3] = {
+			privsep_stdin_name.Value(),
+			privsep_stdout_name.Value(),
+			privsep_stderr_name.Value()
+		};
+		JobPid = privsep_helper.create_process(JobName,
+		                                       args,
+		                                       job_env,
+		                                       job_iwd,
+		                                       fds,
+		                                       std_file_names,
+		                                       nice_inc,
+		                                       core_size_ptr,
+		                                       1,
+		                                       job_opt_mask,
+		                                       family_info);
 	}
-
-	JobPid = daemonCore->Create_Process( JobName, args, PRIV_USER_FINAL,
-					     1, FALSE, &job_env, job_iwd, family_info,
-					     NULL, fds, nice_inc, NULL, job_opt_mask, 
-						 core_size_ptr );
+	else {
+		JobPid = daemonCore->Create_Process( JobName,
+		                                     args,
+		                                     PRIV_USER_FINAL,
+		                                     1,
+		                                     FALSE,
+		                                     &job_env,
+		                                     job_iwd,
+		                                     family_info,
+		                                     NULL,
+		                                     fds,
+											 NULL,
+		                                     nice_inc,
+		                                     NULL,
+		                                     job_opt_mask, 
+		                                     core_size_ptr );
+	}
 
 	//NOTE: Create_Process() saves the errno for us if it is an
 	//"interesting" error.
@@ -558,11 +612,7 @@ OsProc::renameCoreFile( const char* old_name, const char* new_name )
 	errno = 0;
 	old_priv = set_user_priv();
 	int ret;
-	if (privsep_enabled()) {
-		ret = privsep_helper.rename(old_full.Value(), new_full.Value());
-		errno = ENOENT;
-	}
-	else {
+	if (!privsep_enabled()) {
 		ret = rename(old_full.Value(), new_full.Value());
 	}
 	if( ret != 0 ) {

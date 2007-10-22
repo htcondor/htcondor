@@ -239,10 +239,20 @@ ToolDaemonProc::StartJob()
 
 	set_priv( priv );
 
-	JobPid = daemonCore->
-		Create_Process( DaemonName, DaemonArgs,
-		                PRIV_USER_FINAL, 1, FALSE, &job_env, job_iwd, &fi,
-		                NULL, fds, nice_inc, NULL, DCJOBOPT_NO_ENV_INHERIT );
+	JobPid = daemonCore->Create_Process( DaemonName,
+	                                     DaemonArgs,
+	                                     PRIV_USER_FINAL,
+	                                     1,
+	                                     FALSE,
+	                                     &job_env,
+	                                     job_iwd,
+	                                     &fi,
+	                                     NULL,
+	                                     fds,
+	                                     NULL,
+	                                     nice_inc,
+	                                     NULL,
+	                                     DCJOBOPT_NO_ENV_INHERIT );
 
 		//NOTE: Create_Process() saves the errno for us if it is an
 		//"interesting" error.

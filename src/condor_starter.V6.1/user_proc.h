@@ -149,6 +149,13 @@ protected:
 		SFT_IN, SFT_OUT, SFT_ERR
 	};
 
+	bool getStdFile( std_file_type type,
+	                 const char* attr,
+	                 bool allow_dash,
+	                 const char* log_header,
+	                 int* out_fd,
+	                 MyString* out_name);
+
 	int openStdFile( std_file_type type,
 	                 const char* attr, 
 	                 bool allow_dash,

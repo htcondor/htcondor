@@ -33,7 +33,6 @@
 #include "condor_config.h"
 #include "utc_time.h"
 #include "stat_wrapper.h"
-#include "../condor_privsep/condor_privsep.h"
 
 
 static const char SynchDelimiter[] = "...\n";
@@ -50,7 +49,7 @@ UserLog::UserLog( void )
 UserLog::UserLog (const char *owner,
                   const char *domain,
                   const char *file,
-				  int c,
+                  int c,
                   int p,
                   int s,
                   bool xml, const char *gjid)
@@ -99,13 +98,7 @@ UserLog::Reset( void )
 	m_use_xml = XML_USERLOG_DEFAULT;
 	m_gjid = NULL;
 
-#if !defined(WIN32)
-	m_privsep_uid = 0;
-	m_privsep_gid = 0;
-#endif
-
 	MyString	base;
-
 	base = "";
 	base += getuid();
 	base += '.';
@@ -203,29 +196,15 @@ open_file(const char *file,
 	// Unix
 	int	flags = O_WRONLY | O_CREAT;
 	mode_t mode = 0664;
-
-	if (privsep_enabled() && log_as_user) {
-		ASSERT(m_privsep_uid != 0);
-		ASSERT(m_privsep_gid != 0);
-		fd = privsep_open(m_privsep_uid, m_privsep_gid, file, flags, mode);
-		if (fd == -1) {
-			dprintf(D_ALWAYS,
-		            "UserLog::initialize: privsep_open(\"%s\") failed\n",
-			        file);
-			return false;
-		}
-	}
-	else {
-		fd = safe_open_wrapper( file, flags, mode );
-		if( fd < 0 ) {
-			dprintf( D_ALWAYS,
-			         "UserLog::initialize: "
-			             "safe_open_wrapper(\"%s\") failed - errno %d (%s)\n",
-			         file,
-			         errno,
-			         strerror(errno) );
-			return false;
-		}
+	fd = safe_open_wrapper( file, flags, mode );
+	if( fd < 0 ) {
+		dprintf( D_ALWAYS,
+		         "UserLog::initialize: "
+		             "safe_open_wrapper(\"%s\") failed - errno %d (%s)\n",
+		         file,
+		         errno,
+		         strerror(errno) );
+		return false;
 	}
 
 		// attach it to stdio stream
@@ -365,27 +344,6 @@ initialize( const char *owner, const char *domain, const char *file,
 
 	return res;
 }
-
-#if !defined(WIN32)
-bool
-UserLog::initialize( uid_t uid,
-                     gid_t gid,
-                     const char *file,
-                     int c,
-                     int p,
-                     int s,
-					 const char *gjid )
-{
-	// this is only for use in the PrivSep world; make sure this is the case
-	//
-	ASSERT(privsep_enabled());
-
-	m_privsep_uid = uid;
-	m_privsep_gid = gid;
-
-	return initialize(file, c, p, s, gjid);
-}
-#endif
 
 bool UserLog::
 initialize( int c, int p, int s, const char *gjid )

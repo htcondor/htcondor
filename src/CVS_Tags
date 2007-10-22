@@ -1,3 +1,7 @@
+10/22/07 V6_9-privsep_switchboard-merge-1
+  The state of V6_9-privsep_switchboard-branch before merging to
+  the trunk.
+
 10/19/07 V6_9-ian_osca-{root,branch}
   Branch for research code involving signed ClassAds (sca), using 
   OpenSSL (o) rather than GSI.  This branch was made from 
