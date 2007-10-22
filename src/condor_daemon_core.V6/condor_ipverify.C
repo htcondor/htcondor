@@ -335,17 +335,7 @@ bool IpVerify :: has_user(UserPerm_t * perm, const char * user, int & mask, MySt
 
     if (user && *user && (strcmp("*", user) != 0)) {
         userid = user;
-        if ( (found = perm->lookup(userid, mask)) == -1 ) {
-            // try *@..../...
-            char *tmp;
-            if ((tmp = strchr( user, '@')) == NULL) {
-                dprintf(D_SECURITY, "IPVERIFY: Malformed user name: %s\n", user);
-            }      
-            else {
-				userid.sprintf("*%s", tmp);
-				found = perm->lookup(userid, mask);
-            }
-        }
+        found = perm->lookup(userid, mask);
     }
 
     // Last resort, see if the wild card is in the list
@@ -404,7 +394,7 @@ IpVerify::add_hash_entry(const struct in_addr & sin_addr, const char * user, int
 //              */perdita.cs.wisc.edu            
 //              *@cs.wisc.edu/*                  -- wild
 //              *@cs.wisc.edu/*.cs.wisc.edu      -- wild
-//              *@cs.wisc.edu/perdita.cs.wisc.edu
+//              *@cs.wisc.edu/perdita.cs.wisc.edu-- wild
 //              * and */* are considered as invalid and are discarded earlier
 //
 // This returns true if we successfully added the given entry to the
@@ -433,7 +423,12 @@ IpVerify::add_host_entry( const char* addr, int mask )
 	// a.b.c.d/len or a.b.c.d/m.a.s.k
 	// is_ipaddr will still return false for those
 
-    if( is_ipaddr(host,&sin_addr) == TRUE ) {
+	if ( strchr(user,'*') && strcmp(user,"*") ) {
+		// Refuse usernames that contain wildcards.
+		// The only exception is '*', which AddAllowHost likes to put
+		// directly into the hashtable.
+		result = false;
+	} else if( is_ipaddr(host,&sin_addr) == TRUE ) {
         // This address is an IP addr in numeric form.
         // Add it into the hash table.
         add_hash_entry(sin_addr, user, mask);
