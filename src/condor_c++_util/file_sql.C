@@ -131,7 +131,7 @@ QuillErrCode FILESQL::file_close()
 		 * error.
 		 */
 	if (fp) {
-		fclose(fp);
+		retval = fclose(fp);
 		fp = NULL;
 	}
 	else {
