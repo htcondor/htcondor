@@ -1001,6 +1001,15 @@ Claim::sendAliveResponseHandler( Stream *sock )
 		"Received Alive response of %d from schedd %d job %d.%d\n",
 		reply, c_addr, c_cluster, c_proc);
 
+		// If the response is -1, that means the schedd knows nothing
+		// about this claim, so relinquish it.
+	if ( reply == -1 ) {
+		dprintf(D_FAILURE|D_ALWAYS,"State change: claim no longer recognized "
+			 "by the schedd - removing claim\n" );
+		finishKillClaim();	// get rid of the claim
+		return FALSE;
+	}
+
 	alive();	// this will push forward the lease & alive expiration timer
 
 		// and now clear c_alive_inprogress_sock since this alive is done.
@@ -1026,25 +1035,33 @@ Claim::leaseExpired()
 		return TRUE;
 	}
 
+	dprintf( D_FAILURE|D_ALWAYS, "State change: claim lease expired "
+			 "(condor_schedd gone?)\n" );
+
+		// Kill the claim.
+	finishKillClaim();
+	return TRUE;
+}
+
+int
+Claim::finishKillClaim()
+{
 	Resource* res_ip = resmgr->get_by_cur_id( id() );
 	if( !res_ip ) {
 		EXCEPT( "Can't find resource of expired claim" );
 	}
-		// Note that this claim timed out so we don't try to send a 
+		// Note that this claim either (a) timed out, or (b) is unknown 
+		// by the schedd, so we don't try to send a 
 		// command to our client.
 	if( c_client ) {
 		delete c_client;
 		c_client = NULL;
 	}
 
-	dprintf( D_FAILURE|D_ALWAYS, "State change: claim lease expired "
-			 "(condor_schedd gone?)\n" );
-
 		// Kill the claim.
 	res_ip->kill_claim();
 	return TRUE;
 }
-
 
 void
 Claim::alive()

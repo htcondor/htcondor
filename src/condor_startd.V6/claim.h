@@ -307,6 +307,7 @@ private:
 		// Helper methods
 	int  finishReleaseCmd( void );
 	int  finishDeactivateCmd( void );
+	int  finishKillClaim( void );
 
 		/** Once the starter exits and the claim is no longer active,
 			reset it by clearing out all the activation-specific data
