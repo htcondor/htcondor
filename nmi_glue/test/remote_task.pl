@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.2.2.11 2007-10-19 21:17:18 bt Exp $
+# $Id: remote_task.pl,v 1.2.2.12 2007-10-22 20:32:57 bt Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -37,6 +37,16 @@ my $BaseDir = $ENV{BASE_DIR} || c_die("BASE_DIR is not in environment!\n");
 my $SrcDir = $ENV{SRC_DIR} || c_die("SRC_DIR is not in environment!\n");
 my $testdir = "condor_tests";
 
+# iterations have numbers placed at the end of the name 
+# for unique db tracking in nmi for now.
+if($fulltestname =~ /([\w\-\.\+]+)-\d+/) {
+	my $matchingtest = $fulltestname . ".run";
+	if(!(-f $matchingtest)) {
+		# if we don't have a test called this, strip iterator off
+		$fulltestname = $1;
+	}
+}
+
 ######################################################################
 # get the testname and group
 ######################################################################
@@ -47,16 +57,6 @@ my $compiler = $testinfo[1];
 
 if( ! $testname ) {
     c_die("Invalid input for testname\n");
-}
-
-# iterations have numbers placed at the end of the name 
-# for unique db tracking in nmi for now.
-if($testname =~ /([\w\-]+)-\d+/) {
-	my $matchingtest = $testname . ".run";
-	if(!(-f $matchingtest)) {
-		# if we don't have a test called this, strip iterator off
-		$testname = $1;
-	}
 }
 
 #track time.....
