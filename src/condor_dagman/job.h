@@ -351,8 +351,7 @@ class Job {
 		// Whether the _nodePriority value is meaningful.
 	bool _hasNodePriority;
 
-		// Node priority (only really matters for sibling nodes).  Lower
-		// number is better priority (run first).
+		// Node priority.  Higher number is better priority (submit first).
 	int _nodePriority;
 
 private:

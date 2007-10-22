@@ -1255,12 +1255,12 @@ Dag::StartNode( Job *node, bool isRetry )
     }
 	// no PRE script exists or is done, so add job to the queue of ready jobs
 	if ( isRetry && m_retryNodeFirst ) {
-		_readyQ->Prepend( node, node->_nodePriority );
+		_readyQ->Prepend( node, -node->_nodePriority );
 	} else {
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( node, node->_nodePriority );
+			_readyQ->Prepend( node, -node->_nodePriority );
 		} else {
-			_readyQ->Append( node, node->_nodePriority );
+			_readyQ->Append( node, -node->_nodePriority );
 		}
 	}
 	return TRUE;
@@ -1492,9 +1492,9 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 				thisSubmitDelay == 1 ? "" : "s" );
 
 		if ( m_retrySubmitFirst ) {
-		  _readyQ->Prepend(job, job->_nodePriority);
+		  _readyQ->Prepend(job, -job->_nodePriority);
 		} else {
-		  _readyQ->Append(job, job->_nodePriority);
+		  _readyQ->Append(job, -job->_nodePriority);
 		}
 	  }
 
@@ -1596,9 +1596,9 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		job->_Status = Job::STATUS_READY;
 		_preRunNodeCount--;
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( job, job->_nodePriority );
+			_readyQ->Prepend( job, -job->_nodePriority );
 		} else {
-			_readyQ->Append( job, job->_nodePriority );
+			_readyQ->Append( job, -job->_nodePriority );
 		}
 	}
 
