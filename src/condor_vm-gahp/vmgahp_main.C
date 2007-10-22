@@ -46,6 +46,16 @@ int	oriDebugFlags = 0;
 
 MyString workingdir;
 
+// This variables come from vmgahp_common.C
+extern bool SetUid;
+extern bool needchown;
+extern MyString caller_name;
+extern MyString job_user_name;
+extern uid_t caller_uid;
+extern uid_t caller_gid;
+extern uid_t job_user_uid;
+extern uid_t job_user_gid;
+
 void
 vm_cleanup(void)
 {
@@ -76,15 +86,6 @@ void Reconfig()
 	oriDebugFlags = DebugFlags;
 	if( Termlog ) {
 		DebugFlags = 0;
-	}else {
-		if( isOwnSwitchUid() ) {
-			// Because we use our own priv swithcing, 
-			// dprintf will be broken.
-			// Stopping all logging.
-			oriDebugFlags = 0;
-			DebugFlags = 0;
-			Termlog = 1;
-		}
 	}
 
 	if( (vmgahp_mode != VMGAHP_TEST_MODE) &&
@@ -129,6 +130,108 @@ main_shutdown_graceful()
 void 
 main_pre_dc_init(int argc, char* argv[]) 
 {
+#if !defined(WIN32)
+	bool SwitchUid = false;
+
+	caller_uid = getuid();
+	caller_gid = getgid();
+
+	uid_t caller_euid = geteuid();
+	uid_t caller_egid = getegid();
+
+
+	SwitchUid = can_switch_ids();
+
+	// Set user uid/gid
+	MyString user_uid;
+	MyString user_gid;
+	user_uid = getenv("VMGAHP_USER_UID");
+	if( user_uid.IsEmpty() == false ) {
+		int env_uid = (int)strtol(user_uid.Value(), (char **)NULL, 10);
+		if( env_uid > 0 ) {
+			job_user_uid = env_uid;
+
+			// Try to read user_gid
+			user_gid = getenv("VMGAHP_USER_GID");
+			if( user_gid.IsEmpty() == false ) {
+				int env_gid = (int)strtol(user_gid.Value(), (char **)NULL, 10);
+				if( env_gid > 0 ) {
+					job_user_gid = env_gid;
+				}
+			}
+			if( job_user_gid == ROOT_UID ) {
+				job_user_gid = job_user_uid;
+			}
+		}
+	}
+
+	// check setuid-root
+	if( SwitchUid && (caller_uid > 0) && (caller_euid > 0 ) )  {
+		// To make sure that daemonCore supports setuid-root
+		priv_state oldpriv = set_root_priv();
+		caller_euid = geteuid();
+		caller_egid = getegid();
+		set_priv(oldpriv);
+	}
+
+	if( (caller_uid > 0) && !caller_euid ) {
+		// This daemon has setuid-root
+		SetUid = true;
+
+		// check if vmgahp need to chown files 
+		// in working directory.
+		if( getenv("VMGAHP_NEED_CHOWN") ) {
+			needchown = true;
+		}
+	}
+
+	if( !SwitchUid ) {
+		// We cannot switch uids
+		// a job user uid is set to caller uid
+		job_user_uid = caller_uid;
+		job_user_gid = caller_gid;
+	}else {
+		// We can switch uids
+		if( job_user_uid == ROOT_UID ) {
+			// a job user uid is not set yet.
+			if( caller_uid != ROOT_UID ) {
+				job_user_uid = caller_uid;
+				if( caller_gid != ROOT_UID ) {
+					job_user_gid = caller_gid;
+				}else {
+					job_user_gid = caller_uid;
+				}
+			}else {
+				job_user_uid = get_condor_uid(); 
+				job_user_gid = get_condor_gid(); 
+			}
+		}
+	}
+
+	// find the user name calling this program
+	char *user_name = NULL;
+	passwd_cache* p_cache = pcache();
+	if( p_cache->get_user_name(caller_uid, user_name) == true ) {
+		caller_name = user_name;
+	}
+
+	if( job_user_uid == caller_uid ) {
+		job_user_name = caller_name;
+	}
+
+	if( SwitchUid ) {
+		set_user_ids(job_user_uid, job_user_gid);
+		set_user_priv();
+
+		// Try to get the name of a job user
+		// If failed, it is harmless.
+		if( job_user_uid != caller_uid ) {
+			if( p_cache->get_user_name(job_user_uid, user_name) == true ) {
+				job_user_name = user_name;
+			}
+		}
+	}
+#endif
 }
 
 void 
@@ -303,7 +406,7 @@ int main_init(int argc, char *argv[])
 		DC_Exit(1);
 	}
 
-	initialize_uids(vmtype.Value());
+	initialize_uids();
 
 #if defined(LINUX)
 	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
@@ -424,7 +527,7 @@ int main_init(int argc, char *argv[])
 #if defined(LINUX)
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN ) == 0 ) {
 			XenType::killVMFast(gahpconfig->m_vm_script.Value(), 
-					matchstring.Value());
+					matchstring.Value(), gahpconfig->m_controller.Value());
 		}else
 #endif
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {

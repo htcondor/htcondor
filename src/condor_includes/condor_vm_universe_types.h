@@ -55,10 +55,10 @@
 
 /* ClassAd Attributes for Xen */
 #define VMPARAM_XEN_KERNEL			"VMPARAM_Xen_Kernel"
-#define VMPARAM_XEN_RAMDISK			"VMPARAM_Xen_Ramdisk"
+#define VMPARAM_XEN_INITRD			"VMPARAM_Xen_Initrd"
 #define VMPARAM_XEN_ROOT			"VMPARAM_Xen_Root"
 #define VMPARAM_XEN_DISK			"VMPARAM_Xen_Disk"
-#define VMPARAM_XEN_EXTRA			"VMPARAM_Xen_Extra"
+#define VMPARAM_XEN_KERNEL_PARAMS	"VMPARAM_Xen_Kernel_Params"
 #define VMPARAM_XEN_CDROM_DEVICE	"VMPARAM_Xen_CDROM_Device"
 #define VMPARAM_XEN_TRANSFER_FILES	"VMPARAM_Xen_Transfer_Files"
 

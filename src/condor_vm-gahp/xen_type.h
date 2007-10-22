@@ -43,7 +43,7 @@ class XenType : public VMType
 public:
 	static bool checkXenParams(VMGahpConfig* config);
 	static bool testXen(VMGahpConfig* config);
-	static bool killVMFast(const char* script, const char* vmname);
+	static bool killVMFast(const char* script, const char* vmname, const char* controller);
 
 	XenType(const char* scriptname, const char* workingpath, ClassAd* ad);
 
@@ -68,7 +68,10 @@ public:
 	virtual bool killVM();
 
 private:
-	MyString makeXenDiskString(void);
+	MyString makeXMDiskString(void);
+	MyString makeVirshDiskString(void);
+	bool createISO();
+
 	bool parseXenDiskParam(const char *format);
 	bool writableXenDisk(const char* file);
 	void updateLocalWriteDiskTimestamp(time_t timestamp);
@@ -78,12 +81,23 @@ private:
 	bool findCkptConfigAndSuspendFile(MyString &config, MyString &suspendfile);
 	bool checkCkptSuspendFile(const char* file);
 	bool ResumeFromSoftSuspend(void);
+	bool CreateXenVMCofigFile(const char* controller, const char* filename);
+	bool CreateVirshConfigFile(const char* filename);
+	bool CreateXMConfigFile(const char* filename);
 
 	SimpleList<XenDisk*> m_disk_list;
 
+	MyString m_xen_controller;
 	MyString m_xen_cdrom_device;
 	MyString m_suspendfile;
 	float m_cputime_before_suspend;
+
+	MyString m_xen_kernel_submit_param;
+	MyString m_xen_kernel_file;
+	MyString m_xen_initrd_file;
+	MyString m_xen_root;
+	MyString m_xen_kernel_params;
+	MyString m_xen_bootloader;
 
 	bool m_xen_hw_vt;
 	bool m_allow_hw_vt_suspend;

@@ -387,14 +387,20 @@ VMProc::StartJob()
 		return false;
 	}
 
-	int vmgahp_error = new_req->checkResult(err_msg);
-	if( vmgahp_error != VMGAHP_NO_ERR ) {
+	if( new_req->checkResult(err_msg) == false ) {
 		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
 		m_vmgahp->printSystemErrorMsg();
-		if( (vmgahp_error == VMGAHP_ERR_INTERNAL) || 
-				(vmgahp_error == VMGAHP_ERR_CRITICAL) ) {
+
+		MyString internal_err;
+		MyString critical_err;
+		getVMGahpErrString(VMGAHP_ERR_INTERNAL, internal_err);
+		getVMGahpErrString(VMGAHP_ERR_CRITICAL, critical_err);
+
+		if( !strcmp(err_msg.Value(), internal_err.Value()) ||
+			!strcmp(err_msg.Value(), critical_err.Value()) ) {
 			reportErrorToStartd();
 		}
+
 		Starter->jic->notifyStarterError( err_msg.Value(), true, 
 				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
 
@@ -788,12 +794,15 @@ VMProc::Suspend()
 	}
 
 	MyString gahpmsg;
-	int gahp_error = new_req->checkResult(gahpmsg);
-	if( gahp_error != VMGAHP_NO_ERR ) {
+	if( new_req->checkResult(gahpmsg) == false ) {
 		dprintf(D_ALWAYS, "Failed to suspend the VM(%s)", gahpmsg.Value());
 		m_vmgahp->printSystemErrorMsg();
 		delete new_req;
-   		if( gahp_error != VMGAHP_ERR_VM_NO_SUPPORT_SUSPEND ) {
+
+		MyString errmsg;
+		getVMGahpErrString(VMGAHP_ERR_VM_NO_SUPPORT_SUSPEND, errmsg);
+
+		if( strcmp(errmsg.Value(), gahpmsg.Value()) ) {
 			// It is possible that a VM job is just finished.
 			// So we reset the timer for status 
 			if( m_vmstatus_tid != -1 ) {
@@ -850,7 +859,7 @@ VMProc::Continue()
 	}
 
 	MyString gahpmsg;
-	if( new_req->checkResult(gahpmsg) != VMGAHP_NO_ERR ) {
+	if( new_req->checkResult(gahpmsg) == false ) {
 		dprintf(D_ALWAYS, "Failed to resume the VM(%s)", gahpmsg.Value());
 		m_vmgahp->printSystemErrorMsg();
 		delete new_req;
@@ -1025,7 +1034,7 @@ VMProc::StopVM()
 	}
 
 	MyString gahpmsg;
-	if( new_req->checkResult(gahpmsg) != VMGAHP_NO_ERR ) {
+	if( new_req->checkResult(gahpmsg) == false ) {
 		dprintf(D_ALWAYS, "Failed to stop the VM(%s)\n", gahpmsg.Value());
 		m_vmgahp->printSystemErrorMsg();
 		reportErrorToStartd();
@@ -1083,12 +1092,15 @@ VMProc::Ckpt()
 	}
 
 	MyString gahpmsg;
-	int gahp_error = new_req->checkResult(gahpmsg);
-	if( gahp_error != VMGAHP_NO_ERR ) {
+	if( new_req->checkResult(gahpmsg) == false ) {
 		dprintf(D_ALWAYS, "Failed to checkpoint the VM(%s)", gahpmsg.Value());
 		m_vmgahp->printSystemErrorMsg();
 		delete new_req;
-   		if( gahp_error != VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT ) {
+
+		MyString errmsg;
+		getVMGahpErrString(VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT, errmsg);
+
+		if( strcmp(errmsg.Value(), gahpmsg.Value()) ) {
 			// It is possible that a VM job is just finished.
 			// So we reset the timer for status 
 			if( m_vmstatus_tid != -1 ) {
@@ -1187,7 +1199,7 @@ VMProc::PIDofVM()
 	}
 
 	MyString gahpmsg;
-	if( new_req->checkResult(gahpmsg) != VMGAHP_NO_ERR ) {
+	if( new_req->checkResult(gahpmsg) == false ) {
 		dprintf(D_ALWAYS, "Failed to get PID of VM(%s)", gahpmsg.Value());
 		m_vmgahp->printSystemErrorMsg();
 		delete new_req;

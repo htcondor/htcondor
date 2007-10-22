@@ -42,19 +42,15 @@ static BUCKET *VMConfigVars[VMCONFIGVARSIZE];
 static StringList allConfigParams;
 static StringList forcedConfigParams;
 
-static bool SetUid = false;
-static bool needchown = false;
-static bool SwitchUid = false;
-static bool MySwitchUid = false;
-THREAD_LOCAL_STORAGE static priv_state CurrentPrivState = PRIV_UNKNOWN;
-static uid_t job_user_uid = ROOT_UID;
-static uid_t job_user_gid = ROOT_UID;
-static uid_t caller_uid = ROOT_UID;
-static gid_t caller_gid = ROOT_UID;
-static uid_t caller_euid = ROOT_UID;
-static gid_t caller_egid = ROOT_UID;
-static MyString caller_name;
-static MyString job_user_name;
+bool SetUid = false;
+bool needchown = false;
+MyString caller_name;
+MyString job_user_name;
+
+uid_t caller_uid = ROOT_UID;
+gid_t caller_gid = ROOT_UID;
+uid_t job_user_uid = ROOT_UID;
+uid_t job_user_gid = ROOT_UID;
 
 const char *support_vms_list[] = {
 #if defined(LINUX)
@@ -743,19 +739,13 @@ void vmprintf( int flags, const char *fmt, ... )
 
 
 void 
-initialize_uids(const char* vmtype)
+initialize_uids(void)
 {
-	SetUid = false;
-	SwitchUid = false;
-	MySwitchUid = false;
-
 #if defined(WIN32)
 #include "my_username.h"
 
 	char *name = NULL;
 	char *domain = NULL;
-
-	SwitchUid = can_switch_ids();
 
 	name = my_username();
 	domain = my_domainname();
@@ -767,7 +757,6 @@ initialize_uids(const char* vmtype)
 		// shouldn't happen - we always can get our own token
 		vmprintf(D_ALWAYS, "Could not initialize user_priv with our own token!\n");
 	}
-	CurrentPrivState = get_priv();
 
 	vmprintf(D_ALWAYS, "Initialize Uids: caller=%s@%s, job user=%s@%s\n", 
 			caller_name.Value(), domain, job_user_name.Value(), domain);
@@ -780,173 +769,15 @@ initialize_uids(const char* vmtype)
 	}
 	return;
 #else
-	caller_uid = getuid();
-	caller_gid = getgid();
-	caller_euid = geteuid();
-	caller_egid = getegid();
-
-	SwitchUid = can_switch_ids();
-
+	// init_user_ids was called in main_pre_dc_init()
 	vmprintf(D_ALWAYS, "Initial UID/GUID=%d/%d, EUID/EGUID=%d/%d, "
-			"Condor UID/GID=%d,%d\n", (int)caller_uid, (int)caller_gid, 
-			(int)caller_euid, (int)caller_egid, 
+			"Condor UID/GID=%d,%d\n", (int)getuid(), (int)getuid(), 
+			(int)geteuid(), (int)getegid(), 
 			(int)get_condor_uid(), (int)get_condor_gid());
-
-	// Set user uid/gid
-	MyString user_uid;
-	MyString user_gid;
-	user_uid = getenv("VMGAHP_USER_UID");
-	if( user_uid.IsEmpty() == false ) {
-		int env_uid = (int)strtol(user_uid.Value(), (char **)NULL, 10);
-		if( env_uid > 0 ) {
-			job_user_uid = env_uid;
-
-			// Try to read user_gid
-			user_gid = getenv("VMGAHP_USER_GID");
-			if( user_gid.IsEmpty() == false ) {
-				int env_gid = (int)strtol(user_gid.Value(), (char **)NULL, 10);
-				if( env_gid > 0 ) {
-					job_user_gid = env_gid;
-				}
-			}
-			if( job_user_gid == ROOT_UID ) {
-				job_user_gid = job_user_uid;
-			}
-		}
-	}
-
-	// check setuid-root
-	if( (caller_uid > 0) && (caller_euid > 0 ) )  {
-		// To make sure that daemonCore supports setuid-root
-		if( SwitchUid ) {
-			// May it means that daemonCore supports setuid-root
-			priv_state oldpriv = set_root_priv();
-			caller_euid = geteuid();
-			caller_egid = getegid();
-			set_priv(oldpriv);
-			vmprintf(D_PRIV, "After set_root_priv UID/GUID=%d/%d, "
-					"EUID/EGUID=%d/%d\n", (int)caller_uid, (int)caller_gid, 
-					(int)caller_euid, (int)caller_egid);
-		}
-	}
-
-	if( (caller_uid > 0) && !caller_euid ) {
-		// This daemon has setuid-root
-		SetUid = true;
-
-		// check if vmgahp need to chown files 
-		// in working directory.
-		if( getenv("VMGAHP_NEED_CHOWN") ) {
-			needchown = true;
-		}
-	}
-
-	CurrentPrivState = get_priv();
-
-	if( SetUid && !SwitchUid )  {
-		vmprintf(D_ALWAYS, "This daemonCore doesn't support setuid-root\n");
-		if( strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) != 0 ) {
-			vmprintf(D_ALWAYS, "vmgahp for '%s' requires that daemonCore "
-					"support setuid-root. Exiting..\n", vmtype);
-			DC_Exit(1);
-		}
-		MySwitchUid = true;
-		CurrentPrivState = PRIV_ROOT;
-	}
-
-	if( !SwitchUid && !MySwitchUid ) {
-		// We cannot switch uids
-		// a job user uid is set to caller uid
-		job_user_uid = caller_uid;
-		job_user_gid = caller_gid;
-	}else {
-		// We can switch uids
-		if( job_user_uid == ROOT_UID ) {
-			// a job user uid is not set yet.
-			if( caller_uid != ROOT_UID ) {
-				job_user_uid = caller_uid;
-				if( caller_gid != ROOT_UID ) {
-					job_user_gid = caller_gid;
-				}else {
-					job_user_gid = caller_uid;
-				}
-			}else {
-				job_user_uid = get_condor_uid(); 
-				job_user_gid = get_condor_gid(); 
-			}
-		}
-	}
-
-
-	if( SetUid ) {
-		// For security, make sure that Condor uid is equal to caller uid 
-		// in setuid-root vmgahp.
-		if( caller_uid != get_condor_uid() ) {
-			vmprintf(D_ALWAYS, "Security ERROR: mismatch of caller uid=%d and "
-					"condor_uid=%d\n", (int)caller_uid, (int)get_condor_uid());
-			DC_Exit(1);
-		}
-		if( caller_gid != get_condor_gid() ) {
-			vmprintf(D_ALWAYS, "Security ERROR: mismatch of caller gid=%d and "
-					"condor_gid=%d\n", (int)caller_gid, (int)get_condor_gid());
-			DC_Exit(1);
-		}
-	}
-
-	// find the user name calling this program
-	char *user_name = NULL;
-	passwd_cache* p_cache = pcache();
-	p_cache->get_user_name(caller_uid, user_name);
-	caller_name = user_name;
-
-	if( SetUid ) {
-		if( caller_name.IsEmpty() ) {
-			vmprintf(D_ALWAYS, "\nERROR: Failed to get the user name "
-					"calling this program(uid=%d)\n", (int)caller_uid);
-			DC_Exit(1);
-		}
-	}
-
-	if( job_user_uid == caller_uid ) {
-		job_user_name = caller_name;
-	}
-
-	if( SwitchUid || MySwitchUid ) {
-		if( SwitchUid ) {
-			if( set_user_ids(job_user_uid, job_user_gid) == false ) {
-				vmprintf(D_ALWAYS, "\nERROR: set_user_ids() failed with "
-						"uid=%d,gid=%d\n", (int)job_user_uid, (int)job_user_gid);
-				DC_Exit(1);
-			}
-		}
-
-		// Try to get the name of a job user
-		// If failed, it is harmless.
-		if( job_user_uid != caller_uid ) {
-			if( p_cache->get_user_name(job_user_uid, user_name) == false ) {
-				// This senario may happen if we use SOFT_UID_DOMAIN
-				vmprintf(D_ALWAYS, "\nWarning: Failed to get the name "
-						"of a job user(uid=%d). Using SOFT_UID_DOMAIN ??\n", 
-						(int)job_user_uid);
-			}
-
-			job_user_name = user_name;
-		}
-	}
 
 	vmprintf(D_ALWAYS, "Initialize Uids: caller=%s, job user=%s\n", 
 			caller_name.Value(), job_user_name.Value());
 	
-	if( MySwitchUid ) {
-		// Because we use our own priv switching, 
-		// dprintf will be broken. 
-		// So we stop all logging.
-		if( !Termlog ) {
-			DebugFlags = 0;
-			oriDebugFlags = 0;
-			Termlog = 1;
-		}
-	}
 	return;
 #endif
 }
@@ -961,18 +792,6 @@ gid_t
 get_caller_gid(void)
 {
 	return caller_gid;
-}
-
-uid_t
-get_caller_euid(void)
-{
-	return caller_euid;
-}
-
-gid_t 
-get_caller_egid(void)
-{
-	return caller_egid;
 }
 
 uid_t 
@@ -1009,14 +828,9 @@ bool needChown(void)
 	return needchown;
 }
 
-bool isOwnSwitchUid(void)
-{
-	return MySwitchUid;
-}
-
 bool canSwitchUid(void)
 {
-	return ( SwitchUid || MySwitchUid );
+	return can_switch_ids();
 }
 
 static char* get_priv_state_name(priv_state s)
@@ -1067,55 +881,11 @@ _priv_debug_log(priv_state prev, priv_state new_priv, char file[], int line)
 priv_state 
 _vmgahp_set_priv(priv_state s, char file[], int line, int dologging)
 {
-	priv_state PrevPrivState = CurrentPrivState;
-
-	if( MySwitchUid ) {
-#if !defined(WIN32)
-		// daemonCore doesn't support setuid-root
-		// Currently this code works well only for Xen. 
-
-		if( s == PRIV_UNKNOWN ) {
-			/* ignore */
-			return CurrentPrivState;
-		}
-
-		if( s != CurrentPrivState ) {
-			if( ((s == PRIV_CONDOR ) || (s == PRIV_USER)) && 
-					(( CurrentPrivState == PRIV_CONDOR ) || 
-					 ( CurrentPrivState == PRIV_USER))) {
-				// In setuid-Root, 
-				// PRIV_USER and PRIV_CONDOR are same
-				CurrentPrivState = s;
-			}else {
-				CurrentPrivState = s;
-				switch(s) {
-					case PRIV_ROOT:
-						seteuid(0);
-						break;
-					case PRIV_CONDOR: 
-					case PRIV_USER:
-						seteuid(0);
-						setegid(get_job_user_uid());
-						seteuid(get_job_user_uid());
-						break;
-					default:
-						break;	/* silently ignore */
-				}
-			}
-		}
-		if(dologging) {
-			_priv_debug_log(PrevPrivState, CurrentPrivState, file, line);
-		}
-#endif
-		return PrevPrivState;
-	}
-
-
 	// We use daemonCore uid switch.
-	CurrentPrivState = get_priv();
-	PrevPrivState = CurrentPrivState;
+	priv_state PrevPrivState = get_priv();
 	_set_priv(s, file, line, dologging);
-	CurrentPrivState = get_priv();
+	priv_state CurrentPrivState = get_priv();
+
 	if(dologging) {
 		_priv_debug_log(PrevPrivState, CurrentPrivState, file, line);
 	}
@@ -1143,4 +913,26 @@ systemCommand(ArgList &args, bool is_root)
 		vmprintf(D_ALWAYS, "Failed to execute my_system: %s\n", args_string.Value());
 	}
 	return result;
+}
+
+MyString
+makeErrorMessage(const char* err_string)
+{
+	MyString buffer;
+
+	if( err_string ) {
+		for( int i = 0; err_string[i] != '\0'; i++ ) {
+			switch( err_string[i] ) {
+				case ' ':
+				case '\\':
+				case '\r':
+				case '\n':
+					buffer += '\\';
+				default:
+					buffer += err_string[i];
+			}
+		}
+	}
+
+	return buffer;
 }

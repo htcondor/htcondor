@@ -147,23 +147,26 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 	if( m_vm_networking ) {
 		// Read parameter for networking types
 		if( m_classAd.LookupString( ATTR_JOB_VM_NETWORKING_TYPE, 
-					m_vm_networking_interfaces) != 1 ) {
-			vmprintf(D_ALWAYS, "A job requests networking but "
-					"the parameter for networking types is not defined\n");
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_JOBCLASSAD_MISMATCHED_NETWORKING_TYPE;
-			return false;
-		}
+					m_vm_networking_type) == 1 ) {
+			// vm_networking_type is defined
 
-		// change string to lowercase
-		m_vm_networking_interfaces.trim();
-		m_vm_networking_interfaces.strlwr();
-		if( vmgahp->m_gahp_config->m_vm_networking_types.contains(m_vm_networking_interfaces.Value()) == false ) {
-			vmprintf(D_ALWAYS, "Networking type(%s) is not supported by "
-					"this gahp server\n", m_vm_networking_interfaces.Value());
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_JOBCLASSAD_MISMATCHED_NETWORKING_TYPE;
-			return false;
+			// change string to lowercase
+			m_vm_networking_type.trim();
+			m_vm_networking_type.strlwr();
+			if( vmgahp->m_gahp_config->m_vm_networking_types.contains(m_vm_networking_type.Value()) == false ) {
+				vmprintf(D_ALWAYS, "Networking type(%s) is not supported by "
+						"this gahp server\n", m_vm_networking_type.Value());
+				m_result_msg = "";
+				m_result_msg += VMGAHP_ERR_JOBCLASSAD_MISMATCHED_NETWORKING_TYPE;
+				return false;
+			}
+		}else {
+			// vm_networking_type is undefined
+			if( vmgahp->m_gahp_config->m_vm_default_networking_type.IsEmpty() == false ) {
+				m_vm_networking_type = vmgahp->m_gahp_config->m_vm_default_networking_type;
+			}else {
+				m_vm_networking_type = "nat";
+			}
 		}
 	}
 

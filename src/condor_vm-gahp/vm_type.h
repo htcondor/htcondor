@@ -79,14 +79,14 @@ public:
 	MyString m_result_msg;
 
 protected:
+	virtual bool createISOConfigAndName(StringList *files, MyString &isoconf, MyString &isofile);
+	virtual	bool createISO();
+
 	void setVMStatus(vm_status status);
 	void deleteNonTransferredFiles();
 	bool parseCommonParamFromClassAd(bool is_root = false);
 	bool createConfigUsingScript(const char* configfile);
 	bool createTempFile(const char *template_string, const char *suffix, MyString &outname);
-	bool createISOConfigAndName(StringList *files, MyString &isoconf, MyString &isofile);
-	bool createISO();
-
 	bool isTransferedFile(const char* file_name, MyString& fullname);
 	void chownWorkingFiles(uid_t dst_uid);
 
@@ -117,7 +117,7 @@ protected:
 	ClassAd m_classAd;
 	int m_vm_mem;  // VM memory requested in Job classAd
 	bool m_vm_networking;
-	MyString m_vm_networking_interfaces;
+	MyString m_vm_networking_type;
 	bool m_vm_checkpoint;
 	bool m_vm_no_output_vm;
 	bool m_vm_hardware_vt;

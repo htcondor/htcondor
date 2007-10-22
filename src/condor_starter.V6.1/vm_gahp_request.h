@@ -78,7 +78,7 @@ class VMGahpRequest : public Service {
 
 		int getReqId();
 		Gahp_Args* getResult();
-		int checkResult(MyString& errmsg);
+		bool checkResult(MyString& errmsg);
 
 		reqstatus getPendingStatus();
 		void clearPending();

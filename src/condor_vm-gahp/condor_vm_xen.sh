@@ -26,10 +26,20 @@
 #
 # Xen Control Tool
 # This program must be called by root user.
-# V0.1 / 2007-Mar-01 / Jaeyoung Yoon / jyoon@cs.wisc.edu
+# V0.2 / 2007-Oct-19 / Jaeyoung Yoon / jyoon@cs.wisc.edu
 #
 
-XM=/usr/sbin/xm
+usage() {
+	echo $"Usage: $0 {xm|virsh} {start|stop|suspend|resume|pause|unpause|status|getvminfo|check|killvm|createiso|createconfig}" 1>&2
+	exit 1
+}
+
+if [ -z "$1" ] ; then
+	usage;
+fi
+
+XM=$1
+CTRL_PROG=`basename $XM`
 MKISOFS="mkisofs"
 PROG="$0"
 TOPDIR=`pwd`
@@ -40,6 +50,40 @@ XM_ERROR_OUTPUT=xm_error_file
 unalias rm 2>/dev/null
 unalias cp 2>/dev/null
 
+run_controller() {
+	CTRL_RESULT=0
+	if [ "${CTRL_PROG}" = "xm" ]; then
+		run_xm_command $@	
+		CTRL_RESULT=$?
+	elif [ "${CTRL_PROG}" = "virsh" ]; then
+		run_virsh_command $@	
+		CTRL_RESULT=$?
+	fi
+	return $CTRL_RESULT
+}
+
+run_virsh_command() {
+		rm -f "$XM_STD_OUTPUT" 2>/dev/null
+		rm -f "$XM_ERROR_OUTPUT" 2>/dev/null
+		# Because it is possible that some arguments have spaces,
+		# We do like this.
+		if [ -n "$5" ]; then
+			$XM "$1" "$2" "$3" "$4" "$5" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
+		elif [ -n "$4" ]; then
+			$XM "$1" "$2" "$3" "$4" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
+		elif [ -n "$3" ]; then
+			$XM "$1" "$2" "$3" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
+		elif [ -n "$2" ]; then
+			$XM "$1" "$2" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
+		elif [ -n "$1" ]; then
+			$XM "$1" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
+		else
+			$XM > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
+		fi
+		REALRESULT=$?
+	return $REALRESULT
+}
+
 run_xm_command() {
 	TMP_RESULT=0
 	ERR_COUNT=0
@@ -49,7 +93,11 @@ run_xm_command() {
 		rm -f "$XM_ERROR_OUTPUT" 2>/dev/null
 		# Because it is possible that some arguments have spaces,
 		# We do like this.
-		if [ -n "$3" ]; then
+		if [ -n "$5" ]; then
+			$XM "$1" "$2" "$3" "$4" "$5" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
+		elif [ -n "$4" ]; then
+			$XM "$1" "$2" "$3" "$4" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
+		elif [ -n "$3" ]; then
 			$XM "$1" "$2" "$3" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
 		elif [ -n "$2" ]; then
 			$XM "$1" "$2" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
@@ -86,6 +134,14 @@ run_xm_command() {
 }
 
 find_domain_name() {
+	if [ "${CTRL_PROG}" = "xm" ]; then
+		find_xm_domain_name $@	
+	elif [ "${CTRL_PROG}" = "virsh" ]; then
+		find_virsh_domain_name $@	
+	fi
+}
+
+find_xm_domain_name() {
 
 	TEMP_XEN_CONFIG="$1"
 	DOMAINNAME=""
@@ -98,52 +154,17 @@ find_domain_name() {
 	DOMAINNAME=`sed -n '/^name=/p' "$TEMP_XEN_CONFIG" | sed -e 's/name=//' | sed -e 's/\"//g'`
 }
 
-find_start_error() {
-	if [ ! -f "$1" ]; then
-		return
+find_virsh_domain_name() {
+
+	TEMP_XEN_CONFIG="$1"
+	DOMAINNAME=""
+
+	if [ ! -f "$TEMP_XEN_CONFIG" ]; then
+		echo "$TEMP_XEN_CONFIG doesn't exist" 1>&2
+		return 1
 	fi
 
-	grep "Error" "$1" >/dev/null
-	if [ $? != 0 ]; then
-		rm -f "$1" 2>/dev/null
-		echo "UNKNOWN ERROR" > "$1"
-		return
-	fi
-
-	grep "MiB" "$1" >/dev/null
-	if [ $? = 0 ]; then
-		rm -f "$1" 2>/dev/null
-		# MEMORY ERROR
-		echo "MEMORY ERROR" > "$1"
-		return
-	fi
-
-	grep "KiB" "$1" >/dev/null
-	if [ $? = 0 ]; then
-		rm -f "$1" 2>/dev/null
-		# MEMORY ERROR
-		echo "MEMORY ERROR" > "$1"
-		return
-	fi
-
-	grep "(vbd) could not be connected" "$1" >/dev/null
-	if [ $? = 0 ]; then
-		rm -f "$1" 2>/dev/null
-		# VBD CONNECT ERROR
-		echo "VBD CONNECT ERROR" > "$1"
-		return
-	fi
-
-	grep "(22, 'Invalid argument')" "$1" >/dev/null
-	if [ $? = 0 ]; then
-		rm -f "$1" 2>/dev/null
-		# Invalid argument such as KERNEL ERROR
-		echo "INVALID ARGUMENT" > "$1"
-		return
-	fi
-
-	rm -f "$1" 2>/dev/null
-	echo "UNKNOWN ERROR" > "$1"
+	DOMAINNAME=`sed -e "s#.*<name>\(.*\)</name>.*#\1#" $TEMP_XEN_CONFIG`
 }
 
 start() {
@@ -161,7 +182,7 @@ start() {
 
 	find_domain_name "$XEN_CONFIG_FILE"
 
-	run_xm_command create "$XEN_CONFIG_FILE"
+	run_controller create "$XEN_CONFIG_FILE"
 	RESULT=$?
 
 	cat "$XM_STD_OUTPUT" 1>&2
@@ -173,7 +194,6 @@ start() {
 		if [ -n "$2" ]; then
 			cat "$XM_ERROR_OUTPUT" > "$2"
 			if [ -f "$2" ]; then
-				find_start_error "$2"
 				chown --reference="$XEN_CONFIG_FILE" "$2" 2>/dev/null
 			fi
 		fi
@@ -197,7 +217,7 @@ stop() {
 		return 1
 	fi
 
-	run_xm_command list
+	run_controller list
 	RESULT=$?
 
 	if [ $RESULT != 0 ]; then
@@ -208,7 +228,7 @@ stop() {
 
 	n=`grep -w "$DOMAINNAME" "$XM_STD_OUTPUT" | wc -l`
 	if [ $n -eq 1 ]; then
-		run_xm_command destroy "$DOMAINNAME"
+		run_controller destroy "$DOMAINNAME"
 		RESULT=$?
 
 		cat "$XM_STD_OUTPUT" 1>&2
@@ -242,7 +262,7 @@ suspend() {
 		return 1
 	fi
 
-	run_xm_command list
+	run_controller list
 	RESULT=$?
 
 	if [ $RESULT != 0 ]; then
@@ -253,7 +273,7 @@ suspend() {
 
 	n=`grep -w "$DOMAINNAME" "$XM_STD_OUTPUT" | wc -l`
 	if [ $n -eq 1 ]; then
-		run_xm_command save "$DOMAINNAME" "$XEN_SUSPEND_FILE"
+		run_controller save "$DOMAINNAME" "$XEN_SUSPEND_FILE"
 		RESULT=$?
 
 		cat "$XM_STD_OUTPUT" 1>&2
@@ -281,7 +301,7 @@ resume() {
 	fi
 	XEN_CONFIG_FILE="$1"
 
-	run_xm_command restore "$XEN_CONFIG_FILE"
+	run_controller restore "$XEN_CONFIG_FILE"
 	RESULT=$?
 
 	cat "$XM_STD_OUTPUT" 1>&2
@@ -307,7 +327,7 @@ pause() {
 		return 1
 	fi
 
-	run_xm_command list
+	run_controller list
 	RESULT=$?
 
 	if [ $RESULT != 0 ]; then
@@ -318,12 +338,24 @@ pause() {
 
 	n=`grep -w "$DOMAINNAME" "$XM_STD_OUTPUT" | wc -l`
 	if [ $n -eq 1 ]; then
-		run_xm_command pause "$DOMAINNAME"
+
+		if [ "${CTRL_PROG}" = "xm" ]; then
+			run_xm_command pause "$DOMAINNAME"
+		elif [ "${CTRL_PROG}" = "virsh" ]; then
+			run_virsh_command suspend "$DOMAINNAME"
+		fi
+
 		RESULT=$?
 
 		cat "$XM_STD_OUTPUT" 1>&2
 		if [ $RESULT != 0 ]; then
-			echo "$XM pause $DOMAINNAME error" 1>&2
+
+			if [ "${CTRL_PROG}" = "xm" ]; then
+				echo "$XM pause $DOMAINNAME error" 1>&2
+			elif [ "${CTRL_PROG}" = "virsh" ]; then
+				echo "$XM suspend $DOMAINNAME error" 1>&2
+			fi
+
 			cat "$XM_ERROR_OUTPUT" 1>&2
 			return 1
 		fi
@@ -348,7 +380,7 @@ unpause() {
 		return 1
 	fi
 
-	run_xm_command list
+	run_controller list
 	RESULT=$?
 
 	if [ $RESULT != 0 ]; then
@@ -359,12 +391,20 @@ unpause() {
 
 	n=`grep -w "$DOMAINNAME" "$XM_STD_OUTPUT" | wc -l`
 	if [ $n -eq 1 ]; then
-		run_xm_command unpause "$DOMAINNAME"
+		if [ "${CTRL_PROG}" = "xm" ]; then
+			run_xm_command unpause "$DOMAINNAME"
+		elif [ "${CTRL_PROG}" = "virsh" ]; then
+			run_virsh_command resume "$DOMAINNAME"
+		fi
 		RESULT=$?
 
 		cat "$XM_STD_OUTPUT" 1>&2
 		if [ $RESULT != 0 ]; then
-			echo "$XM unpause $DOMAINNAME error" 1>&2
+			if [ "${CTRL_PROG}" = "xm" ]; then
+				echo "$XM unpause $DOMAINNAME error" 1>&2
+			elif [ "${CTRL_PROG}" = "virsh" ]; then
+				echo "$XM resume $DOMAINNAME error" 1>&2
+			fi
 			cat "$XM_ERROR_OUTPUT" 1>&2
 			return 1
 		fi
@@ -392,7 +432,7 @@ status() {
 		return 1
 	fi
 
-	run_xm_command list
+	run_controller list
 	RESULT=$?
 
 	if [ $RESULT != 0 ]; then
@@ -405,8 +445,13 @@ status() {
 	if [ $n -eq 1 ]; then
 		# domain is running
 		echo "STATUS=Running" > "$XEN_RESULT_FILE"
-		CPUTIME=`grep -w "$DOMAINNAME" "$XM_STD_OUTPUT" | awk '{print $6}'`
-		echo "CPUTIME=$CPUTIME" >> "$XEN_RESULT_FILE"
+
+		if [ "${CTRL_PROG}" = "xm" ]; then
+			CPUTIME=`grep -w "$DOMAINNAME" "$XM_STD_OUTPUT" | awk '{print $6}'`
+			if [ -n "$CPUTIME" ]; then
+				echo "CPUTIME=$CPUTIME" >> "$XEN_RESULT_FILE"
+			fi
+		fi
 	else
 		# domain is stopped
 		echo "STATUS=Stopped" > "$XEN_RESULT_FILE"
@@ -435,7 +480,7 @@ check() {
 		return 1
 	fi
 
-	run_xm_command list
+	run_controller list
 	RESULT=$?
 
 	if [ $RESULT != 0 ]; then
@@ -454,7 +499,7 @@ killvm() {
 
 	DOMAINNAME="$1"
 
-	run_xm_command destroy "$DOMAINNAME"
+	run_controller destroy "$DOMAINNAME"
 
 	return 0;
 }
@@ -514,10 +559,10 @@ createconfig() {
 
 #### Program starts from here #####
 
-if [ ! -x "$XM" ]; then
-	echo "Xen Utility($XM) does not exist" 1>&2
-	exit 1
-fi
+#if [ ! -x "$XM" ]; then
+#	echo "Xen Utility($XM) does not exist" 1>&2
+#	exit 1
+#fi
 
 if [ -z "$MKISOFS" ]; then
 	echo "Should define 'MKISOFS' for mkisofs program" 1>&2
@@ -530,46 +575,45 @@ if [ $ID != 0 ]; then
 	exit 1
 fi
 
-case "$1" in
+case "$2" in
   start)
-	start "$2" "$3"
+	start "$3" "$4"
    	;;
   stop)
-   	stop "$2"
+   	stop "$3"
    	;;
   suspend)
-  	suspend "$2" "$3"
+  	suspend "$3" "$4"
 	;;
   resume)
-  	resume "$2"
+  	resume "$3"
 	;;
   pause)
-  	pause "$2"
+  	pause "$3"
 	;;
   unpause)
-  	unpause "$2"
+  	unpause "$3"
 	;;
   status)
-  	status "$2" "$3"
+  	status "$3" "$4"
 	;;
   getvminfo)
-  	getvminfo "$2" "$3"
+  	getvminfo "$3" "$4"
 	;;
   check)
   	check
 	;;
   killvm)
-    killvm "$2"
+    killvm "$3"
 	;;
   createiso)
-  	createiso "$2" "$3"
+  	createiso "$3" "$4"
 	;;
   createconfig)
-  	createconfig "$2"
+  	createconfig "$3"
 	;;
    *)
-        echo $"Usage: $0 {start|stop|suspend|resume|pause|unpause|status|getvminfo|check|killvm|createiso|createconfig}" 1>&2
-        exit 1
+   	usage
 esac
 
 RESULT=$?

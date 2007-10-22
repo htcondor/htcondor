@@ -47,12 +47,14 @@ class VMGahpConfig {
 
 		bool m_vm_networking;
 		StringList m_vm_networking_types;
+		MyString m_vm_default_networking_type;
 
 		bool m_vm_hardware_vt;
 
 		MyString m_prog_for_script; // program to execute a below script(perl etc.)
 		MyString m_vm_script; // Script program for virtual machines
 		MyString m_configfile; // gahp configuration file
+		MyString m_controller; // This field is used for Xen
 };
 
 #endif /* VM_GAHP_CONFIG_H */

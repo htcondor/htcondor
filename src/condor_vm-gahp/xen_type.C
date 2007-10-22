@@ -39,36 +39,26 @@
 #define XEN_CONFIG_FILE_NAME "xen_vm.config"
 #define XEN_CKPT_TIMESTAMP_FILE_SUFFIX ".timestamp"
 
-static int
-getVMGahpErrorNumber(const char* fname)
+static MyString
+getVMGahpErrorString(const char* fname)
 {
-	FILE *file;
+	MyString err_msg;
+	FILE *file = NULL;
 	char buffer[1024];
 	file = safe_fopen_wrapper(fname, "r");
 
 	if( !file ) {
-		return VMGAHP_ERR_INTERNAL;
-	}
-	if( fgets(buffer, sizeof(buffer), file) == NULL) {
-		fclose(file);
-		return VMGAHP_ERR_INTERNAL;
+		getVMGahpErrString(VMGAHP_ERR_INTERNAL, err_msg);
+		return err_msg;
 	}
 
+	memset(buffer, 0, sizeof(buffer));
+	while( fgets(buffer, sizeof(buffer), file) != NULL ) {
+		err_msg += buffer;
+		memset(buffer, 0, sizeof(buffer));
+	}
 	fclose(file);
-
-	if( buffer[strlen(buffer) - 1] == '\n') {
-		buffer[strlen(buffer) - 1] = '\0';
-	}
-
-	if( !strcasecmp(buffer, "MEMORY ERROR" ) ) {
-		return VMGAHP_ERR_VM_NOT_ENOUGH_MEMORY;
-	}else if( !strcasecmp(buffer, "VBD CONNECT ERROR" ) ) {
-		return VMGAHP_ERR_XEN_VBD_CONNECT_ERROR;
-	}else if( !strcasecmp(buffer, "INVALID ARGUMENT" ) ) {
-		return VMGAHP_ERR_XEN_INVALID_GUEST_KERNEL;
-	}
-
-	return VMGAHP_ERR_XEN_CONFIG_FILE_ERROR;
+	return err_msg;
 }
 
 XenType::XenType(const char* scriptname, const char* workingpath, 
@@ -105,18 +95,14 @@ XenType::Start()
 {
 	vmprintf(D_FULLDEBUG, "Inside XenType::Start\n");
 
-	m_result_msg = "";
-
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_INTERNAL;
+		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
 		return false;
 	}
 
 	if( getVMStatus() != VM_STOPPED ) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_VM_INVALID_OPERATION;
+		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
 		return false;
 	}
 
@@ -157,6 +143,7 @@ XenType::Start()
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
+	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("start");
 	systemcmd.AppendArg(m_configfile);
 	systemcmd.AppendArg(tmpfilename);
@@ -164,8 +151,7 @@ XenType::Start()
 	int result = systemCommand(systemcmd, true);
 	if( result != 0 ) {
 		// Read error file
-		m_result_msg = "";
-		m_result_msg += getVMGahpErrorNumber(tmpfilename.Value());
+		m_result_msg = getVMGahpErrorString(tmpfilename.Value());
 		unlink(tmpfilename.Value());
 		return false;
 	}
@@ -185,12 +171,9 @@ XenType::Shutdown()
 {
 	vmprintf(D_FULLDEBUG, "Inside XenType::Shutdown\n");
 
-	m_result_msg = "";
-
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_INTERNAL;
+		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
 		return false;
 	}
 
@@ -206,6 +189,11 @@ XenType::Shutdown()
 					unlink(m_suspendfile.Value());
 				}
 				m_suspendfile = "";
+
+				// delete the created xen vm configuration file
+				if( !m_configfile.IsEmpty() ) {
+					unlink(m_configfile.Value());
+				}
 
 				// We need to update timestamp of transferred writable disk files
 				updateLocalWriteDiskTimestamp(time(NULL));
@@ -226,6 +214,7 @@ XenType::Shutdown()
 	if( getVMStatus() == VM_RUNNING ) {
 		ArgList systemcmd;
 		systemcmd.AppendArg(m_scriptname);
+		systemcmd.AppendArg(m_xen_controller);
 		systemcmd.AppendArg("stop");
 		systemcmd.AppendArg(m_configfile);
 
@@ -250,26 +239,21 @@ XenType::Checkpoint()
 {
 	vmprintf(D_FULLDEBUG, "Inside XenType::Checkpoint\n");
 
-	m_result_msg = "";
-
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_INTERNAL;
+		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
 		return false;
 	}
 
 	if( getVMStatus() == VM_STOPPED ) {
 		vmprintf(D_ALWAYS, "Checkpoint is called for a stopped VM\n");
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_VM_INVALID_OPERATION;
+		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
 		return false;
 	}
 
 	if( !m_vm_checkpoint ) {
 		vmprintf(D_ALWAYS, "Checkpoint is not supported.\n");
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT;
+		getVMGahpErrString(VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT, m_result_msg);
 		return false;
 	}
 
@@ -278,8 +262,7 @@ XenType::Checkpoint()
 		// However, Xen cannot suspend this type of VM yet.
 		// So we cannot checkpoint this VM.
 		vmprintf(D_ALWAYS, "Checkpoint of Hardware VT is not supported.\n");
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT;
+		getVMGahpErrString(VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT, m_result_msg);
 		return false;
 	}
 
@@ -288,8 +271,7 @@ XenType::Checkpoint()
 
 	// This function cause a running VM to be suspended.
 	if( createCkptFiles() == false ) { 
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_VM_CANNOT_CREATE_CKPT_FILES;
+		getVMGahpErrString(VMGAHP_ERR_VM_CANNOT_CREATE_CKPT_FILES, m_result_msg);
 		vmprintf(D_ALWAYS, "failed to create checkpoint files\n");
 		return false;
 	}
@@ -309,6 +291,7 @@ XenType::ResumeFromSoftSuspend(void)
 	if( m_is_soft_suspended ) {
 		ArgList systemcmd;
 		systemcmd.AppendArg(m_scriptname);
+		systemcmd.AppendArg(m_xen_controller);
 		systemcmd.AppendArg("unpause");
 		systemcmd.AppendArg(m_configfile);
 
@@ -329,12 +312,9 @@ XenType::SoftSuspend()
 {
 	vmprintf(D_FULLDEBUG, "Inside XenType::SoftSuspend\n");
 
-	m_result_msg = "";
-
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_INTERNAL;
+		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
 		return false;
 	}
 
@@ -343,13 +323,13 @@ XenType::SoftSuspend()
 	}
 
 	if( getVMStatus() != VM_RUNNING ) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_VM_INVALID_OPERATION;
+		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
 		return false;
 	}
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
+	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("pause");
 	systemcmd.AppendArg(m_configfile);
 
@@ -371,12 +351,9 @@ XenType::Suspend()
 {
 	vmprintf(D_FULLDEBUG, "Inside XenType::Suspend\n");
 
-	m_result_msg = "";
-
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_INTERNAL;
+		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
 		return false;
 	}
 
@@ -385,16 +362,14 @@ XenType::Suspend()
 	}
 
 	if( getVMStatus() != VM_RUNNING ) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_VM_INVALID_OPERATION;
+		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
 		return false;
 	}
 
 	if( m_xen_hw_vt && !m_allow_hw_vt_suspend ) {
 		// This VM uses hardware virtualization.
 		// However, Xen cannot suspend this type of VM yet.
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_VM_NO_SUPPORT_SUSPEND;
+		getVMGahpErrString(VMGAHP_ERR_VM_NO_SUPPORT_SUSPEND, m_result_msg);
 		return false;
 	}
 
@@ -407,14 +382,14 @@ XenType::Suspend()
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
+	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("suspend");
 	systemcmd.AppendArg(m_configfile);
 	systemcmd.AppendArg(tmpfilename);
 
 	int result = systemCommand(systemcmd, true);
 	if( result != 0 ) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_CRITICAL;
+		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
 		unlink(tmpfilename.Value());
 		return false;
 	}
@@ -432,12 +407,9 @@ XenType::Resume()
 {
 	vmprintf(D_FULLDEBUG, "Inside XenType::Resume\n");
 
-	m_result_msg = "";
-
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_INTERNAL;
+		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
 		return false;
 	}
 
@@ -450,8 +422,7 @@ XenType::Resume()
 
 	if( !m_restart_with_ckpt && 
 			( getVMStatus() != VM_SUSPENDED) ) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_VM_INVALID_OPERATION;
+		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
 		return false;
 	}
 	m_restart_with_ckpt = false;
@@ -466,20 +437,19 @@ XenType::Resume()
 	}
 
 	if( check_vm_read_access_file(m_suspendfile.Value(), true) == false ) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_VM_INVALID_SUSPEND_FILE;
+		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_SUSPEND_FILE, m_result_msg);
 		return false;
 	}
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
+	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("resume");
 	systemcmd.AppendArg(m_suspendfile);
 
 	int result = systemCommand(systemcmd, true);
 	if( result != 0 ) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_CRITICAL;
+		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
 		return false;
 	}
 
@@ -497,12 +467,9 @@ XenType::Status()
 {
 	vmprintf(D_FULLDEBUG, "Inside XenType::Status\n");
 
-	m_result_msg = "";
-
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_INTERNAL;
+		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
 		return false;
 	}
 
@@ -538,6 +505,7 @@ XenType::Status()
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
+	systemcmd.AppendArg(m_xen_controller);
 	if( m_vm_networking ) {
 		systemcmd.AppendArg("getvminfo");
 	}else {
@@ -548,8 +516,7 @@ XenType::Status()
 
 	int result = systemCommand(systemcmd, true);
 	if( result != 0 ) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_CRITICAL;
+		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
 		unlink(tmpfilename.Value());
 		return false;
 	}
@@ -559,8 +526,7 @@ XenType::Status()
 	char buffer[1024];
 	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
 	if( !file ) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_INTERNAL;
+		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
 		unlink(tmpfilename.Value());
 		return false;
 	}
@@ -617,8 +583,7 @@ XenType::Status()
 	unlink(tmpfilename.Value());
 
 	if( !vm_status.Length() ) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_INTERNAL;
+		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
 		return false;
 	}
 
@@ -687,29 +652,386 @@ XenType::Status()
 		return true;
 	}else {
 		// Woops, something is wrong
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_INTERNAL;
+		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
 		return false;
 	}
 	return false;
 }
 
 bool
-XenType::CreateConfigFile()
+XenType::CreateXMConfigFile(const char* filename)
 {
-	MyString tmp_config_name;
 	MyString disk_string;
-	MyString xen_kernel_param;
-	MyString xen_kernel_file;
-	MyString xen_ramdisk_file;
-	MyString xen_bootloader;
-	MyString xen_root;
-	MyString xen_disk;
-	MyString xen_extra;
+
+	if( !filename ) {
+		return false;
+	}
 
 	FILE *fp = NULL;
 
-	m_result_msg = "";
+	fp = safe_fopen_wrapper(filename, "w");
+	if( !fp ) {
+		vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper vm config file "
+				"in write mode: safe_fopen_wrapper(%s) returns %s\n", 
+				filename, strerror(errno));
+		return false;
+	}
+
+	if( fprintf(fp, "name=\"%s\"\n", m_vm_name.Value()) < 0 ) {
+		goto xmwriteerror;
+	}
+
+	if( fprintf(fp, "memory=%d\n", m_vm_mem) < 0 ) {
+		goto xmwriteerror;
+	}
+
+	if( m_xen_kernel_file.IsEmpty() == false ) {
+		MyString tmp_fullname;
+		if( isTransferedFile(m_xen_kernel_file.Value(), 
+					tmp_fullname) ) {
+			// this file is transferred
+			// So we use basename
+			if( fprintf(fp, "kernel=\"%s\"\n", basename(tmp_fullname.Value())) < 0 ) {
+				goto xmwriteerror;
+			}
+			m_xen_kernel_file = tmp_fullname;
+		}else {
+			// this file is not transferred
+			if( fprintf(fp, "kernel=\"%s\"\n", m_xen_kernel_file.Value()) < 0 ) {
+				goto xmwriteerror;
+			}
+		}
+		if( m_xen_initrd_file.IsEmpty() == false ) {
+			if( isTransferedFile(m_xen_initrd_file.Value(), 
+						tmp_fullname) ) {
+				// this file is transferred
+				// So we use basename
+				if(fprintf(fp, "ramdisk=\"%s\"\n", basename(tmp_fullname.Value())) < 0) {
+					goto xmwriteerror;
+				}
+				m_xen_initrd_file = tmp_fullname;
+			}else {
+				// this file is not transferred
+				if( fprintf(fp, "ramdisk=\"%s\"\n", m_xen_initrd_file.Value()) < 0 ) {
+					goto xmwriteerror;
+				}
+			}
+		}
+		if( m_xen_root.IsEmpty() == false ) {
+			if( fprintf(fp,"root=\"%s\"\n", m_xen_root.Value()) < 0 ) {
+				goto xmwriteerror;
+			}
+		}
+	}
+
+	if( m_vm_networking ) {
+		MyString networking_type;
+		char* xen_vif_param = NULL;
+
+		if( fprintf(fp, "dhcp=\"dhcp\"\n") < 0 ) {
+			goto xmwriteerror;
+		}
+
+		if( m_xen_hw_vt ) {
+			xen_vif_param = vmgahp_param("XEN_VT_VIF");
+			if( xen_vif_param ) {
+				networking_type = delete_quotation_marks(xen_vif_param);
+				free(xen_vif_param);
+			}
+		}
+
+		if( networking_type.IsEmpty() ) {
+			MyString tmp_string; 
+			MyString tmp_string2;
+
+			tmp_string2 = m_vm_networking_type;
+			tmp_string2.strupr();
+
+			tmp_string.sprintf("XEN_%s_VIF_PARAMETER", tmp_string2.Value());
+			xen_vif_param = vmgahp_param(tmp_string.Value());
+
+			if( xen_vif_param) {
+				networking_type = delete_quotation_marks(xen_vif_param);
+				free(xen_vif_param);
+			}else {
+				xen_vif_param = vmgahp_param("XEN_VIF_PARAMETER");
+				if( xen_vif_param ) {
+					networking_type = delete_quotation_marks(xen_vif_param);
+					free(xen_vif_param);
+				}else {
+					networking_type = "['']";
+				}
+			}
+		}
+
+		if( fprintf(fp, "vif=%s\n", networking_type.Value()) < 0 ) {
+			goto xmwriteerror;
+		}
+	}
+
+	// Create disk parameter in Xen config file
+	disk_string = makeXMDiskString();
+	if( fprintf(fp,"disk=%s\n", disk_string.Value()) < 0 ) {
+		goto xmwriteerror;
+	}
+
+	if( strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0) {
+		if( fprintf(fp, "bootloader=\"%s\"\n", m_xen_bootloader.Value()) < 0 ) {
+			goto xmwriteerror;
+		}
+	}
+
+	if( m_xen_hw_vt ) {
+		if( write_specific_vm_params_to_file("XEN_VT_", fp) == false ) {
+			goto xmwriteerror;
+		}
+	}
+
+	if( m_xen_kernel_params.IsEmpty() == false ) {
+		if( fprintf(fp,"extra=\"%s\"\n", m_xen_kernel_params.Value()) < 0 ) {
+			goto xmwriteerror;
+		}
+	}
+
+	if( write_forced_vm_params_to_file(fp, NULL, NULL) == false ) {
+		goto xmwriteerror;
+	}
+	fclose(fp);
+	fp = NULL;
+
+	if( m_use_script_to_create_config ) {
+		// We will call the script program 
+		// to create a configuration file for VM
+		
+		if( createConfigUsingScript(filename) == false ) {
+			unlink(filename);
+			return false;
+		}
+	}
+
+	return true;
+
+xmwriteerror:
+	vmprintf(D_ALWAYS, "failed to fprintf in CreateXMConfigFile(%s:%s)\n",
+			filename, strerror(errno));
+	if( fp ) {
+		fclose(fp);
+	}
+	unlink(filename);
+	return false;
+}
+
+bool
+XenType::CreateVirshConfigFile(const char* filename)
+{
+	MyString disk_string;
+	char* config_value = NULL;
+	MyString bridge_script;
+
+	if( !filename ) {
+		return false;
+	}
+
+	FILE *fp = NULL;
+
+	fp = safe_fopen_wrapper(filename, "w");
+	if( !fp ) {
+		vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper vm config file "
+				"in write mode: safe_fopen_wrapper(%s) returns %s\n", 
+				filename, strerror(errno));
+		return false;
+	}
+
+	config_value = vmgahp_param( "XEN_BRIDGE_SCRIPT" );
+	if( !config_value ) {
+		vmprintf(D_ALWAYS, "XEN_BRIDGE_SCRIPT is not defined in the "
+				 "vmgahp config file\n");
+
+			// I'm not so sure this should be required. The problem
+			// with it being missing/wrong is that a job expecting to
+			// have un-nat'd network access might not get it. There's
+			// no way for us to tell if the script given is correct
+			// though, so this error might just be better as a warning
+			// in the log. If this is turned into a warning an EXCEPT
+			// must be removed when 'bridge_script' is used below.
+			//  - matt 17 oct 2007
+			//return false;
+	} else {
+		bridge_script = config_value;
+		free(config_value); 
+		config_value = NULL;
+	}
+
+	if( fprintf(fp, "<domain type='xen'>") < 0 ) {
+		goto virshwriteerror;
+	}
+
+	if( fprintf(fp, "<name>%s</name>", m_vm_name.Value()) < 0 ) {
+		goto virshwriteerror;
+	}
+
+	if( fprintf(fp, "<memory>%d</memory>", m_vm_mem) < 0 ) {
+		goto virshwriteerror;
+	}
+
+	if( fprintf(fp, "<os>") < 0 ) {
+		goto virshwriteerror;
+	}
+
+	if( fprintf(fp, "<type>linux</type>") < 0 ) {
+		goto virshwriteerror;
+	}
+
+	if( m_xen_kernel_file.IsEmpty() == false ) {
+		MyString tmp_fullname;
+
+		if( fprintf(fp, "<kernel>") < 0 ) {
+			goto virshwriteerror;
+		}
+		if( isTransferedFile(m_xen_kernel_file.Value(), 
+					tmp_fullname) ) {
+			// this file is transferred
+			// we need a full path
+			m_xen_kernel_file = tmp_fullname;
+		}
+		if( fprintf(fp, "%s", m_xen_kernel_file.Value()) < 0 ) {
+			goto virshwriteerror;
+		}
+		if( fprintf(fp, "</kernel>") < 0 ) {
+			goto virshwriteerror;
+		}
+
+		if( m_xen_initrd_file.IsEmpty() == false ) {
+			if( fprintf(fp, "<initrd>") < 0 ) {
+				goto virshwriteerror;
+			}
+			if( isTransferedFile(m_xen_initrd_file.Value(), 
+						tmp_fullname) ) {
+				// this file is transferred
+				// we need a full path
+				m_xen_initrd_file = tmp_fullname;
+			}
+			if( fprintf(fp, "%s", m_xen_initrd_file.Value()) < 0 ) {
+				goto virshwriteerror;
+			}
+			if( fprintf(fp, "</initrd>") < 0 ) {
+				goto virshwriteerror;
+			}
+		}
+		if( m_xen_root.IsEmpty() == false ) {
+			if( fprintf(fp,"<root>%s</root>", m_xen_root.Value()) < 0 ) {
+				goto virshwriteerror;
+			}
+		}
+
+		if( m_xen_kernel_params.IsEmpty() == false ) {
+			if( fprintf(fp,"<cmdline>%s</cmdline>", 
+						m_xen_kernel_params.Value()) < 0 ) {
+				goto virshwriteerror;
+			}
+		}
+	}
+
+
+	if( fprintf(fp, "</os>") < 0 ) {
+		goto virshwriteerror;
+	}
+
+	if( strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0) {
+		if( fprintf(fp, "<bootloader>%s</bootloader>", m_xen_bootloader.Value()) < 0 ) {
+			goto virshwriteerror;
+		}
+	}
+
+	if( fprintf(fp, "<devices>") < 0 ) {
+		goto virshwriteerror;
+	}
+
+	if( m_vm_networking ) {
+		if( m_vm_networking_type.find("nat") >= 0 ) {
+			if( fprintf(fp, "<interface type='network'>"
+						"<source network='default'/>"
+						"</interface>") < 0 ) {
+				goto virshwriteerror;
+			}
+		} else {
+			if( fprintf(fp, "<interface type='bridge'>") < 0 ) {
+				goto virshwriteerror;
+			}
+			if (!bridge_script.IsEmpty()) {
+				if( fprintf(fp, "<script path='%s'/>",
+							bridge_script.Value()) < 0 ) {
+					goto virshwriteerror;
+				}
+			}
+			if( fprintf(fp, "</interface>") < 0 ) {
+				goto virshwriteerror;
+			}
+		}
+	}
+
+	// Create disk parameter in Xen config file
+	disk_string = makeVirshDiskString();
+	if( fprintf(fp,"%s", disk_string.Value()) < 0 ) {
+		goto virshwriteerror;
+	}
+
+	if( fprintf(fp, "</devices>") < 0 ) {
+		goto virshwriteerror;
+	}
+
+	if( fprintf(fp, "</domain>") < 0 ) {
+		goto virshwriteerror;
+	}
+
+	fclose(fp);
+	fp = NULL;
+
+	if( m_use_script_to_create_config ) {
+		// We will call the script program 
+		// to create a configuration file for VM
+		
+		if( createConfigUsingScript(filename) == false ) {
+			unlink(filename);
+			return false;
+		}
+	}
+
+	return true;
+
+virshwriteerror:
+	vmprintf(D_ALWAYS, "failed to fprintf in CreateVirshConfigFile(%s:%s)\n",
+			filename, strerror(errno));
+	if( fp ) {
+		fclose(fp);
+	}
+	unlink(filename);
+	return false;
+}
+
+bool
+XenType::CreateXenVMCofigFile(const char* controller, const char* filename)
+{
+	if( !controller || !filename ) {
+		return false;
+	}
+
+	if( !strcmp(controller, "xm") ) {
+		return CreateXMConfigFile(filename);
+	}else if( !strcmp(controller, "virsh") ) {
+		return CreateVirshConfigFile(filename);
+	}else {
+		vmprintf(D_ALWAYS, "Not supported xen controller(%s)\n", controller);
+		return false;
+	}
+
+	return false;
+}
+
+bool
+XenType::CreateConfigFile()
+{
+	char *config_value = NULL;
 
 	// Read common parameters for VM
 	// and create the name of this VM
@@ -722,53 +1044,62 @@ XenType::CreateConfigFile()
 		m_vm_mem = 32;
 	}
 
+	// First try to read XEN_CONTROLLER
+	config_value = vmgahp_param("XEN_CONTROLLER");
+	if( !config_value ) {
+		vmprintf(D_ALWAYS, "\nERROR: You should define 'XEN_CONTROLLER' "
+				"in vmgahp config file\n");
+		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+		return false;
+	}else {
+		m_xen_controller = delete_quotation_marks(config_value);
+		free(config_value);
+	}
+
 	// Read the parameter of Xen kernel
-	if( m_classAd.LookupString( VMPARAM_XEN_KERNEL, xen_kernel_param) != 1 ) {
+	if( m_classAd.LookupString( VMPARAM_XEN_KERNEL, m_xen_kernel_submit_param) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
 							VMPARAM_XEN_KERNEL);
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM;
+		getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM, m_result_msg);
 		return false;
 	}
-	xen_kernel_param.trim();
+	m_xen_kernel_submit_param.trim();
 
-	if(strcasecmp(xen_kernel_param.Value(), XEN_KERNEL_ANY) == 0) {
+	if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_ANY) == 0) {
 		vmprintf(D_ALWAYS, "VMGahp will use default xen kernel\n");
-		char* config_value = vmgahp_param( "XEN_DEFAULT_KERNEL" );
+		config_value = vmgahp_param( "XEN_DEFAULT_KERNEL" );
 		if( !config_value ) {
 			vmprintf(D_ALWAYS, "Default xen kernel is not defined "
 					"in vmgahp config file\n");
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_CRITICAL;
+			getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
 			return false;
 		}else {
-			xen_kernel_file = delete_quotation_marks(config_value);
+			m_xen_kernel_file = delete_quotation_marks(config_value);
 			free(config_value);
 
-			config_value = vmgahp_param( "XEN_DEFAULT_RAMDISK" );
+			config_value = vmgahp_param( "XEN_DEFAULT_INITRD" );
 			if( config_value ) {
-				xen_ramdisk_file = delete_quotation_marks(config_value);
+				m_xen_initrd_file = delete_quotation_marks(config_value);
 				free(config_value);
 			}
 		}
-	}else if(strcasecmp(xen_kernel_param.Value(), XEN_KERNEL_INCLUDED) == 0) {
+	}else if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0) {
 		vmprintf(D_ALWAYS, "VMGahp will use xen bootloader\n");
-		char* config_value = vmgahp_param( "XEN_BOOTLOADER" );
+		config_value = vmgahp_param( "XEN_BOOTLOADER" );
 		if( !config_value ) {
 			vmprintf(D_ALWAYS, "xen bootloader is not defined "
 					"in vmgahp config file\n");
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_CRITICAL;
+			getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
 			return false;
 		}else {
-			xen_bootloader = delete_quotation_marks(config_value);
+			m_xen_bootloader = delete_quotation_marks(config_value);
 			free(config_value);
 		}
-	}else if(strcasecmp(xen_kernel_param.Value(), XEN_KERNEL_HW_VT) == 0) {
+	}else if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_HW_VT) == 0) {
 		vmprintf(D_ALWAYS, "This VM requires hardware virtualization\n");
 		if( !m_vm_hardware_vt ) {
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT;
+			getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT, 
+					m_result_msg);
 			return false;
 		}
 		m_xen_hw_vt = true;
@@ -777,61 +1108,62 @@ XenType::CreateConfigFile()
 	}else {
 		// A job user defined a customized kernel
 		// make sure that the file for xen kernel is readable
-		if( check_vm_read_access_file(xen_kernel_param.Value(), true) == false) {
+		if( check_vm_read_access_file(m_xen_kernel_submit_param.Value(), true) == false) {
 			vmprintf(D_ALWAYS, "xen kernel file '%s' cannot be read\n", 
-					xen_kernel_param.Value());
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND;
+					m_xen_kernel_submit_param.Value());
+			getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND, 
+					m_result_msg);
 			return false;
 		}
-		xen_kernel_file = xen_kernel_param;
+		m_xen_kernel_file = m_xen_kernel_submit_param;
 
-		if( m_classAd.LookupString( VMPARAM_XEN_RAMDISK, xen_ramdisk_file) 
+		if( m_classAd.LookupString(VMPARAM_XEN_INITRD, m_xen_initrd_file) 
 					== 1 ) {
 			// A job user defined a customized ramdisk
-			xen_ramdisk_file.trim();
-			if( check_vm_read_access_file(xen_ramdisk_file.Value(), true) == false) {
+			m_xen_initrd_file.trim();
+			if( check_vm_read_access_file(m_xen_initrd_file.Value(), true) == false) {
 				// make sure that the file for xen ramdisk is readable
 				vmprintf(D_ALWAYS, "xen ramdisk file '%s' cannot be read\n", 
-						xen_ramdisk_file.Value());
-				m_result_msg = "";
-				m_result_msg += VMGAHP_ERR_JOBCLASSAD_XEN_RAMDISK_NOT_FOUND;
+						m_xen_initrd_file.Value());
+				getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND, 
+					m_result_msg);
 				return false;
 			}
 		}
 	}
 
-	if( xen_kernel_file.IsEmpty() == false ) {
+	if( m_xen_kernel_file.IsEmpty() == false ) {
 		// Read the parameter of Xen Root
-		if( m_classAd.LookupString( VMPARAM_XEN_ROOT, xen_root) != 1 ) {
+		if( m_classAd.LookupString(VMPARAM_XEN_ROOT, m_xen_root) != 1 ) {
 			vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
 					VMPARAM_XEN_ROOT);
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_JOBCLASSAD_XEN_NO_ROOT_DEVICE_PARAM;
+			getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_NO_ROOT_DEVICE_PARAM, 
+				m_result_msg);
 			return false;
 		}
-		xen_root.trim();
+		m_xen_root.trim();
 	}
 
+	MyString xen_disk;
 	// Read the parameter of Xen Disk
 	if( m_classAd.LookupString(VMPARAM_XEN_DISK, xen_disk) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
 				VMPARAM_XEN_DISK);
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM;
+		getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM, 
+			m_result_msg);
 		return false;
 	}
 	xen_disk.trim();
 	if( parseXenDiskParam(xen_disk.Value()) == false ) {
 		vmprintf(D_ALWAYS, "xen disk format(%s) is incorrect\n", 
 				xen_disk.Value());
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_JOBCLASSAD_XEN_INVALID_DISK_PARAM;
+		getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_INVALID_DISK_PARAM, 
+			m_result_msg);
 	}
 
-	// Read the parameter of Xen Extra
-	if( m_classAd.LookupString(VMPARAM_XEN_EXTRA, xen_extra) == 1 ) {
-		xen_extra.trim();
+	// Read the parameter of Xen Kernel Param
+	if( m_classAd.LookupString(VMPARAM_XEN_KERNEL_PARAMS, m_xen_kernel_params) == 1 ) {
+		m_xen_kernel_params.trim();
 	}
 
 	// Read the parameter of Xen cdrom device
@@ -844,8 +1176,8 @@ XenType::CreateConfigFile()
 			m_xen_cdrom_device.IsEmpty() ) {
 		vmprintf(D_ALWAYS, "A job user defined files for a CDROM, "
 				"but the job user didn't define CDROM device\n");
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_JOBCLASSAD_XEN_NO_CDROM_DEVICE;
+		getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_NO_CDROM_DEVICE, 
+			m_result_msg);
 		return false;
 	}
 
@@ -876,8 +1208,8 @@ XenType::CreateConfigFile()
 		// Create ISO file
 		if( createISO() == false ) {
 			vmprintf(D_ALWAYS, "Cannot create a ISO file for CDROM\n");
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_CANNOT_CREATE_ISO_FILE;
+			getVMGahpErrString(VMGAHP_ERR_CANNOT_CREATE_ISO_FILE, 
+				m_result_msg);
 			return false;
 		}
 	}
@@ -895,161 +1227,27 @@ XenType::CreateConfigFile()
 			vmprintf(D_ALWAYS, "To use vm checkpint in Xen, "
 					"all disk and iso files should be "
 					"in a shared file system\n");
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT;
+			getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT, 
+				m_result_msg);
 			return false;
 		}
 	}
 
+
 	// create a vm config file
+	MyString tmp_config_name;
 	tmp_config_name.sprintf("%s%c%s",m_workingpath.Value(), 
 			DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME);
-	fp = safe_fopen_wrapper(tmp_config_name.Value(), "w");
-	if( !fp ) {
-		vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper vm config file "
-				"in write mode: safe_fopen_wrapper(%s) returns %s\n", 
-				tmp_config_name.Value(), strerror(errno));
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_CRITICAL;
+
+	if( CreateXenVMCofigFile(m_xen_controller.Value(), tmp_config_name.Value()) 
+			== false ) {
+		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
 		return false;
 	}
 
-	if( fprintf(fp, "name=\"%s\"\n", m_vm_name.Value()) < 0 ) {
-		goto writeerror;
-	}
-
-	if( fprintf(fp, "memory=%d\n", m_vm_mem) < 0 ) {
-		goto writeerror;
-	}
-
-	if( xen_kernel_file.IsEmpty() == false ) {
-		MyString tmp_fullname;
-		if( isTransferedFile(xen_kernel_file.Value(), 
-					tmp_fullname) ) {
-			// this file is transferred
-			// So we use basename
-			if( fprintf(fp, "kernel=\"%s\"\n", basename(tmp_fullname.Value())) < 0 ) {
-				goto writeerror;
-			}
-			xen_kernel_file = tmp_fullname;
-		}else {
-			// this file is not transferred
-			if( fprintf(fp, "kernel=\"%s\"\n", xen_kernel_file.Value()) < 0 ) {
-				goto writeerror;
-			}
-		}
-		if( xen_ramdisk_file.IsEmpty() == false ) {
-			if( isTransferedFile(xen_ramdisk_file.Value(), 
-						tmp_fullname) ) {
-				// this file is transferred
-				// So we use basename
-				if(fprintf(fp, "ramdisk=\"%s\"\n", basename(tmp_fullname.Value())) < 0) {
-					goto writeerror;
-				}
-				xen_ramdisk_file = tmp_fullname;
-			}else {
-				// this file is not transferred
-				if( fprintf(fp, "ramdisk=\"%s\"\n", xen_ramdisk_file.Value()) < 0 ) {
-					goto writeerror;
-				}
-			}
-		}
-		if( xen_root.IsEmpty() == false ) {
-			if( fprintf(fp,"root=\"%s\"\n", xen_root.Value()) < 0 ) {
-				goto writeerror;
-			}
-		}
-	}
-
-	if( m_vm_networking ) {
-		MyString networking_type;
-		char* xen_vif_param = NULL;
-
-		if( m_vm_networking_interfaces.find("dhcp") >= 0 ) {
-			if( fprintf(fp, "dhcp=\"dhcp\"\n") < 0 ) {
-				goto writeerror;
-			}
-		}
-
-		if( m_xen_hw_vt ) {
-			xen_vif_param = vmgahp_param("XEN_VT_VIF");
-			if( xen_vif_param ) {
-				networking_type = delete_quotation_marks(xen_vif_param);
-				free(xen_vif_param);
-			}
-		}
-
-		if( networking_type.IsEmpty() ) {
-			xen_vif_param = vmgahp_param("XEN_VIF_PARAMETER");
-			if( xen_vif_param) {
-				networking_type = delete_quotation_marks(xen_vif_param);
-				free(xen_vif_param);
-			}else {
-				networking_type = "['']";
-			}
-		}
-
-		if( fprintf(fp, "vif=%s\n", networking_type.Value()) < 0 ) {
-			goto writeerror;
-		}
-	}
-
-	// Create disk parameter in Xen config file
-	disk_string = makeXenDiskString();
-	if( fprintf(fp,"disk=%s\n", disk_string.Value()) < 0 ) {
-		goto writeerror;
-	}
-
-	if( strcasecmp(xen_kernel_param.Value(), XEN_KERNEL_INCLUDED) == 0) {
-		if( fprintf(fp, "bootloader=\"%s\"\n", xen_bootloader.Value()) < 0 ) {
-			goto writeerror;
-		}
-	}
-
-	if( m_xen_hw_vt ) {
-		if( write_specific_vm_params_to_file("XEN_VT_", fp) == false ) {
-			goto writeerror;
-		}
-	}
-
-	if( xen_extra.IsEmpty() == false ) {
-		if( fprintf(fp,"extra=\"%s\"\n", xen_extra.Value()) < 0 ) {
-			goto writeerror;
-		}
-	}
-
-	if( write_forced_vm_params_to_file(fp, NULL, NULL) == false ) {
-		goto writeerror;
-	}
-	fclose(fp);
-	fp = NULL;
-
-	if( m_use_script_to_create_config ) {
-		// We will call the script program 
-		// to create a configuration file for VM
-		
-		if( createConfigUsingScript(tmp_config_name.Value()) == false ) {
-			unlink(tmp_config_name.Value());
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_CRITICAL;
-			return false;
-		}
-	}
-
 	// set vm config file
-	m_configfile = tmp_config_name;
+	m_configfile = tmp_config_name.Value();
 	return true;
-
-writeerror:
-	vmprintf(D_ALWAYS, "failed to fprintf in CreateConfigFile(%s:%s)\n",
-			tmp_config_name.Value(), strerror(errno));
-	if( fp ) {
-		fclose(fp);
-	}
-	unlink(tmp_config_name.Value());
-	m_result_msg = "";
-	m_result_msg += VMGAHP_ERR_CRITICAL;
-	return false;
 }
 
 bool 
@@ -1154,7 +1352,7 @@ XenType::parseXenDiskParam(const char *format)
 
 // This function should be called after parseXenDiskParam and createISO
 MyString
-XenType::makeXenDiskString(void)
+XenType::makeXMDiskString(void)
 {
 	char* tmp_ptr = NULL;
 
@@ -1221,6 +1419,50 @@ XenType::makeXenDiskString(void)
 	}
 
 	xendisk += " ]";
+	return xendisk;
+}
+
+// This function should be called after parseXenDiskParam and createISO
+MyString
+XenType::makeVirshDiskString(void)
+{
+	MyString xendisk;
+	xendisk = "";
+	bool first_disk = true;
+
+	XenDisk *vdisk = NULL;
+	m_disk_list.Rewind();
+	while( m_disk_list.Next(vdisk) ) {
+		if( !first_disk ) {
+			xendisk += "</disk>";
+		}
+		first_disk = false;
+		xendisk += "<disk type='file'>";
+		xendisk += "<source file='";
+		xendisk += vdisk->filename;
+		xendisk += "'/>";
+		xendisk += "<target dev='";
+		xendisk += vdisk->device;
+		xendisk += "'/>";
+
+		if (vdisk->permission == "r") {
+			xendisk += "<readonly/>";
+		}
+	}
+	xendisk += "</disk>";
+
+	if( m_iso_file.IsEmpty() == false ) {
+		xendisk += "<disk type='file' device='cdrom'>";
+		xendisk += "<source file='";
+		xendisk += m_iso_file;
+		xendisk += "'/>";
+		xendisk += "<target dev='";
+		xendisk += m_xen_cdrom_device;
+		xendisk += "'/>";
+		xendisk += "<readonly/>";
+		xendisk += "</disk>";
+	}
+
 	return xendisk;
 }
 
@@ -1354,6 +1596,17 @@ XenType::checkXenParams(VMGahpConfig* config)
 		return false;
 	}
 
+	// First try to read XEN_CONTROLLER
+	config_value = vmgahp_param("XEN_CONTROLLER");
+	if( !config_value ) {
+		vmprintf(D_ALWAYS, "\nERROR: You should define 'XEN_CONTROLLER' "
+				"in \"%s\"\n", config->m_configfile.Value());
+		return false;
+	}
+	fixedvalue = delete_quotation_marks(config_value);
+	free(config_value);
+	config->m_controller = fixedvalue;
+
 	// find script program for Xen
 	config_value = vmgahp_param("XEN_SCRIPT");
 	if( !config_value ) {
@@ -1416,8 +1669,8 @@ XenType::checkXenParams(VMGahpConfig* config)
 		return false;
 	}
 	
-	// Read XEN_DEFAULT_RAMDISK (optional parameter)
-	config_value = vmgahp_param("XEN_DEFAULT_RAMDISK");
+	// Read XEN_DEFAULT_INITRD (optional parameter)
+	config_value = vmgahp_param("XEN_DEFAULT_INITRD");
 	if( config_value ) {
 		fixedvalue = delete_quotation_marks(config_value);
 		free(config_value);
@@ -1459,6 +1712,7 @@ XenType::testXen(VMGahpConfig* config)
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(config->m_vm_script);
+	systemcmd.AppendArg(config->m_controller);
 	systemcmd.AppendArg("check");
 
 	int result = systemCommand(systemcmd, true);
@@ -1610,11 +1864,12 @@ XenType::killVM()
 	// If a VM is soft suspended, resume it first.
 	ResumeFromSoftSuspend();
 
-	return killVMFast(m_scriptname.Value(), m_vm_name.Value());
+	return killVMFast(m_scriptname.Value(), m_vm_name.Value(), 
+			m_xen_controller.Value());
 }
 
 bool
-XenType::killVMFast(const char* script, const char* vmname)
+XenType::killVMFast(const char* script, const char* vmname, const char* controller)
 {
 	vmprintf(D_FULLDEBUG, "Inside XenType::killVMFast\n");
 	
@@ -1625,6 +1880,7 @@ XenType::killVMFast(const char* script, const char* vmname)
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(script);
+	systemcmd.AppendArg(controller);
 	systemcmd.AppendArg("killvm");
 	systemcmd.AppendArg(vmname);
 
@@ -1632,5 +1888,52 @@ XenType::killVMFast(const char* script, const char* vmname)
 	if( result != 0 ) {
 		return false;
 	}
+	return true;
+}
+
+bool
+XenType::createISO()
+{
+	vmprintf(D_FULLDEBUG, "Inside XenType::createISO\n");
+
+	m_iso_file = "";
+
+	if( m_scriptname.IsEmpty() || m_vm_cdrom_files.isEmpty() ) {
+		return false;
+	}
+
+	MyString tmp_config;
+	MyString tmp_file;
+	if( createISOConfigAndName(&m_vm_cdrom_files, tmp_config, 
+				tmp_file) == false ) {
+		return false;
+	}
+
+	ArgList systemcmd;
+	if( m_prog_for_script.IsEmpty() == false ) {
+		systemcmd.AppendArg(m_prog_for_script);
+	}
+	systemcmd.AppendArg(m_scriptname);
+	systemcmd.AppendArg(m_xen_controller);
+	systemcmd.AppendArg("createiso");
+	systemcmd.AppendArg(tmp_config);
+	systemcmd.AppendArg(tmp_file);
+
+	int result = systemCommand(systemcmd, true);
+	if( result != 0 ) {
+		return false;
+	}
+
+#if defined(LINUX)	
+	// To avoid lazy-write behavior to disk
+	sync();
+#endif
+
+	unlink(tmp_config.Value());
+	m_iso_file = tmp_file;
+	m_local_iso = true;
+
+	// Insert the name of created iso file to classAd for future use
+	m_classAd.Assign("VMPARAM_ISO_NAME", condor_basename(m_iso_file.Value()));
 	return true;
 }

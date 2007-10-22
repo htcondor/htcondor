@@ -406,30 +406,30 @@ VMGahpRequest::getResult() {
 	return m_pending_result;
 }
 
-int 
+bool 
 VMGahpRequest::checkResult(MyString& errmsg) {
 	if( !m_pending_result || m_pending_result->argc != 3) {
 		dprintf(D_ALWAYS, "Bad Result of VM Request('%s')\n", 
 				m_command.Value());
 		getVMGahpErrString(VMGAHP_ERR_INTERNAL, errmsg);
-		return VMGAHP_ERR_INTERNAL;
+		return false;
 	}
 
 	int resultno = (int)strtol(m_pending_result->argv[1], (char **)NULL, 10);
 	if( resultno != 0 ) {
 		dprintf(D_ALWAYS, "Failed to execute command('%s'), "
-				"vmgahp errorNo('%s')\n", 
+				"vmgahp error string('%s')\n", 
 				m_command.Value(), m_pending_result->argv[2]);
-		int gahp_error = (int)strtol(m_pending_result->argv[2], 
-				(char **)NULL, 10);
-		if( gahp_error != 0 ) {
-			getVMGahpErrString(gahp_error, errmsg);
-			return gahp_error;
+
+		if( !strcmp(m_pending_result->argv[2], "NULL") ) {
+			getVMGahpErrString(VMGAHP_ERR_INTERNAL, errmsg);
+			return false;
 		}else {
-			return VMGAHP_ERR_INTERNAL;
+			errmsg = m_pending_result->argv[2];
+			return false;
 		}
 	}
-	return VMGAHP_NO_ERR;
+	return true;
 }
 
 void 

@@ -49,9 +49,10 @@ operator=(const VMGahpConfig& old)
 	m_vm_max_memory = old.m_vm_max_memory;
 	m_vm_networking = old.m_vm_networking;
 	m_vm_networking_types.clearAll();
-	if( old.m_vm_networking_types.isEmpty() == false ) {
+	if( old.m_vm_networking_types.isEmpty() == false ) { 
 		m_vm_networking_types.create_union(oldp->m_vm_networking_types, false);
 	}
+
 	m_vm_hardware_vt = old.m_vm_hardware_vt;
 	m_vm_script = old.m_vm_script;
 	m_prog_for_script = old.m_prog_for_script;
@@ -147,24 +148,25 @@ VMGahpConfig::init(const char* vmtype, const char* configfile)
 					"So 'VM_NETWORKING' is disabled\n", configfile);
 			m_vm_networking = false;
 		}else {
-			MyString networking_types = delete_quotation_marks(config_value);
+			MyString networking_type = delete_quotation_marks(config_value);
+			networking_type.trim();
+			// change string to lowercase
+			networking_type.strlwr();
 			free(config_value);
 
-			networking_types.strlwr();
-			m_vm_networking_types.initializeFromString(networking_types.Value());
+			StringList networking_types(networking_type.Value(), ", ");
+			m_vm_networking_types.create_union(networking_types, false);
+
 			if( m_vm_networking_types.isEmpty() ) {
 				vmprintf( D_ALWAYS, "\nERROR: 'VM_NETWORKING' is true but "
 						"'VM_NETWORKING_TYPE' is empty in \"%s\" "
 						"So 'VM_NETWORKING' is disabled\n", configfile);
 				m_vm_networking = false;
-			}
-
-			// If there is a networking type using dhcp 
-			// (e.g. nat_dhcp,bridge_dhcp),
-			// "dhcp" will be also inserted as a type.
-			if( networking_types.find( "dhcp", 0 ) >= 0 ) {
-				if( m_vm_networking_types.contains("dhcp") == false ) {
-					m_vm_networking_types.append("dhcp");
+			}else {
+				config_value = vmgahp_param("VM_NETWORKING_DEFAULT_TYPE");
+				if( config_value ) {
+					m_vm_default_networking_type = delete_quotation_marks(config_value);
+					free(config_value);
 				}
 			}
 		}

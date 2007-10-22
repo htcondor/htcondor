@@ -164,7 +164,7 @@ MyString VMType;
 int VMMemory = 0;
 bool VMCheckpoint = false;
 bool VMNetworking = false;
-StringList VMNetworkTypes;
+MyString VMNetworkType;
 bool VMHardwareVT = false;
 bool vm_need_fsdomain = false;
 bool xen_has_file_to_be_transferred = false;
@@ -6799,7 +6799,7 @@ void SetVMRequirements()
 		}
 	}
 
-	if( VMNetworking && (VMNetworkTypes.isEmpty() == false) ) {
+	if( VMNetworking ) {
 		bool checks_vmnetworking = false;
 		checks_vmnetworking = findClause( vmanswer, ATTR_VM_NETWORKING);
 
@@ -6808,17 +6808,19 @@ void SetVMRequirements()
 			(void)strcat( vmanswer, " && (" );
 			(void)strcat( vmanswer, ATTR_VM_NETWORKING);
 			(void)strcat( vmanswer, ")" );
+		}
 
+		if(	VMNetworkType.IsEmpty() == false ) {
 			// add vm_networking_type to requirements
 			(void)strcat( vmanswer, " && ( stringListIMember(\"" );
-			(void)strcat( vmanswer, VMNetworkTypes.print_to_string());
+			(void)strcat( vmanswer, VMNetworkType.Value());
 			(void)strcat( vmanswer, "\",");
 			(void)strcat( vmanswer, "TARGET.");
 			(void)strcat( vmanswer, ATTR_VM_NETWORKING_TYPES);
 			(void)strcat( vmanswer, ",\",\")) ");
 		}
 	}
-
+			
 	if( VMCheckpoint ) {
 		bool checks_ckpt_arch = false;
 		bool checks_vm_ckpt_mac = false;
@@ -6878,27 +6880,15 @@ SetVMParams()
 	if( VMNetworking ) {
 		tmp_ptr = condor_param(VM_Networking_Type, ATTR_JOB_VM_NETWORKING_TYPE);
 		if( tmp_ptr ) {
-			VMNetworkTypes.initializeFromString(tmp_ptr);
+			VMNetworkType = tmp_ptr;
 			free(tmp_ptr);
 
-			if( VMNetworkTypes.number() > 1 ) {
-				fprintf( stderr, "\nERROR: Currently VM Universe supports "
-						"only one vm networking type\n");
-				DoCleanup(0,0,NULL);
-				exit(1);
-			}
+			sprintf(buffer, "%s = \"%s\"", ATTR_JOB_VM_NETWORKING_TYPE, 
+					VMNetworkType.Value());
+			InsertJobExpr(buffer, false );
 		}else {
-			fprintf( stderr, "\nERROR: In order to use VM networking, "
-					"you should define '%s'\n", VM_Networking_Type);
-			DoCleanup(0,0,NULL);
-			exit(1);
+			VMNetworkType = "";
 		}
-	}
-	if( VMNetworking && (VMNetworkTypes.isEmpty() == false) ) {
-		tmp_ptr = VMNetworkTypes.print_to_string();
-		sprintf(buffer, "%s = \"%s\"", ATTR_JOB_VM_NETWORKING_TYPE, tmp_ptr);
-		InsertJobExpr(buffer, false );
-		free(tmp_ptr);
 	}
 
 	// Set memory for virtual machine
@@ -7130,26 +7120,26 @@ SetVMParams()
 			free(xen_kernel);
 		}
 
-		// xen_ramdisk is an optional parameter
-		char *xen_ramdisk = NULL;
-		xen_ramdisk = condor_param("xen_ramdisk");
-		if( xen_ramdisk ) {
+		// xen_initrd is an optional parameter
+		char *xen_initrd = NULL;
+		xen_initrd = condor_param("xen_initrd");
+		if( xen_initrd ) {
 			if( !real_xen_kernel_file ) {
-				fprintf( stderr, "\nERROR: To use xen_ramdisk, "
+				fprintf( stderr, "\nERROR: To use xen_initrd, "
 						"xen_kernel should be a real kernel file.\n");
 				DoCleanup(0,0,NULL);
 				exit(1);
 			}
 			MyString fixedname;
-			if( make_vm_file_path(xen_ramdisk, "xen_ramdisk", fixedname) 
+			if( make_vm_file_path(xen_initrd, "xen_initrd", fixedname) 
 					== false ) {
 				DoCleanup(0,0,NULL);
 				exit(1);
 			}
-			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_RAMDISK, 
+			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_INITRD, 
 					fixedname.Value());
 			InsertJobExpr(buffer, false);
-			free(xen_ramdisk);
+			free(xen_initrd);
 		}
 
 		if( need_xen_root_device ) {
@@ -7200,14 +7190,15 @@ SetVMParams()
 			free(xen_disk);
 		}
 
-		// xen_extra is a optional parameter
-		char *xen_extra = NULL;
-		xen_extra = condor_param("xen_extra");
-		if( xen_extra ) {
-			MyString fixedvalue = delete_quotation_marks(xen_extra);
-			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_EXTRA, fixedvalue.Value());
+		// xen_kernel_params is a optional parameter
+		char *xen_kernel_params = NULL;
+		xen_kernel_params = condor_param("xen_kernel_params");
+		if( xen_kernel_params ) {
+			MyString fixedvalue = delete_quotation_marks(xen_kernel_params);
+			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_KERNEL_PARAMS, 
+					fixedvalue.Value());
 			InsertJobExpr( buffer, false);
-			free(xen_extra);
+			free(xen_kernel_params);
 		}
 
 		if( has_vm_cdrom_files ) {

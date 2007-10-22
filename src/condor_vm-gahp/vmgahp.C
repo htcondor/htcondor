@@ -916,12 +916,13 @@ VMGahp::executeStart(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_START <req_id> <type>
 	char* vmtype = req->m_args.argv[2];
+	MyString err_message;
 
 	if( m_jobAd == NULL ) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = "";
-		req->m_result += VMGAHP_ERR_NO_JOBCLASSAD_INFO;
+		getVMGahpErrString(VMGAHP_ERR_NO_JOBCLASSAD_INFO, err_message);
+		req->m_result = makeErrorMessage(err_message.Value());
 		return; 
 	}
 
@@ -929,8 +930,8 @@ VMGahp::executeStart(VMRequest *req)
 	if( m_jobAd->LookupString( "VM_WORKING_DIR", vmworkingdir) != 1 ) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = "";
-		req->m_result += VMGAHP_ERR_NO_JOBCLASSAD_INFO;
+		getVMGahpErrString(VMGAHP_ERR_NO_JOBCLASSAD_INFO, err_message);
+		req->m_result = makeErrorMessage(err_message.Value());
 		vmprintf(D_ALWAYS, "VM_WORKING_DIR cannot be found in vm classAd\n");
 		return;
 	}
@@ -939,8 +940,8 @@ VMGahp::executeStart(VMRequest *req)
 	if( m_jobAd->LookupString( ATTR_JOB_VM_TYPE, job_vmtype) != 1 ) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = "";
-		req->m_result += VMGAHP_ERR_NO_JOBCLASSAD_INFO;
+		getVMGahpErrString(VMGAHP_ERR_NO_JOBCLASSAD_INFO, err_message);
+		req->m_result = makeErrorMessage(err_message.Value());
 		vmprintf(D_ALWAYS, "VM_TYPE('%s') cannot be found in vm classAd\n", 
 							ATTR_JOB_VM_TYPE);
 		return;
@@ -949,8 +950,8 @@ VMGahp::executeStart(VMRequest *req)
 	if(strcasecmp(vmtype, job_vmtype.Value()) != 0 ) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = "";
-		req->m_result += VMGAHP_ERR_NO_SUPPORTED_VM_TYPE;
+		getVMGahpErrString(VMGAHP_ERR_NO_SUPPORTED_VM_TYPE, err_message);
+		req->m_result = makeErrorMessage(err_message.Value());
 		vmprintf(D_ALWAYS, "Argument is %s but VM_TYPE in job classAD "
 						"is %s\n", vmtype, job_vmtype.Value());
 		return;
@@ -959,8 +960,8 @@ VMGahp::executeStart(VMRequest *req)
 	if(strcasecmp(vmtype, m_gahp_config->m_vm_type.Value()) != 0 ) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = "";
-		req->m_result += VMGAHP_ERR_NO_SUPPORTED_VM_TYPE;
+		getVMGahpErrString(VMGAHP_ERR_NO_SUPPORTED_VM_TYPE, err_message);
+		req->m_result = makeErrorMessage(err_message.Value());
 		return;
 	}
 
@@ -982,15 +983,15 @@ VMGahp::executeStart(VMRequest *req)
 		vmprintf(D_ALWAYS, "vmtype(%s) is not yet implemented\n", vmtype);
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = "";
-		req->m_result += VMGAHP_ERR_NO_SUPPORTED_VM_TYPE;
+		getVMGahpErrString(VMGAHP_ERR_NO_SUPPORTED_VM_TYPE, err_message);
+		req->m_result = makeErrorMessage(err_message.Value());
 		return; 
 	}
 
 	if( new_vm->CreateConfigFile() == false ) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = new_vm->m_result_msg;
+		req->m_result = makeErrorMessage(new_vm->m_result_msg.Value());
 		delete new_vm;
 		new_vm = NULL;
 		vmprintf(D_FULLDEBUG, "CreateConfigFile fails in executeStart!\n");
@@ -1002,7 +1003,7 @@ VMGahp::executeStart(VMRequest *req)
 	if(result == false) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = new_vm->m_result_msg;
+		req->m_result = makeErrorMessage(new_vm->m_result_msg.Value());
 		delete new_vm;
 		new_vm = NULL;
 		vmprintf(D_FULLDEBUG, "executeStart fail!\n");
@@ -1033,13 +1034,14 @@ VMGahp::executeStop(VMRequest *req)
 		return;
 	}
 
+	MyString err_message;
 	VMType *vm = findVM(vm_id);
 
 	if(vm == NULL) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = "";
-		req->m_result += VMGAHP_ERR_VM_NOT_FOUND;
+		getVMGahpErrString(VMGAHP_ERR_VM_NOT_FOUND, err_message);
+		req->m_result = makeErrorMessage(err_message.Value());
 		vmprintf(D_FULLDEBUG, "VM(id=%d) is not found in executeStop\n", vm_id);
 		return;
 	}else {
@@ -1048,7 +1050,7 @@ VMGahp::executeStop(VMRequest *req)
 		if(result == false) {
 			req->m_has_result = true;
 			req->m_is_success = false;
-			req->m_result = vm->m_result_msg;
+			req->m_result = makeErrorMessage(vm->m_result_msg.Value());
 			removeVM(vm);
 			vmprintf(D_FULLDEBUG, "executeStop fail!\n");
 			return;
@@ -1074,13 +1076,14 @@ VMGahp::executeSuspend(VMRequest *req)
 		return;
 	}
 
+	MyString err_message;
 	VMType *vm = findVM(vm_id);
 
 	if(vm == NULL) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = "";
-		req->m_result += VMGAHP_ERR_VM_NOT_FOUND;
+		getVMGahpErrString(VMGAHP_ERR_VM_NOT_FOUND, err_message);
+		req->m_result = makeErrorMessage(err_message.Value());
 		vmprintf(D_FULLDEBUG, "VM(id=%d) is not found in executeSuspend\n", vm_id);
 		return;
 	}else {
@@ -1089,7 +1092,7 @@ VMGahp::executeSuspend(VMRequest *req)
 		if(result == false) {
 			req->m_has_result = true;
 			req->m_is_success = false;
-			req->m_result = vm->m_result_msg;
+			req->m_result = makeErrorMessage(vm->m_result_msg.Value());
 			vmprintf(D_FULLDEBUG, "executeSuspend fail!\n");
 			return;
 		} else {
@@ -1113,13 +1116,14 @@ VMGahp::executeSoftSuspend(VMRequest *req)
 		return;
 	}
 
+	MyString err_message;
 	VMType *vm = findVM(vm_id);
 
 	if(vm == NULL) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = "";
-		req->m_result += VMGAHP_ERR_VM_NOT_FOUND;
+		getVMGahpErrString(VMGAHP_ERR_VM_NOT_FOUND, err_message);
+		req->m_result = makeErrorMessage(err_message.Value());
 		vmprintf(D_FULLDEBUG, "VM(id=%d) is not found in executeSoftSuspend\n",
 			   	vm_id);
 		return;
@@ -1129,7 +1133,7 @@ VMGahp::executeSoftSuspend(VMRequest *req)
 		if(result == false) {
 			req->m_has_result = true;
 			req->m_is_success = false;
-			req->m_result = vm->m_result_msg;
+			req->m_result = makeErrorMessage(vm->m_result_msg.Value());
 			vmprintf(D_FULLDEBUG, "executeSoftSuspend fail!\n");
 			return;
 		} else {
@@ -1153,13 +1157,14 @@ VMGahp::executeResume(VMRequest *req)
 		return;
 	}
 
+	MyString err_message;
 	VMType *vm = findVM(vm_id);
 
 	if(vm == NULL) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = "";
-		req->m_result += VMGAHP_ERR_VM_NOT_FOUND;
+		getVMGahpErrString(VMGAHP_ERR_VM_NOT_FOUND, err_message);
+		req->m_result = makeErrorMessage(err_message.Value());
 		vmprintf(D_FULLDEBUG, "VM(id=%d) is not found in executeResume\n", 
 					vm_id);
 		return;
@@ -1169,7 +1174,7 @@ VMGahp::executeResume(VMRequest *req)
 		if(result == false) {
 			req->m_has_result = true;
 			req->m_is_success = false;
-			req->m_result = vm->m_result_msg;
+			req->m_result = makeErrorMessage(vm->m_result_msg.Value());
 			vmprintf(D_FULLDEBUG, "executeResume fail!\n");
 			return;
 		} else {
@@ -1193,13 +1198,14 @@ VMGahp::executeCheckpoint(VMRequest *req)
 		return;
 	}
 
+	MyString err_message;
 	VMType *vm = findVM(vm_id);
 
 	if(vm == NULL) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = "";
-		req->m_result += VMGAHP_ERR_VM_NOT_FOUND;
+		getVMGahpErrString(VMGAHP_ERR_VM_NOT_FOUND, err_message);
+		req->m_result = makeErrorMessage(err_message.Value());
 		vmprintf(D_FULLDEBUG, "VM(id=%d) is not found in executeCheckpoint\n", 
 					vm_id);
 		return;
@@ -1209,7 +1215,7 @@ VMGahp::executeCheckpoint(VMRequest *req)
 		if(result == false) {
 			req->m_has_result = true;
 			req->m_is_success = false;
-			req->m_result = vm->m_result_msg;
+			req->m_result = makeErrorMessage(vm->m_result_msg.Value());
 			vmprintf(D_FULLDEBUG, "executeCheckpoint fail!\n");
 			return;
 		} else {
@@ -1246,7 +1252,7 @@ VMGahp::executeStatus(VMRequest *req)
 		if(result == false) {
 			req->m_has_result = true;
 			req->m_is_success = false;
-			req->m_result = vm->m_result_msg;
+			req->m_result = makeErrorMessage(vm->m_result_msg.Value());
 			return;
 		} else {
 
@@ -1272,13 +1278,14 @@ VMGahp::executeGetpid(VMRequest *req)
 		return;
 	}
 
+	MyString err_message;
 	VMType *vm = findVM(vm_id);
 
 	if(vm == NULL) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = "";
-		req->m_result += VMGAHP_ERR_VM_NOT_FOUND;
+		getVMGahpErrString(VMGAHP_ERR_VM_NOT_FOUND, err_message);
+		req->m_result = makeErrorMessage(err_message.Value());
 		vmprintf(D_FULLDEBUG, "VM(id=%d) is not found in executeGetPid\n", 
 					vm_id);
 		return;
@@ -1565,7 +1572,7 @@ VMGahp::killAllProcess()
 			MyString vmname;
 			if( VMType::createVMName(m_jobAd, vmname) ) {
 				XenType::killVMFast(m_gahp_config->m_vm_script.Value(), 
-						vmname.Value());
+						vmname.Value(), m_gahp_config->m_controller.Value());
 				vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 			}
 		}
