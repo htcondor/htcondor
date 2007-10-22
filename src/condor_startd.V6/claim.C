@@ -99,10 +99,6 @@ Claim::~Claim()
 		// Cancel any daemonCore events associated with this claim
 	this->cancel_match_timer();
 	this->cancelLeaseTimer();
-	if ( c_sendalive_tid != -1 ) {
-		daemonCore->Cancel_Timer(c_sendalive_tid);
-		c_sendalive_tid = -1;
-	}
 	if ( c_alive_inprogress_sock ) {
 		daemonCore->Cancel_Socket(c_alive_inprogress_sock);
 		c_alive_inprogress_sock = NULL;
@@ -829,6 +825,14 @@ Claim::cancelLeaseTimer()
 		}
 		c_lease_tid = -1;
 	}
+
+		// Anytime we cancel the lease, we should also cancel
+		// the timer to renew the lease.  So do that now.
+	if ( c_sendalive_tid != -1 ) {
+		daemonCore->Cancel_Timer(c_sendalive_tid);
+		c_sendalive_tid = -1;
+	}
+
 }
 
 int
