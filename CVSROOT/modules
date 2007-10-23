@@ -881,7 +881,7 @@ V6_9_5_EXT	-a V6_9_COMMON_EXT \
                    externals/bundles/drmaa/1.5 \
                    externals/bundles/gt4gahp/1.7 \
                    externals/bundles/globus/4.0.5 \
-                   externals/bundles/nordugridgahp/1.1.1
+                   externals/bundles/nordugridgahp/1.1.2
 
 # Externals needed for the head of the V6_9-branch (a.k.a. the TRUNK)
 V6_9_EXT	-a V6_9_5_EXT
