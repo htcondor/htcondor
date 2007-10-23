@@ -78,7 +78,7 @@ within the cluster, and/or a POST script.
 
 \index{DAGMan!input file example}
 The input file used by DAGMan is called a DAG input file.
-It may specify nine types of items:
+It may specify eleven types of items:
 \begin{enumerate}
 \item
 A list of the nodes in the DAG which cause the submission of
@@ -102,6 +102,10 @@ if a node within the DAG fails.
 Any definition of macros associated with a node.
 \item
 A specification of the priority of a node.
+\item
+A specification of the category of a node.
+\item
+A maxjobs specification for a given node category.
 \item
 A node's exit value that causes the entire DAG to abort.
 \item
@@ -535,7 +539,7 @@ of unique submit description files.
 The \Arg{PRIORITY} key word assigns a priority to a DAG node.
 The syntax for PRIORITY is
 
-\Arg{PRIORITY} \Arg{JobName} \Arg{PriorityValue}
+\Opt{PRIORITY} \Arg{JobName} \Arg{PriorityValue}
 
 The node priority affects the order in which nodes that are ready
 at the same time will be submitted.  Note that node priority does
@@ -572,6 +576,38 @@ DAG
 
 This will cause node C to be submitted before node B (normally, node B
 would be submitted first).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{CATEGORY}
+
+The \Arg{CATEGORY} key word assigns a category to a DAG node.
+The syntax for CATEGORY is
+
+\Opt{CATEGORY} \Arg{JobName} \Arg{CategoryName}
+
+Node categories are used for job submission throttling (see \Opt{MAXJOBS}
+below).  Category names cannot contain whitespace.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{MAXJOBS}
+
+The \Arg{MAXJOBS} key word limits the number of submitted jobs for a node
+category.  The syntax for MAXJOBS is
+
+\Opt{MAXJOBS} \Arg{CategoryName} \Arg{MaxJobsValue}
+
+If the number of submitted jobs for a given category reaches the limit,
+no further jobs in that category will be submitted until other jobs
+in the category terminate.  If there is no MAXJOBS entry for a given node
+category, the limit is set to infinity.
+
+Note that a single invocation
+of \Condor{submit} counts as one job, even if the submit file produces
+a multi-job cluster.
+
+The \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED} configuration macro and the
+\Condor{submit\_dag} \Arg{-maxjobs} command-line flag are still in effect
+if node category throttles are used.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{ABORT-DAG-ON}
@@ -637,7 +673,7 @@ The \Arg{CONFIG} keyword specifies a configuration file to be used
 to set \Condor{dagman} configuration options when running this DAG.
 The syntax for \Arg{CONFIG} is
 
-\Arg{CONFIG} \Arg{ConfigFileName}
+\Opt{CONFIG} \Arg{ConfigFileName}
 
 If the DAG file contains a line like this:
 
