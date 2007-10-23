@@ -1438,6 +1438,7 @@ ExecuteEvent::
 ExecuteEvent()
 {	
 	executeHost [0] = '\0';
+	remoteName [0] = '\0';
 	eventNumber = ULOG_EXECUTE;
 }
 
