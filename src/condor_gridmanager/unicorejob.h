@@ -32,7 +32,6 @@
 
 #include "proxymanager.h"
 #include "basejob.h"
-#include "gt3resource.h"
 #include "gahp-client.h"
 
 

@@ -35,8 +35,6 @@
 #include "gahp-client.h"
 #include "globusjob.h"
 #include "globusresource.h"
-#include "gt3job.h"
-#include "gt3resource.h"
 #include "gt4job.h"
 #include "gt4resource.h"
 #include "infnbatchjob.h"
@@ -94,9 +92,6 @@ template class HashTable<HashKey, GlobusResource *>;
 template class HashBucket<HashKey, GlobusResource *>;
 template class List<GlobusJob>;
 template class Item<GlobusJob>;
-
-template class HashTable<HashKey, GT3Resource *>;
-template class HashBucket<HashKey, GT3Resource *>;
 
 template class HashTable<HashKey, GT4Resource *>;
 template class HashBucket<HashKey, GT4Resource *>;
