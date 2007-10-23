@@ -722,6 +722,14 @@ int daemon::RealStart( )
 		// Since we just started it, we know it's not a new executable. 
 	newExec = FALSE;
 
+		// If starting the collector, give it a few seconds to get
+		// going before starting other daemons or talking to ti
+		// ourselves
+	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
+		dprintf(D_FULLDEBUG, "Pausing to allow the collector to start\n");
+		sleep(3);
+	}
+
 	if( needs_update ) {
 		needs_update = FALSE;
 		daemons.UpdateCollector();
