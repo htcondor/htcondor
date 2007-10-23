@@ -29,6 +29,8 @@
 
 static const int CATEGORY_HASH_SIZE = 101; // prime
 
+const int ThrottleByCategory::noThrottleSetting = -1;
+
 //---------------------------------------------------------------------------
 ThrottleByCategory::ThrottleByCategory() :
 			_throttles( CATEGORY_HASH_SIZE, MyStringHash, rejectDuplicateKeys )

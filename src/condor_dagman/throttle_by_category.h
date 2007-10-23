@@ -33,7 +33,7 @@
 
 class ThrottleByCategory {
 public:
-	static const int	noThrottleSetting = -1;
+	static const int	noThrottleSetting;
 
 	struct ThrottleInfo {
 		const MyString *_category;
