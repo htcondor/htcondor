@@ -1,10 +1,8 @@
 NAME=condor_gridmanager
-GT3GAHP_WRAPPER_NAME = gt3_gahp
 GT4GAHP_WRAPPER_NAME = gt4_gahp
-#all_target($(NAME) grid_monitor.sh $(GT3GAHP_WRAPPER_NAME) $(GT4GAHP_WRAPPER_NAME))
 UNICOREGAHP_WRAPPER_NAME = unicore_gahp
 GRIDFTP_WRAPPER_NAME = gridftp_wrapper.sh
-all_target($(NAME) grid_monitor.sh $(GT3GAHP_WRAPPER_NAME) $(GT4GAHP_WRAPPER_NAME) $(UNICOREGAHP_WRAPPER_NAME) $(GRIDFTP_WRAPPER_NAME))
+all_target($(NAME) grid_monitor.sh $(GT4GAHP_WRAPPER_NAME) $(UNICOREGAHP_WRAPPER_NAME) $(GRIDFTP_WRAPPER_NAME))
 
 #if WANT_ORACLE_UNIVERSE
 ORACLE_JOB_FLAGS = -DORACLE_UNIVERSE -I/p/condor/workspaces/jfrey/oracle/OraHome1/rdbms/demo -I/p/condor/workspaces/jfrey/oracle/OraHome1/rdbms/public
@@ -18,17 +16,14 @@ LIB = $(ORACLE_JOB_LIB) $(DAEMONCORE_LIB) $(STD_LIBS)
 
 soapobjs(gridmanager)
 
-OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o gt3job.o gt3resource.o gt4job.o gt4resource.o infnbatchjob.o mirrorjob.o mirrorresource.o condorjob.o condorresource.o unicorejob.o nordugridjob.o nordugridresource.o creamjob.o creamresource.o proxymanager.o gahp-client.o $(ORACLE_JOB_OBJ) basejob.o baseresource.o gridftpmanager.o gridmanager_instantiate.o $(SOAP_OBJS)
+OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o gt4job.o gt4resource.o infnbatchjob.o mirrorjob.o mirrorresource.o condorjob.o condorresource.o unicorejob.o nordugridjob.o nordugridresource.o creamjob.o creamresource.o proxymanager.o gahp-client.o $(ORACLE_JOB_OBJ) basejob.o baseresource.o gridftpmanager.o gridmanager_instantiate.o $(SOAP_OBJS)
 
 template_inst( gridmanager_instantiate.C, gridmanager_instantiate.o )
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
-GT3GAHP_WRAPPER_OBJ = gt3_gahp_wrapper.o
 GT4GAHP_WRAPPER_OBJ = gt4_gahp_wrapper.o
 UNICOREGAHP_WRAPPER_OBJ = unicore_gahp_wrapper.o
-
-public_c_plus_target($(GT3GAHP_WRAPPER_NAME),sbin,$(GT3GAHP_WRAPPER_OBJ),$(STD_LIBS))
 
 public_c_plus_target($(UNICOREGAHP_WRAPPER_NAME),sbin,$(UNICOREGAHP_WRAPPER_OBJ),$(STD_LIBS))
 
@@ -48,10 +43,6 @@ public_copy_target($(GRIDFTP_WRAPPER_NAME),libexec,$(GRIDFTP_WRAPPER_NAME),EXECU
 grid_monitor.sh: grid_monitor_wrapper grid_manager_monitor_agent
 	cat grid_monitor_wrapper grid_manager_monitor_agent > grid_monitor.sh
 	chmod 755 grid_monitor.sh
-
-release_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
-static_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
-strip_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
 
 public_copy_target($(GT4GAHP_DIR)/gt4-gahp.jar,lib,gt4-gahp.jar,TEXT_MODE)
 

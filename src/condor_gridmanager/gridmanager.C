@@ -47,7 +47,6 @@
 #include "unicorejob.h"
 #include "mirrorjob.h"
 #include "condorjob.h"
-#include "gt3job.h"
 #include "gt4job.h"
 #include "infnbatchjob.h"
 
@@ -375,14 +374,6 @@ Init()
 	new_type->ReconfigFunc = CondorJobReconfig;
 	new_type->AdMatchFunc = CondorJobAdMatch;
 	new_type->CreateFunc = CondorJobCreate;
-	jobTypes.Append( new_type );
-
-	new_type = new JobType;
-	new_type->Name = strdup( "GT3" );
-	new_type->InitFunc = GT3JobInit;
-	new_type->ReconfigFunc = GT3JobReconfig;
-	new_type->AdMatchFunc = GT3JobAdMatch;
-	new_type->CreateFunc = GT3JobCreate;
 	jobTypes.Append( new_type );
 
 	new_type = new JobType;
