@@ -1565,7 +1565,7 @@ SetUniverse()
 		}
 		if ( JobGridType ) {
 			// Validate
-			// Valid values are (as of 6.7): nordugrid, oracle, gt3, globus,
+			// Valid values are (as of 6.7): nordugrid, oracle, globus,
 			//    gt2, infn, condor
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
@@ -1573,7 +1573,6 @@ SetUniverse()
 			//   people who care about the old value. This changed happend in
 			//   Condor 6.7.12.
 			if ((stricmp (JobGridType, "gt2") == MATCH) ||
-				(stricmp (JobGridType, "gt3") == MATCH) ||
 				(stricmp (JobGridType, "gt4") == MATCH) ||
 				(stricmp (JobGridType, "infn") == MATCH) ||
 				(stricmp (JobGridType, "blah") == MATCH) ||
@@ -1594,7 +1593,7 @@ SetUniverse()
 			} else {
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid_type\n", JobGridType );
-				fprintf( stderr, "Must be one of: globus, gt2, gt3, gt4, condor, nordugrid, unicore, or oracle\n" );
+				fprintf( stderr, "Must be one of: globus, gt2, gt4, condor, nordugrid, unicore, or oracle\n" );
 				exit( 1 );
 			}
 		}			
@@ -4468,7 +4467,6 @@ SetGlobusParams()
 		InsertJobExpr( buffer, false );
 
 		if ( stricmp (JobGridType, "gt2") == MATCH ||
-			 stricmp (JobGridType, "gt3") == MATCH ||
 			 stricmp (JobGridType, "gt4") == MATCH ||
 			 stricmp (JobGridType, "oracle") == MATCH ) {
 
@@ -4498,7 +4496,7 @@ SetGlobusParams()
 					// to try again with the actual job classad value:
 				globushost = condor_param( ATTR_GLOBUS_RESOURCE, NULL );
 				if( ! globushost ) { 
-					fprintf( stderr, "Globus/gt3/gt4 universe jobs require a "
+					fprintf( stderr, "Globus/gt4 universe jobs require a "
 							 "\"GlobusScheduler\" parameter\n" );
 					DoCleanup( 0, 0, NULL );
 					exit( 1 );
@@ -4685,7 +4683,6 @@ SetGlobusParams()
 
 	if ( !unified_syntax && JobGridType &&
 		 ( stricmp (JobGridType, "gt2") == MATCH ||
-		   stricmp (JobGridType, "gt3") == MATCH ||
 		   stricmp (JobGridType, "gt4") == MATCH ||
 		   stricmp (JobGridType, "oracle") == MATCH ||
 		   stricmp (JobGridType, "nordugrid") == MATCH ) ) {
@@ -4697,7 +4694,6 @@ SetGlobusParams()
 
 	if ( JobGridType == NULL ||
 		 stricmp (JobGridType, "gt2") == MATCH ||
-		 stricmp (JobGridType, "gt3") == MATCH ||
 		 stricmp (JobGridType, "gt4") == MATCH ||
 		 stricmp (JobGridType, "oracle") == MATCH ||
 		 stricmp (JobGridType, "nordugrid") == MATCH ) {
@@ -4723,7 +4719,6 @@ SetGlobusParams()
 
 	if ( JobGridType == NULL ||
 		 stricmp (JobGridType, "gt2") == MATCH ||
-		 stricmp (JobGridType, "gt3") == MATCH ||
 		 stricmp (JobGridType, "gt4") == MATCH ) {
 
 		sprintf( buffer, "%s = %d", ATTR_GLOBUS_STATUS,
@@ -4812,7 +4807,6 @@ SetGSICredentials()
 	if ( proxy_file == NULL && JobUniverse == CONDOR_UNIVERSE_GRID &&
 		 JobGridType != NULL &&
 		 (stricmp (JobGridType, "gt2") == MATCH ||
-		  stricmp (JobGridType, "gt3") == MATCH ||
 		  stricmp (JobGridType, "gt4") == MATCH ||
 		  stricmp (JobGridType, "nordugrid") == MATCH)) {
 
@@ -4820,7 +4814,7 @@ SetGSICredentials()
 		if ( proxy_file == NULL ) {
 
 			fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
-			fprintf( stderr, "x509 user proxy is required for gt2, gt3, gt4 or nordugrid jobs\n");
+			fprintf( stderr, "x509 user proxy is required for gt2, gt4 or nordugrid jobs\n");
 			exit (1);
 		}
 	}

@@ -1736,10 +1736,6 @@ format_globusHostAndJM( char  *ignore_me, AttrList *ad )
 				jm[p] = '\0';
 			}
 
-		} else if ( !stricmp( grid_type, "gt3" ) ) {
-
-			strncpy( host, resource_name, sizeof(host) );
-
 		} else if ( !stricmp( grid_type, "gt4" ) ) {
 
 			strcpy( jm, "Fork" );
