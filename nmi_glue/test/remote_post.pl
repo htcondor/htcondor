@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.2.2.7 2007-10-09 02:39:58 bt Exp $
+# $Id: remote_post.pl,v 1.2.2.8 2007-10-23 20:03:07 bt Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -125,7 +125,13 @@ if( $? ) {
 open (TASKFILE, "tasklist.nmi") || die "Can't tasklist.nmi: $!\n";
 while( <TASKFILE> ) {
     chomp;
-    my ($testname, $compiler) = split(/\./);
+	my ($taskname, $timeout) = split(/ /);
+	# iterations have numbers placed at the end of the name
+	# for unique db tracking in nmi for now.
+	if($taskname =~ /([\w\-\.\+]+)-\d+/) {
+		$taskname = $1;
+	}
+    my ($testname, $compiler) = split(/\./, $taskname);
     if( $compiler eq "." ) {
         $resultdir = "$BaseDir/results/base";
     } else {
