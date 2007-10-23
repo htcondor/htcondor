@@ -164,22 +164,6 @@ SOURCE=..\src\condor_gridmanager\gridmanager_main.C
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_gridmanager\gt3job.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_gridmanager\gt3job.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_gridmanager\gt3resource.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_gridmanager\gt3resource.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_gridmanager\gt4job.C
 # End Source File
 # Begin Source File
