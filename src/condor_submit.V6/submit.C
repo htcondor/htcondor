@@ -78,6 +78,7 @@
 #include "condor_crontab.h"
 #include "../condor_schedd.V6/scheduler.h"
 #include "condor_holdcodes.h"
+#include "condor_url.h"
 
 #include "list.h"
 #include "condor_vm_universe_types.h"
@@ -1958,6 +1959,10 @@ int
 calc_image_size( const char *name)
 {
 	struct stat	buf;
+
+	if ( IsUrl( name ) ) {
+		return 0;
+	}
 
 	if( stat(full_path(name),&buf) < 0 ) {
 		// EXCEPT( "Cannot stat \"%s\"", name );
@@ -6007,6 +6012,10 @@ check_open( const char *name, int flags )
 
 	/* No need to check for existence of the Null file. */
 	if( strcmp(name, NULL_FILE) == MATCH ) {
+		return;
+	}
+
+	if ( IsUrl( name ) ) {
 		return;
 	}
 

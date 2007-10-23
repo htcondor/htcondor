@@ -30,6 +30,7 @@
 #include "condor_ckpt_name.h"
 #include "nullfile.h"
 #include "filename_tools.h"
+#include "condor_url.h"
 
 #include "globus_utils.h"
 #include "gridmanager.h"
@@ -469,7 +470,14 @@ int NordugridJob::doEvaluateState()
 			} break;
 		case GM_STAGE_IN: {
 			if ( stageList == NULL ) {
+				const char *file;
 				stageList = buildStageInList();
+				stageList->rewind();
+				while ( (file = stageList->next()) ) {
+					if ( IsUrl( file ) ) {
+						stageList->deleteCurrent();
+					}
+				}
 			}
 			rc = gahp->nordugrid_stage_in( resourceManagerString, remoteJobId,
 										   *stageList );
@@ -574,7 +582,17 @@ int NordugridJob::doEvaluateState()
 				stageList = buildStageOutList();
 			}
 			if ( stageLocalList == NULL ) {
+				const char *file;
 				stageLocalList = buildStageOutLocalList( stageList );
+				stageList->rewind();
+				stageLocalList->rewind();
+				while ( (file = stageLocalList->next()) ) {
+					ASSERT( stageList->next() );
+					if ( IsUrl( file ) ) {
+						stageList->deleteCurrent();
+						stageLocalList->deleteCurrent();
+				}
+				}
 			}
 			rc = gahp->nordugrid_stage_out2( resourceManagerString,
 											 remoteJobId,
@@ -839,6 +857,7 @@ MyString *NordugridJob::buildSubmitRSL()
 	MyString *rsl = new MyString;
 	MyString buff;
 	StringList *stage_list = NULL;
+	StringList *stage_local_list = NULL;
 	char *attr_value = NULL;
 	char *rsl_suffix = NULL;
 	char *iwd = NULL;
@@ -943,7 +962,11 @@ MyString *NordugridJob::buildSubmitRSL()
 		while ( (file = stage_list->next()) != NULL ) {
 			*rsl += "(";
 			*rsl += condor_basename(file);
-			*rsl += " \"\")";
+			if ( IsUrl( file ) ) {
+				rsl->sprintf_cat( " \"%s\")", file );
+			} else {
+				*rsl += " \"\")";
+			}
 		}
 	}
 
@@ -968,22 +991,32 @@ MyString *NordugridJob::buildSubmitRSL()
 	}
 
 	stage_list = buildStageOutList();
+	stage_local_list = buildStageOutLocalList( stage_list );
 
 	if ( stage_list->isEmpty() == false ) {
 		char *file;
+		char *local_file;
 		stage_list->rewind();
+		stage_local_list->rewind();
 
 		*rsl += ")(outputfiles=";
 
 		while ( (file = stage_list->next()) != NULL ) {
+			local_file = stage_local_list->next();
 			*rsl += "(";
 			*rsl += condor_basename(file);
-			*rsl += " \"\")";
+			if ( IsUrl( local_file ) ) {
+				rsl->sprintf_cat( " \"%s\")", local_file );
+			} else {
+				*rsl += " \"\")";
+			}
 		}
 	}
 
 	delete stage_list;
 	stage_list = NULL;
+	delete stage_local_list;
+	stage_local_list = NULL;
 
 	*rsl += ')';
 
@@ -1040,7 +1073,7 @@ StringList *NordugridJob::buildStageInList()
 
 	tmp_list->rewind();
 	while ( ( filename = tmp_list->next() ) ) {
-		if ( filename[0] == '/' ) {
+		if ( filename[0] == '/' || IsUrl( filename ) ) {
 			buf.sprintf( "%s", filename );
 		} else {
 			buf.sprintf( "%s%s", iwd.Value(), filename );
@@ -1136,7 +1169,7 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 			local_name[sizeof(local_name)-1] = '\0';
 		}
 
-		if ( local_name[0] == '/' ) {
+		if ( local_name[0] == '/' || IsUrl( local_name ) ) {
 			buff.sprintf( "%s", local_name );
 		} else {
 			buff.sprintf( "%s%s", iwd.Value(), local_name );
