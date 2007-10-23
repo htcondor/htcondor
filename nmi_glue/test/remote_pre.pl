@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.15 2007-10-17 14:09:22 bt Exp $
+# $Id: remote_pre.pl,v 1.16 2007-10-23 14:48:11 gthain Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -247,6 +247,7 @@ print FIX "PROCD_LOG 			= \$(LOG)/ProcdLog\n";
 
 # Add a shorter check time for periodic policy issues
 print FIX "PERIODIC_EXPR_INTERVAL = 15\n";
+print FIX "PERIODIC_EXPR_TIMESLICE = .95\n";
 print FIX "NEGOTIATOR_INTERVAL = 20\n";
 
 # turn on soap for testing
