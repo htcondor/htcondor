@@ -30,6 +30,9 @@
 #include "MyString.h"
 #include "list.h"
 #include "condor_id.h"
+#include "throttle_by_category.h"
+
+class ThrottleByCategory;
 
 //
 // Local DAGMan includes
@@ -285,6 +288,19 @@ class Job {
     */
 	bool IsActive() const;
 
+	/** Sets the node's category (used for throttling by category).
+		@param categoryName: the name of the node's category
+		@param catThrottles: the category throttles object
+		*/
+	void SetCategory( const char *categoryName,
+				ThrottleByCategory &catThrottles );
+
+	/** Get the category throttle information for this node.
+		@return pointer to throttle info (may be NULL)
+	*/
+	ThrottleByCategory::ThrottleInfo *GetThrottleInfo() {
+			return _throttleInfo; }
+
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
@@ -401,6 +417,10 @@ private:
 
 		// True if the node job has been submitted and is idle.
 	bool _isIdle;
+
+		// This node's category; points to an object "owned" by the
+		// ThrottleByCategory object.
+	ThrottleByCategory::ThrottleInfo *_throttleInfo;
 
 };
 

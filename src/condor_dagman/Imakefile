@@ -5,15 +5,11 @@
 #endif
 
 NAME = condor_dagman
-all_target($(NAME) t_helper condor_submit_dag)
-
-#if defined(DAGMAN_HELPER)
-HELPER_FLAGS = -DBUILD_HELPER
-#endif
+all_target($(NAME) condor_submit_dag)
 
 C_PLUS_FLAGS = -I. $(STD_C_PLUS_FLAGS) \
 	-I../condor_daemon_core.V6 -I.. \
-	-Wall $(HELPER_FLAGS)
+	-Wall
 
 CFLAGS = $(STD_C_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) New_classads_lib
@@ -22,18 +18,14 @@ TOOL_LIB = $(STD_LIBS) New_classads_lib
 soapobjs(dagman)
 
 OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o \
-	script.o scriptQ.o helper.o dagman_instantiate.o dagman_commands.o \
-	dagman_multi_dag.o $(SOAP_OBJS)
+	script.o scriptQ.o dagman_instantiate.o dagman_commands.o \
+	dagman_multi_dag.o throttle_by_category.o $(SOAP_OBJS)
 
 public_c_plus_target($(NAME),bin,$(OBJ),$(LIB))
 
 public_c_plus_target(condor_submit_dag,bin,condor_submit_dag.o dagman_multi_dag.o,$(TOOL_LIB))
 
 html_target( documentation )
-
-#if defined(DAGMAN_HELPER)
-c_plus_target(t_helper,t_helper.o helper.o,$(LIB))
-#endif
 
 gen_soapfiles(dagman,condorDagman)
 

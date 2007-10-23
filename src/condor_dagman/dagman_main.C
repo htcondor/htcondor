@@ -628,7 +628,7 @@ int main_init (int argc, char ** const argv) {
 					 	dagFile );
     	}
 	}
-    
+
 #ifndef NOT_DETECT_CYCLE
 	if( dagman.startup_cycle_detect && dagman.dag->isCycle() )
 	{

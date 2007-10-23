@@ -46,3 +46,4 @@ template class BinarySearch<int>;
 CHECK_EVENTS_HASH_INSTANCE;
 template class HashTable<MyString, Job *>;
 template class HashTable<JobID_t, Job *>;
+template class HashTable<MyString, ThrottleByCategory::ThrottleInfo *>;

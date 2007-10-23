@@ -47,6 +47,8 @@ typedef enum {
 	updateDuplicateKeys,
 } duplicateKeyBehavior_t;
 
+// IMPORTANT NOTE: Index must be a class on which == works.
+
 template <class Index, class Value>
 class HashTable {
  public:

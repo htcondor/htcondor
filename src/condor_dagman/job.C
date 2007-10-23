@@ -27,6 +27,7 @@
 #include "condor_debug.h"
 #include "dagman_main.h"
 #include "read_multiple_logs.h"
+#include "throttle_by_category.h"
 
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
@@ -100,6 +101,7 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
     _jobName = strnewp (jobName);
 	_directory = strnewp (directory);
     _cmdFile = strnewp (cmdFile);
+	_throttleInfo = NULL;
 
 	if ( (_jobType == TYPE_CONDOR) && prohibitMultiJobs ) {
 		MyString	errorMsg;
@@ -607,4 +609,23 @@ Job::NumParents()
 {
 	int n = _queues[Q_PARENTS].Number();
 	return n;
+}
+
+void
+Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
+{
+	if ( _throttleInfo != NULL ) {
+		debug_printf( DEBUG_NORMAL, "Warning: new category %s for node %s "
+					"overrides old value %s\n", categoryName, GetJobName(),
+					_throttleInfo->_category->Value() );
+	}
+
+	MyString	tmpName( categoryName );
+	ThrottleByCategory::ThrottleInfo *throttleInfo =
+				catThrottles.GetThrottleInfo( &tmpName );
+	if ( throttleInfo != NULL ) {
+		_throttleInfo = throttleInfo;
+	} else {
+		_throttleInfo = catThrottles.AddCategory( &tmpName );
+	}
 }

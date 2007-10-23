@@ -36,6 +36,7 @@
 #include "check_events.h"
 #include "condor_id.h"
 #include "prioritysimplelist.h"
+#include "throttle_by_category.h"
 
 // NOTE: must be kept in sync with Job::job_type_t
 enum Log_source{
@@ -317,7 +318,7 @@ class Dag {
 			@return number of jobs successfully submitted
 		*/
     int SubmitReadyJobs(const Dagman &dm);
-  
+
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
         as arguments to condor_rm via popen.  This function is called
@@ -342,7 +343,7 @@ class Dag {
 		@param useDagDir run DAGs in directories from DAG file paths 
 			if true
     */
-    void Rescue (const char * rescue_file, const char * datafile) const;
+    void Rescue (const char * rescue_file, const char * datafile) /* const */;
 
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );
@@ -406,7 +407,6 @@ class Dag {
 		// batch-system, or other external errors
 	const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
 	const int DAG_ERROR_CONDOR_JOB_ABORTED;
-	const int DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED;
 
 		// The maximum signal we can deal with in the error-reporting
 		// code.
@@ -425,6 +425,9 @@ class Dag {
 		*/
 	void SetPendingNodeReportInterval( int interval );
 	
+		// Node category throttle information for the DAG.
+	ThrottleByCategory		_catThrottles;
+
   protected:
 
 	/** Print a numbered list of the DAG files.
@@ -446,6 +449,50 @@ class Dag {
 	   @return true on success, false on failure
     */
     bool StartNode( Job *node, bool isRetry );
+
+	typedef enum {
+		SUBMIT_RESULT_OK,
+		SUBMIT_RESULT_FAILED,
+		SUBMIT_RESULT_NO_SUBMIT,
+	} submit_result_t;
+
+	/** Submit the Condor or Stork job for a node, including doing
+		some higher-level work such as sleeping before the actual submit
+		if necessary.
+		@param the appropriate Dagman object
+		@param the node for which to submit a job
+		@param reference to hold the Condor ID the job is assigned
+		@return submit_result_t (see above)
+	*/
+	submit_result_t SubmitNodeJob( const Dagman &dm, Job *node,
+				CondorID &condorID );
+
+	/** Do the post-processing of a successful submit of a Condor or
+		Stork job.
+		@param the node for which the job was just submitted
+		@param the Condor ID of the associated job
+	*/	
+	void ProcessSuccessfulSubmit( Job *node, const CondorID &condorID );
+
+	/** Do the post-processing of a failed submit of a Condor or
+		Stork job.
+		@param the node for which the job was just submitted
+		@param the maximum number of submit attempts allowed for a job.
+	*/
+	void ProcessFailedSubmit( Job *node, int max_submit_attempts );
+
+	/** Decrement the job counts for this node.
+		@param The node for which to decrement the job counts.
+	*/
+	void DecrementJobCounts( Job *node );
+
+	// Note: there's no IncrementJobCounts method because the code isn't
+	// exactly duplicated when incrementing.
+
+	/** Update the job counts for the given node.
+		@param The amount by which to change the job counts.
+	*/
+	void UpdateJobCounts( Job *node, int change );
 
     // add job to termination queue and report termination to all
     // child jobs by removing job ID from each child's waiting queue
@@ -644,6 +691,9 @@ class Dag {
 		// that a single job getting deferred multiple times is counted
 		// multiple times).
 	int		_maxIdleDeferredCount;
+
+		// Total count of jobs deferred because of node category throttles.
+	int		_catThrottleDeferredCount;
 
 		// whether or not to prohibit multiple job proc submitsn (e.g.,
 		// node jobs that create more than one job proc)
