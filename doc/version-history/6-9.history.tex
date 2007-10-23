@@ -19,6 +19,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Dropped support for OGSA GRAM (i.e. grid-type gt3) in the grid
+universe. This version of GRAM is not included in recent versions of
+the Globus Toolkit. This does not affect Condor's support for pre-WS
+GRAM (grid-type gt2) or WS GRAM (grid-type gt4).
+
 \item The suggested configuration value for
 \MacroNI{SHADOW\_RENICE\_INCREMENT} has been changed from 10 to 0.  If
 you have the old value in an existing configuration file, we recommend
