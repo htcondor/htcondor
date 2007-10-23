@@ -136,14 +136,6 @@ SOURCE=..\src\condor_dagman\debug.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\helper.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_dagman\helper.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_dagman\job.C
 # End Source File
 # Begin Source File
@@ -200,6 +192,14 @@ SOURCE=..\src\condor_dagman\soap_dagmanStub.h
 # Begin Source File
 
 SOURCE=..\src\condor_dagman\submit.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_dagman\throttle_by_category.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_dagman\throttle_by_category.h
 # End Source File
 # Begin Source File
 
