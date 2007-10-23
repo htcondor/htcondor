@@ -13,7 +13,6 @@ EXT_GAHP_VERSION = @ext_gahp_version@
 EXT_ZLIB_VERSION = @ext_zlib_version@
 EXT_PVM_VERSION = @ext_pvm_version@
 EXT_MAN_VERSION = man-current
-EXT_GT3GAHP_VERSION = @ext_gt3gahp_version@
 EXT_GT4GAHP_VERSION = @ext_gt4gahp_version@
 EXT_CLASSADS_VERSION = @ext_classads_version@
 EXT_SRB_VERSION = @ext_srb_version@
@@ -103,10 +102,6 @@ GCB_DIR = $(EXT_INSTALL)/$(EXT_GCB_VERSION)
 GCB_LIB = $(GCB_DIR)/lib/libGCB.a
 GCB_INC = $(GCB_DIR)/include
 GCB_BIN = $(GCB_DIR)/bin
-#endif
-
-#if HAVE_EXT_GT3GAHP
-GT3GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT3GAHP_VERSION)
 #endif
 
 #if HAVE_EXT_GT4GAHP

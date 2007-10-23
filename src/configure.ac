@@ -2233,9 +2233,6 @@ CHECK_EXTERNAL([krb5], [1.4.3], [soft],
 _cv_has_gahp=$_cv_has_globus
 CHECK_EXTERNAL([gahp],[1.0.15], [soft])
 
-_cv_has_gt3gahp=$_cv_has_globus
-CHECK_EXTERNAL([gt3gahp],[2.0], [soft])
-
 _cv_has_gt4gahp=$_cv_has_globus
 CHECK_EXTERNAL([gt4gahp],[1.7], [soft])
 
