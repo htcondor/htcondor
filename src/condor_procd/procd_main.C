@@ -47,17 +47,20 @@ static char* local_client_principal = NULL;
 //
 static char* log_file_name = NULL;
 
-// info about the root process of the family we'll be monitoring
-// (set with the two-argument "-P" option)
-//
-static pid_t root_pid = 0;
-static birthday_t root_birthday = 0;
-
 // the maximum number of seconds we'll wait in between
 // taking snapshots (one minute by default)
 // (set with the "-S" option)
 //
 static int max_snapshot_interval = 60;
+
+#if defined(LINUX)
+// a range of group IDs that can be used to track process
+// families by placing them in their supplementary group
+// lists
+//
+static gid_t min_tracking_gid = 0;
+static gid_t max_tracking_gid = 0;
+#endif
 
 #if defined(WIN32)
 // on Windows, we use an external program (condor_softkill.exe)
@@ -140,30 +143,6 @@ parse_command_line(int argc, char* argv[])
 				log_file_name = argv[index];
 				break;
 
-			// root process information
-			//
-			case 'P':
-				if (index + 2 >= argc) {
-					fail_option_args("-P", 2);
-				}
-				index++;
-				root_pid = atoi(argv[index]);
-				if (root_pid == 0) {
-					fprintf(stderr,
-					        "error: invalid root process id: %s",
-					        argv[index]);
-					exit(1);
-				}
-				index++;
-				root_birthday = procd_atob(argv[index]);
-				if (root_birthday == 0) {
-					fprintf(stderr,
-					        "error: invalid root process birthday: %s",
-					        argv[index]);
-					exit(1);
-				}
-				break;
-
 			// maximum snapshot interval
 			//
 			case 'S':
@@ -173,6 +152,20 @@ parse_command_line(int argc, char* argv[])
 				index++;
 				max_snapshot_interval = atoi(argv[index]);
 				break;
+
+#if defined(LINUX)
+			// tracking group ID range
+			//
+			case 'G':
+				if (index + 2 >= argc) {
+					fail_option_args("-G", 2);
+				}
+				index++;
+				min_tracking_gid = (gid_t)atoi(argv[index]);
+				index++;
+				max_tracking_gid = (gid_t)atoi(argv[index]);
+				break;
+#endif
 
 #if defined(WIN32)
 			// windows condor_softkill.exe binary path
@@ -202,10 +195,33 @@ parse_command_line(int argc, char* argv[])
 		fprintf(stderr, "error: the \"-A\" option is required");
 		exit(1);
 	}
-	if (root_pid == 0 || root_birthday == 0) {
-		fprintf(stderr, "error: the \"-P\" option is required");
+}
+
+static void
+get_parent_info(pid_t& parent_pid, birthday_t& parent_birthday)
+{
+	procInfo* own_pi = NULL;
+	procInfo* parent_pi = NULL;
+
+	int ignored;
+	if (ProcAPI::getProcInfo(getpid(), own_pi, ignored) != PROCAPI_SUCCESS) {
+		fprintf(stderr, "error: getProcInfo failed on own PID");
 		exit(1);
 	}
+	if (ProcAPI::getProcInfo(own_pi->ppid, parent_pi, ignored) != PROCAPI_SUCCESS) {
+		fprintf(stderr, "error: getProcInfo failed on parent PID");
+		exit(1);
+	}
+	if (parent_pi->birthday > own_pi->birthday) {
+		fprintf(stderr, "error: parent process's birthday is later than our own");
+		exit(1);
+	}
+
+	parent_pid = parent_pi->pid;
+	parent_birthday = parent_pi->birthday;
+
+	free(own_pi);
+	free(parent_pi);
 }
 
 int
@@ -220,6 +236,13 @@ main(int argc, char* argv[])
 	// our command line parameters
 	//
 	parse_command_line(argc, argv);
+
+	// get the PID and birthday of our parent (whose process
+	// tree we'll be monitoring)
+	//
+	pid_t parent_pid;
+	birthday_t parent_birthday;
+	get_parent_info(parent_pid, parent_birthday);
 
 	// setup logging if a file was given
 	//
@@ -240,7 +263,9 @@ main(int argc, char* argv[])
 	// a non-negative number, or -1 for "infinite"
 	//
 	if (max_snapshot_interval < -1) {
-		EXCEPT("error: maximum snapshot interval must be non-negative or -1");
+		fprintf(stderr,
+		        "error: maximum snapshot interval must be non-negative or -1");
+		exit(1);
 	}
 
 #if defined(WIN32)
@@ -254,16 +279,34 @@ main(int argc, char* argv[])
 
 	// initialize the "engine" for tracking process families
 	//
-	ProcFamilyMonitor monitor(root_pid, root_birthday, max_snapshot_interval);
+	ProcFamilyMonitor monitor(parent_pid, parent_birthday, max_snapshot_interval);
 
-	// initialize the server for accepting requests from clients. if a local
-	// client principal was given, tell the server to accept connections from
-	// this principal
+#if defined(LINUX)
+	// if a "-G" option was given, enable group ID tracking in the
+	// monitor
+	//
+	if (min_tracking_gid != 0) {
+		if (min_tracking_gid > max_tracking_gid) {
+			fprintf(stderr,
+			        "invalid group range given: %u - %u\n",
+			        min_tracking_gid,
+			        max_tracking_gid);
+			exit(1);
+		}
+		monitor.enable_group_tracking(min_tracking_gid, max_tracking_gid);
+	}
+#endif
+
+	// initialize the server for accepting requests from clients
 	//
 	ProcFamilyServer server(monitor, local_server_address);
-	if (local_client_principal != NULL) {
-		server.set_client_principal(local_client_principal);
-	}
+
+	// specify the client that we'll be accepting connections from. note
+	// that passing NULL may have special meaning here: for example on
+	// UNIX we'll check to see if we were invoked as a setuid root program
+	// and if so use our real UID as the client principal
+	//
+	server.set_client_principal(local_client_principal);
 
 	// now that we've initialized the server, close out standard error.
 	// this way, calling programs can set up a pipe to block on until

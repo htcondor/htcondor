@@ -52,8 +52,8 @@ public:
 	//
 	~LocalServer();
 
-	// set the principal that is allows to connect to this server
-	// (on Windows, this will be a SID; on UNIX, as UID)
+	// set the principal that is allowed to connect to this server
+	// (on Windows, this will be a SID; on UNIX, a UID)
 	//
 	bool set_client_principal(const char*);
 

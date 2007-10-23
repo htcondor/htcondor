@@ -91,6 +91,8 @@ int init_user_ids(const char username[], const char domain[]);
 int init_user_ids_quiet(const char username[]);
 int set_user_ids(uid_t uid, gid_t gid);
 int set_user_ids_quiet(uid_t uid, gid_t gid);
+void set_user_tracking_gid(gid_t);
+void unset_user_tracking_gid();
 priv_state _set_priv(priv_state s, char file[], int line, int dologging);
 uid_t get_my_uid(void);
 gid_t get_my_gid(void);

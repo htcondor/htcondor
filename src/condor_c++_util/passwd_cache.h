@@ -94,9 +94,9 @@ class passwd_cache {
 		bool get_user_name(const uid_t uid, char *&user);
 
 		/* initializes group access list for given user. 
-		 * The additional group 'group' is added to the list.
+		 * The additional group is added to the list if given.
 		 * returns true on success. */
-		bool init_groups(const char* user);
+		bool init_groups(const char* user, gid_t additional_gid = 0);
 		
 		/* for testing purposes only. 
 		 * returns the age of a given cache entry.

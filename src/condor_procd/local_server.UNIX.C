@@ -100,16 +100,34 @@ LocalServer::set_client_principal(const char* uid_str)
 {
 	ASSERT(m_initialized);
 
-	uid_t client_uid = atoi(uid_str);
+	uid_t my_uid = geteuid();
 
-	// if the client says they're root, we can just leave the
-	// named pipe ownership as is
+	// determine what the client UID should be. if we were called
+	// with a NULL argument and our effective ID is root, we'll use
+	// our real UID - this will allow us to support being called as
+	// a setuid root binary
 	//
-	if (client_uid == 0) {
+	uid_t client_uid;
+	if (uid_str != NULL) {
+		client_uid = atoi(uid_str);
+	}
+	else if (my_uid == 0) {
+		client_uid = getuid();
+	}
+	else {
+		client_uid = my_uid;
+	}
+
+	// if the client UID is the same is our effective UID, then the
+	// named pipes will already have the correct ownership
+	//
+	if (client_uid == my_uid) {
 		return true;
 	}
 
-	uid_t my_uid = geteuid();
+	// if we're root, we can chown the named pipes to the client
+	// so they can connect
+	//
 	if (my_uid == 0) {
 		if (!m_reader->change_owner(client_uid)) {
 			dprintf(D_ALWAYS,
@@ -121,18 +139,16 @@ LocalServer::set_client_principal(const char* uid_str)
 			        "LocalServer: error changing ownership on watchdog pipe\n");
 			return false;
 		}
-	}
-	else {
-		if (my_uid != client_uid) {
-			dprintf(D_ALWAYS,
-			        "running as UID %u; can't allow connections from UID %u\n",
-			        my_uid,
-			        client_uid);
-			return false;
-		}
+		return true;
 	}
 
-	return true;
+	// if we got here, we're stuck
+	//
+	dprintf(D_ALWAYS,
+	        "running as UID %u; can't allow connections from UID %u\n",
+	        my_uid,
+	        client_uid);
+	return false;
 }
 
 bool

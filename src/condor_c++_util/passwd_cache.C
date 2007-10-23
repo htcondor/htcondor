@@ -362,7 +362,7 @@ passwd_cache::get_user_name(const uid_t uid, char *&user) {
 }
 
 bool
-passwd_cache::init_groups( const char* user ) {
+passwd_cache::init_groups( const char* user, gid_t additional_gid ) {
 
 	gid_t *gid_list;
 	bool result;
@@ -374,26 +374,34 @@ passwd_cache::init_groups( const char* user ) {
 
 	if ( siz > 0 ) {
 
-		gid_list = new gid_t[siz];
+		gid_list = new gid_t[siz + 1];
 
 		if ( get_groups(user, siz, gid_list) ) { 
+
+			if (additional_gid != 0) {
+				gid_list[siz] = additional_gid;
+				siz++;
+			}
 
 			if ( setgroups(siz, gid_list) != 0 ) {
 				dprintf(D_ALWAYS, "passwd_cache: setgroups( %s ) failed.\n", user);
 				result = false;
 			} else {
 					/* success */
-				result = true;
+				result = true;			
 			}
+			
 		} else {
 			dprintf(D_ALWAYS, "passwd_cache: getgroups( %s ) failed.\n", user);
 			result = false;
 		}
 
-
 	} else {
 			/* error */
-		dprintf(D_ALWAYS, "passwd_cache: getgroups( %s ) failed.\n", user);
+		dprintf(D_ALWAYS,
+		        "passwd_cache: num_groups( %s ) returned %d\n",
+		        user,
+		        siz);
 		result = false;
 	}
 

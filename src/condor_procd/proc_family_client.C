@@ -79,8 +79,6 @@ bool
 ProcFamilyClient::register_subfamily(pid_t root_pid,
                                      pid_t watcher_pid,
                                      int max_snapshot_interval,
-                                     PidEnvID* penvid,
-                                     const char* login,
                                      bool& response)
 {
 	ASSERT(m_initialized);
@@ -89,26 +87,10 @@ ProcFamilyClient::register_subfamily(pid_t root_pid,
 	        "About to register family for PID %u with the ProcD\n",
 	        root_pid);
 
-	// figure out how big a buffer we need for this message;
-	// the format will be:
-	//   - the root pid of the new subfamily
-	//   - the pid the will be querying / controllering this subfamily
-	//   - the requested maximum snapshot interval
-	//   - size of penvid (0 if not present)
-	//   - penvid (if present)
-	//   - size of login (0 if not present)
-	//   - login (if present)
-	//
-	int penvid_len = (penvid != NULL) ? sizeof(PidEnvID) : 0;
-	int login_len = (login != NULL) ? (strlen(login) + 1) : 0;
 	int message_len = sizeof(proc_family_command_t) +
 	                  sizeof(pid_t) +
 	                  sizeof(pid_t) +
-	                  sizeof(int) +
-	                  sizeof(int) +
-	                  penvid_len +
-	                  sizeof(int) +
-	                  login_len;
+	                  sizeof(int);
 	void* buffer = malloc(message_len);
 	ASSERT(buffer != NULL);
 	char* ptr = (char*)buffer;
@@ -132,32 +114,6 @@ ProcFamilyClient::register_subfamily(pid_t root_pid,
 	//
 	*(int*)ptr = max_snapshot_interval;
 	ptr += sizeof(int);
-
-	// fill in the PidEnvID info
-	//
-	if (penvid) {
-		*(int*)ptr = sizeof(PidEnvID);
-		ptr += sizeof(int);
-		pidenvid_copy((PidEnvID*)ptr, penvid);
-		ptr += sizeof(PidEnvID);
-	}
-	else {
-		*(int*)ptr = 0;
-		ptr += sizeof(int);
-	}
-
-	// fill in the login info
-	//
-	if (login_len) {
-		*(int*)ptr = login_len;
-		ptr += sizeof(int);
-		memcpy(ptr, login, login_len);
-		ptr += login_len;
-	}
-	else {
-		*(int*)ptr = 0;
-		ptr += sizeof(int);
-	}
 
 	// quick sanity check
 	//
@@ -184,6 +140,175 @@ ProcFamilyClient::register_subfamily(pid_t root_pid,
 	response = (err == PROC_FAMILY_ERROR_SUCCESS);
 	return true;
 }
+
+bool
+ProcFamilyClient::track_family_via_environment(pid_t pid,
+                                               PidEnvID& penvid,
+                                               bool& response)
+{
+	ASSERT(m_initialized);
+
+	dprintf(D_PROCFAMILY,
+	        "About to tell ProcD to track family with root %u "
+	            "via environment\n",
+	        pid);
+
+	int message_len = sizeof(proc_family_command_t) +
+	                  sizeof(pid_t) +
+	                  sizeof(int) +
+	                  sizeof(PidEnvID);
+	void* buffer = malloc(message_len);
+	ASSERT(buffer != NULL);
+	char* ptr = (char*)buffer;
+
+	*(proc_family_command_t*)ptr = PROC_FAMILY_TRACK_FAMILY_VIA_ENVIRONMENT;
+	ptr += sizeof(proc_family_command_t);
+
+	*(pid_t*)ptr = pid;
+	ptr += sizeof(pid_t);
+
+	*(int*)ptr = sizeof(PidEnvID);
+	ptr += sizeof(int);
+
+	pidenvid_copy((PidEnvID*)ptr, &penvid);
+	ptr += sizeof(PidEnvID);
+
+	ASSERT(ptr - (char*)buffer == message_len);
+
+	if (!m_client->start_connection(buffer, message_len)) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyClient: failed to start connection with ProcD\n");
+		free(buffer);
+		return false;
+	}
+	free(buffer);
+	proc_family_error_t err;
+	if (!m_client->read_data(&err, sizeof(proc_family_error_t))) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyClient: failed to read response from ProcD\n");
+		return false;
+	}
+	m_client->end_connection();
+
+	log_exit("track_family_via_environment", err);
+	response = (err == PROC_FAMILY_ERROR_SUCCESS);
+	return true;
+}
+
+bool
+ProcFamilyClient::track_family_via_login(pid_t pid,
+                                         const char* login,
+                                         bool& response)
+{
+	ASSERT(m_initialized);
+
+	dprintf(D_PROCFAMILY,
+	        "About to tell ProcD to track family with root %u "
+	            "via login %s\n",
+	        pid,
+	        login);
+
+	int login_len = strlen(login) + 1;
+	int message_len = sizeof(proc_family_command_t) +
+	                  sizeof(pid_t) +
+	                  sizeof(int) +
+	                  login_len;
+	void* buffer = malloc(message_len);
+	ASSERT(buffer != NULL);
+	char* ptr = (char*)buffer;
+
+	*(proc_family_command_t*)ptr = PROC_FAMILY_TRACK_FAMILY_VIA_LOGIN;
+	ptr += sizeof(proc_family_command_t);
+
+	*(pid_t*)ptr = pid;
+	ptr += sizeof(pid_t);
+
+	*(int*)ptr = login_len;
+	ptr += sizeof(int);
+
+	memcpy(ptr, login, login_len);
+	ptr += login_len;
+
+	ASSERT(ptr - (char*)buffer == message_len);
+
+	if (!m_client->start_connection(buffer, message_len)) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyClient: failed to start connection with ProcD\n");
+		free(buffer);
+		return false;
+	}
+	free(buffer);
+	proc_family_error_t err;
+	if (!m_client->read_data(&err, sizeof(proc_family_error_t))) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyClient: failed to read response from ProcD\n");
+		return false;
+	}
+	m_client->end_connection();
+
+	log_exit("track_family_via_login", err);
+	response = (err == PROC_FAMILY_ERROR_SUCCESS);
+	return true;
+}
+
+#if defined(LINUX)
+bool
+ProcFamilyClient::track_family_via_supplementary_group(pid_t pid,
+                                                       bool& response,
+                                                       gid_t& gid)
+{
+	ASSERT(m_initialized);
+
+	dprintf(D_PROCFAMILY,
+	        "About to tell ProcD to track family with root %u\n",
+	        pid);
+
+	int message_len = sizeof(proc_family_command_t) +
+	                  sizeof(pid_t);
+	void* buffer = malloc(message_len);
+	ASSERT(buffer != NULL);
+	char* ptr = (char*)buffer;
+
+	*(proc_family_command_t*)ptr =
+		PROC_FAMILY_TRACK_FAMILY_VIA_SUPPLEMENTARY_GROUP;
+	ptr += sizeof(proc_family_command_t);
+
+	*(pid_t*)ptr = pid;
+	ptr += sizeof(pid_t);
+
+	ASSERT(ptr - (char*)buffer == message_len);
+	
+	if (!m_client->start_connection(buffer, message_len)) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyClient: failed to start connection with ProcD\n");
+		free(buffer);
+		return false;
+	}
+	free(buffer);
+	proc_family_error_t err;
+	if (!m_client->read_data(&err, sizeof(proc_family_error_t))) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyClient: failed to read response from ProcD\n");
+		return false;
+	}
+	if (err == PROC_FAMILY_ERROR_SUCCESS) {
+		if (!m_client->read_data(&gid, sizeof(gid_t))) {
+			dprintf(D_ALWAYS,
+			        "ProcFamilyClient: failed to read group ID from ProcD\n");
+			return false;
+		}
+		dprintf(D_PROCFAMILY,
+		        "tracking family with root PID %u using group ID %u\n",
+		        pid,
+		        gid);
+	}
+	m_client->end_connection();
+
+	log_exit("track_family_via_supplementary_group", err);
+	response = (err == PROC_FAMILY_ERROR_SUCCESS);
+	return true;
+}
+#endif
 
 bool
 ProcFamilyClient::get_usage(pid_t pid, ProcFamilyUsage& usage, bool& response)

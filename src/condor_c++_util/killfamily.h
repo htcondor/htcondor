@@ -34,8 +34,7 @@ class ProcAPI; 	// forward reference
 class KillFamily : public Service {
 public:
 	
-	KillFamily( pid_t pid, PidEnvID *penvid, priv_state priv,
-					int test_only = 0 );
+	KillFamily( pid_t pid, priv_state priv, int test_only = 0 );
 
 	~KillFamily();
 
@@ -63,6 +62,7 @@ public:
 	
 	void	display();		// dprintf's the existing pid family
 
+	void	setFamilyEnvironmentID( PidEnvID* penvid );
 	void	setFamilyLogin( const char *login );
 
 private:

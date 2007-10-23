@@ -35,35 +35,27 @@ public:
 
 	static ProcFamilyInterface* create(char* subsys);
 
-	virtual ~ProcFamilyInterface() { };
+	virtual ~ProcFamilyInterface() { }
 
-	// function that is called from the parent process in a UNIX
-	// fork/exec-style Create_Process, in order to register a
-	// process family for the child
+#if !defined(WIN32)
+	// on UNIX, depending on the ProcFamily implementation, we
+	// may need to call register_subfamily from the child or the
+	// parent. this method indicates to the caller which to use
 	//
-	virtual bool register_subfamily_parent(pid_t,
-	                                       pid_t,
-	                                       int,
-	                                       PidEnvID* = NULL,
-	                                       const char* = NULL) = 0;
-
-	// child-side logic in a UNIX fork/exec-style Create_Process
-	//
-	virtual bool register_subfamily_child(pid_t,
-	                                      pid_t,
-	                                      int,
-	                                      PidEnvID* = NULL,
-	                                      const char* = NULL) = 0;
-
-	// on Windows, there is no fork/exec; this is simple called from
-	// the parent process in order to register its child as a new process
-	// family
-	//
+	virtual bool register_from_child() = 0;
+#endif
+	
 	virtual bool register_subfamily(pid_t,
 	                                pid_t,
-	                                int,
-	                                PidEnvID* = NULL,
-	                                const char* = NULL) = 0;
+	                                int) = 0;
+
+	virtual bool track_family_via_environment(pid_t, PidEnvID&) = 0;
+
+	virtual bool track_family_via_login(pid_t, const char*) = 0;
+
+#if defined(LINUX)
+	virtual bool track_family_via_supplementary_group(pid_t, gid_t&) = 0;
+#endif
 
 	virtual bool get_usage(pid_t, ProcFamilyUsage&, bool) = 0;
 

@@ -35,12 +35,12 @@ public:
 
 	LoginTracker(ProcFamilyMonitor* pfm) : ProcFamilyTracker(pfm) { }
 
-	void add_entry(ProcFamily* family, char* login)
+	void add_mapping(ProcFamily* family, char* login)
 	{
 		m_list.add_mapping(LoginTag(login), family);
 	}
 
-	void remove_entry(ProcFamily* family)
+	void remove_mapping(ProcFamily* family)
 	{
 		LoginTag tmp;
 		if (m_list.remove_mapping(family, &tmp)) {

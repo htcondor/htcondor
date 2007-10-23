@@ -28,6 +28,10 @@
 #include "environment_tracker.h"
 #include "parent_tracker.h"
 
+#if defined(LINUX)
+#include "group_tracker.h"
+#endif
+
 ProcFamilyMonitor::ProcFamilyMonitor(pid_t pid,
                                      birthday_t birthday,
                                      int snapshot_interval) :
@@ -45,6 +49,9 @@ ProcFamilyMonitor::ProcFamilyMonitor(pid_t pid,
 	//
 	m_pid_tracker = new PIDTracker(this);
 	ASSERT(m_pid_tracker != NULL);
+#if defined(LINUX)
+	m_group_tracker = NULL;
+#endif
 	m_login_tracker = new LoginTracker(this);
 	ASSERT(m_login_tracker != NULL);
 	m_environment_tracker = new EnvironmentTracker(this);
@@ -93,7 +100,6 @@ ProcFamilyMonitor::ProcFamilyMonitor(pid_t pid,
 	snapshot();
 }
 
-
 ProcFamilyMonitor::~ProcFamilyMonitor()
 {
 	delete_all_families(m_tree);
@@ -102,15 +108,31 @@ ProcFamilyMonitor::~ProcFamilyMonitor()
 	delete m_parent_tracker;
 	delete m_environment_tracker;
 	delete m_login_tracker;
+#if defined(LINUX)
+	if (m_group_tracker != NULL) {
+		delete m_group_tracker;
+	}
+#endif
 	delete m_pid_tracker;
 }
+
+#if defined(LINUX)
+void
+ProcFamilyMonitor::enable_group_tracking(gid_t min_tracking_gid,
+                                         gid_t max_tracking_gid)
+{
+	ASSERT(m_group_tracker == NULL);
+	m_group_tracker = new GroupTracker(this,
+	                                   min_tracking_gid,
+	                                   max_tracking_gid);
+	ASSERT(m_group_tracker != NULL);
+}
+#endif
 
 proc_family_error_t
 ProcFamilyMonitor::register_subfamily(pid_t root_pid,
                                       pid_t watcher_pid,
-                                      int max_snapshot_interval,
-                                      PidEnvID* penvid,
-                                      char* login)
+                                      int max_snapshot_interval)
 {
 	int ret;
 
@@ -180,17 +202,11 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 	                                    watcher_pid,
 	                                    max_snapshot_interval);
 
-	// register any pidenvid or login info with the tracker objects
+	// register this family with the PID-based tracker object
 	//
 	m_pid_tracker->add_mapping(family,
 	                           root_pid,
 	                           member->get_proc_info()->birthday);
-	if (login != NULL) {
-		m_login_tracker->add_entry(family, login);
-	}
-	if (penvid != NULL) {
-		m_environment_tracker->add_mapping(family, penvid);
-	}
 
 	// find the family that will be this new subfamily's parent and create
 	// the parent-child link
@@ -222,6 +238,79 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 
 	return PROC_FAMILY_ERROR_SUCCESS;
 }
+
+proc_family_error_t
+ProcFamilyMonitor::track_family_via_environment(pid_t pid, PidEnvID* penvid)
+{
+	// lookup the family
+	//
+	Tree<ProcFamily*>* tree;
+	int ret = m_family_table.lookup(pid, tree);
+	if (ret == -1) {
+		dprintf(D_ALWAYS,
+		        "track_family_via_environment failure: "
+				    "family with root %u not found\n",
+		        pid);
+		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
+	}
+
+	// add this association to the tracker
+	//
+	m_environment_tracker->add_mapping(tree->get_data(), penvid);
+	return PROC_FAMILY_ERROR_SUCCESS;
+}
+
+proc_family_error_t
+ProcFamilyMonitor::track_family_via_login(pid_t pid, char* login)
+{
+	// lookup the family
+	//
+	Tree<ProcFamily*>* tree;
+	int ret = m_family_table.lookup(pid, tree);
+	if (ret == -1) {
+		dprintf(D_ALWAYS,
+		        "track_family_via_login failure: "
+				    "family with root %u not found\n",
+		        pid);
+		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
+	}
+
+	// add this association to the tracker
+	//
+	m_login_tracker->add_mapping(tree->get_data(), login);
+	return PROC_FAMILY_ERROR_SUCCESS;
+}
+
+#if defined(LINUX)
+proc_family_error_t
+ProcFamilyMonitor::track_family_via_supplementary_group(pid_t pid, gid_t& gid)
+{
+	// check if group tracking is enabled
+	//
+	if (m_group_tracker == NULL) {
+		return PROC_FAMILY_ERROR_NO_GROUP_ID_AVAILABLE;
+	}
+
+	// lookup the family
+	//
+	Tree<ProcFamily*>* tree;
+	int ret = m_family_table.lookup(pid, tree);
+	if (ret == -1) {
+		dprintf(D_ALWAYS,
+		        "track_family_via_supplementary_group failure: "
+				    "family with root %u not found\n",
+		        pid);
+		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
+	}
+
+	bool ok = m_group_tracker->add_mapping(tree->get_data(), gid);
+	if (!ok) {
+		return PROC_FAMILY_ERROR_NO_GROUP_ID_AVAILABLE;
+	}
+
+	return PROC_FAMILY_ERROR_SUCCESS;
+}
+#endif
 
 proc_family_error_t
 ProcFamilyMonitor::unregister_subfamily(pid_t pid)
@@ -433,6 +522,11 @@ ProcFamilyMonitor::snapshot()
 	//       m_environment_tracker in this case, the child will not be found)
 	//
 	m_pid_tracker->find_processes(pi_list);
+#if defined(LINUX)
+	if (m_group_tracker != NULL) {
+		m_group_tracker->find_processes(pi_list);
+	}
+#endif
 	m_login_tracker->find_processes(pi_list);
 	m_environment_tracker->find_processes(pi_list);
 	m_parent_tracker->find_processes(pi_list);
@@ -682,7 +776,12 @@ ProcFamilyMonitor::unregister_subfamily(Tree<ProcFamily*>* tree)
 	// our tracker objects
 	//
 	m_pid_tracker->remove_mapping(tree->get_data());
-	m_login_tracker->remove_entry(tree->get_data());
+#if defined(LINUX)
+	if (m_group_tracker != NULL) {
+		m_group_tracker->remove_mapping(tree->get_data());
+	}
+#endif
+	m_login_tracker->remove_mapping(tree->get_data());
 	m_environment_tracker->remove_mapping(tree->get_data());
 
 	// get rid of the hash table entry for this family

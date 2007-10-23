@@ -59,47 +59,28 @@ private:
 	//
 	void write_to_client(void*, int);
 
-	// handle a "register subfamily" command
+	// handlers for various commands
 	//
 	void register_subfamily();
-
-	// handle a "get family usage" command
-	//
+	void track_family_via_environment();
+	void track_family_via_login();
+#if defined(LINUX)
+	void track_family_via_supplementary_group();
+#endif
 	void get_usage();
-
-	// handle a "signal process" command
-	//
 	void signal_process();
-
-	// handle a "suspend family" command
-	//
 	void suspend_family();
-
-	// handle a "continue family" command
-	//
 	void continue_family();
-
-	// handle a "kill family" command
-	//
 	void kill_family();
-
-	// handle a "unregister family" command
-	//
 	void unregister_family();
-
-	// handle a "snapshot" command
-	//
 	void snapshot();
+	void quit();
 
 #if defined(PROCD_DEBUG)
 	// handle a "dump" command
 	//
 	void dump();
 #endif
-
-	// handle a "quit" command
-	//
-	void quit();
 
 	// our monitor
 	//

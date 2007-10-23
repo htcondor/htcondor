@@ -21,23 +21,25 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_common.h"
-#include "proc_family_io.h"
+#ifndef _IDENTIFIER_POOL_H
+#define _IDENTIFIER_POOL_H
 
-// IMPORTANT: these string constants must match the proc_family_error_t
-// enumeration (in proc_family_io.h) in both number and order
-//
-const char* proc_family_error_strings[] = {
-	"SUCCESS",
-	"ERROR: Invalid root PID",
-	"ERROR: Invalid watcher PID",
-	"ERROR: Invalid snapshot interval",
-	"ERROR: A family with the given root PID is already registered",
-	"ERROR: No family with the given PID is registered",
-	"ERROR: The given PID is not found on the system",
-	"ERROR: The given PID is not part of the family tree",
-	"ERROR: Attempt to unregister root family",
-	"ERROR: Bad environment tracking information",
-	"ERROR: Bad login tracking information",
-	"ERROR: No group ID available for tracking"
+#include <sys/types.h>
+
+class ProcFamily;
+
+class GIDPool {
+
+public:
+	GIDPool(gid_t min_gid, gid_t max_gid);
+	bool allocate(ProcFamily* family, gid_t& gid);
+	bool free(ProcFamily* family);
+	ProcFamily* get_family(gid_t gid);
+
+private:
+	int   m_size;
+	gid_t m_offset;
+	ProcFamily** m_gid_map;
 };
+
+#endif

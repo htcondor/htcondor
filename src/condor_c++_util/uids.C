@@ -40,6 +40,14 @@ static int SwitchIds = TRUE;
 static int UserIdsInited = FALSE;
 static int OwnerIdsInited = FALSE;
 
+#if !defined(WIN32)
+/*
+   supplementary group used to track process families. if nonzero,
+   this group id will be inserted into the group list when we switch
+   into USER_PRIV_FINAL
+*/
+static gid_t TrackingGid = 0;
+#endif
 
 /* must be listed in the same order as enum priv_state in condor_uid.h */
 static char *priv_state_name[] = {
@@ -1053,6 +1061,17 @@ set_user_ids_quiet(uid_t uid, gid_t gid)
 	return set_user_ids_implementation( uid, gid, NULL, 1 );
 }
 
+void
+set_user_tracking_gid(gid_t tracking_gid)
+{
+	TrackingGid = tracking_gid;
+}
+
+void
+unset_user_tracking_gid()
+{
+	TrackingGid = 0;
+}
 
 void
 uninit_user_ids()
@@ -1369,7 +1388,7 @@ set_user_rgid()
 		
 	if( UserName ) {
 		errno = 0;
-		if( !(pcache()->init_groups(UserName)) ) {
+		if( !(pcache()->init_groups(UserName, TrackingGid)) ) {
 			dprintf( D_ALWAYS, 
 					 "set_user_rgid - ERROR: initgroups(%s, %d) failed, "
 					 "errno: %d\n", UserName, UserGid, errno );

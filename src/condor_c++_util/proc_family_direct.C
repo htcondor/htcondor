@@ -51,24 +51,14 @@ ProcFamilyDirect::~ProcFamilyDirect() {
 }
 
 bool
-ProcFamilyDirect::register_subfamily_parent(pid_t pid,
-                                            pid_t,
-                                            int snapshot_interval,
-                                            PidEnvID* penvid,
-                                            const char* login)
+ProcFamilyDirect::register_subfamily(pid_t pid,
+                                     pid_t,
+                                     int snapshot_interval)
 {
 	// create a KillFamily object according to our arguments
 	//
-	PidEnvID empty_penvid;
-	pidenvid_init(&empty_penvid);
-	if (penvid == NULL) {
-		penvid = &empty_penvid;
-	}
-	KillFamily* family = new KillFamily(pid, penvid, PRIV_ROOT);
+	KillFamily* family = new KillFamily(pid, PRIV_ROOT);
 	ASSERT(family != NULL);
-	if (login != NULL) {
-		family->setFamilyLogin(login);
-	}
 
 	// register a timer with DaemonCore to take snapshots of this family
 	//
@@ -101,6 +91,28 @@ ProcFamilyDirect::register_subfamily_parent(pid_t pid,
 		return false;
 	}
 
+	return true;
+}
+
+bool
+ProcFamilyDirect::track_family_via_environment(pid_t pid, PidEnvID& penvid)
+{
+	KillFamily* family = lookup(pid);
+	if (family == NULL) {
+		return false;
+	}
+	family->setFamilyEnvironmentID(&penvid);
+	return true;
+}
+
+bool
+ProcFamilyDirect::track_family_via_login(pid_t pid, const char* login)
+{
+	KillFamily* family = lookup(pid);
+	if (family == NULL) {
+		return false;
+	}
+	family->setFamilyLogin(login);
 	return true;
 }
 

@@ -51,7 +51,13 @@ ProcFamilyInterface* ProcFamilyInterface::create(char* subsys)
 		dprintf(D_ALWAYS,
 		        "PrivSep requires use of ProcD; "
 		            "ignoring USE_PROCD setting\n");
-		// char* address_suffix = is_master ? NULL : subsys;
+		ptr = new ProcFamilyProxy;
+	}
+	else if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
+
+		dprintf(D_ALWAYS,
+		        "GID-based process tracking requires use of ProcD; "
+		            "ignoring USE_PROCD setting\n");
 		ptr = new ProcFamilyProxy;
 	}
 	else {

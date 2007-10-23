@@ -36,6 +36,9 @@
 #endif
 
 class PIDTracker;
+#if defined(LINUX)
+class GroupTracker;
+#endif
 class LoginTracker;
 class EnvironmentTracker;
 class ParentTracker;
@@ -52,14 +55,33 @@ public:
 	//
 	~ProcFamilyMonitor();
 
+#if defined(LINUX)
+	// enable tracking based on group IDs by specifying a range that
+	// can be used for this purpose
+	//
+	void enable_group_tracking(gid_t min_tracking_gid, gid_t max_tracking_gid);
+#endif
+
 	// create a "subfamily", which can then be signalled and accounted
 	// for as a unit
 	//
 	proc_family_error_t register_subfamily(pid_t,
 	                                       pid_t,
-	                                       int,
-	                                       PidEnvID* = NULL,
-	                                       char* = NULL);
+	                                       int);
+
+	// start tracking a family using envionment variables
+	//
+	proc_family_error_t track_family_via_environment(pid_t, PidEnvID*);
+
+	// start tracking a family using login
+	//
+	proc_family_error_t track_family_via_login(pid_t, char*);
+
+#if defined(LINUX)
+	// start tracking a family using a supplementary group ID
+	//
+	proc_family_error_t track_family_via_supplementary_group(pid_t, gid_t&);
+#endif
 
 	// remove a subfamily
 	//
@@ -127,6 +149,9 @@ private:
 	// to the families we're tracking
 	//
 	PIDTracker*         m_pid_tracker;
+#if defined(LINUX)
+	GroupTracker*       m_group_tracker;
+#endif
 	LoginTracker*       m_login_tracker;
 	EnvironmentTracker* m_environment_tracker;
 	ParentTracker*      m_parent_tracker;

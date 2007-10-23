@@ -45,12 +45,24 @@ public:
 
 	// tell the procd to start tracking a new subfamily
 	//
-	bool register_subfamily(pid_t,
-	                        pid_t,
-	                        int,
-	                        PidEnvID*,
-	                        const char*,
-	                        bool&);
+	bool register_subfamily(pid_t root_pid,
+	                        pid_t watcher_pid,
+	                        int   max_snapshot_interval,
+	                        bool& response);
+
+	// tell ProcD to track a family via environment variables
+	//
+	bool track_family_via_environment(pid_t pid, PidEnvID& penvid, bool&);
+
+	// tell ProcD to track a family via login
+	//
+	bool track_family_via_login(pid_t pid, const char* login, bool&);
+
+#if defined(LINUX)
+	// tell ProcD to track a family via supplementary group id
+	//
+	bool track_family_via_supplementary_group(pid_t pid, bool&, gid_t&);
+#endif
 
 	// ask the procd for usage information about a process
 	// family

@@ -21,61 +21,25 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef _PROC_FAMILY_DIRECT_H
-#define _PROC_FAMILY_DIRECT_H
+#ifndef _GROUP_TRACKER_H
+#define _GROUP_TRACKER_H
 
-#include "proc_family_interface.h"
-#include "HashTable.h"
+#include "proc_family_tracker.h"
+#include "gid_pool.h"
 
-class KillFamily;
-struct ProcFamilyDirectContainer;
-
-class ProcFamilyDirect : public ProcFamilyInterface {
+class GroupTracker : public ProcFamilyTracker {
 
 public:
 
-	//constructor and destructor
-	ProcFamilyDirect();
-	~ProcFamilyDirect();
+	GroupTracker(ProcFamilyMonitor* pfm, gid_t min_gid, gid_t max_gid);
 
-#if !defined(WIN32)
-	// on UNIX, the registration logic should be
-	// called from the parent for this class
-	//
-	bool register_from_child() { return false; }
-#endif
-
-	bool register_subfamily(pid_t,
-	                        pid_t,
-	                        int);
-
-	bool track_family_via_environment(pid_t, PidEnvID&);
-	bool track_family_via_login(pid_t, const char*);
-
-#if defined(LINUX)
-	// this class doesn't support tracking via supplementary
-	// group
-	//
-	bool track_family_via_supplementary_group(pid_t, gid_t&) { return false; }
-#endif
-
-	bool get_usage(pid_t, ProcFamilyUsage&, bool);
-
-	bool signal_process(pid_t, int);
-
-	bool suspend_family(pid_t);
-
-	bool continue_family(pid_t);
-
-	bool kill_family(pid_t);
-
-	bool unregister_family(pid_t);
+	bool add_mapping(ProcFamily* family, gid_t& group);
+	bool remove_mapping(ProcFamily* family);
+	bool check_process(procInfo* pi);
 
 private:
 
-	HashTable<pid_t, ProcFamilyDirectContainer*> m_table;
-
-	KillFamily* lookup(pid_t);
+	GIDPool m_gid_pool;
 };
 
 #endif

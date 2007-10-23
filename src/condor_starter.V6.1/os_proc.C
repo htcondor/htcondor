@@ -475,6 +475,19 @@ OsProc::StartJob(FamilyInfo* family_info)
 		JobPid = -1;
 
 		if(create_process_error) {
+
+			// if the reason Create_Process failed was that registering
+			// a family with the ProcD failed, it is indicative of a
+			// problem regarding this execute machine, not the job. in
+			// this case, we'll want to EXCEPT instead of telling the
+			// Shadow to put the job on hold. there are probably other
+			// error conditions where EXCEPTing would be more appropriate
+			// as well...
+			//
+			if (create_process_errno == DaemonCore::ERRNO_REGISTRATION_FAILED) {
+				EXCEPT("Create_Process failed to register the job with the ProcD");
+			}
+
 			MyString err_msg = "Failed to execute '";
 			err_msg += JobName;
 			err_msg += "'";
@@ -484,7 +497,10 @@ OsProc::StartJob(FamilyInfo* family_info)
 			}
 			err_msg += ": ";
 			err_msg += create_process_error;
-			Starter->jic->notifyStarterError( err_msg.Value(), true, CONDOR_HOLD_CODE_FailedToCreateProcess, create_process_errno );
+			Starter->jic->notifyStarterError( err_msg.Value(),
+			                                  true,
+			                                  CONDOR_HOLD_CODE_FailedToCreateProcess,
+			                                  create_process_errno );
 		}
 
 		EXCEPT("Create_Process(%s,%s, ...) failed",

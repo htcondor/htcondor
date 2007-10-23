@@ -38,42 +38,28 @@ public:
 	ProcFamilyProxy(char* address_suffix = NULL);
 	~ProcFamilyProxy();
 
+#if !defined(WIN32)
 	// all registration with the ProcD is done in the
 	// child (so we can guarantee it hasn't exited yet)
+	// when using this class on UNIX
 	//
-	bool register_subfamily_parent(pid_t,
-	                               pid_t,
-	                               int,
-	                               PidEnvID*,
-	                               const char*)
-	{
-		return true;
-	}
-
+	bool register_from_child() { return true; }
+#endif
 
 	// tell the procd to start tracking a new subfamily
 	//
-	bool register_subfamily_child(pid_t,
-	                              pid_t,
-	                              int,
-	                              PidEnvID*,
-	                              const char*);
+	bool register_subfamily(pid_t,
+	                        pid_t,
+	                        int);
 
-	// for Windows: register_subfamily simply calls
-	// register_subfamily_child to do the real work
+	// ask procd to use environment, login, or SGID
+	// based tracking
 	//
-	bool register_subfamily(pid_t root,
-	                        pid_t watcher,
-	                        int snapshot_interval,
-	                        PidEnvID* penvid,
-	                        const char* login)
-	{
-		return register_subfamily_child(root,
-		                                watcher,
-		                                snapshot_interval,
-		                                penvid,
-		                                login);
-	}
+	bool track_family_via_environment(pid_t, PidEnvID&);
+	bool track_family_via_login(pid_t, const char*);
+#if defined(LINUX)
+	bool track_family_via_supplementary_group(pid_t, gid_t&);
+#endif
 
 	// ask the procd for usage information about a process
 	// family

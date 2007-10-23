@@ -927,6 +927,12 @@ class DaemonCore : public Service
 
     //@}
 
+	/** "Special" errno values that may be set when Create_Process fails
+	*/
+	static const int ERRNO_EXEC_AS_ROOT;
+	static const int ERRNO_PID_COLLISION;
+	static const int ERRNO_REGISTRATION_FAILED;
+
     /** Methods for operating on a process family
     */
     int Get_Family_Usage(pid_t, ProcFamilyUsage&, bool full = false);
@@ -1295,6 +1301,13 @@ class DaemonCore : public Service
                         char *handler_descrip,
                         Service* s, 
                         int is_cpp);
+
+	bool Register_Family(pid_t child_pid,
+	                     pid_t parent_pid,
+	                     int max_snapshot_interval,
+	                     PidEnvID* penvid,
+	                     const char* login,
+	                     gid_t* group);
 
 	void CheckForTimeSkip(time_t time_before, time_t okay_delta);
 

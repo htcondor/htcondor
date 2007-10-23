@@ -83,17 +83,6 @@ ProcFamilyServer::write_to_client(void* buf, int len)
 void
 ProcFamilyServer::register_subfamily()
 {
-	// the payload for this command has the following format:
-	//   - the "root pid" of this new subfamily
-	//   - the "watcher pid", who'll be able to control the
-	//     subfamily
-	//   - requested maximum snapshot interval
-	//   - size of penvid (0 if not present)
-	//   - penvid (if present)
-	//   - size of login (0 if not present)
-	//   - login (if present)
-	//
-
 	pid_t root_pid;
 	read_from_client(&root_pid, sizeof(pid_t));
 
@@ -103,35 +92,76 @@ ProcFamilyServer::register_subfamily()
 	int max_snapshot_interval;
 	read_from_client(&max_snapshot_interval, sizeof(int));
 
-	int penvid_len;
-	read_from_client(&penvid_len, sizeof(int));
-
-	PidEnvID* penvid = NULL;
-	if (penvid_len) {
-		ASSERT(penvid_len == sizeof(PidEnvID));
-		penvid = new PidEnvID;
-		ASSERT(penvid != NULL);
-		read_from_client(penvid, penvid_len);
-	}
-
-	int login_len;
-	read_from_client(&login_len, sizeof(int));
-
-	char* login = NULL;
-	if (login_len) {
-		login = new char[login_len];
-		ASSERT(login != NULL);
-		read_from_client(login, login_len);
-	}
-
 	proc_family_error_t err = m_monitor.register_subfamily(root_pid,
 	                                                       watcher_pid,
-	                                                       max_snapshot_interval,
-	                                                       penvid,
-	                                                       login);
+	                                                       max_snapshot_interval);
 
 	write_to_client(&err, sizeof(proc_family_error_t));
 }
+
+void
+ProcFamilyServer::track_family_via_environment()
+{
+	pid_t pid;
+	read_from_client(&pid, sizeof(pid_t));
+
+	int penvid_length;
+	read_from_client(&penvid_length, sizeof(int));
+
+	proc_family_error_t err;
+	if (penvid_length != sizeof(PidEnvID)) {
+		err = PROC_FAMILY_ERROR_BAD_ENVIRONMENT_INFO;
+	}
+	else {
+		PidEnvID* penvid = new PidEnvID;
+		ASSERT(penvid != NULL);
+		read_from_client(penvid, sizeof(PidEnvID));
+		err = m_monitor.track_family_via_environment(pid, penvid);
+	}
+
+	write_to_client(&err, sizeof(proc_family_error_t));
+}
+
+void
+ProcFamilyServer::track_family_via_login()
+{
+	pid_t pid;
+	read_from_client(&pid, sizeof(pid_t));
+
+	int login_length;
+	read_from_client(&login_length, sizeof(int));
+
+	proc_family_error_t err;
+	if (login_length <= 0) {
+		err = PROC_FAMILY_ERROR_BAD_LOGIN_INFO;
+	}
+	else {
+		char* login = new char[login_length];
+		ASSERT(login != NULL);
+		read_from_client(login, login_length);
+		err = m_monitor.track_family_via_login(pid, login);
+	}
+
+	write_to_client(&err, sizeof(proc_family_error_t));
+}
+
+#if defined(LINUX)
+void
+ProcFamilyServer::track_family_via_supplementary_group()
+{
+	pid_t pid;
+	read_from_client(&pid, sizeof(pid_t));
+
+	gid_t gid;
+	proc_family_error_t err =
+		m_monitor.track_family_via_supplementary_group(pid, gid);
+
+	write_to_client(&err, sizeof(proc_family_error_t));
+	if (err == PROC_FAMILY_ERROR_SUCCESS) {
+		write_to_client(&gid, sizeof(gid_t));
+	}
+}
+#endif
 
 void
 ProcFamilyServer::get_usage()
@@ -295,6 +325,26 @@ ProcFamilyServer::wait_loop()
 				dprintf(D_ALWAYS, "PROC_FAMILY_REGISTER_SUBFAMILY\n");
 				register_subfamily();
 				break;
+
+			case PROC_FAMILY_TRACK_FAMILY_VIA_ENVIRONMENT:
+				dprintf(D_ALWAYS,
+				        "PROC_FAMILY_TRACK_FAMILY_VIA_ENVIRONMENT\n");
+				track_family_via_environment();
+				break;
+
+			case PROC_FAMILY_TRACK_FAMILY_VIA_LOGIN:
+				dprintf(D_ALWAYS,
+				        "PROC_FAMILY_TRACK_FAMILY_VIA_LOGIN\n");
+				track_family_via_login();
+				break;
+
+#if defined(LINUX)
+			case PROC_FAMILY_TRACK_FAMILY_VIA_SUPPLEMENTARY_GROUP:
+				dprintf(D_ALWAYS,
+				        "PROC_FAMILY_TRACK_FAMILY_VIA_SUPPLEMENTARY_GROUP\n");
+				track_family_via_supplementary_group();
+				break;
+#endif
 
 			case PROC_FAMILY_SIGNAL_PROCESS:
 				dprintf(D_ALWAYS, "PROC_FAMILY_SIGNAL_PROCESS\n");

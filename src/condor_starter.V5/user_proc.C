@@ -610,8 +610,7 @@ UserProc::execute()
 				EXCEPT("privsep is enabled, but PROCD_ADDRESS is not defined!");
 			}
 
-			ret = pfc.register_subfamily(getpid(), getppid(), 60, NULL, NULL, 
-					response);
+			ret = pfc.register_subfamily(getpid(), getppid(), 60, response);
 
 			if (ret == false) {
 				EXCEPT("Could not communicate with procd. Aborting.");

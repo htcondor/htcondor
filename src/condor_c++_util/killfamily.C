@@ -30,8 +30,7 @@
 extern dynuser *myDynuser;
 #endif
 
-KillFamily::KillFamily( pid_t pid, PidEnvID *penvid, priv_state priv,
-				int test_only )
+KillFamily::KillFamily( pid_t pid, priv_state priv, int test_only )
 {
 	daddy_pid = pid;
 	old_pids = NULL;
@@ -42,9 +41,7 @@ KillFamily::KillFamily( pid_t pid, PidEnvID *penvid, priv_state priv,
 	exited_cpu_sys_time = 0;
 	max_image_size = 0;
 
-	/* uses C's structure copy, no dynamic memory in this structure */
-	pidenvid_copy(&m_penvid, penvid);
-
+	pidenvid_init(&m_penvid);
 	searchLogin = NULL;
 
 #ifdef WIN32
@@ -67,6 +64,14 @@ KillFamily::~KillFamily()
 	}
 	dprintf( D_PROCFAMILY,
 			 "Deleted KillFamily w/ pid %d as parent\n", daddy_pid );
+}
+
+void
+KillFamily::setFamilyEnvironmentID( PidEnvID* penvid )
+{
+	if (penvid != NULL) {
+		pidenvid_copy(&m_penvid, penvid);
+	}
 }
 
 void
