@@ -5594,10 +5594,13 @@ void CreateProcessForkit::exec() {
 				}
 		}
 
-			// regardless of whether or not we made an "official" unix
-			// process group above, ALWAYS contact the procd to register
-			// ourselves
-			//
+		// regardless of whether or not we made an "official" unix
+		// process group above, ALWAYS contact the procd to register
+		// ourselves
+		//
+		ASSERT(daemonCore->m_proc_family != NULL);
+		if (daemonCore->m_proc_family->register_from_child()) {
+
 			// NOTE: only on Linux do we pass the structure with the
 			// environment tracking info in it, since Linux is currently
 			// the only platform for which ProcAPI can read process'
@@ -5608,41 +5611,40 @@ void CreateProcessForkit::exec() {
 			// causing major badness)
 			//
 #if defined(LINUX)
-		PidEnvID* penvid_ptr = &m_penvid;
+			PidEnvID* penvid_ptr = &m_penvid;
 #else
-		PidEnvID* penvid_ptr = NULL;
+			PidEnvID* penvid_ptr = NULL;
 #endif
 
 			// yet another linux-only tracking method: supplementary GID
 			//
-		gid_t tracking_gid;
-		gid_t* tracking_gid_ptr = NULL;
+			gid_t tracking_gid;
+			gid_t* tracking_gid_ptr = NULL;
 #if defined(LINUX)
-		if ((m_priv == PRIV_USER_FINAL) &&
-		    (can_switch_ids()) &&
-		    (param_boolean("USE_GID_PROCESS_TRACKING", false)))
-		{
-			tracking_gid_ptr = &tracking_gid;
-		}
+			if ((m_priv == PRIV_USER_FINAL) &&
+			    (can_switch_ids()) &&
+			    (param_boolean("USE_GID_PROCESS_TRACKING", false)))
+			{
+				tracking_gid_ptr = &tracking_gid;
+			}
 #endif
 
-		ASSERT(daemonCore->m_proc_family != NULL);
-		bool ok;
-		if (daemonCore->m_proc_family->register_from_child()) {
-			ok = daemonCore->Register_Family(pid,
-			                                 ppid,
-			                                 m_family_info->max_snapshot_interval,
-			                                 penvid_ptr,
-			                                 m_family_info->login,
-			                                 tracking_gid_ptr);
-		}
-		if (tracking_gid_ptr != NULL) {
-			set_user_tracking_gid(*tracking_gid_ptr);
-		}
-		if (!ok) {
-			errno = DaemonCore::ERRNO_REGISTRATION_FAILED;
-			write(m_errorpipe[1], &errno, sizeof(errno));
-			exit(4);
+			bool ok =
+				daemonCore->Register_Family(pid,
+			                                ppid,
+			                                m_family_info->max_snapshot_interval,
+			                                penvid_ptr,
+			                                m_family_info->login,
+			                                tracking_gid_ptr);
+			if (!ok) {
+				errno = DaemonCore::ERRNO_REGISTRATION_FAILED;
+				write(m_errorpipe[1], &errno, sizeof(errno));
+				exit(4);
+			}
+
+			if (tracking_gid_ptr != NULL) {
+				set_user_tracking_gid(*tracking_gid_ptr);
+			}
 		}
 	}
 
