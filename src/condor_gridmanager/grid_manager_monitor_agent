@@ -36,6 +36,10 @@ my %Config = (
 	      CheckUid		=> 1,
 	     );
 
+# Hash of jobs in a permanent job state (i.e. DONE), which we don't want
+# to poll again.
+my %CachedJobs;
+
 # Timestamp of the last "alive" mark
 my $LastAlive = -1;
 
@@ -414,6 +418,14 @@ sub ReadJobs( )
 		print "StateFile = $StateFile, Contact = '$Contact', JobId = $Job{JobId}\n";
 	    }
 
+	    # If we already have a status for this job, don't poll
+	    if ( exists $CachedJobs{$Contact} ) {
+		if ( $Config{Debug} > 4 ) {
+		    print "Found cached state for $Contact\n";
+		}
+		next;
+	    }
+
 	    # If we don't know the job manager type, skip it..
 	    next if ( ! CheckJob( \%Job ) );
 
@@ -452,13 +464,17 @@ sub ReadJobs( )
 	    # Store it..
 	    if ( defined $JobState )
 	    {
-		$Jobs{$Contact} = $JobState;
+		if ( $JobState == 8 ) {
+		    $CachedJobs{$Contact} = $JobState;
+		} else {
+		    $Jobs{$Contact} = $JobState;
 
-		# And, update its mtime..
-		if ( $Config{TouchState} )
-		{
-		    my $Now = time( );	
-		    utime( $Now, $Now, $Job{FullPath} );
+		    # And, update its mtime if we're not caching it
+		    if ( $Config{TouchState} )
+		    {
+			my $Now = time( );	
+			utime( $Now, $Now, $Job{FullPath} );
+		    }
 		}
 	    }
 	}
@@ -470,13 +486,18 @@ sub ReadJobs( )
     my $TmpFile = $Config{TmpFile};
     open( FILE, ">$TmpFile" ) || die( "Can't write to data file '$TmpFile': $!" );
     print FILE "$PassStartTime " . time() . "\n";
+    foreach my $Job ( sort keys %CachedJobs )
+    {
+	printf FILE "%-60s %5d\n", $Job, $CachedJobs{$Job};
+    }
     foreach my $Job ( sort keys %Jobs )
     {
 	printf FILE "%-60s %5d\n", $Job, $Jobs{$Job};
     }
     print FILE "GRIDMONEOF\n";
     close( FILE );
-    print "Wrote " . scalar( keys %Jobs ) . " entries to $TmpFile\n"
+    print "Wrote " . ( scalar( keys %CachedJobs ) + scalar( keys %Jobs ) ) .
+	" entries to $TmpFile\n"
 	if ( $Config{Debug} );
 
     # Ok, move it on top of the real file
