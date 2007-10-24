@@ -133,7 +133,12 @@ const char* spool
 
 	ASSERT(jobQueueDBIpAddress);
 	ASSERT(jobQueueDBName);
-	ASSERT(jobQueueDBUser);
+
+	if (jobQueueDBUser == NULL) {
+		dprintf(D_ALWAYS, "Please set the QUILL_DB_USER to a valid username\n");
+		ASSERT(jobQueueDBUser);
+	}
+
 	ASSERT(spool);
 
 		//parse the ip address and get host and port

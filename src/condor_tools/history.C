@@ -58,7 +58,7 @@ static void Usage(char* name)
 		"\t\t-backwards\t\tList jobs in reverse chronological order\n"
 		"\t\t-match <number>\t\tLimit the number of jobs displayed\n"
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"		
-		"\t\t-long\t\t\tVerbose output (entire classads)\n"
+		"\t\t-l\t\t\tVerbose output (entire classads)\n"
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 #ifdef WANT_QUILL
 		"\t\t-name <quill-name>\tRead history data from Quill database\n"
@@ -146,6 +146,10 @@ main(int argc, char* argv[])
       longformat=TRUE;   
     }
 
+    else if (strcmp(argv[i],"-long")==0) {
+		longformat = true;
+	}
+    
     else if (match_prefix(argv[i],"-xml")) {
 		use_xml = true;	
 		longformat = true;
@@ -175,6 +179,8 @@ main(int argc, char* argv[])
 			exit(1);
 		}
 		
+
+/*
 		if( !(quillName = get_daemon_name(argv[i])) ) {
 			fprintf( stderr, "Error: unknown host %s\n",
 					 get_host_part(argv[i]) );
@@ -192,10 +198,13 @@ main(int argc, char* argv[])
 		sprintf (tmp, "%s == \"%s\"", ATTR_NAME, quillName);      		
 		quillQuery.addORConstraint (tmp);
 
-                sprintf (tmp, "%s == \"%s\"", ATTR_SCHEDD_NAME, quillName);
-                quillQuery.addORConstraint (tmp);
+*/
+		quillName = argv[i];
 
-		remotequill = true;
+		sprintf (tmp, "%s == \"%s\"", ATTR_SCHEDD_NAME, quillName);
+		quillQuery.addORConstraint (tmp);
+
+		remotequill = false;
 		readfromfile = false;
     }
 #endif /* WANT_QUILL */
@@ -226,7 +235,7 @@ main(int argc, char* argv[])
 		sprintf(tmp,"(%s)",argv[i+1]);
 		constraint=tmp;
 		i++;
-		readfromfile = true;
+		//readfromfile = true;
     }
 #ifdef WANT_QUILL
     else if (match_prefix(argv[i],"-completedsince")) {
@@ -351,13 +360,15 @@ main(int argc, char* argv[])
 		Daemon schedd( DT_SCHEDD, 0, 0 );
 
         if ( schedd.locate() ) {
-			char *scheddname;	
+			char *scheddname = quillName;	
+/*
 			if( (scheddname = schedd.name()) ) {
 				queryhor.setScheddname(scheddname);	
 				queryver.setScheddname(scheddname);	
             } else {
 				// set it to NULL?
             }
+*/
 			
 			ClassAd *daemonAd = schedd.daemonAd();
 			int scheddbirthdate;
@@ -419,7 +430,6 @@ main(int argc, char* argv[])
   if(dbIpAddr) free(dbIpAddr);
   if(dbName) free(dbName);
   if(queryPassword) free(queryPassword);
-  if(quillName) free(quillName);
   if(dbconn) free(dbconn);
   return 0;
 }

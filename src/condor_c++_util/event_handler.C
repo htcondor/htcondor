@@ -116,9 +116,9 @@ EventHandler::install()
 			// we should move this to be a #define symbol...
 #if (defined(LINUX) && !defined(GLIBC20) && !defined(GLIBC21)) || defined(AIX) || defined(HPUX11) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
 			// bad craziness with the type cast --psilord
-			action.sa_handler = (void (*)(int)) func;
+			action.sa_handler = func;
 #else
-			action.sa_handler = (void (*)(...)) func;
+			action.sa_handler = (void *) func;
 #endif
 
 			action.sa_mask = mask;

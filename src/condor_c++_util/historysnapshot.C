@@ -83,8 +83,9 @@ HistorySnapshot::sendQuery(SQLQuery *queryhor,
 						   bool longformat,
 						   bool fileformat,
 						   bool custForm,
-						   AttrListPrintMask *pmask)
+						   AttrListPrintMask *pmask, const char *constraint)
 {
+printf("GGTGGTGGT constraint is %d\n", constraint);
   QuillErrCode st;
   
   st = jqDB->connectDB();
@@ -128,7 +129,8 @@ HistorySnapshot::sendQuery(SQLQuery *queryhor,
 					longformat,
 					fileformat,
 					custForm,
-					pmask);
+					pmask,
+					constraint);
   
   if (st != QUILL_SUCCESS) {
 	  printf("Error while querying the history cursors: %s\n", jqDB->getDBError());
@@ -156,7 +158,9 @@ QuillErrCode
 HistorySnapshot::printResults(SQLQuery *queryhor, 
 							  SQLQuery *queryver, 
 							  bool longformat, bool fileformat,
-							  bool custForm, AttrListPrintMask *pmask) {
+							  bool custForm, 
+							AttrListPrintMask *pmask,
+							const char *constraint /* = "" */) {
   AttrList *ad = 0;
   QuillErrCode st = QUILL_SUCCESS;
 

@@ -46,7 +46,7 @@ public:
 	//! high level method
 	QuillErrCode sendQuery(SQLQuery *, SQLQuery *, bool, 
 		bool fileformat = false, bool custForm = false, 
-		AttrListPrintMask *pmask = NULL);
+		AttrListPrintMask *pmask = NULL, const char *constraint = "");
 
 	//! used to determine whether result set is empty
 	bool isHistoryEmpty() { return isHistoryEmptyFlag; }
@@ -78,7 +78,8 @@ private:
 							  SQLQuery *queryver, 
 							  bool longformat, bool fileformat = false,
 							  bool custForm = false, 
-							  AttrListPrintMask *pmask = NULL);
+							  AttrListPrintMask *pmask = NULL,
+							  const char *constraint = "");
 };
 
 #endif
