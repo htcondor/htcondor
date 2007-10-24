@@ -67,19 +67,7 @@ run_virsh_command() {
 		rm -f "$XM_ERROR_OUTPUT" 2>/dev/null
 		# Because it is possible that some arguments have spaces,
 		# We do like this.
-		if [ -n "$5" ]; then
-			$XM "$1" "$2" "$3" "$4" "$5" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		elif [ -n "$4" ]; then
-			$XM "$1" "$2" "$3" "$4" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		elif [ -n "$3" ]; then
-			$XM "$1" "$2" "$3" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		elif [ -n "$2" ]; then
-			$XM "$1" "$2" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		elif [ -n "$1" ]; then
-			$XM "$1" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		else
-			$XM > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		fi
+		$XM $@ > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
 		REALRESULT=$?
 	return $REALRESULT
 }
@@ -93,19 +81,7 @@ run_xm_command() {
 		rm -f "$XM_ERROR_OUTPUT" 2>/dev/null
 		# Because it is possible that some arguments have spaces,
 		# We do like this.
-		if [ -n "$5" ]; then
-			$XM "$1" "$2" "$3" "$4" "$5" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		elif [ -n "$4" ]; then
-			$XM "$1" "$2" "$3" "$4" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		elif [ -n "$3" ]; then
-			$XM "$1" "$2" "$3" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		elif [ -n "$2" ]; then
-			$XM "$1" "$2" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		elif [ -n "$1" ]; then
-			$XM "$1" > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		else
-			$XM > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		fi
+		$XM $@ > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
 		REALRESULT=$?
 		if [ $REALRESULT != 0 ]; then
 			# command failed

@@ -40,7 +40,7 @@
 #define XEN_CKPT_TIMESTAMP_FILE_SUFFIX ".timestamp"
 
 static MyString
-getVMGahpErrorString(const char* fname)
+getScriptErrorString(const char* fname)
 {
 	MyString err_msg;
 	FILE *file = NULL;
@@ -48,7 +48,7 @@ getVMGahpErrorString(const char* fname)
 	file = safe_fopen_wrapper(fname, "r");
 
 	if( !file ) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, err_msg);
+		err_msg = VMGAHP_ERR_INTERNAL;
 		return err_msg;
 	}
 
@@ -97,12 +97,12 @@ XenType::Start()
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
 	if( getVMStatus() != VM_STOPPED ) {
-		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_INVALID_OPERATION;
 		return false;
 	}
 
@@ -151,7 +151,7 @@ XenType::Start()
 	int result = systemCommand(systemcmd, true);
 	if( result != 0 ) {
 		// Read error file
-		m_result_msg = getVMGahpErrorString(tmpfilename.Value());
+		m_result_msg = getScriptErrorString(tmpfilename.Value());
 		unlink(tmpfilename.Value());
 		return false;
 	}
@@ -173,7 +173,7 @@ XenType::Shutdown()
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -241,19 +241,19 @@ XenType::Checkpoint()
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
 	if( getVMStatus() == VM_STOPPED ) {
 		vmprintf(D_ALWAYS, "Checkpoint is called for a stopped VM\n");
-		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_INVALID_OPERATION;
 		return false;
 	}
 
 	if( !m_vm_checkpoint ) {
 		vmprintf(D_ALWAYS, "Checkpoint is not supported.\n");
-		getVMGahpErrString(VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT;
 		return false;
 	}
 
@@ -262,7 +262,7 @@ XenType::Checkpoint()
 		// However, Xen cannot suspend this type of VM yet.
 		// So we cannot checkpoint this VM.
 		vmprintf(D_ALWAYS, "Checkpoint of Hardware VT is not supported.\n");
-		getVMGahpErrString(VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT;
 		return false;
 	}
 
@@ -271,7 +271,7 @@ XenType::Checkpoint()
 
 	// This function cause a running VM to be suspended.
 	if( createCkptFiles() == false ) { 
-		getVMGahpErrString(VMGAHP_ERR_VM_CANNOT_CREATE_CKPT_FILES, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_CANNOT_CREATE_CKPT_FILES;
 		vmprintf(D_ALWAYS, "failed to create checkpoint files\n");
 		return false;
 	}
@@ -314,7 +314,7 @@ XenType::SoftSuspend()
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -323,7 +323,7 @@ XenType::SoftSuspend()
 	}
 
 	if( getVMStatus() != VM_RUNNING ) {
-		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_INVALID_OPERATION;
 		return false;
 	}
 
@@ -353,7 +353,7 @@ XenType::Suspend()
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -362,14 +362,14 @@ XenType::Suspend()
 	}
 
 	if( getVMStatus() != VM_RUNNING ) {
-		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_INVALID_OPERATION;
 		return false;
 	}
 
 	if( m_xen_hw_vt && !m_allow_hw_vt_suspend ) {
 		// This VM uses hardware virtualization.
 		// However, Xen cannot suspend this type of VM yet.
-		getVMGahpErrString(VMGAHP_ERR_VM_NO_SUPPORT_SUSPEND, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_NO_SUPPORT_SUSPEND;
 		return false;
 	}
 
@@ -389,7 +389,7 @@ XenType::Suspend()
 
 	int result = systemCommand(systemcmd, true);
 	if( result != 0 ) {
-		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_CRITICAL;
 		unlink(tmpfilename.Value());
 		return false;
 	}
@@ -409,7 +409,7 @@ XenType::Resume()
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -422,7 +422,7 @@ XenType::Resume()
 
 	if( !m_restart_with_ckpt && 
 			( getVMStatus() != VM_SUSPENDED) ) {
-		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_INVALID_OPERATION;
 		return false;
 	}
 	m_restart_with_ckpt = false;
@@ -437,7 +437,7 @@ XenType::Resume()
 	}
 
 	if( check_vm_read_access_file(m_suspendfile.Value(), true) == false ) {
-		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_SUSPEND_FILE, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_INVALID_SUSPEND_FILE;
 		return false;
 	}
 
@@ -449,7 +449,7 @@ XenType::Resume()
 
 	int result = systemCommand(systemcmd, true);
 	if( result != 0 ) {
-		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
 	}
 
@@ -469,7 +469,7 @@ XenType::Status()
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -516,7 +516,7 @@ XenType::Status()
 
 	int result = systemCommand(systemcmd, true);
 	if( result != 0 ) {
-		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_CRITICAL;
 		unlink(tmpfilename.Value());
 		return false;
 	}
@@ -526,7 +526,7 @@ XenType::Status()
 	char buffer[1024];
 	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
 	if( !file ) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		unlink(tmpfilename.Value());
 		return false;
 	}
@@ -583,7 +583,7 @@ XenType::Status()
 	unlink(tmpfilename.Value());
 
 	if( !vm_status.Length() ) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -652,7 +652,7 @@ XenType::Status()
 		return true;
 	}else {
 		// Woops, something is wrong
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 	return false;
@@ -1049,7 +1049,7 @@ XenType::CreateConfigFile()
 	if( !config_value ) {
 		vmprintf(D_ALWAYS, "\nERROR: You should define 'XEN_CONTROLLER' "
 				"in vmgahp config file\n");
-		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
 	}else {
 		m_xen_controller = delete_quotation_marks(config_value);
@@ -1060,7 +1060,7 @@ XenType::CreateConfigFile()
 	if( m_classAd.LookupString( VMPARAM_XEN_KERNEL, m_xen_kernel_submit_param) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
 							VMPARAM_XEN_KERNEL);
-		getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM, m_result_msg);
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM;
 		return false;
 	}
 	m_xen_kernel_submit_param.trim();
@@ -1071,7 +1071,7 @@ XenType::CreateConfigFile()
 		if( !config_value ) {
 			vmprintf(D_ALWAYS, "Default xen kernel is not defined "
 					"in vmgahp config file\n");
-			getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+			m_result_msg = VMGAHP_ERR_CRITICAL;
 			return false;
 		}else {
 			m_xen_kernel_file = delete_quotation_marks(config_value);
@@ -1089,7 +1089,7 @@ XenType::CreateConfigFile()
 		if( !config_value ) {
 			vmprintf(D_ALWAYS, "xen bootloader is not defined "
 					"in vmgahp config file\n");
-			getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+			m_result_msg = VMGAHP_ERR_CRITICAL;
 			return false;
 		}else {
 			m_xen_bootloader = delete_quotation_marks(config_value);
@@ -1098,8 +1098,7 @@ XenType::CreateConfigFile()
 	}else if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_HW_VT) == 0) {
 		vmprintf(D_ALWAYS, "This VM requires hardware virtualization\n");
 		if( !m_vm_hardware_vt ) {
-			getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT, 
-					m_result_msg);
+			m_result_msg = VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT;
 			return false;
 		}
 		m_xen_hw_vt = true;
@@ -1111,8 +1110,7 @@ XenType::CreateConfigFile()
 		if( check_vm_read_access_file(m_xen_kernel_submit_param.Value(), true) == false) {
 			vmprintf(D_ALWAYS, "xen kernel file '%s' cannot be read\n", 
 					m_xen_kernel_submit_param.Value());
-			getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND, 
-					m_result_msg);
+			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND;
 			return false;
 		}
 		m_xen_kernel_file = m_xen_kernel_submit_param;
@@ -1125,8 +1123,7 @@ XenType::CreateConfigFile()
 				// make sure that the file for xen ramdisk is readable
 				vmprintf(D_ALWAYS, "xen ramdisk file '%s' cannot be read\n", 
 						m_xen_initrd_file.Value());
-				getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND, 
-					m_result_msg);
+				m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND;
 				return false;
 			}
 		}
@@ -1137,8 +1134,7 @@ XenType::CreateConfigFile()
 		if( m_classAd.LookupString(VMPARAM_XEN_ROOT, m_xen_root) != 1 ) {
 			vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
 					VMPARAM_XEN_ROOT);
-			getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_NO_ROOT_DEVICE_PARAM, 
-				m_result_msg);
+			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_ROOT_DEVICE_PARAM;
 			return false;
 		}
 		m_xen_root.trim();
@@ -1149,16 +1145,14 @@ XenType::CreateConfigFile()
 	if( m_classAd.LookupString(VMPARAM_XEN_DISK, xen_disk) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
 				VMPARAM_XEN_DISK);
-		getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM, 
-			m_result_msg);
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM;
 		return false;
 	}
 	xen_disk.trim();
 	if( parseXenDiskParam(xen_disk.Value()) == false ) {
 		vmprintf(D_ALWAYS, "xen disk format(%s) is incorrect\n", 
 				xen_disk.Value());
-		getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_INVALID_DISK_PARAM, 
-			m_result_msg);
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_INVALID_DISK_PARAM;
 	}
 
 	// Read the parameter of Xen Kernel Param
@@ -1176,8 +1170,7 @@ XenType::CreateConfigFile()
 			m_xen_cdrom_device.IsEmpty() ) {
 		vmprintf(D_ALWAYS, "A job user defined files for a CDROM, "
 				"but the job user didn't define CDROM device\n");
-		getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_NO_CDROM_DEVICE, 
-			m_result_msg);
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_CDROM_DEVICE;
 		return false;
 	}
 
@@ -1208,8 +1201,7 @@ XenType::CreateConfigFile()
 		// Create ISO file
 		if( createISO() == false ) {
 			vmprintf(D_ALWAYS, "Cannot create a ISO file for CDROM\n");
-			getVMGahpErrString(VMGAHP_ERR_CANNOT_CREATE_ISO_FILE, 
-				m_result_msg);
+			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ISO_FILE;
 			return false;
 		}
 	}
@@ -1227,8 +1219,7 @@ XenType::CreateConfigFile()
 			vmprintf(D_ALWAYS, "To use vm checkpint in Xen, "
 					"all disk and iso files should be "
 					"in a shared file system\n");
-			getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT, 
-				m_result_msg);
+			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT;
 			return false;
 		}
 	}
@@ -1241,7 +1232,7 @@ XenType::CreateConfigFile()
 
 	if( CreateXenVMCofigFile(m_xen_controller.Value(), tmp_config_name.Value()) 
 			== false ) {
-		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
 	}
 

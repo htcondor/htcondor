@@ -411,7 +411,7 @@ VMGahpRequest::checkResult(MyString& errmsg) {
 	if( !m_pending_result || m_pending_result->argc != 3) {
 		dprintf(D_ALWAYS, "Bad Result of VM Request('%s')\n", 
 				m_command.Value());
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, errmsg);
+		errmsg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -422,7 +422,7 @@ VMGahpRequest::checkResult(MyString& errmsg) {
 				m_command.Value(), m_pending_result->argv[2]);
 
 		if( !strcmp(m_pending_result->argv[2], "NULL") ) {
-			getVMGahpErrString(VMGAHP_ERR_INTERNAL, errmsg);
+			errmsg = VMGAHP_ERR_INTERNAL;
 			return false;
 		}else {
 			errmsg = m_pending_result->argv[2];

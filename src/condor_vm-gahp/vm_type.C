@@ -118,15 +118,13 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 	if( m_classAd.LookupInteger( ATTR_JOB_VM_MEMORY, m_vm_mem) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
 				ATTR_JOB_VM_MEMORY);
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_JOBCLASSAD_NO_VM_MEMORY_PARAM;
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_NO_VM_MEMORY_PARAM;
 		return false;
 	}else {
 		// Requested memory should not be larger than the maximum allowed memory
 		if( ( m_vm_mem <= 0 ) || 
 				(m_vm_mem > vmgahp->m_gahp_config->m_vm_max_memory) ) {
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_JOBCLASSAD_TOO_MUCH_MEMORY_REQUEST;
+			m_result_msg = VMGAHP_ERR_JOBCLASSAD_TOO_MUCH_MEMORY_REQUEST;
 			return false;
 		}
 	}
@@ -139,8 +137,7 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 			(vmgahp->m_gahp_config->m_vm_networking == false ) ) {
 		vmprintf(D_ALWAYS, "A job requests networking but " 
 				"the gahp server doesn't support networking\n");
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_JOBCLASSAD_MISMATCHED_NETWORKING;
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_MISMATCHED_NETWORKING;
 		return false;
 	}
 
@@ -156,8 +153,7 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 			if( vmgahp->m_gahp_config->m_vm_networking_types.contains(m_vm_networking_type.Value()) == false ) {
 				vmprintf(D_ALWAYS, "Networking type(%s) is not supported by "
 						"this gahp server\n", m_vm_networking_type.Value());
-				m_result_msg = "";
-				m_result_msg += VMGAHP_ERR_JOBCLASSAD_MISMATCHED_NETWORKING_TYPE;
+				m_result_msg = VMGAHP_ERR_JOBCLASSAD_MISMATCHED_NETWORKING_TYPE;
 				return false;
 			}
 		}else {
@@ -175,8 +171,7 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 	m_classAd.LookupBool(ATTR_JOB_VM_CHECKPOINT, m_vm_checkpoint);
 
 	if( VMType::createVMName(&m_classAd, m_vm_name) == false ) {
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_CRITICAL;
+		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
 	}
 
@@ -190,8 +185,7 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 			(vmgahp->m_gahp_config->m_vm_hardware_vt == false ) ) {
 		vmprintf(D_ALWAYS, "A job requests hardware virtualization but " 
 				"the vmgahp server doesn't support hardware VT\n");
-		m_result_msg = "";
-		m_result_msg += VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT;
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT;
 		return false;
 	}
 
@@ -252,8 +246,7 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 								is_root) == false ) {
 						vmprintf(D_ALWAYS, "ISO file(%s) for CDROM cannot "
 								"be read\n", tmp_fullname.Value());
-						m_result_msg = "";
-						m_result_msg += VMGAHP_ERR_CANNOT_READ_ISO_FILE;
+						m_result_msg = VMGAHP_ERR_CANNOT_READ_ISO_FILE;
 						return false;
 					}
 					m_iso_file = tmp_fullname;
@@ -275,8 +268,7 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 			vmprintf(D_ALWAYS, "A job user defined both an ISO file and "
 					"'Argument' in a job description file. But 'Argument' "
 					"cannot be used with an iso file together\n");
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
+			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
 			return false;
 		}
 
@@ -284,8 +276,7 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 			vmprintf(D_ALWAYS, "A file with the same filename '%s' "
 					"is already in '%s'\n", VM_UNIV_ARGUMENT_FILE, 
 					VMPARAM_CDROM_FILES);
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
+			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
 			return false;
 		}
 
@@ -295,8 +286,7 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 			vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper the file "
 					"for arguments: safe_fopen_wrapper(%s) returns %s\n", 
 					VM_UNIV_ARGUMENT_FILE, strerror(errno));
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
+			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
 			return false;
 		}
 		if( fprintf(argfile_fp, "%s", m_classad_arg.Value()) < 0) {
@@ -304,8 +294,7 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 			unlink(VM_UNIV_ARGUMENT_FILE);
 			vmprintf(D_ALWAYS, "failed to fprintf in CreateConfigFile(%s:%s)\n",
 					VM_UNIV_ARGUMENT_FILE, strerror(errno));
-			m_result_msg = "";
-			m_result_msg += VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
+			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
 			return false;
 		}
 		fclose(argfile_fp);

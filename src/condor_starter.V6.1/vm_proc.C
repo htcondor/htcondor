@@ -391,13 +391,8 @@ VMProc::StartJob()
 		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
 		m_vmgahp->printSystemErrorMsg();
 
-		MyString internal_err;
-		MyString critical_err;
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, internal_err);
-		getVMGahpErrString(VMGAHP_ERR_CRITICAL, critical_err);
-
-		if( !strcmp(err_msg.Value(), internal_err.Value()) ||
-			!strcmp(err_msg.Value(), critical_err.Value()) ) {
+		if( !strcmp(err_msg.Value(), VMGAHP_ERR_INTERNAL) ||
+			!strcmp(err_msg.Value(), VMGAHP_ERR_CRITICAL) )  {
 			reportErrorToStartd();
 		}
 
@@ -799,10 +794,7 @@ VMProc::Suspend()
 		m_vmgahp->printSystemErrorMsg();
 		delete new_req;
 
-		MyString errmsg;
-		getVMGahpErrString(VMGAHP_ERR_VM_NO_SUPPORT_SUSPEND, errmsg);
-
-		if( strcmp(errmsg.Value(), gahpmsg.Value()) ) {
+		if( strcmp(gahpmsg.Value(), VMGAHP_ERR_VM_NO_SUPPORT_SUSPEND) ) {
 			// It is possible that a VM job is just finished.
 			// So we reset the timer for status 
 			if( m_vmstatus_tid != -1 ) {
@@ -1097,10 +1089,7 @@ VMProc::Ckpt()
 		m_vmgahp->printSystemErrorMsg();
 		delete new_req;
 
-		MyString errmsg;
-		getVMGahpErrString(VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT, errmsg);
-
-		if( strcmp(errmsg.Value(), gahpmsg.Value()) ) {
+		if( strcmp(gahpmsg.Value(), VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT) ) {
 			// It is possible that a VM job is just finished.
 			// So we reset the timer for status 
 			if( m_vmstatus_tid != -1 ) {

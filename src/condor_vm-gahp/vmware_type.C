@@ -560,7 +560,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 	if( !fp ) {
 		vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper vmware vmx file(%s) : "
 				"safe_fopen_wrapper returns %s\n", filename, strerror(errno));
-		getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_VMWARE_VMX_NOT_FOUND, m_result_msg);
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_VMWARE_VMX_NOT_FOUND;
 		return false;
 	}
 
@@ -665,8 +665,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 						if( check_vm_read_access_file(value.Value()) == false ) {
 							vmprintf(D_ALWAYS, "file(%s) in a vmx file cannot "
 									"be read\n", value.Value());
-							getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_VMWARE_VMX_ERROR,
-								   	m_result_msg);
+							m_result_msg = VMGAHP_ERR_JOBCLASSAD_VMWARE_VMX_ERROR;
 							return false;
 						}
 						m_configVars.append(line);
@@ -683,8 +682,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 								== false ) {
 							vmprintf(D_ALWAYS, "file(%s) in a vmx file cannot "
 									"be read\n", tmp_fullname.Value());
-							getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_VMWARE_VMX_ERROR,
-								   	m_result_msg);
+							m_result_msg = VMGAHP_ERR_JOBCLASSAD_VMWARE_VMX_ERROR;
 							return false;
 						}
 						m_configVars.append(tmp_line.Value());
@@ -730,8 +728,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 		if( cdrom_devices.isEmpty() ) {
 			vmprintf(D_ALWAYS, "Job user defined files for a CDROM, "
 					"but no CDROM device is found in a vmx file\n");
-			getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_VMWARE_NO_CDROM_DEVICE,
-				m_result_msg);
+			m_result_msg = VMGAHP_ERR_JOBCLASSAD_VMWARE_NO_CDROM_DEVICE;
 			return false;
 		}
 
@@ -814,10 +811,10 @@ bool
 VMwareType::Snapshot()
 {
 	vmprintf(D_FULLDEBUG, "Inside VMwareType::Snapshot\n");
-
+	
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -829,7 +826,7 @@ VMwareType::Snapshot()
 
 	int result = systemCommand(systemcmd, false);
 	if( result != 0 ) {
-		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
 	}
 
@@ -846,16 +843,14 @@ VMwareType::Start()
 {
 	vmprintf(D_FULLDEBUG, "Inside VMwareType::Start\n");
 
-	m_result_msg = "";
-
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
 	if( getVMStatus() != VM_STOPPED ) {
-		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_INVALID_OPERATION;
 		return false;
 	}
 		
@@ -909,7 +904,7 @@ VMwareType::Start()
 		unlink(tmpfilename.Value());
 
 		Unregister();
-		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
 	}
 
@@ -989,7 +984,7 @@ VMwareType::Shutdown()
 
 	if( (m_scriptname.Length() == 0) ||
 			(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -1057,19 +1052,19 @@ VMwareType::Checkpoint()
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
 	if( getVMStatus() == VM_STOPPED ) {
 		vmprintf(D_ALWAYS, "Checkpoint is called for a stopped VM\n");
-		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_INVALID_OPERATION;
 		return false;
 	}
 
 	if( !m_vm_checkpoint ) {
 		vmprintf(D_ALWAYS, "Checkpoint is not supported.\n");
-		getVMGahpErrString(VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT;
 		return false;
 	}
 
@@ -1078,7 +1073,7 @@ VMwareType::Checkpoint()
 
 	// This function cause a running VM to be suspended.
 	if( createCkptFiles() == false ) { 
-		getVMGahpErrString(VMGAHP_ERR_VM_CANNOT_CREATE_CKPT_FILES, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_CANNOT_CREATE_CKPT_FILES;
 		vmprintf(D_ALWAYS, "failed to create checkpoint files\n");
 		return false;
 	}
@@ -1119,7 +1114,7 @@ VMwareType::SoftSuspend()
 	}
 
 	if( getVMStatus() != VM_RUNNING ) {
-		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_INVALID_OPERATION;
 		return false;
 	}
 
@@ -1144,7 +1139,7 @@ VMwareType::Suspend()
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -1153,7 +1148,7 @@ VMwareType::Suspend()
 	}
 
 	if( getVMStatus() != VM_RUNNING ) {
-		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_INVALID_OPERATION;
 		return false;
 	}
 
@@ -1168,7 +1163,7 @@ VMwareType::Suspend()
 
 	int result = systemCommand(systemcmd, false);
 	if( result != 0 ) {
-		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
 	}
 
@@ -1185,7 +1180,7 @@ VMwareType::Resume()
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -1197,7 +1192,7 @@ VMwareType::Resume()
 	}
 
 	if( getVMStatus() != VM_SUSPENDED ) {
-		getVMGahpErrString(VMGAHP_ERR_VM_INVALID_OPERATION, m_result_msg);
+		m_result_msg = VMGAHP_ERR_VM_INVALID_OPERATION;
 		return false;
 	}
 
@@ -1227,7 +1222,7 @@ VMwareType::Resume()
 	int result = systemCommand(systemcmd, false);
 	if( result != 0 ) {
 		unlink(tmpfilename.Value());
-		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
 	}
 
@@ -1262,7 +1257,7 @@ VMwareType::Status()
 
 	if( (m_scriptname.Length() == 0) ||
 			(m_configfile.Length() == 0)) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -1309,7 +1304,7 @@ VMwareType::Status()
 
 	int result = systemCommand(systemcmd, false);
 	if( result != 0 ) {
-		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_CRITICAL;
 		unlink(tmpfilename.Value());
 		return false;
 	}
@@ -1319,7 +1314,7 @@ VMwareType::Status()
 	char buffer[1024];
 	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
 	if( !file ) {
-		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_CRITICAL;
 		unlink(tmpfilename.Value());
 		return false;
 	}
@@ -1375,7 +1370,7 @@ VMwareType::Status()
 	unlink(tmpfilename.Value());
 
 	if( !vm_status.Length() ) {
-		getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
 	}
 
@@ -1452,7 +1447,7 @@ VMwareType::Status()
 		return true;
 	}else {
 		// Woops, something is wrong
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 	return true;
@@ -1538,7 +1533,7 @@ VMwareType::CreateConfigFile()
 	if( m_classAd.LookupString(VMPARAM_VMWARE_DIR, m_vmware_dir) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
 							VMPARAM_VMWARE_DIR);
-		getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_DIR_PARAM, m_result_msg);
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_DIR_PARAM;
 		return false;
 	}
 	m_vmware_dir.trim();
@@ -1547,7 +1542,7 @@ VMwareType::CreateConfigFile()
 	if( m_classAd.LookupString(VMPARAM_VMWARE_VMX_FILE, m_vmware_vmx) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
 							VMPARAM_VMWARE_VMX_FILE);
-		getVMGahpErrString(VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_VMX_PARAM, m_result_msg);
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_VMX_PARAM;
 		return false;
 	}
 	m_vmware_vmx.trim();
@@ -1603,7 +1598,7 @@ VMwareType::CreateConfigFile()
 		if( createISO() == false ) {
 			vmprintf(D_ALWAYS, "Cannot create a ISO file for CDROM\n");
 			m_iso_file = "";
-			getVMGahpErrString(VMGAHP_ERR_CANNOT_CREATE_ISO_FILE, m_result_msg);
+			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ISO_FILE;
 			return false;
 		}
 	}
@@ -1611,7 +1606,7 @@ VMwareType::CreateConfigFile()
 	// Create vm config file
 	if( createTempFile(VMWARE_TMP_TEMPLATE, VMWARE_TMP_CONFIG_SUFFIX, 
 				tmp_config_name) == false ) {
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -1620,7 +1615,7 @@ VMwareType::CreateConfigFile()
 	if( retval < 0 ) {
 		vmprintf(D_ALWAYS, "Failed to chmod %s in "
 				"VMwareType::CreateConfigFile()\n", tmp_config_name.Value());
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -1693,7 +1688,7 @@ VMwareType::CreateConfigFile()
 				tmp_config_name.Value(), strerror(errno));
 
 		unlink(tmp_config_name.Value());
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -1707,7 +1702,7 @@ VMwareType::CreateConfigFile()
 
 			fclose(config_fp);
 			unlink(tmp_config_name.Value());
-			getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+			m_result_msg = VMGAHP_ERR_INTERNAL;
 			return false;
 		}
 	}
@@ -1720,7 +1715,7 @@ VMwareType::CreateConfigFile()
 
 		fclose(config_fp);
 		unlink(tmp_config_name.Value());
-		getVMGahpErrString(VMGAHP_ERR_INTERNAL, m_result_msg);
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
 
@@ -1733,7 +1728,7 @@ VMwareType::CreateConfigFile()
 
 		if( createConfigUsingScript(tmp_config_name.Value()) == false ) {
 			unlink(tmp_config_name.Value());
-			getVMGahpErrString(VMGAHP_ERR_CRITICAL, m_result_msg);
+			m_result_msg = VMGAHP_ERR_CRITICAL;
 			return false;
 		}
 	}

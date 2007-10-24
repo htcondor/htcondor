@@ -202,8 +202,9 @@ main_pre_dc_init(int argc, char* argv[])
 					job_user_gid = caller_uid;
 				}
 			}else {
-				job_user_uid = get_condor_uid(); 
-				job_user_gid = get_condor_gid(); 
+				fprintf(stderr, "\nERROR: Please set environment variable "
+						"'VMGAHP_USER_UID=<uid>'\n");
+				exit(1);
 			}
 		}
 	}
