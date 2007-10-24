@@ -305,6 +305,14 @@ SOURCE="..\src\condor_c++_util\condor_state.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_url.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_url.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_user_policy.C"
 # End Source File
 # Begin Source File
