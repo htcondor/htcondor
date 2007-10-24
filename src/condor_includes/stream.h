@@ -500,6 +500,11 @@ public:
     */
 	virtual stream_type type() = 0;
 
+	/** Create a copy of this stream (e.g. dups underlying socket).
+		Caller should delete the returned stream when finished with it.
+	*/
+	virtual Stream *CloneStream() = 0;
+
 	/** @name Condor Compatibility Ops
      */
     //@{

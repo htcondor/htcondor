@@ -844,6 +844,10 @@ class DaemonCore : public Service
 		/** Create a "poor man's" thread.  Works for NT (via
 			CreateThread) and Unix (via fork).  The new thread does
 			not have a DaemonCore command socket.
+			NOTE: if DoFakeCreateThread() is true, this will just
+			call the specified function directly and then call the
+			reaper later in a timer.  Currently, this is the default
+			under Windows until thread-safety can be assured.
 			@param start_func Function to execute in the thread.
 			   This function must not access any shared memory.
 			   The only DaemonCore command which may be used in this
@@ -883,6 +887,11 @@ class DaemonCore : public Service
 		Stream			*sock = NULL,
 		int				reaper_id = 1
 		);
+
+		// On some platforms (currently Windows), we do not want
+		// Create_Thread() to actually create a thread, because
+		// just about nothing in Condor is thread safe at this time.
+	bool DoFakeCreateThread() { return m_fake_create_thread; }
 
 	///
 	int Suspend_Thread(int tid);
@@ -1047,6 +1056,9 @@ class DaemonCore : public Service
 	int HandleReqSocketHandler(Stream *stream);
     int HandleSig(int command, int sig);
 
+	friend class FakeCreateThreadReaperCaller;
+	void CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exit_status);
+
     int HandleProcessExitCommand(int command, Stream* stream);
     int HandleProcessExit(pid_t pid, int exit_status);
     int HandleDC_SIGCHLD(int sig);
@@ -1169,6 +1181,8 @@ class DaemonCore : public Service
 		// avoiding the creation of new persistent sockets.  Do not use
 		// this value directly.  Call FileDescriptorSafetyLimit().
 	int file_descriptor_safety_limit;
+
+	bool m_fake_create_thread;
 
 #if defined(WIN32)
 	typedef PipeEnd* PipeHandle;

@@ -84,6 +84,10 @@ public:
 	// Copy constructor
 	SafeSock(const SafeSock &);
 
+	/// Create a copy of this stream (e.g. dups underlying socket).
+	/// Caller should delete the returned stream when finished with it.
+	Stream *CloneStream();
+
 	// Destructor
 	~SafeSock();
 

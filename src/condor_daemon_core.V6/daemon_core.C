@@ -353,6 +353,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
+	m_fake_create_thread = false;
+
 	soap = new struct soap;
 }
 
@@ -2108,6 +2110,17 @@ DaemonCore::ReInit()
 #endif // COMPILE_SOAP_SSL
 
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
+
+		// FAKE_CREATE_THREAD is an undocumented config knob which turns
+		// Create_Thread() into a simple function call in the main process,
+		// rather than a thread/fork.
+#ifdef WIN32
+		// Currently, all use of threads are deemed unsafe in Windows.
+	m_fake_create_thread = param_boolean("FAKE_CREATE_THREAD",true);
+#else
+		// Under unix, Create_Thread() is actually a fork, so it is safe.
+	m_fake_create_thread = param_boolean("FAKE_CREATE_THREAD",false);
+#endif
 
 	return TRUE;
 }
@@ -6606,6 +6619,41 @@ win32_thread_start_func(void *arg) {
 }
 #endif
 
+class FakeCreateThreadReaperCaller: public Service {
+public:
+	FakeCreateThreadReaperCaller(int exit_status,int reaper_id);
+
+	int CallReaper();
+
+	int FakeThreadID() { return m_tid; }
+
+private:
+	int m_tid; // timer id
+	int m_exit_status;
+	int m_reaper_id;
+};
+
+FakeCreateThreadReaperCaller::FakeCreateThreadReaperCaller(int exit_status,int reaper_id):
+	m_exit_status(exit_status), m_reaper_id(reaper_id)
+{
+		// We cannot call the reaper right away, because the caller of
+		// Create_Thread doesn't yet know the "thread id".  Therefore,
+		// register a timer that will call the reaper.
+	m_tid = daemonCore->Register_Timer(
+		0,
+		(Eventcpp)&FakeCreateThreadReaperCaller::CallReaper,
+		"FakeCreateThreadReaperCaller::CallReaper()",
+		this );
+
+	ASSERT( m_tid >= 0 );
+}
+
+int
+FakeCreateThreadReaperCaller::CallReaper() {
+	daemonCore->CallReaper( m_reaper_id, "fake thread", m_tid, m_exit_status );
+	delete this;
+}
+
 int
 DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 						  int reaper_id)
@@ -6615,6 +6663,41 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 		 || (reapTable[reaper_id - 1].num == 0) ) {
 		dprintf(D_ALWAYS,"Create_Thread: invalid reaper_id\n");
 		return FALSE;
+	}
+
+	if( DoFakeCreateThread() ) {
+			// Rather than creating a thread (or fork), we have been
+			// configured to just call the function directly in the
+			// current process, and then register a timer to call the
+			// reaper.
+
+		// need to copy the sock because our caller is going to delete/close it
+		Stream *s = sock ? sock->CloneStream() : (Stream *)NULL;
+
+		priv_state saved_priv = get_priv();
+		int exit_status = start_func(arg,s);
+
+#ifndef WIN32
+			// In unix, we need to make exit_status like wait waitpid() returns
+		exit_status = exit_status<<8;
+#endif
+
+		priv_state new_priv = get_priv();
+		if( saved_priv != new_priv ) {
+			char const *reaper =
+				reaper_id > 0 ? reapTable[reaper_id-1].handler_descrip : NULL;
+			dprintf(D_ALWAYS,
+					"Create_Thread: UNEXPECTED: priv state changed "
+					"during worker function: %d %d (%s)\n",
+					(int)saved_priv, (int)new_priv,
+					reaper ? reaper : "no reaper" );
+			set_priv(saved_priv);
+		}
+
+		FakeCreateThreadReaperCaller *reaper_caller =
+			new FakeCreateThreadReaperCaller( exit_status, reaper_id );
+
+		return reaper_caller->FakeThreadID();
 	}
 
 	// Before we create the thread, call InfoCommandSinfulString once.
@@ -6627,22 +6710,8 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	HANDLE hThread;
 	priv_state priv;
 	// need to copy the sock because our caller is going to delete/close it
-//	Stream *s = sock;
-// #if 0
-	Stream *s = NULL;
-	if (sock) {
-		switch(sock->type()) {
-		case Stream::reli_sock:
-			s = new ReliSock(*((ReliSock *)sock));
-			break;
-		case Stream::safe_sock:
-			s = new SafeSock(*((SafeSock *)sock));
-			break;
-		default:
-			break;
-		}
-	}
-// #endif
+	Stream *s = sock ? sock->CloneStream() : (Stream *)NULL;
+
 	thread_info *tinfo = (thread_info *)malloc(sizeof(thread_info));
 	tinfo->start_func = start_func;
 	tinfo->arg = arg;
@@ -7511,13 +7580,57 @@ int DaemonCore::HandleProcessExitCommand(int command, Stream* stream)
 	return( HandleProcessExit(pid,0) );
 }
 
+void
+DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exit_status)
+{
+	ReapEnt *reaper = NULL;
+
+	if( reaper_id > 0 ) {
+		reaper = &(reapTable[reaper_id-1]);
+	}
+	if( !reaper || !(reaper->handler || reaper->handlercpp) ) {
+			// no registered reaper
+			dprintf(D_DAEMONCORE,
+			"DaemonCore: %s %lu exited with status %d; no registered reaper\n",
+				whatexited, (unsigned long)pid, exit_status);
+		return;
+	}
+
+		// Set curr_dataptr for Get/SetDataPtr()
+	curr_dataptr = &(reaper->data_ptr);
+
+		// Log a message
+	char *hdescrip = reaper->handler_descrip;
+	if ( !hdescrip ) {
+		hdescrip = EMPTY_DESCRIP;
+	}
+	dprintf(D_DAEMONCORE,
+		"DaemonCore: %s %lu exited with status %d, invoking reaper "
+		"%d <%s>\n",
+		whatexited, (unsigned long)pid, exit_status, reaper_id, hdescrip);
+
+	if ( reaper->handler ) {
+		// a C handler
+		(*(reaper->handler))(reaper->service,pid,exit_status);
+	}
+	else if ( reaper->handlercpp ) {
+		// a C++ handler
+		(reaper->service->*(reaper->handlercpp))(pid,exit_status);
+	}
+
+		// Make sure we didn't leak our priv state
+	CheckPrivState();
+
+	// Clear curr_dataptr
+	curr_dataptr = NULL;
+}
+
 // This function gets calls with the pid of a process which just exited.
 // On Unix, the exit_status is also provided; on NT, we need to fetch
 // the exit status here.  Then we call any registered reaper for this process.
 int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 {
 	PidEntry* pidentry;
-	int i;
 	const char *whatexited = "pid";	// could be changed to "tid"
 
 	// Fetch the PidEntry for this pid from our hash table.
@@ -7581,43 +7694,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	// If parent process is_local, simply invoke the reaper here.
 	// If remote, call the DC_INVOKEREAPER command.
 	if ( pidentry->parent_is_local ) {
-
-		// Set i to be the entry in the reaper table to use
-		i = pidentry->reaper_id - 1;
-
-		// Invoke the reaper handler if there is one registered
-		if( (i >= 0) && (reapTable[i].handler || reapTable[i].handlercpp) ) {
-			// Set curr_dataptr for Get/SetDataPtr()
-			curr_dataptr = &(reapTable[i].data_ptr);
-
-			// Log a message
-			char *hdescrip = reapTable[i].handler_descrip;
-			if ( !hdescrip )
-				hdescrip = EMPTY_DESCRIP;
-			dprintf(D_DAEMONCORE,
-				"DaemonCore: %s %lu exited with status %d, invoking reaper "
-				"%d <%s>\n",
-				whatexited, (unsigned long)pid, exit_status, i+1, hdescrip);
-
-			if ( reapTable[i].handler )
-				// a C handler
-				(*(reapTable[i].handler))(reapTable[i].service,pid,exit_status);
-			else
-			if ( reapTable[i].handlercpp )
-				// a C++ handler
-				(reapTable[i].service->*(reapTable[i].handlercpp))(pid,exit_status);
-
-				// Make sure we didn't leak our priv state
-			CheckPrivState();
-
-			// Clear curr_dataptr
-			curr_dataptr = NULL;
-		} else {
-			// no registered reaper
-			dprintf(D_DAEMONCORE,
-			"DaemonCore: %s %lu exited with status %d; no registered reaper\n",
-				whatexited, (unsigned long)pid, exit_status);
-		}
+		CallReaper( pidentry->reaper_id, whatexited, pid, exit_status );
 	} else {
 		// TODO: the parent for this process is remote.
 		// send the parent a DC_INVOKEREAPER command.
