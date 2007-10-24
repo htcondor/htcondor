@@ -218,6 +218,10 @@ main( int argc, char* argv[] )
 			verbose = true;
 		} else if( match_prefix( argv[i], "-dump" ) ) {
 			dump_all_variables = true;
+		} else if( match_prefix( argv[i], "-debug" ) ) {
+				// dprintf to console
+			Termlog = 1;
+			dprintf_config( "TOOL" );
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
