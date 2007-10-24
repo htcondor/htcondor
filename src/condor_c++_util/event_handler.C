@@ -118,7 +118,7 @@ EventHandler::install()
 			// bad craziness with the type cast --psilord
 			action.sa_handler = func;
 #else
-			action.sa_handler = (void *) func;
+			action.sa_handler = (void (*)(...)) func;
 #endif
 
 			action.sa_mask = mask;
