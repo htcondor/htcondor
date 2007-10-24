@@ -136,7 +136,7 @@ static char *GMStateNames[] = {
 
 #define OUTPUT_WAIT_POLL_INTERVAL 1
 
-#define CANCEL_AFTER_RESTART_DELAY	30
+#define CANCEL_AFTER_RESTART_DELAY	15
 
 #define LOG_GLOBUS_ERROR(func,error) \
     dprintf(D_ALWAYS, \
@@ -1887,7 +1887,6 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					// cancel. If the job is done but the jobmanager
 					// hasn't noticed yet, then we'll get GRAM error
 					// JOB_CANCEL_FAILED.
-dprintf(D_ALWAYS,"JEF: waiting after restart to do a cancel\n");
 					daemonCore->Reset_Timer( evaluateStateTid,
 								(lastRestartAttempt + CANCEL_AFTER_RESTART_DELAY) - now );
 					break;
