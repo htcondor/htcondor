@@ -226,6 +226,9 @@ elif test $os = "Linux" ; then
 	 "3" )
        _cv_linux_distro="RHEL3"
        ;;
+	 "5" )
+       _cv_linux_distro="RHEL5"
+       ;;
 	 "4.2" )
        _cv_linux_distro="CENTOS42"
        ;;
@@ -2226,9 +2229,15 @@ if test x$_cv_sysname != "xppc_aix52" -a x$_cv_linux_distro != "xRH72" -a  x$_cv
   fi
 fi
 
+if test "x$_cv_linux_distro" = "xRHEL5" ; then
+CHECK_EXTERNAL([krb5], [1.4.3-p0], [soft],
+               [use krb5 (provides Kerberos support)],
+               MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
+else
 CHECK_EXTERNAL([krb5], [1.4.3], [soft],
                [use krb5 (provides Kerberos support)],
                MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
+fi
 
 _cv_has_gahp=$_cv_has_globus
 CHECK_EXTERNAL([gahp],[1.0.15], [soft])

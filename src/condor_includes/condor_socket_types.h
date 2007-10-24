@@ -138,7 +138,7 @@ _all_ the calls and put them in one standard place.
 
 	#define SOCKET_FLAGS_TYPE int
 
-	#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24)
+	#if !defined(GLIBC20) && !defined(GLIBC21)
 		#define SOCKET_COUNT_TYPE int
 	#else
 		#define SOCKET_COUNT_TYPE unsigned int

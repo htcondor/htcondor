@@ -58,7 +58,9 @@
 #  include <sys/mount.h>
 # endif
 # ifdef HAVE_USTAT_H
-#  include <ustat.h>
+#  if !defined(HAVE_LINUX_NFSD_CONST_H)
+#   include <ustat.h>
+#  endif
 # endif
 # ifdef HAVE_SYS_STATFS_H
 #  include <sys/statfs.h>

@@ -114,7 +114,7 @@ EventHandler::install()
 		if( sigismember(&mask,signo) ) {
 			// explicit type cast to eliminate type check warning  -- Rajesh
 			// we should move this to be a #define symbol...
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24))) || defined(AIX) || defined(HPUX11) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
+#if (defined(LINUX) && !defined(GLIBC20) && !defined(GLIBC21)) || defined(AIX) || defined(HPUX11) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
 			// bad craziness with the type cast --psilord
 			action.sa_handler = (void (*)(int)) func;
 #else
