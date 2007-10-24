@@ -132,7 +132,7 @@ static char *GMStateNames[] = {
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
-#define MAX_SUBMIT_ATTEMPTS	1
+#define MAX_SUBMIT_ATTEMPTS	3
 
 #define OUTPUT_WAIT_POLL_INTERVAL 1
 
@@ -634,7 +634,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	enteredCurrentGlobusState = time(NULL);
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
-	submitFailureCode = 0;
+	previousGlobusError = 0;
 	lastRestartReason = 0;
 	lastRestartAttempt = 0;
 	numRestartAttempts = 0;
@@ -1265,28 +1265,17 @@ int GlobusJob::doEvaluateState()
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
 					dprintf(D_ALWAYS,"(%d.%d)    RSL='%s'\n",
 							procID.cluster, procID.proc,RSL->Value());
-					submitFailureCode = globusError = rc;
+					globusError = rc;
 					WriteGlobusSubmitFailedEventToUserLog( jobAd,
-														   submitFailureCode,
-														   gahp->globus_gram_client_error_string(submitFailureCode) );
+														   rc,
+														   gahp->globus_gram_client_error_string(rc) );
+					// See if the user wants to rematch. We evaluate the
+					// expressions here because GM_CLEAR_REQUEST may
+					// decide to hold the job before it evaluates it.
 					jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
-					if ( wantRematch ) {
-						// We go to CLEAR_REQUEST here so that wantRematch
-						// will be acted upon
-						doResubmit = 1;
-						gmState = GM_CLEAR_REQUEST;
-					} else {
-						// We don't go to CLEAR_REQUEST here because it will
-						// clear out globusError, which we want to save once
-						// we run out of submit attempts.
-						// TODO We need a better solution to this, so that
-						//   we always go to the same state.
-						gmState = GM_UNSUBMITTED;
-					}
-					reevaluate_state = true;
+
+					gmState = GM_CLEAR_REQUEST;
 				}
-			} else if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_UNSUBMITTED;
 			} else {
 				unsigned int delay = 0;
 				if ( (lastSubmitAttempt + submitInterval) > now ) {
@@ -2076,19 +2065,13 @@ dprintf(D_ALWAYS,"JEF: waiting after restart to do a cancel\n");
 			// Remove all knowledge of any previous or present job
 			// submission, in both the gridmanager and the schedd.
 
-			// If we are doing a rematch, we are simply waiting around
-			// for the schedd to be updated and subsequently this globus job
-			// object to be destroyed.  So there is nothing to do.
-			if ( wantRematch ) {
-				break;
-			}
-
 			// For now, put problem jobs on hold instead of
 			// forgetting about current submission and trying again.
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
 			if ( (jobContact != NULL || (globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED && globusStateErrorCode != GLOBUS_GRAM_PROTOCOL_ERROR_JOB_UNSUBMITTED)) 
 				     // && condorState != REMOVED 
+					 && wantRematch == 0 
 					 && wantResubmit == 0 
 					 && doResubmit == 0 ) {
 				gmState = GM_HOLD;
@@ -2109,6 +2092,12 @@ dprintf(D_ALWAYS,"JEF: waiting after restart to do a cancel\n");
 				dprintf(D_ALWAYS,
 					"(%d.%d) Resubmitting to Globus (last submit failed)\n",
 						procID.cluster, procID.proc );
+			}
+				// Save the globus error code that led to this submission
+				// failing, if any
+			if ( previousGlobusError == 0 ) {
+				previousGlobusError = globusStateErrorCode ?
+					globusStateErrorCode : globusError;
 			}
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
@@ -2223,6 +2212,13 @@ dprintf(D_ALWAYS,"JEF: waiting after restart to do a cancel\n");
 							  gahp->globus_gram_client_error_string( globusError ) );
 					holdCode = CONDOR_HOLD_CODE_GlobusGramError;
 					holdSubCode = globusError;
+				}
+				if ( holdReason[0] == '\0' && previousGlobusError != 0 ) {
+					snprintf( holdReason, 1024, "Globus error %d: %s",
+							  previousGlobusError,
+							  gahp->globus_gram_client_error_string( previousGlobusError ) );
+					holdCode = CONDOR_HOLD_CODE_GlobusGramError;
+					holdSubCode = previousGlobusError;
 				}
 				if ( holdReason[0] == '\0' ) {
 					strncpy( holdReason, "Unspecified gridmanager error",
@@ -2657,11 +2653,10 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 			if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 					// TODO: should SUBMIT_FAILED_EVENT be used only on
 					//   certain errors (ones we know are submit-related)?
-				submitFailureCode = new_error_code;
 				if ( !submitFailedLogged ) {
 					WriteGlobusSubmitFailedEventToUserLog( jobAd,
-														   submitFailureCode,
-														   gahp->globus_gram_client_error_string(submitFailureCode) );
+														   new_error_code,
+														   gahp->globus_gram_client_error_string(new_error_code) );
 					submitFailedLogged = true;
 				}
 			} else {

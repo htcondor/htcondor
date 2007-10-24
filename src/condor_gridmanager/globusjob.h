@@ -121,7 +121,9 @@ class GlobusJob : public BaseJob
 	time_t enteredCurrentGlobusState;
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
-	int submitFailureCode;
+		// Globus error code that caused the failure of the previous
+		// submit attempt/submission
+	int previousGlobusError;
 	int lastRestartReason;
 	time_t lastRestartAttempt;
 	int numRestartAttempts;
