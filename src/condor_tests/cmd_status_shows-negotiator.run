@@ -224,6 +224,7 @@ if($bail != 1) {
 
 
 my $numnegotiator = 0;
+my $cmd = "";
 
 if($bail == 1) {
 	# allow time for all the nodes to update the collector
@@ -262,6 +263,14 @@ if($bail == 1) {
 	}
 }
 
+if($done == 0) {
+	print "Test failed because we never saw a negotiator.....\n";
+	print "Last run of \"$cmd\" was...\n";
+
+	foreach $lineitem (@adarray) {
+		print "cmdres: $lineitem\n";
+	}
+}
 
 print "Saving things and cleaning up....\n";
 
