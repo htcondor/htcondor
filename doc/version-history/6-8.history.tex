@@ -63,6 +63,12 @@ was introduced in 6.7.1.
 (e.g. \MacroNI{ALLOW\_READ}) now properly recognize values where the
 username contains a wildcard (e.g. \MacroNI{*@cs.wisc.edu/bird.cs.wisc.edu}).
 
+\item A rare threading problem in the Windows version of Condor has
+been fixed.  The problem could cause memory corruption in the
+\Condor{starter} while receiving input files and in the
+\Condor{schedd} while transferring input/output files for a remotely
+submitted job or a `spooled' job.
+
 \end{itemize}
 
 \noindent Known Bugs:
