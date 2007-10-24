@@ -30,7 +30,7 @@ $execute = sub
 	my $job = "good";
 	my $cluster = $info{"cluster"};
 	my $name = $info{"output"};
-	CondorTest::RegisterTimed($testname, $timed, 120);
+	CondorTest::RegisterTimed($testname, $timed, 300);
 
 	#job sleeps forever and will be there for removal
 	sleep(60);
