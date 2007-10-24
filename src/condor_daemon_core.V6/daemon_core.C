@@ -6623,7 +6623,7 @@ class FakeCreateThreadReaperCaller: public Service {
 public:
 	FakeCreateThreadReaperCaller(int exit_status,int reaper_id);
 
-	int CallReaper();
+	void CallReaper();
 
 	int FakeThreadID() { return m_tid; }
 
@@ -6648,7 +6648,7 @@ FakeCreateThreadReaperCaller::FakeCreateThreadReaperCaller(int exit_status,int r
 	ASSERT( m_tid >= 0 );
 }
 
-int
+void
 FakeCreateThreadReaperCaller::CallReaper() {
 	daemonCore->CallReaper( m_reaper_id, "fake thread", m_tid, m_exit_status );
 	delete this;
