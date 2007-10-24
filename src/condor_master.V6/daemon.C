@@ -672,7 +672,6 @@ int daemon::RealStart( )
 	//
 	FamilyInfo fi;
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 60);
-	fi.login = NULL;
 
 	pid = daemonCore->Create_Process(
 				process_name,	// program to exec

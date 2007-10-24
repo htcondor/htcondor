@@ -128,6 +128,11 @@ privsep_create_process(const char* cmd,
 			privsep_exec_set_std_file(in_fp, i, std_file_names[i]);
 		}
 	}
+#if defined(LINUX)
+	if ((family_info != NULL) && (family_info->group_ptr != NULL)) {
+		privsep_exec_set_tracking_group(in_fp, *family_info->group_ptr);
+	}
+#endif
 	fclose(in_fp);
 
 	// check the switchboard's error pipe for any problems

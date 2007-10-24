@@ -148,6 +148,7 @@ typedef struct exec_params {
     char *stdout_filename;
     char *stderr_filename;
     int is_std_univ;
+    gid_t tracking_group;
     id_range_list keep_open_fds;
 } exec_params;
 
@@ -165,6 +166,8 @@ static void init_exec_params(exec_params *c)
     c->stderr_filename = 0;
 
     c->is_std_univ = 0;
+
+    c->tracking_group = 0;
 
     init_id_range_list(&c->keep_open_fds);
 }
@@ -244,6 +247,7 @@ typedef enum config_key_enum {
     EXEC_STDOUT,
     EXEC_STDERR,
     EXEC_IS_STD_UNIV,
+    EXEC_TRACKING_GROUP,
     EXEC_KEEP_OPEN_FDS,
 
     INVALID
@@ -276,6 +280,7 @@ key_to_enum key_to_enum_map[] = {
     {EXEC_STDOUT, "exec-stdout"},
     {EXEC_STDERR, "exec-stderr"},
     {EXEC_IS_STD_UNIV, "exec-is-std-univ"},
+    {EXEC_TRACKING_GROUP, "exec-tracking-group"},
     {EXEC_KEEP_OPEN_FDS, "exec-keep-open-fd"}
 };
 
@@ -346,7 +351,6 @@ config_parse_uid(uid_t * uid, const char *key, const char *value,
     check_id_error(key, value, cf, endptr, "uid");
 }
 
-#if 0
 static void
 config_parse_gid(gid_t * gid, const char *key, const char *value,
                  config_file *cf)
@@ -357,7 +361,6 @@ config_parse_gid(gid_t * gid, const char *key, const char *value,
 
     check_id_error(key, value, cf, endptr, "gid");
 }
-#endif
 
 static void
 config_parse_id_list(id_range_list *list, const char *key,
@@ -563,6 +566,9 @@ static int process_user_exec_config(exec_params *c, int do_validate)
             break;
         case EXEC_IS_STD_UNIV:
             config_parse_bool(&c->is_std_univ, key, value, &cf);
+            break;
+        case EXEC_TRACKING_GROUP:
+            config_parse_gid(&c->tracking_group, key, value, &cf);
             break;
         case EXEC_KEEP_OPEN_FDS:
             config_parse_id_list(&c->keep_open_fds, key, value, &cf);
@@ -1001,9 +1007,19 @@ static void do_start_procd(configuration *c)
     //
     procd_argv =
         null_terminated_list_from_string_list(&procd_conf.exec_args);
-    r = safe_exec_as_user(0, &all_ids, &all_ids, procd_conf.exec_filename,
-                          procd_argv, environ, &all_ids, NULL, NULL, NULL,
-                          "/", 0);
+    r = safe_exec_as_user(0,
+                          0,
+                          &all_ids,
+                          &all_ids,
+                          procd_conf.exec_filename,
+                          procd_argv,
+                          environ,
+                          &all_ids,
+                          NULL,
+                          NULL,
+                          NULL,
+                          "/",
+                          0);
     if (r) {
         fatal_error_exit(1, "error exec'ing user job");
     }
@@ -1033,11 +1049,18 @@ static void do_start_transferd(configuration *c)
     args[1] = 0;
 
     r = safe_exec_as_user(td_conf.user_uid,
+                          0,
                           &c->valid_user_uids,
                           &c->valid_user_gids,
                           args[0],
-                          args, environ, &keep_open_fds, 0, 0, 0, "/", 0);
-
+                          args,
+                          environ,
+                          &keep_open_fds,
+                          0,
+                          0,
+                          0,
+                          "/",
+                          0);
     if (r) {
         fatal_error_exit(1, "error exec'ing user job");
     }
@@ -1060,6 +1083,7 @@ static void do_exec_job(configuration *c)
     }
 
     r = safe_exec_as_user(exec_conf.user_uid,
+                          exec_conf.tracking_group,
                           &c->valid_user_uids,
                           &c->valid_user_gids,
                           exec_conf.exec_filename,
@@ -1071,7 +1095,8 @@ static void do_exec_job(configuration *c)
                           exec_conf.stdin_filename,
                           exec_conf.stdout_filename,
                           exec_conf.stderr_filename,
-                          exec_conf.exec_init_dir, exec_conf.is_std_univ);
+                          exec_conf.exec_init_dir,
+                          exec_conf.is_std_univ);
 
     if (r) {
         fatal_error_exit(1, "error exec'ing user job");

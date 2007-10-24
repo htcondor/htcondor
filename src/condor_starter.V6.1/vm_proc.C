@@ -163,7 +163,6 @@ VMProc::StartJob()
 	// take snapshots at no more than 15 seconds in between, by default
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
 
-	fi.login = NULL;
 	bool dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
 
 	if (dedicated_account) {

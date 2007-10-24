@@ -5621,12 +5621,7 @@ void CreateProcessForkit::exec() {
 			gid_t tracking_gid;
 			gid_t* tracking_gid_ptr = NULL;
 #if defined(LINUX)
-			if ((m_priv == PRIV_USER_FINAL) &&
-			    (can_switch_ids()) &&
-			    (param_boolean("USE_GID_PROCESS_TRACKING", false)))
-			{
-				tracking_gid_ptr = &tracking_gid;
-			}
+			tracking_gid_ptr = m_family_info->group_ptr;
 #endif
 
 			bool ok =

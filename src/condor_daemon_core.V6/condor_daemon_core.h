@@ -153,8 +153,20 @@ const int DCJOBOPT_NO_ENV_INHERIT   = (1<<2);
 // structure to be used as an argument to Create_Process for tracking process
 // families
 struct FamilyInfo {
+
 	int max_snapshot_interval;
 	const char* login;
+#if defined(LINUX)
+	gid_t* group_ptr;
+#endif
+
+	FamilyInfo() {
+		max_snapshot_interval = -1;
+		login = NULL;
+#if defined(LINUX)
+		group_ptr = NULL;
+#endif
+	}
 };
 
 // Create_Process takes a sigset_t* as an argument for the signal mask to be

@@ -742,7 +742,6 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 
 	FamilyInfo fi;
 	fi.max_snapshot_interval = pid_snapshot_interval;
-	fi.login = NULL;
 
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,

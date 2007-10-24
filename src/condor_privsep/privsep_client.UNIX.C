@@ -324,6 +324,14 @@ privsep_exec_set_is_std_univ(FILE* fp)
 	fprintf(fp, "exec-is-std-univ\n");
 }
 
+#if defined(LINUX)
+void
+privsep_exec_set_tracking_group(FILE* fp, gid_t tracking_group)
+{
+	fprintf(fp, "exec-tracking-group=%u\n", tracking_group);
+}
+#endif
+
 bool
 privsep_create_dir(uid_t uid, const char* pathname)
 {

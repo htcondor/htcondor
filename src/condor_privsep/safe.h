@@ -104,12 +104,16 @@ int safe_close_fds_except(id_range_list *ids);
 int safe_open_std_file(int fd, const char *filename);
 int safe_open_std_files_to_null(void);
 
-int safe_switch_to_uid(uid_t uid, id_range_list *safe_uids,
+int safe_switch_to_uid(uid_t uid,
+                       gid_t tracking_gid,
+                       id_range_list *safe_uids,
                        id_range_list *safe_gids);
-int safe_switch_effective_to_uid(uid_t uid, id_range_list *safe_uids,
+int safe_switch_effective_to_uid(uid_t uid,
+                                 id_range_list *safe_uids,
                                  id_range_list *safe_gids);
 
 int safe_exec_as_user(uid_t uid,
+                      gid_t tracking_gid,
                       id_range_list *safe_uids,
                       id_range_list *safe_gids,
                       const char *exec_name,
@@ -119,7 +123,8 @@ int safe_exec_as_user(uid_t uid,
                       const char *stdin_filename,
                       const char *stdout_filename,
                       const char *stderr_filename,
-                      const char *initial_dir, int is_std_univ);
+                      const char *initial_dir,
+                      int is_std_univ);
 
 enum { PATH_UNTRUSTED =
         0, PATH_TRUSTED_STICKY_DIR, PATH_TRUSTED, PATH_TRUSTED_CONFIDENTIAL

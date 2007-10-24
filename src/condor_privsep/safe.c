@@ -1348,6 +1348,9 @@ int safe_open_std_files_to_null()
  * parameters
  * 	uid
  * 		the uid to test and to get group information
+ * 	tracking_gid
+ * 		if nonzero, an additional GID to place in the supplementary
+ * 		groups list for tracking purposes
  * 	safe_uids
  * 		list of safe user ids
  * 	safe_gids
@@ -1365,14 +1368,19 @@ int safe_open_std_files_to_null()
  * 	-6	malloc failed
  * 	-7	couldn't get supplementary groups
  * 	-8	a supplementary group was not safe
+ * 	-12	the tracking GID could not be inserted
  */
 static int
-safe_checks_and_set_gids(uid_t uid, id_range_list *safe_uids,
-                         id_range_list *safe_gids, gid_t * primary_gid)
+safe_checks_and_set_gids(uid_t uid,
+                         gid_t tracking_gid,
+                         id_range_list *safe_uids,
+                         id_range_list *safe_gids,
+                         gid_t * primary_gid)
 {
     struct passwd *pw;
     gid_t gid = *primary_gid;
     int num_groups;
+    int total_groups;
     gid_t *gids;
     int r;
     int i;
@@ -1381,6 +1389,11 @@ safe_checks_and_set_gids(uid_t uid, id_range_list *safe_uids,
     if (!is_id_in_list(safe_uids, uid)) {
         return -1;
     }
+
+    /* check tracking GID, if given, is safe */
+    if ((tracking_gid != 0) && !is_id_in_list(safe_gids, tracking_gid)) {
+		return -8;
+	}
 
     /* check uid is in the password file */
     pw = getpwuid(uid);
@@ -1403,12 +1416,14 @@ safe_checks_and_set_gids(uid_t uid, id_range_list *safe_uids,
     }
 
     /* get number of supplementary groups */
-    num_groups = getgroups(0, 0);
+    total_groups = num_groups = getgroups(0, 0);
     if (num_groups == -1) {
         return -5;
     }
-
-    gids = (gid_t *) malloc(num_groups * sizeof(gid_t));
+    if (tracking_gid != 0) {
+        total_groups++;
+    }
+    gids = (gid_t *) malloc(total_groups * sizeof(gid_t));
     if (gids == NULL) {
         return -6;
     }
@@ -1428,6 +1443,15 @@ safe_checks_and_set_gids(uid_t uid, id_range_list *safe_uids,
         }
     }
 
+    /* add in the tracking GID if given */
+    if (tracking_gid != 0) {
+        gids[num_groups] = tracking_gid;
+        if (setgroups(num_groups + 1, gids) == -1) {
+            free(gids);
+            return -12;
+        }
+    }
+
     free(gids);
 
     /* return primary group */
@@ -1443,6 +1467,9 @@ safe_checks_and_set_gids(uid_t uid, id_range_list *safe_uids,
  * parameters
  * 	uid
  * 		the uid to test and to get group information
+ * 	tracking_gid
+ * 		if nonzero, an additional GID that will be put in the supplementary
+ * 		group list for tracking
  * 	safe_uids
  * 		list of safe user ids
  * 	safe_gids
@@ -1453,15 +1480,22 @@ safe_checks_and_set_gids(uid_t uid, id_range_list *safe_uids,
  * 	-9	couldn't set real gid
  * 	-10	couldn't set real uid
  * 	-11	some id did not change properly
+ * 	-12	couldn't insert tracking GID
  */
 int
-safe_switch_to_uid(uid_t uid, id_range_list *safe_uids,
+safe_switch_to_uid(uid_t uid,
+                   gid_t tracking_gid,
+                   id_range_list *safe_uids,
                    id_range_list *safe_gids)
 {
     gid_t gid;
     int r;
 
-    r = safe_checks_and_set_gids(uid, safe_uids, safe_gids, &gid);
+    r = safe_checks_and_set_gids(uid,
+                                 tracking_gid,
+                                 safe_uids,
+                                 safe_gids,
+                                 &gid);
     if (r != 0) {
         return r;
     }
@@ -1510,7 +1544,7 @@ safe_switch_effective_to_uid(uid_t uid, id_range_list *safe_uids,
     gid_t gid;
     int r;
 
-    r = safe_checks_and_set_gids(uid, safe_uids, safe_gids, &gid);
+    r = safe_checks_and_set_gids(uid, 0, safe_uids, safe_gids, &gid);
     if (r != 0) {
         return r;
     }
@@ -1557,6 +1591,9 @@ safe_switch_effective_to_uid(uid_t uid, id_range_list *safe_uids,
  * parameters
  * 	uid
  * 		the uid to test and to get group information
+ * 	tracking_gid
+ * 		if nonzero, an additional GID that will be placed into the
+ * 		the process's supplementary group list for tracking purposes
  * 	safe_uids
  * 		list of safe user ids
  * 	safe_gids
@@ -1588,11 +1625,15 @@ safe_switch_effective_to_uid(uid_t uid, id_range_list *safe_uids,
  * 	initial_dir
  * 		the initial working directory for the executable.  A NULL
  * 		will cause the root directory to be used ("/").
+ * 	is_std_univ
+ * 		triggers special logic to prepare the process so that it
+ * 		can be run under Condor's standard universe
  * returns
  * 	does not return on success, non-zero on failure
  */
 int
 safe_exec_as_user(uid_t uid,
+                  gid_t tracking_gid,
                   id_range_list *safe_uids,
                   id_range_list *safe_gids,
                   const char *exec_name,
@@ -1602,13 +1643,14 @@ safe_exec_as_user(uid_t uid,
                   const char *stdin_filename,
                   const char *stdout_filename,
                   const char *stderr_filename,
-                  const char *initial_dir, int is_std_univ)
+                  const char *initial_dir,
+                  int is_std_univ)
 {
     int r;
 
     /* switch real and effective user and groups ids along with supplementary
      * groups, verify that they are all safe */
-    r = safe_switch_to_uid(uid, safe_uids, safe_gids);
+    r = safe_switch_to_uid(uid, tracking_gid, safe_uids, safe_gids);
     if (r < 0) {
         fatal_error_exit(1, "error switching to uid %lu",
                          (unsigned long) uid);

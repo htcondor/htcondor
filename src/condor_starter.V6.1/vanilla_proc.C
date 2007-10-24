@@ -34,6 +34,7 @@
 #include "dynuser.h"
 #include "condor_config.h"
 #include "domain_tools.h"
+#include "../condor_privsep/condor_privsep.h"
 
 #ifdef WIN32
 extern dynuser* myDynuser;
@@ -114,9 +115,7 @@ VanillaProc::StartJob()
 	//
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
 
-	fi.login = NULL;
 	bool dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
-
 	if (dedicated_account) {
 			// using login-based family tracking
 		fi.login = get_user_loginname();
@@ -127,6 +126,21 @@ VanillaProc::StartJob()
 		        "Tracking process family by login \"%s\"\n",
 		        fi.login);
 	}
+
+#if defined(LINUX)
+	// on Linux, we also have the ability to track processes via
+	// a phony supplementary group ID
+	//
+	gid_t tracking_gid;
+	if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
+		if (!can_switch_ids() && !privsep_enabled()) {
+			EXCEPT("USE_GID_PROCESS_TRACKING enabled, but can't modify "
+			           "the group list of our children unless running as "
+			           "root or using PrivSep");
+		}
+		fi.group_ptr = &tracking_gid;
+	}
+#endif
 
 	// have OsProc start the job
 	//

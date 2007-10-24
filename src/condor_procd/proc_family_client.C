@@ -260,7 +260,8 @@ ProcFamilyClient::track_family_via_supplementary_group(pid_t pid,
 	ASSERT(m_initialized);
 
 	dprintf(D_PROCFAMILY,
-	        "About to tell ProcD to track family with root %u\n",
+	        "About to tell ProcD to track family with root %u "
+	            "via GID\n",
 	        pid);
 
 	int message_len = sizeof(proc_family_command_t) +
