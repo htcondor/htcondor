@@ -984,6 +984,9 @@ XenType::CreateVirshConfigFile(const char* filename)
 		goto virshwriteerror;
 	}
 
+	if( write_forced_vm_params_to_file(fp, NULL, NULL) == false ) {
+		goto virshwriteerror;
+	}
 	fclose(fp);
 	fp = NULL;
 

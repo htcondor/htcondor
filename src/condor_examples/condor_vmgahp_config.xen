@@ -54,15 +54,17 @@ VM_NETWORKING = FALSE
 ##  What kind of networking types are supported?
 ##
 ##  If you set VM_NETWORKING to TRUE, you must define this parameter.
-##  VM_NETWORKING_TYPE = nat_dhcp
-##  VM_NETWORKING_TYPE = bridge_dhcp
+##  VM_NETWORKING_TYPE = nat
+##  VM_NETWORKING_TYPE = bridge
+##  VM_NETWORKING_TYPE = nat, bridge
 ##
-#VM_NETWORKING_TYPE = nat_dhcp
-
+##  If multiple networking types are defined, you may define 
+##  VM_NETWORKING_DEFAULT_TYPE for default networking type. 
+##  Otherwise, nat is used for default networking type.
+##  VM_NETWORKING_DEFAULT_TYPE = nat
 ##
-##  Does this machine support hardware virtualization such as Intel VT 
-##  and AMD-V ?
-#VM_HARDWARE_VT = TRUE
+#VM_NETWORKING_DEFAULT_TYPE = nat
+VM_NETWORKING_TYPE = nat
 
 
 #######################################################################
@@ -70,6 +72,23 @@ VM_NETWORKING = FALSE
 ##	Setting for Xen specific parameters 
 ##
 #######################################################################
+
+##  This required parameter specifies if the Xen hypervisor is
+##  controlled by the xm or virsh program. xm is part of the Xen
+##  distribution while virsh is part of the libvirt library. These
+##  controllers both provide the same functionality with respect to the Xen
+##  hypervisor, but with different configurations. Differences are: xm
+##  requires the XEN_IMAGE_IO_TYPE config option used, nat and bridge
+##  networking must be configured within Xen's xend-config.sxp file, and
+##  networking parameters must be specified with the XEN_VIF_PARAMETER
+##  config option; while, the virsh option uses the XEN_BRIDGE_SCRIPT option
+##  to setup a bridged network and does not need a XEN_IMAGE_IO_TYPE or
+##  XEN_VIF_PARAMETER.
+##
+##  XEN_CONTROLLER = <xm | virsh>
+##
+#XEN_CONTROLLER = virsh
+XEN_CONTROLLER = xm
 
 ##
 ##  Where is the Condor script program to control Xen? (Required)
@@ -90,11 +109,11 @@ XEN_DEFAULT_KERNEL = /full/path/to/<kernel-image-file>
 ##
 ##  Where is the default initrd image for Xen domainU? (Optional)
 ##
-##  If you want to use initrd image for Xen domainU together with 
-##  Xen default kernel image, you need to define this parameter.
-##  (e.g.) XEN_DEFAULT_RAMDISK = /boot/initrd-2.6.16-xen0.img
+##  The complete path and image file name for the initrd image, if
+##  needed for the default kernel image. 
+##  (e.g.) XEN_DEFAULT_INITRD = /boot/initrd-2.6.16-xen0.img
 ## 
-#XEN_DEFAULT_RAMDISK = /full/path/to/<initrd-image-file>
+#XEN_DEFAULT_INITRD = /full/path/to/<initrd-image-file>
 
 ##
 ##  Where is bootloader for Xen domainU? (Required)
@@ -107,9 +126,9 @@ XEN_BOOTLOADER = /usr/bin/pygrub
 #######################################################################
 ## Networking parameters for Xen
 #######################################################################
+
 ##
-##  If you want to use networking for Xen domainU, 
-##  you may need to define this parameter.
+##  This parameter is used only for xm.
 ##
 ##  Values in this parameter are the same to that of "vif" parameter in 
 ##  Xen virtual machine(vm) config file.
@@ -127,12 +146,38 @@ XEN_BOOTLOADER = /usr/bin/pygrub
 ## Examples
 ## (e.g.) XEN_VIF_PARAMETER = [ 'script=vif-nat' ]
 ## (e.g.) XEN_VIF_PARAMETER = [ 'script=vif-bridge, bridge=xen-br0' ]
+##
+##  If multiple networking types are defined, you may specify different vif parameters
+##  for each networking type.
+##
+## Examples
+## (e.g.) XEN_NAT_VIF_PARAMETER = [ 'script=vif-nat' ]
+## (e.g.) XEN_BRIDGE_VIF_PARAMETER = [ 'script=vif-bridge, bridge=xen-br0' ]
+## 
+##  If there is no parameter for specific networking type, XEN_VIF_PARAMETER is used.
+##
+#XEN_NAT_VIF_PARAMETER = ['']
+#XEN_BRIDGE_VIF_PARAMETER = ['']
 XEN_VIF_PARAMETER = ['']
+
+##
+##  This parameter is used only for virsh.
+##
+##  A string specifying a script and its arguments that will be run to
+##  setup a bridging network interface for guests. The interface should
+##  provide direct access to the host system's LAN, i.e. not be NAT'd on the
+##  host. 
+##
+## Example 
+##  XEN_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0 
+XEN_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0 
 
 
 #######################################################################
 ## Disk IO type for Xen domainU
 #######################################################################
+##
+##  This parameter is used only for xm.
 ##
 ##  You can define which file IO device needs to be used for Xen domainU.
 ##  Default is to use loopback device for Xen domainU disk files.
@@ -143,38 +188,6 @@ XEN_VIF_PARAMETER = ['']
 ##  all machines in a shared file system use the same file IO type.
 XEN_IMAGE_IO_TYPE = file:
 
-
-#######################################################################
-##  Settings for Hardware Virtualization
-##  For hardware virtualization, all parameters starting with XEN_VT 
-##  will be inserted into a Xen config file.
-##  For example, if "XEN_VT_BUILDER = 'hvm'" is defined, builder='hvm' 
-##  will be inserted into a Xen config file.
-##  If "XEN_VT_SHADOW_MEMORY = 8" is defined, 
-##  shadow_memory=8 will be inserted into a Xen config file.
-##  If "XEN_VT_DEVICE_MODEL = /usr/lib/xen/bin/qemu-dm" is defined,
-##  device_model=/usr/lib/xen/bin/qemu-dm will be inserted into 
-##  a Xen config file.
-#######################################################################
-XEN_VT_KERNEL = "/usr/lib/xen/boot/hvmloader"
-XEN_VT_BUILDER = 'hvm'
-XEN_VT_SHADOW_MEMORY = 8
-XEN_VT_DEVICE_MODEL = '/usr/lib/xen/bin/qemu-dm'
-#XEN_VT_SDL = 0
-#XEN_VT_VNC = 1
-#XEN_VT_STDVGA = 0
-#XEN_VT_SERIAL = 'pty'
-
-##
-## Use ioemu to virtualize unmodified guest domains.
-## If not using ioemu, it uses vbd like paravirtualized guests.
-#XEN_DEVICE_TYPE_FOR_VT = ioemu:
-
-##
-##  This parameter is for use in the future.
-##  Hardware VT guests currently cannot be saved and restored in Xen. 
-##  These features are currently under active development by Xen developers.
-#XEN_ALLOW_HARDWARE_VT_SUSPEND = FALSE
 
 #######################################################################
 ##

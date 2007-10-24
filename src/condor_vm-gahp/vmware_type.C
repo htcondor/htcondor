@@ -478,13 +478,27 @@ VMwareType::adjustCkptConfig(const char* vmconfig)
 						strlen("ethernet0.connectionType")) ) {
 
 				MyString networking_type;
-				char *net_type = vmgahp_param("VMWARE_NETWORKING_TYPE");
+				MyString tmp_string;
+				MyString tmp_string2;
+
+				tmp_string2 = m_vm_networking_type;
+				tmp_string2.strupr();
+
+				tmp_string.sprintf("VMWARE_%s_NETWORKING_TYPE", tmp_string2.Value());
+
+				char *net_type = vmgahp_param(tmp_string.Value());
 				if( net_type ) {
 					networking_type = delete_quotation_marks(net_type);
 					free(net_type);
 				}else {
-					// default networking type is nat
-					networking_type = "nat";
+					net_type = vmgahp_param("VMWARE_NETWORKING_TYPE");
+					if( net_type ) {
+						networking_type = delete_quotation_marks(net_type);
+						free(net_type);
+					}else {
+						// default networking type is nat
+						networking_type = "nat";
+					}
 				}
 
 				tmp_line.sprintf("ethernet0.connectionType = \"%s\"", 

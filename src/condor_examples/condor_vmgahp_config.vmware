@@ -56,10 +56,17 @@ VM_NETWORKING = FALSE
 ##  What kind of networking types are supported?
 ##
 ##  If you set VM_NETWORKING to TRUE, you must define this parameter.
-##  VM_NETWORKING_TYPE = nat_dhcp
-##  VM_NETWORKING_TYPE = bridge_dhcp
+##  VM_NETWORKING_TYPE = nat
+##  VM_NETWORKING_TYPE = bridge
+##  VM_NETWORKING_TYPE = nat, bridge
 ##
-#VM_NETWORKING_TYPE = nat_dhcp
+##  If multiple networking types are defined, you may define 
+##  VM_NETWORKING_DEFAULT_TYPE for default networking type. 
+##  Otherwise, nat is used for default networking type.
+##  VM_NETWORKING_DEFAULT_TYPE = nat
+##
+#VM_NETWORKING_DEFAULT_TYPE = nat
+VM_NETWORKING_TYPE = nat
 
 #######################################################################
 ##
@@ -82,8 +89,18 @@ VMWARE_SCRIPT = /full/path/to/condor_vm_vmware.pl
 #######################################################################
 ##
 ##  What kind of VMware networking is used?
-##  Type should be either nat or bridged ( default is nat )
-#VMWARE_NETWORKING_TYPE = bridged
+## 
+##  If multiple networking types are defined, you may specify different parameters
+##  for each networking type.
+##
+## Examples
+## (e.g.) VMWARE_NAT_NETWORKING_TYPE = nat
+## (e.g.) VMWARE_BRIDGE_NETWORKING_TYPE = bridged
+## 
+##  If there is no parameter for specific networking type, VMWARE_NETWORKING_TYPE is used.
+##
+#VMWARE_NAT_NETWORKING_TYPE = nat
+#VMWARE_BRIDGE_NETWORKING_TYPE = bridged
 VMWARE_NETWORKING_TYPE = nat
 
 #######################################################################
