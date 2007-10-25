@@ -112,7 +112,15 @@ EventHandler::install()
 	for( i=0; i<N_POSIX_SIGS; i++ ) {
 		signo = next_sig();
 		if( sigismember(&mask,signo) ) {
-			action.sa_handler = (void (*)(int))func;
+			// explicit type cast to eliminate type check warning  -- Rajesh
+			// we should move this to be a #define symbol...
+#if (defined(LINUX) && !defined(GLIBC20) && !defined(GLIBC21)) || defined(AIX) || defined(HPUX11) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
+			// bad craziness with the type cast --psilord
+			action.sa_handler = func;
+#else
+			action.sa_handler = (void (*)(...)) func;
+#endif
+
 			action.sa_mask = mask;
 			action.sa_flags = SA_NOCLDSTOP;
 			if( sigaction(signo,&action,&o_action[i]) < 0 ) {
