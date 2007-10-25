@@ -487,6 +487,10 @@ public:
 	/// For stream types that support it, this returns the ip address we are connecting to.
 	virtual char const *endpoint_ip_str() = 0;
 
+	/// For stream types that support it, this is the sinful address of peer
+	/// This is suitable for passing to dprintf() (never NULL).
+	virtual char const *peer_description() = 0;
+
 	/** Get this stream's type.
         @return the type of this stream
     */

@@ -669,6 +669,9 @@ extern const char * MANAGED_DONE;
 extern const char * COLLECTOR_REQUIREMENTS;
 extern const char * ATTR_PREV_LAST_HEARD_FROM;
 
+extern const char *ATTR_TRY_AGAIN;
+extern const char *ATTR_DOWNLOADING;
+
 // Enumerate the ones that can't be constant strings..
 typedef enum
 {

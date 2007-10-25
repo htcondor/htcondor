@@ -53,6 +53,7 @@ Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
 	_timeout = 0;
+	ignore_timeout_multiplier = false;
 	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
 	connect_state.host = NULL;
 	connect_state.connect_failure_reason = NULL;
@@ -66,6 +67,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
 	_timeout = 0;
+	ignore_timeout_multiplier = orig.ignore_timeout_multiplier;
 	connect_state.host = NULL;
 	connect_state.connect_failure_reason = NULL;
 	memset( &_who, 0, sizeof( struct sockaddr_in ) );
@@ -1252,7 +1254,7 @@ int Sock::timeout(int sec)
 {
 	int t = _timeout;
 
-	if (sec && (timeout_multiplier > 0)) {
+	if (sec && (timeout_multiplier > 0) && !ignore_timeout_multiplier) {
 		sec *= timeout_multiplier;
 	}
 
@@ -1614,6 +1616,15 @@ Sock::get_sinful_peer()
 	return _sinful_peer_buf;
 }
 
+char const *
+Sock::peer_description()
+{
+	char const *retval = get_sinful_peer();
+	if( !retval ) {
+		return "(unconnected)";
+	}
+	return retval;
+}
 
 int 
 Sock::get_file_desc()

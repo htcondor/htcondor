@@ -63,6 +63,10 @@ int FileTransfer::CommandsRegistered = FALSE;
 int FileTransfer::SequenceNum = 0;
 int FileTransfer::ReaperId = -1;
 
+const int GO_AHEAD_FAILED = -1; // failed to contact transfer queue manager
+const int GO_AHEAD_UNDEFINED = 0;
+const int GO_AHEAD_ONCE = 1;    // send one file and ask again
+const int GO_AHEAD_ALWAYS = 2;  // send all files without asking again
 
 // Utils from the util_lib that aren't prototyped
 extern "C" {
@@ -100,6 +104,7 @@ FileTransfer::FileTransfer()
 	TransferFilePermissions = false;
 	DelegateX509Credentials = false;
 	PeerDoesTransferAck = false;
+	PeerDoesGoAhead = false;
 	Iwd = NULL;
 	InputFiles = NULL;
 	OutputFiles = NULL;
@@ -198,7 +203,6 @@ FileTransfer::~FileTransfer()
 #ifdef WIN32
 	if (perm_obj) delete perm_obj;
 #endif
-
 }
 
 int
@@ -319,6 +323,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	int Proc = 0;
 	Ad->LookupInteger(ATTR_CLUSTER_ID, Cluster);
 	Ad->LookupInteger(ATTR_PROC_ID, Proc);
+	m_jobid.sprintf("%d.%d",Cluster,Proc);
 	if ( IsServer() && Spool ) {
 
 		SpoolSpace = strdup( gen_ckpt_name(Spool,Cluster,Proc,0) );
@@ -1486,6 +1491,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	int delegation_method = 0; /* 0 means this transfer is not a delegation. 1 means it is.*/
 	time_t start, elapsed;
   char daemon[15];
+	bool I_go_ahead_always = false;
+	bool peer_goes_ahead_always = false;
+	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
 
 	priv_state saved_priv = PRIV_UNKNOWN;
 	*total_bytes = 0;
@@ -1597,7 +1605,38 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		} else {
 			fullname.sprintf("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename.Value());
 		}
-	
+
+		if( PeerDoesGoAhead ) {
+			if( !s->end_of_message() ) {
+				dprintf(D_FULLDEBUG,"DoDownload: failed on eom before GoAhead: exiting at %d\n",__LINE__);
+				return_and_resetpriv( -1 );
+			}
+
+			if( !I_go_ahead_always ) {
+					// The following blocks until getting the go-ahead
+					// (e.g.  from the local schedd) to receive the
+					// file.  It then sends a message to our peer
+					// telling it to go ahead.
+				if( !ObtainAndSendTransferGoAhead(xfer_queue,true,s,fullname.Value(),I_go_ahead_always) ) {
+					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
+					return_and_resetpriv( -1 );
+				}
+			}
+
+				// We have given permission to peer to go ahead
+				// with transfer.  Now do the reverse: wait for
+				// peer to tell is that it is ready to send.
+			if( !peer_goes_ahead_always ) {
+
+				if( !ReceiveTransferGoAhead(s,fullname.Value(),peer_goes_ahead_always) ) {
+					dprintf(D_FULLDEBUG, "DoDownload: exiting at %d\n",__LINE__);
+					return_and_resetpriv( -1 );
+				}
+			}
+
+			s->encode();
+		}
+
 		// On WinNT and apparently, some Unix, too, even doing an
 		// fsync on the file does not get rid of the lazy-write
 		// behavior which in the modification time being set a few
@@ -1610,7 +1649,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 //		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.Value());
 		start = time(NULL);
 		if ( reply == 4 ) {
-			if ( s->end_of_message() ) {
+			if ( PeerDoesGoAhead || s->end_of_message() ) {
 				rc = s->get_x509_delegation( &bytes, fullname.Value() );
 			} else {
 				rc = -1;
@@ -1721,14 +1760,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,
 		                error_buf.Value());
 
-		// Save failure information.
-		Info.success = false;
-		Info.try_again = try_again;
-		Info.hold_code = hold_code;
-		Info.hold_subcode = hold_subcode;
-		Info.error_desc.sprintf("%s; %s",
-		                        error_buf.Value(),upload_error_buf.Value());
-
 		return_and_resetpriv( -1 );
 	}
 
@@ -1827,8 +1858,23 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 }
 
 void
+FileTransfer::SaveTransferInfo(bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason)
+{
+	Info.success = success;
+	Info.try_again = try_again;
+	Info.hold_code = hold_code;
+	Info.hold_subcode = hold_subcode;
+	if( hold_reason ) {
+		Info.error_desc = hold_reason;
+	}
+}
+
+void
 FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason)
 {
+	// Save failure information.
+	SaveTransferInfo(success,try_again,hold_code,hold_subcode,hold_reason);
+
 	if(!PeerDoesTransferAck) {
 		dprintf(D_FULLDEBUG,"SendTransferAck: skipping transfer ack, because peer does not support it.\n");
 		return;
@@ -2045,6 +2091,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	int hold_code = 0;
 	int hold_subcode = 0;
 	MyString error_desc;
+	bool I_go_ahead_always = false;
+	bool peer_goes_ahead_always = false;
+	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
 
 	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
@@ -2108,6 +2157,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 								error_desc.Value(),__LINE__);
 		}
 #endif
+
 
 		// now we send an int to the other side to indicate the next
 		// action.  historically, we sent either 1 or 0.  zero meant
@@ -2185,8 +2235,35 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		}
 		free( basefilename );						//b/c of de-consting
 
+		if( PeerDoesGoAhead ) {
+			if( !s->end_of_message() ) {
+				dprintf(D_FULLDEBUG, "DoUpload: failed on eom before GoAhead; exiting at %d\n",__LINE__);
+				return_and_resetpriv( -1 );
+			}
+
+			if( !peer_goes_ahead_always ) {
+					// Now wait for our peer to tell us it is ok for us to
+					// go ahead and send data.
+				if( !ReceiveTransferGoAhead(s,fullname.Value(),peer_goes_ahead_always) ) {
+					dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
+					return_and_resetpriv( -1 );
+				}
+			}
+
+			if( !I_go_ahead_always ) {
+					// Now tell our peer when it is ok for us to read data
+					// from disk for sending.
+				if( !ObtainAndSendTransferGoAhead(xfer_queue,false,s,fullname.Value(),I_go_ahead_always) ) {
+					dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
+					return_and_resetpriv( -1 );
+				}
+			}
+
+			s->encode();
+		}
+
 		if ( file_command == 4 ) {
-			if ( s->end_of_message() ) {
+			if ( (PeerDoesGoAhead || s->end_of_message()) ) {
 				rc = s->put_x509_delegation( &bytes, fullname.Value() );
 			} else {
 				rc = -1;
@@ -2251,6 +2328,233 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	return ExitDoUpload(total_bytes,s,saved_priv,socket_default_crypto,
 	                    upload_success,do_upload_ack,do_download_ack,
 	                    try_again,hold_code,hold_subcode,NULL,__LINE__);
+}
+
+void
+FileTransfer::setTransferQueueContactInfo(char const *contact) {
+	m_xfer_queue_contact_info = TransferQueueContactInfo(contact);
+}
+
+bool
+FileTransfer::ObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,char const *full_fname,bool &go_ahead_always)
+{
+	bool result;
+	bool try_again = true;
+	int hold_code = 0;
+	int hold_subcode = 0;
+	MyString error_desc;
+
+	result = DoObtainAndSendTransferGoAhead(xfer_queue,downloading,s,full_fname,go_ahead_always,try_again,hold_code,hold_subcode,error_desc);
+
+	if( !result ) {
+		SaveTransferInfo(false,try_again,hold_code,hold_subcode,error_desc.Value());
+		if( error_desc.Length() ) {
+			dprintf(D_ALWAYS,"%s\n",error_desc.Value());
+		}
+	}
+	return result;
+}
+
+
+bool
+FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc)
+{
+	ClassAd msg;
+	int go_ahead = GO_AHEAD_UNDEFINED;
+	int alive_interval = 0;
+	time_t last_alive = time(NULL);
+		//extra time to reserve for sending msg to our file xfer peer
+	int alive_slop = 20;
+
+	s->decode();
+	if( !s->get(alive_interval) || !s->end_of_message() ) {
+		error_desc.sprintf("ObtainAndSendTransferGoAhead: failed on alive_interval before GoAhead");
+		return false;
+	}
+
+	int timeout = alive_interval - alive_slop;
+	if( timeout < 1 ) timeout = 1;
+	if( !xfer_queue.RequestTransferQueueSlot(downloading,full_fname,m_jobid.Value(),timeout,error_desc) )
+	{
+		go_ahead = GO_AHEAD_FAILED;
+	}
+
+	while(1) {
+		if( go_ahead == GO_AHEAD_UNDEFINED ) {
+			timeout = alive_interval - (time(NULL) - last_alive) - alive_slop;
+			if( timeout < 1 ) timeout = 1;
+			bool pending = true;
+			if( xfer_queue.PollForTransferQueueSlot(timeout,pending,error_desc) )
+			{
+				if( xfer_queue.GoAheadAlways( downloading ) ) {
+						// no need to keep checking for GoAhead for each file,
+						// just let 'em rip
+					go_ahead = GO_AHEAD_ALWAYS;
+				}
+				else {
+						// send this file, and then check to see if we
+						// still have GoAhead to send more
+					go_ahead = GO_AHEAD_ONCE;
+				}
+			}
+			else if( !pending ) {
+				go_ahead = GO_AHEAD_FAILED;
+			}
+		}
+
+		char const *ip = s->endpoint_ip_str();
+		char const *go_ahead_desc = "";
+		if( go_ahead < 0 ) go_ahead_desc = "NO ";
+		if( go_ahead == GO_AHEAD_UNDEFINED ) go_ahead_desc = "PENDING ";
+
+		dprintf( go_ahead < 0 ? D_ALWAYS : D_FULLDEBUG,
+				 "Sending %sGoAhead for %s to %s %s%s.\n",
+				 go_ahead_desc,
+				 ip ? ip : "(null)",
+				 downloading ? "send" : "receive",
+				 full_fname,
+				 (go_ahead == GO_AHEAD_ALWAYS) ? " and all further files":"");
+
+		s->encode();
+		msg.Assign(ATTR_RESULT,go_ahead); // go ahead
+		if( go_ahead < 0 ) {
+				// tell our peer what exactly went wrong
+			msg.Assign(ATTR_TRY_AGAIN,try_again);
+			msg.Assign(ATTR_HOLD_REASON_CODE,hold_code);
+			msg.Assign(ATTR_HOLD_REASON_SUBCODE,hold_subcode);
+			if( error_desc.Length() ) {
+				msg.Assign(ATTR_HOLD_REASON,error_desc.Value());
+			}
+		}
+		if( !msg.put(*s) || !s->end_of_message() ) {
+			error_desc.sprintf("Failed to send GoAhead message.");
+			try_again = true;
+			return false;
+		}
+		last_alive = time(NULL);
+
+		if( go_ahead != GO_AHEAD_UNDEFINED ) {
+			break;
+		}
+	}
+
+	if( go_ahead == GO_AHEAD_ALWAYS ) {
+		go_ahead_always = true;
+	}
+
+	return go_ahead > 0;
+}
+
+bool
+FileTransfer::ReceiveTransferGoAhead(
+	Stream *s,
+	char const *fname,
+	bool &go_ahead_always)
+{
+	bool try_again = true;
+	int hold_code = 0;
+	int hold_subcode = 0;
+	MyString error_desc;
+	bool result;
+
+	result = DoReceiveTransferGoAhead(s,fname,go_ahead_always,try_again,hold_code,hold_subcode,error_desc);
+
+	if( !result ) {
+		SaveTransferInfo(false,try_again,hold_code,hold_subcode,error_desc.Value());
+		if( error_desc.Length() ) {
+			dprintf(D_ALWAYS,"%s\n",error_desc.Value());
+		}
+	}
+
+	return result;
+}
+
+bool
+FileTransfer::DoReceiveTransferGoAhead(
+	Stream *s,
+	char const *fname,
+	bool &go_ahead_always,
+	bool &try_again,
+	int &hold_code,
+	int &hold_subcode,
+	MyString &error_desc)
+{
+	int go_ahead = GO_AHEAD_UNDEFINED;
+
+	s->encode();
+
+	// How frequently peer should tell us that it is still alive
+	// while we are waiting for GoAhead.
+	int alive_interval = clientSockTimeout/2;
+	if( !s->put(alive_interval) || !s->end_of_message() ) {
+		error_desc.sprintf("DoReceiveTransferGoAhead: failed to send alive_interval");
+		return false;
+	}
+
+	s->decode();
+
+	while(1) {
+		ClassAd msg;
+		if( !msg.initFromStream(*s) || !s->end_of_message() ) {
+			char const *ip = s->sender_ip_str();
+			error_desc.sprintf("Failed to receive GoAhead message from %s.",
+							   ip ? ip : "(null)");
+
+			return false;
+		}
+
+		go_ahead = GO_AHEAD_UNDEFINED;
+		if(!msg.LookupInteger(ATTR_RESULT,go_ahead)) {
+			MyString msg_str;
+			msg.sPrint(msg_str);
+			error_desc.sprintf("GoAhead message missing attribute: %s.  "
+							   "Full classad: [\n%s]",
+							   ATTR_RESULT,msg_str.Value());
+			try_again = false;
+			hold_code = CONDOR_HOLD_CODE_InvalidTransferGoAhead;
+			hold_subcode = 1;
+			return false;
+		}
+
+		if( go_ahead == GO_AHEAD_UNDEFINED ) {
+				// This is just an "alive" message from our peer.
+				// Keep looping.
+			dprintf(D_FULLDEBUG,"Still waiting for GoAhead for %s.\n",fname);
+			continue;
+		}
+
+		if(!msg.LookupBool(ATTR_TRY_AGAIN,try_again)) {
+			try_again = true;
+		}
+
+		if(!msg.LookupInteger(ATTR_HOLD_REASON_CODE,hold_code)) {
+			hold_code = 0;
+		}
+		if(!msg.LookupInteger(ATTR_HOLD_REASON_SUBCODE,hold_subcode)) {
+			hold_subcode = 0;
+		}
+		char *hold_reason_buf = NULL;
+		if(msg.LookupString(ATTR_HOLD_REASON,&hold_reason_buf)) {
+			error_desc = hold_reason_buf;
+			free(hold_reason_buf);
+		}
+
+		break;
+	}
+
+	if( go_ahead <= 0 ) {
+		return false;
+	}
+
+	if( go_ahead == GO_AHEAD_ALWAYS ) {
+		go_ahead_always = true;
+	}
+
+	dprintf(D_FULLDEBUG,"Received GoAhead from peer to send %s%s.\n",
+			fname,
+			go_ahead_always ? " and all further files" : "");
+
+	return true;
 }
 
 int
@@ -2424,6 +2728,9 @@ FileTransfer::setClientSocketTimeout(int timeout)
 {
 	int old_val = clientSockTimeout;
 	clientSockTimeout = timeout;
+	if( uploadGoAheadTimeout < clientSockTimeout ) {
+		uploadGoAheadTimeout = clientSockTimeout;
+	}
 	return old_val;
 }
 
@@ -2465,6 +2772,12 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 			peer_version.getMajorVer(),
 			peer_version.getMinorVer(),
 			peer_version.getSubMinorVer());
+	}
+	if( peer_version.built_since_version(6,9,5) ) {
+		PeerDoesGoAhead = true;
+	}
+	else {
+		PeerDoesGoAhead = false;
 	}
 }
 

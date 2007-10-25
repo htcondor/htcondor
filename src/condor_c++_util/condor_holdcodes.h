@@ -91,4 +91,7 @@ const int CONDOR_HOLD_CODE_SpoolingInput = 16;
 //compatible.
 const int CONDOR_HOLD_CODE_JobShadowMismatch = 17;
 
+//An internal Condor protocol error was encountered when transferring files.
+const int CONDOR_HOLD_CODE_InvalidTransferGoAhead = 18;
+
 #endif

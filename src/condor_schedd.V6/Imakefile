@@ -20,6 +20,7 @@ OBJ = schedd.o schedd_main.o schedd_td.o tdman.o $(QMGMT_OBJ) \
 	schedd_instantiate.o \
 	schedd_cronmgr.o schedd_cronjob.o \
 	dedicated_scheduler.o grid_universe.o shadow_mgr.o autocluster.o \
+	transfer_queue.o \
 	$(SOAP_OBJS2)
 
 #ifdef HAVE_EXT_GSOAP

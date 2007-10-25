@@ -1,0 +1,129 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#ifndef _CONDOR_DC_TRANSFER_QUEUE_H
+#define _CONDOR_DC_TRANSFER_QUEUE_H
+
+/*
+ DCTransferQueue is used to communicate with a transfer queue manager
+ for getting permission to transfer a file (e.g. the shadow asking the
+ schedd if it is ok to download an output file from a job).
+*/
+
+#include "condor_common.h"
+#include "condor_classad.h"
+#include "condor_io.h"
+#include "enum_utils.h"
+#include "daemon.h"
+#include "MyString.h"
+
+enum XFER_QUEUE_ENUM {
+	XFER_QUEUE_NO_GO = 0,
+	XFER_QUEUE_GO_AHEAD = 1
+};
+
+// TransferQueueContactInfo is used to pass around information for
+// initializing DCTransferQueue.  For example, the schedd uses this to
+// pass contact information to the shadow.  In addition to an address,
+// this class contains information to optimize unlimited
+// uploads/downloads, which do not require any connection to the
+// manager to be made.
+
+class TransferQueueContactInfo {
+ public:
+	TransferQueueContactInfo(char const *sinful,bool unlimited_uploads,bool unlimited_downloads);
+		// this function takes the string representation produced by
+		// GetStringRepresentation()
+	TransferQueueContactInfo(char const *string_representation);
+	TransferQueueContactInfo();
+	void operator=(TransferQueueContactInfo const &copy);
+
+		// serializes all contact information into a string suitable for
+		// passing on a command line etc.
+	char const *GetStringRepresentation();
+
+		// returns NULL if unlimited, o.w. sinful string of transfer
+		// queue server
+	char const *GetAddress() { return m_addr.Value(); }
+
+	bool GetUnlimitedUploads() { return m_unlimited_uploads; }
+	bool GetUnlimitedDownloads() { return m_unlimited_downloads; }
+
+ private:
+	MyString m_addr;
+	bool m_unlimited_uploads;
+	bool m_unlimited_downloads;
+
+	MyString m_str_representation;
+};
+
+class DCTransferQueue : public Daemon {
+public:
+	DCTransferQueue( TransferQueueContactInfo &contact_info );
+
+		/// Destructor
+	~DCTransferQueue();
+
+		// Request permission to download (upload) file.
+		// Follow up with one or more calls to PollForTransferQueueSlot()
+		// to determine actual status.  This function just initiates
+		// the request.  If transfers are unlimited, this does no work.
+		// downloading - true if downloading file, false if uploading
+	bool RequestTransferQueueSlot(bool downloading,char const *fname,char const *jobid,int timeout,MyString &error_desc);
+
+		// See if we have been given permission to transfer currently
+		// requested file.  If transfers are unlimited, this does no
+		// work.  Call GoAheadAlways() to confirm whether we have GoAhead
+		// for one file or for unlimited files.
+	bool PollForTransferQueueSlot(int timeout,bool &pending,MyString &error_desc);
+
+		// Remove current request for permission to transfer.
+	void ReleaseTransferQueueSlot();
+
+	bool GoAheadAlways( bool downloading );
+
+ private:
+		// As an optimization, if up/downloads are unlimited, this class
+		// does not bother to connect to the transfer queue manager.
+	bool m_unlimited_uploads;
+	bool m_unlimited_downloads;
+
+		// The current transfer request sock.  This stays open as long
+		// as we are in the transfer queue.
+	ReliSock *m_xfer_queue_sock;
+
+	MyString m_xfer_fname;      // name of file involved in current request
+	MyString m_xfer_jobid;      // job id associated with current request
+	                            // (for information purposes only)
+
+	bool m_xfer_downloading;    // true if request was for download
+	bool m_xfer_queue_pending;  // true if status of request is pending
+	bool m_xfer_queue_go_ahead; // true if it is ok to go ahead with transfer
+
+	MyString m_xfer_rejected_reason;
+
+		// Verify that transfer queue server hasn't revoked our slot.
+	bool CheckTransferQueueSlot();
+};
+
+#endif

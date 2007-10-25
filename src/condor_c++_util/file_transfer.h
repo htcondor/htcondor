@@ -33,6 +33,7 @@
 #include "condor_uid.h"
 #include "condor_ver_info.h"
 #include "condor_classad.h"
+#include "dc_transfer_queue.h"
 
 class FileTransfer;	// forward declatation
 
@@ -200,6 +201,8 @@ class FileTransfer {
 
 	priv_state getDesiredPrivState( void ) { return desired_priv_state; };
 
+	void setTransferQueueContactInfo(char const *contact);
+
   protected:
 
 	int Download(ReliSock *s, bool blocking);
@@ -233,6 +236,7 @@ class FileTransfer {
 	bool TransferFilePermissions;
 	bool DelegateX509Credentials;
 	bool PeerDoesTransferAck;
+	bool PeerDoesGoAhead;
 	char* Iwd;
 	StringList* OutputFiles;
 	StringList* EncryptInputFiles;
@@ -273,11 +277,14 @@ class FileTransfer {
 	static int SequenceNum;
 	static int ReaperId;
 	int clientSockTimeout;
+	int uploadGoAheadTimeout;
 	bool did_init;
 	bool simple_init;
 	ReliSock *simple_sock;
 	MyString download_filename_remaps;
 	bool m_use_file_catalog;
+	TransferQueueContactInfo m_xfer_queue_contact_info;
+	MyString m_jobid; // what job we are working on, for informational purposes
 
 	// called to construct the catalog of files in a direcotry
 	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable **catalog = NULL);
@@ -293,6 +300,24 @@ class FileTransfer {
 
 	// Receive acknowledgment of success/failure after downloading files.
 	void GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
+
+	// Stash transfer success/failure info that will be propagated back to
+	// caller of file transfer operation, using GetInfo().
+	void SaveTransferInfo(bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
+
+	// Receive message indicating that the peer is ready to receive the file
+	// and save failure information with SaveTransferInfo().
+	bool ReceiveTransferGoAhead(Stream *s,char const *fname,bool &go_ahead_always);
+
+	// Receive message indicating that the peer is ready to receive the file.
+	bool DoReceiveTransferGoAhead(Stream *s,char const *fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
+
+	// Obtain permission to receive a file download and then tell our
+	// peer to go ahead and send it.
+	// Save failure information with SaveTransferInfo().
+	bool ObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,char const *full_fname,bool &go_ahead_always);
+
+	bool DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
 
 	// Report information about completed transfer from child thread.
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);

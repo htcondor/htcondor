@@ -57,6 +57,7 @@
 #include "condor_crontab.h"
 #include "condor_timeslice.h"
 #include "condor_claimid_parser.h"
+#include "transfer_queue.h"
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -519,6 +520,13 @@ private:
 
 	// The object which manages the various transferds.
 	TDMan m_tdman;
+
+	// The object which manages the transfer queue
+	TransferQueueManager m_xfer_queue_mgr;
+
+	// Information to pass to shadows for contacting file transfer queue
+	// manager.
+	MyString m_xfer_queue_contact;
 
 	// useful names
 	char*			CondorAdministrator;

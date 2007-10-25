@@ -93,14 +93,14 @@ UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
 
 
 void
-UniShadow::init( ClassAd* job_ad, const char* schedd_addr )
+UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info )
 {
 	if ( !job_ad ) {
 		EXCEPT("No job_ad defined!");
 	}
 
 		// base init takes care of lots of stuff:
-	baseInit( job_ad, schedd_addr );
+	baseInit( job_ad, schedd_addr, xfer_queue_contact_info );
 
 		// we're only dealing with one host, so the rest is pretty
 		// trivial.  we can just lookup everything we need in the job

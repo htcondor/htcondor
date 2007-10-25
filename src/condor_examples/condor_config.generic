@@ -341,6 +341,16 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  to spawn shadows for?
 #MAX_JOBS_RUNNING	= 200
 
+##  Maximum number of simultaneous downloads of output files from
+##  execute machines to the submit machine (limit applied per schedd).
+##  The value 0 means unlimited.
+#MAX_CONCURRENT_DOWNLOADS = 10
+
+##  Maximum number of simultaneous uploads of input files from the
+##  submit machine to execute machines (limit applied per schedd).
+##  The value 0 means unlimited.
+#MAX_CONCURRENT_UPLOADS = 10
+
 ##  Condor needs to create a few lock files to synchronize access to
 ##  various log files.  Because of problems we've had with network
 ##  filesystems and file locking over the years, we HIGHLY recommend

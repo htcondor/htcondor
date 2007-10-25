@@ -81,7 +81,7 @@ BaseShadow::~BaseShadow() {
 }
 
 void
-BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
+BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer_queue_contact_info )
 {
 	int pending = FALSE;
 
@@ -94,6 +94,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
 		EXCEPT("schedd_addr not specified with valid address");
 	}
 	scheddAddr = strdup( schedd_addr );
+
+	m_xfer_queue_contact_info = xfer_queue_contact_info;
 
 	if ( !jobAd->LookupString(ATTR_OWNER, owner)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_OWNER);

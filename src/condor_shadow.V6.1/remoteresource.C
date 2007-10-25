@@ -715,6 +715,8 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		filetrans.setPeerVersion( starter_version );
 	}
 
+	filetrans.setTransferQueueContactInfo( shadow->getTransferQueueContactInfo() );
+
 	int tmp_int;
 	if( ad->LookupBool(ATTR_HAS_RECONNECT, tmp_int) ) {
 			// Whatever the starter defines in its own classad

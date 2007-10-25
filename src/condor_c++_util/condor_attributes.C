@@ -737,3 +737,6 @@ const char *MANAGED_SCHEDD				 = "Schedd";
 const char *MANAGED_DONE				 = "ScheddDone";
 const char * COLLECTOR_REQUIREMENTS = "COLLECTOR_REQUIREMENTS";
 const char *ATTR_PREV_LAST_HEARD_FROM	= "PrevLastHeardFrom";
+
+const char *ATTR_TRY_AGAIN = "TryAgain";
+const char *ATTR_DOWNLOADING = "Downloading";

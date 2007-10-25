@@ -204,6 +204,9 @@ public:
 	/// sinful address of peer in form of "<a.b.c.d:pppp>"
 	char * get_sinful_peer();
 
+	/// sinful address of peer, suitable for passing to dprintf() (never NULL)
+	virtual char const *peer_description();
+
 	/// local file descriptor (fd) of this socket
 	int get_file_desc();
 
@@ -220,6 +223,8 @@ public:
 	Sock(const Sock &);
 
 	void doNotEnforceMinimalCONNECT_TIMEOUT() ;		// Used by HA Daemon
+
+	void ignoreTimeoutMultiplier() { ignore_timeout_multiplier = true; }
 
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
@@ -315,6 +320,8 @@ protected:
 	static int timeout_multiplier;
 
 	bool ignore_connect_timeout;	// Used by HA Daemon
+
+	bool ignore_timeout_multiplier;
 
 	// Buffer to hold the string version of our own IP address. 
 	char _sender_ip_buf[IP_STRING_BUF_SIZE];	

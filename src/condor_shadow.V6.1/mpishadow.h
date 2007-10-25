@@ -81,7 +81,7 @@ class MPIShadow : public BaseShadow
 			The parameters passed are all gotten from the 
 			command line and should be easy to figure out.
 		 */
-	void init( ClassAd* job_ad, const char* schedd_addr );
+	void init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info );
 
 		/** Shadow should spawn a new starter for this job.
 		 */

@@ -41,6 +41,7 @@ static const char* job_ad_file = NULL;
 static bool is_reconnect = false;
 static int cluster = -1;
 static int proc = -1;
+static const char * xfer_queue_contact_info = NULL;
 
 static void
 usage( int argc, char* argv[] )
@@ -84,7 +85,7 @@ parseArgs( int argc, char *argv[] )
 	char** tmp = argv;
 	for( tmp++; *tmp; tmp++ ) {
 		opt = tmp[0];
-		
+
 		if( sscanf(opt, "%d.%d", &cluster, &proc) == 2 ) {
 			if( cluster < 0 || proc < 0 ) {
 				dprintf(D_ALWAYS, 
@@ -129,6 +130,13 @@ parseArgs( int argc, char *argv[] )
 				usage(argc, argv);
 			}
 		}
+
+		if (strncmp(opt, "--xfer-queue=", 13) == 0) {
+			xfer_queue_contact_info = opt+13;
+			args_handled++;
+			continue;
+		}
+
 			// the only other argument we understand is the
 			// filename we should read our ClassAd from, "-" for
 			// STDIN.  There's no further checking we need to do 
@@ -254,7 +262,7 @@ initShadow( ClassAd* ad )
 				 CondorUniverseName(universe) );
 		EXCEPT( "Universe not supported" );
 	}
-	Shadow->init( ad, schedd_addr );
+	Shadow->init( ad, schedd_addr, xfer_queue_contact_info );
 }
 
 

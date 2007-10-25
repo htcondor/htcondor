@@ -411,7 +411,7 @@ Daemon::display( FILE* fp )
 //////////////////////////////////////////////////////////////////////
 
 ReliSock*
-Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking )
+Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking, bool ignore_timeout_multiplier )
 {
 	if( !checkAddr() ) {
 			// this already deals w/ _error for us...
@@ -421,6 +421,9 @@ Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking )
 	reli = new ReliSock();
 	if( sec ) {
 		reli->timeout( sec );
+		if( ignore_timeout_multiplier ) {
+			reli->ignoreTimeoutMultiplier();
+		}
 	}
 	int rc = reli->connect(_addr, 0, non_blocking);
 	if(rc || (non_blocking && rc == CEDAR_EWOULDBLOCK)) {

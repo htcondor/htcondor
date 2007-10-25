@@ -6799,7 +6799,12 @@ Scheduler::spawnShadow( shadow_rec* srec )
 				argbuf.sprintf("--schedd=%s", daemonCore->publicNetworkIpAddr());
 				args.AppendArg(argbuf.Value());
 			}
-			
+
+			if( m_xfer_queue_contact.Length() ) {
+				argbuf.sprintf("--xfer-queue=%s",m_xfer_queue_contact.Value());
+				args.AppendArg(argbuf.Value());
+			}
+
 				// pass the private socket ip/port for use just by shadows
 			args.AppendArg(MyShadowSockName);
 				
@@ -10436,6 +10441,9 @@ Scheduler::Init()
 		CronMgr->Initialize( );
 	}
 
+	m_xfer_queue_mgr.InitAndReconfig();
+	m_xfer_queue_mgr.GetContactInfo(MyShadowSockName,m_xfer_queue_contact);
+
 	first_time_in_init = false;
 }
 
@@ -10540,6 +10548,8 @@ Scheduler::Register()
 
 	// Initialize the Transfer Daemon Manager's handlers as well
 	m_tdman.register_handlers();
+
+	m_xfer_queue_mgr.RegisterHandlers();
 }
 
 void
@@ -10654,6 +10664,7 @@ void
 Scheduler::reconfig()
 {
 	Init();
+
 	RegisterTimers();			// reset timers
 
 

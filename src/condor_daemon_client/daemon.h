@@ -273,7 +273,8 @@ public:
 		  @return A new ReliSock object connected to the daemon.  
 		  */
 	ReliSock* reliSock( int sec = 0, CondorError* errstack = 0,
-	                    bool non_blocking = false );
+	                    bool non_blocking = false,
+						bool ignore_timeout_multiplier = false );
 
 		/**	Create a new SafeSock object, connected to the daemon.
 		  Callers can optionally specify a timeout to use for the

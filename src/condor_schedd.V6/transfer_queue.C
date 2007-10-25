@@ -1,0 +1,383 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "transfer_queue.h"
+#include "condor_debug.h"
+#include "selector.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_commands.h"
+#include "condor_config.h"
+#include "dc_transfer_queue.h"
+
+TransferQueueRequest::TransferQueueRequest(ReliSock *sock,char const *fname,char const *jobid,bool downloading,time_t max_queue_age):
+	m_sock(sock),
+	m_jobid(jobid),
+	m_fname(fname),
+	m_downloading(downloading),
+	m_max_queue_age(max_queue_age)
+{
+	m_gave_go_ahead = false;
+	m_time_born = time(NULL);
+	m_time_go_ahead = 0;
+}
+
+TransferQueueRequest::~TransferQueueRequest() {
+	if( m_sock ) {
+		daemonCore->Cancel_Socket( m_sock );
+		delete m_sock;
+		m_sock = NULL;
+	}
+}
+
+char const *
+TransferQueueRequest::Description() {
+	m_description.sprintf("%s %s job %s (initial file %s)",
+					m_sock ? m_sock->peer_description() : "",
+					m_downloading ? "downloading" : "uploading",
+					m_jobid.Value(),
+					m_fname.Value());
+	return m_description.Value();
+}
+
+bool
+TransferQueueRequest::Alive() {
+	ASSERT( m_sock );
+
+	Selector selector;
+	selector.add_fd( m_sock->get_file_desc(), Selector::IO_READ );
+	selector.set_timeout( 0 );
+	selector.execute();
+
+	if( selector.has_ready() ) {
+			// If the socket ever selects true for read, this means the
+			// client has either died or finished with the transfer.
+		return false;
+	}
+	return true;
+}
+
+bool
+TransferQueueRequest::SendGoAhead(XFER_QUEUE_ENUM go_ahead,char const *reason) {
+	ASSERT( m_sock );
+
+	m_sock->encode();
+	ClassAd msg;
+	msg.Assign(ATTR_RESULT,(int)go_ahead);
+	if( reason ) {
+		msg.Assign(ATTR_ERROR_STRING,reason);
+	}
+
+	if(!msg.put( *m_sock ) || !m_sock->end_of_message()) {
+		dprintf(D_ALWAYS,
+				"TransferQueueRequest: failed to send GoAhead to %s\n",
+				Description() );
+		return false;
+	}
+
+	m_gave_go_ahead = true;
+	m_time_go_ahead = time(NULL);
+	return true;
+}
+
+TransferQueueManager::TransferQueueManager() {
+	m_max_uploads = 0;
+	m_max_downloads = 0;
+	m_check_queue_timer = -1;
+}
+
+TransferQueueManager::~TransferQueueManager() {
+	TransferQueueRequest *client = NULL;
+
+	m_xfer_queue.Rewind();
+	while( m_xfer_queue.Next( client ) ) {
+		delete client;
+	}
+	m_xfer_queue.Clear();
+
+	if( m_check_queue_timer != -1 ) {
+		daemonCore->Cancel_Timer( m_check_queue_timer );
+	}
+}
+
+void
+TransferQueueManager::InitAndReconfig() {
+	m_max_downloads = param_integer("MAX_CONCURRENT_DOWNLOADS",10,0);
+	m_max_uploads = param_integer("MAX_CONCURRENT_UPLOADS",10,0);
+	m_default_max_queue_age = param_integer("MAX_TRANSFER_QUEUE_AGE",3600*2,0);
+}
+
+void
+TransferQueueManager::RegisterHandlers() {
+	int rc = daemonCore->Register_Command(
+		TRANSFER_QUEUE_REQUEST,
+		"TRANSFER_QUEUE_REQUEST",
+		(CommandHandlercpp)&TransferQueueManager::HandleRequest,
+		"TransferQueueManager::HandleRequest",
+		this,
+		WRITE );
+	ASSERT( rc >= 0 );
+}
+
+int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
+{
+	ReliSock *sock = (ReliSock *)stream;
+	ASSERT( cmd == TRANSFER_QUEUE_REQUEST );
+
+	ClassAd msg;
+	sock->decode();
+	if( !msg.initFromStream( *sock ) || !sock->end_of_message() ) {
+		dprintf(D_ALWAYS,
+				"TransferQueueManager: failed to receive transfer request "
+				"from %s.\n", sock->peer_description() );
+		return FALSE;
+	}
+
+	bool downloading = false;
+	MyString fname;
+	MyString jobid;
+	if( !msg.LookupBool(ATTR_DOWNLOADING,downloading) ||
+		!msg.LookupString(ATTR_FILE_NAME,fname) ||
+		!msg.LookupString(ATTR_JOB_ID,jobid) )
+	{
+		MyString msg_str;
+		msg.sPrint(msg_str);
+		dprintf(D_ALWAYS,"TransferQueueManager: invalid request from %s: %s\n",
+				sock->peer_description(), msg_str.Value());
+		return FALSE;
+	}
+
+		// Currently, we just create the client with the default max queue
+		// age.  If it becomes necessary to customize the maximum age
+		// on a case-by-case basis, it should be easy to adjust.
+
+	TransferQueueRequest *client =
+		new TransferQueueRequest(
+			sock,
+			fname.Value(),
+			jobid.Value(),
+			downloading,
+			m_default_max_queue_age);
+
+	if( !AddRequest( client ) ) {
+		delete client;
+		return KEEP_STREAM; // we have already closed this socket
+	}
+
+	return KEEP_STREAM;
+}
+
+bool
+TransferQueueManager::AddRequest( TransferQueueRequest *client ) {
+	ASSERT( client );
+
+	MyString error_desc;
+	if( daemonCore->TooManyRegisteredSockets(client->m_sock->get_file_desc(),&error_desc))
+	{
+		dprintf(D_FULLDEBUG,"TransferQueueManager: rejecting %s to avoid overload: %s\n",
+				client->Description(),
+				error_desc.Value());
+		client->SendGoAhead(XFER_QUEUE_NO_GO,error_desc.Value());
+		return false;
+	}
+
+	dprintf(D_FULLDEBUG,
+			"TransferQueueManager: enqueueing %s.\n",
+			client->Description());
+
+	int rc = daemonCore->Register_Socket(client->m_sock,
+		"<file transfer request>",
+		(SocketHandlercpp)&TransferQueueManager::HandleDisconnect,
+		"HandleDisconnect()", this, ALLOW);
+
+	if( rc < 0 ) {
+		dprintf(D_ALWAYS,
+				"TransferQueueManager: failed to register socket for %s.\n",
+				client->Description());
+		return false;
+	}
+
+	ASSERT( daemonCore->Register_DataPtr( client ) );
+
+	m_xfer_queue.Append( client );
+
+	TransferQueueChanged();
+
+	return true;
+}
+
+int
+TransferQueueManager::HandleDisconnect( Stream *sock )
+{
+	TransferQueueRequest *client;
+	m_xfer_queue.Rewind();
+	while( m_xfer_queue.Next( client ) ) {
+		if( client->m_sock == sock ) {
+			dprintf(D_FULLDEBUG,
+					"TransferQueueManager: dequeueing %s.\n",
+					client->Description());
+
+			delete client;
+			m_xfer_queue.DeleteCurrent();
+
+			TransferQueueChanged();
+
+			return KEEP_STREAM; // we have already deleted socket
+		}
+	}
+
+		// should never get here
+	m_xfer_queue.Rewind();
+	MyString clients;
+	while( m_xfer_queue.Next( client ) ) {
+		clients.sprintf_cat(" (%p) %s\n",
+					 client->m_sock,client->m_sock->peer_description());
+	}
+	EXCEPT("TransferQueueManager: ERROR: disconnect from client (%p) %s;"
+		   " not found in list: %s\n",
+		   sock,
+		   sock->peer_description(),
+		   clients.Value());
+	return FALSE; // close socket
+}
+
+void
+TransferQueueManager::TransferQueueChanged() {
+	if( m_check_queue_timer != -1 ) {
+			// already have a timer set
+		return;
+	}
+	m_check_queue_timer = daemonCore->Register_Timer(
+		0,(TimerHandlercpp)&TransferQueueManager::CheckTransferQueue,
+		"CheckTransferQueue",this);
+													 
+}
+
+void
+TransferQueueManager::CheckTransferQueue() {
+	TransferQueueRequest *client = NULL;
+	int downloading = 0;
+	int uploading = 0;
+	bool clients_waiting = false;
+	int queue_position = 0;
+
+	m_check_queue_timer = -1;
+
+	m_xfer_queue.Rewind();
+	while( m_xfer_queue.Next(client) ) {
+		queue_position++;
+
+		if( client->m_gave_go_ahead ) {
+			if( client->m_downloading ) {
+				downloading += 1;
+			}
+			else {
+				uploading += 1;
+			}
+		}
+		else {
+			if( client->m_downloading && 
+				(downloading < m_max_downloads || m_max_downloads <= 0) ||
+				!client->m_downloading &&
+				(uploading < m_max_uploads || m_max_uploads <= 0) )
+			{
+				dprintf(D_FULLDEBUG,
+						"TransferQueueManager: sending GoAhead to %s.\n",
+						client->Description() );
+
+				if( !client->SendGoAhead() ) {
+					dprintf(D_FULLDEBUG,
+							"TransferQueueManager: failed to send GoAhead; "
+							"dequeueing %s.\n",
+							client->Description() );
+
+					delete client;
+					m_xfer_queue.DeleteCurrent();
+
+					TransferQueueChanged();
+
+					continue;
+				}
+			}
+			else if( queue_position == 1 ) {
+					// This request has not been granted, but it is at the
+					// front of the queue.  This shouldn't happen for simple
+					// upload/download requests, but for future generality, we
+					// check for this case and treat it appropriately.
+				dprintf(D_ALWAYS,"TransferQueueManager: forcibly "
+						"dequeueing entry for %s, "
+						"because it is at the front of the queue "
+						"but is still not allowed by the queue policy.\n",
+						client->Description());
+				delete client;
+				m_xfer_queue.DeleteCurrent();
+				TransferQueueChanged();
+				continue;
+			}
+			else {
+				clients_waiting = true;
+			}
+		}
+	}
+
+	if( clients_waiting ) {
+			// queue is full; check for ancient clients
+		m_xfer_queue.Rewind();
+		while( m_xfer_queue.Next(client) ) {
+			if( client->m_gave_go_ahead ) {
+				int age = time(NULL) - client->m_time_go_ahead;
+				int max_queue_age = client->m_max_queue_age;
+				if( max_queue_age > 0 && max_queue_age < age ) {
+						// Killing this client will not stop the current
+						// file that is being transfered by it (which
+						// presumably has stalled for some reason).  However,
+						// it should prevent any additional files in the
+						// sandbox from being transferred.
+					dprintf(D_ALWAYS,"TransferQueueManager: forcibly "
+							"dequeueing  ancient (%ds old) entry for %s, "
+							"because it is older than "
+							"MAX_TRANSFER_QUEUE_AGE=%ds.\n",
+							age,
+							client->Description(),
+							max_queue_age);
+					delete client;
+					m_xfer_queue.DeleteCurrent();
+					TransferQueueChanged();
+						// Only delete more ancient clients if the
+						// next pass of this function finds there is pressure
+						// on the queue.
+					break;
+				}
+			}
+		}
+	}
+}
+
+void
+TransferQueueManager::GetContactInfo(char const *command_sock_addr,MyString &contact_str)
+{
+	TransferQueueContactInfo contact(
+		command_sock_addr,
+		m_max_uploads == 0,
+		m_max_downloads == 0);
+	contact_str = contact.GetStringRepresentation();
+}

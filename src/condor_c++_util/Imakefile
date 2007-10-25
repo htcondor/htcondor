@@ -159,7 +159,8 @@ CONLIBAPI_OBJ = \
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
 	dc_schedd.o dc_collector.o dc_starter.o daemon_list.o \
-	New_classads_dc_obj dc_message.o dc_master.o dc_transferd.o
+	New_classads_dc_obj dc_message.o dc_master.o dc_transferd.o \
+	dc_transfer_queue.o
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	alarm.o user_job_policy.o classad_support.o \

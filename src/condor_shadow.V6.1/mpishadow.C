@@ -66,7 +66,7 @@ MPIShadow::~MPIShadow() {
 }
 
 void 
-MPIShadow::init( ClassAd* job_ad, const char* schedd_addr )
+MPIShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info )
 {
 
 	char buf[256];
@@ -76,7 +76,7 @@ MPIShadow::init( ClassAd* job_ad, const char* schedd_addr )
     }
 
         // BaseShadow::baseInit - basic init stuff...
-    baseInit( job_ad, schedd_addr );
+    baseInit( job_ad, schedd_addr, xfer_queue_contact_info );
 
 		// Register command which gets updates from the starter
 		// on the job's image size, cpu usage, etc.  Each kind of

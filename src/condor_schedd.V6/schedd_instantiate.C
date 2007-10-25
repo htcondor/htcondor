@@ -35,7 +35,9 @@
 #endif
 #include "tdman.h"
 #include "condor_crontab.h"
+#include "transfer_queue.h"
 
+template class SimpleList<TransferQueueRequest *>;
 template class SimpleList<TransferRequest*>;
 template class HashTable<MyString, TransferRequest*>;
 

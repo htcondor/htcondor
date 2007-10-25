@@ -81,12 +81,12 @@ class BaseShadow : public Service
 			@param job_ad The ClassAd for this job.
 			@param schedd_addr The sinful string of the schedd
 		*/
-	void baseInit( ClassAd *job_ad, const char* schedd_addr );
+	void baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer_queue_contact_info );
 
 		/** Everyone must make an init with a bunch of parameters.<p>
 			This function is <b>pure virtual</b>.
 		 */
-	virtual void init( ClassAd* job_ad, const char* schedd_addr ) = 0;
+	virtual void init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info ) = 0;
 
 		/** Shadow should spawn a new starter for this job.
 			This function is <b>pure virtual</b>.
@@ -345,6 +345,8 @@ class BaseShadow : public Service
 
 	virtual void logDisconnectedEvent( const char* reason ) = 0;
 
+	char const *getTransferQueueContactInfo() {return m_xfer_queue_contact_info.Value();}
+
  protected:
 	
 		/** Note that this is the base, "unexpanded" ClassAd for the job.
@@ -422,6 +424,7 @@ class BaseShadow : public Service
 	char *scheddAddr;
 	bool jobExitedGracefully;
 	char *core_file_name;
+	MyString m_xfer_queue_contact_info;
 
 		/// Timer id for the job cleanup retry handler.
 	int m_cleanup_retry_tid;

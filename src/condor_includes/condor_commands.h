@@ -164,6 +164,8 @@
 #define VM_UNIV_GUEST_IP	(SCHED_VERS+105) // IP address of VM
 #define VM_UNIV_GUEST_MAC	(SCHED_VERS+106) // MAC address of VM
 
+#define TRANSFER_QUEUE_REQUEST (SCHED_VERS+107) // request to do file transfer
+
 // HAD-related commands
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 #define HAD_SEND_ID_CMD                 (HAD_COMMANDS_BASE + 1)
