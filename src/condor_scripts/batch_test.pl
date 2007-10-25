@@ -926,7 +926,9 @@ sub CreateLocalConfig
 	print FIX "environment=\"PATH=\'$mypath\'\"\n";
 	print FIX "SUBMIT_EXPRS=environment\n";
 	print FIX "PROCD_LOG = \$(LOG)/ProcLog\n";
-	print FIX "PROCD_ADDRESS = \\\\.\\pipe\\buildandtestprocd\n";
+	if($iswindows == 1) {
+		print FIX "PROCD_ADDRESS = \\\\.\\pipe\\buildandtestprocd\n";
+	}
 
 	close FIX; 
 }
