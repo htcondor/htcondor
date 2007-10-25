@@ -38,6 +38,15 @@ starved for CPU time.
 
 \begin{itemize}
 
+\item Added new policy for parallel universe jobs to control how they
+	exit.  If the attribute ParallelShutdownPolicy is set to the string
+	"WAIT\_FOR\_ALL", then Condor will wait until every node in the parallel
+	job has completed to consider the job finished.  If this attribute is
+	not set, or is set to any other string, the default policy is in effect.
+	This policy is needed for MPI jobs: when the first node exits, the whole
+	job is considered done, and condor kills all other running nodes in that
+	parallel job.
+
 \item Added new Windows specific ClassAd attributes:
  \begin{itemize}
  \item \AdAttr{WindowsMajorVersion}
