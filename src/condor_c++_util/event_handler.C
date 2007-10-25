@@ -112,7 +112,7 @@ EventHandler::install()
 	for( i=0; i<N_POSIX_SIGS; i++ ) {
 		signo = next_sig();
 		if( sigismember(&mask,signo) ) {
-			action.sa_handler = (void (*)(int, siginfo_t *, void *)) func;
+			action.sa_handler = (void (*)(int))func;
 			action.sa_mask = mask;
 			action.sa_flags = SA_NOCLDSTOP;
 			if( sigaction(signo,&action,&o_action[i]) < 0 ) {
