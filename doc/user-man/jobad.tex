@@ -154,6 +154,12 @@ reason that a job was put on hold.
   \Attr{HoldReasonSubCode} is the Unix  error number. \\ \hline
 14 & The initial working directory of the job cannot be accessed.
   \Attr{HoldReasonSubCode} is the Unix  error number. \\ \hline
+15 & The user requested the job be submitted on hold. \\ \hline
+16 & Input files are being spooled. \\ \hline
+17 & In the standard universe, the job and shadows versions aren't
+  compatible. \\ \hline
+18 & An internal Condor protocol error was encountered when transferring
+  files. \\ \hline
 \end{tabular}
 \end{table}
 \end{center}

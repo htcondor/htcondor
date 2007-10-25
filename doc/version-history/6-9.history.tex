@@ -66,6 +66,15 @@ authenticated with a pool password and exist within a restricted set
 of IP addresses, while schedds may join the pool from a broader set
 of IP addresses and must authenticate with X509 credentials.
 
+\item Added ability to throttle in Condor's file transfer mechanism
+the maximum number of simultaneous stage-outs and stage-ins for jobs
+submitted from the same \Condor{schedd}.  The configuration variables
+are \MacroNI{MAX\_CONCURRENT\_DOWNLOADS} and
+\MacroNI{MAX\_CONCURRENT\_UPLOADS}.  The default is 10 simultaneous
+uploads of input files and 10 simultaneous downloads of output files.
+These limits currently do not apply to grid universe jobs or standard
+universe jobs.
+
 \item Condor-C now uses a more efficient protocol when querying the
 status of jobs from Condor 6.9.5 and newer \Condor{schedd} daemons.
 
@@ -140,6 +149,15 @@ server, which performs the transfers.
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
+
+\item The new variables \Macro{MAX\_CONCURRENT\_DOWNLOADS} and
+\Macro{MAX\_CONCURRENT\_UPLOADS} limit the number of simultaneous file
+transfers that may take place through Condor's file transfer mechanism
+for jobs submitted to the same \Condor{schedd}.  The default is 10
+simultaneous uploads of input files and 10 simultaneous downloads of
+output files.  These limits currently do not apply to grid universe
+jobs or standard universe jobs.  See
+page~\pageref{param:MaxConcurrentDownloads} for more information.
 
 \item The new variable \Macro{WANT\_UDP\_COMMAND\_SOCKET} controls
   if Condor daemons should create a UDP command socket in addition to

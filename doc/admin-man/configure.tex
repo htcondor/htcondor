@@ -3955,6 +3955,27 @@ These macros control the \Condor{schedd}.
   error (exception) before the \Condor{schedd} will relinquish
   the match associated with the dying shadow.  Defaults to 5.
 
+\item[\Macro{MAX\_CONCURRENT\_DOWNLOADS}]
+  \label{param:MaxConcurrentDownloads} This specifies the maximum
+  number of simultaneous transfers of output files from execute
+  machines to the submit machine.  The limit applies to all jobs
+  submitted from the same \Condor{schedd}.  The default is 10.  A
+  setting of 0 means unlimited transfers.  This limit currently does
+  not apply to grid universe jobs or standard universe jobs, and it
+  also does not apply to streaming output files.  When the limit is
+  reached, additional transfers will queue up and wait before
+  proceeding.
+
+\item[\Macro{MAX\_CONCURRENT\_UPLOADS}]
+  \label{param:MaxConcurrentUploads} This specifies the maximum
+  number of simultaneous transfers of input files from the submit
+  machine to execute machines.  The limit applies to all jobs
+  submitted from the same \Condor{schedd}.  The default is 10.  A
+  setting of 0 means unlimited transfers.  This limit currently does
+  not apply to grid universe jobs or standard universe jobs.  When the
+  limit is reached, additional transfers will queue up and wait before
+  proceeding.
+
 \item[\Macro{SCHEDD\_INTERVAL}] \label{param:ScheddInterval} This
   macro determines the maximum interval for both how often the
   \Condor{schedd} sends a ClassAd update to the \Condor{collector} and
