@@ -21,6 +21,7 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "condor_common.h"
 #include "dc_transfer_queue.h"
 #include "condor_attributes.h"
 #include "selector.h"
@@ -370,3 +371,4 @@ DCTransferQueue::CheckTransferQueueSlot()
 		// All is quiet on our connection to the transfer queue manager.
 	return true;
 }
+
