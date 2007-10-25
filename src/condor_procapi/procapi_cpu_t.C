@@ -137,7 +137,7 @@ int cpuusage_test(bool verbose) {
   // end the short and relativly boring existance of the child process.
     // He'll be relieved trust me.  Would you like to just spin in a 
   // never ending loop.  Thought not.
-  kill(child, SIGTERM);
+  kill(child, SIGKILL);
   
   return success;
 }
