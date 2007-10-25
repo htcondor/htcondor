@@ -21,6 +21,13 @@ CronDayOfWeek	= *
 ##
 CronPrepTime	= 90
 
+
+#
+# Deferral window
+# Give it 5 seconds leeway to run, so if it gets there late,it
+# is still ok
+deferral_window = 5
+
 ##
 ## We only want to run it 2 times
 ##
