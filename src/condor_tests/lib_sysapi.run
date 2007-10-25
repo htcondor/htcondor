@@ -1,0 +1,36 @@
+#! /usr/bin/env perl
+
+my @got;
+$testname = 'lib_sysapi - runs prebuilt sysapi tests from testbin_dir';
+$test = "../testbin_dir/condor_sysapi";
+
+system("date");
+
+open(ELOG,"$test 2>&1 |") || die "Could not run test<<$test>>: $!\n";
+while(<ELOG>) {
+	push  @got, $_;
+}
+close(ELOG);
+
+my $passedtests = "";
+my $lastsave = "";
+foreach $line (@got) {
+	chomp($line);
+	$lastsave = $line;
+	#print "$line\n";
+	if($line =~ /^Failed\s+tests\s+=\s+(\d+).*$/) {
+		if($1 != 0) {
+			print "Sysapi failed $1 test(s)\n";
+			exit(1);
+		} else {
+			print "Sysapi passed $passedtests tests\n";
+			exit(0);
+		}
+	} elsif($line =~ /^Passed\s+tests\s+=\s+(\d+).*$/) {
+		$passedtests = $1;
+	} elsif($line =~ /^Failed.*$/) {
+		print "$line\n";
+	}
+}
+
+

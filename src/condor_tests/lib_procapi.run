@@ -1,0 +1,35 @@
+#! /usr/bin/env perl
+
+my @got;
+$testname = 'condor_procapi - runs prebuilt procapi tests from testbin_dir';
+$test = "../testbin_dir/condor_procapi";
+
+system("date");
+
+
+open(ELOG,"$test 2>&1 |") || die "Could not run test<<$test>>: $!\n";
+while(<ELOG>) {
+	chomp;
+	push  @got, $_;
+	#print "seeing: $_\n";
+}
+close(ELOG);
+
+print "We have $#got lines of test output\n";
+
+my $lastsave = "";
+foreach $line (@got) {
+	chomp($line);
+	$lastsave = $line;
+	#print "$line\n";
+}
+
+
+if($lastsave =~ /^.*Tests\s+completed\s+sucessfully.*$/) {
+	print "Lastline was: $lastsave\n";
+	print "Procapi Test passed!\n";
+} else {
+	print "Lastline was: $lastsave\n";
+	die "Procapi Test failed!\n";
+}
+
