@@ -167,6 +167,10 @@ server, which performs the transfers.
 
 \begin{itemize}
 
+\item When the master starts a collector on a central manager, the master
+	now pauses for a short time before starting any other daemons. This
+	helps the other daemons to appear in the collector more quickly. 
+
 \item Patched the parallel universe scripts lamscript and mp1script
 so that they work with newer versions of the GNU textutils.
 
