@@ -220,5 +220,13 @@ SOURCE=..\src\condor_schedd.V6\tdman.C
 
 SOURCE=..\src\condor_schedd.V6\tdman.h
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\transfer_queue.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\transfer_queue.h
+# End Source File
 # End Target
 # End Project

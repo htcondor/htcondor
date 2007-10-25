@@ -442,6 +442,14 @@ SOURCE=..\src\condor_daemon_client\dc_starter.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_daemon_client\dc_transfer_queue.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_client\dc_transfer_queue.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_daemon_client\dc_transferd.C
 # End Source File
 # Begin Source File
