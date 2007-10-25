@@ -94,7 +94,7 @@ int sysapi_swap_space(void);
 
 /* these are functions that spit out data about the library, useful for
 	testing or debugging purposes */
-void sysapi_test_dump_all(int, char *[]);
+int sysapi_test_dump_all(int, char *[]);
 void sysapi_test_dump_internal_vars(void);
 void sysapi_test_dump_functions(void);
 

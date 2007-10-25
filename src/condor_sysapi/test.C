@@ -189,12 +189,14 @@ sysapi_test_dump_functions(void)
 }
 
 /* the main entry function, this will do all the magic */
-extern "C" void
+extern "C" int
 sysapi_test_dump_all(int argc, char** argv)
 {
 	int foo;
 	int return_val = 0;
 	int	tests = TEST_NONE;
+	int failed_tests = 0;
+	int passed_tests = 0;
 	int i;
 	int print_help = 0;
 #if defined(LINUX)
@@ -285,7 +287,7 @@ sysapi_test_dump_all(int argc, char** argv)
 #		  if defined(LINUX)
 			printf("--proc_cpuinfo <file> <uname match string>|<cpuinfo #>\n");
 #		  endif
-			return;
+			return 0;
 		}
 	}
 
@@ -328,10 +330,13 @@ sysapi_test_dump_all(int argc, char** argv)
 		foo = arch_test(500);
 		dprintf(D_ALWAYS, "SysAPI: END ARCH_TEST:\n");
 		return_val |= foo;
-		if (foo == 0)
+		if (foo == 0) {
 			dprintf(D_ALWAYS, "SysAPI: Passed ARCH_TEST.\n\n");
-		else
+			passed_tests++;
+		} else {
 			dprintf(D_ALWAYS, "SysAPI: Failed ARCH_TEST.\n\n");
+			failed_tests++;
+		}
 	}
 
 
@@ -343,10 +348,13 @@ sysapi_test_dump_all(int argc, char** argv)
 								  FREEBLOCKS_MAX_WARN_OK );
 		dprintf(D_ALWAYS, "SysAPI: END FREE_FS_BLOCKS_TEST:\n");
 		return_val |= foo;
-		if (foo == 0)
+		if (foo == 0) {
 			dprintf(D_ALWAYS, "SysAPI: Passed FREE_FS_BLOCKS_TEST.\n\n");
-		else
+			passed_tests++;
+		} else {
 			dprintf(D_ALWAYS, "SysAPI: Failed FREE_FS_BLOCKS_TEST.\n\n");
+			failed_tests++;
+		}
 	}
 	
 
@@ -359,10 +367,13 @@ sysapi_test_dump_all(int argc, char** argv)
 							 IDLETIME_MAX_WARN_OK );
 		dprintf(D_ALWAYS, "SysAPI: END IDLE_TIME_TEST:\n");
 		return_val |= foo;
-		if (foo == 0)
+		if (foo == 0) {
 			dprintf(D_ALWAYS, "SysAPI: Passed IDLE_TIME_TEST.\n\n");
-		else
+			passed_tests++;
+		} else {
 			dprintf(D_ALWAYS, "SysAPI: Failed IDLE_TIME_TEST.\n\n");
+			failed_tests++;
+		}
 	}
 
 	
@@ -375,10 +386,13 @@ sysapi_test_dump_all(int argc, char** argv)
 						  );
 		dprintf(D_ALWAYS, "SysAPI: END KFLOPS_TEST:\n");
 		return_val |= foo;
-		if (foo == 0)
+		if (foo == 0) {
 			dprintf(D_ALWAYS, "SysAPI: Passed KFLOPS_TEST.\n\n");
-		else
+			passed_tests++;
+		} else {
 			dprintf(D_ALWAYS, "SysAPI: Failed KFLOPS_TEST.\n\n");
+			failed_tests++;
+		}
 	}
 
 
@@ -396,10 +410,13 @@ sysapi_test_dump_all(int argc, char** argv)
 							LOADAVG_MAX_WARN_OK);
 		dprintf(D_ALWAYS, "SysAPI: END LOAD_AVG_TEST:\n");
 		return_val |= foo;
-		if (foo == 0)
+		if (foo == 0) {
 			dprintf(D_ALWAYS, "SysAPI: Passed LOAD_AVG_TEST.\n\n");
-		else
+			passed_tests++;
+		} else {
 			dprintf(D_ALWAYS, "SysAPI: Failed LOAD_AVG_TEST.\n\n");
+			failed_tests++;
+		}
 	}
 
 	
@@ -411,10 +428,13 @@ sysapi_test_dump_all(int argc, char** argv)
 						MIPS_MAX_WARN_OK );
 		dprintf(D_ALWAYS, "SysAPI: END MIPS_TEST:\n");
 		return_val |= foo;
-		if (foo == 0)
+		if (foo == 0) {
 			dprintf(D_ALWAYS, "SysAPI: Passed MIPS_TEST.\n\n");
-		else
+			passed_tests++;
+		} else {
 			dprintf(D_ALWAYS, "SysAPI: Failed MIPS_TEST.\n\n");
+			failed_tests++;
+		}
 	}
 	
 	/* Special test: /proc/cpuinfo on a file */
@@ -426,7 +446,7 @@ sysapi_test_dump_all(int argc, char** argv)
 		if ( !fp ) {
 			dprintf(D_ALWAYS, "SysAPI: Can't open cpuinfo file '%s'.\n\n",
 					linux_cpuinfo_file);
-			return;
+			return(++failed_tests);
 		}
 		else {
 			/* Skip 'til we find the "right" uname */
@@ -496,7 +516,7 @@ sysapi_test_dump_all(int argc, char** argv)
 							"SysAPI: Can't find uname '%s' in %s.\n\n",
 							linux_uname, linux_cpuinfo_file );
 				}
-				return;
+				return(++failed_tests);
 			}
 			dprintf(D_ALWAYS,
 					"SysAPI: Using uname string on line %d:\n%s\n",
@@ -513,10 +533,13 @@ sysapi_test_dump_all(int argc, char** argv)
 						 NCPUS_MAX_WARN_OK);
 		dprintf(D_ALWAYS, "SysAPI: END NUMBER_CPUS_TEST:\n");
 		return_val |= foo;
-		if (foo == 0)
+		if (foo == 0) {
 			dprintf(D_ALWAYS, "SysAPI: Passed NUMBER_CPUS_TEST.\n\n");
-		else
+			passed_tests++;
+		} else {
 			dprintf(D_ALWAYS, "SysAPI: Failed NUMBER_CPUS_TEST.\n\n");
+			failed_tests++;
+		}
 #    if defined(LINUX)
 		if ( ( linux_processors >= 0 ) &&
 			 ( _SysapiProcCpuinfo.found_processors != linux_processors )  )  {
@@ -555,10 +578,13 @@ sysapi_test_dump_all(int argc, char** argv)
 		foo = phys_memory_test(PHYSMEM_TRIALS, PHYSMEM_MAX_WARN_OK);
 		dprintf(D_ALWAYS, "SysAPI: END PHYSICAL_MEMORY_TEST:\n");
 		return_val |= foo;
-		if (foo == 0)
+		if (foo == 0) {
 			dprintf(D_ALWAYS, "SysAPI: Passed PHYSICAL_MEMORY_TEST.\n\n");
-		else
+			passed_tests++;
+		} else {
 			dprintf(D_ALWAYS, "SysAPI: Failed PHYSICAL_MEMORY_TEST.\n\n");
+			failed_tests++;
+		}
 	}
 
 	
@@ -570,9 +596,14 @@ sysapi_test_dump_all(int argc, char** argv)
 							   VIRTMEM_MAX_FAIL_OK);
 		dprintf(D_ALWAYS, "SysAPI: END VIRTUAL_MEMORY_TEST:\n");
 		return_val |= foo;
-		if (foo == 0)
+		if (foo == 0) {
 			dprintf(D_ALWAYS, "SysAPI: Passed VIRTUAL_MEMORY_TEST.\n\n");
-		else
+			passed_tests++;
+		} else {
 			dprintf(D_ALWAYS, "SysAPI: Failed VIRTUAL_MEMORY_TEST.\n\n");
+			failed_tests++;
+		}
 	}
+	printf("Passed tests = %d\n",passed_tests);
+	return(failed_tests);
 }

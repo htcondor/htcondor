@@ -30,13 +30,15 @@
 int
 main(int argc, char** argv)
 {
+	int retval = 0;
 	Termlog = 1;
 	dprintf_config("TOOL");
 
 	set_debug_flags("D_ALWAYS");
 	config();
-	sysapi_test_dump_all(argc, argv);
-	return 0;
+	retval = sysapi_test_dump_all(argc, argv);
+	printf("Failed tests = %d\n",retval);
+	return (retval);
 }
 
 
