@@ -1305,7 +1305,7 @@ Used to provide any additional Globus RSL
 string attributes which are not covered by other submit description
 file commands or job attributes. Used for \SubmitCmd{grid} \SubmitCmd{universe}
 jobs, where the grid resource has a \SubmitCmd{grid-type-string} of
-\SubmitCmd{gt2} or \SubmitCmd{gt3}.
+\SubmitCmd{gt2}.
 
 %%%%%%%%%%%%%%%%%%%
 %% globus_xml
@@ -1327,7 +1327,7 @@ there are further type-specific values that must specified.
 This submit description file command allows each to
 be given in a space-separated list.
 Allowable \SubmitCmd{grid-type-string} values are
-\SubmitCmd{gt2}, \SubmitCmd{gt3}, \SubmitCmd{gt4},
+\SubmitCmd{gt2}, \SubmitCmd{gt4},
 \SubmitCmd{condor}, \SubmitCmd{nordugrid}, and \SubmitCmd{unicore}.
 See section~\ref{sec:GridUniverse} for details on the variety of 
 grid types.
@@ -1342,10 +1342,6 @@ See section~\ref{sec:Condor-C-Submit} for details.
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt2},
 the single parameter is the name of the pre-WS GRAM resource to be used.
 See section~\ref{sec:Using-gt2} for details.
-
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt3},
-the single parameter is the name of the OSGA GRAM service to be used.
-See section~\ref{sec:Using-gt3} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt4},
 the first parameter is the name of the WS GRAM service to be used.
@@ -1557,7 +1553,7 @@ it will search in the default location.
 
 \SubmitCmd{x509userproxy} is relevant when
 the \SubmitCmd{universe} is \SubmitCmd{grid},
-and the type of grid system is one of \SubmitCmd{gt2}, \SubmitCmd{gt3},
+and the type of grid system is one of \SubmitCmd{gt2},
 \SubmitCmd{gt4}, or \SubmitCmd{nordugrid}.
 
 \end{description} 

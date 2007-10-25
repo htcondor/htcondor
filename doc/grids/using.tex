@@ -39,7 +39,7 @@ The Globus Toolkit's Global Access to Secondary Storage (GASS) service provides
 \index{GASS (Global Access to Secondary Storage)}
 mechanisms for transferring data to and from a remote HTTP, FTP, or GASS server. 
 GASS is used by Condor for the 
-\SubmitCmd{gt2} and \SubmitCmd{gt3} grid types
+\SubmitCmd{gt2} grid type
 to transfer a job's files
 to and from the machine where the job is submitted and the remote resource.
 \item[GridFTP]
@@ -87,7 +87,8 @@ Condor detects and intelligently handles cases
 such as if the remote resource crashes.
 
 There are now three different versions of the GRAM protocol.
-Condor supports all three:
+Condor supports both the \SubmitCmd{gt2} and \SubmitCmd{gt4}
+protocols.  It does not support \SubmitCmd{gt3}.
 \begin{description}
 \item[gt2]
 This initial GRAM protocol is used in Globus Toolkit versions 1 and 2.
@@ -453,87 +454,6 @@ globus_rsl = (project=Test_Project)
 This example's attribute name for the additional RSL is
 \AdAttr{project}, and the value assigned is \AdAttr{Test\_Project}.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Using-gt3}The gt3 Grid Type}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{universe!grid, grid type gt3}
-\index{grid computing!submitting jobs to gt3}
-
-% since version 6.7.1
-Condor-G supports submitting jobs to remote resources running
-the Globus Toolkit version 3.2.
-Please note that this Globus Toolkit version
-is \emph{not} compatible with the Globus Toolkit version 3.0.
-See
-\URL{http://www-unix.globus.org/toolkit/docs/3.2/index.html}
-for more information about the Globus Toolkit version 3.2.
-
-For grid jobs destined for \SubmitCmd{gt3},
-the submit description file is much the same as for
-\SubmitCmd{gt2} jobs.
-\index{submit commands!grid\_resource}
-The \SubmitCmd{grid\_resource} command is still required,
-but the format changes from \SubmitCmd{gt2}
-to one that is a URL. 
-The syntax follows the form:
-\footnotesize
-\begin{verbatim}
-grid_resource = gt3 http://hostname[:port]/ogsa/services/base/gram/
-XXXManagedJobFactoryService
-\end{verbatim}
-\normalsize
-
-or
-\footnotesize
-\begin{verbatim}
-grid_resource = gt3 http://IPaddress[:port]/ogsa/services/base/gram/
-XXXManagedJobFactoryService
-\end{verbatim}
-\normalsize
-
-This value is placed on two lines for
-formatting purposes, but is all on a single line within
-a submit description file.
-The portion of this syntax specification enclosed within
-square brackets (\Lbr\ and \Rbr) is optional.
-The substring \verb@XXX@ within the last part of the value
-is replaced by one of five strings that (like for 
-\SubmitCmd{gt2}) identifies and selects the correct service to perform.
-The five strings that replace \verb@XXX@ are
-\begin{verbatim}
-Fork
-Condor
-PBS
-LSF
-SGE
-\end{verbatim}
-
-
-An example, given on two lines (again, for formatting reasons) is 
-\footnotesize
-\begin{verbatim}
-grid_resource = gt3 http://198.51.254.40:8080/ogsa/services/base/gram/
-ForkManagedJobFactoryService
-\end{verbatim}
-\normalsize
-
-%Its value is the URL of the appropriate GT3 job factory service.
-%It is the same, for example,
-%as the URL provided to the \Prog{managed-job-globusrun} tool in GT3.
-
-On the machine where the job is submitted,
-there is no requirement for any Globus Toolkit 3.2 components.
-Condor itself installs all necessary framework within the directory 
-\File{\MacroUNI{LIB}/lib/gt3}.
-The machine where the job is submitted
-is required to
-have Java 1.4 or a higher version installed.
-The configuration variable \Macro{JAVA}
-must identify the location of the installation.
-See page~\pageref{param:Java} within
-section~\ref{sec:Configuring-Condor}
-for the complete description of the configuration variable \MacroNI{JAVA}.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Using-gt4}The gt4 Grid Type}
@@ -552,7 +472,7 @@ for more information about the Globus Toolkit version 4.0.
 
 For grid jobs destined for \SubmitCmd{gt4},
 the submit description file is much the same as for
-\SubmitCmd{gt2} or \SubmitCmd{gt3} jobs.
+\SubmitCmd{gt2} jobs.
 \index{submit commands!grid\_resource}
 The \SubmitCmd{grid\_resource} command is still required,
 and is given in the form of a URL. 
@@ -625,7 +545,7 @@ for the complete description of the configuration variable \MacroNI{JAVA}.
 
 The delimiting of arguments passed to a Condor-G 
 job varies based on the grid type of the job.
-For the \SubmitCmd{gt2} and \SubmitCmd{gt3} types,
+For the \SubmitCmd{gt2} type,
 there are two languages involved, 
 leading to two sets of parsing rules that must work together.
 \SubmitCmd{gt4} jobs
@@ -690,8 +610,8 @@ argv[2] = argument2
 argv[3] = "string3"
 \end{verbatim}
 
-For 
-\SubmitCmd{gt2} and \SubmitCmd{gt3} types,
+For the
+\SubmitCmd{gt2} type,
 the jobmanager on the remote resource
 must receive information about job arguments
 in RSL (Resource Specification Language).
