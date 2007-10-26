@@ -6,10 +6,13 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!startd policy}
+\index{configuration!of machines, to implement a given policy}
 \index{startd!configuration}
 \index{daemon!condor\_startd@\Condor{startd}}
-This section describes the configuration of the \Condor{startd} to
-implement the desired policy for when remote jobs should start, be
+This section describes the configuration of machines,
+such that they,
+through the \Condor{startd} daemon,
+implement a desired policy for when remote jobs should start, be
 suspended, (possibly) resumed, vacate (with a checkpoint) or be killed
 (no checkpoint).
 This policy is the heart of Condor's balancing act
@@ -22,11 +25,11 @@ either the owners of machines in your pool (they may
 ask to be removed from the pool entirely) or the users of your pool
 (they may stop using Condor).
 
-Before we get into the details, there are a few things to note:
+Before the details, there are a few things to note:
 \begin{itemize}
-\item Much of this section refers to ClassAd expressions.  You
-probably want to read through section~\ref{classad-reference} on
-ClassAd expressions before continuing with this.
+\item Much of this section refers to ClassAd expressions.
+Please read through section~\ref{classad-reference} on
+ClassAd expressions before continuing.
 
 \item If you are primarily familiar with the version 6.0 policy
 expressions and what they do, read
@@ -34,11 +37,11 @@ section~\ref{sec:V60-Policy-diffs} on
 page~\pageref{sec:V60-Policy-diffs}.  This section explains the differences
 between the version 6.0 policy expressions and later versions.  
 
-\item If you are defining the policy for an SMP machine
+\item If defining the policy for an SMP machine
 (a multi-CPU machine),
 also read section~\ref{sec:Configuring-SMP} for specific information on
-configuring the \Condor{startd} for SMP machines.  
-Each \Term{slot} represented by the \Condor{startd} on an
+configuring the \Condor{startd} daemon for SMP machines.  
+Each \Term{slot} represented by the \Condor{startd} daemon on an
 SMP machine has its own \Term{state} and \Term{activity}
 (as described below). 
 In the future, each slot will be able to have its
@@ -48,7 +51,7 @@ refers to an individual slot within
 an SMP machine.
 \end{itemize}
 
-To define your policy, set expressions in
+To define a policy, set expressions in
 the configuration file (see section~\ref{sec:Configuring-Condor} on
 Configuring Condor for an introduction to Condor's
 configuration files).
@@ -56,15 +59,16 @@ The expressions are evaluated in the context of the machine's ClassAd
 and a job ClassAd.
 The expressions can therefore reference attributes from either
 ClassAd. 
-Listed in this section are
-both the attributes that are included in the machine's ClassAd and
-the attributes that are included in a job ClassAd. 
+See the unnumbered Appendix on page~\pageref{sec:Job-ClassAd-Attributes}
+for a list of job ClassAd attributes.
+See the unnumbered Appendix on page~\pageref{sec:Machine-ClassAd-Attributes}
+for a list of machine ClassAd attributes.
 \index{START@\Expr{START} expression}
 \index{configuration!START@\Expr{START} expression}
-The \Expr{START} expression is explained.
+The \Macro{START} expression is explained.
 It describes the conditions that must be met for a machine to
 start a job.
-The \Expr{RANK} expression is described.
+The \Macro{RANK} expression for a machine is described.
 It allows the specification of
 the kinds of jobs a machine prefers to run.
 A final discussion details how the \Condor{startd} daemon works.
@@ -89,16 +93,7 @@ The values of these attributes may be listed by using the command:
 \Prog{\condor{status} -l hostname}.
 On an SMP machine, the \Condor{startd} will break the machine up and advertise
 it as separate slots, each with its own name and ClassAd.
-The attributes themselves and what they represent are described below:
 
-\input{user-man/machad.tex}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Job-Attributes}
-Job ClassAd Attributes}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\input{user-man/jobad.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Start-Expr}

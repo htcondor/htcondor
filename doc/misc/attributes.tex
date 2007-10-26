@@ -1,0 +1,72 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:ClassAd-Types}ClassAd Types}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ClassAd attributes vary, 
+depending on the entity producing the ClassAd.
+Therefore, each ClassAd has an attribute named \AdAttr{MyType},
+which describes the type of ClassAd.
+Here is a list of defined values for \AdAttr{MyType},
+as well as a reference to a list attributes relevant to
+that type.
+
+\begin{description}
+  \item[\AdAttr{Job}]
+  Each submitted job describes its state, for use by the
+  \Condor{negotiator} daemon in finding a machine upon which to
+  run the job.
+  ClassAd attributes that appear in a job ClassAd are listed and described in
+  the unnumbered subsection labelled Job ClassAd Attributes
+  on page~\pageref{sec:Job-ClassAd-Attributes}.
+
+  \item[\AdAttr{Machine}]
+   Each machine in the pool (and hence, the \Condor{startd} daemon running
+   on that machine) describes its state.
+  ClassAd attributes that appear in a machine ClassAd 
+  are listed and described in
+  the unnumbered subsection labelled Machine ClassAd Attributes
+  on page~\pageref{sec:Machine-ClassAd-Attributes}.
+
+  \item[\AdAttr{DaemonMaster}]
+   Each \Condor{master} daemon describes its state.
+  ClassAd attributes that appear in a DaemonMaster ClassAd 
+  are listed and described in
+  the unnumbered subsection labelled DaemonMaster ClassAd Attributes
+  on page~\pageref{sec:DaemonMaster-ClassAd-Attributes}.
+
+  \item[\AdAttr{Scheduler}]
+   Each \Condor{schedd} daemon describes its state.
+  ClassAd attributes that appear in a Scheduler ClassAd 
+  are listed and described in
+  the unnumbered subsection labelled Scheduler ClassAd Attributes
+  on page~\pageref{sec:Scheduler-ClassAd-Attributes}.
+
+  \item[\AdAttr{Negotiator}]
+  \Todo
+  % Prose here about a \Attr{Negotiator} value.
+
+  \item[\AdAttr{Query}]
+  \Todo
+  % Prose here about a \Attr{Query} value.
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:Job-ClassAd-Attributes}Job ClassAd Attributes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{misc/jobad.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:Machine-ClassAd-Attributes}Machine ClassAd Attributes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{misc/machad.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:DaemonMaster-ClassAd-Attributes}DaemonMaster ClassAd Attributes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{misc/masterad.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:Scheduler-ClassAd-Attributes}Scheduler ClassAd Attributes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{misc/scheddad.tex}

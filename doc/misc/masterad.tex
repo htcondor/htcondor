@@ -1,0 +1,62 @@
+\index{ClassAd!DaemonMaster attributes}
+\begin{description}
+
+\index{ClassAd DaemonMaster attribute!CkptServer}
+\item[\AdAttr{CkptServer}:] A string with with the fully qualified
+  host name of the machine running a checkpoint server.
+
+\index{ClassAd DaemonMaster attribute!DaemonStartTime}
+\item[\AdAttr{DaemonStartTime}:] The time that this daemon was
+  started, represented as the number of second elapsed since
+  the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+
+\index{ClassAd DaemonMaster attribute!LastHeardFrom}
+\item[\AdAttr{LastHeardFrom}:] Description is not yet written.
+
+\index{ClassAd DaemonMaster attribute!Machine}
+\item[\AdAttr{Machine}:] A string with the machine's fully qualified 
+  host name.
+
+\index{ClassAd DaemonMaster attribute!MasterIpAddr}
+\item[\AdAttr{MasterIpAddr}:] String with the IP and port address of the
+\Condor{master} daemon which is publishing this DaemonMaster ClassAd.
+
+\index{ClassAd DaemonMaster attribute!MyAddress}
+\item[\AdAttr{MyAddress}:] Description is not yet written.
+
+\index{ClassAd DaemonMaster attribute!MyCurrentTime}
+\item[\AdAttr{MyCurrentTime}:] Description is not yet written.
+
+\index{ClassAd DaemonMaster attribute!Name}
+\item[\AdAttr{Name}:] The name of this resource; typically the same value as
+  the \AdAttr{Machine} attribute, but could be customized by the site
+  administrator.
+  On SMP machines, the \Condor{startd} will divide the CPUs up into separate
+  slots, each with with a unique name.
+  These names will be of the form ``slot\#@full.hostname'', for example,
+  ``slot1@vulture.cs.wisc.edu'', which signifies slot number 1 from
+  vulture.cs.wisc.edu.
+
+\index{ClassAd DaemonMaster attribute!PublicNetworkIpAddr}
+\item[\AdAttr{PublicNetworkIpAddr}:] Description is not yet written.
+
+\index{ClassAd DaemonMaster attribute!RealUid}
+\item[\AdAttr{RealUid}:] The UID under which the \Condor{master} is started.
+
+\index{ClassAd DaemonMaster attribute!UpdateSequenceNumber}
+\item[\AdAttr{UpdateSequenceNumber}:] Description is not yet written.
+
+\index{ClassAd DaemonMaster attribute!UpdatesHistory}
+\item[\AdAttr{UpdatesHistory}:] Description is not yet written.
+
+\index{ClassAd DaemonMaster attribute!UpdatesLost}
+\item[\AdAttr{UpdatesLost}:] Description is not yet written.
+
+\index{ClassAd DaemonMaster attribute!UpdatesSequenced}
+\item[\AdAttr{UpdatesSequenced}:] Description is not yet written.
+
+\index{ClassAd DaemonMaster attribute!UpdatesTotal}
+\item[\AdAttr{UpdatesTotal}:] Description is not yet written.
+
+\end{description}
+

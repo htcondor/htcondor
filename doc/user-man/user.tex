@@ -610,7 +610,7 @@ Please see section~\ref{sec:Parallel} for more details.
 %%%%%%%%%%%%
 \index{universe!vm}
 \index{vm universe}
-Condor facilitates the execution of VMWare and Xen
+Condor facilitates the execution of VMware and Xen
 virtual machines with the vm universe.
 
 Please see section~\ref{sec:vmuniverse} for details.
@@ -829,30 +829,31 @@ case insensitively.  The special comparison operators
 \verb@=?=@ and \verb@=!=@
 compare strings case sensitively.
 
-The allowed
-ClassAd attributes are those 
+A  \SubmitCmd{requirements} or \SubmitCmd{rank} command in
+the submit description file may utilize attributes
 that appear in a machine or a job ClassAd.
-To see all of the machine ClassAd attributes for all machines in
-the Condor pool, run \Condor{status -l}.  
+Within the submit description file (for a job) the
+prefix \verb@MY.@ (on a ClassAd attribute name)
+causes a reference to the job ClassAd attribute,
+and the prefix \verb@TARGET.@ causes a reference to 
+a potential machine or matched machine ClassAd attribute.
+
+The \Condor{status} command displays
 \index{Condor commands!condor\_status}
-The \Arg{-l} argument to
-\Condor{status} means to display all the complete machine ClassAds.
+statistics about machines within the pool.
+The \Opt{-l} option displays the
+machine ClassAd attributes for all machines in the Condor pool.
 The job ClassAds, if there jobs in the queue, can be seen
 with the \Condor{q -l} command.
-This
-will show you all the available attributes you can play with.
+This shows all the defined attributes for current jobs in the queue.
 
-To help you out with what these attributes all signify,
-descriptions follow for the attributes which will be common to every
-machine ClassAd. Remember that because ClassAds are flexible, the
-machine ads in your pool may include additional attributes specific
-to your site's installation and policies. 
+A list of defined ClassAd attributes for job ClassAds
+is given in the unnumbered Appendix on 
+page~\pageref{sec:Job-ClassAd-Attributes}.
+A list of defined ClassAd attributes for machine ClassAds
+is given in the unnumbered Appendix on 
+page~\pageref{sec:Machine-ClassAd-Attributes}.
 
-\subsubsection{\label{user-man-machad}ClassAd Machine Attributes}
-\input{user-man/machad.tex}
-
-\subsubsection{\label{user-man-jobad}ClassAd Job Attributes}
-\input{user-man/jobad.tex}
 
 \subsubsection{\label{rank-examples}Rank Expression Examples}
 
@@ -1290,7 +1291,7 @@ to the machine from which the job was submitted.
 Most of the time, this is the best option.
 To restrict the files that are transferred,
 specify the exact list of files with  \SubmitCmd{transfer\_output\_files}.
-Delimite these file names with a comma.
+Delimit these file names with a comma.
 When this list is defined, and any of the files do not exist as the
 job exits, Condor considers this an error, and re-runs the job.
 
@@ -1508,7 +1509,7 @@ however those files are placed into a single,
 flat, temporary directory on the execute machine.
 
 Note that this specification and submission will cause the
-job to fail and reexecute.
+job to fail and re-execute.
 
 \footnotesize
 \begin{verbatim}
@@ -2374,7 +2375,7 @@ kills off the \Condor{starter} daemon and user job.
 The user must set a value for \Attr{job\_lease\_duration}
 to keep a job running in the case that the submit side no longer
 renews the lease.
-There is a tradeoff in setting the value of \Attr{job\_lease\_duration}. 
+There is a trade off in setting the value of \Attr{job\_lease\_duration}. 
 Too small a value,
 and the job might get killed before the submitting machine has a
 chance to recover.

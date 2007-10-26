@@ -735,18 +735,15 @@ File System Configuration File Entries''.
   Multiple Platforms on page~\pageref{sec:Multiple-Platforms}.
 
 \item[\Macro{REQUIRE\_LOCAL\_CONFIG\_FILE}] \label{param:RequireLocalConfigFile}
-  Beginning in Condor 6.5.5, it is permissible for files listed 
-  in \MacroNI{LOCAL\_CONFIG\_FILE}
-  to be missing. This is most useful for sites that have 
-  large numbers of machines in the pool, and a local configuration file
-  that uses
-  the \MacroUNI{HOSTNAME} macro in its definition.
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{True}, Condor exits with an error,
+  if any file listed in \MacroNI{LOCAL\_CONFIG\_FILE} cannot be read.
+  A value of \Expr{False} allows local configuration files to be missing.
+  This is most useful for sites that have 
+  both large numbers of machines in the pool and a local configuration file
+  that uses the \MacroUNI{HOSTNAME} macro in its definition.
   Instead of having an empty file for every host
   in the pool, files can simply be omitted.
-  The default value is \Expr{True},
-  causing Condor to exit with an error, if a file listed as the local 
-  configuration file cannot be read.
-  A value of \Expr{False} allows local configuration files to be missing.
 
 \item[\Macro{LOCAL\_CONFIG\_DIR}] \label{param:LocalConfigDir} 
   Beginning in Condor 6.7.18, a directory may be used as a container for 

@@ -644,6 +644,10 @@ processing a job's crontab entries in the submit description file.
 
 \begin{itemize}
 
+\item \SubmitCmd{standard} universe jobs do not work
+  when writing binary data.  The behavior exhibited in this
+  case may include the job crashing, or corrupt binary written.
+
 \item \SubmitCmd{grid} universe jobs for the gt4 grid type do not work, 
 if Condor daemons are started as root
 and there is file transfer associated with or specified by the job.

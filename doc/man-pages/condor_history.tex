@@ -12,16 +12,16 @@
 \oOptArg{-format}{formatString AttributeName}
 \oOpt{-l \Bar -long \Bar -xml} 
 \oOptArg{-match}{number}
-\oOptArg{-name}{quill-name}
+\oOptArg{-name}{schedd-name}
 \oOpt{cluster \Bar cluster.process \Bar owner}
 
 \Description
 \Condor{history} displays a summary of all Condor jobs listed in the
 specified history files, or in the Quill database, when Quill is enabled.
-
-If no history files are specified (with the \Opt{-f} option), and Quill
-is not enabled, the local history file as specified in Condor's 
-configuration file (\File{\MacroUNI{SPOOL}/history} by default) is read.  
+If no history files are specified (with the \Opt{-f} option) 
+and Quill is not enabled, the local
+history file as specified in Condor's configuration file
+(\File{\MacroUNI{SPOOL}/history} by default) is read.  
 The default listing summarizes (in chronological order)
 each job on a single line, and  contains the following items:
 
@@ -73,16 +73,18 @@ for details on converting history files to the new format.
     is undefined when Quill is \emph{not} enabled. }
   \OptItem{\OptArg{-constraint}{expr}}{Display jobs that satisfy the
     expression.}
-  \OptItem{\OptArg{-f}{filename}}{Use the specified file instead of the default     history file.  When Quill is enabled, this option will force the query
-	to read from the history file, and not the database.}
+  \OptItem{\OptArg{-f}{filename}}{Use the specified file instead of the
+    default history file. When Quill is enabled, this option will force 
+    the query to read from the history file, and not the database.}
   \OptItem{\OptArg{-format}{formatString}{AttributeName}}{Display jobs
     with a custom format. See the \Condor{q} man page \Opt{-format} option
     for details.}
   \OptItem{\Opt{-l} or \Opt{-long}}{Display job ads in long format.}
   \OptItem{\OptArg{-match}{number}}{Limit the number of jobs displayed
     to \Arg{number}.}
-  \OptItem{\OptArg{-name}{schedd-name}}{When quill is enabled, query job
-	ads from the named schedd, not the default schedd}
+  \OptItem{\OptArg{-name}{schedd-name}}{When Quill is enabled,
+    query job ClassAds from the named \Condor{schedd} daemon,
+    not the default \Condor{schedd} daemon.}
   \OptItem{\Opt{-xml}}{Display job ClassAds in xml format.
       The xml format is fully defined at
       \URL{http://www.cs.wisc.edu/condor/classad/refman/}.}
