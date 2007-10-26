@@ -65,6 +65,7 @@ void dprintf ( int flags, const char* fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 FILE * debug_lock ( void );
 void debug_unlock ( void );
 void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
+void condor_except_should_dump_core( int flag );
 int flock ( int fd, int op );
 int getdtablesize ( void );
 

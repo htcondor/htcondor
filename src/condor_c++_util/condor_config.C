@@ -723,6 +723,8 @@ real_config(char* host, int wantsQuiet)
 		// all the parameters we think are defined really are.  
 	check_params();
 
+	condor_except_should_dump_core( param_boolean("ABORT_ON_EXCEPTION", false) );
+
 	(void)SetSyscalls( scm );
 }
 

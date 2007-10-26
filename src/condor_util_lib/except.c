@@ -41,6 +41,12 @@ int		SetSyscalls(int);
 
 extern int		_condor_dprintf_works;
 
+	/* This is configured in the config file with ABORT_ON_EXCEPTION = True */
+static int _condor_except_should_dump_core;
+void condor_except_should_dump_core( int flag ) {
+	_condor_except_should_dump_core = flag;
+}
+
 void
 _EXCEPT_(const char *fmt, ...)
 {
@@ -65,6 +71,10 @@ _EXCEPT_(const char *fmt, ...)
 	}
 
 	va_end(pvar);
+
+	if( _condor_except_should_dump_core ) {
+		abort();
+	}
 
 	exit( JOB_EXCEPTION );
 }

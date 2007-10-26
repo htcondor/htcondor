@@ -394,6 +394,14 @@ LOCK		= $(LOG)
 ##  developers debug any problems you might be having.
 #CREATE_CORE_FILES	= True
 
+##  When Condor daemons detect a fatal internal exception, they
+##  normally log an error message and exit.  If you have turned on
+##  CREATE_CORE_FILES, in some cases you may also want to turn on
+##  ABORT_ON_EXCEPTION so that core files are generated when an
+##  exception occurs.  Set the following to True if that is what you
+##  want.
+#ABORT_ON_EXCEPTION = False
+
 ##  Condor Glidein downloads binaries from a remote server for the
 ##  machines into which you're gliding. This saves you from manually
 ##  downloading and installing binaries for every architecture you
