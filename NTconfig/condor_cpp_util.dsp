@@ -558,6 +558,14 @@ SOURCE="..\src\condor_c++_util\file_xml.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\forkwork.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\forkwork.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\format_time.C"
 # End Source File
 # Begin Source File

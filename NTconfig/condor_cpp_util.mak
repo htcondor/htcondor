@@ -99,6 +99,7 @@ CLEAN :
 	-@erase "$(INTDIR)\file_transfer.obj"
 	-@erase "$(INTDIR)\file_transfer_db.obj"
 	-@erase "$(INTDIR)\file_xml.obj"
+	-@erase "$(INTDIR)\forkwork.obj"
 	-@erase "$(INTDIR)\format_time.obj"
 	-@erase "$(INTDIR)\gahp_common.obj"
 	-@erase "$(INTDIR)\generic_query.obj"
@@ -261,6 +262,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\dc_shadow.obj" \
 	"$(INTDIR)\dc_startd.obj" \
 	"$(INTDIR)\dc_starter.obj" \
+	"$(INTDIR)\dc_transfer_queue.obj" \
 	"$(INTDIR)\dc_transferd.obj" \
 	"$(INTDIR)\directory.obj" \
 	"$(INTDIR)\distribution.obj" \
@@ -341,7 +343,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\dc_transfer_queue.obj"
+	"$(INTDIR)\forkwork.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -422,6 +424,7 @@ CLEAN :
 	-@erase "$(INTDIR)\file_transfer.obj"
 	-@erase "$(INTDIR)\file_transfer_db.obj"
 	-@erase "$(INTDIR)\file_xml.obj"
+	-@erase "$(INTDIR)\forkwork.obj"
 	-@erase "$(INTDIR)\format_time.obj"
 	-@erase "$(INTDIR)\gahp_common.obj"
 	-@erase "$(INTDIR)\generic_query.obj"
@@ -583,6 +586,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\dc_shadow.obj" \
 	"$(INTDIR)\dc_startd.obj" \
 	"$(INTDIR)\dc_starter.obj" \
+	"$(INTDIR)\dc_transfer_queue.obj" \
 	"$(INTDIR)\dc_transferd.obj" \
 	"$(INTDIR)\directory.obj" \
 	"$(INTDIR)\distribution.obj" \
@@ -663,7 +667,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\dc_transfer_queue.obj"
+	"$(INTDIR)\forkwork.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -1112,6 +1116,12 @@ SOURCE="..\src\condor_c++_util\file_transfer_db.C"
 SOURCE="..\src\condor_c++_util\file_xml.C"
 
 "$(INTDIR)\file_xml.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\forkwork.C"
+
+"$(INTDIR)\forkwork.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

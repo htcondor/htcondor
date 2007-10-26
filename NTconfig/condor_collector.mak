@@ -52,7 +52,6 @@ CLEAN :
 	-@erase "$(INTDIR)\collector_engine.obj"
 	-@erase "$(INTDIR)\collector_main.obj"
 	-@erase "$(INTDIR)\collector_stats.obj"
-	-@erase "$(INTDIR)\forkwork.obj"
 	-@erase "$(INTDIR)\hashkey.obj"
 	-@erase "$(INTDIR)\soap_collectorC.obj"
 	-@erase "$(INTDIR)\soap_collectorServer.obj"
@@ -113,7 +112,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\collector_engine.obj" \
 	"$(INTDIR)\collector_main.obj" \
 	"$(INTDIR)\collector_stats.obj" \
-	"$(INTDIR)\forkwork.obj" \
 	"$(INTDIR)\hashkey.obj" \
 	"$(INTDIR)\soap_collectorC.obj" \
 	"$(INTDIR)\soap_collectorServer.obj" \
@@ -162,7 +160,6 @@ CLEAN :
 	-@erase "$(INTDIR)\collector_engine.obj"
 	-@erase "$(INTDIR)\collector_main.obj"
 	-@erase "$(INTDIR)\collector_stats.obj"
-	-@erase "$(INTDIR)\forkwork.obj"
 	-@erase "$(INTDIR)\hashkey.obj"
 	-@erase "$(INTDIR)\soap_collectorC.obj"
 	-@erase "$(INTDIR)\soap_collectorServer.obj"
@@ -221,7 +218,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\collector_engine.obj" \
 	"$(INTDIR)\collector_main.obj" \
 	"$(INTDIR)\collector_stats.obj" \
-	"$(INTDIR)\forkwork.obj" \
 	"$(INTDIR)\hashkey.obj" \
 	"$(INTDIR)\soap_collectorC.obj" \
 	"$(INTDIR)\soap_collectorServer.obj" \
@@ -512,12 +508,6 @@ SOURCE=..\src\condor_collector.V6\collector_main.C
 SOURCE=..\src\condor_collector.V6\collector_stats.C
 
 "$(INTDIR)\collector_stats.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_collector.V6\forkwork.C
-
-"$(INTDIR)\forkwork.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
