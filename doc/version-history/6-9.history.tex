@@ -75,6 +75,11 @@ uploads of input files and 10 simultaneous downloads of output files.
 These limits currently do not apply to grid universe jobs or standard
 universe jobs.
 
+\item Added \MacroNI{SCHEDD\_QUERY\_WORKERS}, which is 3 by default in
+unix, and which is ignored in Windows.  This specifies the maximum
+number of concurrent sub-processes that the \Condor{schedd} will spawn
+to handle queries.
+
 \item Condor-C now uses a more efficient protocol when querying the
 status of jobs from Condor 6.9.5 and newer \Condor{schedd} daemons.
 
@@ -158,6 +163,12 @@ simultaneous uploads of input files and 10 simultaneous downloads of
 output files.  These limits currently do not apply to grid universe
 jobs or standard universe jobs.  See
 page~\pageref{param:MaxConcurrentDownloads} for more information.
+
+\item The new variable \MacroNI{SCHEDD\_QUERY\_WORKERS} specifies the
+maximum number of concurrent sub-processes that the \Condor{schedd}
+will spawn to handle queries.  This is ignored in Windows.  In unix,
+the default is 3.  See page~\pageref{param:ScheddQueryWorkers} for
+more details.
 
 \item The new variable \Macro{WANT\_UDP\_COMMAND\_SOCKET} controls
   if Condor daemons should create a UDP command socket in addition to
