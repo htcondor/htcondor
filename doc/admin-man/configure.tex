@@ -1004,6 +1004,14 @@ File System Configuration File Entries''.
   % Default definition in config file: bogus
   % Result if not defined or RHS is empty: shell's default corelimit size applies
 
+\item[\Macro{ABORT\_ON\_EXCEPTION}] \label{param:AbortOnException}
+  When Condor programs detect a fatal internal exception, they
+  normally log an error message and exit.  If you have turned on
+  \Macro{CREATE\_CORE\_FILES}, in some cases you may also want to turn
+  on \Macro{ABORT\_ON\_EXCEPTION} so that core files are generated
+  when an exception occurs.  Set the following to True if that is what
+  you want.
+
 \item[\Macro{Q\_QUERY\_TIMEOUT}] \label{param:QQueryTimeout}
   Defines the timeout (in seconds) that \Condor{q} uses when trying to
   connect to the \Condor{schedd}.  Defaults to 20 seconds.
