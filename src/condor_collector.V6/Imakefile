@@ -11,7 +11,7 @@ soapobjs(collector)
 
 OBJ = $(SOAP_OBJS) \
       collector_main.o collector.o view_server.o \
-      collector_instantiate.o totals.o collector_stats.o forkwork.o
+      collector_instantiate.o totals.o collector_stats.o
 
 library_target(collector_engine.a, $(ENGINE_OBJ))
 

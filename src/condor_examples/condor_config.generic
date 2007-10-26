@@ -1327,6 +1327,10 @@ SCHEDD_DAEMON_AD_FILE = $(LOG)/.schedd_classad
 ##  How long should the schedd wait between spawning each shadow?
 #JOB_START_DELAY	= 2
 
+##  How many concurrent sub-processes should the schedd spawn to handle
+##  queries?  (Unix only)
+#SCHEDD_QUERY_WORKERS   = 3
+
 ##  How often should the schedd send a keep alive message to any
 ##  startds it has claimed?  (5 minutes)
 #ALIVE_INTERVAL		= 300

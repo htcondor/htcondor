@@ -86,12 +86,18 @@ ForkWork::ForkWork( int max_workers )
 	max_workers = 0;
 # endif
 	maxWorkers = max_workers;
+	reaperId = -1;
 }
 
 // Finish initialization
 int
 ForkWork::Initialize( void )
 {
+	if( reaperId != -1 ) {
+			// already initialized
+		return 0;
+	}
+
 	// Register my reaper
 	reaperId = daemonCore->Register_Reaper( 
 		"ForkWork_Reaper",

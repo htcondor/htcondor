@@ -54,6 +54,7 @@
 #include "condor_string.h" // for strnewp, etc.
 #include "utc_time.h"
 #include "condor_crontab.h"
+#include "forkwork.h"
 
 #include "file_sql.h"
 extern FILESQL *FILEObj;
@@ -80,7 +81,7 @@ extern  void    cleanup_ckpt_files(int, int, const char*);
 extern	bool	service_this_universe(int, ClassAd *);
 static QmgmtPeer *Q_SOCK = NULL;
 
-int		do_Q_request(ReliSock *);
+int		do_Q_request(ReliSock *,bool &may_fork);
 void	FindPrioJob(PROC_ID &);
 
 static ClassAdCollection *JobQueue = 0;
@@ -106,6 +107,8 @@ HashTable<int,int> *PrioRecAutoClusterRejected = NULL;
 static int 	MAX_PRIO_REC=INITIAL_MAX_PRIO_REC ;	// INITIAL_MAX_* in prio_rec.h
 
 const char HeaderKey[] = "0.0";
+
+static ForkWork forker;
 
 static void AppendHistory(ClassAd*);
 static void MaybeRotateHistory(int size_to_append);
@@ -672,6 +675,10 @@ InitQmgmt()
 			"all queue access checks disabled!\n"
 			);
 	}
+
+	forker.Initialize();
+	int max_forkers = param_integer ("SCHEDD_QUERY_WORKERS",3,0);
+	forker.setMaxWorkers( max_forkers );
 }
 
 void
@@ -1260,15 +1267,35 @@ handle_q(Service *, int, Stream *sock)
 
 	JobQueue->BeginTransaction();
 
+	bool may_fork = false;
+	ForkStatus fork_status = FORK_FAILED;
 	do {
 		/* Probably should wrap a timer around this */
-		rval = do_Q_request( Q_SOCK->getReliSock() );
+		rval = do_Q_request( Q_SOCK->getReliSock(), may_fork );
+
+		if( may_fork && fork_status == FORK_FAILED ) {
+			fork_status = forker.NewJob();
+
+			if( fork_status == FORK_PARENT ) {
+				break;
+			}
+		}
 	} while(rval >= 0);
 
 
 	unsetQSock();
 
-	dprintf(D_FULLDEBUG, "QMGR Connection closed\n");
+	if( fork_status == FORK_CHILD ) {
+		dprintf(D_FULLDEBUG, "QMGR forked query done\n");
+		forker.WorkerDone(); // never returns
+		EXCEPT("ForkWork::WorkDone() returned!");
+	}
+	else if( fork_status == FORK_PARENT ) {
+		dprintf(D_FULLDEBUG, "QMGR forked query\n");
+	}
+	else {
+		dprintf(D_FULLDEBUG, "QMGR Connection closed\n");
+	}
 
 	// Abort any uncompleted transaction.  The transaction should
 	// be committed in CloseConnection().

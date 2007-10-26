@@ -49,7 +49,7 @@ static bool QmgmtMayAccessAttribute( char const *attr_name ) {
 }
 
 int
-do_Q_request(ReliSock *syscall_sock)
+do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 {
 	int	request_num;
 	int	rval;
@@ -95,6 +95,8 @@ do_Q_request(ReliSock *syscall_sock)
 	{
 			// same as InitializeConnection but no authenticate()
 		InitializeConnection( NULL, NULL );			
+
+		may_fork = true;
 		return 0;
 	}
 
