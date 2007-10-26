@@ -68,9 +68,11 @@ Stream :: Stream(stream_code c) :
     mdMode_(MD_OFF),
     mdKey_(0),
     _code(c), 
-    _coding(stream_encode)
+    _coding(stream_encode),
+	allow_empty_message_flag(FALSE),
+	decrypt_buf(NULL),
+	decrypt_buf_len(0)
 {
-	allow_empty_message_flag = FALSE;
 }
 
 int
@@ -85,6 +87,9 @@ Stream :: ~Stream()
 {
     delete crypto_;
     delete mdKey_;
+	if( decrypt_buf ) {
+		free( decrypt_buf );
+	}
 }
 
 int 
@@ -1803,25 +1808,80 @@ Stream::get( double	&d)
 
 
 
-/* Get the next string from the UDP port
- * This function copies the next string arrived at the UDP port
- * to the arg 's'. When a message has not been received, its behaviour
- * is dependent on the current value of 'timeout', which can be set by
- * 'timeout(int)'. If 'timeout' is 0, it blocks until a message is ready
- * at the port, otherwise, it returns FALSE after waiting that amount of time.
+/* Get the next string on the stream.  This function sets s to a
+ * freshly mallocated string, or NULL.  The caller should free s.
+ * When a message has not been received, its behaviour is dependent on
+ * the current value of 'timeout', which can be set by
+ * 'timeout(int)'. If 'timeout' is 0, it blocks until a message is
+ * ready at the port, otherwise, it returns FALSE after waiting that
+ * amount of time.
  *
- * Notice: This function allocates space for the arg 's' when s = NULL,
- *         hence calling function must free memory pointed by s after using it
  */
 int 
 Stream::get( char	*&s)
 {
+	char const *ptr = NULL;
+
+		// This function used to be defined with two different calling
+		// semantics.  One was where s != NULL, in which case the
+		// string was copied into the memory pointed to by s, with no
+		// bounds checking.  This latter case is no longer allowed.
+	ASSERT( s == NULL );
+
+	int result = get_string_ptr(ptr);
+	if( result == TRUE ) {
+		if( ptr ) {
+			s = strdup(ptr);
+		}
+		else {
+			s = NULL;
+		}
+	}
+	else {
+		s = NULL;
+	}
+	return result;
+}
+
+/* Get the next string on the stream.  This function copies the data
+ * into the buffer pointed to by s.  If the length of the data
+ * (including the terminating null) exceeds the buffer length l, this
+ * function returns FALSE and truncates the string with a null at the
+ * end of the buffer.
+ */
+
+int 
+Stream::get( char	*s, int		l)
+{
+	char const *ptr = NULL;
+
+	ASSERT( s != NULL && l > 0 );
+
+	int result = get_string_ptr(ptr);
+	if( result != TRUE || !ptr ) {
+		ptr = "";
+	}
+
+	int len = strlen(ptr);
+	if( len + 1 > l ) {
+		strncpy(s,ptr,l-1);
+		s[l] = '\0';
+		result = FALSE;
+	}
+	else {
+		strncpy(s,ptr,l);
+	}
+
+	return result;
+}
+
+int
+Stream::get_string_ptr( char const *&s ) {
 	char	c;
 	void 	*tmp_ptr = 0;
     int     len;
 
-
-
+	s = NULL;
 	switch(_code){
 		case internal:
 		case external:
@@ -1829,21 +1889,12 @@ Stream::get( char	*&s)
                     if (!get_encryption()) {
                         if (!peek(c)) return FALSE;
                         if (c == '\255'){
-                            /* s = (char *)0; */
                             if (get_bytes(&c, 1) != 1) return FALSE;
-                            if (s) s[0] = '\0';
+							s = NULL;
                         }
                         else{
-                            /* tmp_ptr = s; */
                             if (get_ptr(tmp_ptr, '\0') <= 0) return FALSE;
-                            if (s) {
-                                strcpy(s, (char *)tmp_ptr);
-                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
-                            }
-                            else {
-                                s = strdup((char *)tmp_ptr);
-                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
-                            }
+							s = (char *)tmp_ptr;
                         }
                     }
                     else { // 6.3 with encryption support
@@ -1851,95 +1902,36 @@ Stream::get( char	*&s)
                         if (get(len) == FALSE) {
                             return FALSE;
                         }
-                        
-                        tmp_ptr = malloc(len);
-                        if (get_bytes((char *) tmp_ptr, len) != len) {
+
+						if( !decrypt_buf || decrypt_buf_len < len ) {
+							free( decrypt_buf );
+							decrypt_buf = (char *)malloc(len);
+							ASSERT( decrypt_buf );
+							decrypt_buf_len = len;
+						}
+
+                        if( get_bytes(decrypt_buf, len) != len ) {
                             return FALSE;
                         }
-                        
-                        if (*((char *)tmp_ptr) == '\255') {
-                            if (s) s[0] = '\0';
+
+                        if( *decrypt_buf == '\255' ) {
+							s = NULL;
                         }
                         else {
-                            if (s) {
-                                strcpy(s, (char *)tmp_ptr);
-                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
-                            }
-                            else {
-                                s = strdup((char *)tmp_ptr);
-                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
-                            }
+							s = decrypt_buf;
                         }
-                        free(tmp_ptr);
                     }
                     break;
-                        
-		case ascii:
-			return FALSE;
-	}
-        NETWORK_TRACE("get string " << s);
-	return TRUE;
-}
-
-
-
-/*
- * Do not FREE memory pointed by the arg 's' when you call this function with s = NULL
- */
-int 
-Stream::get( char	*&s, int		&l)
-{
-	char	c;
-	void	*tmp_ptr = 0;
-	int     len;
-
-	if (s == NULL) {
-		return FALSE;
-	}
-
-	switch(_code){
-		case internal:
-		case external:
-			if (!get_encryption()) {
-				if (!peek(c)) return FALSE;
-				if (c == '\255') {
-					/* s = (char *)0; */
-					if (get_bytes(&c, 1) != 1) return FALSE;
-					s[0] = '\0';
-				}
-				else{
-					/* tmp_ptr = s; */
-					if ((l = get_ptr(tmp_ptr, '\0')) <= 0) return FALSE;
-					strcpy(s, (char *)tmp_ptr);
-					//cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
-				}
-			}
-			else { // 6.3 with encryption support
-				// First, get length
-				if (get(len) == FALSE) {
-					return FALSE;
-				}
-                        
-				tmp_ptr = malloc(len);
-				if (get_bytes((char *)tmp_ptr, len) != len) {
-					return FALSE;
-				}
-                        
-				if (*((char*)tmp_ptr) == '\255') {
-					s[0] = '\0';
-				}
-				else {
-					strcpy(s, (char *)tmp_ptr);
-					//cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
-				}
-				free(tmp_ptr);
-			}
-			break;
 
 		case ascii:
 			return FALSE;
 	}
-	NETWORK_TRACE("get string and int " <<   l);
+	if( s ) {
+		NETWORK_TRACE("get string ptr " << s);
+	}
+	else {
+		NETWORK_TRACE("get string ptr NULL");
+	}
 	return TRUE;
 }
 

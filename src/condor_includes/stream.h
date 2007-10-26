@@ -411,13 +411,23 @@ public:
 	int get(unsigned short &);
 	int get(float &);
 	int get(double &);
-		// If arg is NULL, this function mallocs memory that caller should free
-		// If arg is not NULL, this function blindly writes into caller's
-		// buffer without doing any bounds checking.
+
+		// This function assigns the argument to a freshly mallocated string
+		// or NULL.  The caller should free the string.
+		// NOTE: arg MUST be NULL when this function is called.
 	int get(char *&);
-		// arg must not be NULL, and this function will blindly write into caller's
-		// buffer without doing any bounds checking. (so don't use this)
-	int get(char *&, int &);
+
+		// Copies a string into buffer supplied as argument.  If
+		// length of string (including terminal null) exceeds
+		// specified maximum length, this function returns FALSE and
+		// inserts a truncated (and terminated) string into the buffer.
+	int get(char *, int);
+
+		// Points argument to a buffer containing the string at the
+		// current read position in the stream or NULL.  The buffer is
+		// ONLY valid until the next function call on this stream.
+		// Caller should NOT free the buffer or modify its contents.
+	int get_string_ptr( char const *&s );
 
 	/*
 	**	Stream protocol
@@ -630,6 +640,9 @@ protected:
 	stream_coding	    _coding;
 
 	int allow_empty_message_flag;
+
+	char *decrypt_buf;
+	int decrypt_buf_len;
 };
 
 

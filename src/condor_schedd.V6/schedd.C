@@ -4624,7 +4624,7 @@ Scheduler::negotiate(int command, Stream* s)
 	char owner[200], *ownerptr = owner;
 	char *sig_attrs_from_cm = NULL;	
 	s->decode();
-	if (!s->code(ownerptr)) {
+	if (!s->get(ownerptr,sizeof(owner))) {
 		dprintf( D_ALWAYS, "Can't receive owner from manager\n" );
 		return (!(KEEP_STREAM));
 	}
