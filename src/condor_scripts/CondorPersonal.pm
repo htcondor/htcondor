@@ -798,7 +798,6 @@ sub TunePersonalCondor
 		}
 
 
-		print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST)\n";
 		print NEW "MASTER_ADDRESS_FILE = \$(LOG)/.master_address\n";
 		print NEW "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
 		print NEW "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
@@ -824,7 +823,6 @@ sub TunePersonalCondor
 			debug("COLLECTOR_HOST is \$(CONDOR_HOST)\n");
 		}
 
-		print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST)\n";
 		print NEW "CONDOR_HOST = $condorhost\n";
 		print NEW "START = TRUE\n";
 		print NEW "SCHEDD_INTERVAL = 5\n";
