@@ -101,6 +101,11 @@ static void validate_configuration(configuration *c)
                          CONF_FILE);
     }
 
+    if (is_id_list_empty(&c->valid_real_gids)) {
+        fatal_error_exit(1, "real-gid not set in configuration file %s",
+                         CONF_FILE);
+    }
+
     if (is_id_list_empty(&c->valid_user_uids)) {
         fatal_error_exit(1,
                          "valid-user-uids not set in configuration file %s",
