@@ -65,7 +65,7 @@ GROUP BY
   user,
   run_type 
 ORDER BY 
-  IF(user = '".CONDOR_USER."',0,1)
+  IF(user = '".CONDOR_USER."',0,1), runid desc
 ";
 
 $last_user = CONDOR_USER;
