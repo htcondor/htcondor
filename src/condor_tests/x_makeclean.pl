@@ -73,11 +73,11 @@ foreach $thing (@everything) {
 
 # now clean compiler directories
 chdir("g77");
-system("rm *.err *.out *.log");
+system("rm -f *.err *.out *.log");
 chdir("..");
 chdir("gcc");
-system("rm *.err *.out *.log");
+system("rm -f *.err *.out *.log");
 chdir("..");
 chdir("g++");
-system("rm *.err *.out *.log");
+system("rm -f *.err *.out *.log");
 chdir("..");
