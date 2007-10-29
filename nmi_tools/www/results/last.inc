@@ -16,8 +16,8 @@ function parseTimeStamp($ts) {
 # On failure it returns the empty string.
 function getLastGoodBuild($id, $debug) {
 # This section is configurable - add/remove branches as needed.
-  $branches['V6_6-branch'] = 1;
-  $branches['V6_7-branch'] = 1;
+  $branches['V6_8-branch'] = 1;
+  $branches['V6_9-trunk'] = 1;
 
   # echo "DEBUG: runid --> $id<br>\n";
   $query1 = "SELECT cvs_tag from Method_cvs WHERE runid=$id";
@@ -61,8 +61,8 @@ function getLastGoodBuild($id, $debug) {
   if ($debug) echo "DEBUG: branch --> '$branch'<br>\n";
   $present = $branches[$branch];
   if ($debug) echo "DEBUG: present -> $present.<br>\n";
-  if ($debug) echo "DEBUG: ", $branches['V6_6-branch'], "<br>\n";
-  if ($debug) echo "DEBUG: ", $branches['V6_7-branch'], "<br>\n";
+  if ($debug) echo "DEBUG: ", $branches['V6_8-branch'], "<br>\n";
+  if ($debug) echo "DEBUG: ", $branches['V6_9-trunk'], "<br>\n";
   
   if ($branches[$branch] != 1) return '';
   $year = $parts[2];
