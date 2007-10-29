@@ -24,8 +24,8 @@ echo "</P>";
 $query = "
 SELECT
   Task.name,
-  Task.start,
-  Task.finish,
+  convert_tz(Task.start, 'GMT', 'US/Central') as start,
+  convert_tz(Task.finish, 'GMT', 'US/Central') as finish,
   Task.result,
   Run.host,
   Run.gid,

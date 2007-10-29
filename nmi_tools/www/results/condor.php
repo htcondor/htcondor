@@ -47,7 +47,7 @@ SELECT
          (IF(LOCATE('trunk-',description),
             LOCATE('trunk-',description)+4,
             CHAR_LENGTH(description)))))) AS branch,
-  MAX(start) as start,
+  MAX(convert_tz(start, 'GMT', 'US/Central')) as start,
   run_type, 
   max(runid) as runid,
   user,

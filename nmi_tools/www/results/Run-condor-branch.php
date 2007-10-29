@@ -69,7 +69,7 @@
 # for each (branch, type) tuple
 
 $sql = "SELECT description,
-               start,
+               convert_tz(start, 'GMT', 'US/Central') as start,
                run_type, 
                runid,
                result
