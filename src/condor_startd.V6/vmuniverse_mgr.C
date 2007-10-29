@@ -423,30 +423,6 @@ VMUniverseMgr::init( void )
 		free(tmp);
 	}
 
-#if defined(WIN32) 
-	// TODO..
-	// Currently more than one VMware VM universe jobs can't run on Windows.
-	// It seems to be due to the problem of Windows pipes 
-	// but I don't know exact reason.
-	// Until this problem is solved, only one VMware VM universe job can run 
-	// on Windows.
-	// -jaeyoung 06/15/07
-
-	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
-		m_vm_max_num = 1;
-		
-		// For debugging...
-		tmp = param( "VM_WIN_MAX_NUMBER");
-		if( tmp ) {
-			int vmax = (int)strtol(tmp, (char **)NULL, 10);
-			if( vmax > 0 ) {
-				m_vm_max_num = vmax;
-			}
-			free(tmp);
-		}
-	}
-#endif
-
 	// now, we've got a path to a vmgahp server.  
 	// try to test it with given vmtype and gahp config file 
 	// and grab the output (whose format should be a classad type), 
