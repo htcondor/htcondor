@@ -118,12 +118,6 @@ static void validate_configuration(configuration *c)
                          CONF_FILE);
     }
 
-    if (!c->transferd_executable) {
-        fatal_error_exit(1,
-                         "transferd-executable not set in configuration file %s",
-                         CONF_FILE);
-    }
-
     if (!c->procd_executable) {
         fatal_error_exit(1,
                          "procd-executable not set in configuration file %s",
