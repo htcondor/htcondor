@@ -62,11 +62,12 @@ FILE *cmd_conf_stream = 0;
 const char *cmd_conf_stream_name = 0;
 
 typedef struct configuration {
-    id_range_list valid_real_uids;
-    id_range_list valid_real_gids;
+    id_range_list valid_caller_uids;
+    id_range_list valid_caller_gids;
 
     id_range_list valid_user_uids;
     id_range_list valid_user_gids;
+
     string_list valid_user_dirs;
 
     char *transferd_executable;
@@ -79,8 +80,8 @@ typedef struct configuration {
 
 static void init_configuration(configuration *c)
 {
-    init_id_range_list(&c->valid_real_uids);
-    init_id_range_list(&c->valid_real_gids);
+    init_id_range_list(&c->valid_caller_uids);
+    init_id_range_list(&c->valid_caller_gids);
 
     init_id_range_list(&c->valid_user_uids);
     init_id_range_list(&c->valid_user_gids);
@@ -96,13 +97,15 @@ static void init_configuration(configuration *c)
 
 static void validate_configuration(configuration *c)
 {
-    if (is_id_list_empty(&c->valid_real_uids)) {
-        fatal_error_exit(1, "real-uid not set in configuration file %s",
+    if (is_id_list_empty(&c->valid_caller_uids)) {
+        fatal_error_exit(1,
+                         "valid-caller-uids not set in configuration file %s",
                          CONF_FILE);
     }
 
-    if (is_id_list_empty(&c->valid_real_gids)) {
-        fatal_error_exit(1, "real-gid not set in configuration file %s",
+    if (is_id_list_empty(&c->valid_caller_gids)) {
+        fatal_error_exit(1,
+                         "valid-caller-gids not set in configuration file %s",
                          CONF_FILE);
     }
 
@@ -225,8 +228,8 @@ static void validate_transferd_params(transferd_params *c)
 }
 
 typedef enum config_key_enum {
-    REAL_UID,
-    REAL_GID,
+    VALID_CALLER_UIDS,
+    VALID_CALLER_GIDS,
     VALID_USER_UIDS,
     VALID_USER_GIDS,
     VALID_USER_DIRS,
@@ -258,8 +261,8 @@ typedef struct key_to_enum {
 } key_to_enum;
 
 key_to_enum key_to_enum_map[] = {
-    {REAL_UID, "real-uid"},
-    {REAL_GID, "real-gid"},
+    {VALID_CALLER_UIDS, "valid-caller-uids"},
+    {VALID_CALLER_GIDS, "valid-caller-gids"},
     {VALID_USER_UIDS, "valid-user-uids"},
     {VALID_USER_GIDS, "valid-user-gids"},
     {VALID_USER_DIRS, "valid-user-dirs"},
@@ -478,11 +481,11 @@ static int process_config_file(configuration *c, const char *filename)
     while (next_cf_value(&cf, &key, &value)) {
         config_key_enum e = key_name_to_enum(key);
         switch (e) {
-        case REAL_UID:
-            config_parse_uid_list(&c->valid_real_uids, key, value, &cf);
+        case VALID_CALLER_UIDS:
+            config_parse_uid_list(&c->valid_caller_uids, key, value, &cf);
             break;
-        case REAL_GID:
-            config_parse_gid_list(&c->valid_real_gids, key, value, &cf);
+        case VALID_CALLER_GIDS:
+            config_parse_gid_list(&c->valid_caller_gids, key, value, &cf);
             break;
         case VALID_USER_UIDS:
             config_parse_uid_list(&c->valid_user_uids, key, value, &cf);
@@ -717,19 +720,19 @@ static void init_safe_conf_uids(void)
 #endif
 }
 
-static void validate_real_ids(configuration *c)
+static void validate_caller_ids(configuration *c)
 {
-    uid_t real_uid = getuid();
-    gid_t real_gid = getgid();
+    uid_t caller_uid = getuid();
+    gid_t caller_gid = getgid();
 
-    if (!is_id_in_list(&c->valid_real_uids, real_uid)) {
-        fatal_error_exit(1, "invalid real uid (%lu)",
-                         (unsigned long) real_uid);
+    if (!is_id_in_list(&c->valid_caller_uids, caller_uid)) {
+        fatal_error_exit(1, "invalid caller uid (%lu)",
+                         (unsigned long) caller_uid);
     }
 
-    if (!is_id_in_list(&c->valid_real_gids, real_gid)) {
-        fatal_error_exit(1, "invalid real gid (%lu)",
-                         (unsigned long) real_gid);
+    if (!is_id_in_list(&c->valid_caller_gids, caller_gid)) {
+        fatal_error_exit(1, "invalid caller gid (%lu)",
+                         (unsigned long) caller_gid);
     }
 }
 
@@ -937,8 +940,8 @@ static void do_chown_dir(configuration *c)
                                      &c->valid_user_gids);
     if (r < 0) {
         r = safe_switch_effective_to_uid(uid,
-                                         &c->valid_real_uids,
-                                         &c->valid_real_gids);
+                                         &c->valid_caller_uids,
+                                         &c->valid_caller_gids);
     }
     if (r < 0) {
         fatal_error_exit(1, "error switching user to uid %lu",
@@ -1157,7 +1160,7 @@ int main(int argc, char **argv)
     safe_reset_environment();
     init_safe_conf_uids();
     process_config_file(&conf, CONF_FILE);
-    validate_real_ids(&conf);
+    validate_caller_ids(&conf);
     do_command(cmd, cmd_fd, &conf);
 
     return 0;
