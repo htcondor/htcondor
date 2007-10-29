@@ -65,10 +65,10 @@ typedef struct configuration {
     id_range_list valid_caller_uids;
     id_range_list valid_caller_gids;
 
-    id_range_list valid_user_uids;
-    id_range_list valid_user_gids;
+    id_range_list valid_target_uids;
+    id_range_list valid_target_gids;
 
-    string_list valid_user_dirs;
+    string_list valid_dirs;
 
     char *transferd_executable;
     char *procd_executable;
@@ -83,9 +83,9 @@ static void init_configuration(configuration *c)
     init_id_range_list(&c->valid_caller_uids);
     init_id_range_list(&c->valid_caller_gids);
 
-    init_id_range_list(&c->valid_user_uids);
-    init_id_range_list(&c->valid_user_gids);
-    init_string_list(&c->valid_user_dirs);
+    init_id_range_list(&c->valid_target_uids);
+    init_id_range_list(&c->valid_target_gids);
+    init_string_list(&c->valid_dirs);
 
     c->transferd_executable = 0;
     c->procd_executable = 0;
@@ -109,15 +109,15 @@ static void validate_configuration(configuration *c)
                          CONF_FILE);
     }
 
-    if (is_id_list_empty(&c->valid_user_uids)) {
+    if (is_id_list_empty(&c->valid_target_uids)) {
         fatal_error_exit(1,
-                         "valid-user-uids not set in configuration file %s",
+                         "valid-target-uids not set in configuration file %s",
                          CONF_FILE);
     }
 
-    if (is_id_list_empty(&c->valid_user_gids)) {
+    if (is_id_list_empty(&c->valid_target_gids)) {
         fatal_error_exit(1,
-                         "valid-user-gids not set in configuration file %s",
+                         "valid-target-gids not set in configuration file %s",
                          CONF_FILE);
     }
 
@@ -230,9 +230,9 @@ static void validate_transferd_params(transferd_params *c)
 typedef enum config_key_enum {
     VALID_CALLER_UIDS,
     VALID_CALLER_GIDS,
-    VALID_USER_UIDS,
-    VALID_USER_GIDS,
-    VALID_USER_DIRS,
+    VALID_TARGET_UIDS,
+    VALID_TARGET_GIDS,
+    VALID_DIRS,
     TRANSFERD_EXECUTABLE,
     PROCD_EXECUTABLE,
     VALID_USER_EXECUTABLES,
@@ -263,9 +263,9 @@ typedef struct key_to_enum {
 key_to_enum key_to_enum_map[] = {
     {VALID_CALLER_UIDS, "valid-caller-uids"},
     {VALID_CALLER_GIDS, "valid-caller-gids"},
-    {VALID_USER_UIDS, "valid-user-uids"},
-    {VALID_USER_GIDS, "valid-user-gids"},
-    {VALID_USER_DIRS, "valid-user-dirs"},
+    {VALID_TARGET_UIDS, "valid-target-uids"},
+    {VALID_TARGET_GIDS, "valid-target-gids"},
+    {VALID_DIRS, "valid-dirs"},
     {TRANSFERD_EXECUTABLE, "transferd-executable"},
     {PROCD_EXECUTABLE, "procd-executable"},
     {VALID_USER_EXECUTABLES, "valid-user-executables"},
@@ -487,14 +487,14 @@ static int process_config_file(configuration *c, const char *filename)
         case VALID_CALLER_GIDS:
             config_parse_gid_list(&c->valid_caller_gids, key, value, &cf);
             break;
-        case VALID_USER_UIDS:
-            config_parse_uid_list(&c->valid_user_uids, key, value, &cf);
+        case VALID_TARGET_UIDS:
+            config_parse_uid_list(&c->valid_target_uids, key, value, &cf);
             break;
-        case VALID_USER_GIDS:
-            config_parse_gid_list(&c->valid_user_gids, key, value, &cf);
+        case VALID_TARGET_GIDS:
+            config_parse_gid_list(&c->valid_target_gids, key, value, &cf);
             break;
-        case VALID_USER_DIRS:
-            config_parse_string_list(&c->valid_user_dirs, key, value, &cf);
+        case VALID_DIRS:
+            config_parse_string_list(&c->valid_dirs, key, value, &cf);
             break;
         case TRANSFERD_EXECUTABLE:
             config_parse_string(&c->transferd_executable, key, value, &cf);
@@ -758,30 +758,30 @@ static char *do_common_dir_cmd_tasks(configuration *c,
     dir_name = strrchr(dir_parent, '/');
     if (dir_name == NULL) {
         fatal_error_exit(1,
-                         "user directory without parent directory specified");
+                         "directory without parent directory specified");
     }
 
     *dir_name++ = '\0';
 
-    if (!is_string_in_list(&c->valid_user_dirs, dir_parent)) {
+    if (!is_string_in_list(&c->valid_dirs, dir_parent)) {
         fatal_error_exit(1,
-                         "user directory is not in list of valid user dirs");
+                         "directory is not in list of valid dirs");
     }
 
     r = safe_is_path_trusted(dir_parent, &conf_safe_uids, &conf_safe_gids);
     if (r < 0) {
         fatal_error_exit(1,
-                         "error in checking safety of user directory parent (%s)",
+                         "error in checking safety of directory parent (%s)",
                          dir_parent);
     } else if (r == PATH_UNTRUSTED) {
         fatal_error_exit(1,
-                         "unsafe permissions in user directory parent (%s)",
+                         "unsafe permissions in directory parent (%s)",
                          dir_parent);
     }
 
     r = chdir(dir_parent);
     if (r == -1) {
-        fatal_error_exit(1, "error chdir to user directory parent (%s)",
+        fatal_error_exit(1, "error chdir to directory parent (%s)",
                          dir_parent);
     }
 
@@ -792,7 +792,7 @@ static char *do_common_dir_cmd_tasks(configuration *c,
 
     dir_name = strdup(dir_name);
     if (dir_name == NULL) {
-        fatal_error_exit(1, "strdup of user dir name failed");
+        fatal_error_exit(1, "strdup of dir name failed");
     }
 
     free(dir_parent);
@@ -817,8 +817,8 @@ static void do_mkdir(configuration *c)
 
     uid = dir_cmd_conf.user_uid;
     r = safe_switch_effective_to_uid(uid,
-                                     &c->valid_user_uids,
-                                     &c->valid_user_gids);
+                                     &c->valid_target_uids,
+                                     &c->valid_target_gids);
     if (r < 0) {
         fatal_error_exit(1, "error switching user to uid %lu",
                          (unsigned long) uid);
@@ -885,8 +885,8 @@ static void do_rmdir(configuration *c)
 
     uid = dir_cmd_conf.user_uid;
     r = safe_switch_effective_to_uid(uid,
-                                     &c->valid_user_uids,
-                                     &c->valid_user_gids);
+                                     &c->valid_target_uids,
+                                     &c->valid_target_gids);
     if (r < 0) {
         fatal_error_exit(1, "error switching user to uid %lu",
                          (unsigned long) uid);
@@ -936,8 +936,8 @@ static void do_chown_dir(configuration *c)
 
     uid = dir_cmd_conf.user_uid;
     r = safe_switch_effective_to_uid(uid,
-                                     &c->valid_user_uids,
-                                     &c->valid_user_gids);
+                                     &c->valid_target_uids,
+                                     &c->valid_target_gids);
     if (r < 0) {
         r = safe_switch_effective_to_uid(uid,
                                          &c->valid_caller_uids,
@@ -1052,8 +1052,8 @@ static void do_start_transferd(configuration *c)
 
     r = safe_exec_as_user(td_conf.user_uid,
                           0,
-                          &c->valid_user_uids,
-                          &c->valid_user_gids,
+                          &c->valid_target_uids,
+                          &c->valid_target_gids,
                           args[0],
                           args,
                           environ,
@@ -1086,8 +1086,8 @@ static void do_exec_job(configuration *c)
 
     r = safe_exec_as_user(exec_conf.user_uid,
                           exec_conf.tracking_group,
-                          &c->valid_user_uids,
-                          &c->valid_user_gids,
+                          &c->valid_target_uids,
+                          &c->valid_target_gids,
                           exec_conf.exec_filename,
                           null_terminated_list_from_string_list(&exec_conf.
                                                                 exec_args),
