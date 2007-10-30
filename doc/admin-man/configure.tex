@@ -6506,9 +6506,23 @@ or a full path must be used in every case.
   required and relevant only when \MacroNI{VM\_NETWORKING} is \Expr{True}.
   Defined strings are
   \begin{verbatim}
-    bridge_dhcp
-    nat_dhcp
+    bridge
+    nat
+    nat, bridge
   \end{verbatim}
+
+\item[\Macro{VM\_NETWORKING\_DEFAULT\_TYPE}]
+  \label{param:VMNetworkingDefaultType}
+  Where multiple networking types are given in \MacroNI{VM\_NETWORKING\_TYPE},
+  this optional configuration variable identifies which to use.
+  Therefore, for 
+  \begin{verbatim}
+  VM_NETWORKING_TYPE = nat, bridge
+  \end{verbatim}
+  this variable may be defined as either \Expr{nat} or \Expr{bridge}.
+  Where multiple networking types are given in \MacroNI{VM\_NETWORKING\_TYPE},
+  and this variable is \emph{not} defined, a default of \Expr{nat}
+  is used.
 
 \end{description}
 
@@ -6542,9 +6556,18 @@ or a full path must be used in every case.
 
 \item[\Macro{VMWARE\_NETWORKING\_TYPE}]
   \label{param:VMwareNetworkingType}
-  A string that defaults to the value \verb@nat@,
+  A string that defaults to the value \Expr{nat},
   identifying the type of VMware networking used.
-  Defined types are \verb@nat@ or \verb@bridged@.
+  Defined types are \Expr{nat} or \Expr{bridged}.
+
+\item[\Macro{VMWARE\_NAT\_NETWORKING\_TYPE}]
+  \label{param:VMwareNatNetworkingType}
+  Description here.
+
+\item[\Macro{VMWARE\_BRIDGE\_NETWORKING\_TYPE}]
+  \label{param:VMwareBridgeNetworkingType}
+  Description here.
+
 \end{description}
 
 The following configuration variables are specific to the Xen
@@ -6582,8 +6605,8 @@ or a full path must be used in every case.
   The complete path and executable name of a Xen kernel to be utilized
   if the job's submission does not specify its own kernel image.
 
-\item[\Macro{XEN\_DEFAULT\_RAMDISK}]
-  \label{param:XenDefaultRAMDisk}
+\item[\Macro{XEN\_DEFAULT\_INITRD}]
+  \label{param:XenDefaultInitrd}
   The complete path and image file name for the initrd image,
   if used with the default kernel image.
 
@@ -6591,6 +6614,27 @@ or a full path must be used in every case.
   \label{param:XenBootloader}
   A required full path and executable for the Xen bootloader,
   if the kernel image includes a disk image.
+
+\item[\Macro{XEN\_CONTROLLER}]
+  \label{param:XenController}
+  A required variable that will be set to either
+  \Expr{xm} or \Expr{virsh},
+  specifying whether the Xen hypervisor is 
+  controlled by the \Prog{xm} or \Prog{virsh} program.
+  \Prog{xm} is part of the Xen distribution,
+  while \Prog{virsh} is part of the libvirt library.
+  These controllers both provide the same functionality 
+  with respect to the Xen hypervisor, but with different configurations.
+  The differences are: \Prog{xm}
+  requires the \MacroNI{XEN\_IMAGE\_IO\_TYPE} configuration variable
+  to be defined, nat and bridge networking must be configured
+  within Xen's \File{xend-config.sxp} file,
+  and networking parameters must be specified with
+  the \MacroNI{XEN\_VIF\_PARAMETER} configuration variable;
+  while, \Prog{virsh} uses the \MacroNI{XEN\_BRIDGE\_SCRIPT} 
+  configuration variable to set up a bridged network,
+  and does not need \MacroNI{XEN\_IMAGE\_IO\_TYPE} or
+  \MacroNI{XEN\_VIF\_PARAMETER} configuration variables.
 
 \item[\Macro{XEN\_VIF\_PARAMETER}]
   \label{param:XenVIFParameter}
@@ -6601,6 +6645,14 @@ or a full path must be used in every case.
   vif = ['']
   \end{verbatim}
 
+\item[\Macro{XEN\_NAT\_VIF\_PARAMETER}]
+  \label{param:XenNatVIFParameter}
+  Description here.
+
+\item[\Macro{XEN\_BRIDGE\_VIF\_PARAMETER}]
+  \label{param:XenBridgeVIFParameter}
+  Description here.
+
 \item[\Macro{XEN\_IMAGE\_IO\_TYPE}]
   \label{param:XenImageIOType}
   An optional string that defines a file I/O device.
@@ -6609,6 +6661,17 @@ or a full path must be used in every case.
   When not defined, the default value uses a loopback device:
   \begin{verbatim}
   XEN_IMAGE_IO_TYPE = file:
+  \end{verbatim}
+
+\item[\Macro{XEN\_BRIDGE\_SCRIPT}]
+  \label{param:XenBridgeScript}
+  A path, file name, and command-line arguments to specify a script
+  that will be run to set up a bridging network interface for guests.
+  The interface should provide direct access to the host system's LAN,
+  that is, not be NAT'd on the host.
+  An example:
+  \begin{verbatim}
+  XEN_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0
   \end{verbatim}
 
 % \item[\Macro{XEN\_VT\_KERNEL}]

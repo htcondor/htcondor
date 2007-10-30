@@ -82,17 +82,18 @@ Virtual machine networking is enabled with the command
   vm_networking = true
 \end{verbatim}
 And, when networking is enabled, a definition of
-\SubmitCmd{vm\_networking\_type} as \SubmitCmd{bridge\_dhcp}
-matches the job with a machine that is configured to use
+\SubmitCmd{vm\_networking\_type} as \SubmitCmd{bridge}
+matches the job only with a machine that is configured to use
 bridge networking.
 A definition of
-\SubmitCmd{vm\_networking\_type} as \SubmitCmd{nat\_dhcp}
-matches the job with a machine that is configured to use
+\SubmitCmd{vm\_networking\_type} as \SubmitCmd{nat}
+matches the job only with a machine that is configured to use
 NAT networking.
-A definition of
-\SubmitCmd{vm\_networking\_type} as \SubmitCmd{dhcp}
-matches with a machine
-that enables networking, and the choice of bridge or NAT networking
+When no definition of
+\SubmitCmd{vm\_networking\_type} is given,
+Condor may
+match the job with a machine that enables networking,
+and further, the choice of bridge or NAT networking
 is determined by the machine's configuration.
 
 A current limitation restricts the use of networking to
