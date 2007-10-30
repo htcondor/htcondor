@@ -2899,4 +2899,232 @@ the core file resides in the submit-side current working directory.
 
 \index{UIDs in Condor|)}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Privilege Separation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Section~\ref{sec:uids} discusses why under most circumstances, it is
+beneficial to run the Condor daemons as \Login{root}. In situations
+where multiple users are involved or where Condor is responsible for
+enforcing a machine owner's policy, running as \Login{root} is the 
+\emph{only} way for Condor to do its job correctly and securely.
+
+Unfortunately, this requirement of running Condor as \Login{root} is
+at odds with a well-established goal of security-conscious
+administrators: keeping the amount of software that runs with
+superuser privileges to a reasonable minimum. Condor's nature as a
+large distributed system that routinely communicates with potentially
+untrusted components over the network further aggravates this goal.
+
+The privilege separation (PrivSep) effort in Condor aims to minimize
+the amount of code that needs \Login{root}-level access while still
+giving Condor the tools it needs to work properly. Note that PrivSep
+is currently only available for execute side functionality, and not
+implemented on Windows.
+
+In the PrivSep model, all logic in Condor that requires superuser
+privilege is contained in a small component called the \emph{PrivSep
+Kernel}. The Condor daemons, executing using an unprivileged account,
+must explicitly request action from the PrivSep Kernel whenever
+\Login{root}-level operations are needed.
+
+To illustrate, imagine that an attacker has found an exploit in the
+\Condor{startd} that allows for execution of arbitrary code on that
+daemon's behalf. If the \Condor{startd} is running as \Login{root} on
+all execute machines in a Condor pool, the attacker can achieve full
+control over any machine where the exploit can be exercised.
+
+If the \Condor{startd} were instead deployed to run in ``PrivSep
+mode,'' the attacker could no longer take arbitrary action as
+\Login{root}, but would have access the PrivSep Kernel. By placing
+limits on what actions can performed via the PrivSep Kernel, however,
+the attacker's sphere of influence can be contained. Refer ahead to
+the ``PrivSep Kernel Interface'' section for a detailed description of
+the services that the PrivSep Kernel provides to Condor, and how it
+limits what \Login{root}-level actions are allowed. The following
+section describes how to enable PrivSep for an execute-side Condor
+installation.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{PrivSep Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The PrivSep Kernel is implemented as two programs:
+\Condor{root\_switchboard} and \Condor{procd}. Both are contained in
+the \File{sbin} directory of the Condor distribution. When Condor is
+running in PrivSep mode, these will be the only two programs that run
+with \Login{root} privilege.
+
+Each of these binaries must be accessible on the file system via a
+\emph{trusted path}. A trusted path ensures that no user (other than
+\Login{root}) can alter what binary it refers to. To ensure that the
+paths to these binaries are trusted, make sure that only
+\Login{root}-owned directories are used, and that the permissions on
+these directories deny write access to anyone but \Login{root}. The
+binaries themselves must also be owned by \Login{root} and writable by
+no one else. The \Condor{root\_switchboard} program additionally
+should be installed with the setuid bit set. The following command
+properly sets the permissions on the \Condor{root\_switchboard}
+binary:
+\begin{verbatim}
+chmod 4755 /opt/condor/release/sbin/condor_root_switchboard
+\end{verbatim}
+
+The PrivSep Kernel has a configuration file that must be located at
+\File{/etc/condor/privsep\_config}. The format of this file consists
+of lines with ``\Code{key = value}'' pairs. Lines with only whitespace
+or lines with ``\Code{\#}'' as the first non-whitespace character are
+ignored.
+
+Some configuration settings are interpreted as single values, while
+others are interpreted as lists. To populate a list setting with
+multiple values, use multiple configuration file lines with the same
+key. For example, the following configures the \Code{valid-dirs}
+setting as a list with two entries:
+\begin{verbatim}
+valid-dirs = /opt/condor/execute_1
+valid-dirs = /opt/condor/execute_2
+\end{verbatim}
+It is an error to have multiple lines with the same key for a setting
+that is not interpreted as a list.
+
+Some settings more specifically require a list of UIDs or GIDs, and
+these allow for a more specialized syntax. User and group IDs can be
+specified either numerically or textually. In addition, list entries
+can be given that specify a range of IDs using a ``\Code{-}''
+character to separate the minimum and maximum IDs included. The
+``\Code{*}'' character can be given on the right-hand side of such a
+range to indicate that the range extends to the maximum possible
+ID. Finally, multiple list entries may be given on a single
+configuration file line using the \Code{:} character as a
+delimiter. The following example shows how this specialized syntax can
+be used to build up a complex list of IDs.
+\begin{verbatim}
+valid-target-uids = nobody : nfsuser1 : nfsuser2
+valid-target-uids = condor_run_1 - condor_run_8
+valid-target-uids = 800 - *
+\end{verbatim}
+
+The settings used to configure the PrivSep Kernel are listed
+below. All settings are required.
+
+\begin{itemize}
+
+\item \Code{valid-caller-uids} and \Code{valid-caller-gids}. These
+specify users and groups that will be allowed to request action from
+the PrivSep Kernel. These typically will just be set to contain the
+UID and primary GID that the Condor daemons will run as.
+
+\item \Code{valid-target-uids} and \Code{valid-target-gids}. These
+specify the users and groups that Condor will be allowed to act on
+behalf of. These settings will need to include all users and groups
+that Condor jobs may use on the given execute machine.
+
+\item \Code{valid-dirs}. This specifies a list of directories that
+Condor will be allowed to manage for the use of temporary job
+files. Normally, this will only need to include Condor's
+\Macro{EXECUTE} directory.
+
+\item \Code{procd-executable}. A (trusted) full path to the
+\Condor{procd} executable must be given.
+
+\end{itemize}
+
+An example of a full \File{privsep\_config} file is given below. This
+file gives the \Login{condor} account access to the PrivSep
+Kernel. Condor's use of this execute machine will be restricted to a
+set of eight dedicated accounts along with the \Login{users}
+group. Condor's \MacroNI{EXECUTE} directory and the \Condor{procd}
+executable are also provided, as required.
+\begin{verbatim}
+valid-caller-uids = condor
+valid-caller-gids = condor
+valid-target-uids = condor_run_1 - condor_run_8
+valid-target-gids = users : condor_run_1 - condor_run_8
+valid-dirs = /opt/condor/local/execute
+procd-executable = /opt/condor/release/sbin/condor_procd
+\end{verbatim}
+
+Once the PrivSep Kernel is properly installed and configured, Condor's
+configuration must be updated to specify that PrivSep should be
+used. The \Macro{PRIVSEP\_ENABLED} parameter is a boolean flag that
+serves this purpose. In addition, Condor must be told where the
+\Condor{root\_switchboard} binary is located using the
+\Macro{PRIVSEP\_SWITCHBOARD} setting. The following example
+illustrates:
+\begin{verbatim}
+PRIVSEP_ENABLED = True
+PRIVSEP_SWITCHBOARD = $(SBIN)/condor_root_switchboard
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{PrivSep Kernel Interface}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section describes the \Login{root}-enabled operations that the
+PrivSep Kernel makes available to Condor. The PrivSep Kernel's
+interface is designed to provide only operations needed by Condor in
+order to function properly. Each operation is further restricted based
+on the PrivSep Kernel's configuration settings.
+
+The following list describes each action that can be performed via the
+PrivSep Kernel, along with the limitations enforced on how it may be
+used. The terms \emph{valid target users}, \emph{valid target groups},
+and \emph{valid directories} refer respectively to the settings for
+\Code{valid-target-uids}, \Code{valid-target-gids}, and
+\Code{valid-dirs} from the PrivSep Kernel's configuration.
+
+\begin{itemize}
+
+\item \emph{Make a directory as a user.} This operation simply creates
+an empty directory as a regular user. The user must be a valid target
+user, and the new directory's parent must be a valid directory.
+
+\item \emph{Change ownership of a directory tree.} This operation
+involves recursively changing ownership of all files and
+subdirectories contained in a given directory. The directory's parent
+must be a valid directory, and the new owner must either be a valid
+target user or the user invoking the PrivSep Kernel.
+
+\item \emph{Remove a directory tree.} This deletes a given directory,
+including everything contained within. The directory's parent must be
+a valid directory.
+
+\item \emph{Execute a program as a user.} Condor can invoke the
+PrivSep kernel to execute a program as a valid target user. The user's
+primary group and any supplemental groups that it is a member of must
+all be valid target groups. This operation may also include opening
+files for standard input, output, and error before executing the
+program.
+
+\end{itemize}
+
+After launching a program as a valid target user, the PrivSep Kernel
+allows Condor limited control over its execution. The following
+operations are supported on a progam started via the PrivSep Kernel:
+
+\begin{itemize}
+
+\item \emph{Get resource usage information.} This allows Condor to
+gather usage statistics such as CPU time and memory image size. This
+applies to the program's initial process and any of its descendents.
+
+\item \emph{Signal the program.} Condor may ask that signals be sent
+to the program's initial process as a notification mechanism.
+
+\item \emph{Suspend and resume the program.} These operations send
+\Code{SIGSTOP} or \Code{SIGCONT} signals to all processes that make up
+the program.
+
+\item \emph{Kill the process and all descendents.} Condor is allowed
+to terminate the execution of the program or cleanup any processes
+left behind when the program completes.
+
+\end{itemize}
+
+It is apparent that by sufficiently constraining the valid target
+accounts and valid directories that the PrivSep Kernel will allow
+access to, the ability of a compromised Condor daemon to do damage can
+be considerably reduced.
+
 \index{security! in Condor|)}
