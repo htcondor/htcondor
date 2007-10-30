@@ -99,6 +99,28 @@ TESTCLASS(job_flocking_to,core)
 TESTCLASS(job_flocking_to,quick)
 TESTCLASS(job_flocking_to,btdebug)
 
+/*
+**
+** Not in use till endurance testing done
+DESC(lib_sysapi,"Run SysApi Tests")
+RUN(lib_sysapi)
+TESTCLASS(lib_sysapi,core)
+TESTCLASS(lib_sysapi,quick)
+TESTCLASS(lib_sysapi,btdebug)
+
+DESC(lib_procapi,"Run ProcApi Tests")
+RUN(lib_procapi)
+TESTCLASS(lib_procapi,core)
+TESTCLASS(lib_procapi,quick)
+TESTCLASS(lib_procapi,btdebug)
+*/
+
+DESC(lib_unit_tests,"Run Unit Tests Tests")
+RUN(lib_unit_tests)
+TESTCLASS(lib_unit_tests,core)
+TESTCLASS(lib_unit_tests,quick)
+TESTCLASS(lib_unit_tests,btdebug)
+
 DESC(lib_classads,"Run ClassAd Tests")
 RUN(lib_classads)
 TESTCLASS(lib_classads,core)
@@ -148,6 +170,22 @@ TESTCLASS(lib_auth_protocol-negot-prt2,core)
 TESTCLASS(lib_auth_protocol-negot-prt2,quick)
 
 /* Turned off on Free BSD port GNATS 766 */
+
+/*
+**
+** Not in use till endurance testing done
+DESC(cmd_status_shows-any,"Condor_status -any works as expected")
+RUN(cmd_status_shows-any)
+TESTCLASS(cmd_status_shows-any,core)
+TESTCLASS(cmd_status_shows-any,quick)
+TESTCLASS(cmd_status_shows-any,btdebug)
+
+DESC(cmd_status_shows-submitters,"Condor_status -submitters works as expected")
+RUN(cmd_status_shows-submitters)
+TESTCLASS(cmd_status_shows-submitters,core)
+TESTCLASS(cmd_status_shows-submitters,quick)
+TESTCLASS(cmd_status_shows-submitters,btdebug)
+*/
 
 DESC(cmd_status_shows-negotiator,"Condor_status -negotiator works as expected")
 RUN(cmd_status_shows-negotiator)
