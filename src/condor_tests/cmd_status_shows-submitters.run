@@ -269,25 +269,39 @@ my %discoveries = {};
 my @expectations = ("Submitter", "Negotiator", "DaemonMaster", "Scheduler", "Machine");
 
 if(($numclaimed == 4) && ($done == 1)) {
-	# process one of each ad type and then compare with expected list
-	$cmd = "condor_status -submitters -format \"<%s:\" Name -format \"%s:\" Machine -format \"%d>\n\" RunningJobs";
-	#$cmd = "condor_status -submitters -l ";
-	print "Looking at -submitters($cmd)\n";
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-    if(!$cmdstatus)
-    {
-        print "Test failure due to Condor Tool Failure<$cmd>\n";
-        exit(1)
-    }
-	
-	# we know we have 2 jobs in each of the two pools
+# process one of each ad type and then compare with expected list
+	$nattempts = 5;
 	my $jobcount = 0;
-	foreach $line (@adarray) {
-		print "-submitters: $line\n";
-		if( $line =~ /^<(.*):(.*):(\d+)>$/ ) {
-			$jobcount = $jobcount + $3;
-			print "JobCount up to $jobcount.\n";
+	$count = 0;
+
+	while($count < $nattempts) {
+		$cmd = "condor_status -submitters -format \"<%s:\" Name -format \"%s:\" Machine -format \"%d>\n\" RunningJobs";
+		#$cmd = "condor_status -submitters -l ";
+		print "Looking at -submitters($cmd)\n";
+		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	    if(!$cmdstatus)
+	    {
+	        print "Test failure due to Condor Tool Failure<$cmd>\n";
+	        exit(1)
+	    }
+		
+		# we know we have 2 jobs in each of the two pools
+		$jobcount = 0;
+		foreach $line (@adarray) {
+			print "-submitters: $line\n";
+			if( $line =~ /^<(.*):(.*):(\d+)>$/ ) {
+				$jobcount = $jobcount + $3;
+				print "JobCount up to $jobcount.\n";
+			}
 		}
+
+		if($jobcount == 4) {
+			print "SUCCESS: Found 4 running jobs from -submittors\n";
+			last;
+		}
+
+		$count = $count + 1;
+		sleep($count * 2);
 	}
 
 	if($jobcount != 4) {
