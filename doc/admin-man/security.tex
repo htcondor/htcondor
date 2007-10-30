@@ -2900,7 +2900,7 @@ the core file resides in the submit-side current working directory.
 \index{UIDs in Condor|)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Privilege Separation}
+\subsection{\label{sec:PrivSep}Privilege Separation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Section~\ref{sec:uids} discusses why under most circumstances, it is
@@ -3056,6 +3056,11 @@ illustrates:
 PRIVSEP_ENABLED = True
 PRIVSEP_SWITCHBOARD = $(SBIN)/condor_root_switchboard
 \end{verbatim}
+
+Finally, note that while the \Condor{procd} is in general an optional
+component of Condor, it is required when PrivSep is in use. If
+\MacroNI{PRIVSEP\_ENABLED} is true, the \Condor{procd} will be used
+regardless of the \Macro{USE\_PROCD} setting.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{PrivSep Kernel Interface}

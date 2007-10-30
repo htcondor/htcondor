@@ -5475,6 +5475,57 @@ The following configuration macros affect negotiation for group users.
 % \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Procd-Config-File-Entries}\condor{procd}
+Configuration File Macros}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{description}
+
+\item[\Macro{USE\_PROCD}]\label{param:UseProcd} This boolean parameter
+is used to determine whether the \Condor{procd} will be used for
+managing process families. If the \Condor{procd} is not used, each
+daemon will run the process family tracking logic on its own. Use of
+the \Condor{procd} results in improved scalability becuase only one
+instance of this logic is required. The \Condor{procd} is required
+when using privilege separation (see Section~\ref{sec:PrivSep}) or
+group ID-based process tracking (see
+Section~\ref{sec:GroupTracking}). In either of these cases, the
+\MacroNI{USE\_PROCD} setting will be ignored and a \Condor{procd} will
+always be used. By default, the \Condor{master} will not use a
+\Condor{procd} but all other daemons that need process family tracking
+will.
+
+\item[\Macro{PROCD\_MAX\_SNAPSHOT\_INTERVAL}]\label{param:ProcdMaxSnapshotInterval}
+This setting determines the maximum time that the \Condor{procd} will
+wait between probes of the system for information about the process
+families it is tracking.
+
+\item[\Macro{PROCD\_LOG}]\label{param:ProcdLog} Specifies a log file
+for the ProcD to use. Note that by design, the \Condor{procd} does not
+include most of the other logic that is shared amongst the various
+Condor daemons. This is because the \Condor{procd} is a component of
+the PrivSep Kernel (see Section~\ref{sec:PrivSep} for more information
+regarding privilege separation). This means that the \Condor{procd}
+does not include the normal Condor logging subsystem, and thus things
+like multiple debug levels and log rotation are not
+supported. Therefore, \MacroNI{PROCD\_LOG} is not set by default and
+is only intended to debug problems should they arise. Note, however,
+that enabling \Dflag{PROCFAMILY} in the debug level for any other
+daemon will cause it to log all interactions with the \Condor{procd}.
+
+\item[\Macro{PROCD\_ADDRESS}]\label{param:ProcdAddress} This specifies
+the ``address'' that the \Condor{procd} will use to receive requests
+from other Condor daemons. On UNIX, this should point to a file system
+location that can be used for a named pipe. On Windows, named pipes
+are also used but they do not exist in the file system. The default
+setting therefore depends on the platform: \Code{\$(LOCK)/procd\_pipe}
+on UNIX and
+\Code{$\backslash$$\backslash$.$\backslash$pipe$\backslash$procd\_pipe}
+on Windows.
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Credd-Config-File-Entries}\condor{credd}
 Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
