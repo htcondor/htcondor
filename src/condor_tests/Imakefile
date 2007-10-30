@@ -171,15 +171,15 @@ TESTCLASS(lib_auth_protocol-negot-prt2,quick)
 
 /* Turned off on Free BSD port GNATS 766 */
 
-/*
-**
-** Not in use till endurance testing done
 DESC(cmd_status_shows-any,"Condor_status -any works as expected")
 RUN(cmd_status_shows-any)
 TESTCLASS(cmd_status_shows-any,core)
 TESTCLASS(cmd_status_shows-any,quick)
 TESTCLASS(cmd_status_shows-any,btdebug)
 
+/*
+**
+** Not in use till endurance testing done
 DESC(cmd_status_shows-submitters,"Condor_status -submitters works as expected")
 RUN(cmd_status_shows-submitters)
 TESTCLASS(cmd_status_shows-submitters,core)
