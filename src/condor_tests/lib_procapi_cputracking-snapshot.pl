@@ -44,8 +44,8 @@ $ExitSuccess = sub {
 	}
 	close(PIN);
 
-	if($counter != 11) {
-		die "expecting 11 data values and got $counter\n";
+	if($counter != 7) {
+		print "WARNING: expecting 7 data values and got $counter\n";
 	}
 
 	print "Total usage reported by children is  $total\n";
@@ -126,12 +126,12 @@ $ExitSuccess = sub {
 		$snapshot = $findx;
 	}
 
-	$low = $total - (3 * $snapshot);
+	$low = $total - (2 + $snapshot);
 	# so what range do we insist on for the test to pass???
 	if($low > $remcpu) {
 		die "We wanted $remcpu in the range of  $low to $total\n";
 	} else {
-		print "Good: Tasks totaled to $total subtract snapshot interval($snapshot)\n";
+		print "Good: Tasks totaled to $total subtract snapshot interval($snapshot + 2)\n";
 		print "This Reported $remcpu which is in range of $low to $total\n";
 		exit(0);
 	}
