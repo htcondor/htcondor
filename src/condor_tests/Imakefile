@@ -210,7 +210,7 @@ DEPS(lib_userlog,x_write_joblog.exe)
 TESTCLASS(lib_userlog,lib)
 TESTCLASS(lib_userlog,quick)
 
-#if defined(IS_I386_LINUX_RH9) || defined(IS_I386_LINUX_RH80) || defined(IS_I386_LINUX_RH72) || defined(IS_I386_LINUX_RHEL3) || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_IA64_LINUX_SLES81) || defined(IS_IA64_LINUX_RHEL3) 
+#if defined(IS_I386_LINUX_RH9) || defined(IS_I386_LINUX_RH80) || defined(IS_I386_LINUX_RH72) || defined(IS_I386_LINUX_RHEL3) || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_IA64_LINUX_RHEL3) 
 DESC(job_quill_basic,"Basic Quill Test")
 RUN(job_quill_basic)
 TESTCLASS(job_quill_basic,core)
@@ -899,14 +899,25 @@ TESTCLASS(job_core_bigenv_sched,quick)
    it for standard universe, since we really don't care about
    different compilers for this one... we just need to see how the
    starter/shadow behave when we drop a core file
+   Similarly we want the binary io test here too.
 */
-CBUILD($(CC),job_core_coredump,c)
 #if ! IS_CLIPPED
+CBUILD($(CC),job_core_coredump,c)
 DESC(job_core_coredump_std,"Do we handle core files made by standard jobs?")
 DEPS(job_core_coredump_std,job_core_coredump.cndr.exe)
 RUN(job_core_coredump_std)
 TESTCLASS(job_core_coredump_std,framework)
 TESTCLASS(job_core_coredump_std,quick)
+
+/* ready the binary io test
+CBUILD($(CC),job_rsc_binary-io_std,c)
+DESC(job_rsc_binary-io_std,"Do we handle binary io in standard jobs?")
+DEPS(job_rsc_binary-io_std,job_rsc_binary-io_std.cndr.exe)
+RUN(job_rsc_binary-io_std)
+TESTCLASS(job_rsc_binary-io_std,framework)
+TESTCLASS(job_rsc_binary-io_std,quick)
+TESTCLASS(job_rsc_binary-io_std,btdebug)
+*/
 #endif /* ! IS_CLIPPED */
 /* This test fails constantly and is off for now
 **DESC(job_core_coredump_van,"Do we handle core files made by vanilla jobs?")
