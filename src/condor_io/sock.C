@@ -1263,6 +1263,7 @@ int Sock::timeout(int sec)
 	}
 
 	if (_timeout == 0) {
+		// Put socket into blocking mode
 #ifdef WIN32
 		unsigned long mode = 0;	// reset blocking mode
 		if (ioctlsocket(_sock, FIONBIO, &mode) < 0)
@@ -1276,18 +1277,22 @@ int Sock::timeout(int sec)
 			return -1;
 #endif
 	} else {
+		// Put socket into non-blocking mode.
+		// However, we never want to put a UDP socket into non-blocking mode.		
+		if ( type() != safe_sock ) {	// only if socket is not UDP...
 #ifdef WIN32
-		unsigned long mode = 1;	// nonblocking mode
-		if (ioctlsocket(_sock, FIONBIO, &mode) < 0)
-			return -1;
+			unsigned long mode = 1;	// nonblocking mode
+			if (ioctlsocket(_sock, FIONBIO, &mode) < 0)
+				return -1;
 #else
-		int fcntl_flags;
-		if ( (fcntl_flags=fcntl(_sock, F_GETFL)) < 0 )
-			return -1;
-		fcntl_flags |= O_NONBLOCK;	// set nonblocking mode
-		if ( fcntl(_sock,F_SETFL,fcntl_flags) == -1 )
-			return -1;
+			int fcntl_flags;
+			if ( (fcntl_flags=fcntl(_sock, F_GETFL)) < 0 )
+				return -1;
+			fcntl_flags |= O_NONBLOCK;	// set nonblocking mode
+			if ( fcntl(_sock,F_SETFL,fcntl_flags) == -1 )
+				return -1;
 #endif
+		}
 	}
 
 	return t;
