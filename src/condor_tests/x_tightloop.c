@@ -18,6 +18,8 @@ struct rusage myrusage;
 
 FILE* OUT = NULL;
 char *output;
+int fastexit = 0;
+
 
 void
 catch_sigalrm( int sig )
@@ -41,9 +43,11 @@ catch_sigalrm( int sig )
 		fprintf(stderr, "hmmm error writing file: %s\n",strerror(errno));
 	}
 	close(fd);
+	if(fastexit == 0){
+		sleep(15);
+	}
 	exit( 0 );
 }
-
 
 main(int argc, char ** argv)
 {
@@ -53,7 +57,7 @@ main(int argc, char ** argv)
 
 	signal( SIGALRM, catch_sigalrm );
 
-	if(argc != 3) {
+	if(argc < 3) {
 		printf("Usage: %s \n",argv[0]);
 		exit(1);
 	} 
@@ -62,6 +66,11 @@ main(int argc, char ** argv)
 	printf("sleep = %s log = %s\n",argv[1], argv[2]);
 	*/
 	
+	if(argc == 4){
+		printf("setting no wait\n");
+		fastexit = argv[3];
+	}
+
 	output = argv[2];
 
 	alarm((unsigned int)atoi(argv[1]));
