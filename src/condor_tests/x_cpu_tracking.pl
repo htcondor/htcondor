@@ -11,6 +11,8 @@ my $opsys = $ARGV[0];
 my $sleeptime = $ARGV[1];
 my $testname = $ARGV[2];
 
+my $shortsleep = $sleeptime - 60;
+
 my $LogFile = $testname . ".data.log";
 system("rm -f $LogFile");
 system("touch $LogFile");
@@ -27,14 +29,10 @@ my $innerpid = 0;
 
 #my $childcmd = "/usr/bin/strace -ostrace$$ ./x_tightloop.exe $sleeptime $LogFile\n";
 my $childcmd = "./x_tightloop.exe $sleeptime $LogFile\n";
+my $shortchildcmd = "./x_tightloop.exe $shortsleep $LogFile 1\n";
+
 system("rm -rf $testname.data.kids");
 
-my $level1 = 1;
-my $level2 = 2;	# run this many tasks
-my $level3 = 4;	# run this many tasks
-
-# Times collected are ($level2 * $level3) + $level2 + $level1
-# or currently 11
 
 # spin out three levels of tasks each of which
 # runs the tightloop code.
@@ -49,15 +47,15 @@ if($toppid == 0) {
 
 		$innerpid = fork();
 		if ($innerpid == 0) {
-			#spin
+			spin
 			system("$childcmd");
 			exit(0);
 		}
 
 		$innerpid = fork();
 		if ($innerpid == 0) {
-			#spin
-			system("$childcmd");
+			spin
+			system("$shortchildcmd");
 			exit(0);
 		}
 
@@ -86,7 +84,7 @@ if($toppid == 0) {
 		$innerpid = fork();
 		if ($innerpid == 0) {
 			#spin
-			system("$childcmd");
+			system("$shortchildcmd");
 			exit(0);
 		}
 
@@ -102,7 +100,7 @@ if($toppid == 0) {
 	} 
 
 	#spin
-	system("$childcmd");
+	system("$shortchildcmd");
 
 
 	# clean up the kids
@@ -120,7 +118,7 @@ while( $child = wait() ) {
 	last if $child == -1;
 }
 
-system("date");
+#system("date");
 
 exit 0;
 
