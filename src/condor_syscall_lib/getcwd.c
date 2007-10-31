@@ -51,6 +51,13 @@ getwd( char *path )
 	} else {
 		char *p = NULL;
 		REMOTE_CONDOR_getwd( &p );
+			/* We do not know how big the supplied buffer is.  If
+			   we assume it is only _POSIX_PATH_MAX, this could cause
+			   failure when, in fact, more space is needed and more
+			   space has been provided.  Therefore, the correct
+			   behavior is to assume the caller has provided enough space.
+			   Here goes nothing ...
+			*/
 		strcpy( path, p );
 		free( p );
 		return path;
