@@ -1513,18 +1513,29 @@ CStarter::getMySlotNumber( void )
 						 // interpret that.  
 			
 	if ( logappend ) {
+			// We currently use the extension of the starter log file
+			// name to determine which slot we are.  Strange.
+		char const *log_basename = condor_basename(logappend);
+		MyString prefix;
 
-		// this could break if the user has ".slot" in the 
-		// path to the starterlog, but considering it just looked
-		// for '.' until now, I think this assumption is safe-enough.
+		char* resource_prefix = param("STARTD_RESOURCE_PREFIX");
+		if( resource_prefix ) {
+			prefix.sprintf(".%s",resource_prefix);
+			free( resource_prefix );
+		}
+		else {
+			prefix = ".slot";
+		}
 
-		tmp = strstr(logappend, ".slot");
+		tmp = strstr(log_basename, prefix.Value());
 		if ( tmp ) {				
-			if ( sscanf(tmp, ".slot%d", &slot_number) < 1 ) {
-				// if we couldn't parse it, set it to 1.
+			prefix += "%d";
+			if ( sscanf(tmp, prefix.Value(), &slot_number) < 1 ) {
+				// if we couldn't parse it, leave it at 0.
 				slot_number = 0;
 			}
 		} 
+
 		free(logappend);
 	}
 
