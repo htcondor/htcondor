@@ -123,6 +123,7 @@ file_table					return grab( FILE_TABLE );
 in					return grab( IN );
 out					return grab( OUT );
 alloc				return grab( ALLOC );
+null_alloc				return grab( NULL_ALLOC );
 return				return grab( RETURN );
 extract				return grab( EXTRACT );
 dl_extract			return grab( DL_EXTRACT );

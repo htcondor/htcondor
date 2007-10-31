@@ -223,7 +223,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 		dprintf(D_SYSCALLS,"Getting mapping for file %s\n",path);
 
-		result = REMOTE_CONDOR_get_file_info_new(path,url);
+		result = REMOTE_CONDOR_get_file_info_new(path,url,sizeof(url));
 		if(result==0) {
 			dprintf(D_SYSCALLS,"Directed to use url %s\n",url);
 			if(!strncmp(url,"remote:",7)) {
@@ -327,7 +327,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"lookup %s",path)==1) {
 
-		result = REMOTE_CONDOR_get_file_info_new(path,url);
+		result = REMOTE_CONDOR_get_file_info_new(path,url,sizeof(url));
 		if(result==0) {
 			dprintf(D_SYSCALLS,"Filename %s maps to url %s\n",path,url);
 			sprintf(line,"%u",(unsigned int)strlen(url));

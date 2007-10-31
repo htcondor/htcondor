@@ -57,8 +57,10 @@ int _condor_get_unmapped_fd( int fd );
 /** Return true if this virtual fd refers to a local file. */
 int _condor_is_fd_local( int user_fd );
 
-/** Return true if this file should be accessed locally */
-int _condor_is_file_name_local( const char *name, char *local_name );
+/** Return true if this file should be accessed locally 
+ *  Caller should free local_name when done with it.
+ */
+int _condor_is_file_name_local( const char *name, char **local_name );
 
 /** Just before the program is about to exit, perform any necessary cleanup such as buffer flushing, data reporting, etc. */
 void _condor_file_table_cleanup();

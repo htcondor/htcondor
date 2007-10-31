@@ -104,16 +104,16 @@ extern int EventSigs[];
 int UserProc::proc_index = 1;
 
 /* These are the remote system calls we use in this file */
-extern "C" int REMOTE_CONDOR_get_a_out_name(char *path);
-extern "C" int REMOTE_CONDOR_getwd(char *path_name);
+extern "C" int REMOTE_CONDOR_get_a_out_name(char *&path);
+extern "C" int REMOTE_CONDOR_getwd(char *&path_name);
 extern "C" int REMOTE_CONDOR_free_fs_blocks(char *pathname);
-extern "C" int REMOTE_CONDOR_get_std_file_info(int fd, char *logical_name);
+extern "C" int REMOTE_CONDOR_get_std_file_info(int fd, char *&logical_name);
 extern "C" int REMOTE_CONDOR_get_file_info_new(char *logical_name,
-	char *actual_url);
-extern "C" int REMOTE_CONDOR_std_file_info(int fd, char *logical_name,
+	char *&actual_url);
+extern "C" int REMOTE_CONDOR_std_file_info(int fd, char *&logical_name,
 	int *pipe_fd);
 extern "C" int REMOTE_CONDOR_report_error(char *msg);
-extern "C" int REMOTE_CONDOR_get_iwd(char *path);
+extern "C" int REMOTE_CONDOR_get_iwd(char *&path);
 
 #ifndef MATCH
 #define MATCH 0	// for strcmp
@@ -131,6 +131,7 @@ UserProc::~UserProc()
 	if ( core_name ) {
 		delete [] core_name;
 	}
+	free( m_a_out );
 }
 
 
@@ -215,15 +216,15 @@ UserProc::display()
 char *
 UserProc::expand_exec_name( int &on_this_host )
 {
-	static char answer[ _POSIX_PATH_MAX ];
 	char	*host_part;
 	char	*path_part;
 	char	*tmp;
-	char	a_out[ _POSIX_PATH_MAX ];
+	char	*a_out;
 	int		status;
 
+	a_out = NULL;
 	status = REMOTE_CONDOR_get_a_out_name( a_out );
-	if( status < 0 ) {
+	if( status < 0 || a_out == NULL ) {
 		EXCEPT( "Can't get name of a.out file" );
 	}
 	if( strchr(a_out,':') ) {		// form is <hostname>:<path>
@@ -255,12 +256,13 @@ UserProc::expand_exec_name( int &on_this_host )
 
 		// expand macros in the pathname part
 	tmp = macro_expand( path_part );
-	strcpy( answer, tmp );
+	free( m_a_out );
+	m_a_out = strdup( tmp );
 	FREE( tmp );
 			
 
 	if( on_this_host ) {
-		if( access(answer,X_OK) == 0 ) {
+		if( access(m_a_out,X_OK) == 0 ) {
 			dprintf( D_ALWAYS, "Executable is located on this host\n" );
 		} else {
 			dprintf( D_FAILURE|D_ALWAYS,
@@ -271,8 +273,8 @@ UserProc::expand_exec_name( int &on_this_host )
 	} else {
 		dprintf( D_ALWAYS, "Executable is located on submitting host\n" );
 	}
-	dprintf( D_ALWAYS, "Expanded executable name is \"%s\"\n", answer );
-	return answer;
+	dprintf( D_ALWAYS, "Expanded executable name is \"%s\"\n", m_a_out );
+	return m_a_out;
 }
 
 /*
@@ -1131,8 +1133,8 @@ void
 UserProc::store_core()
 {
 	int		core_size;
-	char	virtual_working_dir[ _POSIX_PATH_MAX ];
-	char	new_name[ _POSIX_PATH_MAX ];
+	char	*virtual_working_dir = NULL;
+	MyString new_name;
 	int		free_disk;
 	priv_state	priv;
 
@@ -1173,16 +1175,17 @@ UserProc::store_core()
 																free_disk );
 
 	if( free_disk > core_size ) {
-		sprintf( new_name, "%s/core.%d.%d", virtual_working_dir, cluster, proc);
-		dprintf( D_ALWAYS, "Transferring core file to \"%s\"\n", new_name );
+		new_name.sprintf( "%s/core.%d.%d", virtual_working_dir, cluster, proc);
+		dprintf( D_ALWAYS, "Transferring core file to \"%s\"\n", new_name.Value() );
 		priv = set_root_priv();
-		send_a_file( core_name, new_name, REGULAR_FILE_MODE );
+		send_a_file( core_name, (char *)new_name.Value(), REGULAR_FILE_MODE );
 		set_priv(priv);
 		core_transferred = TRUE;
 	} else {
 		dprintf( D_ALWAYS, "*NOT* Transferring core file\n" );
 		core_transferred = FALSE;
 	}
+	free( virtual_working_dir );
 }
 
 void
@@ -1285,9 +1288,8 @@ pre_open( int, int, int ) { return 0; }
 void
 open_std_file( int fd )
 {
-	char	logical_name[ _POSIX_PATH_MAX ];
-	char	physical_name[ _POSIX_PATH_MAX ];
-	char	buf[ _POSIX_PATH_MAX + 50 ];
+	char	*logical_name = NULL;
+	char	*physical_name = NULL;
 	char	*file_name;
 	int	flags;
 	int	success;
@@ -1307,6 +1309,7 @@ open_std_file( int fd )
 		if(success<0) {
 			EXCEPT("Couldn't get standard file info!");
 		}
+		physical_name = (char *)malloc(strlen(logical_name)+7);
 		sprintf(physical_name,"local:%s",logical_name);
 	}
 
@@ -1344,20 +1347,24 @@ open_std_file( int fd )
 	}
 
 	if(real_fd<0) {
-		sprintf(buf,"Can't open \"%s\": %s", file_name,strerror(errno));
-		dprintf(D_ALWAYS,buf);
-		REMOTE_CONDOR_report_error(buf);
+		MyString err;
+		err.sprintf("Can't open \"%s\": %s", file_name,strerror(errno));
+		dprintf(D_ALWAYS,"%s\n",err.Value());
+		REMOTE_CONDOR_report_error((char *)err.Value());
 		exit( 4 );
 	} else {
 		if( real_fd != fd ) {
 			dup2( real_fd, fd );
 		}
 	}
+	free( logical_name );
+	free( physical_name );
 }
 
 UserProc::UserProc( STARTUP_INFO &s ) :
 	cluster( s.cluster ),
 	proc( s.proc ),
+	m_a_out( NULL ),
 	core_name( NULL ),
 	uid( s.uid ),
 	gid( s.gid ),
@@ -1466,8 +1473,7 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 void
 set_iwd()
 {
-	char	iwd[ _POSIX_PATH_MAX ];
-	char	buf[ _POSIX_PATH_MAX + 50 ];
+	char	*iwd = NULL;
 
 	if( REMOTE_CONDOR_get_iwd(iwd) < 0 ) {
 		REMOTE_CONDOR_report_error("Can't determine initial working directory");
@@ -1488,11 +1494,13 @@ set_iwd()
 			EXCEPT("Connection timed out for 30 minutes on chdir(%s)", iwd);
 		}
 			
-		sprintf( buf, "Can't open working directory \"%s\": %s", iwd,
+		MyString err;
+		err.sprintf( "Can't open working directory \"%s\": %s", iwd,
 			    strerror(errno) );
-		REMOTE_CONDOR_report_error( buf );
+		REMOTE_CONDOR_report_error( (char *)err.Value() );
 		exit( 4 );
 	}
+	free( iwd );
 }
 
 extern "C"	int MappingFileDescriptors();

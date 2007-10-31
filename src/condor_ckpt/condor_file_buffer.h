@@ -63,7 +63,7 @@ public:
 	virtual int	is_seekable();
 
 	virtual int	get_size();
-	virtual char	*get_url();
+	virtual char const	*get_url();
 
 	virtual int get_unmapped_fd();
 	virtual int is_file_local();
@@ -75,7 +75,7 @@ private:
 	void clean( CondorChunk *c );
 
 	// The url of this file
-	char url[_POSIX_PATH_MAX];
+	char *url;
 
 	// The raw file being buffered
 	CondorFile *original;

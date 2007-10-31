@@ -32,19 +32,22 @@ CondorFileCompress::CondorFileCompress( CondorFile *o )
 	poffset = 0;
 	voffset = 0;
 	crc = 0;
+	url = NULL;
 }
 
 CondorFileCompress::~CondorFileCompress()
 {
 	delete original;
+	free( url );
 }
 
 int CondorFileCompress::open( const char *url_in, int flags, int mode )
 {
-	char junk[_POSIX_PATH_MAX];
-	char sub_url[_POSIX_PATH_MAX];
+	char *junk = (char *)malloc(strlen(url_in)+1);
+	char *sub_url = (char *)malloc(strlen(url_in)+1);
 
-	strcpy(url,url_in);
+	free( url );
+	url = strdup(url_in);
 
 	/* linux glibc 2.1 and presumeably 2.0 had a bug where the range didn't
 		work with 8bit numbers */
@@ -53,8 +56,11 @@ int CondorFileCompress::open( const char *url_in, int flags, int mode )
 	#else
 	sscanf( url, "%[^:]:%[\x1-\xFF]", junk, sub_url );
 	#endif
+	free( junk );
 
-	return original->open( sub_url, flags, mode );
+	int result = original->open( sub_url, flags, mode );
+	free( sub_url );
+	return result;
 }
 
 int CondorFileCompress::close()
@@ -500,7 +506,7 @@ int CondorFileCompress::get_size()
 	return -1;
 }
 
-char * CondorFileCompress::get_url()
+char const * CondorFileCompress::get_url()
 {
 	return original->get_url();
 }

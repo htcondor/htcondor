@@ -82,6 +82,66 @@ void filename_url_parse( char *input, char *method, char *server, int *port, cha
 	strncpy(path,p,_POSIX_PATH_MAX);
 }
 
+void filename_url_parse_malloc( char const *input, char **method, char **server, int *port, char **path )
+{
+	char const *p;
+	char const *q;
+
+	*method = *server = *path = 0;
+	*port = -1;
+
+	/* Find a colon and record the method proceeding it */
+
+	p = strchr(input,':');
+	if(p) {
+		*method = (char *)malloc(p-input+1);
+		strncpy(*method,input,p-input);
+		(*method)[p-input] = '\0';
+		p++;
+	} else {
+		p = input;
+	}
+
+	/* Now p points to the first character following the colon */
+
+	if( (p[0]=='/') && (p[1]=='/') ) {
+
+		/* This is a server name, skip the slashes */
+		p++; p++;
+
+		/* Find the end of the server name */
+		q = strchr(p,'/');
+
+		if(q) {
+			/* If there is an end, copy up to that. */
+			*server = (char *)malloc(q-p+1);
+			strncpy(*server,p,q-p);
+			(*server)[q-p] = '\0';
+			p = q++;
+		} else {
+		        /* If there is no end, copy all of it. */
+			*server = strdup(p);
+			p = 0;
+		}
+
+		/* Now, reconsider the server name for a port number. */
+		q = strchr(*server,':');
+
+		if(q) {
+			/* If there is one, delimit the server name and scan */
+			(*server)[q-*server] = '\0';
+			q++;
+			*port = atoi(q);
+		}
+	}
+
+	/* Now, p points to the beginning of the filename, or null */
+
+	if( (!p) || (!*p) ) return;
+
+	*path = strdup(p);
+}
+
 /* Copy in to out, removing whitespace. */
 
 static void eat_space( const char *in, char *out )

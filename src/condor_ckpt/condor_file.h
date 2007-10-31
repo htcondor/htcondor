@@ -82,7 +82,7 @@ public:
 	virtual int	is_seekable()=0;
 
 	virtual int	get_size()=0;
-	virtual char	*get_url()=0;
+	virtual char const	*get_url()=0;
 
 	virtual int get_unmapped_fd()=0;
 	virtual int is_file_local()=0;

@@ -7,13 +7,17 @@
 	// because it sends Class Ads, and we do not want to force users to
 	// link their STANDARD universe jobs with the classad library. -Todd 12/97
 int
-REMOTE_CONDOR_work_request(ClassAd *ad, char *a_out, char *targ, char *orig,
+REMOTE_CONDOR_work_request(ClassAd *ad, char *&a_out, char *&targ, char *&orig,
 	condor_signal_t *kill_sig)
 {
 	int scm;
 	int rval;
 	condor_errno_t terrno;
 	sigset_t    omask;
+
+	assert( a_out == NULL );
+	assert( targ == NULL );
+	assert( orig == NULL );
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	omask = _condor_signals_disable();

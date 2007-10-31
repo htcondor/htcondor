@@ -62,7 +62,7 @@ public:
 	virtual int	is_seekable();
 
 	virtual int	get_size();
-	virtual char	*get_url();
+	virtual char const	*get_url();
 
 	virtual int get_unmapped_fd();
 	virtual int is_file_local();
@@ -83,7 +83,7 @@ private:
 	void	read_string();
 
 	// The URL of this file
-	char url[_POSIX_PATH_MAX];
+	char *url;
 
 	// Compressed data buffer
 	char buffer[COMPRESS_BUFFER_SIZE];

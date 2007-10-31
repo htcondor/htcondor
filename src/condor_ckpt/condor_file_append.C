@@ -28,20 +28,22 @@
 CondorFileAppend::CondorFileAppend( CondorFile *o )
 {
 	original = o;
-	url[0] = 0;
+	url = NULL;
 }
 
 CondorFileAppend::~CondorFileAppend()
 {
 	delete original;
+	free( url );
 }
 
 int CondorFileAppend::open( const char *u, int flags, int mode )
 {
-	char junk[_POSIX_PATH_MAX];
-	char sub_url[_POSIX_PATH_MAX];
+	char *junk = (char *)malloc(strlen(u)+1);
+	char *sub_url = (char *)malloc(strlen(u)+1);
 
-	strcpy(url,u);
+	free( url );
+	url = strdup(u);
 
 	/* linux glibc 2.1 and presumeably 2.0 had a bug where the range didn't 
 		work with 8bit numbers */
@@ -50,8 +52,11 @@ int CondorFileAppend::open( const char *u, int flags, int mode )
 	#else
 	sscanf(url,"%[^:]:%[\x1-\xFF]",junk,sub_url);
 	#endif
+	free( junk );
 
-	return original->open(sub_url,flags|O_APPEND,mode);
+	int result = original->open(sub_url,flags|O_APPEND,mode);
+	free( sub_url );
+	return result;
 }
 
 int CondorFileAppend::close()
@@ -119,9 +124,9 @@ int CondorFileAppend::get_size()
 	return original->get_size();
 }
 
-char *CondorFileAppend::get_url()
+char const *CondorFileAppend::get_url()
 {
-	return url;
+	return url ? url : "";
 }
 
 int CondorFileAppend::get_unmapped_fd()

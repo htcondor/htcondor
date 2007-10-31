@@ -35,21 +35,27 @@ static char buffer[TRANSFER_BLOCK_SIZE];
 CondorFileAgent::CondorFileAgent( CondorFile *file )
 {
 	original = file;
+	url = NULL;
+	local_url = NULL;
 }
 
 CondorFileAgent::~CondorFileAgent()
 {
 	delete original;
+	free( url );
+	free( local_url );
 }
 
 int CondorFileAgent::open( const char *url_in, int flags, int mode )
 {
 	int pos=0, chunk=0, result=0;
 	int local_flags;
-	char junk[_POSIX_PATH_MAX];
-	char sub_url[_POSIX_PATH_MAX];
+	char *junk = (char *)malloc(strlen(url_in)+1);
+	char *sub_url = (char *)malloc(strlen(url_in)+1);
+	char local_filename[_POSIX_PATH_MAX];
 
-	strcpy( url, url_in );
+	free( url );
+	url = strdup( url_in );
 
 	/* linux glibc 2.1 and presumeably 2.0 had a bug where the range didn't 
 		work with 8bit numbers */
@@ -58,7 +64,7 @@ int CondorFileAgent::open( const char *url_in, int flags, int mode )
 	#else
 	sscanf( url, "%[^:]:%[\x1-\xFF]",junk,sub_url );
 	#endif
-
+	free( junk );
 
 	// First, fudge the flags.  Even if the file is opened
 	// write-only, we must open it read/write to get the 
@@ -88,6 +94,7 @@ int CondorFileAgent::open( const char *url_in, int flags, int mode )
 	// Open the original file.
 
 	result = original->open(sub_url,flags,mode);
+	free( sub_url );
 	if(result<0) return -1;
 
 	// Choose where to store the file.
@@ -99,6 +106,8 @@ int CondorFileAgent::open( const char *url_in, int flags, int mode )
 	tmpnam(local_filename);
 	SetSyscalls(scm);
 
+	free( local_url );
+	local_url = (char *)malloc(strlen(local_filename) + 7);
 	sprintf(local_url,"local:%s",local_filename);
 
 	// Open the local copy, with a private mode.
@@ -266,9 +275,9 @@ int CondorFileAgent::get_size()
 	return local_copy->get_size();
 }
 
-char * CondorFileAgent::get_url()
+char const * CondorFileAgent::get_url()
 {
-	return url;
+	return url ? url : "";
 }
 
 int CondorFileAgent::get_unmapped_fd()

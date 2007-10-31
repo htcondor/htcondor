@@ -239,7 +239,7 @@ public:
 	int	is_fd_local( int fd );
 
 	/** Returns true if this file name should be accessed locally */
-	int	is_file_name_local( const char *name, char *local_name );
+	int	is_file_name_local( const char *name, char **local_name );
 	
 private:
 
@@ -251,13 +251,14 @@ private:
 	void	check_safety( CondorFilePointer *f );
 	int	find_url( char *url );
 	int	find_logical_name( const char *logical_name );
-	void	complete_path( const char *short_path, char *long_path );
-	void	lookup_url( char *logical_name, char *url );
+	void	complete_path( const char *short_path, char **long_path );
+	void	lookup_url( char *logical_name, char **url );
 	void	replace_file( CondorFile *o, CondorFile *n );
 
-	CondorFile * create_url_chain( char *url );
-	CondorFile * open_url( char *url, int flags, int mode );
-	CondorFile * open_url_retry( char *url, int flags, int mode );
+	CondorFile * create_url_chain( char const *url );
+	CondorFile * create_url_chain( char const *url, char *method, char *rest );
+	CondorFile * open_url( char const *url, int flags, int mode );
+	CondorFile * open_url_retry( char const *url, int flags, int mode );
 	CondorFile * open_file_unique( char *logical_name, int flags, int mode );
 	CondorFileInfo	* make_info( char *logical_name );
 
@@ -265,7 +266,7 @@ private:
 	CondorFileInfo		*info_head;
 
 	int	length;
-	char	working_dir[_POSIX_PATH_MAX];
+	char	*working_dir;
 	int	buffer_size;
 	int	buffer_block_size;
 	int	got_buffer_info;

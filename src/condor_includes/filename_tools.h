@@ -54,6 +54,18 @@ that we use in many other places.
 
 void filename_url_parse( char *input, char *method, char *server, int *port, char *path );
 
+/**
+Unlike filename_url_parse(), this function is not limited by POSIX_PATH_MAX.
+Take an input string in URL form, and split it into its components.
+URLs are of the form "method://server:port/filename".  Any component
+that is missing will be set to NULL.
+If the port is not specified, it is recorded as -1.
+<p>
+The outputs method, server, and path must all be freed by the caller.
+*/
+
+void filename_url_parse_malloc( char const *input, char **method, char **server, int *port, char **path );
+
 /** 
 Take an input string which looks like this:
 "filename = url ; filename = url ; ..."

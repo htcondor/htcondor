@@ -59,11 +59,11 @@ external_name( const char *name, char* buf, int bufsize )
 	}
 
 	if( !name[0] ) {
-		(void)getcwd(pathname,_POSIX_PATH_MAX);
+		(void)getcwd(pathname,sizeof(pathname));
 	} else if( name[0] == '/' ) {
 		(void)strcpy( pathname, name );
 	} else {
-		(void)getcwd(pathname,_POSIX_PATH_MAX);
+		(void)getcwd(pathname,sizeof(pathname));
 		(void)strcat( pathname, "/" );
 		(void)strcat( pathname, name );
 	}

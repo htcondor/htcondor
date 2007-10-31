@@ -35,13 +35,11 @@ int open_file_stream( const char *file, int flags, size_t *len );
 
 /* remote system call prototypes */
 extern int REMOTE_CONDOR_file_info(char *logical_name, int *fd, 
-	char *physical_name);
+	char **physical_name);
 extern int REMOTE_CONDOR_put_file_stream(char *file, size_t len, 
 	unsigned int *ip_addr, u_short *port_num);
 extern int REMOTE_CONDOR_get_file_stream(char *file, size_t *len, 
 	unsigned int *ip_addr, u_short *port_num);
-extern int REMOTE_CONDOR_file_info(char *logical_name, int *fd, 
-	char *physical_name);
 
 
 int _condor_in_file_stream;
@@ -59,7 +57,7 @@ open_file_stream( const char *file, int flags, size_t *len )
 	unsigned int	addr;
 	unsigned short	port;
 	int				fd = -1;
-	char			local_path[ _POSIX_PATH_MAX ];
+	char			*local_path = NULL;
 	int				pipe_fd;
 	int				st;
 	int				mode;
@@ -68,7 +66,7 @@ open_file_stream( const char *file, int flags, size_t *len )
 	_condor_in_file_stream = FALSE;
 
 		/* Ask the shadow how we should access this file */
-	mode = REMOTE_CONDOR_file_info((char*)file, &pipe_fd, local_path );
+	mode = REMOTE_CONDOR_file_info((char*)file, &pipe_fd, &local_path );
 
 	if( mode < 0 ) {
 		EXCEPT( "CONDOR_file_info failed in open_file_stream\n" );
@@ -119,6 +117,7 @@ open_file_stream( const char *file, int flags, size_t *len )
 
 		if( st < 0 ) {
 			dprintf( D_ALWAYS, "File stream access \"%s\" failed\n",local_path);
+			free( local_path );
 			return -1;
 		}
         dprintf(D_NETWORK, "Opening TCP stream to %s\n",
@@ -128,6 +127,7 @@ open_file_stream( const char *file, int flags, size_t *len )
 		fd = open_tcp_stream( addr, port );
 		if( fd < 0 ) {
 			dprintf( D_ALWAYS, "open_tcp_stream() failed\n" );
+			free( local_path );
 			return -1;
 		} else {
 			dprintf( D_ALWAYS,"Opened \"%s\" via file stream\n", local_path);
@@ -135,6 +135,7 @@ open_file_stream( const char *file, int flags, size_t *len )
 		_condor_in_file_stream = TRUE;
 	}
 
+	free( local_path );
 	return fd;
 }
 

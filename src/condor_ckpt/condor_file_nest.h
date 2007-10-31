@@ -51,7 +51,7 @@ public:
 	virtual int	is_seekable();
 
 	virtual int	get_size();
-	virtual char	*get_url();
+	virtual char const	*get_url();
 
 	virtual int get_unmapped_fd();
 	virtual int is_file_local();
@@ -59,10 +59,10 @@ private:
 	NestConnection con;
 	NestReplyStatus status;
 
-	char	url[_POSIX_PATH_MAX];
-	char	method[_POSIX_PATH_MAX];
-	char	server[_POSIX_PATH_MAX];
-	char	path[_POSIX_PATH_MAX];
+	char	*url;
+	char	*method;
+	char	*server;
+	char	*path;
 	int	port;
 };
 

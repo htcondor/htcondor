@@ -33,7 +33,8 @@ CondorFileFD::~CondorFileFD()
 
 int CondorFileFD::open(const char *url_in, int flags, int mode)
 {
-	strcpy( url, url_in );
+	free( url );
+	url = strdup( url_in );
 	sscanf( url, "fd:%d", &fd );
 
 	switch( flags & O_ACCMODE ) {

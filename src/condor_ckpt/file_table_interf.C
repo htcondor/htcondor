@@ -52,13 +52,15 @@ int _condor_is_fd_local( int user_fd )
 	}
 }
 
-int _condor_is_file_name_local( const char *name, char *local_name )
+int _condor_is_file_name_local( const char *name, char **local_name )
 {
+	assert( local_name != NULL && *local_name == NULL );
+
 	_condor_file_table_init();
 	if( MappingFileDescriptors() ) {
 		return FileTab->is_file_name_local(name,local_name);
 	} else {
-		strcpy(local_name,name);
+		*local_name = strdup(name);
 		return LocalSysCalls();
 	}
 }

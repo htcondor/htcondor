@@ -796,7 +796,7 @@ REMOTE_CONDOR_fsync(int   fd)
 }
 
 int
-REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *  actual_url)
+REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *  actual_url, int url_buflen)
 {
         int     rval;
         condor_errno_t  terrno;
@@ -816,7 +816,7 @@ REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *  actual_url)
                 errno = (int)terrno;
                 return rval;
         }
-        ASSERT( syscall_sock->code(actual_url) );
+        ASSERT( syscall_sock->get(actual_url, url_buflen) );
         ASSERT( syscall_sock->end_of_message() );
 
         return rval;

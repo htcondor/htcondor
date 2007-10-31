@@ -187,9 +187,9 @@ do_REMOTE_syscall(ReliSock *sock, int process)
                 condor_errno_t terrno;
 
                 kill_sig = (condor_signal_t *)malloc( (unsigned)INT_SIZE );
-                orig = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-                targ = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-                a_out = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+                orig = NULL;
+                targ = NULL;
+                a_out = NULL;
 		/* space for ad allocated by pseudo_work_req */
                 assert( syscall_sock->end_of_message() );;
 

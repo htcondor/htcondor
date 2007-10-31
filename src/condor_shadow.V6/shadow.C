@@ -357,12 +357,15 @@ main(int argc, char *argv[] )
 		usage();
 	}
 
-#ifdef WAIT_FOR_DEBUGGER
-	int x = 1;
-	while( x ) {
-
+	if (param_boolean("SHADOW_DEBUG_WAIT", false, false)) {
+		int debug_wait = 1;
+		dprintf(D_ALWAYS,
+				"SHADOW_DEBUG_WAIT is TRUE, waiting for debugger to attach to pid %d.\n", 
+				(int)::getpid());
+		while (debug_wait) {
+			sleep(1);
+		}
 	}
-#endif /* WAIT_FOR_DEBUGGER */
 
 	if( strcmp("-pipe",argv[1]) == 0 ) {
 		bogus_capability = argv[2];

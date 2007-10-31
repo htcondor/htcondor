@@ -191,9 +191,9 @@ extern int REMOTE_CONDOR_chdir(const char *path);
 extern int REMOTE_CONDOR_image_size(int kbytes);
 extern int REMOTE_CONDOR_get_ckpt_mode(enum condor_signal_t sig);
 extern int REMOTE_CONDOR_get_ckpt_speed(void);
-extern int REMOTE_CONDOR_get_std_file_info(int fd, char *logical_name);
-extern int REMOTE_CONDOR_get_iwd(char *path);
-extern int REMOTE_CONDOR_get_ckpt_name(char *path);
+extern int REMOTE_CONDOR_get_std_file_info(int fd, char **logical_name);
+extern int REMOTE_CONDOR_get_iwd(char **path);
+extern int REMOTE_CONDOR_get_ckpt_name(char **path);
 
 extern int _condor_dprintf_works;
 extern int	_condor_DebugFD;
@@ -222,7 +222,7 @@ MAIN( int argc, char *argv[], char **envp )
 	int		i;
 	int	should_restart = FALSE;
 
-	char	ckpt_file[_POSIX_PATH_MAX];
+	char	*ckpt_file = NULL;
 
 		/*
 		  These will hold the argc and argv we actually give to the
@@ -236,6 +236,7 @@ MAIN( int argc, char *argv[], char **envp )
 	user_argc = 1;
 
 		/* Default checkpoint file is argv[0].ckpt */
+	ckpt_file = (char *)malloc(strlen(argv[0])+6);
 	sprintf(ckpt_file,"%s.ckpt",argv[0]);
 
 		/*
@@ -366,7 +367,8 @@ MAIN( int argc, char *argv[], char **envp )
 				_condor_error_fatal("-_condor_ckpt requires another argument");
 			} else {
 				i++;
-				strcpy( ckpt_file, argv[i] );
+				free( ckpt_file );
+				ckpt_file = strdup( argv[i] );
 			 }	
 			continue;
 		}
@@ -380,7 +382,8 @@ MAIN( int argc, char *argv[], char **envp )
 				_condor_error_fatal("-_condor_restart requires an argument");
 			} else {
 				i++;
-				strcpy( ckpt_file, argv[i] );
+				free( ckpt_file );
+				ckpt_file = strdup( argv[i] );
 				should_restart = TRUE;
 			}
 			continue;
@@ -781,14 +784,15 @@ display_ip_addr( unsigned int addr )
 void
 open_std_files()
 {
-	char	logical_name[3][_POSIX_PATH_MAX];
+	char	*logical_name[3];
 	int	result;
 	int	new_fd;
 	int	flags;
 	int	fd;
 
 	for( fd=0; fd<3; fd++ ) {
-		result = REMOTE_CONDOR_get_std_file_info(fd,logical_name[fd]);
+		logical_name[fd] = NULL;
+		result = REMOTE_CONDOR_get_std_file_info(fd,&logical_name[fd]);
 		if(result!=0) _condor_error_fatal("Couldn't get info on standard file %d",fd );
 
 		close(fd);
@@ -813,16 +817,19 @@ open_std_files()
 			}
 		}
 	}
+	free( logical_name[0] );
+	free( logical_name[1] );
+	free( logical_name[2] );
 }
 
 void
 _condor_set_iwd()
 {
-	char	iwd[ _POSIX_PATH_MAX ];
+	char	*iwd = NULL;
 	int	scm;
 	int	result;
 
-	if( REMOTE_CONDOR_get_iwd(iwd) < 0 ) {
+	if( REMOTE_CONDOR_get_iwd(&iwd) < 0 ) {
 		_condor_error_fatal( "Can't determine initial working directory" );
 	}
 
@@ -835,20 +842,22 @@ _condor_set_iwd()
 	if( result < 0 ) {
 		_condor_error_retry( "Can't move to directory %s", iwd );
 	}
+	free( iwd );
 }
 
 void
 get_ckpt_name()
 {
-	char	ckpt_name[ _POSIX_PATH_MAX ];
+	char	*ckpt_name = NULL;
 	int		status;
 
-	status = REMOTE_CONDOR_get_ckpt_name( ckpt_name );
+	status = REMOTE_CONDOR_get_ckpt_name( &ckpt_name );
 	if( status < 0 ) {
 		_condor_error_fatal("Can't get checkpoint file name!\n");
 	}
 	dprintf( D_ALWAYS, "Checkpoint file name is \"%s\"\n", ckpt_name );
 	init_image_with_file_name( ckpt_name );
+	free( ckpt_name );
 }
 
 void

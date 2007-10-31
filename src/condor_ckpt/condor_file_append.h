@@ -54,13 +54,13 @@ public:
 	virtual int	is_seekable();
 
 	virtual int	get_size();
-	virtual char	*get_url();
+	virtual char const	*get_url();
 
 	virtual int get_unmapped_fd();
 	virtual int is_file_local();
 
 private:
-	char url[_POSIX_PATH_MAX];
+	char *url;
 	CondorFile *original;
 };
 

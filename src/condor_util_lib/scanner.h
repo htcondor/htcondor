@@ -31,6 +31,7 @@
 #define ACTION_PARAM	5
 #define NOSUPP_FUNC		6
 #define RETURN_FUNC		7
+#define NULL_ALLOC_FUNC 8
 
 #define NAME_LENGTH		80
 

@@ -338,9 +338,7 @@ commit_rusage()
 	// Also, we should update the job ad to record the
 	// checkpointing signature of the execution machine now
 	// that we know we wrote the checkpoint properly.
-	sprintf(buf, "%s = %s", ATTR_LAST_CHECKPOINT_PLATFORM,
-		LastCkptPlatform);
-	JobAd->Insert(buf);
+	JobAd->Assign(ATTR_LAST_CHECKPOINT_PLATFORM,LastCkptPlatform);
 }
 
 int
@@ -394,9 +392,9 @@ pseudo_report_file_info_new( char *name, long long open_count, long long read_co
 }
 
 int
-pseudo_getwd( char *path )
+pseudo_getwd( char *&path )
 {
-	strncpy(path,CurrentWorkingDir,_POSIX_PATH_MAX);
+	path = strdup( CurrentWorkingDir );
 	return 1;
 }
 
@@ -524,31 +522,35 @@ pseudo_get_file( const char *name )
 
 #if !defined(PVM_RECEIVE)
 int
-pseudo_work_request( PROC *p, char *a_out, char *targ, char *orig, int *kill_sig )
+pseudo_work_request( PROC *p, char *&a_out, char *&targ, char *&orig, int *kill_sig )
 {
 	struct stat	st_buf;
 	int soft_kill = SIGUSR1;
+
+	ASSERT( a_out == NULL );
+	ASSERT( targ == NULL );
+	ASSERT( orig == NULL );
 
 		/* Copy Proc struct into space provided */
 	memcpy( p, (PROC *)Proc, sizeof(PROC) );
 
 	if( stat(ICkptName,&st_buf) == 0 ) {
-		strcpy( a_out, ICkptName );
+		a_out = strdup( ICkptName );
 	} else {
 		EXCEPT( "Can't find a.out file" );
 	}
 
 		/* Copy current checkpoint name into space provided */
 	if( stat(CkptName,&st_buf) == 0 ) {
-		strcpy( orig, CkptName );
+		orig = strdup( CkptName );
 	} else if( stat(ICkptName,&st_buf) == 0 ) {
-		strcpy( orig, ICkptName );
+		orig = strdup( ICkptName );
 	} else {
 		EXCEPT( "Can't find checkpoint file" );
 	}
 
 		/* Copy next checkpoint name into space provided */
-	strcpy( targ, RCkptName );
+	targ = strdup( RCkptName );
 
 		/* Copy kill signal number into space provided */
 	memcpy( kill_sig, &soft_kill, sizeof(soft_kill) );
@@ -1628,22 +1630,24 @@ url, call get_file_info.
 */
 
 int
-pseudo_get_std_file_info( int which, char *logical_name )
+pseudo_get_std_file_info( int which, char *&logical_name )
 {
 	PROC	*p = (PROC *)Proc;
 
+	ASSERT( logical_name == NULL );
+
 	switch( which ) {
 		case 0:
-			strcpy( logical_name, p->in[0] );
+			logical_name = strdup( p->in[0] );
 			break;
 		case 1:
-			strcpy( logical_name, p->out[0] );
+			logical_name = strdup( p->out[0] );
 			break;
 		case 2:
-			strcpy( logical_name, p->err[0] );
+			logical_name = strdup( p->err[0] );
 			break;
 		default:
-			logical_name[0] = '\0';
+			logical_name = strdup("");
 			break;
 	}
 
@@ -1659,7 +1663,7 @@ It will go away in the near future.
 */
 
 int
-pseudo_std_file_info( int which, char *logical_name, int *pipe_fd )
+pseudo_std_file_info( int which, char *&logical_name, int *pipe_fd )
 {
 	*pipe_fd = -1;
 	return pseudo_get_std_file_info( which, logical_name );
@@ -1696,23 +1700,23 @@ such as "local:" or "remote:" and assumes the syscall lib will
 add the necessary transformations.
 */
 
-int do_get_file_info( char *logical_name, char *url, int allow_complex );
-void append_buffer_info( char *url, char *method, char *path );
+int do_get_file_info( char *logical_name, char *&url, int allow_complex );
+void append_buffer_info( MyString &url, char *method, char *path );
 
 int
-pseudo_get_file_info_new( const char *logical_name, char *actual_url )
+pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 {
 	return do_get_file_info( (char*)logical_name, actual_url, 1 );
 }
 
 int
-pseudo_get_file_info( const char *logical_name, char *actual_url )
+pseudo_get_file_info( const char *logical_name, char *&actual_url )
 {
 	return do_get_file_info( (char*)logical_name, actual_url, 0 );
 }
 
 int
-do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
+do_get_file_info( char *logical_name, char *&actual_url, int allow_complex )
 {
 	char	remap_list[ATTRLIST_MAX_EXPRESSION];
 	char	split_dir[_POSIX_PATH_MAX];
@@ -1721,9 +1725,11 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 	char	remap[_POSIX_PATH_MAX];
 	char	*method;
 	int		want_remote_io;
+	MyString url_buf;
 	static int		warned_once = FALSE;
 
 	dprintf( D_SYSCALLS, "\tlogical_name = \"%s\"\n", logical_name );
+	ASSERT( actual_url == NULL );
 
 	/* if this attribute is not present, then default to TRUE */
 	if ( ! JobAd->LookupInteger( ATTR_WANT_REMOTE_IO, want_remote_io ) ) {
@@ -1766,7 +1772,7 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 
 		if(strchr(remap,':')) {
 			dprintf(D_SYSCALLS,"\tremap is complete url\n");
-			strcpy(actual_url,remap);
+			actual_url = strdup(remap);
 			if (want_remote_io == FALSE) {
 				return 1;
 			}
@@ -1807,26 +1813,25 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 		method = "remote";
 	}
 
-	actual_url[0] = 0;
-
 	if( allow_complex ) {
 		if( use_fetch(method,full_path) ) {
-			strcat(actual_url,"fetch:");
+			url_buf += "fetch:";
 		}
 		if( use_compress(method,full_path) ) {
-			strcat(actual_url,"compress:");
+			url_buf += "compress:";
 		}
 
-		append_buffer_info(actual_url,method,full_path);
+		append_buffer_info(url_buf,method,full_path);
 
 		if( use_append(method,full_path) ) {
-			strcat(actual_url,"append:");
+			url_buf += "append:";
 		}
 	}
 
-	strcat(actual_url,method);
-	strcat(actual_url,":");
-	strcat(actual_url,full_path);
+	url_buf += method;
+	url_buf += ":";
+	url_buf += full_path;
+	actual_url = strdup(url_buf.Value());
 
 	dprintf(D_SYSCALLS,"\tactual_url: %s\n",actual_url);
 
@@ -1840,7 +1845,7 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 	return 0;
 }
 
-void append_buffer_info( char *url, char *method, char *path )
+void append_buffer_info( MyString &url, char *method, char *path )
 {
 	char buffer_list[ATTRLIST_MAX_EXPRESSION];
 	char buffer_string[ATTRLIST_MAX_EXPRESSION];
@@ -1862,11 +1867,11 @@ void append_buffer_info( char *url, char *method, char *path )
 		    filename_remap_find(buffer_list,file,buffer_string) ) {
 
 			/* If the file is merely mentioned, turn on the default buffer */
-			strcat(url,"buffer:");
+			url += "buffer:";
 
 			/* If there is also a size setting, use that */
 			result = sscanf(buffer_string,"(%d,%d)",&s,&bs);
-			if( result==2 ) strcat(url,buffer_string);
+			if( result==2 ) url += buffer_string;
 
 			return;
 		}
@@ -1876,7 +1881,7 @@ void append_buffer_info( char *url, char *method, char *path )
 	/* In this case, use the simple syntax 'buffer:' so as not to confuse old libs */
 
 	if( s>0 && bs>0 && strcmp(method,"local") && strcmp(method,"special")  ) {
-		strcat(url,"buffer:");
+		url += "buffer:";
 	}
 }
 
@@ -1925,14 +1930,21 @@ This is for compatibility with the old starter.
 It will go away in the near future.
 */
 
-int pseudo_file_info( const char *logical_name, int *fd, char *physical_name )
+int pseudo_file_info( const char *logical_name, int *fd, char *&physical_name )
 {
-	char	url[_POSIX_PATH_MAX];
+	char	*url = NULL;
 	char	method[_POSIX_PATH_MAX];
 	int	result;
 
+	ASSERT( physical_name == NULL );
+
 	result = pseudo_get_file_info( logical_name, url );
-	if(result<0) return result;
+	if(result<0) {
+		free( url );
+		return result;
+	}
+
+	physical_name = (char *)malloc(strlen(url)+1);
 
 	/* glibc21 (and presumeably glibc20) have a problem where the range
 		specifier can't be 8bit. So, this only allows a 7bit clean filename. */
@@ -1948,6 +1960,7 @@ int pseudo_file_info( const char *logical_name, int *fd, char *physical_name )
 		result = IS_RSC;
 	}
 
+	free( url );
 	return result;
 }
 
@@ -1981,7 +1994,7 @@ int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_b
   Return process's initial working directory
 */
 int
-pseudo_get_iwd( char *path )
+pseudo_get_iwd( char *&path )
 {
 		/*
 		  Try to log an execute event.  We had made logging the
@@ -1997,7 +2010,8 @@ pseudo_get_iwd( char *path )
 
 	PROC	*p = (PROC *)Proc;
 
-	strcpy( path, p->iwd );
+	ASSERT( path == NULL );
+	path = strdup( p->iwd );
 	dprintf( D_SYSCALLS, "\tanswer = \"%s\"\n", p->iwd );
 	return 0;
 }
@@ -2007,9 +2021,10 @@ pseudo_get_iwd( char *path )
   Return name of checkpoint file for this process
 */
 int
-pseudo_get_ckpt_name( char *path )
+pseudo_get_ckpt_name( char *&path )
 {
-	strcpy( path, RCkptName );
+	ASSERT( path == NULL );
+	path = strdup( RCkptName );
 	dprintf( D_SYSCALLS, "\tanswer = \"%s\"\n", path );
 	return 0;
 }
@@ -2068,10 +2083,11 @@ pseudo_get_ckpt_speed()
   Return name of executable file for this process
 */
 int
-pseudo_get_a_out_name( char *path )
+pseudo_get_a_out_name( char *&path )
 {
-	path[0] = '\0';
 	int result;
+
+	ASSERT( path == NULL );
 
 	// See if we can find an executable in the spool dir.
 	// Switch to Condor uid first, since ickpt files are 
@@ -2082,13 +2098,13 @@ pseudo_get_a_out_name( char *path )
 
 	if ( result >= 0 ) {
 			// we can access an executable in the spool dir
-		strcpy( path, ICkptName );
+		path = strdup( ICkptName );
 	} else {
 			// nothing in the spool dir; the executable 
 			// probably has $$(opsys) in it... so use what
 			// the jobad tells us.
 		ASSERT(JobAd);
-		JobAd->LookupString(ATTR_JOB_CMD,path);
+		JobAd->LookupString(ATTR_JOB_CMD,&path);
 	}
 
 	dprintf( D_SYSCALLS, "\tanswer = \"%s\"\n", path );
@@ -2358,11 +2374,12 @@ pseudo_get_universe( int *my_universe )
 
 #if !defined(PVM_RECEIVE)
 int
-pseudo_get_username( char *uname )
+pseudo_get_username( char *&uname )
 {
 	PROC	*p = (PROC *)Proc;
 
-	strcpy( uname, p->owner );
+	ASSERT( uname == NULL );
+	uname = strdup( p->owner );
 	return 0;
 }
 #endif
@@ -2640,7 +2657,7 @@ by Chirp.  They certainly could be implemented in the old
 shadow, but we have no need for them just yet.
 */
 
-int pseudo_get_job_attr( const char *name, char *expr )
+int pseudo_get_job_attr( const char *name, char *&expr )
 {
 	errno = ENOSYS;
 	return -1;

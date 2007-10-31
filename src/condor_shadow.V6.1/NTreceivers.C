@@ -358,8 +358,7 @@ do_REMOTE_syscall()
 		result = ( syscall_sock->code(lastarg) );
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  lastarg = %d\n", lastarg );
-		path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-		memset( path, 0, (unsigned)_POSIX_PATH_MAX );
+		path = NULL;
 		result = ( syscall_sock->code(path) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
@@ -539,8 +538,7 @@ do_REMOTE_syscall()
 	  {
 		char *  path;
 
-		path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-		memset( path, 0, (unsigned)_POSIX_PATH_MAX );
+		path = NULL;
 		result = ( syscall_sock->code(path) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
@@ -575,10 +573,8 @@ do_REMOTE_syscall()
 		char *  from;
 		char *  to;
 
-		to = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-		memset( to, 0, (unsigned)_POSIX_PATH_MAX );
-		from = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-		memset( from, 0, (unsigned)_POSIX_PATH_MAX );
+		to = NULL;
+		from = NULL;
 		result = ( syscall_sock->code(to) );
 		ASSERT( result );
 		result = ( syscall_sock->code(from) );
@@ -641,8 +637,7 @@ do_REMOTE_syscall()
 		char *  path;
 		int mode;
 
-		path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-		memset( path, 0, (unsigned)_POSIX_PATH_MAX );
+		path = NULL;
 		result = ( syscall_sock->code(path) );
 		ASSERT( result );
 		result = ( syscall_sock->code(mode) );
@@ -677,8 +672,7 @@ do_REMOTE_syscall()
 	  {
 		char *  path;
 
-		path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-		memset( path, 0, (unsigned)_POSIX_PATH_MAX );
+		path = NULL;
 		result = ( syscall_sock->code(path) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
@@ -738,15 +732,13 @@ do_REMOTE_syscall()
 		char *  logical_name;
 		char *  actual_url;
  
-		actual_url = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-		memset( actual_url, 0, (unsigned)_POSIX_PATH_MAX );
-		logical_name = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-		memset( logical_name, 0, (unsigned)_POSIX_PATH_MAX );
+		actual_url = NULL;
+		logical_name = NULL;
 		ASSERT( syscall_sock->code(logical_name) );
 		ASSERT( syscall_sock->end_of_message() );;
  
 		errno = (condor_errno_t)0;
-		rval = pseudo_get_file_info_new( logical_name , actual_url);
+		rval = pseudo_get_file_info_new( logical_name , actual_url );
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
  
@@ -800,12 +792,7 @@ do_REMOTE_syscall()
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			// sadly, we much cast away the constness because
-			// of code's interface.  This should be safe
-			// as we're in encode mode, so it should be
-			// treated as cost.
-			char * tmp = (char *)expr.Value();
-			assert( syscall_sock->code(tmp) );
+			assert( syscall_sock->put(expr.Value()) );
 		}
 		free( (char *)attrname );
 		assert( syscall_sock->end_of_message() );;

@@ -223,7 +223,7 @@ circumstances:
 
 #define SEND_PATH(name) in code(name)
 #define GET_PATH(name) out code(name)
-#define ALLOC_PATH(name) alloc(name,_POSIX_PATH_MAX)
+#define ALLOC_PATH(name) null_alloc(name)
 
 /* Does EXTRACT mean static or dynamic? */
 
@@ -920,7 +920,7 @@ either file names or file descriptors.
 #endif /* REMOTE_SYSCALLS and not CLIP */
 
 #	if !defined(SWITCH)
-		char * getwd( char *path_name ) : pseudo {
+		char * getwd( char *&path_name ) : pseudo {
 			GET_PATH( path_name );
 			ALLOC_PATH( path_name );
 		}
@@ -1193,7 +1193,7 @@ they should be built in the special "clipped" version.
 
 	int report_error( char *msg ) : pseudo {
 		in code( msg );
-		alloc( msg, MAX_STRING );
+		null_alloc(msg);
 	}
 
 	/* This was the old remote call for reporting file actions.
@@ -1218,7 +1218,7 @@ they should be built in the special "clipped" version.
 		SEND_PATH(name);
 		ALLOC_PATH(name);
 	}
-	int get_std_file_info( int fd, char *logical_name ) : pseudo {
+	int get_std_file_info( int fd, char *&logical_name ) : pseudo {
 		GET_PATH( logical_name );
 		ALLOC_PATH( logical_name );
 	}
@@ -1226,7 +1226,7 @@ they should be built in the special "clipped" version.
 	This call transforms a logical name into a url chain, perhaps including
 	multiple stages, e.g. /tmp/file -> buffer:remote:/tmp/file
 	*/
-	int get_file_info_new( const char *logical_name, char *actual_url ): pseudo {
+	int get_file_info_new( const char *logical_name, char *&actual_url ): pseudo {
 		SEND_PATH( logical_name );
 		ALLOC_PATH( logical_name );
 		GET_PATH( actual_url );
@@ -1237,7 +1237,7 @@ they should be built in the special "clipped" version.
 	returns the basic file type, such as local: or remote:, and leaves
 	it to the syscall lib to add wrapper stages.
 	*/
-	int get_file_info( const char *logical_name, char *actual_url ): pseudo {
+	int get_file_info( const char *logical_name, char *&actual_url ): pseudo {
 		SEND_PATH( logical_name );
 		ALLOC_PATH( logical_name );
 		GET_PATH( actual_url );
@@ -1248,13 +1248,13 @@ they should be built in the special "clipped" version.
 	get_file_info, which deal with urls instead of file names
 	and integers.  They remain for compatibility with the old starter.
 	*/
-        int std_file_info( int fd, char *logical_name, int *pipe_fd ) : pseudo {
+        int std_file_info( int fd, char *&logical_name, int *pipe_fd ) : pseudo {
                 GET_PATH( logical_name );
                 ALLOC_PATH( logical_name );
                 out code( pipe_fd );
                 alloc( pipe_fd, INT_SIZE );
         }
-        int file_info( const char *logical_name, int *fd, char *physical_name ): pseudo {
+        int file_info( const char *logical_name, int *fd, char *&physical_name ): pseudo {
                 SEND_PATH( logical_name );
                 ALLOC_PATH( logical_name );
                 GET_PATH( physical_name );
@@ -1272,33 +1272,33 @@ they should be built in the special "clipped" version.
 		alloc( prefetch_size, INT_SIZE );
 	}
 
-	int get_job_attr( const char *attrname, char *expr ) : pseudo
+	int get_job_attr( const char *attrname, char *&expr ) : pseudo
 	{
 		in code(attrname);
-		alloc(attrname,ATTRLIST_MAX_EXPRESSION);
+		null_alloc(attrname);
 		out code(expr);
-		alloc(expr,ATTRLIST_MAX_EXPRESSION);
+		null_alloc(expr);
 	}
 
 	int set_job_attr( const char *attrname, const char *expr ) : pseudo
 	{
 		in code(attrname);
-		alloc(attrname,ATTRLIST_MAX_EXPRESSION);
+		null_alloc(attrname);
 		in code(expr);
-		alloc(expr,ATTRLIST_MAX_EXPRESSION);
+		null_alloc(expr);
 	}
 
 	int constrain( const char *expr ) : pseudo
 	{
 		in code(expr);
-		alloc(expr,ATTRLIST_MAX_EXPRESSION);
+		null_alloc(expr);
 	}
 
-	int get_iwd( char *path ) : pseudo {
+	int get_iwd( char *&path ) : pseudo {
 		GET_PATH( path );
 		ALLOC_PATH( path );
 	}
-	int get_ckpt_name( char *path ) : pseudo {
+	int get_ckpt_name( char *&path ) : pseudo {
 		GET_PATH( path );
 		ALLOC_PATH( path );
 	}
@@ -1307,7 +1307,7 @@ they should be built in the special "clipped" version.
 
 	int get_ckpt_speed( ) : pseudo;
 
-	int get_a_out_name( char *path ) : pseudo {
+	int get_a_out_name( char *&path ) : pseudo {
 		GET_PATH( path );
 		ALLOC_PATH( path );
 	}

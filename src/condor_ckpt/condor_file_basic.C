@@ -30,7 +30,7 @@
 CondorFileBasic::CondorFileBasic( int mode )
 {
 	fd = -1;
-	url[0] = 0;
+	url = NULL;
 	readable = 0;
 	writeable = 0;
 	size = 0;
@@ -39,14 +39,16 @@ CondorFileBasic::CondorFileBasic( int mode )
 
 CondorFileBasic::~CondorFileBasic( )
 {
+	free( url );
 }
 
 int CondorFileBasic::open(const char *url_in, int flags, int mode)
 {
-	char junk[_POSIX_PATH_MAX];
-	char path[_POSIX_PATH_MAX];
+	char *junk = (char *)malloc(strlen(url_in)+1);
+	char *path = (char *)malloc(strlen(url_in)+1);
 
-	strcpy(url,url_in);
+	free( url );
+	url = strdup(url_in);
 
 	/* linux glibc 2.1 and presumeably 2.0 had a bug where the range didn't
 		work with 8bit numbers */
@@ -55,6 +57,9 @@ int CondorFileBasic::open(const char *url_in, int flags, int mode)
 	#else
 	sscanf(url,"%[^:]:%[\x1-\xFF]",junk,path);
 	#endif
+
+	free( junk );
+	junk = NULL;
 
 	switch( flags & O_ACCMODE ) {
 		case O_RDONLY:
@@ -77,6 +82,8 @@ int CondorFileBasic::open(const char *url_in, int flags, int mode)
 
 	int scm = SetSyscalls(syscall_mode);
 	fd = ::open(path,flags,mode);
+	free( path );
+	path = NULL;
 	SetSyscalls(scm);
 
 	if(fd<0) return fd;
@@ -189,9 +196,9 @@ int CondorFileBasic::get_size()
 	return size;
 }
 
-char *CondorFileBasic::get_url()
+char const *CondorFileBasic::get_url()
 {
-	return url;
+	return url ? url : "";
 }
 
 int CondorFileBasic::get_unmapped_fd()

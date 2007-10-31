@@ -141,9 +141,7 @@ protected:
 	char	*env;
 	Env     env_obj;
 
-#if 0
-	char	*a_out;			// on submitting machine
-#endif
+	char	*m_a_out;			// on submitting machine
 
 	char	*local_dir;		// on executing machine
 	char	*cur_ckpt;		// on executing machine

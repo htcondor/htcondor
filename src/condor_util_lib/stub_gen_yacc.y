@@ -14,6 +14,7 @@
 %token OUT
 %token BOTH
 %token ALLOC
+%token NULL_ALLOC
 %token RETURN
 %token NOSUPP
 %token IGNORE
@@ -32,7 +33,7 @@
 %type <node> stub_spec param_list param simple_param
 %type <node> stub_body action_func_list
 %type <node> action_param action_param_list action_func xfer_func alloc_func
-%type <node> return_func
+%type <node> return_func null_alloc_func
 %type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN FILE_TABLE DL_EXTRACT NO_SYS_CHK ARRAY opt_mult
 %type <bool> opt_const opt_ptr opt_ptr_to_const opt_array
 %type <bool> opt_reference
@@ -51,6 +52,7 @@ mk_func_node( char *type, char *name, struct node * p_list,
 struct node * mk_xfer_func( char *xdr_func, struct node *param_list,
 	int in, int out );
 struct node * mk_alloc_func( struct node *param_list );
+struct node * mk_null_alloc_func( struct node *param_list );
 struct node * mk_return_func( struct node *param_list );
 struct node * mk_param_node( char *type, char *name,
 	int is_const, int is_ptr, int is_ref, int is_const_ptr, int is_array,
@@ -250,6 +252,10 @@ action_func
 		{
 		$$ = $1;
 		}
+	| null_alloc_func
+		{
+		$$ = $1;
+		}
 	| return_func
 		{
 		$$ = $1;
@@ -269,6 +275,14 @@ alloc_func
 		{
 		Trace( "alloc_func" );
 		$$ = mk_alloc_func( $3 );
+		}
+	;
+
+null_alloc_func
+	: NULL_ALLOC '(' action_param_list ')' ';'
+		{
+		Trace( "null_alloc_func" );
+		$$ = mk_null_alloc_func( $3 );
 		}
 	;
 
@@ -780,6 +794,18 @@ mk_alloc_func( struct node *param_list )
 }
 
 struct node *
+mk_null_alloc_func( struct node *param_list )
+{
+	struct node	*answer;
+
+	answer = (struct node *)malloc( sizeof(struct node) );
+	answer->node_type = NULL_ALLOC_FUNC;
+	answer->param_list = param_list;
+
+	return answer;
+}
+
+struct node *
 mk_return_func( struct node *param_list )
 {
 	struct node	*answer;
@@ -855,6 +881,16 @@ char * node_type_noconst ( struct node *n )
 		n->type_name,
 		n->is_ptr?"* ":" ",
 		n->is_ref?"& ":"",
+		n->is_array?"* ":"");
+	return buffer;
+}
+
+char * node_type_noconst_noref ( struct node *n )
+{
+	static char buffer[1024];
+	sprintf(buffer,"%s %s%s",
+		n->type_name,
+		n->is_ptr?"* ":" ",
 		n->is_array?"* ":"");
 	return buffer;
 }
@@ -1238,7 +1274,7 @@ output_receiver( struct node *n )
 
 		/* output a local variable decl for each param of the sys call */
 	for( p=param_list->next; p != param_list; p = p->next ) {
-		if(!p->rdiscard) printf("\t\t%s %s;\n",node_type_noconst(p),p->id);
+		if(!p->rdiscard) printf("\t\t%s %s;\n",node_type_noconst_noref(p),p->id);
 	}
 
 	printf( "\t\tcondor_errno_t terrno;\n" );
@@ -1265,6 +1301,19 @@ output_receiver( struct node *n )
 				   p->id, p->id
 			);
 		}
+	}
+
+		/*
+		Null out pointer type parameters.
+		*/
+	for( p=n->action_func_list->next; p->node_type != DUMMY; p = p->next ) {
+		if( p->node_type != NULL_ALLOC_FUNC ) {
+			continue;
+		}
+		var = p->param_list->next;
+		printf( "\t\t%s = NULL;\n",
+			var->id
+		);
 	}
 
 		/*
@@ -1369,7 +1418,7 @@ output_receiver( struct node *n )
 		DeAllocate space for pointer type parameters.
 		*/
 	for( p=n->action_func_list->next; p->node_type != DUMMY; p = p->next ) {
-		if( p->node_type != ALLOC_FUNC ) {
+		if( p->node_type != ALLOC_FUNC && p->node_type != NULL_ALLOC_FUNC ) {
 			continue;
 		}
 		var = p->param_list->next;
@@ -1624,14 +1673,14 @@ output_switch( struct node *n )
 			printf("\t}\n\n");
 		}
 		if( p->is_map_name ) {
-			printf("\tchar newname[_POSIX_PATH_MAX];\n");
-			printf("\tdo_local = _condor_is_file_name_local( %s, newname );\n",p->id);
+			printf("\tchar *newname = NULL;\n");
+			printf("\tdo_local = _condor_is_file_name_local( %s, &newname );\n",p->id);
 			printf("\t%s = newname;\n\n",p->id);
 			did_map_name = 1;
 		}
 		if( p->is_map_name_two ) {
-			printf("\tchar newname2[_POSIX_PATH_MAX];\n");
-			printf("\tint do_local_two = _condor_is_file_name_local( %s, newname2 );\n",p->id);
+			printf("\tchar *newname2 = NULL;\n");
+			printf("\tint do_local_two = _condor_is_file_name_local( %s, &newname2 );\n",p->id);
 			printf("\t%s = newname2;\n\n",p->id);
 			printf("\tif( do_local!=do_local_two ) {\n");
 			printf("\t\terrno = EXDEV;\n");
@@ -1678,6 +1727,16 @@ output_switch( struct node *n )
 
 		if( n->is_tabled ) {
 			printf("\t}\n");
+		}
+	}
+
+	/* free mapped filename. */
+	for( p=n->param_list->next; p!=n->param_list; p=p->next ) {
+		if( p->is_map_name ) {
+			printf("\tfree( newname );\n");
+		}
+		if( p->is_map_name_two ) {
+			printf("\tfree( newname2 );\n");
 		}
 	}
 

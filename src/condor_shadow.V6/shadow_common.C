@@ -632,9 +632,7 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		/* add in the signature of the checkpointing host for this 
 			completed ckpt */
 		if (LastCkptPlatform != NULL) {
-			sprintf(buf, "%s = %s", ATTR_LAST_CHECKPOINT_PLATFORM, 
-				LastCkptPlatform);
-			JobAd->Insert(buf);
+			JobAd->Assign(ATTR_LAST_CHECKPOINT_PLATFORM,LastCkptPlatform);
 		}
 
 		break;

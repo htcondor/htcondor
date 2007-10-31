@@ -1245,8 +1245,8 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
 
 	sigset_t omask = _condor_signals_disable();
 
-	char newname[_POSIX_PATH_MAX];
-	do_local = _condor_is_file_name_local( path, newname );
+	char *newname = NULL;
+	do_local = _condor_is_file_name_local( path, &newname );
 	path = newname;
 
 	if( MappingFileDescriptors() ) {
@@ -1268,6 +1268,7 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
 			}
 		}
 	}
+	free( newname );
 	_condor_signals_enable(omask);
 	return rval;
 }
@@ -1283,8 +1284,8 @@ int _condor_xstat64(int version, const char *path, struct stat64 *buf)
 
 	sigset_t omask = _condor_signals_disable();
 
-	char newname[_POSIX_PATH_MAX];
-	do_local = _condor_is_file_name_local( path, newname );
+	char *newname = NULL;
+	do_local = _condor_is_file_name_local( path, &newname );
 	path = newname;
 
 	if( MappingFileDescriptors() ) {
@@ -1306,6 +1307,7 @@ int _condor_xstat64(int version, const char *path, struct stat64 *buf)
 			}
 		}
 	}
+	free( newname );
 	_condor_signals_enable(omask);
 	return rval;
 }
@@ -1391,8 +1393,8 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
 
 	sigset_t omask = _condor_signals_disable();
 
-	char newname[_POSIX_PATH_MAX];
-	do_local = _condor_is_file_name_local( path, newname );
+	char *newname = NULL;
+	do_local = _condor_is_file_name_local( path, &newname );
 	path = newname;
 
 	if( MappingFileDescriptors() ) {
@@ -1414,6 +1416,7 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
 			}
 		}
 	}
+	free( newname );
 	_condor_signals_enable(omask);
 	return rval;
 }
@@ -1429,8 +1432,8 @@ int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
 
 	sigset_t omask = _condor_signals_disable();
 
-	char newname[_POSIX_PATH_MAX];
-	do_local = _condor_is_file_name_local( path, newname );
+	char *newname = NULL;
+	do_local = _condor_is_file_name_local( path, &newname );
 	path = newname;
 
 	if( MappingFileDescriptors() ) {
@@ -1452,7 +1455,7 @@ int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
 			}
 		}
 	}
-
+	free( newname );
 	_condor_signals_enable(omask);
 	return rval;
 }
@@ -1479,8 +1482,8 @@ int _xstat(const int ver, const char *path, struct stat *buf)
 
 	sigset_t omask = _condor_signals_disable();
 
-	char newname[_POSIX_PATH_MAX];
-	do_local = _condor_is_file_name_local( path, newname );
+	char *newname = NULL;
+	do_local = _condor_is_file_name_local( path, &newname );
 	path = newname;
 
 
@@ -1494,7 +1497,7 @@ int _xstat(const int ver, const char *path, struct stat *buf)
 			rval = REMOTE_CONDOR_stat( path, buf );
 		}
 	}
-
+	free( newname );
 	_condor_signals_enable(omask);
 	return rval;
 }
@@ -1507,8 +1510,8 @@ int _lxstat(const int ver, const char *path, struct stat *buf)
 
 	sigset_t omask = _condor_signals_disable();
 
-	char newname[_POSIX_PATH_MAX];
-	do_local = _condor_is_file_name_local( path, newname );
+	char *newname = NULL;
+	do_local = _condor_is_file_name_local( path, &newname );
 	path = newname;
 
 
@@ -1522,7 +1525,7 @@ int _lxstat(const int ver, const char *path, struct stat *buf)
 			rval = REMOTE_CONDOR_lstat( path, buf );
 		}
 	}
-
+	free( newname );
 	_condor_signals_enable(omask);
 	return rval;
 }

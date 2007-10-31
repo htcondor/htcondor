@@ -52,7 +52,7 @@ extern "C" int REMOTE_CONDOR_report_file_info_new(char *name,
 	long long open_count, long long read_count, long long write_count,
 	long long seek_count, long long read_bytes, long long write_bytes);
 extern "C" int REMOTE_CONDOR_get_file_info_new(char *logical_name,
-	char *actual_url);
+	char *&actual_url);
 extern "C" int REMOTE_CONDOR_get_buffer_info(int *bytes, int *block_size, 
 	int *prefetch_size);
 extern "C" int REMOTE_CONDOR_chdir(const char *path);
@@ -70,13 +70,16 @@ to this module.
 class CondorFileInfo {
 public:
 	CondorFileInfo( char *n ) {
-		strcpy(info_name,n);
+		info_name = strdup(n);
 		open_count = 0;
 		read_count = read_bytes = 0;
 		write_count = write_bytes = 0;
 		seek_count = 0;
 		already_warned = 0;
 		next = 0;
+	}
+	~CondorFileInfo() {
+		free( info_name );
 	}
 
 	void	report() {
@@ -92,7 +95,7 @@ public:
 	// a certain number of files are opened, one block
 	// named "everything else" is shared between all open files.
 
-	char	info_name[_POSIX_PATH_MAX];
+	char	*info_name;
 
 	long long open_count;
 	long long read_count, read_bytes;
@@ -119,14 +122,17 @@ public:
 		info = i;
 		flags = fl;
 		offset = 0;
-		strcpy( logical_name, n );
+		logical_name = strdup( n );
+	}
+	~CondorFilePointer() {
+		free( logical_name );
 	}
 
 	CondorFile *file;
 	CondorFileInfo *info;
 	int flags;
 	off_t offset;
-	char logical_name[_POSIX_PATH_MAX];
+	char *logical_name;
 };
 
 /*
@@ -180,7 +186,7 @@ void CondorFileTable::init()
 	pointers[1] = new CondorFilePointer(0,make_info("default stdout"),O_WRONLY,"default stdout");
 	pointers[2] = new CondorFilePointer(0,make_info("default stderr"),O_WRONLY,"default stderr");
 
-	strcpy( working_dir, "." );
+	working_dir = strdup(".");
 
 	atexit( _condor_file_table_shutdown );
 }
@@ -356,7 +362,7 @@ int CondorFileTable::count_file_uses( CondorFile *f )
 Convert a logical file name into a physical url by any and all methods available.  This function will not fail -- it will always fall back on something reasonable.  This is a private function which expects an already compelted path name.
 */
 
-void CondorFileTable::lookup_url( char *logical_name, char *url )
+void CondorFileTable::lookup_url( char *logical_name, char **url )
 {
 	static int never_ask_shadow = FALSE;
 
@@ -364,13 +370,13 @@ void CondorFileTable::lookup_url( char *logical_name, char *url )
 	// should be mapped to constant file descriptors.
  
 	if(!strcmp(logical_name,"default stdin")) {
-		strcpy(url,"fd:0");
+		*url = strdup("fd:0");
 		return;
 	} else if(!strcmp(logical_name,"default stdout")) {
-		strcpy(url,"fd:1");
+		*url = strdup("fd:1");
 		return;
 	} else if(!strcmp(logical_name,"default stderr")) {
-		strcpy(url,"fd:2");
+		*url = strdup("fd:2");
 		return;
 	}
 
@@ -378,7 +384,8 @@ void CondorFileTable::lookup_url( char *logical_name, char *url )
 	// Otherwise, ask shadow.  If that fails, try buffer:remote:logical_name.
 
 	if( LocalSysCalls() || (never_ask_shadow == TRUE)) {
-		sprintf(url,"local:%s",logical_name);
+		*url = (char *)malloc(strlen(logical_name)+7);
+		sprintf(*url,"local:%s",logical_name);
 	} else {
 		if (never_ask_shadow == FALSE ) {
 			int result;
@@ -393,12 +400,14 @@ void CondorFileTable::lookup_url( char *logical_name, char *url )
 			// control of how the files are opened, permanently I assume,
 			// since the static variable in here is preserved across
 			// checkpoints in the memory image. 
-			result = REMOTE_CONDOR_get_file_info_new( logical_name, url );
+			result = REMOTE_CONDOR_get_file_info_new( logical_name, *url );
 
 			if (result == 1) {
 				never_ask_shadow = TRUE;
 			} else if( result < 0 ) {
-				sprintf(url,"buffer:remote:%s",logical_name);
+				free( *url );
+				*url = (char *)malloc(strlen(logical_name)+8);
+				sprintf(*url,"buffer:remote:%s",logical_name);
 			} 
 
 			if(!got_buffer_info) {
@@ -416,12 +425,24 @@ Convert a nested url into a url chain.  For example, compress:fetch:remote:/tmp/
 becomes CondorFileCompress( CondorFileFetch( CondorFileRemote ) )
 */
 
-CondorFile * CondorFileTable::create_url_chain( char *url )
+CondorFile * CondorFileTable::create_url_chain( char const *url )
 {
-	char method[_POSIX_PATH_MAX];
-	char rest[_POSIX_PATH_MAX];
+	char *method = (char *)malloc(strlen(url)+1);
+	char *rest = (char *)malloc(strlen(url)+1);
+
+	CondorFile * result = create_url_chain( url, method, rest );
+
+	free( method );
+	free( rest );
+
+	return result;
+}
+
+CondorFile * CondorFileTable::create_url_chain( char const *url, char *method, char *rest )
+{
 	char *next;
 	CondorFile *f;
+
 
 	/* linux glibc 2.1 and presumeably 2.0 had a bug where the range didn't
 		work with 8bit numbers */
@@ -488,7 +509,7 @@ CondorFile * CondorFileTable::create_url_chain( char *url )
 
 /* Given a url, create and open a url chain. */
 
-CondorFile * CondorFileTable::open_url( char *url, int flags, int mode )
+CondorFile * CondorFileTable::open_url( char const *url, int flags, int mode )
 {
 	CondorFile *f = create_url_chain( url );
 
@@ -508,7 +529,7 @@ CondorFile * CondorFileTable::open_url( char *url, int flags, int mode )
 
 /* Open a url.  If the open fails, fall back on buffered remote system calls. */
 
-CondorFile * CondorFileTable::open_url_retry( char *url, int flags, int mode )
+CondorFile * CondorFileTable::open_url_retry( char const *url, int flags, int mode )
 {
 	CondorFile *f;
 
@@ -516,7 +537,6 @@ CondorFile * CondorFileTable::open_url_retry( char *url, int flags, int mode )
 	if(f) return f;
 
 	if( RemoteSysCalls() ) {
-		char new_url[_POSIX_PATH_MAX];
 		char *path;
 
 		if( strstr(url,"remote:") ) return 0;
@@ -527,8 +547,11 @@ CondorFile * CondorFileTable::open_url_retry( char *url, int flags, int mode )
 		path++;
 		if(!*path) return 0;
 
+		char *new_url = (char *)malloc(strlen(path)+15);
 		sprintf(new_url,"buffer:remote:%s",path);
-		return open_url( new_url, flags, mode );
+		CondorFile *result = open_url( new_url, flags, mode );
+		free( new_url );
+		return result;
 	}
 
 	return 0;
@@ -574,14 +597,19 @@ both purposes.
 
 CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, int mode )
 {
-	char url[_POSIX_PATH_MAX];
 
 	int match = find_logical_name( logical_name );
 	if( match==-1 || !pointers[match]->file ) {
-		lookup_url( (char*)logical_name, url );
-		match = find_url( url );
-		if( match==-1 ) {
-			return open_url_retry( url, flags, mode );
+		char *url = NULL;
+		lookup_url( (char*)logical_name, &url );
+		if( url ) {
+			match = find_url( url );
+			if( match==-1 ) {
+				CondorFile *f = open_url_retry( url, flags, mode );
+				free( url );
+				return f;
+			}
+			free( url );
 		}
 	}
 
@@ -614,40 +642,45 @@ Otherwise, tack the current directory on to the front
 of short_path, and copy it to full_path.
 */
  
-void CondorFileTable::complete_path( const char *short_path, char *full_path )
+void CondorFileTable::complete_path( const char *short_path, char **full_path )
 {
         if(short_path[0]=='/') {
-                strcpy(full_path,short_path);
+                *full_path = strdup(short_path);
         } else {
-                strcpy(full_path,working_dir);
-                strcat(full_path,"/");
-                strcat(full_path,short_path);
+                *full_path = (char *)malloc(strlen(working_dir)+strlen(short_path)+2);
+				strcpy(*full_path,working_dir);
+                strcat(*full_path,"/");
+                strcat(*full_path,short_path);
         }
 }
 
 int CondorFileTable::open( const char *logical_name, int flags, int mode )
 {
-	char full_logical_name[_POSIX_PATH_MAX];
+	char *full_logical_name = NULL;
 
 	CondorFile *file=0;
 	CondorFileInfo *info=0;
 
 	// Convert a relative path into a complete path
 
-	complete_path( logical_name, full_logical_name );
+	complete_path( logical_name, &full_logical_name );
 
 	// Find a fresh file descriptor
 
 	int fd = find_empty();
 	if(fd<0) {
 		errno = EMFILE;
+		free( full_logical_name );
 		return -1;
 	}
 
-	file = open_file_unique( (char*) full_logical_name, flags, mode );
-	if(!file) return -1;
+	file = open_file_unique( full_logical_name, flags, mode );
+	if(!file) {
+		free( full_logical_name );
+		return -1;
+	}
 
-	info = make_info( (char*) full_logical_name );
+	info = make_info( full_logical_name );
 	info->open_count++;
 
 	// Flags that should be applied once only are now removed
@@ -658,6 +691,7 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 	// Install the pointer and return!
 
 	pointers[fd] = new CondorFilePointer(file,info,flags,full_logical_name);
+	free( full_logical_name );
 	return fd;
 }
 
@@ -1017,9 +1051,11 @@ int CondorFileTable::chdir( const char *path )
 
 	if( result==-1 ) return result;
 
+	free( working_dir );
 	if( path[0]=='/' ) {
-		strcpy( working_dir, path );
+		working_dir = strdup( path );
 	} else {
+		working_dir = (char *)realloc(working_dir,strlen(path)+strlen(working_dir)+2);
 		strcat( working_dir, "/" );
 		strcat( working_dir, path );
 	}
@@ -1139,7 +1175,6 @@ int CondorFileTable::stat( const char *name, struct stat *buf)
 	int scm, oscm;
 	int ret;
 	int do_local;
-	char newname[_POSIX_PATH_MAX];
 
 	/* See if the file is open, if so, then just do an fstat. If it isn't open
 		then call the normal stat in unmapped mode with whatever the shadow
@@ -1150,7 +1185,8 @@ int CondorFileTable::stat( const char *name, struct stat *buf)
 		oscm = scm = GetSyscallMode();
 
 		/* determine where the shadow says to deal with this file. */
-		do_local = _condor_is_file_name_local( name, newname );
+		char *newname = NULL;
+		do_local = _condor_is_file_name_local( name, &newname );
 		if (LocalSysCalls() || do_local) {
 			scm |= SYS_LOCAL;		/* turn on SYS_LOCAL */
 			scm &= ~(SYS_REMOTE);	/* turn off SYS_REMOTE */
@@ -1168,7 +1204,9 @@ int CondorFileTable::stat( const char *name, struct stat *buf)
 		SetSyscalls(scm);
 		ret = ::stat(newname, buf);
 		SetSyscalls(oscm); /* set it back to what it was */
-		
+
+		free( newname );
+
 		return ret;
 	}
 	return fstat(fd, buf);
@@ -1180,7 +1218,6 @@ int CondorFileTable::lstat( const char *name, struct stat *buf)
 	int scm, oscm;
 	int ret;
 	int do_local;
-	char newname[_POSIX_PATH_MAX];
 
 	/* See if the file is open, if so, then just do an fstat. If it isn't open
 		then call the normal lstat in unmapped mode with whatever the shadow
@@ -1191,7 +1228,8 @@ int CondorFileTable::lstat( const char *name, struct stat *buf)
 		oscm = scm = GetSyscallMode();
 
 		/* determine where the shadow says to deal with this file. */
-		do_local = _condor_is_file_name_local( name, newname );
+		char *newname = NULL;
+		do_local = _condor_is_file_name_local( name, &newname );
 		if (LocalSysCalls() || do_local) {
 			scm |= SYS_LOCAL;		/* turn on SYS_LOCAL */
 			scm &= ~(SYS_REMOTE);	/* turn off SYS_REMOTE */
@@ -1208,7 +1246,9 @@ int CondorFileTable::lstat( const char *name, struct stat *buf)
 		SetSyscalls(scm);
 		ret = ::lstat(newname, buf);
 		SetSyscalls(oscm); /* set it back to what it was */
-		
+
+		free( newname );
+
 		return ret;
 	}
 	return fstat(fd, buf);
@@ -1419,13 +1459,15 @@ int CondorFileTable::is_fd_local( int fd )
 	return pointers[fd]->file->is_file_local();
 }
 
-int CondorFileTable::is_file_name_local( const char *incomplete_name, char *local_name )
+int CondorFileTable::is_file_name_local( const char *incomplete_name, char **local_name )
 {
-	char url[_POSIX_PATH_MAX];
-	char logical_name[_POSIX_PATH_MAX];
+	char *url = NULL;
+	char *logical_name = NULL;
+
+	assert( local_name != NULL && *local_name == NULL );
 
 	// Convert the incomplete name into a complete path
-	complete_path( incomplete_name, logical_name );
+	complete_path( incomplete_name, &logical_name );
 
 	// Now look to see if the file is already open.
 	// If it is, ask the file if it is local.
@@ -1435,18 +1477,21 @@ int CondorFileTable::is_file_name_local( const char *incomplete_name, char *loca
 		CondorFile *file;
 		resume(match);
 		file = pointers[match]->file;
-		strcpy(local_name,strrchr(file->get_url(),':')+1); 
+		*local_name = strdup(strrchr(file->get_url(),':')+1); 
+		free( logical_name );
 		return file->is_file_local();
 	}
 
 	// Otherwise, resolve the url by normal methods.
-	lookup_url( logical_name, url );
+	lookup_url( logical_name, &url );
+	free( logical_name );
 
 	// Copy the local path name out
-	strcpy(local_name,strrchr(url,':')+1);
+	*local_name = strdup(strrchr(url,':')+1);
 
 	// Create a URL chain and ask it if it is local.
 	CondorFile *f = create_url_chain(url);
+	free( url );
 	if(f) {
 		if( f->is_file_local() ) {
 			delete f;

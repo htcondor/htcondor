@@ -38,7 +38,7 @@ extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
 extern RemoteResource *parallelMasterResource;
 
-static void append_buffer_info( char *url, char *method, char *path );
+static void append_buffer_info( MyString &url, char *method, char *path );
 static int use_append( char *method, char *path );
 static int use_compress( char *method, char *path );
 static int use_fetch( char *method, char *path );
@@ -211,16 +211,19 @@ into an actual url which describes how and where to fetch
 the file from.  For example, joe/data might become buffer:remote:/usr/joe/data
 */
 
-int pseudo_get_file_info_new( const char *logical_name, char *actual_url )
+int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 {
 	MyString remap_list;
 	char	split_dir[_POSIX_PATH_MAX];
 	char	split_file[_POSIX_PATH_MAX];
 	char	full_path[_POSIX_PATH_MAX];
 	char	remap[_POSIX_PATH_MAX];
+	MyString urlbuf;
 	char	*method;
 
 	dprintf( D_SYSCALLS, "\tlogical_name = \"%s\"\n", logical_name );
+
+	ASSERT( actual_url == NULL );
 
 	/* The incoming logical name might be a simple, relative, or complete path */
 	/* We need to examine both the full path and the simple name. */
@@ -242,7 +245,7 @@ int pseudo_get_file_info_new( const char *logical_name, char *actual_url )
 
 		if(strchr(remap,':')) {
 			dprintf(D_SYSCALLS,"\tremap is complete url\n");
-			strcpy(actual_url,remap);
+			actual_url = strdup(remap);
 			return 0;
 		} else {
 			dprintf(D_SYSCALLS,"\tremap is simple file\n");
@@ -276,32 +279,31 @@ int pseudo_get_file_info_new( const char *logical_name, char *actual_url )
 		method = "remote";
 	}
 
-	actual_url[0] = 0;
-
 	if( use_fetch(method,full_path) ) {
-		strcat(actual_url,"fetch:");
+		urlbuf += "fetch:";
 	}
 
 	if( use_compress(method,full_path) ) {
-		strcat(actual_url,"compress:");
+		urlbuf += "compress:";
 	}
 
-	append_buffer_info(actual_url,method,full_path);
+	append_buffer_info(urlbuf,method,full_path);
 
 	if( use_append(method,full_path) ) {
-		strcat(actual_url,"append:");
+		urlbuf += "append:";
 	}
 
-	strcat(actual_url,method);
-	strcat(actual_url,":");
-	strcat(actual_url,full_path);
+	urlbuf += method;
+	urlbuf += ":";
+	urlbuf += full_path;
+	actual_url = strdup(urlbuf.Value());
 
 	dprintf(D_SYSCALLS,"\tactual_url: %s\n",actual_url);
 
 	return 0;
 }
 
-static void append_buffer_info( char *url, char *method, char *path )
+static void append_buffer_info( MyString &url, char *method, char *path )
 {
 	MyString buffer_list;
 	char buffer_string[_POSIX_PATH_MAX*3+1];
@@ -326,11 +328,11 @@ static void append_buffer_info( char *url, char *method, char *path )
 		    filename_remap_find(buffer_list.Value(),file,buffer_string) ) {
 
 			/* If the file is merely mentioned, turn on the default buffer */
-			strcat(url,"buffer:");
+			url += "buffer:";
 
 			/* If there is also a size setting, use that */
 			result = sscanf(buffer_string,"(%d,%d)",&s,&bs);
-			if( result==2 ) strcat(url,buffer_string);
+			if( result==2 ) url += buffer_string;
 
 			return;
 		}
@@ -340,7 +342,7 @@ static void append_buffer_info( char *url, char *method, char *path )
 	/* In this case, use the simple syntax 'buffer:' so as not to confuse old libs */
 
 	if( s>0 && bs>0 && strcmp(method,"local") && strcmp(method,"special")  ) {
-		strcat(url,"buffer:");
+		url += "buffer:";
 	}
 }
 

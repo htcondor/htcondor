@@ -48,21 +48,32 @@ int nest_status_to_errno( NestReplyStatus status )
 
 CondorFileNest::CondorFileNest()
 {
-	url[0] = 0;
-	server[0] = 0;
-	path[0] = 0;
+	url = NULL;
+	server = NULL;
+	method = NULL;
+	path = NULL;
 	_condor_ckpt_disable();
 }
 
 CondorFileNest::~CondorFileNest()
 {
 	_condor_ckpt_enable();
+	free( url );
+	free( server );
+	free( method );
+	free( path );
 }
 
 int CondorFileNest::open( const char *u, int flags, int mode )
 {
-	strcpy(url,u);
-	filename_url_parse( url, method, server, &port, path );
+	free( url );
+	url = strdup(u);
+
+	free( method );
+	free( server );
+	free( path );
+	method = server = path = NULL;
+	filename_url_parse_malloc( url, &method, &server, &port, &path );
 
 	int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
 	status = OpenNestConnection( con, server );
@@ -194,9 +205,9 @@ int CondorFileNest::get_size()
 	}
 }
 
-char *CondorFileNest::get_url()
+char const *CondorFileNest::get_url()
 {
-	return url;
+	return url ? url : "";
 }
 
 int CondorFileNest::get_unmapped_fd()

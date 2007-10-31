@@ -37,7 +37,7 @@ char* _getwd( char* );
 char* __getwd( char* );
 
 /* remote system call externs */
-extern int REMOTE_CONDOR_getwd(char *path_name);
+extern int REMOTE_CONDOR_getwd(char **path_name);
 
 
 /* Definitions of the getwd() and getcwd() that the user job will
@@ -49,7 +49,10 @@ getwd( char *path )
 	if( LocalSysCalls() ) {
 		return GETCWD( path, _POSIX_PATH_MAX );
 	} else {
-		REMOTE_CONDOR_getwd( path );
+		char *p = NULL;
+		REMOTE_CONDOR_getwd( &p );
+		strcpy( path, p );
+		free( p );
 		return path;
 	}
 }
@@ -57,7 +60,7 @@ getwd( char *path )
 char *
 getcwd( char *path, size_t size )
 {
-	char tmpbuf[_POSIX_PATH_MAX];
+	char *tmpbuf = NULL;
 
 	if( LocalSysCalls() ) {
 		return GETCWD( path, size );
@@ -68,10 +71,11 @@ getcwd( char *path, size_t size )
 #endif
 			return NULL;
 		}
-		tmpbuf[0] = '\0';
-		REMOTE_CONDOR_getwd( tmpbuf );
-		if ( tmpbuf[0] == '\0' ) {
+
+		REMOTE_CONDOR_getwd( &tmpbuf );
+		if ( tmpbuf == NULL || tmpbuf[0] == '\0' ) {
 			// our remote syscall failed somehow
+			free( tmpbuf );
 			return NULL;
 		}
 		if ( (strlen(tmpbuf) + 1) > size ) {
@@ -79,18 +83,18 @@ getcwd( char *path, size_t size )
 #ifdef ERANGE
 			errno = ERANGE;
 #endif
+			free( tmpbuf );
 			return NULL;
 		}
 
     	if ( path == NULL ) {
-			if ( (path=(char *)malloc(size)) == NULL ) {
-				// Out of memory
-				return NULL;
-			}
+			path = tmpbuf;
+			return path;
 		}
 
 		// finally, copy from our tmpbuf into users buffer
 		strcpy(path,tmpbuf);
+		free( tmpbuf );
 
 		return path;
 	}

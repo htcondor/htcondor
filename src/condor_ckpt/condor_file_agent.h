@@ -60,7 +60,7 @@ public:
 	virtual int	is_seekable();
 
 	virtual int	get_size();
-	virtual char	*get_url();
+	virtual char const	*get_url();
 
 	virtual int get_unmapped_fd();
 	virtual int is_file_local();
@@ -68,9 +68,8 @@ public:
 private:
 	CondorFile *original;
 	CondorFile *local_copy;
-	char local_filename[_POSIX_PATH_MAX];
-	char local_url[_POSIX_PATH_MAX];
-	char url[_POSIX_PATH_MAX];
+	char *local_url;
+	char *url;
 };
 
 #endif

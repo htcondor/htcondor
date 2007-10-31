@@ -185,21 +185,24 @@ CondorFileBuffer::CondorFileBuffer( CondorFile *o, int bs, int bbs )
 	size = 0;
 	buffer_size = bs;
 	buffer_block_size = bbs;
+	url = NULL;
 }
 
 CondorFileBuffer::~CondorFileBuffer()
 {
 	delete original;
+	free( url );
 }
 
 int CondorFileBuffer::open( const char *url_in, int flags, int mode )
 {
-	char junk[_POSIX_PATH_MAX];
-	char sub_url[_POSIX_PATH_MAX];
+	char *junk = (char *)malloc(strlen(url_in)+1);
+	char *sub_url = (char *)malloc(strlen(url_in)+1);
 
 	int result;
 
-	strcpy(url,url_in);
+	free( url );
+	url = strdup(url_in);
 	
 	/* linux glibc 2.1 and presumeably 2.0 had a bug where the range didn't
 		work with 8bit numbers */
@@ -208,6 +211,8 @@ int CondorFileBuffer::open( const char *url_in, int flags, int mode )
 	#else
 	result = sscanf( url, "%[^:]:%[\x1-\xFF]", junk, sub_url );
 	#endif
+	free( junk );
+	junk = NULL;
 
 	if(result!=2) {
 		_condor_warning(CONDOR_WARNING_KIND_BADURL, "Couldn't understand url '%s'",url_in);
@@ -216,7 +221,7 @@ int CondorFileBuffer::open( const char *url_in, int flags, int mode )
 	}
 
 	if(sub_url[0]=='(') {
-		char path[_POSIX_PATH_MAX];
+		char *path = (char *)malloc(strlen(sub_url)+1);
 
 		/* linux glibc 2.1 and presumeably 2.0 had a bug where the range didn't
 			work with 8bit numbers */
@@ -229,17 +234,24 @@ int CondorFileBuffer::open( const char *url_in, int flags, int mode )
 		if(result!=3) {
 			_condor_warning(CONDOR_WARNING_KIND_BADURL, "Couldn't understand url '%s'",sub_url);
 			errno = EINVAL;
+			free( path );
+			free( sub_url );
 			return -1;
 		}
 		if( buffer_size<0 || buffer_block_size<0 || buffer_size<buffer_block_size ) {
 			_condor_warning(CONDOR_WARNING_KIND_NOTICE, "Invalid buffer configuration: (%d,%d)",buffer_size,buffer_block_size);
 			errno = EINVAL;
+			free( path );
+			free( sub_url );
 			return -1;
 		}
-		strcpy(sub_url,path);
+		free( sub_url );
+		sub_url = strdup(path);
+		free( path );
 	}
 
 	result = original->open( sub_url, flags, mode );
+	free( sub_url );
  	size = original->get_size();
 	return result;
 }
@@ -427,9 +439,9 @@ int CondorFileBuffer::get_size()
 	return size;
 }
 
-char * CondorFileBuffer::get_url()
+char const * CondorFileBuffer::get_url()
 {
-	return url;
+	return url ? url : "";
 }
 
 int CondorFileBuffer::get_unmapped_fd()

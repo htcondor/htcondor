@@ -54,13 +54,13 @@ public:
 	virtual int	is_seekable();
 
 	virtual int	get_size();
-	virtual char	*get_url();
+	virtual char const	*get_url();
 
 	virtual int	get_unmapped_fd();
 
 protected:
 	int	fd;		// the real fd used by this file
-	char	url[_POSIX_PATH_MAX];
+	char	*url;
 
 	int	readable;	// can this file be read?
 	int	writeable;	// can this file be written?
