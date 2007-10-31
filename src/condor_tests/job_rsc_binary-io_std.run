@@ -1,0 +1,24 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = "job_rsc_binary-io_std.cmd";
+
+$testname = "Binary io test - standard U";
+
+
+$ExitSuccess = sub {
+	my %info = @_;
+	my @input;
+
+};
+
+
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
