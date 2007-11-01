@@ -9,9 +9,6 @@
 \index{ClassAd Scheduler attribute!JobQueueBirthdate}
 \item[\AdAttr{JobQueueBirthdate}:] Description is not yet written.
 
-\index{ClassAd Scheduler attribute!LastHeardFrom}
-\item[\AdAttr{LastHeardFrom}:] Description is not yet written.
-
 \index{ClassAd Scheduler attribute!Machine}
 \item[\AdAttr{Machine}:] A string with the machine's fully qualified 
   host name.
@@ -26,7 +23,10 @@
 \item[\AdAttr{MyAddress}:] Description is not yet written.
 
 \index{ClassAd Scheduler attribute!MyCurrentTime}
-\item[\AdAttr{MyCurrentTime}:] Description is not yet written.
+\item[\AdAttr{MyCurrentTime}:]  The time, represented as the number of 
+  second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970),
+  at which the \Condor{schedd} daemon last sent a ClassAd update to the
+  \Condor{collector}.
 
 \index{ClassAd Scheduler attribute!Name}
 \item[\AdAttr{Name}:] The name of this resource; typically the same value as
@@ -95,19 +95,10 @@
   \Condor{schedd} daemon that are currently running.
 
 \index{ClassAd Scheduler attribute!UpdateSequenceNumber}
-\item[\AdAttr{UpdateSequenceNumber}:] Description is not yet written.
-
-\index{ClassAd Scheduler attribute!UpdatesHistory}
-\item[\AdAttr{UpdatesHistory}:] Description is not yet written.
-
-\index{ClassAd Scheduler attribute!UpdatesLost}
-\item[\AdAttr{UpdatesLost}:] Description is not yet written.
-
-\index{ClassAd Scheduler attribute!UpdatesSequenced}
-\item[\AdAttr{UpdatesSequenced}:] Description is not yet written.
-
-\index{ClassAd Scheduler attribute!UpdatesTotal}
-\item[\AdAttr{UpdatesTotal}:] Description is not yet written.
+\item[\AdAttr{UpdateSequenceNumber}:] An integer, starting at zero,
+  and incremented with each ClassAd update sent to the \Condor{collector}.
+  The \Condor{collector} uses this value to sequence the updates it
+  receives.
 
 \index{ClassAd Scheduler attribute!VirtualMemory}
 \item[\AdAttr{VirtualMemory}:] Description is not yet written.
