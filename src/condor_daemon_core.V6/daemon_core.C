@@ -2235,17 +2235,6 @@ DaemonCore::ReInit()
 
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
-		// FAKE_CREATE_THREAD is an undocumented config knob which turns
-		// Create_Thread() into a simple function call in the main process,
-		// rather than a thread/fork.
-#ifdef WIN32
-		// Currently, all use of threads are deemed unsafe in Windows.
-	m_fake_create_thread = param_boolean("FAKE_CREATE_THREAD",true);
-#else
-		// Under unix, Create_Thread() is actually a fork, so it is safe.
-	m_fake_create_thread = param_boolean("FAKE_CREATE_THREAD",false);
-#endif
-
 	return TRUE;
 }
 
@@ -2296,6 +2285,17 @@ DaemonCore::reconfig(void) {
 		// now been disabled.  Access to it will be disallowed, even
 		// though the structure is still allocated.
 	}
+#endif
+
+		// FAKE_CREATE_THREAD is an undocumented config knob which turns
+		// Create_Thread() into a simple function call in the main process,
+		// rather than a thread/fork.
+#ifdef WIN32
+		// Currently, all use of threads are deemed unsafe in Windows.
+	m_fake_create_thread = param_boolean("FAKE_CREATE_THREAD",true);
+#else
+		// Under unix, Create_Thread() is actually a fork, so it is safe.
+	m_fake_create_thread = param_boolean("FAKE_CREATE_THREAD",false);
 #endif
 
 }
