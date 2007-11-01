@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.9 2007-11-01 14:58:05 jfrey Exp $
+# $Id: remote_post.pl,v 1.10 2007-11-01 22:35:30 bt Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -104,7 +104,7 @@ if( ! -d $log_dir ) {
 }
 if( -d $log_dir ) {
     print "Copying log files to $log_dir\n";
-    system( "cp -r $SrcDir/condor_tests/TestingPersonalCondor/local/log $log_dir" );
+    system( "cp $SrcDir/condor_tests/TestingPersonalCondor/local/log/*Log* $log_dir" );
     if( $? >> 8 ) {
         print "Can't copy $SrcDir/condor_tests/TestingPersonalCondor/local/log/ to $log_dir\n";
         $exit_status = 1;
