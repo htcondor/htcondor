@@ -1,3 +1,6 @@
+10/31/07 V6_8-merge-11
+  The state of the V6_8-branch for a merge back to the trunk.
+
 10/25/07 V6_9-ian_osca-2-{root,branch}
   Branch for research code involving signed ClassAds (sca), using 
   OpenSSL (o) rather than GSI.  This branch was made from 
@@ -32,6 +35,9 @@
 09/27/07 V6_9-privsep_switchboard-{root,branch}
   A branch for integrating Jim K's changes to the PrivSep Switchboard
   into Condor.
+
+09/28/07 V6_8-vc2005-(root,branch)
+  Test branch for the new VC2005 builds
 
 09/20/07 V6_8-merge-10
   The state of the V6_8-branch for a merge back to the trunk.

@@ -83,6 +83,12 @@ ReliSock::ReliSock(const ReliSock & orig) : Sock(orig)
 	delete [] buf;
 }
 
+Stream *
+ReliSock::CloneStream()
+{
+	return new ReliSock(*this);
+}
+
 ReliSock::~ReliSock()
 {
 	close();

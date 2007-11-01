@@ -7,6 +7,17 @@ Simple guide to running tests in the Condor test suite
   - so long as the condor tools in your PATH (namely condor_submit,
     condor_vacate, etc) all work, you should be in good shape...
 
+						OR
+
+   Let batch_test.pl set it up for you and use it. As of 10/2007,
+   batch_test.pl has all the smarts even for the nightly builds and tests
+   in the Build & Test Lab. If you add a "-b", it will use the binaries
+   which it finds in your path and configure a personal condor(slightly
+   tweaked in the config files) from the default config files in
+   src/condor_examples and locate everythig in:
+
+   				condor_tests/TestingPersonalCondor
+
 
 2) Build some tests:
   - you can just type "make all" in the src/condor_tests directory
@@ -29,7 +40,11 @@ Simple guide to running tests in the Condor test suite
   test (and other factors) to decide if the test passed or failed.
 
 
-4) Execute a bunch of tests all at once:
+4) Run all the current nightly tests(default - list_quick):
+
+	% ./batch_test.pl
+
+5) Execute a bunch of tests all at once:
 
   If you want to run a bunch of tests all at once, you should use the
   "batch_test.pl" script.  With this script, you can:
@@ -69,4 +84,17 @@ Simple guide to running tests in the Condor test suite
   told to execute, checks the output of each .run file, prints out if
   each test passed or failed, and summarizes the results across all
   tests. 
+
+
+6) Changing test timeouts in the Build & Test(default 20 minutes)
+
+	Modify TimeoutChanges to have the test and a number for minutes:
+
+			job_quill_basic 35
+
+7) Repeating tests more then once per test run in the Build & Test
+
+	Modify RuncountChanges to have the test and a number for iterations:
+
+			lib_chirpio 20
 

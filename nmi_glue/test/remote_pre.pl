@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.16 2007-10-23 14:48:11 gthain Exp $
+# $Id: remote_pre.pl,v 1.17 2007-11-01 14:58:05 jfrey Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -59,6 +59,7 @@ while( <UNTAR> ) {
   print;
 }
 close UNTAR;
+
 
 ######################################################################
 # move prebuilt test programs into the source tree to their normal
@@ -144,175 +145,7 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 
 	$Win32BaseDir = $ENV{WIN32_BASE_DIR} || die "WIN32_BASE_DIR not in environment!\n";
 
-	# setup the user job wrapper
-	safe_copy("$SrcDir/condor_scripts/exe_switch.pl", "$BaseDir/condor/bin/exe_switch.pl") ||
-		die "couldn't copy exe_swtich.pl";
-	open( WRAPPER, ">$BaseDir/condor/bin/exe_switch.bat" ) || die "Can't open new job wrapper: $!\n";
-	print WRAPPER "\@c:\\perl\\bin\\perl.exe $Win32BaseDir/condor/bin/exe_switch.pl %*\n";
-	close(WRAPPER);
-
-	# create config file with todd's awk script
-	$awkscript = "$BaseDir/src/condor_examples/convert_config_to_win32.awk";
-	$genericconfig = "$BaseDir/src/condor_examples/condor_config.generic";
-	$configcmd = "awk -f $awkscript $genericconfig > condor/etc/condor_config.orig";
-	system("$configcmd");
-
-	# create local config file with todd's awk script
-	$genericlocalconfig = "$BaseDir/src/condor_examples/condor_config.local.central.manager";
-	$configcmd = "awk -f $awkscript $genericlocalconfig >local/condor_config.local";
-	system("$configcmd");
-
-	# change RELEASE_DIR and LOCAL_DIR
-	print "Set RELEASE_DIR and LOCAL_DIR\n";
-	open( OLDFIG, "<condor/etc/condor_config.orig" ) || die "Can't open base config file: $!\n";
-	open( NEWFIG, ">condor/etc/condor_config" ) || die "Can't open new config file: $!\n";
-	$line = "";
-
-	while( <OLDFIG> ) {
-    	chomp;
-		$line = $_;
-		if($line =~ /^RELEASE_DIR\s*=.*/) {
-			print "Matching <<$line>>\n";
-			print NEWFIG "RELEASE_DIR = $Win32BaseDir/condor\n";
-		} elsif($line =~ /^LOCAL_DIR\s*=.*/) {
-			print "Matching <<$line>>\n";
-			print NEWFIG "LOCAL_DIR = $Win32BaseDir/local\n";
-		} else {
-			print NEWFIG "$line\n";
-		}
-	}
-	close( OLDFIG );
-	close( NEWFIG );
 }
-
-
-print "Modifying local config file\n";
-
-rename( "$BaseDir/local/condor_config.local",
-	"$BaseDir/local/condor_config.local.orig" )
-    	|| die "Can't rename $BaseDir/local/condor_config.local: $!\n";
-
-# make sure ports for Personal Condor are valid, we'll use address
-# files and port = 0 for dynamic ports...
-open( ORIG, "<$BaseDir/local/condor_config.local.orig" ) ||
-    die "Can't open $BaseDir/local/condor_config.local.orig: $!\n";
-open( FIX, ">$BaseDir/local/condor_config.local" ) ||
-    die "Can't open $BaseDir/local/condor_config.local: $!\n";
-
-while( <ORIG> ) {
-  if( /CONDOR_HOST.*/ ) {
-    print FIX;
-    print FIX "COLLECTOR_HOST = \$(CONDOR_HOST):0\n";
-    print FIX "NEGOTIATOR_HOST = \n";
-    print FIX "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
-    print FIX "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
-    print FIX "SCHEDD_ADDRESS_FILE = \$(LOG)/.scheduler_address\n";
-  } else {
-    print FIX;
-  }
-}
-
-# ADD size for log files and debug level
-# default settings are in condor_config, set here to override 
-print FIX "ALL_DEBUG               = D_FULLDEBUG\n";
-
-print FIX "MAX_COLLECTOR_LOG       = $logsize\n";
-print FIX "COLLECTOR_DEBUG         = \n";
-
-print FIX "MAX_KBDD_LOG            = $logsize\n";
-print FIX "KBDD_DEBUG              = \n";
-
-print FIX "MAX_NEGOTIATOR_LOG      = $logsize\n";
-print FIX "NEGOTIATOR_DEBUG        = D_MATCH\n";
-print FIX "MAX_NEGOTIATOR_MATCH_LOG = $logsize\n";
-
-print FIX "MAX_SCHEDD_LOG          = $logsize\n";
-print FIX "SCHEDD_DEBUG            = D_COMMAND\n";
-
-print FIX "MAX_SHADOW_LOG          = $logsize\n";
-print FIX "SHADOW_DEBUG            = D_FULLDEBUG\n";
-
-print FIX "MAX_STARTD_LOG          = $logsize\n";
-print FIX "STARTD_DEBUG            = D_COMMAND\n";
-
-print FIX "MAX_STARTER_LOG         = $logsize\n";
-print FIX "STARTER_DEBUG           = D_NODATE\n";
-
-print FIX "MAX_MASTER_LOG          = $logsize\n";
-print FIX "MASTER_DEBUG            = D_COMMAND\n";
-
-# add procd log
-
-print FIX "PROCD_LOG 			= \$(LOG)/ProcdLog\n";
-
-# Add a shorter check time for periodic policy issues
-print FIX "PERIODIC_EXPR_INTERVAL = 15\n";
-print FIX "PERIODIC_EXPR_TIMESLICE = .95\n";
-print FIX "NEGOTIATOR_INTERVAL = 20\n";
-
-# turn on soap for testing
-print FIX "ENABLE_SOAP            	= TRUE\n";
-print FIX "ALLOW_SOAP            	= *\n";
-print FIX "QUEUE_ALL_USERS_TRUSTED 	= TRUE\n";
-
-# condor_config.generic now contains a special value
-# for HOSTALLOW_WRITE which causes it to EXCEPT on submit
-# till set to some legal value. Old was most insecure..
-print FIX "HOSTALLOW_WRITE 			= *\n";
-print FIX "NUM_CPUS 			= 1\n";
-
-# Allow a default heap size for java(addresses issues on x86_rhas_3)
-# May address some of the other machines with Java turned off also
-print FIX "JAVA_MAXHEAP_ARGUMENT = \n";
-
-if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
-{
-    # evil hack b/c our ARCH-detection code is stupid on HPUX, and our
-    # HPUX11 build machine in NMI doesn't seem to have the files we're
-    # looking for...
-    print FIX "ARCH = HPPA2\n";
-}
-
-if( ($ENV{NMI_PLATFORM} =~ /ppc64_sles_9/) ) {
-	# evil work around for bad JIT compiler
-	print FIX "JAVA_EXTRA_ARGUMENTS = -Djava.compiler=NONE\n";
-}
-
-if( ($ENV{NMI_PLATFORM} =~ /ppc64_macos_10.3/) ) {
-	# evil work around for macos
-	print FIX "JAVA_EXTRA_ARGUMENTS = -Djava.vm.vendor=Apple\n";
-}
-
-# Add a job wrapper for windows.... and a few other things which
-# normally are done by condor_configure for a personal condor
-if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
-	my $mypath = $ENV{PATH};
-	print FIX "USER_JOB_WRAPPER = $Win32BaseDir/condor/bin/exe_switch.bat\n";
-	print FIX "CONDOR_HOST = \$(IP_ADDRESS)\n";
-	print FIX "START = TRUE\n";
-	print FIX "PREEMPT = FALSE\n";
-	print FIX "SUSPEND = FALSE\n";
-	print FIX "KILL = FALSE\n";
-	print FIX "WANT_SUSPEND = FALSE\n";
-    print FIX "WANT_VACATE = FALSE\n";
-	print FIX "COLLECTOR_NAME = Personal Condor for Tests\n";
-	print FIX "ALL_DEBUG = D_FULLDEBUG\n";
-	# insure path from framework is injected into the new pool
-	print FIX "environment=\"PATH=\'$mypath\'\"\n";
-	print FIX "SUBMIT_EXPRS=environment\n";
-	print FIX "PROCD_ADDRESS = \\\\.\\pipe\\buildandtestprocd\n";
-
-	# Tell condor to use the current directory for temp.  This way,
-	# if we get preempted/killed, we don't pollute the global /tmp
-	mkdir( "$Win32BaseDir/tmp", 0777 ) || die "Can't mkdir($BaseDir/tmp): $!\n";
-	print FIX "TMP_DIR = $Win32BaseDir\\tmp\n";
-
-}
-
-close ORIG;
-close FIX; 
-
-print "PERSONAL CONDOR installed!\n";
 
 
 ######################################################################
@@ -361,55 +194,9 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 }
 
 
-######################################################################
-# spawn the personal condor
-######################################################################
-
-chdir($BaseDir);
-print "Starting condor_master, about to FORK in $BaseDir\n";
-
-$master_pid = fork();
-if( $master_pid == 0) {
-	if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
-  		exec("$BaseDir/condor/sbin/condor_master -f");
-	} else {
-		exec("$BaseDir/condor/bin/condor_master -f");
-	}
-  	print "MASTER EXEC FAILED!!!!!\n";
-  	exit 1;
-}
-
-# save the master pid for later use
-print "Master PID is $master_pid\n";
-open( PIDFILE, ">$BaseDir/condor_master_pid") || 
-    die "cannot open $BaseDir/condor_master_pid: $!\n";
-print PIDFILE "$master_pid";
-close PIDFILE;   
-
-# Give the master time to start before jobs are submitted.
-$scheddadr = `$BaseDir/condor/bin/condor_config_val SCHEDD_ADDRESS_FILE`;
-$scheddadr =~ s/\012+$//;
-$scheddadr =~ s/\015+$//;
-print "SCHEDD_ADDRESS_FILE is <<<<<$scheddadr>>>>>\n";
-if(!($scheddadr =~/Not defined/)) {
-	print "We are waiting for the file to exist\n";
-	# Where is the schedd address file? wait for it to exist
-	$havescheddaddr = "no";
-	while($havescheddaddr ne "yes") { 
-		print "Looking for $scheddadr\n";
-		if( -f $scheddadr ) {
-			print "Found it!!!! \n";
-			$havescheddaddr = "yes";
-		} else {
-			sleep 10;
-		}
-	}
-} else {
-	print "We are not waiting for the file to exist\n";
-	print "SCHEDD_ADDRESS_FILE is not defined\n";
-	sleep 45;
-}
-
+my $OldPath = $ENV{PATH} || die "PATH not in environment!\n";
+my $NewPath = "$BaseDir/condor/sbin:" . "$BaseDir/condor/bin:" . $OldPath;
+$ENV{PATH} = $NewPath;
 
 sub safe_copy {
     my( $src, $dest ) = @_;

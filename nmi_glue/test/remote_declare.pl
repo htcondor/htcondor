@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.6 2007-10-22 20:34:36 bt Exp $
+# $Id: remote_declare.pl,v 1.7 2007-11-01 14:58:05 jfrey Exp $
 # generate list of all tests to run
 ######################################################################
 
@@ -24,6 +24,7 @@ if( -f "$TimeoutFile") {
 			$CustomTimeouts{"$1"} = $2;
 		}
 	}
+	close(TIMEOUTS);
 }
 
 my %RuncountChanges;
@@ -178,7 +179,8 @@ print "-- Found $total_tests $word for \"$class\" in all " .
 print "****************************************************\n";
 print "**** Writing out tests to tasklist.nmi\n";
 print "****************************************************\n";
-$unique_tests = 0;
+my $unique_tests = 0;
+my $repeat_test;
 foreach $task (sort keys %tasklist ) {
 	$tempt = $CustomTimeouts{"$task"};
     $tempr = $RuncountChanges{"$task"};

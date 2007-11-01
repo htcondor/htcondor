@@ -48,7 +48,7 @@ BEGIN
     $vacates = 0;
     %test;
 	%machine_ads;
-	#Condor::DebugOn();
+	Condor::DebugOn();
 }
 
 sub Reset
@@ -518,6 +518,7 @@ sub CompareText
 	warn "expect: $expectline\n";
 	return 0;
     }
+	close(FILE);
 
     # barf if we're still expecting text but the file has ended
     ($expectline = shift @$aref ) && 
@@ -691,6 +692,7 @@ sub ParseMachineAds
 #		   "skipping\n" );
 	}
     }
+	close(PULL);
     return 1;
 }
 

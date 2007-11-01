@@ -84,6 +84,10 @@ public:
 	/// Copy ctor
 	ReliSock(const ReliSock &);
 
+	/// Create a copy of this stream (e.g. dups underlying socket).
+	/// Caller should delete the returned stream when finished with it.
+	Stream *CloneStream();
+
     ///
 	~ReliSock();
     ///

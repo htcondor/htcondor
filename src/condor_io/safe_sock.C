@@ -90,6 +90,12 @@ SafeSock::SafeSock(const SafeSock & orig)
 	delete [] buf;
 }
 
+Stream *
+SafeSock::CloneStream()
+{
+	return new SafeSock(*this);
+}
+
 SafeSock::~SafeSock()
 {
 	_condorInMsg *tempMsg, *delMsg;

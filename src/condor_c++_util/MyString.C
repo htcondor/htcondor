@@ -445,7 +445,7 @@ MyString::Hash() const
 	int i;
 	unsigned int result = 0;
 	for(i = 0; i < Len; i++) {
-		result += i*((unsigned char)Data[i]);
+		result = (result<<5) + result + (unsigned char)Data[i];
 	}
 	return result;
 }	  

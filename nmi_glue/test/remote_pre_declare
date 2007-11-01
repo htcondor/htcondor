@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre_declare,v 1.5 2007-09-20 18:38:30 gquinn Exp $
+# $Id: remote_pre_declare,v 1.6 2007-11-01 14:58:05 jfrey Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -78,7 +78,7 @@ print ENVSETUP "export SRC_DIR\n";
 
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
     print ENVSETUP "PATH=$BaseDir/nmi_glue/test:$BaseDir/condor/bin:$BaseDir/condor/sbin:\$PATH\n";
-    print ENVSETUP "CONDOR_CONFIG=$BaseDir/condor/etc/condor_config\n";
+    print ENVSETUP "CONDOR_CONFIG=$SrcDir/condor_tests/TestingPersonalCondor/condor_config\n";
 } else {
     # we want UNIX-style paths for PATH (since we're using cygwin)
     print ENVSETUP "PATH=$BaseDir/nmi_glue/test:$BaseDir/condor/bin:/bin:/usr/bin\n";

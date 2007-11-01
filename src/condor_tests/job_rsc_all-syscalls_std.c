@@ -224,6 +224,7 @@ void *xmalloc(size_t len)
 	vec = malloc(len);
 	if (vec == NULL) {
 		printf("Out of Memory. Exiting.\n");
+		fflush(NULL);
 		exit(EXIT_FAILURE);
 	}
 	memset(vec, 0, len);
@@ -237,6 +238,7 @@ char *xtmpnam(char *space)
 	errno = 0;
 	if ((buf = tmpnam(space)) == NULL) {
 		printf("Could not determine unique file name.(%s)\n", strerror(errno));
+		fflush(NULL);
 		exit(EXIT_FAILURE);
 	}
 	return buf;
@@ -4380,8 +4382,29 @@ int BasicGetSetlimit(void)
 
 	passed = expect_zng(SUCCESS, getrlimit_test(&orlim));
 	EXPECTED_RESP;
-	nrlim.rlim_cur = 42;
-	nrlim.rlim_max = 84;
+
+	/* if orlim is zero, then this will function correctly, since I'll be
+		setting the limit to something it is alread yset to. */
+	if (nrlim.rlim_cur == RLIM_INFINITY) {
+		/* this branch implies that the max must also be this value */
+		nrlim.rlim_cur = INT_MAX / 2;
+	} else {
+		nrlim.rlim_cur = orlim.rlim_cur / 2;
+	}
+
+	if (nrlim.rlim_max == RLIM_INFINITY) {
+		nrlim.rlim_max = INT_MAX / 2;
+	} else {
+		nrlim.rlim_max = orlim.rlim_max / 2; 
+	}
+
+	/* just in case though... I'm not going to print out a warning since I
+		was just looking for a valid rlimit configuration under certain
+		restrictions, and any will do. */
+	if (nrlim.rlim_cur > nrlim.rlim_max) {
+		nrlim.rlim_cur = nrlim.rlim_max;
+	}
+
 	passed = expect_zng(SUCCESS, setrlimit_test(&nrlim));
 	EXPECTED_RESP;
 	passed = expect_zng(SUCCESS, getrlimit_test(&crlim));
@@ -4596,7 +4619,7 @@ int main(int argc, char **argv)
 		{BasicGetSetlimit, "BasicGetSetLimit: Can I change proc limits?"},
 	};
 
-	printf("Condor System Call Tester $Revision: 1.2 $\n\n");
+	printf("Condor System Call Tester $Revision: 1.3 $\n\n");
 
 	printf("The length of the string:\n'%s'\nIs: %d\n\n", 
 		STR(passage), strlen(passage));

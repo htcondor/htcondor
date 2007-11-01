@@ -33,10 +33,10 @@ $success = sub
 
 	my $done = 0;
 	my $retrycount = 0;
-	my $status = 1;
 	my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\" ClusterId -format \" Status = %d\n\" JobStatus";
 	while($done == 0) {
 		my @adarray;
+		my $status = 1;
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status) {
 			print "Test failure due to Condor Tool Failure<$cmd>\n";

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.8 2007-10-23 20:01:12 bt Exp $
+# $Id: remote_post.pl,v 1.9 2007-11-01 14:58:05 jfrey Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -27,24 +27,11 @@ if( defined $ENV{_NMI_STEP_FAILED} ) {
 # kill test suite personal condor daemons
 ######################################################################
 
-$pid_file = "$BaseDir/condor_master_pid";
 
-if( -f "$pid_file" ) {
-    # Get master PID from file
-    open (PIDFILE, "$pid_file") || die "Can't open $pid_file: $!\n";
-    while( <PIDFILE> ) {
-        chomp;
-        $master_pid = $_;
-    }
-    close PIDFILE;
-
-    # probably try to stop more gracefully, then wait 30 seconds and
-    # kill if necessary
-    print "KILLING Personal condor_master (pid: $master_pid)\n";
-    if( ! kill(15, $master_pid) ) {
-        print "ERROR: Can't kill condor_master (pid: $master_pid): $!\n";
-        $exit_status = 1;
-    }
+if( -f "$SrcDir/condor_tests/TestingPersonalCondor/local/log/.scheduler_address" ) {
+    #  Came up and had a scheduler running. good
+	$ENV{"CONDOR_CONFIG"} = "$SrcDir/condor_tests/TestingPersonalCondor/condor_config";
+	system("$BaseDir/userdir/condor/sbin/condor_off -master");
 } else {
     # if there's no pid_file, there must be no personal condor running
     # which we'd have to kill.  this would be caused by an empty
@@ -97,14 +84,14 @@ if( ! -d $etc_dir ) {
 }
 if( -d $etc_dir ) {
     print "Copying config files to $etc_dir\n";
-    system( "cp $BaseDir/condor/etc/condor_config $etc_dir" );
+    system( "cp $SrcDir/condor_tests/TestingPersonalCondor/condor_config $etc_dir" );
     if( $? >> 8 ) {
-        print "Can't copy $BaseDir/condor/etc/condor_config to $etc_dir\n";
+        print "Can't copy $SrcDir/condor_tests/TestingPersonalCondor/condor_config to $etc_dir\n";
         $exit_status = 1;
     }
-    system( "cp $BaseDir/local/condor_config.local $etc_dir" );
+    system( "cp $SrcDir/condor_tests/TestingPersonalCondor/condor_config.local $etc_dir" );
     if( $? >> 8 ) {
-        print "Can't copy $BaseDir/local/condor_config.local to $etc_dir\n";
+        print "Can't copy $SrcDir/condor_tests/TestingPersonalCondor/condor_config.local to $etc_dir\n";
         $exit_status = 1;
     }
 }
@@ -117,9 +104,9 @@ if( ! -d $log_dir ) {
 }
 if( -d $log_dir ) {
     print "Copying log files to $log_dir\n";
-    system( "cp $BaseDir/local/log/* $log_dir" );
+    system( "cp -r $SrcDir/condor_tests/TestingPersonalCondor/local/log $log_dir" );
     if( $? >> 8 ) {
-        print "Can't copy $BaseDir/local/log/* to $log_dir\n";
+        print "Can't copy $SrcDir/condor_tests/TestingPersonalCondor/local/log/ to $log_dir\n";
         $exit_status = 1;
     }
 }
@@ -138,11 +125,11 @@ if( $? ) {
 open (TASKFILE, "tasklist.nmi") || die "Can't tasklist.nmi: $!\n";
 while( <TASKFILE> ) {
     chomp;
-    my ($taskname, $timeout) = split(/ /);
+	my ($taskname, $timeout) = split(/ /);
 	# iterations have numbers placed at the end of the name
 	# for unique db tracking in nmi for now.
 	if($taskname =~ /([\w\-\.\+]+)-\d+/) {
-        $taskname = $1;
+		$taskname = $1;
 	}
     my ($testname, $compiler) = split(/\./, $taskname);
     if( $compiler eq "." ) {
@@ -162,10 +149,10 @@ while( <TASKFILE> ) {
     # these files are all optional.  if they exist, we'll save 'em, if
     # they do not, we don't worry about it.
 
-    @savefiles = glob "$testname*.out* $testname*.err* $testname*.log $testname*.cmd.out";
-    foreach $target (@savefiles) {
-        copy_file( $target, $resultdir, false );
-    }
+	@savefiles = glob "$testname*.out* $testname*.err* $testname*.log $testname*.cmd.out";
+	foreach $target (@savefiles) {
+		copy_file( $target, $resultdir, false );
+	}
 
     # if it exists, tarup the 'saveme' subdirectory for this test, which
     # may contain test debug info etc.

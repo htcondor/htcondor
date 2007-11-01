@@ -110,7 +110,6 @@ IpVerify::Init()
 {
 	char *pAllow, *pDeny, *pOldAllow, *pOldDeny, *pNewAllow = NULL, *pNewDeny = NULL;
 	DCpermission perm;
-    bool useOldPermSetup = true;
 	
 	did_init = TRUE;
 
@@ -191,7 +190,6 @@ IpVerify::Init()
 				pentry->behavior = USERVERIFY_ALLOW;
 			}
 		} else {
-            useOldPermSetup = false;        // new permission setup!
 			if ( pDeny && !pAllow ) {
 				pentry->behavior = USERVERIFY_ONLY_DENIES;
 			} else {
@@ -270,26 +268,8 @@ bool IpVerify :: has_user(UserPerm_t * perm, const char * user, perm_mask_t & ma
     assert(perm);
 
     if (user && *user && (strcmp("*", user) != 0)) {
-        userid = MyString(user);
-        if ( (found = perm->lookup(userid, mask)) == -1 ) {
-            // try *@..../...
-            char *tmp;
-            char buf[256];
-            memset(buf, 0, 256);
-            if ((tmp = strchr( user, '@')) == NULL) {
-                dprintf(D_SECURITY, "IPVERIFY: Malformed user name: %s\n", user);
-            }      
-            else {
-                if (strlen(tmp) > 255) {
-                    dprintf(D_SECURITY, "IPVERIFY: User name is too long (over 255): %s\n", user);
-                }  
-                else {
-                    sprintf(buf, "*%s", tmp);
-                    userid = MyString(buf);
-                    found = perm->lookup(user, mask);
-                }
-            }
-        }
+        userid = user;
+        found = perm->lookup(userid, mask);
     }
 
     // Last resort, see if the wild card is in the list
@@ -364,7 +344,7 @@ IpVerify::PermMaskToString(perm_mask_t mask, MyString &mask_str)
 //              */perdita.cs.wisc.edu            
 //              *@cs.wisc.edu/*                  -- wild
 //              *@cs.wisc.edu/*.cs.wisc.edu      -- wild
-//              *@cs.wisc.edu/perdita.cs.wisc.edu
+//              *@cs.wisc.edu/perdita.cs.wisc.edu-- wild
 //              * and */* are considered as invalid and are discarded earlier
 //
 // This returns true if we successfully added the given entry to the
@@ -393,7 +373,12 @@ IpVerify::add_host_entry( const char* addr, perm_mask_t mask )
 	// a.b.c.d/len or a.b.c.d/m.a.s.k
 	// is_ipaddr will still return false for those
 
-    if( is_ipaddr(host,&sin_addr) == TRUE ) {
+	if ( strchr(user,'*') && strcmp(user,"*") ) {
+		// Refuse usernames that contain wildcards.
+		// The only exception is '*', which AddAllowHost likes to put
+		// directly into the hashtable.
+		result = false;
+	} else if( is_ipaddr(host,&sin_addr) == TRUE ) {
         // This address is an IP addr in numeric form.
         // Add it into the hash table.
         add_hash_entry(sin_addr, user, mask);
