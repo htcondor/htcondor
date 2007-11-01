@@ -5485,7 +5485,7 @@ Configuration File Macros}
 is used to determine whether the \Condor{procd} will be used for
 managing process families. If the \Condor{procd} is not used, each
 daemon will run the process family tracking logic on its own. Use of
-the \Condor{procd} results in improved scalability becuase only one
+the \Condor{procd} results in improved scalability because only one
 instance of this logic is required. The \Condor{procd} is required
 when using privilege separation (see Section~\ref{sec:PrivSep}) or
 group ID-based process tracking (see
@@ -6607,17 +6607,24 @@ or a full path must be used in every case.
 
 \item[\Macro{VMWARE\_NETWORKING\_TYPE}]
   \label{param:VMwareNetworkingType}
-  A string that defaults to the value \Expr{nat},
-  identifying the type of VMware networking used.
+  An optional string used in networking that the \Condor{vm-gahp}
+  inserts into the VMware configuration file to define a networking type.
   Defined types are \Expr{nat} or \Expr{bridged}.
+  If a default value is needed, the inserted string will be \Expr{nat}.
 
 \item[\Macro{VMWARE\_NAT\_NETWORKING\_TYPE}]
   \label{param:VMwareNatNetworkingType}
-  Description here.
+  An optional string used in networking that the \Condor{vm-gahp}
+  inserts into the VMware configuration file to define a networking type.
+  If nat networking is used, this variable's definition takes
+  precedence over one defined by \MacroNI{VMWARE\_NETWORKING\_TYPE}.
 
 \item[\Macro{VMWARE\_BRIDGE\_NETWORKING\_TYPE}]
   \label{param:VMwareBridgeNetworkingType}
-  Description here.
+  An optional string used in networking that the \Condor{vm-gahp}
+  inserts into the VMware configuration file to define a networking type.
+  If bridge networking is used, this variable's definition takes
+  precedence over one defined by \MacroNI{VMWARE\_NETWORKING\_TYPE}.
 
 \end{description}
 
@@ -6678,31 +6685,35 @@ or a full path must be used in every case.
   with respect to the Xen hypervisor, but with different configurations.
   The differences are: \Prog{xm}
   requires the \MacroNI{XEN\_IMAGE\_IO\_TYPE} configuration variable
-  to be defined, nat and bridge networking must be configured
-  within Xen's \File{xend-config.sxp} file,
-  and networking parameters must be specified with
-  the \MacroNI{XEN\_VIF\_PARAMETER} configuration variable;
+  to be defined; 
   while, \Prog{virsh} uses the \MacroNI{XEN\_BRIDGE\_SCRIPT} 
   configuration variable to set up a bridged network,
-  and does not need \MacroNI{XEN\_IMAGE\_IO\_TYPE} or
-  \MacroNI{XEN\_VIF\_PARAMETER} configuration variables.
+  does not need the \MacroNI{XEN\_IMAGE\_IO\_TYPE} configuration variable,
+  and the configuration variable
+  \MacroNI{XEN\_VIF\_PARAMETER} is irrelevant.
 
 \item[\Macro{XEN\_VIF\_PARAMETER}]
   \label{param:XenVIFParameter}
   An optional string used in networking that the \Condor{vm-gahp}
   inserts into the Xen configuration file for a vif parameter.
-  If not defined, then the inserted string will be
+  If a default value is needed, the inserted string will be
   \begin{verbatim}
   vif = ['']
   \end{verbatim}
 
 \item[\Macro{XEN\_NAT\_VIF\_PARAMETER}]
   \label{param:XenNatVIFParameter}
-  Description here.
+  An optional string used in networking that the \Condor{vm-gahp}
+  inserts into the Xen configuration file for a vif parameter.
+  If nat networking is used, this variable's definition takes
+  precedence over one defined by \MacroNI{XEN\_VIF\_PARAMETER}.
 
 \item[\Macro{XEN\_BRIDGE\_VIF\_PARAMETER}]
   \label{param:XenBridgeVIFParameter}
-  Description here.
+  An optional string used in networking that the \Condor{vm-gahp}
+  inserts into the Xen configuration file for a vif parameter.
+  If bridge networking is used, this variable's definition takes
+  precedence over one defined by \MacroNI{XEN\_VIF\_PARAMETER}.
 
 \item[\Macro{XEN\_IMAGE\_IO\_TYPE}]
   \label{param:XenImageIOType}
