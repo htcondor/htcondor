@@ -179,7 +179,7 @@ while( $_ = shift( @ARGV ) ) {
 # take a momment to get a personal condor running if it is not configured
 # and running already
 
-DebugOff();
+DebugOn();
 
 my $iswindows =  0;
 my $awkscript = "";
@@ -667,6 +667,10 @@ sub CreateLocal
 		mkdir( "$testpersonalcondorlocation/local/log", 0777 ) 
 			|| die "Can't mkdir $testpersonalcondorlocation/local/log: $!\n";
 	}
+	if( !(-d "$testpersonalcondorlocation/local/log/tmp")) {
+		mkdir( "$testpersonalcondorlocation/local/log/tmp", 0777 ) 
+			|| die "Can't mkdir $testpersonalcondorlocation/local/log: $!\n";
+	}
 }
 
 sub CreateConfig
@@ -915,7 +919,7 @@ sub CreateLocalConfig
 	# Tell condor to use the current directory for temp.  This way,
 	# if we get preempted/killed, we don't pollute the global /tmp
 	mkdir( "$installdir/tmp", 0777 ) || die "Can't mkdir($installdir/tmp): $!\n";
-	print FIX "TMP_DIR = $installdir/tmp\n";
+	print FIX "TMP_DIR = \($LOG)/tmp\n";
 
 	# do this for all now....
 

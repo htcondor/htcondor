@@ -140,6 +140,7 @@ BEGIN
 	$collector_port = "0";
 	$personal_config_file = "";
 	$condordomain = "cs.wisc.edu";
+	$procdaddress = "";
 }
 
 #################################################################
@@ -171,6 +172,8 @@ sub StartCondor
 	system("mkdir -p $topleveldir");
 	$topleveldir = $topleveldir . "/" . $mpid . $version;
 	system("mkdir -p $topleveldir");
+
+	$procdaddress = $mpid . $version;
 
 	$personal_config_file = $topleveldir ."/condor_config";
 
@@ -251,6 +254,7 @@ sub Reset
 	$collector_port = "0";
 	$personal_config_file = "";
 	$condordomain = "cs.wisc.edu";
+	$procdaddress = "";
 }
 
 #################################################################
@@ -850,6 +854,11 @@ sub TunePersonalCondor
 	{
 		die "Misdirected request for ports\n";
 		exit(1);
+	}
+
+	#print NEW "PROCD_LOG = \$(LOG)/ProcLog\n";
+	if( $ENV{NMI_PLATFORM} =~ /win/ ){
+		print NEW "PROCD_ADDRESS = \\\\.\\pipe\\$procdaddress\n";
 	}
 
 	# now we consider configuration requests
