@@ -8,4 +8,5 @@ while(<IN>) {
 close(IN);
 $cmd = `pwd`;
 print OUT "$cmd\n";
+print OUT "Done\n";
 close(OUT);

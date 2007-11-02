@@ -52,12 +52,20 @@ $success = sub
 	my %info = @_;
 
 	# Verify that output file contains expected "Done" line
+	my $founddone - 0;
 	$output = $info{"output"};
 	open( OUTPUT, "< $output" );
 	@output_lines = <OUTPUT>;
 	close OUTPUT;
-	if( !grep(/Done/,@output_lines) ) {
-	    die "Output file $output is missing expected output!\n";
+	foreach $res (@output_lines) {
+		print "res: $res\n";
+		if($res =~ /^.*Done.*$/) {
+			$founddone = 1;
+			last;
+		}
+	}
+	if( $founddone != 1 ) {
+	    die "Output file $output is missing \"Done\"!\n";
 	}
 
 	# Verify that output file contains the contents of the
@@ -70,15 +78,6 @@ $success = sub
 	    if( !grep($_ eq $input_line,@output_lines) ) {
 		die "Output file is missing echoed input!\n";
 	    }
-	}
-
-	# Verify expected output in outfile1.
-	$output1 = "outfile1";
-	open( OUTPUT1, "< $output1" );
-	@output1_lines = <OUTPUT1>;
-	close OUTPUT1;
-	if( !grep(/Output to file 2/,@output1_lines) ) {
-	    die "Output file $output1 is missing expected output!\n";
 	}
 
 	print "Success: ok\n";
