@@ -2945,7 +2945,6 @@ MyString *GlobusJob::buildSubmitRSL()
 	} else {
 		ArgList args;
 		MyString arg_errors;
-		MyString rsl_args;
 		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
 					procID.cluster, procID.proc, arg_errors.Value());
@@ -2954,28 +2953,13 @@ MyString *GlobusJob::buildSubmitRSL()
 			return NULL;
 		}
 		if(args.Count() != 0) {
-			if(args.InputWasV1()) {
-					// In V1 syntax, the user's input _is_ RSL
-				if(!args.GetArgsStringV1Raw(&rsl_args,&arg_errors)) {
-					dprintf(D_ALWAYS,
-							"(%d.%d) Failed to get job arguments: %s\n",
-							procID.cluster,procID.proc,arg_errors.Value());
-					errorString.sprintf("Failed to get job arguments: %s\n",
-							arg_errors.Value());
-					return NULL;
-				}
-			}
-			else {
-					// In V2 syntax, we convert the ArgList to RSL
-				for(int i=0;i<args.Count();i++) {
-					if(i) {
-						rsl_args += ' ';
-					}
-					rsl_args += rsl_stringify(args.GetArg(i));
-				}
-			}
 			*rsl += ")(arguments=";
-			*rsl += rsl_args;
+			for(int i=0;i<args.Count();i++) {
+				if(i) {
+					*rsl += ' ';
+				}
+				*rsl += rsl_stringify(args.GetArg(i));
+			}
 		}
 	}
 
