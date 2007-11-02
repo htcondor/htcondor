@@ -179,7 +179,7 @@ while( $_ = shift( @ARGV ) ) {
 # take a momment to get a personal condor running if it is not configured
 # and running already
 
-DebugOn();
+DebugOff();
 
 my $iswindows =  0;
 my $awkscript = "";
