@@ -53,7 +53,7 @@ $success = sub
 
 	# Verify that output file contains expected "Done" line
 	my $founddone - 0;
-	$output = $info{"output"};
+	$output = $info{"transfer_output_files"};
 	open( OUTPUT, "< $output" );
 	@output_lines = <OUTPUT>;
 	close OUTPUT;
