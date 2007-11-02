@@ -308,7 +308,7 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
     struct stat buf;
     
     if( fstat( fd, &buf ) == -1 ) {
-		dprintf( D_FULLDEBUG, "ReadMultipleUserLogs error: can't stat "
+		dprintf( D_ALWAYS, "ReadMultipleUserLogs error: can't stat "
 					"condor log (%s): %s\n",
 					  log.strFilename.GetCStr(), strerror( errno ) );
 		return false;
@@ -945,7 +945,7 @@ ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
 			// First event for this job ID.  Insert the given log into
 			// the hash table.
 		if ( logHash.insert(id, log) != 0 ) {
-			dprintf(D_FULLDEBUG,
+			dprintf(D_ALWAYS,
 					"ReadMultipleUserLogs: hash table insert error");
 		}
 		result = false;
