@@ -31,6 +31,11 @@ changing it.  This improves performance of Condor on busy submit nodes
 where other processes would cause low priority shadows to become
 starved for CPU time.
 
+\item For grid-type gt2 grid universe jobs, job arguments are now handled
+like they are for all other job types. Previously, the user would have to
+manually escape characters that had special meaning to GRAM's RSL
+language.
+
 \end{itemize}
 
 

@@ -93,14 +93,12 @@ characters.  Double-quotes must be escaped with a backslash (i.e. put
 a backslash in front of each double-quote).
 
 Further interpretation of the argument string differs depending on the
-universe and operating system.  On Windows, your argument string is
+operating system.  On Windows, your argument string is
 simply passed verbatim (other than the backslash in front of
 double-quotes) to the windows application.  Most Windows applications
 will allow you to put spaces within an argument value by surrounding
-the argument with double-quotes.  In the grid universe, arguments are
-passed verbatim (other than the backslash in front of double-quotes)
-into the RSL string used by Globus.  See
-section~\ref{sec:CondorG-Submit-Args} for further details.  In all
+the argument with double-quotes.
+In all
 other cases, there is no further interpretation of the arguments.
 
 Example:
