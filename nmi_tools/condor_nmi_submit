@@ -81,9 +81,10 @@ use vars qw/ $opt_build $opt_test
     $opt_tag $opt_module $opt_nmiconf $opt_desc $opt_append
     $opt_submit_xtests
     $opt_nightly $opt_externals $opt_without_tests
+    $opt_clear_externals_cache $opt_use_externals_cache
+    $opt_externals_only
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args
     $opt_input_platform
-    $opt_clear_externals_cache $opt_use_externals_cache
     /;
 
 
@@ -336,6 +337,7 @@ sub parseOptions
            'without-tests' => \$opt_without_tests,
            'use_externals_cache' => \$opt_use_externals_cache,
            'clear_externals_cache' => \$opt_clear_externals_cache,
+           'externals-only' => \$opt_externals_only,
 # test-specific options
            'buildid=i'     => \$opt_buildid,
            'test-src=s'    => \$opt_test_src,
@@ -401,6 +403,10 @@ sub parseOptions
         }
         if( defined($opt_clear_externals_cache) ) {
             print "ERROR: --clear_externals_cache is not valid with --test\n";
+            printUsage( 1 );
+        }
+        if( defined($opt_externals_only) ) {
+            print "ERROR: --externals-only is not valid with --test\n";
             printUsage( 1 );
         }
     } else {
@@ -857,6 +863,9 @@ sub writeBuildGlue
     # define the glue scripts we want
     print $fh "pre_all = nmi_glue/build/pre_all\n";
     print $fh "remote_declare = nmi_glue/build/remote_declare\n";
+    if( defined($opt_externals_only) ) {
+	print $fh "remote_declare_args = --externals-only\n";
+    }
     print $fh "remote_pre = nmi_glue/build/remote_pre\n";
     print $fh "remote_task = nmi_glue/build/remote_task\n";
     print $fh "remote_post = nmi_glue/build/remote_post\n";
