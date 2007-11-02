@@ -72,6 +72,8 @@ template class HashBucket<HashKey, BaseJob *>;
 
 template class HashTable<HashKey, CondorResource *>;
 template class HashBucket<HashKey, CondorResource *>;
+template class HashTable<HashKey, CondorResource::ScheddPollInfo *>;
+template class HashBucket<HashKey, CondorResource::ScheddPollInfo *>;
 template class List<CondorJob>;
 template class Item<CondorJob>;
 

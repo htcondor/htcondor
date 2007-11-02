@@ -35,6 +35,9 @@ HashTable <HashKey, CondorResource *>
     CondorResource::ResourcesByName( HASH_TABLE_SIZE,
 									 hashFunction );
 
+HashTable <HashKey, CondorResource::ScheddPollInfo *>
+    CondorResource::PollInfoByName( 100, hashFunction );
+
 int CondorResource::scheddPollInterval = 300;		// default value
 
 const char *CondorResource::HashName( const char *resource_name,
@@ -148,6 +151,22 @@ CondorResource::~CondorResource()
 	ResourcesByName.remove( HashKey( HashName( resourceName,
 											   poolName,
 											   proxySubject ) ) );
+
+		// Make sure we don't leak a ScheddPollInfo. If there are other
+		// CondorResources that still want to use it, they'll recreate it.
+		// Don't delete it if we know another CondorResource is doing a
+		// poll of the remote schedd right now.
+		// TODO Track how many CondorResources are still using this
+		//   ScheddPollInfo and delete it only if we're the last one.
+	ScheddPollInfo *poll_info = NULL;
+	PollInfoByName.lookup( HashKey( HashName( scheddName, poolName, NULL ) ),
+						   poll_info );
+	if ( poll_info && ( poll_info->m_pollActive == false ||
+		 scheddStatusActive == true ) ) {
+		PollInfoByName.remove( HashKey( HashName( scheddName, poolName,
+												  NULL ) ) );
+		delete poll_info;
+	}
 	if ( proxySubject != NULL ) {
 		free( proxySubject );
 	}
@@ -196,7 +215,12 @@ void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
 
 void CondorResource::UnregisterJob( CondorJob *job )
 {
-	submittedJobs.Delete( job );
+	ScheddPollInfo *poll_info = NULL;
+	PollInfoByName.lookup( HashKey( HashName( scheddName, poolName, NULL ) ),
+						   poll_info );
+	if ( poll_info ) {
+		poll_info->m_submittedJobs.Delete( job );
+	}
 
 		// This may call delete, so don't put anything after it!
 	BaseResource::UnregisterJob( job );
@@ -205,9 +229,12 @@ void CondorResource::UnregisterJob( CondorJob *job )
 int CondorResource::DoScheddPoll()
 {
 	int rc;
+	ScheddPollInfo *poll_info = NULL;
 
-	if ( registeredJobs.IsEmpty() && scheddStatusActive == false ) {
-			// No jobs, so nothing to poll/update
+	if ( ( registeredJobs.IsEmpty() || resourceDown ) &&
+		 scheddStatusActive == false ) {
+			// No jobs or we can't talk to the schedd, so no point
+			// in polling
 		daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
 		return 0;
 	}
@@ -222,9 +249,30 @@ int CondorResource::DoScheddPoll()
 		}
 	}
 
+	PollInfoByName.lookup( HashKey( HashName( scheddName, poolName, NULL ) ),
+						   poll_info );
+
 	daemonCore->Reset_Timer( scheddPollTid, TIMER_NEVER );
 
 	if ( scheddStatusActive == false ) {
+
+			// We share polls across all CondorResource objects going to
+			// the same schedd. If another object has done a poll
+			// recently, then don't bother doing one ourselves.
+		if ( poll_info  == NULL ) {
+			poll_info = new ScheddPollInfo;
+			poll_info->m_lastPoll = 0;
+			poll_info->m_pollActive = false;
+			PollInfoByName.insert( HashKey( HashName( scheddName, poolName,
+													  NULL ) ),
+								   poll_info );
+		}
+
+		if ( poll_info->m_pollActive == true ||
+			 poll_info->m_lastPoll + scheddPollInterval > time(NULL) ) {
+			daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
+			return 0;
+		}
 
 			// start schedd status command
 		dprintf( D_FULLDEBUG, "Starting collective poll: %s\n",
@@ -233,16 +281,29 @@ int CondorResource::DoScheddPoll()
 
 			// create a list of jobs we expect to hear about in our
 			// status command
-		submittedJobs.Rewind();
-		while ( submittedJobs.Next() ) {
-			submittedJobs.DeleteCurrent();
+			// Since we're sharing the results of this status command with
+			// all CondorResource objects going to the same schedd, look
+			// for their jobs as well.
+		poll_info->m_submittedJobs.Rewind();
+		while ( poll_info->m_submittedJobs.Next() ) {
+			poll_info->m_submittedJobs.DeleteCurrent();
 		}
+		CondorResource *next_resource;
 		BaseJob *job;
 		MyString job_id;
-		registeredJobs.Rewind();
-		while ( ( job = registeredJobs.Next() ) ) {
-			if ( job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) {
-				submittedJobs.Append( (CondorJob *)job );
+		ResourcesByName.startIterations();
+		while ( ResourcesByName.iterate( next_resource ) != 0 ) {
+			if ( strcmp( scheddName, next_resource->scheddName ) ||
+				 strcmp( poolName ? poolName : "",
+						 next_resource->poolName ? next_resource->poolName : "" ) ) {
+				continue;
+			}
+
+			next_resource->registeredJobs.Rewind();
+			while ( ( job = next_resource->registeredJobs.Next() ) ) {
+				if ( job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) {
+					poll_info->m_submittedJobs.Append( (CondorJob *)job );
+				}
 			}
 		}
 
@@ -259,12 +320,15 @@ int CondorResource::DoScheddPoll()
 			EXCEPT( "condor_job_status_constrained failed!" );
 		}
 		scheddStatusActive = true;
+		poll_info->m_pollActive = true;
 
 	} else {
 
 			// finish schedd status command
 		int num_status_ads;
 		ClassAd **status_ads = NULL;
+
+		ASSERT( poll_info );
 
 		rc = gahp->condor_job_status_constrained( NULL, NULL,
 												  &num_status_ads,
@@ -302,12 +366,15 @@ int CondorResource::DoScheddPoll()
 													  (BaseJob*&)job );
 				if ( rc2 == 0 ) {
 					job->NotifyNewRemoteStatus( status_ads[i] );
-					submittedJobs.Delete( job );
+					poll_info->m_submittedJobs.Delete( job );
 				} else {
 					delete status_ads[i];
 				}
 			}
+
+			poll_info->m_lastPoll = time(NULL);
 		}
+		poll_info->m_pollActive = false;
 
 		if ( status_ads != NULL ) {
 			free( status_ads );
@@ -317,15 +384,15 @@ int CondorResource::DoScheddPoll()
 		if ( rc == 0 ) {
 			CondorJob *job;
 			MyString job_id;
-			submittedJobs.Rewind();
-			while ( ( job = submittedJobs.Next() ) ) {
+			poll_info->m_submittedJobs.Rewind();
+			while ( ( job = poll_info->m_submittedJobs.Next() ) ) {
 				if ( job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) {
 						// We should have gotten a status ad for this job,
 						// but didn't. Tell the job that there may be
 						// something wrong by giving it a NULL status ad.
 					job->NotifyNewRemoteStatus( NULL );
 				}
-				submittedJobs.DeleteCurrent();
+				poll_info->m_submittedJobs.DeleteCurrent();
 			}
 		}
 

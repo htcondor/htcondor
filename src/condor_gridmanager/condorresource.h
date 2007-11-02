@@ -73,6 +73,15 @@ class CondorResource : public BaseResource
 
 	static HashTable <HashKey, CondorResource *> ResourcesByName;
 
+		// Used by DoPollSchedd() to share poll results across all
+		// CondorResources of the same remote schedd
+	struct ScheddPollInfo {
+		time_t m_lastPoll;
+		bool m_pollActive;
+		List<CondorJob> m_submittedJobs;
+	};
+	static HashTable <HashKey, ScheddPollInfo *> PollInfoByName;
+
  private:
 	void DoPing( time_t& ping_delay, bool& ping_complete,
 				 bool& ping_succeeded  );
@@ -83,10 +92,6 @@ class CondorResource : public BaseResource
 	GahpClient *gahp;
 	GahpClient *ping_gahp;
 	GahpClient *lease_gahp;
-
-		// Used by DoPollSchedd() to determine which jobs we expect to
-		// see ads for. It is rebuilt on every poll.
-	List<CondorJob> submittedJobs;
 };
 
 #endif
