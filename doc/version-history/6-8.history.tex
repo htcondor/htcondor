@@ -69,6 +69,10 @@ been fixed.  The problem could cause memory corruption in the
 \Condor{schedd} while transferring input/output files for a remotely
 submitted job or a `spooled' job.
 
+% PR 908
+\item Increased the verbosity of some error messages (related to
+reading log files) in \Condor{dagman}.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -98,7 +102,7 @@ submitted job or a `spooled' job.
 
 \item Condor is now officially supported on Microsoft Vista.
 
-\item Condor is now officially supported on MacOS running natively on Intel CPUs.  (and Condor bianries for Intel MacOS are now available for download).
+\item Condor is now officially supported on MacOS running natively on Intel CPUs.  (and Condor binaries for Intel MacOS are now available for download).
 
 \item Condor now uses Globus 4.0.5 for GSI, pre-WS GRAM, and GridFTP support.
 
@@ -211,7 +215,7 @@ starts to perform file transfers for grid-type gt4 grid universe jobs.
 
 \begin{itemize}
 
-\item Grid universe type GT4 (web services GRAM) does not work properly on Itanium-based machines, because it requies Java 1.5, which is not available on the Itanium (ia\_64).
+\item Grid universe type GT4 (web services GRAM) does not work properly on Itanium-based machines, because it requires Java 1.5, which is not available on the Itanium (ia\_64).
 
 \end{itemize}
 
