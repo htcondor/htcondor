@@ -145,7 +145,7 @@ if($bail != 1) {
 					print "found $schedd: $line\n";
 					$found1 = 1;
 				} else {
-					#print "skip: $line\n";
+					print "skip: $line\n";
 				}
 			}
 			if($found1 == 1){
