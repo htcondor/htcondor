@@ -468,6 +468,7 @@ sub InstallPersonalCondor
 			system("mkdir -p $topleveldir/execute");
 			system("mkdir -p $topleveldir/spool");
 			system("mkdir -p $topleveldir/log");
+			system("mkdir -p $topleveldir/log/tmp");
 		}
 		elsif( $condordistribution eq "nightlies" )
 		{
@@ -535,6 +536,7 @@ sub InstallPersonalCondor
 			system("mkdir -p $topleveldir/execute");
 			system("mkdir -p $topleveldir/spool");
 			system("mkdir -p $topleveldir/log");
+			system("mkdir -p $topleveldir/log/tmp");
 		}
 		elsif( -e $condordistribution )
 		{

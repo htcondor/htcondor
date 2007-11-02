@@ -918,8 +918,8 @@ sub CreateLocalConfig
 
 	# Tell condor to use the current directory for temp.  This way,
 	# if we get preempted/killed, we don't pollute the global /tmp
-	mkdir( "$installdir/tmp", 0777 ) || die "Can't mkdir($installdir/tmp): $!\n";
-	print FIX "TMP_DIR = \($LOG)/tmp\n";
+	#mkdir( "$installdir/tmp", 0777 ) || die "Can't mkdir($installdir/tmp): $!\n";
+	print FIX "TMP_DIR = \$(LOG)/tmp\n";
 
 	# do this for all now....
 
