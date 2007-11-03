@@ -1023,7 +1023,6 @@ sub IsRunningYet
         	if( -f $masteradr ) {
             	print "Found it!!!! master address file \n";
             	$havemasteraddr = "yes";
-				sleep 2;
         	} else {
             	sleep 2;
         	}
@@ -1046,7 +1045,6 @@ sub IsRunningYet
         	if( -f $collectoradr ) {
             	print "Found it!!!! collector address file\n";
             	$havecollectoraddr = "yes";
-				sleep 2;
         	} else {
             	sleep 2;
         	}
@@ -1069,7 +1067,6 @@ sub IsRunningYet
         	if( -f $negotiatoradr ) {
             	print "Found it!!!! negotiator address file\n";
             	$havenegotiatoraddr = "yes";
-				sleep 2;
         	} else {
             	sleep 2;
         	}
@@ -1092,7 +1089,6 @@ sub IsRunningYet
         	if( -f $startdadr ) {
             	print "Found it!!!! startd address file\n";
             	$havestartdaddr = "yes";
-				sleep 2;
         	} else {
             	sleep 2;
         	}
@@ -1115,7 +1111,6 @@ sub IsRunningYet
         	if( -f $scheddadr ) {
             	print "Found it!!!! schedd address file\n";
             	$havescheddaddr = "yes";
-				sleep 2;
         	} else {
             	sleep 2;
         	}

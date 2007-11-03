@@ -1127,7 +1127,6 @@ sub IsRunningYet
         	if( -f $masteradr ) {
             	debug( "Found it!!!! master address file\n");
             	$havemasteraddr = "yes";
-				sleep 1;
         	} else {
             	sleep 1;
         	}
@@ -1150,7 +1149,6 @@ sub IsRunningYet
         	if( -f $collectoradr ) {
             	debug( "Found it!!!! collector address file\n");
             	$havecollectoraddr = "yes";
-				sleep 1;
         	} else {
             	sleep 1;
         	}
@@ -1173,7 +1171,6 @@ sub IsRunningYet
         	if( -f $negotiatoradr ) {
             	debug( "Found it!!!! negotiator address file\n");
             	$havenegotiatoraddr = "yes";
-				sleep 1;
         	} else {
             	sleep 1;
         	}
@@ -1196,7 +1193,6 @@ sub IsRunningYet
         	if( -f $startdadr ) {
             	debug( "Found it!!!! startd address file\n");
             	$havestartdaddr = "yes";
-				sleep 1;
         	} else {
             	sleep 1;
         	}
@@ -1221,7 +1217,6 @@ sub IsRunningYet
         	if( -f $scheddadr ) {
             	debug( "Found it!!!! schedd address file\n");
             	$havescheddaddr = "yes";
-				sleep 1;
         	} else {
             	sleep 1;
         	}
