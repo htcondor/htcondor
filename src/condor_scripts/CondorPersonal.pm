@@ -853,6 +853,7 @@ sub TunePersonalCondor
 		print NEW "NEGOTIATOR_INTERVAL = 5\n";
 		print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
 		print NEW "PERIODIC_EXPR_TIMESLICE = .99\n";
+		print NEW "JOB_START_DELAY = 0\n";
 	}
 	elsif( $portchanges eq "standard" )
 	{
