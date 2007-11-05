@@ -848,6 +848,7 @@ sub TunePersonalCondor
 			print NEW "CONDOR_HOST = $condorhost\n";
 		}
 		print NEW "START = TRUE\n";
+		print NEW "RunBenchmarks = FALSE\n";
 		print NEW "SCHEDD_INTERVAL = 5\n";
 		print NEW "UPDATE_INTERVAL = 5\n";
 		print NEW "NEGOTIATOR_INTERVAL = 5\n";
