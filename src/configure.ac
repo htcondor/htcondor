@@ -2293,7 +2293,7 @@ AC_DEFINE(HAVE_BOINC,1,[are we compiling support for backfill with BOINC])
 
 # GCB only matters and works if we have GNU ld...
 if test x$_cv_ld_is_gnu = xyes; then
-  CHECK_EXTERNAL([gcb], [1.5.2], [soft])
+  CHECK_EXTERNAL([gcb], [1.5.3], [soft])
 fi
 
 AX_LIB_ORACLE_OCI("10.0.0")
