@@ -38,6 +38,8 @@
 #define XEN_STATUS_TMP_FILE "xen_status.condor"
 #define XEN_CONFIG_FILE_NAME "xen_vm.config"
 #define XEN_CKPT_TIMESTAMP_FILE_SUFFIX ".timestamp"
+#define XEN_MEM_SAVED_FILE "xen.mem.ckpt"
+#define XEN_CKPT_TIMESTAMP_FILE XEN_MEM_SAVED_FILE XEN_CKPT_TIMESTAMP_FILE_SUFFIX
 
 static MyString
 getScriptErrorString(const char* fname)
@@ -194,6 +196,12 @@ XenType::Shutdown()
 				if( !m_configfile.IsEmpty() ) {
 					unlink(m_configfile.Value());
 				}
+
+				// delete the checkpoint timestamp file
+				MyString tmpfilename;
+				tmpfilename.sprintf("%s%c%s", m_workingpath.Value(),
+						DIR_DELIM_CHAR, XEN_CKPT_TIMESTAMP_FILE);
+				unlink(tmpfilename.Value());
 
 				// We need to update timestamp of transferred writable disk files
 				updateLocalWriteDiskTimestamp(time(NULL));
@@ -1720,8 +1728,8 @@ XenType::testXen(VMGahpConfig* config)
 void
 XenType::makeNameofSuspendfile(MyString& name)
 {
-	name.sprintf("%s%c%s.mem.ckpt", m_workingpath.Value(), 
-			DIR_DELIM_CHAR, m_vmtype.Value());
+	name.sprintf("%s%c%s", m_workingpath.Value(), DIR_DELIM_CHAR, 
+			XEN_MEM_SAVED_FILE);
 }
 
 // This function compares the timestamp of given file with 
