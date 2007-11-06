@@ -4052,6 +4052,7 @@ SetRunAsOwner()
 	}
 			
 	free(run_as_owner);
+	MyString buffer;
 	buffer.sprintf(  "%s = True", ATTR_JOB_RUNAS_OWNER );
 	InsertJobExpr (buffer);
 

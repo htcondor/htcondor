@@ -6239,10 +6239,10 @@ int DaemonCore::Create_Process(
 			"\0" };		// must end list with NULL string
 		int i = 0;
 		while ( default_vars[i][0] ) {
-			envbuf[0]='\0';
-			GetEnvironmentVariable(default_vars[i],envbuf,sizeof(envbuf));
-			if (envbuf[0]) {
-				job_environ.SetEnv(default_vars[i],envbuf);
+			MyString envbuf;
+			GetEnv(default_vars[i],envbuf);
+			if (envbuf.Length()) {
+				job_environ.SetEnv(default_vars[i],envbuf.Value());
 			}
 			i++;
 		}
