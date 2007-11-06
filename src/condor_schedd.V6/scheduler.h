@@ -544,7 +544,7 @@ private:
 	// utility functions
 	int				count_jobs();
 	void   			check_claim_request_timeouts( void );
-	int				insert_owner(char*);
+	int				insert_owner(char const*);
 	void			child_exit(int, int);
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
 	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, shadow_rec * srec);

@@ -129,15 +129,15 @@ cleanup_execute_dir(int pid, char const *exec_path)
 	// Instantiate a directory object pointing at the execute directory
 	Directory execute_dir( exec_path, PRIV_ROOT );
 
-	char	pid_dir[_POSIX_PATH_MAX];
+	MyString	pid_dir;
 
 		// We're trying to delete a specific subdirectory, either
 		// b/c a starter just exited and we might need to clean up
 		// after it, or because we're in a recursive call.
-	sprintf( pid_dir, "dir_%d", pid );
+	pid_dir.sprintf( "dir_%d", pid );
 
 		// Look for it
-	if ( execute_dir.Find_Named_Entry( pid_dir ) ) {
+	if ( execute_dir.Find_Named_Entry( pid_dir.Value() ) ) {
 
 			// Remove the execute directory
 		execute_dir.Remove_Current_File();

@@ -28,6 +28,7 @@
 #include "directory.h"
 #include "my_username.h"
 #include "internet.h"
+#include "condor_getcwd.h"
 
 SshdWrapper::SshdWrapper()
 {
@@ -227,16 +228,16 @@ bool
 SshdWrapper::getSshRuntimeInfo(char* & sinful_string, char* & dir, char* & 
 					   username)
 {
-	char hostname[_POSIX_PATH_MAX];
-	condor_gethostname(hostname, _POSIX_PATH_MAX);
+	char hostname[CONDOR_HOSTNAME_MAX];
+	condor_gethostname(hostname, CONDOR_HOSTNAME_MAX);
 
 	sinful_string = (char *) malloc(strlen(hostname) + 10);
 	sprintf(sinful_string, "<%s:%d>", hostname, port);
 
 		// Is the dir the cwd?
-	char wd[_POSIX_PATH_MAX];
-	getcwd(wd, _POSIX_PATH_MAX);
-	dir = strdup(wd);
+	MyString wd;
+	condor_getcwd(wd);
+	dir = strdup(wd.Value());
 			
 		// At this point am I running as the user?
 

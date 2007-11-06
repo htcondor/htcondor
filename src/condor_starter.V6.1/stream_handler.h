@@ -39,8 +39,8 @@ public:
 	static int ReconnectAll();
 private:
 	char	buffer[STREAM_BUFFER_SIZE];
-	char	filename[_POSIX_PATH_MAX];
-	char	streamname[_POSIX_PATH_MAX];
+	MyString	filename;
+	MyString	streamname;
 	bool	is_output;
 	int	pipe_fds[2];
 	int	job_pipe;

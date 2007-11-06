@@ -40,7 +40,7 @@ public:
     int         job_prio;
     int         status;
     int         qdate;
-    char        owner[100];                       
+    char        owner[MAX_CONDOR_USERNAME_LEN];
 	int			auto_cluster_id;
 
 	prio_rec() { *owner='\0'; }

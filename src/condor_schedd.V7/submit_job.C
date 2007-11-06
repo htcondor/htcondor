@@ -987,8 +987,7 @@ EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
 
 		// gather all the info out of the job ad which we want to 
 		// put into the email message.
-	char JobName[_POSIX_PATH_MAX];
-	JobName[0] = '\0';
+	MyString JobName;
 	job_ad->LookupString( ATTR_JOB_CMD, JobName );
 
 	MyString Args;
@@ -1030,8 +1029,8 @@ EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
 	time_t now = time(NULL);
 
 	fprintf( mailer, "Your Condor job %d.%d \n", cluster, proc);
-	if ( JobName[0] ) {
-		fprintf(mailer,"\t%s %s\n",JobName,Args.Value());
+	if ( JobName.Length() ) {
+		fprintf(mailer,"\t%s %s\n",JobName.Value(),Args.Value());
 	}
 	if(exit_status_known) {
 		fprintf(mailer, "has ");

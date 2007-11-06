@@ -1118,7 +1118,6 @@ exception_cleanup(int,int,char*)
 
 int	AvoidNFS = 0;
 
-char Condor_CWD[ _POSIX_PATH_MAX ];
 
 #if defined(OSF1) || defined(HPUX)
 /*

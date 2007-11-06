@@ -81,7 +81,7 @@ int
 main_init(int argc, char* argv[])
 {
 	char**		ptr; 
-	char		job_queue_name[_POSIX_PATH_MAX];
+	MyString		job_queue_name;
  
 	int argc_count = 1;
 	for(ptr = argv + 1, argc_count = 1; argc_count<argc && *ptr; ptr++,argc_count++)
@@ -111,7 +111,7 @@ main_init(int argc, char* argv[])
 	scheduler.Register();
 
 		// Initialize the job queue
-	sprintf(job_queue_name, "%s/job_queue.log", Spool);
+	job_queue_name.sprintf( "%s/job_queue.log", Spool);
 
 		// Make a backup of the job queue?
 	char	*tmp;
@@ -122,15 +122,15 @@ main_init(int argc, char* argv[])
 			if ( condor_gethostname( hostname, sizeof( hostname ) ) ) {
 				strcpy( hostname, "" );
 			}
-			char		job_queue_backup[_POSIX_PATH_MAX];
-			sprintf(job_queue_backup, "%s/job_queue.bak.%s",
+			MyString		job_queue_backup;
+			job_queue_backup.sprintf( "%s/job_queue.bak.%s",
 					Spool, hostname );
-			if ( copy_file( job_queue_name, job_queue_backup ) ) {
+			if ( copy_file( job_queue_name.Value(), job_queue_backup.Value() ) ) {
 				dprintf( D_ALWAYS, "Failed to backup spool to '%s'\n",
-						 job_queue_backup );
+						 job_queue_backup.Value() );
 			} else {
 				dprintf( D_FULLDEBUG, "Spool backed up to '%s'\n",
-						 job_queue_backup );
+						 job_queue_backup.Value() );
 			}
 		}
 		free( tmp );
@@ -138,7 +138,7 @@ main_init(int argc, char* argv[])
 
 	int max_historical_logs = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
 
-	InitJobQueue(job_queue_name,max_historical_logs);
+	InitJobQueue(job_queue_name.Value(),max_historical_logs);
 	mark_jobs_idle();
 
 		// The below must happen _after_ InitJobQueue is called.

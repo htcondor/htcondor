@@ -2142,7 +2142,7 @@ long _sysconf(int name)
  * we make stub_gen return longs instead of ints, casting char* to an int
  * causes problems on some platforms...  also, stubgen does not deal
  * well with a function like getlogin which returns a NULL on error */
-extern "C" int REMOTE_CONDOR_getlogin( char * );
+extern "C" int REMOTE_CONDOR_getlogin( char ** );
 char *
 getlogin()
 {
@@ -2172,11 +2172,9 @@ getlogin()
 		return (  GETLOGIN() );
 #endif
 	} else {
-		if (loginbuf == NULL) {
-			loginbuf = (char *)malloc(35);
-			memset( loginbuf, 0, 35 );
-		}
-		rval = REMOTE_CONDOR_getlogin( loginbuf );
+		free( loginbuf );
+		loginbuf = NULL;
+		rval = REMOTE_CONDOR_getlogin( &loginbuf );
 	}
 
 	if( rval >= 0 ) {

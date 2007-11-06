@@ -47,6 +47,7 @@
 #include "condor_socket_types.h"
 #include "classad_helpers.h"
 #include "condor_holdcodes.h"
+#include "basename.h"
 
 
 extern "C" {
@@ -57,10 +58,10 @@ extern "C" {
 	int access_via_nfs (const char *);
 	int use_local_access (const char *);
 	int use_special_access (const char *);
-	int use_buffer( char *method, char *path );
-	int use_compress( char *method, char *path );
-	int use_fetch( char *method, char *path );
-	int use_append( char *method, char *path );
+	int use_buffer( char *method, char const *path );
+	int use_compress( char *method, char const *path );
+	int use_fetch( char *method, char const *path );
+	int use_append( char *method, char const *path );
 	void HoldJob( const char* long_reason, const char* short_reason,
 				  int reason_code, int reason_subcode );
 	void reaper();
@@ -93,7 +94,7 @@ extern char *LastCkptPlatform;
 int		LastCkptSig = 0;
 
 /* Until the cwd is actually set, use "dot" */
-char CurrentWorkingDir[ _POSIX_PATH_MAX ]=".";
+MyString CurrentWorkingDir(".");
 
 extern "C" {
 
@@ -140,7 +141,7 @@ void RequestCkptBandwidth();
 #endif
 
 int
-pseudo_register_ckpt_platform( const char *platform, int len )
+pseudo_register_ckpt_platform( const char *platform, int /*len*/ )
 {
 	/* Here we set the platform into a global variable which the
 		shadow will only be placed into the jobad (much later)
@@ -158,7 +159,7 @@ pseudo_register_ckpt_platform( const char *platform, int len )
 
 /* performing a blocking call to system() */
 int
-pseudo_shell( char *command, int len )
+pseudo_shell( char *command, int /*len*/ )
 {
 	int rval;
 	char *tmp;
@@ -222,18 +223,18 @@ pseudo_getpid()
 
 /* always return the owner of the job as the loginname */
 int
-pseudo_getlogin(char *loginbuf)
+pseudo_getlogin(char *&loginbuf)
 {
 	char *temp;
 
+	ASSERT( loginbuf == NULL );
 	temp = ((PROC *)Proc)->owner; 
 
-	if ( (temp != NULL) && (strlen(temp) < 30) ) {
-		strcpy(loginbuf,temp);
-		return 0;
-	} else {
+	if( temp == NULL ) {
 		return -1;
 	}
+	loginbuf = strdup( temp );
+	return 0;
 }
 
 int
@@ -318,7 +319,6 @@ void
 commit_rusage()
 {
 	struct rusage local_rusage;
-	char buf[1024*10];
 
 	get_local_rusage( &local_rusage );
 
@@ -358,7 +358,7 @@ pseudo_send_rusage( struct rusage *use_p )
 }
 
 int
-pseudo_getrusage(int who, struct rusage *use_p )
+pseudo_getrusage(int /*who*/, struct rusage *use_p )
 {
 
 	// No need to look at the "who" param; the special switch for getrusage
@@ -378,7 +378,7 @@ pseudo_report_error( char *msg )
 }
 
 int
-pseudo_report_file_info( char *kind, char *name, int open_count, int read_count, int write_count, int seek_count, int read_bytes, int write_bytes )
+pseudo_report_file_info( char * /*kind*/, char *name, int open_count, int read_count, int write_count, int seek_count, int read_bytes, int write_bytes )
 {
 	job_report_store_file_info( name, open_count, read_count, write_count, seek_count, read_bytes, write_bytes );
 	return 0;
@@ -394,7 +394,7 @@ pseudo_report_file_info_new( char *name, long long open_count, long long read_co
 int
 pseudo_getwd( char *&path )
 {
-	path = strdup( CurrentWorkingDir );
+	path = strdup( CurrentWorkingDir.Value() );
 	return 1;
 }
 
@@ -1676,14 +1676,14 @@ Otherwise, tack the current directory on to the front
 of short_path, and copy it to full_path.
 */
  
-static void complete_path( const char *short_path, char *full_path )
+static void complete_path( const char *short_path, MyString &full_path )
 {
 	if(short_path[0]=='/') {
-		strcpy(full_path,short_path);
+		full_path = short_path;
 	} else {
-		strcpy(full_path,CurrentWorkingDir);
-		strcat(full_path,"/");
-		strcat(full_path,short_path);
+		full_path = CurrentWorkingDir;
+		full_path += "/";
+		full_path += short_path;
 	}
 }
 
@@ -1700,29 +1700,29 @@ such as "local:" or "remote:" and assumes the syscall lib will
 add the necessary transformations.
 */
 
-int do_get_file_info( char *logical_name, char *&url, int allow_complex );
-void append_buffer_info( MyString &url, char *method, char *path );
+int do_get_file_info( char const *logical_name, char *&url, int allow_complex );
+void append_buffer_info( MyString &url, char *method, char const *path );
 
 int
 pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 {
-	return do_get_file_info( (char*)logical_name, actual_url, 1 );
+	return do_get_file_info( logical_name, actual_url, 1 );
 }
 
 int
 pseudo_get_file_info( const char *logical_name, char *&actual_url )
 {
-	return do_get_file_info( (char*)logical_name, actual_url, 0 );
+	return do_get_file_info( logical_name, actual_url, 0 );
 }
 
 int
-do_get_file_info( char *logical_name, char *&actual_url, int allow_complex )
+do_get_file_info( char const *logical_name, char *&actual_url, int allow_complex )
 {
-	char	remap_list[ATTRLIST_MAX_EXPRESSION];
-	char	split_dir[_POSIX_PATH_MAX];
-	char	split_file[_POSIX_PATH_MAX];
-	char	full_path[_POSIX_PATH_MAX];
-	char	remap[_POSIX_PATH_MAX];
+	MyString	remap_list;
+	MyString	split_dir;
+	MyString	split_file;
+	MyString	full_path;
+	MyString	remap;
 	char	*method;
 	int		want_remote_io;
 	MyString url_buf;
@@ -1755,37 +1755,37 @@ do_get_file_info( char *logical_name, char *&actual_url, int allow_complex )
 	/* The incoming logical name might be a simple, relative, or complete path */
 	/* We need to examine both the full path and the simple name. */
 
-	filename_split( (char*) logical_name, split_dir, split_file );
+	filename_split( logical_name, split_dir, split_file );
 	complete_path( logical_name, full_path );
 
 	/* Any name comparisons must check the logical name, the simple name, and the full path */
 
 	if(JobAd->LookupString(ATTR_FILE_REMAPS,remap_list) &&
-	  (filename_remap_find( remap_list, (char*) logical_name, remap ) ||
-	   filename_remap_find( remap_list, split_file, remap ) ||
-	   filename_remap_find( remap_list, full_path, remap ))) {
+	  (filename_remap_find( remap_list.Value(), logical_name, remap ) ||
+	   filename_remap_find( remap_list.Value(), split_file.Value(), remap ) ||
+	   filename_remap_find( remap_list.Value(), full_path.Value(), remap ))) {
 
-		dprintf(D_SYSCALLS,"\tremapped to: %s\n",remap);
+		dprintf(D_SYSCALLS,"\tremapped to: %s\n",remap.Value());
 
 		/* If the remap is a full URL, return right away */
 		/* Otherwise, continue processing */
 
-		if(strchr(remap,':')) {
+		if(strchr(remap.Value(),':')) {
 			dprintf(D_SYSCALLS,"\tremap is complete url\n");
-			actual_url = strdup(remap);
+			actual_url = strdup(remap.Value());
 			if (want_remote_io == FALSE) {
 				return 1;
 			}
 			return 0;
 		} else {
 			dprintf(D_SYSCALLS,"\tremap is simple file\n");
-			complete_path( remap, full_path );
+			complete_path( remap.Value(), full_path );
 		}
 	} else {
 		dprintf(D_SYSCALLS,"\tnot remapped\n");
 	}
 
-	dprintf( D_SYSCALLS,"\tfull_path = \"%s\"\n", full_path );
+	dprintf( D_SYSCALLS,"\tfull_path = \"%s\"\n", full_path.Value() );
 
 	/* Now, we have a full pathname. */
 	/* Figure out what url modifiers to slap on it. */
@@ -1793,37 +1793,37 @@ do_get_file_info( char *logical_name, char *&actual_url, int allow_complex )
 #ifdef HPUX
 	/* I have no idea why this is happening, but I have seen it happen many
 	 * times on the HPUX version, so here is a quick hack -Todd 5/19/95 */
-	if ( strcmp(full_path,"/usr/lib/nls////strerror.cat") == 0 )
-		strcpy(full_path,"/usr/lib/nls/C/strerror.cat\0");
+	if ( full_path == "/usr/lib/nls////strerror.cat" )
+		full_path = "/usr/lib/nls/C/strerror.cat\0";
 #endif
 
-	if(is_ckpt_file(full_path) || is_ickpt_file(full_path)) {
+	if(is_ckpt_file(full_path.Value()) || is_ickpt_file(full_path.Value())) {
 		method = "remote";
-	} else if( use_special_access(full_path) ) {
+	} else if( use_special_access(full_path.Value()) ) {
 		method = "special";
 	} else if ( want_remote_io == FALSE ) {
 		method = "local";
-	} else if( use_local_access(full_path) ) {
+	} else if( use_local_access(full_path.Value()) ) {
 		method = "local";
-	} else if( access_via_afs(full_path) ) {
+	} else if( access_via_afs(full_path.Value()) ) {
 		method = "local";
-	} else if( access_via_nfs(full_path) ) {
+	} else if( access_via_nfs(full_path.Value()) ) {
 		method = "local";
 	} else {
 		method = "remote";
 	}
 
 	if( allow_complex ) {
-		if( use_fetch(method,full_path) ) {
+		if( use_fetch(method,full_path.Value()) ) {
 			url_buf += "fetch:";
 		}
-		if( use_compress(method,full_path) ) {
+		if( use_compress(method,full_path.Value()) ) {
 			url_buf += "compress:";
 		}
 
-		append_buffer_info(url_buf,method,full_path);
+		append_buffer_info(url_buf,method,full_path.Value());
 
-		if( use_append(method,full_path) ) {
+		if( use_append(method,full_path.Value()) ) {
 			url_buf += "append:";
 		}
 	}
@@ -1845,12 +1845,12 @@ do_get_file_info( char *logical_name, char *&actual_url, int allow_complex )
 	return 0;
 }
 
-void append_buffer_info( MyString &url, char *method, char *path )
+void append_buffer_info( MyString &url, char *method, char const *path )
 {
-	char buffer_list[ATTRLIST_MAX_EXPRESSION];
-	char buffer_string[ATTRLIST_MAX_EXPRESSION];
-	char dir[_POSIX_PATH_MAX];
-	char file[_POSIX_PATH_MAX];
+	MyString buffer_list;
+	MyString buffer_string;
+	MyString dir;
+	MyString file;
 	int s,bs,ps;
 	int result;
 
@@ -1863,14 +1863,14 @@ void append_buffer_info( MyString &url, char *method, char *path )
 	/* These lines have the same syntax as a remap list */
 
 	if(JobAd->LookupString(ATTR_BUFFER_FILES,buffer_list)) {
-		if( filename_remap_find(buffer_list,path,buffer_string) ||
-		    filename_remap_find(buffer_list,file,buffer_string) ) {
+		if( filename_remap_find(buffer_list.Value(),path,buffer_string) ||
+		    filename_remap_find(buffer_list.Value(),file.Value(),buffer_string) ) {
 
 			/* If the file is merely mentioned, turn on the default buffer */
 			url += "buffer:";
 
 			/* If there is also a size setting, use that */
-			result = sscanf(buffer_string,"(%d,%d)",&s,&bs);
+			result = sscanf(buffer_string.Value(),"(%d,%d)",&s,&bs);
 			if( result==2 ) url += buffer_string;
 
 			return;
@@ -1889,38 +1889,33 @@ void append_buffer_info( MyString &url, char *method, char *path )
 
 static int attr_list_has_file( const char *attr, const char *path )
 {
-	char dir[_POSIX_PATH_MAX];
-	char file[_POSIX_PATH_MAX];
-	char str[ATTRLIST_MAX_EXPRESSION];
-	StringList *list=0;
+	char const *file;
+	MyString str;
 
-	filename_split( path, dir, file );
+	file = condor_basename(path);
 
-	str[0] = 0;
 	JobAd->LookupString(attr,str);
-	list = new StringList(str);
+	StringList list(str.Value());
 
-	if( list->contains_withwildcard(path) || list->contains_withwildcard(file) ) {
-		delete list;
+	if( list.contains_withwildcard(path) || list.contains_withwildcard(file) ) {
 		return 1;
 	} else {
-		delete list;
 		return 0;
 	}
 }
 
 
-int use_append( char *method, char *path )
+int use_append( char * /*method*/, char const *path )
 {
 	return attr_list_has_file( ATTR_APPEND_FILES, path );
 }
 
-int use_compress( char *method, char *path )
+int use_compress( char * /*method*/, char const *path )
 {
 	return attr_list_has_file( ATTR_COMPRESS_FILES, path );
 }
 
-int use_fetch( char *method, char *path )
+int use_fetch( char * /*method*/, char const *path )
 {
 	return attr_list_has_file( ATTR_FETCH_FILES, path );
 }
@@ -1930,10 +1925,10 @@ This is for compatibility with the old starter.
 It will go away in the near future.
 */
 
-int pseudo_file_info( const char *logical_name, int *fd, char *&physical_name )
+int pseudo_file_info( const char *logical_name, int * /*fd*/, char *&physical_name )
 {
 	char	*url = NULL;
-	char	method[_POSIX_PATH_MAX];
+	char	*method = NULL;
 	int	result;
 
 	ASSERT( physical_name == NULL );
@@ -1944,7 +1939,10 @@ int pseudo_file_info( const char *logical_name, int *fd, char *&physical_name )
 		return result;
 	}
 
+	method = (char *)malloc(strlen(url)+1);
 	physical_name = (char *)malloc(strlen(url)+1);
+	ASSERT( method );
+	ASSERT( physical_name );
 
 	/* glibc21 (and presumeably glibc20) have a problem where the range
 		specifier can't be 8bit. So, this only allows a 7bit clean filename. */
@@ -1961,6 +1959,7 @@ int pseudo_file_info( const char *logical_name, int *fd, char *&physical_name )
 	}
 
 	free( url );
+	free( method );
 	return result;
 }
 
@@ -2134,7 +2133,7 @@ pseudo_chdir( const char *path )
 	log_execute( ExecutingHost );
 
 	dprintf( D_SYSCALLS, "\tpath = \"%s\"\n", path );
-	dprintf( D_SYSCALLS, "\tOrig CurrentWorkingDir = \"%s\"\n", CurrentWorkingDir );
+	dprintf( D_SYSCALLS, "\tOrig CurrentWorkingDir = \"%s\"\n", CurrentWorkingDir.Value() );
 
 	rval = chdir( path );
 
@@ -2144,12 +2143,12 @@ pseudo_chdir( const char *path )
 	}
 
 	if( path[0] == '/' ) {
-		strcpy( CurrentWorkingDir, path );
+		CurrentWorkingDir = path;
 	} else {
-		strcat( CurrentWorkingDir, "/" );
-		strcat( CurrentWorkingDir, path );
+		CurrentWorkingDir += "/";
+		CurrentWorkingDir += path;
 	}
-	dprintf( D_SYSCALLS, "\tNew CurrentWorkingDir = \"%s\"\n", CurrentWorkingDir );
+	dprintf( D_SYSCALLS, "\tNew CurrentWorkingDir = \"%s\"\n", CurrentWorkingDir.Value() );
 	dprintf( D_SYSCALLS, "OK\n" );
 	return rval;
 }
@@ -2468,21 +2467,21 @@ N_REQ)?"open_req":"server_down");
 
 #if !defined(PVM_RECEIVE)
 int
-pseudo_pvm_info(char *pvmd_reply, int starter_tid)
+pseudo_pvm_info(char * /*pvmd_reply*/, int /*starter_tid*/)
 {
 	return 0;
 }
 
 
 int
-pseudo_pvm_task_info(int pid, int task_tid)
+pseudo_pvm_task_info(int /*pid*/, int /*task_tid*/)
 {
 	return 0;
 }
 
 
 int
-pseudo_suspended(int suspended)
+pseudo_suspended(int /*suspended*/)
 {
 	return 0;
 }
@@ -2657,19 +2656,19 @@ by Chirp.  They certainly could be implemented in the old
 shadow, but we have no need for them just yet.
 */
 
-int pseudo_get_job_attr( const char *name, char *&expr )
+int pseudo_get_job_attr( const char * /*name*/, char *& /*expr*/ )
 {
 	errno = ENOSYS;
 	return -1;
 }
 
-int pseudo_set_job_attr( const char *name, const char *expr )
+int pseudo_set_job_attr( const char * /*name*/, const char * /*expr*/ )
 {
 	errno = ENOSYS;
 	return -1;
 }
 
-int pseudo_constrain( const char *expr )
+int pseudo_constrain( const char * /*expr*/ )
 {
 	errno = ENOSYS;
 	return -1;

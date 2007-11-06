@@ -131,6 +131,8 @@ extern char *_condor_DebugFlagNames[];
 */
 int InDBX = 0;
 
+#define DPRINTF_ERR_MAX 255
+
 /*
 ** Print a nice log message, but only if "flags" are included in the
 ** current debugging flags.
@@ -410,7 +412,7 @@ debug_lock(int debug_level)
 	int			length = 0;
 	priv_state	priv;
 	int save_errno;
-	char msg_buf[_POSIX_PATH_MAX];
+	char msg_buf[DPRINTF_ERR_MAX];
 
 	if ( DebugFP == NULL ) {
 		DebugFP = stderr;
@@ -438,7 +440,7 @@ debug_lock(int debug_level)
 			LockFd = _condor_open_lock_file(DebugLock,O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
 				save_errno = errno;
-				sprintf( msg_buf, "Can't open \"%s\"\n", DebugLock );
+				snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n", DebugLock );
 				_condor_dprintf_exit( save_errno, msg_buf );
 			}
 		}
@@ -451,7 +453,7 @@ debug_lock(int debug_level)
 #endif
 		{
 			save_errno = errno;
-			sprintf( msg_buf, "Can't get exclusive lock on \"%s\", "
+			snprintf( msg_buf, sizeof(msg_buf), "Can't get exclusive lock on \"%s\", "
 					 "LockFd: %d\n", DebugLock, LockFd );
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
@@ -470,7 +472,7 @@ debug_lock(int debug_level)
 				_condor_fd_panic( __LINE__, __FILE__ );
 			}
 #endif
-			sprintf( msg_buf, "Could not open DebugFile \"%s\"\n", 
+			snprintf( msg_buf, sizeof(msg_buf), "Could not open DebugFile \"%s\"\n", 
 					 DebugFile[debug_level] );
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
@@ -482,7 +484,7 @@ debug_lock(int debug_level)
 				return NULL;
 			}
 			save_errno = errno;
-			sprintf( msg_buf, "Can't seek to end of DebugFP file\n" );
+			snprintf( msg_buf, sizeof(msg_buf), "Can't seek to end of DebugFP file\n" );
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 
@@ -503,7 +505,7 @@ void
 debug_unlock(int debug_level)
 {
 	priv_state priv;
-	char msg_buf[_POSIX_PATH_MAX];
+	char msg_buf[DPRINTF_ERR_MAX];
 	int flock_errno = 0;
 	int result = 0;
 
@@ -532,7 +534,7 @@ debug_unlock(int debug_level)
 #endif
 		{
 			flock_errno = errno;
-			sprintf( msg_buf, "Can't release exclusive lock on \"%s\"\n", 
+			snprintf( msg_buf, sizeof(msg_buf), "Can't release exclusive lock on \"%s\"\n", 
 					 DebugLock );
 			DebugUnlockBroken = 1;
 			_condor_dprintf_exit( flock_errno, msg_buf );
@@ -568,7 +570,7 @@ preserve_log_file(int debug_level)
 #ifndef WIN32
 	struct stat buf;
 #endif
-	char msg_buf[_POSIX_PATH_MAX];
+	char msg_buf[DPRINTF_ERR_MAX];
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
@@ -621,7 +623,7 @@ preserve_log_file(int debug_level)
 	errno = 0;
 	if( link(DebugFile[debug_level], old) < 0 ) {
 		save_errno = errno;
-		sprintf( msg_buf, "Can't link(%s,%s)\n",
+		snprintf( msg_buf, sizeof(msg_buf), "Can't link(%s,%s)\n",
 				 DebugFile[debug_level], old );
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
@@ -629,7 +631,7 @@ preserve_log_file(int debug_level)
 	errno = 0;
 	if( unlink(DebugFile[debug_level]) < 0 ) {
 		save_errno = errno;
-		sprintf( msg_buf, "Can't unlink(%s)\n", DebugFile[debug_level] ); 
+		snprintf( msg_buf, sizeof(msg_buf), "Can't unlink(%s)\n", DebugFile[debug_level] ); 
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 
@@ -639,7 +641,7 @@ preserve_log_file(int debug_level)
 		if (stat (DebugFile[debug_level], &buf) >= 0)
 		{
 			save_errno = errno;
-			sprintf( msg_buf, "unlink(%s) succeeded but file still exists!", 
+			snprintf( msg_buf, sizeof(msg_buf), "unlink(%s) succeeded but file still exists!", 
 					 DebugFile[debug_level] );
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
@@ -653,7 +655,7 @@ preserve_log_file(int debug_level)
 
 	if( DebugFP == NULL ) {
 		save_errno = errno;
-		sprintf( msg_buf, "Can't open file for debug level %d\n",
+		snprintf( msg_buf, sizeof(msg_buf), "Can't open file for debug level %d\n",
 				 debug_level ); 
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
@@ -681,13 +683,13 @@ _condor_fd_panic( int line, char* file )
 {
 	priv_state	priv;
 	int i;
-	char msg_buf[_POSIX_PATH_MAX];
-	char panic_msg[_POSIX_PATH_MAX];
+	char msg_buf[DPRINTF_ERR_MAX];
+	char panic_msg[DPRINTF_ERR_MAX];
 	int save_errno;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
-	sprintf( panic_msg, 
+	snprintf( panic_msg, sizeof(panic_msg),
 			 "**** PANIC -- OUT OF FILE DESCRIPTORS at line %d in %s",
 			 line, file );
 
@@ -701,7 +703,7 @@ _condor_fd_panic( int line, char* file )
 
 	if( DebugFP == NULL ) {
 		save_errno = errno;
-		sprintf( msg_buf, "Can't open \"%s\"\n%s\n", DebugFile[0],
+		snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", DebugFile[0],
 				 panic_msg ); 
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
@@ -751,7 +753,7 @@ open_debug_file(int debug_level, char flags[])
 {
 	FILE		*fp;
 	priv_state	priv;
-	char msg_buf[_POSIX_PATH_MAX];
+	char msg_buf[DPRINTF_ERR_MAX];
 	int save_errno;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
@@ -772,7 +774,7 @@ open_debug_file(int debug_level, char flags[])
 		}
 		fprintf( DebugFP, "Can't open \"%s\"\n", DebugFile[debug_level] );
 		if( debug_level == 0 ) {
-			sprintf( msg_buf, "Can't open \"%s\"\n",
+			snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n",
 					 DebugFile[debug_level] );
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
@@ -790,9 +792,9 @@ _condor_dprintf_exit( int error_code, const char* msg )
 {
 	char* tmp;
 	FILE* fail_fp;
-	char buf[_POSIX_PATH_MAX];
-	char header[_POSIX_PATH_MAX];
-	char tail[_POSIX_PATH_MAX];
+	char buf[DPRINTF_ERR_MAX];
+	char header[DPRINTF_ERR_MAX];
+	char tail[DPRINTF_ERR_MAX];
 	int wrote_warning = FALSE;
 	struct tm *tm;
 	time_t clock_now;
@@ -800,14 +802,14 @@ _condor_dprintf_exit( int error_code, const char* msg )
 	(void)time( &clock_now );
 
 	if ( DebugUseTimestamps ) {
-		sprintf( header, "(%d) ", clock_now );
+		snprintf( header, sizeof(header), "(%d) ", clock_now );
 	} else {
 		tm = localtime( &clock_now );
-		sprintf( header, "%d/%d %02d:%02d:%02d ",
+		snprintf( header, sizeof(header), "%d/%d %02d:%02d:%02d ",
 				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
 				tm->tm_min, tm->tm_sec );
 	}
-	sprintf( header, "dprintf() had a fatal error in pid %d\n", (int)getpid() );
+	snprintf( header, sizeof(header), "dprintf() had a fatal error in pid %d\n", (int)getpid() );
 	tail[0] = '\0';
 	if( error_code ) {
 		sprintf( tail, "errno: %d (%s)\n", error_code,
@@ -821,7 +823,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 
 	tmp = param( "LOG" );
 	if( tmp ) {
-		sprintf( buf, "%s/dprintf_failure.%s", tmp, get_mySubSystem() );
+		snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s", tmp, get_mySubSystem() );
 		fail_fp = safe_fopen_wrapper( buf, "w",0644 );
 		if( fail_fp ) {
 			fprintf( fail_fp, "%s", header );

@@ -35,6 +35,7 @@
 #include "dagman_main.h"
 #include "dagman_commands.h"
 #include "util.h"
+#include "condor_getcwd.h"
 
 void ExitSuccess();
 
@@ -576,13 +577,13 @@ int main_init (int argc, char ** const argv) {
 	while( wait_for_debug );
 
     {
-        char *temp;
-        debug_printf( DEBUG_DEBUG_1, "Current path is %s\n",
-                       (temp=getcwd(NULL, _POSIX_PATH_MAX)) ? temp : "<null>");
-		if( temp ) {
-			free( temp );
+		MyString cwd;
+		if( !condor_getcwd(cwd) ) {
+			cwd = "<null>";
 		}
-		temp = my_username();
+        debug_printf( DEBUG_DEBUG_1, "Current path is %s\n",cwd.Value());
+
+		char *temp = my_username();
 		debug_printf( DEBUG_DEBUG_1, "Current user is %s\n",
 					   temp ? temp : "<null>" );
 		if( temp ) {
@@ -859,8 +860,8 @@ main_pre_dc_init( int, char*[] )
 		// if we change to a different directory.
 	const char *	logFile = GetEnv( "_CONDOR_DAGMAN_LOG" );
 	if ( logFile && !fullpath( logFile ) ) {
-		char	currentDir[_POSIX_PATH_MAX];
-		if ( getcwd( currentDir, sizeof(currentDir) ) ) {
+		MyString	currentDir;
+		if ( condor_getcwd( currentDir ) ) {
 			MyString newLogFile(currentDir);
 			newLogFile += DIR_DELIM_STRING;
 			newLogFile += logFile;

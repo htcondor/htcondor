@@ -103,7 +103,7 @@ public:
 
 		/** Checkpoint */
 	virtual bool Ckpt() { return false; }
-	virtual void CkptDone(bool success) {};
+	virtual void CkptDone(bool /*success*/) {};
 
 		/** Returns the pid of this job.
 			@return The pid. */

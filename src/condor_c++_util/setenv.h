@@ -23,6 +23,8 @@
 #ifndef _SETENV_H
 #define _SETENV_H
 
+class MyString;
+
 /** @name Environment management.
  */
 //@{
@@ -54,6 +56,15 @@ int UnsetEnv( const char *env_var );
 	SetEnv().
 */
 const char *GetEnv( const char *env_var );
+
+/** Look up env_var in the environment
+    @param env_var Desired variable name to search for in the environment;
+	@param result A buffer in which to place the result.
+    @return A pointer to the corresponding value or NULL (if an error
+	occurred or the variable is not present). The returned string should
+	not be deallocated.  It is merely a pointer to result.Value().
+*/
+const char *GetEnv( const char *env_var, MyString &result );
 //@}
 
 #endif  // _SETENV_H

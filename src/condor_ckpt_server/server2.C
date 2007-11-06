@@ -832,11 +832,11 @@ void Server::ProcessServiceReq(int             req_id,
 					htons(imds.RemoveFile(shadow_IP, 
 										  service_req.owner_name, 
 										  service_req.file_name));
-				char key[_POSIX_PATH_MAX];
-				sprintf(key, "%s/%s/%s", inet_ntoa(shadow_IP), 
+				MyString key;
+				key.sprintf("%s/%s/%s", inet_ntoa(shadow_IP), 
 						service_req.owner_name, service_req.file_name);
 				if (CkptClassAds) {
-					CkptClassAds->DestroyClassAd(key);
+					CkptClassAds->DestroyClassAd(key.Value());
 				}
 			}
 			break;
@@ -1423,20 +1423,21 @@ void Server::ProcessStoreReq(int            req_id,
 			if (strcmp(store_req.filename+len-4, ".tmp") == MATCH) {
 				store_req.filename[len-4] = '\0';
 			}
-			char key[_POSIX_PATH_MAX];
-			sprintf(key, "%s/%s/%s", inet_ntoa(shadow_IP), store_req.owner,
+			MyString keybuf;
+			keybuf.sprintf( "%s/%s/%s", inet_ntoa(shadow_IP), store_req.owner,
 					store_req.filename);
+			char const *key = keybuf.Value();
 			ClassAd *ad;
 			if (CkptClassAds) {
 				if (!CkptClassAds->LookupClassAd(key, ad)) {
-					char buf[_POSIX_PATH_MAX];
+					MyString buf;
 					CkptClassAds->NewClassAd(key, CKPT_FILE_ADTYPE, "0");
-					sprintf(buf, "\"%s\"", store_req.owner);
-					CkptClassAds->SetAttribute(key, ATTR_OWNER, buf);
-					sprintf(buf, "\"%s\"", inet_ntoa(shadow_IP));
-					CkptClassAds->SetAttribute(key, ATTR_SHADOW_IP_ADDR, buf);
-					sprintf(buf, "\"%s\"", store_req.filename);
-					CkptClassAds->SetAttribute(key, ATTR_FILE_NAME, buf);
+					buf.sprintf( "\"%s\"", store_req.owner);
+					CkptClassAds->SetAttribute(key, ATTR_OWNER, buf.Value());
+					buf.sprintf( "\"%s\"", inet_ntoa(shadow_IP));
+					CkptClassAds->SetAttribute(key, ATTR_SHADOW_IP_ADDR, buf.Value());
+					buf.sprintf( "\"%s\"", store_req.filename);
+					CkptClassAds->SetAttribute(key, ATTR_FILE_NAME, buf.Value());
 				}
 				char size[40];
 				sprintf(size, "%d", (int) store_req.file_size);

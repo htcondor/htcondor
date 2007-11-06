@@ -44,16 +44,16 @@ public:
 	virtual bool PublishUpdateAd( ClassAd *ad );
 
 private:
-	int ParseExceptionLine( const char *line, char *name, char *type );
+	int ParseExceptionLine( const char *line, MyString &name, MyString &type );
 	int ParseExceptionFile( FILE *file );
 	java_exit_mode_t ClassifyExit( int status );
 
 	char *execute_dir;
-	char startfile[_POSIX_PATH_MAX];
-	char endfile[_POSIX_PATH_MAX];
-	char ex_name[ATTRLIST_MAX_EXPRESSION];
-	char ex_type[ATTRLIST_MAX_EXPRESSION];
-	char ex_hier[ATTRLIST_MAX_EXPRESSION];
+	MyString startfile;
+	MyString endfile;
+	MyString ex_name;
+	MyString ex_type;
+	MyString ex_hier;
 };
 
 #endif

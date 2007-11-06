@@ -361,7 +361,6 @@ ReadUserLogState::InitState( ReadUserLog::FileState &state )
 {
 	ReadUserLogState::FileState	*istate = new ReadUserLogState::FileState;
 
-	memset( istate, 0, sizeof( FileState ) );
 	strncpy( istate->signature,
 			 FileStateSignature,
 			 sizeof(istate->signature) );
@@ -397,9 +396,8 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 	}
 
 	// The paths shouldn't change... copy them only the first time
-	if( ! istate->path[0] ) {
-		strncpy( istate->path, m_base_path, _POSIX_PATH_MAX );
-		istate->path[_POSIX_PATH_MAX-1] = '\0';
+	if( !istate->path.Length() ) {
+		istate->path = m_base_path;
 	}
 
 	// The signature is set in the InitFileState()
@@ -442,9 +440,9 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 
 	int		len;
 
-	len = strlen( istate->path );
+	len = istate->path.Length();
 	m_base_path = new char[ len+1 ];
-	strcpy( m_base_path, istate->path );
+	strcpy( m_base_path, istate->path.Value() );
 
 	// Set the rotation & path
 	Rotation( istate->rotation, false );

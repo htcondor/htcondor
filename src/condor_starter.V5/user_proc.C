@@ -438,8 +438,8 @@ UserProc::execute()
 	char	**argp;
 	char	**envp;
 	sigset_t	sigmask;
-	char	a_out_name[ _POSIX_PATH_MAX ];
-	char	shortname[ _POSIX_PATH_MAX ];
+	MyString	a_out_name;
+	MyString	shortname;
 	int		user_syscall_fd;
 	const	int READ_END = 0;
 	const	int WRITE_END = 1;
@@ -452,8 +452,8 @@ UserProc::execute()
 	pipe_fds[0] = -1;
 	pipe_fds[1] = -1;
 
-	sprintf( shortname, "condor_exec.%d.%d", cluster, proc );
-	sprintf( a_out_name, "%s/%s/%s", Execute, local_dir, shortname );
+	shortname.sprintf( "condor_exec.%d.%d", cluster, proc );
+	a_out_name.sprintf( "%s/%s/%s", Execute, local_dir, shortname.Value() );
 
 		// Set up arg vector according to class of job
 	switch( job_class ) {
@@ -497,7 +497,7 @@ UserProc::execute()
 	  	if (privsep_enabled()) {
 			EXCEPT("Don't know how to deal with Vanilla jobs");
 		}
-		new_args.AppendArg(shortname);
+		new_args.AppendArg(shortname.Value());
 		break;
 	}
 
@@ -848,7 +848,7 @@ UserProc::handle_termination( int exit_st )
 	/* XXX I wonder what the kernel does if a core file is created such that 
 		the entire path up to the core file is path max, and when you add the
 		pid, it overshoots the path max... */
-	char corebuf[_POSIX_PATH_MAX]; 
+	MyString corebuf;
 	struct stat sbuf;
 	int core_name_type = CORE_NAME_UNKNOWN;
 	pid_t user_job_pid;
@@ -933,14 +933,14 @@ UserProc::handle_termination( int exit_st )
 			core_name_type = CORE_NAME_UNKNOWN;
 
 			/* try the 'core.pid' form first */
-			sprintf(corebuf, "%s/core.%lu", local_dir, 
+			corebuf.sprintf( "%s/core.%lu", local_dir, 
 				(unsigned long)user_job_pid);
-			if (stat(corebuf, &sbuf) >= 0) {
+			if (stat(corebuf.Value(), &sbuf) >= 0) {
 				core_name_type = CORE_NAME_KNOWN;
 			} else {
 				/* now try the normal 'core' form */
-				sprintf(corebuf, "%s/core", local_dir);
-				if (stat(corebuf, &sbuf) >= 0) {
+				corebuf.sprintf( "%s/core", local_dir);
+				if (stat(corebuf.Value(), &sbuf) >= 0) {
 					core_name_type = CORE_NAME_KNOWN;
 				}
 			}
@@ -957,8 +957,8 @@ UserProc::handle_termination( int exit_st )
 				}
 
 				/* this gets deleted when this objects destructs */
-				core_name = new char [ strlen(corebuf) + 1 ];
-				strcpy( core_name, corebuf );
+				core_name = new char [ corebuf.Length() + 1 ];
+				strcpy( core_name, corebuf.Value() );
 
 				/* core_is_valid checks to make sure it isn't a symlink and
 					returns false if it is */
@@ -1388,7 +1388,7 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	guaranteed_sys_time( 0 ),
 	pids_suspended( -1 )
 {
-	char	buf[ _POSIX_PATH_MAX ];
+	MyString	buf;
 	mode_t 	omask;
 
 	cmd = new char [ strlen(s.cmd) + 1 ];
@@ -1420,26 +1420,26 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 
 		// assume outgoing port range
 	if (get_port_range(TRUE, &low_port, &high_port) == TRUE) {
-		sprintf(buf, "_condor_LOWPORT=%d", low_port);
-		env_obj.SetEnv(buf);
-		sprintf(buf, "_condor_HIGHPORT=%d", high_port);
-		env_obj.SetEnv(buf);
+		buf.sprintf( "_condor_LOWPORT=%d", low_port);
+		env_obj.SetEnv(buf.Value());
+		buf.sprintf( "_condor_HIGHPORT=%d", high_port);
+		env_obj.SetEnv(buf.Value());
 	}
 	/* end - Port regulation for user job */
 
 	if( param_boolean("BIND_ALL_INTERFACES", false) ) {
-		sprintf( buf, "_condor_BIND_ALL_INTERFACES=TRUE" );
+		buf.sprintf( "_condor_BIND_ALL_INTERFACES=TRUE" );
 	} else {
-		sprintf( buf, "_condor_BIND_ALL_INTERFACES=FALSE" );
+		buf.sprintf( "_condor_BIND_ALL_INTERFACES=FALSE" );
 	}
-	env_obj.SetEnv(buf);
+	env_obj.SetEnv(buf.Value());
 	
 
 		// Generate a directory where process can run and do its checkpointing
 	omask = umask(0);
-	sprintf( buf, "dir_%d", getpid() );
-	local_dir = new char [ strlen(buf) + 1 ];
-	strcpy( local_dir, buf );
+	buf.sprintf( "dir_%d", getpid() );
+	local_dir = new char [ buf.Length() + 1 ];
+	strcpy( local_dir, buf.Value() );
 	if( mkdir(local_dir,LOCAL_DIR_MODE) < 0 ) {
 		EXCEPT( "mkdir(%s,0%o)", local_dir, LOCAL_DIR_MODE );
 	}
@@ -1447,13 +1447,13 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 
 		// Now that we know what the local_dir is, put the path into
 		// the environment so the job knows where it is
-	char scratch_env[_POSIX_PATH_MAX];
-	sprintf(scratch_env,"CONDOR_SCRATCH_DIR=%s/%s",Execute,local_dir);
-	env_obj.SetEnv(scratch_env);
+	MyString scratch_env;
+	scratch_env.sprintf("CONDOR_SCRATCH_DIR=%s/%s",Execute,local_dir);
+	env_obj.SetEnv(scratch_env.Value());
 
-	sprintf( buf, "%s/condor_exec.%d.%d", local_dir, cluster, proc );
-	cur_ckpt = new char [ strlen(buf) + 1 ];
-	strcpy( cur_ckpt, buf );
+	buf.sprintf( "%s/condor_exec.%d.%d", local_dir, cluster, proc );
+	cur_ckpt = new char [ buf.Length() + 1 ];
+	strcpy( cur_ckpt, buf.Value() );
 
 		// Find out if user wants checkpointing
 #if defined(NO_CKPT)

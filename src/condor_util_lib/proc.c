@@ -224,5 +224,6 @@ PROC	*proc;
 	FREE( proc->remote_usage );
 	FREE( proc );
 }
+
 #endif /* NEW_PROC */
 

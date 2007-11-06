@@ -42,6 +42,7 @@
 #include "classad_merge.h"
 #include "daemon.h"
 #include "daemon_core_sock_adapter.h"
+#include "setenv.h"
 
 extern char* mySubSystem;
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
@@ -2538,15 +2539,11 @@ char* SecMan::my_parent_unique_id() {
 
 		// look in the env for ENV_PARENT_ID
 		const char* envName = EnvGetName ( ENV_PARENT_ID );
-#ifdef WIN32
-		char value[_POSIX_PATH_MAX];
-		value[0] = '\0';
-		GetEnvironmentVariable( envName, value, sizeof(value) );
-#else
-		char * value = getenv( envName );
-#endif
-		if (value && value[0]) {
-			set_parent_unique_id(value);
+		MyString value;
+		GetEnv( envName, value );
+
+		if (value.Length()) {
+			set_parent_unique_id(value.Value());
 		}
 	}
 

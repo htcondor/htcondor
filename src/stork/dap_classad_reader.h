@@ -38,7 +38,7 @@ class ClassAd_Reader{
   classad::ClassAd *currentAd;
 
  public:
-  ClassAd_Reader(char *fname);
+  ClassAd_Reader(const char *fname);
   ~ClassAd_Reader();
   const classad::ClassAd * getCurrentAd () { return currentAd; }
   int readAd();

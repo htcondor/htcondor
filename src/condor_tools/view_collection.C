@@ -43,9 +43,9 @@ main(int argc, char *argv[])
 	// mess up the actual collection file
 	char tmpfile[L_tmpnam];
 	tmpnam(tmpfile);
-	char cmd[_POSIX_PATH_MAX];
-	sprintf(cmd, "cp %s %s", argv[1], tmpfile);
-	system(cmd);
+	MyString cmd;
+	cmd.sprintf( "cp %s %s", argv[1], tmpfile);
+	system(cmd.Value());
 	
 	ClassAdCollection c(tmpfile);
 

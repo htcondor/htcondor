@@ -34,6 +34,10 @@
 
 #define NEW_PROC 1
 
+// maximum length of a buffer containing a "cluster.proc" string
+// as produced by ProcIdToStr()
+#define PROC_ID_STR_BUFLEN 35
+
 // a handy little structure used in a lot of places
 typedef struct {
 	int		cluster;
@@ -215,6 +219,12 @@ bool operator==( const PROC_ID a, const PROC_ID b);
 unsigned int hashFuncPROC_ID( const PROC_ID & );
 void procids_to_mystring(ExtArray<PROC_ID> *procids, MyString &str);
 ExtArray<PROC_ID>* mystring_to_procids(MyString &str);
+
+// result MUST be of size PROC_ID_STR_BUFLEN
+void ProcIdToStr(const PROC_ID a, char *result);
+void ProcIdToStr(int cluster, int proc, char *result);
+bool StrToProcId(char const *str, PROC_ID &id);
+bool StrToProcId(char const *str, int &cluster, int &proc);
 #endif
 
 #define ICKPT -1

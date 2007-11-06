@@ -857,11 +857,12 @@ GahpServer::command_cache_proxy_from_file( GahpProxyInfo *new_proxy )
 		return false;
 	}
 
-	char buf[_POSIX_PATH_MAX];
-	int x = snprintf(buf,sizeof(buf),"%s %d %s",command,new_proxy->proxy->id,
+	MyString buf;
+	bool x = buf.sprintf("%s %d %s",command,new_proxy->proxy->id,
 					 escapeGahpString(new_proxy->proxy->proxy_filename));
-	ASSERT( x > 0 && x < (int)sizeof(buf) );
-	write_line(buf);
+	ASSERT( x );
+	write_line(buf.Value());
+
 	Gahp_Args result;
 	read_argv(result);
 	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
@@ -888,10 +889,11 @@ GahpServer::uncacheProxy( GahpProxyInfo *gahp_proxy )
 		return false;
 	}
 
-	char buf[_POSIX_PATH_MAX];
-	int x = snprintf(buf,sizeof(buf),"%s %d",command,gahp_proxy->proxy->id);
-	ASSERT( x > 0 && x < (int)sizeof(buf) );
-	write_line(buf);
+	MyString buf;
+	bool x = buf.sprintf("%s %d",command,gahp_proxy->proxy->id);
+	ASSERT( x );
+	write_line(buf.Value());
+
 	Gahp_Args result;
 	read_argv(result);
 	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
@@ -962,10 +964,11 @@ GahpServer::command_use_cached_proxy( GahpProxyInfo *new_proxy )
 		return false;
 	}
 
-	char buf[_POSIX_PATH_MAX];
-	int x = snprintf(buf,sizeof(buf),"%s %d",command,new_proxy->proxy->id);
-	ASSERT( x > 0 && x < (int)sizeof(buf) );
-	write_line(buf);
+	MyString buf;
+	bool x = buf.sprintf("%s %d",command,new_proxy->proxy->id);
+	ASSERT( x );
+	write_line(buf.Value());
+
 	Gahp_Args result;
 	read_argv(result);
 	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
@@ -1277,14 +1280,15 @@ GahpServer::command_initialize_from_file(const char *proxy_path,
 
 	ASSERT(proxy_path);		// Gotta have it...
 
-	char buf[_POSIX_PATH_MAX];
+	MyString buf;
 	if ( command == NULL ) {
 		command = "INITIALIZE_FROM_FILE";
 	}
-	int x = snprintf(buf,sizeof(buf),"%s %s",command,
+	bool x = buf.sprintf("%s %s",command,
 					 escapeGahpString(proxy_path));
-	ASSERT( x > 0 && x < (int)sizeof(buf) );
-	write_line(buf);
+	ASSERT( x );
+	write_line(buf.Value());
+
 	Gahp_Args result;
 	read_argv(result);
 	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
@@ -1311,10 +1315,11 @@ GahpServer::command_response_prefix(const char *prefix)
 		return false;
 	}
 
-	char buf[_POSIX_PATH_MAX];
-	int x = snprintf(buf,sizeof(buf),"%s %s",command,escapeGahpString(prefix));
-	ASSERT( x > 0 && x < (int)sizeof(buf) );
-	write_line(buf);
+	MyString buf;
+	bool x = buf.sprintf("%s %s",command,escapeGahpString(prefix));
+	ASSERT( x );
+	write_line(buf.Value());
+
 	Gahp_Args result;
 	read_argv(result);
 	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {

@@ -247,11 +247,10 @@ NewConnection( int id )
 	the a_out_name and args as appropiate.
 */
 void
-support_job_wrapper(char *a_out_name, ArgList *args)
+support_job_wrapper(MyString &a_out_name, ArgList *args)
 {
 	char *wrapper = NULL;
 
-	ASSERT(a_out_name);
 	ASSERT(args);
 	ASSERT(args->Count() > 0);
 
@@ -267,10 +266,10 @@ support_job_wrapper(char *a_out_name, ArgList *args)
 
 	// reset old argv[0] to the full path to the job executable
 	args->RemoveArg(0);
-	args->InsertArg(a_out_name,0);
+	args->InsertArg(a_out_name.Value(),0);
 
 		// now reset a_out_name and insert new argv[0]
-	strcpy(a_out_name,wrapper);
+	a_out_name = wrapper;
 	args->InsertArg(condor_basename(wrapper),0);
 
 		// and finally free wrapper, which was malloced by param()

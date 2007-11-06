@@ -53,8 +53,7 @@ VanillaProc::StartJob()
 	// an argument to the shell, if we are asked to run a .bat file.
 #ifdef WIN32
 
-	char systemshell[_POSIX_PATH_MAX];
-	char tmp[_POSIX_PATH_MAX];
+	char systemshell[MAX_PATH];
 
 	const char* jobtmp = Starter->jic->origJobName();
 	int joblen = strlen(jobtmp);
@@ -65,8 +64,9 @@ VanillaProc::StartJob()
 
 		// first change executable to be cmd.exe
 		::GetSystemDirectory(systemshell,MAX_PATH);
-		sprintf(tmp,"%s=\"%s\\cmd.exe\"",ATTR_JOB_CMD,systemshell);
-		JobAd->InsertOrUpdate(tmp);		
+		MyString tmp;
+		tmp.sprintf("%s\\cmd.exe",systemshell);
+		JobAd->Assign(ATTR_JOB_CMD,tmp.Value());
 
 		// now change arguments to include name of program cmd.exe 
 		// should run

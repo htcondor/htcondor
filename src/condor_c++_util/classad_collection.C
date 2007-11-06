@@ -37,16 +37,6 @@ ClassAdCollection::ClassAdCollection(const char* filename,int max_historical_log
   LastCoID=0;
   Collections.insert(LastCoID,new ExplicitCollection("",true));
 
-#if 0		// Todd: this code just uses cycles
-  HashKey HK;
-  char key[_POSIX_PATH_MAX];
-  ClassAd* Ad;
-  table.startIterations();
-  while(table.iterate(HK,Ad)) {
-    HK.sprint(key);
-    AddClassAd(0,key,Ad);
-  }
-#endif
 }
 
 //----------------------------------------------------------------------------------

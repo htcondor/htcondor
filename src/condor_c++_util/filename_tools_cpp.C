@@ -22,69 +22,30 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "filename_tools.h"
+#include "MyString.h"
 
-void filename_url_parse_malloc( char const *input, char **method, char **server, int *port, char **path )
+// keep this function in sync with filename_split() in filename_tools.c
+int filename_split( const char *path, MyString &dir, MyString &file )
 {
-	char const *p;
-	char const *q;
+	char *last_slash;
 
-	*method = *server = *path = 0;
-	*port = -1;
-
-	/* Find a colon and record the method proceeding it */
-
-	p = strchr(input,':');
-	if(p) {
-		*method = (char *)malloc(p-input+1);
-		strncpy(*method,input,p-input);
-		(*method)[p-input] = '\0';
-		p++;
+	last_slash = strrchr(path,DIR_DELIM_CHAR);
+	if(last_slash) {
+		dir = path;
+		dir.setChar((last_slash-path),'\0');
+		last_slash++;
+		file = last_slash;
+		return 1;
 	} else {
-		p = input;
+		file = path;
+		dir = ".";
+		return 0;
 	}
-
-	/* Now p points to the first character following the colon */
-
-	if( (p[0]=='/') && (p[1]=='/') ) {
-
-		/* This is a server name, skip the slashes */
-		p++; p++;
-
-		/* Find the end of the server name */
-		q = strchr(p,'/');
-
-		if(q) {
-			/* If there is an end, copy up to that. */
-			*server = (char *)malloc(q-p+1);
-			strncpy(*server,p,q-p);
-			(*server)[q-p] = '\0';
-			p = q++;
-		} else {
-		        /* If there is no end, copy all of it. */
-			*server = strdup(p);
-			p = 0;
-		}
-
-		/* Now, reconsider the server name for a port number. */
-		q = strchr(*server,':');
-
-		if(q) {
-			/* If there is one, delimit the server name and scan */
-			(*server)[q-*server] = '\0';
-			q++;
-			*port = atoi(q);
-		}
-	}
-
-	/* Now, p points to the beginning of the filename, or null */
-
-	if( (!p) || (!*p) ) return;
-
-	*path = strdup(p);
 }
 
 /* Copy in to out, removing whitespace. */
 
+// keep in sync with version in filename_tools.c
 static void eat_space( const char *in, char *out )
 {
 	while(1) {
@@ -112,6 +73,7 @@ pointer to the delimiter, or return null at end of string.
 The character can be escaped with a backslash.
 */
 
+// keep in sync with version in filename_tools.c
 static char * copy_upto( char *in, char *out, char delim, int length )
 {
 	int copied=0;
@@ -139,48 +101,69 @@ static char * copy_upto( char *in, char *out, char delim, int length )
 	}
 }
 
-
-int is_relative_to_cwd( const char *path )
+int filename_remap_find( const char *input, const char *filename, MyString &output )
 {
-#if WIN32
-	if(*path == '/' || *path == '\\') return 0;
-	if(('A' <= toupper(*path) && toupper(*path) <= 'Z') && path[1] == ':') return 0;
-#else
-	if(*path == DIR_DELIM_CHAR) return 0;
-#endif
-	return 1;
-}
+	char *name;
+	char *url;
+	char *buffer,*p;
+	int found = 0;
+	size_t input_len = strlen(input);
 
-// keep in sync with version in filename_tools_cpp.C
-int filename_split( const char *path, char *dir, char *file )
-{
-	char *last_slash;
+	/* First make a copy of the input in canonical form */
 
-	last_slash = strrchr(path,DIR_DELIM_CHAR);
-	if(last_slash) {
-		strncpy(dir,path,(last_slash-path));
-		dir[(last_slash-path)] = 0;
-       		last_slash++;
-		strcpy(file,last_slash);
-		return 1;
-	} else {
-		strcpy(file,path);
-		strcpy(dir,".");
-		return 0;
+	buffer = (char *)malloc(input_len+1);
+	name = (char *)malloc(input_len+1);
+	url = (char *)malloc(input_len+1);
+	if(!buffer || !name || !url) return 0;
+	eat_space(input,buffer);
+
+	/* Now find things like name=url; name=url; ... */
+	/* A trailing url with no ; shouldn't cause harm. */
+
+	p = buffer;
+
+	while(1) {
+		p = copy_upto(p,name,'=',input_len);
+		if(!p) break;
+		p++;
+		p = copy_upto(p,url,';',input_len);
+
+		if(!strncmp(name,filename,input_len)) {
+			output = url;
+			found = 1;
+			break;
+		}
+
+		if(!p) break;
+		p++;
 	}
+
+	free(buffer);
+	free(name);
+	free(url);
+	return found;
 }
 
 // changes all directory separators to match the DIR_DELIM_CHAR
 // makes changes in place
 void
-canonicalize_dir_delimiters( char *path ) {
-	if( !path ) {
-		return;
-	}
-	while ( *path ) {
-		if ( *path == '\\' || *path == '/' ) {
-		   	*path = DIR_DELIM_CHAR;
-		}
-		path++;
-	}	
+canonicalize_dir_delimiters( MyString &path ) {
+
+	char *tmp = strdup(path.Value());
+	canonicalize_dir_delimiters( tmp );
+	path = tmp;
+	free( tmp );
+}
+
+void filename_url_parse( char *input, MyString &method, MyString &server, int *port, MyString &path ) {
+	char *tmp_method = NULL;
+	char *tmp_server = NULL;
+	char *tmp_path = NULL;
+	filename_url_parse_malloc(input,&tmp_method,&tmp_server,port,&tmp_path);
+	method = tmp_method;
+	server = tmp_server;
+	path = tmp_path;
+	free( tmp_method );
+	free( tmp_server );
+	free( tmp_path );
 }

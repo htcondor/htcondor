@@ -59,7 +59,7 @@ unsigned long Max_delayInMinutes;      //max time a job is allowed to finish
 extern char *logfilename;
 extern char *xmllogfilename;
 extern char *userlogfilename;
-char historyfilename[_POSIX_PATH_MAX];
+MyString historyfilename;
 char *Cred_tmp_dir = NULL;				// temporary credential storage directory
 char *Module_dir = NULL;				// Module directory (DAP Catalog)
 char *Log_dir = NULL;					// LOG directory
@@ -312,7 +312,7 @@ void get_last_dapid()
 	}
   
 		//check also the history log file for max dapid
-	ClassAd_Reader adreader(historyfilename);
+	ClassAd_Reader adreader(historyfilename.Value());
 	while(1) {
 		if ( !adreader.readAd()) {
 			break;
@@ -862,7 +862,7 @@ void process_request(classad::ClassAd *currentAd)
 					args_error.Value());
 
 			dapcollection->RemoveClassAd(dap_id);
-			write_dap_log(historyfilename, "\"request_failed\"",
+			write_dap_log(historyfilename.Value(), "\"request_failed\"",
 						  "dap_id",dap_id,"error_code","\"bad arguments\"");
 			write_xml_user_log(userlogfilename, "MyType", "\"JobCompletedEvent\"", 
 							   "EventTypeNumber", "5", 
@@ -891,7 +891,7 @@ void process_request(classad::ClassAd *currentAd)
 				user_log(currentAd, ULOG_GENERIC);
 				currentAd->InsertAttr("termination_type", "server_error");
 				user_log(currentAd, ULOG_JOB_TERMINATED);
-				write_dap_log(historyfilename, "\"request_removed\"", 
+				write_dap_log(historyfilename.Value(), "\"request_removed\"", 
 					  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
 				remove_job( dap_id);
 			}
@@ -909,7 +909,7 @@ void process_request(classad::ClassAd *currentAd)
 					user_log(currentAd, ULOG_GENERIC);
 					currentAd->InsertAttr("termination_type", "server_error");
 					user_log(currentAd, ULOG_JOB_TERMINATED);
-					write_dap_log(historyfilename, "\"request_removed\"", 
+					write_dap_log(historyfilename.Value(), "\"request_removed\"", 
 						  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
 					remove_job( dap_id);
 				}
@@ -961,7 +961,7 @@ void process_request(classad::ClassAd *currentAd)
 					user_log(currentAd, ULOG_GENERIC);
 					currentAd->InsertAttr("termination_type", "server_error");
 					user_log(currentAd, ULOG_JOB_TERMINATED);
-					write_dap_log(historyfilename, "\"request_removed\"", 
+					write_dap_log(historyfilename.Value(), "\"request_removed\"", 
 						  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
 					remove_job( dap_id);
 				}
@@ -1167,7 +1167,7 @@ void regular_check_for_requests_in_process()
 
 
 								dapcollection->RemoveClassAd(key);
-								write_dap_log(historyfilename,
+								write_dap_log(historyfilename.Value(),
 										"\"request_failed\"", 
 											  "dap_id", dap_id, "error_code", "\"ABORTED!\"");
 		   
@@ -1333,7 +1333,7 @@ int initializations()
 	initialize_dapcollection();
 
 		//init history file name 
-	snprintf(historyfilename, MAXSTR, "%s.history", logfilename);
+	historyfilename.sprintf( "%s.history", logfilename);
 
 		//init xml log file name 
 		//  sprintf(xmllogfilename, "%s.xml", logfilename);<-- change this
@@ -1748,7 +1748,7 @@ int send_dap_status_to_client(ReliSock * sock)
 		unparser.Unparse (adbuffer, job_ad);
 	} else {
 		// If not, try getting it from the history file
-		ClassAd_Reader adreader(historyfilename);
+		ClassAd_Reader adreader(historyfilename.Value());
       
 		while(adreader.readAd()) {
 			adreader.getValue("dap_id", unstripped); 
@@ -1879,7 +1879,7 @@ int remove_requests_from_queue(ReliSock * sock)
 
 		dapcollection->RemoveClassAd(key);
 
-		write_dap_log(historyfilename, "\"request_removed\"", 
+		write_dap_log(historyfilename.Value(), "\"request_removed\"", 
 					  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
       
 		// FIXME delete this old userlog writer
@@ -2052,7 +2052,7 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 
 
 
-		write_dap_log(historyfilename, "\"request_completed\"", "dap_id", dap_id);
+		write_dap_log(historyfilename.Value(), "\"request_completed\"", "dap_id", dap_id);
 			//    write_xml_log(xmllogfilename, job_ad, "\"request_completed\"");
     
 		// FIXME delete this old userlog writer
@@ -2189,7 +2189,7 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 
 			dapcollection->RemoveClassAd(key);
 
-			write_dap_log(historyfilename, "\"request_failed\"", 
+			write_dap_log(historyfilename.Value(), "\"request_failed\"", 
 						  "dap_id", dap_id, "error_code", linebufstr);
             
 			char exit_status_str[MAXSTR];

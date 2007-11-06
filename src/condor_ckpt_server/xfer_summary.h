@@ -50,7 +50,7 @@ private:
 	FILE	*log_file;
 
 	char	*subnet;
-	char	pwd[_POSIX_PATH_MAX];
+	MyString pwd;
 
 	CollectorList * Collectors;
 

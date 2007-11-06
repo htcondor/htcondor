@@ -262,9 +262,14 @@ GT4Job::GT4Job( ClassAd *classad )
 {
 	int bool_value;
 	int int_value;
-	char buff[4096];
-	char buff2[_POSIX_PATH_MAX];
-	char iwd[_POSIX_PATH_MAX];
+	MyString iwd;
+	MyString job_output;
+	MyString job_error;
+	MyString job_proxy_subject;
+	MyString grid_resource;
+	MyString grid_job_id;
+	MyString gridftp_url_base;
+	MyString globus_delegation_uri;
 	bool job_already_submitted = false;
 	MyString error_string = "";
 	char *gahp_path = NULL;
@@ -319,37 +324,36 @@ GT4Job::GT4Job( ClassAd *classad )
 		error_string = "GT4_GAHP not defined";
 		goto error_exit;
 	}
-	snprintf( buff, sizeof(buff), "GT4/%s", jobProxy->subject->subject_name );
-	gahp = new GahpClient( buff, gahp_path );
+	job_proxy_subject.sprintf( "GT4/%s", jobProxy->subject->subject_name );
+	gahp = new GahpClient( job_proxy_subject.Value(), gahp_path );
 	free( gahp_path );
 
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
-	if ( buff[0] != '\0' ) {
+	jobAd->LookupString( ATTR_GRID_RESOURCE, grid_resource );
+	if ( grid_resource.Length() ) {
 		const char *token;
-		MyString str = buff;
 
-		str.Tokenize();
+		grid_resource.Tokenize();
 
-		token = str.GetNextToken( " ", false );
+		token = grid_resource.GetNextToken( " ", false );
 		if ( !token || stricmp( token, "gt4" ) ) {
 			error_string.sprintf( "%s not of type gt4", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
-		token = str.GetNextToken( " ", false );
+		token = grid_resource.GetNextToken( " ", false );
 		if ( token && *token ) {
 			// If the resource url is missing a scheme, insert one
 			if ( strncmp( token, "http://", 7 ) == 0 ||
 				 strncmp( token, "https://", 8 ) == 0 ) {
 				resourceManagerString = strdup( token );
 			} else {
-				snprintf( buff2, sizeof(buff2), "https://%s", token );
-				resourceManagerString = strdup( buff2 );
+				MyString urlbuf;
+				urlbuf.sprintf("https://%s", token );
+				resourceManagerString = strdup( urlbuf.Value() );
 			}
 		} else {
 			error_string.sprintf( "%s missing GRAM Service URL",
@@ -357,7 +361,7 @@ GT4Job::GT4Job( ClassAd *classad )
 			goto error_exit;
 		}
 
-		token = str.GetNextToken( " ", false );
+		token = grid_resource.GetNextToken( " ", false );
 		if ( token && *token ) {
 			jobmanagerType = strdup( token );
 		} else {
@@ -372,10 +376,9 @@ GT4Job::GT4Job( ClassAd *classad )
 		goto error_exit;
 	}
 
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
-	if ( buff[0] != '\0' ) {
-		SetRemoteJobId( strchr( buff, ' ' ) + 1 );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, grid_job_id );
+	if ( grid_job_id.Length() ) {
+		SetRemoteJobId( strchr( grid_job_id.Value(), ' ' ) + 1 );
 		job_already_submitted = true;
 	}
 
@@ -395,17 +398,16 @@ GT4Job::GT4Job( ClassAd *classad )
 
 	gridftpServer = GridftpServer::FindOrCreateServer( jobProxy );
 
-	buff[0] = '\0';
 	if ( jobContact ) {
-		jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, buff );
+		jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, gridftp_url_base );
 	}
 
-	gridftpServer->RegisterClient( evaluateStateTid, buff[0] ? buff : NULL );
+	gridftpServer->RegisterClient( evaluateStateTid, gridftp_url_base.Length() ? gridftp_url_base.Value() : NULL);
 
 	if ( jobContact &&
-		 jobAd->LookupString( ATTR_GLOBUS_DELEGATION_URI, buff ) ) {
+		 jobAd->LookupString( ATTR_GLOBUS_DELEGATION_URI, globus_delegation_uri ) ) {
 
-		delegatedCredentialURI = strdup( buff );
+		delegatedCredentialURI = strdup( globus_delegation_uri.Value() );
 		myResource->registerDelegationURI( delegatedCredentialURI, jobProxy );
 	}
 
@@ -417,30 +419,28 @@ GT4Job::GT4Job( ClassAd *classad )
 		jmLifetime = int_value;
 	}
 
-	iwd[0] = '\0';
-	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
-		int len = strlen(iwd);
+	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && iwd.Length() ) {
+		int len = iwd.Length();
 		if ( len > 1 && iwd[len - 1] != '/' ) {
-			strcat( iwd, "/" );
+			iwd += "/";
 		}
 	} else {
-		strcpy( iwd, "/" );
+		iwd = "/";
 	}
 
-	buff[0] = '\0';
-	buff2[0] = '\0';
-	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
-		 strcmp( buff, NULL_FILE ) ) {
+	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, job_output) && job_output.Length() &&
+		 strcmp( job_output.Value(), NULL_FILE ) ) {
 
 		if ( !jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, bool_value ) ||
 			 bool_value ) {
+			MyString full_job_output;
 
-			if ( buff[0] != '/' ) {
-				strcat( buff2, iwd );
+			if ( job_output[0] != '/' ) {
+				full_job_output = iwd;
 			}
 
-			strcat( buff2, buff );
-			localOutput = strdup( buff2 );
+			full_job_output += job_output;
+			localOutput = strdup( full_job_output.Value() );
 
 			bool_value = 1;
 			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
@@ -449,20 +449,19 @@ GT4Job::GT4Job( ClassAd *classad )
 		}
 	}
 
-	buff[0] = '\0';
-	buff2[0] = '\0';
-	if ( jobAd->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
-		 strcmp( buff, NULL_FILE ) ) {
+	if ( jobAd->LookupString(ATTR_JOB_ERROR, job_error) && job_error.Length() &&
+		 strcmp( job_error.Value(), NULL_FILE ) ) {
 
 		if ( !jobAd->LookupBool( ATTR_TRANSFER_ERROR, bool_value ) ||
 			 bool_value ) {
+			MyString full_job_error;
 
-			if ( buff[0] != '/' ) {
-				strcat( buff2, iwd );
+			if ( job_error[0] != '/' ) {
+				full_job_error = iwd;
 			}
 
-			strcat( buff2, buff );
-			localError = strdup( buff2 );
+			full_job_error += job_error;
+			localError = strdup( full_job_error.Value() );
 
 			bool_value = 1;
 			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );
@@ -1939,7 +1938,7 @@ MyString *GT4Job::buildSubmitRSL()
 		}
 
 		char *remaps = NULL;
-		char new_name[_POSIX_PATH_MAX*3];
+		MyString new_name;
 		jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
 
 		stage_out_list.rewind();
@@ -1955,7 +1954,7 @@ MyString *GT4Job::buildSubmitRSL()
 												new_name ) ) {
 				buff.sprintf( "%s%s%s", local_url_base.Value(),
 							  new_name[0] == '/' ? "" : local_iwd.Value(),
-							  new_name );
+							  new_name.Value() );
 			} else {
 				buff.sprintf( "%s%s%s", local_url_base.Value(),
 							  local_iwd.Value(),

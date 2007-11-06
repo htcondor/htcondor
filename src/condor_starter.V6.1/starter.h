@@ -156,7 +156,7 @@ public:
 	virtual int Reaper(int pid, int exit_status);
 
 		/** Return the Working dir */
-	const char *GetWorkingDir() const { return WorkingDir; }
+	const char *GetWorkingDir() const { return WorkingDir.Value(); }
 
 		/** Publish all attributes we care about for our job
 			controller into the given ClassAd.  Walk through all our
@@ -230,8 +230,7 @@ private:
 	int jobUniverse;
 
 	char *Execute;
-	char WorkingDir[_POSIX_PATH_MAX]; // The iwd given to the job
-	char ExecuteDir[_POSIX_PATH_MAX]; // The scratch dir created for the job
+	MyString WorkingDir; // The iwd given to the job
 	char *orig_cwd;
 	bool is_gridshell;
 	int ShuttingDown;

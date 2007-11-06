@@ -253,9 +253,9 @@ class BaseShadow : public Service
 		/// Returns the schedd address
 	char *getScheddAddr() { return scheddAddr; }
         /// Returns the current working dir for the job
-    char *getIwd() { return iwd; }
+    char const *getIwd() { return iwd.Value(); }
         /// Returns the owner of the job - found in the job ad
-    char *getOwner() { return owner; }
+    char const *getOwner() { return owner.Value(); }
 
 		/// Called by EXCEPT handler to log to user log
 	static void log_except(const char *msg);
@@ -418,9 +418,9 @@ class BaseShadow : public Service
 	int cluster;
 	int proc;
 	char* gjid;
-	char owner[_POSIX_PATH_MAX];
-	char domain[_POSIX_PATH_MAX];
-	char iwd[_POSIX_PATH_MAX];
+	MyString owner;
+	MyString domain;
+	MyString iwd;
 	char *scheddAddr;
 	bool jobExitedGracefully;
 	char *core_file_name;

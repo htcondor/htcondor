@@ -179,7 +179,7 @@ FreeJobAd(ClassAd *&ad)
 }
 
 int
-SendSpoolFileBytes(char *filename)
+SendSpoolFileBytes(char const *filename)
 {
 	filesize_t	size;
 	qmgmt_sock->encode();

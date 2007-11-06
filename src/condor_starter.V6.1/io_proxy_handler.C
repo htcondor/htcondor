@@ -201,7 +201,7 @@ A valid cookie is assumed to have been received, so decode and execute any reque
 
 void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 {
-	char url[_POSIX_PATH_MAX];
+	char *url = NULL;
 	char path[CHIRP_LINE_MAX];
 	char newpath[CHIRP_LINE_MAX];
 	char flags_string[CHIRP_LINE_MAX];
@@ -223,13 +223,14 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 		dprintf(D_SYSCALLS,"Getting mapping for file %s\n",path);
 
-		result = REMOTE_CONDOR_get_file_info_new(path,url,sizeof(url));
+		result = REMOTE_CONDOR_get_file_info_new(path,url);
 		if(result==0) {
 			dprintf(D_SYSCALLS,"Directed to use url %s\n",url);
+			ASSERT( strlen(url) < CHIRP_LINE_MAX );
 			if(!strncmp(url,"remote:",7)) {
-				strcpy(path,url+7);
+				strncpy(path,url+7,CHIRP_LINE_MAX);
 			} else if(!strncmp(url,"buffer:remote:",14)) {
-				strcpy(path,url+14);
+				strncpy(path,url+14,CHIRP_LINE_MAX);
 			} else {
 				EXCEPT("File %s maps to url %s, which I don't know how to open.\n",path,url);
 			}
@@ -260,6 +261,8 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
+		free( url );
+		url = NULL;
 	} else if(sscanf_chirp(line,"close %d",&fd)==1) {
 
 		result = REMOTE_CONDOR_close(fd);
@@ -327,7 +330,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"lookup %s",path)==1) {
 
-		result = REMOTE_CONDOR_get_file_info_new(path,url,sizeof(url));
+		result = REMOTE_CONDOR_get_file_info_new(path,url);
 		if(result==0) {
 			dprintf(D_SYSCALLS,"Filename %s maps to url %s\n",path,url);
 			sprintf(line,"%u",(unsigned int)strlen(url));
@@ -338,6 +341,8 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			r->put_line_raw(line);
 		}
 
+		free( url );
+		url = NULL;
 	} else if(sscanf_chirp(line,"set_job_attr %s %s",name,expr)==2) {
 
 		result = REMOTE_CONDOR_set_job_attr(name,expr);

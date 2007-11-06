@@ -30,6 +30,7 @@
 #include "condor_ckpt_name.h"
 #include "env.h"
 #include "basename.h"
+#include "condor_getcwd.h"
 #include <time.h>
 #include "user_log.c++.h"
 #include "condor_classad.h"
@@ -106,7 +107,6 @@ template class HashBucket<AttrKey, MyString>;
 char* mySubSystem = "SUBMIT";	/* Used for SUBMIT_EXPRS */
 
 ClassAd  *job = NULL;
-char	 buffer[_POSIX_ARG_MAX + 64];
 
 char	*OperatingSystem;
 char	*Architecture;
@@ -118,16 +118,16 @@ DCSchedd* MySchedd = NULL;
 char	*My_fs_domain;
 char    JobRequirements[2048];
 #if !defined(WIN32)
-char    JobRootdir[_POSIX_PATH_MAX];
+MyString    JobRootdir;
 #endif
-char    JobIwd[_POSIX_PATH_MAX];
+MyString    JobIwd;
 
 int		LineNo;
 int		ExtraLineNo;
 int		GotQueueCommand;
 SandboxTransferMethod	STMethod = STM_USE_SCHEDD_ONLY;
 
-char	IckptName[_POSIX_PATH_MAX];	/* Pathname of spooled initial ckpt file */
+MyString	IckptName;	/* Pathname of spooled initial ckpt file */
 
 unsigned int TransferInputSize;	/* total size of files transfered to exec machine */
 const char	*MyName;
@@ -402,7 +402,7 @@ void	SetFileOptions();
 void	SetKillSig();
 #endif
 void	SetForcedAttributes();
-void 	check_iwd( char *iwd );
+void 	check_iwd( char const *iwd );
 int	read_condor_file( FILE *fp );
 char * 	condor_param( const char* name, const char* alt_name );
 char * 	condor_param( const char* name ); // call param with NULL as the alt
@@ -415,12 +415,13 @@ void 	usage();
 void 	init_params();
 int 	whitespace( const char *str);
 void 	delete_commas( char *ptr );
-void 	compress( char *str );
-char	*full_path(const char *name, bool use_iwd=true);
+void 	compress( MyString &path );
+char const*full_path(const char *name, bool use_iwd=true);
 void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
 int	  SaveClassAd ();
 void	InsertJobExpr (const char *expr, bool clustercheck = true);
+void	InsertJobExpr (const MyString &expr, bool clustercheck = true);
 void	InsertJobExprInt(const char * name, int val, bool clustercheck = true);
 void	InsertJobExprString(const char * name, const char * val, bool clustercheck = true);
 void	check_umask();
@@ -560,6 +561,7 @@ void TestFilePermissions( char *scheddAddr = NULL )
 void
 init_job_ad()
 {
+	MyString buffer;
 	ASSERT(owner);
 
 	if ( job ) {
@@ -574,19 +576,19 @@ init_job_ad()
 		job->SetTargetTypeName (STARTD_ADTYPE);
 	}
 
-	(void) sprintf (buffer, "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));
+	buffer.sprintf( "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0", ATTR_COMPLETION_DATE);
+	buffer.sprintf( "%s = 0", ATTR_COMPLETION_DATE);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, owner);
+	buffer.sprintf( "%s = \"%s\"", ATTR_OWNER, owner);
 	InsertJobExpr (buffer);
 
 #ifdef WIN32
 	// put the NT domain into the ad as well
 	ntdomain = my_domainname();
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_NT_DOMAIN, ntdomain);
+	buffer.sprintf( "%s = \"%s\"", ATTR_NT_DOMAIN, ntdomain);
 	InsertJobExpr (buffer);
 
 	// Publish the version of Windows we are running
@@ -594,66 +596,66 @@ init_job_ad()
 	ZeroMemory ( &os_version_info, sizeof ( OSVERSIONINFO ) );
 	os_version_info.dwOSVersionInfoSize = sizeof ( OSVERSIONINFO );	
 	if ( GetVersionEx ( &os_version_info ) > 0 ) {
-		(void) sprintf (buffer, "%s = %u\n", ATTR_WINDOWS_MAJOR_VERSION, 
+		buffer.sprintf( "%s = %u\n", ATTR_WINDOWS_MAJOR_VERSION, 
 			os_version_info.dwMajorVersion );
-		(void) sprintf (buffer, "%s = %u\n", ATTR_WINDOWS_MINOR_VERSION, 
+		buffer.sprintf_cat( "%s = %u\n", ATTR_WINDOWS_MINOR_VERSION, 
 			os_version_info.dwMinorVersion );
-		(void) sprintf (buffer, "%s = %u\n", ATTR_WINDOWS_BUILD_NUMBER, 
+		buffer.sprintf_cat( "%s = %u\n", ATTR_WINDOWS_BUILD_NUMBER, 
 			os_version_info.dwBuildNumber );
 	} else {
-		(void) sprintf (buffer, "%s = \"Undefined\"\n", 
+		buffer.sprintf( "%s = \"Undefined\"\n", 
 			ATTR_WINDOWS_MAJOR_VERSION );
-		(void) sprintf (buffer, "%s = \"Undefined\"\n", 
+		buffer.sprintf_cat( "%s = \"Undefined\"\n", 
 			ATTR_WINDOWS_MINOR_VERSION );
-		(void) sprintf (buffer, "%s = \"Undefined\"\n", 
+		buffer.sprintf_cat( "%s = \"Undefined\"\n", 
 			ATTR_WINDOWS_BUILD_NUMBER );
 	}
-	InsertJobExpr ( buffer );
+	InsertJobExpr ( buffer.Value() );
 #endif
 
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_WALL_CLOCK);
+	buffer.sprintf( "%s = 0.0", ATTR_JOB_REMOTE_WALL_CLOCK);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_USER_CPU);
+	buffer.sprintf( "%s = 0.0", ATTR_JOB_LOCAL_USER_CPU);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_SYS_CPU);
+	buffer.sprintf( "%s = 0.0", ATTR_JOB_LOCAL_SYS_CPU);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_USER_CPU);
+	buffer.sprintf( "%s = 0.0", ATTR_JOB_REMOTE_USER_CPU);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_SYS_CPU);
+	buffer.sprintf( "%s = 0.0", ATTR_JOB_REMOTE_SYS_CPU);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0", ATTR_JOB_EXIT_STATUS);
+	buffer.sprintf( "%s = 0", ATTR_JOB_EXIT_STATUS);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0", ATTR_NUM_CKPTS);
+	buffer.sprintf( "%s = 0", ATTR_NUM_CKPTS);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0", ATTR_NUM_JOB_STARTS);
+	buffer.sprintf( "%s = 0", ATTR_NUM_JOB_STARTS);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0", ATTR_NUM_RESTARTS);
+	buffer.sprintf( "%s = 0", ATTR_NUM_RESTARTS);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0", ATTR_NUM_SYSTEM_HOLDS);
+	buffer.sprintf( "%s = 0", ATTR_NUM_SYSTEM_HOLDS);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0", ATTR_JOB_COMMITTED_TIME);
+	buffer.sprintf( "%s = 0", ATTR_JOB_COMMITTED_TIME);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0", ATTR_TOTAL_SUSPENSIONS);
+	buffer.sprintf( "%s = 0", ATTR_TOTAL_SUSPENSIONS);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0", ATTR_LAST_SUSPENSION_TIME);
+	buffer.sprintf( "%s = 0", ATTR_LAST_SUSPENSION_TIME);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0", ATTR_CUMULATIVE_SUSPENSION_TIME);
+	buffer.sprintf( "%s = 0", ATTR_CUMULATIVE_SUSPENSION_TIME);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = FALSE", ATTR_ON_EXIT_BY_SIGNAL);
+	buffer.sprintf( "%s = FALSE", ATTR_ON_EXIT_BY_SIGNAL);
 	InsertJobExpr (buffer);
 
 	config_fill_ad( job );
@@ -1293,13 +1295,6 @@ check_and_universalize_path( MyString &path, const char *lhs )
 	
 #endif
 
-	if (path.Length() > _POSIX_PATH_MAX) {
-		fprintf(stderr, "\nERROR: Value for \"%s\" is too long:\n"
-				"\tPosix limits path names to %d bytes\n",
-				lhs, _POSIX_PATH_MAX);
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
 	return retval;
 }
 
@@ -1311,6 +1306,7 @@ SetExecutable()
 	char	*copySpool = NULL;
 	char	*macro_value = NULL;
 	MyString	full_ename;
+	MyString buffer;
 
 	ename = condor_param( Executable, ATTR_JOB_CMD );
 	if( ename == NULL ) {
@@ -1322,7 +1318,7 @@ SetExecutable()
 	macro_value = condor_param( TransferExecutable, ATTR_TRANSFER_EXECUTABLE );
 	if ( macro_value ) {
 		if ( macro_value[0] == 'F' || macro_value[0] == 'f' ) {
-			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
+			buffer.sprintf( "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
 			InsertJobExpr( buffer );
 			transfer_it = false;
 		}
@@ -1333,7 +1329,7 @@ SetExecutable()
 	// but just the name of job.
 	if ( JobUniverse == CONDOR_UNIVERSE_VM) {
 		if( transfer_it == true ) {
-			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
+			buffer.sprintf( "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
 			InsertJobExpr( buffer );
 			transfer_it = false;
 		}
@@ -1350,7 +1346,7 @@ SetExecutable()
 		check_and_universalize_path(full_ename, Executable);
 	}
 
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, full_ename.Value());
+	buffer.sprintf( "%s = \"%s\"", ATTR_JOB_CMD, full_ename.Value());
 	InsertJobExpr (buffer);
 
 		/* MPI REALLY doesn't like these! */
@@ -1368,9 +1364,9 @@ SetExecutable()
 	switch(JobUniverse) 
 	{
 	case CONDOR_UNIVERSE_STANDARD:
-		(void) sprintf (buffer, "%s = TRUE", ATTR_WANT_REMOTE_SYSCALLS);
+		buffer.sprintf( "%s = TRUE", ATTR_WANT_REMOTE_SYSCALLS);
 		InsertJobExpr (buffer);
-		(void) sprintf (buffer, "%s = TRUE", ATTR_WANT_CHECKPOINT);
+		buffer.sprintf( "%s = TRUE", ATTR_WANT_CHECKPOINT);
 		InsertJobExpr (buffer);
 		break;
 	case CONDOR_UNIVERSE_PVM:
@@ -1382,9 +1378,9 @@ SetExecutable()
 	case CONDOR_UNIVERSE_GRID:
 	case CONDOR_UNIVERSE_JAVA:
 	case CONDOR_UNIVERSE_VM:
-		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_REMOTE_SYSCALLS);
+		buffer.sprintf( "%s = FALSE", ATTR_WANT_REMOTE_SYSCALLS);
 		InsertJobExpr (buffer);
-		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
+		buffer.sprintf( "%s = FALSE", ATTR_WANT_CHECKPOINT);
 		InsertJobExpr (buffer);
 		break;
 	default:
@@ -1416,7 +1412,7 @@ SetExecutable()
 	}
 
 	// generate initial checkpoint file
-	strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,0) );
+	IckptName = gen_ckpt_name(0,ClusterId,ICKPT,0);
 
 	// spool executable only if no $$(arch).$$(opsys) specified
 
@@ -1432,9 +1428,9 @@ SetExecutable()
 			exit( 1 );
 		}
 
-		if (SendSpoolFile(IckptName) < 0) {
+		if (SendSpoolFile(IckptName.Value()) < 0) {
 			fprintf( stderr, "\nERROR: Permission to transfer executable "
-					 "%s denied\n", IckptName );
+					 "%s denied\n", IckptName.Value() );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
@@ -1461,6 +1457,7 @@ void
 SetUniverse()
 {
 	char	*univ;
+	MyString buffer;
 
 	univ = condor_param( Universe, ATTR_JOB_UNIVERSE );
 
@@ -1475,7 +1472,7 @@ SetUniverse()
 
 	if( univ && stricmp(univ,"scheduler") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_SCHEDULER;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_SCHEDULER);
+		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_SCHEDULER);
 		InsertJobExpr (buffer);
 		free(univ);
 		return;
@@ -1483,7 +1480,7 @@ SetUniverse()
 
 	if( univ && stricmp(univ,"local") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_LOCAL;
-		(void) sprintf( buffer, "%s = %d", ATTR_JOB_UNIVERSE,
+		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE,
 						CONDOR_UNIVERSE_LOCAL );
 		InsertJobExpr( buffer );
 		free( univ );
@@ -1510,7 +1507,7 @@ SetUniverse()
 		}
 
 		JobUniverse = CONDOR_UNIVERSE_PVM;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PVM);
+		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PVM);
 		InsertJobExpr (buffer);
 
 		free(univ);
@@ -1523,7 +1520,7 @@ SetUniverse()
 		((stricmp(univ,"globus") == MATCH) || (stricmp(univ,"grid") == MATCH))) {
 		JobUniverse = CONDOR_UNIVERSE_GRID;
 		
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID);
+		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID);
 		InsertJobExpr (buffer);
 		free(univ);
 		univ = 0;
@@ -1607,7 +1604,7 @@ SetUniverse()
 
 	if( univ && stricmp(univ,"parallel") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_PARALLEL;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PARALLEL);
+		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PARALLEL);
 		InsertJobExpr (buffer);
 		
 		free(univ);
@@ -1616,7 +1613,7 @@ SetUniverse()
 
 	if( univ && stricmp(univ,"vanilla") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_VANILLA;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA);
+		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA);
 		InsertJobExpr (buffer);
 		free(univ);
 		return;
@@ -1624,7 +1621,7 @@ SetUniverse()
 
 	if( univ && stricmp(univ,"mpi") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_MPI;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_MPI);
+		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_MPI);
 		InsertJobExpr (buffer);
 		
 		free(univ);
@@ -1633,7 +1630,7 @@ SetUniverse()
 
 	if( univ && stricmp(univ,"java") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_JAVA;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_JAVA);
+		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_JAVA);
 		InsertJobExpr (buffer);
 		free(univ);
 		return;
@@ -1641,7 +1638,7 @@ SetUniverse()
 
 	if( univ && stricmp(univ,"vm") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_VM;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VM);
+		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VM);
 		InsertJobExpr (buffer);
 		free(univ);
 
@@ -1751,7 +1748,7 @@ SetUniverse()
 	}
 
 	JobUniverse = CONDOR_UNIVERSE_STANDARD;
-	(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_STANDARD);
+	buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_STANDARD);
 	InsertJobExpr (buffer);
 	if ( univ ) {
 		free(univ);
@@ -1767,6 +1764,7 @@ SetMachineCount()
 {
 	char	*mach_count;
 	char	*ptr;
+	MyString buffer;
 
 	if (JobUniverse == CONDOR_UNIVERSE_PVM) {
 
@@ -1781,7 +1779,7 @@ SetMachineCount()
 			}
 
 			tmp = atoi(mach_count);
-			(void) sprintf (buffer, "%s = %d", ATTR_MIN_HOSTS, tmp);
+			buffer.sprintf( "%s = %d", ATTR_MIN_HOSTS, tmp);
 			InsertJobExpr (buffer);
 			
 			for ( ; !isdigit(*ptr) && *ptr; ptr++) ;
@@ -1789,7 +1787,7 @@ SetMachineCount()
 				tmp = atoi(ptr);
 			}
 
-			(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
+			buffer.sprintf( "%s = %d", ATTR_MAX_HOSTS, tmp);
 			InsertJobExpr (buffer);
 			free(mach_count);
 		} else {
@@ -1816,9 +1814,9 @@ SetMachineCount()
 			exit( 1 );
 		}
 
-		(void) sprintf (buffer, "%s = %d", ATTR_MIN_HOSTS, tmp);
+		buffer.sprintf( "%s = %d", ATTR_MIN_HOSTS, tmp);
 		InsertJobExpr (buffer);
-		(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
+		buffer.sprintf( "%s = %d", ATTR_MAX_HOSTS, tmp);
 		InsertJobExpr (buffer);
 
 	}
@@ -1833,6 +1831,7 @@ SetImageSize()
 	char	*tmp;
 	char	*p;
 	char    buff[2048];
+	MyString buffer;
 
 	tmp = condor_param( ImageSize, ATTR_IMAGE_SIZE );
 
@@ -1874,10 +1873,10 @@ SetImageSize()
 	// the requirements line, but that caused many problems.
 	// Jeff Ballard 11/4/98
 
-	(void)sprintf (buffer, "%s = %d", ATTR_IMAGE_SIZE, size);
+	buffer.sprintf( "%s = %d", ATTR_IMAGE_SIZE, size);
 	InsertJobExpr (buffer);
 
-	(void)sprintf (buffer, "%s = %u", ATTR_EXECUTABLE_SIZE, 
+	buffer.sprintf( "%s = %u", ATTR_EXECUTABLE_SIZE, 
 					executablesize);
 	InsertJobExpr (buffer);
 
@@ -1894,9 +1893,9 @@ SetImageSize()
 		if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
 			vm_disk_space += 100*1024;
 		}
-		(void)sprintf (buffer, "%s = %u", ATTR_DISK_USAGE, vm_disk_space);
+		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, vm_disk_space);
 	}else {
-		(void)sprintf (buffer, "%s = %u", ATTR_DISK_USAGE, 
+		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, 
 				executablesize + TransferInputSize);
 	}
 	InsertJobExpr (buffer);
@@ -1910,14 +1909,14 @@ void SetFileOptions()
 	tmp = condor_param( FileRemaps, ATTR_FILE_REMAPS );
 	if(tmp) {
 		strbuffer.sprintf("%s = %s",ATTR_FILE_REMAPS,tmp);
-		InsertJobExpr(strbuffer.Value());
+		InsertJobExpr(strbuffer);
 		free(tmp);
 	}
 
 	tmp = condor_param( BufferFiles, ATTR_BUFFER_FILES );
 	if(tmp) {
 		strbuffer.sprintf("%s = %s",ATTR_BUFFER_FILES,tmp);
-		InsertJobExpr(strbuffer.Value());
+		InsertJobExpr(strbuffer);
 		free(tmp);
 	}
 
@@ -1931,7 +1930,7 @@ void SetFileOptions()
 		}
 	}
 	strbuffer.sprintf("%s = %s",ATTR_BUFFER_SIZE,tmp);
-	InsertJobExpr(strbuffer.Value());
+	InsertJobExpr(strbuffer);
 	free(tmp);
 
 	/* If not buffer block size is given, use 32 KB */
@@ -2211,15 +2210,14 @@ SetTransferFiles()
 		  JobUniverse != CONDOR_UNIVERSE_STANDARD) ||
 		 Remote ) {
 
-		char output[_POSIX_PATH_MAX + 32];
-		char error[_POSIX_PATH_MAX + 32];
+		MyString output;
+		MyString error;
 
-		output[0] = error[0] = '\0';
-		job->LookupString(ATTR_JOB_OUTPUT,output,sizeof(output));
-		job->LookupString(ATTR_JOB_ERROR,error,sizeof(error));
+		job->LookupString(ATTR_JOB_OUTPUT,output);
+		job->LookupString(ATTR_JOB_ERROR,error);
 
-		if(*output && condor_basename(output) != output && 
-		   strcmp(output,"/dev/null") != 0 && !stream_stdout_toggle)
+		if(output.Length() && output != condor_basename(output.Value()) && 
+		   strcmp(output.Value(),"/dev/null") != 0 && !stream_stdout_toggle)
 		{
 			char const *working_name = "_condor_stdout";
 				//Force setting value, even if we have already set it
@@ -2231,15 +2229,15 @@ SetTransferFiles()
 			InsertJobExprString(ATTR_JOB_OUTPUT, working_name,false);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
-			output_remaps.sprintf_cat("%s=%s",working_name,MyString(output).EscapeChars(";=\\",'\\').Value());
+			output_remaps.sprintf_cat("%s=%s",working_name,output.EscapeChars(";=\\",'\\').Value());
 		}
 
-		if(*error && condor_basename(error) != error && 
-		   strcmp(error,"/dev/null") != 0 && !stream_stderr_toggle)
+		if(error.Length() && error != condor_basename(error.Value()) && 
+		   strcmp(error.Value(),"/dev/null") != 0 && !stream_stderr_toggle)
 		{
 			char const *working_name = "_condor_stderr";
 
-			if(strcmp(error,output) == 0) {
+			if(error == output) {
 				//stderr will use same file as stdout
 				working_name = "_condor_stdout";
 			}
@@ -2252,7 +2250,7 @@ SetTransferFiles()
 			InsertJobExprString(ATTR_JOB_ERROR, working_name,false);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
-			output_remaps.sprintf_cat("%s=%s",working_name,MyString(error).EscapeChars(";=\\",'\\').Value());
+			output_remaps.sprintf_cat("%s=%s",working_name,error.EscapeChars(";=\\",'\\').Value());
 		}
 	}
 
@@ -2260,10 +2258,10 @@ SetTransferFiles()
 	// exprs  
 	if( should_transfer != STF_NO ) {
 		if ( input_files.Length() > 0 ) {
-			InsertJobExpr (input_files.Value());
+			InsertJobExpr (input_files);
 		}
 		if ( output_files.Length() > 0 ) {
-			InsertJobExpr (output_files.Value());
+			InsertJobExpr (output_files);
 		}
 	}
 
@@ -2317,19 +2315,20 @@ SetTransferFiles()
 	if(!output_remaps.IsEmpty()) {
 		MyString expr;
 		expr.sprintf("%s = \"%s\"",ATTR_TRANSFER_OUTPUT_REMAPS,output_remaps.Value());
-		InsertJobExpr(expr.Value());
+		InsertJobExpr(expr);
 	}
 
 		// Check accessibility of output files.
 	output_file_list.rewind();
-	while ( (tmp_ptr=output_file_list.next()) ) {
+	char const *output_file;
+	while ( (output_file=output_file_list.next()) ) {
 		// Apply filename remaps if there are any.
-		char remap_fname[_POSIX_PATH_MAX*3];
-		if(filename_remap_find(output_remaps.Value(),tmp_ptr,remap_fname)) {
-			tmp_ptr = remap_fname;
+		MyString remap_fname;
+		if(filename_remap_find(output_remaps.Value(),output_file,remap_fname)) {
+			output_file = remap_fname.Value();
 		}
 
-		check_open(tmp_ptr, O_WRONLY|O_CREAT|O_TRUNC );
+		check_open(output_file, O_WRONLY|O_CREAT|O_TRUNC );
 	}
 }
 
@@ -2729,7 +2728,7 @@ SetJavaVMArgs()
 		if(!value.IsEmpty()) {
 			strbuffer.sprintf("%s = \"%s\"",ATTR_JOB_JAVA_VM_ARGS1,
 						   value.EscapeChars("\"",'\\').Value());
-			InsertJobExpr (strbuffer.Value());
+			InsertJobExpr (strbuffer);
 		}
 	}
 	else {
@@ -2737,7 +2736,7 @@ SetJavaVMArgs()
 		if(!value.IsEmpty()) {
 			strbuffer.sprintf("%s = \"%s\"",ATTR_JOB_JAVA_VM_ARGS2,
 						   value.EscapeChars("\"",'\\').Value());
-			InsertJobExpr (strbuffer.Value());
+			InsertJobExpr (strbuffer);
 		}
 	}
 
@@ -2778,7 +2777,7 @@ SetStdFile( int which_file )
 	char	*macro_value = NULL;
 	char	*macro_value2 = NULL;
 	char	*generic_name;
-	char	 strbuffer[_POSIX_PATH_MAX + 32];
+	MyString	 strbuffer;
 
 	switch( which_file ) 
 	{
@@ -2862,41 +2861,41 @@ SetStdFile( int which_file )
 	switch( which_file ) 
 	{
 	case 0:
-		(void) sprintf (strbuffer, "%s = \"%s\"", ATTR_JOB_INPUT, macro_value);
+		strbuffer.sprintf( "%s = \"%s\"", ATTR_JOB_INPUT, macro_value);
 		InsertJobExpr (strbuffer);
 		if ( transfer_it ) {
 			check_open( macro_value, O_RDONLY );
-			sprintf( strbuffer, "%s = %s", ATTR_STREAM_INPUT, stream_it ? "TRUE" : "FALSE" );
-			InsertJobExpr( strbuffer );
+			strbuffer.sprintf( "%s = %s", ATTR_STREAM_INPUT, stream_it ? "TRUE" : "FALSE" );
+			InsertJobExpr( strbuffer.Value() );
 		} else {
-			sprintf( strbuffer, "%s = FALSE", ATTR_TRANSFER_INPUT );
-			InsertJobExpr( strbuffer );
+			strbuffer.sprintf( "%s = FALSE", ATTR_TRANSFER_INPUT );
+			InsertJobExpr( strbuffer.Value() );
 		}
 		break;
 	case 1:
-		(void) sprintf (strbuffer, "%s = \"%s\"", ATTR_JOB_OUTPUT, macro_value);
+		strbuffer.sprintf( "%s = \"%s\"", ATTR_JOB_OUTPUT, macro_value);
 		InsertJobExpr (strbuffer);
 		if ( transfer_it ) {
 			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
-			sprintf( strbuffer, "%s = %s", ATTR_STREAM_OUTPUT, stream_it ? "TRUE" : "FALSE" );
-			InsertJobExpr( strbuffer );
+			strbuffer.sprintf( "%s = %s", ATTR_STREAM_OUTPUT, stream_it ? "TRUE" : "FALSE" );
+			InsertJobExpr( strbuffer.Value() );
 			stream_stdout_toggle = stream_it;
 		} else {
-			sprintf( strbuffer, "%s = FALSE", ATTR_TRANSFER_OUTPUT );
-			InsertJobExpr( strbuffer );
+			strbuffer.sprintf( "%s = FALSE", ATTR_TRANSFER_OUTPUT );
+			InsertJobExpr( strbuffer.Value() );
 		}
 		break;
 	case 2:
-		(void) sprintf (strbuffer, "%s = \"%s\"", ATTR_JOB_ERROR, macro_value);
+		strbuffer.sprintf( "%s = \"%s\"", ATTR_JOB_ERROR, macro_value);
 		InsertJobExpr (strbuffer);
 		if ( transfer_it ) {
 			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
-			sprintf( strbuffer, "%s = %s", ATTR_STREAM_ERROR, stream_it ? "TRUE" : "FALSE" );
-			InsertJobExpr( strbuffer );
+			strbuffer.sprintf( "%s = %s", ATTR_STREAM_ERROR, stream_it ? "TRUE" : "FALSE" );
+			InsertJobExpr( strbuffer.Value() );
 			stream_stderr_toggle = stream_it;
 		} else {
-			sprintf( strbuffer, "%s = FALSE", ATTR_TRANSFER_ERROR );
-			InsertJobExpr( strbuffer );
+			strbuffer.sprintf( "%s = FALSE", ATTR_TRANSFER_ERROR );
+			InsertJobExpr( strbuffer.Value() );
 		}
 		break;
 	}
@@ -2910,36 +2909,37 @@ void
 SetJobStatus()
 {
 	char *hold = condor_param( Hold, NULL );
+	MyString buffer;
 
 	if( hold && (hold[0] == 'T' || hold[0] == 't') ) {
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, HELD);
+		buffer.sprintf( "%s = %d", ATTR_JOB_STATUS, HELD);
 		InsertJobExpr (buffer);
 
-		(void)sprintf( buffer, "%s=\"submitted on hold at user's request\"", 
+		buffer.sprintf( "%s=\"submitted on hold at user's request\"", 
 					   ATTR_HOLD_REASON );
 		InsertJobExpr( buffer );
 
-		sprintf( buffer, "%s = %d", ATTR_HOLD_REASON_CODE,
+		buffer.sprintf( "%s = %d", ATTR_HOLD_REASON_CODE,
 				 CONDOR_HOLD_CODE_SubmittedOnHold );
 		InsertJobExpr( buffer );
 	} else 
 	if ( Remote ) {
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, HELD);
+		buffer.sprintf( "%s = %d", ATTR_JOB_STATUS, HELD);
 		InsertJobExpr (buffer);
 
-		(void)sprintf( buffer, "%s=\"Spooling input data files\"", 
+		buffer.sprintf( "%s=\"Spooling input data files\"", 
 					   ATTR_HOLD_REASON );
 		InsertJobExpr( buffer );
 
-		sprintf( buffer, "%s = %d", ATTR_HOLD_REASON_CODE,
+		buffer.sprintf( "%s = %d", ATTR_HOLD_REASON_CODE,
 				 CONDOR_HOLD_CODE_SpoolingInput );
 		InsertJobExpr( buffer );
 	} else {
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, IDLE);
+		buffer.sprintf( "%s = %d", ATTR_JOB_STATUS, IDLE);
 		InsertJobExpr (buffer);
 	}
 
-	(void) sprintf( buffer, "%s = %d", ATTR_ENTERED_CURRENT_STATUS,
+	buffer.sprintf( "%s = %d", ATTR_ENTERED_CURRENT_STATUS,
 					(int)time(0) );
 	InsertJobExpr( buffer );
 
@@ -2953,27 +2953,28 @@ SetPriority()
 {
 	char *prio = condor_param( Priority, ATTR_PRIO );
 	int  prioval = 0;
+	MyString buffer;
 
 	if( prio != NULL ) 
 	{
 		prioval = atoi (prio);
 		free(prio);
 	}
-	(void) sprintf (buffer, "%s = %d", ATTR_JOB_PRIO, prioval);
+	buffer.sprintf( "%s = %d", ATTR_JOB_PRIO, prioval);
 	InsertJobExpr (buffer);
 
 	// also check if the job is "dirt user" priority (i.e., nice_user==True)
 	char *nice_user = condor_param( NiceUser, ATTR_NICE_USER );
 	if( nice_user && (*nice_user == 'T' || *nice_user == 't') )
 	{
-		sprintf( buffer, "%s = TRUE", ATTR_NICE_USER );
+		buffer.sprintf( "%s = TRUE", ATTR_NICE_USER );
 		InsertJobExpr( buffer );
 		free(nice_user);
 		nice_user_setting = true;
 	}
 	else
 	{
-		sprintf( buffer, "%s = FALSE", ATTR_NICE_USER );
+		buffer.sprintf( "%s = FALSE", ATTR_NICE_USER );
 		InsertJobExpr( buffer );
 		nice_user_setting = false;
 	}
@@ -2999,7 +3000,7 @@ SetMaxJobRetirementTime()
 	if(value) {
 		MyString expr;
 		expr.sprintf("%s = %s",ATTR_MAX_JOB_RETIREMENT_TIME, value);
-		InsertJobExpr(expr.Value());
+		InsertJobExpr(expr);
 	}
 }
 
@@ -3007,16 +3008,17 @@ void
 SetPeriodicHoldCheck(void)
 {
 	char *phc = condor_param(PeriodicHoldCheck, ATTR_PERIODIC_HOLD_CHECK);
+	MyString buffer;
 
 	if (phc == NULL)
 	{
 		/* user didn't have one, so add one */
-		sprintf( buffer, "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK );
+		buffer.sprintf( "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK );
 	}
 	else
 	{
 		/* user had a value for it, leave it alone */
-		sprintf( buffer, "%s = %s", ATTR_PERIODIC_HOLD_CHECK, phc );
+		buffer.sprintf( "%s = %s", ATTR_PERIODIC_HOLD_CHECK, phc );
 		free(phc);
 	}
 
@@ -3027,12 +3029,12 @@ SetPeriodicHoldCheck(void)
 	if (phc == NULL)
 	{
 		/* user didn't have one, so add one */
-		sprintf( buffer, "%s = FALSE", ATTR_PERIODIC_RELEASE_CHECK );
+		buffer.sprintf( "%s = FALSE", ATTR_PERIODIC_RELEASE_CHECK );
 	}
 	else
 	{
 		/* user had a value for it, leave it alone */
-		sprintf( buffer, "%s = %s", ATTR_PERIODIC_RELEASE_CHECK, phc );
+		buffer.sprintf( "%s = %s", ATTR_PERIODIC_RELEASE_CHECK, phc );
 		free(phc);
 	}
 
@@ -3043,16 +3045,17 @@ void
 SetPeriodicRemoveCheck(void)
 {
 	char *prc = condor_param(PeriodicRemoveCheck, ATTR_PERIODIC_REMOVE_CHECK);
+	MyString buffer;
 
 	if (prc == NULL)
 	{
 		/* user didn't have one, so add one */
-		sprintf( buffer, "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK );
+		buffer.sprintf( "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK );
 	}
 	else
 	{
 		/* user had a value for it, leave it alone */
-		sprintf( buffer, "%s = %s", ATTR_PERIODIC_REMOVE_CHECK, prc );
+		buffer.sprintf( "%s = %s", ATTR_PERIODIC_REMOVE_CHECK, prc );
 		free(prc);
 	}
 
@@ -3063,16 +3066,17 @@ void
 SetExitHoldCheck(void)
 {
 	char *ehc = condor_param(OnExitHoldCheck, ATTR_ON_EXIT_HOLD_CHECK);
+	MyString buffer;
 
 	if (ehc == NULL)
 	{
 		/* user didn't have one, so add one */
-		sprintf( buffer, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK );
+		buffer.sprintf( "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK );
 	}
 	else
 	{
 		/* user had a value for it, leave it alone */
-		sprintf( buffer, "%s = %s", ATTR_ON_EXIT_HOLD_CHECK, ehc );
+		buffer.sprintf( "%s = %s", ATTR_ON_EXIT_HOLD_CHECK, ehc );
 		free(ehc);
 	}
 
@@ -3084,6 +3088,7 @@ SetLeaveInQueue()
 {
 	char *erc = condor_param(LeaveInQueue, ATTR_JOB_LEAVE_IN_QUEUE);
 	char *mirror_schedd = condor_param(MirrorSchedd,ATTR_MIRROR_SCHEDD);
+	MyString buffer;
 
 	if ( mirror_schedd ) {
 		
@@ -3098,18 +3103,18 @@ SetLeaveInQueue()
 		
 			// schedd job mirroring is being used
 			// set the mirrored schedd attribute
-		sprintf(buffer,"%s = \"%s\"", ATTR_MIRROR_SCHEDD,mirror_schedd);
+		buffer.sprintf("%s = \"%s\"", ATTR_MIRROR_SCHEDD,mirror_schedd);
 		InsertJobExpr( buffer );
 		free(mirror_schedd);
 
 			// set default WantMatching for mirrored jobs
-		sprintf(buffer,"%s = %s =?= False", ATTR_WANT_MATCHING,
+		buffer.sprintf("%s = %s =?= False", ATTR_WANT_MATCHING,
 			ATTR_MIRROR_RELEASED);
 		InsertJobExpr( buffer );
 
 			// set default LeaveInQueue for mirrored jobs (erc is used below)
-		sprintf(buffer,"%s =?= \"%s\"",ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
-		erc = strdup(buffer);
+		buffer.sprintf("%s =?= \"%s\"",ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+		erc = strdup(buffer.Value());
 	}
 
 
@@ -3117,12 +3122,12 @@ SetLeaveInQueue()
 	{
 		/* user didn't have one, so add one */
 		if ( !Remote ) {
-			sprintf( buffer, "%s = FALSE", ATTR_JOB_LEAVE_IN_QUEUE );
+			buffer.sprintf( "%s = FALSE", ATTR_JOB_LEAVE_IN_QUEUE );
 		} else {
 				/* if remote spooling, leave in the queue after the job completes
 				   for up to 10 days, so user can grab the output.
 				 */
-			sprintf( buffer, 
+			buffer.sprintf( 
 				"%s = %s == %d && (%s =?= UNDEFINED || %s == 0 || ((CurrentTime - %s) < %d))",
 				ATTR_JOB_LEAVE_IN_QUEUE,
 				ATTR_JOB_STATUS,
@@ -3137,7 +3142,7 @@ SetLeaveInQueue()
 	else
 	{
 		/* user had a value for it, leave it alone */
-		sprintf( buffer, "%s = %s", ATTR_JOB_LEAVE_IN_QUEUE, erc );
+		buffer.sprintf( "%s = %s", ATTR_JOB_LEAVE_IN_QUEUE, erc );
 		free(erc);
 	}
 
@@ -3149,16 +3154,17 @@ void
 SetExitRemoveCheck(void)
 {
 	char *erc = condor_param(OnExitRemoveCheck, ATTR_ON_EXIT_REMOVE_CHECK);
+	MyString buffer;
 
 	if (erc == NULL)
 	{
 		/* user didn't have one, so add one */
-		sprintf( buffer, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK );
+		buffer.sprintf( "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK );
 	}
 	else
 	{
 		/* user had a value for it, leave it alone */
-		sprintf( buffer, "%s = %s", ATTR_ON_EXIT_REMOVE_CHECK, erc );
+		buffer.sprintf( "%s = %s", ATTR_ON_EXIT_REMOVE_CHECK, erc );
 		free(erc);
 	}
 
@@ -3169,6 +3175,7 @@ void
 SetNoopJob(void)
 {
 	char *noop = condor_param(Noop, ATTR_JOB_NOOP);
+	MyString buffer;
 
 	if (noop == NULL)
 	{	
@@ -3178,7 +3185,7 @@ SetNoopJob(void)
 	else
 	{
 		/* user had a value for it, leave it alone */
-		sprintf( buffer, "%s = %s", ATTR_JOB_NOOP, noop );
+		buffer.sprintf( "%s = %s", ATTR_JOB_NOOP, noop );
 		free(noop);
 	}
 
@@ -3189,6 +3196,7 @@ void
 SetNoopJobExitSignal(void)
 {
 	char *noop = condor_param(NoopExitSignal, ATTR_JOB_NOOP_EXIT_SIGNAL);
+	MyString buffer;
 
 	if (noop == NULL)
 	{	
@@ -3198,7 +3206,7 @@ SetNoopJobExitSignal(void)
 	else
 	{
 		/* user had a value for it, leave it alone */
-		sprintf( buffer, "%s = %s", ATTR_JOB_NOOP_EXIT_SIGNAL, noop );
+		buffer.sprintf( "%s = %s", ATTR_JOB_NOOP_EXIT_SIGNAL, noop );
 		free(noop);
 	}
 
@@ -3209,6 +3217,7 @@ void
 SetNoopJobExitCode(void)
 {
 	char *noop = condor_param(NoopExitCode, ATTR_JOB_NOOP_EXIT_CODE);
+	MyString buffer;
 
 	if (noop == NULL)
 	{	
@@ -3218,7 +3227,7 @@ SetNoopJobExitCode(void)
 	else
 	{
 		/* user had a value for it, leave it alone */
-		sprintf( buffer, "%s = %s", ATTR_JOB_NOOP_EXIT_CODE, noop );
+		buffer.sprintf( "%s = %s", ATTR_JOB_NOOP_EXIT_CODE, noop );
 		free(noop);
 	}
 
@@ -3229,12 +3238,13 @@ void
 SetWantRemoteIO(void)
 {
 	char *how = condor_param( WantRemoteIO, ATTR_WANT_REMOTE_IO );
+	MyString buffer;
 
 	if (how == NULL) {
-		(void) sprintf (buffer, "%s = TRUE", 
+		buffer.sprintf( "%s = TRUE", 
 						ATTR_WANT_REMOTE_IO);
 	} else {
-		(void) sprintf ( buffer, "%s = %s", ATTR_WANT_REMOTE_IO, 
+		buffer.sprintf( "%s = %s", ATTR_WANT_REMOTE_IO, 
 						isTrue(how)?"TRUE":"FALSE" );
 	}
 
@@ -3250,6 +3260,7 @@ SetNotification()
 {
 	char *how = condor_param( Notification, ATTR_JOB_NOTIFICATION );
 	int notification;
+	MyString buffer;
 
 	if( (how == NULL) || (stricmp(how, "COMPLETE") == 0) ) {
 		notification = NOTIFY_COMPLETE;
@@ -3270,7 +3281,7 @@ SetNotification()
 		exit( 1 );
 	}
 
-	(void) sprintf (buffer, "%s = %d", ATTR_JOB_NOTIFICATION, notification);
+	buffer.sprintf( "%s = %d", ATTR_JOB_NOTIFICATION, notification);
 	InsertJobExpr (buffer);
 
 	if ( how ) {
@@ -3283,6 +3294,7 @@ SetNotifyUser()
 {
 	bool needs_warning = false;
 	static bool did_warning = false;
+	MyString buffer;
 
 	char *who = condor_param( NotifyUser, ATTR_NOTIFY_USER );
 
@@ -3310,7 +3322,7 @@ SetNotifyUser()
 
 			did_warning = true;
 		}
-		(void) sprintf (buffer, "%s = \"%s\"", ATTR_NOTIFY_USER, who);
+		buffer.sprintf( "%s = \"%s\"", ATTR_NOTIFY_USER, who);
 		InsertJobExpr (buffer);
 		free(who);
 	}
@@ -3324,6 +3336,7 @@ SetNotifyUser()
 void
 SetCronTab()
 {
+	MyString buffer;
 		//
 		// For convienence I put all the attributes in array
 		// and just run through the ad looking for them
@@ -3352,7 +3365,7 @@ SetCronTab()
 				// Go ahead and stuff it in the job ad now
 				// The parameters must be wrapped in quotation marks
 				//				
-			sprintf (buffer, "%s = \"%s\"", CronTab::attributes[ctr], param );
+			buffer.sprintf( "%s = \"%s\"", CronTab::attributes[ctr], param );
 			InsertJobExpr (buffer);
 			free( param );
 			NeedsJobDeferral = true;
@@ -3378,12 +3391,13 @@ SetCronTab()
 void
 SetMatchListLen()
 {
+	MyString buffer;
 	int len = 0;
 	char* tmp = condor_param( LastMatchListLength,
 							  ATTR_LAST_MATCH_LIST_LENGTH );
 	if( tmp ) {
 		len = atoi(tmp);
-		(void) sprintf( buffer, "%s = %d", ATTR_LAST_MATCH_LIST_LENGTH, len );
+		buffer.sprintf( "%s = %d", ATTR_LAST_MATCH_LIST_LENGTH, len );
 		InsertJobExpr( buffer );
 		free( tmp );
 	}
@@ -3393,8 +3407,9 @@ void
 SetDAGNodeName()
 {
 	char* name = condor_param( ATTR_DAG_NODE_NAME_ALT, ATTR_DAG_NODE_NAME );
+	MyString buffer;
 	if( name ) {
-		(void) sprintf( buffer, "%s = \"%s\"", ATTR_DAG_NODE_NAME, name );
+		buffer.sprintf( "%s = \"%s\"", ATTR_DAG_NODE_NAME, name );
 		InsertJobExpr( buffer );
 		free( name );
 	}
@@ -3404,8 +3419,9 @@ void
 SetDAGManJobId()
 {
 	char* id = condor_param( DAGManJobId, ATTR_DAGMAN_JOB_ID );
+	MyString buffer;
 	if( id ) {
-		(void) sprintf( buffer, "%s = \"%s\"", ATTR_DAGMAN_JOB_ID, id );
+		(void) buffer.sprintf( "%s = \"%s\"", ATTR_DAGMAN_JOB_ID, id );
 		InsertJobExpr( buffer );
 		free( id );
 	}
@@ -3431,8 +3447,9 @@ void
 SetRemoteInitialDir()
 {
 	char *who = condor_param( RemoteInitialDir, ATTR_JOB_REMOTE_IWD );
+	MyString buffer;
 	if (who) {
-		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_REMOTE_IWD, who);
+		buffer.sprintf( "%s = \"%s\"", ATTR_JOB_REMOTE_IWD, who);
 		InsertJobExpr (buffer);
 		free(who);
 	}
@@ -3515,7 +3532,7 @@ SetArguments()
 		exit(1);
 	}
 
-	InsertJobExpr (strbuffer.Value());
+	InsertJobExpr (strbuffer);
 
 	if( JobUniverse == CONDOR_UNIVERSE_JAVA && arglist.Count() == 0)
 	{
@@ -3542,9 +3559,10 @@ SetJobDeferral() {
 		// We will only be able to validate the deferral time when the
 		// Starter evaluates it and tries to set the timer for it
 		//
+	MyString buffer;
 	char *temp = condor_param( DeferralTime, ATTR_DEFERRAL_TIME );
 	if ( temp != NULL ) {
-		sprintf (buffer, "%s = %s", ATTR_DEFERRAL_TIME, temp );
+		buffer.sprintf( "%s = %s", ATTR_DEFERRAL_TIME, temp );
 		InsertJobExpr (buffer);
 		free( temp );
 		NeedsJobDeferral = true;
@@ -3583,13 +3601,13 @@ SetJobDeferral() {
 			// If we have a parameter from the job file, use that value
 			//
 		if ( temp != NULL ){
-			sprintf (buffer, "%s = %s", ATTR_DEFERRAL_WINDOW, temp );	
+			buffer.sprintf(  "%s = %s", ATTR_DEFERRAL_WINDOW, temp );	
 			free( temp );
 			//
 			// Otherwise, use the default value
 			//
 		} else {
-			sprintf( buffer, "%s = %d",
+			buffer.sprintf( "%s = %d",
 				   ATTR_DEFERRAL_WINDOW, JOB_DEFERRAL_WINDOW_DEFAULT );
 		}
 		InsertJobExpr (buffer);
@@ -3618,13 +3636,13 @@ SetJobDeferral() {
 			// If we have a parameter from the job file, use that value
 			//
 		if ( temp != NULL ){
-			sprintf (buffer, "%s = %s", ATTR_DEFERRAL_PREP_TIME, temp );	
+			buffer.sprintf(  "%s = %s", ATTR_DEFERRAL_PREP_TIME, temp );	
 			free( temp );
 			//
 			// Otherwise, use the default value
 			//
 		} else {
-			sprintf( buffer, "%s = %d",
+			buffer.sprintf( "%s = %d",
 				   ATTR_DEFERRAL_PREP_TIME, JOB_DEFERRAL_PREP_TIME_DEFAULT );
 		}
 		InsertJobExpr (buffer);
@@ -3637,10 +3655,10 @@ SetJobDeferral() {
 			//
 		temp = param( "SCHEDD_INTERVAL" );
 		if ( temp != NULL ) {
-			sprintf( buffer, "%s = %s", ATTR_SCHEDD_INTERVAL, temp );
+			buffer.sprintf( "%s = %s", ATTR_SCHEDD_INTERVAL, temp );
 			free( temp );
 		} else {
-			sprintf( buffer, "%s = %d", ATTR_SCHEDD_INTERVAL,
+			buffer.sprintf( "%s = %d", ATTR_SCHEDD_INTERVAL,
 										SCHEDD_INTERVAL_DEFAULT );
 		}
 		InsertJobExpr (buffer);
@@ -3775,7 +3793,7 @@ SetEnvironment()
 		newenv.sprintf("%s = \"%s\"",
 					   ATTR_JOB_ENVIRONMENT1,
 					   newenv_raw.EscapeChars("\"",'\\').Value());
-		InsertJobExpr(newenv.Value());
+		InsertJobExpr(newenv);
 
 		// Record in the JobAd the V1 delimiter that is being used.
 		// This way remote submits across platforms have a prayer.
@@ -3783,7 +3801,7 @@ SetEnvironment()
 		delim_assign.sprintf("%s = \"%c\"",
 							 ATTR_JOB_ENVIRONMENT1_DELIM,
 							 envobject.GetEnvV1Delimiter());
-		InsertJobExpr(delim_assign.Value());
+		InsertJobExpr(delim_assign);
 	}
 
 	if(insert_env2 && env_success) {
@@ -3794,7 +3812,7 @@ SetEnvironment()
 		newenv.sprintf("%s = \"%s\"",
 					   ATTR_JOB_ENVIRONMENT2,
 					   newenv_raw.EscapeChars("\"",'\\').Value());
-		InsertJobExpr(newenv.Value());
+		InsertJobExpr(newenv);
 	}
 
 	if(!env_success) {
@@ -3825,7 +3843,7 @@ ComputeRootDir()
 
 	if( rootdir == NULL ) 
 	{
-		(void) strcpy (JobRootdir, "/");
+		JobRootdir = "/";
 	} 
 	else 
 	{
@@ -3838,7 +3856,7 @@ ComputeRootDir()
 
 		MyString rootdir_str = rootdir;
 		check_and_universalize_path(rootdir_str, RootDir);
-		(void) strcpy (JobRootdir, rootdir_str.Value());
+		JobRootdir = rootdir_str;
 		free(rootdir);
 	}
 }
@@ -3846,8 +3864,9 @@ ComputeRootDir()
 void
 SetRootDir()
 {
+	MyString buffer;
 	ComputeRootDir();
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ROOT_DIR, JobRootdir);
+	buffer.sprintf( "%s = \"%s\"", ATTR_JOB_ROOT_DIR, JobRootdir.Value());
 	InsertJobExpr (buffer);
 }
 #endif
@@ -3857,6 +3876,7 @@ SetRequirements()
 {
 	char *requirements = condor_param( Requirements, NULL );
 	char *tmp;
+	MyString buffer;
 	if( requirements == NULL ) 
 	{
 		(void) strcpy (JobRequirements, "");
@@ -3868,7 +3888,7 @@ SetRequirements()
 	}
 
 	tmp = check_requirements( JobRequirements );
-	(void) sprintf (buffer, "%s = %s", ATTR_REQUIREMENTS, tmp);
+	buffer.sprintf( "%s = %s", ATTR_REQUIREMENTS, tmp);
 	strcpy (JobRequirements, tmp);
 
 	InsertJobExpr (buffer);
@@ -3876,7 +3896,7 @@ SetRequirements()
 	char* fs_domain = NULL;
 	if( (should_transfer == STF_NO || should_transfer == STF_IF_NEEDED) 
 		&& ! job->LookupString(ATTR_FILE_SYSTEM_DOMAIN, &fs_domain) ) {
-		sprintf( buffer, "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, 
+		buffer.sprintf( "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, 
 				 My_fs_domain ); 
 		InsertJobExpr( buffer );
 	}
@@ -3985,7 +4005,7 @@ SetTDP( void )
 		if(!args_value.IsEmpty()) {
 			buf.sprintf("%s = \"%s\"",ATTR_TOOL_DAEMON_ARGS1,
 						args_value.EscapeChars("\"",'\\').Value());
-			InsertJobExpr( buf.Value() );
+			InsertJobExpr( buf );
 		}
 	}
 	else if(args.Count()) {
@@ -3993,7 +4013,7 @@ SetTDP( void )
 		if(!args_value.IsEmpty()) {
 			buf.sprintf("%s = \"%s\"",ATTR_TOOL_DAEMON_ARGS2,
 						args_value.EscapeChars("\"",'\\').Value());
-			InsertJobExpr( buf.Value() );
+			InsertJobExpr( buf );
 		}
 	}
 
@@ -4032,7 +4052,7 @@ SetRunAsOwner()
 	}
 			
 	free(run_as_owner);
-	sprintf (buffer, "%s = True", ATTR_JOB_RUNAS_OWNER );
+	buffer.sprintf(  "%s = True", ATTR_JOB_RUNAS_OWNER );
 	InsertJobExpr (buffer);
 
 	// make sure we have a CredD
@@ -4056,6 +4076,7 @@ SetRank()
 	char *orig_rank = condor_param( Rank, NULL );
 	char *default_rank = NULL;
 	char *append_rank = NULL;
+	MyString buffer;
 
 	switch( JobUniverse ) {
 	case CONDOR_UNIVERSE_STANDARD:
@@ -4124,10 +4145,10 @@ SetRank()
 	}
 				
 	if( rank.Length() == 0 ) {
-		(void)sprintf( buffer, "%s = 0.0", ATTR_RANK );
+		buffer.sprintf( "%s = 0.0", ATTR_RANK );
 		InsertJobExpr( buffer );
 	} else {
-		(void)sprintf( buffer, "%s = %s", ATTR_RANK, rank.Value() );
+		buffer.sprintf( "%s = %s", ATTR_RANK, rank.Value() );
 		InsertJobExpr( buffer );
 	}
 
@@ -4141,11 +4162,8 @@ void
 ComputeIWD()
 {
 	char	*shortname;
-	char	iwd[ _POSIX_PATH_MAX ];
-	char	cwd[ _POSIX_PATH_MAX ];
-
-	memset(iwd, 0, sizeof(iwd));
-	memset(cwd, 0, sizeof(cwd));
+	MyString	iwd;
+	MyString	cwd;
 
 	shortname = condor_param( InitialDir, ATTR_JOB_IWD );
 	if( ! shortname ) {
@@ -4156,12 +4174,12 @@ ComputeIWD()
 
 #if !defined(WIN32)
 	ComputeRootDir();
-	if( strcmp(JobRootdir,"/") != MATCH )	{	/* Rootdir specified */
+	if( JobRootdir != "/" )	{	/* Rootdir specified */
 		if( shortname ) {
-			(void)strcpy( iwd, shortname );
+			iwd = shortname;
 		} 
 		else {
-			(void)strcpy( iwd, "/" );
+			iwd = "/";
 		}
 	} 
 	else 
@@ -4175,26 +4193,22 @@ ComputeIWD()
 			if( shortname[0] == '/' ) 
 #endif
 			{
-				(void)strcpy( iwd, shortname );
+				iwd = shortname;
 			} 
 			else {
-				(void)getcwd( cwd, sizeof cwd );
-				(void)sprintf( iwd, "%s%c%s", cwd, DIR_DELIM_CHAR, shortname );
+				condor_getcwd( cwd );
+				iwd.sprintf( "%s%c%s", cwd.Value(), DIR_DELIM_CHAR, shortname );
 			}
 		} 
 		else {
-			(void)getcwd( iwd, sizeof iwd );
+			condor_getcwd( iwd );
 		}
 	}
 
 	compress( iwd );
-	MyString iwd_str = iwd;
-	if ( check_and_universalize_path(iwd_str, InitialDir) != 0 ) {
-		// we universalized the path, so we have to update iwd
-		strcpy(iwd, iwd_str.Value());
-	}
-	check_iwd( iwd );
-	strcpy (JobIwd, iwd);
+	check_and_universalize_path(iwd, InitialDir);
+	check_iwd( iwd.Value() );
+	JobIwd = iwd;
 
 	if ( shortname )
 		free(shortname);
@@ -4203,26 +4217,26 @@ ComputeIWD()
 void
 SetIWD()
 {
+	MyString buffer;
 	ComputeIWD();
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_IWD, JobIwd);
+	buffer.sprintf( "%s = \"%s\"", ATTR_JOB_IWD, JobIwd.Value());
 	InsertJobExpr (buffer);
 }
 
 void
-check_iwd( char *iwd )
+check_iwd( char const *iwd )
 {
-	char	pathname[ _POSIX_PATH_MAX ];
-	pathname[0] = '\0';
+	MyString pathname;
 
 #if defined(WIN32)
-	(void)sprintf( pathname, "%s", iwd );
+	pathname = iwd;
 #else
-	(void)sprintf( pathname, "%s/%s", JobRootdir, iwd );
+	pathname.sprintf( "%s/%s", JobRootdir.Value(), iwd );
 #endif
 	compress( pathname );
 
-	if( access(pathname, F_OK|X_OK) < 0 ) {
-		fprintf( stderr, "\nERROR: No such directory: %s\n", pathname );
+	if( access(pathname.Value(), F_OK|X_OK) < 0 ) {
+		fprintf( stderr, "\nERROR: No such directory: %s\n", pathname.Value() );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
@@ -4232,6 +4246,7 @@ void
 SetUserLog()
 {
 	char *ulog_entry = condor_param( UserLogFile, ATTR_ULOG_FILE );
+	MyString buffer;
 
 	if (ulog_entry) {
 		MyString ulog = full_path(ulog_entry);
@@ -4272,7 +4287,7 @@ SetUserLog()
 		}
 
 		check_and_universalize_path(ulog, UserLogFile);
-		(void) sprintf(buffer, "%s = \"%s\"", ATTR_ULOG_FILE, ulog.Value());
+		buffer.sprintf( "%s = \"%s\"", ATTR_ULOG_FILE, ulog.Value());
 		InsertJobExpr(buffer);
 		UserLogSpecified = true;
 	}
@@ -4281,16 +4296,17 @@ SetUserLog()
 void
 SetUserLogXML()
 {
+	MyString buffer;
 	char *use_xml = condor_param(UseLogUseXML,
 								 ATTR_ULOG_USE_XML);
 
 	if (use_xml) {
 		if ('T' == *use_xml || 't' == *use_xml) {
 			UseXMLInLog = true;
-			sprintf(buffer, "%s = TRUE", ATTR_ULOG_USE_XML);
+			buffer.sprintf( "%s = TRUE", ATTR_ULOG_USE_XML);
 			InsertJobExpr( buffer );
 		} else {
-			sprintf(buffer, "%s = FALSE", ATTR_ULOG_USE_XML);
+			buffer.sprintf( "%s = FALSE", ATTR_ULOG_USE_XML);
 		}
 		free(use_xml);
 	}
@@ -4309,6 +4325,7 @@ SetCoreSize()
 {
 	char *size = condor_param( CoreSize, "core_size" );
 	long coresize;
+	MyString buffer;
 
 	if (size == NULL) {
 #if defined(HPUX) || defined(WIN32) /* RLIMIT_CORE not supported */
@@ -4328,7 +4345,7 @@ SetCoreSize()
 		free(size);
 	}
 
-	(void)sprintf (buffer, "%s = %ld", ATTR_CORE_SIZE, coresize);
+	buffer.sprintf( "%s = %ld", ATTR_CORE_SIZE, coresize);
 	InsertJobExpr(buffer);
 }
 
@@ -4396,6 +4413,7 @@ SetForcedAttributes()
 	AttrKey		name;
 	MyString	value;
 	char		*exValue;
+	MyString buffer;
 
 	forcedAttributes.startIterations();
 	while( ( forcedAttributes.iterate( name, value ) ) )
@@ -4408,7 +4426,7 @@ SetForcedAttributes()
 					 "  Ignoring.\n", value.Value() );
 			continue;
 		}
-		sprintf( buffer, "%s = %s", name.value(), exValue );
+		buffer.sprintf( "%s = %s", name.value(), exValue );
 			// Call InserJobExpr with checkcluster set to false.
 			// This will result in forced attributes always going
 			// into the proc ad, not the cluster ad.  This allows
@@ -4425,6 +4443,7 @@ SetGlobusParams()
 {
 	char *tmp;
 	bool unified_syntax;
+	MyString buffer;
 
 	if ( JobUniverse != CONDOR_UNIVERSE_GRID )
 		return;
@@ -4447,17 +4466,17 @@ SetGlobusParams()
 
 			// TODO validate number of fields in grid_resource?
 
-		sprintf( buffer, "%s = \"%s\"", ATTR_GRID_RESOURCE, tmp );
+		buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE, tmp );
 		InsertJobExpr( buffer );
 
 		if ( strstr(tmp,"$$") ) {
 				// We need to perform matchmaking on the job in order
 				// to fill GridResource.
-			sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
+			buffer.sprintf("%s = FALSE", ATTR_JOB_MATCHED);
 			InsertJobExpr (buffer);
-			sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
+			buffer.sprintf("%s = 0", ATTR_CURRENT_HOSTS);
 			InsertJobExpr (buffer);
-			sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
+			buffer.sprintf("%s = 1", ATTR_MAX_HOSTS);
 			InsertJobExpr (buffer);
 		}
 
@@ -4468,7 +4487,7 @@ SetGlobusParams()
 			// then the user is using the old syntax (with grid_type).
 			// Deal with all the attributes that go into GridResource.
 
-		sprintf( buffer, "%s = \"%s\"", ATTR_JOB_GRID_TYPE, JobGridType );
+		buffer.sprintf( "%s = \"%s\"", ATTR_JOB_GRID_TYPE, JobGridType );
 		InsertJobExpr( buffer, false );
 
 		if ( stricmp (JobGridType, "gt2") == MATCH ||
@@ -4482,7 +4501,7 @@ SetGlobusParams()
 					fprintf(stderr, "\nWARNING: Param %s is not supported for grid types other than gt4\n", GlobusJobmanagerType );
 				}
 				if ( !unified_syntax ) {
-					sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_JOBMANAGER_TYPE,
+					buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_JOBMANAGER_TYPE,
 							 jobmanager_type );
 					InsertJobExpr (buffer, false );
 				}
@@ -4510,25 +4529,25 @@ SetGlobusParams()
 
 			if ( unified_syntax ) {
 					// GT4 jobs need the extra jobmanager_type field.
-				sprintf( buffer, "%s = \"%s %s%s%s\"", ATTR_GRID_RESOURCE,
+				buffer.sprintf( "%s = \"%s %s%s%s\"", ATTR_GRID_RESOURCE,
 						 JobGridType, globushost,
 						 stricmp( JobGridType, "gt4" ) == MATCH ? " " : "",
 						 stricmp(JobGridType, "gt4") == MATCH ?
 						 jobmanager_type : "" );
 				InsertJobExpr( buffer );
 			} else {
-				sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
+				buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
 				InsertJobExpr (buffer);
 			}
 
 			if ( strstr(globushost,"$$") ) {
 					// We need to perform matchmaking on the job in order
 					// to find the GlobusScheduler.
-				sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
+				buffer.sprintf("%s = FALSE", ATTR_JOB_MATCHED);
 				InsertJobExpr (buffer);
-				sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
+				buffer.sprintf("%s = 0", ATTR_CURRENT_HOSTS);
 				InsertJobExpr (buffer);
-				sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
+				buffer.sprintf("%s = 1", ATTR_MAX_HOSTS);
 				InsertJobExpr (buffer);
 			}
 
@@ -4568,16 +4587,16 @@ SetGlobusParams()
 			}
 
 			if ( unified_syntax ) {
-				sprintf( buffer, "%s = \"condor %s %s\"", ATTR_GRID_RESOURCE,
+				buffer.sprintf( "%s = \"condor %s %s\"", ATTR_GRID_RESOURCE,
 						 remote_schedd, remote_pool );
 				InsertJobExpr( buffer );
 			} else {
-				sprintf( buffer, "%s = \"%s\"", ATTR_REMOTE_SCHEDD,
+				buffer.sprintf( "%s = \"%s\"", ATTR_REMOTE_SCHEDD,
 						 remote_schedd );
 				InsertJobExpr (buffer);
 
 				if ( remote_pool ) {
-					sprintf( buffer, "%s = \"%s\"", ATTR_REMOTE_POOL,
+					buffer.sprintf( "%s = \"%s\"", ATTR_REMOTE_POOL,
 							 remote_pool );
 					InsertJobExpr ( buffer );
 				}
@@ -4587,11 +4606,11 @@ SetGlobusParams()
 
 				// We need to perform matchmaking on the job in order to find
 				// the RemoteSchedd.
-				sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
+				buffer.sprintf("%s = FALSE", ATTR_JOB_MATCHED);
 				InsertJobExpr (buffer);
-				sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
+				buffer.sprintf("%s = 0", ATTR_CURRENT_HOSTS);
 				InsertJobExpr (buffer);
-				sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
+				buffer.sprintf("%s = 1", ATTR_MAX_HOSTS);
 				InsertJobExpr (buffer);
 			}
 
@@ -4612,18 +4631,18 @@ SetGlobusParams()
 
 				// nordugrid is only supported in versions that use the
 				// unified grid resource syntax
-			sprintf( buffer, "%s = \"nordugrid %s\"", ATTR_GRID_RESOURCE, 
+			buffer.sprintf( "%s = \"nordugrid %s\"", ATTR_GRID_RESOURCE, 
 					 host );
 			InsertJobExpr( buffer );
 
 			if ( strstr(host,"$$") ) {
 					// We need to perform matchmaking on the job in order
 					// to find the nordugrid_resource.
-				sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
+				buffer.sprintf("%s = FALSE", ATTR_JOB_MATCHED);
 				InsertJobExpr (buffer);
-				sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
+				buffer.sprintf("%s = 0", ATTR_CURRENT_HOSTS);
 				InsertJobExpr (buffer);
-				sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
+				buffer.sprintf("%s = 1", ATTR_MAX_HOSTS);
 				InsertJobExpr (buffer);
 			}
 
@@ -4650,14 +4669,14 @@ SetGlobusParams()
 			}
 
 			if ( unified_syntax ) {
-				sprintf( buffer, "%s = \"unicore %s %s\"", ATTR_GRID_RESOURCE,
+				buffer.sprintf( "%s = \"unicore %s %s\"", ATTR_GRID_RESOURCE,
 						 u_site, v_site );
 				InsertJobExpr( buffer );
 			} else {
-				sprintf( buffer, "%s = \"%s\"", "UnicoreUSite", u_site );
+				buffer.sprintf( "%s = \"%s\"", "UnicoreUSite", u_site );
 				InsertJobExpr (buffer);
 
-				sprintf( buffer, "%s = \"%s\"", "UnicoreVSite", v_site );
+				buffer.sprintf( "%s = \"%s\"", "UnicoreVSite", v_site );
 				InsertJobExpr ( buffer );
 			}
 
@@ -4665,11 +4684,11 @@ SetGlobusParams()
 
 				// We need to perform matchmaking on the job in order to find
 				// the remote resource.
-				sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
+				buffer.sprintf("%s = FALSE", ATTR_JOB_MATCHED);
 				InsertJobExpr (buffer);
-				sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
+				buffer.sprintf("%s = 0", ATTR_CURRENT_HOSTS);
 				InsertJobExpr (buffer);
-				sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
+				buffer.sprintf("%s = 1", ATTR_MAX_HOSTS);
 				InsertJobExpr (buffer);
 			}
 
@@ -4692,7 +4711,7 @@ SetGlobusParams()
 		   stricmp (JobGridType, "oracle") == MATCH ||
 		   stricmp (JobGridType, "nordugrid") == MATCH ) ) {
 
-		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
+		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
 				 NULL_JOB_CONTACT );
 		InsertJobExpr (buffer);
 	}
@@ -4704,11 +4723,11 @@ SetGlobusParams()
 		 stricmp (JobGridType, "nordugrid") == MATCH ) {
 
 		if( (tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
-			sprintf( buffer, "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
+			buffer.sprintf( "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
 			free(tmp);
 			InsertJobExpr (buffer, false );
 		} else {
-			sprintf( buffer, "%s = FALSE", ATTR_GLOBUS_RESUBMIT_CHECK);
+			buffer.sprintf( "%s = FALSE", ATTR_GLOBUS_RESUBMIT_CHECK);
 			InsertJobExpr (buffer, false );
 		}
 	}
@@ -4716,7 +4735,7 @@ SetGlobusParams()
 	if ( (tmp = condor_param(GridShell, ATTR_USE_GRID_SHELL)) ) {
 
 		if( tmp[0] == 't' || tmp[0] == 'T' ) {
-			sprintf( buffer, "%s = TRUE", ATTR_USE_GRID_SHELL );
+			buffer.sprintf( "%s = TRUE", ATTR_USE_GRID_SHELL );
 			InsertJobExpr( buffer );
 		}
 		free(tmp);
@@ -4726,43 +4745,43 @@ SetGlobusParams()
 		 stricmp (JobGridType, "gt2") == MATCH ||
 		 stricmp (JobGridType, "gt4") == MATCH ) {
 
-		sprintf( buffer, "%s = %d", ATTR_GLOBUS_STATUS,
+		buffer.sprintf( "%s = %d", ATTR_GLOBUS_STATUS,
 				 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
 		InsertJobExpr (buffer);
 
-		sprintf( buffer, "%s = 0", ATTR_NUM_GLOBUS_SUBMITS );
+		buffer.sprintf( "%s = 0", ATTR_NUM_GLOBUS_SUBMITS );
 		InsertJobExpr (buffer, false );
 	}
 
-	sprintf( buffer, "%s = False", ATTR_WANT_CLAIMING );
+	buffer.sprintf( "%s = False", ATTR_WANT_CLAIMING );
 	InsertJobExpr(buffer);
 
 	if( (tmp = condor_param(GlobusRematch,ATTR_REMATCH_CHECK)) ) {
-		sprintf( buffer, "%s = %s", ATTR_REMATCH_CHECK, tmp );
+		buffer.sprintf( "%s = %s", ATTR_REMATCH_CHECK, tmp );
 		free(tmp);
 		InsertJobExpr (buffer, false );
 	}
 
 	if( (tmp = condor_param(GlobusRSL, ATTR_GLOBUS_RSL)) ) {
-		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
+		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}
 
 	if( (tmp = condor_param(GlobusXML, ATTR_GLOBUS_XML)) ) {
-		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_XML, tmp );
+		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_XML, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}
 
 	if( (tmp = condor_param(NordugridRSL, ATTR_NORDUGRID_RSL)) ) {
-		sprintf( buffer, "%s = \"%s\"", ATTR_NORDUGRID_RSL, tmp );
+		buffer.sprintf( "%s = \"%s\"", ATTR_NORDUGRID_RSL, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}
 
 	if ( (tmp = condor_param( KeystoreFile, ATTR_KEYSTORE_FILE )) ) {
-		sprintf( buffer, "%s = \"%s\"", ATTR_KEYSTORE_FILE, tmp );
+		buffer.sprintf( "%s = \"%s\"", ATTR_KEYSTORE_FILE, tmp );
 		InsertJobExpr( buffer );
 		free( tmp );
 	} else if ( JobGridType && stricmp( JobGridType, "unicore" ) == 0 ) {
@@ -4773,7 +4792,7 @@ SetGlobusParams()
 	}
 
 	if ( (tmp = condor_param( KeystoreAlias, ATTR_KEYSTORE_ALIAS )) ) {
-		sprintf( buffer, "%s = \"%s\"", ATTR_KEYSTORE_ALIAS, tmp );
+		buffer.sprintf( "%s = \"%s\"", ATTR_KEYSTORE_ALIAS, tmp );
 		InsertJobExpr( buffer );
 		free( tmp );
 	} else if ( JobGridType && stricmp( JobGridType, "unicore" ) == 0 ) {
@@ -4785,7 +4804,7 @@ SetGlobusParams()
 
 	if ( (tmp = condor_param( KeystorePassphraseFile,
 							  ATTR_KEYSTORE_PASSPHRASE_FILE )) ) {
-		sprintf( buffer, "%s = \"%s\"", ATTR_KEYSTORE_PASSPHRASE_FILE, tmp );
+		buffer.sprintf( "%s = \"%s\"", ATTR_KEYSTORE_PASSPHRASE_FILE, tmp );
 		InsertJobExpr( buffer );
 		free( tmp );
 	} else if ( JobGridType && stricmp( JobGridType, "unicore" ) == 0 ) {
@@ -4800,6 +4819,7 @@ void
 SetGSICredentials()
 {
 	char *tmp;
+	MyString buffer;
 
 		// Find the X509 user proxy
 		// First param for it in the submit file. If it's not there
@@ -4826,11 +4846,11 @@ SetGSICredentials()
 
 	if (proxy_file != NULL) {
 		if ( proxy_file[0] == '#' ) {
-			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
+			buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
 						   &proxy_file[1]);
 			InsertJobExpr(buffer);	
 
-//			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
+//			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY, 
 //						   proxy_file);
 //			InsertJobExpr(buffer);	
 			free( proxy_file );
@@ -4878,13 +4898,13 @@ SetGSICredentials()
 					}
 				} while (space_tmp);
 			}
-			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
+			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
 						   proxy_subject);
 			InsertJobExpr(buffer);	
 			free( proxy_subject );
 #endif
 
-			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
+			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY, 
 						   full_path(proxy_file));
 			InsertJobExpr(buffer);	
 			free( proxy_file );
@@ -4894,13 +4914,13 @@ SetGSICredentials()
 
 	//ckireyev: MyProxy-related crap
 	if ((tmp = condor_param (ATTR_MYPROXY_HOST_NAME))) {
-		sprintf (buffer, "%s = \"%s\"", ATTR_MYPROXY_HOST_NAME, tmp );
+		buffer.sprintf(  "%s = \"%s\"", ATTR_MYPROXY_HOST_NAME, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}
 
 	if ((tmp = condor_param (ATTR_MYPROXY_SERVER_DN))) {
-		sprintf (buffer, "%s = \"%s\"", ATTR_MYPROXY_SERVER_DN, tmp );
+		buffer.sprintf(  "%s = \"%s\"", ATTR_MYPROXY_SERVER_DN, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}
@@ -4912,24 +4932,24 @@ SetGSICredentials()
 	}
 
 	if ((tmp = condor_param (ATTR_MYPROXY_CRED_NAME))) {
-		sprintf (buffer, "%s = \"%s\"", ATTR_MYPROXY_CRED_NAME, tmp );
+		buffer.sprintf(  "%s = \"%s\"", ATTR_MYPROXY_CRED_NAME, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}
 
 	if (myproxy_password) {
-		sprintf (buffer, "%s = %s", ATTR_MYPROXY_PASSWORD, myproxy_password);
+		buffer.sprintf(  "%s = %s", ATTR_MYPROXY_PASSWORD, myproxy_password);
 		InsertJobExpr (buffer);
 	}
 
 	if ((tmp = condor_param (ATTR_MYPROXY_REFRESH_THRESHOLD))) {
-		sprintf (buffer, "%s = %s", ATTR_MYPROXY_REFRESH_THRESHOLD, tmp );
+		buffer.sprintf(  "%s = %s", ATTR_MYPROXY_REFRESH_THRESHOLD, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}
 
 	if ((tmp = condor_param (ATTR_MYPROXY_NEW_PROXY_LIFETIME))) { 
-		sprintf (buffer, "%s = %s", ATTR_MYPROXY_NEW_PROXY_LIFETIME, tmp );
+		buffer.sprintf(  "%s = %s", ATTR_MYPROXY_NEW_PROXY_LIFETIME, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}
@@ -4978,6 +4998,7 @@ void
 SetKillSig()
 {
 	char* sig_name;
+	MyString buffer;
 
 	sig_name = findKillSigName( KillSig, ATTR_KILL_SIG );
 	if( ! sig_name ) {
@@ -4990,13 +5011,13 @@ SetKillSig()
 			break;
 		}
 	}
-	sprintf( buffer, "%s=\"%s\"", ATTR_KILL_SIG, sig_name );
+	buffer.sprintf( "%s=\"%s\"", ATTR_KILL_SIG, sig_name );
 	InsertJobExpr( buffer );
 	free( sig_name );
 
 	sig_name = findKillSigName( RmKillSig, ATTR_REMOVE_KILL_SIG );
 	if( sig_name ) {
-		sprintf( buffer, "%s=\"%s\"", ATTR_REMOVE_KILL_SIG, sig_name );
+		buffer.sprintf( "%s=\"%s\"", ATTR_REMOVE_KILL_SIG, sig_name );
 		InsertJobExpr( buffer );
 		free( sig_name );
 		sig_name = NULL;
@@ -5004,7 +5025,7 @@ SetKillSig()
 
 	sig_name = findKillSigName( HoldKillSig, ATTR_HOLD_KILL_SIG );
 	if( sig_name ) {
-		sprintf( buffer, "%s=\"%s\"", ATTR_HOLD_KILL_SIG, sig_name );
+		buffer.sprintf( "%s=\"%s\"", ATTR_HOLD_KILL_SIG, sig_name );
 		InsertJobExpr( buffer );
 		free( sig_name );
 		sig_name = NULL;
@@ -5022,7 +5043,7 @@ read_condor_file( FILE *fp )
 
 	char* justSeenQueue = NULL;
 
-	JobIwd[0] = '\0';
+	JobIwd = "";
 
 	LineNo = 0;
 	ExtraLineNo = 0;
@@ -5303,7 +5324,8 @@ connect_to_the_schedd()
 void
 queue(int num)
 {
-	char tmp[ BUFSIZ ], *logfile;
+	char tmp[ BUFSIZ ];
+	char const *logfile;
 	int		rval;
 
 	// First, connect to the schedd if we have not already done so
@@ -5946,60 +5968,39 @@ check_requirements( char *orig )
 
 
 
-char *
+char const *
 full_path(const char *name, bool use_iwd)
 {
-	static char	pathname[_POSIX_PATH_MAX];
-	pathname[0] = '\0';
-	char *p_iwd;
-	char realcwd[_POSIX_PATH_MAX];
+	static MyString	pathname;
+	char const *p_iwd;
+	MyString realcwd;
 
 	if ( use_iwd ) {
-		ASSERT(JobIwd[0]);
-		p_iwd = JobIwd;
+		ASSERT(JobIwd.Length());
+		p_iwd = JobIwd.Value();
 	} else {
-		(void)getcwd(realcwd,sizeof(realcwd));
-		p_iwd = realcwd;
+		condor_getcwd(realcwd);
+		p_iwd = realcwd.Value();
 	}
 
 #if defined(WIN32)
 	if ( name[0] == '\\' || name[0] == '/' || (name[0] && name[1] == ':') ) {
-		strcpy(pathname, name);
+		pathname = name;
 	} else {
-		(void)sprintf( pathname, "%s\\%s", p_iwd, name );
+		pathname.sprintf( "%s\\%s", p_iwd, name );
 	}
 #else
-	int root_len, iwd_len, name_len, real_len;
 
-	root_len = strlen(JobRootdir);
-	iwd_len = strlen(p_iwd);
-	name_len = strlen(name);
 	if( name[0] == '/' ) {	/* absolute wrt whatever the root is */
-		if(root_len + name_len >= _POSIX_PATH_MAX) {
-		fprintf(stderr, "\nERROR: Value for \"%s/%s\" is too long:\n"
-                                "\tPosix limits path names to %d bytes\n",
-                                JobRootdir, name, _POSIX_PATH_MAX);
-                DoCleanup(0,0,NULL);
-                exit( 1 );
-	
-		}
-		real_len=sprintf( pathname, "%s%s", JobRootdir, name );
+		pathname.sprintf( "%s%s", JobRootdir.Value(), name );
 	} else {	/* relative to iwd which is relative to the root */
-		if(root_len + iwd_len + name_len + 2 >= _POSIX_PATH_MAX) {
-		fprintf(stderr, "\nERROR: Value for \"%s/%s\%s\" is too long:\n"
-                                "\tPosix limits path names to %d bytes\n",
-                                JobRootdir, p_iwd,  name, _POSIX_PATH_MAX);
-                DoCleanup(0,0,NULL);
-                exit( 1 );
-	
-		}
-		real_len=sprintf( pathname, "%s/%s/%s", JobRootdir, p_iwd, name );
+		pathname.sprintf( "%s/%s/%s", JobRootdir.Value(), p_iwd, name );
 	}
 #endif
 
 	compress( pathname );
 
-	return pathname;
+	return pathname.Value();
 }
 
 void
@@ -6203,9 +6204,10 @@ whitespace( const char *str)
 }
 
 void
-compress( char *str )
+compress( MyString &path )
 {
 	char	*src, *dst;
+	char *str = strdup(path.Value());
 
 	src = str;
 	dst = str;
@@ -6223,6 +6225,9 @@ compress( char *str )
 		}
 	}
 	*dst = '\0';
+
+	path = str;
+	free( str );
 }
 
 
@@ -6377,13 +6382,16 @@ SaveClassAd ()
 	return retval;
 }
 
+void
+InsertJobExpr (MyString const &expr, bool clustercheck)
+{
+	InsertJobExpr(expr.Value(),clustercheck);
+}
 
 void 
 InsertJobExpr (const char *expr, bool clustercheck)
 {
 	ExprTree *tree = NULL, *lhs = NULL;
-	char      name[128];
-	name[0] = '\0';
 	int unused = 0;
 
 	MyString hashkey(expr);
@@ -6413,9 +6421,7 @@ InsertJobExpr (const char *expr, bool clustercheck)
 		exit( 1 );
 	}
 
-	if( (lhs = tree->LArg()) ) {
-		lhs->PrintToStr (name);
-	} else {
+	if( !(lhs = tree->LArg()) ) {
 		fprintf (stderr, "\nERROR: Expression not assignment: %s\n", expr);
 		fprintf(stderr,"Error in submit file\n");
 		DoCleanup(0,0,NULL);
@@ -6554,6 +6560,7 @@ isTrue( const char* attr )
 void transfer_vm_file(const char *filename, const char *lhs ) 
 {
 	MyString fixedname;
+	MyString buffer;
 
 	if( !filename ) {
 		return;
@@ -6584,7 +6591,7 @@ void transfer_vm_file(const char *filename, const char *lhs )
 	transfer_file_list.append(fixedname.Value());
 	tmp_ptr = transfer_file_list.print_to_string();
 
-	sprintf(buffer, "%s = \"%s\"", ATTR_TRANSFER_INPUT_FILES, tmp_ptr);
+	buffer.sprintf( "%s = \"%s\"", ATTR_TRANSFER_INPUT_FILES, tmp_ptr);
 	InsertJobExpr(buffer, false);
 	free(tmp_ptr);
 
@@ -6705,6 +6712,7 @@ validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
 // this function should be called after SetVMParams() and SetRequirements
 void SetVMRequirements()
 {
+	MyString buffer;
 	if ( JobUniverse != CONDOR_UNIVERSE_VM ) {
 		return;
 	}
@@ -6747,7 +6755,7 @@ void SetVMRequirements()
 		}
 		MyString my_fsdomain;
 		if(job->LookupString(ATTR_FILE_SYSTEM_DOMAIN, my_fsdomain) != 1) {
-			sprintf( buffer, "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, 
+			buffer.sprintf( "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, 
 					My_fs_domain ); 
 			InsertJobExpr( buffer );
 		}
@@ -6846,7 +6854,7 @@ void SetVMRequirements()
 		}
 	}
 
-	(void) sprintf (buffer, "%s = %s", ATTR_REQUIREMENTS, vmanswer);
+	buffer.sprintf( "%s = %s", ATTR_REQUIREMENTS, vmanswer);
 	strcpy (JobRequirements, vmanswer);
 	InsertJobExpr (buffer);
 }
@@ -6864,18 +6872,19 @@ SetVMParams()
 	bool has_vm_iso_file = false;
 	bool vm_should_transfer_cdrom_files = false;
 	MyString final_cdrom_files;
+	MyString buffer;
 
 	// VM type is already set in SetUniverse
-	sprintf( buffer, "%s = \"%s\"", ATTR_JOB_VM_TYPE, VMType.Value());
+	buffer.sprintf( "%s = \"%s\"", ATTR_JOB_VM_TYPE, VMType.Value());
 	InsertJobExpr(buffer);
 
 	// VM checkpoint is already set in SetUniverse
-	sprintf( buffer, "%s = %s", ATTR_JOB_VM_CHECKPOINT, 
+	buffer.sprintf( "%s = %s", ATTR_JOB_VM_CHECKPOINT, 
 			VMCheckpoint? "TRUE":"FALSE");
 	InsertJobExpr(buffer);
 
 	// VM networking is already set in SetUniverse
-	sprintf( buffer, "%s = %s", ATTR_JOB_VM_NETWORKING, 
+	buffer.sprintf( "%s = %s", ATTR_JOB_VM_NETWORKING, 
 			VMNetworking? "TRUE":"FALSE");
 	InsertJobExpr(buffer);
 
@@ -6886,7 +6895,7 @@ SetVMParams()
 			VMNetworkType = tmp_ptr;
 			free(tmp_ptr);
 
-			sprintf(buffer, "%s = \"%s\"", ATTR_JOB_VM_NETWORKING_TYPE, 
+			buffer.sprintf( "%s = \"%s\"", ATTR_JOB_VM_NETWORKING_TYPE, 
 					VMNetworkType.Value());
 			InsertJobExpr(buffer, false );
 		}else {
@@ -6914,7 +6923,7 @@ SetVMParams()
 		DoCleanup(0,0,NULL);
 		exit(1);
 	}
-	sprintf( buffer, "%s = %d", ATTR_JOB_VM_MEMORY, VMMemory);
+	buffer.sprintf( "%s = %d", ATTR_JOB_VM_MEMORY, VMMemory);
 	InsertJobExpr( buffer, false );
 
 	/* 
@@ -6933,7 +6942,7 @@ SetVMParams()
 		parse_vm_option(tmp_ptr, vm_no_output_vm);
 		free(tmp_ptr);
 		if( vm_no_output_vm ) {
-			sprintf( buffer, "%s = TRUE", VMPARAM_NO_OUTPUT_VM);
+			buffer.sprintf( "%s = TRUE", VMPARAM_NO_OUTPUT_VM);
 			InsertJobExpr( buffer, false );
 		}
 	}
@@ -6967,7 +6976,7 @@ SetVMParams()
 		}
 		free(tmp_ptr);
 
-		sprintf( buffer, "%s = %s", VMPARAM_TRANSFER_CDROM_FILES,
+		buffer.sprintf( "%s = %s", VMPARAM_TRANSFER_CDROM_FILES,
 				vm_should_transfer_cdrom_files ? "TRUE" : "FALSE");
 		InsertJobExpr( buffer, false);
 
@@ -7024,7 +7033,7 @@ SetVMParams()
 			exit(1);
 		}
 
-		sprintf( buffer, "%s = \"%s\"", VMPARAM_CDROM_FILES, 
+		buffer.sprintf( "%s = \"%s\"", VMPARAM_CDROM_FILES, 
 				final_cdrom_files.Value());
 		InsertJobExpr( buffer, false );
 		has_vm_cdrom_files = true;
@@ -7067,7 +7076,7 @@ SetVMParams()
 				// basenames for files to be transferred.
 				final_output += condor_basename(one_file.Value());
 			}
-			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_TRANSFER_FILES, 
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_TRANSFER_FILES, 
 					final_output.Value());
 			InsertJobExpr( buffer, false );
 			free(xen_transfer_files);
@@ -7105,7 +7114,7 @@ SetVMParams()
 				real_xen_kernel_file = false;
 				need_xen_root_device = false;
 				VMHardwareVT = true;
-				sprintf( buffer, "%s = TRUE", ATTR_JOB_VM_HARDWARE_VT);
+				buffer.sprintf( "%s = TRUE", ATTR_JOB_VM_HARDWARE_VT);
 				InsertJobExpr( buffer, false );
 			}else {
 				// real kernel file
@@ -7117,7 +7126,7 @@ SetVMParams()
 				real_xen_kernel_file = true;
 				need_xen_root_device = true;
 			}
-			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_KERNEL, 
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_KERNEL, 
 					fixedname.Value());
 			InsertJobExpr(buffer, false);
 			free(xen_kernel);
@@ -7139,7 +7148,7 @@ SetVMParams()
 				DoCleanup(0,0,NULL);
 				exit(1);
 			}
-			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_INITRD, 
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_INITRD, 
 					fixedname.Value());
 			InsertJobExpr(buffer, false);
 			free(xen_initrd);
@@ -7157,7 +7166,7 @@ SetVMParams()
 				exit(1);
 			}else {
 				MyString fixedvalue = delete_quotation_marks(xen_root);
-				sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_ROOT, 
+				buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_ROOT, 
 						fixedvalue.Value());
 				InsertJobExpr(buffer, false);
 				free(xen_root);
@@ -7188,7 +7197,7 @@ SetVMParams()
 				exit(1);
 			}
 
-			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_DISK, fixedvalue.Value());
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_DISK, fixedvalue.Value());
 			InsertJobExpr( buffer, false);
 			free(xen_disk);
 		}
@@ -7198,7 +7207,7 @@ SetVMParams()
 		xen_kernel_params = condor_param("xen_kernel_params");
 		if( xen_kernel_params ) {
 			MyString fixedvalue = delete_quotation_marks(xen_kernel_params);
-			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_KERNEL_PARAMS, 
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_KERNEL_PARAMS, 
 					fixedvalue.Value());
 			InsertJobExpr( buffer, false);
 			free(xen_kernel_params);
@@ -7225,7 +7234,7 @@ SetVMParams()
 				exit(1);
 			}
 
-			sprintf( buffer, "%s = \"%s\"", VMPARAM_XEN_CDROM_DEVICE, 
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_XEN_CDROM_DEVICE, 
 					xen_cdrom_string.Value());
 			InsertJobExpr( buffer, false );
 		}
@@ -7253,7 +7262,7 @@ SetVMParams()
 		}
 		free(tmp_ptr);
 
-		sprintf( buffer, "%s = %s", VMPARAM_VMWARE_TRANSFER, 
+		buffer.sprintf( "%s = %s", VMPARAM_VMWARE_TRANSFER, 
 				vmware_should_transfer_files ? "TRUE" : "FALSE");
 		InsertJobExpr( buffer, false);
 
@@ -7289,7 +7298,7 @@ SetVMParams()
 			exit( 1 );
 		}
 
-		sprintf( buffer, "%s = %s", VMPARAM_VMWARE_SNAPSHOTDISK,
+		buffer.sprintf( "%s = %s", VMPARAM_VMWARE_SNAPSHOTDISK,
 				vmware_snapshot_disk? "TRUE" : "FALSE");
 		InsertJobExpr( buffer, false );
 
@@ -7312,7 +7321,7 @@ SetVMParams()
 		f_dirname = full_path(f_dirname.Value(), false);
 		check_and_universalize_path(f_dirname,"vmware_dir");
 
-		sprintf( buffer, "%s = \"%s\"", VMPARAM_VMWARE_DIR, f_dirname.Value());
+		buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_DIR, f_dirname.Value());
 		InsertJobExpr( buffer, false );
 
 		// find vmx file in the given directory
@@ -7337,7 +7346,7 @@ SetVMParams()
 			// add vmx file to transfer_input_files
 			// vmx file will be always transfered to an execute machine
 			transfer_vm_file(vmxfile.Value(), "vmware_vmx");
-			sprintf( buffer, "%s = \"%s\"", VMPARAM_VMWARE_VMX_FILE,
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMX_FILE,
 					condor_basename(vmxfile.Value()));
 			InsertJobExpr( buffer, false );
 		}
@@ -7361,7 +7370,7 @@ SetVMParams()
 				// basenames for vmdks files
 				vmdks += condor_basename(tmp_file);
 			}
-			sprintf( buffer, "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, 
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, 
 					vmdks.Value());
 			InsertJobExpr( buffer, false );
 		}

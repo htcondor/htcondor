@@ -125,7 +125,7 @@ public:
 	// methods
 	struct FileState {
 		char			signature[64];		// File state signature
-		char			path[_POSIX_PATH_MAX]; // The log's path
+		MyString		path;				// The log's path
 		char			uniq_id[128];		// File's uniq identifier
 		int				sequence;			// File's sequence number
 		int				rotation;			// 0 == the "current" file
@@ -137,6 +137,18 @@ public:
 			filesize_t	asint;
 		}				size, offset;		// log's size and our offset
 		time_t			update_time;		// Time of last struct update
+
+		FileState() {
+			memset(signature,0,sizeof(signature));
+			memset(uniq_id,0,sizeof(uniq_id));
+			sequence = 0;
+			rotation = 0;
+			log_type = LOG_TYPE_UNKNOWN;
+			ctime = 0;
+			memset(size.bytes,0,sizeof(size.bytes));
+			memset(offset.bytes,0,sizeof(offset.bytes));
+			update_time = 0;
+		};
 	};
 
 private:

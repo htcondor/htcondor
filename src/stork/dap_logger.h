@@ -35,15 +35,15 @@
 #include "condor_fix_iostream.h"
 #include "classad_distribution.h"
 
-void write_dap_log(char *logfilename, char *status, char *param1, char *value1, char *param2 = NULL, char *value2 = NULL, char *param3 = NULL, char *value3 = NULL, char *param4 = NULL, char *value4 = NULL, char *param5 = NULL, char *value5 = NULL, char *param6 = NULL, char *value6 = NULL);
+void write_dap_log(const char *logfilename, const char *status, const char *param1, const char *value1, const char *param2 = NULL, const char *value2 = NULL, const char *param3 = NULL, const char *value3 = NULL, const char *param4 = NULL, const char *value4 = NULL, const char *param5 = NULL, const char *value5 = NULL, const char *param6 = NULL, const char *value6 = NULL);
 
-void write_classad_log(char *logfilename, char *status, classad::ClassAd *classad);
+void write_classad_log(const char *logfilename, const char *status, classad::ClassAd *classad);
 
-void write_collection_log(classad::ClassAdCollection *dapcollection, char *dap_id, const char *update);
+void write_collection_log(classad::ClassAdCollection *dapcollection, const char *dap_id, const char *update);
 
-void write_xml_log(char *logfilename, classad::ClassAd *classad, const char *status);
+void write_xml_log(const char *logfilename, classad::ClassAd *classad, const char *status);
 
-void write_xml_user_log(char *logfilename,
+void write_xml_user_log(const char *logfilename,
 			const char *param1, const char *value1,
 			const char *param2 = NULL, const char *value2 = NULL,
 			const char *param3 = NULL, const char *value3 = NULL,

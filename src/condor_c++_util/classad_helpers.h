@@ -53,15 +53,16 @@ bool printExitString( ClassAd* ad, int exit_reason, MyString &str );
 ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd );
 
 /*
-	This function tells the caller if a UserLog object should
-	be constructed or not, and if so, says where the user wants the user log
-	file to go.	The only difference
-	between this function and simply doing a LookupString() on ATTR_ULOG_FILE
-	is that if EVENT_LOG is defined in the condor_config file, then the 
-	result will be /dev/null even if ATTR_ULOG_FILE is not defined (since we 
-	still want a UserLog object in this case so the global event log is 
-	updated). Return function is true if ATTR_ULOG_FILE is found or if 
-	EVENT_LOG is defined, else false.  
+	This function tells the caller if a UserLog object should be
+	constructed or not, and if so, says where the user wants the user
+	log file to go. The difference between this function and simply
+	doing a LookupString() on ATTR_ULOG_FILE is that A) the result is
+	combined with IWD if necessary to form an absolute path, and B) if
+	EVENT_LOG is defined in the condor_config file, then the result
+	will be /dev/null even if ATTR_ULOG_FILE is not defined (since we
+	still want a UserLog object in this case so the global event log
+	is updated). Return function is true if ATTR_ULOG_FILE is found or
+	if EVENT_LOG is defined, else false.
 */
-bool getPathToUserLog(ClassAd *job_ad, char *result, int max_result_len,
+bool getPathToUserLog(ClassAd *job_ad, MyString &result,
 					   const char* ulog_path_attr = ATTR_ULOG_FILE);

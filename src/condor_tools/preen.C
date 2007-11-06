@@ -577,25 +577,25 @@ good_file( const char *dir, const char *name )
 void
 bad_file( const char *dirpath, const char *name, Directory & dir )
 {
-	char	pathname [_POSIX_PATH_MAX];
-	char	buf[_POSIX_PATH_MAX + 512];
+	MyString	pathname;
+	MyString	buf;
 
-	sprintf( pathname, "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
+	pathname.sprintf( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
 
 	if( VerboseFlag ) {
-		printf( "%s - BAD\n", pathname );
+		printf( "%s - BAD\n", pathname.Value() );
 	}
 
 	if( RmFlag ) {
-		if( dir.Remove_Full_Path( pathname ) ) {
-			sprintf( buf, "%s - Removed", pathname );
+		if( dir.Remove_Full_Path( pathname.Value() ) ) {
+			buf.sprintf( "%s - Removed", pathname.Value() );
 		} else {
-			sprintf( buf, "%s - Can't Remove", pathname );
+			buf.sprintf( "%s - Can't Remove", pathname.Value() );
 		}
 	} else {
-		sprintf( buf, "%s - Not Removed", pathname );
+		buf.sprintf( "%s - Not Removed", pathname.Value() );
 	}
-	BadFiles->append( buf );
+	BadFiles->append( buf.Value() );
 }
 
 

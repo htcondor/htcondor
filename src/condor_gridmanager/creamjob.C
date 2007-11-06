@@ -186,8 +186,11 @@ CreamJob::CreamJob( ClassAd *classad )
 
 	int bool_value;
 	char buff[4096];
-	char buff2[_POSIX_PATH_MAX];
-	char iwd[_POSIX_PATH_MAX];
+	MyString buff2;
+	MyString iwd;
+	MyString job_output;
+	MyString job_error;
+	MyString grid_resource;
 	bool job_already_submitted = false;
 	MyString error_string = "";
 	char *gahp_path = NULL;
@@ -253,31 +256,30 @@ CreamJob::CreamJob( ClassAd *classad )
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 	
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, grid_resource );
 
-	if ( buff[0] != '\0' ) {
+	if ( grid_resource.Length() ) {
 		const char *token;
-		MyString str = buff;
 
-		str.Tokenize();
+		grid_resource.Tokenize();
 
-		token = str.GetNextToken( " ", false );
+		token = grid_resource.GetNextToken( " ", false );
 		if ( !token || stricmp( token, "cream" ) ) {
 			error_string.sprintf( "%s not of type cream", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 			/* TODO Make port and '/ce-cream/services/CREAM' optional */
-		token = str.GetNextToken( " ", false );
+		token = grid_resource.GetNextToken( " ", false );
 		if ( token && *token ) {
 			// If the resource url is missing a scheme, insert one
 			if ( strncmp( token, "http://", 7 ) == 0 ||
 				 strncmp( token, "https://", 8 ) == 0 ) {
 				resourceManagerString = strdup( token );
 			} else {
-				snprintf( buff2, sizeof(buff2), "https://%s", token );
-				resourceManagerString = strdup( buff2 );
+				MyString urlbuf;
+				urlbuf.sprintf("https://%s", token );
+				resourceManagerString = strdup( urlbuf.Value() );
 			}
 		} else {
 			error_string.sprintf( "%s missing CREAM Service URL",
@@ -285,7 +287,7 @@ CreamJob::CreamJob( ClassAd *classad )
 			goto error_exit;
 		}
 
-		token = str.GetNextToken( " ", false );
+		token = grid_resource.GetNextToken( " ", false );
 		if ( token && *token ) {
 			resourceBatchSystemString = strdup( token );
 		} else {
@@ -294,7 +296,7 @@ CreamJob::CreamJob( ClassAd *classad )
 			goto error_exit;
 		}
 
-		token = str.GetNextToken( " ", false );
+		token = grid_resource.GetNextToken( " ", false );
 		if ( token && *token ) {
 			resourceQueueString = strdup( token );
 		} else {
@@ -357,30 +359,28 @@ CreamJob::CreamJob( ClassAd *classad )
 
 	gahpErrorString = "";
 
-	iwd[0] = '\0';
-	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
-		int len = strlen(iwd);
+	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && iwd.Length() ) {
+		int len = iwd.Length();
 		if ( len > 1 && iwd[len - 1] != '/' ) {
-			strcat( iwd, "/" );
+			iwd += "/";
 		}
 	} else {
-		strcpy( iwd, "/" );
+		iwd = "/";
 	}
 
-	buff[0] = '\0';
-	buff2[0] = '\0';
-	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
-		 strcmp( buff, NULL_FILE ) ) {
+	buff2 = "";
+	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, job_output) && job_output.Length() &&
+		 strcmp( job_output.Value(), NULL_FILE ) ) {
 
 		if ( !jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, bool_value ) ||
 			 bool_value ) {
 
-			if ( buff[0] != '/' ) {
-				strcat( buff2, iwd );
+			if ( job_output[0] != '/' ) {
+				buff2 = iwd;
 			}
 
-			strcat( buff2, buff );
-			localOutput = strdup( buff2 );
+			buff2 += job_output;
+			localOutput = strdup( buff2.Value() );
 
 			bool_value = 1;
 			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
@@ -389,20 +389,19 @@ CreamJob::CreamJob( ClassAd *classad )
 		}
 	}
 
-	buff[0] = '\0';
-	buff2[0] = '\0';
-	if ( jobAd->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
-		 strcmp( buff, NULL_FILE ) ) {
+	buff2 = "";
+	if ( jobAd->LookupString(ATTR_JOB_ERROR, job_error) && job_error.Length() &&
+		 strcmp( job_error.Value(), NULL_FILE ) ) {
 
 		if ( !jobAd->LookupBool( ATTR_TRANSFER_ERROR, bool_value ) ||
 			 bool_value ) {
 
-			if ( buff[0] != '/' ) {
-				strcat( buff2, iwd );
+			if ( job_error[0] != '/' ) {
+				buff2 = iwd;
 			}
 
-			strcat( buff2, buff );
-			localError = strdup( buff2 );
+			buff2 += job_error;
+			localError = strdup( buff2.Value() );
 
 			bool_value = 1;
 			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );

@@ -127,7 +127,7 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 	InputFiles->rewind();
 	while( !found && (inputFile = InputFiles->next()) ) {	
 		const char *inputBaseName = condor_basename(inputFile);
-		if(strncmp(inputBaseName, src_name.GetCStr(), _POSIX_PATH_MAX) == 0) {
+		if(strcmp(inputBaseName, src_name.GetCStr()) == 0) {
 			found = true;
 			if(fullpath(inputFile)) {
 				src_path = condor_dirname(inputFile);

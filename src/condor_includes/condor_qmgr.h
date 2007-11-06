@@ -207,6 +207,11 @@ int GetAttributeString(int cluster, int proc, const char *attr, char *value);
 */
 int GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name, 
 					   char **val );
+/** Get value of string attr for job with specified cluster and proc.
+	@return -1 on failure; 0 on success.
+*/
+int GetAttributeString( int cluster_id, int proc_id, char const *attr_name,
+						MyString &val );
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */
@@ -253,11 +258,11 @@ void FreeJobAd(ClassAd *&ad);
 	@param filename Name of initial checkpoint file destination
 	@return -1 on failure; 0 on success
 */
-int SendSpoolFile(char *filename);
+int SendSpoolFile(char const *filename);
 /** Actually transfer the initial checkpoint file (the executable).
 	@param filename Name of initial checkpoint file source.
 */
-int SendSpoolFileBytes(char *filename);
+int SendSpoolFileBytes(char const *filename);
 
 void WalkJobQueue(scan_func);
 

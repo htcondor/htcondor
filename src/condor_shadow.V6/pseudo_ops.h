@@ -37,7 +37,7 @@ int pseudo_register_begin_execution( void );
 int pseudo_get_ckpt_mode( int sig );
 int pseudo_getppid();
 int pseudo_getpid();
-int pseudo_getlogin(char *loginbuf);
+int pseudo_getlogin(char *&loginbuf);
 int pseudo_getuid();
 int pseudo_geteuid();
 int pseudo_getgid();

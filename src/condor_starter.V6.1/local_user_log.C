@@ -83,7 +83,7 @@ bool
 LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 							 const char* xml_attr )
 {
-    char tmp[_POSIX_PATH_MAX], logfilename[_POSIX_PATH_MAX];
+    MyString tmp, logfilename;
 	int use_xml = FALSE;
 	const char* iwd = jic->jobIWD();
 	int cluster = jic->jobCluster();
@@ -95,25 +95,25 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 		return initNoLogging();
 	}
 
-	if( fullpath(tmp) ) {
+	if( fullpath(tmp.Value()) ) {
 			// we have a full pathname in the job ad.  however, if the
 			// job is using a different iwd (namely, filetransfer is
 			// being used), we want to just stick it in the local iwd
 			// for the job, instead.
 		if( jic->iwdIsChanged() ) {
-			const char* base = condor_basename(tmp);
-			sprintf(logfilename, "%s/%s", iwd, base);
-		} else {			
-			strcpy(logfilename, tmp);
+			const char* base = condor_basename(tmp.Value());
+			logfilename.sprintf( "%s/%s", iwd, base);
+		} else {
+			logfilename = tmp;
 		}
 	} else {
 			// no full path, so, use the job's iwd...
-		sprintf(logfilename, "%s/%s", iwd, tmp);
+		logfilename.sprintf( "%s/%s", iwd, tmp.Value());
 	}
 
 	ad->LookupBool( xml_attr, use_xml );
 
-	return init( logfilename, (bool)use_xml, cluster, proc, subproc );
+	return init( logfilename.Value(), (bool)use_xml, cluster, proc, subproc );
 }
 
 

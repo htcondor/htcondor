@@ -38,6 +38,7 @@
 #include "condor_config.h"
 #include "condor_qmgr.h"
 #include "classad_helpers.h"
+#include "condor_getcwd.h"
 
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
@@ -97,22 +98,15 @@ check_execute_event( void )
 extern "C" void 
 initializeUserLog ()
 {
-	char tmp[_POSIX_PATH_MAX], logfilename[_POSIX_PATH_MAX];
-	char gjid[_POSIX_PATH_MAX];
+	MyString logfilename;
+	MyString gjid;
 	int use_xml;
-	if ( getPathToUserLog(JobAd, tmp, sizeof(tmp)) ) {
-		if (tmp[0] == '/') {
-			strcpy(logfilename, tmp);
-		} else {
-			sprintf(logfilename, "%s/%s", Proc->iwd, tmp);
-		}
-		if(JobAd->LookupString(ATTR_GLOBAL_JOB_ID, tmp) == 1) {
-            strcpy(gjid, tmp);
-        } else {
-            sprintf(gjid, "Unknown");
+	if ( getPathToUserLog(JobAd, logfilename) ) {
+		if(JobAd->LookupString(ATTR_GLOBAL_JOB_ID, gjid) != 1) {
+            gjid = "Unknown";
         }
-		if (!ULog.initialize (Proc->owner, NULL, logfilename,
-							  Proc->id.cluster, Proc->id.proc, 0, gjid)) {
+		if (!ULog.initialize (Proc->owner, NULL, logfilename.Value(),
+							  Proc->id.cluster, Proc->id.proc, 0, gjid.Value())) {
 			EXCEPT("Failed to initialize user log!\n");
 		}
 		if (JobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
@@ -121,7 +115,7 @@ initializeUserLog ()
 		} else {
 			ULog.setUseXML(false);
 		}
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename);
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());
 	} else {
 		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
 	}
@@ -238,8 +232,8 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 	  default:
 		// abnormal termination
 		{
-			char coredir[_POSIX_PATH_MAX];
-			char coreFile[_POSIX_PATH_MAX];
+			MyString coredir;
+			MyString coreFile;
 			JobTerminatedEvent event;
 			event.normal = false;
 			event.signalNumber = WTERMSIG(JobStatus);
@@ -251,24 +245,21 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 					/* if it didn't exist in the job ad, then construct what it
 						should be. */
 
-#if defined(Solaris) || defined(HPUX)
-					getcwd(coredir,_POSIX_PATH_MAX);
-#else	
-					getwd( coredir );
-#endif
+					ASSERT( condor_getcwd(coredir) );
+
 					if (strcmp (Proc->rootdir, "/") == 0)
 					{
-						sprintf( coreFile, "%s/core.%d.%d", coredir, 
+						coreFile.sprintf( "%s/core.%d.%d", coredir.Value(),
 							 	Proc->id.cluster, Proc->id.proc );
 					}
 					else
 					{
-						sprintf( coreFile, "%s%s/core.%d.%d", Proc->rootdir,
-							 	coredir, Proc->id.cluster, Proc->id.proc );
+						coreFile.sprintf( "%s%s/core.%d.%d", Proc->rootdir,
+							 	coredir.Value(), Proc->id.cluster, Proc->id.proc );
 					}
 				} 
 				
-				event.setCoreFile( coreFile );
+				event.setCoreFile( coreFile.Value() );
 			}
 			event.run_local_rusage = *localr;
 			event.run_remote_rusage = *remoter;

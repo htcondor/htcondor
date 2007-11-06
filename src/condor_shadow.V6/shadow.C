@@ -426,8 +426,8 @@ main(int argc, char *argv[] )
 
 	// if job specifies a checkpoint server host, this overrides
 	// the config file parameters
-	tmp = (char *)malloc(_POSIX_PATH_MAX);
-	if (JobAd->LookupString(ATTR_CKPT_SERVER, tmp) == 1) {
+	tmp = NULL;
+	if (JobAd->LookupString(ATTR_CKPT_SERVER, &tmp) == 1) {
 		if (CkptServerHost) free(CkptServerHost);
 		UseCkptServer = TRUE;
 		CkptServerHost = strdup(tmp);
@@ -467,9 +467,9 @@ main(int argc, char *argv[] )
 		// on a checkpoint server then set LastCkptServer.  Otherwise,
 		// LastCkptServer should be NULL to indicate that we should
 		// look on the local disk for our checkpoint file.
-	LastCkptServer = (char *)malloc(_POSIX_PATH_MAX);
+	LastCkptServer = NULL;
 	if (JobAd->LookupString(ATTR_LAST_CKPT_SERVER,
-							LastCkptServer) == 0) {
+							&LastCkptServer) == 0) {
 		free(LastCkptServer);
 		LastCkptServer = NULL;
 	}

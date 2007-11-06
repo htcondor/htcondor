@@ -1259,13 +1259,13 @@ temp_dir_path()
 #else
 			// try to get the temp dir, then try SPOOL,
 			// then use the root directory
-		char buf[_POSIX_PATH_MAX];
+		char buf[MAX_PATH];
 		int len;
-		if ((len = GetTempPath(_POSIX_PATH_MAX, buf)) <= _POSIX_PATH_MAX) {
+		if ((len = GetTempPath(sizeof(buf), buf)) <= sizeof(buf)) {
 			buf[len - 1] = '\0';
 			prefix = strdup(buf);
 		} else {
-			dprintf(D_ALWAYS, "GetTempPath: buffer of size %d too small\n", _POSIX_PATH_MAX);
+			dprintf(D_ALWAYS, "GetTempPath: buffer of size %d too small\n", sizeof(buf));
 
 			prefix = param("SPOOL");
 			if (!prefix) {

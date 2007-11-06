@@ -132,28 +132,29 @@ void job_report_display_errors( FILE *f )
 
 /* A linked list for storing file reports */
 
-struct file_info {
-	char name[_POSIX_PATH_MAX];
+class file_info {
+public:
+	MyString name;
 	long long open_count;
 	long long read_count, write_count, seek_count;
 	long long read_bytes, write_bytes;
 	struct file_info *next;
 };
 
-static struct file_info *file_list=0;
+static file_info *file_list=0;
 
 /* Store the current number of I/O ops performed */
 
 void job_report_store_file_info( char *name, long long oc, long long rc, long long wc, long long sc, long long rb, long long wb )
 {
-	struct file_info *i;
+	file_info *i;
 
 	if( !rc && !wc && !sc ) return;
 
 	/* Has this file been opened and closed before? */
 
 	for( i=file_list; i; i=i->next ) {
-		if(!strcmp(i->name,name)) {
+		if(!strcmp(i->name.Value(),name)) {
 			i->open_count = oc;
 			i->read_count = rc;
 			i->write_count = wc;
@@ -166,10 +167,10 @@ void job_report_store_file_info( char *name, long long oc, long long rc, long lo
 
 	/* If not, make a new node. */
 
-	i = (struct file_info *) malloc(sizeof(struct file_info));
+	i = new file_info;
 	if(!i) return;
 
-	strcpy( i->name, name );
+	i->name = name;
 	i->open_count = oc;
 	i->read_count = rc;
 	i->write_count = wc;
@@ -181,9 +182,9 @@ void job_report_store_file_info( char *name, long long oc, long long rc, long lo
 	file_list = i;
 }
 
-static void sum_file_info( struct file_info *total )
+static void sum_file_info( file_info *total )
 {
-	struct file_info *i;
+	file_info *i;
 
 	total->open_count=0;
 	total->read_count=0;
@@ -206,8 +207,8 @@ static void sum_file_info( struct file_info *total )
 
 void job_report_display_file_info( FILE *f, int total_time )
 {
-	struct file_info *i;
-	struct file_info total;
+	file_info *i;
+	file_info total;
 
 	int	buffer_size;
 	int	buffer_block_size;
@@ -239,7 +240,7 @@ void job_report_display_file_info( FILE *f, int total_time )
 	fprintf(f,"\nI/O by File:\n");
 
 	for( i=file_list; i; i=i->next ) {
-		fprintf(f,"\n %s\n",i->name);
+		fprintf(f,"\n %s\n",i->name.Value());
 		fprintf(f,"\topened %.0f times\n",(float)i->open_count );
 		fprintf(f,"\t%.0f reads totaling %s\n",
 			(float)i->read_count, metric_units(i->read_bytes) );
@@ -253,7 +254,7 @@ void job_report_display_file_info( FILE *f, int total_time )
 
 void job_report_update_queue( PROC *proc )
 {
-	struct file_info total;
+	file_info total;
 
 	sum_file_info( &total );
 

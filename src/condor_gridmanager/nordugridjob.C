@@ -1130,7 +1130,7 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 {
 	StringList *stage_local_list;
 	char *remaps = NULL;
-	char local_name[_POSIX_PATH_MAX*3];
+	MyString local_name;
 	char *remote_name;
 	MyString stdout_name = "";
 	MyString stderr_name = "";
@@ -1155,24 +1155,21 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 			// stdout and stderr don't get remapped, and their paths
 			// are evaluated locally
 		if ( strcmp( REMOTE_STDOUT_NAME, remote_name ) == 0 ) {
-			strncpy( local_name, stdout_name.Value(), sizeof(local_name) );
-			local_name[sizeof(local_name)-1] = '\0';
+			local_name = stdout_name.Value();
 		} else if ( strcmp( REMOTE_STDERR_NAME, remote_name ) == 0 ) {
-			strncpy( local_name, stderr_name.Value(), sizeof(local_name) );
-			local_name[sizeof(local_name)-1] = '\0';
+			local_name = stderr_name.Value();
 		} else if( remaps && filename_remap_find( remaps, remote_name,
 												  local_name ) ) {
 				// file is remapped
 		} else {
-			strncpy( local_name, condor_basename( remote_name ),
-					 sizeof(local_name) );
-			local_name[sizeof(local_name)-1] = '\0';
+			local_name = condor_basename( remote_name );
 		}
 
-		if ( local_name[0] == '/' || IsUrl( local_name ) ) {
-			buff.sprintf( "%s", local_name );
+		if ( (local_name.Length() && local_name[0] == '/')
+			 || IsUrl( local_name.Value() ) ) {
+			buff = local_name;
 		} else {
-			buff.sprintf( "%s%s", iwd.Value(), local_name );
+			buff.sprintf( "%s%s", iwd.Value(), local_name.Value() );
 		}
 		stage_local_list->append( buff.Value() );
 	}

@@ -27,8 +27,10 @@
 
 #include "condor_common.h"
 #include "chirp_client.h"
+#include "chirp_protocol.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "MyString.h"
 
 struct chirp_client *
 chirp_client_connect_starter()
@@ -37,14 +39,14 @@ chirp_client_connect_starter()
     int fields;
     int save_errno;
     struct chirp_client *client;
-    char host[_POSIX_PATH_MAX];
-    char cookie[_POSIX_PATH_MAX];
-	char path[_POSIX_PATH_MAX];
+    char host[CONDOR_HOSTNAME_MAX];
+    char cookie[CHIRP_LINE_MAX];
+	MyString path;
     int port;
     int result;
 
-	snprintf(path, _POSIX_PATH_MAX, "%s%c%s",getenv("_CONDOR_SCRATCH_DIR"),DIR_DELIM_CHAR,"chirp.config");
-    file = safe_fopen_wrapper(path,"r");
+	path.sprintf( "%s%c%s",getenv("_CONDOR_SCRATCH_DIR"),DIR_DELIM_CHAR,"chirp.config");
+    file = safe_fopen_wrapper(path.Value(),"r");
     if(!file) { 
 		fprintf(stderr, "Can't open chirp.config file\n");
 		return 0;

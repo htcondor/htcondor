@@ -1573,15 +1573,15 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		if( final_transfer || IsClient() ) {
-			char remap_filename[_POSIX_PATH_MAX*3];
+			MyString remap_filename;
 			if(filename_remap_find(download_filename_remaps.Value(),filename.Value(),remap_filename)) {
-				if(!is_relative_to_cwd(remap_filename)) {
+				if(!is_relative_to_cwd(remap_filename.Value())) {
 					fullname = remap_filename;
 				}
 				else {
-					fullname.sprintf("%s%c%s",Iwd,DIR_DELIM_CHAR,remap_filename);
+					fullname.sprintf("%s%c%s",Iwd,DIR_DELIM_CHAR,remap_filename.Value());
 				}
-				dprintf(D_FULLDEBUG,"Remapped downloaded file from %s to %s\n",filename.Value(),remap_filename);
+				dprintf(D_FULLDEBUG,"Remapped downloaded file from %s to %s\n",filename.Value(),remap_filename.Value());
 			}
 			else {
 				fullname.sprintf("%s%c%s",Iwd,DIR_DELIM_CHAR,filename.Value());

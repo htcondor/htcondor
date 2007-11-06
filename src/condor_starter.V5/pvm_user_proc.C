@@ -57,7 +57,7 @@ void PVMdProc::execute()
 	sigset_t	sigmask;
 	long	arg_max;
 	char	*tmp;
-	char	a_out_name[ _POSIX_PATH_MAX ];
+	MyString a_out_name;
 	int		user_syscall_fd;
 	int		pipes[2];
 	int		readlen;
@@ -72,16 +72,16 @@ void PVMdProc::execute()
 	tmp = new char [arg_max];
 	strncpy( tmp, args, arg_max );
 
-	sprintf( a_out_name, "condor_exec.%d.%d", cluster, proc );
+	a_out_name.sprintf( "condor_exec.%d.%d", cluster, proc );
 
-	argv[0] = a_out_name;
+	argv[0] = a_out_name.Value();
 	mkargv( &argc, &argv[1], tmp );
 
 	// set up environment vector
 	envp = env_obj.get_vector();
 
 		// print out arguments to execve
-	dprintf( D_ALWAYS, "Calling execve( \"%s\"", a_out_name );
+	dprintf( D_ALWAYS, "Calling execve( \"%s\"", a_out_name.Value() );
 	for( argp = argv; *argp; argp++ ) {							// argv
 		dprintf( D_ALWAYS | D_NOHEADER, ", \"%s\"", *argp );
 	}
@@ -131,7 +131,7 @@ void PVMdProc::execute()
 
 			// Everything's ready, start it up...
 		errno = 0;
-		execve( a_out_name, argv, envp );
+		execve( a_out_name.Value(), argv, envp );
 
 			// A successful call to execve() never returns, so it is an
 			// error if we get here.  A number of errors are possible
@@ -193,7 +193,7 @@ void PVMUserProc::execute()
 	sigset_t	sigmask;
 	long	arg_max;
 	char	*tmp;
-	char	a_out_name[ _POSIX_PATH_MAX ];
+	MyString	a_out_name;
 	int		user_syscall_fd;
 	int		pipes[2];
 	int		readlen;
@@ -217,9 +217,9 @@ void PVMUserProc::execute()
 	tmp = new char [arg_max];
 	strncpy( tmp, args, arg_max );
 
-	sprintf( a_out_name, "../%s/condor_exec.%d.%d", local_dir, cluster, proc );
+	a_out_name.sprintf( "../%s/condor_exec.%d.%d", local_dir, cluster, proc );
 
-	argv[0] = a_out_name;
+	argv[0] = a_out_name.Value();
 	mkargv( &argc, &argv[1], tmp );
 
 	// set up environment vector
@@ -232,7 +232,7 @@ void PVMUserProc::execute()
 	trc_tid = atoi(argv[5]);
 	trc_cod = atoi(argv[6]);
 		// print out arguments to execve
-	dprintf( D_ALWAYS, "Calling execve( \"%s\"", a_out_name );
+	dprintf( D_ALWAYS, "Calling execve( \"%s\"", a_out_name.Value() );
 	arg_count = 0;
 	for( argp = &argv[7]; *argp; argp++ ) {							// argv
 		dprintf( D_ALWAYS | D_NOHEADER, ", \"%s\"", *argp );
@@ -248,7 +248,7 @@ void PVMUserProc::execute()
 
 	pvm_initsend(PvmDataFoo);
 	pvm_pkint(&pvm_parent, 1, 1);
-	pvm_pkstr(a_out_name);
+	pvm_pkstr(a_out_name.Value());
 	pvm_pkint(&pvm_flags, 1, 1);
 	pvm_pkint(&one, 1, 1);		// How many to spawn
 	pvm_pkint(&arg_count, 1, 1);

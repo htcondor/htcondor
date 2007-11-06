@@ -443,7 +443,7 @@ sub InstallPersonalCondor
 			}
 			
 
-			if( $binloc =~ /^(\/.*\/)bin\/\s*$/ )
+			if( $binloc =~ /^(\/.*\/)s*bin\/\s*$/ )
 			{
 				debug( "Root path to sbin is $1\n");
 				$sbinloc = $1;	# we'll get our binaries here. # local_dir is here

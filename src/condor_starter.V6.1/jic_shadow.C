@@ -1108,11 +1108,9 @@ JICShadow::initJobInfo( void )
 				 "Can't find %s in job ad\n", ATTR_JOB_CMD );
 		return false;
 	} else {
-		char tmp[_POSIX_PATH_MAX];
 			// put the orig job name in class ad
-		sprintf(tmp, "%s=\"%s\"", ATTR_ORIG_JOB_CMD, orig_job_name);
 		dprintf(D_ALWAYS, "setting the orig job name in starter\n");
-		job_ad->InsertOrUpdate (tmp);
+		job_ad->Assign(ATTR_ORIG_JOB_CMD,orig_job_name);
 	}
 
 		// stash the iwd name in orig_job_iwd
@@ -1121,11 +1119,9 @@ JICShadow::initJobInfo( void )
 				 "Can't find %s in job ad\n", ATTR_JOB_IWD );
 		return false;
 	} else {
-		char tmp[_POSIX_PATH_MAX];
 			// put the orig job iwd in class ad
-		sprintf(tmp, "%s=\"%s\"", ATTR_ORIG_JOB_IWD, orig_job_iwd);
 		dprintf(D_ALWAYS, "setting the orig job iwd in starter\n");
-		job_ad->InsertOrUpdate (tmp);
+		job_ad->Assign(ATTR_ORIG_JOB_IWD, orig_job_iwd);
 		free(orig_job_iwd);
 	}
 
@@ -1697,7 +1693,6 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 bool
 JICShadow::beginFileTransfer( void )
 {
-	char tmp[_POSIX_PATH_MAX];
 
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
@@ -1706,9 +1701,8 @@ JICShadow::beginFileTransfer( void )
 		job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
 
 		if( xferExec ) {
-			sprintf( tmp, "%s=\"%s\"", ATTR_JOB_CMD,CONDOR_EXEC );
 			dprintf( D_FULLDEBUG, "Changing the executable name\n" );
-			job_ad->InsertOrUpdate( tmp );
+			job_ad->Assign(ATTR_JOB_CMD,CONDOR_EXEC );
 		}
 
 		filetrans = new FileTransfer();
@@ -1819,7 +1813,7 @@ bool
 JICShadow::initIOProxy( void )
 {
 	int want_io_proxy = 0;
-	char io_proxy_config_file[_POSIX_PATH_MAX];
+	MyString io_proxy_config_file;
 
 	if( job_ad->LookupBool( ATTR_WANT_IO_PROXY, want_io_proxy ) < 1 ) {
 		dprintf( D_FULLDEBUG, "JICShadow::initIOProxy(): "
@@ -1831,9 +1825,9 @@ JICShadow::initIOProxy( void )
 	}
 
 	if( want_io_proxy || job_universe==CONDOR_UNIVERSE_JAVA ) {
-		sprintf( io_proxy_config_file, "%s%cchirp.config",
+		io_proxy_config_file.sprintf( "%s%cchirp.config",
 				 Starter->GetWorkingDir(), DIR_DELIM_CHAR );
-		if( !io_proxy.init(io_proxy_config_file) ) {
+		if( !io_proxy.init(io_proxy_config_file.Value()) ) {
 			dprintf( D_FAILURE|D_ALWAYS, 
 					 "Couldn't initialize IO Proxy.\n" );
 			return false;

@@ -970,9 +970,9 @@ They are not needed for remote I/O or for the condor daemons.
 	job's Owner as the value.  -Todd , 4/97
 	*/
 #	if !defined(SWITCH)
-		int getlogin( char *loginbuf ) : pseudo {
+		int getlogin( char *&loginbuf ) : pseudo {
 			out code( loginbuf );
-			alloc ( loginbuf, _POSIX_PATH_MAX );
+			null_alloc ( loginbuf );
 		}  
 #	endif /* not SWITCH */
 

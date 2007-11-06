@@ -79,7 +79,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 		return 0;
 	}
 
-	char JobName[_POSIX_PATH_MAX];
+	MyString JobName;
 	if ( JobAd->LookupString( ATTR_JOB_CMD, JobName ) != 1 ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
 				 ATTR_JOB_CMD );
@@ -101,27 +101,26 @@ OsProc::StartJob(FamilyInfo* family_info)
 	// the file should have been transferred with the execute
 	// bit set
 	//
-	if ( (strcmp(CONDOR_EXEC,JobName) == 0) && !privsep_enabled() ) {
+	if ( (strcmp(CONDOR_EXEC,JobName.Value()) == 0) && !privsep_enabled() ) {
 			// also, prepend the full path to this name so that we
 			// don't have to rely on the PATH inside the
 			// USER_JOB_WRAPPER or for exec().
-		sprintf( JobName, "%s%c%s", Starter->GetWorkingDir(),
+		JobName.sprintf( "%s%c%s", Starter->GetWorkingDir(),
 				 DIR_DELIM_CHAR, CONDOR_EXEC );
 
 		priv_state old_priv = set_user_priv();
-		int retval = chmod( JobName, 0755 );
+		int retval = chmod( JobName.Value(), 0755 );
 		set_priv( old_priv );
 		if( retval != 0 ) {
-			dprintf ( D_ALWAYS, "Failed to chmod %s!\n",JobName );
+			dprintf ( D_ALWAYS, "Failed to chmod %s!\n",JobName.Value() );
 			return 0;
 		}
 	}
-	else if(is_relative_to_cwd(JobName) && job_iwd && *job_iwd) {
+	else if(is_relative_to_cwd(JobName.Value()) && job_iwd && *job_iwd) {
 		// prepend full path to executable name
 		MyString full_name;
-		full_name.sprintf("%s%c%s",job_iwd,DIR_DELIM_CHAR,JobName);
-		ASSERT(((unsigned)full_name.Length()) < sizeof(JobName));
-		strcpy(JobName,full_name.Value());
+		full_name.sprintf("%s%c%s",job_iwd,DIR_DELIM_CHAR,JobName.Value());
+		JobName = full_name;
 	}
 
 	if( Starter->isGridshell() ) {
@@ -129,10 +128,10 @@ OsProc::StartJob(FamilyInfo* family_info)
 			// globus probably transfered it for us and left it with
 			// bad permissions...
 		priv_state old_priv = set_user_priv();
-		int retval = chmod( JobName, S_IRWXU | S_IRWXO | S_IRWXG );
+		int retval = chmod( JobName.Value(), S_IRWXU | S_IRWXO | S_IRWXG );
 		set_priv( old_priv );
 		if( retval < 0 ) {
-			dprintf ( D_ALWAYS, "Failed to chmod %s!\n", JobName );
+			dprintf ( D_ALWAYS, "Failed to chmod %s!\n", JobName.Value() );
 			return 0;
 		}
 	} 
@@ -153,7 +152,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// may consider removing the CONDOR_EXEC feature entirely.
 		//
 	if( (job_universe == CONDOR_UNIVERSE_JAVA) ) {
-		args.AppendArg(JobName);
+		args.AppendArg(JobName.Value());
 	} else {
 		args.AppendArg(CONDOR_EXEC);
 	}
@@ -175,8 +174,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 			// "JobName" so we exec it directly, and we want to put
 			// what was the JobName (with the full path) as the first
 			// argument to the wrapper
-		args.AppendArg(JobName);
-		strcpy( JobName, wrapper );
+		args.AppendArg(JobName.Value());
+		JobName = wrapper;
 		free(wrapper);
 	} 
 		// Either way, we now have to add the user-specified args as
@@ -363,10 +362,10 @@ OsProc::StartJob(FamilyInfo* family_info)
 	if( has_wrapper ) { 
 			// print out exactly what we're doing so folks can debug
 			// it, if they need to.
-		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName, 
+		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.Value(), 
 				 args_string.Value() );
 	} else {
-		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName,
+		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.Value(),
 				 args_string.Value() );
 	}
 
@@ -413,7 +412,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 			privsep_stdout_name.Value(),
 			privsep_stderr_name.Value()
 		};
-		JobPid = privsep_helper.create_process(JobName,
+		JobPid = privsep_helper.create_process(JobName.Value(),
 		                                       args,
 		                                       job_env,
 		                                       job_iwd,
@@ -426,7 +425,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 		                                       family_info);
 	}
 	else {
-		JobPid = daemonCore->Create_Process( JobName,
+		JobPid = daemonCore->Create_Process( JobName.Value(),
 		                                     args,
 		                                     PRIV_USER_FINAL,
 		                                     1,
@@ -504,7 +503,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 		}
 
 		EXCEPT("Create_Process(%s,%s, ...) failed",
-			JobName, args_string.Value() );
+			JobName.Value(), args_string.Value() );
 		return 0;
 	}
 

@@ -31,7 +31,6 @@
 #include <sys/time.h>
 #include <sys/resource.h>       /* for struct rusage */
 #endif
-#include <limits.h>             /* for _POSIX_PATH_MAX */
 
 /* 
 	Since the ULogEvent class definition only deals with the ClassAd via a

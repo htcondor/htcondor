@@ -72,6 +72,7 @@ static const int MIN_REGISTERED_SOCKET_SAFETY_LIMIT = 15;
 #include "condor_commands.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
+#include "condor_getcwd.h"
 #include "strupr.h"
 #include "sig_name.h"
 #include "env.h"
@@ -4705,9 +4706,9 @@ int DaemonCore::Shutdown_Fast(pid_t pid)
 	}
 
 	if( (DebugFlags & D_PROCFAMILY) && (DebugFlags & D_FULLDEBUG) ) {
-			char check_name[_POSIX_PATH_MAX];
+			char check_name[MAX_PATH];
 			CSysinfo sysinfo;
-			sysinfo.GetProcessName(pid,check_name, _POSIX_PATH_MAX);
+			sysinfo.GetProcessName(pid,check_name, sizeof(check_name));
 			dprintf(D_PROCFAMILY,
 				"Shutdown_Fast(%d):calling TerminateProcess handle=%x check_name='%s'\n",
 				pid,pidHandle,check_name);
@@ -6184,7 +6185,6 @@ int DaemonCore::Create_Process(
 	// by "goto wrapup", so we start a new block here
 	{
 		Env job_environ;
-		char envbuf[_POSIX_PATH_MAX];
 
 			// if not using inheritance, start with default values for
 			// PATH and TEMP, othwise just start with our environment
@@ -6193,18 +6193,18 @@ int DaemonCore::Create_Process(
 				// add in what is likely the system default path.  we do this
 				// here, before merging the user env, because if the user
 				// specifies a path in the job ad we want top use that instead.
-			envbuf[0]='\0';
-			GetEnvironmentVariable("PATH",envbuf,sizeof(envbuf));
-			if (envbuf[0]) {
-				job_environ.SetEnv("PATH",envbuf);
+			MyString path;
+			GetEnv("PATH",path);
+			if (path.Length()) {
+				job_environ.SetEnv("PATH",path.Value());
 			}
 
 			// do the same for what likely is the system default TEMP
 			// directory.
-			envbuf[0]='\0';
-			GetEnvironmentVariable("TEMP",envbuf,sizeof(envbuf));
-			if (envbuf[0]) {
-				job_environ.SetEnv("TEMP",envbuf);
+			MyString temp_path;
+			GetEnv("TEMP",temp_path);
+			if (temp_path.Length()) {
+				job_environ.SetEnv("TEMP",temp_path.Value());
 			}
 		}
 		else {
@@ -6294,7 +6294,7 @@ int DaemonCore::Create_Process(
 	} else if ( (stricmp(".bat",&(executable[namelen-4])) == 0) ||
 			(stricmp(".cmd",&(executable[namelen-4])) == 0) ) {
 
-		char systemshell[_POSIX_PATH_MAX+1];
+		char systemshell[MAX_PATH+1];
 
 		// next, stuff the extra cmd.exe args in with the arguments
 		strArgs = " /Q /C \"" + MyString(executable) + MyString("\" ");
@@ -6302,7 +6302,7 @@ int DaemonCore::Create_Process(
 		// now find out where cmd.exe lives on this box and
 		// set it to our executable
 		::GetSystemDirectory(systemshell, MAX_PATH);
-		strncat(systemshell, "\\cmd.exe", _POSIX_PATH_MAX);
+		strncat(systemshell, "\\cmd.exe", MAX_PATH);
 		executable_buf = systemshell;
 		executable = executable_buf.Value();
 
@@ -6513,13 +6513,13 @@ int DaemonCore::Create_Process(
 	if( cwd && (cwd[0] != '\0') ) {
 
 		if ( executable[0] != '/' ) {   // relative path
-			char currwd[_POSIX_PATH_MAX];
-			if ( getcwd( currwd, _POSIX_PATH_MAX ) == NULL ) {
+			MyString currwd;
+			if ( !condor_getcwd( currwd ) ) {
 				dprintf ( D_ALWAYS, "Create_Process: getcwd failed\n" );
 				goto wrapup;
 			}
 
-			executable_fullpath_buf.sprintf("%s/%s", currwd, executable);
+			executable_fullpath_buf.sprintf("%s/%s", currwd.Value(), executable);
 			executable_fullpath = executable_fullpath_buf.Value();
 
 				// Finally, log it

@@ -29,25 +29,51 @@ extern "C"
 PROC_ID
 getProcByString( const char* str )
 {
-	char* tmp;
-	char* copy;
 	PROC_ID rval;
-
-	rval.cluster = -1;
-	rval.proc = -1;
-	copy = strdup( str );
-
-	tmp = strchr( copy, '.' );
-	if( ! (tmp && tmp[1]) ) {
-		free( copy );
-		return rval;
-	}
-	*tmp = '\0';
-	rval.cluster = atoi( copy );
-	rval.proc = atoi( &tmp[1] );
-	free( copy );
+	StrToProcId(str,rval);
 	return rval;
 }
+
+void
+ProcIdToStr( const PROC_ID a, char *buf )
+{
+	ProcIdToStr( a.cluster, a.proc, buf );
+}
+
+void
+ProcIdToStr( int cluster, int proc, char *buf ) {
+	if ( proc == -1 ) {
+		// cluster ad key
+		sprintf(buf,"0%d.-1",cluster);
+	} else {
+		// proc ad key
+		sprintf(buf,"%d.%d",cluster,proc);
+	}
+}
+
+bool StrToProcId(char const *str, PROC_ID &id) {
+	return StrToProcId(str,id.cluster,id.proc);
+}
+
+bool StrToProcId(char const *str, int &cluster, int &proc) {
+	char const *tmp;
+
+	// skip leading zero, if any
+	if ( *str == '0' ) 
+		str++;
+
+	if ( !(tmp = strchr(str,'.')) ) {
+		cluster = -1;
+		proc = -1;
+		return false;
+	}
+	tmp++;
+
+	cluster = atoi(str);
+	proc = atoi(tmp);
+	return true;
+}
+
 
 bool operator==( const PROC_ID a, const PROC_ID b)
 {

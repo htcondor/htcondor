@@ -141,50 +141,34 @@ static char *default_super_user =
 
 //static int allow_remote_submit = FALSE;
 
-static
-char *
-IdToStr(int cluster, int proc)
+static inline
+void
+IdToStr(int cluster, int proc, char *buf)
 {
-	static char strbuf[35];
-
-	if ( proc == -1 ) {
-		// cluster ad key
-		sprintf(strbuf,"0%d.-1",cluster);
-	} else {
-		// proc ad key
-		sprintf(strbuf,"%d.%d",cluster,proc);
-	}
-	return strbuf;
+	ProcIdToStr(cluster,proc,buf);
 }
 
 static
 void
 StrToId(const char *str,int & cluster,int & proc)
 {
-	char *tmp;
-
-	// skip leading zero, if any
-	if ( *str == '0' ) 
-		str++;
-
-	if ( !(tmp = strchr(str,'.')) ) {
+	if( !StrToProcId(str,cluster,proc) ) {
 		EXCEPT("Qmgmt: Malformed key - '%s'",str);
 	}
-	tmp++;
-
-	cluster = atoi(str);
-	proc = atoi(tmp);
 }
 
 static
 void
 ClusterCleanup(int cluster_id)
 {
+	char key[PROC_ID_STR_BUFLEN];
+	IdToStr(cluster_id,-1,key);
+
 	// remove entry in ClusterSizeHashTable 
 	ClusterSizeHashTable->remove(cluster_id);
 
 	// delete the cluster classad
-	JobQueue->DestroyClassAd( IdToStr(cluster_id,-1) );
+	JobQueue->DestroyClassAd( key );
 
 	// blow away the initial checkpoint file from the spool dir
 	char *ckpt_file_name = gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
@@ -710,13 +694,13 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	int 	cluster_num, cluster, proc, universe;
 	int		stored_cluster_num;
 	bool	CreatedAd = false;
-	char	cluster_str[40];
-	char	owner[_POSIX_PATH_MAX];
-	char	user[_POSIX_PATH_MAX];
-	char	correct_user[_POSIX_PATH_MAX];
-	char	buf[_POSIX_PATH_MAX];
-	char	attr_scheduler[_POSIX_PATH_MAX];
-	char	correct_scheduler[_POSIX_PATH_MAX];
+	char	cluster_str[PROC_ID_STR_BUFLEN];
+	MyString	owner;
+	MyString	user;
+	MyString	correct_user;
+	MyString	buf;
+	MyString	attr_scheduler;
+	MyString	correct_scheduler;
 	MyString buffer;
 
 	if (!JobQueue->LookupClassAd(HeaderKey, ad)) {
@@ -740,7 +724,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// all jobs, we only have to figure it out once.  We use '%'
 		// as the delimiter, since ATTR_NAME might already have '@' in
 		// it, and we don't want to confuse things any further.
-	sprintf( correct_scheduler, "DedicatedScheduler!%s", Name );
+	correct_scheduler.sprintf( "DedicatedScheduler!%s", Name );
 
 	next_cluster_num = 1;
 	JobQueue->StartIterateAllClassAds();
@@ -755,7 +739,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			}
 
 			// link all proc ads to their cluster ad, if there is one
-			sprintf(cluster_str,"0%d.-1",cluster_num);
+			IdToStr(cluster_num,-1,cluster_str);
 			if ( JobQueue->LookupClassAd(cluster_str,clusterad) ) {
 				ad->ChainToAd(clusterad);
 			}
@@ -803,28 +787,26 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				// Figure out what ATTR_USER *should* be for this job
 			int nice_user = 0;
 			ad->LookupInteger( ATTR_NICE_USER, nice_user );
-			sprintf( correct_user, "%s%s@%s",
-					 (nice_user) ? "nice-user." : "", owner,
+			correct_user.sprintf( "%s%s@%s",
+					 (nice_user) ? "nice-user." : "", owner.Value(),
 					 scheduler.uidDomain() );
 
 			if (!ad->LookupString(ATTR_USER, user)) {
 				dprintf( D_FULLDEBUG,
 						"Job %s has no %s attribute.  Inserting one now...\n",
 						tmp, ATTR_USER);
-				sprintf( buf, "%s = \"%s\"", ATTR_USER, correct_user );
-				ad->Insert( buf );
+				ad->Assign( ATTR_USER, correct_user.Value() );
 				JobQueueDirty = true;
 			} else {
 					// ATTR_USER exists, make sure it's correct, and
 					// if not, insert the new value now.
-				if( strcmp(user,correct_user) ) {
+				if( user != correct_user ) {
 						// They're different, so insert the right value
 					dprintf( D_FULLDEBUG,
 							 "Job %s has stale %s attribute.  "
 							 "Inserting correct value now...\n",
 							 tmp, ATTR_USER );
-					sprintf( buf, "%s = \"%s\"", ATTR_USER, correct_user );
-					ad->Insert( buf );
+					ad->Assign( ATTR_USER, correct_user.Value() );
 					JobQueueDirty = true;
 				}
 			}
@@ -838,24 +820,20 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 					dprintf( D_FULLDEBUG, "Job %s has no %s attribute.  "
 							 "Inserting one now...\n", tmp,
 							 ATTR_SCHEDULER );
-					sprintf( buf, "%s = \"%s\"", ATTR_SCHEDULER,
-							 correct_scheduler );
-					ad->Insert( buf );
+					ad->Assign( ATTR_SCHEDULER, correct_scheduler.Value() );
 					JobQueueDirty = true;
 				} else {
 
 						// ATTR_SCHEDULER exists, make sure it's correct,
 						// and if not, insert the new value now.
-					if( strcmp(attr_scheduler,correct_scheduler) ) {
+					if( attr_scheduler != correct_scheduler ) {
 							// They're different, so insert the right
 							// value 
 						dprintf( D_FULLDEBUG,
 								 "Job %s has stale %s attribute.  "
 								 "Inserting correct value now...\n",
 								 tmp, ATTR_SCHEDULER );
-						sprintf( buf, "%s = \"%s\"", ATTR_SCHEDULER,
-								 correct_scheduler );
-						ad->Insert( buf );
+						ad->Assign( ATTR_SCHEDULER, correct_scheduler );
 						JobQueueDirty = true;
 					}
 				}
@@ -994,14 +972,14 @@ isQueueSuperUser( const char* user )
 bool
 OwnerCheck(int cluster_id,int proc_id)
 {
-	char				key[_POSIX_PATH_MAX];
+	char				key[PROC_ID_STR_BUFLEN];
 	ClassAd				*ad = NULL;
 
 	if (!Q_SOCK) {
 		return 0;
 	}
 
-	strcpy(key, IdToStr(cluster_id,proc_id) );
+	IdToStr(cluster_id,proc_id,key);
 	if (!JobQueue->LookupClassAd(key, ad)) {
 		return 0;
 	}
@@ -1032,7 +1010,7 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 bool
 OwnerCheck2(ClassAd *ad, const char *test_owner)
 {
-	char	my_owner[_POSIX_PATH_MAX];
+	MyString	my_owner;
 
 	// in the very rare event that the admin told us all users 
 	// can be trusted, let it pass
@@ -1094,13 +1072,13 @@ OwnerCheck2(ClassAd *ad, const char *test_owner)
 		// to connect to the queue.
 #if defined(WIN32)
 	// WIN32: user names are case-insensitive
-	if (strcasecmp(my_owner, test_owner) != 0) {
+	if (strcasecmp(my_owner.Value(), test_owner) != 0) {
 #else
-	if (strcmp(my_owner, test_owner) != 0) {
+	if (strcmp(my_owner.Value(), test_owner) != 0) {
 #endif
 		errno = EACCES;
 		dprintf( D_FULLDEBUG, "ad owner: %s, queue submit owner: %s\n",
-				my_owner, test_owner );
+				my_owner.Value(), test_owner );
 		return false;
 	} 
 	else {
@@ -1379,7 +1357,7 @@ int
 NewCluster()
 {
 //	LogSetAttribute *log;
-	char cluster_str[40];
+	char cluster_str[PROC_ID_STR_BUFLEN];
 
 	if( Q_SOCK && !OwnerCheck(NULL, Q_SOCK->getOwner()  ) ) {
 		dprintf( D_FULLDEBUG, "NewCluser(): OwnerCheck failed\n" );
@@ -1409,7 +1387,9 @@ NewCluster()
 	JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
 
 	// put a new classad in the transaction log to serve as the cluster ad
-	JobQueue->NewClassAd(IdToStr(active_cluster_num,-1), JOB_ADTYPE, STARTD_ADTYPE);
+	char cluster_key[PROC_ID_STR_BUFLEN];
+	IdToStr(active_cluster_num,-1,cluster_key);
+	JobQueue->NewClassAd(cluster_key, JOB_ADTYPE, STARTD_ADTYPE);
 
 	return active_cluster_num;
 }
@@ -1419,7 +1399,7 @@ int
 NewProc(int cluster_id)
 {
 	int				proc_id;
-	char			key[_POSIX_PATH_MAX];
+	char			key[PROC_ID_STR_BUFLEN];
 //	LogNewClassAd	*log;
 
 	if( Q_SOCK && !OwnerCheck(NULL, Q_SOCK->getOwner() ) ) {
@@ -1440,7 +1420,7 @@ NewProc(int cluster_id)
 	}
 
 	proc_id = next_proc_num++;
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	IdToStr(cluster_id,proc_id,key);
 //	log = new LogNewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
 //	JobQueue->AppendLog(log);
 	JobQueue->NewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
@@ -1468,11 +1448,11 @@ int 	DestroyMyProxyPassword (int cluster_id, int proc_id);
 
 int DestroyProc(int cluster_id, int proc_id)
 {
-	char				key[_POSIX_PATH_MAX];
+	char				key[PROC_ID_STR_BUFLEN];
 	ClassAd				*ad = NULL;
 //	LogDestroyClassAd	*log;
 
-	strcpy(key, IdToStr(cluster_id,proc_id) );
+	IdToStr(cluster_id,proc_id,key);
 	if (!JobQueue->LookupClassAd(key, ad)) {
 		return DESTROYPROC_ENOENT;
 	}
@@ -1679,56 +1659,6 @@ int DestroyCluster(int cluster_id, const char* reason)
 	return 0;
 }
 
-// DestroyClusterByContraint not used anywhere, so it is commented out.
-#if 0
-int DestroyClusterByConstraint(const char* constraint)
-{
-	int			flag = 1;
-	ClassAd		*ad=NULL;
-	char		key[_POSIX_PATH_MAX];
-//	LogRecord	*log;
-	char		*ickpt_file_name;
-	int			prev_cluster = -1;
-    PROC_ID		job_id;
-
-	JobQueue->StartIterateAllClassAds();
-
-	while(JobQueue->IterateAllClassAds(ad)) {
-		// check cluster first to avoid header ad
-		if (ad->LookupInteger(ATTR_CLUSTER_ID, job_id.cluster) == 1) {
-			if ( !Q_SOCK || OwnerCheck(ad, Q_SOCK->getOwner() )) {
-				if (EvalBool(ad, constraint)) {
-					ad->LookupInteger(ATTR_PROC_ID, job_id.proc);
-
-					// Apend to history file
-    	            AppendHistory(ad);
-
-					sprintf(key, "%d.%d", job_id.cluster, job_id.proc);
-//					log = new LogDestroyClassAd(key);
-//					JobQueue->AppendLog(log);
-					JobQueue->DestroyClassAd(key);
-					flag = 0;
-
-					if (prev_cluster != job_id.cluster) {
-						ickpt_file_name =
-							gen_ckpt_name( Spool, job_id.cluster, ICKPT, 0 );
-						(void)unlink( ickpt_file_name );
-						prev_cluster = job_id.cluster;
-						ClusterSizeHashTable->remove(job_id.cluster);
-					}
-				}
-			}
-		}
-	}
-
-	JobQueueDirty = true;
-
-	if(flag) return -1;
-	return 0;
-}
-#endif
-
-
 int
 SetAttributeByConstraint(const char *constraint, const char *attr_name,
 						 const char *attr_value)
@@ -1768,16 +1698,16 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			 const char *attr_value, SetAttributeFlags_t flags )
 {
 //	LogSetAttribute	*log;
-	char			key[_POSIX_PATH_MAX];
+	char			key[PROC_ID_STR_BUFLEN];
 	ClassAd			*ad = NULL;
-	char			alternate_attrname_buf[_POSIX_PATH_MAX];
+	MyString		alternate_attrname_buf;
 
 	// Only an authenticated user or the schedd itself can set an attribute.
 	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
 		return -1;
 	}
 
-	strcpy(key, IdToStr(cluster_id,proc_id) );
+	IdToStr(cluster_id,proc_id,key);
 
 	if (JobQueue->LookupClassAd(key, ad)) {
 		if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
@@ -1813,16 +1743,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	{
 		const char* sock_owner = Q_SOCK->getOwner();
 		if ( sock_owner ) {
-			sprintf(alternate_attrname_buf, "\"%s\"", sock_owner );
-		} else {
-			alternate_attrname_buf[0] = '\0';
+			alternate_attrname_buf.sprintf( "\"%s\"", sock_owner );
 		}
 		if ( stricmp(attr_value,"UNDEFINED")==0 ) {
 				// If the user set the owner to be undefined, then
 				// just fill in the value of Owner with the owner name
 				// of the authenticated socket.
 			if ( sock_owner ) {
-				attr_value  = alternate_attrname_buf;
+				attr_value  = alternate_attrname_buf.Value();
 			} else {
 				// socket not authenticated and Owner is UNDEFINED.
 #if !defined(WIN32)
@@ -1836,14 +1764,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 		if (!qmgmt_all_users_trusted && 
 #if defined(WIN32)
-			(stricmp(attr_value, alternate_attrname_buf) != 0)) {
+			(stricmp(attr_value, alternate_attrname_buf.Value()) != 0)) {
 #else
-			(strcmp(attr_value, alternate_attrname_buf) != 0)) {
+			(strcmp(attr_value, alternate_attrname_buf.Value()) != 0)) {
 				errno = EACCES;
 #endif
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s when active owner is %s\n",
-					attr_value, alternate_attrname_buf);
+					attr_value, alternate_attrname_buf.Value());
 				return -1;
 		}
 	}
@@ -1854,24 +1782,24 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// insert a value for ATTR_USER, too, so that's always in
 			// the job queue.
 		int nice_user = 0;
-		char user[_POSIX_PATH_MAX];
+		MyString user;
 			// We can't just use attr_value, since it contains '"'
 			// marks.  Carefully remove them here.
-		char owner_buf[_POSIX_PATH_MAX];
-		strcpy( owner_buf, attr_value );
-		char *owner = owner_buf;
+		MyString owner_buf;
+		char const *owner = attr_value;
 		if( *owner == '"' ) {
-			owner++;
-			int endquoteindex = strlen(owner) - 1;
-			if ( endquoteindex >= 0 && owner[endquoteindex] == '"' ) {
-				owner[endquoteindex] = '\0';
+			owner_buf = owner+1;
+			if( owner_buf.Length() && owner_buf[owner_buf.Length()-1] == '"' )
+			{
+				owner_buf.setChar(owner_buf.Length()-1,'\0');
 			}
+			owner = owner_buf.Value();
 		}
 		GetAttributeInt( cluster_id, proc_id, ATTR_NICE_USER,
 						 &nice_user );
-		sprintf( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
+		user.sprintf( "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
 				 owner, scheduler.uidDomain() );
-		SetAttribute( cluster_id, proc_id, ATTR_USER, user );
+		SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value() );
 	}
 	else if (stricmp(attr_name, ATTR_CLUSTER_ID) == 0) {
 		if (atoi(attr_value) != cluster_id) {
@@ -1888,26 +1816,17 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// should create a new value for ATTR_USER while we're at
 			// it, since that might need to change now that
 			// ATTR_NICE_USER is set.
-		char owner_buf[ _POSIX_PATH_MAX];
-		char *owner = owner_buf;
-		char user[_POSIX_PATH_MAX];
+		MyString owner;
+		MyString user;
 		bool nice_user = false;
 		if( ! stricmp(attr_value, "TRUE") ) {
 			nice_user = true;
 		}
-		if( GetAttributeString(cluster_id, proc_id, ATTR_OWNER, owner_buf)
+		if( GetAttributeString(cluster_id, proc_id, ATTR_OWNER, owner)
 			>= 0 ) {
-				// carefully strip off any '"' marks from ATTR_OWNER.
-			if( *owner == '"' ) {
-				owner++;
-				int endquoteindex = strlen(owner) - 1;
-				if ( endquoteindex >= 0 && owner[endquoteindex] == '"' ) {
-					owner[endquoteindex] = '\0';
-				}
-			}
-			sprintf( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." :
-					 "", owner, scheduler.uidDomain() );
-			SetAttribute( cluster_id, proc_id, ATTR_USER, user );
+			user.sprintf( "\"%s%s@%s\"", (nice_user) ? "nice-user." :
+					 "", owner.Value(), scheduler.uidDomain() );
+			SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value() );
 		}
 	}
 	else if (stricmp(attr_name, ATTR_PROC_ID) == 0) {
@@ -2075,23 +1994,23 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	}
 
 	// Create filename
-	char filename[_POSIX_PATH_MAX];
-	sprintf (filename, "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
+	MyString filename;
+	filename.sprintf( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
 
 	// Swith to root temporarily
 	priv_state old_priv = set_root_priv();
 	// Delete the file
 	struct stat stat_buff;
-	if (stat (filename, &stat_buff) == 0) {
+	if (stat (filename.Value(), &stat_buff) == 0) {
 		// If the exists, delete it
-		if (unlink (filename)) {
+		if (unlink (filename.Value())) {
 			set_priv(old_priv);
 			return -1;
 		}
 	}
 
 	// Create the file
-	int fd = safe_open_wrapper(filename, O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
+	int fd = safe_open_wrapper(filename.Value(), O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
@@ -2153,16 +2072,19 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	// Swith to root temporarily
 	priv_state old_priv = set_root_priv();
 	
-	char filename[_POSIX_PATH_MAX];
-	sprintf (filename, "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
-	int fd = safe_open_wrapper(filename, O_RDONLY);
+	MyString filename;
+	filename.sprintf( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
+	int fd = safe_open_wrapper(filename.Value(), O_RDONLY);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
 	}
 
-	char buff[_POSIX_PATH_MAX];
-	int bytes = read (fd, buff, _POSIX_PATH_MAX);
+	char buff[MYPROXY_MAX_PASSWORD_BUFLEN];
+	int bytes = read (fd, buff, sizeof(buff));
+	if( bytes < 0 ) {
+		return -1;
+	}
 	buff [bytes] = '\0';
 
 	close (fd);
@@ -2336,11 +2258,15 @@ CloseConnection()
 		}
 
 		for ( cluster_id=old_cluster_num; cluster_id < next_cluster_num; cluster_id++ ) {
-			if ( (JobQueue->LookupClassAd(IdToStr(cluster_id,-1), clusterad)) &&
+			char cluster_key[PROC_ID_STR_BUFLEN];
+			IdToStr(cluster_id,-1,cluster_key);
+			if ( (JobQueue->LookupClassAd(cluster_key, clusterad)) &&
 			     (ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1) )
 			{
 				for ( i = 0; i < *numOfProcs; i++ ) {
-					if (JobQueue->LookupClassAd(IdToStr(cluster_id,i),procad)) {
+					char key[PROC_ID_STR_BUFLEN];
+					IdToStr(cluster_id,i,key);
+					if (JobQueue->LookupClassAd(key,procad)) {
 							// chain proc ads to cluster ad
 						procad->ChainToAd(clusterad);
 
@@ -2374,10 +2300,10 @@ int
 GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val)
 {
 	ClassAd	*ad;
-	char	key[_POSIX_PATH_MAX];
+	char	key[PROC_ID_STR_BUFLEN];
 	char	*attr_val;
 
-	strcpy(key, IdToStr(cluster_id,proc_id) );
+	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		sscanf(attr_val, "%f", val);
@@ -2398,10 +2324,10 @@ int
 GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 {
 	ClassAd	*ad;
-	char	key[_POSIX_PATH_MAX];
+	char	key[PROC_ID_STR_BUFLEN];
 	char	*attr_val;
 
-	strcpy(key, IdToStr(cluster_id,proc_id) );
+	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		sscanf(attr_val, "%d", val);
@@ -2422,10 +2348,10 @@ int
 GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, int *val)
 {
 	ClassAd	*ad;
-	char	key[_POSIX_PATH_MAX];
+	char	key[PROC_ID_STR_BUFLEN];
 	char	*attr_val;
 
-	strcpy(key, IdToStr(cluster_id,proc_id) );
+	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		sscanf(attr_val, "%d", val);
@@ -2446,10 +2372,10 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 					char *val )
 {
 	ClassAd	*ad;
-	char	key[_POSIX_PATH_MAX];
+	char	key[PROC_ID_STR_BUFLEN];
 	char	*attr_val;
 
-	strcpy(key, IdToStr(cluster_id,proc_id) );
+	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		int attr_len = strlen( attr_val );
@@ -2481,10 +2407,10 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 					   char **val )
 {
 	ClassAd	*ad;
-	char	key[_POSIX_PATH_MAX];
+	char	key[PROC_ID_STR_BUFLEN];
 	char	*attr_val;
 
-	strcpy(key, IdToStr(cluster_id,proc_id) );
+	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		int attr_len = strlen( attr_val );
@@ -2511,14 +2437,49 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 }
 
 int
+GetAttributeString( int cluster_id, int proc_id, const char *attr_name, 
+					MyString &val )
+{
+	ClassAd	*ad;
+	char	key[PROC_ID_STR_BUFLEN];
+	char	*attr_val;
+
+	IdToStr(cluster_id,proc_id,key);
+
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
+		int attr_len = strlen( attr_val );
+		if ( attr_val[0] != '"' || attr_val[attr_len-1] != '"' ) {
+			free( attr_val );
+			val = "";
+			return -1;
+		}
+		attr_val[attr_len - 1] = '\0';
+		val = attr_val + 1;
+		free( attr_val );
+		return 1;
+	}
+
+	if (!JobQueue->LookupClassAd(key, ad)) {
+		val = "";
+		return -1;
+	}
+
+	if (ad->LookupString(attr_name, val) == 1) {
+		return 0;
+	}
+	val = "";
+	return -1;
+}
+
+int
 GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 {
 	ClassAd		*ad;
-	char		key[_POSIX_PATH_MAX];
+	char		key[PROC_ID_STR_BUFLEN];
 	ExprTree	*tree;
 	char		*attr_val;
 
-	strcpy(key, IdToStr(cluster_id,proc_id) );
+	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		strcpy(val, attr_val);
@@ -2546,11 +2507,11 @@ int
 DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 {
 	ClassAd				*ad;
-	char				key[_POSIX_PATH_MAX];
+	char				key[PROC_ID_STR_BUFLEN];
 //	LogDeleteAttribute	*log;
 	char				*attr_val = NULL;
 
-	strcpy(key, IdToStr(cluster_id,proc_id) );
+	IdToStr(cluster_id,proc_id,key);
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
 		if( ! JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
@@ -3069,10 +3030,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 ClassAd *
 GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 {
-	char	key[_POSIX_PATH_MAX];
+	char	key[PROC_ID_STR_BUFLEN];
 	ClassAd	*ad;
 
-	strcpy(key, IdToStr(cluster_id,proc_id) );
+	IdToStr(cluster_id,proc_id,key);
 	if (JobQueue->LookupClassAd(key, ad)) {
 		if ( !expStartdAd ) {
 			// we're done, return the ad.
@@ -3198,9 +3159,9 @@ FreeJobAd(ClassAd *&ad)
 
 
 int
-SendSpoolFile(char *filename)
+SendSpoolFile(char const *filename)
 {
-	char path[_POSIX_PATH_MAX];
+	MyString path;
 
 		/* We are passed in a filename to use to save the ICKPT file.
 		   However, we should NOT trust this filename since it comes from 
@@ -3211,8 +3172,8 @@ SendSpoolFile(char *filename)
 		   of this is correct, we could even just ignore the passed-in 
 		   filename parameter completely. -Todd Tannenbaum, 2/2005
 		*/
-	strcpy(path,gen_ckpt_name(Spool,active_cluster_num,ICKPT,0));
-	if ( filename && strcmp(filename, condor_basename(path)) ) {
+	path = gen_ckpt_name(Spool,active_cluster_num,ICKPT,0);
+	if ( filename && strcmp(filename, condor_basename(path.Value())) ) {
 		dprintf(D_ALWAYS, 
 				"ERROR SendSpoolFile aborted due to suspicious path (%s)!\n",
 				filename);
@@ -3230,13 +3191,13 @@ SendSpoolFile(char *filename)
 	/* Read file size from client. */
 	filesize_t	size;
 	Q_SOCK->getReliSock()->decode();
-	if (Q_SOCK->getReliSock()->get_file(&size, path) < 0) {
+	if (Q_SOCK->getReliSock()->get_file(&size, path.Value()) < 0) {
 		dprintf(D_ALWAYS, "Failed to receive file from client in SendSpoolFile.\n");
 		Q_SOCK->getReliSock()->eom();
 		return -1;
 	}
 
-	chmod(path,00755);
+	chmod(path.Value(),00755);
 
 	// Q_SOCK->getReliSock()->eom();
 	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);

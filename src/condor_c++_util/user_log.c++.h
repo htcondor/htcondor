@@ -53,7 +53,6 @@ typedef int BOOL_T;
 #if !defined(WIN32)
 #include <sys/types.h>
 #endif
-#include <limits.h>             /* for _POSIX_PATH_MAX */
 
 /* Predeclare some classes */
 class MyString;

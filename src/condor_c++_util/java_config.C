@@ -34,7 +34,7 @@ arguments get put in 'args'.  If you have other dirs or jarfiles
 that should be placed in the classpath, provide them in 'extra_classpath'.
 */
 
-int java_config( char *cmd, ArgList *args, StringList *extra_classpath )
+int java_config( MyString &cmd, ArgList *args, StringList *extra_classpath )
 {
 	char *tmp;
 	char separator;
@@ -42,7 +42,7 @@ int java_config( char *cmd, ArgList *args, StringList *extra_classpath )
 
 	tmp = param("JAVA");
 	if(!tmp) return 0;
-	strcpy(cmd,tmp);
+	cmd = tmp;
 	free(tmp);
 
 	tmp = param("JAVA_MAXHEAP_ARGUMENT");

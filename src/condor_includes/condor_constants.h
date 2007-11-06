@@ -118,4 +118,13 @@ static const size_t IP_STRING_BUF_SIZE = 16;
  */
 #define SINFUL_STRING_BUF_SIZE 24
 
+#define MYPROXY_MAX_PASSWORD_BUFLEN 256
+
+/* Max space needed to hold a null-terminated
+ * user name such as the value of ATTR_JOB_OWNER
+ */
+#define MAX_CONDOR_USERNAME_LEN 100
+
+#define CONDOR_HOSTNAME_MAX 256
+
 #endif /* CONDOR_CONSTANTS_H */

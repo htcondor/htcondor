@@ -892,15 +892,13 @@ UserLog*
 InitializeUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	char userLogFile[_POSIX_PATH_MAX];
-	char owner[_POSIX_PATH_MAX] = "";
-	char domain[_POSIX_PATH_MAX] = "";
-	char gjid[_POSIX_PATH_MAX] = "";
+	MyString userLogFile;
+	MyString owner;
+	MyString domain;
+	MyString gjid;
 	bool use_xml = false;
 
-	userLogFile[0] = '\0';
-	getPathToUserLog(job_ad, userLogFile, sizeof(userLogFile));
-	if ( userLogFile[0] == '\0' ) {
+	if( !getPathToUserLog(job_ad, userLogFile) ) {
 		// User doesn't want a log
 		return NULL;
 	}
@@ -913,7 +911,7 @@ InitializeUserLog( ClassAd *job_ad )
 	job_ad->LookupBool( ATTR_ULOG_USE_XML, use_xml );
 
 	UserLog *ULog = new UserLog();
-	ULog->initialize(owner, domain, userLogFile, cluster, proc, 0, gjid);
+	ULog->initialize(owner.Value(), domain.Value(), userLogFile.Value(), cluster, proc, 0, gjid.Value());
 	ULog->setUseXML( use_xml );
 	return ULog;
 }
@@ -1539,8 +1537,7 @@ EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
 
 		// gather all the info out of the job ad which we want to 
 		// put into the email message.
-	char JobName[_POSIX_PATH_MAX];
-	JobName[0] = '\0';
+	MyString JobName;
 	job_ad->LookupString( ATTR_JOB_CMD, JobName );
 
 	MyString Args;
@@ -1582,8 +1579,8 @@ EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
 	time_t now = time(NULL);
 
 	fprintf( mailer, "Your Condor job %d.%d \n", cluster, proc);
-	if ( JobName[0] ) {
-		fprintf(mailer,"\t%s %s\n",JobName,Args.Value());
+	if ( JobName.Length() ) {
+		fprintf(mailer,"\t%s %s\n",JobName.Value(),Args.Value());
 	}
 	if(exit_status_known) {
 		fprintf(mailer, "has ");

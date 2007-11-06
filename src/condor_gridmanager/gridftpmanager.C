@@ -641,13 +641,13 @@ bool GridftpServer::SubmitServerJob()
 	args_list.AppendArg( server_path );
 
 	if ( m_requestedUrlBase ) {
-		char url_scheme[_POSIX_PATH_MAX];
-		char url_host[_POSIX_PATH_MAX];
-		char url_path[_POSIX_PATH_MAX];
+		MyString url_scheme;
+		MyString url_host;
+		MyString url_path;
 		int url_port;
 		filename_url_parse( m_requestedUrlBase, url_scheme, url_host,
 							&url_port, url_path );
-		if ( strcasecmp( "gsiftp", url_scheme ) ) {
+		if ( strcasecmp( "gsiftp", url_scheme.Value() ) ) {
 				// The requested URL base is malformed, discard it
 			free( m_requestedUrlBase );
 			m_requestedUrlBase = NULL;

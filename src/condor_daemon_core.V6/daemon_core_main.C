@@ -491,7 +491,7 @@ void
 set_dynamic_dir( char* param_name, const char* append_str )
 {
 	char* val;
-	char newdir[_POSIX_PATH_MAX];
+	MyString newdir;
 
 	val = param( (char *)param_name );
 	if( ! val ) {
@@ -500,15 +500,15 @@ set_dynamic_dir( char* param_name, const char* append_str )
 	}
 
 		// First, create the new name.
-	sprintf( newdir, "%s.%s", val, append_str );
+	newdir.sprintf( "%s.%s", val, append_str );
 	
 		// Next, try to create the given directory, if it doesn't
 		// already exist.
-	make_dir( newdir );
+	make_dir( newdir.Value() );
 
 		// Now, set our own config hashtable entry so we start using
 		// this new directory.
-	config_insert( (char *) param_name, newdir );
+	config_insert( (char *) param_name, newdir.Value() );
 
 	// Finally, insert the _condor_<param_name> environment
 	// variable, so our children get the right configuration.
@@ -1142,8 +1142,7 @@ dc_config_auth()
 	char *trustedca_buf = 0;
 	char *mapfile_buf = 0;
 
-	char buffer[(_POSIX_PATH_MAX * 3)];
-	memset(buffer, 0, (_POSIX_PATH_MAX * 3));
+	MyString buffer;
 
     
     // Here's how it works. If you define any of 
@@ -1176,23 +1175,23 @@ dc_config_auth()
     if (pbuf) {
 
 		if( !trustedca_buf) {
-			sprintf( buffer, "%s%ccertificates", pbuf, DIR_DELIM_CHAR);
-			SetEnv( STR_GSI_CERT_DIR, buffer );
+			buffer.sprintf( "%s%ccertificates", pbuf, DIR_DELIM_CHAR);
+			SetEnv( STR_GSI_CERT_DIR, buffer.Value() );
 		}
 
 		if( !cert_buf ) {
-        	sprintf( buffer, "%s%chostcert.pem", pbuf, DIR_DELIM_CHAR);
-        	SetEnv( STR_GSI_USER_CERT, buffer );
+        	buffer.sprintf( "%s%chostcert.pem", pbuf, DIR_DELIM_CHAR);
+        	SetEnv( STR_GSI_USER_CERT, buffer.Value() );
 		}
 	
 		if (!key_buf ) {
-			sprintf( buffer, "%s%chostkey.pem", pbuf, DIR_DELIM_CHAR);
-        	SetEnv( STR_GSI_USER_KEY, buffer );
+			buffer.sprintf( "%s%chostkey.pem", pbuf, DIR_DELIM_CHAR);
+        	SetEnv( STR_GSI_USER_KEY, buffer.Value() );
 		}
 
 		if (!mapfile_buf ) {
-			sprintf( buffer, "%s%cgrid-mapfile", pbuf, DIR_DELIM_CHAR);
-        	SetEnv( STR_GSI_MAPFILE, buffer );
+			buffer.sprintf( "%s%cgrid-mapfile", pbuf, DIR_DELIM_CHAR);
+        	SetEnv( STR_GSI_MAPFILE, buffer.Value() );
 		}
 
         free( pbuf );
@@ -1294,7 +1293,7 @@ handle_dc_sigquit( Service*, int )
 }
 
 void
-handle_gcb_recovery_failed( Service *ignore )
+handle_gcb_recovery_failed( Service * /*ignore*/ )
 {
 	dprintf( D_ALWAYS, "GCB failed to recover from a failure with the "
 			 "Broker. Performing fast shutdown.\n" );
@@ -2007,17 +2006,14 @@ int main( int argc, char** argv )
 	// zmiller
 	// look in the env for ENV_PARENT_ID
 	const char* envName = EnvGetName ( ENV_PARENT_ID );
-#ifdef WIN32
-	char value[_POSIX_PATH_MAX];
-	value[0] = '\0';
-	GetEnvironmentVariable( envName, value, sizeof(value) );
-#else
-	char * value = getenv( envName );
-#endif
+	MyString parent_id;
+
+	GetEnv( envName, parent_id );
+
 	// send it to the SecMan object so it can include it in any
 	// classads it sends.  if this is NULL, it will not include
 	// the attribute.
-	daemonCore->sec_man->set_parent_unique_id(value);
+	daemonCore->sec_man->set_parent_unique_id(parent_id.Value());
 
 	// now re-set the identity so that any children we spawn will have it
 	// in their environment

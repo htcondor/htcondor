@@ -425,6 +425,12 @@ int full_fwrite(char *buf, size_t size, size_t nmemb, FILE *fp)
 	return items_wrote;
 }
 
+int getlogin_test()
+{
+	char const *tmp = getlogin();
+	return tmp == NULL;
+}
+
 /* This will check to see if the errno is of the set that you pass in a 
 	comma delimited format. You MUST use ENDLIST to dictate the end of list.
 	This call only makes sense in the event of a failure by the system
@@ -3634,6 +3640,7 @@ int BasicUid(void)
 	EXPECTED_RESP;
 	passed = expect_zng(SUCCESS, unlink_test(tf));
 	EXPECTED_RESP;
+	passed = expect_zng(SUCCESS, getlogin_test());
 
 	testbreak();
 	return block;
@@ -4619,7 +4626,7 @@ int main(int argc, char **argv)
 		{BasicGetSetlimit, "BasicGetSetLimit: Can I change proc limits?"},
 	};
 
-	printf("Condor System Call Tester $Revision: 1.3 $\n\n");
+	printf("Condor System Call Tester $Revision: 1.4 $\n\n");
 
 	printf("The length of the string:\n'%s'\nIs: %d\n\n", 
 		STR(passage), strlen(passage));

@@ -131,7 +131,6 @@ REMOTE_CONDOR_register_job_info( ClassAd* ad )
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
-	int result = 0;
 
 	dprintf ( D_SYSCALLS, "Doing CONDOR_register_job_info\n" );
 
@@ -404,7 +403,7 @@ REMOTE_CONDOR_begin_execution( void )
 #define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "i/o error result is %d, errno is %d\n", x, errno);errno=ETIMEDOUT;return x;}
 
 int
-REMOTE_CONDOR_open( char *  path , open_flags_t flags , int   lastarg)
+REMOTE_CONDOR_open( char const *  path , open_flags_t flags , int   lastarg)
 {
         int     rval;
         condor_errno_t     terrno;
@@ -419,7 +418,7 @@ REMOTE_CONDOR_open( char *  path , open_flags_t flags , int   lastarg)
 		ON_ERROR_RETURN( result );
         result = syscall_sock->code(lastarg);
 		ON_ERROR_RETURN( result );
-        result = syscall_sock->code(path);
+        result = syscall_sock->put(path);
 		ON_ERROR_RETURN( result );
         result = syscall_sock->end_of_message();
 		ON_ERROR_RETURN( result );
@@ -796,12 +795,14 @@ REMOTE_CONDOR_fsync(int   fd)
 }
 
 int
-REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *  actual_url, int url_buflen)
+REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *&actual_url)
 {
         int     rval;
         condor_errno_t  terrno;
  
         CurrentSysCall = CONDOR_get_file_info_new;
+
+		ASSERT( actual_url == NULL );
  
         syscall_sock->encode();
         ASSERT( syscall_sock->code(CurrentSysCall) );
@@ -816,7 +817,7 @@ REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *  actual_url, int u
                 errno = (int)terrno;
                 return rval;
         }
-        ASSERT( syscall_sock->get(actual_url, url_buflen) );
+        ASSERT( syscall_sock->get(actual_url) );
         ASSERT( syscall_sock->end_of_message() );
 
         return rval;

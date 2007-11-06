@@ -874,11 +874,11 @@ VMUniverseMgr::freeVM(pid_t s_pid)
 		return;
 	}
 
-	char pid_dir[_POSIX_PATH_MAX];
+	MyString pid_dir;
 	Directory execute_dir(info->m_execute_dir.Value(), PRIV_ROOT);
-	sprintf(pid_dir, "dir_%ld", (long)s_pid);
+	pid_dir.sprintf("dir_%ld", (long)s_pid);
 
-	if( execute_dir.Find_Named_Entry( pid_dir ) ) {
+	if( execute_dir.Find_Named_Entry( pid_dir.Value() ) ) {
 		// starter didn't exit cleanly,
 		// maybe it seems to be killed by startd.
 		// So we need to make sure that VM is really destroyed. 

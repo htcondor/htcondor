@@ -217,12 +217,10 @@ main_pre_dc_init( int argc, char* argv[] )
 	}
 
 		// if we're still here, stash the cwd for future reference
-	char cwd[_POSIX_PATH_MAX];
-	if( getcwd( cwd, _POSIX_PATH_MAX ) == NULL ) {
+	orig_cwd = getcwd( NULL, 0);
+	if( orig_cwd == NULL ) {
 		dprintf( D_ALWAYS, "ERROR calling getcwd(): %s (errno %d)\n", 
 				 strerror(errno), errno );
-	} else {
-		orig_cwd = strdup(cwd);
 	}
 
 		// if we're the gridshell, assume a "-f" option.  all that

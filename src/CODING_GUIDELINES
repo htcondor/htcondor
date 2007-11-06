@@ -407,7 +407,10 @@ new code (or major re-writes of old code) should try to conform to POSIX
 instead.  
 
 The macro MAXPATHLEN is not generally avaiable on POSIX sytems.   Use
-_POSIX_PATH_MAX from <limits.h>
+_POSIX_PATH_MAX from <limits.h> if you really must.  In most cases, it
+is better to use a dynamic buffer (e.g. MyString) rather than a fixed length
+buffer, because many platforms support path names much longer than
+_POSIX_PATH_MAX.
 
 The wait3() routine, and the structure "union wait" are not generally
 available on POSIX sytems.  Use wait() or waitpid(), and the

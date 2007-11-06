@@ -65,7 +65,7 @@ public:
 
 protected:
 	bool	hasMainDir;
-	char    mainDir[_POSIX_PATH_MAX];
+	MyString mainDir;
 	int		m_objectNum;
 	bool	m_inMainDir;
 

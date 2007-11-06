@@ -124,9 +124,9 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 			// For now, the gridshell doesn't need its own special
 			// scratch directory, we're just going to use whatever
 			// EXECUTE is, or our CWD if that's not defined...
-		sprintf( WorkingDir, "%s", Execute );
+		WorkingDir = Execute;
 	} else {
-		sprintf( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
+		WorkingDir.sprintf( "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 				 (long)daemonCore->getpid() );
 	}
 
@@ -523,7 +523,7 @@ CStarter::createTempExecuteDir( void )
 		// scratch dir, we're just using whatever we got from the
 		// scheduler we're running under.
 	if( is_gridshell ) { 
-		dprintf( D_ALWAYS, "gridshell running in: \"%s\"\n", WorkingDir ); 
+		dprintf( D_ALWAYS, "gridshell running in: \"%s\"\n", WorkingDir.Value() ); 
 		return true;
 	}
 
@@ -539,12 +539,12 @@ CStarter::createTempExecuteDir( void )
 #endif
 
 	if (privsep_enabled()) {
-		privsep_helper.initialize_sandbox(WorkingDir);
+		privsep_helper.initialize_sandbox(WorkingDir.Value());
 	}
 	else {
-		if( mkdir(WorkingDir, 0777) < 0 ) {
+		if( mkdir(WorkingDir.Value(), 0777) < 0 ) {
 			dprintf( D_FAILURE|D_ALWAYS, "couldn't create dir %s: %s\n", 
-					 WorkingDir, strerror(errno) );
+					 WorkingDir.Value(), strerror(errno) );
 			set_priv( priv );
 			return false;
 		}
@@ -562,7 +562,7 @@ CStarter::createTempExecuteDir( void )
 		const char * nobody_login = get_user_loginname();
 		ASSERT(nobody_login);
 		dirperm.init(nobody_login);
-		bool ret_val = dirperm.set_acls( WorkingDir );
+		bool ret_val = dirperm.set_acls( WorkingDir.Value() );
 		if ( !ret_val ) {
 			dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON EXECUTE DIRECTORY\n");
 			set_priv( priv );
@@ -605,12 +605,12 @@ CStarter::createTempExecuteDir( void )
 			}
 
 			if ( efs_support ) {
-				wchar_t *WorkingDir_w = new wchar_t[strlen(WorkingDir)+1];
-				swprintf(WorkingDir_w, L"%S", WorkingDir);
+				wchar_t *WorkingDir_w = new wchar_t[WorkingDir.Length()+1];
+				swprintf(WorkingDir_w, L"%S", WorkingDir.Value());
 				EncryptionDisable(WorkingDir_w, FALSE);
 				delete[] WorkingDir_w;
 				
-				if ( EncryptFile(WorkingDir) == 0 ) {
+				if ( EncryptFile(WorkingDir.Value()) == 0 ) {
 					dprintf(D_ALWAYS, "Could not encrypt execute directory "
 							"(err=%li)\n", GetLastError());
 				}
@@ -633,13 +633,13 @@ CStarter::createTempExecuteDir( void )
 
 #endif /* WIN32 */
 
-	if( chdir(WorkingDir) < 0 ) {
-		dprintf( D_FAILURE|D_ALWAYS, "couldn't move to %s: %s\n", WorkingDir,
+	if( chdir(WorkingDir.Value()) < 0 ) {
+		dprintf( D_FAILURE|D_ALWAYS, "couldn't move to %s: %s\n", WorkingDir.Value(),
 				 strerror(errno) ); 
 		set_priv( priv );
 		return false;
 	}
-	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir );
+	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir.Value() );
 	set_priv( priv );
 	return true;
 }
@@ -998,7 +998,7 @@ CStarter::SpawnJob( void )
 			job = new VanillaProc( jobAd );
 			break;
 		case CONDOR_UNIVERSE_JAVA:
-			job = new JavaProc( jobAd, WorkingDir );
+			job = new JavaProc( jobAd, WorkingDir.Value() );
 			break;
 	    case CONDOR_UNIVERSE_PARALLEL:
 			job = new ParallelProc( jobAd );

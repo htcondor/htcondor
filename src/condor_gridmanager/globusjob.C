@@ -190,15 +190,15 @@ char *
 globusJobId( const char *contact )
 {
 	static char buff[1024];
-	char url_scheme[_POSIX_PATH_MAX];
-	char url_host[_POSIX_PATH_MAX];
-	char url_path[_POSIX_PATH_MAX];
+	MyString url_scheme;
+	MyString url_host;
+	MyString url_path;
 	int url_port;
 
 	snprintf( buff, sizeof(buff), "%s", contact );
 	filename_url_parse( buff, url_scheme, url_host, &url_port, url_path );
 
-	snprintf( buff, sizeof(buff), "%s://%s%s", url_scheme, url_host, url_path );
+	snprintf( buff, sizeof(buff), "%s://%s%s", url_scheme.Value(), url_host.Value(), url_path.Value() );
 	return buff;
 }
 
@@ -599,9 +599,12 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	int bool_value;
-	char buff[4096];
-	char buff2[_POSIX_PATH_MAX];
-	char iwd[_POSIX_PATH_MAX];
+	MyString iwd;
+	MyString job_output;
+	MyString job_error;
+	MyString grid_resource;
+	MyString grid_job_id;
+	MyString grid_proxy_subject;
 	bool job_already_submitted = false;
 	MyString error_string = "";
 	char *gahp_path = NULL;
@@ -697,30 +700,28 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		}
 		free(args);
 	}
-	snprintf( buff, sizeof(buff), "GT2/%s",
+	grid_proxy_subject.sprintf( "GT2/%s",
 			  jobProxy->subject->subject_name );
-	gahp = new GahpClient( buff, gahp_path, &gahp_args );
+	gahp = new GahpClient( grid_proxy_subject.Value(), gahp_path, &gahp_args );
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
 	jobAd->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, jmVersion );
 
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
-	if ( buff[0] != '\0' ) {
+	jobAd->LookupString( ATTR_GRID_RESOURCE, grid_resource );
+	if ( grid_resource.Length() ) {
 		const char *token;
-		MyString str = buff;
 
-		str.Tokenize();
+		grid_resource.Tokenize();
 
-		token = str.GetNextToken( " ", false );
+		token = grid_resource.GetNextToken( " ", false );
 		if ( !token || stricmp( token, "gt2" ) ) {
 			error_string.sprintf( "%s not of type gt2", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
-		token = str.GetNextToken( " ", false );
+		token = grid_resource.GetNextToken( " ", false );
 		if ( token && *token ) {
 			resourceManagerString = strdup( token );
 		} else {
@@ -735,9 +736,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		goto error_exit;
 	}
 
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
-	if ( buff[0] != '\0' ) {
+	jobAd->LookupString( ATTR_GRID_JOB_ID, grid_job_id );
+	if ( grid_job_id.Length() ) {
 		if ( jmVersion == GRAM_V_UNKNOWN ) {
 			dprintf(D_ALWAYS,
 					"(%d.%d) Non-NULL contact string and unknown gram version!\n",
@@ -745,18 +745,17 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		}
 
 		const char *token;
-		MyString str = buff;
 
-		str.Tokenize();
+		grid_job_id.Tokenize();
 
-		token = str.GetNextToken( " ", false );
+		token = grid_job_id.GetNextToken( " ", false );
 		if ( !token || stricmp( token, "gt2" ) ) {
 			error_string.sprintf( "%s not of type gt2", ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
 
-		token = str.GetNextToken( " ", false );
-		token = str.GetNextToken( " ", false );
+		token = grid_job_id.GetNextToken( " ", false );
+		token = grid_job_id.GetNextToken( " ", false );
 		if ( !token ) {
 			error_string.sprintf( "%s missing job ID",
 								  ATTR_GRID_JOB_ID );
@@ -786,30 +785,28 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 	globusError = GLOBUS_SUCCESS;
 
-	iwd[0] = '\0';
-	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
-		int len = strlen(iwd);
+	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && iwd.Length() ) {
+		int len = iwd.Length();
 		if ( len > 1 && iwd[len - 1] != '/' ) {
-			strcat( iwd, "/" );
+			iwd += "/";
 		}
 	} else {
-		strcpy( iwd, "/" );
+		iwd = "/";
 	}
 
-	buff[0] = '\0';
-	buff2[0] = '\0';
-	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
-		 strcmp( buff, NULL_FILE ) ) {
+	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, job_output) && job_output.Length() &&
+		 strcmp( job_output.Value(), NULL_FILE ) ) {
 
 		if ( !jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, bool_value ) ||
 			 bool_value ) {
+			MyString full_job_output;
 
-			if ( buff[0] != '/' ) {
-				strcat( buff2, iwd );
+			if ( job_output[0] != '/' ) {
+				 full_job_output = iwd;
 			}
 
-			strcat( buff2, buff );
-			localOutput = strdup( buff2 );
+			full_job_output += job_output;
+			localOutput = strdup( full_job_output.Value() );
 
 			bool_value = 1;
 			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
@@ -818,20 +815,19 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		}
 	}
 
-	buff[0] = '\0';
-	buff2[0] = '\0';
-	if ( jobAd->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
-		 strcmp( buff, NULL_FILE ) ) {
+	if ( jobAd->LookupString(ATTR_JOB_ERROR, job_error) && job_error.Length() &&
+		 strcmp( job_error.Value(), NULL_FILE ) ) {
 
 		if ( !jobAd->LookupBool( ATTR_TRANSFER_ERROR, bool_value ) ||
 			 bool_value ) {
+			MyString full_job_error;
 
-			if ( buff[0] != '/' ) {
-				strcat( buff2, iwd );
+			if ( job_error[0] != '/' ) {
+				full_job_error = iwd;
 			}
 
-			strcat( buff2, buff );
-			localError = strdup( buff2 );
+			full_job_error += job_error;
+			localError = strdup( full_job_error.Value() );
 
 			bool_value = 1;
 			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );
@@ -3095,7 +3091,7 @@ MyString *GlobusJob::buildSubmitRSL()
 			}
 
 			char *remaps = NULL;
-			char new_name[_POSIX_PATH_MAX*3];
+			MyString new_name;
 			jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
 
 			filelist.rewind();

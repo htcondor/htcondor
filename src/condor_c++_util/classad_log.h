@@ -134,7 +134,8 @@ private:
 	void LogState(FILE* fp);
 	FILE* log_fp;
 
-	char log_filename[_POSIX_PATH_MAX];
+	char const *logFilename() { return log_filename_buf.Value(); }
+	MyString log_filename_buf;
 	Transaction *active_transaction;
 	int max_historical_logs;
 	unsigned long historical_sequence_number;

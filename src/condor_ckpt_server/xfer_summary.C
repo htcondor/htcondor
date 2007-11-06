@@ -33,6 +33,7 @@
 #include "condor_version.h"
 #include "my_hostname.h"
 #include "internet.h"
+#include "condor_getcwd.h"
 
 
 extern "C" {
@@ -80,8 +81,7 @@ XferSummary::init()
 	if( subnet ) { free( subnet ); }
 	subnet = calc_subnet_name();
 
-	/* pwd is an array defined for this class to be of path_max size */
-	if( ! getcwd( pwd, _POSIX_PATH_MAX ) ) {
+	if( ! condor_getcwd( pwd ) ) {
 		EXCEPT( "Can't get working directory." );
 	}
 }
@@ -175,7 +175,7 @@ XferSummary::time_out(time_t now, char *hostaddr)
 	tmp = strchr( line, '\n' );
 	strcpy( tmp, "\"" );
 	info.Insert(line);
-	sprintf(line, "Disk = %d", sysapi_disk_space(pwd) );
+	sprintf(line, "Disk = %d", sysapi_disk_space(pwd.Value()) );
 	info.Insert(line);
 	
 	// Send to collector

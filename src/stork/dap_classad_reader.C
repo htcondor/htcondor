@@ -101,7 +101,7 @@ int getValue(classad::ClassAd *currentAd, char *attr, char *attrval)
 //---------------------------------------
 // USED TO READ FROM THE HISTORY LOGS
 //----------------------------------------
-ClassAd_Reader::ClassAd_Reader(char *fname)
+ClassAd_Reader::ClassAd_Reader(const char *fname)
 {
 
   currentAd = NULL;

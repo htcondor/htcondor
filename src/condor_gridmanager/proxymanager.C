@@ -716,19 +716,19 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 
 	// Set up environnment for myproxy-get-delegation
 	Env myEnv;
-	char buff[_POSIX_PATH_MAX];
+	MyString buff;
 
 	if (myProxyEntry->myproxy_server_dn) {
-		sprintf (buff, "MYPROXY_SERVER_DN=%s",
+		buff.sprintf( "MYPROXY_SERVER_DN=%s",
 				 myProxyEntry->myproxy_server_dn);
-		myEnv.SetEnv(buff);
-		dprintf (D_FULLDEBUG, "%s\n", buff);
+		myEnv.SetEnv(buff.Value());
+		dprintf (D_FULLDEBUG, "%s\n", buff.Value());
 	}
 
 
-	sprintf (buff,"X509_USER_PROXY=%s", proxy_filename);
-	myEnv.SetEnv (buff);
-	dprintf (D_FULLDEBUG, "%s\n", buff);
+	buff.sprintf("X509_USER_PROXY=%s", proxy_filename);
+	myEnv.SetEnv (buff.Value());
+	dprintf (D_FULLDEBUG, "%s\n", buff.Value());
 
 
 	// Print password (this will end up in stdin for myproxy-get-delegation)

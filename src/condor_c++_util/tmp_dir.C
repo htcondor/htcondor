@@ -30,6 +30,7 @@
 #include "basename.h"
 #include "condor_debug.h"
 #include "tmp_dir.h"
+#include "condor_getcwd.h"
 
 int TmpDir::nextObjectNum = 0;
 
@@ -70,7 +71,7 @@ TmpDir::Cd2TmpDir(const char *directory, MyString &errMsg)
 	errMsg = "";
 
 	if ( !hasMainDir ) {
-		if ( getcwd( mainDir, sizeof(mainDir) ) ) {
+		if ( condor_getcwd( mainDir ) ) {
 		 	hasMainDir = true;
 		} else {
 			errMsg += MyString( "Unable to get cwd: " ) +
@@ -120,7 +121,7 @@ TmpDir::Cd2MainDir(MyString &errMsg)
 	errMsg = "";
 
 	if ( hasMainDir ) {
-		if ( chdir( mainDir ) != 0 ) {
+		if ( chdir( mainDir.Value() ) != 0 ) {
 			errMsg += MyString( "Unable to chdir to " ) + mainDir +
 					": " + strerror( errno );
 			dprintf( D_FULLDEBUG, "ERROR: %s\n", errMsg.Value() );

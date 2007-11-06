@@ -42,6 +42,7 @@
 #include "condor_config.h"
 #include "../condor_ckpt_server/server_interface.h"
 #include "env.h"
+#include "condor_getcwd.h"
 
 #include "daemon.h"
 #include "stream.h"
@@ -68,7 +69,7 @@ extern "C" {
 	int whoami( FILE *fp );
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void handle_termination( PROC *proc, char *notification,
-				int *jobstatus, char *coredir );
+				int *jobstatus, char const *coredir );
 	int DoCleanup();
 }
 
@@ -520,12 +521,11 @@ get_local_rusage( struct rusage *bsd_rusage )
 
 void
 handle_termination( PROC *proc, char *notification, int *jobstatus,
-			char *coredir )
+			char const *coredir )
 {
 	MyString escapedbuf;
-	char buf[4096];
 	int status = *jobstatus;
-	char my_coredir[_POSIX_PATH_MAX];
+	MyString coredir_buf;
 	dprintf(D_FULLDEBUG, "handle_termination() called.\n");
 
 	ASSERT (JobAd != NULL );
@@ -555,27 +555,22 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		proc->status = COMPLETED;
 		proc->completion_date = time( (time_t *)0 );
 
-		sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_BY_SIGNAL);
-		JobAd->Insert(buf);
-		sprintf(buf, "%s = %d", ATTR_ON_EXIT_CODE, WEXITSTATUS(status));
-		JobAd->Insert(buf);
+		JobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL,false);
+		JobAd->Assign( ATTR_ON_EXIT_CODE, WEXITSTATUS(status));
 
 		// set up the terminate pending "state"
-		sprintf(buf, "%s = TRUE", ATTR_TERMINATION_PENDING);
-		JobAd->Insert(buf);
+		JobAd->Assign(ATTR_TERMINATION_PENDING,true);
 
 		// this can have newlines and crap in it, for now, just replace them
 		// with spaces. I know it is ugly, but the classadlog class which
 		// writes the job queue log file can't have literal newlines and such
 		// in the values. :(
-		escapedbuf.sprintf("%s = \"%s\"", 
-							ATTR_TERMINATION_REASON, notification);
+		escapedbuf = notification;
 		escapedbuf.replaceString("\n", " ");
 		escapedbuf.replaceString("\t", " ");
-		JobAd->Insert(escapedbuf.Value());
+		JobAd->Assign(ATTR_TERMINATION_REASON,escapedbuf.Value());
 
-		sprintf(buf, "%s = %d", ATTR_TERMINATION_EXITREASON, ExitReason);
-		JobAd->Insert(buf);
+		JobAd->Assign(ATTR_TERMINATION_EXITREASON, ExitReason);
 
 		break;
 
@@ -593,16 +588,12 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		/* in here, we disregard what the user wanted.
 			Otherwise doing a condor_rm will result in the
 			wanting to be resubmitted or held by the shadow. */
-		sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
-		JobAd->Insert(buf);
-		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
-		JobAd->Insert(buf);
+		JobAd->Assign(ATTR_ON_EXIT_HOLD_CHECK,false);
+		JobAd->Assign(ATTR_ON_EXIT_REMOVE_CHECK,true);
 
 		// set up the terminate pending "state"
-		sprintf(buf, "%s = TRUE", ATTR_TERMINATION_PENDING);
-		JobAd->Insert(buf);
-		sprintf(buf, "%s = %d", ATTR_TERMINATION_EXITREASON, ExitReason);
-		JobAd->Insert(buf);
+		JobAd->Assign(ATTR_TERMINATION_PENDING,true);
+		JobAd->Assign(ATTR_TERMINATION_EXITREASON,ExitReason);
 		break;
 
 	 case SIGQUIT:	/* Kicked off, but with a checkpoint */
@@ -613,21 +604,18 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		/* in here, we disregard what the user wanted.
 			Otherwise doing a condor_vacate will result in the
 			wanting to be resubmitted or held by the shadow. */
-		sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
-		JobAd->Insert(buf);
+		JobAd->Assign(ATTR_ON_EXIT_HOLD_CHECK,false);
 
 		// this can have newlines and crap in it, for now, just replace them
 		// with spaces. I know it is ugly, but the classadlog class which
 		// writes the job queue log file can't have literal newlines and such
 		// in the values. :(
-		escapedbuf.sprintf("%s = \"%s\"", 
-							ATTR_TERMINATION_REASON, notification);
+		escapedbuf = notification;
 		escapedbuf.replaceString("\n", " ");
 		escapedbuf.replaceString("\t", " ");
-		JobAd->Insert(escapedbuf.Value());
+		JobAd->Assign(ATTR_TERMINATION_REASON, escapedbuf.Value());
 
-		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
-		JobAd->Insert(buf);
+		JobAd->Assign(ATTR_ON_EXIT_REMOVE_CHECK,true);
 
 		/* add in the signature of the checkpointing host for this 
 			completed ckpt */
@@ -640,31 +628,28 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 
 	 default:	/* Job exited abnormally */
 		if (coredir == NULL) {
-			coredir = my_coredir;
-#if defined(Solaris)
-			getcwd(coredir,_POSIX_PATH_MAX);
-#else
-			getwd( coredir );
-#endif
+			ASSERT( condor_getcwd(coredir_buf) );
+			coredir = coredir_buf.Value();
 		}
 		if( WCOREDUMP(status) ) {
+			MyString corepath;
 			if( strcmp(proc->rootdir, "/") == 0 ) {
 				(void)sprintf(notification,
 					"was killed by signal %d.\nCore file is %s/core.%d.%d.",
 					 WTERMSIG(status) ,
 						coredir, proc->id.cluster, proc->id.proc);
-				sprintf(buf, "%s = \"%s/core.%d.%d\"", ATTR_JOB_CORE_FILENAME,
+				corepath.sprintf("%s/core.%d.%d",
 							coredir, proc->id.cluster, proc->id.proc);
 			} else {
 				(void)sprintf(notification,
 					"was killed by signal %d.\nCore file is %s%s/core.%d.%d.",
 					 WTERMSIG(status) ,proc->rootdir, coredir, 
 					 proc->id.cluster, proc->id.proc);
-				sprintf(buf, "%s = \"%s%s/core.%d.%d\"", ATTR_JOB_CORE_FILENAME,
+				corepath.sprintf("%s%s/core.%d.%d",
 							proc->rootdir, coredir, proc->id.cluster, 
 							proc->id.proc);
 			}
-			JobAd->Insert(buf);
+			JobAd->Assign(ATTR_JOB_CORE_FILENAME,corepath.Value());
 			ExitReason = JOB_COREDUMPED;
 		} else {
 			(void)sprintf(notification,
@@ -676,27 +661,22 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		proc->status = COMPLETED;
 		proc->completion_date = time( (time_t *)0 );
 
-		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_BY_SIGNAL);
-		JobAd->Insert(buf);
-		sprintf(buf, "%s = %d", ATTR_ON_EXIT_SIGNAL, WTERMSIG(status));
-		JobAd->Insert(buf);
+		JobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL,true);
+		JobAd->Assign(ATTR_ON_EXIT_SIGNAL,WTERMSIG(status));
 
 		// set up the terminate pending "state"
-		sprintf(buf, "%s = TRUE", ATTR_TERMINATION_PENDING);
-		JobAd->Insert(buf);
+		JobAd->Assign(ATTR_TERMINATION_PENDING,true);
 
 		// this can have newlines and crap in it, for now, just replace them
 		// with spaces. I know it is ugly, but the classadlog class which
 		// writes the job queue log file can't have literal newlines and such
 		// in the values. :(
-		escapedbuf.sprintf("%s = \"%s\"", 
-							ATTR_TERMINATION_REASON, notification);
+		escapedbuf = notification;
 		escapedbuf.replaceString("\n", " ");
 		escapedbuf.replaceString("\t", " ");
-		JobAd->Insert(escapedbuf.Value());
+		JobAd->Assign(ATTR_TERMINATION_REASON,escapedbuf.Value());
 
-		sprintf(buf, "%s = %d", ATTR_TERMINATION_EXITREASON, ExitReason);
-		JobAd->Insert(buf);
+		JobAd->Assign(ATTR_TERMINATION_EXITREASON, ExitReason);
 
 		break;
 	}
@@ -789,7 +769,7 @@ part_send_job(
 	      char *host,
 	      int &reason,
 	      char *capability,
-	      char *schedd,
+	      char * /*schedd*/,
 	      PROC *proc,
 	      int &sd1,
 	      int &sd2,
@@ -924,21 +904,16 @@ part_send_job(
 	  // grab the IP address from the ReliSock, since we konw the
 	  // startd always uses the same IP address for all of its
 	  // communication.
-  char sinfulstring[40];
+  char sinfulstring[SINFUL_STRING_BUF_SIZE];
 
-  // We can't use snprintf as it isn't availble on all platforms. We'll put
-  // it in the util lib post-6.2.0
-  // epaulson 7-21-2000
-  //snprintf(sinfulstring, 40, "<%s:%d>", sock->endpoint_ip_str(), ports.port1);
-  sprintf(sinfulstring, "<%s:%d>", sock->endpoint_ip_str(), ports.port1);
+  snprintf(sinfulstring, SINFUL_STRING_BUF_SIZE, "<%s:%d>", sock->endpoint_ip_str(), ports.port1);
+
   if( (sd1 = do_connect(sinfulstring, (char *)0, (u_short)ports.port1)) < 0 ) {
     dprintf( D_ALWAYS, "failed to connect to scheduler on %s\n", sinfulstring );
 	goto returnfailure;
   }
  
-  // No snprintf. See above - epaulson 7-21-2000
-  //snprintf(sinfulstring, 40, "<%s:%d>", sock->endpoint_ip_str(), ports.port2);
-  sprintf(sinfulstring, "<%s:%d>", sock->endpoint_ip_str(), ports.port2);
+  snprintf(sinfulstring, SINFUL_STRING_BUF_SIZE, "<%s:%d>", sock->endpoint_ip_str(), ports.port2);
   if( (sd2 = do_connect(sinfulstring, (char *)0, (u_short)ports.port2)) < 0 ) {
     dprintf( D_ALWAYS, "failed to connect to scheduler on %s\n", sinfulstring );
 	close(sd1);

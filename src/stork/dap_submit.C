@@ -182,7 +182,7 @@ int main(int argc, char **argv)
   classad::ClassAd *currentAd = NULL;
   int leftparan = 0;
   FILE *adfile;
-  char fname[_POSIX_PATH_MAX];
+  MyString fname;
   char *lognotes = NULL;
   int read_from_stdin = 0;
   struct stork_global_opts global_opts;
@@ -229,15 +229,15 @@ int main(int argc, char **argv)
 			}
 		case 1:
 			if(read_from_stdin) {
-				strcpy(fname, "stdin");
+				fname = "stdin";
 				global_opts.server = argv[i];
 			} else {
-				strcpy(fname, argv[i]);
+				fname = argv[i];
 			}
 		  break;
 	  case 2:
 			global_opts.server = argv[i++];
-			strcpy(fname, argv[i]);
+			fname = argv[i];
 		  break;
 	  default:
 		  stork_print_usage(stderr, argv[0], USAGE, true);
@@ -247,9 +247,9 @@ int main(int argc, char **argv)
   //open the submit file
   if(read_from_stdin) adfile = stdin;
   else {
-    adfile = safe_fopen_wrapper(fname,"r");
+    adfile = safe_fopen_wrapper(fname.Value(),"r");
     if (adfile == NULL) {
-      fprintf(stderr, "Cannot open submit file %s: %s\n",fname, strerror(errno) );
+      fprintf(stderr, "Cannot open submit file %s: %s\n",fname.Value(), strerror(errno) );
       exit(1);
     }
   }
@@ -268,7 +268,7 @@ int main(int argc, char **argv)
       if (c == '[') leftparan ++; 
       
       if (c == EOF) {
-	fprintf (stderr, "Invalid Stork submit file %s\n", fname);
+	fprintf (stderr, "Invalid Stork submit file %s\n", fname.Value());
 	return 1;
       }
       

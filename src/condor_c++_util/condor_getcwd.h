@@ -20,18 +20,15 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef JAVA_CONFIG_H
-#define JAVA_CONFIG_H
+#ifndef _CONDOR_GETCWD_H_
+#define _CONDOR_GETCWD_H_
 
-#include "condor_arglist.h"
+class MyString;
 
-/*
-Extract the java configuration from the local config files.
-The name of the java executable gets put in 'cmd', and the necessary
-arguments get put in 'args'.  If you have other dirs or jarfiles
-that should be placed in the classpath, provide them in 'extra_classpath'.
-*/
-
-int java_config( MyString &cmd, ArgList *args, StringList *extra_classpath );
+/* condor_getcwd() gets the current working directory, creating as large
+   a buffer as necessary.
+   returns: true on success, false on failure (errno contains reason)
+ */
+bool condor_getcwd(MyString &path);
 
 #endif

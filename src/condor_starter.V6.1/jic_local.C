@@ -361,11 +361,9 @@ JICLocal::initJobInfo( void )
 				 "Can't find %s in job ad\n", ATTR_JOB_CMD );
 		return false;
 	} else {
-		char tmp[_POSIX_PATH_MAX];
 			// put the orig job name in class ad
-		sprintf(tmp, "%s=\"%s\"", ATTR_ORIG_JOB_CMD, orig_job_name);
 		dprintf(D_ALWAYS, "setting the orig job name in starter\n");
-		job_ad->InsertOrUpdate (tmp);
+		job_ad->Assign (ATTR_ORIG_JOB_CMD,orig_job_name);
 	}
 
 		// stash the iwd name in orig_job_iwd
@@ -374,11 +372,9 @@ JICLocal::initJobInfo( void )
 				 "Can't find %s in job ad\n", ATTR_JOB_IWD );
 		return false;
 	} else {
-		char tmp[_POSIX_PATH_MAX];
 			// put the orig job iwd in class ad
-		sprintf(tmp, "%s=\"%s\"", ATTR_ORIG_JOB_IWD, orig_job_iwd);
 		dprintf(D_ALWAYS, "setting the orig job iwd in starter\n");
-		job_ad->InsertOrUpdate (tmp);
+		job_ad->Assign(ATTR_ORIG_JOB_IWD,orig_job_iwd);
 		free(orig_job_iwd);
 	}
 

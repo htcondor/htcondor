@@ -551,7 +551,7 @@ DeleteAttribute( int cluster_id, int proc_id, char const *attr_name )
 }
 
 int
-SendSpoolFile( char *filename )
+SendSpoolFile( char const *filename )
 {
 	int	rval;
 
@@ -559,7 +559,7 @@ SendSpoolFile( char *filename )
 
 		qmgmt_sock->encode();
 		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(filename) );
+		assert( qmgmt_sock->put(filename) );
 		assert( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();

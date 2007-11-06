@@ -43,7 +43,7 @@ int
 main( int argc, char* argv[] )
 {
 	char* my_path = getExecPath();
-	char* my_cwd = getcwd( NULL, _POSIX_PATH_MAX );
+	char* my_cwd = getcwd( NULL, 0 );
 
 	int i;
 	for( i=0; i<argc; i++ ) {

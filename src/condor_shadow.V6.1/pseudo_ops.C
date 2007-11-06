@@ -32,16 +32,17 @@
 #include "condor_config.h"
 #include "exit.h"
 #include "filename_tools.h"
+#include "basename.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
 extern RemoteResource *parallelMasterResource;
 
-static void append_buffer_info( MyString &url, char *method, char *path );
-static int use_append( char *method, char *path );
-static int use_compress( char *method, char *path );
-static int use_fetch( char *method, char *path );
+static void append_buffer_info( MyString &url, char *method, char const *path );
+static int use_append( char *method, const char *path );
+static int use_compress( char *method, const char *path );
+static int use_fetch( char *method, const char *path );
 static int use_local_access( const char *file );
 static int use_special_access( const char *file );
 static int access_via_afs( const char *file );
@@ -193,15 +194,16 @@ moved around, but there is no such notion in this shadow,
 so CurrentWorkingDir is replaced with the job's iwd.
 */
  
-static void complete_path( const char *short_path, char *full_path )
+static void complete_path( const char *short_path, MyString &full_path )
 {
 	if(short_path[0]==DIR_DELIM_CHAR) {
-		strcpy(full_path,short_path);
+		full_path = short_path;
 	} else {
 		// strcpy(full_path,CurrentWorkingDir);
-		strcpy(full_path,Shadow->getIwd());
-		strcat(full_path,DIR_DELIM_STRING);
-		strcat(full_path,short_path);
+		full_path.sprintf("%s%s%s",
+						  Shadow->getIwd(),
+						  DIR_DELIM_STRING,
+						  short_path);
 	}
 }
 
@@ -214,10 +216,10 @@ the file from.  For example, joe/data might become buffer:remote:/usr/joe/data
 int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 {
 	MyString remap_list;
-	char	split_dir[_POSIX_PATH_MAX];
-	char	split_file[_POSIX_PATH_MAX];
-	char	full_path[_POSIX_PATH_MAX];
-	char	remap[_POSIX_PATH_MAX];
+	MyString	split_dir;
+	MyString	split_file;
+	MyString	full_path;
+	MyString	remap;
 	MyString urlbuf;
 	char	*method;
 
@@ -235,27 +237,27 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 
 	if(Shadow->getJobAd()->LookupString(ATTR_FILE_REMAPS,remap_list) &&
 	  (filename_remap_find( remap_list.Value(), logical_name, remap ) ||
-	   filename_remap_find( remap_list.Value(), split_file, remap ) ||
-	   filename_remap_find( remap_list.Value(), full_path, remap ))) {
+	   filename_remap_find( remap_list.Value(), split_file.Value(), remap ) ||
+	   filename_remap_find( remap_list.Value(), full_path.Value(), remap ))) {
 
-		dprintf(D_SYSCALLS,"\tremapped to: %s\n",remap);
+		dprintf(D_SYSCALLS,"\tremapped to: %s\n",remap.Value());
 
 		/* If the remap is a full URL, return right away */
 		/* Otherwise, continue processing */
 
-		if(strchr(remap,':')) {
+		if(strchr(remap.Value(),':')) {
 			dprintf(D_SYSCALLS,"\tremap is complete url\n");
-			actual_url = strdup(remap);
+			actual_url = strdup(remap.Value());
 			return 0;
 		} else {
 			dprintf(D_SYSCALLS,"\tremap is simple file\n");
-			complete_path( remap, full_path );
+			complete_path( remap.Value(), full_path );
 		}
 	} else {
 		dprintf(D_SYSCALLS,"\tnot remapped\n");
 	}
 
-	dprintf( D_SYSCALLS,"\tfull_path = \"%s\"\n", full_path );
+	dprintf( D_SYSCALLS,"\tfull_path = \"%s\"\n", full_path.Value() );
 
 	/* Now, we have a full pathname. */
 	/* Figure out what url modifiers to slap on it. */
@@ -263,33 +265,33 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 #ifdef HPUX
 	/* I have no idea why this is happening, but I have seen it happen many
 	 * times on the HPUX version, so here is a quick hack -Todd 5/19/95 */
-	if ( strcmp(full_path,"/usr/lib/nls////strerror.cat") == 0 )
-		strcpy(full_path,"/usr/lib/nls/C/strerror.cat\0");
+	if ( full_path == "/usr/lib/nls////strerror.cat" )
+		full_path = "/usr/lib/nls/C/strerror.cat\0";
 #endif
 
-	if( use_special_access(full_path) ) {
+	if( use_special_access(full_path.Value()) ) {
 		method = "special";
-	} else if( use_local_access(full_path) ) {
+	} else if( use_local_access(full_path.Value()) ) {
 		method = "local";
-	} else if( access_via_afs(full_path) ) {
+	} else if( access_via_afs(full_path.Value()) ) {
 		method = "local";
-	} else if( access_via_nfs(full_path) ) {
+	} else if( access_via_nfs(full_path.Value()) ) {
 		method = "local";
 	} else {
 		method = "remote";
 	}
 
-	if( use_fetch(method,full_path) ) {
+	if( use_fetch(method,full_path.Value()) ) {
 		urlbuf += "fetch:";
 	}
 
-	if( use_compress(method,full_path) ) {
+	if( use_compress(method,full_path.Value()) ) {
 		urlbuf += "compress:";
 	}
 
-	append_buffer_info(urlbuf,method,full_path);
+	append_buffer_info(urlbuf,method,full_path.Value());
 
-	if( use_append(method,full_path) ) {
+	if( use_append(method,full_path.Value()) ) {
 		urlbuf += "append:";
 	}
 
@@ -303,12 +305,12 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 	return 0;
 }
 
-static void append_buffer_info( MyString &url, char *method, char *path )
+static void append_buffer_info( MyString &url, char *method, char const *path )
 {
 	MyString buffer_list;
-	char buffer_string[_POSIX_PATH_MAX*3+1];
-	char dir[_POSIX_PATH_MAX];
-	char file[_POSIX_PATH_MAX];
+	MyString buffer_string;
+	MyString dir;
+	MyString file;
 	int s,bs,ps;
 	int result;
 
@@ -325,13 +327,13 @@ static void append_buffer_info( MyString &url, char *method, char *path )
 
 	if(Shadow->getJobAd()->LookupString(ATTR_BUFFER_FILES,buffer_list)) {
 		if( filename_remap_find(buffer_list.Value(),path,buffer_string) ||
-		    filename_remap_find(buffer_list.Value(),file,buffer_string) ) {
+		    filename_remap_find(buffer_list.Value(),file.Value(),buffer_string) ) {
 
 			/* If the file is merely mentioned, turn on the default buffer */
 			url += "buffer:";
 
 			/* If there is also a size setting, use that */
-			result = sscanf(buffer_string,"(%d,%d)",&s,&bs);
+			result = sscanf(buffer_string.Value(),"(%d,%d)",&s,&bs);
 			if( result==2 ) url += buffer_string;
 
 			return;
@@ -350,36 +352,32 @@ static void append_buffer_info( MyString &url, char *method, char *path )
 
 static int attr_list_has_file( const char *attr, const char *path )
 {
-	char dir[_POSIX_PATH_MAX];
-	char file[_POSIX_PATH_MAX];
+	char const *file;
 	MyString str;
-	StringList *list=0;
 
-	filename_split( path, dir, file );
+	file = condor_basename(path);
 
 	Shadow->getJobAd()->LookupString(attr,str);
-	list = new StringList(str.Value());
+	StringList list(str.Value());
 
-	if( list->contains_withwildcard(path) || list->contains_withwildcard(file) ) {
-		delete list;
+	if( list.contains_withwildcard(path) || list.contains_withwildcard(file) ) {
 		return 1;
 	} else {
-		delete list;
 		return 0;
 	}
 }
 
-static int use_append( char * /* method */, char *path )
+static int use_append( char * /* method */, const char *path )
 {
 	return attr_list_has_file( ATTR_APPEND_FILES, path );
 }
 
-static int use_compress( char * /* method */, char *path )
+static int use_compress( char * /* method */, const char *path )
 {
 	return attr_list_has_file( ATTR_COMPRESS_FILES, path );
 }
 
-static int use_fetch( char * /* method */, char *path )
+static int use_fetch( char * /* method */, const char *path )
 {
 	return attr_list_has_file( ATTR_FETCH_FILES, path );
 }

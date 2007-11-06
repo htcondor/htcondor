@@ -30,6 +30,8 @@
 #include "dagman_multi_dag.h"
 #include "basename.h"
 #include "read_multiple_logs.h"
+#include "condor_getcwd.h"
+
 
 #ifdef WIN32
 const char* dagman_exe = "condor_dagman.exe";
@@ -131,13 +133,11 @@ int main(int argc, char *argv[])
 		// DAG to the current directory, to avoid confusion (since the
 		// rescue DAG must be run from the current directory).
 	if ( opts.useDagDir ) {
-		char	currentDir[_POSIX_PATH_MAX];
-		if ( !getcwd( currentDir, sizeof(currentDir) ) ) {
+		if ( !condor_getcwd( rescueDagBase ) ) {
 			fprintf( stderr, "ERROR: unable to get cwd: %d, %s\n",
 					errno, strerror(errno) );
 			return 1;
 		}
-		rescueDagBase = currentDir;
 		rescueDagBase += DIR_DELIM_STRING;
 		rescueDagBase += condor_basename(opts.primaryDagFile.Value());
 	} else {

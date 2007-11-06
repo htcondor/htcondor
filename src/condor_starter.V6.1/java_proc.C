@@ -35,11 +35,6 @@ extern CStarter * Starter;
 JavaProc::JavaProc( ClassAd * jobAd, const char *xdir ) : VanillaProc(jobAd)
 {
 	execute_dir = strdup(xdir);
-	startfile[0] = 0;
-	endfile[0] = 0;
-	ex_hier[0] = 0;
-	ex_name[0] = 0;
-	ex_type[0] = 0;
 }
 
 JavaProc::~JavaProc()
@@ -50,7 +45,7 @@ JavaProc::~JavaProc()
 int JavaProc::StartJob()
 {
 	
-	char java_cmd[_POSIX_PATH_MAX];
+	MyString java_cmd;
 	char* jarfiles = NULL;
 	ArgList args;
 	MyString arg_buf;
@@ -109,15 +104,15 @@ int JavaProc::StartJob()
 		}			
 	}
 
-	sprintf(startfile,"%s%cjvm.start",execute_dir,DIR_DELIM_CHAR);
-	sprintf(endfile,"%s%cjvm.end",execute_dir,DIR_DELIM_CHAR);
+	startfile.sprintf("%s%cjvm.start",execute_dir,DIR_DELIM_CHAR);
+	endfile.sprintf("%s%cjvm.end",execute_dir,DIR_DELIM_CHAR);
 
 	if( !java_config(java_cmd,&args,jarfiles_final_list) ) {
 		dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Java is not configured!\n");
 		return 0;
 	}
 
-	JobAd->Assign(ATTR_JOB_CMD, java_cmd);
+	JobAd->Assign(ATTR_JOB_CMD, java_cmd.Value());
 
 	arg_buf.sprintf("-Dchirp.config=%s%cchirp.config",execute_dir,DIR_DELIM_CHAR);
 	args.AppendArg(arg_buf.Value());
@@ -143,8 +138,8 @@ int JavaProc::StartJob()
 	}
 
 	args.AppendArg("CondorJavaWrapper");
-	args.AppendArg(startfile);
-	args.AppendArg(endfile);
+	args.AppendArg(startfile.Value());
+	args.AppendArg(endfile.Value());
 
 	MyString args_error;
 	if(!args.AppendArgsFromClassAd(JobAd,&args_error)) {
@@ -162,7 +157,7 @@ int JavaProc::StartJob()
 		return 0;
 	}
 
-	dprintf(D_ALWAYS,"JavaProc: Cmd=%s\n",java_cmd);
+	dprintf(D_ALWAYS,"JavaProc: Cmd=%s\n",java_cmd.Value());
 	MyString args_string;
 	args.GetArgsStringForDisplay(&args_string);
 	dprintf(D_ALWAYS,"JavaProc: Args=%s\n",args_string.Value());
@@ -176,12 +171,12 @@ Save the last exception name as the 'name', and look for
 three specific middle types to save as the 'type'.
 */
 
-int JavaProc::ParseExceptionLine( const char *line, char *exname, char *type )
+int JavaProc::ParseExceptionLine( const char *line, MyString &exname, MyString &type )
 {
 	char *copy, *tok, *last;
 
-	exname[0] = 0;
-	type[0] = 0;
+	exname = "";
+	type = "";
 
 	copy = strdup(line);
 	if(!copy) return 0;
@@ -195,14 +190,14 @@ int JavaProc::ParseExceptionLine( const char *line, char *exname, char *type )
 			!strcmp(tok,"java.lang.Exception") ||
 			!strcmp(tok,"java.lang.RuntimeException")
 		) {
-			strcpy(type,tok);
+			type = tok;
 		}
 		last = tok;
 		tok = strtok(0," \t\n");
 	}
 
 	if(last) {
-		strcpy(exname,last);
+		exname = last;
 		free(copy);
 		return 1;
 	} else {
@@ -218,12 +213,12 @@ and stash the necessary info in this object.
 
 int JavaProc::ParseExceptionFile( FILE *file )
 {
-	if(!fgets(ex_hier,sizeof(ex_hier),file)) return 0;
-	if(!fgets(ex_hier,sizeof(ex_hier),file)) return 0;
+	if(!ex_hier.readLine(file)) return 0;
+	if(!ex_hier.readLine(file)) return 0;
 
 	/* Kill the newline at the end of the line */
-	ex_hier[strlen(ex_hier)-1] = 0;
-	if(!ParseExceptionLine(ex_hier,ex_name,ex_type)) return 0;
+	ex_hier.chomp();
+	if(!ParseExceptionLine(ex_hier.Value(),ex_name,ex_type)) return 0;
 	return 1;
 }
 
@@ -250,17 +245,17 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 		dprintf(D_ALWAYS,
 		        "JavaProc: JVM exited normally with code %d\n",
 		        exit_code);
-		file = safe_fopen_wrapper(startfile,"r");
+		file = safe_fopen_wrapper(startfile.Value(),"r");
 		if(file) {
 			dprintf(D_ALWAYS,
 			        "JavaProc: Wrapper left start record %s\n",
-			        startfile);
+			        startfile.Value());
 			fclose(file);
-			file = safe_fopen_wrapper(endfile,"r");
+			file = safe_fopen_wrapper(endfile.Value(),"r");
 			if(file) {
 				dprintf(D_ALWAYS,
 				        "JavaProc: Wrapper left end record %s\n",
-				        endfile);
+				        endfile.Value());
 				fields = fscanf(file,"%10s",tmp); // no more than sizeof(tmp)
 				if(fields!=1) {
 					dprintf(D_FAILURE|D_ALWAYS,
@@ -273,19 +268,19 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 					exit_mode = JAVA_EXIT_NORMAL;
 				} else if(!strcmp(tmp,"abnormal")) {	
 					ParseExceptionFile(file);
-					if(!strcmp(ex_type,"java.lang.Error")) {
+					if(!strcmp(ex_type.Value(),"java.lang.Error")) {
 						dprintf(D_FAILURE|D_ALWAYS,
 					            "JavaProc: Job threw a %s (%s), "
 						            "will retry it later.\n",
-						        ex_name,
-						        ex_type);
+						        ex_name.Value(),
+						        ex_type.Value());
 						exit_mode = JAVA_EXIT_SYSTEM_ERROR;
 					} else {
 						dprintf(D_FAILURE|D_ALWAYS,
 						        "JavaProc: Job threw a %s (%s), "
 						            "will return it to the user.\n",
-						        ex_name,
-						        ex_type);
+						        ex_name.Value(),
+						        ex_type.Value());
 						exit_mode = JAVA_EXIT_EXCEPTION;
 					}
 				} else if(!strcmp(tmp,"noexec")) {
@@ -303,7 +298,7 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 			} else {
 				dprintf(D_FAILURE|D_ALWAYS,
 				        "JavaProc: Wrapper did not leave end record %s\n",
-				        endfile);
+				        endfile.Value());
 				dprintf(D_ALWAYS,
 				        "JavaProc: Thus, job called System.exit(%d)\n",
 				        exit_code);
@@ -323,11 +318,11 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 		exit_mode = JAVA_EXIT_SYSTEM_ERROR;
 	}
 
-	dprintf(D_ALWAYS,"JavaProc: unlinking %s and %s\n",startfile,endfile);
+	dprintf(D_ALWAYS,"JavaProc: unlinking %s and %s\n",startfile.Value(),endfile.Value());
 
 	priv_state s = set_priv(PRIV_ROOT);
-	unlink(startfile);
-	unlink(endfile);
+	unlink(startfile.Value());
+	unlink(endfile.Value());
 	set_priv(s);
 
 	return exit_mode;
@@ -387,19 +382,19 @@ then throw it into the update ad.
 
 bool JavaProc::PublishUpdateAd( ClassAd* ad )
 {
-	if(ex_hier[0]) {
-		ad->Assign(ATTR_EXCEPTION_HIERARCHY,ex_hier);
-		dprintf(D_ALWAYS,"JavaProc: %s \"%s\"\n",ATTR_EXCEPTION_HIERARCHY,ex_hier);
+	if(ex_hier.Length()) {
+		ad->Assign(ATTR_EXCEPTION_HIERARCHY,ex_hier.Value());
+		dprintf(D_ALWAYS,"JavaProc: %s \"%s\"\n",ATTR_EXCEPTION_HIERARCHY,ex_hier.Value());
 	}
 
-	if(ex_name[0]) {
-		ad->Assign(ATTR_EXCEPTION_NAME,ex_name);
-		dprintf(D_ALWAYS,"JavaProc: %s \"%s\"\n", ATTR_EXCEPTION_NAME, ex_name);
+	if(ex_name.Length()) {
+		ad->Assign(ATTR_EXCEPTION_NAME,ex_name.Value());
+		dprintf(D_ALWAYS,"JavaProc: %s \"%s\"\n", ATTR_EXCEPTION_NAME, ex_name.Value());
 	}
 
-	if(ex_type[0]) {
-		ad->Assign(ATTR_EXCEPTION_TYPE,ex_type);
-		dprintf(D_ALWAYS,"JavaProc: %s \"%s\"\n",ATTR_EXCEPTION_TYPE,ex_type);
+	if(ex_type.Length()) {
+		ad->Assign(ATTR_EXCEPTION_TYPE,ex_type.Value());
+		dprintf(D_ALWAYS,"JavaProc: %s \"%s\"\n",ATTR_EXCEPTION_TYPE,ex_type.Value());
 	}
 
 	return VanillaProc::PublishUpdateAd(ad);

@@ -41,7 +41,7 @@ void init_shadow_connections();
 void init_logging();
 void usage( char *my_name );
 ReliSock* NewConnection( int id );
-void support_job_wrapper(char *a_out_name,ArgList *args);
+void support_job_wrapper(MyString &a_out_name, ArgList *args);
 void setSlotEnv( Env* env_obj );
 
 extern "C" int exception_cleanup(int,int,char*);

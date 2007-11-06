@@ -904,9 +904,9 @@ init_tilde()
 		// got the reg key open; now we just need to see if
 		// we can open the TILDE string value.
 
-		char the_path[_POSIX_PATH_MAX];
+		char the_path[MAX_PATH];
 		DWORD valType;
-		DWORD valSize = _POSIX_PATH_MAX - 2;
+		DWORD valSize = MAX_PATH - 2;
 
 		the_path[0] = '\0';
 
@@ -936,18 +936,18 @@ get_tilde()
 char*
 find_global()
 {
-	char	file[_POSIX_PATH_MAX];
-	sprintf( file, "%s_config", myDistro->Get() );
-	return find_file( EnvGetName( ENV_CONFIG), file );
+	MyString	file;
+	file.sprintf( "%s_config", myDistro->Get() );
+	return find_file( EnvGetName( ENV_CONFIG), file.Value() );
 }
 
 
 char*
 find_global_root()
 {
-	char	file[_POSIX_PATH_MAX];
-	sprintf( file, "%s_config.root", myDistro->Get() );
-	return find_file( EnvGetName( ENV_CONFIG_ROOT ), file );
+	MyString	file;
+	file.sprintf( "%s_config.root", myDistro->Get() );
+	return find_file( EnvGetName( ENV_CONFIG_ROOT ), file.Value() );
 }
 
 
@@ -1056,9 +1056,9 @@ find_file(const char *env_name, const char *file_name)
 		// This user deserves a tax credit.  
 
 		// So now that we found the key, read it.
-		char the_path[_POSIX_PATH_MAX];
+		char the_path[MAX_PATH];
 		DWORD valType;
-		DWORD valSize = _POSIX_PATH_MAX - 2;
+		DWORD valSize = MAX_PATH - 2;
 
 		the_path[0] = '\0';
 		if ( RegQueryValueEx(handle, env_name, 0, 

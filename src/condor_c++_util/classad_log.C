@@ -54,7 +54,6 @@ ptr = NULL;
 
 ClassAdLog::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 {
-	log_filename[0] = '\0';
 	active_transaction = NULL;
 	log_fp = NULL;
 	m_nondurable_level = 0;
@@ -63,7 +62,7 @@ ClassAdLog::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 
 ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 {
-	strcpy(log_filename, filename);
+	log_filename_buf = filename;
 	active_transaction = NULL;
 	m_nondurable_level = 0;
 
@@ -71,14 +70,14 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 	historical_sequence_number = 1;
 	m_original_log_birthdate = time(NULL);
 
-	int log_fd = safe_open_wrapper(log_filename, O_RDWR | O_CREAT, 0600);
+	int log_fd = safe_open_wrapper(logFilename(), O_RDWR | O_CREAT, 0600);
 	if (log_fd < 0) {
-		EXCEPT("failed to open log %s, errno = %d", log_filename, errno);
+		EXCEPT("failed to open log %s, errno = %d", logFilename(), errno);
 	}
 
 	log_fp = fdopen(log_fd, "r+");
 	if (log_fp == NULL) {
-		EXCEPT("failed to fdopen log %s, errno = %d", log_filename, errno);
+		EXCEPT("failed to fdopen log %s, errno = %d", logFilename(), errno);
 	}
 
 
@@ -132,7 +131,7 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 	if(!count) {
 		log_rec = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
 		if (log_rec->Write(log_fp) < 0) {
-			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
+			EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
 		}
 	}
 }
@@ -163,16 +162,16 @@ ClassAdLog::AppendLog(LogRecord *log)
 			//MD: using file pointer
 		if (log_fp!=NULL) {
 			if (log->Write(log_fp) < 0) {
-				EXCEPT("write to %s failed, errno = %d", log_filename, errno);
+				EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
 			}
 			if( m_nondurable_level == 0 ) {
 					//MD: flushing data -- using a file pointer
 				if (fflush(log_fp) !=0){
-					EXCEPT("flush to %s failed, errno = %d", log_filename, errno);
+					EXCEPT("flush to %s failed, errno = %d", logFilename(), errno);
 				}
 					//MD: syncing the data as done before
 				if (fsync(fileno(log_fp)) < 0) {
-					EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
+					EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
 				}
 			}
 		}
@@ -187,7 +186,7 @@ ClassAdLog::SaveHistoricalLogs()
 	if(!max_historical_logs) return true;
 
 	MyString new_histfile;
-	if(!new_histfile.sprintf("%s.%lu",log_filename,historical_sequence_number))
+	if(!new_histfile.sprintf("%s.%lu",logFilename(),historical_sequence_number))
 	{
 		dprintf(D_ALWAYS,"Aborting save of historical log: out of memory.\n");
 		return false;
@@ -195,13 +194,13 @@ ClassAdLog::SaveHistoricalLogs()
 
 	dprintf(D_FULLDEBUG,"About to save historical log %s\n",new_histfile.GetCStr());
 
-	if( hardlink_or_copy_file(log_filename, new_histfile.GetCStr()) < 0) {
-		dprintf(D_ALWAYS,"Failed to copy %s to %s.\n",log_filename,new_histfile.GetCStr());
+	if( hardlink_or_copy_file(logFilename(), new_histfile.GetCStr()) < 0) {
+		dprintf(D_ALWAYS,"Failed to copy %s to %s.\n",logFilename(),new_histfile.GetCStr());
 		return false;
 	}
 
 	MyString old_histfile;
-	if(!old_histfile.sprintf("%s.%lu",log_filename,historical_sequence_number - max_historical_logs))
+	if(!old_histfile.sprintf("%s.%lu",logFilename(),historical_sequence_number - max_historical_logs))
 	{
 		dprintf(D_ALWAYS,"Aborting cleanup of historical logs: out of memory.\n");
 		return true; // this is not a fatal error
@@ -235,29 +234,29 @@ ClassAdLog::GetMaxHistoricalLogs() {
 void
 ClassAdLog::TruncLog()
 {
-	char	tmp_log_filename[_POSIX_PATH_MAX];
+	MyString	tmp_log_filename;
 	int new_log_fd;
 	FILE *new_log_fp;
 
-	dprintf(D_FULLDEBUG,"About to truncate log %s\n",log_filename);
+	dprintf(D_FULLDEBUG,"About to truncate log %s\n",logFilename());
 
 	if(!SaveHistoricalLogs()) {
 		dprintf(D_ALWAYS,"Skipping log truncation, because saving of historical log failed.\n");
 		return;
 	}
 
-	sprintf(tmp_log_filename, "%s.tmp", log_filename);
-	new_log_fd = safe_open_wrapper(tmp_log_filename, O_RDWR | O_CREAT, 0600);
+	tmp_log_filename.sprintf( "%s.tmp", logFilename());
+	new_log_fd = safe_open_wrapper(tmp_log_filename.Value(), O_RDWR | O_CREAT, 0600);
 	if (new_log_fd < 0) {
 		dprintf(D_ALWAYS, "failed to truncate log: safe_open_wrapper(%s) returns %d\n",
-				tmp_log_filename, new_log_fd);
+				tmp_log_filename.Value(), new_log_fd);
 		return;
 	}
 
 	new_log_fp = fdopen(new_log_fd, "r+");
 	if (new_log_fp == NULL) {
 		dprintf(D_ALWAYS, "failed to truncate log: fdopen(%s) returns NULL\n",
-				tmp_log_filename);
+				tmp_log_filename.Value());
 		return;
 	}
 
@@ -268,35 +267,35 @@ ClassAdLog::TruncLog()
 	LogState(new_log_fp);
 	fclose(log_fp);
 	fclose(new_log_fp);	// avoid sharing violation on move
-	if (rotate_file(tmp_log_filename, log_filename) < 0) {
+	if (rotate_file(tmp_log_filename.Value(), logFilename()) < 0) {
 		dprintf(D_ALWAYS, "failed to truncate job queue log!\n");
 
 		// Beat a hasty retreat into the past.
 		historical_sequence_number--;
 
-		int log_fd = safe_open_wrapper(log_filename, O_RDWR, 0600);
+		int log_fd = safe_open_wrapper(logFilename(), O_RDWR, 0600);
 		if (log_fd < 0) {
-			EXCEPT("failed to reopen log %s, errno = %d after failing to rotate log.",log_filename,errno);
+			EXCEPT("failed to reopen log %s, errno = %d after failing to rotate log.",logFilename(),errno);
 		}
 
 		log_fp = fdopen(log_fd, "r+");
 		if (log_fp == NULL) {
-			EXCEPT("failed to refdopen log %s, errno = %d after failing to rotate log.",log_filename,errno);
+			EXCEPT("failed to refdopen log %s, errno = %d after failing to rotate log.",logFilename(),errno);
 		}
 
 		return;
 	}
-	int log_fd = safe_open_wrapper(log_filename, O_RDWR | O_APPEND, 0600);
+	int log_fd = safe_open_wrapper(logFilename(), O_RDWR | O_APPEND, 0600);
 	if (log_fd < 0) {
 		dprintf(D_ALWAYS, "failed to open log in append mode: "
-			"safe_open_wrapper(%s) returns %d\n", log_filename, log_fd);
+			"safe_open_wrapper(%s) returns %d\n", logFilename(), log_fd);
 		return;
 	}
 	log_fp = fdopen(log_fd, "a+");
 	if (log_fp == NULL) {
 		close(log_fd);
 		dprintf(D_ALWAYS, "failed to fdopen log in append mode: "
-			"fdopen(%s) returns %d\n", log_filename, log_fd);
+			"fdopen(%s) returns %d\n", logFilename(), log_fd);
 		return;
 	}
 
@@ -553,14 +552,14 @@ ClassAdLog::LogState(FILE *fp)
 	ClassAd		*ad=NULL;
 	ExprTree	*expr=NULL;
 	HashKey		hashval;
-	char		key[_POSIX_PATH_MAX];
+	MyString	key;
 	char		*attr_name = NULL;
 	char		*attr_val;
 
 	// This must always be the first entry in the log.
 	log = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
 	if (log->Write(fp) < 0) {
-		EXCEPT("write to %s failed, errno = %d", log_filename, errno);
+		EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
 	}
 	delete log;
 
@@ -568,9 +567,9 @@ ClassAdLog::LogState(FILE *fp)
 	while(table.iterate(ad) == 1) {
 		table.getCurrentKey(hashval);
 		hashval.sprint(key);
-		log = new LogNewClassAd(key, ad->GetMyTypeName(), ad->GetTargetTypeName());
+		log = new LogNewClassAd(key.Value(), ad->GetMyTypeName(), ad->GetTargetTypeName());
 		if (log->Write(fp) < 0) {
-			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
+			EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
 		}
 		delete log;
 			// Unchain the ad -- we just want to write out this ads exprs,
@@ -583,9 +582,9 @@ ClassAdLog::LogState(FILE *fp)
 			expr = ad->Lookup(attr_name);
 			if (expr && !expr->invisible) {
 				expr->RArg()->PrintToNewStr(&attr_val);
-				log = new LogSetAttribute(key, attr_name, attr_val);
+				log = new LogSetAttribute(key.Value(), attr_name, attr_val);
 				if (log->Write(fp) < 0) {
-					EXCEPT("write to %s failed, errno = %d", log_filename,
+					EXCEPT("write to %s failed, errno = %d", logFilename(),
 						   errno);
 				}
 				free(attr_val);
@@ -598,10 +597,10 @@ ClassAdLog::LogState(FILE *fp)
 		ad->RestoreChain(chain);
 	}
 	if (fflush(fp) !=0){
-	  EXCEPT("fflush of %s failed, errno = %d", log_filename, errno);
+	  EXCEPT("fflush of %s failed, errno = %d", logFilename(), errno);
 	}
 	if (fsync(fileno(fp)) < 0) {
-		EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
+		EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
 	} 
 }
 

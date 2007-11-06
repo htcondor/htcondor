@@ -81,6 +81,7 @@
 #include "utc_time.h"
 #include "schedd_files.h"
 #include "file_sql.h"
+#include "condor_getcwd.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 #define DEFAULT_JOB_START_COUNT 1
@@ -1011,10 +1012,10 @@ count( ClassAd *job )
 {
 	int		status;
 	int		niceUser;
-	char 	buf[_POSIX_PATH_MAX];
-	char 	buf2[_POSIX_PATH_MAX];
-	char*	owner;
-	char 	domain[_POSIX_PATH_MAX];
+	MyString owner_buf;
+	MyString owner_buf2;
+	char const*	owner;
+	MyString domain;
 	int		cur_hosts;
 	int		max_hosts;
 	int		universe;
@@ -1069,20 +1070,18 @@ count( ClassAd *job )
 	}
 
 	// calculate owner for per submittor information.
-	buf[0] = '\0';
-	job->LookupString(ATTR_ACCOUNTING_GROUP,buf,sizeof(buf));	// TODDCORE
-	if ( buf[0] == '\0' ) {
-		job->LookupString(ATTR_OWNER,buf,sizeof(buf));
-		if ( buf[0] == '\0' ) {	
+	job->LookupString(ATTR_ACCOUNTING_GROUP,owner_buf);	// TODDCORE
+	if ( owner_buf.Length() == 0 ) {
+		job->LookupString(ATTR_OWNER,owner_buf);
+		if ( owner_buf.Length() == 0 ) {	
 			dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
 					ATTR_OWNER);
 			return 0;
 		}
 	}
-	owner = buf;
+	owner = owner_buf.Value();
 
 	// grab the domain too, if it exists
-	domain[0] = '\0';
 	job->LookupString(ATTR_NT_DOMAIN, domain);
 	
 	// With NiceUsers, the number of owners is
@@ -1090,10 +1089,8 @@ count( ClassAd *job )
 	// check if this job is being submitted by a NiceUser, and
 	// if so, insert it as a new entry in the "Owner" table
 	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-		strcpy(buf2,NiceUserName);
-		strcat(buf2,".");
-		strcat(buf2,owner);
-		owner=buf2;		
+		owner_buf2.sprintf("%s.%s",NiceUserName,owner);
+		owner=owner_buf2.Value();
 	}
 
 	// increment our count of the number of job ads in the queue
@@ -1118,7 +1115,7 @@ count( ClassAd *job )
 		}
 		if ( needs_management ) {
 			GridUniverseLogic::JobCountUpdate(real_owner.Value(),
-				domain,mirror_schedd_name,ATTR_MIRROR_SCHEDD,
+				domain.Value(),mirror_schedd_name,ATTR_MIRROR_SCHEDD,
 				0, 0, 1, job_managed ? 0 : 1);
 		}
 		free(mirror_schedd_name);
@@ -1207,7 +1204,7 @@ count( ClassAd *job )
 		// Don't count HELD jobs that aren't externally (gridmanager) managed
 		// Don't count jobs that the gridmanager has said it's completely
 		// done with.
-		UserIdentity userident(real_owner.Value(),domain);
+		UserIdentity userident(real_owner.Value(),domain.Value());
 		if ( ( status != HELD || job_managed != false ) &&
 			 job_managed_done == false ) 
 		{
@@ -1226,7 +1223,7 @@ count( ClassAd *job )
 			int proc = 0;
 			job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 			job->LookupInteger(ATTR_PROC_ID, proc);
-			GridUniverseLogic::JobCountUpdate(owner,domain,NULL,NULL,
+			GridUniverseLogic::JobCountUpdate(owner,domain.Value(),NULL,NULL,
 					cluster, proc, needs_management, job_managed ? 0 : 1);
 		}
 			// If we do not need to do matchmaking on this job (i.e.
@@ -1311,7 +1308,7 @@ service_this_universe(int universe, ClassAd* job)
 }
 
 int
-Scheduler::insert_owner(char* owner)
+Scheduler::insert_owner(char const* owner)
 {
 	int		i;
 	for ( i=0; i<N_Owners; i++ ) {
@@ -1363,17 +1360,15 @@ handle_mirror_job_notification(ClassAd *job_ad, int mode, PROC_ID & job_id)
 			}
 		}
 		if ( job_managed  ) {
-			char owner[_POSIX_PATH_MAX];
-			char domain[_POSIX_PATH_MAX];
-			owner[0] = '\0';
-			domain[0] = '\0';
+			MyString owner;
+			MyString domain;
 			job_ad->LookupString(ATTR_OWNER,owner);
 			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
 			if ( gridman_per_job ) {
-				GridUniverseLogic::JobRemoved(owner,domain,mirror_schedd_name,
+				GridUniverseLogic::JobRemoved(owner.Value(),domain.Value(),mirror_schedd_name,
 					ATTR_MIRROR_SCHEDD,job_id.cluster,job_id.proc);
 			} else {
-				GridUniverseLogic::JobRemoved(owner,domain,mirror_schedd_name,
+				GridUniverseLogic::JobRemoved(owner.Value(),domain.Value(),mirror_schedd_name,
 					ATTR_MIRROR_SCHEDD,0,0);
 			}
 		}
@@ -1478,16 +1473,14 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 					// nothing to do
 				return;
 			}
-			char owner[_POSIX_PATH_MAX];
-			char domain[_POSIX_PATH_MAX];
-			owner[0] = '\0';
-			domain[0] = '\0';
+			MyString owner;
+			MyString domain;
 			job_ad->LookupString(ATTR_OWNER,owner);
 			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
 			if ( gridman_per_job ) {
-				GridUniverseLogic::JobRemoved(owner,domain,NULL,NULL,job_id.cluster,job_id.proc);
+				GridUniverseLogic::JobRemoved(owner.Value(),domain.Value(),NULL,NULL,job_id.cluster,job_id.proc);
 			} else {
-				GridUniverseLogic::JobRemoved(owner,domain,NULL,NULL,0,0);
+				GridUniverseLogic::JobRemoved(owner.Value(),domain.Value(),NULL,NULL,0,0);
 			}
 			return;
 		}
@@ -1606,19 +1599,18 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
                      "Found record for scheduler universe job %d.%d\n",
                      job_id.cluster, job_id.proc);
             
-			char owner[_POSIX_PATH_MAX];
-			char domain[_POSIX_PATH_MAX];
-			owner[0] = '\0';
+			MyString owner;
+			MyString domain;
 			job_ad->LookupString(ATTR_OWNER,owner);
 			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
-			if (! init_user_ids(owner, domain) ) {
+			if (! init_user_ids(owner.Value(), domain.Value()) ) {
 				MyString msg;
 				dprintf(D_ALWAYS, "init_user_ids() failed - putting job on "
 					   "hold.\n");
 #ifdef WIN32
-				msg.sprintf("Bad or missing credential for user: %s", owner);
+				msg.sprintf("Bad or missing credential for user: %s", owner.Value());
 #else
-				msg.sprintf("Unable to switch to user: %s", owner);
+				msg.sprintf("Unable to switch to user: %s", owner.Value());
 #endif
 				holdJob(job_id.cluster, job_id.proc, msg.Value(), 
 					false, false, true, false, false);
@@ -1665,7 +1657,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			dprintf( D_FULLDEBUG, "Sending %s signal (%s, %d) to "
 					 "scheduler universe job pid=%d owner=%s\n",
 					 getJobActionString(action), sig_name, kill_sig,
-					 srec->pid, owner );
+					 srec->pid, owner.Value() );
 			priv_state priv = set_user_priv();
 
 			scheduler.sendSignalToShadow(srec->pid,kill_sig,job_id);
@@ -2489,40 +2481,28 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 UserLog*
 Scheduler::InitializeUserLog( PROC_ID job_id ) 
 {
-	char tmp[_POSIX_PATH_MAX];
-	
-	if( (GetAttributeString(job_id.cluster,job_id.proc,ATTR_ULOG_FILE,tmp) 
-		 < 0) && 
-		(getPathToUserLog(NULL, tmp, sizeof(tmp))==false) )
+	MyString logfilename;
+	ClassAd *ad = GetJobAd(job_id.cluster,job_id.proc);
+	if( getPathToUserLog(ad, logfilename)==false )
 	{			
 			// if there is no userlog file defined, then our work is
 			// done...  
 		return NULL;
 	}
 	
-	char owner[_POSIX_PATH_MAX];
-	char domain[_POSIX_PATH_MAX];
-	char logfilename[_POSIX_PATH_MAX];
-	char iwd[_POSIX_PATH_MAX];
-	char gjid[_POSIX_PATH_MAX];
+	MyString owner;
+	MyString domain;
+	MyString iwd;
+	MyString gjid;
 	int use_xml;
 
-	GetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_IWD, iwd);
-	if ( tmp[0] == '/' || tmp[0]=='\\' || (tmp[1]==':' && tmp[2]=='\\') ) {
-		strcpy(logfilename, tmp);
-	} else {
-		sprintf(logfilename, "%s/%s", iwd, tmp);
-	}
-
-	owner[0] = '\0';
-	domain[0] = '\0';
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_NT_DOMAIN, domain);
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_GLOBAL_JOB_ID, gjid);
 
 	dprintf( D_FULLDEBUG, 
 			 "Writing record to user logfile=%s owner=%s\n",
-			 logfilename, owner );
+			 logfilename.Value(), owner.Value() );
 
 	UserLog* ULog=new UserLog();
 	if (0 <= GetAttributeBool(job_id.cluster, job_id.proc,
@@ -2532,11 +2512,11 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	} else {
 		ULog->setUseXML(false);
 	}
-	if (ULog->initialize(owner, domain, logfilename, job_id.cluster, job_id.proc, 0, gjid)) {
+	if (ULog->initialize(owner.Value(), domain.Value(), logfilename.Value(), job_id.cluster, job_id.proc, 0, gjid.Value())) {
 		return ULog;
 	} else {
 		dprintf ( D_ALWAYS,
-				"WARNING: Invalid user log file specified: %s\n", logfilename);
+				"WARNING: Invalid user log file specified: %s\n", logfilename.Value());
 		delete ULog;
 		return NULL;
 	}
@@ -3047,13 +3027,13 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			char *old_path_buf;
 			bool changed = false;
 			const char *base = NULL;
-			char new_path_buf[_POSIX_PATH_MAX];
+			MyString new_path_buf;
 			while ( (old_path_buf=old_paths.next()) ) {
 				base = condor_basename(old_path_buf);
 				if ( strcmp(base,old_path_buf)!=0 ) {
-					snprintf(new_path_buf,_POSIX_PATH_MAX,
+					new_path_buf.sprintf(
 						"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,base);
-					base = new_path_buf;
+					base = new_path_buf.Value();
 					changed = true;
 				}
 				new_paths.append(base);
@@ -7551,16 +7531,16 @@ shadow_rec*
 Scheduler::start_sched_universe_job(PROC_ID* job_id)
 {
 
-	char	a_out_name[_POSIX_PATH_MAX];
-	char	input[_POSIX_PATH_MAX];
-	char	output[_POSIX_PATH_MAX];
-	char	error[_POSIX_PATH_MAX];
-	char	x509_proxy[_POSIX_PATH_MAX];
+	MyString a_out_name;
+	MyString input;
+	MyString output;
+	MyString error;
+	MyString x509_proxy;
 	ArgList args;
 	MyString argbuf;
 	MyString error_msg;
-	char	owner[_POSIX_PATH_MAX], iwd[_POSIX_PATH_MAX];
-	char	domain[_POSIX_PATH_MAX];
+	MyString owner, iwd;
+	MyString domain;
 	int		pid;
 	StatInfo* filestat;
 	bool is_executable;
@@ -7569,8 +7549,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	Env envobject;
 	MyString env_error_msg;
     int niceness = 0;
-	char tmpCwd[_POSIX_PATH_MAX];
-	char *p_tmpCwd = tmpCwd;
+	MyString tmpCwd;
 	int inouterr[3];
 	bool cannot_open_files = false;
 	priv_state priv;
@@ -7590,14 +7569,14 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		ATTR_OWNER, owner) < 0) {
 		dprintf(D_FULLDEBUG, "Scheduler::start_sched_universe_job"
 			"--setting owner to \"nobody\"\n" );
-		sprintf(owner, "nobody");
+		owner = "nobody";
 	}
 
 	// get the nt domain too, if we have it
 	GetAttributeString(job_id->cluster, job_id->proc, ATTR_NT_DOMAIN, domain);
 
 	// sanity check to make sure this job isn't going to start as root.
-	if (stricmp(owner, "root") == 0 ) {
+	if (stricmp(owner.Value(), "root") == 0 ) {
 		dprintf(D_ALWAYS, "Aborting job %d.%d.  Tried to start as root.\n",
 			job_id->cluster, job_id->proc);
 		goto wrapup;
@@ -7606,14 +7585,14 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// switch to the user in question to make some checks about what I'm 
 	// about to execute and then to execute.
 
-	if (! init_user_ids(owner, domain) ) {
-		char tmpstr[255];
+	if (! init_user_ids(owner.Value(), domain.Value()) ) {
+		MyString tmpstr;
 #ifdef WIN32
-		snprintf(tmpstr, 255, "Bad or missing credential for user: %s", owner);
+		tmpstr.sprintf("Bad or missing credential for user: %s", owner.Value());
 #else
-		snprintf(tmpstr, 255, "Unable to switch to user: %s", owner);
+		tmpstr.sprintf("Unable to switch to user: %s", owner.Value());
 #endif
-		holdJob(job_id->cluster, job_id->proc, tmpstr,
+		holdJob(job_id->cluster, job_id->proc, tmpstr.Value(),
 				false, false, true, false, false);
 		goto wrapup;
 	}
@@ -7625,9 +7604,9 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// executable probably is owned by Condor in most circumstances, we
 	// must ensure the user can at least execute it.
 
-	strcpy(a_out_name, gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0));
+	a_out_name = gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0);
 	errno = 0;
-	filestat = new StatInfo(a_out_name);
+	filestat = new StatInfo(a_out_name.Value());
 	ASSERT(filestat);
 
 	if (filestat->Error() == SIGood) {
@@ -7658,9 +7637,9 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		// specified in the classad. Either way, it must be executable by them.
 
 		// Sanity check the classad to ensure we have an executable.
-		a_out_name[0] = '\0';
-		userJob->LookupString(ATTR_JOB_CMD,a_out_name,sizeof(a_out_name));
-		if (a_out_name[0]=='\0') {
+		a_out_name = "";
+		userJob->LookupString(ATTR_JOB_CMD,a_out_name);
+		if (a_out_name.Length()==0) {
 			set_priv( priv );  // back to regular privs...
 			holdJob(job_id->cluster, job_id->proc, 
 				"Executable unknown - not specified in job ad!",
@@ -7669,17 +7648,17 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		}
 		
 		// Now check, as the user, if we may execute it.
-		filestat = new StatInfo(a_out_name);
+		filestat = new StatInfo(a_out_name.Value());
 		is_executable = false;
 		if ( filestat ) {
 			is_executable = filestat->IsExecutable();
 			delete filestat;
 		}
 		if ( !is_executable ) {
-			char tmpstr[255];
-			snprintf(tmpstr, 255, "File '%s' is missing or not executable", a_out_name);
+			MyString tmpstr;
+			tmpstr.sprintf( "File '%s' is missing or not executable", a_out_name.Value() );
 			set_priv( priv );  // back to regular privs...
-			holdJob(job_id->cluster, job_id->proc, tmpstr,
+			holdJob(job_id->cluster, job_id->proc, tmpstr.Value(),
 					false, false, true, false, false);
 			goto wrapup;
 		}
@@ -7689,34 +7668,34 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// Get std(in|out|err)
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_INPUT,
 		input) < 0) {
-		sprintf(input, NULL_FILE); 
+		input = NULL_FILE;
 		
 	}
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_OUTPUT,
 		output) < 0) {
-		sprintf(output, NULL_FILE);
+		output = NULL_FILE;
 	}
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ERROR,
 		error) < 0) {
-		sprintf(error, NULL_FILE);
+		error = NULL_FILE;
 	}
 	
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_IWD,
 		iwd) < 0) {
 #ifndef WIN32		
-		sprintf(iwd, "/tmp");
+		iwd = "/tmp";
 #else
 		// try to get the temp dir, otherwise just use the root directory
 		char* tempdir = getenv("TEMP");
-		sprintf(iwd, "%s", ((tempdir) ? tempdir : "\\") );		
+		iwd = ((tempdir) ? tempdir : "\\");
 		
 #endif
 	}
 	
 	//change to IWD before opening files, easier than prepending 
 	//IWD if not absolute pathnames
-	p_tmpCwd = getcwd( p_tmpCwd, _POSIX_PATH_MAX );
-	chdir(iwd);
+	condor_getcwd(tmpCwd);
+	chdir(iwd.Value());
 	
 	// now open future in|out|err files
 	
@@ -7727,34 +7706,34 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// but since we're the schedd, we'll have to do it ourselves.
 	// At least for now. --stolley
 	
-	if (nullFile(input)) {
-		sprintf(input, WINDOWS_NULL_FILE);
+	if (nullFile(input.Value())) {
+		input = WINDOWS_NULL_FILE;
 	}
-	if (nullFile(output)) {
-		sprintf(output, WINDOWS_NULL_FILE);
+	if (nullFile(output.Value())) {
+		output = WINDOWS_NULL_FILE;
 	}
-	if (nullFile(error)) {
-		sprintf(error, WINDOWS_NULL_FILE);
+	if (nullFile(error.Value())) {
+		error = WINDOWS_NULL_FILE;
 	}
 	
 #endif
 	
-	if ((inouterr[0] = safe_open_wrapper(input, O_RDONLY, S_IREAD)) < 0) {
-		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
+	if ((inouterr[0] = safe_open_wrapper(input.Value(), O_RDONLY, S_IREAD)) < 0) {
+		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", input.Value(), errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[1] = safe_open_wrapper(output, O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
-		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", output, errno );
+	if ((inouterr[1] = safe_open_wrapper(output.Value(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
+		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", output.Value(), errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[2] = safe_open_wrapper(error, O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
-		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", error, errno );
+	if ((inouterr[2] = safe_open_wrapper(error.Value(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
+		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", error.Value(), errno );
 		cannot_open_files = true;
 	}
 	
 	//change back to whence we came
-	if ( p_tmpCwd ) {
-		chdir( p_tmpCwd );
+	if ( tmpCwd.Length() ) {
+		chdir( tmpCwd.Value() );
 	}
 	
 	if ( cannot_open_files ) {
@@ -7764,21 +7743,21 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			if (close(inouterr[0]) == -1) {
 				dprintf(D_ALWAYS, 
 					"Failed to close input file fd for '%s' because [%d %s]\n",
-					input, errno, strerror(errno));
+					input.Value(), errno, strerror(errno));
 			}
 		}
 		if (inouterr[1] >= 0) {
 			if (close(inouterr[1]) == -1) {
 				dprintf(D_ALWAYS,  
 					"Failed to close output file fd for '%s' because [%d %s]\n",
-					output, errno, strerror(errno));
+					output.Value(), errno, strerror(errno));
 			}
 		}
 		if (inouterr[2] >= 0) {
 			if (close(inouterr[2]) == -1) {
 				dprintf(D_ALWAYS,  
 					"Failed to close error file fd for '%s' because [%d %s]\n",
-					output, errno, strerror(errno));
+					output.Value(), errno, strerror(errno));
 			}
 		}
 		set_priv( priv );  // back to regular privs...
@@ -7794,8 +7773,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 	
 	// stick a CONDOR_ID environment variable in job's environment
-	char condor_id_string[64];
-	sprintf( condor_id_string, "%d.%d", job_id->cluster, job_id->proc );
+	char condor_id_string[PROC_ID_STR_BUFLEN];
+	ProcIdToStr(*job_id,condor_id_string);
 	envobject.SetEnv("CONDOR_ID",condor_id_string);
 
 	// Set X509_USER_PROXY in the job's environment if the job ad says
@@ -7835,9 +7814,9 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		core_size_ptr = &core_size;
 	}
 	
-	pid = daemonCore->Create_Process( a_out_name, args, PRIV_USER_FINAL, 
+	pid = daemonCore->Create_Process( a_out_name.Value(), args, PRIV_USER_FINAL, 
 	                                  shadowReaperId, FALSE,
-	                                  &envobject, iwd, NULL, NULL, inouterr,
+	                                  &envobject, iwd.Value(), NULL, NULL, inouterr,
 	                                  NULL, niceness, NULL,
 	                                  DCJOBOPT_NO_ENV_INHERIT,
 	                                  core_size_ptr );
@@ -8441,7 +8420,6 @@ _mark_job_stopped(PROC_ID* job_id)
 	int		status;
 	int		orig_max;
 	int		had_orig;
-	char	owner[_POSIX_PATH_MAX];
 
 	had_orig = GetAttributeInt(job_id->cluster, job_id->proc, 
 								ATTR_ORIG_MAX_HOSTS, &orig_max);
@@ -8470,13 +8448,6 @@ _mark_job_stopped(PROC_ID* job_id)
 
 	// if job isn't RUNNING, then our work is already done
 	if (status == RUNNING) {
-
-		if ( GetAttributeString(job_id->cluster, job_id->proc, 
-				ATTR_OWNER, owner) < 0 )
-		{
-			dprintf(D_FULLDEBUG,"mark_job_stopped: setting owner to \"nobody\"\n");
-			strcpy(owner,"nobody");
-		}
 
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt( job_id->cluster, job_id->proc,
@@ -8918,7 +8889,7 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 {
 	int notification;
 	char owner[2048], subject[2048];
-	char cmd[_POSIX_PATH_MAX];
+	MyString cmd;
 	MyString args;
 
 	if (GetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
@@ -8983,7 +8954,7 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	FILE* mailer = email_open(owner, subject);
 	if( mailer ) {
 		fprintf( mailer, "Your condor job %s%d.\n\n", msg, status );
-		fprintf( mailer, "Job: %s %s\n", cmd, args.Value() );
+		fprintf( mailer, "Job: %s %s\n", cmd.Value(), args.Value() );
 		email_close( mailer );
 	}
 
@@ -9002,7 +8973,7 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	write(fd, subject, strlen(subject));
 	sprintf(subject, "Your condor job\n\t");
 	write(fd, subject, strlen(subject));
-	write(fd, cmd, strlen(cmd));
+	write(fd, cmd.Value(), cmd.Length());
 	write(fd, " ", 1);
 	write(fd, args, strlen(args));
 	write(fd, "\n", 1);
@@ -9717,19 +9688,20 @@ JobPreCkptServerScheddNameChange(int cluster, int proc)
 void
 cleanup_ckpt_files(int cluster, int proc, const char *owner)
 {
-    char	 ckpt_name[MAXPATHLEN];
-	char	buf[_POSIX_PATH_MAX];
-	char	server[_POSIX_PATH_MAX];
+    MyString	ckpt_name_buf;
+	char const *ckpt_name;
+	MyString	owner_buf;
+	MyString	server;
 	int		universe = CONDOR_UNIVERSE_STANDARD;
 
 		/* In order to remove from the checkpoint server, we need to know
 		 * the owner's name.  If not passed in, look it up now.
   		 */
 	if ( owner == NULL ) {
-		if ( GetAttributeString(cluster,proc,ATTR_OWNER,buf) < 0 ) {
+		if ( GetAttributeString(cluster,proc,ATTR_OWNER,owner_buf) < 0 ) {
 			dprintf(D_ALWAYS,"ERROR: cleanup_ckpt_files(): cannot determine owner for job %d.%d\n",cluster,proc);
 		} else {
-			owner = buf;
+			owner = owner_buf.Value();
 		}
 	}
 
@@ -9738,7 +9710,7 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 	if (universe == CONDOR_UNIVERSE_STANDARD) {
 		if (GetAttributeString(cluster, proc, ATTR_LAST_CKPT_SERVER,
 							   server) == 0) {
-			SetCkptServerHost(server);
+			SetCkptServerHost(server.Value());
 		} else {
 			SetCkptServerHost(NULL); // no ckpt on ckpt server
 		}
@@ -9748,7 +9720,8 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		 * not know the owner, don't bother sending to the ckpt
 		 * server.
 		 */
-	strcpy(ckpt_name, gen_ckpt_name(Spool,cluster,proc,0) );
+	ckpt_name_buf = gen_ckpt_name(Spool,cluster,proc,0);
+	ckpt_name = ckpt_name_buf.Value();
 	if ( owner ) {
 		if ( IsDirectory(ckpt_name) ) {
 			if ( param_boolean("KEEP_OUTPUT_SANDBOX",false) ) {
@@ -9792,7 +9765,8 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		unlink(ckpt_name);
 
 		  /* Remove any temporary checkpoint files */
-	strcat( ckpt_name, ".tmp");
+	ckpt_name_buf += ".tmp";
+	ckpt_name = ckpt_name_buf.Value();
 	if ( owner ) {
 		if ( IsDirectory(ckpt_name) ) {
 			{
@@ -11533,9 +11507,8 @@ int
 fixAttrUser( ClassAd *job )
 {
 	int nice_user = 0;
-	char owner[_POSIX_PATH_MAX];
-	char user[_POSIX_PATH_MAX];
-	owner[0] = '\0';
+	MyString owner;
+	MyString user;
 	
 	if( ! job->LookupString(ATTR_OWNER, owner) ) {
 			// No ATTR_OWNER!
@@ -11544,10 +11517,10 @@ fixAttrUser( ClassAd *job )
 		// if it's not there, nice_user will remain 0
 	job->LookupInteger( ATTR_NICE_USER, nice_user );
 
-	sprintf( user, "%s = \"%s%s@%s\"", ATTR_USER, 
-			 (nice_user) ? "nice-user." : "", owner,
+	user.sprintf( "%s%s@%s",
+			 (nice_user) ? "nice-user." : "", owner.Value(),
 			 scheduler.uidDomain() );  
-	job->Insert( user );
+	job->Assign( ATTR_USER, user );
 	return 0;
 }
 

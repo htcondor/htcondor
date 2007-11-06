@@ -20,18 +20,38 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef JAVA_CONFIG_H
-#define JAVA_CONFIG_H
+#include "condor_common.h"
+#include "condor_getcwd.h"
+#include "MyString.h"
 
-#include "condor_arglist.h"
+bool condor_getcwd(MyString &path) {
+	size_t buflen = 0;
+	char *buf = NULL;
 
-/*
-Extract the java configuration from the local config files.
-The name of the java executable gets put in 'cmd', and the necessary
-arguments get put in 'args'.  If you have other dirs or jarfiles
-that should be placed in the classpath, provide them in 'extra_classpath'.
-*/
+		// Some platforms (supposedly) do not support getcwd(NULL),
+		// so we do it the hard way...
 
-int java_config( MyString &cmd, ArgList *args, StringList *extra_classpath );
+	while(1) {
+		buflen += 20;
+		buf = (char *)malloc(buflen);
+		if( !buf ) {
+			return false;
+		}
 
-#endif
+		if( getcwd(buf,buflen) != NULL ) {
+			path = buf;
+			free( buf );
+			buf = NULL;
+			break;
+		}
+		free( buf );
+		buf = NULL;
+
+		if( errno == ERANGE ) {
+			continue; // try with a bigger buffer
+		}
+		return false;
+	}
+
+	return true;
+}

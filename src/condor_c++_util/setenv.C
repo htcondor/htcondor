@@ -168,13 +168,25 @@ const char *GetEnv( const char *env_var )
 	assert( env_var );
 
 #ifdef WIN32
+	static MyString result;
+	return GetEnv( env_var, result );
+#else
+	return getenv( env_var );
+#endif
+}
+
+const char *GetEnv( const char *env_var, MyString &result )
+{
+	assert( env_var );
+
+#ifdef WIN32
 	DWORD rc;
-	static int value_size = 0;
-	static char *value = NULL;
-	if ( value == NULL ) {
-		value_size = 1024;
-		value = (char *)malloc( value_size );
-	}
+	int value_size = 0;
+	char *value = NULL;
+
+	value_size = 1024;
+	value = (char *)malloc( value_size );
+
 	rc = GetEnvironmentVariable( env_var, value, value_size );
 	if ( rc > value_size - 1 ) {
 			// environment variable value is too large,
@@ -186,6 +198,7 @@ const char *GetEnv( const char *env_var )
 	}
 	if ( rc > value_size - 1 ) {
 		dprintf( D_ALWAYS, "GetEnv(): environment variable still too large: %d\n", rc );
+		free( value );
 		return NULL;
 	} else if ( rc == 0 ) {
 		DWORD error = GetLastError();
@@ -194,11 +207,14 @@ const char *GetEnv( const char *env_var )
 					 "GetEnv(): GetEnvironmentVariable() failed, error=%d\n",
 					 error );
 		}
+		free( value );
 		return NULL;
 	} else {
-		return value;
+		result = value;
+		free( value );
 	}
 #else
-	return getenv( env_var );
+	result = getenv( env_var );
+	return result.Value();
 #endif
 }

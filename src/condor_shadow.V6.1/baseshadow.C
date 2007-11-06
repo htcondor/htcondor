@@ -59,8 +59,6 @@ BaseShadow::BaseShadow() {
 	remove_requested = false;
 	cluster = proc = -1;
 	gjid = NULL;
-	owner[0] = '\0';
-	iwd[0] = '\0';
 	core_file_name = NULL;
 	scheddAddr = NULL;
 	job_updater = NULL;
@@ -163,7 +161,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 
 	// handle system calls with Owner's privilege
 // XXX this belong here?  We'll see...
-	if ( !init_user_ids(owner, domain)) {
+	if ( !init_user_ids(owner.Value(), domain.Value())) {
 		dprintf(D_ALWAYS, "init_user_ids() failed!\n");
 		// uids.C will EXCEPT when we set_user_priv() now
 		// so there's not much we can do at this point
@@ -353,14 +351,14 @@ void BaseShadow::config()
 
 
 int BaseShadow::cdToIwd() {
-	if (chdir(iwd) < 0) {
+	if (chdir(iwd.Value()) < 0) {
 		int chdir_errno = errno;
 		dprintf(D_ALWAYS, "\n\nPath does not exist.\n"
 				"He who travels without bounds\n"
 				"Can't locate data.\n\n" );
 		MyString hold_reason;
 		hold_reason.sprintf("Cannot access initial working directory %s: %s",
-		                    iwd, strerror(chdir_errno));
+		                    iwd.Value(), strerror(chdir_errno));
 		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 		holdJob(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
 		return -1;
@@ -759,22 +757,17 @@ BaseShadow::emailUser( const char *subjectline )
 
 void BaseShadow::initUserLog()
 {
-	char tmp[_POSIX_PATH_MAX], logfilename[_POSIX_PATH_MAX];
+	MyString logfilename;
 	int  use_xml;
-	if ( getPathToUserLog(jobAd, tmp, sizeof(tmp)) ) {
-		if ( tmp[0] == '/' || tmp[0]=='\\' || (tmp[1]==':' && tmp[2]=='\\') ) {
-			strcpy(logfilename, tmp);
-		} else {
-			sprintf(logfilename, "%s/%s", iwd, tmp);
-		}
-		uLog.initialize (owner, domain, logfilename, cluster, proc, 0, gjid);
+	if ( getPathToUserLog(jobAd, logfilename) ) {
+		uLog.initialize (owner.Value(), domain.Value(), logfilename.Value(), cluster, proc, 0, gjid);
 		if (jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
 			&& use_xml) {
 			uLog.setUseXML(true);
 		} else {
 			uLog.setUseXML(false);
 		}
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename);
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());
 	} else {
 		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
 	}

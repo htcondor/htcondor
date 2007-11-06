@@ -44,47 +44,10 @@ Take an input string in URL form, and split it into its components.
 URLs are of the form "method://server:port/filename".  Any component
 that is missing will be recorded as the string with one null character.
 If the port is not specified, it is recorded as -1.
-<p>
-The outputs method, server, and path must all point to buffers of length
-_POSIX_PATH_MAX.  This function will fill in that many characters and
-ignore any remaining data in those input fields.  Use of _POSIX_PATH_MAX
-as an upper bound is perhaps overkill, but it is a well-defined constant
-that we use in many other places.
-*/
-
-void filename_url_parse( char *input, char *method, char *server, int *port, char *path );
-
-/**
-Unlike filename_url_parse(), this function is not limited by POSIX_PATH_MAX.
-Take an input string in URL form, and split it into its components.
-URLs are of the form "method://server:port/filename".  Any component
-that is missing will be set to NULL.
-If the port is not specified, it is recorded as -1.
-<p>
-The outputs method, server, and path must all be freed by the caller.
+The caller should free the resulting strings in method, server, and path.
 */
 
 void filename_url_parse_malloc( char const *input, char **method, char **server, int *port, char **path );
-
-/** 
-Take an input string which looks like this:
-"filename = url ; filename = url ; ..."
-Search for a filename matching the input string, and copy the 
-corresponding url into output.  The url can then be parsed by
-filename_url_parse().
-<p>
-The filename argument may be up to _POSIX_PATH_MAX, and output must
-point to a buffer of _POSIX_PATH_MAX*3.
-<p>
-The delimiting characters = and ; may be escaped with a backslash.
-<p>
-Currently, this data is represented as a string attribute within
-a ClassAd.  A much better implementation would be to store it
-as a ClassAd within a ClassAd.  However, this will have to wait until
-new ClassAds are deployed.
-*/
-
-int filename_remap_find( const char *input, const char *filename, char *output );
 
 void canonicalize_dir_delimiters( char *path );
 
@@ -103,5 +66,31 @@ symlinks or whatever.
 int is_relative_to_cwd( const char *path );
 
 END_C_DECLS
+
+// Put C++ definitions here
+#if defined(__cplusplus)
+class MyString;
+
+int filename_split( const char *path, MyString &dir, MyString &file );
+
+/** 
+Take an input string which looks like this:
+"filename = url ; filename = url ; ..."
+Search for a filename matching the input string, and copy the 
+corresponding url into output.  The url can then be parsed by
+filename_url_parse().
+<p>
+The delimiting characters = and ; may be escaped with a backslash.
+<p>
+Currently, this data is represented as a string attribute within
+a ClassAd.  A much better implementation would be to store it
+as a ClassAd within a ClassAd.  However, this will have to wait until
+new ClassAds are deployed.
+*/
+int filename_remap_find( const char *input, const char *filename, MyString &output );
+
+void canonicalize_dir_delimiters( MyString &path );
+void filename_url_parse( char *input, MyString &method, MyString &server, int *port, MyString &path );
+#endif
 
 #endif

@@ -37,7 +37,7 @@
 
 extern char *clientagenthost;
 
-void write_dap_log(char *logfilename, char *status, char *param1, char *value1, char *param2, char *value2, char *param3, char *value3, char *param4, char *value4, char *param5, char *value5, char *param6, char *value6)
+void write_dap_log(const char *logfilename, const char *status, const char *param1, const char *value1, const char *param2, const char *value2, const char *param3, const char *value3, const char *param4, const char *value4, const char *param5, const char *value5, const char *param6, const char *value6)
 {
   
   // -------- ClassAd stuff ------------------------------
@@ -114,7 +114,7 @@ void write_dap_log(char *logfilename, char *status, char *param1, char *value1, 
 }
 
 //--------------------------------------------------------------------------
-void write_classad_log(char *logfilename, char *status, classad::ClassAd *classad)
+void write_classad_log(const char *logfilename, const char *status, classad::ClassAd *classad)
 {
 
   classad::ClassAdParser parser;
@@ -166,7 +166,7 @@ void write_classad_log(char *logfilename, char *status, classad::ClassAd *classa
 }
 
 //--------------------------------------------------------------------------
-void write_collection_log(classad::ClassAdCollection *dapcollection, char *dap_id, 
+void write_collection_log(classad::ClassAdCollection *dapcollection, const char *dap_id, 
 			  const char *update)
 {
   //log the new status of the request
@@ -225,7 +225,7 @@ void write_collection_log(classad::ClassAdCollection *dapcollection, char *dap_i
 //--------------------------------------------------------------------------
 
 //--------------------------------------------------------------------------
-void write_xml_log(char *logfilename, classad::ClassAd *classad, const char *status)
+void write_xml_log(const char *logfilename, classad::ClassAd *classad, const char *status)
 {
 
   classad::ClassAdParser parser;
@@ -325,7 +325,7 @@ int send_log_to_client_agent(const char *log)
 //--------------------------------------------------------------------------
 void
 write_xml_user_log(
-		char *logfilename,
+		const char *logfilename,
 		const char *param1, const char *value1,
 		const char *param2, const char *value2,
 		const char *param3, const char *value3,

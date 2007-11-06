@@ -29,9 +29,9 @@
 
 ClassAd * java_detect()
 {
-	char path[_POSIX_PATH_MAX];
+	MyString path;
 	ArgList args;
-	char command[_POSIX_ARG_MAX];
+	MyString command;
 	MyString args_string;
 	MyString args_error;
 
@@ -53,7 +53,7 @@ ClassAd * java_detect()
 		return 0;
 	}
 
-	sprintf(command,"%s %s CondorJavaInfo old %d",path,args_string.Value(),benchmark_time);
+	command.sprintf("%s %s CondorJavaInfo old %d",path.Value(),args_string.Value(),benchmark_time);
 
 	/*
 	N.B. Certain version of Java do not set up their own signal
@@ -70,7 +70,7 @@ ClassAd * java_detect()
 	sigprocmask(SIG_SETMASK,&mask,0);
 #endif
 
-	FILE *stream = popen(command,"r");
+	FILE *stream = popen(command.Value(),"r");
 	if(!stream) return 0;
 
 	int eof=0,error=0,empty=0;

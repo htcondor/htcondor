@@ -47,8 +47,8 @@ main( int argc, char* argv[], char *env[] )
 {
 	int errcode, i;
 	FILE *config_val;
-	char *path_from_config_val;
-	char *master_path;
+	MyString path_from_config_val;
+	char const *master_path;
 	size_t count;
 
 
@@ -69,12 +69,6 @@ main( int argc, char* argv[], char *env[] )
 	// Ask this machine what condor_master it should run, ala the startup
 	// script...
 
-	path_from_config_val = (char *)calloc(1, (_POSIX_PATH_MAX + 1));
-	if(path_from_config_val == NULL ) {
-		fprintf( stderr, "error: Couldn't allocate memory for path!\n");
-		exit(1);
-	}
-	
 	config_val = popen(config_val_cmd, "r");
 	if(config_val == NULL) {
 		fprintf( stderr, "warning: Can't popen config_val"
@@ -82,15 +76,9 @@ main( int argc, char* argv[], char *env[] )
 				 errno, strerror(errno) );
 		master_path = static_master_path;
 	} else {
-		count = fread( path_from_config_val, 1, _POSIX_PATH_MAX, config_val);
-		if( count > 0 ) {
-			path_from_config_val[_POSIX_PATH_MAX] = 0; // Null terminate it
-			for(i = 0; i < count; i++) {
-				if(path_from_config_val[i] == '\n') {
-					path_from_config_val[i] = 0;
-				}
-			}
-			master_path = path_from_config_val;
+		if( path_from_config_val.readLine(config_val) ) {
+			path_from_config_val.chomp();
+			master_path = path_from_config_val.Value();
 		} else {
 			fprintf(stderr, "Unable to read config entry, using hard-coded ");
 			fprintf(stderr, "default of /unsup/condor/sbin/condor_master\n ");

@@ -187,7 +187,6 @@ void Accountant::Initialize()
   // records for a user and what the user record says jives
   if ( first_time ) {
 	  HashKey HK;
-	  char key[_POSIX_PATH_MAX];
 	  ClassAd* ad;
 	  AttrList *unused;
 	  StringList users;
@@ -202,13 +201,15 @@ void Accountant::Initialize()
 		// first find all the users
 	  AcctLog->table.startIterations();
 	  while (AcctLog->table.iterate(HK,ad)) {
-		HK.sprint(key);
+		MyString keybuf;
+		HK.sprint(keybuf);
+		char const *key = keybuf.Value();
 			// skip records that are not customer records...
 		if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 			// for now, skip records that are "group" customer records. 
 			// TODO: we should fix the below sanity check code so it understands
 			// fixing up group customer records as well.
-		char *thisUser = &(key[CustomerRecord.Length()]);
+		char const *thisUser = &(key[CustomerRecord.Length()]);
 		if (GroupNamesList && GroupNamesList->contains_anycase(thisUser)) continue;
 			// if we made it here, append to our list of users
 		users.append( thisUser );
@@ -355,12 +356,13 @@ void Accountant::ResetAllUsage()
   dprintf(D_ACCOUNTANT,"Accountant::ResetAllUsage\n");
   time_t T=time(0);
   HashKey HK;
-  char key[_POSIX_PATH_MAX];
   ClassAd* ad;
 
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    HK.sprint(key);
+    MyString keybuf;
+    HK.sprint(keybuf);
+	char const *key = keybuf.Value();
     if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 	AcctLog->BeginTransaction();
     SetAttributeFloat(key,AccumulatedUsageAttr,0);
@@ -614,12 +616,12 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 void Accountant::DisplayLog()
 {
   HashKey HK;
-  char key[_POSIX_PATH_MAX];
   ClassAd* ad;
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
+    MyString key;
     HK.sprint(key);
-    printf("------------------------------------------------\nkey = %s\n",key);
+    printf("------------------------------------------------\nkey = %s\n",key.Value());
     ad->fPrint(stdout);
   }
 }
@@ -631,16 +633,18 @@ void Accountant::DisplayLog()
 void Accountant::DisplayMatches()
 {
   HashKey HK;
-  char key[_POSIX_PATH_MAX];
   ClassAd* ad;
   MyString ResourceName;
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    HK.sprint(key);
+    MyString keybuf;
+    HK.sprint(keybuf);
+	char const *key = keybuf.Value();
     if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
     ResourceName=key+ResourceRecord.Length();
-    ad->LookupString(RemoteUserAttr.Value(),key);
-    printf("Customer=%s , Resource=%s\n",key,ResourceName.Value());
+    MyString RemoteUser;
+    ad->LookupString(RemoteUserAttr.Value(),RemoteUser);
+    printf("Customer=%s , Resource=%s\n",RemoteUser.Value(),ResourceName.Value());
   }
 }
 
@@ -669,7 +673,6 @@ void Accountant::UpdatePriorities()
   dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Updating priorities - AgingFactor=%8.3f , TimePassed=%d\n",AgingFactor,TimePassed);
 
   HashKey HK;
-  char key[_POSIX_PATH_MAX];
   ClassAd* ad;
   float Priority, OldPrio, PriorityFactor;
   int UnchargedTime;
@@ -680,7 +683,9 @@ void Accountant::UpdatePriorities()
 
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    HK.sprint(key);
+    MyString keybuf;
+    HK.sprint(keybuf);
+    char const *key = keybuf.Value();
     if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 
     // lookup values in the ad
@@ -757,7 +762,6 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
 
   ClassAd* ResourceAd;
   HashKey HK;
-  char key[_POSIX_PATH_MAX];
   ClassAd* ad;
   MyString ResourceName;
   MyString CustomerName;
@@ -765,7 +769,9 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
   // Remove matches that were broken
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    HK.sprint(key);
+    MyString keybuf;
+    HK.sprint(keybuf);
+    char const *key = keybuf.Value();
     if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
     ResourceName=key+ResourceRecord.Length();
     ResourceAd=FindResourceAd(ResourceName, ResourceList);
@@ -775,8 +781,7 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
     }
 	else {
 		// Here we need to figure out the CustomerName.
-      ad->LookupString(RemoteUserAttr.Value(),key);
-      CustomerName=key;
+      ad->LookupString(RemoteUserAttr.Value(),CustomerName);
       if (!CheckClaimedOrMatched(ResourceAd, CustomerName)) {
         dprintf(D_ACCOUNTANT,"Resource %s was not claimed by %s - removing match\n",ResourceName.Value(),CustomerName.Value());
         RemoveMatch(ResourceName);
@@ -1068,7 +1073,7 @@ void Accountant::SetAttributeInt(const MyString& Key, const MyString& AttrName, 
     LogNewClassAd* log=new LogNewClassAd(Key.Value(),"*","*");
     AcctLog->AppendLog(log);
   }
-  char value[_POSIX_PATH_MAX];
+  char value[50];
   sprintf(value,"%d",AttrValue);
   LogSetAttribute* log=new LogSetAttribute(Key.Value(),AttrName.Value(),value);
   AcctLog->AppendLog(log);
@@ -1085,7 +1090,7 @@ void Accountant::SetAttributeFloat(const MyString& Key, const MyString& AttrName
     AcctLog->AppendLog(log);
   }
   
-  char value[_POSIX_PATH_MAX];
+  char value[255];
   sprintf(value,"%f",AttrValue);
   LogSetAttribute* log=new LogSetAttribute(Key.Value(),AttrName.Value(),value);
   AcctLog->AppendLog(log);
@@ -1102,9 +1107,9 @@ void Accountant::SetAttributeString(const MyString& Key, const MyString& AttrNam
     AcctLog->AppendLog(log);
   }
   
-  char value[_POSIX_PATH_MAX];
-  sprintf(value,"\"%s\"",AttrValue.Value());
-  LogSetAttribute* log=new LogSetAttribute(Key.Value(),AttrName.Value(),value);
+  MyString value;
+  value.sprintf("\"%s\"",AttrValue.Value());
+  LogSetAttribute* log=new LogSetAttribute(Key.Value(),AttrName.Value(),value.Value());
   AcctLog->AppendLog(log);
 }
 
@@ -1140,9 +1145,8 @@ bool Accountant::GetAttributeString(const MyString& Key, const MyString& AttrNam
 {
   ClassAd* ad;
   if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) return false;
-  char tmp[_POSIX_PATH_MAX];
-  if (ad->LookupString(AttrName.Value(),tmp)==0) return false;
-  AttrValue=tmp;
+
+  if (ad->LookupString(AttrName.Value(),AttrValue)==0) return false;
   return true;
 }
 

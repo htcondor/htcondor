@@ -35,7 +35,7 @@ extern "C" {
 
 //! Gets the writer password required by the quill++
 //  daemon to access the database
-static char * getWritePassword(char *write_passwd_fname, 
+static char * getWritePassword(const char *write_passwd_fname, 
 							   const char *host, const char *port, 
 							   const char *db,
 							   const char *dbuser) {
@@ -127,7 +127,7 @@ const char* spool
 {
 	char *host = NULL, *port = NULL;
 	char *writePassword;
-	char *writePasswordFile;
+	MyString writePasswordFile;
 	int len, tmp1, tmp2, tmp3;
 	char *jobQueueDBConn;
 
@@ -157,15 +157,12 @@ const char* spool
 	port[strlen(ptr_colon+1)] = '\0';
 
 		// get the password from the .pgpass file
-	writePasswordFile = (char *) malloc(_POSIX_PATH_MAX * sizeof(char));
-	snprintf(writePasswordFile, _POSIX_PATH_MAX, "%s/.pgpass", spool);
+	writePasswordFile.sprintf( "%s/.pgpass", spool);
 
-	writePassword = getWritePassword(writePasswordFile, 
+	writePassword = getWritePassword(writePasswordFile.Value(), 
 										   host?host:"", port?port:"", 
 										   jobQueueDBName?jobQueueDBName:"", 
 										   jobQueueDBUser);
-
-	free(writePasswordFile);
 
 	tmp1 = jobQueueDBName?strlen(jobQueueDBName):0;
 	tmp2 = strlen(writePassword);
