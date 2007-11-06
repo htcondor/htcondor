@@ -935,16 +935,32 @@ main_shutdown_graceful()
 	return TRUE;
 }
 
-
-time_t
 GetTimeStamp(char* file)
 {
 	struct stat sbuf;
-
+	
 	if( stat(file, &sbuf) < 0 ) {
 		return( (time_t) -1 );
 	}
 
+#if defined ( WIN32 ) 
+	/*
+	It appearers that the _stat function under Windows NT 4.0 and, by all 
+	reports, many other Windows systems, will return file times 3600 seconds 
+	(1 hour) too big when daylight savings time is in effect (this also 
+	includes st_atime and st_ctime).  In general the	MSDN is an accurate 
+	source of information, but this is a glaring omission. This is a to be 
+	considered a bug since it is defined as returning the time in UTC. The 
+	following fix is kinda gross, but it seems to fix the problem. Also, since 
+	the problem has been around since NT 4.0, it's sure to survive at least 
+	another 10 years... if not forever.
+	-B [11/6/2007]
+	*/
+    if ( 1 == sbuf.tm_isdst ) {
+		sbuf.st_mtime -= 3600;
+    }
+#else
+	
 	return( sbuf.st_mtime );
 }
 
