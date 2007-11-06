@@ -158,6 +158,12 @@ when there are jobs with different X509 subjects.
 nordugrid jobs in the grid universe. URLs are forwarded to the NorduGrid
 server, which performs the transfers.
 
+\item The length of the paths to the job's initial working directory,
+user log, and input/output files are no longer limited to 255
+characters.  Previously, \Condor{submit} would refuse to accept jobs
+exceeding this POSIX\_PATH\_MAX limit.  Now the only limit is whatever
+limit the operating system enforces on the system where the files are accessed.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -237,7 +243,7 @@ to an fd, the application will not encounter this bug.
 
 \item Standard universe jobs are no longer restricted in the length of
 file names that may be passed to system calls within the program.
-Previously, file names on the order of 240 characters or more could
+Previously, file names approaching 255 characters or more could
 cause the program to crash or behave incorrectly.
 
 \item Fixed a bug introduced in Condor 6.9.4 that caused grid universe
