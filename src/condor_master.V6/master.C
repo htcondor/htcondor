@@ -935,6 +935,7 @@ main_shutdown_graceful()
 	return TRUE;
 }
 
+time_t
 GetTimeStamp(char* file)
 {
 	struct stat sbuf;
