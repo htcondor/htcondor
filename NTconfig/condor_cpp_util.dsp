@@ -260,6 +260,14 @@ SOURCE="..\src\condor_c++_util\condor_ftp.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_getcwd.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_getcwd.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_id.C"
 # End Source File
 # Begin Source File
@@ -555,6 +563,10 @@ SOURCE="..\src\condor_c++_util\file_xml.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\file_xml.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\filename_tools_cpp.C"
 # End Source File
 # Begin Source File
 

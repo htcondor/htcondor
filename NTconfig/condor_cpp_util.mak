@@ -56,6 +56,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_environ.obj"
 	-@erase "$(INTDIR)\condor_event.obj"
 	-@erase "$(INTDIR)\condor_ftp.obj"
+	-@erase "$(INTDIR)\condor_getcwd.obj"
 	-@erase "$(INTDIR)\condor_id.obj"
 	-@erase "$(INTDIR)\condor_md.obj"
 	-@erase "$(INTDIR)\condor_open.obj"
@@ -99,6 +100,7 @@ CLEAN :
 	-@erase "$(INTDIR)\file_transfer.obj"
 	-@erase "$(INTDIR)\file_transfer_db.obj"
 	-@erase "$(INTDIR)\file_xml.obj"
+	-@erase "$(INTDIR)\filename_tools_cpp.obj"
 	-@erase "$(INTDIR)\forkwork.obj"
 	-@erase "$(INTDIR)\format_time.obj"
 	-@erase "$(INTDIR)\gahp_common.obj"
@@ -278,6 +280,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\file_transfer.obj" \
 	"$(INTDIR)\file_transfer_db.obj" \
 	"$(INTDIR)\file_xml.obj" \
+	"$(INTDIR)\forkwork.obj" \
 	"$(INTDIR)\format_time.obj" \
 	"$(INTDIR)\gahp_common.obj" \
 	"$(INTDIR)\generic_query.obj" \
@@ -343,7 +346,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\forkwork.obj"
+	"$(INTDIR)\filename_tools_cpp.obj" \
+	"$(INTDIR)\condor_getcwd.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -381,6 +385,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_environ.obj"
 	-@erase "$(INTDIR)\condor_event.obj"
 	-@erase "$(INTDIR)\condor_ftp.obj"
+	-@erase "$(INTDIR)\condor_getcwd.obj"
 	-@erase "$(INTDIR)\condor_id.obj"
 	-@erase "$(INTDIR)\condor_md.obj"
 	-@erase "$(INTDIR)\condor_open.obj"
@@ -424,6 +429,7 @@ CLEAN :
 	-@erase "$(INTDIR)\file_transfer.obj"
 	-@erase "$(INTDIR)\file_transfer_db.obj"
 	-@erase "$(INTDIR)\file_xml.obj"
+	-@erase "$(INTDIR)\filename_tools_cpp.obj"
 	-@erase "$(INTDIR)\forkwork.obj"
 	-@erase "$(INTDIR)\format_time.obj"
 	-@erase "$(INTDIR)\gahp_common.obj"
@@ -602,6 +608,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\file_transfer.obj" \
 	"$(INTDIR)\file_transfer_db.obj" \
 	"$(INTDIR)\file_xml.obj" \
+	"$(INTDIR)\forkwork.obj" \
 	"$(INTDIR)\format_time.obj" \
 	"$(INTDIR)\gahp_common.obj" \
 	"$(INTDIR)\generic_query.obj" \
@@ -667,7 +674,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\forkwork.obj"
+	"$(INTDIR)\filename_tools_cpp.obj" \
+	"$(INTDIR)\condor_getcwd.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -822,6 +830,12 @@ SOURCE="..\src\condor_c++_util\condor_event.C"
 SOURCE="..\src\condor_c++_util\condor_ftp.C"
 
 "$(INTDIR)\condor_ftp.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\condor_getcwd.C"
+
+"$(INTDIR)\condor_getcwd.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -1116,6 +1130,12 @@ SOURCE="..\src\condor_c++_util\file_transfer_db.C"
 SOURCE="..\src\condor_c++_util\file_xml.C"
 
 "$(INTDIR)\file_xml.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\filename_tools_cpp.C"
+
+"$(INTDIR)\filename_tools_cpp.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
