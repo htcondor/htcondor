@@ -66,8 +66,8 @@ typedef int socklen_t;
 typedef DWORD pid_t;
 typedef	unsigned __int16 uint16_t;
 typedef unsigned __int32 uint32_t;
-#define stat _stat
-#define fstat _fstat
+#define stat _fixed_windows_stat
+#define fstat _fixed_windows_fstat
 #define MAXPATHLEN 1024
 #define MAXHOSTNAMELEN 64
 #define	_POSIX_PATH_MAX 255
@@ -221,5 +221,8 @@ END_C_DECLS
 #if !defined( PRIu64 )
 # define PRIu64 "I64u"
 #endif
+
+/* fix [f]stat on Windows */
+#include "stat.WINDOWS.h"
 
 #endif /* CONDOR_SYS_NT_H */
