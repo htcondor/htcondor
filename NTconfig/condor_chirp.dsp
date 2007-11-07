@@ -78,7 +78,7 @@ BSC32=bscmake.exe
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
 # SUBTRACT BASE LINK32 /map
-# ADD LINK32 WS2_32.lib /nologo /subsystem:console /pdb:none /map /debug /machine:I386
+# ADD LINK32 ../Release/condor_common.obj ..\Release\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map /debug /machine:I386
 
 !ENDIF 
 
@@ -93,6 +93,10 @@ SOURCE=..\src\condor_chirp\chirp_protocol.h
 # Begin Source File
 
 SOURCE=..\src\condor_chirp\condor_chirp.C
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\dc_stub.C"
 # End Source File
 # End Target
 # End Project

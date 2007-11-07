@@ -296,6 +296,10 @@ SOURCE=..\src\condor_util_lib\signames.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\stat.WINDOWS.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\strcmp_until.c
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File

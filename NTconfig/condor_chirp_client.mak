@@ -175,9 +175,27 @@ LIB32_OBJS= \
 !IF "$(CFG)" == "condor_chirp_client - Win32 Debug" || "$(CFG)" == "condor_chirp_client - Win32 Release"
 SOURCE=..\src\condor_chirp\chirp_client.c
 
-"$(INTDIR)\chirp_client.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
+!IF  "$(CFG)" == "condor_chirp_client - Win32 Debug"
 
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+
+"$(INTDIR)\chirp_client.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ELSEIF  "$(CFG)" == "condor_chirp_client - Win32 Release"
+
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /I "..\src\condor_includes" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+
+"$(INTDIR)\chirp_client.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ENDIF 
 
 
 !ENDIF 

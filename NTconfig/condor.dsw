@@ -137,6 +137,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_softkill
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_chirp
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -313,6 +316,18 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
     End Project Dependency
 }}}
 

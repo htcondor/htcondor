@@ -83,6 +83,15 @@ LIB32=link.exe -lib
 # Begin Source File
 
 SOURCE=..\src\condor_chirp\chirp_client.c
+
+!IF  "$(CFG)" == "condor_chirp_client - Win32 Debug"
+
+# SUBTRACT CPP /YX /Yc /Yu
+
+!ELSEIF  "$(CFG)" == "condor_chirp_client - Win32 Release"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
