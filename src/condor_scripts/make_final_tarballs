@@ -406,7 +406,7 @@ foreach $module ( sort keys %modules ) {
 	   	 	$dest = $file;
 		}
 		# Must be able to do recursive copy in case of directories...
-		runcmd("$cp_cmd $src $skel/$release/$dest");
+		runcmd("date && time $cp_cmd $src $skel/$release/$dest");
     }
     runcmd("rm -rf $skel/$release/CVS", 1);
     runcmd("rm -rf $skel/$release/*/CVS", 1);
@@ -452,7 +452,7 @@ foreach $module ( sort keys %modules ) {
 			print "Untaring tarfile into skeleton.\n";
 			# This runs in a subshell as to not distub the cwd of the script
 			print runcmd("(cd $skel/$release && " . 
-				"$tar_cmd -xf " .
+				"time $tar_cmd -xf " .
 				"../../$modules{$module}{'releaselocation'}{$linktype}/$tarfile)");
 		} else {
 			# Otherwise just copy the tarfile with the right permissions into
@@ -464,7 +464,7 @@ foreach $module ( sort keys %modules ) {
 			# here instead of a move, otherwise the toplevel makefile will
 			# have to be called again to rebuild the source file.
 
-			runcmd("dd " .
+			runcmd("date && time dd " .
 				"if=$modules{$module}{'releaselocation'}{$linktype}/$tarfile " .
 				"of=$skel/$release/$tarfile bs=10485760");
 		}
@@ -479,7 +479,7 @@ foreach $module ( sort keys %modules ) {
 		runcmd("unlink $skel/$release/$tarfile", 1);
 
 		print "Renaming tarball to archecture specific name.\n";
-		runcmd("mv $skel/$release.tar $skel/$release-$platform.tar");
+		runcmd("date && time mv $skel/$release.tar $skel/$release-$platform.tar");
 	
 		# Figure out where we want put this tarball
 		if( $module =~ /condor/ ) {
@@ -504,17 +504,20 @@ foreach $module ( sort keys %modules ) {
 		# we already check for gzip (but not compress) on our build
 		# machines @ configure time, and some of our platforms don't
 		# put compress in a reasonable location... :(
-		#runcmd("time gzip $skel/$release-$platform.tar");
-		# If /usr/bin/time is not installed then doing `time` fails
-		runcmd("gzip $skel/$release-$platform.tar");
+		runcmd("date && time gzip $skel/$release-$platform.tar");
 
 		print "Moving $release-$platform.tar.gz into $targetdir\n";
-		runcmd("mv $skel/$release-$platform.tar.gz $targetdir");
+		runcmd("date && time mv $skel/$release-$platform.tar.gz $targetdir");
 		print "done.\n";
 	}
 }
 
 exit 0;
+
+
+# WARNING: If /usr/bin/time is not installed then doing `time` fails,
+# but doing `date && time` is safe, so if you want to runcmd("time
+# ..") you should runcmd("date && time ..")
 
 # The first argument is the command for the shell to execute.
 # The presence of the second argument, means don't die if the command fails.
