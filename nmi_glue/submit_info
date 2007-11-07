@@ -37,6 +37,7 @@
 # ppc_macos_10.4
 # ppc64_sles_9
 # ps3_ydl_5.0
+# x86_rhap_5
 
 # These platforms are in maintenance build only
 #N/A
@@ -101,7 +102,7 @@ prereqs   = gcc-3.3
 ########################################
 [
 platforms = ia64_sles_8, ia64_rhas_3, x86_64_rhas_3, ppc_ydl_3.0, \
-            x86_winnt_5.1, ppc64_sles_9, ps3_ydl_5.0
+            x86_winnt_5.1, ppc64_sles_9, ps3_ydl_5.0, x86_rhap_5
 ]
 
 
@@ -160,6 +161,11 @@ test_append_prereqs = java-1.4.2
 
 [
 platforms = x86_deb_4.0
+test_append_prereqs = java-1.4.2_05
+]
+
+[
+platforms = x86_rhap_5
 test_append_prereqs = java-1.4.2_05
 ]
 
