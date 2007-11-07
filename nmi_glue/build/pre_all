@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: pre_all,v 1.5 2007-09-27 15:24:01 gthain Exp $ 
+# $Id: pre_all,v 1.6 2007-11-07 02:17:29 psilord Exp $ 
 # Submit-side NMI build system infrastructure to prepare sources for
 # the Condor build
 #
@@ -60,6 +60,7 @@ print "Figuring out Condor version\n";
 chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
 my $vers_src="$SrcDir/condor_c++_util/condor_version.C";
 my $vers_file="CONDOR-VERSION";
+my $buildid_file="BUILD-ID";
 my $majorv;
 my $minorv;
 my $releasev;
@@ -123,6 +124,7 @@ close( DOC );
 close( DOC_LOG );
 $nroff_status = $?;
 if( $nroff_status ) {
+	print `cat $doc_log`;
     die "Building nroff man pages failed with status $nroff_status!\n";
 } else {
     unlink( $doc_log ) || warn "Can't unlink($doc_log): $!\n";
@@ -233,9 +235,17 @@ print "Done removing all source directories\n";
 
 # All we want to do is tar the files in common into
 # common/results.tar.gz so that we can save them.
-print "Tarring up contents of common to save for later\n";
+print "Creating platform-independent results.tar.gz file\n";
 chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
-open( TAR, "tar -zcvf $result $vers_file $src_tarball|" ) ||
+
+$runid = acquire_runid();
+open( BUILDID_FILE, ">$buildid_file") || die "Can't open $buildid_file: $!\n";
+print BUILDID_FILE "$runid\n";
+close( BUILDID_FILE );
+print "Embedded build id: $runid\n";
+
+print "Tarring up contents of common to save for later\n";
+open( TAR, "tar -zcvf $result $buildid_file $vers_file $src_tarball|" ) ||
     die "Can't open(tar -zcvf $result $vers_file $src_tarball): $!\n";
 while( <TAR> ) {
     print $_;
@@ -261,4 +271,33 @@ sub safe_sys() {
     if( $status ) {
 	die "$arg failed with status $status\n";
     }
+}
+
+sub acquire_runid() {
+	my $runid;
+	my $tries = 5;
+	my $count = 0;
+	my $delay = 60;
+
+	# Try for $tries times, with a delay of $delay, to try and get a runid
+	# from the database for this gid. If all else fails, just use the gid
+	# (which we don't initially want to use since this is going into
+	# the version string of the binaries and it is a user interface mistake to
+	# have it in there).
+	
+	# figure out the runid, if not available, then put in the gid.
+	$runid = `nmi_gid2runid $ENV{_NMI_GID} 2>&1`;
+	while($count < $tries && ($? != 0 || $runid =~ m/ERROR/)) {
+		$count++;
+		sleep $delay;
+		$runid = `nmi_gid2runid $ENV{_NMI_GID} 2>&1`;
+	}
+	if ($? != 0 || $runid =~ m/ERROR/) {
+		# oops, no runid, so we'll just slam the gid in here for now until we
+		# find a better semantic thing to do
+		$runid = $ENV{_NMI_GID};
+	}
+	
+	chomp $runid;
+	return $runid;
 }

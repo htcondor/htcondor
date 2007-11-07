@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.19 2007-10-13 17:01:19 matt Exp $
+# $Id: remote_pre,v 1.20 2007-11-07 02:17:30 psilord Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -18,6 +18,8 @@ GetOptions(
 my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
 my $vers_file = "CONDOR-VERSION";
+my $buildid_file = "BUILD-ID";
+my $buildid;
 
 # autoflush our STDOUT
 $| = 1;
@@ -29,6 +31,23 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     system("env");
 }
 print "------------------------- ENV DUMP ------------------------\n";
+
+######################################################################
+# grab out the build id so we can tell configure what to use for the
+# version string.
+######################################################################
+print "Finding build id of Condor\n";
+open( BUILDID, "$buildid_file" ) || die "Can't open $buildid_file: $!\n";
+while( <BUILDID> ) {
+    chomp;
+    $buildid = $_;
+}
+close( BUILDID );
+if( ! $buildid ) {
+    die "Can't find Condor build id in $buildid_file!\n";
+}
+print "Build id is: $buildid\n";
+$buildid = " --with-buildid=$buildid ";
 
 ######################################################################
 # grab the Condor version out of the version file so we can unpack our 
@@ -250,11 +269,17 @@ configure:
 ######################################################################
 
 chdir( $SrcDir ) || die "Can't chdir($SrcDir): $!\n";
+
 print "running CONFIGURE ...\n"; 
-open( CONFIG,
+my $configexecstr = 
       "./configure " .
+	  $buildid .
       " --with-soft-is-hard " .
-      " --with-externals=$externals 2>&1 |") ||
+      " --with-externals=$externals";
+
+print "$configexecstr\n";
+
+open( CONFIG, "$configexecstr 2>&1 |") ||
     die "Can't open configure as a pipe: $!\n";
 while ( <CONFIG> ) {
   print $_;
