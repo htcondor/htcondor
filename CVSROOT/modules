@@ -46,9 +46,12 @@ NMI_GLUE	-a \
 		nmi_glue/submit_info
 
 # These probably won't need to change
+LICENSE		-a \
+		LICENSE-2.0.txt \
+		NOTICE.txt
 CONFIG		-a config
 TOOLS		-a config imake NMI_GLUE
-DOC		-a doc
+DOC		-a doc LICENSE
 NT_TOOLS	-a NTconfig
 
 # Windows-only programs. dagedit will be added here too.
@@ -273,6 +276,7 @@ V6_8_SRC		-a \
 			src/packaging
 
 V6_9_SRC		-a \
+			LICENSE \
 			V6_8_SRC \
 			src/condor_eventd.V2 \
 			src/condor_procd \
