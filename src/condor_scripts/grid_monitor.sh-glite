@@ -1,3 +1,5 @@
+#! /usr/bin/env perl
+
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,7 +19,6 @@
 ##
 ##**************************************************************
 
-#! /usr/bin/env perl
 
 # Sends results from the grid_manager_monitor_agent back to a
 # globus-url-copy friendly URL whenever those results are updated.
