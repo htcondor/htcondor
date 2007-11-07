@@ -21,20 +21,6 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-/* Here is the version string - update before a public release */
-/* --- IMPORTANT!  THE FORMAT OF THE VERSION STRING IS VERY STRICT
-   BECAUSE IT IS PARSED AT RUNTIME.  DO NOT ALTER THE FORMAT OR ENTER
-   ANYTHING EXTRA BEFORE THE DATE.  IF YOU WISH TO ADD EXTRA INFORMATION,
-   DO SO _AFTER_ THE DATE AND BEFORE THE TRAILING '$' CHARACTER.
-   EXAMPLES:
-       $CondorVersion: 6.1.11 " __DATE__ " WinNTPreview $    [OK]
-	   $CondorVersion: 6.1.11 WinNTPreview " __DATE__ " $	 [WRONG!!!]
-   Any questions?  See Todd or Derek.  Note: if you mess it up, DaemonCore
-   will EXCEPT at startup time.  
-*/
-
-static char* CondorVersionString = "$CondorVersion: 6.9.5 " __DATE__ " PRE-RELEASE-UWCS $";
-
 /* 
    This is some wisdom from Cygnus's web page.  If you just try to use
    the "stringify" operator on a preprocessor directive, you'd get
@@ -57,12 +43,34 @@ static char* CondorVersionString = "$CondorVersion: 6.9.5 " __DATE__ " PRE-RELEA
    define the correct platform string right in here. :( -Derek 12/3/99 
 */
 
+#define xstr(s) str(s)
+#define str(s) #s
+
 #if defined(WIN32)
 #define PLATFORM INTEL-WINNT50
 #endif
 
-#define xstr(s) str(s)
-#define str(s) #s
+/* Via configure, one may have specified a particular buildid string to use
+	in the version string. So honor that request here. */
+#if defined(BUILDID)
+#define BUILDIDSTR " BuildID: " xstr(BUILDID)
+#else
+#define BUILDIDSTR ""
+#endif
+
+/* Here is the version string - update before a public release */
+/* --- IMPORTANT!  THE FORMAT OF THE VERSION STRING IS VERY STRICT
+   BECAUSE IT IS PARSED AT RUNTIME.  DO NOT ALTER THE FORMAT OR ENTER
+   ANYTHING EXTRA BEFORE THE DATE.  IF YOU WISH TO ADD EXTRA INFORMATION,
+   DO SO _AFTER_ THE BUILDIDSTR AND BEFORE THE TRAILING '$' CHARACTER.
+   EXAMPLES:
+       $CondorVersion: 6.1.11 " __DATE__ BUILDIDSTR " WinNTPreview $ [OK]
+	   $CondorVersion: 6.1.11 WinNTPreview " __DATE__ BUILDIDSTR " $ [WRONG!!!]
+   Any questions?  See Todd or Derek.  Note: if you mess it up, DaemonCore
+   will EXCEPT at startup time.  
+*/
+
+static char* CondorVersionString = "$CondorVersion: 6.9.5 " __DATE__ BUILDIDSTR " PRE-RELEASE-UWCS $";
 
 /* Here is the platform string.  You don't need to edit this */
 static char* CondorPlatformString = "$CondorPlatform: " xstr(PLATFORM) " $";

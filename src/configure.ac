@@ -527,6 +527,12 @@ AC_SUBST(_cv_ext_config_sh,"$_root_dir/config/config.sh")
 # Check for command-line arguments and environment variables
 ############################################################
 
+AC_ARG_WITH(buildid,
+  [AS_HELP_STRING([--with-buildid],
+     [Add a build identification string to the Condor Version String])],
+  [BUILDID=$withval],
+  [BUILDID=no])
+
 AC_ARG_WITH(proper,
   [AS_HELP_STRING([--with-proper],
      [Force this configure script to work in the proper (non-Condor) way])],
@@ -538,6 +544,15 @@ AC_ARG_WITH(soft-is-hard,
      [Force all SOFT requirements into HARD requirements])],
   [SOFT_IS_HARD=$withval],
   [SOFT_IS_HARD=no])
+
+# if we want a buildid, jam it into CPPFLAGS
+AC_MSG_CHECKING(for a build id to use)
+if test "x$BUILDID" != "xno"; then
+	CPPFLAGS="$CPPFLAGS -DBUILDID=$BUILDID"
+	AC_MSG_RESULT($BUILDID)
+else
+	AC_MSG_RESULT(none specified)
+fi
 
 # If we are being proper we don't want to look for "externals"
 AS_IF([test "x$PROPER" != xyes],
