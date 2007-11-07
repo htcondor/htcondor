@@ -220,6 +220,7 @@ $realskel="condor_release";
   "i386_centos44"   => "linux",
   "i386_centos45"   => "linux",
   "i386_f7"       => "linux",
+  "i386_rhel51"   => "linux",
   "ia64_rh72"     => "linux",
   "ia64_rhel3"    => "linux",
   "i386_rhel3"    => "linux",
@@ -262,6 +263,7 @@ $realskel="condor_release";
   "i386_centos44"   => "x86",
   "i386_centos45"   => "x86",
   "i386_f7"       => "x86",
+  "i386_rhel51"       => "x86",
   "ia64_rh72"     => "ia64",
   "ia64_rhel3"    => "ia64",
   "i386_rhel3"    => "x86",
@@ -304,6 +306,7 @@ $realskel="condor_release";
   "i386_centos44" => "centos44",
   "i386_centos45" => "centos45",
   "i386_f7"     => "fedora7",
+  "i386_rhel51"       => "rhel51",
   "x86_64_rhel3"  => "rhel3",
   "x86_64_debian40"  => "debian40",
   "i386_rhel3"  => "rhel3",
@@ -501,7 +504,9 @@ foreach $module ( sort keys %modules ) {
 		# we already check for gzip (but not compress) on our build
 		# machines @ configure time, and some of our platforms don't
 		# put compress in a reasonable location... :(
-		runcmd("time gzip $skel/$release-$platform.tar");
+		#runcmd("time gzip $skel/$release-$platform.tar");
+		# If /usr/bin/time is not installed then doing `time` fails
+		runcmd("gzip $skel/$release-$platform.tar");
 
 		print "Moving $release-$platform.tar.gz into $targetdir\n";
 		runcmd("mv $skel/$release-$platform.tar.gz $targetdir");

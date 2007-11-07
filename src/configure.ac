@@ -223,22 +223,25 @@ elif test $os = "Linux" ; then
      "9" )
        _cv_linux_distro="RH9"
        ;;
-	 "3" )
+     "3" )
        _cv_linux_distro="RHEL3"
        ;;
-	 "5" )
+     "5" )
        _cv_linux_distro="RHEL5"
        ;;
-	 "4.2" )
+     "5.1" )
+       _cv_linux_distro="RHEL51"
+      ;;
+     "4.2" )
        _cv_linux_distro="CENTOS42"
-       ;;
-	 "4.3" )
+      ;;
+     "4.3" )
        _cv_linux_distro="CENTOS43"
        ;;
-	 "4.4" )
+     "4.4" )
        _cv_linux_distro="CENTOS44"
        ;;
-	 "4.5" )
+     "4.5" )
        _cv_linux_distro="CENTOS45"
        ;;
      "7" )
@@ -2202,6 +2205,9 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
     ;;
   "2.3.6" )
     CHECK_EXTERNAL([glibc],[2.3.2.27.9.7], [soft])
+    ;;
+  "2.5" ) # RHEL 5.1
+    including_glibc_ext=NO
     ;;
   "2.5." )
     including_glibc_ext=NO
