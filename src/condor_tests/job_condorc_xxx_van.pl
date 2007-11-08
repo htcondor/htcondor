@@ -1,3 +1,4 @@
+#! /usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,7 +18,6 @@
 ##
 ##**************************************************************
 
-#! /usr/bin/env perl
 
 open(IN,"<job_condorc_xxx_van.in") || die "can not open job_condorc_xxx_van.in:$!\n";
 open(OUT,">outfile1") || die "can not open outfile1:$!\n";

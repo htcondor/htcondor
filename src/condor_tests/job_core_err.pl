@@ -1,3 +1,4 @@
+#! /usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,5 +18,4 @@
 ##
 ##**************************************************************
 
-#! /usr/bin/env perl
 print "Good 

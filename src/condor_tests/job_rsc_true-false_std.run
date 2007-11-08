@@ -1,49 +1,20 @@
 #!/usr/bin/env perl
-
-use CondorTest;
-
-$cmd = 'job_rsc_true-false_std.cmd';
-$testname = 'remote io true/false Test';
-$line = "";
-$filenm = "/tmp/job_rsc_true-false_std.$$";
-	
-	open(CMD,"<$cmd") || die "Can not open command file: $!\n";
-	open(NEWCMD,">$cmd.new") || die "Can not open new command file: $!\n";
-	while(<CMD>)
-	{
-		CondorTest::fullchomp();
-		$line = $_;
-		if($line =~ /\s*arguments\s*=.*$/)
-		{
-			print NEWCMD "arguments = $filenm\n";
-		}
-		else
-		{
-			print NEWCMD "$line\n";
-		}
-
-	}
-	close(CMD);
-	close(NEWCMD);
-	system("mv $cmd.new $cmd");
-
-$ExitSuccess = sub 
-{
-	my %info = @_;
-
-	# Pull out requested environment values
-	my $args   = $info{"arguments"};
-	print "Args passed in are $args\n";
-	if(!defined($args)) {
-	}
-};
-
-CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
-
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-    print "$testname: SUCCESS\n";
-    exit(0);
-} else {
-    die "$testname: CondorTest::RunTest() failed\n";
-}
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
 

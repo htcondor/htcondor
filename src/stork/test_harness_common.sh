@@ -1,3 +1,4 @@
+#!/bin/bash
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,7 +18,6 @@
 ##
 ##**************************************************************
 
-#!/bin/bash
 # Stork, CredD common test harness variables, functions.
 
 # Configuration constants

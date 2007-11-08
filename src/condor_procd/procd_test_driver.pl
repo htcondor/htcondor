@@ -1,3 +1,4 @@
+#!/usr/bin/perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,7 +18,6 @@
 ##
 ##**************************************************************
 
-#!/usr/bin/perl
 
 use strict;
 use List::Util "sum";

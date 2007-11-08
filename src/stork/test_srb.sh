@@ -1,3 +1,4 @@
+#!/bin/bash
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,7 +18,6 @@
 ##
 ##**************************************************************
 
-#!/bin/bash
 
 #srb_root=../../externals/install/srb-3.2.1
 srb_root=/p/condor/workspaces/externals/install/srb-3.2.1

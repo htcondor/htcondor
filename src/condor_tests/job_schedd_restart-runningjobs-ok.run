@@ -1,90 +1,20 @@
 #! /usr/bin/env perl
-use CondorTest;
-use CondorPersonal;
-
-$cmd_template = "job_schedd_restart-runningjobs-ok.template";
-$testname = 'job_schedd_restart-runningjobs-ok - Simple parallel job with security on';
-$cmd = "job_schedd_restart-runningjobs-ok.cmd";
-$corename = "job_schedd_restart-runningjobs-ok";
-
-# where am I running
-$dummyhost = "gamgee.cs.wisc.edu";
-$currenthost = `hostname`;
-CondorTest::fullchomp($currenthost);
-
-system("date");
-print "Dummyhost was $dummyhost and really running on $currenthost\n";
-
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
-system("mkdir $mysaveme");
-$mypiddir = $mysaveme . "/" . $mypid;
-system("mkdir $mypiddir");
-#make a symbolic link for personal condor module to use
-system("ln -s $mypiddir $mypid");
-
-$mysubmitnm = $corename . $mypid . ".cmd";
-$mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
-$mysubmitnmlog = $corename . $mypid . ".log";
-$mysubmitnmerr = $corename . $mypid . ".err";
-$mysubmitnmout = $corename . $mypid . ".out";
-$mycorenm = $corename . ".cmd";
-$mycorenmcmdout = $corename . ".cmd.out";
-$mycorenmlog = $corename . ".log";
-$mycorenmerr = $corename . ".err";
-$mycorenmout = $corename . ".out";
-
-print "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
-
-# my $configrem = CondorPersonal::DebugOn();
-# get a remote scheduler running (side b)
-my $configrem = CondorPersonal::StartCondor("x_param.scheddrestart" ,"scheddrestart");
-my @parallel = split /\+/, $configrem;
-my $parallelconfig = shift @parallel;
-my $parallelport = shift @parallel;
-
-print "---Parallel config is $parallelconfig and remote port is $parallelport---\n";
-
-$ENV{CONDOR_CONFIG} = $parallelconfig;
-
-print "Set config to $parallelconfig\n";
-
-my $result = system("./job_schedd_restart-runningjobs-ok.pl $mysubmitnm");
-print "Result of job_schedd_restart-runningjobs-ok job is  $result\n";
-
-
-system("cp *schedd_restart-runningjobs-ok* $mysaveme");
-
-if( -e "$mysubmitnm" )
-{
-	system("cp $mysubmitnm $mycorenm");
-}
-
-if( -e "$mysubmitnmout" )
-{
-	system("cp $mysubmitnmcmdout $mycorenmcmdout");
-}
-
-if( -e "$mysubmitnmlog" )
-{
-	system("cp $mysubmitnmlog $mycorenmlog");
-}
-
-if( $result != 0 )
-{
-	exit(1);
-}
-
-my @adarray;
-my $status = 1;
-my $cmd = "condor_off -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
-	exit(1)
-}
-
-system("date");
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
 

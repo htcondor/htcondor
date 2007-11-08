@@ -1,90 +1,20 @@
 #! /usr/bin/env perl
-use CondorTest;
-
-$cmd = 'cmd_q_shows-better-analyze.cmd';
-$cmdout = $cmd . ".out";
-$testname = 'cmd_q_shows-better-analyze  ';
-
-$whoami = `whoami`;
-chomp($whoami);
-
-
-@adarray;
-
-$submit = sub {
-	my %info = @_;
-	print "Good we need to run to see it\n";
-
-	my $foundcluster = 0;
-	my $foundanalyze = 0;
-	my $cmd = "condor_q -better-analyze";
-
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		exit(1)
-	}
-
-	my $submitline = "";
-	my $cluster = "";
-
-	open(CMD, "<$cmdout") || die "Can not find better-analyze output:$!\n";;
-	while(<CMD>) {
-		chomp($_);
-		$submitline = $_;
-		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
-			$cluster = $1;
-			print "Found my cluster which is $cluster!\n";
-		}
-		print "$_\n";
-	}
-
-	foreach $line (@adarray) {
-		chomp($line);
-		if($line =~ /^\s*(\d+)\.(\d+):\s*Run\s+analysis\s+summary\.\s+.*$/) {
-				print "Score!!!!! found cluster $cluster\n";
-				print "$line\n";
-				$foundcluster = 1;
-		}
-		if($line =~ /^\s*The\s+Requirements\s+expression\s+for\s+your\s+job\s+is:\s*.*$/) {
-				print "Score!!!!! found -better-analyze\n";
-				print "$line\n";
-				print "condor_q -better-analyse prints Requirements like this\n";
-				$foundanalyze = 1;
-		}
-	}
-	if(($foundcluster) && ($foundanalyze)) {
-		$cmd = "condor_rm $cluster";
-		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	}
-
-};
-
-$aborted = sub {
-	print "If all is good we abort our own job.......\n";
-	exit(0);
-};
-
-$ExitSuccess = sub {
-	my %info = @_;
-};
-
-$timed = sub
-{
-    die "Job should have ended by now. condor_q -sub $whoami broken!\n";
-};
-
-CondorTest::RegisterSubmit( $testname, $submit );
-CondorTest::RegisterAbort($testname, $aborted);
-#CondorTest::RegisterExecute($testname, $execute);
-CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
-
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
-}
-
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
 

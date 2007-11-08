@@ -1,3 +1,4 @@
+#! /usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,7 +18,6 @@
 ##
 ##**************************************************************
 
-#! /usr/bin/env perl
 
 my $limit = $ARGV[0];
 my $corefile = "core";

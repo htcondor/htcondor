@@ -1,185 +1,20 @@
 #! /usr/bin/env perl
-use CondorTest;
-use CondorPersonal;
-
-CondorPersonal::DebugOff();
-Condor::DebugOff();
-
-$cmd_template = "job_condorc_abc_van.template";
-$testname = 'job_condorc_abc_van - Chained Condor-C A&B&C with Vanilla job';
-$corename = "job_condorc_abc_van";
-
-# where are we running
-$dummyhost = "gamgee.cs.wisc.edu";
-$currenthost = `hostname`;
-CondorTest::fullchomp($currenthost);
-print "Running on $currenthost\n";
-
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
-system("mkdir $mysaveme");
-$mypiddir = $mysaveme . "/" . $mypid;
-system("mkdir $mypiddir");
-#make a symbolic link for personal condor module to use
-system("ln -s $mypiddir $mypid");
-$mysubmitnm = $corename . $mypid . ".cmd";
-$mysubmitnmout = $corename . $mypid . ".cmd.out";
-$mysubmitnmlog = $corename . $mypid . ".log";
-$mycorenamecmd = $corename . ".cmd";
-$mycorenamecmdout = $corename . ".cmd.out";
-$mycorenamelog = $corename . ".log";
-
-system("date");
-print "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
-
-#my $configrem = CondorPersonal::DebugOn();
-
-# get a remote scheduler running (side c)
-my $configrem = CondorPersonal::StartCondor("x_param.condorcremote" ,"remote");
-my @remote = split /\+/, $configrem;
-my $remconfig = shift @remote;
-my $remport = shift @remote;
-
-print "---Remote config(c) is $remconfig and remote port is $remport---\n";
-
-# get a middle scheduler running (side b)
-my $configmid = CondorPersonal::StartCondor("x_param.condorcmiddle" ,"middle");
-my @middle = split /\+/, $configmid;
-my $midconfig = shift @middle;
-my $midport = shift @middle;
-
-print "---Middle config(b) is $midconfig and remote port is $midport---\n";
-
-# Edit submit file to submit to scheduler at remote (side b) schedd.
-my $line;
-open(CSUB,">$mysubmitnm") || die "Can't open new submit file $mysubmitnm: $!\n";
-open(TPLATE,"<$cmd_template") || die "Can't open submit file template $cmd_template: $!\n";
-while(<TPLATE>)
-{
-	CondorTest::fullchomp($_);
-	$line = $_;
-	if( $line =~ /^\s*remote_pool\s*=\s*($dummyhost):\s*(\d+)\s*$/ )
-	{
-		print "remote pool is $currenthost:$midport\n";
-		print CSUB "remote_pool = $currenthost:$midport\n";
-	}
-	elsif( $line =~ /^\s*remote_schedd\s*=.*$/ )
-	{
-		my $schedd = "schedd$mypid" . "middle\@$currenthost";
-		print CSUB "remote_schedd = $schedd\n";
-	}
-	elsif( $line =~ /^\s*\+Remote_RemotePool\s*=\s*\"($dummyhost):\s*(\d+)\"\s*$/ )
-	{
-		print "remote pool is $currenthost: port $remport\n";
-		print CSUB "+Remote_RemotePool = \"$currenthost:$remport\"\n";
-	}
-	elsif( $line =~ /^\s*\+Remote_RemoteSchedd\s*=\s*.*$/ )
-	{
-		my $schedd = "schedd$mypid" . "remote\@$currenthost";
-		print CSUB "+Remote_RemoteSchedd = \"$schedd\"\n";
-	}
-	elsif( $line =~ /^\s*(.*)$dummyhost(.*)\s*$/)
-	{
-		print "found $dummyhost and subbing $currenthost\n"; 
-		print CSUB "$1$currenthost$2\n";
-	}
-	# do not leave the log file name alone
-	# because we are always cluster 1 as we
-	# are always a fresh personal condor and we
-	# do not want to trip on it if we fire the test
-	# locally a number of times.
-	elsif( $line =~ /^\s*log\s*= .*$/)
-	{
-		my $lognm = $mysubmitnmlog;
-		print "New log name: $lognm\n"; 
-		print CSUB "log = $lognm\n";
-	}
-	else
-	{
-		print "template: $line\n";
-		print CSUB "$line\n";
-	}
-}
-close(TPLATE);
-close(CSUB);
-sleep 10;
-
-# get a local scheduler running (side a)
-my $configloc = CondorPersonal::StartCondor("x_param.condorclocal" ,"local");
-my @local = split /\+/, $configloc;
-my $locconfig = shift @local;
-my $locport = shift @local;
-
-print "---local config is $locconfig and local port is $locport---\n";
-
-$ENV{CONDOR_CONFIG} = $locconfig;
-# submit into local schedd (side a)
-
-if( ! -e "job_condorc_xxx_van.in" )
-{
-	system("date > job_condorc_xxx_van.in");
-}
-
-print "Looking for schedds at B middle point of ABC - Condor-C\n";
-system("condor_status -pool $currenthost:$midport -schedd -format '%s\n' Name");
-print "Looking for schedds at C remote point of ABC - Condor-C\n";
-system("condor_status -pool $currenthost:$remport -schedd -format '%s\n' Name");
-
-my $result = system("./job_condorc_ab_van.pl $mysubmitnm");
-print "Result of crafted Condor-C job is  $result\n";
-
-system("cp *condorc* $mysaveme");
-
-if( -e "$mysubmitnm" )
-{
-	system("cp $mysubmitnm $mycorenamecmd");
-}
-
-if( -e "$mysubmitnmout" )
-{
-	system("cp $mysubmitnmout $mycorenamecmdout");
-}
-
-if( -e "$mysubmitnmlog" )
-{
-	system("cp $mysubmitnmlog $mycorenamelog");
-}
-
-my @adarray;
-my $status = 1;
-my $cmd = "condor_off -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
-	exit(1)
-}
-
-$ENV{CONDOR_CONFIG} = $remconfig;
-$status = 1;
-$cmd = "condor_off -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
-	exit(1)
-}
-
-$ENV{CONDOR_CONFIG} = $midconfig;
-$status = 1;
-$cmd = "condor_off -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
-	exit(1)
-}
-system("date");
-
-if($result != 0)
-{
-	# actuaal job failed but we allowed cleanup
-	exit(1);
-}
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
 

@@ -1,3 +1,4 @@
+#!/s/std/bin/perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,7 +18,6 @@
 ##
 ##**************************************************************
 
-#!/s/std/bin/perl
 
 ######################################################################
 # This script finds out the time skew between a given remote machine #

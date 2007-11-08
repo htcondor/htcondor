@@ -1,3 +1,4 @@
+#! /usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,7 +18,6 @@
 ##
 ##**************************************************************
 
-#! /usr/bin/env perl
 BEGIN {$^W=1}  #warnings enabled
 
 # I'm adding 1 below because this will be called with an argument of

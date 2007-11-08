@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,7 +18,6 @@
 ##
 ##**************************************************************
 
-#!/usr/bin/env perl
 
 # Script for sorting condor_attributes.h.  All you have to do is run
 # it in the condor_includes directory.  It will rename the existing

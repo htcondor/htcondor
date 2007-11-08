@@ -1,83 +1,20 @@
 #! /usr/bin/env perl
-use CondorTest;
-
-$cmd = 'cmd_q_shows-format.cmd';
-$cmdout = $cmd . ".out";
-$testname = 'cmd_q_shows-format  ';
-
-$whoami = "";
-
-@adarray;
-
-$submit = sub {
-	my %info = @_;
-	my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\n\" ClusterId";
-
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		exit(1)
-	}
-
-	my $submitline = "";
-	my $cluster = "";
-
-	open(CMD, "<$cmdout") || die "Can not find submit output:$!\n";;
-	while(<CMD>) {
-		chomp($_);
-		$submitline = $_;
-		print "Scraping cluster from submit file\n";
-		print "hmmmm<$submitline>\n";
-		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
-			$cluster = $1;
-			print "Found my cluster which is $cluster!\n";
-		}
-	}
-
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		exit(1)
-	}
-
-	$cmd = "condor_rm $cluster";
-
-	foreach $line (@adarray) {
-		chomp($line);
-		print "$line\n";
-		if($line =~ /^\s*([\w\-]+)\s+ClusterId\s+=\s+$clusters.*$/) {
-				print "Bingo: found <$line> shows I am $1\n";
-				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
-				return(0);
-		} else {
-			print "<<<$line>>>\n";
-		}
-	}
-
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
-	exit(1);
-};
-
-$aborted = sub {
-	print "If all is good we abort our own job.......\n";
-	exit(0);
-};
-
-$ExitSuccess = sub {
-	my %info = @_;
-};
-
-CondorTest::RegisterAbort($testname, $aborted);
-CondorTest::RegisterSubmit($testname, $submit);
-CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
-
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
-}
-
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
 

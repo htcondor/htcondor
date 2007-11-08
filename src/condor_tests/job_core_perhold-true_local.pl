@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,7 +18,6 @@
 ##
 ##**************************************************************
 
-#!/usr/bin/env perl
 ##
 ## PERIODIC_HOLD - True
 ## We submit a job and it should be put on hold
