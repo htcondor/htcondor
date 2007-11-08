@@ -40,10 +40,13 @@ if( $datafile ) {
 	#print "Merging daily data in <<$datafile>>\n";
 }
 
+my $domove = 0;
 if( !$outfile ) {
 	$outfile = "/tmp/btplots/tempdata";
+	$domove=1;
 	#print "Temp results going to <<$outfile>>\n";
 }
+#print "Temp results going to <<$outfile>>\n";
 
 my $curday = "";
 my $curyear = "";
@@ -195,7 +198,11 @@ while(<DATA>) {
 close(OUTDATA);
 close(DATA);
 #system("cat $outfile");
-system("mv $outfile $datafile");
+
+if($domove == 1) {
+	#merged files goes back to same file
+	system("mv $outfile $datafile");
+}
 
 sub resetratehist
 {
