@@ -587,6 +587,12 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, cons
 			set_temporary_env(envName, tmp_str.Value(), &oldValue);
 		}
 	}
+
+	if( can_switch_ids() ) {
+		MyString tmp_str;
+		tmp_str.sprintf("%d", (int)get_condor_uid());
+		set_temporary_env("VMGAHP_USER_UID", tmp_str.Value(), &oldValue);
+	}
 #endif
 
 	priv_state prev_priv;
@@ -1087,6 +1093,12 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 			tmp_str.sprintf("%d.%d", (int)get_condor_uid(),(int)get_condor_gid());
 			set_temporary_env(envName, tmp_str.Value(), &oldValue);
 		}
+	}
+
+	if( can_switch_ids() ) {
+		MyString tmp_str;
+		tmp_str.sprintf("%d", (int)get_condor_uid());
+		set_temporary_env("VMGAHP_USER_UID", tmp_str.Value(), &oldValue);
 	}
 #endif
 
