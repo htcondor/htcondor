@@ -220,6 +220,14 @@ more details.
 
 \begin{itemize}
 
+\item On Windows daylight saving is handled incorrectly by stat() and fstat().
+      According to the MSDN, they both return the UTC time of a file; however,
+      if daylight saving is detected, the time is adjusted by one hour, which 
+      results in the \Condor{master} thinking that a different version of it 
+      has been installed.  In which case it recycles itself, and it's child 
+      process twice a year: not exactly what one would expect given that UTC
+      time is not intended to pay attention to these regional changes.
+
 \item When the master starts a collector on a central manager, the master
 	now pauses for a short time before starting any other daemons. This
 	helps the other daemons to appear in the collector more quickly. 
