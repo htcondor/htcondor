@@ -8,4 +8,4 @@ condorlocal = condor_config.local
 secprepostsrc = x_secneg_ANY
 localpostsrc = x_seckrb_configpostsrc
 condordaemons = master,schedd,collector,startd,negotiator
-slots	= 1
+vms	= 1

@@ -18,3 +18,5 @@
 ##
 ##**************************************************************
 
+
+system("./x_general_client.pl prepostsock postscript_ran");

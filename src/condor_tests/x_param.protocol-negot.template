@@ -9,4 +9,3 @@ secprepostsrc = x_secneg_ANY
 localpostsrc = x_secneg_configpostsrc
 condordaemons = master,schedd,collector,startd,negotiator
 slots	= 1
-daemonwait = false
