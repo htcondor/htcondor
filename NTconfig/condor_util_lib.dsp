@@ -1,4 +1,3 @@
-<<<<<<< condor_util_lib.dsp
 # Microsoft Developer Studio Project File - Name="condor_util_lib" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
@@ -662,4 +661,3 @@ SOURCE=..\src\condor_util_lib\win32_posix.c
 # End Source File
 # End Target
 # End Project
->>>>>>> 1.25
