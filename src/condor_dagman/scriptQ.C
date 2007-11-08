@@ -77,8 +77,22 @@ ScriptQ::Run( Script *script )
 		}
 		// BackgroundRun() returned pid 0
 		debug_printf( DEBUG_NORMAL, "  error: daemonCore->Create_Process() "
-					  "failed; deferring %s script of Job %s\n", prefix,
+					  "failed; %s script of Job %s failed\n", prefix,
 					  script->GetNodeName() );
+
+		// Putting this code here fixes PR 906 (Missing PRE or POST script
+		// causes DAGMan to hang); also, without this code a node for which
+		// the script spawning fails will permanently add to the running
+		// script count, which will throw off the maxpre/maxpost throttles.
+		// wenger 2007-11-08
+		const int returnVal = 1<<8;
+		if( ! script->_post ) {
+			_dag->PreScriptReaper( script->GetNodeName(), returnVal );
+		} else {
+			_dag->PostScriptReaper( script->GetNodeName(), returnVal );
+		}
+
+		return 0;
 	}
 	else {
 			// max scripts already running
