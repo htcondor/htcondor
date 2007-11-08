@@ -6386,6 +6386,26 @@ A path and file name of the unified map file.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-PrivSep}Configuration File Entries
+Relating to PrivSep}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!PrivSep configuration variables}
+\begin{description}
+\item[\Macro{PRIVSEP\_ENABLED}]
+  \label{param:PrivSepEnabled}
+  A boolean variable that, when \Expr{True}, enables PrivSep.
+  When \Expr{True}, the \Condor{procd} is used,
+  ignoring the definition of the configuration variable \Macro{USE\_PROCD}.
+  The default value when this configuration variable is not defined
+  is \Expr{False}.
+
+\item[\Macro{PRIVSEP\_SWITCHBOARD}]
+  \label{param:PrivSepSwitchboard}
+  The full (trusted) path and file name of the \Condor{root\_switchboard}
+  executable.
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-VMs}Configuration File Entries
 Relating to Virtual Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
