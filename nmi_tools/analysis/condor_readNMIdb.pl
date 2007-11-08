@@ -65,6 +65,7 @@ GetOptions (
 		'branch=s' => \$branch,
         'date=s' => \$datestring,
 		'type=s' => \$type,
+		'project' => \$project,
         'help' => \$help,
 		'save=s' => \$savefile,
 		'new' => \$newfile,
@@ -76,7 +77,12 @@ if($datestring) {
 	$TodayDate = $datestring;
 }
 
-my $dropfile = "/tmp/btplots/" . $branch . "auto" . $type;
+my $dropfile = "";
+if(!defined($project)) {
+	$dropfile = "/tmp/btplots/" . $branch . "auto" . $type;
+} else {
+	$dropfile = "/tmp/btplots/" . "projectauto" . $type;
+}
 #print "Drop file will be $dropfile\n";
 
 open(DROP,">$dropfile") or die "Unable to open result file $dropfile:$!\n";
@@ -374,12 +380,23 @@ sub FindBuildRuns
 	my $plotdateform = "";
 	my $starttime = "";
 	
-
-	my $extraction = $db->prepare("SELECT * FROM Run WHERE  \
+	# looking for project use or nightly use?
+	my $extraction;
+	if(!defined($project)) {
+		$extraction = $db->prepare("SELECT * FROM Run WHERE  \
 				user = 'cndrauto' \
 				and project = 'condor' \
 				and start >=  '$TodayDate' \
 				and run_type = 'BUILD'");
+	} else {
+		$extraction = $db->prepare("SELECT * FROM Run WHERE  \
+				#user = 'cndrauto' \
+				#and project = 'condor' \
+				project = 'condor' \
+				and start >=  '$TodayDate' \
+				and run_type = 'BUILD'");
+	}
+
     $extraction->execute();
 	while( my $sumref = $extraction->fetchrow_hashref() ){
         $rid = $sumref->{'runid'};
@@ -409,10 +426,15 @@ sub FindBuildRuns
 				#print "Did not findd <$branch> in <$des>\n";
 			}
 		} else {
-			if( $des =~ /^.*(V\d+_\d+-(trunk|branch)).*$/ ) {
-				push(@buildruns,$rid . ":" . $plotdateform . ":" . $1);
+			if(!defined($project)) {
+				if( $des =~ /^.*(V\d+_\d+-(trunk|branch)).*$/ ) {
+					push(@buildruns,$rid . ":" . $plotdateform . ":" . $1);
+				} else {
+					#print "Did not find <$branch> in <$des>\n";
+				}
 			} else {
-				#print "Did not findd <$branch> in <$des>\n";
+				# when collecting for project take ALL branches
+				push(@buildruns,$rid . ":" . $plotdateform . ":" . $des);
 			}
 		}
 	}
@@ -466,9 +488,13 @@ sub FindTestTasks
 
 		my $ownref = $extraction->fetchrow_hashref();
 		$testuser = $ownref->{'user'};
-		if($testuser ne "cndrauto") {
-			# do not add these results in cause its a different user
-			next;
+
+		# looking at all project use vs nightly use
+		if(!defined($project)) {
+			if($testuser ne "cndrauto") {
+				# do not add these results in cause its a different user
+				next;
+			}
 		}
 
 		#print "Find tests for runid $args[0] builddate <<$builddate>>\n";
@@ -508,7 +534,7 @@ sub FindTestTasks
 
 		if($builddate =~ /^(\d+)\s+[0]?(\d+)\s+(\d+).*$/) {
 			#print "Plat date is $3 $2 $1\n";
-			$plotdateform = $3 . " " . $months{$2} . " " . $1;
+			$plotdateform = $1 . " " . $months{$2} . " " . $3;
 		} else {
 			die "can not create plot date from starttime!!!!\n";
 		}
