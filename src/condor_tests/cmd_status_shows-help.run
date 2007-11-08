@@ -1,20 +1,139 @@
 #! /usr/bin/env perl
-##**************************************************************
-##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
-## University of Wisconsin-Madison, WI.
-## 
-## Licensed under the Apache License, Version 2.0 (the "License"); you
-## may not use this file except in compliance with the License.  You may
-## obtain a copy of the License at
-## 
-##    http://www.apache.org/licenses/LICENSE-2.0
-## 
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
-##
-##**************************************************************
+use CondorTest;
+use CondorPersonal;
 
+CondorPersonal::DebugOff();
+Condor::DebugOff();
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+$testname = 'cmd_status_shows-help';
+$corename = "cmd_status_shows-help";
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+chomp($currenthost);
+$primarycollector = $currenthost;
+my @adarray;
+
+CondorTest::fullchomp($currenthost);
+
+system("date");
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$mypid = $$;
+$bail = 0;
+$mysaveme = $corename . ".saveme";
+system("mkdir $mysaveme");
+$mypiddir = $mysaveme . "/" . $mypid;
+system("mkdir $mypiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $mypid");
+
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmout = $corename . $mypid . ".out";
+$mycorenm = $corename . ".cmd";
+$mycorenmout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
+
+print "Master PID is $mypid\n";
+print "Master PID submit file is $mysubmitnm\n";
+
+my $version = "local";
+# get a local scheduler running (side a)
+my $configloc = CondorPersonal::StartCondor("x_param.cmdstatus-multi" ,$version);
+my @local = split /\+/, $configloc;
+my $locconfig = shift @local;
+my $locport = shift @local;
+
+print "---local config is $locconfig and local port is $locport---\n";
+
+$primarycollector = $primarycollector . ":" . $locport;
+
+print "Primary collector for other nodes <<$primarycollector>>\n";
+
+print "Looking at new pool<condor_status>\n";
+
+my $count = 0;
+my $nattempts = 1;
+
+while($count < $nattempts) {
+	my $masterlocal = 0;
+	my $mastersched = 0;
+	$found1 = 0;
+	$cmd = "condor_status -help";
+	# forth arg places stderr into passed array
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2,"usage");
+    if(!$cmdstatus)
+    {
+        print "Test failure due to Condor Tool Failure<$cmd>\n";
+        exit(1)
+    }
+
+	print "Looking at condor_status -help \n";
+
+	# looking for.....  <Usage: condor_status>
+	foreach $line (@adarray) {
+		if($line =~ /^\s*Usage:\s+condor_status.*$/) {
+			print "found usage: $line\n";
+			$done = 1;
+		} else {
+			print "usage: $line\n";
+		}
+	}
+
+	$count = $count + 1;
+	sleep($count * 2);
+}
+
+
+
+print "Saving things and cleaning up....\n";
+
+system("cp *cmd_status_shows-help* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmout $mycorenmout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+# still set to local config
+ $ENV{CONDOR_CONFIG} = $locconfig;
+
+sleep(5);
+
+$cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
+
+system("date");
+
+if( $done == 0 )
+{
+	# actual test failed but we allowed cleanup
+	exit(1);
+}
+
+print "cmd_status_shows-help SUCCESS\n";
+system("date");
+exit(0);

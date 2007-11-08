@@ -1,20 +1,141 @@
 #! /usr/bin/env perl
-##**************************************************************
-##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
-## University of Wisconsin-Madison, WI.
-## 
-## Licensed under the Apache License, Version 2.0 (the "License"); you
-## may not use this file except in compliance with the License.  You may
-## obtain a copy of the License at
-## 
-##    http://www.apache.org/licenses/LICENSE-2.0
-## 
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
-##
-##**************************************************************
+use CondorTest;
+
+$cmd = 'cmd_q_shows-analyze.cmd';
+$cmdout = $cmd . ".out";
+$testname = 'cmd_q_shows-analyze  ';
+
+$whoami = `whoami`;
+chomp($whoami);
+
+@adarray;
+
+$submit = sub {
+	my %info = @_;
+
+	my $foundcluster = 0;
+	my $foundanalyze = 0;
+	my $foundnegotiator = 0;
+	my $cmd = "";
+	my $timecollector = 0;
+	my $maxwait = 600;
+	my $interval = 30;
+
+	# This is the first test run, so we need to make sure that
+	# the negotiator has reported to the collector.  If it started
+	# before the collector was ready, it takes five minutes
+	# for it to show up in the collector.
+
+	#Condor::DebugOn();
+
+	$cmd = "condor_status -negotiator";
+
+	while($timecollector < $maxwait) {
+		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+		print "runCondorTool returned <<$cmdstatus>>\n";
+		if(!$cmdstatus)
+		{
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			exit(1);
+		}
+		foreach $line (@adarray) {
+			chomp($line);
+			print "Examing line $line\n";
+			if($line =~ /^\s*(\w+).*\s*(\w+)\s*.*$/) {
+				print "Score!!!!! something for a negotiator <<$1/$2>>\n";
+				$foundnegotiator = 1;
+				last;
+			}
+		}
+		if($foundnegotiator == 1) {
+			last;
+		} else {
+			sleep($interval);
+		}
+		$timecollector = $timecollector + $interval;
+	}
+
+	if($timecollector == $maxwait) {
+		die "Failed to ever find a usable negotiator!!!!\n";
+	}
+
+	$cmd = "condor_q -analyze";
+
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	print "runCondorTool returned <<$cmdstatus>>\n";
+	if(!$cmdstatus)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		system("ps auxww | grep negotiator");
+		print "NegotiatorLog:--------------------------------\n";
+		system("cat `condor_config_val LOG`/NegotiatorLog");
+		print "condor_status -any -l:--------------------------------\n";
+		system("condor_status -any -l");
+		exit(1);
+	}
+
+	my $submitline = "";
+	my $cluster = -1;
+
+	open(CMD, "<$cmdout") || die "Can not find analyze output:$!\n";;
+	while(<CMD>) {
+		chomp($_);
+		$submitline = $_;
+		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
+			$cluster = $1;
+			print "Found my cluster which is $cluster!\n";
+		}
+		print "$_\n";
+	}
+
+	if ($cluster == -1) {
+		die("Can not find a cluster in $cmdout\n");	
+	}
+
+	foreach $line (@adarray) {
+		chomp($line);
+		print "Examing line $line\n";
+		if($line =~ /^\s*(\d+)\.(\d+):\s*Run\s+analysis\s+summary\.\s+.*$/) {
+			print "Score!!!!! found cluster $1\n";
+			print "$line\n";
+			$foundcluster = 1;
+		}
+		if($line =~ /^\s*Requirements\s+=\s+.*$/) {
+			print "Score!!!!! found -analyze\n";
+			print "$line\n";
+			print "condor_q -analyse prints Requirements like this\n";
+			$foundanalyze = 1;
+		}
+	}
+
+	$cmd = "condor_rm $cluster";
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+
+	if(($foundcluster) && ($foundanalyze)) {
+		print "Found analyze output\n";
+	} else {
+		die("Could not parse condor_q -analyze output\n");
+	}
+};
+
+$aborted = sub {
+	print "If all is good we abort our own job.......\n";
+	exit(0);
+};
+
+$ExitSuccess = sub {
+	my %info = @_;
+};
+
+CondorTest::RegisterSubmit( $testname, $submit );
+CondorTest::RegisterAbort($testname, $aborted);
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
 

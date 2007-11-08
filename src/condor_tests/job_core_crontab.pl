@@ -1,4 +1,3 @@
-#!/usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -18,6 +17,7 @@
 ##
 ##**************************************************************
 
+#!/usr/bin/env perl
 #########################################################
 ## CronTab Tests
 ## We submit a job that is set to run 4 times every 2

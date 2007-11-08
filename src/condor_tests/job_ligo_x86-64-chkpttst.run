@@ -1,20 +1,42 @@
 #!/usr/bin/env perl
-##**************************************************************
-##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
-## University of Wisconsin-Madison, WI.
-## 
-## Licensed under the Apache License, Version 2.0 (the "License"); you
-## may not use this file except in compliance with the License.  You may
-## obtain a copy of the License at
-## 
-##    http://www.apache.org/licenses/LICENSE-2.0
-## 
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
-##
-##**************************************************************
+
+use CondorTest;
+
+$cmd = 'job_ligo_x86-64-chkpttst.cmd';
+$testname = 'LIGO Chkpt Test';
+
+$tarres = system("tar -zxvf x_job_ligo_x86-64-chkpttst.tar.gz");
+
+print "Extract LIGO test files\n";
+print "Condor compile LIGO application\n";
+$condorize = system("./build.condor.sh");
+if( !(-s "ring")) {
+	die "LIGO app not built\n";
+}
+
+$hey = system("./ligo_medium_setup.sh");
+print "Medium set up done, now configuring to run Ring\n";
+
+$ExitSuccess = sub {
+	if( (-s "L1-RING-793420200-2176.xml") &&  (-s "L1-RINGBANK-793420200-2176.xml") ) {
+		system("ls -l *.xml");
+		print "Good! These files should be current and non-zero\n";
+		system("cat job_ligo_x86-64-chkpttst.err");
+		return(0);
+	} else { 
+		system("ls -l *.xml");
+		die "One or more of the output files is 0 sized...\n";
+	}
+};
+
+
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 1) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
+
 

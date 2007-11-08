@@ -1,4 +1,3 @@
-#! /usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -18,6 +17,7 @@
 ##
 ##**************************************************************
 
+#! /usr/bin/env perl
 BEGIN {$^W=1}  #warnings enabled
 
 kill 9, $$;

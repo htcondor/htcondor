@@ -1,20 +1,107 @@
 #! /usr/bin/env perl
-##**************************************************************
-##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
-## University of Wisconsin-Madison, WI.
-## 
-## Licensed under the Apache License, Version 2.0 (the "License"); you
-## may not use this file except in compliance with the License.  You may
-## obtain a copy of the License at
-## 
-##    http://www.apache.org/licenses/LICENSE-2.0
-## 
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
-##
-##**************************************************************
+use CondorTest;
+
+$cmd = 'cmd_q_shows-sub.cmd';
+$cmdout = $cmd . ".out";
+$testname = 'cmd_q_shows-sub  ';
+
+$whoami = "";
+
+@adarray;
+
+$submit = sub {
+	my %info = @_;
+	print "Looking for submitter $whoami\n";
+	my $search = 0;
+
+	my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\n\" ClusterId";
+
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$cmdstatus)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1)
+	}
+
+	my $submitline = "";
+	my $cluster = "";
+
+	open(CMD, "<$cmdout") || die "Can not find submit output:$!\n";;
+	while(<CMD>) {
+		chomp($_);
+		$submitline = $_;
+		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
+			$cluster = $1;
+			print "Found my cluster which is $cluster!\n";
+		}
+		print "$_\n";
+	}
+
+
+	foreach $line (@adarray) {
+        chomp($line);
+        print "$line\n";
+        if($line =~ /^\s*([\w\-]+)\s+ClusterId\s+=\s+$clusters.*$/) {
+                print "Bingo: found <$line> shows I am $1\n";
+				$whoami = $1;
+        } else {
+            print "<<<$line>>>\n";
+        }
+    }
+
+	if( $whoami eq "" ) {
+		die "Can not find out who I am to use in condor_q -sub <$whoami>\n";
+		# other wise we can never finish and might hang.....
+	}
+	
+	$cmd = "condor_q -sub $whoami -format \"%d.\" ClusterId -format \"%d \" ProcId -format \" %s\" Owner -format \" %s\n\" Cmd";
+
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$cmdstatus)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		system("condor_rm $cluster"); # bail but pull job which never dies...
+		exit(1)
+	}
+
+	foreach $line (@adarray) {
+	    print "output: $line\n";
+		chomp($line);
+
+		if($line =~ /^\s*(\d+).\d+\s+([\w\-]+).*$/) {
+			if(($cluster eq $1) && ($whoami eq $2)){
+				print "condor_q -sub $whoami found my job matching $cluster\n";
+				$cmd = "condor_rm $cluster";
+				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
+				$search = 1;
+				return(0);
+			}
+		}
+	}
+
+	$cmd = "condor_rm $cluster";
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
+	die "We never found ourselves with <condor_q -sub $whoami>\n"
+};
+
+$aborted = sub {
+	print "Cleaning held job.......\n";
+	exit(0);
+};
+
+$ExitSuccess = sub {
+	my %info = @_;
+};
+
+CondorTest::RegisterAbort($testname, $aborted);
+CondorTest::RegisterSubmit($testname, $submit);
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
 

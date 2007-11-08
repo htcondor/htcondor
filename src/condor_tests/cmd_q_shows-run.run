@@ -1,20 +1,74 @@
 #! /usr/bin/env perl
-##**************************************************************
-##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
-## University of Wisconsin-Madison, WI.
-## 
-## Licensed under the Apache License, Version 2.0 (the "License"); you
-## may not use this file except in compliance with the License.  You may
-## obtain a copy of the License at
-## 
-##    http://www.apache.org/licenses/LICENSE-2.0
-## 
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
-##
-##**************************************************************
+use CondorTest;
+
+$cmd      = 'cmd_q_shows-run.cmd';
+$testname = 'Condor_q shows jobs running - vanilla U';
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my $alreadydone=0;
+
+$execute = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	print "Good, we can't look for a running job without one\n";
+	my @adarray;
+	my $running = "no";
+	my $status = 1;
+	my $cmd = "condor_q -run $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		$cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		exit(1)
+	}
+	foreach $line (@adarray) {
+		chomp($line);
+		print "$line\n";
+		if($line =~ /^.*$cluster.*$/) {
+			print "Cluster $cluster found running!\n";
+			$running = "yes";
+			last;
+		}
+	}
+
+	if($running eq "no") {
+		print "Failed to find $cluster running with condor_q -run \n";
+		exit(1);
+	} else {
+		my $cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$status)
+		{
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			exit(1)
+		}
+	}
+};
+
+$abort = sub {
+	print "Job is gone now, cool.\n";
+};
+
+$success = sub
+{
+	die "/Remove/Abort is expected event trail!\n";
+};
+
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterAbort($testname, $abort);
+CondorTest::RegisterExitedSuccess($testname, $success);
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
 
