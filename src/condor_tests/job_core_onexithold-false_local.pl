@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,7 +18,6 @@
 ##
 ##**************************************************************
 
-#!/usr/bin/env perl
 ##
 ## ON_EXIT_HOLD - False
 ## We submit a job where ON_EXIT_HOLD evaluates to false and just
