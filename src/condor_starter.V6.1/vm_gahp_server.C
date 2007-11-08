@@ -1535,6 +1535,12 @@ VMGahpServer::killVM(void)
 			set_temporary_env(envName, tmp_str.Value(), &oldValue);
 		}
 	}
+
+	if( can_switch_ids() ) {
+		MyString tmp_str;
+		tmp_str.sprintf("%d", (int)get_condor_uid());
+		set_temporary_env("VMGAHP_USER_UID", tmp_str.Value(), &oldValue);
+	}
 #endif
 
 	priv_state oldpriv; 
