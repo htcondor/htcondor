@@ -73,6 +73,11 @@ submitted job or a `spooled' job.
 \item Increased the verbosity of some error messages (related to
 reading log files) in \Condor{dagman}.
 
+% PR 906
+\item Fixed a bug in \Condor{dagman} that would cause it to hang if it
+was unable to successfully spawn a PRE or POST script.  This case is now
+dealt with as a PRE or POST script failure.
+
 \end{itemize}
 
 \noindent Known Bugs:
