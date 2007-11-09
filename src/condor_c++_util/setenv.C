@@ -212,6 +212,6 @@ const char *GetEnv( const char *env_var, MyString &result )
 	}
 #else
 	result = getenv( env_var );
-	return result.Value();
 #endif
+	return result.Value();
 }
