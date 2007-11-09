@@ -16,14 +16,17 @@ select(STDERR);
 select(STDOUT);
  $| = 1;
 
+my $timefiles = "/tmp/btplots/durationfiles";
+
 my $datalocation = "/p/condor/public/html/developers/testsuite/";
 #my $datalocation = "./";
-my $toollocation = "/p/condor/home/tools/build-test-plots/";
-my $timefiles = "/tmp/btplots/durationfiles";
-my $tmpdir = "/tmp/btplots";
-#my $tmpdir = "./tmp/";
+
 my $rundir = "/p/condor/home/tools/build-test-plots";
 #my $rundir = ".";
+
+my $tmpdir = "/tmp/btplots";
+#my $tmpdir = "./tmp/";
+
 my $outfile = "";
 my $infile = "";
 
@@ -35,6 +38,45 @@ GetOptions (
 if( $newwd ) { chdir("$newwd"); }
 if ( $help )    { help() and exit(0); }
 
+#AUTO BUILDS
+$placefile = $datalocation . "autobuilds.png";
+system("$rundir/condor_readNMIdb.pl --type=builds -d=2005-06-01");
+
+$outfile = $tmpdir . "autobuilds.merged";
+system("$rundir/mergeruns.pl --type=builds --data=/tmp/btplots/autobuilds --out=$outfile");
+
+$infile = $tmpdir . "autobuilds.merged";
+$outfile = $tmpdir . "autobuilds.avg";
+system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
+
+$infile = $tmpdir . "autobuilds.avg";
+system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail autobuilds");
+
+#AUTO TESTS
+$placefile = $datalocation . "autotests.png";
+system("$rundir/condor_readNMIdb.pl --type=tests -d=2005-06-01");
+
+$outfile = $tmpdir . "autotests.merged";
+system("$rundir/mergeruns.pl --type=tests --data=/tmp/btplots/autotests --out=$outfile");
+
+$infile = $tmpdir . "autotests.merged";
+$outfile = $tmpdir . "autotests.avg";
+system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
+
+$infile = $tmpdir . "autotests.avg";
+system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail autotests");
+
+#TESTS PER BUILD
+$placefile = $datalocation . "testsperbuild.png";
+$avgbuilds = $tmpdir . "autobuilds.avg";
+$avgtests = $tmpdir . "autotests.avg";
+$out = $tmpdir . "testsperbuild.avg";
+system("$rundir/testaverage.pl --builds=$avgbuilds --tests=$avgtests --out=$out");
+
+$infile = $tmpdir . "testsperbuild.avg";
+system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail testsperplatform");
+
+# PROJECT TESTS
 $placefile = $datalocation . "projectautotests.png";
 system("$rundir/condor_readNMIdb.pl --project --type=tests -d=2005-06-01");
 
@@ -45,6 +87,7 @@ system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
 $infile = $tmpdir . "projectautotests.avg";
 system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail autotests");
 
+#PROJECT BUILDS
 $placefile = $datalocation . "projectautobuilds.png";
 system("$rundir/condor_readNMIdb.pl --project --type=builds -d=2005-06-01");
 
@@ -55,31 +98,6 @@ system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
 $infile = $tmpdir . "projectautobuilds.avg";
 system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail autobuilds");
 
-$placefile = $datalocation . "autobuilds.png";
-system("/p/condor/home/tools/build-test-plots/condor_readNMIdb.pl --type=builds -d=2005-06-01");
-
-$outfile = $tmpdir . "autobuilds.merged";
-system("/p/condor/home/tools/build-test-plots/mergeruns.pl --type=builds --data=/tmp/btplots/autobuilds --out=$outfile");
-
-$infile = $tmpdir . "autobuilds.merged";
-$outfile = $tmpdir . "autobuilds.avg";
-system("/p/condor/home/tools/build-test-plots/monthaverage.pl  --data=$infile --out=$outfile");
-
-$infile = $tmpdir . "autobuilds.avg";
-system("/p/condor/home/tools/build-test-plots/make-graphs-hist --monthly --input $infile --output $placefile --detail autobuilds");
-
-$placefile = $datalocation . "autotests.png";
-system("/p/condor/home/tools/build-test-plots/condor_readNMIdb.pl.tst --type=tests -d=2005-06-01");
-
-$outfile = $tmpdir . "autotests.merged";
-system("/p/condor/home/tools/build-test-plots/mergeruns.pl --type=tests --data=/tmp/btplots/autotests --out=$outfile");
-
-$infile = $tmpdir . "autotests.merged";
-$outfile = $tmpdir . "autotests.avg";
-system("/p/condor/home/tools/build-test-plots/monthaverage.pl  --data=$infile --out=$outfile");
-
-$infile = $tmpdir . "autotests.avg";
-system("/p/condor/home/tools/build-test-plots/make-graphs-hist --monthly --input $infile --output $placefile --detail autotests");
 #
 # =================================
 # print help
