@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: pre_all,v 1.7 2007-11-08 22:53:44 nleroy Exp $ 
+# $Id: pre_all,v 1.8 2007-11-09 19:09:47 matt Exp $ 
 # Submit-side NMI build system infrastructure to prepare sources for
 # the Condor build
 #
@@ -238,7 +238,7 @@ my $src_tarball = "$src_tar_dir.tar.gz";
 mkdir( "$src_tar_dir" ) || die "Can't mkdir($src_tar_dir): $!\n";
 
 safe_sys( "cp $SrcDir/README.building $src_tar_dir" );
-safe_sys( "cp src/condor_release/LICENSE.TXT $src_tar_dir" );
+safe_sys( "cp src/condor_release/LICENSE-2.0.TXT $src_tar_dir" );
 safe_sys( "mv NTconfig config imake src externals $src_tar_dir" );
 safe_sys( "tar --exclude=CVS -zcf $src_tarball $src_tar_dir" );
 print "Done creating source tarball\n";
