@@ -27,6 +27,21 @@ my %months = (
     "12" => "December",
 );
 
+# history of some platforms desired for platting increased tests
+my %testtrackingplatforms = (
+	"sun4u_sol_5.9" => 1, 
+	"x86_rhas_3" => 1,
+	"hppa_hpux_11" => 1,
+	"x86_rh_9" => 1,
+);
+
+my %specialtests = (
+	"lib_classads-1" => 322,
+	"lib_classads" => 322,
+	"lib_unit_tests-1" => 53,
+	"lib_unit_tests" => 53,
+);
+
 my %metrotask = (
 	"fetch.test_glue.src" => "1",
 	"fetch.input_build_runid.src" => "1",
@@ -67,11 +82,21 @@ GetOptions (
 		'type=s' => \$type,
 		'project' => \$project,
         'help' => \$help,
+		'testhist=s' => \$thistfile,
 		'save=s' => \$savefile,
 		'new' => \$newfile,
 		'append' => \$appendfile,
         #'megs=i' => \$megs,
 );
+
+print "project($project) type ($type)\n";
+if( (defined($project)) && ($type eq "tests")) {
+	if(!$thistfile) {
+		$thistfile = "/tmp/btplots/testhistory";
+	}
+	print "Creating /tmp/btplots/testhistory\n";
+	open(THIST,">$thistfile") or die "Unable to open test history file $thistfile:$!\n";
+}
 
 if($datestring) {
 	$TodayDate = $datestring;
@@ -112,6 +137,9 @@ if( $type eq "builds") {
 
 
 close(DROP);
+if( (defined($project)) && ($type eq "tests")) {
+	close(THIST);
+}
 DbDisconnect();	# all done..... :-)
 
 exit(0);
@@ -471,12 +499,20 @@ sub FindTestTasks
 	my $goodresult = 0;
 	my $badresult = 0;
 	my $builddate = "";
+	my $platform = "";
 
 	foreach $runid (@testruns) {
 
 		my @args = split /:/, $runid;
 		$builddate = $args[1];
 		$thisbranch = $args[2];
+
+		if($builddate =~ /^(\d+)\s+[0]?(\d+)\s+(\d+).*$/) {
+			#print "Plat date is $3 $2 $1\n";
+			$plotdateform = $1 . " " . $months{$2} . " " . $3;
+		} else {
+			die "can not create plot date from starttime!!!!\n";
+		}
 
 		# verify that the user is cndrauto unless another is called out
 		# I for one am known to run entire sets of tests on nightly builds
@@ -507,7 +543,11 @@ sub FindTestTasks
 
 		# we really only care about the results for the automatics
 		# null(not defined()) means still in never never land, 0 is good and all else bad.
-
+		
+		# track individual runs and then add to accumulators
+		$thisgood = 0;
+		$thisbad = 0;
+		$thisnull = 0;
 		while( my $sumref = $extraction->fetchrow_hashref() ){
 			$res = $sumref->{'result'};
 			$name = $sumref->{'name'};
@@ -515,29 +555,44 @@ sub FindTestTasks
 			$platform = $sumref->{'platform'};
 			if(!(exists $metrotask{"$name"})) {
 				#print "TestRun $runid Task $name Time $start Platform $platform<$res>\n";
+				my $value = 1;
+				if( exists $specialtests{"$name"} ) {
+					$value = $specialtests{"$name"};
+					#print "Special Test <$name>\n";
+				} else {
+					#print "Nothing special about test <$name>\n";
+				}
 				if( defined($res)) { 
 					#print "<$res>\n";
 					if($res == 0) {
 						#print "GOOD\n";
-						$goodresult = $goodresult + 1;
+						$thisgood = $thisgood + $value;
 					} else {
 						# we are left with the positive and negative failures
 						#print "BAD\n";
-						$badresult = $badresult + 1;
+						$thisbad = $thisbad + $value;
 					}
 				} else {
 					#print "NULL\n";
-					$nullresult = $nullresult + 1;
+					$thisnull = $thisnull + $value;
 				}
 			}
 		}
 
-		if($builddate =~ /^(\d+)\s+[0]?(\d+)\s+(\d+).*$/) {
-			#print "Plat date is $3 $2 $1\n";
-			$plotdateform = $1 . " " . $months{$2} . " " . $3;
-		} else {
-			die "can not create plot date from starttime!!!!\n";
+		# track a few platforms of test count to see effort
+		if( (exists $testtrackingplatforms{"$platform"} ) && ( $testuser eq "cndrauto" )){
+			if( $thisbranch =~ /^.*(V\d+_\d+-(trunk|branch)).*$/) {
+				my $sum = $thisnull + $thisgood + $thisbad;
+				if($sum != 0) {
+					print THIST "$plotdateform, $platform, $1, $sum\n";
+				}
+			}
 		}
+
+		# add results to accumulators
+		$badresult = $badresult + $thisbad;
+		$goodresult = $goodresult + $thisgood;
+		$nullresult = $nullresult + $thisnull;
 
 		$pandb = $nullresult + $badresult;
 		$pandbandf = $pandb + $goodresult;
