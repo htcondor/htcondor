@@ -43,6 +43,12 @@ language.
 
 \begin{itemize}
 
+\item When the master sends an obituary email, it prints the last
+	few lines of the log file for that daemon, and the name of the
+	file.  This email now contains the full pathname of that log file,
+	not just the file name.  This is more convenient for sites which
+	run multiple instances of the same daemon on one machine.
+
 \item Added new policy for parallel universe jobs to control how they
 	exit.  If the attribute ParallelShutdownPolicy is set to the string
 	"WAIT\_FOR\_ALL", then Condor will wait until every node in the parallel
