@@ -16,7 +16,8 @@
    // This is a hack for now and there's no way to differentiate between different
    // branchs. But you know, life is funny that way -- you never really get what you want
    //
-   $no_test_platforms = Array( "ppc_macos_10.4", "x86_macos_10.4" );
+   //$no_test_platforms = Array( "ppc_macos_10.4", "x86_macos_10.4" );
+   $no_test_platforms = Array( );
 ?>
 <html>
 <head>
@@ -121,6 +122,7 @@ while ($row = mysql_fetch_array($result)) {
           "  FROM Task, Run, Method_nmi ".
           " WHERE Method_nmi.input_runid = {$runid} AND ".
           "       Run.runid = Method_nmi.runid AND ".
+          "       Run.user = '$user'  AND ".
           "       Task.runid = Run.runid AND ".
           "       Task.platform != 'local' ".
           " GROUP BY Task.platform ";
@@ -157,6 +159,7 @@ while ($row = mysql_fetch_array($result)) {
    
    echo <<<EOF
    <tr>
+      <td><a href="{$branch_url}">{$branch}</a></td>
       <td><a href="{$branch_url}">{$branch}</a></td>
       <td align="center">{$runid}</td>
       <td align="center">{$start}</td>
