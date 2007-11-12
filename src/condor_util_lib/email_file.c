@@ -134,7 +134,7 @@ email_asciifile_tail( FILE* output, const char* file, int lines )
 		if ( first_line ) {
 			first_line = FALSE;
 			fprintf(output,"\n*** Last %d line(s) of file %s:\n",
-				lines, condor_basename(file));
+				lines, file);
 		}
 		/* Now print the line */
 		display_line( loc, input, output );
