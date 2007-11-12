@@ -593,21 +593,26 @@ init_job_ad()
 	ZeroMemory ( &os_version_info, sizeof ( OSVERSIONINFO ) );
 	os_version_info.dwOSVersionInfoSize = sizeof ( OSVERSIONINFO );	
 	if ( GetVersionEx ( &os_version_info ) > 0 ) {
-		buffer.sprintf( "%s = %u\n", ATTR_WINDOWS_MAJOR_VERSION, 
+		buffer.sprintf( "%s = %u", ATTR_WINDOWS_MAJOR_VERSION, 
 			os_version_info.dwMajorVersion );
-		buffer.sprintf_cat( "%s = %u\n", ATTR_WINDOWS_MINOR_VERSION, 
+		InsertJobExpr ( buffer );
+		buffer.sprintf( "%s = %u", ATTR_WINDOWS_MINOR_VERSION, 
 			os_version_info.dwMinorVersion );
-		buffer.sprintf_cat( "%s = %u\n", ATTR_WINDOWS_BUILD_NUMBER, 
+		InsertJobExpr ( buffer );
+		buffer.sprintf( "%s = %u", ATTR_WINDOWS_BUILD_NUMBER, 
 			os_version_info.dwBuildNumber );
+		InsertJobExpr ( buffer );
 	} else {
-		buffer.sprintf( "%s = \"Undefined\"\n", 
+		buffer.sprintf( "%s = \"Undefined\"", 
 			ATTR_WINDOWS_MAJOR_VERSION );
-		buffer.sprintf_cat( "%s = \"Undefined\"\n", 
+		InsertJobExpr ( buffer );
+		buffer.sprintf( "%s = \"Undefined\"", 
 			ATTR_WINDOWS_MINOR_VERSION );
-		buffer.sprintf_cat( "%s = \"Undefined\"\n", 
+		InsertJobExpr ( buffer );
+		buffer.sprintf( "%s = \"Undefined\"", 
 			ATTR_WINDOWS_BUILD_NUMBER );
+		InsertJobExpr ( buffer );
 	}
-	InsertJobExpr ( buffer.Value() );
 #endif
 
 	buffer.sprintf( "%s = 0.0", ATTR_JOB_REMOTE_WALL_CLOCK);
