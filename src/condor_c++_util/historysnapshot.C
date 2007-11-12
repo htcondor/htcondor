@@ -82,7 +82,6 @@ HistorySnapshot::sendQuery(SQLQuery *queryhor,
 						   bool custForm,
 						   AttrListPrintMask *pmask, const char *constraint)
 {
-printf("GGTGGTGGT constraint is %d\n", constraint);
   QuillErrCode st;
   
   st = jqDB->connectDB();
