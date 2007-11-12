@@ -846,6 +846,7 @@ sub TunePersonalCondor
 		}
 		print NEW "START = TRUE\n";
 		print NEW "RunBenchmarks = FALSE\n";
+		print NEW "JAVA_BENCHMARK_TIME = 0\n";
 		print NEW "SCHEDD_INTERVAL = 5\n";
 		print NEW "UPDATE_INTERVAL = 5\n";
 		print NEW "NEGOTIATOR_INTERVAL = 5\n";
