@@ -186,6 +186,13 @@ BUCKET *ProcVars[ PROCVARSIZE ];
 
 #define MEG	(1<<20)
 
+//
+// Dump ClassAd to file junk
+//
+MyString	DumpFileName;
+bool		DumpClassAdToFile = false;
+FILE		*DumpFile = NULL;
+
 /*
 **	Names of possible CONDOR variables.
 */
@@ -798,7 +805,22 @@ main( int argc, char *argv[] )
 				string_to_stm(method, STMethod);
 			} else if ( match_prefix( ptr[0], "-unused" ) ) {
 				WarnOnUnusedMacros = WarnOnUnusedMacros == 1 ? 0 : 1;
-				// TOGGLE?
+				// TOGGLE? 
+				// -- why not? if you set it to warn on unused macros in the 
+				// config file, there should be a way to turn it off
+			} else if ( match_prefix( ptr[0], "-dump" ) ) {
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -dump requires another argument\n",
+						MyName );
+					exit(1);
+				}
+				DumpFileName = *ptr;
+				DumpClassAdToFile = true;
+#if defined ( WIN32 )
+				// we don't really want to do this because there is no real 
+				// schedd to query the credentials from...
+				query_credential = false;
+#endif				
 			} else if ( match_prefix( ptr[0], "-help" ) ) {
 				usage();
 				exit( 0 );
@@ -819,6 +841,16 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
+	// we only want communication with the schedd to take place... because
+	// that's the only type of communication we are interested in
+	if ( DumpClassAdToFile && STMethod != STM_USE_SCHEDD_ONLY ) {
+		fprintf( stderr, 
+			"%s: Dumping ClassAds to a file is not copatible with sandbox "
+			"transfer method: %s\n", MyName, method.Value());
+		usage();
+		exit(1);
+	}
+
 	char *dis_check = param("SUBMIT_SKIP_FILECHECKS");
 	if ( dis_check ) {
 		if (dis_check[0]=='T' || dis_check[0]=='t') {
@@ -827,19 +859,28 @@ main( int argc, char *argv[] )
 		free(dis_check);
 	}
 
+	// if we are dumping to a file, we never want to check file permissions
+	// as this would initiate some schedd communication
+	if ( DumpClassAdToFile ) {
+		DisableFileChecks = TRUE;
+	}
+
 	MaxProcsPerCluster = param_integer("SUBMIT_MAX_PROCS_IN_CLUSTER", 0, 0);
 
+	// we don't want a schedd instance if we are dumping to a file
+	if ( !DumpClassAdToFile ) {
 		// Instantiate our DCSchedd so we can locate and communicate
 		// with our schedd.  
-	MySchedd = new DCSchedd( ScheddName, PoolName );
-	if( ! MySchedd->locate() ) {
-		if( ScheddName ) {
-			fprintf( stderr, "\nERROR: Can't find address of schedd %s\n",
-					 ScheddName );
-		} else {
-			fprintf( stderr, "\nERROR: Can't find address of local schedd\n" );
+		MySchedd = new DCSchedd( ScheddName, PoolName );
+		if( ! MySchedd->locate() ) {
+			if( ScheddName ) {
+				fprintf( stderr, "\nERROR: Can't find address of schedd %s\n",
+						 ScheddName );
+			} else {
+				fprintf( stderr, "\nERROR: Can't find address of local schedd\n" );
+			}
+			exit(1);
 		}
-		exit(1);
 	}
 
 #ifdef WIN32
@@ -903,8 +944,21 @@ main( int argc, char *argv[] )
 	IsFirstExecutable = true;
 	init_job_ad();	
 
-	if (Quiet) {
-		fprintf(stdout, "Submitting job(s)");
+	if ( !DumpClassAdToFile ) {
+		if (Quiet) {
+			fprintf(stdout, "Submitting job(s)");
+		}
+	} else {
+		fprintf(stdout, "Storing job ClassAd(s)");
+	}
+
+	// open the file we are to dump the ClassAds to...
+	if ( DumpClassAdToFile ) {
+		if( (DumpFile=safe_fopen_wrapper(DumpFileName.GetCStr(),"w")) == NULL ) {
+			fprintf( stderr, "\nERROR: Failed to open file to dump ClassAds into (%s)\n",
+				strerror(errno));
+			exit(1);
+		}
 	}
 
 	//  Parse the file and queue the jobs
@@ -929,7 +983,9 @@ main( int argc, char *argv[] )
 		exit( 1 );
 	}
 
-	if ( !DisconnectQ(0) ) {
+	// we can't disconnect from something if we haven't connected to it: since
+	// we are dumping to a file, we don't actually open a connection to the schedd
+	if ( !DumpClassAdToFile && !DisconnectQ(0) ) {
 		fprintf(stderr, "\nERROR: Failed to commit job submission into the queue.\n");
 		exit(1);
 	}
@@ -938,7 +994,7 @@ main( int argc, char *argv[] )
 		fprintf(stdout, "\n");
 	}
 
-	if (UserLogSpecified) {
+	if (!DumpClassAdToFile && UserLogSpecified) {
 		log_submit();
 	}
 
@@ -967,7 +1023,9 @@ main( int argc, char *argv[] )
 		TestFilePermissions( MySchedd->addr() );
 	}
 
-	if ( Remote && JobAdsArrayLen > 0 ) {
+	// we don't want to spool jobs if we are simply writting the ClassAds to 
+	// a file, so we just skip this block entirely if we are doing this...
+	if ( !DumpClassAdToFile && Remote && JobAdsArrayLen > 0 ) {
 		bool result;
 		CondorError errstack;
 
@@ -1045,7 +1103,9 @@ main( int argc, char *argv[] )
 		}
 	}
 
-	if(ProcId != -1 ) {
+	// don't try to reschedule jobs if we are dumping to a file, because, again
+	// there will be not schedd present to reschedule thru.
+	if( !DumpClassAdToFile && ProcId != -1 ) {
 		reschedule();
 	}
 
@@ -2725,7 +2785,14 @@ SetJavaVMArgs()
 		exit( 1 );
 	}
 
-	if(args.InputWasV1() || args.CondorVersionRequiresV1(MySchedd->version())) {
+	// since we don't care about what version the schedd needs if it
+	// is not present, we just default to no.... this only happens
+	// in the case when we are dumping to a file.
+	bool MyCondorVersionRequiresV1 = false;
+	if ( !DumpClassAdToFile ) {
+		MyCondorVersionRequiresV1 = args.CondorVersionRequiresV1(MySchedd->version());
+	}
+	if(args.InputWasV1() || MyCondorVersionRequiresV1) {
 		args_success = args.GetArgsStringV1Raw(&value,&error_msg);
 		if(!value.IsEmpty()) {
 			strbuffer.sprintf("%s = \"%s\"",ATTR_JOB_JAVA_VM_ARGS1,
@@ -3516,7 +3583,11 @@ SetArguments()
 
 	MyString strbuffer;
 	MyString value;
-	if(arglist.InputWasV1() || arglist.CondorVersionRequiresV1(MySchedd->version())) {
+	bool MyCondorVersionRequiresV1 = false;
+	if ( !DumpClassAdToFile ) {
+		MyCondorVersionRequiresV1 = arglist.CondorVersionRequiresV1(MySchedd->version());
+	}
+	if(arglist.InputWasV1() || MyCondorVersionRequiresV1) {
 		args_success = arglist.GetArgsStringV1Raw(&value,&error_msg);
 		strbuffer.sprintf("%s = \"%s\"",ATTR_JOB_ARGUMENTS1,
 					   value.EscapeChars("\"",'\\').Value());
@@ -3767,7 +3838,11 @@ SetEnvironment()
 	bool ad_contains_env1 = job->Lookup(ATTR_JOB_ENVIRONMENT1);
 	bool ad_contains_env2 = job->Lookup(ATTR_JOB_ENVIRONMENT2);
 
-	bool insert_env1 = envobject.InputWasV1() || envobject.CondorVersionRequiresV1(MySchedd->version());
+	bool MyCondorVersionRequiresV1 = false;
+	if ( !DumpClassAdToFile ) {
+		MyCondorVersionRequiresV1 = envobject.CondorVersionRequiresV1(MySchedd->version());
+	}
+	bool insert_env1 = envobject.InputWasV1() || MyCondorVersionRequiresV1;
 	bool insert_env2 = !insert_env1;
 
 	if(!env1 && !env2 && envobject.Count() == 0 && \
@@ -4002,7 +4077,11 @@ SetTDP( void )
 	}
 
 	MyString args_value;
-	if(args.InputWasV1() || args.CondorVersionRequiresV1(MySchedd->version())) {
+	bool MyCondorVersionRequiresV1 = false;
+	if ( !DumpClassAdToFile ) {
+		MyCondorVersionRequiresV1 = args.CondorVersionRequiresV1(MySchedd->version());
+	}
+	if(args.InputWasV1() || MyCondorVersionRequiresV1) {
 		args_success = args.GetArgsStringV1Raw(&args_value,&error_msg);
 		if(!args_value.IsEmpty()) {
 			buf.sprintf("%s = \"%s\"",ATTR_TOOL_DAEMON_ARGS1,
@@ -4252,41 +4331,46 @@ SetUserLog()
 	MyString buffer;
 
 	if (ulog_entry) {
+		
 		MyString ulog = full_path(ulog_entry);
-		free(ulog_entry);
 
-		// check that the log is a valid path
-		FILE* test = safe_fopen_wrapper(ulog.Value(), "a+");
-		if (!test) {
-			fprintf(stderr,
-				"\nWARNING: Invalid log file: \"%s\" (%s)\n", ulog.Value(),
-				strerror(errno));
-			exit( 1 );
-		} else {
-			fclose(test);
-		}
+		if ( !DumpClassAdToFile ) {
+			
+			free(ulog_entry);
 
-		// Check that the log file isn't on NFS
-		BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
-		BOOLEAN	nfs = FALSE;
-
-		if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
-			fprintf(stderr,
-				"\nWARNING: Can't determine whether log file %s is on NFS\n",
-				ulog.Value() );
-		} else if ( nfs ) {
-			if ( nfs_is_error ) {
-
+			// check that the log is a valid path
+			FILE* test = safe_fopen_wrapper(ulog.Value(), "a+");
+			if (!test) {
 				fprintf(stderr,
-					"\nERROR: Log file %s is on NFS.\nThis could cause"
-					" log file corruption. Condor has been configured to"
-					" prohibit log files on NFS.\n",
-					ulog.Value() );
-
-				DoCleanup(0,0,NULL);
+					"\nWARNING: Invalid log file: \"%s\" (%s)\n", ulog.Value(),
+					strerror(errno));
 				exit( 1 );
+			} else {
+				fclose(test);
+			}
 
-			} 
+			// Check that the log file isn't on NFS
+			BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
+			BOOLEAN	nfs = FALSE;
+
+			if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
+				fprintf(stderr,
+					"\nWARNING: Can't determine whether log file %s is on NFS\n",
+					ulog.Value() );
+			} else if ( nfs ) {
+				if ( nfs_is_error ) {
+
+					fprintf(stderr,
+						"\nERROR: Log file %s is on NFS.\nThis could cause"
+						" log file corruption. Condor has been configured to"
+						" prohibit log files on NFS.\n",
+						ulog.Value() );
+
+					DoCleanup(0,0,NULL);
+					exit( 1 );
+
+				} 
+			}
 		}
 
 		check_and_universalize_path(ulog, UserLogFile);
@@ -5333,7 +5417,7 @@ queue(int num)
 
 	// First, connect to the schedd if we have not already done so
 
-	if (ActiveQueueConnection != TRUE) 
+	if (!DumpClassAdToFile && ActiveQueueConnection != TRUE) 
 	{
 		connect_to_the_schedd();
 	}
@@ -5341,14 +5425,17 @@ queue(int num)
 	/* queue num jobs */
 	for (int i=0; i < num; i++) {
 
+	
 		if (NewExecutable) {
- 			if ((ClusterId = NewCluster()) < 0) {
-				fprintf(stderr, "\nERROR: Failed to create cluster\n");
-				if ( ClusterId == -2 ) {
-					fprintf(stderr,
-					"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
+ 			if ( !DumpClassAdToFile ) {
+				if ((ClusterId = NewCluster()) < 0) {
+					fprintf(stderr, "\nERROR: Failed to create cluster\n");
+					if ( ClusterId == -2 ) {
+						fprintf(stderr,
+						"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
+					}
+					exit(1);
 				}
-				exit(1);
 			}
 				// We only need to call init_job_ad the second time we see
 				// a new Executable, because we call init_job_ad() in main()
@@ -5360,41 +5447,51 @@ queue(int num)
 			ClusterAdAttrs.clear();
 		}
 
-		if ( ClusterId == -1 ) {
-			fprintf( stderr, "\nERROR: Used queue command without "
-					 "specifying an executable\n" );
-			exit(1);
-		}
-
-		ProcId = NewProc (ClusterId);
-
-		if ( ProcId < 0 ) {
-			fprintf(stderr, "\nERROR: Failed to create proc\n");
-			if ( ProcId == -2 ) {
-				fprintf(stderr,
-				"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
+		if ( !DumpClassAdToFile ) {
+			if ( ClusterId == -1 ) {
+				fprintf( stderr, "\nERROR: Used queue command without "
+						 "specifying an executable\n" );
+				exit(1);
 			}
-			DoCleanup(0,0,NULL);
-			exit(1);
-		}
+		
+			ProcId = NewProc (ClusterId);
 
+			if ( ProcId < 0 ) {
+				fprintf(stderr, "\nERROR: Failed to create proc\n");
+				if ( ProcId == -2 ) {
+					fprintf(stderr,
+					"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
+				}
+				DoCleanup(0,0,NULL);
+				exit(1);
+			}
+
+		}
+		
 		if (MaxProcsPerCluster && ProcId >= MaxProcsPerCluster) {
 			fprintf(stderr, "\nERROR: number of procs exceeds SUBMIT_MAX_PROCS_IN_CLUSTER\n");
 			DoCleanup(0,0,NULL);
 			exit(-1);
+		} 
+
+		if ( !DumpClassAdToFile ) {
+			/*
+			**	Insert the current idea of the cluster and
+			**	process number into the hash table.
+			*/	
+			// GotQueueCommand = 1; // (see bellow)
+			(void)sprintf(tmp, "%d", ClusterId);
+			set_condor_param(Cluster, tmp);
+			set_condor_param_used(Cluster); // we don't show system macros as "unused"
+			(void)sprintf(tmp, "%d", ProcId);
+			set_condor_param(Process, tmp);
+			set_condor_param_used(Process);
+
 		}
 
-		/*
-		**	Insert the current idea of the cluster and
-		**	process number into the hash table.
-		*/
+		// we move this outside the above, otherwise it appears that we have 
+		// received no queue command
 		GotQueueCommand = 1;
-		(void)sprintf(tmp, "%d", ClusterId);
-		set_condor_param(Cluster, tmp);
-		set_condor_param_used(Cluster); // we don't show system macros as "unused"
-		(void)sprintf(tmp, "%d", ProcId);
-		set_condor_param(Process, tmp);
-		set_condor_param_used(Process);
 
 #if !defined(WIN32)
 		SetRootDir();	// must be called very early
@@ -5439,7 +5536,7 @@ queue(int num)
 		SetKillSig();
 #endif
 		SetRank();
-		SetStdFile( 0 );
+		( 0 );
 		SetStdFile( 1 );
 		SetStdFile( 2 );
 		SetFileOptions();
@@ -5495,7 +5592,12 @@ queue(int num)
 			// set by normal submit attributes
 		SetForcedAttributes();
 
-		rval = SaveClassAd();
+		// we assume success; otherwise the SaveClassAd will try to connect
+		// to the schedd, which is something we are trying to avoind
+		rval = 0;
+		if ( !DumpClassAdToFile ) {
+			rval = SaveClassAd();
+		}
 
 		SetLogNotes();
 		SetUserNotes();
@@ -5559,6 +5661,15 @@ queue(int num)
 
 		if (JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
 				SubmitInfo[CurrentSubmitInfo].lastjob = 0;
+		}
+
+		// now that we've loaded all the information into the job object
+		// we can just dump it to a file.  (In my opinion this is needlessly 
+		// ugly, here we should be using a derivation of Stream called File 
+		// which we would in turn serialize the job object to...)
+		if ( DumpClassAdToFile ) {
+			job->fPrint ( DumpFile );
+			fprintf ( DumpFile, "\n" );
 		}
 
 		if ( job_ad_saved == false ) {
@@ -6046,13 +6157,15 @@ check_open( const char *name, int flags )
 		delete list;
 	}
 
-	if( (fd=safe_open_wrapper(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
-		fprintf( stderr, "\nERROR: Can't open \"%s\"  with flags 0%o (%s)\n",
-				 strPathname.Value(), flags, strerror( errno ) );
-		DoCleanup(0,0,NULL);
-		exit( 1 );
+	if ( !DumpClassAdToFile ) {
+			if( (fd=safe_open_wrapper(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
+			fprintf( stderr, "\nERROR: Can't open \"%s\"  with flags 0%o (%s)\n",
+					 strPathname.Value(), flags, strerror( errno ) );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+		(void)close( fd );
 	}
-	(void)close( fd );
 
 	// Queue files for testing access if not already queued
 	int junk;
@@ -6093,6 +6206,8 @@ usage()
 	fprintf( stderr, "	-spool\t\t\tspool all files to the schedd\n" );
 	fprintf( stderr, "	-password <password>\tspecify password to MyProxy server\n" );
 	fprintf( stderr, "	-pool <host>\t\tUse host as the central manager to query\n" );
+	fprintf( stderr, "	-dump <filename>\t\tWrite schedd bound ClassAds to this\n"
+					 "                  \t\tfile rather than to the schedd itself\n" );
 	fprintf( stderr, "	-stm <method>\t\thow to move a sandbox into Condor\n" );
 	fprintf( stderr, "               \t\tAvailable methods:\n\n" );
 	fprintf( stderr, "               \t\t\tstm_use_schedd_only\n" );
@@ -6266,7 +6381,15 @@ log_submit()
 		fprintf(stdout, "Logging submit event(s)");
 	}
 
-	strcpy (jobSubmit.submitHost, MySchedd->addr());
+	if ( DumpClassAdToFile ) {
+		// we just put some arbitrary string here: it doesn't actually mean 
+		// anything since we will never communicate the resulting ad to 
+		// to anyone (we make the name obviously unresolvable so we know
+		// this was a generated file).
+		strcpy (jobSubmit.submitHost, "localhost-used-to-dump");
+	} else {
+		strcpy (jobSubmit.submitHost, MySchedd->addr());
+	}
 
 	if( LogNotesVal ) {
 		jobSubmit.submitEventLogNotes = LogNotesVal;
