@@ -60,7 +60,7 @@ my $max_run_ctr = 2;
 ##
 ## The sleep time of the job
 ##
-my $SLEEP_TIME = 20;
+my $SLEEP_TIME = 10;
 
 ##
 ## The preptime that the job gets to be sent over to the starter
