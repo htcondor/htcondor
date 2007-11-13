@@ -845,7 +845,7 @@ main( int argc, char *argv[] )
 	// that's the only type of communication we are interested in
 	if ( DumpClassAdToFile && STMethod != STM_USE_SCHEDD_ONLY ) {
 		fprintf( stderr, 
-			"%s: Dumping ClassAds to a file is not copatible with sandbox "
+			"%s: Dumping ClassAds to a file is not compatible with sandbox "
 			"transfer method: %s\n", MyName, method.Value());
 		usage();
 		exit(1);
@@ -862,7 +862,7 @@ main( int argc, char *argv[] )
 	// if we are dumping to a file, we never want to check file permissions
 	// as this would initiate some schedd communication
 	if ( DumpClassAdToFile ) {
-		DisableFileChecks = TRUE;
+		DisableFileChecks = 1;
 	}
 
 	MaxProcsPerCluster = param_integer("SUBMIT_MAX_PROCS_IN_CLUSTER", 0, 0);
@@ -985,17 +985,21 @@ main( int argc, char *argv[] )
 
 	// we can't disconnect from something if we haven't connected to it: since
 	// we are dumping to a file, we don't actually open a connection to the schedd
-	if ( !DumpClassAdToFile && !DisconnectQ(0) ) {
-		fprintf(stderr, "\nERROR: Failed to commit job submission into the queue.\n");
-		exit(1);
+	if ( !DumpClassAdToFile ) {
+		if ( !DisconnectQ(0) ) {
+			fprintf(stderr, "\nERROR: Failed to commit job submission into the queue.\n");
+			exit(1);
+		}
 	}
 
 	if (Quiet) {
 		fprintf(stdout, "\n");
 	}
 
-	if (!DumpClassAdToFile && UserLogSpecified) {
-		log_submit();
+	if (!DumpClassAdToFile) {
+		if (UserLogSpecified) {
+			log_submit();
+		}
 	}
 
 	if (Quiet) {
@@ -1023,90 +1027,94 @@ main( int argc, char *argv[] )
 		TestFilePermissions( MySchedd->addr() );
 	}
 
-	// we don't want to spool jobs if we are simply writting the ClassAds to 
+	// we don't want to spool jobs if we are simply writing the ClassAds to 
 	// a file, so we just skip this block entirely if we are doing this...
-	if ( !DumpClassAdToFile && Remote && JobAdsArrayLen > 0 ) {
-		bool result;
-		CondorError errstack;
+	if ( !DumpClassAdToFile ) {
+		if ( Remote && JobAdsArrayLen > 0 ) {
+			bool result;
+			CondorError errstack;
 
-		switch(STMethod) {
-			case STM_USE_SCHEDD_ONLY:
-				// perhaps check for proper schedd version here?
-				result = MySchedd->spoolJobFiles( JobAdsArrayLen,
-										  JobAdsArray.getarray(),
-										  &errstack );
-				if ( !result ) {
-					fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
-					fprintf( stderr, "ERROR: Failed to spool job files.\n" );
-					exit(1);
-				}
-				break;
+			switch(STMethod) {
+				case STM_USE_SCHEDD_ONLY:
+					// perhaps check for proper schedd version here?
+					result = MySchedd->spoolJobFiles( JobAdsArrayLen,
+											  JobAdsArray.getarray(),
+											  &errstack );
+					if ( !result ) {
+						fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+						fprintf( stderr, "ERROR: Failed to spool job files.\n" );
+						exit(1);
+					}
+					break;
 
-			case STM_USE_TRANSFERD:
-				{ // start block
+				case STM_USE_TRANSFERD:
+					{ // start block
 
-				fprintf(stdout,
-					"Locating a Sandbox for %d jobs.\n",JobAdsArrayLen);
-				MyString td_sinful;
-				MyString td_capability;
-				ClassAd respad;
-				int invalid;
-				MyString reason;
+					fprintf(stdout,
+						"Locating a Sandbox for %d jobs.\n",JobAdsArrayLen);
+					MyString td_sinful;
+					MyString td_capability;
+					ClassAd respad;
+					int invalid;
+					MyString reason;
 
-				result = MySchedd->requestSandboxLocation( FTPD_UPLOAD, 
-											JobAdsArrayLen,
-											JobAdsArray.getarray(), FTP_CFTP,
-											&respad, &errstack );
-				if ( !result ) {
-					fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
-					fprintf( stderr, 
-						"ERROR: Failed to get a sandbox location.\n" );
-					exit(1);
-				}
+					result = MySchedd->requestSandboxLocation( FTPD_UPLOAD, 
+												JobAdsArrayLen,
+												JobAdsArray.getarray(), FTP_CFTP,
+												&respad, &errstack );
+					if ( !result ) {
+						fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+						fprintf( stderr, 
+							"ERROR: Failed to get a sandbox location.\n" );
+						exit(1);
+					}
 
-				respad.LookupInteger(ATTR_TREQ_INVALID_REQUEST, invalid);
-				if (invalid == TRUE) {
-					fprintf( stderr, 
-						"Schedd rejected sand box location request:\n");
-					respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
-					fprintf( stderr, "\t%s\n", reason.Value());
-					return false;
-				}
+					respad.LookupInteger(ATTR_TREQ_INVALID_REQUEST, invalid);
+					if (invalid == TRUE) {
+						fprintf( stderr, 
+							"Schedd rejected sand box location request:\n");
+						respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
+						fprintf( stderr, "\t%s\n", reason.Value());
+						return false;
+					}
 
-				respad.LookupString(ATTR_TREQ_TD_SINFUL, td_sinful);
-				respad.LookupString(ATTR_TREQ_CAPABILITY, td_capability);
+					respad.LookupString(ATTR_TREQ_TD_SINFUL, td_sinful);
+					respad.LookupString(ATTR_TREQ_CAPABILITY, td_capability);
 
-				dprintf(D_ALWAYS, "Got td: %s, cap: %s\n", td_sinful.Value(),
-					td_capability.Value());
+					dprintf(D_ALWAYS, "Got td: %s, cap: %s\n", td_sinful.Value(),
+						td_capability.Value());
 
-				fprintf(stdout,"Spooling data files for %d jobs.\n",
-					JobAdsArrayLen);
+					fprintf(stdout,"Spooling data files for %d jobs.\n",
+						JobAdsArrayLen);
 
-				DCTransferD dctd(td_sinful.Value());
+					DCTransferD dctd(td_sinful.Value());
 
-				result = dctd.upload_job_files( JobAdsArrayLen,
-										  JobAdsArray.getarray(),
-										  &respad, &errstack );
-				if ( !result ) {
-					fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
-					fprintf( stderr, "ERROR: Failed to spool job files.\n" );
-					exit(1);
-				}
+					result = dctd.upload_job_files( JobAdsArrayLen,
+											  JobAdsArray.getarray(),
+											  &respad, &errstack );
+					if ( !result ) {
+						fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+						fprintf( stderr, "ERROR: Failed to spool job files.\n" );
+						exit(1);
+					}
 
-				} // end block
+					} // end block
 
-				break;
+					break;
 
-			default:
-				EXCEPT("PROGRAMMER ERROR: Unknown sandbox transfer method\n");
-				break;
+				default:
+					EXCEPT("PROGRAMMER ERROR: Unknown sandbox transfer method\n");
+					break;
+			}
 		}
 	}
 
 	// don't try to reschedule jobs if we are dumping to a file, because, again
 	// there will be not schedd present to reschedule thru.
-	if( !DumpClassAdToFile && ProcId != -1 ) {
-		reschedule();
+	if ( !DumpClassAdToFile ) {
+		if( ProcId != -1 ) {
+			reschedule();
+		}
 	}
 
 	if( dag_pause ) {
@@ -2790,9 +2798,9 @@ SetJavaVMArgs()
 	// in the case when we are dumping to a file.
 	bool MyCondorVersionRequiresV1 = false;
 	if ( !DumpClassAdToFile ) {
-		MyCondorVersionRequiresV1 = args.CondorVersionRequiresV1(MySchedd->version());
+		MyCondorVersionRequiresV1 = args.InputWasV1() || args.CondorVersionRequiresV1(MySchedd->version());
 	}
-	if(args.InputWasV1() || MyCondorVersionRequiresV1) {
+	if( MyCondorVersionRequiresV1 ) {
 		args_success = args.GetArgsStringV1Raw(&value,&error_msg);
 		if(!value.IsEmpty()) {
 			strbuffer.sprintf("%s = \"%s\"",ATTR_JOB_JAVA_VM_ARGS1,
@@ -3585,9 +3593,9 @@ SetArguments()
 	MyString value;
 	bool MyCondorVersionRequiresV1 = false;
 	if ( !DumpClassAdToFile ) {
-		MyCondorVersionRequiresV1 = arglist.CondorVersionRequiresV1(MySchedd->version());
+		MyCondorVersionRequiresV1 = arglist.InputWasV1() || arglist.CondorVersionRequiresV1(MySchedd->version());
 	}
-	if(arglist.InputWasV1() || MyCondorVersionRequiresV1) {
+	if(MyCondorVersionRequiresV1) {
 		args_success = arglist.GetArgsStringV1Raw(&value,&error_msg);
 		strbuffer.sprintf("%s = \"%s\"",ATTR_JOB_ARGUMENTS1,
 					   value.EscapeChars("\"",'\\').Value());
@@ -3840,9 +3848,10 @@ SetEnvironment()
 
 	bool MyCondorVersionRequiresV1 = false;
 	if ( !DumpClassAdToFile ) {
-		MyCondorVersionRequiresV1 = envobject.CondorVersionRequiresV1(MySchedd->version());
+		MyCondorVersionRequiresV1 = envobject.InputWasV1() 
+			|| envobject.CondorVersionRequiresV1(MySchedd->version());
 	}
-	bool insert_env1 = envobject.InputWasV1() || MyCondorVersionRequiresV1;
+	bool insert_env1 = MyCondorVersionRequiresV1;
 	bool insert_env2 = !insert_env1;
 
 	if(!env1 && !env2 && envobject.Count() == 0 && \
@@ -4079,9 +4088,9 @@ SetTDP( void )
 	MyString args_value;
 	bool MyCondorVersionRequiresV1 = false;
 	if ( !DumpClassAdToFile ) {
-		MyCondorVersionRequiresV1 = args.CondorVersionRequiresV1(MySchedd->version());
+		MyCondorVersionRequiresV1 = args.InputWasV1() || args.CondorVersionRequiresV1(MySchedd->version());
 	}
-	if(args.InputWasV1() || MyCondorVersionRequiresV1) {
+	if(MyCondorVersionRequiresV1) {
 		args_success = args.GetArgsStringV1Raw(&args_value,&error_msg);
 		if(!args_value.IsEmpty()) {
 			buf.sprintf("%s = \"%s\"",ATTR_TOOL_DAEMON_ARGS1,
@@ -5490,7 +5499,7 @@ queue(int num)
 		}
 
 		// we move this outside the above, otherwise it appears that we have 
-		// received no queue command
+		// received no queue command (or several)
 		GotQueueCommand = 1;
 
 #if !defined(WIN32)
