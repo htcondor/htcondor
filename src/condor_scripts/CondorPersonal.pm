@@ -1249,7 +1249,7 @@ sub IsRunningYet
 						print "Found startd running!\n";
         			}
     			}
-				if ($done -eq "no") {sleep 1;}
+				sleep 2;
 			}
 		}
 	}
@@ -1280,7 +1280,7 @@ sub IsRunningYet
 						print "Found schedd running!\n";
         			}
     			}
-				if ($done -eq "no") { sleep 1; }
+				sleep 2;
 			}
 		}
 	}
