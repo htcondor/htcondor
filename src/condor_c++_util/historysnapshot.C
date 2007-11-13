@@ -171,12 +171,21 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
 	  short_header();
   }
 
+  ExprTree *tree = NULL;
+
+  if (constraint) {
+  	Parse(constraint, tree);
+  }
+
   while(1) {
 	  st = getNextAd_Hor(ad, queryhor);
 
 	  if(st != QUILL_SUCCESS) 
 		  break;
 	  
+	  if (constraint && EvalBool(ad, tree) == FALSE) {
+			continue;
+	  }
 	  if (longformat) { 
 		  st = getNextAd_Ver(ad, queryver);
 
