@@ -11,6 +11,7 @@
 % this option needs the dots in boldface, so using the macro oOptArg won't work
 \Lbr\Opt{-append} \Arg{command} \Opt{\Dots}\Rbr 
 \oOpt{-spool}
+\oOptArg{-dump}{file\_name}
 \oArg{submit description file}
 
 \index{Condor commands!condor\_submit}
@@ -2442,6 +2443,9 @@ proxy over the connection to the \Condor{schedd}.
 After submission, modify
 local copies of the files without affecting your jobs. Any output
 files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
+
+\OptItem{\Opt{-dump}}{Sends all the class ads to a file instead of the
+  \Condor{schedd}.
 
 \OptItem{\Arg{submit description file}}{The pathname to the submit description
 file. If this optional argument is missing or equal to ``-'', then the commands
