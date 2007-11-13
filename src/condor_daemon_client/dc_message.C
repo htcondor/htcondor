@@ -272,10 +272,12 @@ void DCMessenger::writeMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 
 	if( !msg->writeMsg( this, sock ) ) {
 		msg->callMessageSendFailed( this );
+		doneWithSock(sock);
 	}
 	else if( !sock->eom() ) {
 		msg->addError( CEDAR_ERR_EOM_FAILED, "failed to send EOM" );
 		msg->callMessageSendFailed( this );
+		doneWithSock(sock);
 	}
 	else {
 			// Success
@@ -428,7 +430,7 @@ DCStringMsg::DCStringMsg( int cmd, char const *str ):
 
 bool DCStringMsg::writeMsg( DCMessenger *, Sock *sock )
 {
-	if( !sock->put( (char *)m_str.Value() ) ) {
+	if( !sock->put( m_str.Value() ) ) {
 		sockFailed( sock );
 		return false;
 	}
