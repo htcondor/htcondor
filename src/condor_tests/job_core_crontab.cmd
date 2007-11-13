@@ -5,13 +5,13 @@
 ##
 Executable		= ./x_time.pl
 Notification	= NEVER
-Arguments		= 20
+Arguments		= 10
 
 ##
 ## The job will run every 3 minutes
 ##
 CronHour		= *
-CronMinute		= */3
+CronMinute		= *
 CronDayOfMonth	= *
 CronMonth		= *
 CronDayOfWeek	= *
