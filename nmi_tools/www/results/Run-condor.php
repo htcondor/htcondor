@@ -160,7 +160,6 @@ while ($row = mysql_fetch_array($result)) {
    echo <<<EOF
    <tr>
       <td><a href="{$branch_url}">{$branch}</a></td>
-      <td><a href="{$branch_url}">{$branch}</a></td>
       <td align="center">{$runid}</td>
       <td align="center">{$start}</td>
       <td align="center">{$user}</td>
