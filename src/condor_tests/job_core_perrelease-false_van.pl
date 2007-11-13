@@ -107,7 +107,7 @@ CondorTest::RegisterExecute($testname, $executed);
 # Note we are never going to release this job if preriodic release
 # policy is false.... so eventually we simply remove it
 # Question is....... how long after submit do we wait to make sure
-CondorTest::RegisterTimed($testname, $timed, 480); # kill in queue 8 minutes
+CondorTest::RegisterTimed($testname, $timed, 25); # kill in queue 25 seconds
 CondorTest::RegisterExitedSuccess( $testname, $success );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
