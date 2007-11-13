@@ -46,6 +46,10 @@ language.
 
 \begin{itemize}
 
+\item \Condor{history}, when quill is enabled, will now query the
+	database for historical items even when the -constraint option
+	is given.  Previously, it would go to the history file in that case.
+
 \item \Condor{submit} can now write the class ads it generates to a
       file instead of sending them to the \Condor{schedd}.
 
