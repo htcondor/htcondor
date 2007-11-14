@@ -1610,8 +1610,8 @@ JICShadow::startUpdateTimer( void )
 		return;
 	}
 
-	// default interval is 20 minutes, with 8 seconds as the initial value.
-	int update_interval = param_integer( "STARTER_UPDATE_INTERVAL", (20*60) );
+	// default interval is 5 minutes, with 8 seconds as the initial value.
+	int update_interval = param_integer( "STARTER_UPDATE_INTERVAL", 300 );
 	int initial_interval = param_integer( "STARTER_INITIAL_UPDATE_INTERVAL", 8 );
 
 	if( update_interval < initial_interval ) {
