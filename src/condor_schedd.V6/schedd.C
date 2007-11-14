@@ -4471,7 +4471,7 @@ Scheduler::negotiate(int command, Stream* s)
 	ClassAd* cad;
 	char buffer[1024];
 	bool cant_spawn_shadow = false;
-
+	bool skip_negotiation = false;
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
@@ -4644,7 +4644,7 @@ Scheduler::negotiate(int command, Stream* s)
 		if ( autocluster.config(sig_attrs_from_cm) ) {
 			// clear out auto cluster id attributes
 			WalkJobQueue( (int(*)(ClassAd *))clear_autocluster_id );
-			ClearPrioRecArray(); // must rebuild PrioRecArray
+			DirtyPrioRecArray(); // should rebuild PrioRecArray
 		}
 		free(sig_attrs_from_cm);
 		sig_attrs_from_cm = NULL;
@@ -4663,18 +4663,20 @@ Scheduler::negotiate(int command, Stream* s)
 		 owner_num++);
 	if (owner_num == N_Owners) {
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
-		jobs = N_PrioRecs = 0;
+		jobs = 0;
+		skip_negotiation = true;
 	} else if (Owners[owner_num].FlockLevel < which_negotiator) {
 		dprintf(D_FULLDEBUG,
 				"This user is no longer flocking with this negotiator.\n");
-		jobs = N_PrioRecs = 0;
+		jobs = 0;
+		skip_negotiation = true;
 	} else if (Owners[owner_num].FlockLevel == which_negotiator) {
 		Owners[owner_num].NegotiationTimestamp = time(0);
 	}
 	if (at_sign) *at_sign = '@';
 
 	/* Try jobs in priority order */
-	for( i=0; i < N_PrioRecs; i++ ) {
+	for( i=0; i < N_PrioRecs && !skip_negotiation; i++ ) {
 	
 		// BIOTECH
 		if ( JobsRejected > 0 && biotech ) {

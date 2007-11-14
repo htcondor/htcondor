@@ -95,6 +95,7 @@ bool        PrioRecArrayIsDirty = true;
 // spend at most this fraction of the time rebuilding the PrioRecArray
 const double PrioRecRebuildMaxTimeSlice = 0.05;
 const double PrioRecRebuildMaxTimeSliceWhenNoMatchFound = 0.1;
+const double PrioRecRebuildMaxInterval = 20 * 60;
 Timeslice   PrioRecArrayTimeslice;
 prio_rec	PrioRecArray[INITIAL_MAX_PRIO_REC];
 prio_rec	* PrioRec = &PrioRecArray[0];
@@ -3479,10 +3480,10 @@ void mark_jobs_idle()
     WalkJobQueue( mark_idle );
 }
 
-void ClearPrioRecArray() {
-		// force a rebuild of PrioRecArray the next time we need it
+void DirtyPrioRecArray() {
+		// Mark the PrioRecArray as stale. This will trigger a rebuild,
+		// though possibly not immediately.
 	PrioRecArrayIsDirty = true;
-	N_PrioRecs = 0;
 }
 
 static void DoBuildPrioRecArray() {
@@ -3546,6 +3547,7 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 		return false;
 	}
 
+	PrioRecArrayTimeslice.setMaxInterval( PrioRecRebuildMaxInterval );
 	if( no_match_found ) {
 		PrioRecArrayTimeslice.setTimeslice( PrioRecRebuildMaxTimeSliceWhenNoMatchFound );
 	}

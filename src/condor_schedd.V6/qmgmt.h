@@ -86,7 +86,7 @@ bool isQueueSuperUser( const char* user );
 bool OwnerCheck( ClassAd *ad, const char *test_owner );
 bool OwnerCheck2( ClassAd *ad, const char *test_owner );
 bool BuildPrioRecArray(bool no_match_found=false);
-void ClearPrioRecArray();
+void DirtyPrioRecArray();
 extern ClassAd *dollarDollarExpand(int cid, int pid, ClassAd *job, ClassAd *res);
 ClassAd* GetNextJobByCluster( int, int );
 
