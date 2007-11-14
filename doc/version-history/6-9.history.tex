@@ -180,6 +180,12 @@ characters.  Previously, \Condor{submit} would refuse to accept jobs
 exceeding this POSIX\_PATH\_MAX limit.  Now the only limit is whatever
 limit the operating system enforces on the system where the files are accessed.
 
+\item The \Condor{startd} now receives updates to the job ClassAd from
+the \Condor{starter}.  The primary benefit of this is that
+\AdAttr{DiskUsage} is updated and can therefore be used in policy
+expressions, such as \MacroNI{PREEMPT}.  The frequency of updates is
+determined by \MacroNI{STARTER\_UPDATE\_INTERVAL}.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
