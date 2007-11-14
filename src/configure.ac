@@ -2242,7 +2242,7 @@ fi
 # platforms where the build is known to fail
 if test x$_cv_sysname != "xppc_aix52" -a x$_cv_linux_distro != "xRH72" -a  x$_cv_sysname != "xsun4x_58" -a x$_cv_sysname != "xsun4x_59" -a x$_cv_sysname != "xalpha_dux51" ; then
   if test x$_cv_sysname = "xppc_macosx" -o $ac_pthreads = "yes"; then
-   CHECK_EXTERNAL([drmaa],[1.5], [soft])
+   CHECK_EXTERNAL([drmaa],[1.5.1], [soft])
   fi
 fi
 
