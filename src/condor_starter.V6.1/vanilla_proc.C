@@ -180,6 +180,11 @@ VanillaProc::JobCleanup(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::JobCleanup()\n");
 
+		// make sure that nothing was left behind
+	if (pid == JobPid) {
+		daemonCore->Kill_Family(JobPid);
+	}
+
 		// This will reset num_pids for us, too.
 	return OsProc::JobCleanup( pid, status );
 }
@@ -265,9 +270,12 @@ VanillaProc::ShutdownFast()
 	// step is to hard kill it.
 	requested_exit = true;
 
-	// FINDOUT: when we are being shutdown fast, do we still update the
-	// shadow with the latest usage information about the job???
-	//
+	// this used to be the only place where we would clean up the process
+	// family. this, however, wouldn't properly clean up local universe jobs
+	// so a call to Kill_Family has been added to JobCleanup(). i'm not sure
+	// that this call is still needed, but am unwilling to remove it on the
+	// eve of Condor 7
+	//   -gquinn, 2007-11-14
 	daemonCore->Kill_Family(JobPid);
 
 	return false;	// shutdown is pending, so return false
