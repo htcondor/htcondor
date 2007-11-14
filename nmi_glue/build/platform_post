@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: platform_post,v 1.7 2007-11-08 22:53:44 nleroy Exp $
+# $Id: platform_post,v 1.8 2007-11-14 22:20:28 bt Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -44,6 +44,8 @@ system("chmod a+r *");
 
 print "Initializing values from the environment\n";
 my $platform = $ENV{NMI_PLATFORM};
+my $mode = "regular"; # if workspace, try to do a workspace test
+
 print "ENV: NMI_PLATFORM = $platform\n";
 $platform || die "No platform to use, NOT submitting tests\n";
 
@@ -56,6 +58,11 @@ if( defined $opt_test_args ) {
     print "--test-args specified on command-line, additional args for " 
         . "condor_nmi_submit:\n   '$opt_test_args'\n";
 }   
+
+if($opt_test_args =~ /^--workspace=.*/) {
+	print "Attempting workspace build auto test run!\n";
+	$mode = "workspace";
+}
 
 my $tag = $ENV{NMI_tag};
 my $module = $ENV{NMI_module};
@@ -78,8 +85,10 @@ if( $notify ) {
 }
 my $xtests_arg = $opt_submit_xtests == 1 ? '--submit-xtests' : '--nosubmit-xtests';
 
-$tag || die "No tag to use, NOT submitting tests\n";
-$module || die "No module to use, NOT submitting tests\n";
+if($mode ne "workspace") {
+	$tag || die "No tag to use, NOT submitting tests\n";
+	$module || die "No module to use, NOT submitting tests\n";
+}
 $gid || die "No gid to use, NOT submitting tests\n";
 
 my $runid = `nmi_gid2runid $ENV{_NMI_GID}`;
@@ -100,8 +109,16 @@ my $status;
             . "and chmod() failed: $!\n";
     }
 
-    my $cmd = "$cns --test --buildid=$runid --platform=$platform " .
-       "--tag=$tag --module=$module $notify_arg $opt_test_args $xtests_arg";
+	my $cmd = "";
+	if($mode ne "workspace") {
+    	$cmd = "$cns --test --buildid=$runid --platform=$platform " .
+       		"--tag=$tag --module=$module $notify_arg $opt_test_args $xtests_arg";
+	} else {
+		# set up tests for a workspace build
+    	$cmd = "$cns --test --buildid=$runid --platform=$platform " .
+       		"$notify_arg $opt_test_args";
+		print "Workspace test command is <$cmd>\n";
+	}
 
     print "Invoking CNS ($cmd)\n";
     open( CNS, "$cmd|" ) || 
