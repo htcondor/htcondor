@@ -531,7 +531,7 @@ int Sock::bind(bool outbound, int port, bool loopback)
 
 #ifndef WIN32
 		priv_state old_priv;
-		if(port < 1024) {
+		if(port > 0 && port < 1024) {
 			// use root priv for the call to bind to allow privileged ports
 			old_priv = PRIV_UNKNOWN;
 			old_priv = set_root_priv();
@@ -541,7 +541,7 @@ int Sock::bind(bool outbound, int port, bool loopback)
 		bind_return_value = _bind_helper(_sock, (sockaddr *)&sin, sizeof(sockaddr_in), outbound);
 
 #ifndef WIN32
-		if(port < 1024) {
+		if(port > 0 && port < 1024) {
 			set_priv (old_priv);
 		}
 #endif
