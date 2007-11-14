@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: pre_all,v 1.9 2007-11-09 19:19:44 matt Exp $ 
+# $Id: pre_all,v 1.10 2007-11-14 22:14:27 psilord Exp $ 
 # Submit-side NMI build system infrastructure to prepare sources for
 # the Condor build
 #
@@ -228,6 +228,20 @@ if ($tagname ne "") {
 }
 
 ######################################################################
+# 4.5) Create a buildid file which represents the runid of this build
+######################################################################
+
+print "Creating embedded buildid\n";
+chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
+
+# Stash this in the common dir for remote_pre
+$runid = acquire_runid();
+open( BUILDID_FILE, ">$buildid_file") || die "Can't open $buildid_file: $!\n";
+print BUILDID_FILE "$runid\n";
+close( BUILDID_FILE );
+print "Embedding build id: $runid\n";
+
+######################################################################
 # 5) Setup the sources as a release-able source tarball
 ######################################################################
 
@@ -236,6 +250,9 @@ chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
 my $src_tar_dir = "condor-$version";
 my $src_tarball = "$src_tar_dir.tar.gz";
 mkdir( "$src_tar_dir" ) || die "Can't mkdir($src_tar_dir): $!\n";
+
+# cwd must be the CommonDir to get the buildid file
+safe_sys( "cp $buildid_file $src_tar_dir" );
 
 safe_sys( "cp $SrcDir/README.building $src_tar_dir" );
 safe_sys( "cp src/condor_release/LICENSE-2.0.txt $src_tar_dir" );
@@ -256,12 +273,6 @@ print "Done removing all source directories\n";
 # common/results.tar.gz so that we can save them.
 print "Creating platform-independent results.tar.gz file\n";
 chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
-
-$runid = acquire_runid();
-open( BUILDID_FILE, ">$buildid_file") || die "Can't open $buildid_file: $!\n";
-print BUILDID_FILE "$runid\n";
-close( BUILDID_FILE );
-print "Embedded build id: $runid\n";
 
 print "Tarring up contents of common to save for later\n";
 open( TAR, "tar -zcvf $result $buildid_file $vers_file $src_tarball|" ) ||
