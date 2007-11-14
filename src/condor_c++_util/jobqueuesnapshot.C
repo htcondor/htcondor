@@ -97,7 +97,8 @@ JobQueueSnapshot::startIterateAllClassAds(int *clusterarray,
 					  int numprocs,
 					  char *schedd, 
 					  bool isfullscan,
-					  time_t scheddBirthdate)
+					  time_t scheddBirthdate,
+					  char *&lastUpdate)
 {
 	QuillErrCode st;
 		// initialize index variables
@@ -128,6 +129,21 @@ JobQueueSnapshot::startIterateAllClassAds(int *clusterarray,
 			printf("Error while setting xact isolation level to serializable\n");
 			return QUILL_FAILURE;
 		}
+	}
+
+	/* Get currency info */
+	char query[1024];
+	sprintf(query, "select lastupdate from currencies where datasource = \'%s\'", schedd);
+	int rows;
+	st = jqDB->execQuery(query, rows);
+	if (st != QUILL_SUCCESS) {
+		return QUILL_FAILURE;
+	}
+	
+	if (rows == 1) {
+		lastUpdate = strdup(jqDB->getValue(0,0));
+	} else {
+		lastUpdate = strdup("");
 	}
 
 	st = jqDB->getJobQueueDB(clusterarray, 

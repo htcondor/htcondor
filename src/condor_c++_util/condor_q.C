@@ -290,7 +290,7 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, char *host, CondorErro
 }
 
 int CondorQ::
-fetchQueueFromDB (ClassAdList &list, char *dbconn, CondorError*  /*errstack*/)
+fetchQueueFromDB (ClassAdList &list, char *&lastUpdate, char *dbconn, CondorError*  /*errstack*/)
 {
 #ifdef WANT_QUILL
 	ClassAd 		filterAd;
@@ -308,7 +308,8 @@ fetchQueueFromDB (ClassAdList &list, char *dbconn, CondorError*  /*errstack*/)
 						 numprocs,
 						 schedd,
 						 FALSE,
-						 scheddBirthdate);
+						 scheddBirthdate,
+						 lastUpdate);
 
 	if (rv == QUILL_FAILURE) {
 		delete jqSnapshot;
@@ -385,7 +386,7 @@ fetchQueueFromHostAndProcess ( char *host, StringList &attrs, process_function p
 }
 
 int CondorQ::
-fetchQueueFromDBAndProcess ( char *dbconn, process_function process_func, CondorError*  /*errstack*/ )
+fetchQueueFromDBAndProcess ( char *dbconn, char *&lastUpdate, process_function process_func, CondorError*  /*errstack*/ )
 {
 #ifdef WANT_QUILL
 	ClassAd 		filterAd;
@@ -405,7 +406,8 @@ fetchQueueFromDBAndProcess ( char *dbconn, process_function process_func, Condor
 						 numprocs,
 						schedd,
 						 FALSE,
-						scheddBirthdate);
+						scheddBirthdate,
+						lastUpdate);
 
 	if (rv == QUILL_FAILURE) {
 		delete jqSnapshot;

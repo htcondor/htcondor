@@ -1884,6 +1884,8 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 
 	output_buffer = new ExtArray<clusterProcString*>;
 
+	char *lastUpdate;
+
 		/* intepret the parameters accordingly based on whether we are querying database */
 	if (useDB) {
 		quill_name = v1;
@@ -1984,6 +1986,7 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 		dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
 
 		if( Q.fetchQueueFromDBAndProcess( dbconn,
+											lastUpdate,
 											process_buffer_line,
 											&errstack) != Q_OK ) {
 			fprintf( stderr, 
@@ -2036,8 +2039,8 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 
 		if (! customFormat ) {
 			if (useDB) {
-				printf ("\n\n-- Quill: %s : %s : %s\n", quill_name, 
-						db_ipAddr, db_name);
+				printf ("\n\n-- Quill: %s : %s : %s : %s\n", quill_name, 
+						db_ipAddr, db_name, lastUpdate);
 			} else if( querySchedds ) {
 				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
 			} else {
@@ -2200,6 +2203,8 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 	scheddName = v2;
 	scheddMachine = v3;		
 
+	char *lastUpdate;
+
     if (jobads_file != NULL) {
 		/* get the "q" from the job ads file */
         if (!read_classad_file(jobads_file, jobs)) {
@@ -2230,12 +2235,13 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 			dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
 
 				// fetch queue from database
-			if( Q.fetchQueueFromDB(jobs, dbconn, &errstack) != Q_OK ) {
+			if( Q.fetchQueueFromDB(jobs, lastUpdate, dbconn, &errstack) != Q_OK ) {
 				fprintf( stderr,
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
 						db_ipAddr, db_name, errstack.getFullText(true) );
 				return false;
 			}
+
 #endif /* WANT_QUILL */
 		} else {
 				// fetch queue from schedd	

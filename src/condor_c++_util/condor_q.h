@@ -94,8 +94,8 @@ class CondorQ
 	int fetchQueueFromHostAndProcess ( char *, StringList &attrs, process_function process_func, bool useFastPath, CondorError* errstack = 0);
 	
 		// fetch the job ads from database 	
-	int fetchQueueFromDB (ClassAdList &, char * = 0, CondorError* errstack = 0);
-	int fetchQueueFromDBAndProcess ( char *, process_function process_func, CondorError* errstack = 0);
+	int fetchQueueFromDB (ClassAdList &, char *&lastUpdate, char * = 0, CondorError* errstack = 0);
+	int fetchQueueFromDBAndProcess ( char *, char *&lastUpdate, process_function process_func, CondorError* errstack = 0);
 
 		// return the results from a DB query directly to user
 	void rawDBQuery(char *, CondorQQueryType);

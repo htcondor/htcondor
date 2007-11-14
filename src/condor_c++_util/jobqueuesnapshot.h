@@ -44,7 +44,8 @@ public:
 					     int numprocs,
 				    	     char *owner, 
 					     bool isfullscan,
-						time_t scheddBirthdate);
+						time_t scheddBirthdate,
+						char *&lastUpdate);
 	//! iterate one by one
 	QuillErrCode iterateAllClassAds(ClassAd*& ad);
 	//! release snapshot
