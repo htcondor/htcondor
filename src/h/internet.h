@@ -43,6 +43,9 @@ extern "C" {
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  TCP */
 int string_to_sin(const char *addr, struct sockaddr_in *s_in);
 
+/* Like inet_aton(), but works in Windows too.  (Returns 0 on failure.) */
+int condor_inet_aton(const char *ipstr, struct in_addr *result);
+
 char *sin_to_string(const struct sockaddr_in *s_in);
 
 /* Extract the port from a string of the form "<xx.xx.xx.xx:pppp>" */

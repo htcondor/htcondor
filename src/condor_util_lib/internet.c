@@ -913,3 +913,12 @@ getSockAddr(int sockfd)
     }
     return &sa_in;
 }
+
+int
+condor_inet_aton(const char *ipstr, struct in_addr *result)
+{
+	if( !is_ipaddr(ipstr,result) ) {
+		return 0;
+	}
+	return 1;
+}
