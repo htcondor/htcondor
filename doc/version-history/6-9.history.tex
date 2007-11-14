@@ -367,6 +367,9 @@ shutdown while it's disconnected from the \Condor{shadow}.
   more processes were concurrently writing to the event log, they
   didn't correctly detect that another writer process had rotated the
   file, and would do their own rotation, resulting in data loss.
+
+\item Fixed a bug in the \Condor{schedd} that could cause it to not match
+any jobs for long periods of time.
  
 \end{itemize}
 
