@@ -4325,13 +4325,15 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   in attribute \Attr{foo\_RAW} in the job ClassAd.
   The following are set by default:
 \begin{verbatim}
-        SCHEDD_ROUND_ATTR_ImageSize = 4
-        SCHEDD_ROUND_ATTR_ExecutableSize = 4
-        SCHEDD_ROUND_ATTR_DiskUsage = 4
-		SCHEDD_ROUND_ATTR_NumCkpts = 4
+        SCHEDD_ROUND_ATTR_ImageSize = 5
+        SCHEDD_ROUND_ATTR_ExecutableSize = 5
+        SCHEDD_ROUND_ATTR_DiskUsage = 5
+        SCHEDD_ROUND_ATTR_NumCkpts = 4
 \end{verbatim}
-  Thus, the above attributes are all rounded up from Kbytes to the nearest
-  10 Megabytes.
+  Thus, the above attributes that are in Kbytes are rounded to the nearest
+  100 Megabytes.  If your batch slots have less than 100MB of memory
+  or disk, you should reduce the rounding to a smaller number, because
+  job requirements will all be rounded up and will therefore not match.
 
 \item[\Macro{SCHEDD\_BACKUP\_SPOOL}]
   \label{param:ScheddBackupSpool} This macro is used to enable the

@@ -240,6 +240,17 @@ more details.
   unexpanded variables in a submit file.  The default is \Expr{True}
   to list unused or unexpanded variables.
 
+\item The configuration variables
+\Macro{SCHEDD\_ROUND\_ATTR\_ImageSize},
+\Macro{SCHEDD\_ROUND\_ATTR\_ExecutableSize}, and
+\Macro{SCHEDD\_ROUND\_ATTR\_DiskUsage} now have a default value of 5
+rather than 4.  In other words, these values are now rounded to 100MB
+rather than 10MB.  This increases the efficiency of negotiation,
+because jobs can be grouped together with more flexibility.  However,
+note that this change will be a problem for you if your batch slots
+have less than 100MB of memory or disk, because job requirements will
+not be met.  In this case, reduce the rounding from 5 to 4.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
