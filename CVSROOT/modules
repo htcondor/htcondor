@@ -885,7 +885,7 @@ V6_9_5_EXT	-a V6_9_COMMON_EXT \
                    externals/bundles/gcb/1.5.1 \
                    externals/bundles/gcb/1.5.2 \
                    externals/bundles/gcb/1.5.3 \
-                   externals/bundles/drmaa/1.5 \
+                   externals/bundles/drmaa/1.5.1 \
                    externals/bundles/gt4gahp/1.7 \
                    externals/bundles/globus/4.0.5 \
                    externals/bundles/nordugridgahp/1.1.2 \
