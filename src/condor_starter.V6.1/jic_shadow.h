@@ -413,6 +413,8 @@ private:
 			job again...
 		*/
 	bool job_cleanup_disconnected;
+
+	Stream *m_job_startd_update_sock;
 };
 
 

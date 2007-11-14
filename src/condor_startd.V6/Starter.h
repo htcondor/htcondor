@@ -87,6 +87,8 @@ public:
 
 	char*	getIpAddr( void );
 
+	int receiveJobClassAdUpdate( Stream *stream );
+
 private:
 
 		// methods
@@ -130,7 +132,7 @@ private:
 	bool            s_is_boinc;
 #endif /* HAVE_BOINC */
 	int             s_reaper_id;
-
+	ReliSock*       s_job_update_sock;
 };
 
 #endif /* _CONDOR_STARTD_STARTER_H */

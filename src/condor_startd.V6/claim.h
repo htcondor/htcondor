@@ -250,6 +250,8 @@ public:
 		*/
 	bool writeJobAd( int fd );
 
+	void receiveJobClassAdUpdate( ClassAd &update_ad );
+
 private:
 	Resource	*c_rip;
 	Client 		*c_client;

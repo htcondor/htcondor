@@ -2028,3 +2028,36 @@ ClaimId::dropFile( int slot_id )
 		unlink( filename_new.Value() );
 	}
 }
+
+void
+Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
+{
+	ASSERT( c_ad );
+
+	update_ad.ResetExpr();
+	ExprTree *expr;
+	while( (expr=update_ad.NextExpr()) != NULL ) {
+
+		ASSERT( expr->MyType() == LX_ASSIGN &&
+				expr->LArg()->MyType() == LX_VARIABLE );
+
+		char const *name = ((Variable *)expr->LArg())->Name();
+		if( !strcmp(name,ATTR_MY_TYPE) ||
+			!strcmp(name,ATTR_TARGET_TYPE) )
+		{
+				// ignore MyType and TargetType
+			continue;
+		}
+
+			// replace expression in current ad with expression from update ad
+		ExprTree *new_expr = expr->DeepCopy();
+		ASSERT( new_expr );
+		if( !c_ad->Insert( new_expr ) ) {
+			delete new_expr;
+		}
+	}
+	if( DebugFlags & D_JOB ) {
+		dprintf(D_JOB,"Updated job ClassAd:\n");
+		c_ad->dPrint(D_JOB);
+	}
+}

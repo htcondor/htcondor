@@ -250,7 +250,7 @@ SafeSock::sender_ip_str()
 }
 
 int SafeSock::connect(
-	char	*host,
+	char const	*host,
 	int		port, 
 	bool
 	)

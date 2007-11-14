@@ -88,6 +88,7 @@ Starter::initRunData( void )
 #if HAVE_BOINC
 	s_is_boinc = false;
 #endif /* HAVE_BOINC */
+	s_job_update_sock = NULL;
 }
 
 
@@ -100,6 +101,10 @@ Starter::~Starter()
 	}
 	if( s_ad ) {
 		delete( s_ad );
+	}
+	if( s_job_update_sock ) {
+		daemonCore->Cancel_Socket( s_job_update_sock );
+		delete s_job_update_sock;
 	}
 }
 
@@ -690,20 +695,68 @@ Starter::execDCStarter( Stream* s )
 	return s_pid;
 }
 
+int
+Starter::receiveJobClassAdUpdate( Stream *stream )
+{
+	ClassAd update_ad;
+
+		// It is expected that we will get here when the stream is closed.
+		// Unfortunately, log noise will be generated when we try to read
+		// from it.
+
+	stream->decode();
+	if( !update_ad.initFromStream( *stream ) || !stream->end_of_message() ) {
+		dprintf(D_FULLDEBUG, "Closing job ClassAd update socket from starter.\n");
+		daemonCore->Cancel_Socket(s_job_update_sock);
+		delete s_job_update_sock;
+		s_job_update_sock = NULL;
+		return KEEP_STREAM;
+	}
+	dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
+	update_ad.dPrint( D_JOB );
+
+	if( s_claim ) {
+		s_claim->receiveJobClassAdUpdate( update_ad );
+	}
+	return KEEP_STREAM;
+}
 
 int
 Starter::execDCStarter( ArgList const &args, Env const *env, 
 						int* std_fds, Stream* s )
 {
-	Stream *sock_inherit_list[] = { s, 0 };
-	Stream** inherit_list = NULL;
-	if( s ) {
-		inherit_list = sock_inherit_list;
-	}
+	Stream *inherit_list[] =
+		{ 0 /*ClassAd update stream (assigned below)*/,
+		  s /*shadow syscall sock*/,
+		  0 /*terminal NULL*/ };
 
 	const ArgList* final_args = &args;
 	const Env* final_env = env;
 	const char* final_path = s_path;
+
+	ReliSock child_job_update_sock;   // child inherits this socket
+	ASSERT( !s_job_update_sock );
+	s_job_update_sock = new ReliSock; // parent (yours truly) keeps this socket
+	ASSERT( s_job_update_sock );
+
+		// Connect parent and child sockets together so child can send us
+		// udpates to the job ClassAd.
+	if( !s_job_update_sock->connect_socketpair( child_job_update_sock ) ) {
+		dprintf( D_ALWAYS, "ERROR: Failed to create job ClassAd update socket!\n");
+		s_pid = 0;
+		return s_pid;
+	}
+	inherit_list[0] = &child_job_update_sock;
+
+	if( !daemonCore->Register_Socket(
+			s_job_update_sock,
+			"starter ClassAd update socket",
+			(SocketHandlercpp)&Starter::receiveJobClassAdUpdate,
+			"receiveJobClassAdUpdate",
+			this) < 0 )
+	{
+		EXCEPT("Failed to register ClassAd update socket.");
+	}
 
 #if !defined(WIN32)
 	// see if we should be using glexec to spawn the starter.

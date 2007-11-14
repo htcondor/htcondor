@@ -245,7 +245,7 @@ ReliSock::accept()
 }
 
 int 
-ReliSock::connect( char	*host, int port, bool non_blocking_flag )
+ReliSock::connect( char	const *host, int port, bool non_blocking_flag )
 {
 	if (authob) {                                                           
 		delete authob;                                                  
@@ -1410,3 +1410,26 @@ bool ReliSock :: is_encrypt()
 	return FALSE;
 }
 
+bool
+ReliSock::connect_socketpair(ReliSock &sock)
+{
+	ReliSock tmp_srv;
+
+	if( !tmp_srv.bind_to_loopback() ) {
+		return false;
+	}
+
+	if( !tmp_srv.listen() ) {
+		return false;
+	}
+
+	if( !connect(tmp_srv.sender_ip_str(),tmp_srv.get_port()) ) {
+		return false;
+	}
+
+	if( !tmp_srv.accept( sock ) ) {
+		return false;
+	}
+
+	return true;
+}

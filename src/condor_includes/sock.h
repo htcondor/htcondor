@@ -111,14 +111,14 @@ public:
 		the call would block.
 		@see do_connect_finish
 	*/
-	virtual int connect(char *host, int port=0, bool do_not_block = false) = 0;
+	virtual int connect(char const *host, int port=0, bool do_not_block = false) = 0;
 
 	/** Connect the socket to a remote peer.
 		@param host Hostname of the peer, either a DNS name or IP address.
 		@param service The name of a service that represents a port address,
 		which can be passed to getportbyserv().
 	*/
-	inline int connect(char *host, char *service, bool do_not_block = false) { 
+	inline int connect(char const *host, char *service, bool do_not_block = false) { 
 		return connect(host,getportbyserv(service),do_not_block); 
 	}
 
@@ -135,7 +135,10 @@ public:
 #if defined(WIN32) && defined(_WINSOCK2API_)
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
-	int bind(bool outbound, int port=0);
+	int bind(bool outbound, int port=0, bool loopback=false);
+
+	bool bind_to_loopback(bool outbound=false, int port=0);
+
     int setsockopt(int, int, const char*, int); 
 
 	/**  Set the size of the operating system buffers (in the IP stack) for
@@ -152,6 +155,7 @@ public:
 	static int set_timeout_multiplier(int secs);
 	
 	inline int bind(bool outbound, char *s) { return bind(outbound, getportbyserv(s)); }
+
 	int close();
 	/** if any operation takes more than sec seconds, timeout
         call timeout(0) to set blocking mode (default)
@@ -262,7 +266,7 @@ protected:
 			is reached.  For DaemonCore applications, this is handled
 			by passing the socket to DaemonCore's Register_Socket() function.
     */
-	int do_connect(char *host, int port, bool non_blocking_flag = false);
+	int do_connect(char const *host, int port, bool non_blocking_flag = false);
 
 	inline SOCKET get_socket (void) { return _sock; }
 	char * serialize(char *);

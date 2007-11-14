@@ -71,9 +71,17 @@ public:
         @param s can be a hostname or sinful string
         @param port the port to connect to, ignorred if s contains port
     */
-	virtual int connect(char *s, int port=0, 
+	virtual int connect(char const *s, int port=0, 
 							bool do_not_block = false);
 
+
+		/** Connect this socket to another socket (s).
+			An implementation of socketpair() that works on windows as well
+			as unix (by using the loopback interface).
+			@param sock - the socket to connect this socket to
+			@returns true on success, false on failure.
+		 */
+	bool connect_socketpair(ReliSock &dest);
 
     ///
 	ReliSock();

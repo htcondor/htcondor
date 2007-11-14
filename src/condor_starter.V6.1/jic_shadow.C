@@ -67,18 +67,30 @@ JICShadow::JICShadow( char* shadow_name ) : JobInfoCommunicator()
 
 		// now we need to try to inherit the syscall sock from the startd
 	Stream **socks = daemonCore->GetInheritedSocks();
+	if (socks[0] == NULL ||
+		socks[0]->type() != Stream::reli_sock) 
+	{
+		dprintf(D_ALWAYS, "Failed to inherit job ClassAd startd update socket.\n");
+		Starter->StarterExit( 1 );
+	}
+	m_job_startd_update_sock = socks[0];
+	socks++;
+
 	if (socks[0] == NULL || 
-		socks[1] != NULL || 
 		socks[0]->type() != Stream::reli_sock) 
 	{
 		dprintf(D_ALWAYS, "Failed to inherit remote system call socket.\n");
 		Starter->StarterExit( 1 );
 	}
 	syscall_sock = (ReliSock *)socks[0];
+	socks++;
+
 		/* Set a timeout on remote system calls.  This is needed in
 		   case the user job exits in the middle of a remote system
 		   call, leaving the shadow blocked.  -Jim B. */
 	syscall_sock->timeout(300);
+
+	ASSERT( socks[0] == NULL );
 }
 
 
@@ -1675,6 +1687,16 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 					"instead of CONDOR_register_job_info RSC\n");
 		}
 		rval = shadow->updateJobInfo(ad, insure_update);
+	}
+
+	// also update the startd's copy of the job ClassAd
+	if( m_job_startd_update_sock ) {
+		m_job_startd_update_sock->encode();
+		if( !ad->put(*m_job_startd_update_sock) ||
+			!m_job_startd_update_sock->end_of_message() )
+		{
+			dprintf(D_FULLDEBUG,"Failed to send job ClassAd update to startd.\n");
+		}
 	}
 
 	first_time = false;

@@ -462,7 +462,7 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 }
 
 
-int Sock::bind(bool outbound, int port)
+int Sock::bind(bool outbound, int port, bool loopback)
 {
 	sockaddr_in		sin;
 	int bind_return_value;
@@ -510,7 +510,7 @@ int Sock::bind(bool outbound, int port)
 	// printed to D_ALWAYS in get_port_range.
 
 	int lowPort, highPort;
-	if ( port == 0 && get_port_range((int)outbound, &lowPort, &highPort) == TRUE ) {
+	if ( port == 0 && !loopback && get_port_range((int)outbound, &lowPort, &highPort) == TRUE ) {
 			// Bind in a specific port range.
 		if ( bindWithin(lowPort, highPort, outbound) != TRUE ) {
 			return FALSE;
@@ -519,8 +519,10 @@ int Sock::bind(bool outbound, int port)
 			// Bind to a dynamic port.
 		memset(&sin, 0, sizeof(sockaddr_in));
 		sin.sin_family = AF_INET;
-		bool bind_all = (bool)_condor_bind_all_interfaces();
-		if( bind_all ) {
+		if( loopback ) {
+			ASSERT( inet_aton("127.0.0.1",&sin.sin_addr) );
+		}
+		else if( (bool)_condor_bind_all_interfaces() ) {
 			sin.sin_addr.s_addr = INADDR_ANY;
 		} else {
 			sin.sin_addr.s_addr = htonl(my_ip_addr());
@@ -573,6 +575,11 @@ int Sock::bind(bool outbound, int port)
 	}
 
 	return TRUE;
+}
+
+bool Sock::bind_to_loopback(bool outbound,int port)
+{
+	return bind(outbound,port,true) == TRUE;
 }
 
 int Sock::set_os_buffers(int desired_size, bool set_write_buf)
@@ -643,7 +650,7 @@ int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
 
 
 int Sock::do_connect(
-	char	*host,
+	char const	*host,
 	int		port,
 	bool	non_blocking_flag
 	)
