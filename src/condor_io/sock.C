@@ -520,10 +520,10 @@ int Sock::bind(bool outbound, int port, bool loopback)
 		memset(&sin, 0, sizeof(sockaddr_in));
 		sin.sin_family = AF_INET;
 		if( loopback ) {
-			ASSERT( condor_inet_aton("127.0.0.1",&sin.sin_addr) );
+			sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 		}
 		else if( (bool)_condor_bind_all_interfaces() ) {
-			sin.sin_addr.s_addr = INADDR_ANY;
+			sin.sin_addr.s_addr = htonl(INADDR_ANY);
 		} else {
 			sin.sin_addr.s_addr = htonl(my_ip_addr());
 		}

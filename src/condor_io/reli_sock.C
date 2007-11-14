@@ -1415,6 +1415,10 @@ ReliSock::connect_socketpair(ReliSock &sock)
 {
 	ReliSock tmp_srv;
 
+	if( !bind_to_loopback() ) {
+		return false;
+	}
+
 	if( !tmp_srv.bind_to_loopback() ) {
 		return false;
 	}
