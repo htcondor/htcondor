@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.18 2007-11-08 22:53:46 nleroy Exp $
+# $Id: remote_pre.pl,v 1.19 2007-11-15 15:13:08 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -216,6 +216,46 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 my $OldPath = $ENV{PATH} || die "PATH not in environment!\n";
 my $NewPath = "$BaseDir/condor/sbin:" . "$BaseDir/condor/bin:" . $OldPath;
 $ENV{PATH} = $NewPath;
+
+# -p means  just set up the personal condor for the test run
+# move into the condor_tests directory first
+
+chdir( "$SrcDir/condor_tests" ) ||
+    die "Can't chdir($SrcDir/condor_tests for personal condor setup): $!\n";
+
+if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+    system( "make batch_test.pl" );
+    if( $? >> 8 ) {
+        c_die("Can't build batch_test.pl\n");
+    }
+    system( "make CondorTest.pm" );
+    if( $? >> 8 ) {
+        c_die("Can't build CondorTest.pm\n");
+    }
+    system( "make Condor.pm" );
+    if( $? >> 8 ) {
+        c_die("Can't build Condor.pm\n");
+    }
+    system( "make CondorPersonal.pm" );
+    if( $? >> 8 ) {
+        c_die("Can't build CondorPersonal.pm\n");
+    }
+} else {
+    my $scriptdir = $SrcDir . "/condor_scripts";
+    copy_file("$scriptdir/batch_test.pl", "batch_test.pl");
+    copy_file("$scriptdir/Condor.pm", "Condor.pm");
+    copy_file("$scriptdir/CondorTest.pm", "CondorTest.pm");
+    copy_file("$scriptdir/CondorPersonal.pm", "CondorPersonal.pm");
+}
+print "About to run batch_test.pl -p\n";
+
+system("perl $SrcDir/condor_scripts/batch_test.pl -p");
+$batchteststatus = $?;
+
+# figure out here if the setup passed or failed.
+if( $batchteststatus != 0 ) {
+    exit 2;
+}
 
 sub safe_copy {
     my( $src, $dest ) = @_;
