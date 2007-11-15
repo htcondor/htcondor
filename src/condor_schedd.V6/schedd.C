@@ -6862,12 +6862,39 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	    (universe == CONDOR_UNIVERSE_PARALLEL) ){
 		dedicated_scheduler.shadowSpawned( srec );
 	}
-
-	int delay = 0;
-	GetAttributeInt(job_id->cluster,job_id->proc,ATTR_NEXT_JOB_START_DELAY,&delay);
-	jobThrottleNextJobDelay = MAX(jobThrottleNextJobDelay,delay);
 }
 
+
+void
+Scheduler::setNextJobDelay( ClassAd const *job_ad, ClassAd const *machine_ad ) {
+	int delay = 0;
+	ASSERT( job_ad );
+
+	int cluster,proc;
+	job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
+	job_ad->LookupInteger(ATTR_PROC_ID, proc);
+
+	job_ad->EvalInteger(ATTR_NEXT_JOB_START_DELAY,machine_ad,delay);
+	if( MaxNextJobDelay && delay > MaxNextJobDelay ) {
+		dprintf(D_ALWAYS,
+				"Job %d.%d has %s = %d, which is greater than "
+				"MAX_NEXT_JOB_START_DELAY=%d\n",
+				cluster,
+				proc,
+				ATTR_NEXT_JOB_START_DELAY,
+				delay,
+				MaxNextJobDelay);
+
+		delay = MaxNextJobDelay;
+	}
+	if( delay > jobThrottleNextJobDelay ) {
+		jobThrottleNextJobDelay = delay;
+		dprintf(D_FULLDEBUG,"Job %d.%d setting next job delay to %ds\n",
+				cluster,
+				proc,
+				delay);
+	}
+}
 
 void
 Scheduler::tryNextJob()
@@ -6956,33 +6983,31 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	srec->pid = 0; 
 	add_shadow_rec( srec );
 
-	if( wants_pipe ) {
-		job_ad = GetJobAd( job_id->cluster, job_id->proc, true );
-		if( ! job_ad ) {
-				// this might happen if the job is asking for
-				// something in $$() that doesn't exist in the machine
-				// ad and/or if the machine ad is already gone for some
-				// reason.  so, verify the job is still here...
-			if( ! GetJobAd(job_id->cluster, job_id->proc, false) ) {
-				EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d " 
-						"but that job is already known to exist",
-						job_id->cluster, job_id->proc );
-			}
-
-				// the job is still there, it just failed b/c of $$()
-				// woes... abort.
-			dprintf( D_ALWAYS, "ERROR: Failed to get classad for job "
-					 "%d.%d, can't spawn %s, aborting\n", 
-					 job_id->cluster, job_id->proc, name );
-			for( int i = 0; i < 2; i++ ) {
-				if( pipe_fds[i] >= 0 ) {
-					daemonCore->Close_Pipe( pipe_fds[i] );
-				}
-			}
-				// our caller will deal with cleaning up the srec
-				// as appropriate...  
-			return false;
+	job_ad = GetJobAd( job_id->cluster, job_id->proc, true );
+	if( ! job_ad ) {
+			// this might happen if the job is asking for
+			// something in $$() that doesn't exist in the machine
+			// ad and/or if the machine ad is already gone for some
+			// reason.  so, verify the job is still here...
+		if( ! GetJobAd(job_id->cluster, job_id->proc, false) ) {
+			EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d " 
+					"but that job is already known to exist",
+					job_id->cluster, job_id->proc );
 		}
+
+			// the job is still there, it just failed b/c of $$()
+			// woes... abort.
+		dprintf( D_ALWAYS, "ERROR: Failed to get classad for job "
+				 "%d.%d, can't spawn %s, aborting\n", 
+				 job_id->cluster, job_id->proc, name );
+		for( int i = 0; i < 2; i++ ) {
+			if( pipe_fds[i] >= 0 ) {
+				daemonCore->Close_Pipe( pipe_fds[i] );
+			}
+		}
+			// our caller will deal with cleaning up the srec
+			// as appropriate...  
+		return false;
 	}
 
 
@@ -7052,6 +7077,14 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			// Now that all the data is written to the pipe, we can
 			// safely close the other end, too.  
 		daemonCore->Close_Pipe(pipe_fds[1]);
+	}
+
+	{
+		ClassAd *machine_ad = NULL;
+		if( srec && srec->match ) {
+			machine_ad = srec->match->my_match_ad;
+		}
+		setNextJobDelay( job_ad, machine_ad );
 	}
 
 	if( job_ad ) {
@@ -10016,13 +10049,15 @@ Scheduler::Init()
 	// default every hour
 	WallClockCkptInterval = param_integer( "WALL_CLOCK_CKPT_INTERVAL",60*60 );
 
-	JobStartDelay = param_integer( "JOB_START_DELAY", 2 );
+	JobStartDelay = param_integer( "JOB_START_DELAY", 0 );
 	
 	JobStartCount =	param_integer(
 						"JOB_START_COUNT",			// name
 						DEFAULT_JOB_START_COUNT,	// default value
 						DEFAULT_JOB_START_COUNT		// min value
 					);
+
+	MaxNextJobDelay = param_integer( "MAX_NEXT_JOB_START_DELAY", 60*10 );
 
 	JobsThisBurst = -1;
 

@@ -264,6 +264,7 @@ class Scheduler : public Service
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
 	int				updateGSICred(int, Stream* s);
+	void            setNextJobDelay( ClassAd const *job_ad, ClassAd const *machine_ad );
 	int				spoolJobFiles(int, Stream *);
 	static int		spoolJobFilesWorkerThread(void *, Stream *);
 	static int		transferJobFilesWorkerThread(void *, Stream *);
@@ -452,6 +453,7 @@ private:
 	int             RequestClaimTimeout;
 	int				JobStartDelay;
 	int				JobStartCount;
+	int             MaxNextJobDelay;
 	int				JobsThisBurst;
 	int				MaxJobsRunning;
 	char*			StartLocalUniverse; // expression for local jobs

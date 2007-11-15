@@ -352,6 +352,9 @@ char    *VM_Networking = "vm_networking";
 char    *VM_Networking_Type = "vm_networking_type";
 
 
+char const *next_job_start_delay = "next_job_start_delay";
+char const *next_job_start_delay2 = "NextJobStartDelay";
+
 const char * REMOTE_PREFIX="Remote_";
 
 #if !defined(WIN32)
@@ -360,6 +363,7 @@ char	*RmKillSig			= "remove_kill_sig";
 char	*HoldKillSig		= "hold_kill_sig";
 #endif
 
+void    SetSimpleJobExprs();
 void	SetRemoteAttrs();
 void 	reschedule();
 void 	SetExecutable();
@@ -1889,6 +1893,43 @@ SetMachineCount()
 		buffer.sprintf( "%s = %d", ATTR_MAX_HOSTS, tmp);
 		InsertJobExpr (buffer);
 
+	}
+}
+
+struct SimpleExprInfo {
+	char const *name1;
+	char const *name2;
+	char const *default_value;
+};
+
+/* This function is used to handle submit file commands that are inserted
+ * into the job ClassAd verbatim, with no special treatment.
+ */
+void
+SetSimpleJobExprs()
+{
+	SimpleExprInfo simple_exprs[] = {
+		{next_job_start_delay, next_job_start_delay2, NULL},
+		{NULL,NULL,NULL}
+	};
+
+	SimpleExprInfo *i = simple_exprs;
+	for( i=simple_exprs; i->name1; i++) {
+		char *expr;
+		expr = condor_param( i->name1, i->name2 );
+		if( !expr ) {
+			if( !i->default_value ) {
+				continue;
+			}
+			expr = strdup( i->default_value );
+			ASSERT( expr );
+		}
+
+		MyString buffer;
+		buffer.sprintf( "%s = %s", ATTR_NEXT_JOB_START_DELAY, expr);
+		InsertJobExpr (buffer);
+
+		free( expr );
 	}
 }
 
@@ -5560,7 +5601,9 @@ queue(int num)
 #endif
 		SetPerFileEncryption();  // must be called _before_ SetRequirements()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
-		
+
+		SetSimpleJobExprs();
+
 			//
 			// SetCronTab() must be called before SetJobDeferral()
 			// Both of these need to be called before SetRequirements()
