@@ -180,15 +180,11 @@ TESTCLASS(cmd_status_shows-any,core)
 TESTCLASS(cmd_status_shows-any,quick)
 TESTCLASS(cmd_status_shows-any,btdebug)
 
-/*
-**
-** Not in use till endurance testing done
 DESC(cmd_status_shows-submitters,"Condor_status -submitters works as expected")
 RUN(cmd_status_shows-submitters)
 TESTCLASS(cmd_status_shows-submitters,core)
 TESTCLASS(cmd_status_shows-submitters,quick)
 TESTCLASS(cmd_status_shows-submitters,btdebug)
-*/
 
 DESC(cmd_status_shows-negotiator,"Condor_status -negotiator works as expected")
 RUN(cmd_status_shows-negotiator)
@@ -1091,7 +1087,6 @@ RUN(job_core_coredump_std)
 TESTCLASS(job_core_coredump_std,framework)
 TESTCLASS(job_core_coredump_std,quick)
 
-/* ready the binary io test
 CBUILD($(CC),job_rsc_binary-io_std,c)
 DESC(job_rsc_binary-io_std,"Do we handle binary io in standard jobs?")
 DEPS(job_rsc_binary-io_std,job_rsc_binary-io_std.cndr.exe)
@@ -1099,7 +1094,7 @@ RUN(job_rsc_binary-io_std)
 TESTCLASS(job_rsc_binary-io_std,framework)
 TESTCLASS(job_rsc_binary-io_std,quick)
 TESTCLASS(job_rsc_binary-io_std,btdebug)
-*/
+
 #endif /* ! IS_CLIPPED */
 /* This test fails constantly and is off for now
 **DESC(job_core_coredump_van,"Do we handle core files made by vanilla jobs?")
