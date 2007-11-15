@@ -47,6 +47,8 @@
 # 	will be different for the nightlies then for a workspace. However if 
 # 	we look at our current location and we find an "execute" directory in the
 #	path, we can assume it is a nightly test run.
+# Nov 07 : Added repaeating a test n times by adding "-a n" to args
+# Nov 07 : Added condor_personal setup only by adding -p (pretest work);
 #
 
 #require 5.0;
@@ -72,6 +74,7 @@ my $BaseDir = getcwd();
 $hush = 0;
 $timestamp = 0;
 $kindwait = 1; # run tests one at a time
+$repeat = 1; # run test/s repeatedly
 $nightly;
 $testpersonalcondorlocation = "$BaseDir/TestingPersonalCondor";
 $wintestpersonalcondorlocation = "";
@@ -96,6 +99,7 @@ $configlocal;
 $iswindows = 0;
 
 $wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/TestingPersonalCondor
+$pretestsetuponly = 0; # only get the personal condor in place
 
 # set up to recover from tests which hang
 $SIG{ALRM} = sub { die "timeout" };
@@ -122,6 +126,7 @@ $ENV{PATH} = $ENV{PATH} . ":" . $Basedir;
 # -m[arktime]: time stamp
 # -k[ind]: be kind and submit slowly
 # -b[buildandtest]: set up a personal condor and generic configs
+# -a[again]: how many times do we run each test?
 #
 while( $_ = shift( @ARGV ) ) {
   SWITCH: {
@@ -145,9 +150,19 @@ while( $_ = shift( @ARGV ) ) {
                 $kindwait = 1;
                 next SWITCH;
         }
+        if( /-a.*/ ) {
+                $repeat = shift(@ARGV);
+                next SWITCH;
+        }
         if( /-b.*/ ) {
 				# start with fresh environment
                 $wantcurrentdaemons = 0;
+                next SWITCH;
+        }
+        if( /-p.*/ ) {
+				# start with fresh environment
+                $wantcurrentdaemons = 0;
+				$pretestsetuponly = 1;
                 next SWITCH;
         }
         if( /-t.*/ ) {
@@ -182,7 +197,7 @@ my $iswindows =  0;
 my $awkscript = "";
 my $genericconfig = "";
 my $genericlocalconfig = "";
-my $nightly =  0;
+my $nightly = IsThisNightly($BaseDir);
 my $res = 0;
 
 if(!($wantcurrentdaemons)) {
@@ -193,7 +208,6 @@ if(!($wantcurrentdaemons)) {
 	$genericlocalconfig = "../condor_examples/condor_config.local.central.manager";
 
 
-	$nightly = IsThisNightly($basedir);
 	if($nightly == 1) {
 		print "This is a nightly test run\n";
 	}
@@ -248,6 +262,11 @@ if(!($wantcurrentdaemons)) {
 debug("Current config settings are:\n");
 foreach $fig (@myfig) {
 	debug("$fig\n");
+}
+
+if($pretestsetuponly == 1) {
+	# we have done the requested set up, leave
+	exit(0);
 }
 
 print "Ready for Testing\n";
@@ -409,59 +428,68 @@ foreach $compiler (@compilers)
 		}
 
         next if $skip_hash{$compiler}->{$test_program};
-        $pid = fork();
-		debug( "forking for $test_program pid returned is $pid\n");
-        die "error calling fork(): $!\n" unless defined $pid;
 
-		# two modes 
-		#		kindwait = resolve each test after the fork
-		#		else:	   fork them all and then wait for all
+		# allow multiple runs easily
+		my $repeatcounter = 0;
+		debug("Want $repeat runs of each test\n");
+		while($repeatcounter < $repeat) {
 
-		if( defined $kindwait ) {
-			if( $pid > 0 ) {
-            	$test{$pid} = "$test_program";
-				debug( "Started test: $test_program/$pid\n");
+	        $pid = fork();
+			debug( "forking for $test_program pid returned is $pid\n");
+	        die "error calling fork(): $!\n" unless defined $pid;
 
-				# Wait for job before starting the next one
+			# two modes 
+			#		kindwait = resolve each test after the fork
+			#		else:	   fork them all and then wait for all
 
-				StartTestOutput($compiler,$test_program);
+			if( defined $kindwait ) {
+				if( $pid > 0 ) {
+	            	$test{$pid} = "$test_program";
+					debug( "Started test: $test_program/$pid\n");
 
-				#print "Waiting on test\n";
-    			while( $child = wait() ) {
+					# Wait for job before starting the next one
 
-        			# if there are no more children, we're done
-        			last if $child == -1;
-					debug( "informed $child gone yeilding test $test{$child}\n");
-	
-					# ignore spurious children
-					if(! defined $test{$child}) {
-						debug("Can't find jobname for child? <ignore>\n");
-						next;
+					StartTestOutput($compiler,$test_program);
+
+					#print "Waiting on test\n";
+	    			while( $child = wait() ) {
+
+	        			# if there are no more children, we're done
+	        			last if $child == -1;
+						debug( "informed $child gone yeilding test $test{$child}\n");
+		
+						# ignore spurious children
+						if(! defined $test{$child}) {
+							debug("Can't find jobname for child? <ignore>\n");
+							next;
+						}
+
+						#finally
+	        			($test_name) = $test{$child} =~ /(.*)\.run$/;
+						debug( "Done Waiting on test($test_name)\n");
+
+	        			# record the child's return status
+	        			$status = $?;
+
+						CompleteTestOutput($compiler,$test_program,$child,$status);
 					}
-
-					#finally
-        			($test_name) = $test{$child} =~ /(.*)\.run$/;
-					debug( "Done Waiting on test($test_name)\n");
-
-        			# record the child's return status
-        			$status = $?;
-
-					CompleteTestOutput($compiler,$test_program,$child,$status);
+				} else {
+	        		# if we're the child, start test program
+					DoChild($test_program, $test_retirement);
 				}
 			} else {
-        		# if we're the child, start test program
-				DoChild($test_program, $test_retirement);
+				if( $pid > 0 ) {
+	            	$test{$pid} = "$test_program";
+					debug( "Started test: $test_program/$pid\n");
+	            	sleep 1;
+					next;
+				} else { # child
+	        		# if we're the child, start test program
+					DoChild($test_program, $test_retirement);
+				}
 			}
-		} else {
-			if( $pid > 0 ) {
-            	$test{$pid} = "$test_program";
-				debug( "Started test: $test_program/$pid\n");
-            	sleep 1;
-				next;
-			} else { # child
-        		# if we're the child, start test program
-				DoChild($test_program, $test_retirement);
-			}
+
+			$repeatcounter = $repeatcounter + 1;
 		}
     }
 
@@ -560,6 +588,7 @@ sub IsThisNightly
 {
 	$mylocation = shift;
 
+	print "IsThisNightly passed <$mylocation>\n";
 	if($mylocation =~ /^.*(\/execute\/).*$/) {
 		print "Nightly testing\n";
 		$configlocal = "../condor_examples/condor_config.local.central.manager";
@@ -1192,6 +1221,53 @@ sub DoChild
             alarm($test_retirement);
 			debug( "Child Starting:perl $test_program > $test_program.out\n");
 			$res = system("perl $test_program > $test_program.out 2>&1");
+
+			# if not build and test move key files to saveme/pid directory
+			$_ = $test_program;
+			s/\.run//;
+			$testname = $_;
+			$save = $testname . ".saveme";
+			$piddir = $save . "/$$";
+			# make sure pid storage directory exists
+			$mksave = system("mkdir -p $save");
+			$pidcmd = "mkdir -p " . $save . "/" . "$$";
+			$mkpid = system("$pidcmd");
+
+			# generate file names
+			$log = $testname . ".log";
+			$cmd = $testname . ".cmd";
+			$out = $testname . ".out";
+			$err = $testname . ".err";
+			$runout = $testname . ".run.out";
+			$cmdout = $testname . ".cmd.out";
+
+			$newlog =  $piddir . "/" . $log;
+			$newcmd =  $piddir . "/" . $cmd;
+			$newout =  $piddir . "/" . $out;
+			$newerr =  $piddir . "/" . $err;
+			$newrunout =  $piddir . "/" . $runout;
+			$newcmdout =  $piddir . "/" . $cmdout;
+
+			if( $nightly == 0) {
+				move($log, $newlog);
+				copy($cmd, $newcmd);
+				move($out, $newout);
+				move($err, $newerr);
+				copy($runout, $newrunout);
+				move($cmdout, $newcmdout);
+			} else {
+				copy($log, $newlog);
+				copy($cmd, $newcmd);
+				copy($out, $newout);
+				copy($err, $newerr);
+				copy($runout, $newrunout);
+				copy($cmdout, $newcmdout);
+			}
+
+			if($repeat > 1) {
+				print "($$)";
+			}
+
 			if($res != 0) { 
 				#print "Perl test($test_program) returned <<$res>>!!! \n"; 
 				exit(1); 
