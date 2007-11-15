@@ -4030,20 +4030,16 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
 \item[\Macro{JOB\_START\_COUNT}] \label{param:JobStartCount} This
   macro works together with the \Macro{JOB\_START\_DELAY} macro to
   throttle job starts.  The default and minimum values for this
-  integer configuration variable are both 1.  Small values for this
-  macro are preferred and will minimize the load upon the
-  \Condor{schedd} daemon.
-  
+  integer configuration variable are both 1.
+
 \item[\Macro{JOB\_START\_DELAY}] \label{param:JobStartDelay}
   This integer-valued macro works together with the
   \Macro{JOB\_START\_COUNT} macro
   to throttle job starts.  The  \Condor{schedd} daemon starts
   \MacroUNI{JOB\_START\_COUNT} jobs at a time, then delays for
   \MacroUNI{JOB\_START\_DELAY} seconds before starting the next set of jobs.
-  This delay prevents a sudden, large load on the submit
-  machine as it spawns many \Condor{shadow} daemons simultaneously,
-  and it prevents having to deal
-  with their start up activity all at once.
+  This delay prevents a sudden, large load on resources required by
+  the jobs during their startup phase.
   The resulting job start rate
   averages as fast as
   (\MacroUNI{JOB\_START\_COUNT}/\MacroUNI{JOB\_START\_DELAY}) jobs/second.
@@ -4051,9 +4047,14 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   \Condor{schedd} daemon.
   During graceful shutdown, this macro determines the wait time in
   between requesting each \Condor{shadow} daemon to gracefully shut down.  
-  It is defined in terms of seconds and defaults to 2.  
-  Setting this macro to a lower value is not advised,
-  as it can overwhelm the \Condor{schedd} daemon.
+  It is defined in terms of seconds and defaults to 0, which means jobs
+  will be started as fast as possible.  If you wish to throttle the rate
+  of specific types of jobs, you can use the job attribute
+  \AdAttr{NextJobStartDelay}.
+
+\item[\Macro{MAX\_NEXT\_JOB\_START\_DELAY}] \label{param:MaxNextJobStartDelay}
+  This integer is the maximum allowed value of the job attribute
+  \AdAttr{NextJobStartDelay}.  It defaults to 10 minutes.
 
 \item[\Macro{JOB\_IS\_FINISHED\_INTERVAL}] \label{param:JobIsFinishedInterval}
   The \Condor{schedd} maintains a list of jobs that are ready to permanently

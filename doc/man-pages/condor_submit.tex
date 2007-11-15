@@ -992,6 +992,20 @@ periodic expressions once every 300 seconds.  The period of
 these evaluations can be adjusted by setting the
 \MacroNI{PERIODIC\_EXPR\_INTERVAL} configuration macro.
 
+%%%%%%%%%%%%%%%%%%%
+%% next_job_start_delay
+%%%%%%%%%%%%%%%%%%%
+
+\item[next\_job\_start\_delay = $<$ClassAd Boolean Expression$>$]
+\index{submit commands!next\_job\_start\_delay}
+\index{submit commands!NextJobStartDelay}
+This expression specifies the number of seconds after starting up
+this job that the next job startup should be delayed.  The maximum
+allowed delay is specified by the Condor configuration variable
+\Macro{MAX\_NEXT\_JOB\_STARTUP\_DELAY}, which defaults to 10 minutes.
+Currently, this command does not apply to scheduler or local universe
+jobs.
+
 \end{description} 
 
 

@@ -205,6 +205,14 @@ output files.  These limits currently do not apply to grid universe
 jobs or standard universe jobs.  See
 page~\pageref{param:MaxConcurrentDownloads} for more information.
 
+\item The default for \Macro{JOB\_START\_DELAY} has been changed
+from 2 seconds to 0.  This means the \Condor{schedd} will not limit
+the rate at which it starts up \Condor{shadow} processes by default.
+The delay between startup of jobs may now be controlled individually
+for jobs using the job attribute \AdAttr{NextJobStartDelay}, which
+defaults to 0 seconds and is at most \Macro{MAX\_NEXT\_JOB\_START\_DELAY},
+which defaults to 10 minutes.
+
 \item The new variable \MacroNI{SCHEDD\_QUERY\_WORKERS} specifies the
 maximum number of concurrent sub-processes that the \Condor{schedd}
 will spawn to handle queries.  This is ignored in Windows.  In unix,
