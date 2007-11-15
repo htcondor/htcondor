@@ -699,24 +699,33 @@ int
 Starter::receiveJobClassAdUpdate( Stream *stream )
 {
 	ClassAd update_ad;
+	int final_update = 0;
 
 		// It is expected that we will get here when the stream is closed.
 		// Unfortunately, log noise will be generated when we try to read
 		// from it.
 
 	stream->decode();
-	if( !update_ad.initFromStream( *stream ) || !stream->end_of_message() ) {
+	if( !stream->get( final_update) ||
+		!update_ad.initFromStream( *stream ) ||
+		!stream->end_of_message() )
+	{
+		final_update = 1;
+	}
+	else {
+		dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
+		update_ad.dPrint( D_JOB );
+
+		if( s_claim ) {
+			s_claim->receiveJobClassAdUpdate( update_ad );
+		}
+	}
+
+	if( final_update ) {
 		dprintf(D_FULLDEBUG, "Closing job ClassAd update socket from starter.\n");
 		daemonCore->Cancel_Socket(s_job_update_sock);
 		delete s_job_update_sock;
 		s_job_update_sock = NULL;
-		return KEEP_STREAM;
-	}
-	dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
-	update_ad.dPrint( D_JOB );
-
-	if( s_claim ) {
-		s_claim->receiveJobClassAdUpdate( update_ad );
 	}
 	return KEEP_STREAM;
 }

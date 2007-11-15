@@ -214,6 +214,11 @@ private:
 		*/
 	bool updateShadow( ClassAd* update_ad, bool insure_update = false );
 
+		/** Send an update ClassAd to the startd.
+			@param ad Update ad
+		 */
+	void updateStartd( ClassAd *ad, bool final_update );
+
 		/** Function to be called periodically to update the shadow.
 			We can't just register a timer to call UpdateShadow()
 			directly, since DaemonCore isn't passing any args to timer

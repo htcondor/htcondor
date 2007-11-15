@@ -658,6 +658,8 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 		}
 	}
 
+	updateStartd(&ad, true);
+
 	if ( job_exit_wants_ad ) {
 		ad_to_send = &ad;
 	} else {
@@ -671,9 +673,39 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 		job_cleanup_disconnected = true;
 		return false;
 	}
+
 	return true;
 }
 
+void
+JICShadow::updateStartd( ClassAd *ad, bool final_update )
+{
+	ASSERT( ad );
+
+	// update the startd's copy of the job ClassAd
+	if( !m_job_startd_update_sock ) {
+		return;
+	}
+
+	m_job_startd_update_sock->encode();
+	if( !m_job_startd_update_sock->put((int)final_update) ||
+		!ad->put(*m_job_startd_update_sock) ||
+		!m_job_startd_update_sock->end_of_message() )
+	{
+		dprintf(D_FULLDEBUG,"Failed to send job ClassAd update to startd.\n");
+	}
+	else {
+		dprintf(D_FULLDEBUG,"Sent job ClassAd update to startd.\n");
+	}
+	if( DebugFlags & D_FULLDEBUG ) {
+		ad->dPrint(D_JOB);
+	}
+
+	if( final_update ) {
+		delete m_job_startd_update_sock;
+		m_job_startd_update_sock = NULL;
+	}
+}
 
 bool
 JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode )
@@ -1689,15 +1721,7 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 		rval = shadow->updateJobInfo(ad, insure_update);
 	}
 
-	// also update the startd's copy of the job ClassAd
-	if( m_job_startd_update_sock ) {
-		m_job_startd_update_sock->encode();
-		if( !ad->put(*m_job_startd_update_sock) ||
-			!m_job_startd_update_sock->end_of_message() )
-		{
-			dprintf(D_FULLDEBUG,"Failed to send job ClassAd update to startd.\n");
-		}
-	}
+	updateStartd(ad, false);
 
 	first_time = false;
 	if (rval) {
