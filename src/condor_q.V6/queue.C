@@ -1122,6 +1122,7 @@ processCommandLineArguments (int argc, char *argv[])
 						 "format and attribute parameters\n" );
 				exit( 1 );
 			}
+			verbose = 0;
 			if (customFormat == false) {
 				// first time here
 				attrs.clearAll();
@@ -2158,7 +2159,11 @@ process_buffer_line( ClassAd *job )
 		free(dagman_job_string);
 	}
 
-	if( analyze ) {
+	if (use_xml) {
+		MyString s;
+		job->sPrintAsXML(s);
+		tempCPS->string = strnewp( s.GetCStr() );
+	} else if( analyze ) {
 		tempCPS->string = strnewp( doRunAnalysisToBuffer( job ) );
 	} else if ( show_io ) {
 		tempCPS->string = strnewp( buffer_io_display( job ) );
