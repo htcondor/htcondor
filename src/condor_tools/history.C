@@ -389,7 +389,7 @@ main(int argc, char* argv[])
 	  queryver.prepareQuery();
 	  
 	  st = historySnapshot->sendQuery(&queryhor, &queryver, longformat,
-	  	false, customFormat, &mask);
+	  	false, customFormat, &mask, constraint);
 
 		  //if there's a failure here and if we're not posing a query on a 
 		  //remote quill daemon, we should instead query the local file
