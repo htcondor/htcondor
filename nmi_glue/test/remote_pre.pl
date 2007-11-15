@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.19 2007-11-15 15:13:08 bt Exp $
+# $Id: remote_pre.pl,v 1.20 2007-11-15 19:50:21 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -255,6 +255,16 @@ $batchteststatus = $?;
 # figure out here if the setup passed or failed.
 if( $batchteststatus != 0 ) {
     exit 2;
+}
+
+sub copy_file {
+    my( $src, $dest ) = @_;
+    copy($src, $dest);
+    if( $? >> 8 ) {
+        print "Can't copy $src to $dest: $!\n";
+    } else {
+        print "Copied $src to $dest\n";
+    }
 }
 
 sub safe_copy {
