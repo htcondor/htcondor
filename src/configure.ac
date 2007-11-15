@@ -467,7 +467,7 @@ AC_SUBST(_cv_kernel_rev,$_cv_kernel_rev)
 # check out the libc
 if test "$_cv_opsys" = "LINUX" ; then
   AC_MSG_CHECKING([exact libc version])
-  for _libc in "/lib/libc.so.6" "/lib/libc.so.6.1" ; do
+  for _libc in "/lib/libc.so.6" "/lib/libc.so.6.1" "/lib64/libc.so.6" ; do
     if test -f "$_libc" && test -L "$_libc" ; then
       _libc_ver=`echo $_libc|$PERL -nle '$f=readlink;$f=~/libc-(.*)\.so/;print $1;'`
       break;
