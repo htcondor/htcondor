@@ -113,7 +113,7 @@ char	*ScheddName = NULL;
 char	*PoolName = NULL;
 DCSchedd* MySchedd = NULL;
 char	*My_fs_domain;
-char    JobRequirements[2048];
+MyString    JobRequirements;
 #if !defined(WIN32)
 MyString    JobRootdir;
 #endif
@@ -417,7 +417,7 @@ char * 	condor_param( const char* name ); // call param with NULL as the alt
 void 	set_condor_param( const char* name, char* value);
 void 	set_condor_param_used( const char* name);
 void 	queue(int num);
-char * 	check_requirements( char *orig );
+bool 	check_requirements( char const *orig, MyString &answer );
 void 	check_open( const char *name, int flags );
 void 	usage();
 void 	init_params();
@@ -4002,21 +4002,21 @@ void
 SetRequirements()
 {
 	char *requirements = condor_param( Requirements, NULL );
-	char *tmp;
+	MyString tmp;
 	MyString buffer;
 	if( requirements == NULL ) 
 	{
-		(void) strcpy (JobRequirements, "");
+		JobRequirements = "";
 	} 
 	else 
 	{
-		(void) strcpy (JobRequirements, requirements);
+		JobRequirements = requirements;
 		free(requirements);
 	}
 
-	tmp = check_requirements( JobRequirements );
-	buffer.sprintf( "%s = %s", ATTR_REQUIREMENTS, tmp);
-	strcpy (JobRequirements, tmp);
+	check_requirements( JobRequirements.Value(), tmp );
+	buffer.sprintf( "%s = %s", ATTR_REQUIREMENTS, tmp.Value());
+	JobRequirements = tmp;
 
 	InsertJobExpr (buffer);
 	
@@ -5734,7 +5734,6 @@ queue(int num)
 	}
 }
 
-
 bool
 findClause( const char* buffer, const char* attr_name )
 {
@@ -5748,9 +5747,15 @@ findClause( const char* buffer, const char* attr_name )
 	return false;
 }
 
+bool
+findClause( MyString const &buffer, char const *attr_name )
+{
+	return findClause( buffer.Value(), attr_name );
+}
 
-char *
-check_requirements( char *orig )
+
+bool
+check_requirements( char const *orig, MyString &answer )
 {
 	bool	checks_opsys = false;
 	bool	checks_arch = false;
@@ -5766,14 +5771,13 @@ check_requirements( char *orig )
 #if defined(WIN32)
 	bool	checks_credd = false;
 #endif
-	char	*ptr, *tmp;
-	static char	answer[4096];
+	char	*ptr;
 	MyString ft_clause;
 
 	if( strlen(orig) ) {
-		(void) sprintf( answer, "(%s)", orig );
+		answer.sprintf( "(%s)", orig );
 	} else {
-		answer[0] = '\0';
+		answer = "";
 	}
 
 	switch( JobUniverse ) {
@@ -5798,17 +5802,17 @@ check_requirements( char *orig )
 
 	if( ptr != NULL ) {
 			// We found something to append.  
-		if( answer[0] ) {
+		if( answer.Length() ) {
 				// We've already got something in requirements, so we
 				// need to append an AND clause.
-			(void) strcat( answer, " && (" );
+			answer += " && (";
 		} else {
 				// This is the first thing in requirements, so just
 				// put this as the first clause.
-			(void) strcat( answer, "(" );
+			answer += "(";
 		}
-		(void) strcat( answer, ptr );
-		(void) strcat( answer, ")" );
+		answer += ptr;
+		answer += ")";
 		free( ptr );
 	}
 
@@ -5816,9 +5820,9 @@ check_requirements( char *orig )
 		// We don't want any defaults at all w/ Globus...
 		// If we don't have a req yet, set to TRUE
 		if ( answer[0] == '\0' ) {
-			sprintf(answer,"TRUE");
+			answer = "TRUE";
 		}
-		return answer;
+		return true;
 	}
 
 	checks_arch = findClause( answer, ATTR_ARCH );
@@ -5856,19 +5860,19 @@ check_requirements( char *orig )
 
 		// because of the special-case nature of "Memory" and
 		// "VirtualMemory", we have to do this one manually...
-	for( ptr = answer; *ptr; ptr++ ) {
-		if( strincmp(ATTR_MEMORY,ptr,5) == MATCH ) {
+	char const *aptr;
+	for( aptr = answer.Value(); *aptr; aptr++ ) {
+		if( strincmp(ATTR_MEMORY,aptr,5) == MATCH ) {
 				// We found "Memory", but we need to make sure that's
 				// not part of "VirtualMemory"...
-			if( ptr == answer ) {
+			if( aptr == answer.Value() ) {
 					// We're at the beginning, must be Memory, since
 					// there's nothing before it.
 				checks_mem = true;
 				break;
 			}
 				// Otherwise, it's safe to go back one position:
-			tmp = ptr - 1;
-			if( *tmp == 'l' || *tmp == 'L' ) {
+			if( *(aptr-1) == 'l' || *(aptr-1) == 'L' ) {
 					// Must be VirtualMemory, keep searching...
 				continue;
 			}
@@ -5880,81 +5884,78 @@ check_requirements( char *orig )
  
 	if( JobUniverse == CONDOR_UNIVERSE_JAVA ) {
 		if( answer[0] ) {
-			strcat( answer, " && (" );
-		} else {
-			(void)strcat( answer, "(" );
+			answer += " && ";
 		}
-		(void)strcat( answer, ATTR_HAS_JAVA );
-		(void)strcat( answer, ")" );
+		answer += "(";
+		answer += ATTR_HAS_JAVA;
+		answer += ")";
 	} else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
 		// For vm universe, we require the same archicture.
 		if( !checks_arch ) {
 			if( answer[0] ) {
-				(void)strcat( answer, " && (Arch == \"" );
-			} else {
-				(void)strcpy( answer, "(Arch == \"" );
+				answer += " && ";
 			}
-			(void)strcat( answer, Architecture );
-			(void)strcat( answer, "\")" );
+			answer += "(Arch == \"";
+			answer += Architecture;
+			answer += "\")";
 		}
 		// add HasVM to requirements
 		bool checks_vm = false;
 		checks_vm = findClause( answer, ATTR_HAS_VM );
 		if( !checks_vm ) {
-			(void)strcat( answer, "&& (" );
-			(void)strcat( answer, ATTR_HAS_VM );
-			(void)strcat( answer, ")" );
+			answer += "&& (";
+			answer += ATTR_HAS_VM;
+			answer += ")";
 		}
 		// add vm_type to requirements
 		bool checks_vmtype = false;
 		checks_vmtype = findClause( answer, ATTR_VM_TYPE);
 		if( !checks_vmtype ) {
-			(void)strcat( answer, " && (" );
-			(void)strcat( answer, ATTR_VM_TYPE );
-			(void)strcat( answer, " == \"" );
-			(void)strcat( answer, VMType.Value());
-			(void)strcat( answer, "\")" );
+			answer += " && (";
+			answer += ATTR_VM_TYPE;
+			answer += " == \"";
+			answer += VMType.Value();
+			answer += "\")";
 		}
 		// check if the number of executable VM is more than 0
 		bool checks_avail = false;
 		checks_avail = findClause(answer, ATTR_VM_AVAIL_NUM);
 		if( !checks_avail ) {
-			(void)strcat( answer, " && (" );
-			(void)strcat( answer, ATTR_VM_AVAIL_NUM );
-			(void)strcat( answer, " > 0)" );
+			answer += " && (";
+			answer += ATTR_VM_AVAIL_NUM;
+			answer += " > 0)";
 		}
 	} else {
 		if( !checks_arch ) {
 			if( answer[0] ) {
-				(void)strcat( answer, " && (Arch == \"" );
-			} else {
-				(void)strcpy( answer, "(Arch == \"" );
+				answer += " && ";
 			}
-			(void)strcat( answer, Architecture );
-			(void)strcat( answer, "\")" );
+			answer += "(Arch == \"";
+			answer += Architecture;
+			answer += "\")";
 		}
 
 		if( !checks_opsys ) {
-			(void)strcat( answer, " && (OpSys == \"" );
-			(void)strcat( answer, OperatingSystem );
-			(void)strcat( answer, "\")" );
+			answer += " && (OpSys == \"";
+			answer += OperatingSystem;
+			answer += "\")";
 		}
 	}
 
 	if ( JobUniverse == CONDOR_UNIVERSE_STANDARD && !checks_ckpt_arch ) {
-		(void)strcat( answer, " && ((CkptArch == Arch) ||" );
-		(void)strcat( answer, " (CkptArch =?= UNDEFINED))" );
-		(void)strcat( answer, " && ((CkptOpSys == OpSys) ||" );
-		(void)strcat( answer, "(CkptOpSys =?= UNDEFINED))" );
+		answer += " && ((CkptArch == Arch) ||";
+		answer += " (CkptArch =?= UNDEFINED))";
+		answer += " && ((CkptOpSys == OpSys) ||";
+		answer += "(CkptOpSys =?= UNDEFINED))";
 	}
 
 	if( !checks_disk ) {
 		if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
 			// VM universe uses Total Disk 
 			// instead of Disk for Condor slot
-			(void)strcat( answer, " && (TotalDisk >= DiskUsage)" );
+			answer += " && (TotalDisk >= DiskUsage)";
 		}else {
-			(void)strcat( answer, " && (Disk >= DiskUsage)" );
+			answer += " && (Disk >= DiskUsage)";
 		}
 	}
 
@@ -5962,29 +5963,29 @@ check_requirements( char *orig )
 		// The memory requirement for VM universe will be 
 		// added in SetVMRequirements 
 		if ( !checks_mem ) {
-			(void)strcat( answer, " && ( (Memory * 1024) >= ImageSize )" );
+			answer += " && ( (Memory * 1024) >= ImageSize )";
 		}
 	}
 
 	if( HasTDP && !checks_tdp ) {
-		(void)strcat( answer, "&& (" );
-		(void)strcat( answer, ATTR_HAS_TDP );
-		(void)strcat( answer, ")" );
+		answer += "&& (";
+		answer += ATTR_HAS_TDP;
+		answer += ")";
 	}
 
 	if ( JobUniverse == CONDOR_UNIVERSE_PVM ) {
 		if( ! checks_pvm ) {
-			(void)strcat( answer, "&& (" );
-			(void)strcat( answer, ATTR_HAS_PVM );
-			(void)strcat( answer, ")" );
+			answer += "&& (";
+			answer += ATTR_HAS_PVM;
+			answer += ")";
 		}
 	} 
 
 	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 		if( ! checks_mpi ) {
-			(void)strcat( answer, "&& (" );
-			(void)strcat( answer, ATTR_HAS_MPI );
-			(void)strcat( answer, ")" );
+			answer += "&& (";
+			answer += ATTR_HAS_MPI;
+			answer += ")";
 		}
 	}
 
@@ -6004,24 +6005,24 @@ check_requirements( char *orig )
 				// the FileSystemDomain yet, tack on a clause for
 				// that. 
 			if( ! checks_fsdomain ) {
-				(void)strcat( answer, "&& (TARGET." );
-				(void)strcat( answer, ATTR_FILE_SYSTEM_DOMAIN );
-				(void)strcat( answer, " == MY." );
-				(void)strcat( answer, ATTR_FILE_SYSTEM_DOMAIN );
-				(void)strcat( answer, ")" );
+				answer += "&& (TARGET.";
+				answer += ATTR_FILE_SYSTEM_DOMAIN;
+				answer += " == MY.";
+				answer += ATTR_FILE_SYSTEM_DOMAIN;
+				answer += ")";
 			} 
 			break;
 			
 		case STF_YES:
 				// we're definitely going to use file transfer.  
 			if( ! checks_file_transfer ) {
-				(void)strcat( answer, "&& (");
-				(void)strcat( answer, ATTR_HAS_FILE_TRANSFER );
+				answer += "&& (";
+				answer += ATTR_HAS_FILE_TRANSFER;
 				if (!checks_per_file_encryption && NeedsPerFileEncryption) {
-					(void)strcat( answer, " && ");
-					(void)strcat( answer, ATTR_HAS_PER_FILE_ENCRYPTION );
+					answer += " && ";
+					answer += ATTR_HAS_PER_FILE_ENCRYPTION;
 				}
-				(void)strcat( answer, ")");
+				answer += ")";
 			}
 			break;
 			
@@ -6043,7 +6044,7 @@ check_requirements( char *orig )
 				ft_clause += " == MY.";
 				ft_clause += ATTR_FILE_SYSTEM_DOMAIN;
 				ft_clause += "))";
-				strcat( answer, ft_clause.Value() );
+				answer += ft_clause.Value();
 			}
 			break;
 		}
@@ -6064,9 +6065,9 @@ check_requirements( char *orig )
 			//
 			//
 		if ( JobUniverse != CONDOR_UNIVERSE_LOCAL ) {
-			(void)strcat( answer, " && (" );
-			(void)strcat( answer, ATTR_HAS_JOB_DEFERRAL );
-			(void)strcat( answer, ")" );
+			answer += " && (";
+			answer += ATTR_HAS_JOB_DEFERRAL;
+			answer += ")";
 		}
 		
 			//
@@ -6095,9 +6096,9 @@ check_requirements( char *orig )
 						ATTR_CURRENT_TIME,
 						ATTR_DEFERRAL_TIME,
 						ATTR_DEFERRAL_WINDOW );
-		(void)strcat( answer, " && (" );
-		(void)strcat( answer, attrib.Value() );
-		(void)strcat( answer, ")" );			
+		answer += " && (";
+		answer += attrib.Value();
+		answer += ")";			
 	} // !seenBefore
 
 #if defined(WIN32)
@@ -6119,13 +6120,13 @@ check_requirements( char *orig )
 			tmp_rao += "\")";
 		}
 		tmp_rao += ")";
-		strcat(answer, tmp_rao.GetCStr());
+		answer += tmp_rao.GetCStr();
 		free(RunAsOwnerCredD);
 	}
 #endif
 
 	/* if the user specified they want this feature, add it to the requirements */
-	return answer;
+	return true;
 }
 
 
@@ -6891,14 +6892,10 @@ void SetVMRequirements()
 		return;
 	}
 
-	char *orig = JobRequirements;
-	static char	vmanswer[4096];
-
-	if( strlen(orig) ) {
-		(void) sprintf( vmanswer, "(%s)", orig );
-	} else {
-		vmanswer[0] = '\0';
-	}
+	MyString vmanswer;
+	vmanswer = "(";
+	vmanswer += JobRequirements;
+	vmanswer += ")";
 
 	// check OS
 	if( (stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) || 
@@ -6907,9 +6904,9 @@ void SetVMRequirements()
 		checks_opsys = findClause( vmanswer, ATTR_OPSYS );
 
 		if( !checks_opsys ) {
-			(void)strcat( vmanswer, " && (OpSys == \"" );
-			(void)strcat( vmanswer, OperatingSystem );
-			(void)strcat( vmanswer, "\")" );
+			vmanswer += " && (OpSys == \"";
+			vmanswer += OperatingSystem;
+			vmanswer += "\")";
 		}
 	}
 
@@ -6921,11 +6918,11 @@ void SetVMRequirements()
 		checks_fsdomain = findClause( vmanswer, ATTR_FILE_SYSTEM_DOMAIN ); 
 
 		if( !checks_fsdomain ) {
-			(void)strcat( vmanswer, " && (TARGET." );
-			(void)strcat( vmanswer, ATTR_FILE_SYSTEM_DOMAIN );
-			(void)strcat( vmanswer, " == MY." );
-			(void)strcat( vmanswer, ATTR_FILE_SYSTEM_DOMAIN );
-			(void)strcat( vmanswer, ")" );
+			vmanswer += " && (TARGET.";
+			vmanswer += ATTR_FILE_SYSTEM_DOMAIN;
+			vmanswer += " == MY.";
+			vmanswer += ATTR_FILE_SYSTEM_DOMAIN;
+			vmanswer += ")";
 		}
 		MyString my_fsdomain;
 		if(job->LookupString(ATTR_FILE_SYSTEM_DOMAIN, my_fsdomain) != 1) {
@@ -6948,28 +6945,28 @@ void SetVMRequirements()
 		// the number of ATTR_VM_AVAIL_NUM.
 		// Generally ATTR_VM_AVAIL_NUM must be less than the number of 
 		// Condor slot.
-		(void)strcat( vmanswer, " && (" );
-		(void)strcat( vmanswer, ATTR_TOTAL_MEMORY );
-		(void)strcat( vmanswer, " >= " );
+		vmanswer += " && (";
+		vmanswer += ATTR_TOTAL_MEMORY;
+		vmanswer += " >= ";
 
 		MyString mem_tmp;
 		mem_tmp.sprintf("%d", VMMemory);
-		(void)strcat( vmanswer, mem_tmp.Value());
-		(void)strcat( vmanswer, ")" );
+		vmanswer += mem_tmp.Value();
+		vmanswer += ")";
 	}
 
 	// add vm_memory to requirements
 	bool checks_vmmemory = false;
 	checks_vmmemory = findClause(vmanswer, ATTR_VM_MEMORY);
 	if( !checks_vmmemory ) {
-		(void)strcat( vmanswer, " && (" );
-		(void)strcat( vmanswer, ATTR_VM_MEMORY );
-		(void)strcat( vmanswer, " >= " );
+		vmanswer += " && (";
+		vmanswer += ATTR_VM_MEMORY;
+		vmanswer += " >= ";
 
 		MyString mem_tmp;
 		mem_tmp.sprintf("%d", VMMemory);
-		(void)strcat( vmanswer, mem_tmp.Value());
-		(void)strcat( vmanswer, ")" );
+		vmanswer += mem_tmp.Value();
+		vmanswer += ")";
 	}
 
 	if( VMHardwareVT ) {
@@ -6978,9 +6975,9 @@ void SetVMRequirements()
 
 		if( !checks_hardware_vt ) {
 			// add hardware vt to requirements
-			(void)strcat( vmanswer, " && (" );
-			(void)strcat( vmanswer, ATTR_VM_HARDWARE_VT);
-			(void)strcat( vmanswer, ")" );
+			vmanswer += " && (";
+			vmanswer += ATTR_VM_HARDWARE_VT;
+			vmanswer += ")";
 		}
 	}
 
@@ -6990,19 +6987,19 @@ void SetVMRequirements()
 
 		if( !checks_vmnetworking ) {
 			// add vm_networking to requirements
-			(void)strcat( vmanswer, " && (" );
-			(void)strcat( vmanswer, ATTR_VM_NETWORKING);
-			(void)strcat( vmanswer, ")" );
+			vmanswer += " && (";
+			vmanswer += ATTR_VM_NETWORKING;
+			vmanswer += ")";
 		}
 
 		if(	VMNetworkType.IsEmpty() == false ) {
 			// add vm_networking_type to requirements
-			(void)strcat( vmanswer, " && ( stringListIMember(\"" );
-			(void)strcat( vmanswer, VMNetworkType.Value());
-			(void)strcat( vmanswer, "\",");
-			(void)strcat( vmanswer, "TARGET.");
-			(void)strcat( vmanswer, ATTR_VM_NETWORKING_TYPES);
-			(void)strcat( vmanswer, ",\",\")) ");
+			vmanswer += " && ( stringListIMember(\"";
+			vmanswer += VMNetworkType.Value();
+			vmanswer += "\",";
+			vmanswer += "TARGET.";
+			vmanswer += ATTR_VM_NETWORKING_TYPES;
+			vmanswer += ",\",\")) ";
 		}
 	}
 			
@@ -7015,21 +7012,21 @@ void SetVMRequirements()
 		if( !checks_ckpt_arch ) {
 			// VM checkpoint files created on AMD 
 			// can not be used in INTEL. vice versa.
-			(void)strcat( vmanswer, " && ((MY.CkptArch == Arch) ||" );
-			(void)strcat( vmanswer, " (MY.CkptArch =?= UNDEFINED))" );
+			vmanswer += " && ((MY.CkptArch == Arch) ||";
+			vmanswer += " (MY.CkptArch =?= UNDEFINED))";
 		}
 		if( !checks_vm_ckpt_mac ) { 
 			// VMs with the same MAC address cannot run 
 			// on the same execute machine
-			(void)strcat( vmanswer, " && ((MY.VM_CkptMac =?= UNDEFINED) || " );
-			(void)strcat( vmanswer, "(TARGET.VM_All_Guest_Macs =?= UNDEFINED) || " );
-			(void)strcat( vmanswer, "( stringListIMember(MY.VM_CkptMac, ");
-			(void)strcat( vmanswer, "TARGET.VM_All_Guest_Macs, \",\") == FALSE )) ");
+			vmanswer += " && ((MY.VM_CkptMac =?= UNDEFINED) || ";
+			vmanswer += "(TARGET.VM_All_Guest_Macs =?= UNDEFINED) || ";
+			vmanswer += "( stringListIMember(MY.VM_CkptMac, ";
+			vmanswer += "TARGET.VM_All_Guest_Macs, \",\") == FALSE )) ";
 		}
 	}
 
-	buffer.sprintf( "%s = %s", ATTR_REQUIREMENTS, vmanswer);
-	strcpy (JobRequirements, vmanswer);
+	buffer.sprintf( "%s = %s", ATTR_REQUIREMENTS, vmanswer.Value());
+	JobRequirements = vmanswer;
 	InsertJobExpr (buffer);
 }
 

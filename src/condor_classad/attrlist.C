@@ -1707,7 +1707,7 @@ AttrList::sPrintExpr(char *buffer, unsigned int buffersize, const char* name)
     }
 
     ExprTree*	tmpExpr = Lookup(name);
-    char	tmpStr[ATTRLIST_MAX_EXPRESSION] = "";
+    MyString	tmpStr;
 
     if(!tmpExpr)
     // the named expression is not found
@@ -1717,9 +1717,12 @@ AttrList::sPrintExpr(char *buffer, unsigned int buffersize, const char* name)
 
     tmpExpr->PrintToStr(tmpStr);
 	if (buffer) {
-		strncpy(buffer,tmpStr,buffersize);
+		strncpy(buffer,tmpStr.Value(),buffersize);
+		buffer[buffersize-1] = '\0';
+			// Behavior is undefined if buffer is not big enough.
+			// Currently, we return TRUE.
 	} else {
-		if ( (buffer=strdup(tmpStr)) == NULL ) {
+		if ( (buffer=strdup(tmpStr.Value())) == NULL ) {
 			EXCEPT("Out of memory");
 		}
 	}
