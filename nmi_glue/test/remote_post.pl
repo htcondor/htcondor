@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_post.pl,v 1.11 2007-11-08 22:53:46 nleroy Exp $
+# $Id: remote_post.pl,v 1.12 2007-11-15 14:18:01 bt Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -144,10 +144,12 @@ if( $? ) {
 open (TASKFILE, "tasklist.nmi") || die "Can't tasklist.nmi: $!\n";
 while( <TASKFILE> ) {
     chomp;
+	my $testcopy = 1;
 	my ($taskname, $timeout) = split(/ /);
 	# iterations have numbers placed at the end of the name
 	# for unique db tracking in nmi for now.
-	if($taskname =~ /([\w\-\.\+]+)-\d+/) {
+	if($taskname =~ /([\w\-\.\+]+)-(\d+)/) {
+		$testcopy = $2;
 		$taskname = $1;
 	}
     my ($testname, $compiler) = split(/\./, $taskname);
@@ -174,8 +176,9 @@ while( <TASKFILE> ) {
 	}
 
     # if it exists, tarup the 'saveme' subdirectory for this test, which
-    # may contain test debug info etc.
-    if( -d "$testname.saveme" ) {
+    # may contain test debug info etc. Sometimes we run endurance tests
+	# and we really only need to tar up the results once.
+    if( (-d "$testname.saveme") && ($testcopy == 1) ) {
         system( "tar zcf $testname.saveme.tar.gz $testname.saveme/" );
         if( $? >> 8 ) {
             print "Tar failed to save test dir $testname.saveme\n";
