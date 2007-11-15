@@ -2268,7 +2268,7 @@ CHECK_EXTERNAL([unicoregahp],[1.2.0], [soft])
 _cv_has_nordugridgahp=$_cv_has_globus
 CHECK_EXTERNAL([nordugridgahp],[1.1.2], [soft])
 
-CHECK_EXTERNAL([zlib], [1.1.3], [soft],
+CHECK_EXTERNAL([zlib], [1.2.3], [soft],
                [use zlib (provides compression support)],
                MF_LIB_CHECK([zlib], [[z deflate]]))
 
