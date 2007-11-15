@@ -61,8 +61,8 @@
    ANYTHING EXTRA BEFORE THE DATE.  IF YOU WISH TO ADD EXTRA INFORMATION,
    DO SO _AFTER_ THE BUILDIDSTR AND BEFORE THE TRAILING '$' CHARACTER.
    EXAMPLES:
-       $CondorVersion: 6.1.11 " __DATE__ BUILDIDSTR " WinNTPreview $ [OK]
-	   $CondorVersion: 6.1.11 WinNTPreview " __DATE__ BUILDIDSTR " $ [WRONG!!!]
+       $CondorVersion: 6.9.5 " __DATE__ BUILDIDSTR " WinNTPreview $ [OK]
+	   $CondorVersion: 6.9.5 WinNTPreview " __DATE__ BUILDIDSTR " $ [WRONG!!!]
    Any questions?  See Todd or Derek.  Note: if you mess it up, DaemonCore
    will EXCEPT at startup time.  
 */
