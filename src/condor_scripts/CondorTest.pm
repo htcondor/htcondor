@@ -745,7 +745,7 @@ sub getJobStatus
 
 #
 # Run a condor tool and look for exit value. Apply multiplier
-# upon failure
+# upon failure and return 1 on failure.
 #
 
 sub runCondorTool
@@ -788,6 +788,11 @@ sub runCondorTool
 		if(( $status != 0 ) && ($attempts == ($count + 1)))
 		{
 				print "runCondorTool: $cmd timestamp $start_time failed!\n";
+				print "************* std out ***************\n";
+				foreach $stdout (@tmparray) {
+					print "STDOUT: $stdout \n";
+				}
+				print "************* std err ***************\n";
 				if( !open( MACH, "<$catch" )) { 
 					warn "Can't look at command output <$catch>:$!\n";
 				} else {
@@ -796,8 +801,13 @@ sub runCondorTool
     				}
     				close(MACH);
 				}
+				print "************* GetQueue() ***************\n";
+				GetQueue();
+				print "************* GetQueue() DONE ***************\n";
+
 				return(0);
 		}
+
 		if ($status == 0) {
 			$line = "";
 			foreach $value (@tmparray)
@@ -830,6 +840,25 @@ sub runCondorTool
 	Condor::debug( "runCondorTool: $cmd worked!\n");
 
 	return(0);
+}
+
+# Lets be able to drop some extra information if runCondorTool
+# can not do what it is supposed to do....... short and full
+# output from condor_q 11/13
+
+sub GetQueue
+{
+	my @cmd = ("condor_q", "condor_q -l" );
+	foreach $request (@cmd) {
+		print "Queue command <$request>\n";
+		open(PULL, "$request 2>&1 |");
+		while(<PULL>)
+		{
+			fullchomp($_);
+			print "GetQueue: $_\n";
+		}
+		close(PULL);
+	}
 }
 
 #
