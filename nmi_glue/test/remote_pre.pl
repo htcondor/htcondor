@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.20 2007-11-15 19:50:21 bt Exp $
+# $Id: remote_pre.pl,v 1.21 2007-11-15 21:22:29 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -240,21 +240,22 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
     if( $? >> 8 ) {
         c_die("Can't build CondorPersonal.pm\n");
     }
+	print "About to run batch_test.pl -p\n";
+
+	system("perl $SrcDir/condor_scripts/batch_test.pl -p");
+	$batchteststatus = $?;
+
+	# figure out here if the setup passed or failed.
+	if( $batchteststatus != 0 ) {
+    	exit 2;
+	}
 } else {
-    my $scriptdir = $SrcDir . "/condor_scripts";
-    copy_file("$scriptdir/batch_test.pl", "batch_test.pl");
-    copy_file("$scriptdir/Condor.pm", "Condor.pm");
-    copy_file("$scriptdir/CondorTest.pm", "CondorTest.pm");
-    copy_file("$scriptdir/CondorPersonal.pm", "CondorPersonal.pm");
-}
-print "About to run batch_test.pl -p\n";
-
-system("perl $SrcDir/condor_scripts/batch_test.pl -p");
-$batchteststatus = $?;
-
-# figure out here if the setup passed or failed.
-if( $batchteststatus != 0 ) {
-    exit 2;
+	# do not do a pre-setup yet in remote_pre till fixed
+    #my $scriptdir = $SrcDir . "/condor_scripts";
+    #copy_file("$scriptdir/batch_test.pl", "batch_test.pl");
+    #copy_file("$scriptdir/Condor.pm", "Condor.pm");
+    #copy_file("$scriptdir/CondorTest.pm", "CondorTest.pm");
+    #copy_file("$scriptdir/CondorPersonal.pm", "CondorPersonal.pm");
 }
 
 sub copy_file {
