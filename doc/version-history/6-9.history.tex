@@ -302,6 +302,9 @@ file names that may be passed to system calls within the program.
 Previously, file names approaching 255 characters or more could
 cause the program to crash or behave incorrectly.
 
+\item Fixed a long-standing bug causing \Condor{submit} to fail when
+given a requirements expression longer than 2048 characters.
+
 \item Fixed a bug introduced in Condor 6.9.4 that caused grid universe
 jobs of type gt4 to not work when the Condor daemons were started as
 root and any file transfer was associated with the job.
