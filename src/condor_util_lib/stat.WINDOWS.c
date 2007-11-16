@@ -61,8 +61,8 @@ _fixed_windows_stat(const char *file, struct _fixed_windows_stat *sbuf) {
 	
 	int ret = _stat(file, (struct _stat*) sbuf);
 
-	if( ret < 0 ) {
-		return( (time_t) -1 );
+	if ( ret != 0 ) {
+		return ret;
 	}
 	
 	resolve_daylight_saving_problem ( sbuf );
@@ -78,8 +78,8 @@ _fixed_windows_fstat(int file, struct _fixed_windows_stat *sbuf) {
 	
 	int ret = _fstat(file, (struct _stat*) sbuf);
 
-	if( ret < 0 ) {
-		return( (time_t) -1 );
+	if ( ret != 0 ) {
+		return ret;
 	}
 	
 	resolve_daylight_saving_problem ( sbuf );

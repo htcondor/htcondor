@@ -158,9 +158,9 @@ StatWrapper::DoStat( const char *path_arg )
 	lstat_errno = errno;
 #else
 	// Windows doesn't have lstat, so just copy the stat_buf
-	// into lstat_buf
-	lstat_rc = 0;
-	lstat_errno = 0;
+	// into lstat_buf as well as all the *error information*
+	lstat_rc = m_stat_rc;
+	lstat_errno = m_stat_errno;
 	m_lstat_buf = m_stat_buf;
 #endif
 
