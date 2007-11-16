@@ -48,7 +48,7 @@ $executed = sub
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	CondorTest::RegisterTimed($testname, $timed, 600);
+	#CondorTest::RegisterTimed($testname, $timed, 600);
 	print "EventLog test executed\n";
 };
 
