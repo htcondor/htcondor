@@ -1000,10 +1000,6 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
         ouch( "Error loading CA file and/or directory\n" );
 		goto setup_server_ctx_err;
     }
-    if( SSL_CTX_set_default_verify_paths( ctx ) != 1 ) {
-        ouch( "Error loading default CA file and/or directory\n" );
-        goto setup_server_ctx_err;
-    }
     if( SSL_CTX_use_certificate_chain_file( ctx, certfile ) != 1 ) {
         ouch( "Error loading certificate from file" );
         goto setup_server_ctx_err;
