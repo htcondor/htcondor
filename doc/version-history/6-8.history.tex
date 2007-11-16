@@ -55,7 +55,28 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item A claim in the state Claimed/Idle could not be preempted until
+it transitioned into Busy or went away of its own accord.  This bug
+was introduced in 6.7.1.
+
+\item The user-based authorization parameters in the configuration file
+(e.g. \MacroNI{ALLOW\_READ}) now properly recognize values where the
+username contains a wild card (e.g. \MacroNI{*@cs.wisc.edu/bird.cs.wisc.edu}).
+
+\item A rare threading problem in the Windows version of Condor has
+been fixed.  The problem could cause memory corruption in the
+\Condor{starter} while receiving input files and in the
+\Condor{schedd} while transferring input/output files for a remotely
+submitted job or a `spooled' job.
+
+% PR 908
+\item Increased the verbosity of some error messages (related to
+reading log files) in \Condor{dagman}.
+
+% PR 906
+\item Fixed a bug in \Condor{dagman} that would cause it to hang if it
+was unable to successfully spawn a PRE or POST script.  This case is now
+dealt with as a PRE or POST script failure.
 
 \end{itemize}
 
@@ -86,7 +107,7 @@ The details of each version are described below.
 
 \item Condor is now officially supported on Microsoft Vista.
 
-\item Condor is now officially supported on MacOS running natively on Intel CPUs.  (and Condor bianries for Intel MacOS are now available for download).
+\item Condor is now officially supported on MacOS running natively on Intel CPUs.  (and Condor binaries for Intel MacOS are now available for download).
 
 \item Condor now uses Globus 4.0.5 for GSI, pre-WS GRAM, and GridFTP support.
 
@@ -190,7 +211,7 @@ specifications were not propagated to rescue DAGs.
 (\URL{http://bugzilla.mcs.anl.gov/globus/show\_bug.cgi?id=5467})
 that can cause very short jobs' standard output and error to be lost.
 
-\item Disable GSI authorization callouts for the gridftp server that Condor
+\item Disable GSI authorization callouts for the GridFTP server that Condor
 starts to perform file transfers for grid-type gt4 grid universe jobs.
 
 \end{itemize}
@@ -199,7 +220,7 @@ starts to perform file transfers for grid-type gt4 grid universe jobs.
 
 \begin{itemize}
 
-\item Grid universe type GT4 (web services GRAM) does not work properly on Itanium-based machines, because it requies Java 1.5, which is not available on the Itanium (ia\_64).
+\item Grid universe type GT4 (web services GRAM) does not work properly on Itanium-based machines, because it requires Java 1.5, which is not available on the Itanium (ia\_64).
 
 \end{itemize}
 
@@ -208,6 +229,9 @@ starts to perform file transfers for grid-type gt4 grid universe jobs.
 \begin{itemize}
 
 \item Several updates to the DAGMan documentation (section~\ref{sec:DAGMan}).
+
+% PR 893
+\item Improved the group quota documentation.
 
 \end{itemize}
 

@@ -13,7 +13,7 @@
 %   by the settings of various configuration variables.
 % During each negotiation cycle, all machines are allocated (presuming
 %   that there are more requests than machines).
-% Each user is allocated machines in a ratio of 1/users's priority.
+% Each user is allocated machines in a ratio of 1/user's priority.
 % Within the negotiation cycle, each user is given an initial
 %   allocation of machines.  From there, remaining unallocated machines
 %   are divided up among users that want more.  In a round robin
@@ -94,7 +94,7 @@ of allocated resources,
 the available resources are repartitioned and distributed among
 remaining users according to the inverse ratio rule.
 
-% editted to here
+% edited to here
 
 Condor supplies mechanisms to directly support two policies in which EUP may
 be useful:
@@ -272,7 +272,7 @@ accomplishes the following ordered list of items.
     \end{description}
 \end{enumerate}
 
-The \Condor{negotiatior} asks the \Condor{schedd} for the 
+The \Condor{negotiator} asks the \Condor{schedd} for the 
 "next job" from a given submitter/user.
 Typically, the \Condor{schedd} returns jobs in the order of
 job priority.
@@ -363,12 +363,11 @@ be beneficial when the use of thousands
 of short term accounting groups leads to scalability
 issues.
 
-Note that the name of an accounting group may include a period (.),
-and the period character has
-no special interpretation for group accounting.
-For group users, 
-as described in the next section,
-a period does have special meaning.
+Note that the name of an accounting group may include a period (.).
+Inclusion of a period character in the accounting group name
+only has relevance if the portion of the name before the
+period matches a group name,
+as described in the next section on group quotas.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:group-quotas}Group Quotas}
@@ -385,8 +384,8 @@ This may be the case when
 different groups (of varying size) own computers,
 and the groups choose to combine their computers to
 form a Condor pool.
-Consider an imaginary Condor pool example with thirty computers.
-Twenty computers are owned by the physics group and ten
+Consider an imaginary Condor pool example with thirty computers;
+twenty computers are owned by the physics group and ten
 computers are owned by the chemistry group.
 One notion of fair allocation could be implemented 
 by configuring the twenty machines owned by the physics group
@@ -400,41 +399,50 @@ This routes jobs to execute on specific machines,
 perhaps causing more preemption than necessary.
 The (fair allocation) policy desired is likely somewhat different,
 if these thirty machines have been pooled.
-It does not tie users to specific sets of machines,
+The desired policy does not tie users to specific sets of machines,
 but to numbers of machines (a quota).
 Given thirty similar machines,
 the desired policy allows users within the physics group to have
 preference on up to twenty of the machines within the pool,
 and the machines can be any of the machines that are available.
 
-A quota for a set of users requires an identification for
+A quota for a set of users requires an identification of
 the set; members are called group users.
-Jobs to be negotiated for under the group quota
+Jobs under the group quota
 specify the group user with the 
-\AdAttr{AccountingGroup} job ClassAd, as described above.
+\AdAttr{AccountingGroup} job ClassAd attribute.
+This is the same attribute as is used with group accounting.
 
-The syntax for specifying a group user is
+The submit file syntax for specifying a group user includes 
+both a group name and a user name.
+The syntax is
 \begin{verbatim}
-group.user
+  +AccountingGroup = "<group>.<user>"
 \end{verbatim}
 The \verb@group@ is a name chosen for the group.
+Group names are case-insensitive for negotiation.
 Group names are not required to begin with the
 string \AdStr{group\_},
 as in the examples
 \AdStr{group\_physics.newton} and \AdStr{group\_chemistry.curie},
-but it is a useful convention because group names
-must not conflict with user names.
+but it is a useful convention,
+because group names must not conflict with user names.
 The period character between the group and the user name is
-a required part of the syntax.
+a required part of the syntax.  \Note  An accounting
+group value lacking the period will cause the job to not 
+be considered part of the
+group when negotiating, even if the group name has a quota.
+Furthermore, there will be no warnings that the group quota is not
+in effect for the job, as this syntax defines group accounting.
 
 Configuration controls the order of negotiation for
 groups and individual users,
 as well as sets quotas
-(preferentially allocated number of machines)
+(preferentially allocated numbers of machines)
 for the groups.
 A declared number of slots specifies the quota for each group
 (see \MacroNI{GROUP\_QUOTA\_<groupname>}
-in section~\ref{sec:Negotiator-Config-File-Entries}).
+in section~\ref{param:GroupQuotaGroupname}).
 The sum of the quotas for all groups must be less than or equal to
 the number of slots in the entire pool.
 If the sum is less than the number of
@@ -485,8 +493,8 @@ descriptions of the variables mentioned.
 Group names that may be given quotas to be used in
 negotiation are listed in the \Macro{GROUP\_NAMES} macro.
 The names chosen must not conflict with Condor user names.
-Quotas (by group) are defined in numbers of virtual machines.
-Each group may assign an initial value for each group user's
+Quotas (by group) are defined in numbers of machine slots.
+Each group may be assigned an initial value for its
 user priority factor with the \Macro{GROUP\_PRIO\_FACTOR\_<groupname>}
 macro.
 If a group is currently allocated its entire quota of machines,
@@ -495,5 +503,49 @@ the \Macro{GROUP\_AUTOREGROUP} macro allows the job to be
 considered a second time within the negotiation cycle
 along with all other individual users' jobs.
 
+\begin{verbatim}
+  ####################
+  #
+  # Example 1
+  # Configuration for group quotas
+  #
+  ####################
+
+  GROUP_NAMES = group_physics, group_chemistry
+  GROUP_QUOTA_group_physics = 20
+  GROUP_QUOTA_group_chemistry = 10
+  GROUP_PRIO_FACTOR_group_physics = 1.0
+  GROUP_PRIO_FACTOR_group_chemistry = 3.0
+  GROUP_AUTOREGROUP_group_physics = FALSE
+  GROUP_AUTOREGROUP_group_chemistry = TRUE
+\end{verbatim}
+
+This configuration specifies that the \verb@group_physics@ users will
+get 20 machines and the \verb@group_chemistry@ users will get
+ten machines.  \verb@group_physics@ users will never get more than
+20 machines; however, \verb@group_chemistry@ users can potentially get
+more than ten machines because \Macro{GROUP\_AUTOREGROUP\_chemistry}
+is true.
+This could happen, for example, if there are only 15 jobs
+submitted by \verb@group_physics@ users.
+Also, the default priority
+factor for the physics groups is 1.0, and the default priority factor
+for the chemistry group is 3.0.
 
 
+\begin{verbatim}
+  ####################
+  #
+  # Submit description file for group quota user
+  #
+  ####################
+  ...
+  +AccountingGroup = "group_physics.newton"
+  ...
+\end{verbatim}
+
+This submit file specifies that this job is to be negotiated as part of
+the \verb@group_physics@ group and that the user is newton.
+Remember that
+both the group name and the user name are required for the group quota
+to take effect.
