@@ -1699,6 +1699,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	char			key[PROC_ID_STR_BUFLEN];
 	ClassAd			*ad = NULL;
 	MyString		alternate_attrname_buf;
+	MyString		new_value;
 
 	// Only an authenticated user or the schedd itself can set an attribute.
 	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
@@ -1875,14 +1876,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	// This block handles rounding of attributes.
-	MyString temp_buf;
-	temp_buf = "SCHEDD_ROUND_ATTR_";
-	temp_buf += attr_name;
+	MyString round_param_name;
+	round_param_name = "SCHEDD_ROUND_ATTR_";
+	round_param_name += attr_name;
 
-	int exp = param_integer(temp_buf.Value(),0,0,9);
-	if ( exp ) {
-		long ivalue;
-		unsigned int base;
+	char *round_param = param(round_param_name.Value());
+
+	if( round_param && *round_param && strcmp(round_param,"0") ) {
 		Token token;
 
 			// See if attr_value is a scalar (int or float) by
@@ -1895,41 +1895,81 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		if ( token.type == LX_INTEGER || token.type == LX_FLOAT ) {
 			// first, store the actual value
-			temp_buf = attr_name;
-			temp_buf += "_RAW";
-			JobQueue->SetAttribute(key, temp_buf.Value(), attr_value);
+			MyString raw_attribute = attr_name;
+			raw_attribute += "_RAW";
+			JobQueue->SetAttribute(key, raw_attribute.Value(), attr_value);
 
-			// now compute the rounded value
-			// set base to be 10^exp
-			for (base=1 ; exp > 0; exp--, base *= 10);
+			long ivalue;
+			double fvalue;
 
 			if ( token.type == LX_INTEGER ) {
 				ivalue = token.intVal;
+				fvalue = token.intVal;
 			} else {
 				ivalue = (long) token.floatVal;	// truncation conversion
+				fvalue = token.floatVal;
 			}
 
-			// round it.  note we always round UP!!  
-			ivalue = ((ivalue + base - 1) / base) * base;
+			if( strstr(round_param,"%") ) {
+					// round to specified percentage of the number's
+					// order of magnitude
+				char *end=NULL;
+				double percent = strtod(round_param,&end);
+				if( !end || end[0] != '%' || end[1] != '\0' ||
+					percent > 1000 || percent < 0 )
+				{
+					EXCEPT("Invalid rounding parameter %s=%s",
+						   round_param_name.Value(),round_param);
+				}
+				if( fabs(fvalue) < 0.000001 || percent < 0.000001 ) {
+					new_value = attr_value; // unmodified
+				}
+				else {
+						// find the closest power of 10
+					int magnitude = (int)(log(fabs(fvalue/5))/log(10) + 1);
+					double roundto = pow(10,magnitude) * percent/100.0;
+					fvalue = ceil( fvalue/roundto )*roundto;
 
-			// make it a string, courtesty MyString conversion.
-			temp_buf = ivalue;
+					if( token.type == LX_INTEGER ) {
+						new_value.sprintf("%d",(int)fvalue);
+					}
+					else {
+						new_value.sprintf("%f",fvalue);
+					}
+				}
+			}
+			else {
+					// round to specified power of 10
+				unsigned int base;
+				int exp = param_integer(round_param_name.Value(),0,0,9);
 
-			// if it was a float, append ".0" to keep it a float
-			if ( token.type == LX_FLOAT ) {
-				temp_buf += ".0";
+					// now compute the rounded value
+					// set base to be 10^exp
+				for (base=1 ; exp > 0; exp--, base *= 10);
+
+					// round it.  note we always round UP!!  
+				ivalue = ((ivalue + base - 1) / base) * base;
+
+					// make it a string, courtesty MyString conversion.
+				new_value = ivalue;
+
+					// if it was a float, append ".0" to keep it a float
+				if ( token.type == LX_FLOAT ) {
+					new_value += ".0";
+				}
 			}
 
 			// change attr_value, so when we do the SetAttribute below
 			// we really set to the rounded value.
-			attr_value = temp_buf.Value();
+			attr_value = new_value.Value();
 
 		} else {
 			dprintf(D_FULLDEBUG,
-				"%s=%d, but value '%s' is not a scalar - ignored\n",
-				temp_buf.Value(),exp,attr_value);
+				"%s=%s, but value '%s' is not a scalar - ignored\n",
+				round_param_name.Value(),round_param,attr_value);
 		}
 	}
+	free( round_param );
 
 	if( !PrioRecArrayIsDirty ) {
 		if( stricmp(attr_name, ATTR_JOB_PRIO) == 0 ) {
