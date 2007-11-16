@@ -4308,11 +4308,18 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   minutes).
 
 \item[\Macro{SCHEDD\_ROUND\_ATTR\_<xxxx>}]
-  \label{param:ScheddRoundAttr} An integer-valued macro that
-  instructs the \Condor{schedd} to round up 
-  scalar job ClassAd attributes to a specific number of decimal places.  This is desirable to improve job
-  scheduling performance, since it allows Condor's auto-clustering algorithm
-  to bucket attributes such as \AdAttr{ImageSize}.  
+  \label{param:ScheddRoundAttr} This is used to round off attributes in
+  the job ClassAd so that similar jobs may be grouped together for
+  negotiation purposes.  There are two cases.  One is that a
+  percentage such as 25\% is specified.  In this case, the value of
+  the attribute named \verb@<xxxx>\@ in the job ClassAd will be
+  rounded up to the next multiple of the specified percentage of the
+  values order of magnitude.  For example, a setting of 25\% will
+  cause a value near 100 to be rounded up to the next multiple of 25
+  and a value near 1000 will be rounded up to the next multiple of
+  250.  The other case is that an integer, such as 4, is specified
+  instead of a percentage.  In this case, the job attribute is rounded
+  up to the specified number of decimal places.
   Replace \verb@<xxxx>@ with the name of the attribute to round, and set this
   macro equal to the number of decimal places to round up.  For example, to
   round the value of job ClassAd attribute \Attr{foo}  up to the nearest
@@ -4326,15 +4333,16 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   in attribute \Attr{foo\_RAW} in the job ClassAd.
   The following are set by default:
 \begin{verbatim}
-        SCHEDD_ROUND_ATTR_ImageSize = 5
-        SCHEDD_ROUND_ATTR_ExecutableSize = 5
-        SCHEDD_ROUND_ATTR_DiskUsage = 5
+        SCHEDD_ROUND_ATTR_ImageSize = 25%
+        SCHEDD_ROUND_ATTR_ExecutableSize = 25%
+        SCHEDD_ROUND_ATTR_DiskUsage = 25%
         SCHEDD_ROUND_ATTR_NumCkpts = 4
 \end{verbatim}
-  Thus, the above attributes that are in Kbytes are rounded to the nearest
-  100 Megabytes.  If your batch slots have less than 100MB of memory
-  or disk, you should reduce the rounding to a smaller number, because
-  job requirements will all be rounded up and will therefore not match.
+  Thus, an ImageSize near 100MB will be rounded up to the next
+  multiple of 25MB.  If your batch slots have less
+  memory or disk than the rounded values, it may be necessary to
+  reduce the amount of rounding, because the job requirements
+  will not be met.
 
 \item[\Macro{SCHEDD\_BACKUP\_SPOOL}]
   \label{param:ScheddBackupSpool} This macro is used to enable the
