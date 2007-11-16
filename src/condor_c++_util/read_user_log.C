@@ -259,7 +259,7 @@ ReadUserLog::initialize ( bool handle_rotation,
 
 	// Should we close the file between operations?
 # if defined(WIN32)
-	m_close_file = param_boolean( "ALWAYS_CLOSE_USERLOG", true );
+	m_close_file = param_boolean( "ALWAYS_CLOSE_USERLOG", false );
 	if ( m_handle_rot ) {
 		m_close_file = true;	// Can't rely on open FD with unlink / rename
 	}
