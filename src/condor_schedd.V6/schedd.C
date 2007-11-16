@@ -9852,21 +9852,21 @@ Scheduler::Init()
 	tmpstr.sprintf("SCHEDD_ROUND_ATTR_%s",ATTR_EXECUTABLE_SIZE);
 	tmp = param(tmpstr.Value());
 	if ( !tmp ) {
-		config_insert(tmpstr.Value(),"5");	// round from Kb to 100Mb
+		config_insert(tmpstr.Value(),"4");	// round from Kb to 10Mb
 	} else {
 		free(tmp);
 	}
 	tmpstr.sprintf("SCHEDD_ROUND_ATTR_%s",ATTR_IMAGE_SIZE);
 	tmp = param(tmpstr.Value());
 	if ( !tmp ) {
-		config_insert(tmpstr.Value(),"5");	// round from Kb to 100Mb
+		config_insert(tmpstr.Value(),"4");	// round from Kb to 10Mb
 	} else {
 		free(tmp);
 	}
 	tmpstr.sprintf("SCHEDD_ROUND_ATTR_%s",ATTR_DISK_USAGE);
 	tmp = param(tmpstr.Value());
 	if ( !tmp ) {
-		config_insert(tmpstr.Value(),"5");	// round from Kb to 100Mb
+		config_insert(tmpstr.Value(),"4");	// round from Kb to 10Mb
 	} else {
 		free(tmp);
 	}
