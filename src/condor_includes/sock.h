@@ -410,7 +410,7 @@ private:
 	   avoid pounding the GCB broker for all outbound connections.
 	*/
 	int _bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
-		SOCKET_LENGTH_TYPE len, bool outbound);
+		SOCKET_LENGTH_TYPE len, bool outbound, bool loopback);
 
 };
 

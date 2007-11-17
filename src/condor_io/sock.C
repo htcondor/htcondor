@@ -430,7 +430,7 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 
 		bind_return_val = _bind_helper(_sock, 
 			(SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)&sin, 
-			sizeof(sockaddr_in), outbound);
+			sizeof(sockaddr_in), outbound, false);
 
 #ifndef WIN32
 		if (this_trial <= 1024) {
@@ -538,7 +538,7 @@ int Sock::bind(bool outbound, int port, bool loopback)
 		}
 #endif
 
-		bind_return_value = _bind_helper(_sock, (sockaddr *)&sin, sizeof(sockaddr_in), outbound);
+		bind_return_value = _bind_helper(_sock, (sockaddr *)&sin, sizeof(sockaddr_in), outbound, loopback);
 
 #ifndef WIN32
 		if(port > 0 && port < 1024) {
@@ -1890,12 +1890,12 @@ bool Sock :: is_encrypt()
 
 int
 Sock::_bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
-	SOCKET_LENGTH_TYPE len, bool outbound)
+	SOCKET_LENGTH_TYPE len, bool outbound, bool loopback)
 {
 	int rval;
 
 #if HAVE_EXT_GCB
-	if (outbound) {
+	if (outbound || loopback) {
 		rval = GCB_local_bind(fd, 
 			/* XXX This evil, evil typecast is here because
 				this codepath only exists on linux. The
