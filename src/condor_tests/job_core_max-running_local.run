@@ -84,8 +84,10 @@ $successCallback = sub {
 	## job submitted. Otherwise we to check to make sure that they 
 	## ran far enough apart from each other
 	##
+	## SLEEP_TIME - 1 to avoid rounding errors
+
 	if ( $LAST_RUN_TIME ) {
-		if ( ( $reportTime - $LAST_RUN_TIME ) < $SLEEP_TIME ) {
+		if ( ( $reportTime - $LAST_RUN_TIME ) < ($SLEEP_TIME - 1) ) {
 			$testFailure = "More than one local job ran concurrently!";
 			return ( 0 );
 		}
