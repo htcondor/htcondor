@@ -3791,6 +3791,7 @@ int DaemonCore::HandleReq(Stream *insock)
 					if (!the_policy->put(*sock) ||
 						!sock->eom()) {
 						dprintf (D_ALWAYS, "SECMAN: Error sending response classad!\n");
+						auth_info.dPrint (D_ALWAYS);
 						result = FALSE;
 						goto finalize;
 					}
