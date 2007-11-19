@@ -272,6 +272,11 @@ from 20 minutes to 5 minutes.
 
 \begin{itemize}
 
+\item When a \Condor{starter} discovered a missing username in the
+process of discovering the owner of an executing job, a cryptic and
+misleading error message was emitted to the daemon log. The error text
+has been cleaned up to be more meaningful.
+
 \item On Windows daylight saving is handled incorrectly by stat() and fstat().
       According to the MSDN, they both return the UTC time of a file; however,
       if daylight saving is detected, the time is adjusted by one hour, which 
