@@ -152,12 +152,30 @@ passwd_cache::cache_uid(const char* user) {
 	struct passwd *pwent;
 	char *err_string;
 
+	errno = 0;
 	pwent = getpwnam(user);
 	if ( pwent == NULL ) {
-			// unix is lame: getpwnam() sets errno to ENOENT ("No such
-			// file or directory") when it means "user not found"
-			// Under linux, it sets errno to 0 in this case.
-		if( errno == ENOENT || errno == 0 ) {
+			// According to POSIX, to differentiate the case between
+			// getpwnam() legitimately not finding a user and having an
+			// error not finding a user, in the former case NULL is
+			// returned and errno is left unchanged. In the latter case
+			// NULL is returned and errno is set appropriately. So to
+			// deal with the former case properly, I've set errno to be
+			// some known value I can check here.
+			
+			// Under linux, getpwnam sets errno to ENOENT the former case, so
+			// we consider that as well.
+
+			// Under AIX, getpwnam sets errno to ESRCH the former case, so
+			// we consider that as well.
+		if( errno == 0 
+#if defined(LINUX)
+			|| errno == ENOENT
+#elif defined(AIX)
+			|| errno == ESRCH
+#endif
+		) 
+		{
 			static char *errno_clarification = "user not found";
 			err_string = errno_clarification;
 		} else {
@@ -166,9 +184,9 @@ passwd_cache::cache_uid(const char* user) {
 		dprintf( D_ALWAYS, "passwd_cache::cache_uid(): getpwnam(\"%s\") "
 				 "failed: %s\n", user, err_string );
 		return false;
-	} else {
-	   	return cache_uid(pwent);
 	}
+
+   	return cache_uid(pwent);
 }
 
 /* uses standard system functions to get user's uid, 
