@@ -998,13 +998,12 @@ these evaluations can be adjusted by setting the
 
 \item[next\_job\_start\_delay = $<$ClassAd Boolean Expression$>$]
 \index{submit commands!next\_job\_start\_delay}
-\index{submit commands!NextJobStartDelay}
-This expression specifies the number of seconds after starting up
-this job that the next job startup should be delayed.  The maximum
+This expression specifies the number of seconds to delay after starting up
+this job before the next job is started.  The maximum
 allowed delay is specified by the Condor configuration variable
-\Macro{MAX\_NEXT\_JOB\_STARTUP\_DELAY}, which defaults to 10 minutes.
-Currently, this command does not apply to scheduler or local universe
-jobs.
+\Macro{MAX\_NEXT\_JOB\_START\_DELAY}, which defaults to 10 minutes.
+Currently, this command does not apply to \SubmitCmd{scheduler}
+or \SubmitCmd{local} universe jobs.
 
 \end{description} 
 
