@@ -161,7 +161,7 @@ produce_output()
 	char	*str;
 	FILE	*mailer;
 	MyString subject;
-	subject.sprintf("condor_press results %s: %d old file%s found", 
+	subject.sprintf("condor_preen results %s: %d old file%s found", 
 		my_full_hostname(), BadFiles->number(), 
 		(BadFiles->number() > 1)?"s":"");
 
