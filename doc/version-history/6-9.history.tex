@@ -194,6 +194,11 @@ determined by \MacroNI{STARTER\_UPDATE\_INTERVAL}.
 using privilege separation on the execute side. See section~\ref{sec:PrivSep}
 for details.
 
+\item Added support on Linux systems for reliably tracking all of a job's
+processes using a dedicated supplementary group ID. This has the advantage
+of working regardless of whether a job runs using a dedicated user account.
+See section~\ref{sec:GroupTracking} for details.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -274,6 +279,12 @@ from 20 minutes to 5 minutes.
 \Macro{PRIVSEP\_SWITCHBOARD} are required when setting up execute-side
 Condor to use privilege separation. See section~\ref{sec:Privsep} for
 details.
+
+\item The new parameters \Macro{USE\_GID\_PROCESS\_TRACKING},
+\Macro{MIN\_TRACKING\_GID}, and \Macro{MAX\_TRACKING\_GID} are used
+when setting up a Linux machine to use process tracking based on
+dedicated supplementary group IDs. See section~\ref{sec:GroupTracking}
+for details.
 
 \end{itemize}
 
