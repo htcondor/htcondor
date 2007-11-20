@@ -228,8 +228,7 @@ int ViewServer::ReceiveHistoryQuery(Service* s, int command, Stream* sock)
 	dprintf(D_ALWAYS,"Got history query %d\n",command);
 
 	int FromDate, ToDate, Options;
-	char Line[200];
-	char* LinePtr=Line;
+	char *Line = NULL;
 
 	// Read query parameters
 
@@ -237,22 +236,24 @@ int ViewServer::ReceiveHistoryQuery(Service* s, int command, Stream* sock)
 	if (!sock->code(FromDate) ||
 	    !sock->code(ToDate) ||
 	    !sock->code(Options) ||
-	    !sock->code(LinePtr) ||
+	    !sock->get(Line) ||
 	    !sock->end_of_message()) {
 		dprintf(D_ALWAYS,"Can't receive history query!\n");
+		free( Line );
 		return 1;
 	} 
 
-	dprintf(D_ALWAYS, "Got history query: FromDate=%d, ToDate=%d, Type=%d, Arg=%s\n",FromDate,ToDate,command,LinePtr);
+	dprintf(D_ALWAYS, "Got history query: FromDate=%d, ToDate=%d, Type=%d, Arg=%s\n",FromDate,ToDate,command,Line);
 
 	// Reply to query
 
 	sock->encode();
 
-	HandleQuery(sock,command,FromDate,ToDate,Options,LinePtr);
+	HandleQuery(sock,command,FromDate,ToDate,Options,Line);
 
-	strcpy(Line,""); // Send an empty line to signal end of data
-	if (!sock->code(LinePtr) ||
+	free( Line );
+
+	if (!sock->put("") ||
 	    !sock->end_of_message()) {
 		dprintf(D_ALWAYS,"Can't send information to client!\n");
 		return 1;

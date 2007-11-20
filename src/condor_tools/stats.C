@@ -289,7 +289,7 @@ int main(int argc, char* argv[])
 
   sock.decode(); 
   while(1) {
-    if (!sock.code(LinePtr)) {
+    if (!sock.get(LinePtr,MaxLen)) {
       fprintf(stderr, "failed to receive data from the CondorView server\n");
       if (LineCount==0) fputs("No Data.\n",outfile);
       exit(1);
