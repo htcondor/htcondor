@@ -38,7 +38,7 @@ $execute = sub {
 
 	# avoid reentrant death
 	if($alreadydone == 0) {
-		CondorTest::RegisterTimed($testname, $timed, 180);
+		#CondorTest::RegisterTimed($testname, $timed, 180);
 		print "Seeing job run and about to place on hold\n";
 		$alreadydone = 1;
 	} else {

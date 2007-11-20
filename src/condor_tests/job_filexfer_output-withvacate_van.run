@@ -243,7 +243,7 @@ CondorTest::RegisterShadow($testname, $shadow);
 CondorTest::RegisterEvicted($testname, $evicted);
 CondorTest::RegisterAbort($testname, $aborted);
 CondorTest::RegisterExitedSuccess($testname, $success);
-CondorTest::RegisterTimed($testname, $timed, 3600);
+#CondorTest::RegisterTimed($testname, $timed, 3600);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "$testname: SUCCESS\n";

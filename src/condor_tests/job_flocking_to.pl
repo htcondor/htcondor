@@ -48,7 +48,7 @@ $execute = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 	my $name = $info{"error"};
-	CondorTest::RegisterTimed($testname, $timed, 600);
+	#CondorTest::RegisterTimed($testname, $timed, 600);
 };
 
 $ExitSuccess = sub {

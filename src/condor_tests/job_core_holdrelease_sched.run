@@ -41,7 +41,7 @@ $execute = sub {
 		return true;
 	} else {
 		$alreadydone = 1;
-		CondorTest::RegisterTimed($testname, $timed, 600);
+		#CondorTest::RegisterTimed($testname, $timed, 600);
 	}
 	
 	print "Putting cluster $cluster on hold\n";

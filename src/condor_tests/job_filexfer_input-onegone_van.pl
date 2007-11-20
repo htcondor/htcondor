@@ -133,7 +133,7 @@ system("mv $cmd.new $cmd");
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterWantError($testname, $wanterror);
 CondorTest::RegisterExitedSuccess($testname, $success);
-CondorTest::RegisterTimed($testname, $timed, 3600);
+#CondorTest::RegisterTimed($testname, $timed, 3600);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "$testname: SUCCESS\n";
