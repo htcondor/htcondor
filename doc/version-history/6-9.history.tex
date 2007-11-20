@@ -190,6 +190,10 @@ the \Condor{starter}.  The primary benefit of this is that
 expressions, such as \MacroNI{PREEMPT}.  The frequency of updates is
 determined by \MacroNI{STARTER\_UPDATE\_INTERVAL}.
 
+\item Several improvements have been made to Condor's ability to run
+using privilege separation on the execute side. See section~\ref{sec:PrivSep}
+for details.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -265,6 +269,11 @@ rounded.
 
 \item The default for \Macro{STARTER\_UPDATE\_INTERVAL} has been changed
 from 20 minutes to 5 minutes.
+
+\item The new parameters \Macro{PRIVSEP\_ENABLED} and
+\Macro{PRIVSEP\_SWITCHBOARD} are required when setting up execute-side
+Condor to use privilege separation. See section~\ref{sec:Privsep} for
+details.
 
 \end{itemize}
 
