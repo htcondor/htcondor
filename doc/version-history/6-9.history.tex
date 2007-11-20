@@ -297,6 +297,11 @@ so that they work with newer versions of the GNU textutils.
 any fd the application opened. If an application only writes ASCII data
 to an fd, the application will not encounter this bug.
 
+\item Condor daemons will now print an error message in the logs when
+\MacroNI{<SUBSYS>\_ATTRS} contains attributes that are not valid
+ClassAd values.  Previously, this was a silent error.  The most common
+reason for this problem is an unquoted string value.
+
 \item The \Condor{negotiator} now prints out the value of the configuration
 	parameter \MacroNI{PREEMPTION\_REQUIREMENTS} if it is set.  Previously,
 	it always logged that it was unset, even when it was.
