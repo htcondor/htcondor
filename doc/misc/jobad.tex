@@ -349,6 +349,13 @@ startd expression allows.
 \item[\AdAttr{MinHosts}:]  The minimum number of hosts that must be in
 the claimed state for this job, before the job may enter the running state.
 
+%%% ClassAd attribute: NextJobStartDelay
+\index{ClassAd job attribute!NextJobStartDelay}
+\index{NextJobStartDelay!job ClassAd attribute}
+\item[\AdAttr{NextJobStartDelay}:]  An integer number of seconds delay time
+after this job starts until the next job is started. The value is limited
+by the configuration variable \Macro{MAX\_NEXT\_JOB\_START\_DELAY}.
+
 %%% ClassAd attribute: NiceUser
 \index{ClassAd job attribute!NiceUser}
 \index{NiceUser!job ClassAd attribute}

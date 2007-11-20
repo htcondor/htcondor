@@ -4053,8 +4053,9 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   \AdAttr{NextJobStartDelay}.
 
 \item[\Macro{MAX\_NEXT\_JOB\_START\_DELAY}] \label{param:MaxNextJobStartDelay}
-  This integer is the maximum allowed value of the job attribute
-  \AdAttr{NextJobStartDelay}.  It defaults to 10 minutes.
+  An integer number of seconds representing the maximum allowed value
+  of the job ClassAd attribute \AdAttr{NextJobStartDelay}.  It defaults to 600,
+  which is 10 minutes.
 
 \item[\Macro{JOB\_IS\_FINISHED\_INTERVAL}] \label{param:JobIsFinishedInterval}
   The \Condor{schedd} maintains a list of jobs that are ready to permanently
