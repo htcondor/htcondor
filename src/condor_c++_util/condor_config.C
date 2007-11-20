@@ -187,7 +187,13 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 			}
 			if(expr == NULL) continue;
 			buffer.sprintf( "%s = %s", tmp, expr );
-			ad->Insert( buffer.Value() );
+
+			if( !ad->Insert( buffer.Value() ) ) {
+				dprintf(D_ALWAYS,
+						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
+						buffer.Value(), mySubSystem );
+			}
+
 			free( expr );
 		}	
 	}
