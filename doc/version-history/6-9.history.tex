@@ -413,6 +413,9 @@ when SSL authentication is enabled.
 
 \item Fixed problem where local universe jobs could leave stray processes behind
 after termination.
+
+\item Fixed a memory leak that affected all daemons receiving ClassAds via the
+network if encryption were enabled. This bug existed in versions 6.9.3 and 6.9.4.
  
 \end{itemize}
 
