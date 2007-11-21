@@ -1699,12 +1699,12 @@ safe_exec_as_user(uid_t uid,
        - 0x4000 is ADDR_NO_RANDOMIZE, but the macro is
        not defined in many of our supported distros
      */
-#if defined(I386)
-    unsigned long persona = PER_LINUX32 | 0x40000;
-#elif defined(X86_64)
-    unsigned long persona = 0x40000;
-#endif
     if (is_std_univ) {
+#if defined(I386)
+        unsigned long persona = PER_LINUX32 | 0x40000;
+#elif defined(X86_64)
+        unsigned long persona = 0x40000;
+#endif
         if (personality(persona) == -1) {
             fatal_error_exit(1,
                              "error setting personality: %s",
