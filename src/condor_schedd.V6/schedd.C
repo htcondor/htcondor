@@ -6774,10 +6774,13 @@ Scheduler::spawnShadow( shadow_rec* srec )
 
 			if(wants_reconnect) {
 				args.AppendArg("--reconnect");
-				// pass the public ip/port of the schedd (used w/ reconnect)
-				argbuf.sprintf("--schedd=%s", daemonCore->publicNetworkIpAddr());
-				args.AppendArg(argbuf.Value());
 			}
+
+			// pass the public ip/port of the schedd (used w/ reconnect)
+			// We need this even if we are not currently in reconnect mode,
+			// because the shadow may go into reconnect mode at any time.
+			argbuf.sprintf("--schedd=%s", daemonCore->publicNetworkIpAddr());
+			args.AppendArg(argbuf.Value());
 
 			if( m_xfer_queue_contact.Length() ) {
 				argbuf.sprintf("--xfer-queue=%s",m_xfer_queue_contact.Value());
