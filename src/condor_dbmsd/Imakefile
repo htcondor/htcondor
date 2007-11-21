@@ -10,16 +10,9 @@ soapobjs(dbmsd)
 OBJ = dbmsd_main.o DBMSManager.o ManagedDatabase.o \
 ../condor_tt/condor_ttdb.o $(SOAP_OBJS)
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),sbin,EXECUTABLE_MODE)
-strip_target($(NAME),sbin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 html:
-release:: all
-stripped:: all
-static:: all
-clean::
 
 gen_soapfiles(dbmsd,condorDbmsd)
 
