@@ -43,6 +43,7 @@
 
 #if HAVE_SYS_PERSONALITY_H
 #include <sys/personality.h>
+#include <sys/syscall.h>
 #endif
 
 #include "safe.h"
@@ -1705,10 +1706,8 @@ safe_exec_as_user(uid_t uid,
 #elif defined(X86_64)
         unsigned long persona = 0x40000;
 #endif
-        if (personality(persona) == -1) {
-            fatal_error_exit(1,
-                             "error setting personality: %s",
-                             strerror(errno));
+        if (syscall(SYS_personality, persona) == -1) {
+            fatal_error_exit(1, "error setting personality: %s");
         }
     }
 #endif
