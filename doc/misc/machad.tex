@@ -314,6 +314,24 @@ This will only be present if \Macro{ALLOW\_VM\_CRUFT} is TRUE.
 \index{ClassAd machine attribute!VirtualMemory}
 \item[\AdAttr{VirtualMemory}:] The amount of currently available virtual memory 
 (swap space) expressed in Kbytes.
+%
+\index{ClassAd machine attribute!WindowsBuildNumber}
+\item[\AdAttr{WindowsBuildNumber}:] An integer, extracted from the
+platform type, representing a build number 
+for a Windows operating system.
+This attribute only exists on Windows machines.
+%
+\index{ClassAd machine attribute!WindowsMajorVersion}
+\item[\AdAttr{WindowsMajorVersion}:] An integer, extracted from the
+platform type, representing a major version number (currently 5 or 6)
+for a Windows operating system.
+This attribute only exists on Windows machines.
+%
+\index{ClassAd machine attribute!WindowsMinorVersion}
+\item[\AdAttr{WindowsMinorVersion}:] An integer, extracted from the
+platform type, representing a minor version number (currently 0, 1, or 2)
+for a Windows operating system.
+This attribute only exists on Windows machines.
 
 \end{description}
 

@@ -560,4 +560,25 @@ If \Expr{False}, no transfer takes place (remote to submit machine),
 and the name of the file is the file referred to
 by job attribute \Attr{Out}.
 
+%%% ClassAd attribute: WindowsBuildNumber
+\index{ClassAd machine attribute!WindowsBuildNumber}
+\item[\AdAttr{WindowsBuildNumber}:] An integer, extracted from the
+platform type of the machine upon which this job is submitted,
+representing a build number for a Windows operating system.
+This attribute only exists for jobs submitted from Windows machines.
+
+\index{ClassAd machine attribute!WindowsMajorVersion}
+\item[\AdAttr{WindowsMajorVersion}:] An integer, extracted from the
+platform type of the machine upon which this job is submitted,
+representing a major version number (currently 5 or 6)
+for a Windows operating system.
+This attribute only exists for jobs submitted from Windows machines.
+
+\index{ClassAd machine attribute!WindowsMinorVersion}
+\item[\AdAttr{WindowsMinorVersion}:] An integer, extracted from the
+platform type of the machine upon which this job is submitted, 
+representing a minor version number (currently 0, 1, or 2)
+for a Windows operating system.
+This attribute only exists for jobs submitted from Windows machines.
+
 \end{description}
