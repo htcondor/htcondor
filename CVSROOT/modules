@@ -893,8 +893,11 @@ V6_9_5_EXT	-a V6_9_COMMON_EXT \
                    externals/bundles/nordugridgahp/1.1.2 \
                    externals/bundles/zlib/1.2.3
 
+# Externals needed for 6.9.6.
+V6_9_6_EXT	-a V6_9_5_EXT
+
 # Externals needed for the head of the V6_9-branch (a.k.a. the TRUNK)
-V6_9_EXT	-a V6_9_5_EXT
+V6_9_EXT	-a V6_9_6_EXT
 
 
 #---------------------------------------------------------------------
