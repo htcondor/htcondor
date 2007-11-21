@@ -66,7 +66,6 @@ static bool test_normal_case() {
 	char* hostname = string_to_hostname(input);
 	e.emit_retval(hostname);
 	if(strcmp(&expected[0], hostname) != 0) {
-		free(expected);
 		e.emit_result_failure(__LINE__);
 		return false;
 	}
