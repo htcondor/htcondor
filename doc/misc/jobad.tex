@@ -403,6 +403,21 @@ on hold using the \Condor{hold} command, this attribute is not incremented.
 \item[\AdAttr{Owner}:]  String describing the user who submitted this
 job.
 
+%%% ClassAd attribute: ParallelShutdownPolicy
+\index{ClassAd job attribute!ParallelShutdownPolicy}
+\index{ParallelShutdownPolicy!job ClassAd attribute}
+\item[\AdAttr{ParallelShutdownPolicy}:]  A string that is only relevant
+to parallel universe jobs.  Without this attribute defined, the default
+policy applied to parallel universe jobs is to consider the whole job
+completed when the first node exits, killing processes running on
+all remaining nodes.  If defined to the following strings, Condor's
+behaviour changes:
+  \begin{description}
+  \item[\AdStr{WAIT\_FOR\_ALL}] Condor will wait until every node in 
+  the parallel job has completed to consider the job finished.
+  \end{description}
+
+
 %%% ClassAd attribute: ProcId
 \index{ClassAd job attribute!ProcId}
 \index{ProcId!job ClassAd attribute}
