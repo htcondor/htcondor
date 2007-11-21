@@ -7941,20 +7941,24 @@ int DaemonCore::SendAliveToParent()
 			ret_val = FALSE;
 		}
 
-		Daemon d( DT_ANY, parent_sinful_string );
-		if (!d.startCommand(DC_CHILDALIVE, &sock, 0)) {
-			dprintf(D_FULLDEBUG,"DaemonCore: startCommand() to %s failed. "
-				"SendAliveToParent() failed.\n",parent_sinful_string);
-			ret_val = FALSE;
+		if( ret_val == TRUE ) {
+			Daemon d( DT_ANY, parent_sinful_string );
+			if (!d.startCommand(DC_CHILDALIVE, &sock, 0)) {
+				dprintf(D_FULLDEBUG,"DaemonCore: startCommand() to %s failed. "
+				        "SendAliveToParent() failed.\n",parent_sinful_string);
+				ret_val = FALSE;
+			}
 		}
 
-		sock.encode();
-		if ( !sock.code(mypid) || !sock.code(max_hang_time) 
-				|| !sock.end_of_message())
-		{
-			dprintf(D_FULLDEBUG,"DaemonCore: Could not connect to parent %s. "
-				"SendAliveToParent() failed.\n",parent_sinful_string);
-			ret_val = FALSE;
+		if( ret_val == TRUE ) {
+			sock.encode();
+			if ( !sock.code(mypid) || !sock.code(max_hang_time) 
+				 || !sock.end_of_message())
+			{
+				dprintf(D_FULLDEBUG,"DaemonCore: Could not connect to parent %s. "
+				        "SendAliveToParent() failed.\n",parent_sinful_string);
+				ret_val = FALSE;
+			}
 		}
 
 		number_of_tries--;
