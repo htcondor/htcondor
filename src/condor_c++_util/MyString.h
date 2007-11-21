@@ -72,7 +72,7 @@ class MyString
 	int Length()          const { return Len;                }
 
 	/** Returns true if the string is empty, false otherwise */
-	const bool IsEmpty() const { return (Len == 0); }
+	bool IsEmpty() const { return (Len == 0); }
 
 	/** Returns space reserved for string */
 	int Capacity()        const { return capacity;           }
