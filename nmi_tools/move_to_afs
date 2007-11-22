@@ -26,9 +26,7 @@ my @platforms = (
    "ia64_sles_8",
    "ppc64_sles_9",
    "ppc_aix_5.2",
-   "ppc_macos_10.3",
    "ppc_macos_10.4",
-   "ppc_ydl_3.0",
    "ps3_ydl_5.0",
    "sun4u_sol_5.8",
    "sun4u_sol_5.9",
@@ -36,18 +34,11 @@ my @platforms = (
    "x86_deb_4.0",
    "x86_freebsd_6",
    "x86_macos_10.4",
-   "x86_rh_7.2",
    "x86_rh_9",
    "x86_rhap_5",
    "x86_rhas_3",
 );
 
-
-my @csl_platforms = ( 
-   "sun4u_sol_5.8",
-   "x86_rh_9",
-   "x86_64_rhas_3",
-);
 
 #
 # you probably shouldn't change anything below this line
@@ -67,17 +58,8 @@ my $cwd = getcwd();
 my $base = "$cwd/$run_id";
 
 foreach $platform ( @platforms ) {
-    my $is_csl;
-    if( grep /$platform/, @csl_platforms ) {
-        print "Working on CSL platform: $platform\n";
-        $target_dir = "public";
-        $is_csl = 1;
-    } else {
-        print "Working on platform: $platform\n";
-        $target_dir = $pub_ver;
-        $is_csl = 0;
-    }
-
+    print "Working on platform: $platform\n";
+    $target_dir = $pub_ver;
     $cur_dir = "$userdir_root/$platform";
     $results = "$cur_dir/results.tar.gz"; 
     if( ! -f $results ) {
@@ -114,15 +96,6 @@ foreach $platform ( @platforms ) {
         }
     }
     closedir DIR;
-    if( $is_csl == 1 ) {
-        # we need to grab the unstripped release, too
-        $pub_dir = "$base/$platform/public";
-        $src_path = "$pub_dir/unstripped-release.tar.gz";
-        $full_path = "$pub_dir/$platform-unstripped-release.tar.gz";
-        rename( $src_path, $full_path )
-            || die "Can't rename $src_path to $full_path: $!\n";
-        push( @condor_files, $full_path );
-    }
 }
 
 
