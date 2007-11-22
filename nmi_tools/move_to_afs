@@ -5,47 +5,56 @@ use Cwd;
 # directory (below) in AFS, and run this script from nmi-s001 in a
 # directory containing lots of space (e.g. 14+ GB was needed for 6.8.0)
 
-my $run_id = "26185";
-my $gid = "cndrauto_nmi-s001.cs.wisc.edu_1153282503_18858";
+my $run_id = "64173";
+my $gid = "cndrauto_nmi-s003.cs.wisc.edu_1195352121_26757";
+# TODO: could extract all of these from the $gid
+my $nmi_user = "cndrauto";
+my $build_year = "2007";
+my $build_month = "11";
 
-my $target_root = "/p/condor/public/binaries/v6.8/6.8.0";
-my $vers_dir = "v6.8";
-my $scp_ident = "zmiller\@omega.cs.wisc.edu";
+
+my $target_root = "/scratch.1/wright/6.9.5";
+my $vers_dir = "v6.9";
+my $scp_ident = "wright\@tonic.cs.wisc.edu";
 
 # the below list needs to change only if we change which platforms
 # we support, or if you want to just update a subset of them.
 
 my @platforms = (
-   "alpha_osf_V5.1",
    "hppa_hpux_11",
    "ia64_rhas_3",
    "ia64_sles_8",
+   "ppc64_sles_9",
    "ppc_aix_5.2",
    "ppc_macos_10.3",
+   "ppc_macos_10.4",
    "ppc_ydl_3.0",
+   "ps3_ydl_5.0",
    "sun4u_sol_5.8",
    "sun4u_sol_5.9",
    "x86_64_rhas_3",
+   "x86_deb_4.0",
    "x86_freebsd_6",
-   "x86_rhas_3",
+   "x86_macos_10.4",
    "x86_rh_7.2",
-   "x86_rh_8.0",
    "x86_rh_9",
+   "x86_rhap_5",
+   "x86_rhas_3",
 );
 
+
+my @csl_platforms = ( 
+   "sun4u_sol_5.8",
+   "x86_rh_9",
+   "x86_64_rhas_3",
+);
 
 #
 # you probably shouldn't change anything below this line
 #
 
-my @csl_platforms = ( 
-   #"sun4u_sol_5.8",
-   #"x86_rh_9",
-);
-
-
 my @condor_files = ();
-my $userdir_root = "/nmi/run/$gid/userdir";
+my $userdir_root = "/nmi/run/$nmi_user/$build_year/$build_month/$gid/userdir";
 my $cur_dir;
 my $results;
 my $pub_ver = "public/$vers_dir";
