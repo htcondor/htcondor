@@ -21,7 +21,9 @@ The privilege separation (PrivSep) effort in Condor aims to minimize
 the amount of code that needs \Login{root}-level access, while still
 giving Condor the tools it needs to work properly. Note that PrivSep
 is currently only available for execute side functionality, and is not
-implemented on Windows.
+implemented on Windows. Furthermore, an execute-side Condor installation
+using PrivSep is currently unable to run standard universe jobs; this
+constraint will be removed in the next Condor release.
 
 In the PrivSep model, all logic in Condor that requires superuser
 privilege is contained in a small component called 
@@ -138,10 +140,13 @@ that Condor jobs may use on the given execute machine.
 \item \Code{valid-dirs}. This list specifies directories that
 Condor will be allowed to manage for the use of temporary job
 files. Normally, this will only need to include the value of Condor's
-\MacroU{EXECUTE} directory. 
-Note that the PrivSep Kernel does not
-have access to Condor's configuration variables,
-and therefore may not refer to them in this file.
+\MacroU{EXECUTE} directory. Any entry in this list must be a trusted
+path. This means that all components of the path must be directories
+that are \Login{root}-owned and only writable by \Login{root}. For
+many sites, this may require a change in ownership and permissions
+to the \MacroU{LOCAL\_DIR} and \MacroU{EXECUTE} directories. Note also
+that the PrivSep Kernel does not have access to Condor's configuration
+variables, and therefore may not refer to them in this file.
 
 \item \Code{procd-executable}. A (trusted) full path to the
 \Condor{procd} executable.
