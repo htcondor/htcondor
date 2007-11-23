@@ -401,7 +401,6 @@ MPIShadow::startMaster()
 #ifndef WIN32
     if ( fchmod( fileno( pg ), 0666 ) < 0 ) {
         dprintf ( D_ALWAYS, "fchmod failed! errno %d\n", errno );
-        fclose( pg );
         shutDown( JOB_NOT_STARTED );
     }
 #endif
