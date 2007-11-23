@@ -237,6 +237,7 @@ daemon::runs_on_this_host()
 			{
 				runs_here = FALSE;
 			}
+		free(tmp);
 		}
 	}
 	return runs_here;
