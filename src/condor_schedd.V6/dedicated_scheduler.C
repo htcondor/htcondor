@@ -571,6 +571,7 @@ DedicatedScheduler::DedicatedScheduler()
 
 	hdjt_tid = -1;
 	sanity_tid = -1;
+	rid = -1;
 
 		// TODO: Be smarter about the sizes of these tables
 	allocations = new HashTable < int, AllocationNode*> 

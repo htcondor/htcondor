@@ -468,7 +468,7 @@ class DedicatedScheduler : public Service {
 	friend class CandidateList;
 
 	SimpleList<PROC_ID> jobsToReconnect;
-	int				checkReconnectQueue_tid;
+	//int				checkReconnectQueue_tid;
 	
 	StringList scheduling_groups;
 };
