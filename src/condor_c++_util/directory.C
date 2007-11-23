@@ -1305,6 +1305,8 @@ create_temp_file() {
 			 ((fd=safe_open_wrapper(filename, O_EXCL | O_CREAT, S_IREAD | S_IWRITE)) == -1));
 
 	if (fd == -1) {
+		free(temp_dir);
+		free(filename);
 		return NULL;
 	}
 
