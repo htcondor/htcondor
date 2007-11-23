@@ -606,7 +606,6 @@ DedicatedScheduler::~DedicatedScheduler()
 
 	if( ds_owner ) { delete [] ds_owner; }
 	if( ds_name ) { delete [] ds_name; }
-	if( unclaimed_resources ) { delete unclaimed_resources; }
 
 	if( shadow_obj ) {
 		delete shadow_obj;
