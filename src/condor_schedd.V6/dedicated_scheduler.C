@@ -804,7 +804,7 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 	int		reqs_rejected = 0;
 	int		reqs_matched = 0;
 	int		serviced_other_commands = 0;	
-	int		op;
+	int		op = -1;
 	PROC_ID	id;
 	NegotiationResult result;
 
@@ -2331,7 +2331,6 @@ DedicatedScheduler::spawnJobs( void )
 				 "can't spawn MPI jobs, aborting\n", ATTR_HAS_MPI );
 		return false;
 	}
-	shadow = shadow_obj->path();
 
 	allocations->startIterations();
 	while( allocations->iterate(allocation) ) {
@@ -3215,12 +3214,13 @@ DedicatedScheduler::removeAllocation( shadow_rec* srec )
 	MRecArray* matches;
 	int i, n, m;
 
-	dprintf( D_FULLDEBUG, "DedicatedScheduler::removeAllocation, "
-			 "cluster %d\n", srec->job_id.cluster );
-
 	if( ! srec ) {
 		EXCEPT( "DedicatedScheduler::removeAllocation: srec is NULL!" );
 	}
+
+	dprintf( D_FULLDEBUG, "DedicatedScheduler::removeAllocation, "
+			 "cluster %d\n", srec->job_id.cluster );
+
 	if( allocations->lookup( srec->job_id.cluster, alloc ) < 0 ) {
 		EXCEPT( "DedicatedScheduler::removeAllocation(): can't find " 
 				"allocation node for cluster %d! Aborting", 
@@ -3392,12 +3392,13 @@ DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 	MRecArray* matches;
 	int i, n, m;
 
-	dprintf( D_FULLDEBUG, "DedicatedScheduler::shutdownMpiJob, cluster %d\n", 
-			 srec->job_id.cluster );
-
 	if( ! srec ) {
 		EXCEPT( "DedicatedScheduler::shutdownMpiJob: srec is NULL!" );
 	}
+
+	dprintf( D_FULLDEBUG, "DedicatedScheduler::shutdownMpiJob, cluster %d\n", 
+			 srec->job_id.cluster );
+
 	if( allocations->lookup( srec->job_id.cluster, alloc ) < 0 ) {
 		EXCEPT( "DedicatedScheduler::shutdownMpiJob(): can't find " 
 				"allocation node for cluster %d! Aborting", 
