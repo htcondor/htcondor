@@ -1740,7 +1740,7 @@ DedicatedScheduler::reaper( int pid, int status )
 int
 DedicatedScheduler::giveMatches( int, Stream* stream )
 {
-	int cluster;
+	int cluster = -1;
 	char *id = NULL, *sinful = NULL;
 	MRecArray* matches;
 	int i, p, last;
