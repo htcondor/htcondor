@@ -279,7 +279,7 @@ main( int argc, char* argv[] )
 
 		hostname = param("FULL_HOSTNAME");
 		if (hostname == NULL) {
-			hostname = "<unknown hostname>";
+			hostname = strdup("<unknown hostname>");
 		}
 
 		pvs = param_all();
