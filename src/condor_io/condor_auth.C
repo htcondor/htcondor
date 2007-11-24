@@ -135,12 +135,12 @@ const char * Condor_Auth_Base :: getRemoteHost() const
     return remoteHost_;
 }
 
-const int Condor_Auth_Base :: getMode() const
+int Condor_Auth_Base :: getMode() const
 {
     return mode_;
 }
     
-const int Condor_Auth_Base :: isAuthenticated() const
+int Condor_Auth_Base :: isAuthenticated() const
 {
     return authenticated_;
 }
@@ -275,7 +275,7 @@ Condor_Auth_Base& Condor_Auth_Base :: setAuthenticatedName(const char * auth_nam
 }
 
 
-const bool Condor_Auth_Base :: isDaemon() const
+bool Condor_Auth_Base :: isDaemon() const
 {
     return isDaemon_;
 }

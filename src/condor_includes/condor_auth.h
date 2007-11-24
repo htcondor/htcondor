@@ -115,7 +115,7 @@ class Condor_Auth_Base {
     // RETURNS: TRUE -- success, FALSE -- failure
     //------------------------------------------
 
-    const int isAuthenticated() const;
+    int isAuthenticated() const;
     //------------------------------------------
     // PURPOSE: Check out the status 
     // REQUIRE: None
@@ -124,7 +124,7 @@ class Condor_Auth_Base {
     //          0    -- not yet authenticated
     //------------------------------------------
 
-    const int getMode() const;
+    int getMode() const;
     //------------------------------------------
     // PURPOSE: retrieve the mode of the authenticator
     // REQUIRE: None
@@ -203,7 +203,7 @@ class Condor_Auth_Base {
 
     Condor_Auth_Base& setFullyQualifiedUser(const char * fqu);
 
-    const bool isDaemon() const;
+    bool isDaemon() const;
     //------------------------------------------
     // PURPOSE: Whether it's a deamon or not
     // REQUIRE: None
