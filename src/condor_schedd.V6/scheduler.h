@@ -162,7 +162,7 @@ class UserIdentity {
 			m_domain = src.m_domain;
 			return *this;
 		}
-		const bool operator==(const UserIdentity & rhs) {
+		bool operator==(const UserIdentity & rhs) {
 			return m_username == rhs.m_username && m_domain == rhs.m_domain;
 		}
 		MyString username() const { return m_username; }
