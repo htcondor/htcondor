@@ -130,7 +130,7 @@ public:
 
 		// history schema metadata routines
 	virtual const char*         getHistoryHorFieldName(int col) = 0;
-	virtual const int           getHistoryHorNumFields() = 0;
+	virtual int           getHistoryHorNumFields() = 0;
 
 		// cursor declaration and reclamation routines
 	virtual QuillErrCode        openCursorsHistory(SQLQuery *,
@@ -144,11 +144,11 @@ public:
 	virtual QuillErrCode		releaseHistoryResults() = 0;
 	virtual const char*         getJobQueueClusterHorFieldName(int col) = 0;
 
-	virtual const int           getJobQueueClusterHorNumFields() = 0;
+	virtual int           getJobQueueClusterHorNumFields() = 0;
 
 	virtual const char*         getJobQueueProcHorFieldName(int col) = 0;
 
-	virtual const int           getJobQueueProcHorNumFields() = 0;
+	virtual int           getJobQueueProcHorNumFields() = 0;
 
 
 		// get the error string
