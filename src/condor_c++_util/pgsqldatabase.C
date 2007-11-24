@@ -423,7 +423,7 @@ PGSQLDatabase::getJobQueueClusterHorFieldName(int col)
 }
 
 //! get number of fields returned in the horizontal cluster ads
-const int 
+int 
 PGSQLDatabase::getJobQueueClusterHorNumFields() 
 {
   return PQnfields(clusterAdsHorRes);
@@ -438,7 +438,7 @@ PGSQLDatabase::getJobQueueProcHorFieldName(int col)
 }
 
 //! get number of fields in the proc ad horizontal
-const int 
+int 
 PGSQLDatabase::getJobQueueProcHorNumFields() 
 {
   return PQnfields(procAdsHorRes);
@@ -458,7 +458,7 @@ PGSQLDatabase::getHistoryHorFieldName(int col)
 }
 
 //! get number of fields returned in result
-const int 
+int 
 PGSQLDatabase::getHistoryHorNumFields() 
 {
 		// return PQnfields(historyHorRes);

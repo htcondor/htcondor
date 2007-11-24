@@ -86,7 +86,7 @@ public:
 											const char **value);
 
 		// history schema metadata routines
-	const int            getHistoryHorNumFields();
+	int            getHistoryHorNumFields();
 	const char*          getHistoryHorFieldName(int col);
 
 
@@ -129,11 +129,11 @@ public:
 
 	const char*         getJobQueueClusterHorFieldName(int col);
 
-	const int           getJobQueueClusterHorNumFields();
+	int           getJobQueueClusterHorNumFields();
 
 	const char*         getJobQueueProcHorFieldName(int col);
 
-	const int           getJobQueueProcHorNumFields();
+	int           getJobQueueProcHorNumFields();
 
 
 		// get the error string 

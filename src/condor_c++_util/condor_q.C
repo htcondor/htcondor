@@ -656,7 +656,7 @@ int JobSort(ClassAd *job1, ClassAd *job2, void *  /*data*/)
   Encode a status from a PROC structure as a single letter suited for
   printing.
 */
-const char
+char
 encode_status( int status )
 {
 	switch( status ) {
