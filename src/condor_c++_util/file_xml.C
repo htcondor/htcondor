@@ -76,7 +76,7 @@ QuillErrCode FILEXML::file_newEvent(const char * /*eventType*/, AttrList *info) 
 			if (value->RArg()) 
 				value->RArg()->PrintToNewStr(&val_temp);
 			else 
-				val_temp = "NULL";
+				val_temp = strdup("NULL");
             temp += val_temp;
             temp += "</";
             temp += tag;
