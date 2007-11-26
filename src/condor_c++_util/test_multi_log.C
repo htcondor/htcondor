@@ -297,7 +297,7 @@ ReadEvents(StringList &logFiles)
 	printf("\nReading events\n");
 	fflush(stdout);
 
-	MultiLogFiles::DeleteLogs(logFiles);
+	MultiLogFiles::TruncateLogs(logFiles);
 
 	// Note: return value of false is okay here because log files are
 	// empty.
