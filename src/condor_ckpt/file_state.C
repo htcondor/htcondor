@@ -1039,6 +1039,7 @@ safe on auto-mounted NFS systems.
 int CondorFileTable::chdir( const char *path )
 {
 	int result;
+	char *nmem = NULL;
 
 	if( MyImage.GetMode() != STANDALONE ) {
 		result = REMOTE_CONDOR_chdir( path );
@@ -1048,11 +1049,22 @@ int CondorFileTable::chdir( const char *path )
 
 	if( result==-1 ) return result;
 
-	free( working_dir );
 	if( path[0]=='/' ) {
+		free( working_dir );
 		working_dir = strdup( path );
 	} else {
-		working_dir = (char *)realloc(working_dir,strlen(path)+strlen(working_dir)+2);
+		nmem = (char *)realloc(working_dir,strlen(path)+strlen(working_dir)+2);
+		if (nmem == NULL) {
+			/* I wonder what happens if the actual chidir succeeded and I fail
+				to get memory here and return. If the user program ignores
+				the errno, I'm sure problems will arise since working_dir is
+				now unsynchronized with the actual chdir.
+			*/
+			errno = ENOMEM;
+			return -1;
+		}
+		free( working_dir );
+		working_dir = nmem;
 		strcat( working_dir, "/" );
 		strcat( working_dir, path );
 	}
