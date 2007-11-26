@@ -44,6 +44,16 @@ XferSummary::XferSummary()
 	subnet = 0;
 	log_file = 0;
 	Collectors = NULL;
+	bytes_recv = 0;
+	bytes_sent = 0;
+	num_recvs = 0;
+	num_sends = 0;
+	start_time = time(0);
+	time_recving = 0;
+	time_sending = 0;
+	tot_recv_bandwidth = 0;
+	tot_send_bandwidth = 0;
+
 }
 
 
