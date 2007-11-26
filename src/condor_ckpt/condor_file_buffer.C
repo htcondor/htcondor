@@ -528,6 +528,7 @@ void CondorFileBuffer::evict( CondorChunk *c )
 			if( i->next==c ) {
 				i->next = c->next;
 				delete c;
+				break;
 			}
 		}
 	}
