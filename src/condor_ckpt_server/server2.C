@@ -81,6 +81,14 @@ Server::Server()
 	max_replicate_xfers = 0;
 	num_peers = 0;
 	CkptClassAds = NULL;
+	clean_interval = 0;
+	memset(peer_addr_list, 0, sizeof(peer_addr_list));
+	max_req_sd_plus1 = 0;
+	num_replicate_xfers = 0;
+	num_restore_xfers = 0;
+	num_store_xfers = 0;
+	reclaim_interval = 0;
+	replication_level = 0;
 }
 
 
