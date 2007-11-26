@@ -23,6 +23,8 @@
 
 CondorFileCompress::CondorFileCompress( CondorFile *o )
 {
+	int i;
+
 	last_action = NONE;
 	memset( &stream, 0, sizeof(stream) );
 	original = o;
@@ -30,6 +32,10 @@ CondorFileCompress::CondorFileCompress( CondorFile *o )
 	voffset = 0;
 	crc = 0;
 	url = NULL;
+
+	for (i = 0; i < COMPRESS_BUFFER_SIZE; i++) {
+		buffer[i] = 0;
+	}
 }
 
 CondorFileCompress::~CondorFileCompress()
