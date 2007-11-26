@@ -34,6 +34,7 @@ CondorFileAgent::CondorFileAgent( CondorFile *file )
 	original = file;
 	url = NULL;
 	local_url = NULL;
+	local_copy = NULL;
 }
 
 CondorFileAgent::~CondorFileAgent()
