@@ -72,6 +72,8 @@ int CondorFileBasic::open(const char *url_in, int flags, int mode)
 			writeable = 1;
 			break;
 		default:
+			free(path);
+			path = NULL;
 			return -1;
 	}
 
