@@ -627,6 +627,16 @@ CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, i
 		if( old_file->close()!=0 ) return 0;
 
 		replace_file( old_file, f );
+
+		/* Even though old_file is aliasing p->file here, and
+			then we're deleting old_file, There is no
+			returning a freed pointer error at the end of the
+			function because replace_file() will *always*
+			be able to replace the entry in the pointers[]
+			table (aliased by p) indexed with old_file (being
+			actually p->file) with the updated value of f.
+		*/
+
 		delete old_file;
 	}
 
