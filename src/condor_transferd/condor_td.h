@@ -51,6 +51,9 @@ class Features
 		{
 			m_uses_stdin = FALSE;
 			m_schedd_sinful = "N/A";
+			/* in case people forget to set a timeout, this is always 
+				a good number */
+			m_timeout = 20 * 60;
 		}
 
 		~Features() { }
