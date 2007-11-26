@@ -107,6 +107,7 @@ void _condor_warning( condor_warning_kind_t kind, const char *format, ... )
 	}
 
 	if(table[kind].mode==CONDOR_WARNING_MODE_OFF) {
+		va_end(args);
 		return;
 	}
 
@@ -114,6 +115,7 @@ void _condor_warning( condor_warning_kind_t kind, const char *format, ... )
 
 	if(table[kind].mode==CONDOR_WARNING_MODE_ONCE) {
 		if(table[kind].count>1) {
+			va_end(args);
 			return;
 		}
 	}
