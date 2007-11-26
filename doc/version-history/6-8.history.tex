@@ -55,6 +55,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item On Windows, fixed a problem that could cause spurious failures with Condor-C
+or with streaming a job's standard output or error.
+
 \item A claim in the state Claimed/Idle could not be preempted until
 it transitioned into Busy or went away of its own accord.  This bug
 was introduced in 6.7.1.
