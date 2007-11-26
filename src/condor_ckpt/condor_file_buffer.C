@@ -213,6 +213,7 @@ int CondorFileBuffer::open( const char *url_in, int flags, int mode )
 
 	if(result!=2) {
 		_condor_warning(CONDOR_WARNING_KIND_BADURL, "Couldn't understand url '%s'",url_in);
+		free(sub_url);
 		errno = EINVAL;
 		return -1;
 	}
