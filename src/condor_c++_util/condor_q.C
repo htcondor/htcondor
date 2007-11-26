@@ -104,6 +104,8 @@ CondorQ ()
 CondorQ::
 ~CondorQ ()
 {
+	free(clusterarray);
+	free(procarray);
 }
 
 
@@ -127,9 +129,9 @@ addDBConstraint (CondorQIntCategories cat, int value)
 		numclusters++;
 		if(numclusters == clusterprocarraysize-1) {
 		   clusterarray = (int *) realloc(clusterarray, 
-					clusterprocarraysize * 2);
+					clusterprocarraysize * 2 * sizeof(int));
 		   procarray = (int *) realloc(procarray, 
-					clusterprocarraysize * 2);
+					clusterprocarraysize * 2 * sizeof(int));
 		   for(i=clusterprocarraysize; 
 				i < clusterprocarraysize * 2; i++) {
 		      clusterarray[i] = -1;
@@ -165,7 +167,7 @@ add (CondorQStrCategories cat, char *value)
 {  
 	switch (cat) {
 	case CQ_OWNER:
-		strncpy(owner, value, MAXOWNERLEN);
+		strncpy(owner, value, MAXOWNERLEN - 1);
 		break;
 	default:
 		break;
@@ -197,7 +199,7 @@ addAND (char *value)
 int CondorQ::
 addSchedd (char *value)
 {  
-	strncpy(schedd, value, MAXSCHEDDLEN);
+	strncpy(schedd, value, MAXSCHEDDLEN - 1);
 	return 0;
 }
 
@@ -449,10 +451,6 @@ fetchQueueFromDBAndProcess ( char *dbconn, char *&lastUpdate, process_function p
 		ad = getDBNextJobByConstraint(constraint, jqSnapshot);
 	}	
 
-	if(ad) {
-		ad->clear();
-		delete ad;
-	}
 	delete jqSnapshot;
 	free(constraint);
 #endif /* WANT_QUILL */
@@ -463,7 +461,7 @@ fetchQueueFromDBAndProcess ( char *dbconn, char *&lastUpdate, process_function p
 void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
 #ifdef WANT_QUILL
 
-	JobQueueDatabase *DBObj;
+	JobQueueDatabase *DBObj = NULL;
 	const char    *rowvalue;
 	int           ntuples;
 	SQLQuery      sqlquery;
@@ -480,6 +478,8 @@ void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
 	} else {
 		dt = T_PGSQL; // assume PGSQL by default
 	}
+
+	free(tmp);
 
 	switch (dt) {				
 	case T_ORACLE:
