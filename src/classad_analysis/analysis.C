@@ -317,7 +317,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			cond_s = "";
 			value_s = "";
 			condition->ToString( cond_s );
-			strncpy( cond, cond_s.c_str( ), 1024 );
+			strncpy( cond, cond_s.c_str( ), 1023 );
 
 			sprintf( info, "%i", condition->explain.numberOfMatches );
 
@@ -328,7 +328,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			}
 			case ConditionExplain::MODIFY: {
 				pp.Unparse( value_s, condition->explain.newValue );
-				strncpy( value, value_s.c_str( ), 64 );
+				strncpy( value, value_s.c_str( ), 63 );
 				sprintf( suggest, "MODIFY TO %s", value );
 				break;
 			}
