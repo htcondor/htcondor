@@ -81,7 +81,7 @@ $executed = sub
 	my $cluster = $args{"cluster"};
 
 	print "Start test timer from execution time\n";
-	CondorTest::RegisterTimed($testname, $timed, 1800);
+	#CondorTest::RegisterTimed($testname, $timed, 1800);
 };
 
 $timed = sub
