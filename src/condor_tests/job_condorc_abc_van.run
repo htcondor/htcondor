@@ -29,7 +29,6 @@ $testname = 'job_condorc_abc_van - Chained Condor-C A&B&C with Vanilla job';
 $corename = "job_condorc_abc_van";
 
 # where are we running
-$dummyhost = "gamgee.cs.wisc.edu";
 $currenthost = `hostname`;
 CondorTest::fullchomp($currenthost);
 print "Running on $currenthost\n";
@@ -78,7 +77,7 @@ while(<TPLATE>)
 {
 	CondorTest::fullchomp($_);
 	$line = $_;
-	if( $line =~ /^\s*remote_pool\s*=\s*($dummyhost):\s*(\d+)\s*$/ )
+	if( $line =~ /^\s*remote_pool\s*=.*$/ )
 	{
 		print "remote pool is $currenthost:$midport\n";
 		print CSUB "remote_pool = $currenthost:$midport\n";
@@ -88,7 +87,7 @@ while(<TPLATE>)
 		my $schedd = "schedd$mypid" . "middle\@$currenthost";
 		print CSUB "remote_schedd = $schedd\n";
 	}
-	elsif( $line =~ /^\s*\+Remote_RemotePool\s*=\s*\"($dummyhost):\s*(\d+)\"\s*$/ )
+	elsif( $line =~ /^\s*\+Remote_RemotePool\s*=.*$/ )
 	{
 		print "remote pool is $currenthost: port $remport\n";
 		print CSUB "+Remote_RemotePool = \"$currenthost:$remport\"\n";
@@ -97,11 +96,6 @@ while(<TPLATE>)
 	{
 		my $schedd = "schedd$mypid" . "remote\@$currenthost";
 		print CSUB "+Remote_RemoteSchedd = \"$schedd\"\n";
-	}
-	elsif( $line =~ /^\s*(.*)$dummyhost(.*)\s*$/)
-	{
-		print "found $dummyhost and subbing $currenthost\n"; 
-		print CSUB "$1$currenthost$2\n";
 	}
 	# do not leave the log file name alone
 	# because we are always cluster 1 as we

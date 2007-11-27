@@ -29,13 +29,11 @@ $testname = 'job_condorc_ab_van - Simple Condor-C A&B with Vanilla job';
 $corename = "job_condorc_ab_van";
 
 # where am I running
-$dummyhost = "gamgee.cs.wisc.edu";
 $currenthost = `hostname`;
 CondorTest::fullchomp($currenthost);
 CondorPersonal::DebugOn();
 
 system("date");
-print "Dummyhost was $dummyhost and really running on $currenthost\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
@@ -73,7 +71,7 @@ while(<TPLATE>)
 {
 	CondorTest::fullchomp($_);
 	$line = $_;
-	if( $line =~ /^\s*remote_pool\s*=\s*($dummyhost):\s*(\d+)\s*$/ )
+	if( $line =~ /^\s*remote_pool\s*=.*$/ )
 	{
 		print "remote pool is $currenthost:$remport\n";
 		print CSUB "remote_pool = $currenthost:$remport\n";
@@ -82,11 +80,6 @@ while(<TPLATE>)
 	{
 		my $schedd = "schedd$mypid" . "remote\@$currenthost";
 		print CSUB "remote_schedd = $schedd\n";
-	}
-	elsif( $line =~ /^\s*(.*)$dummyhost(.*)\s*$/)
-	{
-		print "found $dummyhost and subbing $currenthost\n";
-		print CSUB "$1$currenthost$2\n";
 	}
 	elsif( $line =~ /^\s*log\s*= .*$/)
 	{
