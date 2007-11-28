@@ -1,3 +1,11 @@
+11/28/07 V6_9_5
+  The offical tag for 6.9.5, from the V6_9_5-branch.
+  Version string: $CondorVersion: 6.9.5 Nov 28 2007 BuildID: 65347 $
+  Original build tag: BUILD-V6_9_5-branch-2007-11-28
+  Note that the original windoze build failed for no good reason, so
+  those binaries actually came from BuildID 65427, even though the
+  version string in that build still used "65347" for consistency.
+
 11/21/07 V6_9_5-{root,branch}
   Release branch for 6.9.5.  From BUILD-V6_9-trunk-2007-11-21_2.
 
