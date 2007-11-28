@@ -102,7 +102,7 @@ void _condor_warning( condor_warning_kind_t kind, const char *format, ... )
 	char text[BUFFER_SIZE];
 	va_start(args,format);
 
-	if( kind<0 || kind>CONDOR_WARNING_KIND_MAX ) {
+	if( kind<0 || kind>=CONDOR_WARNING_KIND_MAX ) {
 		kind = CONDOR_WARNING_KIND_NOTICE;
 	}
 
