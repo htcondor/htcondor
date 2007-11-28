@@ -217,8 +217,8 @@ get_parent_info(pid_t& parent_pid, birthday_t& parent_birthday)
 	parent_pid = parent_pi->pid;
 	parent_birthday = parent_pi->birthday;
 
-	free(own_pi);
-	free(parent_pi);
+	delete own_pi;
+	delete parent_pi;
 }
 
 int
