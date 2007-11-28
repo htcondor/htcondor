@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: pre_all,v 1.10 2007-11-14 22:14:27 psilord Exp $ 
+# $Id: pre_all,v 1.11 2007-11-28 18:18:23 wright Exp $ 
 # Submit-side NMI build system infrastructure to prepare sources for
 # the Condor build
 #
@@ -46,6 +46,12 @@
 ######################################################################
 
 use Cwd;
+
+use Getopt::Long;
+use vars qw/ $opt_version_buildid /;
+GetOptions(
+  'version-buildid=s' => \$opt_version_buildid,
+);
 
 # autoflush our STDOUT
 $| = 1;
@@ -235,11 +241,18 @@ print "Creating embedded buildid\n";
 chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
 
 # Stash this in the common dir for remote_pre
-$runid = acquire_runid();
+if (defined($opt_version_buildid)) {
+  $runid = $opt_version_buildid;
+  print "Using build id from command-line: $runid\n";
+}
+else {
+  $runid = acquire_runid();
+  print "Automatically discovered that my build id is: $runid\n";
+}
 open( BUILDID_FILE, ">$buildid_file") || die "Can't open $buildid_file: $!\n";
 print BUILDID_FILE "$runid\n";
 close( BUILDID_FILE );
-print "Embedding build id: $runid\n";
+
 
 ######################################################################
 # 5) Setup the sources as a release-able source tarball

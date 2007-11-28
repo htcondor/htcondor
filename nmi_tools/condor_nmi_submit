@@ -82,7 +82,7 @@ use vars qw/ $opt_build $opt_test
     $opt_submit_xtests
     $opt_nightly $opt_externals $opt_without_tests
     $opt_clear_externals_cache $opt_use_externals_cache
-    $opt_externals_only $opt_release_only
+    $opt_externals_only $opt_release_only $opt_version_buildid
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args
     $opt_input_platform
     /;
@@ -339,6 +339,7 @@ sub parseOptions
            'clear_externals_cache' => \$opt_clear_externals_cache,
            'externals-only' => \$opt_externals_only,
 	   'release-only' => \$opt_release_only,
+           'version-buildid=s' => \$opt_version_buildid,
 # test-specific options
            'buildid=i'     => \$opt_buildid,
            'test-src=s'    => \$opt_test_src,
@@ -412,6 +413,10 @@ sub parseOptions
         }
 	if( defined($opt_release_only) ) {
 	    print "ERROR: --release-only is not valid with --test\n";
+	    printUsage( 1 );
+	}
+	if( defined($opt_version_buildid) ) {
+	    print "ERROR: --version-buildid is not valid with --test\n";
 	    printUsage( 1 );
 	}
     } else {
@@ -551,6 +556,7 @@ Where [build-options] can be any of:
                     if the tag defined with --tag doesn't define them)>
 --without-tests    <Submit a build job such that it will NOT submit
                     test runs as each platform completes>
+--version-buildid=string <Build RunId to use in the version string>
  
 Where [test-options] can be any of:
 --buildid=string   <Build RunId to test>
@@ -867,6 +873,9 @@ sub writeBuildGlue
 
     # define the glue scripts we want
     print $fh "pre_all = nmi_glue/build/pre_all\n";
+    if (defined($opt_version_buildid)) {
+      print $fh "pre_all_args = --version-buildid=$opt_version_buildid\n";
+    }
     print $fh "remote_declare = nmi_glue/build/remote_declare\n";
     print $fh "remote_declare_args =";
     print $fh " --externals-only" if defined($opt_externals_only);
