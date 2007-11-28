@@ -1,3 +1,9 @@
+02/02/07 V6_8_7
+  The official V6_8_7 release is a copy of V6_8_7-branch-2007-11-28
+  All platforms built on NMI runid 65269.
+  (The actual build was from the head of V6_8_7-branch around 3 in the
+  afternoon, but nothing changed between those two points.)
+
 11/26/07 V6_8_7-{root,branch}
   The branch for V6_8_7 off of V6_8-branch.
 
