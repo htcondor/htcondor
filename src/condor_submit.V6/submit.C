@@ -1488,12 +1488,20 @@ SetExecutable()
 	// generate initial checkpoint file
 	IckptName = gen_ckpt_name(0,ClusterId,ICKPT,0);
 
-	// spool executable only if no $$(arch).$$(opsys) specified
-
-	if ( !strstr(ename,"$$") && *copySpool != 'F' && *copySpool != 'f' &&
-		 transfer_it ) {
+	// ensure the executables exist and spool them only if no 
+	// $$(arch).$$(opsys) are specified
+	if ( !strstr(ename,"$$") && transfer_it ) {
 
 		StatInfo si(ename);
+		if ( SINoFile == si.Error () && 
+		     CONDOR_UNIVERSE_VM != JobUniverse ) {
+		  fprintf ( stderr, 
+			    "\nERROR: Executable file %s does not exist\n",
+			    ename );
+		  DoCleanup ( 0, 0, NULL );
+		  exit ( 1 );
+		}
+			    
 		if (!si.Error() && (si.GetFileSize() == 0)) {
 			fprintf( stderr,
 					 "\nERROR: Executable file %s has zero length\n", 
@@ -1502,19 +1510,22 @@ SetExecutable()
 			exit( 1 );
 		}
 
-		if (SendSpoolFile(IckptName.Value()) < 0) {
-			fprintf( stderr, "\nERROR: Permission to transfer executable "
-					 "%s denied\n", IckptName.Value() );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
+		// spool executable if necessary
+		if ( isTrue ( copySpool ) ) {
+			if (SendSpoolFile(IckptName.Value()) < 0) {
+				fprintf( stderr, "\nERROR: Permission to transfer executable "
+						 "%s denied\n", IckptName.Value() );
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+			}
 
-		if (SendSpoolFileBytes(full_path(ename,false)) < 0) {
-			fprintf( stderr,
-					 "\nERROR: failed to transfer executable file %s\n", 
-					 ename );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
+			if (SendSpoolFileBytes(full_path(ename,false)) < 0) {
+				fprintf( stderr,
+						 "\nERROR: failed to transfer executable file %s\n", 
+						 ename );
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+			}
 		}
 
 	}
