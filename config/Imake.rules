@@ -1293,26 +1293,27 @@ CONDOR_ARCH_LINK = perl ../condor_scripts/condor_arch_link
 PRE_BUILT_RELEASE = ../release_dir
 #endif
 
+
 /*
 ** Link a program with Condor libraries for the standard universe
 */
 #ifndef CLINK
 #if IS_CLIPPED
-#define CLINK(compiler,name,obj)	/* */ @@\
-XCOMM Begin translation of func(CLINK)		@@\
-XCOMM NULL BODY!				@@\
+#define CLINK(compiler,name,obj) /* */ @@\
+XCOMM Begin translation of func(CLINK)    @@\
+XCOMM NULL BODY!           @@\
 XCOMM End translation of func(CLINK)
 #else
-#define CLINK(compiler,name,obj)		@@\
-XCOMM Begin translation of func(CLINK)		@@\
-all:: name.cndr.exe				@@\
-name:: name.cndr.exe				@@\
-	@$(TRUE)				@@\
-name.cndr.exe: $(CONDOR_COMPILE) $(PRE_BUILT_RELEASE)/lib obj	@@\
+#define CLINK(compiler,name,obj)    @@\
+XCOMM Begin translation of func(CLINK)    @@\
+all:: name.cndr.exe           @@\
+name:: name.cndr.exe          @@\
+	@$(TRUE)          @@\
+name.cndr.exe: $(CONDOR_COMPILE) $(PRE_BUILT_RELEASE)/lib obj  @@\
 	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o name.cndr.exe obj $(TEST_LDFLAGS) @@\
-	$(CONDOR_ARCH_LINK) name.cndr.exe		@@\
-clean::						@@\
-	rm -f name.cndr.exe obj			@@\
+	$(CONDOR_ARCH_LINK) name.cndr.exe      @@\
+clean::                 @@\
+	rm -f name.cndr.exe obj       @@\
 XCOMM End translation of func(CLINK)
 #endif /* IS_CLIPPED */
 #endif /* CLINK */
@@ -1323,18 +1324,17 @@ XCOMM End translation of func(CLINK)
 ** without libraries at all
 */
 #ifndef CLINK_NOSTD
-#define CLINK_NOSTD(compiler,name,obj)		@@\
-XCOMM Begin translation of func(CLINK_NOSTD)	@@\
-all:: name.exe					@@\
-name:: name.exe					@@\
-	@$(TRUE)				@@\
-name.exe: obj x_fake_ckpt.o			@@\
-	compiler -o name.exe obj x_fake_ckpt.o $(TEST_LDFLAGS)	@@\
-clean::						@@\
-	rm -f name.exe obj			@@\
+#define CLINK_NOSTD(compiler,name,obj)    @@\
+XCOMM Begin translation of func(CLINK_NOSTD) @@\
+all:: name.exe             @@\
+name:: name.exe               @@\
+	@$(TRUE)          @@\
+name.exe: obj x_fake_ckpt.o         @@\
+	compiler -o name.exe obj x_fake_ckpt.o $(TEST_LDFLAGS)   @@\
+clean::                 @@\
+	rm -f name.exe obj         @@\
 XCOMM End translation of func(CLINK_NOSTD)
 #endif /* CLINK_NOSTD */
-
 
 
 /*
@@ -1364,55 +1364,6 @@ clean::						@@\
 	rm -f name.exe obj			@@\
 XCOMM End translation of func(LINK_LIB)
 #endif /* LINK_LIB */
-
-
-/***********************************************************************
-** DEPRECATED condor_compile rules
-***********************************************************************/
-
-/*
-** Link a program for running remotely
-** This rule is deprecated, in favor of using CLINK 
-*/
-#ifndef RLINK
-#if IS_CLIPPED
-#define RLINK(compiler,name,obj)	/* */ @@\
-XCOMM Begin translation of func(RLINK)		@@\
-XCOMM NULL BODY!				@@\
-XCOMM End translation of func(RLINK)
-#else
-#define RLINK(compiler,name,obj)		@@\
-XCOMM Begin translation of func(RLINK)		@@\
-all:: name.remote				@@\
-name:: name.remote				@@\
-       @$(TRUE)					@@\
-name.remote: obj				@@\
-	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o name.remote obj $(TEST_LDFLAGS) @@\
-	$(CONDOR_ARCH_LINK) name.remote		@@\
-clean::						@@\
-	rm -f name.remote obj			@@\
-XCOMM End translation of func(RLINK)
-#endif /* IS_CLIPPED */
-#endif /* RLINK */
-
-
-/*
-** Link a program to run normally (no condor at all)
-** This rule is deprecated in favor of using LINK
-*/
-#ifndef VLINK
-#define VLINK(compiler,name,obj)		@@\
-XCOMM Begin translation of func(VLINK)		@@\
-all:: name.vanilla				@@\
-name:: name.vanilla				@@\
-       @$(TRUE)					@@\
-name.vanilla: obj fake_ckpt.o			@@\
-	compiler -o name.vanilla obj fake_ckpt.o $(TEST_LDFLAGS)	@@\
-clean::						@@\
-	rm -f name.vanilla obj			@@\
-XCOMM End translation of func(VLINK)
-#endif /* VLINK */
-
 
 
 /***********************************************************************

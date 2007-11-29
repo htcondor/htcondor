@@ -170,3 +170,17 @@ CONDOR_ANALYZE_STRIP = @condor_analyze_strip@
 GlobusFlavor = @globus_flavor@
 
 LIBCRYPT = @crypt_lib@
+
+/***
+ * AC_SUBST definitions needed because assignment or #define were
+ * removed from .cf files or Project.tmpl but some Imakefile still
+ * need them
+ ***/
+
+SIMPLE_LIBC = @LIBC_A@
+
+#define PVM_ARCH @_cv_pvm_arch@
+
+#if @_cv_is_clipped@
+#define IS_CLIPPED YES
+#endif

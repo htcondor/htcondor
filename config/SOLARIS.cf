@@ -29,14 +29,9 @@
 ** Shared Solaris Settings
 **************************************************************************/
 
-#define SimpleLibC /lib/libc.a
-#define LibC SimpleLibC  
-
 #define NEEDS_KBDD			NO
 
 #define DOES_SAVE_SIGSTATE	YES
-
-#define	HAS_DYNAMIC_USER_JOBS	YES
 
 #define HAS_AR_S_OPTION			YES
 #define HAS_RANLIB_TOUCH		YES
@@ -48,7 +43,6 @@
 #define NEEDS_64BIT_SYSCALLS		YES
 #define NEEDS_64BIT_STRUCTS		YES
 
-#define	PVM_ARCH			SUN4SOL2
 #define	HAS_PURIFY			YES
 
 

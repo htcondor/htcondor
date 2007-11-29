@@ -22,9 +22,6 @@
 ** the platform, version and OS specific files have been included.
 **************************************************************************/
 
-LIBC = LibC
-SIMPLE_LIBC = SimpleLibC
-
 TOP = Top
 PLATFORM = Platform
 
@@ -135,7 +132,6 @@ SMP_FLAGS =
 endif
 
 #define UNIX_RT0	$(CRT0)
-#define UNIX_LIBC	$(LIBC)
 #define CKPT_RT0	$(RELEASE_DIR)/lib/condor_rt0.o
 #define CONDOR_RT0	$(RELEASE_DIR)/lib/condor_rt0.o
 #define CKPT_LIBC	$(RELEASE_DIR)/lib/libckpt.a
@@ -165,15 +161,6 @@ endif
 #		define RANLIB_TOUCH(libname)ranlib libname
 #	endif
 #endif
-
-#ifndef IS_CLIPPED
-#  define IS_CLIPPED NO
-#endif
-#if IS_CLIPPED
-#  undef DOES_CHECKPOINTING
-#  undef DOES_COMPRESS_CKPT
-#  undef DOES_REMOTE_SYSCALLS
-#endif /* IS_CLIPPED */
 
 #ifndef FORTRAN_HAS_RECURSION
 #define FORTRAN_HAS_RECURSION NO

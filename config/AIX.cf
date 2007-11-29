@@ -34,7 +34,6 @@
 #define HAS_RANLIB_TOUCH		YES
 #define HAS_CP_PRESERVE			YES
 #define HAS_FLOCK			NO
-#define PVM_ARCH			RS6K
 
 #define ShadowSizeEstimate 200
 

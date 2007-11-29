@@ -504,6 +504,15 @@ AC_ARG_WITH(proper,
   [PROPER=$withval],
   [PROPER=no])
 
+AC_ARG_WITH(full-port,
+  [AS_HELP_STRING([--with-full-port],
+    [Perform a full build, i.e. Standard Universe included])],
+  [if "x$withval" = xyes; then
+    CLIPPED=no
+   else
+    CLIPPED=yes],
+  [CLIPPED=default])
+
 AC_ARG_WITH(soft-is-hard,
   [AS_HELP_STRING([--with-soft-is-hard],
      [Force all SOFT requirements into HARD requirements])],
@@ -1156,6 +1165,55 @@ AC_SUBST([has_vendor_f90],[$_cv_has_vendor_f90])
 # Check for functionality availability on different platforms #
 ###############################################################
 
+###
+# Check for the availability of full ports
+#
+# CLIPPED is available here as "yes", "no" or "default"
+#
+# If CLIPPED is default it means the user did not specify if she wants
+# a clipped build or not. In such a case we check to see if a full
+# port is available and if so try to build a full port.
+###
+
+# NOTES:
+#
+# Due to two problems we turn off the full port for Debian:
+#
+#  1. -fstack-protect has a support library that our glibc doesn't have and
+#      we need to copy its functionality for standard universe to link.
+#  2. C++ exception handling in stdc++ assumes that the glibc is compiled
+#     with TLS, but ours isn't and doesn't compile out of the box with
+#     TLS.
+	
+AC_MSG_CHECKING([for clipped-port default])
+case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_cv_libc_minor" in
+  *-AIX5-* | \
+  *-DUX5-* | \
+  DARWIN-* | \
+  CONDOR_FREEBSD-* | \
+  *-HPUX11-* | \
+  LINUX-*-ALPHA-* | \
+  LINUX-*-*-DEBIAN40-* | \
+  LINUX-*-I386-*-2-5 | \
+  LINUX-*-IA64-* | \
+  LINUX-*-CONDOR_PPC-* ) _cv_clipped_default=yes ;;
+  * ) _cv_clipped_default=no ;;
+esac
+AC_MSG_RESULT([$_cv_clipped_default])
+
+if test "x$CLIPPED" = "xdefault"; then
+  CLIPPED=$_cv_clipped_default
+fi
+
+# Exposed in configure.cf.in for Imake.rules's CLINK*
+AC_SUBST([_cv_is_clipped], [$CLIPPED])
+
+if test "x$CLIPPED" = "xyes"; then
+  AC_DEFINE([IS_CLIPPED], [1], [Define if doing a clipped build])
+fi
+
+# Remote Syscalls
+
 AC_MSG_CHECKING([if DOES_REMOTE_SYSCALLS is supported])
 case "$_cv_opsys" in
   HPUX | LINUX | SOLARIS )
@@ -1166,8 +1224,10 @@ case "$_cv_opsys" in
   ;;
 esac
 AC_MSG_RESULT([$_cv_does_remote_syscalls])
-AS_IF([test "x$_cv_does_remote_syscalls" = xyes],
+AS_IF([test "x$CLIPPED" != "xyes" -a "x$_cv_does_remote_syscalls" = xyes],
   AC_DEFINE([DOES_REMOTE_SYSCALLS], [1], [Define if we can do remote syscalls]))
+
+# Checkpointing
 
 AC_MSG_CHECKING([if DOES_CHECKPOINTING is supported])
 case "$_cv_opsys" in
@@ -1179,8 +1239,10 @@ case "$_cv_opsys" in
   ;;
 esac
 AC_MSG_RESULT([$_cv_does_checkpointing])
-AS_IF([test "x$_cv_does_checkpointing" = xyes],
+AS_IF([test "x$CLIPPED" != "xyes" -a "x$_cv_does_checkpointing" = xyes],
   AC_DEFINE([DOES_CHECKPOINTING], [1], [Define if we can do checkpointing]))
+
+# Compressed checkpoints
 
 AC_MSG_CHECKING([if DOES_COMPRESS_CKPT is supported])
 # Turned off on LINUX-X86_64: due to thaineryconcerning void* and int, don't compile this in for now...
@@ -1193,8 +1255,110 @@ case "$_cv_opsys-$_cv_arch" in
   ;;
 esac
 AC_MSG_RESULT([$_cv_does_compress_ckpt])
-AS_IF([test "x$_cv_does_compress_ckpt" = xyes],
+AS_IF([test "x$CLIPPED" != "xyes" -a "x$_cv_does_compress_ckpt" = xyes],
   AC_DEFINE([DOES_COMPRESS_CKPT], [1], [Define if we can compress checkpoints]))
+
+# HAS_DYNAMIC_USER_JOBS, not sure exactly what this is -matt 26 Nov 07
+if test "x$_cv_opsys" = "xSOLARIS"; then
+  AC_DEFINE([HAS_DYNAMIC_USER_JOBS], [1], [Used in condor_ckpt/image.C])
+fi
+
+# Old SOLARIS2*.cf files contained -DSolaris2*=Solaris2*, so instead
+# we AC_DEFINE Solaris2* here
+case "$_cv_opsys_vers" in
+  SOLARIS28 ) AC_DEFINE([Solaris28], [Solaris28], [Define if on Solaris28]) ;;
+  SOLARIS29 ) AC_DEFINE([Solaris29], [Solaris29], [Define if on Solaris29]) ;;
+esac
+
+# Old FREEBSD*.cf files contained -DCONDOR_FREEBSD*=CONDOR_FREEBSD*,
+# so instead we AC_DEFINE CONDOR_FREEBSD* here
+case "$_cv_opsys_vers" in
+  FREEBSD4 )
+    AC_DEFINE([CONDOR_FREEBSD4], [CONDOR_FREEBSD4], [Define if on FreeBSD4]) ;;
+  FREEBSD5 )
+    AC_DEFINE([CONDOR_FREEBSD5], [CONDOR_FREEBSD5], [Define if on FreeBSD5]) ;;
+  FREEBSD6 )
+    AC_DEFINE([CONDOR_FREEBSD6], [CONDOR_FREEBSD6], [Define if on FreeBSD6]) ;;
+  FREEBSD7 )
+    AC_DEFINE([CONDOR_FREEBSD7], [CONDOR_FREEBSD7], [Define if on FreeBSD7]) ;;
+esac
+
+# DARWIN.cf contained -DDarwin_10_*=Darwin_10_*, so instead we
+# AC_DEFINE Darwin_10_* here
+case "$_cv_opsys_vers" in
+  OSX_10_3 ) AC_DEFINE([Darwin_10_3], [Darwin_10_3], [Define if on OS X 10.3]) ;;
+  OSX_10_4 ) AC_DEFINE([Darwin_10_4], [Darwin_10_4], [Define if on OS X 10.4]) ;;
+esac
+
+# Old ALPHA_OSF1_V*.cf files contained -DDUX=DUX -DDUX*=DUX* -DTRU64,
+# so instead we AC_DEFINE them here, TRU64 is just for gsoap
+if test "x$_cv_opsys" = xyes; then
+  AC_DEFINE([DUX], [DUX], [Define if on DUX])
+  AC_DEFINE([TRU64], [DUX], [Define if on TRU64 (DUX)])
+
+  case "$_cv_opsys_vers" in
+    DUX5 ) AC_DEFINE([DUX5], [DUX5], [Define if on DUX5]) ;;
+  esac
+fi
+
+# Many old .cf files #define'd PVM_ARCH, their logic is moved here and
+# AC_SUBST'd into configure.cf.in
+if test "x$_cv_opsys" = xAIX; then
+  AC_SUBST([_cv_pvm_arch], [RS6K])
+fi
+if test "x$_cv_opsys_vers" = xDUX5; then
+  AC_SUBST([_cv_pvm_arch], [ALPHA])
+fi
+if test "x$_cv_opsys" = xCONDOR_FREEBSD; then
+  AC_SUBST([_cv_pvm_arch], [FREEBSD])
+fi
+if test "x$_cv_opsys" = xLINUX -a "x$_cv_arch" = xI386; then
+  AC_SUBST([_cv_pvm_arch], [LINUX])
+fi
+if test "x$_cv_opsys" = xSOLARIS; then
+  AC_SUBST([_cv_pvm_arch], [SUN4SOL2])
+fi
+
+# PlatformLdFlags used to live in a number of .cf files, their logic
+# now exists here
+case "$_cv_opsys" in
+  AIX ) _cv_platform_ld_flags="-Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -lcrypt -lc -static-libgcc" ;;
+  LINUX | DARWIN ) _cv_platform_ld_flags="-lresolv" ;;
+  DUX ) _cv_platform_ld_flags="-lmld" ;;
+  HPUX ) _cv_platform_ld_flags="-Wl,+vnocompatwarnings $_cv_lib_std_cpp" ;;
+#NOTE: The following definition of PlatformLdFlags assumes that the
+#compiler libraries (libgcc and libstdc++) are available _only_ as
+#static libraries, so we do not need to do anything special to cause
+#them to be statically linked.  We want them to be statically linked
+#so people can run condor binaries on machines where gcc has never
+#been installed, since this is common for Solaris boxes.
+#
+#We used to append $(GCC_STATIC_LIBS) to PlatformLdFlags, however, this
+#caused libc to be statically linked, and that caused runtime errors on
+#binaries compiled on Solaris 9 when run on Solaris 10.  Why was libc
+#statically linked you may ask?  Because GCC_STATIC_LIBS was defined
+#like this: -Wl,-bstatic -lstdc++ -lgcc.  This turns on static linking
+#but does not turn it off.  The compiler appends a bunch of standard
+#libs, including -lstdc++, -lgcc, and -lc.  Therefore, libc was being
+#statically linked.  We could have turned off static linking with
+#-Wl,-bdyanamic, so the libs appended by the compiler would not be
+#statically linked.  However, among the libs appended by the compiler
+#are the very libs we are trying to link statically, so if they were
+#available both statically and dynamically, they would be linked both
+#ways.  The version of gcc currently in use on the Solaris build
+#machines is 2.95.3, which does not support the option -nodefaultlibs,
+#so we can't easily prevent the compiler from doing this.  It does
+#support -nostdlibs, but that option also disables the linking of all
+#other standard things, including the runtime object files, so it
+#becomes a rather messy situation to make sure we link in all the stuff
+#we need without getting more than we want.
+#
+#Therefore, we do not explicitly call for static linking of the
+#compiler libs.  Instead, we depend on the compiler being installed
+#with _only_ static versions of libgcc and libstdc++.
+  SOLARIS ) _cv_platform_ld_flags="-lkstat -lelf -lsocket -lresolv -lnsl -lm -lc" ;;
+esac  
+AC_SUBST([_cv_platform_ld_flags], [$_cv_platform_ld_flags])
 
 
 #####################
@@ -1934,7 +2098,6 @@ AS_IF([test "x$enable_static" != xno -a "$_cv_has_static" = "yes"],
    AC_SUBST(_cv_has_static,NO)])
 
 
-
 ############################################################
 # What versions of what externals do we need
 ############################################################
@@ -2358,6 +2521,35 @@ AS_IF([test "x$cv_ext_gsoap" = xyes -a "x$PROPER" = xyes],
 ##  LIBS=$_libs_save])
 
 
+# This MUST happen after externals are determined because it must
+# reference information about externals, specifically glibc
+#
+# SIMPLE_LIBC is needed for unclipped builds, as is LIBC
+#
+# It turns out that SIMPLE_LIBC==LIBC
+#
+
+AC_MSG_CHECKING([if we have libc.a])
+_cv_libc_a=none
+# from externals.cf.in
+GLIBC_DIR="$ac_cv_externals/install/$_cv_ext_glibc_version/lib"
+case "$_cv_opsys" in
+# Ignore on clipped ports
+#  ?ALPHA_OSF1? ) /lib/libc.a ;;
+#  ?HPUX? ) /lib/libc.a ;;
+#  ?HPUX11? ) /usr/lib/pa20_64/libc.a ;;
+  LINUX )
+    if test "x$CLIPPED" = xyes; then
+      _cv_libc_a=/usr/lib/libc.a
+    else
+      _cv_libc_a=$GLIBC_DIR/libc.a
+    fi
+  ;;
+  SOLARIS ) _cv_libc_a=/lib/libc.a ;;
+esac
+AC_MSG_RESULT([$_cv_libc_a])
+
+AC_SUBST([LIBC_A], [$_cv_libc_a])
 
 else
 # if there's no externals at all, we still need to define these to
@@ -2369,7 +2561,6 @@ else
 
 fi
 # END of if $ac_cv_has_externals = "YES" or $PROPER = yes
-
 
 
 ############################################################

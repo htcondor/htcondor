@@ -6,31 +6,24 @@
 **
 **********/
 
-#elif defined( IS_DARWIN )
-#  define PlatformIncludeFile <BSD.cf>
+#if defined( IS_DARWIN )
+#  define PlatformIncludeFile <DARWIN.cf>
 
+/* Logic for FREEBSD has been moved to configure.ac */
 #elif defined(IS_CONDOR_FREEBSD)
-#  define PlatformIncludeFile <BSD.cf>
 
 #elif defined( IS_SOLARIS )
 #  define PlatformIncludeFile <SOLARIS.cf>
-#  if defined( IS_SOLARIS26 )
-#    define OSVersionIncludeFile <SOLARIS26.cf>
-#  elif defined( IS_SOLARIS27 )
-#    define OSVersionIncludeFile <SOLARIS27.cf>
-#  elif defined( IS_SOLARIS28 )
-#    define OSVersionIncludeFile <SOLARIS28.cf>
+/* Logic from SOLARIS2X.cf files was moved into configure.ac */
+#  if defined( IS_SOLARIS28 )
 #  elif defined( IS_SOLARIS29 )
-#    define OSVersionIncludeFile <SOLARIS29.cf>
 #  else
 #    error CONDOR DOES NOT YET SUPPORT THIS SOLARIS PLATFORM 
 #  endif
 
 #elif defined( IS_HPUX )
 #  define PlatformIncludeFile <HPUX.cf>
-#  if defined( IS_HPUX10 )
-#    define OSVersionIncludeFile <HPUX10.cf>
-#  elif defined( IS_HPUX11 )
+#  if defined( IS_HPUX11 )
 #    define OSVersionIncludeFile <HPUX11.cf>
 #  else
 #    error CONDOR DOES NOT YET SUPPORT THIS HPUX PLATFORM 
@@ -39,19 +32,13 @@
 
 #elif defined( IS_LINUX )
 #  define PlatformIncludeFile <LINUX.cf>
-#  if defined( IS_LINUX_DEBIAN40 )
-#    define OSVersionIncludeFile <LINUX_DEBIAN.cf>
-#  endif
 #  if defined( IS_I386 ) 
 #    define ArchIncludeFile <LINUX_I386.cf>
+/* Logic from LINUX_*.cf files was moved into configure.ac */
 #  elif defined( IS_ALPHA )
-#    define ArchIncludeFile <LINUX_ALPHA.cf>
 #  elif defined( IS_IA64 )
-#    define ArchIncludeFile <LINUX_IA64.cf>
 #  elif defined( IS_CONDOR_PPC )
-#    define ArchIncludeFile <LINUX_PPC.cf>
 #  elif defined( IS_X86_64 )
-#    define ArchIncludeFile <LINUX_X86_64.cf>
 #  else
 #    error CONDOR DOES NOT YET SUPPORT THIS LINUX PLATFORM 
 #  endif
@@ -59,11 +46,6 @@
 #elif defined( IS_AIX )
 #  define PlatformIncludeFile <AIX.cf>
 /* We don't have need to create a OSVersionIncludeFile file yet */
-#  if defined( IS_AIX5 )
-#    define OSVersionIncludeFile <AIX5.cf>
-#  else
-#    error CONDOR DOES NOT YET SUPPORT THIS AIX PLATFORM 
-#  endif
 
 #else
 

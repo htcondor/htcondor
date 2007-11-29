@@ -23,20 +23,8 @@
 #undef  PlatformLdFlags
 #define PlatformLdFlags		-Wl,+vnocompatwarnings $(LIB_STDCPP)
 
-/*
-#undef SimpleLibC
-#define SimpleLibC /usr/lib/pa20_64/libc.a
-#undef LibC
-#define LibC SimpleLibC
-*/
-
-
 /* inet_nota() with gcc is broken under 64-bit compilation mode, so use ours */
 #define HAS_INET_NTOA		NO
-
-#define HAS_DYNAMIC_USER_JOBS	NO
-
-#define IS_CLIPPED YES
 
 #define VendorCTestFlags -Aa -Ae
 #define VendorCPPTestFlags -Aa -ext +eh
