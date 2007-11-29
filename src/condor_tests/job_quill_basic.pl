@@ -205,11 +205,11 @@ $submitted = sub
 
 	$submitcount = $submitcount + 1;
 
-	if($submitcount == 750) {
+	if($submitcount == 75) {
 
 	sleep(30);
 
-		print "750 submitted: <<<";
+		print "75 submitted: <<<";
 		system("date");
 		print ">>>\n";
 		print "Collecting queue details from schedd\n";
