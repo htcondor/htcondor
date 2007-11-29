@@ -131,9 +131,7 @@ _cv_sysname=""
 # needed under Linux, but I'll make every OS produce this identification.
 _cv_kernel_rev="XXX"
 
-# Make sure if we get back something that begins with "IRIX" that we
-# strip off anything after it (e.g. "IRIX64", etc).
-os=`uname -s | sed 's/IRIX.*/IRIX/'`
+os=`uname -s`
 
 if test "$os" = "HP-UX"; then
   _cv_op_sys="HPUX"
@@ -145,18 +143,6 @@ if test "$os" = "HP-UX"; then
   elif test "$osrelease" = "B.11.11" ; then
     _cv_opsys_vers="HPUX11"
     _cv_sysname="hp_ux110"
-  fi
-
-elif test "$os" = "OSF1" ; then
-  _cv_arch="ALPHA"
-  _cv_op_sys="OSF1"
-  _cv_opsys="DUX"
-  if test $osrelease = "V4.0" ; then
-    _cv_opsys_vers="DUX4"
-    _cv_sysname="alpha_dux40"
-  elif test $osrelease = "V5.0" -o $osrelease = "V5.1" ; then
-    _cv_opsys_vers="DUX5"
-    _cv_sysname="alpha_dux51"
   fi
 
 elif test $os = "Linux" ; then
@@ -313,26 +299,6 @@ elif test $os = "SunOS" ; then
   fi
 
   # now figure out the kernel revision. Under solaris this will have
-  # the form: major.minor
-  _cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
-
-elif test $os = "IRIX" ; then
-  _cv_arch="SGI"
-  _cv_op_sys="IRIX"
-  _cv_opsys="IRIX"
-  if test "$osrelease" = "6.5" ; then
-    _cv_opsys_vers="IRIX65"
-    _cv_sysname="sgi_65"
-    IsMipsVersion=3
-    IsMipsABI=N32
-  else
-    _cv_opsys_vers="IRIX62"
-    _cv_sysname="sgi_62"
-    IsMipsVersion=2
-    IsMipsABI=O32
-  fi
-
-  # now figure out the kernel revision. Under irix this will have
   # the form: major.minor
   _cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
 
@@ -895,36 +861,6 @@ case "$os" in
       CRT_BEGIN=/usr/ccs/lib/pa20_64/crt0.o
     fi
     ;;
-  "IRIX" )
-    case "$IsMipsABI" in
-      "N64" )
-        IrixBaseLibPath=/usr/lib64
-        ;;
-      "N32" )
-        IrixBaseLibPath=/usr/lib32
-        ;;
-      "O32" )
-        IrixBaseLibPath=/usr/lib32
-        ;;
-    esac
-    case "$IsMipsVersion" in
-      "2" )
-        IrixLibPath=$IrixBaseLibPath
-        ;;
-      "3" )
-        IrixLibPath="$IrixBaseLibPath/mips3"
-        ;;
-      "4" )
-        IrixLibPath="$IrixBaseLibPath/mips4"
-        ;;
-    esac
-    CRT_BEGIN="$IrixLibPath/crt1.o"
-    ;;
-
-  "OSF1" )
-    CRT_BEGIN=/usr/lib/cmplrs/cc/crt0.o
-    ;;
-
   "AIX" )
     CRT_BEGIN=/lib/crt0.o
     ;;
@@ -978,9 +914,8 @@ else
   # -Bstatic is GNU ld
   # -B,static is Solaris ld
   # -a,archive is HPUX ld
-  # -no_so is DUX ld
   #####
-  for arg in "-Bstatic" "-B,static" "-a,archive" "-no_so" ; do
+  for arg in "-Bstatic" "-B,static" "-a,archive" ; do
     # we always want to prepend "-Wl,"
     arg="-Wl,$arg"
     AC_MSG_CHECKING([$arg])
@@ -1016,8 +951,6 @@ fi
 # These options are shared between gcc and g++
 #
 
-AS_IF([test "x$_cv_arch" = xALPHA -a "x$_cv_op_sys" = xOSF1],
-  [debug_flags="-ggdb"])
 AC_SUBST([DEBUG_FLAGS], $debug_flags)
 
 # The standard warnings
@@ -1225,7 +1158,7 @@ AC_SUBST([has_vendor_f90],[$_cv_has_vendor_f90])
 
 AC_MSG_CHECKING([if DOES_REMOTE_SYSCALLS is supported])
 case "$_cv_opsys" in
-  HPUX | LINUX | DUX | SOLARIS )
+  HPUX | LINUX | SOLARIS )
     _cv_does_remote_syscalls=yes
   ;;
   * )
@@ -1238,7 +1171,7 @@ AS_IF([test "x$_cv_does_remote_syscalls" = xyes],
 
 AC_MSG_CHECKING([if DOES_CHECKPOINTING is supported])
 case "$_cv_opsys" in
-  HPUX | LINUX | DUX | SOLARIS )
+  HPUX | LINUX | SOLARIS )
     _cv_does_checkpointing=yes
   ;;
   * )
@@ -1252,7 +1185,7 @@ AS_IF([test "x$_cv_does_checkpointing" = xyes],
 AC_MSG_CHECKING([if DOES_COMPRESS_CKPT is supported])
 # Turned off on LINUX-X86_64: due to thaineryconcerning void* and int, don't compile this in for now...
 case "$_cv_opsys-$_cv_arch" in
-  LINUX-X86_64 | DUX-* )
+  LINUX-X86_64 )
     _cv_does_compress_ckpt=no
   ;;
   * )
@@ -1380,7 +1313,7 @@ for as_dir in $PATH ; do
 done;
 if test "$_cv_gnu_strip" = "no" ; then
   AC_MSG_RESULT([no])
-  if ! test "$os" = "Darwin" && ! test "$os" = "OSF1" ; then
+  if ! test "$os" = "Darwin" ; then
     AC_MSG_WARN([GNU strip is recommended])
   fi
 else
@@ -1722,15 +1655,11 @@ AS_IF([test "x$enable_tt" = xyes],
 # package them into a tarball. for example, if say objcopy's debuglink flag
 # is available, but we can't exclude the files when making the tarballs,
 # then turn the whole thing off.
-# NOTE: There is some problem with OSF1 that executables subjected to this
-# form of stripping become not executable anymore. I haven't looked into it
-# deeply, so for now I'll just turn this off for that platform.
 AC_MSG_CHECKING([for ability to produce debuglink tarball])
 if test "x$ac_find" != "xno" -a "x$ac_objcopy" != "xno" \
 		-a "x$_cv_objcopy_keepdebug_flag" != "x" \
 		-a "x$_cv_gnu_tar_exclude_flag" != "x" \
-		-a "x$_cv_gnu_tar_files_from_flag" != "x" \
-		-a ! "$os" = "OSF1"; then
+		-a "x$_cv_gnu_tar_files_from_flag" != "x" ; then
 	AC_MSG_RESULT([yes])
 	AC_DEFINE(HAVE_DEBUGLINK_TARBALL,[1],[Define to 1 of you know you can produce the debuglink tarball])
 else
@@ -1977,16 +1906,10 @@ case "$os" in
       _cv_has_static=yes
     fi
     ;;
-  "OSF1" )
-    _cv_has_static=yes
-    ;;
   "Linux" )
     _cv_has_static=yes
     ;;
   "SunOS" )
-    _cv_has_static=no
-    ;;
-  "IRIX" )
     _cv_has_static=no
     ;;
   "Darwin" )
@@ -2041,7 +1964,7 @@ AC_MSG_NOTICE([determining availability of external packages])
 AC_MSG_CHECKING([if globus is supported])
 case "$os" in
   HP-UX ) _cv_has_globus=no ;;
-  OSF1|Linux|SunOS|IRIX|Darwin|FreeBSD|AIX ) _cv_has_globus=yes ;;
+  Linux|SunOS|Darwin|FreeBSD|AIX ) _cv_has_globus=yes ;;
   * )
     AC_MSG_RESULT([error])
     AC_MSG_ERROR([Unrecognized platform: $os])
@@ -2052,7 +1975,7 @@ AC_MSG_RESULT([$_cv_has_globus])
 AC_MSG_CHECKING([if gsoap is supported])
 case "$os" in
   HP-UX ) _cv_has_gsoap=yes ;;
-  OSF1|Linux|SunOS|IRIX|Darwin|FreeBSD|AIX ) _cv_has_gsoap=yes ;;
+  Linux|SunOS|Darwin|FreeBSD|AIX ) _cv_has_gsoap=yes ;;
   * )
     AC_MSG_RESULT([error])
     AC_MSG_ERROR([Unrecognized platform: $os])
@@ -2062,8 +1985,8 @@ AC_MSG_RESULT([$_cv_has_gsoap])
 
 AC_MSG_CHECKING([if krb5 is supported])
 case "$os-$_cv_arch" in
-  OSF1-*|HP-UX-*|Linux-ALPHA|Linux-CONDOR_PPC ) _cv_has_krb5=no ;;
-  Linux-*|SunOS-*|IRIX-*|Darwin-*|FreeBSD-*|AIX-* ) _cv_has_krb5=yes ;;
+  HP-UX-*|Linux-ALPHA|Linux-CONDOR_PPC ) _cv_has_krb5=no ;;
+  Linux-*|SunOS-*|Darwin-*|FreeBSD-*|AIX-* ) _cv_has_krb5=yes ;;
   * )
     AC_MSG_RESULT([error])
     AC_MSG_ERROR([Unrecognized platform: $os-$_cv_arch])
@@ -2076,7 +1999,7 @@ case "$os-$_cv_arch-$_cv_opsys_vers" in
   HP-UX-*-HPUX11|Linux-ALPHA-*|Linux-CONDOR_PPC-*|Linux-X86_64-*|Linux-IA64-*|Darwin-* )
     _cv_has_pvm=no
   ;;
-  HP-UX-*-HPUX10|OSF1-*|Linux-*|SunOS-*|IRIX-*|FreeBSD-*|AIX-* )
+  HP-UX-*-HPUX10|Linux-*|SunOS-*|FreeBSD-*|AIX-* )
     _cv_has_pvm=yes
   ;;
   * )
@@ -2350,7 +2273,7 @@ if test "x$_cv_has_globus" = xyes -a "x$cv_ext_globus" = xyes; then
   _cv_globus_flavor=gcc32dbg
   if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" -o "$_cv_arch" = "X86_64"; then
     _cv_globus_flavor=gcc64dbg
-  elif test "$_cv_arch" = "SGI" -o "$_cv_opsys" = "AIX" ; then
+  elif test "$_cv_opsys" = "AIX" ; then
     _cv_globus_flavor=vendorcc32dbg
   fi
   AC_MSG_RESULT([$_cv_globus_flavor])

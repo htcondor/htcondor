@@ -6,17 +6,6 @@
 **
 **********/
 
-#if defined( IS_DUX )
-#  define PlatformIncludeFile <ALPHA_OSF1.cf>
-#  if defined( IS_DUX4 )
-#    define OSVersionIncludeFile <ALPHA_OSF1_V4.cf>
-#  elif defined( IS_DUX5 )
-#    define OSVersionIncludeFile <ALPHA_OSF1_V5.cf>
-#  else
-#    error CONDOR DOES NOT YET SUPPORT THIS DUX PLATFORM 
-#  endif
-
-
 #elif defined( IS_DARWIN )
 #  define PlatformIncludeFile <BSD.cf>
 
@@ -65,14 +54,6 @@
 #    define ArchIncludeFile <LINUX_X86_64.cf>
 #  else
 #    error CONDOR DOES NOT YET SUPPORT THIS LINUX PLATFORM 
-#  endif
-
-#elif defined( IS_IRIX )
-#  define PlatformIncludeFile <SGI_IRIX.cf>
-#  if defined( IS_IRIX65 )
-#    define OSVersionIncludeFile <SGI_IRIX65.cf>
-#  else
-#    error CONDOR DOES NOT YET SUPPORT THIS IRIX PLATFORM 
 #  endif
 
 #elif defined( IS_AIX )
