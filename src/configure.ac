@@ -511,7 +511,7 @@ AC_ARG_WITH(full-port,
     CLIPPED=no
    else
     CLIPPED=yes
-   fi],
+   fi;],
   [CLIPPED=default])
 
 AC_ARG_WITH(soft-is-hard,
