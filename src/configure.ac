@@ -510,7 +510,8 @@ AC_ARG_WITH(full-port,
   [if "x$withval" = xyes; then
     CLIPPED=no
    else
-    CLIPPED=yes],
+    CLIPPED=yes
+   fi],
   [CLIPPED=default])
 
 AC_ARG_WITH(soft-is-hard,
