@@ -14,7 +14,7 @@ Note that the MPI contrib module will only work with condor versions
 
 Installing the MPI Contrib Module
 
-   For complete documentation on using PVM in Condor, see the section
+   For complete documentation on using MPI in Condor, see the section
    entitled ``Running MPICH jobs in Condor'' in the
    version 6.1 manual. This manual can be found at
    http://www.cs.wisc.edu/condor/manual/v6.1. To install the MPI
