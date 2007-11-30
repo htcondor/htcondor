@@ -40,6 +40,9 @@ foreach $line (@got) {
 	if($line =~ /^Failed\s+tests\s+=\s+(\d+).*$/) {
 		if($1 != 0) {
 			print "Sysapi failed $1 test(s)\n";
+			foreach $outline (@got) {
+				print "Error: Sysapi out: $outline\n";
+			}
 			exit(1);
 		} else {
 			print "Sysapi passed $passedtests tests\n";
@@ -47,7 +50,7 @@ foreach $line (@got) {
 		}
 	} elsif($line =~ /^Passed\s+tests\s+=\s+(\d+).*$/) {
 		$passedtests = $1;
-	} elsif($line =~ /^Failed.*$/) {
+	} elsif($line =~ /^.*Failed.*$/) {
 		print "$line\n";
 	}
 }

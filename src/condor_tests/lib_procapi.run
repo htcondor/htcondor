@@ -40,6 +40,9 @@ my $lastsave = "";
 foreach $line (@got) {
 	chomp($line);
 	$lastsave = $line;
+	if($line =~ /^.*test\s+\d+\s+failed.*$/) {
+		print "$line\n";
+	}
 	#print "$line\n";
 }
 
@@ -48,7 +51,12 @@ if($lastsave =~ /^.*Tests\s+completed\s+sucessfully.*$/) {
 	print "Lastline was: $lastsave\n";
 	print "Procapi Test passed!\n";
 } else {
+	print "*********** Procapi Test failed! ***************\n";
 	print "Lastline was: $lastsave\n";
-	die "Procapi Test failed!\n";
+	foreach $line (@got) {
+	    chomp($line);
+		print "$line\n";
+	}
+	die "*********** Procapi Test failed! ***************\n";
 }
 
