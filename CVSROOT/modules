@@ -892,8 +892,36 @@ V6_9_5_EXT	-a V6_9_COMMON_EXT \
                    externals/bundles/nordugridgahp/1.1.2 \
                    externals/bundles/zlib/1.2.3
 
+
+# ----------------------------------------------------------------------
+# Start over with a clean slate to correct the mess above and purge
+# stale externals we don't need anymore. This should just be renamed
+# to V7_0_COMMON_EXT in the near future, but for now, we'll keep
+# calling it 6.9.6.
+# ----------------------------------------------------------------------
 # Externals needed for 6.9.6.
-V6_9_6_EXT	-a V6_9_5_EXT
+V6_9_6_EXT	   -a EXT_COMMON \
+                   externals/bundles/blahp/1.7.0
+                   externals/bundles/classads/0.9.8-b4 \
+                   externals/bundles/coredumper \
+                   externals/bundles/drmaa/1.5.1 \
+                   externals/bundles/gahp/1.0.15 \
+                   externals/bundles/gcb/1.5.5 \
+                   externals/bundles/glibc/2.3.2.27.9.7 \
+                   externals/bundles/globus/4.0.5 \
+                   externals/bundles/gsoap/2.7.6c-p2 \
+                   externals/bundles/gt4gahp/1.7 \
+                   externals/bundles/krb5/1.4.3 \
+                   externals/bundles/krb5/1.4.3-p0 \
+                   externals/bundles/linuxlibcheaders \
+                   externals/bundles/nordugridgahp/1.1.2 \
+                   externals/bundles/openssl/0.9.8 \
+                   externals/bundles/pcre/5.0 \
+                   externals/bundles/postgresql/8.0.2 \
+                   externals/bundles/postgresql/8.2.3 \
+                   externals/bundles/srb/3.2.1 \
+                   externals/bundles/unicoregahp/1.2.0 \
+                   externals/bundles/zlib/1.2.3
 
 # Externals needed for the head of the V6_9-branch (a.k.a. the TRUNK)
 V6_9_EXT	-a V6_9_6_EXT
