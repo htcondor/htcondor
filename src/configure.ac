@@ -2226,15 +2226,6 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
   including_glibc_ext=YES
   _cv_libc_full_vers="$_cv_libc_major.$_cv_libc_minor.$_cv_libc_patch"
   case "$_cv_libc_full_vers" in
-  "2.2.4" )
-    CHECK_EXTERNAL([glibc],[2.2.2], [soft])
-    ;;
-  "2.2.5" )
-    CHECK_EXTERNAL([glibc],[2.2.2], [soft])
-    ;;
-  "2.2.93" )
-    CHECK_EXTERNAL([glibc],[2.2.93], [soft])
-    ;;
   "2.3.2" )
     # the glibc 2.3.2 from redhat's source rpms are very different than the
 	# stock 2.3.2 you can download off of the web.
