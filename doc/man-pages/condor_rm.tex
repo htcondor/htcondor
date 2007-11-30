@@ -56,12 +56,6 @@ to finish any clean up at the remote scheduler.
 
 \GenRem
 
-When removing a PVM universe job, you should always remove the entire
-job cluster.  (In the PVM universe, each PVM job is assigned its own
-cluster number, and each machine class is assigned a ``process''
-number in the job's cluster.)  Removing a subset of the machine
-classes for a PVM job is not supported.
-
 Use the \Arg{-forcex} argument with caution, as it will remove jobs
 from the local queue immediately, but can ``orphan'' parts of the job
 that are running remotely and haven't yet been stopped or removed.

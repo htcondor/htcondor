@@ -2901,13 +2901,6 @@ Configuring The Startd Policy.
   spawn.
   It is normally defined relative to \MacroUNI{SBIN}.
   
-\item[\Macro{ALTERNATE\_STARTER\_1}] \label{param:AlternateStarter1}
-  This macro holds the full path to the \Condor{starter.pvm}
-  binary that the \Condor{startd} spawns to service PVM jobs.  It is normally
-  defined relative to \MacroUNI{SBIN}, since by default,
-  \Condor{starter.pvm} is installed in the regular Condor release
-  directory. 
-  
 \item[\Macro{POLLING\_INTERVAL}] \label{param:PollingInterval} When a
   \Condor{startd} enters the claimed state, this macro determines how often
   the state of the machine is polled to check the need to suspend, resume,
@@ -3886,11 +3879,6 @@ These macros control the \Condor{schedd}.
   full path of the \Condor{shadow} binary that the \Condor{schedd}
   spawns.  It is normally defined in terms of \MacroUNI{SBIN}. 
   
-\item[\Macro{SHADOW\_PVM}] \label{param:ShadowPvm} This macro
-  determines the full path of the special \Condor{shadow.pvm} binary
-  used for supporting PVM jobs that the \Condor{schedd} spawns.  It is
-  normally defined in terms of \MacroUNI{SBIN}.
-  
 \item[\Macro{START\_LOCAL\_UNIVERSE}] \label{param:StartLocalUniverse}
   A boolean value that defaults to \Expr{True}.
   The \Condor{schedd} uses this macro to determine whether to start
@@ -4497,32 +4485,6 @@ Defaults to 900 (15 minutes).
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Shadow-PVM-Config-File-Entries}\condor{shadow.pvm}
-Configuration File Entries}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\index{configuration!condor\_shadow.pvm configuration variables}
-These macros control the \Condor{shadow.pvm}, the special shadow
-that supports PVM jobs inside Condor.  See
-section~\ref{sec:Install-PVM-Condor} on Installing PVM Support in
-Condor for details.  \Condor{shadow} macros also apply to this
-special shadow.  See section~\ref{sec:Shadow-Config-File-Entries}.
-\begin{description}
-
-\item[\Macro{PVMD}] \label{param:PvmD}  This macro holds the full path
-  to the special \Condor{pvmd}, the Condor PVM daemon.  This daemon is
-  installed in the regular Condor release directory by default, so the
-  macro is usually defined in terms of \MacroUNI{SBIN}.
-  
-\item[\Macro{PVMGS}] \label{param:PvmGS} This macro holds the full
-  path to the special \Condor{pvmgs}, the Condor PVM Group Server
-  daemon, which is needed to support PVM groups.  This daemon is
-  installed in the regular Condor release directory by default, so the
-  macro is usually defined in terms of \MacroUNI{SBIN}.
-
-\end{description}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Starter-Config-File-Entries}\condor{starter}
 Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -4659,7 +4621,7 @@ daemons.
 When both the user job and \MacroNI{STARTER\_JOB\_ENVIRONMENT} define
 an environment variable that is in the \Condor{starter}'s
 environment, the user job's definition takes precedence.
-This variable does not apply to standard or pvm universe jobs.
+This variable does not apply to standard universe jobs.
 
 \item[\Macro{STARTER\_UPLOAD\_TIMEOUT}]
 \label{param:StarterUploadTimeout} 

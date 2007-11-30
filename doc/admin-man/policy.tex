@@ -1521,15 +1521,15 @@ MachineBusy             = ($(CPUBusy) || $(KeyboardBusy)
 Macros are defined to want to suspend jobs (instead of
 killing them) in the case of jobs that use little memory,
 when the keyboard is not being used, and for vanilla universe
-and PVM universe jobs.
+jobs.
 We want to gracefully vacate jobs which
 have been running for more than 10 minutes
-or are vanilla universe or PVM universe jobs.
+or are vanilla universe jobs.
 \begin{verbatim}
 WANT_SUSPEND       = ( $(SmallJob) || $(KeyboardNotBusy) \
-                       || $(IsPVM) || $(IsVanilla) )
+                       || $(IsVanilla) )
 WANT_VACATE        = ( $(ActivationTimer) > 10 * $(MINUTE) \
-                       || $(IsPVM) || $(IsVanilla) )
+                       || $(IsVanilla) )
 \end{verbatim}
 
 Finally, definitions of the actual expressions.
@@ -1632,9 +1632,9 @@ KeyboardNotBusy         = ($(KeyboardBusy) == False)
 MachineBusy             = ($(CPUBusy) || $(KeyboardBusy)
 
 WANT_SUSPEND       = ( $(SmallJob) || $(KeyboardNotBusy) \
-                       || $(IsPVM) || $(IsVanilla) )
+                       || $(IsVanilla) )
 WANT_VACATE        = ( $(ActivationTimer) > 10 * $(MINUTE) \
-                       || $(IsPVM) || $(IsVanilla) )
+                       || $(IsVanilla) )
 START        = ( (KeyboardIdle > $(StartIdleTime)) \
                   && ( $(CPUIdle) || \
                        (State != "Unclaimed" && State != "Owner")) )
@@ -1797,12 +1797,12 @@ START = ( ($(CPUIdle) || (State != "Unclaimed" && State != "Owner")) \
           && (IsDesktop =!= True || (KeyboardIdle > $(StartIdleTime))) )
 
 # Suspend (instead of vacating/killing) for the following cases:
-WANT_SUSPEND = ( $(SmallJob) || $(JustCpu) || $(IsPVM) \
+WANT_SUSPEND = ( $(SmallJob) || $(JustCpu) \
                  || $(IsVanilla) )
 
 # When preempting, vacate (instead of killing) in the following cases:
 WANT_VACATE  = ( $(ActivationTimer) > 10 * $(MINUTE) \
-                 || $(IsPVM) || $(IsVanilla) )
+                 || $(IsVanilla) )
 
 # Suspend jobs if:
 # 1) The CPU has been busy for more than 2 minutes, AND

@@ -355,7 +355,6 @@ universes for user jobs:
 \begin{itemize}
 	\item Standard
 	\item Vanilla
-	\item PVM
  	\item MPI
 	\item Grid
 	\item Java
@@ -375,9 +374,6 @@ restrictions on the programs that can be run.
 \index{universe!vanilla}
 The vanilla universe provides fewer services, but has very few
 restrictions.
-\index{universe!PVM}
-The PVM universe is for programs written to the Parallel Virtual
-Machine interface.  See section~\ref{sec:PVM} for more about PVM and Condor.
 \index{universe!MPI}
 The MPI universe is for programs written to the MPICH interface.
 See section~\ref{sec:MPI} for more about MPI and Condor. The MPI Universe
@@ -516,15 +512,6 @@ section~\ref{sec:shared-fs} on page~\pageref{sec:shared-fs}.
 For details on using the Condor File Transfer mechanism, see 
 section~\ref{sec:file-transfer} on page~\pageref{sec:file-transfer}.
 
-
-%%%%%%%%%%%%
-\subsubsection{PVM Universe}
-%%%%%%%%%%%%
-
-\index{universe!PVM}
-The PVM universe allows programs written for the Parallel Virtual Machine
-interface to be used within the opportunistic Condor environment.
-Please see section~\ref{sec:PVM} for more details.
 
 %%%%%%%%%%%%
 \subsubsection{Grid Universe}
@@ -1116,16 +1103,6 @@ For the grid universe,
 jobs are to be executed on remote machines, so there would never
 be a shared file system between machines.
 See section~\ref{sec:Condor-G} for more details.
-
-For the PVM universe,
-file transfer other than the master's executable and files given in
-\SubmitCmd{input},
-\SubmitCmd{output}, and
-\SubmitCmd{error} commands is not supported.
-This is not usually an impediment (shared file system or not), since
-PVM jobs are set up to have the master direct the workers, and I/O
-from the workers is usually passed back to the master via PVM
-messages, not files.
 
 For the scheduler universe,
 Condor is only using the machine from which the job is submitted.
@@ -2182,10 +2159,6 @@ the usual method to nicely terminate a Unix program.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/java.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/pvm.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

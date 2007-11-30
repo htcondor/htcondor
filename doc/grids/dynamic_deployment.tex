@@ -73,8 +73,8 @@ submit node:
 
 \footnotesize
 \begin{verbatim}
-DEPLOYMENT_REQUIRED_EXECS       = MASTER, SCHEDD, PREEN, STARTER, STARTER_PVM,\
-                                  STARTER_STANDARD, SHADOW, SHADOW_PVM, \
+DEPLOYMENT_REQUIRED_EXECS       = MASTER, SCHEDD, PREEN, STARTER, \
+                                  STARTER_STANDARD, SHADOW, \
                                   SHADOW_STANDARD, GRIDMANAGER, GAHP, CONDOR_GAHP
 DEPLOYMENT_REQUIRED_DIRS        = SPOOL, LOG, EXECUTE
 DEPLOYMENT_RECOMMENDED_EXECS    = CREDD
@@ -133,8 +133,6 @@ sbin/condor_shadow.std
 sbin/condor_starter.std
 sbin/condor_schedd
 sbin/condor_master
-sbin/condor_starter.pvm
-sbin/condor_shadow.pvm
 sbin/condor_gridmanager
 sbin/gt4_gahp
 sbin/gahp_server

@@ -74,14 +74,6 @@ which hosts they happen to be running on.
 Only the owner of the jobs or queue super users have permission to use
 \Condor{vacate\_job}.
 
-When vacating a PVM universe job, you should always vacate the entire
-job cluster.  (In the PVM universe, each PVM job is assigned its own
-cluster number, and each machine class is assigned a ``process''
-number in the job's cluster.)  Vacating a subset of the machine
-classes for a PVM job is not supported using \Condor{vacate\_job}.
-To vacate individual nodes in a PVM computation, you must use
-\Condor{vacate} and target the specific hosts.  
-
 \Examples
 
 To vacate job 23.0:

@@ -470,7 +470,7 @@ one submit description file.
 %% universe
 %%%%%%%%%%%%%%%%%%%
 
-\item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler
+\item[universe = $<$vanilla \Bar\ standard \Bar\ scheduler
 \Bar\ local \Bar\ grid \Bar\ mpi \Bar\ java \Bar\ vm$>$]
 \index{submit commands!universe}
 \label{man-condor-submit-universe}
@@ -483,8 +483,8 @@ via \Condor{compile} with the Condor libraries and therefore supports
 checkpointing and remote system calls.  The \SubmitCmd{vanilla} Universe is an
 execution environment for jobs which have not been linked with the
 Condor libraries.  \emph{Note:} Use the \SubmitCmd{vanilla} Universe to
-submit shell scripts to Condor.  The \SubmitCmd{pvm} Universe is for a
-parallel job written with PVM 3.4. The \SubmitCmd{scheduler} is for a job that
+submit shell scripts to Condor. 
+The \SubmitCmd{scheduler} is for a job that
 should act as a metascheduler.
 The \SubmitCmd{grid} universe forwards the job to an external job
 management system.
@@ -1573,7 +1573,7 @@ and the type of grid system is one of \SubmitCmd{gt2},
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\emph{COMMANDS FOR PARALLEL, JAVA, SCHEDULER, and PVM UNIVERSES}
+\emph{COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{description} 
 
@@ -1618,20 +1618,8 @@ and initial property values.
 %% machine_count
 %%%%%%%%%%%%%%%%%%%
 
-\item[machine\_count = $<$min..max$>$ \Bar\ $<$max$>$] 
+\item[machine\_count = $<$max$>$] 
 \index{submit commands!machine\_count}
-For the PVM universe,
-both \Arg{min} and \Arg{max} or just
-\Arg{max} may be defined. 
-If \SubmitCmd{machine\_count} is
-specified, Condor will not start the job until it can simultaneously
-supply the job with \Arg{min} machines.  Condor will continue to try 
-to provide up
-to \Arg{max} machines, but will not delay starting of the job to do so.
-If the job is started with fewer than \Arg{max} machines, the job
-will be notified via a usual PvmHostAdd notification as additional
-hosts come on line.
-
 For the parallel (and therefore, the mpi) universe,
 a single value (\Arg{max}) is required.
 It is neither a maximum or minimum, but 
@@ -2304,7 +2292,7 @@ These macros are
 intended to aid in the specification of input/output files, arguments,
 etc., for clusters with lots of jobs, and/or could be used to supply a
 Condor process with its own cluster and process numbers on the command
-line.  The \MacroU{Process} macro should not be used for PVM jobs.
+line.
 The 
 \MacroU{Node} macro is defined only for MPI universe jobs.
 It is a unique value assigned for the duration of the job
