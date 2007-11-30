@@ -1216,7 +1216,9 @@ void init_firewall_exceptions() {
 #ifdef WIN32
 
 	bool add_exception;
-	char *master_image_path, *schedd_image_path, *startd_image_path;
+	char *master_image_path, *schedd_image_path, *startd_image_path,
+		 *dagman_image_path, *bin_path;
+	const char* dagman_exe = "condor_dagman.exe";
 
 	WindowsFirewallHelper wfh;
 	
@@ -1238,6 +1240,19 @@ void init_firewall_exceptions() {
 	
 		schedd_image_path = param("SCHEDD");
 		startd_image_path = param("STARTD");
+
+		// We also want to add exceptions for the DAGMan we ship with
+		// with Condor:
+
+		bin_path = param ( "BIN" );
+		if ( bin_path ) {
+			dagman_image_path = (char*) malloc (
+				strlen ( bin_path ) + strlen ( dagman_exe ) + 2 );
+			if ( dagman_image_path ) {
+				sprintf ( dagman_image_path, "%s\\%s", bin_path, dagman_exe );
+			}
+			free ( bin_path );
+		}
 
 		if ( master_image_path ) {
 
@@ -1263,8 +1278,17 @@ void init_firewall_exceptions() {
 				}
 			}
 
+			if ( dagman_image_path ) {
+				if ( !wfh.addTrusted (dagman_image_path) ) {
+					dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to "
+						"the windows firewall exception list.\n",
+						dagman_image_path);
+				}
+			}
+
 			if ( schedd_image_path ) { free(schedd_image_path); }
 			if ( startd_image_path ) { free(startd_image_path); }
+			if ( dagman_image_path ) { free(dagman_image_path); }
 			free(master_image_path);
 
 		} else {
