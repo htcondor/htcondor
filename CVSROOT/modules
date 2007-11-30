@@ -885,10 +885,6 @@ V6_9_5_EXT	-a V6_9_COMMON_EXT \
                    externals/bundles/classads/0.9.8-b4 \
                    externals/bundles/gsoap/2.7.6c-p2 \
                    externals/bundles/krb5/1.4.3-p0 \
-                   externals/bundles/gcb/1.5.1 \
-                   externals/bundles/gcb/1.5.2 \
-                   externals/bundles/gcb/1.5.3 \
-                   externals/bundles/gcb/1.5.4 \
                    externals/bundles/gcb/1.5.5 \
                    externals/bundles/drmaa/1.5.1 \
                    externals/bundles/gt4gahp/1.7 \
