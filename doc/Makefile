@@ -167,3 +167,22 @@ release:
 	make release-ps
 	make release-pdf
 	make release-html
+
+.PHONY: just-man-pages
+
+just-man-pages:
+	echo "% do not want times" > timesfont.tex
+	rm -f fontsize.tex
+	rm -f symbol.tex
+	rm -f figuresizing.tex
+	ln -s regularfont.tex fontsize.tex
+	ln -s symbol-html.tex symbol.tex
+	ln -s figuresizing-html.tex figuresizing.tex
+	cd makeman && make clean makeman
+	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons just-man-pages.tex
+	for html in just-man-pages/condor_*.html; do \
+		makeman/makeman -v -i $$html -s 1; \
+	done
+	-mkdir man
+	-mkdir man/man1
+	mv just-man-pages/*.1 man/man1
