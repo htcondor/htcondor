@@ -368,7 +368,9 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	fprintf(pSubFile, "output\t\t= %s\n", opts.strLibOut.Value());
     fprintf(pSubFile, "error\t\t= %s\n", opts.strLibErr.Value());
     fprintf(pSubFile, "log\t\t= %s\n", opts.strSchedLog.Value());
+#if !defined ( WIN32 )
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
+#endif
 
 	const char *defaultRemoveExpr = "( ExitSignal =?= 11 || "
 				"(ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))";
