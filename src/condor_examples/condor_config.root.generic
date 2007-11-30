@@ -94,8 +94,6 @@ KBDD			= $(SBIN)/condor_kbdd
 
 STARTD			= $(SBIN)/condor_startd
 STARTER			= $(SBIN)/condor_starter
-ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.pvm
-ALTERNATE_STARTER_2	= $(SBIN)/condor_starter.v63
 
 
 ##--------------------------------------------------------------------
@@ -104,16 +102,6 @@ ALTERNATE_STARTER_2	= $(SBIN)/condor_starter.v63
 
 SCHEDD			= $(SBIN)/condor_schedd
 SHADOW			= $(SBIN)/condor_shadow
-SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
-SHADOW_NT		= $(SBIN)/condor_shadow.v63
-SHADOW_MPI		= $(SBIN)/condor_shadow.v63
-
-##  Where is the condor pvm daemon installed?
-PVMD			= $(SBIN)/condor_pvmd
-
-##  Where is the condor pvm group server daemon installed?
-PVMGS			= $(SBIN)/condor_pvmgs
-
 
 ##--------------------------------------------------------------------
 ##  condor_starter

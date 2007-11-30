@@ -25,7 +25,7 @@ use POSIX ":sys_wait_h";
 $config_name = "glidein_condor_config";
 $startup_name = "glidein_startup";
 @DAEMONS = ( "condor_master", "condor_startd", "condor_starter",
-			 "condor_starter.std", "condor_pvmd", "condor_starter.pvm" );
+			 "condor_starter.std" );
 
 if ( ( $error = parse_command_line() )
 		|| ( $error = gather_info() ) )
@@ -616,12 +616,8 @@ PROCD = \$(SBIN)/condor_procd
 PROCD_LOG = \$(LOG)/ProcLog
 PROCD_ADDRESS = \$(LOCK)/procd_address
 
-STARTER_PVM = \$(SBIN)/condor_starter.pvm
 STARTER_STD = \$(SBIN)/condor_starter.std
-STARTER_LIST = STARTER, STARTER_STD, STARTER_PVM
-
-ALTERNATE_STARTER_1 = \$(SBIN)/condor_starter.pvm
-PVMD = \$(SBIN)/condor_pvmd
+STARTER_LIST = STARTER, STARTER_STD
 
 USE_NFS = False
 USE_CKPT_SERVER = False

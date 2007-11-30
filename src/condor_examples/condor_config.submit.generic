@@ -412,8 +412,6 @@ PREEN_ARGS			= -m -r
 ##--------------------------------------------------------------------
 ##  Where are the various shadow binaries installed?
 SHADOW			= $(SBIN)/condor_shadow
-SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
-SHADOW_NT		= $(SBIN)/condor_shadow.v63
 
 ##  When the schedd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -494,16 +492,6 @@ QUEUE_SUPER_USERS	= root, condor
 ##  the job is started from scratch.  Defaults to 1 hour.  This
 ##  setting is only used if USE_CKPT_SERVER (from above) is True.
 #MAX_DISCARDED_RUN_TIME = 3600 
-
-
-##--------------------------------------------------------------------
-##  condor_shadow.pvm
-##--------------------------------------------------------------------
-##  Where is the condor pvm daemon installed?
-PVMD			= $(SBIN)/condor_pvmd
-
-##  Where is the condor pvm group server daemon installed?
-PVMGS			= $(SBIN)/condor_pvmgs
 
 
 ##--------------------------------------------------------------------

@@ -423,10 +423,8 @@ LastCkpt	= (CurrentTime - LastPeriodicCheckpoint)
 ##  The JobUniverse attribute is just an int.  These macros can be
 ##  used to specify the universe in a human-readable way:
 STANDARD	= 1
-PVM		= 4
 VANILLA		= 5
 MPI		= 8
-IsPVM           = (TARGET.JobUniverse == $(PVM))
 IsMPI           = (TARGET.JobUniverse == $(MPI))
 IsVanilla       = (TARGET.JobUniverse == $(VANILLA))
 IsStandard      = (TARGET.JobUniverse == $(STANDARD))
@@ -494,10 +492,8 @@ NEGOTIATOR_POST_JOB_RANK = $(TESTINGMODE_NEGOTIATOR_POST_JOB_RANK)
 #####################################################################
 ## This is the UWisc - CS Department Configuration.
 #####################################################################
-UWCS_WANT_SUSPEND	= ( $(SmallJob) || $(KeyboardNotBusy) \
-                            || $(IsPVM) || $(IsVanilla) )
-UWCS_WANT_VACATE 	= ( $(ActivationTimer) > 10 * $(MINUTE) \
-                            || $(IsPVM) || $(IsVanilla) )
+UWCS_WANT_SUSPEND  = ( $(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) )
+UWCS_WANT_VACATE   = ( $(ActivationTimer) > 10 * $(MINUTE) || $(IsVanilla) )
 
 # Only start jobs if:
 # 1) the keyboard has been idle long enough, AND
@@ -833,9 +829,8 @@ NEGOTIATOR_INTERVAL = 15
 ##  condor_startd
 ##--------------------------------------------------------------------
 ##  Where are the various condor_starter binaries installed?
-STARTER_LIST = STARTER, STARTER_PVM, STARTER_STANDARD
+STARTER_LIST = STARTER, STARTER_STANDARD
 STARTER			= $(SBIN)/condor_starter
-STARTER_PVM		= $(SBIN)/condor_starter.pvm
 STARTER_STANDARD	= $(SBIN)/condor_starter.std
 
 ##  When the startd starts up, it can place it's address (IP and port)
@@ -1059,9 +1054,8 @@ NUM_VIRTUAL_MACHINES = 1
 ##  condor_schedd
 ##--------------------------------------------------------------------
 ##  Where are the various shadow binaries installed?
-SHADOW_LIST = SHADOW, SHADOW_PVM, SHADOW_STANDARD
+SHADOW_LIST = SHADOW, SHADOW_STANDARD
 SHADOW			= $(SBIN)/condor_shadow
-SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
 SHADOW_STANDARD		= $(SBIN)/condor_shadow.std
 
 ##  When the schedd starts up, it can place it's address (IP and port)
@@ -1162,16 +1156,6 @@ QUEUE_SUPER_USERS	= root, condor
 ##  parameter specifies the speed at which vacate checkpoints should
 ##  be written, in kilobytes per second.
 #SLOW_CKPT_SPEED = 0
-
-
-##--------------------------------------------------------------------
-##  condor_shadow.pvm
-##--------------------------------------------------------------------
-##  Where is the condor pvm daemon installed?
-PVMD			= $(SBIN)/condor_pvmd
-
-##  Where is the condor pvm group server daemon installed?
-PVMGS			= $(SBIN)/condor_pvmgs
 
 
 ##--------------------------------------------------------------------

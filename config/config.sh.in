@@ -15,8 +15,6 @@ EXT_GAHP_VERSION=@ext_gahp_version@
 
 EXT_ZLIB_VERSION=@ext_zlib_version@
 
-EXT_PVM_VERSION=@ext_pvm_version@
-
 EXT_GT4GAHP_VERSION=@ext_gt4gahp_version@
 
 EXT_CLASSADS_VERSION=@ext_classads_version@

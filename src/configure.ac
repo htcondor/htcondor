@@ -1301,24 +1301,6 @@ if test "x$_cv_opsys" = xyes; then
   esac
 fi
 
-# Many old .cf files #define'd PVM_ARCH, their logic is moved here and
-# AC_SUBST'd into configure.cf.in
-if test "x$_cv_opsys" = xAIX; then
-  AC_SUBST([_cv_pvm_arch], [RS6K])
-fi
-if test "x$_cv_opsys_vers" = xDUX5; then
-  AC_SUBST([_cv_pvm_arch], [ALPHA])
-fi
-if test "x$_cv_opsys" = xCONDOR_FREEBSD; then
-  AC_SUBST([_cv_pvm_arch], [FREEBSD])
-fi
-if test "x$_cv_opsys" = xLINUX -a "x$_cv_arch" = xI386; then
-  AC_SUBST([_cv_pvm_arch], [LINUX])
-fi
-if test "x$_cv_opsys" = xSOLARIS; then
-  AC_SUBST([_cv_pvm_arch], [SUN4SOL2])
-fi
-
 # PlatformLdFlags used to live in a number of .cf files, their logic
 # now exists here
 case "$_cv_opsys" in
@@ -1700,12 +1682,6 @@ fi
 AC_PATH_PROG(ac_gzip,gzip,no,[$PATH])
 if test $ac_gzip = no; then
     AC_MSG_ERROR( [gzip is required] )
-fi
-
-# m4 is used to build PVM
-AC_PATH_PROG(ac_m4prog,m4,no,[$PATH])
-if test $ac_m4prog = no; then
-    AC_MSG_ERROR( [m4 is required] )
 fi
 
 # true is used in the imake build system, esp. in condor_tests
@@ -2157,21 +2133,6 @@ case "$os-$_cv_arch" in
 esac
 AC_MSG_RESULT([$_cv_has_krb5])
 
-AC_MSG_CHECKING([if pvm is supported])
-case "$os-$_cv_arch-$_cv_opsys_vers" in
-  HP-UX-*-HPUX11|Linux-ALPHA-*|Linux-CONDOR_PPC-*|Linux-X86_64-*|Linux-IA64-*|Darwin-* )
-    _cv_has_pvm=no
-  ;;
-  HP-UX-*-HPUX10|Linux-*|SunOS-*|FreeBSD-*|AIX-* )
-    _cv_has_pvm=yes
-  ;;
-  * )
-    AC_MSG_RESULT([error])
-    AC_MSG_ERROR([Unrecognized platform: $os-$_cv_arch-$_cv_opsys_vers])
-  ;;
-esac
-AC_MSG_RESULT([$_cv_has_pvm])
-
 AC_MSG_CHECKING([if classads is supported])
 _cv_has_classads=no
 AS_IF([test "x$_cv_libc_kind-$_cv_libc_major-$_cv_libc_minor" = xGLIBC-2-3],
@@ -2363,8 +2324,6 @@ CHECK_EXTERNAL([nordugridgahp],[1.1.2], [soft])
 CHECK_EXTERNAL([zlib], [1.2.3], [hard],
                [use zlib (provides compression support)],
                MF_LIB_CHECK([zlib], [[z deflate]]))
-
-CHECK_EXTERNAL([pvm], [3.4.2], [soft])
 
 CHECK_EXTERNAL([classads], [0.9.8-b4], [soft])
 

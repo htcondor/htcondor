@@ -179,8 +179,6 @@ LIBCRYPT = @crypt_lib@
 
 SIMPLE_LIBC = @LIBC_A@
 
-#define PVM_ARCH @_cv_pvm_arch@
-
 #if @_cv_is_clipped@
 #define IS_CLIPPED YES
 #endif
