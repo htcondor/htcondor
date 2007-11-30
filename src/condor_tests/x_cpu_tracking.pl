@@ -47,8 +47,10 @@ my $innercount = 0;
 my $innerpid = 0;
 
 #my $childcmd = "/usr/bin/strace -ostrace$$ ./x_tightloop.exe $sleeptime $LogFile\n";
+#my $childcmd = "./x_tightloop.exe $sleeptime $LogFile 2\n";
 my $childcmd = "./x_tightloop.exe $sleeptime $LogFile\n";
-my $shortchildcmd = "./x_tightloop.exe $shortsleep $LogFile 1\n";
+#my $shortchildcmd = "./x_tightloop.exe $shortsleep $LogFile 2\n";
+my $shortchildcmd = "./x_tightloop.exe $shortsleep $LogFile\n";
 
 system("rm -rf $testname.data.kids");
 
@@ -66,14 +68,14 @@ if($toppid == 0) {
 
 		$innerpid = fork();
 		if ($innerpid == 0) {
-			spin
+			#spin
 			system("$childcmd");
 			exit(0);
 		}
 
 		$innerpid = fork();
 		if ($innerpid == 0) {
-			spin
+			#spin
 			system("$shortchildcmd");
 			exit(0);
 		}

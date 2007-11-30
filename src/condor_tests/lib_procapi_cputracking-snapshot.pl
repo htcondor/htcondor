@@ -109,18 +109,29 @@ $ExitSuccess = sub {
 	}
 	print "\n";
 
-	open(HIST,"<$historyfile") || die "Could not open historyfile:($historyfile) : !$\n";
-	while(<HIST>) {
-		$line  = $_;
-		if($line =~ /^\s*RemoteWallClockTime\s*=\s*(\d+\.?\d*).*$/) {
-			#print "Found RemoteWallClockTime = $1\n";
-			$remwallclock = $1;
-		} elsif($line =~ /^\s*RemoteUserCpu\s*=\s*(\d+\.?\d*).*$/) {
-			#print "Found RemoteUserCpu = $1\n";
-			$remcpu = $1;
+	# let history file get finished before getting upset about missing values
+	my $trys = 4;
+	my $count = 0;
+
+	while($count < $trys) {
+		open(HIST,"<$historyfile") || die "Could not open historyfile:($historyfile) : !$\n";
+		while(<HIST>) {
+			$line  = $_;
+			if($line =~ /^\s*RemoteWallClockTime\s*=\s*(\d+\.?\d*).*$/) {
+				#print "Found RemoteWallClockTime = $1\n";
+				$remwallclock = $1;
+			} elsif($line =~ /^\s*RemoteUserCpu\s*=\s*(\d+\.?\d*).*$/) {
+				#print "Found RemoteUserCpu = $1\n";
+				$remcpu = $1;
+			}
 		}
+		close(HIST);
+		if($remcpu != 0) {
+			last;
+		}
+		$count = $count + 1;
+		sleep(2 * $count);
 	}
-	close(HIST);
 
 	if($remcpu == 0) {
 		open(HIST,"<$historyfile") || die "Could not open historyfile:($historyfile) : !$\n";
@@ -145,12 +156,13 @@ $ExitSuccess = sub {
 		$snapshot = $findx;
 	}
 
-	$low = $total - (2 + $snapshot);
+	$low = $total - (2 + (2 * $snapshot));
 	# so what range do we insist on for the test to pass???
 	if($low > $remcpu) {
+		print "Failed: Tasks totaled to $total subtract snapshot interval(($snapshot * 2) + 2)\n";
 		die "We wanted $remcpu in the range of  $low to $total\n";
 	} else {
-		print "Good: Tasks totaled to $total subtract snapshot interval($snapshot + 2)\n";
+		print "Good: Tasks totaled to $total subtract snapshot interval(($snapshot * 2) + 2)\n";
 		print "This Reported $remcpu which is in range of $low to $total\n";
 		exit(0);
 	}

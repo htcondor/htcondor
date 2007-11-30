@@ -37,7 +37,7 @@ struct rusage myrusage;
 
 FILE* OUT = NULL;
 char *output;
-int fastexit = 0;
+int slowexit = 0;
 
 
 void
@@ -46,24 +46,30 @@ catch_sigalrm( int sig )
 	int fd;
 	size_t len;
 	size_t ret;
+	float rtime = 0.0;
 	int lockstatus;
 	char bigbuff[512];
 
 	getrusage(RUSAGE_SELF, &myrusage);
+	/*printf("Awake now\n");*/
 	fd = open((const char*)output, O_WRONLY | O_APPEND, 0777);
 	if(fd == -1) {
 		fprintf(stderr, "Can't open %s", output );
 		exit(1);
 	}
-	sprintf( bigbuff, "done <%d.%d>\n", myrusage.ru_utime.tv_sec,myrusage.ru_utime.tv_usec);
+	/*printf("Awake now have log output\n");*/
+	rtime = myrusage.ru_utime.tv_sec + (myrusage.ru_utime.tv_usec * .000001);
+	sprintf( bigbuff, "done <%f>\n", rtime);
+	/*printf("have time calculated.......<%s>\n",bigbuff);*/
 	len = strlen((const char*)bigbuff);
 	ret =  write(fd, (const void *)&bigbuff, len);
 	if( ret == -1 ) {
 		fprintf(stderr, "hmmm error writing file: %s\n",strerror(errno));
 	}
 	close(fd);
-	if(fastexit == 0){
-		sleep(15);
+	/*printf("slowexit set to %d\n",slowexit);*/
+	if(slowexit != 0){
+		sleep(slowexit);
 	}
 	exit( 0 );
 }
@@ -86,8 +92,10 @@ main(int argc, char ** argv)
 	*/
 	
 	if(argc == 4){
-		printf("setting no wait\n");
-		fastexit = argv[3];
+		slowexit = atoi(argv[3]);
+		/*
+		printf("setting wait to %d\n",slowexit);
+		*/
 	}
 
 	output = argv[2];
