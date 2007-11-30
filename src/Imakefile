@@ -10,12 +10,6 @@
 #   define standalone
 #endif
 
-#if HAVE_EXT_PVM
-#define PvmProgs starter.jim shadow.jim 
-#else
-#define PvmProgs
-#endif
-
 #define StdUnvProgs shadow.V6 starter.V5 
 #define StdUnvLibs ckpt syscall_lib
 
@@ -69,7 +63,7 @@
 		procapi sysapi unit_tests accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
-		tools KbddProgs collector.V6 PvmProgs dagman userlog Eventd \
+		tools KbddProgs collector.V6 dagman userlog Eventd \
 		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp had \
 		CreddProgs StorkProgs \
 		TTProgs DeploymentTools \
@@ -288,10 +282,6 @@ condor_object_target(io)
 condor_object_target(classad)
 condor_object_target(daemon_core.V6)
 condor_object_target(daemon_client)
-#if HAVE_EXT_PVM
-   condor_object_target(starter.jim)
-   condor_object_target(shadow.jim)
-#endif
 condor_object_target(prio)
 condor_object_target(scripts)
 #if HAVE_EXT_GLOBUS
@@ -449,10 +439,6 @@ ext_target(EXT_NORDUGRIDGAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
 
 #if HAVE_EXT_BLAHP
 ext_target(EXT_BLAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION) $(EXT_TRIGGER)/$(EXT_CLASSADS_VERSION))
-#endif
-
-#if HAVE_EXT_PVM
-ext_target(EXT_PVM_VERSION,$(NULL))
 #endif
 
 #if HAVE_EXT_MAN
