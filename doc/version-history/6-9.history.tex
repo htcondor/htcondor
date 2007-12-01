@@ -58,6 +58,13 @@ The details of each version are described below.
 \item With large numbers of machine ClassAds (e.g. 10,000), an algorithm in \Condor{negotiator}
 was causing long delays at the beginning of each negotiation cycle.
 
+\item Use of \MacroNI{MAX\_CONCURRENT\_UPLOADS} was resulting in a
+connection attempt from \Condor{shadow} to \Condor{schedd} with a
+fixed 10 second timeout, which is sometimes too small.  This timeout
+has been increased to be the same as other connection timeouts between
+\Condor{shadow} and \Condor{schedd}, and it now respects
+\MacroNI{SHADOW\_TIMEOUT\_MULTIPLIER}, so it can be adjusted if necessary.
+
 \end{itemize}
 
 \noindent Known Bugs:
