@@ -22,3 +22,4 @@
 #include "matchmaker.h"
 
 template class HashTable<MyString, MapEntry *>;
+template class HashTable<MyString, ClassAd *>;

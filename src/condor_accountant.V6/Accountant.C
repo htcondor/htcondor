@@ -763,6 +763,15 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
   MyString ResourceName;
   MyString CustomerName;
 
+	  // Create a hash table for speedier lookups of Resource ads.
+  HashTable<MyString,ClassAd *> resource_hash(MyStringHash);
+  ResourceList.Open();
+  while ((ResourceAd=ResourceList.Next())!=NULL) {
+    ResourceName = GetResourceName(ResourceAd);
+    ASSERT( resource_hash.insert( ResourceName, ResourceAd ) == 0 );
+  }
+  ResourceList.Close();
+
   // Remove matches that were broken
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
@@ -771,8 +780,7 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
     char const *key = keybuf.Value();
     if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
     ResourceName=key+ResourceRecord.Length();
-    ResourceAd=FindResourceAd(ResourceName, ResourceList);
-    if (!ResourceAd) {
+    if( resource_hash.lookup(ResourceName,ResourceAd) < 0 ) {
       dprintf(D_ACCOUNTANT,"Resource %s class-ad wasn't found in the resource list.\n",ResourceName.Value());
       RemoveMatch(ResourceName);
     }
