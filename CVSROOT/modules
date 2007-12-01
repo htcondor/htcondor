@@ -901,7 +901,7 @@ V6_9_5_EXT	-a V6_9_COMMON_EXT \
 # ----------------------------------------------------------------------
 # Externals needed for 6.9.6.
 V6_9_6_EXT	   -a EXT_COMMON \
-                   externals/bundles/blahp/1.7.0
+                   externals/bundles/blahp/1.7.0 \
                    externals/bundles/classads/0.9.8-b4 \
                    externals/bundles/coredumper \
                    externals/bundles/drmaa/1.5.1 \
