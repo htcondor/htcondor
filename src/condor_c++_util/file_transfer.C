@@ -2361,7 +2361,8 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 	int alive_interval = 0;
 	time_t last_alive = time(NULL);
 		//extra time to reserve for sending msg to our file xfer peer
-	int alive_slop = 20;
+	const int alive_slop = 20;
+	int min_timeout = 300;
 
 	s->decode();
 	if( !s->get(alive_interval) || !s->end_of_message() ) {
@@ -2369,8 +2370,27 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 		return false;
 	}
 
-	int timeout = alive_interval - alive_slop;
-	if( timeout < 1 ) timeout = 1;
+	if( Sock::get_timeout_multiplier() > 0 ) {
+		min_timeout *= Sock::get_timeout_multiplier();
+	}
+
+	int timeout = alive_interval;
+	if( timeout < min_timeout ) {
+		timeout = min_timeout;
+
+			// tell peer the new timeout
+		msg.Assign(ATTR_TIMEOUT,timeout);
+			// GO_AHEAD_UNDEFINED just means that our peer should keep waiting
+		msg.Assign(ATTR_RESULT,go_ahead);
+
+		s->encode();
+		if( !msg.put(*s) || !s->end_of_message() ) {
+			error_desc.sprintf("Failed to send GoAhead new timeout message.");
+		}
+	}
+	ASSERT( timeout > alive_slop );
+	timeout -= alive_slop;
+
 	if( !xfer_queue.RequestTransferQueueSlot(downloading,full_fname,m_jobid.Value(),timeout,error_desc) )
 	{
 		go_ahead = GO_AHEAD_FAILED;
@@ -2379,7 +2399,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 	while(1) {
 		if( go_ahead == GO_AHEAD_UNDEFINED ) {
 			timeout = alive_interval - (time(NULL) - last_alive) - alive_slop;
-			if( timeout < 1 ) timeout = 1;
+			if( timeout < min_timeout ) timeout = min_timeout;
 			bool pending = true;
 			if( xfer_queue.PollForTransferQueueSlot(timeout,pending,error_desc) )
 			{
@@ -2453,8 +2473,27 @@ FileTransfer::ReceiveTransferGoAhead(
 	int hold_subcode = 0;
 	MyString error_desc;
 	bool result;
+	int alive_interval;
+	int old_timeout;
+	const int slop_time = 20; // extra time to wait when alive_interval expires
+	const int min_alive_interval = 300;
 
-	result = DoReceiveTransferGoAhead(s,fname,go_ahead_always,try_again,hold_code,hold_subcode,error_desc);
+	// How frequently peer should tell us that it is still alive while
+	// we are waiting for GoAhead.  Note that the peer may respond
+	// with its own specification of timeout if it does not agree with
+	// ours.  This is an important issue, because our peer may need to
+	// talk to some other service (i.e. the schedd) before getting
+	// back to us.
+
+	alive_interval = clientSockTimeout;
+	if( alive_interval < min_alive_interval ) {
+		alive_interval = min_alive_interval;
+	}
+	old_timeout = s->timeout(alive_interval + slop_time);
+
+	result = DoReceiveTransferGoAhead(s,fname,go_ahead_always,try_again,hold_code,hold_subcode,error_desc,alive_interval);
+
+	s->timeout( old_timeout );
 
 	if( !result ) {
 		SaveTransferInfo(false,try_again,hold_code,hold_subcode,error_desc.Value());
@@ -2474,15 +2513,13 @@ FileTransfer::DoReceiveTransferGoAhead(
 	bool &try_again,
 	int &hold_code,
 	int &hold_subcode,
-	MyString &error_desc)
+	MyString &error_desc,
+	int alive_interval)
 {
 	int go_ahead = GO_AHEAD_UNDEFINED;
 
 	s->encode();
 
-	// How frequently peer should tell us that it is still alive
-	// while we are waiting for GoAhead.
-	int alive_interval = clientSockTimeout/2;
 	if( !s->put(alive_interval) || !s->end_of_message() ) {
 		error_desc.sprintf("DoReceiveTransferGoAhead: failed to send alive_interval");
 		return false;
@@ -2516,6 +2553,18 @@ FileTransfer::DoReceiveTransferGoAhead(
 		if( go_ahead == GO_AHEAD_UNDEFINED ) {
 				// This is just an "alive" message from our peer.
 				// Keep looping.
+
+			int new_timeout = -1;
+			if( msg.LookupInteger(ATTR_TIMEOUT,new_timeout) &&
+				new_timeout != -1)
+			{
+				// our peer wants a different timeout
+				s->timeout(new_timeout);
+				dprintf(D_FULLDEBUG,"Peer specified different timeout "
+				        "for GoAhead protocol: %d (for %s)\n",
+						new_timeout, fname);
+			}
+
 			dprintf(D_FULLDEBUG,"Still waiting for GoAhead for %s.\n",fname);
 			continue;
 		}

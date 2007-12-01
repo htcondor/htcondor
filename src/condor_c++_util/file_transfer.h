@@ -307,7 +307,7 @@ class FileTransfer {
 	bool ReceiveTransferGoAhead(Stream *s,char const *fname,bool &go_ahead_always);
 
 	// Receive message indicating that the peer is ready to receive the file.
-	bool DoReceiveTransferGoAhead(Stream *s,char const *fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
+	bool DoReceiveTransferGoAhead(Stream *s,char const *fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc, int alive_interval);
 
 	// Obtain permission to receive a file download and then tell our
 	// peer to go ahead and send it.

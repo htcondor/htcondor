@@ -153,6 +153,7 @@ public:
 	int set_os_buffers(int desired_size, bool set_write_buf = false);
 
 	static int set_timeout_multiplier(int secs);
+	static int get_timeout_multiplier() { return timeout_multiplier; }
 	
 	inline int bind(bool outbound, char *s) { return bind(outbound, getportbyserv(s)); }
 
