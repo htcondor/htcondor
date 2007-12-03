@@ -25,13 +25,13 @@
 #include "condor_classad.h"
 #include "MyString.h"
 #include "util_lib_proto.h"
+#include "stat_wrapper.h"
 #include "vmgahp_common.h"
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
 #include "vmware_type.h"
 
 #define VMWARE_TMP_FILE "vmware_status.condor"
-
 #define VMWARE_TMP_TEMPLATE		"vmXXXXXX"
 #define VMWARE_TMP_CONFIG_SUFFIX	"_condor.vmx"
 #define VMWARE_VMX_FILE_PERM	0770
@@ -39,6 +39,153 @@
 
 #define VMWARE_VM_CONFIG_LOCAL_PARAMS_START "### Start local parameters ###"
 #define VMWARE_VM_CONFIG_LOCAL_PARAMS_END "### End local parameters ###"
+
+#define VMWARE_MONOLITHICSPARSE_VMDK_SEEK_BYTE	512
+#define VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE	800
+
+#define VMWARE_SNAPSHOT_PARENTFILE_HINT "parentFileNameHint"
+	
+// "parent_filenames" will have basenames for parent files
+static void
+change_monolithicSparse_snapshot_vmdk_file(const char* file, bool use_fullpath, const char* dirpath, StringList &parent_filenames)
+{
+	if( !file || (check_vm_read_access_file(file) == false) 
+			|| ( use_fullpath && !dirpath )) {
+		return;
+	}
+
+	// find the filesize of vmdk file
+	int file_size = 0; 
+	StatWrapper swrap(file);
+	file_size = swrap.GetStatBuf()->st_size;
+
+	// read snapshot vmdk file to find "parentFileNameHint"
+	int fd = -1;
+	fd = safe_open_wrapper(file, O_RDWR);
+	if( fd < 0 ) {
+		vmprintf(D_ALWAYS, "failed to safe_open_wrapper file(%s) : "
+				"safe_open_wrapper returns %s\n", file, strerror(errno));
+		return;
+	}
+
+	int ret = lseek(fd, VMWARE_MONOLITHICSPARSE_VMDK_SEEK_BYTE, SEEK_SET);
+	if( ret != VMWARE_MONOLITHICSPARSE_VMDK_SEEK_BYTE ) {
+		close(fd);
+		vmprintf(D_ALWAYS, "failed to lseek to %d in file(%s). "
+				"Is this file a vmdk file for vmware monolithicsparse disk?\n", 
+				VMWARE_MONOLITHICSPARSE_VMDK_SEEK_BYTE, file);
+		return;
+	}
+
+	char descbuffer[VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE + 1];
+
+	ret = read(fd, descbuffer, VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE );
+	if( ret != VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE ) {
+		close(fd);
+		vmprintf(D_ALWAYS, "failed to read(need %d but real read %d) in file(%s). "
+				"Is this file a vmdk file for vmware monolithicsparse disk?\n", 
+				VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE, ret, file);
+		return;
+	}
+
+	descbuffer[VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE] = '\0';
+
+	char* namestartpos = strstr(descbuffer, VMWARE_SNAPSHOT_PARENTFILE_HINT);
+	if( !namestartpos ) {
+		close(fd);
+		vmprintf(D_ALWAYS, "failed to find(%s) in file(%s). "
+				"Is this file a vmdk file for vmware monolithicsparse disk?\n", 
+				VMWARE_SNAPSHOT_PARENTFILE_HINT, file);
+		return;
+	}
+
+	namestartpos += strlen(VMWARE_SNAPSHOT_PARENTFILE_HINT);
+	while( *namestartpos == ' ' || *namestartpos == '=' || *namestartpos == '\"' ) {
+		namestartpos++;
+	}
+
+	char* tmppos = namestartpos;
+	MyString parentfilename;
+
+	while( *tmppos != '\"' ) {
+		parentfilename += *tmppos++;
+	}
+
+	char* nameendpos = tmppos; 
+
+	vmprintf(D_FULLDEBUG, "parentfilename is %s in file(%s)\n",
+			parentfilename.Value(), file);
+
+	parent_filenames.append(condor_basename(parentfilename.Value()));
+
+	MyString final_parentfilename;
+	bool is_modified = false;
+
+	if( use_fullpath ) {
+		// We need fullpath 
+		if( fullpath(parentfilename.Value()) == false ) {
+			// parentfilename is not fullpath
+			if(	dirpath[0] == '/' ) {
+				// submitted from Linux machine
+				final_parentfilename.sprintf("%s/%s", dirpath, parentfilename.Value());
+			}else {
+				// submitted from Windows machine
+				final_parentfilename.sprintf("%s\\%s", dirpath, parentfilename.Value());
+			}
+			is_modified = true;
+		}
+	}else {
+		// We need basename
+		if( fullpath(parentfilename.Value()) ) {
+			// parentfilename is fullpath
+			final_parentfilename = condor_basename(parentfilename.Value());
+			is_modified = true;
+		}
+	}
+
+	if( !is_modified ) {
+		close(fd);
+		return;
+	}
+
+	// Modifying..
+	int index = nameendpos - descbuffer;
+	if( final_parentfilename.Length() > parentfilename.Length() ) {
+		// we converted basename to fullpath
+		memmove(namestartpos + final_parentfilename.Length(), nameendpos, 
+				VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE - index - final_parentfilename.Length()); 
+		memcpy(namestartpos, final_parentfilename.Value(), final_parentfilename.Length());
+	}else {
+		// we converted fullpath to basename
+		memmove(namestartpos + final_parentfilename.Length(), nameendpos, 
+				VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE - index); 
+		memcpy(namestartpos, final_parentfilename.Value(), final_parentfilename.Length());
+
+		int remain = parentfilename.Length() - final_parentfilename.Length();
+		if( remain > 0 ) {
+			memset(descbuffer + VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE - remain, 
+					0, remain);
+		}
+	}
+
+	ret = lseek(fd, VMWARE_MONOLITHICSPARSE_VMDK_SEEK_BYTE, SEEK_SET);
+	if( ret != VMWARE_MONOLITHICSPARSE_VMDK_SEEK_BYTE ) {
+		close(fd);
+		vmprintf(D_ALWAYS, "failed to lseek to %d in file(%s) for modification\n",
+				VMWARE_MONOLITHICSPARSE_VMDK_SEEK_BYTE, file);
+		return;
+	}
+
+	ret = write(fd, descbuffer, VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE );
+	if( ret != VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE ) {
+		close(fd);
+		vmprintf(D_ALWAYS, "failed to write %d in file(%s) for modification\n",
+				VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE, file);
+		return;
+	}
+
+	close(fd);
+}
 
 // "parent_filenames" will have basenames for parent files
 static void
@@ -49,7 +196,10 @@ change_snapshot_vmdk_file(const char* file, bool use_fullpath, const char* dirpa
 		return;
 	}
 
-	parent_filenames.clearAll();
+	// find the filesize of vmdk file
+	int file_size = 0; 
+	StatWrapper swrap(file);
+	file_size = swrap.GetStatBuf()->st_size;
 
 	// read snapshot vmdk file to find "parentFileNameHint"
 	FILE *fp = NULL;
@@ -67,8 +217,10 @@ change_snapshot_vmdk_file(const char* file, bool use_fullpath, const char* dirpa
 	MyString name;
 	MyString value;
 	bool is_modified = false;
+	int total_read = 0;
 
 	while( fgets(linebuf, 2048, fp) ) {
+		total_read += strlen(linebuf);
 		one_line = linebuf;
 		one_line.chomp();
 		one_line.trim();
@@ -91,7 +243,7 @@ change_snapshot_vmdk_file(const char* file, bool use_fullpath, const char* dirpa
 			continue;
 		}
 
-		if( !strcasecmp(name.Value(), "parentFileNameHint") ) {
+		if( !strcasecmp(name.Value(), VMWARE_SNAPSHOT_PARENTFILE_HINT) ) {
 
 			parent_filenames.append(condor_basename(value.Value()));
 
@@ -124,6 +276,12 @@ change_snapshot_vmdk_file(const char* file, bool use_fullpath, const char* dirpa
 		filelines.append(linebuf);
 	}
 	fclose(fp);
+
+	if( total_read != file_size ) {
+		// Maybe, this is a vmdk file for monolithicSparse disk
+		change_monolithicSparse_snapshot_vmdk_file(file, use_fullpath, dirpath, parent_filenames);
+		return;
+	}
 
 	if( !is_modified ) {
 		return;
@@ -353,7 +511,6 @@ VMwareType::adjustConfigDiskPath()
 	// Change vmsd file
 	MyString vmsd_file(m_configfile);
 	vmsd_file.replaceString(VMWARE_TMP_CONFIG_SUFFIX, "_condor.vmsd");
-
 	change_snapshot_vmsd_file(vmsd_file.Value(), &parent_filenames, true, m_vmware_dir.Value());
 }
 
