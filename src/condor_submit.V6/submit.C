@@ -6821,10 +6821,11 @@ make_vm_file_path(const char *filename, const char* param, MyString& fixedname)
 		}
 	}
 
+	// This file will not be transferred
 	// filename should have absolute path
 	fixedname = full_path(fixedname.Value());
 	check_and_universalize_path(fixedname, param);
-	check_open(fixedname.Value(), O_RDONLY);
+	//check_open(fixedname.Value(), O_RDONLY);
 	
 	// we need the same file system for this file
 	vm_need_fsdomain = true;
@@ -6909,6 +6910,7 @@ void SetVMRequirements()
 	vmanswer += ")";
 
 	// check OS
+	/*	
 	if( (stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) || 
 			vm_need_fsdomain ) {
 		bool checks_opsys = false;
@@ -6920,6 +6922,7 @@ void SetVMRequirements()
 			vmanswer += "\")";
 		}
 	}
+	*/
 
 	// check file system domain
 	if( vm_need_fsdomain ) {
