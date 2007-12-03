@@ -35,6 +35,7 @@
 #include "jic_local_file.h"
 #include "jic_local_schedd.h"
 #include "vm_proc.h"
+#include "condor_getcwd.h"
 
 
 extern "C" int exception_cleanup(int,int,char*);	/* Our function called by EXCEPT */
@@ -214,10 +215,12 @@ main_pre_dc_init( int argc, char* argv[] )
 	}
 
 		// if we're still here, stash the cwd for future reference
-	orig_cwd = getcwd( NULL, 0);
-	if( orig_cwd == NULL ) {
+	MyString cwd;
+	if( ! condor_getcwd(cwd)) {
 		dprintf( D_ALWAYS, "ERROR calling getcwd(): %s (errno %d)\n", 
 				 strerror(errno), errno );
+	} else {
+		orig_cwd = strdup(cwd.Value());
 	}
 
 		// if we're the gridshell, assume a "-f" option.  all that
