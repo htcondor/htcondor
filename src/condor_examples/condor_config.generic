@@ -2099,11 +2099,11 @@ MAX_VM_GAHP_LOG	= 1000000
 ## So we need to define "VM_UNIV_NOBODY_USER" with a regular user. 
 ## For VMware, the user defined in "VM_UNIV_NOBODY_USER" must have a
 ## home directory.  So SOFT_UID_DOMAIN doesn't work for VMware VM universe job.
-## If neither "VM_UNIV_NOBODY_USER" nor "SLOTx_USER" is defined, 
+## If neither "VM_UNIV_NOBODY_USER" nor "SLOTx_VMUSER"/"SLOTx_USER" is defined, 
 ## VMware VM universe job will run as "condor" instead of "nobody".
 ## As a result, the preference of local users for a VMware VM universe job
 ## which comes from the different UID domain is 
-## "VM_UNIV_NOBODY_USER" -> "SLOTx_USER" -> "condor". 
+## "VM_UNIV_NOBODY_USER" -> "SLOTx_VMUSER" -> "SLOTx_USER" -> "condor". 
 #VM_UNIV_NOBODY_USER = login name of a user who has home directory
 
 ## If Condor runs as root and "ALWAYS_VM_UNIV_USE_NOBODY" is set to TRUE, 
