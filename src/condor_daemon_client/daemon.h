@@ -362,15 +362,15 @@ public:
 			Note that this function will only work in DaemonCore
 			applications, because it relies on the DaemonCore non-blocking
 			event callbacks.
+			Note that the callback may occur inside the call to
+			startCommand(), mainly in error cases.
 			@param cmd The command you want to send.
 			@param st The type of the Sock you want to use.
 			@param sec The timeout you want to use on your Sock.
 			@param errstack NULL or error stack to dump errors into.
 			@param errstack NULL or errstack to dump errors into
-			@param callback_fn NULL or function to call when finished
-			                   If NULL and sock is UDP, will return
-			                   StartCommandWouldBlock if TCP session key
-			                   setup is in progress.
+			@param callback_fn function to call when finished
+			                   Must be non-NULL
 			@param misc_data any data caller wants passed to callback_fn
 			@return see definition of StartCommandResult enumeration.
 		  */
@@ -390,6 +390,8 @@ public:
 			Note that this function will only work in DaemonCore
 			applications, because it relies on the DaemonCore non-blocking
 			event callbacks.
+			Note that the callback may occur inside the call to
+			startCommand(), mainly in error cases.
 			@param cmd The command you want to send.
 			@param sock The	Sock you want to use.
 			@param timeout The number of seconds you want to use on your Sock.

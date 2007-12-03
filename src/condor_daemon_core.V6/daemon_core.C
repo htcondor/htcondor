@@ -626,7 +626,7 @@ int DaemonCore::FileDescriptorSafetyLimit()
 	return file_descriptor_safety_limit;
 }
 
-bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg)
+bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 {
 	int registered_socket_count = RegisteredSocketCount();
 	int fds_used = registered_socket_count;
@@ -641,13 +641,20 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg)
 		// file descriptor numbers are allocated using the lowest
 		// available number.
 #if !defined(WIN32)
+	if (fd == -1) {
+		// TODO If num_fds>1, should we call open() multiple times?
+		fd = safe_open_wrapper( NULL_FILE, O_RDONLY );
+		if ( fd >= 0 ) {
+			close( fd );
+		}
+	}
 	if( fd > fds_used ) {
 			// Assume fds are allocated always lowest number first
 		fds_used = fd;
 	}
 #endif
 
-	if( fds_used > file_descriptor_safety_limit ) {
+	if( num_fds + fds_used > file_descriptor_safety_limit ) {
 		if( registered_socket_count < MIN_REGISTERED_SOCKET_SAFETY_LIMIT ) {
 			// We don't have very many sockets registered, but
 			// we seem to be running out of file descriptors.

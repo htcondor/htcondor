@@ -646,9 +646,11 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	// This function may be either blocking or non-blocking, depending on
 	// the flag that was passed in.
 
-	// If caller wants non-blocking with no callback function,
-	// we _must_ be using UDP.
-	ASSERT(!nonblocking || callback_fn || st == Stream::safe_sock);
+	// If caller wants non-blocking with no callback function and we're
+	// creating the Sock, there's no way for the caller to finish the
+	// command (since it doesn't have the Sock), which makes no sense.
+	// Also, there's no one to delete the Sock.
+	ASSERT(!nonblocking || callback_fn);
 
 	switch( st ) {
 	case Stream::reli_sock:
@@ -662,7 +664,12 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 				(int)st );
 	}
 	if( ! *sock ) {
-		return StartCommandFailed;
+		if ( callback_fn ) {
+			(*callback_fn)( false, NULL, errstack, misc_data );
+			return StartCommandSucceeded;
+		} else {
+			return StartCommandFailed;
+		}
 	}
 
 	if(nonblocking && (*sock)->is_connect_pending()) {
@@ -704,7 +711,13 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 				dprintf(D_ALWAYS,"%s\n",msg.Value());
 			}
 			delete cb;
-			return StartCommandFailed;
+
+			if ( callback_fn ) {
+				(*callback_fn)( false, *sock, errstack, misc_data );
+				return StartCommandSucceeded;
+			} else {
+				return StartCommandFailed;
+			}
 		}
 
 		ASSERT(daemonCoreSockAdapter.Register_DataPtr( cb ));
@@ -738,7 +751,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError*
 		if(sock) {
 			delete sock;
 		}
-		return false;
+		return NULL;
 	case StartCommandInProgress:
 	case StartCommandWouldBlock: //impossible!
 		break;
@@ -753,6 +766,8 @@ Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, 
 	// This is a nonblocking version of startCommand.
 	const int nonblocking = true;
 	Sock *sock = NULL;
+	// We require that callback_fn be non-NULL. The startCommand() we call
+	// here does that check.
 	return startCommand(cmd,st,&sock,timeout,errstack,callback_fn,misc_data,nonblocking);
 }
 

@@ -180,7 +180,10 @@ char const *DCMessenger::peerDescription()
 void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg, Stream::stream_type st, int timeout )
 {
 	MyString error;
-	if( daemonCoreSockAdapter.TooManyRegisteredSockets(-1,&error) ) {
+		// For a UDP message, we may need to register two sockets, one for
+		// the SafeSock and another for a ReliSock to establish the
+		// security session.
+	if( daemonCoreSockAdapter.TooManyRegisteredSockets(-1,&error,st==Stream::safe_sock?2:1) ) {
 			// Try again in a sec
 			// Eventually, it would be better to queue this centrally
 			// (i.e. in DaemonCore) rather than having an independent

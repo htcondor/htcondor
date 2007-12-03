@@ -38,7 +38,7 @@ class DaemonCoreSockAdapterClass {
     typedef int (DaemonCore::*Register_DataPtr_fnptr)( void *data );
     typedef void *(DaemonCore::*GetDataPtr_fnptr)();
 	typedef int (DaemonCore::*Register_Timer_fnptr)(unsigned deltawhen,Eventcpp event,char * event_descrip,Service* s);
-	typedef bool (DaemonCore::*TooManyRegisteredSockets_fnptr)(int fd,MyString *msg);
+	typedef bool (DaemonCore::*TooManyRegisteredSockets_fnptr)(int fd,MyString *msg,int num_fds);
 	typedef void (DaemonCore::*incrementPendingSockets_fnptr)();
 	typedef void (DaemonCore::*decrementPendingSockets_fnptr)();
 
@@ -118,10 +118,10 @@ class DaemonCoreSockAdapterClass {
 			event_descrip,
 			s);
 	}
-	bool TooManyRegisteredSockets(int fd=-1,MyString *msg=NULL)
+	bool TooManyRegisteredSockets(int fd=-1,MyString *msg=NULL,int num_fds=1)
 	{
 		ASSERT(m_daemonCore);
-		return (m_daemonCore->*m_TooManyRegisteredSockets_fnptr)(fd,msg);
+		return (m_daemonCore->*m_TooManyRegisteredSockets_fnptr)(fd,msg,num_fds);
 	}
 
 	bool isEnabled()

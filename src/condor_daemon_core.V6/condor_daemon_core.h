@@ -663,9 +663,13 @@ class DaemonCore : public Service
 	   @param msg Optional string into which this function writes
 	              a human readable description of why it was decided
 	              that there are too many open sockets.
+	   @param num_fds Number of file descriptors that the caller plans
+	                  to register. This will usually be 1, but may be
+					  2 for UDP (UDP socket plus TCP socket for
+					  establishing the security session).
 	   @return true of in danger of running out of file descriptors
 	 */
-	bool TooManyRegisteredSockets(int fd=-1,MyString *msg=NULL);
+	bool TooManyRegisteredSockets(int fd=-1,MyString *msg=NULL,int num_fds=1);
 
 	/**
 	   @return Maximum number of persistent file descriptors that
