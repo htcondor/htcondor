@@ -102,7 +102,7 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	}
 	jic = my_jic;
 
-	if( orig_cwd ) {
+	if( original_cwd ) {
 		this->orig_cwd = strdup( original_cwd );
 	}
 	this->is_gridshell = is_gsh;
