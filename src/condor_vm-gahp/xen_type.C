@@ -1024,9 +1024,9 @@ XenType::CreateXenVMCofigFile(const char* controller, const char* filename)
 		return false;
 	}
 
-	if( !strcmp(controller, "xm") ) {
+	if( !strcmp( condor_basename(controller), "xm") ) {
 		return CreateXMConfigFile(filename);
-	}else if( !strcmp(controller, "virsh") ) {
+	}else if( !strcmp( condor_basename(controller), "virsh") ) {
 		return CreateVirshConfigFile(filename);
 	}else {
 		vmprintf(D_ALWAYS, "Not supported xen controller(%s)\n", controller);
@@ -1062,6 +1062,17 @@ XenType::CreateConfigFile()
 	}else {
 		m_xen_controller = delete_quotation_marks(config_value);
 		free(config_value);
+
+		// check if this xen controller is supported 
+		const char* tmp_base_name = condor_basename(m_xen_controller.Value());
+
+		if( strcmp(tmp_base_name, "xm") && strcmp(tmp_base_name, "virsh") ) {
+			vmprintf(D_ALWAYS, "\nERROR: Not supported xen controller(%s), "
+					"XEN_CONTROLLER should be either 'xm' or 'virsh'\n", 
+					m_xen_controller.Value());
+			m_result_msg = VMGAHP_ERR_CRITICAL;
+			return false;
+		}
 	}
 
 	// Read the parameter of Xen kernel
@@ -1115,7 +1126,7 @@ XenType::CreateConfigFile()
 	}else {
 		// A job user defined a customized kernel
 		// make sure that the file for xen kernel is readable
-		if( check_vm_read_access_file(m_xen_kernel_submit_param.Value(), true) == false) {
+		if( check_vm_read_access_file(m_xen_kernel_submit_param.Value(), false) == false) {
 			vmprintf(D_ALWAYS, "xen kernel file '%s' cannot be read\n", 
 					m_xen_kernel_submit_param.Value());
 			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND;
@@ -1127,7 +1138,7 @@ XenType::CreateConfigFile()
 					== 1 ) {
 			// A job user defined a customized ramdisk
 			m_xen_initrd_file.trim();
-			if( check_vm_read_access_file(m_xen_initrd_file.Value(), true) == false) {
+			if( check_vm_read_access_file(m_xen_initrd_file.Value(), false) == false) {
 				// make sure that the file for xen ramdisk is readable
 				vmprintf(D_ALWAYS, "xen ramdisk file '%s' cannot be read\n", 
 						m_xen_initrd_file.Value());
@@ -1161,6 +1172,7 @@ XenType::CreateConfigFile()
 		vmprintf(D_ALWAYS, "xen disk format(%s) is incorrect\n", 
 				xen_disk.Value());
 		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_INVALID_DISK_PARAM;
+		return false;
 	}
 
 	// Read the parameter of Xen Kernel Param
@@ -1319,14 +1331,14 @@ XenType::parseXenDiskParam(const char *format)
 		if( !strcasecmp(disk_perm.Value(), "w") || 
 				!strcasecmp(disk_perm.Value(), "rw")) {
 			// check if this disk file is writable
-			if( check_vm_write_access_file(disk_file.Value(), true) == false ) {
+			if( check_vm_write_access_file(disk_file.Value(), false) == false ) {
 				vmprintf(D_ALWAYS, "xen disk image file('%s') cannot be modified\n",
 					   	disk_file.Value());
 				return false;
 			}
 		}else {
 			// check if this disk file is readable 
-			if( check_vm_read_access_file(disk_file.Value(), true) == false ) {
+			if( check_vm_read_access_file(disk_file.Value(), false) == false ) {
 				vmprintf(D_ALWAYS, "xen disk image file('%s') cannot be read\n", 
 						disk_file.Value());
 				return false;
@@ -1604,6 +1616,15 @@ XenType::checkXenParams(VMGahpConfig* config)
 	}
 	fixedvalue = delete_quotation_marks(config_value);
 	free(config_value);
+
+	// check if this xen controller is supported 
+	const char* tmp_base_name = condor_basename(fixedvalue.Value());
+	if( strcmp(tmp_base_name, "xm") && strcmp(tmp_base_name, "virsh") ) {
+		vmprintf(D_ALWAYS, "\nERROR: Not supported xen controller(%s), "
+				"XEN_CONTROLLER should be either 'xm' or 'virsh' in \"%s\"\n", 
+				fixedvalue.Value(), config->m_configfile.Value());
+		return false;
+	}
 	config->m_controller = fixedvalue;
 
 	// find script program for Xen

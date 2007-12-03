@@ -218,6 +218,23 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 		cd_file_list.initializeFromString(cdrom_files.Value());
 	
 		if( cd_file_list.isEmpty() == false ) {
+			// check if cdrom files are readable by user
+			const char *fname = NULL;
+			cd_file_list.rewind();
+			while( (fname = cd_file_list.next()) != NULL ) {
+				MyString tmp_fullname;
+				isTransferedFile(fname, tmp_fullname);
+
+				// check if this file is readable
+				if( check_vm_read_access_file(tmp_fullname.Value(), 
+							false) == false ) {
+					vmprintf(D_ALWAYS, "file(%s) for CDROM cannot "
+							"be read\n", tmp_fullname.Value());
+					m_result_msg = VMGAHP_ERR_CANNOT_READ_CDROM_FILE;
+					return false;
+				}
+			}
+
 			m_vm_cdrom_files.create_union(cd_file_list, false);
 
 			// If cd_file_list has an iso file, 
@@ -238,14 +255,6 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 						m_local_iso = false;
 					}
 
-					// check if this file is readable
-					if( check_vm_read_access_file(tmp_fullname.Value(), 
-								is_root) == false ) {
-						vmprintf(D_ALWAYS, "ISO file(%s) for CDROM cannot "
-								"be read\n", tmp_fullname.Value());
-						m_result_msg = VMGAHP_ERR_CANNOT_READ_ISO_FILE;
-						return false;
-					}
 					m_iso_file = tmp_fullname;
 					m_has_iso = true;
 				}
