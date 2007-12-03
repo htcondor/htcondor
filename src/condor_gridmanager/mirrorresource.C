@@ -24,6 +24,7 @@
 #include "string_list.h"
 
 #include "mirrorresource.h"
+#include "mirrorjob.h"
 #include "gridmanager.h"
 
 #define HASH_TABLE_SIZE			500

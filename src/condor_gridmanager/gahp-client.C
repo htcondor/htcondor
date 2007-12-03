@@ -229,7 +229,7 @@ GahpServer::write_line(const char *command, int req, const char *args)
 	}
 
 	char buf[20];
-	sprintf(buf," %d ",req);
+	sprintf(buf," %d%c",req,args?" ":"");
 	daemonCore->Write_Pipe(m_gahp_writefd,command,strlen(command));
 	daemonCore->Write_Pipe(m_gahp_writefd,buf,strlen(buf));
 	if ( args ) {
@@ -279,7 +279,7 @@ GahpClient::GahpClient(const char *id, const char *path, const ArgList *args)
 	server = GahpServer::FindOrCreateGahpServer(id,path,args);
 	m_timeout = 0;
 	m_mode = normal;
-	pending_command[0] = '\0';
+	pending_command = NULL;
 	pending_args = NULL;
 	pending_reqid = 0;
 	pending_result = NULL;
@@ -1432,7 +1432,8 @@ GahpClient::globus_gram_client_error_string(int error_code)
 		return NULL;
 	}
 		// Copy error string into our static buffer.
-	strncpy(buf,result.argv[1],sizeof(buf));
+	strncpy(buf,result.argv[1],sizeof(buf)-1);
+	buf[sizeof(buf)-1] = '\0';
 
 	return buf;
 }
@@ -1933,7 +1934,7 @@ GahpClient::is_pending(const char *command, const char * /* buf */)
 // the status of a pending command, so relax our check here. Current users
 // of GahpClient are careful to purge potential outstanding commands before
 // issuing new ones, so this shouldn't be a problem. 
-	if ( strcmp(command,pending_command)==0 )
+	if ( command && pending_command && strcmp(command,pending_command)==0 )
 //	if ( strcmp(command,pending_command)==0 && 
 //		 ( (pending_args==NULL) || strcmp(buf,pending_args)==0) )
 	{
@@ -1960,7 +1961,8 @@ GahpClient::clear_pending()
 	pending_reqid = 0;
 	if (pending_result) delete pending_result;
 	pending_result = NULL;
-	pending_command[0] = '\0';
+	free(pending_command);
+	pending_command = NULL;
 	if (pending_args) free(pending_args);
 	pending_args = NULL;
 	pending_timeout = 0;
@@ -2016,7 +2018,7 @@ GahpClient::now_pending(const char *command,const char *buf,
 		// to the GAHP.
 	if ( command ) {
 		clear_pending();
-		strcpy(pending_command,command);
+		pending_command = strdup( command );
 		pending_reqid = server->new_reqid();
 		if (buf) {
 			pending_args = strdup(buf);
@@ -2028,6 +2030,7 @@ GahpClient::now_pending(const char *command,const char *buf,
 			// add new reqid to hashtable
 		server->requestTable->insert(pending_reqid,this);
 	}
+	ASSERT( pending_command != NULL );
 
 	if ( server->num_pending_requests >= server->max_pending_requests ) {
 			// We have too many requests outstanding.  Queue up

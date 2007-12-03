@@ -133,7 +133,9 @@ BaseJob::~BaseJob()
 	JobsByProcId.remove( procID );
 
 	MyString remote_id;
-	jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
+	if ( jobAd ) {
+		jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
+	}
 	if ( !remote_id.IsEmpty() ) {
 		JobsByRemoteId.remove( HashKey( remote_id.Value() ) );
 	}
@@ -1188,6 +1190,7 @@ WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
 	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
 	if ( contact.IsEmpty() ) {
 			// Not a Globus job, don't log the event
+		delete ulog;
 		return true;
 	}
 	contact.Tokenize();
@@ -1232,6 +1235,7 @@ WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
 	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
 	if ( contact.IsEmpty() ) {
 			// Not a Globus job, don't log the event
+		delete ulog;
 		return true;
 	}
 	contact.Tokenize();

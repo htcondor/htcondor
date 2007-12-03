@@ -141,9 +141,6 @@ void CreamJobReconfig()
 	CreamJob::setGahpCallTimeout( tmp_int );
 	CreamResource::setGahpCallTimeout( tmp_int );
 
-	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
-	CreamJob::setConnectFailureRetry( tmp_int );
-
 	// Tell all the resource objects to deal with their new config values
 	CreamResource *next_resource;
 
@@ -175,7 +172,6 @@ BaseJob *CreamJobCreate( ClassAd *jobad )
 int CreamJob::probeInterval = 300;			// default value
 int CreamJob::submitInterval = 300;			// default value
 int CreamJob::gahpCallTimeout = 300;		// default value
-int CreamJob::maxConnectFailures = 3;		// default value
 
 CreamJob::CreamJob( ClassAd *classad )
 	: BaseJob( classad )
@@ -211,7 +207,6 @@ CreamJob::CreamJob( ClassAd *classad )
 	numSubmitAttempts = 0;
 	jmProxyExpireTime = 0;
 	jmLifetime = 0;
-	connect_failure_counter = 0;
 	resourceManagerString = NULL;
 	myResource = NULL;
 	jobProxy = NULL;
@@ -470,7 +465,6 @@ void CreamJob::Reconfig()
 
 int CreamJob::doEvaluateState()
 {
-	bool connect_failure = false;
 	int old_gm_state;
 	MyString old_remote_state;
 	bool reevaluate_state = true;
@@ -1189,32 +1183,11 @@ int CreamJob::doEvaluateState()
 				free( creamAd );
 				creamAd = NULL;
 			}
-			connect_failure_counter = 0;
 		}
 	} while ( reevaluate_state );
 
 		//end of evaluateState loop
 		
-	if ( connect_failure && !resourceDown ) {
-		if ( connect_failure_counter < maxConnectFailures ) {
-				// We are seeing a lot of failures to connect
-				// with Globus 2.2 libraries, often due to GSI not able 
-				// to authenticate.
-			connect_failure_counter++;
-			int retry_secs = param_integer(
-				"GRIDMANAGER_CONNECT_FAILURE_RETRY_INTERVAL",5);
-			dprintf(D_FULLDEBUG,
-				"(%d.%d) Connection failure (try #%d), retrying in %d secs\n",
-				procID.cluster,procID.proc,connect_failure_counter,retry_secs);
-			daemonCore->Reset_Timer( evaluateStateTid, retry_secs );
-		} else {
-			dprintf(D_FULLDEBUG,
-				"(%d.%d) Connection failure, requesting a ping of the resource\n",
-				procID.cluster,procID.proc);
-			RequestPing();
-		}
-	}
-
 	return TRUE;
 }
 

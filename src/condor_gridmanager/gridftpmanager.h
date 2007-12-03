@@ -24,9 +24,6 @@
 
 #include "gridmanager.h"
 #include "proxymanager.h"
-#include "gt4job.h"
-
-class GT4Job;
 
 class GridftpServer : public Service
 {

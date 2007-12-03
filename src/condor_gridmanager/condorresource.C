@@ -24,6 +24,7 @@
 #include "string_list.h"
 
 #include "condorresource.h"
+#include "condorjob.h"
 #include "gridmanager.h"
 
 #define HASH_TABLE_SIZE			500

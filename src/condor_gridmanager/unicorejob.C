@@ -232,8 +232,8 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 			goto error_exit;
 		}
 
-		token = buff.GetNextToken( " ", false );
-		token = buff.GetNextToken( " ", false );
+		buff.GetNextToken( " ", false );
+		buff.GetNextToken( " ", false );
 		token = buff.GetNextToken( " ", false );
 		if ( !token ) {
 			error_string.sprintf( "%s missing job ID",

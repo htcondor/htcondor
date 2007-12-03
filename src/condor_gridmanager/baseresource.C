@@ -22,7 +22,8 @@
 #include "condor_config.h"
 #include "job_lease.h"
 
-#include "globusresource.h"
+#include "baseresource.h"
+#include "basejob.h"
 #include "gridmanager.h"
 
 #define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5

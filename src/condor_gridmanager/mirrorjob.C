@@ -179,7 +179,7 @@ ClassAd *ClassAdDiff( ClassAd *old_ad, ClassAd *new_ad )
 
 		if ( ( old_expr == NULL &&
 			   new_expr->RArg()->MyType() != LX_UNDEFINED ) ||
-			 (*old_expr == *new_expr) == false ) {
+			 ( old_expr != NULL && (*old_expr == *new_expr) == false ) ) {
 
 			diff_ad->Insert( new_expr->DeepCopy() );
 		}

@@ -659,7 +659,8 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 {
 	char * proxy_filename = proxy->proxy_filename;
 	MyProxyEntry * myProxyEntry = NULL;
-
+	MyString args_string;
+	int pid;
 
 	// Starting from the most recent myproxy entry
 	// Find an entry with a password
@@ -793,15 +794,14 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	char * myproxy_get_delegation_pgm = param ("MYPROXY_GET_DELEGATION");
 	if (!myproxy_get_delegation_pgm) {
 		dprintf (D_ALWAYS, "MYPROXY_GET_DELEGATION not defined in config file\n");
-		return FALSE;
+		goto error_exit;
 	}
 
 
-	MyString args_string;
 	args.GetArgsStringForDisplay(&args_string);
 	dprintf (D_ALWAYS, "Calling %s %s\n", myproxy_get_delegation_pgm, args_string.Value());
 
-	int pid = daemonCore->Create_Process (
+	pid = daemonCore->Create_Process (
 					myproxy_get_delegation_pgm,
 					args,
 					PRIV_USER_FINAL,
@@ -817,24 +817,37 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 
 	if (pid == FALSE) {
 		dprintf (D_ALWAYS, "Failed to run myproxy-get-delegation\n");
-
-		myProxyEntry->get_delegation_err_fd=-1;
-		myProxyEntry->get_delegation_pid=FALSE;
-		close (myProxyEntry->get_delegation_err_fd);
-		unlink (myProxyEntry->get_delegation_err_filename);// Remove the temporary file
-		free (myProxyEntry->get_delegation_err_filename);
-
-		close (myProxyEntry->get_delegation_password_pipe[0]);
-		close (myProxyEntry->get_delegation_password_pipe[1]);
-		myProxyEntry->get_delegation_password_pipe[0]=-1;
-		myProxyEntry->get_delegation_password_pipe[1]=-1;
-
-		return FALSE;
+		goto error_exit;
 	}
 
 	myProxyEntry->get_delegation_pid = pid;
 
 	return TRUE;
+
+ error_exit:
+	myProxyEntry->get_delegation_pid=FALSE;
+
+	if (myProxyEntry->get_delegation_err_fd >= 0) {
+		close (myProxyEntry->get_delegation_err_fd);
+		myProxyEntry->get_delegation_err_fd=-1;
+	}
+
+	if (myProxyEntry->get_delegation_err_filename) {
+		unlink (myProxyEntry->get_delegation_err_filename);// Remove the tempora
+		free (myProxyEntry->get_delegation_err_filename);
+		myProxyEntry->get_delegation_err_filename=NULL;
+	}
+
+	if (myProxyEntry->get_delegation_password_pipe[0] >= 0) {
+		close (myProxyEntry->get_delegation_password_pipe[0]);
+		myProxyEntry->get_delegation_password_pipe[0]=-1;
+	}
+	if (myProxyEntry->get_delegation_password_pipe[1] >= 0 ) {
+		close (myProxyEntry->get_delegation_password_pipe[1]);
+		myProxyEntry->get_delegation_password_pipe[1]=-1;
+	}
+
+	return FALSE;
 }
 
 
@@ -887,7 +900,9 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 		if (fd != -1) {
 			int bytes_read = read (fd, buff, 499);
 			close (fd);
-			buff[bytes_read]='\0';
+			if (bytes_read >= 0) {
+				buff[bytes_read]='\0';
+			}
 		} else {
 			dprintf (D_ALWAYS, "WEIRD! Cannot read err file %s\n", matched_entry->get_delegation_err_filename);
 		}

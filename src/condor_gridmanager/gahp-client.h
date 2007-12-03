@@ -617,7 +617,7 @@ class GahpClient : public Service {
 			// Private Data Members
 		unsigned int m_timeout;
 		mode m_mode;
-		char pending_command[150];
+		char *pending_command;
 		char *pending_args;
 		int pending_reqid;
 		Gahp_Args* pending_result;

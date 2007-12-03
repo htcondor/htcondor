@@ -200,6 +200,9 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
+	free( gahp_path );
+	gahp_path = NULL;
+
 	buff[0] = '\0';
 	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
@@ -856,22 +859,19 @@ MyString *NordugridJob::buildSubmitRSL()
 	StringList *stage_list = NULL;
 	StringList *stage_local_list = NULL;
 	char *attr_value = NULL;
-	char *rsl_suffix = NULL;
-	char *iwd = NULL;
-	char *executable = NULL;
+	MyString rsl_suffix;
+	MyString iwd;
+	MyString executable;
 
-	if ( jobAd->LookupString( ATTR_NORDUGRID_RSL, &rsl_suffix ) &&
+	if ( jobAd->LookupString( ATTR_NORDUGRID_RSL, rsl_suffix ) &&
 						   rsl_suffix[0] == '&' ) {
 		*rsl = rsl_suffix;
-		free( rsl_suffix );
 		return rsl;
 	}
 
-	if ( jobAd->LookupString( ATTR_JOB_IWD, &iwd ) != 1 ) {
+	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) != 1 ) {
 		errorString = "ATTR_JOB_IWD not defined";
-		if ( rsl_suffix != NULL ) {
-			free( rsl_suffix );
-		}
+		delete rsl;
 		return NULL;
 	}
 
@@ -882,14 +882,14 @@ MyString *NordugridJob::buildSubmitRSL()
 	attr_value = NULL;
 
 	//We're assuming all job clasads have a command attribute
-	jobAd->LookupString( ATTR_JOB_CMD, &executable );
+	jobAd->LookupString( ATTR_JOB_CMD, executable );
 	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_exec );
 
 	*rsl += "(executable=";
 	// If we're transferring the executable, strip off the path for the
 	// remote machine, since it refers to the submit machine.
 	if ( transfer_exec ) {
-		*rsl += condor_basename( executable );
+		*rsl += condor_basename( executable.Value() );
 	} else {
 		*rsl += executable;
 	}
@@ -903,6 +903,7 @@ MyString *NordugridJob::buildSubmitRSL()
 					procID.cluster, procID.proc, arg_errors.Value());
 			errorString.sprintf("Failed to read job arguments: %s\n",
 					arg_errors.Value());
+			delete rsl;
 			return NULL;
 		}
 		if(args.Count() != 0) {
@@ -914,6 +915,7 @@ MyString *NordugridJob::buildSubmitRSL()
 							procID.cluster,procID.proc,arg_errors.Value());
 					errorString.sprintf("Failed to get job arguments: %s\n",
 							arg_errors.Value());
+					delete rsl;
 					return NULL;
 				}
 			}
@@ -935,7 +937,7 @@ MyString *NordugridJob::buildSubmitRSL()
 	// execute bit on the transferred executable.
 	if ( transfer_exec ) {
 		*rsl += ")(executables=";
-		*rsl += condor_basename( executable );
+		*rsl += condor_basename( executable.Value() );
 	}
 
 	if ( jobAd->LookupString( ATTR_JOB_INPUT, &attr_value ) == 1) {
@@ -1017,13 +1019,9 @@ MyString *NordugridJob::buildSubmitRSL()
 
 	*rsl += ')';
 
-	if ( rsl_suffix != NULL ) {
+	if ( !rsl_suffix.IsEmpty() ) {
 		*rsl += rsl_suffix;
-		free( rsl_suffix );
 	}
-
-	free( executable );
-	free( iwd );
 
 dprintf(D_FULLDEBUG,"*** RSL='%s'\n",rsl->Value());
 	return rsl;

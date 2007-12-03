@@ -60,7 +60,6 @@ class CreamJob : public BaseJob
 	static int probeInterval;
 	static int submitInterval;
 	static int gahpCallTimeout;
-	static int maxConnectFailures;
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
@@ -68,8 +67,6 @@ class CreamJob : public BaseJob
 		{ submitInterval = new_interval; }
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
-	static void setConnectFailureRetry( int count )
-		{ maxConnectFailures = count; }
 
 	// New variables
 	int gmState;
@@ -112,9 +109,6 @@ class CreamJob : public BaseJob
 	MyString gahpErrorString;
 
 	char * delegatedCredentialURI;
-
- protected:
-	int connect_failure_counter;
 };
 
 #endif

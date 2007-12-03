@@ -65,7 +65,6 @@ class GT4Job : public BaseJob
 	static int probeInterval;
 	static int submitInterval;
 	static int gahpCallTimeout;
-	static int maxConnectFailures;
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
@@ -73,8 +72,6 @@ class GT4Job : public BaseJob
 		{ submitInterval = new_interval; }
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
-	static void setConnectFailureRetry( int count )
-		{ maxConnectFailures = count; }
 
 	// New variables
 	int gmState;

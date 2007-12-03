@@ -25,6 +25,7 @@
 #include "directory.h"
 
 #include "globusresource.h"
+#include "globusjob.h"
 #include "gridmanager.h"
 
 #define DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE		10

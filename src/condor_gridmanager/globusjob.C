@@ -3160,10 +3160,6 @@ MyString *GlobusJob::buildSubmitRSL()
 		}
 		deleteStringArray(env_vec);
 	}
-	if ( attr_value ) {
-		free( attr_value );
-		attr_value = NULL;
-	}
 
 	buff.sprintf( ")(proxy_timeout=%d", JM_MIN_PROXY_TIME );
 	*rsl += buff;

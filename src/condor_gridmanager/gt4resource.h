@@ -25,7 +25,6 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 #include "proxymanager.h"
-#include "gt4job.h"
 #include "baseresource.h"
 #include "gahp-client.h"
 

@@ -24,6 +24,7 @@
 #include "string_list.h"
 
 #include "gt4resource.h"
+#include "gt4job.h"
 #include "gridmanager.h"
 
 #define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
@@ -472,11 +473,12 @@ dprintf(D_FULLDEBUG,"      done\n");
 		activeDelegationCmd = NULL;
 
 		if ( signal_jobs ) {
-dprintf(D_FULLDEBUG,"    signalling jobs for %s\n",next_deleg->deleg_uri);
+dprintf(D_FULLDEBUG,"    signalling jobs for %s\n",next_deleg->deleg_uri?next_deleg->deleg_uri:"(undelegated)");
 			GT4Job *next_job;
 			registeredJobs.Rewind();
 			while ( (next_job = (GT4Job*)registeredJobs.Next()) != NULL ) {
-				if ( next_job->delegatedCredentialURI != NULL ) {
+				if ( next_job->delegatedCredentialURI != NULL &&
+					 next_deleg->deleg_uri != NULL ) {
 					if ( strcmp( next_job->delegatedCredentialURI,
 								 next_deleg->deleg_uri ) == 0 ) {
 						next_job->SetEvaluateState();

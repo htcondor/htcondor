@@ -460,7 +460,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 
 
 #ifndef WIN32
-	if (stricmp(owner, "root") == 0 ) {
+	if (owner && stricmp(owner, "root") == 0 ) {
 		dprintf(D_ALWAYS, "Tried to start condor_gmanager as root.\n");
 		return NULL;
 	}
@@ -487,6 +487,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	if(!args.AppendArgsV1RawOrV2Quoted(gman_args,&error_msg)) {
 		dprintf( D_ALWAYS, "ERROR: failed to parse gridmanager args: %s\n",
 				 error_msg.Value());
+		free(gman_binary);
 		free(gman_args);
 		return NULL;
 	}
@@ -494,16 +495,19 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 
 	if (cluster) {
 		dprintf( D_ALWAYS, "ERROR - gridman_per_job not supported!\n" );
+		free(gman_binary);
 		return NULL;
 	}
 	if ( !group_per_subject() ) {
 			// pre-6.5.1 gridmanager: waaaaaay too old!
 		dprintf( D_ALWAYS, "ERROR - gridmanager way too old!\n" );
+		free(gman_binary);
 		return NULL;
 	} else {
 		// new way - pass a constraint
 		if ( !owner ) {
 			dprintf(D_ALWAYS,"ERROR - missing owner field\n");
+			free(gman_binary);
 			return NULL;
 		}
 		MyString constraint;
@@ -529,6 +533,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 
 	if (!init_user_ids(owner, domain)) {
 		dprintf(D_ALWAYS,"ERROR - init_user_ids() failed in GRIDMANAGER\n");
+		free(gman_binary);
 		return NULL;
 	}
 
@@ -603,6 +608,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		delete [] finalpath;
 		if ( failed ) {
 			// we already did dprintf reason to the log...
+			free(gman_binary);
 			if (gman_node) delete gman_node;
 			return NULL;
 		}

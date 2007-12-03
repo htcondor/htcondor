@@ -170,9 +170,6 @@ void GT4JobReconfig()
 	GT4Job::setGahpCallTimeout( tmp_int );
 	GT4Resource::setGahpCallTimeout( tmp_int );
 
-	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
-	GT4Job::setConnectFailureRetry( tmp_int );
-
 	// Tell all the resource objects to deal with their new config values
 	GT4Resource *next_resource;
 
@@ -252,7 +249,6 @@ int Gt4JobStateToInt( const char *status ) {
 int GT4Job::probeInterval = 300;			// default value
 int GT4Job::submitInterval = 300;			// default value
 int GT4Job::gahpCallTimeout = 300;			// default value
-int GT4Job::maxConnectFailures = 3;			// default value
 
 GT4Job::GT4Job( ClassAd *classad )
 	: BaseJob( classad )
@@ -289,7 +285,6 @@ GT4Job::GT4Job( ClassAd *classad )
 	numSubmitAttempts = 0;
 	jmProxyExpireTime = 0;
 	jmLifetime = 0;
-	connect_failure_counter = 0;
 	resourceManagerString = NULL;
 	jobmanagerType = NULL;
 	myResource = NULL;
@@ -528,7 +523,6 @@ void GT4Job::Reconfig()
 
 int GT4Job::doEvaluateState()
 {
-	bool connect_failure = false;
 	int old_gm_state;
 	MyString old_globus_state;
 	bool reevaluate_state = true;
@@ -1304,30 +1298,9 @@ int GT4Job::doEvaluateState()
 				delete RSL;
 				RSL = NULL;
 			}
-			connect_failure_counter = 0;
 		}
 
 	} while ( reevaluate_state );
-
-	if ( connect_failure && !resourceDown ) {
-		if ( connect_failure_counter < maxConnectFailures ) {
-				// We are seeing a lot of failures to connect
-				// with Globus 2.2 libraries, often due to GSI not able 
-				// to authenticate.
-			connect_failure_counter++;
-			int retry_secs = param_integer(
-				"GRIDMANAGER_CONNECT_FAILURE_RETRY_INTERVAL",5);
-			dprintf(D_FULLDEBUG,
-				"(%d.%d) Connection failure (try #%d), retrying in %d secs\n",
-				procID.cluster,procID.proc,connect_failure_counter,retry_secs);
-			daemonCore->Reset_Timer( evaluateStateTid, retry_secs );
-		} else {
-			dprintf(D_FULLDEBUG,
-				"(%d.%d) Connection failure, requesting a ping of the resource\n",
-				procID.cluster,procID.proc);
-			RequestPing();
-		}
-	}
 
 	return TRUE;
 }
@@ -1522,12 +1495,14 @@ MyString *GT4Job::buildSubmitRSL()
 
 	if ( !jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, local_url_base ) ) {
 		errorString.sprintf( "%s not defined", ATTR_GRIDFTP_URL_BASE );
+		delete rsl;
 		return NULL;
 	}
 
 		// Once we add streaming support, remove this
 	if ( streamOutput || streamError ) {
 		errorString = "Streaming not supported";
+		delete rsl;
 		return NULL;
 	}
 
@@ -1663,6 +1638,7 @@ MyString *GT4Job::buildSubmitRSL()
 					procID.cluster, procID.proc, arg_errors.Value());
 			errorString.sprintf("Failed to read job arguments: %s\n",
 					arg_errors.Value());
+			delete rsl;
 			return NULL;
 		}
 		for(int a=0; a<args.Count(); a++) {
@@ -1799,6 +1775,7 @@ MyString *GT4Job::buildSubmitRSL()
 		if ( create_remote_iwd ) {
 			if ( getDummyJobScratchDir() == NULL ) {
 				errorString = "Failed to create empty stage-in directory";
+				delete rsl;
 				return NULL;
 			}
 			if ( riwd_parent != "" ) {
@@ -1992,6 +1969,7 @@ MyString *GT4Job::buildSubmitRSL()
 					procID.cluster, procID.proc, env_errors.Value());
 			errorString.sprintf("Failed to read job environment: %s\n",
 					env_errors.Value());
+			delete rsl;
 			return NULL;
 		}
 		char **env_vec = envobj.getStringArray();
@@ -2013,10 +1991,6 @@ MyString *GT4Job::buildSubmitRSL()
 			*equals = '=';
 		}
 		deleteStringArray(env_vec);
-	}
-	if ( attr_value ) {
-		free( attr_value );
-		attr_value = NULL;
 	}
 
 	*rsl += "<jobCredentialEndpoint xsi:type=\"ns1:EndpointReferenceType\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns1=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">";
