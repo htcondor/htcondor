@@ -508,6 +508,7 @@ ProcFamilyClient::unregister_family(pid_t pid, bool& response)
 		dprintf(D_ALWAYS,
 		        "ProcFamilyClient: failed to start connection with ProcD\n");
 		free(buffer);
+		return false;
 	}
 	free(buffer);
 	proc_family_error_t err;
