@@ -65,6 +65,10 @@ has been increased to be the same as other connection timeouts between
 \Condor{shadow} and \Condor{schedd}, and it now respects
 \MacroNI{SHADOW\_TIMEOUT\_MULTIPLIER}, so it can be adjusted if necessary.
 
+\item Fixed a bug in the \Condor{schedd} that could cause it to crash due
+to file descriptor exhaustion when trying to send messages to hundreds of
+\Condor{startd}s simultaneously.
+
 \end{itemize}
 
 \noindent Known Bugs:
