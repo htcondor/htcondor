@@ -360,12 +360,12 @@ VMProc::StartJob()
 
 	// When we call vmStart, vmStart may create an ISO file.
 	// So we need to give some more time to vmgahp.
-	new_req->setTimeout(m_vmoperation_timeout + 60);
+	new_req->setTimeout(m_vmoperation_timeout + 120);
 
 	int p_result;
 	p_result = new_req->vmStart(m_vm_type.Value(), Starter->GetWorkingDir());
 
-	// Because req is blocking mode, result should be VMGHAP_REQ_COMMAND_DONE
+	// Because req is blocking mode, result should be VMGAHP_REQ_COMMAND_DONE
 	if(p_result != VMGAHP_REQ_COMMAND_DONE) {
 		err_msg = "Failed to create a new VM";
 		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
@@ -775,7 +775,7 @@ VMProc::Suspend()
 		p_result = new_req->vmSuspend(m_vm_id);
 	}
 
-	// Because req is blocking mode, result should be VMGHAP_REQ_COMMAND_DONE
+	// Because req is blocking mode, result should be VMGAHP_REQ_COMMAND_DONE
 	if(p_result != VMGAHP_REQ_COMMAND_DONE) {
 		dprintf(D_ALWAYS, "Failed to suspend the VM\n");
 		m_vmgahp->printSystemErrorMsg();
@@ -837,7 +837,7 @@ VMProc::Continue()
 	int p_result;
 	p_result = new_req->vmResume(m_vm_id);
 
-	// Because req is blocking mode, result should be VMGHAP_REQ_COMMAND_DONE
+	// Because req is blocking mode, result should be VMGAHP_REQ_COMMAND_DONE
 	if(p_result != VMGAHP_REQ_COMMAND_DONE) {
 		dprintf(D_ALWAYS, "Failed to resume the VM\n");
 		m_vmgahp->printSystemErrorMsg();
@@ -1012,7 +1012,7 @@ VMProc::StopVM()
 	int p_result;
 	p_result = new_req->vmStop(m_vm_id);
 
-	// Because req is blocking mode, result should be VMGHAP_REQ_COMMAND_DONE
+	// Because req is blocking mode, result should be VMGAHP_REQ_COMMAND_DONE
 	if(p_result != VMGAHP_REQ_COMMAND_DONE) {
 		dprintf(D_ALWAYS, "Failed to stop VM\n");
 		m_vmgahp->printSystemErrorMsg();
@@ -1070,9 +1070,9 @@ VMProc::Ckpt()
 	int p_result;
 	p_result = new_req->vmCheckpoint(m_vm_id);
 
-	// Because req is blocking mode, result should be VMGHAP_REQ_COMMAND_DONE
+	// Because req is blocking mode, result should be VMGAHP_REQ_COMMAND_DONE
 	if(p_result != VMGAHP_REQ_COMMAND_DONE) {
-		dprintf(D_ALWAYS, "Failed to checkpoit the VM\n");
+		dprintf(D_ALWAYS, "Failed to checkpoint the VM\n");
 		m_vmgahp->printSystemErrorMsg();
 		delete new_req;
 		internalVMGahpError();
@@ -1174,7 +1174,7 @@ VMProc::PIDofVM()
 	int p_result;
 	p_result = new_req->vmGetPid(m_vm_id);
 
-	// Because req is blocking mode, result should be VMGHAP_REQ_COMMAND_DONE
+	// Because req is blocking mode, result should be VMGAHP_REQ_COMMAND_DONE
 	if(p_result != VMGAHP_REQ_COMMAND_DONE) {
 		dprintf(D_ALWAYS, "Failed to get PID of VM\n");
 		m_vmgahp->printSystemErrorMsg();
