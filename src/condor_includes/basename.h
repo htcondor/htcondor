@@ -26,9 +26,9 @@ extern "C" {
 #endif
 
 /*
-  NOTE: The semantics of condor_basename() and condor_pathname()
+  NOTE: The semantics of condor_basename() and condor_dirname()
   are slightly different tha the semantics of the default basename()
-  and pathname().  For example, if the path is "foo/bar/",
+  and dirname().  For example, if the path is "foo/bar/",
   condor_basename() and condor_dirname() return "" and "foo/bar", while
   the default basename() and dirname() return "bar" and "foo".
   (See test_basename.c for examples of how things work.)
