@@ -603,7 +603,7 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 				        "%s VIOLATION: ClassAd from %s advertises inconsistent"
 				        " IP addresses: %s=%s, %s=%s\n",
 				        COLLECTOR_REQUIREMENTS,
-				        sock->get_sinful_peer(),
+				        (sock ? sock->get_sinful_peer() : "(NULL)"),
 				        ipattr, subsys_ipaddr.Value(),
 				        ATTR_MY_ADDRESS, my_address.Value());
 				return false;
