@@ -108,9 +108,10 @@ init_soap(struct soap *soap)
 				OR(param((subsys + "_SOAP_SSL_CA_FILE").GetCStr()),
 				   param("SOAP_SSL_CA_FILE"));
 
-			char *ca_path =
-				OR(param((subsys + "_SOAP_SSL_CA_DIR").GetCStr()),
-				   param("SOAP_SSL_CA_DIR"));
+			char *ca_path;
+			if (!(ca_path = param((subsys + "_SOAP_SSL_CA_DIR").GetCStr()))) {
+				ca_path = param("SOAP_SSL_CA_DIR");
+			}
 
 			if (NULL == ca_file &&
 				NULL == ca_path) {
