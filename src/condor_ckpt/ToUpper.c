@@ -38,6 +38,7 @@ char *NewName;
 int NameLen;
 
 void InitInBuf(void);
+int IsName(void);
 
 main( argc, argv )
 int argc;
@@ -152,7 +153,7 @@ NextChar()
 	Index = (Index + 1) % NameLen;
 }
 
-IsName()
+int IsName(void)
 {
 	int i;
 
