@@ -41,6 +41,7 @@ HistorySnapshot::HistorySnapshot(const char* dbcon_str)
 		} else if (strcasecmp(tmp, "PGSQL") == 0) {
 			dt = T_PGSQL;
 		}
+		free(tmp);
 	} else {
 		dt = T_PGSQL; // assume PGSQL by default
 	}
@@ -63,6 +64,11 @@ HistorySnapshot::HistorySnapshot(const char* dbcon_str)
 	curAd = NULL;
 	curClusterId_hor = curProcId_hor = curClusterId_ver = curProcId_ver = -1;
 	isHistoryEmptyFlag = false;
+
+	cur_historyads_hor_index = -1;
+	cur_historyads_ver_index = -1;
+	dt = T_PGSQL;
+	jqDB = NULL;
 }
 
 //! destructor
