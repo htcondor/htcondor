@@ -250,6 +250,10 @@ init_soap(struct soap *soap)
 				free(ca_file);
 				ca_file = NULL;
 			}
+			if (ca_path) {
+				free(ca_path);
+				ca_path = NULL;
+			}
 			if (dh_file) {
 				free(dh_file);
 				dh_file = NULL;
