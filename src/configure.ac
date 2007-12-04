@@ -2315,13 +2315,12 @@ CHECK_EXTERNAL([unicoregahp],[1.2.0], [soft])
 _cv_has_nordugridgahp=$_cv_has_globus
 CHECK_EXTERNAL([nordugridgahp],[1.1.2], [soft])
 
-# Since we don't yet differentiate between full and clipped ports in this
-# script, we must always build this in order to catch the situation where
-# a full port is being made.
-# It is used for both checkpoint
-# page compression AND for file compression/decompression in the file
-# translation table in stduniv.
-CHECK_EXTERNAL([zlib], [1.2.3], [hard],
+if test "x$CLIPPED" = xyes; then
+  _cv_zlib_requirement=soft
+else
+  _cv_zlib_requirement=hard
+fi
+CHECK_EXTERNAL([zlib], [1.2.3], [$_cv_zlib_requirement],
                [use zlib (provides compression support)],
                MF_LIB_CHECK([zlib], [[z deflate]]))
 
