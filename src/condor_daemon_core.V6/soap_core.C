@@ -347,10 +347,6 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 		soap_done(current_soap);
 		free(current_soap);
 
-		if (peer_cert) {
-			X509_free(peer_cert); peer_cert = NULL;
-		}
-
 		return KEEP_STREAM;
 	}
 	peer_subject = X509_get_subject_name(peer_cert);
