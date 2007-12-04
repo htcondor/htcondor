@@ -21,7 +21,6 @@
 #define SERVER_TYPEDEFS2_H
 
 #include "constants2.h"
-#include "network2.h"
 #include <time.h>
 #include "sig_install.h"
 
