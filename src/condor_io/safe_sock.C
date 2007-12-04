@@ -856,8 +856,10 @@ bool SafeSock :: init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
     else {
         inited = _shortMsg.verifyMD(mdChecker_);
     }
-    
-    inited = _outMsg.init_MD(keyId);
+
+    if( !_outMsg.init_MD(keyId) ) {
+        inited = false;
+    }
 
     return inited;
 }
