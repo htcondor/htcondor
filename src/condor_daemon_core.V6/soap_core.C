@@ -94,9 +94,11 @@ init_soap(struct soap *soap)
 				   getting, was "no shared cipher" from SSL. -Matt 3/3/5
 				 */
 			bool freePassword = true;
-			char *server_keyfile_password =
-				OR(param((subsys + "_SOAP_SSL_SERVER_KEYFILE_PASSWORD").GetCStr()),
-				   param("SOAP_SSL_SERVER_KEYFILE_PASSWORD"));
+			char *server_keyfile_password;
+			if (!(server_keyfile_password =
+				  param((subsys + "_SOAP_SSL_SERVER_KEYFILE_PASSWORD").GetCStr())) &&
+				!(server_keyfile_password =
+				  param("SOAP_SSL_SERVER_KEYFILE_PASSWORD")))
 			if (NULL == server_keyfile_password) {
 				server_keyfile_password = "96hoursofmattslife";
 				freePassword = false;
