@@ -513,7 +513,7 @@ int http_copy_file(struct soap *soap, const char *name, const char *type)
       break;
     //if (soap_send_raw(soap, soap->tmpbuf, r))
 	if (soap_send_raw(soap, bbb, r))
-    { soap_end_send(soap);
+    { if (soap_end_send(soap)) { /* flush failed, already returning error */ }
       fclose(fd);
       return soap->error;
     }
