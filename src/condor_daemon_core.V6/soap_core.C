@@ -367,9 +367,9 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 		return KEEP_STREAM;
 	}
 	char subject[1024];
-	subject[1023] = '\0';
+	subject[0] = subject[1023] = '\0';
 	X509_NAME_oneline(peer_subject, subject, 1023);
-	if (NULL == subject) {
+	if ('\0' == subject[0]) {
 		dprintf(D_ALWAYS,
 				"SOAP SSL connection attempt from %s failed "
 				"because the client's certificate's subject was not "
