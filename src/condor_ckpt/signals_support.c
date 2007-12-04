@@ -25,6 +25,7 @@
 #include "condor_debug.h"
 
 extern	char	*strerror();
+extern int SetSyscalls(int);
 
 #if defined(HPUX)
 extern void _sigreturn();
