@@ -37,6 +37,8 @@ char *OldName;
 char *NewName;
 int NameLen;
 
+void InitInBuf(void);
+
 main( argc, argv )
 int argc;
 char **argv;
@@ -115,7 +117,7 @@ char ch;
 	(void) fputc( (int) ch, OutFP );
 }
 
-InitInBuf()
+void InitInBuf(void)
 {
 	int i;
 
