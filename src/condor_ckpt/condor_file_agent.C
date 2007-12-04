@@ -52,6 +52,8 @@ int CondorFileAgent::open( const char *url_in, int flags, int mode )
 	char *sub_url = (char *)malloc(strlen(url_in)+1);
 	char local_filename[_POSIX_PATH_MAX];
 
+	memset(local_filename, 0, sizeof(local_filename));
+
 	free( url );
 	url = strdup( url_in );
 
