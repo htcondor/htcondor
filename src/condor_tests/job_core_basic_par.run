@@ -30,12 +30,10 @@ $cmd = "job_core_basic_par.cmd";
 $corename = "job_core_basic_par";
 
 # where am I running
-$dummyhost = "gamgee.cs.wisc.edu";
 $currenthost = `hostname`;
 CondorTest::fullchomp($currenthost);
 
 system("date");
-print "Dummyhost was $dummyhost and really running on $currenthost\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";

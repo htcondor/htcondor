@@ -42,12 +42,10 @@ $mycertfile = "ssl_keys/host.crt";
 $mykeyfile = "ssl_keys/host.key";
 
 # where am I running
-$dummyhost = "gamgee.cs.wisc.edu";
 $currenthost = `hostname`;
 CondorTest::fullchomp($currenthost);
 
 system("date");
-print "Dummyhost was $dummyhost and really running on $currenthost\n";
 
 $pid = $$;
 $mypid = $pid;

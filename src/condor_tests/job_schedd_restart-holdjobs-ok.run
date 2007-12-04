@@ -27,12 +27,10 @@ $cmd = "job_schedd_restart-holdjobs-ok.cmd";
 $corename = "job_schedd_restart-holdjobs-ok";
 
 # where am I running
-$dummyhost = "gamgee.cs.wisc.edu";
 $currenthost = `hostname`;
 CondorTest::fullchomp($currenthost);
 
 system("date");
-print "Dummyhost was $dummyhost and really running on $currenthost\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
