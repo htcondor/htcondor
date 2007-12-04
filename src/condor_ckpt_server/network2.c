@@ -78,6 +78,7 @@ int I_socket(void);
 int I_listen(int socket_desc, int queue_len);
 int I_accept(int socket_desc, struct sockaddr_in* addr, int* addr_len);
 int net_write(int socket_desc, char* buffer, int size);
+int _condor_local_bind(int, int);
 
 char* GetIPName(struct in_addr machine_IP)
 {
