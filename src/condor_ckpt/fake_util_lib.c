@@ -32,6 +32,7 @@ char	*_EXCEPT_File;
 int		(*_EXCEPT_Cleanup)(int,int,char*);
 
 extern	int		DebugFlags;
+extern int SetSyscalls(int sysnum);
 
 void _condor_dprintf_va( int flags, const char* fmt, va_list args );
 void _EXCEPT_(char* fmt, ...);
