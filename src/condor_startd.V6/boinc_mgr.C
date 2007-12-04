@@ -273,7 +273,7 @@ BOINC_BackfillMgr::start( int slot_id )
 				 (int)m_boinc_starter->pid() );
 	} else { 
 		// no BOINC client running, we need to spawn it
-		if( ! spawnClient() ) {
+		if( ! spawnClient(rip) ) {
 			dprintf( D_ALWAYS,
 					 "ERROR spawning BOINC client, can't start backfill!\n" );
 			return false;
@@ -293,7 +293,7 @@ BOINC_BackfillMgr::start( int slot_id )
 
 
 bool
-BOINC_BackfillMgr::spawnClient( void )
+BOINC_BackfillMgr::spawnClient( Resource *rip )
 { 
 	dprintf( D_FULLDEBUG, "Entering BOINC_BackfillMgr::spawnClient()\n" );
 
@@ -328,6 +328,8 @@ BOINC_BackfillMgr::spawnClient( void )
 		m_boinc_starter = tmp_starter;
 		m_boinc_starter->setIsBOINC( true );
 		m_boinc_starter->setReaperID( m_reaper_id );
+		ASSERT( rip );
+		m_boinc_starter->setExecuteDir( rip->executeDir() );
 	}
 
 		// now, we can actually spawn the BOINC client

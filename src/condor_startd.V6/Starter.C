@@ -529,11 +529,29 @@ Starter::reallykill( int signo, int type )
 	}
 }
 
+void
+Starter::finalizeExecuteDir()
+{
+		// If setExecuteDir() has already been called (e.g. BOINC), then
+		// do nothing.  Otherwise, choose the execute dir now.
+	if( !executeDir() ) {
+		ASSERT( s_claim && s_claim->rip() );
+		setExecuteDir( s_claim->rip()->executeDir() );
+	}
+}
 
+char const *
+Starter::executeDir()
+{
+	return s_execute_dir.Length() ? s_execute_dir.Value() : NULL;
+}
 
 int 
 Starter::spawn( time_t now, Stream* s )
 {
+		// if execute dir has not been set, choose one now
+	finalizeExecuteDir();
+
 	if( isCOD() ) {
 		s_pid = execCODStarter();
 #if HAVE_BOINC
@@ -556,7 +574,6 @@ Starter::spawn( time_t now, Stream* s )
 	return s_pid;
 }
 
-
 void
 Starter::exited()
 {
@@ -572,8 +589,8 @@ Starter::exited()
 	}
 
 		// Now, delete any files lying around.
-	ASSERT( s_claim && s_claim->rip() );
-	cleanup_execute_dir( s_pid, s_claim->rip()->executeDir() );
+	ASSERT( executeDir() );
+	cleanup_execute_dir( s_pid, executeDir() );
 
 #if !defined(WIN32)
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
@@ -660,6 +677,7 @@ int
 Starter::execBOINCStarter( void )
 {
 	ArgList args;
+
 	args.AppendArg("condor_starter");
 	args.AppendArg("-f");
 	args.AppendArg("-append");
@@ -740,8 +758,22 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		  0 /*terminal NULL*/ };
 
 	const ArgList* final_args = &args;
-	const Env* final_env = env;
 	const char* final_path = s_path;
+	Env new_env;
+
+	if( env ) {
+		new_env.MergeFrom( *env );
+	}
+
+		// The starter figures out its execute directory by paraming
+		// for EXECUTE, which we override in the environment here.
+		// This way, all the logic about choosing a directory to use
+		// is in only one place.
+	ASSERT( executeDir() );
+	new_env.SetEnv( "_CONDOR_EXECUTE", executeDir() );
+
+	env = &new_env;
+
 
 	ReliSock child_job_update_sock;   // child inherits this socket
 	ASSERT( !s_job_update_sock );
@@ -780,7 +812,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 			return 0;
 		}
 		final_args = &glexec_args;
-		final_env = &glexec_env;
+		env = &glexec_env;
 		final_path = glexec_args.GetArg(0);
 	}
 #endif
@@ -804,7 +836,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
-		                TRUE, final_env, NULL, &fi, inherit_list, std_fds );
+		                TRUE, env, NULL, &fi, inherit_list, std_fds );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
@@ -846,6 +878,15 @@ Starter::execOldStarter( void )
 		args.AppendArg("-a");
 		args.AppendArg(s_claim->rip()->r_id_str);
 	}
+
+	Env env;
+
+		// The starter figures out its execute directory by paraming
+		// for EXECUTE, which we override in the environment here.
+		// This way, all the logic about choosing a directory to use
+		// is in only one place.
+	ASSERT( executeDir() );
+	env.SetEnv( "_CONDOR_EXECUTE", executeDir() );
 
 	// set up the signal mask (block everything, which is what the old
 	// starter expects)
@@ -893,7 +934,7 @@ Starter::execOldStarter( void )
 	                                         PRIV_ROOT,    // start as root
 	                                         main_reaper,  // reaper
 	                                         FALSE,        // no command port
-	                                         NULL,         // inherit our env
+	                                         &env,
 	                                         NULL,         // inherit out cwd
 	                                         &family_info, // new family
 	                                         NULL,         // no inherited sockets

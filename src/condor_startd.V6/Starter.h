@@ -57,6 +57,11 @@ public:
 	int		spawn( time_t now, Stream* s );
 	void	setReaperID( int reaper_id ) { s_reaper_id = reaper_id; };
 
+	void    setExecuteDir( char const * dir ) { s_execute_dir = dir; }
+		// returns NULL if no execute directory set, o.w. returns the value
+		// of EXECUTE that is passed to the starter
+	char const *executeDir();
+
 	bool	killHard( void );
 	bool	killSoft( void );
 	bool	suspend( void );
@@ -113,6 +118,9 @@ private:
 	int		startKillTimer( void );	    // Timer for how long we're willing 
 	void	cancelKillTimer( void );	// to "hardkill" before we SIGKILL
 
+		// choose EXECUTE directory for starter
+	void    finalizeExecuteDir( void );
+
 		// data that will be the same across all instances of this
 		// starter (i.e. things that are valid for copying)
 	ClassAd* s_ad;
@@ -133,6 +141,7 @@ private:
 #endif /* HAVE_BOINC */
 	int             s_reaper_id;
 	ReliSock*       s_job_update_sock;
+	MyString        s_execute_dir;
 };
 
 #endif /* _CONDOR_STARTD_STARTER_H */

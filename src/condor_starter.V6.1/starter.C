@@ -218,15 +218,13 @@ CStarter::StarterExit( int code )
 void
 CStarter::Config()
 {
-	MyString execute_param;
-	execute_param.sprintf("SLOT%d_EXECUTE",getMySlotNumber());
 	if( Execute ) {
 		free( Execute );
 	}
-	if( (Execute = param(execute_param.Value())) ) {
-			// This batch slot has its own execute directory.
-	}
-	else if( (Execute = param("EXECUTE")) == NULL ) {
+		// NOTE: We do not param for SLOTx_EXECUTE here, because it is
+		// the startd's job to set _CONDOR_EXECUTE in our environment
+		// and point that to the appropriate path.
+	if( (Execute = param("EXECUTE")) == NULL ) {
 		if( is_gridshell ) {
 			Execute = strdup( orig_cwd );
 		} else {

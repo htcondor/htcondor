@@ -72,7 +72,7 @@ public:
 	bool walk( BoincSlotMember );
 
 protected:
-	bool spawnClient( void );
+	bool spawnClient( class Resource * );
 	bool killClient( void );
 
 	Starter* m_boinc_starter;
