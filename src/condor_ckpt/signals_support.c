@@ -26,6 +26,7 @@
 
 extern	char	*strerror();
 extern int SetSyscalls(int);
+extern int MappingFileDescriptors(void);
 
 #if defined(HPUX)
 extern void _sigreturn();
