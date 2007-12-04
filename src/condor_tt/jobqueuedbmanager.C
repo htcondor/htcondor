@@ -53,7 +53,18 @@
 //! constructor
 JobQueueDBManager::JobQueueDBManager()
 {
-		//nothing here...its all done in config()
+	DBObj = NULL;
+	caLogParser = NULL;
+	dt = T_PGSQL;
+	jobQueueDBConn = NULL;
+	jobQueueDBIpAddress = NULL;
+	jobQueueDBName = NULL;
+	jobQueueDBUser = NULL;
+	jobQueueLogFile = NULL;
+	prober = NULL;
+	scheddbirthdate = 0;
+	scheddname = NULL;
+	xactState = NOT_IN_XACT;
 }
 
 //! destructor
@@ -1716,9 +1727,7 @@ JobQueueDBManager::setJQPollingInfo()
 		ret_st = QUILL_FAILURE;
 	} 	
 	
-	if (sql_str) {
-		free(sql_str);
-	}
+	free(sql_str);
 	
 	if (tmp) {
 		free(tmp);
