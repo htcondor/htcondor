@@ -104,9 +104,10 @@ init_soap(struct soap *soap)
 				freePassword = false;
 			}
 
-			char *ca_file =
-				OR(param((subsys + "_SOAP_SSL_CA_FILE").GetCStr()),
-				   param("SOAP_SSL_CA_FILE"));
+			char *ca_file;
+			if (!(ca_file = param((subsys + "_SOAP_SSL_CA_FILE").GetCStr()))) {
+				ca_file = param("SOAP_SSL_CA_FILE");
+			}
 
 			char *ca_path;
 			if (!(ca_path = param((subsys + "_SOAP_SSL_CA_DIR").GetCStr()))) {
