@@ -119,9 +119,10 @@ init_soap(struct soap *soap)
 					   "[SUBSYS_]ENABLE_SOAP_SSL");
 			}
 
-			char *dh_file =
-				OR(param((subsys + "_SOAP_SSL_DH_FILE").GetCStr()),
-				   param("SOAP_SSL_DH_FILE"));
+			char *dh_file;
+			if (!(dh_file = param((subsys + "_SOAP_SSL_DH_FILE").GetCStr()))) {
+				dh_file = param("SOAP_SSL_DH_FILE");
+			}
 
 			dprintf(D_FULLDEBUG,
 					"SOAP SSL CONFIG: PORT %d; "
