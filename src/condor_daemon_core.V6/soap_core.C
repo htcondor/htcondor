@@ -78,10 +78,10 @@ init_soap(struct soap *soap)
 					"Setting up SOAP SSL socket on port (0 = dynamic): %d\n",
 					ssl_port);
 
-			char *server_keyfile =
-				OR(param((subsys + "_SOAP_SSL_SERVER_KEYFILE").GetCStr()),
-				   param("SOAP_SSL_SERVER_KEYFILE"));
-			if (NULL == server_keyfile) {
+			char *server_keyfile;
+			if (!(server_keyfile =
+				  param((subsys + "_SOAP_SSL_SERVER_KEYFILE").GetCStr())) &&
+				!(server_keyfile = param("SOAP_SSL_SERVER_KEYFILE"))) {
 				EXCEPT("DaemonCore: Must define [SUBSYS_]SOAP_SSL_SERVER_KEYFILE "
 					   "with [SUBSYS_]ENABLE_SOAP_SSL");
 			}
