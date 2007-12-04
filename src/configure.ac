@@ -228,7 +228,10 @@ elif test $os = "Linux" ; then
        ;;
      "7" )
        _cv_linux_distro="F7"
-     ;;
+       ;;
+     "8" )
+       _cv_linux_distro="F8"
+       ;;
      * )
        AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor])
@@ -2248,6 +2251,9 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
     including_glibc_ext=NO
     ;;
   "2.6." ) # F7 uses glibc 2.6-4
+    including_glibc_ext=NO
+    ;;
+  "2.7." ) # F8 uses glibc 2.7-2
     including_glibc_ext=NO
     ;;
   * )
