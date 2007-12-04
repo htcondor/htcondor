@@ -1189,7 +1189,7 @@ AC_SUBST([has_vendor_f90],[$_cv_has_vendor_f90])
 #     with TLS, but ours isn't and doesn't compile out of the box with
 #     TLS.
 	
-AC_MSG_CHECKING([for clipped-port default])
+AC_MSG_CHECKING([for clipped port default])
 case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_cv_libc_minor" in
   *-AIX5-* | \
   *-DUX5-* | \
@@ -1205,9 +1205,11 @@ case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_c
 esac
 AC_MSG_RESULT([$_cv_clipped_default])
 
+AC_MSG_CHECKING([for clipped port])
 if test "x$CLIPPED" = "xdefault"; then
   CLIPPED=$_cv_clipped_default
 fi
+AC_MSG_RESULT([$CLIPPED])
 
 # Exposed in configure.cf.in for Imake.rules's CLINK*
 AC_SUBST([_cv_is_clipped], [$CLIPPED])
