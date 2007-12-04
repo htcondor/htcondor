@@ -54,11 +54,13 @@ JobQueueCollection::JobQueueCollection(int iBucketNum)
 	tmp = param( "SCHEDD_NAME" );
 	if( tmp ) {
 		scheddname = build_valid_daemon_name( tmp );
+		free(tmp);
 	} else {
 		scheddname = default_daemon_name();
 	}  
 
-	free(tmp);
+	DBObj = NULL;
+	dt = T_PGSQL;
 }
 
 //! destructor
@@ -86,6 +88,7 @@ JobQueueCollection::~JobQueueCollection()
 
 	delete[] _ppClusterAdBucketList;
 	delete[] _ppProcAdBucketList;
+	delete[] scheddname;
 }
 
 void JobQueueCollection::setDBObj(JobQueueDatabase *DBObj)
