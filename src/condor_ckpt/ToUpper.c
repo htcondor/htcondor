@@ -40,6 +40,7 @@ int NameLen;
 void InitInBuf(void);
 int IsName(void);
 void put_one(char ch);
+void NextChar(void);
 
 main( argc, argv )
 int argc;
@@ -135,7 +136,7 @@ void InitInBuf(void)
 	Index = 0;
 }
 
-NextChar()
+void NextChar(void)
 {
 	int i;
 
