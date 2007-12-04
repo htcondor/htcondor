@@ -133,8 +133,8 @@ init_soap(struct soap *soap)
 					"CA_DIR=%s\n",
 					ssl_port,
 					server_keyfile,
-					ca_file,
-					ca_path);
+					(ca_file ? ca_file : "(NULL)"),
+					(ca_path ? ca_path : "(NULL)"));
 
 			soap_init(&ssl_soap);
 
