@@ -39,6 +39,7 @@ int NameLen;
 
 void InitInBuf(void);
 int IsName(void);
+void put_one(char ch);
 
 main( argc, argv )
 int argc;
@@ -112,8 +113,7 @@ get_one()
 	return( (char) ch );
 }
 
-put_one( ch )
-char ch;
+void put_one( char ch )
 {
 	(void) fputc( (int) ch, OutFP );
 }
