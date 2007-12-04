@@ -510,11 +510,11 @@ AC_ARG_WITH(proper,
 AC_ARG_WITH(full-port,
   [AS_HELP_STRING([--with-full-port],
     [Perform a full build, i.e. Standard Universe included])],
-  [if "x$withval" = xyes; then
+  [if test "x$withval" = xyes; then
     CLIPPED=no
    else
     CLIPPED=yes
-   fi;],
+   fi],
   [CLIPPED=default])
 
 AC_ARG_WITH(soft-is-hard,
