@@ -187,6 +187,7 @@ void _condor_prestart( int syscall_mode );
 /* I hate C++, especially when it is badly mixed with C */
 extern void init_syscall_connection_noret( int );
 void init_image_with_file_name( const char *ckpt_name );
+void restart(void);
 
 /* These are the various remote system calls we need to worry about */
 extern int REMOTE_CONDOR_register_syscall_version(char *version);
