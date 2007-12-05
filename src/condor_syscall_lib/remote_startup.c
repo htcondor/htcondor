@@ -183,6 +183,7 @@ int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 void get_ckpt_name( void );
 extern volatile int InRestart;
 void _condor_setup_dprintf( void );
+void _condor_prestart( int syscall_mode );
 
 /* These are the various remote system calls we need to worry about */
 extern int REMOTE_CONDOR_register_syscall_version(char *version);
