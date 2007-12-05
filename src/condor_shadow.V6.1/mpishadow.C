@@ -374,6 +374,7 @@ MPIShadow::startMaster()
         dprintf( D_ALWAYS, "Failure to open %s for writing, errno %d\n", 
                  pgfilename, errno );
         shutDown( JOB_NOT_STARTED );
+		return;
     }
         
         // get the machine name (using string_to_sin and sin_to_hostname)
