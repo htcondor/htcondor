@@ -142,6 +142,7 @@ SQLQuery::
 SQLQuery (query_types qtype, void **parameters)
 {
 	setQuery(qtype,parameters);
+  	jobqueuebirthdate = 0;
 }
 
 
@@ -219,7 +220,7 @@ setJobqueuebirthdate(time_t birthdate)
 int SQLQuery::
 createQueryString(query_types qtype, void **parameters) {
   char *tmp;
-  dbtype dt;
+  dbtype dt = T_PGSQL;
 
   tmp = param("QUILL_DB_TYPE");
   if (tmp) {
@@ -228,10 +229,11 @@ createQueryString(query_types qtype, void **parameters) {
 	  } else if (strcasecmp(tmp, "PGSQL") == 0) {
 		  dt = T_PGSQL;
 	  }
+  free(tmp);
   } else {
 	  dt = T_PGSQL; // assume PGSQL by default
   }
-    
+
   query_str = (char *) malloc(MAX_QUERY_SIZE * sizeof(char));
   declare_cursor_str = (char *) malloc(MAX_QUERY_SIZE * sizeof(char));
   fetch_cursor_str = (char *) malloc(MAX_QUERY_SIZE * sizeof(char));
