@@ -75,6 +75,10 @@ init_syscall_connection( int want_debug_mode )
 	return RSC_Init( RSC_SOCK, CLIENT_LOG );
 }
 
+void init_syscall_connection_noret( int want_debug_mode )
+{
+	(void)init_syscall_connection(want_debug_mode);
+}
 
 /*
   Open the named pipe in the given mode, and get the file descriptor to
