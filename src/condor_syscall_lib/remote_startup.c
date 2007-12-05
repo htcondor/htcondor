@@ -130,6 +130,7 @@
 #include "condor_error.h"
 #include "condor_version.h"
 #include "condor_open.h"
+#include "file_table_interf.h"
 #include "../condor_ckpt/gtodc.h"
 
 enum result { NOT_OK = 0, OK = 1, END };
