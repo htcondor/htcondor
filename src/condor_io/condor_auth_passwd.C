@@ -1568,9 +1568,9 @@ int Condor_Auth_Passwd :: client_receive(int *client_status,
 	mySock_->decode();
 	if( !mySock_->code(server_status)
 		|| !mySock_->code(a_len)
-		|| !mySock_->code(a)
+		|| !mySock_->get(a,AUTH_PW_MAX_NAME_LEN)
 		|| !mySock_->code(b_len)
-		|| !mySock_->code(b)
+		|| !mySock_->get(b,AUTH_PW_MAX_NAME_LEN)
 		|| !mySock_->code(ra_len)
 		|| !(ra_len  == mySock_->get_bytes(ra, ra_len))
 		|| !mySock_->code(rb_len)
