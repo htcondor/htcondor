@@ -164,6 +164,8 @@ COMMAND CmdTable[] = {
 	{ NO_COMMAND,	"" },
 };
 
+int main(int, char*[], char **);
+
 void _condor_interp_cmd_stream( int fd );
 static void _condor_scan_cmd( char *buf, int *argc, char *argv[] );
 static enum result _condor_do_cmd( int argc, char *argv[] );
