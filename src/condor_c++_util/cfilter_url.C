@@ -67,9 +67,9 @@ int condor_open_cfilter_url( const char *name, int flags )
 	}
 
 	if (name[0]) {
-		sprintf(filter_url, "filter:%s %s|%s", gzip_prog, gzip_flags, name);
+		snprintf(filter_url, 999, "filter:%s %s|%s", gzip_prog, gzip_flags, name);
 	} else {
-		sprintf(filter_url, "filter:%s %s", gzip_prog, gzip_flags);
+		snprintf(filter_url, 999, "filter:%s %s", gzip_prog, gzip_flags);
 	}
 	return open_url(filter_url, flags);
 }
