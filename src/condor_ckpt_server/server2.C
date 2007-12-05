@@ -1833,7 +1833,7 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 void Server::ChildComplete()
 {
 	struct in_addr peer_addr;
-	int			  peer_info_fd, xfer_size;
+	int			  peer_info_fd, xfer_size = 0;
 	char		  peer_info_filename[100];
 	int           child_pid;
 	int           exit_status;
