@@ -316,7 +316,7 @@ Image::SetFd( int f )
 }
 
 void
-Image::SetFileName( char *ckpt_name )
+Image::SetFileName( const char *ckpt_name )
 {
 	static bool done_once = false;
 	if(done_once && file_name) 
@@ -1836,7 +1836,7 @@ Checkpoint( int sig, int code, void *scp )
 }
 
 void
-init_image_with_file_name( char *ckpt_name )
+init_image_with_file_name( const char *ckpt_name )
 {
 	_condor_ckpt_disable();
 	MyImage.SetFileName( ckpt_name );

@@ -93,7 +93,7 @@ public:
 	void RestoreSeg( const char *seg_name );
 	void RestoreAllSegsExceptStack();
 	void SetFd( int fd );
-	void SetFileName( char *ckpt_name );
+	void SetFileName( const char *ckpt_name );
 	void SetMode( int syscall_mode );
 	void MSync();
 #if defined(COMPRESS_CKPT)
@@ -131,7 +131,7 @@ extern "C" void Checkpoint( int, int, void * );
 extern "C" {
 	void ckpt();
 	void restart();
-	void init_image_with_file_name( char *ckpt_name );
+	void init_image_with_file_name( const char *ckpt_name );
 	void init_image_with_file_descriptor( int ckpt_fd );
 	void _condor_prestart( int syscall_mode );
 	void Suicide();

@@ -184,8 +184,9 @@ void get_ckpt_name( void );
 extern volatile int InRestart;
 void _condor_setup_dprintf( void );
 void _condor_prestart( int syscall_mode );
-/* I hate C++, especiaqlly when it is badly mixed with C */
+/* I hate C++, especially when it is badly mixed with C */
 extern void init_syscall_connection_noret( int );
+void init_image_with_file_name( const char *ckpt_name );
 
 /* These are the various remote system calls we need to worry about */
 extern int REMOTE_CONDOR_register_syscall_version(char *version);
