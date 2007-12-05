@@ -30,7 +30,6 @@
 #include "generic_query.h"
 #include "CondorError.h"
 #include "daemon.h"
-#include "daemon_list.h"
 
 // Please read the documentation for the API before you use it (RTFM :-)  --RR
 
