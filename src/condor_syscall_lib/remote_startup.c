@@ -129,6 +129,7 @@
 #include "condor_debug.h"
 #include "condor_error.h"
 #include "condor_version.h"
+#include "condor_open.h"
 #include "../condor_ckpt/gtodc.h"
 
 enum result { NOT_OK = 0, OK = 1, END };
@@ -285,7 +286,7 @@ MAIN( int argc, char *argv[], char **envp )
 				_condor_error_fatal("Error in command line syntax");
 			} else {
 				i++;
-				cmd_fd = safe_open_wrapper( argv[i], O_RDONLY );
+				cmd_fd = safe_open_wrapper( argv[i], O_RDONLY, 0600 );
 				if( cmd_fd < 0 ) {
 					_condor_error_fatal("Can't read cmd file %s", argv[i] );
 				}
@@ -691,7 +692,7 @@ open_ckpt_file( const char *name, int flags, size_t n_bytes )
 		if( flags & O_WRONLY ) {
 			return safe_open_wrapper( name, O_CREAT | O_TRUNC | O_WRONLY, 0664 );
 		} else {
-			return safe_open_wrapper( name, O_RDONLY );
+			return safe_open_wrapper( name, O_RDONLY, 0600 );
 		}
 	} else {
 		return open_file_stream( name, flags, &n_bytes );
