@@ -348,7 +348,7 @@ bool getPathToUserLog(ClassAd *job_ad, MyString &result,
 
 	if( ret_val && is_relative_to_cwd(result.Value()) ) {
 		MyString iwd;
-		if( job_ad->LookupString(ATTR_JOB_IWD,iwd) ) {
+		if( job_ad && job_ad->LookupString(ATTR_JOB_IWD,iwd) ) {
 			iwd += "/";
 			iwd += result;
 			result = iwd;
