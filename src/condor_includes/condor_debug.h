@@ -111,6 +111,7 @@ void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void Suicide(void);
 void set_debug_flags( char *strflags );
 void _condor_fd_panic( int line, char *file );
+void _condor_set_debug_flags( char *strflags );
 
 time_t dprintf_last_modification(void);
 void dprintf_touch_log(void);
