@@ -359,7 +359,7 @@ JobQueueSnapshot::getNextProcAd(ClassAd*& ad)
 		return DONE_PROCADS_CURSOR;
 	}
 	else if (strlen(curProcId) == 0) {
-		strncpy(curProcId, pid, 20);
+		strncpy(curProcId, pid, 19);
 	}
 	else if (strcmp(pid, curProcId) == 0) {
 		delete ad;
@@ -367,7 +367,7 @@ JobQueueSnapshot::getNextProcAd(ClassAd*& ad)
 		return QUILL_FAILURE;
 	}
 	else  { /* pid and curProcId are not NULL and not equal */ 
-		strncpy(curProcId, pid, 20);
+		strncpy(curProcId, pid, 19);
 	}
 
 		//the below two while loops grab stuff out of 

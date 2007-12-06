@@ -29,6 +29,10 @@ DBMSManager::DBMSManager() {
 	m_public_ad_update_timer = -1;
 	m_public_ad_update_interval = -1;
 	m_databases = NULL;
+	m_database_purge_interval = -1;
+	m_database_purge_timer = -1;
+	m_database_reindex_interval = -1;
+	m_database_reindex_timer = -1;
 }
 
 DBMSManager::~DBMSManager() {

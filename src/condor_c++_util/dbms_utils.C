@@ -157,7 +157,7 @@ const char* spool
 	writePasswordFile.sprintf( "%s/.pgpass", spool);
 
 	writePassword = getWritePassword(writePasswordFile.Value(), 
-										   host?host:"", port?port:"", 
+										   host, port,
 										   jobQueueDBName?jobQueueDBName:"", 
 										   jobQueueDBUser);
 
@@ -176,7 +176,7 @@ const char* spool
 			 "host=%s port=%s user=%s password=%s dbname=%s", 
 			 host?host:"", port?port:"", 
 			 jobQueueDBUser?jobQueueDBUser:"", 
-			 writePassword?writePassword:"", 
+			 writePassword, 
 			 jobQueueDBName?jobQueueDBName:"");
 
 	free(writePassword);
