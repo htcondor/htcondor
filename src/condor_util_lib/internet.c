@@ -342,11 +342,13 @@ is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
 	}
 
 	len = strlen(inbuf);
-	if ( len < 3 || len > 16 ) 
-		return FALSE;	// shortest possible IP addr is "1.*" - 3 chars
+	if ( len < 3 || len > 15 ) 
+		return FALSE;
+		// shortest possible IP addr is "1.*" - 3 chars
+		// longest possible IP addr is "123.123.123.123" - 15 chars
 	
 	// copy to our local buf
-	strncpy( buf, inbuf, 17 );
+	strncpy( buf, inbuf, 16 );
 
 	// on IP addresses, wildcards only permitted at the end, 
 	// i.e. 144.92.* , _not_ *.92.11
@@ -575,7 +577,7 @@ string_to_ipstr( const char* addr )
 		return NULL;
 	}
 
-	strncpy( sinful, addr, MAXHOSTNAMELEN );
+	strncpy( sinful, addr, MAXHOSTNAMELEN-1 );
 	tmp = strchr( sinful, ':' );
 	if( tmp ) {
 		*tmp = '\0';
@@ -583,7 +585,7 @@ string_to_ipstr( const char* addr )
 		return NULL;
 	}
 	if( is_ipaddr(&sinful[1], NULL) ) {
-		strncpy( result, &sinful[1], MAXHOSTNAMELEN );
+		strncpy( result, &sinful[1], MAXHOSTNAMELEN-1 );
 		return result;
 	}
 	return NULL;
