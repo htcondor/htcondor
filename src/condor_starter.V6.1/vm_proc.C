@@ -179,6 +179,7 @@ VMProc::StartJob()
 		// make certain the vmgahp server program is executable
 		dprintf(D_ALWAYS, "vmgahp server cannot be found/executed\n");
 		reportErrorToStartd();
+		if (vmgahpfile) { free(vmgahpfile); vmgahpfile = NULL; }
 		return false;
 	}
 	m_vmgahp_server = vmgahpfile;
