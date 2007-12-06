@@ -74,6 +74,8 @@ JobListParser::JobListParser( const char *s )
 	name = NULL;
 	path = NULL;
 	period = NULL;
+	curJobStart = NULL;
+	prefix = NULL;
 }
 
 // Job list parser destructor
