@@ -1456,12 +1456,18 @@ bool Condor_Auth_Passwd::calculate_hkt(msg_t_buf *t_buf, sk_buf *sk)
 		goto hkt_error;
 	}
 	free(buffer);
+	// t_buf->hkt, allocated above, must be freed by caller if this function
+	// returns true.
 	return true;
  hkt_error:
 	if(buffer)
 		free(buffer);
-	if(t_buf->hkt)
-		free(buffer);
+	if(t_buf->hkt) {
+		// make it very clear that t_buf->hkt is not valid.
+		free(t_buf->hkt);
+		t_buf->hkt = NULL;
+		t_buf->hkt_len = 0;
+	}
 	return false;
 }
 
