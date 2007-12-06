@@ -113,6 +113,7 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 				"ERROR: Could not open canonicalization file '%s' (%s)\n",
 				filename.GetCStr(),
 				strerror(errno));
+		return -1;
 	}
 
     while (!feof(file)) {
@@ -192,6 +193,7 @@ MapFile::ParseUsermapFile(const MyString filename)
 				"ERROR: Could not open usermap file '%s' (%s)\n",
 				filename.GetCStr(),
 				strerror(errno));
+		return -1;
 	}
 
     while (!feof(file)) {
