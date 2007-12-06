@@ -72,14 +72,16 @@ int job_report_store_error( char *format, ... )
 	struct error_node *e;
 	char *text;
 
+	text = (char*)malloc(JOB_REPORT_RECORD_MAX);
+	if(!text) return 0;
+
 	va_list args;
 	va_start( args, format );
 
 	/* Create a string according to the text */
 
-	text = (char*)malloc(JOB_REPORT_RECORD_MAX);
-	if(!text) return 0;
 	vsprintf( text, format, args );
+	va_end(args);
 
 	/* Are there any duplicates? */
 
