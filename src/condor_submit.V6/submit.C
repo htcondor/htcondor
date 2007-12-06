@@ -4238,6 +4238,7 @@ SetRank()
 		// If they're not yet defined, or they're defined but empty,
 		// try the generic, non-universe-specific versions.
 	if( ! default_rank || ! default_rank[0]  ) {
+		if (default_rank) { free(default_rank); default_rank = NULL; }
 		default_rank = param("DEFAULT_RANK");
 	}
 	if( ! append_rank || ! append_rank[0]  ) {
@@ -4248,6 +4249,7 @@ SetRank()
 		// If any of these are defined but empty, treat them as
 		// undefined, or else, we get nasty errors.  -Derek W. 8/21/98
 	if( default_rank && !default_rank[0] ) {
+		free(default_rank);
 		default_rank = NULL;
 	}
 	if( append_rank && !append_rank[0] ) {
@@ -4302,6 +4304,10 @@ SetRank()
 	if ( orig_rank )
 		free(orig_rank);
 
+	if (default_rank) {
+		free(default_rank);
+		default_rank = NULL;
+	}
 	if (append_rank) {
 		free(append_rank);
 		append_rank = NULL;
