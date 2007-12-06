@@ -1084,6 +1084,7 @@ VMGahpServer::poll()
 	result = new Gahp_Args;
 	ASSERT(result);
 	if( read_argv(result) == false ){
+		delete result;
 		return -1;
 	}
 
