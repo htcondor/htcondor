@@ -4241,6 +4241,7 @@ SetRank()
 		default_rank = param("DEFAULT_RANK");
 	}
 	if( ! append_rank || ! append_rank[0]  ) {
+		if (append_rank) { free(append_rank); append_rank = NULL; }
 		append_rank = param("APPEND_RANK");
 	}
 
@@ -4250,6 +4251,7 @@ SetRank()
 		default_rank = NULL;
 	}
 	if( append_rank && !append_rank[0] ) {
+		free(append_rank);
 		append_rank = NULL;
 	}
 
@@ -4299,6 +4301,11 @@ SetRank()
 		free(orig_pref);
 	if ( orig_rank )
 		free(orig_rank);
+
+	if (append_rank) {
+		free(append_rank);
+		append_rank = NULL;
+	}
 }
 
 void
