@@ -53,6 +53,7 @@ X509Credential::X509Credential (const classad::ClassAd& class_ad) : Credential (
 
 X509Credential::X509Credential () {
 	type = X509_CREDENTIAL_TYPE;
+	expiration_time = 0;
 }
 
 
