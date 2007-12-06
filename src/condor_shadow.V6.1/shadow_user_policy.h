@@ -23,7 +23,6 @@
 
 #include "condor_user_policy.h"
 #include "condor_common.h"
-#include "baseshadow.h"
 #include "condor_classad.h"
 
 class BaseShadow;
