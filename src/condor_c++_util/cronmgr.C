@@ -519,16 +519,28 @@ CronMgrBase::ParseJobList( const char *jobListString )
 		dprintf( D_JOB, "CronMgr: Job name is '%s'\n", jobName );
 
 		// Parse out the prefix
-		MyString paramPrefix     = GetParam( jobName, "_PREFIX" );
-		MyString paramExecutable = GetParam( jobName, "_EXECUTABLE" );
-		MyString paramPeriod     = GetParam( jobName, "_PERIOD" );
-		MyString paramMode       = GetParam( jobName, "_MODE" );
-		MyString paramReconfig   = GetParam( jobName, "_RECONFIG" );
-		MyString paramKill       = GetParam( jobName, "_KILL" );
-		MyString paramOptions    = GetParam( jobName, "_OPTIONS" );
-		MyString paramArgs       = GetParam( jobName, "_ARGS" );
-		MyString paramEnv        = GetParam( jobName, "_ENV" );
-		MyString paramCwd        = GetParam( jobName, "_CWD" );
+		char *paramPrefix_cstr     = GetParam( jobName, "_PREFIX" );
+		char *paramExecutable_cstr = GetParam( jobName, "_EXECUTABLE" );
+		char *paramPeriod_cstr     = GetParam( jobName, "_PERIOD" );
+		char *paramMode_cstr       = GetParam( jobName, "_MODE" );
+		char *paramReconfig_cstr   = GetParam( jobName, "_RECONFIG" );
+		char *paramKill_cstr       = GetParam( jobName, "_KILL" );
+		char *paramOptions_cstr    = GetParam( jobName, "_OPTIONS" );
+		char *paramArgs_cstr       = GetParam( jobName, "_ARGS" );
+		char *paramEnv_cstr        = GetParam( jobName, "_ENV" );
+		char *paramCwd_cstr        = GetParam( jobName, "_CWD" );
+
+		MyString paramPrefix = paramPrefix_cstr; free(paramPrefix_cstr);
+		MyString paramExecutable = paramExecutable_cstr; free(paramExecutable_cstr);
+		MyString paramPeriod = paramPeriod_cstr; free(paramPeriod_cstr);
+		MyString paramMode = paramMode_cstr; free(paramMode_cstr);
+		MyString paramReconfig = paramReconfig_cstr; free(paramReconfig_cstr);
+		MyString paramKill = paramKill_cstr; free(paramKill_cstr);
+		MyString paramOptions = paramOptions_cstr; free(paramOptions_cstr);
+		MyString paramArgs = paramArgs_cstr; free(paramArgs_cstr);
+		MyString paramEnv = paramEnv_cstr; free(paramEnv_cstr);
+		MyString paramCwd = paramCwd_cstr; free(paramCwd_cstr);
+
 		bool jobOk = true;
 
 		// Some quick sanity checks
