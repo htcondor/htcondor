@@ -8,4 +8,4 @@ condorlocal = condor_config.local
 localpostsrc = x_condorc_locconfigpostsrc
 nameschedd = parent;
 condordaemons = master,collector,negotiator,schedd,startd
-slots	= 3
+slots	= 2

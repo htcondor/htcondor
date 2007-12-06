@@ -185,7 +185,7 @@ $ENV{CONDOR_CONFIG} = $scheddoneconfig;
 
 # allow time for all the nodes to update the collector
 # by allowing N attempts
-my $nattempts = 5;
+my $nattempts = 8;
 my $count = 0;
 my $done = 0;
 my $found1 = 0;
@@ -220,10 +220,10 @@ if($bail != 1) {
 			}
 		}
 
-		if(($masterlocal == 3) && ($mastersched == 6)) {
+		if(($masterlocal == 2) && ($mastersched == 4)) {
 			$bail = 1;
-			print "Found expected number of startds(9)\n";
-			print "Found 3 on local collector and 6 on alternate node in pool\n";
+			print "Found expected number of startds(6)\n";
+			print "Found 2 on local collector and 4 on alternate node in pool\n";
 			last;
 		} else {
 			print "Keep going masterlocal is $masterlocal and mastersched is $mastersched\n";
@@ -240,13 +240,13 @@ if($bail == 1) {
 	# allow time for all the nodes to update the collector
 	# by allowing N attempts
 	# with 4 run forever jobs we are not stable until -avail finds exactly 5
-	$nattempts = 5;
+	$nattempts = 8;
 	$count = 0;
 	$done = 0;
 
 	while($count < $nattempts) {
 		$cmd = "condor_status -avail";
-		print "Looking for exactly 5 available slots\n";
+		print "Looking for exactly 2 available slots\n";
 		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
     	if(!$cmdstatus)
     	{
@@ -254,7 +254,7 @@ if($bail == 1) {
         	exit(1)
     	}
 	
-		# 4 are busy so 5 should be available....
+		# 4 are busy so 2 should be available....
 	
 		$numavail = 0;
 		foreach $line (@adarray) {
@@ -269,8 +269,8 @@ if($bail == 1) {
 			}
 		}
 
-		if($numavail == 5) {
-			print "Condor_status -avail found the expected 5 slots\n";
+		if($numavail == 2) {
+			print "Condor_status -avail found the expected 2 slots\n";
 			$done = 1;
 			last;
 		} else {
