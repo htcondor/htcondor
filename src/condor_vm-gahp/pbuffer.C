@@ -32,6 +32,9 @@ PBuffer::PBuffer (int _pipe_end) {
 	eof = false;
 	last_char_was_escape = false;
 	readahead_length = 0;
+	readahead_index = -1;
+	memset((void *) readahead_buffer, 0, P_BUFFER_READAHEAD_SIZE);
+
 }
 
 PBuffer::PBuffer() {
@@ -41,6 +44,8 @@ PBuffer::PBuffer() {
 	eof = false;
 	last_char_was_escape = false;
 	readahead_length = 0;
+	readahead_index = -1;
+	memset((void *) readahead_buffer, 0, P_BUFFER_READAHEAD_SIZE);
 }
 
 MyString *
