@@ -122,14 +122,15 @@ int Condor_Auth_Kerberos :: authenticate(const char * remoteHost, CondorError* e
 		int message = (status == TRUE? KERBEROS_PROCEED : KERBEROS_ABORT);
 
 		mySock_->encode();
-		mySock_->code(message);
-		mySock_->end_of_message();
-            
-		if (message == KERBEROS_PROCEED) {
-			// We are ready to go
-			status = authenticate_client_kerberos();
-		} else {
+		if (!mySock_->code(message) || !mySock_->end_of_message()) {
 			status = FALSE;
+		} else {
+			if (message == KERBEROS_PROCEED) {
+				// We are ready to go
+				status = authenticate_client_kerberos();
+			} else {
+				status = FALSE;
+			}
 		}
 	} else {
 		// we are the server.
@@ -302,9 +303,6 @@ int Condor_Auth_Kerberos :: init_daemon()
 
     char *         daemonPrincipal = 0;
 
-	krb5_creds    *l_increds = (krb5_creds *) malloc(sizeof(krb5_creds));
-	krb5_creds    *l_outcreds = (krb5_creds *) malloc(sizeof(krb5_creds));
-
     krb5_keytab    keytab = 0;
 
 	// init some member vars
@@ -316,8 +314,6 @@ int Condor_Auth_Kerberos :: init_daemon()
 	MyString sname;
 
     memset(creds_, 0, sizeof(krb5_creds));
-    memset(l_increds, 0, sizeof(krb5_creds));
-    memset(l_outcreds, 0, sizeof(krb5_creds));
 
     //------------------------------------------
     // Initialize the principal for daemon (properly :-)
@@ -511,6 +507,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     //------------------------------------------
     // Load local addresses
     //------------------------------------------
+	assert(creds_);
     if (creds_->addresses == NULL) {
 		dprintf ( D_SECURITY, "KERBEROS: creds_->addresses == NULL\n");
         if ((code = krb5_os_localaddr(krb_context_, &(creds_->addresses)))) {
@@ -589,8 +586,9 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     // Abort
     mySock_->encode();
     reply = KERBEROS_ABORT;
-    mySock_->code(reply);
-    mySock_->end_of_message();
+    if (!mySock_->code(reply) || !mySock_->end_of_message()) {
+        dprintf( D_ALWAYS, "KERBEROS: Failed to send ABORT message.\n");
+    }
 
     rc = FALSE;
     
@@ -932,6 +930,7 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
 		user = 0;
 		free(service);
 		service = 0;
+		free(server_princ);
 
 		if (!map_domain_name(at_sign+1)) {
 			return FALSE;
@@ -1336,7 +1335,7 @@ int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * ticket)
     
 int Condor_Auth_Kerberos :: read_request(krb5_data * request)
 {
-    int code = TRUE, message;
+    int code = TRUE, message = 0;
     
     mySock_->decode();
     
