@@ -616,7 +616,7 @@ ReadUserLog::ReopenLogFile( void )
 	int new_rot = -1;
 	int max_score = -1;
 	int max_score_rot = -1;
-	int *scores = new int(m_max_rot+1);
+	int *scores = new int[m_max_rot+1];
 	int	start = m_state->Rotation();
 	for( int rot = start; (rot <= m_max_rot) && (new_rot < 0); rot++ ) {
 		int		score;

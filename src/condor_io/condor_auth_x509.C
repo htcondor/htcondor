@@ -723,7 +723,7 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
             status = 0;
         }
 
-        delete server;
+        delete [] server;
         delete daemonNames;
     }
  clear:
