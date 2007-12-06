@@ -30,6 +30,7 @@
 
 #define USABLE_PACKET_SIZE SAFE_MSG_FRAGMENT_SIZE - SAFE_MSG_HEADER_SIZE
 const char THIS_IS_TOO_UGLY_FOR_THE_SAKE_OF_BACKWARD[] = "CRAP";
+static const int SAFE_MSG_CRYPTO_HEADER_SIZE = 10;
 
 _condorPacket::_condorPacket()
 {
@@ -98,6 +99,15 @@ bool _condorPacket :: set_encryption_id(const char * keyId)
     // This should be for outpacket only!
     ASSERT(empty());
     if (outgoingEncKeyId_) {
+        if( curIndex > 0 ) {
+            curIndex -= outgoingEidLen_;
+            if (curIndex == SAFE_MSG_CRYPTO_HEADER_SIZE) {
+                    // empty header
+                curIndex -= SAFE_MSG_CRYPTO_HEADER_SIZE;
+            }
+            ASSERT( curIndex >= 0 );
+        }
+
         free(outgoingEncKeyId_);
         outgoingEncKeyId_ = 0;
         outgoingEidLen_   = 0;
@@ -112,21 +122,9 @@ bool _condorPacket :: set_encryption_id(const char * keyId)
 					 outgoingEidLen_ );  
 		}
         if ( curIndex == 0 ) {
-            curIndex += 10;
+            curIndex += SAFE_MSG_CRYPTO_HEADER_SIZE;
         }
-        // This might be a problem if someone calls twice in a row
         curIndex += outgoingEidLen_;
-    }
-    else {
-       // clear everything 
-        if ( (curIndex > 0) && (outgoingEidLen_ > 0)) {
-            curIndex -= outgoingEidLen_;
-            if (curIndex == 10) {
-                // even more optimization
-                curIndex -= 10;     // ask hao and he will tell you how much he hates CEDAR
-            }
-            outgoingEidLen_ = 0;
-        } 
     }
 
     length = curIndex;
@@ -140,30 +138,29 @@ bool _condorPacket::init_MD(const char * keyId)
     ASSERT(empty());
 
     if (outgoingMD5KeyId_) {
+        if( curIndex > 0 ) {
+            curIndex -= MAC_SIZE;
+            curIndex -= outgoingMdLen_;
+            if (curIndex == SAFE_MSG_CRYPTO_HEADER_SIZE) {
+                    // empty header
+                curIndex -= SAFE_MSG_CRYPTO_HEADER_SIZE;
+            }
+            ASSERT( curIndex >= 0 );
+        }
+
         free(outgoingMD5KeyId_);
         outgoingMD5KeyId_ = 0;
+        outgoingMdLen_ = 0;
     }
 
     if (keyId) {
         outgoingMD5KeyId_ = strdup(keyId);
         outgoingMdLen_    = strlen(outgoingMD5KeyId_);
         if ( curIndex == 0 ) {
-            curIndex += 10;     // ask hao and he will tell you how much he hates CEDAR
+            curIndex += SAFE_MSG_CRYPTO_HEADER_SIZE;
         }
         curIndex += MAC_SIZE;
         curIndex += outgoingMdLen_; 
-    }
-    else {
-        // clear everything 
-        if ( (curIndex > 0) && (outgoingMdLen_ > 0)) {
-            curIndex -= MAC_SIZE;
-            curIndex -= outgoingMdLen_;
-            if (curIndex == 10) {
-                // even more optimization
-                curIndex -= 10;
-            }
-            outgoingMdLen_ = 0;
-        }
     }
 
     length = curIndex;
@@ -256,7 +253,7 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
         encKeyIdLen = ntohs(stemp);
         data += 2;
 
-        length -= 10;
+        length -= SAFE_MSG_CRYPTO_HEADER_SIZE;
         dprintf(D_NETWORK,
                 "Sec Hdr: tag(4), flags(2), mdKeyIdLen(2), encKeyIdLen(2), mdKey(%d), MAC(16), encKey(%d)\n",
                 mdKeyIdLen, encKeyIdLen);
@@ -422,7 +419,7 @@ void _condorPacket::reset()
     }
 
     if (curIndex > 0) {
-        curIndex += 10;
+        curIndex += SAFE_MSG_CRYPTO_HEADER_SIZE;
     }
 
     length = curIndex;
@@ -467,7 +464,7 @@ int _condorPacket::putMax(const void* dta, const int size)
 
 void _condorPacket::addExtendedHeader(unsigned char * mac) 
 {
-    int where = 10;
+    int where = SAFE_MSG_CRYPTO_HEADER_SIZE;
     if (mac) {
         if (mac && outgoingMD5KeyId_) {
             // First, add the key id if possible
@@ -502,7 +499,7 @@ bool _condorPacket::empty()
         forward += outgoingEidLen_;
     }
     if (forward > 0) {
-        forward += 10;    
+        forward += SAFE_MSG_CRYPTO_HEADER_SIZE;    
         // For backward compatibility reasons, we need 
         // to adjust the header size dynamically depends
         // on which version of condor we are talking with
@@ -732,6 +729,12 @@ int _condorOutMsg::sendMsg(const int sock,
     if(seqNo == 0) { // a short message
 		msgLen = lastPacket->length;
         lastPacket->makeHeader(true, 0, msgID, md);
+			// Short messages are sent without initial "magic" header,
+			// because we don't need to specify sequence number,
+			// and presumably for backwards compatibility with ancient
+			// versions of Condor.  The crypto header may still
+			// be there, since that is in the buffer starting at
+			// the position pointed to by "data".
 		sent = sendto(sock, lastPacket->data, lastPacket->length,
 		              0, who, sizeof(struct sockaddr));
 		if(sent != lastPacket->length) {
