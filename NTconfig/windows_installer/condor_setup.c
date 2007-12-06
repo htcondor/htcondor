@@ -85,6 +85,7 @@ bool set_int_option(const char *attribute, const int val);
 bool setup_config_file(void) { Config_file = "condor_config"; return true; };
 bool isempty(const char * a) { return ((a == NULL) || (a[0] == '\0')); }
 bool attribute_matches( const char *string, const char *attr );
+char* get_short_path_name (char *path);
 
 void Usage();
 
@@ -156,7 +157,7 @@ void
 set_jvmlocation() {
 
 	if ( Opt.jvmlocation ) {
-		set_option("JAVA", Opt.jvmlocation);
+		set_option("JAVA", get_short_path_name(Opt.jvmlocation));
 	}
 }
 
@@ -568,4 +569,21 @@ attribute_matches( const char *string, const char *attr ) {
 	free(buf);
 
 	return matches;
+}
+
+/* ugly hack to get short paths into the config file, because
+   we do not support spaces in paths in all places */		
+char* 
+get_short_path_name(char *path) {
+	char *short_path = (char*)malloc(MAX_PATH * sizeof(char));
+	if (short_path) {
+		if (GetShortPathName(path, short_path, MAX_PATH) > 0) {
+			free(path);
+			return short_path;
+		}
+		/* may fail because the path has unexpanded variables,
+		   so we can't just assume it's an error... */
+		free(short_path);
+	}
+	return path;
 }
