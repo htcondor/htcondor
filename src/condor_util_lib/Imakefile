@@ -51,7 +51,7 @@ INET_NTOA_OBJ = inet_ntoa.o
 	$(GETWD_OBJ) ckpt_name.o \
 	lock_file.NON_POSIX.o getmnt.o $(INET_NTOA_OBJ) \
 	syscall_numbers.o sig_install.o internet.o startup_info.o escapes.o\
-	ckpt_util.o get_random_num.o fdprintf.o rotate_file.o \
+	ckpt_util.o get_random_num.o rotate_file.o \
 	setsyscalls.o match_prefix.o sleep.o basename.o strcmp_until.o\
 	filename_tools.o d_format_time.o chomp.o strupr.o globus_utils.o \
 	condor_universe.o condor_perms.o access_euid.o \

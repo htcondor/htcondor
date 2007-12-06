@@ -25,7 +25,6 @@
 #include "condor_config.h"
 #include "condor_network.h"
 #include "internet.h"
-#include "fdprintf.h"
 #include "condor_io.h"
 #include "condor_attributes.h"
 #include "condor_parameters.h"
