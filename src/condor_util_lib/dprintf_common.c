@@ -90,7 +90,7 @@ _condor_set_debug_flags( char *strflags )
 		// Always set D_ALWAYS
 	DebugFlags |= D_ALWAYS;
 
-	(void)strncpy(tmp, strflags, sizeof(tmp));
+	(void)strncpy(tmp, strflags, sizeof(tmp)-1);
 	_condor_mkargv(&argc, argv, tmp);
 
 	while( --argc >= 0 ) {
