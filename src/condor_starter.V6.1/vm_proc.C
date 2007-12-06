@@ -190,6 +190,7 @@ VMProc::StartJob()
 		// make certain the vmgahp config file exists
 		dprintf(D_ALWAYS, "vmgahp config file cannot be found\n");
 		reportErrorToStartd();
+		if (vmgahpconfig) { free(vmgahpconfig); vmgahpconfig = NULL; }
 		return false;
 	}
 	m_vmgahp_config = vmgahpconfig;
