@@ -4549,6 +4549,7 @@ SetJobLease( void )
 		}
 		if (lease_duration == 0) {
 				// User explicitly didn't want a lease, so we're done.
+			free(tmp);
 			return;
 		}
 		else if (lease_duration < 20) {
@@ -4560,6 +4561,7 @@ SetJobLease( void )
 			}
 			lease_duration = 20;
 		}
+		free(tmp);
 	}
 	MyString val = ATTR_JOB_LEASE_DURATION;
 	val += "=";
@@ -6378,6 +6380,7 @@ init_params()
 		if( (*tmp == 'f' || *tmp == 'F') ) {
 			WarnOnUnusedMacros = 0;
 		}
+		free( tmp );
 	}
 
 }
