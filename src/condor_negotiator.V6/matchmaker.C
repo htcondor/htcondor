@@ -778,8 +778,8 @@ compute_signficant_attrs(ClassAdList & startdAds)
 		sample_startd_ad->AssignExpr(preempt_req_name,tmp);
 		sample_startd_ad->GetReferences(preempt_req_name,internal_references,
 					external_references);
-		free(tmp);
 	}
+	free(tmp);
 	if (sample_startd_ad) {
 		delete sample_startd_ad;
 		sample_startd_ad = NULL;
