@@ -3503,6 +3503,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			break;
 
 		default:
+			tid = FALSE;
 			break;
 	}
 
@@ -3875,6 +3876,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		rhs = tree->RArg();
 		if( ! rhs ) {
 				// TODO: deal with this kind of error
+			free(reason);
 			return false;
 		}
 		rhs->PrintToNewStr( &tmp );
@@ -6695,6 +6697,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 			  "Please upgrade your condor_shadow.  Aborting.\n");
 		noShadowForJob(srec, NO_SHADOW_PRE_6_8_5_STD);
 		delete( shadow_obj );
+		free( shadow_path );
 		return;
 	}
 

@@ -60,7 +60,7 @@ class GridUniverseLogic : public Service
 			int remove_timer_id;
 			char owner[200];
 			char domain[200];
-			gman_node_t() : pid(0),add_timer_id(-1),remove_timer_id(-1) {};
+			gman_node_t() : pid(0),add_timer_id(-1),remove_timer_id(-1) {owner[0] = '\0'; domain[0] = '\0';};
 		};
 
 		static gman_node_t* lookupGmanByOwner(const char* owner, 

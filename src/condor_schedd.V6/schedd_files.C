@@ -133,7 +133,9 @@ void schedd_files_ins(
 		MyString tmpFile2 = tmpFile;
 
 		fileName = condor_basename(tmpFile.GetCStr()); 
-		path = condor_dirname(tmpFile2.GetCStr());
+		char *dir_tmp = condor_dirname(tmpFile2.GetCStr());
+		path = dir_tmp;
+		free(dir_tmp);
 	}
 	else {
 		pathname.sprintf("%s/%s", path.GetCStr(), tmpFile.GetCStr());

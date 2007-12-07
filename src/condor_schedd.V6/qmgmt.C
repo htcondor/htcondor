@@ -2058,6 +2058,7 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	int len = strlen(encoded_value);
 	if (write (fd, encoded_value, len) != len) {
 		set_priv(old_priv);
+		free(encoded_value);
 		return -1;
 	}
 	close (fd);
@@ -4135,6 +4136,7 @@ static int MaybeDeleteOneHistoryBackup(void)
             }
         }
         free(history_dir);
+		free(oldest_history_filename);
     }
     return num_backups;
 }

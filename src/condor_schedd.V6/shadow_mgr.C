@@ -237,6 +237,7 @@ ShadowMgr::init( void )
 						 "in SHADOW_LIST more than once, ignoring.\n", 
 						 tmp, shadow_path );
 			}
+			free( shadow_path );
 			continue;
 		}
 		
