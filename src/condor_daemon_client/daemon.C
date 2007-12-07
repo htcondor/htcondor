@@ -1419,6 +1419,7 @@ Daemon::getCmInfo( const char* subsys )
 
 	if( ! host  || !host[0] ) {
 			// this is just a fancy wrapper for param()...
+		free( host );
 		host = getCmHostFromConfig( subsys );
 	}
 
@@ -1432,6 +1433,7 @@ Daemon::getCmInfo( const char* subsys )
 				// on the fullname and the address.
 			New_name( strnewp(my_full_hostname()) );
 			New_full_hostname( strnewp(my_full_hostname()) );
+			free( host );
 			return true;
 		}
 	}
