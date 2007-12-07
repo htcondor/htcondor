@@ -360,6 +360,7 @@ int SafeSock::put_bytes(const void *data, int sz)
  */
 int SafeSock::get_bytes(void *dta, int size)
 {
+	ASSERT( size > 0 );
 	while(!_msgReady) {
 		if(_timeout > 0) {
 			Selector selector;
