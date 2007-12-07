@@ -159,6 +159,8 @@ protected:
 		request_id = -1;
 		expirations = NULL;
 		num_jobs =0;
+		status = SDCS_NEW;
+		command = SDC_REMOVE_JOB;
 	}
 
 };

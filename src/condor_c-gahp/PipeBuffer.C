@@ -30,6 +30,8 @@ PipeBuffer::PipeBuffer (int _pipe_end) {
 	eof = false;
 	last_char_was_escape = false;
 	readahead_length = 0;
+	readahead_index = 0;
+	readahead_buffer[0] = '\0';
 }
 
 PipeBuffer::PipeBuffer() {
@@ -39,6 +41,8 @@ PipeBuffer::PipeBuffer() {
 	eof = false;
 	last_char_was_escape = false;
 	readahead_length = 0;
+	readahead_index = 0;
+	readahead_buffer[0] = '\0';
 }
 
 MyString *
