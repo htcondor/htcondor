@@ -183,6 +183,7 @@ store_cred_handler(Service * service, int i, Stream *stream) {
   
   init_user_id_from_FQN (user);
   if (!StoreData(temp_file_name,data,data_size)) {
+	delete cred_wrapper;
     socket->encode();
     int rcred = CREDD_UNABLE_TO_STORE;
     socket->code(rcred);
