@@ -13,6 +13,10 @@ set VC_DIR=C:\Program Files\Microsoft Visual Studio\VC98\Bin
 set SDK_DIR=C:\Program Files\Microsoft Platform SDK
 set SDK_XP_DIR=C:\Program Files\Microsoft Platform SDK for Windows XP SP2
 set PERL_DIR=C:\Perl\bin
+set DBG_DIR=C:\Program Files\Debugging Tools for Windows
+
+rem Specify symbol image path
+set _NT_SYMBOL_PATH=C:\Windows\Symbols
 
 REM Where do the completed externals live?
 if A%EXTERN_DIR%==A  set EXTERN_DIR=%cd%\..\externals
@@ -35,7 +39,7 @@ set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VER
 
 REM Put NTConfig in the PATH, since it's got lots of stuff we need
 REM like awk, gunzip, tar, bison, yacc...
-set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VC_DIR%;%SDK_DIR%;%SDK_XP_DIR%
+set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VC_DIR%;%SDK_DIR%;%SDK_XP_DIR%;%DBG_DIR%
 
 call vcvars32.bat
 if not defined INCLUDE ( echo . && echo *** Failed to run VCVARS32.BAT! Is Microsoft Visual Studio 6.0 installed? && exit /B 1 )
