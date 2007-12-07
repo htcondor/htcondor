@@ -234,6 +234,7 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 	if ( _SysapiProcCpuinfo.file ) {
 		fp = safe_fopen_wrapper( _SysapiProcCpuinfo.file, "r", 0644 );
 		if( !fp ) {
+			free( array );
 			return -1;
 		}
 		fseek( fp, _SysapiProcCpuinfo.offset, SEEK_SET );
@@ -242,6 +243,7 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 		fp = safe_fopen_wrapper( "/proc/cpuinfo", "r", 0644 );
 	}
 	if( !fp ) {
+		free( array );
 		return -1;
 	}
 
