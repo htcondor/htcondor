@@ -292,6 +292,7 @@ convert_ip_to_hostname(const char *addr,
 		snprintf(&(h_name[h_name_len]), maxlen - h_name_len, ".%s",
 				 default_domain_name);
 
+		free(default_domain_name);
 		return 0;
 	} else {
 		dprintf(D_HOSTNAME,

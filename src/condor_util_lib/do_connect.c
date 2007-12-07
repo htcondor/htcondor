@@ -168,7 +168,9 @@ find_port_num( const char* service_name, unsigned short dflt_port )
 	config_name = mk_config_name( service_name );
 	pval = param( config_name );
 	if( pval != NULL ) {
-		return (unsigned short)atoi( pval );
+		unsigned short rc = atoi( pval );
+		free( pval );
+		return rc;
 	}
 
 		/* Try to find in "/etc/services" */

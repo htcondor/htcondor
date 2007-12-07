@@ -70,7 +70,7 @@ isLengthChar( char c )
 static int
 consumeInt( const char** str )
 {
-	int rval;
+	int rval = 0;
 	int digit_val;
 	int first = 0;
 
@@ -83,12 +83,8 @@ consumeInt( const char** str )
 			   subtract the ASCII value of '0' from the given char,
 			   since the ASCII codes for 0-9 are consecutive */
 		digit_val = **str - '0';
-		if( first ) {
-			rval = digit_val;
-		} else {
-			rval *= 10;
-			rval += digit_val;
-		}
+		rval *= 10;
+		rval += digit_val;
 			/* advance to the next char in the string */
 		(*str)++;
 	}

@@ -281,6 +281,7 @@ same_host(const char *h1, const char *h2)
 
 	// stash h_name before our next call to gethostbyname
 	strncpy(cn1, he1->h_name, MAXHOSTNAMELEN);
+	cn1[MAXHOSTNAMELEN-1] = '\0';
 
 	if ((he2 = condor_gethostbyname(h2)) == NULL) {
 		return -1;
@@ -606,6 +607,7 @@ string_to_hostname( const char* addr )
     string_to_sin( addr, &sa_in );
 	if( (tmp = sin_to_hostname(&sa_in, NULL)) ) {
 		strncpy( result, tmp, MAXHOSTNAMELEN );
+		result[MAXHOSTNAMELEN-1] = '\0';
 	} else {
 		return NULL;
 	}
