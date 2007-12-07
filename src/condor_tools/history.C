@@ -601,7 +601,7 @@ static void readHistoryFromFiles(char *JobHistoryFileName, char* constraint, Exp
 static char **findHistoryFiles(int *numHistoryFiles)
 {
     int  fileIndex;
-    char **historyFiles;
+    char **historyFiles = NULL;
     char *historyDir;
 
     BaseJobHistoryFileName = param("HISTORY");

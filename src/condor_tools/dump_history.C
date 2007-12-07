@@ -84,7 +84,6 @@ main(int argc, char* argv[])
   void **parameters;
   char *dbconn=NULL;
   char *completedsince = NULL;
-  char *owner=NULL;
   bool readfromfile = false,remotequill=false;
 
   char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL,*quillName=NULL;
@@ -206,7 +205,6 @@ main(int argc, char* argv[])
   }
   
   
-  if(owner) free(owner);
   if(completedsince) free(completedsince);
   if(parameters) free(parameters);
   if(dbIpAddr) free(dbIpAddr);
@@ -372,8 +370,8 @@ static void readHistoryFromFiles(char *JobHistoryFileName, char* constraint, Exp
                     free(historyFiles[fileIndex]);
                 }
             }
-            free(historyFiles);
         }
+		free(historyFiles);
     }
     return;
 }
@@ -384,7 +382,7 @@ static void readHistoryFromFiles(char *JobHistoryFileName, char* constraint, Exp
 static char **findHistoryFiles(int *numHistoryFiles)
 {
     int  fileIndex;
-    char **historyFiles;
+    char **historyFiles = NULL;
     char *historyDir;
 
     BaseJobHistoryFileName = param("HISTORY");

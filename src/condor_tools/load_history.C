@@ -218,6 +218,7 @@ static void doDBconfig() {
 		} else if (strcasecmp(tmp, "PGSQL") == 0) {
 			dt = T_PGSQL;
 		}
+		free(tmp);
 	} else {
 		dt = T_PGSQL; // assume PGSQL by default
 	}
@@ -331,6 +332,10 @@ static void doDBconfig() {
 		dprintf(D_FULLDEBUG, "scheddname built from default daemon name: %s\n", scheddname);
 	}
 */	
+
+	free(DBIpAddress);
+	free(DBName);
+	free(DBUser);
 }
 
 //! Gets the writer password required by the quill++
