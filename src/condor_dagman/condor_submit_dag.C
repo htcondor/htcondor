@@ -372,20 +372,22 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
 #endif
 
+		// ensure DAGMan is automatically requeued by the schedd if it
+		// exits abnormally or is killed (e.g., during a reboot)
 	const char *defaultRemoveExpr = "( ExitSignal =?= 11 || "
 				"(ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))";
-	const char *removeExpr = param("DAGMAN_ON_EXIT_REMOVE");
-	if ( !removeExpr ) {
-			// ensure DAGMan is automatically requeued by the schedd if it
-			// exits abnormally or is killed (e.g., during a reboot)
-		removeExpr = defaultRemoveExpr;
+	MyString removeExpr(defaultRemoveExpr);
+	char *tmpRemoveExpr = param("DAGMAN_ON_EXIT_REMOVE");
+	if ( tmpRemoveExpr ) {
+		removeExpr = tmpRemoveExpr;
+		free(tmpRemoveExpr);
 	}
     fprintf(pSubFile, "# Note: default on_exit_remove expression:\n");
 	fprintf(pSubFile, "# %s\n", defaultRemoveExpr);
 	fprintf(pSubFile, "# attempts to ensure that DAGMan is automatically\n");
 	fprintf(pSubFile, "# requeued by the schedd if it exits abnormally or\n");
     fprintf(pSubFile, "# is killed (e.g., during a reboot).\n");
-    fprintf(pSubFile, "on_exit_remove\t= %s\n", removeExpr );
+    fprintf(pSubFile, "on_exit_remove\t= %s\n", removeExpr.Value() );
 
     fprintf(pSubFile, "copy_to_spool\t= False\n" );
 

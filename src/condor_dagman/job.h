@@ -114,7 +114,7 @@ class Job {
 		/** Returns how many direct parents a node has.
 			@return number of parents
 		*/
-	const int NumParents();
+	int NumParents() const;
 
     /** The Status of a Job
         If you update this enum, you *must* also update status_t_names
@@ -155,13 +155,13 @@ class Job {
 	inline const char* GetJobName() const { return _jobName; }
 	inline const char* GetDirectory() const { return _directory; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
-	inline const JobID_t GetJobID() const { return _jobID; }
-	inline const int GetRetryMax() const { return retry_max; }
-	inline const int GetRetries() const { return retries; }
+	inline JobID_t GetJobID() const { return _jobID; }
+	inline int GetRetryMax() const { return retry_max; }
+	inline int GetRetries() const { return retries; }
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
 	const char* JobTypeString() const;
-	const job_type_t JobType() const;
+	job_type_t JobType() const;
 
 	bool AddPreScript( const char *cmd, MyString &whynot );
 	bool AddPostScript( const char *cmd, MyString &whynot );
@@ -391,6 +391,7 @@ private:
     const char* _jobName;
   
     /*  Job queues
+	    NOTE: indexed by queue_t
       
         parents -> dependencies coming into the Job
         children -> dependencies going out of the Job

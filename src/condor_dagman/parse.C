@@ -113,16 +113,22 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// If useDagDir is true, we have to cd into the directory so we can
 		// parse the submit files correctly.
 		// 
-	const char *	tmpDirectory = "";
+	MyString		tmpDirectory("");
 	const char *	tmpFilename = filename;
 	TmpDir		dagDir;
+
 	if ( useDagDir ) {
-		tmpDirectory = condor_dirname( filename );
+			// Use a MyString here so we don't have to manually free memory
+			// at all of the places we return.
+		char *dirname = condor_dirname( filename );
+		tmpDirectory = dirname;
+		free(dirname);
+
 		MyString	errMsg;
-		if ( !dagDir.Cd2TmpDir( tmpDirectory, errMsg ) ) {
+		if ( !dagDir.Cd2TmpDir( tmpDirectory.Value(), errMsg ) ) {
 			debug_printf( DEBUG_QUIET,
 					"Could not change to DAG directory %s: %s\n",
-					tmpDirectory, errMsg.Value() );
+					tmpDirectory.Value(), errMsg.Value() );
 			return false;
 		}
 		tmpFilename = condor_basename( filename );
@@ -132,8 +138,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	if(fp == NULL) {
 		if(DEBUG_LEVEL(DEBUG_QUIET)) {
 			debug_printf( DEBUG_QUIET, "Could not open file %s for input\n", filename);
-			return false;
 		}
+		return false;
    	}
 
 	char *line;
@@ -161,6 +167,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 			// which is much safer, but I don't want to deal with that
 			// right now.  wenger 2005-02-02.
 		char *token = strtok(line, DELIMITERS);
+		if ( !token ) continue; // so Coverity is happy
+
 		bool parsed_line_successfully;
 
 		// Handle a Job spec
@@ -168,7 +176,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		//
 		if(strcasecmp(token, "JOB") == 0) {
 			parsed_line_successfully = parse_node( dag, Job::TYPE_CONDOR, token,
-												   filename, lineNumber, tmpDirectory );
+					   filename, lineNumber, tmpDirectory.Value() );
 		}
 
 		// Handle a Stork job spec
@@ -176,7 +184,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		//
 		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
 			parsed_line_successfully = parse_node( dag, Job::TYPE_STORK, token,
-												   filename, lineNumber, tmpDirectory );
+					   filename, lineNumber, tmpDirectory.Value() );
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
 				"Warning: the DAP token is deprecated and may be unsupported "
 				"in a future release.  Use the DATA token\n",
@@ -185,7 +193,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 
 		else if	(strcasecmp(token, "DATA") == 0) {
 			parsed_line_successfully = parse_node( dag, Job::TYPE_STORK, token,
-												   filename, lineNumber, tmpDirectory );
+					   filename, lineNumber, tmpDirectory.Value() );
 		}
 
 		// Handle a SCRIPT spec

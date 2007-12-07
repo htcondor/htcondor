@@ -95,7 +95,19 @@ Dagman::Dagman() :
 	primaryDagFile (NULL),
 	allowLogError (false),
 	useDagDir (false),
-	deleteOldLogs (true)
+	deleteOldLogs (true),
+	_dagmanConfigFile (NULL), // so Coverity is happy
+	abortDuplicates (true), // so Coverity is happy
+	abortOnScarySubmit (true), // so Coverity is happy
+	allow_events (CheckEvents::ALLOW_NONE), // so Coverity is happy
+	max_submits_per_interval (1000), // so Coverity is happy
+	mungeNodeNames (true), // so Coverity is happy
+	pendingReportInterval (10 * 60), // so Coverity is happy
+	prohibitMultiJobs (false), // so Coverity is happy
+	retryNodeFirst (false), // so Coverity is happy
+	retrySubmitFirst (true), // so Coverity is happy
+	startup_cycle_detect (false), // so Coverity is happy
+	submitDepthFirst (false) // so Coverity is happy
 {
 }
 

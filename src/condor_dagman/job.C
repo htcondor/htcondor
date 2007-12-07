@@ -30,6 +30,7 @@
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
 
 //---------------------------------------------------------------------------
+// NOTE: this must be kept in sync with the queue_t enum
 const char *Job::queue_t_names[] = {
     "Q_PARENTS",
     "Q_WAITING",
@@ -47,6 +48,7 @@ const char * Job::status_t_names[] = {
     "STATUS_ERROR    ",
 };
 
+//---------------------------------------------------------------------------
 // NOTE: must be kept in sync with the job_type_t enum
 const char* Job::_job_type_names[] = {
     "Condor",
@@ -67,6 +69,8 @@ Job::~Job() {
 	delete [] _logFile;
 	delete varNamesFromDag;
 	delete varValsFromDag;
+	delete _scriptPre;
+	delete _scriptPost;
 }
 
 Job::
@@ -126,11 +130,15 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
     retry_max = 0;
     retries = 0;
     _submitTries = 0;
+	retval = -1; // so Coverity is happy
     have_retry_abort_val = false;
     retry_abort_val = 0xdeadbeef;
     have_abort_dag_val = false;
+	abort_dag_val = -1; // so Coverity is happy
     have_abort_dag_return_val = false;
+	abort_dag_return_val = -1; // so Coverity is happy
 	_visited = false;
+	_dfsOrder = -1; // so Coverity is happy
 
 	_queuedNodeJobProcs = 0;
 
@@ -147,6 +155,8 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
 
 	varNamesFromDag = new List<MyString>;
 	varValsFromDag = new List<MyString>;
+
+	snprintf( error_text, JOB_ERROR_TEXT_MAXLEN, "unknown" );
 
 	return;
 }
@@ -179,11 +189,10 @@ void Job::Dump () const {
     dprintf( D_ALWAYS, "---------------------- Job ----------------------\n");
     dprintf( D_ALWAYS, "      Node Name: %s\n", _jobName );
     dprintf( D_ALWAYS, "         NodeID: %d\n", _jobID );
-    dprintf( D_ALWAYS, "    Node Status: %s\n", status_t_names[_Status] );
+    dprintf( D_ALWAYS, "    Node Status: %s\n", GetStatusName() );
     dprintf( D_ALWAYS, "Node return val: %d\n", retval );
 	if( _Status == STATUS_ERROR ) {
-		dprintf( D_ALWAYS, "          Error: %s\n",
-				 error_text ? error_text : "unknown" );
+		dprintf( D_ALWAYS, "          Error: %s\n", error_text );
 	}
     dprintf( D_ALWAYS, "Job Submit File: %s\n", _cmdFile );
 	if( _scriptPre ) {
@@ -493,6 +502,7 @@ Job::IsActive() const
 const char*
 Job::GetStatusName() const
 {
+		// Put in bounds check here?
 	return status_t_names[_Status];
 }
 
@@ -579,7 +589,7 @@ Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
 }
 
 
-const Job::job_type_t
+Job::job_type_t
 Job::JobType() const
 {
     return _jobType;
@@ -601,8 +611,8 @@ const char* Job::JobIdString() const
 */
 
 
-const int
-Job::NumParents()
+int
+Job::NumParents() const
 {
 	int n = _queues[Q_PARENTS].Number();
 	return n;

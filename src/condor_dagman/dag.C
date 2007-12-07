@@ -1309,8 +1309,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 				  	job->GetJobName() );
 
 		if ( job->GetStatus() != Job::STATUS_READY ) {
-			EXCEPT( "Job %s status is %d, not STATUS_READY",
-						job->GetJobName(), job->GetStatus() );
+			EXCEPT( "Job %s status is %s, not STATUS_READY",
+						job->GetJobName(), job->GetStatusName() );
 		}
 
 			// Check for throttling by node category.
@@ -2236,7 +2236,7 @@ Dag::PrintPendingNodes() const
 		case Job::STATUS_POSTRUN:
 			dprintf( D_ALWAYS, "  Node %s, Condor ID %d, status %s\n",
 						node->GetJobName(), node->_CondorID._cluster,
-						Job::status_t_names[ node->GetStatus() ] );
+						node->GetStatusName() );
 			break;
 
 		default:

@@ -70,10 +70,13 @@ ThrottleByCategory::SetThrottle( const MyString *category, int maxJobs )
 
 	ThrottleInfo	*info;
 	if ( _throttles.lookup( *category, info ) != 0 ) {
-		// category not in table
+			// category not in table
+
+			// Coverity complains about not storing the return value here, but
+			// AddCategory also puts it in the hash table.
 		AddCategory( category, maxJobs );
 	} else {
-		// category is in table
+			// category is in table
 		if ( info->_maxJobs != noThrottleSetting &&
 					info->_maxJobs != maxJobs ) {
 			debug_printf( DEBUG_NORMAL, "Warning: new maxjobs value %d "
