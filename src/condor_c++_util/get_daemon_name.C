@@ -119,7 +119,7 @@ get_daemon_name( const char* name )
 char*
 build_valid_daemon_name( char* name ) 
 {
-	char *tmp, *tmpname, *daemon_name = NULL;
+	char *tmp, *tmpname = NULL, *daemon_name = NULL;
 	int size;
 
 		// This flag determines if we want to just return a copy of
@@ -157,8 +157,8 @@ build_valid_daemon_name( char* name )
 		size = strlen(tmpname) + strlen(my_full_hostname()) + 2; 
 		daemon_name = new char[size];
 		sprintf( daemon_name, "%s@%s", tmpname, my_full_hostname() ); 
-		delete [] tmpname;
 	}
+	delete [] tmpname;
 	return daemon_name;
 }
 

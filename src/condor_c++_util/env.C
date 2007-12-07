@@ -492,6 +492,7 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 		// This environment entry is an unexpanded $$() macro.
 		// We just want to keep it in the environment verbatim.
 		SetEnv(expr,NO_ENVIRONMENT_VALUE);
+		delete[] expr;
 		return true;
 	}
 

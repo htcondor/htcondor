@@ -67,6 +67,8 @@ displayJobShort(AttrList* ad)
                 !ad->EvalString  (ATTR_JOB_CMD, NULL, &cmd) )
         {
                 printf (" --- ???? --- \n");
+				free(owner);
+				free(cmd);
                 return;
         }
         
@@ -240,7 +242,6 @@ static bool EvalBool(AttrList* ad, ExprTree *tree)
   // have the same semantics as the collector queries.  --RR
   if (!tree->EvalTree(NULL, ad, &result)) {        
         // dprintf(D_ALWAYS, "can't evaluate constraint: %s\n", constraint);
-    delete tree;
     return false;
   }
         

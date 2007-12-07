@@ -564,6 +564,7 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(const char * attrname, const char *
 				return true;
 			}
 		}
+		free(sysexpr);
 	}
 
 	return false;

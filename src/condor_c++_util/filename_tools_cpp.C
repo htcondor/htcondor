@@ -111,7 +111,12 @@ int filename_remap_find( const char *input, const char *filename, MyString &outp
 	buffer = (char *)malloc(input_len+1);
 	name = (char *)malloc(input_len+1);
 	url = (char *)malloc(input_len+1);
-	if(!buffer || !name || !url) return 0;
+	if(!buffer || !name || !url) {
+		free(buffer);
+		free(name);
+		free(url);
+		return 0;
+	}
 	eat_space(input,buffer);
 
 	/* Now find things like name=url; name=url; ... */

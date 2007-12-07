@@ -64,6 +64,7 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 	char src_host[MAXMACHNAME];
 	bool inStarter  = FALSE;
 	char *tmpp;
+	char *dir_tmp;
 
 	struct stat file_status;
 
@@ -90,7 +91,9 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 		// hostname
 	dst_host = my_full_hostname();
 	dst_name = condor_basename(rp->fullname);
-	dst_path = condor_dirname(rp->fullname);
+	dir_tmp = condor_dirname(rp->fullname);
+	dst_path = dir_tmp;
+	free(dir_tmp);
 
 		// src_host
 	src_host[0] = '\0';
@@ -109,7 +112,9 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 		ad->LookupString(ATTR_ORIG_JOB_CMD, job_name);
 		if (!job_name.IsEmpty() && fullpath(job_name.GetCStr())) {
 			src_name = condor_basename(job_name.GetCStr());
-			src_path = condor_dirname(job_name.GetCStr());
+			dir_tmp = condor_dirname(job_name.GetCStr());
+			src_path = dir_tmp;
+			free(dir_tmp);
 			found = true;
 		} else
 			src_name = job_name;
@@ -149,15 +154,18 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 		if(strcmp(inputBaseName, src_name.GetCStr()) == 0) {
 			found = true;
 			if(fullpath(inputFile)) {
-				src_path = condor_dirname(inputFile);
+				dir_tmp = condor_dirname(inputFile);
+				src_path = dir_tmp;
+				free(dir_tmp);
 			} else {
 				src_path = iwd_path;
-				const char *inputDirName = condor_dirname(inputFile);
+				char *inputDirName = condor_dirname(inputFile);
 				// if dirname gives back '.', don't bother sticking it on
 				if(!(inputDirName[0] == '.' && inputDirName[1] == '\0')) {
 					src_path += DIR_DELIM_CHAR;
 					src_path += inputDirName;
 				}
+				free(inputDirName);
 			}	
 		}
 	}
