@@ -211,6 +211,7 @@ main_pre_dc_init(int argc, char* argv[])
 	passwd_cache* p_cache = pcache();
 	if( p_cache->get_user_name(caller_uid, user_name) == true ) {
 		caller_name = user_name;
+		free(user_name);
 	}
 
 	if( job_user_uid == caller_uid ) {
@@ -226,6 +227,7 @@ main_pre_dc_init(int argc, char* argv[])
 		if( job_user_uid != caller_uid ) {
 			if( p_cache->get_user_name(job_user_uid, user_name) == true ) {
 				job_user_name = user_name;
+				free(user_name);
 			}
 		}
 	}
