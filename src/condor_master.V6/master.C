@@ -259,19 +259,10 @@ main_init( int argc, char* argv[] )
         // We'll give it an absolute time, though runfor is a 
         // relative time. This means that we don't have to update
         // the time each time we restart the daemon.
-        time_t      death_time;
-        MyString    runfor_env_source;
-        const char  *env_name;
-        char        *runfor_env;
-        
-        env_name   = EnvGetName(ENV_DAEMON_DEATHTIME);
-        death_time = time(NULL) + (runfor * 60);
-
-        runfor_env_source.sprintf("%s=%d\n", env_name, (int)death_time);
-        runfor_env = strdup(runfor_env_source.Value());
-        putenv(runfor_env);
-        // Note that we don't free runfor_env, because it lives on 
-        // forever in the environment. 
+		MyString runfor_env;
+		runfor_env.sprintf("%s=%d", EnvGetName(ENV_DAEMON_DEATHTIME),
+						   time(NULL) + (runfor * 60));
+		SetEnv(runfor_env.Value());
     }
 
 	daemons.SetDefaultReaper();
@@ -689,6 +680,7 @@ init_daemon_list()
 	char* dc_daemon_list = param("DC_DAEMON_LIST");
 	if( dc_daemon_list ) {
 		dc_daemon_names.initializeFromString(dc_daemon_list);
+		free(dc_daemon_list);
 	} else {
 		dc_daemon_names.initializeFromString(default_dc_daemon_list);
 	}
