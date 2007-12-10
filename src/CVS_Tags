@@ -1,3 +1,7 @@
+12/10/07 V6_9-dagman-pre-7_0-{root,branch}
+  A branch to continue DAGMan development while the cvs trunk is frozen
+  for Condor 7.0.
+
 11/28/07 V6_9_5
   The offical tag for 6.9.5, from the V6_9_5-branch.
   Version string: $CondorVersion: 6.9.5 Nov 28 2007 BuildID: 65347 $
