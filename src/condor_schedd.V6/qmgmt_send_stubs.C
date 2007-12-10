@@ -550,7 +550,7 @@ DeleteAttribute( int cluster_id, int proc_id, char const *attr_name )
 int
 SendSpoolFile( char const *filename )
 {
-	int	rval -1;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_SendSpoolFile;
 
