@@ -8,6 +8,10 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+12/10/07 V6_9-dagman-pre-7_0-{root,branch}
+  A branch to continue DAGMan development while the cvs trunk is frozen
+  for Condor 7.0.
+
 12/10/07 better-trunk-post-merge-V6_9_5-merge-1
    Another tag on the trunk, after removal of 2 files that CVS did not
    properly remove.
