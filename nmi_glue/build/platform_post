@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: platform_post,v 1.8 2007-11-14 22:20:28 bt Exp $
+# $Id: platform_post,v 1.9 2007-12-10 17:08:12 bt Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -85,6 +85,19 @@ if( $notify ) {
 }
 my $xtests_arg = $opt_submit_xtests == 1 ? '--submit-xtests' : '--nosubmit-xtests';
 
+@crossplatforms = ();
+if( $xtests_arg eq "--submit-xtests") {
+	# look in the environment for the list of platforms desired
+	# condor_nmi_submit parses this information out of "submit_info"
+	# in the nmi_glue directory
+	$nmi_env_lookup = "NMI_x_test_platforms_" . $platform;
+	my $xtestplatforms = $ENV{$nmi_env_lookup};
+	@crossplatforms = split /\s*\,\s*/, $xtestplatforms;
+	foreach $cross (@crossplatforms) {
+		print "Cross test binary testing on $cross for platform $platform\n";
+	}
+}
+
 if($mode ne "workspace") {
 	$tag || die "No tag to use, NOT submitting tests\n";
 	$module || die "No module to use, NOT submitting tests\n";
@@ -95,54 +108,86 @@ my $runid = `nmi_gid2runid $ENV{_NMI_GID}`;
 chomp $runid;
 $runid || die "Can't find runid from gid, NOT submitting tests\n";
 
-# Skip MacOS 10.4 for now
 my $status;
-#unless ($platform =~ /macos_10\.4/) {
-    print "Attempting to submit test job for platform: '$platform' "
-        . "runid: '$runid' ...\n";
+print "Attempting to submit test job for platform: '$platform' "
+	. "runid: '$runid' ...\n";
 
-    # path to the condor_nmi_submit binary we're planning to use
-    my $cns = "nmi_tools/condor_nmi_submit";
-    -f $cns || die "Can't submit tests: $cns does not exist\n";
-    if( ! -x $cns ) {
-        chmod(0755, $cns) || die "Can't submit tests: $cns is not executable "
-            . "and chmod() failed: $!\n";
-    }
-
-	my $cmd = "";
-	if($mode ne "workspace") {
-    	$cmd = "$cns --test --buildid=$runid --platform=$platform " .
-       		"--tag=$tag --module=$module $notify_arg $opt_test_args $xtests_arg";
-	} else {
-		# set up tests for a workspace build
-    	$cmd = "$cns --test --buildid=$runid --platform=$platform " .
-       		"$notify_arg $opt_test_args";
-		print "Workspace test command is <$cmd>\n";
-	}
-
-    print "Invoking CNS ($cmd)\n";
-    open( CNS, "$cmd|" ) || 
-        die "Can't submit tests: Can't open '$cmd' as a pipe: $!\n";
-    while( <CNS> ) {
-        print "CNS: $_";
-    }
-    close( CNS );
-    $status = $?;
-#} # UNLESS
-
-if( ! $status ) {
-    # exited with status 0, we're happy
-    print "platform_post: SUCCESS\n";
-    exit 0;
+# path to the condor_nmi_submit binary we're planning to use
+my $cns = "nmi_tools/condor_nmi_submit";
+-f $cns || die "Can't submit tests: $cns does not exist\n";
+if( ! -x $cns ) {
+	chmod(0755, $cns) || die "Can't submit tests: $cns is not executable "
+	. "and chmod() failed: $!\n";
 }
 
-if( $status == -1 ) {
-    die "$cns failed to execute: $!";
-} elsif( WIFEXITED($status) ) {
-    die "$cns exited with status " . WEXITSTATUS($status);
-} elsif( WIFSIGNALED($status) ) {
-    die "$cns died with signal " . WTERMSIG($status);
+my $cmd = "";
+my $cmd1 = "";
+my $cmd2 = "--platforms=$platform "; 
+my $cmd3 = "$notify_arg $opt_test_args $xtests_arg";
+if($mode ne "workspace") {
+   	$cmd1 = "$cns --test --buildid=$runid --tag=$tag --module=$module ";
 } else {
-    die "$cns returned unrecognized status: $status";
+	# set up tests for a workspace build
+   	$cmd1 = "$cns --test --buildid=$runid "; 
+}
+$cmd = $cmd1 . $cmd2 . $cmd3;
+
+# submit the tests for the native build
+print "Invoking CNS ($cmd)\n";
+open( CNS, "$cmd|" ) || 
+	die "Can't submit tests: Can't open '$cmd' as a pipe: $!\n";
+while( <CNS> ) {
+	print "CNS: $_";
+}
+close( CNS );
+
+$status = $?;
+if($status) {
+	# non zero return - not good
+	print "failed to submit tests for $platform\n";
+	leavebadly($status);
 }
 
+# is this a cross test run too?
+foreach $test (@crossplatforms) {
+	# mark the source binaries here and set the platform
+	# condor_nmi_submit will do the magic to make it work
+	# and will make the cross test binaries show up in the 
+	# Run table in the component_version field
+	$cmd2 = "--platforms=$test --input-platform=$platform ";
+	$cmd = $cmd1 . $cmd2 . $cmd3;
+
+	# submit the tests for cross test request
+   	print "Invoking CNS ($cmd)\n";
+   	open( CNS, "$cmd|" ) || 
+       	die "Can't submit tests: Can't open '$cmd' as a pipe: $!\n";
+   	while( <CNS> ) {
+       	print "CNS: $_";
+   	}
+   	close( CNS );
+   	$status = $?;
+
+	if($status) {
+		# non zero return - not good
+		print "failed to submit cross tests for $platform on $test\n";
+		leavebadly($status);
+	}
+}
+
+print "platform_post: SUCCESS\n";
+exit 0;
+
+sub leavebadly
+{
+	my $status = shift;
+
+	if( $status == -1 ) {
+    	die "$cns failed to execute: $!";
+	} elsif( WIFEXITED($status) ) {
+    	die "$cns exited with status " . WEXITSTATUS($status);
+	} elsif( WIFSIGNALED($status) ) {
+    	die "$cns died with signal " . WTERMSIG($status);
+	} else {
+    	die "$cns returned unrecognized status: $status";
+	}
+}
