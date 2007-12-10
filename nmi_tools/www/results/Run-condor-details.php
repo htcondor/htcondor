@@ -52,6 +52,7 @@
    //
    // Platforms
    //
+   // Original platforms we actually built on
    $sql = "SELECT DISTINCT(platform) AS platform ".
           "  FROM Run, Task ".
           " WHERE Task.runid = $runid ".
@@ -62,7 +63,8 @@
    $result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
    $platforms = Array();
    while ($row = mysql_fetch_array($result)) {
-      $platforms[] = $row["platform"];
+      $tmpp = $platforms[] = $row["platform"];
+		//echo "<H3>$tmpp</H3>";
    }
    mysql_free_result($result);
    
@@ -89,14 +91,17 @@
       //
       // We also need runids
       //
-      $runid_sql = "SELECT Method_nmi.runid ".
+      $runid_sql = "SELECT DISTINCT Method_nmi.runid ".
                    "  FROM Method_nmi, Run ".
                    " WHERE Method_nmi.input_runid = $runid ".
                    "   AND Run.runid = Method_nmi.runid ".
+		   		   "  AND (component_version = project_version or ( component_version = 'native'))".
                    "   AND Run.user = '$user' ";
       $result = mysql_query($runid_sql) or die ("Query $runid_sql failed : " . mysql_error());
       while ($row = mysql_fetch_array($result)) {
-         $runids[] = $row["runid"];
+         $tmp = $runids[] = $row["runid"];
+		 //echo "<H3>$tmp</H3>";
+		 //echo "<H3>$tmp, $row["component_version"], $row["platform"]</H3>";
       }
       mysql_free_result($result);
       
@@ -163,7 +168,7 @@
 			$filepath = $locrow["filepath"];
 		}
 
-      $display = "<a href=\"$filepath/$gid/userdir/$platform/\" ".
+		$display = "<a href=\"$filepath/$gid/userdir/$platform/\" ".
                  "title=\"View Run Directory\">$display</a>";
       echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display</td>\n";
    } // FOREACH

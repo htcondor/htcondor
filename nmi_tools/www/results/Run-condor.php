@@ -4,6 +4,7 @@
    //
    define("BRANCH_URL", "./Run-condor-branch.php?branch=%s&user=%s");
    define("DETAIL_URL", "./Run-condor-details.php?runid=%s&type=%s&user=%s");
+   define("CROSS_DETAIL_URL", "./Run-condor-pre-details.php?runid=%s&type=%s&user=%s");
    define("CONDOR_USER", "cndrauto");
    
    $result_types = Array( "passed", "pending", "failed", "missing" );
@@ -35,6 +36,7 @@
       <th>User</th>
       <th>Build Results</th>
       <th>Test Results</th>  
+      <th>Cross Test Results</th>  
       </tr>
 
 <?php
@@ -124,7 +126,8 @@ while ($row = mysql_fetch_array($result)) {
           "       Run.runid = Method_nmi.runid AND ".
           "       Run.user = '$user'  AND ".
           "       Task.runid = Run.runid AND ".
-          "       Task.platform != 'local' ".
+          "       Task.platform != 'local' AND ".
+          "       ((Run.project_version = Run.component_version)  OR (Run.component_version = 'native' ))".
           " GROUP BY Task.platform ";
    $result2 = mysql_query($sql)
                   or die ("Query {$sql} failed : " . mysql_error());
@@ -139,6 +142,38 @@ while ($row = mysql_fetch_array($result)) {
       } elseif (!empty($platforms["passed"])) {
          $data["test"]["passed"]++;
          $data["test"]["total"]++;
+      }
+   } // WHILE
+   mysql_free_result($result2);
+
+   // --------------------------------
+   // CROSS TESTS
+   // --------------------------------
+   $sql = "SELECT SUM(IF(Task.result = 0, 1, 0)) AS passed, ".
+          "       SUM(IF(Task.result != 0, 1, 0)) AS failed, ".
+          "       SUM(IF(Task.result IS NULL, 1, 0)) AS pending ".
+          "  FROM Task, Run, Method_nmi ".
+          " WHERE Method_nmi.input_runid = {$runid} AND ".
+          "       Run.runid = Method_nmi.runid AND ".
+          "       Run.user = '$user'  AND ".
+          "       Task.runid = Run.runid AND ".
+          "       Task.platform != 'local' AND ".
+		  "       project_version != component_version AND ".
+		  "		  component_version != 'native' ".
+          " GROUP BY Task.platform ";
+   $result2 = mysql_query($sql)
+                  or die ("Query {$sql} failed : " . mysql_error());
+   $data["crosstest"] = Array();
+   while ($platforms = mysql_fetch_array($result2)) {
+      if (!empty($platforms["failed"])) {
+         $data["crosstest"]["failed"]++;
+         $data["crosstest"]["total"]++;
+      } elseif (!empty($platforms["pending"])) {
+         $data["crosstest"]["pending"]++;
+         $data["crosstest"]["total"]++;
+      } elseif (!empty($platforms["passed"])) {
+         $data["crosstest"]["passed"]++;
+         $data["crosstest"]["total"]++;
       }
    } // WHILE
    mysql_free_result($result2);
@@ -165,7 +200,7 @@ while ($row = mysql_fetch_array($result)) {
       <td align="center">{$user}</td>
 EOF;
 
-   foreach (Array("build", "test") AS $type) {
+   foreach (Array("build", "test", "crosstest") AS $type) {
       $cur = $data[$type];
       $status = ($cur["failed"] ? "FAILED" :
                 ($cur["pending"] ? "PENDING" : "PASSED"));
@@ -196,7 +231,11 @@ EOF;
          elseif ($cur["missing"] < 0) $cur["missing"] = 0;
       }
 
-      $detail_url = sprintf(DETAIL_URL, $runid, $type, $user);
+		if($type == "crosstest") {
+      		$detail_url = sprintf(CROSS_DETAIL_URL, $runid, $type, $user);
+		} else {
+      		$detail_url = sprintf(DETAIL_URL, $runid, $type, $user);
+	  	}
       
       //
       // No results
