@@ -768,6 +768,7 @@ sub createSubmitFiles
         print CMDFILE "run_type = build\n";
         writeBuildPrereqs( *CMDFILE );
         writeBuildGlue( *CMDFILE, $tag, $module );
+		writeBuildXTestSpecs( *CMDFILE );
     } else {
         print CMDFILE "run_type = test\n";
         writeTestPrereqs( *CMDFILE );
@@ -811,7 +812,19 @@ sub writeBuildPrereqs
     }
 }
 
+sub writeBuildXTestSpecs
+{
+    my $fh = shift;
 
+    # Drop the info on desired cross testing into environment
+    # via entries in the command file.
+    if( defined($opt_submit_xtests) && $opt_submit_xtests == 1) {
+        foreach my $key (sort keys %platform_x_test_platforms) {
+            my $code = "x_test_platforms_" . $key . " =";
+            print $fh "$code $platform_x_test_platforms{$key}\n";
+        }
+    }
+}
 
 sub writeCommonInfo
 {
@@ -838,11 +851,28 @@ sub writeCommonInfo
     print $fh "project = condor\n";
     if( defined $vers_string ) {
         print $fh "project_release = $vers_string\n";
-    }
+    } else {
+		# Now that we care about comparing this to
+		# to component version to sort displays of
+		# native vs pre-binary cross testing lets loose
+		# the uninitialized NULL field.
+		print $fh "project_release = unknown workspace\n";
+	}
+
     print $fh "component = condor\n";
-    if( defined $vers_string ) {
-        print $fh "component_version = $vers_string\n";
-    }
+	if( defined $opt_input_platform ) {
+		# brand binaries being tested on this platform so we can find it later
+		# its a cross test
+        print $fh "component_version = $opt_input_platform\n";
+    } elsif( $runtype eq "test") {
+		# when the optional input is not used its a native test 
+        print $fh "component_version = native\n";
+	} else {
+		# build - so keep marking it as it was
+    	if( defined $vers_string ) {
+        	print $fh "component_version = $vers_string\n";
+    	}
+	}
     print $fh "notify = $notify\n";
     print $fh "private_web_users = condor-team\n";
     print $fh "priority = 1\n";
@@ -1005,6 +1035,14 @@ sub generateTestFetchFiles
     print RUNIDFILE "method = nmi\n";
     print RUNIDFILE "input_runids = $opt_buildid\n";
     print RUNIDFILE "untar_results = false\n";     
+
+	# allow non-matching test bimaries for cross tests
+	if( defined($opt_submit_xtests) && $opt_submit_xtests == 1) {
+        print RUNIDFILE "ignore_missing_platforms = true\n";
+    } else {
+        print RUNIDFILE "ignore_missing_platforms = false\n";
+    }
+
     if( defined $opt_input_platform ) {
         my @fetch_platforms;
         my $platform;
