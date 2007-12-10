@@ -142,6 +142,7 @@ XferSummary::time_out(time_t now, char *hostaddr)
 {
 	ClassAd	   	info;
 	char		line[128], *tmp;
+	char		*str = NULL;
 
 	info.SetMyTypeName("CkptServer");
 	info.SetTargetTypeName("CkptFile");
@@ -174,14 +175,39 @@ XferSummary::time_out(time_t now, char *hostaddr)
 	sprintf(line, "AvgReceiveBandwidth = %f", num_recvs ?
 			tot_recv_bandwidth / num_recvs : 0.0);
 	info.Insert(line);
-	sprintf(line, "CkptServerIntervalStart = \"%s\"", ctime(&start_time));
+
+	/* ctime adds a newline at the end of the ascii conversion.... */
+	str = ctime(&start_time);
+	if (str == NULL) {
+		/* This should never happen, but in case it does. */
+		str = "Unknown\n";
+	}
+	sprintf(line, "CkptServerIntervalStart = \"%s\"", str);
 	tmp = strchr( line, '\n' );
-	strcpy( tmp, "\"" );
+	if (tmp != NULL) {
+		/* delete the newline */
+		*tmp = '\"';
+		tmp++;
+		*tmp = '\0';
+	}
 	info.Insert(line);
-	sprintf(line, "CkptServerIntervalEnd = \"%s\"", ctime(&now));
+
+	/* ctime adds a newline at the end of the ascii conversion.... */
+	str = ctime(&now);
+	if (str == NULL) {
+		/* This should never happen, but in case it does. */
+		str = "Unknown\n";
+	}
+	sprintf(line, "CkptServerIntervalEnd = \"%s\"", str);
 	tmp = strchr( line, '\n' );
-	strcpy( tmp, "\"" );
+	if (tmp != NULL) {
+		/* delete the newline */
+		*tmp = '\"';
+		tmp++;
+		*tmp = '\0';
+	}
 	info.Insert(line);
+
 	sprintf(line, "Disk = %d", sysapi_disk_space(pwd.Value()) );
 	info.Insert(line);
 	
