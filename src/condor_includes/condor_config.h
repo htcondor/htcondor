@@ -246,7 +246,6 @@ BEGIN_C_DECLS
 	of size TABLESIZE.
 	*/
 	char * macro_expand ( const char *name );
-	int param_in_pattern ( char *parameter, char *pattern);
 	void init_config ( void );
 	void clear_config ( void );
 	void set_debug_flags( char * );

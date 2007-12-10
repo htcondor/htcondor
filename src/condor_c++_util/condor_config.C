@@ -1542,33 +1542,6 @@ param_boolean_int( const char *name, int default_value )
     return param_boolean(name, default_bool) ? 1 : 0;
 }
 
-/*
-** Return non-zero iff the named configuration parameter contains the given
-** pattern.  
-*/
-int
-param_in_pattern( char *parameter, char *pattern )
-{
-	char	*argv[512];
-	int		argc;
-	char	*tmp;
-
-		/* Look up the parameter and break its value into an argv */
-	/* tmp = strdup( param(parameter) ); */
-	tmp = param(parameter);
-	mkargv( &argc, argv, tmp );
-
-		/* Search for the given pattern */
-	for( argc--; argc >= 0; argc-- ) {
-		if( !strcmp(pattern,argv[argc]) ) {
-			FREE( tmp );
-			return 1;
-		}
-	}
-	FREE( tmp );
-	return 0;
-}
-
 // Note that the line_number can be -1 if the filename isn't a real
 // filename, but something like <Internal> or <Environment>
 bool param_get_location(
