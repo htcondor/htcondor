@@ -2,6 +2,7 @@
 {Queue jobs for execution under Condor}
 \Synopsis \SynProg{\Condor{submit}}
 \oOpt{-verbose}
+\oOpt{-unused}
 \oOptArg{-name}{schedd\_name}
 \oOptArg{-remote}{schedd\_name}
 \oOptArg{-pool}{pool\_name}
@@ -2408,6 +2409,15 @@ character are ignored by the submit description file parser.
 \begin{Options}
 
 \OptItem{\Opt{-verbose}}{Verbose output - display the created job ClassAd}
+
+\OptItem{\Opt{-unused}}{As a default, causes no warnings to be issued about
+  user-defined macros not being used within the submit description file.
+  The meaning reverses (toggles) when
+  the configuration variable \Macro{WARN\_ON\_UNUSED\_SUBMIT\_FILE\_MACROS}
+  is set to the nondefault value of \Expr{False}.
+  Printing the warnings can help identify spelling
+  errors of submit description file commands.  The warnings are sent
+  to stderr. }
 
 \OptItem{\OptArg{-name}{schedd\_name}}{Submit to the specified \Condor{schedd}.
 Use this option to submit to a \Condor{schedd} other than the default local one.}

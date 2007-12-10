@@ -109,25 +109,46 @@ some types of invalid ClassAd expressions.
 
 \begin{itemize}
 
-\item Dropped support for Digital Unix systems on the Alpha processor.
-This port is still supported in the 6.8 series of Condor.
+\item There are some known vulnerabilities in the Virtual Machine
+  (VM) universe support included in this release that can allow VM
+  universe jobs to read arbitrary files on the host machine.
+  VM universe is disabled by default, so this potential vulnerability
+  does not affect most sites.
+  However, VM universe should not be enabled unless the job policy
+  only allows users that you trust completely to run jobs on the
+  machine.
 
-\item Dropped support for OGSA GRAM (i.e. grid-type gt3) in the grid
+\item Condor is now licensed under the terms of the Apache License
+  version 2.0.
+
+\item Dropped support for the following platforms:
+\begin{itemize}
+\item Red Hat Linux 7.x systems on the x86 processor.
+\item Digital Unix systems on the Alpha processor.
+\item Yellow Dog Linux 3.0 systems on the PPC processor.
+\item MacOS 10.3 systems on the PPC processor.
+\end{itemize}
+Theses ports are still supported in the 6.8 series of Condor.
+
+\item Dropped support for OGSA GRAM (grid-type gt3) in the grid
 universe. This version of GRAM is not included in recent versions of
 the Globus Toolkit. This does not affect Condor's support for pre-WS
 GRAM (grid-type gt2) or WS GRAM (grid-type gt4).
 
 \item The suggested configuration value for
 \MacroNI{SHADOW\_RENICE\_INCREMENT} has been changed from 10 to 0.  If
-you have the old value in an existing configuration file, we recommend
-changing it.  This improves performance of Condor on busy submit nodes
-where other processes would cause low priority shadows to become
-starved for CPU time.
+using the value 10 in an existing configuration file, we recommend
+changing it.  This improves the performance of Condor on busy submit nodes
+where other processes would cause low priority \Condor{shadow} daemons
+to become starved for CPU time.
 
 \item For grid-type gt2 grid universe jobs, job arguments are now handled
-like they are for all other job types. Previously, the user would have to
+as they are for all other job types. Previously, the user would have to
 manually escape characters that had special meaning to GRAM's RSL
 language.
+
+\item \Condor{version} now includes a specific build
+identification number for official builds of Condor.
 
 \end{itemize}
 
@@ -136,31 +157,32 @@ language.
 
 \begin{itemize}
 
-\item \Condor{q}, when quill is enabled, now displays the last time
-	quill updated the database.  This allows you to see how fresh
-	the database information is.
+\item \Condor{q}, when Quill is enabled, now displays the last time
+Quill updated the database.  This permits seeing how fresh
+the database information is.
 
-\item \Condor{history}, when quill is enabled, will now query the
-	database for historical items even when the -constraint option
-	is given.  Previously, it would go to the history file in that case.
+\item \Condor{history}, when Quill is enabled, will now query the
+database for historical items even when the \Opt{-constraint} option
+is given.  Previously, it would go to the history file in that case.
 
-\item \Condor{submit} can now write the class ads it generates to a
-      file instead of sending them to the \Condor{schedd}.
+\item \Condor{submit} can now write the ClassAds it generates to a
+file instead of sending them to the \Condor{schedd} daemon.
 
-\item When the master sends an obituary email, it prints the last
-	few lines of the log file for that daemon, and the name of the
-	file.  This email now contains the full pathname of that log file,
-	not just the file name.  This is more convenient for sites which
-	run multiple instances of the same daemon on one machine.
+\item When the \Condor{master} daemon sends an obituary e-mail,
+it prints the last few lines of the log file for that daemon,
+and the name of the file.
+This e-mail now contains the full path name of that log file,
+not just the file name.  This is more convenient for sites which
+run multiple instances of the same daemon on one machine.
 
 \item Added new policy for parallel universe jobs to control how they
-	exit.  If the attribute ParallelShutdownPolicy is set to the string
-	"WAIT\_FOR\_ALL", then Condor will wait until every node in the parallel
-	job has completed to consider the job finished.  If this attribute is
-	not set, or is set to any other string, the default policy is in effect.
-	This policy is needed for MPI jobs: when the first node exits, the whole
-	job is considered done, and condor kills all other running nodes in that
-	parallel job.
+exit.  If the attribute ParallelShutdownPolicy is set to the string
+"WAIT\_FOR\_ALL", then Condor will wait until every node in the parallel
+job has completed to consider the job finished.  If this attribute is
+not set, or is set to any other string, the default policy is in effect.
+This policy is needed for MPI jobs: when the first node exits, the whole
+job is considered done, and condor kills all other running nodes in that
+parallel job.
 
 \item Added new Windows specific ClassAd attributes:
  \begin{itemize}
@@ -168,8 +190,9 @@ language.
  \item \AdAttr{WindowsMinorVersion}
  \item \AdAttr{WindowsBuildNumber}
  \end{itemize}
-For more information, please see their descriptions in 
-section~\ref{user-man-jobad} on page~\pageref{user-man-jobad}.
+For definitions, please see 
+the unnumbered subsection labeled Machine ClassAd Attributes
+on page~\pageref{sec:Machine-ClassAd-Attributes}.
 
 \item Added new authorization levels to allow fine-grained control
 over the security settings that are used by the collector when
@@ -191,7 +214,7 @@ These limits currently do not apply to grid universe jobs or standard
 universe jobs.
 
 \item Added \MacroNI{SCHEDD\_QUERY\_WORKERS}, which is 3 by default in
-unix, and which is ignored in Windows.  This specifies the maximum
+Unix, and which is ignored in Windows.  This specifies the maximum
 number of concurrent sub-processes that the \Condor{schedd} will spawn
 to handle queries.
 
@@ -206,7 +229,7 @@ status of jobs from Condor 6.9.5 and newer \Condor{schedd} daemons.
  \item \AdAttr{NumShadowStarts}
  \end{itemize}
 For more information, please see their descriptions in
-section~\ref{user-man-jobad} on page~\pageref{user-man-jobad}.
+section~\ref{sec:Job-ClassAd-Attributes} on page~\pageref{sec:Job-ClassAd-Attributes}.
 
 \item Added a new attribute, \AdAttr{GridJobStatus}, to the ClassAds of
 \SubmitCmd{grid} universe jobs. This string shows the job's status as reported
@@ -247,7 +270,7 @@ subject of the message.
 
 \item The user log reading code is now able to handle global event log
   rotations correctly.  The API is backwards compatible, but with
-  several new method, it is able to invisibly handle rotated eventlog
+  several new method, it is able to invisibly handle rotated event log
   files.
 
 \item The user log writer code now generates a header record (as a
@@ -314,7 +337,7 @@ which defaults to 10 minutes.
 
 \item The new variable \MacroNI{SCHEDD\_QUERY\_WORKERS} specifies the
 maximum number of concurrent sub-processes that the \Condor{schedd}
-will spawn to handle queries.  This is ignored in Windows.  In unix,
+will spawn to handle queries.  This is ignored in Windows.  In Unix,
 the default is 3.  See page~\pageref{param:ScheddQueryWorkers} for
 more details.
 
@@ -326,7 +349,7 @@ more details.
   See section~\ref{param:WantUDPCommandSocket} on
   page~\pageref{param:WantUDPCommandSocket} for more information.
 
-\item The new variable \Macro{NEGOTIATOR\_INFORM\_START} controls if
+\item The new variable \Macro{NEGOTIATOR\_INFORM\_STARTD} controls if
   the \Condor{negotiator} should inform the \Condor{startd} when it
   has been matched with a job.
   The default is \Expr{True}.
@@ -381,6 +404,9 @@ for details.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Missing files that Quill needed to function now appear in the
+downloadable release of Condor.
 
 \item When a \Condor{starter} discovered a missing username in the
 process of discovering the owner of an executing job, a cryptic and
@@ -458,7 +484,7 @@ state until the claim lease expired (20 minutes by default).
 
 \item Applied the \MacroNI{QUERY\_TIMEOUT} to fix problem where the schedd 
 would block for a long time when doing negotiation with flocked or HAD 
-negotiator, and one of the collectors was not routeable (for instance, when 
+negotiator, and one of the collectors was not routable (for instance, when 
 the machine is powered off). Previously, there was no time-out and would
 result in a the schedd waiting for the connection attempt to fail, which may
 take a long time.
@@ -530,6 +556,21 @@ or with streaming a job's standard output or error.
 \item Condor on MacOSX 10.4 on the PowerPC architecture.
 will report zero image size and resident set size for jobs. This
 is due to bugs in the MacOSX 10.4 kernel on the PowerPC.
+
+\item There are some known vulnerabilities in the Virtual Machine
+  (VM) universe support included in this release that can allow VM
+  universe jobs to read arbitrary files on the host machine.
+  VM universe is disabled by default, so this potential vulnerability
+  does not affect most sites.
+  However, VM universe should not be enabled unless the job policy
+  only allows users that you trust completely to run jobs on the
+  machine.
+
+\item The \Condor{startd} will crash if \MacroNI{ENABLE\_BACKFILL} is
+set to True.  This was also the case in 6.9.4.
+
+\item The pool password authentication method fails to authenticate
+(and in fact will cause the client to crash).
 
 \end{itemize}
 
