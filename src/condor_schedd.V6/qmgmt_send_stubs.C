@@ -64,7 +64,7 @@ InitializeReadOnlyConnection( const char *owner )
 int
 NewCluster()
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_NewCluster;
 
@@ -89,7 +89,7 @@ NewCluster()
 int
 NewProc( int cluster_id )
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_NewProc;
 
@@ -115,7 +115,7 @@ NewProc( int cluster_id )
 int
 DestroyProc( int cluster_id, int proc_id )
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_DestroyProc;
 
@@ -142,7 +142,7 @@ DestroyProc( int cluster_id, int proc_id )
 int
 DestroyCluster( int cluster_id, const char * /*reason*/ )
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_DestroyCluster;
 
@@ -196,7 +196,7 @@ DestroyClusterByConstraint( char *constraint )
 int
 SetAttributeByConstraint( char const *constraint, char const *attr_name, char const *attr_value )
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_SetAttributeByConstraint;
 
@@ -261,7 +261,7 @@ SetAttribute( int cluster_id, int proc_id, char const *attr_name, char const *at
 int
 SetTimerAttribute( int cluster_id, int proc_id, char const *attr_name, int duration )
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_SetTimerAttribute;
 
@@ -289,7 +289,7 @@ SetTimerAttribute( int cluster_id, int proc_id, char const *attr_name, int durat
 int
 BeginTransaction_imp()
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_BeginTransaction;
 
@@ -319,7 +319,7 @@ BeginTransaction()
 int
 AbortTransaction_imp()
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_AbortTransaction;
 
@@ -351,7 +351,7 @@ AbortTransaction()
 int
 CloseConnection()
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_CloseConnection;
 
@@ -376,7 +376,7 @@ CloseConnection()
 int
 GetAttributeFloat( int cluster_id, int proc_id, char *attr_name, float *value )
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_GetAttributeFloat;
 
@@ -405,7 +405,7 @@ GetAttributeFloat( int cluster_id, int proc_id, char *attr_name, float *value )
 int
 GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, int *value )
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_GetAttributeInt;
 
@@ -434,7 +434,7 @@ GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, int *value 
 int
 GetAttributeString( int cluster_id, int proc_id, char *attr_name, char *value )
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_GetAttributeString;
 
@@ -463,7 +463,7 @@ GetAttributeString( int cluster_id, int proc_id, char *attr_name, char *value )
 int
 GetAttributeStringNew( int cluster_id, int proc_id, char const *attr_name, char **val )
 {
-	int	rval;
+	int	rval = -1;
 
 	CurrentSysCall = CONDOR_GetAttributeString;
 
@@ -494,7 +494,7 @@ GetAttributeStringNew( int cluster_id, int proc_id, char const *attr_name, char 
 int
 GetAttributeExpr( int cluster_id, int proc_id, char const *attr_name, char *value )
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_GetAttributeExpr;
 
@@ -523,7 +523,7 @@ GetAttributeExpr( int cluster_id, int proc_id, char const *attr_name, char *valu
 int
 DeleteAttribute( int cluster_id, int proc_id, char const *attr_name )
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_DeleteAttribute;
 
@@ -550,7 +550,7 @@ DeleteAttribute( int cluster_id, int proc_id, char const *attr_name )
 int
 SendSpoolFile( char const *filename )
 {
-	int	rval;
+	int	rval -1;
 
 		CurrentSysCall = CONDOR_SendSpoolFile;
 
@@ -593,7 +593,7 @@ CloseSocket()
 ClassAd *
 GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/ )
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_GetJobAd;
 
@@ -628,7 +628,7 @@ GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/ )
 ClassAd *
 GetJobByConstraint( char const *constraint )
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_GetJobByConstraint;
 
@@ -662,7 +662,7 @@ GetJobByConstraint( char const *constraint )
 ClassAd *
 GetNextJob( int initScan )
 {
-	int	rval;
+	int	rval = -1;;
 
 		CurrentSysCall = CONDOR_GetNextJob;
 
@@ -697,7 +697,7 @@ GetNextJob( int initScan )
 ClassAd *
 GetNextJobByConstraint( char const *constraint, int initScan )
 {
-	int	rval;
+	int	rval = -1;
 
 	CurrentSysCall = CONDOR_GetNextJobByConstraint;
 
@@ -732,7 +732,7 @@ GetNextJobByConstraint( char const *constraint, int initScan )
 ClassAd *
 GetAllJobsByConstraint_imp( char const *constraint, char const *projection, ClassAdList &list)
 {
-	int	rval;
+	int	rval = -1;
 
 		CurrentSysCall = CONDOR_GetAllJobsByConstraint;
 
