@@ -472,10 +472,21 @@ ProcFamilyMonitor::snapshot()
 	//   - remove its procInfo struct from pi_list, since this
 	//     process's family membership was already determined in
 	//     a previous snapshot
+	// we also hackishly get rid of any procInfo's with a PID of
+	// zero. windows tends to return two of these (they are system
+	// processes of some sort), and the code below gets confused
+	// when multiple processes with a single PID are in our list
 	//
 	procInfo** prev_ptr = &pi_list;
 	procInfo* curr = pi_list;
 	while (curr != NULL) {
+
+		if (curr->pid == 0) {
+			*prev_ptr = curr->next;
+			delete curr;
+			curr = *prev_ptr;
+			continue;
+		}
 
 		ProcFamilyMember* pm;
 		int ret = m_member_table.lookup(curr->pid, pm);
