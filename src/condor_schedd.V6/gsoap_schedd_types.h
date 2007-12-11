@@ -28,12 +28,14 @@ enum condor__HashType {
 
 enum condor__UniverseType {
   STANDARD = 1,
-  PVMUNIVERSE = 4,
   VANILLA = 5,
   SCHEDULER = 7,
   MPI = 8,
-  GLOBUS = 9,
-  JAVA = 10
+  GRID = 9,
+  JAVA = 10,
+  PARALLEL = 11,
+  LOCALUNIVESE = 12,
+  VM = 13
 };
 
 struct condor__Transaction
