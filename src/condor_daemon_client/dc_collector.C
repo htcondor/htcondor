@@ -125,8 +125,10 @@ DCCollector::deepCopy( const DCCollector& copy )
 
     if( tcp_update_destination ) {
         delete [] tcp_update_destination;
-        tcp_update_destination = strnewp( tcp_update_destination );
-    }
+	}
+
+    tcp_update_destination = strnewp( copy.tcp_update_destination );
+    
 
 	startTime = copy.startTime;
 
