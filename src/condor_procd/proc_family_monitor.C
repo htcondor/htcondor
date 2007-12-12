@@ -801,7 +801,7 @@ ProcFamilyMonitor::unregister_subfamily(Tree<ProcFamily*>* tree)
 	// family up into its parent family
 	//
 	ASSERT(tree->get_parent() != NULL);
-	tree->get_data()->give_away_members(tree->get_parent()->get_data());
+	tree->get_data()->fold_into_parent(tree->get_parent()->get_data());
 
 	// remove the current node from the tree, reparenting all
 	// children up to our parent

@@ -89,7 +89,7 @@ public:
 	// our monitor is about to delete us, so we need to offload any
 	// members we have in our list to our parent (passed in)
 	//
-	void give_away_members(ProcFamily*);
+	void fold_into_parent(ProcFamily*);
 
 #if defined(PROCD_DEBUG)
 	// output the PIDs of all processes in this family

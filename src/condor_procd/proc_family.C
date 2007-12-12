@@ -213,9 +213,17 @@ ProcFamily::remove_exited_processes()
 }
 
 void
-ProcFamily::give_away_members(ProcFamily* parent)
+ProcFamily::fold_into_parent(ProcFamily* parent)
 {
-	// nothing to do if our member list is empty
+	// fold in usage info from our dead processes
+	//
+	parent->m_exited_user_cpu_time += m_exited_user_cpu_time;
+	parent->m_exited_sys_cpu_time += m_exited_sys_cpu_time;
+	if (m_exited_max_image_size > parent->m_exited_max_image_size) {
+		parent->m_exited_max_image_size = m_exited_max_image_size;
+	}
+
+	// nothing left to do if our member list is empty
 	//
 	if (m_member_list == NULL) {
 		return;
