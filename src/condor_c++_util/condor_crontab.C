@@ -472,7 +472,6 @@ CronTab::nextRunTime( long timestamp ) {
 		matchTime.tm_mon	= match[CRONTAB_MONTHS_IDX] - 1;
 		matchTime.tm_year	= match[CRONTAB_YEARS_IDX] - 1900;
 		matchTime.tm_isdst  = tm->tm_isdst;
-		matchTime.tm_zone  = tm->tm_zone;
 		runtime = (long)mktime( &matchTime );
 		
 			//
