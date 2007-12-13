@@ -37,6 +37,8 @@ class MpiResource : public RemoteResource {
 		/// Destructor
 	~MpiResource() {};
 
+	virtual void hadContact();
+
 		/** Special format... */
 	virtual void printExit( FILE *fp );
 

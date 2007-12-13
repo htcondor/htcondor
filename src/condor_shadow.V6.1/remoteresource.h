@@ -378,7 +378,7 @@ class RemoteResource : public Service {
 	bool exited_by_signal;
 
 		/// Updates both the last_contact data member and the job ad
-	void hadContact( void );
+	virtual void hadContact( void );
 	time_t last_job_lease_renewal;
 	bool supports_reconnect;
 
