@@ -795,8 +795,8 @@ test_connection()
         pval = param( "STARTER_LOCAL_LOGGING" );
         if( pval && (pval[0] == 't' || pval[0] == 'T') ) {
 			dprintf( D_ALWAYS, "Lost our connection to the shadow! Exiting.\n" );
-			free( pval );
 		}
+		free( pval );
 
 			// Send a SIGKILL to our whole process group
 		set_root_priv();
