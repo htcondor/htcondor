@@ -81,6 +81,10 @@ the pool password authentication method.
 \item Fixed a bug that caused Condor daemons to crash when encountering
 some types of invalid ClassAd expressions.
 
+\item Fixed a bug under Linux that could cause multi-process daemons
+lacking a log lock file to crash while rotating logs that have reached
+their maximum configured size.
+
 \end{itemize}
 
 \noindent Known Bugs:
