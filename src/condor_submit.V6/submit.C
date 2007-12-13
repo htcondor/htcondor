@@ -680,7 +680,6 @@ main( int argc, char *argv[] )
 	FILE	*fp;
 	char	**ptr;
 	char	*cmd_file = NULL;
-	int dag_pause = 0;
 	int i;
 	MyString method;
 
@@ -1119,10 +1118,6 @@ main( int argc, char *argv[] )
 		if( ProcId != -1 ) {
 			reschedule();
 		}
-	}
-
-	if( dag_pause ) {
-		sleep(4);
 	}
 
 	// Deallocate some memory just to keep Purify happy
