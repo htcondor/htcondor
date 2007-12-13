@@ -122,7 +122,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 	case CONDOR_NewProc:
 	  {
-		int cluster_id;
+		int cluster_id = -1;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
@@ -148,7 +148,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 	case CONDOR_DestroyProc:
 	  {
-		int cluster_id;
+		int cluster_id = -1;
 		int proc_id;
 		int terrno;
 
@@ -177,7 +177,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 	case CONDOR_DestroyCluster:
 	  {
-		int cluster_id;
+		int cluster_id = -1;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
@@ -264,7 +264,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	case CONDOR_SetAttribute:
 	case CONDOR_SetAttribute2:
 	  {
-		int cluster_id;
+		int cluster_id = -1;
 		int proc_id;
 		char *attr_name=NULL;
 		char *attr_value=NULL;
@@ -316,8 +316,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 	case CONDOR_SetTimerAttribute:
 	  {
-		int cluster_id;
-		int proc_id;
+		int cluster_id = -1;
+		int proc_id = -1;
 		char *attr_name=NULL;
 		int duration = 0;
 		int terrno;
@@ -416,8 +416,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 	case CONDOR_GetAttributeFloat:
 	  {
-		int cluster_id;
-		int proc_id;
+		int cluster_id = -1;
+		int proc_id = -1;
 		char *attr_name=NULL;
 		float value;
 		int terrno;
@@ -454,8 +454,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 	case CONDOR_GetAttributeInt:
 	  {
-		int cluster_id;
-		int proc_id;
+		int cluster_id = -1;
+		int proc_id = -1;
 		char *attr_name=NULL;
 		int value;
 		int terrno;
@@ -499,8 +499,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 	case CONDOR_GetAttributeString:
 	  {
-		int cluster_id;
-		int proc_id;
+		int cluster_id = -1;
+		int proc_id = -1;
 		char *attr_name=NULL;
 		char *value = NULL;
 		int terrno;
@@ -538,8 +538,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 	case CONDOR_GetAttributeExpr:
 	  {
-		int cluster_id;
-		int proc_id;
+		int cluster_id = -1;
+		int proc_id = -1;
 		char *attr_name=NULL;
 		// XXX: shouldn't need a fixed size here -- at least keep
 		// it off the stack to avoid overflow attacks
@@ -580,8 +580,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 	case CONDOR_DeleteAttribute:
 	  {
-		int cluster_id;
-		int proc_id;
+		int cluster_id = -1;
+		int proc_id = -1;
 		char *attr_name=NULL;
 		int terrno;
 
@@ -609,8 +609,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 	case CONDOR_GetJobAd:
 	  {
-		int cluster_id;
-		int proc_id;
+		int cluster_id = -1;
+		int proc_id = -1;
 		ClassAd *ad;
 		int terrno;
 
