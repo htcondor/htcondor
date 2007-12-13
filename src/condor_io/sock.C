@@ -380,7 +380,7 @@ int Sock::assign(SOCKET sockd)
 	// socket itself has never been set to non-blocking mode with some fcntl or whatever.
 	// SO, we check here for this situation and rectify by calling timeout() again. -Todd 10/97.
 	if ( _timeout > 0 )
-		timeout( _timeout );
+		timeout_no_timeout_multiplier( _timeout );
 
 	return TRUE;
 }
@@ -847,7 +847,7 @@ Sock::do_connect_finish()
 				}
 				if ( connect_state.old_timeout_value != _timeout ) {
 						// Restore old timeout
-					timeout(connect_state.old_timeout_value);			
+					timeout_no_timeout_multiplier(connect_state.old_timeout_value);			
 				}
 				return true;
 			}
@@ -1117,7 +1117,7 @@ Sock::cancel_connect()
 #endif
 	if ( connect_state.old_timeout_value != _timeout ) {
 			// Restore old timeout
-		timeout(connect_state.old_timeout_value);			
+		timeout_no_timeout_multiplier(connect_state.old_timeout_value);
 	}
 }
 
@@ -1254,13 +1254,10 @@ Sock::bytes_available_to_read()
  * Once more: we do _not_ return FALSE on Error like most other CEDAR functions;
  * we return a -1 !! 
  */
-int Sock::timeout(int sec)
+int
+Sock::timeout_no_timeout_multiplier(int sec)
 {
 	int t = _timeout;
-
-	if (sec && (timeout_multiplier > 0) && !ignore_timeout_multiplier) {
-		sec *= timeout_multiplier;
-	}
 
 	_timeout = sec;
 
@@ -1302,6 +1299,31 @@ int Sock::timeout(int sec)
 			if ( fcntl(_sock,F_SETFL,fcntl_flags) == -1 )
 				return -1;
 #endif
+		}
+	}
+
+	return t;
+}
+
+int
+Sock::timeout(int sec)
+{
+	bool adjusted = false;
+	if ((timeout_multiplier > 0) && !ignore_timeout_multiplier) {
+		sec *= timeout_multiplier;
+		adjusted = true;
+	}
+
+	int t = timeout_no_timeout_multiplier( sec );
+
+		// Adjust return value so caller can call timeout() with that value
+		// to restore timeout to what it used to be.
+	if( (t > 0) && adjusted ) {
+		t /= timeout_multiplier;
+		if( t == 0 ) {
+				// Just in case t is not a multiple of timeout multiplier,
+				// make sure it does not get adjusted to the special value 0.
+			t = 1;
 		}
 	}
 
@@ -1527,7 +1549,7 @@ char * Sock::serialize(char *buf)
 
 	// call the timeout method to make certain socket state set via
 	// setsockopt() and/or ioctl() is restored.
-	timeout(_timeout);
+	timeout_no_timeout_multiplier(_timeout);
 
 	// set our return value to a pointer beyond the 3 state values...
 	ptmp = buf;

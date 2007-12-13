@@ -161,9 +161,17 @@ public:
 	/** if any operation takes more than sec seconds, timeout
         call timeout(0) to set blocking mode (default)
         @param sec the number of seconds to wait before timing out
-        @return previous timeout
+               Note that (for better or worse) this may be multiplied
+               by a global timeout multiplier unless
+               ignoreTimeoutMultiplier has been called.
+        @return previous timeout (divided by timeout multiplier)
     */
 	int timeout(int sec);
+
+	/** This is just like timeout(), but it does not do any
+	    adjustments.  The timeout multiplier is always ignored.
+	*/
+	int timeout_no_timeout_multiplier(int sec);
     
 	/** get the number of bytes available to read without blocking.
 		@return number of bytes, or -1 on failure
