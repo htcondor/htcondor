@@ -93,6 +93,7 @@ external_name( const char *name, char* buf, int bufsize )
 			dprintf( D_NFS, "external_name: fs->path = \"%s\"\n", fs->path );
 			if( (char *)strchr((const char *)fs->devname,':') ) {	/* it's a mount point */
 				if( (mount_pt=xlate_link(fs->path)) == NULL ) {
+					FREE(local_name);
 					return -1;
 				}
 				remote_name = remote_part( mount_pt, local_name );
@@ -104,15 +105,18 @@ external_name( const char *name, char* buf, int bufsize )
 				} else {
 					(void)sprintf( my_buf, "%s", fs->devname );
 				}
+				FREE(mount_pt);
 			} else {					/* local device */
 				(void)sprintf( my_buf, "%s:%s", Hostname, local_name );
 			}
 			strncpy( buf, my_buf, bufsize );
 			dprintf( D_NFS, "external_name returning 0, answer \"%s\"\n", buf );
+			FREE(local_name);
 			return 0;
 		}
 	}
 	dprintf( D_NFS, "external_name returning -1\n" );
+	FREE(local_name);
 	return -1;
 }
 
