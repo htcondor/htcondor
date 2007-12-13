@@ -1321,7 +1321,7 @@ RemoteResource::setResourceState( ResourceState s )
 const char*
 rrStateToString( ResourceState s )
 {
-	if( s > _RR_STATE_THRESHOLD ) {
+	if( s >= _RR_STATE_THRESHOLD ) {
 		return "Unknown State";
 	}
 	return Resource_State_String[s];
