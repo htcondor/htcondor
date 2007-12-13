@@ -54,16 +54,17 @@ Shadow::Shadow( const char* path_arg, ClassAd* ad )
 {
 	s_path = strnewp( path_arg );
 	s_ad = ad;
+	s_is_dc = false;
+	m_version_info = NULL;
 
-	int is_dc = 0;
-	ad->LookupBool( ATTR_IS_DAEMON_CORE, is_dc );
-	s_is_dc = (bool)is_dc;
-	char* version_string = NULL;
-	if (ad->LookupString(ATTR_VERSION, &version_string)) {
-		m_version_info = new CondorVersionInfo(version_string, "SHADOW", NULL);
-		free(version_string);
-	} else {
-		m_version_info = NULL;
+	if ( s_ad ) {
+		s_ad->LookupBool( ATTR_IS_DAEMON_CORE, s_is_dc );
+
+		char* version_string = NULL;
+		if (s_ad->LookupString(ATTR_VERSION, &version_string)) {
+			m_version_info = new CondorVersionInfo(version_string, "SHADOW", NULL);
+			free(version_string);
+		}
 	}
 }
 
@@ -85,7 +86,7 @@ Shadow::Shadow( const Shadow& s )
 	s_is_dc = s.s_is_dc;
 
 	char* version_string = NULL;
-	if (s_ad->LookupString(ATTR_VERSION, &version_string)) {
+	if (s_ad && s_ad->LookupString(ATTR_VERSION, &version_string)) {
 		m_version_info = new CondorVersionInfo(version_string, "SHADOW", NULL);
 		free(version_string);
 	} else {
