@@ -458,8 +458,8 @@ WindowsFirewallHelper::WindowsFirewallInitialize() {
     		if (SUCCEEDED(hr)) {
 				break;
 			} else {
-				dprintf(D_FULLDEBUG, "get_CurrentProfile() failed. "
-					   " Retry %d...\n", i);
+				dprintf(D_FULLDEBUG, "WinFirewall: get_CurrentProfile() "
+					   "failed.  Retry %d...\n", i);
 				sleep(10);
 			}
 		}
