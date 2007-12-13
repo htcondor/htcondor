@@ -101,6 +101,7 @@ TransferQueueManager::TransferQueueManager() {
 	m_max_uploads = 0;
 	m_max_downloads = 0;
 	m_check_queue_timer = -1;
+	m_default_max_queue_age = 0;
 }
 
 TransferQueueManager::~TransferQueueManager() {
