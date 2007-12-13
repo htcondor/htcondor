@@ -154,7 +154,8 @@ email_asciifile_tail( FILE* output, const char* file, int lines )
 static void
 display_line( long loc, FILE* input, FILE* output )
 {
-	int		ch,lastch;
+	int		ch;
+	int lastch = -1;
 
 	(void)fseek( input, loc, 0 );
 
