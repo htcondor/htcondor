@@ -2809,6 +2809,7 @@ doRunAnalysisToBuffer( ClassAd *request )
         if( fReqConstraint > 0 ) {
             analyzer.AnalyzeJobReqToBuffer( request, startdAds, buffer_string );
             strncpy( ana_buffer, buffer_string.c_str( ), SHORT_BUFFER_SIZE );
+			ana_buffer[SHORT_BUFFER_SIZE-1] = '\0';
             strcat( return_buff, ana_buffer );
         }
     }
@@ -2828,6 +2829,7 @@ doRunAnalysisToBuffer( ClassAd *request )
             buffer_string = "";
             analyzer.AnalyzeJobAttrsToBuffer( request, startdAds, buffer_string );
             strncpy( ana_buffer, buffer_string.c_str( ), SHORT_BUFFER_SIZE);
+			ana_buffer[SHORT_BUFFER_SIZE-1] = '\0';
             strcat( return_buff, ana_buffer );
         }
     }
