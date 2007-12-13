@@ -998,9 +998,6 @@ void CollectorDaemon::Config()
 
 	init_classad(i);
 
-    if (tmp)
-        free(tmp);
-
     // set the appropriate parameters in the collector engine
     collector.setClientTimeout( ClientTimeout );
     collector.scheduleHousekeeper( ClassadLifetime );
