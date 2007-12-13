@@ -134,14 +134,16 @@ void iso8601_to_time(
 	bool begins_with_time;
 
 	// Preset to -1, to indicate nothing was parsed.
-	time->tm_year = -1;
-	time->tm_wday = -1;
-	time->tm_yday = -1;
-	time->tm_mon  = -1;
-	time->tm_mday = -1;
-	time->tm_hour = -1;
-	time->tm_min  = -1;
-	time->tm_sec  = -1;
+	if (time != NULL) {
+		time->tm_year = -1;
+		time->tm_wday = -1;
+		time->tm_yday = -1;
+		time->tm_mon  = -1;
+		time->tm_mday = -1;
+		time->tm_hour = -1;
+		time->tm_min  = -1;
+		time->tm_sec  = -1;
+	}
 
 	// Only do something if we got valid parameters
 	if (iso_time != NULL && time != NULL) {
@@ -184,10 +186,12 @@ void iso8601_to_time(
 			time->tm_sec = atoi(workspace);
 		}
 
-		if (toupper(*current) == 'Z' && is_utc != NULL) {
-			*is_utc = true;
-		} else {
-			*is_utc = false;
+		if (is_utc != NULL) {
+			if (toupper(*current) == 'Z') {
+				*is_utc = true;
+			} else {
+				*is_utc = false;
+			}
 		}
 	}
 
