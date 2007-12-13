@@ -1523,6 +1523,7 @@ RemoteResource::locateReconnectStarter( void )
 			setStarterAddress( tmp );
 			dprintf( D_ALWAYS, "Found starter: %s\n", tmp );
 			free( tmp );
+			delete[] claimid;
 			return true;
 		} else {
 			EXCEPT( "impossible: locateStarter() returned success "
@@ -1588,6 +1589,7 @@ RemoteResource::locateReconnectStarter( void )
 		EXCEPT( "impossible: success already handled" );
 		break;
 	}
+	delete[] claimid;
 	return false;
 }
 
