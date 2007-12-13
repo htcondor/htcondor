@@ -598,7 +598,7 @@ toClassAd()
 	if( !myad ) return NULL;
 	char buf0[512];
 
-	if( submitHost && submitHost[0] ) {
+	if( submitHost[0] ) {
 		snprintf(buf0, 512, "SubmitHost = \"%s\"", submitHost);
 		buf0[511] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
@@ -1126,7 +1126,7 @@ toClassAd()
 	if( !myad ) return NULL;
 	char buf0[512];
 
-	if( info && info[0] ) {
+	if( info[0] ) {
 		snprintf(buf0, 512, "Info = \"%s\"", info);
 		buf0[511] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
@@ -1576,7 +1576,7 @@ toClassAd()
 	if( !myad ) return NULL;
 	char buf0[512];
 
-	if( executeHost && executeHost[0] ) {
+	if( executeHost[0] ) {
 		snprintf(buf0, 512, "ExecuteHost = \"%s\"", executeHost);
 		buf0[511] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
@@ -2979,12 +2979,10 @@ toClassAd()
 	if( myad ) {
 		char buf0[512];
 	
-		if( message ) {
-			MyString buf2;
-			buf2.sprintf("Message = \"%s\"", message);
-			if( !myad->Insert(buf2.Value())) {
-				success = false;
-			}
+		MyString buf2;
+		buf2.sprintf("Message = \"%s\"", message);
+		if( !myad->Insert(buf2.Value())) {
+			success = false;
 		}
 
 		snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
@@ -3013,7 +3011,7 @@ initFromClassAd(ClassAd* ad)
 	if( !ad ) return;
 
 	if( ad->LookupString("Message", message, BUFSIZ) ) {
-		message[BUFSIZ] = 0;
+		message[BUFSIZ - 1] = 0;
 	}
 	
 	ad->LookupFloat("SentBytes", sent_bytes);
