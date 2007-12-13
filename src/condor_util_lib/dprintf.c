@@ -564,6 +564,7 @@ preserve_log_file(int debug_level)
 	int			still_in_old_file = FALSE;
 	int			failed_to_rotate = FALSE;
 	int			save_errno;
+	int         rename_failed = 0;
 #ifndef WIN32
 	struct stat buf;
 #endif
@@ -578,9 +579,9 @@ preserve_log_file(int debug_level)
 	fclose( DebugFP );
 	DebugFP = NULL;
 
-	unlink(old);
-
 #if defined(WIN32)
+
+	unlink(old);
 
 	/* use rename on WIN32, since link isn't available */
 	if (rename(DebugFile[debug_level], old) < 0) {
@@ -610,35 +611,36 @@ preserve_log_file(int debug_level)
 
 #else
 
-	/* 
-	** for some still unknown reason, newer versions of OSF/1 (Digital Unix)
-    ** sometimes do not rotate the log correctly using 'rename'.  Changing
-	** this to a unlink/link/unlink sequence seems to work.  May as well do
-	** it for all platforms as there is no need for atomicity.  --RR
-    */
-
 	errno = 0;
-	if( link(DebugFile[debug_level], old) < 0 ) {
+	if( rename(DebugFile[debug_level], old) < 0 ) {
 		save_errno = errno;
-		snprintf( msg_buf, sizeof(msg_buf), "Can't link(%s,%s)\n",
-				 DebugFile[debug_level], old );
-		_condor_dprintf_exit( save_errno, msg_buf );
+		if( save_errno == ENOENT && !DebugLock ) {
+				/* This can happen if we are not using debug file locking,
+				   and two processes try to rotate this log file at the
+				   same time.  The other process must have already done
+				   the rename but not created the new log file yet.
+				*/
+			rename_failed = 1;
+		}
+		else {
+			snprintf( msg_buf, sizeof(msg_buf), "Can't rename(%s,%s)\n",
+					  DebugFile[debug_level], old );
+			_condor_dprintf_exit( save_errno, msg_buf );
+		}
 	}
 
-	errno = 0;
-	if( unlink(DebugFile[debug_level]) < 0 ) {
-		save_errno = errno;
-		snprintf( msg_buf, sizeof(msg_buf), "Can't unlink(%s)\n", DebugFile[debug_level] ); 
-		_condor_dprintf_exit( save_errno, msg_buf );
-	}
+	/* double check the result of the rename
+	   If we are not using locking, then it is possible for two processes
+	   to rotate at the same time, in which case the following check
+	   should be skipped, because it is expected that a new file may
+	   have already been created by now. */
 
-	/* double check the result of the rename */
-	{
+	if( DebugLock) {
 		errno = 0;
 		if (stat (DebugFile[debug_level], &buf) >= 0)
 		{
 			save_errno = errno;
-			snprintf( msg_buf, sizeof(msg_buf), "unlink(%s) succeeded but file still exists!", 
+			snprintf( msg_buf, sizeof(msg_buf), "rename(%s) succeeded but file still exists!", 
 					 DebugFile[debug_level] );
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
@@ -661,9 +663,14 @@ preserve_log_file(int debug_level)
 		fprintf (DebugFP, "Now in new log file %s\n", DebugFile[debug_level]);
 	}
 
-	if ( failed_to_rotate ) {
-		fprintf(DebugFP,"ERROR: Failed to rotate log into file %s!\n",old);
-		fprintf(DebugFP,"       Perhaps someone is keeping log files open???");
+	if ( failed_to_rotate || rename_failed ) {
+		fprintf(DebugFP,"WARNING: Failed to rotate log into file %s!\n",old);
+		if( rename_failed ) {
+			fprintf(DebugFP,"Likely cause is that another Condor process rotated the file at the same time.\n");
+		}
+		else {
+			fprintf(DebugFP,"       Perhaps someone is keeping log files open???");
+		}
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
