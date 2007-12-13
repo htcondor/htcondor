@@ -306,6 +306,15 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		refuse( stream );
 		return FALSE;
 	}
+
+	if( !stream->end_of_message() ) {
+		ClaimIdParser idp( id );
+		dprintf( D_ALWAYS,
+				 "Error: can't read end of message for RELEASE_CLAIM %s.\n",
+				 idp.publicClaimId() );
+		return FALSE;
+	}
+
 	State s = rip->state();
 
 	//There are two cases: claim id is the current or the preempting claim
@@ -432,6 +441,10 @@ command_match_info( Service*, int cmd, Stream* stream )
 	if( ! stream->code(id) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		free( id );
+		return FALSE;
+	}
+	if( !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Error: can't read end of message for MATCH_INFO.\n" );
 		return FALSE;
 	}
 

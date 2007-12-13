@@ -530,6 +530,35 @@ int SafeSock::handle_incoming_packet()
 	_condorInMsg *tempMsg, *delMsg, *prev = NULL;
 	time_t curTime;
 
+	if( _msgReady ) {
+		char const *existing_msg_type;
+		bool existing_consumed;
+		if( _longMsg ) {
+			existing_msg_type = "long";
+			existing_consumed = _longMsg->consumed();
+		}
+		else {
+			existing_msg_type = "short";
+			existing_consumed = _shortMsg.consumed();
+		}
+		dprintf( D_ALWAYS,
+				 "ERROR: receiving new UDP message but found a %s "
+				 "message still waiting to be closed (consumed=%d). "
+				 "Closing it now.\n",
+				 existing_msg_type, existing_consumed );
+
+			// Now force end_of_message() to be called.  This is especially
+			// important if we receive a short UDP message and a long
+			// message is still unclosed, because the long message will
+			// continue to act as the source for all read operations.
+
+		stream_coding saved_coding = _coding;
+		_coding = stream_decode;
+		end_of_message();
+		_coding = saved_coding;
+	}
+
+
 	received = recvfrom(_sock, _shortMsg.dataGram, SAFE_MSG_MAX_PACKET_SIZE,
 	                    0, (struct sockaddr *)&_who, fromlen );
 	if(received < 0) {
@@ -822,8 +851,10 @@ bool SafeSock :: init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
     else {
         inited = _shortMsg.verifyMD(mdChecker_);
     }
-    
-    inited = _outMsg.init_MD(keyId);
+
+    if( !_outMsg.init_MD(keyId) ) {
+        inited = false;
+    }
 
     return inited;
 }

@@ -42,6 +42,8 @@ class ScriptQ : public Service {
 	~ScriptQ();
 
 	// runs script if possible, otherwise inserts into a wait queue
+	// return: 1 means script was spawned, 0 means it was not (error
+	// or deferred).
 	int Run( Script *script );
 
     int NumScriptsRunning();
