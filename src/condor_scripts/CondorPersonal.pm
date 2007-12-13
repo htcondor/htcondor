@@ -782,8 +782,8 @@ sub TunePersonalCondor
 		# now make sure we have the local dir we want after the generic .local file is seeded in
 		$line = $personal_config_changes{"LOCAL_DIR"};
 		print NEW "$line\n";
-		# and a lock file we like
-		print NEW "LOCK = \$(LOG)/main_lock\n";
+		# and a lock directory we like
+		print NEW "LOCK = \$(LOG)\n";
 		close(LOCSRC);
 	}
 
