@@ -609,9 +609,9 @@ printMasterNormal(ClassAd *ad)
 			alpm.registerFormat("%s\n",ATTR_NAME,"[??????????????????]");
 			first = false;
 		}
-	}
 
-	alpm.display (stdout, ad);
+		alpm.display (stdout, ad);
+	}
 }
 
 
@@ -633,9 +633,9 @@ printCkptSrvrNormal(ClassAd *ad)
 			alpm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
 			first = false;
 		}
-	}
 
-	alpm.display (stdout, ad);
+		alpm.display (stdout, ad);
+	}
 }
 
 
@@ -657,9 +657,9 @@ printStorageNormal(ClassAd *ad)
 			alpm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
 			first = false;
 		}
-	}
 
-	alpm.display (stdout, ad);
+		alpm.display (stdout, ad);
+	}
 }
 
 void
@@ -683,9 +683,9 @@ printNegotiatorNormal(ClassAd *ad)
 
 			first = false;
 		}
-	}
 
-	alpm.display (stdout, ad);
+		alpm.display (stdout, ad);
+	}
 }
 
 /*
@@ -722,8 +722,9 @@ printAnyNormal(ClassAd *ad)
 
 		printf("%-20.20s %-20.20s %-30.30s\n",my_type,target_type,name);
 		free(name);
+
+		pm.display (stdout, ad);
 	}
-	pm.display (stdout, ad);
 }
 
 
