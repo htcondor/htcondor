@@ -497,6 +497,7 @@ static void ProcessInfo(AttrList* ad)
   CollectInfo(NumElem,ad,LR);
   qsort(LR,NumElem,sizeof(LineRec),CompPrio);  
   PrintInfo(ad,LR,NumElem);
+  delete[] LR;
 } 
 
 //-----------------------------------------------------------------
