@@ -24,9 +24,6 @@
 #include "function_test_driver.h"
 
 FunctionDriver::FunctionDriver(int size) {
-		// sanity checking
-	if(size < 1) return;
-
 	pointers = new test_func_ptr[size];
 	max_functions = size;
 	used_functions = 0;
