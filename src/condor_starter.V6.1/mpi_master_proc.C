@@ -184,6 +184,7 @@ MPIMasterProc::alterEnv()
 	if ( JobAd->LookupString( ATTR_MY_ADDRESS, shad ) < 1 ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
 				 ATTR_MY_ADDRESS );
+		free( condor_rsh );
 		return 0;
 	}
 
@@ -196,6 +197,8 @@ MPIMasterProc::alterEnv()
 	condor_rsh_command = condor_rsh;
 	condor_rsh_command += "/rsh";
 	envobject.SetEnv( "P4_RSHCOMMAND", condor_rsh_command.Value());
+
+	free( condor_rsh );
 
 	if(DebugFlags & D_FULLDEBUG) {
 		MyString env_str;

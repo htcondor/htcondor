@@ -37,7 +37,7 @@ class JICShadow : public JobInfoCommunicator
 {
 public:
 		/// Constructor
-	JICShadow( char* shadow_name );
+	JICShadow( const char* shadow_name );
 
 		/// Destructor
 	~JICShadow();

@@ -150,6 +150,8 @@ ScriptProc::StartJob()
 				 args1_attr.Value(), args2_attr.Value());
 	}
 
+	free( args1 );
+	free( args2 );
 
 		// // // // // // 
 		// Environment 
@@ -177,6 +179,8 @@ ScriptProc::StartJob()
 			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
 					 "Aborting ScriptProc::StartJob.\n",
 					 env2_attr.GetCStr(),env_errors.Value() );  
+			free( env1 );
+			free( env2 );
 			return 0;
 		}
 	}
@@ -185,6 +189,8 @@ ScriptProc::StartJob()
 			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
 					 "Aborting ScriptProc::StartJob.\n",
 					 env1_attr.GetCStr(),env_errors.Value() );  
+			free( env1 );
+			free( env2 );
 			return 0;
 		}
 	}

@@ -146,6 +146,8 @@ MPIComradeProc::addEnvVars()
 		dprintf ( D_FULLDEBUG, "New env: %s\n", env_str.Value() );
 	}
 
+	free(bin);
+
         // now put the env back into the JobAd:
 	if(!env.InsertEnvIntoClassAd(JobAd,&env_errors)) {
 		dprintf( D_ALWAYS, "Unable to update env! Aborting: %s\n",

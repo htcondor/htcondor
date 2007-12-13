@@ -45,7 +45,7 @@ extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
 
 
-JICShadow::JICShadow( char* shadow_name ) : JobInfoCommunicator()
+JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 {
 	if( ! shadow_name ) {
 		EXCEPT( "Trying to instantiate JICShadow with no shadow name!" );
@@ -1311,6 +1311,11 @@ JICShadow::initWithFileTransfer()
 			// no new attribute, try the old...
 		char* tmp = NULL;
 		job_ad->LookupString( ATTR_TRANSFER_FILES, &tmp );
+		if ( tmp == NULL ) {
+			dprintf( D_ALWAYS, "ERROR: No file transfer attributes in job "
+					 "ad, aborting\n" );
+			return false;
+		}
 			// if set to "ALWAYS", then set transfer_at_vacate to true
 		switch ( tmp[0] ) {
 		case 'a':
@@ -1322,6 +1327,7 @@ JICShadow::initWithFileTransfer()
 			return initNoFileTransfer();
 			break;
 		}
+		free( tmp );
 	}
 
 		// if we're here, it means we're transfering files, so we need

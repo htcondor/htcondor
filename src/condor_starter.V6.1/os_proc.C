@@ -164,6 +164,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 			dprintf( D_ALWAYS, 
 					 "Cannot find/execute USER_JOB_WRAPPER file %s\n",
 					 wrapper );
+			free( wrapper );
 			return 0;
 		}
 		has_wrapper = true;

@@ -363,6 +363,7 @@ parseArgs( int argc, char* argv [] )
 
 		if( opt[0] != '-' ) {
 				// this must be a hostname...
+			free( shadow_host );
 			shadow_host = strdup( opt );
 			continue;
 		}
@@ -388,6 +389,7 @@ parseArgs( int argc, char* argv [] )
 			if( ! arg ) {
 				another( _schedd_addr );
 			}
+			free( schedd_addr );
 			schedd_addr = strdup( arg );
 			tmp++;	// consume the arg so we don't get confused 
 			continue;
