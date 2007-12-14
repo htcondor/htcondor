@@ -112,11 +112,14 @@ $executed = sub {
 	## might have overwritten it
 	##
 	my @result;
-	my $q_cmd = "condor_q $cluster.$job -format %d DeferralTime";
+	my $q_cmd = "_CONDOR_TOOL_DEBUG=D_ALL condor_q $cluster.$job -debug -format %d DeferralTime";
 	if ( ! CondorTest::runCondorTool($q_cmd, \@result, 3) ) {
 		print "ERROR: Unable to get DeferralTime due to Condor Tool Failure<$q_cmd>\n";
 	    exit(1);
 	}
+    print "Stderr with debug info for condor_q follows\n";
+    system("cat runCTool$$");
+
 	$DEFERRAL_TIME = "@result";	
 	##
 	## We're screwed if we can't get out the time
