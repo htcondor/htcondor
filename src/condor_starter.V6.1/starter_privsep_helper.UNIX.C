@@ -112,7 +112,7 @@ StarterPrivSepHelper::chown_sandbox_to_user()
 	}
 
 	dprintf(D_FULLDEBUG, "changing sandbox ownership to the user\n");
-	if (!privsep_chown_dir(m_uid, m_sandbox_path)) {
+	if (!privsep_chown_dir(m_uid, get_condor_uid(), m_sandbox_path)) {
 		EXCEPT("error changing sandbox ownership to the user");
 	}
 
@@ -132,7 +132,7 @@ StarterPrivSepHelper::chown_sandbox_to_condor()
 	}
 
 	dprintf(D_FULLDEBUG, "changing sandbox ownership to condor\n");
-	if (!privsep_chown_dir(get_condor_uid(), m_sandbox_path)) {
+	if (!privsep_chown_dir(get_condor_uid(), m_uid, m_sandbox_path)) {
 		EXCEPT("error changing sandbox ownership to condor");
 	}
 

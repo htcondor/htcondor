@@ -23,6 +23,7 @@
 #include "directory.h"
 #include "dynuser.h"	// used in cleanup_execute_dir() for WinNT
 #include "daemon.h"
+#include "../condor_privsep/condor_privsep.h"
 
 static void
 check_execute_dir_perms( char const *exec_path )
@@ -39,6 +40,16 @@ check_execute_dir_perms( char const *exec_path )
 	if (stat(exec_path, &st) < 0) {
 		EXCEPT( "stat exec path (%s), errno: %d (%s)", exec_path, errno,
 				strerror( errno ) ); 
+	}
+
+	// in PrivSep mode, the EXECUTE directory must be trusted by
+	// the PrivSep kernel. we can't determine this ourselves in general
+	// (since the PrivSep Switchboard can be recompiled to trust
+	// non-root users), so we'll have to be satisfied for now that we
+	// could stat its path
+	//
+	if (privsep_enabled()) {
+		return;
 	}
 
 	if ((st.st_mode & desired_mode) != desired_mode) {
@@ -79,12 +90,21 @@ cleanup_execute_dirs( StringList &list )
 		// get rid of everything in the execute directory
 		Directory execute_dir(exec_path);
 		execute_dir.Remove_Entire_Directory();
-
 #else
-
+		// if we're using PrivSep, the Switchboard will only allow
+		// us to remove subdirectories of EXECUTE - so we need to
+		// list them and ask the Switchboard to delete each one
+		//
 		Directory execute_dir( exec_path, PRIV_ROOT );
-		execute_dir.Remove_Entire_Directory();
-
+		if (privsep_enabled()) {
+			execute_dir.Rewind();
+			while (execute_dir.Next()) {
+				privsep_remove_dir(execute_dir.GetFullPath());
+			}
+		}
+		else {
+			execute_dir.Remove_Entire_Directory();
+		}
 #endif
 	}
 }
@@ -123,15 +143,28 @@ cleanup_execute_dir(int pid, char const *exec_path)
 
 #else /* UNIX */
 
-	// Instantiate a directory object pointing at the execute directory
-	Directory execute_dir( exec_path, PRIV_ROOT );
-
 	MyString	pid_dir;
 
 		// We're trying to delete a specific subdirectory, either
 		// b/c a starter just exited and we might need to clean up
 		// after it, or because we're in a recursive call.
 	pid_dir.sprintf( "dir_%d", pid );
+
+		// if we're using PrivSep, we won't have the permissions
+		// needed to clean up - ask the Switchboard to do it
+	if (privsep_enabled()) {
+		MyString pid_dir_path;
+		pid_dir_path.sprintf("%s/%s", exec_path, pid_dir.Value());
+		if (!privsep_remove_dir(pid_dir_path.Value())) {
+			dprintf(D_ALWAYS,
+			        "privsep_remove_dir failed to remove %s\n",
+			        pid_dir_path.Value());
+		}
+		return;
+	}
+
+	// Instantiate a directory object pointing at the execute directory
+	Directory execute_dir( exec_path, PRIV_ROOT );
 
 		// Look for it
 	if ( execute_dir.Find_Named_Entry( pid_dir.Value() ) ) {

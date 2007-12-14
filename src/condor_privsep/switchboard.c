@@ -189,22 +189,28 @@ static void validate_exec_params(exec_params *c)
 typedef struct dir_cmd_params {
     uid_t user_uid;
     char *user_dir;
+    uid_t chown_source_uid;
 } dir_cmd_params;
 
 static void init_dir_cmd_params(dir_cmd_params *c)
 {
     c->user_uid = 0;
     c->user_dir = 0;
+    c->chown_source_uid = 0;
 }
 
-static void validate_dir_cmd_params(dir_cmd_params *c)
+static void validate_dir_cmd_params(dir_cmd_params *c, int is_rmdir, int is_chown_dir)
 {
-    if (c->user_uid == 0) {
+    if (!is_rmdir && (c->user_uid == 0)) {
         fatal_error_exit(1, "user-uid not set");
     }
 
     if (!c->user_dir) {
         fatal_error_exit(1, "user-dir not set");
+    }
+
+    if (is_chown_dir && (c->chown_source_uid == 0)) {
+        fatal_error_exit(1, "chown-source-uid not set");
     }
 }
 
@@ -249,6 +255,8 @@ typedef enum config_key_enum {
     EXEC_TRACKING_GROUP,
     EXEC_KEEP_OPEN_FDS,
 
+    CHOWN_SOURCE_UID,
+
     INVALID
 } config_key_enum;
 
@@ -280,7 +288,9 @@ key_to_enum key_to_enum_map[] = {
     {EXEC_STDERR, "exec-stderr"},
     {EXEC_IS_STD_UNIV, "exec-is-std-univ"},
     {EXEC_TRACKING_GROUP, "exec-tracking-group"},
-    {EXEC_KEEP_OPEN_FDS, "exec-keep-open-fd"}
+    {EXEC_KEEP_OPEN_FDS, "exec-keep-open-fd"},
+
+    {CHOWN_SOURCE_UID, "chown-source-uid"}
 };
 
 static config_key_enum key_name_to_enum(const char *key)
@@ -591,7 +601,7 @@ static int process_user_exec_config(exec_params *c, int do_validate)
     return 0;
 }
 
-static int process_dir_cmd_config(dir_cmd_params *c)
+static int process_dir_cmd_config(dir_cmd_params *c, int is_rmdir, int is_chown_dir)
 {
     config_file cf;
     char *key;
@@ -612,6 +622,9 @@ static int process_dir_cmd_config(dir_cmd_params *c)
         case USER_DIR:
             config_parse_string(&c->user_dir, key, value, &cf);
             break;
+        case CHOWN_SOURCE_UID:
+            config_parse_uid(&c->chown_source_uid, key, value, &cf);
+            break;
         default:
             fatal_error_exit(1,
                              "unknown option '%s' in configuration: %s:%d",
@@ -624,7 +637,7 @@ static int process_dir_cmd_config(dir_cmd_params *c)
 
     close_config_stream(&cf);
 
-    validate_dir_cmd_params(c);
+    validate_dir_cmd_params(c, is_rmdir, is_chown_dir);
 
     return 0;
 }
@@ -734,7 +747,9 @@ static void validate_caller_ids(configuration *c)
 }
 
 static char *do_common_dir_cmd_tasks(configuration *c,
-                                     dir_cmd_params *dir_cmd_conf)
+                                     dir_cmd_params *dir_cmd_conf,
+                                     int is_rmdir,
+                                     int is_chown_dir)
 {
     const char *pathname;
     uid_t uid;
@@ -742,7 +757,7 @@ static char *do_common_dir_cmd_tasks(configuration *c,
     char *dir_parent;
     char *dir_name;
 
-    process_dir_cmd_config(dir_cmd_conf);
+    process_dir_cmd_config(dir_cmd_conf, is_rmdir, is_chown_dir);
 
     uid = dir_cmd_conf->user_uid;
     pathname = dir_cmd_conf->user_dir;
@@ -805,7 +820,7 @@ static void do_mkdir(configuration *c)
     uid_t uid;
     gid_t gid;
 
-    dir_name = do_common_dir_cmd_tasks(c, &dir_cmd_conf);
+    dir_name = do_common_dir_cmd_tasks(c, &dir_cmd_conf, 0, 0);
 
     r = mkdir(dir_name, 0755);
     if (r == -1) {
@@ -816,6 +831,11 @@ static void do_mkdir(configuration *c)
     r = safe_switch_effective_to_uid(uid,
                                      &c->valid_target_uids,
                                      &c->valid_target_gids);
+    if (r < 0) {
+        r = safe_switch_effective_to_uid(uid,
+                                         &c->valid_caller_uids,
+                                         &c->valid_caller_gids);
+    }
     if (r < 0) {
         fatal_error_exit(1, "error switching user to uid %lu",
                          (unsigned long) uid);
@@ -867,9 +887,8 @@ static void do_rmdir(configuration *c)
     char *dir_name;
     int r;
     struct stat stat_buf;
-    uid_t uid;
 
-    dir_name = do_common_dir_cmd_tasks(c, &dir_cmd_conf);
+    dir_name = do_common_dir_cmd_tasks(c, &dir_cmd_conf, 1, 0);
 
     r = lstat(dir_name, &stat_buf);
     if (r == -1) {
@@ -880,21 +899,10 @@ static void do_rmdir(configuration *c)
         fatal_error_exit(1, "leaf dir is not a directory (%s)", dir_name);
     }
 
-    uid = dir_cmd_conf.user_uid;
-    r = safe_switch_effective_to_uid(uid,
-                                     &c->valid_target_uids,
-                                     &c->valid_target_gids);
-    if (r < 0) {
-        fatal_error_exit(1, "error switching user to uid %lu",
-                         (unsigned long) uid);
-    }
-
     r = safe_dir_walk(dir_name, rmdir_func, 0, 64);
     if (r != 0) {
         fatal_error_exit(1, "error in recursive delete of directory");
     }
-
-    (void) seteuid(0);
 
     r = rmdir_func(dir_name, &stat_buf, 0);
     if (r != 0) {
@@ -910,14 +918,48 @@ typedef struct uid_pair {
 } uid_pair;
 
 static int
-chown_func(const char *filename, const struct stat *stat_buf, void *data)
+chown_func(const char *filename, const struct stat *buf, void *data)
 {
-    int r = 0;
+    int fd;
+    struct stat stat_buf;
+    uid_t source_uid;
     uid_pair *ids = data;
-    (void) stat_buf;
+    int r;
 
-    r = lchown(filename, ids->uid, ids->gid);
+    (void)buf;
 
+    /*
+       This may follow a symlink, but there's no real (well, easy and
+       portable) way around that. Additionally, a job may hard link to
+       something outside of its sandbox, which can even be owned by
+       someone else. Therefore, we'll do open and fstat (as the expected
+       source user), then only fchown (as root) if the expected source user
+       is correct. Note that this function expects to be called with our
+       EUID set to the (expected) source user.
+    */
+    fd = open(filename, O_RDONLY | O_NONBLOCK);
+    if (fd == -1) {
+        return -1;
+    }
+    r = fstat(fd, &stat_buf);
+    if (r == -1) {
+        close(fd);
+        return -1;
+    }
+    source_uid = geteuid();
+    if (stat_buf.st_uid != source_uid) {
+        close(fd);
+        return -1;
+    }
+    if (seteuid(0) == -1) {
+        fatal_error_exit(1, "error switching user to root\n");
+    }
+    r = fchown(fd, ids->uid, ids->gid);
+    if (seteuid(source_uid) == -1) {
+        fatal_error_exit(1, "error switching user to uid %lu",
+                         (unsigned long) source_uid);
+    }
+    close(fd);
     return r;
 }
 
@@ -929,7 +971,7 @@ static void do_chown_dir(configuration *c)
     uid_t uid;
     int r;
 
-    dir_name = do_common_dir_cmd_tasks(c, &dir_cmd_conf);
+    dir_name = do_common_dir_cmd_tasks(c, &dir_cmd_conf, 0, 1);
 
     uid = dir_cmd_conf.user_uid;
     r = safe_switch_effective_to_uid(uid,
@@ -951,6 +993,18 @@ static void do_chown_dir(configuration *c)
     r = seteuid(0);
     if (r == -1) {
         fatal_error_exit(1, "error switching user to root");
+    }
+    r = safe_switch_effective_to_uid(dir_cmd_conf.chown_source_uid,
+                                     &c->valid_target_uids,
+                                     &c->valid_target_gids);
+    if (r < 0) {
+        r = safe_switch_effective_to_uid(dir_cmd_conf.chown_source_uid,
+                                         &c->valid_caller_uids,
+                                         &c->valid_caller_gids);
+    }
+    if (r < 0) {
+        fatal_error_exit(1, "error switching user to uid %lu",
+                         (unsigned long) dir_cmd_conf.chown_source_uid);
     }
 
     r = safe_dir_walk(dir_name, chown_func, &ids, 64);

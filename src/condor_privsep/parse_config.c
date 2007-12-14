@@ -39,7 +39,7 @@
 #include "safe.h"
 #include "parse_config.h"
 
-#define MAX_CONFIG_LINE		4096
+#define MAX_CONFIG_LINE		(8 * 1024)
 #define MAX_CONFIG_VALUE_LENGTH	(1024 * 1024)
 #define MAX_CONFIG_FILE_SIZE	(10 * 1024 * 1024)
 

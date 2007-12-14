@@ -830,12 +830,26 @@ UserProc::delete_files()
 		do_unlink( core_name );
 	}
 
-	if( rmdir(local_dir) < 0 ) {
-		dprintf( D_ALWAYS,
-			"Can't remove directory \"%s\" - errno = %d\n", local_dir, errno
-		);
-	} else {
-		dprintf( D_ALWAYS, "Removed directory \"%s\"\n", local_dir );
+	dprintf( D_ALWAYS, "Removing directory \"%s\"\n", local_dir );
+	if (privsep_enabled()) {
+		// again, the PrivSep Switchboard expects a full path for
+		// the "remove dir" operation
+		//
+		MyString local_dir_path;
+		local_dir_path.sprintf("%s/%s", Execute, local_dir);
+		if (!privsep_remove_dir(local_dir_path.Value())) {
+			dprintf(D_ALWAYS,
+			        "privsep_remove_dir failed to remove %s\n",
+			        local_dir_path.Value());
+		}
+	}
+	else {
+		if( rmdir(local_dir) < 0 ) {
+			dprintf( D_ALWAYS,
+				"Can't remove directory \"%s\" - errno = %d\n",
+			        local_dir,
+			        errno);
+		}
 	}
 }
 
@@ -1437,8 +1451,21 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	buf.sprintf( "dir_%d", getpid() );
 	local_dir = new char [ buf.Length() + 1 ];
 	strcpy( local_dir, buf.Value() );
-	if( mkdir(local_dir,LOCAL_DIR_MODE) < 0 ) {
-		EXCEPT( "mkdir(%s,0%o)", local_dir, LOCAL_DIR_MODE );
+	if (privsep_enabled()) {
+		// the Switchboard expects a full path to privsep_create_dir
+		MyString local_dir_path;
+		local_dir_path.sprintf("%s/%s", Execute, local_dir);
+		if (!privsep_create_dir(get_condor_uid(), local_dir_path.Value())) {
+			EXCEPT("privsep_create_dir failure");
+		}
+		if (chmod(local_dir_path.Value(), LOCAL_DIR_MODE) == -1) {
+			EXCEPT("chmod failure after privsep_create_dir");
+		}
+	}
+	else {
+		if( mkdir(local_dir,LOCAL_DIR_MODE) < 0 ) {
+			EXCEPT( "mkdir(%s,0%o)", local_dir, LOCAL_DIR_MODE );
+		}
 	}
 	(void)umask(omask);
 

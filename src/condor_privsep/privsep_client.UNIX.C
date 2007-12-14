@@ -357,7 +357,7 @@ privsep_create_dir(uid_t uid, const char* pathname)
 }
 
 bool
-privsep_remove_dir(uid_t uid, const char* pathname)
+privsep_remove_dir(const char* pathname)
 {
 	// launch the privsep switchboard with the "rmdir" operation
 	//
@@ -372,9 +372,8 @@ privsep_remove_dir(uid_t uid, const char* pathname)
 		return false;
 	}
 
-	// feed it the uid and pathname via its input pipe
+	// feed it the pathname via its input pipe
 	//
-	fprintf(in_fp, "user-uid = %u\n", (unsigned)uid);
 	fprintf(in_fp, "user-dir = %s\n", pathname);
 	fclose(in_fp);
 
@@ -384,7 +383,7 @@ privsep_remove_dir(uid_t uid, const char* pathname)
 }
 
 bool
-privsep_chown_dir(uid_t uid, const char* pathname)
+privsep_chown_dir(uid_t target_uid, uid_t source_uid, const char* pathname)
 {
 	// launch the privsep switchboard with the "chowndir" operation
 	//
@@ -401,8 +400,9 @@ privsep_chown_dir(uid_t uid, const char* pathname)
 
 	// feed it the uid and pathname via its input pipe
 	//
-	fprintf(in_fp, "user-uid = %u\n", (unsigned)uid);
+	fprintf(in_fp, "user-uid = %u\n", (unsigned)target_uid);
 	fprintf(in_fp, "user-dir = %s\n", pathname);
+	fprintf(in_fp, "chown-source-uid=%u\n", (unsigned)source_uid);
 	fclose(in_fp);
 
 	// now reap it and return

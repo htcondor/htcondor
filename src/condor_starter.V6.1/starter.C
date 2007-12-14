@@ -1619,12 +1619,20 @@ CStarter::removeTempExecuteDir( void )
 		return true;
 	}
 
-	if (privsep_enabled()) {
-		privsep_helper.chown_sandbox_to_condor();
-	}
-
 	MyString dir_name = "dir_";
 	dir_name += (int)daemonCore->getpid();
+
+	if (privsep_enabled()) {
+		MyString path_name;
+		path_name.sprintf("%s/%s", Execute, dir_name.Value());
+		if (!privsep_remove_dir(path_name.Value())) {
+			dprintf(D_ALWAYS,
+			        "privsep_remove_dir failed for %s\n",
+			        path_name.Value());
+			return false;
+		}
+		return true;
+	}
 
 	Directory execute_dir( Execute, PRIV_ROOT );
 	if ( execute_dir.Find_Named_Entry( dir_name.Value() ) ) {

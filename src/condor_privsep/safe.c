@@ -2993,6 +2993,60 @@ opendir_with_fd(const char *path,
 #endif
 
 /*
+ * chdir_no_follow
+ *
+ * parameters
+ *      dir_name
+ *              a directory name, relative to the current dir, to change to
+ * returns
+ *       0 on success
+ *      -1 on error
+ */
+static int chdir_no_follow(const char* dir_name)
+{
+    int fd;
+    dev_t dev;
+    ino_t ino;
+    struct stat stat_buf;
+
+    fd = open(dir_name, O_RDONLY | O_NONBLOCK);
+    if (fd == -1) {
+        return -1;
+    }
+
+    if (fstat(fd, &stat_buf) == -1) {
+        close(fd);
+        return -1;
+    }
+
+    if (!S_ISDIR(stat_buf.st_mode)) {
+        close(fd);
+        return -1;
+    }
+
+    dev = stat_buf.st_dev;
+    ino = stat_buf.st_ino;
+
+    if (lstat(dir_name, &stat_buf) == -1) {
+        close(fd);
+        return -1;
+    }
+
+    if ((stat_buf.st_dev != dev) || (stat_buf.st_ino != ino)) {
+         close(fd);
+         return -1;
+    }
+
+    if (fchdir(fd) == -1) {
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+    return 0;
+}
+
+/*
  * do_dir_contents_one_fd
  *
  * parameters
@@ -3077,7 +3131,8 @@ static int do_dir_contents_one_fd(safe_dir_walk_func func, void *data)
         char **dirptr = null_terminated_list_from_string_list(&dirs);
 
         while (*dirptr) {
-            status = chdir(*dirptr);
+
+            status = chdir_no_follow(*dirptr);
             if (status == -1) {
                 break;
             }
@@ -3182,7 +3237,7 @@ do_dir_contents(safe_dir_walk_func func, void *data, int num_fds)
         }
 
         if (statp && S_ISDIR(statp->st_mode)) {
-            status = chdir(de->d_name);
+            status = chdir_no_follow(de->d_name);
             if (status == -1) {
                 break;
             }
@@ -3245,7 +3300,7 @@ safe_dir_walk(const char *path, safe_dir_walk_func func, void *data,
         goto cleanup_and_exit;
     }
 
-    r = chdir(path);
+    r = chdir_no_follow(path);
     if (r == -1) {
         goto cleanup_and_exit;
     }

@@ -96,10 +96,12 @@ bool privsep_create_dir(uid_t uid, const char* pathname);
 
 // remove a directory tree
 //
-bool privsep_remove_dir(uid_t uid, const char* pathname);
+bool privsep_remove_dir(const char* pathname);
 
 // change the ownership of a directory tree to the given user
 //
-bool privsep_chown_dir(uid_t uid, const char* pathname);
+bool privsep_chown_dir(uid_t target_uid,
+                       uid_t source_uid,
+                       const char* pathname);
 
 #endif
