@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_pre,v 1.21 2007-11-08 22:53:44 nleroy Exp $
+# $Id: remote_pre,v 1.22 2007-12-14 14:13:02 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -176,6 +176,7 @@ if (defined($opt_clear_externals_cache) ||
     system("diff $old/build_external $new/build_external 2>&1 > /dev/null")) {
     print "Clearing cache " .
 	"(clear_externals_cache: $opt_clear_externals_cache)...\n";
+    system("rm -r $old/*");
     (-e "$old/bundles" ) &&
 	print "Failed to remove '$old/bundles'\n" &&
 	goto bail;
