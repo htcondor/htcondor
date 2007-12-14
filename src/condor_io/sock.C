@@ -874,10 +874,22 @@ Sock::do_connect_finish()
 			}
 		}
 
+		if( connect_state.non_blocking_flag &&
+		    _state == sock_connect_pending )
+		{
+				// select() must have timed out, but the connection
+				// attempt has not timed out, or we wouldn't get here,
+				// so just keep waiting.
+			return CEDAR_EWOULDBLOCK;
+		}
+
 		if( connect_state.non_blocking_flag ) {
 				// To prevent a retry busy loop, set a retry timeout
 				// of one second and return.  We will be called again
 				// when this timeout expires (e.g. by DaemonCore)
+			if(_state != sock_bound) {
+				cancel_connect();
+			}
 			_state = sock_connect_pending_retry;
 			connect_state.retry_wait_timeout_time = time(NULL)+1;
 
@@ -1062,10 +1074,10 @@ bool Sock::do_connect_tryit()
 void
 Sock::cancel_connect()
 {
-#if defined(WIN32)
-	_state = sock_bound;
-#else
-		// Here we need to close the underlying socket and re-create
+		// In some cases, we may be cancelling a non-blocking connect
+		// attempt that has timed out.  In others, we may be cleaning
+		// up after a failed connect attempt.  Even in the latter case
+		// we need to close the underlying socket and re-create
 		// it.  Why?  Because v2.2.14 of the Linux Kernel, which is 
 		// used in RedHat 4.2, has a bug which will cause the machine
 		// to lock up if you do repeated calls to connect() on the same
@@ -1076,7 +1088,7 @@ Sock::cancel_connect()
 		// socket after a failed connect.  -Todd 8/00
 		
 		// stash away the descriptor so we can compare later..
-	int old_sock = _sock;
+	SOCKET old_sock = _sock;
 
 		// now close the underlying socket.  do not call Sock::close()
 		// here, because we do not want all the CEDAR socket state
@@ -1093,10 +1105,14 @@ Sock::cancel_connect()
 		return;
 	}
 
+#ifndef WIN32
 		// make certain our descriptor number has not changed,
 		// because parts of Condor may have stashed the old
 		// socket descriptor into data structures.  So if it has
 		// changed, use dup2() to set it the same as before.
+		// NOTE from Dan 2007-12-13: we have no good way to do this
+		// under windows, and I question whether this is really
+		// necessary in the first place.
 	if ( _sock != old_sock ) {
 		if ( dup2(_sock,old_sock) < 0 ) {
 			dprintf(D_ALWAYS,
@@ -1108,13 +1124,14 @@ Sock::cancel_connect()
 		::closesocket(_sock);
 		_sock = old_sock;
 	}
+#endif
 
 	// finally, bind the socket
 	/* TRUE means this is an outgoing connection */
 	if( !bind(true) ) {
 		connect_state.connect_refused = true; // better give up
 	}
-#endif
+
 	if ( connect_state.old_timeout_value != _timeout ) {
 			// Restore old timeout
 		timeout_no_timeout_multiplier(connect_state.old_timeout_value);
