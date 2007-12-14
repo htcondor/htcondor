@@ -1622,6 +1622,7 @@ CStarter::removeTempExecuteDir( void )
 	MyString dir_name = "dir_";
 	dir_name += (int)daemonCore->getpid();
 
+#if !defined(WIN32)
 	if (privsep_enabled()) {
 		MyString path_name;
 		path_name.sprintf("%s/%s", Execute, dir_name.Value());
@@ -1633,6 +1634,7 @@ CStarter::removeTempExecuteDir( void )
 		}
 		return true;
 	}
+#endif
 
 	Directory execute_dir( Execute, PRIV_ROOT );
 	if ( execute_dir.Find_Named_Entry( dir_name.Value() ) ) {
