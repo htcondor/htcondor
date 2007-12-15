@@ -71,7 +71,9 @@ use File::Basename;
 use File::Spec;
 use IO::File;
 use lib $ENV{'NMI_LIB'} || "/nmi/lib";
-use NmiConf;
+
+BEGIN { eval "use NmiConf;" }
+my $HAS_NMICONF = $INC{"NmiConf.pm"};
 
 # variables we'll be using for from Getopt::Long.  keep these in the
 # same order as the call to GetOptions() to help notice discrepancies
@@ -281,6 +283,10 @@ sub initializeDB
     # this point, only when we're invoked with "--platforms=all").
 
     print "Initializing Database Parameters\n";
+
+    unless ($HAS_NMICONF) {
+	die("ERROR: NmiConf not available, database inaccessible\n");
+    }
 
     if( ! defined $nmiconf ) {
         die "FATAL: $0: No NMI config file specified.\n";
