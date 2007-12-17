@@ -103,7 +103,7 @@ store_cred_handler(Service * service, int i, Stream *stream) {
 
   _classad = parser.ParseClassAd(classad_cstr);
   if (!_classad) {
-	  dprintf (D_ALWAYS, "Error: invalid credential metadata %s\n", classad_str);
+	  dprintf (D_ALWAYS, "Error: invalid credential metadata %s\n", classad_cstr.c_str());
 	  goto EXIT;
   }
 
