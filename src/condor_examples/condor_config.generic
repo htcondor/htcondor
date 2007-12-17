@@ -475,7 +475,7 @@ GLIDEIN_SITES =
 ## submitting a large number of jobs. Copying exposes the credential
 ## to third parties if Condor isn't set to encrypt communications.
 ## By default, Condor will delegate rather than copy.
-DELEGATE_JOB_GSI_CREDENTIALS = True
+#DELEGATE_JOB_GSI_CREDENTIALS = True
 
 ## This setting controls the default behaviour for the spooling of files
 ## into, or out of, the Condor system by such tools as condor_submit
@@ -491,7 +491,7 @@ DELEGATE_JOB_GSI_CREDENTIALS = True
 ##
 ## The allowed values are case insensitive.
 ## The default of this parameter if not specified is: stm_use_schedd_only
-SANDBOX_TRANSFER_METHOD = stm_use_schedd_only
+#SANDBOX_TRANSFER_METHOD = stm_use_schedd_only
 
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
@@ -533,9 +533,9 @@ MASTER_DEBUG		=
 ## The daemons touch their log file periodically, even when they have
 ## nothing to write. When a daemon starts up, it prints the last time
 ## the log file was modified. This lets you estimate when a previous
-## instance of a daemon stopped running. This paramete controls often
+## instance of a daemon stopped running. This paramete controls how often
 ## the daemons touch the file (in seconds).
-TOUCH_LOG_INTERVAL = 60
+#TOUCH_LOG_INTERVAL = 60
 
 ######################################################################
 ######################################################################
