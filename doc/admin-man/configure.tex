@@ -1020,6 +1020,15 @@ File System Configuration File Entries''.
   % Defined in the default config file: NO
   % Default definition in config file: N/A
   % Result if not defined or RHS is empty: defaults to 20 seconds.
+
+\item[\Macro{DEAD\_COLLECTOR\_MAX\_AVOIDANCE\_TIME}]
+\label{param:DeadCollectorMaxAvoidanceTime} Defines the maximum time
+(in seconds) that a daemon (such as the negotiator) will fail over from
+a primary collector to a secondary collector (if any).  The default is
+one hour.  If connections to the dead primary collector take very
+little time to fail, new attempts to query the primary collector may
+be more frequent than the specified maximum avoidance time.
+
 \item[\Macro{PASSWD\_CACHE\_REFRESH}]
   \label{param:PasswdCacheRefresh}
   Condor can cause NIS servers to become overwhelmed by queries for uid

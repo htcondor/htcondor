@@ -88,6 +88,19 @@ their maximum configured size.
 \item Fixed a bug under Windows that sometimes caused connection attempts
 between Condor daemons to fail with Windows error number 10056.
 
+\item Fixed a problem in which there are multiple collectors in a pool
+for fault tolerance.  If the primary collector failed, the
+\Condor{negotiator} would fail over to the secondary collector
+indefinitely (or until the secondary collector also failed or the
+administrator ran \Condor{reconfig}).  This was a problem for users
+flocking jobs to the pool, because flocking currently only works with
+the primary collector.  Now, the \Condor{negotiator} will fail over
+for a restricted amount of time, up to
+\MacroNI{DEAD\_COLLECTOR\_MAX\_AVOIDANCE\_TIME} seconds.  The default
+is one hour, but if querying the dead primary collector takes very little
+time to fail, the negotiator may retry more frequently in order to remain
+responsive to flocked users.
+
 \end{itemize}
 
 \noindent Known Bugs:
