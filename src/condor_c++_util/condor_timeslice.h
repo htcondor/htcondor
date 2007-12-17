@@ -72,6 +72,12 @@ class Timeslice {
 		updateNextStartTime();
 	}
 
+	void reset() {
+		m_last_duration = 0;
+		m_start_time = UtcTime();
+		updateNextStartTime();
+	}
+
 	void updateNextStartTime() {
 		double delay = m_default_interval;
 		if( m_start_time.seconds() == 0 ) {

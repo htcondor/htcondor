@@ -26,6 +26,8 @@
 #include "dc_collector.h"
 #include "internet.h"
 
+template SimpleList<DCCollector *>;
+
 DaemonList::DaemonList()
 {
 }
@@ -264,19 +266,43 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 QueryResult
 CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *errstack) {
 
-	int total_size = this->number();
-	if (total_size < 1) {
+	int num_collectors = this->number();
+	if (num_collectors < 1) {
 		return Q_NO_COLLECTOR_HOST;
 	}
 
+	SimpleList<DCCollector *> sorted_collectors;
 	DCCollector * daemon;
-	int i=0;
 	QueryResult result;
+	int pass = 0;
 
 	bool problems_resolving = false;
 
-	this->rewind();
-	while (this->next(daemon)) {
+	for( pass = 1; pass <= 2; pass++ ) {
+		this->rewind();
+		while (this->next(daemon)) {
+				// Only try blacklisted collectors on the second pass
+			if( daemon->isBlacklisted() ) {
+				if( pass == 1 ) {
+					dprintf( D_ALWAYS,
+					         "Collector %s %s is still being avoided if "
+					         "an alternative succeeds.\n",
+					         daemon->name(),
+					         daemon->addr() );
+					continue;
+				}
+			}
+			else {
+				if( pass == 2 ) {
+					continue;
+				}
+			}
+			sorted_collectors.Append( daemon );
+		}
+	}
+
+	sorted_collectors.Rewind();
+	while( sorted_collectors.Next( daemon ) ) {
 		if ( ! daemon->addr() ) {
 			if ( daemon->name() ) {
 				dprintf( D_ALWAYS,
@@ -293,22 +319,20 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 				 "Trying to query collector %s\n", 
 				 daemon->addr());
 
+		if( num_collectors > 1 ) {
+			daemon->blacklistMonitorQueryStarted();
+		}
+
 		result = 
 			cQuery.fetchAds (adList, daemon->addr(), errstack);
-		
+
+		if( num_collectors > 1 ) {
+			daemon->blacklistMonitorQueryFinished( result == Q_OK );
+		}
+
 		if (result == Q_OK) {
 			return result;
 		}
-		
-			// This collector is bad, it should be moved
-			// to the end of the list
-		DCCollector* copy = new DCCollector( *daemon );
-		this->deleteCurrent();
-		this->append (copy);
-		this->rewind();
-		
-			// Make sure we don't keep rotating through the list
-		if (++i >= total_size) break;
 	}
 			
 	// only push an error if the error stack exists and is currently empty

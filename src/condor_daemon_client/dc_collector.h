@@ -27,6 +27,7 @@
 #include "condor_io.h"
 #include "extArray.h"
 #include "daemon_list.h"
+#include "condor_timeslice.h"
 
 
 /** Class to manage the sequence nubmers of individual ClassAds
@@ -116,6 +117,9 @@ public:
 
 	const char* updateDestination( void );
 
+	bool isBlacklisted();
+	void blacklistMonitorQueryStarted();
+	void blacklistMonitorQueryFinished( bool success );
 
   protected:
 		// Get the ad sequence manager (for copy constructor)
@@ -154,6 +158,7 @@ private:
 	char* tcp_update_destination;
 	char* udp_update_destination;
 
+	Timeslice blacklisted;
 
 	void displayResults( void );
 

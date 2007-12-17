@@ -56,6 +56,7 @@ DCCollector::init( bool needs_reconfig )
 	tcp_update_destination = NULL;
 	startTime = time( NULL );
 	adSeqMan = NULL;
+
 	if( needs_reconfig ) {
 		reconfig();
 	}
@@ -214,6 +215,15 @@ DCCollector::reconfig( void )
 		}
 		break;
 	}
+
+		// Blacklist this collector if last failed contact took more
+		// than 1% of the time that has passed since that operation
+		// started.  (i.e. if contact fails quickly, don't worry, but
+		// if it takes a long time to fail, be cautious.
+	blacklisted.setTimeslice(0.01);
+		// Set an upper bound of one hour for the collector to be blacklisted.
+	int avoid_time = param_integer("DEAD_COLLECTOR_MAX_AVOIDANCE_TIME",3600);
+	blacklisted.setMaxInterval(avoid_time);
 
 	parseTCPInfo();
 	initDestinationStrings();
@@ -914,5 +924,34 @@ DCCollector::~DCCollector( void )
 		// let them know this DCCollector object is going away.
 	if(pending_update_list) {
 		pending_update_list->DCCollectorGoingAway();
+	}
+}
+
+bool
+DCCollector::isBlacklisted() {
+	return !blacklisted.isTimeToRun();
+}
+
+void
+DCCollector::blacklistMonitorQueryStarted() {
+	blacklisted.setStartTimeNow();
+}
+
+void
+DCCollector::blacklistMonitorQueryFinished( bool success ) {
+	if( success ) {
+		blacklisted.reset();
+	}
+	else {
+		blacklisted.setFinishTimeNow();
+
+		int delta = blacklisted.getTimeToNextRun();
+		if( delta > 0 ) {
+			dprintf( D_ALWAYS, "Will avoid querying collector %s %s for %ds "
+			         "if an alternative succeeds.\n",
+			         name(),
+					 addr(),
+			         delta );
+		}
 	}
 }
