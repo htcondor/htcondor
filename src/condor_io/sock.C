@@ -1074,6 +1074,14 @@ bool Sock::do_connect_tryit()
 void
 Sock::cancel_connect()
 {
+#ifdef WIN32
+		// This is a temporary measure to avoid causing exceptions
+		// in the daemonCore select loop when the socket handle
+		// changes due to closing and opening the socket.
+		// Before 7.0 ships, we must fix this for real.
+	_state = sock_bound;
+#else
+
 		// In some cases, we may be cancelling a non-blocking connect
 		// attempt that has timed out.  In others, we may be cleaning
 		// up after a failed connect attempt.  Even in the latter case
@@ -1131,6 +1139,7 @@ Sock::cancel_connect()
 	if( !bind(true) ) {
 		connect_state.connect_refused = true; // better give up
 	}
+#endif
 
 	if ( connect_state.old_timeout_value != _timeout ) {
 			// Restore old timeout
