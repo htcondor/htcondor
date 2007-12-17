@@ -611,7 +611,7 @@ MachineBusy		= ($(CPUBusy) || $(KeyboardBusy))
 ######################################################################
 
 ##  Also here is what is referred to as the TESTINGMODE_*, which is
-##  a quick hardwired way to test Condor.
+##  a quick hardwired way to test Condor with a simple no-preemption policy.
 ##  Replace UWCS_* with TESTINGMODE_* if you wish to do testing mode.
 ##  For example:
 ##  WANT_SUSPEND 		= $(UWCS_WANT_SUSPEND)
@@ -656,6 +656,7 @@ PREEMPTION_RANK		= $(UWCS_PREEMPTION_RANK)
 NEGOTIATOR_PRE_JOB_RANK = $(UWCS_NEGOTIATOR_PRE_JOB_RANK)
 NEGOTIATOR_POST_JOB_RANK = $(UWCS_NEGOTIATOR_POST_JOB_RANK)
 MaxJobRetirementTime    = $(UWCS_MaxJobRetirementTime)
+CLAIM_WORKLIFE          = $(UWCS_CLAIM_WORKLIFE)
 
 #####################################################################
 ## This is the UWisc - CS Department Configuration.
@@ -705,9 +706,17 @@ UWCS_PREEMPT = ( ((Activity == "Suspended") && \
 # out, the usual preemption process will take place.  The job may
 # self-limit the retirement time to _less_ than what is given here.
 # By default, nice user jobs and standard universe jobs set their
-# MaxJobRetirementTime to 0, so they will usually not wait in retirement.
+# MaxJobRetirementTime to 0, so they will not wait in retirement.
 
 UWCS_MaxJobRetirementTime = 0
+
+##  If you completely disable preemption of claims to machines, you
+##  should consider limiting the timespan over which new jobs will be
+##  accepted on the same claim.  See the manual section on disabling
+##  preemption for a comprehensive discussion.  Since this example
+##  configuration does not disable preemption of claims, we leave
+##  CLAIM_WORKLIFE undefined (infinite).
+#UWCS_CLAIM_WORKLIFE = 1200
 
 # Kill jobs if they have taken too long to vacate gracefully
 UWCS_KILL = $(ActivityTimer) > $(MaxVacateTime) 
@@ -780,6 +789,7 @@ UWCS_PREEMPTION_REQUIREMENTS = ( $(StateTimer) > (1 * $(HOUR)) && \
 ##  negotiation ranks are equal.
 UWCS_PREEMPTION_RANK = (RemoteUserPrio * 1000000) - TARGET.ImageSize
 
+
 #####################################################################
 ##  This is a Configuration that will cause your Condor jobs to
 ##  always run.  This is intended for testing only.
@@ -799,6 +809,10 @@ TESTINGMODE_KILL			= False
 TESTINGMODE_PERIODIC_CHECKPOINT	= False
 TESTINGMODE_PREEMPTION_REQUIREMENTS = False
 TESTINGMODE_PREEMPTION_RANK = 0
+
+# Prevent machine claims from being reused indefinitely, since
+# preemption of claims is disabled in the TESTINGMODE configuration.
+TESTINGMODE_CLAIM_WORKLIFE = 1200
 
 
 ######################################################################
