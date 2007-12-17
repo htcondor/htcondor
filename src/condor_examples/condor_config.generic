@@ -378,7 +378,7 @@ LOCK		= $(LOG)
 ##  places because it can't resolve hostnames to IP addresses and
 ##  vice-versa. If you enable this option, Condor will use
 ##  pseudo-hostnames constructed from a machine's IP address and the
-##  DEFAULT_DOMAIN_NAME. Both NO_DNS and DEFAULT_DOMAIN must set in
+##  DEFAULT_DOMAIN_NAME. Both NO_DNS and DEFAULT_DOMAIN must be set in
 ##  your top-level config file for this mode of operation to work
 ##  properly.
 #NO_DNS = True
@@ -407,11 +407,10 @@ LOCK		= $(LOG)
 ##  downloading and installing binaries for every architecture you
 ##  might want to glidein to. The default server is one maintained at
 ##  The University of Wisconsin. If you don't want to use the UW
-##  server, you can set up your own and change the following values to
+##  server, you can set up your own and change the following to
 ##  point to it, instead.
 GLIDEIN_SERVER_URLS = \
-  http://www.cs.wisc.edu/condor/glidein/binaries \
-  gsiftp://gridftp.cs.wisc.edu/p/condor/public/binaries/glidein
+  http://www.cs.wisc.edu/condor/glidein/binaries
 
 ## List the sites you want to GlideIn to on the GLIDEIN_SITES. For example, 
 ## if you'd like to GlideIn to some Alliance GiB resources, 
