@@ -118,13 +118,13 @@ char* getStoredCredential(const char *username, const char *domain)
 	priv_state priv = set_root_priv();
 	FILE* fp = safe_fopen_wrapper(filename, "r");
 	set_priv(priv);
-	free(filename);
 	if (fp == NULL) {
 		dprintf(D_FULLDEBUG,
 		        "error opening SEC_PASSWORD_FILE (%s), %s (errno: %d)\n",
 		        filename,
 		        strerror(errno),
 		        errno);
+		free(filename);
 		return NULL;
 	}
 
@@ -137,8 +137,10 @@ char* getStoredCredential(const char *username, const char *domain)
 		        strerror(errno),
 		        errno);
 		fclose(fp);
+		free(filename);
 		return NULL;
 	}
+	free(filename);
 	if (st.st_uid != get_my_uid()) {
 		dprintf(D_ALWAYS,
 		        "error: SEC_PASSWORD_FILE must be owned "
