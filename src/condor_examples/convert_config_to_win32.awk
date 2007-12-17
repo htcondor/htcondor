@@ -33,6 +33,15 @@ BEGIN {
 	FS = "="
 }
 
+# Make it so we can fill in the VM_GAHP_SERVER option if we choose to in the
+# installer. This is done before the .exe append bellow, because that match 
+# seems to block any other matches for that line.
+/^#VM_GAHP_SERVER/ {
+	print "#VM_GAHP_SERVER = $(BIN)/condor_vm-gahp.exe"
+	print "VM_GAHP_SERVER = "
+	next
+}
+
 # Add a .exe to the end of all condor daemon names
 /BIN)\/condor_/ {
 	printf "%s.exe\n",$0
@@ -102,6 +111,19 @@ BEGIN {
 # pipe
 /^PROCD_ADDRESS/ {
 	print "PROCD_ADDRESS = \\\\.\\pipe\\condor_procd_pipe"
+	next
+}
+
+# Make it so we can fill in the VM GAHP options if we choose to in the
+# installer. 
+/^#VM_GAHP_CONFIG/ {
+	print "#VM_GAHP_CONFIG = $(RELEASE_DIR)/condor_vmgahp_config.vmware"
+	print "VM_GAHP_CONFIG ="
+	next
+}
+/^#VM_TYPE/ {
+	print "#VM_TYPE = vmware"
+	print "VM_TYPE ="
 	next
 }
 
