@@ -38,8 +38,8 @@ BEGIN {
 
 # Set it up so we can change the VMWARE_SCRIPT option if we choose to
 # do so in the installer
-/^#VMWARE_SCRIPT/ {
-	printf "VMWARE_SCRIPT = $(BIN)\condor_vm_vmware.pl\n"
+/^VMWARE_SCRIPT/ {
+	printf "VMWARE_SCRIPT = $(BIN)/condor_vm_vmware.pl\n"
 	next
 }
 
