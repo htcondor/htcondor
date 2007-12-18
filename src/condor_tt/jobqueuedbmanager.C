@@ -1728,9 +1728,7 @@ JobQueueDBManager::setJQPollingInfo()
 	} 	
 	
 	free(sql_str);
-	
-	if (tmp) {
-		free(tmp);
-	}
+	free(tmp);
+
 	return ret_st;
 }
