@@ -100,9 +100,9 @@ main(int argc, char *argv[])
 		strcat(fullpath, "/libcondorsyscall.a");
 				
 		vername = NULL;
-		vername = version->get_version_from_file(fullpath, vername);
+		vername = CondorVersionInfo::get_version_from_file(fullpath, vername);
 		platform = NULL;
-		platform = version->get_platform_from_file(fullpath, platform);
+		platform = CondorVersionInfo::get_platform_from_file(fullpath, platform);
 
 		version = new CondorVersionInfo(vername, NULL, platform);
 		free(path);
