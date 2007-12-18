@@ -98,6 +98,21 @@ void set_debug_flags( char *strflags );
 void _condor_fd_panic( int line, char *file );
 void _condor_set_debug_flags( char *strflags );
 
+/* must call this before clone(CLONE_VM|CLONE_VFORK) */
+void dprintf_before_shared_mem_clone( void );
+
+/* must call this after clone(CLONE_VM|CLONE_VFORK) returns */
+void dprintf_after_shared_mem_clone( void );
+
+/* must call this upon entering child of fork() if child calls dprintf */
+void dprintf_init_fork_child( void );
+
+/* call this when done with dprintf in child of fork()
+ * This is not necessary if child is just going to exit.  It just
+ * ensures that nothing gets inherited by exec().
+ */
+void dprintf_wrapup_fork_child( void );
+
 time_t dprintf_last_modification(void);
 void dprintf_touch_log(void);
 

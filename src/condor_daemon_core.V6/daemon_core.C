@@ -209,7 +209,6 @@ static int _condor_exit_with_exec = 0;
 #ifdef HAVE_EXT_GSOAP
 extern int soap_serve(struct soap*);
 #endif
-extern int LockFd;
 extern void drop_addr_file( void );
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD
 
@@ -5344,6 +5343,9 @@ pid_t CreateProcessForkit::fork_exec() {
 			child_stack_ptr += stack_size;
 		}
 
+			// save some state in dprintf
+		dprintf_before_shared_mem_clone();
+
 			// reason for flags passed to clone:
 			// CLONE_VM    - child shares same address space (so no time
 			//               wasted copying page tables)
@@ -5360,6 +5362,9 @@ pid_t CreateProcessForkit::fork_exec() {
 
 			// Since we used the CLONE_VFORK flag, the child has exited
 			// or called exec by now.
+
+			// restore state
+		dprintf_after_shared_mem_clone();
 
 		return newpid;
 	}
@@ -5399,10 +5404,7 @@ void CreateProcessForkit::exec() {
 
 		// make sure we're not going to try to share the lock file
 		// with our parent (if it's been defined).
-	if( LockFd >= 0 ) {
-		close( LockFd );
-		LockFd = -1;
-	}
+	dprintf_init_fork_child();
 
 		// close the read end of our error pipe and set the
 		// close-on-exec flag on the write end
@@ -5803,10 +5805,7 @@ void CreateProcessForkit::exec() {
 	Generic_stop_logging();
 #endif
 
-	if( LockFd >= 0 ) {
-		close( LockFd );
-		LockFd = -1;
-	}
+	dprintf_wrapup_fork_child();
 
 	bool found;
 	for ( int j=3 ; j < openfds ; j++ ) {

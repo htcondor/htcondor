@@ -1058,3 +1058,38 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 	return result;
 }
 #endif  // of Win32
+
+#ifndef WIN32
+static int ParentLockFd = -1;
+
+void
+dprintf_before_shared_mem_clone() {
+	ParentLockFd = LockFd;
+}
+
+void
+dprintf_after_shared_mem_clone() {
+	LockFd = ParentLockFd;
+}
+
+void
+dprintf_init_fork_child( ) {
+	if( LockFd >= 0 ) {
+		close( LockFd );
+		LockFd = -1;
+	}
+}
+
+void
+dprintf_wrapup_fork_child( ) {
+		/* Child pledges not to call dprintf any more, so it is
+		   safe to close the lock file.  If parent closes all
+		   fds anyway, then this is redundant.
+		*/
+	if( LockFd >= 0 ) {
+		close( LockFd );
+		LockFd = -1;
+	}
+}
+
+#endif
