@@ -162,15 +162,25 @@ TESTCLASS(lib_auth_protocol-gsi,quick)
 
 #endif
 
-DESC(lib_auth_protocol-negot,"16 way negotiation test - frist 8")
+DESC(lib_auth_protocol-negot,"4 way negotiation test - frist 8")
 RUN(lib_auth_protocol-negot)
 TESTCLASS(lib_auth_protocol-negot,core)
 TESTCLASS(lib_auth_protocol-negot,quick)
 
-DESC(lib_auth_protocol-negot-prt2,"16 way negotiation test - last 8")
+DESC(lib_auth_protocol-negot-prt2,"4 way negotiation test - last 8")
 RUN(lib_auth_protocol-negot-prt2)
 TESTCLASS(lib_auth_protocol-negot-prt2,core)
 TESTCLASS(lib_auth_protocol-negot-prt2,quick)
+
+DESC(lib_auth_protocol-negot-prt3,"4 way negotiation test - last 8")
+RUN(lib_auth_protocol-negot-prt3)
+TESTCLASS(lib_auth_protocol-negot-prt3,core)
+TESTCLASS(lib_auth_protocol-negot-prt3,quick)
+
+DESC(lib_auth_protocol-negot-prt4,"4 way negotiation test - last 8")
+RUN(lib_auth_protocol-negot-prt4)
+TESTCLASS(lib_auth_protocol-negot-prt4,core)
+TESTCLASS(lib_auth_protocol-negot-prt4,quick)
 
 /* Turned off on Free BSD port GNATS 766 */
 
@@ -890,10 +900,12 @@ RUN(job_schedd_restart-holdjobs-ok)
 TESTCLASS(job_schedd_restart-holdjobs-ok,core)
 TESTCLASS(job_schedd_restart-holdjobs-ok,quick)
 
+/*
 DESC(job_schedd_restart-runningjobs-ok,"Running queue ok after schedd restart")
 RUN(job_schedd_restart-runningjobs-ok)
 TESTCLASS(job_schedd_restart-runningjobs-ok,core)
 TESTCLASS(job_schedd_restart-runningjobs-ok,quick)
+*/
 
 /* File Transfer Tests */
 
