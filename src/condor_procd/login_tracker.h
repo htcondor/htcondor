@@ -60,7 +60,12 @@ private:
 	class LoginTag : public ProcInfoMatcher {
 
 	public:
-		LoginTag() { }
+		LoginTag() : m_login(NULL)
+		{
+#if !defined(WIN32)
+			m_uid = 0;
+#endif
+		}
 		LoginTag(char* login);
 		char* get_login() { return m_login; }
 		bool test(procInfo*);
