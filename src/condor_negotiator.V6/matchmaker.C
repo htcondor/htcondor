@@ -1113,6 +1113,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 	double		scheddPrioFactor;
 	double		scheddShare;
 	double		scheddAbsShare;
+	double		scheddLimitRoundoff;
 	int			scheddLimit;
 	int			scheddUsage;
 	int			totalTime;
@@ -1123,6 +1124,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 	bool ignore_schedd_limit;
 	int			num_idle_jobs;
 	time_t		startTime;
+	int			userprioCrumbs = 0;
 	
 
 	// ----- Sort the schedd list in decreasing priority order
@@ -1156,6 +1158,21 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 		if ( numStartdAds > groupQuota ) {
 			numStartdAds = groupQuota;
 		}
+			// Calculate how many machines are left over after dishing out
+			// rounded share of machines to each submitter.
+			// What's left are the user-prio "pie crumbs".
+		calculateUserPrioCrumbs(
+			scheddAds,
+			groupAccountingName,
+			groupQuota,
+			numStartdAds,
+			maxPrioValue,
+			maxAbsPrioValue,
+			normalFactor,
+			normalAbsFactor,
+				/* result parameters: */
+			userprioCrumbs );
+
 		MaxscheddLimit = 0;
 		// ----- Negotiate with the schedds in the sorted list
 		dprintf( D_ALWAYS, "Phase 4.%d:  Negotiating with schedds ...\n",
@@ -1210,34 +1227,38 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 			free(schedd_ver_string);
 			schedd_ver_string = NULL;
 
-			// calculate the percentage of machines that this schedd can use
-			scheddPrio = accountant.GetPriority ( scheddName );
-			scheddUsage = accountant.GetResourcesUsed ( scheddName );
-			scheddShare = maxPrioValue/(scheddPrio*normalFactor);
-			if ( param_boolean("NEGOTIATOR_IGNORE_USER_PRIORITIES",false) ) {
-				scheddLimit = 500000;
-			} else {
-				scheddLimit  = (int) rint((scheddShare*numStartdAds)-scheddUsage);
-			}
-			if( scheddLimit < 0 ) {
-				scheddLimit = 0;
-			}
-			if ( groupAccountingName ) {
-				int maxAllowed = groupQuota - accountant.GetResourcesUsed(groupAccountingName);
-				if ( maxAllowed < 0 ) maxAllowed = 0;
-				if ( scheddLimit > maxAllowed ) {
-					scheddLimit = maxAllowed;
-				}
-			}
-			if (scheddLimit>MaxscheddLimit) MaxscheddLimit=scheddLimit;
+			calculateScheddLimit(
+				scheddName,
+				groupAccountingName,
+				groupQuota,
+				numStartdAds,
+				maxPrioValue,
+				maxAbsPrioValue,
+				normalFactor,
+				normalAbsFactor,
+					/* result parameters: */
+				scheddLimit,
+				scheddUsage,
+				scheddShare,
+				scheddAbsShare,
+				scheddPrio,
+				scheddPrioFactor,
+				scheddLimitRoundoff );
 
-			// calculate this schedd's absolute fair-share for allocating
-			// resources other than CPUs (like network capacity and licenses)
-			scheddPrioFactor = accountant.GetPriorityFactor ( scheddName );
-			scheddAbsShare =
-				maxAbsPrioValue/(scheddPrioFactor*normalAbsFactor);
+			int scheddLimitWithoutCrumbs = scheddLimit;
+			if( scheddLimitRoundoff > 0 && userprioCrumbs > 0 &&
+			    num_idle_jobs > 0)
+			{
+					// give this schedd a chance to eat one user-prio crumb,
+					// because its limit was rounded down, and the crumbs
+					// have not all been eaten yet
+				scheddLimit++;
+			}
 
-			// print some debug info
+			if( scheddLimit > MaxscheddLimit ) {
+				MaxscheddLimit = scheddLimit;
+			}
+
 			if ( num_idle_jobs > 0 ) {
 				dprintf (D_FULLDEBUG, "  Calculating schedd limit with the "
 					"following parameters\n");
@@ -1253,6 +1274,8 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 					scheddUsage);
 				dprintf (D_FULLDEBUG, "    scheddLimit      = %d\n",
 					scheddLimit);
+				dprintf (D_FULLDEBUG, "    userprioCrumbs   = %d (%d)\n",
+					userprioCrumbs, scheddLimit - scheddLimitWithoutCrumbs);
 				dprintf (D_FULLDEBUG, "    MaxscheddLimit   = %d\n",
 					MaxscheddLimit);
 			}
@@ -1294,13 +1317,35 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 					} else {
 						ignore_schedd_limit = false;
 					}
+					int numMatched = 0;
 					startTime = time(NULL);
 					result=negotiate( scheddName,scheddAddr,scheddPrio,
 								  scheddAbsShare, scheddLimit,
 								  startdAds, startdPvtAds, 
 								  send_ad_to_schedd, scheddVersion, ignore_schedd_limit,
-								  startTime);
+								  startTime, numMatched);
 					updateNegCycleEndTime(startTime, schedd);
+
+					if( numMatched > scheddLimitWithoutCrumbs ) {
+							// this schedd ate some of the free crumbs
+						dprintf(D_FULLDEBUG,
+						        "Removing up to %d user prio crumb(s) "
+						        "from %d total remaining.\n",
+						        numMatched - scheddLimitWithoutCrumbs,
+						        userprioCrumbs);
+
+						userprioCrumbs -= numMatched - scheddLimitWithoutCrumbs;
+						if( userprioCrumbs < 0 ) {
+								// The schedd must have gotten some
+								// extra machines via startd rank.
+								// There is not much point in keeping
+								// track of whether the extra takings
+								// were user-prio crumbs or startd
+								// rank entitlements.  Either way, the
+								// pie has shrunk.
+							userprioCrumbs = 0;
+						}
+					}
 				}
 			}
 
@@ -1671,10 +1716,9 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		   int scheddLimit,
 		   ClassAdList &startdAds, ClassAdList &startdPvtAds, 
 		   int send_ad_to_schedd, const CondorVersionInfo & scheddVersion,
-		   bool ignore_schedd_limit, time_t startTime)
+		   bool ignore_schedd_limit, time_t startTime, int &numMatched)
 {
 	ReliSock	*sock;
-	int			i;
 	int			reply;
 	int			cluster, proc;
 	int			result;
@@ -1685,6 +1729,8 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 	bool		display_overlimit = true;
 	char		prioExpr[128], remoteUser[128];
 	int negotiate_command = NEGOTIATE;
+
+	numMatched = 0;
 
 		// Starting w/ ver 6.7.15, the schedd supports the 
 		// NEGOTIATE_WITH_SIGATTRS command that expects a
@@ -1762,8 +1808,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 	(void) sprintf( prioExpr , "%s = %f" , ATTR_SUBMITTOR_PRIO , priority );
 
 	// 2.  negotiation loop with schedd
-	// for (i = 0; i < scheddLimit;  i++)
-	for (i=0;true;i++)
+	for (numMatched=0;true;numMatched++)
 	{
 		// Service any interactive commands on our command socket.
 		// This keeps condor_userprio hanging to a minimum when
@@ -1784,7 +1829,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 
 
 		// Handle the case if we are over the scheddLimit
-		if ( i >= scheddLimit ) {
+		if ( numMatched >= scheddLimit ) {
 			if ( ignore_schedd_limit ) {
 				only_consider_startd_rank = true;
 				if ( display_overlimit ) {  // print message only once
@@ -1795,7 +1840,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 				}
 			} else {
 				dprintf (D_ALWAYS, 	
-				"    Reached submitter resource limit: %d ... stopping\n", i);
+				"    Reached submitter resource limit: %d ... stopping\n", numMatched);
 				break;	// get out of the infinite for loop & stop negotiating
 			}
 		} else {
@@ -1834,7 +1879,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 				// So in this case, return MM_RESUME since there still may be 
 				// jobs which the schedd wants scheduled but have not been considered
 				// as candidates for no preemption or user priority preemption.
-			if ( i >= scheddLimit ) {
+			if ( numMatched >= scheddLimit ) {
 				return MM_RESUME;
 			} else {
 				return MM_DONE;
@@ -1978,7 +2023,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		// 2f.  if MM_NO_MATCH was found for the request, get another request
 		if (result == MM_NO_MATCH) 
 		{
-			i--;		// haven't used any resources this cycle
+			numMatched--;		// haven't used any resources this cycle
 			continue;
 		}
 
@@ -2710,6 +2755,116 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	return MM_GOOD_MATCH;
 }
 
+void
+Matchmaker::calculateScheddLimit(
+	char const *scheddName,
+	char const *groupAccountingName,
+	int groupQuota,
+	int numStartdAds,
+	double maxPrioValue,
+	double maxAbsPrioValue,
+	double normalFactor,
+	double normalAbsFactor,
+		/* result parameters: */
+	int &scheddLimit,
+	int &scheddUsage,
+	double scheddShare,
+	double &scheddAbsShare,
+	double &scheddPrio,
+	double &scheddPrioFactor,
+	double &scheddLimitRoundoff )
+{
+		// calculate the percentage of machines that this schedd can use
+	scheddPrio = accountant.GetPriority ( scheddName );
+	scheddUsage = accountant.GetResourcesUsed ( scheddName );
+	scheddShare = maxPrioValue/(scheddPrio*normalFactor);
+	double unroundedScheddLimit;
+	if ( param_boolean("NEGOTIATOR_IGNORE_USER_PRIORITIES",false) ) {
+			// why is this not assigned to numStartdAds?
+		unroundedScheddLimit = 500000;
+	} else {
+		unroundedScheddLimit = (scheddShare*numStartdAds)-scheddUsage;
+	}
+	if( unroundedScheddLimit < 0 ) {
+		unroundedScheddLimit = 0;
+	}
+	if ( groupAccountingName ) {
+		int maxAllowed = groupQuota - accountant.GetResourcesUsed(groupAccountingName);
+		if ( maxAllowed < 0 ) maxAllowed = 0;
+		if ( unroundedScheddLimit > maxAllowed ) {
+			unroundedScheddLimit = maxAllowed;
+		}
+	}
+
+	scheddLimit  = (int) rint(unroundedScheddLimit);
+	scheddLimitRoundoff = unroundedScheddLimit - scheddLimit;
+
+		// calculate this schedd's absolute fair-share for allocating
+		// resources other than CPUs (like network capacity and licenses)
+	scheddPrioFactor = accountant.GetPriorityFactor ( scheddName );
+	scheddAbsShare =
+		maxAbsPrioValue/(scheddPrioFactor*normalAbsFactor);
+}
+
+void
+Matchmaker::calculateUserPrioCrumbs(
+	ClassAdList &scheddAds,
+	char const *groupAccountingName,
+	int groupQuota,
+	int numStartdAds,
+	double maxPrioValue,
+	double maxAbsPrioValue,
+	double normalFactor,
+	double normalAbsFactor,
+		/* result parameters: */
+	int &userprioCrumbs )
+{
+	ClassAd *schedd;
+
+		// Calculate how many machines are left over after dishing out
+		// rounded integer shares of machines to each submitter.
+		// What's left are the user-prio "pie crumbs".
+	userprioCrumbs = 0;
+
+	double roundoff_sum = 0.0;
+
+	scheddAds.Open();
+	while ((schedd = scheddAds.Next()))
+	{
+		int scheddLimit = 0;
+		int scheddUsage = 0;
+		double scheddShare = 0.0;
+		double scheddAbsShare = 0.0;
+		double scheddPrio = 0.0;
+		double scheddPrioFactor = 0.0;
+		MyString scheddName;
+		double scheddLimitRoundoff = 0.0;
+
+		schedd->LookupString( ATTR_NAME, scheddName );
+
+		calculateScheddLimit(
+			scheddName.Value(),
+			groupAccountingName,
+			groupQuota,
+			numStartdAds,
+			maxPrioValue,
+			maxAbsPrioValue,
+			normalFactor,
+			normalAbsFactor,
+				/* result parameters: */
+			scheddLimit,
+			scheddUsage,
+			scheddShare,
+			scheddAbsShare,
+			scheddPrio,
+			scheddPrioFactor,
+			scheddLimitRoundoff );
+		roundoff_sum += scheddLimitRoundoff;
+	}
+	scheddAds.Close();
+
+	userprioCrumbs = (int)rint( roundoff_sum );
+}
 
 void Matchmaker::
 calculateNormalizationFactor (ClassAdList &scheddAds,
