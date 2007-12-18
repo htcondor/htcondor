@@ -26,9 +26,9 @@
 void
 ParentTracker::find_processes(procInfo*& pi_list)
 {
-	keep_checking = 1;
-	while( keep_checking ) {
-		keep_checking = false;
+	m_keep_checking = 1;
+	while( m_keep_checking ) {
+		m_keep_checking = false;
 		ProcFamilyTracker::find_processes(pi_list);
 	}
 }
@@ -64,7 +64,7 @@ ParentTracker::check_process(procInfo* pi)
 	if (m_monitor->add_member_to_family(pm->get_proc_family(),
 	                                    pi,
 	                                    "PARENT")) {
-		keep_checking = true;
+		m_keep_checking = true;
 		return true;
 	}
 
