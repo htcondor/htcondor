@@ -56,7 +56,7 @@ package CondorPersonal;
 #   secprepostsrc	New security settings 											$personal_sec_prepost_src
 #	condordaemon	daemon list to start				contents of config template $personal_daemons
 #	condorconfig	Name for condor config file			condor_config				$personal_config
-#	condordomain	Name for domain						cs.wisc.edu					$condordomain
+#	condordomain	Name for domain						local						$condordomain
 #	condorlocal		Name for condor local config 		condor_config.local			$personal_local
 #	condor			"install" or path to tarball 									$condordistribution
 #	collector	 	Used to define COLLECTOR_HOST									$collectorhost
@@ -136,7 +136,7 @@ BEGIN
 	$DEBUG = 0;
 	$collector_port = "0";
 	$personal_config_file = "";
-	$condordomain = "cs.wisc.edu";
+	$condordomain = "";
 	$procdaddress = "";
 }
 
@@ -250,7 +250,7 @@ sub Reset
 	$portchanges = "dynamic";
 	$collector_port = "0";
 	$personal_config_file = "";
-	$condordomain = "cs.wisc.edu";
+	$condordomain = "";
 	$procdaddress = "";
 }
 
@@ -628,7 +628,7 @@ sub TunePersonalCondor
 	#}
 	#print "\n";
 
-	$myhost = @domainparts[0];
+	#$myhost = @domainparts[0];
 
 	debug( "My basic name is $myhost\n");
 
@@ -651,7 +651,11 @@ sub TunePersonalCondor
 		$condordomain = $control{"condordomain"};
 	}
 
-	$condorhost = $myhost . "." . $condordomain;
+	if( $condordomain ne "" ) {
+		$condorhost = $myhost . "." . $condordomain;
+	} else {
+		$condorhost = $myhost;
+	}
 
 	debug( "Fully qualified domain name is ************************ $condorhost ********************\n");
 
