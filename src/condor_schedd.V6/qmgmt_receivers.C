@@ -541,9 +541,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		int cluster_id = -1;
 		int proc_id = -1;
 		char *attr_name=NULL;
-		// XXX: shouldn't need a fixed size here -- at least keep
-		// it off the stack to avoid overflow attacks
-		char *value = (char *)malloc(ATTRLIST_MAX_EXPRESSION*sizeof(char));
 
 		int terrno;
 
@@ -553,6 +550,10 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name) );
 		assert( syscall_sock->end_of_message() );;
+
+		// XXX: shouldn't need a fixed size here -- at least keep
+		// it off the stack to avoid overflow attacks
+		char *value = (char *)malloc(ATTRLIST_MAX_EXPRESSION*sizeof(char));
 
 		errno = 0;
 		if( QmgmtMayAccessAttribute( attr_name ) ) {
@@ -565,12 +566,22 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+
+		if ( !syscall_sock->code(rval) ) {
+			free(value);
+			return -1;
+		}
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			if ( !syscall_sock->code(terrno) ) {
+					free(value);
+					return -1;
+			}
 		}
 		if( rval >= 0 ) {
-			assert( syscall_sock->code(value) );
+			if ( !syscall_sock->code(value) ) {
+					free(value);
+					return -1;
+			}
 		}
 		free( (char *)value );
 		free( (char *)attr_name );
@@ -681,7 +692,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	case CONDOR_GetNextJob:
 	  {
 		ClassAd *ad;
-		int initScan;
+		int initScan = 0;
 		int terrno;
 
 		assert( syscall_sock->code(initScan) );
@@ -713,7 +724,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	  {
 		char *constraint=NULL;
 		ClassAd *ad;
-		int initScan;
+		int initScan = 0;
 		int terrno;
 
 		assert( syscall_sock->code(initScan) );
