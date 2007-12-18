@@ -45,7 +45,6 @@ BEGIN
     $vacates = 0;
     %test;
 	%machine_ads;
-	Condor::DebugOn();
 }
 
 sub Reset
@@ -892,7 +891,7 @@ sub changeDaemonState
 
 	print "Checking for $daemon being $state\n";
 	if($state eq "off") {
-		$cmd = "condor_off -$daemon";
+		$cmd = "condor_off -fast -$daemon";
 	} elsif($state eq "on") {
 		$cmd = "condor_on -$daemon";
 	} else {
