@@ -78,7 +78,7 @@ my $HAS_NMICONF = $INC{"NmiConf.pm"};
 # variables we'll be using for from Getopt::Long.  keep these in the
 # same order as the call to GetOptions() to help notice discrepancies
 use vars qw/ $opt_build $opt_test
-    $opt_help $opt_debug $opt_notify $opt_platforms $opt_nmi_glue 
+    $opt_help $opt_debug $opt_notify $opt_notify_fail_only $opt_platforms $opt_nmi_glue 
     $opt_workspace
     $opt_tag $opt_module $opt_nmiconf $opt_desc $opt_append
     $opt_submit_xtests
@@ -127,6 +127,9 @@ if( -f '/nmi/etc/nmi.conf' ) {
 
 # Who should get notification emails?
 my $notify;
+
+# True if we should only notify on build/test errors
+my $notify_fail_only;
 
 # What type of run is this? ("build" or "test")
 my $runtype;
@@ -328,6 +331,7 @@ sub parseOptions
            'help'          => \$opt_help,
            'debug'         => \$opt_debug,
            'notify=s'      => \$opt_notify,
+           'notify-fail-only'      => \$opt_notify_fail_only,
            'platforms=s'   => \$opt_platforms,
            'nmi-glue=s'    => \$opt_nmi_glue,
            'workspace=s'   => \$opt_workspace,
@@ -439,6 +443,10 @@ sub parseOptions
         $notify = "$username\@cs.wisc.edu";
     }
 
+	if( defined $opt_notify_fail_only ) {
+		$notify_fail_only = 1;
+	}
+
     if ( defined $opt_tag && defined $opt_module ) {
         $tags{"$opt_tag"} = $opt_module;
     }
@@ -542,6 +550,7 @@ Where [options] can be any of:
 --help             <This screen>
 --debug            <Print out the generated submit files, don't submit them>
 --notify=string    <Comma-seprated list of users to notify with results>
+--notify-fail-only  <Only send notification email on build or test failure>
 --platforms=string <Comma-sperated list of platforms to run tests on>
 --tag=string       <Condor source code tag to be fetched from cvs>
 --module=string    <Condor source code module to be fetched from cvs>
@@ -893,6 +902,10 @@ sub writeCommonInfo
     print $fh "notify = $notify\n";
     print $fh "private_web_users = condor-team\n";
     print $fh "priority = 1\n";
+
+	if (defined $notify_fail_only) {
+    	print $fh "notify_fail_only = true\n";
+	}
 
 	# The following is a short-termhack to work around some condor
 	# problems.  This allows our tests to generate core files
