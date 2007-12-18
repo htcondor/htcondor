@@ -98,7 +98,10 @@ bool privsep_create_dir(uid_t uid, const char* pathname);
 //
 bool privsep_remove_dir(const char* pathname);
 
-// change the ownership of a directory tree to the given user
+// change the ownership of a directory tree to the given user.
+// this operation will fail if anything it tries to chown is
+// not owned by the given source UID. this prevents us from
+// getting hacked via tricks like hard links
 //
 bool privsep_chown_dir(uid_t target_uid,
                        uid_t source_uid,
