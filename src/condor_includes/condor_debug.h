@@ -87,21 +87,6 @@ extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
 extern int (*DebugId)(FILE *);		/* set header message */
 
-#ifdef __GNUC__
-#ifndef CHECK_PRINTF_FORMAT
-/*
-Check printf-style format arguments at compile type.
-gcc specific.  Put CHECK_PRINTF_FORMAT(1,2) after a functions'
-declaration, before the ";"
-a - Argument position of the char * format.
-b - Argument position of the "..."
-*/
-#define CHECK_PRINTF_FORMAT(a,b) __attribute__((__format__(__printf__, a, b)))
-#endif
-#else
-#define CHECK_PRINTF_FORMAT(a,b)
-#endif
-
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 
 void dprintf_config( char *subsys );
