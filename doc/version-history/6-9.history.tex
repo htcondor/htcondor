@@ -116,6 +116,10 @@ was this:
 Over submitter resource limit (0) ... only consider startd ranks
 \end{verbatim}
 
+\item Fixed a problem introduced in 6.9.3 that would cause daemons to
+run out of file descriptors if they create sub-processes and are
+configured to use a lock file for the debug log.
+
 \end{itemize}
 
 \noindent Known Bugs:
