@@ -3343,11 +3343,6 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			rsock->eom();
 			dprintf(D_FULLDEBUG,"spoolJobFiles(): read JobAdsArrayLen - %d\n",
 					JobAdsArrayLen);
-	
-			if (JobAdsArrayLen <= 0) {
-				refuse(s);
-				return FALSE;
-			}
 			break;
 
 		// downloading files from schedd
