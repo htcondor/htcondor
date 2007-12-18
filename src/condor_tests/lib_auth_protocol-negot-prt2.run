@@ -34,7 +34,7 @@ $mybaseparamname = "x_param.protocol-negot-prt2";
 $datafile = "lib_auth_protocol-negot-prt2.data";
 
 
-my $numberoftests = 8;
+my $numberoftests = 4;
 my $numberoferrors = 0;
 
 # where am I running
@@ -107,7 +107,6 @@ while(<DF>) {
 	}
 	close(TPLATE);
 	close(CSUB);
-	#my $configsec = CondorPersonal::DebugOn();
 	my $configsec = CondorPersonal::StartCondor($myparamname ,$label, $mypid);
 	my @securitypool = split /\+/, $configsec;
 	my $secconfig = shift @securitypool;
@@ -146,7 +145,7 @@ while(<DF>) {
 
 	my @adarray;
 	my $status = 1;
-	my $cmd = "condor_off -master";
+	my $cmd = "condor_off -fast -master";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{

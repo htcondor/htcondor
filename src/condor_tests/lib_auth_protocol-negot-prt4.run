@@ -25,13 +25,13 @@ CondorPersonal::DebugOff();
 Condor::DebugOff();
 
 $param_template = "x_param.protocol-negot.template";
-$testname = 'lib_auth_protocol-negot - Security Protocol Negotiation Test';
-$corename = "lib_auth_protocol-negot";
+$testname = 'lib_auth_protocol-negot-prt4 - Security Protocol Negotiation Test';
+$corename = "lib_auth_protocol-negot-prt4";
 $mytestnegotiation = "x_secneg_clR_dmnR_secprepostsrc";
 $mytestnegotiation_result = "yes";
 $mytestnegotiation_pat = "secprepostsrc";
-$mybaseparamname = "x_param.protocol-negot";
-$datafile = "lib_auth_protocol-negot.data";
+$mybaseparamname = "x_param.protocol-negot-prt4";
+$datafile = "lib_auth_protocol-negot-prt4.data";
 
 
 my $numberoftests = 4;
@@ -118,7 +118,7 @@ while(<DF>) {
 	$ENV{CONDOR_CONFIG} = $secconfig;
 	# submit into local schedd (side a)
 
-	my $result = system("./lib_auth_protocol-negot.pl $mypid $label $mytestnegotiation_result");
+	my $result = system("./lib_auth_protocol-negot-prt4.pl $mypid $label $mytestnegotiation_result");
 	print "Result of crafted lib_auth_protocol-negot job is  $result\n";
 
 	if($result != 0) {
