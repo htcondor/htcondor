@@ -58,7 +58,7 @@ private:
 	class PIDTag : public ProcInfoMatcher {
 
 	public:
-		PIDTag() { }
+		PIDTag() : m_pid(0), m_birthday(0) { }
 		PIDTag(pid_t p, birthday_t b) : m_pid(p), m_birthday(b) { }
 
 		bool test(procInfo* pi) {
