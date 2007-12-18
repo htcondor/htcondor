@@ -147,7 +147,7 @@ named_pipe_create(const char* name, int& read_fd, int& write_fd)
 		        name,
 		        strerror(errno),
 		        errno);
-		close(write_fd_tmp);
+		close(read_fd_tmp);
 		return false;
 	}
 
