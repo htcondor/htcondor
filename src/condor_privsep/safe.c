@@ -1054,8 +1054,8 @@ static int setenv(const char *var, const char *val, int overwrite)
 extern char **environ;
 int clearenv(void)
 {
-    int r;                      /* status value */
-    const char var_name[] = "x";        /* temp env name to set and delete */
+    int r = 0;                      /* status value */
+    const char var_name[] = "x";    /* temp env name to set and delete */
 
     /* setting environ will make most implementation of getenv, setenv,
      * unsetenv, and putenv properly work and recreate the environment
@@ -1079,7 +1079,9 @@ int clearenv(void)
 /*
  * safe_reset_environment
  * 	Clears the environment, and retains the TZ value and sets
- * 	the PATH to a minimal reasonable value.
+ * 	the PATH to a minimal reasonable value. This will leak
+ * 	memory (from the strdup of the TZ variable) if called
+ * 	multiple times.
  * parameters
  * 	n/a
  * returns
@@ -1376,7 +1378,7 @@ safe_checks_and_set_gids(uid_t uid,
                          gid_t * primary_gid)
 {
     struct passwd *pw;
-    gid_t gid = *primary_gid;
+    gid_t gid;
     int num_groups;
     int total_groups;
     gid_t *gids;
@@ -3245,7 +3247,7 @@ do_dir_contents(safe_dir_walk_func func, void *data, int num_fds)
             status = do_dir_contents(func, data, num_fds - 1);
 
             r = fchdir(dir_fd);
-            if (status != 0 && r != 0) {
+            if (status != 0 || r != 0) {
                 if (status == 0) {
                     status = r;
                 }
