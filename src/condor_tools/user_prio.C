@@ -32,6 +32,7 @@
 #include "format_time.h"
 #include "daemon.h"
 #include "condor_distribution.h"
+#include "condor_attributes.h"
 
 //-----------------------------------------------------------------
 
@@ -584,10 +585,8 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
 static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 {
   char LastUsageStr[17];
-  ExprTree* exp;
-  ad->ResetExpr();
-  exp=ad->NextExpr();
-  time_t T=((Integer*) exp->RArg())->Value();
+  int T = 0;
+  ad->LookupInteger( ATTR_LAST_UPDATE, T );
   printf("Last Priority Update: %s\n",format_date(T));
 
   LineRec Totals;
