@@ -1616,7 +1616,8 @@ Sock::endpoint_ip_str()
 {
 		// We need to recompute this each time because _who might have changed.
 	memset(&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE );
-	strcpy( _endpoint_ip_buf, inet_ntoa(_who.sin_addr) );
+	snprintf( _endpoint_ip_buf, IP_STRING_BUF_SIZE, "%s",
+			  inet_ntoa(_who.sin_addr) );
 	return &(_endpoint_ip_buf[0]);
 }
 
