@@ -1323,12 +1323,12 @@ start_job( char *cluster_id, char *proc_id )
 		strcpy( TmpCkptName, "" );
 	} else {
 		tmp = gen_ckpt_name( Spool, Proc->id.cluster, Proc->id.proc, 0 );
-		strcpy( CkptName, tmp );
+		snprintf( CkptName, MAXPATHLEN, "%s", tmp );
 		sprintf( TmpCkptName, "%s.tmp", CkptName );
 	}
 
 	tmp = gen_ckpt_name( Spool, Proc->id.cluster, ICKPT, 0 );
-	strcpy( ICkptName, tmp );
+	snprintf( ICkptName, MAXPATHLEN, "%s", tmp );
 
 	strcpy( RCkptName, CkptName );
 }
@@ -1437,7 +1437,7 @@ pipe_setup( char *cluster, char *proc, char *capability )
 		EXCEPT( "Spool directory not specified in config file" );
 	}
 
-	strcpy( host, my_hostname() );
+	snprintf( host, 1024, "%s", my_hostname() );
 	ExecutingHost = host;
 
 	open_named_pipe( "/tmp/syscall_req", O_RDONLY, REQ_SOCK );
@@ -1686,7 +1686,7 @@ void RemoveNewShadowDroppings(char *cluster, char *proc)
 						}
 				}
 				/* now delete the directory itself */
-				if (rmdir(names[j]) < 0) {
+				if (rmdir(names[j]) < 0 && errno != ENOENT) {
 					dprintf(D_ALWAYS, "RemoveNewShadowDroppings(): Old shadow "
 						"failed to remove new shadow ckpt directory: %s (%s)\n",
 						names[j], strerror(errno));
