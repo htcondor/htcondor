@@ -87,9 +87,9 @@ displayJobShort(AttrList* ad)
                prio, image_size, cmd); 
 
 
-        if (owner) free(owner);
-        if (cmd)   free(cmd);
-        if (args)  free(args);
+        free(owner);
+        free(cmd);
+        free(args);
         return;
 }
 
