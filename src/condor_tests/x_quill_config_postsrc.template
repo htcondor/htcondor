@@ -4,7 +4,7 @@ QUILL_NAME              = quill
 
 QUILL_DB_NAME           = test
 QUILL_DB_USER 			= quillwriter
-QUILL_DB_QUERY_PASSWORD = biqN9ihm
+QUILL_DB_QUERY_PASSWORD = condor4me#
 QUILL_DB_IP_ADDR        = $(CONDOR_HOST):5432
 QUILL_DB_TYPE 			= PGSQL
 

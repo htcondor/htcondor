@@ -117,7 +117,6 @@ while(<TPLATE>)
 close(TPLATE);
 close(CSUB);
 
-#my $configsec = CondorPersonal::DebugOn();
 my $configsec = CondorPersonal::StartCondor($myparamname ,"protocol", $mypid);
 my @securitypool = split /\+/, $configsec;
 my $secconfig = shift @securitypool;
@@ -171,7 +170,7 @@ if( -e "$mysubmitnmlog" )
 my @adarray;
 my $status = 1;
 $status = 1;
-my $cmd = "condor_off -master";
+my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {

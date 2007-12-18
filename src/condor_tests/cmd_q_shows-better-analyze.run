@@ -106,4 +106,3 @@ if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	die "$testname: CondorTest::RunTest() failed\n";
 }
 
-

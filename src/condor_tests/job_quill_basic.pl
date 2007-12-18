@@ -54,6 +54,7 @@ sub compare_3arrays_byrows
 	$harray2 = shift;
 	$harray3 = shift;
 	$href = shift;
+	$delayedfail = 0;
 
 	print "Make sure they all have the same number of entries\n";
 
@@ -67,7 +68,8 @@ sub compare_3arrays_byrows
 		print "Good the sizes<<$count1>> match up!!!!\n";
 	} else {
 		print "Compare failed because $count1, $count2 and $count3 are not the same\n";
-		return(1);
+		$delayedfail = 1;
+		#return(1);
 	}
 
 	$current = "";
@@ -120,6 +122,7 @@ sub compare_2arrays_byrows
 	$harray1 = shift;
 	$harray2 = shift;
 	$href = shift;
+	$delayedfail = 0;
 
 	print "Make sure they all have the same number of entries\n";
 
@@ -132,32 +135,33 @@ sub compare_2arrays_byrows
 		print "Good the sizes<<$count1>> match up!!!!\n";
 	} else {
 		print "Compare failed because $count1 and $count2 are not the same\n";
-		return(1);
+		$delayedfail = 1;
+		#return(1);
 	}
 
 	$current = "";
 
-	#print "Skip items follow:\n";
-	#while (($key, $value) = each %{$href}) {
-		#print "$key => $value\n";
-	#}
+	print "Skip items follow:\n";
+	while (($key, $value) = each %{$href}) {
+		print "$key => $value\n";
+	}
 
 	while( $location < ($count1 + 1)) {
 		# look at current item
 		$current = ${$harray1}[$location];
 		$current =~ /^\s*(\w*)\s*=\s*(.*)\s*$/;
 		$thiskey = $1;
-		#print "Current<<$current>> Thiskey<<$thiskey>>\n";
-		#print "${$href}{$thiskey}\n";
+		print "Current<<$current>> Thiskey<<$thiskey>>\n";
+		print "${$href}{$thiskey}\n";
 		if($current =~ /^.*Submitter.*$/) {
 			print "Skip Submitter entry\n";
-			#print "${$harray1}[$location] vs ${$harray2}[$location]\n";
+			print "${$harray1}[$location] vs ${$harray2}[$location]\n";
 		} elsif( exists ${$href}{$thiskey}) {
-			#print "Skip compare of -$thiskey-\n";
-			#print "${$harray1}[$location] vs ${$harray2}[$location]\n";
+			print "Skip compare of -$thiskey-\n";
+			print "${$harray1}[$location] vs ${$harray2}[$location]\n";
 		} else {
 			if(${$harray1}[$location] eq ${$harray2}[$location]){
-				#print "Good match:${$harray1}[$location] at entry $location\n";
+				print "Good match:${$harray1}[$location] at entry $location\n";
 			} else {
 				print "Match FAIL position <<$location>>: 1: ${$harray1}[$location] 2: ${$harray2}[$location]\n";
 				return(1);
@@ -168,6 +172,10 @@ sub compare_2arrays_byrows
 		#print "Location now <<$location>>\n";
 	}
 
+	if($delayedfail == 1) {
+		print "delayfail set so really failing\n";
+		return(1);
+	}
 	return(0);
 };
 
@@ -207,7 +215,7 @@ $submitted = sub
 
 	if($submitcount == 75) {
 
-	sleep(30);
+	sleep(60); # database settling time
 
 		print "75 submitted: <<<";
 		system("date");
@@ -251,7 +259,21 @@ $submitted = sub
 		system("date");
 		@adarray = sort(@adarray);
 		@bdarray = sort(@bdarray);
+		$scheddout = "quill_schedd_ads";
+		$rdbsout = "quill_rdbs_ads";
 		print "Done sorting arrays\n";
+		open(SCHEDD,">>$scheddout") or die "Can not open $scheddout:$!\n";
+		open(RDBS,">>$rdbsout") or die "Can not open $rdbsout:$!\n";
+		foreach $ad (@adarray) {
+			print SCHEDD "$ad\n";
+		}
+		print SCHEDD "*******************\n";
+		foreach $ad (@bdarray) {
+			print RDBS "$ad\n";
+		}
+		print RDBS "*******************\n";
+		close(SCHEDD);
+		close(RDBS);
 		system("date");
 		$result = compare_2arrays_byrows(\@adarray, \@bdarray, \%skip);
 		# save the time and leave the jobs behind before stopping condor

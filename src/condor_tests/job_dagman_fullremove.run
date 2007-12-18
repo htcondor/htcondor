@@ -96,4 +96,3 @@ if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";
 }
-

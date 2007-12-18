@@ -1085,7 +1085,7 @@ sub KillAllInstances
 		my $masterSinfulString =
         	&GetAddress("$condorLogsDirectory/\.master_address");
 
-    	CondorTest::runCondorTool("condor_off -master -fast -addr \'" .
+    	CondorTest::runCondorTool("condor_off -fast -master -fast -addr \'" .
                               	  "$masterSinfulString\'", \@adarray, 2);
 	}
 }
@@ -1314,7 +1314,6 @@ sub RaiseMachines
         my $masterSinfulString =
             &GetAddress("$condorLogsDirectory/\.master_address");
 
-		Condor::DebugOn();
 		CondorTest::runCondorTool("condor_on -addr \'" .
                                   "$masterSinfulString\' -subsystem collector", \@adarray, 2);
         CondorTest::runCondorTool("condor_on -addr \'" .

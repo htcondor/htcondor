@@ -31,6 +31,8 @@ my $condorconfigadd = $ARGV[4];
 my $morelibs = $ARGV[5];
 my $testsrc = $ARGV[6];
 
+print "$prefix $installlog $tarfile $pgsqlversion $condorconfigadd $morelibs $testsrc \n";
+
 my $startpostmasterport = 5432;
 my $postmasterinc = int(rand(100) + 13);
 $currenthost = `hostname`;
@@ -40,12 +42,14 @@ CondorTest::fullchomp($currenthost);
 # is what quill uses to builds its search string for the
 # db writing password.
 
-if($currenthost =~ /^(.*)\.cs\.wisc\.edu$/) {
+#if($currenthost =~ /^(.*)\.cs\.wisc\.edu$/) {
+if($currenthost =~ /^(.*)/) {
 	# fine we got a fully qualified name.....
 	print "Fully qualified name already<<$currenthost>>\n";
 } else {
 	# fine add our domain for madison
-	$currenthost = $currenthost . ".cs.wisc.edu";
+	#$currenthost = $currenthost . ".cs.wisc.edu";
+	$currenthost = $currenthost;
 	print "Fully qualified name now<<$currenthost>>\n";
 }
 
@@ -240,27 +244,33 @@ if($trylimit > 10) {
 	close(NEW);
 }
 
+
 system("date");
 print "Configuring Postgres for Quil\n";
 
 # add quillreader and quillwriter
 print "Create quillreader\n";
+
+#$Expect::Log_Stdout=1;
+#$Expect::Debug=3;
+#$Expect::Exp_Internal=1;
+
 $command = Expect->spawn("$prefix/bin/createuser quillreader --port $startpostmasterport --no-createdb --no-adduser --pwprompt")||
 	die "Could not start program: $!\n";
-$command->log_stdout(0);
-unless($command->expect(10,"Enter password for new role:")) {
+#$command->log_stdout(1);
+unless($command->expect(10,"Enter password for new user: ")) {
 	die "Quillreader Password request never happened\n";
 }
-print $command "biqN9ihm\n";
+print $command "condor4me#\n";
 
-unless($command->expect(10,"Enter it again:")) {
+unless($command->expect(10,"Enter it again: ")) {
 	die "Password confirmation never happened\n";
 }
-print $command "biqN9ihm\n";
+print $command "condor4me#\n";
 
-unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
-	die "Password request never happened\n";
-}
+#unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
+	#die "Password request never happened\n";
+#}
 print $command "n\n";
 $command->soft_close();
 
@@ -268,25 +278,25 @@ print "Create quillwriter\n";
 $command = Expect->spawn("$prefix/bin/createuser quillwriter --port $startpostmasterport --createdb --no-adduser --pwprompt")||
 	die "Could not start program: $!\n";
 $command->log_stdout(0);
-unless($command->expect(10,"Enter password for new role:")) {
+unless($command->expect(10,"Enter password for new user: ")) {
 	die "Quillwriter Password request never happened\n";
 }
-print $command "biqN9ihm\n";
+print $command "condor4me#\n";
 
-unless($command->expect(10,"Enter it again:")) {
+unless($command->expect(10,"Enter it again: ")) {
 	die "Password confirmation never happened\n";
 }
-print $command "biqN9ihm\n";
+print $command "condor4me#\n";
 
-unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
-	die "Password request never happened\n";
-}
+#unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
+	#die "Password request never happened\n";
+#}
 print $command "n\n";
 $command->soft_close();
 
 #save PGPASS date for Condor to grab......
 open(PG,">$pgpass") || die "Could not open file<$pgpass> for .pgpass data!:$!\n";
-print PG "$currenthost:$startpostmasterport:test:quillwriter:biqN9ihm\n";
+print PG "$currenthost:$startpostmasterport:test:quillwriter:condor4me#\n";
 close(PG);
 
 system("date");

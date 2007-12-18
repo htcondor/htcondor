@@ -66,7 +66,8 @@ if($ourtarfile eq "") {
 	@versions = grep !/CVS/, @versions;
 	$keepversion = "";
 	foreach $version (@versions) {
-		if($version =~ /8.2.3/) {
+		# bt if($version =~ /8.2.3/) {
+		if($version =~ /8.0.2/) {
 			print "PG version is: $version\n";
 			$keepversion = $version;
 		}
@@ -223,7 +224,7 @@ if( -e "$mysubmitnmlog" )
 
 my @adarray;
 my $status = 1;
-my $cmd = "condor_off -master";
+my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {

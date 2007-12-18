@@ -92,7 +92,6 @@ close(SCHEDDSRC);
 close(SCHEDDONE);
 
 $version = "scheddone";
-# my $configscheddone = CondorPersonal::DebugOn();
 # get another node running
 my $configscheddone = CondorPersonal::StartCondor("x_param.cmdq-multi-one" ,$version);
 my @scheddone = split /\+/, $configscheddone;
@@ -204,7 +203,16 @@ if( -e "$mysubmitnmlog" )
 
 my @adarray;
 my $status = 1;
-my $cmd = "condor_off -master";
+my $cmd = "condor_rm -all";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
+
+$status = 1;
+$cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
@@ -215,7 +223,16 @@ if(!$status)
 $ENV{CONDOR_CONFIG} = $scheddoneconfig;
 
 $status = 1;
-$cmd = "condor_off -master";
+$cmd = "condor_rm -all";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
+
+$status = 1;
+$cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {

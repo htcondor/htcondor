@@ -84,7 +84,6 @@ system("ln -s $mypiddir $mypid");
 	close(CSUB);
 	sleep 10;
 
-	#my $configsec = CondorPersonal::DebugOn();
 	my $configsec = CondorPersonal::StartCondor($myparamname ,"protocol", $mypid);
 	my @securitypool = split /\+/, $configsec;
 	my $secconfig = shift @securitypool;
@@ -118,7 +117,7 @@ system("ln -s $mypiddir $mypid");
 
 	my @adarray;
 	my $status = 1;
-	my $cmd = "condor_off -master";
+	my $cmd = "condor_off -fast -master";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{

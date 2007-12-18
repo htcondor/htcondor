@@ -97,7 +97,6 @@ close(SCHEDDSRC);
 close(SCHEDDONE);
 
 $version = "scheddone";
-# my $configscheddone = CondorPersonal::DebugOn();
 # get another node running
 my $configscheddone = CondorPersonal::StartCondor("x_param.cmdstatus-multi-one" ,$version);
 my @scheddone = split /\+/, $configscheddone;
@@ -129,13 +128,13 @@ while($qstat != RUNNING)
 	$qstat = CondorTest::getJobStatus(1.1);
 }
 
-$qstat = CondorTest::getJobStatus(1);
-print "remote cluster 1 status is $qstat\n";
+$qstat = CondorTest::getJobStatus(1.0);
+print "remote cluster 1.0 status is $qstat\n";
 while($qstat != RUNNING)
 {
-	print "remote Job status 1 not RUNNING - wait a bit\n";
+	print "remote Job status 1.0 not RUNNING - wait a bit\n";
 	sleep 4;
-	$qstat = CondorTest::getJobStatus(1);
+	$qstat = CondorTest::getJobStatus(1.0);
 }
 
 # submit into collector node schedd
@@ -162,13 +161,13 @@ while($qstat != RUNNING)
 	$qstat = CondorTest::getJobStatus(1.1);
 }
 
-$qstat = CondorTest::getJobStatus(1);
-print "local cluster 1 status is $qstat\n";
+$qstat = CondorTest::getJobStatus(1.0);
+print "local cluster 1.0 status is $qstat\n";
 while($qstat != RUNNING)
 {
-	print "local Job status 1 not RUNNING - wait a bit\n";
+	print "local Job status 1.0 not RUNNING - wait a bit\n";
 	sleep 4;
-	$qstat = CondorTest::getJobStatus(1);
+	$qstat = CondorTest::getJobStatus(1.0);
 }
 
 my $cmdstatus;
@@ -314,7 +313,7 @@ if(!$status)
 
 sleep(5);
 
-$cmd = "condor_off -master";
+$cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
@@ -335,7 +334,7 @@ if(!$status)
 
 sleep(5);
 
-$cmd = "condor_off -master";
+$cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {

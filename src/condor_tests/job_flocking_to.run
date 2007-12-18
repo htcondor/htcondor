@@ -21,9 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
-
 # truly const variables in perl
 sub IDLE{1};
 sub HELD{5};
@@ -94,7 +91,6 @@ close(PASRAMSRC);
 close(PASRAMDONE);
 
 $version = "flockfrom";
-# my $configflockto = CondorPersonal::DebugOn();
 # get another node running
 my $configflockto = CondorPersonal::StartCondor("x_param.flocktestlocal" ,$version);
 my @flockto = split /\+/, $configflockto;
@@ -131,7 +127,7 @@ if( -e "$mysubmitnmlog" )
  $ENV{CONDOR_CONFIG} = $locconfig;
 
 
-$cmd = "condor_off -master";
+$cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
@@ -142,7 +138,7 @@ if(!$status)
 $ENV{CONDOR_CONFIG} = $flocktoconfig;
 
 
-$cmd = "condor_off -master";
+$cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {

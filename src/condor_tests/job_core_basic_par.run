@@ -57,7 +57,6 @@ $mycorenmout = $corename . ".out";
 #print "Master PID is $mypid\n";
 #print "Master PID submit file is $mysubmitnm\n";
 
-# my $configrem = CondorPersonal::DebugOn();
 # get a remote scheduler running (side b)
 my $configrem = CondorPersonal::StartCondor("x_param.basicparallel" ,"parallel");
 my @parallel = split /\+/, $configrem;
@@ -143,7 +142,7 @@ if( $result != 0 )
 
 my @adarray;
 my $status = 1;
-my $cmd = "condor_off -master";
+my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {

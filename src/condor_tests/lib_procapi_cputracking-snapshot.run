@@ -64,7 +64,6 @@ system("ln -s $mypiddir $mypid");
 	system("cp $mycmdfile $mysubmitnm");
 	system("cp $param_template $myparamname");
 
-	#my $configsec = CondorPersonal::DebugOn();
 	my $configsec = CondorPersonal::StartCondor($myparamname ,"cputracking", $mypid);
 	my @cputrackingpool = split /\+/, $configsec;
 	my $secconfig = shift @cputrackingpool;
@@ -98,7 +97,7 @@ system("ln -s $mypiddir $mypid");
 
 	my @adarray;
 	my $status = 1;
-	my $cmd = "condor_off -master";
+	my $cmd = "condor_off -fast -master";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{

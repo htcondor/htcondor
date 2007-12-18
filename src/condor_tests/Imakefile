@@ -323,10 +323,12 @@ TESTCLASS(lib_eventlog-xml,core)
 TESTCLASS(lib_eventlog-xml,quick)
 
 #if defined(IS_I386_LINUX_RH80) || defined(IS_I386_LINUX_RHEL3) || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_PPC_OSX_10_3) || defined(IS_IA64_LINUX_RHEL3) || defined(IS_I386_LINUX_RHEL5)
+/*
 DESC(job_quill_basic,"Basic Quill Test")
 RUN(job_quill_basic)
 TESTCLASS(job_quill_basic,core)
 TESTCLASS(job_quill_basic,quick)
+*/
 #endif
 
 DESC(job_core_basic_par,"Basic Parallel Universe")

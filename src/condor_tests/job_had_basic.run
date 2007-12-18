@@ -1048,7 +1048,7 @@ sub KillAllInstances
 		my $masterSinfulString =
         	&GetAddress("$condorLogsDirectory/\.master_address");
 
-    	CondorTest::runCondorTool("condor_off -master -fast -addr \'" .
+    	CondorTest::runCondorTool("condor_off -fast -master -fast -addr \'" .
                               	  "$masterSinfulString\'", \@adarray, 2);
 	}
 }
@@ -1148,7 +1148,7 @@ sub FailMachines
 		            'LOG');
 		my $masterSinfulString =
 			&GetAddress("$condorLogsDirectory/\.master_address");
-		CondorTest::runCondorTool("condor_off -master -fast -addr \'" .
+		CondorTest::runCondorTool("condor_off -fast -master -fast -addr \'" .
 								  "$masterSinfulString\'", \@adarray, 2);
 		
 		$hadsStatus[$hadIndex] = FAILED;

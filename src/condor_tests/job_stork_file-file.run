@@ -193,7 +193,7 @@ if( -e "$mysubmitnmlog" )
 
 my @adarray;
 my $status = 1;
-my $cmd = "condor_off -master";
+my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {

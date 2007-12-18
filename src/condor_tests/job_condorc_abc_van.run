@@ -51,7 +51,6 @@ system("date");
 print "Master PID is $mypid\n";
 print "Master PID submit file is $mysubmitnm\n";
 
-#my $configrem = CondorPersonal::DebugOn();
 
 # get a remote scheduler running (side c)
 my $configrem = CondorPersonal::StartCondor("x_param.condorcremote" ,"remote");
@@ -161,7 +160,7 @@ if( -e "$mysubmitnmlog" )
 
 my @adarray;
 my $status = 1;
-my $cmd = "condor_off -master";
+my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
@@ -171,7 +170,7 @@ if(!$status)
 
 $ENV{CONDOR_CONFIG} = $remconfig;
 $status = 1;
-$cmd = "condor_off -master";
+$cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
@@ -181,7 +180,7 @@ if(!$status)
 
 $ENV{CONDOR_CONFIG} = $midconfig;
 $status = 1;
-$cmd = "condor_off -master";
+$cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
