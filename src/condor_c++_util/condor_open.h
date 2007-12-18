@@ -35,6 +35,9 @@ extern "C"  {
 #define SAFE_OPEN_DEFAULT_MODE
 #endif
 
+#ifndef SAFE_OPEN_RETRY_MAX
+#define SAFE_OPEN_RETRY_MAX 50
+#endif
 
 /** @name Replacement functions for open.  These functions differ from the 
  standard C library open() in the following ways:

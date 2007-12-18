@@ -113,15 +113,67 @@ int safe_create_replace_if_exists(const char *fn, int flags, mode_t mode)
 // create file if it doesn't exist, keep inode if it does
 int safe_create_keep_if_exists(const char *fn, int flags, mode_t mode)
 {
-    int noCreateFlags = flags & ~O_CREAT & ~O_EXCL;
+	int f = -1;
+	int saved_errno = errno;
+	int num_tries = 0;
 
-    int f = open (fn, noCreateFlags, mode);
+		/* check for invalid argument values */
+	if (!fn)  {
+		errno = EINVAL;
+		return -1;
+	}
 
-    if (f == -1 && errno == ENOENT)  {
-        f = open(fn, flags | O_CREAT | O_EXCL, mode);
-    }
+		/* Remove O_CREATE and O_EXCL from the flags, the safe_open_no_create()
+		 * requires them to not be included and safe_creat_fail_if_exists() adds
+		 * them implicitly.
+		 */
+	flags &= ~O_CREAT & ~O_EXCL;
 
-    return f;
+		/* Loop alternating between creating the file (and failing if it exists)
+		 * and opening an existing file.  Return an error if any error occurs other
+		 * than an indication that the other function should work.
+		 */
+	while (f == -1)  {
+			/* If this is the second or subsequent attempt, then someone is
+			 * manipulating the file system object referred to by fn.  Call the user
+			 * defined callback if registered, and fail if it returns a non-zero value.
+			 */
+		if (++num_tries > 1)  {
+				/* the default error is EAGAIN */
+			errno = EAGAIN;
+
+				/* check if we tried too many times */
+			if (num_tries > SAFE_OPEN_RETRY_MAX)  {
+					/* let the user decide what to do */
+				return -1;
+			}
+		}
+
+		f = safe_create_fail_if_exists(fn, flags, mode);
+
+			/* check for error */
+		if (f == -1)  {
+			if (errno != EEXIST)  {
+				return -1;
+			}
+
+				/* previous function said the file exists, so this should work */
+			f = safe_open_no_create(fn, flags);
+			if (f == -1 && errno != ENOENT)  {
+				return -1;
+			}
+
+				/* At this point, safe_open_no_create either worked in which case
+				 * we are done, or it failed saying the file does not exist in which
+				 * case we'll take another spin in the loop.
+				 */
+		}
+	}
+
+		/* no error, restore errno incase we had recoverable failures */
+	errno = saved_errno;
+
+	return f;
 }
 
 
