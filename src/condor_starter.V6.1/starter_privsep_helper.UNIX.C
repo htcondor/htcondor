@@ -32,7 +32,9 @@ bool StarterPrivSepHelper::s_instantiated = false;
 StarterPrivSepHelper::StarterPrivSepHelper() :
 	m_user_initialized(false),
 	m_sandbox_initialized(false),
-	m_sandbox_path(NULL)
+	m_uid(0),
+	m_sandbox_path(NULL),
+	m_sandbox_owned_by_user(false)
 {
 	ASSERT(!s_instantiated);
 	s_instantiated = true;
