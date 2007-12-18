@@ -104,6 +104,18 @@ responsive to flocked users.
 \item Fixed a problem preventing the use of \Condor{q} \Opt{-analyze}
 with the \Opt{-pool} option.
 
+\item Fixed a problem in the negotiator in which machines go
+unassigned when user priorities result in the machines getting split
+into shares that are rounded down to 0.  For example if there are 10
+machines and 100 equal priority submitters, then each submitter was
+getting 0.1 machines, which got rounded down to 0, so no machines were
+assigned to anybody.  The message in the negotiator log in this case
+was this:
+
+\begin{verbatim}
+Over submitter resource limit (0) ... only consider startd ranks
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Known Bugs:
