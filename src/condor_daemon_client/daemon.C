@@ -1045,8 +1045,7 @@ Daemon::locate( void )
 		rval = getCmInfo( "COLLECTOR" );
 		break;
 	case DT_NEGOTIATOR:
-		tmp = getCmHostFromConfig( "NEGOTIATOR" );
-		if( tmp ) {
+		if( !_pool && (tmp = getCmHostFromConfig( "NEGOTIATOR" )) ) {
 				// if NEGOTIATOR_HOST (or equiv) is in the config
 				// file, we have to use the old getCmInfo() code to
 				// honor what it says... 
@@ -1134,7 +1133,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 
 		// If we were not passed a name or an addr, check the
 		// config file for a subsystem_HOST, e.g. SCHEDD_HOST=XXXX
-	if( ! _name ) {
+	if( ! _name  && !_pool ) {
 		buf.sprintf( "%s_HOST", subsys );
 		char *specified_host = param( buf.Value() );
 		if ( specified_host ) {
