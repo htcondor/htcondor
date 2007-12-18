@@ -28,6 +28,7 @@ system("date");
 open(ELOG,"$test 2>&1 |") || die "Could not run test<<$test>>: $!\n";
 while(<ELOG>) {
 	push  @got, $_;
+	print $_;
 }
 close(ELOG);
 
