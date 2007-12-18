@@ -61,7 +61,7 @@ private:
 	class EnvironmentTag : public ProcInfoMatcher {
 
 	public:
-		EnvironmentTag() { }
+		EnvironmentTag() : m_penvid(NULL) { }
 		EnvironmentTag(PidEnvID* penvid) : m_penvid(penvid) { }
 		PidEnvID* get_penvid() { return m_penvid; }
 
