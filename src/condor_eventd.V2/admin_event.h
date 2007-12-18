@@ -52,7 +52,7 @@ struct StartdStats {
 		jobstart(0), slotid(0), remotetime(0), ckptmegs(0), ckptlength(0), 
 		ckptmegspersec(0), ckpttime(0), ckptgroup(0), ckptdone(0)
 		{ 	
-			strcpy( name, Name); 
+			snprintf( name, 128, "%s", Name ); 
 			state[0] = '\0';
 			activity[0] = '\0';
 			clientmachine[0] = '\0';
