@@ -321,6 +321,7 @@ int
 AdminEvent::spoolClassAd( ClassAd * ca_shutdownRate, char *direction )
 {
 	char *tmp;
+	char *tmp2;
 	MyString spoolHistory;
 
 	tmp = param("SPOOL");
@@ -329,7 +330,11 @@ AdminEvent::spoolClassAd( ClassAd * ca_shutdownRate, char *direction )
 		return(1);
 	}
 
-	spoolHistory = dircat(tmp,"EventdShutdownRate.log");
+	tmp2 = dircat(tmp,"EventdShutdownRate.log");
+	spoolHistory = tmp2;
+
+	free( tmp );
+	delete[] tmp2;
 
 	if(strcmp(direction,"in") == MATCH) {
 
@@ -348,7 +353,6 @@ AdminEvent::spoolClassAd( ClassAd * ca_shutdownRate, char *direction )
 			} else {
 				dprintf(D_ALWAYS,"Failed to get initial spool classad(%s)\n",
 					spoolHistory.Value());
-				free(tmp);
 				return(1);
 			}
 		} else {
@@ -368,11 +372,9 @@ AdminEvent::spoolClassAd( ClassAd * ca_shutdownRate, char *direction )
 			} else {
 				dprintf(D_ALWAYS,"Failed to open(w) from spool(%s/%d)\n",
 					spoolHistory.Value(),errno);
-				free(tmp);
 				return(1);
 			}
 		}
-		free(tmp);
 		return(0);
 	} else if(strcmp(direction,"out") == MATCH) {
 
@@ -385,13 +387,10 @@ AdminEvent::spoolClassAd( ClassAd * ca_shutdownRate, char *direction )
 		} else {
 			dprintf(D_ALWAYS,"Failed to open(w) from spool(%s/%d)\n",
 				spoolHistory.Value(),errno);
-			free(tmp);
 			return(1);
 		}
-		free(tmp);
 		return(0);
 	} else {
-		free(tmp);
 		return(1);
 	}
 }
