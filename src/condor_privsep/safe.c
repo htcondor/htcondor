@@ -2411,6 +2411,7 @@ safe_is_path_trusted(const char *pathname, id_range_list *trusted_uids,
 
             /* add the path of the referent to the stack */
             if (push_path_on_stack(&paths, link_path)) {
+		free(link_path);
                 status = -1;
                 goto restore_dir_and_exit;
             }
@@ -2888,6 +2889,7 @@ safe_is_path_trusted_r(const char *pathname, id_range_list *trusted_uids,
 
             /* add path to the stack */
             if (push_path_on_stack(&paths, link_path)) {
+		free(link_path);
                 status = -1;
                 goto cleanup_and_exit;
             }
