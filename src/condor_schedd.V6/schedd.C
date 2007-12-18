@@ -10877,8 +10877,13 @@ Scheduler::invalidate_ads()
 
 
 int
-Scheduler::reschedule_negotiator(int, Stream *)
+Scheduler::reschedule_negotiator(int, Stream *s)
 {
+	if( s && !s->end_of_message() ) {
+		dprintf(D_ALWAYS,"Failed to receive end of message for RESCHEDULE.\n");
+		return 0;
+	}
+
 		// don't bother the negotiator if we are shutting down
 	if ( ExitWhenDone ) {
 		return 0;
