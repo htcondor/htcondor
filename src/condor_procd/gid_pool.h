@@ -29,6 +29,7 @@ class GIDPool {
 
 public:
 	GIDPool(gid_t min_gid, gid_t max_gid);
+	~GIDPool();
 	bool allocate(ProcFamily* family, gid_t& gid);
 	bool free(ProcFamily* family);
 	ProcFamily* get_family(gid_t gid);

@@ -34,6 +34,11 @@ GIDPool::GIDPool(gid_t min_gid, gid_t max_gid)
 	}
 }
 
+GIDPool::~GIDPool()
+{
+	delete[] m_gid_map;
+}
+
 bool
 GIDPool::allocate(ProcFamily* family, gid_t& gid)
 {
