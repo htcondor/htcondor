@@ -27,13 +27,14 @@ class ParentTracker : public ProcFamilyTracker {
 
 public:
 
-	ParentTracker(ProcFamilyMonitor* pfm) : ProcFamilyTracker(pfm) { }
+	ParentTracker(ProcFamilyMonitor* pfm) :
+		ProcFamilyTracker(pfm), m_keep_checking(false) { }
 
 	void find_processes(procInfo*&);
 	bool check_process(procInfo*);
 
 private:
-	bool keep_checking;
+	bool m_keep_checking;
 };
 
 #endif
