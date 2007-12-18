@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.22 2007-12-17 18:44:01 bt Exp $
+# $Id: remote_pre.pl,v 1.23 2007-12-18 19:12:14 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -220,19 +220,8 @@ $ENV{PATH} = $NewPath;
 # -p means  just set up the personal condor for the test run
 # move into the condor_tests directory first
 
-chdir( "$SrcDir" ) ||
-    die "Can't chdir($SrcDir to run configure): $!\n";
-
-print "Running configure.......\n";
-system("./configure");
-print "Configure has been run..... doing a Imake/make in condor_tests next\n";
-
 chdir( "$SrcDir/condor_tests" ) ||
     die "Can't chdir($SrcDir/condor_tests for personal condor setup): $!\n";
-
-print "In test running ../condor_imake\n";
-system("../condor_imake");
-system("make all");
 
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
     system( "make batch_test.pl" );
