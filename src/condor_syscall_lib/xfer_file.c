@@ -23,6 +23,8 @@
 #include "condor_debug.h"
 
 #include "condor_macros.h"
+#include "condor_open.h"
+#include "util_lib_proto.h"
 
 double	get_time();
 extern int	Syscalls;
