@@ -2040,8 +2040,8 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	// Delete the file
 	struct stat stat_buff;
 	if (stat (filename.Value(), &stat_buff) == 0) {
-		// If the exists, delete it
-		if (unlink (filename.Value())) {
+		// If the file exists, delete it
+		if (unlink (filename.Value()) && errno != ENOENT) {
 			set_priv(old_priv);
 			return -1;
 		}
@@ -2086,8 +2086,8 @@ DestroyMyProxyPassword( int cluster_id, int proc_id )
 	// Delete the file
 	struct stat stat_buff;
 	if( stat(filename.Value(), &stat_buff) == 0 ) {
-			// If the exists, delete it
-		if( unlink( filename.Value()) < 0 ) {
+			// If the file exists, delete it
+		if( unlink( filename.Value()) < 0 && errno != ENOENT ) {
 			dprintf( D_ALWAYS, "unlink(%s) failed: errno %d (%s)\n",
 					 filename.Value(), errno, strerror(errno) );
 		 	set_priv(old_priv);
@@ -2953,17 +2953,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 					curr_attr_to_expand,name);
 				fprintf(email,"\nAttribute $$(%s) cannot be expanded because",
 					name);
-				if ( attribute_not_found ) {
-					fprintf(email,"\nthis attribute was not found in the "
-							"machine ClassAd.\n");
-				} else {
-					fprintf(email,
-							"\nthis feature is not supported by the version"
-							" of the Condor Central Manager\n"
-							"currently installed.  Please ask your site's"
-							" Condor administrator to upgrade the\n"
-							"Central Manager to a more recent revision.\n");
-				}
+				fprintf(email,"\nthis attribute was not found in the "
+						"machine ClassAd.\n");
 				fprintf(email,
 					"\n\nPlease correct this problem and release your "
 					"job with:\n   \"condor_release %d.%d\"\n\n",
