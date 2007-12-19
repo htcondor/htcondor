@@ -29,13 +29,18 @@
 #
 # This should be run in the top-level src directory.
 #
+use strict;
+use warnings;
 
 use Getopt::Long;
+
+sub runcmd($$);
+sub print_usage();
 
 # Autoflush the output
 $| = 1;
 
-use vars qw/ $opt_help $opt_sys $opt_version $opt_libc $opt_tarcmd $opt_cpcmd $opt_target/;
+use vars qw/ $opt_help $opt_sys $opt_version $opt_libc $opt_tarcmd $opt_cpcmd $opt_target $opt_linktype/;
 
 GetOptions ( 'help'              => \$opt_help,
              'sys=s'             => \$opt_sys,
@@ -72,6 +77,7 @@ if (defined($opt_target)) {
     $target = $opt_target;
 }
 
+my @linktypes;
 if (defined($opt_linktype)) {
    @linktypes = split /,/, $opt_linktype;
 } else {
@@ -81,6 +87,7 @@ if (defined($opt_linktype)) {
 }
 
 # Now, grab the version of this release.
+my $vers_string;
 if( $versarg ) {
     $vers_string = $versarg;
 } else {
@@ -99,10 +106,10 @@ if( $versarg ) {
 }
 
 $vers_string =~ /(.*\$CondorVersion: )?(\d+)\.(\d+)\.(\d+).*/;
-$majorv = $2;
-$minorv = $3;
-$releasev = $4;
-$version = "$majorv.$minorv.$releasev";
+my $majorv = $2;
+my $minorv = $3;
+my $releasev = $4;
+my $version = "$majorv.$minorv.$releasev";
 
 if( $version =~ /(\d+)\.(\d+)\.(\d+)/ ) {
     print "Making final tarballs for Condor Version $version\n";
@@ -156,41 +163,44 @@ require 5.002;
 #		dynamically linked executables, which are found in src/strip_dir
 #		after "make stripped" completes.
 
-%modules = (
-	"condor" => {
-		"generate" => 1,
+my %modules =
+(
+	 "condor" =>
+	 {
+		 "generate" => 1,
 
-		"skelfiles" => [ 
-			"README", "DOC", "INSTALL", "LICENSE-2.0.txt",
-			[ "condor_scripts/condor_configure", "condor_configure" ],
-			"examples" 
-		],
+		 "skelfiles" => [ "README", "DOC", "INSTALL", "LICENSE-2.0.txt",
+						  { src => "condor_scripts/condor_configure",
+							dest => "condor_configure" },
+						  "examples" 
+						],
 
-		"tarfile" => [ "release.tar", 0 ],
+         "tarfile" => { file => "release.tar", extract => 1 },
 
-		"releaselocation" => {
-  			"dynamic"       => "strip_dir",
-  			"static"        => "static_dir",
-  			"unstripped-static"  => "static_unstrip_dir",
-  			"unstripped-dynamic" => "release_dir",
-		},
-	},
+         "releaselocation" => {
+			 "dynamic"			  => "strip_dir",
+			 "static"    	      => "static_dir",
+			 "unstripped-static"  => "static_unstrip_dir",
+			 "unstripped-dynamic" => "release_dir",
+		 },
+	 },
 	
-	"condordebugsyms" => {
-		"generate" => 1,
+	 "condordebugsyms" =>
+	 {
+		 "generate" => 1,
 
-		"skelfiles" => [ 
-			"DOC", "INSTALL", "LICENSE-2.0.txt",
-			[ "condor_release/README.debugsyms", "README" ], 
-		],
+		 "skelfiles" => [ "DOC", "INSTALL", "LICENSE-2.0.txt",
+						  { src => "condor_release/README.debugsyms",
+							dest => "README" }, 
+						],
 
-		"tarfile" => [ "debugsyms.tar", 1],
+		 "tarfile" => { file => "debugsyms.tar", extract => 1 },
 
-		# Currently, this module exists only for the 'dynamic' linktype.
-		"releaselocation" => {
-  			"dynamic"       => "strip_dir",
-		},
-	},
+		 # Currently, this module exists only for the 'dynamic' linktype.
+		 "releaselocation" => {
+			 "dynamic"       => "strip_dir",
+		 },
+	 },
 );
 
 ######################################################################
@@ -198,11 +208,11 @@ require 5.002;
 ######################################################################
 
 # Some paths of interest:
-$skel="release_skeleton";
-$realskel="condor_release";
+my $skel="release_skeleton";
+my $realskel="condor_release";
 
 # Convert from AFS @sys names to our names for the tarballs.
-%opsysname = (
+my %opsysname = (
   "sun4x_56"      => "solaris26",
   "sun4x_57"      => "solaris27",
   "sun4x_58"      => "solaris28",
@@ -248,7 +258,7 @@ $realskel="condor_release";
   "i386_freebsd6" => "freebsd6"
 );
 
-%archname = (
+my %archname = (
   "sun4x_56"      => "Sparc",
   "sun4x_57"      => "Sparc",
   "sun4x_58"      => "Sparc",
@@ -298,7 +308,7 @@ $realskel="condor_release";
 # NOTE: any two entries in here with the same arch *MUST* have
 # seperate values, or else we get identically named files and that's
 # no good at all!
-%libcname = (
+my %libcname = (
   "i386_debian40"   => "debian40",
   "i386_rh72"   => "glibc22",
   "i386_rh80"   => "redhat80",
@@ -343,8 +353,8 @@ if( ! $sys ) {
     $sys=`sys`;
     chomp($sys);
 } 
-$arch = $archname{$sys};
-$opsys = $opsysname{$sys};
+my $arch = $archname{$sys};
+my $opsys = $opsysname{$sys};
 $libc = $libcname{$sys};
 
 if( ! $tar_cmd ) {
@@ -370,49 +380,54 @@ if( ! $cp_cmd ) {
 
 mkdir( "$skel", 0777 ) || die "Can't mkdir($skel): $!\n";
 
-($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
 $mon++;
-$date="$mon/$mday/$year";
+my $date="$mon/$mday/$year";
+ 
+print "Building linktype(s): ".join(" ",@linktypes)."\n";
 
-print "Building linktype(s): @linktypes\n";
+foreach my $name ( sort keys %modules ) {
 
-foreach $module ( sort keys %modules ) {
+	my $module = $modules{$name};
 
-    die "Define generate for $module" 
-		if( !exists($modules{$module}{'generate'}) );
+    die "Define generate for $name" 
+		if( !exists($module->{generate}) );
 
-	if ($modules{$module}{'generate'} != 1) {
-		print "Skipping the processing of module: $module\n";
+	if ($module->{generate} != 1) {
+		print "Skipping the processing of module: $name\n";
 		next;
 	}
 
-	print "Processing module: $module\n";
+	print "Processing module: $name\n";
 
-    $release="$module-$version";
+    my $release="$name-$version";
 
-    die "Define a tarfile for $module" 
-		if( !exists($modules{$module}{'tarfile'}) );
+    die "Define a tarfile for $name" 
+		if( !exists($module->{tarfile}) );
 
 	# the first argument is the tarfile, the second is whether or not we
 	# should untar it.
-	($tarfile,$untar) = @{$modules{$module}{'tarfile'}};
+	my $tarfile = $module->{tarfile}{file};
+	my $extract = $module->{tarfile}{extract};
 
 	# Setup the skeleton directory
-    print "Setting up skeleton directory for \"$module\"...\n";
+    print "Setting up skeleton directory for \"$name\"...\n";
 	mkdir("$skel/$release", 0777) || 
 		die "Can't mkdir($skel/$release): $!";
 
     # Now, copy over any files specified for a given module
-    foreach $file ( @{$modules{$module}{'skelfiles'}} ) {
+    foreach my $file ( @{$module->{skelfiles}} ) {
 		
-		if (ref($file) eq "ARRAY") {
-			($src, $dest) = @{$file};
+		my ($src,$dest);
+		if (ref($file) eq "HASH") {
+			$src =  $file->{src};
+			$dest = $file->{dest};
 		} else {
 	   	 	$src = "$realskel/$file";
 	   	 	$dest = $file;
 		}
 		# Must be able to do recursive copy in case of directories...
-		runcmd("date && time $cp_cmd $src $skel/$release/$dest");
+		runcmd("date && time $cp_cmd $src $skel/$release/$dest", undef);
     }
     runcmd("rm -rf $skel/$release/CVS", 1);
     runcmd("rm -rf $skel/$release/*/CVS", 1);
@@ -420,28 +435,30 @@ foreach $module ( sort keys %modules ) {
     print "done.\n";
 
     # Now, handle static and/or dynamic versions, whatever exists... 
-
+	my $relloc = $module->{releaselocation};
 	print "Building specified linktypes versions of release tarballs\n";
-    foreach $linktype ( @linktypes ) {
+
+    foreach my $linktype ( @linktypes ) {
 		# If the modules doesn't provide a release for this linktype, just
 		# ignore it.
-		if (!exists($modules{$module}{'releaselocation'}{$linktype})) {
-			print "Module $module doesn't support linktype '$linktype'. " .
+		if (!exists($relloc->{$linktype})) {
+			print "Module $name doesn't support linktype '$linktype'. " .
 				"Ignoring.\n";
 			next;
 		}
 
-		print "Building $linktype from $modules{$module}{'releaselocation'}{$linktype}/$tarfile\n";
+		my $tarball = $relloc->{$linktype}."/$tarfile";
+		print "Building $linktype from $tarball\n";
 
 		# Make sure the proper tar file exists
-		if( ! (-d $modules{$module}{'releaselocation'}{$linktype} && 
-	       	-f "$modules{$module}{'releaselocation'}{$linktype}/$tarfile") ) {
-	    	print STDERR "There's no $tarfile file for $linktype on this platform, skipping.\n";
+		if( ! (-d $relloc->{$linktype} && -f $tarball) ){
+	    	print STDERR "There's no $tarfile file for $linktype on ".
+				"this platform, skipping.\n";
 	    	next;
 		}
 
 		# Figure out what our filenames should look like.
-		$platform="$opsys-$arch";
+		my $platform="$opsys-$arch";
 		if( $libc ) {
 	    	$platform .= "-$libc";
 		}
@@ -452,14 +469,14 @@ foreach $module ( sort keys %modules ) {
 	    	$platform .= "-unstripped";
 		}
 		
-		if ($untar == 1) {
+		if ( $extract ) {
 			# If I've asked for this tarball to have been untarred, then 
 			# untar it into the skeleton directory
 			print "Untaring tarfile into skeleton.\n";
 			# This runs in a subshell as to not distub the cwd of the script
-			print runcmd("(cd $skel/$release && " . 
-				"time $tar_cmd -xf " .
-				"../../$modules{$module}{'releaselocation'}{$linktype}/$tarfile)");
+			print runcmd( "( cd $skel/$release && " .
+						  "  time $tar_cmd -xf ../../$tarball )",
+						  undef );
 		} else {
 			# Otherwise just copy the tarfile with the right permissions into
 			# the skeleton. 
@@ -471,33 +488,42 @@ foreach $module ( sort keys %modules ) {
 			# have to be called again to rebuild the source file.
 
 			runcmd("date && time dd " .
-				"if=$modules{$module}{'releaselocation'}{$linktype}/$tarfile " .
-				"of=$skel/$release/$tarfile bs=10485760");
+				   "if=$tarball " .
+				   "of=$skel/$release/$tarfile bs=10485760",
+				   undef);
 		}
 
 		# Create full archive 
 		print "Creating the full archive $skel/$release.tar\n";
 		# This runs in a subshell as to not distub the cwd of the script
-		print runcmd("(cd $skel && time $tar_cmd -cvf $release.tar $release)");
+		print runcmd("(cd $skel && time $tar_cmd -cvf $release.tar $release)",
+					 undef);
 
 		# Delete the release.tar we're now done with.
 		print "Cleaning up some files...\n";
 		runcmd("unlink $skel/$release/$tarfile", 1);
 
 		print "Renaming tarball to archecture specific name.\n";
-		runcmd("date && time mv $skel/$release.tar $skel/$release-$platform.tar");
+		runcmd("date && ".
+			   "time mv $skel/$release.tar $skel/$release-$platform.tar",
+			   undef);
 	
 		# Figure out where we want put this tarball
-		if( $module =~ /condor/ ) {
+		my $targetdir;
+		if( $name =~ /condor/ ) {
 	    	$targetdir = "$target/v$majorv.$minorv";
 		} else {
 	    	$targetdir = "$target/contrib";
+		}
+		if( ! -d $target ) {
+	    	print "mkdir($target, 0777)\n";
+	    	mkdir( $target, 0777 ) || die "Can't mkdir $target: $!\n";
 		}
 		if( ! -d $targetdir ) {
 	    	print "mkdir($targetdir, 0777)\n";
 	    	mkdir( $targetdir, 0777 ) || die "Can't mkdir $targetdir: $!\n";
 		}
-		$targetfile = "$targetdir/$release-$platform.tar";
+		my $targetfile = "$targetdir/$release-$platform.tar";
 
 		# Make sure there's nothing in the way where we want to put it.
 		runcmd("unlink $targetfile", 1);
@@ -510,10 +536,11 @@ foreach $module ( sort keys %modules ) {
 		# we already check for gzip (but not compress) on our build
 		# machines @ configure time, and some of our platforms don't
 		# put compress in a reasonable location... :(
-		runcmd("date && time gzip $skel/$release-$platform.tar");
+		runcmd("date && time gzip $skel/$release-$platform.tar", undef);
 
 		print "Moving $release-$platform.tar.gz into $targetdir\n";
-		runcmd("date && time mv $skel/$release-$platform.tar.gz $targetdir");
+		runcmd("date && time mv $skel/$release-$platform.tar.gz $targetdir",
+			   undef);
 		print "done.\n";
 	}
 }
@@ -528,7 +555,7 @@ exit 0;
 # The first argument is the command for the shell to execute.
 # The presence of the second argument, means don't die if the command fails.
 # Returns the output of the program, if any.
-sub runcmd() {
+sub runcmd($$) {
 	my ($cmd, $shouldnt_die) = @_;
 	my (@out);
 
@@ -542,7 +569,7 @@ sub runcmd() {
 	# or not.
 	if( ($? >> 8) != 0 ) {
 		if (!defined($shouldnt_die)) {
-			$out = join("\n", @out);
+			my $out = join("\n", @out);
 	   		die "Can't $cmd: $out";
 		}
 	}
@@ -573,3 +600,8 @@ This screen
 
 END_USAGE
 }
+
+### Local Variables: ***
+### mode:perl ***
+### tab-width: 4  ***
+### End: ***

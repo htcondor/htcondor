@@ -50,94 +50,163 @@ use strict;			# restrict unsafe constructs
 BEGIN { $^W = 1; }	# "heritage" way to enable warnings from #!/usr/bin/env perl
 
 my $Program; ($Program = $0) =~ s|.*/||;    # This program name.
-my $Usage = <<END_USAGE;
-$Program: Condor installation/configuration:
 
-options:
-
---install[=<path/to/release.tar>]
-Perform installation of Condor files and initial configuration as a working
-personal Condor. (if type or "central manager" are not specified).  If this is
-an upgrade to an existing installation directory, the existing config files and
-local directory will be preserved. 
-
---install-dir=<path> 
+my @Options =
+(
+ {
+	 short => "--install[=<path/to/release_dirs>]",
+	 long => <<END_OPT_INSTALL,
+Perform installation of Condor files and initial configuration as a
+working personal Condor. (if type or "central manager" are not
+specified).  If this is an upgrade to an existing installation
+directory, the existing config files and local directory will be
+preserved.
+The default behavior of "condor_install" is "--install=.".
+END_OPT_INSTALL
+ },
+ {
+	 short => "--prefix=<path> ",
+	 long => <<END_OPT_PREFIX,
 Specifies the installation directory (the root of Condor installation).
-
---local-dir=<path>
-Sets the local directory at the specified location (if one does not exist
-there).  Moves log,spool,execute directories there from the old local directory
-(if applicable).
-
---make-personal-condor
-Creates a personal Condor (i.e. a 1-node pool running on local machine). 
-
---make-personal-stork
+This is the same as --install-dir=<path>.
+END_OPT_PREFIX
+ },
+ {
+	 short => "--install-dir=<path> ",
+	 long => <<END_OPT_INSTALL_DIR,
+Specifies the installation directory (the root of Condor installation).
+This is the same as --prefix=<path>.
+END_OPT_INSTALL_DIR
+ },
+ {
+	 short => "--local-dir=<path>",
+	 long => <<END_OPT_LOCAL_DIR,
+Sets the local directory at the specified location (if one does not
+exist there).  Moves log,spool,execute directories there from the old
+local directory applicable).
+END_OPT_LOCAL_DIR
+ },
+ {
+	 short => "--make-personal-condor",
+	 long => <<END_OPT_MAKE_PERSONAL_CONDOR,
+Creates a personal Condor (i.e. a 1-node pool running on local machine).
+END_OPT_MAKE_PERSONAL_CONDOR
+ },
+ {
+	 short => "--make-personal-stork",
+	 long => <<END_OPT_MAKE_PERSONAL_STORK,
 Creates a personal Stork, using the credential manager daemon.
-
---type=<[submit],[execute],[manager]> 
-Determines which role(s) the machine will perform in a pool (which translates to
-which daemons will run). In the case of a personal Condor this value is
-automatically forced to be \"submit,execute,manager\". 
-
---central-manager=<host>
+END_OPT_MAKE_PERSONAL_STORK
+ },
+ {
+	 short => "--type=<[submit],[execute],[manager]> ",
+	 long => <<END_OPT_TYPE,
+Determines which role(s) the machine will perform in a pool (which
+translates to which daemons will run). In the case of a personal
+Condor this value is automatically forced to be
+\"submit,execute,manager\".
+END_OPT_TYPE
+ },
+ {
+	 short => "--central-manager=<host>",
+	 long => <<END_OPT_CENTRAL_MANAGER,
 Connect to existing pool with Central manager on <host>. 
-
---stork
-Configures Stork data placement server.  It is recommended to also use the
---credd option with the --stork option.
-
---credd
+END_OPT_CENTRAL_MANAGER
+ },
+ {
+	 short => "--stork",
+	 long => <<END_OPT_STORK,
+Configures Stork data placement server.  It is recommended to also use
+the --credd option with the --stork option.
+END_OPT_STORK
+ },
+ {
+	 short => "--credd",
+	 long => <<END_OPT_CREDD,
 Configure credential manager daemon.
+END_OPT_CREDD
+ },
+ {
+	 short => "--owner=<user>",
+	 long => <<END_OPT_OWNER,
+Run Condor daemons as specified user (can be either ID or
+username). (Only applicable when condor_configure is run by root,
+otherwise the current user is assumed).  Changes ownership of
+log,spool,execute directories to specified user, and instructs Condor
+system to run as that user (by setting CONDOR_IDS in the config file).
+END_OPT_OWNER
+ },
+ {
+	 short => "--maybe-daemon-owner",
+	 long => <<END_OPT_MAYBE_DAEMON_OWNER,
+If --owner is not specified and no appropriate user can be found to
+run Condor, then this option will allow the daemon user to be
+selected. This option is rarely needed by users but can be useful for
+scripts that invoke condor_configure to install Condor.
+END_OPT_MAYBE_DAEMON_OWNER
+ },
+ {
+	 short => "--install-log=<file>",
+	 long => <<END_OPT_INSTALL_LOG,
+Save information about the installation in the specified file. This is
+normally only needed when condor_configure is called by a higher-level
+script, not when invoked by a person.
+END_OPT_INSTALL_LOG
+ },
+ {
+	 short => "--overwrite",
+	 long => <<END_OPT_OVERWRITE,
+Always overwrite the contents of the 'sbin' directory in the
+installation directory.  By default, Condor will not install if it
+finds an existing 'sbin' directory.  If condor finds a 'sbin' directory
+in the installation directory, You must specify --overwrite
+or --backup to tell condor what to do.
 
---owner=<user>
-Run Condor daemons as specified user (can be either ID or username). (Only
-applicable when condor_configure is run by root, otherwise the current user is
-assumed).  Changes ownership of log,spool,execute directories to specified user,
-and instructs Condor system to run as that user (by setting CONDOR_IDS in the
-config file).
-
---maybe-daemon-owner
-If --owner is not specified and no appropriate user can be found to run Condor,
-then this option will allow the daemon user to be selected. This option is 
-rarely needed by users but can be useful for scripts that invoke condor_configure 
-to install Condor.
-
---install-log=<file>
-Save information about the installation in the specified file. This is normally 
-only needed when condor_configure is called by a higher-level script, not when
-invoked by a person.
-
---overwrite
-Always overwrite the contents of the 'sbin' directory in the installation directory.
-By default, Condor will make a backup copy of the original 'sbin' and create a new
-'sbin' directory containing only the new binaries.
-
---verbose
-Print more information. 
-
---help
+END_OPT_OVERWRITE
+ },
+ {
+	 short => "--backup",
+	 long => <<END_OPT_BACKUP,
+Always backup the 'sbin' directory in the installation directory.  By
+default, Condor will not install if it finds an existing 'sbin'
+directory.  If condor finds a 'sbin' directory in the installation
+directory, You must specify --overwrite or --backup to tell condor
+what to do.
+END_OPT_BACKUP
+ },
+ {
+	 short => "--verbose",
+	 long => <<END_OPT_VERBOSE,
+Print more information.
+END_OPT_VERBOSE
+ },
+ {
+	 short => "--help",
+	 long => <<END_OPT_HELP,
 Prints out this screen and exits.
-
-END_USAGE
+END_OPT_HELP
+ },
+ );
 
 # For parsing command line options (&GetOptions)
-my (
-	$opt_install,				
-	$opt_install_dir,
-	$opt_local_dir,
-	$opt_make_personal_condor,
-	$opt_make_personal_stork,
-	$opt_type,
-	$opt_central_manager,
-	$opt_stork,
-	$opt_credd,
-	$opt_owner,
-	$opt_maybe_daemon_owner,
-	$opt_install_log,
-	$opt_verbose,
-	$opt_overwrite,
-);
+	my (
+		$opt_release_dir,				# --install= directory
+		$opt_prefix_dir,
+		$opt_sbin_rename,
+		$opt_local_dir,
+		$opt_make_personal_condor,
+		$opt_make_personal_stork,
+		$opt_type,
+		$opt_central_manager,
+		$opt_stork,
+		$opt_credd,
+		$opt_owner,
+		$opt_maybe_daemon_owner,
+		$opt_install_log,
+		$opt_verbose,
+		$opt_overwrite,
+		$opt_backup,
+		);
 
 
 my ($owner, $release_dir, $local_dir, $local_config_file, $config_file, $cm, $type);
@@ -152,42 +221,44 @@ my $printed_log_message = 0;
 # Prototypes
 sub user_host_stuff();
 sub parse_command_line();
-sub find_owner(;$);
+sub find_owner(;$ );
 sub find_config_file();
 sub find_local_config_file();
 sub find_local_dir();
-sub install($);
-sub find_release_dir($);
-sub safe_mkdir($$);
-sub condor_init($);
-sub check_release_dir($);
+sub install( $ );
+sub find_release_dir( $ );
+sub safe_mkdir( $$ );
+sub condor_init( $ );
+sub check_release_dir( $ );
 sub set_mail_settings();
 sub set_domain_settings();
-sub set_central_manager ($);
-sub set_config_values ($$$);
+sub set_central_manager ( $ );
+sub set_config_values ( $$$ );
 sub set_java_jvm_path();
 sub make_personal_condor();
 sub make_personal_stork();
-sub get_config_value($;$);
-sub debug($);
+sub get_config_value( $;$ );
+sub debug( $ );
 sub read_config_file_comments();
-#sub is_dynamic($);
-sub which($);
+#sub is_dynamic( $ );
+sub which( $ );
 sub myproxy();
 sub credd();
 sub stork();
-sub log_message($);
+sub log_message( $ );
+sub usage( $ );
+sub help( );
 
 parse_command_line();
 
 my $timestamp=time();
 
 if ($opt_install_log) {
-    open(LOGFILE, ">>$opt_install_log")
-        or die "Couldn't open $opt_install_log: $!\n";
-    $logfile = *LOGFILE;
+	open(LOGFILE, ">>$opt_install_log")
+		or die "Couldn't open $opt_install_log: $!\n";
+	$logfile = *LOGFILE;
 } else {
-    $logfile = *STDOUT;
+	$logfile = *STDOUT;
 }
 
 # Hashes to store values that will go into config files
@@ -200,8 +271,8 @@ user_host_stuff();
 # Owner of spool, exec dirs
 if ($opt_owner) {
     if ($<) {
-	# real user id != 0
-	die "Option --owner is only valid when condor_configure is run as root!\n";
+		# real user id != 0
+		die "Option --owner is only valid when condor_configure is run as root!\n";
     }
 
     $owner=find_owner($opt_owner);
@@ -209,7 +280,7 @@ if ($opt_owner) {
     $owner=find_owner();
 }
 
-if (defined ($opt_install) || $opt_owner) {
+if (defined ($opt_release_dir) || $opt_owner) {
     my $gid=(getpwuid ($owner))[3]; #Get group id
     $local_config{CONDOR_IDS}="$owner.$gid";
 }
@@ -218,48 +289,48 @@ my @pwuid=getpwuid ($owner);
 debug ("Condor will be run as user: " . $pwuid[0]);
 
 # Install if necessary
-if (defined($opt_install)) {
+if (defined($opt_release_dir)) {
     # Install
-    if ($opt_install_dir) {
-	$release_dir=install($opt_install_dir);
+    if ($opt_prefix_dir) {
+		$release_dir=install($opt_prefix_dir);
     } else {
-	chomp($release_dir=`pwd`);
-	$release_dir=install($release_dir);
+		chomp($release_dir=`pwd`);
+		$release_dir=install($release_dir);
     }
 }
 else {
     # Verify Install diretory
-    if ($opt_install_dir) {
-	check_release_dir($opt_install_dir) || 
-	    die "Invalid install directory: $opt_install_dir!\n";
-	$release_dir=$opt_install_dir;
-	chomp ($release_dir=`pushd $release_dir >> /dev/null && pwd && popd >> /dev/null`);
+    if ($opt_prefix_dir) {
+		check_release_dir($opt_prefix_dir) or
+			die "Invalid install directory: $opt_prefix_dir!\n";
+		$release_dir=$opt_prefix_dir;
+		chomp ($release_dir=`pushd $release_dir >> /dev/null && pwd && popd >> /dev/null`);
     } else {
-	chomp (my $pwd=`pwd`);
-	$release_dir=find_release_dir($pwd);
+		chomp (my $pwd=`pwd`);
+		$release_dir=find_release_dir($pwd);
     }
 
-    $config_file=find_config_file();
+    $config_file = find_config_file() or exit(1);
 
     # User requested to change local dir, so copy old
     # local directory into new one
     if ($opt_local_dir) {
-	my $old_local_dir=find_local_dir();
-	$local_dir=$opt_local_dir; 
- 
-	(system ("mv $old_local_dir/spool $local_dir") ||
-	system ("mv $old_local_dir/log $local_dir") ||
-	system ("mv $old_local_dir/execute $local_dir")) &&
-	die "\nUnable to move log, spool, execute directories to new local directory: \"$local_dir\"\n\n";
-	condor_init ($local_dir);
-	$local_config{LOCAL_DIR}=$local_dir;
+		my $old_local_dir=find_local_dir();
+		$local_dir=$opt_local_dir; 
+		
+		(system ("mv $old_local_dir/spool $local_dir") ||
+		 system ("mv $old_local_dir/log $local_dir") ||
+		 system ("mv $old_local_dir/execute $local_dir")) &&
+		 die "\nUnable to move log, spool, execute directories to new local directory: \"$local_dir\"\n\n";
+		condor_init ($local_dir);
+		$local_config{LOCAL_DIR}=$local_dir;
     }
 }
 debug ("Install directory: $release_dir");
 
 # Config file location
 if (!$config_file) {
-    $config_file=find_config_file();
+    $config_file = find_config_file() or exit(1);
 }
 debug ("Main config file: $config_file");
 
@@ -278,17 +349,17 @@ if ($opt_central_manager) {
     $cm=set_central_manager($opt_central_manager);
     
     unless ($opt_type) {
-	if ($cm eq "localhost" || $cm eq $host || $cm eq $fullhost) {
-	    debug ("\n--type is not specified. Assuming <manager>.");
-	    $opt_type="manager";
-	} else {
-	    debug ("\n--type is not specified. Assuming <submit,execute>.");
-	    $opt_type="submit,execute";
-	}
+		if ($cm eq "localhost" || $cm eq $host || $cm eq $fullhost) {
+			debug ("\n--type is not specified. Assuming <manager>.");
+			$opt_type="manager";
+		} else {
+			debug ("\n--type is not specified. Assuming <submit,execute>.");
+			$opt_type="submit,execute";
+		}
     }
 }
 
- 
+
 
 # Determine daemons needed to run and other settings based on
 # the values of the following options:
@@ -297,7 +368,7 @@ if ($opt_central_manager) {
 #  --make-personal_condor
 
 if ($opt_make_personal_condor ||
-    (defined($opt_install) && !$opt_type)) {
+    (defined($opt_release_dir) && !$opt_type)) {
 
 	$daemon_list{COLLECTOR} = 1;
 	$daemon_list{NEGOTIATOR} = 1;
@@ -323,16 +394,16 @@ elsif ($opt_type) {
     $local_config{COLLECTOR_NAME}="";
 
     foreach $type (@types) {
-	if ($type eq "execute") {
-		$daemon_list{STARTD} = 1;
-	} elsif ($type eq "submit") {
-		$daemon_list{SCHEDD} = 1;
-	} elsif ($type eq "manager") {
-		$daemon_list{COLLECTOR} = 1;
-		$daemon_list{NEGOTIATOR} = 1;
-	} else {
-	    die "Illegal -type argument: $opt_type!\n";
-	}
+		if ($type eq "execute") {
+			$daemon_list{STARTD} = 1;
+		} elsif ($type eq "submit") {
+			$daemon_list{SCHEDD} = 1;
+		} elsif ($type eq "manager") {
+			$daemon_list{COLLECTOR} = 1;
+			$daemon_list{NEGOTIATOR} = 1;
+		} else {
+			die "Illegal -type argument: $opt_type!\n";
+		}
     }
 }
 
@@ -357,7 +428,7 @@ if ($opt_owner) {
 }
 
 # Backup old local config file
-unless (defined($opt_install)) {
+unless (defined($opt_release_dir)) {
     
     chomp (my $backup_local_config_file=$local_config_file . ".backup." . $timestamp);
     debug ("\nBacking up local config file to: $backup_local_config_file");
@@ -374,18 +445,25 @@ unless ($no_config_modify) {
 }
 
 
-if (defined($opt_install)) {
-    print "\nCondor has been installed into:\n";
+if (defined($opt_release_dir)) {
+	print "\nCondor has been installed into:\n";
     print "    $release_dir\n";
 }
 
+unless ($no_config_modify) {
+	print
+		"\nConfigured condor using these configuration files:\n".
+		"  global: $config_file\n".
+		"  local:  $local_config_file\n";
+}
+
 unless (defined($ENV{CONDOR_CONFIG}) && ($ENV{CONDOR_CONFIG} eq $config_file) ) {
-    log_message( "\nIn order for Condor to work properly you must set your \
-CONDOR_CONFIG environment variable to point to your \
-Condor configuration file: \
-    $config_file \
-before running Condor commands/daemons.
-" );
+    log_message( "\nIn order for Condor to work properly you must set your ".
+				 "CONDOR_CONFIG environment variable to point to your ".
+				 "Condor configuration file: ".
+				 "$config_file ".
+				 "before running Condor commands/daemons."
+				 );
 
 }
 
@@ -403,15 +481,15 @@ sub user_host_stuff() {
     $who=$pwdent[0];
 
     if ($ENV{HOSTNAME}) {
-	$host=$ENV{HOSTNAME};
+		$host=$ENV{HOSTNAME};
     } else {
-	$host=`hostname`;
-	if ($? ne 0) {
-	    die "\nUnable to determine the host name. Please set the \
+		$host=`hostname`;
+		if ($? ne 0) {
+			die "\nUnable to determine the host name. Please set the \
 environment variable \$HOSTNAME to the full name of this machine \
 e.g. mymachine.mydomain.com \n";
-	}
-	chomp ($host);
+		}
+		chomp ($host);
     }
     
     # Make sure $host is just hostname, with no domain.  Grab everything
@@ -419,61 +497,61 @@ e.g. mymachine.mydomain.com \n";
     
     if ($host =~ /^([^.]+)\.(\S+)$/) {
 
-	# $host = mymachine.mydomain.com
+		# $host = mymachine.mydomain.com
 
-	$host=$1;
-	$domain=$2;
-	$fullhost=$host.'.'.$domain;
+		$host=$1;
+		$domain=$2;
+		$fullhost=$host.'.'.$domain;
     }
     elsif ($host =~ /\w+/) {
 
-	# $host = mymachine
+		# $host = mymachine
 
-	# Lookup the full hostname.
-	if (!gethostbyname($host)) {
-	   ##
-	   ## We use to die right here when we couldn't get the hostname.
-	   ## But the FreeBSD testers run Condor in a jail without a real hostname, so 
-	   ## we need to be able to still install when gethostbyname() fails
-	   ## This is why we just set the fullhost to the host, and blank out the domain
-	   ## Andy Pavlo - 06/27/2007
-	   ##
-	   $fullhost = $host;
-	   $domain = "";
-         my $msg = "WARNING: Unable to determine full hostname for host '$host'. ".
-                   "Condor may not work properly\n".
-                   "Please set the environment variable \$HOSTNAME to the full name ".
-                   "of this machine (e.g., mymachine.mydomain.com)\n";
-         warn($msg);
-         return;
-	}
+		# Lookup the full hostname.
+		if (!gethostbyname($host)) {
+			##
+			## We use to die right here when we couldn't get the hostname.
+			## But the FreeBSD testers run Condor in a jail without a real hostname, so 
+			## we need to be able to still install when gethostbyname() fails
+			## This is why we just set the fullhost to the host, and blank out the domain
+			## Andy Pavlo - 06/27/2007
+			##
+			$fullhost = $host;
+			$domain = "";
+			my $msg = "WARNING: Unable to determine full hostname for host '$host'. ".
+				"Condor may not work properly\n".
+				"Please set the environment variable \$HOSTNAME to the full name ".
+				"of this machine (e.g., mymachine.mydomain.com)\n";
+			warn($msg);
+			return;
+		}
 
-	$fullhost=(gethostbyname($host))[0];
-	if( ! ($fullhost =~ /.*\..*/) ) {
-	    # There's no "." in the hostname.  DNS/hosts/YP is probably
-	    # misconfigured... try the other entry, that might be it.
-	    $fullhost=(gethostbyname($host))[1];
-	}
+		$fullhost=(gethostbyname($host))[0];
+		if( ! ($fullhost =~ /.*\..*/) ) {
+			# There's no "." in the hostname.  DNS/hosts/YP is probably
+			# misconfigured... try the other entry, that might be it.
+			$fullhost=(gethostbyname($host))[1];
+		}
 
-	if( ! ($fullhost =~ /.*\..*/) ) {
-	    # There's still no "." in the hostname.  DNS/hosts/YP is totally 
-	    # misconfigured...
-	    chomp($fullhost=`host $fullhost | grep \"has address\" | awk \'\{print \$1\}\'`);
-	}
+		if( ! ($fullhost =~ /.*\..*/) ) {
+			# There's still no "." in the hostname.  DNS/hosts/YP is totally 
+			# misconfigured...
+			chomp($fullhost=`host $fullhost | grep \"has address\" | awk \'\{print \$1\}\'`);
+		}
 
-	if( ! ($fullhost =~ /.*\..*/) ) { 
-	    $fullhost=$host;
-	    $domain="";
-         my $msg = "WARNING: Unable to determine full hostname for host '$host'. ".
-         "Condor may not work properly\n".
-         "Please set the environment variable \$HOSTNAME to the full name ".
-         "of this machine (e.g., mymachine.mydomain.com)\n";
-         warn($msg);
-	} else {
-	    # Grab just the domain, so we have it.
-	    $fullhost =~ /\w*\.(.*)/;
-	    $domain = $1;
-	}
+		if( ! ($fullhost =~ /.*\..*/) ) { 
+			$fullhost=$host;
+			$domain="";
+			my $msg = "WARNING: Unable to determine full hostname for host '$host'. ".
+				"Condor may not work properly\n".
+				"Please set the environment variable \$HOSTNAME to the full name ".
+				"of this machine (e.g., mymachine.mydomain.com)\n";
+			warn($msg);
+		} else {
+			# Grab just the domain, so we have it.
+			$fullhost =~ /\w*\.(.*)/;
+			$domain = $1;
+		}
     }
 }
 
@@ -484,28 +562,37 @@ e.g. mymachine.mydomain.com \n";
 
 sub parse_command_line() {
 
-	@ARGV or die $Usage;	# This program requires command line options.
+	if ( $#ARGV < 0 ) {
+		usage( 1 );
+	}
+
+	# For condor_install, default behavior is --install=.
+	if ( $0 =~ /_install/ ) {
+		unshift( @ARGV, "--install=." );
+	}
 
 	&GetOptions (
-		"install:s"				=>	\$opt_install,
-		"install-dir=s"			=>	\$opt_install_dir,
-		"local-dir=s"			=>	\$opt_local_dir,
-		"make-personal-condor!"	=>	\$opt_make_personal_condor,
-		"make-personal-stork!"	=>	\$opt_make_personal_stork,
-		"type=s"				=>	\$opt_type,
-		"central-manager=s"		=>	\$opt_central_manager,
-		"stork!"				=>	\$opt_stork,
-		"credd!"				=>	\$opt_credd,
-	  	"owner=s"				=>	\$opt_owner,
-		"maybe-daemon-owner!"	=>	\$opt_maybe_daemon_owner,
-		"install-log=s"	        =>	\$opt_install_log,
-		"verbose!"				=>	\$opt_verbose,
-		"help"					=>	sub {print $Usage; exit 0},
-		"overwrite"			=>	\$opt_overwrite,
-	) or die $Usage;
+				 "install:s"				=>	\$opt_release_dir,
+				 "prefix=s"					=>	\$opt_prefix_dir,
+				 "install-dir=s"			=>	\$opt_prefix_dir,
+				 "local-dir=s"				=>	\$opt_local_dir,
+				 "make-personal-condor!"	=>	\$opt_make_personal_condor,
+				 "make-personal-stork!"		=>	\$opt_make_personal_stork,
+				 "type=s"					=>	\$opt_type,
+				 "central-manager=s"		=>	\$opt_central_manager,
+				 "stork!"					=>	\$opt_stork,
+				 "credd!"					=>	\$opt_credd,
+				 "owner=s"					=>	\$opt_owner,
+				 "maybe-daemon-owner!"		=>	\$opt_maybe_daemon_owner,
+				 "install-log=s"	        =>	\$opt_install_log,
+				 "verbose!"					=>	\$opt_verbose,
+				 "help"						=>	sub { help(); exit 0; },
+				 "overwrite"				=>	\$opt_overwrite,
+				 "backup"					=>	\$opt_backup,
+				 ) or usage( 1 );
 
-    if ($opt_local_dir && !($opt_local_dir =~ m/^\//)) {
-	die "--local-dir must specify absolute path\n";
+    if ( $opt_local_dir and ( $opt_local_dir !~ /^\// ) ) {
+		die "--local-dir must specify absolute path\n";
     }
 }
 
@@ -549,7 +636,7 @@ sub find_owner(;$) {
                         . "will work, but usually isn't "
                         . "what you want. Usually it's the condor user, which doesn't "
                         . "exist on this system. If you like, you can rerun the condor_configure "
-                        . "program with the --owner option when you decide which user "
+                        . "$Program with the --owner option when you decide which user "
                         . "should be used by the Condor daemons.\n");
         } else {
             die wrap("", "", "Unable to determine which user to run Condor as. "
@@ -559,7 +646,7 @@ sub find_owner(;$) {
     }
     else {
         die wrap("", "", "\nUnable to find the user to run Condor daemons as. "
-               . "Please specify it using the --owner option\n");
+				 . "Please specify it using the --owner option\n");
     }
 
     if( ! $uid ) {
@@ -573,17 +660,27 @@ sub find_owner(;$) {
 }
 
 sub find_config_file() {
-    if ($ENV{CONDOR_CONFIG}) {
-	return $ENV{CONDOR_CONFIG};
-    } elsif (-f "/etc/condor/condor_config") {
-	return "/etc/condor/condor_config"; 
-    } elsif (-f "/usr/local/etc/condor_config") {
-	return "/usr/local/etc/condor_config"; 
-    } elsif (-f "$release_dir/etc/condor_config") {
-	return "$release_dir/etc/condor_config";
-    }
+	my @list = (
+				$ENV{CONDOR_CONFIG},
+				"/etc/condor/condor_config",
+				"/usr/local/etc/condor_config",
+				$opt_prefix_dir ? "$opt_prefix_dir/etc/condor_config" : undef,
+				"$release_dir/etc/condor_config",
+				);
+	foreach my $config ( @list ) {
+		if ( defined $config and -f $config ) {
+			return $config;
+		}
+	}
 
-    die "Unable to find Condor configuration file (condor_config)!\n";
+    print STDERR "Unable to find Condor configuration file (condor_config)!\n";
+	print STDERR "$Program searched in these locations:\n";
+	foreach my $config ( @list ) {
+		if ( defined $config ) {
+			print "   $config\n";
+		}
+	}
+	return undef;
 }
 
 sub find_local_config_file() {
@@ -593,8 +690,8 @@ sub find_local_config_file() {
 
     $from_config=$files[$#files];
     if ($#files > 0) {
-	
-	warn "\nWARNING: There are several local config files used: \
+		
+		warn "\nWARNING: There are several local config files used: \
 @files \
 The script will modify the following file (it will be backed up):
 $from_config\n";
@@ -610,55 +707,106 @@ $from_config\n";
 
 sub find_local_dir() {
     my $from_config=get_config_value("LOCAL_DIR") ||
-	die "Unable to find local directory!\n";
+		die "Unable to find local directory!\n";
 
     return $from_config;
 }
 
-sub install($) {
+sub install( $ ) {
     my $release_dir=shift(@_);
-    
-    chomp(my $curdir=`pwd`);
-    my $release_tar="$curdir/release.tar";
-    if ($opt_install) {
-	$release_tar=$opt_install;
+
+    my @release_dirs = qw( etc include src lib libexec bin sbin sql man );
+
+	chomp(my $curdir=`pwd`);
+    my $release_src_dir="$curdir";
+    if ($opt_release_dir) {
+		$release_src_dir=$opt_release_dir;
     }
 
-    if (!$release_tar ||  ! -f $release_tar) {
-	die "Unable to find release.tar. Please specify the correct location of release.tar with --install=<path to release.tar> or make sure it's in the current directory!\n";
-    }
+	my $old = $ENV{PWD};
+    chdir "$release_src_dir" or die "Can't chdir to $release_src_dir";
+    chomp ($release_src_dir=`pwd`); # Get the complete absolute path
+	chdir( $old ) or die "Can't chdir back to $old";
 
-    if (!$release_dir) {
-	die "Undefined \$release_dir!\n";
+	my @missing;
+	foreach my $d ( @release_dirs ) {
+		my $dir = "$release_src_dir/$d";
+		if ( ! -d $dir ) {
+			push( @missing, $d );
+		}
+	}
+	if ( scalar @missing ) {
+		print STDERR
+			"Missing release directories (looking in $release_src_dir):\n".
+			"  " . join( "\n  ", @missing ) . "\n";
+		die "Unable to find some release directories.\n".
+			"  Please specify the correct location of these with \n".
+			"--install=<path to release directories> or make sure it's \n".
+			"in the current directory\n";
+	}
+
+    if ( !$release_dir ) {
+		die "Undefined \$release_dir!\n";
     }
     
     if ( ! -d $release_dir ) {
-	(system ("mkdir -p $release_dir") == 0) || 
-	    die "Unable to create $release_dir!\n" ;
-	chmod 0777, $release_dir;
+		(system ("mkdir -p $release_dir") == 0) || 
+			die "Unable to create $release_dir!\n" ;
+		chmod 0777, $release_dir;
     } elsif ( ! -w $release_dir ) {
-	die "Unable to write to $release_dir!\n";
+		die "Unable to write to $release_dir!\n";
     }
 
     chdir "$release_dir";
 
     chomp ($release_dir=`pwd`); # Get the complete absolute path
 
-#    if ( ! -f "./release.tar" ) {
-#	system ("cp $release_tar $release_dir") &&
-#	    die "Unable to copy $release_tar to $release_dir!\n";
-#    }
-
     # Move the sbin directories instead of overwriting them,
     # so that the running daemons don't blow up 
-    if ( !$opt_overwrite && -d "$release_dir/sbin" ) {
-	rename ("$release_dir/sbin", "$release_dir/sbin.old.$timestamp") or
-	    die "Unable to move $release_dir/sbin!\n";
+	my $sbin = "$release_dir/sbin";
+	if ( -d $sbin && -x "$sbin/condor_master" ) {
+		if ( $opt_overwrite ) {
+			# Do nothing...  overwrite sbin below
+		}
+		elsif ( $opt_backup ) {
+			rename ("$release_dir/sbin", "$release_dir/sbin.old.$timestamp") or
+				die "Unable to move $release_dir/sbin!\n";
+		}
+		else {
+			print STDERR
+				"$Program found '$sbin' and can't proceed.\n".
+				"  You need to specify '--backup' or '--overwrite' to\n".
+				"  tell $Program what to.\n".
+				"  --overwrite will cause $Program to overwrite Condor\n".
+				"    executables in the above sbin directory\n".
+				"  --backup will cause $Program to move the above sbin\n".
+				"    directory out of the way and create a new sbin\n".
+				"    directory in it's place\n";
+			exit( 1 );
+		}
     }
 
-    # Untar the release.tar
-    system ("tar xf $release_tar") && 
-	die "Unable to untar $release_tar!\n";
+	# Create a process to read the tar-ify the release directories
+	print "Installing Condor from $release_src_dir to $release_dir\n";
+	my $cmd = "cd $release_src_dir; tar cf - " . join( " ", @release_dirs );
+	open( TARCF, "$cmd|" ) or die "Can't run $cmd (used to copy release)";
+
+	$cmd = "tar xf -";
+	open( TARXF, "|$cmd" ) or die "Can't run $cmd (used to copy release)";
+
+	# Read from the "tar cf -", pipe output into the "tar xf -"
+	while( 1 ) {
+		my $buffer;
+		my $size = 1024 * 1024;
+		my $read_size = sysread( TARCF, $buffer, $size );
+		last if ( $read_size <= 0 );
+		my $write_size = syswrite( TARXF, $buffer, $read_size );
+		if ( $write_size != $read_size ) {
+			die "Failed copying to $release_dir: $!";
+		}
+	}
+	close( TARCF );
+	close( TARXF );
 
     $local_config{RELEASE_DIR}="$release_dir";
     
@@ -668,29 +816,29 @@ sub install($) {
     
     # If the config file already exists, we're done
     if ( -f $config_file ) {
-	debug ("\nThis is an upgrade installation. Will not modify config files.\n");
-	$no_config_modify=1;
-	return $release_dir;
+		debug ("\nThis is an upgrade installation. Will not modify config files.\n");
+		$no_config_modify=1;
+		return $release_dir;
     }
 
 
     # Create config file
     system("cp $release_dir/etc/examples/condor_config.generic $config_file") &&
-	die "Unable to create condor_config file: $config_file!\n";
+		die "Unable to create condor_config file: $config_file!\n";
 
     if ($opt_local_dir) {
-	$local_dir=condor_init ($opt_local_dir);
-	$local_config{LOCAL_DIR}="$opt_local_dir";
+		$local_dir=condor_init ($opt_local_dir);
+		$local_config{LOCAL_DIR}="$opt_local_dir";
     } else { 
-	# Set up local directory
-	$local_dir=condor_init ("$release_dir/local.$host");
-	$local_config{LOCAL_DIR}="$release_dir/local.\$(HOSTNAME)";
+		# Set up local directory
+		$local_dir=condor_init ("$release_dir/local.$host");
+		$local_config{LOCAL_DIR}="$release_dir/local.\$(HOSTNAME)";
     }
 
     # Create local config file
     $local_config_file="$local_dir/condor_config.local";
     (system ("touch $local_config_file") == 0) ||
-	die "Unable to create local config file: $local_config_file!\n";
+		die "Unable to create local config file: $local_config_file!\n";
     $global_config{LOCAL_CONFIG_FILE}="$local_config_file";
 
     # make_personal_condor();
@@ -704,9 +852,9 @@ sub install($) {
     # if GT3 gahp is installed, fix a few wsdl files
     my $gt3_install=$release_dir."/lib/gt3";
     if ( -d $gt3_install ) {
-	
-	system ("cat $gt3_install/server-config.wsdd.in | sed -e \'s|\@GT3_INSTALL\@|$gt3_install|\' > $gt3_install/server-config.wsdd");
-	system ("cat $gt3_install/local-server-config.wsdd.in | sed -e \'s|\@GT3_INSTALL\@|$gt3_install|\' > $gt3_install/local-server-config.wsdd");
+		
+		system ("cat $gt3_install/server-config.wsdd.in | sed -e \'s|\@GT3_INSTALL\@|$gt3_install|\' > $gt3_install/server-config.wsdd");
+		system ("cat $gt3_install/local-server-config.wsdd.in | sed -e \'s|\@GT3_INSTALL\@|$gt3_install|\' > $gt3_install/local-server-config.wsdd");
     }
 
     # This is necessary so that if no collector host is specified, 
@@ -725,12 +873,12 @@ sub install($) {
     chomp (my $network_interface=`host $host | grep \"has address\" | awk \'\{print \$4\}\'`);
     
     if ($? == 0 && 
-	($network_interface =~ m/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/ )) {
-	#$local_config{NETWORK_INTERFACE}=$network_interface;
+		($network_interface =~ m/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/ )) {
+		#$local_config{NETWORK_INTERFACE}=$network_interface;
     } else {
-	log_message( "\nWARNING: Unable to determine local IP address. Condor "
-                 ." might not work propertly until you set "
-                 ." NETWORK_INTERFACE=<machine IP address>\n");
+		log_message( "\nWARNING: Unable to determine local IP address. Condor "
+					 ." might not work propertly until you set "
+					 ." NETWORK_INTERFACE=<machine IP address>\n");
     }  
 
     set_mail_settings();
@@ -743,23 +891,23 @@ sub install($) {
 }
 
 
-sub find_release_dir($) {
+sub find_release_dir( $ ) {
     my $path=shift(@_);
 
     if ($path && check_release_dir ($path)) {
-	return $path;
+		return $path;
     }
     
     chomp($_ = `which condor_config_val 2>/dev/null`);
     if( /^\/.*$/ && !$?) {
-	chomp($path = `condor_config_val RELEASE_DIR 2>/dev/null`);
-	if( $? == 0 && check_release_dir($path) ) {
-	    return $path;
-	}
+		chomp($path = `condor_config_val RELEASE_DIR 2>/dev/null`);
+		if( $? == 0 && check_release_dir($path) ) {
+			return $path;
+		}
     }
     
     if( check_release_dir("/usr/local/condor") ) {
-	return "/usr/local/condor";
+		return "/usr/local/condor";
     } 
     
     die "Unable to find directory where Condor is installed! \
@@ -775,7 +923,7 @@ sub safe_mkdir($$) {
     umask($prev_umask);
 }
 
-sub condor_init($) {
+sub condor_init( $ ) {
     my $local_dir = shift(@_);
 
     # Make required local directories
@@ -790,10 +938,17 @@ sub condor_init($) {
     return $local_dir;
 }
 
-sub check_release_dir($) {
+sub check_release_dir( $ ) {
     my $dir = shift;
-    
-    return ( -d "$dir/bin" && -d "$dir/sbin" && -d "$dir/etc" );
+
+    foreach my $sub ("bin", "sbin", "etc") {
+		my $full = "$dir/$sub";
+		if ( ! -d $full ) {
+			print STDERR "Directory $full does not exit\n";
+			return 0;
+		}
+	}
+	return 1;
 }
 
 sub set_mail_settings() {
@@ -815,23 +970,23 @@ sub set_mail_settings() {
   }   
     
     if (-f $mail_path && -x $mail_path) {
-	$local_config{MAIL}=$mail_path;
+		$local_config{MAIL}=$mail_path;
     }
     else {
-	foreach $mail_path ( "/bin/mailx", "/usr/sbin/mailx",
-			     "/usr/ucb/mailx", "/usr/bin/mail",
-			     "/usr/ucb/mail", "/bin/mail" ) {
-	    if (-f $mail_path && -x $mail_path) {
-		$local_config{MAIL}=$mail_path;
-		last;
-	    }
-	}
+		foreach $mail_path ( "/bin/mailx", "/usr/sbin/mailx",
+							 "/usr/ucb/mailx", "/usr/bin/mail",
+							 "/usr/ucb/mail", "/bin/mail" ) {
+			if (-f $mail_path && -x $mail_path) {
+				$local_config{MAIL}=$mail_path;
+				last;
+			}
+		}
     }
 
     if ( $local_config{MAIL} ) {
-	debug ("Setting mail path to: $local_config{MAIL}");
+		debug ("Setting mail path to: $local_config{MAIL}");
     } else {
-	warn "\n\n WARNING: Unable to find mail program! Condor will not be \n
+		warn "\n\n WARNING: Unable to find mail program! Condor will not be \n
 able to send status notifications until MAIL parameter is configured.\n";
     }
 
@@ -846,11 +1001,11 @@ sub set_domain_settings() {
     $local_config{UID_DOMAIN}=$domain; 
 }
 
-sub set_central_manager ($) {
+sub set_central_manager ( $ ) {
     my $cm=shift(@_);
 
     if (!(gethostbyname($cm))[0]) {
-	warn "\nWARNING: Unable to contact central manager: $cm!\n";
+		warn "\nWARNING: Unable to contact central manager: $cm!\n";
     }
 
     $local_config{CONDOR_HOST}=$cm;
@@ -872,66 +1027,66 @@ sub set_config_values ($$$) {
 
     while (<SOURCE>) {
       SWITCH:{
-	  chomp(my $line=$_);
-	  
-	  
-	  foreach my $key (@keylist) {
-	      if ($line =~ m/^\s*$key\s*=.*/) {
-		  #print TEMP "#$ line\n";  # Comment the old line
+		  chomp(my $line=$_);
+		  
+		  
+		  foreach my $key (@keylist) {
+			  if ($line =~ m/^\s*$key\s*=.*/) {
+				  #print TEMP "#$ line\n";  # Comment the old line
 
-		  if (exists $hashref->{$key}) {
-		      my $value=$hashref->{$key};
-		      &debug ("$key=$value");
-		      if ($value) {
-			  print TEMP "$key = $value\n";
-		      }
-		      delete $hashref->{$key};
+				  if (exists $hashref->{$key}) {
+					  my $value=$hashref->{$key};
+					  &debug ("$key=$value");
+					  if ($value) {
+						  print TEMP "$key = $value\n";
+					  }
+					  delete $hashref->{$key};
+				  }
+				  last SWITCH; 
+			  } elsif ($line =~ m/^\#\s*$key\s*=.*/) {
+				  last SWITCH;
+			  }
 		  }
-		  last SWITCH; 
-	      } elsif ($line =~ m/^\#\s*$key\s*=.*/) {
-		  last SWITCH;
-	      }
-	  }
-	  
-	  print TEMP "$line\n";
+		  
+		  print TEMP "$line\n";
       } # SWITCH
     }
 
     # Print out the keys that are in @allparams
     # so that we can group them together
     foreach my $key (@allparams) {
-	my $value = $hashref->{$key};
-	if ($value) {
-	    &debug ("$key=$value");
-	    if ($is_local) {
-		my $comment = $comment_hash{$key};
-		if ($comment) {
-		    print TEMP "\n$comment\n";
+		my $value = $hashref->{$key};
+		if ($value) {
+			&debug ("$key=$value");
+			if ($is_local) {
+				my $comment = $comment_hash{$key};
+				if ($comment) {
+					print TEMP "\n$comment\n";
+				}
+			}
+			print TEMP "$key = $value\n\n";
+			delete $hashref->{$key};
 		}
-	    }
-	    print TEMP "$key = $value\n\n";
-	    delete $hashref->{$key};
-	}
     }
 
     # Print out all the remaining values
     while (my ($key, $value) = each %$hashref) {
-	if ($value) {
-	    &debug ("$key=$value");
-	    if ($is_local) {
-		my $comment = $comment_hash{$key};
-		if ($comment) {
-		    print TEMP "\n$comment\n";
+		if ($value) {
+			&debug ("$key=$value");
+			if ($is_local) {
+				my $comment = $comment_hash{$key};
+				if ($comment) {
+					print TEMP "\n$comment\n";
+				}
+			}
+			print TEMP "$key = $value\n\n";
 		}
-	    }
-	    print TEMP "$key = $value\n\n";
-	}
     }
     
     close TEMP;
     close SOURCE;
     system("mv /tmp/set_config_values.temp $file") &&
-	die "Unable to move /tmp/set_config_values.temp to $file!\n";
+		die "Unable to move /tmp/set_config_values.temp to $file!\n";
 }
 
 # Search for default locations for java, and then test to see if it is a
@@ -942,13 +1097,13 @@ sub set_java_jvm_path()
     my $jvm = "";
 
     my @default_jvm_locations = ("/bin/java", 
-				 "/usr/bin/java", 
-				 "/usr/local/bin/java", 
-				 "/s/std/bin/java");
+								 "/usr/bin/java", 
+								 "/usr/local/bin/java", 
+								 "/s/std/bin/java");
     
     unless (system ("which java >> /dev/null 2>&1")) {
-	chomp (my $which_java = `which java`);
-	@default_jvm_locations = ($which_java, @default_jvm_locations) unless ($?);
+		chomp (my $which_java = `which java`);
+		@default_jvm_locations = ($which_java, @default_jvm_locations) unless ($?);
     }
 
     my $java_libdir = "$release_dir/lib";
@@ -957,17 +1112,17 @@ sub set_java_jvm_path()
 
     # check some default locations for java and pick first valid one
     foreach $default_jvm_location (@default_jvm_locations) {
-	if ( -f $default_jvm_location && -x $default_jvm_location) {
-	    $jvm = $default_jvm_location;
-	    last;
-	}
+		if ( -f $default_jvm_location && -x $default_jvm_location) {
+			$jvm = $default_jvm_location;
+			last;
+		}
     }
 
     # if nothing is found, explain that, otherwise see if they just want to
     # accept what I found. 
 
     if ($jvm eq "") {
-	log_message( "Unable to find a valid Java installation \
+		log_message( "Unable to find a valid Java installation \
 Java Universe will not work properly until the JAVA \
 (and JAVA_MAXHEAP_ARGUMENT) parameters are set in the configuration file!" );
 return;
@@ -1028,11 +1183,11 @@ sub get_config_value($;$) {
     return "";
 }
 
-sub debug($) {
+sub debug( $ ) {
     my $str=shift;
     
     if ($opt_verbose) {
-	print "$str\n";
+		print "$str\n";
     }
 }
 
@@ -1044,31 +1199,31 @@ sub read_config_file_comments() {
     open (CONFIG, "<$config_file");
 
     while (<CONFIG>) {
-	if (/^## /) {
-	    $current_comment .= $_;
-	} elsif (/^#?(\w+)\W*=/) {
-		 $key=$1;
-		 $comment_hash{$key}=$current_comment;
-		 $found_param = 1;
-		 push (@allparams, $key);
-	     } elsif (/^$/) {
-		 if ($found_param) {
-		     $current_comment="";
-		     $found_param = 0;
-		 }
-	     } elsif (/^####/) {
-		      # skip header delimiters
-		      $current_comment="";
-		  }
+		if (/^## /) {
+			$current_comment .= $_;
+		} elsif (/^#?(\w+)\W*=/) {
+				 $key=$1;
+				 $comment_hash{$key}=$current_comment;
+				 $found_param = 1;
+				 push (@allparams, $key);
+			 } elsif (/^$/) {
+				 if ($found_param) {
+					 $current_comment="";
+					 $found_param = 0;
+				 }
+			 } elsif (/^####/) {
+					  # skip header delimiters
+					  $current_comment="";
+				  }
 
-    
+		
     }
 
     close (CONFIG);
 }
 
 # find first occurrence of file in PATH, or undef.
-sub which($) {
+sub which( $ ) {
 	my $file = shift;
 	foreach my $path ( split /:/, $ENV{PATH} ) {
 		my $fullpath = join( '/' , $path, $file);
@@ -1086,7 +1241,7 @@ sub which($) {
 sub myproxy() {
 	my $myproxy_get_delegation = which "myproxy-get-delegation";
 	if ($myproxy_get_delegation) {
-			$local_config{MYPROXY_GET_DELEGATION} = $myproxy_get_delegation;
+		$local_config{MYPROXY_GET_DELEGATION} = $myproxy_get_delegation;
 	}
 }
 
@@ -1125,10 +1280,10 @@ sub stork() {
 
 }
 
-sub log_message($)
+sub log_message( $ )
 {
     my $message = shift;
-  
+	
     if (defined($opt_install_log) && $opt_install_log ne "") {
         if ($printed_log_message == 0) {
             print wrap("", "", "You should look inside the installation log ",
@@ -1144,3 +1299,27 @@ sub log_message($)
     return;
 }
 
+sub usage($) {
+	my $exit = shift;
+	print "usage: $Program [options]\n";
+	foreach my $opt ( @Options ) {
+		print "    " . $opt->{short} . "\n";
+	}
+	if ( defined $exit ) {
+		exit( $exit );
+	}
+}
+
+sub help() {
+	usage( undef );
+	print "\n";
+	foreach my $opt ( @Options ) {
+		print $opt->{short} . "\n";
+		print $opt->{long} . "\n";
+	}
+}
+
+### Local Variables: ***
+### mode:perl ***
+### tab-width: 4  ***
+### End: ***

@@ -129,10 +129,6 @@ fi
 rm condor.tar.gz
 cd condor-${condor_version}
 
-echo "*** Untarring release.tar..."
-tar xf release.tar
-rm release.tar
-
 cd ${builddir}
 
 # Note something important in the spec file below: In the %files
@@ -178,14 +174,9 @@ owner="condor"
 grep condor: /etc/passwd > /dev/null || owner="daemon"
 
 # This is a hack so that condor_configure works
-touch ./ignore.me
-tar cf ./release.tar ignore.me
-rm ./ignore.me
 mv sbin sbin.tmp
 ./condor_configure --install --owner=\${owner}
 mv sbin.tmp sbin
-rm ./ignore.me
-rm ./release.tar
 
 %postun
 
