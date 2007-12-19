@@ -906,7 +906,7 @@ class DaemonCore : public Service
         @param std An array of three file descriptors to map
                to stdin, stdout, stderr respectively.  If this array
                is NULL, don't perform remapping.  If any one of these
-			   is -1, it is ignored and *not* mapped.
+			   is negative, it is ignored and *not* mapped.
         @param nice_inc The value to be passed to nice() in the
                child.  0 < nice < 20, and greater numbers mean
                less priority.  This is an addition to the current
