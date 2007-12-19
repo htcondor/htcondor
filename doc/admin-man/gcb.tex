@@ -538,27 +538,26 @@ NET_REMAP_SERVICE = GCB
 \normalsize
 
 Only GCB clients within a private network need to define the following
-variable, which specifies the IP address of the broker serving this
+variable, which specifies the IP addresses of the brokers serving this
 network.
-Note that this IP address must be the same as the IP address
-that was specified on the
+Note that these IP addresses must match the IP address
+that was specified on each
 broker's command-line with the \Opt{-i} option.
 
 \footnotesize
 \begin{verbatim}
-# Public IP address (in standard dot notation) of the GCB broker
+# Public IP address (in standard dot notation) of the GCB broker(s)
 # serving this private node.
-NET_REMAP_INAGENT = xxx.xxx.xxx.xxx
+NET_REMAP_INAGENT = xxx.xxx.xxx.xxx, yyy.yyy.yyy.yyy
 \end{verbatim}
 \normalsize
 
-Obviously, because the \MacroNI{NET\_REMAP\_INAGENT} setting is only
+When more than one IP address is given, the \Condor{master} picks one at
+random for it and all of its descendents to use.
+Because the \MacroNI{NET\_REMAP\_INAGENT} setting is only
 valid on private nodes, it should not be defined in a global
-Condor configuration file (\File{condor\_config}).
-Furthermore, with a large number of hosts in a given private
-network, if multiple brokers are to be run to alleviate
-scalability issues, each subset of the private nodes that uses a
-specific broker will need a different value for this variable.
+Condor configuration file (\File{condor\_config}) if the pool also
+contains nodes on a public network.
 
 Finally, if setting up  the recommended (but optional) GCB routing table, 
 tell Condor daemons where to find their table.
@@ -588,7 +587,7 @@ BIND_ALL_INTERFACES = true
 \end{verbatim}
 \normalsize
 
-Once a GCB broker is set up and running to manage connections for a
+Once a GCB broker is set up and running to manage connections for
 each private network, and the Condor installation for all the nodes in
 either private and public networks are configured to enable GCB,
 restart the Condor daemons, and all of the different machines
