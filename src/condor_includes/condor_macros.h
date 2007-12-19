@@ -72,20 +72,4 @@
 #  endif
 #endif 
 
-#ifndef CHECK_PRINTF_FORMAT
-/*
-Check printf-style format arguments at compile time.
-gcc specific.  Put CHECK_PRINTF_FORMAT(1,2) after a functions'
-declaration, before the ";"
-a - Argument position of the char * format.
-b - Argument position of the "..."
-*/
-#ifdef __GNUC__
-# define CHECK_PRINTF_FORMAT(a,b) __attribute__((__format__(__printf__, a, b)))
-#else
-# define CHECK_PRINTF_FORMAT(a,b)
-#endif
-#endif
-
-
 #endif /* CONDOR_MACROS_H */
