@@ -29,7 +29,38 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Eliminated the ``tarball in a tarball'' in our distribution --
+  the contents of ``release.tar'' from the distribution tarball
+  (e.g. ``condor-6.9.6-linux-x86-centos45-dynamic.tar.gz'') is now
+  included in the distribution tarball.
+
+\item Updated \Condor{configure} to match the above change.  The
+  ``--install'' option now takes a directory as it's parameter
+  (``--install=/path/to/release''), where it used to take the path to
+  the ``release.tar'' tarball (``--install=/path/to/release.tar'').
+
+\item Added \Condor{install} which is a symlink to \Condor{configure};
+  invoking ``\Condor{install}'' is identical to running
+  ``\Condor{configure} --install=.''.
+
+\item Added ``--prefix=dir'' to \Condor{configure} and
+  \Condor{install} which is an alias for ``--install-dir=dir''.
+
+\item Added ``--backup'' option to \Condor{configure} and
+  \Condor{install} which tells it to rename the target sbin directory
+  if \Condor{master} exits in the target sbin directory.  Previous
+  versions of \Condor{configure} did this by default.
+
+\item Changed the default behavior of \Condor{install} to exit with a
+  warning if the target sbin exists (and \Condor{master} is in the
+  sbin directory), and neither ``--backup'' nor ``--overwrite'' are
+  specified.  This prevents \Condor{install} from moving an ``sbin''
+  directory out of the way that it shouldn't (i.e. ``\Condor{install}
+  --prefix=/usr'' will not move ``/usr/sbin'' out of the way unless
+  you specify the ``--backup'' option.
+
+\item Updated the usage summary of \Condor{configure} and
+  \Condor{install} to be much more readable.
 
 \end{itemize}
 

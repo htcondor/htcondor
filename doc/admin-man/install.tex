@@ -53,8 +53,22 @@ and 2 directories:
                   configure Condor
 \item[\File{examples}] directory containing C, Fortran and C++ example
 		  programs to run with Condor
-\item[\File{release.tar}] tar file of the release directory, which contains
-		  the Condor binaries and libraries
+\item[\File{bin}] directory which contains the distribution Condor
+		  user programs.
+\item[\File{sbin}] directory which contains the distribution Condor
+		  system programs.
+\item[\File{etc}] directory which contains the distribution Condor
+		  configuration data.
+\item[\File{lib}] directory which contains the distribution Condor
+		  libraries.
+\item[\File{libexec}] directory which contains the distribution Condor
+		  programs that are only used internally by Condor.
+\item[\File{man}] directory which contains the distribution Condor
+		  manual pages.
+\item[\File{sql}] directory which contains the distribution Condor
+                  files used for SQL operations.
+\item[\File{src}] directory which contains the distribution Condor
+		  source code for CHIRP and DRMAA.
 \end{description}
 
 Before you install, please consider joining the condor-world mailing
@@ -410,7 +424,7 @@ macro can be a list of files or a single file.
 
 \item[Release Directory]
 
-Every binary distribution contains a \File{release.tar} file that contains
+Every binary distribution contains a contains
 five subdirectories: \File{bin}, \File{etc}, \File{lib}, \File{sbin},
 and \File{libexec}. Wherever you
 choose to install these five directories we call the release directory
@@ -546,23 +560,34 @@ They need to be untarred, as
 \begin{verbatim}
   tar xzf completename.tar.gz
 \end{verbatim}
-After untarring, the directory will have the Perl script
-\Condor{configure}, as well as a second tar file called
-\File{release.tar}.
-\Condor{configure} works on \File{release.tar}.
+After untarring, the directory will have the Perl scripts
+\Condor{configure} and \Condor{install}, as well as a ``bin'', ``etc'',
+``examples'', ``include'', ``lib'', ``libexec'', ``man'', ``sbin'',
+``sql'' and ``src'' subdirectories.
 
-\Condor{configure} is completely command-line driven; it is not interactive.
-Several command-line arguments are always needed with \Condor{configure}.
+\Condor{configure} and \Condor{install} are the same program, but have
+different default behaviors.  \Condor{install} is identical to
+running ``\Condor{configure} --install=.''.
+\Condor{configure} and \Condor{install} work on above directories
+(``sbin'', etc.).  As the names imply, \Condor{install} is used to
+install Condor, whereas \Condor{configure} is used to modify the
+configuration of an existing Condor install.
+
+\Condor{configure} and \Condor{install} are completely command-line
+driven; it is not interactive.  Several command-line arguments are
+always needed with \Condor{configure} and \Condor{install}.
 The argument
 \begin{verbatim}
-  --install=/path/to/release.tar
+  --install=/path/to/release.
 \end{verbatim}
-specifies the path to the Condor release tarball. 
+specifies the path to the Condor release directories (see above).
+The default for \Condor{install} is ``--install=.''.
 The argument
-\begin{verbatim}
---install-dir=directory
-\end{verbatim}
+\begin{verbatim} --install-dir=directory \end{verbatim}
+or
+\begin{verbatim} --prefix=directory \end{verbatim}
 specifies the path to the install directory.
+
 The argument
 \begin{verbatim}
 --local-dir=directory
@@ -580,18 +605,25 @@ the proper command-line option is
 --type=manager,execute
 \end{verbatim}
 
-Configure Condor on the central manager machine first.  If Condor
-will run as root in this pool (Item 3 above), run \Condor{configure} 
+Install Condor on the central manager machine first.  If Condor
+will run as root in this pool (Item 3 above), run \Condor{install} 
 as root, and it will install and set the file permissions correctly.  
-On the central manager machine, run \Condor{configure} as follows.
+On the central manager machine, run \Condor{install} as follows.
 \begin{verbatim}
-% condor_configure --install=r.tar --install-dir=~condor \
+% condor_install --prefix=~condor \
 	--local-dir=/scratch/condor --type=manager
 \end{verbatim}
 
-The central manager can also be a submit point or and execute machine, but
-this is only recommended for very small pools.
-If this is the case, the \Opt{--type} option changes to
+To update the above Condor installation, for example, to also be
+submit machine:
+\begin{verbatim}
+% condor_configure --prefix=~condor \
+	--local-dir=/scratch/condor --type=manager,submit
+\end{verbatim}
+
+As in the above example, the central manager can also be a submit
+point or and execute machine, but this is only recommended for very
+small pools.  If this is the case, the \Opt{--type} option changes to
 \Expr{manager,execute} or \Expr{manager,submit}  or 
 \Expr{manager,submit,execute}.
 
@@ -601,7 +633,7 @@ should be consistent throughout the pool. For each machine in the pool,
 run
 
 \begin{verbatim}
-% condor_configure --install=r.tar --install-dir=~condor \
+% condor_install --prefix=~condor \
 	--local-dir=/scratch/condor --type=execute,submit
 \end{verbatim}
 

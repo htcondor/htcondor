@@ -1,18 +1,21 @@
 \begin{ManPage}{\label{man-condor-configure}\Condor{configure}}{1}
 {Configure or install Condor}
 
-\Synopsis \SynProg{\Condor{configure}}
+\Synopsis \SynProg{\Condor{configure} or \Condor{install}}
 [\verb@--@\textbf{help}]
 
-\SynProg{\Condor{configure}}
-[\verb@--@\textbf{install[=$<$path/to/release.tar$>$] }]
+\SynProg{\Condor{configure}} or \SynProg{\Condor{install}}
+[\verb@--@\textbf{install[=$<$path/to/release$>$] }]
 [\verb@--@\textbf{install-dir=$<$path$>$}]
+[\verb@--@\textbf{prefix=$<$path$>$}]
 [\verb@--@\textbf{local-dir=$<$path$>$}]
 [\verb@--@\textbf{make-personal-condor}]
 [\verb@--@\textbf{type = $<$ submit, execute, manager $>$}]
 [\verb@--@\textbf{central-manager = $<$ hostname$>$}]
 [\verb@--@\textbf{owner = $<$ ownername $>$}]
 [\verb@--@\textbf{make-personal-stork}]
+[\verb@--@\textbf{overwrite}]
+[\verb@--@\textbf{backup}]
 [\verb@--@\textbf{stork}]
 [\verb@--@\textbf{credd}]
 [\verb@--@\textbf{verbose}]
@@ -42,18 +45,25 @@
 %  and use the verbatim.
 
 \index{Condor commands!condor\_configure}
+\index{Condor commands!condor\_install}
 \index{condor\_configure command}
+\index{condor\_install command}
 
 \Description 
 
-\Condor{configure} is a Perl script that installs and/or configures
-Condor on Unix machines.
-It will run with Perl 5.003 or more recent versions.
+\Condor{configure} and \Condor{install} are scripts that install
+and/or configures Condor on Unix machines.  As the names imply,
+\Condor{install} is intended to perform a Condor installation, and
+\Condor{configure} is intended to configure (or reconfigure) an
+existing installation.
+Both will run with Perl 5.6.0 or more recent versions.
 
-\Condor{configure} is designed to be run more than one time
-where required.
-It can install Condor (with a correct configuration),
-or it can change the configuration files.
+\Condor{configure} (and \Condor{install}) are designed to be run more
+than one time where required.
+They can install Condor (when invoked via ``\Condor{install}'' or
+``\Condor{configure} --install'') (with a correct configuration),
+or it can change the configuration files (when invoked via
+``\Condor{configure}'').
 Note that changes in the configuration files do not result
 in changes while Condor is running.
 To effect changes while Condor is running,
@@ -65,25 +75,33 @@ daemons need to be informed of configuration changes.
 \verb@--@\textbf{type}
 are used, since these affect which daemons are running.
 
-Running \Condor{configure} with no options results in the
-help screen being printed.
+Running \Condor{configure} or \Condor{install} with no options results
+in a usage screen being printed.  ``--help'' can be used to display a
+full help screen.
+
+Below, ``release directories'' is the list of directories that are
+released with Condor.  This list include: 
+``bin'', ``etc'', ``examples'', ``include'', ``lib'', ``libexec'',
+``man'', ``sbin'', ``sql'' and ``src''.
 
 \begin{Options}
 	\OptItem{\Opt{---help}} {Print help screen and exit}
 
 	\OptItem{\Opt{---install}} {Perform installation, assuming that
-	the current working directory contains the \File{release.tar} file.
-	Where a directory path is supplied,
-	it specifies that directory containing the \File{release.tar} file.
+	the current working directory contains the release directories.
 	Without further options, the configuration is that of
 	a Personal Condor, a complete one-machine pool.
 	If used as an 
 	upgrade within an existing installation directory, existing 
-	configuration files and local directory are preserved.}
+	configuration files and local directory are preserved.  This
+	is the default behavior of \Condor{install}}
 
 	\OptItem{\Opt{---install-dir=$<$path$>$}} {Specifies the path
 	where Condor should be installed or the path where it already is
 	installed. The default is the current working directory.}
+
+	\OptItem{\Opt{---prefix=$<$path$>$}} {This is an alias for
+	``--install-dir''.}
 
 	\OptItem{\Opt{---local-dir=$<$path$>$}} {Specifies the
 	location of the local directory, which is the directory that generally 
@@ -137,6 +155,49 @@ help screen being printed.
 	If not run as root, the owner is the user running
 	the \Condor{configure} command.  }
 
+	\OptItem{\Opt{---overwrite}} {
+	  Always overwrite the contents of the ``sbin'' directory in
+	  the installation directory.  By default, \Condor{install}
+	  will not install if it finds an existing ``sbin'' directory
+	  with Condor programs in it.  In this case, \Condor{install}
+	  will exit with an error message.  You must specify
+	  ``--overwrite'' or ``--backup'' to tell \Condor{install}
+	  what to do.
+
+	  This prevents \Condor{install} from moving an ``sbin''
+	  directory out of the way that it shouldn't.  This is
+	  particularly useful if you're trying to install Condor in a
+	  location used by other things (``/usr'', ``/usr/local'', etc.)
+	  For exmaple: ``\Condor{install} --prefix=/usr'' will not move
+	  ``/usr/sbin'' out of the way unless you specify the
+	  ``--backup'' option.
+
+	  The ``--backup'' behavior is used to
+	  prevent \Condor{install} from overwriting running daemons --
+	  UNIX semantics will keep the existing binaries running, even
+	  if they've been moved to a new directory.}
+
+	\OptItem{\Opt{---backup}} {
+	  Always backup the ``sbin'' directory in the installation
+	  directory.  By default, \Condor{install} will not install if
+	  it finds an existing ``sbin'' directory with Condor programs
+	  in it.  In this case, \Condor{install} with exit with an
+	  error message.  You must specify ``--overwrite'' or
+	  ``--backup'' to tell \Condor{install} what to do.
+
+	  This prevents \Condor{install} from moving an ``sbin''
+	  directory out of the way that it shouldn't.  This is
+	  particularly useful if you're trying to install Condor in a
+	  location used by other things (``/usr'', ``/usr/local'', etc.)
+	  For exmaple: ``\Condor{install} --prefix=/usr'' will not move
+	  ``/usr/sbin'' out of the way unless you specify the
+	  ``--backup'' option.
+
+	  The ``--backup'' behavior is used to
+	  prevent \Condor{install} from overwriting running daemons --
+	  UNIX semantics will keep the existing binaries running, even
+	  if they've been moved to a new directory. }
+
 	\OptItem{\Opt{---make-personal-stork}} {Creates a 
 	  Personal Stork, using the \Condor{credd} daemon.}
 
@@ -161,10 +222,10 @@ Install Condor on the machine (machine1@cs.wisc.edu)
 to be the pool's central manager.
 On machine1,
 within the directory that contains the unzipped Condor
-distribution \File{.tar.gz} file:
+distribution directories:
 \footnotesize
 \begin{verbatim}
-% condor_configure --install --type=submit,execute,manager
+% condor_install --type=submit,execute,manager
 \end{verbatim}
 \normalsize
 This will allow the machine to submit and execute Condor jobs, 
