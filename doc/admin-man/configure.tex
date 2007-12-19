@@ -4394,6 +4394,14 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   This option defaults to being unset.  When not set, no such
   files are written.
 
+\item[\Macro{DEDICATED\_SCHEDULER\_USE\_FIFO}]
+  \label{param:DedicatedSchedulerUseFifo}
+  When this parameter is set to true (the default), parallel and mpi
+  universe jobs will be scheduled in a first-in, first-out manner.
+  When set to false, parallel and mpi jobs are scheduled using a
+  best-fit algorithm. Using the best-fit algorithm is not recommended,
+  as it can cause starvation.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
