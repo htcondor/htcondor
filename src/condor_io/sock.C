@@ -1074,14 +1074,6 @@ bool Sock::do_connect_tryit()
 void
 Sock::cancel_connect()
 {
-#ifdef WIN32
-		// This is a temporary measure to avoid causing exceptions
-		// in the daemonCore select loop when the socket handle
-		// changes due to closing and opening the socket.
-		// Before 7.0 ships, we must fix this for real.
-	_state = sock_bound;
-#else
-
 		// In some cases, we may be cancelling a non-blocking connect
 		// attempt that has timed out.  In others, we may be cleaning
 		// up after a failed connect attempt.  Even in the latter case
@@ -1119,8 +1111,9 @@ Sock::cancel_connect()
 		// socket descriptor into data structures.  So if it has
 		// changed, use dup2() to set it the same as before.
 		// NOTE from Dan 2007-12-13: we have no good way to do this
-		// under windows, and I question whether this is really
-		// necessary in the first place.
+		// under windows, and it is not necessary anyway, now that
+		// daemonCore avoids stashing fds.  Get rid of this in the
+		// next development branch.
 	if ( _sock != old_sock ) {
 		if ( dup2(_sock,old_sock) < 0 ) {
 			dprintf(D_ALWAYS,
@@ -1139,7 +1132,6 @@ Sock::cancel_connect()
 	if( !bind(true) ) {
 		connect_state.connect_refused = true; // better give up
 	}
-#endif
 
 	if ( connect_state.old_timeout_value != _timeout ) {
 			// Restore old timeout
@@ -1683,13 +1675,6 @@ Sock::peer_description()
 	}
 	return retval;
 }
-
-int 
-Sock::get_file_desc()
-{
-	return _sock;
-}
-
 
 int
 Sock::get_port()

@@ -1389,8 +1389,7 @@ class DaemonCore : public Service
 
     struct SockEnt
     {
-        Stream*         iosock;
-        SOCKET          sockd;
+        Sock*           iosock;
         SocketHandler   handler;
         SocketHandlercpp    handlercpp;
         int             is_cpp;

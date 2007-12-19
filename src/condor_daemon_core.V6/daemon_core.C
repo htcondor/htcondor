@@ -948,7 +948,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		}
 		else {
 			sinful_public = strdup(
-			    sock_to_string( (*sockTable)[initial_command_sock].sockd ) );
+			    sock_to_string( (*sockTable)[initial_command_sock].iosock->get_file_desc() ) );
 		}
 	}
 
@@ -967,7 +967,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 				// If the knob wasn't defined, and GCB is enabled, ask GCB.
 			struct sockaddr_in addr;
 			SOCKET_LENGTH_TYPE addr_len = sizeof(addr);
-			SOCKET sockd = (*sockTable)[initial_command_sock].sockd;
+			SOCKET sockd = (*sockTable)[initial_command_sock].get_file_desc();
 			if (GCB_real_getsockname(sockd, (struct sockaddr *)&addr, &addr_len) >= 0) {
 				sinful_private = strdup(sin_to_string(&addr));
 			}
@@ -1272,15 +1272,13 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 
 	// Found a blank entry at index i. Now add in the new data.
 	(*sockTable)[i].call_handler = false;
-	(*sockTable)[i].iosock = iosock;
+	(*sockTable)[i].iosock = (Sock *)iosock;
 	switch ( iosock->type() ) {
 		case Stream::reli_sock :
-			(*sockTable)[i].sockd = ((ReliSock *)iosock)->get_file_desc();
 			(*sockTable)[i].is_connect_pending =
 								((ReliSock *)iosock)->is_connect_pending();
 			break;
 		case Stream::safe_sock :
-			(*sockTable)[i].sockd = ((SafeSock *)iosock)->get_file_desc();
 				// SafeSock connect never blocks....
 			(*sockTable)[i].is_connect_pending = false;
 			break;
@@ -2499,8 +2497,8 @@ void DaemonCore::Driver()
 						// connect is ready to write.  when connect
 						// is ready, select will set the writefd set
 						// on success, or the exceptfd set on failure.
-					selector.add_fd( (*sockTable)[i].sockd, Selector::IO_WRITE );
-					selector.add_fd( (*sockTable)[i].sockd, Selector::IO_EXCEPT );
+					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_WRITE );
+					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_EXCEPT );
 
 					// If this connection attempt times out sooner than
 					// our select timeout, adjust the select timeout.
@@ -2519,7 +2517,7 @@ void DaemonCore::Driver()
 				} else {
 						// we want to be woken when there is something
 						// to read.
-					selector.add_fd( (*sockTable)[i].sockd, Selector::IO_READ );
+					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
 				}
             }
 		}
@@ -2564,13 +2562,13 @@ void DaemonCore::Driver()
 				// only allow soap commands for a while longer
 				timeout = only_allow_soap - now;
 				selector.reset();
-				selector.add_fd( (*sockTable)[initial_command_sock].sockd,
+				selector.add_fd( (*sockTable)[initial_command_sock].iosock->get_file_desc(),
 								 Selector::IO_READ );
 					// This is ugly, and will break if the sockTable
 					// is ever "compacted" or otherwise rearranged
 					// after sockets are registered into it.
 				if (-1 != soap_ssl_sock) {
-					selector.add_fd( (*sockTable)[soap_ssl_sock].sockd,
+					selector.add_fd( (*sockTable)[soap_ssl_sock].iosock->get_file_desc(),
 									 Selector::IO_READ );
 				}
 			}
@@ -2649,9 +2647,9 @@ void DaemonCore::Driver()
 							(*sockTable)[i].iosock->connect_timeout_time();
 						bool connect_timed_out =
 							connect_timeout != 0 && connect_timeout < time(NULL);
-						if ( selector.fd_ready( (*sockTable)[i].sockd,
+						if ( selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
 												Selector::IO_WRITE ) ||
-							 selector.fd_ready( (*sockTable)[i].sockd,
+							 selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
 												Selector::IO_EXCEPT ) ||
 							 connect_timed_out )
 						{
@@ -2667,7 +2665,7 @@ void DaemonCore::Driver()
 							}
 						}
 					} else {
-						if ( selector.fd_ready( (*sockTable)[i].sockd,
+						if ( selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
 												Selector::IO_READ ) )
 						{
 							(*sockTable)[i].call_handler = true;
@@ -2827,7 +2825,7 @@ void DaemonCore::Driver()
 							// for reading.
 							selector.reset();
 							selector.set_timeout( 0 );// set timeout for a poll
-							selector.add_fd( (*sockTable)[i].sockd,
+							selector.add_fd( (*sockTable)[i].iosock->get_file_desc(),
 											 Selector::IO_READ );
 
 							selector.execute();
@@ -2968,7 +2966,7 @@ int DaemonCore::ServiceCommandSocket()
 
 	// Setting timeout to 0 means do not block, i.e. just poll the socket
 	selector.set_timeout( 0 );
-	selector.add_fd( (*sockTable)[initial_command_sock].sockd,
+	selector.add_fd( (*sockTable)[initial_command_sock].iosock->get_file_desc(),
 					 Selector::IO_READ );
 
 	inServiceCommandSocket_flag = TRUE;

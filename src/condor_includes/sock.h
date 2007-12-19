@@ -218,7 +218,7 @@ public:
 	virtual char const *peer_description();
 
 	/// local file descriptor (fd) of this socket
-	int get_file_desc();
+	int get_file_desc() { return _sock; }
 
 	/// is a non-blocking connect outstanding?
 	bool is_connect_pending() { return _state == sock_connect_pending || _state == sock_connect_pending_retry; }
