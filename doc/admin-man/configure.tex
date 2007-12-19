@@ -5847,6 +5847,14 @@ These macros affect the \Prog{grid\_monitor}.
   \Prog{grid\_monitor} will be disabled for the site in question until 60
   minutes have passed.
 
+\item[\Macro{GRID\_MONITOR\_NO\_STATUS\_TIMEOUT}] \label{param:GridMonitorNoStatusTimeout}
+  Jobs can disappear from the \Prog{grid\_monitor}'s status reports for
+  short periods of time under normal circumstances, but a prolonged
+  absence is often a sign of problems on the remote machine. This parameter
+  sets the amount of time (in seconds) that a job can be absent before the
+  \Condor{gridmanager} reacts by restarting the GRAM \Prog{jobmanager}.
+  The default if 15 minutes.
+
 \end{description}
 
 
