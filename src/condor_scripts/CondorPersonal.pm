@@ -41,6 +41,9 @@
 #		PID/PIDversion/condor_config
 #		...
 
+use Net::Domain qw(hostfqdn);
+
+
 package CondorPersonal;
 
 #################################################################
@@ -606,8 +609,7 @@ sub InstallPersonalCondor
 sub TunePersonalCondor
 {
 	my %control = %personal_condor_params;
-	my $myhost = `hostname`;
-	CondorTest::fullchomp($myhost);
+	my $myhost = hostfqdn();
 	my @domainparts = split /\./, $myhost;
 	my $condorhost = "";
 	my $collectorhost = "";
@@ -1232,8 +1234,7 @@ sub IsRunningYet
 		# if we have a collector
 		$havestartd = "";
 		my $done = "no";
-		$currenthost = `hostname`;
-		chomp($currenthost);
+		$currenthost = hostfqdn();
 		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
 			while( $done eq "no") {
 				my $cmd = "condor_status -startd -format \"%s\\n\" name";
@@ -1263,8 +1264,7 @@ sub IsRunningYet
 		# if we have a collector
 		$haveschedd = "";
 		my $done = "no";
-		$currenthost = `hostname`;
-		chomp($currenthost);
+		$currenthost = hostfqdn();
 		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
 			while( $done eq "no") {
 				my $cmd = "condor_status -schedd -format \"%s\\n\" name";
