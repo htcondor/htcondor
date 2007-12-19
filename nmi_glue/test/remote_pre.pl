@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.23 2007-12-18 19:12:14 bt Exp $
+# $Id: remote_pre.pl,v 1.24 2007-12-19 21:04:00 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -135,11 +135,11 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
 	mkdir( "$BaseDir/condor", 0777 ) || die "Can't mkdir $BaseDir/condor: $!\n";
 
-	my $reltar = "$BaseDir/$version/release.tar";
+	my $release = "$BaseDir/$version";
 
 	print "RUNNING condor_configure\n";
 
-	$configure_cmd="$configure --make-personal-condor --local-dir=$BaseDir/local --install=$reltar --install-dir=$BaseDir/condor --verbose";
+	$configure_cmd="$configure --make-personal-condor --local-dir=$BaseDir/local --install=$release --install-dir=$BaseDir/condor --verbose";
 	open( CONF, "$configure_cmd|" ) || 
     	die "Can't open $configure as a pipe: $!\n";
 	while( <CONF> ) {
