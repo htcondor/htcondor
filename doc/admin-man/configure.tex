@@ -7371,6 +7371,13 @@ quill-for-schedd_name@machinename.fully.qualified.address
   therefore, having the \Condor{quill} daemon vacuum is not necessary.
   A value of \Expr{True} causes warnings to be written to the log file.
 
+\item[\Macro{QUILL\_SHOULD\_REINDEX}]
+  \label{param:QuillShouldReindex}
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{True}, the \Condor{quill} daemon will re-index the database
+  tables when the history file is purged of old data. So, if Quill is
+  configured to never delete history data, the tables are never re-indexed.
+
 \item[\Macro{QUILL\_IS\_REMOTELY\_QUERYABLE}]
   \label{param:QuillIsRemotelyQueryable}
   A boolean value that defaults to \Expr{True}.
