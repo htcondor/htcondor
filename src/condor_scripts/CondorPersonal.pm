@@ -41,10 +41,10 @@
 #		PID/PIDversion/condor_config
 #		...
 
-use Net::Domain qw(hostfqdn);
 
 
 package CondorPersonal;
+use Net::Domain qw(hostfqdn);
 
 #################################################################
 #
