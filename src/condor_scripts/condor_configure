@@ -37,14 +37,13 @@
 # Set some global settings
 umask 0022;			# default file creation permissions
 use strict;			# restrict unsafe constructs
+use warnings;		# warn about bad things
 
 require 5.003;		# Perl version for function prototypes
 
 # Library modules
 use Text::Wrap;		# line wrapping to form simple paragraphs
 use Getopt::Long;	# "long" command line options parser
-use strict;			# restrict unsafe constructs
-use warnings;		# Doesn't work on 5.004_05 built for irix-n32
 
 my $Program; ($Program = $0) =~ s|.*/||;    # This program name.
 
