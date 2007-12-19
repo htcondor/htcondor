@@ -967,7 +967,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 				// If the knob wasn't defined, and GCB is enabled, ask GCB.
 			struct sockaddr_in addr;
 			SOCKET_LENGTH_TYPE addr_len = sizeof(addr);
-			SOCKET sockd = (*sockTable)[initial_command_sock].get_file_desc();
+			SOCKET sockd = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_file_desc();
 			if (GCB_real_getsockname(sockd, (struct sockaddr *)&addr, &addr_len) >= 0) {
 				sinful_private = strdup(sin_to_string(&addr));
 			}
