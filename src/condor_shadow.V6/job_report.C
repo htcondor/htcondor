@@ -96,7 +96,10 @@ int job_report_store_error( char *format, ... )
 	/* Otherwise, add it to the list */
 	
 	e = (struct error_node *) malloc(sizeof(struct error_node));
-	if(!e) return 0;
+	if ( !e ) {
+		free(text);
+		return 0;
+	}
 
 	e->text = text;
 	e->count = 1;
