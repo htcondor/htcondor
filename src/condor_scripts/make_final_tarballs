@@ -40,7 +40,7 @@ sub print_usage();
 # Autoflush the output
 $| = 1;
 
-use vars qw/ $opt_help $opt_sys $opt_version $opt_libc $opt_tarcmd $opt_cpcmd $opt_target $opt_linktype/;
+use vars qw/ $opt_help $opt_sys $opt_version $opt_libc $opt_tarcmd $opt_cpcmd $opt_slinkcmd $opt_target $opt_linktype/;
 
 GetOptions ( 'help'              => \$opt_help,
              'sys=s'             => \$opt_sys,
@@ -48,12 +48,13 @@ GetOptions ( 'help'              => \$opt_help,
              'libc=s'            => \$opt_libc,
              'tarcmd=s'          => \$opt_tarcmd,
              'cpcmd=s'           => \$opt_cpcmd,
+             'slinkcmd=s'        => \$opt_slinkcmd,
              'linktype=s'        => \$opt_linktype,
              'target=s'          => \$opt_target);
 
 # Deal with any command-line args we are passed:
 
-my ($sys, $versarg, $libc, $tar_cmd, $cp_cmd, $target);
+my ($sys, $versarg, $libc, $tar_cmd, $cp_cmd, $slink_cmd, $target);
 
 if (defined($opt_help)) {
     print_usage(); exit 0;
@@ -72,6 +73,9 @@ if (defined($opt_tarcmd)) {
 }
 if (defined($opt_cpcmd)) {
     $cp_cmd = $opt_cpcmd;
+}
+if (defined($opt_slinkcmd)) {
+    $slink_cmd = $opt_slinkcmd;
 }
 if (defined($opt_target)) {
     $target = $opt_target;
@@ -171,7 +175,10 @@ my %modules =
 
 		 "skelfiles" => [ "README", "DOC", "INSTALL", "LICENSE-2.0.txt",
 						  { src => "condor_scripts/condor_configure",
-							dest => "condor_configure" },
+							dest => "condor_configure", },
+						  { src => "condor_scripts/condor_configure",
+							dest => "condor_install",
+							symlink => 1, },
 						  "examples" 
 						],
 
@@ -361,19 +368,22 @@ if( ! $tar_cmd ) {
     $tar_cmd = "tar --owner=root --group=root";
 }
 if( ! $cp_cmd ) {
-  # the condor build system always tells us the right thing, so
-  # hopefully we never hit this code.  however, if we need a default,
-  # it really depends on if we're using GNU cp or not.  on linux, we
-  # can safely use the GNU flags, and on the others, we'll just have
-  # to live without and hope for the best.  luckily, the configure
-  # script figures it out for us and tells us, so it's not really an
-  # issue inside here anymore...
-  if( $opsys =~ /.*linux.*/ ) {
-    $cp_cmd = "cp -rL"; 
-  } else {  
-    $cp_cmd = "cp -r"; 
-  } 
+	# the condor build system always tells us the right thing, so
+	# hopefully we never hit this code.  however, if we need a default,
+	# it really depends on if we're using GNU cp or not.  on linux, we
+	# can safely use the GNU flags, and on the others, we'll just have
+	# to live without and hope for the best.  luckily, the configure
+	# script figures it out for us and tells us, so it's not really an
+	# issue inside here anymore...
+	if( $opsys =~ /.*linux.*/ ) {
+		$cp_cmd = "cp -rL"; 
+	} else {  
+		$cp_cmd = "cp -r"; 
+	} 
 
+}
+if( ! $slink_cmd ) {
+    $slink_cmd = "ln -s"; 
 }
 
 `rm -rf $skel`;
@@ -418,16 +428,21 @@ foreach my $name ( sort keys %modules ) {
     # Now, copy over any files specified for a given module
     foreach my $file ( @{$module->{skelfiles}} ) {
 		
-		my ($src,$dest);
+		my ($src,$dest,$symlink);
 		if (ref($file) eq "HASH") {
 			$src =  $file->{src};
 			$dest = $file->{dest};
+			$symlink = $file->{symlink};
 		} else {
 	   	 	$src = "$realskel/$file";
 	   	 	$dest = $file;
 		}
 		# Must be able to do recursive copy in case of directories...
-		runcmd("date && time $cp_cmd $src $skel/$release/$dest", undef);
+		if ( defined $symlink ) {
+			runcmd("date && time $slink_cmd $src $skel/$release/$dest", undef);
+		} else {
+			runcmd("date && time $cp_cmd $src $skel/$release/$dest", undef);
+		}
     }
     runcmd("rm -rf $skel/$release/CVS", 1);
     runcmd("rm -rf $skel/$release/*/CVS", 1);

@@ -39,7 +39,7 @@ umask 0022;			# default file creation permissions
 use strict;			# restrict unsafe constructs
 use warnings;		# warn about bad things
 
-require 5.003;		# Perl version for function prototypes
+require 5.60;		# Perl version for function prototypes
 
 # Library modules
 use Text::Wrap;		# line wrapping to form simple paragraphs
