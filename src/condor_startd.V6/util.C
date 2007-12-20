@@ -151,10 +151,16 @@ cleanup_execute_dir(int pid, char const *exec_path)
 	pid_dir.sprintf( "dir_%d", pid );
 
 		// if we're using PrivSep, we won't have the permissions
-		// needed to clean up - ask the Switchboard to do it
+		// needed to clean up - ask the Switchboard to do it; but
+		// before we do that, use stat to see if there's anything
+		// to clean up and save the Switchboard invocation if not
 	if (privsep_enabled()) {
 		MyString pid_dir_path;
 		pid_dir_path.sprintf("%s/%s", exec_path, pid_dir.Value());
+		struct stat stat_buf;
+		if (stat(pid_dir_path.Value(), &stat_buf) == -1) {
+			return;
+		}
 		if (!privsep_remove_dir(pid_dir_path.Value())) {
 			dprintf(D_ALWAYS,
 			        "privsep_remove_dir failed to remove %s\n",
