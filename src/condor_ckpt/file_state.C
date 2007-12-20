@@ -1073,7 +1073,9 @@ int CondorFileTable::chdir( const char *path )
 			errno = ENOMEM;
 			return -1;
 		}
-		free( working_dir );
+		/* if working_dir's pointer stayed the same, this is a nop, if it
+			changed, then realloc() already freed() the memory and returned
+			the new pointer, which I update here. */
 		working_dir = nmem;
 		strcat( working_dir, "/" );
 		strcat( working_dir, path );
