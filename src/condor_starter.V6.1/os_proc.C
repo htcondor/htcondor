@@ -569,41 +569,66 @@ OsProc::JobExit( void )
 void
 OsProc::checkCoreFile( void )
 {
-	MyString new_name;
-	new_name.sprintf( "core.%d.%d", Starter->jic->jobCluster(), 
-					  Starter->jic->jobProc() );
+	// we must act differently depending on whether PrivSep is enabled.
+	// if it's not, we rename any core file we find to
+	// core.<cluster>.<proc>. if PrivSep is enabled, we may not have the
+	// permissions to do the rename, so we don't. in either case, we
+	// add the core file if present to the list of output files
+	// (that happens in renameCoreFile for the non-PrivSep case)
+
+	// Since Linux now writes out "core.pid" by default, we should
+	// search for that.  Try the JobPid of our first child:
+	MyString name_with_pid;
+	name_with_pid.sprintf( "core.%d", JobPid );
 
 	if (privsep_enabled()) {
-		privsep_helper.chown_sandbox_to_condor();
-	}
 
-		// Since Linux now writes out "core.pid" by default, we should
-		// search for that.  Try the JobPid of our first child:
-	MyString old_name;
-	old_name.sprintf( "core.%d", JobPid );
-	if( renameCoreFile(old_name.Value(), new_name.Value()) ) {
+#if defined(WIN32)
+		EXCEPT("PrivSep not yet available on Windows");
+#else
+		// shouldn't strictly be necessary, but i'm ascared to
+		// take it out on the eve of 7.0.0
+		privsep_helper.chown_sandbox_to_condor();
+
+		struct stat stat_buf;
+		if (stat(name_with_pid.Value(), &stat_buf) != -1) {
+			Starter->jic->addToOutputFiles(name_with_pid.Value());
+		}
+		else if (stat("core", &stat_buf) != -1) {
+			Starter->jic->addToOutputFiles("core");
+		}
+#endif
+	}
+	else {
+		MyString new_name;
+		new_name.sprintf( "core.%d.%d",
+		                  Starter->jic->jobCluster(), 
+		                  Starter->jic->jobProc() );
+
+		if( renameCoreFile(name_with_pid.Value(), new_name.Value()) ) {
 			// great, we found it, renameCoreFile() took care of
 			// everything we need to do... we're done.
-		return;
-	}
+			return;
+		}
 
 		// Now, just see if there's a file called "core"
-	if( renameCoreFile("core", new_name.Value()) ) {
-		return;
+		if( renameCoreFile("core", new_name.Value()) ) {
+			return;
+		}
 	}
 
-		/*
-		  maybe we should check for other possible pids (either by
-		  using a Directory object to scan all the files in the iwd,
-		  or by using the procfamily to test all the known pids under
-		  the job).  also, you can configure linux to drop core files
-		  with other possible values, not just pid.  however, it gets
-		  complicated and it becomes harder and harder to tell if the
-		  core files belong to this job or not in the case of a shared
-		  file system where we might be running in a directory shared
-		  by many jobs...  for now, the above is good enough and will
-		  catch most of the problems we're having.
-		*/
+	/*
+	  maybe we should check for other possible pids (either by
+	  using a Directory object to scan all the files in the iwd,
+	  or by using the procfamily to test all the known pids under
+	  the job).  also, you can configure linux to drop core files
+	  with other possible values, not just pid.  however, it gets
+	  complicated and it becomes harder and harder to tell if the
+	  core files belong to this job or not in the case of a shared
+	  file system where we might be running in a directory shared
+	  by many jobs...  for now, the above is good enough and will
+	  catch most of the problems we're having.
+	*/
 }
 
 
@@ -624,10 +649,7 @@ OsProc::renameCoreFile( const char* old_name, const char* new_name )
 		// we need to do this rename as the user...
 	errno = 0;
 	old_priv = set_user_priv();
-	int ret;
-	if (!privsep_enabled()) {
-		ret = rename(old_full.Value(), new_full.Value());
-	}
+	int ret = rename(old_full.Value(), new_full.Value());
 	if( ret != 0 ) {
 			// rename failed
 		t_errno = errno; // grab errno right away
