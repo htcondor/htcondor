@@ -1631,7 +1631,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				}
 			}
 
-			s->encode();
+			s->decode();
 		}
 
 		// On WinNT and apparently, some Unix, too, even doing an
