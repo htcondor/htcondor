@@ -1625,7 +1625,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				// peer to tell is that it is ready to send.
 			if( !peer_goes_ahead_always ) {
 
-				if( !ReceiveTransferGoAhead(s,fullname.Value(),peer_goes_ahead_always) ) {
+				if( !ReceiveTransferGoAhead(s,fullname.Value(),true,peer_goes_ahead_always) ) {
 					dprintf(D_FULLDEBUG, "DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
@@ -1648,6 +1648,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		if ( reply == 4 ) {
 			if ( PeerDoesGoAhead || s->end_of_message() ) {
 				rc = s->get_x509_delegation( &bytes, fullname.Value() );
+				dprintf( D_FULLDEBUG,
+				         "DoDownload: get_x509_delegation() returned %d\n",
+				         rc );
 			} else {
 				rc = -1;
 			}
@@ -2241,7 +2244,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			if( !peer_goes_ahead_always ) {
 					// Now wait for our peer to tell us it is ok for us to
 					// go ahead and send data.
-				if( !ReceiveTransferGoAhead(s,fullname.Value(),peer_goes_ahead_always) ) {
+				if( !ReceiveTransferGoAhead(s,fullname.Value(),false,peer_goes_ahead_always) ) {
 					dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
@@ -2262,6 +2265,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		if ( file_command == 4 ) {
 			if ( (PeerDoesGoAhead || s->end_of_message()) ) {
 				rc = s->put_x509_delegation( &bytes, fullname.Value() );
+				dprintf( D_FULLDEBUG,
+				         "DoUpload: put_x509_delegation() returned %d\n",
+				         rc );
 			} else {
 				rc = -1;
 			}
@@ -2466,6 +2472,7 @@ bool
 FileTransfer::ReceiveTransferGoAhead(
 	Stream *s,
 	char const *fname,
+	bool downloading,
 	bool &go_ahead_always)
 {
 	bool try_again = true;
@@ -2491,7 +2498,7 @@ FileTransfer::ReceiveTransferGoAhead(
 	}
 	old_timeout = s->timeout(alive_interval + slop_time);
 
-	result = DoReceiveTransferGoAhead(s,fname,go_ahead_always,try_again,hold_code,hold_subcode,error_desc,alive_interval);
+	result = DoReceiveTransferGoAhead(s,fname,downloading,go_ahead_always,try_again,hold_code,hold_subcode,error_desc,alive_interval);
 
 	s->timeout( old_timeout );
 
@@ -2509,6 +2516,7 @@ bool
 FileTransfer::DoReceiveTransferGoAhead(
 	Stream *s,
 	char const *fname,
+	bool downloading,
 	bool &go_ahead_always,
 	bool &try_again,
 	int &hold_code,
@@ -2596,7 +2604,8 @@ FileTransfer::DoReceiveTransferGoAhead(
 		go_ahead_always = true;
 	}
 
-	dprintf(D_FULLDEBUG,"Received GoAhead from peer to send %s%s.\n",
+	dprintf(D_FULLDEBUG,"Received GoAhead from peer to %s %s%s.\n",
+			downloading ? "receive" : "send",
 			fname,
 			go_ahead_always ? " and all further files" : "");
 
