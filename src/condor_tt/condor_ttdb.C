@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
-
+#include "condor_common.h"
 #include "condor_ttdb.h"
 #include <time.h>
 #include "misc_utils.h"

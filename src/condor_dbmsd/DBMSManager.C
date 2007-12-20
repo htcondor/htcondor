@@ -18,6 +18,7 @@
  ***************************************************************/
 
 
+#include "condor_common.h"
 #include "DBMSManager.h"
 #include "condor_config.h"
 #include "dc_collector.h"

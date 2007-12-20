@@ -28,9 +28,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
-#include <signal.h>
 #include <time.h>
-#include <sys/mman.h>
 #include "condor_md.h"
 
 #include "jobqueuedbmanager.h"

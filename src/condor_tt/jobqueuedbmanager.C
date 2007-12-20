@@ -32,7 +32,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
-#include <signal.h>
 #include <time.h>
 
 #include "jobqueuedbmanager.h"
@@ -392,7 +391,7 @@ JobQueueDBManager::maintain()
 QuillErrCode
 JobQueueDBManager::cleanupJobQueueTables()
 {
-	int		sqlNum = 4;
+	const int	sqlNum = 4;
 	int		i;
 	MyString sql_str[sqlNum];
 	

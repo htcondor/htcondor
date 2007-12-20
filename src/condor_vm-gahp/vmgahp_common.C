@@ -471,17 +471,73 @@ read_vmgahp_configfile( const char *config )
 		}
 
 		if( (name != NULL) && (name[0] != '\0') ) {
+			char *name_str = NULL;
+			MyString finalname;
+
+			// First, try to use macro in vmgahp config
 			/* Expand references to other parameters */
 			name = expand_macro( name, VMConfigVars, VMCONFIGVARSIZE );
 			if( name == NULL ) {
 				(void)fclose( fp );
-				vmprintf( D_ALWAYS, "\nERROR: Failed to expand macros in: %s\n",
-						name );
+				vmprintf( D_ALWAYS, "\nERROR: Failed to expand macros in vmgahp "
+						"config: %s\n", name );
 				return( -1 );
 			}
-			strlwr(name);
-			insert(name, value, VMConfigVars, VMCONFIGVARSIZE);
+
+			// Second, try to use macro in Condor config
+			name_str = macro_expand( name );
+			if( name_str == NULL ) {
+				(void)fclose( fp );
+				vmprintf( D_ALWAYS, "\nERROR: Failed to expand macros in Condor "
+						"config: %s\n", name );
+				free(name);
+				return( -1 );
+			}
 			free(name);
+
+			finalname = name_str;
+			free(name_str);
+
+			// First check if this parameter is already in Condor config
+			char *exist = param(finalname.GetCStr());
+			bool is_in_condorconfig = false;
+			if( exist && (exist[0] != '\0') ) {
+				is_in_condorconfig = true;
+			}
+			if( exist ) {
+				free(exist);
+			}
+
+			if( is_in_condorconfig ) {
+				// There exists a parameter with the same name 
+				// in Condor configurations
+				// We will not overwrite it. 
+				// So just add this parameter to vmgahp configurations.
+				insert(finalname.GetCStr(), tmp_value.GetCStr(), VMConfigVars, VMCONFIGVARSIZE);
+			}else {
+				MyString realvalue;
+				// This parameter is not in Condor config file
+				// So first, we will add this parameter to Condor configurations
+				config_insert(finalname.GetCStr(), tmp_value.GetCStr());
+
+				// Try to get this param again from Condor configurations
+				exist = param(finalname.GetCStr());
+				if( !exist ) {
+					// Impossible
+					(void)fclose( fp );
+					vmprintf( D_ALWAYS, "\nERROR: Failed to get %s in Condor config\n",
+							finalname.Value() );
+					return( -1 );
+				}
+				realvalue = exist;
+				free(exist);
+
+				insert(finalname.GetCStr(), realvalue.GetCStr(), 
+						VMConfigVars, VMCONFIGVARSIZE);
+	
+				// Here, we reset value for this parameter to "" in Condor config
+				config_insert(finalname.GetCStr(), "");
+			}
 		}
 	}
 

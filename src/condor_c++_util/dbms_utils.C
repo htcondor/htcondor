@@ -88,12 +88,12 @@ static char * getWritePassword(const char *write_passwd_fname,
 		msbuf = new MyString();
 	}
 
-	free(prefix);
-    fclose(fp);
+	fclose(fp);
 	if (!found) {
 		EXCEPT("Unable to find password from file %s with prefix %s\n", write_passwd_fname, prefix);
 	}
-
+	free(prefix);
+    
 	return passwd;
 }
 
