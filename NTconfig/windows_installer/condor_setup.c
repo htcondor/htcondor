@@ -40,10 +40,13 @@ struct Options {
 	char submitjobs; /* Y/N */
 	char runjobs;    /* N/A/I/C (Never/Always/Idle/Cpu+Idle */
 	char vacatejobs; /* Y/N */
+	char enablevmuniverse; /* Y/N */
+	
 
 	char *poolhostname;
 	char *poolname; 
 	char *jvmlocation;
+	char *perllocation;
 	char *accountingdomain;
 	char *release_dir;
 	char *smtpserver;
@@ -51,10 +54,10 @@ struct Options {
 	char *hostallowread;
 	char *hostallowwrite;
 	char *hostallowadministrator;
-} Opt = { '\0', '\0', '\0', '\0', NULL, NULL, NULL, NULL, NULL, 
-	NULL, NULL, NULL, NULL, NULL};
+} Opt = { '\0', '\0', '\0', '\0', '\0', NULL, NULL, NULL, NULL, NULL, 
+	NULL, NULL, NULL, NULL, NULL, NULL};
 
-const char *short_options = ":c:d:e:i:j:v:n:p:o:r:a:s:t:m:h";
+const char *short_options = ":c:d:e:i:j:v:n:p:o:r:a:s:t:m:u:l:h";
 static struct option long_options[] =
 { 
 	{"acctdomain",              required_argument, 0, 'a'},
@@ -67,15 +70,19 @@ static struct option long_options[] =
 	{"submitjobs",              required_argument, 0, 's'},
 	{"condoremail",             required_argument, 0, 'c'},
 	{"jvmlocation",             required_argument, 0, 'j'},
+	{"perllocation",            required_argument, 0, 'l'},
 	{"poolname",                required_argument, 0, 'p'},
 	{"poolhostname",            required_argument, 0, 'o'},
 	{"release_dir",             required_argument, 0, 'd'},
 	{"smtpserver",              required_argument, 0, 'm'},
+	{"enablevmuniverse",        required_argument, 0, 'u'},
 	{"help",                    no_argument,       0, 'h'},
    	{0, 0, 0, 0}
 };
-	
+
 const char *Config_file = NULL;
+const char *LogFileName = "install.log";
+FILE *LogFileHandle = NULL;
 
 
 bool parse_args(int argc, char** argv);
@@ -83,9 +90,12 @@ bool append_option(const char *attribute, const char *val);
 bool set_option(const char *attribute, const char *val);
 bool set_int_option(const char *attribute, const int val);
 bool setup_config_file(void) { Config_file = "condor_config"; return true; };
+bool setup_vmgahp_config_file(void) { Config_file = "condor_vmgahp_config.vmware"; return true; }
+bool open_log_file(void) { return ( NULL != ( LogFileHandle = fopen(LogFileName, "w") ) ); }
+bool close_log_file(void) { if ( NULL != LogFileHandle ) { fclose(LogFileHandle); LogFileHandle = NULL; } return true; }
 bool isempty(const char * a) { return ((a == NULL) || (a[0] == '\0')); }
 bool attribute_matches( const char *string, const char *attr );
-char* get_short_path_name (char *path);
+char* get_short_path_name (const char *path);
 
 void Usage();
 
@@ -94,8 +104,10 @@ void set_daemonlist();
 void set_poolinfo();
 void set_startdpolicy();
 void set_jvmlocation();
+void set_vmgahpoptions();
 void set_mailoptions();
 void set_hostpermissions();
+void set_vmuniverse();
 
 int WINAPI WinMain( HINSTANCE hInstance, 
 		    HINSTANCE hPrevInstance, 
@@ -107,6 +119,9 @@ int WINAPI WinMain( HINSTANCE hInstance,
   UNUSED_VARIABLE ( lpCmdLine );
   UNUSED_VARIABLE ( nShowCmd ); 
   
+  open_log_file();
+  
+ 
   if ( !parse_args ( __argc, __argv ) ) {
     exit ( 1 );
   }
@@ -116,8 +131,18 @@ int WINAPI WinMain( HINSTANCE hInstance,
   set_poolinfo (); /* name; hostname */
   set_startdpolicy ();
   set_jvmlocation ();
+  
   set_mailoptions ();
   set_hostpermissions ();
+  set_vmuniverse();
+  
+  /* the following options go in the vmgahp config file */
+  if ( 'Y' == Opt.enablevmuniverse ) {
+    setup_vmgahp_config_file();
+    set_vmgahpoptions ();
+  }
+  
+  close_log_file ();
   
   // getc ( stdin );
   return 0;
@@ -157,8 +182,33 @@ void
 set_jvmlocation() {
 
 	if ( Opt.jvmlocation ) {
-		set_option("JAVA", get_short_path_name(Opt.jvmlocation));
+		set_option("JAVA", Opt.jvmlocation);
 	}
+}
+
+void
+set_vmgahpoptions() {
+
+	if ( Opt.perllocation ) {
+		set_option("VMWARE_PERL", Opt.perllocation);
+	}
+
+	if ( Opt.release_dir ) {
+		char *control_script = "bin\\condor_vm_vmware.pl";
+ 
+		char *tmp = malloc(strlen(Opt.release_dir) 
+				   + strlen(control_script) + 2); 
+		char *short_name = NULL;
+		sprintf(tmp, "%s\\%s", Opt.release_dir, control_script);
+		short_name = get_short_path_name(tmp);
+ 
+		free(tmp);
+ 
+		set_option("VMWARE_SCRIPT", short_name);
+		free(short_name);
+ 
+	}
+				
 }
 
 void
@@ -252,6 +302,17 @@ set_hostpermissions() {
 	}
 }
 
+void
+set_vmuniverse() {
+	if ( Opt.enablevmuniverse == 'Y' ) {
+		set_option("VM_GAHP_SERVER", "$(BIN)/condor_vm-gahp.exe");
+		set_option("VM_GAHP_CONFIG", "$(RELEASE_DIR)/condor_vmgahp_config.vmware");
+		set_option("VM_TYPE", "vmware");
+	}
+	
+}
+
+
 bool 
 parse_args(int argc, char** argv) {
 
@@ -294,7 +355,13 @@ parse_args(int argc, char** argv) {
 
 			case 'j':
 				if (!isempty(optarg)) {
-					Opt.jvmlocation = strdup(optarg);
+					Opt.jvmlocation = get_short_path_name(optarg);
+				}
+			break;
+
+			case 'l':
+				if (!isempty(optarg)) {
+					Opt.perllocation = get_short_path_name(optarg);
 				}
 			break;
 
@@ -308,7 +375,7 @@ parse_args(int argc, char** argv) {
 			
 			case 'd':
 				if (!isempty(optarg)) {
-					Opt.release_dir = strdup(optarg);
+					Opt.release_dir = get_short_path_name(optarg);
 				}
 			break;
 
@@ -350,6 +417,14 @@ parse_args(int argc, char** argv) {
 				}
 			break;
 
+			case 'u':
+				if ( optarg && (optarg[0] == 'N' || optarg[0] == 'n') ) {
+					Opt.enablevmuniverse = 'N';
+				} else {
+					Opt.enablevmuniverse = 'Y';
+				}
+			break;
+
 			case 'h':
 			default:
 				/* getopt already printed an error msg */
@@ -374,7 +449,7 @@ parse_args(int argc, char** argv) {
 */
 	if (!((Opt.submitjobs && Opt.runjobs && Opt.newpool ) ||
 	      (!Opt.submitjobs && !Opt.runjobs && !Opt.newpool ) )) {
-		fprintf(stderr, "%s: --newpool, --runjobs and --submitjobs must be\n"
+		fprintf(LogFileHandle, "%s: --newpool, --runjobs and --submitjobs must be\n"
 				"\tspecified together\n", argv[0]);
 		return false;
 	}
@@ -394,24 +469,24 @@ set_option(const char *attribute, const char *val) {
 
 
 	if ( Config_file == NULL && !setup_config_file() ) {
-		fprintf(stderr, "Error opening config file '%s'.\n\tErr=%s\n",
+		fprintf(LogFileHandle, "Error opening config file '%s'.\n\tErr=%s\n",
 				Config_file, strerror(errno));
 		result = false;
 		return result;
 	}
 
 	if ( NULL == ( config_file_tmp = tempnam(".", Config_file)) ) {
-		fprintf(stderr, "Error creating temporary file '%s'.\n\tErr=%s\n",
+		fprintf(LogFileHandle, "Error creating temporary file '%s'.\n\tErr=%s\n",
 				config_file_tmp, strerror(errno));
 		result = false;
 		return result;
 	} else {
-		 fprintf(stderr, "tmp file: %s\n", config_file_tmp);
+		// fprintf(LogFileHandle, "tmp file: %s\n", config_file_tmp);
 	}
 
 	cfg_out = fopen(config_file_tmp, "w");
 	if ( cfg_out == NULL ) {
-		fprintf(stderr, "Error opening config file '%s'.\n\tErr=%s\n",
+		fprintf(LogFileHandle, "Error opening config file '%s'.\n\tErr=%s\n",
 				config_file_tmp, strerror(errno));
 		result = false;
 		return result;
@@ -420,7 +495,7 @@ set_option(const char *attribute, const char *val) {
 	cfg = fopen(Config_file, "r");
 
 	if ( cfg == NULL ) {
-		fprintf(stderr, "Error opening config file '%s'.\n\tErr=%s\n",
+		fprintf(LogFileHandle, "Error opening config file '%s'.\n\tErr=%s\n",
 				Config_file, strerror(errno));
 		fclose(cfg_out);
 		result = false;
@@ -429,7 +504,7 @@ set_option(const char *attribute, const char *val) {
 
 	/* seek to beginning of the file */
 	if ( 0 != fseek(cfg, 0, SEEK_SET) ) {
-		fprintf(stderr, "Error seeking config file '%s'.\n\tErr=%s\n",
+		fprintf(LogFileHandle, "Error seeking config file '%s'.\n\tErr=%s\n",
 				Config_file, strerror(errno));
 		result = false;
 		return result;
@@ -442,7 +517,7 @@ set_option(const char *attribute, const char *val) {
 	
 				/* reached end of file */
 				if (0 != fclose(cfg)) {
-					fprintf(stderr, "Error closing config file '%s'.\n"
+					fprintf(LogFileHandle, "Error closing config file '%s'.\n"
 							"\tErr=%s\n", Config_file, strerror(errno));
 					result = false;
 				}
@@ -451,30 +526,30 @@ set_option(const char *attribute, const char *val) {
 					/* new option, so append it to the file */
 					fflush(cfg_out);
 					if ( 0 == fprintf(cfg_out, "%s = %s\n", attribute, val) ) {
-						fprintf(stderr, "Error appending to config file '%s'.\n"
+						fprintf(LogFileHandle, "Error appending to config file '%s'.\n"
 							"\tErr=%s\n", config_file_tmp, strerror(errno));
 						result = false;
 					}
 				}
 
 				if (0 != fclose(cfg_out)) {
-					fprintf(stderr, "Error closing temp config file '%s'.\n"
+					fprintf(LogFileHandle, "Error closing temp config file '%s'.\n"
 							"\tErr=%s\n", config_file_tmp, strerror(errno));
 					result = false;
 				}
 
 				if (0 != remove(Config_file) ) {
-					fprintf(stderr, "Error removing old config file '%s'.\n"
+					fprintf(LogFileHandle, "Error removing old config file '%s'.\n"
 							"\tErr=%s\n", Config_file, strerror(errno));
 				} else if (0 != rename(config_file_tmp, Config_file) ) {
-					fprintf(stderr, "Error moving new config file '%s' to "
+					fprintf(LogFileHandle, "Error moving new config file '%s' to "
 							"'%s'.\n\tErr=%s\n", config_file_tmp, Config_file,
 						   	strerror(errno));
 				}
 				break;
 
 			} else {
-				fprintf(stderr, "Error reading config file '%s'.\n\tErr=%s\n",
+				fprintf(LogFileHandle, "Error reading config file '%s'.\n\tErr=%s\n",
 					Config_file, strerror(errno));
 			}
 			return result;
@@ -483,7 +558,7 @@ set_option(const char *attribute, const char *val) {
 		if ( !foundit && attribute_matches(buf, attribute) ) {
 			fflush(cfg_out);
 			if (0 == fprintf(cfg_out, "%s = %s\n", attribute, val)) {
-				fprintf(stderr, "Error writing to config file '%s'.\n"
+				fprintf(LogFileHandle, "Error writing to config file '%s'.\n"
 					"\tErr=%s\n", config_file_tmp, strerror(errno));
 				result = false;
 			}
@@ -491,7 +566,7 @@ set_option(const char *attribute, const char *val) {
 		} else {
 				// no change
 			if ( 0 == fprintf(cfg_out, "%s", buf) ) {
-				fprintf(stderr, "Error writing to config file '%s'.\n"
+				fprintf(LogFileHandle, "Error writing to config file '%s'.\n"
 					"\tErr=%s\n", config_file_tmp, strerror(errno));
 				result = false;
 			}
@@ -506,7 +581,7 @@ set_int_option(const char *attribute, const int val) {
 	char buf[64];
 
 	if ( 0 > snprintf(buf, 63, "%d", val) ) {
-		fprintf(stderr, "Error setting option '%s' to '%d'.\n\t"
+		fprintf(LogFileHandle, "Error setting option '%s' to '%d'.\n\t"
 			   "Integer too big!!\n", attribute, val);
 		return false;
 	} else {
@@ -574,16 +649,15 @@ attribute_matches( const char *string, const char *attr ) {
 /* ugly hack to get short paths into the config file, because
    we do not support spaces in paths in all places */		
 char* 
-get_short_path_name(char *path) {
+get_short_path_name(const char *path) {
 	char *short_path = (char*)malloc(MAX_PATH * sizeof(char));
 	if (short_path) {
 		if (GetShortPathName(path, short_path, MAX_PATH) > 0) {
-			free(path);
 			return short_path;
 		}
 		/* may fail because the path has unexpanded variables,
 		   so we can't just assume it's an error... */
 		free(short_path);
 	}
-	return path;
+	return strdup(path);
 }

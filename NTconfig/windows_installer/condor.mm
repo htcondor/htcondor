@@ -31,13 +31,14 @@
 <$Property "STARTSERVICE" VALUE="Y">
 <$Property "AA" VALUE="N">
 <$Property "AB" VALUE="N">
+<$Property "USEVMUNIVERSE" VALUE="N">
 
 <$AbortIf Condition=^not VersionNT OR (VersionNT < 500)^ Message=^Condor for Windows can only be installed on Windows 2000 or greater.^>
 
-
+;--- Find some binaries on the system that we may need ---------------------
+;<$FileFind File="cygwin1.dll" Property="CYGWINDLL" Depth="1" Path="[WindowsVolume]cygwin" Default="">
 <$FileFind File="JAVA.EXE" Property="JVMLOCATION" Depth="3" Path="[ProgramFilesFolder]" Default="JAVA.EXE">
-
-
+<$FileFind File="PERL.EXE" Property="PERLLOCATION" Depth="2" Path="[WindowsVolume]\Perl" Default="PERL.EXE">
 
 <$Dialog "New Or Existing Condor Pool?" Dialog="NewOrExistingPool" INSERT="LicenseAgreementDlg">
    ;--- A Radio Button ------------------------------------------------------
@@ -69,7 +70,7 @@
    #data 'RadioButton_RUNJOBS'
          ;--- All buttons on same dialog line (not over 3) ------------------
          'N'  'Do not run jobs on this machine.' ''  'Do not run a condor_startd on this machine.'
-		 'A'  'Always run jobs and never suspend them.' '' 'This machine will always accept jobs.'
+	 'A'  'Always run jobs and never suspend them.' '' 'This machine will always accept jobs.'
          'I'  'When keyboard has been idle for 15 minutes.' ''  'Idle keyboard and mouse.'
          'C'  'When keyboard has been idle for 15 minutes and CPU is idle.' ''  'Idle keyboard and low CPU activity.'
    #data
@@ -114,7 +115,23 @@
 	<$DialogEntry Property="HOSTALLOWADMINISTRATOR" LabelWidth=140 Label="Hosts with Administrator access:" ToolTip="Turn Condor on/off, modify job queue." Width=160 Blank="N">
 <$/Dialog>
 
-<$Dialog "Condor Service" Description="Choose whether to start Condor after installation." Dialog="StartService" INSERT="HostPermissionSettings">
+<$Dialog "VM Universe Settings" Dialog="VMUniverseSettings" INSERT="HostPermissionSettings">
+   	#data 'RadioButton_USEVMUNIVERSE'	         
+	         'N'	'No'	''	''
+		 'Y'	'Yes (Requires VMware Server and Perl)'	''	''
+	#data
+	<$DialogEntry Property="USEVMUNIVERSE" Label="Enable VM Universe:" Control="RB">
+	<$DialogEntry Property="PERLLOCATION" Label="Path to Perl:" ToolTip="VM Universe on Windows requires PERL.EXE" Width=200 Blank="N">
+<$/Dialog>
+
+; flip the text fields on or off for perl location
+<$Table "ControlCondition">
+	<$Row Dialog_="VMUniverseSettings" Control_="Entry.2" Action="Enable" Condition=^USEVMUNIVERSE = "Y"^>
+	<$Row Dialog_="VMUniverseSettings" Control_="Entry.2" Action="Disable" Condition=^USEVMUNIVERSE = "N"^>
+<$/Table>
+
+
+<$Dialog "Condor Service" Description="Choose whether to start Condor after installation." Dialog="StartService" INSERT="VMUniverseSettings">
    	<$DialogEntry Property="AA" LabelWidth="250" Label="Start the Condor service after installation?" Control="Text">
    	#data 'RadioButton_STARTSERVICE'
 	         'Y'	'Yes'	''	''
@@ -126,7 +143,8 @@
 ;--- Create INSTALLDIR ------------------------------------------------------
 <$DirectoryTree Key="INSTALLDIR" Dir="c:\condor" CHANGE="\" PrimaryFolder="Y">
 
-;--- Create LOG, SPOOL and EXECUTE
+
+;--- Create LOG, SPOOL and EXECUTE ------------------------------------------
 <$Component "CreateExecuteFolder" Create="Y" Directory_="EXECUTEDIR">
 	<$DirectoryTree Key="EXECUTEDIR" Dir="[INSTALLDIR]\execute" MAKE="Y">
 <$/Component>
@@ -141,6 +159,13 @@
 ;--- Add the files (components generated) -----------------------------------
 <$Files '<$ImageRootDirectory>\*.*' SubDir='TREE' DestDir='INSTALLDIR'>
 
+;--- If using VM Universe, copy the default configuration -------------------
+<$Component "CondorVMUniverse" Create="Y" Directory_="[INSTALLDIR]" Condition=^USEVMUNIVERSE = "Y"^>
+	<$Files '<$ImageRootDirectory>\etc\condor_vmgahp_config.vmware' KeyFile="*">
+<$/Component>
+
+;--- Copy cygwin1.dll if we find one (to avoid version conflicts) -----------
+;<$Files '[CYGWINDLL]' DestDir='[INSTALLDIR]bin'>
 
 ; ---- remove trailing slash from INSTALLDIR --------
 <$VbsCa Binary="RemoveSlashFromINSTALLDIR.vbs">
@@ -167,8 +192,17 @@
 <$VbsCaSetup Binary="RemoveSlashFromINSTALLDIR.vbs" Entry="RemoveTrailingSlash" Seq=1401 CONDITION=^<$CONDITION_INSTALL_ONLY>^ Deferred="N">
 
 ;--- set CONDOR_CONFIG registry key ----------------------------------------
-<$Access "AdminOnly" Users="Administrators SYSTEM" Access="GENERIC_ALL">
-<$Registry HKEY="LOCAL_MACHINE" KEY="software\Condor"  VALUE="[INSTALLDIR_NTS]\condor_config" MsiFormatted="VALUE" Name="CONDOR_CONFIG" Access="AdminOnly">
+<$Access "GenericAllAdmin" Users="Administrators SYSTEM" Access="GENERIC_ALL">
+<$Access "ReadOnlyUsers" Users="Users" Access="GENERIC_READ">
+#(
+<$Registry 
+	HKEY="LOCAL_MACHINE" 
+	KEY="software\Condor" 
+	VALUE="[INSTALLDIR_NTS]\condor_config" 
+	MsiFormatted="VALUE" 
+	Name="CONDOR_CONFIG" 
+	Access="GenericAllAdmin ReadOnlyUsers">
+#)
 
 ; There is something fancy about this app that MS Vista likes because it lets it do it's thing without complaining 
 ; one little bit.  The rest of our customs steps required some modification to get working on Vista ... not 
@@ -238,7 +272,9 @@ Args=^
 -d "[INSTALLDIR_NTS]"
 -a "[ACCOUNTINGDOMAIN]"
 -j "[JVMLOCATION]"
--m "[SMTPSERVER]"^ 
+-m "[SMTPSERVER]"
+-u "[USEVMUNIVERSE]"
+-l "[PERLLOCATION]"^ 
 WorkDir=^INSTALLDIR^   
 Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
 Seq="InstallServices-"

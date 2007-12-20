@@ -79,6 +79,7 @@ config_file:
 	cmd /c copy /Y set_perms   $(CONDORRELEASEDIR)\\set_perms.exe
 	cmd /c copy /Y condor_config.local $(CONDORRELEASEDIR)
 	cmd /c awk -f $(BASE)\\src\\condor_examples\\convert_config_to_win32.awk $(BASE)\\src\\condor_examples\\condor_config.generic > $(CONDORRELEASEDIR)\\condor_config
+	cmd /c awk -f $(BASE)\\src\\condor_examples\\convert_vmgahp_config_to_win32.awk $(BASE)\\src\\condor_examples\\condor_vmgahp_config.vmware > $(CONDORRELEASEDIR)\\etc\\condor_vmgahp_config.vmware
 
 # generate an RTF version of the License file, since MSI won't take plain text
 license:
