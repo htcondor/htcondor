@@ -44,10 +44,8 @@ extern char **environ;
 #endif
 
 /* user and group ids that are secure, if these can be compromised so can root */
-#define CONF_SAFE_UIDS			"wheel : admin"
-#define CONF_SAFE_GIDS			"wheel : admin"
 #undef  CONF_SAFE_UIDS
-#undef  CONF_SAFE_GIDS
+#define CONF_SAFE_GIDS			"root"
 
 /* the path the main configuration file */
 #define CONF_FILE			"/etc/condor/privsep_config"
