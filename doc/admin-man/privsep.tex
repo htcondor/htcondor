@@ -21,9 +21,7 @@ The privilege separation (PrivSep) effort in Condor aims to minimize
 the amount of code that needs \Login{root}-level access, while still
 giving Condor the tools it needs to work properly. Note that PrivSep
 is currently only available for execute side functionality, and is not
-implemented on Windows. Furthermore, an execute-side Condor installation
-using PrivSep is currently unable to run standard universe jobs; this
-constraint will be removed in the next Condor release.
+implemented on Windows.
 
 In the PrivSep model, all logic in Condor that requires superuser
 privilege is contained in a small component called 

@@ -151,6 +151,12 @@ Over submitter resource limit (0) ... only consider startd ranks
 run out of file descriptors if they create sub-processes and are
 configured to use a lock file for the debug log.
 
+\item Standard universe jobs now work properly when using PrivSep.
+
+\item Fixed problem with PrivSep mode where a job that dumps core would
+not get the core file transferred back to the the submit host if the
+\SubmitCmd{transfer\_output\_files} submit option were used.
+
 \end{itemize}
 
 \noindent Known Bugs:
