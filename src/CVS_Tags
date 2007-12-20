@@ -1,3 +1,13 @@
+12/20/07 V7_0-{root,branch}
+  A new branch off HEAD for the 7.0.x stable series.
+
+12/20/07 V7_0_0-{root,branch}
+  A new branch off the V7_0-branch for the 7.0.0 release.
+
+12/20/07 V6_9_5-merge-1                                                         
+  The state of the V6_9_5-branch before the first (and probably only)           
+  merge back into the trunk.                                                    
+
 12/19/07 V6_8_8
   The official tag for 6.8.8, from the V6_8-branch.
   Version string: $CondorVersion: 6.8.8 Dec 19 2007 $
