@@ -287,6 +287,88 @@ V6_9_SRC		-a \
 			src/condor_vm-gahp \
 			src/condor_unit_tests
 
+V7_COMMON    		-a \
+			LICENSE \
+			src/.cvsignore \
+			src/CVS_Tags \
+			src/build_init \
+			src/aclocal.m4 \
+			src/configure.ac \
+			src/condor_imake \
+			src/Imakefile \
+			src/CODING_GUIDELINES \
+			src/README.building \
+			src/condor_accountant.V6 \
+			src/condor_c++_util \
+			src/condor_c-gahp \
+			src/condor_chirp \
+			src/condor_ckpt \
+			src/condor_ckpt_server \
+			src/condor_classad \
+			src/condor_collector.V6 \
+			src/condor_credd \
+			src/condor_daemon_client \
+			src/condor_daemon_core.V6 \
+			src/condor_dagman \
+			src/condor_dbmsd \
+			src/condor_dcskel \
+			src/condor_drmaa \
+			src/condor_eventd \
+			src/condor_eventd.V2 \
+			src/condor_examples \
+			src/condor_globus \
+			src/condor_gridmanager \
+			src/condor_had \
+			src/condor_includes \
+			src/condor_io \
+			src/condor_kbdd \
+			src/condor_mail \
+			src/condor_master.V6 \
+			src/condor_negotiator.V6 \
+			src/condor_prio \
+			src/condor_privsep \
+			src/condor_procapi \
+			src/condor_procd \
+			src/condor_q.V6 \
+			src/condor_quill \
+			src/condor_release \
+			src/condor_rm.V6 \
+			src/condor_schedd.V6 \
+			src/condor_schedd.V7 \
+			src/condor_scripts \
+			src/condor_shadow.V6 \
+			src/condor_shadow.V6.1 \
+			src/condor_shadow.jim \
+			src/condor_startd.V6 \
+			src/condor_starter.V5 \
+			src/condor_starter.V6.1 \
+			src/condor_starter.jim \
+			src/condor_status.V6 \
+			src/condor_submit.V6 \
+			src/condor_sysapi \
+			src/condor_syscall_lib \
+			src/condor_tests \
+			src/condor_tools \
+			src/condor_transferd \
+			src/condor_tt \
+			src/condor_unit_tests \
+			src/condor_userlog \
+			src/condor_util_lib \
+			src/condor_vm-gahp \
+			src/classad_analysis \
+			src/deployment_tools \
+			src/h \
+			src/hawkeye_modules \
+			src/html \
+			src/packaging \
+			src/stork
+
+V7_0_SRC		-a \
+			V7_COMMON
+
+V7_1_SRC		-a \
+			V7_COMMON
+
 
 ######################################################################
 # Modules for the externals tree used by different branches of the
@@ -892,15 +974,18 @@ V6_9_5_EXT	-a V6_9_COMMON_EXT \
                    externals/bundles/nordugridgahp/1.1.2 \
                    externals/bundles/zlib/1.2.3
 
+# Externals needed for the head of the V6_9-branch
+# V6_9_5 was the final relase from this series, so point there forevermore.
+V6_9_EXT	-a V6_9_5_EXT
+
+
 
 # ----------------------------------------------------------------------
 # Start over with a clean slate to correct the mess above and purge
-# stale externals we don't need anymore. This should just be renamed
-# to V7_0_COMMON_EXT in the near future, but for now, we'll keep
-# calling it 6.9.6.
+# stale externals we don't need anymore.
 # ----------------------------------------------------------------------
-# Externals needed for 6.9.6.
-V6_9_6_EXT	   -a EXT_COMMON \
+# Externals needed for the 7.0.x series.
+V7_0_COMMON_EXT	   -a EXT_COMMON \
                    externals/bundles/blahp/1.7.0 \
                    externals/bundles/classads/0.9.8-b4 \
                    externals/bundles/coredumper \
@@ -923,8 +1008,28 @@ V6_9_6_EXT	   -a EXT_COMMON \
                    externals/bundles/unicoregahp/1.2.0 \
                    externals/bundles/zlib/1.2.3
 
-# Externals needed for the head of the V6_9-branch (a.k.a. the TRUNK)
-V6_9_EXT	-a V6_9_6_EXT
+# Externals needed for the 7.0.0 release:
+V7_0_0_EXT      -a V7_0_COMMON_EXT
+
+# Externals needed for the head of the V7_0-branch
+V7_0_EXT        -a V7_0_0_EXT
+
+
+#---------------------------------------------------------------------
+# 7.1.x
+#---------------------------------------------------------------------
+
+# Shared externals needed for the 7.1.x.  Until this actually
+changes, just
+# point to the same externals as the V7_0 series
+V7_1_COMMON_EXT -a V7_0_COMMON_EXT
+
+# Externals needed for the 7.1.0 release:
+V7_1_0_EXT      -a V7_1_COMMON_EXT
+
+# Externals needed for the HEAD (7.1.x):
+V7_1_EXT        -a V7_1_0_EXT
+
 
 
 #---------------------------------------------------------------------
@@ -1008,12 +1113,26 @@ V6_9_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V6_9_SRC
 V6_9_ALL	-a DOC V6_9_CODE
 V6_9_BUILD	-a V6_9_ALL externals
 
+# Modules needed for the 7.0.x series
+V7_0_UNIX_CODE	-a TOOLS V7_0_SRC
+V7_0_NT_CODE	-a NT_TOOLS NT_PROGRAMS V7_0_SRC
+V7_0_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V7_0_SRC
+V7_0_ALL	-a DOC V7_0_CODE
+V7_0_BUILD	-a V7_0_ALL externals
+
+# Modules needed for the 7.1.x series
+V7_1_UNIX_CODE	-a TOOLS V7_1_SRC
+V7_1_NT_CODE	-a NT_TOOLS NT_PROGRAMS V7_1_SRC
+V7_1_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V7_1_SRC
+V7_1_ALL	-a DOC V7_1_CODE
+V7_1_BUILD	-a V7_1_ALL externals
+
 # Point these to whatever version is living on the trunk.
-TRUNK_UNIX_CODE	-a V6_9_UNIX_CODE
-TRUNK_NT_CODE	-a V6_9_NT_CODE
-TRUNK_CODE	-a V6_9_CODE
-TRUNK_ALL	-a V6_9_ALL
-TRUNK_BUILD	-a V6_9_BUILD
+TRUNK_UNIX_CODE	-a V7_1_UNIX_CODE
+TRUNK_NT_CODE	-a V7_1_NT_CODE
+TRUNK_CODE	-a V7_1_CODE
+TRUNK_ALL	-a V7_1_ALL
+TRUNK_BUILD	-a V7_1_BUILD
 
 
 ######################################################################
