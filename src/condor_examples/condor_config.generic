@@ -2,7 +2,11 @@
 ##
 ##  condor_config
 ##
-##  This is the global configuration file for condor.
+##  This is the global configuration file for condor.  Any settings
+##  made here may potentially be overridden in the local configuration
+##  file.  KEEP THAT IN MIND!  To double-check that a variable is
+##  getting set from the configuration file that you expect, use
+##  condor_config_val -v <variable name>
 ##
 ##  The file is divided into four main parts:
 ##  Part 1:  Settings you MUST customize 
@@ -417,8 +421,11 @@ GLIDEIN_SERVER_URLS = \
 ## uncomment the line below.
 ## Make sure that $(GLIDEIN_SITES) is included in HOSTALLOW_READ and
 ## HOSTALLW_WRITE, or else your GlideIns won't be able to join your pool.
+## This is _NOT_ done for you by default, because it is an even better
+## idea to use a strong security method (such as GSI) rather than
+## host-based security for authorizing glideins.
 #GLIDEIN_SITES = *.ncsa.uiuc.edu, *.cs.wisc.edu, *.mcs.anl.gov 
-GLIDEIN_SITES = 
+#GLIDEIN_SITES = 
 
 ##  If your site needs to use UID_DOMAIN settings (defined above) that
 ##  are not real Internet domains that match the hostnames, you can
@@ -432,8 +439,8 @@ GLIDEIN_SITES =
 ## a vanilla/standard/java job is in a suspension state, set this attribute to
 ## TRUE. However, this real-time update of the condor_schedd by the shadows 
 ## could cause performance issues if there are thousands of concurrently
-## running vanilla/standard/java jobs under a single condor_schedd and they are 
-## allowed to suspend and resume.
+## running vanilla/standard/java jobs under a single condor_schedd and they
+## are allowed to suspend and resume.
 #REAL_TIME_JOB_SUSPEND_UPDATES = False
 
 ## A standard universe job can perform arbitrary shell calls via the
@@ -618,7 +625,10 @@ MachineBusy		= ($(CPUBusy) || $(KeyboardBusy))
 ##  becomes
 ##  WANT_SUSPEND 		= $(TESTINGMODE_WANT_SUSPEND)
 
+# When should we only consider SUSPEND instead of PREEMPT?
 WANT_SUSPEND 		= $(UWCS_WANT_SUSPEND)
+
+# When should we preempt gracefully instead of hard-killing?
 WANT_VACATE		= $(UWCS_WANT_VACATE)
 
 ##  When is this machine willing to start a job? 
@@ -661,7 +671,16 @@ CLAIM_WORKLIFE          = $(UWCS_CLAIM_WORKLIFE)
 #####################################################################
 ## This is the UWisc - CS Department Configuration.
 #####################################################################
-UWCS_WANT_SUSPEND  = ( $(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) )
+
+# When should we only consider SUSPEND instead of PREEMPT?
+# Only when SUSPEND is True and one of the following is also true:
+#   - the job is small
+#   - the keyboard is idle
+#   - it is a vanilla universe job
+UWCS_WANT_SUSPEND  = ( $(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) ) && \
+                     ( $(SUSPEND) )
+
+# When should we preempt gracefully instead of hard-killing?
 UWCS_WANT_VACATE   = ( $(ActivationTimer) > 10 * $(MINUTE) || $(IsVanilla) )
 
 # Only start jobs if:
