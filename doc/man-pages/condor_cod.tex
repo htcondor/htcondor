@@ -8,35 +8,40 @@
 \SynProg{\Condor{cod}}
 \Arg{request}
 \ToolLocate
-\Lbr \oOpt{-help | -version} $|$ \oOpt{-debug | -timeout N | -classad file} \Rbr
+\Lbr \oOpt{-help $|$ -version} $|$ \oOpt{-debug $|$ -timeout N $|$ -classad file} \Rbr
 \oOpt{-requirements expr} \oOpt{-lease N}
 
 \SynProg{\Condor{cod}}
 \Arg{release} \OptArg{-id}{ClaimID}
-\Lbr \oOpt{-help | -version} $|$ \oOpt{-debug | -timeout N | -classad file} \Rbr
+\Lbr \oOpt{-help $|$ -version} $|$ \oOpt{-debug $|$ -timeout N $|$ -classad file} \Rbr
 \oOpt{-fast}
 
 \SynProg{\Condor{cod}}
 \Arg{activate} \OptArg{-id}{ClaimID}
-\Lbr \oOpt{-help | -version} $|$ \oOpt{-debug | -timeout N | -classad file} \Rbr
-\oOpt{-keyword string | -jobad filename | -cluster N | -proc N | -requirements expr}
+\Lbr \oOpt{-help $|$ -version} $|$ \oOpt{-debug $|$ -timeout N $|$ -classad file} \Rbr
+\oOpt{-keyword string $|$ -jobad filename $|$ -cluster N $|$ -proc N $|$ -requirements expr}
 
 \SynProg{\Condor{cod}}
 \Arg{deactivate} \OptArg{-id}{ClaimID}
-\Lbr \oOpt{-help | -version} $|$ \oOpt{-debug | -timeout N | -classad file} \Rbr
+\Lbr \oOpt{-help $|$ -version} $|$ \oOpt{-debug $|$ -timeout N $|$ -classad file} \Rbr
 \oOpt{-fast}
 
 \SynProg{\Condor{cod}}
 \Arg{suspend} \OptArg{-id}{ClaimID}
-\Lbr \oOpt{-help | -version} $|$ \oOpt{-debug | -timeout N | -classad file} \Rbr
+\Lbr \oOpt{-help $|$ -version} $|$ \oOpt{-debug $|$ -timeout N $|$ -classad file} \Rbr
 
 \SynProg{\Condor{cod}}
 \Arg{renew} \OptArg{-id}{ClaimID}
-\Lbr \oOpt{-help | -version} $|$ \oOpt{-debug | -timeout N | -classad file} \Rbr
+\Lbr \oOpt{-help $|$ -version} $|$ \oOpt{-debug $|$ -timeout N $|$ -classad file} \Rbr
 
 \SynProg{\Condor{cod}}
 \Arg{resume} \OptArg{-id}{ClaimID}
-\Lbr \oOpt{-help | -version} $|$ \oOpt{-debug | -timeout N | -classad file} \Rbr
+\Lbr \oOpt{-help $|$ -version} $|$ \oOpt{-debug $|$ -timeout N $|$ -classad file} \Rbr
+
+\SynProg{\Condor{cod}}
+\Arg{delegate\_proxy} \OptArg{-id}{ClaimID}
+\Lbr \oOpt{-help $|$ -version} $|$ \oOpt{-debug $|$ -timeout N $|$ -classad file} \Rbr
+\oOptArg{-x509proxy}{ProxyFile}
 
 \index{Condor commands!condor\_cod}
 \index{condor\_cod command}
@@ -98,6 +103,7 @@ for more a complete description of COD.
   \OptItem{\Opt{suspend}}{Suspend the job on a given claim}
   \OptItem{\Opt{renew}}{Renew the lease to the COD claim}
   \OptItem{\Opt{resume}}{Resume the job on a given claim}
+  \OptItem{\Opt{delegate\_proxy}}{Delegate an X509 proxy for the given claim}
 \end{Options}
 
 \GenRem

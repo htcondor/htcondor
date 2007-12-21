@@ -20,9 +20,10 @@ and management.
 To deal with the issues of reliability and fault-tolerance,
 a two-phase commit mechanism to provides a transaction-based protocol.  
 The following API description describes interaction
-between a client using the API and the \Condor{schedd} daemon
-to illustrate transactions
-for use in job submission and queue management functions.
+between a client using the API and both the \Condor{schedd} and 
+\Condor{collector} daemons to illustrate transactions
+for use in job submission, queue management and ClassAd 
+management functions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{WebService-Transactions} Transactions}
@@ -362,6 +363,8 @@ deal with
   \item Job Submission
   \item File Transfer
   \item Job Management
+  \item ClassAd Management
+  \item Version Information
 \end{itemize}
 The routines for each of these categories is detailed.
 Note that the signature provided will accurately 
@@ -377,26 +380,85 @@ will vary according  to the target programming language.
 \item [\Code{beginTransaction}]
   A prototype is
   
-  \Code{StatusAndTransaction beginTransaction(int duration);}
+  \begin{itemize}
+    \item[] \Code{StatusAndTransaction beginTransaction(int duration);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{duration}
+
+      Expected duration of the transaction.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains the new transaction.
+    \end{itemize}
+  \end{itemize}    
   
   Begin a transaction.
 \item [\Code{commitTransaction}]
   A prototype is
 
-  \Code{Status commitTransaction(Transaction transaction);}
+  \begin{itemize}
+    \item[] \Code{Status commitTransaction(Transaction transaction);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction}
+
+      Transaction to be committed.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. 
+    \end{itemize}
+  \end{itemize}  
 
   Commits a transaction.
 \item [\Code{abortTransaction}]
   A prototype is
 
-  \Code{Status abortTransaction(Transaction transaction);}
+  \begin{itemize}
+    \item[] \Code{Status abortTransaction(Transaction transaction);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction}
 
+      Transaction to be aborted.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. 
+    \end{itemize}
+  \end{itemize}  
+  
   Abort a transaction.
 \item [\Code{extendTransaction}]
   A prototype is
 
-  \Code{StatusAndTransaction extendTransaction(Transaction transaction, int duration);}
+  \begin{itemize}
+    \item[] \Code{StatusAndTransaction extendTransaction(
+      Transaction transaction, int duration);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction}
 
+      Transaction to be extended.
+      \item[] \Parameter{duration} 
+
+      Duration of the extension.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains the transaction with the extended
+      duration.
+    \end{itemize}
+  \end{itemize}  
+  
   Request an extension in duration for a specific transaction.
 \end{description}
 
@@ -407,21 +469,112 @@ will vary according  to the target programming language.
 \begin{description}
 \item [\Code{submit}]
   A prototype is
+  
+  \begin{itemize}
+    \item[] \Code{StatusAndRequirements submit(Transaction transaction, 
+      int clusterId, int jobId, ClassAd jobAd);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction}
 
-  \Code{Status submit(Transaction transaction, int clusterId, int jobId, ClassAd jobAd);}
+      Transaction in which the submission takes place.
+      \item[] \Parameter{clusterId} 
+
+      Cluster identifier.
+      \item[] \Parameter{jobId}
+
+      Job identifier.
+      \item[] \Parameter{jobAd} 
+
+      ClassAd describing the job. Creation of this ClassAd can be simplified
+      with \Code{createJobTemplate();}.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      the return value contains the job's requirements.
+    \end{itemize}
+  \end{itemize}  
 
   Submit a job.
 \item [\Code{createJobTemplate}]
   A prototype is 
 
-  \Code{StatusAndClassAd createJobTemplate(int clusterId, int jobId,
-  String owner, UniverseType type, String command, String arguments, 
-  String requirements);}
+  \begin{itemize}
+    \item[] \Code{StatusAndClassAd createJobTemplate(int clusterId, 
+      int jobId, String owner, UniverseType type, String command, 
+      String arguments, String requirements);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{clusterId} 
+
+      Cluster identifier.
+      \item[] \Parameter{jobId}
+
+      Job identifier.
+      \item[] \Parameter{owner} 
+
+      The name to be associated with the job.
+      \item[] \Parameter{type}
+
+      Universe under which the job will run, where \Parameter{type} can be
+      one of the following:
+
+      \Code{enum UniverseType \{}
+
+      \begin{itemize}
+        \item[] \Code{STANDARD = 1, VANILLA = 5,}
+	\item[] \Code{SCHEDULER = 7, MPI = 8,}
+	\item[] \Code{GRID = 9, JAVA = 10,}
+	\item[]	\Code{PARALLEL = 11, LOCALUNIVERSE = 12,} 
+	\item[]	\Code{VM = 13 \};}
+      \end{itemize}
+      
+      \item[] \Parameter{command} 
+
+      Command to execute once the job has started.
+      \item[] \Parameter{arguments}
+
+      Command-line arguments for \Parameter{command}.
+      \item[] \Parameter{requirements}
+
+      Requirement expression for the job. For further details 
+      and examples of the expression syntax, please refer to 
+      section~\ref{sec:classadref}.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. 
+    \end{itemize}
+  \end{itemize}
  
   Request a job Class Ad, given some of the job requirements.
   This job Class Ad will be suitable for use when submitting the job.
 
-%%    StatusAndRequirements discoverJobRequirements(ClassAd jobAd)
+\item [\Code{discoverJobRequirements}]
+  A prototype is 
+
+  \begin{itemize}
+    \item[] \Code{StatusAndRequirements discoverJobRequirements(
+      ClassAd jobAd);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{jobAd} 
+
+      ClassAd of the job.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains the job's requirements.
+    \end{itemize}
+  \end{itemize}    
+
+  Discover the requirements of a job, given a Class Ad.  May be helpful 
+  in determining what should be sent along with the job. 
 
 \end{description}
 
@@ -432,41 +585,188 @@ will vary according  to the target programming language.
 \begin{description}
 \item [\Code{declareFile}]
   A prototype is 
+  
+  \begin{itemize}
+    \item[] \Code{Status declareFile(Transaction transaction, int clusterId, 
+      int jobId, String name, int size, HashType hashType, String hash);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction} 
 
-  \Code{Status declareFile(Transaction transaction, int clusterId, 
-  int jobId, String name, int size, HashType hashType, String hash);}
+      The transaction in which this file is declared.
+      \item[] \Parameter{clusterId} 
+
+      Cluster identifier.
+      \item[] \Parameter{jobId}
+
+      identifier of the job that will use the file.
+      \item[] \Parameter{name}
+
+      Name of the file.
+      \item[] \Parameter{size} 
+
+      Size of the file.
+      \item[] \Parameter{hashType}
+
+      Type of hash mechanism used to verify file integrity, where 
+      \Parameter{hashType} can be one of the following:
+
+      \Code{enum HashType \{}
+
+      \begin{itemize}
+        \item[] \Code{NOHASH,}
+	\item[] \Code{MD5HASH \};}
+      \end{itemize}
+      
+      \item[] \Parameter{hash}
+
+      An optionally zero-length string encoding of the file hash.
+      \Parameter{length}.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. 
+    \end{itemize}
+  \end{itemize}   
 
   Declare a file that may be used by a job.
 \item [\Code{sendFile}]
   A prototype is 
 
-  \Code{Status sendFile(Transaction transaction, int clusterId, int jobId, String name, int offset, Base64 data);}
+  \begin{itemize}
+    \item[] \Code{Status sendFile(Transaction transaction, int clusterId, 
+      int jobId, String name, int offset, Base64 data);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction} 
+
+      The transaction in which this file is send.
+      \item[] \Parameter{clusterId} 
+
+      Cluster identifier.
+      \item[] \Parameter{jobId}
+
+      identifier of the job that will use the file.
+      \item[] \Parameter{name}
+
+      Name of the file being sent.
+      \item[] \Parameter{offset} 
+
+      Starting offset withing the file being sent.
+      \item[] \Parameter{length}
+
+      Length from the offset to send.
+      \item[] \Parameter{data}
+
+      The data block being send.  This could be the entire file or a
+      sub-section of the file as defined by \Parameter{offset} and 
+      \Parameter{length}.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. 
+    \end{itemize}
+  \end{itemize}  
 
   Send a file that a job may use.
 \item [\Code{getFile}]
   A prototype is 
 
-  \Code{StatusAndBase64 getFile(Transaction transaction, int clusterId, 
-  int jobId, String name, int offset, int length);}
+  \begin{itemize}
+    \item[] \Code{StatusAndBase64 getFile(Transaction transaction, 
+      int clusterId, int jobId, String name, int offset, int length);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction} 
 
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item[] \Parameter{clusterId} 
+
+      Cluster identifier to search in.
+      \item[] \Parameter{jobId}
+
+      Job identifier the file is associated with.
+      \item[] \Parameter{name}
+
+      Name of the file to retrieve.
+      \item[] \Parameter{offset} 
+
+      Starting offset withing the file being retrieved.
+      \item[] \Parameter{length}
+
+      Length from the offset to retrieve.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains the file or a sub-section of the
+      file as defined by \Parameter{offset} and \Parameter{length}.
+    \end{itemize}
+  \end{itemize}  
+  
   Get a file from a job's spool.
-  Does not need to occur in a transaction.
 \item [\Code{closeSpool}]
   A prototype is 
 
-  \Code{Status closeSpool(Transaction transaction, int clusterId, int jobId);}
+  \begin{itemize}
+    \item[] \Code{Status closeSpool(Transaction transaction, int clusterId, 
+      int jobId);}      
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction} 
+
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item[] \Parameter{clusterId} 
+
+      Cluster identifier which the job is associated with. 
+      \item[] \Parameter{jobId}
+
+      Job identifier for which the spool is to be removed.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values.
+    \end{itemize}
+  \end{itemize}  
 
   Close a job's spool.
-  Does not need to occur in a transaction.
   All the files in the job's spool can be deleted. 
   %%  deleted before or after this method returns/is invoked?
 \item [\Code{listSpool}]
   A prototype is 
 
-  \Code{FileInfoArrayAndStatus listSpool(Transaction transaction, int clusterId, int jobId);}
+  \begin{itemize}
+    \item[] \Code{StatusAndFileInfoArray listSpool(Transaction transaction, 
+        int clusterId, int jobId);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction} 
+
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item[] \Parameter{clusterId} 
+
+      Cluster identifier to search in.
+      \item[] \Parameter{jobId}
+
+      Job identifier to search for.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains a list of files and their 
+      respective sizes.
+    \end{itemize}
+  \end{itemize}  
 
   List the files in a job's spool.
-  Does not need to occur in a transaction.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -477,70 +777,262 @@ will vary according  to the target programming language.
 \item [\Code{newCluster}]
   A prototype is 
 
-  \Code{StatusAndInteger newCluster(Transaction transaction);}
+  \begin{itemize}
+    \item[] \Code{StatusAndInt newCluster(Transaction transaction);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction} 
+
+      The transaction in which this cluster is created.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains the cluster id.
+    \end{itemize}
+  \end{itemize}
 
   Create a new job cluster.
 \item [\Code{removeCluster}]
   A prototype is 
 
-  \Code{Status removeCluster(Transaction transaction, int clusterId,
-  String reason);}
+  \begin{itemize}
+    \item[] \Code{Status removeCluster(Transaction transaction, int clusterId,
+      String reason);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction} 
+
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item[] \Parameter{clusterId} 
+
+      Cluster identifier to remove.
+      \item[] \Parameter{reason}
+
+      The reason for the removal.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. 
+    \end{itemize}
+  \end{itemize}
 
   Remove a job cluster, and all the jobs within it.
-  %% What does it mean within Condor to remove a cluster?
-  Does not need to occur in a transaction.
+  %% What does it mean within Condor to remove a cluster?  
 \item [\Code{newJob}]
   A prototype is 
 
-  \Code{StatusAndInteger newJob(Transaction transaction, int clusterId);}
+  \begin{itemize}
+    \item[] \Code{StatusAndInt newJob(Transaction transaction, int clusterId);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction} 
+
+      The transaction in which this job is created.
+      \item[] \Parameter{clusterId} 
+
+      Cluster identifier of the most recently created cluster. 
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains the job id.
+    \end{itemize}
+  \end{itemize}
 
   Creates a new job within the most recently created job cluster.
   %% Why pass the clusterId if there's only 1 that we can use?
   %% Is this to mimic the behaviour of commands within a submit file
   %%     WRT the queue command?
+  %%
+  %% The reason we pass the cluster id is because in the future it 
+  %% maybe not be an implementation restriction to use the most 
+  %% recently created cluster to run a new job under.
+  %% -Ben (from a convo with Matt)
 \item [\Code{removeJob}]
   A prototype is 
 
-  \Code{Status removeJob(Transaction transaction, int clusterId, 
-  int jobId, String reason, boolean forceRemoval);}
+    \begin{itemize}
+    \item[] \Code{Status removeJob(Transaction transaction, int clusterId, 
+      int jobId, String reason, boolean forceRemoval);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction} 
+
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item[] \Parameter{clusterId} 
+
+      Cluster identifier to search in.
+      \item[] \Parameter{jobId}
+
+      Job identifier to search for.
+      \item[] \Parameter{reason}
+
+      The reason for the release.
+      \item[] \Parameter{reason}
+
+      The reason for the release.      
+      \item[] \Parameter{forceRemoval}
+
+      Set if the job should be forcibly removed.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values.
+    \end{itemize}
+  \end{itemize}   
 
   Remove a job, regardless of the job's state.
-  Does not need to occur in a transaction.
+
 \item [\Code{holdJob}]
   A prototype is 
 
-  \Code{Status holdJob();}
-  %% Needs parameters.
+  \begin{itemize}
+    \item[] \Code{Status holdJob(Transaction transaction, int clusterId, 
+      int jobId, string reason, boolean emailUser, boolean emailAdmin,
+      boolean systemHold);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction} 
+
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item[] \Parameter{clusterId} 
+
+      Cluster identifier to search in.
+      \item[] \Parameter{jobId}
+
+      Job identifier to search for.
+      \item[] \Parameter{reason}
+
+      The reason for the release.
+      \item[] \Parameter{reason}
+
+      The reason for the release.      
+      \item[] \Parameter{emailUser}
+
+      Set if the submitting user should be notified.
+      \item[] \Parameter{emailAdmin}
+
+      Set if the administrator should be notified.
+      \item[] \Parameter{systemHold}
+      
+      Set if the job should be put on hold.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values.
+    \end{itemize}
+  \end{itemize}   
 
   Put a job into the Hold state, regardless of the job's current state.
-  Does not need to occur in a transaction.
+
 \item [\Code{releaseJob}]
   A prototype is 
 
-  \Code{Status releaseJob(Transaction transaction, int clusterId, 
-  int jobId, String reason, boolean emailUser, boolean emailAdmin);}
+  \begin{itemize}
+    \item[] \Code{Status releaseJob(Transaction transaction, int clusterId, 
+      int jobId, String reason, boolean emailUser, boolean emailAdmin);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction} 
+
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item[] \Parameter{clusterId} 
+
+      Cluster identifier to search in.
+      \item[] \Parameter{jobId}
+
+      Job identifier to search for.
+      \item[] \Parameter{reason}
+
+      The reason for the release.
+      \item[] \Parameter{reason}
+
+      The reason for the release.      
+      \item[] \Parameter{emailUser}
+
+      Set if the submitting user should be notified.
+      \item[] \Parameter{emailAdmin}
+
+      Set if the administrator should be notified.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values.
+    \end{itemize}
+  \end{itemize} 
 
   Release a job that has been in the Hold state.
-  Does not need to occur in a transaction.
 
 \item [\Code{getJobAds}]
   A prototype is 
 
-  \Code{StatusAndClassAdArray getJobAds(Transaction transaction, 
-  String constraint);}
+  \begin{itemize}
+    \item[] \Code{StatusAndClassAdArray getJobAds(Transaction transaction, 
+      String constraint);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction} 
 
-  Find all the job ClassAds matching the given constraint.
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item[] \Parameter{constraint} 
+
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classadref}.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains all job ClassAds matching the 
+      given constraint.
+    \end{itemize}
+  \end{itemize}     
   %% Find them from where?  The API's set of cluster/jobs or Condor's?
-  Does not need to occur in a transaction.
+  
 \item [\Code{getJobAd}]
   A prototype is 
 
-  \Code{StatusAndClassAd getJobAd(Transaction transaction, 
-  int clusterId, int jobId);}
+  \begin{itemize}
+    \item[] \Code{StatusAndClassAd getJobAd(Transaction transaction, 
+      int clusterId, int jobId);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{transaction} 
 
-   Find a specific job ClassAd. 
-   This method does much the same as the first element from the array 
-   returned by
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item[] \Parameter{clusterId} 
+
+      Cluster identifier to search in.
+      \item[] \Parameter{jobId}
+
+      Job identifier to search for.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on succees, the return value contains the requested ClassAd.
+    \end{itemize}
+  \end{itemize}
+
+  Finds a specific job ClassAd. 
+
+  This method does much the same as the first element from the array 
+  returned by
 
 \footnotesize
 \begin{verbatim}
@@ -552,9 +1044,232 @@ getJobAds(transaction, "(ClusterId==clusterId && JobId==jobId)")
 \item [\Code{requestReschedule}]
   A prototype is 
 
-  \Code{Status  requestReschedule();}
+  \begin{itemize}
+    \item[] \Code{Status requestReschedule();}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values.
+    \end{itemize}
+  \end{itemize} 
 
-   Request a \Condor{reschedule} from the \Condor{schedd} daemon.
+  Request a \Condor{reschedule} from the \Condor{schedd} daemon.
+   
 \end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-ClassAdManagement} Methods for ClassAd Management}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% ClassAdType
+% ClassAdStruct
+
+\begin{description}
+\item [\Code{insertAd}]
+  A prototype is 
+
+  \begin{itemize}
+    \item[] \Code{Status insertAd(ClassAdType type, ClassAdStruct ad);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{type}
+      
+      The type of ClassAd to insert, where \Parameter{type} can be one of the
+      folling:
+
+      \Code{enum ClassAdType \{}
+
+      \begin{itemize}
+        \item[] \Code{STARTD\_AD\_TYPE, QUILL\_AD\_TYPE,}
+        \item[] \Code{SCHEDD\_AD\_TYPE, SUBMITTOR\_AD\_TYPE,} 
+        \item[] \Code{LICENSE\_AD\_TYPE, MASTER\_AD\_TYPE,}
+        \item[] \Code{CKPTSRVR\_AD\_TYPE, COLLECTOR\_AD\_TYPE,}
+        \item[] \Code{STORAGE\_AD\_TYPE, NEGOTIATOR\_AD\_TYPE,}
+        \item[] \Code{HAD\_AD\_TYPE, GENERIC\_AD\_TYPE \};}
+      \end{itemize}
+
+      \item[] \Parameter{ad} 
+
+      The ClassAd to insert
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values.
+    \end{itemize}
+  \end{itemize}
+
+\item [\Code{queryStartdAds}]
+  A prototype is 
+
+  \begin{itemize}
+    \item[] \Code{ClassAdArray queryStartdAds(String constraint);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{constraint} 
+
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classadref}.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] A list of all the \Condor{startd} ClassAds matching the 
+      given constraint.
+    \end{itemize}
+  \end{itemize}    
+
+\item [\Code{queryScheddAds}]
+  A prototype is 
+
+  \begin{itemize}
+    \item[] \Code{ClassAdArray queryScheddAds(String constraint);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{constraint} 
+
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classadref}.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] A list of all the \Condor{schedd} ClassAds matching the given 
+      constraint.
+    \end{itemize}
+  \end{itemize}   
+
+\item [\Code{queryMasterAds}]
+  A prototype is 
+
+  \begin{itemize}
+    \item[] \Code{ClassAdArray queryMasterAds(String constraint);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{constraint} 
+
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classadref}.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] A list of all the \Condor{master} ClassAds matching the given 
+      constraint.
+    \end{itemize}
+  \end{itemize}
+
+\item [\Code{querySubmittorAds}]
+  A prototype is 
+
+  \begin{itemize}
+    \item[] \Code{ClassAdArray querySubmittorAds(String constraint);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{constraint} 
+
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classadref}.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] A list of all the submitters ClassAds matching the given 
+        constraint.
+    \end{itemize}
+  \end{itemize}
+
+\item [\Code{queryLicenseAds}]
+  A prototype is 
+
+  \begin{itemize}
+    \item[] \Code{ClassAdArray queryLicenseAds(String constraint);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{constraint} 
+
+      A string constraining the number ClassAds to return.For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classadref}.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] A list of all the license ClassAds matching the given constraint.
+    \end{itemize}
+  \end{itemize}
+  
+\item [\Code{queryStorageAds}]
+  A prototype is 
+
+  \begin{itemize}
+    \item[] \Code{ClassAdArray queryStorageAds(String constraint);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{constraint}
+
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classadref}.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] A list of all the storage ClassAds matching the given constraint.
+    \end{itemize}
+  \end{itemize} 
+
+\item [\Code{queryAnyAds}]
+  A prototype is 
+  
+  \begin{itemize}
+    \item[] \Code{ClassAdArray queryAnyAds(String constraint);}
+    \item[] Parameters
+    \begin{itemize}
+      \item[] \Parameter{constraint} 
+
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classadref}.
+    \end{itemize}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] A list of all the ClassAds matching the given constraint.
+      to return.
+    \end{itemize}
+  \end{itemize}  
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-VersionInformation} Methods for Version Information}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{description}
+\item [\Code{getVersionString}]
+  A prototype is 
+
+  \begin{itemize}
+    \item[] \Code{StatusAndString getVersionString();}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] Returns the Condor version as string.
+    \end{itemize}
+  \end{itemize}  
+
+\item [\Code{getPlatformString}]
+  A prototype is 
+
+  \begin{itemize}
+    \item[] \Code{StatusAndString getPlatformString();}
+    \item[] Return Values
+    \begin{itemize}
+      \item[] Returns the platform information Condor is running on as string.
+    \end{itemize}
+  \end{itemize}  
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsubsection{\label{WebService-DataStructures} Common Data Structures}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Not yet in this list:

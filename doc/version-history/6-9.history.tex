@@ -481,6 +481,9 @@ for details.
 
 \begin{itemize}
 
+\item Updated the SOAP API's \Code{enum UniverseType} to include all the 
+      supported universes.
+
 \item Missing files that Quill needed to function now appear in the
 downloadable release of Condor.
 
@@ -647,6 +650,14 @@ set to True.  This was also the case in 6.9.4.
 
 \item The pool password authentication method fails to authenticate
 (and in fact will cause the client to crash).
+
+% PR 906
+\item If \Condor{dagman} cannot execute a PRE or POST script
+(for example, if the script name is specified incorrectly),
+\Condor{dagman} will hang indefinitely.  (Note that if the 
+script is executed and fails, \Condor{dagman} deals with this
+correctly.)  (This bug was fixed in version 6.8.7.)
+
 
 \end{itemize}
 
@@ -1492,7 +1503,7 @@ if you update any of the other Condor daemons.
   As this was undocumented and confusing behavior it is no longer
   present.  To request a setting use its default, either comment it
   out, or set it to nothing (``\Code{EXAMPLE\_SETTING=}'').
-  Setting impacted include but are not limited to: 
+  Settings impacted include but are not limited to: 
   % From condor_master.V6/master.C 1.82 to 1.83:
   \Macro{MASTER\_BACKOFF\_CONSTANT},
   \Macro{MASTER\_BACKOFF\_CEILING},

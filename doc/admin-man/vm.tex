@@ -1,0 +1,203 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:vm-install}Virtual Machines}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{virtual machines}
+\index{installation!vm universe}
+
+Virtual Machines can be executed on any execution site with VMware or Xen
+(via \Prog{libvirt}).  To do this, Condor must be informed of some details 
+of the VM installation.
+
+What follows is not a comprehensive list of the VM Universe options; rather,
+it is intended to serve as a starting point for those users interested in
+getting VM Universe up and running quickly.  For further, more comprehensive 
+coverage of the configuration options please refer to 
+section~\ref{sec:Config-VMs}.
+
+Begin by installing the virtualization package according to the vendor's
+instructions.  We have successfully used both VMware Server and Xen. If you
+are considering running on a Windows system, you will also need to install
+a Perl distribution; for this we have used ActivePerl successfully. 
+
+If you are considering Xen, then there are four things that must exist on 
+a system to fully support it. First, a Xen kernel must be running on the 
+execute machine. This running Xen kernel acts as Dom0, in Xen terminology, 
+under which all VMs are started, called DomUs Xen terminology. Second, 
+either the \Prog{virsh} or \Prog{xm} utilities must be available, and their 
+companion \Prog{libvirtd} and \Prog{Xend} services must be running. Third, a 
+reasonably recent version of the \Prog{mkisofs} utility must be available, 
+for creation of CD-ROM disk images. Fourth, the \Prog{pygrub} program must be 
+available, for execution of VMs whose disks contain the kernel they will run.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Condor Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Condor's configuration file, includes several of the 
+VM configuration options.  Some options are required, while others are 
+optional.  Here we only discuss those that are required.
+
+First, you are required to specify the type of VM that is installed. 
+For instance, the following tells Condor we are using VMware:
+
+\begin{verbatim}
+VM_TYPE = vmware
+\end{verbatim}
+
+You are also required to specify the location of \Condor{vm-gahp}, as well as 
+its configuration file. A basic \Condor{vm-gahp} configuration is shipped 
+with Condor and can be copied to reside alongside the configuration file. For a 
+Windows installation, these options may look like this:
+
+\begin{verbatim}
+VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp.exe
+VM_GAHP_CONFIG = $(RELEASE_DIR)/condor_vmgahp_config.vmware
+\end{verbatim}
+
+The final required configuration setting is the location where the
+\Condor{vm-gahp} should write its logs. By default, this is set to 
+\File{/dev/null} on Unix and Linux and \File{NUL} on Windows; however, if 
+logging is required, it can be set to a specific path.  The following will 
+work on both Windows and Unix/Linux systems, provided the 
+\Code{VMGahpLogs} directory exists:
+
+\begin{verbatim}
+VM_GAHP_LOG = $(LOG)/VMGahpLogs/VMGahpLog.$(USERNAME)
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Configuration for the \Condor{vm-gahp}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The next set of options that need to be set, belong in the \Condor{vm-gahp}'s 
+configuration file.  Again, you must specify the kind of virtual machine 
+software that is installed on the host:
+
+\begin{verbatim}
+VM_TYPE = vmware
+\end{verbatim}
+
+You must also tell the \Condor{vm-gahp} which version of the software you 
+are using:
+
+\begin{verbatim}
+VM_VERSION = server1.0.4
+\end{verbatim}
+
+While required, this option does not alter the behavior of the 
+\Condor{vm-gahp}. Instead, it is added to the ClassAd for the machine, so it 
+can be matched against.  This way, if future releases of VMware/Xen support
+new features that are desirable for your job, you can match on this string.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{VMware-Specific Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+If you are using VMware you also need to set the location of the Perl 
+executable.  In most cases, however, the default value should suffice:
+
+\begin{verbatim}
+VMWARE_PERL = perl
+\end{verbatim}
+
+This, of course, assumes the Perl executable is in the path.  If this is not 
+the case, then a full path to the Perl executable will be required.
+
+The final required option is the location of the VMware control script. On 
+Windows the following is valid:
+
+\begin{verbatim}
+VMWARE_PERL = C:\condor\bin\condor_vm_vmware.pl
+\end{verbatim}
+
+On Unix/Linux installations the path must be set to reflect the location of
+your installation.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Xen-Specific Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Xen configurations must set which local users 
+are eligible to execute the \Condor{vm-gahp}:
+
+\begin{verbatim}
+ALLOW_USERS = condor
+\end{verbatim}
+
+This is a requirement because Xen requires root privileges and therefore
+\Condor{vm-gahp} is installed with setuid-root.  The default is initially 
+set to \Code{condor} as is illustrated above; however, there may be reasons
+to add other users to this list.
+
+Next you must set which program controls the Xen hypervisor.  In most cases 
+you will not need a full path, as \File{/usr/sbin} is in the root user's 
+path; however, if you are not running the \Condor{vm-gahp} as root,
+then you will need 
+to specify the complete path to the control program.  For instance:
+
+\begin{verbatim}
+XEN_CONTROLLER = /usr/sbin/xm
+\end{verbatim}
+
+Thirdly, the location of the control script must be set.  For example:
+
+\begin{verbatim}
+XEN_SCRIPT = /usr/local/condor/sbin/condor_vm_xen.sh
+\end{verbatim}
+
+The last required option not included in the default Xen configuration is
+\Macro{XEN\_DEFAULT\_KERNEL}: this is the kernel image that will be used
+in cases where the user does not specify one explicitly in their job
+submission.  In most cases, this is can be the default kernel from which
+the system was booted.  For instance, the following was used on a Fedora
+Core installation:
+
+\begin{verbatim}
+XEN_DEFAULT_KERNEL = /boot/vmlinuz-2.6.18-1.2798.fc6xen
+\end{verbatim}
+
+There is one final option worth mentioning: \Macro{XEN\_DEFAULT\_INITRD}.  
+It's not a required option, but if you do decide to use it, there are a 
+few things that you should be careful with.  Unlike the kernel image above,
+this image cannot be the stock one used to boot the system.  The reason
+for this is that Xen requires several device drivers in DomUs: \Prog{xennet} 
+and \Prog{xenblk}.  This can be easily fixed by creating a new \Prog{initrd}
+using \Prog{mkinitrd} and loading the drivers into it.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsection{}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Once the configuration options have been set, restart the \Condor{startd} 
+daemon on that host.  For example:
+
+\begin{verbatim}
+> condor_restart -startd leovinus
+\end{verbatim}
+
+The \Condor{startd} daemon takes a few moments to exercise the VM
+capabilities of the \Condor{vm-gahp}, query its properties, and then 
+advertise the machine to the pool as VM-capable.  If the set up 
+succeeded, then \Condor{status} will tell you the host is now 
+VM-capable by printing the VM type and the version number:
+
+\begin{verbatim}
+> condor_status -vm leovinus
+\end{verbatim}
+
+After a suitable amount of time, if this command does not give any output,
+then the \Condor{vm-gahp} is having difficulty executing the VM software.
+The exact cause of the problem depends on the details of the VM, the local 
+installation, and a variety of other factors. We can offer only limited 
+advice on these matters:
+
+For Xen, the VM Universe is only available when root starts Condor.
+This is a restriction currently imposed because root privileges are 
+required to create a VM on top of a Xen kernel. Specifically, root is needed 
+to properly use the \Prog{virsh} or \Prog{xm} utilities that control 
+creation and management of Xen guest virtual machines. This restriction 
+may be lifted in future versions depending on features provided by the 
+underlying tools, \Prog{virsh} and \Prog{xm}, or upon Condor's direct 
+support of Qemu VMs that do not require network access.

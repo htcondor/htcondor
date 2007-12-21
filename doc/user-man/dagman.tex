@@ -170,7 +170,9 @@ Therefore, \Arg{DONE}, \Arg{Done}, and \Arg{done} are all equivalent.
 The values defined for \Arg{JobName} and \Arg{SubmitDescriptionFileName}
 are case sensitive, as file names in
 the Unix file system are case sensitive.
-The \Arg{JobName} can be any string that contains no white space.
+The \Arg{JobName} can be any string that contains no white space, except
+for the strings \Arg{PARENT} and \Arg{CHILD} (in upper, lower, or mixed
+case).
 
 The \Arg{DIR} option specifies a working directory
 for this node,

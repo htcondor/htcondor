@@ -31,6 +31,75 @@ section~\ref{sec:Availability} on page~\pageref{sec:Availability}.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-6-8-8}Version 6.8.8}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item This release fixes a security vulnerability that affects
+those who rely upon Condor's network message integrity checking
+(where the configuration is set to
+\verb@SEC_DEFAULT_INTEGRITY = REQUIRED@).  Not all of
+Condor's network communications are vulnerable to the integrity
+checking bug, so based on the scope of the affected parts, we consider
+the level of threat to be modest.  A denial of service attack could be
+launched against Condor by an attacker who tampers with Condor's
+network communications.  All previous releases of Condor are affected
+by this bug.  For users of the 6.9 development series, a
+fix for this problem will be released as part of the new 7.0.0 stable
+series release, which is planned to happen near the end of 2007.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a named pipe collision on Windows: streaming error and 
+output would not work on more than one slot
+(Condor version 6.8.8 terminology: Condor vm) at a time.
+
+\item Fixed a bug in Condor's network message integrity checking.
+
+\item Fixed a forward-compatibility problem when a 6.8 \Condor{startd}
+runs jobs for a 6.9 or later \Condor{schedd} and the communication
+between them is configured to use integrity checking or encryption.
+The problem caused the \Condor{startd} to crash.
+
+\item Fixed a problem that sometimes caused corruption of ClassAd data
+that is forwarded from one \Condor{collector} daemon to another via
+\MacroNI{CONDOR\_VIEW\_HOST}.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-6-8-7}Version 6.8.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -55,19 +124,23 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item On Windows, fixed a problem that could cause spurious failures with Condor-C
+or with streaming a job's standard output or error.
+
 \item A claim in the state Claimed/Idle could not be preempted until
 it transitioned into Busy or went away of its own accord.  This bug
 was introduced in 6.7.1.
 
 \item The user-based authorization parameters in the configuration file
-(e.g. \MacroNI{ALLOW\_READ}) now properly recognize values where the
-username contains a wild card (e.g. \MacroNI{*@cs.wisc.edu/bird.cs.wisc.edu}).
+(for example, \MacroNI{ALLOW\_READ}) now properly recognize values where the
+user name contains a wild card
+(for example, \MacroNI{*@cs.wisc.edu/bird.cs.wisc.edu}).
 
 \item A rare threading problem in the Windows version of Condor has
 been fixed.  The problem could cause memory corruption in the
 \Condor{starter} while receiving input files and in the
 \Condor{schedd} while transferring input/output files for a remotely
-submitted job or a `spooled' job.
+submitted job or a spooled job.
 
 % PR 908
 \item Increased the verbosity of some error messages (related to
@@ -118,15 +191,15 @@ dealt with as a PRE or POST script failure.
 
 \begin{itemize}
 
-\item On all UNIX ports of Condor except MacOSX, AIX, and Tru64, separate
+\item On all Unix ports of Condor except MacOSX, AIX, and Tru64, separate
 debug symbol files are now supported. This allows meaningful debugging of
 core files in addition to attaching to stripped executables during runtime.
 
 \item \Condor{dagman} now prints reports of pending nodes to the
 \File{dagman.out}, if it has been waiting more than
 \MacroNI{DAGMAN\_PENDING\_REPORT\_INTERVAL} seconds without seeing
-any node job events.  (This is to help diagnose the problem if
-\Condor{dagman} gets "stuck".)
+any node job events.  This is to help diagnose the problem if
+\Condor{dagman} gets "stuck".
 
 % This is a back-port from 6.9
 \item Optimized the submission of grid-type gt4 grid universe jobs to the
@@ -1554,7 +1627,7 @@ config file \MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} is set to True.
 True, this will instruct the negotiator to safely cache data in order to
 improve matchmaking performance.
 
-\item The Condor{master} now recognizes \Condor{quill} as a valid
+\item The \Condor{master} now recognizes \Condor{quill} as a valid
   Condor daemon without any manual configuration on the part of site
   administrators.
   This simplifies the configuration changes required to enable Quill. 

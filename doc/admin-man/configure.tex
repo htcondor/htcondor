@@ -1029,11 +1029,12 @@ one hour.  If connections to the dead primary collector take very
 little time to fail, new attempts to query the primary collector may
 be more frequent than the specified maximum avoidance time.
 
+
 \item[\Macro{PASSWD\_CACHE\_REFRESH}]
   \label{param:PasswdCacheRefresh}
   Condor can cause NIS servers to become overwhelmed by queries for uid
   and group information in large pools. In order to avoid this problem,
-  Condor caches UID and group information internally. This setting allows
+  Condor caches UID and group information internally. This integer value allows
   pool administrators to specify (in seconds) how long Condor should wait
   until refreshes a cache entry. The default is set to 300 seconds, or
   5 minutes, plus a random number of seconds between 0 and 60 to avoid
@@ -1178,6 +1179,13 @@ This macro
   The last modification date is printed, and it provides an upper bound
   on the length of time that the daemon was not running.
   Defaults to 60 seconds.
+
+\item[\Macro{LOGS\_USE\_TIMESTAMP}] \label{param:LogsUseTimestamp}
+  This macro controls how the current time is formatted at the start of
+  each line in the daemon log files. When \Expr{True}, the Unix time is
+  printed (number of seconds since 00:00:00 UTC, January 1, 1970).
+  When \Expr{False} (the default value), the time is printed like so:
+  \Expr{<Month>/<Day> <Hour>:<Minute>:<Second>} in the local timezone.
 
 \item[\MacroB{<SUBSYS>\_DEBUG}] \label{param:SubsysDebug}
 \index{SUBSYS\_DEBUG macro@\texttt{<SUBSYS>\_DEBUG} macro}
@@ -1599,6 +1607,15 @@ server, shadow, and starter, none of which use DaemonCore yet).
   with the appropriate subsystem string as defined in
   section~\ref{sec:Condor-Subsystem-Names}.
   
+\item[\MacroB{<SUBSYS>\_DAEMON\_AD\_FILE}]
+  \label{param:SubsysDaemonAdFile}
+  \index{SUBSYS\_DAEMON\_AD\_FILE macro@\texttt{<SUBSYS>\_DAEMON\_AD\_FILE} macro}
+  A complete path to a file that is to contain the ClassAd for a daemon.
+  When the daemon sends a ClassAd describing itself to the
+  \Condor{collector}, it will also place a copy of the ClassAd in this
+  file. Currently, this setting only works for the \Condor{schedd}
+  (that is \Macro{SCHEDD\_DAEMON\_AD\_FILE}) and is required for Quill.
+
 \item[\MacroB{<SUBSYS>\_ATTRS} or \label{param:SubsysExprs}
   \MacroB{<SUBSYS>\_EXPRS}] \label{param:SubsysAttrs}
   \index{SUBSYS\_ATTRS macro@\texttt{<SUBSYS>\_ATTRS} macro}
@@ -1680,6 +1697,15 @@ server, shadow, and starter, none of which use DaemonCore yet).
   Identical to \MacroNI{DAEMON\_SHUTDOWN} (defined above), except the
   daemon will use the fast shutdown mode (as if it sent itself a
   \Condor{off} command using the \Opt{-fast} option).
+
+\item[\Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES}] \label{param:UseCloneToCreateProcesses}
+  This setting controls how a Condor daemon creates a new process under
+  certain versions of Linux. If set to \Expr{True} (the default value),
+  the \Expr{clone} system call is used. Otherwise, the \Expr{fork} system
+  call is used. \Expr{clone} provides scalability improvements for daemons
+  using a large amount of memory (e.g. a \Condor{schedd} with a lot of
+  jobs in the queue). Currently, the use of \Expr{clone} is available on
+  Linux systems other than IA-64, but not when GCB is enabled.
 
 \end{description}
 
@@ -2803,7 +2829,9 @@ will not want to change them for any reason.
   \label{param:UseProcessGroups} 
   A boolean value that defaults to \Expr{True}.  When \Expr{False},
   Condor daemons on Unix machines will \emph{not} create new sessions
-  or process groups. 
+  or process groups. Condor uses processes groups to help it track the
+  descendants of processes it creates. This can cause problems when
+  Condor is run under another job execution system (e.g. Condor Glidein).
 
 \end{description}
 
@@ -3910,6 +3938,22 @@ These macros control the \Condor{schedd}.
   \end{verbatim}
   \normalsize
   
+\item[\Macro{STARTER\_LOCAL}] \label{param:StarterLocal}
+  The complete path and executable name of the \Condor{starter} to
+  run for \SubmitCmd{local} universe jobs.  This variable's value
+  is defined in the initial configuration provided with Condor as
+  \footnotesize
+  \begin{verbatim}
+  STARTER_LOCAL = $(SBIN)/condor_starter
+  \end{verbatim}
+  \normalsize
+  This variable would only be modified or hand added into 
+  the configuration for a pool to be upgraded from one
+  running a version of Condor that existed before the
+  \SubmitCmd{local} universe to one that includes the
+  \SubmitCmd{local} universe, but without utilizing the newer, provided
+  configuration files.
+
 \item[\Macro{START\_SCHEDULER\_UNIVERSE}] \label{param:StartSchedulerUniverse}
   A boolean value that defaults to \Expr{True}.
   The \Condor{schedd} uses this macro to determine whether to start

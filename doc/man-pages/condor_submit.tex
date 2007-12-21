@@ -631,6 +631,10 @@ This command is ignored if the job ClassAd attribute
 \Expr{False}.
 The default value is \Expr{True} in the grid
 universe and \Expr{False} otherwise.
+This command must be used in conjunction with 
+\SubmitCmd{error}, otherwise \File{stderr} will
+sent to \File{/dev/null} on Unix machines and
+ignored on Windows machines.
 
 %%%%%%%%%%%%%%%%%%%
 %% stream_input
@@ -644,6 +648,10 @@ The command is only relevant for jobs submitted to
 the vanilla or java universes, and
 it is ignored by the grid
 universe.
+This command must be used in conjunction with 
+\SubmitCmd{input}, otherwise \File{stdin} will
+be \File{/dev/null} on Unix machines and
+ignored on Windows machines.
 
 %%%%%%%%%%%%%%%%%%%
 %% stream_output
@@ -659,6 +667,10 @@ This command is ignored if the job ClassAd attribute
 \Expr{False}.
 The default value is \Expr{True} in the grid
 universe and \Expr{False} otherwise.
+This command must be used in conjunction with 
+\SubmitCmd{ouput}, otherwise \File{stdout} will
+sent to \File{/dev/null} on Unix machines and
+ignored on Windows machines.
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_executable
