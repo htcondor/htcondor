@@ -173,10 +173,7 @@ cd \${RPM_INSTALL_PREFIX}
 owner="condor"
 grep condor: /etc/passwd > /dev/null || owner="daemon"
 
-# This is a hack so that condor_configure works
-mv sbin sbin.tmp
 ./condor_configure --install --owner=\${owner}
-mv sbin.tmp sbin
 
 %postun
 
