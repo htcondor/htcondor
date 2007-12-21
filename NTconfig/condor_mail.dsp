@@ -115,7 +115,7 @@ SOURCE=..\src\condor_util_lib\uuid_lib.WIN32.c
 
 !IF  "$(CFG)" == "condor_mail - Win32 Debug"
 
-# ADD CPP /Yu
+# SUBTRACT CPP /YX /Yc /Yu
 
 !ELSEIF  "$(CFG)" == "condor_mail - Win32 Release"
 

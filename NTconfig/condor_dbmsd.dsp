@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="condor_cgahp_worker" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="condor_dbmsd" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Console Application" 0x0103
 
-CFG=condor_cgahp_worker - Win32 Release
+CFG=condor_dbmsd - Win32 Release
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "condor_cgahp_worker.mak".
+!MESSAGE NMAKE /f "condor_dbmsd.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "condor_cgahp_worker.mak" CFG="condor_cgahp_worker - Win32 Release"
+!MESSAGE NMAKE /f "condor_dbmsd.mak" CFG="condor_dbmsd - Win32 Release"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "condor_cgahp_worker - Win32 Debug" (based on "Win32 (x86) Console Application")
-!MESSAGE "condor_cgahp_worker - Win32 Release" (based on "Win32 (x86) Console Application")
+!MESSAGE "condor_dbmsd - Win32 Debug" (based on "Win32 (x86) Console Application")
+!MESSAGE "condor_dbmsd - Win32 Release" (based on "Win32 (x86) Console Application")
 !MESSAGE 
 
 # Begin Project
@@ -28,7 +28,7 @@ CFG=condor_cgahp_worker - Win32 Release
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "condor_cgahp_worker - Win32 Debug"
+!IF  "$(CFG)" == "condor_dbmsd - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -50,21 +50,20 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /debug /machine:I386 /out:"..\Debug/condor_c-gahp_worker_thread.exe" /pdbtype:sept
-# SUBTRACT LINK32 /map
+# ADD LINK32 ../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
 
-!ELSEIF  "$(CFG)" == "condor_cgahp_worker - Win32 Release"
+!ELSEIF  "$(CFG)" == "condor_dbmsd - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "condor_cgahp_worker___Win32_Release"
-# PROP BASE Intermediate_Dir "condor_cgahp_worker___Win32_Release"
+# PROP BASE Output_Dir "condor_dbmsd___Win32_Release"
+# PROP BASE Intermediate_Dir "condor_dbmsd___Win32_Release"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "../Release"
-# PROP Intermediate_Dir "../Release"
+# PROP Output_Dir "..\Release"
+# PROP Intermediate_Dir "..\Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
@@ -77,78 +76,63 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# SUBTRACT BASE LINK32 /map
-# ADD LINK32 ../Release/condor_common.obj ..\Release\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map /debug /machine:I386 /out:"../Release/condor_c-gahp_worker_thread.exe"
+# ADD LINK32 ../Release/condor_common.obj ../Release/condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map /debug /machine:I386
 
 !ENDIF 
 
 # Begin Target
 
-# Name "condor_cgahp_worker - Win32 Debug"
-# Name "condor_cgahp_worker - Win32 Release"
+# Name "condor_dbmsd - Win32 Debug"
+# Name "condor_dbmsd - Win32 Release"
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\cgahp_common.C"
+SOURCE="..\src\condor_tt\condor_ttdb.C"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\cgahp_common.h"
+SOURCE="..\src\condor_dbmsd\dbmsd_main.C"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\gsoap_cgahp_worker.h"
+SOURCE="..\src\condor_dbmsd\DBMSManager.C"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\PipeBuffer.C"
+SOURCE="..\src\condor_dbmsd\DBMSManager.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\PipeBuffer.h"
+SOURCE="..\src\condor_dbmsd\gsoap_dbmsd.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\schedd_client.C"
+SOURCE="..\src\condor_dbmsd\ManagedDatabase.C"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\schedd_client.h"
+SOURCE="..\src\condor_dbmsd\ManagedDatabase.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\schedd_client_main.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c-gahp\SchedDCommands.C"
+SOURCE=..\src\condor_dbmsd\soap_dbmsdC.C
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\SchedDCommands.h"
+SOURCE=..\src\condor_dbmsd\soap_dbmsdH.h
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\soap_cgahp_workerC.C"
+SOURCE=..\src\condor_dbmsd\soap_dbmsdServer.C
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\soap_cgahp_workerH.h"
+SOURCE="..\src\condor_dbmsd\soap_dbmsdStub.C"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\soap_cgahp_workerServer.C"
-# SUBTRACT CPP /YX /Yc /Yu
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c-gahp\soap_cgahp_workerStub.C"
-# SUBTRACT CPP /YX /Yc /Yu
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c-gahp\soap_cgahp_workerStub.h"
+SOURCE=..\src\condor_dbmsd\soap_dbmsdStub.h
 # End Source File
 # End Target
 # End Project

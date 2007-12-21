@@ -22,7 +22,7 @@ SOAPCPPFLAGS = -I $(SRCDIR)\condor_daemon_core.V6
 
 DAEMONS = collector dagman gridmanager master negotiator had credd \
 		schedd shadow startd starter cgahp cgahp_worker quill \
-		replication transferer vmgahp
+		replication transferer vmgahp dbmsd
 
 all : $(DAEMONS)
 
@@ -238,6 +238,19 @@ vmgahp : $(SRCDIR)\condor_vm-gahp\soap_$@Stub.C \
 			$(SRCDIR)\condor_vm-gahp\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_vm-gahp
+	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\condor$@.nsmap    .
+	copy /Y $(TEMPDIR)\soap_$@H.h        .
+	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
+	copy /Y $(TEMPDIR)\condor$@.wsdl     .
+	rd /q /s $(TEMPDIR) > NUL 2>&1
+
+dbmsd : $(SRCDIR)\condor_dbmsd\soap_$@Stub.C \
+			$(SRCDIR)\condor_dbmsd\gsoap_$@.h
+	-2mkdir $(TEMPDIR)
+	cd $(SRCDIR)\condor_dbmsd
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
 	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
 	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
