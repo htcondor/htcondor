@@ -17,6 +17,7 @@ if not exist %1\bin\NUL mkdir %1\bin
 if not exist %1\lib\NUL mkdir %1\lib
 if not exist %1\lib\webservice\NUL mkdir %1\lib\webservice
 if not exist %1\etc\NUL mkdir %1\etc
+if not exist %1\sql\NUL mkdir %1\sql
 echo Copying files...
 copy ..\Release\*.exe %1\bin
 copy ..\Release\*.dll %1\bin
@@ -31,6 +32,7 @@ copy ..\src\condor_vm-gahp\mkisofs.exe %1\bin
 copy msvcrt.dll %1\bin
 copy msvcirt.dll %1\bin
 copy pdh.dll %1\bin
+copy ..\src\condor_tt\*.sql %1\sql
 pushd .
 cd ..\src
 for /R %%f in (*.wsdl) do copy %%f %1\lib\webservice
