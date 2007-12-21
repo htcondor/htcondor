@@ -338,11 +338,9 @@ V7_COMMON    		-a \
 			src/condor_scripts \
 			src/condor_shadow.V6 \
 			src/condor_shadow.V6.1 \
-			src/condor_shadow.jim \
 			src/condor_startd.V6 \
 			src/condor_starter.V5 \
 			src/condor_starter.V6.1 \
-			src/condor_starter.jim \
 			src/condor_status.V6 \
 			src/condor_submit.V6 \
 			src/condor_sysapi \
