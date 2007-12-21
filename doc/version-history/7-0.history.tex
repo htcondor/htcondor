@@ -51,7 +51,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a memory leak in the \Condor{procd} daemon on Windows.
+
+\item Fixed a problem that could cause Condor daemons to crash if a
+  failure occurred when communicating with the \Condor{procd}.
+
+\item Fixed a couple of problems that were preventing the
+  \Condor{startd} from properly removing per-job directories
+  when running with PrivSep.
+
+\item The \Condor{startd} will no longer fail to initialize, 
+  claiming the \MacroNI{EXECUTE} directory has improper permissions,
+  when PrivSep is enabled.
 
 \end{itemize}
 
