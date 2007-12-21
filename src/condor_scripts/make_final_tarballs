@@ -176,7 +176,7 @@ my %modules =
 		 "skelfiles" => [ "README", "DOC", "INSTALL", "LICENSE-2.0.txt",
 						  { src => "condor_scripts/condor_configure",
 							dest => "condor_configure", },
-						  { src => "condor_scripts/condor_configure",
+						  { src => "condor_configure",
 							dest => "condor_install",
 							symlink => 1, },
 						  "examples" 
