@@ -1,3 +1,9 @@
+12/26/07 V7_1-fetchwork-{root,branch}
+  A new branch off HEAD (while it's in 7.1.* mode) for changes to let
+  the startd fetch work instead of always requiring a schedd. This is
+  the branch where a series of new hooks will be added to the startd
+  and starter to enable site admins to define their own fetching system.
+
 12/20/07 V7_0-{root,branch}
   A new branch off HEAD for the 7.0.x stable series.
 
