@@ -18,6 +18,8 @@
 \oOpt{-usedagdir}
 \oOptArg{-outfile\_dir}{directory}
 \oOptArg{-config}{ConfigFileName}
+\oOptArg{-insert\_sub\_file}{FileName}
+\oOptArg{-append}{Command}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
@@ -125,6 +127,31 @@ description.
      \Condor{dagman} configuration files work, see
      section~\ref{sec:DAGConfig}.
      }
+  \OptItem{\OptArg{-insert\_sub\_file}{FileName}}{
+    Specifies a file to insert into the \File{.condor.sub} file created
+    by \Condor{submit\_dag}.  The specified file must contain only legal
+    submit file commands.  Only one file can be inserted.  (If both
+    the DAGMAN\_INSERT\_SUB\_FILE configuration variable and
+    \Opt{-insert\_sub\_file} are specified, \Opt{-insert\_sub\_file}
+    overrides DAGMAN\_INSERT\_SUB\_FILE.)  The specified file is inserted
+    into the \File{.condor.sub} file before the Queue command and before
+    any commands specified with the \Opt{-append} option.
+  }
+  \OptItem{\OptArg{-append}{Command}}{
+    Specifies a command to append to the \File{.condor.sub} file created
+    by \Condor{submit\_dag}.  The specified command is appended to the
+    \File{.condor.sub} file immediately before the Queue command.
+    Multiple commands are specified by using the \Opt{-append} option
+    multiple times. Each new command is given in a separate \Opt{-append}
+    option. Commands with spaces in them must be enclosed in double quotes. 
+    Commands specified with the \Opt{-append} option are appended to
+    the \File{.condor.sub} file \emph{after} commands inserted from a file
+    specified by the \Opt{-insert\_sub\_file} option or the
+    DAGMAN\_INSERT\_SUB\_FILE configuration variable, so the \Opt{-append}
+    command(s) will override commands from the inserted file if the commands
+    conflict.
+  }
+
   \end{Options}
 
 \SeeAlso

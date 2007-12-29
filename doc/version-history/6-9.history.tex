@@ -62,13 +62,25 @@ The details of each version are described below.
 \item Updated the usage summary of \Condor{configure} and
   \Condor{install} to be much more readable.
 
+% PR 888/921
+\item Added the capability to insert commands into the \File{.condor.sub}
+file produced by \Condor{submit\_dag} with the \Opt{-append} and
+\Opt{-insert\_sub\_file} command-line arguments to \Condor{submit\_dag} and
+the DAGMAN\_INSERT\_SUB\_FILE configuration variable.
+See page~\pageref{man-condor-submit-dag}
+and page~\pageref{param:DAGManInsertSubFile} for more information.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
 
-\item None.
+% PR 921
+\item Added the DAGMAN\_INSERT\_SUB\_FILE variable, which allows a file
+of commands to be inserted into \File{.condor.sub} files generated
+by \Condor{submit\_dag}.  See page~\pageref{param:DAGManInsertSubFile}
+for more information.
 
 \end{itemize}
 
@@ -156,6 +168,21 @@ configured to use a lock file for the debug log.
 \item Fixed problem with PrivSep mode where a job that dumps core would
 not get the core file transferred back to the the submit host if the
 \SubmitCmd{transfer\_output\_files} submit option were used.
+
+% PR 926
+\item \Condor{submit\_dag} now avoids possibly running off the end
+of the argument list if an argument requiring a value does not have one.
+
+\item The \Condor{submit\_dag} \Opt{-debug} argument now must be
+specified with at least \Opt{-de} to avoid conflict with the
+\Opt{-dagman} argument.
+
+\item Added missing information about the \Opt{-config} argument to
+\Condor{submit\_dag}'s usage message.
+
+% PR 927
+\item \Condor{dagman} no longer considers duplicate edges in a DAG a
+fatal error (it is now a warning).
 
 \end{itemize}
 
