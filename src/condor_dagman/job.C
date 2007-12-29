@@ -324,6 +324,14 @@ Job::AddParent( Job* parent, MyString &whynot )
 	if( !this->CanAddParent( parent, whynot ) ) {
 		return false;
 	}
+
+	if( HasParent( parent ) ) {
+		debug_printf( DEBUG_QUIET,
+					"Warning: child %s already has parent %s\n",
+					GetJobName(), parent->GetJobName() );
+		return true;
+	}
+
 	if( !Add( Q_PARENTS, parent->GetJobID() ) ) {
 		whynot = "unknown error appending to PARENTS queue";
 		return false;
@@ -348,11 +356,6 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 {
 	if( !parent ) {
 		whynot = "parent == NULL";
-		return false;
-	}
-	if( this->HasParent( parent ) )
-	{
-		whynot = "dependency already exists";
 		return false;
 	}
 
@@ -394,6 +397,14 @@ Job::AddChild( Job* child, MyString &whynot )
 	if( !this->CanAddChild( child, whynot ) ) {
 		return false;
 	}
+
+	if( HasChild( child ) ) {
+		debug_printf( DEBUG_QUIET,
+					"Warning: parent %s already has child %s\n",
+					GetJobName(), child->GetJobName() );
+		return true;
+	}
+
 	if( !Add( Q_CHILDREN, child->GetJobID() ) ) {
 		whynot = "unknown error appending to CHILDREN queue";
 		return false;
@@ -410,11 +421,7 @@ Job::CanAddChild( Job* child, MyString &whynot )
 		whynot = "child == NULL";
 		return false;
 	}
-	if( this->HasChild( child ) )
-	{
-		whynot = "dependency already exists";
-		return false;
-	}
+
 	whynot = "n/a";
 	return true;
 }

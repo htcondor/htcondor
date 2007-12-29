@@ -1,3 +1,7 @@
+12/28/07 V6_9-dagman-pre-7_0-branch-merge-1
+   The state of the V6_9-dagman-pre-7_0-branch for a merge to the
+   trunk.
+
 12/26/07 V7_1-fetchwork-{root,branch}
   A new branch off HEAD (while it's in 7.1.* mode) for changes to let
   the startd fetch work instead of always requiring a schedd. This is
