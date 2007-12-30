@@ -28,7 +28,7 @@
 #include "basename.h"
 #include "read_multiple_logs.h"
 #include "condor_getcwd.h"
-#include "condor_includes/condor_string.h" // for getline()
+#include "condor_string.h" // for getline()
 
 
 #ifdef WIN32
