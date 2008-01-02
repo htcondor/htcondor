@@ -202,6 +202,7 @@ sub SubmitDagman
 sub TestSubmit
 {
     my $cmd_file = shift || croak "missing submit file argument";
+	my $submitOutput = "";
 
     # reset global state
     # Reset();
@@ -221,6 +222,7 @@ sub TestSubmit
     }
     while( <SUBMIT> )
     {
+	$submitOutput .= $_;
 	if( /\d+ job\(s\) submitted to cluster (\d+)./ )
 	{
 	    $cluster = $1;
@@ -232,7 +234,7 @@ sub TestSubmit
     # if for some reason we didn't find the cluster id 
     unless( $cluster )
     {
-	warn "error: couldn't find cluster id in condor_submit output\n";
+	warn "error: couldn't find cluster id in condor_submit output:\n $submitOutput";
 	return 0;
     }
     
