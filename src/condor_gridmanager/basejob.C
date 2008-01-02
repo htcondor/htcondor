@@ -1499,6 +1499,8 @@ d_format_time( double dsecs )
 void
 EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
 {
+		// TODO We should use the Email class here, rather than duplicating
+		//   most of what it does.
 	if ( !job_ad ) {
 		dprintf(D_ALWAYS, 
 				"email_terminate_event called with invalid ClassAd\n");
@@ -1675,6 +1677,8 @@ EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
 	fprintf(mailer, "%10s Run Bytes Sent By Job\n",
 			metric_units(network_bytes) );
 	*/
+
+	email_custom_attributes(mailer, job_ad);
 
 	email_close(mailer);
 }
