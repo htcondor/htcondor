@@ -36,7 +36,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% This feature was added in 6.7, but condor_submit wasn't changed.
+% Until now, the user had to set this via the '+' notation in the submit
+% file.
+\item You can now use attribute \Attr{email\_attributes} in the job
+description file to define a set of job classad attributes whose values
+should be included in the email notification of job completion.
 
 \end{itemize}
 
