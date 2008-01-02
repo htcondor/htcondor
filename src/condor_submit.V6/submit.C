@@ -227,6 +227,7 @@ char	*Universe		= "universe";
 char	*Grid_Type		= "grid_type";
 char	*MachineCount	= "machine_count";
 char	*NotifyUser		= "notify_user";
+char	*EmailAttributes = "email_attributes";
 char	*ExitRequirements = "exit_requirements";
 char	*UserLogFile	= "log";
 char    *UseLogUseXML   = "log_xml";
@@ -378,6 +379,7 @@ void 	SetPriority();
 void 	SetNotification();
 void	SetWantRemoteIO(void);
 void 	SetNotifyUser ();
+void	SetEmailAttributes();
 void 	SetCronTab();
 void	SetRemoteInitialDir();
 void	SetExitRequirements();
@@ -3452,6 +3454,28 @@ SetNotifyUser()
 	}
 }
 
+void
+SetEmailAttributes()
+{
+	char *attrs = condor_param( EmailAttributes, ATTR_EMAIL_ATTRIBUTES );
+
+	if ( attrs ) {
+		StringList attr_list( attrs );
+
+		if ( !attr_list.isEmpty() ) {
+			char *tmp;
+			MyString buffer;
+
+			tmp = attr_list.print_to_string();
+			buffer.sprintf( "%s = \"%s\"", ATTR_EMAIL_ATTRIBUTES, tmp );
+			InsertJobExpr( buffer );
+			free( tmp );
+		}
+
+		free( attrs );
+	}
+}
+
 /**
  * We search to see if the ad has any CronTab attributes defined
  * If so, then we will check to make sure they are using the 
@@ -5598,6 +5622,7 @@ queue(int num)
 		SetNotification();
 		SetWantRemoteIO();
 		SetNotifyUser();
+		SetEmailAttributes();
 		SetRemoteInitialDir();
 		SetExitRequirements();
 		SetUserLog();
