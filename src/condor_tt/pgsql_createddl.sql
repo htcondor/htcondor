@@ -361,7 +361,7 @@ CREATE OR REPLACE FUNCTION
 quill_purgehistory(
 resourceHistoryDuration integer,
 runHistoryDuration integer,
-jobHistoryDuration integer) RETURNS void AS $$
+jobHistoryDuration integer) RETURNS  int AS $$
 DECLARE
 totalUsedMB NUMERIC;
 start_time timestamp with time zone;
@@ -542,10 +542,11 @@ select into end_time timeofday();
 INSERT INTO maintenance_log(eventid,eventts,eventdur) 
 VALUES(1, timestamp with time zone 'now', end_time-start_time);
 
+return 1;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION quill_reindextables() RETURNS void AS $$
+CREATE OR REPLACE FUNCTION quill_reindextables() RETURNS  int AS $$
 DECLARE
 start_time timestamp with time zone;
 end_time timestamp with time zone;
@@ -575,6 +576,7 @@ select into end_time timeofday();
 INSERT INTO maintenance_log(eventid,eventts,eventdur) 
 VALUES(2, timestamp with time zone 'now', end_time-start_time);
 
+return 1;
 END;
 $$ LANGUAGE plpgsql;
 
