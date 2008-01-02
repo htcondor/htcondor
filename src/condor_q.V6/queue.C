@@ -47,6 +47,7 @@
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
 #include "string_list.h"
+#include "condor_version.h"
 
 #ifdef WANT_CLASSAD_ANALYSIS
 #include "../classad_analysis/analysis.h"
@@ -1244,6 +1245,10 @@ processCommandLineArguments (int argc, char *argv[])
 			directDBquery =  true;
 		}
 #endif /* WANT_QUILL */
+        else if (match_prefix(arg, "version")) {
+			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
+			exit(0);
+        }
 		else {
 			fprintf( stderr, "Error: unrecognized argument -%s\n", arg );
 			usage(argv[0]);
@@ -1828,6 +1833,7 @@ usage (char *myName)
 		"\t\t-direct <schedd>\tPerform a direct query to the schedd\n"
 #endif
 		"\t\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
+		"\t\t-version\t\t\tPrint the Condor Version and exit\n",
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"

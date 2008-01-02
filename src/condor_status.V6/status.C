@@ -33,6 +33,7 @@
 #include "print_wrapped_text.h"
 #include "error_utils.h"
 #include "condor_distribution.h"
+#include "condor_version.h"
 
 // global variables
 AttrListPrintMask pm;
@@ -629,6 +630,10 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix(argv[i], "-expert", 2)) {
 			expert = true;
+		} else
+		if (matchPrefix(argv[i], "-version", 4)) {
+			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
+			exit(0);
 		} else
 		if (*argv[i] == '-') {
 			fprintf (stderr, "Error:  Unknown option %s\n", argv[i]);
