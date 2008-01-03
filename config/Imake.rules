@@ -1975,7 +1975,6 @@ XCOMM BEGIN translation of func(man_target)		@@\
 man_full_target(name,strip)				@@\
 man_full_target(name,release)				@@\
 man_full_target(name,static)				@@\
-man_full_target(name,static_unstrip)			@@\
 XCOMM End translation of func(man_target)
 #else /* HAS_STATIC */
 #define man_target(name)				@@\
