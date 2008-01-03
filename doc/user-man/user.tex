@@ -1813,8 +1813,10 @@ will assume that the program is to be executed on
 a machine with the same platform as the machine where the job
 is submitted.
 
-Cross submission works for both
-\Expr{standard} and \Expr{vanilla} universes.
+Cross submission works for all universes except \Expr{scheduler} and
+\Expr{local}.
+See section~\ref{sec:Grid-Matchmaking} for how matchmaking works in the
+\Expr{grid} universe.
 The burden is on the user to both obtain and specify
 the correct executable for the target architecture.
 To list the architecture and operating systems of the machines
