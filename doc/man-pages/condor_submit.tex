@@ -62,7 +62,9 @@ Each submit description file describes one cluster of jobs to be
 placed in the Condor execution pool. All jobs in a cluster must share
 the same executable, but they may have different input and output files,
 and different program arguments. The submit description file is
-the only command-line argument to \Condor{submit}. 
+the only command-line argument to \Condor{submit}. If the submit description
+file argument is omitted, \Condor{submit} will read the submit description
+from standard input.
 
 The submit description file must contain one \Arg{executable} command and at least one
 \Arg{queue} command.  All of the other commands have default actions.
