@@ -87,7 +87,7 @@ if (defined($opt_linktype)) {
 } else {
    # set up a default of everything
    @linktypes = 
-      ("static", "dynamic", "unstripped-dynamic", "unstripped-static");
+      ("static", "dynamic", "unstripped-dynamic");
 }
 
 # Now, grab the version of this release.
@@ -161,7 +161,7 @@ require 5.002;
 #		the destination directory.
 #	releaselocation
 #		The key of this hash is one of these linktype specifiers:
-#			static dynamic unstripped-dynamic unstripped-static
+#			static dynamic unstripped-dynamic 
 #		The value is the src/ directory name of where that linktype had been
 #		produced. For example, the "dynamic" linktype means the stripped
 #		dynamically linked executables, which are found in src/strip_dir
@@ -187,7 +187,6 @@ my %modules =
          "releaselocation" => {
 			 "dynamic"			  => "strip_dir",
 			 "static"    	      => "static_dir",
-			 "unstripped-static"  => "static_unstrip_dir",
 			 "unstripped-dynamic" => "release_dir",
 		 },
 	 },
@@ -611,7 +610,7 @@ This screen
 --target=<target location>
 
 --linktype=<a set of one or more of:
-   static, dynamic, unstripped-dynamic, unstripped-static>
+   static, dynamic, unstripped-dynamic>
 
 END_USAGE
 }

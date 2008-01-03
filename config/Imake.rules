@@ -693,15 +693,11 @@ $(STATIC_DIR)/dir/program: program.static			@@\
 	cp program.static $(STATIC_DIR)/dir/program		@@\
 	chmod EXECUTABLE_MODE $(STATIC_DIR)/dir/program		@@\
 	strip_file($(STATIC_DIR)/dir/program)			@@\
-$(STATIC_UNSTRIP_DIR)/dir/program: program.static		@@\
-	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/program		@@\
-	cp program.static $(STATIC_UNSTRIP_DIR)/dir/program	@@\
-	chmod EXECUTABLE_MODE $(STATIC_UNSTRIP_DIR)/dir/program	@@\
 program.static: $(filter DEP_FILTER,objlist libs) 		@@\
 	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program.static objlist libs ldflags $(DEMANGLE) @@\
 clean:: 							@@\
 	rm -f program.static objlist				@@\
-static:: $(STATIC_DIR)/dir/program $(STATIC_UNSTRIP_DIR)/dir/program	@@\
+static:: $(STATIC_DIR)/dir/program @@\
 XCOMM End translation of func(static_target_real)
 #else  /* ! HAS_STATIC */
 #define static_target_real(program,objlist,libs,dir,ldflags)	@@\
@@ -738,11 +734,7 @@ $(STATIC_DIR)/dir/lib: lib			@@\
 	COPY_LIBRARY(lib,$(STATIC_DIR)/dir/lib) @@\
 	RANLIB_TOUCH($(STATIC_DIR)/dir/lib)	@@\
 	chmod OBJECT_MODE $(STATIC_DIR)/dir/lib	@@\
-$(STATIC_UNSTRIP_DIR)/dir/lib: lib			@@\
-	COPY_LIBRARY(lib,$(STATIC_UNSTRIP_DIR)/dir/lib) @@\
-	RANLIB_TOUCH($(STATIC_UNSTRIP_DIR)/dir/lib)	@@\
-	chmod OBJECT_MODE $(STATIC_UNSTRIP_DIR)/dir/lib	@@\
-static:: $(STATIC_DIR)/dir/lib $(STATIC_UNSTRIP_DIR)/dir/lib	@@\
+static:: $(STATIC_DIR)/dir/lib @@\
 XCOMM End translation of func(static_library)
 #else  /* ! HAS_STATIC */
 #define static_library(lib,dir)			@@\
@@ -762,10 +754,7 @@ XCOMM Begin translation of func(static_shared_library) @@\
 $(STATIC_DIR)/dir/lib: lib			@@\
 	COPY_LIBRARY(lib,$(STATIC_DIR)/dir/lib) @@\
 	chmod OBJECT_MODE $(STATIC_DIR)/dir/lib	@@\
-$(STATIC_UNSTRIP_DIR)/dir/lib: lib			@@\
-	COPY_LIBRARY(lib,$(STATIC_UNSTRIP_DIR)/dir/lib) @@\
-	chmod OBJECT_MODE $(STATIC_UNSTRIP_DIR)/dir/lib	@@\
-static:: $(STATIC_DIR)/dir/lib $(STATIC_UNSTRIP_DIR)/dir/lib	@@\
+static:: $(STATIC_DIR)/dir/lib @@\
 XCOMM End translation of func(static_shared_library)
 #else  /* ! HAS_STATIC */
 #define static_shared_library(lib,dir)			@@\
@@ -787,11 +776,7 @@ $(STATIC_DIR)/dir/file: src			@@\
 	/bin/rm -f $(STATIC_DIR)/dir/file	@@\
 	cp src $(STATIC_DIR)/dir/file		@@\
 	chmod mode $(STATIC_DIR)/dir/file	@@\
-$(STATIC_UNSTRIP_DIR)/dir/file: src			@@\
-	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/file	@@\
-	cp src $(STATIC_UNSTRIP_DIR)/dir/file		@@\
-	chmod mode $(STATIC_UNSTRIP_DIR)/dir/file	@@\
-static:: $(STATIC_DIR)/dir/file	$(STATIC_UNSTRIP_DIR)/dir/file	@@\
+static:: $(STATIC_DIR)/dir/file	@@\
 XCOMM End translation of func(static_copy_target)
 #else  /* ! HAS_STATIC */
 #define static_copy_target(src,dir,file,mode)	@@\
@@ -809,13 +794,10 @@ XCOMM End translation of func(static_copy_target)
 #if HAS_STATIC
 #define static_recursive_copy_target(src,dest)			@@\
 XCOMM Begin translation of func(static_recursive_copy_target)	@@\
-static:: $(STATIC_DIR)/dest $(STATIC_UNSTRIP_DIR)/dest		@@\
+static:: $(STATIC_DIR)/dest @@\
 $(STATIC_DIR)/dest: src						@@\
 	/bin/rm -rf $(STATIC_DIR)/dest				@@\
 	$(CP_CMD) src $(STATIC_DIR)/dest			@@\
-$(STATIC_UNSTRIP_DIR)/dest: src					@@\
-	/bin/rm -rf $(STATIC_UNSTRIP_DIR)/dest			@@\
-	$(CP_CMD) src $(STATIC_UNSTRIP_DIR)/dest		@@\
 XCOMM End translation of func(static_recursive_copy_target)
 #else  /* ! HAS_STATIC */
 #define static_recursive_copy_target(src,dest)			@@\
@@ -833,14 +815,11 @@ XCOMM End translation of func(static_recursive_copy_target)
 #if HAS_STATIC
 #define static_link_target(dir,src,dest)	@@\
 XCOMM Begin translation of func(static_link_target) @@\
-static:: $(STATIC_DIR)/dir/dest	$(STATIC_UNSTRIP_DIR)/dir/dest	@@\
+static:: $(STATIC_DIR)/dir/dest	@@\
 						@@\
 $(STATIC_DIR)/dir/dest: $(STATIC_DIR)/dir/src	@@\
 	/bin/rm -f $(STATIC_DIR)/dir/dest	@@\
 	ln $(STATIC_DIR)/dir/src $(STATIC_DIR)/dir/dest	@@\
-$(STATIC_UNSTRIP_DIR)/dir/dest: $(STATIC_UNSTRIP_DIR)/dir/src	@@\
-	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/dest	@@\
-	ln $(STATIC_UNSTRIP_DIR)/dir/src $(STATIC_UNSTRIP_DIR)/dir/dest	@@\
 XCOMM End translation of func(static_link_target)
 #else  /* ! HAS_STATIC */
 #define static_link_target(dir,src,dest)	@@\
@@ -857,13 +836,10 @@ XCOMM End translation of func(static_link_target)
 #if HAS_STATIC
 #define static_symlink_target(src,dir,dest)	@@\
 XCOMM Begin translation of func(static_symlink_target) @@\
-static:: $(STATIC_DIR)/dir/dest $(STATIC_UNSTRIP_DIR)/dir/dest	@@\
+static:: $(STATIC_DIR)/dir/dest @@\
 $(STATIC_DIR)/dir/dest: 			@@\
 	/bin/rm -f $(STATIC_DIR)/dir/dest	@@\
 	ln -s src $(STATIC_DIR)/dir/dest	@@\
-$(STATIC_UNSTRIP_DIR)/dir/dest: 			@@\
-	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/dest	@@\
-	ln -s src $(STATIC_UNSTRIP_DIR)/dir/dest	@@\
 XCOMM End translation of func(static_symlink_target)
 #else  /* ! HAS_STATIC */
 #define static_symlink_target(src,dir,dest)	@@\

@@ -43,11 +43,7 @@ $(STATIC_DIR)/dir/file: src			@@\
 	/bin/rm -f $(STATIC_DIR)/dir/file	@@\
 	./condor_version_filt src > $(STATIC_DIR)/dir/file	@@\
 	chmod mode $(STATIC_DIR)/dir/file	@@\
-$(STATIC_UNSTRIP_DIR)/dir/file: src			@@\
-	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/file	@@\
-	./condor_version_filt src $(STATIC_UNSTRIP_DIR)/dir/file	@@\
-	chmod mode $(STATIC_UNSTRIP_DIR)/dir/file	@@\
-static:: $(STATIC_DIR)/dir/file	$(STATIC_UNSTRIP_DIR)/dir/file	@@\
+static:: $(STATIC_DIR)/dir/file	@@\
 XCOMM End translation of func(static_version_target)
 #else  /* ! HAS_STATIC */
 #define static_version_target(src,dir,file,mode)	@@\

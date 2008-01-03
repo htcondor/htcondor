@@ -35,12 +35,6 @@ $(STATIC_DIR)/etc/examples/README:
 	/bin/cp -f $(FILES) $(STATIC_DIR)/etc/examples
 	perl ./customize $(STATIC_DIR)
 
-static:: $(STATIC_UNSTRIP_DIR)/etc/examples/README
-
-$(STATIC_UNSTRIP_DIR)/etc/examples/README:
-	/bin/cp -f $(FILES) $(STATIC_UNSTRIP_DIR)/etc/examples
-	perl ./customize $(STATIC_UNSTRIP_DIR)
-
 #else  /* ! HAS_STATIC */
 static::
 #endif  /* HAS_STATIC */

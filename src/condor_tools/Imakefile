@@ -62,7 +62,7 @@ static_target(condor_dump_history,dump_history.o,$(LIB) $(QUILL_LIB),bin)
    file from the right directory */ 
 release_copy_target($(RELEASE_DIR)/sbin/condor,bin,condor,EXECUTABLE_MODE)
 strip_copy_target($(STRIP_DIR)/sbin/condor,bin,condor,EXECUTABLE_MODE)
-static_copy_target($(STATIC_UNSTRIP_DIR)/sbin/condor,bin,condor,EXECUTABLE_MODE)
+static_copy_target($(STATIC_DIR)/sbin/condor,bin,condor,EXECUTABLE_MODE)
 /* TODO: this is broken for strip vs. unstrip static. :(  */
 
 
