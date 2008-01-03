@@ -425,7 +425,7 @@ XCOMM End translation of func(testbin_target)
 XCOMM Begin translation of func(release_target) @@\
 $(RELEASE_DIR)/dir/file: file			@@\
 	/bin/rm -f $(RELEASE_DIR)/dir/file	@@\
-	cp file $(RELEASE_DIR)/dir			@@\
+	ln file $(RELEASE_DIR)/dir 2>/dev/null || cp file $(RELEASE_DIR)/dir			@@\
 	chmod mode $(RELEASE_DIR)/dir/file	@@\
 release:: $(RELEASE_DIR)/dir/file			@@\
 XCOMM End translation of func(release_target)
@@ -438,7 +438,7 @@ XCOMM End translation of func(release_target)
 #define release_library(lib,dir) 			@@\
 XCOMM Begin translation of func(release_library) @@\
 $(RELEASE_DIR)/dir/lib: lib					@@\
-	COPY_LIBRARY(lib,$(RELEASE_DIR)/dir/lib)		@@\
+	ln lib $(RELEASE_DIR)/dir 2>/dev/null || COPY_LIBRARY(lib,$(RELEASE_DIR)/dir/lib)		@@\
 	RANLIB_TOUCH($(RELEASE_DIR)/dir/lib)			@@\
 release:: $(RELEASE_DIR)/dir/lib	@@\
 XCOMM End translation of func(release_library)
