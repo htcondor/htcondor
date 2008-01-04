@@ -550,8 +550,9 @@ The scheduler universe allows users to submit lightweight jobs
 to be run immediately, alongside the \Condor{schedd} daemon on the submit host
 itself.
 Scheduler universe jobs are not matched with a remote machine,
-and will never be preempted.  They do not obey the
-machine's \MacroNI{requirements} expression.
+and will never be preempted.
+The job's requirements expression is evaluated against the \Condor{schedd}'s
+ClassAd.
 
 Originally intended for meta-schedulers such as \Condor{dagman},
 the scheduler universe can also be
@@ -580,8 +581,8 @@ The job does not wait to be matched with a machine.
 It instead executes right away, on the machine where the job
 is submitted.
 The job will never be preempted.
-The machine requirements are not considered for local universe
-jobs.
+The job's requirements expression is evaluated against the \Condor{schedd}'s
+ClassAd.
 
 %%%%%%%%%%%%
 \subsubsection{Parallel Universe}
