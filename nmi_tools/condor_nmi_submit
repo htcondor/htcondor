@@ -322,8 +322,9 @@ sub initializeDB
 sub parseOptions
 {
     my $platform;
+    my $rc;
 
-    GetOptions(
+    $rc = GetOptions(
 # primary switch: build vs. test
            'build'         => \$opt_build,
            'test'          => \$opt_test,
@@ -360,6 +361,9 @@ sub parseOptions
            'input-platform=s' => \$opt_input_platform,
     );
 
+    if( !$rc ) {
+        printUsage( 1 );
+    }
     if( defined $opt_help ) {
         printUsage( 0 );
     }
