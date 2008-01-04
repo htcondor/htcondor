@@ -856,7 +856,8 @@ precedence over a \AdAttr{*\_remove} expressions.
 
 If left unspecified, this will default to \Expr{False}.
 
-This expression is available for the vanilla, java, and scheduler universes.
+This expression is available for the vanilla, java, parallel, mpi, grid,
+local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.
 
@@ -911,7 +912,9 @@ precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
 precedence over a \AdAttr{*\_remove} expressions.
 
-This expression is available for the vanilla, java, and scheduler universes.  It
+This expression is available for the vanilla, java, parallel, mpi, grid,
+local and scheduler universes.
+It
 is additionally available, when submitted from a Unix machine, for the
 standard universe.  Note that the \Condor{schedd} daemon,
 by default, only checks
@@ -940,7 +943,8 @@ precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
 precedence over a \AdAttr{*\_remove} expressions.
 
-This expression is available for the vanilla, java and grid universes.
+This expression is available for the vanilla, java, parallel, mpi, grid,
+local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.  Note that the schedd, by default, only checks
 periodic expressions once every 300 seconds.  The period of
@@ -971,7 +975,8 @@ If the expression becomes \Expr{True}, the job will be released.
 %So the short answer: by default, every SCHEDD_INTERVAL (5 minutes by
 %default) or more often as needed.
 
-This expression is available for the vanilla, java, and grid universes.
+This expression is available for the vanilla, java, parallel, mpi, grid,
+local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.  Note that the \Condor{schedd} daemon,
 by default, only checks
@@ -1002,7 +1007,8 @@ So, the \AdAttr{periodic\_remove} expression takes precedent over
 the \AdAttr{on\_exit\_remove} expression,
 if the two describe conflicting actions.
 
-This expression is available for the vanilla, java and grid universes.
+This expression is available for the vanilla, java, parallel, mpi, grid,
+local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.  Note that the schedd, by default, only checks
 periodic expressions once every 300 seconds.  The period of
