@@ -545,8 +545,8 @@ use:
 \begin{verbatim}
 requirements = Memory >= 64 && Mips > 45
 \end{verbatim}
-Only one requirements command may be present in a
-submit description file.
+Like all commands in the submit description file, if multiple requirements
+commands are present, all but the last one are ignored.
 By default, \Condor{submit} appends the following clauses to
 the requirements expression:
 \begin{enumerate}
