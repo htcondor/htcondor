@@ -377,6 +377,7 @@ sub gnuplot_commands {
 		$xtics = "691200";
 	} elsif($details eq "downloadlogs") {
 		$ylabel = "Download Results per Day";
+		$title = "Condor Download Plots";
 		$xtics = "691200";
 	} elsif($details eq "times") {
 		$title = "Condor Build & Test Times";

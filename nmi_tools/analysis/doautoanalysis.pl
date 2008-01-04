@@ -17,7 +17,8 @@ select(STDOUT);
  $| = 1;
 
 my $datalocation = "/p/condor/public/html/developers/testsuite/";
-my $toollocation = "/p/condor/home/tools/build-test-plots/";
+my $toollocation = "/p/condor/home/tools/build-test-plots";
+#my $toollocation = ".";
 my $timefiles = "/tmp/btplots/durationfiles";
 
 GetOptions (
@@ -25,26 +26,34 @@ GetOptions (
 		'start=s' => \$newwd,
 );
 
+$branch1 = "7_0_0";
+$branch2 = "7_1";
+$tmp_builddata1 = "/tmp/btplots/" . $branch1 . "autobuilds";
+$tmp_builddata2 = "/tmp/btplots/" . $branch2 . "autobuilds";
+$tmp_testdata1 = "/tmp/btplots/" . $branch1 . "autotests";
+$tmp_testdata2 = "/tmp/btplots/" . $branch2 . "autotests";
 
 if( $newwd ) { chdir("$newwd"); }
 if ( $help )    { help() and exit(0); }
 
-$placefile = $datalocation . "V6_8autobuilds.png";
-system("/p/condor/home/tools/build-test-plots/condor_readNMIdb.pl --type=builds --branch=V6_8 -d=2007-05-01");
-system("/p/condor/home/tools/build-test-plots/make-graphs --daily --input /tmp/btplots/V6_8autobuilds --output $placefile --detail autobuilds");
-$placefile = $datalocation . "V6_9autobuilds.png";
-system("/p/condor/home/tools/build-test-plots/condor_readNMIdb.pl --type=builds --branch=V6_9 -d=2007-05-01");
-system("/p/condor/home/tools/build-test-plots/make-graphs --daily --input /tmp/btplots/V6_9autobuilds --output $placefile --detail autobuilds");
+$placefile = $datalocation . "V7_0autobuilds.png";
+system("$toollocation/condor_readNMIdb.pl --type=builds --branch=$branch1 -d=2007-12-01");
+system("$toollocation/make-graphs --daily --input $tmp_builddata1 --output $placefile --detail autobuilds");
 
-$placefile = $datalocation . "V6_8autotests.png";
-system("/p/condor/home/tools/build-test-plots/condor_readNMIdb.pl --type=tests --branch=V6_8 -d=2007-05-01");
-system("/p/condor/home/tools/build-test-plots/make-graphs --daily --input /tmp/btplots/V6_8autotests --output $placefile --detail autotests");
-$placefile = $datalocation . "V6_9autotests.png";
-system("/p/condor/home/tools/build-test-plots/condor_readNMIdb.pl --type=tests --branch=V6_9 -d=2007-05-01");
-system("/p/condor/home/tools/build-test-plots/make-graphs --daily --input /tmp/btplots/V6_9autotests --output $placefile --detail autotests");
+$placefile = $datalocation . "V7_1autobuilds.png";
+system("$toollocation/condor_readNMIdb.pl --type=builds --branch=$branch2 -d=2007-12-01");
+system("$toollocation/make-graphs --daily --input $tmp_builddata2 --output $placefile --detail autobuilds");
 
-system("/p/condor/home/tools/build-test-plots/condor_readNMIdb.pl --type=times --date=2007-05-10 --branch=6_8 --save=$timefiles --new");
-system("/p/condor/home/tools/build-test-plots/condor_readNMIdb.pl --type=times --date=2007-05-10 --branch=6_9 --save=$timefiles --append");
+$placefile = $datalocation . "V7_0autotests.png";
+system("$toollocation/condor_readNMIdb.pl --type=tests --branch=$branch1 -d=2007-12-01");
+system("$toollocation/make-graphs --daily --input $tmp_testdata1 --output $placefile --detail autotests");
+
+$placefile = $datalocation . "V7_1autotests.png";
+system("$toollocation/condor_readNMIdb.pl --type=tests --branch=$branch2 -d=2007-12-01");
+system("$toollocation/make-graphs --daily --input $tmp_testdata2 --output $placefile --detail autotests");
+
+system("$toollocation/condor_readNMIdb.pl --type=times --date=2007-12-10 --branch=$branch1 --save=$timefiles --new");
+system("$toollocation/condor_readNMIdb.pl --type=times --date=2007-12-10 --branch=$branch2 --save=$timefiles --append");
 
 open(TIMEDFILES,"<$timefiles") || die "Can not find timed data<$timefiles>: $!\n";
 $current = "";
@@ -61,7 +70,7 @@ while(<TIMEDFILES>) {
 	}
 	$placefile = $datalocation . $relocate . ".png";
 	#print "Plot $current to $relocate\n";
-	system("/p/condor/home/tools/build-test-plots/make-graphs --daily --input $current --output $placefile --detail times");
+	system("$toollocation/make-graphs --daily --input $current --output $placefile --detail times");
 }
 
 # =================================

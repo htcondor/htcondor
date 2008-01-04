@@ -89,12 +89,12 @@ GetOptions (
         #'megs=i' => \$megs,
 );
 
-print "project($project) type ($type)\n";
+#print "project($project) type ($type)\n";
 if( (defined($project)) && ($type eq "tests")) {
 	if(!$thistfile) {
 		$thistfile = "/tmp/btplots/testhistory";
 	}
-	print "Creating /tmp/btplots/testhistory\n";
+	#print "Creating /tmp/btplots/testhistory\n";
 	open(THIST,">$thistfile") or die "Unable to open test history file $thistfile:$!\n";
 }
 
@@ -115,7 +115,7 @@ open(DROP,">$dropfile") or die "Unable to open result file $dropfile:$!\n";
 FindBuildRuns();
 
 if( $type eq "builds") {
-	#ShowBuildRuns();
+	ShowBuildRuns();
 
 	foreach $buildrun (@buildruns) {
 		# we want to massage the data if we are looking for long
@@ -149,6 +149,8 @@ sub CollectTimeResults
 	# which platforms do we care about
 	# Look at ones in all the runs and see if 
 	# we have them in our hash yet
+	#print "Collecting Time Results\n";
+	ShowBuildRuns();
 	foreach $run (@buildruns) {
 		#print "Platforms for $run\n";
 		FindPlatforms($run);
@@ -166,9 +168,11 @@ sub CollectTimeResults
 		die "Either --new or --append must be set\n";
 	}
 
+	#print "Here are the keys from hash platformlist\n";
 	foreach $key (sort keys %platformlist) {
+		#print "Key-----<$key>\n";
 		my $datafile = "/tmp/btplots/V" . $branch . "-" . $key;
-		print LIST "$datafile\n";
+		#print LIST "$datafile\n";
 		open(DATA,">$datafile") || die "Failed to start datafile:<$datafile> $!\n";
 		foreach $run (@buildruns) {
 			#print "Looking at tests for<<$run>>\n";
@@ -197,6 +201,7 @@ sub FindPlatforms
 {
 	$runid = shift;
 
+	#print "Platforms for <$runid> are:\n";
 	@args = split /:/, $runid;
 	$extraction = $db->prepare("SELECT * FROM Task WHERE  \
 			runid = $args[0] \
@@ -210,6 +215,7 @@ sub FindPlatforms
 
 		if( exists $platformlist{$platform}) {
 			# we are good and have this already 
+			#print "Have $platform in lest already\n";
 		} else {
 			#print "Add $platform as a platform\n";
 			$platformlist{$platform} = 1;
@@ -272,7 +278,9 @@ sub FindBuildAndTestTimes
 	}
 
 	# now find the runids(test runs) which used this build id for data
+	#print "Calling FindTestRuns\n";
 	FindTestRuns($run);
+	#print "Calling FindTestTimes\n";
 	FindTestTimes($desiredplatform);
 
 	# so we now have all the builds in one hash and existent tests in another
@@ -409,6 +417,7 @@ sub FindBuildRuns
 	my $starttime = "";
 	
 	# looking for project use or nightly use?
+	#print "Looking for runs since <$TodayDate>\n";
 	my $extraction;
 	if(!defined($project)) {
 		$extraction = $db->prepare("SELECT * FROM Run WHERE  \
@@ -449,16 +458,18 @@ sub FindBuildRuns
 		}
 		if($branch) {
 			if( $des =~ /^.*$branch-(trunk|branch).*$/ ) {
+				print "adding $rid and $plotdateform to array buildruns\n";
+				print "Described as $des\n";
 				push(@buildruns,$rid . ":" . $plotdateform);
 			} else {
-				#print "Did not findd <$branch> in <$des>\n";
+				#print "1: Did not findd <$branch> in <$des>\n";
 			}
 		} else {
 			if(!defined($project)) {
 				if( $des =~ /^.*(V\d+_\d+-(trunk|branch)).*$/ ) {
 					push(@buildruns,$rid . ":" . $plotdateform . ":" . $1);
 				} else {
-					#print "Did not find <$branch> in <$des>\n";
+					#print "2: Did not find <$branch> in <$des>\n";
 				}
 			} else {
 				# when collecting for project take ALL branches
@@ -659,7 +670,7 @@ sub SetMonthYear
     }
     $currentyear = $year + 1900;
 	$TodayDate = $currentyear . "-" . $monthstring . "-" . $mday;
-	#print "Today is $TodayDate\n";
+	print "Today is $TodayDate\n";
 }
 
 sub MysqlDate2Seconds

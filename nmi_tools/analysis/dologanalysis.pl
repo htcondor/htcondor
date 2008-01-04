@@ -3,6 +3,8 @@ use File::Copy;
 use File::Path;
 use Getopt::Long;
 
+system("mkdir -p /tmp/btplots");
+
 my $dbtimelog = "/tmp/btplots/dodownloads.log";
 #print "Trying to open logfile... $dbtimelog\n";
 open(OLDOUT, ">&STDOUT");
@@ -20,7 +22,11 @@ my $tooldir = "/p/condor/home/tools/build-test-plots/";
 my $datalocation = "/p/condor/public/license/";
 my $datacruncher = "filter_sendfile";
 my $crunch = $datalocation . $datacruncher;
-my @datafiles = ( "sendfile-v6.0", "sendfile-v6.1", "sendfile-v6.2", "sendfile-v6.3", "sendfile-v6.4", "sendfile-v6.5", "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9" );
+#my @datafiles = ( "sendfile-v6.0", "sendfile-v6.1", "sendfile-v6.2", "sendfile-v6.3", "sendfile-v6.4", "sendfile-v6.5", "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9","sendfile-v7.0", "sendfile-v7.1" );
+#my @datafiles = ( "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9","sendfile-v7.0", "sendfile-v7.1" );
+my @datafiles = ( "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9" );
+my $stable = "sendfile-v6.8";
+my $developer = "sendfile-v6.9";
 #my @datafiles = ( "sendfile-v6.8" );
 
 GetOptions (
@@ -56,6 +62,21 @@ my %nummonths = (
     "Oct" => 10,
     "Nov" => 11,
     "Dec" => 12,
+);
+
+my %monthnums = (
+    1 => "Jan",
+    2 => "Feb",
+    3 => "Mar",
+    4 => "Apr",
+    5 => "May",
+    6 => "Jun",
+    7 => "Jul",
+    8 => "Aug",
+    9 => "Sep",
+    10 => "Oct",
+    11 => "Nov",
+    12 => "Dec",
 );
 
 if ( $help )    { help() and exit(0); }
@@ -148,6 +169,21 @@ foreach $log (@datafiles) {
 	#print "$graphcmd\n";
 	system("$graphcmd");
 
+	# prepare a 2 month plot for key downloads
+
+	$shortdate = mk2month_strtdate($day, $month, $year);
+
+	if($log eq $developer) {
+		$graphcmd = "$tooldir/./make-graphs-hist --firstdate \"$shortdate\" --detail downloadlogs --daily --input $outfile --output developer.png";
+	} elsif ($log eq $stable) {
+		$graphcmd = "$tooldir/./make-graphs-hist --firstdate \"$shortdate\" --detail downloadlogs --daily --input $outfile --output stable.png";
+	}
+	if(($log eq $developer) || ($log eq $stable)) {
+		print "About to execute this:\n";
+		print "$graphcmd\n";
+		system("$graphcmd");
+	}
+
 }
 exit(0);
 
@@ -162,6 +198,42 @@ Options:
 	[-h/--help]				See this
 	[-d/--data]				file holding test data
 	\n";
+}
+
+
+# =================================
+# Scale the data and return position info. Which
+# data location is correct for color coding of data.
+# =================================
+
+sub mk2month_strtdate
+{
+	my $day = shift;
+	my $month = shift;
+	my $intmonth = 0;
+	$intmonth = $nummonths{$month};
+	my $year = shift;
+	my $intyear = 0; 
+	$intyear = $year;
+	print " Day $day Month $intmonth Year $intyear\n";
+	if(($intmonth - 2) > 0) {
+		$intmonth = $intmonth - 2;
+	} elsif($intmonth == 2) {
+		$intmonth = 12;
+		$intyear = $intyear - 1;
+	} elsif($intmonth == 1) {
+		$intmonth = 11;
+		$intyear = $intyear - 1;
+	}
+
+	$month = $monthnums{$intmonth};
+	$month = $months{$month};
+	print "shortdate: Day $day Month $month Year $intyear\n";
+	$newyear = "";
+	$newyear = $intyear;
+	$newdate = $day . " " . $month . " " . $newyear;
+	print "Returning new date $newdate\n";
+	return($newdate);
 }
 
 # =================================

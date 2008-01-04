@@ -22,19 +22,25 @@ if( $datafile ) {
 	$datafile = $datadefault;
 }
 
+$branch1 = "7_0_0";
+$branch2 = "7_1";
 
-print "Transition file is <<6_8regdata>>\n";
-system("./readtestdata.pl --data=$data --view=testsum --branch=6_8 --out=6_8regdata");
-system("./make-graphs  --daily --input 6_8regdata --output ../testblog/6_8regdata.png");
-print "Transition file is <<6_8detaildata>>\n";
-system("./readtestdata.pl --data=$data --view=testdetail  --branch=6_8 --out=6_8detaildata");
-system("./make-graphs --detail analdetail --daily --input 6_8detaildata --output ../testblog/6_8detaildata.png");
-print "Transition file is <<6_9regdata>>\n";
-system("./readtestdata.pl --data=$data --view=testsum --branch=6_9 --out=6_9regdata");
-system("./make-graphs  --daily --input 6_9regdata --output ../testblog/6_9regdata.png");
-print "Transition file is <<6_9detaildata>>\n";
-system("./readtestdata.pl --data=$data --view=testdetail  --branch=6_9 --out=6_9detaildata");
-system("./make-graphs --detail analdetail --daily --input 6_9detaildata --output ../testblog/6_9detaildata.png");
+print "Transition file is <<7_0regdata>>\n";
+system("./readtestdata.pl --data=$data --view=testsum --branch=$branch1 --out=7_0regdata");
+system("./make-graphs  --daily --input 7_0regdata --output ../testblog/7_0regdata.png");
+exit(0);
+
+print "Transition file is <<7_0detaildata>>\n";
+system("./readtestdata.pl --data=$data --view=testdetail  --branch=$branch17_0 --out=7_0detaildata");
+system("./make-graphs --detail analdetail --daily --input 7_0detaildata --output ../testblog/7_0detaildata.png");
+
+print "Transition file is <<7_1regdata>>\n";
+system("./readtestdata.pl --data=$data --view=testsum --branch=$branch2 --out=7_1regdata");
+system("./make-graphs  --daily --input 7_1regdata --output ../testblog/7_1regdata.png");
+
+print "Transition file is <<7_1detaildata>>\n";
+system("./readtestdata.pl --data=$data --view=testdetail  --branch=$branch2 --out=7_1detaildata");
+system("./make-graphs --detail analdetail --daily --input 7_1detaildata --output ../testblog/7_1detaildata.png");
 
 
 # =================================
