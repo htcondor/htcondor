@@ -67,6 +67,12 @@ The details of each version are described below.
 \item Lookups of ClassAd attribute \Attr{CurrentTime} are now
   case-insensitive, just like all other attributes.
 
+\item Fixed problems causing the following error message in the log file:
+
+\begin{verbatim}
+ERROR: receiving new UDP message but found a short message still waiting to be closed (consumed=1). Closing it now.
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Known Bugs:
