@@ -690,34 +690,46 @@ check_core_files()
 }
 
 
-int
-handle_off_fast( Service*, int, Stream* )
+static int
+handle_off_fast( Service*, int, Stream* stream)
 {
+	if( !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "handle_off_fast: failed to read end of message\n");
+		return FALSE;
+	}
 	daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
 	return TRUE;
 }
 
 	
-int
-handle_off_graceful( Service*, int, Stream* )
+static int
+handle_off_graceful( Service*, int, Stream* stream)
 {
+	if( !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "handle_off_graceful: failed to read end of message\n");
+		return FALSE;
+	}
 	daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 	return TRUE;
 }
 
-int
-handle_off_peaceful( Service*, int, Stream* )
+static int
+handle_off_peaceful( Service*, int, Stream* stream)
 {
 	// Peaceful shutdown is the same as graceful, except
 	// there is no timeout waiting for things to finish.
 
+	if( !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "handle_off_peaceful: failed to read end of message\n");
+		return FALSE;
+	}
 	daemonCore->SetPeacefulShutdown(true);
 	daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 	return TRUE;
 }
 
-int
-handle_set_peaceful_shutdown( Service*, int, Stream* )
+static int
+handle_set_peaceful_shutdown( Service*, int, Stream* stream)
 {
 	// If the master could send peaceful shutdown signals, it would
 	// not be necessary to have a message for turning on the peaceful
@@ -725,14 +737,22 @@ handle_set_peaceful_shutdown( Service*, int, Stream* )
 	// shutdown signals, condor_off is responsible for first turning
 	// on peaceful shutdown in appropriate daemons.
 
+	if( !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "handle_set_peaceful_shutdown: failed to read end of message\n");
+		return FALSE;
+	}
 	daemonCore->SetPeacefulShutdown(true);
 	return TRUE;
 }
 
 
-int
-handle_reconfig( Service*, int cmd, Stream* )
+static int
+handle_reconfig( Service*, int cmd, Stream* stream )
 {
+	if( !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "handle_reconfig: failed to read end of message\n");
+		return FALSE;
+	}
 	if( cmd == DC_RECONFIG_FULL ) {
 		dc_reconfig( true );
 	} else {
@@ -837,8 +857,12 @@ handle_fetch_log( Service *, int, Stream *s )
 
 
 int
-handle_nop( Service*, int, Stream* )
+handle_nop( Service*, int, Stream* stream)
 {
+	if( !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "handle_nop: failed to read end of message\n");
+		return FALSE;
+	}
 	return TRUE;
 }
 
@@ -939,6 +963,11 @@ handle_config( Service *, int cmd, Stream *stream )
 		dprintf( D_ALWAYS, "Can't read configuration string\n" );
 		free( admin );
 		free( config );
+		return FALSE;
+	}
+
+	if( !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "handle_config: failed to read end of message\n");
 		return FALSE;
 	}
 
