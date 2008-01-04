@@ -126,6 +126,14 @@ BEGIN {
 	print "VM_TYPE ="
 	next
 }
+/^#VM_NETWORKING/ {
+	print "VM_NETWORKING = FALSE"
+	next
+}
+/^#VM_MAX_NUMBER/ {
+	print "VM_MAX_NUMBER = $(NUM_CPUS)"
+	next
+}
 
 # If we made it here, print out the line unchanged
 {print $0}

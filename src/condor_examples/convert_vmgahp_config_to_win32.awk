@@ -43,6 +43,17 @@ BEGIN {
 	next
 }
 
+# Change the configuration such that we can modify the VMware networking
+# types
+/^\#VMWARE_NAT_NETWORKING_TYPE/ {
+	printf "VMWARE_NAT_NETWORKING_TYPE = nat\n"
+	next
+}
+/^\#VMWARE_BRIDGE_NETWORKING_TYPE/ {
+	printf "VMWARE_BRIDGE_NETWORKING_TYPE = bridged\n"
+	next
+}
+
 # If we made it here, print out the line unchanged
 {print $0}
 
