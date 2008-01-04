@@ -1,3 +1,6 @@
+01/04/08 V7_0_0-vc2008-{root,branch}
+  A new branch to port the Windows build system to Visual Studio 2008
+
 12/20/07 V7_0-{root,branch}
   A new branch off HEAD for the 7.0.x stable series.
 
