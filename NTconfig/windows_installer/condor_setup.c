@@ -41,7 +41,7 @@ struct Options {
 	char runjobs;    /* N/A/I/C (Never/Always/Idle/Cpu+Idle */
 	char vacatejobs; /* Y/N */
 	char enablevmuniverse; /* Y/N */
-	
+	char vmnetworking; /* N/A/B/C (None/NAT/Bridge/NAT and Bridge) */	
 
 	char *poolhostname;
 	char *poolname; 
@@ -54,10 +54,13 @@ struct Options {
 	char *hostallowread;
 	char *hostallowwrite;
 	char *hostallowadministrator;
-} Opt = { '\0', '\0', '\0', '\0', '\0', NULL, NULL, NULL, NULL, NULL, 
-	NULL, NULL, NULL, NULL, NULL, NULL};
+	char *vmmaxnumber;
+	char *vmversion;
+	char *vmmemory;
+} Opt = { '\0', '\0', '\0', '\0', '\0','\0', NULL, NULL, NULL, NULL, NULL, 
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
-const char *short_options = ":c:d:e:i:j:v:n:p:o:r:a:s:t:m:u:l:h";
+const char *short_options = ":c:d:e:i:j:v:n:p:o:r:a:s:t:m:u:l:w:x:y:z:h";
 static struct option long_options[] =
 { 
 	{"acctdomain",              required_argument, 0, 'a'},
@@ -76,6 +79,10 @@ static struct option long_options[] =
 	{"release_dir",             required_argument, 0, 'd'},
 	{"smtpserver",              required_argument, 0, 'm'},
 	{"enablevmuniverse",        required_argument, 0, 'u'},
+	{"vmmaxnumber",             required_argument, 0, 'w'},	
+	{"vmversion",               required_argument, 0, 'x'},
+	{"vmmemory",                required_argument, 0, 'y'},
+	{"vmnetworking",            required_argument, 0, 'z'},
 	{"help",                    no_argument,       0, 'h'},
    	{0, 0, 0, 0}
 };
@@ -208,7 +215,26 @@ set_vmgahpoptions() {
 		free(short_name);
  
 	}
-				
+
+	if ( Opt.vmversion ) {
+		set_option("VM_VERSION", Opt.vmversion);
+	}
+
+	if ( Opt.vmmemory ) {
+		set_option("VM_MAX_MEMORY", Opt.vmmemory);
+	}
+
+	set_option("VM_NETWORKING", "TRUE");
+	if ( 'A' == Opt.vmnetworking ) {
+		set_option("VM_NETWORKING_TYPE", "nat");
+	} else if ( 'B' == Opt.vmnetworking ) {
+		set_option("VM_NETWORKING_TYPE", "bridge");
+	} else if ( 'C' == Opt.vmnetworking ) {
+		set_option("VM_NETWORKING_TYPE", "nat, bridge");
+	} else { /* no networking */ 
+		set_option("VM_NETWORKING", "FALSE");
+	}
+
 }
 
 void
@@ -308,6 +334,16 @@ set_vmuniverse() {
 		set_option("VM_GAHP_SERVER", "$(BIN)/condor_vm-gahp.exe");
 		set_option("VM_GAHP_CONFIG", "$(RELEASE_DIR)/condor_vmgahp_config.vmware");
 		set_option("VM_TYPE", "vmware");
+	}
+
+	if ( Opt.vmmaxnumber ) {
+		set_option("VM_MAX_NUMBER", Opt.vmmaxnumber);
+	}
+
+	if ( 'N' == Opt.vmnetworking ) {
+		set_option("VM_NETWORKING", "FALSE");
+	} else {
+		set_option("VM_NETWORKING", "TRUE");	  
 	}
 	
 }
@@ -424,7 +460,31 @@ parse_args(int argc, char** argv) {
 					Opt.enablevmuniverse = 'Y';
 				}
 			break;
+			
+			case 'w':
+				if (!isempty(optarg)) {
+					Opt.vmmaxnumber = strdup(optarg);
+				}
+			break;
 
+			case 'x':
+				if (!isempty(optarg)) {
+					Opt.vmversion = strdup(optarg);
+				}
+			break;
+
+			case 'y':
+				if (!isempty(optarg)) {
+					Opt.vmmemory = strdup(optarg);
+				}
+			break;
+
+			case 'z':
+				if ( optarg ) {
+					Opt.vmnetworking = toupper(optarg[0]);
+				}
+			break;
+			
 			case 'h':
 			default:
 				/* getopt already printed an error msg */

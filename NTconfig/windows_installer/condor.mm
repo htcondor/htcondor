@@ -8,11 +8,15 @@
 ; --condoremail CONDOREMAIL
 ;
 
+;---------------------------------------------------------------------------
+;--- Definitions and Includes ----------------------------------------------
+;---------------------------------------------------------------------------
+
 ;--- Load MAKEMSI (via wrapper) ---------------------------------------------
 #define? COMPANY_MSINAME_SUFFIX.D  
 
 #include "condor.mmh"
-#define  UISAMPLE_BLINE_TEXT           Condor for Windows <$ProductVersion>
+#define  UISAMPLE_BLINE_TEXT  Condor for Windows <$ProductVersion>
 #define UISAMPLE_BLINE_TEXT_INDENT    10
 #define UISAMPLE_BLINE_TEXT_WIDTH    110
 #define UISAMPLE_DIALOG_FILE_dlgbmp Leftside-condor.bmp
@@ -20,6 +24,26 @@
 #define ImageRootDirectory <??*CondorReleaseDir>
 #undef DIALOGTEMPLATE_LABEL_COLUMN_WIDTH 
 #define DIALOGTEMPLATE_LABEL_COLUMN_WIDTH 115
+
+;---------------------------------------------------------------------------
+;--- Macros ----------------------------------------------------------------
+;---------------------------------------------------------------------------
+
+;---------------------------------------------------------------------------
+;--- PersistMe -------------------------------------------------------------
+;---------------------------------------------------------------------------
+;--- 1. Retain these values
+;--- 2. Supply default values for the dialog
+;--- 3. None of these default values are validated during silent install
+;--- 4. For silent install your MSIEXEC.EXE command line would supply
+;---    overrides for these values as required.
+;--- 5. Saving these items is vital for Windows Installer "repair" operation
+;---------------------------------------------------------------------------
+#define PersistMe <$Property {$?} Persist="Y" PersistHow="LOCAL_MACHINE PRODUCT FOREVER">
+
+;---------------------------------------------------------------------------
+;--- Non-persistent values -------------------------------------------------
+;---------------------------------------------------------------------------
 
 <$Property "RUNJOBS" VALUE="N">
 <$Property "SUBMITJOBS" VALUE="Y">
@@ -31,60 +55,92 @@
 <$Property "STARTSERVICE" VALUE="Y">
 <$Property "AA" VALUE="N">
 <$Property "AB" VALUE="N">
+<$Property "AC" VALUE="N">
 <$Property "USEVMUNIVERSE" VALUE="N">
+<$Property "VMVERSION" VALUE="server1.0">
+<$Property "VMMEMORY" VALUE="128">
+<$Property "VMMAXNUMBER" VALUE="$(NUM_CPUS)">
+<$Property "VMNETWORKING" VALUE="N">
 
-<$AbortIf Condition=^not VersionNT OR (VersionNT < 500)^ Message=^Condor for Windows can only be installed on Windows 2000 or greater.^>
+;---------------------------------------------------------------------------
+;--- Persistent values -----------------------------------------------------
+;---------------------------------------------------------------------------
+
+<$PersistMe "INSTALLDIR_NTS" VALUE="">
+
+
+;--- Choke if we are not running on Windows 2000 and beyond ----------------
+#(
+<$AbortIf Condition=^not VersionNT OR (VersionNT < 500)^ 
+ Message=^Condor for Windows can only be installed on Windows 2000 or greater.^>
+#)
 
 ;--- Find some binaries on the system that we may need ---------------------
-;<$FileFind File="cygwin1.dll" Property="CYGWINDLL" Depth="1" Path="[WindowsVolume]cygwin" Default="">
-<$FileFind File="JAVA.EXE" Property="JVMLOCATION" Depth="3" Path="[ProgramFilesFolder]" Default="JAVA.EXE">
-<$FileFind File="PERL.EXE" Property="PERLLOCATION" Depth="2" Path="[WindowsVolume]\Perl" Default="PERL.EXE">
+;#(
+;<$FileFind File="cygwin1.dll" Property="CYGWINDLL" Depth="1" 
+;	Path="[WindowsVolume]cygwin" Default="">
+;#)
+#(
+<$FileFind File="JAVA.EXE" Property="JVMLOCATION" Depth="3" 
+	Path="[ProgramFilesFolder]" Default="JAVA.EXE">
+#)
+#(
+<$FileFind File="PERL.EXE" Property="PERLLOCATION" Depth="2" 
+	Path="[WindowsVolume]\Perl" Default="PERL.EXE">
+#)
 
 <$Dialog "New Or Existing Condor Pool?" Dialog="NewOrExistingPool" INSERT="LicenseAgreementDlg">
-   ;--- A Radio Button ------------------------------------------------------
-   #data 'RadioButton_NEWPOOL'
-         ;--- All buttons on same dialog line (not over 3) ------------------
-         'Y'       'Create a new Condor Pool.'      ''  'Use this machine as the Central Manager.'
-         'N'  'Join an existing Condor Pool.'       ''  'Use an existing Central Manager.'
-   #data
+	
+	#data 'RadioButton_NEWPOOL'
+		'Y' 'Create a new Condor Pool.' '' 'Use this machine as the Central Manager.'
+		'N' 'Join an existing Condor Pool.' '' 'Use an existing Central Manager.'
+	#data
 	<$DialogEntry Property="NEWPOOL" Label="Choose install type:" Control="RB">
 
-	<$DialogEntry Property="POOLNAME" Label="Name of New Pool:" ToolTip="Enter the public name of this Condor pool" Width=100 Blank="Y">
+	#(
+	<$DialogEntry Property="POOLNAME" Label="Name of New Pool:" 
+		ToolTip="Enter the public name of this Condor pool" 
+		Width=100 Blank="Y">
+	#)
 
-	<$DialogEntry Property="POOLHOSTNAME" Label="Hostname of Central Manager:" ToolTip="Enter the hostname of the new or existing CM" Width=100 Blank="Y">
+	#(
+	<$DialogEntry Property="POOLHOSTNAME" 
+		Label="Hostname of Central Manager:" 
+		ToolTip="Enter the hostname of the new or existing CM" 
+		Width=100 Blank="Y">
+	#)
+
 <$/Dialog>
 
-; flip the text fields on or off for pool hostname or pool name
+;--- Flip the text fields on or off for pool hostname or pool name ---------
 <$Table "ControlCondition">
-	<$Row    Dialog_="NewOrExistingPool" Control_="Entry.3" Action="Enable" Condition=^NEWPOOL = "N"^>
-	<$Row    Dialog_="NewOrExistingPool" Control_="Entry.2" Action="Disable" Condition=^NEWPOOL = "N"^>
-
-	<$Row    Dialog_="NewOrExistingPool" Control_="Entry.2" Action="Enable" Condition=^NEWPOOL = "Y"^>
-	<$Row    Dialog_="NewOrExistingPool" Control_="Entry.3" Action="Disable" Condition=^NEWPOOL = "Y"^>
+	<$Row Dialog_="NewOrExistingPool" Control_="Entry.3" Action="Enable" Condition=^NEWPOOL = "N"^>
+	<$Row Dialog_="NewOrExistingPool" Control_="Entry.2" Action="Disable" Condition=^NEWPOOL = "N"^>
+	<$Row Dialog_="NewOrExistingPool" Control_="Entry.2" Action="Enable" Condition=^NEWPOOL = "Y"^>
+	<$Row Dialog_="NewOrExistingPool" Control_="Entry.3" Action="Disable" Condition=^NEWPOOL = "Y"^>
 <$/Table>
 
 
 <$Dialog "Configure Execute and Submit Behavior" Dialog="RunOrSubmitJobs" INSERT="NewOrExistingPool">
+
 	<$DialogEntry Property="SUBMITJOBS" Label="Submit jobs to Condor Pool" Control="XB:N|Y" ToolTip="Run a condor_schedd daemon on this machine.">
 
-   #data 'RadioButton_RUNJOBS'
-         ;--- All buttons on same dialog line (not over 3) ------------------
-         'N'  'Do not run jobs on this machine.' ''  'Do not run a condor_startd on this machine.'
-	 'A'  'Always run jobs and never suspend them.' '' 'This machine will always accept jobs.'
-         'I'  'When keyboard has been idle for 15 minutes.' ''  'Idle keyboard and mouse.'
-         'C'  'When keyboard has been idle for 15 minutes and CPU is idle.' ''  'Idle keyboard and low CPU activity.'
-   #data
-
+	#data 'RadioButton_RUNJOBS'
+		'N' 'Do not run jobs on this machine.' '' 'Do not run a condor_startd on this machine.'
+		'A' 'Always run jobs and never suspend them.' '' 'This machine will always accept jobs.'
+		'I' 'When keyboard has been idle for 15 minutes.' '' 'Idle keyboard and mouse.'
+		'C' 'When keyboard has been idle for 15 minutes and CPU is idle.' '' 'Idle keyboard and low CPU activity.'
+	#data
 	<$DialogEntry Property="RUNJOBS" Label="When should Condor run jobs?" Control="RB">
 	
 	<$DialogEntry LabelWidth="235" Property="AA" Label="When the machine becomes no longer idle, jobs are suspended." Control="Text">
 
-   #data 'RadioButton_VACATEJOBS'
-         'N'  'Keep the job in memory and restart it when you leave.' ''  'Use this machine as the Central Manager.'
-         'Y'  'Restart the job on a different machine.'  ''  'Use an existing Central Manager.'
-   #data
-
+	#data 'RadioButton_VACATEJOBS'
+		'N' 'Keep the job in memory and restart it when you leave.' '' 'Use this machine as the Central Manager.'
+		'Y' 'Restart the job on a different machine.' '' 'Use an existing Central Manager.'
+	#data
 	<$DialogEntry Property="VACATEJOBS" Label="After 10 minutes:" Control="RB">
+
 <$/Dialog>
 
 <$Table "ControlCondition">
@@ -116,18 +172,66 @@
 <$/Dialog>
 
 <$Dialog "VM Universe Settings" Dialog="VMUniverseSettings" INSERT="HostPermissionSettings">
-   	#data 'RadioButton_USEVMUNIVERSE'	         
-	         'N'	'No'	''	''
-		 'Y'	'Yes (Requires VMware Server and Perl)'	''	''
+   	
+	#data 'RadioButton_USEVMUNIVERSE'	         
+	         'N' 'N&o' '' ''
+		 'Y' '&Yes (Requires VMware Server and Perl)' '' ''
 	#data
-	<$DialogEntry Property="USEVMUNIVERSE" Label="Enable VM Universe:" Control="RB">
-	<$DialogEntry Property="PERLLOCATION" Label="Path to Perl:" ToolTip="VM Universe on Windows requires PERL.EXE" Width=200 Blank="N">
+	#(
+	<$DialogEntry Property="USEVMUNIVERSE" Label="Enable VM Universe:" 
+		Control="RB">
+	#)
+	
+	#(	
+	<$DialogEntry Property="VMVERSION" Label="&Version:" 
+		ToolTip="Placed in the Machine information Ad" 
+		Width=200 Blank="N">
+	#)
+	
+	#(
+	<$DialogEntry Property="VMMEMORY" Label="Maximum &Memory (in MB):" 
+		ToolTip="The maximum memory VM Universe can use."
+		Control="ME:######" Blank="N">
+	#)
+	
+	#(
+	<$DialogEntry Property="VMMAXNUMBER" Label="Maximum Number of VMs:" 
+		ToolTip="The maximum memory number of VMs that can be run."
+		Width=100 Blank="N">
+	#)
+	
+	#data 'ComboBox_VMNETWORKING'
+            ;--- Define the networking types we support ---
+            'N'	'None'
+            'A'	'NAT'
+            'B'	'Bridged'
+            'C'	'NAT and Bridged'
+        #data
+	#(
+	<$DialogEntry Property="VMNETWORKING" Label="N&etworking Support:" 
+		Control="CL">
+	#)	
+
+	#(
+	<$DialogEntry Property="PERLLOCATION" Label="Path to &Perl Executable:" 
+		ToolTip="VM Universe on Windows requires PERL.EXE" 
+		Width=200 Blank="N">
+	#)	
+
 <$/Dialog>
 
-; flip the text fields on or off for perl location
+;--- Flip the fields on or off depending on if VM Universe is on ---
 <$Table "ControlCondition">
-	<$Row Dialog_="VMUniverseSettings" Control_="Entry.2" Action="Enable" Condition=^USEVMUNIVERSE = "Y"^>
+	<$Row Dialog_="VMUniverseSettings" Control_="Entry.2" Action="Enable" Condition=^USEVMUNIVERSE = "Y"^>	
 	<$Row Dialog_="VMUniverseSettings" Control_="Entry.2" Action="Disable" Condition=^USEVMUNIVERSE = "N"^>
+	<$Row Dialog_="VMUniverseSettings" Control_="Entry.3" Action="Enable" Condition=^USEVMUNIVERSE = "Y"^>	
+	<$Row Dialog_="VMUniverseSettings" Control_="Entry.3" Action="Disable" Condition=^USEVMUNIVERSE = "N"^>
+	<$Row Dialog_="VMUniverseSettings" Control_="Entry.4" Action="Enable" Condition=^USEVMUNIVERSE = "Y"^>	
+	<$Row Dialog_="VMUniverseSettings" Control_="Entry.4" Action="Disable" Condition=^USEVMUNIVERSE = "N"^>
+	<$Row Dialog_="VMUniverseSettings" Control_="Entry.5" Action="Enable" Condition=^USEVMUNIVERSE = "Y"^>	
+	<$Row Dialog_="VMUniverseSettings" Control_="Entry.5" Action="Disable" Condition=^USEVMUNIVERSE = "N"^>
+	<$Row Dialog_="VMUniverseSettings" Control_="Entry.6" Action="Enable" Condition=^USEVMUNIVERSE = "Y"^>	
+	<$Row Dialog_="VMUniverseSettings" Control_="Entry.6" Action="Disable" Condition=^USEVMUNIVERSE = "N"^>
 <$/Table>
 
 
@@ -244,7 +348,10 @@
 <$/Component>
 
 ;--- Set Config file parameters ---------------------------------------------
-;-- we split into two calls because the arglist can only be 255 characters.
+;----------------------------------------------------------------------------
+;--- we split into several calls because the arglist can only be 255 
+;--- characters
+;----------------------------------------------------------------------------
 #(
 <$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^
 Args=^
@@ -269,11 +376,28 @@ Type="System" ;; run as the System account
 Args=^
 -p "[POOLNAME]"
 -o "[POOLHOSTNAME]"
--d "[INSTALLDIR_NTS]"
 -a "[ACCOUNTINGDOMAIN]"
 -j "[JVMLOCATION]"
--m "[SMTPSERVER]"
+-m "[SMTPSERVER]"^
+WorkDir=^INSTALLDIR^   
+Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
+Seq="InstallServices-"
+Rc0="N"       ;; On Vista this app will not return any useful results
+Type="System" ;; run as the System account	
+>
+#)
+
+;--- Note that we set the install dir here: we do this because the vm-gaph -
+;--- needs it in order to determine the path for its control script --------
+#(
+<$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^
+Args=^
+-d "[INSTALLDIR_NTS]"
 -u "[USEVMUNIVERSE]"
+-w "[VMMAXNUMBER]"
+-x "[VMVERSION]"
+-y "[VMMEMORY]"
+-z "[VMNETWORKING]"
 -l "[PERLLOCATION]"^ 
 WorkDir=^INSTALLDIR^   
 Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
