@@ -23,7 +23,9 @@
 void
 evalFromEnvironment (const char *name, EvalResult *val)
 {
-	if (strcmp (name, "CurrentTime") == 0)
+	// Use stricmp comparison since ClassAd attribute
+	// names are supposed to be case-insensitive.
+	if (stricmp (name, "CurrentTime") == 0)
 	{
 		time_t	now = time (NULL);
 		if (now == (time_t) -1)
