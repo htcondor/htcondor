@@ -1204,12 +1204,14 @@ main_pre_command_sock_init()
 #endif
 }
 
+
 void init_firewall_exceptions() {
 #ifdef WIN32
 
 	bool add_exception;
 	char *master_image_path, *schedd_image_path, *startd_image_path,
-		 *dagman_image_path, *bin_path;
+		 *dbmsd_image_path, *quill_image_path, *dagman_image_path, 
+		 *bin_path;
 	const char* dagman_exe = "condor_dagman.exe";
 
 	WindowsFirewallHelper wfh;
@@ -1233,7 +1235,12 @@ void init_firewall_exceptions() {
 		schedd_image_path = param("SCHEDD");
 		startd_image_path = param("STARTD");
 
-		// We also want to add exceptions for the DAGMan we ship with
+		// We to also add exceptions for Quill and DBMSD
+
+		quill_image_path = param("QUILL");
+		dbmsd_image_path = param("DBMSD");
+
+		// We also want to add exceptions for the DAGMan we ship
 		// with Condor:
 
 		bin_path = param ( "BIN" );
@@ -1267,6 +1274,22 @@ void init_firewall_exceptions() {
 					dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 						"windows firewall exception list.\n",
 						startd_image_path);
+				}
+			}
+
+			if ( (! (daemons.GetIndex("QUILL") < 0) ) && quill_image_path ) {
+				if ( !wfh.addTrusted(quill_image_path) ) {
+					dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+						"windows firewall exception list.\n",
+						quill_image_path);
+				}
+			}
+
+			if ( (! (daemons.GetIndex("DBMSD") < 0) ) && dbmsd_image_path ) {
+				if ( !wfh.addTrusted(dbmsd_image_path) ) {
+					dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+						"windows firewall exception list.\n",
+						dbmsd_image_path);
 				}
 			}
 
