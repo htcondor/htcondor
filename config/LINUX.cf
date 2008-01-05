@@ -47,10 +47,6 @@
 #  define GlibCFlag
 #endif
 
-#ifndef ArchOptimizeFlag
-#define ArchOptimizeFlag
-#endif
-
 #define PlatformFlags		ArchOptimizeFlag GlibCFlag
 
 #define PlatformLdFlags		-lresolv

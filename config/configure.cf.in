@@ -179,6 +179,8 @@ LIBCRYPT = @crypt_lib@
 
 SIMPLE_LIBC = @LIBC_A@
 
+#define ArchOptimizeFlag @_cv_arch_optimize_flag@
+
 #if @_cv_is_clipped@
 #define IS_CLIPPED YES
 #endif

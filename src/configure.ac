@@ -1307,6 +1307,17 @@ if test "x$_cv_opsys" = xyes; then
   esac
 fi
 
+# ArchOptimizeFlag logic used to live in .cf files, mostly
+# LINUX_I386.cf, that logic now lives here.
+if test "x$_cv_opsys" = xLINUX -a "x$CompilerKind" = xGCC; then
+  case "$CompilerMajor" in
+    4 ) _cv_arch_optimize_flag="-march=i486" ;;
+    3 ) _cv_arch_optimize_flag="-mcpu=i486" ;;
+    * ) _cv_arch_optimize_flag="-m486" ;;
+  esac
+  AC_SUBST([_cv_arch_optimize_flag], [$_cv_arch_optimize_flag])
+fi
+
 # PlatformLdFlags used to live in a number of .cf files, their logic
 # now exists here
 case "$_cv_opsys" in
