@@ -53,7 +53,7 @@ EvalResult::EvalResult()
 // EvalResult dtor
 EvalResult::~EvalResult()
 {
-	if ((type == LX_STRING) && (s)) {
+	if ((type == LX_STRING || type == LX_TIME) && (s)) {
 		delete [] s;
 	}
 }
