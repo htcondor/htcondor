@@ -1264,6 +1264,19 @@ AC_MSG_RESULT([$_cv_does_compress_ckpt])
 AS_IF([test "x$CLIPPED" != "xyes" -a "x$_cv_does_compress_ckpt" = xyes],
   AC_DEFINE([DOES_COMPRESS_CKPT], [1], [Define if we can compress checkpoints]))
 
+AC_MSG_CHECKING([if DOES_SAVE_SIGSTATE is supported])
+case "$_cv_opsys" in
+  AIX | HPUX | LINUX | SOLARIS )
+    _cv_does_save_sigstate=yes
+  ;;
+  * )
+    _cv_does_save_sigstate=no
+  ;;
+esac
+AC_MSG_RESULT([$_cv_does_save_sigstate])
+AS_IF([test "x$_cv_does_save_sigstate" = xyes],
+  AC_DEFINE([DOES_SAVE_SIGSTATE], [1], [Define if we save sigstate]))
+
 # HAS_DYNAMIC_USER_JOBS, not sure exactly what this is -matt 26 Nov 07
 if test "x$_cv_opsys" = "xSOLARIS"; then
   AC_DEFINE([HAS_DYNAMIC_USER_JOBS], [1], [Used in condor_ckpt/image.C])

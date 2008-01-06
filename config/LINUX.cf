@@ -49,8 +49,6 @@
 
 #define PlatformFlags		ArchOptimizeFlag GlibCFlag
 
-#define DOES_SAVE_SIGSTATE		YES
-
 #define NEEDS_KBDD			NO	
 #define HAS_AR_S_OPTION			YES
 #define HAS_RANLIB_TOUCH		NO
