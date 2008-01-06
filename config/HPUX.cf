@@ -17,8 +17,6 @@
  *
  ***************************************************************/
 
-#define NEEDS_KBDD			NO
-
 #define NEEDS_64BIT_SYSCALLS	NO
 #define NEEDS_64BIT_STRUCTS		YES
 

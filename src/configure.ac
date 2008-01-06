@@ -1827,6 +1827,21 @@ AC_ARG_ENABLE([tt],
 AS_IF([test "x$enable_tt" = xyes],
   [AC_DEFINE([WANT_TT], [1], [Define if enabling TT])])
 
+AC_ARG_ENABLE([kbdd],
+  AC_HELP_STRING([--enable-kbdd],
+    [enable KBDD functionality (default: platform dependent)]),
+  [],
+  [case "$_cv_opsys" in
+    AIX | HPUX | LINUX | SOLARIS )
+      enable_kbdd=no
+    ;;
+    * ) # Who had this turned on? No .cf files on 1/6/8 used it. -matt
+      enable_kbdd=no
+    ;;
+  esac])
+AS_IF([test "x$enable_kbdd" = xyes],
+  [AC_DEFINE([NEEDS_KBDD], [1], [Define if enabling KBDD])])
+
 # Here we figure out whether or not the circumstances are correct for us
 # to be able to separate the debugging symbols from the executables and
 # package them into a tarball. for example, if say objcopy's debuglink flag

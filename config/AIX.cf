@@ -20,8 +20,6 @@
 /* we also need to link test suite jobs with the same mess */
 #define TestPlatformLdFlags PlatformLdFlags
 
-#define NEEDS_KBDD			NO
-
 #define NEEDS_64BIT_SYSCALLS	NO
 #define NEEDS_64BIT_STRUCTS		YES
 
