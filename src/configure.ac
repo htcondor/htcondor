@@ -1277,6 +1277,19 @@ AC_MSG_RESULT([$_cv_does_save_sigstate])
 AS_IF([test "x$_cv_does_save_sigstate" = xyes],
   AC_DEFINE([DOES_SAVE_SIGSTATE], [1], [Define if we save sigstate]))
 
+AC_MSG_CHECKING([if HAS_RANLIB_TOUCH is supported])
+case "$_cv_opsys" in
+  AIX | HPUX | SOLARIS )
+    _cv_has_ranlib_touch=yes
+  ;;
+  LINUX )
+    _cv_has_ranlib_touch=no
+  ;;
+esac
+AC_MSG_RESULT([$_cv_has_ranlib_touch])
+AS_IF([test "x$_cv_has_ranlib_touch" = xyes],
+  AC_DEFINE([HAS_RANLIB_TOUCH], [1], [Define if we want HAS_RANLIB_TOUCH]))
+
 AC_MSG_CHECKING([if HAS_AR_S_OPTION is supported])
 case "$_cv_opsys" in
   AIX | HPUX | LINUX | SOLARIS )
