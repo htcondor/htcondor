@@ -182,7 +182,3 @@ SIMPLE_LIBC = @LIBC_A@
 #define ArchOptimizeFlag @_cv_arch_optimize_flag@
 
 #define PlatformLdFlags @_cv_platform_ld_flags@
-
-#if @_cv_is_clipped@
-#define IS_CLIPPED YES
-#endif
