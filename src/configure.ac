@@ -1277,6 +1277,19 @@ AC_MSG_RESULT([$_cv_does_save_sigstate])
 AS_IF([test "x$_cv_does_save_sigstate" = xyes],
   AC_DEFINE([DOES_SAVE_SIGSTATE], [1], [Define if we save sigstate]))
 
+AC_MSG_CHECKING([if HAS_AR_S_OPTION is supported])
+case "$_cv_opsys" in
+  AIX | HPUX | LINUX | SOLARIS )
+    _cv_has_ar_s_option=yes
+  ;;
+  * ) # Who doesn't have 'ar s'? On 1/6/8 all .cf files supported it. -matt
+    _cv_has_ar_s_option=no
+  ;;
+esac
+AC_MSG_RESULT([$_cv_has_ar_s_option])
+AS_IF([test "x$_cv_has_ar_s_option" = xyes],
+  AC_DEFINE([HAS_AR_S_OPTION], [1], [Define if ar has the s option]))
+
 # HAS_DYNAMIC_USER_JOBS, not sure exactly what this is -matt 26 Nov 07
 if test "x$_cv_opsys" = "xSOLARIS"; then
   AC_DEFINE([HAS_DYNAMIC_USER_JOBS], [1], [Used in condor_ckpt/image.C])

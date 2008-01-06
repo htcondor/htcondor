@@ -29,7 +29,6 @@
 ** Shared Solaris Settings
 **************************************************************************/
 
-#define HAS_AR_S_OPTION			YES
 #define HAS_RANLIB_TOUCH		YES
 #define HAS_CP_PRESERVE			YES
 #ifndef FORTRAN_HAS_RECURSION
