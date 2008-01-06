@@ -1309,7 +1309,9 @@ fi
 
 # ArchOptimizeFlag logic used to live in .cf files, mostly
 # LINUX_I386.cf, that logic now lives here.
-if test "x$_cv_opsys" = xLINUX -a "x$CompilerKind" = xGCC; then
+if test "x$_cv_opsys" = xLINUX \
+   -a "x$_cv_arch" = xI386 \
+   -a "x$CompilerKind" = xGCC; then
   case "$CompilerMajor" in
     4 ) _cv_arch_optimize_flag="-march=i486" ;;
     3 ) _cv_arch_optimize_flag="-mcpu=i486" ;;
