@@ -61,40 +61,6 @@
 */ 
 #define PurifyPlatformLdFlags -lkstat -lelf -lnsl -lsocket -lresolv
 
-/*
-NOTE: The following definition of PlatformLdFlags assumes that the
-compiler libraries (libgcc and libstdc++) are available _only_ as
-static libraries, so we do not need to do anything special to cause
-them to be statically linked.  We want them to be statically linked
-so people can run condor binaries on machines where gcc has never
-been installed, since this is common for Solaris boxes.
-
-We used to append $(GCC_STATIC_LIBS) to PlatformLdFlags, however, this
-caused libc to be statically linked, and that caused runtime errors on
-binaries compiled on Solaris 9 when run on Solaris 10.  Why was libc
-statically linked you may ask?  Because GCC_STATIC_LIBS was defined
-like this: -Wl,-bstatic -lstdc++ -lgcc.  This turns on static linking
-but does not turn it off.  The compiler appends a bunch of standard
-libs, including -lstdc++, -lgcc, and -lc.  Therefore, libc was being
-statically linked.  We could have turned off static linking with
--Wl,-bdyanamic, so the libs appended by the compiler would not be
-statically linked.  However, among the libs appended by the compiler
-are the very libs we are trying to link statically, so if they were
-available both statically and dynamically, they would be linked both
-ways.  The version of gcc currently in use on the Solaris build
-machines is 2.95.3, which does not support the option -nodefaultlibs,
-so we can't easily prevent the compiler from doing this.  It does
-support -nostdlibs, but that option also disables the linking of all
-other standard things, including the runtime object files, so it
-becomes a rather messy situation to make sure we link in all the stuff
-we need without getting more than we want.
-
-Therefore, we do not explicitly call for static linking of the
-compiler libs.  Instead, we depend on the compiler being installed
-with _only_ static versions of libgcc and libstdc++.
-*/
-
-#define PlatformLdFlags -lkstat -lelf -lsocket -lresolv -lnsl -lm -lc
 
 /**************************************************************************
 ** Include OS version-specific config files

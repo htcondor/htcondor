@@ -49,8 +49,6 @@
 
 #define PlatformFlags		ArchOptimizeFlag GlibCFlag
 
-#define PlatformLdFlags		-lresolv
-
 #define DOES_SAVE_SIGSTATE		YES
 
 #define NEEDS_KBDD			NO	

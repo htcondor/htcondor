@@ -1323,10 +1323,15 @@ fi
 # PlatformLdFlags used to live in a number of .cf files, their logic
 # now exists here
 case "$_cv_opsys" in
+  # specifically ask for the C++ libraries to be statically linked
   AIX ) _cv_platform_ld_flags="-Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -lcrypt -lc -static-libgcc" ;;
   LINUX | DARWIN ) _cv_platform_ld_flags="-lresolv" ;;
   DUX ) _cv_platform_ld_flags="-lmld" ;;
-  HPUX ) _cv_platform_ld_flags="-Wl,+vnocompatwarnings $_cv_lib_std_cpp" ;;
+  HPUX ) # HPUX11 Only...
+    if test "x$_cv_opsys_vers" = "xHPUX11" ; then
+      _cv_platform_ld_flags="-Wl,+vnocompatwarnings $_cv_lib_std_cpp";
+    fi
+   ;;
 #NOTE: The following definition of PlatformLdFlags assumes that the
 #compiler libraries (libgcc and libstdc++) are available _only_ as
 #static libraries, so we do not need to do anything special to cause
@@ -1358,7 +1363,7 @@ case "$_cv_opsys" in
 #compiler libs.  Instead, we depend on the compiler being installed
 #with _only_ static versions of libgcc and libstdc++.
   SOLARIS ) _cv_platform_ld_flags="-lkstat -lelf -lsocket -lresolv -lnsl -lm -lc" ;;
-esac  
+esac
 AC_SUBST([_cv_platform_ld_flags], [$_cv_platform_ld_flags])
 
 

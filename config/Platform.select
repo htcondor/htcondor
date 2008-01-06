@@ -6,8 +6,8 @@
 **
 **********/
 
+/* Logic for DARWIN has been moved to configure.ac */
 #if defined( IS_DARWIN )
-#  define PlatformIncludeFile <DARWIN.cf>
 
 /* Logic for FREEBSD has been moved to configure.ac */
 #elif defined(IS_CONDOR_FREEBSD)

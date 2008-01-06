@@ -17,8 +17,6 @@
  *
  ***************************************************************/
 
-#define PlatformLdFlags /**/
-
 #define NEEDS_KBDD			NO
 
 #define DOES_SAVE_SIGSTATE		YES
