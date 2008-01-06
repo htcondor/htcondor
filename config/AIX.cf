@@ -23,7 +23,6 @@
 #define NEEDS_64BIT_SYSCALLS	NO
 #define NEEDS_64BIT_STRUCTS		YES
 
-#define HAS_CP_PRESERVE			YES
 #define HAS_FLOCK			NO
 
 #define ShadowSizeEstimate 200

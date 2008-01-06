@@ -1290,6 +1290,19 @@ AC_MSG_RESULT([$_cv_has_ranlib_touch])
 AS_IF([test "x$_cv_has_ranlib_touch" = xyes],
   AC_DEFINE([HAS_RANLIB_TOUCH], [1], [Define if we want HAS_RANLIB_TOUCH]))
 
+AC_MSG_CHECKING([if HAS_CP_PRESERVE is supported])
+case "$_cv_opsys" in
+  AIX | HPUX | SOLARIS )
+    _cv_has_cp_preserve=yes
+  ;;
+  LINUX )
+    _cv_has_cp_preserve=no
+  ;;
+esac
+AC_MSG_RESULT([$_cv_has_cp_preserve])
+AS_IF([test "x$_cv_has_cp_preserve" = xyes],
+  AC_DEFINE([HAS_CP_PRESERVE], [1], [Define if we want HAS_CP_PRESERVE]))
+
 AC_MSG_CHECKING([if HAS_AR_S_OPTION is supported])
 case "$_cv_opsys" in
   AIX | HPUX | LINUX | SOLARIS )

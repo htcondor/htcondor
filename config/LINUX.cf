@@ -50,7 +50,6 @@
 #define PlatformFlags		ArchOptimizeFlag GlibCFlag
 
 /*?????*/
-#define HAS_CP_PRESERVE			NO
 #ifndef FORTRAN_HAS_RECURSION
 #  define FORTRAN_HAS_RECURSION		NO
 #endif
