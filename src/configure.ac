@@ -2533,6 +2533,22 @@ else
 fi
 # END of if $ac_cv_has_externals = "YES" or $PROPER = yes
 
+# This, unfortunately, must be way down here to make sure info about
+# externals is defined. -matt 1/6/8
+AC_ARG_ENABLE([stork],
+  AC_HELP_STRING([--enable-stork],
+    [enable Stork functionality (default: platform dependent)]),
+  [],
+  [if test "x$_cv_opsys" = xLINUX -a "x$_cv_arch" = xI386 \
+       -a "x$_cv_has_globus" = xyes -a "x$cv_ext_globus" = xyes \
+       -a "x$_cv_has_classads" = xyes -a "x$cv_ext_classads" = xyes \
+       -a "x$_cv_libc_kind-$_cv_libc_major-$_cv_libc_minor" = xGLIBC-2-3; then
+    enable_stork=yes;
+   else
+    enable_stork=no;
+   fi])
+AS_IF([test "x$enable_stork" = xyes],
+  [AC_DEFINE([WANT_STORK], [1], [Define if enabling Stork])])
 
 ############################################################
 # Configure-generated output

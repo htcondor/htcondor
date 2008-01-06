@@ -32,9 +32,8 @@
 
 #elif defined( IS_LINUX )
 #  define PlatformIncludeFile <LINUX.cf>
-#  if defined( IS_I386 ) 
-#    define ArchIncludeFile <LINUX_I386.cf>
 /* Logic from LINUX_*.cf files was moved into configure.ac */
+#  if defined( IS_I386 ) 
 #  elif defined( IS_ALPHA )
 #  elif defined( IS_IA64 )
 #  elif defined( IS_CONDOR_PPC )
