@@ -1316,6 +1316,19 @@ AC_MSG_RESULT([$_cv_has_ar_s_option])
 AS_IF([test "x$_cv_has_ar_s_option" = xyes],
   AC_DEFINE([HAS_AR_S_OPTION], [1], [Define if ar has the s option]))
 
+AC_MSG_CHECKING([if HAS_FLOCK is supported])
+case "$_cv_opsys" in
+  AIX | HPUX | LINUX | SOLARIS )
+    _cv_has_flock=no
+  ;;
+  * ) # Who doesn't HAS_FLOCK? On 1/6/8 no .cf files supported it. -matt
+    _cv_has_flock=yes
+  ;;
+esac
+AC_MSG_RESULT([$_cv_has_flock])
+AS_IF([test "x$_cv_has_flock" = xyes],
+  AC_DEFINE([HAS_FLOCK], [1], [Define if HAS_FLOCK]))
+
 # HAS_DYNAMIC_USER_JOBS, not sure exactly what this is -matt 26 Nov 07
 if test "x$_cv_opsys" = "xSOLARIS"; then
   AC_DEFINE([HAS_DYNAMIC_USER_JOBS], [1], [Used in condor_ckpt/image.C])

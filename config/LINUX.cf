@@ -53,7 +53,6 @@
 #ifndef FORTRAN_HAS_RECURSION
 #  define FORTRAN_HAS_RECURSION		NO
 #endif
-#define HAS_FLOCK			NO
 
 /**************************************************************************
 ** Include Arch-specific config files
