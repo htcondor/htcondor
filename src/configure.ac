@@ -1264,20 +1264,20 @@ AC_MSG_RESULT([$_cv_does_compress_ckpt])
 AS_IF([test "x$CLIPPED" != "xyes" -a "x$_cv_does_compress_ckpt" = xyes],
   AC_DEFINE([DOES_COMPRESS_CKPT], [1], [Define if we can compress checkpoints]))
 
-AC_MSG_CHECKING([if DOES_SAVE_SIGSTATE is supported])
+AC_MSG_CHECKING([if DOES_SAVE_SIGSTATE])
 case "$_cv_opsys" in
   AIX | HPUX | LINUX | SOLARIS )
     _cv_does_save_sigstate=yes
   ;;
   * )
-    _cv_does_save_sigstate=no
+    _cv_does_save_sigstate=unknown
   ;;
 esac
 AC_MSG_RESULT([$_cv_does_save_sigstate])
 AS_IF([test "x$_cv_does_save_sigstate" = xyes],
   AC_DEFINE([DOES_SAVE_SIGSTATE], [1], [Define if we save sigstate]))
 
-AC_MSG_CHECKING([if HAS_RANLIB_TOUCH is supported])
+AC_MSG_CHECKING([if HAS_RANLIB_TOUCH])
 case "$_cv_opsys" in
   AIX | HPUX | SOLARIS )
     _cv_has_ranlib_touch=yes
@@ -1285,12 +1285,15 @@ case "$_cv_opsys" in
   LINUX )
     _cv_has_ranlib_touch=no
   ;;
+  * )
+    _cv_has_ranlib_touch=unknown
+  ;;
 esac
 AC_MSG_RESULT([$_cv_has_ranlib_touch])
 AS_IF([test "x$_cv_has_ranlib_touch" = xyes],
   AC_DEFINE([HAS_RANLIB_TOUCH], [1], [Define if we want HAS_RANLIB_TOUCH]))
 
-AC_MSG_CHECKING([if HAS_CP_PRESERVE is supported])
+AC_MSG_CHECKING([if HAS_CP_PRESERVE])
 case "$_cv_opsys" in
   AIX | HPUX | SOLARIS )
     _cv_has_cp_preserve=yes
@@ -1298,25 +1301,28 @@ case "$_cv_opsys" in
   LINUX )
     _cv_has_cp_preserve=no
   ;;
+  * )
+    _cv_has_cp_preserve=unknown
+  ;;
 esac
 AC_MSG_RESULT([$_cv_has_cp_preserve])
 AS_IF([test "x$_cv_has_cp_preserve" = xyes],
   AC_DEFINE([HAS_CP_PRESERVE], [1], [Define if we want HAS_CP_PRESERVE]))
 
-AC_MSG_CHECKING([if HAS_AR_S_OPTION is supported])
+AC_MSG_CHECKING([if HAS_AR_S_OPTION])
 case "$_cv_opsys" in
   AIX | HPUX | LINUX | SOLARIS )
     _cv_has_ar_s_option=yes
   ;;
-  * ) # Who doesn't have 'ar s'? On 1/6/8 all .cf files supported it. -matt
-    _cv_has_ar_s_option=no
+  * )
+    _cv_has_ar_s_option=unknown
   ;;
 esac
 AC_MSG_RESULT([$_cv_has_ar_s_option])
 AS_IF([test "x$_cv_has_ar_s_option" = xyes],
   AC_DEFINE([HAS_AR_S_OPTION], [1], [Define if ar has the s option]))
 
-AC_MSG_CHECKING([if FORTRAN_HAS_RECURSION is supported])
+AC_MSG_CHECKING([if FORTRAN_HAS_RECURSION])
 case "$_cv_opsys" in
   SOLARIS )
     _cv_fortran_has_recursion=yes
@@ -1358,13 +1364,13 @@ AC_MSG_RESULT([$_cv_needs_64bit_structs])
 AS_IF([test "x$_cv_needs_64bit_structs" = xyes],
   AC_DEFINE([NEEDS_64BIT_STRUCTS], [1], [Define if NEEDS_64BIT_STRUCTS]))
 
-AC_MSG_CHECKING([if HAS_FLOCK is supported])
+AC_MSG_CHECKING([if HAS_FLOCK])
 case "$_cv_opsys" in
   AIX | HPUX | LINUX | SOLARIS )
     _cv_has_flock=no
   ;;
-  * ) # Who doesn't HAS_FLOCK? On 1/6/8 no .cf files supported it. -matt
-    _cv_has_flock=yes
+  * )
+    _cv_has_flock=unknown
   ;;
 esac
 AC_MSG_RESULT([$_cv_has_flock])
