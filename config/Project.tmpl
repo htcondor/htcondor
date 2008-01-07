@@ -154,18 +154,6 @@ OS_FLAG = OperatingSystem
 ARCH_FLAG = Architecture
 DIST_FLAG = Distribution
 
-#if !defined( VendorCTestFlags )
-#define VendorCTestFlags
-#endif
-
-#if !defined( VendorCPPTestFlags )
-#define VendorCPPTestFlags
-#endif
-
-#if !defined( VendorFTestFlags )
-#define VendorFTestFlags
-#endif
-
 #if HAVE_EXT_CLASSADS
 #	define WANT_CLASSAD_ANALYSIS YES
 #endif
@@ -365,7 +353,7 @@ TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)
 TESTSUITE_FLAGS_G77 =  $(STD_C_FLAGS)
 TESTSUITE_FLAGS_CC = -g $(VENDOR_C_FLAGS) VendorCTestFlags PlatformFlags
 TESTSUITE_FLAGS_CPP = -g $(VENDOR_C_FLAGS) VendorCPPTestFlags PlatformFlags
-TESTSUITE_FLAGS_F77 = -g $(VENDOR_C_FLAGS) VendorFTestFlags PlatformFlags
+TESTSUITE_FLAGS_F77 = -g $(VENDOR_C_FLAGS) PlatformFlags
 
 
 CKPT_SERV_LIB = ../condor_ckpt_server/ckpt_server_api.a
