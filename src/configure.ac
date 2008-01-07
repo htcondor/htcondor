@@ -1433,6 +1433,13 @@ if test "x$_cv_opsys" = xLINUX \
   AC_SUBST([_cv_arch_optimize_flag], [$_cv_arch_optimize_flag])
 fi
 
+# VendorCTestFlags logic used to live in .cf files, mostly
+# HPUX11.cf, that logic now lives here.
+if test "x$_cv_opsys_vers" = xHPUX11; then
+  _cv_vendor_c_test_flags="-Aa -Ae";
+  AC_SUBST([_cv_vendor_c_test_flags], [$_cv_vendor_c_test_flags])
+fi
+
 # PlatformLdFlags used to live in a number of .cf files, their logic
 # now exists here
 case "$_cv_opsys" in

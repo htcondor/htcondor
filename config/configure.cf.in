@@ -182,3 +182,6 @@ SIMPLE_LIBC = @LIBC_A@
 #define ArchOptimizeFlag @_cv_arch_optimize_flag@
 
 #define PlatformLdFlags @_cv_platform_ld_flags@
+
+#define VendorCTestFlags @_cv_vendor_c_test_flags@
+
