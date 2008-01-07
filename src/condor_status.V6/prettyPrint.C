@@ -29,6 +29,7 @@ extern AttrListPrintMask 	pm;
 extern int					wantOnlyTotals;
 extern bool javaMode;
 extern bool vmMode;
+extern ClassAd *targetAd;
 
 extern char *format_time( int );
 
@@ -759,7 +760,7 @@ printXML (ClassAd *ad, bool first_ad, bool last_ad)
 void
 printCustom (ClassAd *ad)
 {
-	(void) pm.display (stdout, ad);
+	(void) pm.display (stdout, ad, targetAd);
 }
 
 char *

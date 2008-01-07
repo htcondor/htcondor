@@ -57,6 +57,8 @@ ExtArray<ExprTree*> sortLessThanExprs( 4 );
 ExtArray<ExprTree*> sortEqualExprs( 4 );
 bool            javaMode = false;
 bool			vmMode = false;
+char 		*target = NULL;
+ClassAd		*targetAd = NULL;
 
 // instantiate templates
 template class ExtArray<ExprTree*>;
@@ -401,7 +403,8 @@ usage ()
 		"\t-expert\t\t\tDisplay shorter error messages\n" 
 		"    and [custom-opts ...] are one or more of\n"
 		"\t-constraint <const>\tAdd constraint on classads\n"
-		"\t-format <fmt> <attr>\tRegister display format and attribute\n",
+		"\t-format <fmt> <attr>\tRegister display format and attribute\n"
+		"\t-target filename\tIf -format is used, the option target classad\n",
 		myName);
 }
 
@@ -463,6 +466,19 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			}
 			i += 2;			
+		} else
+		if (matchPrefix (argv[i], "-target", 5)) {
+			if( !argv[i+1] ) {
+				fprintf( stderr, "%s: -target requires one additional argument\n", 
+						 myName ); 
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
+				exit( 1 );
+			}
+			i += 1;
+			target = argv[i];
+			FILE *targetFile = safe_fopen_wrapper(target, "r");
+			int iseof, iserror, empty;
+			targetAd = new ClassAd(targetFile, "\n\n", iseof, iserror, empty);
 		} else
 		if (matchPrefix (argv[i], "-constraint", 4)) {
 			// can add constraints on second pass only
@@ -674,6 +690,10 @@ secondPass (int argc, char *argv[])
 				printf ("Arg %d --- register format [%s] for [%s]\n", 
 						i, argv[i+1], argv[i+2]);
 			}
+			i += 2;
+			continue;
+		}
+		if (matchPrefix (argv[i], "-target", 2)) {
 			i += 2;
 			continue;
 		}
