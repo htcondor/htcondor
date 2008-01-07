@@ -1526,7 +1526,7 @@ AC_SUBST([_cv_platform_ld_flags], [$_cv_platform_ld_flags])
 # that, we can set that symbol right here, sensibly.
 AS_IF([test "x$_cv_libc_kind" = xGLIBC],
   [_cv_glibc_flag="-DGLIBC=GLIBC -DGLIBC$_cv_libc_major$_cv_libc_minor=GLIBC$_cv_libc_major$_cv_libc_minor"])
-#AC_SUBST([_cv_glibc_flag], [$_cv_glibc_flag])
+AC_SUBST([_cv_glibc_flag], [$_cv_glibc_flag])
 
 
 # PlatformFlags logic has been moved here from .cf files, primarily
