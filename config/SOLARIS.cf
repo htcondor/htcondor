@@ -29,7 +29,6 @@
 ** Shared Solaris Settings
 **************************************************************************/
 
-#define NEEDS_64BIT_SYSCALLS		YES
 #define NEEDS_64BIT_STRUCTS		YES
 
 #define	HAS_PURIFY			YES

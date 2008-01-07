@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-#define NEEDS_64BIT_SYSCALLS	NO
 #define NEEDS_64BIT_STRUCTS		YES
 
 #define ShadowSizeEstimate 200

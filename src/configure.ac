@@ -1329,6 +1329,22 @@ AC_MSG_RESULT([$_cv_fortran_has_recursion])
 AS_IF([test "x$_cv_fortran_has_recursion" = xyes],
   AC_DEFINE([FORTRAN_HAS_RECURSION], [1], [Define if FORTRAN_HAS_RECURSION]))
 
+AC_MSG_CHECKING([if NEEDS_64BIT_SYSCALLS])
+case "$_cv_opsys" in
+  SOLARIS )
+    _cv_needs_64bit_syscalls=yes
+  ;;
+  AIX | HPUX )
+    _cv_needs_64bit_syscalls=no
+  ;;
+  * )
+    _cv_needs_64bit_syscalls=unknown
+  ;;
+esac
+AC_MSG_RESULT([$_cv_needs_64bit_syscalls])
+AS_IF([test "x$_cv_needs_64bit_syscalls" = xyes],
+  AC_DEFINE([NEEDS_64BIT_SYSCALLS], [1], [Define if NEEDS_64BIT_SYSCALLS]))
+
 AC_MSG_CHECKING([if HAS_FLOCK is supported])
 case "$_cv_opsys" in
   AIX | HPUX | LINUX | SOLARIS )
