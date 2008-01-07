@@ -1309,6 +1309,19 @@ AC_MSG_RESULT([$_cv_has_cp_preserve])
 AS_IF([test "x$_cv_has_cp_preserve" = xyes],
   AC_DEFINE([HAS_CP_PRESERVE], [1], [Define if we want HAS_CP_PRESERVE]))
 
+AC_MSG_CHECKING([if HAS_PURIFY])
+case "$_cv_opsys" in
+  SOLARIS )
+    _cv_has_purify=yes
+  ;;
+  * )
+    _cv_has_purify=no
+  ;;
+esac
+AC_MSG_RESULT([$_cv_has_purify])
+AS_IF([test "x$_cv_has_purify" = xyes],
+  AC_DEFINE([HAS_PURIFY], [1], [Define if we want HAS_PURIFY]))
+
 AC_MSG_CHECKING([if HAS_AR_S_OPTION])
 case "$_cv_opsys" in
   AIX | HPUX | LINUX | SOLARIS )
