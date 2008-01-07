@@ -112,9 +112,9 @@ clearFormats (void)
 
 
 int AttrListPrintMask::
-display (FILE *file, AttrList *al)
+display (FILE *file, AttrList *al, AttrList *target /* =NULL */)
 {
-	char * temp = display(al);
+	char * temp = display(al, target);
 
 	if (temp != NULL) {
 		fputs(temp, file);
@@ -127,7 +127,7 @@ display (FILE *file, AttrList *al)
 
 // returns a new char * that is your responsibility to delete.
 char * AttrListPrintMask::
-display (AttrList *al)
+display (AttrList *al, AttrList *target /* = NULL */)
 {
 	Formatter *fmt;
 	char 	*attr, *alt;
@@ -215,7 +215,7 @@ display (AttrList *al)
 				switch( fmt_type ) {
 				case PFT_STRING:
 					if( attr_is_expr ) {
-						if( tree->EvalTree (al, NULL, &result) ) {
+						if( tree->EvalTree (al, target, &result) ) {
 							if( result.type == LX_STRING && result.s ) {
 								retval.sprintf_cat(fmt->printfFmt, result.s);
 							}
@@ -225,7 +225,7 @@ display (AttrList *al)
 								retval += alt;
 							}
 						}
-					} else if( al->EvalString( attr, NULL, &value_from_classad ) ) {
+					} else if( al->EvalString( attr, target, &value_from_classad ) ) {
 						stringValue.sprintf( fmt->printfFmt,
 											 value_from_classad );
 						retval += stringValue;
@@ -251,7 +251,7 @@ display (AttrList *al)
 
 				case PFT_INT:
 				case PFT_FLOAT:
-					if( tree->EvalTree (al, NULL, &result) ) {
+					if( tree->EvalTree (al, target, &result) ) {
 						switch( result.type ) {
 						case LX_FLOAT:
 							if( fmt_type == PFT_INT ) {
@@ -301,7 +301,7 @@ display (AttrList *al)
 				break;
 
 		  	case INT_CUSTOM_FMT:
-				if( al->EvalInteger( attr, NULL, intValue ) ) {
+				if( al->EvalInteger( attr, target, intValue ) ) {
 					retval += (fmt->df)( intValue , al );
 				} else {
 					retval += alt;
@@ -309,7 +309,7 @@ display (AttrList *al)
 				break;
 
 		  	case FLT_CUSTOM_FMT:
-				if( al->EvalFloat( attr, NULL, floatValue ) ) {
+				if( al->EvalFloat( attr, target, floatValue ) ) {
 					retval += (fmt->ff)( floatValue , al );
 				} else {
 					retval += alt;
@@ -317,7 +317,7 @@ display (AttrList *al)
 				break;
 
 		  	case STR_CUSTOM_FMT:
-				if( al->EvalString( attr, NULL, &value_from_classad ) ) {
+				if( al->EvalString( attr, target, &value_from_classad ) ) {
 					retval += (fmt->sf)(value_from_classad, al);
 					free(value_from_classad);
 				} else {
@@ -336,14 +336,14 @@ display (AttrList *al)
 
 
 int AttrListPrintMask::
-display (FILE *file, AttrListList *list)
+display (FILE *file, AttrListList *list, AttrList *target /* = NULL */)
 {
 	int retval = 1;
 	AttrList *al;
 
 	list->Open();
     while( (al = (AttrList *) list->Next()) ) {
-		if( !display (file, al) ) {
+		if( !display (file, al, target) ) {
 			retval = 0;
 		}
     }
