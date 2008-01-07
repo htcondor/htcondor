@@ -20,8 +20,6 @@
 /* we also need to link test suite jobs with the same mess */
 #define TestPlatformLdFlags PlatformLdFlags
 
-#define ShadowSizeEstimate 200
-
 /**************************************************************************
 ** Include OS version-specific config file
 **************************************************************************/
