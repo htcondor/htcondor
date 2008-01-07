@@ -1303,6 +1303,8 @@ void init_firewall_exceptions() {
 
 			if ( schedd_image_path ) { free(schedd_image_path); }
 			if ( startd_image_path ) { free(startd_image_path); }
+			if ( quill_image_path )  { free(quill_image_path); }
+			if ( dbmsd_image_path )  { free(dbmsd_image_path); }
 			if ( dagman_image_path ) { free(dagman_image_path); }
 			free(master_image_path);
 
