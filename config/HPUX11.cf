@@ -21,7 +21,4 @@
 
 #define PlatformFlags		-DHPUX11=HPUX11
 
-/* inet_nota() with gcc is broken under 64-bit compilation mode, so use ours */
-#define HAS_INET_NTOA		NO
-
 

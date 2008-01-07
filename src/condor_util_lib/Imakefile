@@ -34,7 +34,7 @@ GETPAGESIZE_OBJ = getpagesize.o
 SETLINEBUF_OBJ = setlinebuf.o
 #endif
 
-#if !HAS_INET_NTOA
+#ifndef HAS_INET_NTOA
 INET_NTOA_OBJ = inet_ntoa.o
 #endif
 

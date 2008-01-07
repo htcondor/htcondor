@@ -1377,6 +1377,17 @@ AC_MSG_RESULT([$_cv_has_flock])
 AS_IF([test "x$_cv_has_flock" = xyes],
   AC_DEFINE([HAS_FLOCK], [1], [Define if HAS_FLOCK]))
 
+AC_MSG_CHECKING([if HAS_INET_NTOA])
+# inet_nota() with gcc is broken under 64-bit compilation mode, so use ours
+if test "x$_cv_opsys_vers" = xHPUX11; then
+  _cv_has_inet_ntoa=no
+else
+  _cv_has_inet_ntoa=yes
+fi
+AC_MSG_RESULT([$_cv_has_inet_ntoa])
+AS_IF([test "x$_cv_has_inet_ntoa" = xyes],
+  AC_DEFINE([HAS_INET_NTOA], [1], [Define if HAS_INET_NTOA]))
+
 # HAS_DYNAMIC_USER_JOBS, not sure exactly what this is -matt 26 Nov 07
 if test "x$_cv_opsys" = "xSOLARIS"; then
   AC_DEFINE([HAS_DYNAMIC_USER_JOBS], [1], [Used in condor_ckpt/image.C])
