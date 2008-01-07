@@ -19,6 +19,4 @@
 
 /* HPUX 11 Specific stuff */
 
-#define PlatformFlags		-DHPUX11=HPUX11
-
 

@@ -1506,6 +1506,30 @@ esac
 AC_SUBST([_cv_platform_ld_flags], [$_cv_platform_ld_flags])
 
 
+# LINUX.cf defined GlibCFlag to be "-DGLIBC=GLIBC -DGLIBCXY=GLIBCXY"
+# where X is the _cv_libc_major and Y is _cv_libc_minor. This
+# GlibCFlag #define was one that someone would need to create each
+# time they wanted to do even a clipped port of Condor. Instead of all
+# that, we can set that symbol right here, sensibly.
+AS_IF([test "x$_cv_libc_kind" = xGLIBC],
+  [_cv_glibc_flag="-DGLIBC=GLIBC -DGLIBC$_cv_libc_major$_cv_libc_minor=GLIBC$_cv_libc_major$_cv_libc_minor"])
+#AC_SUBST([_cv_glibc_flag], [$_cv_glibc_flag])
+
+
+# PlatformFlags logic has been moved here from .cf files, primarily
+# HPUX11.cf and LINUX.cf.
+case "$_cv_opsys" in
+  LINUX ) _cv_platform_flags="$_cv_arch_optimize_flag $_cv_glibc_flag" ;;
+  HPUX ) # HPUX11 Only...
+    if test "x$_cv_opsys_vers" = "xHPUX11" ; then
+      _cv_platform_flags="-DHPUX11=HPUX11";
+    fi
+   ;;
+  * ) _cv_platform_flags="" ;;
+esac
+AC_SUBST([_cv_platform_flags], [$_cv_platform_flags])
+
+
 #####################
 # everything else
 #####################
