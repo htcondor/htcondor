@@ -21,18 +21,16 @@
 #    error CONDOR DOES NOT YET SUPPORT THIS SOLARIS PLATFORM 
 #  endif
 
+/* Logic for HPUX has been moved to configure.ac */
 #elif defined( IS_HPUX )
-#  define PlatformIncludeFile <HPUX.cf>
 #  if defined( IS_HPUX11 )
-#    define OSVersionIncludeFile <HPUX11.cf>
 #  else
 #    error CONDOR DOES NOT YET SUPPORT THIS HPUX PLATFORM 
 #  endif
 
 
+/* Logic for LINUX files was moved into configure.ac */
 #elif defined( IS_LINUX )
-#  define PlatformIncludeFile <LINUX.cf>
-/* Logic from LINUX_*.cf files was moved into configure.ac */
 #  if defined( IS_I386 ) 
 #  elif defined( IS_ALPHA )
 #  elif defined( IS_IA64 )
@@ -42,8 +40,8 @@
 #    error CONDOR DOES NOT YET SUPPORT THIS LINUX PLATFORM 
 #  endif
 
+/* Logic for AIX files was moved into configure.ac */
 #elif defined( IS_AIX )
-#  define PlatformIncludeFile <AIX.cf>
 /* We don't have need to create a OSVersionIncludeFile file yet */
 
 #else
