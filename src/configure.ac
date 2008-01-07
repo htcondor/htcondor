@@ -1540,6 +1540,19 @@ esac
 AC_SUBST([_cv_test_platform_ld_flags], [$_cv_test_platform_ld_flags])
 
 
+# PurifyPlatformLdFlags logic has been moved here from .cf files,
+# primarily SOLARIS.cf.
+case "$_cv_opsys" in
+  # When we're linking for purify, we don't want all the static junk,
+  # either, but we need more libs than just the test suite.  So, we
+  # define this here to specify the flags we want to give to the
+  # linker when we're building the Condor Daemons under purify.
+  SOLARIS ) _cv_purify_platform_ld_flags="-lkstat -lelf -lnsl -lsocket -lresolv" ;;
+  * ) _cv_purify_platform_ld_flags="" ;;
+esac
+AC_SUBST([_cv_purify_platform_ld_flags], [$_cv_purify_platform_ld_flags])
+
+
 #####################
 # everything else
 #####################

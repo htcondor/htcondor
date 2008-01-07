@@ -190,3 +190,5 @@ SIMPLE_LIBC = @LIBC_A@
 #define PlatformFlags @_cv_platform_flags@
 
 #define TestPlatformLdFlags @_cv_test_platform_ld_flags@
+
+#define PurifyPlatformLdFlags @_cv_purify_platform_ld_flags@

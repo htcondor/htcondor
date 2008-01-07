@@ -61,10 +61,6 @@ DAEMONCLIENT_INCLUDE =	../condor_daemon_client
 #define PlatformGppFlags
 #endif
 
-#if !defined(PurifyPlatformLdFlags)
-#define PurifyPlatformLdFlags
-#endif
-
 #ifdef HAVE_RPM
 MakeRPMs = perl condor_scripts/make_public_rpms $(RPM_CMD)
 #else
