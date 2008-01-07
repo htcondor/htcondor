@@ -185,3 +185,5 @@ SIMPLE_LIBC = @LIBC_A@
 
 #define VendorCTestFlags @_cv_vendor_c_test_flags@
 
+#define VendorCPPTestFlags @_cv_vendor_cpp_test_flags@
+
