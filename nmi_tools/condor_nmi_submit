@@ -79,7 +79,7 @@ my $HAS_NMICONF = $INC{"NmiConf.pm"};
 # same order as the call to GetOptions() to help notice discrepancies
 use vars qw/ $opt_build $opt_test
     $opt_help $opt_debug $opt_notify $opt_notify_fail_only $opt_platforms $opt_nmi_glue 
-    $opt_workspace
+    $opt_workspace $opt_git
     $opt_tag $opt_module $opt_nmiconf $opt_desc $opt_append
     $opt_submit_xtests
     $opt_nightly $opt_externals $opt_without_tests
@@ -89,6 +89,8 @@ use vars qw/ $opt_build $opt_test
     $opt_input_platform
     /;
 
+sub TRUE { 1; };
+sub FALSE { 0; };
 
 ######################################################################
 # Configurable settings
@@ -99,6 +101,12 @@ my $tag_file = "/space/cvs/nwo-build-tags";
 
 # CVSROOT to use for checking out from CVS
 my $CVSROOT = "/space/cvs/CONDOR_SRC";
+
+# Root of the GIT Source repository
+my $GITROOT_SRC = "/space/git/CONDOR_SRC.GIT";
+
+# Root of the GIT Externals repository
+my $GITROOT_EXT = "/space/git/CONDOR_EXT.GIT";
 
 # name of the submit_info file
 my $submit_info_basename = "submit_info";
@@ -141,7 +149,7 @@ my $init_cwd;
 my $workspace;
 
 # User specified directory to build Condor out of.
-# undef for builds out of CVS
+# undef for builds out of CVS (or any other VCS, e.g. GIT)
 my $src_workspace;
 
 # Hash of tag -> module mappings
@@ -336,6 +344,7 @@ sub parseOptions
            'platforms=s'   => \$opt_platforms,
            'nmi-glue=s'    => \$opt_nmi_glue,
            'workspace=s'   => \$opt_workspace,
+           'git'          => \$opt_git,
            'tag=s'         => \$opt_tag,
            'module=s'      => \$opt_module,
            'nmiconf=s'     => \$opt_nmiconf,
@@ -347,9 +356,7 @@ sub parseOptions
            'externals=s'   => \$opt_externals,
            'without-tests' => \$opt_without_tests,
            'use_externals_cache' => \$opt_use_externals_cache,
-           'use-externals-cache' => \$opt_use_externals_cache,
            'clear_externals_cache' => \$opt_clear_externals_cache,
-           'clear-externals-cache' => \$opt_clear_externals_cache,
            'externals-only' => \$opt_externals_only,
 	   'release-only' => \$opt_release_only,
            'version-buildid=s' => \$opt_version_buildid,
@@ -696,23 +703,28 @@ sub getSubmitInfo
 sub checkoutSubmitInfo
 {
     my( $tag ) = @_;
-    my @cvs_output;
+    my @output;
     my $retval;
 
     print "Attempting to fetch $submit_info from $tag...\n";
-    my $cvs_cmd = "cvs -d $CVSROOT co -r $tag $submit_info";
-    open( CVS, "$cvs_cmd 2>&1 |" ) ||
-        die "Can't open 'cvs co' as a pipe: $!\n";
-    @cvs_output = <CVS>;
-    close( CVS );
+    my $cmd = "/bin/false FATAL ERROR, UNKNOWN VCS";
+    if (defined($opt_git)) {
+	$cmd = "git archive --remote=$GITROOT_SRC $tag $submit_info | tar x";
+    } else {
+	$cmd = "cvs -d $CVSROOT co -r $tag $submit_info";
+    }
+    open( OUT, "$cmd 2>&1 |" ) ||
+        die "Can't open '$cmd' as a pipe: $!\n";
+    @output = <OUT>;
+    close( OUT );
     $retval = $? / 256;
     if( $retval != 0 ) {
-        print @cvs_output;
-        print "FAILED (cvs returned $retval)\n";
+        print @output;
+        print "FAILED (return value $retval)\n";
         return 0;
     } 
     if( ! -f $submit_info ) {
-        print @cvs_output;
+        print @output;
         print "FAILED ($submit_info does not exist)\n";
         return 0;
     }
@@ -1058,7 +1070,7 @@ sub generateTestFetchFiles
         # rely on the copy of the glue in the source tarball from the
         # build output, since we have no way to untar it without glue. ;)
         my $glue_file = "test_glue.src";
-        makeFetchFileCVS( $glue_file, "nmi_glue/$runtype", $tag );
+        makeFetchFileVCS( $glue_file, FALSE, "nmi_glue/$runtype", $tag );
         push( @fetch_files, $glue_file );
     }
     # else: Not workspace build.  Using --nmi_glue 
@@ -1109,7 +1121,7 @@ sub generateBuildFetchFiles
 
     if( defined $tag ) {
         my $srcfile = "source-$tag.src";
-        makeFetchFileCVS( $srcfile, $module, $tag );
+        makeFetchFileVCS( $srcfile, TRUE, $module, $tag );
         push( @fetch_files, $srcfile );
     }
     elsif( defined $src_workspace ) {
@@ -1130,12 +1142,12 @@ sub generateBuildFetchFiles
 
     if( defined $opt_externals ) { 
         my $ext_file = "externals.src";
-        makeFetchFileCVS( $ext_file, $opt_externals );
+        makeFetchFileVCS( $ext_file, TRUE, $opt_externals );
         push( @fetch_files, "$ext_file" );
     }
 
     my $nmi_tools_file = "nmi_tools.src";
-    makeFetchFileCVS( $nmi_tools_file, $cvs_condor_nmi_submit );
+    makeFetchFileVCS( $nmi_tools_file, FALSE, $cvs_condor_nmi_submit );
     push( @fetch_files, $nmi_tools_file );
 
     return @fetch_files;
@@ -1158,18 +1170,43 @@ sub generateSharedFetchFiles
 }
 
 
-sub makeFetchFileCVS
+sub makeFetchFileVCS
 {
     # NOTE: this one breaks the convention of $tag first, b/c for
     # things on the trunk (e.g. externals) there is no tag
-    my ( $file, $module, $tag ) = @_;
+    # NOTE2: The $is_module parameter is meant to help properly
+    # identify the $module parameter as an actual CVS-style module,
+    # i.e. a taget that can be checked out that does not directly
+    # exist in the repository e.g. something from CVSROOT/modules, or
+    # a target that exists, i.e. a file or directory in the repository
+    my ( $file, $is_module, $module, $tag ) = @_;
 
     open( FILE, ">$file" ) || die "Can't open $file for writing: $!\n";
-    print FILE "method = cvs\n";
-    print FILE "cvs_root = $CVSROOT\n";
-    print FILE "cvs_module = $module\n";
-    if( $tag ) {
-        print FILE "cvs_tag = $tag\n";
+    if (defined($opt_git)) {
+	# git_tree is a commit/tree, could can be a tag or a branch
+	# git_path is essentially a filter, only pull git_path or git_path/...
+	# ==> git archive --remote=<git_root> <git_tree> <git_path> | tar x
+	my $gitroot = \
+	    ($is_module && $module =~ /^.*_EXT$/) ? $GITROOT_EXT : $GITROOT_SRC;
+	print FILE "method = git\n";
+	print FILE "git_root = $gitroot\n";
+	print FILE "git_path = $module\n" unless $is_module;
+	if( $tag ) {
+	    print FILE "git_tree = $tag\n";
+	} else {
+	    # the "master" branch is essentially like the CVS
+	    # TRUNK. it should always exist, but it is possible for
+	    # someone to rename it. hopefully we won't do that in the
+	    # NMI copy of the repository
+	    print FILE "git_tree = master\n";
+	}
+    } else {
+	print FILE "method = cvs\n";
+	print FILE "cvs_root = $CVSROOT\n";
+	print FILE "cvs_module = $module\n";
+	if( $tag ) {
+	    print FILE "cvs_tag = $tag\n";
+	}
     }
     close FILE;
 }
