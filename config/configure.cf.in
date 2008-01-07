@@ -188,3 +188,5 @@ SIMPLE_LIBC = @LIBC_A@
 #define VendorCPPTestFlags @_cv_vendor_cpp_test_flags@
 
 #define PlatformFlags @_cv_platform_flags@
+
+#define TestPlatformLdFlags @_cv_test_platform_ld_flags@

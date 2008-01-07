@@ -17,9 +17,6 @@
  *
  ***************************************************************/
 
-/* we also need to link test suite jobs with the same mess */
-#define TestPlatformLdFlags PlatformLdFlags
-
 /**************************************************************************
 ** Include OS version-specific config file
 **************************************************************************/

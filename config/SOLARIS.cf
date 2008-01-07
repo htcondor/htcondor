@@ -33,13 +33,6 @@
 
 
 /*
-    In the test suite, we only need to make sure we've got the network 
-    libs, not all the other stuff for static linking, gcc, etc.  This
-    is common to all versions of Solaris, so we can do it here.
-*/
-#define TestPlatformLdFlags -lnsl -lsocket -lresolv
-
-/*
     When we're linking for purify, we don't want all the static junk,
     either, but we need more libs than just the test suite.  So, we 
     define this here to specify the flags we want to give to the

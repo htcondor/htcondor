@@ -1530,6 +1530,16 @@ esac
 AC_SUBST([_cv_platform_flags], [$_cv_platform_flags])
 
 
+# TestPlatformLdFlags logic has been moved here from .cf files,
+# primarily SOLARIS.cf and AIX.cf.
+case "$_cv_opsys" in
+  SOLARIS ) _cv_test_platform_ld_flags="-lnsl -lsocket -lresolv" ;;
+  AIX )_cv_test_platform_ld_flags="$_cv_platform_ld_flags" ;;
+  * ) _cv_test_platform_ld_flags="" ;;
+esac
+AC_SUBST([_cv_test_platform_ld_flags], [$_cv_test_platform_ld_flags])
+
+
 #####################
 # everything else
 #####################
