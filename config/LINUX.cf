@@ -49,11 +49,6 @@
 
 #define PlatformFlags		ArchOptimizeFlag GlibCFlag
 
-/*?????*/
-#ifndef FORTRAN_HAS_RECURSION
-#  define FORTRAN_HAS_RECURSION		NO
-#endif
-
 /**************************************************************************
 ** Include Arch-specific config files
 **************************************************************************/

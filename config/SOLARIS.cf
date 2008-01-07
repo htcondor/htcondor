@@ -29,9 +29,6 @@
 ** Shared Solaris Settings
 **************************************************************************/
 
-#ifndef FORTRAN_HAS_RECURSION
-#define FORTRAN_HAS_RECURSION YES
-#endif
 #define NEEDS_64BIT_SYSCALLS		YES
 #define NEEDS_64BIT_STRUCTS		YES
 

@@ -1316,6 +1316,19 @@ AC_MSG_RESULT([$_cv_has_ar_s_option])
 AS_IF([test "x$_cv_has_ar_s_option" = xyes],
   AC_DEFINE([HAS_AR_S_OPTION], [1], [Define if ar has the s option]))
 
+AC_MSG_CHECKING([if FORTRAN_HAS_RECURSION is supported])
+case "$_cv_opsys" in
+  SOLARIS )
+    _cv_fortran_has_recursion=yes
+  ;;
+  * )
+    _cv_fortran_has_recursion=no
+  ;;
+esac
+AC_MSG_RESULT([$_cv_fortran_has_recursion])
+AS_IF([test "x$_cv_fortran_has_recursion" = xyes],
+  AC_DEFINE([FORTRAN_HAS_RECURSION], [1], [Define if FORTRAN_HAS_RECURSION]))
+
 AC_MSG_CHECKING([if HAS_FLOCK is supported])
 case "$_cv_opsys" in
   AIX | HPUX | LINUX | SOLARIS )
