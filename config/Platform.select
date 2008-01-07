@@ -12,9 +12,8 @@
 /* Logic for FREEBSD has been moved to configure.ac */
 #elif defined(IS_CONDOR_FREEBSD)
 
+/* Logic for SOLARIS files was moved into configure.ac */
 #elif defined( IS_SOLARIS )
-#  define PlatformIncludeFile <SOLARIS.cf>
-/* Logic from SOLARIS2X.cf files was moved into configure.ac */
 #  if defined( IS_SOLARIS28 )
 #  elif defined( IS_SOLARIS29 )
 #  else
