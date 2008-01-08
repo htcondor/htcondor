@@ -25,7 +25,6 @@
 #include "basename.h"
 #include "directory.h"
 #include "build_job_env.h"
-#include "HashTable.h"
 
 #define X509_USER_PROXY "X509_USER_PROXY"
 

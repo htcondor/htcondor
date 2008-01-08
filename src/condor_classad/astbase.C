@@ -29,10 +29,12 @@
 #include "condor_astbase.h"
 #include "condor_debug.h"
 #include "MyString.h"
+#include "string_list.h"
 
 #define AdvancePtr(ptr)  while(*ptr != '\0') ptr++;
 
 #ifdef USE_STRING_SPACE_IN_CLASSADS
+#include "stringSpace.h"
 StringSpace *ExprTree::string_space = NULL;
 int ExprTree::string_space_references = 0;
 #endif
@@ -1136,6 +1138,7 @@ FunctionBase::FunctionBase(char *tName)
     this->name = tName;
 #endif
     this->type = LX_FUNCTION;
+	arguments = new List<ExprTree>();
 	return;
 }
 
@@ -1143,13 +1146,14 @@ FunctionBase::~FunctionBase()
 {
 	ExprTree *arg = NULL;
 
-	arguments.Rewind();
-	while(arguments.Next(arg)) {
+	arguments->Rewind();
+	while(arguments->Next(arg)) {
 		if(arg) {
 			delete arg;
 			arg = NULL;
 		}
 	}
+	delete arguments;
 
 	return;
 }
@@ -1177,9 +1181,9 @@ void FunctionBase::GetReferences(const AttrList *base_attrlist,
     // way out and magically turn it mutable, by hiding the 
     // fact that it should be const. 
     FunctionBase *mutable_this = (FunctionBase *) this;
-	mutable_this->arguments.Rewind();
+	mutable_this->arguments->Rewind();
 
-	while (mutable_this->arguments.Next(arg)) {
+	while (mutable_this->arguments->Next(arg)) {
         arg->GetReferences(base_attrlist, 
                            internal_references, external_references);
 	}
@@ -1190,7 +1194,7 @@ void FunctionBase::GetReferences(const AttrList *base_attrlist,
 void
 FunctionBase::AppendArgument(ExprTree *argument)
 {
-	arguments.Append(argument);
+	arguments->Append(argument);
 	return;
 }
 
@@ -1213,3 +1217,40 @@ FunctionBase::EvaluateArgument(
 	}
 	return;
 }
+
+// I added a contructor for this base class to initialize
+// unit to something.  later we check to see if unit is "k"
+// and without the contructor, we're doing that from unitialized
+// memory which (belive it!) on HPUX happened to be 'k', and
+// really bad things happened!  Yes, this bug was a pain 
+// in the #*&@! to find!  -Todd, 7/97
+// and now init sumFlag as well... not sure if it should be
+// FALSE or TRUE! but it needs to be initialized -Todd, 9/10
+// and now init evalFlag as well (to detect circular eval'n) -Rajesh
+// We no longer initialze sumFlag, because it has been removed. 
+// It's not used, that's why you couldn't figure out how to initialize
+// it, Todd.-Alain 26-Sep-2001
+ExprTree::ExprTree() : unit('\0'), evalFlag(FALSE)
+{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	if (string_space_references == 0) {
+		string_space = new StringSpace;
+	}
+	string_space_references++;
+#endif
+	invisible = false;
+	return;
+}
+
+ExprTree::~ExprTree()
+{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	string_space_references--;
+	if (string_space_references == 0) {
+		delete string_space;
+		string_space = NULL;
+	}
+#endif
+	return;
+}
+

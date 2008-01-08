@@ -64,11 +64,12 @@ Example V2Quoted syntax yielding same as above:
 ***********************************************************************/
 
 
-#include "HashTable.h"
 #include "MyString.h"
 #include "condor_arglist.h"
 #include "condor_classad.h"
 #include "condor_ver_info.h"
+template <class Key, class Value> class HashTable;
+
 
 class Env {
  public:

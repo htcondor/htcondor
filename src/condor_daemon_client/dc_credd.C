@@ -26,6 +26,7 @@
 #include "daemon.h"
 #include "dc_credd.h"
 #include "../condor_c++_util/X509credential.h"
+#include "simplelist.h"
 
 
 #include "../condor_c++_util/credential.h"

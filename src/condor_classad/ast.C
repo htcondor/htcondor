@@ -1516,10 +1516,10 @@ int Function::CalcPrintToStr(void)
 	length += strlen(name);
 	length += 1; // for left paren
 
-	arguments.Rewind();
+	arguments->Rewind();
 	i = 0;
-	num_args = arguments.Length();
-	while (arguments.Next(arg)) {
+	num_args = arguments->Length();
+	while (arguments->Next(arg)) {
 		length += arg->CalcPrintToStr();
 		i++;
 		if (i < num_args) {
@@ -1536,12 +1536,12 @@ void Function::PrintToStr(char *s)
 	ExprTree *arg;
 	int i, num_args;
 
-	arguments.Rewind();
+	arguments->Rewind();
 	i = 0;
-	num_args = arguments.Length();
+	num_args = arguments->Length();
 	strcat(s, name);
 	strcat(s, "(");
-	while (arguments.Next(arg)) {
+	while (arguments->Next(arg)) {
 		arg->PrintToStr(s);
 		i++;
 		if (i < num_args) {
@@ -1565,7 +1565,7 @@ ExprTree *Function::DeepCopy(void) const
 #endif
 	CopyBaseExprTree(copy);
 
-	ListIterator< ExprTree > iter(arguments);
+	ListIterator< ExprTree > iter(*arguments);
 	ExprTree *arg;
 
 	iter.ToBeforeFirst();
@@ -1618,10 +1618,10 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 	}
 
 	if (!done) {
-		number_of_args = arguments.Length();
+		number_of_args = arguments->Length();
 		evaluated_args = new EvalResult[number_of_args];
 		
-		ListIterator<ExprTree> iter(arguments);
+		ListIterator<ExprTree> iter(*arguments);
 		ExprTree *arg;
 
 		i = 0;
@@ -2333,7 +2333,7 @@ int Function::FunctionIfThenElse(
 	EvalResult conditionclause;
 	ExprTree *arg = NULL;
 
-	int number_of_args = arguments.Length();
+	int number_of_args = arguments->Length();
 
 	if ( number_of_args != 3 ) {
 		// we must have three arguments
@@ -2341,7 +2341,7 @@ int Function::FunctionIfThenElse(
 		return false;
 	}
 
-	ListIterator<ExprTree> iter(arguments);
+	ListIterator<ExprTree> iter(*arguments);
 
 		// pop off and evaluate the condition clause (1st argument)
 	iter.Next(arg);		// arg now has the first argument (condition clause)

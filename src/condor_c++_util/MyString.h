@@ -18,11 +18,11 @@
  ***************************************************************/
 
 
-#include <stdarg.h>
-#include "simplelist.h"
 
 #ifndef _MyString_H_
 #define _MyString_H_
+
+#include <stdarg.h>
 
 /** The MyString class is a C++ representation of a string. It was
  * written before we could reliably use the standard string class.

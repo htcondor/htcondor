@@ -21,6 +21,7 @@
 #include "condor_common.h"
 #include "proc.h"
 #include "string_list.h"
+#include "extArray.h"
 
 extern "C" 
 PROC_ID

@@ -33,7 +33,7 @@
 #include "MyString.h"
 
 #include "stream.h"
-#include "list.h"
+//#include "list.h"
 
 #define		ATTRLIST_MAX_EXPRESSION		10240
 

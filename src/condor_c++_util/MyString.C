@@ -24,6 +24,7 @@
 #include "condor_string.h"
 #include "condor_random_num.h"
 #include "strupr.h"
+#include "simplelist.h"
 
 /*--------------------------------------------------------------------
  *

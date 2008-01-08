@@ -24,6 +24,7 @@
 #include "condor_attributes.h"
 
 #include "env.h"
+#include "HashTable.h"
 
 // Since ';' is the PATH delimiter in Windows, we use a different
 // delimiter for V1 environment entries.

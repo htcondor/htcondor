@@ -82,6 +82,7 @@
 #include "condor_mkstemp.h"
 #include "basename.h"
 #include "condor_random_num.h"
+#include "extArray.h"
 
 #if HAVE_EXT_GCB
 #include "GCB.h"

@@ -26,7 +26,7 @@
 
 #if defined(__cplusplus)
 #include "MyString.h"
-#include "extArray.h"
+template <class Item> class ExtArray;
 #endif
 
 #define NEW_PROC 1

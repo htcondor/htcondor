@@ -43,6 +43,7 @@
 #include "daemon.h"
 #include "condor_distribution.h"
 #include "basename.h" // for condor_basename 
+#include "extArray.h"
 
 State get_machine_state();
 
