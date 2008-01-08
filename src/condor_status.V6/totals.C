@@ -25,6 +25,7 @@
 #include "stdio.h"
 #include "HashTable.h"
 #include "totals.h"
+#include "string_list.h"
 
 #ifndef WIN32
 template class  HashTable<MyString,ClassTotal*>;
