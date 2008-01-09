@@ -310,6 +310,7 @@ const char *ATTR_JOB_REMOTE_USER_CPU		 = "RemoteUserCpu";
 const char *ATTR_JOB_REMOTE_WALL_CLOCK	 = "RemoteWallClockTime";
 const char *ATTR_JOB_ROOT_DIR			 = "RootDir";
 const char *ATTR_JOB_RUN_COUNT			 = "JobRunCount";
+const char *ATTR_JOB_SANDBOX_JOBAD		= "DropJobAdInSandbox";
 const char *ATTR_JOB_START                = "JobStart";
 const char *ATTR_JOB_START_DATE			 = "JobStartDate";
 const char *ATTR_JOB_STATE                = "JobState";
