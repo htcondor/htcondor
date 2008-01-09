@@ -21,21 +21,7 @@ XCOMM **************************************************************
 #include "config.h"
 #include <configure.cf>
 
-#define BeforeVendorCF
 #include <site.def>
-#undef BeforeVendorCF
-
-#ifdef PlatformIncludeFile
-#include PlatformIncludeFile
-#endif
-
-XCOMM
-XCOMM This Makefile is generated specifically for Platform machines.
-XCOMM
-
-#define AfterVendorCF
-#include <site.def>
-#undef AfterVendorCF
 
 #include <externals.cf>
 #include <Project.tmpl>

@@ -1,5 +1,3 @@
-#ifdef BeforeVendorCF
-
 #define CCompiler	gcc
 #define CPlusCompiler	g++
 #define PreProcessCmd	CCompiler -E -x c-header
@@ -7,19 +5,9 @@
 
 #define DocCompiler     /unsup/doc++-3.4.8/bin/doc++
 
-
-/* Put all of your #defines up here do you can turn them off/redefine
-	them selectively for an architecture if you desire. */
-
-#endif  /* BeforeVendorCF */
-
-#ifdef AfterVendorCF
-
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
 #define Top /full/path/to/your/source/workspace
 
 #define CondorAdministrator	condor-admin
-
-#endif  /* AfterVendorCF */
