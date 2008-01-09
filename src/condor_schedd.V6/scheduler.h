@@ -530,7 +530,6 @@ private:
 	// useful names
 	char*			CondorAdministrator;
 	char*			Mail;
-	char*			filename;					// save UpDown object
 	char*			AccountantName;
     char*			UidDomain;
 

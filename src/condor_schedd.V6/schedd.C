@@ -308,7 +308,6 @@ Scheduler::Scheduler() :
 		//gotiator = NULL;
 	CondorAdministrator = NULL;
 	Mail = NULL;
-	filename = NULL;
 	alive_interval = 0;
 	startd_sends_alives = false;
 	leaseAliveInterval = 500000;	// init to a nice big number
@@ -394,7 +393,6 @@ Scheduler::~Scheduler()
 		free(CondorAdministrator);
 	if (Mail)
 		free(Mail);
-	delete []filename;
 	if (matches) {
 		matches->startIterations();
 		match_rec *rec;
@@ -11551,7 +11549,6 @@ Scheduler::dumpState(int, Stream* s) {
 	job_ad.Assign( "startJobsDelayBit", startJobsDelayBit );
 	job_ad.Assign( "timeoutid", timeoutid );
 	job_ad.Assign( "Mail", Mail );
-	job_ad.Assign( "filename", filename );
 	
 	int cmd;
 	s->code( cmd );
