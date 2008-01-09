@@ -52,7 +52,6 @@
 #include "utc_time.h"
 #include "condor_crontab.h"
 #include "forkwork.h"
-#include "set_user_priv_from_ad.h"
 #include "condor_open.h"
 
 #include "file_sql.h"
@@ -119,7 +118,6 @@ static void RotateHistory(void);
 static int findHistoryOffset(FILE *LogFile);
 
 static void WritePerJobHistoryFile(ClassAd*);
-static void WriteSandboxJobAdFile(ClassAd*);
 
 // Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
@@ -1533,13 +1531,6 @@ int DestroyProc(int cluster_id, int proc_id)
 	// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
 	WritePerJobHistoryFile(ad);
 
-	// Write the job ad file to the sandbox. There is a problem here,
-	// if the job was spooled, i.e. ATTR_JOB_LEAVE_IN_QUEUE is true
-	// and the ATTR_JOB_IWD is Schedd managed, then this call will not
-	// be reached until after the spool has been destroyed, which
-	// means the job ad file has no where to be written.
-	WriteSandboxJobAdFile(ad);
-
 	bool already_in_transaction = InTransaction();
 	if( !already_in_transaction ) {
 		BeginTransaction(); // for performance
@@ -1633,15 +1624,6 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 				// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
 				WritePerJobHistoryFile(ad);
-
-				// Write the job ad file to the sandbox. There is a
-				// problem here, if the job was spooled,
-				// i.e. ATTR_JOB_LEAVE_IN_QUEUE is true and the
-				// ATTR_JOB_IWD is Schedd managed, then this call will
-				// not be reached until after the spool has been
-				// destroyed, which means the job ad file has no where
-				// to be written.
-				WriteSandboxJobAdFile(ad);
 
 //				log = new LogDestroyClassAd(key);
 //				JobQueue->AppendLog(log);
@@ -4339,96 +4321,6 @@ static void WritePerJobHistoryFile(ClassAd* ad)
 	fclose(fp);
 }
 
-static void WriteSandboxJobAdFile(ClassAd* ad)
-{
-	priv_state prev_priv_state;
-	int cluster, proc, i, value;
-	int fd = -1;
-	FILE *file = NULL;
-	MyString filename, iwd;
-
-	ASSERT(ad);
-
-	value = 0;
-	if (!ad->EvalBool(ATTR_JOB_SANDBOX_JOBAD, NULL, value) || !value) {
-		return;
-	}
-
-	if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "WriteSandboxJobAdFile ERROR: Job contained no CLUSTER_ID\n");
-		return;
-	}
-
-	if (!ad->LookupInteger(ATTR_PROC_ID, proc)) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "WriteSandboxJobAdFile ERROR: Job contained no PROC_ID\n");
-		return;
-	}
-
-	if (!ad->LookupString(ATTR_JOB_IWD, iwd)) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "WriteSandboxJobAdFile ERROR: Job contained no IWD\n");
-		return;
-	}
-
-	prev_priv_state = set_user_priv_from_ad(*ad);
-
-		// Construct the file name to be: jobad.CLUSTER.PROC[.X],
-		// where X is the lowest number possible to make the file name
-		// unique, e.g. if jobad.0.0 exists then jobad.0.0.0 and if
-		// jobad.0.0.0 exists then jobad.0.0.1 and so on
-
-	i = 0;
-	filename.sprintf("%s/jobad.%d.%d", iwd.GetCStr(), cluster, proc);
-	while (-1 == (fd = safe_open_wrapper(filename.GetCStr(),
-										 O_WRONLY|O_CREAT|O_EXCL))) {
-		if (EEXIST != errno) {
-			dprintf(D_ALWAYS | D_FAILURE,
-					"WriteSandboxJobAdFile ERROR: '%s', %d (%s)\n",
-					filename.GetCStr(), errno, strerror(errno));
-			goto EXIT;
-		}
-
-		dprintf(D_ALWAYS,
-				"WriteSandboxJobAdFile WARNING: Drop file '%s' already exists\n",
-				filename.GetCStr());
-
-		filename.sprintf("%s/jobad.%d.%d.%d", iwd.GetCStr(), cluster, proc, i++);
-	}
-
-	if (NULL == (file = fdopen(fd, "w"))) {
-		dprintf(D_ALWAYS | D_FAILURE,
-				"WriteSandboxJobAdFile ERROR: error %d (%s) opening file '%s'\n",
-				errno, strerror(errno), filename.GetCStr());
-		goto EXIT;
-	}
-										   
-	if (!ad->fPrint(file)) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "WriteSandboxJobAdFile ERROR: Error writing to file '%s'\n",
-		        filename.GetCStr());
-		goto EXIT;
-	}
-
-	dprintf(D_FULLDEBUG,
-			"WriteSandboxJobAdFile: Wrote Job Ad to '%s'\n",
-			filename.GetCStr());
-
- EXIT:
-
-	if (file) {
-		fclose(file);
-	} else {
-		if (-1 != fd) {
-			close(fd);
-		}
-	}
-
-	set_priv(prev_priv_state);
-
-	return;
-}
 
 void
 dirtyJobQueue()

@@ -79,6 +79,7 @@
 #include "schedd_files.h"
 #include "file_sql.h"
 #include "condor_getcwd.h"
+#include "set_user_priv_from_ad.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 #define DEFAULT_JOB_START_COUNT 1
@@ -145,6 +146,8 @@ bool jobCleanupNeedsThread( int cluster, int proc );
 bool jobExternallyManaged(ClassAd * ad);
 bool jobManagedDone(ClassAd * ad);
 int  count( ClassAd *job );
+static void WriteSandboxJobAdFile(ClassAd* ad);
+
 
 int	WallClockCkptInterval = 0;
 static bool gridman_per_job = false;
@@ -2388,6 +2391,24 @@ jobIsFinished( int cluster, int proc, void* )
 		}
 	}
 #endif /* WIN32 */
+
+
+		// Write the job ad file to the sandbox. This work is done
+		// here instead of with AppendHistory in DestroyProc/Cluster
+		// because we want to be sure that the job's sandbox exists
+		// when we try to write the job ad file to it. In the case of
+		// spooled jobs, AppendHistory is only called after the spool
+		// has been deleted, which means there is no place for us to
+		// write the job ad. Also, generally for jobs that use
+		// ATTR_JOB_LEAVE_IN_QUEUE the job ad file would not be
+		// written until the job leaves the queue, which would
+		// unnecessarily delay the create of the job ad file. At this
+		// time the only downside to dropping the file here in the
+		// code is that any attributes that change between the
+		// completion of a job and its removal from the queue would
+		// not be present in the job ad file, but that should be of
+		// little consequence.
+	WriteSandboxJobAdFile(job_ad);
 
 		/*
 		  make sure we can switch uids.  if not, there's nothing to
@@ -12748,4 +12769,97 @@ Scheduler::sendSignalToShadow(pid_t pid,int sig,PROC_ID proc)
 
 		// When this operation completes, the handler in DCShadowKillMsg
 		// will take care of setting shadow_rec->preempted = TRUE.
+}
+
+static
+void
+WriteSandboxJobAdFile(ClassAd* ad)
+{
+	priv_state prev_priv_state;
+	int cluster, proc, i, value;
+	int fd = -1;
+	FILE *file = NULL;
+	MyString filename, iwd;
+
+	ASSERT(ad);
+
+	value = 0;
+	if (!ad->EvalBool(ATTR_JOB_SANDBOX_JOBAD, NULL, value) || !value) {
+		return;
+	}
+
+	if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "WriteSandboxJobAdFile ERROR: Job contained no CLUSTER_ID\n");
+		return;
+	}
+
+	if (!ad->LookupInteger(ATTR_PROC_ID, proc)) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "WriteSandboxJobAdFile ERROR: Job contained no PROC_ID\n");
+		return;
+	}
+
+	if (!ad->LookupString(ATTR_JOB_IWD, iwd)) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "WriteSandboxJobAdFile ERROR: Job contained no IWD\n");
+		return;
+	}
+
+	prev_priv_state = set_user_priv_from_ad(*ad);
+
+		// Construct the file name to be: jobad.CLUSTER.PROC[.X],
+		// where X is the lowest number possible to make the file name
+		// unique, e.g. if jobad.0.0 exists then jobad.0.0.0 and if
+		// jobad.0.0.0 exists then jobad.0.0.1 and so on
+
+	i = 0;
+	filename.sprintf("%s/jobad.%d.%d", iwd.GetCStr(), cluster, proc);
+	while (-1 == (fd = safe_open_wrapper(filename.GetCStr(),
+										 O_WRONLY|O_CREAT|O_EXCL))) {
+		if (EEXIST != errno) {
+			dprintf(D_ALWAYS | D_FAILURE,
+					"WriteSandboxJobAdFile ERROR: '%s', %d (%s)\n",
+					filename.GetCStr(), errno, strerror(errno));
+			goto EXIT;
+		}
+
+		dprintf(D_ALWAYS,
+				"WriteSandboxJobAdFile WARNING: Drop file '%s' already exists\n",
+				filename.GetCStr());
+
+		filename.sprintf("%s/jobad.%d.%d.%d", iwd.GetCStr(), cluster, proc, i++);
+	}
+
+	if (NULL == (file = fdopen(fd, "w"))) {
+		dprintf(D_ALWAYS | D_FAILURE,
+				"WriteSandboxJobAdFile ERROR: error %d (%s) opening file '%s'\n",
+				errno, strerror(errno), filename.GetCStr());
+		goto EXIT;
+	}
+										   
+	if (!ad->fPrint(file)) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "WriteSandboxJobAdFile ERROR: Error writing to file '%s'\n",
+		        filename.GetCStr());
+		goto EXIT;
+	}
+
+	dprintf(D_FULLDEBUG,
+			"WriteSandboxJobAdFile: Wrote Job Ad to '%s'\n",
+			filename.GetCStr());
+
+ EXIT:
+
+	if (file) {
+		fclose(file);
+	} else {
+		if (-1 != fd) {
+			close(fd);
+		}
+	}
+
+	set_priv(prev_priv_state);
+
+	return;
 }
