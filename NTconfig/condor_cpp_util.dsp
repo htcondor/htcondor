@@ -911,6 +911,14 @@ SOURCE="..\src\condor_c++_util\Set.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\set_user_priv_from_ad.C"
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\set_user_priv_from_ad.h
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\setenv.C"
 # End Source File
 # Begin Source File
