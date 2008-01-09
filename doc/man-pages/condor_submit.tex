@@ -546,7 +546,10 @@ use:
 requirements = Memory >= 64 && Mips > 45
 \end{verbatim}
 For scheduler and local universe jobs, the requirements expression is
-evaluated against the \Condor{schedd}, rather than a remote machine.
+evaluated against
+the \Attr{Scheduler} ClassAd which represents the 
+the \Condor{schedd} daemon running on the submit machine,
+rather than a remote machine.
 Like all commands in the submit description file, if multiple requirements
 commands are present, all but the last one are ignored.
 By default, \Condor{submit} appends the following clauses to
