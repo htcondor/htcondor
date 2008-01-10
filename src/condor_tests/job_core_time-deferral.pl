@@ -100,8 +100,8 @@ my $ABORTING = 0;
 ##
 push(@exact,   1);
 push(@deltas,  60);
-push(@windows, 0);
-push(@preps,   20);
+push(@windows, 300);
+push(@preps,   120);
 push(@fail,    0);
 
 ##
@@ -124,8 +124,8 @@ push(@fail,    0);
 ##
 push(@exact,   1);
 push(@deltas,  -120);  # 120 sec = 2 min
-push(@windows, 180); # 180 sec = 3 min
-push(@preps,   20);
+push(@windows, 360); # 180 sec = 3 min
+push(@preps,   120);
 push(@fail,    0);
 
 ##
@@ -471,7 +471,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	## This callback is to make sure our job actually runs
 	## Sometimes the job fails to match and execute.
 	##
-	CondorTest::RegisterTimed( $test, $timeout, abs($delta * 2) );
+	CondorTest::RegisterTimed( $test, $timeout, abs($delta * 8) );
 	
 	##
 	## Kind of a hack
