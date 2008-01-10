@@ -13,14 +13,6 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_schedd.V6
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 RSH_LIB = $(STD_LIBS) $(CLASSAD_LIB)
 
-#if IS_SGI_IRIX62
-OS = IRIX62
-#elif IS_SGI_IRIX65
-OS = IRIX65
-#else
-OS = OperatingSystem
-#endif
-
 soapobjs(starter)
 
 # this can (and will have to) be made better, but

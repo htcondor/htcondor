@@ -21,8 +21,6 @@ REMOTE_SYSCALL_OBJ = \
 
 LIB = $(STD_LIBS)
 
-OS = OperatingSystem
-
 CLASS_LIB_OBJ = alarm.o
 
 PORTABLE_OBJ = $(CLASS_LIB_OBJ) signals.o \
