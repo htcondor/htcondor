@@ -38,32 +38,37 @@
 
 #if defined(WIN32)
 
+// Names of all the architectures supported for Windows (Only some of 
+// these are relevant to us; however, listing them all simplifies lookup).
+static char const *windows_architectures[] = { 
+	"INTEL",
+	"MIPS",
+	"ALPHA",
+	"PPC",
+	"SHX",
+	"ARM",
+	"IA64",
+	"ALPHA64",
+	"MSIL",
+	"X64", // was AMD64, but it means both
+	"IA32_ON_WIN64"
+};
+
+// On the off chance that we simply don't recognize the architecture we
+// can tell the user as much:
+static char const *unknown_architecture = "unknown";
+
 const char *
 sysapi_condor_arch()
 {
-	static char answer[1024];	
 	SYSTEM_INFO info;
 	GetSystemInfo(&info);
-	switch(info.wProcessorArchitecture) {
-	case PROCESSOR_ARCHITECTURE_INTEL:
-		sprintf(answer, "INTEL");
-		break;
-	case PROCESSOR_ARCHITECTURE_MIPS:
-		sprintf(answer, "MIPS");
-		break;
-	case PROCESSOR_ARCHITECTURE_ALPHA:
-		sprintf(answer, "ALPHA");
-		break;
-	case PROCESSOR_ARCHITECTURE_PPC:
-		sprintf(answer, "PPC");
-		break;
-	case PROCESSOR_ARCHITECTURE_UNKNOWN:
-	default:
-		sprintf(answer, "UNKNOWN");
-		break;
+	if (   info.wProcessorArchitecture >= PROCESSOR_ARCHITECTURE_INTEL 
+		&& info.wProcessorArchitecture <= PROCESSOR_ARCHITECTURE_IA32_ON_WIN64 ) {
+		return windows_architectures[info.wProcessorArchitecture];
+	} else {
+		return unknown_architecture;
 	}
-
-	return answer;
 }
 
 
