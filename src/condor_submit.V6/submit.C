@@ -2489,7 +2489,7 @@ SetNewTransferFiles( void )
 {
 	bool found_it = false;
 	char *should, *when;
-	FileTransferOutput_t when_output;
+	FileTransferOutput_t when_output = FTO_NONE;
 	MyString err_msg;
 	
 	should = condor_param( ATTR_SHOULD_TRANSFER_FILES, 
@@ -2926,6 +2926,7 @@ SetStdFile( int which_file )
 		fprintf( stderr, "\nERROR: Unknown standard file descriptor (%d)\n",
 				 which_file ); 
 		DoCleanup(0,0,NULL);
+		exit( 1 );
 	}
 
 	if ( macro_value ) {
