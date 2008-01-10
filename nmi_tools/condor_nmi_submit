@@ -425,11 +425,11 @@ sub parseOptions
             printUsage( 1 );
         }
         if( defined($opt_use_externals_cache) ) {
-            print "ERROR: --use_externals_cache is not valid with --test\n";
+            print "ERROR: --use-externals-cache is not valid with --test\n";
             printUsage( 1 );
         }
         if( defined($opt_clear_externals_cache) ) {
-            print "ERROR: --clear_externals_cache is not valid with --test\n";
+            print "ERROR: --clear-externals-cache is not valid with --test\n";
             printUsage( 1 );
         }
         if( defined($opt_externals_only) ) {
@@ -586,17 +586,18 @@ Where [build-options] can be any of:
                     if the tag defined with --tag doesn't define them)>
 --without-tests    <Submit a build job such that it will NOT submit
                     test runs as each platform completes>
---use_externals_cache   Use the externals cache stored in /scratch on execute
+--use-externals-cache   Use the externals cache stored in /scratch on execute
                         nodes. Do NOT use this option if your build is testing
                         a new external.
---clear_externals_cache Delete the externals cache before building. This can
+--clear-externals-cache Delete the externals cache before building. This can
                         be done along with --use_externals_cache.
 --externals-only  Perform a build that only builds the externals. This is
                   useful when testing a new external on all platforms.
 --release-only    Perform a build that only executes 'make release',
                   i.e. the public, stripped, static, etc targets are
                   skipped. This can help in performing quick complication
-                  on all platforms.
+                  on all platforms. Do NOT use this option if you want to
+                  submit test runs based on this build.
 --version-buildid=string <Build RunId to use in the version string>
  
 Where [test-options] can be any of:
