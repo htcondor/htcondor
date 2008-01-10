@@ -54,6 +54,7 @@ OsProc::OsProc( ClassAd* ad )
 	is_checkpointed = false;
 	num_pids = 0;
 	dumped_core = false;
+	m_using_priv_sep = false;
 	UserProc::initialize();
 }
 
