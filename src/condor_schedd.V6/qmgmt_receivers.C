@@ -149,7 +149,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	case CONDOR_DestroyProc:
 	  {
 		int cluster_id = -1;
-		int proc_id;
+		int proc_id = -1;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
@@ -265,7 +265,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	case CONDOR_SetAttribute2:
 	  {
 		int cluster_id = -1;
-		int proc_id;
+		int proc_id = -1;
 		char *attr_name=NULL;
 		char *attr_value=NULL;
 		int terrno;
