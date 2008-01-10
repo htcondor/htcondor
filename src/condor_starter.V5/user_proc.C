@@ -84,7 +84,7 @@ void set_iwd();
 #if !defined(NO_CKPT)
 extern "C" {
 void
-_updateckpt( char *a, char *b, char *c )
+_updateckpt( char *, char *, char * )
 {
 	EXCEPT( "Should never get here" );
 }
@@ -444,7 +444,6 @@ UserProc::execute()
 	FILE	*cmd_fp;
 	char	buf[128];
 	ReliSock	*new_reli = NULL;
-	extern char **environ;
 
 	pipe_fds[0] = -1;
 	pipe_fds[1] = -1;
@@ -1530,7 +1529,7 @@ set_iwd()
 extern "C"	int MappingFileDescriptors();
 
 extern "C" int
-MarkOpen( const char *file, int flags, int fd, int is_remote )
+MarkOpen( const char * /* file */, int /* flags */, int fd, int /* is_remote */ )
 {
 	if( MappingFileDescriptors() ) {
 		EXCEPT( "MarkOpen() called, but should never be used!" );
