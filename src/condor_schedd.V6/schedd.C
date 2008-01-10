@@ -2774,7 +2774,7 @@ int
 Scheduler::abort_job(int, Stream* s)
 {
 	PROC_ID	job_id;
-	int nToRemove;
+	int nToRemove = -1;
 
 	// First grab the number of jobs to remove/hold
 	if ( !s->code(nToRemove) ) {
@@ -11532,7 +11532,7 @@ Scheduler::dumpState(int, Stream* s) {
 	job_ad.Assign( "Mail", Mail );
 	job_ad.Assign( "filename", filename );
 	
-	int cmd;
+	int cmd = 0;
 	s->code( cmd );
 	s->eom();
 
