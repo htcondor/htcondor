@@ -4441,7 +4441,7 @@ int
 Scheduler::negotiate(int command, Stream* s)
 {
 	int		i;
-	int		op;
+	int		op = -1;
 	PROC_ID	id;
 	char*	claim_id = NULL;			// claim_id for each match made
 	char*	host = NULL;
