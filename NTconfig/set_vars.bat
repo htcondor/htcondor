@@ -53,7 +53,19 @@ set BISON_HAIRY=%cd%\bison.hairy
 REM Tell the build system where we can find soapcpp2
 set SOAPCPP2=%EXT_INSTALL%\%EXT_GSOAP_VERSION%\soapcpp2.exe
 
-set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" /GR
+REM Determine the build id, if it is defined
+pushd ..
+set BID=none
+if exist BUILD-ID. (
+    echo Found BUILD-ID in %cd%
+    for /f %%i in ('more BUILD-ID') do set BID=%%i
+) else (
+    echo No build-id defined (i.e. the file %cd%\BUILD-ID is missing)
+)
+echo Using build-id: %BID%
+popd
+
+set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" /GR /D BUILDID=%BID%
 set CONDOR_LIB=Crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib advapi32.lib ws2_32.lib user32.lib oleaut32.lib ole32.lib
 set CONDOR_LIBPATH=
 
