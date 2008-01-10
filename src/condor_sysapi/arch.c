@@ -50,7 +50,7 @@ static char const *windows_architectures[] = {
 	"IA64",
 	"ALPHA64",
 	"MSIL",
-	"X64", // was AMD64, but it means both
+	"X86_64", // was AMD64, but it means both
 	"IA32_ON_WIN64"
 };
 
