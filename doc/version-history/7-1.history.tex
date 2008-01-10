@@ -29,6 +29,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Updated \AdAttr{Arch} to better reflect the architectures supported 
+      under Windows. The three most commonly seen values will now be: 
+      \AdStr{INTEL} (aka x68), \AdStr{IA64} (Intel Itanium), and 
+      \AdStr{X86\_64} (for both AMD and Intel 64-bit processors).
+      For further information, please see the unnumbered subsection 
+      labeled Machine ClassAd Attributes on 
+      page~\pageref{sec:Machine-ClassAd-Attributes}.
+
+\item The Windows MSI installer now supports extended VM Universe 
+      options. These new options include: the ability to set the 
+      networking type; how much memory VM Universe can use on a host; 
+      and the ability to set the version of VMware installed on the host.
+
 \item The \Condor{status} and \Condor{q} command line tools now have a
 version option which prints the version of those specific tools.  This
 can be useful when multiple versions of Condor are installed on the
@@ -48,7 +61,14 @@ same machine.
 
 \begin{itemize}
 
-\item None.
+\item The Build ID is now included in the Windows' \Condor{version} print
+      out, as well as the logs.
+
+\item \Condor{quill}, as well as \Condor{dbmsd}, correctly register 
+      themselves with the Window Firewall.
+
+\item Added \AdStr{WINNT60} (for Vista) to the documented list of 
+      possible values for \AdAttr{OpSys}.
 
 \end{itemize}
 
