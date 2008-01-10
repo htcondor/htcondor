@@ -48,7 +48,7 @@ static bool QmgmtMayAccessAttribute( char const *attr_name ) {
 int
 do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 {
-	int	request_num;
+	int	request_num = -1;
 	int	rval;
 
 	syscall_sock->decode();
@@ -419,7 +419,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		int cluster_id = -1;
 		int proc_id = -1;
 		char *attr_name=NULL;
-		float value;
+		float value = 0.0;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
@@ -457,7 +457,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		int cluster_id = -1;
 		int proc_id = -1;
 		char *attr_name=NULL;
-		int value;
+		int value = 0;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
