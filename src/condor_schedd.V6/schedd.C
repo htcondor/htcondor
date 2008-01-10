@@ -4302,7 +4302,7 @@ Scheduler::refuse( Stream* s )
 int
 Scheduler::negotiatorSocketHandler (Stream *stream)
 {
-	int command;
+	int command = -1;
 	int rval;
 
 	dprintf (D_ALWAYS, "Activity on stashed negotiator socket\n");
