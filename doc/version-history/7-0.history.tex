@@ -35,35 +35,47 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Eliminated the ``tarball in a tarball'' in our distribution --
-  the contents of ``release.tar'' from the distribution tarball
-  (e.g. ``condor-6.9.6-linux-x86-centos45-dynamic.tar.gz'') is now
+\item Eliminated the ``tarball in a tarball'' in our distribution.
+  The contents of \File{release.tar} from the distribution tarball
+  (for example, \File{condor-6.9.6-linux-x86-centos45-dynamic.tar.gz}) is now
   included in the distribution tarball.
 
 \item Updated \Condor{configure} to match the above change.  The
-  ``--install'' option now takes a directory as it's parameter
-  (``--install=/path/to/release''), where it used to take the path to
-  the ``release.tar'' tarball (``--install=/path/to/release.tar'').
+  \Opt{--install} option now takes a directory path as its parameter,
+  for example \Opt{--install=/path/to/release}.
+  It previously took the path to
+  the \File{release.tar} tarball.
 
-\item Added \Condor{install} which is a symlink to \Condor{configure};
-  invoking ``\Condor{install}'' is identical to running
-  ``\Condor{configure} --install=.''.
+\item Added \Condor{install}, which is a symlink to \Condor{configure}.
+  Invoking 
+\begin{verbatim}
+    condor_install
+\end{verbatim}
+  is identical to running
+\begin{verbatim}
+    condor_configure --install=.
+\end{verbatim}
 
-\item Added ``--prefix=dir'' to \Condor{configure} and
-  \Condor{install} which is an alias for ``--install-dir=dir''.
+\item Added the option \Opt{--prefix=dir} to \Condor{configure} and
+  \Condor{install}.  This is an alias for \Opt{--install-dir=dir}.
 
-\item Added ``--backup'' option to \Condor{configure} and
-  \Condor{install} which tells it to rename the target sbin directory
-  if \Condor{master} exits in the target sbin directory.  Previous
-  versions of \Condor{configure} did this by default.
+\item Added the option \Opt{--backup} option to \Condor{configure} and
+  \Condor{install}.  This option renames the target \File{sbin} directory,
+  if the \Condor{master} daemon exits while in the target \File{sbin} directory.
+  Previous versions of \Condor{configure} did this by default.
 
 \item Changed the default behavior of \Condor{install} to exit with a
-  warning if the target sbin exists (and \Condor{master} is in the
-  sbin directory), and neither ``--backup'' nor ``--overwrite'' are
-  specified.  This prevents \Condor{install} from moving an ``sbin''
-  directory out of the way that it shouldn't (i.e. ``\Condor{install}
-  --prefix=/usr'' will not move ``/usr/sbin'' out of the way unless
-  you specify the ``--backup'' option.
+  warning if the target \File{sbin} directory exists,
+  the \Condor{master} daemon is in the \File{sbin} directory,
+  and neither the \Opt{--backup} nor \Opt{--overwrite} options are specified.
+  This prevents \Condor{install} from improperly moving an \File{sbin}
+  directory out of the way.
+  For example,
+\begin{verbatim}
+    condor_install --prefix=/usr
+\end{verbatim}
+  will not move \File{/usr/sbin} out of the way unless
+  the \Opt{--backup} option is also specified.
 
 \item Updated the usage summary of \Condor{configure} and
   \Condor{install} to be much more readable.
