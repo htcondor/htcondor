@@ -28,6 +28,16 @@ The details of each version are described below.
 
 \item PVM support has been dropped.
 
+\item The time zone for the \Prog{PostgreSQL} 8.2 database
+  used with Quill on Windows machines must be explicitly set
+  to use an abbreviation.
+  This Windows environment variable is \verb@TZ@.
+  Proper abbreviations for the value of this variable may be found
+  within the \Prog{PostgreSQL} installation in a file,
+  \File{share/timezonesets/<continent>.txt}, where
+  \verb@<continent>@ is replaced by the continent of the 
+  desired time zone.
+
 \end{itemize}
 
 
