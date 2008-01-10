@@ -71,7 +71,7 @@ MachAttributes::MachAttributes()
 	ZeroMemory ( &m_window_version_info, sizeof ( OSVERSIONINFO ) );
 	m_window_version_info.dwOSVersionInfoSize = sizeof ( OSVERSIONINFO );	
 	m_got_windows_version_info = GetVersionEx ( &m_window_version_info );
-	if ( m_got_windows_version_info ) {
+	if ( !m_got_windows_version_info ) {
 		dprintf ( D_ALWAYS, "MachAttributes::publish: failed to get "
 			"Windows version information\n" );			
 	}
