@@ -143,6 +143,7 @@ void iso8601_to_time(
 		time->tm_hour = -1;
 		time->tm_min  = -1;
 		time->tm_sec  = -1;
+		time->tm_isdst = -1;
 	}
 
 	// Only do something if we got valid parameters
