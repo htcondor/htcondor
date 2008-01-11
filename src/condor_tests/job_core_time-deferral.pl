@@ -483,7 +483,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	if( CondorTest::RunTest( $test, $cmdFile, 0)) {
 		if ($testFailure) {
 			print "$test: CondorTest::RunTest() failed - $testFailure\n";
-			$success = false;
+			$success = 0;
 		} else {
 			print "$test: SUCCESS\n";
 		}
