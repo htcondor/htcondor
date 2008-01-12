@@ -340,7 +340,6 @@ Scheduler::Scheduler() :
 	quill_db_query_password = NULL;
 #endif
 
-	startJobsDelayBit = FALSE;
 	num_reg_contacts = 0;
 
 	checkContactQueue_tid = -1;
@@ -5546,18 +5545,9 @@ Scheduler::startdContactSockHandler( Stream *sock )
 		BAILOUT;
 	}
 
-	checkContactQueue();
+	StartJob( mrec );
 
-		// we want to set a timer to go off in 2 seconds that will
-		// do a StartJobs().  However, we don't want to set this
-		// *every* time we get here.  We check startJobDelayBit, if
-		// it is TRUE then we don't reset the timer because we were here
-		// less than 2 seconds ago.  
-	if ( startJobsDelayBit == FALSE ) {
-		daemonCore->Reset_Timer(startjobsid, 2);
-		startJobsDelayBit = TRUE;
-        dprintf ( D_FULLDEBUG, "Timer set...\n" );
-	}
+	checkContactQueue();
 
 	return TRUE;
 }
@@ -6016,13 +6006,8 @@ find_idle_local_jobs( ClassAd *job )
 void
 Scheduler::StartJobs()
 {
-	PROC_ID id;
 	match_rec *rec;
-	bool ReactivatingMatch;
     
-        /* Todd also added this; watch for conflict! */
-    startJobsDelayBit = FALSE;
-
 		/* If we are trying to exit, don't start any new jobs! */
 	if ( ExitWhenDone ) {
 		return;
@@ -6034,108 +6019,9 @@ Scheduler::StartJobs()
 	this->calculateCronTabSchedules();
 		
 	dprintf(D_FULLDEBUG, "-------- Begin starting jobs --------\n");
-	startJobsDelayBit = FALSE;
 	matches->startIterations();
 	while(matches->iterate(rec) == 1) {
-		switch(rec->status) {
-		case M_UNCLAIMED:
-			dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->publicClaimId());
-			continue;
-		case M_CONNECTING:
-			dprintf(D_FULLDEBUG, "match (%s) waiting for connection\n", rec->publicClaimId());
-			continue;
-		case M_STARTD_CONTACT_LIMBO:
-			dprintf ( D_FULLDEBUG, "match (%s) waiting for startd contact\n", 
-					  rec->publicClaimId() );
-			continue;
-		case M_ACTIVE:
-		case M_CLAIMED:
-			if ( rec->shadowRec ) {
-				dprintf(D_FULLDEBUG, "match (%s) already running a job\n",
-						rec->publicClaimId());
-				continue;
-			}
-			// Go ahead and start a shadow.
-			break;
-		default:
-			EXCEPT( "Unknown status in match rec (%d)", rec->status );
-		}
-
-		// This is the case we want to try and start a job.
-		id.cluster = rec->cluster;
-		id.proc = rec->proc; 
-		ReactivatingMatch = (id.proc == -1);
-		if(!Runnable(&id))
-		// find the job in the cluster with the highest priority
-		{
-			id.proc = -1;
-			if( rec->my_match_ad ) {
-				FindRunnableJob(id,rec->my_match_ad,rec->user);
-			}
-		}
-		if(id.proc < 0)
-		// no more jobs to run
-		{
-			dprintf(D_ALWAYS,
-					"match (%s) out of jobs (cluster id %d); relinquishing\n",
-					rec->publicClaimId(), id.cluster);
-			Relinquish(rec);
-			continue;
-		}
-
-#ifdef WANT_NETMAN
-		if (ManageBandwidth && ReactivatingMatch) {
-			RequestBandwidth(id.cluster, id.proc, rec);
-		}
-#endif
-
-		if(!(rec->shadowRec = StartJob(rec, &id))) {
-                
-		// Start job failed. Throw away the match. The reason being that we
-		// don't want to keep a match around and pay for it if it's not
-		// functioning and we don't know why. We might as well get another
-		// match.
-
-			dprintf(D_ALWAYS,"Failed to start job %s; relinquishing\n",
-					rec->publicClaimId());
-			Relinquish(rec);
-			mark_job_stopped( &id );
-
-					/* We want to send some email to the administrator
-					   about this.  We only want to do it once, though. */
-			if ( !sent_shadow_failure_email ) {
-				sent_shadow_failure_email = TRUE;
-				FILE *email = email_admin_open("Failed to start shadow.");
-				if( email ) {
-					fprintf( email,
-							 "Condor failed to start the condor_shadow.\n\n"
-							 "This may be a configuration problem or a "
-							 "problem with\n"
-							 "permissions on the condor_shadow binary.\n" );
-					char *schedlog = param ( "SCHEDD_LOG" );
-					if ( schedlog ) {
-						email_asciifile_tail( email, schedlog, 50 );
-						free ( schedlog );
-					}
-					email_close ( email );
-				} else {
-						// Error sending the message
-					dprintf( D_ALWAYS, 
-							 "ERROR: Can't send email to the Condor "
-							 "Administrator\n" );
-				}
-			}
-			continue;
-		}
-		dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",
-		        rec->publicClaimId(), id.cluster, id.proc);
-			// If we're reusing a match to start another job, then cluster
-			// and proc may have changed, so we keep them up-to-date here.
-			// This is important for Scheduler::AlreadyMatched(), and also
-			// for when we receive an alive command from the startd.
-		SetMrecJobID(rec,id);
-			// Now that the shadow has spawned, consider this match "ACTIVE"
-		rec->setStatus( M_ACTIVE );
+		StartJob( rec );
 	}
 	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
 		StartLocalJobs();
@@ -6145,6 +6031,112 @@ Scheduler::StartJobs()
 	daemonCore->Reset_Timer(startjobsid,(int)SchedDInterval.getDefaultInterval());
 
 	dprintf(D_FULLDEBUG, "-------- Done starting jobs --------\n");
+}
+
+void
+Scheduler::StartJob(match_rec *rec)
+{
+	PROC_ID id;
+	bool ReactivatingMatch;
+
+	ASSERT( rec );
+	switch(rec->status) {
+	case M_UNCLAIMED:
+		dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->publicClaimId());
+		return;
+	case M_CONNECTING:
+		dprintf(D_FULLDEBUG, "match (%s) waiting for connection\n", rec->publicClaimId());
+		return;
+	case M_STARTD_CONTACT_LIMBO:
+		dprintf ( D_FULLDEBUG, "match (%s) waiting for startd contact\n", 
+				  rec->publicClaimId() );
+		return;
+	case M_ACTIVE:
+	case M_CLAIMED:
+		if ( rec->shadowRec ) {
+			dprintf(D_FULLDEBUG, "match (%s) already running a job\n",
+					rec->publicClaimId());
+			return;
+		}
+			// Go ahead and start a shadow.
+		break;
+	default:
+		EXCEPT( "Unknown status in match rec (%d)", rec->status );
+	}
+
+		// This is the case we want to try and start a job.
+	id.cluster = rec->cluster;
+	id.proc = rec->proc; 
+	ReactivatingMatch = (id.proc == -1);
+	if(!Runnable(&id)) {
+			// find the job in the cluster with the highest priority
+		id.proc = -1;
+		if( rec->my_match_ad ) {
+			FindRunnableJob(id,rec->my_match_ad,rec->user);
+		}
+	}
+	if(id.proc < 0) {
+			// no more jobs to run
+		dprintf(D_ALWAYS,
+				"match (%s) out of jobs (cluster id %d); relinquishing\n",
+				rec->publicClaimId(), id.cluster);
+		Relinquish(rec);
+		return;
+	}
+
+#ifdef WANT_NETMAN
+	if (ManageBandwidth && ReactivatingMatch) {
+		RequestBandwidth(id.cluster, id.proc, rec);
+	}
+#endif
+
+	if(!(rec->shadowRec = StartJob(rec, &id))) {
+                
+			// Start job failed. Throw away the match. The reason being that we
+			// don't want to keep a match around and pay for it if it's not
+			// functioning and we don't know why. We might as well get another
+			// match.
+
+		dprintf(D_ALWAYS,"Failed to start job %s; relinquishing\n",
+				rec->publicClaimId());
+		Relinquish(rec);
+		mark_job_stopped( &id );
+
+			/* We want to send some email to the administrator
+			   about this.  We only want to do it once, though. */
+		if ( !sent_shadow_failure_email ) {
+			sent_shadow_failure_email = TRUE;
+			FILE *email = email_admin_open("Failed to start shadow.");
+			if( email ) {
+				fprintf( email,
+						 "Condor failed to start the condor_shadow.\n\n"
+						 "This may be a configuration problem or a "
+						 "problem with\n"
+						 "permissions on the condor_shadow binary.\n" );
+				char *schedlog = param ( "SCHEDD_LOG" );
+				if ( schedlog ) {
+					email_asciifile_tail( email, schedlog, 50 );
+					free ( schedlog );
+				}
+				email_close ( email );
+			} else {
+					// Error sending the message
+				dprintf( D_ALWAYS, 
+						 "ERROR: Can't send email to the Condor "
+						 "Administrator\n" );
+			}
+		}
+		return;
+	}
+	dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",
+			rec->publicClaimId(), id.cluster, id.proc);
+		// If we're reusing a match to start another job, then cluster
+		// and proc may have changed, so we keep them up-to-date here.
+		// This is important for Scheduler::AlreadyMatched(), and also
+		// for when we receive an alive command from the startd.
+	SetMrecJobID(rec,id);
+		// Now that the shadow has spawned, consider this match "ACTIVE"
+	rec->setStatus( M_ACTIVE );
 }
 
 
@@ -11546,7 +11538,6 @@ Scheduler::dumpState(int, Stream* s) {
 	job_ad.Assign( "leaseAliveInterval", leaseAliveInterval );
 	job_ad.Assign( "alive_interval", alive_interval );
 	job_ad.Assign( "startjobsid", startjobsid );
-	job_ad.Assign( "startJobsDelayBit", startJobsDelayBit );
 	job_ad.Assign( "timeoutid", timeoutid );
 	job_ad.Assign( "Mail", Mail );
 	
