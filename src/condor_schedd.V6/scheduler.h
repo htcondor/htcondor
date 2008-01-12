@@ -291,6 +291,7 @@ class Scheduler : public Service
 	void            sendSignalToShadow(pid_t pid,int sig,PROC_ID proc);
 	int				AlreadyMatched(PROC_ID*);
 	void			StartJobs();
+	void			StartJob(match_rec *rec);
 	void			StartLocalJobs();
 	void			sendAlives();
 	void			RecomputeAliveInterval(int cluster, int proc);
@@ -492,8 +493,6 @@ private:
 	int				jobThrottleNextJobDelay;	// used by jobThrottle()
 
 	int				shadowReaperId; // daemoncore reaper id for shadows
-
-	int             startJobsDelayBit;  // for delay when starting jobs.
 
 		// used so that we don't register too many Sockets at once & fd panic
 	int             num_reg_contacts;  
