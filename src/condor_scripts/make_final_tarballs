@@ -174,9 +174,10 @@ my %modules =
 		 "generate" => 1,
 
 		 "skelfiles" => [ "README", "DOC", "INSTALL", "LICENSE-2.0.txt",
-						  { src => "condor_scripts/condor_configure",
-							dest => "condor_configure", },
-						  { src => "condor_scripts/condor_configure",
+						  { src => "sbin/condor_configure",
+							dest => "condor_configure",
+							symlink => 1, },
+						  { src => "sbin/condor_configure",
 							dest => "condor_install",
 							symlink => 1, },
 						  "examples" 
