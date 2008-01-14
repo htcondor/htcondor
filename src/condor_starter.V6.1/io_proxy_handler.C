@@ -348,15 +348,17 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"get_job_attr %s",name)==1) {
 
-		result = REMOTE_CONDOR_get_job_attr(name,expr);
+		char *recv_expr = NULL;
+		result = REMOTE_CONDOR_get_job_attr(name,recv_expr);
 		if(result==0) {
-			sprintf(line,"%u",(unsigned int)strlen(expr));
+			sprintf(line,"%u",(unsigned int)strlen(recv_expr));
 			r->put_line_raw(line);
-			r->put_bytes_raw(expr,strlen(expr));
+			r->put_bytes_raw(expr,strlen(recv_expr));
 		} else {
 			sprintf(line,"%d",convert(result,errno));
 			r->put_line_raw(line);
 		}	
+		free( recv_expr );
 
 	} else if(sscanf_chirp(line,"constrain %s",expr)==1) {
 
