@@ -198,10 +198,10 @@ CondorTest::RegisterRelease( $testname, $release );
 ##
 ## This callback is to see if our job never got released
 ## The callback time should be greater than the sleep time
-## of the job and the periodic interval. 60 seconds should
+## of the job and the periodic interval. 600 seconds should
 ## suffice for now
 ##
-CondorTest::RegisterTimed($testname, $timed, 60);
+CondorTest::RegisterTimed($testname, $timed, 600);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "$testname: SUCCESS\n";
