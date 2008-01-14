@@ -14,10 +14,13 @@
 \Description
 \Condor{advertise} sends a ClassAd to the \Condor{collector} daemon on
 the central manager machine.
-The ClassAd is contained in a file,
-which is specified by the second required argument.
-Which daemon's ClassAd to update is specified by the first
-required argument.
+The required argument \Arg{update-command} says what daemon type's ClassAd
+is to be updated.
+The optional argument \Arg{classad-filename} is the file from which the
+ClassAd should be read.
+If \Arg{classad-filename} is omitted or is ``-'', then the
+ClassAd is read from standard input.
+
 The \Arg{update-command} may be one of the following strings:
 \begin{description}
 \item[UPDATE\_STARTD\_AD]

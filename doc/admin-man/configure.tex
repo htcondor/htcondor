@@ -5540,6 +5540,8 @@ Section~\ref{sec:GroupTracking}). In either of these cases, the
 always be used. By default, the \Condor{master} will not use a
 \Condor{procd} but all other daemons that need process family tracking
 will.
+A daemon that uses the \Condor{procd} will start a \Condor{procd} for
+use by itself and all of its child daemons.
 
 \item[\Macro{PROCD\_MAX\_SNAPSHOT\_INTERVAL}]\label{param:ProcdMaxSnapshotInterval}
 This setting determines the maximum time that the \Condor{procd} will

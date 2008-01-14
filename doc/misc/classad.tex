@@ -164,7 +164,7 @@ Optional parameters are given within square brackets.
 
 \begin{description}
   \index{ClassAd functions!ifThenElse()}
-  \item[\Expr{AnyType ifThenElse(AnyType IfExpr,AnyType ThenExpr, AnyType ElseExpr)}]
+  \item[\Code{AnyType ifThenElse(AnyType IfExpr,AnyType ThenExpr, AnyType ElseExpr)}]
     A conditional expression is described by \Expr{IfExpr}.
     The following defines return values, when \Expr{IfExpr}
     evaluates to
@@ -190,7 +190,7 @@ Optional parameters are given within square brackets.
 
 
   \index{ClassAd functions!isUndefined()}
-  \item[\Expr{Boolean isUndefined(AnyType Expr)}]
+  \item[\Code{Boolean isUndefined(AnyType Expr)}]
     Returns \Expr{True}, if \Expr{Expr} evaluates to \Expr{UNDEFINED}.
     Returns \Expr{False} in all other cases.
 
@@ -198,7 +198,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!isError()}
-  \item[\Expr{Boolean isError(AnyType Expr)}]
+  \item[\Code{Boolean isError(AnyType Expr)}]
     Returns \Expr{True}, if \Expr{Expr} evaluates to \Expr{ERROR}.
     Returns \Expr{False} in all other cases.
 
@@ -206,7 +206,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!isString()}
-  \item[\Expr{Boolean isString(AnyType Expr)}]
+  \item[\Code{Boolean isString(AnyType Expr)}]
     Returns \Expr{True}, if the evaluation of \Expr{Expr}
     gives a value of type \Expr{String}.
     Returns \Expr{False} in all other cases.
@@ -215,7 +215,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!isInteger()}
-  \item[\Expr{Boolean isInteger(AnyType Expr)}]
+  \item[\Code{Boolean isInteger(AnyType Expr)}]
     Returns \Expr{True}, if the evaluation of \Expr{Expr}
     gives a value of type \Expr{Integer}.
     Returns \Expr{False} in all other cases.
@@ -224,7 +224,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!isReal()}
-  \item[\Expr{Boolean isReal(AnyType Expr)}]
+  \item[\Code{Boolean isReal(AnyType Expr)}]
     Returns \Expr{True}, if the evaluation of \Expr{Expr}
     gives a value of type \Expr{Real}.
     Returns \Expr{False} in all other cases.
@@ -233,7 +233,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!isBoolean()}
-  \item[\Expr{Boolean isBoolean(AnyType Expr)}]
+  \item[\Code{Boolean isBoolean(AnyType Expr)}]
     Returns \Expr{True}, if the evaluation of \Expr{Expr}
     gives the integer value 0 or 1.
     Returns \Expr{False} in all other cases.
@@ -242,7 +242,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!int()}
-  \item[\Expr{Integer int(AnyType Expr)}]
+  \item[\Code{Integer int(AnyType Expr)}]
     Returns the integer value as defined by \Expr{Expr}.
     Where the type of the evaluated \Expr{Expr} is \Expr{Real},
     the value is truncated (round towards zero) to an integer.
@@ -257,7 +257,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!real()}
-  \item[\Expr{Real real(AnyType Expr)}]
+  \item[\Code{Real real(AnyType Expr)}]
     Returns the real value as defined by \Expr{Expr}.
     Where the type of the evaluated \Expr{Expr} is \Expr{Integer},
     the return value is the converted integer.
@@ -272,7 +272,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!string()}
-  \item[\Expr{String string(AnyType Expr)}]
+  \item[\Code{String string(AnyType Expr)}]
     Returns the string that results from the evaluation of \Expr{Expr}.
     Converts a non-string value to a string.
     Where the evaluated \Expr{Expr} is \Expr{ERROR} or \Expr{UNDEFINED},
@@ -282,7 +282,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!floor()}
-  \item[\Expr{Integer floor(AnyType Expr)}]
+  \item[\Code{Integer floor(AnyType Expr)}]
     Returns the integer that results from the evaluation of \Expr{Expr},
     where the type of the evaluated \Expr{Expr} is \Expr{Integer}.
     Where the type of the evaluated \Expr{Expr} is \emph{not} \Expr{Integer},
@@ -296,7 +296,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!ceiling()}
-  \item[\Expr{Integer ceiling(AnyType Expr)}]
+  \item[\Code{Integer ceiling(AnyType Expr)}]
     Returns the integer that results from the evaluation of \Expr{Expr},
     where the type of the evaluated \Expr{Expr} is \Expr{Integer}.
     Where the type of the evaluated \Expr{Expr} is \emph{not} \Expr{Integer},
@@ -310,7 +310,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!round()}
-  \item[\Expr{Integer round(AnyType Expr)}]
+  \item[\Code{Integer round(AnyType Expr)}]
     Returns the integer that results from the evaluation of \Expr{Expr},
     where the type of the evaluated \Expr{Expr} is \Expr{Integer}.
     Where the type of the evaluated \Expr{Expr} is \emph{not} \Expr{Integer},
@@ -329,7 +329,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!random()}
-  \item[\Expr{Integer random(\Lbr\ AnyType Expr \Rbr)}]
+  \item[\Code{Integer random(\Lbr\ AnyType Expr \Rbr)}]
     Where the optional argument \Expr{Expr} evaluates to type \Expr{Integer}
     or type \Expr{Real}
     (and called \Expr{x}),
@@ -342,13 +342,13 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!strcat()}
-  \item[\Expr{String strcat(AnyType Expr1 \Lbr\ , AnyType Expr2 \Dots \Rbr)}]
+  \item[\Code{String strcat(AnyType Expr1 \Lbr\ , AnyType Expr2 \Dots \Rbr)}]
     Returns the string which is the concatenation of all arguments, where all arguments are 
     converted to type \Expr{String} by function \Expr{string(Expr)}.
     Returns \Expr{ERROR} if any argument evaluates to \Expr{UNDEFINED} or \Expr{ERROR}.
 
   \index{ClassAd functions!substr()}
-  \item[\Expr{String substr(String s, Integer offset \Lbr\ , Integer length  \Rbr)}]
+  \item[\Code{String substr(String s, Integer offset \Lbr\ , Integer length  \Rbr)}]
     Returns the substring of \Expr{s}, from the position indicated by \Expr{offset},
     with (optional) \Expr{length} characters.
     The first character within \Expr{s} is at offset 0.
@@ -368,7 +368,7 @@ Optional parameters are given within square brackets.
     arguments are given.
     
   \index{ClassAd functions!strcmp()}
-  \item[\Expr{Integer strcmp(AnyType Expr1, AnyType Expr2)}]
+  \item[\Code{Integer strcmp(AnyType Expr1, AnyType Expr2)}]
     Both arguments are converted to type \Expr{String} by function \Expr{string(Expr)}.
     The return value is an integer that will be
     \begin{itemize}
@@ -386,12 +386,12 @@ Optional parameters are given within square brackets.
     This function returns \Expr{ERROR} if other than 2 arguments are given.
 
   \index{ClassAd functions!stricmp()}
-  \item[\Expr{Integer stricmp(AnyType Expr1, AnyType Expr2)}]
+  \item[\Code{Integer stricmp(AnyType Expr1, AnyType Expr2)}]
     This function is the same as \Expr{strcmp}, except that letter case is
     \emph{not} significant.
 
   \index{ClassAd functions!toUpper()}
-  \item[\Expr{String toUpper(AnyType Expr)}]
+  \item[\Code{String toUpper(AnyType Expr)}]
     The single argument is converted to type \Expr{String} by function \Expr{string(Expr)}.
     The return value is this string, with all lower case letters converted to
     upper case.
@@ -402,7 +402,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!toLower()}
-  \item[\Expr{String toLower(AnyType Expr)}]
+  \item[\Code{String toLower(AnyType Expr)}]
     The single argument is converted to type \Expr{String} by function \Expr{string(Expr)}.
     The return value is this string, with all upper case letters converted to
     lower case.
@@ -413,7 +413,7 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!size()}
-  \item[\Expr{Integer size(AnyType Expr)}]
+  \item[\Code{Integer size(AnyType Expr)}]
     Returns the number of characters in the string, after calling function
     \Expr{string(Expr)}.
     If the argument evaluates to \Expr{ERROR} or \Expr{UNDEFINED},
@@ -434,7 +434,7 @@ characters within the delimiter string.
 
 \begin{description}
   \index{ClassAd functions!stringListSize()}
-  \item[\Expr{Integer stringListSize(String list \Lbr\ , String delimiter \Rbr)}]
+  \item[\Code{Integer stringListSize(String list \Lbr\ , String delimiter \Rbr)}]
     Returns the number of elements in the string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
     Returns \Expr{ERROR} if either argument is not a string.
@@ -442,9 +442,8 @@ characters within the delimiter string.
     This function returns \Expr{ERROR} if other than 1 or 2 arguments are given.
 
   \index{ClassAd functions!stringListSum()}
-  \item[\Expr{Integer stringListSum(String list \Lbr\ , String delimiter \Rbr)} \\
-  OR
-  \Expr{Real stringListSum(String list \Lbr\ , String delimiter \Rbr)}]
+  \item[\Code{Integer stringListSum(String list \Lbr\ , String delimiter \Rbr)}]
+  \item[OR \Code{Real stringListSum(String list \Lbr\ , String delimiter \Rbr)}]
     Sums and returns the sum of all items in the string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
     If all items in the list are integers, the return value is also
@@ -456,7 +455,7 @@ characters within the delimiter string.
 
 
   \index{ClassAd functions!stringListAve()}
-  \item[\Expr{Real stringListAve(String list \Lbr\ , String delimiter \Rbr)}]
+  \item[\Code{Real stringListAve(String list \Lbr\ , String delimiter \Rbr)}]
     Sums and returns the real-valued average of all items in the 
     string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
@@ -465,9 +464,8 @@ characters within the delimiter string.
     A list with 0 items (the empty list) returns the value 0.0.
 
   \index{ClassAd functions!stringListMin()}
-  \item[\Expr{Integer stringListMin(String list \Lbr\ , String delimiter \Rbr)} \\
-  OR
-  \Expr{Real stringListMin(String list \Lbr\ , String delimiter \Rbr)}]
+  \item[\Code{Integer stringListMin(String list \Lbr\ , String delimiter \Rbr)}]
+  \item[OR \Code{Real stringListMin(String list \Lbr\ , String delimiter \Rbr)}]
     Finds and returns the minimum value from all items in the
     string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
@@ -480,9 +478,8 @@ characters within the delimiter string.
     A list with 0 items (the empty list) returns the value \Expr{UNDEFINED}.
 
   \index{ClassAd functions!stringListMax()}
-  \item[\Expr{Integer stringListMax(String list \Lbr\ , String delimiter \Rbr)} \\
-  OR
-  \Expr{Real stringListMax(String list \Lbr\ , String delimiter \Rbr)}]
+  \item[\Code{Integer stringListMax(String list \Lbr\ , String delimiter \Rbr)}]
+  \item[OR \Code{Real stringListMax(String list \Lbr\ , String delimiter \Rbr)}]
     Finds and returns the maximum value from all items in the
     string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
@@ -495,7 +492,7 @@ characters within the delimiter string.
     A list with 0 items (the empty list) returns the value \Expr{UNDEFINED}.
 
   \index{ClassAd functions!stringListMember()}
-  \item[\Expr{Boolean stringListMember(String x, String list \Lbr\ , String delimiter \Rbr)}]
+  \item[\Code{Boolean stringListMember(String x, String list \Lbr\ , String delimiter \Rbr)}]
     Returns \Expr{TRUE} if item \Expr{x} is in the string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
     Returns \Expr{FALSE} if item \Expr{x} is not in the string \Expr{list}.
@@ -504,8 +501,8 @@ characters within the delimiter string.
     are not strings.
 
   \index{ClassAd functions!stringListIMember()}
-  \item[\Expr{Boolean stringListIMember(String x, String list \Lbr\ , String delimiter \Rbr)}]
-    Same as \Expr{stringListMember()}, but comparison is done
+  \item[\Code{Boolean stringListIMember(String x, String list \Lbr\ , String delimiter \Rbr)}]
+    Same as \Code{stringListMember()}, but comparison is done
     with \Expr{stricmp()}, so letter case is not relevant.
 
 \end{description}
@@ -537,7 +534,7 @@ Inclusion of characters other than these as options are ignored.
 
 \begin{description}
   \index{ClassAd functions!regexp()}
-  \item[\Expr{Boolean regexp(String pattern, String target \Lbr\ , String options \Rbr)}]
+  \item[\Code{Boolean regexp(String pattern, String target \Lbr\ , String options \Rbr)}]
     Returns \Expr{TRUE} if the string \Expr{target} is 
     a regular expression as described by \Expr{pattern}.
     Returns \Expr{FALSE} otherwise.
@@ -545,7 +542,8 @@ Inclusion of characters other than these as options are ignored.
     a valid regular expression, returns \Expr{ERROR}.
 
   \index{ClassAd functions!regexps()}
-  \item[\Expr{String regexps(String pattern, String target, String substitute, \Lbr\ String options \Rbr)}]
+  \item[\Code{String regexps(String pattern, String target, String substitute,}]
+  \item[\Code{\Lbr\ String options \Rbr) } ]
     The regular expression \Expr{pattern} is applied to \Expr{target}.
     If the string \Expr{target} is a regular expression
     as described by \Expr{pattern},
@@ -555,7 +553,8 @@ Inclusion of characters other than these as options are ignored.
     are not strings.
 
   \index{ClassAd functions!stringListRegexpMember()}
-  \item[\Expr{Boolean stringListRegexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr\ \Lbr\ , String options \Rbr)}]
+  \item[\Code{Boolean stringListRegexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr\ } ]
+  \item[\Code{\Lbr\ , String options \Rbr)}]
     Returns \Expr{TRUE} if any of the strings within the
     \Expr{list} is a regular expression as described by \Expr{pattern}.
     Returns \Expr{FALSE} otherwise.
@@ -570,14 +569,14 @@ Inclusion of characters other than these as options are ignored.
 
 \begin{description}
   \index{ClassAd functions!time()}
-  \item[\Expr{Integer time()}]
+  \item[\Code{Integer time()}]
     Returns the current coordinated universal time, which is the same
     as the ClassAd attribute \Attr{CurrentTime}.
     This is the time, in seconds, since midnight of January 1, 1970.
 
 
   \index{ClassAd functions!interval()}
-  \item[\Expr{String interval(Integer seconds)}]
+  \item[\Code{String interval(Integer seconds)}]
     Uses \Expr{seconds} to return a string of the form
     \Expr{days+hh:mm:ss}.
     This represents an interval of time.

@@ -550,8 +550,9 @@ The scheduler universe allows users to submit lightweight jobs
 to be run immediately, alongside the \Condor{schedd} daemon on the submit host
 itself.
 Scheduler universe jobs are not matched with a remote machine,
-and will never be preempted.  They do not obey the
-machine's \MacroNI{requirements} expression.
+and will never be preempted.
+The job's requirements expression is evaluated against the \Condor{schedd}'s
+ClassAd.
 
 Originally intended for meta-schedulers such as \Condor{dagman},
 the scheduler universe can also be
@@ -580,8 +581,8 @@ The job does not wait to be matched with a machine.
 It instead executes right away, on the machine where the job
 is submitted.
 The job will never be preempted.
-The machine requirements are not considered for local universe
-jobs.
+The job's requirements expression is evaluated against the \Condor{schedd}'s
+ClassAd.
 
 %%%%%%%%%%%%
 \subsubsection{Parallel Universe}
@@ -1813,8 +1814,10 @@ will assume that the program is to be executed on
 a machine with the same platform as the machine where the job
 is submitted.
 
-Cross submission works for both
-\Expr{standard} and \Expr{vanilla} universes.
+Cross submission works for all universes except \Expr{scheduler} and
+\Expr{local}.
+See section~\ref{sec:Grid-Matchmaking} for how matchmaking works in the
+\Expr{grid} universe.
 The burden is on the user to both obtain and specify
 the correct executable for the target architecture.
 To list the architecture and operating systems of the machines
@@ -1834,13 +1837,12 @@ will allow Condor to choose an executable after an
 available machine is chosen.
 
 A special-purpose Machine Ad substitution macro can be used in
-the \AdAttr{executable}, \AdAttr{environment},  and \AdAttr{arguments}
+string
 attributes in the submit description file.
 The macro has the form
 \begin{verbatim}
   $$(MachineAdAttribute)
 \end{verbatim}
-Note that this macro is ignored in all other submit description attributes.
 The \$\$() informs Condor to substitute the requested 
 \AdAttr{MachineAdAttribute} 
 from the machine where the job will be executed.
@@ -1907,7 +1909,7 @@ There are two common errors made with the substitution macro.
 The first is the use of a non-existent \AdAttr{MachineAdAttribute}.
 If the specified \AdAttr{MachineAdAttribute} does not
 exist in the machine's ClassAd, then Condor will place
-the job in the machine state of hold until the problem is resolved.
+the job in the held state until the problem is resolved.
 
 The second common error occurs due to an incomplete job set up.
 For example, the submit description file given above specifies
