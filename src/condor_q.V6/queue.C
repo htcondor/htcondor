@@ -2974,6 +2974,9 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
             if (!is_error && !is_empty) {
                 classads.Insert(classad);
             }
+			else {
+				delete classad;
+			}
         } while (!is_eof && !is_error);
         if (is_error) {
             success = false;
