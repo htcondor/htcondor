@@ -212,6 +212,9 @@ Over submitter resource limit (0) ... only consider startd ranks
   not get the core file transferred back to the the submit host if the
   \SubmitCmd{transfer\_output\_files} submit option were used.
 
+\item Fixed a bug that caused the \Condor{starter} to crash if a job
+called \Condor{chirp} with the \Expr{get\_job\_attr} option.
+
 \end{itemize}
 
 \noindent Known Bugs:
