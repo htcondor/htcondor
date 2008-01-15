@@ -49,6 +49,7 @@ TimerManager::TimerManager()
 	timer_ids = 0;
 	in_timeout = FALSE;
 	_t = this; 
+	did_reset = -1;
 }
 
 TimerManager::~TimerManager()
