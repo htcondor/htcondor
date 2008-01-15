@@ -3077,7 +3077,7 @@ int DaemonCore::HandleReq(Stream *insock)
 	Stream				*stream = NULL;
 
 	int					is_tcp;
-	int                 req;
+	int                 req = 0;
 	int					index, j;
 	int					reqFound = FALSE;
 	int					result = FALSE;
