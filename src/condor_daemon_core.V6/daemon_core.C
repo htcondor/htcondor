@@ -5262,7 +5262,6 @@ private:
 	char **m_unix_env;
 	size_t *m_core_hard_limit;
 	Env m_envobject;
-	PidEnvID m_penvid;
 };
 
 enum {
@@ -5508,7 +5507,11 @@ void CreateProcessForkit::exec() {
 		// env vars in the forker process as well.
 	char envid[PIDENVID_ENVID_SIZE];
 
-	pidenvid_init(&m_penvid);
+		// PidEnvID does no dynamic allocation, so it is being declared here
+		// rather than in the CreateProcessForkit object, because we do not
+		// have to worry about freeing anything up later etc.
+	PidEnvID penvid;
+	pidenvid_init(&penvid);
 
 		// if we weren't inheriting the parent's environment, then grab out
 		// the parent's pidfamily history... and jam it into the child's 
@@ -5518,7 +5521,7 @@ void CreateProcessForkit::exec() {
 			// The parent process could not have been exec'ed if there were 
 			// too many ancestor markers in its environment, so this check
 			// is more of an assertion.
-		if (pidenvid_filter_and_insert(&m_penvid, environ) ==
+		if (pidenvid_filter_and_insert(&penvid, environ) ==
 			PIDENVID_OVERSIZED)
 			{
 				dprintf ( D_ALWAYS, "Create_Process: Failed to filter ancestor "
@@ -5533,8 +5536,8 @@ void CreateProcessForkit::exec() {
 
 			// Propogate the ancestor history to the child's environment
 		for (i = 0; i < PIDENVID_MAX; i++) {
-			if (m_penvid.ancestors[i].active == TRUE) { 
-				m_envobject.SetEnv( m_penvid.ancestors[i].envid );
+			if (penvid.ancestors[i].active == TRUE) { 
+				m_envobject.SetEnv( penvid.ancestors[i].envid );
 			} else {
 					// After the first FALSE entry, there will never be
 					// true entries.
@@ -5557,7 +5560,7 @@ void CreateProcessForkit::exec() {
 
 		// if the new entry fits into the penvid, then add it to the 
 		// environment, else EXCEPT cause it is programmer's error 
-	if (pidenvid_append(&m_penvid, envid) == PIDENVID_OK) {
+	if (pidenvid_append(&penvid, envid) == PIDENVID_OK) {
 		m_envobject.SetEnv( envid );
 	} else {
 		dprintf ( D_ALWAYS, "Create_Process: Failed to insert envid "
@@ -5630,7 +5633,7 @@ void CreateProcessForkit::exec() {
 			// causing major badness)
 			//
 #if defined(LINUX)
-			PidEnvID* penvid_ptr = &m_penvid;
+			PidEnvID* penvid_ptr = &penvid;
 #else
 			PidEnvID* penvid_ptr = NULL;
 #endif
