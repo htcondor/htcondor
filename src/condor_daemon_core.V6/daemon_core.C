@@ -8028,8 +8028,8 @@ const char* DaemonCore::GetExceptionString(int sig)
 
 int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 {
-	pid_t child_pid;
-	unsigned int timeout_secs;
+	pid_t child_pid = 0;
+	unsigned int timeout_secs = 0;
 	PidEntry *pidentry;
 	int ret_value;
 
