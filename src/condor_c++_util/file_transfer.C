@@ -1479,7 +1479,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	MyString filename;;
 	MyString fullname;
 	char *tmp_buf = NULL;
-	int final_transfer;
+	int final_transfer = 0;
 	bool download_success = false;
 	bool try_again = true;
 	int hold_code = 0;
