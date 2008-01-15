@@ -72,7 +72,8 @@ XCOMM End translation of func(public_version_target)
 
 
 public_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
-public_symlink_target(sbin,condor_configure,condor_install)
+#public_symlink_target(condor_configure,sbin,condor_install)
+public_link_target(sbin,condor_configure,condor_install)
 public_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
 public_version_target(condor_updates_stats,sbin,condor_updates_stats,EXECUTABLE_MODE)
 public_copy_target(condor_ssh,libexec,condor_ssh,EXECUTABLE_MODE)
