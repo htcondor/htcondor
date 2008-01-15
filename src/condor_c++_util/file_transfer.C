@@ -128,6 +128,7 @@ FileTransfer::FileTransfer()
 	ActiveTransferTid = -1;
 	TransferStart = 0;
 	ClientCallback = 0;
+	ClientCallbackClass = NULL;
 	TransferPipe[0] = TransferPipe[1] = -1;
 	bytesSent = 0.0;
 	bytesRcvd = 0.0;
@@ -210,7 +211,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
 
-	jobAd = Ad;	// save job ad
+	jobAd = *Ad;	// save job ad
 
 	if( did_init ) {
 			// no need to except, just quietly return success
@@ -1725,7 +1726,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		record.sockp =s;
 		record.transfer_time = start;
 		record.delegation_method_id = delegation_method;
-		file_transfer_db(&record, jobAd);
+		file_transfer_db(&record, &jobAd);
 	}
 
 	// go back to the state we were in before file transfer
@@ -2783,9 +2784,6 @@ FileTransfer::setClientSocketTimeout(int timeout)
 {
 	int old_val = clientSockTimeout;
 	clientSockTimeout = timeout;
-	if( uploadGoAheadTimeout < clientSockTimeout ) {
-		uploadGoAheadTimeout = clientSockTimeout;
-	}
 	return old_val;
 }
 

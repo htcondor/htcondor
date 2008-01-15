@@ -274,7 +274,6 @@ class FileTransfer {
 	static int SequenceNum;
 	static int ReaperId;
 	int clientSockTimeout;
-	int uploadGoAheadTimeout;
 	bool did_init;
 	bool simple_init;
 	ReliSock *simple_sock;
@@ -318,7 +317,7 @@ class FileTransfer {
 
 	// Report information about completed transfer from child thread.
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
-	ClassAd *jobAd;
+	ClassAd jobAd;
 };
 
 #endif
