@@ -488,7 +488,7 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
     char * slash1;
     char * at;
 	char * colon;
-    char permbuf[512];
+    char * permbuf;
 
 	if (!perm_entry || !*perm_entry) {
 		EXCEPT("split_entry called with NULL or &NULL!");
@@ -509,7 +509,8 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 	// to see if it is a user
 
 	// make a local copy
-	strcpy (permbuf, perm_entry);
+	permbuf = strdup( perm_entry );
+	ASSERT( permbuf );
 
     slash0 = strchr(permbuf, '/');
 	if (!slash0) {
@@ -562,6 +563,7 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 			}
 		}
 	}
+	free( permbuf );
 }
 
 int
