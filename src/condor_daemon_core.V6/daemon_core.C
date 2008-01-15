@@ -7815,7 +7815,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 
 int DaemonCore::HandleProcessExitCommand(int command, Stream* stream)
 {
-	unsigned int pid;
+	unsigned int pid = 0;
 	int result = TRUE;
 
 	assert( command == DC_PROCESSEXIT );
