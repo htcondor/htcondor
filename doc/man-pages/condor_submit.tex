@@ -62,7 +62,9 @@ Each submit description file describes one cluster of jobs to be
 placed in the Condor execution pool. All jobs in a cluster must share
 the same executable, but they may have different input and output files,
 and different program arguments. The submit description file is
-the only command-line argument to \Condor{submit}. 
+the only command-line argument to \Condor{submit}. If the submit description
+file argument is omitted, \Condor{submit} will read the submit description
+from standard input.
 
 The submit description file must contain one \Arg{executable} command and at least one
 \Arg{queue} command.  All of the other commands have default actions.
@@ -543,8 +545,13 @@ use:
 \begin{verbatim}
 requirements = Memory >= 64 && Mips > 45
 \end{verbatim}
-Only one requirements command may be present in a
-submit description file.
+For scheduler and local universe jobs, the requirements expression is
+evaluated against
+the \Attr{Scheduler} ClassAd which represents the 
+the \Condor{schedd} daemon running on the submit machine,
+rather than a remote machine.
+Like all commands in the submit description file, if multiple requirements
+commands are present, all but the last one are ignored.
 By default, \Condor{submit} appends the following clauses to
 the requirements expression:
 \begin{enumerate}
@@ -852,7 +859,8 @@ precedence over a \AdAttr{*\_remove} expressions.
 
 If left unspecified, this will default to \Expr{False}.
 
-This expression is available for the vanilla, java, and scheduler universes.
+This expression is available for the vanilla, java, parallel, mpi, grid,
+local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.
 
@@ -907,7 +915,9 @@ precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
 precedence over a \AdAttr{*\_remove} expressions.
 
-This expression is available for the vanilla, java, and scheduler universes.  It
+This expression is available for the vanilla, java, parallel, mpi, grid,
+local and scheduler universes.
+It
 is additionally available, when submitted from a Unix machine, for the
 standard universe.  Note that the \Condor{schedd} daemon,
 by default, only checks
@@ -936,7 +946,8 @@ precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
 precedence over a \AdAttr{*\_remove} expressions.
 
-This expression is available for the vanilla, java and grid universes.
+This expression is available for the vanilla, java, parallel, mpi, grid,
+local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.  Note that the schedd, by default, only checks
 periodic expressions once every 300 seconds.  The period of
@@ -967,7 +978,8 @@ If the expression becomes \Expr{True}, the job will be released.
 %So the short answer: by default, every SCHEDD_INTERVAL (5 minutes by
 %default) or more often as needed.
 
-This expression is available for the vanilla, java, and grid universes.
+This expression is available for the vanilla, java, parallel, mpi, grid,
+local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.  Note that the \Condor{schedd} daemon,
 by default, only checks
@@ -998,7 +1010,8 @@ So, the \AdAttr{periodic\_remove} expression takes precedent over
 the \AdAttr{on\_exit\_remove} expression,
 if the two describe conflicting actions.
 
-This expression is available for the vanilla, java and grid universes.
+This expression is available for the vanilla, java, parallel, mpi, grid,
+local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.  Note that the schedd, by default, only checks
 periodic expressions once every 300 seconds.  The period of
@@ -2015,6 +2028,16 @@ The deferral window is used in conjunction with the
 miss their deferral time to begin execution.
 
 See section~\ref{sec:JobDeferral} for further details and examples.
+
+%%%%%%%%%%%%%%%%%%%
+%% email_attributes
+%%%%%%%%%%%%%%%%%%%
+
+\item[email\_attributes = $<$list-of-job-ad-attributes$>$] 
+\index{submit commands!email\_attributes}
+A comma-separated list of attributes from the job classad. These
+attributes and their values will be included in the email notification
+of job completion.
 
 %%%%%%%%%%%%%%%%%%%
 %% image_size

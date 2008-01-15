@@ -2,6 +2,12 @@
 
 \index{ClassAd!job attributes}
 
+%%% ClassAd attribute: AllRemoteHosts
+\index{ClassAd job attribute!AllRemoteHosts}
+\index{AllRemoteHosts!job ClassAd attribute}
+\item[\AdAttr{AllRemoteHosts}:]  String containing a comma-separated list
+of all the remote machines running a parallel or mpi universe job.
+
 %%% ClassAd attribute: Args
 \index{ClassAd job attribute!Args}
 \index{Args!job ClassAd attribute}
@@ -60,6 +66,13 @@ seconds the job has spent in suspension for the life of the job.
 \index{CurrentHosts!job ClassAd attribute}
 \item[\AdAttr{CurrentHosts}:]  The number of hosts in the claimed state,
 due to this job.
+
+%%% ClassAd attribute: EmailAttributes
+\index{ClassAd job attribute!EmailAttributes}
+\index{EmailAttributes!job ClassAd attribute}
+\item[\AdAttr{EmailAttributes}:]  String containing a comma-separated
+list of job ad attributes. The attribute names and values will be
+included in the email notification of job completion.
 
 %%% ClassAd attribute: EnteredCurrentStatus
 \index{ClassAd job attribute!EnteredCurrentStatus}
