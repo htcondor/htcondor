@@ -915,7 +915,7 @@ const char* SafeSock::getFullyQualifiedUser() const {
 	return _fqu;
 }
 
-void SafeSock::setFullyQualifiedUser(char * u) {
+void SafeSock::setFullyQualifiedUser(char const * u) {
 	if (_fqu) {
 		delete []_fqu;
 		_fqu = NULL;

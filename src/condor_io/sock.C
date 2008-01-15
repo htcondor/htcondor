@@ -1870,7 +1870,7 @@ int Sock::set_async_handler( CedarHandler *handler )
 #endif  /* of ifndef WIN32 for the async support */
 
 
-void Sock :: setFullyQualifiedUser(char *)
+void Sock :: setFullyQualifiedUser(char const *)
 {
 	return;
 }

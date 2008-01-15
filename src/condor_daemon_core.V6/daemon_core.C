@@ -3083,8 +3083,7 @@ int DaemonCore::HandleReq(Stream *insock)
 	int					result = FALSE;
 	int					old_timeout;
     int                 perm         = USER_AUTH_FAILURE;
-    char                user[256];
-	user[0] = '\0';
+	MyString            user;
     ClassAd *the_policy     = NULL;
     KeyInfo *the_key        = NULL;
     char    *the_sid        = NULL;
@@ -3673,7 +3672,7 @@ int DaemonCore::HandleReq(Stream *insock)
 
 					if (the_user) {
 						// copy this to the HandleReq() scope
-						strcpy (user, the_user);
+						user = the_user;
 						free( the_user );
 						the_user = NULL;
 					}
@@ -4127,8 +4126,8 @@ int DaemonCore::HandleReq(Stream *insock)
 						req,
 						comTable[index].command_descrip,
 						(is_tcp) ? "TCP" : "UDP",
-						(user[0] != '\0') ? " from " : "",
-						(user[0] != '\0') ? user : "",
+						!user.IsEmpty() ? " from " : "",
+						user.Value(),
 						sin_to_string(((Sock*)stream)->endpoint()),
 						PermString(comTable[index].perm));
 
@@ -4148,16 +4147,16 @@ int DaemonCore::HandleReq(Stream *insock)
         if (is_tcp) {
             const char *u = ((ReliSock*)stream)->getFullyQualifiedUser();
 			if (u) {
-				strcpy(user, u);
+				user = u;
 			}
         } else {
 			// user is filled in above, but we should make it part of
 			// the SafeSock too.
-			((SafeSock*)stream)->setFullyQualifiedUser(user);
+			((SafeSock*)stream)->setFullyQualifiedUser(user.Value());
             ((SafeSock*)stream)->setAuthenticated(true);
 		}
 
-		if ( (perm = Verify(comTable[index].perm, ((Sock*)stream)->endpoint(), user)) != USER_AUTH_SUCCESS )
+		if ( (perm = Verify(comTable[index].perm, ((Sock*)stream)->endpoint(), user.Value())) != USER_AUTH_SUCCESS )
 		{
 			// Permission check FAILED
 			reqFound = FALSE;	// so we do not call the handler function below
@@ -4165,7 +4164,7 @@ int DaemonCore::HandleReq(Stream *insock)
 			result = 0;
 			dprintf( D_ALWAYS,
                      "DaemonCore: PERMISSION DENIED to %s from host %s for command %d (%s), access level %s\n",
-                     (user[0] == '\0')? "unknown user" : user, sin_to_string(((Sock*)stream)->endpoint()), req,
+                     user.IsEmpty() ? "unknown user" : user.Value(), sin_to_string(((Sock*)stream)->endpoint()), req,
                      comTable[index].command_descrip,
 					 PermString(comTable[index].perm));
 			// if UDP, consume the rest of this message to try to stay "in-sync"
@@ -4176,8 +4175,8 @@ int DaemonCore::HandleReq(Stream *insock)
 			dprintf(comTable[index].dprintf_flag,
 					"DaemonCore: Command received via %s%s%s from host %s, access level %s\n",
 					(is_tcp) ? "TCP" : "UDP",
-					(user[0] != '\0') ? " from " : "",
-					(user[0] != '\0') ? user : "",
+					!user.IsEmpty() ? " from " : "",
+					user.Value(),
 					sin_to_string(((Sock*)stream)->endpoint()),
 					PermString(comTable[index].perm));
 			dprintf(comTable[index].dprintf_flag,
@@ -4190,8 +4189,8 @@ int DaemonCore::HandleReq(Stream *insock)
 		dprintf(D_ALWAYS,
 				"DaemonCore: Command received via %s%s%s from host %s\n",
 				(is_tcp) ? "TCP" : "UDP",
-				(user[0] != '\0') ? " from " : "",
-				(user[0] != '\0') ? user : "",
+				!user.IsEmpty() ? " from " : "",
+				user.Value(),
 				sin_to_string(((Sock*)stream)->endpoint()) );
 		dprintf(D_ALWAYS,
 			"DaemonCore: received unregistered command request %d !\n",req);
