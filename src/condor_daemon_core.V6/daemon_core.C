@@ -4286,7 +4286,7 @@ finalize:
 
 
 int DaemonCore::HandleSigCommand(int command, Stream* stream) {
-	int sig;
+	int sig = 0;
 
 	assert( command == DC_RAISESIGNAL );
 
