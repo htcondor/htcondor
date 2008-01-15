@@ -8,9 +8,31 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+01/15/08  trunk-pre-merge-V7_0-merge-1
+          trunk-post-merge-V7_0-merge-1
+   The state of the doc directory in trunk before and after
+   merging changes from the V7_0--branch as tagged V7_0-merge-1.
+
+01/15/08 V7_0-merge-1
+   The state of the doc directory in the V7_0-branch for a 
+   first-time merge into the trunk.
+
+01/14/08 V7_0-pre-merge-V7_0_0-merge-1
+         V7_0-post-merge-V7_0_0-merge-1
+   The state of the doc directory in V7_0-branch before and after
+   merging changes from the V7_0_0-branch as tagged V7_0_0-merge-1.
+
+01/14/08 V7_0_0-merge-1
+   The state of the doc directory in the V7_0_0-branch for a 
+   first-time merge into V7_0-branch.
+
 12/28/07 V6_9-dagman-pre-7_0-branch-merge-1
    The state of the V6_9-dagman-pre-7_0-branch for a merge to the
    trunk.
+
+12/21/07 V7_0_0-root and V7_0_0-branch
+   A branch for the 7.0.0 doc series of the manual, created from
+   V7_0_0-root on the V7_0-branch of doc.
 
 12/21/07 V7_0-root and V7_0-branch
    A branch for the 7.0.x doc series of the manual, created from
