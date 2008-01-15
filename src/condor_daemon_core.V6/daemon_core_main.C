@@ -748,7 +748,7 @@ handle_fetch_log( Service *, int, Stream *s )
 	ReliSock *stream = (ReliSock*) s;
 	int  total_bytes = 0;
 	int result;
-	int type;
+	int type = -1;
 
 	if( ! stream->code(type) ||
 		! stream->code(name) || 
