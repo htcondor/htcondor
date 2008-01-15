@@ -1474,7 +1474,7 @@ int
 FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 {
 	int rc;
-	int reply;
+	int reply = 0;
 	filesize_t bytes;
 	MyString filename;;
 	MyString fullname;
