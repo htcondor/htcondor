@@ -73,8 +73,6 @@ class CondorLock : public CondorLockBase
 
 	// Private data
 	CondorLockImpl	*real_lock;
-	const char		*lock_url;
-	const char		*lock_name;
 
 };
 
