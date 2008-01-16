@@ -39,9 +39,9 @@ The details of each version are described below.
 % This feature was added in 6.7, but condor_submit wasn't changed.
 % Until now, the user had to set this via the '+' notation in the submit
 % file.
-\item You can now use attribute \SubmitCmd{email\_attributes} in the job
-description file to define a set of job classad attributes whose values
-should be included in the email notification of job completion.
+\item The command \SubmitCmd{email\_attributes} in a job submit
+description file defines a set of job ClassAd attributes whose values
+should be included in the e-mail notification of job completion.
 
 \end{itemize}
 
@@ -57,8 +57,8 @@ should be included in the email notification of job completion.
 
 \begin{itemize}
 
-\item The job attribute \Attr{EmailAttributes} now works for grid universe
-jobs.
+\item The job ClassAd attribute \Attr{EmailAttributes} now works 
+for grid universe jobs.
 
 \end{itemize}
 
