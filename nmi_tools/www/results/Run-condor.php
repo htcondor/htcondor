@@ -55,6 +55,7 @@ SELECT
   run_type, 
   max(runid) as runid,
   user,
+  archive_results_until,
   result
 FROM 
   Run 
@@ -80,6 +81,7 @@ while ($row = mysql_fetch_array($result)) {
    $start      = $row["start"];
    $user       = $row["user"];
    $run_result = $row["result"];
+	$pin 			= $row["archive_results_until"];
    
    //
    // Apply a break for nightly builds
@@ -194,7 +196,7 @@ while ($row = mysql_fetch_array($result)) {
    
    echo <<<EOF
    <tr>
-      <td><a href="{$branch_url}">{$branch}</a></td>
+      <td><a href="{$branch_url}">{$branch}</a><br>$pin</td>
       <td align="center">{$runid}</td>
       <td align="center">{$start}</td>
       <td align="center">{$user}</td>

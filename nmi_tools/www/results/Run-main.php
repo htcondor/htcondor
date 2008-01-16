@@ -543,6 +543,9 @@ load_config();
     $archived_until = $myrow["archive_results_until"];
     $base = "$basedir/$gid/userdir";
     $webserver = $myrow["host"];
+	 $now_ts = strtotime("now");
+	 $pined_ts = strtotime("$myrow[archive_results_until]");
+	 $pined = $pined_ts - $now_ts;
  
     # find the duration, if the run is complete
     # if not finished, don't display a finish time
@@ -555,7 +558,7 @@ load_config();
     }     
    
     echo "<tr>";
-    echo "<td><a href=\"http://$webserver/$currentDir/Task-search.php?runid=$runid&gid=$gid\">$runid</a></td>";
+    echo "<td><a href=\"http://$webserver/$currentDir/Task-search.php?runid=$runid&gid=$gid\">$runid</a><br>$archived_until</td>";
     # figure out the result
     if (  is_null($result) ) {
       printf("<td bgcolor=#ffff55>%s</td>", "running");

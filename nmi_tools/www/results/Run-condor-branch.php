@@ -74,6 +74,7 @@ $sql = "SELECT description,
                convert_tz(start, 'GMT', 'US/Central') as start,
                run_type, 
                runid,
+					archive_results_until,
                result
           FROM Run 
          WHERE component='condor' AND 
@@ -90,6 +91,7 @@ while ($row = mysql_fetch_array($results)) {
   $desc       = $row["description"];
   $start      = $row["start"];
   $run_result = $row["result"];
+  $pin 		  = $row["archive_results_until"];
 
    // --------------------------------
    // BUILDS
@@ -193,7 +195,7 @@ while ($row = mysql_fetch_array($results)) {
    
    echo <<<EOF
    <tr>
-      <td>{$desc}</td>
+      <td>{$desc}<br>$pin</td>
       <td align="center">{$runid}</td>
       <td align="center">{$start}</td>
 EOF;
