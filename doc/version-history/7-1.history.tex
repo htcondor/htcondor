@@ -29,6 +29,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
+% PR 888/921
+\item Added the capability to insert commands into the \File{.condor.sub}
+  file produced by \Condor{submit\_dag} with the \Opt{-append} and
+  \Opt{-insert\_sub\_file} command-line arguments to \Condor{submit\_dag} and
+  the \Macro{DAGMAN\_INSERT\_SUB\_FILE} configuration variable.
+  See the \Condor{submit\_dag} manual page on
+  page~\pageref{man-condor-submit-dag}
+  and the configuration variable definition on
+  page~\pageref{param:DAGManInsertSubFile} for more information.
+
 \item Updated \AdAttr{Arch} to better reflect the architectures supported 
       under Windows. The three most commonly seen values will now be: 
       \AdStr{INTEL} (aka x68), \AdStr{IA64} (Intel Itanium), and 
@@ -62,7 +72,11 @@ matchmaking.
 
 \begin{itemize}
 
-\item None.
+% PR 921
+\item Added the \Macro{DAGMAN\_INSERT\_SUB\_FILE} variable, which allows a file
+  of commands to be inserted into \File{.condor.sub} files generated
+  by \Condor{submit\_dag}.  See page~\pageref{param:DAGManInsertSubFile}
+  for more information.
 
 \end{itemize}
 

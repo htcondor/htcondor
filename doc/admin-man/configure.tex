@@ -6242,9 +6242,9 @@ are waiting indefinitely for a job to finish.) If not defined,
 A file name of a file containing submit file commands to be inserted
 into the \File{.condor.sub} file created by \Condor{submit\_dag}.
 The specified file is inserted into the \File{.condor.sub} file before
-the Queue command and before any commands specified with the
+the \SubmitCmd{queue} command and before any commands specified with the
 \Opt{-append} \Condor{submit\_dag} command-line option.
-Note that the DAGMAN\_INSERT\_SUB\_FILE value can be overridden
+Note that the \MacroNI{DAGMAN\_INSERT\_SUB\_FILE} value can be overridden
 by the \Opt{-insert\_sub\_file} \Condor{submit\_dag} command-line option.
 
 \end{description}
