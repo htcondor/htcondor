@@ -92,6 +92,21 @@ The details of each version are described below.
 \item \Condor{quill} and the \Condor{dbmsd} correctly register 
   themselves with the Windows firewall.
 
+% PR 926
+\item \Condor{submit\_dag} now avoids possibly running off the end
+of the argument list if an argument requiring a value does not have one.
+
+\item The \Condor{submit\_dag} \Opt{-debug} argument now must be
+specified with at least \Opt{-de} to avoid conflict with the
+\Opt{-dagman} argument.
+
+\item Added missing information about the \Opt{-config} argument to
+\Condor{submit\_dag}'s usage message.
+
+% PR 927
+\item \Condor{dagman} no longer considers duplicate edges in a DAG a
+fatal error (it is now a warning).
+
 \end{itemize}
 
 \noindent Known Bugs:
