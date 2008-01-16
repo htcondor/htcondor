@@ -154,8 +154,6 @@ reserve_for_fs()
 	int	answer = -1;
 
 	if( answer < 0 ) {
-		dprintf( D_FULLDEBUG, "Looking up RESERVED_DISK parameter\n" );
-
 		answer = _sysapi_reserve_disk;
 		if( answer < 0 ) {
 			answer = 0;
@@ -163,7 +161,6 @@ reserve_for_fs()
 	}
 
 	answer = _sysapi_reserve_disk;
-	dprintf( D_FULLDEBUG, "Reserving %d kbytes for file system\n", answer );
 	return answer;
 }
 
