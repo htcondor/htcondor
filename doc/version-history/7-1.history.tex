@@ -39,13 +39,14 @@ The details of each version are described below.
   and the configuration variable definition on
   page~\pageref{param:DAGManInsertSubFile} for more information.
 
-\item Updated \AdAttr{Arch} to better reflect the architectures supported 
-      under Windows. The three most commonly seen values will now be: 
-      \AdStr{INTEL} (aka x68), \AdStr{IA64} (Intel Itanium), and 
-      \AdStr{X86\_64} (for both AMD and Intel 64-bit processors).
-      For further information, please see the unnumbered subsection 
-      labeled Machine ClassAd Attributes on 
-      page~\pageref{sec:Machine-ClassAd-Attributes}.
+\item For platforms running a Windows operating system, the \Attr{Arch}
+  machine ClassAd attribute more correctly reflects the architectures
+  supported.  Instead of values \AdStr{INTEL} and \AdStr{UNDEFINED},
+  the values will now be: \AdStr{INTEL} for x86,
+  \AdStr{IA64} for Intel Itanium,
+  and \AdStr{X86\_64} for both AMD and Intel 64-bit processors.
+  These values are listed in the unnumbered subsection labeled
+  Machine ClassAd Attributes on page~\pageref{sec:Machine-ClassAd-Attributes}.
 
 \item The Windows MSI installer now supports extended VM Universe 
       options. These new options include: the ability to set the 
