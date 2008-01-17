@@ -60,6 +60,10 @@ should be included in the e-mail notification of job completion.
 \item The job ClassAd attribute \Attr{EmailAttributes} now works 
 for grid universe jobs.
 
+\item In Linux, the job queue database file may now exceed 2GB.  Previously,
+the \Condor{schedd} would halt with an error when trying to write past
+the 2GB mark.
+
 \end{itemize}
 
 \noindent Known Bugs:
