@@ -64,6 +64,10 @@ for grid universe jobs.
 the \Condor{schedd} would halt with an error when trying to write past
 the 2GB mark.
 
+\item Local universe jobs are now scheduled to run more promptly.  Previously,
+new local universe jobs would sometimes take up to \MacroNI{SCHEDD\_INTERVAL}
+(default 5 minutes) to be considered for running.
+
 \end{itemize}
 
 \noindent Known Bugs:
