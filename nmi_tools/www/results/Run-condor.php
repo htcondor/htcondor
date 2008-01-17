@@ -193,11 +193,42 @@ while ($row = mysql_fetch_array($result)) {
    // Andy - 11/30/2006
    //
    if ($user != CONDOR_USER && !count($data["build"]) && !count($data["test"])) continue;
+
+	// Is this top level run pinned or not(probably not but could be one of a kind)
+
+	$findpin="
+		SELECT 
+  			run_type, 
+  			runid,
+  			user,
+			archived,
+  			archive_results_until
+		FROM 
+  			Run 
+		WHERE 
+  			runid = $runid ";
+
+   $pincheck = mysql_query($findpin)
+                  or die ("Query {$findpin} failed : " . mysql_error());
+   while ($pindetails = mysql_fetch_array($pincheck)) {
+	  $pin = $pindetails["archive_results_until"];
+	  $archived = $pindetails["archived"];
+	  if( !(is_null($pin))) {
+	  		$pinstr = "pin ". "$pin";
+	  } else {
+	  		$pinstr = "";
+	  }
+	  if( $archived == '0' ) {
+	  		$archivedstr = "$runid". "<br><font size=\"-1\"> D </font>";
+	  } else {
+	  		$archivedstr = "$runid";
+	  }
+   } 
    
    echo <<<EOF
    <tr>
-      <td><a href="{$branch_url}">{$branch}</a><br>$pin</td>
-      <td align="center">{$runid}</td>
+      <td><a href="{$branch_url}">{$branch}</a><br><font size="-2">$pinstr</font></td>
+      <td align="center">{$archivedstr}</td>
       <td align="center">{$start}</td>
       <td align="center">{$user}</td>
 EOF;

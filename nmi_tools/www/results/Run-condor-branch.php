@@ -74,6 +74,7 @@ $sql = "SELECT description,
                convert_tz(start, 'GMT', 'US/Central') as start,
                run_type, 
                runid,
+					archived,
 					archive_results_until,
                result
           FROM Run 
@@ -92,6 +93,7 @@ while ($row = mysql_fetch_array($results)) {
   $start      = $row["start"];
   $run_result = $row["result"];
   $pin 		  = $row["archive_results_until"];
+	$archived = $row["archived"];
 
    // --------------------------------
    // BUILDS
@@ -192,11 +194,22 @@ while ($row = mysql_fetch_array($results)) {
    // Not sure if I want to do this...
    //
    //if (!count($data["build"]) && !count($data["test"])) continue;
+	if( !(is_null($pin))) {
+		$pinstr = "pin ". "$pin";
+	} else {
+		$pinstr = "";
+	}
+
+	if( $archived == '0' ) {
+		$archivedstr = "$runid". "<br><font size=\"-1\"> D </font>";
+	} else {
+		$archivedstr = "$runid";
+	}
    
    echo <<<EOF
    <tr>
-      <td>{$desc}<br>$pin</td>
-      <td align="center">{$runid}</td>
+      <td>{$desc}<br><font size="-2">$pinstr<font></td>
+      <td align="center">{$archivedstr}</td>
       <td align="center">{$start}</td>
 EOF;
 
