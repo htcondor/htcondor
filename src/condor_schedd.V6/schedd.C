@@ -482,7 +482,6 @@ Scheduler::timeout()
 			dprintf(D_FULLDEBUG,"Setting delay until next queue scan to %d seconds\n",time_to_next_run);
 
 			daemonCore->Reset_Timer(timeoutid,time_to_next_run,1);
-			daemonCore->Reset_Timer(startjobsid,time_to_next_run+1,1);
 			min_interval_timer_set = true;
 		}
 		return;
@@ -506,6 +505,11 @@ Scheduler::timeout()
 				 "Preempting %d jobs due to MAX_JOBS_RUNNING change\n",
 				 (real_jobs - MaxJobsRunning) );
 		preempt( real_jobs - MaxJobsRunning );
+	}
+
+	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
+		this->calculateCronTabSchedules();
+		StartLocalJobs();
 	}
 
 	/* Call function that will start using our local startd if it
@@ -10884,18 +10888,15 @@ Scheduler::reschedule_negotiator(int, Stream *s)
 		return 0;
 	}
 
-	timeout();							// update the central manager now
+		// Update the central manager now.
+		// This also starts local jobs etc.
+	timeout();
 
 	dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
 
 	sendReschedule();
 
-	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
-		this->calculateCronTabSchedules();
-		StartLocalJobs();
-	}
-
-	 return 0;
+	return 0;
 }
 
 
