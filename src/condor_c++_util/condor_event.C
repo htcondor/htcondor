@@ -1265,7 +1265,7 @@ RemoteErrorEvent::writeEvent(FILE *file)
     }
 
 	//output each line of error_str, indented by one tab
-	char const *line = error_str;
+	char *line = error_str;
 	if(line)
 	while(*line) {
 		char *next_line = strchr(line,'\n');
