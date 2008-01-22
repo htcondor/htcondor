@@ -1,7 +1,7 @@
-01/18/08 V7_0_0
+01/18/22 V7_0_0
   The offical tag for 7.0.0, from the V7_0_0-branch.
-  $CondorVersion: 7.0.0 Jan 16 2008 BuildID: 71398 $
-  Original build tag: BUILD-V7_0_0-branch-2008-1-16
+  $CondorVersion: 7.0.0 Jan 22 2008 BuildID: 72173 $
+  Original build tag: BUILD-V7_0_0-branch-2008-01-21
 
 12/20/07 V7_0-{root,branch}
   A new branch off HEAD for the 7.0.x stable series.
