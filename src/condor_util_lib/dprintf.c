@@ -43,6 +43,7 @@
 #include "condor_uid.h"
 #include "basename.h"
 #include "get_mysubsystem.h"
+#include "file_lock.h"
 
 FILE *debug_lock(int debug_level);
 FILE *open_debug_file( int debug_level, char flags[] );
@@ -109,7 +110,6 @@ static	int DprintfBroken = 0;
 static	int DebugUnlockBroken = 0;
 #ifdef WIN32
 static CRITICAL_SECTION	*_condor_dprintf_critsec = NULL;
-extern int lock_file(int fd, LOCK_TYPE type, int do_block);
 static int lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block);
 extern int vprintf_length(const char *format, va_list args);
 static HANDLE debug_win32_mutex = NULL;
@@ -445,7 +445,7 @@ debug_lock(int debug_level)
 #ifdef WIN32
 		if( lock_or_mutex_file(LockFd,WRITE_LOCK,TRUE) < 0 ) 
 #else
-		if( flock(LockFd,LOCK_EX) < 0 ) 
+		if( lock_file_plain(LockFd,WRITE_LOCK,TRUE) < 0 ) 
 #endif
 		{
 			save_errno = errno;
@@ -526,7 +526,7 @@ debug_unlock(int debug_level)
 #if defined(WIN32)
 		if ( lock_or_mutex_file(LockFd,UN_LOCK,TRUE) < 0 )
 #else
-		if( flock(LockFd,LOCK_UN) < 0 ) 
+		if( lock_file_plain(LockFd,UN_LOCK,TRUE) < 0 ) 
 #endif
 		{
 			flock_errno = errno;
@@ -981,7 +981,7 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 
 	if ( use_kernel_mutex == FALSE ) {
 			// use a filesystem lock
-		return lock_file(fd,type,do_block);
+		return lock_file_plain(fd,type,do_block);
 	}
 	
 		// If we made it here, we want to use a kernel mutex.

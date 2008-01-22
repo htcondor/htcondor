@@ -114,7 +114,7 @@ typedef unsigned __int32 uint32_t;
 #include <math.h>
 #include <float.h>   // for DBL_MAX and other constants
 #include <errno.h>
-#include "condor_file_lock.h"
+#include "file_lock.h"
 #include "condor_fix_assert.h"
 
 #define getwd(path) (int)_getcwd(path, _POSIX_PATH_MAX)

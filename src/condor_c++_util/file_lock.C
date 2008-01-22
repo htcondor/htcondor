@@ -26,8 +26,6 @@
 #include "condor_config.h"
 #include "file_lock.h"
 
-extern "C" int lock_file( int fd, LOCK_TYPE type, bool do_block );
-
 FileLock::FileLock( int fd, FILE *fp_arg, const char* path )
 {
 	Reset( );

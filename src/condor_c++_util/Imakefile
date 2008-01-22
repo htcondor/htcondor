@@ -37,10 +37,6 @@ C_PLUS_FLAGS =	\
 CFLAGS = $(STD_C_FLAGS) New_classads_includes
 LIB = $(STD_LIBS)
 
-#if !HAS_FLOCK
-FLOCK_OBJ = ../condor_util_lib/flock.o
-#endif 
-
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o MapFile.o
 
@@ -137,7 +133,6 @@ CONLIBAPI_OBJ = \
 	../condor_util_lib/strupr.o \
 	../condor_util_lib/lock_file.NON_POSIX.o \
 	../condor_util_lib/rotate_file.o \
-	$(FLOCK_OBJ) \
 	strnewp.o \
 	condor_environ.o \
 	../condor_util_lib/setsyscalls.o \

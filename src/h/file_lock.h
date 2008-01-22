@@ -23,6 +23,27 @@
 typedef enum { READ_LOCK, WRITE_LOCK, UN_LOCK } LOCK_TYPE;
 
 #if defined(__cplusplus)
+extern "C" {
+#endif
+
+/* Lock/unlock a file using the OS's file locking mechanism.
+ *
+ * lock_file_plain() doesn't call any Condor code. It can be used anywhere
+ *   in Condor without fear of recursion.
+ *
+ * lock_file() makes calls to low-level Condor code like param() and
+ *   dprintf() to provide additional functionality (like optionally
+ *   ignoring locking failures on NFS).
+ */
+
+int lock_file( int fd, LOCK_TYPE type, int do_block );
+int lock_file_plain( int fd, LOCK_TYPE type, int do_block );
+
+#if defined(__cplusplus)
+}		/* End of extern "C" declaration */
+#endif
+
+#if defined(__cplusplus)
 
 	// C++ wrapper for lock_file.  Note that the constructor takes 
 	// the path to the file - if the path is supplied, then this class

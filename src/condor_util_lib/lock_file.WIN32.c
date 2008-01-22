@@ -23,10 +23,9 @@
 #include "condor_common.h"
 #include <sys/locking.h>
 #include "file_lock.h"
-#include "fake_flock.h"
 
 int
-lock_file(int fd, LOCK_TYPE type, int do_block)
+lock_file_plain(int fd, LOCK_TYPE type, int do_block)
 {
 	int	mode, result;
 	long original_pos, pos;
@@ -45,7 +44,6 @@ lock_file(int fd, LOCK_TYPE type, int do_block)
 			mode = _LK_NBLCK;
 		break;
 	case UN_LOCK:
-	case LOCK_UN:
 		mode = _LK_UNLCK;
 		break;
 	}
@@ -58,14 +56,17 @@ lock_file(int fd, LOCK_TYPE type, int do_block)
 		result = _locking(fd, mode, 4L);
 	} while ((result < 0) && errno == EDEADLOCK); 
 
-#if 0  // leave this out because lock_file called from dprintf,
-	   // so we cannot dprintf or EXCEPT in lock_file !
-	if ( result < 0 && ( errno != EACCES && errno != EDEADLOCK ) ) {
-		EXCEPT("Programmer error in lock_file()");
-	}
-#endif
-
 	lseek(fd, SEEK_SET, original_pos);
 
 	return result;
+}
+
+int
+lock_file(int fd, LOCK_TYPE type, int do_block)
+{
+	int result = lock_file_plain( fd, type, do_block );
+
+	if ( result < 0 && ( errno != EACCES && errno != EDEADLOCK ) ) {
+		EXCEPT("Programmer error in lock_file()");
+	}
 }

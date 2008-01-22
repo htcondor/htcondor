@@ -59,11 +59,10 @@ void detach ( void );
 int do_connect ( const char *host, const char *service, u_short port );
 int udp_connect ( char *host, u_short port );
 void dprintf ( int flags, const char* fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
-FILE * debug_lock ( void );
-void debug_unlock ( void );
+FILE * debug_lock ( int debug_level );
+void debug_unlock ( int debug_level );
 void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void condor_except_should_dump_core( int flag );
-int flock ( int fd, int op );
 int getdtablesize ( void );
 
 #ifndef WIN32  // on WIN32, it messes with our macro in condor_sys_nt.h
@@ -118,7 +117,6 @@ void dprintf ();
 FILE * debug_lock ();
 void debug_unlock ();
 void _EXCEPT_ ();
-int flock ();
 int getdtablesize ();
 int getmnt ();
 /* int getpagesize (); */

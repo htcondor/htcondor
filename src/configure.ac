@@ -1379,11 +1379,11 @@ AS_IF([test "x$_cv_needs_64bit_structs" = xyes],
 
 AC_MSG_CHECKING([if HAS_FLOCK])
 case "$_cv_opsys" in
-  AIX | HPUX | LINUX | SOLARIS )
+  SOLARIS )
     _cv_has_flock=no
   ;;
   * )
-    _cv_has_flock=unknown
+    _cv_has_flock=yes
   ;;
 esac
 AC_MSG_RESULT([$_cv_has_flock])

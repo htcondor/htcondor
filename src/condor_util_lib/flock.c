@@ -31,10 +31,19 @@
 ** (shared lock) can only be applied if the file is open for reading.
 */
 
-/* Note, you may not call dprintf in here be because it will go into an 
-	infinite loop as it tries to flock() the file multiple times through each
-	dprintf invocation 
-*/
+/*
+ * This is only used for standard universe on Solaris. Solaris doesn't
+ * have an flock() system call, but provides an emulated one using fcntl()
+ * in libucb. Unfortunately, libucb also provides implementations of
+ * common functions like readdir() which screw up when linked with C++
+ * code. So we provide our own emulation of flock() based on fcntl().
+ */
+
+#define   LOCK_SH   1<<0
+#define   LOCK_EX   1<<1
+#define   LOCK_NB   1<<2
+#define   LOCK_UN   1<<3
+
 
 int
 flock( int fd, int op )
