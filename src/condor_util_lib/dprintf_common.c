@@ -30,8 +30,6 @@
 #include "condor_debug.h"
 #include "condor_uid.h"
 
-int _condor_mkargv( int* argc, char* argv[], char* line );
-
 
 /* 
    This should default to 0 so we only get dprintf() messages if we
@@ -80,21 +78,27 @@ dprintf(int flags, const char* fmt, ...)
 }
 
 
+/* If this were C++ code, we could use StringList instead of strtok().
+ * We don't use strtok_r() because it's not available on Windows.
+ */
 void
-_condor_set_debug_flags( char *strflags )
+_condor_set_debug_flags( const char *strflags )
 {
-	char tmp[ BUFSIZ ];
-	char *argv[ BUFSIZ ], *flag;
-	int argc, notflag, bit, i;
+	char *tmp;
+	char *flag;
+	int notflag, bit, i;
 
 		// Always set D_ALWAYS
 	DebugFlags |= D_ALWAYS;
 
-	(void)strncpy(tmp, strflags, sizeof(tmp)-1);
-	_condor_mkargv(&argc, argv, tmp);
+	tmp = strdup( strflags );
+	if ( tmp == NULL ) {
+		return;
+	}
 
-	while( --argc >= 0 ) {
-		flag = argv[argc];
+	flag = strtok( tmp, ", " );
+
+	while ( flag != NULL ) {
 		if( *flag == '-' ) {
 			flag += 1;
 			notflag = 1;
@@ -117,7 +121,11 @@ _condor_set_debug_flags( char *strflags )
 		} else {
 			DebugFlags |= bit;
 		}
+
+		flag = strtok( NULL, ", " );
 	}
+
+	free( tmp );
 }
 
 

@@ -42,7 +42,7 @@ extern int		_condor_dprintf_works;
 extern time_t	DebugLastMod;
 extern int		DebugUseTimestamps;
 
-extern void		_condor_set_debug_flags( char *strflags );
+extern void		_condor_set_debug_flags( const char *strflags );
 extern void		_condor_dprintf_saved_lines( void );
 
 FILE *open_debug_file( int debug_level, char flags[] );

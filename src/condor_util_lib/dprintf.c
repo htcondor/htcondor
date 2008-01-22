@@ -49,8 +49,7 @@ FILE *open_debug_file( int debug_level, char flags[] );
 void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
 void _condor_dprintf_exit( int error_code, const char* msg );
-void _condor_set_debug_flags( char *strflags );
-int _condor_mkargv( int* argc, char* argv[], char* line );
+void _condor_set_debug_flags( const char *strflags );
 static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
 void _condor_dprintf_saved_lines( void );
 struct saved_dprintf {
@@ -895,13 +894,6 @@ dprintf_touch_log()
 		utime( DebugFile[0], NULL );
 	}
 }
-
-int
-mkargv( int* argc, char* argv[], char* line )
-{
-	return( _condor_mkargv(argc, argv, line) );
-}
-
 
 static void
 _condor_save_dprintf_line( int flags, const char* fmt, va_list args )

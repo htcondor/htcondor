@@ -26,13 +26,11 @@
 BEGIN_C_DECLS
 
 #if defined(__STDC__) || (__cplusplus)
-int mkargv ( int *argc, char *argv[], char *line );
 char* strupr( char *str );
 char* strlwr( char *str );
 char * getline ( FILE *fp );
 char * ltrunc ( register char *str );
 #else
-int mkargv();
 char* strupr();
 char* strlwr();
 char * getline();

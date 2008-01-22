@@ -96,7 +96,7 @@ void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void Suicide(void);
 void set_debug_flags( char *strflags );
 void _condor_fd_panic( int line, char *file );
-void _condor_set_debug_flags( char *strflags );
+void _condor_set_debug_flags( const char *strflags );
 
 /* must call this before clone(CLONE_VM|CLONE_VFORK) */
 void dprintf_before_shared_mem_clone( void );
