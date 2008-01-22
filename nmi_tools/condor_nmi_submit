@@ -966,6 +966,7 @@ sub writeBuildGlue
     print $fh "remote_task = nmi_glue/build/remote_task\n";
     print $fh "remote_post = nmi_glue/build/remote_post\n";
     print $fh "platform_post = nmi_glue/build/platform_post\n";
+    print $fh "post_all = nmi_glue/build/post_all\n";
 
     # Pass arguments to remote_pre script
     if( defined($opt_use_externals_cache) ) {
@@ -1042,6 +1043,8 @@ sub writeTestGlue
         print $fh "alpha_osf_V5.1_remote_task_timeout = $dux_test_timeout\n";
     }
     print $fh "remote_post = nmi_glue/test/remote_post\n";
+    print $fh "platform_post = nmi_glue/test/platform_post\n";
+    print $fh "post_all = nmi_glue/test/post_all\n";
     print $fh "\n";
 }
 
