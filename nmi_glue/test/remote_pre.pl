@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.24 2007-12-19 21:04:00 bt Exp $
+# $Id: remote_pre.pl,v 1.24.2.1 2008-01-22 17:49:38 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -166,6 +166,12 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 
 }
 
+######################################################################
+# Remove leftovers from extracting built binaries.
+######################################################################
+
+print "Removing $version tar file and extraction\n";
+system("rm -rf $version*");
 
 ######################################################################
 # setup the src tree so the test suite finds condor_compile and its

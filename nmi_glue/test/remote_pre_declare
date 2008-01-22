@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_pre_declare,v 1.7 2007-11-08 22:53:46 nleroy Exp $
+# $Id: remote_pre_declare,v 1.7.6.1 2008-01-22 17:49:38 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -78,7 +78,10 @@ if( $? ) {
     die "moving condor-$vers/* to $BaseDir failed with status $?\n";
 }
 print "Move completed successfully\n";
-
+print "Removing $src_file now.\n";
+system("rm -rf $src_file");
+print "Remove empty shell from source extratcion:condor-$vers\n";
+system("rm -rf condor-$vers");
 
 ######################################################################
 # set up environment and create env file for the rest of the scripts
