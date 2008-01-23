@@ -58,6 +58,7 @@ HistorySnapshot::HistorySnapshot(const char* dbcon_str)
 		jqDB = new PGSQLDatabase(dbcon_str);
 		break;
 	default:
+		jqDB = NULL;
 		break;;
 	}
 
@@ -68,7 +69,6 @@ HistorySnapshot::HistorySnapshot(const char* dbcon_str)
 	cur_historyads_hor_index = -1;
 	cur_historyads_ver_index = -1;
 	dt = T_PGSQL;
-	jqDB = NULL;
 }
 
 //! destructor
