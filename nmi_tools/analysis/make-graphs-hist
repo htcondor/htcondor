@@ -39,7 +39,7 @@ my $RATIO = 0.3;
 
 # Scale factor for graph as whole
 # Setting it larger makes lines thinner and fonts smaller
-my $SCALE = 3;
+my $SCALE = 2;
 
 # Constants.  Ignore them.
 my $BIN_DAY = 'DAY';

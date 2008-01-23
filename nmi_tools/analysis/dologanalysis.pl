@@ -19,13 +19,14 @@ select(STDERR);
 chdir("/p/condor/public/html/developers/download_stats");
 
 my $tooldir = "/p/condor/home/tools/build-test-plots/";
+#my $tooldir = "/p/condor/workspaces/bt/v700branch/nmi_tools/analysis";
 my $datalocation = "/p/condor/public/license/";
 my $datacruncher = "filter_sendfile";
 my $crunch = $datalocation . $datacruncher;
 #my @datafiles = ( "sendfile-v6.0", "sendfile-v6.1", "sendfile-v6.2", "sendfile-v6.3", "sendfile-v6.4", "sendfile-v6.5", "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9","sendfile-v7.0", "sendfile-v7.1" );
 #my @datafiles = ( "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9","sendfile-v7.0", "sendfile-v7.1" );
-my @datafiles = ( "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9" );
-my $stable = "sendfile-v6.8";
+my @datafiles = ( "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9", "sendfile-v7.0" );
+my $stable = "sendfile-v7.0";
 my $developer = "sendfile-v6.9";
 #my @datafiles = ( "sendfile-v6.8" );
 
@@ -92,9 +93,11 @@ $day = 0;
 $year;
 $skip = "true";
 $trimdata = "no";
+$firstoutput;
 
 #print "$crunch\n";
 foreach $log (@datafiles) {
+	$firstoutput = 0;
 	$datafile = $datalocation . $log;
 	print "$log\n";
 	$outfile = $log . ".data";
@@ -164,7 +167,7 @@ foreach $log (@datafiles) {
 	#close the date file and generate image
 	close(LOGDATA);
 	close(OUT);
-	$graphcmd = "$tooldir/./make-graphs-hist --firstdate \"$firstdate\" --detail downloadlogs --daily --input $outfile --output $image";
+	$graphcmd = "$tooldir/make-graphs-hist --firstdate \"$firstdate\" --detail downloadlogs --daily --input $outfile --output $image";
 	#print "About to execute this:\n";
 	#print "$graphcmd\n";
 	system("$graphcmd");
@@ -174,9 +177,9 @@ foreach $log (@datafiles) {
 	$shortdate = mk2month_strtdate($day, $month, $year);
 
 	if($log eq $developer) {
-		$graphcmd = "$tooldir/./make-graphs-hist --firstdate \"$shortdate\" --detail downloadlogs --daily --input $outfile --output developer.png";
+		$graphcmd = "$tooldir/make-graphs-hist --firstdate \"$shortdate\" --detail downloadlogs --daily --input $outfile --output developer.png";
 	} elsif ($log eq $stable) {
-		$graphcmd = "$tooldir/./make-graphs-hist --firstdate \"$shortdate\" --detail downloadlogs --daily --input $outfile --output stable.png";
+		$graphcmd = "$tooldir/make-graphs-hist --firstdate \"$shortdate\" --detail downloadlogs --daily --input $outfile --output stable.png";
 	}
 	if(($log eq $developer) || ($log eq $stable)) {
 		print "About to execute this:\n";
@@ -271,6 +274,15 @@ sub ResetCounters
 sub DoOutput
 {
 	my $scale = shift;
+
+	if($firstoutput == 0) {
+		#ok if we start a data set on the 1st of the month we "should"
+		# roll the data to the previous month....
+		print "starting 0 data point\n";
+		$dayearly = $day - 1;
+		print OUT "$months{$month} $dayearly $year, 0, 0, 0, 0, 0, 0\n";
+		$firstoutput = 1;
+	}
 	if( $scale == 0 ) {
 		print OUT "$months{$month} $day $year, $totalgood, $negbad, 0, 0, 0, 0\n";
 	} elsif( $scale == 1 ) {
