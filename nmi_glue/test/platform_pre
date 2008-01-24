@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: platform_pre,v 1.6.4.1 2008-01-22 17:49:37 bt Exp $
+# $Id: platform_pre,v 1.6.4.2 2008-01-24 21:28:41 bt Exp $
 # Submit-side NMI build system infrastructure to setup platform
 # specific input for test jobs.  All we have to do is trim down the
 # architecture-dependent results.tar.gz file to remove all the
@@ -107,7 +107,6 @@ if(!(-f $extractdone)) {
 	if( ! $saved_tarball ) {
     	die "Can't find any tarball that matches '$test_type' in $results\n";
 	}
-}
 
 
 ######################################################################
@@ -115,7 +114,6 @@ if(!(-f $extractdone)) {
 #    move it to this parent directory.
 ######################################################################
 
-if(!(-f $extractdone)) {
 	print "Unpacking architecture-dependent results.tar.gz\n";
 	open( UNTAR, "tar -zxvf $results $saved_tarball|" ) || 
     	die "Can't open tar -zxvf $results $saved_tarball: $!\n";
@@ -139,14 +137,12 @@ if(!(-f $extractdone)) {
 	}
 
 
-}
 
 ######################################################################
 # 2) Now that we found the binary we want, untar the pre-built test
 #	 programs from the tarball and move them to this parent directory.
 ######################################################################
 
-if(!(-f $extractdone)) {
 	$testbin = "public/testbin";
 	print "Unpacking testbin/testbin_dir from results.tar.gz\n";
 	open( UNTAR, "tar -zxvf $results $testbin |" ) || 
