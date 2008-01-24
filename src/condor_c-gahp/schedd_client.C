@@ -456,7 +456,8 @@ doContactSchedd()
 		if (!dc_schedd.receiveJobSandbox( constraint.Value(),
 										  &errstack, &jobssent )) {
 			error = TRUE;
-			error_msg.sprintf( "Error connecting to schedd %s", ScheddAddr );
+			error_msg.sprintf( "Error receiving files from schedd %s: %s",
+							   ScheddAddr, errstack.getFullText() );
 			dprintf( D_ALWAYS, "%s\n", error_msg.Value() );
 		}
 
