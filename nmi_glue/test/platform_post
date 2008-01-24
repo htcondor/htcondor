@@ -46,3 +46,4 @@ print "Condor version: $vers\n";
 $src_file = "condor-$vers.tar.gz";
 system("rm -f $src_file");
 
+exit(0);
