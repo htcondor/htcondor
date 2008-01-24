@@ -157,22 +157,3 @@ platforms = x86_rhap_5
 test_append_prereqs = java-1.4.2_05
 ]
 
-[
-platforms = x86_sles_9
-test_append_prereqs = java-1.4.2_05
-]
-
-[
-platforms = x86_fc_3
-test_append_prereqs = java-1.4.2_05
-]
-
-[
-platforms = x86_rhas_4
-test_append_prereqs = java-1.4.2_05
-]
-
-[
-platforms = x86_64_rhas_4
-test_append_prereqs = java-1.4.2_05
-]
