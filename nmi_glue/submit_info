@@ -78,7 +78,6 @@ x_test_platforms_x86_rhas_3 = x86_fc_3, x86_sles9, x86_rhas_4
 #x_test_platforms_ppc_aix_5.2 = ppc_aix_5.3
 #x_test_platforms_ia64_64_rhas_3 = ia64_64_rhas_4
 #x_test_platforms_x86_64_rhas_3 =x86_64_rhas_4, x86_64_fc_4, x86_64_fc_5
-x_test_platforms_x86_64_rhas_3 = x86_64_rhas_4
 ]   
 
 ########################################
@@ -94,7 +93,7 @@ prereqs   = tar-1.14, m4-1.4.1, flex-2.5.4a, make-3.80, bison-1.25, perl-5.8.5
 # Platforms with no prereqs at all
 ########################################
 [
-platforms = ia64_sles_8, ia64_rhas_3, x86_64_rhas_3, \
+platforms = ia64_sles_8, ia64_rhas_3, x86_64_rhas_3,  x86_64_rhas_4, \
             x86_winnt_5.1, ppc64_sles_9, ps3_ydl_5.0, x86_rhap_5
 ]
 
@@ -105,12 +104,12 @@ platforms = ia64_sles_8, ia64_rhas_3, x86_64_rhas_3, \
 [
 platforms =   \
 	ia64_sles_8, ia64_rhas_3, x86_64_rhas_3, \
-	ppc_aix_5.2, \
+	x86_64_rhas_4, ppc_aix_5.2, \
 	sun4u_sol_5.8, sun4u_sol_5.9, \
 	x86_rh_9, \
 	x86_rhas_3
 test_append_prereqs = java-1.4.2_05
-#x_test_platforms_x86_64_rhas_3 = x86_64_rhas_4
+x_test_platforms_x86_64_rhas_3 = x86_64_rhas_4
 ]
 
 [
