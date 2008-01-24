@@ -252,7 +252,7 @@ DC_Exit( int status )
 		// default).  If so, use the given status.  Otherwise, use the
 		// special code to tell our parent not to restart us.
 	int exit_status;
-	if (daemonCore->wantsRestart()) {
+	if (daemonCore == NULL || daemonCore->wantsRestart()) {
 		exit_status = status;
 	}
 	else {
