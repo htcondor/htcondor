@@ -265,14 +265,15 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		return false;
 	}
 	if ( use_new_command ) {
-		if( ! startCommand(TRANSFER_DATA_WITH_PERMS, (Sock*)&rsock) ) {
+		if( ! startCommand(TRANSFER_DATA_WITH_PERMS, (Sock*)&rsock, 0,
+						   errstack) ) {
 			dprintf( D_ALWAYS, "DCSchedd::receiveJobSandbox: "
 					 "Failed to send command (TRANSFER_DATA_WITH_PERMS) "
 					 "to the schedd\n" );
 			return false;
 		}
 	} else {
-		if( ! startCommand(TRANSFER_DATA, (Sock*)&rsock) ) {
+		if( ! startCommand(TRANSFER_DATA, (Sock*)&rsock, 0, errstack) ) {
 			dprintf( D_ALWAYS, "DCSchedd::receiveJobSandbox: "
 					 "Failed to send command (TRANSFER_DATA) "
 					 "to the schedd\n" );
@@ -284,7 +285,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 	if (!forceAuthentication( &rsock, errstack )) {
 		dprintf( D_ALWAYS, 
 			"DCSchedd::receiveJobSandbox: authentication failure: %s\n",
-			errstack->getFullText() );
+			errstack ? errstack->getFullText() : "" );
 		return false;
 	}
 
@@ -314,13 +315,38 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 	}
 	free( nc_constraint );
 
-	rsock.eom();
+	if ( !rsock.eom() ) {
+		MyString errmsg;
+		errmsg.sprintf(
+			"Can't send initial message (version + constraint) to schedd (%s)",
+			_addr );
+
+		dprintf(D_ALWAYS,"DCSchedd::receiveJobSandbox: %s\n", errmsg.Value() );
+
+		if( errstack ) {
+			errstack->push(
+				"DCSchedd::receiveJobSandbox",
+				CEDAR_ERR_EOM_FAILED,
+				errmsg.Value());
+		}
+		return false;
+	}
 
 		// Now, read how many jobs matched the constraint.
 	rsock.decode();
 	if ( !rsock.code(JobAdsArrayLen) ) {
-		dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
-				"Can't receive JobAdsArrayLen from the schedd\n");
+		MyString errmsg;
+		errmsg.sprintf( "Can't receive JobAdsArrayLen from the schedd (%s)",
+						_addr );
+
+		dprintf(D_ALWAYS,"DCSchedd::receiveJobSandbox: %s\n", errmsg.Value() );
+
+		if( errstack ) {
+			errstack->push(
+				"DCSchedd::receiveJobSandbox",
+				CEDAR_ERR_GET_FAILED,
+				errmsg.Value());
+		}
 		return false;
 	}
 
@@ -337,8 +363,17 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 
 			// grab job ClassAd
 		if ( !job.initFromStream(rsock) ) {
-			dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
-				"Can't receive job ad %d from the schedd\n", i+1);
+			MyString errmsg;
+			errmsg.sprintf( "Can't receive job ad %d from the schedd", i );
+
+			dprintf(D_ALWAYS,"DCSchedd::receiveJobSandbox: %s\n", errmsg.Value() );
+
+			if( errstack ) {
+				errstack->push(
+							   "DCSchedd::receiveJobSandbox",
+							   CEDAR_ERR_GET_FAILED,
+							   errmsg.Value());
+			}
 			return false;
 		}
 
@@ -379,6 +414,16 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		}	// while next expr
 
 		if ( !ftrans.SimpleInit(&job,false,false,&rsock) ) {
+			if( errstack ) {
+				int cluster = -1, proc = -1;
+				job.LookupInteger(ATTR_CLUSTER_ID,cluster);
+				job.LookupInteger(ATTR_PROC_ID,proc);
+				errstack->pushf(
+					"DCSchedd::receiveJobSandbox",
+					FILETRANSFER_INIT_FAILED,
+					"File transfer initialization failed for target job %d.%d",
+					cluster, proc );
+			}
 			return false;
 		}
 		// We want files to be copied to their final places, so apply
@@ -390,6 +435,18 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 			ftrans.setPeerVersion( version() );
 		}
 		if ( !ftrans.DownloadFiles() ) {
+			if( errstack ) {
+				FileTransfer::FileTransferInfo ft_info = ftrans.GetInfo();
+
+				int cluster = -1, proc = -1;
+				job.LookupInteger(ATTR_CLUSTER_ID,cluster);
+				job.LookupInteger(ATTR_PROC_ID,proc);
+				errstack->pushf(
+					"DCSchedd::receiveJobSandbox",
+					FILETRANSFER_DOWNLOAD_FAILED,
+					"File transfer failed for target job %d.%d: %s",
+					cluster, proc, ft_info.error_desc.Value() );
+			}
 			return false;
 		}
 	}	
