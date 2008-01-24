@@ -3,11 +3,11 @@
 Summary: Condor's ClassAd Library
 Name: classads
 Version: 1.0
-Release: 0.1.rc2
-License: Condor Public License
+Release: 0.1.rc3
+License: ASL 2.0
 Group: Development/Libraries
 URL: http://www.cs.wisc.edu/condor/classad/
-Source0: ftp://ftp.cs.wisc.edu/condor/classad/c++/classads-1.0rc2.tar.gz
+Source0: ftp://ftp.cs.wisc.edu/condor/classad/c++/classads-1.0rc3.tar.gz
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 #BuildRequires: libtool
@@ -56,7 +56,7 @@ Static versions of Condor's ClassAd Library's libraries, a powerful
 and flexible, semi-structured representation of data.
 
 %prep
-%setup -q -n classads-1.0rc2
+%setup -q -n classads-1.0rc3
 
 %build
 %configure --enable-namespace --enable-flexible-member CC=g++
@@ -75,7 +75,7 @@ make check
 
 %files
 %defattr(-,root,root,-)
-%doc LICENSE README CHANGELOG
+%doc LICENSE-2.0.txt README CHANGELOG NOTICE.txt
 %_libdir/libclassad.so.0
 %_libdir/libclassad.so.0.0.0
 %_libdir/libclassad_ns.so.0
@@ -84,7 +84,7 @@ make check
 
 %files devel
 %defattr(-,root,root,-)
-%doc LICENSE README CHANGELOG
+%doc LICENSE-2.0.txt README CHANGELOG NOTICE.txt
 %_bindir/classad_version
 %_bindir/classad_version_ns
 %_bindir/classad_functional_tester
@@ -126,7 +126,7 @@ make check
 
 %files static
 %defattr(-,root,root,-)
-%doc LICENSE README CHANGELOG
+%doc LICENSE-2.0.txt README CHANGELOG NOTICE.txt
 %_libdir/libclassad.a
 %_libdir/libclassad_ns.a
 
@@ -136,6 +136,10 @@ make check
 
 
 %changelog
+* Thu Jan 24 2008  <mfarrellee@redhat> - 1.0-0.1.rc3
+- Updated to Apache Licensed version, 1.0.0rc3
+- Added LICENSE-2.0.txt and NOTICE.txt to doc lines
+
 * Fri Aug 17 2007  <mfarrellee@redhat> - 1.0-0.1.rc2
 - Fixed Release tag
 

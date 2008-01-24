@@ -86,7 +86,7 @@ template_inst( coll-client-inst.C,coll-client-inst.o) 	/* collection client*/
 template_inst( exp-inst.C, exp-inst.o )					/* experimental */
 
 /* Standalone distribution of classads/collections */
-DIST_VERSION = 1.0rc2
+DIST_VERSION = 1.0rc3
 DISTRIBUTION_DIR = classads-$(DIST_VERSION)
 
 DIST_FILES = 								\
@@ -97,9 +97,10 @@ DIST_FILES = 								\
 	lexerSource.C literals.C matchClassad.C operators.C query.C	\
 	sample.C shared.C sink.C source.C test_instantiations.C		\
 	test_xml.C tests.txt transaction.C util.C value.C view.C	\
-	xmlLexer.C xmlSink.C xmlSource.C cclassad.C LICENSE README	\
+	xmlLexer.C xmlSink.C xmlSource.C cclassad.C README		\
 	CHANGELOG configure.ac Makefile.am.m4 functional_tests.txt	\
-	ClassAd.swg classads.spec classad_functional_tester.h
+	ClassAd.swg classads.spec classad_functional_tester.h		\
+	NOTICE.txt LICENSE-2.0.txt
 
 H_FILES = 								\
 	classad/attrrefs.h classad/cclassad.h				\
@@ -145,6 +146,7 @@ dist: $(DIST_FILES)
 	(cd $(DISTRIBUTION_DIR) ; m4 Makefile.am.m4 > Makefile.am)
 	(cd $(DISTRIBUTION_DIR) ; chmod a-w Makefile.am)
 	(cd $(DISTRIBUTION_DIR) ; autoreconf --install)
+	(cd $(DISTRIBUTION_DIR) ; rm -rf autom4te.cache)
 	tar cf $(DISTRIBUTION_DIR).tar $(DISTRIBUTION_DIR)
 	gzip $(DISTRIBUTION_DIR).tar
 	chmod 664 $(DISTRIBUTION_DIR).tar.gz
