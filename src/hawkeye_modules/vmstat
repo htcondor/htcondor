@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -232,7 +232,7 @@ sub RunIt( $ )
     {
 	next if ( /[a-zA-Z]/ );
 	my @VmStat = split;
-	if ( $#VmStat != $#{$Table} )
+	if ( $#VmStat > $#{$Table} )
 	{
 	    die "Field mismatch: Expect $#{$Table}, found $#VmStat";
 	}
@@ -282,7 +282,9 @@ sub GetNameTable( )
 			       "SysContextSec",
 			       "CpuUserPct",
 			       "CpuSysPct",
-			       "CpuIdlePct" ],
+			       "CpuIdlePct",
+			       "StolenFromVM",
+			       ],
 		   },
 
 		   # Solaris
