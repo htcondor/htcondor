@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: platform_post,v 1.10.2.2 2008-01-24 18:42:36 bt Exp $
+# $Id: platform_post,v 1.10.2.3 2008-01-25 15:43:52 bt Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -118,7 +118,7 @@ print "Attempting to submit test job for platform: '$platform' "
 	. "runid: '$runid' ...\n";
 
 # path to the condor_nmi_submit binary we're planning to use
-my $cns = "nmi_tools.devel/condor_nmi_submit";
+my $cns = "nmi_tools/condor_nmi_submit";
 -f $cns || die "Can't submit tests: $cns does not exist\n";
 if( ! -x $cns ) {
 	chmod(0755, $cns) || die "Can't submit tests: $cns is not executable "
