@@ -1674,6 +1674,38 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 			return false;
 		}
 	}
+	// Do attribute evaluation assignments
+	for( itr = m_route_ad.begin( ); itr != m_route_ad.end( ); itr++ ) {
+		char const *attr = itr->first.c_str();
+		if(strncmp(attr,"eval_set_",9)) continue;
+		attr = attr + 9;
+		dprintf(D_FULLDEBUG,"JobRouter (route=%s): Setting attribute %s to an evaluated expression\n",Name(),attr);
+		if( !( tree = itr->second->Copy( ) ) ) {
+			return false;
+		}
+		if(!src_ad->Insert(attr,tree)) {
+			return false;
+		}
+		classad::Value val;
+		if(!src_ad->EvaluateAttr(attr,val)) {
+			dprintf(D_ALWAYS,"JobRouter (route=%s): Failed to evaluate %s\n",Name(),attr);
+			return false;
+		}
+		classad::ClassAdUnParser unparser;
+		std::string valstr;
+		unparser.Unparse( valstr, val );
+
+		classad::ExprTree *valtree;
+		classad::ClassAdParser parser;
+		valtree=parser.ParseExpression(valstr);
+		if( !valtree ) {
+			dprintf(D_ALWAYS,"JobRouter (route=%s): Failed to parse unparsed evaluation of %s\n",Name(),attr);
+			return false;
+		}
+		if(!src_ad->Insert(attr,valtree)) {
+			return false;
+		}
+	}
 	src_ad->EnableDirtyTracking();
 
 	return true;
