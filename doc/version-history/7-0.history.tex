@@ -43,6 +43,15 @@ The details of each version are described below.
 description file defines a set of job ClassAd attributes whose values
 should be included in the e-mail notification of job completion.
 
+\item The configuration variable \MacroNI{CONDOR\_VIEW\_HOST} may now
+contain a port number and may (if desired) refer to a
+\Condor{collector} daemon running on the same host as the
+\Condor{collector} that is forwarding ads.  It is also now possible to
+use the forwarded ads for matchmaking purposes.  For example, several
+collectors could forward ads to a single aggregating collector which
+a \Condor{negotiator} then uses as its source of information for
+matchmaking.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
