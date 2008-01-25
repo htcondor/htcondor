@@ -53,6 +53,7 @@ CONFIG		-a config
 TOOLS		-a config imake NMI_GLUE
 DOC		-a doc LICENSE
 NT_TOOLS	-a NTconfig
+MS_TOOLS	-a msbuild
 
 # Windows-only programs. dagedit will be added here too.
 NT_PROGRAMS -a src/condor_birdwatcher 
@@ -1114,6 +1115,7 @@ V6_9_BUILD	-a V6_9_ALL externals
 # Modules needed for the 7.0.x series
 V7_0_UNIX_CODE	-a TOOLS V7_0_SRC
 V7_0_NT_CODE	-a NT_TOOLS NT_PROGRAMS V7_0_SRC
+V7_0_MS_CODE	-a MS_TOOLS NT_PROGRAMS V7_0_SRC
 V7_0_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V7_0_SRC
 V7_0_ALL	-a DOC V7_0_CODE
 V7_0_BUILD	-a V7_0_ALL externals
