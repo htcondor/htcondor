@@ -1015,10 +1015,20 @@ void CollectorDaemon::Config()
 
     tmp = param("CONDOR_VIEW_HOST");
     if(tmp) {
-       if(!same_host(my_full_hostname(), tmp) ) {
-           dprintf(D_ALWAYS, "Will forward ads on to View Server %s\n", tmp);
-           View_Collector = new DCCollector( tmp );
+       View_Collector = new DCCollector( tmp );
+       char const *addr = View_Collector->addr();
+
+       if( addr && ( !strcmp(addr,daemonCore->privateNetworkIpAddr()) ||
+                     !strcmp(addr,daemonCore->publicNetworkIpAddr()) ) )
+       {
+       	     // Do not forward to myself.
+          dprintf(D_ALWAYS, "Not forwarding to View Server %s, because that's me!\n", tmp);
+          delete View_Collector;
+          View_Collector = NULL;
        } 
+       else {
+          dprintf(D_ALWAYS, "Will forward ads on to View Server %s\n", tmp);
+       }
        free(tmp);
        if(View_Collector) {
            view_sock = View_Collector->safeSock(); 
@@ -1195,6 +1205,27 @@ CollectorDaemon::send_classad_to_sock(int cmd, Daemon * d, ClassAd* theAd)
             return;
         }
     }
+
+	if( cmd == UPDATE_STARTD_AD ) {
+			// Forward the startd private ad as well.  This allows the
+			// target collector to act as an aggregator for multiple collectors
+			// that balance the load of authenticating connections from
+			// the rest of the pool.
+
+		AdNameHashKey		hk;
+		ClassAd *pvt_ad;
+
+		ASSERT( makeStartdAdHashKey (hk, theAd, NULL) );
+		pvt_ad = collector.lookup(STARTD_PVT_AD,hk);
+		if( pvt_ad ) {
+			if( ! pvt_ad->put( *view_sock ) ) {
+				dprintf( D_ALWAYS, "Can't forward startd private classad to View Collector\n");
+				view_sock->end_of_message();
+				return;
+			}
+		}
+	}
+
     if( ! view_sock->end_of_message() ) {
         dprintf( D_ALWAYS, "Can't send end_of_message to View Collector\n");
         return;
