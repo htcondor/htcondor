@@ -104,7 +104,7 @@ platforms = ia64_sles_8, ia64_rhas_3, x86_64_rhas_3 \
 [
 platforms =   \
 	ia64_sles_8, ia64_rhas_3, x86_64_rhas_3, \
-	x86_64_rhas_4, ppc_aix_5.2, \
+	ppc_aix_5.2, \
 	sun4u_sol_5.8, sun4u_sol_5.9, \
 	x86_rh_9, \
 	x86_rhas_3
