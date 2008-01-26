@@ -23,7 +23,7 @@
 #We will be removing the platform app_input.tar.gz until NMI does
 ##################################################################
 
-$appinput = "../../" . $ENV{NMI_PLATFORM} . "_app_input.tar.gz"
+$appinput = "../../" . $ENV{NMI_PLATFORM} . "_app_input.tar.gz";
 print "Looking to see is $appinput is around and removing\n";
 system("rm -f $appinput");
 
