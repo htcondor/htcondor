@@ -26,7 +26,7 @@ GetOptions (
 		'start=s' => \$newwd,
 );
 
-$branch1 = "7_0_0";
+$branch1 = "7_0";
 $branch2 = "7_1";
 $tmp_builddata1 = "/tmp/btplots/" . $branch1 . "autobuilds";
 $tmp_builddata2 = "/tmp/btplots/" . $branch2 . "autobuilds";
