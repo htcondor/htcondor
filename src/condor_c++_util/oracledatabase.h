@@ -84,7 +84,7 @@ public:
 	QuillErrCode         releaseQueryResult();
 
 	const char*          getHistoryHorFieldName(int col);
-	const int            getHistoryHorNumFields();
+	int            getHistoryHorNumFields();
 	QuillErrCode		 releaseHistoryResults();		
 
 	       // cursor declaration and reclamation routines
@@ -106,10 +106,10 @@ public:
 									   int& clusterAdsVerRes_num);
 
 	const char*		 	 getJobQueueProcHorFieldName(int col);
-	const int			 getJobQueueProcHorNumFields();
+	int			 getJobQueueProcHorNumFields();
 
 	const char*			 getJobQueueClusterHorFieldName(int col);
-	const int			 getJobQueueClusterHorNumFields();
+	int			 getJobQueueClusterHorNumFields();
 
 		// The values returned by the following methods must be copied out
 		// before a subsequent call to any of the following methods. This
