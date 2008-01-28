@@ -1070,6 +1070,9 @@ void CollectorDaemon::Config()
     size = param_integer ("COLLECTOR_DAEMON_HISTORY_SIZE",128);
     collectorStats.setDaemonHistorySize( size );
 
+	time_t garbage_interval = param_integer( "COLLECTOR_STATS_SWEEP", DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL );
+	collectorStats.setGarbageCollectionInterval( garbage_interval );
+
     size = param_integer ("COLLECTOR_QUERY_WORKERS",0);
     forkQuery.setMaxWorkers( size );
 

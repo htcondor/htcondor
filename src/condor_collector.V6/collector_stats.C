@@ -32,14 +32,19 @@
 // The hash function to use
 static unsigned int hashFunction (const StatsHashKey &key)
 {
-    unsigned int bkt = 0;
+    unsigned int result = 0;
 	const char *p;
 
-    for (p = key.type.GetCStr(); p && *p; bkt += *p++);
-    for (p = key.name.GetCStr(); p && *p; bkt += *p++);
-    for (p = key.ip_addr.GetCStr(); p && *p; bkt += *p++);
+    for (p = key.type.GetCStr(); p && *p;
+	     result = (result<<5) + result + (unsigned int)(*(p++)));
 
-    return bkt;
+    for (p = key.name.GetCStr(); p && *p;
+	     result = (result<<5) + result + (unsigned int)(*(p++)));
+
+    for (p = key.ip_addr.GetCStr(); p && *p;
+	     result = (result<<5) + result + (unsigned int)(*(p++)));
+
+    return result;
 }
 
 bool operator== (const StatsHashKey &lhs, const StatsHashKey &rhs)
@@ -82,6 +87,8 @@ CollectorBaseStats::CollectorBaseStats ( int history_size )
 
 	// Reset the stats
 	reset( );
+
+	m_recently_updated = true;
 }
 
 // Destructor
@@ -156,6 +163,8 @@ CollectorBaseStats::setHistorySize ( int new_size )
 int
 CollectorBaseStats::updateStats ( bool sequenced, int dropped )
 {
+	m_recently_updated = true;
+
 	// Store this update
 	storeStats( sequenced, dropped );
 
@@ -675,6 +684,8 @@ CollectorStats::CollectorStats( bool enable_daemon_stats,
 	classList = new CollectorClassStatsList( class_history_size );
 	daemonList = new CollectorDaemonStatsList( enable_daemon_stats,
 											   daemon_history_size );
+	m_last_garbage_time = time(NULL);
+	m_garbage_interval = DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL;
 }
 
 // Destructor
@@ -712,6 +723,8 @@ int
 CollectorStats::update( const char *className,
 						ClassAd *oldAd, ClassAd *newAd )
 {
+	considerCollectingGarbage();
+
 	// No old ad is trivial; handle it & get out
 	if ( ! oldAd ) {
 		classList->updateStats( className, false, 0 );
@@ -770,4 +783,63 @@ CollectorStats::publishGlobal( ClassAd *ad )
 	classList->publish( ad );
 
 	return 0;
+}
+
+void
+CollectorStats::considerCollectingGarbage() {
+	time_t now = time(NULL);
+	if( m_garbage_interval <= 0 ) {
+		return; // garbage collection is disabled
+	}
+	if( now < m_last_garbage_time + m_garbage_interval ) {
+		if( now < m_last_garbage_time ) {
+				// last time is in the future -- clock must have been reset
+			m_last_garbage_time = now;
+		}
+		return;  // it is not time yet
+	}
+
+	m_last_garbage_time = now;
+	if( daemonList ) {
+		daemonList->collectGarbage();
+	}
+}
+
+void
+CollectorDaemonStatsList::collectGarbage()
+{
+	if( !hashTable ) {
+		return;
+	}
+
+	StatsHashKey key;
+	CollectorBaseStats *value;
+	int records_kept = 0;
+	int records_deleted = 0;
+
+	hashTable->startIterations();
+	while( hashTable->iterate( key, value ) ) {
+		if( value->wasRecentlyUpdated() ) {
+				// Unset the flag.  Any update to this record before
+				// the next call to this function will reset the flag.
+			value->setRecentlyUpdated(false);
+			records_kept++;
+		}
+		else {
+				// This record has not been updated since the last call
+				// to this function.  It is garbage.
+			MyString desc;
+			key.getstr( desc );
+			dprintf( D_FULLDEBUG, "Removing stale collector stats for %s\n",
+					 desc.Value() );
+
+			hashTable->remove( key );
+			delete value;
+			records_deleted++;
+		}
+	}
+	dprintf( D_ALWAYS,
+			 "COLLECTOR_STATS_SWEEP: kept %d records and deleted %d.\n",
+			 records_kept,
+			 records_deleted );
 }
