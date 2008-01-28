@@ -5092,6 +5092,13 @@ Reset OS socket buffer size to 2048k (UDP), 255k (TCP).
   or not.  ``UpdatesLost'' is the number of updates that the Collector
   has detected as being lost.
 
+\item[\Macro{COLLECTOR\_STATS\_SWEEP}]
+  \label{param:CollectorStatsSweep} This value specifies the number of
+  seconds between sweeps of the \Condor{collector}'s per-daemon update
+  statistics.  Records for daemons which have not reported in this amount
+  of time are purged in order to save memory.  The default is two days.
+  It is unlikely that you would ever need to adjust this.
+
 \item[\Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE}]
   \label{param:CollectorDaemonHistorySize} This macro controls the
   size of the published update history that the Collector inserts into

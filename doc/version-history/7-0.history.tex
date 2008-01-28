@@ -77,6 +77,15 @@ the 2GB mark.
 new local universe jobs would sometimes take up to \MacroNI{SCHEDD\_INTERVAL}
 (default 5 minutes) to be considered for running.
 
+\item The memory usage of \Condor{collector} used to grow over time if
+daemons with new names kept joining and then leaving the pool (e.g. a
+glidein pool).  This was due to statistics on dropped updates that
+accumulated for all daemons that ever advertised themselves to the
+collector.  These statistics are now periodically purged of
+information about daemons which have not reported in a long time.  How
+long is controlled by \MacroNI{COLLECTOR\_STATS\_SWEEP}, which
+defaults to 2 days.
+
 \end{itemize}
 
 \noindent Known Bugs:
