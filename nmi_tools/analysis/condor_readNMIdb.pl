@@ -172,7 +172,7 @@ sub CollectTimeResults
 	foreach $key (sort keys %platformlist) {
 		#print "Key-----<$key>\n";
 		my $datafile = "/tmp/btplots/V" . $branch . "-" . $key;
-		#print LIST "$datafile\n";
+		print LIST "$datafile\n";
 		open(DATA,">$datafile") || die "Failed to start datafile:<$datafile> $!\n";
 		foreach $run (@buildruns) {
 			#print "Looking at tests for<<$run>>\n";
