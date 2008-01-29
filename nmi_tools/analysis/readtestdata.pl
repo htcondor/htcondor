@@ -59,7 +59,7 @@ GetOptions (
 if ( $help )    { help() and exit(0); }
 
 if( $datafile ) {
-	#print "data file will be <<$datafile>>\n";
+	print "data file will be <<$datafile>>\n";
 }
 
 if( !$outfile ) {
@@ -105,23 +105,23 @@ $framework = 0;
 $limitloop = 0;
 open(DATA,"<$datafile") || die "Can not open <<$datafile>>: $!\n";
 while(<DATA>) {
-	#print "$_";
+	print "$_";
 	chomp($_);
 	$line = $_;
 	$gotdate = 0;
 
 	if( $line =~ /^(\d+)\-(\d+)\-(\d+)\s*$/) {
-		#print "got a date <<$1 $2 $3>>\n";
+		print "got a date <<$1 $2 $3>>\n";
 		$gotdate = 1;
 		$mydate = $2 . " " . $months{$1} . " " . $3;
-		#print "New style Date <<$mydate>>\n";
+		print "New style Date <<$mydate>>\n";
 	} elsif( $line =~ /^\s*Tests V(\d+_\d+).*$/) {
-		#print "found a branch <<$1>>\n";
+		print "found a branch <<$1>>\n";
 		$currentbranch = $1;
 	} elsif( $line =~ /^\s*Totals Passed\s*=\s*(\d+),\s*Failed\s*=\s*(\d+),.*Expected\s*=\s*(\d+)[,]*\s*Missing\s*=\s*(\d+).*$/ ) {
 		if($targetbranch eq $currentbranch) {
-		#print "**************************** hit Lost Tests ************************************\n";
-			#print "Branch hit <$currentbranch><$targetbranch>\n";
+		print "**************************** hit Lost Tests ************************************\n";
+			print "Branch hit <$currentbranch><$targetbranch>\n";
 			$passed = $1;
 			$failed = $2;
 			$expected = $3;
@@ -131,11 +131,11 @@ while(<DATA>) {
 			$texpected = $expected + $texpected;
 			$tmissing = $missing + $tmissing;
 		}
-		#print "$mydate, $branch, $passed, $failed, $expected, $missing, ";
+		print "$mydate, $branch, $passed, $failed, $expected, $missing, ";
 	} elsif( $line =~ /^\s*Test\s*=\s*(\d+),\s*Condor\s*=\s*(\d+),\s*Platform\s*=\s*(\d+),\s*Framework\s*=\s*(\d+).*$/) {
 		if($targetbranch eq $currentbranch) {
-		#print "**************************** hit Lost Tests ************************************\n";
-			#print "Branch hit <$currentbranch><$targetbranch>\n";
+		print "**************************** hit Lost Tests ************************************\n";
+			print "Branch hit <$currentbranch><$targetbranch>\n";
 			$test = $1;
 			$condor = $2;
 			$platform = $3;
@@ -145,16 +145,16 @@ while(<DATA>) {
 			$tplatform = $platform + $tplatform;
 			$tframework = $framework + $tframework;
 		}
-		#print "$test, $condor, $platform, $framework\n";
+		print "$test, $condor, $platform, $framework\n";
 		#Store_stats($mydate, $currentbranch, $passed, $failed, $expected, $missing, $test, $condor, $platform, $framework);
 	} elsif( $line =~ /^\s*Lost\s+Tests\((\d+)\)\s+Condor\s*=\s*(\d+)\s*Platform\s*=\s*(\d+)\s*Framework\s*=\s*(\d+).*$/) {
 		if($targetbranch eq $currentbranch) {
 			$cbuilderr = $2;
 			$pbuilderr = $3;
 			$fbuilderr = $4;
-		#print "**************************** hit Lost Tests ************************************\n";
-			#print "Branch hit <$currentbranch><$targetbranch>\n";
-			#print "framework:$4, Platform:$3, Condor:$2\n";
+		print "**************************** hit Lost Tests ************************************\n";
+			print "Branch hit <$currentbranch><$targetbranch>\n";
+			print "framework:$4, Platform:$3, Condor:$2\n";
 			$tcondor = $cbuilderr + $tcondor;
 			$tplatform = $pbuilderr + $tplatform;
 			$tframework = $fbuilderr + $tframework;
@@ -162,7 +162,7 @@ while(<DATA>) {
 			$totbuildp = $totbuildp + $pbuilderr;
 			$totbuildf = $totbuildf + $fbuilderr;
 		}
-		#print "c = $cbuilderr, p = $pbuilderr, f = $fbuilderr\n";
+		print "c = $cbuilderr, p = $pbuilderr, f = $fbuilderr\n";
 		Store_stats($mydate, $currentbranch, $passed, $failed, $expected, $missing, $test, $condor, $platform, $framework, $cbuilderr, $pbuilderr, $fbuilderr, $allbuilds, $goodbuilds, $failedbuilds);
 
 		#$limitloop = $limitloop + 1;
@@ -171,8 +171,8 @@ while(<DATA>) {
 
 	} elsif( $line =~ /^\s*Lost\s+Builds\((\d+)\/(\d+)\)\s+Condor\s*=\s*(\d+)\s*Platform\s*=\s*(\d+)\s*Framework\s*=\s*(\d+).*$/) {
 		if($targetbranch eq $currentbranch) {
-		#print "**************************** hit Lost Tests ************************************\n";
-			#print "Branch hit <$currentbranch><$targetbranch>\n";
+		print "**************************** hit Lost Tests ************************************\n";
+			print "Branch hit <$currentbranch><$targetbranch>\n";
 			$goodbuilds = ($2 - $1);
 			$allbuilds = $2;
 			$failedbuilds = $1;
@@ -189,7 +189,7 @@ while(<DATA>) {
 #print "Total Lost from Platform Build Issues($totbuildp)\n";
 #print "Total Lost from Framework Build Issues($totbuildf)\n";
 
-Write_stats("6_8",$view);
+Write_stats($targetbranch,$view);
 
 exit(0);
 
@@ -327,7 +327,7 @@ sub Write_stats
 	my $mode = shift; # production vs issues
 	my $subjectbranch = "";
 
-#print "write mode = $mode\n";
+print "write mode = $mode\n";
 	my $date = 0;
 	my $databranch = 0;
 	my $passed = 0;
@@ -350,20 +350,20 @@ sub Write_stats
 	open(OUTDATA,">$outfile") || die "Can not open <<$outfile>>: $!\n";
 
 	if($mode eq "testsum") {
-		#print "Date, Expected, Passed, Failed\n";
+		print "Date, Expected, Passed, Failed\n";
 	} elsif($mode eq "details") {
-		#print "Date, Test, Condor, Platform, Framework\n";
+		print "Date, Test, Condor, Platform, Framework\n";
 	} else {
-		#print "Date, Passed, Failed, Expected, Missing, Test, Condor, Platform, Framework\n";
+		print "Date, Passed, Failed, Expected, Missing, Test, Condor, Platform, Framework\n";
 	}
 	foreach $datapoint (@monthlydata) {
 
-		#print "looking for $branch\n";
+		print "looking for $branch\n";
 		$subjectbranch = $datapoint->branch();
-		#print "Subject branch: $subjectbranch \n";
+		print "Subject branch: $subjectbranch \n";
 		if($subjectbranch eq $branch) {
 			$date = $datapoint->date();
-			#$branch = $datapoint->branch();
+			$branch = $datapoint->branch();
 			$passed = $datapoint->passed();
 			$failed = $datapoint->failed();
 			$expected = $datapoint->expected();
