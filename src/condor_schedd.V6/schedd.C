@@ -12652,8 +12652,6 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 		//		Always calculate a new time
 		//	
 	if ( valid && calculate ) {
-		dprintf( D_FULLDEBUG, "Calculating next execution time for Job %d.%d\n",
-				 id.cluster, id.proc );
 			//
 			// Get the next runtime from our current time
 			// I used to subtract the DEFERRAL_WINDOW time from the current
@@ -12664,6 +12662,8 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			//
 		long runTime = cronTab->nextRunTime( );
 
+		dprintf( D_FULLDEBUG, "Calculating next execution time for Job %d.%d = %ld\n",
+				 id.cluster, id.proc, runTime );
 			//
 			// We have a valid runtime, so we need to update our job ad
 			//
