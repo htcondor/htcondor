@@ -535,6 +535,7 @@ extern const char * ATTR_SHADOW_BIRTHDATE;
 extern const char * ATTR_HOLD_REASON;
 extern const char * ATTR_HOLD_REASON_CODE;
 extern const char * ATTR_HOLD_REASON_SUBCODE;
+extern const char * ATTR_HOLD_COPIED_FROM_TARGET_JOB;
 extern const char * ATTR_WANT_MATCHING;
 extern const char * ATTR_WANT_RESOURCE_AD;
 extern const char * ATTR_TOTAL_SUSPENSIONS;

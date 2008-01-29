@@ -55,6 +55,13 @@ return true on success, false on failure.
 
 
 */
-bool update_job_status( classad::ClassAd & orig, classad::ClassAd & newgrid);
+bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgrid, classad::ClassAd &update);
+
+/*
+ Returns true if the original job is on hold only because it is mirroring
+ the state of the target job.  Otherwise, if this job is on hold, it must
+ have gone on hold for some other reason.
+*/
+bool hold_copied_from_target_job(classad::ClassAd const &orig);
 
 #endif /*#ifndef _VANILLA_TO_GRID_H_*/

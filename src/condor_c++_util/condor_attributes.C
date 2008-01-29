@@ -599,6 +599,7 @@ const char *ATTR_SHADOW_BIRTHDATE		 = "ShadowBday";
 const char *ATTR_HOLD_REASON				 = "HoldReason";
 const char *ATTR_HOLD_REASON_CODE		 = "HoldReasonCode";
 const char *ATTR_HOLD_REASON_SUBCODE		 = "HoldReasonSubCode";
+const char *ATTR_HOLD_COPIED_FROM_TARGET_JOB = "HoldCopiedFromTargetJob";
 const char *ATTR_WANT_MATCHING			 = "WantMatching";
 const char *ATTR_WANT_RESOURCE_AD		 = "WantResAd";
 const char *ATTR_TOTAL_SUSPENSIONS        = "TotalSuspensions";

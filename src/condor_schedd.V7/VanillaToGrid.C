@@ -121,35 +121,50 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, const char * gridresour
 	return true;
 }
 
-
-
-static void set_job_status_idle(classad::ClassAd &orig)
+bool hold_copied_from_target_job(classad::ClassAd const &orig)
 {
-	int origstatus;
-	if( orig.EvaluateAttrInt(ATTR_JOB_STATUS, origstatus) ) {
-		if(origstatus == IDLE || origstatus == HELD || origstatus == REMOVED) {
-			return;
+	bool hold_copied_from_target = false;
+	if( orig.EvaluateAttrBool(ATTR_HOLD_COPIED_FROM_TARGET_JOB, hold_copied_from_target) )
+	{
+		if( hold_copied_from_target ) {
+			return true;
 		}
 	}
-	orig.InsertAttr(ATTR_JOB_STATUS, IDLE);
-	orig.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
+	return false;
 }
 
-static void set_job_status_running(classad::ClassAd &orig)
+static bool set_job_status_simple(classad::ClassAd const &orig,classad::ClassAd &update,int new_status)
 {
 	int origstatus;
+	bool hold_copied_from_target = hold_copied_from_target_job( orig );
+
 	if( orig.EvaluateAttrInt(ATTR_JOB_STATUS, origstatus) ) {
-		if(origstatus == RUNNING || origstatus == HELD || origstatus == REMOVED) {
-			return;
+		if( origstatus == HELD && !hold_copied_from_target ) {
+			return false;
+		}
+		if(origstatus == new_status || origstatus == REMOVED) {
+			return false;
 		}
 	}
-	orig.InsertAttr(ATTR_JOB_STATUS, RUNNING);
-	orig.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
-	// TODO: Should we be calling WriteExecuteEventToUserLog?
+	update.InsertAttr(ATTR_JOB_STATUS, new_status);
+	update.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
+	if( hold_copied_from_target ) {
+		update.InsertAttr( ATTR_HOLD_COPIED_FROM_TARGET_JOB, false );
+	}
+	return true;
 }
 
-static void set_job_status_held(classad::ClassAd &orig,
-	const char * hold_reason, int hold_code, int hold_subcode)
+static void set_job_status_idle(classad::ClassAd const &orig, classad::ClassAd &update) {
+	set_job_status_simple(orig,update,IDLE);
+}
+
+static void set_job_status_running(classad::ClassAd const &orig, classad::ClassAd &update) {
+	set_job_status_simple(orig,update,RUNNING);
+	// TODO: For new_status=RUNNING and set_job_status_simple()
+	// returned true, should we be calling WriteExecuteEventToUserLog?
+}
+
+static void set_job_status_held(classad::ClassAd const &orig,classad::ClassAd &update,const char * hold_reason, int hold_code, int hold_subcode)
 {
 	int origstatus;
 	if( orig.EvaluateAttrInt(ATTR_JOB_STATUS, origstatus) ) {
@@ -157,33 +172,35 @@ static void set_job_status_held(classad::ClassAd &orig,
 			return;
 		}
 	}
-	orig.InsertAttr(ATTR_JOB_STATUS, HELD);
-	orig.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
+	update.InsertAttr(ATTR_JOB_STATUS, HELD);
+	update.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
 	if( ! hold_reason) {
 		hold_reason = "Unknown reason";
 	}
-	orig.InsertAttr(ATTR_HOLD_REASON, hold_reason);
-	orig.InsertAttr(ATTR_HOLD_REASON_CODE, hold_code);
-	orig.InsertAttr(ATTR_HOLD_REASON_SUBCODE, hold_subcode);
+	update.InsertAttr(ATTR_HOLD_REASON, hold_reason);
+	update.InsertAttr(ATTR_HOLD_REASON_CODE, hold_code);
+	update.InsertAttr(ATTR_HOLD_REASON_SUBCODE, hold_subcode);
+	update.InsertAttr(ATTR_HOLD_COPIED_FROM_TARGET_JOB, true);
 
-	classad::ExprTree * origexpr = orig.Lookup(ATTR_RELEASE_REASON);
+	classad::ExprTree * origexpr = update.Lookup(ATTR_RELEASE_REASON);
 	if(origexpr) {
 		classad::ExprTree * toinsert = origexpr->Copy(); 
-		orig.Insert(ATTR_LAST_RELEASE_REASON, toinsert);
+		update.Insert(ATTR_LAST_RELEASE_REASON, toinsert);
 	}
-	orig.Delete(ATTR_RELEASE_REASON);
+	update.Delete(ATTR_RELEASE_REASON);
 
 	int numholds;
 	if( ! orig.EvaluateAttrInt(ATTR_NUM_SYSTEM_HOLDS, numholds) ) {
 		numholds = 0;
 	}
 	numholds++;
-	orig.InsertAttr(ATTR_NUM_SYSTEM_HOLDS, numholds);
+	update.InsertAttr(ATTR_NUM_SYSTEM_HOLDS, numholds);
 }
 
-bool update_job_status( classad::ClassAd & orig, classad::ClassAd & newgrid)
+bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgrid, classad::ClassAd & update)
 {
 	// List courtesy of condor_gridmanager/condorjob.C CondorJob::ProcessRemoteAd
+	// Added ATTR_SHADOW_BIRTHDATE so condor_q shows current run time
 
 	const char *attrs_to_copy[] = {
 		ATTR_BYTES_SENT,
@@ -208,6 +225,7 @@ bool update_job_status( classad::ClassAd & orig, classad::ClassAd & newgrid)
 		ATTR_JOB_CORE_DUMPED,
 		ATTR_EXECUTABLE_SIZE,
 		ATTR_IMAGE_SIZE,
+		ATTR_SHADOW_BIRTHDATE,
 		NULL };		// list must end with a NULL
 		// ATTR_JOB_STATUS
 
@@ -222,13 +240,21 @@ bool update_job_status( classad::ClassAd & orig, classad::ClassAd & newgrid)
 		dprintf(D_ALWAYS, "Unable to read attribute %s from new ad\n", ATTR_JOB_STATUS);
 		return false;
 	}
+
+		// Check sanity of HoldCopiedFromTargetJob, because some
+		// versions of the schedd do not know about this attribute,
+		// so it can get into an inconsistent state.
+	if( origstatus != HELD && hold_copied_from_target_job( orig ) ) {
+		update.InsertAttr(ATTR_HOLD_COPIED_FROM_TARGET_JOB,false);
+	}
+
 	if(origstatus != newgridstatus) {
 		switch(newgridstatus) {
 		case IDLE:
-			set_job_status_idle(orig);
+			set_job_status_idle(orig,update);
 			break;
 		case RUNNING:
-			set_job_status_running(orig);
+			set_job_status_running(orig,update);
 			break;
 		case HELD:
 			{
@@ -244,14 +270,14 @@ bool update_job_status( classad::ClassAd & orig, classad::ClassAd & newgrid)
 			if( ! newgrid.EvaluateAttrString(ATTR_HOLD_REASON, reason) ) {
 				reasonsubcode = 0;
 			}
-			set_job_status_held(orig, reason.c_str(), reasoncode, reasonsubcode);
+			set_job_status_held(orig, update, reason.c_str(), reasoncode, reasonsubcode);
 			}
 			break;
 		case REMOVED:
 			// Do not pass back "removed" status to the orig job.
 			break;
 		default:
-			orig.InsertAttr(ATTR_JOB_STATUS, newgridstatus);
+			update.InsertAttr(ATTR_JOB_STATUS, newgridstatus);
 			break;
 		}
 	}
@@ -266,17 +292,17 @@ bool update_job_status( classad::ClassAd & orig, classad::ClassAd & newgrid)
 		classad::ExprTree * newgridexpr = newgrid.Lookup(attrs_to_copy[index]);
 		if( newgridexpr != NULL && (origexpr == NULL || ! (*origexpr == *newgridexpr) ) ) {
 			classad::ExprTree * toinsert = newgridexpr->Copy(); 
-			orig.Insert(attrs_to_copy[index], toinsert);
+			update.Insert(attrs_to_copy[index], toinsert);
 		}
 	}
 
 #if 0
 	dprintf(D_FULLDEBUG, "Dirty fields updated:\n");
-	for(classad::ClassAd::dirtyIterator it = orig.dirtyBegin();
-		it != orig.dirtyEnd(); ++it) {
+	for(classad::ClassAd::dirtyIterator it = update.dirtyBegin();
+		it != update.dirtyEnd(); ++it) {
 		classad::PrettyPrint unp;
 		std::string val;
-		classad::ExprTree * p = orig.Lookup(*it);
+		classad::ExprTree * p = update.Lookup(*it);
 		if( p ) {
 			unp.Unparse(val, p);
 		} else {

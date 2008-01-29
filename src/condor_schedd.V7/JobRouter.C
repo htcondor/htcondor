@@ -1104,6 +1104,12 @@ JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 		return;
 	}
 
+	if(job_status == HELD && !hold_copied_from_target_job(*src_ad) ) {
+		dprintf(D_FULLDEBUG, "JobRouter (%s): found src job on hold\n",job->JobDesc().c_str());
+		GracefullyRemoveJob(job);
+		return;
+	}
+
 	classad::ClassAd *ad = ad_collection->GetClassAd(job->dest_key);
 
 	// If ad is not found, this could be because Quill hasn't seen
@@ -1123,7 +1129,7 @@ JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 	}
 
 	job->SetDestJobAd(ad);
-	if(!update_job_status(job->src_ad,job->dest_ad)) {
+	if(!update_job_status(*src_ad,job->dest_ad,job->src_ad)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to update job status\n",job->JobDesc().c_str());
 	}
 	else if(ClassAdHasDirtyAttributes(&job->src_ad)) {

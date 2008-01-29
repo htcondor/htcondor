@@ -301,8 +301,19 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 			}
 		}
 		else if(status != IDLE && status != COMPLETED) {
-				// Return job to idle state.
-			SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, IDLE);
+			int hold_mirrored = 0;
+			if(status == HELD) {
+					// If held state is mirrored from target job, then
+					// undo it.  Otherwise, leave it alone.
+				GetAttributeInt(cluster, proc, ATTR_HOLD_COPIED_FROM_TARGET_JOB, &hold_mirrored);
+				if( hold_mirrored ) {
+					DeleteAttribute(cluster, proc, ATTR_HOLD_COPIED_FROM_TARGET_JOB );
+				}
+			}
+			if(status != HELD || hold_mirrored) {
+					// Return job to idle state.
+				SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, IDLE);
+			}
 		}
 	}
 
