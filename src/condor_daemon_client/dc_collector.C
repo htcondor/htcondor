@@ -487,8 +487,7 @@ public:
 			if(sock) who = sock->get_sinful_peer();
 			dprintf(D_ALWAYS,"Failed to send non-blocking update to %s.\n",who);
 		}
-
-		if(sock->type() == Sock::reli_sock) {
+		else if(sock && sock->type() == Sock::reli_sock) {
 			// We keep the TCP socket around for sending more updates.
 			if(ud->dc_collector && ud->dc_collector->update_rsock == NULL) {
 				ud->dc_collector->update_rsock = (ReliSock *)sock;
