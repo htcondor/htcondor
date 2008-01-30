@@ -61,7 +61,17 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 	int nr = 0, nro;
 	unsigned int start_time, cur_time;
 	char sinbuf[SINFUL_STRING_BUF_SIZE];
-	
+
+	if( DebugFlags & D_NETWORK ) {
+		dprintf(D_NETWORK,
+				"condor_read(fd=%d %s,,size=%d,timeout=%d,flags=%d)\n",
+				fd,
+				sock_peer_to_string(fd,sinbuf,sizeof(sinbuf),"unknown source"),
+				sz,
+				timeout,
+				flags);
+	}
+
 	/* PRE Conditions. */
 	ASSERT(fd >= 0);     /* Need valid file descriptor */
 	ASSERT(buf != NULL); /* Need real memory to put data into */
@@ -192,6 +202,16 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 	bool needs_select = true;
 	char sinbuf[SINFUL_STRING_BUF_SIZE];
 
+	if( DebugFlags & D_NETWORK ) {
+		dprintf(D_NETWORK,
+				"condor_write(fd=%d %s,,size=%d,timeout=%d,flags=%d)\n",
+				fd,
+				sock_peer_to_string(fd,sinbuf,sizeof(sinbuf),"unknown source"),
+				sz,
+				timeout,
+				flags);
+	}
+
 	/* Pre-conditions. */
 	ASSERT(sz > 0);      /* Can't write buffers that are have no data */
 	ASSERT(fd >= 0);     /* Need valid file descriptor */
@@ -257,6 +277,7 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 					continue;
 				} else if ( selector.has_ready() ) {
 					if ( selector.fd_ready( fd, Selector::IO_READ ) ) {
+						dprintf(D_NETWORK, "condor_write(): socket %d is readable\n", fd);
 							// see if the socket was closed
 						nro = recv(fd, tmpbuf, 1, MSG_PEEK);
 						if( nro == -1 ) {

@@ -305,7 +305,7 @@ if( -e "$mysubmitnmlog" )
  $ENV{CONDOR_CONFIG} = $locconfig;
 
 my $status = 1;
-my $cmd = "condor_rm -all";
+my $cmd = "_CONDOR_TOOL_DEBUG=D_ALL condor_rm -debug -all";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
