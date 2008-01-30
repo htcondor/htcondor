@@ -89,6 +89,11 @@ defaults to 2 days.
 \item Condor daemons would die when trying to send ClassAd
 advertisements to a hostname that could not be resolved by DNS.
 
+\item Since 6.9.5, file transfer errors for vanilla, java, or parallel
+jobs would sometimes not result in the job going on hold as it should.
+This was most likely for very small files that failed to be written
+for some reason.
+
 \end{itemize}
 
 \noindent Known Bugs:
