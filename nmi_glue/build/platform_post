@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: platform_post,v 1.10.2.3 2008-01-25 15:43:52 bt Exp $
+# $Id: platform_post,v 1.10.2.4 2008-01-30 02:07:10 bt Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -185,6 +185,8 @@ foreach $test (@crossplatforms) {
 
 $appinput = "../../" . $ENV{NMI_PLATFORM} . "_app_input.tar.gz";
 print "Looking to see is $appinput is around and removing\n";
+print "../.. holds:\n";
+system("ls -l ../..");
 system("rm -f $appinput");
 
 ##################################################################
@@ -204,6 +206,8 @@ if( ! $vers ) {
 }
 print "Condor version: $vers\n";
 $src_file = "condor-$vers.tar.gz";
+print "Tar files here are :\n";
+system("ls condor-$vers*tar.gz");
 system("rm -f $src_file");
 
 print "platform_post: SUCCESS\n";
