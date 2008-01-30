@@ -38,6 +38,10 @@
 
 const unsigned int PUT_FILE_EOM_NUM = 666;
 
+// This special file descriptor number must not be a valid fd number.
+// It is used to make get_file() consume transferred data without writing it.
+const int GET_FILE_NULL_FD = -10;
+
 /**************************************************************/
 
 /* 
@@ -455,13 +459,28 @@ ReliSock::get_file( filesize_t *size, const char *destination, bool flush_buffer
 	// Handle open failure; it's bad....
 	if ( fd < 0 )
 	{
+		int saved_errno = errno;
 #ifndef WIN32 /* Unix */
 		if ( errno == EMFILE ) {
 			_condor_fd_panic( __LINE__, __FILE__ ); /* This calls dprintf_exit! */
 		}
 #endif
-		dprintf(D_ALWAYS, "get_file(): Failed to open file %s, errno = %d.\n",
-				destination, errno);
+		dprintf(D_ALWAYS,
+				"get_file(): Failed to open file %s, errno = %d: %s.\n",
+				destination, saved_errno, strerror(saved_errno) );
+
+			// In order to remain in a well-defined state on the wire
+			// protocol, read and throw away the file data.
+		result = get_file( size, GET_FILE_NULL_FD, flush_buffers );
+		if( result<0 ) {
+				// Failure to read (and throw away) data indicates that
+				// we are in an undefined state on the wire protocol
+				// now, so return that type of failure, rather than
+				// the well-defined failure code for OPEN_FAILED.
+			return result;
+		}
+
+		errno = saved_errno;
 		return GET_FILE_OPEN_FAILED;
 	} 
 
@@ -487,6 +506,11 @@ ReliSock::get_file( filesize_t *size, int fd, bool flush_buffers )
 	filesize_t filesize;
 	unsigned int eom_num;
 	filesize_t total = 0;
+	int retval = 0;
+	int saved_errno = 0;
+
+		// NOTE: the caller may pass fd=GET_FILE_NULL_FD, in which
+		// case we just read but do not write the data.
 
 	// Read the filesize from the other end of the wire
 	if ( !get(filesize) || !end_of_message() ) {
@@ -518,15 +542,32 @@ ReliSock::get_file( filesize_t *size, int fd, bool flush_buffers )
 			break;
 		}
 
+		if( fd == GET_FILE_NULL_FD ) {
+				// Do not write the data, because we are just
+				// fast-forwarding and throwing it away, due to errors
+				// already encountered.
+			total += nbytes;
+			continue;
+		}
+
 		int rval;
 		int written;
 		for( written=0; written<nbytes; ) {
 			rval = ::write( fd, &buf[written], (nbytes-written) );
 			if( rval < 0 ) {
+				saved_errno = errno;
 				dprintf( D_ALWAYS,
 						 "ReliSock::get_file: write() returned %d: %s "
 						 "(errno=%d)\n", rval, strerror(errno), errno );
-				return GET_FILE_WRITE_FAILED;
+
+
+					// Continue reading data, but throw it all away.
+					// In this way, we keep the wire protocol in a
+					// well defined state.
+				fd = GET_FILE_NULL_FD;
+				retval = GET_FILE_WRITE_FAILED;
+				written = nbytes;
+				break;
 			} else if( rval == 0 ) {
 					/*
 					  write() shouldn't really return 0 at all.
@@ -556,12 +597,21 @@ ReliSock::get_file( filesize_t *size, int fd, bool flush_buffers )
 		}			
 	}
 
-	if (flush_buffers) {
+	if (flush_buffers && fd != GET_FILE_NULL_FD ) {
 		fsync(fd);
 	}
 
-	dprintf(D_FULLDEBUG,
-			"get_file: wrote " FILESIZE_T_FORMAT " bytes to file\n", total );
+	if( fd == GET_FILE_NULL_FD ) {
+		dprintf( D_ALWAYS,
+				 "get_file(): consumed " FILESIZE_T_FORMAT
+				 " bytes of file transmission\n",
+				 total );
+	}
+	else {
+		dprintf( D_FULLDEBUG,
+				 "get_file: wrote " FILESIZE_T_FORMAT " bytes to file\n",
+				 total );
+	}
 
 	if ( total < filesize ) {
 		dprintf( D_ALWAYS,
@@ -572,7 +622,8 @@ ReliSock::get_file( filesize_t *size, int fd, bool flush_buffers )
 	}
 
 	*size = total;
-	return 0;
+	errno = saved_errno;
+	return retval;
 }
 
 int
