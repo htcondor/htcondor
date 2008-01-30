@@ -1,0 +1,48 @@
+##
+# Sample BOINC configuration
+##
+
+# Turn on backfill functionality, and use BOINC
+ENABLE_BACKFILL = TRUE
+BACKFILL_SYSTEM = BOINC
+
+# Spawn a backfill job if we've been Unclaimed for more than 5
+# minutes 
+START_BACKFILL = $(StateTimer) > (5 * $(MINUTE))
+
+# Evict a backfill job if the machine is busy (based on keyboard
+# activity or cpu load)
+EVICT_BACKFILL = $(MachineBusy)
+
+# Define a shared macro that can be used to define other settings.
+# This directory must be manually created before attempting to run
+# any backfill jobs.  This should be read/writable by all users.
+BOINC_HOME = $(LOCAL_DIR)/boinc
+
+# *NIX:
+# Path to the boinc_client to use, and required universe setting
+BOINC_Executable =  /usr/local/bin/boinc_client
+BOINC_Universe = vanilla
+#BOINC_Arguments = --attach_project http://einstein.phys.uwm.edu/ [key]
+
+# WINDOWS: (note the use of the "--dir" option to boinc.exe, this is required)
+# Path to the boinc_client to use, and required universe setting
+#BOINC_Executable = C:\PROGRA~1\BOINC\boinc.exe
+#BOINC_Universe = vanilla
+#BOINC_Arguments = --dir $(BOINC_HOME) --attach_project http://einstein.phys.uwm.edu/ [key]
+
+# What initial working directory should BOINC use?
+BOINC_InitialDir = $(BOINC_HOME)
+
+# Save STDOUT and STDERR
+BOINC_Output = $(BOINC_HOME)/boinc.out
+BOINC_Error = $(BOINC_HOME)/boinc.err
+
+# What user the boinc client program should be run as. This 
+# macro is only used if the Condor daemons are running as root. 
+# In this case, the condor_starter must be told what user 
+# identity to switch to before spawning the boinc client. This 
+# can be any valid user on the local system, but it must have 
+# write permission in whatever directory is specified in 
+# BOINC_InitialDir). 
+#BOINC_Owner = nobody
