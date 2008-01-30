@@ -479,3 +479,33 @@ project(s).
 More information about participating in multiple BOINC projects can be
 found at \URL{http://boinc.berkeley.edu/multiple\_projects.php}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Backfill-BOINC-Windows}BOINC on Windows}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The Windows version of BOINC has multiple installation methods: the 
+preferred method of installation for use Condor is the 
+``Shared Installation'' method.  Using this method allows all users 
+have access to the executables.  During the installation process 
+deselect the options which make BOINC the default screensaver, as well 
+as running on start-up.  Finally, do not launch BOINC at the conclusion
+of the installation.
+
+There are two major differences to keep in mind when dealing with 
+the Windows installation: First, the executables have different names.  
+The Windows client is called \Prog{boinc.exe} and the administrative 
+tool is called \Prog{boinccmd.exe}.
+  
+Secondly, when using BOINC on Windows, \Macro{BOINC\_InitialDir} will not 
+be respected fully.  That is to say, you must pass the BOINC home 
+directory directly to the BOINC application, via the \Macro{BOINC\_Arguments}
+line. For instance, the abovementioned argument line example can be 
+re-written as such:
+
+\footnotesize
+\begin{verbatim}
+BOINC_Arguments = --dir $(BOINC_HOME) \
+                  --attach_project http://einstein.phys.uwm.edu [account_key] 
+\end{verbatim}
+\normalsize
+
