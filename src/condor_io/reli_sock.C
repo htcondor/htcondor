@@ -1416,22 +1416,27 @@ ReliSock::connect_socketpair(ReliSock &sock)
 	ReliSock tmp_srv;
 
 	if( !bind_to_loopback() ) {
+		dprintf(D_ALWAYS, "connect_socketpair: failed in bind_to_loopback()\n");
 		return false;
 	}
 
 	if( !tmp_srv.bind_to_loopback() ) {
+		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.bind_to_loopback()\n");
 		return false;
 	}
 
 	if( !tmp_srv.listen() ) {
+		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.listen()\n");
 		return false;
 	}
 
 	if( !connect(tmp_srv.sender_ip_str(),tmp_srv.get_port()) ) {
+		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.get_port()\n");
 		return false;
 	}
 
 	if( !tmp_srv.accept( sock ) ) {
+		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.accept()\n");
 		return false;
 	}
 
