@@ -58,6 +58,16 @@
 #
 ###########################################################################
 
+###########################################################################
+#
+# Update 1/24/08: We need a way to have test only platforms
+# and prereqs. This is caused first by java needs while doing
+# cross testing. So we will add as additonal directives:
+# "testplatforms"		defines platforms only being tested
+# "testprereqs" 		shared prereqs across entire block
+# "testonly_append_prereqs" prereqs to append to the other defined prereqs
+#
+###########################################################################
 
 ######################################################################
 # Modules used by this script
@@ -168,10 +178,17 @@ my %platforms;   # this is a hash, not a list, to guarantee uniqueness
 my $global_prereqs;
 my $global_test_prereqs;
 my $global_testargs;
+
 my %platform_prereqs;
 my %platform_test_prereqs;
+
 my %platform_x_test_platforms;
 my %platform_testargs;
+
+# data for the test only platform definitions for cross testing
+my %testplatforms;   # this is a hash, not a list, to guarantee uniqueness
+my %testplatform_prereqs;
+my %testplatform_test_prereqs;
 
 # Global variable for better error messages when parsing submit_info
 my $orig_lineno = 0;
@@ -747,6 +764,10 @@ sub clearGlobalSubmitInfo
     undef %platform_testargs;
     undef %platforms;
     undef @platforms;
+	# cross testing platform defs
+    undef %testplatforms;
+    undef %testplatform_prereqs;
+    undef %testplatform_test_prereqs;
 }
 
 
@@ -817,6 +838,7 @@ sub createSubmitFiles
         writeBuildGlue( *CMDFILE, $tag, $module );
 		writeBuildXTestSpecs( *CMDFILE );
     } else {
+	 	print CMDFILE "+periodic_remove = (((JobUniverse == 5) && (WallClockCheckpoint > (60 * 60 * 6))) =?= TRUE )\n";
         print CMDFILE "run_type = test\n";
         writeTestPrereqs( *CMDFILE );
         writeTestGlue( *CMDFILE );
@@ -839,6 +861,12 @@ sub writeTestPrereqs
         if( $platform_test_prereqs{$platform} ) {
             print $fh "prereqs_$platform = "
                 . "$platform_test_prereqs{$platform}\n";
+        }
+    }
+    foreach $platform ( @platforms ) {
+        if( $testplatform_test_prereqs{$platform} ) {
+            print $fh "prereqs_$platform = "
+                . "$testplatform_test_prereqs{$platform}\n";
         }
     }
 }
@@ -1482,6 +1510,13 @@ sub parseBlock
     # these are hashes to map platform -> prereqs
     my %block_platform_prereqs;
     my %block_platform_test_prereqs;
+    my %block_testplatform_prereqs;
+    my %block_testplatform_test_prereqs;
+
+	# test platform define local hashes
+    my %block_testplatforms;
+    my %block_testprereqs;
+    my %block_testtest_prereqs;
 
     # flag to help check for sanity
     my $in_block = 1;
@@ -1499,9 +1534,19 @@ sub parseBlock
                 $block_platforms{$item}=1;
             }
         }
+        elsif( $line =~ /^testplatforms\s*=\s*(.*)/i ) {
+            foreach $item ( split(/[, \t]+/, $1)) {
+                $block_testplatforms{$item}=1;
+            }
+        }
         elsif( $line =~ /^prereqs\s*=\s*(.*)/i ) {
             foreach $item ( split(/[, \t]+/, $1)) {
                 $block_prereqs{$item}=1;
+            }
+        }
+        elsif( $line =~ /^testprereqs\s*=\s*(.*)/i ) {
+            foreach $item ( split(/[, \t]+/, $1)) {
+				$block_testprereqs{$item} = 1;
             }
         }
         elsif( $line =~ /^prereqs_(\S+)\s*=\s*(.*)/i ) {
@@ -1513,9 +1558,23 @@ sub parseBlock
             }
             $block_platform_prereqs{$platform} = $val;
         }
+        elsif( $line =~ /^testprereqs_(\S+)\s*=\s*(.*)/i ) {
+            $platform = $1;
+            $val = $2;
+            if( ! $block_testplatforms{$platform} ) {
+                parseError( "testprereqs_$platform defined but "
+                            . "$platform not declared in this block" );
+            }
+            $block_testplatform_prereqs{$platform} = $val;
+        }
         elsif( $line =~ /^test_append_prereqs\s*=\s*(.*)/i ) {
             foreach $item ( split(/[, \t]+/, $1)) {
                 $block_test_prereqs{$item} = 1;
+            }
+        }
+        elsif( $line =~ /^testonly_append_prereqs\s*=\s*(.*)/i ) {
+            foreach $item ( split(/[, \t]+/, $1)) {
+                $block_testtest_prereqs{$item} = 1;
             }
         }
         elsif( $line =~ /^test_append_prereqs_(\S+)\s*=\s*(.*)/i ) {
@@ -1526,6 +1585,15 @@ sub parseBlock
                             . "$platform not declared in this block" );
             }
             $block_platform_test_prereqs{$platform} = $val;
+        }
+        elsif( $line =~ /^testonly_append_prereqs_(\S+)\s*=\s*(.*)/i ) {
+            $platform = $1;
+            $val = $2;
+            if( ! $block_testplatforms{$platform} ) {
+                parseError( "test_append_prereqs_$platform defined but "
+                            . "$platform not declared in this block" );
+            }
+            $block_testplatform_test_prereqs{$platform} = $val;
         }
         elsif( $line =~ /^testargs(_(\S+))?\s*=\s*(.*)/i ) {
             $platform = $2;
@@ -1562,13 +1630,17 @@ sub parseBlock
 
     # first, some sanity checks:
     $in_block && parseError( "hit EOM while still in a block" );
-    if( ! %block_platforms ) {
+    if( (! %block_platforms) && (! %block_testplatforms) ) {
         parseError( "Block defined without any platforms" );
     }
 
     # append all the (new) platforms we saw to our global list:
     foreach $platform ( keys(%block_platforms) ) {
         $platforms{$platform} = 1;
+    }
+	 # same for test platforms
+    foreach $platform ( keys(%block_testplatforms) ) {
+        $testplatforms{$platform} = 1;
     }
 
     # for each platform we saw, append any platform-specific stuff to
@@ -1639,6 +1711,49 @@ sub parseBlock
             }
             $platform_x_test_platforms{$platform} .= $append;
         }
+    }
+    foreach $platform ( keys(%block_testplatforms) ) {
+
+        # append all shared prereqs in this block to each platform
+        if( %block_testprereqs ) { 
+            $testplatform_prereqs{$platform} .= 
+                join( ', ', sort(keys(%block_testprereqs)) );
+            $testplatform_test_prereqs{$platform} .= 
+                join( ', ', sort(keys(%block_testprereqs)) );
+        }
+
+        # append all shared test prereqs in this block to each platform
+        if( %block_testtest_prereqs ) { 
+            if( $testplatform_test_prereqs{$platform} ) {
+                $testplatform_test_prereqs{$platform} .= ", ";
+            }
+            $testplatform_test_prereqs{$platform} .= 
+                join( ', ', sort(keys(%block_testtest_prereqs)) );
+        }
+
+        # if this platform also has platform-specific prereqs, append
+        # those, too...
+        if( $block_testplatform_prereqs{$platform} ) {
+            if( $testplatform_prereqs{$platform} ) {
+                $testplatform_prereqs{$platform} .= ", ";
+            }
+            $testplatform_prereqs{$platform} .= $block_testplatform_prereqs{$platform};
+            if( $testplatform_test_prereqs{$platform} ) {
+                $testplatform_test_prereqs{$platform} .= ", ";
+            }
+            $testplatform_test_prereqs{$platform} .= $block_testplatform_prereqs{$platform};
+        }
+
+        # if this platform also has platform-specific test prereqs,
+        # append those, too...
+        if( $block_testplatform_test_prereqs{$platform} ) {
+            if( $testplatform_test_prereqs{$platform} ) {
+                $testplatform_test_prereqs{$platform} .= ", ";
+            }
+            $testplatform_test_prereqs{$platform} .=
+                $block_testplatform_test_prereqs{$platform};
+        }
+
     }
 }
 
