@@ -58,7 +58,12 @@ matchmaking.
 
 \begin{itemize}
 
-\item None.
+\item Added \MacroNI{CKPT\_SERVER\_CHECK\_PARENT\_INTERVAL}.  Unlike
+other Condor daemons, the checkpoint server was not checking to see if
+its parent (the \Condor{master}) has gone away unexpectedly.  Now it
+does, and it shuts itself down if this happens.  The default interval
+for checking is 120 seconds.  Setting this parameter to 0 disables the
+check.
 
 \end{itemize}
 

@@ -2411,6 +2411,13 @@ checkpoint server host (see below).
   hour). This setting is only used if \MacroUNI{USE\_CKPT\_SERVER} is
   \Expr{True}.
 
+\item[\Macro{CKPT\_SERVER\_CHECK\_PARENT\_INTERVAL}]
+  \label{param:CkptServerCheckParentInterval}  This is the number of
+  seconds between checks to see whether the parent of the checkpoint
+  server (i.e. the \Condor{master}) has died.  If the parent has died,
+  the checkpoint server shuts itself down.  The default is 120 seconds.
+  A setting of 0 disables this check.
+
 \end{description}
 
 
