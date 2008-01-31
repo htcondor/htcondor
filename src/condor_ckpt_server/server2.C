@@ -89,6 +89,7 @@ Server::Server()
 	num_store_xfers = 0;
 	reclaim_interval = 0;
 	replication_level = 0;
+	check_parent_interval = 0;
 }
 
 
@@ -166,6 +167,7 @@ void Server::Init()
 	}
 
 	clean_interval = param_integer( "CKPT_SERVER_CLEAN_INTERVAL",CLEAN_INTERVAL );
+	check_parent_interval = param_integer( "CKPT_SERVER_CHECK_PARENT_INTERVAL",120);
 	socket_bufsize = param_integer( "CKPT_SERVER_SOCKET_BUFSIZE",0 );
 	max_xfers = param_integer( "CKPT_SERVER_MAX_PROCESSES",DEFAULT_XFERS );
 	max_store_xfers = param_integer( "CKPT_SERVER_MAX_STORE_PROCESSES",max_xfers );
@@ -353,9 +355,13 @@ void Server::Execute()
 	time_t         current_time;
 	time_t         last_reclaim_time;
 	time_t		   last_clean_time;
+	time_t         last_check_parent_time;
 	struct timeval poll;
+	int            ppid;
 	
-	current_time = last_reclaim_time = last_clean_time = time(NULL);
+	current_time = last_reclaim_time = last_clean_time = last_check_parent_time = time(NULL);
+
+	ppid = getppid();
 
 	dprintf( D_ALWAYS, "Sending initial ckpt server ad to collector\n" );
     struct sockaddr_in *tmp = getSockAddr(store_req_sd);
@@ -372,6 +378,19 @@ void Server::Execute()
 		poll.tv_sec = reclaim_interval - ((unsigned int)current_time -
 										  (unsigned int)last_reclaim_time);
 		poll.tv_usec = 0;
+
+		if( check_parent_interval > 0 ) {
+			if( last_check_parent_time > current_time ) {
+					// time has jumped back
+				last_check_parent_time = current_time;
+			}
+			if( poll.tv_sec > check_parent_interval -
+				(current_time - last_check_parent_time) )
+			{
+				poll.tv_sec = check_parent_interval;
+			}
+		}
+
 		errno = 0;
 		FD_ZERO(&req_sds);
 		FD_SET(store_req_sd, &req_sds);
@@ -435,6 +454,18 @@ void Server::Execute()
 				Log("Done cleaning ClassAd log...");
 			}
 			last_clean_time = current_time;
+		}
+		if( current_time - last_check_parent_time >= check_parent_interval
+			&& check_parent_interval > 0 )
+		{
+			if( kill(ppid,0) < 0 ) {
+				if( errno == ESRCH ) {
+					MyString msg;
+					msg.sprintf("Parent process %d has gone away", ppid);
+					NoMore(msg.Value());
+				}
+			}
+			last_check_parent_time = current_time;
 		}
     }
 	free( canon_name );
@@ -2035,7 +2066,7 @@ void Server::ChildComplete()
 }
 
 
-void Server::NoMore(char *reason)
+void Server::NoMore(char const *reason)
 {
   more = 0;
   dprintf(D_ALWAYS, "%s: shutting down checkpoint server\n", 

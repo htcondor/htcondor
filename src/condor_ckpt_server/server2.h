@@ -60,6 +60,7 @@ class Server
 	int		       replication_level;
 	int			   reclaim_interval;
 	int			   clean_interval;
+	int            check_parent_interval;
 	ClassAdCollection	*CkptClassAds;
     int SetUpPort(u_short port);
 	void SetUpPeers();
@@ -95,7 +96,7 @@ class Server
     void Init();
     void Execute();
     void ChildComplete();
-    void NoMore(char *reason);
+    void NoMore(char const *reason);
     void ServerDump();
     void Log(int         request,
 	     const char* event);
