@@ -102,6 +102,11 @@ use vars qw/ $opt_build $opt_test
 sub TRUE { 1; };
 sub FALSE { 0; };
 
+# Constants for use with makeFetchFileVCS to specify if fetching from
+# source (SRC) or externals (EXT).
+sub EXT { 1; };
+sub SRC { 0; };
+
 ######################################################################
 # Configurable settings
 ######################################################################
@@ -1104,7 +1109,7 @@ sub generateTestFetchFiles
         # rely on the copy of the glue in the source tarball from the
         # build output, since we have no way to untar it without glue. ;)
         my $glue_file = "test_glue.src";
-        makeFetchFileVCS( $glue_file, FALSE, "nmi_glue/$runtype", $tag );
+        makeFetchFileVCS( $glue_file, FALSE, SRC, "nmi_glue/$runtype", $tag );
         push( @fetch_files, $glue_file );
     }
     # else: Not workspace build.  Using --nmi_glue 
@@ -1155,8 +1160,18 @@ sub generateBuildFetchFiles
 
     if( defined $tag ) {
         my $srcfile = "source-$tag.src";
-        makeFetchFileVCS( $srcfile, TRUE, $module, $tag );
+        makeFetchFileVCS( $srcfile, TRUE, SRC, $module, $tag );
         push( @fetch_files, $srcfile );
+
+	# This is a bit of a hack, if we are using git then we need to
+	# check the externals out from a different repository than the
+	# source. Ideally, this would only be visible at the
+	# makeFetchFileVCS level.
+	if( defined $opt_git ) {
+	    my $extfile = "externals-$tag.src";
+	    makeFetchFileVCS( $extfile, TRUE, EXT, $module, $tag );
+	    push( @fetch_files, $extfile );
+	}
     }
     elsif( defined $src_workspace ) {
         # TODO: There is a race condition if the user also specified
@@ -1176,12 +1191,12 @@ sub generateBuildFetchFiles
 
     if( defined $opt_externals ) { 
         my $ext_file = "externals.src";
-        makeFetchFileVCS( $ext_file, TRUE, $opt_externals );
+        makeFetchFileVCS( $ext_file, TRUE, EXT, $opt_externals );
         push( @fetch_files, "$ext_file" );
     }
 
     my $nmi_tools_file = "nmi_tools.src";
-    makeFetchFileVCS( $nmi_tools_file, FALSE, $cvs_condor_nmi_submit );
+    makeFetchFileVCS( $nmi_tools_file, FALSE, SRC, $cvs_condor_nmi_submit );
     push( @fetch_files, $nmi_tools_file );
 
     return @fetch_files;
@@ -1212,16 +1227,17 @@ sub makeFetchFileVCS
     # identify the $module parameter as an actual CVS-style module,
     # i.e. a taget that can be checked out that does not directly
     # exist in the repository e.g. something from CVSROOT/modules, or
-    # a target that exists, i.e. a file or directory in the repository
-    my ( $file, $is_module, $module, $tag ) = @_;
+    # a target that exists, i.e. a file or directory in the
+    # repository. $repo is used to target our checkout to either a
+    # source repository or externals repository.
+    my ( $file, $is_module, $repo, $module, $tag ) = @_;
 
     open( FILE, ">$file" ) || die "Can't open $file for writing: $!\n";
     if (defined($opt_git)) {
 	# git_tree is a commit/tree, could can be a tag or a branch
 	# git_path is essentially a filter, only pull git_path or git_path/...
 	# ==> git archive --remote=<git_root> <git_tree> <git_path> | tar x
-	my $gitroot = \
-	    ($is_module && $module =~ /^.*_EXT$/) ? $GITROOT_EXT : $GITROOT_SRC;
+	my $gitroot = $repo ? $GITROOT_EXT : $GITROOT_SRC;
 	print FILE "method = git\n";
 	print FILE "git_root = $gitroot\n";
 	print FILE "git_path = $module\n" unless $is_module;
