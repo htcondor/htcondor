@@ -289,9 +289,15 @@ if (defined($opt_release_dir)) {
     # Install
     if ($opt_prefix_dir) {
 		$release_dir=install($opt_prefix_dir);
+		set_mail_settings();
+		set_domain_settings();
+		set_java_jvm_path();
     } else {
 		chomp($release_dir=`pwd`);
 		$release_dir=install($release_dir);
+		set_mail_settings();
+		set_domain_settings();
+		set_java_jvm_path();
     }
 }
 else {
@@ -886,15 +892,10 @@ sub install( $ ) {
 					 ." might not work propertly until you set "
 					 ." NETWORK_INTERFACE=<machine IP address>\n");
     }  
-
-    set_mail_settings();
-    
-    set_domain_settings();
-
-    &set_java_jvm_path();
     
     return $release_dir;
-}
+
+}	# sub install()
 
 
 sub find_release_dir( $ ) {
