@@ -757,10 +757,15 @@ sub install( $ ) {
 
     chomp ($release_dir=`pwd`); # Get the complete absolute path
 
+	my $install_in_place = 0;
+	if ( $release_dir eq $release_src_dir ) {
+		$install_in_place = 1;
+	}
+
     # Move the sbin directories instead of overwriting them,
     # so that the running daemons don't blow up 
 	my $sbin = "$release_dir/sbin";
-	if ( -d $sbin && -x "$sbin/condor_master" ) {
+	if ( !$install_in_place && -d $sbin && -x "$sbin/condor_master" ) {
 		if ( $opt_overwrite ) {
 			# Do nothing...  overwrite sbin below
 		}
@@ -782,27 +787,32 @@ sub install( $ ) {
 		}
     }
 
-	# Create a process to read the tar-ify the release directories
-	print "Installing Condor from $release_src_dir to $release_dir\n";
-	my $cmd = "cd $release_src_dir; tar cf - " . join( " ", @release_dirs );
-	open( TARCF, "$cmd|" ) or die "Can't run $cmd (used to copy release)";
-
-	$cmd = "tar xf -";
-	open( TARXF, "|$cmd" ) or die "Can't run $cmd (used to copy release)";
-
-	# Read from the "tar cf -", pipe output into the "tar xf -"
-	while( 1 ) {
-		my $buffer;
-		my $size = 1024 * 1024;
-		my $read_size = sysread( TARCF, $buffer, $size );
-		last if ( $read_size <= 0 );
-		my $write_size = syswrite( TARXF, $buffer, $read_size );
-		if ( $write_size != $read_size ) {
-			die "Failed copying to $release_dir: $!";
-		}
+	if( $install_in_place ) {
+		print "Setting up Condor in $release_dir\n";
 	}
-	close( TARCF );
-	close( TARXF );
+	else {
+		# Create a process to tar-ify the release directories
+		print "Installing Condor from $release_src_dir to $release_dir\n";
+		my $cmd = "cd $release_src_dir; tar cf - " . join( " ", @release_dirs );
+		open( TARCF, "$cmd|" ) or die "Can't run $cmd (used to copy release)";
+
+		$cmd = "tar xf -";
+		open( TARXF, "|$cmd" ) or die "Can't run $cmd (used to copy release)";
+
+		# Read from the "tar cf -", pipe output into the "tar xf -"
+		while( 1 ) {
+			my $buffer;
+			my $size = 1024 * 1024;
+			my $read_size = sysread( TARCF, $buffer, $size );
+			last if ( $read_size <= 0 );
+			my $write_size = syswrite( TARXF, $buffer, $read_size );
+			if ( $write_size != $read_size ) {
+				die "Failed copying to $release_dir: $!";
+			}
+		}
+		close( TARCF );
+		close( TARXF );
+	}
 
     $local_config{RELEASE_DIR}="$release_dir";
     

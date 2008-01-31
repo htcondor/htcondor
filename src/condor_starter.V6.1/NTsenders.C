@@ -880,7 +880,7 @@ REMOTE_CONDOR_ulog( ClassAd *ad )
 }
 
 int
-REMOTE_CONDOR_get_job_attr(char *  attrname , char *  expr)
+REMOTE_CONDOR_get_job_attr(char *  attrname , char *& expr)
 {
 	int	rval;
 	condor_errno_t	terrno;

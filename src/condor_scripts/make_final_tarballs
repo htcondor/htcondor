@@ -87,7 +87,7 @@ if (defined($opt_linktype)) {
 } else {
    # set up a default of everything
    @linktypes = 
-      ("static", "dynamic", "unstripped-dynamic", "unstripped-static");
+      ("static", "dynamic", "unstripped-dynamic");
 }
 
 # Now, grab the version of this release.
@@ -161,7 +161,7 @@ require 5.002;
 #		the destination directory.
 #	releaselocation
 #		The key of this hash is one of these linktype specifiers:
-#			static dynamic unstripped-dynamic unstripped-static
+#			static dynamic unstripped-dynamic 
 #		The value is the src/ directory name of where that linktype had been
 #		produced. For example, the "dynamic" linktype means the stripped
 #		dynamically linked executables, which are found in src/strip_dir
@@ -174,9 +174,10 @@ my %modules =
 		 "generate" => 1,
 
 		 "skelfiles" => [ "README", "DOC", "INSTALL", "LICENSE-2.0.txt",
-						  { src => "condor_scripts/condor_configure",
-							dest => "condor_configure", },
-						  { src => "condor_scripts/condor_configure",
+						  { src => "sbin/condor_configure",
+							dest => "condor_configure",
+							symlink => 1, },
+						  { src => "sbin/condor_configure",
 							dest => "condor_install",
 							symlink => 1, },
 						  "examples" 
@@ -187,7 +188,6 @@ my %modules =
          "releaselocation" => {
 			 "dynamic"			  => "strip_dir",
 			 "static"    	      => "static_dir",
-			 "unstripped-static"  => "static_unstrip_dir",
 			 "unstripped-dynamic" => "release_dir",
 		 },
 	 },
@@ -454,6 +454,8 @@ foreach my $name ( sort keys %modules ) {
 	print "Building specified linktypes versions of release tarballs\n";
 
     foreach my $linktype ( @linktypes ) {
+		my @clean_dirs = qw( lib libexec bin sbin sql );
+
 		# If the modules doesn't provide a release for this linktype, just
 		# ignore it.
 		if (!exists($relloc->{$linktype})) {
@@ -472,6 +474,14 @@ foreach my $name ( sort keys %modules ) {
 	    	next;
 		}
 
+		# Pre cleanup
+		print "Making sure that $skel/$release is clean\n";
+		my $clean_cmd = "/bin/rm -fr ";
+		foreach my $dir ( @clean_dirs ) {
+			$clean_cmd .= "$skel/$release/$dir ";
+		}
+		print runcmd( $clean_cmd, undef );
+
 		# Figure out what our filenames should look like.
 		my $platform="$opsys-$arch";
 		if( $libc ) {
@@ -483,7 +493,8 @@ foreach my $name ( sort keys %modules ) {
 		if( $linktype =~ /unstripped/ ) {
 	    	$platform .= "-unstripped";
 		}
-		
+
+		# List of directories to clean up
 		if ( $extract ) {
 			# If I've asked for this tarball to have been untarred, then 
 			# untar it into the skeleton directory
@@ -494,7 +505,7 @@ foreach my $name ( sort keys %modules ) {
 						  undef );
 		} else {
 			# Otherwise just copy the tarfile with the right permissions into
-			# the skeleton. 
+			# the skeleton.
 
 			print "Copying tarfile into skeleton.\n";
 
@@ -517,6 +528,7 @@ foreach my $name ( sort keys %modules ) {
 		# Delete the release.tar we're now done with.
 		print "Cleaning up some files...\n";
 		runcmd("unlink $skel/$release/$tarfile", 1);
+		print runcmd( $clean_cmd, undef );
 
 		print "Renaming tarball to archecture specific name.\n";
 		runcmd("date && ".
@@ -611,7 +623,7 @@ This screen
 --target=<target location>
 
 --linktype=<a set of one or more of:
-   static, dynamic, unstripped-dynamic, unstripped-static>
+   static, dynamic, unstripped-dynamic>
 
 END_USAGE
 }

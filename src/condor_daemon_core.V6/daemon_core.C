@@ -3631,6 +3631,10 @@ int DaemonCore::HandleReq(Stream *insock)
 						free (return_addr);
 					}
 
+					// consume the rejected message
+					sock->decode();
+					sock->end_of_message();
+
 					// close the connection.
 					result = FALSE;
 					goto finalize;

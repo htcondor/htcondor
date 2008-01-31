@@ -554,6 +554,7 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(const char * attrname, const char *
 			const char * ATTR_SCRATCH_EXPRESSION = "UserJobPolicyScratchExpression";
 			m_ad->AssignExpr(ATTR_SCRATCH_EXPRESSION, sysexpr);
 			free(sysexpr);
+			sysexpr = NULL;
 			int result_ok = m_ad->EvalBool(ATTR_SCRATCH_EXPRESSION, m_ad, result);
 			m_ad->Delete(ATTR_SCRATCH_EXPRESSION);
 			if(result_ok && result) {
