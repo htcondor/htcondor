@@ -3174,8 +3174,13 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		dprintf(D_ALWAYS, "The submitting job ad as the FileTransferObject sees it\n");
 		ad->dPrint(D_ALWAYS);
 
-			// Create a file transfer object, with schedd as the server
-		result = ftrans.SimpleInit(ad, true, true, rsock);
+			// Create a file transfer object, with schedd as the server.
+			// If we're receiving files, don't create a file catalog in
+			// the FileTransfer object. The submitter's IWD is probably not
+			// valid on this machine and we won't use the catalog anyway.
+		result = ftrans.SimpleInit(ad, true, true, rsock, PRIV_UNKNOWN,
+								   (mode == TRANSFER_DATA ||
+									mode == TRANSFER_DATA_WITH_PERMS));
 		if ( !result ) {
 			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
 					 "failed to init filetransfer for job %d.%d \n",
