@@ -2328,7 +2328,7 @@ CHECK_EXTERNAL([classads], [0.9.8-b4], [soft])
 
 CHECK_EXTERNAL([srb], [3.2.1], [soft])
 
-CHECK_EXTERNAL([pcre], [5.0], [hard],
+CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
                MF_LIB_CHECK([pcre], [[pcre pcre_compile]]))
 AS_IF([test "x$cv_ext_pcre" = xyes],
