@@ -999,7 +999,6 @@ V7_0_COMMON_EXT	   -a EXT_COMMON \
                    externals/bundles/linuxlibcheaders \
                    externals/bundles/nordugridgahp/1.1.2 \
                    externals/bundles/openssl/0.9.8 \
-                   externals/bundles/pcre/5.0 \
                    externals/bundles/postgresql/8.0.2 \
                    externals/bundles/postgresql/8.2.3 \
                    externals/bundles/srb/3.2.1 \
@@ -1007,10 +1006,15 @@ V7_0_COMMON_EXT	   -a EXT_COMMON \
                    externals/bundles/zlib/1.2.3
 
 # Externals needed for the 7.0.0 release:
-V7_0_0_EXT      -a V7_0_COMMON_EXT
+V7_0_0_EXT      -a V7_0_COMMON_EXT \
+                   externals/bundles/pcre/5.0
+
+# Externals needed for the 7.0.1 release:
+V7_0_1_EXT      -a V7_0_COMMON_EXT \
+                   externals/bundles/pcre/7.6
 
 # Externals needed for the head of the V7_0-branch
-V7_0_EXT        -a V7_0_0_EXT
+V7_0_EXT        -a V7_0_1_EXT
 
 
 #---------------------------------------------------------------------
@@ -1020,7 +1024,8 @@ V7_0_EXT        -a V7_0_0_EXT
 # Shared externals needed for the 7.1.x.  Until this actually
 changes, just
 # point to the same externals as the V7_0 series
-V7_1_COMMON_EXT -a V7_0_COMMON_EXT
+V7_1_COMMON_EXT -a V7_0_COMMON_EXT \
+                   externals/bundles/pcre/5.0
 
 # Externals needed for the 7.1.0 release:
 V7_1_0_EXT      -a V7_1_COMMON_EXT
