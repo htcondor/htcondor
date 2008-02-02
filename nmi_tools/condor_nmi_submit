@@ -233,6 +233,8 @@ my $condor_bin;
 
 my $tag;
 parseOptions();
+# Replace the default tag_file location if we're using git
+my $tag_file = "/space/git/nwo-build-tags.git" if defined $opt_git;
 initialize();
 getTags();
 foreach $tag (sort keys %tags ) {
