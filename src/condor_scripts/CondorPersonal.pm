@@ -794,7 +794,7 @@ sub TunePersonalCondor
 	}
 
 
-	print NEW "ALL_DEBUG = D_FULLDEBUG\n";
+	print NEW "ALL_DEBUG = D_FULLDEBUG D_NETWORK\n";
 
 	if($personal_daemons ne "")
 	{

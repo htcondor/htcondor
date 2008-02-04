@@ -810,7 +810,7 @@ sub CreateLocalConfig
 
 	# ADD size for log files and debug level
 	# default settings are in condor_config, set here to override 
-	print FIX "ALL_DEBUG               = D_FULLDEBUG\n";
+	print FIX "ALL_DEBUG               = D_FULLDEBUG D_NETWORK\n";
 
 	print FIX "MAX_COLLECTOR_LOG       = $logsize\n";
 	print FIX "COLLECTOR_DEBUG         = \n";
