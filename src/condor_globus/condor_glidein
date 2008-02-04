@@ -1255,8 +1255,8 @@ EOF
 	Grid_Resource = gt2 $CONTACT_SETUP
 	$globus_rsl
 	executable = $glidein_remote_setup
-    # Manually quote the URL in case it has characters meaningful to RSL
-	arguments = $basedir_arg $archdir_arg $arch $localdir_arg '$SERVER_URL' $force_setup
+
+	arguments = "'$basedir_arg' '$archdir_arg' '$arch' '$localdir_arg' '$SERVER_URL' '$force_setup'"
 	#avoid trouble with scratch directory creation
 	remote_initialdir = /tmp
 	output = $glidein_setup_output
