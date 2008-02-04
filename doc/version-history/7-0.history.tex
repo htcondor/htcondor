@@ -52,6 +52,17 @@ collectors could forward ads to a single aggregating collector which
 a \Condor{negotiator} then uses as its source of information for
 matchmaking.
 
+\item \Condor{configure} (and condor{install}) now detects missing
+  shared libraries (such as libstdc++.so.5 on Linux), and prints
+  messages and exits if missing libraries are detected.  A new command
+  line option ``--ignore-missing-libs'' will cause it to not exit
+  after the messages have been printed, and to proceed with the
+  installation.
+
+\item Added a ``--force'' command line option to \Condor{configure}
+  (and condor{install}) which will turn on ``--overwrite'' and
+  ``--ignore-missing-libs''.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:

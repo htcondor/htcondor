@@ -15,6 +15,8 @@
 [\verb@--@\textbf{owner = $<$ ownername $>$}]
 [\verb@--@\textbf{make-personal-stork}]
 [\verb@--@\textbf{overwrite}]
+[\verb@--@\textbf{ignore-missing-libs}]
+[\verb@--@\textbf{force}]
 [\verb@--@\textbf{backup}]
 [\verb@--@\textbf{stork}]
 [\verb@--@\textbf{credd}]
@@ -208,6 +210,21 @@ released with Condor.  This list includes:
 	  prevent \Condor{install} from overwriting running daemons --
 	  UNIX semantics will keep the existing binaries running, even
 	  if they've been moved to a new directory. }
+
+	\OptItem{\Opt{---ignore-missing-libs}} {
+	  Ignore missing shared libraries that are detected by
+	  \Condor{install}.  By default, \Condor{install} will detect
+	  missing shared libraries (such as ``libstdc++.so.5'' on
+	  Linux); it will print messages and exit if missing libraries
+	  are deteted.  The \Opt{---ignore-missing-libs} will cause
+	  \Condor{install} to not exit, and to proceed with the
+	  installation if missing libraries are detected.
+	}
+
+	\OptItem{\Opt{---force}} {
+	  This is equivielent to enabling both the \Opt{--overwrite} and
+	  \Opt{--ignore-missing-libs} command line options.
+	}
 
 	\OptItem{\Opt{---make-personal-stork}} {Creates a 
 	  Personal Stork, using the \Condor{credd} daemon.}
