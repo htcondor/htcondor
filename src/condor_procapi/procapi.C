@@ -1938,7 +1938,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 		/* Clean up and convert the raw data */
 	
 		// Convert the image size from pages to KB
-	pi->imgsize = procRaw.imgsize * getpagesize();
+	pi->imgsize = procRaw.imgsize * getpagesize() / 1024;
 
 
 		// Calculate the age
