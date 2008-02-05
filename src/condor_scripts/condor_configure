@@ -160,6 +160,24 @@ or --backup to tell condor what to do.
 END_OPT_OVERWRITE
  },
  {
+	 short => "--env-scripts-dir=<dir>",
+	 long => <<END_OPT_ENV_SCRIPTS_DIR
+Condor will create simple scripts that can be sourced by
+sh and csh shells to update the PATH and set the CONDOR_CONFIG environtment
+variables.  This option allows you to specify in what directory to write
+them.  By default, these will be created in the root of the installation
+directory.
+END_OPT_ENV_SCRIPTS_DIR
+ },
+ {
+	 short => "--no-env-scripts",
+	 long => <<END_OPT_NO_ENV_SCRIPTS
+By default, Condor will create simple scripts that can be sourced by
+sh and csh shells to update the PATH and set the CONDOR_CONFIG environtment
+variables.  This option prevents Condor from creating these scripts.
+END_OPT_NO_ENV_SCRIPTS
+ },
+ {
 	 short => "--ignore-missing-libs",
 	 long => <<END_OPT_IGNORE_MISSING_LIBS,
 By default, Condor will not install if prerequisite libraries
@@ -225,6 +243,8 @@ my (
 	$opt_test_missing_libs,
 	$opt_force,
 	$opt_backup,
+	$opt_env_scripts_dir,
+	$opt_disable_env_scripts,
 	);
 
 
@@ -352,6 +372,9 @@ else {
     }
 }
 debug ("Install directory: $release_dir");
+if ( ! defined ($opt_env_scripts_dir ) ) {
+	$opt_env_scripts_dir = $release_dir;
+}
 
 # Config file location
 if (!$config_file) {
@@ -492,6 +515,29 @@ unless (defined($ENV{CONDOR_CONFIG}) && ($ENV{CONDOR_CONFIG} eq $config_file) ) 
 
 }
 
+unless ( $opt_disable_env_scripts ) {
+	my $env_sh = $opt_env_scripts_dir ."/condor.sh";
+	open( SH, ">$env_sh" ) or die "Can't write to $env_sh";
+	print SH "# The script should be sourced by /bin/sh or similar\n";
+	print SH "CONDOR_CONFIG=\"$config_file\"\n";
+	print SH "export CONDOR_CONFIG\n";
+	print SH "PATH=\"$release_dir/bin:$release_dir/sbin:\$PATH\"\n";
+	print SH "export PATH\n";
+	close( SH );
+
+	my $env_csh = $opt_env_scripts_dir ."/condor.csh";
+	open( CSH, ">$env_csh" ) or die "Can't write to $env_csh";
+	print CSH "# The script should be sourced by /bin/csh or similar\n";
+	print CSH "setenv CONDOR_CONFIG \"$config_file\"\n";
+	print CSH "setenv PATH \"$release_dir/bin:$release_dir/sbin:\$PATH\"\n";
+	close( CSH );
+
+	print "Created scripts which can be sourced by users to setup their\n";
+	print "Condor environment variables.  These are:\n";
+	print "   sh: $env_sh\n";
+	print "  csh: $env_csh\n";
+}
+
 print "\n";
 
 exit 0;
@@ -619,6 +665,8 @@ sub parse_command_line() {
 				 "overwrite"				=>	\$opt_overwrite,
 				 "ignore-missing-libs"		=>	\$opt_ignore_missing_libs,
 				 "test-missing-libs=s"		=>	\$opt_test_missing_libs,
+				 "env-scripts-dir=s"		=>	\$opt_env_scripts_dir,
+				 "no-env-scripts"			=>	\$opt_disable_env_scripts,
 				 "force"					=>	\$opt_force,
 				 "backup"					=>	\$opt_backup,
 				 ) or usage( 1 );
