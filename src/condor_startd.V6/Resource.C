@@ -1638,7 +1638,7 @@ Resource::dprintf_va( int flags, char* fmt, va_list args )
 		MyString fmt_str( r_id_str );
 		fmt_str += ": ";
 		fmt_str += fmt;
-		::_condor_dprintf_va( flags, (char*)fmt_str.Value(), args );
+		::_condor_dprintf_va( flags, fmt_str.Value(), args );
 	} else {
 		::_condor_dprintf_va( flags, fmt, args );
 	}
