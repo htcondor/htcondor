@@ -848,13 +848,13 @@ sub createSubmitFiles
         writeBuildGlue( *CMDFILE, $tag, $module );
 		writeBuildXTestSpecs( *CMDFILE );
     } else {
-	 	print CMDFILE "+periodic_remove = (((JobUniverse == 5) && (WallClockCheckpoint > (60 * 60 * 6))) =?= TRUE )\n";
+	 	print CMDFILE "+periodic_remove = (((JobStatus == 2)&&(JobUniverse == 5)&&((CurrentTime - JobCurrentStartDate) > (60 * 60 * 8))) =?= TRUE)\n";
         print CMDFILE "run_type = test\n";
         writeTestPrereqs( *CMDFILE );
         writeTestGlue( *CMDFILE );
     }
 
-    close CMDFILE;
+	 close CMDFILE;
     return $cmdfile;
 }
 
