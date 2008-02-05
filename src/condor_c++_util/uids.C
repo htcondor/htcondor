@@ -203,7 +203,7 @@ init_user_ids(const char username[], const char domain[])
 
 	if (!username || !domain) {
 		dprintf(D_ALWAYS, "WARNING: init_user_ids() called with"
-			   " NULL arguments!");
+			   " NULL arguments!\n");
 	   	return 0;
    	}
 
