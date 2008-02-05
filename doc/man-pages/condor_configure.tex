@@ -17,6 +17,8 @@
 [\verb@--@\textbf{overwrite}]
 [\verb@--@\textbf{ignore-missing-libs}]
 [\verb@--@\textbf{force}]
+[\verb@--@\textbf{no-env-scripts}]
+[\verb@--@\textbf{env-scripts-dir = $<$ directory $>$}]
 [\verb@--@\textbf{backup}]
 [\verb@--@\textbf{stork}]
 [\verb@--@\textbf{credd}]
@@ -146,7 +148,7 @@ released with Condor.  This list includes:
 	In the case of a Personal Condor,
 	the machine fulfills all three of these roles.}
 
-	\OptItem{\Opt{---central-manager=$<$hostname$>$}} {Instructs
+	\OptItem {\Opt{---central-manager=$<$hostname$>$}} {Instructs
 	the current Condor installation to use the specified machine
 	as the central manager. 
 	This modifies the configuration variables \MacroNI{COLLECTOR\_HOST}
@@ -222,8 +224,23 @@ released with Condor.  This list includes:
 	}
 
 	\OptItem{\Opt{---force}} {
-	  This is equivielent to enabling both the \Opt{--overwrite} and
-	  \Opt{--ignore-missing-libs} command line options.
+	  This is equivielent to enabling both the \Opt{---overwrite} and
+	  \Opt{---ignore-missing-libs} command line options.
+	}
+
+	\OptItem{\Opt{---no-env-scripts}} {
+	  By default, \Condor{configure} writes simple sh and csh
+	  shell scripts which can be sourced by their respective
+	  shells to set the user's PATH and CONDOR\_CONFIG environment
+	  variables.  This option will prevent \Condor{configure} from
+	  generating these scripts.
+	}
+	\OptItem{\Opt{---env-scripts-dir=$<$directory$>$}} {
+	  By default, the simple sh and csh shell scripts (see
+	  \Opt{---no-env-scripts} for details) are created in 
+	  the root directory of the Condor installation.  This option
+	  cauess \Condor{configure} to generate these scripts in the
+	  specified directory.
 	}
 
 	\OptItem{\Opt{---make-personal-stork}} {Creates a 
