@@ -25,7 +25,7 @@
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "user_job_policy.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 ///
 /// Default value for PERIODIC_EXPR_INTERVAL

@@ -25,7 +25,7 @@
 #if !defined(HAD_StateMachine_H__)
 #define HAD_StateMachine_H__
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 //#undef IS_REPLICATION_USED
 //#define IS_REPLICATION_USED

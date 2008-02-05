@@ -22,7 +22,7 @@
 #include "transfer_queue.h"
 #include "condor_debug.h"
 #include "selector.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_commands.h"
 #include "condor_config.h"
 #include "dc_transfer_queue.h"

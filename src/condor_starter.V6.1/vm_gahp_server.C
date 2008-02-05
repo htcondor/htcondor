@@ -25,7 +25,7 @@
 #include "exit.h"
 #include "env.h"
 #include "starter.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "MyString.h"
 #include "gahp_common.h"
 #include "condor_string.h"

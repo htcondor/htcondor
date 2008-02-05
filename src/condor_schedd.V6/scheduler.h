@@ -46,7 +46,7 @@
 #include "shadow_mgr.h"
 #include "enum_utils.h"
 //#include "self_draining_queue.h"
-#include "../condor_daemon_core.V6/self_draining_queue.h"
+#include "self_draining_queue.h"
 #include "schedd_cronmgr.h"
 #include "condor_classad_namedlist.h"
 #include "env.h"

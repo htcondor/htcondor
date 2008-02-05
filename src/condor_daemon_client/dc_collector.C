@@ -25,7 +25,7 @@
 #include "condor_attributes.h"
 #include "internet.h"
 #include "daemon.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "dc_collector.h"
 #include "condor_parameters.h"
 #include "daemon_core_sock_adapter.h"

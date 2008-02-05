@@ -32,7 +32,7 @@
 #include <arpa/inet.h>
 #include <strings.h>
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 //dap_server_run
 #define SERV_SUBMIT_TCP_PORT      34044  //listening to dap_submit requests

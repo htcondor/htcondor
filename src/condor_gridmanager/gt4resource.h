@@ -22,7 +22,7 @@
 #define GT4RESOURCE_H
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 #include "proxymanager.h"
 #include "baseresource.h"

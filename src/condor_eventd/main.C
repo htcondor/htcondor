@@ -24,7 +24,7 @@
 */
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "eventd.h"
 
 char *mySubSystem = "EVENTD";

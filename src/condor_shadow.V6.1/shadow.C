@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 #include "shadow.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_qmgr.h"         // need to talk to schedd's qmgr
 #include "condor_attributes.h"   // for ATTR_ ClassAd stuff
 #include "condor_email.h"        // for email.

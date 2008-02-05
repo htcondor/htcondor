@@ -22,7 +22,7 @@
 // and the qmgmt server (i.e. the schedd).
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "dedicated_scheduler.h"
 #include "scheduler.h"
 #include "condor_qmgr.h"

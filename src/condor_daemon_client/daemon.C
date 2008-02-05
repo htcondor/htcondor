@@ -34,7 +34,7 @@
 #include "my_hostname.h"
 #include "internet.h"
 #include "HashTable.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "dc_collector.h"
 #include "time_offset.h"
 #include "condor_netdb.h"

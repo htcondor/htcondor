@@ -22,7 +22,7 @@
 #define IO_LOOP_H
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h" // For Stream decl
+#include "condor_daemon_core.h" // For Stream decl
 #include "gahp_common.h"
 #include "PipeBuffer.h"
 

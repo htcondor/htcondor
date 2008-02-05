@@ -20,7 +20,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "MyString.h"
 
 #define DEFAULT_SEND_COMMAND_TIMEOUT                             (5)

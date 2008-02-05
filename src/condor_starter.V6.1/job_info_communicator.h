@@ -21,7 +21,7 @@
 #if !defined(_CONDOR_JOB_INFO_COMMUNICATOR_H)
 #define _CONDOR_JOB_INFO_COMMUNICATOR_H
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_classad.h"
 #include "user_proc.h"
 #include "local_user_log.h"

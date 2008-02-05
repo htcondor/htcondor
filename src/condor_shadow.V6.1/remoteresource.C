@@ -27,7 +27,7 @@
 #include "condor_string.h"    // for strnewp()
 #include "condor_attributes.h"
 #include "internet.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "dc_starter.h"
 #include "directory.h"
 #include "condor_claimid_parser.h"

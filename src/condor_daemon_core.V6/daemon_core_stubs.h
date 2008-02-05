@@ -30,7 +30,7 @@
 	DCSchedd, but not link with daemoncore.
 
 *************************************/
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 	DaemonCore* daemonCore = NULL;
 	int DaemonCore::Kill_Thread(int) { return 0; }
 //char * DaemonCore::InfoCommandSinfulString(int) { return NULL; }

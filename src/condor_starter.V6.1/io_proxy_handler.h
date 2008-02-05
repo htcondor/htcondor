@@ -27,7 +27,7 @@ and translates the Chirp protocol into remote system calls
 back to the shadow.
 */
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 class IOProxyHandler : public Service {
 public:

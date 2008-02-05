@@ -32,7 +32,7 @@
 #include "condor_auth_passwd.h"
 #include "condor_secman.h"
 #include "condor_environ.h"
-#include "../condor_daemon_core.V6/condor_ipverify.h"
+#include "condor_ipverify.h"
 #include "CondorError.h"
 
 
@@ -42,7 +42,7 @@
 #   include "condor_config.h"
 #   include "string_list.h"
 #include "MapFile.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #endif /* !defined(SKIP_AUTHENTICATION) */
 
 

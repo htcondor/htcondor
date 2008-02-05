@@ -23,7 +23,7 @@
 #include "starter_privsep_helper.h"
 #include "condor_uid.h"
 #include "condor_arglist.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 StarterPrivSepHelper privsep_helper;
 

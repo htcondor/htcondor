@@ -28,7 +28,7 @@
 #include "user_log.c++.h"          /* from condor_c++_util/ directory */
 #include "condor_constants.h"      /* from condor_includes/ directory */
 #include "HashTable.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "read_multiple_logs.h"
 #include "check_events.h"
 #include "condor_id.h"

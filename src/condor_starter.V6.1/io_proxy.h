@@ -27,7 +27,7 @@ connections, and forks IOProxyHandler children to
 handle the incoming connections.
 */
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 class IOProxy : public Service {
 public:

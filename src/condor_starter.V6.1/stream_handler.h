@@ -21,7 +21,7 @@
 #define STREAM_HANDLER_H
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 #define STREAM_BUFFER_SIZE 4096
 

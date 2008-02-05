@@ -29,7 +29,7 @@
 
 #include "HashTable.h"
 #include "env.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 extern DLL_IMPORT_MAGIC char **environ;
 

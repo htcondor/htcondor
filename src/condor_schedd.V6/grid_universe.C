@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_config.h"
 #include "globus_utils.h"
 #include "grid_universe.h"

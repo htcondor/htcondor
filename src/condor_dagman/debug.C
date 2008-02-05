@@ -21,7 +21,7 @@
 #include "condor_common.h"
 
 #include "debug.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 debug_level_t debug_level    = DEBUG_NORMAL;
 const char *        debug_progname = NULL;

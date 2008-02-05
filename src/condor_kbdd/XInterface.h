@@ -22,7 +22,7 @@
 #ifndef __XINTERFACE_H__
 #define __XINTERFACE_H__
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_debug.h"
 #include "condor_uid.h"
 #include <ctype.h>

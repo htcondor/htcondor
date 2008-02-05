@@ -22,7 +22,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "proc_family_proxy.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "../condor_procd/proc_family_client.h"
 #include "setenv.h"
 #include "directory.h"

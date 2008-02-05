@@ -24,7 +24,7 @@
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_debug.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 //
 // If we fail for whatever reason to figure out what the

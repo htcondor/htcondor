@@ -25,7 +25,7 @@
 #include "user_proc.h"
 #include "script_proc.h"
 #include "starter.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_attributes.h"
 #include "exit.h"
 #include "condor_uid.h"

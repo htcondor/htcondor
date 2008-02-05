@@ -21,7 +21,7 @@
 #if !defined(_CONDOR_STARTER_H)
 #define _CONDOR_STARTER_H
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "list.h"
 #include "user_proc.h"
 #include "job_info_communicator.h"

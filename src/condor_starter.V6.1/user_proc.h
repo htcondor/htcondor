@@ -20,7 +20,7 @@
 #if !defined(_CONDOR_USER_PROC_H)
 #define _CONDOR_USER_PROC_H
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_distribution.h"
 #include "utc_time.h"
 #include "env.h"

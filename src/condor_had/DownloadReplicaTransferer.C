@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 // for 'Daemon' class
 #include "daemon.h"
 // for 'DT_ANY'

@@ -26,7 +26,7 @@
 #include "user_proc.h"
 #include "os_proc.h"
 #include "starter.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_attributes.h"
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"

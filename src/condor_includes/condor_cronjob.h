@@ -21,7 +21,7 @@
 #define _CONDOR_CRONJOB_H
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "linebuffer.h"
 #include "Queue.h"
 #include "env.h"

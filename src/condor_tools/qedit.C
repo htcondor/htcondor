@@ -200,4 +200,4 @@ main(int argc, char *argv[])
 	return 0;
 }
 
-#include "../condor_daemon_core.V6/daemon_core_stubs.h"
+#include "daemon_core_stubs.h"

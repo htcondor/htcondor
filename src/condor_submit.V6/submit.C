@@ -7665,4 +7665,4 @@ SetVMParams()
 }
 
 
-#include "../condor_daemon_core.V6/daemon_core_stubs.h"
+#include "daemon_core_stubs.h"

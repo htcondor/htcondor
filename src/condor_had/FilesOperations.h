@@ -20,7 +20,7 @@
 #ifndef FILES_OPERATIONS_H 
 #define FILES_OPERATIONS_H
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "MyString.h"
 
 class FilesOperations

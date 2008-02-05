@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 // replication classes
 #include "UploadReplicaTransferer.h"

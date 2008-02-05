@@ -23,7 +23,7 @@
 #include "condor_classad.h"
 #include "condor_qmgr.h"
 #include "my_username.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_attributes.h"
 #include "condor_config.h"
 #include "format_time.h"  // for format_time and friends

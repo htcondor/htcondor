@@ -21,7 +21,7 @@
 #define _CONDOR_CRONMGR_H
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_cron.h"
 
 // Define a simple class to run child tasks periodically.

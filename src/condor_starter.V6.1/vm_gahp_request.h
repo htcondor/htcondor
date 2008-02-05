@@ -22,7 +22,7 @@
 #define CONDOR_VM_GAHP_REQUEST_H
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "gahp_common.h"
 #include "MyString.h"
 #include "condor_string.h"

@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 // for 'daemonCore'
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 // for 'StatWrapper'
 #include "stat_wrapper.h"
 // for 'getHostFromAddr' and 'getPortFromAddr'

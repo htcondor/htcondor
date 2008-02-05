@@ -24,7 +24,7 @@
 #include "HashTable.h"
 #include "Queue.h"
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 class Dag;
 class Script;

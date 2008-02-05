@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 // Things to include for the stubs
 #include "condor_version.h"
@@ -1625,4 +1625,4 @@ return_from_stub:
 // TODO : This should move into daemonCore once we figure out how we wanna link
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "../condor_daemon_core.V6/soap_daemon_core.cpp"
+#include "soap_daemon_core.cpp"

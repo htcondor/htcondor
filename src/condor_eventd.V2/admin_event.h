@@ -20,7 +20,7 @@
 #ifndef __ADMINEVENT_H__
 #define __ADMINEVENT_H__
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "daemon.h"
 #include "dc_master.h"
 #include "classad_hashtable.h"

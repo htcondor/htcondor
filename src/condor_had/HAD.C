@@ -23,7 +23,7 @@
 */
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_io.h"
 #include "condor_attributes.h"
 #include "condor_version.h"

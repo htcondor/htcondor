@@ -20,7 +20,7 @@
 #ifndef __MATCHMAKER_H__
 #define __MATCHMAKER_H__
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_accountant.h"
 #include "condor_io.h"
 #include "HashTable.h"

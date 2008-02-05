@@ -23,7 +23,7 @@
 #include "condor_config.h"
 #include "condor_uid.h"
 #include "master.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "exit.h"
 #include "my_hostname.h"
 #include "basename.h"

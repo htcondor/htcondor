@@ -22,7 +22,7 @@
 #include "dap_server_interface.h"
 #include "dap_client_interface.h"
 #include "daemon.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_config.h"
 
 #define USAGE \

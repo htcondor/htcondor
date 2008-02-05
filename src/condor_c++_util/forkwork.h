@@ -20,7 +20,7 @@
 #ifndef __FORKWORK_H__
 #define __FORKWORD_H__
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 // Return values of ForkerWorker::Fork()
 enum ForkStatus {

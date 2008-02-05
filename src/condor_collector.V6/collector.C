@@ -31,7 +31,7 @@
 #include "condor_email.h"
 #include "condor_query.h"
 
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "../condor_status.V6/status_types.h"
 #include "../condor_status.V6/totals.h"
 

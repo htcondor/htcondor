@@ -21,7 +21,7 @@
 #define __CREDD_H__
 #include "condor_common.h"
 #include "sock.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "stream.h"
 #include "simplelist.h"
 #include "credential.h"

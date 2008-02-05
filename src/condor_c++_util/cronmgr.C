@@ -22,7 +22,7 @@
 #include <limits.h>
 #include <string.h>
 #include "condor_debug.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_config.h"
 #include "simplelist.h"
 #include "condor_cron.h"

@@ -24,7 +24,7 @@
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "MyString.h"
 #include "gahp_common.h"
 #include "my_popen.h"

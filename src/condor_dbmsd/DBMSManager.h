@@ -21,7 +21,7 @@
 #define _DBMSMANAGER_H_
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 class DBMSManager: public Service {
 public:

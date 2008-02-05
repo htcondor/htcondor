@@ -21,7 +21,7 @@
 #define _CONDOR_BACKFILL_MGR_H
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_classad.h"
 #include "condor_state.h"
 #include "extArray.h"

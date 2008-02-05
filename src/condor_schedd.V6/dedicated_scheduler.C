@@ -32,7 +32,7 @@
 */
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "dedicated_scheduler.h"
 #include "shadow_mgr.h"
 #include "scheduler.h"

@@ -22,7 +22,7 @@
 
 #include "extArray.h"
 #include "condor_uid.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "../condor_procapi/procapi.h"
 #include "condor_pidenvid.h"
 

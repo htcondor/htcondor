@@ -22,7 +22,7 @@
 #define CONDOR_GAHP_CLIENT_H
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "gahp_common.h"
 
 #include "classad_hashtable.h"

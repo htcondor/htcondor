@@ -26,7 +26,7 @@
 #include "condor_classad.h"
 #include "starter.h"
 #include "job_info_communicator.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 class JobInfoCommunicator;
 

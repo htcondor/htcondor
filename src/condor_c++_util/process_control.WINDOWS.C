@@ -23,7 +23,7 @@
 #include "process_control.WINDOWS.h"
 #include "ntsysinfo.h"
 #include "HashTable.h"
-#include "../condor_daemon_core.V6/condor_softkill.h"
+#include "condor_softkill.h"
 
 static char* soft_kill_binary = NULL;
 

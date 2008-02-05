@@ -44,7 +44,7 @@
 #include "simplelist.h"
 #include "condor_string.h"  /* for strnewp() */
 #include "string_list.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 const CondorID Dag::_defaultCondorId;
 

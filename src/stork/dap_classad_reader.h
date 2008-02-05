@@ -23,7 +23,7 @@
 #include "condor_common.h"
 #include "condor_string.h"
 #include "condor_debug.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "dap_constants.h"
 
 #define WANT_NAMESPACES

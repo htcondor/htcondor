@@ -25,7 +25,7 @@
 #include "sock.h"
 #include "condor_adtypes.h"
 #include "condor_system.h"
-#include "../condor_daemon_core.V6/condor_ipverify.h"
+#include "condor_ipverify.h"
 
 
 /*

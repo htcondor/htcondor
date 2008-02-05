@@ -23,7 +23,7 @@
 #include "string_list.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 
 #include "basename.h"
 #include "qmgmt.h"

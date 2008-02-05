@@ -18,7 +18,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "daemon.h"
 #include "X509credential.h"
 #include "condor_config.h"
