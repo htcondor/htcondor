@@ -754,12 +754,10 @@ sub find_os( $$$ )
 	my $Table = shift;
 	my $field = shift;
 	my $text = shift;
-	foreach my $os ( @{$Table} )
-	{
+	foreach my $os ( @{$Table} ) {
 		next if ( ! exists( $os->{$field} ) );
 		my $pat = $os->{$field};
-		if ( $text =~ /$pat/ )
-		{
+		if ( $text =~ /$pat/ ) {
 			return $os;
 		}
 	}
@@ -866,6 +864,10 @@ sub install( $ ) {
 			 linux => {
 				 name => "unknown package installer",
 			 },
+			 apt => {
+				 name => "APT",
+				 run => "apt-get install %s",
+			 },
 			 yum => {
 				 name => "YUM",
 				 run => "yum install %s",
@@ -881,34 +883,48 @@ sub install( $ ) {
 		my @OsTable =
 			(
 			 {
-				 issue => "CentOS|Red Hat Enterprise|Fedora",
 				 name => "Red Hat",
 				 installer => "yum",
+
+				 issue => "CentOS|Red Hat Enterprise|Fedora",
 				 libs => {
 					 "libstdc++.so.5" => "compat-libstdc++",
 				 },
 			 },
 			 {
-				 issue => "openSUSE",
 				 name => "openSUSE",
 				 installer => "zypper",
+
+				 issue => "openSUSE",
 				 libs => {
 					 "libstdc++.so.5" => "compat-libstdc++",
 				 }
 			 },
 			 {
-				 issue => "(?i)linux",
-				 uname => "(?i)linux",
+				 name => "Debian",
+				 installer => "apt",
+
+				 issue => "(?i)debian",
+				 text => "debian",
+				 libs => {
+					 "libstdc++.so.5" => "libstdc++5",
+				 }
+			 },
+			 {
 				 name => "Linux",
 				 installer => "linux",
+
+				 issue => "(?i)linux",
+				 uname => "(?i)linux",
 				 libs => {
 					 "libstdc++.so.5" => "compat-libstdc++",
 				 },
 			 },
 			 {
-				 true => ".*",
 				 name => "UNIX",
 				 installer => "UNIX",
+
+				 true => ".*",
 			 },
 			 );
 
@@ -917,6 +933,11 @@ sub install( $ ) {
 			 {
 				 run	=> "cat '/etc/issue'",
 				 field	=> "issue",
+			 },
+			 {
+				 file	=> "/etc/debian_version",
+				 text	=> "debian",
+				 field	=> "text",
 			 },
 			 {
 				 run	=> "uname",
@@ -931,16 +952,22 @@ sub install( $ ) {
 
 		my $os = undef;
 		my $installer = undef;
-		foreach my $lookup ( @OsLookupTable )
-		{
-			my $text = `$lookup->{run}`;
-			chomp $text;
+		foreach my $lookup ( @OsLookupTable ) {
+			my $text;
+			if ( exists $lookup->{file}  and  -f $lookup->{file} ) {
+				$text = $lookup->{text};
+			}
+			elsif ( exists $lookup->{run} ) {
+				$text = `$lookup->{run}`;
+				chomp $text;
+			}
+			else {
+				next;
+			}
 			$os = find_os( \@OsTable, $lookup->{field}, $text );
-			if ( $os )
-			{
+			if ( $os ) {
 				if (  exists $os->{installer}  and 
-					  exists $InstallerTable{$os->{installer}}  )
-				{
+					  exists $InstallerTable{$os->{installer}}  ) {
 					$installer = $InstallerTable{$os->{installer}};
 				}
 				last;
@@ -956,7 +983,13 @@ sub install( $ ) {
 			if ( exists($os->{libs}{$lib})  and  exists($installer->{run}) )
 			{
 				my $cmd = sprintf( $installer->{run}, $os->{libs}{$lib} );
-				print "  Run '$cmd' as root to correct this\n";
+				print
+					"  This is probably provided by the '".
+					($os->{libs}{$lib}) . "' package.\n".
+					"  You need to install this package with " .
+					$installer->{name}.
+					" by running the following as root:\n".
+					"    $cmd\n";
 			}
 			elsif ( exists($os->{libs}{$lib}) )
 			{
