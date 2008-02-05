@@ -1951,20 +1951,20 @@ another machine becomes available.
 
 Condor may be configured with a policy that allows these potentially
 evicted jobs to be suspended instead.
-The configuration introduces the notion of a slot,
-even in the case of a single, physical CPU.
 The policy utilizes two slots,
-one (called slot1 in the example) that runs jobs following
-the normal policy implemented for all machines in the pool.
+one (called slot1 in the example) that only runs jobs identified
+as high priority jobs.
 The second slot (called slot2 in the example) is 
-set to run jobs whenever it can, and suspend these jobs
-when slot1 is utilized.
+set to run jobs according to the usual policy and to suspend them
+when slot1 is claimed.  A policy for a machine with more than one physical
+CPU may be adapted from this example.  Instead of having 2 slots,
+you would have 2 times the number of physical CPUs.  Half of the slots
+would be for high priority jobs and the other half would be for suspendable
+jobs.
 
 Section~\ref{sec:Startd-Config-File-Entries} contains details of
 the \Macro{STARTD\_SLOT\_EXPRS} configuration macro,
 utilized in this policy example.
-The configuration, with comments to illustrate the intended policy
-will appear much like this example.
 
 \footnotesize
 \begin{verbatim}
@@ -1991,13 +1991,22 @@ SLOT2_START = ( (slot1_Activity != "Busy") && \
 SUSPEND = (SlotID == 2) && \
           ( (slot1_Activity == "Busy") || ($(KeyboardBusy)) )
 
-# Since SUSPEND can only be TRUE on slot2, we can write the
-# CONTINUE expression specifically for slot2:
-CONTINUE = (KeyboardIdle > $(ContinueIdleTime)) && \
+CONTINUE = (SlotID == 2) && \
+           (KeyboardIdle > $(ContinueIdleTime)) && \
            (slot1_Activity != "Busy")
 
 \end{verbatim}
 \normalsize
+
+Note that in this example, the job ClassAd attribute \Attr{IsHighPrioJob}
+has no special meaning to Condor.  It is an invented name chosen
+for this example.  To take advantage of the policy, a user
+must submit high priority jobs with this attribute defined.
+The following line appears in the job's submit description file as
+\begin{verbatim}
++IsHighPrioJob = True
+\end{verbatim}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:V60-Policy-diffs}Differences from the 

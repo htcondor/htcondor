@@ -1022,13 +1022,15 @@ File System Configuration File Entries''.
   % Result if not defined or RHS is empty: defaults to 20 seconds.
 
 \item[\Macro{DEAD\_COLLECTOR\_MAX\_AVOIDANCE\_TIME}]
-\label{param:DeadCollectorMaxAvoidanceTime} Defines the maximum time
-(in seconds) that a daemon (such as the negotiator) will fail over from
-a primary collector to a secondary collector (if any).  The default is
-one hour.  If connections to the dead primary collector take very
-little time to fail, new attempts to query the primary collector may
-be more frequent than the specified maximum avoidance time.
-
+\label{param:DeadCollectorMaxAvoidanceTime} Defines the interval of time
+  (in seconds) between checks for a failed primary \Condor{collector} daemon.
+  If connections to the dead primary \Condor{collector} take very
+  little time to fail, new attempts to query the primary \Condor{collector} may
+  be more frequent than the specified maximum avoidance time.
+  The default value equals one hour.
+  This variable has relevance to flocked jobs, as it defines 
+  the maximum time they may be reporting to the primary \Condor{collector}
+  without the \Condor{negotiator} noticing.
 
 \item[\Macro{PASSWD\_CACHE\_REFRESH}]
   \label{param:PasswdCacheRefresh}
@@ -3394,6 +3396,17 @@ search for the corresponding attribute names using ``slot'', instead.
   not be reported to the Condor pool. You cannot use this parameter to
   make Condor advertise more slots than there are CPUs on the machine.
   To do that, use \Macro{NUM\_CPUS}.
+
+\item[\Macro{ALLOW\_VM\_CRUFT}]
+\label{param:AllowVMCruft}
+  A boolean value that Condor sets and uses internally, currently
+  defaulting to \Expr{True}.  When \Expr{True},
+  Condor looks for configuration variables named with the
+  previously used string \MacroNI{VM} after searching unsuccessfully
+  for variables named with the currently used string \MacroNI{SLOT}.
+  When \Expr{False}, Condor does \emph{not} look for variables named
+  with the previously used string \MacroNI{VM} after searching
+  unsuccessfully for the string \MacroNI{SLOT}. 
 
 \end{description}
 

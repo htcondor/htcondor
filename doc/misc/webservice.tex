@@ -373,6 +373,21 @@ but that return values and parameter specification
 will vary according  to the target programming language.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-Gotchas} Get These Items Correct}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{itemize}
+\item For jobs that are to be executed on Windows platforms,
+  explicitly set the job ClassAd attribute \Attr{NTDomain}.
+  This attribute defines the NT domain within which the
+  job's owner authenticates.  The attribute is necessary,
+  and it is not set for the job by the \Procedure{createJobTemplate}
+  function.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{WebService-Transactions} Methods for Transaction Management}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -487,6 +502,9 @@ will vary according  to the target programming language.
 \item [\Code{createJobTemplate}]
   Request a job Class Ad, given some of the job requirements.
   This job Class Ad will be suitable for use when submitting the job.
+  Note that the job attribute \Attr{NTDomain} is not set by this
+  function, but must be set for jobs that will execute on Windows
+  platforms.
   A prototype is 
 
   \Code{StatusAndClassAd createJobTemplate(int clusterId, 
@@ -1109,7 +1127,28 @@ getJobAds(transaction, "(ClusterId==clusterId && JobId==jobId)")
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\subsubsection{\label{WebService-DataStructures} Common Data Structures}
+\subsubsection{\label{WebService-DataStructures} Common Data Structures}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Not yet in this list:
+Many methods return a status.
+Table ~\ref{WebService-StatusCode} lists and defines the
+\Code{StatusCode} return values.
+
+
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|l|l|l|} \hline
+\textbf{Value} & \textbf{Identifier} & \textbf{Definition}\\ \hline \hline
+0  &  \Code{SUCCESS}           &  All OK \\             \hline
+1  &  \Code{FAIL}              &  An error occurred that is not specific to another error code   \\ \hline
+2  &  \Code{INVALIDTRANSACTION}&  No such transaction exists  \\ \hline
+3  &  \Code{UNKNOWNCLUSTER}    &  The specified cluster is not the currently active one  \\ \hline
+4  &  \Code{UNKNOWNJOB}        &  The specified job does not exist within the specified cluster \\ \hline
+5  &  \Code{UNKNOWNFILE}       &    \\ \hline
+6  &  \Code{INCOMPLETE}        &    \\ \hline
+7  &  \Code{INVALIDOFFSET}     &    \\ \hline
+8  &  \Code{ALREADYEXISTS}     &  For this job, the specified file already exists  \\ \hline
+\end{tabular}
+\caption{\label{WebService-StatusCode}\Code{StatusCode} definitions}
+\end{table}
+\end{center}
