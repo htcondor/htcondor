@@ -74,6 +74,7 @@ leave the 4th argument empty...
 
 BUILD_DEP_LIB($(CPlusPlus),x_read_joblog,C,,../release_dir/lib/libcondorapi.a)
 BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a)
+BUILD_DEP_LIB($(CPlusPlus),x_write_joblog_events,C,,../release_dir/lib/libcondorapi.a)
 
 /* BUG: We seem to consistently loose track of one pid on AIX
 	so we will turn this test off until this gets fixed.....
@@ -188,13 +189,11 @@ DESC(cmd_status_shows-any,"Condor_status -any works as expected")
 RUN(cmd_status_shows-any)
 TESTCLASS(cmd_status_shows-any,core)
 TESTCLASS(cmd_status_shows-any,quick)
-TESTCLASS(cmd_status_shows-any,btdebug)
 
 DESC(cmd_status_shows-submitters,"Condor_status -submitters works as expected")
 RUN(cmd_status_shows-submitters)
 TESTCLASS(cmd_status_shows-submitters,core)
 TESTCLASS(cmd_status_shows-submitters,quick)
-TESTCLASS(cmd_status_shows-submitters,btdebug)
 
 DESC(cmd_status_shows-negotiator,"Condor_status -negotiator works as expected")
 RUN(cmd_status_shows-negotiator)
@@ -970,6 +969,38 @@ RUN(job_filexfer_md5-remote_van)
 TESTCLASS(job_filexfer_md5-remote_van,filexfer)
 TESTCLASS(job_filexfer_md5-remote_van,quick)
 #endif
+
+/* new condor_wait tests */
+
+DESC(cmd_wait_shows-all,"")
+DEPS(cmd_wait_shows-all,x_write_joblog_events.exe)
+RUN(cmd_wait_shows-all)
+TESTCLASS(cmd_wait_shows-all,quick)
+TESTCLASS(cmd_wait_shows-all,btdebug)
+
+DESC(cmd_wait_shows-base,"")
+DEPS(cmd_wait_shows-base,x_write_joblog_events.exe)
+RUN(cmd_wait_shows-base)
+TESTCLASS(cmd_wait_shows-base,quick)
+TESTCLASS(cmd_wait_shows-base,btdebug)
+
+DESC(cmd_wait_shows-notimeout,"")
+DEPS(cmd_wait_shows-notimeout,x_write_joblog_events.exe)
+RUN(cmd_wait_shows-notimeout)
+TESTCLASS(cmd_wait_shows-notimeout,quick)
+TESTCLASS(cmd_wait_shows-notimeout,btdebug)
+
+DESC(cmd_wait_shows-partial,"")
+DEPS(cmd_wait_shows-partial,x_write_joblog_events.exe)
+RUN(cmd_wait_shows-partial)
+TESTCLASS(cmd_wait_shows-partial,quick)
+TESTCLASS(cmd_wait_shows-partial,btdebug)
+
+DESC(cmd_wait_shows-timeout,"")
+DEPS(cmd_wait_shows-timeout,x_write_joblog_events.exe)
+RUN(cmd_wait_shows-timeout)
+TESTCLASS(cmd_wait_shows-timeout,quick)
+TESTCLASS(cmd_wait_shows-timeout,btdebug)
 
 /* Dagman Tests */
 
