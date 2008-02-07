@@ -90,6 +90,11 @@ check.
 
 \begin{itemize}
 
+\item A memory leak that prevented \Condor{load\_history} from running
+with large history files has been fixed.
+
+\item A bug in \Condor{history} when running in a quill environment has been fixed.  This bug would cause the command to crash in some situations.
+
 \item The job ClassAd attribute \Attr{EmailAttributes} now works 
 for grid universe jobs.
 
