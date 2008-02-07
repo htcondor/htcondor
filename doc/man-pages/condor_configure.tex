@@ -109,14 +109,14 @@ released with Condor.  This list includes:
 	If used as an 
 	upgrade within an existing installation directory, existing 
 	configuration files and local directory are preserved.  This
-	is the default behavior of \Condor{install}}
+	is the default behavior of \Condor{install}. }
 
 	\OptItem{\Opt{---install-dir=$<$path$>$}} {Specifies the path
 	where Condor should be installed or the path where it already is
 	installed. The default is the current working directory.}
 
 	\OptItem{\Opt{---prefix=$<$path$>$}} {This is an alias for
-	``--install-dir''.}
+	\Opt{--install-dir}.}
 
 	\OptItem{\Opt{---local-dir=$<$path$>$}} {Specifies the
 	location of the local directory, which is the directory that generally 
@@ -125,7 +125,7 @@ released with Condor.  This list includes:
 	(\File{spool}, \File{log}, \File{execute}).
 	This location is indicated  by the \MacroNI{LOCAL\_DIR} 
 	variable in the configuration file. 
-	When installing (that is, if ---install is specified),
+	When installing (that is, if \Opt{--install} is specified),
 	\Condor{configure} 
 	will properly create the local directory in the location specified.
 	If none is specified, the default value is given by the evaluation of
@@ -155,7 +155,7 @@ released with Condor.  This list includes:
 	and \MacroNI{NEGOTIATOR\_HOST} to point to the given host name).
 	The central manager machine's Condor configuration needs
 	to be independently configured to 
-	act as a manager using the option ---type=manager. }
+	act as a manager using the option \Opt{--type=manager}. }
 
 	\OptItem{\Opt{---owner=$<$ownername$>$}} {Set configuration
 	such that Condor daemons will be executed as the given owner.
@@ -170,38 +170,39 @@ released with Condor.  This list includes:
 	If not run as root, the owner is the user running
 	the \Condor{configure} command.  }
 
-	\OptItem{\Opt{---overwrite}} {
-	  Always overwrite the contents of the ``sbin'' directory in
+	\OptItem{\Opt{--overwrite}} {
+	  Always overwrite the contents of the \File{sbin} directory in
 	  the installation directory.  By default, \Condor{install}
-	  will not install if it finds an existing ``sbin'' directory
+	  will not install if it finds an existing \File{sbin} directory
 	  with Condor programs in it.  In this case, \Condor{install}
-	  will exit with an error message.  You must specify
-	  ``--overwrite'' or ``--backup'' to tell \Condor{install}
+	  will exit with an error message.  Specify
+	  \Opt{--overwrite} or \Opt{--backup} to tell \Condor{install}
 	  what to do.
 
-	  This prevents \Condor{install} from moving an ``sbin''
-	  directory out of the way that it shouldn't.  This is
-	  particularly useful if you're trying to install Condor in a
-	  location used by other things (``/usr'', ``/usr/local'', etc.)
-	  For example: ``\Condor{install} --prefix=/usr'' will not move
-	  ``/usr/sbin'' out of the way unless you specify the
-	  ``--backup'' option.
+	  This prevents \Condor{install} from moving an \File{sbin}
+	  directory out of the way that it should not move.  This is
+	  particularly useful when trying to install Condor in a
+	  location used by other things (\File{/usr}, \File{/usr/local}, etc.)
+	  For example: \Condor{install} \Opt{--prefix=/usr}
+          will not move
+	  \File{/usr/sbin} out of the way unless you specify the
+	  \Opt{--backup} option.
 
-	  The ``--backup'' behavior is used to
+	  The \Opt{--backup} behavior is used to
 	  prevent \Condor{install} from overwriting running daemons --
-	  UNIX semantics will keep the existing binaries running, even
-	  if they've been moved to a new directory.}
+	  Unix semantics will keep the existing binaries running, even
+	  if they have been moved to a new directory.}
 
 	\OptItem{\Opt{---backup}} {
-	  Always backup the ``sbin'' directory in the installation
+	  Always backup the \File{sbin} directory in the installation
 	  directory.  By default, \Condor{install} will not install if
-	  it finds an existing ``sbin'' directory with Condor programs
+	  it finds an existing \File{sbin} directory with Condor programs
 	  in it.  In this case, \Condor{install} with exit with an
-	  error message.  You must specify ``--overwrite'' or
-	  ``--backup'' to tell \Condor{install} what to do.
+	  error message.  You must specify \Opt{--overwrite} or
+	  \Opt{--backup} to tell \Condor{install} what to do.
 
-	  This prevents \Condor{install} from moving an ``sbin''
-	  directory out of the way that it shouldn't.  This is
+	  This prevents \Condor{install} from moving an \File{sbin}
+	  directory out of the way that it should not move.  This is
 	  particularly useful if you're trying to install Condor in a
 	  location used by other things (``/usr'', ``/usr/local'', etc.)
 	  For example: ``\Condor{install} --prefix=/usr'' will not move
