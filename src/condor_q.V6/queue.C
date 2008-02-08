@@ -1833,7 +1833,7 @@ usage (char *myName)
 		"\t\t-direct <schedd>\tPerform a direct query to the schedd\n"
 #endif
 		"\t\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
-		"\t\t-version\t\t\tPrint the Condor Version and exit\n",
+		"\t\t-version\t\t\tPrint the Condor Version and exit\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
