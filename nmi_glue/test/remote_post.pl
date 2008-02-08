@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_post.pl,v 1.12.6.1 2008-01-22 17:49:37 bt Exp $
+# $Id: remote_post.pl,v 1.12.6.2 2008-02-08 17:21:45 bt Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -180,7 +180,7 @@ while( <TASKFILE> ) {
 	# and we really only need to tar up the results once.
 	# Except 1/15/08 we are taring after the individual tests to
 	# keep disk use lower.
-    if( (-d "$testname.saveme.tar.gz") && ($testcopy == 1) ) {
+    if( (-f "$testname.saveme.tar.gz") && ($testcopy == 1) ) {
             print "Saving $testname.saveme.tar.gz.\n";
             copy_file( "$testname.saveme.tar.gz", $resultdir, true );
     }
