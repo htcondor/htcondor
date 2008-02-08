@@ -129,6 +129,10 @@ of 1024.
 \item Since 6.9.5, \Condor{glidein} failed in the setup stage, due to the
 change in syntax of quoting in the Condor submit file for gt2 argument strings.
 
+\item Fixed a bug in the \Condor{gridmanager} that could prevent refreshed
+X509 proxies from being forwarded to the remote machine for grid universe
+jobs of type gt4.
+
 \end{itemize}
 
 \noindent Known Bugs:
