@@ -76,7 +76,7 @@ mkdir "$savemeDirectory";
 $mypiddir = $savemeDirectory . "/" . $pId;
 system("mkdir $mypiddir");
 #make a symbolic link for personal condor module to use
-system("ln -s $mypiddir $pId");
+system("rm -f $pId"); system("ln -s $mypiddir $pId");
 
 #mkdir "$configurationsDirectory";
 mkdir "$jobsDirectory";

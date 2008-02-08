@@ -64,7 +64,7 @@ system("mkdir $mysaveme");
 $mypiddir = $mysaveme . "/" . $mypid;
 system("mkdir $mypiddir");
 #make a symbolic link for personal condor module to use
-system("ln -s $mypiddir $mypid");
+system("rm -f $mypid"); system("ln -s $mypiddir $mypid");
 
 #print "$line\n";
 $myparamname = $corename . $mypid . ".param";

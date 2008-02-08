@@ -49,7 +49,7 @@ $myquillpiddir = $mysaveme . "/" . $mypid . "/" . $myquillname;
 system("mkdir $mypiddir");
 system("mkdir $myquillpiddir");
 #make a symbolic link for personal condor module to use
-system("ln -s $mypiddir $mypid");
+system("rm -f $mypid"); system("ln -s $mypiddir $mypid");
 system("ln -s $myquillpiddir $myquillname");
 
 
