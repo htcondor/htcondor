@@ -44,10 +44,6 @@ class GridUniverseLogic : public Service
 		static void shutdown_graceful() { signal_all(SIGTERM); }
 		static void shutdown_fast() { signal_all(SIGQUIT); }
 
-		static bool want_scratch_dir();
-
-		static bool group_per_subject();
-
 	private:
 
 		static void signal_all(int sig);

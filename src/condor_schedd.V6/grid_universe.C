@@ -39,7 +39,6 @@ const int GridUniverseLogic::job_removed_delay = 2;
 GridUniverseLogic::GmanPidTable_t * GridUniverseLogic::gman_pid_table = NULL;
 int GridUniverseLogic::rid = -1;
 static const char scratch_prefix[] = "condor_g_scratch.";
-static int make_tmp_dir = -1;  // -1 = unknown, 0 = no tmp dir, 1 = mkdir
 
 // globals
 GridUniverseLogic* _gridlogic = NULL;
@@ -87,54 +86,6 @@ GridUniverseLogic::~GridUniverseLogic()
 	}
 	gman_pid_table = NULL;
 	return;
-}
-
-bool
-GridUniverseLogic::want_scratch_dir()
-{
-	return group_per_subject();
-}
-
-bool
-GridUniverseLogic::group_per_subject()
-{
-	char *gman_binary;
-
-	if ( make_tmp_dir == -1 ) {
-		gman_binary = param("GRIDMANAGER");
-		if (!gman_binary) {
-			return false;
-		}
-
-		// Now figure out if the gridmanager installed on this
-		// machine wants a tmp dir or not.  Do this by checking the version.
-		char ver[128];
-		ver[0] = '\0';
-		CondorVersionInfo::get_version_from_file(gman_binary,ver,sizeof(ver));
-		dprintf(D_FULLDEBUG,"Version of gridmanager is %s\n",ver);
-		CondorVersionInfo vi(ver);
-		// If gridmanager is ver 6.5.1 or newer, it wants a tmp dir.
-		if ( vi.built_since_version(6,5,1) ) {
-				// give it a tmp dir
-			make_tmp_dir = 1;
-		} else {
-				// old gridmanager --- no tmp dir
-			make_tmp_dir = 0;
-		}
-		free(gman_binary);
-	}
-
-	if ( make_tmp_dir == 1 ) {
-		return true;
-	}
-
-	if ( make_tmp_dir == 0 ) {
-		return false;
-	}
-
-	// if we made it here, make_tmp_dir is messed up
-	EXCEPT("group_per_subject() failed sanity check (%d)\n",make_tmp_dir);
-	return false;
 }
 
 void 
@@ -376,32 +327,31 @@ GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 	// Remove node from our hash table
 	gman_pid_table->remove(owner);
 	// Remove any scratch directory used by this gridmanager
-	if ( want_scratch_dir() ) {
-		char *scratchdir = scratchFilePath(gman_node);
-		ASSERT(scratchdir);
-		if ( IsDirectory(scratchdir) && 
-			init_user_ids(gman_node->owner, gman_node->domain) ) 
+	char *scratchdir = scratchFilePath(gman_node);
+	ASSERT(scratchdir);
+	if ( IsDirectory(scratchdir) && 
+		 init_user_ids(gman_node->owner, gman_node->domain) ) 
+	{
+		priv_state saved_priv = set_user_priv();
+			// Must put this in braces so the Directory object
+			// destructor is called, which will free the iterator
+			// handle.  If we didn't do this, the below rmdir 
+			// would fail.
 		{
-			priv_state saved_priv = set_user_priv();
-				// Must put this in braces so the Directory object
-				// destructor is called, which will free the iterator
-				// handle.  If we didn't do this, the below rmdir 
-				// would fail.
-			{
-				Directory tmp( scratchdir );
-				tmp.Remove_Entire_Directory();
-			}
-			if ( rmdir(scratchdir) == 0 ) {
-				dprintf(D_FULLDEBUG,"Removed scratch dir %s\n",scratchdir);
-			} else {
-				dprintf(D_FULLDEBUG,"Failed to remove scratch dir %s\n",
-					scratchdir);
-			}
-			set_priv(saved_priv);
-			uninit_user_ids();
+			Directory tmp( scratchdir );
+			tmp.Remove_Entire_Directory();
 		}
-		delete [] scratchdir;
+		if ( rmdir(scratchdir) == 0 ) {
+			dprintf(D_FULLDEBUG,"Removed scratch dir %s\n",scratchdir);
+		} else {
+			dprintf(D_FULLDEBUG,"Failed to remove scratch dir %s\n",
+					scratchdir);
+		}
+		set_priv(saved_priv);
+		uninit_user_ids();
 	}
+	delete [] scratchdir;
+
 	// Reclaim memory from the node itself
 	delete gman_node;
 
@@ -498,31 +448,25 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		free(gman_binary);
 		return NULL;
 	}
-	if ( !group_per_subject() ) {
-			// pre-6.5.1 gridmanager: waaaaaay too old!
-		dprintf( D_ALWAYS, "ERROR - gridmanager way too old!\n" );
+
+	// build a constraint
+	if ( !owner ) {
+		dprintf(D_ALWAYS,"ERROR - missing owner field\n");
 		free(gman_binary);
 		return NULL;
-	} else {
-		// new way - pass a constraint
-		if ( !owner ) {
-			dprintf(D_ALWAYS,"ERROR - missing owner field\n");
-			free(gman_binary);
-			return NULL;
-		}
-		MyString constraint;
-		if ( !attr_name  ) {
-			constraint.sprintf("(%s=?=\"%s\"&&%s==%d)",
-				ATTR_OWNER,owner,
-				ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
-		} else {
-			constraint.sprintf("(%s=?=\"%s\"&&%s=?=\"%s\")",
-				ATTR_OWNER,owner,
-				attr_name,attr_value);
-		}
-		args.AppendArg("-C");
-		args.AppendArg(constraint.Value());
 	}
+	MyString constraint;
+	if ( !attr_name  ) {
+		constraint.sprintf("(%s=?=\"%s\"&&%s==%d)",
+						   ATTR_OWNER,owner,
+						   ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
+	} else {
+		constraint.sprintf("(%s=?=\"%s\"&&%s=?=\"%s\")",
+						   ATTR_OWNER,owner,
+						   attr_name,attr_value);
+	}
+	args.AppendArg("-C");
+	args.AppendArg(constraint.Value());
 
 	MyString full_owner_name(owner);
 	if ( domain && *domain ) {
@@ -589,29 +533,27 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 
 	}	// end of once-per-schedd invocation block
 
-	// If gridmanager wants a tmp dir, create one and append proper
+	// Create a temp dir for the gridmanager and append proper
 	// command-line arguments to tell where it is.
-	if ( want_scratch_dir() ) {
-		bool failed = false;
-		gman_node = new gman_node_t;
-		char *finalpath = scratchFilePath(gman_node);
-		priv_state saved_priv = set_user_priv();
-		if ( (mkdir(finalpath,0700)) < 0 ) {
-			// mkdir failed.  
-			dprintf(D_ALWAYS,"ERROR - mkdir(%s,0700) failed in GRIDMANAGER, errno=%d (%s)\n",
+	bool failed = false;
+	gman_node = new gman_node_t;
+	char *finalpath = scratchFilePath(gman_node);
+	priv_state saved_priv = set_user_priv();
+	if ( (mkdir(finalpath,0700)) < 0 ) {
+		// mkdir failed.  
+		dprintf(D_ALWAYS,"ERROR - mkdir(%s,0700) failed in GRIDMANAGER, errno=%d (%s)\n",
 				finalpath, errno, strerror(errno));
-			failed = true;
-		}
-		set_priv(saved_priv);
-		args.AppendArg("-S");	// -S = "ScratchDir" argument
-		args.AppendArg(finalpath);
-		delete [] finalpath;
-		if ( failed ) {
-			// we already did dprintf reason to the log...
-			free(gman_binary);
-			if (gman_node) delete gman_node;
-			return NULL;
-		}
+		failed = true;
+	}
+	set_priv(saved_priv);
+	args.AppendArg("-S");	// -S = "ScratchDir" argument
+	args.AppendArg(finalpath);
+	delete [] finalpath;
+	if ( failed ) {
+		// we already did dprintf reason to the log...
+		free(gman_binary);
+		delete gman_node;
+		return NULL;
 	}
 
 	if(DebugFlags & D_FULLDEBUG) {
