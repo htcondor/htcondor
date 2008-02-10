@@ -114,7 +114,7 @@ $isXML = 0;  # are we running tests with XML output
 # remove . from path
 CleanFromPath(".");
 # yet add in base dir of all tests and compiler directories
-$ENV{PATH} = $ENV{PATH} . ":" . $Basedir;
+$ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
 
 #
 # the args:
