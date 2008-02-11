@@ -98,6 +98,8 @@ main(int argc, char* argv[])
   myDistro->Init( argc, argv );
 
   config();
+  Termlog = 1;
+  dprintf_config("TOOL");
 
   for(i=1; i<argc; i++) {
 
@@ -120,7 +122,6 @@ main(int argc, char* argv[])
 /*    else if (strcmp(argv[i],"-debug")==0) {
           // dprintf to console
           Termlog = 1;
-          dprintf_config ("TOOL", 2 );
     }
 */
     else {
@@ -396,7 +397,10 @@ static MyString getWritePassword(const char *write_passwd_fname,
 QuillErrCode insertHistoryJob(AttrList *ad) {
 
 	MyString errorSqlStmt;
-	return insertHistoryJobCommon(ad, DBObj, dt, errorSqlStmt, ScheddName, (time_t) ScheddBirthdate);
+	DBObj->beginTransaction();
+	QuillErrCode ec = insertHistoryJobCommon(ad, DBObj, dt, errorSqlStmt, ScheddName, (time_t) ScheddBirthdate);
+	DBObj->commitTransaction();
+	return ec;
 }
 
 // Read the history from a single file and print it out. 
@@ -409,8 +413,13 @@ static void readHistoryFromFile(char *JobHistoryFileName)
 
     MyString buf;
     
-    FILE* LogFile=safe_fopen_wrapper(JobHistoryFileName,"r");
+    int fd = safe_open_wrapper(JobHistoryFileName, O_RDONLY | O_LARGEFILE);
+	if (fd < 0) {
+        fprintf(stderr,"History file (%s) not found or empty.\n", JobHistoryFileName);
+        exit(1);
+    }
     
+	FILE *LogFile = fdopen(fd, "r");
 	if (!LogFile) {
         fprintf(stderr,"History file (%s) not found or empty.\n", JobHistoryFileName);
         exit(1);
