@@ -888,7 +888,7 @@ JobRouter::SubmitJob(RoutedJob *job) {
 	if(job->state != RoutedJob::CLAIMED) return;
 
 	job->dest_ad = job->src_ad;
-	VanillaToGrid::vanillaToGrid(&job->dest_ad,job->grid_resource.c_str());
+	VanillaToGrid::vanillaToGrid(&job->dest_ad,job->grid_resource.c_str(),job->is_sandboxed);
 
 	// Now we apply any edits to the job ClassAds as defined in the route ad.
 

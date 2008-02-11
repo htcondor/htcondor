@@ -35,7 +35,7 @@ public:
 	gridresource - where to send the job.  In ATTR_GRID_RESOURCE
 		format. 
 	*/
-	static bool vanillaToGrid(classad::ClassAd * ad, const char * gridresource);
+	static bool vanillaToGrid(classad::ClassAd * ad, const char * gridresource, bool is_sandboxed);
 private:
 };
 
