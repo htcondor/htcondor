@@ -1011,7 +1011,8 @@ V7_0_0_EXT      -a V7_0_COMMON_EXT \
 
 # Externals needed for the 7.0.1 release:
 V7_0_1_EXT      -a V7_0_COMMON_EXT \
-                   externals/bundles/pcre/7.6
+                   externals/bundles/pcre/7.6 \
+                   externals/bundles/glibc/2.5-20061008T1257
 
 # Externals needed for the head of the V7_0-branch
 V7_0_EXT        -a V7_0_1_EXT
