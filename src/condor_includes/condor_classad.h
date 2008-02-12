@@ -96,6 +96,13 @@ class ClassAd : public AttrList
         int put(Stream& s);
 		int initFromStream(Stream& s);
 
+		/*
+		 * @param str The newline-delimited string of attribute assignments
+		 * @param err_msg Optional buffer for error messages.
+		 * @return true on success
+		 */
+		bool initFromString(char const *str,MyString *err_msg=NULL);
+
 #if defined(USE_XDR)
 		// xdr shipping
 		int put (XDR *);
@@ -131,6 +138,11 @@ class ClassAd : public AttrList
 		AdType*		myType;						// my type field.
         AdType*		targetType;					// target type field.
 		// (sequence number is stored in attrlist)
+
+		// This function is called to update myType and targetType
+		// variables.  It should be called whenever the attributes that
+		// these variables are "bound" to may have been updated.
+		void updateBoundVariables();
 };
 
 typedef int (*SortFunctionType)(AttrList*,AttrList*,void*);

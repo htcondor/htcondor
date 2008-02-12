@@ -133,73 +133,25 @@ ClassAd::
 ClassAd(FILE* f, char* d, int& i, int &err, int &empty) 
   : AttrList(f, d, i, err, empty)
 {
-    ExprTree *tree;
-    EvalResult *val;
+	myType = NULL;
+	targetType = NULL;
 
-	// SetRankExpr ("Rank = 0");
-	// SetRequirements ("Requirements = TRUE");
-
-    tree = Lookup("MyType");
-	if(!tree)
-    {
-        myType = new AdType();               // undefined type.
-        if(myType == NULL)
-        {
-            EXCEPT("Warning : you ran out of space");
-		}
-    }
-    else
-    {
-        val = new EvalResult;
-		tree->EvalTree(this, val);
-		myType = new AdType(val->s);
-		if(myType == NULL)
-		{
-            EXCEPT("Warning : you ran out of space");
-		}
-        delete val;
-    }
-
-	if(!(tree = Lookup("TargetType")))
-    {
-        targetType = new AdType();           // undefined type.
-		if(targetType == NULL)
-		{
-            EXCEPT("Warning : you ran out of space");
-		}
-    }
-    else
-    {
-        val = new EvalResult;
-		tree->EvalTree(this, val);
-		targetType = new AdType(val->s);
-		if(targetType == NULL)
-		{
-            EXCEPT("Warning : you ran out of space");
-		}
-        delete val;
-    }
-
-		// We no longer remove MyType and TargetType from the
-		// attrlist, so they can be used in places such as
-		// COLLECTOR_REQUIREMENTS.  Just beware that these values
-		// should only be updated via the ClassAd::SetXXX() functions.
-	SetInvisible("MyType");
-	SetInvisible("TargetType");
-
-	//Delete("MyType");                        // eliminate redundant storage.
-	//Delete("TargetType");
+	updateBoundVariables();
 }
 
 ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 {
+	myType = NULL;
+	targetType = NULL;
+
+	updateBoundVariables();
+}
+
+void
+ClassAd::updateBoundVariables() {
     ExprTree *tree;
     EvalResult *val;
 
-	myType = NULL;
-	targetType = NULL;
-    // SetRankExpr ("Rank = 0");
-	// SetRequirements ("Requirements = TRUE");
     val = new EvalResult;
     if(val == NULL)
     {
@@ -211,6 +163,12 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 	// Evaluate this variable within the classad, to see if it
 	// is defined.
     tree->EvalTree(this, val);
+
+	if( myType ) {
+		delete myType;
+		myType = NULL;
+	}
+
 	// If it's not defined, we set the type to be blank
     if(!val || val->type!=LX_STRING)
     {
@@ -244,6 +202,12 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 	// Evaluate this variable within the classad, to see if it
 	// is defined.
     tree->EvalTree(this, val);
+
+	if( targetType ) {
+		delete targetType;
+		targetType = NULL;
+	}
+
 	// If it's not defined, we set the type to be blank
     if(!val || val->type!=LX_STRING)
     {
@@ -277,12 +241,6 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 		// should only be updated via the ClassAd::SetXXX() functions.
 	SetInvisible("MyType");
 	SetInvisible("TargetType");
-
-	// These are the deletes referred to above. We delete theses
-	// from the attribute list because we keep them separately, 
-	// apparently because it's convenient that way. 
-    //Delete("MyType");
-    //Delete("TargetType");
 }
 
 ClassAd::ClassAd(const ClassAd& old) : AttrList((AttrList&) old)
@@ -852,6 +810,16 @@ ClassAd::clear( void )
         delete targetType;
 		targetType = NULL;
     }
+}
+
+bool
+ClassAd::initFromString(char const *str,MyString *err_msg)
+{
+	if( !AttrList::initFromString(str,err_msg) ) {
+		return false;
+	}
+
+	updateBoundVariables();
 }
 
 

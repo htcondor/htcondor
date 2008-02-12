@@ -254,6 +254,13 @@ class AttrList : public AttrListAbstract
         int put(Stream& s);
 		int initFromStream(Stream& s);
 
+		/*
+		 * @param str The newline-delimited string of attribute assignments
+		 * @param err_msg Optional buffer for error messages.
+		 * @return true on success
+		 */
+		bool initFromString(char const *str,MyString *err_msg);
+
 		void clear( void );
 
 			// Create a list of all ClassAd attribute references made

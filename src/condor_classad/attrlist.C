@@ -2531,6 +2531,53 @@ AttrList::initFromStream(Stream& s)
     return succeeded;
 }
 
+bool
+AttrList::initFromString(char const *str,MyString *err_msg)
+{
+	bool succeeded = true;
+
+	// First, clear our ad so we start with a fresh ClassAd
+	clear();
+	if ( !hash ) {
+		// is hash ever NULL? don't think so, but just in case.
+		this->hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
+	}
+
+	char *exprbuf = new char[strlen(str)+1];
+	ASSERT( exprbuf );
+
+	while( *str ) {
+		while( isspace(*str) ) {
+			str++;
+		}
+
+		size_t len = strcspn(str,"\n");
+		strncpy(exprbuf,str,len);
+		exprbuf[len] = '\0';
+
+		if( str[len] == '\n' ) {
+			len++;
+		}
+		str += len;
+
+		if (!Insert(exprbuf)) {
+			if( err_msg ) {
+				err_msg->sprintf("Failed to parse ClassAd expression: %s",
+								 exprbuf);
+			}
+			else {
+				dprintf(D_ALWAYS,"Failed to parse ClassAd expression : %s\n",
+						exprbuf);
+			}
+			succeeded = false;
+			break;
+		}
+	}
+
+	delete exprbuf;
+	return succeeded;
+}
+
 
 #if defined(USE_XDR)
 // xdr shipping code
