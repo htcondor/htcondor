@@ -1352,4 +1352,61 @@ sub FindCollectorPort
 	debug( "No collector address found in collector address file! returning 0.\n");
 	return("0");
 }
+
+#################################################################
+#
+# SaveMeSetup
+#
+# Make the saveme directory for a test, Create the pid based
+# location for the current test within this saveme directory
+# and then create a symbolic link to this pid directory. By doing this
+# when the personal condor setup go to make a pid directory to
+# run in, it ends up running within the saveme directory.
+# This saveme directory allows more data to be returned during the
+# nightly testing.
+#
+# If all is good the current pid is returned but if there 
+# is an error 0 is returned.
+#
+#################################################################
+
+sub SaveMeSetup
+{
+	$testname = shift;
+	$mypid = $$;
+	$res = 1;
+	$mysaveme = $testname . ".saveme";
+	$res = CondorTest::verbose_system("mkdir -p $mysaveme");
+	if($res != 0) {
+		print "SaveMeSetup: Could not create \"saveme\" directory for test\n";
+		return(0);
+	}
+	$mypiddir = $mysaveme . "/" . $mypid;
+	# there should be no matching directory here
+	# unless we are getting pid recycling. Start fresh.
+	$res = CondorTest::verbose_system("rm -rf $mypiddir");
+	if($res != 0) {
+		print "SaveMeSetup: Could not remove prior pid directory in savemedir \n";
+		return(0);
+	}
+	$res = CondorTest::verbose_system("mkdir $mypiddir");
+	if($res != 0) {
+		print "SaveMeSetup: Could not create pid directory in \"saveme\" directory\n";
+		return(0);
+	}
+	# make a symbolic link for personal condor module to use
+	# if we get pid recycling, blow the symbolic link 
+	$res = CondorTest::verbose_system("rm -f $mypid");
+	if($res != 0) {
+		print "SaveMeSetup: Could not remove prior pid directory\n";
+		return(0);
+	}
+	$res = CondorTest::verbose_system("ln -s $mypiddir $mypid");
+	if($res != 0) {
+		print "SaveMeSetup: Could not link to pid dir in  \"saveme\" directory\n";
+		return(0);
+	}
+	return($mypid);
+}
+
 1;
