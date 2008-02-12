@@ -49,7 +49,7 @@
    mysql_free_result($result);
 
    echo "<h1><a href=\"./Run-condor.php\" class=\"title\">Condor Latest Build/Cross Test Results</a> ".
-        ":: ".ucfirst($nplatform)." binariess from Build ID $runid (".date("m/d/Y", $start).")</h1>\n";
+        ":: ".ucfirst($nplatform)." binaries from Build ID $runid (".date("m/d/Y", $start).")</h1>\n";
 
 	//
 	// Create array of runids to display results for starting with native
