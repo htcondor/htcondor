@@ -358,24 +358,25 @@ main(int argc, char* argv[])
 
         if ( schedd.locate() ) {
 			char *scheddname = quillName;	
-/*
-			if( (scheddname = schedd.name()) ) {
-				queryhor.setScheddname(scheddname);	
-				queryver.setScheddname(scheddname);	
-            } else {
-				// set it to NULL?
-            }
-*/
-			
-			ClassAd *daemonAd = schedd.daemonAd();
-			int scheddbirthdate;
-			if(daemonAd) {
-				if(daemonAd->LookupInteger( ATTR_JOB_QUEUE_BIRTHDATE, 	
-							scheddbirthdate) ) {
-					queryhor.setJobqueuebirthdate( (time_t)scheddbirthdate);	
-					queryver.setJobqueuebirthdate( (time_t)scheddbirthdate);	
+			if (scheddname == NULL) {
+				// none set explictly, look it up in the daemon ad
+				scheddname = schedd.name();
+				ClassAd *daemonAd = schedd.daemonAd();
+				int scheddbirthdate;
+				if(daemonAd) {
+					if(daemonAd->LookupInteger( ATTR_JOB_QUEUE_BIRTHDATE, 	
+								scheddbirthdate) ) {
+						queryhor.setJobqueuebirthdate( (time_t)scheddbirthdate);	
+						queryver.setJobqueuebirthdate( (time_t)scheddbirthdate);	
+					}
 				}
+			} else {
+				queryhor.setJobqueuebirthdate(0);	
+				queryver.setJobqueuebirthdate(0);	
 			}
+			queryhor.setScheddname(scheddname);	
+			queryver.setScheddname(scheddname);	
+			
 		}
 	  }
 	  dbconn = getDBConnStr(quillName,dbIpAddr,dbName,queryPassword);
