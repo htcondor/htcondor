@@ -33,13 +33,13 @@ $currenthost = `hostname`;
 CondorTest::fullchomp($currenthost);
 print "Running on $currenthost\n";
 
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
-system("mkdir $mysaveme");
-$mypiddir = $mysaveme . "/" . $mypid;
-system("mkdir $mypiddir");
-#make a symbolic link for personal condor module to use
-system("rm -f $mypid"); system("ln -s $mypiddir $mypid");
+system("date");
+
+$mypid = CondorPersonal::SaveMeSetup($corename);
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
+}
+
 $mysubmitnm = $corename . $mypid . ".cmd";
 $mysubmitnmout = $corename . $mypid . ".cmd.out";
 $mysubmitnmlog = $corename . $mypid . ".log";

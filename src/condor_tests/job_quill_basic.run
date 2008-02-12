@@ -43,15 +43,14 @@ $myquillname = "pgsql" . $mypid;
 $myfullpgsqlloc = $topdir . "/" . $myquillname;
 $myfullpgsqlinstalllog = $topdir . "/" . $myquillname . "/postgress_install.log" ;
 
-system("mkdir $mysaveme");
-$mypiddir = $mysaveme . "/" . $mypid;
-$myquillpiddir = $mysaveme . "/" . $mypid . "/" . $myquillname;
-system("mkdir $mypiddir");
-system("mkdir $myquillpiddir");
-#make a symbolic link for personal condor module to use
-system("rm -f $mypid"); system("ln -s $mypiddir $mypid");
-system("ln -s $myquillpiddir $myquillname");
+$mypid = CondorPersonal::SaveMeSetup($corename);
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
+}
 
+$myquillpiddir = $mysaveme . "/" . $mypid . "/" . $myquillname;
+system("mkdir $myquillpiddir");
+system("ln -s $myquillpiddir $myquillname");
 
 if($ourtarfile eq "") {
 	# find the version of the current external
