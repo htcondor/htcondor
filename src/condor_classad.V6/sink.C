@@ -126,36 +126,40 @@ Unparse( string &buffer, const Value &val )
 						continue;
 					}   
 				}
-			    switch( *itr ) {
-					case '\a': buffer += "\\a"; break;
-					case '\b': buffer += "\\b"; break;
-					case '\f': buffer += "\\f"; break;
-					case '\n': buffer += "\\n"; break;
-					case '\r': buffer += "\\r"; break;
-					case '\t': buffer += "\\t"; break;
-					case '\v': buffer += "\\v"; break;
-					case '\\': buffer += "\\\\"; break;
-					case '\?': buffer += "\\?"; break;
-					case '\'': buffer += "\'"; break;
-					case '\"': buffer += "\""; break;
+				if( !oldClassAd ) {
+					switch( *itr ) {
+						case '\a': buffer += "\\a"; continue;
+						case '\b': buffer += "\\b"; continue;
+						case '\f': buffer += "\\f"; continue;
+						case '\n': buffer += "\\n"; continue;
+						case '\r': buffer += "\\r"; continue;
+						case '\t': buffer += "\\t"; continue;
+						case '\v': buffer += "\\v"; continue;
+						case '\\': buffer += "\\\\"; continue;
+						case '\?': buffer += "\\?"; continue;
+						case '\'': buffer += "\'"; continue;
+						case '\"': buffer += "\""; continue;
 
-					default:
-						if( !isprint( *itr ) ) {
-							// print octal representation
-							sprintf( tempBuf, "\\%03o", (unsigned char)*itr );
-							buffer += tempBuf;
-						} else {
-							if (!xmlUnparse) {
-								buffer += *itr;
-							} else {
-								switch (*itr) {
-								case '&': buffer += "&amp;"; break;
-								case '<': buffer += "&lt;";  break;
-								case '>': buffer += "&gt;";  break;
-								default:  buffer += *itr;    break;
-								}
+						default:
+							if( !isprint( *itr ) ) {
+									// print octal representation
+								sprintf( tempBuf, "\\%03o", (unsigned char)*itr );
+								buffer += tempBuf;
+								continue;
 							}
-						}
+							break;
+					}
+				}
+
+				if (!xmlUnparse) {
+					buffer += *itr;
+				} else {
+					switch (*itr) {
+						case '&': buffer += "&amp;"; break;
+						case '<': buffer += "&lt;";  break;
+						case '>': buffer += "&gt;";  break;
+						default:  buffer += *itr;    break;
+					}
 				}
 			}
 			buffer += '"';
