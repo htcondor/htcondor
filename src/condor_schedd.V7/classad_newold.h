@@ -22,6 +22,7 @@
 
 namespace classad { class ClassAd; }
 class ClassAd;
+class MyString;
 
 /*
 src - New classad to convert.  Will not be modified.
@@ -45,5 +46,12 @@ returns: true on success, false on a problem.
 
 */
 bool old_to_new(ClassAd & src, classad::ClassAd & dst);
+
+/*
+old_value - ClassAd value in "old" format
+new_value_buffer - buffer to append ClassAd value in "new" format
+err_msg - buffer for error messages (NULL for none)
+*/
+bool old_classad_value_to_new_classad_value(char const *old_value, MyString &new_value_buffer, MyString *err_msg);
 
 #endif /* INCLUDE_CLASSAD_NEWOLD_H*/

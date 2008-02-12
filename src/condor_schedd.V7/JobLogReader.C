@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "classad_newold.h"
 
 #include "JobLogReader.h"
 
@@ -31,7 +32,7 @@ JobLogReader::JobLogReader() {
 
 void
 JobLogReader::SetJobLogFileName(char const *fname) {
-	parser.setJobQueueName((char *)fname);
+	parser.setJobQueueName(fname);
 }
 
 char const *
@@ -117,7 +118,7 @@ bool JobLogReader::IncrementalLoad(classad::ClassAdCollection *ad_collection) {
 /*! read the body of a log Entry; update a new ClassAd collection.
  */
 bool
-JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdCollection *ad_collection, ClassAdLogParser *caLogParser )
+JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdCollection *ad_collection, ClassAdLogParser * /*caLogParser*/ )
 {
 
 	switch(log_entry->op_type) {
@@ -143,7 +144,7 @@ JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdColle
 		//Chain this ad to its parent, if any.
 		PROC_ID proc = getProcByString(log_entry->key);
 		if(proc.proc >= 0) {
-			char cluster_key[50];
+			char cluster_key[PROC_ID_STR_BUFLEN];
 			//NOTE: cluster keys start with a 0: e.g. 021.-1
 			sprintf(cluster_key,"0%d.-1",proc.cluster);
 			classad::ClassAd* cluster_ad = ad_collection->GetClassAd(cluster_key);
@@ -179,10 +180,15 @@ JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdColle
 			dprintf(D_ALWAYS, "ERROR reading %s: no such ad in collection: %s\n",GetJobLogFileName(),log_entry->key);
 			return false;
 		}
-		//NOTE: assuming here that we can parse the old-style classad expression using the new classad parser
-		classad::ClassAdParser parser;
+		MyString new_classad_value, err_msg;
+		if( !old_classad_value_to_new_classad_value( log_entry->value, new_classad_value, &err_msg ) ) {
+			dprintf(D_ALWAYS, "ERROR reading %s: failed to convert expression from old to new ClassAd format: %s\n", GetJobLogFileName(), err_msg.Value() );
+			return false;
+		}
 
-		classad::ExprTree *expr = parser.ParseExpression(log_entry->value);
+		classad::ClassAdParser ad_parser;
+
+		classad::ExprTree *expr = ad_parser.ParseExpression(new_classad_value.Value());
 		if(!expr) {
 			dprintf(D_ALWAYS, "ERROR reading %s: failed to parse expression: %s\n",GetJobLogFileName(),log_entry->value);
 			ASSERT(expr);

@@ -30,17 +30,14 @@ bool new_to_old(classad::ClassAd & src, ClassAd & dst)
 	// Convert back to new classad string
 	classad::ClassAdUnParser unparser;
 	std::string s_newadout;
+	unparser.SetOldClassAd( true );
 	unparser.Unparse(s_newadout, &src);
 
-	// Convert to old classad
-	NewClassAdParser newtoold;
-	ClassAd * newad = newtoold.ParseClassAd(s_newadout.c_str());
-	if( ! newad ) {
-		dprintf(D_ALWAYS,"Failed to convert the following new classad to old ClassAd form: %s\n",s_newadout.c_str());
+	MyString err_msg;
+	if( !dst.initFromString(s_newadout.c_str(),&err_msg) ) {
+		dprintf(D_ALWAYS,"Failed to convert the following new classad to old ClassAd form: (%s) %s\n",err_msg.Value(),s_newadout.c_str());
 		return false;
 	}
-	dst = *newad;
-	delete newad;
 
 	// Ensure dirtiness is preserved
 	dst.ClearAllDirtyFlags();
@@ -65,4 +62,10 @@ bool old_to_new(ClassAd & src, classad::ClassAd & dst)
 	// Convert to new classad
 	classad::ClassAdParser parser;
 	return parser.ParseClassAd(s_newad.Value(), dst, true);
+}
+
+bool old_classad_value_to_new_classad_value(char const *old_value, MyString &new_value_buffer, MyString *err_msg)
+{
+	NewClassAdUnparser oldtonew;
+	return oldtonew.OldValueToNewValue(old_value,new_value_buffer,err_msg);
 }
