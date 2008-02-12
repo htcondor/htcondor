@@ -162,10 +162,21 @@ NewClassAdParser::ParseClassAd(FILE *file)
 /**************************************************************************
  *
  * Function: _ParseClassAd
- * Purpose:  This parses a New ClassAds ad from some source. This is a
- *           private function used by the other ParseClassAds. It uses a
- *           DataSource class so that it doesn't have to know about files
- *           or strings. Pretty much all of the parsing happens here. 
+ * Purpose:  This parses a New ClassAds ad from some source and produces an
+ *           Old ClassAd object. This is a private function used by
+ *           the other ParseClassAds. It uses a DataSource class so
+ *           that it doesn't have to know about files or
+ *           strings. Pretty much all of the parsing happens here.
+ *           Note that this parser currently doesn't handle all
+ *           aspects of the New ClassAd language, such as "is" and
+ *           "isnt" operators.  An alternative, if you can link with
+ *           the New ClassAd library, is to parse the source text with
+ *           the real New ClassAd parser, producing a new ClassAd object.
+ *           Then use the New ClassAd unparser from the library with the
+ *           flag SetOldClassAd(true) set.  The resulting text is a
+ *           representation of the ClassAd in the Old ClassAd format, so
+ *           it can be parsed by the Old ClassAd parser into an Old ClassAd
+ *           object.
  * See Also: ReadToken()
  *
  **************************************************************************/
@@ -388,6 +399,59 @@ NewClassAdUnparser::SetOutputTargetType(bool output_target_type)
 	return;
 }
 
+/**************************************************************************
+ *
+ * Function: OldValueToNewValue
+ * Purpose:  Converts a ClassAd value from the old syntax to the new syntax.
+ *           This only operates on literals and expressions, not whole
+ *           ClassAds.
+ *
+ **************************************************************************/
+bool
+NewClassAdUnparser::OldValueToNewValue(char const *old_value,MyString &new_value_buffer,MyString *err_msg)
+{
+	bool in_string = false;
+	char const *curr_pos = old_value;
+	while ( *curr_pos ) {
+
+		if ( !in_string ) {
+
+			if ( *curr_pos == '"' ) {
+				in_string = true;
+			}
+
+			new_value_buffer += *curr_pos;
+
+		} else {
+
+			if ( *curr_pos == '"' ) {
+				in_string = false;
+			}
+
+			if ( *curr_pos == '\\' ) {
+				new_value_buffer += "\\";
+				if ( curr_pos[1] == '"' && curr_pos[2] != '\0' ) {
+					// This backslash is escaping a double-quote
+					curr_pos++;
+				}
+			}
+
+			new_value_buffer += *curr_pos;
+
+		}
+
+		curr_pos++;
+	}
+
+	if( in_string ) {
+		if( err_msg ) {
+			err_msg->sprintf("Unterminated string: %s",old_value);
+		}
+		return false;
+	}
+
+	return true;
+}
 
 /**************************************************************************
  *
@@ -438,41 +502,8 @@ NewClassAdUnparser::Unparse(ClassAd *classad, MyString &buffer)
 
 		expr->RArg()->PrintToNewStr( &expr_str );
 
-		bool in_string = false;
-		char *curr_pos = expr_str;
-		while ( 1 ) {
-
-			if ( !in_string ) {
-
-				if ( *curr_pos == '\0' ) {
-					break;
-				}
-
-				if ( *curr_pos == '"' ) {
-					in_string = true;
-				}
-
-				buffer += *curr_pos;
-
-			} else {
-
-				if ( *curr_pos == '"' ) {
-					in_string = false;
-				}
-
-				if ( *curr_pos == '\\' ) {
-					buffer += "\\";
-					if ( curr_pos[1] == '"' && curr_pos[2] != '\0' ) {
-						// This backslash is escaping a double-quote
-						curr_pos++;
-					}
-				}
-
-				buffer += *curr_pos;
-
-			}
-
-			curr_pos++;
+		if( !OldValueToNewValue(expr_str,buffer,NULL) ) {
+			return false;
 		}
 
 			// TODO We should add a new-line here and possibly indent the

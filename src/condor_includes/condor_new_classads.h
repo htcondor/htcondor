@@ -28,23 +28,32 @@ class DataSource;
 class NewClassAdParser
 {
  public:
-    /** Constructor. Creates an object that can be used to parse ClassAds */
+    /** Constructor. Creates an object that can be used to parse ClassAds 
+	 *  in the New ClassAd format and produce Old ClassAd objects.
+     *  Not all aspects of the New ClassAd language are handled.
+     *  See the comment in new_classads.C for _ParseClassAd().
+	 */
 	NewClassAdParser();
 
     /** Destructor. */
 	~NewClassAdParser();
 
-	/** Parses a New ClassAds ad. Only the first ClassAd in the buffer is 
-	 *  parsed.
+	/** Parses a string in New ClassAds format into an Old ClassAd
+	 *  object. Only the first ClassAd in the buffer is parsed.
+     *  Not all aspects of the New ClassAd language are handled.
+     *  See the comment in new_classads.C for _ParseClassAd().
 	 * @param buffer The string containing the new-style ClassAd.
 	 * @return A pointer to a freshly-allocated ClassAd, which must be
 	 *        deleted by the caller.
 	 */
 	ClassAd *ParseClassAd(const char *buffer);
 
-	/** Parses a New ClassAds ad from a string. Parsing begins at place-th
-	 * character of the string, and after a single ClassAd is parsed, place
-	 * is updated to indicate where parsing should resume for the next ClassAd.
+	/** Parses a string in New ClassAds format into an Old ClassAd
+     *  object.  Parsing begins at place-th * character of the string,
+     *  and after a single ClassAd is parsed, place * is updated to
+     *  indicate where parsing should resume for the next ClassAd.
+     *  Not all aspects of the New ClassAd language are handled.
+     *  See the comment in new_classads.C for _ParseClassAd().
 	 * @param buffer The string containing the new-style ClassAd.
 	 * @param place  A pointer to an integer indicating where to start. This is
 	 *        updated upon return. 
@@ -53,8 +62,10 @@ class NewClassAdParser
 	 */
 	ClassAd *ParseClassAds(const char *buffer, int *place);
 
-	/** Parses a New ClassAds ad from a file. Only the first ClassAd in the 
-	 * buffer is parsed.
+	/** Parses a file in New ClassAd format into an Old ClassAd object.
+	 *  Only the first ClassAd in the buffer is parsed.
+     *  Not all aspects of the New ClassAd language are handled.
+     *  See the comment in new_classads.C for _ParseClassAd().
 	 * @param buffer The string containing the new-style ClassAd.
 	 * @return A pointer to a freshly-allocated ClassAd, which must be
 	 *        deleted by the caller.
@@ -104,13 +115,21 @@ class NewClassAdUnparser
 	/** Set whether or not we output the Target attribute */
 	void SetOutputTargetType(bool output_target_type);
 
-	/** Format a ClassAd in New ClassAds format. Note that this obeys the
-	 * previously set parameters for compact spacing and compact names. 
+	/** Get the string representation of an old ClassAd object in New
+	 * ClassAds format. Note that this obeys the previously set
+	 * parameters for compact spacing and compact names.
 	 * @param classsad The ClassAd to represent in new ClassAds format.
 	 * @param buffer The string to append the ClassAd to.
 	 * @see SetUseCompactNames().
 	 * @see SetUseCompactSpacing(). */
 	bool Unparse(ClassAd *classad, MyString &buffer);
+
+	/** Convert the string representation of an old ClassAd value to
+	 *  the new ClassAd format.
+	 * @param old_value The old ClassAd value to convert.
+	 * @param new_value_buffer The string to append the new value to.
+	 * @param err_msg Buffer for error messages (NULL if none). */
+	bool OldValueToNewValue(char const *old_value,MyString &new_value_buffer,MyString *err_msg);
 
  private:
 	bool _use_compact_spacing;
