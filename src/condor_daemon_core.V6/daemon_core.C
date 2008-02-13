@@ -5643,7 +5643,6 @@ void CreateProcessForkit::exec() {
 
 			// yet another linux-only tracking method: supplementary GID
 			//
-			gid_t tracking_gid;
 			gid_t* tracking_gid_ptr = NULL;
 #if defined(LINUX)
 			tracking_gid_ptr = m_family_info->group_ptr;

@@ -399,7 +399,7 @@ main_init( int, char* argv[] )
 
 
 int
-main_config( bool is_full )
+main_config( bool /* is_full */ )
 {
 	bool done_allocating;
 
@@ -437,7 +437,7 @@ finish_main_config( void )
 
 
 int
-init_params( int first_time)
+init_params( int /* first_time */)
 {
 	char *tmp;
 
@@ -736,7 +736,7 @@ startd_check_free()
 
 
 void
-main_pre_dc_init( int argc, char* argv[] )
+main_pre_dc_init( int /* argc */, char** /* argv */ )
 {
 }
 

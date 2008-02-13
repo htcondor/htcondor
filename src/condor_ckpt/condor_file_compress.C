@@ -449,7 +449,7 @@ int CondorFileCompress::ioctl( int cmd, long arg )
 	return original->ioctl(cmd,arg);
 }
 
-int CondorFileCompress::ftruncate( size_t length )
+int CondorFileCompress::ftruncate( size_t /* length */ )
 {
 	_condor_warning(CONDOR_WARNING_KIND_BADURL, "You can't ftruncate() a compressed file (%s).",
 					 get_url() ); 
@@ -457,7 +457,7 @@ int CondorFileCompress::ftruncate( size_t length )
 	return -1;
 }
 
-int CondorFileCompress::fstat( struct stat* buf )
+int CondorFileCompress::fstat( struct stat* /* buf */ )
 {
 	_condor_warning(CONDOR_WARNING_KIND_BADURL, "You can't fstat() a compressed file (%s).", 
 					 get_url() );

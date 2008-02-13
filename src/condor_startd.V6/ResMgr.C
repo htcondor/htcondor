@@ -645,7 +645,7 @@ ResMgr::countTypes( int** array_ptr, bool except )
 	int i, num=0, num_set=0;
     MyString param_name;
     MyString cruft_name;
-	int* new_type_nums = new int[max_types];
+	int* my_type_nums = new int[max_types];
 
 	if( ! array_ptr ) {
 		EXCEPT( "ResMgr:countTypes() called with NULL array_ptr!" );
@@ -660,35 +660,35 @@ ResMgr::countTypes( int** array_ptr, bool except )
 		param_name.sprintf("NUM_SLOTS_TYPE_%d", i);
 		if (param_boolean("ALLOW_VM_CRUFT", true)) {
 			cruft_name.sprintf("NUM_VIRTUAL_MACHINES_TYPE_%d", i);
-			new_type_nums[i] = param_integer(param_name.Value(),
+			my_type_nums[i] = param_integer(param_name.Value(),
 											 param_integer(cruft_name.Value(),
 														   0));
 		} else {
-			new_type_nums[i] = param_integer(param_name.Value(), 0);
+			my_type_nums[i] = param_integer(param_name.Value(), 0);
 		}
-		if (new_type_nums[i]) {
+		if (my_type_nums[i]) {
 			num_set = 1;
-			num += new_type_nums[i];
+			num += my_type_nums[i];
 		}
 	}
 
 	if( num_set ) {
 			// We found type-specific stuff, use that.
-		new_type_nums[0] = 0;
+		my_type_nums[0] = 0;
 	} else {
 			// We haven't found any special types yet.  Therefore,
 			// we're evenly dividing things, so we only have to figure
 			// out how many nodes to advertise.
 		if (param_boolean("ALLOW_VM_CRUFT", true)) {
-			new_type_nums[0] = param_integer("NUM_SLOTS",
+			my_type_nums[0] = param_integer("NUM_SLOTS",
 										  param_integer("NUM_VIRTUAL_MACHINES",
 														num_cpus()));
 		} else {
-			new_type_nums[0] = param_integer("NUM_SLOTS", num_cpus());
+			my_type_nums[0] = param_integer("NUM_SLOTS", num_cpus());
 		}
-		num = new_type_nums[0];
+		num = my_type_nums[0];
 	}
-	*array_ptr = new_type_nums;
+	*array_ptr = my_type_nums;
 	return num;
 }
 
@@ -1882,15 +1882,15 @@ ResMgr::processAllocList( void )
 void
 ResMgr::check_use( void ) 
 {
-	int cur_time = time(NULL);
+	int current_time = time(NULL);
 	if( hasAnyClaim() ) {
-		last_in_use = cur_time;
+		last_in_use = current_time;
 	}
 	if( ! startd_noclaim_shutdown ) {
 			// Nothing to do.
 		return;
 	}
-	if( cur_time - last_in_use > startd_noclaim_shutdown ) {
+	if( current_time - last_in_use > startd_noclaim_shutdown ) {
 			// We've been unused for too long, send a SIGTERM to our
 			// parent, the condor_master. 
 		dprintf( D_ALWAYS, 

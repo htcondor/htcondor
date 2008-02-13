@@ -833,7 +833,7 @@ bool SafeSock :: set_encryption_id(const char * keyId)
     return _outMsg.set_encryption_id(keyId);
 }
 
-bool SafeSock :: init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
+bool SafeSock :: init_MD(CONDOR_MD_MODE /* mode */, KeyInfo * key, const char * keyId)
 {
     bool inited = true;
    

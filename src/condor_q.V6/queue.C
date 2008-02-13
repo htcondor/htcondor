@@ -1664,7 +1664,7 @@ format_owner (char *owner, AttrList *ad)
 }
 
 static char *
-format_globusStatus( int globusStatus, AttrList *ad )
+format_globusStatus( int globusStatus, AttrList * /* ad */ )
 {
 	static char result_format[64];
 
@@ -1680,7 +1680,7 @@ format_globusStatus( int globusStatus, AttrList *ad )
 // always be present and be a string. We then ignore that attribute
 // and examine GlobusResource and GridResource.
 static char *
-format_globusHostAndJM( char  *ignore_me, AttrList *ad )
+format_globusHostAndJM( char *, AttrList *ad )
 {
 	static char result_format[64];
 	char	host[80] = "[?????]";

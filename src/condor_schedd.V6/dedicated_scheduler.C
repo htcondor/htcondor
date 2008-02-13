@@ -2310,7 +2310,6 @@ bool
 DedicatedScheduler::spawnJobs( void )
 {
 	AllocationNode* allocation;
-	char* shadow;
 	match_rec* mrec;
 	shadow_rec* srec;
 	int univ;

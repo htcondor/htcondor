@@ -220,12 +220,12 @@ ReliSock::accept( ReliSock	*c)
 	return accept(*c);
 }
 
-bool ReliSock :: set_encryption_id(const char * keyId)
+bool ReliSock :: set_encryption_id(const char * /* keyId */)
 {
     return false; // TCP does not need this yet
 }
 
-bool ReliSock::init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
+bool ReliSock::init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * /* keyId */)
 {
     return (snd_msg.init_MD(mode, key) && rcv_msg.init_MD(mode, key));
 }

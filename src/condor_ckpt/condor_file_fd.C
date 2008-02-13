@@ -28,7 +28,7 @@ CondorFileFD::~CondorFileFD()
 {
 }
 
-int CondorFileFD::open(const char *url_in, int flags, int mode)
+int CondorFileFD::open(const char *url_in, int flags, int /* mode */)
 {
 	free( url );
 	url = strdup( url_in );

@@ -99,7 +99,7 @@ Condor_Auth_Kerberos :: ~Condor_Auth_Kerberos()
     }
 }
 
-int Condor_Auth_Kerberos :: authenticate(const char * remoteHost, CondorError* errstack)
+int Condor_Auth_Kerberos :: authenticate(const char * /* remoteHost */, CondorError* /* errstack */)
 {
     int status = 0;
 

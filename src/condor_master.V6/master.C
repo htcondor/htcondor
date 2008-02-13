@@ -1037,7 +1037,7 @@ void StartConfigServer()
 
 #if HAVE_EXT_GCB
 void
-gcb_broker_down_handler( Service *ignore )
+gcb_broker_down_handler( Service * )
 {
 	int num_slots;
 	const char *our_broker = GetEnv( "GCB_INAGENT" );
@@ -1101,7 +1101,7 @@ gcbBrokerDownCallback()
 }
 
 void
-gcb_recovery_failed_handler( Service *ignore )
+gcb_recovery_failed_handler( Service * )
 {
 	dprintf(D_ALWAYS, "GCB failed to recover from a failure with the "
 			"Broker. Restarting all daemons\n");

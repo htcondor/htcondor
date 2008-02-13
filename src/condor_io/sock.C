@@ -1716,7 +1716,7 @@ static int table_size = 0;
 This function is invoked whenever a SIGIO arrives.  When this happens, we don't even know what fd is begging for attention, so we must use select() (or poll()) to figure this out.  With the fd in hand, we can look up the appropriate Stream and Handler in the table above.  Each Stream that is active will have its handler invoked.
 */
 
-static void async_handler( int s )
+static void async_handler( int )
 {
 	Selector selector;
 	int i;
@@ -1894,12 +1894,12 @@ bool Sock :: is_hdr_encrypt(){
 	return FALSE;
 }
 
-int Sock :: authenticate(KeyInfo *&, const char * methods, CondorError* errstack)
+int Sock :: authenticate(KeyInfo *&, const char * /* methods */, CondorError* /* errstack */)
 {
 	return -1;
 }
 
-int Sock :: authenticate(const char * methods, CondorError* errstack)
+int Sock :: authenticate(const char * /* methods */, CondorError* /* errstack */)
 {
 	/*
 	errstack->push("AUTHENTICATE", AUTHENTICATE_ERR_NOT_BUILT,
