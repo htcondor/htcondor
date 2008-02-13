@@ -25,7 +25,7 @@ Condor can prevent unauthorized access to the Condor pool,
 to help ensure that only trusted users have access to the pool.
 In addition, Condor provides encryption and
 integrity checking, to ensure that data (both Condor's data and user
-jobs' data) has not been examined or tampered with.
+jobs' data) has not been examined or tampered with while in transit.
 
 Broadly speaking, the aspects of security in
 Condor may be categorized and described: 
@@ -244,6 +244,14 @@ a \DCPerm{READ} or both a
    \Condor{schedd} daemon to the collector.  Any setting for this access
    level that is not defined will default to the corresponding setting
    in the \DCPerm{DAEMON} access level.
+
+\item[\DCPerm{CLIENT}] \label{sec-level-client} This access level is
+   different from all the others.  Whereas all of the other access levels
+   refer to the security policy for accepting connections \emph{from} others,
+   the \DCPerm{CLIENT} access level applies when a Condor daemon or tool is
+   connecting \emph{to} some other Condor daemon.  In other words, it specifies
+   the policy of the client that is initiating the operation, rather than
+   the server that is being contacted.
 
 \end{description}
 
@@ -773,19 +781,18 @@ Note that this implemented by setting the value of
 Here is an example portion of the configuration file that would
 enable and require GSI authentication,
 along with a minimal set of other variables to make it work. 
-Note that the last entry (\MacroNI{GSI\_DAEMON\_NAME}) in this example
-must be on a single line;
-this example is broken onto two lines for formatting reasons.
 
 \footnotesize
 \begin{verbatim}
 SEC_DEFAULT_AUTHENTICATION = REQUIRED
 SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
 GSI_DAEMON_DIRECTORY = /path/to/daemon/credential.location
-GSI_DAEMON_NAME = /C=US/O=Condor/O=University of Wisconsin
-/OU=Computer Sciences Department/CN=condor@cs.wisc.edu
 \end{verbatim}
 \normalsize
+
+In addition to the above settings, a map file and an authorization policy
+should also be specified.  See the examples section for complete configuration
+examples.
 
 The
 \MacroNI{SEC\_DEFAULT\_AUTHENTICATION} macro specifies that
@@ -802,22 +809,23 @@ Alternatively, this path name can point to
 local copies of the certificate stored
 in a local file system.
 
-When a daemon acts as the client within authentication,
-the daemon needs a listing of those from which it
-will accept certificates.
+When a daemon acts as the client within authentication, its
+authorization policy for what servers it trusts may be specified via
+\MacroNI{ALLOW\_CLIENT} and \MacroNI{DENY\_CLIENT}, which work like
+other \MacroNI{ALLOW}/\MacroNI{DENY} settings.  Prior to Condor 7.1,
+those controls did not exist, so the client had to rely on a more
+rudamentary authorization method: \Macro{GSI\_DAEMON\_NAME}.  This is
+a list of all server X.509 names trusted by the client.  This name is
+specified with the following format, where each distinguished name may
+contain up to 1 asterix as a wildcard character:
 
-The macro \MacroNI{GSI\_DAEMON\_NAME} configuration macro
-provides daemons with a distinguished name to use for
-X.509 authentication.
-This name is specified with the following format
 \footnotesize
 \begin{verbatim}
-GSI_DAEMON_NAME = /C=?/O=?/O=?/OU=?/CN=<daemon_name@domain>
+GSI_DAEMON_NAME = /X.509/name/of/server/1,/X.509/name/of/server/2,...
 \end{verbatim}
 \normalsize
-A complete example that has the question marks filled in and the
-daemon's user name filled in is given in the 
-example configuration above.
+
+\item[Mapping X.509 Identities to Users]
 
 Condor will also need a way to map an X.509 distinguished
 name to a Condor user id.
@@ -1620,6 +1628,23 @@ pool.  If unspecified, these default to the broader
     DENY_ADVERTISE_SCHEDD
 \end{verbatim}
 
+The client-side of a connection may also specify its own list of
+trusted servers.  This is done using the following settings.  Note
+that the FS and CLAIMTOBE authentication methods are not symmetric.
+The client is authenticated by the server, but the server is not
+authenticated by the client.  When the server is not authenticated to
+the client, only the network address of the host may be authorized and
+not the specific identity of the server.
+
+\index{ALLOW\_CLIENT macro@\texttt{ALLOW\_CLIENT} macro}
+\index{configuration macro!\texttt{ALLOW\_CLIENT}}
+\index{DENY\_CLIENT macro@\texttt{DENY\_CLIENT} macro}
+\index{configuration macro!\texttt{DENY\_CLIENT}}
+\begin{verbatim}
+    ALLOW_CLIENT
+    DENY_CLIENT
+\end{verbatim}
+
 Each macro is defined by a comma-separated list of fully qualified
 users.
 Each
@@ -2072,6 +2097,14 @@ Condor can be registered with:
    level that is not defined will default to the corresponding setting
    in the \DCPerm{DAEMON} access level.
 
+\item[\DCPerm{CLIENT}] \label{dcperm:client} This access level is
+   different from all the others.  Whereas all of the other access levels
+   refer to the security policy for accepting connections \emph{from} others,
+   the \DCPerm{CLIENT} access level applies when a Condor daemon or tool is
+   connecting \emph{to} some other Condor daemon.  In other words, it specifies
+   the policy of the client that is initiating the operation, rather than
+   the server that is being contacted.
+
 \end{description}
 
 Starting with version 6.3.2, Condor provides a mechanism for more
@@ -2109,6 +2142,7 @@ HOSTALLOW_WRITE_COLLECTOR = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
 HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
 HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
 HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
+HOSTALLOW_CLIENT = *
 \end{verbatim}
 \normalsize
 

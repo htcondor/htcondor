@@ -68,6 +68,14 @@ The details of each version are described below.
   a \Condor{negotiator} then uses as its source of information for
   matchmaking.
 
+\item Added client-side authorization controls
+\MacroNI{ALLOW\_CLIENT}, \MacroNI{DENY\_CLIENT}.  When using a mutual
+authentication method (e.g. GSI, SSL, Kerberos), this allows you to
+specify what authenticated servers Condor tools and daemons should
+trust when they form a connection to the server.  This deprecates
+\MacroNI{GSI\_DAEMON\_NAME}, which provided rudamentary support for
+client-side authorization in a GSI-specific way.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
