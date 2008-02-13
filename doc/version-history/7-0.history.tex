@@ -36,6 +36,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Condor now has an available full port to Redhat Enterprise Linux
+5.0 running on the 32-bit x86 architecture.
+
 % This feature was added in 6.7, but condor_submit wasn't changed.
 % Until now, the user had to set this via the '+' notation in the submit
 % file.
@@ -76,6 +79,11 @@ matchmaking.
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
+
+\item Added \MacroNI{CKPT\_PROBE}. This specifes an internal to Condor
+executable which determines information about how a process is layed out
+in memory--in addition to other information. This program is not available
+on Windows at this time.
 
 \item Added \MacroNI{CKPT\_SERVER\_CHECK\_PARENT\_INTERVAL}.  Unlike
 other Condor daemons, the checkpoint server was not checking to see if
@@ -142,7 +150,11 @@ jobs of type gt4.
 
 \begin{itemize}
 
-\item None.
+\item When using \Condor{compile} with the RHEL5 x86 port of Condor to
+produce a standard universe executable, one will see a warning message
+about how linking with dynamic libraries is not portable. This warning
+is erroneous and should be ignored. It will be fixed in a future version
+of Condor.
 
 \end{itemize}
 
