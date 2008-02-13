@@ -19,7 +19,7 @@ select(STDERR);
 chdir("/p/condor/public/html/developers/download_stats");
 
 my $tooldir = "/p/condor/home/tools/build-test-plots/";
-#my $tooldir = "/p/condor/workspaces/bt/v700branch/nmi_tools/analysis";
+#my $tooldir = "./";
 my $datalocation = "/p/condor/public/license/";
 my $datacruncher = "filter_sendfile";
 my $crunch = $datalocation . $datacruncher;
@@ -85,6 +85,7 @@ if ( $help )    { help() and exit(0); }
 $line;
 $totalgood = 0;
 $totalbad = 0;
+$totsrc = 0;
 $negbad = 0;
 $total = 0;
 $scale = 0;
@@ -110,7 +111,7 @@ foreach $log (@datafiles) {
 		chomp;
 		$line = $_;
 		#print "$_\n";
-		if($line =~ /^\s+[\?MB]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):.*/) {
+		if($line =~ /^\s+[\?MB]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):\s(condor[-_]).*/) {
 			if( $skip eq "true" )  {
 				$skip = "false";
 				$firstdate = $3 . " " . $months{$2} . " " . $5;
@@ -128,6 +129,10 @@ foreach $log (@datafiles) {
 			$month = $2;
 			$year = $5;
 			$totalgood = $totalgood + 1;
+			$filename = $6;
+			if($filename =~ /^condor_.*/) {
+				$totalsrc = $totalsrc + 1;
+			}
 			#print "Good $2 $3 $5\n";
 		} elsif($line =~ /^\*[\?MB]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):.*/) {
 			if( $skip eq "true" )  {
@@ -269,6 +274,7 @@ sub ResetCounters
 	$total = 0;
 	$totalgood = 0;
 	$totalbad = 0;
+	$totalsrc = 0;
 }
 
 sub DoOutput
@@ -284,11 +290,11 @@ sub DoOutput
 		$firstoutput = 1;
 	}
 	if( $scale == 0 ) {
-		print OUT "$months{$month} $day $year, $totalgood, $negbad, 0, 0, 0, 0\n";
+		print OUT "$months{$month} $day $year, $totalsrc, $totalgood, $negbad, 0, 0, 0, 0\n";
 	} elsif( $scale == 1 ) {
-		print OUT "$months{$month} $day $year, 0, 0, $totalgood, $negbad, 0, 0\n";
+		print OUT "$months{$month} $day $year, 0, 0, 0, $totalgood, $negbad, 0, 0\n";
 	} else { # 2 returned for scaling
-		print OUT "$months{$month} $day $year, 0, 0, 0, 0, $totalgood, $negbad\n";
+		print OUT "$months{$month} $day $year, 0, 0, 0, 0, 0, $totalgood, $negbad\n";
 	}
 }
 
