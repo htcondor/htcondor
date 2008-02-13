@@ -92,6 +92,8 @@ int SecMan::sec_man_ref_count = 0;
 char* SecMan::_my_unique_id = 0;
 char* SecMan::_my_parent_unique_id = 0;
 bool SecMan::_should_check_env_for_unique_id = true;
+bool SecMan::m_ipverify_initialized = false;
+IpVerify SecMan::m_ipverify;
 
 SecMan::sec_req
 SecMan::sec_alpha_to_sec_req(char *b) {
@@ -856,10 +858,16 @@ class SecManStartCommand: Service {
 
 	int m_refcount;
 
+		// This wraps startCommand_inner_noauth().  This function
+		// ensures that the client authorizes the server.  The caller
+		// of this function must ensure correct cleanup (e.g. callback
+		// function being called etc.)
+	StartCommandResult startCommand_inner();
+
 		// This does most of the work of the startCommand() protocol.
 		// It is called from within a wrapper function that guarantees
 		// correct cleanup (e.g. callback function being called etc.)
-	StartCommandResult startCommand_inner();
+	StartCommandResult startCommand_inner_noauth();
 
 		// This is called when the TCP auth socket is connected.
 		// This function guarantees correct cleanup.
@@ -941,6 +949,49 @@ SecManStartCommand::startCommand()
 
 StartCommandResult
 SecManStartCommand::startCommand_inner()
+{
+
+	// NOTE: the caller of this function must ensure that
+	// the m_callback_fn is called (if there is one).
+
+	ASSERT(m_sock);
+	ASSERT(m_errstack);
+
+	StartCommandResult rc = startCommand_inner_noauth();
+
+	if( rc == StartCommandSucceeded ) {
+			// Check out policy to make sure the server we have just
+			// connected to is authorized.
+
+		char const *server_fqu = m_sock->getFullyQualifiedUser();
+
+		if( DebugFlags & D_FULLDEBUG ) {
+			dprintf(D_SECURITY,
+			        "Authorizing server '%s/%s'.\n",
+			        server_fqu ? server_fqu : "*",
+					m_sock->endpoint_ip_str() );
+		}
+
+		int authorized = m_sec_man.Verify(
+			CLIENT_PERM,
+			m_sock->endpoint(),
+			server_fqu );
+
+		if( authorized != USER_AUTH_SUCCESS ) {
+			dprintf( D_ALWAYS,
+			         "DENIED authorization of server '%s/%s' (I am acting as "
+			         "the client).\n",
+					 server_fqu ? server_fqu : "*",
+					 m_sock->endpoint_ip_str() );
+			rc = StartCommandFailed;
+		}
+	}
+
+	return rc;
+}
+
+StartCommandResult
+SecManStartCommand::startCommand_inner_noauth()
 {
 
 	// NOTE: the caller of this function must ensure that
@@ -1734,6 +1785,10 @@ SecManStartCommand::startCommand_inner()
 			m_sec_man.sec_copy_attribute( auth_info, post_auth_info, ATTR_SEC_USER );
 			m_sec_man.sec_copy_attribute( auth_info, post_auth_info, ATTR_SEC_VALID_COMMANDS );
 
+			if( m_sock->getFullyQualifiedUser() ) {
+				auth_info.Assign( ATTR_SEC_AUTHENTICATED_USER, m_sock->getFullyQualifiedUser() );
+			}
+
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf (D_SECURITY, "SECMAN: policy to be cached:\n");
 				auth_info.dPrint(D_SECURITY);
@@ -1836,6 +1891,17 @@ SecManStartCommand::startCommand_inner()
 		}
 
 	} // if (is_tcp)
+
+	if( !new_session && have_session ) {
+		char *fqu = NULL;
+		if( auth_info.LookupString(ATTR_SEC_AUTHENTICATED_USER,&fqu) && fqu ) {
+			if( DebugFlags & D_FULLDEBUG ) {
+				dprintf( D_SECURITY, "Getting authenticated user from cached session: %s\n", fqu );
+			}
+			m_sock->setFullyQualifiedUser( fqu );
+			free( fqu );
+		}
+	}
 
 	m_sock->encode();
 	m_sock->allow_one_empty_message();
@@ -2350,6 +2416,30 @@ SecMan::~SecMan() {
 		tcp_aut_in_progress = NULL;
 	}
 	*/
+}
+
+void
+SecMan::reconfig()
+{
+	m_ipverify_initialized = false;
+}
+
+IpVerify *
+SecMan::getIpVerify()
+{
+	if( !m_ipverify_initialized ) {
+		m_ipverify_initialized = true;
+		m_ipverify.Init();
+	}
+	return &m_ipverify;
+}
+
+int
+SecMan::Verify(DCpermission perm, const struct sockaddr_in *sin, const char * fqu )
+{
+	IpVerify *ipverify = getIpVerify();
+	ASSERT( ipverify );
+	return ipverify->Verify(perm,sin,fqu);
 }
 
 

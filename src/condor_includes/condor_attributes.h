@@ -584,6 +584,7 @@ extern const char * ATTR_SEC_USER;
 extern const char * ATTR_SEC_NEW_SESSION;
 extern const char * ATTR_SEC_USE_SESSION;
 extern const char * ATTR_SEC_COOKIE;
+extern const char * ATTR_SEC_AUTHENTICATED_USER;
 
 extern const char * ATTR_MULTIPLE_TASKS_PER_PVMD;
 

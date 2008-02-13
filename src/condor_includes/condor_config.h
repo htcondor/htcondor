@@ -252,6 +252,17 @@ BEGIN_C_DECLS
 	void config_insert( const char*, const char* );
 	int  param_boolean_int( const char *name, int default_value );  
 
+/* This function initialize GSI (maybe other) authentication related
+   stuff Daemons that should use the condor daemon credentials should
+   set the argument is_daemon=true.  This function is automatically
+   called at config init time with is_daemon=false, so that all
+   processes get the basic auth config.  The order of calls to this
+   function do not matter, as the results are only additive.
+   Therefore, calling with is_daemon=false and then with
+   is_daemon=true or vice versa are equivalent.
+*/
+void condor_auth_config(int is_daemon);
+
 END_C_DECLS
 
 

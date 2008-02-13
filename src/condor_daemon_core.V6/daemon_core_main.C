@@ -1120,107 +1120,6 @@ dc_reconfig( bool is_full )
 	main_config( is_full );
 }
 
-// This function initialize GSI (maybe other) authentication related stuff
-void
-dc_config_auth()
-{
-#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_GLOBUS)
-
-    // First, if there is X509_USER_PROXY, we clear it.
-	UnsetEnv( "X509_USER_PROXY" );
-
-    // Next, we param the configuration file for GSI related stuff and 
-    // set the corresponding environment variables for it
-
-    char *pbuf = 0;
-	char *proxy_buf = 0;
-	char *cert_buf = 0;
-	char *key_buf = 0;
-	char *trustedca_buf = 0;
-	char *mapfile_buf = 0;
-
-	MyString buffer;
-
-    
-    // Here's how it works. If you define any of 
-	// GSI_DAEMON_CERT, GSI_DAEMON_KEY, GSI_DAEMON_PROXY, or 
-	// GSI_DAEMON_TRUSTED_CA_DIR, those will get stuffed into the
-	// environment. 
-	//
-	// Everything else depends on GSI_DAEMON_DIRECTORY. If 
-	// GSI_DAEMON_DIRECTORY is not defined, then only settings that are
-	// defined above will be placed in the environment, so if you 
-	// want the cert and host in a non-standard location, but want to use 
-	// /etc/grid-security/certifcates as the trusted ca dir, only 
-	// define GSI_DAEMON_CERT and GSI_DAEMON_KEY, and not
-	// GSI_DAEMON_DIRECTORY and GSI_DAEMON_TRUSTED_CA_DIR
-	//
-	// If GSI_DAEMON_DIRECTORY is defined, condor builds a "reasonable" 
-	// default out of what's already been defined and what it can 
-	// construct from GSI_DAEMON_DIRECTORY  - ie  the trusted CA dir ends 
-	// up as in $(GSI_DAEMON_DIRECTORY)/certificates, and so on
-	// The proxy is not included in the "reasonable defaults" section
-
-	// First, let's get everything we might want
-    pbuf = param( STR_GSI_DAEMON_DIRECTORY );
-    proxy_buf = param( STR_GSI_DAEMON_PROXY );
-    cert_buf = param( STR_GSI_DAEMON_CERT );
-    key_buf = param( STR_GSI_DAEMON_KEY );
-    trustedca_buf = param( STR_GSI_DAEMON_TRUSTED_CA_DIR );
-    mapfile_buf = param( STR_GSI_MAPFILE );
-
-    if (pbuf) {
-
-		if( !trustedca_buf) {
-			buffer.sprintf( "%s%ccertificates", pbuf, DIR_DELIM_CHAR);
-			SetEnv( STR_GSI_CERT_DIR, buffer.Value() );
-		}
-
-		if( !cert_buf ) {
-        	buffer.sprintf( "%s%chostcert.pem", pbuf, DIR_DELIM_CHAR);
-        	SetEnv( STR_GSI_USER_CERT, buffer.Value() );
-		}
-	
-		if (!key_buf ) {
-			buffer.sprintf( "%s%chostkey.pem", pbuf, DIR_DELIM_CHAR);
-        	SetEnv( STR_GSI_USER_KEY, buffer.Value() );
-		}
-
-		if (!mapfile_buf ) {
-			buffer.sprintf( "%s%cgrid-mapfile", pbuf, DIR_DELIM_CHAR);
-        	SetEnv( STR_GSI_MAPFILE, buffer.Value() );
-		}
-
-        free( pbuf );
-    }
-
-	if(proxy_buf) { 
-		SetEnv( STR_GSI_USER_PROXY, proxy_buf );
-		free(proxy_buf);
-	}
-
-	if(cert_buf) { 
-		SetEnv( STR_GSI_USER_CERT, cert_buf );
-		free(cert_buf);
-	}
-
-	if(key_buf) { 
-		SetEnv( STR_GSI_USER_KEY, key_buf );
-		free(key_buf);
-	}
-
-	if(trustedca_buf) { 
-		SetEnv( STR_GSI_CERT_DIR, trustedca_buf );
-		free(trustedca_buf);
-	}
-
-    if (mapfile_buf) {
-		SetEnv( STR_GSI_MAPFILE, mapfile_buf );
-        free(mapfile_buf);
-    }
-#endif
-}
-
 int
 handle_dc_sighup( Service*, int )
 {
@@ -1596,7 +1495,7 @@ int main( int argc, char** argv )
     // call dc_config_GSI to set GSI related parameters so that all
     // the daemons will know what to do.
 	if ( doAuthInit ) {
-		dc_config_auth();
+		condor_auth_config( true );
 	}
 
 		// See if we're supposed to be allowing core files or not

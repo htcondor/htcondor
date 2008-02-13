@@ -19,17 +19,14 @@
 
 
 #include "condor_common.h"
-#include "condor_daemon_core.h"
 #include "KeyCache.h"
 #include "string_list.h"
 #include "HashTable.h"
+#include "../condor_daemon_core.V6/condor_ipverify.h"
 
 extern bool operator==(const struct in_addr a, const struct in_addr b);
 
-template class HashTable<pid_t, DaemonCore::PidEntry*>;
-template class ExtArray<DaemonCore::SockEnt>;
-template class ExtArray<DaemonCore::PipeEnt>;
-template class Queue<DaemonCore::WaitpidEntry>;
-template class Queue<ServiceData*>;
-template class List<DaemonCore::TimeSkipWatcher>;
-template class Item<DaemonCore::TimeSkipWatcher>;
+template class HashTable<MyString, perm_mask_t>;
+template class HashTable<struct in_addr, perm_mask_t>;
+template class HashTable<struct in_addr, HashTable<MyString, perm_mask_t> *>;
+template class HashTable<MyString, StringList *>;

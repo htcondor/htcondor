@@ -83,7 +83,6 @@ public:
 		// The following is indexed by session index name ( "addr,<cmd>" )
 	static HashTable<MyString, class SecManStartCommand *> *tcp_auth_in_progress;
 
-
 	SecMan(int numbuckets = 209);  // years of careful research... HA HA HA HA
 	SecMan(const SecMan &);
 	~SecMan();
@@ -151,12 +150,19 @@ public:
 	char*		my_parent_unique_id();
 	char*		my_unique_id();
 
+	void reconfig();
+	static IpVerify *getIpVerify();
+	static int Verify(DCpermission perm, const struct sockaddr_in *sin, const char * fqu );
+
  private:
     void                    remove_commands(KeyCacheEntry * keyEntry);
 
 	static char*		_my_unique_id;
 	static char*		_my_parent_unique_id;
 	static bool			_should_check_env_for_unique_id;
+
+	static bool m_ipverify_initialized;
+	static IpVerify m_ipverify;
 
 	friend class SecManStartCommand;
 };

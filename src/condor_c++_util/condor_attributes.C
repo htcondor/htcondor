@@ -648,6 +648,7 @@ const char *ATTR_SEC_USER                 = "User";
 const char *ATTR_SEC_NEW_SESSION          = "NewSession";
 const char *ATTR_SEC_USE_SESSION          = "UseSession";
 const char *ATTR_SEC_COOKIE               = "Cookie";
+extern const char * ATTR_SEC_AUTHENTICATED_USER = "AuthenticatedUser";
 
 const char *ATTR_MULTIPLE_TASKS_PER_PVMD  = "MultipleTasksPerPvmd";
 

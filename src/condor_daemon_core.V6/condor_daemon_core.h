@@ -36,7 +36,6 @@
 #include "condor_io.h"
 #include "dc_service.h"
 #include "condor_timer_manager.h"
-#include "condor_ipverify.h"
 #include "condor_commands.h"
 #include "command_strings.h"
 #include "condor_classad.h"
@@ -1524,8 +1523,6 @@ class DaemonCore : public Service
 
 	int					_cookie_len, _cookie_len_old;
 	unsigned char		*_cookie_data, *_cookie_data_old;
-
-    IpVerify            ipverify;   
 
     void free_descrip(char *p) { if(p &&  p != EMPTY_DESCRIP) free(p); }
     

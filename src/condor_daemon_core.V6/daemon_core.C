@@ -2158,8 +2158,8 @@ DaemonCore::ReInit()
 {
 	static int tid = -1;
 
-		// Reset our IpVerify object
-	ipverify.Init();
+	SecMan *secman = getSecMan();
+	secman->reconfig();
 
 		// Handle our timer.  If this is the first time, we need to
 		// register it.  Otherwise, we just reset its value to go off
@@ -2306,41 +2306,14 @@ DaemonCore::reconfig(void) {
 int
 DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin, const char * fqu )
 {
-	/*
-	 * Be Warned:  careful about parameter "sin" being NULL.  It could be, in
-	 * which case we should return FALSE (unless perm is ALLOW)
-	 *
-	 */
-
-	switch (perm) {
-	case ALLOW:
-		return TRUE;
-		break;
-
-	case IMMEDIATE_FAMILY:
-		// TODO!!!  Implement IMMEDIATE_FAMILY someday!
-		return TRUE;
-		break;
-
-	default:
-		if ( sin ) {
-			return ipverify.Verify(perm, sin, fqu);
-		} else {
-			return FALSE;
-		}
-		break;
-	}
-
-	// Should never make it here, but we return to satisfy C++
-	EXCEPT("bad DC Verify");
-	return FALSE;
+	return getSecMan()->Verify(perm, sin, fqu);
 }
 
 
 int
 DaemonCore::AddAllowHost( const char* host, DCpermission perm )
 {
-	return ipverify.AddAllowHost( host, perm );
+	return getSecMan()->getIpVerify()->AddAllowHost( host, perm );
 }
 
 void

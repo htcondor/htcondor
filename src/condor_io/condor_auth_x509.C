@@ -697,6 +697,24 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
         }
 
         char * server = get_server_info();
+
+		// store the raw subject name for later mapping
+		setAuthenticatedName(server);
+
+        // Try to map DN to local name (in the format of name@domain)
+        if ( !nameGssToLocal(server) ) {
+			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+				"Failed to gss_assist_gridmap %s to a local user.  "
+				"Check the grid-mapfile.", server );
+			dprintf(D_SECURITY, "gss_assist_gridmap does not contain an entry for %s\n", server );
+			setRemoteUser("gsi");
+        }
+        else {
+            dprintf(D_SECURITY,"gss_assist_gridmap contains an entry for %s\n", 
+                    server);
+        }
+
+
         StringList * daemonNames = getDaemonList(mySock_);
 
         // Now, let's see if the name is in the list, I am not using

@@ -576,145 +576,159 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
     MyString     userid;
     const char * who = user;
 
-	memcpy(&sin_addr,&sin->sin_addr,sizeof(sin_addr));
-	mask = 0;	// must initialize to zero because we logical-or bits into this
+	/*
+	 * Be Warned:  careful about parameter "sin" being NULL.  It could be, in
+	 * which case we should return FALSE (unless perm is ALLOW)
+	 *
+	 */
 
-    if (who == NULL || *who == '\0') {
-        who = TotallyWild;
-    }
 	switch ( perm ) {
 
 	case ALLOW:
 		return USER_AUTH_SUCCESS;
 		break;
 
-	default:
-		if ( !PermTypeArray[perm] ) {
-			EXCEPT("IpVerify::Verify: called with unknown permission %d\n",perm);
-		}
+	case IMMEDIATE_FAMILY:
+		// TODO!!!  Implement IMMEDIATE_FAMILY someday!
+		return TRUE;
+		break;
+
+	}
+
+	memcpy(&sin_addr,&sin->sin_addr,sizeof(sin_addr));
+	mask = 0;	// must initialize to zero because we logical-or bits into this
+
+    if (who == NULL || *who == '\0') {
+        who = TotallyWild;
+    }
+
+	if ( !PermTypeArray[perm] ) {
+		EXCEPT("IpVerify::Verify: called with unknown permission %d\n",perm);
+	}
 		
-		if ( PermTypeArray[perm]->behavior == USERVERIFY_ALLOW ) {
+	if ( PermTypeArray[perm]->behavior == USERVERIFY_ALLOW ) {
 			// allow if no HOSTALLOW_* or HOSTDENY_* restrictions 
 			// specified.
-			return USER_AUTH_SUCCESS;
-		}
+		return USER_AUTH_SUCCESS;
+	}
 		
-		if ( PermTypeArray[perm]->behavior == USERVERIFY_DENY ) {
+	if ( PermTypeArray[perm]->behavior == USERVERIFY_DENY ) {
 			// deny
-			return USER_AUTH_FAILURE;
-		}
+		return USER_AUTH_FAILURE;
+	}
 		
-		if (PermHashTable->lookup(sin_addr, ptable) != -1) {
+	if (PermHashTable->lookup(sin_addr, ptable) != -1) {
 
-            if (has_user(ptable, who, mask, userid)) {
-                if ( ( (mask & allow_mask(perm)) == 0 ) && ( (mask & deny_mask(perm)) == 0 ) ) {
-                    found_match = FALSE;
-                } else {
-                    found_match = TRUE;
-                }
-            }
-            else {
-                found_match = FALSE;
-            }
-        }
-        else {
-            found_match = FALSE;
-        }
+		if (has_user(ptable, who, mask, userid)) {
+			if ( ( (mask & allow_mask(perm)) == 0 ) && ( (mask & deny_mask(perm)) == 0 ) ) {
+				found_match = FALSE;
+			} else {
+				found_match = TRUE;
+			}
+		}
+		else {
+			found_match = FALSE;
+		}
+	}
+	else {
+		found_match = FALSE;
+	}
 
-		if ( found_match == FALSE ) {
-			mask = 0;
+	if ( found_match == FALSE ) {
+		mask = 0;
 			// did not find an existing entry, so try subnets
-			unsigned char *cur_byte = (unsigned char *) &sin_addr;
-			for (i=3; i>0; i--) {
-				cur_byte[i] = (unsigned char) 255;
+		unsigned char *cur_byte = (unsigned char *) &sin_addr;
+		for (i=3; i>0; i--) {
+			cur_byte[i] = (unsigned char) 255;
 
-				if ( PermHashTable->lookup(sin_addr, ptable) != -1 ) {
-                    if (has_user(ptable, who, temp_mask, userid)) {
-                        subnet_mask = (temp_mask & ( allow_mask(perm) | deny_mask(perm) ));
-                        if ( subnet_mask != 0 ) {
+			if ( PermHashTable->lookup(sin_addr, ptable) != -1 ) {
+				if (has_user(ptable, who, temp_mask, userid)) {
+					subnet_mask = (temp_mask & ( allow_mask(perm) | deny_mask(perm) ));
+					if ( subnet_mask != 0 ) {
                             // We found a subnet match.  Logical-or it into our mask.
                             // But only add in the bits that relate to this perm, else
                             // we may not check the hostname strings for a different
                             // perm.
-                            mask |= subnet_mask;
-                            break;
-                        }
-                    }
+						mask |= subnet_mask;
+						break;
+					}
 				}
-			}  // end of for
+			}
+		}  // end of for
 
 			// used in next chunks
-            const char * hoststring = NULL;
+		const char * hoststring = NULL;
 
 			// check for matching subnets in ip/mask style
-			char tmpbuf[16];
-			const unsigned char *byte_array = (const unsigned char *) &(sin->sin_addr);
-			sprintf(tmpbuf, "%u.%u.%u.%u", byte_array[0], byte_array[1],
-					byte_array[2], byte_array[3]);
+		char tmpbuf[16];
+		const unsigned char *byte_array = (const unsigned char *) &(sin->sin_addr);
+		sprintf(tmpbuf, "%u.%u.%u.%u", byte_array[0], byte_array[1],
+				byte_array[2], byte_array[3]);
 
-			StringList * userList;
-			if ( PermTypeArray[perm]->allow_hosts &&
-					(hoststring = PermTypeArray[perm]->allow_hosts->
-					string_withnetwork(tmpbuf))) {
+		StringList * userList;
+		if ( PermTypeArray[perm]->allow_hosts &&
+			 (hoststring = PermTypeArray[perm]->allow_hosts->
+			  string_withnetwork(tmpbuf))) {
 				// See if the user exist
+			if (PermTypeArray[perm]->allow_users->lookup(hoststring, userList) != -1) {
+				if (lookup_user(userList, who)) {
+					dprintf ( D_SECURITY, "IPVERIFY: matched with host %s and user %s\n",
+							  hoststring, (who && *who) ? who : "*");
+					mask |= allow_mask(perm);
+				} else {
+					dprintf ( D_SECURITY, "IPVERIFY: matched with host %s, but not user %s!\n",
+							  hoststring, (who && *who) ? who : "*");
+				}
+			} else {
+				dprintf( D_SECURITY, "IPVERIFY: ip not matched: %s\n", tmpbuf);
+			}
+		}
+    
+		if ( PermTypeArray[perm]->deny_hosts &&
+			 (hoststring = PermTypeArray[perm]->deny_hosts->
+			  string_withnetwork(tmpbuf))) {
+			dprintf ( D_SECURITY, "IPVERIFY: matched with %s\n", hoststring);
+			if (PermTypeArray[perm]->deny_users->lookup(hoststring, userList) != -1) {
+				if (lookup_user(userList, who)) {  
+					dprintf ( D_ALWAYS, "IPVERIFY: denied user %s from %s\n", who, hoststring);
+					mask |= deny_mask(perm);
+				}
+			}
+		}
+
+
+			// now scan through hostname strings
+		thehost = sin_to_hostname(sin,&aliases);
+		i = 0;
+		while ( thehost ) {
+			MyString     host(thehost);
+			if ( PermTypeArray[perm]->allow_hosts &&
+				 (hoststring = PermTypeArray[perm]->allow_hosts->
+				  string_anycase_withwildcard(thehost))) {
+                    // See if the user exist
+				dprintf ( D_SECURITY, "IPVERIFY: matched with %s\n", hoststring);
 				if (PermTypeArray[perm]->allow_users->lookup(hoststring, userList) != -1) {
 					if (lookup_user(userList, who)) {
-						dprintf ( D_SECURITY, "IPVERIFY: matched with host %s and user %s\n",
-								hoststring, (who && *who) ? who : "*");
 						mask |= allow_mask(perm);
-					} else {
-						dprintf ( D_SECURITY, "IPVERIFY: matched with host %s, but not user %s!\n",
-								hoststring, (who && *who) ? who : "*");
 					}
-				} else {
-					dprintf( D_SECURITY, "IPVERIFY: ip not matched: %s\n", tmpbuf); }
 				}
-    
+			} else {
+				dprintf( D_SECURITY, "IPVERIFY: hoststring: %s\n", thehost);
+			}
+                
 			if ( PermTypeArray[perm]->deny_hosts &&
 				 (hoststring = PermTypeArray[perm]->deny_hosts->
-				  string_withnetwork(tmpbuf))) {
-				dprintf ( D_SECURITY, "IPVERIFY: matched with %s\n", hoststring);
+				  string_anycase_withwildcard(thehost))) {
 				if (PermTypeArray[perm]->deny_users->lookup(hoststring, userList) != -1) {
 					if (lookup_user(userList, who)) {  
-						dprintf ( D_ALWAYS, "IPVERIFY: denied user %s from %s\n", who, hoststring);
+						dprintf ( D_SECURITY, "IPVERIFY: matched %s at %s to deny list\n", who,hoststring);
 						mask |= deny_mask(perm);
 					}
 				}
 			}
-
-
-			// now scan through hostname strings
-			thehost = sin_to_hostname(sin,&aliases);
-			i = 0;
-			while ( thehost ) {
-                MyString     host(thehost);
-                if ( PermTypeArray[perm]->allow_hosts &&
-                     (hoststring = PermTypeArray[perm]->allow_hosts->
-                      string_anycase_withwildcard(thehost))) {
-                    // See if the user exist
-					dprintf ( D_SECURITY, "IPVERIFY: matched with %s\n", hoststring);
-                    if (PermTypeArray[perm]->allow_users->lookup(hoststring, userList) != -1) {
-                        if (lookup_user(userList, who)) {
-                            mask |= allow_mask(perm);
-                        }
-                    }
-                } else {
-					dprintf( D_SECURITY, "IPVERIFY: hoststring: %s\n", thehost);
-				}
-                
-                if ( PermTypeArray[perm]->deny_hosts &&
-                     (hoststring = PermTypeArray[perm]->deny_hosts->
-                      string_anycase_withwildcard(thehost))) {
-                    if (PermTypeArray[perm]->deny_users->lookup(hoststring, userList) != -1) {
-                        if (lookup_user(userList, who)) {  
-							dprintf ( D_SECURITY, "IPVERIFY: matched %s at %s to deny list\n", who,hoststring);
-                            mask |= deny_mask(perm);
-                        }
-                    }
-                }
 				// check all aliases for this IP as well
-				thehost = aliases[i++];
-			}
+			thehost = aliases[i++];
+		}
 			// if we found something via our hostname or subnet mactching, we now have 
 			// a mask, and we should add it into our table so we need not
 			// do a gethostbyaddr() next time.  if we still do not have a mask
@@ -724,52 +738,47 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			// authorization heirarchy.
 			// DAEMON and ADMINISTRATOR imply WRITE.
 			// WRITE, NEGOTIATOR, and CONFIG_PERM imply READ.
-			if ( mask == 0 ) {
-				if ( PermTypeArray[perm]->behavior == USERVERIFY_ONLY_DENIES ) {
-					dprintf(D_SECURITY,"IPVERIFY: %s at %s not matched to deny list, so allowing.\n",who,sin_to_string(sin));
-					mask |= allow_mask(perm);
-				} else {
-					DCpermissionHierarchy hierarchy( perm );
-					DCpermission const *parent_perms =
-						hierarchy.getPermsIAmDirectlyImpliedBy();
-					bool parent_allowed = false;
-					for( ; *parent_perms != LAST_PERM; parent_perms++ ) {
-						if( Verify( *parent_perms, sin, user) == USER_AUTH_SUCCESS ) {
-							parent_allowed = true;
-							dprintf(D_SECURITY,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who,sin_to_string(sin),PermString(perm),PermString(*parent_perms));
-							break;
-						}
-					}
-					if( parent_allowed ) {
-						mask |= allow_mask(perm);
-					}
-					else {
-						mask |= deny_mask(perm);
+		if ( mask == 0 ) {
+			if ( PermTypeArray[perm]->behavior == USERVERIFY_ONLY_DENIES ) {
+				dprintf(D_SECURITY,"IPVERIFY: %s at %s not matched to deny list, so allowing.\n",who,sin_to_string(sin));
+				mask |= allow_mask(perm);
+			} else {
+				DCpermissionHierarchy hierarchy( perm );
+				DCpermission const *parent_perms =
+					hierarchy.getPermsIAmDirectlyImpliedBy();
+				bool parent_allowed = false;
+				for( ; *parent_perms != LAST_PERM; parent_perms++ ) {
+					if( Verify( *parent_perms, sin, user) == USER_AUTH_SUCCESS ) {
+						parent_allowed = true;
+						dprintf(D_SECURITY,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who,sin_to_string(sin),PermString(perm),PermString(*parent_perms));
+						break;
 					}
 				}
+				if( parent_allowed ) {
+					mask |= allow_mask(perm);
+				}
+				else {
+					mask |= deny_mask(perm);
+				}
 			}
+		}
 
 			// finally, add the mask we computed into the table with this IP addr
-			if ( cache_DNS_results == TRUE ) {
-				add_hash_entry(sin->sin_addr, who, mask);			
-			}
-		}  // end of if find_match is FALSE
+		if ( cache_DNS_results == TRUE ) {
+			add_hash_entry(sin->sin_addr, who, mask);			
+		}
+	}  // end of if find_match is FALSE
 
 		// decode the mask and return True or False to the user.
-		if ( mask & deny_mask(perm) )
-			return USER_AUTH_FAILURE;
-		if ( mask & allow_mask(perm) )
-			return USER_AUTH_SUCCESS;
-		else
-			return USER_AUTH_FAILURE;
+	if ( mask & deny_mask(perm) ) {
+		return USER_AUTH_FAILURE;
+	}
 
-		break;
-	
-	}	// end of switch(perm)
+	if ( mask & allow_mask(perm) ) {
+		return USER_AUTH_SUCCESS;
+	}
 
-	// should never make it here
-	EXCEPT("User Verify: could not decide, should never make it here!");
-	return FALSE;
+	return USER_AUTH_FAILURE;
 }
 
 bool IpVerify :: lookup_user(StringList * list, const char * user)
