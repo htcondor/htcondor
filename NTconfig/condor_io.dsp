@@ -174,6 +174,14 @@ SOURCE=..\src\condor_includes\condor_io.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_io\condor_rw.C
 # End Source File
 # Begin Source File

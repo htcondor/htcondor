@@ -90,14 +90,6 @@ SOURCE=..\src\condor_daemon_core.V6\condor_daemon_core.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_daemon_core.V6\condor_lock.C
 # End Source File
 # Begin Source File
@@ -196,17 +188,7 @@ SOURCE=..\src\condor_daemon_core.V6\soap_core.h
 # Begin Source File
 
 SOURCE="$(EXT_INSTALL)\$(EXT_GSOAP_VERSION)\src\stdsoap2.cpp"
-
-!IF  "$(CFG)" == "condor_daemon_core - Win32 Debug"
-
 # SUBTRACT CPP /YX /Yc /Yu
-
-!ELSEIF  "$(CFG)" == "condor_daemon_core - Win32 Release"
-
-# SUBTRACT CPP /YX /Yc /Yu
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 

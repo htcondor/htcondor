@@ -50,6 +50,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_crypt.obj"
 	-@erase "$(INTDIR)\condor_crypt_3des.obj"
 	-@erase "$(INTDIR)\condor_crypt_blowfish.obj"
+	-@erase "$(INTDIR)\condor_ipverify.obj"
 	-@erase "$(INTDIR)\condor_rw.obj"
 	-@erase "$(INTDIR)\condor_secman.obj"
 	-@erase "$(INTDIR)\CryptKey.obj"
@@ -132,7 +133,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\SafeMsg.obj" \
 	"$(INTDIR)\sock.obj" \
 	"$(INTDIR)\sockCache.obj" \
-	"$(INTDIR)\stream.obj"
+	"$(INTDIR)\stream.obj" \
+	"$(INTDIR)\condor_ipverify.obj"
 
 "$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -164,6 +166,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_crypt.obj"
 	-@erase "$(INTDIR)\condor_crypt_3des.obj"
 	-@erase "$(INTDIR)\condor_crypt_blowfish.obj"
+	-@erase "$(INTDIR)\condor_ipverify.obj"
 	-@erase "$(INTDIR)\condor_rw.obj"
 	-@erase "$(INTDIR)\condor_secman.obj"
 	-@erase "$(INTDIR)\CryptKey.obj"
@@ -245,7 +248,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\SafeMsg.obj" \
 	"$(INTDIR)\sock.obj" \
 	"$(INTDIR)\sockCache.obj" \
-	"$(INTDIR)\stream.obj"
+	"$(INTDIR)\stream.obj" \
+	"$(INTDIR)\condor_ipverify.obj"
 
 "$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -396,6 +400,12 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /F
 
 
 !ENDIF 
+
+SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.C
+
+"$(INTDIR)\condor_ipverify.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
 
 SOURCE=..\src\condor_io\condor_rw.C
 
