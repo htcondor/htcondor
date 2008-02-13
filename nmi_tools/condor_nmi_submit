@@ -118,10 +118,10 @@ my $tag_file = "/space/cvs/nwo-build-tags";
 my $CVSROOT = "/space/cvs/CONDOR_SRC";
 
 # Root of the GIT Source repository
-my $GITROOT_SRC = "/space/git/CONDOR_SRC.GIT";
+my $GITROOT_SRC = "/space/git/CONDOR_SRC.git";
 
 # Root of the GIT Externals repository
-my $GITROOT_EXT = "/space/git/CONDOR_EXT.GIT";
+my $GITROOT_EXT = "/space/git/CONDOR_EXT.git";
 
 # name of the submit_info file
 my $submit_info_basename = "submit_info";
