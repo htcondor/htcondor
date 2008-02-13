@@ -120,6 +120,10 @@ const char* sysapi_kernel_memory_model( void );
 const char* sysapi_ckptpltfrm_raw( void );
 const char* sysapi_ckptpltfrm( void );
 
+/* determine the syscall gate address on machines where that makes sense */
+const char * sysapi_vsyscall_gate_addr_raw( void );
+const char * sysapi_vsyscall_gate_addr( void );
+
 /* Produce a unique identifier for the disk partition containing the
    specified path.  Caller should free result.  The caller could use
    the result, for example, to see if two paths are on the same disk

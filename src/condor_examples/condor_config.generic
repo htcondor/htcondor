@@ -1334,6 +1334,11 @@ STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 ##  approximately 10 bytes of disk space.
 #STARTD_MAX_AVAIL_PERIOD_SAMPLES = 100
 
+##	CKPT_PROBE is the location of a program which computes aspects of the
+##	CheckpointPlatform classad attribute. By default the location of this
+##	executable will be here: $(LIBEXEC)/condor_ckpt_probe
+CKPT_PROBE = $(LIBEXEC)/condor_ckpt_probe
+
 ##--------------------------------------------------------------------
 ##  condor_schedd
 ##--------------------------------------------------------------------

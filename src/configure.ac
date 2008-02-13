@@ -1198,7 +1198,6 @@ case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_c
   *-HPUX11-* | \
   LINUX-*-ALPHA-* | \
   LINUX-*-*-DEBIAN40-* | \
-  LINUX-*-I386-*-2-5 | \
   LINUX-*-IA64-* | \
   LINUX-*-CONDOR_PPC-* ) _cv_clipped_default=yes ;;
   * ) _cv_clipped_default=no ;;
@@ -2246,11 +2245,8 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
   "2.3.6" )
     CHECK_EXTERNAL([glibc],[2.3.2.27.9.7], [soft])
     ;;
-  "2.5" ) # RHEL 5.1
-    including_glibc_ext=NO
-    ;;
-  "2.5." )
-    including_glibc_ext=NO
+  "2.5." ) # RHEL 5.0/5.1
+    CHECK_EXTERNAL([glibc],[2.5-20061008T1257], [soft])
     ;;
   "2.6." ) # F7 uses glibc 2.6-4
     including_glibc_ext=NO

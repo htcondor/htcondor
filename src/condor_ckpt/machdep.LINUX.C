@@ -278,7 +278,7 @@ void display_prmap()
 	int		i;
 
 	for(i=0;i<map_count;i++) {
-		dprintf(D_ALWAYS, "addr= 0x%p, size= 0x%lx, offset= 0x%x\n",
+		dprintf(D_ALWAYS, "addr= 0x%p, size= 0x%x, offset= 0x%x\n",
 			my_map[i].mem_start, my_map[i].mem_end-my_map[i].mem_start,
 			my_map[i].offset);
 		dprintf(D_ALWAYS, "Flags: %c%c%c%c inode %d\n", 

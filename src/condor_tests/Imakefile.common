@@ -31,6 +31,12 @@ TESTCLASS_DECL(long)
    may be in zero or more of the below 'functional categories'
 */
 TESTCLASS_DECL(env)
+/* every standard universe test must be in rsc and/or ckpt class. Which class
+it goes into is determined by primarily what it tests. */
+TESTCLASS_DECL(rsc)
+TESTCLASS_DECL(ckpt)
+/* every standard universe job must be in the stduniv class */
+TESTCLASS_DECL(stduniv)
 TESTCLASS_DECL(critical)
 TESTCLASS_DECL(framework)
 TESTCLASS_DECL(filexfer)

@@ -363,7 +363,7 @@ All of these calls manipulate the open file table.
 	      at least 32 bit offsets work now. :) 
 	      Derek Wright <wright@cs.wisc.edu> 2/4/00
 	   */
-#		if defined(GLIBC22) || defined(GLIBC23)
+#		if defined(GLIBC22) || defined(GLIBC23) || defined (GLIBC24) || defined(GLIBC25)
 			off64_t llseek( int fd, off64_t offset, int whence )
 				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
 				local_name(lseek);
@@ -498,7 +498,7 @@ version.
 	Most of the switches are special.
 	*/
 
-#	if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))
+#	if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25))
 #		define STAT_NEEDS_SPECIAL_SWITCH
 #	elif defined(IRIX)
 #		define STAT_NEEDS_SPECIAL_SWITCH
@@ -891,7 +891,7 @@ report an error if reside on different devices.
 	}
 
 
-#	if defined( LINUX ) && !( defined( LINUX_CENTOS42 ) || defined( LINUX_CENTOS43 ) || defined( LINUX_CENTOS44 ) || defined( LINUX_CENTOS45) || defined(LINUX_DEBIAN40) )
+#	if defined( LINUX ) && !( defined( LINUX_CENTOS42 ) || defined( LINUX_CENTOS43 ) || defined( LINUX_CENTOS44 ) || defined( LINUX_CENTOS45) || defined(LINUX_DEBIAN40) || defined(LINUX_RHEL5) )
 	/* CENTOS42 uses a header files where this func is const, but
 		the glibc that we use with condor does not define this
 		function as const. So this avoids link errors. */
@@ -999,7 +999,13 @@ They are not needed for remote I/O or for the condor daemons.
 	mode_t umask( mode_t cmask );
 	int getpagesize();
 
-	int getgroups( int gidsetsize, gid_t grouplist[] ) {
+	int getgroups( int gidsetsize, gid_t grouplist[] ) 
+#if defined(GLIBC25)
+	/* I'm not sure why, but SYS_getgroups32 seems to be in fashion for this
+		glibc revision. The normal SYS_getgroups just returns garbage... */
+	: local_name(getgroups32)
+#endif
+	{
 		out code_array( grouplist, gidsetsize );
 		alloc(grouplist, gidsetsize * GID_T_SIZE);
 	}
@@ -1587,7 +1593,7 @@ not_supported {
 not_supported {
 	pid_t fork() : EXTRACT;
 #	if defined(LINUX)
-#		if defined(GLIBC22) || defined(GLIBC23)
+#		if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25)
 			/* XXX the stub generator doesn't understand function prototypes */
 /*			pid_t clone(int (*)(void*), void *sp, int *, void *);*/
 #		else
