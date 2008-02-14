@@ -103,8 +103,9 @@ sub TRUE { 1; };
 sub FALSE { 0; };
 
 # Constants for use with makeFetchFileVCS to specify if fetching from
-# source (SRC) or externals (EXT).
-sub EXT { 1; };
+# source (SRC), externals (EXT) or manual (DOC) repositories.
+sub EXT { 2; };
+sub DOC { 1; };
 sub SRC { 0; };
 
 ######################################################################
@@ -119,6 +120,9 @@ my $CVSROOT = "/space/cvs/CONDOR_SRC";
 
 # Root of the GIT Source repository
 my $GITROOT_SRC = "/space/git/CONDOR_SRC.git";
+
+# Root of the GIT Manual repository
+my $GITROOT_DOC = "/space/git/CONDOR_DOC.git";
 
 # Root of the GIT Externals repository
 my $GITROOT_EXT = "/space/git/CONDOR_EXT.git";
@@ -1169,13 +1173,17 @@ sub generateBuildFetchFiles
         push( @fetch_files, $srcfile );
 
 	# This is a bit of a hack, if we are using git then we need to
-	# check the externals out from a different repository than the
-	# source. Ideally, this would only be visible at the
-	# makeFetchFileVCS level.
+	# check the externals and manual out from different
+	# repositories than the source. Ideally, this would only be
+	# visible at the makeFetchFileVCS level.
 	if( defined $opt_git ) {
 	    my $extfile = "externals-$tag.src";
 	    makeFetchFileVCS( $extfile, TRUE, EXT, $module, $tag );
 	    push( @fetch_files, $extfile );
+
+	    my $docfile = "manual-$tag.src";
+	    makeFetchFileVCS( $docfile, TRUE, DOC, $module, $tag );
+	    push( @fetch_files, $docfile );
 	}
     }
     elsif( defined $src_workspace ) {
@@ -1242,7 +1250,8 @@ sub makeFetchFileVCS
 	# git_tree is a commit/tree, could can be a tag or a branch
 	# git_path is essentially a filter, only pull git_path or git_path/...
 	# ==> git archive --remote=<git_root> <git_tree> <git_path> | tar x
-	my $gitroot = $repo ? $GITROOT_EXT : $GITROOT_SRC;
+	my $gitroot = ((EXT == $repo) ? $GITROOT_EXT :
+		       ((DOC == $repo) ? $GITROOT_DOC : $GITROOT_SRC));
 	print FILE "method = git\n";
 	print FILE "git_root = $gitroot\n";
 	print FILE "git_path = $module\n" unless $is_module;
