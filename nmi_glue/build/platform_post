@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: platform_post,v 1.10.2.4 2008-01-30 02:07:10 bt Exp $
+# $Id: platform_post,v 1.10.2.5 2008-02-15 03:45:34 bt Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -159,8 +159,15 @@ foreach $test (@crossplatforms) {
 	# condor_nmi_submit will do the magic to make it work
 	# and will make the cross test binaries show up in the 
 	# Run table in the component_version field
+
+	# are we testing 32 bit binaries on 64 bit platform?
+
 	$cmd2 = "--platforms=$test --input-platform=$platform ";
-	$cmd = $cmd1 . $cmd2 . $cmd3;
+	if((!($platform =~ /^.*64.*$/)) && ($test =~ /^.*64.*$/)){
+		$cmd = $cmd1 . $cmd2 . $cmd3 . " --configure=--without-full-port";
+	} else {
+		$cmd = $cmd1 . $cmd2 . $cmd3;
+	}
 
 	# submit the tests for cross test request
    	print "Invoking CNS ($cmd)\n";
