@@ -98,6 +98,14 @@ check.
 
 \begin{itemize}
 
+\item Fixed a bug that primarily affected pools with
+\MacroNI{MaxJobRetirementTime} (0 by default) set larger than
+\MacroNI{REQUEST\_CLAIM\_TIMEOUT} (30 minutes by default).  Since
+6.9.3, when the schedd timed out requesting a claim to a slot, the
+\Condor{startd} was not made aware of the cancelled request.  This
+resulted in some wasted time (up to \MacroNI{ALIVE\_INTERVAL}) in
+which the \Condor{startd} would wait for a job to run.
+
 \item A problem with \Condor{history} in a quill environment incorrectly
 interpreting the -name argument has been fixed.
 
