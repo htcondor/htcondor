@@ -41,6 +41,8 @@ struct soap ssl_soap;
 
 #define OR(p,q) ((p) ? (p) : (q))
 
+extern SOAP_NMAC struct Namespace namespaces[];
+
 void
 init_soap(struct soap *soap)
 {
@@ -48,6 +50,7 @@ init_soap(struct soap *soap)
 
 		// KEEP-ALIVE should be turned OFF, not ON.
 	soap_init(soap);
+	soap_set_namespaces(soap, namespaces);
 		//soap_init2(&soap, SOAP_IO_KEEPALIVE, SOAP_IO_KEEPALIVE);
 
 	soap->send_timeout = 20;
@@ -137,6 +140,7 @@ init_soap(struct soap *soap)
 					(ca_path ? ca_path : "(NULL)"));
 
 			soap_init(&ssl_soap);
+			soap_set_namespaces(&ssl_soap, namespaces);
 
 			soap_register_plugin_arg(&ssl_soap,http_get,(void*)http_get_handler);
 
