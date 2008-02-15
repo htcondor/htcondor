@@ -1326,33 +1326,14 @@ DedicatedScheduler::contactStartd( ContactStartdArgs *args )
 int
 DedicatedScheduler::startdContactConnectHandler( Stream *sock )
 {
-	dprintf ( D_FULLDEBUG, "In DedicatedScheduler::startdContactConnectHandler\n" );
+	match_rec *mrec = (match_rec *)daemonCore->GetDataPtr();
 
-		// fetch the match record.  the daemon core DataPtr specifies
-		// the id of the match (a.k.a. the ClaimId).  use this id to
-		// pull out the actual mrec from our hashtable.
-	char *id = (char *) daemonCore->GetDataPtr();
-	match_rec *mrec = NULL;
-	if ( id ) {
-		HashKey key(id);
-		all_matches_by_id->lookup(key, mrec);
-		free(id); 	// it was allocated with strdup() when
-					// Register_DataPtr was called   
-	}
-
-	if ( !mrec ) {
-		// The match record must have been deleted.  Nothing left to do, close
-		// up shop.
-		dprintf ( D_FULLDEBUG, "startdContactConnectHandler(): mrec not found\n" );
-		scheduler.checkContactQueue();
-		return FALSE;
-	}
-
-	dprintf ( D_FULLDEBUG, "Got mrec data pointer %p\n", mrec );
+	ASSERT( mrec );
+	ASSERT( mrec->request_claim_sock == sock );
 
 	if(!claimStartdConnected( (Sock *)sock, mrec, &dummy_job, true )) {
 		DelMrec(mrec);
-		return FALSE;
+		return KEEP_STREAM; // socket was already deleted in DelMrec()
 	}
 
 	// The stream will be closed when we get a callback
@@ -1364,8 +1345,7 @@ DedicatedScheduler::startdContactConnectHandler( Stream *sock )
 // the contact queue.
 #define BAILOUT                         \
 		DelMrec(mrec);					\
-		scheduler.checkContactQueue();  \
-		return FALSE;
+		return KEEP_STREAM; // sock was already deleted in DelMrec()
 
 int
 DedicatedScheduler::startdContactSockHandler( Stream *sock )
@@ -1375,33 +1355,19 @@ DedicatedScheduler::startdContactSockHandler( Stream *sock )
 		// Therefore, DaemonCore will cancel this socket at the
 		// end of this function, which is exactly what we want!
 
-	dprintf( D_FULLDEBUG, "In Scheduler::startdContactSockHandler\n" );
+	match_rec *mrec = (match_rec *) daemonCore->GetDataPtr();
+
+	ASSERT( mrec );
+	ASSERT( mrec->request_claim_sock == sock );
 
 		// since all possible returns from here result in the socket being
 		// cancelled, we begin by decrementing the # of contacts.
 	scheduler.delRegContact();
 
-		// fetch the match record.  the daemon core DataPtr specifies the
-		// id of the match (which is really the startd ClaimId).  use
-		// this id to pull out the actual mrec from our hashtable.
-	char *id = (char *) daemonCore->GetDataPtr();
-	match_rec *mrec = NULL;
-	if( id ) {
-		HashKey key(id);
-		all_matches_by_id->lookup(key, mrec);
-			// the id was allocated with strdup() when
-			// Register_DataPtr() was called 
-		free(id);	
-	}
+	dprintf ( D_FULLDEBUG,
+			  "Reading response for request to claim %s for job %d.%d.\n",
+			  mrec->publicClaimId(), mrec->cluster, mrec->proc );
 
-	if( !mrec ) {
-		// The match record must have been deleted.  Nothing left to do, close
-		// up shop.
-		dprintf( D_FULLDEBUG, "startdContactSockHandler(): mrec not found\n" );
-		scheduler.checkContactQueue();
-		return FALSE;
-	}
-	
 	mrec->setStatus( M_CLAIMED ); // we assume things will work out.
 
 	// Now, we set the timeout on the socket to 1 second.  Since we 
@@ -1442,6 +1408,11 @@ DedicatedScheduler::startdContactSockHandler( Stream *sock )
 		// Set a timer to call handleDedicatedJobs() in 1 second,
 		// since we might be able to spawn something now.
 	handleDedicatedJobTimer( 2 );
+
+		// The claim has been successfully requested, and this sock is
+		// about to be closed, so remove the saved reference to it
+		// from the match_rec.
+	mrec->request_claim_sock = NULL;
 
 	return TRUE;
 }

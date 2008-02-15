@@ -141,6 +141,7 @@ class match_rec: public ClaimIdParser
 	bool			allocated;	// For use by the DedicatedScheduler
 	bool			scheduled;	// For use by the DedicatedScheduler
 	bool			needs_release_claim;
+	Sock*           request_claim_sock;
 
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)
@@ -280,6 +281,8 @@ class Scheduler : public Service
 	// match managing
 	int 			publish( ClassAd *ad );
     match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char*, char*);
+	// All deletions of match records _MUST_ go through DelMrec() to ensure
+	// proper cleanup.
     int         	DelMrec(char const*);
     int         	DelMrec(match_rec*);
 	match_rec*      FindMrecByJobID(PROC_ID);
@@ -333,6 +336,12 @@ class Scheduler : public Service
 			@return true on success, false on failure (to enqueue).
 		*/
 	bool			enqueueStartdContact( ContactStartdArgs* args );
+
+		/** Set a timer to call checkContactQueue() in the near future.
+			This is called when we get new matches and when existing
+			attempts to contact startds finish.
+		*/
+	void			rescheduleContactQueue();
 
 		/** Registered in contactStartdConnected, this function is called when
 			the startd replies to our request.  If it replies in the 
