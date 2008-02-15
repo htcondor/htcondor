@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: platform_post,v 1.10.2.5 2008-02-15 03:45:34 bt Exp $
+# $Id: platform_post,v 1.10.2.6 2008-02-15 03:50:33 bt Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -161,6 +161,7 @@ foreach $test (@crossplatforms) {
 	# Run table in the component_version field
 
 	# are we testing 32 bit binaries on 64 bit platform?
+	# still need to cut out tests which link to 32 bit libraries
 
 	$cmd2 = "--platforms=$test --input-platform=$platform ";
 	if((!($platform =~ /^.*64.*$/)) && ($test =~ /^.*64.*$/)){
