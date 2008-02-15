@@ -507,6 +507,12 @@ AC_ARG_WITH(proper,
   [PROPER=$withval],
   [PROPER=no])
 
+AC_ARG_ENABLE(gcc-version-check,
+  [AS_HELP_STRING([--disable-gcc-version-check],
+     [Disable the gcc version check])],
+  [],
+  [enable_gcc_version_check=yes])
+
 AC_ARG_WITH(full-port,
   [AS_HELP_STRING([--with-full-port],
     [Perform a full build, i.e. Standard Universe included])],
@@ -841,9 +847,17 @@ case "$gcc_vers" in
     CompilerPatch="2"
     ;;
  * )
-   AC_MSG_RESULT([ERROR])
-   AC_MSG_ERROR([Condor will not compile with gcc version $gcc_vers])
-   ;;
+    if test "x$enable_gcc_version_check" = "xyes"; then
+      AC_MSG_RESULT([ERROR])
+      AC_MSG_ERROR([Condor will not compile with gcc version $gcc_vers])
+    else
+      AC_MSG_RESULT([$gcc_vers (UNSUPPORTED)])
+      CompilerKind="UNSUPPORTED"
+      CompilerMajor="0"
+      CompilerMinor="0"
+      CompilerPatch="0"
+    fi
+    ;;
 esac
 AC_MSG_RESULT([$gcc_vers])
 
