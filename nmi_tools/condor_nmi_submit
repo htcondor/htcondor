@@ -1036,6 +1036,11 @@ sub writeBuildGlue
         } else {
             $post_args = "--nosubmit-xtests";
         }
+        # If a build is submitted using --git pass it on,
+        # platform_post checks out the test_glue from some VCS
+        if( defined($opt_git) ) {
+            $post_args .= " --git";
+        }       
         if( defined($src_workspace) ) {
             $post_args .= " --test-args=--workspace='$src_workspace'";
         }
