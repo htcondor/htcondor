@@ -33,6 +33,7 @@
 # ppc64_sles_9
 # ps3_ydl_5.0
 # x86_rhap_5
+# x86_64_rhap_5
 
 # These platforms are in maintenance build only
 # N/A
@@ -93,7 +94,7 @@ prereqs   = tar-1.14, m4-1.4.1, flex-2.5.4a, make-3.80, bison-1.25, perl-5.8.5
 ########################################
 [
 platforms = ia64_sles_8, \
-            x86_winnt_5.1, ppc64_sles_9, ps3_ydl_5.0, x86_rhap_5
+            x86_winnt_5.1, ppc64_sles_9, ps3_ydl_5.0, x86_rhap_5, x86_64_rhap_5
 ]
 
 
@@ -150,6 +151,11 @@ test_append_prereqs = java-1.4.2_05
 
 [
 platforms = x86_rhap_5
+test_append_prereqs = java-1.4.2_05
+]
+
+[
+platforms = x86_64_rhap_5
 test_append_prereqs = java-1.4.2_05
 ]
 

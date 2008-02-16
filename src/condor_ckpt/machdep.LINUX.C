@@ -29,6 +29,18 @@
 #define __KERNEL__
 #include <asm/page.h>
 
+/* This is supposed to be defined in the above headerfile, but on x86_64 on 
+rhel5 the file in question leads to an empty headerfile with no definition
+for PAGE_SIZE and friends. So nor now, I'll best guess one. */
+#if defined(LINUX) && defined(GLIBC25) && defined(X86_64) && !defined(PAGE_SIZE)
+#define PAGE_SHIFT      12
+#define PAGE_SIZE       (1UL << PAGE_SHIFT)
+#define PAGE_MASK       (~(PAGE_SIZE-1))
+
+#define LARGE_PAGE_MASK (~(LARGE_PAGE_SIZE-1))
+#define LARGE_PAGE_SIZE (1UL << PMD_SHIFT)
+#endif
+
 /* needed to tell us where the approximate begining of the data sgmt is */
 #if defined (GLIBC)
 extern int __data_start;

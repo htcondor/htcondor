@@ -93,8 +93,19 @@ REMAP_THREE_VARARGS( fcntl, __libc_fcntl, int , int , int , int)
 /* According to the implementation of these function in glibc 2.5 they appear
 to be simple wrappers around their specific system call */
 REMAP_THREE_VARARGS( fcntl, __fcntl_nocancel, int , int , int , int )
+
+#if defined(X86_64)
+REMAP_THREE( write, __write_nocancel, ssize_t , int , const void* , size_t )
+#else
 REMAP_THREE( write, __write_nocancel, int , int , const void* , size_t )
+#endif
+
+#if defined(X86_64)
+REMAP_THREE( read, __read_nocancel, ssize_t , int , void* , size_t )
+#else
 REMAP_THREE( read, __read_nocancel, int , int , void* , size_t )
+#endif
+
 REMAP_TWO_VARARGS( open, __open_nocancel, int, const char * , int )
 REMAP_ONE( close, __close_nocancel, int, int )
 #endif
@@ -179,7 +190,12 @@ REMAP_THREE( msync, __msync, int , void *, size_t , int )
 REMAP_THREE( msync, __libc_msync, int , void *, size_t , int )
 REMAP_TWO( munmap, __munmap, int, void *, size_t )
 REMAP_ONE( pipe, __pipe, int , int *)
+
+#if defined(X86_64) && defined(GLIBC25)
+REMAP_THREE( readlink, __readlink, ssize_t , const char *, char *, size_t )
+#else
 REMAP_THREE( readlink, __readlink, int , const char *, char *, size_t )
+#endif
 
 #if defined(X86_64)
 REMAP_THREE( readv, __readv, ssize_t, int, const struct iovec *, size_t )

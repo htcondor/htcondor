@@ -849,7 +849,11 @@ report an error if reside on different devices.
 	}
 
 
+#if	defined(LINUX) && defined(GLIBC25) && defined(X86_64)
+	ssize_t readlink( map_name(const char *path), char *buf, size_t buf_size ) {
+#else
 	int readlink( map_name(const char *path), char *buf, size_t buf_size ) {
+#endif
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 		out code_bytes_bool( buf, buf_size );
@@ -1000,9 +1004,10 @@ They are not needed for remote I/O or for the condor daemons.
 	int getpagesize();
 
 	int getgroups( int gidsetsize, gid_t grouplist[] ) 
-#if defined(GLIBC25)
+#if defined(LINUX) && defined(GLIBC25) && defined(I386)
 	/* I'm not sure why, but SYS_getgroups32 seems to be in fashion for this
-		glibc revision. The normal SYS_getgroups just returns garbage... */
+		glibc revision in the i386. The normal SYS_getgroups just returns
+		garbage... */
 	: local_name(getgroups32)
 #endif
 	{

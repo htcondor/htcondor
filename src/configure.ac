@@ -2260,7 +2260,11 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
     CHECK_EXTERNAL([glibc],[2.3.2.27.9.7], [soft])
     ;;
   "2.5." ) # RHEL 5.0/5.1
-    CHECK_EXTERNAL([glibc],[2.5-20061008T1257], [soft])
+    if test "x$_cv_arch" = "xI386" ; then
+       CHECK_EXTERNAL([glibc],[2.5-20061008T1257], [soft])
+	else # x86_64
+       CHECK_EXTERNAL([glibc],[2.5-20061008T1257-x86_64], [soft])
+	fi
     ;;
   "2.6." ) # F7 uses glibc 2.6-4
     including_glibc_ext=NO
