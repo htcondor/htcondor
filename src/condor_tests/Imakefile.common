@@ -27,6 +27,12 @@ all_lists:: list_all
 TESTCLASS_DECL(quick)
 TESTCLASS_DECL(long)
 
+/* 
+	Tests which do not link to condor libraries(32 bit binary testing 
+	on 64 bit platforms
+*/
+TESTCLASS_DECL(quicknolink)
+
 /* In addition to one of the above time-to-run categories, each test
    may be in zero or more of the below 'functional categories'
 */

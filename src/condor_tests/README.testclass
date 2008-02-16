@@ -50,5 +50,11 @@ DESCRIPTION OF CURRENTLY USED TEST CLASSES
 quick        - very short-running tests
 long	     - long-running tests that should run less frequently
 local		 - tests for local universe
+qquicknolink - Tests which do not link condor libraries for testing
+			   32 bit binaries on 64 bit platforms and only running test
+			   built with native 64 bit compilers in 64 bit mode
+			   for cross testing( would like to be able to get
+			   tests to build in 32 bit mode for more complete
+			   testing(-m32 flag option needed).
 
 TODO!!!
