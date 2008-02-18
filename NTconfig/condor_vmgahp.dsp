@@ -176,7 +176,8 @@ SOURCE="..\src\condor_vm-gahp\soap_vmgahpStub.C"
 # Begin Source File
 
 SOURCE="..\src\condor_vm-gahp\soap_vmgahpStub.h"
-
+# SUBTRACT CPP /YX /Yc /Yu
+# End Source File
 
 # End Target
 # End Project
