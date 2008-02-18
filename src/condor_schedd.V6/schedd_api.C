@@ -225,6 +225,7 @@ Job::declare_file(const MyString &name,
 			 0600);
 	if (-1 != jobFile.file) {
 		if (0 == declaredFiles.lookup(name, ignored)) {
+			close(jobFile.file);
 			errstack.pushf("SOAP",
 						   ALREADYEXISTS,
 						   "File '%s' already declared.",
@@ -234,6 +235,7 @@ Job::declare_file(const MyString &name,
 		}
 
 		if (declaredFiles.insert(name, jobFile)) {
+			close(jobFile.file);
 			errstack.pushf("SOAP",
 						   FAIL,
 						   "Failed to record file '%s'.",
@@ -453,6 +455,7 @@ Job::get_file(const MyString &name,
 
 	if (-1 != file) {
 		if (-1 == lseek(file, offset, SEEK_SET)) {
+			close(file);
 			errstack.pushf("SOAP",
 						   FAIL,
 						   "Failed to lseek in file '%s', reason: %s",
@@ -464,6 +467,7 @@ Job::get_file(const MyString &name,
 		int result;
 		if (-1 == 
 			(result = full_read(file, data, sizeof(unsigned char) * length))) {
+			close(file);
 			errstack.pushf("SOAP",
 						   FAIL,
 						   "Failed to read from file '%s', wanted to "
@@ -562,6 +566,14 @@ ScheddTransaction::ScheddTransaction(const char *trans_owner):
 
 ScheddTransaction::~ScheddTransaction()
 {
+	PROC_ID currentKey;
+	Job *job;
+	jobs.startIterations();
+	while (jobs.iterate(currentKey, job)) {
+		delete job;
+		jobs.remove(currentKey);
+	}
+
 	if (this->owner) {
 		free(this->owner);
 		this->owner = NULL;
