@@ -77,12 +77,12 @@ fi
 #                help string,
 #                test)
 #
-# Check for an external. If $PROPER is defined to "yes" perform the
-# external check with the provided test function ($5), otherwise use
-# the default check for an external directory. The help string ($4) is
-# also ignored if $PROPER is not "yes". _cv_has_<name> is checked to
-# see if the external should detected. If _cv_has_<name> is no and the
-# requirement is hard an error is raised.
+# Check for an external. If $enable_proper is defined to "yes" perform
+# the external check with the provided test function ($5), otherwise
+# use the default check for an external directory. The help string
+# ($4) is also ignored if $enable_proper is not "yes". _cv_has_<name>
+# is checked to see if the external should detected. If _cv_has_<name>
+# is no and the requirement is hard an error is raised.
 #
 # Example usage:
 #  CHECK_EXTERNAL([pcre], [5.0], [hard],
@@ -116,7 +116,7 @@ AC_DEFUN([CHECK_EXTERNAL],
        [AC_MSG_FAILURE([$1 required but unsupported])],
        [AC_MSG_CHECKING([for $1])
         AC_MSG_RESULT([unsupported])])],
-     [AS_IF([test "x$PROPER" = xyes],
+     [AS_IF([test "x$enable_proper" = xyes],
        [MF_EXTERNAL_CHECK($1, $2, $4, $3, [$5])],
        [MF_EXTERNAL_CHECK($1, $2, $4, $3, CONDOR_EXTERNAL_VERSION($1, $2))])])])
 
@@ -127,13 +127,13 @@ AC_DEFUN([CHECK_EXTERNAL],
 #                   requierment_level,
 #                   test)
 #
-# This function is the framework for detecting externals PROPERly,
-# i.e. externals present on the system not in special directories
-# waiting to be built. The test function ($5) does the work of
-# actually detecting an external, while this function worries about
-# the requirement_level ($4), if --with-<name> or --without-<name> is
-# given, if --enable-soft-is-hard is given, and what should happen
-# when the external is found or not.
+# This function is the framework for detecting externals under
+# enable_proper, i.e. externals present on the system not in special
+# directories waiting to be built. The test function ($5) does the
+# work of actually detecting an external, while this function worries
+# about the requirement_level ($4), if --with-<name> or
+# --without-<name> is given, if --enable-soft-is-hard is given, and
+# what should happen when the external is found or not.
 #
 # Arguments:
 #  Exactly the same as those given to CHECK_EXTERNAL
@@ -161,7 +161,7 @@ AC_DEFUN([MF_EXTERNAL_CHECK],
        # if a soft requirement
        AS_IF([test "x$4" = xsoft],
          # external is a soft requirement, but soft->hard turned on
-         [AS_IF([test "x$SOFT_IS_HARD" = xyes],
+         [AS_IF([test "x$enable_soft_is_hard" = xyes],
            [_required=yes],
            # else, just a soft requirement
            [_required=no])],
@@ -253,7 +253,8 @@ AC_DEFUN([MF_LIB_CHECK],
 #  print out "checking <name> ... <version>, and we do a variable
 #  substitution in our output files for "ext_<name>_version".
 #
-# Modifications by Matt, for use in CHECK_EXTERNAL when PROPER is off:
+# Modifications by Matt, for use in CHECK_EXTERNAL when enable_proper
+# is off:
 #  * Sets cv_ext_<name> to yes or no if the external is available or not
 #  * All exit points via a failure are changed to warnings, because
 #    MF_EXTERNAL_CHECK will properly exit based on how required the
@@ -666,7 +667,7 @@ dnl The license on the macro is listed as "AllPermissive" which according to
 dnl http://ac-archive.sourceforge.net/doc/contribute.html
 dnl means "assumed MIT-style"
 dnl
-dnl $Id: aclocal.m4,v 1.8 2007-09-19 18:47:25 matt Exp $
+dnl $Id: aclocal.m4,v 1.8.18.1 2008-02-18 21:34:52 matt Exp $
 dnl
 dnl @synopsis AX_LIB_ORACLE_OCI([MINIMUM-VERSION])
 dnl
@@ -700,7 +701,7 @@ dnl
 dnl @category InstalledPackages
 dnl @category Cxx
 dnl @author Mateusz Loskot <mateusz@loskot.net>
-dnl @version $Date: 2007-09-19 18:47:25 $
+dnl @version $Date: 2008-02-18 21:34:52 $
 dnl @license AllPermissive
 dnl
 AC_DEFUN([AX_LIB_ORACLE_OCI],

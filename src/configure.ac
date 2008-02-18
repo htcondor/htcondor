@@ -501,11 +501,17 @@ AC_ARG_WITH(buildid,
   [BUILDID=$withval],
   [BUILDID=no])
 
-AC_ARG_WITH(proper,
-  [AS_HELP_STRING([--with-proper],
-     [Force this configure script to work in the proper (non-Condor) way])],
-  [PROPER=$withval],
-  [PROPER=no])
+AC_ARG_ENABLE(proper,
+  [AS_HELP_STRING([--enable-proper],
+     [Force this configure script to work in the proper (non-Condor) way (default: disabled)])],
+  [],
+  [enable_proper=no])
+
+AC_ARG_ENABLE(full-port,
+  [AS_HELP_STRING([--enable-full-port],
+    [Perform a full build, i.e. Standard Universe included (default: enabled)])],
+  [CLIPPED=$(test $enableval == yes && echo no || echo yes)],
+  [CLIPPED=default])
 
 AC_ARG_ENABLE(gcc-version-check,
   [AS_HELP_STRING([--disable-gcc-version-check],
@@ -513,21 +519,11 @@ AC_ARG_ENABLE(gcc-version-check,
   [],
   [enable_gcc_version_check=yes])
 
-AC_ARG_WITH(full-port,
-  [AS_HELP_STRING([--with-full-port],
-    [Perform a full build, i.e. Standard Universe included])],
-  [if test "x$withval" = xyes; then
-    CLIPPED=no
-   else
-    CLIPPED=yes
-   fi],
-  [CLIPPED=default])
-
-AC_ARG_WITH(soft-is-hard,
-  [AS_HELP_STRING([--with-soft-is-hard],
-     [Force all SOFT requirements into HARD requirements])],
-  [SOFT_IS_HARD=$withval],
-  [SOFT_IS_HARD=no])
+AC_ARG_ENABLE(soft-is-hard,
+  [AS_HELP_STRING([--enable-soft-is-hard],
+     [Force all SOFT requirements into HARD requirements (default: disabled)])],
+  [],
+  [enable_soft_is_hard=no])
 
 # if we want a buildid, jam it into CPPFLAGS
 AC_MSG_CHECKING(for a build id to use)
@@ -539,7 +535,7 @@ else
 fi
 
 # If we are being proper we don't want to look for "externals"
-AS_IF([test "x$PROPER" != xyes],
+AS_IF([test "x$enable_proper" != xyes],
 [
 ac_cv_has_externals=YES
 ac_cv_externals=none
@@ -2101,7 +2097,7 @@ AS_IF([test "x$enable_static" != xno -a "$_cv_has_static" = "yes"],
 # Check for externals, if we are going to use them
 #
 
-if test "x$ac_cv_has_externals" = "xYES" -o "x$PROPER" = xyes ; then
+if test "x$ac_cv_has_externals" = "xYES" -o "x$enable_proper" = xyes ; then
 
 AC_MSG_NOTICE([determining availability of external packages])
 
@@ -2447,7 +2443,7 @@ CHECK_EXTERNAL([gsoap], [2.7.6c-p2], [soft],
 # We need to make sure HAVE_OPENSSL_SSL_H is defined otherwise
 # programs will not link properly as stdsoap2.h will not include ssl
 # structures. This is set manually if using Globus's OpenSSL.
-AS_IF([test "x$cv_ext_gsoap" = xyes -a "x$PROPER" = xyes],
+AS_IF([test "x$cv_ext_gsoap" = xyes -a "x$enable_proper" = xyes],
   [AC_CHECK_HEADERS([openssl/ssl.h], [],
     [AC_MSG_ERROR([gsoap in proper mode requires openssl/ssl.h])])])
 
@@ -2532,7 +2528,7 @@ else
   AC_SUBST(ext_glibc_version,UNUSED)
 
 fi
-# END of if $ac_cv_has_externals = "YES" or $PROPER = yes
+# END of if $ac_cv_has_externals = "YES" or $enable_proper = yes
 
 
 ############################################################
