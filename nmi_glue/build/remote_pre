@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_pre,v 1.22 2007-12-14 14:13:02 matt Exp $
+# $Id: remote_pre,v 1.22.2.1 2008-02-18 21:38:24 matt Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -294,7 +294,7 @@ print "running CONFIGURE ...\n";
 my $configexecstr = 
       "./configure " .
 	  $buildid .
-      " --with-soft-is-hard " .
+      " --enable-soft-is-hard " .
       " --with-externals=$externals";
 
 print "$configexecstr\n";
