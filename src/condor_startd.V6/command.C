@@ -300,8 +300,8 @@ command_release_claim( Service*, int cmd, Stream* stream )
 	rip = resmgr->get_by_any_id( id );
 	if( !rip ) {
 		ClaimIdParser idp( id );
-		dprintf( D_ALWAYS, 
-				 "Warning: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
+		dprintf( D_FULLDEBUG, 
+				 "Can't find resource with ClaimId (%s); perhaps this claim was removed already.\n", idp.publicClaimId() );
 		free( id );
 		refuse( stream );
 		return FALSE;
