@@ -13,11 +13,6 @@ XCOMM
 
 PVM_CHECKPOINT = -DPVM_CHECKPOINTING
 
-/* We need to use dlopen() and dlsym() to extract on IRIX */
-#if IS_IRIX
-DL_EXTRACT = -DDL_EXTRACT
-#endif
-
 #ifdef WANT_NEST
 NEST_CC_FLAGS = -DENABLE_NEST -I$(NEST_INC)
 #endif
@@ -53,8 +48,6 @@ PLATFORM_EXTRACT = MMAP.o SYSCALL.o PIPE.o
 PLATFORM_EXTRACT = MMAP.o SYSCALL.o PIPE.o
 #elif IS_HPUX
 PLATFORM_EXTRACT = SYSCALL.o __SYSCALL.o PIPE.o
-#elif IS_IRIX
-PLATFORM_EXTRACT =
 #else 
 PLATFORM_EXTRACT = PIPE.o
 #endif
@@ -86,18 +79,10 @@ CFLAGS = $(STD_C_FLAGS) $(STATIC) -DIN_CKPT_LIB $(DYNAMIC_FLAGS)
 CFLAGS = $(STD_C_FLAGS) -DIN_CKPT_LIB $(DYNAMIC_FLAGS) $(DL_EXTRACT)
 #endif
 
-#if IS_IRIX65
-OS = IRIX65
-#elif IS_HPUX10
+#if IS_HPUX10
 OS = HPUX10
 #else
 OS = OperatingSystem
-#endif
-
-#if IS_SGI_IRIX65
-ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX65.o MMAP.MIPS.IRIX65.o
-.s.o:
-	gcc $(STD_C_FLAGS) -g -c -o $*.o $*.s
 #endif
 
 CPP_UTIL_OBJ = condor_version.o

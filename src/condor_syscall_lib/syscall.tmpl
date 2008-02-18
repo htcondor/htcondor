@@ -349,7 +349,7 @@ All of these calls manipulate the open file table.
 	off_t lseek( int fd, off_t offset, int whence )
 		: file_table, also_implements(lseek64), also_implements(llseek); 
 
-#	if !defined(IRIX) && !defined(LINUX)
+#	if !defined(LINUX)
 		offset_t llseek( int fd, offset_t offset, int whence )
 			: file_table_name(lseek), remote_name(lseek);
 #	elif defined(LINUX)
@@ -374,10 +374,7 @@ All of these calls manipulate the open file table.
 #	if !defined(LINUX) && !defined(OSF1)
 	off64_t lseek64( int fd, off64_t offset, int whence )
 		: file_table_name(lseek), remote_name(lseek)
-#		if defined(IRIX)
-			/* all seek calls under IRIX call lseek, disassemble it and see. */
-			, local_name(lseek)
-#		elif defined(Solaris)
+#		if defined(Solaris)
 			, local_name(llseek)
 #		endif
 		;
@@ -494,13 +491,11 @@ version.
 #if defined(REMOTE_SYSCALLS) && !defined(CLIP)
 
 	/*
-	The stat calls have very unusual cases on Linux and IRIX.
+	The stat calls have very unusual cases on Linux.
 	Most of the switches are special.
 	*/
 
 #	if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25))
-#		define STAT_NEEDS_SPECIAL_SWITCH
-#	elif defined(IRIX)
 #		define STAT_NEEDS_SPECIAL_SWITCH
 #	endif
 
@@ -509,9 +504,6 @@ version.
 		int fstat( int fd, struct stat *buf ) :
 #			if defined(STAT_NEEDS_EXTRACT)
 				extract,
-#			endif
-#			if defined(IRIX)
-				no_sys_chk,
 #			endif
 				also_implements(fstat64),   /* for backwards compatibility */
 				file_table
@@ -526,9 +518,6 @@ version.
 		int stat( map_name(const char *name), struct stat *buf ) :
 #			if defined(STAT_NEEDS_EXTRACT)
 				extract,
-#			endif
-#			if defined(IRIX)
-				no_sys_chk,
 #			endif
 				also_implements(stat64),   /* for backwards compatibility */
 				file_table
@@ -546,9 +535,6 @@ version.
 #			if defined(STAT_NEEDS_EXTRACT)
 				extract,
 #			endif
-#			if defined(IRIX)
-				no_sys_chk,
-#			endif	
 				also_implements(lstat64),   /* for backwards compatibility */
 				file_table
 		{
@@ -567,22 +553,9 @@ version.
 
 #	if defined(HAS_64BIT_SYSCALLS) 
 
-	/*
-	  This is stupid, you'd never have both Solaris + IRIX
-	  defined, but i'm just leaving it in here since eventually
-	  it'll change into "defined(Solaris) || defined(IRIX) once
-	  it's all tested and working, apropos the comments below...
-	    -derek wright <wright@cs.wisc.edu> 11/22/03
-	*/
-#	if defined(Solaris) && !defined(IRIX)
+#	if defined(Solaris)
 
-		/* when I can test this for sure, I'll remove the IRIX stuff from
-			below */
 		int fstat64( map(int fd), struct stat64 *buf ) :
-#			if defined(IRIX)
-			no_sys_chk,
-			dl_extract,
-#			endif
 			remote_name(fstat)
 		{
 			out code( buf );
@@ -590,10 +563,6 @@ version.
 		}
 	
 		int stat64( map_name(const char *path), struct stat64 *buf ) : 
-#			if defined(IRIX)
-			no_sys_chk,
-			dl_extract,
-#			endif
 			remote_name(stat) 
 		{ 
 			SEND_PATH( path );
@@ -603,10 +572,6 @@ version.
 		}
 	
 		int lstat64( map_name(const char *path), struct stat64 *buf ) : 
-#			if defined(IRIX)
-			no_sys_chk,
-			dl_extract,
-#			endif
 			remote_name(lstat) 
 		{ 
 			SEND_PATH( path );
@@ -620,7 +585,7 @@ version.
 	int fchown( map(int fd), uid_t owner, gid_t group );
 	int fchmod( map(int fd), mode_t mode );
 
-#	if defined(Solaris) || defined(IRIX)
+#	if defined(Solaris)
 		int statfs( const char *path, struct statfs *buf, rdiscard(int len), rdiscard(int fstyp) ) : pseudo {
 #	elif defined(OSF1)
 		int statfs( char *path, struct statfs *buf, rdiscard(int len) ) : pseudo {
@@ -633,7 +598,7 @@ version.
 			alloc( buf, STATFS_SIZE );
 		}
 
-#	if defined(IRIX) || defined(Solaris)
+#	if defined(Solaris)
 		int fstatfs( map(int fd), struct statfs *buf, int len, int fstyp ) {
 #	elif defined(OSF1)
 		int fstatfs( map(int fd), struct statfs *buf, int len) {
@@ -672,7 +637,7 @@ version.
 		}
 #	endif
 
-#	if defined(Solaris) || defined(IRIX) || ( defined(LINUX) && !defined(SWITCH) )
+#	if defined(Solaris) || ( defined(LINUX) && !defined(SWITCH) )
 		int getdents( map(int fd), struct dirent *buf, size_t nbytes )
 		{
 			out code_bytes_bool( buf, nbytes );
@@ -681,7 +646,7 @@ version.
 
 #	endif
 
-#if defined(Solaris) || defined(IRIX) || defined(LINUX)
+#if defined(Solaris) || defined(LINUX)
 		int getdents64( map(int fd), struct dirent64 *buf, size_t nbytes )
 		{
 			out code_bytes_bool( buf, nbytes );
@@ -923,7 +888,7 @@ Miscellaneous file-related operations that do not deal with
 either file names or file descriptors.
 */
 
-#	if !defined(Solaris) && !defined(LINUX) && !defined(IRIX) && !defined(HPUX)
+#	if !defined(Solaris) && !defined(LINUX) && !defined(HPUX)
 		int getfsstat( struct statfs buf[], long bufsize, int flags ) {
 			out code_bytes_bool( buf, STATFS_ARRAY_SIZE );
 			alloc( buf, bufsize );
@@ -1015,14 +980,14 @@ They are not needed for remote I/O or for the condor daemons.
 		alloc(grouplist, gidsetsize * GID_T_SIZE);
 	}
 
-#	if !defined(Solaris) && !defined(LINUX) && !defined(IRIX) && !defined(HPUX)
+#	if !defined(Solaris) && !defined(LINUX) && !defined(HPUX)
 		int table( int id, int index, char *addr, int nel, unsigned int lel ) {
 			out code_bytes_bool( addr, nel * lel );
 			alloc( addr, nel * lel );
 		}
 #	endif
 
-#	if defined(LINUX) || defined(IRIX65) || defined(OSF1)
+#	if defined(LINUX) || defined(OSF1)
 		int gethostname( char *address, size_t address_len ) {
 #	else 
 		int gethostname( char *address, int address_len ) {
@@ -1049,13 +1014,13 @@ They are not needed for remote I/O or for the condor daemons.
 		}
 #endif
 
-#	if defined(HPUX10) || defined(OSF1) || defined(IRIX)
+#	if defined(HPUX10) || defined(OSF1)
 		long gethostid();
 #	else
 		int gethostid();
 #	endif
 
-#	if defined(HPUX) || defined(LINUX) || defined(Solaris) || defined(IRIX)
+#	if defined(HPUX) || defined(LINUX) || defined(Solaris)
 		int setrlimit( int resource, const  struct rlimit *rlp ) {
 #	else
 		int setrlimit( int resource, struct rlimit *rlp ) {
@@ -1093,7 +1058,7 @@ They are not needed for remote I/O or for the condor daemons.
 		}
 #	endif
 
-#	if defined(Solaris) || defined(LINUX) || defined(IRIX) || defined(HPUX)
+#	if defined(Solaris) || defined(LINUX) || defined(HPUX)
 		not_supported { 
 			int mvalid( char * addr, size_t len, int prot ) {
 				out code_bytes_bool( addr, len );
@@ -1109,7 +1074,7 @@ They are not needed for remote I/O or for the condor daemons.
 		}
 
 		int uswitch( int cmd, int value );
-#	endif /* Solaris || Linux || IRIX */
+#	endif /* Solaris || Linux */
 
 #endif /* REMOTE_SYSCALLS and not CLIP */
 
@@ -1454,7 +1419,7 @@ ignored {
 /* Memory mapped files */
 
 not_supported {
-#	if defined(IRIX) || defined(OSF1) || defined(HPUX)
+#	if defined(OSF1) || defined(HPUX)
 		void * mmap( void * a, size_t l, int p, int f, map(int fd), off_t o ) : EXTRACT;
 		int mprotect( const void * addr, size_t len, int prot );
 		int madvise( void * addr, size_t len, int behav );
@@ -1475,7 +1440,7 @@ not_supported {
 }
 
 ignored {
-#	if defined(IRIX) || defined(OSF1) || defined(HPUX)
+#	if defined(OSF1) || defined(HPUX)
 		int msync( void * addr, size_t len, int flags );
 #	elif defined(LINUX)
 		int msync( MMAP_T addr, size_t len, int flags );
@@ -1514,9 +1479,7 @@ not_supported {
 		int async_daemon();
 #	endif
 
-#	if defined(IRIX)
-		/* nothing */
-#	elif defined(HPUX10)
+#	if defined(HPUX10)
 		int getfh( map(int fd), const fhandle_t *fhp );
 #	else
 		int getfh( map(int fd), fhandle_t *fhp, int exp_fd );
@@ -1556,9 +1519,6 @@ not_supported {
 #		elif defined(HPUX10)
 			/* Need a better stub gen to trap mount */
 			int acct( char *path );
-#		elif defined (IRIX)
-			int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
-			int acct( const char *path );
 #		else
 			int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 			int acct( char *path );
@@ -1566,17 +1526,10 @@ not_supported {
 
 		void reboot( int howto );
 
-#		if defined(IRIX)
-			int sethostname( const char *address, int address_len );
-#		else
-			int sethostname( char *address, int address_len );
-#		endif
+		int sethostname( char *address, int address_len );
 
 #		if defined(HPUX10)
 			int settimeofday( const struct timeval *tp, const struct timezone *tzp );
-			int setdomainname( const char *name, int namelen );
-#		elif defined(IRIX)
-			int settimeofday( struct timeval *tp, struct timezone *tzp );
 			int setdomainname( const char *name, int namelen );
 #		else
 			int settimeofday( struct timeval *tp, struct timezone *tzp );
@@ -1643,8 +1596,6 @@ not_supported {
 		long ptrace( int req, long process, long address, long data);
 #	elif defined(Solaris)
 		int ptrace( int req, long process, int address, int data);
-#	elif defined (IRIX)
-		int ptrace( int req, pid_t process, int address, int data);
 #	else
 		int ptrace( long req, long int process, unsigned long *address, unsigned long data );
 #	endif
@@ -1668,8 +1619,6 @@ not_supported {
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
 #	elif defined(HPUX10)
 		void profil( const void *buf, size_t size, size_t offset, int scale );
-#	elif defined(IRIX)
-		int profil( unsigned short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
 #	else
 		void profil( short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
 #	endif
@@ -1677,7 +1626,7 @@ not_supported {
 	int quotactl( char *path, int cmd, int id, char *addr );
 	int getsysinfo( unsigned long op, char * buf, unsigned long nbytes, int *start, char *arg );
 
-#	if defined(LINUX) || defined(IRIX65) || defined(OSF1)
+#	if defined(LINUX) || defined(OSF1)
 		int setitimer( int which, const struct itimerval *value, struct itimerval *oval );
 		int getitimer( int which, struct itimerval *value );
 #	elif defined(HPUX)

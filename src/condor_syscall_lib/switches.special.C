@@ -61,7 +61,7 @@ int SYSCALL(...);
 int _FORK_sys(...);
 void update_rusage( register struct rusage *ru1, register struct rusage *ru2 );
 
-#if defined(LINUX) || defined(IRIX)
+#if defined(LINUX)
 int _condor_xstat(int version, const char *path, struct stat *buf);
 int _condor_lxstat(int version, const char *path, struct stat *buf);
 int _condor_fxstat(int version, int fd, struct stat *buf);
@@ -84,7 +84,7 @@ int __xstat64(int, const char *, struct stat64 *);
 int __fxstat64(int, int, struct stat64 *);
 int __lxstat64(int, const char *, struct stat64 *);
 
-#endif /* LINUX or IRIX */
+#endif /* LINUX */
 
 /*************************************************************
 The following switches are for syscalls that affect the open
@@ -735,7 +735,7 @@ int munmap( MMAP_T addr, size_t length )
 }
 #endif /* defined( LINUX ) */
 
-#if defined(LINUX) || defined(IRIX)
+#if defined(LINUX)
 
 /* 
    There's a whole bunch of Linux-specific evilness w/ [_fxl]*stat.
@@ -796,8 +796,6 @@ int munmap( MMAP_T addr, size_t length )
 #	else
 #	   error "No local version of SYS_*_stat on this platform!"
 #	endif
-#elif defined(IRIX)
-#	define CONDOR_SYS_stat SYS_xstat
 #else
 #	error "Do not understand the stat syscall mapping on this platform!"
 #endif
@@ -812,8 +810,6 @@ int munmap( MMAP_T addr, size_t length )
 #	else
 #		error "No local version of SYS_*_fstat on this platform!"
 #	endif
-#elif defined(IRIX)
-#	define CONDOR_SYS_fstat SYS_fxstat
 #else
 #	error "Do not understand the stat syscall mapping on this platform!"
 #endif
@@ -828,8 +824,6 @@ int munmap( MMAP_T addr, size_t length )
 #	else
 #		error "No local version of SYS_*_lstat on this platform!"
 #	endif
-#elif defined(IRIX)
-#	define CONDOR_SYS_lstat SYS_lxstat
 #else
 #	error "Do not understand the stat syscall mapping on this platform!"
 #endif
@@ -925,8 +919,6 @@ int __lxstat64(int version, const char *path, struct stat64 *buf)
 		structure are identical */
 	#define kernel_stat /*struct*/ stat
 #endif
-#elif defined(IRIX)
-	#define kernel_stat /*struct*/ stat
 #endif /* LINUX */
 
 void 
@@ -980,19 +972,6 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 		target->__unused5 = 0;
 		#endif
 		break;
-#elif defined(IRIX)
-	case _STAT_VER:
-		/* Source and target are the same, everything already copied. */
-		break;
-	case _STAT64_VER:
-		/* our target is a struct stat64, so let our 64-bit 
-		 * conversion function handle it.
-		 */
-		void _condor_k_stat_convert64( int , 
-								const struct kernel_stat *, 
-								struct stat64 * );
-		_condor_k_stat_convert64(version,source,(struct stat64 *)target);
-		break;
 #endif
 
 	default:
@@ -1002,7 +981,7 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 	}
 }
 
-#if defined(IRIX) || defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) ||defined(GLIBC25)
+#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) ||defined(GLIBC25)
 void 
 _condor_k_stat_convert64( int version, const struct kernel_stat *source, 
 						struct stat64 *target )
@@ -1055,12 +1034,6 @@ _condor_k_stat_convert64( int version, const struct kernel_stat *source,
 		target->__unused5 = 0;
 		#endif
 		break;
-#elif defined(IRIX)
-	case _STAT64_VER:
-		/* we expect to see _STAT64_VER here, so break so we do
-		 * not hit the default case below.
-		 */
-		break;
 #endif
 	default:
 			/* Some other version: blow-up */
@@ -1081,17 +1054,6 @@ _condor_s_stat_convert( int version, const struct stat *source,
 						struct stat *target )
 {
 
-#if defined(IRIX)
-		/* On IRIX, _condor_s_stat_convert and _condor_k_stat_convert
-		 * are identical, because on IRIX type kernel_stat and
-		 * struct_stat are identical.  So instead of repeating
-		 * code, on IRIX just invoke _condor_k_stat_convert to do
-		 * the job.
-		 */
-	_condor_k_stat_convert(version,source,target);
-	return;
-#endif
-		
 		/* In all cases, we need to copy the fields we care about. */
 	target->st_dev = source->st_dev;
 	target->st_ino = source->st_ino;
@@ -1138,18 +1100,6 @@ _condor_s_stat_convert( int version, const struct stat *source,
 		target->__unused4 = 0;
 		target->__unused5 = 0;
 #endif
-		break;
-#elif defined(IRIX)
-	case _STAT_VER:
-			/* 
-			  This is the old version, so source and target are identical.
-			  We've already copied all the fields we need, so we're done.
-			*/
-		break;
-	case _STAT64_VER:
-		/* XXX do nothing right now */
-		/* This stuff unfortunately doesn't work... */
-		dprintf(D_FULLDEBUG, "_condor_s_stat_convert() did as instructed\n");
 		break;
 #endif
 	default:
@@ -1222,8 +1172,6 @@ _condor_s_stat_convert64( int version, const struct stat *source,
 
 #if defined(LINUX)
 	#define OPT_STAT_VERSION 
-#elif defined(IRIX)
-	#define OPT_STAT_VERSION _STAT_VER,
 #endif
 
 /*
@@ -1468,7 +1416,7 @@ int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
 #endif /* LINUX stat hell */
 
 /*
-On Solaris and IRIX, stat, lstat, and fstat are statically defined in stat.h,
+On Solaris, stat, lstat, and fstat are statically defined in stat.h,
 so we can't override them.  Instead, we override the following three
 xstat definitions.
 
@@ -1619,7 +1567,7 @@ both remote and local system calls.
 
 #if defined(LINUX) 
 ssize_t readv( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(IRIX) || defined(OSF1)|| defined(HPUX10) || defined(Solaris)
+#elif defined(OSF1)|| defined(HPUX10) || defined(Solaris)
 ssize_t readv( int fd, const struct iovec *iov, int iovcnt )
 #else
 int readv( int fd, struct iovec *iov, int iovcnt )
@@ -1647,7 +1595,7 @@ both remote and local system calls.
 
 #if defined(LINUX) 
 ssize_t writev( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(Solaris) || defined(IRIX) || defined(OSF1) || defined(HPUX10)
+#elif defined(Solaris) || defined(OSF1) || defined(HPUX10)
 ssize_t writev( int fd, const struct iovec *iov, int iovcnt )
 #else
 int writev( int fd, struct iovec *iov, int iovcnt )

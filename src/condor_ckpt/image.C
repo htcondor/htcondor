@@ -71,8 +71,6 @@ extern "C" {
 #elif defined(Solaris)
 	#define htonl(x)		(x)
 	#define ntohl(x)		(x)
-#elif defined(IRIX)
-	#include <sys/endian.h>
 #elif defined(LINUX)
 	#include <netinet/in.h>
 #else
@@ -864,7 +862,7 @@ void Image::RestoreAllSegsExceptStack()
 	int		i;
 	int		save_fd = fd;
 
-#if defined(Solaris) || defined(IRIX)
+#if defined(Solaris)
 	dprintf( D_ALWAYS, "Current segmap dump follows\n");
 	display_prmap();
 #endif
@@ -990,7 +988,13 @@ Image::Write( const char *ckpt_file )
 	 * inside of a signal handler.  POSIX says malloc() is not safe to call
 	 * in a signal handler; open_url calls malloc() and this messes up
 	 * checkpointing on SGI IRIX6 bigtime!!  so it is commented out for
-	 * now until we get rid of all mallocs in open_url() -Todd T, 2/97 */
+	 * now until we get rid of all mallocs in open_url() -Todd T, 2/97
+
+	 * In ripping out the IRIX code, this comment was discovered and now
+	 * needs further exploration as to what it means to have commented out
+	 * this open_url() call. -psilord 2/08.
+	 
+	 */
 	// if( (file_d=open_url(ckpt_file,O_WRONLY|O_TRUNC|O_CREAT)) < 0 ) {
 		sprintf( tmp_name, "%s.tmp", ckpt_file );
 		dprintf( D_ALWAYS, "Tmp name is \"%s\"\n", tmp_name );

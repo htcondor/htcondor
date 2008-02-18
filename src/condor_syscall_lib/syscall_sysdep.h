@@ -75,7 +75,7 @@
 #	else
 #		define SYNC_RETURNS_VOID 0
 #	endif
-#else /* Solaris, IRIX, Alpha, DUX4.0 all confirmed... */
+#else /* Solaris, Alpha, DUX4.0 all confirmed... */
 #	define SYNC_RETURNS_VOID 1
 #endif
 

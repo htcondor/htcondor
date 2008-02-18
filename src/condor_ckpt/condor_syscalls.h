@@ -23,8 +23,6 @@
 
 #if defined(Solaris)
 #	include <sys/syscall.h> /* Solaris specific change ..dhaval 6/30 */
-#elif defined(IRIX)
-#	include <sys.s>
 #else
 #	include <syscall.h> 
 #endif
