@@ -22,6 +22,7 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
+#include "domain_tools.h"
 
 #include "jic_local_config.h"
 
@@ -87,10 +88,46 @@ JICLocalConfig::getLocalJobAd( void )
 		return false;
 	}
 
-		// ATTR_OWNER only matters if we're running as root, and we'll
-		// catch it later if we need it and it's not defined.  so,
-		// just treat it as optional at this point.
+#if defined ( WIN32 )	
+		// Windows "owners" may be of the form domain\user,
+		// so we'll need to parse it...
+	MyString buffer;
+	buffer.sprintf( "%s_%s", key, ATTR_OWNER );
+	char *owner_defined = param( buffer.Value () );
+	if ( owner_defined ) {			
+		// On Windows we need to set RunAsOwner for it to 
+		// respect the owner attribute (but only when the 
+		// starter allows it).
+		bool run_as_owner = param_boolean_expr( 
+			"STARTER_ALLOW_RUNAS_OWNER", false, NULL, job_ad );
+		if ( run_as_owner ) {
+			// Add the RunAsOwner attribute:
+			buffer.sprintf( "%s = True", ATTR_JOB_RUNAS_OWNER );
+			job_ad->Insert( buffer.Value() );
+			// Parse the OWNER attribute and add the new
+			// OWNER and NTDOMAIN attributes:
+			char const *local_domain = ".";
+			char *name = NULL, *domain = NULL;
+			getDomainAndName ( owner_defined, domain, name );
+			buffer.sprintf( "%s = \"%s\"", ATTR_OWNER, name );
+			job_ad->Insert( buffer.Value() );
+			buffer.sprintf( "%s = \"%s\"", ATTR_NT_DOMAIN, 
+				domain ? domain : local_domain );
+			job_ad->Insert( buffer.Value() );
+		} else {
+			dprintf( D_ALWAYS, "Local job \"Owner\" defined, "
+				"but will not be used: please set "
+				"STARTER_ALLOW_RUNAS_OWNER to True to "
+				"enable this.\n" );
+		}
+		free( owner_defined );
+	}		
+#else
+	// ATTR_OWNER only matters if we're running as root, and we'll
+	// catch it later if we need it and it's not defined.  so,
+	// just treat it as optional at this point.
 	getString( 0, ATTR_OWNER, NULL );
+#endif
 
 		// now, optional things
 	getString( 0, ATTR_JOB_INPUT, "input" );
