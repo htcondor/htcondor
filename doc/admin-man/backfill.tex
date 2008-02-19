@@ -479,3 +479,59 @@ project(s).
 More information about participating in multiple BOINC projects can be
 found at \URL{http://boinc.berkeley.edu/multiple\_projects.php}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Backfill-BOINC-Windows}BOINC on Windows}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The Windows version of BOINC has multiple installation methods: the 
+preferred method of installation for use with Condor is the 
+``Shared Installation'' method.  Using this method gives all users 
+access to the executables.  During the installation process 
+deselect the options which make BOINC the default screensaver, as well 
+as running on start-up.  Finally, do not launch BOINC at the conclusion
+of the installation.
+
+There are three major differences to keep in mind when dealing with 
+the Windows installation: First, the executables have different names.  
+The Windows client is called \Prog{boinc.exe} and the administrative 
+tool is called \Prog{boinccmd.exe}. Meaning the \Macro{BOINC\_Executable} 
+must be re-written as follows:
+
+\footnotesize
+\begin{verbatim}
+BOINC_Executable = C:\PROGRA~1\BOINC\boinc.exe
+\end{verbatim}
+\normalsize
+  
+Secondly, when using BOINC on Windows, \Macro{BOINC\_InitialDir} will not 
+be respected fully.  That is to say, you must pass the BOINC home 
+directory directly to the BOINC application, via the \Macro{BOINC\_Arguments}
+line. For instance, the abovementioned argument line example can be 
+re-written as such:
+
+\footnotesize
+\begin{verbatim}
+BOINC_Arguments = --dir $(BOINC_HOME) \
+                  --attach_project http://einstein.phys.uwm.edu [account_key] 
+\end{verbatim}
+\normalsize
+
+As a consequence of setting the BOINC home directory, some projects may 
+fail with an authentication error: ``Scheduler request failed: Peer 
+certificate cannot be authenticated with known CA certificates.'' To 
+resolve this issue, copy the \Prog{ca-bundle.crt} from the BOINC installation 
+directory to \texttt{\$(BOINC\_HOME)}.  This file appears to be project and 
+machine independent, and can therefore be distributed as part of an 
+automated Condor installation.
+
+Finally, the \Macro{BOINC\_Owner} macro behaves differently on Windows:
+First, it may take one of two forms: \texttt{domain\Bs user} or simply 
+\texttt{user}, where the latter assumes the user exists in the local domain 
+(i.e. on the computer itself).  Secondly, setting this option also 
+automatically adds the \Attr{RunAsUser}=True attribute to the BOINC job, 
+which requires that the local Starter be able to run jobs in this 
+manner; that is, the \Macro{STARTER\_ALLOW\_RUNAS\_OWNER} macro must 
+be set to True.  For more information on the \Attr{RunAsUser} attribute and 
+the \Macro{STARTER\_ALLOW\_RUNAS\_OWNER} macro, please see 
+sections~\ref{sec:windows-run-as-owner} 
+and~\ref{param:StarterAllowRunAsOwner} respectively.
