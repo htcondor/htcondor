@@ -40,15 +40,6 @@
 #	define SETJMP _setjmp
 #	define LONGJMP _longjmp
 
-#elif defined(HPUX10)
-
-	extern "C" int brk( void * );
-	extern "C" void *sbrk( int );
-#	include <signal.h>
-	typedef void (*SIG_HANDLER)( int, siginfo_t *, void * );
-#	define SETJMP _setjmp
-#	define LONGJMP _longjmp
-
 #elif defined(LINUX)
 
 	extern "C" int brk( void *);

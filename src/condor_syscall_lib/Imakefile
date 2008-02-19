@@ -106,11 +106,7 @@ EXTRACT = GETEUID.o GETEGID.o GETWD.o
 PLATFORM_UTIL_OBJ = seteuid.o setegid.o
 #endif
 
-#if IS_HPUX10
-DEP_OS = HPUX10
-#else
 DEP_OS = OperatingSystem
-#endif
 
 #if !HAS_FLOCK
 FLOCK_OBJ = flock.o
@@ -473,8 +469,6 @@ STUB_GEN_PLATFORM = -DSolaris27
 STUB_GEN_PLATFORM = -DSolaris28
 #elif IS_SOLARIS29
 STUB_GEN_PLATFORM = -DSolaris29
-#elif IS_HPUX10
-STUB_GEN_PLATFORM = -DHPUX10
 #elif IS_DUX4
 STUB_GEN_PLATFORM = -DDUX4
 #elif IS_DUX5
