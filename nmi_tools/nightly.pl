@@ -45,9 +45,9 @@ chdir $home || die "Can't chdir($home): $!\n";
 
 $CNS = "nmi_tools/condor_nmi_submit";
 
-print LOG "Updating copy of $CNS\n";
+print LOG "Updating copy of nmi_tools, including $CNS\n";
 if (defined $opt_git) {
-    $checkout_cmd = "$GIT $CNS | tar xv";
+    $checkout_cmd = "$GIT nmi_tools | tar xv";
 } else {
     $checkout_cmd = "$CVS co -l nmi_tools";
 }
