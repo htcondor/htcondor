@@ -27,6 +27,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in Condor's authorization policy reader.  The bug
+affects cases where the policy (\MacroNI{ALLOW}/\MacroNI{DENY} and
+\MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY} settings) mixes host-based
+authorizations with authorizations that refer to the authenticated
+user name.  In some cases, this bug would result in host-based
+settings not being applied to authenticated users.
+
 \item None.
 
 \end{itemize}
@@ -159,6 +166,28 @@ change in syntax of quoting in the Condor submit file for gt2 argument strings.
 \item Fixed a bug in the \Condor{gridmanager} that could prevent refreshed
 X509 proxies from being forwarded to the remote machine for grid universe
 jobs of type gt4.
+
+\item Fixed a bug in Condor's authorization policy reader.  The bug
+affects cases where the policy (\MacroNI{ALLOW}/\MacroNI{DENY} and
+\MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY} settings) mixes host-based
+authorizations with authorizations that refer to the authenticated
+user name.  In some cases, this bug would result in host-based
+settings not being applied to authenticated users.
+
+\item Fixed a problem affecting the GSI and SSL authentication
+methods.  When these methods successfully authenticated the user but
+failed to find a mapping of the X509 name to a condor user id, they
+were setting the authenticated name to \verb|gsi| and \verb|ssl|
+respectively.  However, these names contain no domain, so they could
+not be referred to in the authorization policy.  Now these anonymous
+mappings are \verb|gsi@unmappeduser| and \verb|ssl@unmappeduser|.
+Therefore, to deny access by users who are not explicitly mapped in
+the map file, you could do this:
+
+\begin{verbatim}
+DENY_READ = *@unmappeduser
+DENY_WRITE = *@unmappeduser
+\end{verbatim}
 
 \end{itemize}
 

@@ -1238,24 +1238,30 @@ map file may match.
 Lookups are therefore defined to use the first mapping that
 matches.
 
-The default map file contains a mapping that matches for
-each authentication method that Condor implements.
-The unusual string for the GSI authentication
-entry instructs Condor to use GSI-specific way of locating
-the needed GSI map file,
-as shown in 
-section~\ref{sec:GSI-Authentication}.
-The default map file:
+The default behavior of Condor when no mapfile is specified is to
+do the following mappings, with some additional logic noted below:
 \begin{verbatim}
 FS (.*) \1
 FS_REMOTE (.*) \1
 GSI (.*) GSS_ASSIST_GRIDMAP
-SSL (.*) \1
-KERBEROS (.*) \1
+SSL (.*) ssl@unmappeduser
+KERBEROS ([^/]*)/*[^@]*@*(.*) \1@\2
 NTSSPI (.*) \1
 CLAIMTOBE (.*) \1
 PASSWORD (.*) \1
 \end{verbatim}
+
+For GSI, the special name \verb|GSS_ASSIST_GRIDMAP| instructs Condor
+to use the GSI-specific grid mapfile (configured with \Macro{GRIDMAP}
+as shown in section~\ref{sec:GSI-Authentication}) to do the mapping.
+If no mapping can be found for GSI (with or without the use of
+\verb|GSS_ASSIST_GRIDMAP|), the user is mapped to \verb|gsi@unmappeduser|.
+
+For Kerberos, if \Macro{KERBEROS\_MAP\_FILE} is specified, the domain portion
+of the name is obtained by mapping the Kerberos realm to the value specified
+in the map file, rather than just using the realm verbatim as the domain
+portion of the condor user name.  See section~\ref{sec:Kerberos-Authentication}
+for details.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Encryption}Encryption}
