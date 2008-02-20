@@ -51,6 +51,8 @@
 MapFile* Authentication::global_map_file = NULL;
 bool Authentication::global_map_file_load_attempted = false;
 
+char const *UNMAPPED_DOMAIN = "unmappeduser";
+
 Authentication::Authentication( ReliSock *sock )
 {
 #if !defined(SKIP_AUTHENTICATION)
