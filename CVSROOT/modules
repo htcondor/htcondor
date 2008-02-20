@@ -1183,6 +1183,13 @@ V6_9_QUILL_CODE	-a V6_9_CODE \
 V6_9_QUILL_ALL		-a DOC V6_9_QUILL_CODE
 V6_9_QUILL_BUILD -a V6_9_QUILL_ALL DOC externals
 
+# The V7_1-amazon_ec2-2-branch adds directory src/condor_amazon
+V7_1_AMAZON_EC2_SRC	-a V7_1_SRC src/condor_amazon
+V7_1_AMAZON_EC2_UNIX_CODE -a TOOLS V7_1_AMAZON_EC2_SRC
+V7_1_AMAZON_EC2_NT_CODE	-a NT_TOOLS NT_PROGRAMS V7_1_AMAZON_EC2_SRC
+V7_1_AMAZON_EC2_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V7_1_AMAZON_EC2_SRC
+V7_1_AMAZON_EC2_ALL	-a DOC V7_1_AMAZON_EC2_CODE
+V7_1_AMAZON_EC2_BUILD	-a V7_1_AMAZON_EC2_ALL externals
 
 ######################################################################
 # Miscellaneous module definitions
