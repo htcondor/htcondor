@@ -26,6 +26,7 @@ SELECT
   Task.name,
   convert_tz(Task.start, 'GMT', 'US/Central') as start,
   convert_tz(Task.finish, 'GMT', 'US/Central') as finish,
+  timediff(Task.finish, Task.start) as duration,
   Task.result,
   Run.host,
   Run.gid,
@@ -87,6 +88,9 @@ ORDER BY
 	$file_found = 1;
       }
 
+		$resultspath = "$basedir/$gid/userdir/$platform/results.tar.gz";
+		$resfound = file_exists($local_fs_prefix.$resultspath);
+
       if (!$file_found) {
 	$stdout_url = "N/A";
 	$stderr_url = "N/A";
@@ -94,6 +98,13 @@ ORDER BY
 	$stdout_url = "<a href=\"http://$hostname/$filepath.out\">".basename($filepath).".out</a>";
 	$stderr_url = "<a href=\"http://$hostname/$filepath.err\">".basename($filepath).".err</a>";
       }
+
+		if(!$resfound){
+			$results_url = "N/A";
+		} else {
+			$results_url = "<a href=\"http://$hostname/$resultspath\">".basename($resultspath)."</a>";
+		}
+
 
     echo "<P>";
     echo "<TABLE>";
@@ -105,9 +116,11 @@ ORDER BY
     echo "<TR><TD>Task ID:</TD><TD>".$myrow["task_id"] ."</TD></TR>";
     echo "<TR><TD>Start:</TD><TD>".$myrow["start"] ."</TD></TR>";
     echo "<TR><TD>Finish:</TD><TD> ".$myrow["finish"] ."</TD></TR>";
+    echo "<TR><TD>Duration:</TD><TD> ".$myrow["duration"] ."</TD></TR>";
     echo "<TR><TD>Result:</TD><TD> ".$myrow["result"] . "</TD></TR>";
     echo "<TR><TD>Stdout:</TD><TD> $stdout_url </TD></TR>";
     echo "<TR><TD>Stderr:</TD><TD> $stderr_url</a></TD></TR>";
+    echo "<TR><TD>Run Results:</TD><TD> $results_url</a></TD></TR>";
     echo "</TABLE>";
     echo "</P>";
   }

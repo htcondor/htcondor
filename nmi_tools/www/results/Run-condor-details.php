@@ -155,6 +155,7 @@
 <tr>
    <td>Name</td>
 <?php
+	// show link to run directory for each platform
    foreach ($platforms AS $platform) {
       $display = $platform;
       $idx = strpos($display, "_");
@@ -166,13 +167,36 @@
 		$loc_query_res = mysql_query($loc_query) or die ("Query failed : " . mysql_error());
 		while( $locrow = mysql_fetch_array($loc_query_res) ) {
 			$filepath = $locrow["filepath"];
+			$mygid = $locrow["gid"];
 		}
 
-		$display = "<a href=\"$filepath/$gid/userdir/$platform/\" ".
+		$display = "<a href=\"$filepath/$mygid/userdir/$platform/\" ".
                  "title=\"View Run Directory\">$display</a>";
       echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display</td>\n";
-   } // FOREACH
+   } // FOREACH 
+?>
+<tr>
+   <td>Results</td>
+<?php
+	// show link to results for each platform
+   foreach ($platforms AS $platform) {
+      $display = $platform;
+      $idx = strpos($display, "_");
+      $display[$idx] = " ";
+		$filepath = "";
    
+   	// have to lookup the file location now
+		$loc_query = "SELECT * FROM Run WHERE runid='$platform_runids[$platform]'";
+		$loc_query_res = mysql_query($loc_query) or die ("Query failed : " . mysql_error());
+		while( $locrow = mysql_fetch_array($loc_query_res) ) {
+			$filepath = $locrow["filepath"];
+			$mygid = $locrow["gid"];
+		}
+
+		$display = "<a href=\"$filepath/$mygid/userdir/$platform/results.tar.gz\" ".
+                 "title=\"View Run Directory\">click</a>";
+      echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display</td>\n";
+   } // FOREACH 
    foreach ($data AS $task => $arr) {
       echo "<tr>\n".
            "<td ".($task_status[$task] != PLATFORM_PASSED ? 

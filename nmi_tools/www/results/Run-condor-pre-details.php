@@ -75,16 +75,12 @@
    mysql_free_result($result);
 
    foreach ($platforms as $source) {
-		#echo "<H3>Native build: $source</H3>";
+		//echo "<H3>Native build: $source</H3>";
 		// make a list of platforms to display together
 		// with the native platform before the cross platform
 		// tests.
 		$xdetail_set = Array();
 		$nativerunid;
-echo <<<EOF
-   <tr>
-      <td>{$source}</a></td>
-EOF;
 	
 	// --------------------------------
 	// CROSS TESTS RESULTS
@@ -142,6 +138,10 @@ EOF;
          //
          if (!empty($run_result) && $type == 'build') {
             $status = "FAILED";
+echo <<<EOF
+   <tr>
+      <td>{$source}</td>
+EOF;
                      echo <<<EOF
          <td class="{$status}" align="center">
             <table cellpadding="1" cellspacing="0" width="100%" class="details">
@@ -155,13 +155,17 @@ EOF;
          // Just display an empty cell
          //
 		} else {
-            echo "<td>&nbsp;</td>\n";
+            //echo "<td>&nbsp;</td>\n";
          }
       //
       // Show Summary
       //
       } else {
 
+echo <<<EOF
+   <tr>
+      <td>{$source}</td>
+EOF;
          echo <<<EOF
          <td class="{$color}" align="center" valign="top">
             <table cellpadding="1" cellspacing="0" width="100%" class="details">
