@@ -132,7 +132,7 @@ private:
 		~PermTypeEntry(); 
 	};
 
-    bool has_user(UserPerm_t * , const char *, perm_mask_t & , MyString &);
+    bool has_user(UserPerm_t * , const char *, perm_mask_t &);
 	int add_hash_entry(const struct in_addr & sin_addr, const char * user, perm_mask_t new_mask);
 	void fill_table( PermTypeEntry * pentry, perm_mask_t mask, char * list, bool allow);
 	int cache_DNS_results;
@@ -141,6 +141,8 @@ private:
 	inline perm_mask_t deny_mask(DCpermission perm) { return (1 << (2+2*perm)); }
 
 	void PermMaskToString(perm_mask_t mask, MyString &mask_str);
+	void PrintAuthTable(int dprintf_level);
+
 	bool lookup_user(StringList * list, const char * user);
 	char * merge(char * newPerm, char * oldPerm);
 	int did_init;
