@@ -1,0 +1,29 @@
+WORKER_THREAD = amazon-gahp_worker_thread 
+IO_THREAD = amazon-gahp
+
+PROGRAMS = $(WORKER_THREAD) $(IO_THREAD)
+
+all_target( $(PROGRAMS) )
+
+CFLAGS = $(STD_C_FLAGS)
+
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
+
+soapobjs(amazongahp)
+
+WORKER_THREAD_OBJ = PipeBuffer.o amazon_worker.o amazongahp_common.o amazonCommands.o amazongahp_instantiate.o $(SOAP_OBJS)
+
+IO_THREAD_OBJ = PipeBuffer.o io_loop.o amazongahp_common.o amazonCommands.o request.o amazongahp_instantiate.o 
+
+template_inst( amazongahp_instantiate.C, amazongahp_instantiate.o )
+
+public_c_plus_target($(WORKER_THREAD),sbin,$(WORKER_THREAD_OBJ),$(LIB))
+public_c_plus_target($(IO_THREAD),sbin,$(IO_THREAD_OBJ),$(LIB))
+
+html:
+
+IMPORT_LINKS = ../../config/import_links
+import(../condor_util_lib, setsyscalls.o )
+
+gen_soapfiles(amazongahp,condorAmazongahp)

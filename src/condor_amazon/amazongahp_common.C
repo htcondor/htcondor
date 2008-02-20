@@ -1,0 +1,601 @@
+/***************************************************************
+ *
+ * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_config.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "simplelist.h"
+#include "amazongahp_common.h"
+#include "amazonCommands.h"
+
+static MyString working_dir;
+static MyString amazon_lib_path;
+
+// List for all amazon commands
+static SimpleList<AmazonGahpCommand*> amazon_gahp_commands;
+
+AmazonGahpCommand::AmazonGahpCommand(const char* cmd, ioCheckfn iofunc, workerfn workerfunc)
+{
+	command = cmd;
+	iocheckfunction = iofunc;
+	workerfunction = workerfunc;
+}
+
+void
+registerAmazonGahpCommand(const char* command, ioCheckfn iofunc, workerfn workerfunc)
+{
+	if( !command || !iofunc || !workerfunc ) {
+		dprintf(D_ALWAYS, "registerAmazonGahpCommand: Invalid amazon command(%s)\n", 
+				command? command: "");
+		return;
+	}
+
+	AmazonGahpCommand* newcommand = new AmazonGahpCommand(command, iofunc, workerfunc);
+	ASSERT(newcommand);
+
+	amazon_gahp_commands.Append(newcommand);
+}
+
+bool
+registerAllAmazonCommands(void)
+{
+	if( amazon_gahp_commands.Number() > 0 ) {
+		dprintf(D_ALWAYS, "There are already registered commands\n");
+		return false;
+	}
+
+	// EC2 Commands
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_START, 
+			AmazonVMStart::ioCheck, AmazonVMStart::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STOP, 
+			AmazonVMStop::ioCheck, AmazonVMStop::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_REBOOT, 
+			AmazonVMReboot::ioCheck, AmazonVMReboot::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS, 
+			AmazonVMStatus::ioCheck, AmazonVMStatus::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS_ALL, 
+			AmazonVMStatusAll::ioCheck, AmazonVMStatusAll::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_CREATE_GROUP, 
+			AmazonVMCreateGroup::ioCheck, AmazonVMCreateGroup::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_DELETE_GROUP, 
+			AmazonVMDeleteGroup::ioCheck, AmazonVMDeleteGroup::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_GROUP_NAMES, 
+			AmazonVMGroupNames::ioCheck, AmazonVMGroupNames::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_GROUP_RULES, 
+			AmazonVMGroupRules::ioCheck, AmazonVMGroupRules::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_ADD_GROUP_RULE, 
+			AmazonVMAddGroupRule::ioCheck, AmazonVMAddGroupRule::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_DEL_GROUP_RULE, 
+			AmazonVMDelGroupRule::ioCheck, AmazonVMDelGroupRule::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_CREATE_KEYPAIR, 
+			AmazonVMCreateKeypair::ioCheck, AmazonVMCreateKeypair::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_DESTROY_KEYPAIR, 
+			AmazonVMDestroyKeypair::ioCheck, AmazonVMDestroyKeypair::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_KEYPAIR_NAMES, 
+			AmazonVMKeypairNames::ioCheck, AmazonVMKeypairNames::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_REGISTER_IMAGE, 
+			AmazonVMRegisterImage::ioCheck, AmazonVMRegisterImage::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_DEREGISTER_IMAGE, 
+			AmazonVMDeregisterImage::ioCheck, AmazonVMDeregisterImage::workerFunction);
+
+
+	// S3 Commands
+	registerAmazonGahpCommand(AMAZON_COMMAND_S3_ALL_BUCKETS,
+			AmazonS3AllBuckets::ioCheck, AmazonS3AllBuckets::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_S3_CREATE_BUCKET,
+			AmazonS3CreateBucket::ioCheck, AmazonS3CreateBucket::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_S3_DELETE_BUCKET,
+			AmazonS3DeleteBucket::ioCheck, AmazonS3DeleteBucket::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_S3_LIST_BUCKET,
+			AmazonS3ListBucket::ioCheck, AmazonS3ListBucket::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_S3_UPLOAD_FILE,
+			AmazonS3UploadFile::ioCheck, AmazonS3UploadFile::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_S3_UPLOAD_DIR,
+			AmazonS3UploadDir::ioCheck, AmazonS3UploadDir::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_S3_DELETE_FILE,
+			AmazonS3DeleteFile::ioCheck, AmazonS3DeleteFile::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_S3_DOWNLOAD_FILE,
+			AmazonS3DownloadFile::ioCheck, AmazonS3DownloadFile::workerFunction);
+
+	registerAmazonGahpCommand(AMAZON_COMMAND_S3_DOWNLOAD_BUCKET,
+			AmazonS3DownloadBucket::ioCheck, AmazonS3DownloadBucket::workerFunction);
+
+	return true;
+}
+
+int
+numofAmazonCommands(void)
+{
+	return amazon_gahp_commands.Number();
+}
+
+int 
+allAmazonCommands(StringList &output)
+{
+	AmazonGahpCommand *one_cmd = NULL;
+
+	amazon_gahp_commands.Rewind();
+	while( amazon_gahp_commands.Next(one_cmd) ) {
+		output.append(one_cmd->command.Value());
+	}
+
+	return amazon_gahp_commands.Number();
+}
+
+bool
+executeIOCheckFunc(const char* cmd, char **argv, int argc)
+{
+	if(!cmd) {
+		return false;
+	}
+
+	AmazonGahpCommand *one_cmd = NULL;
+
+	amazon_gahp_commands.Rewind();
+	while( amazon_gahp_commands.Next(one_cmd) ) {
+		if( !strcasecmp(one_cmd->command.Value(), cmd) ) {
+			return one_cmd->iocheckfunction(argv, argc);
+		}
+	}
+
+	dprintf (D_ALWAYS, "Unknown command %s\n", cmd);
+	return false;
+}
+
+bool
+executeWorkerFunc(const char* cmd, char **argv, int argc, MyString &output_string)
+{
+	if(!cmd) {
+		return false;
+	}
+
+	AmazonGahpCommand *one_cmd = NULL;
+
+	amazon_gahp_commands.Rewind();
+	while( amazon_gahp_commands.Next(one_cmd) ) {
+		if( !strcasecmp(one_cmd->command.Value(), cmd) ) {
+			return one_cmd->workerfunction(argv, argc, output_string);
+		}
+	}
+	dprintf (D_ALWAYS, "Unknown command %s\n", cmd);
+	return false;
+}
+
+void
+set_working_dir(const char* w_dir)
+{
+	working_dir = w_dir;
+}
+
+const char*
+get_working_dir(void)
+{
+	return working_dir.Value();
+}
+
+void
+set_amazon_lib_path(const char* path)
+{
+	amazon_lib_path = path;
+}
+
+const char*
+get_amazon_lib_path(void)
+{
+	return amazon_lib_path.Value();
+}
+
+int
+parse_gahp_command (const char* raw, Gahp_Args* args) {
+
+	if (!raw) {
+		dprintf(D_ALWAYS,"ERROR parse_gahp_command: empty command\n");
+		return FALSE;
+	}
+
+	args->reset();
+
+	int beginning = 0;
+
+	int len=strlen(raw);
+
+	char * buff = (char*)malloc(len+1);
+	int buff_len = 0;
+
+	for (int i = 0; i<len; i++) {
+
+		if ( raw[i] == '\\' ) {
+			i++; 			//skip this char
+			if (i<(len-1))
+				buff[buff_len++] = raw[i];
+			continue;
+		}
+
+		/* Check if charcater read was whitespace */
+		if ( raw[i]==' ' || raw[i]=='\t' || raw[i]=='\r' || raw[i] == '\n') {
+
+			/* Handle Transparency: we would only see these chars
+			if they WEREN'T escaped, so treat them as arg separators
+			*/
+			buff[buff_len++] = '\0';
+			args->add_arg( strdup(buff) );
+			buff_len = 0;	// re-set temporary buffer
+
+			beginning = i+1; // next char will be one after whitespace
+		}
+		else {
+			// It's just a regular character, save it
+			buff[buff_len++] = raw[i];
+		}
+	}
+
+	/* Copy the last portion */
+	buff[buff_len++] = '\0';
+	args->add_arg( strdup(buff) );
+
+	free (buff);
+	return TRUE;
+}
+
+bool
+check_read_access_file(const char *file)
+{
+	if( !file || file[0] == '\0' ) {
+		return false;
+	}
+
+	int ret = access(file, R_OK);
+
+	if(ret < 0 ) {
+		dprintf(D_ALWAYS, "File(%s) can't be read\n", file);
+		return false;
+	}
+
+	return true;
+}
+
+bool
+check_create_file(const char *file)
+{
+	if( !file || file[0] == '\0' ) {
+		return false;
+	}
+
+	FILE *fp = NULL;
+
+	fp = safe_fopen_wrapper(file, "w");
+	if( !fp ) {
+		dprintf(D_ALWAYS, "failed to safe_fopen_wrapper %s in write mode: "
+				"safe_fopen_wrapper returns %s\n", file, strerror(errno));
+		return false;
+	}
+
+	fclose(fp);
+	return true;
+}
+
+bool
+find_amazon_lib(MyString &lib_path)
+{
+	MyString tmp_lib_path;
+	MyString tmp_lib_prog;
+	char * lib_path_ptr = param("AMAZON_EC2_LIB");
+	if( !lib_path_ptr ) {
+		return false;
+	}
+
+	tmp_lib_path = lib_path_ptr;
+	free (lib_path_ptr);
+
+	tmp_lib_prog.sprintf("%s%c%s", tmp_lib_path.Value(), DIR_DELIM_CHAR, AMAZON_SCRIPT_NAME);
+
+	if( check_read_access_file(tmp_lib_prog.Value()) == false ) {
+		dprintf(D_ALWAYS, "Can't read amazon library path(%s)\n", tmp_lib_path.Value());
+		return false;
+	}
+
+	lib_path = tmp_lib_path;
+	return true;
+}
+
+// Removes leading/tailing single(') or double(") quote
+MyString 
+delete_quotation_marks(const char *value)
+{
+	MyString fixedvalue;
+
+	if( !value || (value[0] == '\0')) {
+		return fixedvalue;
+	}
+
+	char *tmpvalue = strdup(value);
+	char *ptr = tmpvalue;
+
+	// Delete leading ones
+	while( ( *ptr == '\"') || (*ptr == '\'' ) ) {
+		*ptr = ' ';
+		ptr++;
+	}
+
+	ptr = tmpvalue + strlen(tmpvalue) - 1;
+	// Delete tailing ones
+	while( ( ptr > tmpvalue ) && 
+			( ( *ptr == '\"') || (*ptr == '\'' ) )) {
+		*ptr = ' ';
+		ptr--;
+	}
+		   
+	fixedvalue = tmpvalue;
+	fixedvalue.trim();
+	free(tmpvalue);
+	return fixedvalue;
+}
+
+void
+parse_param_string(const char *line, MyString &name, MyString &value, bool del_quotes)
+{
+	MyString one_line;
+	int pos=0;
+
+	name = "";
+	value = "";
+
+	if( !line || (line[0] == '\0') ) {
+		return;
+	}
+
+	one_line = line;
+	one_line.chomp();
+	pos = one_line.FindChar('=', 0);
+	if( pos <= 0 ) {
+		return;
+	}
+
+	name = one_line.Substr(0, pos -1);
+	if( pos == (one_line.Length() - 1) ) {
+		value = "";
+	}else {
+		value = one_line.Substr( pos+1, one_line.Length() - 1); 
+	}
+
+	name.trim();
+	value.trim();
+
+	if( del_quotes ) {
+		value = delete_quotation_marks(value.Value());
+	}
+	return;
+}
+
+int
+verify_number_args (const int is, const int should_be) {
+	if (is != should_be) {
+		dprintf (D_ALWAYS, "Wrong # of args %d, should be %d\n", is, should_be);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+int
+verify_min_number_args (const int is, const int minimum) {
+	if (is < minimum ) {
+		dprintf (D_ALWAYS, "Wrong # of args %d, should be more than or equal to %d\n", is, minimum);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+int
+verify_request_id (const char * s) {
+    unsigned int i;
+	for (i=0; i<strlen(s); i++) {
+		if (!isdigit(s[i])) {
+			dprintf (D_ALWAYS, "Bad request id %s\n", s);
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+int
+verify_string_name(const char * s) {
+	if( !( (s != NULL) && (strlen(s) > 0) ) ) {
+		dprintf (D_ALWAYS, "NULL string\n");
+		return false;
+	}
+    return true;
+}
+
+int
+verify_ami_id(const char * s) {
+	// ami_id should begin with "ami-"
+	if( !verify_string_name(s) ) {
+		return false;
+	}
+
+	if( strncasecmp(s, "ami-", strlen("ami-")) ) {
+		dprintf (D_ALWAYS, "Bad AMI ID %s\n", s);
+		return false;
+	}
+	return true;
+}
+
+int
+verify_instance_id(const char * s) {
+	if( !verify_string_name(s) ) {
+		return false;
+	}
+	if( strncasecmp(s, "i-", strlen("i-")) ) {
+		dprintf (D_ALWAYS, "Bad Instance ID %s\n", s);
+		return false;
+	}
+
+	return true;
+}
+
+int
+verify_number (const char * s) {
+	if (!s || !(*s)) {
+		dprintf (D_ALWAYS, "No digit number\n");
+		return FALSE;
+	}
+	
+	int i=0;
+   
+	do {
+		if (s[i]<'0' || s[i]>'9') {
+			dprintf (D_ALWAYS, "Bad digit number %s\n", s);
+			return FALSE;
+		}
+	} while (s[++i]);
+
+	return TRUE;
+}
+
+bool check_access_and_secret_key_file(const char* accesskeyfile, const char* secretkeyfile, MyString &err_msg)
+{
+	// check the accesskeyfile
+	if( !check_read_access_file(accesskeyfile) ) {
+		err_msg.sprintf("Cannot_read_access_key_file(%s)", accesskeyfile? accesskeyfile:"");
+		dprintf (D_ALWAYS, "Error: %s\n", err_msg.Value());
+		return false;
+	}
+
+	// check the accesskeyfile and secretkeyfile
+	if( !check_read_access_file(secretkeyfile) ) {
+		err_msg.sprintf("Cannot_read_secret_key_file(%s)", secretkeyfile? secretkeyfile:"");
+		dprintf (D_ALWAYS, "Error: %s\n", err_msg.Value());
+		return false;
+	}
+
+	return true;
+}
+
+// String -> int
+int
+get_int (const char * blah, int * s) {
+	*s = atoi(blah);
+	return TRUE;
+}
+
+int
+get_ulong (const char * blah, unsigned long * s) {
+	*s=(unsigned long)atol(blah);
+	return TRUE;
+}
+
+MyString
+create_output_string (int req_id, const char ** results, const int argc)
+{
+	MyString buffer;
+
+	buffer += req_id;
+
+	for ( int i = 0; i < argc; i++ ) {
+		buffer += ' ';
+		if ( results[i] == NULL ) {
+			buffer += "NULL";
+		} else {
+			for ( int j = 0; results[i][j] != '\0'; j++ ) {
+				switch ( results[i][j] ) {
+				case ' ':
+				case '\\':
+				case '\r':
+				case '\n':
+					buffer += '\\';
+				default:
+					buffer += results[i][j];
+				}
+			}
+		}
+	}
+
+	buffer += '\n';
+	return buffer;
+}
+
+MyString
+create_success_result( int req_id, StringList *result_list)
+{
+	int index_count = 1;
+	if( !result_list || (result_list->number() == 0) ) {
+		index_count = 1;
+	}else {
+		index_count = result_list->number();
+	}
+
+	const char *tmp_result[index_count];
+
+	tmp_result[0] = AMAZON_COMMAND_SUCCESS_OUTPUT;
+
+	int i = 1;
+	if( result_list && (result_list->number() > 0) ) {
+		char *one_result = NULL;
+		result_list->rewind();
+		while((one_result = result_list->next()) != NULL ) {
+			tmp_result[i] = one_result;
+			i++;
+		}
+	}
+
+	return create_output_string (req_id, tmp_result, i);
+}
+
+MyString 
+create_failure_result( int req_id, const char *err_msg, const char* err_code)
+{
+	const char *tmp_result[3];
+	tmp_result[0] = AMAZON_COMMAND_ERROR_OUTPUT;
+
+	if( !err_code ) {
+		err_code = "GAHPERROR";
+	}
+	if( !err_msg ) {
+		err_msg = "GAHP_ERROR";
+	}
+	tmp_result[1] = err_code;
+	tmp_result[2] = err_msg;
+
+	return create_output_string(req_id, tmp_result, 3);
+}
