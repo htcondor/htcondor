@@ -1245,14 +1245,14 @@ FS (.*) \1
 FS_REMOTE (.*) \1
 GSI (.*) GSS_ASSIST_GRIDMAP
 SSL (.*) ssl@unmappeduser
-KERBEROS ([^/]*)/*[^@]*@*(.*) \1@\2
+KERBEROS ([^/]*)/?[^@]*@(.*) \1@\2
 NTSSPI (.*) \1
 CLAIMTOBE (.*) \1
 PASSWORD (.*) \1
 \end{verbatim}
 
-For GSI, the special name \verb|GSS_ASSIST_GRIDMAP| instructs Condor
-to use the GSI-specific grid mapfile (configured with \Macro{GRIDMAP}
+For GSI (or SSL), the special name \verb|GSS_ASSIST_GRIDMAP| instructs Condor
+to use the GSI grid mapfile (configured with \Macro{GRIDMAP}
 as shown in section~\ref{sec:GSI-Authentication}) to do the mapping.
 If no mapping can be found for GSI (with or without the use of
 \verb|GSS_ASSIST_GRIDMAP|), the user is mapped to \verb|gsi@unmappeduser|.
