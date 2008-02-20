@@ -61,11 +61,7 @@ to help shutdown the daemon without searching through the output of the
 
 Since daemons run with their current working directory set to the
 value of LOG, if you don't specify a full path (with a ``/'' to
-begin), the file will be left in the log directory. If you leave
-your pidfile in your log directory, you will want to add whatever
-filename you use to the VALID_LOG_FILES parameter, described in
-section~\pageref{param:ValidLogFiles}\ of the manual, so that
-\Condor{preen} does not remove it. }
+begin), the file will be left in the log directory.
 
 \OptItem{\Opt{-k filename}}{Causes the daemon to read out a pid from
 the specified filename and send a SIGTERM to that process. The daemon
