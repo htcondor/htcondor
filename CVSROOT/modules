@@ -1015,8 +1015,11 @@ V7_0_1_EXT      -a V7_0_COMMON_EXT \
                    externals/bundles/glibc/2.5-20061008T1257 \
                    externals/bundles/glibc/2.5-20061008T1257-x86_64
 
+# Externals needed for the 7.0.2 release:
+V7_0_2_EXT      -a V7_0_1_EXT
+
 # Externals needed for the head of the V7_0-branch
-V7_0_EXT        -a V7_0_1_EXT
+V7_0_EXT        -a V7_0_2_EXT
 
 
 #---------------------------------------------------------------------
