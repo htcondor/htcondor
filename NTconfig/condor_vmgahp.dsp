@@ -88,11 +88,7 @@ LINK32=link.exe
 # Name "condor_vmgahp - Win32 Release"
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\vmgahp_main.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_vm-gahp\vmgahp_main.h"
+SOURCE="..\src\condor_vm-gahp\gsoap_vmgahp.h"
 # End Source File
 # Begin Source File
 
@@ -101,6 +97,53 @@ SOURCE="..\src\condor_vm-gahp\pbuffer.C"
 # Begin Source File
 
 SOURCE="..\src\condor_vm-gahp\pbuffer.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_vm-gahp\soap_vmgahpC.C"
+
+!IF  "$(CFG)" == "condor_vm-gahp - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "condor_vm-gahp - Win32 Release"
+
+# SUBTRACT CPP /YX /Yc /Yu
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_vm-gahp\soap_vmgahpH.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_vm-gahp\soap_vmgahpServer.C"
+
+!IF  "$(CFG)" == "condor_vm-gahp - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "condor_vm-gahp - Win32 Release"
+
+# SUBTRACT CPP /YX /Yc /Yu
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_vm-gahp\soap_vmgahpStub.C"
+
+!IF  "$(CFG)" == "condor_vm-gahp - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "condor_vm-gahp - Win32 Release"
+
+# SUBTRACT CPP /YX /Yc /Yu
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_vm-gahp\soap_vmgahpStub.h"
 # End Source File
 # Begin Source File
 
@@ -128,6 +171,14 @@ SOURCE="..\src\condor_vm-gahp\vmgahp.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_vm-gahp\vmgahp_common.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_vm-gahp\vmgahp_common.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_vm-gahp\vmgahp_config.C"
 # End Source File
 # Begin Source File
@@ -136,11 +187,15 @@ SOURCE="..\src\condor_vm-gahp\vmgahp_config.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\vmgahp_common.C"
+SOURCE="..\src\condor_vm-gahp\vmgahp_error_codes.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\vmgahp_common.h"
+SOURCE="..\src\condor_vm-gahp\vmgahp_instantiate.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_vm-gahp\vmgahp_main.C"
 # End Source File
 # Begin Source File
 
@@ -150,34 +205,5 @@ SOURCE="..\src\condor_vm-gahp\vmware_type.C"
 
 SOURCE="..\src\condor_vm-gahp\vmware_type.h"
 # End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_vm-gahp\gsoap_vmgahp.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_vm-gahp\soap_vmgahpC.C"
-# SUBTRACT CPP /YX /Yc /Yu
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_vm-gahp\soap_vmgahpH.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_vm-gahp\soap_vmgahpServer.C"
-# SUBTRACT CPP /YX /Yc /Yu
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_vm-gahp\soap_vmgahpStub.C"
-# SUBTRACT CPP /YX /Yc /Yu
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_vm-gahp\soap_vmgahpStub.h"
-# SUBTRACT CPP /YX /Yc /Yu
-# End Source File
-
 # End Target
 # End Project
