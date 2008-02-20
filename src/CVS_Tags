@@ -1,3 +1,7 @@
+02/19/08 V7_1-amazon_ec2-2-{root,branch}
+  New branch for Amazon EC2 support in the grid universe. The previous 
+  incarnation of this branch was based off of 6.9.
+
 02/13/08 V7_1-ian_sca-2-{root,branch}
   Branch for research code involving signed ClassAds.  This branch
   was made from BUILD-V7_1-trunk-2008-2-8.
