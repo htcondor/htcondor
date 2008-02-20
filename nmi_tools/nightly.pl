@@ -4,6 +4,8 @@
 # 1) Checks out the latest copy of nmi_tools/condor_nmi_submit.
 # 2) Invokes condor_nmi_submit with the right arguments.
 
+# don't edit this file on the build machine... it's in cvs
+
 use Getopt::Long;
 
 # Variables for Getopt::Long::GetOptions
@@ -57,6 +59,7 @@ while (<CVS>) {
 }
 
 print LOG "Running condor_nmi_submit\n";
+# don't edit this file on the build machine... it's in cvs
 
 $cns_cmd = "./$CNS --build --nightly --use_externals_cache --notify=condor-build@cs.wisc.edu" . (defined $opt_git ? " --git" : "");
 
