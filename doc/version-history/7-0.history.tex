@@ -92,6 +92,10 @@ matchmaking.
 
 \begin{itemize}
 
+\item Added \MacroNi{STARTER\_UPLOAD\_SECONDS}. This prevents a hang if 
+the \Condor{shadow} delays a write for more than the specified time.
+The default is 300.
+
 \item Added \MacroNI{CKPT\_PROBE}. This specifes an internal to Condor
 executable which determines information about how a process is layed out
 in memory--in addition to other information. This program is not available
@@ -109,6 +113,9 @@ check.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed file descriptor leak in \Condor{schedd} when using the SOAP
+interface.
 
 \item Fixed a bug that primarily affected pools with
 \MacroNI{MaxJobRetirementTime} (0 by default) set larger than
