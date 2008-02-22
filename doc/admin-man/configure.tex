@@ -1005,10 +1005,10 @@ File System Configuration File Entries''.
   % Result if not defined or RHS is empty: shell's default corelimit size applies
 
 \item[\Macro{CKPT\_PROBE}] \label{param:CkptProbe}
-	Defines the location of a helper process Condor will use to
-	determine information for the \Attr{CheckpointPlatform} attribute
-	in the machine's classified advertisement. The default value
-	for this parameter is \File{\$(LIBEXEC)/condor\_ckpt\_probe}.
+  Defines the path and executable name of the helper process Condor will use to
+  determine information for the \Attr{CheckpointPlatform} attribute
+  in the machine's ClassAd. 
+  The default value is \File{\$(LIBEXEC)/condor\_ckpt\_probe}.
 
 \item[\Macro{ABORT\_ON\_EXCEPTION}] \label{param:AbortOnException}
   When Condor programs detect a fatal internal exception, they
