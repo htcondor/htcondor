@@ -8,6 +8,10 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+02/22/08 V7_0_1-2-{root,branch}
+   A branch for the 7.0.1 doc series of the manual, created from
+   V7_0-branch of doc.
+
 02/5/08 V7_0-pre-merge-V7_0_0-merge-2
         V7_0-post-merge-V7_0_0-merge-2
    The state of the doc directory in V7_0-branch before and after
