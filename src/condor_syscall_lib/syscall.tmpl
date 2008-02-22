@@ -860,16 +860,7 @@ report an error if reside on different devices.
 	}
 
 
-#	if defined( LINUX ) && !( defined( LINUX_CENTOS42 ) || defined( LINUX_CENTOS43 ) || defined( LINUX_CENTOS44 ) || defined( LINUX_CENTOS45) || defined(LINUX_DEBIAN40) || defined(LINUX_RHEL5) || defined(LINUX_RHEL51) )
-	/* CENTOS42 uses a header files where this func is const, but
-		the glibc that we use with condor does not define this
-		function as const. So this avoids link errors. */
-
-		int utimes( map_name(char *path), struct timeval *times ) {
-
-#	else
-		int utimes( map_name(const char *path), const struct timeval *times ) {
-#	endif
+	int utimes( map_name(const char *path), const struct timeval *times ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 		in code( times );
