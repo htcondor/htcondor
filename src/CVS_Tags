@@ -1,6 +1,10 @@
-02/20/07 V7_0_1-{root,branch}
+02/22/07 V7_0_1-2-{root,branch}
   A new branch off the V7_0-branch for the 7.0.1 release.
 
+02/20/07 V7_0_1-{root,branch}
+  A new branch off the V7_0-branch for the 7.0.1 release.
+  * Abandoned
+	
 01/31/08 V7_0_0-merge-1
   The state of V7_0_0-branch before first and only merge back to the 
   V7_0-branch.
