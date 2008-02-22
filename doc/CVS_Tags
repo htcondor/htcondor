@@ -8,6 +8,13 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+02/22/08 V7_0_1-root and V7_0_1-branch
+   A branch for the 7.0.1 doc series of the manual, created from
+   V7_0_1-root on the V7_0-branch of doc. This is the branch we'll
+   use for the 7.0.1 manual, as opposed to the one documented just
+   below this entry, which has an unusual name, and was made before
+   the manual was ready.
+
 02/22/08 V7_0_1-2-{root,branch}
    A branch for the 7.0.1 doc series of the manual, created from
    V7_0-branch of doc.
