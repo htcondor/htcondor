@@ -688,20 +688,8 @@ sub getSubmitInfo
         # check it out is hopeless.
     }
     else {
-        my $val;
-        $val = checkoutSubmitInfo( $tag );
-
-        # TODO: all this should go away once submit_info has been
-        # propagated to all branches...
-        if( $val == 0 ) {
-            # submit_info isn't in the requested tag, see if can get it
-            # from a "nearby" branch, instead....  
-            if( $tag =~ /.*V6_6.*/ ) {
-                $val = checkoutSubmitInfo( "V6_6-branch" );
-            } else {
-                $val = checkoutSubmitInfo( "V6_7-branch" );
-            }
-        }
+        checkoutSubmitInfo( $tag ) ||
+	    die "$tag does not contain $submit_info!\n";
         $submit_info_path = $submit_info;
     }
 
