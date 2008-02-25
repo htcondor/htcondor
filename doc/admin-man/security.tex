@@ -1545,9 +1545,6 @@ This section discusses user-based authorization.
 %\index{ macro@\texttt{} macro}
 %\index{configuration macro!\texttt{}}
 
-Unlike authentication, encryption, and integrity checks,
-which can be configured by both client and server,
-authorization is used only by a server.
 The authorization portion of the security of a Condor pool is
 based on a set of configuration macros.
 The macros list which user/daemon will be authorized
@@ -1602,7 +1599,7 @@ A complete list of the authorization macros:
     DENY_DAEMON
 \end{verbatim}
 
-In addition, the following are used to control authorizationi of
+In addition, the following are used to control authorization of
 specific types of Condor daemons when advertising themselves to the
 pool.  If unspecified, these default to the broader
 \MacroNI{ALLOW\_DAEMON} and \MacroNI{DENY\_DAEMON} settings.
@@ -1645,8 +1642,8 @@ not the specific identity of the server.
     DENY_CLIENT
 \end{verbatim}
 
-Each macro is defined by a comma-separated list of fully qualified
-users.
+All authorization settings are defined by a comma-separated list of
+fully qualified users.
 Each
 fully qualified user
 is described using the following format:
