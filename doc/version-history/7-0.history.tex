@@ -51,7 +51,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item In unix, when started as root, the \Condor{master} now changes the
+effectiver user id back to root (instead of condor) when restarting itself
+(e.g. due to the command \Condor{restart}).  This makes no difference unless
+you have wrapped the \Condor{master} with a script of some kind and this
+script expects to be run as root not only on initial startup but on restart
+as well.
 
 \end{itemize}
 
