@@ -88,6 +88,19 @@ client-side authorization in a GSI-specific way.
   by \Condor{submit\_dag}.  See page~\pageref{param:DAGManInsertSubFile}
   for more information.
 
+\item The semantics of \MacroNI{CLAIM\_WORKLIFE} were previously not
+clearly defined before the start of the first job.  A delay between
+the \Condor{schedd} claiming a slot and the \Condor{shadow} starting a
+job could be caused by the submit machine being very busy or by
+\MacroNI{JOB\_START\_DELAY}.  Previously, such a delay would
+unpredictably result in the first job being rejected if
+\MacroNI{CLAIM\_WORKLIFE} expired during that time.  Now,
+\MacroNI{CLAIM\_WORKLIFE} is defined to apply only after the first job
+has started.  Therefore, setting it to zero has the effect of allowing
+exactly one job per claim to run.  The default is still the special
+value -1, which places no limit on how long the slot may continue
+accepting new jobs from the \Condor{schedd} that claimed it.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

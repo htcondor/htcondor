@@ -2963,11 +2963,15 @@ Configuring The Startd Policy.
   \MacroNI{MAXJOBRETIREMENTTIME} in
   section~\ref{sec:State-Expression-Summary} for further explanation.
 
-\item[\Macro{CLAIM\_WORKLIFE}] \label{param:ClaimWorklife}
-  If provided, this expression specifies
-  the number of seconds during which a claim will continue accepting new
-  jobs.  Once this time expires, any existing job may continue to run as
-  usual, but once it finishes or is preempted, the claim is closed.
+\item[\Macro{CLAIM\_WORKLIFE}] \label{param:ClaimWorklife} If
+  provided, this expression specifies the number of seconds after
+  which a claim will stop accepting additional jobs.  By default, once
+  the negotiator gives a schedd a claim to a slot, the schedd will
+  keep running jobs on that slot as long as it has more jobs with
+  matching requirements, without returning the slot to the unclaimed
+  state and renegotiating for machines.  Once \MacroNI{CLAIM\_WORKLIFE}
+  expires, any existing job may continue to run as usual, but once it
+  finishes or is preempted, the claim is closed.
   This may be useful if you want to force periodic renegotiation of
   resources without preemption having to occur.  For example, if you
   have some low-priority jobs which should never be interrupted with
@@ -2983,7 +2987,9 @@ Configuring The Startd Policy.
   The default value for \Expr{CLAIM\_WORKLIFE} is -1, which is treated
   as an infinite claim worklife, so claims may be held indefinitely
   (as long as they are not preempted and the schedd does not
-  relinquish them, of course).
+  relinquish them, of course).  A value of 0 has the effect of not allowing
+  more than one job to run per claim, since it immediately expires after the
+  first job starts running.
 
 \item[\Macro{MAX\_CLAIM\_ALIVES\_MISSED}]
   \label{param:MaxClaimAlivesMissed} The \Condor{schedd} sends periodic updates
