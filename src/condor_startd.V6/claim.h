@@ -205,6 +205,7 @@ public:
 	void disallowUnretire()     {c_may_unretire=false;}
 	void setRetirePeacefully(bool value) {c_retire_peacefully=value;}
 	void preemptIsTrue() {c_preempt_was_true=true;}
+	int activationCount() {return c_activation_count;}
 
 		// starter-related functions
 	int	 spawnStarter( time_t, Stream* = NULL );
@@ -272,6 +273,7 @@ private:
 	time_t		c_job_total_suspend_time;
 	time_t		c_claim_total_run_time;
 	time_t		c_claim_total_suspend_time;
+	int			c_activation_count;
 	Stream*		c_request_stream; // cedar sock that a remote request
                                   // is waiting for a response on
 

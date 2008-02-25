@@ -1088,7 +1088,7 @@ Resource::claimWorklifeExpired()
 	//This function evaulates to true if the claim has been alive
 	//for longer than the CLAIM_WORKLIFE expression dictates.
 
-	if (r_cur) {
+	if( r_cur && r_cur->activationCount() > 0 ) {
 		int ClaimWorklife = 0;
 
 		//look up the maximum retirement time specified by the startd

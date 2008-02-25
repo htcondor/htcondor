@@ -79,6 +79,7 @@ Claim::Claim( Resource* res_ip, bool is_cod, int lease_duration )
 	c_job_total_suspend_time = 0;
 	c_claim_total_run_time = 0;
 	c_claim_total_suspend_time = 0;
+	c_activation_count = 0;
 	c_may_unretire = true;
 	c_retire_peacefully = false;
 	c_preempt_was_true = false;
@@ -669,6 +670,8 @@ void
 Claim::beginActivation( time_t now )
 {
 	loadAccountingInfo();
+
+	c_activation_count += 1;
 
 	c_job_start = (int)now;
 
