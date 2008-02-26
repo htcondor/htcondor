@@ -127,6 +127,7 @@ $ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
 # -k[ind]: be kind and submit slowly
 # -b[buildandtest]: set up a personal condor and generic configs
 # -a[again]: how many times do we run each test?
+# -p[pretest]: get are environment set but run no tests
 #
 while( $_ = shift( @ARGV ) ) {
   SWITCH: {
