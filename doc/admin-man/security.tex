@@ -100,7 +100,7 @@ based on the type of operation requested.
 The user of a specific request must be authorized at
 the required access level.
 For example,
-the executing the \Condor{status} command requires
+executing the \Condor{status} command requires
 the \DCPerm{READ} access level.
 Actions that accomplish management tasks,
 such as shutting down or restarting of a daemon
@@ -159,7 +159,7 @@ a \DCPerm{READ} or both a
 \begin{description}
 
 \item[\DCPerm{READ}] \label{sec-level-read} This access level
-   access can obtain or read information about Condor.
+   can obtain or read information about Condor.
    Examples that require only \DCPerm{READ} access are
    viewing the status of the pool with \Condor{status}, 
    checking a job queue with \Condor{q},
@@ -281,7 +281,10 @@ determines which technology is chosen for the connection.
 
 Security negotiation is a completely separate process from
 matchmaking, and should not be confused with any specific function of
-the \Condor{negotiator} daemon.
+the \Condor{negotiator} daemon.  Security negotiation happens when one
+Condor daemon or tool sends a command to another Condor daemon.  Negotiation
+between users for machines, on the other hand, is what the \Condor{negotiator}
+manages as part of its matchmaking process.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:security-negotiation-features}Configuration}
@@ -349,9 +352,17 @@ sets:
 \begin{verbatim}
     SEC_DEFAULT_AUTHENTICATION = REQUIRED
 \end{verbatim}
-When Frida submits her jobs, Condor's security negotiation 
-determines that authentication will be used, and allows the command to
-continue.
+When Frida submits her jobs, Condor's security negotiation determines
+that authentication will be used, and allows the command to continue.
+(This example illustrates the point, but there is actually more to the
+story.  Some commands, such as submitting jobs \emph{always} require
+authentication, no matter what the policy says, because the identity
+of the user needs to be known in order to carry out the operation.
+Others commands, such as \Condor{q} do not always require
+authentication, so in the above example, the server's policy would
+force Frida's \Condor{q} queries to be authenticated, whereas a different
+policy could allow \Condor{q} to happen without any authentication.)
+
 
 Whether or not security negotiation occurs depends on the
 setting at both the client and daemon side of the 
@@ -770,45 +781,10 @@ Note that this implemented by setting the value of
 \MacroNI{GSI\_DAEMON\_DIRECTORY}.
 \end{enumerate}
 
-Here is an example portion of the configuration file that would
-enable and require GSI authentication,
-along with a minimal set of other variables to make it work. 
-Note that the last entry (\MacroNI{GSI\_DAEMON\_NAME}) in this example
-must be on a single line;
-this example is broken onto two lines for formatting reasons.
-
-\footnotesize
-\begin{verbatim}
-SEC_DEFAULT_AUTHENTICATION = REQUIRED
-SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
-GSI_DAEMON_DIRECTORY = /path/to/daemon/credential.location
-GSI_DAEMON_NAME = /C=US/O=Condor/O=University of Wisconsin
-/OU=Computer Sciences Department/CN=condor@cs.wisc.edu
-\end{verbatim}
-\normalsize
-
-The
-\MacroNI{SEC\_DEFAULT\_AUTHENTICATION} macro specifies that
-authentication is required for all communications.
-This single macro covers all communications, but could be
-replaced with a set of macros that require authentication for
-only specific communications.
-
-The macro \MacroNI{GSI\_DAEMON\_DIRECTORY} is specified
-to give
-Condor a single place to find the daemon's certificate.
-This path may be a directory on a shared file system such as AFS. 
-Alternatively, this path name can point to 
-local copies of the certificate stored
-in a local file system.
-
 When a daemon acts as the client within authentication,
 the daemon needs a listing of those from which it
 will accept certificates.
-
-The macro \MacroNI{GSI\_DAEMON\_NAME} configuration macro
-provides daemons with a distinguished name to use for
-X.509 authentication.
+This is done with \MacroNI{GSI\_DAEMON\_NAME}.
 This name is specified with the following format
 \footnotesize
 \begin{verbatim}
@@ -817,7 +793,7 @@ GSI_DAEMON_NAME = /C=?/O=?/O=?/OU=?/CN=<daemon_name@domain>
 \normalsize
 A complete example that has the question marks filled in and the
 daemon's user name filled in is given in the 
-example configuration above.
+example configuration below.
 
 Condor will also need a way to map an X.509 distinguished
 name to a Condor user id.
@@ -829,7 +805,9 @@ The second way to do the mapping is within
 an administrator-maintained GSI-specific file called an X.509 map file,
 mapping from X509 Distinguished Name (DN) to Condor user id.
 It is similar to a Globus grid map file except that it is only used for
-mapping to a user id, not for authorization. 
+mapping to a user id, not for authorization.  If the user names in the
+map file do not specify a domain for the user (i.e. \verb|user@domain|),
+then the value of \MacroNI{UID\_DOMAIN} is used.
 Information about authorization can be found in
 Section~\ref{sec:Security-Authorization}. 
 Entries (lines) in the file each contain two items.
@@ -904,6 +882,69 @@ This directory is given by
 $(HOME)/.globus
 \end{verbatim}
 \end{enumerate}
+
+\item[Example GSI Security Configuration]
+
+Here is an example portion of the configuration file that would
+enable and require GSI authentication,
+along with a minimal set of other variables to make it work. 
+
+\footnotesize
+\begin{verbatim}
+SEC_DEFAULT_AUTHENTICATION = REQUIRED
+SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
+SEC_DEFAULT_INTEGRITY = REQUIRED
+GSI_DAEMON_DIRECTORY = /etc/grid-security
+GRIDMAP = /etc/grid-security/grid-mapfile
+
+# authorize based on usernames produced by the map file
+ALLOW_READ = *@cs.wisc.edu/*.cs.wisc.edu
+ALLOW_DAEMON = condor@cs.wisc.edu/*.cs.wisc.edu
+ALLOW_NEGOTIATOR = condor@cs.wisc.edu/condor.cs.wisc.edu, \
+                   condor@cs.wisc.edu/condor2.cs.wisc.edu
+ALLOW_ADMINISTRATOR = condor-admin@cs.wisc.edu/*.cs.wisc.edu
+
+# condor daemon certificate(s) trusted by condor tools and daemons
+# when connecting to other condor daemons
+GSI_DAEMON_NAME = /C=US/O=Condor/O=UW/OU=CS/CN=condor@cs.wisc.edu
+
+# clear out any host-based authorizations
+# (unnecessary if you leave authentication REQUIRED,
+#  but useful if you make it optional and want to
+#  allow some unauthenticated operations, such as
+#  ALLOW_READ = */*.cs.wisc.edu)
+HOSTALLOW_READ =
+HOSTALLOW_WRITE =
+HOSTALLOW_NEGOTIATOR =
+HOSTALLOW_ADMINISTRATOR =
+\end{verbatim}
+\normalsize
+
+The
+\MacroNI{SEC\_DEFAULT\_AUTHENTICATION} macro specifies that
+authentication is required for all communications.
+This single macro covers all communications, but could be
+replaced with a set of macros that require authentication for
+only specific communications.
+
+The macro \MacroNI{GSI\_DAEMON\_DIRECTORY} is specified
+to give
+Condor a single place to find the daemon's certificate.
+This path may be a directory on a shared file system such as AFS. 
+Alternatively, this path name can point to 
+local copies of the certificate stored
+in a local file system.
+
+The macro \MacroNI{GRIDMAP} specifies the file
+to use for mapping GSI names to usernames within condor.  For example,
+it might look like this:
+
+\begin{verbatim}
+"/C=US/O=Condor/O=UW/OU=CS/CN=condor@cs.wisc.edu" condor@cs.wisc.edu
+\end{verbatim}
+
+Additional mappings would be needed for the users who submit jobs to
+the pool or who issue administrative commands.
 
 \end{description}
 
@@ -1058,8 +1099,14 @@ UID that Condor is started as.  On Windows, the same secure password
 store that is used for user passwords will be used for the pool
 password (see section \ref{sec:windows-sps}).
 
-Storing the pool password is done via the \Opt{-c} option to
-\Condor{store\_cred}. Running
+Under Unix, the password file can be generated by using the following
+command to write directly to the password file:
+\begin{verbatim}
+condor_store_cred -f /path/to/password/file
+\end{verbatim}
+
+Under Windows (or Unix if you wish), storing the pool password is done
+via the \Opt{-c} option to \Condor{store\_cred}. Running
 \begin{verbatim}
 condor_store_cred -c add
 \end{verbatim}
@@ -1112,6 +1159,58 @@ This configuration allows remote \verb@DAEMON@-level and
 daemons authenticated as \verb|condor@mydomain| are also allowed
 access. This is done so local authentication can be done using
 another method such as \verb@FS@.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Security-Password-Example} Example Security Configuration Using Pool Password}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{security!sample configuration using pool password}
+
+The following example configuration uses pool password authentication and
+network message integrity checking for all communication between condor
+daemons.
+
+\begin{verbatim}
+SEC_PASSWORD_FILE = $(LOCK)/pool_password
+SEC_DAEMON_AUTHENTICATION = REQUIRED
+SEC_DAEMON_INTEGRITY = REQUIRED
+SEC_DAEMON_AUTHENTICATION_METHODS = PASSWORD
+SEC_NEGOTIATOR_AUTHENTICATION = REQUIRED
+SEC_NEGOTIATOR_INTEGRITY = REQUIRED
+SEC_NEGOTIATOR_AUTHENTICATION_METHODS = PASSWORD
+SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI
+ALLOW_DAEMON = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu, \
+               condor@$(UID_DOMAIN)/$(IP_ADDRESS)
+ALLOW_NEGOTIATOR = condor_pool@$(UID_DOMAIN)/negotiator.machine.name
+\end{verbatim}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Security-Password-Example} Example Using Pool Password for Startd Advertisement}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{security!sample configuration using pool password for startd advertisement}
+
+One problem with the pool password method of authentication is that it
+involves a single shared secret.  This does not scale well as you add
+remote users who configure their schedds to flock to your pool.
+However, you can still use the pool password for authenticating portions
+of your pool, while other parts (such as remote schedds) are authenticated
+by some other means.
+
+In this example, just the startds in the pool are required to have the
+pool password when they advertise themselves to the collector.
+
+\begin{verbatim}
+SEC_PASSWORD_FILE = $(LOCK)/pool_password
+SEC_ADVERTISE_STARTD_AUTHENTICATION = REQUIRED
+SEC_ADVERTISE_STARTD_INTEGRITY = REQUIRED
+SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS = PASSWORD
+SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI
+ALLOW_ADVERTISE_STARTD = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu
+\end{verbatim}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:FS-Authentication}File System Authentication}
@@ -1482,40 +1581,6 @@ macros to allow both the client and the daemon to specify
 which methods are acceptable.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Security-sample1} Example of Daemon-Side Security Configuration}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\index{security!sample daemon-side configuration}
-A configuration file is provided when Condor is installed.
-No security features are enabled within the configuration as
-distributed.
-Included as comments within the configuration file is an example 
-suggesting settings that enable security features.
-Here is that example of the daemon-side portion.
-
-\footnotesize
-\begin{verbatim}
-SEC_DEFAULT_NEGOTIATION     = REQUIRED
-SEC_DEFAULT_AUTHENTICATION  = REQUIRED
-SEC_DEFAULT_ENCRYPTION      = REQUIRED
-SEC_DEFAULT_INTEGRITY       = REQUIRED
-
-SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, FS
-SEC_DEFAULT_CRYPTO_METHODS         = 3DES, BLOWFISH
-\end{verbatim}
-\normalsize
-
-This set of configuration macros forces security negotiation to occur,
-and sets the features to be used at all times.
-All communication is authenticated with Kerberos, unless the client
-does not use Kerberos, but supports File System (FS) authentication,
-in which case FS authentication is used.
-All communication is both encrypted and integrity checked to make sure
-that messages are not modified or corrupted. 
-The encryption is preferably with triple DES, but Blowfish will be
-used if the client does not use 3DES, but does use Blowfish.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Authorization}Authorization}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security!authorization}
@@ -1757,21 +1822,23 @@ ALLOW_READ            = *@cs.wisc.edu/*
 ALLOW_WRITE           = *@cs.wisc.edu/*.cs.wisc.edu
 ALLOW_ADMINISTRATOR   = condor-admin@cs.wisc.edu/*.cs.wisc.edu
 ALLOW_CONFIG          = condor-admin@cs.wisc.edu/*.cs.wisc.edu
-ALLOW_NEGOTIATOR      = condor@cs.wisc.edu/$(COLLECTOR_HOST)
+ALLOW_NEGOTIATOR      = condor@cs.wisc.edu/condor.cs.wisc.edu, \
+                        condor@cs.wisc.edu/condor2.cs.wisc.edu
+ALLOW_DAEMON          = condor@cs.wisc.edu/*.cs.wisc.edu
+
+# Clear out any old-style HOSTALLOW settings:
+HOSTALLOW_READ =
+HOSTALLOW_WRITE =
+HOSTALLOW_DAEMON =
+HOSTALLOW_NEGOTIATOR =
+HOSTALLOW_ADMINISTRATOR =
+HOSTALLOW_OWNER =
 \end{verbatim}
 \normalsize
 
-% NEGOTIATOR_HOST is no longer used since ports are dynamically
-% allocated, so suggest COLLECTOR_HOST instead
-% ALLOW_NEGOTIATOR      = condor@cs.wisc.edu/$(NEGOTIATOR_HOST)
-This example configuration presumes that the \Condor{collector}
-and \Condor{negotiator} daemons are running on the same machine.
-
-% commented out June 04, as it has not been implemented
-%ALLOW_DAEMON          = condor@cs.wisc.edu/*.cs.wisc.edu
 
 This example configuration authorizes
-any user in the 
+any authenticated user in the 
 \verb@cs.wisc.edu@ domain to 
 carry out a request that requires the 
 \DCPerm{READ} access level
@@ -1791,8 +1858,8 @@ The administrator, logged into any machine within
 the \verb@cs.wisc.edu@ domain is authorized at the
 \DCPerm{CONFIG} access level.
 Only the negotiator daemon, running as
-\verb@condor@ on the machine defined by the
-\MacroNI{NEGOTIATOR\_HOST} macro is authorized 
+\verb@condor@ on the two central managers
+are authorized 
 with the
 \DCPerm{NEGOTIATOR} access level.
 And, the last line of the example presumes that there is a
@@ -1819,6 +1886,7 @@ ALLOW_OWNER           = username@cs.wisc.edu/hostname.cs.wisc.edu
 In this example the owner has a login of
 \verb@username@, and the machine's name is represented by
 \verb@hostname@.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
