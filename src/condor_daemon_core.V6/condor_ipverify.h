@@ -141,7 +141,7 @@ private:
 	inline perm_mask_t deny_mask(DCpermission perm) { return (1 << (2+2*perm)); }
 
 	void PermMaskToString(perm_mask_t mask, MyString &mask_str);
-	void UserHashToString(class UserHash_t *user_hash, MyString &result);
+	void UserHashToString(UserHash_t *user_hash, MyString &result);
 	void AuthEntryToString(const struct in_addr & host, const char * user, perm_mask_t mask, MyString &result);
 	void PrintAuthTable(int dprintf_level);
 
