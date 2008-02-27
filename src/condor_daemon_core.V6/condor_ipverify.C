@@ -316,6 +316,14 @@ IpVerify::add_hash_entry(const struct in_addr & sin_addr, const char * user, per
 
     perm->insert(user_key, old_mask | new_mask);
 
+	if( DebugFlags & (D_FULLDEBUG|D_SECURITY) ) {
+		MyString auth_str;
+		AuthEntryToString(sin_addr,user,new_mask, auth_str);
+		dprintf(D_FULLDEBUG|D_SECURITY,
+				"Adding to resolved authorization table: %s\n",
+				auth_str.Value());
+	}
+
     return TRUE;
 }
 
@@ -328,11 +336,41 @@ IpVerify::PermMaskToString(perm_mask_t mask, MyString &mask_str)
 			mask_str.append_to_list(PermString(perm));
 		}
 		if( mask & deny_mask(perm) ) {
-			mask_str.append_to_list("DENY(");
+			mask_str.append_to_list("DENY_");
 			mask_str += PermString(perm);
-			mask_str += ")";
 		}
 	}
+}
+
+void
+IpVerify::UserHashToString(UserHash_t *user_hash, MyString &result)
+{
+	ASSERT( user_hash );
+	user_hash->startIterations();
+	MyString host;
+	StringList *users;
+	char const *user;
+	while( user_hash->iterate(host,users) ) {
+		if( users ) {
+			users->rewind();
+			while( (user=users->next()) ) {
+				result.sprintf_cat(" %s/%s",
+								   user,
+								   host.Value());
+			}
+		}
+	}
+}
+
+void
+IpVerify::AuthEntryToString(const struct in_addr & host, const char * user, perm_mask_t mask, MyString &result)
+{
+	MyString mask_str;
+	PermMaskToString( mask, mask_str );
+	result.sprintf("%s/%s: %s\n",
+			user ? user : "(null)",
+			inet_ntoa(host),
+			mask_str.Value() );
 }
 
 void
@@ -350,12 +388,39 @@ IpVerify::PrintAuthTable(int dprintf_level) {
 				// Call has_user() to get the full mask, including user=*.
 			has_user(ptable, userid.Value(), mask);
 
-			MyString mask_str;
-			PermMaskToString( mask, mask_str );
-			dprintf(dprintf_level,"host %s: user %s: %s\n",
-					inet_ntoa(host),
-					userid.Value(),
-					mask_str.Value() );
+			MyString auth_entry_str;
+			AuthEntryToString(host,userid.Value(),mask, auth_entry_str);
+			dprintf(dprintf_level,"%s\n", auth_entry_str.Value());
+		}
+	}
+
+	dprintf(dprintf_level,"Authorizations yet to be resolved:\n");
+	DCpermission perm;
+	for ( perm=FIRST_PERM; perm < LAST_PERM; perm=NEXT_PERM(perm) ) {
+
+		PermTypeEntry* pentry = PermTypeArray[perm];
+		ASSERT( pentry );
+
+		MyString allow_users,deny_users;
+
+		if( pentry->allow_users ) {
+			UserHashToString(pentry->allow_users,allow_users);
+		}
+
+		if( pentry->deny_users ) {
+			UserHashToString(pentry->deny_users,deny_users);
+		}
+
+		if( allow_users.Length() ) {
+			dprintf(dprintf_level,"allow %s: %s\n",
+					PermString(perm),
+					allow_users.Value());
+		}
+
+		if( deny_users.Length() ) {
+			dprintf(dprintf_level,"deny %s: %s\n",
+					PermString(perm),
+					deny_users.Value());
 		}
 	}
 }
@@ -430,11 +495,6 @@ IpVerify::add_host_entry( const char* addr, perm_mask_t mask )
                                         user, mask );
 						added = true;
 					}   
-				}
-				if ( added && (DebugFlags & D_FULLDEBUG) ) {
-					MyString mask_str;
-					PermMaskToString( mask, mask_str );
-					dprintf (D_SECURITY, "IPVERIFY: successfully resolved and added %s to %s\n", host, mask_str.Value());
 				}
 			} else {
 				dprintf (D_ALWAYS, "IPVERIFY: unable to resolve IP address of %s\n", host);
