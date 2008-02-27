@@ -163,7 +163,7 @@ lsa_mgr::add( const LPWSTR Login, const LPWSTR Passwd ) {
 	}
 
 	// clean up the new buffer after its stored
-	ZeroMemory(new_buffer, sizeof(WCHAR)*wcslen(new_buffer));
+	SecureZeroMemory(new_buffer, sizeof(WCHAR)*wcslen(new_buffer));
 	delete[] new_buffer;
 
 	return result;
@@ -227,7 +227,7 @@ lsa_mgr::isStored( const LPWSTR Login ) {
 	pw = query(Login);
 	if ( pw ) {
 		// we found something, but don't leak memory
-		ZeroMemory(pw, wcslen(pw));
+		SecureZeroMemory(pw, wcslen(pw));
 		delete[] pw;
 		return true;
 	} else {
@@ -357,6 +357,7 @@ lsa_mgr::loadDataFromRegistry() {
 		extractDataString();
 
 		if ( DataOut.pbData != NULL ) {
+			SecureZeroMemory(DataOut.pbData, DataIn.cbData);
 			LocalFree(DataOut.pbData);
 		}
 
@@ -418,6 +419,9 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
 		dprintf(D_ALWAYS, "Encryption error! errorcode=%lu \n",
 			GetLastError());
     }
+
+	// Clean out unencrypted data, to be on the safe side
+	SecureZeroMemory(DataIn.pbData, DataIn.cbData);
 
 	lsaString->Buffer = (USHORT*)DataOut.pbData;
 	lsaString->Length = (USHORT)DataOut.cbData;
@@ -552,7 +556,7 @@ doAdd() {
 
 	foo->add( Login, Passw );
 
-	ZeroMemory(Passw, sizeof(WCHAR)*wcslen(Passw)+1);
+	SecureZeroMemory(Passw, sizeof(WCHAR)*wcslen(Passw)+1);
 	delete[] Passw;
 	Passw = NULL;
 
@@ -602,7 +606,7 @@ void doQuery() {
 	// cleanup 
 
 	if ( Passw ) {
-		ZeroMemory(Passw, sizeof(WCHAR)*wcslen(Passw));
+		SecureZeroMemory(Passw, sizeof(WCHAR)*wcslen(Passw));
 		delete[] Passw;
 		Passw = NULL;
 	}

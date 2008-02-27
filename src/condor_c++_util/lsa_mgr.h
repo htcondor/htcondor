@@ -100,11 +100,16 @@ class lsa_mgr {
 		// cleans up buffers used by this class to store password info
 		void freeBuffers() { 
 			if ( DataBuffer ) {
+				if ( DataBuffer->Length > 0 ) {
+					SecureZeroMemory(DataBuffer->Buffer, DataBuffer->Length);
+				}
 				LsaFreeMemory(DataBuffer);
 				DataBuffer = NULL;
 			}
 			if ( Data_string ) {
-				ZeroMemory(Data_string, sizeof(WCHAR)*wcslen(Data_string));
+				if ( wcslen(Data_string) > 0 ) {
+					SecureZeroMemory(Data_string, sizeof(WCHAR)*wcslen(Data_string));
+				}
 				delete[] Data_string;
 				Data_string = NULL;
 			}
