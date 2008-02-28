@@ -1405,9 +1405,9 @@ DedicatedScheduler::startdContactSockHandler( Stream *sock )
 
 	scheduler.checkContactQueue();
 
-		// Set a timer to call handleDedicatedJobs() in 1 second,
+		// Set a timer to call handleDedicatedJobs() when we return,
 		// since we might be able to spawn something now.
-	handleDedicatedJobTimer( 2 );
+	handleDedicatedJobTimer( 0 );
 
 		// The claim has been successfully requested, and this sock is
 		// about to be closed, so remove the saved reference to it
@@ -3674,7 +3674,7 @@ DedicatedScheduler::requestResources( void )
 			// to ask to negotiate for them...
 		displayResourceRequests();
 		publishRequestAd();
-		scheduler.sendReschedule(true);
+		scheduler.sendReschedule(false);
 	} else {
 			// We just want to publish another add to let the
 			// negotiator know we're satisfied.

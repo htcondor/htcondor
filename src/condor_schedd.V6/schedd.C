@@ -604,9 +604,9 @@ Scheduler::count_jobs()
 
 	if( dedicated_scheduler.hasDedicatedClusters() ) {
 			// We found some dedicated clusters to service.  Wake up
-			// the DedicatedScheduler class in a few seconds to deal
+			// the DedicatedScheduler class when we return to deal
 			// with them.
-		dedicated_scheduler.handleDedicatedJobTimer( 2 );
+		dedicated_scheduler.handleDedicatedJobTimer( 0 );
 	}
 
 		// set JobsRunning/JobsFlocked for owners
