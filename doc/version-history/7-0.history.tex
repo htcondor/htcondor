@@ -115,6 +115,9 @@ Setting this parameter to 0 disables the check.
 
 \begin{itemize}
 
+\item Upgrade from PCRE v5.0 to PCRE v7.6, due to security vulnerabilities 
+found in PCRE v5.0.
+
 \item Fixed file descriptor leak in the \Condor{schedd} when using the SOAP
 interface.
 
@@ -183,6 +186,9 @@ affects cases where the policy (\MacroNI{ALLOW}/\MacroNI{DENY} and
 authorizations with authorizations that refer to the authenticated
 user name.  In some cases, this bug would result in host-based
 settings not being applied to authenticated users.
+
+\item Fixed a bug in \Condor{history} which causes a crash 
+when \Condor{quill} is enabled.
 
 \item Fixed a problem affecting the GSI and SSL authentication
 methods.  When these methods successfully authenticated the user but
