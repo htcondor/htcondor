@@ -483,7 +483,7 @@ ResList::machineSortByRank(const void *left, const void *right) {
 	const struct rankSortRec *lhs = (const struct rankSortRec *)left;
 	const struct rankSortRec *rhs = (const struct rankSortRec *)right;
 
-	return lhs->rank > rhs->rank;
+	return lhs->rank < rhs->rank;
 }
 
 void
