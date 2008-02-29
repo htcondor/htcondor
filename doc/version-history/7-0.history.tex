@@ -51,6 +51,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item \Condor{history} in a quill environment, when given the -constraint option,
+would ignore attributes from the vertical schema.  This has been fixed.
+
 \item In unix, when started as root, the \Condor{master} now changes the
 effectiver user id back to root (instead of condor) when restarting itself
 (e.g. due to the command \Condor{restart}).  This makes no difference unless
