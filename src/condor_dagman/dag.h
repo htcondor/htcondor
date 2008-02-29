@@ -334,13 +334,40 @@ class Dag {
     void RemoveRunningScripts ( ) const;
 
     /** Creates a DAG file based on the DAG in memory, except all
+        completed jobs are premarked as DONE.  Rescue DAG file name
+		is derived automatically from original DAG name.
+        @param datafile The original DAG config file to read from
+    */
+    void Rescue (const char * datafile) /* const */;
+
+    /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.
         @param rescue_file The name of the rescue file to generate
         @param datafile The original DAG config file to read from
-		@param useDagDir run DAGs in directories from DAG file paths 
-			if true
     */
-    void Rescue (const char * rescue_file, const char * datafile) /* const */;
+    void WriteRescue (const char * rescue_file,
+				const char * datafile) /* const */;
+
+	/** Finds the number of the last existing rescue DAG file for the
+		given "primary" DAG.
+		@param primaryDagFile The primary DAG file name
+		@return The number of the last existing rescue DAG (0 if there
+			is none)
+	*/
+	static int FindLastRescueDagNum(const char *primaryDagFile);
+
+	/** Creates a rescue DAG name, given a primary DAG name and rescue
+		DAG number
+		@param primaryDagFile The primary DAG file name
+		@param rescueDagNum The rescue DAG number
+		@return The full name of the rescue DAG
+	*/
+	static MyString RescueDagName(const char *primaryDagFile,
+				int rescueDagNum);
+
+	//TEMP -- document
+	static void DeleteRescueDagsAfter(const char *primaryDagFile,
+				int rescueDagNum);
 
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );

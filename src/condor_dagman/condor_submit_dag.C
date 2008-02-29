@@ -62,6 +62,9 @@ struct SubmitDagOptions
 	MyString strConfigFile;
 	MyString appendFile; // append to .condor.sub file before queue
 	StringList appendLines; // append to .condor.sub file before queue
+	bool oldRescue;
+	int autoRescue;
+	int doRescue;
 	
 	// non-command line options
 	MyString strLibOut;
@@ -91,6 +94,10 @@ struct SubmitDagOptions
 		useDagDir = false;
 		strConfigFile = "";
 		appendFile = param("DAGMAN_INSERT_SUB_FILE");
+			// TEMP -- set default to false after code review and documentation
+		oldRescue = param_boolean( "DAGMAN_OLD_RESCUE", true );
+		autoRescue = -1; // -1 means don't put in submit file
+		doRescue = -1; // -1 means don't put in submit file
 	}
 
 };
@@ -294,7 +301,9 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 		unlink(opts.strSchedLog.Value());
 		unlink(opts.strLibOut.Value());
 		unlink(opts.strLibErr.Value());
-		unlink(opts.strRescueFile.Value());
+		if (opts.oldRescue) {
+			unlink(opts.strRescueFile.Value());
+		}
 	}
 
 	bool bHadError = false;
@@ -322,7 +331,11 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 				 opts.strSchedLog.Value() );
 		bHadError = true;
 	}
-	if (fileExists(opts.strRescueFile))
+
+		// TEMP -- set default to true after code review and documentation
+	bool autoRescueConfig = param_boolean( "DAGMAN_AUTO_RESCUE", false );
+	if (opts.autoRescue != 1 && !autoRescueConfig && opts.doRescue < 1 &&
+				fileExists(opts.strRescueFile))
 	{
 		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
 				 opts.strRescueFile.Value() );
@@ -404,6 +417,14 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	args.AppendArg(opts.iDebugLevel);
 	args.AppendArg("-Lockfile");
 	args.AppendArg(opts.strLockFile.Value());
+	if (opts.autoRescue >= 0) {
+		args.AppendArg("-AutoRescue");
+		args.AppendArg(opts.autoRescue);
+	}
+	if (opts.doRescue >= 0) {
+		args.AppendArg("-DoRescue");
+		args.AppendArg(opts.doRescue);
+	}
 
 	if ( opts.strJobLog == "" ) {
 			// Condor_dagman can't parse command-line args if we have
@@ -419,8 +440,10 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 		args.AppendArg(dagFile);
 	}
 
-	args.AppendArg("-Rescue");
-	args.AppendArg(opts.strRescueFile.Value());
+	if(opts.oldRescue) {
+		args.AppendArg("-Rescue");
+		args.AppendArg(opts.strRescueFile.Value());
+	}
     if(opts.iMaxIdle) 
 	{
 		args.AppendArg("-MaxIdle");
@@ -704,11 +727,37 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 				}
 				opts.appendFile = argv[iArg];
 			}
+			else if (strArg.find("-oldr") != -1) // -oldrescue
+			{
+				if (iArg + 1 >= argc) {
+					fprintf(stderr, "-oldrescue argument needs a value\n");
+					printUsage();
+				}
+				opts.oldRescue = (atoi(argv[++iArg]) != 0);
+			}
+			else if (strArg.find("-autor") != -1) // -autorescue
+			{
+				if (iArg + 1 >= argc) {
+					fprintf(stderr, "-autorescue argument needs a value\n");
+					printUsage();
+				}
+				opts.autoRescue = (atoi(argv[++iArg]) != 0);
+			}
+			else if (strArg.find("-dores") != -1) // -dorescue
+			{
+				if (iArg + 1 >= argc) {
+					fprintf(stderr, "-dorescue argument needs a value\n");
+					printUsage();
+				}
+				opts.doRescue = atoi(argv[++iArg]);
+			}
 			else
 			{
 				fprintf( stderr, "ERROR: unknown option %s\n", strArg.Value() );
 				printUsage();
 			}
+
+			//TEMP -- give a warning if oldRescue and autoRescue are both true?
 		}
 	}
 
@@ -753,5 +802,8 @@ int printUsage()
     printf("    -config <filename>  (Specify a DAGMan configuration file)\n");
 	printf("    -append <command>   (Append specified command to .condor.sub file)\n");
 	printf("    -insert_sub_file <filename>   (Insert specified file into .condor.sub file)\n");
+	printf("    -OldRescue 0|1      (whether to write rescue DAG the old way)\n");
+	printf("    -AutoRescue 0|1     (whether to automatically run newest rescue DAG)\n");
+	printf("    -DoRescue <number>  (run rescue DAG of given number)\n");
 	exit(1);
 }

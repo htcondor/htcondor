@@ -52,6 +52,7 @@ static char* lockFileName = NULL;
 static Dagman dagman;
 
 //---------------------------------------------------------------------------
+//TEMP -- hmm -- this is probably *really* out of date
 static void Usage() {
     debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
             "\t\t[-Debug <level>]\n"
@@ -92,22 +93,25 @@ Dagman::Dagman() :
 	storkRmExe (NULL),
 	submit_delay (0),
 	max_submit_attempts (0),
-	primaryDagFile (NULL),
+	max_submits_per_interval (1000), // so Coverity is happy
+	primaryDagFile (""),
+	startup_cycle_detect (false), // so Coverity is happy
 	allowLogError (false),
 	useDagDir (false),
-	deleteOldLogs (true),
-	_dagmanConfigFile (NULL), // so Coverity is happy
-	abortDuplicates (true), // so Coverity is happy
-	abortOnScarySubmit (true), // so Coverity is happy
 	allow_events (CheckEvents::ALLOW_NONE), // so Coverity is happy
-	max_submits_per_interval (1000), // so Coverity is happy
-	mungeNodeNames (true), // so Coverity is happy
-	pendingReportInterval (10 * 60), // so Coverity is happy
-	prohibitMultiJobs (false), // so Coverity is happy
-	retryNodeFirst (false), // so Coverity is happy
 	retrySubmitFirst (true), // so Coverity is happy
-	startup_cycle_detect (false), // so Coverity is happy
-	submitDepthFirst (false) // so Coverity is happy
+	retryNodeFirst (false), // so Coverity is happy
+	mungeNodeNames (true), // so Coverity is happy
+	deleteOldLogs (true),
+	prohibitMultiJobs (false), // so Coverity is happy
+	abortDuplicates (true), // so Coverity is happy
+	submitDepthFirst (false), // so Coverity is happy
+	abortOnScarySubmit (true), // so Coverity is happy
+	pendingReportInterval (10 * 60), // so Coverity is happy
+	_dagmanConfigFile (NULL), // so Coverity is happy
+	autoRescue(false),
+	doRescue(0),
+	rescueDagName("")
 {
 }
 
@@ -288,6 +292,12 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
 				pendingReportInterval );
 
+		//TEMP -- make sure auto-rescue works right with multiple DAG files -- or mabye disallow it???
+		// TEMP -- set default to true after code review and documentation
+	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", false );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %d\n",
+				autoRescue );
+
 	return true;
 }
 
@@ -323,13 +333,18 @@ int main_shutdown_graceful() {
 int main_shutdown_rescue( int exitVal ) {
 	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
 	if( dagman.dag ) {
-		debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
-					  dagman.rescue_file );
-		dagman.dag->Rescue( dagman.rescue_file, dagman.primaryDagFile );
 			// we write the rescue DAG *before* removing jobs because
 			// otherwise if we crashed, failed, or were killed while
 			// removing them, we would leave the DAG in an
 			// unrecoverable state...
+		if( dagman.rescue_file ) {
+			//TEMP -- warn user that they've overridden the automatic rescuefile generation
+			dagman.dag->WriteRescue( dagman.rescue_file,
+						dagman.primaryDagFile.Value() );
+		} else {
+			dagman.dag->Rescue( dagman.primaryDagFile.Value() );
+		}
+
 		debug_printf( DEBUG_DEBUG_1, "We have %d running jobs to remove\n",
 					dagman.dag->NumJobsSubmitted() );
 		if( dagman.dag->NumJobsSubmitted() > 0 ) {
@@ -460,14 +475,14 @@ int main_init (int argc, char ** const argv) {
                 debug_printf( DEBUG_SILENT, "No DAG specified\n" );
                 Usage();
             }
-			dagman.dagFiles.append( argv[i]);
+			dagman.dagFiles.append( argv[i] );
         } else if( !strcasecmp( "-Rescue", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No Rescue DAG specified\n" );
                 Usage();
             }
-            dagman.rescue_file = argv[i];
+			dagman.rescue_file = argv[i];
         } else if( !strcasecmp( "-MaxIdle", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -518,6 +533,22 @@ int main_init (int argc, char ** const argv) {
         } else if( !strcasecmp( "-UseDagDir", argv[i] ) ) {
 			dagman.useDagDir = true;
 
+        } else if( !strcasecmp( "-AutoRescue", argv[i] ) ) {
+            i++;
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+                debug_printf( DEBUG_SILENT, "No AutoRescue value specified\n" );
+                Usage();
+            }
+            dagman.autoRescue = (atoi( argv[i] ) != 0);
+
+        } else if( !strcasecmp( "-DoRescue", argv[i] ) ) {
+            i++;
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+                debug_printf( DEBUG_SILENT, "No rescue DAG number specified\n" );
+                Usage();
+            }
+            dagman.doRescue = atoi (argv[i]);
+
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );
@@ -527,12 +558,12 @@ int main_init (int argc, char ** const argv) {
 
 	dagman.dagFiles.rewind();
 	dagman.primaryDagFile = dagman.dagFiles.next();
-  
+
     //
     // Check the arguments
     //
 
-    if( dagman.primaryDagFile == NULL ) {
+    if( dagman.primaryDagFile == "" ) {
         debug_printf( DEBUG_SILENT, "No DAG file was specified\n" );
         Usage();
     }
@@ -557,11 +588,16 @@ int main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_SILENT, "-MaxPost must be non-negative\n" );
         Usage();
     }
+    if( dagman.doRescue < 0 ) {
+        debug_printf( DEBUG_SILENT, "-DoRescue must be non-negative\n" );
+        Usage();
+    }
+
     debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
-                   lockFileName);
+                   lockFileName );
 	if ( dagman.dagFiles.number() == 1 ) {
     	debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n",
-				  	dagman.primaryDagFile );
+				  	dagman.primaryDagFile.Value() );
 	} else {
 		MyString msg = "DAG Input files are ";
 		dagman.dagFiles.rewind();
@@ -574,13 +610,10 @@ int main_init (int argc, char ** const argv) {
     	debug_printf( DEBUG_VERBOSE, "%s", msg.Value() );
 	}
 
-	if( dagman.rescue_file == NULL ) {
-		MyString s = dagman.primaryDagFile;
-		s += ".rescue";
-		dagman.rescue_file = strnewp( s.Value() );
+	if ( dagman.rescue_file ) {
+		debug_printf( DEBUG_VERBOSE, "Rescue DAG will be written to %s\n",
+				  	dagman.rescue_file );
 	}
-	debug_printf( DEBUG_VERBOSE, "Rescue DAG will be written to %s\n",
-				  dagman.rescue_file );
 
 		// if requested, wait for someone to attach with a debugger...
 	while( wait_for_debug );
@@ -599,6 +632,39 @@ int main_init (int argc, char ** const argv) {
 			free( temp );
 		}
     }
+
+		//
+		// Decide whether to run a rescue DAG.
+		//
+	int rescueDagNum = 0;
+	MyString rescueDagMsg;
+
+	if ( dagman.doRescue != 0 ) {
+		rescueDagNum = dagman.doRescue;
+		rescueDagMsg.sprintf( "Rescue DAG number %d specified", rescueDagNum );
+		Dag::DeleteRescueDagsAfter( dagman.primaryDagFile.Value(),
+					rescueDagNum );
+
+	} else if ( dagman.autoRescue ) {
+		rescueDagNum = Dag::FindLastRescueDagNum(
+					dagman.primaryDagFile.Value() );
+		rescueDagMsg.sprintf( "Found rescue DAG number %d", rescueDagNum );
+		//TEMP -- give a warning if auto-running rescue dag and multiple dag files are specified?
+	}
+
+	if ( rescueDagNum > 0 ) {
+		dagman.rescueDagName = Dag::RescueDagName(
+					dagman.primaryDagFile.Value(), rescueDagNum );
+		debug_printf ( DEBUG_QUIET, "%s; running %s instead of normal "
+					"DAG file(s)\n", rescueDagMsg.Value(),
+					dagman.rescueDagName.Value() );
+			// Note: if we ran multiple DAGs and they failed, the
+			// whole thing is condensed into a single rescue DAG.
+			// wenger 2007-02-27
+		dagman.dagFiles.clearAll();
+		dagman.dagFiles.append( dagman.rescueDagName.Value() );
+		dagman.dagFiles.rewind();
+	}
 
     //
     // Create the DAG

@@ -48,6 +48,9 @@
 
 const CondorID Dag::_defaultCondorId;
 
+	// The maximum allowed rescue DAG number.
+static const int MAX_RESCUE_DAG_NUM = 100;
+
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
     int fd = safe_open_wrapper(filename, O_RDWR | O_CREAT, 0600);
@@ -1648,7 +1651,27 @@ void Dag::RemoveRunningScripts ( ) const {
 }
 
 //-----------------------------------------------------------------------------
-void Dag::Rescue (const char * rescue_file, const char * datafile) /* const */ {
+void Dag::Rescue (const char * datafile) /* const */
+{
+	int nextRescue = FindLastRescueDagNum( datafile ) + 1;
+	if ( nextRescue > MAX_RESCUE_DAG_NUM ) nextRescue = MAX_RESCUE_DAG_NUM;
+	MyString rescueDagFile = RescueDagName( datafile, nextRescue );
+
+		// Note: there could possibly be a race condition here if two
+		// DAGMans are running on the same DAG at the same time.  That
+		// should be avoided by the lock file, though, so I'm not doing
+		// anything about it right now.  wenger 2007-02-27
+
+	WriteRescue( rescueDagFile.Value(), datafile );
+}
+
+//-----------------------------------------------------------------------------
+void Dag::WriteRescue (const char * rescue_file, const char * datafile)
+			/* const */
+{
+	debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
+				rescue_file );
+
     FILE *fp = safe_fopen_wrapper(rescue_file, "w");
     if (fp == NULL) {
         debug_printf( DEBUG_QUIET, "Could not open %s for writing.\n",
@@ -1834,6 +1857,67 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) /* const */ {
     fclose(fp);
 }
 
+//-------------------------------------------------------------------------
+int
+Dag::FindLastRescueDagNum(const char *primaryDagFile)
+{
+	int lastRescue = 0;
+	bool done = false;
+	
+	while ( !done ) {
+		MyString testName = RescueDagName( primaryDagFile, lastRescue + 1 );
+		if ( access( testName.Value(), F_OK ) != 0 ) {
+			done = true;
+		} else {
+			lastRescue++;
+		}
+
+		if ( lastRescue >= MAX_RESCUE_DAG_NUM ) {
+
+			debug_printf( DEBUG_QUIET,
+						"Warning: Dag::FindLastRescueDagNum() hit maximum "
+						"rescue DAG number: %d\n", MAX_RESCUE_DAG_NUM );
+			done = true;
+		}
+	}
+
+	return lastRescue;
+}
+
+//-------------------------------------------------------------------------
+MyString
+Dag::RescueDagName(const char *primaryDagFile, int rescueDagNum)
+{
+	ASSERT( rescueDagNum >= 1 );
+
+	MyString fileName(primaryDagFile);
+	fileName += ".rescue";
+	if ( rescueDagNum > 1 ) {
+		fileName += rescueDagNum;
+	}
+
+	return fileName;
+}
+
+//-------------------------------------------------------------------------
+void
+Dag::DeleteRescueDagsAfter(const char *primaryDagFile, int rescueDagNum)
+{
+	ASSERT( rescueDagNum >= 1 );
+
+	debug_printf( DEBUG_QUIET, "Deleting rescue DAGs newer than number %d\n",
+				rescueDagNum );
+
+	int firstToDelete = rescueDagNum + 1;
+	int lastToDelete = FindLastRescueDagNum( primaryDagFile );
+
+	for ( int rescueNum = firstToDelete; rescueNum <= lastToDelete;
+				rescueNum++ ) {
+		MyString rescueDagName = RescueDagName( primaryDagFile, rescueNum );
+		debug_printf( DEBUG_QUIET, "Deleting %s\n", rescueDagName.Value() );
+		unlink( rescueDagName.Value() );
+	}
+}
 
 //===========================================================================
 // Private Methods
