@@ -1,3 +1,8 @@
+02/29/08 V7_1-ian_new_crypto-{root,branch}
+  Branch for adding support for AES as an encryption method, and SHA-*
+  as integrity methods.  This branch was made from
+  BUILD-V7_1-trunk-2008-2-27. 
+
 02/19/08 V7_1-amazon_ec2-2-{root,branch}
   New branch for Amazon EC2 support in the grid universe. The previous 
   incarnation of this branch was based off of 6.9.
