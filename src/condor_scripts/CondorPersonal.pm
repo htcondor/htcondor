@@ -431,7 +431,11 @@ sub InstallPersonalCondor
 			#
 			debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n");
 
-			if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ )
+			if( $condorq eq "") {
+				print "Bummer which condor_q failed\n";
+				$binloc = "../release_dir/bin"; # we'll get our binaries here.
+			}
+			elsif( $condorq =~ /^(\/.*\/)(\w+)\s*$/ )
 			{
 				debug( "Root path $1 and base $2\n");
 				$binloc = $1;	# we'll get our binaries here.
