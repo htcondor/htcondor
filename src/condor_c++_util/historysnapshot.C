@@ -225,7 +225,7 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
                  }
 
 	  } 
-	  if (constraint && !longformat) {
+	  if (!longformat) {
 	  	if (custForm == true) {
 			ASSERT(pmask != NULL);
 			pmask->display(stdout, ad);
