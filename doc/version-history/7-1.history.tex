@@ -76,6 +76,10 @@ trust when they form a connection to the server.  This deprecates
 \MacroNI{GSI\_DAEMON\_NAME}, which provided rudamentary support for
 client-side authorization in a GSI-specific way.
 
+% PR 598/788
+\item \Condor{dagman} deals with rescue DAGs in a more sophisticated
+way; this is especially helpful for nested DAGs.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -100,6 +104,14 @@ has started.  Therefore, setting it to zero has the effect of allowing
 exactly one job per claim to run.  The default is still the special
 value -1, which places no limit on how long the slot may continue
 accepting new jobs from the \Condor{schedd} that claimed it.
+
+% PR 598/788
+\item Added the \Macro{DAGMAN\_OLD\_RESCUE} variable, which controls whether
+\Condor{dagman} writes rescue DAGs in the old way.
+
+% PR 598/788
+\item Added the \Macro{DAGMAN\_AUTO\_RESCUE} variable, which controls
+whether \Condor{dagman} automatically runs an existing rescue DAG.
 
 \end{itemize}
 
