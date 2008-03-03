@@ -122,7 +122,7 @@ test_append_prereqs = java-1.5.0_03
 
 [
 platforms = ppc_macos_10.4
-test_append_prereqs = java-1.4.2_09
+test_append_prereqs = java-1.4.2_07
 ]
 
 [
