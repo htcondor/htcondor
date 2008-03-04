@@ -4353,50 +4353,61 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
 
 \item[\Macro{SYSTEM\_PERIODIC\_HOLD}]
   \label{param:SystemPeriodicHold} This expression behaves identically
-  to the job expression \AdAttr{periodic\_hold} but it is evaluated by
-  the schedd for all jobs in the queue.  It defaults to false.  When
-  true, it causes the job to stop running and go on hold.  Here is an
+  to the job expression \AdAttr{periodic\_hold}, but it is evaluated by
+  the \Condor{schedd} daemon individually for each job in the queue.
+  It defaults to \Expr{False}.
+  When \Expr{True}, it causes the job to stop running and go on hold.
+  Here is an
   example that puts jobs on hold if they have been restarted too many
-  times, have an unreasonably large virtual memory ImageSize, or have
-  unreasonably large disk usage.  Of course, in your environment, some
-  of these cut-offs may not be appropriate.
+  times, have an unreasonably large virtual memory \Attr{ImageSize}, or have
+  unreasonably large disk usage for an invented environment.
 
+\footnotesize
 \begin{verbatim}
 SYSTEM_PERIODIC_HOLD = \
   (JobStatus == 1 || JobStatus == 2) && \
   (JobRunCount > 10 || ImageSize > 3000000 || DiskUsage > 10000000)
 \end{verbatim}
+\normalsize
 
 \item[\Macro{SYSTEM\_PERIODIC\_RELEASE}]
   \label{param:SystemPeriodicRelease} This expression behaves identically
-  to the job expression \AdAttr{periodic\_release} but it is evaluated by
-  the schedd for all jobs in the queue.  It defaults to false.  When true,
-  it causes a held job to return to the idle state.  Here is an example
+  to the job expression \AdAttr{periodic\_release}, but it is evaluated by
+  the \Condor{schedd} daemon individually for each job in the queue.
+  It defaults to \Expr{False}.
+  When \Expr{True}, it causes a held job to return to the idle state.
+  Here is an example
   that releases jobs from hold if they have tried to run less than 20
   times, have most recently been on hold for over 20 minutes, and have
   gone on hold due to ``Connection timed out'' when trying to execute
-  the job (because the filesystem containing the job's executable is
-  temporarily unavailable).
+  the job, because the file system containing the job's executable is
+  temporarily unavailable.
 
+\footnotesize
 \begin{verbatim}
 SYSTEM_PERIODIC_RELEASE = \
   (JobRunCount < 20 && CurrentTime - EnteredCurrentStatus > 1200 ) && ( \
     (HoldReasonCode == 6 && HoldReasonSubCode == 110) \
   )
 \end{verbatim} 
+\normalsize
 
 
 \item[\Macro{SYSTEM\_PERIODIC\_REMOVE}]
   \label{param:SystemPeriodicRemove} This expression behaves identically
-  to the job expression \AdAttr{periodic\_remove} but it is evaluated by
-  the schedd for all jobs in the queue.  It defaults to false.  When true,
-  it causes the job to be removed from the queue.  Here is an example
+  to the job expression \AdAttr{periodic\_remove}, but it is evaluated by
+  the \Condor{schedd} daemon individually for each job in the queue.
+  It defaults to \Expr{False}.
+  When \Expr{True}, it causes the job to be removed from the queue.
+  Here is an example
   that removes jobs which have been on hold for 30 days:
 
+\footnotesize
 \begin{verbatim}
 SYSTEM_PERIODIC_REMOVE = \
   (JobStatus == 5 && CurrentTime - EnteredCurrentStatus > 3600*24*30)
 \end{verbatim}
+\normalsize
 
 \item[\Macro{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE}]
   \label{param:ScheddAssumeNegotiatorGone} This macro determines the period,
