@@ -36,6 +36,8 @@ print "Running on $currenthost\n";
 system("date");
 
 $mypid = CondorPersonal::SaveMeSetup($corename);
+$mysaveme = $corename . ".saveme";
+
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
