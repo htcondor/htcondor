@@ -19,14 +19,44 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorPersonal;
+
+CondorPersonal::DebugOff();
+Condor::DebugOff();
 
 $testname = 'Condor PERIODIC_RELEASE policy test - local U';
+$corename = "job_core_perrelease_local";
 
-my $nostatus = CondorTest::verbose_system("./job_core_perrelease-false_local.pl");
-my $willstatus = CondorTest::verbose_system("./job_core_perrelease-true_local.pl");
+# where am I running
+$currenthost = `hostname`;
+CondorTest::fullchomp($currenthost);
+CondorPersonal::DebugOff();
+
+system("date");
+
+$mypid = CondorPersonal::SaveMeSetup($corename);
+$mysaveme = $corename . ".saveme";
+
+if($mypid == 0) {
+    die "Saveme setup for test failed\n";
+}
+
+# get a remote scheduler running (side b)
+my $configrem = CondorPersonal::StartCondor("x_param.locperrelease" ,"perrelease_loc");
+my @personal = split /\+/, $configrem;
+my $personalconfig = shift @personal;
+my $personalport = shift @personal;
+
+print "---personal config is $personalconfig and personal port is $personalport---\n";
+
+#Run in this newly created pool
+$ENV{CONDOR_CONFIG} = $personalconfig;
+
+my $nostatus = CondorTest::verbose_system("./job_core_perrelease-false_local.pl $mypid");
+my $willstatus = CondorTest::verbose_system("./job_core_perrelease-true_local.pl $mypid");
 
 my %listoftests;
-$listoftests{"corename"} = "job_core_perrelease";
+$listoftests{"corename"} = "job_core_perrelease_local";
 $listoftests{"tests"} = [ "job_core_perrelease-false_local", "job_core_perrelease-true_local"];
 $listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
 CondorTest::MergeOutputFiles(\%listoftests);
@@ -41,6 +71,17 @@ if($willstatus != 0)
 	print "PERIODIC_RELEASE: failed trigger test\n";
 }
 
+system("cp job_core_perrelease-false_local* job_core_perrelease-true_local* job_core_perrelease_local.* $mysaveme");
+
+my @adarray;
+my $status = 1;
+my $cmd = "condor_off -fast -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
 if(($willstatus != 0) || ($nostatus != 0))
 {
 	die "Failed one PERIODIC_RELEASE test\n";
