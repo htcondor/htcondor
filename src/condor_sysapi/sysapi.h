@@ -130,6 +130,7 @@ const char * sysapi_vsyscall_gate_addr( void );
    partition or not.
    Returns true on success.
 */
+int sysapi_partition_id_raw(char const *path,char **result);
 int sysapi_partition_id(char const *path,char **result);
 
 END_C_DECLS

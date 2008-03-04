@@ -25,8 +25,10 @@
 
 #if defined(WIN32)
 
-int sysapi_partition_id(char const *path,char **result)
+int sysapi_partition_id_raw(char const *path,char **result)
 {
+	sysapi_internal_reconfig();
+
 	const int VOLUME_PATH_BUFFER_SIZE = 1024;
 	const int RESULT_BUFFER_SIZE = 1024;
 
@@ -73,8 +75,10 @@ int sysapi_partition_id(char const *path,char **result)
 #include <sys/stat.h>
 #include <unistd.h>
 
-int sysapi_partition_id(char const *path,char **result)
+int sysapi_partition_id_raw(char const *path,char **result)
 {
+	sysapi_internal_reconfig();
+
 		// Use st_dev from stat() as the unique identifier for the partition
 		// containing the specified path.
 
@@ -96,3 +100,8 @@ int sysapi_partition_id(char const *path,char **result)
 }
 
 #endif
+
+int sysapi_partition_id(char const *path,char **result) {
+	sysapi_internal_reconfig();
+	return sysapi_partition_id_raw(path,result);
+}
