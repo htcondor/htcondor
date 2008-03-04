@@ -843,6 +843,26 @@ sub runCondorTool
 	return(0);
 }
 
+# Sometimes `which ...` is just plain broken due to stupid fringe vendor
+# not quite bourne shells. So, we have our own implementation that simply
+# looks in $ENV{"PATH"} for the program and return the "usual" response found
+# across unicies. As for windows, well, for now it just sucks.
+sub Which
+{
+	my $exe = shift(@_);
+	my @paths = split /:/, $ENV{'PATH'};
+	my $path;
+
+	foreach $path (@paths) {
+		chomp $path;
+		if (-x "$path/$exe") {
+			return "$path/$exe";
+		}
+	}
+
+	return "$exe: command not found";
+}
+
 # Lets be able to drop some extra information if runCondorTool
 # can not do what it is supposed to do....... short and full
 # output from condor_q 11/13
