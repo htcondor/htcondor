@@ -1029,8 +1029,7 @@ V7_0_EXT        -a V7_0_2_EXT
 # Shared externals needed for the 7.1.x.  Until this actually
 changes, just
 # point to the same externals as the V7_0 series
-V7_1_COMMON_EXT -a V7_0_COMMON_EXT \
-                   externals/bundles/pcre/5.0
+V7_1_COMMON_EXT -a V7_0_COMMON_EXT
 
 # Externals needed for the 7.1.0 release:
 V7_1_0_EXT      -a V7_1_COMMON_EXT
