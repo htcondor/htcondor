@@ -3050,14 +3050,13 @@ int DaemonCore::HandleReq(Stream *insock)
 	Stream				*stream = NULL;
 
 	int					is_tcp;
-	int                 req;
+	int                 req = 0;
 	int					index, j;
 	int					reqFound = FALSE;
 	int					result = FALSE;
 	int					old_timeout;
     int                 perm         = USER_AUTH_FAILURE;
-    char                user[256];
-	user[0] = '\0';
+	MyString            user;
     ClassAd *the_policy     = NULL;
     KeyInfo *the_key        = NULL;
     char    *the_sid        = NULL;
@@ -3605,6 +3604,10 @@ int DaemonCore::HandleReq(Stream *insock)
 						free (return_addr);
 					}
 
+					// consume the rejected message
+					sock->decode();
+					sock->end_of_message();
+
 					// close the connection.
 					result = FALSE;
 					goto finalize;
@@ -3646,7 +3649,7 @@ int DaemonCore::HandleReq(Stream *insock)
 
 					if (the_user) {
 						// copy this to the HandleReq() scope
-						strcpy (user, the_user);
+						user = the_user;
 						free( the_user );
 						the_user = NULL;
 					}
@@ -4100,8 +4103,8 @@ int DaemonCore::HandleReq(Stream *insock)
 						req,
 						comTable[index].command_descrip,
 						(is_tcp) ? "TCP" : "UDP",
-						(user[0] != '\0') ? " from " : "",
-						(user[0] != '\0') ? user : "",
+						!user.IsEmpty() ? " from " : "",
+						user.Value(),
 						sin_to_string(((Sock*)stream)->endpoint()),
 						PermString(comTable[index].perm));
 
@@ -4121,16 +4124,16 @@ int DaemonCore::HandleReq(Stream *insock)
         if (is_tcp) {
             const char *u = ((ReliSock*)stream)->getFullyQualifiedUser();
 			if (u) {
-				strcpy(user, u);
+				user = u;
 			}
         } else {
 			// user is filled in above, but we should make it part of
 			// the SafeSock too.
-			((SafeSock*)stream)->setFullyQualifiedUser(user);
+			((SafeSock*)stream)->setFullyQualifiedUser(user.Value());
             ((SafeSock*)stream)->setAuthenticated(true);
 		}
 
-		if ( (perm = Verify(comTable[index].perm, ((Sock*)stream)->endpoint(), user)) != USER_AUTH_SUCCESS )
+		if ( (perm = Verify(comTable[index].perm, ((Sock*)stream)->endpoint(), user.Value())) != USER_AUTH_SUCCESS )
 		{
 			// Permission check FAILED
 			reqFound = FALSE;	// so we do not call the handler function below
@@ -4138,7 +4141,7 @@ int DaemonCore::HandleReq(Stream *insock)
 			result = 0;
 			dprintf( D_ALWAYS,
                      "DaemonCore: PERMISSION DENIED to %s from host %s for command %d (%s), access level %s\n",
-                     (user[0] == '\0')? "unknown user" : user, sin_to_string(((Sock*)stream)->endpoint()), req,
+                     user.IsEmpty() ? "unknown user" : user.Value(), sin_to_string(((Sock*)stream)->endpoint()), req,
                      comTable[index].command_descrip,
 					 PermString(comTable[index].perm));
 			// if UDP, consume the rest of this message to try to stay "in-sync"
@@ -4149,8 +4152,8 @@ int DaemonCore::HandleReq(Stream *insock)
 			dprintf(comTable[index].dprintf_flag,
 					"DaemonCore: Command received via %s%s%s from host %s, access level %s\n",
 					(is_tcp) ? "TCP" : "UDP",
-					(user[0] != '\0') ? " from " : "",
-					(user[0] != '\0') ? user : "",
+					!user.IsEmpty() ? " from " : "",
+					user.Value(),
 					sin_to_string(((Sock*)stream)->endpoint()),
 					PermString(comTable[index].perm));
 			dprintf(comTable[index].dprintf_flag,
@@ -4163,8 +4166,8 @@ int DaemonCore::HandleReq(Stream *insock)
 		dprintf(D_ALWAYS,
 				"DaemonCore: Command received via %s%s%s from host %s\n",
 				(is_tcp) ? "TCP" : "UDP",
-				(user[0] != '\0') ? " from " : "",
-				(user[0] != '\0') ? user : "",
+				!user.IsEmpty() ? " from " : "",
+				user.Value(),
 				sin_to_string(((Sock*)stream)->endpoint()) );
 		dprintf(D_ALWAYS,
 			"DaemonCore: received unregistered command request %d !\n",req);
@@ -4259,7 +4262,7 @@ finalize:
 
 
 int DaemonCore::HandleSigCommand(int command, Stream* stream) {
-	int sig;
+	int sig = 0;
 
 	assert( command == DC_RAISESIGNAL );
 
@@ -5235,7 +5238,6 @@ private:
 	char **m_unix_env;
 	size_t *m_core_hard_limit;
 	Env m_envobject;
-	PidEnvID m_penvid;
 };
 
 enum {
@@ -5481,7 +5483,11 @@ void CreateProcessForkit::exec() {
 		// env vars in the forker process as well.
 	char envid[PIDENVID_ENVID_SIZE];
 
-	pidenvid_init(&m_penvid);
+		// PidEnvID does no dynamic allocation, so it is being declared here
+		// rather than in the CreateProcessForkit object, because we do not
+		// have to worry about freeing anything up later etc.
+	PidEnvID penvid;
+	pidenvid_init(&penvid);
 
 		// if we weren't inheriting the parent's environment, then grab out
 		// the parent's pidfamily history... and jam it into the child's 
@@ -5491,7 +5497,7 @@ void CreateProcessForkit::exec() {
 			// The parent process could not have been exec'ed if there were 
 			// too many ancestor markers in its environment, so this check
 			// is more of an assertion.
-		if (pidenvid_filter_and_insert(&m_penvid, environ) ==
+		if (pidenvid_filter_and_insert(&penvid, environ) ==
 			PIDENVID_OVERSIZED)
 			{
 				dprintf ( D_ALWAYS, "Create_Process: Failed to filter ancestor "
@@ -5506,8 +5512,8 @@ void CreateProcessForkit::exec() {
 
 			// Propogate the ancestor history to the child's environment
 		for (i = 0; i < PIDENVID_MAX; i++) {
-			if (m_penvid.ancestors[i].active == TRUE) { 
-				m_envobject.SetEnv( m_penvid.ancestors[i].envid );
+			if (penvid.ancestors[i].active == TRUE) { 
+				m_envobject.SetEnv( penvid.ancestors[i].envid );
 			} else {
 					// After the first FALSE entry, there will never be
 					// true entries.
@@ -5530,7 +5536,7 @@ void CreateProcessForkit::exec() {
 
 		// if the new entry fits into the penvid, then add it to the 
 		// environment, else EXCEPT cause it is programmer's error 
-	if (pidenvid_append(&m_penvid, envid) == PIDENVID_OK) {
+	if (pidenvid_append(&penvid, envid) == PIDENVID_OK) {
 		m_envobject.SetEnv( envid );
 	} else {
 		dprintf ( D_ALWAYS, "Create_Process: Failed to insert envid "
@@ -5603,14 +5609,13 @@ void CreateProcessForkit::exec() {
 			// causing major badness)
 			//
 #if defined(LINUX)
-			PidEnvID* penvid_ptr = &m_penvid;
+			PidEnvID* penvid_ptr = &penvid;
 #else
 			PidEnvID* penvid_ptr = NULL;
 #endif
 
 			// yet another linux-only tracking method: supplementary GID
 			//
-			gid_t tracking_gid;
 			gid_t* tracking_gid_ptr = NULL;
 #if defined(LINUX)
 			tracking_gid_ptr = m_family_info->group_ptr;
@@ -7785,7 +7790,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 
 int DaemonCore::HandleProcessExitCommand(int command, Stream* stream)
 {
-	unsigned int pid;
+	unsigned int pid = 0;
 	int result = TRUE;
 
 	assert( command == DC_PROCESSEXIT );
@@ -7998,8 +8003,8 @@ const char* DaemonCore::GetExceptionString(int sig)
 
 int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 {
-	pid_t child_pid;
-	unsigned int timeout_secs;
+	pid_t child_pid = 0;
+	unsigned int timeout_secs = 0;
 	PidEntry *pidentry;
 	int ret_value;
 

@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_post.pl,v 1.12 2007-11-15 14:18:01 bt Exp $
+# $Id: remote_post.pl,v 1.13 2008-03-05 21:12:50 gquinn Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -178,14 +178,11 @@ while( <TASKFILE> ) {
     # if it exists, tarup the 'saveme' subdirectory for this test, which
     # may contain test debug info etc. Sometimes we run endurance tests
 	# and we really only need to tar up the results once.
-    if( (-d "$testname.saveme") && ($testcopy == 1) ) {
-        system( "tar zcf $testname.saveme.tar.gz $testname.saveme/" );
-        if( $? >> 8 ) {
-            print "Tar failed to save test dir $testname.saveme\n";
-        } else {
-            print "Created $testname.saveme.tar.gz.\n";
+	# Except 1/15/08 we are taring after the individual tests to
+	# keep disk use lower.
+    if( (-f "$testname.saveme.tar.gz") && ($testcopy == 1) ) {
+            print "Saving $testname.saveme.tar.gz.\n";
             copy_file( "$testname.saveme.tar.gz", $resultdir, true );
-        }
     }
 }
 

@@ -76,7 +76,14 @@ mkdir "$savemeDirectory";
 $mypiddir = $savemeDirectory . "/" . $pId;
 system("mkdir $mypiddir");
 #make a symbolic link for personal condor module to use
-system("ln -s $mypiddir $pId");
+system("rm -f $pId"); system("ln -s $mypiddir $pId");
+
+#$mypid = CondorPersonal::SaveMeSetup($corename);
+#$mysaveme = $corename . ".saveme";
+
+#if($mypid == 0) {
+	#die "Saveme setup for test failed\n";
+#}
 
 #mkdir "$configurationsDirectory";
 mkdir "$jobsDirectory";

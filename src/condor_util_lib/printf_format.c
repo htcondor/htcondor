@@ -72,7 +72,6 @@ consumeInt( const char** str )
 {
 	int rval = 0;
 	int digit_val;
-	int first = 0;
 
 	if( ! str || !*str ) {
 		return -1;

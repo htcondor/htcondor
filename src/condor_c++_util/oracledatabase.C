@@ -771,7 +771,7 @@ metadata, but haven't been made to work due to a link error
 }
 
 // get the number of fields returned in result
-const int
+int
 ORACLEDatabase::getHistoryHorNumFields()
 {
 
@@ -1464,7 +1464,7 @@ ORACLEDatabase::getJobQueueClusterHorFieldName(int col)
 }
 
 //! get number of fields returned in the horizontal cluster ads
-const int 
+int 
 ORACLEDatabase::getJobQueueClusterHorNumFields() 
 {
   return cluster_field_num;
@@ -1479,7 +1479,7 @@ ORACLEDatabase::getJobQueueProcHorFieldName(int col)
 }
 
 //! get number of fields in the proc ad horizontal
-const int 
+int 
 ORACLEDatabase::getJobQueueProcHorNumFields() 
 {
   return proc_field_num;

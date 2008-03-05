@@ -141,7 +141,7 @@ END_C_DECLS
 /* to get the sysinfo() function call */
 #include <sys/sysinfo.h>
 
-#if defined( I386 )
+#if defined( I386 ) || defined( X86_64 )
 /* For the i386 execution domains for standard
 	universe executables. Under redhat 9 and later there is a
 	sys/personality.h we could include here as well so we can use
@@ -165,7 +165,7 @@ END_C_DECLS
 #include <sys/personality.h>
 #endif
 
-#endif /* IS_I386_LINUX */
+#endif
 
 /****************************************
 ** Condor-specific system definitions

@@ -1,7 +1,7 @@
-$Id: README.building,v 1.9 2006-09-25 21:14:03 zmiller Exp $
+$Id: README.building,v 1.10 2008-03-05 21:12:50 gquinn Exp $
 
 This file is intended to describe the steps needed to build Condor version
-6.8.x from the source code tree.
+7.0.0 and later from the source code tree.
 
 
 ==================================
@@ -17,7 +17,7 @@ On Linux, such as RedHat Linux, we typically use the "default" compiler
 version found in /usr/bin/gcc|g++.  For instance, on RedHat Enterprise
 Server 3 (the recommended Linux build platform), we use gcc 3.2.3. 
 For a complete list of platforms and supported compiler versions, see:
-http://www.cs.wisc.edu/condor/manual/v6.8/1_5Availability.html
+http://www.cs.wisc.edu/condor/manual/latest/1_5Availability.html
 We cannot make any claims about the ability to compile Condor with any
 other compilers or other versions of gcc.
 

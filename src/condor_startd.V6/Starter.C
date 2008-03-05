@@ -49,6 +49,7 @@ Starter::Starter()
 
 
 Starter::Starter( const Starter& s )
+	: Service( s )
 {
 	if( s.s_claim || s.s_pid || s.s_birthdate ||
 	    s.s_port1 >= 0 || s.s_port2 >= 0 )

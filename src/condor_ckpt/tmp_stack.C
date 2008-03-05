@@ -93,20 +93,15 @@ void ExecuteOnTmpStk( void (*func)() )
 			// TmpStack and give some padding -- previously values
 			// were getting overwritten above the stack -- Jim B. 2/7/96
 
-			/* XXX must explore the ramifications of that long cast on other
-				platforms, it breaks under IRIX because pointers are 64 bit.
-				-pete 01/19/00 */
-#if defined(IRIX)
-			JMP_BUF_SP(env) = (TmpStack + TmpStackSize - 2);
-#else
+			/* XXX must explore the ramifications of that long cast on 
+				various platforms.  -pete 01/19/00 
+				Yup. still have to explore the ramifications. 
+				-psilord 02/18/08 */
 			JMP_BUF_SP(env) = (long)(TmpStack + TmpStackSize - 2);
-#endif
+
 		} else {
-#if defined(IRIX)
-			JMP_BUF_SP(env) = TmpStack;
-#else
+
 			JMP_BUF_SP(env) = (long)TmpStack;
-#endif
 		}
 		dprintf(D_CKPT, "About to execute on tmpstack.\n");
 		LONGJMP( env, 1 );

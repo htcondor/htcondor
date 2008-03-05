@@ -398,7 +398,7 @@ sub InstallPersonalCondor
 	my $submit;
 	my $startd;
 	my $negotiator;
-	my $condorq = `which condor_q`;
+	my $condorq = CondorTest::Which("condor_q");
 	my $sbinloc;
 	my $configline = "";
 	my @configfiles;
@@ -431,10 +431,13 @@ sub InstallPersonalCondor
 			#
 			debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n");
 
-			if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ )
-			{
+			if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ ) {
 				debug( "Root path $1 and base $2\n");
 				$binloc = $1;	# we'll get our binaries here.
+			} elsif(-f "../release_dir/bin/condor_status") {
+				print "Bummer which condor_q failed\n";
+				print "Using ../release_dir/bin(s)\n";
+				$binloc = "../release_dir/bin"; # we'll get our binaries here.
 			}
 			else
 			{
@@ -792,7 +795,6 @@ sub TunePersonalCondor
 		print NEW "LOCK = \$(LOG)\n";
 		close(LOCSRC);
 	}
-
 
 	# Dan: Jan 30, '08 added D_NETWORK in order to debug condor_rm timeout
 	print NEW "ALL_DEBUG = D_FULLDEBUG D_NETWORK\n";
@@ -1302,7 +1304,7 @@ sub IsRunningYet
 
 sub IsThisWindows
 {
-    $path = `which cygpath`;
+    $path = CondorTest::Which("cygpath");
     print "Path return from which cygpath: $path\n";
     if($path =~ /^.*\/bin\/cygpath.*$/ ) {
         print "This IS windows\n";
@@ -1353,4 +1355,61 @@ sub FindCollectorPort
 	debug( "No collector address found in collector address file! returning 0.\n");
 	return("0");
 }
+
+#################################################################
+#
+# SaveMeSetup
+#
+# Make the saveme directory for a test, Create the pid based
+# location for the current test within this saveme directory
+# and then create a symbolic link to this pid directory. By doing this
+# when the personal condor setup go to make a pid directory to
+# run in, it ends up running within the saveme directory.
+# This saveme directory allows more data to be returned during the
+# nightly testing.
+#
+# If all is good the current pid is returned but if there 
+# is an error 0 is returned.
+#
+#################################################################
+
+sub SaveMeSetup
+{
+	$testname = shift;
+	$mypid = $$;
+	$res = 1;
+	$mysaveme = $testname . ".saveme";
+	$res = CondorTest::verbose_system("mkdir -p $mysaveme");
+	if($res != 0) {
+		print "SaveMeSetup: Could not create \"saveme\" directory for test\n";
+		return(0);
+	}
+	$mypiddir = $mysaveme . "/" . $mypid;
+	# there should be no matching directory here
+	# unless we are getting pid recycling. Start fresh.
+	$res = CondorTest::verbose_system("rm -rf $mypiddir");
+	if($res != 0) {
+		print "SaveMeSetup: Could not remove prior pid directory in savemedir \n";
+		return(0);
+	}
+	$res = CondorTest::verbose_system("mkdir $mypiddir");
+	if($res != 0) {
+		print "SaveMeSetup: Could not create pid directory in \"saveme\" directory\n";
+		return(0);
+	}
+	# make a symbolic link for personal condor module to use
+	# if we get pid recycling, blow the symbolic link 
+	$res = CondorTest::verbose_system("rm -f $mypid");
+	if($res != 0) {
+		print "SaveMeSetup: Could not remove prior pid directory\n";
+		return(0);
+	}
+	$res = CondorTest::verbose_system("ln -s $mypiddir $mypid");
+	if($res != 0) {
+		print "SaveMeSetup: Could not link to pid dir in  \"saveme\" directory\n";
+		return(0);
+	}
+	return($mypid);
+}
+
 1;

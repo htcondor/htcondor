@@ -352,7 +352,7 @@ INST_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_VERS_FLAGS) PlatformGppFlags
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
 TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)
-TESTSUITE_FLAGS_G77 =  $(STD_C_FLAGS)
+TESTSUITE_FLAGS_G77 =  $(filter-out -Wendif-labels -Wextra -Wvolatile-register-var -fstack-protector,$(STD_C_FLAGS))
 TESTSUITE_FLAGS_CC = -g $(VENDOR_C_FLAGS) VendorCTestFlags PlatformFlags
 TESTSUITE_FLAGS_CPP = -g $(VENDOR_C_FLAGS) VendorCPPTestFlags PlatformFlags
 TESTSUITE_FLAGS_F77 = -g $(VENDOR_C_FLAGS) PlatformFlags

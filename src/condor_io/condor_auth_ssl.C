@@ -22,6 +22,7 @@
 
 #if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)
 #define ouch(x) dprintf(D_ALWAYS,x)
+#include "authentication.h"
 #include "condor_auth_ssl.h"
 #include "condor_string.h"
 #include "condor_environ.h"
@@ -467,6 +468,7 @@ int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack
     X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
     setAuthenticatedName( subjectname );
     setRemoteUser( "ssl" );
+	setRemoteDomain( UNMAPPED_DOMAIN );
 
     dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", subjectname);
 		//free(key);

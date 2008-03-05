@@ -24,6 +24,7 @@ use Socket;
 
 my $SockAddr = $ARGV[0];
 my $LogFile = $ARGV[1];
+my $raw = $ARGV[2];
 
 open(OLDOUT, ">&STDOUT");
 open(OLDERR, ">&STDERR");
@@ -47,10 +48,14 @@ while ( 1 )
 	my $MAXLEN = 1024;
 	#$server->recv($newmsg,$MAXLEN) || die "Recv: $!";
 	$server->recv($newmsg,$MAXLEN);
-	print "$newmsg\n";
 	if($newmsg eq "quit")
 	{
 		exit(0);
+	}
+	if(defined($raw)) {
+		print "$newmsg";
+	} else {
+		print "$newmsg\n";
 	}
 }
 

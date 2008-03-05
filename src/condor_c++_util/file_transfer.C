@@ -128,6 +128,7 @@ FileTransfer::FileTransfer()
 	ActiveTransferTid = -1;
 	TransferStart = 0;
 	ClientCallback = 0;
+	ClientCallbackClass = NULL;
 	TransferPipe[0] = TransferPipe[1] = -1;
 	bytesSent = 0.0;
 	bytesRcvd = 0.0;
@@ -210,7 +211,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
 
-	jobAd = Ad;	// save job ad
+	jobAd = *Ad;	// save job ad
 
 	if( did_init ) {
 			// no need to except, just quietly return success
@@ -1473,13 +1474,13 @@ int
 FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 {
 	int rc;
-	int reply;
+	int reply = 0;
 	filesize_t bytes;
 	MyString filename;;
 	MyString fullname;
 	char *tmp_buf = NULL;
-	int final_transfer;
-	bool download_success = false;
+	int final_transfer = 0;
+	bool download_success = true;
 	bool try_again = true;
 	int hold_code = 0;
 	int hold_subcode = 0;
@@ -1594,9 +1595,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				try_again = false;
 				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
 				hold_subcode = EPERM;
-				SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,error_buf.Value());
-				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
-				return_and_resetpriv( -1 );
+
+					// In order for the wire protocol to remain in a well
+					// defined state, we must consume the rest of the
+					// file transmission without writing.
+				fullname = NULL_FILE;
 			}
 #endif
 		} else {
@@ -1669,7 +1672,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			                  mySubSystem,s->sender_ip_str(),fullname.Value());
 			download_success = false;
 			if(rc == GET_FILE_OPEN_FAILED || rc == GET_FILE_WRITE_FAILED) {
-				// errno is well defined in this case
+				// errno is well defined in this case, and transferred data
+				// has been consumed so that the wire protocol is in a well
+				// defined state
 
 				error_buf.replaceString("receive","write to");
 				error_buf.sprintf_cat(": (errno %d) %s",the_error,strerror(the_error));
@@ -1682,6 +1687,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				try_again = false;
 				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
 				hold_subcode = the_error;
+
+				dprintf(D_ALWAYS,
+						"DoDownload: consuming rest of transfer and failing "
+						"after encountering the following error: %s\n",
+						error_buf.Value());
 			}
 			else {
 				// Assume we had some transient problem (e.g. network timeout)
@@ -1689,14 +1699,17 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				// well defined in this case, so we can't report a specific
 				// error message.
 				try_again = true;
+
+				dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.Value());
+
+					// The wire protocol is not in a well defined state
+					// at this point.  Try sending the ack message indicating
+					// what went wrong, for what it is worth.
+				SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,error_buf.Value());
+
+				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
+				return_and_resetpriv( -1 );
 			}
-
-			dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.Value());
-
-			SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,error_buf.Value());
-
-			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
-			return_and_resetpriv( -1 );
 		}
 
 		if ( want_fsync ) {
@@ -1725,7 +1738,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		record.sockp =s;
 		record.transfer_time = start;
 		record.delegation_method_id = delegation_method;
-		file_transfer_db(&record, jobAd);
+		file_transfer_db(&record, &jobAd);
 	}
 
 	// go back to the state we were in before file transfer
@@ -1741,8 +1754,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	// Receive final report from the sender to make sure all went well.
 	bool upload_success = false;
 	MyString upload_error_buf;
-	GetTransferAck(s,upload_success,try_again,hold_code,hold_subcode,
-	               upload_error_buf);
+	bool upload_try_again = true;
+	int upload_hold_code = 0;
+	int upload_hold_subcode = 0;
+	GetTransferAck(s,upload_success,upload_try_again,upload_hold_code,
+				   upload_hold_subcode,upload_error_buf);
 	if(!upload_success) {
 		// Our peer had some kind of problem sending the files.
 
@@ -1757,12 +1773,20 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				error_buf.Value(),upload_error_buf.Value());
 
 		download_success = false;
-		SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,
-		                error_buf.Value());
+		SendTransferAck(s,download_success,upload_try_again,upload_hold_code,
+						upload_hold_subcode,error_buf.Value());
 
+		dprintf( D_FULLDEBUG, "DoDownload: exiting with upload errors\n" );
 		return_and_resetpriv( -1 );
 	}
 
+	if( !download_success ) {
+		SendTransferAck(s,download_success,try_again,hold_code,
+						hold_subcode,error_buf.Value());
+
+		dprintf( D_FULLDEBUG, "DoDownload: exiting with download errors\n" );
+		return_and_resetpriv( -1 );
+	}
 
 	if ( !final_transfer && IsServer() ) {
 		MyString buf;
@@ -2783,9 +2807,6 @@ FileTransfer::setClientSocketTimeout(int timeout)
 {
 	int old_val = clientSockTimeout;
 	clientSockTimeout = timeout;
-	if( uploadGoAheadTimeout < clientSockTimeout ) {
-		uploadGoAheadTimeout = clientSockTimeout;
-	}
 	return old_val;
 }
 

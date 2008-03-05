@@ -42,6 +42,7 @@ BEGIN
     @skipped_output_lines = ( );
     @expected_output = ( );
     $checkpoints = 0;
+	$hoststring = "notset:000";
     $vacates = 0;
     %test;
 	%machine_ads;
@@ -51,6 +52,7 @@ sub Reset
 {
     %machine_ads = ();
 	Condor::Reset();
+	$hoststring = "notset:000";
 }
 
 sub ForceVacate
@@ -841,6 +843,26 @@ sub runCondorTool
 	return(0);
 }
 
+# Sometimes `which ...` is just plain broken due to stupid fringe vendor
+# not quite bourne shells. So, we have our own implementation that simply
+# looks in $ENV{"PATH"} for the program and return the "usual" response found
+# across unicies. As for windows, well, for now it just sucks.
+sub Which
+{
+	my $exe = shift(@_);
+	my @paths = split /:/, $ENV{'PATH'};
+	my $path;
+
+	foreach $path (@paths) {
+		chomp $path;
+		if (-x "$path/$exe") {
+			return "$path/$exe";
+		}
+	}
+
+	return "$exe: command not found";
+}
+
 # Lets be able to drop some extra information if runCondorTool
 # can not do what it is supposed to do....... short and full
 # output from condor_q 11/13
@@ -1037,6 +1059,67 @@ sub compare_arrays
 		}
     }
 	return(0);
+}
+
+##############################################################################
+#
+# spawn_cmd
+#
+#	For a process to start two processes. One will start the passed system
+# 	call and the other will wait around for completion where it will stuff 
+# 	the results where we can check when we care
+#
+##############################################################################
+
+sub spawn_cmd
+{
+	my $cmdtowatch = shift;
+	my $resultfile = shift;
+	my $result;
+	my $toppid = fork();
+
+	if($toppid == 0) {
+
+		$pid = fork();
+		if ($pid == 0) {
+			# child 1 code....
+			$mylog = $resultfile . ".spawn";
+			open(LOG,">$mylog") || die "Can not open log: $mylog: $!\n";
+			my $res = 0;
+			print LOG "Starting this cmd <$cmdtowatch>\n";
+			$res = system("$cmdtowatch");
+			print LOG "Result from $cmdtowatch is <$res>\n";
+			print LOG "File to watch is <$resultfile>\n";
+			if($res != 0) {
+				print LOG " failed\n";
+				close(LOG);
+				exit(-1);
+			} else {
+				print LOG " worked\n";
+				close(LOG);
+				exit(0);
+			}
+		} 
+
+		open(RES,">$resultfile") || die "Can't open results file<$resultfile>:$!\n";
+		$mylog = $resultfile . ".watch";
+		open(LOG,">$mylog") || die "Can not open log: $mylog: $!\n";
+		print LOG "waiting on pid <$pid>\n";
+		while(($child = waitpid($pid,WNOHANG)) != -1) { 
+			$exitval = $? >> 8;
+			$signal_num = $? & 127;
+			print RES "Exit $exitval Signal $signal_num\n";
+			print LOG "Pid $child res was $exitval\n";
+		}
+		print LOG "Done waiting on pid <$pid>\n";
+		close(RES);
+		close(LOG);
+
+		exit(0);
+	} else {
+		# we are done
+		return($toppid);
+	}
 }
 
 1;

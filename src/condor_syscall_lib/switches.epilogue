@@ -42,10 +42,6 @@
 #include "switches.remap-SOLARIS29.h"
 #endif
 
-#ifdef IRIX65
-#include "switches.remap-IRIX65.h"
-#endif
-
 #ifdef LINUX
 #include "switches.remap-LINUX.h"
 #endif

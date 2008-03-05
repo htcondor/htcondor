@@ -31,7 +31,7 @@ set EXT_OPENSSL_VERSION=openssl-0.9.8
 set EXT_POSTGRESQL_VERSION=postgresql-8.0.2
 set EXT_KERBEROS_VERSION=krb5-1.4.3
 set EXT_GLOBUS_VERSION=
-set EXT_PCRE_VERSION=pcre-5.0
+set EXT_PCRE_VERSION=pcre-7.6
 set EXT_DRMAA_VERSION=drmaa-1.5.1
 
 REM Now tell the build system what externals we need built.
@@ -110,3 +110,4 @@ set CONDOR_PCRE_LIB=libpcre.lib
 set CONDOR_PCRE_LIBPATH=/LIBPATH:%EXT_INSTALL%\%EXT_PCRE_VERSION%\lib
 
 exit /B 0
+

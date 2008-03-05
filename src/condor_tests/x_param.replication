@@ -11,6 +11,6 @@ condor = install
 condorconfig = condor_config
 condorlocal = condor_config.local
 condordaemons = master,schedd,collector,negotiator,startd,had,replication
-collector=192.168.0.5:64101,192.168.0.5:64102,192.168.0.5:64103
+collector=128.105.185.11:54101,128.105.185.11:54102,128.105.185.11:54103
 slots=1
 localpostsrc=job_replication_basic.localpostsrc

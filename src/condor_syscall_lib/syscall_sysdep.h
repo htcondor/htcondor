@@ -75,11 +75,11 @@
 #	else
 #		define SYNC_RETURNS_VOID 0
 #	endif
-#else /* Solaris, IRIX, Alpha, DUX4.0 all confirmed... */
+#else /* Solaris, Alpha, DUX4.0 all confirmed... */
 #	define SYNC_RETURNS_VOID 1
 #endif
 
-#if defined(HPUX10) || defined(Solaris)
+#if defined(Solaris)
 #	define HAS_64BIT_STRUCTS	1
 #	define HAS_64BIT_SYSCALLS	1
 #endif

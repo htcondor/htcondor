@@ -5,7 +5,6 @@
 
 CC_PIC_FLAG =
 
-
 XCOMM
 XCOMM Set the following if you want a PVM ready checkpointing library
 XCOMM compiled.  This will require that the PVM library be linked into
@@ -13,11 +12,6 @@ XCOMM the application.
 XCOMM
 
 PVM_CHECKPOINT = -DPVM_CHECKPOINTING
-
-/* We need to use dlopen() and dlsym() to extract on IRIX */
-#if IS_IRIX
-DL_EXTRACT = -DDL_EXTRACT
-#endif
 
 #ifdef WANT_NEST
 NEST_CC_FLAGS = -DENABLE_NEST -I$(NEST_INC)
@@ -40,16 +34,20 @@ SIG_EXTRACT = SIGSUSPEND.o SIGACTION.o
 
 #endif  /* ======= of if DOES_SAVE_SIGSTATE ==========*/
 
+#if !IS_GLIBC25
+NEED_SYSDEP = SYSDEP.o
+#else
+NEED_SYSDEP =
+#endif
+
 #if IS_LINUX
-PLATFORM_EXTRACT = MMAP.o SYSCALL.o SYSDEP.o PIPE.o
+PLATFORM_EXTRACT = MMAP.o SYSCALL.o $(NEED_SYSDEP) PIPE.o
 #elif IS_SOLARIS
 PLATFORM_EXTRACT = MMAP.o SYSCALL.o PIPE.o 
 #elif IS_ALPHA_DUX
 PLATFORM_EXTRACT = MMAP.o SYSCALL.o PIPE.o
 #elif IS_HPUX
 PLATFORM_EXTRACT = SYSCALL.o __SYSCALL.o PIPE.o
-#elif IS_IRIX
-PLATFORM_EXTRACT =
 #else 
 PLATFORM_EXTRACT = PIPE.o
 #endif
@@ -70,30 +68,14 @@ EXTRACT = $(SIG_EXTRACT) $(PLATFORM_EXTRACT)
 COMPRESS_FLAGS = -DCOMPRESS_CKPT -I $(ZLIB_INC)
 #endif /* DOES_COMPRESS_CKPT */
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) $(STATIC) \
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) \
 	$(FILE_TABLE) $(PVM_CHECKPOINT) -DIN_CKPT_LIB $(DL_EXTRACT)
 TOUPPER_C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) \
 	$(FILE_TABLE) $(PVM_CHECKPOINT) -DIN_CKPT_LIB $(DL_EXTRACT)
 
-#if IS_HPUX10
-CFLAGS = $(STD_C_FLAGS) $(STATIC) -DIN_CKPT_LIB $(DYNAMIC_FLAGS)
-#else
 CFLAGS = $(STD_C_FLAGS) -DIN_CKPT_LIB $(DYNAMIC_FLAGS) $(DL_EXTRACT)
-#endif
 
-#if IS_IRIX65
-OS = IRIX65
-#elif IS_HPUX10
-OS = HPUX10
-#else
 OS = OperatingSystem
-#endif
-
-#if IS_SGI_IRIX65
-ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX65.o MMAP.MIPS.IRIX65.o
-.s.o:
-	gcc $(STD_C_FLAGS) -g -c -o $*.o $*.s
-#endif
 
 CPP_UTIL_OBJ = condor_version.o
 
@@ -104,7 +86,7 @@ OBJ =	image.o machdep.$(OS).o tmp_stack.o syscall_mode.o \
 	fake_remote_syscall.o fake_hooks.o condor_error.o \
 	$(SAVE_SIGSTATE_OBJ) fake_util_lib.o eprintf.o $(EXTRACT) \
 	$(ASSEMBLER_OBJ) $(CPP_UTIL_OBJ) $(UTIL_OBJ) $(FILE_TABLE_OBJ) \
-	$(COMPRESS_OBJ) shared_utils.o malloc-user.o gtodc.o
+	$(COMPRESS_OBJ) shared_utils.o malloc-user.o gtodc.o maps.o
 
 #else /* !DOES_CHECKPOINTING */
 
@@ -113,7 +95,7 @@ SHARED_OBJ =
 #else
 SHARED_OBJ = shared_utils.o
 #endif
-OBJ = signals_control.o syscall_mode.o $(SHARED_OBJ)
+OBJ = signals_control.o syscall_mode.o $(SHARED_OBJ) maps.o
 
 #endif /* !DOES_CHECKPOINTING */
 
@@ -229,6 +211,7 @@ uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL_TMP.o,syscall,SYSCALL)
 SYSCALL.o: SYSCALL_TMP.o ToUpper
 	./ToUpper SYSCALL_TMP.o SYSCALL.o __SYSCALL_error __syscall_error
 
+/* Under RHEL5 (GLIBC25), this dependency is not used */
 SYSDEP.o: SYSDEP_TMP.o ToUpper
 	./ToUpper SYSDEP_TMP.o SYSDEP_TMP2.o errno ERRNO
 	./ToUpper SYSDEP_TMP2.o SYSDEP.o _ERRNO_location _errno_location
@@ -302,7 +285,7 @@ condor_rt0.o: $(CRT_BEGIN) ToUpper
 	./ToUpper $(CRT_BEGIN) condor_rt0.o main  MAIN
 clean::
 	rm -f condor_rt0.o
-#elif IS_GLIBC22 || IS_GLIBC23
+#elif IS_GLIBC22 || IS_GLIBC23 || IS_GLIBC24 || IS_GLIBC25
 condor_rt0.o: $(CRT_BEGIN) ToUpper
 	./ToUpper $(CRT_BEGIN) tmp1 main  MAIN
 	./ToUpper tmp1 condor_rt0.o __libc_start_MAIN __libc_start_main

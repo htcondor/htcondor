@@ -36,7 +36,7 @@ Condor_Auth_FS :: ~Condor_Auth_FS()
 {
 }
 
-int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
+int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* errstack)
 {
 	char *new_dir = NULL;
 	bool used_file = false;

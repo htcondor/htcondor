@@ -114,7 +114,7 @@ $isXML = 0;  # are we running tests with XML output
 # remove . from path
 CleanFromPath(".");
 # yet add in base dir of all tests and compiler directories
-$ENV{PATH} = $ENV{PATH} . ":" . $Basedir;
+$ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
 
 #
 # the args:
@@ -127,6 +127,7 @@ $ENV{PATH} = $ENV{PATH} . ":" . $Basedir;
 # -k[ind]: be kind and submit slowly
 # -b[buildandtest]: set up a personal condor and generic configs
 # -a[again]: how many times do we run each test?
+# -p[pretest]: get are environment set but run no tests
 #
 while( $_ = shift( @ARGV ) ) {
   SWITCH: {
@@ -614,7 +615,7 @@ sub IsThisNightly
 
 sub IsThisWindows
 {
-	$path = `which cygpath`;
+	$path = CondorTest::Which("cygpath");
 	print "Path return from which cygpath: $path\n";
 	if($path =~ /^.*\/bin\/cygpath.*$/ ) {
 		print "This IS windows\n";
@@ -655,7 +656,7 @@ sub WhereIsInstallDir
 	$ppwwdd = `pwd`;
 	debug( "pwd says: $ppwwdd\n");
 
-	$tmp = `which condor_master`;
+	$tmp = CondorTest::Which("condor_master");
 	chomp($tmp);
 	debug( "Install Directory \"$tmp\"\n");
 	if($iswindows == 0) {
@@ -868,7 +869,7 @@ sub CreateLocalConfig
                  "/s/std/bin/java");
 
     unless (system ("which java >> /dev/null 2>&1")) {
-    	chomp (my $which_java = `which java`);
+    	chomp (my $which_java = CondorTest::Which("java"));
     	@default_jvm_locations = ($which_java, @default_jvm_locations) unless ($?);
     }
 

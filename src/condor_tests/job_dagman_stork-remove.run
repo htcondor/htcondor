@@ -37,16 +37,12 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = $$;
+$mypid = CondorPersonal::SaveMeSetup($corename);
 $mysaveme = $corename . ".saveme";
-system("mkdir $mysaveme");
-$mypiddir = $mysaveme . "/" . $mypid;
-system("mkdir $mypiddir");
-#make a symbolic link for personal condor module to use
-system("ln -s $mypiddir $mypid");
 
-# the following allows us to copy PID based files back to the file names 
-# which the framework saves when the tests are done. We do this at the end of the test.
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
+}
 
 $mysubmitnm = $corename . $mypid . ".cmd";
 $mysubmitnmout = $corename . $mypid . ".cmd.out";

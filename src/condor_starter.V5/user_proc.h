@@ -135,7 +135,6 @@ protected:
 
 	char	*cmd;
 	ArgList args;
-	char	*env;
 	Env     env_obj;
 
 	char	*m_a_out;			// on submitting machine

@@ -316,6 +316,12 @@ TransferQueueManager::CheckTransferQueue() {
 
 					continue;
 				}
+				if( client->m_downloading ) {
+					downloading += 1;
+				}
+				else {
+					uploading += 1;
+				}
 			}
 			else if( queue_position == 1 ) {
 					// This request has not been granted, but it is at the

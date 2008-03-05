@@ -17,6 +17,16 @@ use in the OpenSSL Toolkit (http://www.openssl.org/).  Complete
 conditions and disclaimers for OpenSSL can be found at
 http://www.openssl.org/source/license.html
 
+Some distributions of Condor include software developed by the 
+Info-ZIP Project (http://www.info-zip.org/).  Complete conditions 
+and disclaimers for Info-ZIP can be found at 
+http://www.info-zip.org/doc/LICENSE
+
+Some distributions of Condor include MAKEMSI software developed by 
+Dennis Bareis (http://dennisbareis.com/makemsi.htm).  Complete 
+conditions and disclaimers for MAKEMSI can be found at 
+http://makemsi-manual.dennisbareis.com/disclaimer.htm
+
 Some distributions of Condor include a compiled, unmodified version
 of the GNU C library. The complete source code to GNU glibc can be
 found at http://www.gnu.org/software/libc/.

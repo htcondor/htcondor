@@ -108,40 +108,8 @@ getcwd( char *path, size_t size )
 /* We want to remap these underscore versions so we don't miss them. */
 REMAP_ONE( getwd, _getwd, char *, char * )
 REMAP_ONE( getwd, __getwd, char *, char * )
-#if !defined(IRIX)
 REMAP_TWO( getcwd, _getcwd, char *, char *, size_t )
 REMAP_TWO( getcwd, __getcwd, char *, char *, size_t )
-#else
-
-/* 
-   On IRIX, we can't just do the direct remapping, b/c the getcwd() in
-   libc.so really calls _getcwd(), which would cause in an infinite
-   loop.  So, we have our own definitions of _getcwd() and __getcwd()
-   that work just like getcwd(), but they call _GETCWD() and
-   __GETCWD() instead.  These are defined below to use dlsym() on the
-   underscore versions of the functions from libc.so.
-
-   However, getcwd() does seem to work at all if we trap __getcwd()
-   and do our magic with it.  It's unclear why, unless we have the
-   source to the IRIX C library.  So, for now, we'll just ignore this
-   and hopefully someday we'll get to the bottom of it.
-
-   -Derek Wright 7/10/98
-*/
-
-char *
-_getcwd( char *path, size_t size )
-{
-	if( LocalSysCalls() ) {
-		return (char *)_GETCWD( path, size );
-	} else {
-		// in the remote case, we can just invoke getcwd above
-		return getcwd(path,size);
-	}
-}
-
-#endif /* IRIX */
-
 
 /*
   If we're not extracting and ToUpper'ing to get GETCWD(), we're

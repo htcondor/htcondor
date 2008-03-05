@@ -3,7 +3,7 @@ PROGRAMS =  	condor_config_val condor_preen condor_stats \
 		view_collection condor_qedit condor_advertise condor_version \
 		condor_fetchlog condor_findhost condor_cod condor_wait \
 		condor_store_cred condor_convert_history condor_dump_history \
-		condor_load_history
+		condor_load_history condor_ckpt_probe
 
 all_target( $(PROGRAMS) )
 
@@ -13,6 +13,11 @@ LIB = $(STD_LIBS) $(TT_LIB)
 
 LH_OBJ = load_history.o ../condor_tt/condor_ttdb.o \
 ../condor_tt/jobqueuecollection.o
+
+PROBE_OBJ = probe_process.o ../condor_ckpt/maps.o
+
+/* Don't link this with gcb since it'll NEVER talk to anyone */
+public_c_plus_nowrap_target(condor_ckpt_probe,libexec,$(PROBE_OBJ),$(LIB))
 
 public_c_plus_target(condor_cod,bin,cod_tool.o,$(LIB))
 

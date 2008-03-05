@@ -27,9 +27,34 @@
 ## the job is still on hold
 ##
 use CondorTest;
+$mypid = $ARGV[0];
 
-$cmd = 'job_core_perrelease-true_local.cmd';
+# make this run pid unique so a second run does not tumple on prior log
+$corename = 'job_core_perrelease-true_local';
+$corenamewithpid = 'job_core_perrelease-true_local' . $mypid;
+$template = $corename . '.template';
+$cmd = $corenamewithpid . '.cmd';
 $testname = 'Condor submit policy test for PERIODIC_RELEASE - local U';
+
+#create command file
+
+my $line = "";
+open(TEMPLATE,"<$template") || die "Can not open template<$template>:$!";
+open(CMD,">$cmd") || die "Can not create submit file<$cmd>:$!\n";
+while(<TEMPLATE>) {
+	$line = $_;
+	if($line =~ /^log\s+=\s+.*$/) {
+		print CMD "log = $corenamewithpid.log\n";
+	} elsif($line =~ /^output\s+=\s+.*$/) {
+		print CMD "output = $corenamewithpid.out\n";
+	} elsif($line =~ /^error\s+=\s+.*$/) {
+		print CMD "error = $corenamewithpid.err\n";
+	} else {
+		print CMD "$line";
+	}
+}
+close(TEMPLATE);
+close(CMD);
 
 ##
 ## The timer callback method doesn't provide us with this
@@ -134,7 +159,7 @@ $timed = sub {
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
 	
-	print "Bad - Job $cluster.$job was never released from being held.\n";
+	print "Bad - Job $cluster.$job hit our timer!.\n";
 
 	##
 	## Go ahead and remove the job from the queue now

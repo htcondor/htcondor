@@ -61,7 +61,7 @@ typedef struct {
 
 static time_t utmp_pty_idle_time( time_t now );
 static time_t all_pty_idle_time( time_t now );
-static time_t dev_idle_time( char *path, time_t now );
+static time_t dev_idle_time( const char *path, time_t now );
 static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
 
 #if defined(LINUX)
@@ -350,7 +350,7 @@ utmp_pty_idle_time( time_t now )
 time_t
 all_pty_idle_time( time_t now )
 {
-	char	*f;
+	const char	*f;
 
 	static Directory *dev = NULL;
 	static Directory *dev_pts = NULL;
@@ -378,7 +378,7 @@ all_pty_idle_time( time_t now )
 #endif
 	}
 
-	for( dev->Rewind();  (f = (char*)dev->Next()); ) {
+	for( dev->Rewind();  (f = dev->Next()); ) {
 #if defined(Solaris)
 		if( strncmp("pts",f,3) == MATCH ) 
 #else
@@ -395,7 +395,7 @@ all_pty_idle_time( time_t now )
 		// Now, if there's a /dev/pts, search all the devices in there.  
 	if( dev_pts ) {
 		char pathname[100];
-		for( dev_pts->Rewind();  (f = (char*)dev_pts->Next()); ) {
+		for( dev_pts->Rewind();  (f = dev_pts->Next()); ) {
 			sprintf( pathname, "pts/%s", f );
 			idle_time = dev_idle_time( pathname, now );
 			if( idle_time < answer ) {
@@ -447,7 +447,7 @@ all_pty_idle_time( time_t now )
 
 // Unix
 time_t
-dev_idle_time( char *path, time_t now )
+dev_idle_time( const char *path, time_t now )
 {
 	struct stat	buf;
 	time_t answer;

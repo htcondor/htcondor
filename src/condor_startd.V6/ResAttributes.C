@@ -414,7 +414,7 @@ deal_with_benchmarks( Resource* rip )
 }
 
 
-CpuAttributes::CpuAttributes( MachAttributes* map, 
+CpuAttributes::CpuAttributes( MachAttributes* map_arg, 
 							  int slot_type,
 							  int num_cpus, 
 							  int num_phys_mem,
@@ -423,7 +423,7 @@ CpuAttributes::CpuAttributes( MachAttributes* map,
 							  MyString &execute_dir,
 							  MyString &execute_partition_id )
 {
-	this->map = map;
+	map = map_arg;
 	c_type = slot_type;
 	c_num_cpus = num_cpus;
 	c_phys_mem = num_phys_mem;

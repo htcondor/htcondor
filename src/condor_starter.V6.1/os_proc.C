@@ -54,6 +54,7 @@ OsProc::OsProc( ClassAd* ad )
 	is_checkpointed = false;
 	num_pids = 0;
 	dumped_core = false;
+	m_using_priv_sep = false;
 	UserProc::initialize();
 }
 
@@ -226,9 +227,6 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// initialize these to -2 to mean they're not specified.
 		// -1 will be treated as an error.
 	fds[0] = -2; fds[1] = -2; fds[2] = -2;
-	bool starter_stdin = false;
-	bool starter_stdout = false;
-	bool starter_stderr = false;
 
 		// in order to open these files we must have the user's privs:
 	priv_state priv;
@@ -286,13 +284,13 @@ OsProc::StartJob(FamilyInfo* family_info)
 	/* Bail out if we couldn't open the std files correctly */
 	if( !stdin_ok || !stdout_ok || !stderr_ok ) {
 			/* only close ones that had been opened correctly */
-		if( fds[0] >= 0 && !starter_stdin ) {
+		if( fds[0] >= 0 ) {
 			close(fds[0]);
 		}
-		if( fds[1] >= 0 && !starter_stdout ) {
+		if( fds[1] >= 0 ) {
 			close(fds[1]);
 		}
-		if( fds[2] >= 0 && !starter_stderr ) {
+		if( fds[2] >= 0 ) {
 			close(fds[2]);
 		}
 		dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
@@ -452,19 +450,13 @@ OsProc::StartJob(FamilyInfo* family_info)
 	// versions, if that's what we're using, so we don't think we've
 	// still got those available in other parts of the code for any
 	// reason.
-	if( starter_stdin ) {
-		Starter->closeSavedStdin();
-	} else if ( fds[0] != -1 ) {
+	if ( fds[0] >= 0 ) {
 		close(fds[0]);
 	}
-	if( starter_stdout ) {
-		Starter->closeSavedStdout();
-	} else if ( fds[1] != -1 ) {
+	if ( fds[1] >= 0 ) {
 		close(fds[1]);
 	}
-	if( starter_stderr ) {
-		Starter->closeSavedStderr();
-	} else if ( fds[2] != -1 ) {
+	if ( fds[2] >= 0 ) {
 		close(fds[2]);
 	}
 

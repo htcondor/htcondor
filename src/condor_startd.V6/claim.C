@@ -110,9 +110,8 @@ Claim::~Claim()
 	if( c_client ) {
 		delete( c_client );
 	}
-	if( c_request_stream ) {
-		delete( c_request_stream );
-	}
+		// delete the request stream and do any necessary related cleanup
+	setRequestStream( NULL );
 	if( c_starter ) {
 		delete( c_starter );
 	}
@@ -1115,9 +1114,45 @@ void
 Claim::setRequestStream(Stream* stream)
 {
 	if( c_request_stream ) {
+		daemonCore->Cancel_Socket( c_request_stream );
 		delete( c_request_stream );
 	}
 	c_request_stream = stream;
+
+	if( c_request_stream ) {
+		MyString desc;
+		desc.sprintf("request claim %s", publicClaimId() );
+
+		int register_rc = daemonCore->Register_Socket(
+			c_request_stream,
+			desc.Value(),
+			(SocketHandlercpp)&Claim::requestClaimSockClosed,
+			"requestClaimSockClosed",
+			this );
+
+		if( register_rc < 0 ) {
+			dprintf(D_ALWAYS,
+					"Failed to register claim request socket "
+					" to detect premature closure for claim %s.\n",
+					publicClaimId() );
+		}
+	}
+}
+
+int
+Claim::requestClaimSockClosed(Stream *s)
+{
+	dprintf( D_ALWAYS,
+			 "Request claim socket closed prematurely for claim %s. "
+			 "This probably means the schedd gave up.\n",
+			 publicClaimId() );
+
+	ASSERT( s == c_request_stream );
+	c_request_stream = NULL; // socket will be closed when we return
+
+	c_rip->removeClaim( this );
+
+	return FALSE;
 }
 
 

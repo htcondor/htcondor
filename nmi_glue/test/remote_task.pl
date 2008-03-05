@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_task.pl,v 1.10 2007-11-08 22:53:46 nleroy Exp $
+# $Id: remote_task.pl,v 1.11 2008-03-05 21:12:50 gquinn Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -168,6 +168,17 @@ if( $batchteststatus != 0 ) {
     $teststatus = 2;
 } else {
     $teststatus = 0;
+}
+
+######################################################################
+# tar up any saveme directories pull full dir
+######################################################################
+
+$saveme = $testname . ".saveme";
+if( -d $saveme ) {
+	$tarfile = $testname . ".saveme.tar.gz";
+	system("tar -zcvf $tarfile $saveme");
+	system("rm -rf $saveme");
 }
 
 ######################################################################

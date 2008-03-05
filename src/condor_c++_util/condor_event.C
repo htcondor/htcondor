@@ -1265,7 +1265,7 @@ RemoteErrorEvent::writeEvent(FILE *file)
     }
 
 	//output each line of error_str, indented by one tab
-	char const *line = error_str;
+	char *line = error_str;
 	if(line)
 	while(*line) {
 		char *next_line = strchr(line,'\n');
@@ -1801,7 +1801,7 @@ readEvent (FILE *file)
 		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
 		return 0;
 
-    if( !fscanf(file, "\t%.0f  -  Run Bytes Sent By Job For Checkpoint\n",
+    if( !fscanf(file, "\t%f  -  Run Bytes Sent By Job For Checkpoint\n",
                 &sent_bytes)) {
         return 1;		//backwards compatibility
     }
@@ -5052,14 +5052,14 @@ writeEvent(FILE *file)
 }
 
 int JobAdInformationEvent::
-writeEvent(FILE *file, ClassAd *jobad)
+writeEvent(FILE *file, ClassAd *jobad_arg)
 {
     int retval = 0;	 // 0 == FALSE == failure
 
 	fprintf(file,"Job ad information event triggered.\n");
 
-	if ( jobad ) {
-		retval = jobad->fPrint(file);
+	if ( jobad_arg ) {
+		retval = jobad_arg->fPrint(file);
 	}
     
     return retval;

@@ -1652,7 +1652,7 @@ class JobAdInformationEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
-	int writeEvent (FILE *, ClassAd *jobad);
+	int writeEvent (FILE *, ClassAd *jobad_arg);
 
 	/** Return a ClassAd representation of this GenericEvent.
 		@return NULL for failure, the ClassAd pointer otherwise

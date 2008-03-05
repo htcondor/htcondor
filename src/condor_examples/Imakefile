@@ -9,7 +9,8 @@ FILES = README condor_config.local.central.manager \
 	condor_vmgahp_config.xen \
 	condor_vmgahp_config.vmware \
 	lamscript \
-	mp1script
+	mp1script \
+	condor.init
 
 all::
 

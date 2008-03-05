@@ -285,7 +285,7 @@ protected:
     char * serializeMdInfo(char * buf);
     char * serializeMdInfo() const;
         
-	virtual void setFullyQualifiedUser(char * u);
+	virtual void setFullyQualifiedUser(char const * u);
 	///
 	virtual const char * getFullyQualifiedUser() const;
 	///

@@ -3139,20 +3139,20 @@ groupSortCompare(const void* elem1, const void* elem2)
 int Matchmaker::MatchListType::
 sort_compare(const void* elem1, const void* elem2)
 {
-	AdListEntry* Elem1 = (AdListEntry*) elem1;
-	AdListEntry* Elem2 = (AdListEntry*) elem2;
+	const AdListEntry* Elem1 = (const AdListEntry*) elem1;
+	const AdListEntry* Elem2 = (const AdListEntry*) elem2;
 
-	double			candidateRankValue = Elem1->RankValue;
-	double			candidatePreJobRankValue = Elem1->PreJobRankValue;
-	double			candidatePostJobRankValue = Elem1->PostJobRankValue;
-	double			candidatePreemptRankValue = Elem1->PreemptRankValue;
-	PreemptState	candidatePreemptState = Elem1->PreemptStateValue;
+	const double candidateRankValue = Elem1->RankValue;
+	const double candidatePreJobRankValue = Elem1->PreJobRankValue;
+	const double candidatePostJobRankValue = Elem1->PostJobRankValue;
+	const double candidatePreemptRankValue = Elem1->PreemptRankValue;
+	const PreemptState candidatePreemptState = Elem1->PreemptStateValue;
 
-	double			bestRankValue = Elem2->RankValue;
-	double			bestPreJobRankValue = Elem2->PreJobRankValue;
-	double			bestPostJobRankValue = Elem2->PostJobRankValue;
-	double			bestPreemptRankValue = Elem2->PreemptRankValue;
-	PreemptState	bestPreemptState = Elem2->PreemptStateValue;
+	const double bestRankValue = Elem2->RankValue;
+	const double bestPreJobRankValue = Elem2->PreJobRankValue;
+	const double bestPostJobRankValue = Elem2->PostJobRankValue;
+	const double bestPreemptRankValue = Elem2->PreemptRankValue;
+	const PreemptState bestPreemptState = Elem2->PreemptStateValue;
 
 	if ( candidateRankValue == bestRankValue &&
 		 candidatePreJobRankValue == bestPreJobRankValue &&

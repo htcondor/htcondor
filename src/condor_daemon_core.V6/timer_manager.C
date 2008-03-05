@@ -49,6 +49,7 @@ TimerManager::TimerManager()
 	timer_ids = 0;
 	in_timeout = FALSE;
 	_t = this; 
+	did_reset = -1;
 }
 
 TimerManager::~TimerManager()
@@ -85,7 +86,6 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 {
 	Timer*		new_timer;
 	Timer*		timer_ptr;
-	Timer*		trail_ptr;
 
 	dprintf( D_DAEMONCORE, "in DaemonCore NewTimer()\n" );
 	new_timer = new Timer;
@@ -139,6 +139,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 			new_timer->next = timer_list;
 			timer_list = new_timer;
 		} else {
+			Timer* trail_ptr = NULL;
 			for (timer_ptr = timer_list; timer_ptr != NULL; 
 				 timer_ptr = timer_ptr->next ) 
 			{
@@ -147,13 +148,9 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 				}
 				trail_ptr = timer_ptr;
 			}
-			if (timer_ptr == NULL) {
-				new_timer->next = NULL;
-				trail_ptr->next = new_timer;
-			} else {
-				new_timer->next = timer_ptr;
-				trail_ptr->next = new_timer;
-			}
+			ASSERT( trail_ptr );
+			new_timer->next = timer_ptr;
+			trail_ptr->next = new_timer;
 		}
 	}
 

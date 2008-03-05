@@ -58,11 +58,11 @@ int main ( int argc, char *argv[] ) {
 #endif
 
 	char *tmp;
-    char *buf = new char[1024];
+	MyString buf;
 	myDistro->Init( argc, argv );
-    sprintf ( buf, "%s", argv[1] );
+    buf = argv[1];
     for ( int i=2 ; i<argc ; i++ ) {
-        strcat( buf, " " );
+        buf += " ";
 			// Now, we've got to check for "\-" in the argument, and
 			// if we find it, replace it with just "-", since mpich
 			// seems to have started to try to escape some of its args
@@ -72,7 +72,7 @@ int main ( int argc, char *argv[] ) {
 		while( (tmp = strstr(argv[i], "\\-")) ) {
 			*tmp = ' ';
 		}
-        strcat( buf, argv[i] );
+        buf += argv[i];
     }
 
 	const char	*envName = EnvGetName( ENV_PARALLEL_SHADOW_SINFUL );
@@ -84,7 +84,7 @@ int main ( int argc, char *argv[] ) {
 
 		if ( shadow ) {
 			fprintf ( fp, "%s = %s\n", envName, shadow );
-			fprintf ( fp, "args: %s\n", buf );
+			fprintf ( fp, "args: %s\n", buf.Value() );
 		}
 		else {
 			fprintf ( fp, "No PARALLEL_SHADOW_SINFUL!  Aborting!\n" );
@@ -109,15 +109,17 @@ int main ( int argc, char *argv[] ) {
         exit(32);
     }
 
-    if ( !s->code ( buf ) ||
+		// Stupid code() requires a non-const char *
+	tmp = strdup( buf.Value() );
+    if ( !s->code ( tmp ) ||
          !s->end_of_message() ) {
         delete s;
         exit(33);
     }
+	free( tmp );
 
     s->close();
     delete s;
-    delete [] buf;
 
 #ifdef MAKE_DROPPINGS
 	if ( droppings ) {

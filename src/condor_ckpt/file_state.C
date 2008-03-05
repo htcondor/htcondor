@@ -1060,8 +1060,11 @@ int CondorFileTable::chdir( const char *path )
 	if( result==-1 ) return result;
 
 	if( path[0]=='/' ) {
+		/* since path might in fact be identical to working_dir, let's be
+			careful and copy before freeing. */
+		nmem = strdup( path );
 		free( working_dir );
-		working_dir = strdup( path );
+		working_dir = nmem;
 	} else {
 		nmem = (char *)realloc(working_dir,strlen(path)+strlen(working_dir)+2);
 		if (nmem == NULL) {

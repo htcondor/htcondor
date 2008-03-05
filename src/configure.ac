@@ -501,27 +501,29 @@ AC_ARG_WITH(buildid,
   [BUILDID=$withval],
   [BUILDID=no])
 
-AC_ARG_WITH(proper,
-  [AS_HELP_STRING([--with-proper],
-     [Force this configure script to work in the proper (non-Condor) way])],
-  [PROPER=$withval],
-  [PROPER=no])
+AC_ARG_ENABLE(proper,
+  [AS_HELP_STRING([--enable-proper],
+     [Force this configure script to work in the proper (non-Condor) way (default: disabled)])],
+  [],
+  [enable_proper=no])
 
-AC_ARG_WITH(full-port,
-  [AS_HELP_STRING([--with-full-port],
-    [Perform a full build, i.e. Standard Universe included])],
-  [if test "x$withval" = xyes; then
-    CLIPPED=no
-   else
-    CLIPPED=yes
-   fi],
+AC_ARG_ENABLE(full-port,
+  [AS_HELP_STRING([--enable-full-port],
+    [Perform a full build, i.e. Standard Universe included (default: enabled)])],
+  [CLIPPED=$(test $enableval == yes && echo no || echo yes)],
   [CLIPPED=default])
 
-AC_ARG_WITH(soft-is-hard,
-  [AS_HELP_STRING([--with-soft-is-hard],
-     [Force all SOFT requirements into HARD requirements])],
-  [SOFT_IS_HARD=$withval],
-  [SOFT_IS_HARD=no])
+AC_ARG_ENABLE(gcc-version-check,
+  [AS_HELP_STRING([--disable-gcc-version-check],
+     [Disable the gcc version check])],
+  [],
+  [enable_gcc_version_check=yes])
+
+AC_ARG_ENABLE(soft-is-hard,
+  [AS_HELP_STRING([--enable-soft-is-hard],
+     [Force all SOFT requirements into HARD requirements (default: disabled)])],
+  [],
+  [enable_soft_is_hard=no])
 
 # if we want a buildid, jam it into CPPFLAGS
 AC_MSG_CHECKING(for a build id to use)
@@ -533,7 +535,7 @@ else
 fi
 
 # If we are being proper we don't want to look for "externals"
-AS_IF([test "x$PROPER" != xyes],
+AS_IF([test "x$enable_proper" != xyes],
 [
 ac_cv_has_externals=YES
 ac_cv_externals=none
@@ -841,9 +843,17 @@ case "$gcc_vers" in
     CompilerPatch="2"
     ;;
  * )
-   AC_MSG_RESULT([ERROR])
-   AC_MSG_ERROR([Condor will not compile with gcc version $gcc_vers])
-   ;;
+    if test "x$enable_gcc_version_check" = "xyes"; then
+      AC_MSG_RESULT([ERROR])
+      AC_MSG_ERROR([Condor will not compile with gcc version $gcc_vers])
+    else
+      AC_MSG_RESULT([$gcc_vers (UNSUPPORTED)])
+      CompilerKind="UNSUPPORTED"
+      CompilerMajor="0"
+      CompilerMinor="0"
+      CompilerPatch="0"
+    fi
+    ;;
 esac
 AC_MSG_RESULT([$gcc_vers])
 
@@ -1198,7 +1208,6 @@ case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_c
   *-HPUX11-* | \
   LINUX-*-ALPHA-* | \
   LINUX-*-*-DEBIAN40-* | \
-  LINUX-*-I386-*-2-5 | \
   LINUX-*-IA64-* | \
   LINUX-*-CONDOR_PPC-* ) _cv_clipped_default=yes ;;
   * ) _cv_clipped_default=no ;;
@@ -2320,7 +2329,7 @@ AS_IF([test "x$enable_static" != xno -a "$_cv_has_static" = "yes"],
 # Check for externals, if we are going to use them
 #
 
-if test "x$ac_cv_has_externals" = "xYES" -o "x$PROPER" = xyes ; then
+if test "x$ac_cv_has_externals" = "xYES" -o "x$enable_proper" = xyes ; then
 
 AC_MSG_NOTICE([determining availability of external packages])
 
@@ -2478,11 +2487,12 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
   "2.3.6" )
     CHECK_EXTERNAL([glibc],[2.3.2.27.9.7], [soft])
     ;;
-  "2.5" ) # RHEL 5.1
-    including_glibc_ext=NO
-    ;;
-  "2.5." )
-    including_glibc_ext=NO
+  "2.5." ) # RHEL 5.0/5.1
+    if test "x$_cv_arch" = "xI386" ; then
+       CHECK_EXTERNAL([glibc],[2.5-20061008T1257], [soft])
+	else # x86_64
+       CHECK_EXTERNAL([glibc],[2.5-20061008T1257-x86_64], [soft])
+	fi
     ;;
   "2.6." ) # F7 uses glibc 2.6-4
     including_glibc_ext=NO
@@ -2560,7 +2570,7 @@ CHECK_EXTERNAL([classads], [0.9.8-b4], [soft])
 
 CHECK_EXTERNAL([srb], [3.2.1], [soft])
 
-CHECK_EXTERNAL([pcre], [5.0], [hard],
+CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
                MF_LIB_CHECK([pcre], [[pcre pcre_compile]]))
 AS_IF([test "x$cv_ext_pcre" = xyes],
@@ -2665,7 +2675,7 @@ CHECK_EXTERNAL([gsoap], [2.7.6c-p2], [soft],
 # We need to make sure HAVE_OPENSSL_SSL_H is defined otherwise
 # programs will not link properly as stdsoap2.h will not include ssl
 # structures. This is set manually if using Globus's OpenSSL.
-AS_IF([test "x$cv_ext_gsoap" = xyes -a "x$PROPER" = xyes],
+AS_IF([test "x$cv_ext_gsoap" = xyes -a "x$enable_proper" = xyes],
   [AC_CHECK_HEADERS([openssl/ssl.h], [],
     [AC_MSG_ERROR([gsoap in proper mode requires openssl/ssl.h])])])
 
@@ -2750,7 +2760,7 @@ else
   AC_SUBST(ext_glibc_version,UNUSED)
 
 fi
-# END of if $ac_cv_has_externals = "YES" or $PROPER = yes
+# END of if $ac_cv_has_externals = "YES" or $enable_proper = yes
 
 # This, unfortunately, must be way down here to make sure info about
 # externals is defined. -matt 1/6/8

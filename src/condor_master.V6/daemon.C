@@ -1836,6 +1836,11 @@ Daemons::FinalRestartMaster()
 			dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
 				 daemon_ptr[master]->process_name);
 
+				// It is important to switch to ROOT_PRIV, in case we are
+				// executing a master wrapper script that expects to be
+				// root rather than effective uid condor.
+			priv_state saved_priv = set_priv(PRIV_ROOT);
+
 			if( MasterName ) {
 				(void)execl(daemon_ptr[master]->process_name, 
 							"condor_master", "-f", "-n", MasterName, 0);
@@ -1843,6 +1848,8 @@ Daemons::FinalRestartMaster()
 				(void)execl(daemon_ptr[master]->process_name, 
 							"condor_master", "-f", 0);
 			}
+
+			set_priv(saved_priv);
 		}
 		daemon_ptr[master]->restarts++;
 		if ( NT_ServiceFlag == TRUE && daemon_ptr[master]->restarts > 7 ) {

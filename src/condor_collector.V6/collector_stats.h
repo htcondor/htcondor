@@ -25,6 +25,8 @@
 #include "hashkey.h"
 #include "extArray.h"
 
+#define DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL (3600*24*2)
+
 // Base
 class CollectorBaseStats
 {
@@ -40,6 +42,8 @@ class CollectorBaseStats
 	char *getHistoryString( void );
 	char *getHistoryString( char * );
 	int getHistoryStringLen( void ) { return 1 + ( (historySize + 3) / 4 ); };
+	bool wasRecentlyUpdated() { return m_recently_updated; }
+	void setRecentlyUpdated(bool value) { m_recently_updated=value; }
 
   private:
 	int storeStats( bool sequened, int dropped );
@@ -55,6 +59,8 @@ class CollectorBaseStats
 	int			historyWordBits;		// # of bits / word (used a lot)
 	int			historyBitnum;			// Current bit #
 	int			historyMaxbit;			// Max bit #
+
+	bool		m_recently_updated;		// true if not updated since last sweep
 };
 
 // Per "class" update stats
@@ -114,6 +120,10 @@ class CollectorDaemonStatsList
 	int setHistorySize( int size );
 	int enable( bool enabled );
 
+		// Remove all records that have not been updated since the
+		// last sweep.  Mark all remaining records for next sweep.
+	void collectGarbage();
+
   private:
 	bool hashKey( StatsHashKey &key, const char *class_name, ClassAd *ad );
 
@@ -136,12 +146,22 @@ class CollectorStats
 	int setClassHistorySize( int size );
 	int setDaemonStats( bool );
 	int setDaemonHistorySize( int size );
+	void setGarbageCollectionInterval( time_t interval ) {
+		m_garbage_interval = interval;
+	}
+
+		// If it is time to collect garbage, remove all records that
+		// have not been updated since the last sweep.
+	void considerCollectingGarbage();
 
   private:
 
 	CollectorBaseStats			global;
 	CollectorClassStatsList		*classList;
 	CollectorDaemonStatsList	*daemonList;
+
+	time_t m_garbage_interval;
+	time_t m_last_garbage_time;
 };
 
 #endif /* _CONDOR_COLLECTOR_STATS_H */

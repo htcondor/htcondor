@@ -35,6 +35,7 @@
 #include "condor_environ.h"
 #include "../condor_privsep/condor_privsep.h"
 #include "../condor_procd/proc_family_client.h"
+#include "condor_pers.h"
 
 
 #if defined(AIX32)
@@ -84,7 +85,7 @@ void set_iwd();
 #if !defined(NO_CKPT)
 extern "C" {
 void
-_updateckpt( char *a, char *b, char *c )
+_updateckpt( char *, char *, char * )
 {
 	EXCEPT( "Should never get here" );
 }
@@ -444,7 +445,6 @@ UserProc::execute()
 	FILE	*cmd_fp;
 	char	buf[128];
 	ReliSock	*new_reli = NULL;
-	extern char **environ;
 
 	pipe_fds[0] = -1;
 	pipe_fds[1] = -1;
@@ -679,36 +679,10 @@ UserProc::execute()
 		}
 
 #if defined( LINUX ) && (defined(I386) || defined(X86_64))
-		// alter the personality of this process to use i386 memory layout
-		// methods and no exec_shield(brk & stack segment randomization).
-		// We must use a syscall() here because the personality() call was
-		// defined in redhat 9 and not earlier, even though the kernel
-		// entry point existed. Even though the personality has been altered
-		// it will not become active in this process space until an exec()
-		// happens. 
-		
-		// update: after kernel 2.6.12.2 revision, exec shield and the 
-		// randomization of the va space were separated, and using PER_LINUX32
-		// now only turns of exec-shield, leaving va randomization on.
-		// The stupid 0x40000 flag is ADDR_NO_RANDOMIZE, which 
-		// isn't yet defined for use outside of the kernel except in very new
-		// linux distributions, but, since we do redhat 9 for our compatibility
-		// build, it has to go here. From my compatibility testing, using this
-		// magic number on kernel pre 2.6.12.2 *appears* to have no detrimental
-		// effects.
-
-#if defined(I386)
-		if (syscall(SYS_personality, PER_LINUX32 | 0x40000) == -1) {
-#elif defined(X86_64)
-		if (syscall(SYS_personality, 0x40000) == -1) {
-#else
-#error "Please determine the right syscall to disable va randomization!"
-#endif
-			EXCEPT("Unable to set personality: %d(%s)! "
-					"Memory layout will be uncheckpointable!\n", errno,
-					strerror(errno));
-		}
-#endif
+		// adjust the execution domain of the child to be suitable for
+		// checkpointing.
+		patch_personality();
+#endif 
 
 			// if we're using privsep, we'll exec the PrivSep Switchboard
 			// first, which is setuid; it will then setuid to the user we
@@ -1530,7 +1504,7 @@ set_iwd()
 extern "C"	int MappingFileDescriptors();
 
 extern "C" int
-MarkOpen( const char *file, int flags, int fd, int is_remote )
+MarkOpen( const char * /* file */, int /* flags */, int fd, int /* is_remote */ )
 {
 	if( MappingFileDescriptors() ) {
 		EXCEPT( "MarkOpen() called, but should never be used!" );

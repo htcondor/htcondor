@@ -358,24 +358,25 @@ main(int argc, char* argv[])
 
         if ( schedd.locate() ) {
 			char *scheddname = quillName;	
-/*
-			if( (scheddname = schedd.name()) ) {
-				queryhor.setScheddname(scheddname);	
-				queryver.setScheddname(scheddname);	
-            } else {
-				// set it to NULL?
-            }
-*/
-			
-			ClassAd *daemonAd = schedd.daemonAd();
-			int scheddbirthdate;
-			if(daemonAd) {
-				if(daemonAd->LookupInteger( ATTR_JOB_QUEUE_BIRTHDATE, 	
-							scheddbirthdate) ) {
-					queryhor.setJobqueuebirthdate( (time_t)scheddbirthdate);	
-					queryver.setJobqueuebirthdate( (time_t)scheddbirthdate);	
+			if (scheddname == NULL) {
+				// none set explictly, look it up in the daemon ad
+				scheddname = schedd.name();
+				ClassAd *daemonAd = schedd.daemonAd();
+				int scheddbirthdate;
+				if(daemonAd) {
+					if(daemonAd->LookupInteger( ATTR_JOB_QUEUE_BIRTHDATE, 	
+								scheddbirthdate) ) {
+						queryhor.setJobqueuebirthdate( (time_t)scheddbirthdate);	
+						queryver.setJobqueuebirthdate( (time_t)scheddbirthdate);	
+					}
 				}
+			} else {
+				queryhor.setJobqueuebirthdate(0);	
+				queryver.setJobqueuebirthdate(0);	
 			}
+			queryhor.setScheddname(scheddname);	
+			queryver.setScheddname(scheddname);	
+			
 		}
 	  }
 	  dbconn = getDBConnStr(quillName,dbIpAddr,dbName,queryPassword);
@@ -829,13 +830,30 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
     long offset = 0;
     bool BOF = false; // Beginning Of File
     MyString buf;
-    
-    FILE* LogFile=safe_fopen_wrapper(JobHistoryFileName,"r");
-    
+
+	int flags = 0;
+	if( !backwards ) {
+			// Currently, the file position manipulations used in -backwards
+			// do not work with files > 2GB on platforms with 32-bit file
+			// offsets.
+		flags = O_LARGEFILE;
+	}
+	int LogFd = safe_open_wrapper(JobHistoryFileName,flags,0);
+	if (LogFd < 0) {
+		fprintf(stderr,"Error opening history file %s: %s\n", JobHistoryFileName,strerror(errno));
+#ifdef EFBIG
+		if( (errno == EFBIG) && backwards ) {
+			fprintf(stderr,"The -backwards option does not support files this large.\n");
+		}
+#endif
+		exit(1);
+	}
+
+	FILE *LogFile = fdopen(LogFd,"r");
 	if (!LogFile) {
-        fprintf(stderr,"History file (%s) not found or empty.\n", JobHistoryFileName);
-        exit(1);
-    }
+		fprintf(stderr,"Error opening history file %s: %s\n", JobHistoryFileName,strerror(errno));
+		exit(1);
+	}
 
 	// In case of rotated history files, check if we have already reached the number of 
 	// matches specified by the user before reading the next file

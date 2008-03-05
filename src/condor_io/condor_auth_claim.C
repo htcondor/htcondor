@@ -35,7 +35,7 @@ Condor_Auth_Claim :: ~Condor_Auth_Claim()
 {
 }
 
-int Condor_Auth_Claim :: authenticate(const char * remoteHost, CondorError* errstack)
+int Condor_Auth_Claim :: authenticate(const char * /* remoteHost */, CondorError* /* errstack */)
 {
 
 	const char * pszFunction = "Condor_Auth_Claim :: authenticate";

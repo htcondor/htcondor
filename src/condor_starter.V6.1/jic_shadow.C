@@ -88,7 +88,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 		/* Set a timeout on remote system calls.  This is needed in
 		   case the user job exits in the middle of a remote system
 		   call, leaving the shadow blocked.  -Jim B. */
-	syscall_sock->timeout(300);
+	syscall_sock->timeout(param_integer( "STARTER_UPLOAD_TIMEOUT", 300));
 
 	ASSERT( socks[0] == NULL );
 }
@@ -567,7 +567,7 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 			 syscall_sock->endpoint_port() );
 	delete syscall_sock;
 	syscall_sock = s;
-	syscall_sock->timeout(300);
+	syscall_sock->timeout(param_integer( "STARTER_UPLOAD_TIMEOUT", 300));
 	dprintf( D_FULLDEBUG, "Using new syscall sock <%s:%d>\n",
 			 syscall_sock->endpoint_ip_str(), 
 			 syscall_sock->endpoint_port() );

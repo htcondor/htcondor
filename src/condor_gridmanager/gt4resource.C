@@ -400,8 +400,10 @@ dprintf(D_FULLDEBUG,"      %s\n",delegation_uri);
 					// point, it should be changed to let it default to
 					// the full life of the proxy or allow the invoker
 					// to set it as part of the resource creation.
-				//next_deleg->proxy_expire = next_deleg->proxy->expiration_time;
-				next_deleg->proxy_expire = now + 12*60*60;
+				next_deleg->proxy_expire = next_deleg->proxy->expiration_time;
+				if ( next_deleg->proxy_expire > now + 12*60*60 ) {
+					next_deleg->proxy_expire = now + 12*60*60;
+				}
 				next_deleg->lifetime = now + 12*60*60;
 				next_deleg->error_message = "";
 				signal_jobs = true;
@@ -414,7 +416,7 @@ dprintf(D_FULLDEBUG,"      %s\n",delegation_uri);
 			// from now.
 		if ( next_deleg->deleg_uri &&
 			 next_deleg->proxy_expire < next_deleg->proxy->expiration_time &&
-			 next_deleg->proxy_expire < 11*60*60 &&
+			 next_deleg->proxy_expire < now + 11*60*60 &&
 			 now >= next_deleg->last_proxy_refresh + PROXY_REFRESH_INTERVAL ) {
 dprintf(D_FULLDEBUG,"    refreshing %s\n",next_deleg->deleg_uri);
 			int rc;

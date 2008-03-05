@@ -232,7 +232,7 @@ int chirp_fetch(int argc, char **argv) {
  *  chirp_put_one_file to do the real work
  */
 
-int chirp_put(int argc, char **argv) {
+int chirp_put(int /* argc */, char **argv) {
 	
 	int fileOffset = 2;
 	char *mode = "cwat";

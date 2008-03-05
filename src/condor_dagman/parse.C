@@ -684,7 +684,7 @@ parse_retry(
     s = strtok( NULL, DELIMITERS );
     if ( s != NULL ) {
         if ( strcasecmp ( s, "UNLESS-EXIT" ) != 0 ) {
-            debug_printf( DEBUG_NORMAL, "%s (line %d) Invalid retry option: %s\n", 
+            debug_printf( DEBUG_QUIET, "%s (line %d) Invalid retry option: %s\n", 
                           filename, lineNumber, s);
             exampleSyntax( example );
             return false;
@@ -692,7 +692,7 @@ parse_retry(
         else {
             s = strtok( NULL, DELIMITERS );
             if ( s == NULL ) {
-                debug_printf( DEBUG_NORMAL, "%s (line %d) Missing parameter for UNLESS-EXIT\n",
+                debug_printf( DEBUG_QUIET, "%s (line %d) Missing parameter for UNLESS-EXIT\n",
                               filename, lineNumber);
                 exampleSyntax( example );
                 return false;
@@ -700,14 +700,14 @@ parse_retry(
             char *unless_exit_end;
             int unless_exit = strtol(s, &unless_exit_end, 10);
             if (*unless_exit_end != 0) {
-                debug_printf( DEBUG_NORMAL, "%s (line %d) Bad parameter for UNLESS-EXIT: %s\n",
+                debug_printf( DEBUG_QUIET, "%s (line %d) Bad parameter for UNLESS-EXIT: %s\n",
                               filename, lineNumber, s);
                 exampleSyntax( example );
                 return false;
             }
             job->have_retry_abort_val = true;
             job->retry_abort_val = unless_exit;
-            debug_printf( DEBUG_QUIET, "Retry Abort Value for %s is %d\n", 
+            debug_printf( DEBUG_DEBUG_1, "Retry Abort Value for %s is %d\n", 
                           jobName, job->retry_abort_val );
         }
     }
@@ -779,7 +779,7 @@ parse_abort(
 	const char *nextWord = strtok( NULL, DELIMITERS );
 	if ( nextWord != NULL ) {
 		if ( strcasecmp ( nextWord, "RETURN" ) != 0 ) {
-			debug_printf( DEBUG_NORMAL,
+			debug_printf( DEBUG_QUIET,
 						"%s (line %d) Invalid ABORT-ON option: %s\n",
 						filename, lineNumber, nextWord);
 			exampleSyntax( example );
@@ -790,7 +790,7 @@ parse_abort(
 			haveReturnVal = true;
 			nextWord = strtok( NULL, DELIMITERS );
 			if ( nextWord == NULL ) {
-				debug_printf( DEBUG_NORMAL,
+				debug_printf( DEBUG_QUIET,
 							"%s (line %d) Missing parameter for ABORT-ON\n",
 							filename, lineNumber);
 				exampleSyntax( example );
@@ -799,13 +799,13 @@ parse_abort(
 
 			returnVal = strtol(nextWord, &tmp, 10);
 			if ( tmp == nextWord ) {
-				debug_printf( DEBUG_NORMAL,
+				debug_printf( DEBUG_QUIET,
 							"%s (line %d) Bad parameter for ABORT_ON: %s\n",
 							filename, lineNumber, nextWord);
 				exampleSyntax( example );
 				return false;
 			} else if ( (returnVal < 0) || (returnVal > 255) ) {
-				debug_printf( DEBUG_NORMAL,
+				debug_printf( DEBUG_QUIET,
 							"%s (line %d) Bad return value for ABORT_ON "
 							"(must be between 0 and 255): %s\n",
 							filename, lineNumber, nextWord);
@@ -1007,7 +1007,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 			return false;
 		}
 		
-		debug_printf(DEBUG_VERBOSE, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", varName.Value(), varValue.Value());
+		debug_printf(DEBUG_DEBUG_1, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", varName.Value(), varValue.Value());
 		job->varNamesFromDag->Append(new MyString(varName));
 		job->varValsFromDag->Append(new MyString(varValue));
 	}

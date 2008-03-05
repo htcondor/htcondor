@@ -125,7 +125,7 @@ Selector::fd_select_size()
 #if defined(WIN32)
 		// On Windows, fd_set is not a bit-array, but a structure that can
 		// hold up to 1024 different file descriptors (not just file 
-		// descriptors whose value is less than 1024). We set max_fd to
+		// descriptors whose value is less than 1024). We set max_fds to
 		// 1024 (FD_SETSIZE) as a reasonable approximation.
 		_fd_select_size = FD_SETSIZE;
 #elif defined(Solaris)
@@ -148,16 +148,12 @@ Selector::add_fd( int fd, IO_FUNC interest )
 {
 	// update max_fd (the highest valid index in fd_set's array) and also
 	// make sure we're not overflowing our fd_set
-	//
-#if defined(WIN32)
-	max_fd++;
-	if (max_fd > fd_select_size() - 1) {
-		EXCEPT("Selector::add_fd(): fd_set is full");
-	}
-#else
+	// On Windows, we have to check the individual fd_set to see if it's
+	// full.
 	if( fd > max_fd ) {
 		max_fd = fd;
 	}
+#if !defined(WIN32)
 	if ( fd < 0 || fd >= fd_select_size() ) {
 		EXCEPT( "Selector::add_fd(): fd %d outside valid range 0-%d",
 				fd, _fd_select_size-1 );
@@ -167,14 +163,29 @@ Selector::add_fd( int fd, IO_FUNC interest )
 	switch( interest ) {
 
 	  case IO_READ:
+#if defined(WIN32)
+		if ( save_read_fds->fd_count >= fd_select_size() ) {
+			EXCEPT( "Selector::add_fd(): read fd_set is full" );
+		}
+#endif
 		FD_SET( fd, save_read_fds );
 		break;
 
 	  case IO_WRITE:
+#if defined(WIN32)
+		if ( save_write_fds->fd_count >= fd_select_size() ) {
+			EXCEPT( "Selector::add_fd(): write fd_set is full" );
+		}
+#endif
 		FD_SET( fd, save_write_fds );
 		break;
 
 	  case IO_EXCEPT:
+#if defined(WIN32)
+		if ( save_except_fds->fd_count >= fd_select_size() ) {
+			EXCEPT( "Selector::add_fd(): except fd_set is full" );
+		}
+#endif
 		FD_SET( fd, save_except_fds );
 		break;
 
@@ -184,14 +195,8 @@ Selector::add_fd( int fd, IO_FUNC interest )
 void
 Selector::delete_fd( int fd, IO_FUNC interest )
 {
-	// on Windows, we need to update max_fd since it keeps track of
-	// how many sockets are in our fd_set. in UNIX, just do a sanity
-	// check based on the value of fd
-	//
-#if defined(WIN32)
-	max_fd--;
-#else
-	if ( fd < 0 || fd > fd_select_size() ) {
+#if !defined(WIN32)
+	if ( fd < 0 || fd >= fd_select_size() ) {
 		EXCEPT( "Selector::delete_fd(): fd %d outside valid range 0-%d",
 				fd, _fd_select_size-1 );
 	}
@@ -253,6 +258,8 @@ Selector::execute()
 		tp = NULL;
 	}
 
+		// select() ignores its first argument on Windows. We still track
+		// max_fd for the display() functions.
 	nfds = select( max_fd + 1, 
 				  (SELECT_FDSET_PTR) read_fds, 
 				  (SELECT_FDSET_PTR) write_fds, 
@@ -297,7 +304,7 @@ Selector::fd_ready( int fd, IO_FUNC interest )
 #if !defined(WIN32)
 	// on UNIX, make sure the value of fd makes sense
 	//
-	if ( fd < 0 || fd > fd_select_size() ) {
+	if ( fd < 0 || fd >= fd_select_size() ) {
 		return FALSE;
 	}
 #endif

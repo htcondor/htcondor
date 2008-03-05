@@ -58,6 +58,7 @@ HistorySnapshot::HistorySnapshot(const char* dbcon_str)
 		jqDB = new PGSQLDatabase(dbcon_str);
 		break;
 	default:
+		jqDB = NULL;
 		break;;
 	}
 
@@ -68,7 +69,6 @@ HistorySnapshot::HistorySnapshot(const char* dbcon_str)
 	cur_historyads_hor_index = -1;
 	cur_historyads_ver_index = -1;
 	dt = T_PGSQL;
-	jqDB = NULL;
 }
 
 //! destructor
@@ -113,7 +113,7 @@ HistorySnapshot::sendQuery(SQLQuery *queryhor,
   
   st = jqDB->openCursorsHistory(queryhor, 
 								queryver, 
-								longformat);
+								constraint ? true : longformat);
   
   if (st == HISTORY_EMPTY) {
 	  isHistoryEmptyFlag = true;
@@ -177,24 +177,25 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
 	  short_header();
   }
 
+	ExprTree *tree = NULL;
+
+	if (constraint) {
+		 Parse(constraint, tree);
+	}
+
   while(1) {
 	  st = getNextAd_Hor(ad, queryhor);
 
 	  if(st != QUILL_SUCCESS) 
 		  break;
 	  
-       ExprTree *tree = NULL;
-
-       if (constraint) {
-             Parse(constraint, tree);
-       }
-
-	  if (constraint && EvalBool(ad, tree) == FALSE) {
-			continue;
-	  }
-	  if (longformat) { 
+	  if (longformat || constraint) { 
 		  st = getNextAd_Ver(ad, queryver);
 
+		
+		  if (constraint && EvalBool(ad, tree) == FALSE) {
+			continue;
+		  }
 		  // in the case of vertical, we dont want to quit if we run
 		  // out of tuples because 1) we want to display whats in the ad
 		  // and 2) the horizontal cursor will correctly determine when
@@ -218,13 +219,13 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
                          last_line = temp.Length();
                          fprintf(stdout, "%s", ad_str.GetCStr());
                          fprintf(stdout, "%s", temp.GetCStr());
-                 }     else {
+                 }     else if (longformat) {
                          ad->fPrint(stdout);
                          printf("\n");
                  }
 
 	  } 
-	  else {
+	  if (!longformat) {
 	  	if (custForm == true) {
 			ASSERT(pmask != NULL);
 			pmask->display(stdout, ad);

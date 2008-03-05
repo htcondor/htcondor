@@ -71,17 +71,11 @@ extern "C" {
 #elif defined(Solaris)
 	#define htonl(x)		(x)
 	#define ntohl(x)		(x)
-#elif defined(IRIX)
-	#include <sys/endian.h>
 #elif defined(LINUX)
 	#include <netinet/in.h>
 #else
 	extern "C" unsigned long htonl( unsigned long );
 	extern "C" unsigned long ntohl( unsigned long );
-#endif
-
-#if defined(HPUX10)
-extern "C" int _sigreturn();
 #endif
 
 #if defined(Solaris)
@@ -448,11 +442,7 @@ _install_signal_handler( int sig, SIG_HANDLER handler )
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 
-#if defined(HPUX10)
-	action.sa_sigaction = handler;
-#else
 	action.sa_handler = handler;
-#endif
 	sigemptyset( &action.sa_mask );
 	/* We do not want "recursive" checkpointing going on.  So block SIGUSR2
 		during a SIGTSTP checkpoint, and vice-versa.  -Todd Tannenbaum, 8/95 */
@@ -461,11 +451,7 @@ _install_signal_handler( int sig, SIG_HANDLER handler )
 	if ( sig == SIGUSR2 )
 		sigaddset(&action.sa_mask,SIGTSTP);
 	
-#if defined(HPUX10)
-	action.sa_flags = SA_SIGINFO;	/* so our handler is passed the context */
-#else
 	action.sa_flags = 0;
-#endif
 
 	if( sigaction(sig,&action,NULL) < 0 ) {
 		dprintf(D_ALWAYS, "can't install sighandler for sig %d: %s\n",
@@ -511,13 +497,13 @@ Image::Save()
 		// Set up data segment
 	data_start = data_start_addr();
 	data_end = data_end_addr();
-	dprintf(D_CKPT, "Adding a DATA segment: start[0x%lx], end [0x%lx]\n",
+	dprintf(D_CKPT, "Adding a DATA segment: start[0x%x], end [0x%x]\n",
 		(unsigned long)data_start, (unsigned long)data_end);
 	AddSegment( "DATA", data_start, data_end, 0 );
 
 		// Set up stack segment
 	find_stack_location( stack_start, stack_end );
-	dprintf(D_CKPT, "Adding a STACK segment: start[0x%lx], end [0x%lx]\n",
+	dprintf(D_CKPT, "Adding a STACK segment: start[0x%x], end [0x%x]\n",
 		(unsigned long)stack_start, (unsigned long)stack_end);
 	AddSegment( "STACK", stack_start, stack_end, 0 );
 
@@ -665,7 +651,7 @@ Image::AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end, int prot )
 	}
 
 	dprintf(D_CKPT, 
-		"Image::AddSegment: name=[%s], start=[%p], end=[%p], length=[0x%lx], "
+		"Image::AddSegment: name=[%s], start=[%p], end=[%p], length=[0x%x], "
 		"prot=[0x%x]\n", 
 		name, (void*)start, (void*)end, (unsigned long)length, prot);
 
@@ -864,7 +850,7 @@ void Image::RestoreAllSegsExceptStack()
 	int		i;
 	int		save_fd = fd;
 
-#if defined(Solaris) || defined(IRIX)
+#if defined(Solaris)
 	dprintf( D_ALWAYS, "Current segmap dump follows\n");
 	display_prmap();
 #endif
@@ -990,7 +976,13 @@ Image::Write( const char *ckpt_file )
 	 * inside of a signal handler.  POSIX says malloc() is not safe to call
 	 * in a signal handler; open_url calls malloc() and this messes up
 	 * checkpointing on SGI IRIX6 bigtime!!  so it is commented out for
-	 * now until we get rid of all mallocs in open_url() -Todd T, 2/97 */
+	 * now until we get rid of all mallocs in open_url() -Todd T, 2/97
+
+	 * In ripping out the IRIX code, this comment was discovered and now
+	 * needs further exploration as to what it means to have commented out
+	 * this open_url() call. -psilord 2/08.
+	 
+	 */
 	// if( (file_d=open_url(ckpt_file,O_WRONLY|O_TRUNC|O_CREAT)) < 0 ) {
 		sprintf( tmp_name, "%s.tmp", ckpt_file );
 		dprintf( D_ALWAYS, "Tmp name is \"%s\"\n", tmp_name );
@@ -1483,7 +1475,7 @@ SegMap::Write( int fd, ssize_t pos )
 		return len;
 	}
 #endif
-	dprintf( D_ALWAYS, "write(fd=%d,core_loc=0x%lx,len=0x%lx)\n",
+	dprintf( D_ALWAYS, "write(fd=%d,core_loc=0x%x,len=0x%x)\n",
 			fd, core_loc, len );
 
 	int bytes_to_go = len, nbytes;
@@ -1526,11 +1518,7 @@ extern "C" {
   periodic checkpoint). -Todd Tannenbaum
 */
 void
-#if defined( HPUX10 )
-Checkpoint( int sig, siginfo_t *code, void *scp )
-#else
 Checkpoint( int sig, int code, void *scp )
-#endif
 {
 	int		scm, p_scm;
 	int		do_full_restart = 1; // set to 0 for periodic checkpoint
@@ -1775,21 +1763,6 @@ Checkpoint( int sig, int code, void *scp )
 		_condor_file_table_resume();
 		dprintf( D_ALWAYS, "Done restoring file state\n" );
 
-#ifdef HPUX10
-	/* TODD'S SCARY FIX TO THE HPUX10.X FORTRAN PROBLEM ------
-	 * reset the return-pointer in the current stack frame
-	 * to _sigreturn, as it sometimes is a screwed-up address during
-	 * a restart with HPUX10 Fortran. weird trampoline code in HPUX f77?
-	 * We find the return-pointer in the stack frame by adding an offset (16)
-	 * from the address of the 1st parameter on the frame. (in this case, &sig)
-	 * WARNING: we are only dealing here with 32-bit RP addresses!  We
-	 * may need to make this patch more intelligent someday.
-	 * WANRING: do not move this code to a different procedure/func,
-	 * we need to twiddle _this_ stack frame and &sig is only in scope
-	 * here in Checkpoint().  -Todd, 4/97 */
-		*((unsigned int *)( ((unsigned int) &sig)+16 )) = (unsigned int) _sigreturn;
-#endif
-
 		// Here we check if we received checkpoint&exit signal
 		// while all this was going on.  
 		SetSyscalls(SYS_LOCAL | SYS_UNRECORDED);
@@ -1951,11 +1924,7 @@ terminate_with_sig( int sig )
 
 		// Make sure we have the default action in place for the sig
 	if( sig != SIGKILL && sig != SIGSTOP ) {
-#ifdef HPUX10
-		act.sa_handler = SIG_DFL;
-#else
 		act.sa_handler = (SIG_HANDLER)SIG_DFL;
-#endif
 		// mask everything so no user-level sig handlers run
 		sigfillset( &act.sa_mask );
 		act.sa_flags = 0;
@@ -1981,6 +1950,11 @@ terminate_with_sig( int sig )
 	// libc functions here, so we must use SYSCALL(SYS_something, ...).
 #if defined(SYS_sleep)
 	SYSCALL(SYS_sleep, 1);
+#elif defined(SYS__newselect)
+	struct timeval t;
+	t.tv_sec = 1;
+	t.tv_usec = 0;
+	SYSCALL(SYS__newselect, 0, NULL, NULL, NULL, &t);
 #elif defined(SYS_select)
 	struct timeval t;
 	t.tv_sec = 1;

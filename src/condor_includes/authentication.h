@@ -202,6 +202,8 @@ class Authentication {
 
 };
 
+extern char const *UNMAPPED_DOMAIN;
+
 #endif /* AUTHENTICATION_H */
 
 

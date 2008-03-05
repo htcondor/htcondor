@@ -2377,7 +2377,7 @@ SecMan::SecMan(int nbuckets) {
 }
 
 
-SecMan::SecMan(const SecMan &copy) {
+SecMan::SecMan(const SecMan & /* copy */) {
 	// session_cache is static.  if there's a copy, it
 	// should already have been constructed.
 	ASSERT (session_cache);
@@ -2386,7 +2386,7 @@ SecMan::SecMan(const SecMan &copy) {
 	sec_man_ref_count++;
 }
 
-const SecMan & SecMan::operator=(const SecMan &copy) {
+const SecMan & SecMan::operator=(const SecMan & /* copy */) {
 	// session_cache is static.  if there's a copy, it
 	// should already have been constructed.
 	ASSERT (session_cache);

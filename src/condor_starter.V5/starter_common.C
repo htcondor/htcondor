@@ -60,7 +60,7 @@ init_sig_mask()
 
 
 void
-initial_bookeeping( int argc, char *argv[] )
+initial_bookeeping( int /* argc */, char *argv[] )
 {
 	char*	logAppend = NULL;
 	char*	submitHost = NULL;

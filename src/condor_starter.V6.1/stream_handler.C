@@ -21,6 +21,8 @@
 #include "stream_handler.h"
 #include "NTsenders.h"
 
+extern ReliSock *syscall_sock;
+
 /*static*/ int StreamHandler::num_handlers = 0;
 
 /*static*/ StreamHandler *StreamHandler::handlers[3];
@@ -275,6 +277,7 @@ StreamHandler::Disconnect() {
 	dprintf(D_ALWAYS, "Streaming i/o handler disconnecting %s from shadow\n", filename.Value());
 	connected=false;
 	daemonCore->Cancel_Pipe(handler_pipe);
+	syscall_sock->close();
 }
 
 // On reconnect, the submit OS may have crashed and lost our precious

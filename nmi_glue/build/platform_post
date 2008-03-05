@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: platform_post,v 1.10 2007-12-19 03:10:34 gthain Exp $
+# $Id: platform_post,v 1.11 2008-03-05 21:12:49 gquinn Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -30,6 +30,7 @@ use vars qw/ $opt_without_tests $opt_test_args $opt_submit_xtests /;
 GetOptions(
             'without-tests' => \$opt_without_tests,
             'test-args=s' => \$opt_test_args,
+            'git' => \$opt_git,
             'submit-xtests!' => \$opt_submit_xtests,
 );
 
@@ -129,13 +130,14 @@ my $cmd = "";
 my $cmd1 = "";
 my $cmd2 = "--platforms=$platform "; 
 my $cmd3 = "$notify_arg $opt_test_args $xtests_arg";
+my $cmd4 = (defined $opt_git ? " --git" : "");
 if($mode ne "workspace") {
    	$cmd1 = "$cns --test --buildid=$runid --tag=$tag --module=$module ";
 } else {
 	# set up tests for a workspace build
    	$cmd1 = "$cns --test --buildid=$runid "; 
 }
-$cmd = $cmd1 . $cmd2 . $cmd3;
+$cmd = $cmd1 . $cmd2 . $cmd3 . $cmd4;
 
 # submit the tests for the native build
 print "Invoking CNS ($cmd)\n";
@@ -159,8 +161,16 @@ foreach $test (@crossplatforms) {
 	# condor_nmi_submit will do the magic to make it work
 	# and will make the cross test binaries show up in the 
 	# Run table in the component_version field
+
+	# are we testing 32 bit binaries on 64 bit platform?
+	# run only tests which do not link to 32 bit libraries
 	$cmd2 = "--platforms=$test --input-platform=$platform ";
-	$cmd = $cmd1 . $cmd2 . $cmd3;
+	if((!($platform =~ /^.*64.*$/)) && ($test =~ /^.*64.*$/)){
+		$cmd4 = " --configure=--disable-full-port --test-args=quicknolink";
+		$cmd = $cmd1 . $cmd2 . $cmd3 . $cmd4;
+	} else {
+		$cmd = $cmd1 . $cmd2 . $cmd3;
+	}
 
 	# submit the tests for cross test request
    	print "Invoking CNS ($cmd)\n";
@@ -178,6 +188,37 @@ foreach $test (@crossplatforms) {
 		leavebadly($status);
 	}
 }
+
+##################################################################
+#We will be removing the platform app_input.tar.gz until NMI does
+##################################################################
+
+$appinput = "../../" . $ENV{NMI_PLATFORM} . "_app_input.tar.gz";
+print "Looking to see is $appinput is around and removing\n";
+print "../.. holds:\n";
+system("ls -l ../..");
+system("rm -f $appinput");
+
+##################################################################
+# We do not need to hang on to the source tarball
+##################################################################
+
+my $vers_file = "CONDOR-VERSION";
+print "Finding version of Condor\n";
+open( VERS, "$vers_file" ) || die "Can't open $vers_file: $!\n";
+while( <VERS> ) {
+    chomp;
+    $vers = $_;
+}
+close( VERS );
+if( ! $vers ) {
+    die "Can't find Condor version in $vers_file!\n";
+}
+print "Condor version: $vers\n";
+$src_file = "condor-$vers.tar.gz";
+print "Tar files here are :\n";
+system("ls condor-$vers*tar.gz");
+system("rm -f $src_file");
 
 print "platform_post: SUCCESS\n";
 exit 0;

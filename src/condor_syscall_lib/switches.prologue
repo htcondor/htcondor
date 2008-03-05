@@ -54,11 +54,6 @@ extern "C" int errno;
 	#include <dlfcn.h>	/* dlopen and dlsym */
 #endif
 
-#if defined(IRIX)
-	struct statfs;
-	struct exportfsdata;
-#endif
-
 #if defined(HPUX)
 	#define FORK _FORK_sys
 	#define PIPE _PIPE_sys

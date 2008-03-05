@@ -227,6 +227,7 @@ char	*Universe		= "universe";
 char	*Grid_Type		= "grid_type";
 char	*MachineCount	= "machine_count";
 char	*NotifyUser		= "notify_user";
+char	*EmailAttributes = "email_attributes";
 char	*ExitRequirements = "exit_requirements";
 char	*UserLogFile	= "log";
 char    *UseLogUseXML   = "log_xml";
@@ -378,6 +379,7 @@ void 	SetPriority();
 void 	SetNotification();
 void	SetWantRemoteIO(void);
 void 	SetNotifyUser ();
+void	SetEmailAttributes();
 void 	SetCronTab();
 void	SetRemoteInitialDir();
 void	SetExitRequirements();
@@ -2487,7 +2489,7 @@ SetNewTransferFiles( void )
 {
 	bool found_it = false;
 	char *should, *when;
-	FileTransferOutput_t when_output;
+	FileTransferOutput_t when_output = FTO_NONE;
 	MyString err_msg;
 	
 	should = condor_param( ATTR_SHOULD_TRANSFER_FILES, 
@@ -2924,6 +2926,7 @@ SetStdFile( int which_file )
 		fprintf( stderr, "\nERROR: Unknown standard file descriptor (%d)\n",
 				 which_file ); 
 		DoCleanup(0,0,NULL);
+		exit( 1 );
 	}
 
 	if ( macro_value ) {
@@ -3449,6 +3452,28 @@ SetNotifyUser()
 		buffer.sprintf( "%s = \"%s\"", ATTR_NOTIFY_USER, who);
 		InsertJobExpr (buffer);
 		free(who);
+	}
+}
+
+void
+SetEmailAttributes()
+{
+	char *attrs = condor_param( EmailAttributes, ATTR_EMAIL_ATTRIBUTES );
+
+	if ( attrs ) {
+		StringList attr_list( attrs );
+
+		if ( !attr_list.isEmpty() ) {
+			char *tmp;
+			MyString buffer;
+
+			tmp = attr_list.print_to_string();
+			buffer.sprintf( "%s = \"%s\"", ATTR_EMAIL_ATTRIBUTES, tmp );
+			InsertJobExpr( buffer );
+			free( tmp );
+		}
+
+		free( attrs );
 	}
 }
 
@@ -5598,6 +5623,7 @@ queue(int num)
 		SetNotification();
 		SetWantRemoteIO();
 		SetNotifyUser();
+		SetEmailAttributes();
 		SetRemoteInitialDir();
 		SetExitRequirements();
 		SetUserLog();

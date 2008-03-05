@@ -209,6 +209,7 @@ match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id,
 	allocated = false;
 	scheduled = false;
 	needs_release_claim = false;
+	request_claim_sock = NULL;
 }
 
 match_rec::~match_rec()
@@ -482,7 +483,6 @@ Scheduler::timeout()
 			dprintf(D_FULLDEBUG,"Setting delay until next queue scan to %d seconds\n",time_to_next_run);
 
 			daemonCore->Reset_Timer(timeoutid,time_to_next_run,1);
-			daemonCore->Reset_Timer(startjobsid,time_to_next_run+1,1);
 			min_interval_timer_set = true;
 		}
 		return;
@@ -506,6 +506,11 @@ Scheduler::timeout()
 				 "Preempting %d jobs due to MAX_JOBS_RUNNING change\n",
 				 (real_jobs - MaxJobsRunning) );
 		preempt( real_jobs - MaxJobsRunning );
+	}
+
+	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
+		this->calculateCronTabSchedules();
+		StartLocalJobs();
 	}
 
 	/* Call function that will start using our local startd if it
@@ -599,9 +604,9 @@ Scheduler::count_jobs()
 
 	if( dedicated_scheduler.hasDedicatedClusters() ) {
 			// We found some dedicated clusters to service.  Wake up
-			// the DedicatedScheduler class in a few seconds to deal
+			// the DedicatedScheduler class when we return to deal
 			// with them.
-		dedicated_scheduler.handleDedicatedJobTimer( 2 );
+		dedicated_scheduler.handleDedicatedJobTimer( 0 );
 	}
 
 		// set JobsRunning/JobsFlocked for owners
@@ -2792,7 +2797,7 @@ int
 Scheduler::abort_job(int, Stream* s)
 {
 	PROC_ID	job_id;
-	int nToRemove;
+	int nToRemove = -1;
 
 	// First grab the number of jobs to remove/hold
 	if ( !s->code(nToRemove) ) {
@@ -4325,7 +4330,7 @@ Scheduler::refuse( Stream* s )
 int
 Scheduler::negotiatorSocketHandler (Stream *stream)
 {
-	int command;
+	int command = -1;
 	int rval;
 
 	dprintf (D_ALWAYS, "Activity on stashed negotiator socket\n");
@@ -4464,7 +4469,7 @@ int
 Scheduler::negotiate(int command, Stream* s)
 {
 	int		i;
-	int		op;
+	int		op = -1;
 	PROC_ID	id;
 	char*	claim_id = NULL;			// claim_id for each match made
 	char*	host = NULL;
@@ -5319,7 +5324,10 @@ claimStartd( match_rec* mrec, bool is_dedicated )
 		delete sock;
 		return false;
 	}
-	ASSERT(daemonCore->Register_DataPtr( strdup(mrec->claimId()) ));
+	ASSERT(daemonCore->Register_DataPtr( mrec ));
+
+	ASSERT( mrec->request_claim_sock == NULL );
+	mrec->request_claim_sock = sock;
 
 	mrec->setStatus( M_CONNECTING );
 
@@ -5338,10 +5346,15 @@ claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad, bool is_dedi
 		return false;
 	}
 	if (!sock->is_connected()) {
-		dprintf( D_FAILURE|D_ALWAYS, "Failed to connect to startd %s\n",
-				 mrec->peer );
+		dprintf( D_FAILURE|D_ALWAYS,
+				 "Failed to connect to startd %s for match %s job %d.%d.\n",
+				 mrec->peer,mrec->publicClaimId(),mrec->cluster,mrec->proc );
 		return false;
 	}
+
+	dprintf( D_FULLDEBUG,
+			 "Connected to startd to request match %s for job %d.%d.\n",
+			 mrec->publicClaimId(), mrec->cluster, mrec->proc );
 
 	if (!matched_startd.startCommand(REQUEST_CLAIM, sock,
 	                                 STARTD_CONTACT_TIMEOUT )) {
@@ -5411,7 +5424,7 @@ claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad, bool is_dedi
 			  (SocketHandlercpp)&Scheduler::startdContactSockHandler,
 			  to_startd, &scheduler, ALLOW );
 	}
-	daemonCore->Register_DataPtr( strdup(mrec->claimId()) );
+	ASSERT( daemonCore->Register_DataPtr( mrec ) );
 
 	scheduler.addRegContact();
 
@@ -5423,44 +5436,27 @@ claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad, bool is_dedi
 int
 Scheduler::startdContactConnectHandler( Stream *sock )
 {
-	dprintf ( D_FULLDEBUG, "In Scheduler::startdContactConnectHandler\n" );
+	match_rec *mrec = (match_rec *)daemonCore->GetDataPtr();
 
-		// fetch the match record.  the daemon core DataPtr specifies
-		// the id of the match (a.k.a. the ClaimId).  use this id to
-		// pull out the actual mrec from our hashtable.
-	char *id = (char *) daemonCore->GetDataPtr();
-	match_rec *mrec = NULL;
-	if ( id ) {
-		HashKey key(id);
-		matches->lookup(key, mrec);
-		free(id); 	// it was allocated with strdup() when
-					// Register_DataPtr was called   
-	}
-
-	if ( !mrec ) {
-		// The match record must have been deleted.  Nothing left to do, close
-		// up shop.
-		dprintf ( D_FULLDEBUG, "startdContactConnectHandler(): mrec not found\n" );
-		checkContactQueue();
-		return FALSE;
-	}
-
-	dprintf ( D_FULLDEBUG, "Got mrec data pointer %p\n", mrec );
+	ASSERT( mrec );
+	ASSERT( mrec->request_claim_sock == sock );
 
 		// We need an expanded job ad here so that the startd can see
 		// NegotiatorMatchExpr values.
 	ClassAd *jobAd = GetJobAd( mrec->cluster, mrec->proc, true );
 	if( ! jobAd ) {
-		dprintf( D_ALWAYS, "failed to find/expand job %d.%d\n", mrec->cluster,
-				 mrec->proc ); 
+		dprintf( D_ALWAYS,
+				 "failed to find/expand job %d.%d after connecting to "
+				 "request claim %s\n", mrec->cluster, mrec->proc,
+				 mrec->publicClaimId() ); 
 		DelMrec( mrec );
-		return FALSE;
+		return KEEP_STREAM; // socket was already deleted in DelMrec()
 	}
 
 	if( !claimStartdConnected( (Sock *)sock, mrec, jobAd, false ) ) {
 		DelMrec( mrec );
 		delete jobAd;
-		return FALSE;
+		return KEEP_STREAM; // socket was already deleted in DelMrec()
 	}
 	delete jobAd;
 
@@ -5474,8 +5470,7 @@ Scheduler::startdContactConnectHandler( Stream *sock )
    in the contact queue. */
 #define BAILOUT               \
 		DelMrec( mrec );      \
-		checkContactQueue();  \
-		return FALSE;
+		return KEEP_STREAM; // sock was already deleted in DelMrec()
 
 int
 Scheduler::startdContactSockHandler( Stream *sock )
@@ -5486,33 +5481,18 @@ Scheduler::startdContactSockHandler( Stream *sock )
 
 	int reply;
 
-	dprintf ( D_FULLDEBUG, "In Scheduler::startdContactSockHandler\n" );
+	match_rec *mrec = (match_rec *) daemonCore->GetDataPtr();
+
+	ASSERT( mrec );
+	ASSERT( mrec->request_claim_sock == sock );
 
 		// since all possible returns from here result in the socket being
 		// cancelled, we begin by decrementing the # of contacts.
 	delRegContact();
 
-		// fetch the match record.  the daemon core DataPtr specifies
-		// the id of the match (a.k.a. the ClaimId).  use this id to
-		// pull out the actual mrec from our hashtable.
-	char *id = (char *) daemonCore->GetDataPtr();
-	match_rec *mrec = NULL;
-	if ( id ) {
-		HashKey key(id);
-		matches->lookup(key, mrec);
-		free(id); 	// it was allocated with strdup() when
-					// Register_DataPtr was called   
-	}
-
-	if ( !mrec ) {
-		// The match record must have been deleted.  Nothing left to do, close
-		// up shop.
-		dprintf ( D_FULLDEBUG, "startdContactSockHandler(): mrec not found\n" );
-		checkContactQueue();
-		return FALSE;
-	}
-	
-	dprintf ( D_FULLDEBUG, "Got mrec data pointer %p\n", mrec );
+	dprintf ( D_FULLDEBUG,
+			  "Reading response for request to claim %s for job %d.%d.\n",
+			  mrec->publicClaimId(), mrec->cluster, mrec->proc );
 
 	mrec->setStatus( M_CLAIMED ); // we assume things will work out.
 
@@ -5552,7 +5532,7 @@ Scheduler::startdContactSockHandler( Stream *sock )
 
 	StartJob( mrec );
 
-	checkContactQueue();
+	rescheduleContactQueue();
 
 	return TRUE;
 }
@@ -5570,6 +5550,15 @@ Scheduler::enqueueStartdContact( ContactStartdArgs* args )
 	 dprintf( D_FULLDEBUG, "Enqueued contactStartd startd=%s\n",
 			  args->sinful() );  
 
+	 rescheduleContactQueue();
+
+	 return true;
+}
+
+
+void
+Scheduler::rescheduleContactQueue()
+{
 		 /*
 		   If we haven't already done so, register a timer to go off
            in zero seconds to call checkContactQueue().  This will
@@ -5585,9 +5574,7 @@ Scheduler::enqueueStartdContact( ContactStartdArgs* args )
 			// Error registering timer!
 		EXCEPT( "Can't register daemonCore timer!" );
 	}
-	return true;
 }
-
 
 void
 Scheduler::checkContactQueue() 
@@ -10904,18 +10891,15 @@ Scheduler::reschedule_negotiator(int, Stream *s)
 		return 0;
 	}
 
-	timeout();							// update the central manager now
+		// Update the central manager now.
+		// This also starts local jobs etc.
+	timeout();
 
 	dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
 
 	sendReschedule();
 
-	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
-		this->calculateCronTabSchedules();
-		StartLocalJobs();
-	}
-
-	 return 0;
+	return 0;
 }
 
 
@@ -11030,6 +11014,8 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 	return rec;
 }
 
+// All deletions of match records _MUST_ go through DelMrec() to ensure
+// proper cleanup.
 int
 Scheduler::DelMrec(char const* id)
 {
@@ -11045,6 +11031,16 @@ Scheduler::DelMrec(char const* id)
 	if( matches->lookup(key, rec) != 0 ) {
 			// Couldn't find it, return failure
 		return -1;
+	}
+
+	if( rec->request_claim_sock ) {
+			// NOTE: the value passed to Register_DataPtr() for this
+			// registered socket is just a pointer to this match_rec,
+			// so there is no need to worry about deallocating that.
+		daemonCore->Cancel_Socket( rec->request_claim_sock );
+		delete rec->request_claim_sock;
+		rec->request_claim_sock = NULL;
+		rescheduleContactQueue();
 	}
 
 	// release the claim on the startd
@@ -11550,7 +11546,7 @@ Scheduler::dumpState(int, Stream* s) {
 	job_ad.Assign( "timeoutid", timeoutid );
 	job_ad.Assign( "Mail", Mail );
 	
-	int cmd;
+	int cmd = 0;
 	s->code( cmd );
 	s->eom();
 

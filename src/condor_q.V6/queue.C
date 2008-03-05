@@ -1669,7 +1669,7 @@ format_owner (char *owner, AttrList *ad)
 }
 
 static char *
-format_globusStatus( int globusStatus, AttrList *ad )
+format_globusStatus( int globusStatus, AttrList * /* ad */ )
 {
 	static char result_format[64];
 
@@ -1685,7 +1685,7 @@ format_globusStatus( int globusStatus, AttrList *ad )
 // always be present and be a string. We then ignore that attribute
 // and examine GlobusResource and GridResource.
 static char *
-format_globusHostAndJM( char  *ignore_me, AttrList *ad )
+format_globusHostAndJM( char *, AttrList *ad )
 {
 	static char result_format[64];
 	char	host[80] = "[?????]";
@@ -2980,6 +2980,9 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
             if (!is_error && !is_empty) {
                 classads.Insert(classad);
             }
+			else {
+				delete classad;
+			}
         } while (!is_eof && !is_error);
         if (is_error) {
             success = false;

@@ -122,11 +122,7 @@ extern Image MyImage;
 
 void RestoreStack();
 
-#if defined(HPUX10)
-extern "C" void Checkpoint( int, siginfo_t *, void * );
-#else
 extern "C" void Checkpoint( int, int, void * );
-#endif
 
 extern "C" {
 	void ckpt();
@@ -152,7 +148,7 @@ BOOL StackGrowsDown();
 int JmpBufSP_Index();
 void ExecuteOnTmpStk( void (*func)() );
 void patch_registers( void  *);
-#if defined(Solaris) || defined(IRIX)
+#if defined(Solaris)
      int find_map_for_addr(caddr_t addr);
      int num_segments( );
      int segment_bounds( int seg_num, RAW_ADDR &start, RAW_ADDR &end,
@@ -172,10 +168,6 @@ extern "C" {
 };
 #endif
 
-#if defined(IRIX)
-#	define JMP_BUF_SP(env) ((env)[JmpBufSP_Index()])
-#else
-#	define JMP_BUF_SP(env) (((long*)(env))[JmpBufSP_Index()])
-#endif
+#define JMP_BUF_SP(env) (((long*)(env))[JmpBufSP_Index()])
 
 #endif

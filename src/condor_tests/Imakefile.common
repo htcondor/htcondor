@@ -27,10 +27,22 @@ all_lists:: list_all
 TESTCLASS_DECL(quick)
 TESTCLASS_DECL(long)
 
+/* 
+	Tests which do not link to condor libraries(32 bit binary testing 
+	on 64 bit platforms
+*/
+TESTCLASS_DECL(quicknolink)
+
 /* In addition to one of the above time-to-run categories, each test
    may be in zero or more of the below 'functional categories'
 */
 TESTCLASS_DECL(env)
+/* every standard universe test must be in rsc and/or ckpt class. Which class
+it goes into is determined by primarily what it tests. */
+TESTCLASS_DECL(rsc)
+TESTCLASS_DECL(ckpt)
+/* every standard universe job must be in the stduniv class */
+TESTCLASS_DECL(stduniv)
 TESTCLASS_DECL(critical)
 TESTCLASS_DECL(framework)
 TESTCLASS_DECL(filexfer)

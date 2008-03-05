@@ -833,7 +833,7 @@ bool SafeSock :: set_encryption_id(const char * keyId)
     return _outMsg.set_encryption_id(keyId);
 }
 
-bool SafeSock :: init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
+bool SafeSock :: init_MD(CONDOR_MD_MODE /* mode */, KeyInfo * key, const char * keyId)
 {
     bool inited = true;
    
@@ -915,7 +915,7 @@ const char* SafeSock::getFullyQualifiedUser() const {
 	return _fqu;
 }
 
-void SafeSock::setFullyQualifiedUser(char * u) {
+void SafeSock::setFullyQualifiedUser(char const * u) {
 	if (_fqu) {
 		delete []_fqu;
 		_fqu = NULL;

@@ -35,13 +35,12 @@ CondorPersonal::DebugOff();
 
 system("date");
 
-$mypid = $$;
+$mypid = CondorPersonal::SaveMeSetup($corename);
 $mysaveme = $corename . ".saveme";
-system("mkdir $mysaveme");
-$mypiddir = $mysaveme . "/" . $mypid;
-system("mkdir $mypiddir");
-#make a symbolic link for personal condor module to use
-system("ln -s $mypiddir $mypid");
+
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
+}
 
 $mysubmitnm = $corename . $mypid . ".cmd";
 $mysubmitnmout = $corename . $mypid . ".cmd.out";

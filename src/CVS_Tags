@@ -1,8 +1,23 @@
+03/05/08 V7_0-merge-1
+  The state of V7_0-branch before its 1st merge back to HEAD.
+
 02/29/08 V7_1-ian_new_crypto-{root,branch}
   Branch for adding support for AES as an encryption method, and SHA-*
   as integrity methods.  This branch was made from
   BUILD-V7_1-trunk-2008-2-27. 
 
+02/27/08 V7_0_1
+  The offical tag for 7.0.1, from the V7_0_1-branch.
+  $CondorVersion: 7.0.1 Feb 27 2008 BuildID: 76180 $
+  Original build tag: BUILD-V7_0_1-2-branch-2008-2-26
+
+02/22/07 V7_0_1-2-{root,branch}
+  A new branch off the V7_0-branch for the 7.0.1 release.
+
+02/20/07 V7_0_1-{root,branch}
+  A new branch off the V7_0-branch for the 7.0.1 release.
+  * Abandoned
+	
 02/19/08 V7_1-amazon_ec2-2-{root,branch}
   New branch for Amazon EC2 support in the grid universe. The previous 
   incarnation of this branch was based off of 6.9.
@@ -10,6 +25,18 @@
 02/13/08 V7_1-ian_sca-2-{root,branch}
   Branch for research code involving signed ClassAds.  This branch
   was made from BUILD-V7_1-trunk-2008-2-8.
+
+01/31/08 V7_0_0-merge-1
+  The state of V7_0_0-branch before first and only merge back to the 
+  V7_0-branch.
+
+01/18/22 V7_0_0
+  The offical tag for 7.0.0, from the V7_0_0-branch.
+  $CondorVersion: 7.0.0 Jan 22 2008 BuildID: 72173 $
+  Original build tag: BUILD-V7_0_0-branch-2008-01-21
+
+01/04/08 V7_0_0-vc2008-{root,branch}
+  A new branch to port the Windows build system to Visual Studio 2008
 
 12/28/07 V6_9-dagman-pre-7_0-branch-merge-1
    The state of the V6_9-dagman-pre-7_0-branch for a merge to the

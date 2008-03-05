@@ -1,0 +1,101 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use Cwd;
+#use Time::localtime;
+
+$cmd = "cmd_wait_shows.cmd";
+
+my $pid = $$;
+system("mkdir $pid");
+my $curcwd = getcwd();
+print "current directory is $curcwd\n";
+
+my $socketname = "cmd_wait";
+my $resultfile = $curcwd . "/" . $pid . "/results";
+my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows.log";
+my $writelog = "./x_write_joblog_events.exe";
+
+print "Result File is $resultfile\n";
+
+system("chmod -R 777 .");
+
+####################################################################
+####################################################################
+#
+# Base operation of having one cluster in the userlog
+# and telling condor_wait to wait. Then post execute
+# and terminated events and expect a happy result.
+#
+####################################################################
+####################################################################
+
+# seed log with 1 runs
+system("$writelog $flowlog submit 4");
+
+# Start condor_wait
+$spawncmd = "condor_wait -num 2 $flowlog";
+CondorTest::spawn_cmd($spawncmd, $resultfile);
+
+sleep(5);
+# start 1 runs
+system("$writelog $flowlog execute 2");
+
+# end 1 runs
+system("$writelog $flowlog terminated 2");
+
+while(!(-f $resultfile)) {
+	print "Waiting for $resultfile to exist\n";
+	sleep(2);
+}
+
+print "$resultfile exits!\n";
+
+$waitmax = 14;
+$waittime = 0;
+$inc = 2;
+
+while( (-s $resultfile) == 0 ) {
+	print "Waiting for results\n";
+	$waittime = $waittime + $inc;
+	if($waittime >= $waitmax) {
+		die "Waited $waitmax seconds when 2 jobs are already done\n";
+	}
+	sleep($inc);
+}
+
+print "$resultfile not empty!\n";
+
+open(RES,"<$resultfile") || die "Can not open <$resultfile>:$!\n";
+$line = "";
+while(<RES>) {
+	$line = $_;
+	if($line =~ /^Exit\s+(\d+)\s+Signal\s+\d+$/) {
+		if($1 == 0) {
+			print "Exit status of 0, expected. Good!\n";
+			exit(0);
+		} else {
+			exit(1);
+		}
+	} else {
+			exit(1);
+	}
+}

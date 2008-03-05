@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.8 2007-11-08 22:53:46 nleroy Exp $
+# $Id: remote_declare.pl,v 1.9 2008-03-05 21:12:50 gquinn Exp $
 # generate list of all tests to run
 ######################################################################
 
@@ -92,10 +92,11 @@ open( USERTASKFILE, ">$UserdirTaskFile" ) || die "Can't open $UserdirTaskFile: $
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) )
 {
 	chdir( $SrcDir ) || die "Can't chdir($SrcDir): $!\n";
+	$opt_configure = $ENV{NMI_configure};
 	print "****************************************************\n";
 	print "**** running CONFIGURE ...\n"; 
 	print "****************************************************\n";
-	open( TESTCONFIG, "./configure --without-externals 2>&1 |") ||
+	open( TESTCONFIG, "./configure --without-externals $opt_configure 2>&1 |") ||
     	die "Can't open configure as a pipe: $!\n";
 	while ( <TESTCONFIG> ) {
     	print $_;

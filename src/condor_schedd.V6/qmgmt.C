@@ -1288,8 +1288,8 @@ int get_myproxy_password_handler(Service * /*service*/, int /*i*/, Stream *socke
 	//	For debugging
 //	DebugFP = stderr;
 
-	int cluster_id;
-	int proc_id;
+	int cluster_id = -1;
+	int proc_id = -1;
 	int result;
 
 	socket->decode();

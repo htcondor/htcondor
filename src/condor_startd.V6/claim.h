@@ -253,6 +253,10 @@ public:
 
 	void receiveJobClassAdUpdate( ClassAd &update_ad );
 
+		// registered callback for premature closure of connection from
+		// schedd requesting this claim
+	int requestClaimSockClosed(Stream *s);
+
 private:
 	Resource	*c_rip;
 	Client 		*c_client;

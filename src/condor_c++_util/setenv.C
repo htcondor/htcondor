@@ -99,7 +99,7 @@ int SetEnv( const char *env_var )
 		return TRUE;
 	}
 
-	char *equalpos = NULL;
+	char const *equalpos = NULL;
 
 	if ( ! (equalpos = strchr( env_var, '=' )) ) {
 		dprintf (D_ALWAYS, "SetEnv, env_var has no '='\n" );

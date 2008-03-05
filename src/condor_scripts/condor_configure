@@ -157,8 +157,40 @@ installation directory.  By default, Condor will not install if it
 finds an existing 'sbin' directory.  If condor finds a 'sbin' directory
 in the installation directory, You must specify --overwrite
 or --backup to tell condor what to do.
-
 END_OPT_OVERWRITE
+ },
+ {
+	 short => "--env-scripts-dir=<dir>",
+	 long => <<END_OPT_ENV_SCRIPTS_DIR
+Condor will create simple scripts that can be sourced by
+sh and csh shells to update the PATH and set the CONDOR_CONFIG environtment
+variables.  This option allows you to specify in what directory to write
+them.  By default, these will be created in the root of the installation
+directory.
+END_OPT_ENV_SCRIPTS_DIR
+ },
+ {
+	 short => "--no-env-scripts",
+	 long => <<END_OPT_NO_ENV_SCRIPTS
+By default, Condor will create simple scripts that can be sourced by
+sh and csh shells to update the PATH and set the CONDOR_CONFIG environtment
+variables.  This option prevents Condor from creating these scripts.
+END_OPT_NO_ENV_SCRIPTS
+ },
+ {
+	 short => "--ignore-missing-libs",
+	 long => <<END_OPT_IGNORE_MISSING_LIBS,
+By default, Condor will not install if prerequisite libraries
+are detected as missing (this would cause the Condor programs to be unable
+to run).  This option tells Condor to install even if it detects
+missing libraries.
+END_OPT_IGNORE_MISSING_LIBS
+ },
+ {
+	 short => "--force",
+	 long => <<END_OPT_FORCE,
+Enable --overwrite and --ignore-missing-libs options
+END_OPT_FORCE
  },
  {
 	 short => "--backup",
@@ -177,6 +209,12 @@ Print more information.
 END_OPT_VERBOSE
  },
  {
+	 short => "--usage",
+	 long => <<END_OPT_USAGE,
+Prints out short usage and exits.
+END_OPT_USAGE
+ },
+ {
 	 short => "--help",
 	 long => <<END_OPT_HELP,
 Prints out this screen and exits.
@@ -185,24 +223,29 @@ END_OPT_HELP
  );
 
 # For parsing command line options (&GetOptions)
-	my (
-		$opt_release_dir,				# --install= directory
-		$opt_prefix_dir,
-		$opt_sbin_rename,
-		$opt_local_dir,
-		$opt_make_personal_condor,
-		$opt_make_personal_stork,
-		$opt_type,
-		$opt_central_manager,
-		$opt_stork,
-		$opt_credd,
-		$opt_owner,
-		$opt_maybe_daemon_owner,
-		$opt_install_log,
-		$opt_verbose,
-		$opt_overwrite,
-		$opt_backup,
-		);
+my (
+	$opt_release_dir,				# --install= directory
+	$opt_prefix_dir,
+	$opt_sbin_rename,
+	$opt_local_dir,
+	$opt_make_personal_condor,
+	$opt_make_personal_stork,
+	$opt_type,
+	$opt_central_manager,
+	$opt_stork,
+	$opt_credd,
+	$opt_owner,
+	$opt_maybe_daemon_owner,
+	$opt_install_log,
+	$opt_verbose,
+	$opt_overwrite,
+	$opt_ignore_missing_libs,
+	$opt_test_missing_libs,
+	$opt_force,
+	$opt_backup,
+	$opt_env_scripts_dir,
+	$opt_disable_env_scripts,
+	);
 
 
 my ($owner, $release_dir, $local_dir, $local_config_file, $config_file, $cm, $type);
@@ -289,9 +332,15 @@ if (defined($opt_release_dir)) {
     # Install
     if ($opt_prefix_dir) {
 		$release_dir=install($opt_prefix_dir);
+		set_mail_settings();
+		set_domain_settings();
+		set_java_jvm_path();
     } else {
 		chomp($release_dir=`pwd`);
 		$release_dir=install($release_dir);
+		set_mail_settings();
+		set_domain_settings();
+		set_java_jvm_path();
     }
 }
 else {
@@ -323,6 +372,9 @@ else {
     }
 }
 debug ("Install directory: $release_dir");
+if ( ! defined ($opt_env_scripts_dir ) ) {
+	$opt_env_scripts_dir = $release_dir;
+}
 
 # Config file location
 if (!$config_file) {
@@ -463,6 +515,29 @@ unless (defined($ENV{CONDOR_CONFIG}) && ($ENV{CONDOR_CONFIG} eq $config_file) ) 
 
 }
 
+unless ( $opt_disable_env_scripts ) {
+	my $env_sh = $opt_env_scripts_dir ."/condor.sh";
+	open( SH, ">$env_sh" ) or die "Can't write to $env_sh";
+	print SH "# The script should be sourced by /bin/sh or similar\n";
+	print SH "CONDOR_CONFIG=\"$config_file\"\n";
+	print SH "export CONDOR_CONFIG\n";
+	print SH "PATH=\"$release_dir/bin:$release_dir/sbin:\$PATH\"\n";
+	print SH "export PATH\n";
+	close( SH );
+
+	my $env_csh = $opt_env_scripts_dir ."/condor.csh";
+	open( CSH, ">$env_csh" ) or die "Can't write to $env_csh";
+	print CSH "# The script should be sourced by /bin/csh or similar\n";
+	print CSH "setenv CONDOR_CONFIG \"$config_file\"\n";
+	print CSH "setenv PATH \"$release_dir/bin:$release_dir/sbin:\$PATH\"\n";
+	close( CSH );
+
+	print "Created scripts which can be sourced by users to setup their\n";
+	print "Condor environment variables.  These are:\n";
+	print "   sh: $env_sh\n";
+	print "  csh: $env_csh\n";
+}
+
 print "\n";
 
 exit 0;
@@ -563,8 +638,11 @@ sub parse_command_line() {
 	}
 
 	# For condor_install, default behavior is --install=.
-	if ( $0 =~ /_install/ ) {
+	if ( $0 =~ /^\w+_install/ ) {
 		unshift( @ARGV, "--install=." );
+	}
+	elsif ( $0 =~ /^(.*)\/\w+_install/ ) {
+		unshift( @ARGV, "--install=$1" );
 	}
 
 	&GetOptions (
@@ -582,14 +660,25 @@ sub parse_command_line() {
 				 "maybe-daemon-owner!"		=>	\$opt_maybe_daemon_owner,
 				 "install-log=s"	        =>	\$opt_install_log,
 				 "verbose!"					=>	\$opt_verbose,
-				 "help"						=>	sub { help(); exit 0; },
+				 "help"						=>	sub{ help(); },
+				 "usage"					=>	sub{ usage(0); },
 				 "overwrite"				=>	\$opt_overwrite,
+				 "ignore-missing-libs"		=>	\$opt_ignore_missing_libs,
+				 "test-missing-libs=s"		=>	\$opt_test_missing_libs,
+				 "env-scripts-dir=s"		=>	\$opt_env_scripts_dir,
+				 "no-env-scripts"			=>	\$opt_disable_env_scripts,
+				 "force"					=>	\$opt_force,
 				 "backup"					=>	\$opt_backup,
 				 ) or usage( 1 );
 
     if ( $opt_local_dir and ( $opt_local_dir !~ /^\// ) ) {
 		die "--local-dir must specify absolute path\n";
     }
+
+	if ( $opt_force ) {
+		$opt_overwrite = 1;
+		$opt_ignore_missing_libs = 1;
+	}
 }
 
 
@@ -708,6 +797,21 @@ sub find_local_dir() {
     return $from_config;
 }
 
+sub find_os( $$$ )
+{
+	my $Table = shift;
+	my $field = shift;
+	my $text = shift;
+	foreach my $os ( @{$Table} ) {
+		next if ( ! exists( $os->{$field} ) );
+		my $pat = $os->{$field};
+		if ( $text =~ /$pat/ ) {
+			return $os;
+		}
+	}
+	return undef;
+}
+
 sub install( $ ) {
     my $release_dir=shift(@_);
 
@@ -731,6 +835,39 @@ sub install( $ ) {
 			push( @missing, $d );
 		}
 	}
+
+	# Let's look at a sampling of programs, verify that they're there too
+	my %bin_dirs = (
+					bin  => [ "config_val",
+							  "q",
+							  "status",
+							  "submit",
+							  "version",
+							  ],
+					sbin => [ "collector",
+							  "master",
+							  "schedd",
+							  "startd",
+							  ],
+					);
+	my @programs;
+	foreach my $d ( keys( %bin_dirs ) )
+	{
+		foreach my $p ( @{$bin_dirs{$d}} )
+		{
+			my $fp = "$release_src_dir/$d/condor_$p";
+			if ( ! -x $fp )
+			{
+				push( @missing, $fp );
+			}
+			else
+			{
+				push( @programs, $fp );
+			}
+		}
+	}
+
+	# Now, let's display a list of missing items, and puke if we found any
 	if ( scalar @missing ) {
 		print STDERR
 			"Missing release directories (looking in $release_src_dir):\n".
@@ -739,6 +876,195 @@ sub install( $ ) {
 			"  Please specify the correct location of these with \n".
 			"--install=<path to release directories> or make sure it's \n".
 			"in the current directory\n";
+	}
+
+	# Now, let's try to run ldd on the above programs, see what we find
+	my %missing_libs;
+	my $num_missing_libs = 0;
+	foreach my $p ( @programs ) {
+		my $ldd = "ldd $p";
+		if ( !open( LDD, "$ldd|" ) ) {
+			warn "Can't run $ldd";
+			next;
+		}
+		while( <LDD> ) {
+			if (/^\s+(\S+)\s*=>\s*(.*)/ ) {
+				my $lib = $1;
+				my $loc = $2;
+				if ( $loc =~ /not found/ ) {
+					$missing_libs{$lib} = $loc;
+					$num_missing_libs++;
+				}
+			}
+		}
+		close( LDD );
+	}
+	if ( $opt_test_missing_libs ) {
+		$missing_libs{$opt_test_missing_libs} = "not found";
+		$num_missing_libs++;
+	}
+
+	# Try to do something intelligent about missing libraries
+	if ( $num_missing_libs )
+	{
+		my %InstallerTable =
+			(
+			 linux => {
+				 name => "unknown package installer",
+			 },
+			 apt => {
+				 name => "APT",
+				 run => "apt-get install %s",
+			 },
+			 yum => {
+				 name => "YUM",
+				 run => "yum install %s",
+			 },
+			 zypper => {
+				 name => "zypper",
+				 run => "zypper install %s",
+			 },
+			 UNIX => {
+				 name => "unknown UNIX installer",
+			 },
+			 );
+		my @OsTable =
+			(
+			 {
+				 name => "Red Hat",
+				 installer => "yum",
+
+				 issue => "CentOS|Red Hat Enterprise|Fedora",
+				 libs => {
+					 "libstdc++.so.5" => "compat-libstdc++",
+				 },
+			 },
+			 {
+				 name => "openSUSE",
+				 installer => "zypper",
+
+				 issue => "openSUSE",
+				 libs => {
+					 "libstdc++.so.5" => "compat-libstdc++",
+				 }
+			 },
+			 {
+				 name => "Debian",
+				 installer => "apt",
+
+				 issue => "(?i)debian",
+				 text => "debian",
+				 libs => {
+					 "libstdc++.so.5" => "libstdc++5",
+				 }
+			 },
+			 {
+				 name => "Linux",
+				 installer => "linux",
+
+				 issue => "(?i)linux",
+				 uname => "(?i)linux",
+				 libs => {
+					 "libstdc++.so.5" => "compat-libstdc++",
+				 },
+			 },
+			 {
+				 name => "UNIX",
+				 installer => "UNIX",
+
+				 true => ".*",
+			 },
+			 );
+
+		my @OsLookupTable =
+			(
+			 {
+				 run	=> "cat '/etc/issue'",
+				 field	=> "issue",
+			 },
+			 {
+				 file	=> "/etc/debian_version",
+				 text	=> "debian",
+				 field	=> "text",
+			 },
+			 {
+				 run	=> "uname",
+				 field	=> "uname",
+			 },
+			 {
+				 run	=> "/bin/true",
+				 field	=> "true",
+			 },
+			 );
+			 
+
+		my $os = undef;
+		my $installer = undef;
+		foreach my $lookup ( @OsLookupTable ) {
+			my $text;
+			if ( exists $lookup->{file}  and  -f $lookup->{file} ) {
+				$text = $lookup->{text};
+			}
+			elsif ( exists $lookup->{run} ) {
+				$text = `$lookup->{run}`;
+				chomp $text;
+			}
+			else {
+				next;
+			}
+			$os = find_os( \@OsTable, $lookup->{field}, $text );
+			if ( $os ) {
+				if (  exists $os->{installer}  and 
+					  exists $InstallerTable{$os->{installer}}  ) {
+					$installer = $InstallerTable{$os->{installer}};
+				}
+				last;
+			}
+		}
+		die "Unknown O/S" if ( ! $os );
+		die "Unknown O/S installer" if ( ! $installer );
+		print "Detected O/S '".$os->{name}."'".
+			", installer '".$installer->{name}."'\n";
+		foreach my $lib ( keys %missing_libs )
+		{
+			print "Condor requires '$lib':\n";
+			if ( exists($os->{libs}{$lib})  and  exists($installer->{run}) )
+			{
+				my $cmd = sprintf( $installer->{run}, $os->{libs}{$lib} );
+				print
+					"  This is probably provided by the '".
+					($os->{libs}{$lib}) . "' package.\n".
+					"  You need to install this package with " .
+					$installer->{name}.
+					" by running the following as root:\n".
+					"    $cmd\n";
+			}
+			elsif ( exists($os->{libs}{$lib}) )
+			{
+				print
+					"  This is probably provided by package '".
+					($os->{libs}{$lib}) . "' or similar.\n".
+					"  You need to find and install this package with your\n" .
+					"  O/S package installer (as root)\n";
+			}
+			elsif ( exists($installer->{run}) )
+			{
+				my $cmd = sprintf( $installer->{run}, $lib );
+				print
+					"  I don't know what package will provide this library\n".
+					"  You need to find and install this package with your\n" .
+					"  O/S package installer (".$installer->{name}.")\n".
+					"  Try something like '".$cmd."' (as root)\n";
+			}
+			else
+			{
+				print
+					"  I don't know what package will provide this library\n".
+					"  You need to find and install this package with your\n" .
+					"  O/S package installer (as root)\n";
+			}
+		}
+		exit( 1 ) if ( ! $opt_ignore_missing_libs );
 	}
 
     if ( !$release_dir ) {
@@ -757,10 +1083,22 @@ sub install( $ ) {
 
     chomp ($release_dir=`pwd`); # Get the complete absolute path
 
+	my $install_in_place = 0;
+	if ( $release_dir eq $release_src_dir ) {
+		$install_in_place = 1;
+	}
+
     # Move the sbin directories instead of overwriting them,
     # so that the running daemons don't blow up 
+	my @installed_programs;
 	my $sbin = "$release_dir/sbin";
-	if ( -d $sbin && -x "$sbin/condor_master" ) {
+	foreach my $p ( @{$bin_dirs{sbin}} )
+	{
+		my $fp = "$sbin/condor_$p";
+		push( @installed_programs, $fp ) if ( -x $fp );
+	}
+
+	if ( !$install_in_place && -d $sbin && scalar @installed_programs ) {
 		if ( $opt_overwrite ) {
 			# Do nothing...  overwrite sbin below
 		}
@@ -769,8 +1107,9 @@ sub install( $ ) {
 				die "Unable to move $release_dir/sbin!\n";
 		}
 		else {
+			my $n = scalar @installed_programs;
 			print STDERR
-				"$Program found '$sbin' and can't proceed.\n".
+				"$Program found $n daemons in '$sbin' and can't proceed.\n".
 				"  You need to specify '--backup' or '--overwrite' to\n".
 				"  tell $Program what to.\n".
 				"  --overwrite will cause $Program to overwrite Condor\n".
@@ -782,27 +1121,32 @@ sub install( $ ) {
 		}
     }
 
-	# Create a process to read the tar-ify the release directories
-	print "Installing Condor from $release_src_dir to $release_dir\n";
-	my $cmd = "cd $release_src_dir; tar cf - " . join( " ", @release_dirs );
-	open( TARCF, "$cmd|" ) or die "Can't run $cmd (used to copy release)";
-
-	$cmd = "tar xf -";
-	open( TARXF, "|$cmd" ) or die "Can't run $cmd (used to copy release)";
-
-	# Read from the "tar cf -", pipe output into the "tar xf -"
-	while( 1 ) {
-		my $buffer;
-		my $size = 1024 * 1024;
-		my $read_size = sysread( TARCF, $buffer, $size );
-		last if ( $read_size <= 0 );
-		my $write_size = syswrite( TARXF, $buffer, $read_size );
-		if ( $write_size != $read_size ) {
-			die "Failed copying to $release_dir: $!";
-		}
+	if( $install_in_place ) {
+		print "Setting up Condor in $release_dir\n";
 	}
-	close( TARCF );
-	close( TARXF );
+	else {
+		# Create a process to tar-ify the release directories
+		print "Installing Condor from $release_src_dir to $release_dir\n";
+		my $cmd = "cd $release_src_dir; tar cf - " . join( " ", @release_dirs );
+		open( TARCF, "$cmd|" ) or die "Can't run $cmd (used to copy release)";
+
+		$cmd = "tar xf -";
+		open( TARXF, "|$cmd" ) or die "Can't run $cmd (used to copy release)";
+
+		# Read from the "tar cf -", pipe output into the "tar xf -"
+		while( 1 ) {
+			my $buffer;
+			my $size = 1024 * 1024;
+			my $read_size = sysread( TARCF, $buffer, $size );
+			last if ( $read_size <= 0 );
+			my $write_size = syswrite( TARXF, $buffer, $read_size );
+			if ( $write_size != $read_size ) {
+				die "Failed copying to $release_dir: $!";
+			}
+		}
+		close( TARCF );
+		close( TARXF );
+	}
 
     $local_config{RELEASE_DIR}="$release_dir";
     
@@ -876,15 +1220,10 @@ sub install( $ ) {
 					 ." might not work propertly until you set "
 					 ." NETWORK_INTERFACE=<machine IP address>\n");
     }  
-
-    set_mail_settings();
-    
-    set_domain_settings();
-
-    &set_java_jvm_path();
     
     return $release_dir;
-}
+
+}	# sub install()
 
 
 sub find_release_dir( $ ) {
@@ -1313,6 +1652,7 @@ sub help() {
 		print $opt->{short} . "\n";
 		print $opt->{long} . "\n";
 	}
+	exit( 0 );
 }
 
 ### Local Variables: ***

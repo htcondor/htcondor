@@ -68,7 +68,7 @@ Condor_Auth_X509 ::  ~Condor_Auth_X509()
     }
 }
 
-int Condor_Auth_X509 :: authenticate(const char * remoteHost, CondorError* errstack)
+int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError* errstack)
 {
     int status = 1;
     int reply = 0;
@@ -436,6 +436,8 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 	}
 
 	if ( major_status != GSS_S_COMPLETE) {
+		setRemoteUser("gsi");
+		setRemoteDomain( UNMAPPED_DOMAIN );
 		return 0;
 	}
 
@@ -797,7 +799,6 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
 				"Failed to gss_assist_gridmap %s to a local user.  "
 				"Check the grid-mapfile.", GSSClientname);
 			dprintf(D_SECURITY, "gss_assist_gridmap does not contain an entry for %s\n", GSSClientname);
-			setRemoteUser("gsi");
         }
         else {
             dprintf(D_SECURITY,"gss_assist_gridmap contains an entry for %s\n", 

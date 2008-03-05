@@ -35,6 +35,7 @@ CondorLock::CondorLock( const char	*l_url,
 						bool		auto_refresh )
 	: CondorLockBase( )
 {
+	real_lock = NULL;
 
 		// BuildLock does the real work of building the lock
 	BuildLock( l_url,
@@ -51,7 +52,6 @@ CondorLock::CondorLock( const char	*l_url,
 CondorLock::~CondorLock( void )
 {
 	delete( real_lock );
-	free( (void *) lock_url );
 }
 
 // Set period information

@@ -29,6 +29,18 @@
 #define __KERNEL__
 #include <asm/page.h>
 
+/* This is supposed to be defined in the above headerfile, but on x86_64 on 
+rhel5 the file in question leads to an empty headerfile with no definition
+for PAGE_SIZE and friends. So nor now, I'll best guess one. */
+#if defined(LINUX) && defined(GLIBC25) && defined(X86_64) && !defined(PAGE_SIZE)
+#define PAGE_SHIFT      12
+#define PAGE_SIZE       (1UL << PAGE_SHIFT)
+#define PAGE_MASK       (~(PAGE_SIZE-1))
+
+#define LARGE_PAGE_MASK (~(LARGE_PAGE_SIZE-1))
+#define LARGE_PAGE_SIZE (1UL << PMD_SHIFT)
+#endif
+
 /* needed to tell us where the approximate begining of the data sgmt is */
 #if defined (GLIBC)
 extern int __data_start;
@@ -278,7 +290,7 @@ void display_prmap()
 	int		i;
 
 	for(i=0;i<map_count;i++) {
-		dprintf(D_ALWAYS, "addr= 0x%p, size= 0x%lx, offset= 0x%x\n",
+		dprintf(D_ALWAYS, "addr= 0x%p, size= 0x%x, offset= 0x%x\n",
 			my_map[i].mem_start, my_map[i].mem_end-my_map[i].mem_start,
 			my_map[i].offset);
 		dprintf(D_ALWAYS, "Flags: %c%c%c%c inode %d\n", 

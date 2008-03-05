@@ -37,7 +37,7 @@ REMAP_TWO( ftruncate, __ftruncate, int , int , off_t )
 REMAP_THREE( poll, __libc_poll, int , struct pollfd *, unsigned long , int )
 REMAP_THREE( poll, __poll, int , struct pollfd *, unsigned long , int )
 
-#if defined(GLIBC23)
+#if defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25)
 	REMAP_TWO( ftruncate64, __ftruncate64, int , int , off64_t )
 #endif
 
@@ -49,7 +49,7 @@ REMAP_THREE_VARARGS( ioctl, __ioctl, int , unsigned long , unsigned long , int)
 
 REMAP_THREE( lseek, __lseek, off_t, int, off_t, int )
 
-#if defined(GLIBC21) || defined(GLIBC22) || defined(GLIBC23)
+#if defined(GLIBC21) || defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25)
 REMAP_THREE( llseek, __llseek, off64_t, int, off64_t, int )
 REMAP_THREE( llseek, _llseek, off64_t, int, off64_t, int )
 REMAP_THREE( llseek, __lseek64, off64_t, int, off64_t, int )
@@ -67,7 +67,7 @@ REMAP_THREE( llseek, lseek64, long long int, int, long long int, int )
 
 REMAP_THREE_VARARGS( open, __open, int, const char *, int, int )
 
-#if defined(GLIBC23)
+#if defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25)
 REMAP_THREE_VARARGS( open64, __open64, int, const char *, int, int )
 REMAP_THREE_VARARGS( open64, __libc_open64, int, const char *, int, int )
 #endif
@@ -75,19 +75,40 @@ REMAP_THREE_VARARGS( open64, __libc_open64, int, const char *, int, int )
 REMAP_THREE( read, __read, ssize_t, int, __ptr_t, size_t )
 
 REMAP_THREE( write, __write, ssize_t, int, const __ptr_t, size_t )
-#if defined(GLIBC22) || defined(GLIBC23)
+#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25)
 REMAP_THREE( write, __libc_write, ssize_t, int, const __ptr_t, size_t )
 #endif
 
 /* make a bunch of __libc remaps for the things that have fd's or paths.
 	These were new entry points in glibc22 */
-#if defined(GLIBC22) || defined(GLIBC23)
+#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25)
 REMAP_ONE( close, __libc_close, int , int )
 REMAP_TWO( creat, __libc_creat, int, const char*, mode_t )
 REMAP_ONE( dup, __libc_dup, int, int )
 REMAP_TWO( dup2, __libc_dup2, int, int, int )
 REMAP_ONE( fchdir, __libc_fchdir, int, int )
 REMAP_THREE_VARARGS( fcntl, __libc_fcntl, int , int , int , int)
+
+#if defined(GLIBC25)
+/* According to the implementation of these function in glibc 2.5 they appear
+to be simple wrappers around their specific system call */
+REMAP_THREE_VARARGS( fcntl, __fcntl_nocancel, int , int , int , int )
+
+#if defined(X86_64)
+REMAP_THREE( write, __write_nocancel, ssize_t , int , const void* , size_t )
+#else
+REMAP_THREE( write, __write_nocancel, int , int , const void* , size_t )
+#endif
+
+#if defined(X86_64)
+REMAP_THREE( read, __read_nocancel, ssize_t , int , void* , size_t )
+#else
+REMAP_THREE( read, __read_nocancel, int , int , void* , size_t )
+#endif
+
+REMAP_TWO_VARARGS( open, __open_nocancel, int, const char * , int )
+REMAP_ONE( close, __close_nocancel, int, int )
+#endif
 
 REMAP_ONE( fsync, __libc_fsync, int , int )
 REMAP_TWO( ftruncate, __libc_ftruncate, int , int , off_t )
@@ -98,7 +119,7 @@ REMAP_THREE_VARARGS( open, __libc_open, int, const char *, int, int )
 REMAP_THREE( read, __libc_read, ssize_t, int, __ptr_t, size_t )
 #endif
 
-#if defined(GLIBC23)
+#if defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25)
 REMAP_THREE( lseek, __libc_lseek, off_t, int, off_t, int )
 REMAP_FIVE( select, __libc_select, int , int , fd_set *, fd_set *, fd_set *, struct timeval *)
 #endif
@@ -149,7 +170,7 @@ REMAP_TWO( getrlimit, __getrlimit, int , int , struct rlimit *)
 REMAP_TWO( gettimeofday, __gettimeofday, int , struct timeval *, struct timezone *)
 
 /* getuid is now a weak alias to __getuid */
-#if !defined(GLIBC22) && !defined(GLIBC23)
+#if !defined(GLIBC22) && !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25)
 REMAP_ZERO( getuid, __getuid, uid_t )
 #endif
 
@@ -169,7 +190,12 @@ REMAP_THREE( msync, __msync, int , void *, size_t , int )
 REMAP_THREE( msync, __libc_msync, int , void *, size_t , int )
 REMAP_TWO( munmap, __munmap, int, void *, size_t )
 REMAP_ONE( pipe, __pipe, int , int *)
+
+#if defined(X86_64) && defined(GLIBC25)
+REMAP_THREE( readlink, __readlink, ssize_t , const char *, char *, size_t )
+#else
 REMAP_THREE( readlink, __readlink, int , const char *, char *, size_t )
+#endif
 
 #if defined(X86_64)
 REMAP_THREE( readv, __readv, ssize_t, int, const struct iovec *, size_t )
@@ -177,7 +203,7 @@ REMAP_THREE( readv, __readv, ssize_t, int, const struct iovec *, size_t )
 REMAP_THREE( readv, __readv, int, int, const struct iovec *, size_t )
 #endif
 
-#if defined(GLIBC23)
+#if defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25)
 #if defined(I386)
 REMAP_THREE( readv, __libc_readv, int, int, const struct iovec *, size_t )
 #else
@@ -213,7 +239,7 @@ REMAP_ONE( umount, __umount, int , const char *)
 #endif
 
 /* uname is now a weak alias to __uname */
-#if !defined(GLIBC22) && !defined(GLIBC23)
+#if !defined(GLIBC22) && !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25)
 REMAP_ONE( uname, __uname, int , struct utsname *)
 #endif
 
@@ -232,7 +258,7 @@ REMAP_THREE( writev, __writev, int, int, const struct iovec *, size_t )
 REMAP_THREE( writev, __writev, ssize_t, int, const struct iovec *, size_t )
 #endif
 
-#if defined(GLIBC23)
+#if defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25)
 #if defined(I386)
 REMAP_THREE( writev, __libc_writev, int, int, const struct iovec *, size_t )
 #else
@@ -249,7 +275,7 @@ REMAP_FOUR( profil, __profil, int , char *, int , int , int );
 
 #if defined(GLIBC)
 
-#if !defined(GLIBC22) && !defined(GLIBC23)
+#if !defined(GLIBC22) && !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25)
 /* clone has a much different prototype not supported by the stub generator
 	under glibc22 and later machines */
 REMAP_TWO( clone, __clone, pid_t , void *, unsigned long )
@@ -294,6 +320,8 @@ REMAP_FOUR( recv, __recv, SOCKET_SENDRECV_TYPE, int, SOCKET_DATA_TYPE, SOCKET_SE
 #endif
 
 REMAP_SIX( recvfrom, __recvfrom, SOCKET_RECVFROM_TYPE, int, SOCKET_DATA_TYPE, SOCKET_SENDRECV_LENGTH_TYPE, SOCKET_FLAGS_TYPE, SOCKET_ADDR_TYPE, SOCKET_ALTERNATE_LENGTH_TYPE * )
+
+REMAP_THREE( recvmsg, __recvmsg, SOCKET_SENDRECV_TYPE, int, struct msghdr *, SOCKET_FLAGS_TYPE )
 REMAP_THREE( recvmsg, __libc_recvmsg, SOCKET_SENDRECV_TYPE, int, struct msghdr *, SOCKET_FLAGS_TYPE )
 
 REMAP_THREE( sendmsg, __sendmsg, SOCKET_SENDRECV_TYPE, int, SOCKET_MSG_CONST struct msghdr *, SOCKET_FLAGS_TYPE )
@@ -310,7 +338,7 @@ REMAP_THREE( socket, __socket, int, int, int, int )
 
 REMAP_FOUR( socketpair, __socketpair, int, int, int, int, int * )
 
-#if defined(GLIBC23) /* to the best of my knowledge for this version.... */
+#if defined(GLIBC23)
 
 /* This next set of remap function calls don't so much as remap things into
 	condor syscall lib entrance points, but provide a more current interface
@@ -767,8 +795,15 @@ int __wprintf_chk(int flag, const wchar_t *format, ...)
 
 	return done;
 }
+
+
 #endif /* GLIBC23 */
 
+#if defined(GLIBC25)
+/* This forces malloc.o from libc.a to not be brought in, and allows stduniv
+	code to use the malloc-user.c API instead */
+REMAP_TWO( memalign, __libc_memalign, void*, size_t, size_t )
+#endif
 
 #endif /* REMOTE_SYSCALLS */
 

@@ -84,30 +84,6 @@ prolly not support this yet
             dev_t device,
             struct ustat *buffer );
 
-IRIX 6.5/6.2
-     #include <sys/types.h>
-     #include <sys/statfs.h>
-
-	*len is sizeof(struct statfs, fstype is only used for non mounted fs's)
-
-     int statfs (const char *path, struct statfs *buf, int len, int fstyp);
-
-     int fstatfs (int fildes, struct statfs *buf, int len, int fstyp);
-
-     The statfs structure pointed to by buf includes the following members:
-          short   f_fstyp;    /* File system type */
-          long    f_bsize;    /* Block size */
-          long    f_frsize;   /* Fragment size */
-          long    f_blocks;   /* Total number of blocks */
-          long    f_bfree;    /* Count of free blocks */
-          long    f_files;    /* Total number of file nodes */
-          long    f_ffree;    /* Count of free file nodes */
-          char    f_fname[6]; /* Volume name */
-          char    f_fpack[6]; /* Pack name */
-
-     In ABI N32 applications, the fields f_blocks, f_bfree, f_files, and
-     f_ffree are of type __int64_t (long long) instead of long.
-
 HPUX
 
       #include <sys/vfs.h>
