@@ -558,9 +558,10 @@ File System Configuration File Entries''.
   \MacroNI{COLLECTOR\_HOST} variable.
 
 \item[\Macro{CONDOR\_VIEW\_HOST}] \label{param:CondorViewHost} The
-  hostname of the machine where the CondorView server is running.
-  This service is optional, and requires additional configuration if
-  you want to enable it.  There is no default value for
+  host name of the machine, optionally appended by a colon and the
+  port number, where the CondorView server is running.
+  This service is optional, and requires additional configuration 
+  to enable it.  There is no default value for
   \MacroNI{CONDOR\_VIEW\_HOST}.  If \MacroNI{CONDOR\_VIEW\_HOST} is not
   defined, no CondorView server is used.
   See section~\ref{sec:Contrib-CondorView-Install} on
