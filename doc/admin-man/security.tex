@@ -281,10 +281,15 @@ determines which technology is chosen for the connection.
 
 Security negotiation is a completely separate process from
 matchmaking, and should not be confused with any specific function of
-the \Condor{negotiator} daemon.  Security negotiation happens when one
-Condor daemon or tool sends a command to another Condor daemon.  Negotiation
-between users for machines, on the other hand, is what the \Condor{negotiator}
-manages as part of its matchmaking process.
+the \Condor{negotiator} daemon. 
+Security negotiation occurs when one
+Condor daemon or tool initiates communication with another Condor daemon,
+to determine the security settings by which the communication will
+be ruled.
+The \Condor{negotiator} daemon does negotiation,
+whereby queued jobs and available machines within a pool
+go through the process of matchmaking (deciding out which
+machines will run which jobs).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:security-negotiation-features}Configuration}
@@ -354,14 +359,18 @@ sets:
 \end{verbatim}
 When Frida submits her jobs, Condor's security negotiation determines
 that authentication will be used, and allows the command to continue.
-(This example illustrates the point, but there is actually more to the
-story.  Some commands, such as submitting jobs \emph{always} require
-authentication, no matter what the policy says, because the identity
-of the user needs to be known in order to carry out the operation.
-Others commands, such as \Condor{q} do not always require
+This example illustrates the point that the most restrictive
+security policy sets the levels of security enforced.
+There is actually more to the understanding of this scenario.
+Some Condor commands, such as the use of \Condor{submit}
+to submit jobs \emph{always} require
+authentication of the submitter, no matter what the policy says. 
+This is because the identity
+of the submitter needs to be known in order to carry out the operation.
+Others commands, such as \Condor{q}, do not always require
 authentication, so in the above example, the server's policy would
 force Frida's \Condor{q} queries to be authenticated, whereas a different
-policy could allow \Condor{q} to happen without any authentication.)
+policy could allow \Condor{q} to happen without any authentication.
 
 
 Whether or not security negotiation occurs depends on the
@@ -804,9 +813,10 @@ to use Condor's unified map file.
 The second way to do the mapping is within
 an administrator-maintained GSI-specific file called an X.509 map file,
 mapping from X509 Distinguished Name (DN) to Condor user id.
-It is similar to a Globus grid map file except that it is only used for
+It is similar to a Globus grid map file, except that it is only used for
 mapping to a user id, not for authorization.  If the user names in the
-map file do not specify a domain for the user (i.e. \verb|user@domain|),
+map file do not specify a domain for the user
+(specification would appear as \verb|user@domain|),
 then the value of \MacroNI{UID\_DOMAIN} is used.
 Information about authorization can be found in
 Section~\ref{sec:Security-Authorization}. 
@@ -897,7 +907,7 @@ SEC_DEFAULT_INTEGRITY = REQUIRED
 GSI_DAEMON_DIRECTORY = /etc/grid-security
 GRIDMAP = /etc/grid-security/grid-mapfile
 
-# authorize based on usernames produced by the map file
+# authorize based on user names produced by the map file
 ALLOW_READ = *@cs.wisc.edu/*.cs.wisc.edu
 ALLOW_DAEMON = condor@cs.wisc.edu/*.cs.wisc.edu
 ALLOW_NEGOTIATOR = condor@cs.wisc.edu/condor.cs.wisc.edu, \
@@ -936,12 +946,14 @@ local copies of the certificate stored
 in a local file system.
 
 The macro \MacroNI{GRIDMAP} specifies the file
-to use for mapping GSI names to usernames within condor.  For example,
+to use for mapping GSI names to user names within Condor.  For example,
 it might look like this:
 
+\footnotesize
 \begin{verbatim}
 "/C=US/O=Condor/O=UW/OU=CS/CN=condor@cs.wisc.edu" condor@cs.wisc.edu
 \end{verbatim}
+\normalsize
 
 Additional mappings would be needed for the users who submit jobs to
 the pool or who issue administrative commands.
@@ -1105,13 +1117,14 @@ command to write directly to the password file:
 condor_store_cred -f /path/to/password/file
 \end{verbatim}
 
-Under Windows (or Unix if you wish), storing the pool password is done
-via the \Opt{-c} option to \Condor{store\_cred}. Running
+Under Windows (or under Unix), storing the pool password is done
+with the \Opt{-c} option when using to \Condor{store\_cred} \Opt{add}.
+Running
 \begin{verbatim}
 condor_store_cred -c add
 \end{verbatim}
-will prompt for the pool password and store it on the local machine,
-making it available for daemons to use for authentication. The
+prompts for the pool password and store it on the local machine,
+making it available for daemons to use in authentication. The
 \Condor{master} must be running for this command to work.
 
 In addition, storing the pool password to a given machine requires
@@ -1161,14 +1174,11 @@ access. This is done so local authentication can be done using
 another method such as \verb@FS@.
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Security-Password-Example} Example Security Configuration Using Pool Password}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+\begin{description}
+\item[Example Security Configuration Using Pool Password]
 \index{security!sample configuration using pool password}
-
 The following example configuration uses pool password authentication and
-network message integrity checking for all communication between condor
+network message integrity checking for all communication between Condor
 daemons.
 
 \begin{verbatim}
@@ -1186,21 +1196,21 @@ ALLOW_NEGOTIATOR = condor_pool@$(UID_DOMAIN)/negotiator.machine.name
 \end{verbatim}
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Security-Password-Example} Example Using Pool Password for Startd Advertisement}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+\item[Example Using Pool Password for \Condor{startd} Advertisement]
 \index{security!sample configuration using pool password for startd advertisement}
 
 One problem with the pool password method of authentication is that it
-involves a single shared secret.  This does not scale well as you add
-remote users who configure their schedds to flock to your pool.
-However, you can still use the pool password for authenticating portions
-of your pool, while other parts (such as remote schedds) are authenticated
-by some other means.
+involves a single, shared secret.
+This does not scale well with the addition of
+remote users who flock to the local pool.
+However, the pool password may still be used for authenticating portions
+of the local pool, while others
+(such as the remote \Condor{schedd} daemons involved in flocking)
+are authenticated by other means.
 
-In this example, just the startds in the pool are required to have the
-pool password when they advertise themselves to the collector.
+In this example, only the \Condor{startd} daemons in the local pool
+are required to have the
+pool password when they advertise themselves to the \Condor{collector} daemon.
 
 \begin{verbatim}
 SEC_PASSWORD_FILE = $(LOCK)/pool_password
@@ -1211,6 +1221,7 @@ SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI
 ALLOW_ADVERTISE_STARTD = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu
 \end{verbatim}
 
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:FS-Authentication}File System Authentication}
@@ -1665,7 +1676,7 @@ A complete list of the authorization macros:
     DENY_DAEMON
 \end{verbatim}
 
-In addition, the following are used to control authorizationi of
+In addition, the following are used to control authorization of
 specific types of Condor daemons when advertising themselves to the
 pool.  If unspecified, these default to the broader
 \MacroNI{ALLOW\_DAEMON} and \MacroNI{DENY\_DAEMON} settings.
@@ -2840,7 +2851,7 @@ general, the only foolproof mechanism is for the job to run under a
 dedicated execution account (as it does under Windows by default).
 With all other mechanisms, it is possible to fool Condor, and leave
 processes behind after Condor has cleaned up.  In the case of a shared
-account, such as the unix user \Login{nobody}, it is possible for the
+account, such as the Unix user \Login{nobody}, it is possible for the
 job to leave a lurker process lying in wait for the next job run as
 \Login{nobody}.  The lurker process may prey maliciously on the next
 \Login{nobody} user job, wreaking havoc.
