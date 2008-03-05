@@ -398,7 +398,7 @@ sub InstallPersonalCondor
 	my $submit;
 	my $startd;
 	my $negotiator;
-	my $condorq = `which condor_q`;
+	my $condorq = CondorTest::Which("condor_q");
 	my $sbinloc;
 	my $configline = "";
 	my @configfiles;
@@ -1304,7 +1304,7 @@ sub IsRunningYet
 
 sub IsThisWindows
 {
-    $path = `which cygpath`;
+    $path = CondorTest::Which("cygpath");
     print "Path return from which cygpath: $path\n";
     if($path =~ /^.*\/bin\/cygpath.*$/ ) {
         print "This IS windows\n";
