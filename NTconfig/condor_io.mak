@@ -123,6 +123,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_crypt.obj" \
 	"$(INTDIR)\condor_crypt_3des.obj" \
 	"$(INTDIR)\condor_crypt_blowfish.obj" \
+	"$(INTDIR)\condor_ipverify.obj" \
 	"$(INTDIR)\condor_rw.obj" \
 	"$(INTDIR)\condor_secman.obj" \
 	"$(INTDIR)\CryptKey.obj" \
@@ -133,8 +134,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\SafeMsg.obj" \
 	"$(INTDIR)\sock.obj" \
 	"$(INTDIR)\sockCache.obj" \
-	"$(INTDIR)\stream.obj" \
-	"$(INTDIR)\condor_ipverify.obj"
+	"$(INTDIR)\stream.obj"
 
 "$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -238,6 +238,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_crypt.obj" \
 	"$(INTDIR)\condor_crypt_3des.obj" \
 	"$(INTDIR)\condor_crypt_blowfish.obj" \
+	"$(INTDIR)\condor_ipverify.obj" \
 	"$(INTDIR)\condor_rw.obj" \
 	"$(INTDIR)\condor_secman.obj" \
 	"$(INTDIR)\CryptKey.obj" \
@@ -248,8 +249,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\SafeMsg.obj" \
 	"$(INTDIR)\sock.obj" \
 	"$(INTDIR)\sockCache.obj" \
-	"$(INTDIR)\stream.obj" \
-	"$(INTDIR)\condor_ipverify.obj"
+	"$(INTDIR)\stream.obj"
 
 "$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
