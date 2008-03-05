@@ -27,13 +27,14 @@
 
 int sysapi_partition_id_raw(char const *path,char **result)
 {
-	sysapi_internal_reconfig();
-
 	const int VOLUME_PATH_BUFFER_SIZE = 1024;
 	const int RESULT_BUFFER_SIZE = 1024;
 
 	BOOL ret;
 	char* volume_path_name;
+
+
+	sysapi_internal_reconfig();
 
 	// basic idea:
 	//   1) call GetVolumePathName to get the mount point for the
