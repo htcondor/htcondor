@@ -1734,10 +1734,6 @@ int main( int argc, char** argv )
 					env_name, env );
 		}
 	}
-	if (global_root_config_source != "") {
-		dprintf(D_ALWAYS, "Using root config source: %s\n", 
-				global_root_config_source.GetCStr());
-	}
 
 	if (!local_config_sources.isEmpty()) {
 		dprintf(D_ALWAYS, "Using local config sources: \n");

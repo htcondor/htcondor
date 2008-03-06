@@ -42,9 +42,6 @@
   If none of the above locations contain a config source, config()
   prints an error message and exits.
 
-  The root config source is found in the same way, except no environment
-  variable is checked.  
-
   In each "global" config source, a list of "local" config files, or a single
   cmd whose output is to be piped in as the configuration settings can be
   specified.  If a cmd is specified, it is processed and its output used
@@ -98,7 +95,6 @@ bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
 int SetSyscalls(int);
 char* find_global();
-char* find_global_root();
 char* find_file(const char*, const char*);
 void init_tilde();
 void fill_attributes();
@@ -126,7 +122,6 @@ extern DLL_IMPORT_MAGIC char **environ;
 static bool have_config_source = true;
 
 MyString global_config_source;
-MyString global_root_config_source;
 StringList local_config_sources;
 
 static int ParamValueNameAscendingSort(const void *l, const void *r);
@@ -733,8 +728,7 @@ real_config(char* host, int wantsQuiet)
 		// override them, since it's not going to work.
 	reinsert_specials( host );
 
-		// Now, insert any macros defined in the environment.  Note we do
-		// this before the root config source!
+		// Now, insert any macros defined in the environment.
 	for( int i = 0; environ[i]; i++ ) {
 		char magic_prefix[MAX_DISTRIBUTION_NAME + 3];	// case-insensitive
 		strcpy( magic_prefix, "_" );
@@ -787,39 +781,7 @@ real_config(char* host, int wantsQuiet)
 		// override them, since it's not going to work.
 	reinsert_specials( host );
 
-		// Try to find and read the global root config source
-	if( (config_source = find_global_root()) ) {
-		global_root_config_source = config_source;
-		process_config_source( config_source, "global root config source", host, true );
-
-			// Re-insert the special macros.  We don't want the user
-			// to override them, since it's not going to work.
-		reinsert_specials( host );
-
-			// Read in the LOCAL_ROOT_CONFIG_FILE as a string list and
-			// process all the files in the order they are listed.
-		process_locals( "LOCAL_ROOT_CONFIG_FILE", host );
-	}
-
-		// Re-insert the special macros.  We don't want the user
-		// to override them, since it's not going to work.
-	reinsert_specials( host );
-
-	if( process_dynamic_configs() == 1 ) {
-			// if we found dynamic config sources, we process the root
-			// config source again
-		if (config_source) {
-			process_config_source( config_source, "global root config source", host, true );
-
-				// Re-insert the special macros.  We don't want the user
-				// to override them, since it's not going to work.
-			reinsert_specials( host );
-
-				// Read in the LOCAL_ROOT_CONFIG_FILE as a string list and
-				// process all the files in the order they are listed.
-			process_locals( "LOCAL_ROOT_CONFIG_FILE", host );
-		}
-	}
+	process_dynamic_configs();
 
 	if (config_source) {
 		free( config_source );
@@ -1064,15 +1026,6 @@ find_global()
 	MyString	file;
 	file.sprintf( "%s_config", myDistro->Get() );
 	return find_file( EnvGetName( ENV_CONFIG), file.Value() );
-}
-
-
-char*
-find_global_root()
-{
-	MyString	file;
-	file.sprintf( "%s_config.root", myDistro->Get() );
-	return find_file( EnvGetName( ENV_CONFIG_ROOT ), file.Value() );
 }
 
 
@@ -1363,7 +1316,6 @@ clear_config()
 		extra_info = NULL;
 	}
 	global_config_source       = "";
-	global_root_config_source  = "";
 	local_config_sources.clearAll();
 	return;
 }

@@ -300,9 +300,6 @@ main( int argc, char* argv[] )
 		if (global_config_source.Length() > 0) {
 			fprintf( stdout, "#\t%s\n", global_config_source.Value() );
 		}
-		if (global_root_config_source.Length() > 0) {
-			fprintf( stdout, "#\t%s\n", global_root_config_source.Value() );
-		}
 		local_config_sources.rewind();
 		while ( (source = local_config_sources.next()) != NULL ) {
 			fprintf( stdout, "#\t%s\n", source );
@@ -656,12 +653,6 @@ static void PrintConfigSources(void)
 		fflush( stdout );
 	} else {
 		fprintf( stderr, "Can't find the configuration source.\n" );
-	}
-	if (global_root_config_source.Length() > 0) {
-		fprintf( stderr, "Root configuration source:\n" );
-		fflush( stderr );
-		fprintf( stdout, "\t%s\n", global_root_config_source.Value() );
-		fflush( stdout );
 	}
 
 	unsigned int numSources = local_config_sources.number();
