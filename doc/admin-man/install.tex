@@ -187,20 +187,10 @@ running Condor as a Unix user other than root.
 
 Either root will be administering Condor directly, or someone else
 would be acting as the Condor administrator.  If root has delegated
-the responsibility to another person but doesn't want to grant that
-person root access, root can specify a 
-\File{condor\_config.root} file that
-will override settings in the other condor configuration
-files.  This way,
-the global 
-\File{condor\_config} file can be owned and controlled by whoever
-is condor-admin, and the 
-condor\_config.root can be owned and
-controlled only by root.  Settings that would compromise root security
-(such as which binaries are started as root) can be specified in the
-\File{condor\_config.root} file while other settings that only control policy
-or condor-specific settings can still be controlled without root
-access.  
+the responsibility to another person, keep in mind that as long as
+Condor is started up as root, it should be clearly understood that
+whoever has the ability to edit the condor configuration files can
+effectively run arbitrary programs as root.
 
 
 \item[5. Will you have a Unix user named condor, and will its home
@@ -374,16 +364,6 @@ section~\ref{sec:Multiple-Platforms} on
 page~\pageref{sec:Multiple-Platforms} about Configuring Condor for
 Multiple Platforms for details.
 
-In addition, because we recommend that you start the Condor daemons as
-root, we allow you to create configuration files that are owned and
-controlled by root that will override any other Condor settings.  This
-way, if the Condor administrator is not root, the regular Condor configuration
-files can be owned and writable by condor-admin, but root does not have
-to grant root access to this person.  See
-section~\ref{Root-Config} on page~\pageref{Root-Config} in the
-manual for a detailed discussion of the root configuration files, if you
-should use them, and what settings should be in them.
-
 \index{configuration files!location}
 In general, there are a number of places that Condor will look to find
 its configuration files.  The first file it looks for is the global configuration
@@ -410,18 +390,6 @@ The only way to specify the local configuration file(s) is in the global configu
 file, with the \Macro{LOCAL\_CONFIG\_FILE} macro.  If that macro is not
 set, no local configuration file is used.  This macro can be a list of files
 or a single file.
-
-The root configuration files come in last.  The global file is searched for
-in the following places:
-\begin{enumerate}
-   \item \File{/etc/condor/condor\_config.root}
-   \item \File{\Tilde condor/condor\_config.root}
-\end{enumerate}
-
-The local root configuration file(s) are found with the
-\Macro{LOCAL\_ROOT\_CONFIG\_FILE} macro.  If that is not set, no local
-root configuration file is used.  This
-macro can be a list of files or a single file.
 
 \item[Release Directory]
 

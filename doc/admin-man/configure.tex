@@ -28,7 +28,7 @@ Condor works well for most sites.
 Each Condor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
 various configuration files that might be used including pool-wide,
-platform-specific, machine-specific, and root-owned configuration files.
+platform-specific, and machine-specific configuration files.
 Environment variables may also contribute to the configuration.
 
 The result of configuration is a list of key/value pairs.
@@ -66,8 +66,6 @@ The order in which items are parsed is
 \begin{enumerate}
 \item global configuration file
 \item local configuration file
-\item global root-owned configuration file
-\item local root-owned configuration file
 \item specific environment variables prefixed with \MacroNI{\_CONDOR\_}
 \end{enumerate}
 
@@ -163,9 +161,6 @@ B = $(A)
 \end{verbatim}
 are not allowed.
 They create definitions that Condor refuses to parse. 
-
-\Note Macros should not be incrementally defined in the
-\Macro{LOCAL\_ROOT\_CONFIG\_FILE} for security reasons.
 
 % commented out in 2005, as it is too old, and is now confusing
 %\Note Condor used to distinguish between ``macros'' and ``expressions''
@@ -277,8 +272,7 @@ a file name provides the syntax necessary to tell
 Condor to run a program.
 This syntax may only be used in the definition of
 the \Env{CONDOR\_CONFIG} environment variable,
-the \Macro{LOCAL\_CONFIG\_FILE} configuration variable,
-or the \Macro{LOCAL\_ROOT\_CONFIG\_FILE} configuration variable.
+or the \Macro{LOCAL\_CONFIG\_FILE} configuration variable.
 
 The command line for the program 
 is formed by the characters preceding the vertical bar character.
@@ -758,10 +752,6 @@ File System Configuration File Entries''.
   it appears in the list. 
   The process is not recursive, so any directories found inside the directory
   being processed are ignored. 
-
-\item[\Macro{LOCAL\_ROOT\_CONFIG\_FILE}] \label{param:LocalRootConfigFile} 
-  A comma or space separated list of path and file names specifying
-  the local, root configuration files.
 
 \item[\Macro{CONDOR\_IDS}] \label{param:CondorIds}
   The User ID (UID) and Group ID (GID) pair that the Condor daemons
