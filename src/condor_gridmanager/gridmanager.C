@@ -47,9 +47,7 @@
 #include "gt4job.h"
 #include "infnbatchjob.h"
 
-#if !defined(WIN32)
-#  include "creamjob.h"
-#endif
+#include "creamjob.h"
 
 #define QMGMT_TIMEOUT 15
 
@@ -323,7 +321,6 @@ Init()
 	jobTypes.Append( new_type );
 #endif
 
-#if !defined(WIN32)
 	new_type = new JobType;
 	new_type->Name = strdup( "Cream" );
 	new_type->InitFunc = CreamJobInit;
@@ -331,7 +328,6 @@ Init()
 	new_type->AdMatchFunc = CreamJobAdMatch;
 	new_type->CreateFunc = CreamJobCreate;
 	jobTypes.Append( new_type );
-#endif
 
 	new_type = new JobType;
 	new_type->Name = strdup( "Nordugrid" );

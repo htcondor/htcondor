@@ -13,12 +13,6 @@
 #define StdUnvProgs shadow.V6 starter.V5 
 #define StdUnvLibs ckpt syscall_lib
 
-#if HAVE_EXT_GLOBUS
-#define GlobusProgs gridmanager globus
-#else
-#define GlobusProgs
-#endif
-
 #if HAVE_EXT_CLASSADS && HAVE_EXT_GLOBUS
 #define CreddProgs credd
 #else
@@ -64,7 +58,7 @@
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools KbddProgs collector.V6 dagman userlog Eventd \
-		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp had \
+		gridmanager globus starter.V6.1 shadow.V6.1 dcskel c-gahp had \
 		CreddProgs StorkProgs \
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp
@@ -284,10 +278,9 @@ condor_object_target(daemon_core.V6)
 condor_object_target(daemon_client)
 condor_object_target(prio)
 condor_object_target(scripts)
-#if HAVE_EXT_GLOBUS
-    condor_object_target(gridmanager)
-	condor_object_target(globus)
-#endif
+condor_object_target(gridmanager)
+condor_object_target(globus)
+
 #if HAVE_EXT_CLASSADS && HAVE_EXT_GLOBUS
 	condor_object_target(credd)
 #endif
