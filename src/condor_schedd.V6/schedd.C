@@ -5530,6 +5530,13 @@ Scheduler::startdContactSockHandler( Stream *sock )
 		BAILOUT;
 	}
 
+	// The claim has been successfully requested, and this sock is
+	// about to be closed by DaemonCore, so remove the saved reference
+	// to it from the match_rec. We do this before calling StartJob,
+	// since the mrec could be deleted and we don't want it to try
+	// to Cancel_Socket.
+	mrec->request_claim_sock = NULL;
+
 	StartJob( mrec );
 
 	rescheduleContactQueue();
