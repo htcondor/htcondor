@@ -33,10 +33,21 @@ INTDIR=.\..\Debug
 OutDir=.\..\Debug
 # End Custom Macros
 
+!IF "$(RECURSE)" == "0" 
+
 ALL : "$(OUTDIR)\condor_vm-gahp.exe"
 
+!ELSE 
 
+ALL : "condor_privsep_client - Win32 Debug" "condor_io - Win32 Debug" "condor_procapi - Win32 Debug" "condor_procd_client - Win32 Debug" "condor_util_lib - Win32 Debug" "condor_sysapi - Win32 Debug" "condor_daemon_core - Win32 Debug" "condor_cpp_util - Win32 Debug" "condor_classad - Win32 Debug" "$(OUTDIR)\condor_vm-gahp.exe"
+
+!ENDIF 
+
+!IF "$(RECURSE)" == "1" 
+CLEAN :"condor_classad - Win32 DebugCLEAN" "condor_cpp_util - Win32 DebugCLEAN" "condor_daemon_core - Win32 DebugCLEAN" "condor_sysapi - Win32 DebugCLEAN" "condor_util_lib - Win32 DebugCLEAN" "condor_procd_client - Win32 DebugCLEAN" "condor_procapi - Win32 DebugCLEAN" "condor_io - Win32 DebugCLEAN" "condor_privsep_client - Win32 DebugCLEAN" 
+!ELSE 
 CLEAN :
+!ENDIF 
 	-@erase "$(INTDIR)\pbuffer.obj"
 	-@erase "$(INTDIR)\soap_vmgahpC.obj"
 	-@erase "$(INTDIR)\soap_vmgahpServer.obj"
@@ -110,7 +121,16 @@ LINK32_OBJS= \
 	"$(INTDIR)\vmgahp_config.obj" \
 	"$(INTDIR)\vmgahp_instantiate.obj" \
 	"$(INTDIR)\vmgahp_main.obj" \
-	"$(INTDIR)\vmware_type.obj"
+	"$(INTDIR)\vmware_type.obj" \
+	"$(OUTDIR)\condor_classad.lib" \
+	"$(OUTDIR)\condor_cpp_util.lib" \
+	"$(OUTDIR)\condor_daemon_core.lib" \
+	"$(OUTDIR)\condor_sysapi.lib" \
+	"..\src\condor_util_lib\condor_util.lib" \
+	"$(OUTDIR)\condor_procd_client.lib" \
+	"$(OUTDIR)\condor_procapi.lib" \
+	"$(OUTDIR)\condor_io.lib" \
+	"$(OUTDIR)\condor_privsep_client.lib"
 
 "$(OUTDIR)\condor_vm-gahp.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
@@ -125,10 +145,21 @@ INTDIR=.\../Release
 OutDir=.\../Release
 # End Custom Macros
 
+!IF "$(RECURSE)" == "0" 
+
 ALL : "$(OUTDIR)\condor_vm-gahp.exe"
 
+!ELSE 
 
+ALL : "condor_privsep_client - Win32 Release" "condor_io - Win32 Release" "condor_procapi - Win32 Release" "condor_procd_client - Win32 Release" "condor_util_lib - Win32 Release" "condor_sysapi - Win32 Release" "condor_daemon_core - Win32 Release" "condor_cpp_util - Win32 Release" "condor_classad - Win32 Release" "$(OUTDIR)\condor_vm-gahp.exe"
+
+!ENDIF 
+
+!IF "$(RECURSE)" == "1" 
+CLEAN :"condor_classad - Win32 ReleaseCLEAN" "condor_cpp_util - Win32 ReleaseCLEAN" "condor_daemon_core - Win32 ReleaseCLEAN" "condor_sysapi - Win32 ReleaseCLEAN" "condor_util_lib - Win32 ReleaseCLEAN" "condor_procd_client - Win32 ReleaseCLEAN" "condor_procapi - Win32 ReleaseCLEAN" "condor_io - Win32 ReleaseCLEAN" "condor_privsep_client - Win32 ReleaseCLEAN" 
+!ELSE 
 CLEAN :
+!ENDIF 
 	-@erase "$(INTDIR)\pbuffer.obj"
 	-@erase "$(INTDIR)\soap_vmgahpC.obj"
 	-@erase "$(INTDIR)\soap_vmgahpServer.obj"
@@ -200,7 +231,16 @@ LINK32_OBJS= \
 	"$(INTDIR)\vmgahp_config.obj" \
 	"$(INTDIR)\vmgahp_instantiate.obj" \
 	"$(INTDIR)\vmgahp_main.obj" \
-	"$(INTDIR)\vmware_type.obj"
+	"$(INTDIR)\vmware_type.obj" \
+	"$(OUTDIR)\condor_classad.lib" \
+	"$(OUTDIR)\condor_cpp_util.lib" \
+	"$(OUTDIR)\condor_daemon_core.lib" \
+	"$(OUTDIR)\condor_sysapi.lib" \
+	"..\src\condor_util_lib\condor_util.lib" \
+	"$(OUTDIR)\condor_procd_client.lib" \
+	"$(OUTDIR)\condor_procapi.lib" \
+	"$(OUTDIR)\condor_io.lib" \
+	"$(OUTDIR)\condor_privsep_client.lib"
 
 "$(OUTDIR)\condor_vm-gahp.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
@@ -220,6 +260,241 @@ LINK32_OBJS= \
 
 
 !IF "$(CFG)" == "condor_vmgahp - Win32 Debug" || "$(CFG)" == "condor_vmgahp - Win32 Release"
+
+!IF  "$(CFG)" == "condor_vmgahp - Win32 Debug"
+
+"condor_classad - Win32 Debug" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Debug" 
+   cd "."
+
+"condor_classad - Win32 DebugCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Debug" RECURSE=1 CLEAN 
+   cd "."
+
+!ELSEIF  "$(CFG)" == "condor_vmgahp - Win32 Release"
+
+"condor_classad - Win32 Release" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Release" 
+   cd "."
+
+"condor_classad - Win32 ReleaseCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Release" RECURSE=1 CLEAN 
+   cd "."
+
+!ENDIF 
+
+!IF  "$(CFG)" == "condor_vmgahp - Win32 Debug"
+
+"condor_cpp_util - Win32 Debug" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" 
+   cd "."
+
+"condor_cpp_util - Win32 DebugCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" RECURSE=1 CLEAN 
+   cd "."
+
+!ELSEIF  "$(CFG)" == "condor_vmgahp - Win32 Release"
+
+"condor_cpp_util - Win32 Release" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" 
+   cd "."
+
+"condor_cpp_util - Win32 ReleaseCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" RECURSE=1 CLEAN 
+   cd "."
+
+!ENDIF 
+
+!IF  "$(CFG)" == "condor_vmgahp - Win32 Debug"
+
+"condor_daemon_core - Win32 Debug" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_daemon_core.mak CFG="condor_daemon_core - Win32 Debug" 
+   cd "."
+
+"condor_daemon_core - Win32 DebugCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_daemon_core.mak CFG="condor_daemon_core - Win32 Debug" RECURSE=1 CLEAN 
+   cd "."
+
+!ELSEIF  "$(CFG)" == "condor_vmgahp - Win32 Release"
+
+"condor_daemon_core - Win32 Release" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_daemon_core.mak CFG="condor_daemon_core - Win32 Release" 
+   cd "."
+
+"condor_daemon_core - Win32 ReleaseCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_daemon_core.mak CFG="condor_daemon_core - Win32 Release" RECURSE=1 CLEAN 
+   cd "."
+
+!ENDIF 
+
+!IF  "$(CFG)" == "condor_vmgahp - Win32 Debug"
+
+"condor_sysapi - Win32 Debug" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Debug" 
+   cd "."
+
+"condor_sysapi - Win32 DebugCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Debug" RECURSE=1 CLEAN 
+   cd "."
+
+!ELSEIF  "$(CFG)" == "condor_vmgahp - Win32 Release"
+
+"condor_sysapi - Win32 Release" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Release" 
+   cd "."
+
+"condor_sysapi - Win32 ReleaseCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Release" RECURSE=1 CLEAN 
+   cd "."
+
+!ENDIF 
+
+!IF  "$(CFG)" == "condor_vmgahp - Win32 Debug"
+
+"condor_util_lib - Win32 Debug" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Debug" 
+   cd "."
+
+"condor_util_lib - Win32 DebugCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Debug" RECURSE=1 CLEAN 
+   cd "."
+
+!ELSEIF  "$(CFG)" == "condor_vmgahp - Win32 Release"
+
+"condor_util_lib - Win32 Release" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Release" 
+   cd "."
+
+"condor_util_lib - Win32 ReleaseCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Release" RECURSE=1 CLEAN 
+   cd "."
+
+!ENDIF 
+
+!IF  "$(CFG)" == "condor_vmgahp - Win32 Debug"
+
+"condor_procd_client - Win32 Debug" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procd_client.mak CFG="condor_procd_client - Win32 Debug" 
+   cd "."
+
+"condor_procd_client - Win32 DebugCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procd_client.mak CFG="condor_procd_client - Win32 Debug" RECURSE=1 CLEAN 
+   cd "."
+
+!ELSEIF  "$(CFG)" == "condor_vmgahp - Win32 Release"
+
+"condor_procd_client - Win32 Release" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procd_client.mak CFG="condor_procd_client - Win32 Release" 
+   cd "."
+
+"condor_procd_client - Win32 ReleaseCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procd_client.mak CFG="condor_procd_client - Win32 Release" RECURSE=1 CLEAN 
+   cd "."
+
+!ENDIF 
+
+!IF  "$(CFG)" == "condor_vmgahp - Win32 Debug"
+
+"condor_procapi - Win32 Debug" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Debug" 
+   cd "."
+
+"condor_procapi - Win32 DebugCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Debug" RECURSE=1 CLEAN 
+   cd "."
+
+!ELSEIF  "$(CFG)" == "condor_vmgahp - Win32 Release"
+
+"condor_procapi - Win32 Release" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Release" 
+   cd "."
+
+"condor_procapi - Win32 ReleaseCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Release" RECURSE=1 CLEAN 
+   cd "."
+
+!ENDIF 
+
+!IF  "$(CFG)" == "condor_vmgahp - Win32 Debug"
+
+"condor_io - Win32 Debug" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Debug" 
+   cd "."
+
+"condor_io - Win32 DebugCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Debug" RECURSE=1 CLEAN 
+   cd "."
+
+!ELSEIF  "$(CFG)" == "condor_vmgahp - Win32 Release"
+
+"condor_io - Win32 Release" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Release" 
+   cd "."
+
+"condor_io - Win32 ReleaseCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Release" RECURSE=1 CLEAN 
+   cd "."
+
+!ENDIF 
+
+!IF  "$(CFG)" == "condor_vmgahp - Win32 Debug"
+
+"condor_privsep_client - Win32 Debug" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_privsep_client.mak CFG="condor_privsep_client - Win32 Debug" 
+   cd "."
+
+"condor_privsep_client - Win32 DebugCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_privsep_client.mak CFG="condor_privsep_client - Win32 Debug" RECURSE=1 CLEAN 
+   cd "."
+
+!ELSEIF  "$(CFG)" == "condor_vmgahp - Win32 Release"
+
+"condor_privsep_client - Win32 Release" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_privsep_client.mak CFG="condor_privsep_client - Win32 Release" 
+   cd "."
+
+"condor_privsep_client - Win32 ReleaseCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_privsep_client.mak CFG="condor_privsep_client - Win32 Release" RECURSE=1 CLEAN 
+   cd "."
+
+!ENDIF 
+
 SOURCE="..\src\condor_vm-gahp\pbuffer.C"
 
 "$(INTDIR)\pbuffer.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
