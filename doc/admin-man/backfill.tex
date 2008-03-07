@@ -15,10 +15,8 @@ Currently, Condor only supports using the Berkeley Open Infrastructure
 for Network Computing (BOINC) to provide the backfill jobs.
 More information about BOINC is available at
 \URL{http://boinc.berkeley.edu}.
-Furthermore, Condor currently does not support backfill jobs on
-windows machines.
 
-The rest of this section will provide an overview of how backfill jobs
+The rest of this section provides an overview of how backfill jobs
 work in Condor, details for configuring the policy for when backfill
 jobs are started or killed, and details on how to configure Condor to
 spawn the BOINC client to perform the work.
@@ -32,10 +30,10 @@ in Condor}
 \index{Backfill!Overview}
 
 Whenever a resource controlled by Condor is in the Unclaimed/Idle
-state, it is totally idle: neither the interactive user nor a Condor
+state, it is totally idle; neither the interactive user nor a Condor
 job is performing any work.
 Machines in this state can be configured to enter the \Term{Backfill}
-state, which means the resource will attempt to perform a background
+state, which allows the resource to attempt a background
 computation to keep itself busy until other work arrives (either a 
 user returning to use the machine interactively, or a normal Condor
 job).
@@ -57,8 +55,7 @@ The \Condor{startd} has the ability to start and stop the BOINC client
 program at the appropriate times, but otherwise provides no additional
 services to configure the BOINC computations themselves.
 Future versions of Condor might provide additional functionality to
-make it easier to manage BOINC computations from within the Condor
-configuration settings.
+make it easier to manage BOINC computations from within Condor.
 For now, the BOINC client must be manually installed and configured
 outside of Condor on each backfill-enabled machine.
 
@@ -70,7 +67,7 @@ outside of Condor on each backfill-enabled machine.
 \index{Backfill!Defining Condor policy}
 
 There are a small set of policy expressions that determine if a
-\Condor{startd} will attempt to spawn backfill jobs at all, and if so,
+\Condor{startd} will attempt to spawn a backfill client at all, and if so,
 to control the transitions in to and out of the Backfill state.
 This section briefly lists these expressions.
 More detail can be found in
@@ -81,26 +78,27 @@ page~\pageref{sec:Startd-Config-File-Entries}.
 
 \item[\Macro{ENABLE\_BACKFILL}] A boolean value to determine if any
   backfill functionality should be used.
-  The default is \Expr{False}.
+  The default value is \Expr{False}.
 
 \item[\Macro{BACKFILL\_SYSTEM}] A string that defines what backfill
   system to use for spawning and managing backfill computations.
-  Currently, the only supported value for this is \AdStr{BOINC}.
+  Currently, the only supported string is \AdStr{BOINC}.
   
 \item[\Macro{START\_BACKFILL}] A boolean expression to control if a
-  Condor resource should start a backfill computation.
-  This is only evaluated when the machine is in the Unclaimed/Idle
+  Condor resource should start a backfill client.
+  This expression is only evaluated when the machine is in the Unclaimed/Idle
   state and the \MacroNI{ENABLE\_BACKFILL} expression is \Expr{True}.
 
 \item[\Macro{EVICT\_BACKFILL}] A boolean expression that is evaluated
-  whenever a Condor resource is in the Backfill state which, when
-  \Expr{True}, indicates the machine should immediately kill the
-  currently running backfill computation and return to the Owner
-  state.
+  whenever a Condor resource is in the Backfill state.
+  A value of \Expr{True} indicates the machine should immediately kill the
+  currently running backfill client and any other spawned processes,
+  and return to the Owner state.
 
 \end{description}
 
-The following examples show some possible uses of these settings:
+The following example shows a possible configuration to enable
+backfill:
 
 \footnotesize
 \begin{verbatim}
@@ -136,8 +134,8 @@ However, a brief overview is provided here for sites interested in
 using BOINC with Condor to manage backfill jobs. 
 
 BOINC grew out of the relatively famous SETI@home computation, where
-volunteers would install special client software (in the form of a
-screen saver) that would contact a centralized server to download work
+volunteers installed special client software, in the form of a
+screen saver, that contacted a centralized server to download work
 units.
 Each work unit contained a set of radio telescope data and the
 computation tried to find patterns in the data, a sign of intelligent
@@ -146,13 +144,13 @@ Terrestrial Intelligence at home'').
 BOINC is developed by the Space Sciences Lab at the University of
 California, Berkeley, by the same people who created SETI@home.
 However, instead of being tied to the specific radio telescope
-application, BOINC is a generic infrastructure where many different
+application, BOINC is a generic infrastructure by which many different
 kinds of scientific computations can be solved.
 The current generation of SETI@home now runs on top of BOINC, along
 with various physics, biology, climatology, and other applications.
 
 The basic computational model for BOINC and the original SETI@home is
-the same: volunteers install BOINC client software which will run
+the same: volunteers install BOINC client software which runs
 whenever the machine would otherwise be idle.
 However, the BOINC installation on any given machine must be
 configured so that it knows what computations to work for (each
@@ -163,13 +161,13 @@ a single project, or to split the cycles between projects so that, on
 average, the desired percentage of the computational power is
 allocated to each project.
 Once the client software (a program called the \Prog{boinc\_client})
-starts running, it will attempt to contact a centralized server for
+starts running, it attempts to contact a centralized server for
 each project it has been configured to work for.
-The BOINC software will download the appropriate platform-specific
+The BOINC software downloads the appropriate platform-specific
 application binary and some work units from the central server for
 each project.
-Whenever the client software completes a given work unit, it will once
-again attempt to connect to that project's central server to upload
+Whenever the client software completes a given work unit, it once
+again attempts to connect to that project's central server to upload
 the results and download more work.
 
 BOINC participants must register at the centralized server for each
@@ -184,11 +182,11 @@ Because BOINC already handles the problems of distributing the
 application binaries for each scientific computation, the work units,
 and compiling the results, it is a perfect system for managing
 backfill computations in Condor.
-Many of the applications that run on top of BOINC do their own
-application-specific checkpointing, so even if the
+Many of the applications that run on top of BOINC produce their own
+application-specific checkpoints, so even if the
 \Prog{boinc\_client} is killed (for example, when a Condor job arrives
 at a machine, or if the interactive user returns) an entire work unit
-won't necessarily be lost.
+will not necessarily be lost.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -483,55 +481,101 @@ found at \URL{http://boinc.berkeley.edu/multiple\_projects.php}.
 \subsubsection{\label{sec:Backfill-BOINC-Windows}BOINC on Windows}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The Windows version of BOINC has multiple installation methods: the 
-preferred method of installation for use with Condor is the 
-``Shared Installation'' method.  Using this method gives all users 
-access to the executables.  During the installation process 
-deselect the options which make BOINC the default screensaver, as well 
-as running on start-up.  Finally, do not launch BOINC at the conclusion
-of the installation.
+The Windows version of BOINC has multiple installation methods.
+The preferred method of installation for use with Condor is the 
+``Shared Installation'' method.
+Using this method gives all users access to the executables.
+During the installation process 
+\begin{enumerate}
+\item
+Deselect the option which makes BOINC the default screen saver
+\item
+Deselect the option which runs BOINC on start-up.
+\item
+Do not launch BOINC at the conclusion of the installation.
+\end{enumerate}
 
-There are three major differences to keep in mind when dealing with 
-the Windows installation: First, the executables have different names.  
-The Windows client is called \Prog{boinc.exe} and the administrative 
-tool is called \Prog{boinccmd.exe}. Meaning the \Macro{BOINC\_Executable} 
-must be re-written as follows:
+There are three major differences from the Unix version
+to keep in mind when dealing with the Windows installation:
+
+\begin{enumerate}
+\item
+The Windows executables have different names from the Unix versions.  
+The Windows client is called \Prog{boinc.exe}.
+Therefore, the configuration variable \Macro{BOINC\_Executable} 
+is written:
 
 \footnotesize
 \begin{verbatim}
 BOINC_Executable = C:\PROGRA~1\BOINC\boinc.exe
 \end{verbatim}
 \normalsize
+
+The Unix administrative tool \Prog{boinc\_cmd} 
+is called \Prog{boinccmd.exe} on Windows.
+
   
-Secondly, when using BOINC on Windows, \Macro{BOINC\_InitialDir} will not 
-be respected fully.  That is to say, you must pass the BOINC home 
-directory directly to the BOINC application, via the \Macro{BOINC\_Arguments}
-line. For instance, the abovementioned argument line example can be 
-re-written as such:
+\item
+When using BOINC on Windows, the configuration variable
+\Macro{BOINC\_InitialDir} will not be respected fully.
+To work around this difficulty,
+pass the BOINC home directory directly to the BOINC application
+via the \Macro{BOINC\_Arguments} configuration variable.
+For Windows, rewrite the argument line as:
 
 \footnotesize
 \begin{verbatim}
 BOINC_Arguments = --dir $(BOINC_HOME) \
-                  --attach_project http://einstein.phys.uwm.edu [account_key] 
+          --attach_project http://einstein.phys.uwm.edu [account_key] 
 \end{verbatim}
 \normalsize
 
 As a consequence of setting the BOINC home directory, some projects may 
-fail with an authentication error: ``Scheduler request failed: Peer 
-certificate cannot be authenticated with known CA certificates.'' To 
-resolve this issue, copy the \Prog{ca-bundle.crt} from the BOINC installation 
-directory to \texttt{\$(BOINC\_HOME)}.  This file appears to be project and 
-machine independent, and can therefore be distributed as part of an 
+fail with the authentication error:
+\footnotesize
+\begin{verbatim}
+Scheduler request failed: Peer 
+certificate cannot be authenticated 
+with known CA certificates.
+\end{verbatim}
+\normalsize
+
+To resolve this issue,
+copy the \File{ca-bundle.crt} file
+from the BOINC installation directory
+to \File{\$(BOINC\_HOME)}.
+This file appears to be project and machine independent,
+and it can therefore be distributed as part of an 
 automated Condor installation.
 
-Finally, the \Macro{BOINC\_Owner} macro behaves differently on Windows:
-First, it may take one of two forms: \texttt{domain\Bs user} or simply 
-\texttt{user}, where the latter assumes the user exists in the local domain 
-(i.e. on the computer itself).  Secondly, setting this option also 
-automatically adds the \Attr{RunAsUser}=True attribute to the BOINC job, 
-which requires that the local Starter be able to run jobs in this 
-manner; that is, the \Macro{STARTER\_ALLOW\_RUNAS\_OWNER} macro must 
-be set to True.  For more information on the \Attr{RunAsUser} attribute and 
-the \Macro{STARTER\_ALLOW\_RUNAS\_OWNER} macro, please see 
-sections~\ref{sec:windows-run-as-owner} 
-and~\ref{param:StarterAllowRunAsOwner} respectively.
+\item
+The \Macro{BOINC\_Owner} configuration variable behaves differently
+on Windows than it does on Unix.
+Its value may take one of two forms: 
+\begin{itemize}
+
+\item 
+\verb@domain\user@
+\item 
+\verb@user@
+
+This form assumes that the user exists in the local domain 
+(that is, on the computer itself).
+\end{itemize}
+
+Setting this option causes the addition of the job attribute
+\begin{verbatim}
+RunAsUser = True
+\end{verbatim}
+to the backfill client.
+This further implies that the configuration variable
+\Macro{STARTER\_ALLOW\_RUNAS\_OWNER} be set to \Expr{True}
+to insure that the local \Condor{starter} be able to run jobs in this 
+manner.
+For more information on the \Attr{RunAsUser} attribute, 
+see section~\ref{sec:windows-run-as-owner}. 
+For more information on the the \Macro{STARTER\_ALLOW\_RUNAS\_OWNER} 
+configuration variable, see 
+section~\ref{param:StarterAllowRunAsOwner}.
+
+\end{enumerate}
