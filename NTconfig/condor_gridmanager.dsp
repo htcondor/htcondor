@@ -120,22 +120,6 @@ SOURCE=..\src\condor_gridmanager\condorresource.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_gridmanager\creamjob.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_gridmanager\creamjob.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_gridmanager\creamresource.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_gridmanager\creamresource.h
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\condor_gridmanager\gahp-client.C"
 # End Source File
 # Begin Source File

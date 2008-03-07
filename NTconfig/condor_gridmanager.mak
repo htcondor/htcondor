@@ -55,8 +55,6 @@ CLEAN :
 	-@erase "$(INTDIR)\baseresource.obj"
 	-@erase "$(INTDIR)\condorjob.obj"
 	-@erase "$(INTDIR)\condorresource.obj"
-	-@erase "$(INTDIR)\creamjob.obj"
-	-@erase "$(INTDIR)\creamresource.obj"
 	-@erase "$(INTDIR)\gahp-client.obj"
 	-@erase "$(INTDIR)\globusjob.obj"
 	-@erase "$(INTDIR)\globusresource.obj"
@@ -114,8 +112,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\soap_gridmanagerServer.obj" \
 	"$(INTDIR)\soap_gridmanagerStub.obj" \
 	"$(INTDIR)\unicorejob.obj" \
-	"$(INTDIR)\creamjob.obj" \
-	"$(INTDIR)\creamresource.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -159,8 +155,6 @@ CLEAN :
 	-@erase "$(INTDIR)\baseresource.obj"
 	-@erase "$(INTDIR)\condorjob.obj"
 	-@erase "$(INTDIR)\condorresource.obj"
-	-@erase "$(INTDIR)\creamjob.obj"
-	-@erase "$(INTDIR)\creamresource.obj"
 	-@erase "$(INTDIR)\gahp-client.obj"
 	-@erase "$(INTDIR)\globusjob.obj"
 	-@erase "$(INTDIR)\globusresource.obj"
@@ -216,8 +210,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\soap_gridmanagerServer.obj" \
 	"$(INTDIR)\soap_gridmanagerStub.obj" \
 	"$(INTDIR)\unicorejob.obj" \
-	"$(INTDIR)\creamjob.obj" \
-	"$(INTDIR)\creamresource.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -559,18 +551,6 @@ SOURCE=..\src\condor_gridmanager\condorjob.C
 SOURCE=..\src\condor_gridmanager\condorresource.C
 
 "$(INTDIR)\condorresource.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_gridmanager\creamjob.C
-
-"$(INTDIR)\creamjob.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_gridmanager\creamresource.C
-
-"$(INTDIR)\creamresource.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
