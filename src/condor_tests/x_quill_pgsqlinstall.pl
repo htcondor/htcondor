@@ -36,21 +36,28 @@ print "$prefix $installlog $tarfile $pgsqlversion $condorconfigadd $morelibs $te
 my $startpostmasterport = 5432;
 my $postmasterinc = int(rand(100) + 13);
 $currenthost = `hostname`;
+$domain = `dnsdomainname`;
 CondorTest::fullchomp($currenthost);
+CondorTest::fullchomp($domain);
 
 # for quill this must be the fully qualified name which
 # is what quill uses to builds its search string for the
 # db writing password.
 
+@domainparts = () ;
 #if($currenthost =~ /^(.*)\.cs\.wisc\.edu$/) {
 if($currenthost =~ /^(.*)/) {
-	# fine we got a fully qualified name.....
+	# did we get a fully qualified name.....
+	@domainparts = split /\./, $currenthost;
+	if($#domainparts == 0) {
+		$currenthost = $currenthost . "." . $domain;
+	}
 	print "Fully qualified name already<<$currenthost>>\n";
 } else {
 	# fine add our domain for madison
 	#$currenthost = $currenthost . ".cs.wisc.edu";
 	$currenthost = $currenthost;
-	print "Fully qualified name now<<$currenthost>>\n";
+	die "Why Here?????<<$currenthost/$domain>>\n";
 }
 
 print "Original port request is <<$startpostmasterport>>\n";
