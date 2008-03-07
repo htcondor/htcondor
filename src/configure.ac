@@ -530,6 +530,12 @@ AC_ARG_ENABLE(gcc-version-check,
   [],
   [enable_gcc_version_check=yes])
 
+AC_ARG_ENABLE(glibc-version-check,
+  [AS_HELP_STRING([--disable-glibc-version-check],
+     [Disable the glibc version check])],
+  [],
+  [enable_glibc_version_check=yes])
+
 AC_ARG_ENABLE(soft-is-hard,
   [AS_HELP_STRING([--enable-soft-is-hard],
      [Force all SOFT requirements into HARD requirements (default: disabled)])],
@@ -2303,16 +2309,16 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
        CHECK_EXTERNAL([glibc],[2.5-20061008T1257-x86_64], [soft])
 	fi
     ;;
-  "2.6." ) # F7 uses glibc 2.6-4
-    including_glibc_ext=NO
-    ;;
-  "2.7." ) # F8 uses glibc 2.7-2
-    including_glibc_ext=NO
-    ;;
   * )
-    AC_MSG_CHECKING(glibc)
-    AC_MSG_RESULT([ERROR])
-    AC_MSG_ERROR([Condor does NOT know what glibc external to use with glibc-$_cv_libc_full_vers])
+    if test "x$enable_glibc_version_check" = "xyes"; then
+      AC_MSG_CHECKING(glibc)
+      AC_MSG_RESULT([ERROR])
+      AC_MSG_ERROR([Condor does NOT know what glibc external to use with glibc-$_cv_libc_full_vers])
+    else
+      AC_MSG_CHECKING(glibc)
+      AC_MSG_RESULT([glibc-$_cv_libc_full_vers (UNSUPPORTED)])
+      including_glibc_ext=NO
+    fi
   esac
   if test "x$including_glibc_ext" = "xYES"; then
     AC_SUBST(want_ext_glibc,YES)
