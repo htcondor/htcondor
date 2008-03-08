@@ -756,8 +756,6 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 				fprintf( stderr, "ERROR: unknown option %s\n", strArg.Value() );
 				printUsage();
 			}
-
-			//TEMP -- give a warning if oldRescue and autoRescue are both true?
 		}
 	}
 
@@ -765,6 +763,12 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 	{
 		fprintf( stderr, "ERROR: no dag file specified; aborting.\n" );
 		printUsage();
+	}
+
+	if (opts.oldRescue && opts.autoRescue )
+	{
+		fprintf( stderr, "Warning: OLD_RESCUE and AUTO_RESCUE are both "
+					"true.  This may produce undesireable behavior\n" );
 	}
 }
 

@@ -48,8 +48,7 @@ class Dagman {
     int maxJobs;  // Maximum number of Jobs to run at once
     int maxPreScripts;  // max. number of PRE scripts to run at once
     int maxPostScripts;  // max. number of POST scripts to run at once
-		//TEMP -- rename -- this is the rescue DAG file to *write*
-	char *rescue_file;
+	char *rescueFileToWrite; // "old style" of rescue DAG -- null for new
 	bool paused;
 
 	char* condorSubmitExe;
@@ -80,6 +79,11 @@ class Dagman {
 		// The list of all DAG files to be run by this invocation of
 		// condor_dagman.
 	StringList dagFiles;
+
+		// Whether we have more than one DAG file; we need to save this
+		// separately because dagFiles will get reset if we're automatically
+		// running a rescue DAG.
+	bool multiDags;
 
 		// whether to peform expensive cycle-detection at startup
 		// (note: we perform run-time cycle-detection regardless)
@@ -156,8 +160,7 @@ class Dagman {
 		// will remain set to "" unless we're running a rescue DAG.
 		// This is *not* the name of the rescue DAG to write, if the
 		// curren trun fails.
-		//TEMP -- rename this to make it clearer? rescueFileToRun?
-	MyString rescueDagName;
+	MyString rescueFileToRun;
 
 
     bool Config();

@@ -336,14 +336,15 @@ class Dag {
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.  Rescue DAG file name
 		is derived automatically from original DAG name.
-        @param datafile The original DAG config file to read from
+        @param datafile The original DAG file
+		@param multiDags Whether we have multiple DAGs
     */
-    void Rescue (const char * datafile) /* const */;
+    void Rescue (const char * datafile, bool multiDags) /* const */;
 
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.
         @param rescue_file The name of the rescue file to generate
-        @param datafile The original DAG config file to read from
+        @param datafile The original DAG file
     */
     void WriteRescue (const char * rescue_file,
 				const char * datafile) /* const */;
@@ -351,23 +352,32 @@ class Dag {
 	/** Finds the number of the last existing rescue DAG file for the
 		given "primary" DAG.
 		@param primaryDagFile The primary DAG file name
+		@param multiDags Whether we have multiple DAGs
 		@return The number of the last existing rescue DAG (0 if there
 			is none)
 	*/
-	static int FindLastRescueDagNum(const char *primaryDagFile);
+	static int FindLastRescueDagNum(const char *primaryDagFile,
+				bool multiDags);
 
 	/** Creates a rescue DAG name, given a primary DAG name and rescue
 		DAG number
 		@param primaryDagFile The primary DAG file name
+		@param multiDags Whether we have multiple DAGs
 		@param rescueDagNum The rescue DAG number
 		@return The full name of the rescue DAG
 	*/
 	static MyString RescueDagName(const char *primaryDagFile,
-				int rescueDagNum);
+				bool multiDags, int rescueDagNum);
 
-	//TEMP -- document
+	/** Deletes all rescue DAG files for this primary DAG after the
+		given one (as long as the numbers are contiguous).  For example,
+		if rescueDagNum is 3, we will delete .rescue4, .rescue5, etc.
+		@param primaryDagFile The primary DAG file name
+		@param multiDags Whether we have multiple DAGs
+		@param rescueDagNum The rescue DAG number to delete *after*
+	*/
 	static void DeleteRescueDagsAfter(const char *primaryDagFile,
-				int rescueDagNum);
+				bool multiDags, int rescueDagNum);
 
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );

@@ -1651,11 +1651,11 @@ void Dag::RemoveRunningScripts ( ) const {
 }
 
 //-----------------------------------------------------------------------------
-void Dag::Rescue (const char * datafile) /* const */
+void Dag::Rescue (const char * datafile, bool multiDags) /* const */
 {
-	int nextRescue = FindLastRescueDagNum( datafile ) + 1;
+	int nextRescue = FindLastRescueDagNum( datafile, multiDags ) + 1;
 	if ( nextRescue > MAX_RESCUE_DAG_NUM ) nextRescue = MAX_RESCUE_DAG_NUM;
-	MyString rescueDagFile = RescueDagName( datafile, nextRescue );
+	MyString rescueDagFile = RescueDagName( datafile, multiDags, nextRescue );
 
 		// Note: there could possibly be a race condition here if two
 		// DAGMans are running on the same DAG at the same time.  That
@@ -1682,8 +1682,18 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 	bool reset_retries_upon_rescue =
 		param_boolean( "DAGMAN_RESET_RETRIES_UPON_RESCUE", true );
 
+
     fprintf (fp, "# Rescue DAG file, created after running\n");
     fprintf (fp, "#   the %s DAG file\n", datafile);
+
+	time_t timestamp;
+	(void)time( &timestamp );
+	const struct tm *tm;
+	tm = gmtime( &timestamp );
+	fprintf( fp, "# Created %d/%d/%d %02d:%02d:%02d UTC\n", tm->tm_mon + 1,
+				tm->tm_mday, tm->tm_year + 1900, tm->tm_hour, tm->tm_min,
+				tm->tm_sec );
+
     fprintf (fp, "#\n");
     fprintf (fp, "# Total number of Nodes: %d\n", NumNodes());
     fprintf (fp, "# Nodes premarked DONE: %d\n", _numNodesDone);
@@ -1859,26 +1869,29 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 
 //-------------------------------------------------------------------------
 int
-Dag::FindLastRescueDagNum(const char *primaryDagFile)
+Dag::FindLastRescueDagNum(const char *primaryDagFile, bool multiDags)
 {
 	int lastRescue = 0;
 	bool done = false;
+
+	for ( int test = 1; test <= MAX_RESCUE_DAG_NUM; test++ ) {
+		MyString testName = RescueDagName( primaryDagFile, multiDags,
+					test );
+		if ( access( testName.Value(), F_OK ) == 0 ) {
+			if ( test > lastRescue + 1 ) {
+				debug_printf( DEBUG_QUIET, "Warning: found rescue DAG "
+							"number %d, but not rescue DAG number %d\n",
+							test, test - 1);
+			}
+			lastRescue = test;
+		}
+	}
 	
-	while ( !done ) {
-		MyString testName = RescueDagName( primaryDagFile, lastRescue + 1 );
-		if ( access( testName.Value(), F_OK ) != 0 ) {
-			done = true;
-		} else {
-			lastRescue++;
-		}
-
-		if ( lastRescue >= MAX_RESCUE_DAG_NUM ) {
-
-			debug_printf( DEBUG_QUIET,
-						"Warning: Dag::FindLastRescueDagNum() hit maximum "
-						"rescue DAG number: %d\n", MAX_RESCUE_DAG_NUM );
-			done = true;
-		}
+	if ( lastRescue >= MAX_RESCUE_DAG_NUM ) {
+		debug_printf( DEBUG_QUIET,
+					"Warning: Dag::FindLastRescueDagNum() hit maximum "
+					"rescue DAG number: %d\n", MAX_RESCUE_DAG_NUM );
+		done = true;
 	}
 
 	return lastRescue;
@@ -1886,11 +1899,15 @@ Dag::FindLastRescueDagNum(const char *primaryDagFile)
 
 //-------------------------------------------------------------------------
 MyString
-Dag::RescueDagName(const char *primaryDagFile, int rescueDagNum)
+Dag::RescueDagName(const char *primaryDagFile, bool multiDags,
+			int rescueDagNum)
 {
 	ASSERT( rescueDagNum >= 1 );
 
 	MyString fileName(primaryDagFile);
+	if ( multiDags ) {
+		fileName += "_multi";
+	}
 	fileName += ".rescue";
 	if ( rescueDagNum > 1 ) {
 		fileName += rescueDagNum;
@@ -1901,7 +1918,8 @@ Dag::RescueDagName(const char *primaryDagFile, int rescueDagNum)
 
 //-------------------------------------------------------------------------
 void
-Dag::DeleteRescueDagsAfter(const char *primaryDagFile, int rescueDagNum)
+Dag::DeleteRescueDagsAfter(const char *primaryDagFile, bool multiDags,
+			int rescueDagNum)
 {
 	ASSERT( rescueDagNum >= 1 );
 
@@ -1909,11 +1927,12 @@ Dag::DeleteRescueDagsAfter(const char *primaryDagFile, int rescueDagNum)
 				rescueDagNum );
 
 	int firstToDelete = rescueDagNum + 1;
-	int lastToDelete = FindLastRescueDagNum( primaryDagFile );
+	int lastToDelete = FindLastRescueDagNum( primaryDagFile, multiDags );
 
 	for ( int rescueNum = firstToDelete; rescueNum <= lastToDelete;
 				rescueNum++ ) {
-		MyString rescueDagName = RescueDagName( primaryDagFile, rescueNum );
+		MyString rescueDagName = RescueDagName( primaryDagFile, multiDags,
+					rescueNum );
 		debug_printf( DEBUG_QUIET, "Deleting %s\n", rescueDagName.Value() );
 		unlink( rescueDagName.Value() );
 	}

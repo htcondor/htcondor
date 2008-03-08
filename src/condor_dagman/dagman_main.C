@@ -52,7 +52,6 @@ static char* lockFileName = NULL;
 static Dagman dagman;
 
 //---------------------------------------------------------------------------
-//TEMP -- hmm -- this is probably *really* out of date
 static void Usage() {
     debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
             "\t\t[-Debug <level>]\n"
@@ -69,6 +68,8 @@ static void Usage() {
             "\t\t[-NoEventChecks]\n\n"
             "\t\t[-AllowLogError]\n\n"
             "\t\t[-UseDagDir]\n\n"
+            "\t\t[-AutoRescue] <0|1>\n\n"
+            "\t\t[-DoRescue] <int N>\n\n"
             "\twherei NAME is the name of your DAG.\n"
             "\twhere N is Maximum # of Jobs to run at once "
             "(0 means unlimited)\n"
@@ -85,7 +86,7 @@ Dagman::Dagman() :
 	maxJobs (0),
 	maxPreScripts (0),
 	maxPostScripts (0),
-	rescue_file (NULL),
+	rescueFileToWrite (NULL),
 	paused (false),
 	condorSubmitExe (NULL),
 	condorRmExe (NULL),
@@ -95,6 +96,7 @@ Dagman::Dagman() :
 	max_submit_attempts (0),
 	max_submits_per_interval (1000), // so Coverity is happy
 	primaryDagFile (""),
+	multiDags (false),
 	startup_cycle_detect (false), // so Coverity is happy
 	allowLogError (false),
 	useDagDir (false),
@@ -111,7 +113,7 @@ Dagman::Dagman() :
 	_dagmanConfigFile (NULL), // so Coverity is happy
 	autoRescue(false),
 	doRescue(0),
-	rescueDagName("")
+	rescueFileToRun("")
 {
 }
 
@@ -292,7 +294,6 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
 				pendingReportInterval );
 
-		//TEMP -- make sure auto-rescue works right with multiple DAG files -- or mabye disallow it???
 		// TEMP -- set default to true after code review and documentation
 	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", false );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %d\n",
@@ -337,12 +338,15 @@ int main_shutdown_rescue( int exitVal ) {
 			// otherwise if we crashed, failed, or were killed while
 			// removing them, we would leave the DAG in an
 			// unrecoverable state...
-		if( dagman.rescue_file ) {
-			//TEMP -- warn user that they've overridden the automatic rescuefile generation
-			dagman.dag->WriteRescue( dagman.rescue_file,
+		if( dagman.rescueFileToWrite ) {
+			debug_printf( DEBUG_NORMAL, "Rescue DAG file %s was specified; "
+						"overriding automatic rescue DAG naming\n",
+						dagman.rescueFileToWrite );
+			dagman.dag->WriteRescue( dagman.rescueFileToWrite,
 						dagman.primaryDagFile.Value() );
 		} else {
-			dagman.dag->Rescue( dagman.primaryDagFile.Value() );
+			dagman.dag->Rescue( dagman.primaryDagFile.Value(),
+						dagman.multiDags );
 		}
 
 		debug_printf( DEBUG_DEBUG_1, "We have %d running jobs to remove\n",
@@ -482,7 +486,7 @@ int main_init (int argc, char ** const argv) {
                 debug_printf( DEBUG_SILENT, "No Rescue DAG specified\n" );
                 Usage();
             }
-			dagman.rescue_file = argv[i];
+			dagman.rescueFileToWrite = argv[i];
         } else if( !strcasecmp( "-MaxIdle", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -558,6 +562,7 @@ int main_init (int argc, char ** const argv) {
 
 	dagman.dagFiles.rewind();
 	dagman.primaryDagFile = dagman.dagFiles.next();
+	dagman.multiDags = (dagman.dagFiles.number() > 1);
 
     //
     // Check the arguments
@@ -610,9 +615,9 @@ int main_init (int argc, char ** const argv) {
     	debug_printf( DEBUG_VERBOSE, "%s", msg.Value() );
 	}
 
-	if ( dagman.rescue_file ) {
+	if ( dagman.rescueFileToWrite ) {
 		debug_printf( DEBUG_VERBOSE, "Rescue DAG will be written to %s\n",
-				  	dagman.rescue_file );
+				  	dagman.rescueFileToWrite );
 	}
 
 		// if requested, wait for someone to attach with a debugger...
@@ -643,26 +648,28 @@ int main_init (int argc, char ** const argv) {
 		rescueDagNum = dagman.doRescue;
 		rescueDagMsg.sprintf( "Rescue DAG number %d specified", rescueDagNum );
 		Dag::DeleteRescueDagsAfter( dagman.primaryDagFile.Value(),
-					rescueDagNum );
+					dagman.multiDags, rescueDagNum );
 
 	} else if ( dagman.autoRescue ) {
 		rescueDagNum = Dag::FindLastRescueDagNum(
-					dagman.primaryDagFile.Value() );
+					dagman.primaryDagFile.Value(),
+					dagman.multiDags );
 		rescueDagMsg.sprintf( "Found rescue DAG number %d", rescueDagNum );
-		//TEMP -- give a warning if auto-running rescue dag and multiple dag files are specified?
 	}
 
 	if ( rescueDagNum > 0 ) {
-		dagman.rescueDagName = Dag::RescueDagName(
-					dagman.primaryDagFile.Value(), rescueDagNum );
+		dagman.rescueFileToRun = Dag::RescueDagName(
+					dagman.primaryDagFile.Value(),
+					dagman.multiDags, rescueDagNum );
 		debug_printf ( DEBUG_QUIET, "%s; running %s instead of normal "
-					"DAG file(s)\n", rescueDagMsg.Value(),
-					dagman.rescueDagName.Value() );
+					"DAG file%s\n", rescueDagMsg.Value(),
+					dagman.rescueFileToRun.Value(),
+					dagman.multiDags ? "s" : "");
 			// Note: if we ran multiple DAGs and they failed, the
 			// whole thing is condensed into a single rescue DAG.
 			// wenger 2007-02-27
 		dagman.dagFiles.clearAll();
-		dagman.dagFiles.append( dagman.rescueDagName.Value() );
+		dagman.dagFiles.append( dagman.rescueFileToRun.Value() );
 		dagman.dagFiles.rewind();
 	}
 
