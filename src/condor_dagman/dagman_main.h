@@ -153,7 +153,8 @@ class Dagman {
 		// Whether to automatically run a rescue DAG if one exists.
 	bool autoRescue;
 
-		// Rescue DAG number to run; 0 means don't run rescue DAG.
+		// "New-style" rescue DAG number to run; 0 means no rescue DAG
+		// specified
 	int doRescue;
 
 		// The name of the rescue DAG we're running, if any.  This

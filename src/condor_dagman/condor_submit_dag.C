@@ -63,7 +63,7 @@ struct SubmitDagOptions
 	MyString appendFile; // append to .condor.sub file before queue
 	StringList appendLines; // append to .condor.sub file before queue
 	bool oldRescue;
-	int autoRescue;
+	bool autoRescue;
 	int doRescue;
 	
 	// non-command line options
@@ -96,8 +96,9 @@ struct SubmitDagOptions
 		appendFile = param("DAGMAN_INSERT_SUB_FILE");
 			// TEMP -- set default to false after code review and documentation
 		oldRescue = param_boolean( "DAGMAN_OLD_RESCUE", true );
-		autoRescue = -1; // -1 means don't put in submit file
-		doRescue = -1; // -1 means don't put in submit file
+			// TEMP -- set default to true after code review and documentation
+		autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", false );
+		doRescue = 0; // 0 means no rescue DAG specified
 	}
 
 };
@@ -332,9 +333,7 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 		bHadError = true;
 	}
 
-		// TEMP -- set default to true after code review and documentation
-	bool autoRescueConfig = param_boolean( "DAGMAN_AUTO_RESCUE", false );
-	if (opts.autoRescue != 1 && !autoRescueConfig && opts.doRescue < 1 &&
+	if (!opts.autoRescue && opts.doRescue < 1 &&
 				fileExists(opts.strRescueFile))
 	{
 		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
@@ -417,14 +416,10 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	args.AppendArg(opts.iDebugLevel);
 	args.AppendArg("-Lockfile");
 	args.AppendArg(opts.strLockFile.Value());
-	if (opts.autoRescue >= 0) {
-		args.AppendArg("-AutoRescue");
-		args.AppendArg(opts.autoRescue);
-	}
-	if (opts.doRescue >= 0) {
-		args.AppendArg("-DoRescue");
-		args.AppendArg(opts.doRescue);
-	}
+	args.AppendArg("-AutoRescue");
+	args.AppendArg(opts.autoRescue);
+	args.AppendArg("-DoRescue");
+	args.AppendArg(opts.doRescue);
 
 	if ( opts.strJobLog == "" ) {
 			// Condor_dagman can't parse command-line args if we have
@@ -765,10 +760,16 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 		printUsage();
 	}
 
-	if (opts.oldRescue && opts.autoRescue )
+	if (opts.oldRescue && opts.autoRescue)
 	{
 		fprintf( stderr, "Warning: OLD_RESCUE and AUTO_RESCUE are both "
 					"true.  This may produce undesireable behavior\n" );
+	}
+
+	if (opts.doRescue < 0)
+	{
+		fprintf( stderr, "-dorescue value must be non-negative; aborting.\n");
+		printUsage();
 	}
 }
 

@@ -639,7 +639,8 @@ int main_init (int argc, char ** const argv) {
     }
 
 		//
-		// Decide whether to run a rescue DAG.
+		// Figure out the rescue DAG to run, if any (this is with "new-
+		// style" rescue DAGs.
 		//
 	int rescueDagNum = 0;
 	MyString rescueDagMsg;
@@ -657,6 +658,10 @@ int main_init (int argc, char ** const argv) {
 		rescueDagMsg.sprintf( "Found rescue DAG number %d", rescueDagNum );
 	}
 
+		//
+		// If we are running a "new-style" rescue DAG, update our DAG
+		// files list accordingly.
+		//
 	if ( rescueDagNum > 0 ) {
 		dagman.rescueFileToRun = Dag::RescueDagName(
 					dagman.primaryDagFile.Value(),
