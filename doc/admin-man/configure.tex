@@ -3370,7 +3370,8 @@ search for the corresponding attribute names using ``slot'', instead.
 \label{param:SlotTypeN}
   This setting defines a given slot type, by specifying
   what part of each shared system resource (like RAM, swap space, etc)
-  this kind of slot gets.
+  this kind of slot gets.  This setting has \emph{no} effect unless you also
+  define \MacroNI{NUM\_SLOTS\_TYPE\_<N>}.
   N can be any integer from 1 to the value of
   \MacroUNI{MAX\_SLOT\_TYPES}, such as
   \MacroNI{SLOT\_TYPE\_1}. 
