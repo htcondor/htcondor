@@ -27,7 +27,7 @@
 #include "JobRouter.h"
 
 // about self
-char* mySubSystem = "SCHEDD7";		// used by Daemon Core
+char* mySubSystem = "JOB_ROUTER";		// used by Daemon Core
 
 
 Scheduler schedd;

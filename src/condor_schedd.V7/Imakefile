@@ -1,4 +1,4 @@
-NAME = condor_schedd.V7
+NAME = condor_job_router
 
 all_target( $(NAME) )
 
