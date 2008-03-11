@@ -1340,7 +1340,7 @@ sub submitRun()
     } elsif ($status == 0) {
         print "nmi_submit successful\n";
     } else {
-        print "ERROR: nmi_submit failed!\n";
+        die "ERROR: nmi_submit failed!\n";
     }
 }
 
