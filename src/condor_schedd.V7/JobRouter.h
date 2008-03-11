@@ -84,6 +84,9 @@ class JobRouter: public Service {
 
 	bool m_enable_job_routing;
 
+	int m_job_router_entries_refresh;
+	int m_job_router_refresh_timer;
+
 	int m_job_router_polling_timer;
 	int m_job_router_polling_period;
 
@@ -133,6 +136,8 @@ class JobRouter: public Service {
 	void CleanupRetiredJob(RoutedJob *job);
 
 	void SetRoutingTable(RoutingTable *new_routes);
+
+	void ParseRoutingEntries( std::string const &entries, char const *param_name, classad::ClassAd const &router_defaults_ad, bool allow_empty_requirements, RoutingTable *new_routes );
 
 	JobRoute *GetRouteByName(char const *name);
 
@@ -186,7 +191,7 @@ class JobRoute {
 	// copy state from another route
 	void CopyState(JobRoute *route);
 
-	bool ParseClassAd(std::string routing_string,unsigned &offset,classad::ClassAd *router_defaults_ad,bool allow_empty_requirements);
+	bool ParseClassAd(std::string routing_string,unsigned &offset,classad::ClassAd const *router_defaults_ad,bool allow_empty_requirements);
 
 	// ApplyRoutingJobEdits() allows the router to edit the job ad before
 	// resubmitting it.  It does so by having attributes of the following form:
@@ -215,6 +220,10 @@ class JobRoute {
 	bool EvalUseSharedX509UserProxy(RoutedJob *job);
 	bool EvalSharedX509UserProxy(RoutedJob *job,std::string &proxy_file);
 
+		// true if this entry is intended to override an entry with the
+		// same name further up in the routing table definition
+	int OverrideRoutingEntry() { return m_override_routing_entry; }
+
  private:
 	int m_num_jobs;                // current number of jobs on this route
 	int m_num_running_jobs;        // number of jobs currently running
@@ -235,6 +244,10 @@ class JobRoute {
 	int m_max_idle_jobs;          // maximum jobs in the idle state (requirement for submitting more jobs)
 	classad::ExprTree *m_route_requirements; // jobs must match these requirements
 	std::string m_route_requirements_str;    // unparsed version of above
+
+		// true if this entry is intended to override an entry with the
+		// same name further up in the routing table definition
+	int m_override_routing_entry;
 
 	// Extract data from the route_ad into class variables.
 	bool DigestRouteAd(bool allow_empty_requirements);

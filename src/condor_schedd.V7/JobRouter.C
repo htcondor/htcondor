@@ -33,6 +33,7 @@
 #include "submit_job.h"
 #include "schedd_v7_utils.h"
 #include "util_lib_proto.h"
+#include "my_popen.h"
 
 template class HashTable<std::string,RoutedJob *>;
 template HashTable<std::string,JobRoute *>;
@@ -53,6 +54,7 @@ const char JR_ATTR_JOB_FAILURE_TEST[] = "JobFailureTest";
 const char JR_ATTR_JOB_SANDBOXED_TEST[] = "JobShouldBeSandboxed";
 const char JR_ATTR_USE_SHARED_X509_USER_PROXY[] = "UseSharedX509UserProxy";
 const char JR_ATTR_SHARED_X509_USER_PROXY[] = "SharedX509UserProxy";
+const char JR_ATTR_OVERRIDE_ROUTING_ENTRY[] = "OverrideRoutingEntry";
 
 const int THROTTLE_UPDATE_INTERVAL = 600;
 
@@ -61,6 +63,9 @@ JobRouter::JobRouter(Scheduler *scheduler): m_jobs(5000,hashFuncStdString,reject
 	m_job_router_polling_timer = -1;
 	m_job_router_polling_period = 10;
 	m_enable_job_routing = true;
+
+	m_job_router_entries_refresh = 0;
+	m_job_router_refresh_timer = -1;
 
 	m_routes = AllocateRoutingTable();
 	m_poll_count = 0;
@@ -85,6 +90,9 @@ JobRouter::~JobRouter() {
 	}
 	if(m_router_lock_fd != -1) {
 		close(m_router_lock_fd);
+	}
+	if( m_job_router_refresh_timer >= 0 ) {
+		daemonCore->Cancel_Timer( m_job_router_refresh_timer );
 	}
 }
 
@@ -154,11 +162,28 @@ JobRouter::GetInstanceLock() {
 
 char const PARAM_JOB_ROUTER_ENTRIES[] = "JOB_ROUTER_ENTRIES";
 char const PARAM_JOB_ROUTER_DEFAULTS[] = "JOB_ROUTER_DEFAULTS";
+char const PARAM_JOB_ROUTER_ENTRIES_CMD[] = "JOB_ROUTER_ENTRIES_CMD";
+char const PARAM_JOB_ROUTER_ENTRIES_FILE[] = "JOB_ROUTER_ENTRIES_FILE";
+char const PARAM_JOB_ROUTER_ENTRIES_REFRESH[] = "JOB_ROUTER_ENTRIES_REFRESH";
 
 void
 JobRouter::config() {
 	bool allow_empty_requirements = false;
 	m_enable_job_routing = true;
+
+	m_job_router_entries_refresh = param_integer(PARAM_JOB_ROUTER_ENTRIES_REFRESH,0);
+	if( m_job_router_refresh_timer >= 0 ) {
+		daemonCore->Cancel_Timer(m_job_router_refresh_timer);
+		m_job_router_refresh_timer = -1;
+	}
+	if( m_job_router_entries_refresh > 0 ) {
+		m_job_router_refresh_timer = 
+			daemonCore->Register_Timer(
+				m_job_router_entries_refresh,
+				m_job_router_entries_refresh,
+				(Eventcpp)&JobRouter::config,
+				"JobRouter::config", this);
+	}
 
 	char *constraint = param("JOB_ROUTER_SOURCE_JOB_CONSTRAINT");
 	if(!constraint) {
@@ -187,54 +212,85 @@ JobRouter::config() {
 	}
 	if(!m_enable_job_routing) return;
 
-	char *routing_str = param(PARAM_JOB_ROUTER_ENTRIES);
-	if(!routing_str) {
-		dprintf(D_ALWAYS,"JobRouter WARNING: %s not found, so job routing will not take place.\n",PARAM_JOB_ROUTER_ENTRIES);
+	char *routing_str_s = param(PARAM_JOB_ROUTER_ENTRIES);
+	char *routing_file_s = param(PARAM_JOB_ROUTER_ENTRIES_FILE);
+	char *routing_cmd_s = param(PARAM_JOB_ROUTER_ENTRIES_CMD);
+	std::string routing_str = routing_str_s ? routing_str_s : "";
+	std::string routing_file = routing_file_s ? routing_file_s : "";
+	std::string routing_cmd = routing_cmd_s ? routing_cmd_s : "";
+	bool routing_entries_defined = routing_str_s || routing_file_s || routing_cmd_s;
+	free( routing_str_s );
+	free( routing_file_s );
+	free( routing_cmd_s );
+
+	if(!routing_entries_defined) {
+		dprintf(D_ALWAYS,"JobRouter WARNING: none of %s, %s, or %s are defined"
+				", so job routing will not take place.\n",
+				PARAM_JOB_ROUTER_ENTRIES,
+				PARAM_JOB_ROUTER_ENTRIES_FILE,
+				PARAM_JOB_ROUTER_ENTRIES_CMD);
 		m_enable_job_routing = false;
 	}
-	else {
-		std::string routing_string = routing_str;
-		free(routing_str);
 
-		// Now parse a list of routing entries.  The expected syntax is
-		// a list of ClassAds, optionally delimited by commas and or
-		// whitespace.
-
-		unsigned offset = 0;
-		while(1) {
-			// Eat delimiters and whitespace
-			while(routing_string.size() > offset && (routing_string[offset] == ' ' || routing_string[offset] == ','))
-			{
-				offset++;
-			}
-			if(offset >= routing_string.size()) break;
-
-
-			JobRoute route;
-			JobRoute *existing_route;
-			unsigned this_offset = offset; //save offset before eating an ad.
-
-			if(!route.ParseClassAd(routing_string,offset,&router_defaults_ad,allow_empty_requirements))
-			{
-				dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Ignoring the malformed route entry, starting here: %s\n",routing_string.c_str() + this_offset);
-
-				// skip any junk and try parsing the next route in the list
-				while(routing_string.size() > offset && routing_string[offset] != '[') offset++;
-			}
-			else if(new_routes->lookup(route.Name(),existing_route)!=-1)
-			{
-				// Two routes have the same name.  Since route names
-				// are optional, these names may have been
-				// auto-generated from other portions of the route ad.
-				// Warn the user about that.
-
-				dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: two route entries have the same name '%s'; if you have not already explicitly given these routes a name with name=\"blah\", you may want to do so.\n",route.Name());
-			}
-			else {
-				new_routes->insert(route.Name(),new JobRoute(route));
-			}
+	if( routing_cmd.size() ) {
+		ArgList args;
+		MyString error_msg;
+		if(!args.AppendArgsV1RawOrV2Quoted(routing_cmd.c_str(),&error_msg)) {
+			EXCEPT("Invalid value specified for %s: %s",
+				   PARAM_JOB_ROUTER_ENTRIES_CMD,
+				   error_msg.Value());
 		}
+
+			// I have tested with want_stderr 0 and 1, but I have not observed
+			// any difference.  I still get stderr mixed into the stdout.
+			// Although this is annoying, it is better than simply throwing
+			// away stderr altogether.  What generally happens is that the
+			// stderr produces a parse error, and we skip to the next
+			// entry.
+		FILE *fp = my_popen(args, "r", 1);
+
+		if( !fp ) {
+			EXCEPT("Failed to run command '%s' specified for %s.",
+				   routing_cmd.c_str(), PARAM_JOB_ROUTER_ENTRIES_CMD);
+		}
+		std::string routing_file_str;
+		char buf[200];
+		int n;
+		while( (n=fread(buf,1,sizeof(buf)-1,fp)) > 0 ) {
+			buf[n] = '\0';
+			routing_file_str += buf;
+		}
+		n = my_pclose( fp );
+		if( n != 0 ) {
+			EXCEPT("Command '%s' specified for %s returned non-zero status %d",
+				   routing_cmd.c_str(), PARAM_JOB_ROUTER_ENTRIES_CMD, n);
+		}
+
+		ParseRoutingEntries( routing_file_str, PARAM_JOB_ROUTER_ENTRIES_CMD, router_defaults_ad, allow_empty_requirements, new_routes );
 	}
+
+	if( routing_file.size() ) {
+		FILE *fp = safe_fopen_wrapper(routing_file.c_str(),"r");
+		if( !fp ) {
+			EXCEPT("Failed to open '%s' file specified for %s.",
+				   routing_file.c_str(), PARAM_JOB_ROUTER_ENTRIES_FILE);
+		}
+		std::string routing_file_str;
+		char buf[200];
+		int n;
+		while( (n=fread(buf,1,sizeof(buf)-1,fp)) > 0 ) {
+			buf[n] = '\0';
+			routing_file_str += buf;
+		}
+		fclose( fp );
+
+		ParseRoutingEntries( routing_file_str, PARAM_JOB_ROUTER_ENTRIES_FILE, router_defaults_ad, allow_empty_requirements, new_routes );
+	}
+
+	if( routing_str.size() ) {
+		ParseRoutingEntries( routing_str, PARAM_JOB_ROUTER_ENTRIES, router_defaults_ad, allow_empty_requirements, new_routes );
+	}
+
 	if(!m_enable_job_routing) return;
 
 	SetRoutingTable(new_routes);
@@ -267,6 +323,75 @@ JobRouter::config() {
 	}
 	else {
 		m_job_router_name = DaemonIdentityString();
+	}
+}
+
+void
+JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *param_name, classad::ClassAd const &router_defaults_ad, bool allow_empty_requirements, RoutingTable *new_routes ) {
+
+		// Now parse a list of routing entries.  The expected syntax is
+		// a list of ClassAds, optionally delimited by commas and or
+		// whitespace.
+
+	dprintf(D_FULLDEBUG,"Parsing %s=%s\n",param_name,routing_string.c_str());
+
+	unsigned offset = 0;
+	while(1) {
+		if(offset >= routing_string.size()) break;
+
+
+		JobRoute route;
+		JobRoute *existing_route;
+		unsigned this_offset = offset; //save offset before eating an ad.
+		bool ignore_route = false;
+
+		if(!route.ParseClassAd(routing_string,offset,&router_defaults_ad,allow_empty_requirements))
+		{
+			classad::ClassAdParser parser;
+			classad::ClassAd ad;
+			int final_offset = this_offset;
+			std::string final_routing_string = routing_string;
+			final_routing_string += "\n[]"; // add an empty ClassAd
+
+			if(parser.ParseClassAd(final_routing_string,ad,final_offset)) {
+					// There must have been some trailing whitespace or
+					// comments after the last ClassAd, so the only reason
+					// ParseClassAd() failed was because there was no ad.
+					// Therefore, we are done.
+				break;
+			}
+
+			dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Ignoring the malformed route entry in %s, starting here: %s\n",param_name,routing_string.c_str() + this_offset);
+
+			// skip any junk and try parsing the next route in the list
+			while(routing_string.size() > offset && routing_string[offset] != '[') offset++;
+
+			ignore_route = true;
+		}
+		else if(new_routes->lookup(route.Name(),existing_route)!=-1)
+		{
+			// Two routes have the same name.  Since route names
+			// are optional, these names may have been
+			// auto-generated from other portions of the route ad.
+			// Warn the user about that.
+
+			int override = route.OverrideRoutingEntry();
+			if( override < 0 ) {
+				dprintf(D_ALWAYS,"JobRouter CONFIGURATION WARNING while parsing %s: two route entries have the same name '%s' so the second one will override the first one; if you have not already explicitly given these routes a name with name=\"blah\", you may want to give them different names.  If you just want to suppress this warning, then define OverrideRoutingEntry=True/False in the second routing entry.\n",param_name,route.Name());
+				override = 1;
+			}
+			if( override > 0 ) {  // OverrideRoutingEntry=true
+				new_routes->remove(route.Name());
+				delete existing_route;
+			}
+			if( override == 0 ) { // OverrideRoutingEntry=false
+				ignore_route = true;
+			}
+		}
+
+		if( !ignore_route ) {
+			new_routes->insert(route.Name(),new JobRoute(route));
+		}
 	}
 }
 
@@ -1490,6 +1615,7 @@ JobRoute::JobRoute() {
 	m_recent_jobs_routed = 0;
 	m_failure_rate_threshold = 0;
 	m_throttle = 0;
+	m_override_routing_entry = -1;
 }
 
 JobRoute::~JobRoute() {
@@ -1617,6 +1743,13 @@ JobRoute::DigestRouteAd(bool allow_empty_requirements) {
 		classad::ClassAdUnParser unparser;
 		unparser.Unparse(m_route_requirements_str,m_route_requirements);
 	}
+	bool override;
+	if( !m_route_ad.EvaluateAttrBool( JR_ATTR_OVERRIDE_ROUTING_ENTRY, override ) ) {
+		m_override_routing_entry = -1;
+	}
+	else {
+		m_override_routing_entry = override;
+	}
 	return true;
 }
 
@@ -1629,7 +1762,7 @@ JobRoute::RouteString() {
 }
 
 bool
-JobRoute::ParseClassAd(std::string routing_string,unsigned &offset,classad::ClassAd *router_defaults_ad,bool allow_empty_requirements) {
+JobRoute::ParseClassAd(std::string routing_string,unsigned &offset,classad::ClassAd const *router_defaults_ad,bool allow_empty_requirements) {
 	classad::ClassAdParser parser;
 	classad::ClassAd ad;
 	if(!parser.ParseClassAd(routing_string,ad,(int)offset)) {
