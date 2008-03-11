@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.8.6.1 2008-02-15 03:51:21 bt Exp $
+# $Id: remote_declare.pl,v 1.8.6.2 2008-03-11 17:56:03 bt Exp $
 # generate list of all tests to run
 ######################################################################
 
@@ -102,6 +102,20 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) )
     	print $_;
 	}
 	close (TESTCONFIG);
+	$configstat = $?;
+	print "CONFIGURE returned a code of $configstat\n"; 
+	print "Lets try without gcc version check!\n";
+	if($configstat != 0) {
+		print "****************************************************\n";
+		print "**** running CONFIGURE ...\n"; 
+		print "****************************************************\n";
+		$extra_try_args =  " --disable-gcc-version_check --disable-full-port ";
+		open( TESTCONFIG, "./configure --without-externals  $extra_try_args $opt_configure 2>&1 |") ||
+    		die "Can't open configure as a pipe: $!\n";
+		while ( <TESTCONFIG> ) {
+    		print $_;
+		}
+	}
 	$configstat = $?;
 	print "CONFIGURE returned a code of $configstat\n"; 
 	($configstat == 0) || die "CONFIGURE failed, aborting testsuite run.\n";  
