@@ -558,9 +558,10 @@ File System Configuration File Entries''.
   \MacroNI{COLLECTOR\_HOST} variable.
 
 \item[\Macro{CONDOR\_VIEW\_HOST}] \label{param:CondorViewHost} The
-  hostname of the machine where the CondorView server is running.
-  This service is optional, and requires additional configuration if
-  you want to enable it.  There is no default value for
+  host name of the machine, optionally appended by a colon and the
+  port number, where the CondorView server is running.
+  This service is optional, and requires additional configuration 
+  to enable it.  There is no default value for
   \MacroNI{CONDOR\_VIEW\_HOST}.  If \MacroNI{CONDOR\_VIEW\_HOST} is not
   defined, no CondorView server is used.
   See section~\ref{sec:Contrib-CondorView-Install} on
@@ -3369,7 +3370,8 @@ search for the corresponding attribute names using ``slot'', instead.
 \label{param:SlotTypeN}
   This setting defines a given slot type, by specifying
   what part of each shared system resource (like RAM, swap space, etc)
-  this kind of slot gets.
+  this kind of slot gets.  This setting has \emph{no} effect unless you also
+  define \MacroNI{NUM\_SLOTS\_TYPE\_<N>}.
   N can be any integer from 1 to the value of
   \MacroUNI{MAX\_SLOT\_TYPES}, such as
   \MacroNI{SLOT\_TYPE\_1}. 
@@ -4350,6 +4352,64 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   evaluations so that it spends only 1\% of its time in this activity.
   The lower bound for the interval is configured by
   \Macro{PERIODIC\_EXPR\_INTERVAL} (default 60 seconds).
+
+\item[\Macro{SYSTEM\_PERIODIC\_HOLD}]
+  \label{param:SystemPeriodicHold} This expression behaves identically
+  to the job expression \AdAttr{periodic\_hold}, but it is evaluated by
+  the \Condor{schedd} daemon individually for each job in the queue.
+  It defaults to \Expr{False}.
+  When \Expr{True}, it causes the job to stop running and go on hold.
+  Here is an
+  example that puts jobs on hold if they have been restarted too many
+  times, have an unreasonably large virtual memory \Attr{ImageSize}, or have
+  unreasonably large disk usage for an invented environment.
+
+\footnotesize
+\begin{verbatim}
+SYSTEM_PERIODIC_HOLD = \
+  (JobStatus == 1 || JobStatus == 2) && \
+  (JobRunCount > 10 || ImageSize > 3000000 || DiskUsage > 10000000)
+\end{verbatim}
+\normalsize
+
+\item[\Macro{SYSTEM\_PERIODIC\_RELEASE}]
+  \label{param:SystemPeriodicRelease} This expression behaves identically
+  to the job expression \AdAttr{periodic\_release}, but it is evaluated by
+  the \Condor{schedd} daemon individually for each job in the queue.
+  It defaults to \Expr{False}.
+  When \Expr{True}, it causes a held job to return to the idle state.
+  Here is an example
+  that releases jobs from hold if they have tried to run less than 20
+  times, have most recently been on hold for over 20 minutes, and have
+  gone on hold due to ``Connection timed out'' when trying to execute
+  the job, because the file system containing the job's executable is
+  temporarily unavailable.
+
+\footnotesize
+\begin{verbatim}
+SYSTEM_PERIODIC_RELEASE = \
+  (JobRunCount < 20 && CurrentTime - EnteredCurrentStatus > 1200 ) && ( \
+    (HoldReasonCode == 6 && HoldReasonSubCode == 110) \
+  )
+\end{verbatim} 
+\normalsize
+
+
+\item[\Macro{SYSTEM\_PERIODIC\_REMOVE}]
+  \label{param:SystemPeriodicRemove} This expression behaves identically
+  to the job expression \AdAttr{periodic\_remove}, but it is evaluated by
+  the \Condor{schedd} daemon individually for each job in the queue.
+  It defaults to \Expr{False}.
+  When \Expr{True}, it causes the job to be removed from the queue.
+  Here is an example
+  that removes jobs which have been on hold for 30 days:
+
+\footnotesize
+\begin{verbatim}
+SYSTEM_PERIODIC_REMOVE = \
+  (JobStatus == 5 && CurrentTime - EnteredCurrentStatus > 3600*24*30)
+\end{verbatim}
+\normalsize
 
 \item[\Macro{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE}]
   \label{param:ScheddAssumeNegotiatorGone} This macro determines the period,
