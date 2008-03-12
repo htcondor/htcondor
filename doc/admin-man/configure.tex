@@ -6243,6 +6243,44 @@ the \SubmitCmd{queue} command and before any commands specified with the
 Note that the \MacroNI{DAGMAN\_INSERT\_SUB\_FILE} value can be overridden
 by the \Opt{-insert\_sub\_file} \Condor{submit\_dag} command-line option.
 
+\item[\Macro{DAGMAN\_OLD\_RESCUE}]
+\label{param:DAGManOldRescue}
+A boolean value that controls whether \Condor{dagman} uses "old-style"
+rescue DAG naming when creating a rescue DAG.  (With "old-style" rescue
+DAG naming, if your DAG file is \File{my.dag}, the rescue DAG file will
+be \File{my.dag.rescue}, and that file will be overwritten if you re-run
+\File{my.dag} and it fails again.  With "new-style" rescue DAG naming,
+the first time a rescue DAG is created for \File{my.dag}, it will be
+named \File{my.dag.rescue001},and subsequent failures of
+\File{my.dag} will produce rescue DAGs named \File{my.dag.rescue002},
+\File{my.dag.rescue003}, etc.)
+If not defined, \MacroNI{DAGMAN\_OLD\_RESCUE} defaults to
+\Expr{false}.
+
+\item[\Macro{DAGMAN\_AUTO\_RESCUE}]
+\label{param:DAGManAutoRescue}
+A boolean value that controls whether \Condor{dagman} automatically
+runs rescue DAGs.  If \MacroNI{DAGMAN\_AUTO\_RESCUE} is true and you
+run the DAG file \File{my.dag}, if a rescue dag such as
+\File{my.dag.rescue001}, \File{my.dag.rescue002}, etc., exists, the newest
+(highest-numbered) such rescue DAG will be run.
+If not defined, \MacroNI{DAGMAN\_AUTO\_RESCUE} defaults to
+\Expr{true}.
+
+Note: having \MacroNI{DAGMAN\_OLD\_RESCUE} and
+\MacroNI{DAGMAN\_AUTO\_RESCUE} both set to \Expr{true} is a
+fatal error.
+
+\item[\Macro{DAGMAN\_MAX\_RESCUE\_NUM}]
+\label{param:DAGManMaxRescueNum}
+An integer value that controls the maximum "new-style" rescue DAG
+number that will be written (if \MacroNI{DAGMAN\_OLD\_RESCUE} is
+\Expr{false}) or run (if \MacroNI{DAGMAN\_AUTO\_RESCUE} is
+\Expr{true}).  The maximum legal value is 999; the minimum value
+is 0 (which will prevent a rescue DAG from being written at all,
+or automatically run).  If not defined,
+\MacroNI{DAGMAN\_MAX\_RESCUE\_NUM} defaults to 100.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

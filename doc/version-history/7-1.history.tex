@@ -82,12 +82,14 @@ configuration files can effectively run arbitrary programs as root.
 authentication method (e.g. GSI, SSL, Kerberos), this allows you to
 specify what authenticated servers Condor tools and daemons should
 trust when they form a connection to the server.  This deprecates
-\MacroNI{GSI\_DAEMON\_NAME}, which provided rudamentary support for
+\MacroNI{GSI\_DAEMON\_NAME}, which provided rudimentary support for
 client-side authorization in a GSI-specific way.
 
 % PR 598/788
 \item \Condor{dagman} deals with rescue DAGs in a more sophisticated
 way; this is especially helpful for nested DAGs.
+See the rescue DAG subsection~\pageref{sec:DAGRescue} of the \Condor{dagman}
+manual section for more information.
 
 \end{itemize}
 
@@ -116,11 +118,19 @@ accepting new jobs from the \Condor{schedd} that claimed it.
 
 % PR 598/788
 \item Added the \Macro{DAGMAN\_OLD\_RESCUE} variable, which controls whether
-\Condor{dagman} writes rescue DAGs in the old way.
+\Condor{dagman} writes rescue DAGs in the old way.  See
+page~\pageref{param:DAGManOldRescue} for more information.
 
 % PR 598/788
 \item Added the \Macro{DAGMAN\_AUTO\_RESCUE} variable, which controls
 whether \Condor{dagman} automatically runs an existing rescue DAG.
+See page~\pageref{param:DAGManAutoRescue} for more information.
+
+% PR 598/788
+\item Added the \Macro{DAGMAN\_MAX\_RESCUE\_NUM} variable, which
+controls the maximum "new-style" rescue DAG number written or
+automatically run by \Condor{dagman}.
+See page~\pageref{param:DAGManMaxRescueNum} for more information.
 
 \end{itemize}
 

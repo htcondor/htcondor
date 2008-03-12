@@ -13,6 +13,8 @@
 (\OptArg{-condorlog}{filename} \Bar \OptArg{-storklog}{filename})
 \OptArg{-lockfile}{filename}
 \oOpt{-waitfordebug}
+\oOptArg{-autorescue}{0|1}
+\oOptArg{-dorescuefrom}{number}
 \OptArg{-dag}{dag\_file}
 \oArg{\OptArg{-dag}{dag\_file\_2} \Dots \OptArg{-dag}{dag\_file\_n} }
 
@@ -69,13 +71,15 @@ Level values and what they produce is described as
        where 7 is the most verbose output.
        This command-line option to \Condor{submit\_dag}
        is passed to \Condor{dagman} or
-       defaults to the value 3, as set by \Condor{submit\_dag}.
-       }
+       defaults to the value 3, as set by \Condor{submit\_dag}.}
     \OptItem{\OptArg{-rescue}{filename}}{Sets the file name of
        the rescue DAG to write in the case of a failure.
        As passed by \Condor{submit\_dag}, the name of the file
        will be the name of the DAG input file concatenated with
-       the string \File{.rescue}. }
+       the string \File{.rescue}.  This argument is now optional,
+       and in general it is preferred to not specify it.  This allows
+       \Condor{dagman} to automatically generate an appropriate
+       rescue DAG name.}
     \OptItem{\OptArg{-maxidle}{NumberOfJobs}}{Sets the maximum number of idle
        jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
        idle jobs start to run, \Condor{dagman} will resume submitting jobs.
@@ -115,8 +119,7 @@ Level values and what they produce is described as
        \Condor{dagman} to run each specified DAG as if the directory
        containing that DAG file was the current working directory.  This
        option is most useful when running multiple DAGs in a single
-       \Condor{dagman}.
-       }
+       \Condor{dagman}.}
     \OptItem{\OptArg{-storklog}{filename}}{Sets the file name of
        the Stork log for data placement jobs.  }
     \OptItem{\OptArg{-condorlog}{filename}}{Sets the file name of
@@ -131,8 +134,14 @@ Level values and what they produce is described as
     \OptItem{\Opt{-waitfordebug}}{This optional argument causes
        \Condor{dagman} to wait at startup until someone attaches to
        the process with a debugger and sets the wait\_for\_debug
-       variable in main\_init() to false.
-       }
+       variable in main\_init() to false.}
+    \OptItem{\OptArg{-autorescue}{0|1}}{Whether to automatically run
+       the newest rescue DAG for the given DAG file, if one exists
+       (0 = \Expr{false}, 1 = \Expr{true}).}
+    \OptItem{\OptArg{-dorescuefrom}{number}}{Forces \Condor{dagman} to
+       run the specified rescue DAG number for the given DAG.  A value
+       of 0 is the same as not specifying this option.  Specifying a
+       non-existant rescue DAG is a fatal error.}
     \OptItem{\OptArg{-dag}{filename}}{\Arg{filename} is the name of the
        DAG input file that is set as an argument to \Condor{submit\_dag},
        and passed to \Condor{dagman}.}

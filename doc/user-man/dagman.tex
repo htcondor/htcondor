@@ -1249,6 +1249,48 @@ The rescue DAG includes all the path information necessary to
 run each node job in the proper directory.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGRescue}Rescue DAGs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DAGRescueOld}"Old-style" Rescue DAGs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Prior to version 7.1.0, the default has been that, for a DAG file
+\File{my.dag}, the rescue DAG created (if any) would be named
+\File{my.dag.rescue}.  To run the rescue DAG, you would run
+\Condor{submit\_dag} on \File{my.dag.rescue}, and if that run
+fails, it would produce a rescue DAG named
+\File{my.dag.rescue.rescue}, and so on.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DAGRescueNew}"New-style" Rescue DAGs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Starting with version 7.1.0, however, the default behavior is
+different.  For a DAG file \File{my.dag}, an initial failure
+produces a rescue DAG named \File{my.dag.rescue001}.  However, if
+you re-run \Condor{submit\_dag} on \File{my.dag}, the rescue
+DAG \File{my.dag.rescue001} will automatically be run instead of
+the original DAG.  If that run fails, the rescue DAG written will
+be \File{my.dag.rescue002}.  In fact, running \Condor{submit\_dag}
+on the original DAG file will automatically run the newest
+(highest numbered) rescue DAG.  You can specify a rescue DAG
+to run with the the \Arg{-dorescuefrom} flag -- for example, if you
+specify \Arg{-dorescuefrom 3}, rescue DAG number 3 will be run, and
+all newer rescue DAGs will be renamed (\File{.old} will be appended to the
+file name, and previous \File{.old} files, if any, will be overwritten).
+The maximum rescue DAG number is configured by the
+\MacroNI{DAGMAN\_MAX\_RESCUE\_NUM} configuration macro
+(see~\pageref{param:DAGManMaxRescueNum}).
+
+The old behavior can be maintained by setting
+\MacroNI{DAGMAN\_OLD\_RESCUE} (see~\pageref{param:DAGManOldRescue})
+to true and \MacroNI{DAGMAN\_AUTO\_RESCUE}
+(see~\pageref{param:DAGManAutoRescue}) to false.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGConfig}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1264,8 +1306,7 @@ In a \Condor{dagman}-specific configuration file specified in the DAG
 file or on the \Condor{submit\_dag} command line.
 \item
 For some configuration macros, there is a corresponding \Condor{submit\_dag}
-command line flag (e.g., \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}/
-\OptArg{-maxjobs}).
+command line flag (e.g., \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}/\Arg{-maxjobs}).
 \end{enumerate}
 
 In the above list, configuration values specified later in the list
