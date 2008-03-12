@@ -1,4 +1,4 @@
-This is version 1.0-rc3 of the Condor Classad library, released on [XXX].
+This is version 1.0-rc4 of the Condor Classad library, released on [XXX].
 
 ===== What is it? =====
 
@@ -25,7 +25,7 @@ compatibility of jobs and workstations where they may be run.
 
 Although ClassAds are used extensively within the Condor project, they
 are a general-purpose mechanism. This library is being distributed in
-the hope that you will find it useful.
+the hope that you will find it useful for your own purposes.
 
 ===== Credits =====
 This version of the ClassAd library was written by Rajesh Raman. Small
@@ -34,10 +34,11 @@ Coleman, and Alain Roy, but really, Rajesh did all of the real
 work. The release was prepared by Alain Roy, who is responsible for
 maintaining the code.
 
-The original ClassAd library (used in versions of Condor up to 6.4)
+The original ClassAd library (still in the process of being phased out
+and replaced by this new implementation within Condor itself)
 was written by various members of the Condor team, with ideas and
 inspiration from Miron Livny and Marvin Solomon. Although nary a wisp
-of that original code exists in the current implementation, the
+of that original code exists in this new implementation, the
 everyday use and experience with the original code provided much of the
 guidance and inspiration for this version.
 

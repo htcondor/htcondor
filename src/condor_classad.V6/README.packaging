@@ -1,0 +1,24 @@
+
+How to release a new version of the ClassAds library:
+
+Edit Imakefile and set the version number.  Example:
+
+DIST_VERSION = 1.0rc4
+
+Edit TAGS and add a new tag name for this version.  Tag the source
+with this tag.
+
+What I do then is copy condor_classads.V6 to a build tree and create
+the makefile:
+
+../condor_imake
+
+Then:
+
+make dist
+
+If you are on a UW CSL machine, the above command may fail with an error
+about AC_PROG_LIBTOOL.  To get around that, uncomment the following line
+in Makefile.am.m4:
+
+ACLOCAL_AMFLAGS = -I /s/libtool/share/aclocal
