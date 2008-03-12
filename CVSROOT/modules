@@ -1032,7 +1032,9 @@ changes, just
 V7_1_COMMON_EXT -a V7_0_COMMON_EXT \
                    externals/bundles/pcre/7.6 \
                    externals/bundles/glibc/2.5-20061008T1257 \
-                   externals/bundles/glibc/2.5-20061008T1257-x86_64
+                   externals/bundles/glibc/2.5-20061008T1257-x86_64 \
+		   externals/bundles/classads/1.0rc4 \
+		   externals/bundles/blahp/1.7.0-p1
 
 # Externals needed for the 7.1.0 release:
 V7_1_0_EXT      -a V7_1_COMMON_EXT
