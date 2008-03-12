@@ -59,7 +59,7 @@ if [ $? -ne 0 ]
 then
     echo "make check"
     exit 2
-
+fi
 
 ##### Install the ClassAd build #####
 make install
