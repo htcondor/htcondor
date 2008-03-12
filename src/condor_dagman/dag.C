@@ -48,8 +48,9 @@
 
 const CondorID Dag::_defaultCondorId;
 
-	// The maximum allowed rescue DAG number.
-static const int MAX_RESCUE_DAG_NUM = 100;
+	// The absolute maximum allowed rescue DAG number (the real maximum
+	// is normally configured lower).
+const int Dag::ABS_MAX_RESCUE_DAG_NUM = 999;
 
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
@@ -1651,10 +1652,12 @@ void Dag::RemoveRunningScripts ( ) const {
 }
 
 //-----------------------------------------------------------------------------
-void Dag::Rescue (const char * datafile, bool multiDags) /* const */
+void Dag::Rescue ( const char * datafile, bool multiDags,
+			int maxRescueDagNum ) /* const */
 {
-	int nextRescue = FindLastRescueDagNum( datafile, multiDags ) + 1;
-	if ( nextRescue > MAX_RESCUE_DAG_NUM ) nextRescue = MAX_RESCUE_DAG_NUM;
+	int nextRescue = FindLastRescueDagNum( datafile, multiDags,
+				maxRescueDagNum ) + 1;
+	if ( nextRescue > maxRescueDagNum ) nextRescue = maxRescueDagNum;
 	MyString rescueDagFile = RescueDagName( datafile, multiDags, nextRescue );
 
 		// Note: there could possibly be a race condition here if two
@@ -1869,12 +1872,13 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 
 //-------------------------------------------------------------------------
 int
-Dag::FindLastRescueDagNum(const char *primaryDagFile, bool multiDags)
+Dag::FindLastRescueDagNum( const char *primaryDagFile, bool multiDags,
+			int maxRescueDagNum )
 {
 	int lastRescue = 0;
 	bool done = false;
 
-	for ( int test = 1; test <= MAX_RESCUE_DAG_NUM; test++ ) {
+	for ( int test = 1; test <= maxRescueDagNum; test++ ) {
 		MyString testName = RescueDagName( primaryDagFile, multiDags,
 					test );
 		if ( access( testName.Value(), F_OK ) == 0 ) {
@@ -1887,10 +1891,10 @@ Dag::FindLastRescueDagNum(const char *primaryDagFile, bool multiDags)
 		}
 	}
 	
-	if ( lastRescue >= MAX_RESCUE_DAG_NUM ) {
+	if ( lastRescue >= maxRescueDagNum ) {
 		debug_printf( DEBUG_QUIET,
 					"Warning: Dag::FindLastRescueDagNum() hit maximum "
-					"rescue DAG number: %d\n", MAX_RESCUE_DAG_NUM );
+					"rescue DAG number: %d\n", maxRescueDagNum );
 		done = true;
 	}
 
@@ -1909,32 +1913,36 @@ Dag::RescueDagName(const char *primaryDagFile, bool multiDags,
 		fileName += "_multi";
 	}
 	fileName += ".rescue";
-	if ( rescueDagNum > 1 ) {
-		fileName += rescueDagNum;
-	}
+	fileName.sprintf_cat( "%.3d", rescueDagNum );
 
 	return fileName;
 }
 
 //-------------------------------------------------------------------------
 void
-Dag::DeleteRescueDagsAfter(const char *primaryDagFile, bool multiDags,
-			int rescueDagNum)
+Dag::RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags,
+			int rescueDagNum, int maxRescueDagNum)
 {
 	ASSERT( rescueDagNum >= 1 );
 
-	debug_printf( DEBUG_QUIET, "Deleting rescue DAGs newer than number %d\n",
+	debug_printf( DEBUG_QUIET, "Renaming rescue DAGs newer than number %d\n",
 				rescueDagNum );
 
 	int firstToDelete = rescueDagNum + 1;
-	int lastToDelete = FindLastRescueDagNum( primaryDagFile, multiDags );
+	int lastToDelete = FindLastRescueDagNum( primaryDagFile, multiDags,
+				maxRescueDagNum );
 
 	for ( int rescueNum = firstToDelete; rescueNum <= lastToDelete;
 				rescueNum++ ) {
 		MyString rescueDagName = RescueDagName( primaryDagFile, multiDags,
 					rescueNum );
-		debug_printf( DEBUG_QUIET, "Deleting %s\n", rescueDagName.Value() );
-		unlink( rescueDagName.Value() );
+		debug_printf( DEBUG_QUIET, "Renaming %s\n", rescueDagName.Value() );
+		MyString newName = rescueDagName + ".old";
+		if ( rename( rescueDagName.Value(), newName.Value() ) != 0 ) {
+			EXCEPT( "Fatal error: unable to rename old rescue file "
+						"%s: error %d (%s)\n", rescueDagName.Value(),
+						errno, strerror( errno ) );
+		}
 	}
 }
 

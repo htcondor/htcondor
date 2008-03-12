@@ -338,8 +338,10 @@ class Dag {
 		is derived automatically from original DAG name.
         @param datafile The original DAG file
 		@param multiDags Whether we have multiple DAGs
+		@param maxRescueDagNum the maximum legal rescue DAG number
     */
-    void Rescue (const char * datafile, bool multiDags) /* const */;
+    void Rescue (const char * datafile, bool multiDags,
+				int maxRescueDagNum) /* const */;
 
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.
@@ -353,11 +355,12 @@ class Dag {
 		given "primary" DAG.
 		@param primaryDagFile The primary DAG file name
 		@param multiDags Whether we have multiple DAGs
+		@param maxRescueDagNum the maximum legal rescue DAG number
 		@return The number of the last existing rescue DAG (0 if there
 			is none)
 	*/
 	static int FindLastRescueDagNum(const char *primaryDagFile,
-				bool multiDags);
+				bool multiDags, int maxRescueDagNum);
 
 	/** Creates a rescue DAG name, given a primary DAG name and rescue
 		DAG number
@@ -369,15 +372,16 @@ class Dag {
 	static MyString RescueDagName(const char *primaryDagFile,
 				bool multiDags, int rescueDagNum);
 
-	/** Deletes all rescue DAG files for this primary DAG after the
+	/** Renames all rescue DAG files for this primary DAG after the
 		given one (as long as the numbers are contiguous).  For example,
-		if rescueDagNum is 3, we will delete .rescue4, .rescue5, etc.
+		if rescueDagNum is 3, we will rename .rescue4, .rescue5, etc.
 		@param primaryDagFile The primary DAG file name
 		@param multiDags Whether we have multiple DAGs
-		@param rescueDagNum The rescue DAG number to delete *after*
+		@param rescueDagNum The rescue DAG number to rename *after*
+		@param maxRescueDagNum the maximum legal rescue DAG number
 	*/
-	static void DeleteRescueDagsAfter(const char *primaryDagFile,
-				bool multiDags, int rescueDagNum);
+	static void RenameRescueDagsAfter(const char *primaryDagFile,
+				bool multiDags, int rescueDagNum, int maxRescueDagNum);
 
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );
@@ -461,6 +465,10 @@ class Dag {
 	
 		// Node category throttle information for the DAG.
 	ThrottleByCategory		_catThrottles;
+
+		// The absolute maximum allowed rescue DAG number (the real maximum
+		// is normally configured lower).
+	static const int ABS_MAX_RESCUE_DAG_NUM;
 
   protected:
 

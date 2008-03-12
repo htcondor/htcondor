@@ -155,12 +155,15 @@ class Dagman {
 
 		// "New-style" rescue DAG number to run; 0 means no rescue DAG
 		// specified
-	int doRescue;
+	int doRescueFrom;
+
+		// The maximum allowed rescue DAG number.
+	int maxRescueDagNum;
 
 		// The name of the rescue DAG we're running, if any.  This
 		// will remain set to "" unless we're running a rescue DAG.
 		// This is *not* the name of the rescue DAG to write, if the
-		// curren trun fails.
+		// current run fails.
 	MyString rescueFileToRun;
 
 

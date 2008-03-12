@@ -64,7 +64,7 @@ struct SubmitDagOptions
 	StringList appendLines; // append to .condor.sub file before queue
 	bool oldRescue;
 	bool autoRescue;
-	int doRescue;
+	int doRescueFrom;
 	
 	// non-command line options
 	MyString strLibOut;
@@ -94,11 +94,9 @@ struct SubmitDagOptions
 		useDagDir = false;
 		strConfigFile = "";
 		appendFile = param("DAGMAN_INSERT_SUB_FILE");
-			// TEMP -- set default to false after code review and documentation
-		oldRescue = param_boolean( "DAGMAN_OLD_RESCUE", true );
-			// TEMP -- set default to true after code review and documentation
-		autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", false );
-		doRescue = 0; // 0 means no rescue DAG specified
+		oldRescue = param_boolean( "DAGMAN_OLD_RESCUE", false );
+		autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
+		doRescueFrom = 0; // 0 means no rescue DAG specified
 	}
 
 };
@@ -333,7 +331,7 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 		bHadError = true;
 	}
 
-	if (!opts.autoRescue && opts.doRescue < 1 &&
+	if (!opts.autoRescue && opts.doRescueFrom < 1 &&
 				fileExists(opts.strRescueFile))
 	{
 		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
@@ -418,8 +416,8 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	args.AppendArg(opts.strLockFile.Value());
 	args.AppendArg("-AutoRescue");
 	args.AppendArg(opts.autoRescue);
-	args.AppendArg("-DoRescue");
-	args.AppendArg(opts.doRescue);
+	args.AppendArg("-DoRescueFrom");
+	args.AppendArg(opts.doRescueFrom);
 
 	if ( opts.strJobLog == "" ) {
 			// Condor_dagman can't parse command-line args if we have
@@ -738,13 +736,13 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 				}
 				opts.autoRescue = (atoi(argv[++iArg]) != 0);
 			}
-			else if (strArg.find("-dores") != -1) // -dorescue
+			else if (strArg.find("-dores") != -1) // -dorescuefrom
 			{
 				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-dorescue argument needs a value\n");
+					fprintf(stderr, "-dorescuefrom argument needs a value\n");
 					printUsage();
 				}
-				opts.doRescue = atoi(argv[++iArg]);
+				opts.doRescueFrom = atoi(argv[++iArg]);
 			}
 			else
 			{
@@ -762,13 +760,14 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 
 	if (opts.oldRescue && opts.autoRescue)
 	{
-		fprintf( stderr, "Warning: OLD_RESCUE and AUTO_RESCUE are both "
-					"true.  This may produce undesireable behavior\n" );
+		fprintf( stderr, "Error: DAGMAN_OLD_RESCUE and DAGMAN_AUTO_RESCUE "
+					"are both true.\n" );
+	    exit( 1 );
 	}
 
-	if (opts.doRescue < 0)
+	if (opts.doRescueFrom < 0)
 	{
-		fprintf( stderr, "-dorescue value must be non-negative; aborting.\n");
+		fprintf( stderr, "-dorescuefrom value must be non-negative; aborting.\n");
 		printUsage();
 	}
 }
@@ -807,8 +806,10 @@ int printUsage()
     printf("    -config <filename>  (Specify a DAGMan configuration file)\n");
 	printf("    -append <command>   (Append specified command to .condor.sub file)\n");
 	printf("    -insert_sub_file <filename>   (Insert specified file into .condor.sub file)\n");
-	printf("    -OldRescue 0|1      (whether to write rescue DAG the old way)\n");
-	printf("    -AutoRescue 0|1     (whether to automatically run newest rescue DAG)\n");
-	printf("    -DoRescue <number>  (run rescue DAG of given number)\n");
+	printf("    -OldRescue 0|1      (whether to write rescue DAG the old way;\n");
+	printf("         0 = false, 1 = true)\n");
+	printf("    -AutoRescue 0|1     (whether to automatically run newest rescue DAG;\n");
+	printf("         0 = false, 1 = true)\n");
+	printf("    -DoRescueFrom <number>  (run rescue DAG of given number)\n");
 	exit(1);
 }

@@ -69,7 +69,7 @@ static void Usage() {
             "\t\t[-AllowLogError]\n\n"
             "\t\t[-UseDagDir]\n\n"
             "\t\t[-AutoRescue] <0|1>\n\n"
-            "\t\t[-DoRescue] <int N>\n\n"
+            "\t\t[-DoRescueFrom] <int N>\n\n"
             "\twherei NAME is the name of your DAG.\n"
             "\twhere N is Maximum # of Jobs to run at once "
             "(0 means unlimited)\n"
@@ -112,7 +112,8 @@ Dagman::Dagman() :
 	pendingReportInterval (10 * 60), // so Coverity is happy
 	_dagmanConfigFile (NULL), // so Coverity is happy
 	autoRescue(false),
-	doRescue(0),
+	doRescueFrom(0),
+	maxRescueDagNum(Dag::ABS_MAX_RESCUE_DAG_NUM),
 	rescueFileToRun("")
 {
 }
@@ -294,10 +295,14 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
 				pendingReportInterval );
 
-		// TEMP -- set default to true after code review and documentation
-	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", false );
+	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %d\n",
 				autoRescue );
+	
+	maxRescueDagNum = param_integer( "DAGMAN_MAX_RESCUE_NUM", 100, 0,
+				Dag::ABS_MAX_RESCUE_DAG_NUM );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n",
+				maxRescueDagNum );
 
 	return true;
 }
@@ -344,9 +349,12 @@ int main_shutdown_rescue( int exitVal ) {
 						dagman.rescueFileToWrite );
 			dagman.dag->WriteRescue( dagman.rescueFileToWrite,
 						dagman.primaryDagFile.Value() );
-		} else {
+		} else if ( dagman.maxRescueDagNum > 0 ) {
 			dagman.dag->Rescue( dagman.primaryDagFile.Value(),
-						dagman.multiDags );
+						dagman.multiDags, dagman.maxRescueDagNum );
+		} else {
+			debug_printf( DEBUG_QUIET, "No rescue DAG written because "
+						"DAGMAN_MAX_RESCUE_NUM is 0\n" );
 		}
 
 		debug_printf( DEBUG_DEBUG_1, "We have %d running jobs to remove\n",
@@ -545,13 +553,13 @@ int main_init (int argc, char ** const argv) {
             }
             dagman.autoRescue = (atoi( argv[i] ) != 0);
 
-        } else if( !strcasecmp( "-DoRescue", argv[i] ) ) {
+        } else if( !strcasecmp( "-DoRescueFrom", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No rescue DAG number specified\n" );
                 Usage();
             }
-            dagman.doRescue = atoi (argv[i]);
+            dagman.doRescueFrom = atoi (argv[i]);
 
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
@@ -593,10 +601,16 @@ int main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_SILENT, "-MaxPost must be non-negative\n" );
         Usage();
     }
-    if( dagman.doRescue < 0 ) {
-        debug_printf( DEBUG_SILENT, "-DoRescue must be non-negative\n" );
+    if( dagman.doRescueFrom < 0 ) {
+        debug_printf( DEBUG_SILENT, "-DoRescueFrom must be non-negative\n" );
         Usage();
     }
+
+	if (dagman.rescueFileToWrite && dagman.autoRescue) {
+    	debug_printf( DEBUG_QUIET, "Error: old-style rescue DAG specified "
+					"and DAGMAN_AUTO_RESCUE is true\n" );
+		DC_Exit( EXIT_ERROR );
+	}
 
     debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
                    lockFileName );
@@ -645,16 +659,16 @@ int main_init (int argc, char ** const argv) {
 	int rescueDagNum = 0;
 	MyString rescueDagMsg;
 
-	if ( dagman.doRescue != 0 ) {
-		rescueDagNum = dagman.doRescue;
+	if ( dagman.doRescueFrom != 0 ) {
+		rescueDagNum = dagman.doRescueFrom;
 		rescueDagMsg.sprintf( "Rescue DAG number %d specified", rescueDagNum );
-		Dag::DeleteRescueDagsAfter( dagman.primaryDagFile.Value(),
-					dagman.multiDags, rescueDagNum );
+		Dag::RenameRescueDagsAfter( dagman.primaryDagFile.Value(),
+					dagman.multiDags, rescueDagNum, dagman.maxRescueDagNum );
 
 	} else if ( dagman.autoRescue ) {
 		rescueDagNum = Dag::FindLastRescueDagNum(
 					dagman.primaryDagFile.Value(),
-					dagman.multiDags );
+					dagman.multiDags, dagman.maxRescueDagNum );
 		rescueDagMsg.sprintf( "Found rescue DAG number %d", rescueDagNum );
 	}
 
