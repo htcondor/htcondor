@@ -2566,7 +2566,7 @@ CHECK_EXTERNAL([zlib], [1.2.3], [$_cv_zlib_requirement],
                [use zlib (provides compression support)],
                MF_LIB_CHECK([zlib], [[z deflate]]))
 
-CHECK_EXTERNAL([classads], [0.9.8-b4], [soft])
+CHECK_EXTERNAL([classads], [1.0rc4], [soft])
 
 CHECK_EXTERNAL([srb], [3.2.1], [soft])
 
@@ -2576,7 +2576,7 @@ CHECK_EXTERNAL([pcre], [7.6], [hard],
 AS_IF([test "x$cv_ext_pcre" = xyes],
   [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
 
-CHECK_EXTERNAL([blahp], [1.7.0], [soft])
+CHECK_EXTERNAL([blahp], [1.7.0-p1], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what
