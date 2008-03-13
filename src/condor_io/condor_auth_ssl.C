@@ -958,6 +958,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     char *certfile     = NULL;
     char *keyfile      = NULL;
     char *cipherlist   = NULL;
+    priv_state priv;
 
 		// Not sure where we want to get these things from but this
 		// will do for now.
@@ -983,7 +984,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		ctx = NULL;
         goto setup_server_ctx_err;
     }
-	if(cafile)     dprintf( D_SECURITY, "CAFILE:     '%s'\n", cafile     );
+    if(cafile)     dprintf( D_SECURITY, "CAFILE:     '%s'\n", cafile     );
     if(cadir)      dprintf( D_SECURITY, "CADIR:      '%s'\n", cadir      );
     if(certfile)   dprintf( D_SECURITY, "CERTFILE:   '%s'\n", certfile   );
     if(keyfile)    dprintf( D_SECURITY, "KEYFILE:    '%s'\n", keyfile    );
@@ -1006,10 +1007,13 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
         ouch( "Error loading certificate from file" );
         goto setup_server_ctx_err;
     }
+    priv = set_root_priv();
     if( SSL_CTX_use_PrivateKey_file( ctx, keyfile, SSL_FILETYPE_PEM) != 1 ) {
+        set_priv(priv);
         ouch( "Error loading private key from file" );
         goto setup_server_ctx_err;
     }
+    set_priv(priv);
 		// TODO where's this?
     SSL_CTX_set_verify( ctx, SSL_VERIFY_PEER, verify_callback ); 
     SSL_CTX_set_verify_depth( ctx, 4 ); // TODO arbitrary?
