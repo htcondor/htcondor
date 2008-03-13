@@ -8,6 +8,44 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+03/13/08 trunk-pre-merge-V7_0-merge-2
+         trunk-post-merge-V7_0-merge-2
+   The state of the doc directory in trunk before and after
+   merging changes from the V7_0-branch as tagged V7_0-merge-2.
+
+03/13/08 V7_0-merge-2
+   The state of the doc directory in the V7_0-branch for a 
+   merge into the trunk.
+
+03/12/08 V7_0-pre-merge-V7_0_1-merge-1
+         V7_0-post-merge-V7_0_1-merge-1
+   The state of the doc directory in V7_0-branch before and after
+   merging changes from the V7_0_1-branch as tagged V7_0_1-merge-1.
+
+03/12/08 V7_0_1-merge-1
+   The state of the doc directory in the V7_0_1-branch for a 
+   first merge into V7_0-branch.
+
+02/22/08 V7_0_1-root and V7_0_1-branch
+   A branch for the 7.0.1 doc series of the manual, created from
+   V7_0_1-root on the V7_0-branch of doc. This is the branch we'll
+   use for the 7.0.1 manual, as opposed to the one documented just
+   below this entry, which has an unusual name, and was made before
+   the manual was ready.
+
+02/22/08 V7_0_1-2-{root,branch}
+   A branch for the 7.0.1 doc series of the manual, created from
+   V7_0-branch of doc.
+
+02/5/08 V7_0-pre-merge-V7_0_0-merge-2
+        V7_0-post-merge-V7_0_0-merge-2
+   The state of the doc directory in V7_0-branch before and after
+   merging changes from the V7_0_0-branch as tagged V7_0_0-merge-2.
+
+02/5/08 V7_0_0-merge-2
+   The state of the doc directory in the V7_0_0-branch for a 
+   merge into V7_0-branch.
+
 01/15/08  trunk-pre-merge-V7_0-merge-1
           trunk-post-merge-V7_0-merge-1
    The state of the doc directory in trunk before and after
