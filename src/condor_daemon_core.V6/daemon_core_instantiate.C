@@ -23,6 +23,8 @@
 #include "KeyCache.h"
 #include "string_list.h"
 #include "HashTable.h"
+#include "simplelist.h"
+#include "HookClient.h"
 
 extern bool operator==(const struct in_addr a, const struct in_addr b);
 
@@ -33,3 +35,4 @@ template class Queue<DaemonCore::WaitpidEntry>;
 template class Queue<ServiceData*>;
 template class List<DaemonCore::TimeSkipWatcher>;
 template class Item<DaemonCore::TimeSkipWatcher>;
+template class SimpleList<HookClient*>;

@@ -930,10 +930,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 {
 		// Formerly known as "reqservice"
 
-	ClassAd	*req_classad = new ClassAd, *mach_classad = rip->r_classad;
-	int cmd, mach_requirements = 1, req_requirements = 1;
-	float rank = 0;
-	float oldrank = 0;
+	ClassAd	*req_classad = new ClassAd;
+	int cmd;
+	float rank = 0, oldrank = 0;
 	char *client_addr = NULL;
 	int interval;
 	ClaimIdParser idp(id);
@@ -1001,52 +1000,15 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rip->dprintf( D_FULLDEBUG,
 				  "Received ClaimId from schedd (%s)\n", idp.publicClaimId() );
 
-		// Make sure we're willing to run this job at all.  Verify that 
-		// the machine and job meet each other's requirements.
-	rip->r_reqexp->restore();
-	if( mach_classad->EvalBool( ATTR_REQUIREMENTS, 
-								req_classad, mach_requirements ) == 0 ) {
-		mach_requirements = 0;
-	}
-
-	Starter* tmp_starter;
-	tmp_starter = resmgr->starter_mgr.findStarter( req_classad,
-												   mach_classad );
-	if( ! tmp_starter ) {
-		req_requirements = 0;
-	} else {
-		delete( tmp_starter );
-		req_requirements = 1;
-	}
-
-	if( !mach_requirements || !req_requirements ) {
-	    rip->dprintf( D_ALWAYS, "Request to claim resource refused.\n" );
-		if( !mach_requirements ) {
-			rip->dprintf( D_FAILURE|D_ALWAYS, 
-						  "Machine requirements not satisfied.\n" );
-		}
-		if( !req_requirements ) {
-			rip->dprintf( D_FAILURE|D_ALWAYS, 
-						  "Job requirements not satisfied.\n" );
-		}
-		refuse( stream );
+		// Make sure we're willing to run this job at all.
+	if (!rip->willingToRun(req_classad)) {
+	    rip->dprintf(D_ALWAYS, "Request to claim resource refused.\n");
+		refuse(stream);
 		ABORT;
 	}
 
-		// Possibly print out the ads we just got to the logs.
-	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
-	if( DebugFlags & D_JOB ) {
-		req_classad->dPrint( D_JOB );
-	}
-	  
-	rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n" );
-	if( DebugFlags & D_MACHINE ) {
-		mach_classad->dPrint( D_MACHINE );
-	}
-
 		// Now, make sure it's got a high enough rank to preempt us.
-	rank = compute_rank( mach_classad, req_classad );
-
+	rank = compute_rank(rip->r_classad, req_classad);
 	rip->dprintf( D_FULLDEBUG, "Rank of this claim is: %f\n", rank );
 
 	if( rip->state() == claimed_state ) {
@@ -1189,12 +1151,17 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// function after the preemption has completed when the startd
 		// is finally ready to reply to the and finish the claiming
 		// process.
-	return accept_request_claim( rip );
+	accept_request_claim( rip );
+
+		// We always need to return KEEP_STREAM so that daemon core
+		// doesn't try to delete the stream we've already deleted.
+	return KEEP_STREAM;
+
 }
 #undef ABORT
 
 
-int
+void
 abort_accept_claim( Resource* rip, Stream* stream )
 {
 	stream->encode();
@@ -1212,17 +1179,17 @@ abort_accept_claim( Resource* rip, Stream* stream )
 			*/
 		rip->dprintf( D_ALWAYS, "Claiming protocol failed\n" );
 		rip->set_destination_state( owner_state );
-		return KEEP_STREAM;
+		return;
 	}
 #endif /* HAVE_BACKFILL */
 
 	rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" );
 	rip->change_state( owner_state );
-	return KEEP_STREAM;
+	return;
 }
 
 
-int
+bool
 accept_request_claim( Resource* rip )
 {
 	int interval;
@@ -1240,11 +1207,13 @@ accept_request_claim( Resource* rip )
 	stream->encode();
 	if( !stream->put( OK ) ) {
 		rip->dprintf( D_ALWAYS, "Can't to send cmd to schedd.\n" );
-		return abort_accept_claim( rip, stream );
+		abort_accept_claim( rip, stream );
+		return false;
 	}
 	if( !stream->eom() ) {
 		rip->dprintf( D_ALWAYS, "Can't to send eom to schedd.\n" );
-		return abort_accept_claim( rip, stream );
+		abort_accept_claim( rip, stream );
+		return false;
 	}
 
 		// Grab the schedd addr and alive interval if the alive interval is still
@@ -1256,7 +1225,8 @@ accept_request_claim( Resource* rip )
 		stream->decode();
 		if( ! stream->code(client_addr) ) {
 			rip->dprintf( D_ALWAYS, "Can't receive schedd addr.\n" );
-			return abort_accept_claim( rip, stream );
+			abort_accept_claim( rip, stream );
+			return false;
 		} else {
 			rip->dprintf( D_FULLDEBUG, "Schedd addr = %s\n", client_addr );
 		}
@@ -1264,7 +1234,8 @@ accept_request_claim( Resource* rip )
 			rip->dprintf( D_ALWAYS, "Can't receive alive interval\n" );
 			free( client_addr );
 			client_addr = NULL;
-			return abort_accept_claim( rip, stream );
+			abort_accept_claim( rip, stream );
+			return false;
 		} else {
 			rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
 		}
@@ -1332,10 +1303,7 @@ accept_request_claim( Resource* rip )
 
 	rip->dprintf( D_FAILURE|D_ALWAYS, "State change: claiming protocol successful\n" );
 	rip->change_state( claimed_state );
-
-		// Want to return KEEP_STREAM so that daemon core doesn't try
-		// to delete the stream we've already deleted.
-	return KEEP_STREAM;
+	return true;
 }
 
 
@@ -1547,8 +1515,6 @@ activate_claim( Resource* rip, Stream* stream )
 	}
 #endif	// of ifdef WIN32
 
-	time_t now = time( NULL );
-
 		// now that we've gotten this far, we're really going to try
 		// to spawn the starter.  set it in our Claim object.  Once
 		// it's there, we no longer control this memory so we should
@@ -1568,17 +1534,13 @@ activate_claim( Resource* rip, Stream* stream )
 	req_classad = NULL;
 
 		// Actually spawn the starter
-	if( ! rip->r_cur->spawnStarter(now, shadow_sock) ) {
+	if( ! rip->r_cur->spawnStarter(shadow_sock) ) {
 			// if Claim::spawnStarter fails, it resets the Claim
 			// object to clear out all the info we just stashed above
 			// with setStarter() and saveJobInfo().  it's safe to just
 			// abort now, and all the state will be happy.
 		ABORT;
 	}
-
-		// Grab everything we need/want out of the request and store
-		// it in our current claim 
-	rip->r_cur->beginActivation( now );
 
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
 		if( resmgr->m_vmuniverse_mgr.allocVM(vm_starter->pid(), vm_classad, rip->executeDir()) 

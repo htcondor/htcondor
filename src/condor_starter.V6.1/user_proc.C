@@ -47,6 +47,7 @@ UserProc::initialize( void )
 	JobPid = -1;
 	exit_status = -1;
 	requested_exit = false;
+	m_proc_exited = false;
 	job_universe = 0;  // we'll fill in a real value if we can...
 	if( JobAd ) {
 		initKillSigs();
@@ -101,6 +102,18 @@ UserProc::initKillSigs( void )
 
 
 bool
+UserProc::JobReaper(int pid, int status)
+{
+	if (JobPid == pid) {
+		m_proc_exited = true;
+		exit_status = status;
+		job_exit_time.getTime();
+	}
+	return m_proc_exited;
+}
+
+
+bool
 UserProc::PublishUpdateAd( ClassAd* ad )
 {
 	char buf[256];
@@ -117,7 +130,7 @@ UserProc::PublishUpdateAd( ClassAd* ad )
 		ad->Insert( buf );
 	}
 
-	if( exit_status >= 0 ) {
+	if (m_proc_exited) {
 
 		if( job_exit_time.seconds() > 0 ) {
 			sprintf( buf, "%s%s=%f", name ? name : "", ATTR_JOB_DURATION, 
@@ -161,7 +174,7 @@ UserProc::PublishUpdateAd( ClassAd* ad )
 void
 UserProc::PublishToEnv( Env* proc_env )
 {
-	if( exit_status >= 0 ) {
+	if (m_proc_exited) {
 			// TODO: what should these really be called?  use
 			// myDistro?  mySubSystem?  hard to say...
 		MyString base;

@@ -13,6 +13,11 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_schedd.V6
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 RSH_LIB = $(STD_LIBS) $(CLASSAD_LIB)
 
+#if HAVE_JOB_HOOKS
+JOB_HOOKS_OBJS = StarterHookMgr.o
+#endif /* HAVE_JOB_HOOKS */
+
+
 soapobjs(starter)
 
 # this can (and will have to) be made better, but
@@ -27,7 +32,7 @@ OBJ = starter_v61_main.o starter.o NTsenders.o user_proc.o \
 	starter_user_policy.o \
 	starter_privsep_helper.UNIX.o \
 	vm_proc.o vm_gahp_request.o vm_gahp_server.o \
-	stream_handler.o $(SOAP_OBJS)
+	stream_handler.o $(SOAP_OBJS) $(JOB_HOOKS_OBJS)
 
 RSH_OBJ = condor_rsh.o
 

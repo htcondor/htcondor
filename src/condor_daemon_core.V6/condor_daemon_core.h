@@ -73,6 +73,21 @@ static const int CLOSE_STREAM = 101;
 static const int MAX_SOCKS_INHERITED = 4;
 static char* EMPTY_DESCRIP = "<NULL>";
 
+/**
+   Magic fd to include in the 'std' array argument to Create_Process()
+   which means you want a pipe automatically created and handled.
+   If you do this to stdin, you get a writeable pipe end (exposed as a FILE*
+   Write pipes created like this are stored as MyString objects, which
+   you can access via the Get_Pipe_Data() call.
+*/
+static const int DC_STD_FD_PIPE = -10;
+
+/**
+   Constant used to indicate no pipe (or fd at all) should be remapped.
+*/
+static const int DC_STD_FD_NOPIPE = -1;
+
+
 /** @name Typedefs for Callback Procedures
  */
 //@{
@@ -750,6 +765,34 @@ class DaemonCore : public Service
 	*/
 	int Close_Pipe(int pipe_end);
 
+	/**
+	   Gain access to data written to a given DC process's std(out|err) pipe.
+
+	   @param pid
+	     DC process id of the process to read the data for.
+	   @param std_fd
+	     The fd to identify the pipe to read: 1 for stdout, 2 for stderr.
+	   @return
+	     Pointer to a MyString object containing all the data written so far.
+	*/
+	MyString* Read_Std_Pipe(int pid, int std_fd);
+
+	/**
+	   Write data to the given DC process's stdin pipe.
+	   @see Write_Pipe()
+	*/
+	int Write_Stdin_Pipe(int pid, const void* buffer, int len);
+
+	/**
+	   Close a given DC process's stdin pipe.
+
+	   @return true if the given pid was found and had a DC-managed
+	     stdin pipe, false if not. 
+
+	   @see Close_Pipe()
+	*/
+	bool Close_Stdin_Pipe(int pid);
+
 	//@}
 
 	/** @name Timer events.
@@ -906,6 +949,13 @@ class DaemonCore : public Service
                to stdin, stdout, stderr respectively.  If this array
                is NULL, don't perform remapping.  If any one of these
 			   is negative, it is ignored and *not* mapped.
+			   There's a special case if you use DC_STD_FD_PIPE as the
+               value for any of these fds -- DaemonCore will create a
+               pipe and register everything for you automatically. If
+               you use this for stdin, you can use Write_Std_Pipe() to
+               write to the stdin of the child. If you use this for
+               std(out|err) then you can get a pointer to a MyString
+               with all the data written by the child using Read_Std_Pipe().
         @param nice_inc The value to be passed to nice() in the
                child.  0 < nice < 20, and greater numbers mean
                less priority.  This is an addition to the current
@@ -1427,7 +1477,7 @@ class DaemonCore : public Service
 	void pipeHandleTableRemove(int);
 
 	// this table is for dispatching registered pipes
-	struct PidEntry;  // forward reference
+	class PidEntry;  // forward reference
     struct PipeEnt
     {
         int				index;		// index into the pipeHandleTable
@@ -1466,8 +1516,13 @@ class DaemonCore : public Service
     ReapEnt*            reapTable;      // reaper table
     int                 defaultReaper;
 
-    struct PidEntry
+    class PidEntry : public Service
     {
+	public:
+		PidEntry();
+		~PidEntry();
+		int pipeHandler(int pipe_fd);
+
         pid_t pid;
         int new_process_group;
 #ifdef WIN32
@@ -1487,6 +1542,8 @@ class DaemonCore : public Service
         int reaper_id;
         int hung_tid;   // Timer to detect hung processes
         int was_not_responding;
+        int std_pipes[3];  // Pipe handles for automagic DC std pipes.
+        MyString* pipe_buf[3];  // Buffers for data written to DC std pipes.
 
 		/* the environment variables which allow me the track the pidfamily
 			of this pid (where applicable) */

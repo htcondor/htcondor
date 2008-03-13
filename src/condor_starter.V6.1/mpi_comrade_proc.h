@@ -60,7 +60,7 @@ class MPIComradeProc : public VanillaProc
 			really has to define their own and explicitly call their
 			parent's, even if they have nothing special to add.
 		*/
-    virtual int JobCleanup( int pid, int status );
+    virtual bool JobReaper( int pid, int status );
 
 		/** MPI tasks shouldn't be suspended.  So, if we get a
 			suspend, instead of sending the MPI task a SIGSTOP, we

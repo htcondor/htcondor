@@ -52,12 +52,12 @@ public:
 
 		/** A pid exited.  If this UserProc wants to do any cleanup
 			now that this pid has exited, it does so here.  If we
-			return 1, the starter will consider this UserProc done,
+			return true, the starter will consider this UserProc done,
 			remove it from the active job list, and put it in a list
-			of jobs that are already cleaned up.
-		    @return 1 if our UserProc is no longer active, 0 if it is
+			of jobs that are already reaped.
+		    @return true if this UserProc is no longer active, false if it is
 		*/
-	virtual int JobCleanup(int pid, int status) = 0;
+	virtual bool JobReaper(int pid, int status);
 
 		/** Job exits.  Starter has decided it's done with everything
 			it needs to do, and we can now notify the job's controller
@@ -126,6 +126,7 @@ protected:
 	int job_universe;
 	int exit_status;
 	bool requested_exit;
+	bool m_proc_exited;
 
 		/** This is the identifier for this UserProc.  It's used for
 			dprintf messages() and in some cases as a prefix for

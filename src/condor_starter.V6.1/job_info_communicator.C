@@ -28,6 +28,8 @@
 #include "basename.h"
 #include "../condor_privsep/condor_privsep.h"
 #include "condor_vm_universe_types.h"
+#include "hook_utils.h"
+
 
 extern CStarter *Starter;
 
@@ -54,6 +56,11 @@ JobInfoCommunicator::JobInfoCommunicator()
 	change_iwd = false;
 	user_priv_is_initialized = false;
 	m_execute_account_is_dedicated = false;
+#if HAVE_JOB_HOOKS
+    m_hook_mgr = NULL;
+#endif
+	m_periodic_job_update_tid = -1;
+	m_allJobsDone_finished = false;
 }
 
 
@@ -86,6 +93,12 @@ JobInfoCommunicator::~JobInfoCommunicator()
 	if( job_output_ad_file ) {
 		free( job_output_ad_file );
 	}
+#if HAVE_JOB_HOOKS
+    if (m_hook_mgr) {
+        delete m_hook_mgr;
+    }
+#endif
+	cancelUpdateTimer();
 }
 
 
@@ -226,6 +239,76 @@ JobInfoCommunicator::jobSubproc( void )
 {
 	return job_subproc;
 }
+
+
+void
+JobInfoCommunicator::allJobsSpawned( void )
+{
+		// Now that everything is running, start a timer to handle
+		// periodic job updates.
+	startUpdateTimer();
+}
+
+
+bool
+JobInfoCommunicator::allJobsDone( void )
+{
+		// Make sure we only call this once so that in case we need to
+		// retry the job cleanup process, we don't repeat this step.
+	if (m_allJobsDone_finished) {
+		return true;
+	}
+
+		// Now that all the jobs are gone, we can stop our periodic updates.
+		// It's safe to call this multiple times since it's just a no-op if
+		// the timer is already canceled.
+	cancelUpdateTimer();
+
+#if HAVE_JOB_HOOKS
+	if (m_hook_mgr) {
+		static ClassAd* job_exit_ad = NULL;
+		if (!job_exit_ad) {
+			job_exit_ad = new ClassAd(*job_ad);
+			Starter->publishJobExitAd(job_exit_ad);
+		}
+		const char* exit_reason = getExitReasonString();
+		int rval = m_hook_mgr->tryHookJobExit(job_exit_ad, exit_reason);
+		switch (rval) {
+		case -1:   // Error
+				// TODO: set a timer to retry allJobsDone()
+			return false;
+			break;
+
+		case 0:    // Hook not configured
+				// Nothing to do, break out and finish.
+			break;
+
+		case 1:    // Spawned the hook.
+				// We need to bail now, and let the handler call
+				// finishAllJobsDone() when the hook returns.
+			return false;
+			break;
+		}
+	}
+#endif /* HAVE_JOB_HOOKS */
+
+		// If we're here, there was no hook and we're definitely done
+		// with this step, so remember that in case of retries.
+	m_allJobsDone_finished = true;
+	return true;
+}
+
+
+#if HAVE_JOB_HOOKS
+void
+JobInfoCommunicator::finishAllJobsDone( void )
+{
+		// Record the fact the hook finished.
+	m_allJobsDone_finished = true;
+		// Tell the starter to try job cleanup again so it can move on.
+	Starter->allJobsDone();
+}
+#endif /* HAVE_JOB_HOOKS */
 
 
 void
@@ -596,6 +679,18 @@ JobInfoCommunicator::initUserPrivWindows( void )
 }
 #endif // WIN32
 
+
+bool
+JobInfoCommunicator::initJobInfo( void )
+{
+#if HAVE_JOB_HOOKS
+	m_hook_mgr = new StarterHookMgr;
+	m_hook_mgr->initialize(job_ad);
+#endif
+	return true;
+}
+
+
 void
 JobInfoCommunicator::checkForStarterDebugging( void )
 {
@@ -623,4 +718,126 @@ JobInfoCommunicator::checkForStarterDebugging( void )
 		job_ad->dPrint( D_JOB );
         dprintf( D_JOB, "--- End of ClassAd ---\n" );
 	}
+}
+
+
+void
+JobInfoCommunicator::setupJobEnvironment( void )
+{
+#if HAVE_JOB_HOOKS
+	if (m_hook_mgr) {
+		int rval = m_hook_mgr->tryHookPrepareJob();
+		switch (rval) {
+		case -1:   // Error
+			Starter->RemoteShutdownFast(0);
+			return;
+			break;
+
+		case 0:    // Hook not configured
+				// Nothing to do, break out and finish.
+			break;
+
+		case 1:    // Spawned the hook.
+				// We need to bail now, and let the handler call
+				// jobEnvironmentReady() when the hook returns.
+			return;
+			break;
+		}
+	}
+#endif /* HAVE_JOB_HOOKS */
+
+		// If we made it here, either we're not compiled for hook
+		// support, or we didn't spawn a hook.  Either way, we're
+		// done and should tell the starter we're ready.
+	Starter->jobEnvironmentReady();
+}
+
+
+void
+JobInfoCommunicator::cancelUpdateTimer( void )
+{
+	if (m_periodic_job_update_tid >= 0) {
+		daemonCore->Cancel_Timer(m_periodic_job_update_tid);
+		m_periodic_job_update_tid = -1;
+	}
+}
+
+
+void
+JobInfoCommunicator::startUpdateTimer( void )
+{
+	if( m_periodic_job_update_tid >= 0 ) {
+			// already registered the timer...
+		return;
+	}
+
+	// default interval is 5 minutes, with 8 seconds as the initial value.
+	int update_interval = param_integer( "STARTER_UPDATE_INTERVAL", 300 );
+	int initial_interval = param_integer( "STARTER_INITIAL_UPDATE_INTERVAL", 8 );
+
+	if( update_interval < initial_interval ) {
+		initial_interval = update_interval;
+	}
+	m_periodic_job_update_tid = daemonCore->
+		Register_Timer(initial_interval, update_interval,
+	      (TimerHandlercpp)&JobInfoCommunicator::periodicJobUpdateTimerHandler,
+		  "JobInfoCommunicator::periodicJobUpdateTimerHandler", this);
+	if( m_periodic_job_update_tid < 0 ) {
+		EXCEPT( "Can't register DC Timer!" );
+	}
+}
+
+
+/* 
+   We can't just have our periodic timer call periodicJobUpdate()
+   directly, since it passes in arguments that screw up the default
+   bool that determines if we want to ensure the update works.  So,
+   the periodic updates call this function instead, which calls the
+   non-ensure version.
+*/
+int
+JobInfoCommunicator::periodicJobUpdateTimerHandler( void )
+{
+	if( periodicJobUpdate(NULL, false) ) {
+		return TRUE;
+	}
+	return FALSE;
+}
+
+
+bool
+JobInfoCommunicator::periodicJobUpdate(ClassAd* update_ad, bool insure_update)
+{
+#if HAVE_JOB_HOOKS
+	if (m_hook_mgr) {
+		ClassAd ad;
+		ClassAd* update_ad_ptr = NULL;
+		if (update_ad) {
+			update_ad_ptr = update_ad;
+		}
+		else {
+			publishUpdateAd(&ad);
+			update_ad_ptr = &ad;
+		}
+		m_hook_mgr->hookUpdateJobInfo(update_ad_ptr);
+	}
+#endif
+
+	return true;
+}
+
+
+const char*
+JobInfoCommunicator::getExitReasonString( void )
+{
+	if (requested_exit == true) {
+		if (had_hold) {
+			return "hold";
+		}
+		else if (had_remove) {
+			return "remove";
+		}
+		return "evict";
+	}
+	return "exit";
 }

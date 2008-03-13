@@ -50,10 +50,10 @@ MPIMasterProc::~MPIMasterProc() {}
 #if ! MPI_USES_RSH
 // We only need our own version of this function if we're not using
 // rsh and have a port file to clean up.
-int 
-MPIMasterProc::JobCleanup( int pid, int status )
+bool
+MPIMasterProc::JobReaper( int pid, int status )
 { 
-	dprintf(D_FULLDEBUG,"in MPIMasterProc::JobCleanup()\n");
+	dprintf(D_FULLDEBUG,"in MPIMasterProc::JobReaper()\n");
 
 		// First, we've got to clean up the mpi port file, so that
 		// doesn't get transfered back to the user.
@@ -69,7 +69,7 @@ MPIMasterProc::JobCleanup( int pid, int status )
 
 		// Now, just let our parent versions of this function do their
 		// magic. 
-    return MPIComradeProc::JobCleanup( pid, status );
+    return MPIComradeProc::JobReaper( pid, status );
 }
 #endif /* ! MPI_USES_RSH */
 

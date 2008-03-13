@@ -50,9 +50,9 @@ public:
 			do a CONDOR_job_exit remote syscall.  
 			@param pid The pid that exited.
 			@param status Its status
-		    @return 1 if our OsProc is no longer active, 0 if it is
+		    @return True if our OsProc is no longer active, false if it is
 		*/
-	virtual int JobCleanup( int pid, int status );
+	virtual bool JobReaper( int pid, int status );
 
 		/** In this function, we determine what protocol to use to
 			send the shadow a CONDOR_job_exit remote syscall, which

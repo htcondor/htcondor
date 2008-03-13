@@ -23,8 +23,10 @@
 
 
 struct Translation ClaimTypeTranslation[] = {
+	{ "NONE", CLAIM_NONE },
 	{ "COD", CLAIM_COD },
 	{ "OPPORTUNISTIC", CLAIM_OPPORTUNISTIC },
+	{ "FETCH", CLAIM_FETCH },
 	{ "NULL", 0 }
 };
 
@@ -37,6 +39,17 @@ struct Translation ClaimStateTranslation[] = {
     { "Vacating", CLAIM_VACATING },
     { "Killing", CLAIM_KILLING },
 	{ "NULL", 0 }
+};
+
+
+struct Translation HookTypeTranslation[] = {
+	{ "FETCH_WORK", HOOK_FETCH_WORK },
+	{ "REPLY_CLAIM", HOOK_REPLY_CLAIM },
+	{ "EVICT_CLAIM", HOOK_EVICT_CLAIM },
+	{ "PREPARE_JOB", HOOK_PREPARE_JOB },
+	{ "UPDATE_JOB_INFO", HOOK_UPDATE_JOB_INFO },
+	{ "JOB_EXIT", HOOK_JOB_EXIT },
+	{ "EVICT_JOB", HOOK_EVICT_JOB }
 };
 
 
@@ -120,6 +133,20 @@ ClaimState
 getClaimStateNum( const char* str )
 {
 	return (ClaimState)getNumFromName( str, ClaimStateTranslation );
+}
+
+
+const char*
+getHookTypeString( HookType type )
+{
+	return getNameFromNum( (int)type, HookTypeTranslation );
+}
+
+
+HookType
+getHookTypeNum( const char* str )
+{
+	return (HookType)getNumFromName( str, HookTypeTranslation );
 }
 
 

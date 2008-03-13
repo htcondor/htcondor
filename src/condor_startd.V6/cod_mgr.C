@@ -107,7 +107,7 @@ Claim*
 CODMgr::addClaim( int lease_duration ) 
 {
 	Claim* new_claim;
-	new_claim = new Claim( rip, true, lease_duration );
+	new_claim = new Claim( rip, CLAIM_COD, lease_duration );
 	new_claim->beginClaim();
 	claims.Append( new_claim );
 	return new_claim;
@@ -353,16 +353,11 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 
 		// finally, spawn the starter and COD job itself
 
-	time_t now = time(NULL);
 	claim->setStarter( tmp_starter );	
-	int rval = claim->spawnStarter( now );
-	if( rval ) {
-			// only want to do this if it worked...
-		claim->beginActivation( now );
-	}
-	else {
-			// otherwise, make sure everything goes back to normal
-			// with the opportunistic claim
+	int rval = claim->spawnStarter();
+	if( !rval ) {
+			// Failed to spawn, make sure everything goes back to
+			// normal with the opportunistic claim
 		interactionLogicCODStopped();
 	}
 

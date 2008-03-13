@@ -112,10 +112,9 @@ JICLocal::config( void )
 void
 JICLocal::setupJobEnvironment( void )
 { 
-		// nothing to do, tell the starter we're ready
-	Starter->jobEnvironmentReady();
+		// Nothing for us to do, let our parent class do its thing.
+	JobInfoCommunicator::setupJobEnvironment();
 }
-
 
 
 float
@@ -131,14 +130,6 @@ JICLocal::bytesReceived( void )
 {
 		// no file transfer, always 0 for now. 
 	return 0.0;
-}
-
-
-void
-JICLocal::allJobsSpawned( void )
-{
-		// at this point, we don't care that all the jobs have been
-		// spawned...
 }
 
 
@@ -167,15 +158,6 @@ JICLocal::Continue( void )
 
 		// See if the LocalUserLog wants it
 	u_log->logContinue( &update_ad );
-}
-
-
-bool
-JICLocal::allJobsDone( void )
-{
-		// we don't care about anything at this stage.  we'll tell the
-		// user about the jobs exiting when we get the notifyJobExit()
-	return true;
 }
 
 
@@ -346,6 +328,9 @@ JICLocal::initUserPriv( void )
 bool
 JICLocal::initJobInfo( void ) 
 {
+		// Give our base class a chance.
+	JobInfoCommunicator::initJobInfo();
+
 	char *orig_job_iwd;
 
 	if( ! job_ad ) {

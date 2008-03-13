@@ -150,43 +150,58 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 {
 	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
 
-	ProcFamilyUsage usage;
-	if (daemonCore->Get_Family_Usage(JobPid, usage) == FALSE) {
-
-		dprintf(D_ALWAYS,
-		        "error getting family usage in VanillaProc::PublishUpdateAd()\n");
-		return false;
+	ProcFamilyUsage* usage;
+	ProcFamilyUsage cur_usage;
+	if (m_proc_exited) {
+		usage = &m_final_usage;
+	}
+	else {
+		if (daemonCore->Get_Family_Usage(JobPid, cur_usage) == FALSE) {
+			dprintf(D_ALWAYS, "error getting family usage in "
+					"VanillaProc::PublishUpdateAd() for pid %d\n", JobPid);
+			return false;
+		}
+		usage = &cur_usage;
 	}
 
 		// Publish the info we care about into the ad.
 	char buf[200];
-	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_SYS_CPU, usage.sys_cpu_time );
+	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_SYS_CPU, usage->sys_cpu_time );
 	ad->InsertOrUpdate( buf );
-	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_USER_CPU, usage.user_cpu_time );
+	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_USER_CPU, usage->user_cpu_time );
 	ad->InsertOrUpdate( buf );
-	sprintf( buf, "%s=%lu", ATTR_IMAGE_SIZE, usage.max_image_size );
+	sprintf( buf, "%s=%lu", ATTR_IMAGE_SIZE, usage->max_image_size );
 	ad->InsertOrUpdate( buf );
 
 		// Update our knowledge of how many processes the job has
-	num_pids = usage.num_procs;
+	num_pids = usage->num_procs;
 
 		// Now, call our parent class's version
 	return OsProc::PublishUpdateAd( ad );
 }
 
 
-int
-VanillaProc::JobCleanup(int pid, int status)
+bool
+VanillaProc::JobReaper(int pid, int status)
 {
-	dprintf(D_FULLDEBUG,"in VanillaProc::JobCleanup()\n");
+	dprintf(D_FULLDEBUG,"in VanillaProc::JobReaper()\n");
 
-		// make sure that nothing was left behind
 	if (pid == JobPid) {
+			// Make sure that nothing was left behind.
 		daemonCore->Kill_Family(JobPid);
+
+			// Record final usage stats for this process family, since
+			// once the reaper returns, the family is no longer
+			// registered with DaemonCore and we'll never be able to
+			// get this information again.
+		if (daemonCore->Get_Family_Usage(JobPid, m_final_usage) == FALSE) {
+			dprintf(D_ALWAYS, "error getting family usage for pid %d in "
+					"VanillaProc::JobReaper()\n", JobPid);
+		}
 	}
 
 		// This will reset num_pids for us, too.
-	return OsProc::JobCleanup( pid, status );
+	return OsProc::JobReaper( pid, status );
 }
 
 
@@ -272,7 +287,7 @@ VanillaProc::ShutdownFast()
 
 	// this used to be the only place where we would clean up the process
 	// family. this, however, wouldn't properly clean up local universe jobs
-	// so a call to Kill_Family has been added to JobCleanup(). i'm not sure
+	// so a call to Kill_Family has been added to JobReaper(). i'm not sure
 	// that this call is still needed, but am unwilling to remove it on the
 	// eve of Condor 7
 	//   -gquinn, 2007-11-14

@@ -721,17 +721,17 @@ VMProc::CheckStatus()
 	return;
 }
 
-int
-VMProc::JobCleanup(int pid, int status)
+bool
+VMProc::JobReaper(int pid, int status)
 {
-	dprintf(D_FULLDEBUG,"Inside VMProc::JobCleanup()\n");
+	dprintf(D_FULLDEBUG,"Inside VMProc::JobReaper()\n");
 
 	// Ok, vm_gahp server exited
 	// Make sure that all allocated structures are freed
 	cleanup();
 
 	// This will reset num_pids for us, too.
-	return OsProc::JobCleanup( pid, status );
+	return OsProc::JobReaper( pid, status );
 }
 
 bool

@@ -126,6 +126,13 @@ public:
 
 	Claim*	newCODClaim( int lease_duration );
 
+
+		/**
+		   Try to finish accepting a pending claim request.
+		   @return true if we accepted and began a claim, false if not.
+		*/
+	bool	acceptClaimRequest();
+
 		// Called when the starter of one of our claims exits
 	void	starterExited( Claim* cur_claim );	
 
@@ -159,6 +166,7 @@ public:
 	int		eval_is_owner( void );		// EXCEPT's on undefined
 	int		eval_start( void );			// returns -1 on undefined
 	int		eval_cpu_busy( void );		// returns FALSE on undefined
+	bool	willingToRun( ClassAd* request_ad );
 
 #if HAVE_BACKFILL
 	int		eval_start_backfill( void ); 
@@ -167,6 +175,15 @@ public:
 	bool	softkill_backfill( void );
 	bool	hardkill_backfill( void );
 #endif /* HAVE_BACKFILL */
+
+#if HAVE_JOB_HOOKS
+	bool	tryFetchWork( void );
+	void	createOrUpdateFetchClaim( ClassAd* job_ad, float rank = 0 );
+	bool	spawnFetchedWork( void );
+	void	terminateFetchedWork( void );
+	void	startedFetch( void );
+	void	fetchCompleted( void );
+#endif /* HAVE_JOB_HOOKS */
 
 	bool    claimWorklifeExpired();
 	int		retirementExpired( void );
@@ -217,6 +234,18 @@ private:
 
 	MyString m_execute_dir;
 	MyString m_execute_partition_id;
+
+#if HAVE_JOB_HOOKS
+	time_t	m_last_fetch_work_spawned;
+	time_t	m_last_fetch_work_completed;
+	bool	m_currently_fetching;
+	int		m_next_fetch_work_delay;
+	int		m_next_fetch_work_tid;
+	int		evalNextFetchWorkDelay( void );
+	void	createFetchClaim( ClassAd* job_ad, float rank = 0 );
+	void	resetFetchWorkTimer( int next_fetch = 0 );
+#endif /* HAVE_JOB_HOOKS */
+
 };
 
 

@@ -59,7 +59,7 @@ class CODMgr;
 class ClaimId
 {
 public:
-	ClaimId( bool is_cod = false );
+	ClaimId( ClaimType claim_type = CLAIM_OPPORTUNISTIC );
 	~ClaimId();
 
 	char*	id() {return c_id;};
@@ -114,7 +114,8 @@ private:
 class Claim : public Service
 {
 public:
-	Claim( Resource*, bool is_cod = false, int lease_duration = -1 );
+	Claim( Resource*, ClaimType claim_type = CLAIM_OPPORTUNISTIC,
+		   int lease_duration = -1 );
 	~Claim();
 
 		// Operations you can perform on a Claim
@@ -135,24 +136,21 @@ public:
 		*/
 	void beginClaim( void );	
 
-		/** We accepted a request to activate the claim and spawn a
-			starter.  Pull all the information we need out of the
-			request and store it in this Claim object, along with any
-			attributes that care about the time the job was spawned. 
-		*/
-	void beginActivation( time_t now ); 
-
 		/** Load info used by the accountant into this object from the
 			current classad.
 		 */
 	void loadAccountingInfo();
 
-		/** We're servicing a request to activate a claim and we want
+		/** 
+			We're servicing a request to activate a claim and we want
 			to save the request classad into our claim object for
 			future use.  This method also gets some info out of the
 			ClassAd we'll need to spawn the job, like the job ID.
+
+			@param request_ad The ClassAd for the current activation.
+			  If NULL, we reuse the ClassAd already in the claim object.
 		*/
-	void saveJobInfo( ClassAd* request_ad );
+	void saveJobInfo( ClassAd* request_ad = NULL );
 
 		// Timer functions
 	void start_match_timer();
@@ -169,7 +167,7 @@ public:
 		// Functions that return data
 	float		rank()			{return c_rank;};
 	float		oldrank()		{return c_oldrank;};
-	bool		isCOD()			{return c_is_cod;};
+	ClaimType	type()			{return c_type;};
 	char*		codId()			{return c_id->codId();};
     char*       id();
 	char const *publicClaimId();
@@ -187,7 +185,7 @@ public:
 	unsigned long	imageSize( void );
 	CODMgr*		getCODMgr( void );
 	bool		hasPendingCmd() {return c_pending_cmd != -1;};
-	bool		hasJobAd()		{return c_has_job_ad != 0;};
+	bool		hasJobAd();
 	int  		pendingCmd()	{return c_pending_cmd;};
 	bool		wantsRemove()	{return c_wants_remove;};
 	time_t      getJobTotalRunTime();
@@ -208,7 +206,7 @@ public:
 	int activationCount() {return c_activation_count;}
 
 		// starter-related functions
-	int	 spawnStarter( time_t, Stream* = NULL );
+	int	 spawnStarter( Stream* = NULL );
 	void setStarter( Starter* s );
 	void starterExited( void );
 	bool starterPidMatches( pid_t starter_pid );
@@ -222,7 +220,7 @@ public:
 	bool starterKillPg( int sig );
 	bool starterKillSoft( void );
 	bool starterKillHard( void );
-	bool makeCODStarterArgs( ArgList &args );
+	void makeStarterArgs( ArgList &args );
 	bool verifyCODAttrs( ClassAd* req );
 	bool publishStarterAd( ClassAd* ad );
 
@@ -261,6 +259,7 @@ private:
 	Resource	*c_rip;
 	Client 		*c_client;
 	ClaimId 	*c_id;
+	ClaimType	c_type;
 	ClassAd*	c_ad;
 	Starter*	c_starter;
 	float		c_rank;
@@ -296,7 +295,6 @@ private:
 	int			c_lease_duration; // Duration of our claim/job lease
 	int			c_aliveint;		// Alive interval for this claim
 
-	bool		c_is_cod;       // are we a COD claim or not?
 	char*		c_cod_keyword;	// COD keyword for this claim, if any
 	int			c_has_job_ad;	// Do we have a job ad for the COD claim?
 
@@ -318,6 +316,20 @@ private:
 			reset it by clearing out all the activation-specific data
 		*/
 	void resetClaim( void );
+
+		/**
+		   We accepted a request to activate the claim and spawn a
+		   starter.  Pull all the information we need out of the
+		   request and store it in this Claim object, along with any
+		   attributes that care about the time the job was spawned. 
+		*/
+	void beginActivation( time_t now ); 
+
+	void makeCODStarterArgs( ArgList &args );
+#if HAVE_JOB_HOOKS
+	void makeFetchStarterArgs( ArgList &args );
+#endif /* HAVE_JOB_HOOKS */
+
 };
 
 

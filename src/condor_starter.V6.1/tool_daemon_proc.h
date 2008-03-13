@@ -52,9 +52,9 @@ public:
 		    application is gone, we can go that here, too.
 		    @param pid The pid that exited.
 		    @param status Its status
-		    @return 1 if our ToolDaemonProc is no longer active, 0 if it is
+		    @return True if our ToolDaemonProc is no longer active, else false.
 		*/
-	virtual int JobCleanup(int pid, int status);
+	virtual bool JobReaper(int pid, int status);
 
 	/** ToolDaemonProcs don't need to send a remote system call to
 	    the shadow to tell it we've exited.  So, we want our own

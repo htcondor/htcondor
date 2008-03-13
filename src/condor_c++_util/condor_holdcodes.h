@@ -91,4 +91,17 @@ const int CONDOR_HOLD_CODE_JobShadowMismatch = 17;
 //An internal Condor protocol error was encountered when transferring files.
 const int CONDOR_HOLD_CODE_InvalidTransferGoAhead = 18;
 
+#if HAVE_JOB_HOOKS
+/**
+   HOOK_PREPARE_JOB was defined but couldn't execute or returned failure.
+   The hold subcode will be 0 if we failed to execute, the exit status
+   if it exited with a failure code, or a negative number with the signal
+   number if it was killed by a signal (e.g. -9).
+*/
+const int CONDOR_HOLD_CODE_HookPrepareJobFailure = 19;
+#endif /* HAVE_JOB_HOOKS */
+
+// Note: just because the above code was conditionally defined, the
+// next available code should be 20 (and please delete this comment).
+
 #endif

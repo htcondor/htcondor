@@ -55,6 +55,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 static const int MAX_TIME_SKIP = (60*20); //20 minutes
 static const int MIN_FILE_DESCRIPTOR_SAFETY_LIMIT = 20;
 static const int MIN_REGISTERED_SOCKET_SAFETY_LIMIT = 15;
+static const int DC_PIPE_BUF_SIZE = 1024;
 
 #include "authentication.h"
 #include "daemon.h"
@@ -1892,6 +1893,63 @@ DaemonCore::Write_Pipe(int pipe_end, const void* buffer, int len)
 #endif
 }
 
+
+MyString*
+DaemonCore::Read_Std_Pipe(int pid, int std_fd) {
+	PidEntry *pidinfo = NULL;
+	if ((pidTable->lookup(pid, pidinfo) < 0)) {
+			// we have no information on this pid
+			// TODO-pipe: distinguish this error somehow?
+		return NULL;
+	}
+		// We just want to return a pointer to what we've got so
+		// far. If there was no std pipe setup here, this will always
+		// be NULL. However, if there was a pipe, but that's now been
+		// closed, the std_pipes entry will already be cleared out, so
+		// we can't rely on that.
+	return pidinfo->pipe_buf[std_fd];
+}
+
+
+int
+DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int len) {
+	PidEntry *pidinfo = NULL;
+	if ((pidTable->lookup(pid, pidinfo) < 0)) {
+			// we have no information on this pid
+			// TODO-pipe: set custom errno?
+		return -1;
+	}
+	if (pidinfo->std_pipes[0] == DC_STD_FD_NOPIPE) {
+			// No pipe found.
+			// TODO-pipe: set custom errno?
+		return -1;
+	}
+	return Write_Pipe(pidinfo->std_pipes[0], buffer, len);
+}
+
+
+bool
+DaemonCore::Close_Stdin_Pipe(int pid) {
+	PidEntry *pidinfo = NULL;
+	int rval;
+
+	if ((pidTable->lookup(pid, pidinfo) < 0)) {
+			// we have no information on this pid
+		return false;
+	}
+	if (pidinfo->std_pipes[0] == DC_STD_FD_NOPIPE) {
+			// No pipe found.
+		return false;
+	}
+
+	rval = Close_Pipe(pidinfo->std_pipes[0]);
+	if (rval) {
+		pidinfo->std_pipes[0] = DC_STD_FD_NOPIPE;
+	}
+	return (bool)rval;
+}
+
+
 int DaemonCore::Register_Reaper(int rid, char* reap_descrip,
 				ReaperHandler handler, ReaperHandlercpp handlercpp,
 				char *handler_descrip, Service* s, int is_cpp)
@@ -1965,6 +2023,7 @@ int DaemonCore::Register_Reaper(int rid, char* reap_descrip,
 
 	return rid;
 }
+
 
 int DaemonCore::Lookup_Socket( Stream *insock )
 {
@@ -5894,13 +5953,15 @@ int DaemonCore::Create_Process(
 			size_t        *core_hard_limit
             )
 {
-	int i;
+	int i, j;
 	char *ptmp;
 	int inheritFds[MAX_INHERIT_FDS];
 	int numInheritFds = 0;
 	extern char **environ;
 	MyString executable_buf;
 
+	// For automagic DC std pipes.
+	int dc_pipe_fds[3][2] = {{-1, -1}, {-1, -1}, {-1, -1}};
 
 	//saved errno (if any) to pass back to caller
 	//Currently, only stuff that would be of interest to the user
@@ -6083,6 +6144,34 @@ int DaemonCore::Create_Process(
 		m_proc_family = ProcFamilyInterface::create(mySubSystem);
 		ASSERT(m_proc_family);
 	}
+
+		// Before we get into the platform-specific stuff, see if any
+		// of the std fds are requesting a DC-managed pipe.  If so, we
+		// want to create those pipes now so they can be inherited.
+	for (i=0; i<=2; i++) {
+		if (std && std[i] == DC_STD_FD_PIPE) {
+			if (i == 0) {
+				if (!Create_Pipe(dc_pipe_fds[i], false, false, false, true)) {
+					dprintf(D_ALWAYS|D_FAILURE, "ERROR: Create_Process: "
+							"Can't create DC pipe for stdin.\n");
+					goto wrapup;
+				}
+					// We want to have the child inherit the read end.
+				std[i] = dc_pipe_fds[i][0];
+			}
+			else {
+				if (!Create_Pipe(dc_pipe_fds[i], true, false, true)) {
+					dprintf(D_ALWAYS|D_FAILURE, "ERROR: Create_Process: "
+							"Can't create DC pipe for %s.\n",
+							i == 1 ? "stdout" : "stderr");
+					goto wrapup;
+				}
+					// We want to have the child inherit the write end.
+				std[i] = dc_pipe_fds[i][1];
+			}
+		}
+	}
+
 
 #ifdef WIN32
 	// START A NEW PROCESS ON WIN32
@@ -6736,6 +6825,43 @@ int DaemonCore::Create_Process(
 	pidtmp->pipeReady = 0;
 	pidtmp->deallocate = 0;
 #endif 
+		// Now, handle the DC-managed std pipes, if any.
+	for (i=0; i<=2; i++) {
+		if (dc_pipe_fds[i][0] != -1) {
+				// We made a DC pipe, so close the end we don't need,
+				// and stash the end we care about in the PidEntry.
+			if (i == 0) {
+					// For stdin, we close our copy of the read end
+					// and stash the write end.
+				Close_Pipe(dc_pipe_fds[i][0]);
+				pidtmp->std_pipes[i] = dc_pipe_fds[i][1];
+			}
+			else {
+					// std(out|err) is reversed: we close our copy of
+					// the write end and stash the read end.
+				Close_Pipe(dc_pipe_fds[i][1]);
+				pidtmp->std_pipes[i] = dc_pipe_fds[i][0];
+				char* pipe_desc;
+				char* pipe_handler_desc;
+				if (i == 1) {
+					pipe_desc = "DC stdout pipe";
+					pipe_handler_desc = "DC stdout pipe handler";
+				}
+				else {
+					pipe_desc = "DC stderr pipe";
+					pipe_handler_desc = "DC stderr pipe handler";
+				}
+				Register_Pipe(dc_pipe_fds[i][0], pipe_desc,
+					  (PipeHandlercpp) & DaemonCore::PidEntry::pipeHandler,
+					  pipe_handler_desc, pidtmp);
+			}
+				// Either way, we stashed/closed as needed, so clear
+				// out the records in dc_pipe_fds so we don't try to
+				// clean these up again during wrapup.
+			dc_pipe_fds[i][0] = dc_pipe_fds[i][1] = DC_STD_FD_NOPIPE;
+		}
+	}
+
 	/* remember the family history of the new pid */
 	pidenvid_init(&pidtmp->penvid);
 	if (pidenvid_filter_and_insert(&pidtmp->penvid, environ) !=
@@ -6796,6 +6922,16 @@ int DaemonCore::Create_Process(
 		delete [] newenv;
 	}
 #endif
+
+		// If we created any pipes for this process and didn't yet
+		// close them or stash them in the PidEntry, close them now.
+	for (i=0; i<=2; i++) {
+		for (j=0; j<=1; j++) {
+			if (dc_pipe_fds[i][j] != -1) {
+				Close_Pipe(dc_pipe_fds[i][j]);
+			}
+		}
+	}
 
 	errno = return_errno;
 	return newpid;
@@ -7861,6 +7997,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 {
 	PidEntry* pidentry;
 	const char *whatexited = "pid";	// could be changed to "tid"
+	int i;
 
 	// Fetch the PidEntry for this pid from our hash table.
 	if ( pidTable->lookup(pid,pidentry) == -1 ) {
@@ -7883,6 +8020,22 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 		}
 	}
 
+	// If this process has DC-managed pipes attached to stdout or
+	// stderr and those are still open, read them one last time.
+	for (i=1; i<=2; i++) {
+		if (pidentry->std_pipes[i] != DC_STD_FD_NOPIPE) {
+			pidentry->pipeHandler(pidentry->std_pipes[i]);
+			Close_Pipe(pidentry->std_pipes[i]);
+			pidentry->std_pipes[i] = DC_STD_FD_NOPIPE;
+		}
+	}
+
+	// If stdin had a pipe and that's still open, close it, too.
+	if (pidentry->std_pipes[0] != DC_STD_FD_NOPIPE) {
+		Close_Pipe(pidentry->std_pipes[0]);
+		pidentry->std_pipes[0] = DC_STD_FD_NOPIPE;
+	}
+	
     //Now the child is gone, clear all sessions asssociated with the child
     clearSession(pid);
 
@@ -9049,4 +9202,91 @@ DaemonCore::evalExpr( ClassAd* ad, const char* param_name,
 		free(expr);
 	}
 	return value;
+}
+
+
+DaemonCore::PidEntry::PidEntry() {
+	int i;
+	for (i=0; i<=2; i++) {
+		pipe_buf[i] = NULL;
+		std_pipes[i] = DC_STD_FD_NOPIPE;
+	}
+}
+
+
+DaemonCore::PidEntry::~PidEntry() {
+	int i;
+	ASSERT(pipe_buf[0] == NULL);
+	for (i=1; i<=2; i++) {
+		if (pipe_buf[i]) {
+			delete pipe_buf[i];
+		}
+	}
+		// Close and cancel handlers for any pipes we created for this pid.
+	for (i=0; i<=2; i++) {
+		if (std_pipes[i] != DC_STD_FD_NOPIPE) {
+			daemonCore->Close_Pipe(std_pipes[i]);
+		}
+	}
+}
+
+
+int
+DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
+    char buf[DC_PIPE_BUF_SIZE + 1];
+    int bytes;
+    int reads = 0;
+	int pipe_index = 0;
+	MyString* cur_buf = NULL;
+	char* pipe_desc;
+	if (std_pipes[1] == pipe_fd) {
+		pipe_index = 1;
+		pipe_desc = "stdout";
+	}
+	else if (std_pipes[2] == pipe_fd) {
+		pipe_index = 2;
+		pipe_desc = "stderr";
+	}
+	else {
+		EXCEPT("IMPOSSIBLE: in pipeHandler() for pid %d with unknown fd %d",
+			   (int)pid, pipe_fd);
+	}
+
+	if (pipe_buf[pipe_index] == NULL) {
+			// Make a MyString buffer to hold the data.
+		pipe_buf[pipe_index] = new MyString;
+	}
+	cur_buf = pipe_buf[pipe_index];
+
+	// Read until we consume all the data (or loop too many times...)
+    while ((++reads < 10) && (std_pipes[pipe_index] >= 0 )) {
+        bytes = daemonCore->Read_Pipe(pipe_fd, buf, DC_PIPE_BUF_SIZE);
+        if (bytes == 0) {
+            dprintf(D_FULLDEBUG, "DC %s pipe closed for pid %d\n",
+					pipe_desc, (int)pid);
+			daemonCore->Close_Pipe(pipe_fd);
+			std_pipes[pipe_index] = DC_STD_FD_NOPIPE;
+        }
+        else if (bytes > 0) {
+			// Actually read some data, so append it to our MyString.
+			// First, null-terminate the buffer so that sprintf_cat()
+			// doesn't go berserk. This is always safe since buf was
+			// created on the stack with 1 extra byte, just in case.
+			buf[bytes] = '\0';
+			*cur_buf += buf;
+		}
+		// Negative is an error; check for EWOULDBLOCK
+        else if ((EWOULDBLOCK == errno) || (EAGAIN == errno)) {
+			// No more data -- we're done.
+            break;
+        }
+        else {
+			// Something bad	
+            dprintf(D_ALWAYS|D_FAILURE, "DC pipeHandler: "
+					"read %s failed for pid %d: '%s' (errno: %d)\n",
+					pipe_desc, (int)pid, strerror(errno), errno);
+            return FALSE;
+        }
+    }
+	return TRUE;
 }

@@ -158,10 +158,11 @@ MPIComradeProc::addEnvVars()
 	return 1;
 }
 
-int
-MPIComradeProc::JobCleanup( int pid, int status )
+
+bool
+MPIComradeProc::JobReaper( int pid, int status )
 { 
-	return VanillaProc::JobCleanup( pid, status );
+	return VanillaProc::JobReaper( pid, status );
 }
 
 

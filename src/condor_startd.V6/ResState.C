@@ -330,6 +330,16 @@ ResState::eval( void )
 		if( (r_act == busy_act || r_act == retiring_act) && (rip->wants_pckpt()) ) {
 			rip->periodic_checkpoint();
 		}
+
+#if HAVE_JOB_HOOKS
+			// If we're compiled to support fetching work
+			// automatically and configured to do so, check now if we
+			// should try to fetch more work.
+		if (r_act != suspended_act) {
+			rip->tryFetchWork();
+		}
+#endif /* HAVE_JOB_HOOKS */
+
 		if( rip->r_reqexp->restore() ) {
 				// Our reqexp changed states, send an update
 			rip->update();
@@ -355,6 +365,13 @@ ResState::eval( void )
 			// Check to see if we should run benchmarks
 		deal_with_benchmarks( rip );
 
+#if HAVE_JOB_HOOKS
+			// If we're compiled to support fetching work
+			// automatically and configured to do so, check now if we
+			// should try to fetch more work.
+		rip->tryFetchWork();
+#endif /* HAVE_JOB_HOOKS */
+
 #if HAVE_BACKFILL
 			// check if we should go into the Backfill state.  only do
 			// so if a) we've got a BackfillMgr object configured and
@@ -377,6 +394,15 @@ ResState::eval( void )
 			dprintf( D_ALWAYS, "State change: IS_OWNER is false\n" );
 			change( unclaimed_state );
 		}
+#if HAVE_JOB_HOOKS
+			// If we're compiled to support fetching work
+			// automatically and configured to do so, check now if we
+			// should try to fetch more work.  Even if we're in the
+			// owner state, we can still see if the expressions allow
+			// any fetched work at this point.
+		rip->tryFetchWork();
+#endif /* HAVE_JOB_HOOKS */
+
 		break;	
 		
 	case matched_state:
@@ -423,6 +449,13 @@ ResState::eval( void )
 			dprintf( D_ALWAYS, "WARNING: EVICT_BACKFILL is UNDEFINED, "
 					 "staying in Backfill state\n" );
 		}
+
+#if HAVE_JOB_HOOKS
+			// If we're compiled to support fetching work
+			// automatically and configured to do so, check now if we
+			// should try to fetch more work.
+		rip->tryFetchWork();
+#endif /* HAVE_JOB_HOOKS */
 
 		if( r_act == idle_act ) {
 				// if we're in Backfill/Idle, try to spawn a backfill job
@@ -575,7 +608,7 @@ ResState::enter_action( State s, Activity a,
 				// Generate a preempting claim object
 			rip->r_pre = new Claim( rip );
 		}
-		if( a == suspended_act ) {
+		if (a == suspended_act) {
 			if( ! rip->r_cur->suspendClaim() ) {
 				rip->r_cur->starterKillPg( SIGKILL );
 				dprintf( D_ALWAYS,
@@ -583,7 +616,7 @@ ResState::enter_action( State s, Activity a,
 				return change( owner_state );
 			}
 		}
-		if( a == busy_act ) {
+		else if (a == busy_act) {
 			resmgr->start_poll_timer();
 
 			if( rip->inRetirement() ) {
@@ -595,13 +628,39 @@ ResState::enter_action( State s, Activity a,
 				return change( retiring_act );
 			}
 		}
-		if( a == retiring_act ) {
+		else if (a == retiring_act) {
 			if( ! rip->claimIsActive() ) {
 				// The starter exited by the time we got here.
 				// No need to wait around in retirement.
 				return change( preempting_state );
 			}
 		}
+#if HAVE_JOB_HOOKS
+		else if (a == idle_act) {
+			if (rip->r_cur->type() == CLAIM_FETCH) {
+				if (statechange) {
+						// We just entered Claimed/Idle on a state change,
+						// and we've got a fetch claim, so try to activate it.
+					ASSERT(rip->r_cur->hasJobAd());
+					rip->spawnFetchedWork();
+						// spawnFetchedWork() *always* causes a state change.
+					return TRUE;
+				}
+				else {
+						// We just entered Claimed/Idle, but not due
+						// to a state change.  The starter must have
+						// exited, so we should try to fetch more work.
+					rip->tryFetchWork();
+
+						// Starting the fetch doesn't cause a state
+						// change, only the handler does, so we should
+						// just return FALSE.
+					return FALSE;
+				}
+			}
+		}
+#endif /* HAVE_JOB_HOOKS */
+
 		break;
 
 	case unclaimed_state:
@@ -734,6 +793,15 @@ ResState::set_destination( State new_state )
 	case claimed_state:
 			// this is only valid if we've got a pending request to
 			// claim that's already been stashed in our Claim object 
+#if HAVE_JOB_HOOKS
+		if (rip->r_cur->type() == CLAIM_FETCH) {
+			if (rip->r_cur->ad() == NULL) {
+				EXCEPT( "set_destination(Claimed) called but there's no "
+						"fetched job classad in our current Claim" );
+			}
+		}
+		else
+#endif /* HAVE_JOB_HOOKS */
 		if( ! rip->r_cur->requestStream() ) {
 			EXCEPT( "set_destination(Claimed) called but there's no "
 					"pending request stream set in our current Claim" );
@@ -757,9 +825,10 @@ ResState::set_destination( State new_state )
 	case unclaimed_state:
 		if( r_destination == claimed_state ) {
 				// this is a little weird, but we can't just enter
-				// claimed directly, we have to do all this gnarly
-				// claiming protocol stuff, first...
-			accept_request_claim( rip );
+				// claimed directly, we have to see what kind of claim
+				// it is and potentailly do all the gnarly claiming
+				// protocol stuff, first...
+			rip->acceptClaimRequest();
 		} else {
 			change( r_destination );
 		}
@@ -775,7 +844,7 @@ ResState::set_destination( State new_state )
 		if( r_act == idle_act ) {
 				// if we're idle, we can go immediately 
 			if( r_destination == claimed_state ) {
-				accept_request_claim( rip );
+				rip->acceptClaimRequest();
 			} else {
 				change( r_destination );
 			}
@@ -821,8 +890,8 @@ ResState::starterExited( void )
 			// pending request is gone for some reason, go back to
 			// the Owner state... 
 		dprintf( D_ALWAYS, "State change: starter exited\n" );
-		if( rip->r_cur->requestStream() ) {
-			accept_request_claim( rip );
+		if (rip->acceptClaimRequest()) {
+				// Successfully accepted the claim and changed state.
 			return TRUE;
 		} else {
 			r_destination = no_state;

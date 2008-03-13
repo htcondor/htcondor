@@ -95,6 +95,14 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_pre_cod_total_load = 0.0;
 	r_pre_cod_condor_load = 0.0;
 
+#if HAVE_JOB_HOOKS
+	m_last_fetch_work_spawned = 0;
+	m_last_fetch_work_completed = 0;
+	m_next_fetch_work_delay = -1;
+	m_next_fetch_work_tid = -1;
+	m_currently_fetching = false;
+#endif
+
 	if( r_attr->type() ) {
 		dprintf( D_ALWAYS, "New machine resource of type %d allocated\n",  
 				 r_attr->type() );
@@ -113,6 +121,16 @@ Resource::~Resource()
 		}
 		update_tid = -1;
 	}
+
+#if HAVE_JOB_HOOKS
+	if (m_next_fetch_work_tid != -1) {
+		if (daemonCore->Cancel_Timer(m_next_fetch_work_tid) < 0 ) {
+			::dprintf(D_ALWAYS, "failed to cancel update timer (%d): "
+					  "daemonCore error\n", m_next_fetch_work_tid);
+		}
+		m_next_fetch_work_tid = -1;
+	}
+#endif /* HAVE_JOB_HOOKS */
 
 	delete r_state;
 	delete r_classad;
@@ -292,7 +310,7 @@ Resource::deactivate_claim_forcibly( void )
 void
 Resource::removeClaim( Claim* c )
 {
-	if( c->isCOD() ) {
+	if( c->type() == CLAIM_COD ) {
 		r_cod_mgr->removeClaim( c );
 		return;
 	}
@@ -546,7 +564,7 @@ Resource::starterExited( Claim* cur_claim )
 		EXCEPT( "Resource::starterExited() called with no Claim!" );
 	}
 
-	if( cur_claim->isCOD() ) {
+	if( cur_claim->type() == CLAIM_COD ) {
  		r_cod_mgr->starterExited( cur_claim );
 		return;
 	}
@@ -712,7 +730,7 @@ Resource::leave_preempting_state( void )
 			r_pre = NULL;
 			remove_pre(); // do full cleanup of pre stuff
 				// STATE TRANSITION preempting -> claimed
-			accept_request_claim( this );
+			acceptClaimRequest();
 			return;
 		}
 			// Else, fall through, no break.
@@ -763,7 +781,7 @@ Resource::leave_preempting_state( void )
 		r_pre = NULL;
 		remove_pre(); // do full cleanup of pre stuff
 			// STATE TRANSITION preempting -> claimed
-		accept_request_claim( this );
+		acceptClaimRequest();
 	} else {
 			// STATE TRANSITION preempting -> owner
 		remove_pre();
@@ -1469,6 +1487,20 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 	free(ptr);
 
+#if HAVE_JOB_HOOKS
+	if (IS_PUBLIC(mask)) {
+		my_line.sprintf("%s=%d", ATTR_LAST_FETCH_WORK_SPAWNED,
+						(int)m_last_fetch_work_spawned);
+		cap->Insert(my_line.Value());
+		my_line.sprintf("%s=%d", ATTR_LAST_FETCH_WORK_COMPLETED,
+						(int)m_last_fetch_work_completed);
+		cap->Insert(my_line.Value());
+		my_line.sprintf("%s=%d", ATTR_NEXT_FETCH_WORK_DELAY,
+						m_next_fetch_work_delay);
+		cap->Insert(my_line.Value());
+	}
+#endif /* HAVE_JOB_HOOKS */
+
 		// Update info from the current Claim object, if it exists.
 	if( r_cur ) {
 		r_cur->publish( cap, mask );
@@ -1846,3 +1878,309 @@ Resource::endCODLoadHack( void )
 	r_pre_cod_total_load = 0.0;
 	r_pre_cod_condor_load = 0.0;
 }
+
+
+bool
+Resource::acceptClaimRequest()
+{
+	bool accepted = false;
+	switch (r_cur->type()) {
+	case CLAIM_OPPORTUNISTIC:
+		if (r_cur->requestStream()) {
+				// We have a pending opportunistic claim, try to accept it.
+			accepted = accept_request_claim(this);
+		}
+		break;
+
+#if HAVE_JOB_HOOKS
+	case CLAIM_FETCH:
+			// Enter Claimed/Idle will trigger all the actions we need.
+		change_state(claimed_state);
+		accepted = true;
+		break;
+#endif /* HAVE_JOB_HOOKS */
+
+	case CLAIM_COD:
+			// TODO?
+		break;
+
+	default:
+		EXCEPT("Inside Resource::acceptClaimRequest() "
+			   "with unexpected claim type: %s",
+			   getClaimTypeString(r_cur->type()));
+		break;
+	}
+	return accepted;
+}
+
+
+bool
+Resource::willingToRun(ClassAd* request_ad)
+{
+	int slot_requirements = 1, req_requirements = 1;
+
+		// First, verify that the slot and job meet each other's
+		// requirements at all.
+	if (request_ad) {
+		r_reqexp->restore();
+		if (r_classad->EvalBool(ATTR_REQUIREMENTS, 
+								request_ad, slot_requirements) == 0) {
+				// Since we have the request ad, treat UNDEFINED as FALSE.
+			slot_requirements = 0;
+		}
+
+			// Since we have a request ad, we can also check its requirements.
+		Starter* tmp_starter;
+		tmp_starter = resmgr->starter_mgr.findStarter(request_ad, r_classad);
+		if (!tmp_starter) {
+			req_requirements = 0;
+		}
+		else {
+			delete(tmp_starter);
+			req_requirements = 1;
+		}
+	}
+	else {
+			// All we can do is locally evaluate START.  We don't want
+			// the full-blown ATTR_REQUIREMENTS since that includes
+			// the valid checkpoint platform clause, which will always
+			// be undefined (and irrelevant for our decision here).
+		if (r_classad->EvalBool(ATTR_START, NULL, slot_requirements) == 0) {
+				// Without a request classad, treat UNDEFINED as TRUE.
+			slot_requirements = 1;
+		}
+	}
+
+	if (!slot_requirements || !req_requirements) {
+		if (!slot_requirements) {
+			dprintf(D_FAILURE|D_ALWAYS, "Slot requirements not satisfied.\n");
+		}
+		if (!req_requirements) {
+			dprintf(D_FAILURE|D_ALWAYS, "Job requirements not satisfied.\n");
+		}
+	}
+
+		// Possibly print out the ads we just got to the logs.
+	if (request_ad && (DebugFlags & D_JOB)) {
+		dprintf(D_JOB, "REQ_CLASSAD:\n");
+		request_ad->dPrint(D_JOB);
+	}
+	if (DebugFlags & D_MACHINE) {
+		dprintf(D_MACHINE, "MACHINE_CLASSAD:\n");
+		r_classad->dPrint(D_MACHINE);
+	}
+
+	if (!slot_requirements || !req_requirements) {
+			// Not willing -- no sense checking state, RANK, etc.
+		return false;
+	}
+
+		// TODO: check state, RANK, etc.?
+	return true;
+}
+
+
+#if HAVE_JOB_HOOKS
+
+void
+Resource::createOrUpdateFetchClaim(ClassAd* job_ad, float rank)
+{
+	if (state() == claimed_state && activity() == idle_act
+		&& r_cur && r_cur->type() == CLAIM_FETCH)
+	{
+			// We're currently claimed with a fetch claim, and we just
+			// fetched another job. Instead of generating a new Claim,
+			// we just need to update r_cur with the new job ad.
+		r_cur->setad(job_ad);
+		r_cur->setrank(rank);
+	}
+	else {
+			// We're starting a new claim for this fetched work, so
+			// create a new Claim object and initialize it.
+		createFetchClaim(job_ad, rank);
+	}
+		// Either way, maybe we should initialize the Client object, too?
+		// TODO-fetch
+}
+
+void
+Resource::createFetchClaim(ClassAd* job_ad, float rank)
+{
+	Claim* new_claim = new Claim(this, CLAIM_FETCH);
+	new_claim->setad(job_ad);
+	new_claim->setrank(rank);
+
+	if (state() == claimed_state) {
+		remove_pre();
+		r_pre = new_claim;
+	}
+	else {
+		delete r_cur;
+		r_cur = new_claim;
+	}
+}
+
+
+bool
+Resource::spawnFetchedWork(void)
+{
+        // First, we have to find a Starter that will work.
+    Starter* tmp_starter;
+    tmp_starter = resmgr->starter_mgr.findStarter(r_cur->ad(), r_classad);
+	if( ! tmp_starter ) {
+		dprintf(D_ALWAYS|D_FAILURE, "ERROR: Could not find a starter that can run fetched work request, aborting.\n");
+		change_state(owner_state);
+		return false;
+	}
+	
+		// Update the claim object with info from this job ClassAd now
+		// that we're actually activating it. By not passing any
+		// argument here, we tell saveJobInfo() to keep the copy of
+		// the ClassAd it already has instead of clobbering it.
+	r_cur->saveJobInfo();
+
+	r_cur->setStarter(tmp_starter);
+
+	if (!r_cur->spawnStarter()) {
+		dprintf(D_ALWAYS|D_FAILURE, "ERROR: Failed to spawn starter for fetched work request, aborting.\n");
+		change_state(owner_state);
+			// spawnStarter() deletes the Claim's starter object on
+			// failure, so there's no worry about leaking tmp_starter here.
+		return false;
+	}
+
+	change_state(busy_act);
+	return true;
+}
+
+
+void
+Resource::terminateFetchedWork(void)
+{
+	resmgr->m_hook_mgr->hookEvictClaim(this);
+	change_state(preempting_state, vacating_act);
+}
+
+
+void
+Resource::startedFetch(void)
+{
+		// Record that we just fetched.
+	m_last_fetch_work_spawned = time(NULL);
+	m_currently_fetching = true;
+
+}
+
+
+void
+Resource::fetchCompleted(void)
+{
+	m_currently_fetching = false;
+
+		// Record that we just finished fetching.
+	m_last_fetch_work_completed = time(NULL);
+
+		// Now that a fetch hook returned, (re)set our timer to try
+		// fetching again based on the delay expression.
+	resetFetchWorkTimer();
+}
+
+
+int
+Resource::evalNextFetchWorkDelay(void)
+{
+	static bool warned_undefined = false;
+	int value = 0;
+	ClassAd* job_ad = NULL;
+	if (r_cur) {
+		job_ad = r_cur->ad();
+	}
+	if (r_classad->EvalInteger(ATTR_FETCH_WORK_DELAY, job_ad, value) == 0) { 
+			// If undefined, disable the throttle completely.
+		if (!warned_undefined) { 
+			dprintf(D_FULLDEBUG, "%s is UNDEFINED, no throttle in use\n",
+					ATTR_FETCH_WORK_DELAY);
+			warned_undefined = true;
+		}
+		value = 0;
+	}
+	m_next_fetch_work_delay = value;
+	return value;
+}
+
+
+bool
+Resource::tryFetchWork(void)
+{
+		// First, make sure we're not currently fetching.
+	if (m_currently_fetching) {
+			// No need to log a message about this, it's not an error.
+		return false;
+	}
+
+		// Now, make sure we  haven't fetched too recently.
+	evalNextFetchWorkDelay();
+	if (m_next_fetch_work_delay > 0) {
+		time_t now = time(NULL);
+		time_t delta = now - m_last_fetch_work_completed;
+		if (delta < m_next_fetch_work_delay) {
+				// Throttle is defined, and the time since we last
+				// fetched is shorter than the desired delay. Reset
+				// our timer to go off again when we think we'd be
+				// ready, and bail out.
+			resetFetchWorkTimer(m_next_fetch_work_delay - delta);
+			return false;
+		}
+	}
+
+		// Finally, ensure the START expression isn't locally FALSE.
+	if (!willingToRun(NULL)) {
+			// We're not currently willing to run any jobs at all, so
+			// don't bother invoking the hook. However, we know the
+			// fetching delay was already reached, so we should reset
+			// our timer for another full delay.
+		resetFetchWorkTimer();
+		return false;
+	}
+
+		// We're ready to invoke the hook. The timer to re-fetch will
+		// be reset once the hook completes.
+	resmgr->m_hook_mgr->invokeHookFetchWork(this);
+	return true;
+}
+
+
+void
+Resource::resetFetchWorkTimer(int next_fetch)
+{
+	int next = 1;  // Default if there's no throttle set
+	if (next_fetch) {
+			// We already know how many seconds we want to wait until
+			// the next fetch, so just use that.
+		next = next_fetch;
+	}
+	else {
+			// A fetch invocation just completed, we don't need to
+			// recompute any times and deltas.  We just need to
+			// reevaluate the delay expression and set a timer to go
+			// off in that many seconds.
+		evalNextFetchWorkDelay();
+		if (m_next_fetch_work_delay > 0) {
+			next = m_next_fetch_work_delay;
+		}
+	}
+
+	if (m_next_fetch_work_tid == -1) {
+			// Never registered.
+		m_next_fetch_work_tid = daemonCore->Register_Timer(
+			next, 100000, (TimerHandlercpp)&Resource::tryFetchWork,
+			"Resource::tryFetchWork", this);
+	}
+	else {
+			// Already registered, just reset it.
+		daemonCore->Reset_Timer(m_next_fetch_work_tid, next, 100000);
+	}
+}
+
+
+#endif /* HAVE_JOB_HOOKS */

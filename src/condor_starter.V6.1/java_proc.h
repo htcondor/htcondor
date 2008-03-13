@@ -37,7 +37,7 @@ public:
 	virtual ~JavaProc();
 
 	virtual int  StartJob();
-	virtual int  JobCleanup( int pid, int status );
+	virtual bool JobReaper( int pid, int status );
 	virtual bool PublishUpdateAd( ClassAd *ad );
 
 private:

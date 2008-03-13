@@ -344,8 +344,8 @@ If our job exited, then parse the output of the wrapper,
 and return a POSIX status that resembles exactly what
 happened.
 */
-
-int JavaProc::JobCleanup(int pid, int status)
+bool
+JavaProc::JobReaper(int pid, int status)
 {
 	if(pid==JobPid) {
 		dprintf(D_ALWAYS,"JavaProc: JVM pid %d has finished\n",pid);
@@ -365,10 +365,10 @@ int JavaProc::JobCleanup(int pid, int status)
 				break;
 		}
 
-		return VanillaProc::JobCleanup(pid,status);
+		return VanillaProc::JobReaper(pid,status);
 
 	} else {
-		return 0;
+		return false;
 	}
 }
 

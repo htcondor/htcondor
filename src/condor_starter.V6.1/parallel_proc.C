@@ -169,10 +169,11 @@ ParallelProc::addEnvVars()
 	return 1;
 }
 
-int
-ParallelProc::JobCleanup( int pid, int status )
+
+bool
+ParallelProc::JobReaper( int pid, int status )
 { 
-	return VanillaProc::JobCleanup( pid, status );
+	return VanillaProc::JobReaper( pid, status );
 }
 
 

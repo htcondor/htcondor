@@ -38,11 +38,11 @@
 // Claim
 ///////////////////////////////////////////////////////////////////////////
 
-Claim::Claim( Resource* res_ip, bool is_cod, int lease_duration )
+Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 {
 	c_client = new Client;
-	c_id = new ClaimId( is_cod );
-	if( ! is_cod ) {
+	c_id = new ClaimId( claim_type );
+	if( claim_type == CLAIM_OPPORTUNISTIC ) {
 		c_id->dropFile( res_ip->r_id );
 	}
 	c_ad = NULL;
@@ -63,7 +63,7 @@ Claim::Claim( Resource* res_ip, bool is_cod, int lease_duration )
 	c_job_start = -1;
 	c_last_pckpt = -1;
 	c_rip = res_ip;
-	c_is_cod = is_cod;
+	c_type = claim_type;
 	c_cod_keyword = NULL;
 	c_has_job_ad = 0;
 	c_pending_cmd = -1;
@@ -88,7 +88,7 @@ Claim::Claim( Resource* res_ip, bool is_cod, int lease_duration )
 
 Claim::~Claim()
 {	
-	if( c_is_cod ) {
+	if( c_type == CLAIM_COD ) {
 		dprintf( D_FULLDEBUG, "Deleted claim %s (owner '%s')\n", 
 				 c_id->id(), 
 				 c_client->owner() ? c_client->owner() : "unknown" );  
@@ -634,7 +634,7 @@ Claim::loadAccountingInfo()
 		// the same user that claimed us.
 	char* tmp = NULL;
 	if( ! c_ad->LookupString(ATTR_USER, &tmp) ) {
-		if( ! c_is_cod ) { 
+		if( c_type != CLAIM_COD ) { 
 			c_rip->dprintf( D_FULLDEBUG, "WARNING: %s not defined in "
 						  "request classad!  Using old value (%s)\n", 
 						  ATTR_USER, c_client->user() );
@@ -677,17 +677,13 @@ Claim::beginActivation( time_t now )
 		// Everything else is only going to be valid if we're not a
 		// COD job.  So, if we *are* cod, just return now, since we've
 		// got everything we need...
-	if( c_is_cod ) {
+	if( c_type == CLAIM_COD ) {
 		return;
 	}
 
 	int univ;
 	if( c_ad->LookupInteger(ATTR_JOB_UNIVERSE, univ) == 0 ) {
-		if( c_is_cod ) {
-			univ = CONDOR_UNIVERSE_VANILLA;
-		} else {
-			univ = CONDOR_UNIVERSE_STANDARD;
-		}
+		univ = CONDOR_UNIVERSE_STANDARD;
 		c_rip->dprintf( D_ALWAYS, "Default universe \"%s\" (%d) "
 						"since not in classad\n",
 						CondorUniverseName(univ), univ );
@@ -718,9 +714,13 @@ Claim::setaliveint( int new_alive )
 void
 Claim::saveJobInfo( ClassAd* request_ad )
 {
-		// this does not make a copy, so we assume we have control
+		// This does not make a copy, so we assume we have control
 		// over the ClassAd once this method has been called.
-	setad( request_ad );
+		// However, don't clobber our ad if the caller passes NULL.
+	if (request_ad) {
+		setad(request_ad);
+	}
+	ASSERT(c_ad);
 
 	c_ad->LookupInteger( ATTR_CLUSTER_ID, c_cluster );
 	c_ad->LookupInteger( ATTR_PROC_ID, c_proc );
@@ -749,7 +749,7 @@ Claim::saveJobInfo( ClassAd* request_ad )
 		dprintf( D_FULLDEBUG,
 				 "Resetting ClaimLease timer (%d) with new duration\n", 
 				 c_lease_tid );
-	} else if( !c_is_cod ) {
+	} else if( c_type == CLAIM_OPPORTUNISTIC ) {
 		c_lease_duration = max_claim_alives_missed * c_aliveint;
 		dprintf( D_FULLDEBUG, "%s not defined: using %d ("
 				 "alive_interval [%d] * max_missed [%d]\n", 
@@ -769,7 +769,7 @@ void
 Claim::startLeaseTimer()
 {
 	if( c_lease_duration < 0 ) {
-		if( c_is_cod ) {
+		if( c_type == CLAIM_COD ) {
 				// COD claims have no lease by default.
 			return;
 		}
@@ -790,7 +790,7 @@ Claim::startLeaseTimer()
 	}
 	
 	if ( param_boolean("STARTD_SENDS_ALIVES",false) &&
-		 !c_is_cod &&		
+		 c_type != CLAIM_COD &&
 		 c_lease_duration > 0 )	// prevent divide by zero
 	{
 		if ( c_sendalive_tid != -1 ) {
@@ -1027,7 +1027,7 @@ Claim::leaseExpired()
 {
 	c_lease_tid = -1;
 
-	if( c_is_cod ) {
+	if( c_type == CLAIM_COD ) {
 		dprintf( D_FAILURE|D_ALWAYS, "COD claim %s lease expired "
 				 "(client must not have called 'condor_cod renew' within %d seconds)\n", id(), c_lease_duration );
 		if( removeClaim(false) ) {
@@ -1096,6 +1096,21 @@ Claim::alive()
 		daemonCore->Reset_Timer(c_sendalive_tid, c_lease_duration / 3, 
 							c_lease_duration / 3);
 	}
+}
+
+
+bool
+Claim::hasJobAd() {
+	bool has_it = false;
+	if (c_has_job_ad != 0) {
+		has_it = true;
+	}
+#if HAVE_JOB_HOOKS
+	else if (c_type == CLAIM_FETCH && c_ad != NULL) {
+		has_it = true;
+	}
+#endif /* HAVE_JOB_HOOKS */
+	return has_it;
 }
 
 
@@ -1219,7 +1234,7 @@ Claim::getCODMgr( void )
 }
 
 int
-Claim::spawnStarter( time_t now, Stream* s )
+Claim::spawnStarter( Stream* s )
 {
 	int rval;
 	if( ! c_starter ) {
@@ -1229,6 +1244,8 @@ Claim::spawnStarter( time_t now, Stream* s )
 		return FALSE;
 	}
 
+	time_t now = time(NULL);
+
 	rval = c_starter->spawn( now, s );
 	if( ! rval ) {
 		resetClaim();
@@ -1236,6 +1253,9 @@ Claim::spawnStarter( time_t now, Stream* s )
 	}
 
 	changeState( CLAIM_RUNNING );
+
+		// Do other bookkeeping so this claim knows it started an activation.
+	beginActivation(now);
 
 		// WE USED TO....
 		//
@@ -1463,7 +1483,36 @@ Claim::starterKillHard( void )
 }
 
 
-bool
+void
+Claim::makeStarterArgs( ArgList &args )
+{
+	switch (c_type) {
+	case CLAIM_COD:
+		makeCODStarterArgs(args);
+		break;
+#if HAVE_JOB_HOOKS
+	case CLAIM_FETCH:
+		makeFetchStarterArgs(args);
+		break;
+#endif /* HAVE_JOB_HOOKS */
+	default:
+		EXCEPT("Impossible: makeStarterArgs() called with unsupported claim type"); 
+	}
+}
+
+#if HAVE_JOB_HOOKS
+void
+Claim::makeFetchStarterArgs( ArgList &args )
+{
+	args.AppendArg("condor_starter");
+	args.AppendArg("-f");
+	args.AppendArg("-job-input-ad");
+	args.AppendArg("-");
+}
+#endif /* HAVE_JOB_HOOKS */
+
+
+void
 Claim::makeCODStarterArgs( ArgList &args )
 {
 		// first deal with everthing that's shared, no matter what.
@@ -1503,8 +1552,6 @@ Claim::makeCODStarterArgs( ArgList &args )
 		args.AppendArg("-job-input-ad");
 		args.AppendArg("-");
 	}
-
-	return true;
 }
 
 
@@ -1727,7 +1774,7 @@ Claim::resetClaim( void )
 		delete( c_starter );
 		c_starter = NULL;
 	}
-	if( c_ad && c_is_cod ) {
+	if( c_ad && c_type == CLAIM_COD ) {
 		delete( c_ad );
 		c_ad = NULL;
 	}
@@ -1784,9 +1831,9 @@ Claim::changeState( ClaimState s )
 	c_state = s;
 	c_entered_state = now;
 
-		// everytime a cod claim changes state, we want to update the
+		// everytime a COD claim changes state, we want to update the
 		// collector. 
-	if( c_is_cod ) {
+	if( c_type == CLAIM_COD ) {
 		c_rip->update();
 	}
 }
@@ -1992,11 +2039,11 @@ newIdString( char** id_str_ptr )
 }
 
 
-ClaimId::ClaimId( bool is_cod )
+ClaimId::ClaimId( ClaimType claim_type )
 {
 	int num = newIdString( &c_id );
 	claimid_parser.setClaimId(c_id);
-	if( is_cod ) { 
+	if( claim_type == CLAIM_COD ) { 
 		char buf[64];
 		sprintf( buf, "COD%d", num );
 		c_cod_id = strdup( buf );

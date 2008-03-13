@@ -279,11 +279,11 @@ CStarter::ShutdownGraceful( void )
 		this->removeDeferredJobs();
 	}
 
-	JobList.Rewind();
-	while ((job = JobList.Next()) != NULL) {
+	m_job_list.Rewind();
+	while ((job = m_job_list.Next()) != NULL) {
 		if ( job->ShutdownGraceful() ) {
 			// job is completely shut down, so delete it
-			JobList.DeleteCurrent();
+			m_job_list.DeleteCurrent();
 			delete job;
 		} else {
 			// job shutdown is pending, so just set our flag
@@ -344,11 +344,11 @@ CStarter::ShutdownFast( void )
 		this->removeDeferredJobs();
 	}
 
-	JobList.Rewind();
-	while ((job = JobList.Next()) != NULL) {
+	m_job_list.Rewind();
+	while ((job = m_job_list.Next()) != NULL) {
 		if ( job->ShutdownFast() ) {
 			// job is completely shut down, so delete it
-			JobList.DeleteCurrent();
+			m_job_list.DeleteCurrent();
 			delete job;
 		} else {
 			// job shutdown is pending, so just set our flag
@@ -418,11 +418,11 @@ CStarter::Remove( ) {
 		this->removeDeferredJobs();
 	}
 
-	JobList.Rewind();
-	while( (job = JobList.Next()) != NULL ) {
+	m_job_list.Rewind();
+	while( (job = m_job_list.Next()) != NULL ) {
 		if( job->Remove() ) {
 			// job is completely shut down, so delete it
-			JobList.DeleteCurrent();
+			m_job_list.DeleteCurrent();
 			delete job;
 		} else {
 			// job shutdown is pending, so just set our flag
@@ -491,11 +491,11 @@ CStarter::Hold( void )
 		this->removeDeferredJobs();
 	}
 
-	JobList.Rewind();
-	while( (job = JobList.Next()) != NULL ) {
+	m_job_list.Rewind();
+	while( (job = m_job_list.Next()) != NULL ) {
 		if( job->Hold() ) {
 			// job is completely shut down, so delete it
-			JobList.DeleteCurrent();
+			m_job_list.DeleteCurrent();
 			delete job;
 		} else {
 			// job shutdown is pending, so just set our flag
@@ -856,7 +856,7 @@ CStarter::jobWaitUntilExecuteTime( void )
 			//
 		dprintf( D_ALWAYS, "%s Aborting.\n", error.Value() );
 		OsProc proc( jobAd );
-		proc.JobCleanup( -1, JOB_MISSED_DEFERRAL_TIME );
+		proc.JobReaper( -1, JOB_MISSED_DEFERRAL_TIME );
 		this->jic->notifyJobExit( -1, JOB_MISSED_DEFERRAL_TIME, &proc );
 		this->allJobsDone();
 		ret = false;
@@ -1023,7 +1023,7 @@ CStarter::SpawnJob( void )
 	} /* switch */
 
 	if (job->StartJob()) {
-		JobList.Append(job);
+		m_job_list.Append(job);
 		
 			//
 			// If the Starter received a Suspend call while the
@@ -1051,8 +1051,8 @@ CStarter::SpawnJob( void )
 			tool_daemon_proc = new ToolDaemonProc( jobAd, job->GetJobPid() );
 
 			if( tool_daemon_proc->StartJob() ) {
-				JobList.Append( tool_daemon_proc );
-				dprintf( D_FULLDEBUG, "ToolDaemonProc added to JobList\n");				
+				m_job_list.Append( tool_daemon_proc );
+				dprintf( D_FULLDEBUG, "ToolDaemonProc added to m_job_list\n");
 					//
 					// If the Starter received a Suspend call while the
 					// job was being deferred or preparing, we need to 
@@ -1114,8 +1114,8 @@ CStarter::Suspend( void ) {
 	dprintf(D_ALWAYS, "Suspending all jobs.\n");
 
 	UserProc *job;
-	JobList.Rewind();
-	while ((job = JobList.Next()) != NULL) {
+	m_job_list.Rewind();
+	while ((job = m_job_list.Next()) != NULL) {
 		job->Suspend();
 	}
 	
@@ -1161,8 +1161,8 @@ CStarter::Continue( void )
 	dprintf(D_ALWAYS, "Continuing all jobs.\n");
 
 	UserProc *job;
-	JobList.Rewind();
-	while ((job = JobList.Next()) != NULL) {
+	m_job_list.Rewind();
+	while ((job = m_job_list.Next()) != NULL) {
 		job->Continue();
 	}
 	
@@ -1206,8 +1206,8 @@ CStarter::PeriodicCkpt( void )
 	}
 
 	UserProc *job;
-	JobList.Rewind();
-	while ((job = JobList.Next()) != NULL) {
+	m_job_list.Rewind();
+	while ((job = m_job_list.Next()) != NULL) {
 		if( job->Ckpt() ) {
 			// checkpoint files are successfully generated
 			// We need to upload those files by using condor file transfer.
@@ -1252,12 +1252,12 @@ CStarter::Reaper(int pid, int exit_status)
 				 WEXITSTATUS(exit_status) );
 	}
 
-	if( pre_script && pre_script->JobCleanup(pid, exit_status) ) {		
+	if( pre_script && pre_script->JobReaper(pid, exit_status) ) {		
 			// TODO: deal with shutdown case?!?
 		
-			// when the pre script exits, we know the JobList is going
-			// to be empty, so don't bother with any of the rest of
-			// this.  instead, the starter is now able to call
+			// when the pre script exits, we know the m_job_list is
+			// going to be empty, so don't bother with any of the rest
+			// of this.  instead, the starter is now able to call
 			// SpawnJob() to launch the main job.
 		if( ! SpawnJob() ) {
 			dprintf( D_ALWAYS, "Failed to start main job, exiting\n" );
@@ -1267,23 +1267,23 @@ CStarter::Reaper(int pid, int exit_status)
 		return TRUE;
 	}
 
-	if( post_script && post_script->JobCleanup(pid, exit_status) ) {		
-			// when the post script exits, we know the JobList is going
-			// to be empty, so don't bother with any of the rest of
-			// this.  instead, the starter is now able to call
+	if( post_script && post_script->JobReaper(pid, exit_status) ) {
+			// when the post script exits, we know the m_job_list is
+			// going to be empty, so don't bother with any of the rest
+			// of this.  instead, the starter is now able to call
 			// allJobsdone() to do the final clean up stages.
 		allJobsDone();
 		return TRUE;
 	}
 
 
-	JobList.Rewind();
-	while ((job = JobList.Next()) != NULL) {
+	m_job_list.Rewind();
+	while ((job = m_job_list.Next()) != NULL) {
 		all_jobs++;
-		if( job->GetJobPid()==pid && job->JobCleanup(pid, exit_status) ) {
+		if( job->GetJobPid()==pid && job->JobReaper(pid, exit_status) ) {
 			handled_jobs++;
-			JobList.DeleteCurrent();
-			CleanedUpJobList.Append(job);
+			m_job_list.DeleteCurrent();
+			m_reaped_job_list.Append(job);
 		}
 	}
 
@@ -1322,9 +1322,21 @@ CStarter::Reaper(int pid, int exit_status)
 bool
 CStarter::allJobsDone( void )
 {
-		// No more jobs, notify our JobInfoCommunicator
-	static bool needs_jic_allJobsDone = true;
-	if( needs_jic_allJobsDone && ! jic->allJobsDone() ) {
+		// No more jobs, notify our JobInfoCommunicator.
+	if (jic->allJobsDone()) {
+			// JIC::allJobsDone returned true: we're ready to move on.
+		return transferOutput();
+	}
+		// JIC::allJobsDone() returned false: propagate that so we
+		// halt the cleanup process and wait for external events.
+	return false;
+}
+
+
+bool
+CStarter::transferOutput( void )
+{
+	if (!jic->transferOutput()) {
 			/*
 			  there was an error with the JIC in this step.  at this
 			  point, the only possible reason is if we're talking to a
@@ -1333,22 +1345,28 @@ CStarter::allJobsDone( void )
 			  other events (like the shadow reconnecting or the startd
 			  deciding the job lease expired and killing us)
 			*/
-
-		dprintf( D_ALWAYS, "JIC::allJobsDone() failed, waiting for job "
+		dprintf( D_ALWAYS, "JIC::transferOutput() failed, waiting for job "
 				 "lease to expire or for a reconnect attempt\n" );
 		return false;
 	}
-	needs_jic_allJobsDone = false;
 
-		// Now that we're done transfering files and/or doing all
-		// our cleanup, we can finally go through the
-		// CleanedUpJobList and call JobExit() on all the procs in
-		// there.
+		// If we're here, the JIC successfully transfered output.
+		// We're ready to move on to the next cleanup stage.
+	return cleanupJobs();
+}
+
+
+bool
+CStarter::cleanupJobs( void )
+{
+		// Now that we're done with HOOK_JOB_EXIT and transfering
+		// files, we can finally go through the m_reaped_job_list and
+		// call JobExit() on all the procs in there.
 	UserProc *job;
-	CleanedUpJobList.Rewind();
-	while( (job = CleanedUpJobList.Next()) != NULL) {
+	m_reaped_job_list.Rewind();
+	while( (job = m_reaped_job_list.Next()) != NULL) {
 		if( job->JobExit() ) {
-			CleanedUpJobList.DeleteCurrent();
+			m_reaped_job_list.DeleteCurrent();
 			delete job;
 		} else {
 				// This could fail because either we're talking to a
@@ -1370,7 +1388,20 @@ CStarter::allJobsDone( void )
 bool
 CStarter::publishUpdateAd( ClassAd* ad )
 {
+	return publishJobInfoAd(&m_job_list, ad);
+}
 
+
+bool
+CStarter::publishJobExitAd( ClassAd* ad )
+{
+	return publishJobInfoAd(&m_reaped_job_list, ad);
+}
+
+
+bool
+CStarter::publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad)
+{
 		// Iterate through all our UserProcs and have those publish,
 		// as well.  This method is virtual, so we'll get all the
 		// goodies from derived classes, as well.  If any of them put
@@ -1380,8 +1411,8 @@ CStarter::publishUpdateAd( ClassAd* ad )
 		found_one = true;
 	}
 	UserProc *job;
-	JobList.Rewind();
-	while ((job = JobList.Next()) != NULL) {
+	proc_list->Rewind();
+	while ((job = proc_list->Next()) != NULL) {
 		if( job->PublishUpdateAd(ad) ) {
 			found_one = true;
 		}
@@ -1425,12 +1456,12 @@ CStarter::PublishToEnv( Env* proc_env )
 		// about it to pass until it's already done.
 
 	UserProc* uproc;
-	JobList.Rewind();
-	while ((uproc = JobList.Next()) != NULL) {
+	m_job_list.Rewind();
+	while ((uproc = m_job_list.Next()) != NULL) {
 		uproc->PublishToEnv( proc_env );
 	}
-	CleanedUpJobList.Rewind();
-	while ((uproc = CleanedUpJobList.Next()) != NULL) {
+	m_reaped_job_list.Rewind();
+	while ((uproc = m_reaped_job_list.Next()) != NULL) {
 		uproc->PublishToEnv( proc_env );
 	}
 

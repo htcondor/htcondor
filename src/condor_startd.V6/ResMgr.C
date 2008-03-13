@@ -41,6 +41,10 @@ ResMgr::ResMgr()
 	m_backfill_shutdown_pending = false;
 #endif
 
+#if HAVE_JOB_HOOKS
+	m_hook_mgr = NULL;
+#endif
+
 	id_disp = NULL;
 
 	nresources = 0;
@@ -63,6 +67,12 @@ ResMgr::~ResMgr()
 #if HAVE_BACKFILL
 	if( m_backfill_mgr ) {
 		delete m_backfill_mgr;
+	}
+#endif
+
+#if HAVE_JOB_HOOKS
+	if (m_hook_mgr) {
+		delete m_hook_mgr;
 	}
 #endif
 
@@ -116,6 +126,9 @@ ResMgr::init_config_classad( void )
 	configInsert( config_classad, "START_BACKFILL", false );
 	configInsert( config_classad, "EVICT_BACKFILL", false );
 #endif /* HAVE_BACKFILL */
+#if HAVE_JOB_HOOKS
+	configInsert( config_classad, ATTR_FETCH_WORK_DELAY, false );
+#endif /* HAVE_JOB_HOOKS */
 
 		// Next, try the IS_OWNER expression.  If it's not there, give
 		// them a resonable default, instead of leaving it undefined. 
@@ -373,6 +386,10 @@ ResMgr::init_resources( void )
 	backfillConfig();
 #endif
 
+#if HAVE_JOB_HOOKS
+	m_hook_mgr = new StartdHookMgr;
+	m_hook_mgr->initialize();
+#endif
 }
 
 bool
@@ -388,6 +405,12 @@ ResMgr::reconfig_resources( void )
 #if HAVE_BACKFILL
 	backfillConfig();
 #endif
+
+#if HAVE_JOB_HOOKS
+	m_hook_mgr->reconfig();
+#endif
+
+
 		// See if any new types were defined.  Don't except if there's
 		// any errors, just dprintf().
 	initTypes( 0 );

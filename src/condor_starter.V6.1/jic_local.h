@@ -110,10 +110,6 @@ public:
 		// Job execution and state changes
 		// // // // // // // // // // // //
 
-		/** All jobs have been spawned by the starter.
-		 */
-	void allJobsSpawned( void );
-
 		/** The starter has been asked to suspend.  Take whatever
 			steps make sense for the JIC, and notify our job
 			controller what happend.
@@ -126,11 +122,12 @@ public:
 		*/
 	void Continue( void );
 
-		/** The last job this starter is controlling has exited.  Do
-			whatever we have to do to cleanup and notify our
-			controller. 
+		/**
+		   During cleanup, handle the step when file transfer would
+		   happen.  We don't do any file transfer for JICLocal, so
+		   just return true so we move directly onto the next stage.
 		*/
-	bool allJobsDone( void );
+	bool transferOutput( void ) { return true; };
 
 		/** The last job this starter is controlling has been
    			completely cleaned up.  Since there's no shadow to tell us

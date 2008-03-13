@@ -18,37 +18,18 @@
  ***************************************************************/
 
 
-#include "condor_common.h"
-#include "simplelist.h"
-#include "extArray.h"
-#include "MyString.h"
-#include "HashTable.h"
-#include "ResAttributes.h"
+#ifndef _CONDOR_HOOK_UTILS_H_
+#define _CONDOR_HOOK_UTILS_H_
 
-class Resource;
-class CpuAttributes;
-class Starter;
-class Claim;
-class VMMachine;
-class VMStarterInfo;
+/**
+  Lookup the given hook config parameter and make sure it is
+  defined, pointing to a valid executable, and that we have
+  some reason to believe that executable is trust-worthy.
 
-template class ExtArray<bool>;
-template class SimpleList<Claim*>;
-template class SimpleList<Starter*>;
-template class SimpleList<Resource*>;
-template class SimpleList<CpuAttributes*>;
-template class SimpleList<VMMachine*>;
-template class SimpleList<VMStarterInfo*>;
-template class HashTable<MyString,AvailDiskPartition>;
+  @return The strdup'ed string from param() if everything is
+    ok, otherwise NULL.
+*/
+char* validateHookPath( const char* hook_param );
 
 
-#if HAVE_BACKFILL
-class BackfillSlot;
-template class ExtArray<BackfillSlot*>;
-#endif /* HAVE_BACKFILL */
-
-
-#if HAVE_JOB_HOOKS
-template class HashTable<MyString,char**>;
-#endif /* HAVE_JOB_HOOKS */
-
+#endif /* _CONDOR_HOOK_UTILS_H_ */

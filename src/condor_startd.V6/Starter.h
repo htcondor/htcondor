@@ -49,7 +49,7 @@ public:
 	void	exited();
 	pid_t	pid() {return s_pid;};
 	bool	is_dc() {return s_is_dc;};
-	bool	isCOD(); 
+	ClaimType	claimType(); 
 	bool	active();
 	float	percentCpuUsage( void );
 	unsigned long	imageSize( void );
@@ -99,7 +99,7 @@ private:
 		// methods
 	bool	reallykill(int, int);
 	int		execOldStarter( void );
-	int		execCODStarter( void );
+	int		execJobPipeStarter( void );
 	int		execDCStarter( Stream* s );
 	int		execDCStarter( ArgList const &args, Env const *env, 
 						   int std_fds[], Stream* s );

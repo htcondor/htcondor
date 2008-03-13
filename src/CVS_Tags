@@ -1,3 +1,6 @@
+03/13/08 V7_1-fetchwork-merge-1
+  The state of the V7_1-fetchwork-branch before merging back into HEAD.
+
 03/13/08 V7_1-ian_new_crypto-2-{root,branch}
   See ian_new_crypto below.  Changes to externals 
   broke that branch.  From BUILD-V7_1-trunk-2008-3-12.

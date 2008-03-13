@@ -36,6 +36,10 @@
 #include "starter_mgr.h"
 #include "vmuniverse_mgr.h"
 
+#if HAVE_JOB_HOOKS
+#include "StartdHookMgr.h"
+#endif /* HAVE_JOB_HOOKS */
+
 #if HAVE_BACKFILL
 #include "backfill_mgr.h"
 #if HAVE_BOINC
@@ -182,6 +186,11 @@ public:
 	void backfillMgrDone();
 #endif /* HAVE_BACKFILL */
 
+#if HAVE_JOB_HOOKS
+	StartdHookMgr* m_hook_mgr;
+	void startdHookMgrDone();
+#endif /* HAVE_JOB_HOOKS */
+
 	time_t	now( void ) { return cur_time; };
 
 	void FillExecuteDirsList( class StringList *list );
@@ -289,6 +298,11 @@ private:
 	bool backfillConfig( void );
 	bool m_backfill_shutdown_pending;
 #endif /* HAVE_BACKFILL */
+
+#if HAVE_JOB_HOOKS
+	bool fetchWorkConfig( void );
+	bool m_startd_hook_shutdown_pending;
+#endif /* HAVE_JOB_HOOKS */
 
 };
 

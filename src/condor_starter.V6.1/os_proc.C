@@ -507,30 +507,22 @@ OsProc::StartJob(FamilyInfo* family_info)
 }
 
 
-int
-OsProc::JobCleanup( int pid, int status )
+bool
+OsProc::JobReaper( int pid, int status )
 {
-	dprintf( D_FULLDEBUG, "Inside OsProc::JobCleanup()\n" );
+	dprintf( D_FULLDEBUG, "Inside OsProc::JobReaper()\n" );
 
-	if( JobPid != pid ) {		
-		return 0;
+	if (JobPid == pid) {
+			// clear out num_pids... everything under this process
+			// should now be gone
+		num_pids = 0;
+
+			// check to see if the job dropped a core file.  if so, we
+			// want to rename that file so that it won't clobber other
+			// core files back at the submit site.
+		checkCoreFile();
 	}
-
-	job_exit_time.getTime();
-
-		// save the exit status for future use.
-	exit_status = status;
-
-		// clear out num_pids... everything under this process should
-		// now be gone
-	num_pids = 0;
-
-		// check to see if the job dropped a core file.  if so, we
-		// want to rename that file so that it won't clobber other
-		// core files back at the submit site.  
-	checkCoreFile();
-
-	return 1;
+	return UserProc::JobReaper(pid, status);
 }
 
 
@@ -739,7 +731,7 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 	dprintf( D_FULLDEBUG, "Inside OsProc::PublishUpdateAd()\n" );
 	MyString buf;
 
-	if( exit_status >= 0 ) {
+	if (m_proc_exited) {
 		buf.sprintf( "%s=\"Exited\"", ATTR_JOB_STATE );
 	} else if( is_checkpointed ) {
 		buf.sprintf( "%s=\"Checkpointed\"", ATTR_JOB_STATE );
@@ -753,7 +745,7 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 	buf.sprintf( "%s=%d", ATTR_NUM_PIDS, num_pids );
 	ad->Insert( buf.Value() );
 
-	if( exit_status >= 0 ) {
+	if (m_proc_exited) {
 		if( dumped_core ) {
 			buf.sprintf( "%s = True", ATTR_JOB_CORE_DUMPED );
 			ad->Insert( buf.Value() );
