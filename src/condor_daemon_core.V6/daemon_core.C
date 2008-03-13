@@ -2310,12 +2310,6 @@ DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin, const char 
 }
 
 
-int
-DaemonCore::AddAllowHost( const char* host, DCpermission perm )
-{
-	return getSecMan()->getIpVerify()->AddAllowHost( host, perm );
-}
-
 void
 DaemonCore::Only_Allow_Soap(int duration)
 {

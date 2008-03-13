@@ -101,19 +101,29 @@ public:
 	*/
 	void CacheDnsResults(int flag) { cache_DNS_results = flag; }
 
-	bool AddAllowHost( const char* host, DCpermission perm );
-		/** AddAllowHost() method adds a new host to the hostallow
-			table, for the given permission level.
-			@param host IP address or hostname (no wildcards)
-			@param perm Permission level to use
-			@return TRUE if successful, FALSE on error
-		*/
+	/** Dynamically opens a hole in the authorization settings for the
+	    given (user, IP) at the given perm level.
+	        @param  perm The permission level to open.
+	        @param  id   The user / IP to open a hole for, in the form
+	                     "user/IP" or just "IP" for any user.
+	        @return      true on success, false on failure.
+	*/
+	bool PunchHole(DCpermission perm, MyString& id);
+
+	/** Remove an authorization hole previously opened using PunchHole().
+	        @param  perm The permission level that was opened.
+	        @param  id   The user / IP that the hole was opened for.
+	        @return      true on success, false on failure.
+	*/
+	bool FillHole(DCpermission perm, MyString& id);
+
 private:
 
     typedef HashTable <MyString, perm_mask_t> UserPerm_t;     // <userid, mask> pair
     /* This is for listing users per host */
     typedef HashTable <MyString, StringList *>    UserHash_t;
 
+    typedef HashTable <MyString, int> HolePunchTable_t;
 
 	class PermTypeEntry {
 	public:
@@ -122,12 +132,14 @@ private:
 		NetStringList* deny_hosts;
 		UserHash_t* allow_users;
 		UserHash_t* deny_users;
+		HolePunchTable_t* hole_punch_table;
 		PermTypeEntry() {
 			allow_hosts = NULL;
 			deny_hosts  = NULL;
 			allow_users = NULL;
 			deny_users  = NULL;
 			behavior = USERVERIFY_USE_TABLE;
+			hole_punch_table = NULL;
 		}
 		~PermTypeEntry(); 
 	};
@@ -150,7 +162,6 @@ private:
 	int did_init;
 
 	bool add_host_entry( const char* addr, perm_mask_t new_mask );
-	void process_allow_users( void );
 
 	PermTypeEntry* PermTypeArray[LAST_PERM];
 

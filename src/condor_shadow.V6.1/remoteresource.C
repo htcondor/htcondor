@@ -597,26 +597,6 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 	} else {
 		EXCEPT( "in RemoteResource::setStartdInfo() without name or addr" );
 	}
-
-		/*
-		  Tell daemonCore that we're willing to grant DAEMON
-		  permission to whatever machine we are claiming.
-		  This greatly simplifies DaemonCore permission stuff
-		  for flocking, since submitters don't have to know all the
-		  hosts they might possibly run on, all they have to do is
-		  trust the central managers of all the pools they're flocking
-		  to (which they have to do, already).  
-		  Added on 3/15/01 by Todd Tannenbaum <tannenba@cs.wisc.edu>
-		*/
-	char *ip = string_to_ipstr( dc_startd->addr() );
-	if( ip ) {
-		dprintf( D_SECURITY, "Granting remote host \"%s\" (%s)  WRITE and DAEMON permission.\n", ip, dc_startd->addr());
-		daemonCore->AddAllowHost( ip, WRITE );
-		daemonCore->AddAllowHost( ip, DAEMON );
-	} else {
-		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!  Unable to automatically grant WRITE and DAEMON permissions to the machine.\n", 
-				 dc_startd->addr() );
-	}
 }
 
 
