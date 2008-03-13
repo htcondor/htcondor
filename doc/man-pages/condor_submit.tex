@@ -1896,15 +1896,19 @@ to the execute machine.
 %% copy_to_spool 
 %%%%%%%%%%%%%%%%%%%
 
-\item[copy\_to\_spool = $<$True \Bar\ False$>$] If \SubmitCmd{copy\_to\_spool} is set to
+\item[copy\_to\_spool = $<$True \Bar\ False$>$]
 \index{submit commands!copy\_to\_spool}
-\Expr{True}, then \Condor{submit} will copy the executable to the local spool 
-directory before running it on a remote host. Oftentimes this can be quite
-time consuming and unnecessary. By setting it to \Expr{False}, \Condor{submit}
-will skip this step. The default is \Expr{False} in all universes except for
-standard universe.  The default is \Expr{True} in standard universe, because
+If \SubmitCmd{copy\_to\_spool} is \Expr{True},
+then \Condor{submit} copies the executable to the local spool 
+directory before running it on a remote host. 
+As copying can be quite time consuming and unnecessary,
+the default value is \Expr{False} for all job universes
+other than the standard universe. 
+When \Expr{False}, \Condor{submit} does not copy the executable
+to a local spool directory.
+The default is \Expr{True} in standard universe, because
 resuming execution from a checkpoint can only be guaranteed to work using
-the precisely the same executable that created the checkpoint.
+precisely the same executable that created the checkpoint.
 
 %%%%%%%%%%%%%%%%%%%
 %% coresize
@@ -2035,8 +2039,8 @@ See section~\ref{sec:JobDeferral} for further details and examples.
 
 \item[email\_attributes = $<$list-of-job-ad-attributes$>$] 
 \index{submit commands!email\_attributes}
-A comma-separated list of attributes from the job classad. These
-attributes and their values will be included in the email notification
+A comma-separated list of attributes from the job ClassAd. These
+attributes and their values will be included in the e-mail notification
 of job completion.
 
 %%%%%%%%%%%%%%%%%%%

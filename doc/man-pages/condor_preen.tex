@@ -28,10 +28,8 @@ listed in the  \Macro{INVALID\_LOG\_FILES} list.
 The reason for this difference is that, in general, you want to leave
 all files in the LOG directory alone, with a few exceptions (namely,
 core files).
-\Condor{preen} still works if you supply a \Macro{VALID\_LOG\_FILES}
-list instead, but this usage is depricated.
 There are new log files for different things introduced all the time,
-and you wouldn't want to have to keep updating the list of files to
+and you wouldn't want to have to keep updating a list of files to
 leave alone in the LOG directory.
 For example, the SMP startd can spawn an arbitrary number of
 \Condor{starter} processes, each with its own log file.  

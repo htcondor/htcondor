@@ -18,9 +18,8 @@ New features will be added in the 7.1.x development series.
 
 The details of each version are described below.
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-0-1}Version 7.0.1}
+\subsection*{\label{sec:New-7-0-2}Version 7.0.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -36,16 +35,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Windows now has support for Backfill Jobs. For more information on
-      this, please see section~\ref{sec:Backfill-BOINC-Windows} on
-      page~\pageref{sec:Backfill-BOINC-Windows}.
-
-% This feature was added in 6.7, but condor_submit wasn't changed.
-% Until now, the user had to set this via the '+' notation in the submit
-% file.
-\item You can now use attribute \SubmitCmd{email\_attributes} in the job
-description file to define a set of job classad attributes whose values
-should be included in the email notification of job completion.
+\item None.
 
 \end{itemize}
 
@@ -61,8 +51,31 @@ should be included in the email notification of job completion.
 
 \begin{itemize}
 
-\item The job attribute \Attr{EmailAttributes} now works for grid universe
-jobs.
+\item \Condor{history} in a quill environment, when given the -constraint option,
+would ignore attributes from the vertical schema.  This has been fixed.
+
+\item In unix, when started as root, the \Condor{master} now changes the
+effective user id back to root (instead of condor) when restarting itself
+(e.g. due to the command \Condor{restart}).  This makes no difference unless
+you have wrapped the \Condor{master} with a script of some kind and this
+script expects to be run as root not only on initial startup but on restart
+as well.
+
+\item The dedicated scheduler would sometimes take two negotiation cycles
+to acquire all the machines it needed to run a job.  This has been now
+fixed.
+
+% PR 938
+\item \Condor{dagman} no longer prints "Argument added" and
+"Retry Abort Value" diagnostic messages at the default verbosity,
+to reduce the size of the dagman.out file and the startup time
+for very large DAGs.
+
+\item \Condor{dagman} now prints a few fatal parse errors at lower
+verbosity settings than it did previously.
+
+\item \Condor{preen} no longer deletes MyProxy password files in the
+Condor spool directory.
 
 \end{itemize}
 
@@ -79,6 +92,219 @@ jobs.
 \begin{itemize}
 
 \item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-0-1}Version 7.0.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Fixed a bug in Condor's authorization policy reader.  The bug
+affects cases where the policy (\MacroNI{ALLOW}/\MacroNI{DENY} and
+\MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY} settings) mixes host-based
+authorizations with authorizations that refer to the authenticated
+user name.  In some cases, this bug would result in host-based
+settings not being applied to authenticated users.
+
+\end{itemize}
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Support for Backfill Jobs is now available on Windows platforms.
+For more information on this, please see
+section~\ref{sec:Backfill-BOINC-Windows} on
+page~\pageref{sec:Backfill-BOINC-Windows}.
+
+\item Condor has been ported to Redhat Enterprise Linux
+5.0 running on the 32-bit x86 architecture and on the 64-bit x86\_64
+architecture.
+
+% This feature was added in 6.7, but condor_submit wasn't changed.
+% Until now, the user had to set this via the '+' notation in the submit
+% file.
+\item The command \SubmitCmd{email\_attributes} in a job submit
+description file defines a set of job ClassAd attributes whose values
+should be included in the e-mail notification of job completion.
+
+\item The configuration variable \Macro{CONDOR\_VIEW\_HOST} may now
+contain a port number, and may refer to a
+\Condor{collector} daemon running on the same host as the
+\Condor{collector} that is forwarding ClassAds.  It is also now possible to
+use the forwarded ClassAds for matchmaking purposes.  For example, several
+\Condor{collector} daemons could forward ClassAds to 
+a single aggregating \Condor{collector} daemon which
+a \Condor{negotiator} then uses as its source of information for
+matchmaking.
+
+\item \Condor{configure} and \Condor{install} now detect missing
+  shared libraries (such as \File{libstdc++.so.5} on Linux), and print
+  messages and exit if missing libraries are detected.  The new command
+  line option \Opt{--ignore-missing-libs} causes it not to exit
+  after the messages have been printed, and to proceed with the
+  installation.
+
+\item Added a \Opt{--force} command line option to \Condor{configure}
+  (and \Condor{install}) which will turn on \Opt{--overwrite} and
+  \Opt{--ignore-missing-libs}.
+
+\item \Condor{configure} now writes simple sh and csh shell scripts
+  which can be sourced by their respective shells to set the user's
+  \Env{PATH} and \Env{CONDOR\_CONFIG} environment variables.  By default, these
+  are created in the root of the Condor installation, but this can be
+  changed via the \Opt{--env-scripts-dir} command line option.  Also,
+  the creation of these scripts can be disabled with the
+  \Opt{--no-env-scripts} command line option.
+
+\end{itemize}
+
+\noindent Configuration Variable Additions and Changes:
+
+\begin{itemize}
+
+\item The new configuration variable \Macro{STARTER\_UPLOAD\_SECONDS}
+prevents a hang if the \Condor{shadow} delays a write 
+for more than the specified time.
+The default is 300.
+
+\item The new configuration variable \Macro{CKPT\_PROBE} 
+specifies an internal to Condor
+executable which determines information about how a process is laid out
+in memory, in addition to other information. This executable is not yet
+available on Windows platforms.
+
+\item The new configuration variable 
+\MacroNI{CKPT\_SERVER\_CHECK\_PARENT\_INTERVAL} sets an interval
+of time between checks by the checkpoint server to see if 
+its parent, the \Condor{master} daemon, has gone away unexpectedly.
+The checkpoint server shuts itself down if this happens.
+The default interval for checking is 120 seconds.
+Setting this parameter to 0 disables the check.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Upgrade from PCRE v5.0 to PCRE v7.6, due to security vulnerabilities
+found in PCRE v5.0.
+
+\item Fixed file descriptor leak in the \Condor{schedd} when using the SOAP
+interface.
+
+\item Fixed a bug that primarily affected pools with
+\MacroNI{MaxJobRetirementTime} (0 by default) set larger than
+\MacroNI{REQUEST\_CLAIM\_TIMEOUT} (30 minutes by default).  Since
+6.9.3, when the \Condor{schedd} timed out requesting a claim to a slot, the
+\Condor{startd} was not made aware of the canceled request.  This
+resulted in some wasted time (up to \MacroNI{ALIVE\_INTERVAL}) in
+which the \Condor{startd} would wait for a job to run.
+
+\item A problem with \Condor{history} in a Quill environment incorrectly
+interpreting the \Opt{-name} option has been fixed.
+
+\item A memory leak that prevented \Condor{load\_history} from running
+with large history files has been fixed.
+
+\item A bug in \Condor{history} when running in a quill environment has been fixed.  This bug would cause the command to crash in some situations.
+
+\item The job ClassAd attribute \Attr{EmailAttributes} now works 
+for grid universe jobs.
+
+\item On 32-bit Linux platforms, the job queue database file may now exceed 2GB.
+Previously, the \Condor{schedd} would halt with an error when trying
+to write past the 2GB mark.
+
+\item On 32-bit Linux platforms, \Condor{history} can now read from history
+files larger than 2GB \emph{except} when using the \Opt{-backwards} option.
+
+\item Local universe jobs are now scheduled to run more promptly.  Previously,
+new local universe jobs would sometimes take up to \MacroNI{SCHEDD\_INTERVAL}
+(default 5 minutes) to be considered for running.
+
+\item The memory usage of the \Condor{collector} used to grow over time if
+daemons with new names kept joining and then leaving the pool
+(for example, in a Glidein pool).
+This was due to statistics on dropped updates that
+accumulated for all daemons that ever advertised themselves to the
+\Condor{collector}.  These statistics are now periodically purged of
+information about daemons which have not reported in a long time.  How
+long is controlled by \Macro{COLLECTOR\_STATS\_SWEEP}, which
+defaults to 2 days.
+
+\item Condor daemons would die when trying to send ClassAd
+advertisements to a host name that could not be resolved by DNS.
+
+\item Since 6.9.5, file transfer errors for vanilla, java, or parallel
+jobs would sometimes not result in the job going on hold as it should.
+This was most likely for very small files that failed to be written
+for some reason.
+
+\item The \AdAttr{ImageSize} reported for jobs on AIX was too big by a factor
+of 1024.
+
+\item Since 6.9.5, \Condor{glidein} failed in the set up stage, due to the
+change in syntax of quoting rules
+in the Condor submit description file for gt2 argument strings.
+
+\item Fixed a bug in the \Condor{gridmanager} that could prevent refreshed
+X509 proxies from being forwarded to the remote machine for grid universe
+jobs of type gt4.
+
+\item Fixed a bug in Condor's authorization policy reader.  The bug
+affects cases where the policy (\MacroNI{ALLOW}/\MacroNI{DENY} and
+\MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY} settings) mixes host-based
+authorizations with authorizations that refer to the authenticated
+user name.  In some cases, this bug would result in host-based
+settings not being applied to authenticated users.
+
+\item Fixed a bug in \Condor{history} which causes a crash
+when \Condor{quill} is enabled.
+
+\item Fixed a problem affecting the GSI and SSL authentication
+methods.  When these methods successfully authenticated the user but
+failed to find a mapping of the X509 name to a condor user id, they
+were setting the authenticated name to \verb|gsi| and \verb|ssl|
+respectively.  However, these names contain no domain, so they could
+not be referred to in the authorization policy.  Now these anonymous
+mappings are \verb|gsi@unmappeduser| and \verb|ssl@unmappeduser|.
+Therefore, configuration to deny access by users who are not explicitly mapped
+in the map file appears as:
+
+\begin{verbatim}
+DENY_READ = *@unmappeduser
+DENY_WRITE = *@unmappeduser
+\end{verbatim}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item When using \Condor{compile} with the RHEL5 x86 port of Condor to
+produce a standard universe executable, one will see a warning message
+about how linking with dynamic libraries is not portable. This warning
+is erroneous and should be ignored. It will be fixed in a future version
+of Condor.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item The existing configuration variables 
+\Macro{SYSTEM\_PERIODIC\_HOLD}, \Macro{SYSTEM\_PERIODIC\_RELEASE}, and
+\Macro{SYSTEM\_PERIODIC\_REMOVE} have documented definitions.
+See section~\ref{param:SystemPeriodicHold} for definitions.
 
 \end{itemize}
 
@@ -109,6 +335,8 @@ jobs.
 \noindent New Features:
 
 \begin{itemize}
+
+\item The Windows MSI installer now supports VM Universe.
 
 \item Eliminated the ``tarball in a tarball'' in our distribution.
   The contents of \File{release.tar} from the distribution tarball
@@ -161,7 +389,13 @@ jobs.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable
+  \Macro{DEAD\_COLLECTOR\_MAX\_AVOIDANCE\_TIME} defines the maximum
+  time in seconds that a daemon will fail over from a primary
+  \Condor{collector} to a secondary \Condor{collector}.
+  See section~\ref{param:DeadCollectorMaxAvoidanceTime} on
+  page~\pageref{param:DeadCollectorMaxAvoidanceTime} for a
+  complete definition.
 
 \end{itemize}
 
@@ -203,16 +437,21 @@ ERROR: receiving new UDP message but found a short message still waiting to be c
 \item Removed \SubmitCmd{remove\_kill\_sig} from the submission file
   generated by \Condor{submit\_dag} on Windows.
 
-\item With large numbers of machine ClassAds (for example: 10,000), 
-  an algorithm in \Condor{negotiator} was causing long delays at the 
+\item Fixed the algorithm in the \Condor{negotiator} daemon, which
+  with large numbers of machine ClassAds (for example, 10,000) 
+  was causing long delays at the 
   beginning of each negotiation cycle.
 
 \item Use of \MacroNI{MAX\_CONCURRENT\_UPLOADS} was resulting in a
-  connection attempt from \Condor{shadow} to \Condor{schedd} with a
+  connection attempt from the \Condor{shadow} to the \Condor{schedd} with a
   fixed 10 second timeout, which is sometimes too small.  This timeout
   has been increased to be the same as other connection timeouts between
-  \Condor{shadow} and \Condor{schedd}, and it now respects
+  the \Condor{shadow} and the \Condor{schedd}, and it now respects
   \MacroNI{SHADOW\_TIMEOUT\_MULTIPLIER}, so it can be adjusted if necessary.
+
+\item Fixed a problem with \Macro{MAX\_CONCURRENT\_UPLOADS} and
+  \Macro{MAX\_CONCURRENT\_DOWNLOADS}, which was sometimes allowing
+  more than the configured number of concurrent transfers to happen.
 
 \item Fixed a bug in the \Condor{schedd} that could cause it to crash due
   to file descriptor exhaustion when trying to send messages to hundreds of
@@ -237,28 +476,31 @@ ERROR: receiving new UDP message but found a short message still waiting to be c
 \item Fixed a bug under Windows that sometimes caused connection attempts
   between Condor daemons to fail with Windows error number 10056.
 
-\item Fixed a problem in which there are multiple collectors in a pool
-  for fault tolerance.  If the primary collector failed, the
-  \Condor{negotiator} would fail over to the secondary collector
-  indefinitely (or until the secondary collector also failed or the
+\item Fixed a problem in which there are multiple 
+  \Condor{collector} daemons in a pool
+  for fault tolerance.  If the primary \Condor{collector} failed, the
+  \Condor{negotiator} would fail over to the secondary \Condor{collector}
+  indefinitely (or until the secondary \Condor{collector} also failed or the
   administrator ran \Condor{reconfig}).  This was a problem for users
   flocking jobs to the pool, because flocking currently only works with
-  the primary collector.  Now, the \Condor{negotiator} will fail over
+  the primary \Condor{collector}.  Now, the \Condor{negotiator} will fail over
   for a restricted amount of time, up to
-  \MacroNI{DEAD\_COLLECTOR\_MAX\_AVOIDANCE\_TIME} seconds.  The default
-  is one hour, but if querying the dead primary collector takes very little
-  time to fail, the negotiator may retry more frequently in order to remain
+  \Macro{DEAD\_COLLECTOR\_MAX\_AVOIDANCE\_TIME} seconds.  The default
+  is one hour, but if querying the dead primary \Condor{collector}
+  takes very little
+  time to fail, the \Condor{negotiator} may retry more frequently
+  in order to remain
   responsive to flocked users.
 
 \item Fixed a problem preventing the use of \Condor{q} \Opt{-analyze}
   with the \Opt{-pool} option.
 
-\item Fixed a problem in the negotiator in which machines go
+\item Fixed a problem in the \Condor{negotiator} in which machines go
   unassigned when user priorities result in the machines getting split
   into shares that are rounded down to 0.  For example if there are 10
   machines and 100 equal priority submitters, then each submitter was
   getting 0.1 machines, which got rounded down to 0, so no machines were
-  assigned to anybody.  The message in the negotiator log in this case
+  assigned to anybody.  The message in the \Condor{negotiator} log in this case
   was this:
 
 \footnotesize
@@ -276,6 +518,9 @@ Over submitter resource limit (0) ... only consider startd ranks
 \item Fixed problem with PrivSep mode where a job that dumps core would
   not get the core file transferred back to the the submit host if the
   \SubmitCmd{transfer\_output\_files} submit option were used.
+
+\item Fixed a bug that caused the \Condor{starter} to crash if a job
+called \Condor{chirp} with the \Expr{get\_job\_attr} option.
 
 \end{itemize}
 

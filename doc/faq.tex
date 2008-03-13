@@ -1633,6 +1633,24 @@ For more information,
 see Microsoft Article Q184802.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why do Condor daemons exit after logging a 10038 (WSAENOTSOCK) error on some machines?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Usually when Condor daemons exit in this manner, it is because the system in
+question has a non-standard Winsock Layered Service Provider (LSP) installed
+on it. An LSP is in effect a plug-in for the TCP/IP protocol stack. We have
+seen LSPs installed as part of anti-virus software and other security-related
+packages.
+
+There are several tools available to check your system for the
+presence of LSPs. One that we have had success with lspfix, available
+at http://www.cexx.org/lspfix.htm. Any non-Microsoft LSPs that this
+tool shows may potentially be causing the WSAENOTSOCK error in
+Condor. Although the lspfix tool allows you to remove an LSP directly,
+it is probably more advisable to completely remove the application the
+LSP is part of via Control Panel.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Grid Computing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

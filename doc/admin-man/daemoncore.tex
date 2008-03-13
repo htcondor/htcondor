@@ -137,13 +137,9 @@ These arguments and what they do are described below:
   the output of the Unix \Prog{ps} command.
 
   Since daemons run with their current working directory set to the
-  value of \MacroNI{LOG}, if a full path (one that begins with a ``/''),
-  the file will be placed in the \MacroNI{LOG} directory.  If you leave
-  the \Opt{filename} in the \MacroNI{LOG} directory, add this
-  \Opt{filename} to the \Macro{VALID\_LOG\_FILES} configuration variable,
-  described in section~\ref{param:ValidLogFiles} on
-  page~\pageref{param:ValidLogFiles}, so that \Condor{preen} does not
-  remove it.
+  value of \MacroNI{LOG}, if you don't specify a full path
+  (one that begins with a ``/''),
+  the file will be placed in the \MacroNI{LOG} directory.
 
 \item[-k filename] For non-Windows operating systems,
   causes the daemon to read out a PID from the

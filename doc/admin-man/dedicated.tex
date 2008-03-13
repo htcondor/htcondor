@@ -312,7 +312,7 @@ parallel scheduling groups features supports this operation.
 
 Each startd must define which group it belongs to by setting the 
 \Macro{ParallelSchedulingGroup} property in the config file, and 
-advertising it into the machine classad.  The value of this property is simply a
+advertising it into the machine ClassAd.  The value of this property is simply a
 string, which should be the same for all startds in a given group.  The property
 must be advertised in the startd job ad by appending \Macro{ParallelSchedulingGroup}
 into the \Macro{STARTD\_EXPRS} configuration variable.

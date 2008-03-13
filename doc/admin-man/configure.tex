@@ -552,9 +552,10 @@ File System Configuration File Entries''.
   \MacroNI{COLLECTOR\_HOST} variable.
 
 \item[\Macro{CONDOR\_VIEW\_HOST}] \label{param:CondorViewHost} The
-  hostname of the machine where the CondorView server is running.
-  This service is optional, and requires additional configuration if
-  you want to enable it.  There is no default value for
+  host name of the machine, optionally appended by a colon and the
+  port number, where the CondorView server is running.
+  This service is optional, and requires additional configuration 
+  to enable it.  There is no default value for
   \MacroNI{CONDOR\_VIEW\_HOST}.  If \MacroNI{CONDOR\_VIEW\_HOST} is not
   defined, no CondorView server is used.
   See section~\ref{sec:Contrib-CondorView-Install} on
@@ -994,6 +995,12 @@ File System Configuration File Entries''.
   % Default definition in config file: bogus
   % Result if not defined or RHS is empty: shell's default corelimit size applies
 
+\item[\Macro{CKPT\_PROBE}] \label{param:CkptProbe}
+  Defines the path and executable name of the helper process Condor will use to
+  determine information for the \Attr{CheckpointPlatform} attribute
+  in the machine's ClassAd. 
+  The default value is \File{\$(LIBEXEC)/condor\_ckpt\_probe}.
+
 \item[\Macro{ABORT\_ON\_EXCEPTION}] \label{param:AbortOnException}
   When Condor programs detect a fatal internal exception, they
   normally log an error message and exit.  If you have turned on
@@ -1012,13 +1019,15 @@ File System Configuration File Entries''.
   % Result if not defined or RHS is empty: defaults to 20 seconds.
 
 \item[\Macro{DEAD\_COLLECTOR\_MAX\_AVOIDANCE\_TIME}]
-\label{param:DeadCollectorMaxAvoidanceTime} Defines the maximum time
-(in seconds) that a daemon (such as the negotiator) will fail over from
-a primary collector to a secondary collector (if any).  The default is
-one hour.  If connections to the dead primary collector take very
-little time to fail, new attempts to query the primary collector may
-be more frequent than the specified maximum avoidance time.
-
+\label{param:DeadCollectorMaxAvoidanceTime} Defines the interval of time
+  (in seconds) between checks for a failed primary \Condor{collector} daemon.
+  If connections to the dead primary \Condor{collector} take very
+  little time to fail, new attempts to query the primary \Condor{collector} may
+  be more frequent than the specified maximum avoidance time.
+  The default value equals one hour.
+  This variable has relevance to flocked jobs, as it defines 
+  the maximum time they may be reporting to the primary \Condor{collector}
+  without the \Condor{negotiator} noticing.
 
 \item[\Macro{PASSWD\_CACHE\_REFRESH}]
   \label{param:PasswdCacheRefresh}
@@ -1109,13 +1118,6 @@ of the subsystem corresponding to the daemon.
   \MacroUNI{STARTD\_LOG} gives the location of the log file for
   \Condor{startd}.
 
-  The actual names of the files
-  are also used in the \MacroUNI{VALID\_LOG\_FILES} entry used by
-  \Condor{preen}.  A change to one of the
-  file names with this setting requires a change to the
-  \MacroUNI{VALID\_LOG\_FILES} entry as well, or \Condor{preen} will
-  delete your newly named log files.
-
 \item[\Macro{MAX\_<SUBSYS>\_LOG}] \label{param:MaxSubsysLog} Controls
   the maximum length in bytes to which a
   log will be allowed to grow.  Each log file will grow to the
@@ -1143,9 +1145,7 @@ This macro
   file rotations.  A lock file is only required for log files which
   are accessed by more than one process.  Currently, this includes
   only the \MacroNI{SHADOW} subsystem.  This macro is defined relative
-  to the \MacroUNI{LOCK} macro.  If, for some strange
-  reason, you decide to change this setting, be sure to change the
-  \MacroUNI{VALID\_LOG\_FILES} entry that \Condor{preen} uses as well.
+  to the \MacroUNI{LOCK} macro.
 
 \item[\Macro{FILE\_LOCK\_VIA\_MUTEX}] \label{param:FileLockViaMutex} 
   This macro setting only works on Win32 -- it is ignored on Unix.  If set
@@ -2401,6 +2401,13 @@ checkpoint server host (see below).
   hour). This setting is only used if \MacroUNI{USE\_CKPT\_SERVER} is
   \Expr{True}.
 
+\item[\Macro{CKPT\_SERVER\_CHECK\_PARENT\_INTERVAL}]
+  \label{param:CkptServerCheckParentInterval}  This is the number of
+  seconds between checks to see whether the parent of the checkpoint
+  server (i.e. the \Condor{master}) has died.  If the parent has died,
+  the checkpoint server shuts itself down.  The default is 120 seconds.
+  A setting of 0 disables this check.
+
 \end{description}
 
 
@@ -3359,7 +3366,8 @@ search for the corresponding attribute names using ``slot'', instead.
 \label{param:SlotTypeN}
   This setting defines a given slot type, by specifying
   what part of each shared system resource (like RAM, swap space, etc)
-  this kind of slot gets.
+  this kind of slot gets.  This setting has \emph{no} effect unless you also
+  define \MacroNI{NUM\_SLOTS\_TYPE\_<N>}.
   N can be any integer from 1 to the value of
   \MacroUNI{MAX\_SLOT\_TYPES}, such as
   \MacroNI{SLOT\_TYPE\_1}. 
@@ -3383,6 +3391,17 @@ search for the corresponding attribute names using ``slot'', instead.
   not be reported to the Condor pool. You cannot use this parameter to
   make Condor advertise more slots than there are CPUs on the machine.
   To do that, use \Macro{NUM\_CPUS}.
+
+\item[\Macro{ALLOW\_VM\_CRUFT}]
+\label{param:AllowVMCruft}
+  A boolean value that Condor sets and uses internally, currently
+  defaulting to \Expr{True}.  When \Expr{True},
+  Condor looks for configuration variables named with the
+  previously used string \MacroNI{VM} after searching unsuccessfully
+  for variables named with the currently used string \MacroNI{SLOT}.
+  When \Expr{False}, Condor does \emph{not} look for variables named
+  with the previously used string \MacroNI{VM} after searching
+  unsuccessfully for the string \MacroNI{SLOT}. 
 
 \end{description}
 
@@ -4214,9 +4233,6 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   synchronization across log file rotations
   is desired.
   This macro is defined relative to the \MacroUNI{LOCK} macro.
-  If you decide to change this setting (not recommended),
-  be sure to change the \MacroUNI{VALID\_LOG\_FILES} entry that
-  \Condor{preen} uses as well.
 
 \item[\Macro{SCHEDD\_NAME}] \label{param:ScheddName}
   A unique name given for a \Condor{schedd} daemon on a machine.
@@ -4332,6 +4348,64 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   evaluations so that it spends only 1\% of its time in this activity.
   The lower bound for the interval is configured by
   \Macro{PERIODIC\_EXPR\_INTERVAL} (default 60 seconds).
+
+\item[\Macro{SYSTEM\_PERIODIC\_HOLD}]
+  \label{param:SystemPeriodicHold} This expression behaves identically
+  to the job expression \AdAttr{periodic\_hold}, but it is evaluated by
+  the \Condor{schedd} daemon individually for each job in the queue.
+  It defaults to \Expr{False}.
+  When \Expr{True}, it causes the job to stop running and go on hold.
+  Here is an
+  example that puts jobs on hold if they have been restarted too many
+  times, have an unreasonably large virtual memory \Attr{ImageSize}, or have
+  unreasonably large disk usage for an invented environment.
+
+\footnotesize
+\begin{verbatim}
+SYSTEM_PERIODIC_HOLD = \
+  (JobStatus == 1 || JobStatus == 2) && \
+  (JobRunCount > 10 || ImageSize > 3000000 || DiskUsage > 10000000)
+\end{verbatim}
+\normalsize
+
+\item[\Macro{SYSTEM\_PERIODIC\_RELEASE}]
+  \label{param:SystemPeriodicRelease} This expression behaves identically
+  to the job expression \AdAttr{periodic\_release}, but it is evaluated by
+  the \Condor{schedd} daemon individually for each job in the queue.
+  It defaults to \Expr{False}.
+  When \Expr{True}, it causes a held job to return to the idle state.
+  Here is an example
+  that releases jobs from hold if they have tried to run less than 20
+  times, have most recently been on hold for over 20 minutes, and have
+  gone on hold due to ``Connection timed out'' when trying to execute
+  the job, because the file system containing the job's executable is
+  temporarily unavailable.
+
+\footnotesize
+\begin{verbatim}
+SYSTEM_PERIODIC_RELEASE = \
+  (JobRunCount < 20 && CurrentTime - EnteredCurrentStatus > 1200 ) && ( \
+    (HoldReasonCode == 6 && HoldReasonSubCode == 110) \
+  )
+\end{verbatim} 
+\normalsize
+
+
+\item[\Macro{SYSTEM\_PERIODIC\_REMOVE}]
+  \label{param:SystemPeriodicRemove} This expression behaves identically
+  to the job expression \AdAttr{periodic\_remove}, but it is evaluated by
+  the \Condor{schedd} daemon individually for each job in the queue.
+  It defaults to \Expr{False}.
+  When \Expr{True}, it causes the job to be removed from the queue.
+  Here is an example
+  that removes jobs which have been on hold for 30 days:
+
+\footnotesize
+\begin{verbatim}
+SYSTEM_PERIODIC_REMOVE = \
+  (JobStatus == 5 && CurrentTime - EnteredCurrentStatus > 3600*24*30)
+\end{verbatim}
+\normalsize
 
 \item[\Macro{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE}]
   \label{param:ScheddAssumeNegotiatorGone} This macro determines the period,
@@ -4459,9 +4533,6 @@ These settings affect the \Condor{shadow}.
   \File{ShadowLog}, since the \File{ShadowLog} may be rotated 
   and you want to synchronize access across log file rotations.
   This macro is defined relative to the \MacroUNI{LOCK} macro.
-  If you decide to change this setting (not recommended),
-  be sure to change the \MacroUNI{VALID\_LOG\_FILES} entry that
-  \Condor{preen} uses as well.
 
 \item[\Macro{SHADOW\_DEBUG}] \label{param:ShadowDebug} This macro
   (and other settings related to debug logging in the shadow) is
@@ -4864,18 +4935,14 @@ These macros affect \Condor{preen}.
 \item[\Macro{VALID\_SPOOL\_FILES}] \label{param:ValidSpoolFiles}  This
   macro contains a (comma or space separated) list of files that
   \Condor{preen} considers valid files to find in the \MacroUNI{SPOOL}
-  directory.  Defaults to all the files that are valid.  A change
-  to the \MacroUNI{HISTORY} macro requires a change to this
-  macro as well.
+  directory. There is no default value. \Condor{preen} will add to the
+  list files and directories that are normally present in the
+  \MacroUNI{SPOOL} directory.
   
-\item[\Macro{VALID\_LOG\_FILES}] \label{param:ValidLogFiles} This
+\item[\Macro{INVALID\_LOG\_FILES}] \label{param:InvalidLogFiles} This
   macro contains a (comma or space separated) list of files that
-  \Condor{preen} considers valid files to find in the \MacroUNI{LOG}
-  directory.  Defaults to all the files that are valid.  A change
-  to the names of any of the log files above requires a change to this
-  macro as well.  In addition, the defaults for the
-  \MacroUNI{<SUBSYS>\_ADDRESS\_FILE} are listed here, so a change to
-  those requires a change this entry as well.
+  \Condor{preen} considers invalid files to find in the \MacroUNI{LOG}
+  directory.  There is no default value.
 
 \end{description}
 
@@ -5087,6 +5154,13 @@ Reset OS socket buffer size to 2048k (UDP), 255k (TCP).
   daemon it is impossible to tell if any previous ones have been lost
   or not.  ``UpdatesLost'' is the number of updates that the Collector
   has detected as being lost.
+
+\item[\Macro{COLLECTOR\_STATS\_SWEEP}]
+  \label{param:CollectorStatsSweep} This value specifies the number of
+  seconds between sweeps of the \Condor{collector}'s per-daemon update
+  statistics.  Records for daemons which have not reported in this amount
+  of time are purged in order to save memory.  The default is two days.
+  It is unlikely that you would ever need to adjust this.
 
 \item[\Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE}]
   \label{param:CollectorDaemonHistorySize} This macro controls the
