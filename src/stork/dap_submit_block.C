@@ -23,10 +23,10 @@
 #include "dap_classad_reader.h"
 #include "dap_utility.h"
 
-#ifndef WANT_NAMESPACES
-#define WANT_NAMESPACES
+#ifndef WANT_CLASSAD_NAMESPACE
+#define WANT_CLASSAD_NAMESPACE
 #endif
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 int check_dap_format(classad::ClassAd *currentAd)
 {

@@ -25,9 +25,9 @@
 #include "VanillaToGrid.h"
 #include "filename_tools.h"
 #include "string_list.h"
-#define WANT_NAMESPACES
+#define WANT_CLASSAD_NAMESPACE
 #undef open
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 
 bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, const char * gridresource, bool is_sandboxed)

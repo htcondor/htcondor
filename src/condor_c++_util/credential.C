@@ -20,7 +20,7 @@
 #include "credential.h"
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 Credential::Credential(const classad::ClassAd& class_ad) {
 	std::string val;

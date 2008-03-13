@@ -20,7 +20,7 @@
 #include "X509credentialWrapper.h"
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 CredentialWrapper::CredentialWrapper() {
 	cred = NULL;

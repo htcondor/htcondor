@@ -29,10 +29,10 @@
 #include "condor_config.h"
 #include "globus_utils.h"
 
-#ifndef WANT_NAMESPACES
-#define WANT_NAMESPACES
+#ifndef WANT_CLASSAD_NAMESPACE
+#define WANT_CLASSAD_NAMESPACE
 #endif
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 #define USAGE \
 "[stork_server] submit_file\n\

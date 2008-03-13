@@ -21,9 +21,9 @@
 #ifndef __CONVERSION_H__
 #define __CONVERSION_H__
 
-#define WANT_NAMESPACES
+#define WANT_CLASSAD_NAMESPACE
 #include "condor_fix_iostream.h"
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 #include "condor_classad.h"
 
 classad::ClassAd * toNewClassAd( ClassAd * );

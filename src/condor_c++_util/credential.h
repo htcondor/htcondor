@@ -29,11 +29,11 @@
 
 #include "condor_common.h"
 #include <time.h>
-#ifndef WANT_NAMESPACES
-#define WANT_NAMESPACES
+#ifndef WANT_CLASSAD_NAMESPACE
+#define WANT_CLASSAD_NAMESPACE
 #endif
 #include "condor_fix_iostream.h"
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 #include "MyString.h"
 
