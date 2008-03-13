@@ -964,7 +964,23 @@ else
   else
     AC_SUBST([gcc_static_ld_flag],[$gcc_static_ld_flag])
   fi
+
+  # Now test for the -Wl,--hash-type=both flag
+  AC_MSG_CHECKING([hash-style flag])
+  echo "main() { return 0; }" > link_test.c
+  _test_output=`gcc -Wl,--hash-style=both -o link_test link_test.c > /dev/null 2>&1`
+  _test_status=$?
+  if test $_test_status -eq 0 && test "x$_test_output" = "x"; then
+    gcc_hash_style_flag=-Wl,--hash-style=both
+    AC_MSG_RESULT([yes])
+  else
+    AC_MSG_RESULT([no])
+  fi
+  rm -f link_test link_test.c 
+  AC_SUBST([gcc_hash_style_flag],[$gcc_hash_style_flag])
+
 fi
+
 
 #########
 # determine if gcc has a collection of particular warning flags we desire.
