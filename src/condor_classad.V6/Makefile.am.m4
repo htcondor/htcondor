@@ -180,10 +180,10 @@ extra_tests_DEPENDENCIES = shared.so
 MF_IF_NAMESPACE([extra_tests_ns_DEPENDENCIES = shared_ns.so])
 
 shared.so:
-	$(CXXCOMPILE) -fPIC -shared -o shared.so shared.C
+	$(CXXCOMPILE) -fPIC -shared -o shared.so shared.C -L.libs -lclassad
 
 shared_ns.so:
-	$(CXXCOMPILE) $(NAMESPACE) -fPIC -shared -o shared_ns.so shared.C
+	$(CXXCOMPILE) $(NAMESPACE) -fPIC -shared -o shared_ns.so shared.C -L.libs -lclassad_ns
 
 Makefile.am: Makefile.am.m4
 	rm -f Makefile.am
