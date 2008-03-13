@@ -207,6 +207,7 @@ match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id,
 	scheduled = false;
 	needs_release_claim = false;
 	request_claim_sock = NULL;
+	auth_hole_id = NULL;
 }
 
 match_rec::~match_rec()
@@ -5356,6 +5357,38 @@ claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad, bool is_dedi
 		return false;
 	}
 
+	// now that we've completed authentication (if enabled), punch a hole
+	// in our DAEMON authorization level for the execute machine user/IP
+	// (if we're flocking, which is why we check mrec->pool)
+	//
+	if ((mrec->auth_hole_id == NULL)) {
+		mrec->auth_hole_id = new MyString;
+		ASSERT(mrec->auth_hole_id != NULL);
+		const char* fqu = sock->getFullyQualifiedUser();
+			// In 7.0, fqu is not reliably set in all cases, so we
+			// must ignore it.
+		fqu = NULL;
+		if (fqu != NULL) {
+			mrec->auth_hole_id->sprintf("%s/%s",
+			                            fqu,
+			                            sock->endpoint_ip_str());
+		}
+		else {
+			*mrec->auth_hole_id = sock->endpoint_ip_str();
+		}
+		IpVerify* ipv = daemonCore->getIpVerify();
+		if (!ipv->PunchHole(DAEMON, *mrec->auth_hole_id)) {
+			dprintf(D_ALWAYS,
+			        "WARNING: IpVerify::PunchHole error for %s: "
+			            "job %d.%d may fail to execute\n",
+			        mrec->auth_hole_id->Value(),
+			        mrec->cluster,
+			        mrec->proc);
+			delete mrec->auth_hole_id;
+			mrec->auth_hole_id = NULL;
+		}
+	}
+
 	sock->encode();
 
 	if( !sock->put( mrec->claimId() ) ) {
@@ -5668,6 +5701,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	char* claim_id = NULL;
 	char* startd_addr = NULL;
 	char* startd_name = NULL;
+	char* startd_principal = NULL;
 
 	// NOTE: match_ad could be deallocated when this function returns,
 	// so if we need to keep it around, we must make our own copy of it.
@@ -5714,6 +5748,14 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		pool = NULL;
 	}
 
+	if( 0 > GetAttributeStringNew(cluster,
+	                              proc,
+	                              ATTR_STARTD_PRINCIPAL,
+	                              &startd_principal)) {
+		free( startd_principal );
+		startd_principal = NULL;
+	}
+
 	UserLog* ULog = this->InitializeUserLog( *job );
 	if ( ULog ) {
 		JobDisconnectedEvent event;
@@ -5740,6 +5782,26 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		// note: AddMrec will makes its own copy of match_ad
 	match_rec *mrec = AddMrec( claim_id, startd_addr, job, match_ad, 
 							   owner, pool );
+
+		// if we need to punch an authorization hole in our DAEMON
+		// level for this StartD (to support flocking), do it now
+	if (startd_principal != NULL) {
+		mrec->auth_hole_id = new MyString(startd_principal);
+		ASSERT(mrec->auth_hole_id != NULL);
+		free(startd_principal);
+		IpVerify* ipv = daemonCore->getIpVerify();
+		if (!ipv->PunchHole(DAEMON, *mrec->auth_hole_id)) {
+			dprintf(D_ALWAYS,
+			        "WARNING: IpVerify::PunchHole error for %s: "
+			            "job %d.%d may fail to execute\n",
+			        mrec->auth_hole_id->Value(),
+			        mrec->cluster,
+			        mrec->proc);
+			delete mrec->auth_hole_id;
+			mrec->auth_hole_id = NULL;
+		}
+	}
+
 	if( pool ) {
 		free( pool );
 		pool = NULL;
@@ -5768,6 +5830,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		mark_job_stopped( job );
 		return;
 	}
+	
 
 	mrec->setStatus( M_CLAIMED );  // it's claimed now.  we'll set
 								   // this to active as soon as we
@@ -8115,6 +8178,12 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		}
 		if( mrec->pool ) {
 			SetAttributeString(cluster, proc, ATTR_REMOTE_POOL, mrec->pool);
+		}
+		if ( mrec->auth_hole_id ) {
+			SetAttributeString(cluster,
+			                   proc,
+			                   ATTR_STARTD_PRINCIPAL,
+			                   mrec->auth_hole_id->Value());
 		}
 	}
 	GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &new_rec->universe );
@@ -11004,24 +11073,6 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 	ASSERT( matchesByJobID->insert( *jobId, rec ) == 0 );
 	numMatches++;
 
-		/*
-		  Finally, we want to tell daemonCore that we're willing to
-		  grant WRITE permission to whatever machine we were matched
-		  with.  This greatly simplifies DaemonCore permission stuff
-		  for flocking, since submitters don't have to know all the
-		  hosts they might possibly run on, all they have to do is
-		  trust the central managers of all the pools they're flocking
-		  to (which they have to do, already).  Added on 7/13/00 by
-		  Derek Wright <wright@cs.wisc.edu>
-		*/
-	if( (addr = string_to_ipstr(peer)) ) {
-		daemonCore->AddAllowHost( addr, WRITE );
-		daemonCore->AddAllowHost( addr, DAEMON );
-	} else {
-		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
-				 peer );
-	}
-
 		// Update CurrentRank in the startd ad.  Why?  Because when we
 		// reuse this match for a different job (in
 		// FindRunnableJob()), we make sure it has a rank >= the
@@ -11072,6 +11123,17 @@ Scheduler::DelMrec(char const* id)
 	jobId.cluster = rec->cluster;
 	jobId.proc = rec->proc;
 	matchesByJobID->remove(jobId);
+
+		// fill any authorization hole we made for this match
+	if (rec->auth_hole_id != NULL) {
+		IpVerify* ipv = daemonCore->getIpVerify();
+		if (!ipv->FillHole(DAEMON, *rec->auth_hole_id)) {
+			dprintf(D_ALWAYS,
+			        "WARNING: IpVerify::FillHole error for %s\n",
+			        rec->auth_hole_id->Value());
+		}
+		delete rec->auth_hole_id;
+	}
 
 		// Remove this match from the associated shadowRec.
 	if (rec->shadowRec)

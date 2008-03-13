@@ -42,7 +42,7 @@ compute_perm_hash(const struct in_addr &in_addr)
 	return h;
 }
 
-// Hash function for AllowHosts hash table
+// Hash function for HolePunchTable_t hash tables
 static unsigned int
 compute_host_hash( const MyString & str )
 {
@@ -67,7 +67,6 @@ IpVerify::IpVerify()
 	cache_DNS_results = TRUE;
 
 	PermHashTable = new PermHashTable_t(797, compute_perm_hash);
-	AllowHostsTable = new HostHashTable_t(53, compute_host_hash);
 }
 
 
@@ -87,10 +86,6 @@ IpVerify::~IpVerify()
 		}
 
 		delete PermHashTable;
-	}
-
-	if( AllowHostsTable ) { 
-		delete AllowHostsTable;
 	}
 
 	// Clear the Permission Type Array
@@ -229,10 +224,6 @@ IpVerify::Init()
         }
     
     }
-
-    // Finally, check to see if we have an allow hosts that have
-    // been added manually, in which case, re-add those.
-	process_allow_users();
 
 	dprintf(D_FULLDEBUG|D_SECURITY,"Initialized the following authorization table:\n");
 	PrintAuthTable(D_FULLDEBUG|D_SECURITY);
@@ -680,6 +671,26 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		if ( !PermTypeArray[perm] ) {
 			EXCEPT("IpVerify::Verify: called with unknown permission %d\n",perm);
 		}
+
+			// see if a authorization hole has been dyamically punched (via
+			// PunchHole) for this perm / user / IP
+			//
+		if ( PermTypeArray[perm]->hole_punch_table != NULL ) {
+			HolePunchTable_t* hpt = PermTypeArray[perm]->hole_punch_table;
+			char* ip_str = inet_ntoa(sin->sin_addr);
+			MyString id;
+			int count;
+			if ( who != TotallyWild ) {
+				id.sprintf("%s/%s", who, ip_str);
+				if ( hpt->lookup(id, count) != -1 ) {
+					return USER_AUTH_SUCCESS;
+				}
+			}
+			id = ip_str;
+			if ( hpt->lookup(id, count) != -1 ) {
+				return USER_AUTH_SUCCESS;
+			}
+		}
 		
 		if ( PermTypeArray[perm]->behavior == USERVERIFY_ALLOW ) {
 			// allow if no HOSTALLOW_* or HOSTDENY_* restrictions 
@@ -876,80 +887,110 @@ bool IpVerify :: lookup_user(StringList * list, const char * user)
     return found;
 }
 
-void
-IpVerify::process_allow_users( void )
-{
-	MyString user;
-	perm_mask_t mask;
-	AllowHostsTable->startIterations();
-	while( AllowHostsTable->iterate(user, mask) ) {
-		add_host_entry( user.Value(), mask );
-	}
-}
-	
 
-// AddAllowHost is now equivalent to adding */host, where host 
-// is actual host name with no wild card!
-//
+// PunchHole - dynamically opens up a perm level to the
+// given user / IP. The hole can be removed with FillHole.
 // Additions persist across a reconfig.  This is intended
 // for transient permissions (like to automatic permission
 // granted to a remote startd host when a shadow starts up.)
-
+//
 bool
-IpVerify::AddAllowHost( const char* host, DCpermission perm )
+IpVerify::PunchHole(DCpermission perm, MyString& id)
 {
-	perm_mask_t new_mask = allow_mask(perm);
-	perm_mask_t *mask_p = NULL;
-    int len = strlen(host);
-
-    char * buf = (char *) malloc(len+3); // 2 for */
-    memset(buf, 0, len+3);
-    sprintf(buf, "*/%s", host);
-    MyString addr(buf);    // */host
-    free(buf);
-
-	dprintf( D_DAEMONCORE, "Entered IpVerify::AddAllowHost(%s, %s)\n",
-			 host, PermString(perm) );
-
-		// First, see if we already have this host, and if so, we're
-		// done. 
-	if( AllowHostsTable->lookup( addr, mask_p) != -1) {
-			// We found it.  Make sure the mask is cool
-		if( ! (*mask_p & new_mask) ) {
-				// The host was in there, but we need to add more bits
-				// to the mask
-			dprintf( D_DAEMONCORE, 
-					 "IpVerify::AddAllowHost: Changing mask, was %llu, adding %llu)\n",
-					 *mask_p, new_mask );
-			new_mask = *mask_p | new_mask;
-			*mask_p = new_mask;
-			if( add_host_entry(addr.Value(), new_mask) ) {
-				dprintf( D_DAEMONCORE, "Added.\n");
-				return true;
-			} else {
-				return false;
-			}
-		} else {
-			dprintf( D_DAEMONCORE, 
-					 "IpVerify::AddAllowHost: Already have %s with %llu\n", 
-					 host, new_mask );
-		}
-		return true;
-	} 
-
-		// If we're still here, it wasn't in our table, so we want to
-		// add it to the real verify hash table, and if that works,
-		// add it to both our table (so we remember it on reconfig).
-	if( add_host_entry(addr.Value(), new_mask) ) {
-		dprintf( D_DAEMONCORE, "Adding new hostallow (%s) entry for \"%s\"\n",  
-				 PermString(perm), host );
-		AllowHostsTable->insert( addr, new_mask );
-		return true;
-	} else {
+	if (PermTypeArray[perm] == NULL) {
 		return false;
 	}
+	PermTypeEntry* pte = PermTypeArray[perm];
+
+	int count = 0;
+	if (pte->hole_punch_table == NULL) {
+		pte->hole_punch_table =
+			new HolePunchTable_t(compute_host_hash);
+		ASSERT(pte->hole_punch_table != NULL);
+	}
+	else {
+		int c;
+		if (pte->hole_punch_table->lookup(id, c) != -1) {
+			count = c;
+			if (pte->hole_punch_table->remove(id) == -1) {
+				EXCEPT("IpVerify::PunchHole: "
+				           "table entry removal error");
+			}
+		}
+	}
+
+	count++;
+	if (pte->hole_punch_table->insert(id, count) == -1) {
+		EXCEPT("IpVerify::PunchHole: table entry insertion error");
+	}
+
+	if (count == 1) {
+		dprintf(D_SECURITY,
+		        "IpVerify::PunchHole: opened %s level to %s\n",
+		        PermString(perm),
+		        id.Value());
+	}
+	else {
+		dprintf(D_SECURITY,
+		        "IpVerify::PunchHole: "
+			    "open count at level %s for %s now %d\n",
+		        PermString(perm),
+		        id.Value(),
+		        count);
+	}
+
+	return true;
 }
 
+// FillHole - plug up a dynamically punched authorization hole
+//
+bool
+IpVerify::FillHole(DCpermission perm, MyString& id)
+{
+	if (PermTypeArray[perm] == NULL) {
+		return false;
+	}
+	PermTypeEntry* pte = PermTypeArray[perm];
+
+	if (pte->hole_punch_table == NULL) {
+		return false;
+	}
+
+	int count;
+	if (pte->hole_punch_table->lookup(id, count) == -1) {
+		return false;
+	}
+	if (pte->hole_punch_table->remove(id) == -1) {
+		EXCEPT("IpVerify::FillHole: table entry removal error");
+	}
+
+	count--;
+
+	if (count != 0) {
+		if (pte->hole_punch_table->insert(id, count) == -1) {
+			EXCEPT("IpVerify::FillHole: "
+			           "table entry insertion error");
+		}
+	}
+
+	if (count == 0) {
+		dprintf(D_SECURITY,
+		        "IpVerify::FillHole: "
+		            "removed %s-level opening for %s\n",
+		        PermString(perm),
+		        id.Value());
+	}
+	else {
+		dprintf(D_SECURITY,
+		        "IpVerify::FillHole: "
+		            "open count at level %s for %s now %d\n",
+		        PermString(perm),
+		        id.Value(),
+		        count);
+	}
+
+	return true;
+}
 
 IpVerify::PermTypeEntry::~PermTypeEntry() {
 	if (allow_hosts)
@@ -973,6 +1014,9 @@ IpVerify::PermTypeEntry::~PermTypeEntry() {
 			delete value;
 		}
 		delete deny_users;
+	}
+	if (hole_punch_table) {
+		delete hole_punch_table;
 	}
 }
 
