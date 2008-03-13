@@ -38,6 +38,17 @@ configuration files can effectively run arbitrary programs as root.
 
 \begin{itemize}
 
+\item In the past, Condor has always sent work to the execute machines
+  by pushing jobs to the \Condor{startd}, either from the
+  \Condor{schedd} or via \Condor{cod}.
+  As of version 7.1.0, The \Condor{startd} now has the ability to pull
+  work by fetching jobs via a system of plug-ins or hooks.
+  Additional hooks are invoked by the \Condor{starter} to help manage
+  work (especially for fetched jobs, but the \Condor{starter} hooks
+  can be defined and invoked for other kinds of jobs as well).
+  For a complete description of the new hook system, read
+  section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks}.
+
 % PR 888/921
 \item Added the capability to insert commands into the \File{.condor.sub}
   file produced by \Condor{submit\_dag} with the \Opt{-append} and

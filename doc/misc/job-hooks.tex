@@ -1,0 +1,432 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:job-hooks}Job Hooks}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks|(}
+\index{Job hooks}
+
+\index{Job hooks!introduction} 
+In the past, Condor has always sent work to the execute machines by
+pushing jobs to the \Condor{startd}, either from the \Condor{schedd}
+or via \Condor{cod}.
+Beginning with the 7.1.* series, the \Condor{startd} now has the
+ability to pull work by fetching jobs via a system of plug-ins or
+hooks.
+Any site can configure a set of plug-ins to fetch work completely
+outside of the usual Condor matchmaking system.
+
+A hook is an external program or script invoked by Condor at various
+points during the lifecycle of a job.
+Instead of putting all the code and logic directly into the Condor
+daemons to handle all the sorts of external systems to fetch work
+from, sites can write their own programs or scripts and just let
+Condor invoke these plug-ins at the right moments to accomplish the
+desired outcome.
+
+The following sections will describe how this system of hooks works,
+the semantics of fetched jobs, the interaction between fetched work
+and regular Condor jobs, what hooks are invoked by Condor at various
+stages of the job work-flow, how to configure a machine to fetch jobs,
+and how to write your own plug-in hooks.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:job-hooks-overview}
+Overview of Fetching Work}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!overview} 
+
+Periodically, each execution slot managed by a \Condor{startd} will
+invoke a hook to see if there is any work that can be fetched.
+Whenever this hook returns a valid job, the \Condor{startd} will
+evaluate the current state of the slot and decide if it should start
+executing the fetched work.
+If the slot is unclaimed and the \Attr{Start} expression evaluates to
+TRUE, a new claim will be created for the fetched job.
+If the slot is claimed, the \Condor{startd} will evaluate the
+\Attr{Rank} expression relative to the fetched job and compare it to
+the value of the \Attr{Rank} for the currently running job and decide
+if the existing job should be preempted due to the fetched job having
+a higher rank.
+If the slot is unavailable for whatever reason, the \Condor{startd}
+will refuse the fetched job and ignore it.
+Either way, once the \Condor{startd} decides what it should do with
+the fetched job, it will invoke another hook to reply to the claim
+request, so that the external system knows what happened to that work
+unit.
+
+If the job is accepted, a claim is created for it and the slot moves
+into the Claimed state.
+As soon as this happens, the \Condor{startd} will spawn a
+\Condor{starter} to manage the execution of the job.
+At this point, from the perspective of the \Condor{startd}, this claim
+is just like any other.
+The usual policy expressions are evaluated, and if the job needs to be
+suspended or evicted, it will be.
+If a higher-ranked job being managed by a \Condor{schedd} is matched
+with the slot, that job will preempt the fetched work.
+
+The \Condor{starter} itself can optionally invoke additional hooks to
+help manage the execution of the specific job.
+There are hooks to prepare the execution environment for the job,
+periodically update information about the job as it runs, notify when
+the job exits, and to take special actions when the job is being evicted.
+
+Assuming there are no interruptions, the job completes, and the
+\Condor{starter} exits, the \Condor{startd} will invoke the hook to
+fetch work again.
+If another job is available, the existing claim will be reused and a
+new \Condor{starter} is spawned.
+If the hook returns that there is no more work to perform, the claim
+will be evicted, and the slot will return to the Owner state.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:job-hooks-hooks}
+Hooks Invoked by Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!Hooks invoked by Condor} 
+\index{Job hooks!Hooks}
+
+There are a handful of hooks invoked by Condor related to fetching
+work, some of which are called by the \Condor{startd} and others by
+the \Condor{starter}.
+Each hook will be described below, including when it is invoked, what
+task it is supposed to accomplish, what data is passed to the hook,
+and what output (and, when relevant) exit status is expected.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:job-hooks-fetch-work}
+Hook: Fetch Work}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!Hooks!Fetch work}
+
+\Macro{HOOK\_FETCH\_WORK} is invoked whenever the \Condor{startd}
+wants to see if there is any work to fetch.
+This is the most important hook in the whole system, and is the only
+hook that must be defined for any of the other \Condor{startd} hooks
+to operate.
+
+\begin{description}
+\item[Arguments]
+  None.
+
+\item[Standard input]
+  ClassAd of the slot that is looking for work.
+
+\item[Expected output]
+  ClassAd of a job that can be run.
+  If there is no work, the hook should return no output.
+
+\item[Exit status]
+  Ignored.
+\end{description}
+
+The job ClassAd returned by the hook needs to contain enough
+information for the \Condor{starter} to eventually spawn the work.
+The required and optional attributes in this ClassAd are identical to
+the ones described for Computing on Demand (COD) jobs in
+section~\ref{sec:cod-application-attributes} 
+``COD Application Attributes'' on
+page~\pageref{sec:cod-application-attributes}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:job-hooks-reply-claim}
+Hook: Reply Claim}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!Hooks!Reply to a claim}
+
+\Macro{HOOK\_REPLY\_CLAIM} is invoked whenever
+\Macro{HOOK\_FETCH\_WORK} returns data and the the \Condor{startd}
+decides if it's going to accept the job or not.
+
+\begin{description}
+\item[Arguments]
+  Either the string \verb@accept@ or \verb@reject@.
+
+\item[Standard input]
+  A copy of the job ClassAd and the slot ClassAd
+  (separated by the string \verb@-----@ and a new line).
+
+\item[Expected output]
+  None.
+
+\item[Exit status]
+  Ignored.
+\end{description}
+
+The \Condor{startd} will not wait for this hook to return before
+taking other actions, and ignores all output.
+The hook is simply advisory, and has no impact on the behavior of the
+\Condor{startd}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:job-hooks-evict-claim}
+Hook: Evict Claim}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!Hooks!Evict a claim}
+
+\Macro{HOOK\_EVICT\_CLAIM} is invoked whenever the \Condor{startd}
+needs to evict a claim representing fetched work.
+
+\begin{description}
+\item[Arguments]
+  None.
+
+\item[Standard input]
+  A copy of the job ClassAd and the slot ClassAd
+  (separated by the string \verb@-----@ and a new line).
+
+\item[Expected output]
+  None.
+
+\item[Exit status]
+  Ignored.
+\end{description}
+
+The \Condor{startd} will not wait for this hook to return before
+taking other actions, and ignores all output.
+The hook is simply advisory, and has no impact on the behavior of the
+\Condor{startd}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:job-hooks-prepare-job}
+Hook: Prepare Job}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!Hooks!Prepare job}
+
+\Macro{HOOK\_PREPARE\_JOB} is invoked by the \Condor{starter} before
+a job is going to be run.
+This hook provides a chance to execute commands to setup the job
+environment, for example to transfer input files.
+
+\begin{description}
+\item[Arguments]
+  None.
+
+\item[Standard input]
+  A copy of the job ClassAd and the slot ClassAd
+  (separated by the string \verb@-----@ and a new line).
+
+\item[Expected output]
+  None.
+
+\item[Exit status]
+  0 for success preparing the job, any non-zero value on failure.
+\end{description}
+
+The \Condor{starter} waits until this hook returns before
+attempting to execute the job.
+If the hook returns a non-zero exit status, the \Condor{starter} will
+assume an error was reached while attempting to setup the job
+environment and abort the job.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:job-hooks-update-job-info}
+Hook: Update Job Info}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!Hooks!Update job info}
+
+\Macro{HOOK\_UPDATE\_JOB\_INFO} is invoked periodically during the
+life of the job to update information about the status of the job.
+When the job is first spawned, the \Condor{starter} will invoke this
+hook after \Macro{STARTER\_INITIAL\_UPDATE\_INTERVAL} seconds
+(defaults to 8).
+Thereafter, the \Condor{starter} will invoke the hook every 
+\Macro{STARTER\_INITIAL\_UPDATE\_INTERVAL} seconds (defaults to 300,
+in other words, every 5 minutes).
+
+\begin{description}
+\item[Arguments]
+  None.
+
+\item[Standard input]
+  A copy of the job ClassAd that has been augmented with additional
+  attributes describing the current status and execution behavior of
+  the job.
+
+\item[Expected output]
+  None.
+
+\item[Exit status]
+  Ignored.
+\end{description}
+
+The \Condor{starter} will not wait for this hook to return before
+taking other actions, and ignores all output.
+The hook is simply advisory, and has no impact on the behavior of the
+\Condor{starter}.
+
+The additional attributes included inside the job ClassAd are:
+\begin{description}
+\item[\AdAttr{JobState}]
+  The current state of the job.
+  Can be either ``Running'' or ``Suspended''.
+
+\item[\AdAttr{JobPid}]
+  The process identifier for the initial job directly spawned by the
+  \Condor{starter}.
+
+\item[\AdAttr{NumPids}]
+  The number of processes that the job has currently spawned.
+
+\item[\AdAttr{JobStartDate}]
+  The epoch time when the job was first spawned by the \Condor{starter}.
+
+\item[\AdAttr{RemoteSysCpu}]
+  The total number of seconds of system CPU time (the time spent at
+  system calls) the job has used.
+
+\item[\AdAttr{RemoteUserCpu}]
+  The total number of seconds of user CPU time the job has used.
+
+\item[\AdAttr{ImageSize}]
+  The memory image size of the job in Kbytes.
+\end{description}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:job-hooks-job-exit}
+Hook: Job Exit}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!Hooks!Job Exit}
+
+\Macro{HOOK\_JOB\_EXIT} is invoked whenever a job exits, either on its
+own or when being evicted from an execution slot.
+
+\begin{description}
+\item[Arguments]
+  A string describing how the job exited:
+  \begin{itemize}
+    \item \verb@exit@ The job exited or died with a signal on its own.
+    \item \verb@remove@ The job was removed with \Condor{rm} or the
+    user job policy expressions (for example, \Attr{PeriodicRemove}).
+    \item \verb@hold@ The job was held with \Condor{hold} or the
+    user job policy expressions (for example, \Attr{PeriodicHold}).
+    \item \verb@evict@ The job was evicted from the execution slot for
+    any other reason (\Macro{PREEMPT} evaluated to TRUE in the
+    \Condor{startd}, \Condor{vacate}, \Condor{off}, etc).
+  \end{itemize}
+
+\item[Standard input]
+  A copy of the job ClassAd that has been augmented with additional
+  attributes describing the execution behavior of the job and its
+  final results.
+
+\item[Expected output]
+  None.
+
+\item[Exit status]
+  Ignored.
+\end{description}
+
+The \Condor{starter} will wait for this hook to return before
+taking any other actions.
+In the case of jobs that are being managed by a \Condor{shadow}, this
+hook is invoked before the \Condor{starter} does its own optional file
+transfer back to the submission machine, writes to the local user log
+file, or notifies the \Condor{shadow} that the job has exited.
+
+The job ClassAd passed to this hook contains all of the extra
+attributes described above for \Macro{HOOK\_UPDATE\_JOB\_INFO}, and
+the following additional attributes that are only present once a job
+exits:
+\begin{description}
+\item[\AdAttr{ExitReason}]
+  A human-readable string describing why the job exited.
+
+\item[\AdAttr{ExitBySignal}]
+  A boolean indicating if the job exited due to being killed by a
+  signal, or if it exited with an exit status.
+
+\item[\AdAttr{ExitSignal}]
+  If \AdAttr{ExitBySignal} is true, the signal number that killed the job.
+
+\item[\AdAttr{ExitCode}]
+  If \AdAttr{ExitBySignal} is false, the integer exit code of the job.
+
+\item[\AdAttr{JobDuration}]
+  The number of seconds that the job ran during this invocation.
+\end{description}
+
+% \Todo
+% If the job was running in the Java universe and died with a Java
+% exception, the following attributes can be present:
+% ATTR_EXCEPTION_HIERARCHY
+% ATTR_EXCEPTION_NAME
+% ATTR_EXCEPTION_TYPE
+
+% \Todo
+% Is this relevant?
+% If the job is running in the Virtual Machine (VM) universe and 
+% requested checkpointing by setting \AdAttr{JobVMCheckpoint} to true in
+% its ClassAd, the following additional attributes might be present:
+% \begin{description}
+% \item[\AdAttr{VM\_CkptMac}]
+%   The MAC address of the virtual machine.
+% 
+% \item[\AdAttr{VM\_CkptIP}]
+%   The IP address of the virtual machine.
+% \end{description}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:job-hooks-keywords}
+Keywords to Define Hooks in the Condor Configuration files }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!keywords} 
+
+Hooks are defined in the Condor configuration files by prefixing
+the name of the hook with a keyword.
+This way, a given machine can have multiple sets of hooks, each set
+identified by a specific keyword.
+
+Each slot on the machine can define a separate keyword for the set
+of hooks that should be used (\Macro{[SLOTN\_JOB\_HOOK\_KEYWORD}).
+Note that the ``N'' in ``SLOTN'' should be replaced with the slot
+identification number, for example, on slot1, the setting would be
+called \MacroNI{[SLOT1\_JOB\_HOOK\_KEYWORD}.
+If the slot-specific keyword is not defined, the \Condor{startd} will
+use a global keyword (\Macro{STARTD\_JOB\_HOOK\_KEYWORD}).
+
+Once a job is fetched via \Macro{HOOK\_FETCH\_WORK}, the
+\Condor{startd} will insert the keyword used to fetch that job into
+the job ClassAd as \AdAttr{HookKeyword}.
+This way, the same keyword will be used to select the hooks invoked by
+the \Condor{starter} during the actual execution of the job.
+However, the \Macro{STARTER\_JOB\_HOOK\_KEYWORD} can be defined to
+force the \Condor{starter} to always use a given keyword for its own
+hooks, instead of looking the job ClassAd for a \AdAttr{HookKeyword}
+attribute.
+
+For example, the following configuration defines two sets of hooks,
+and on a machine with 4 slots, 3 of the slots use the global keyword
+for running work from a database-driven system, and one of the slots
+uses a custom keyword to handle work fetched from a web service.
+\begin{verbatim}
+  # Most slots fetch and run work from the database system.
+  STARTD_JOB_HOOK_KEYWORD = DATABASE
+
+  # Slot4 fetches and runs work from a web service.
+  SLOT4_JOB_HOOK_KEYWORD = WEB
+
+  # The database system needs to both provide work and know the reply
+  # for each attempted claim.
+  DATABASE_HOOK_DIR = /usr/local/condor/fetch/database
+  DATABASE_HOOK_FETCH_WORK = $(DATABASE_HOOK_DIR)/fetch_work.php
+  DATABASE_HOOK_REPLY_CLAIM = $(DATABASE_HOOK_DIR)/reply_claim.php
+
+  # The web system only needs to fetch work.
+  WEB_HOOK_DIR = /usr/local/condor/fetch/web
+  WEB_HOOK_FETCH_WORK = $(WEB_HOOK_DIR)/fetch_work.php
+\end{verbatim}
+
+The keywords ``DATABASE'' and ``WEB'' are completely arbitrary, so
+each site is encouraged to use different (more specific) names as
+appropriate for their own needs.
+
+\index{Job hooks|)}

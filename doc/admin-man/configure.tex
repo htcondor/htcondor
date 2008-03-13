@@ -3918,6 +3918,70 @@ The following configuration variables support java universe jobs.
   A list of additional arguments to be passed to the Java executable.
 \end{description}
 
+These macros control the system of job hooks invoked by the
+\Condor{startd} to optionally fetch work.
+See section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks} on
+``Job Hooks'' for more details.
+
+\begin{description}
+
+\item[\Macro{SLOTN\_JOB\_HOOK\_KEYWORD}]
+\label{param:SlotNJobHookKeyword}
+  The keyword used to define which set of hooks a particular
+  compute slot should invoke.
+  Note that the ``N'' in ``SLOTN'' should be replaced with the slot
+  identification number, for example, on slot1, this setting would be
+  called \MacroNI{[SLOT1\_JOB\_HOOK\_KEYWORD}.
+  There is no default keyword.
+  Sites that wish to use these job hooks must explicitly define the
+  keyword (and the corresponding hook paths).
+
+\item[\Macro{STARTD\_JOB\_HOOK\_KEYWORD}]
+\label{param:StartdJobHookKeyword}
+  The keyword used to define which set of hooks a particular
+  \Condor{startd} should invoke.
+  This setting is only used if a slot-specific keyword is not defined
+  for a given compute slot.
+  There is no default keyword.
+  Sites that wish to use these job hooks must explicitly define the
+  keyword (and the corresponding hook paths).
+
+\item[\Macro{HOOK\_FETCH\_WORK}]
+\label{param:HookFetchWork}
+  The full path to the program to invoke whenever the \Condor{startd}
+  wants to fetch work.
+  The actual configuration setting must be prefixed with a hook keyword.
+  There is no default.
+
+\item[\Macro{HOOK\_REPLY\_CLAIM}]
+\label{param:HookReplyClaim}
+  The full path to the program to invoke whenever the \Condor{startd}
+  finishes fetching a job and decides what to do with it.
+  The actual configuration setting must be prefixed with a hook keyword.
+  There is no default.
+
+\item[\Macro{HOOK\_EVICT\_CLAIM}]
+\label{param:HookEvictClaim}
+  The full path to the program to invoke whenever the \Condor{startd}
+  needs to evict a fetched claim.
+  The actual configuration setting must be prefixed with a hook keyword.
+  There is no default.
+
+\item[\Macro{FetchWorkDelay}]
+\label{param:FetchWorkDelay}
+  An expression that defines the number of seconds that the
+  \Condor{startd} should wait after an invocation of
+  \Macro{HOOK\_FETCH\_WORK} completes before the hook should be
+  invoked again.
+  The expression is evaluated in the context of the slot ClassAd, and
+  the ClassAd of the currently running job (if any).
+  The expression must evaluate to an integer.
+  If not defined, the \Condor{startd} will attempt to re-fetch every
+  second.
+
+\end{description}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Schedd-Config-File-Entries}\condor{schedd}
 Configuration File Entries}
