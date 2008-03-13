@@ -31,6 +31,9 @@ $dagman_args = "-verbose";
 
 my $killedchosen = 0;
 
+$ENV{_CONDOR_DAGMAN_OLD_RESCUE} = true;
+$ENV{_CONDOR_DAGMAN_AUTO_RESCUE} = false;
+
 # truly const variables in perl
 sub IDLE{1};
 sub HELD{5};
