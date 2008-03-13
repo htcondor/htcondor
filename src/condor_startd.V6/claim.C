@@ -132,6 +132,13 @@ Claim::vacate()
 	if( c_client && c_client->addr() ) {
 		c_client->vacate( c_id->id() );
 	}
+
+#if HAVE_JOB_HOOKS
+	if (c_type == CLAIM_FETCH) {
+		resmgr->m_hook_mgr->hookEvictClaim(c_rip);
+	}
+#endif /* HAVE_JOB_HOOKS */
+
 }
 
 
