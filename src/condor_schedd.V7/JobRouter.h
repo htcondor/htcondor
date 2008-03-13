@@ -24,9 +24,9 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "HashTable.h"
 
-#define WANT_NAMESPACES
+#define WANT_CLASSAD_NAMESPACE
 #undef open
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 class RoutedJob;
 class Scheduler;

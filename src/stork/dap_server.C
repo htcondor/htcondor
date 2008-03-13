@@ -38,10 +38,10 @@
 #include "dap_error.h"
 #include "dap_scheduler.h"
 
-#ifndef WANT_NAMESPACES
-#define WANT_NAMESPACES
+#ifndef WANT_CLASSAD_NAMESPACE
+#define WANT_CLASSAD_NAMESPACE
 #endif
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 #define DAP_CATALOG_NAMESPACE	"stork."
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

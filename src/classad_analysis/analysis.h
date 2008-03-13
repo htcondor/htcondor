@@ -23,9 +23,9 @@
 
 //#define EXPERIMENTAL
 
-#define WANT_NAMESPACES
+#define WANT_CLASSAD_NAMESPACE
 #include "condor_fix_iostream.h"
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "boolExpr.h"

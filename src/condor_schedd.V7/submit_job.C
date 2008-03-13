@@ -32,9 +32,10 @@
 #include "condor_email.h"
 #include "condor_arglist.h"
 #include "format_time.h"
-#define WANT_NAMESPACES
+#include "set_user_priv_from_ad.h"
+#define WANT_CLASSAD_NAMESPACE
 #undef open
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {

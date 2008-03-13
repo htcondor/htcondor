@@ -23,9 +23,11 @@
 #include "condor_attributes.h"
 #include "condor_universe.h"
 #include "VanillaToGrid.h"
-#define WANT_NAMESPACES
+#include "filename_tools.h"
+#include "string_list.h"
+#define WANT_CLASSAD_NAMESPACE
 #undef open
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 
 bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, const char * gridresource)
