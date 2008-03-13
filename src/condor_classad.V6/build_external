@@ -26,7 +26,7 @@
 cd $PACKAGE_BUILD_DIR/$PACKAGE_NAME/
 
 ##### Configure and Build ClassAds #####
-./configure --enable-namespace --prefix=$PACKAGE_INSTALL_DIR CC=g++
+./configure --disable-shared --enable-static --enable-namespace --prefix=$PACKAGE_INSTALL_DIR CC=g++
 if [ $? -ne 0 ]
 then
     echo "Configure failed"
