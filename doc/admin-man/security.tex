@@ -1348,6 +1348,11 @@ map file may match.
 Lookups are therefore defined to use the first mapping that
 matches.
 
+A regular expression may need to contain spaces, and in this case the
+entire expression can be surrounded by double-quotes. If a
+double-quote character also needs to appear in such an expression, it
+should be preceeded by a backslash.
+
 The default behavior of Condor when no mapfile is specified is to
 do the following mappings, with some additional logic noted below:
 \begin{verbatim}
