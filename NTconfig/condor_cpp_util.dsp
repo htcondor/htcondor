@@ -646,6 +646,14 @@ SOURCE="..\src\condor_c++_util\historysnapshot.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\hook_utils.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\hook_utils.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\iso_dates.C"
 # End Source File
 # Begin Source File

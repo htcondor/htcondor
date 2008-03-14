@@ -46,6 +46,8 @@ CLEAN :
 	-@erase "$(INTDIR)\daemon_core_main.obj"
 	-@erase "$(INTDIR)\datathread.obj"
 	-@erase "$(INTDIR)\exphnd.WIN32.obj"
+	-@erase "$(INTDIR)\HookClient.obj"
+	-@erase "$(INTDIR)\HookClientMgr.obj"
 	-@erase "$(INTDIR)\httpget.obj"
 	-@erase "$(INTDIR)\pipe.WIN32.obj"
 	-@erase "$(INTDIR)\self_draining_queue.obj"
@@ -110,6 +112,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\daemon_core_main.obj" \
 	"$(INTDIR)\datathread.obj" \
 	"$(INTDIR)\exphnd.WIN32.obj" \
+	"$(INTDIR)\HookClient.obj" \
+	"$(INTDIR)\HookClientMgr.obj" \
 	"$(INTDIR)\httpget.obj" \
 	"$(INTDIR)\pipe.WIN32.obj" \
 	"$(INTDIR)\self_draining_queue.obj" \
@@ -144,6 +148,8 @@ CLEAN :
 	-@erase "$(INTDIR)\daemon_core_main.obj"
 	-@erase "$(INTDIR)\datathread.obj"
 	-@erase "$(INTDIR)\exphnd.WIN32.obj"
+	-@erase "$(INTDIR)\HookClient.obj"
+	-@erase "$(INTDIR)\HookClientMgr.obj"
 	-@erase "$(INTDIR)\httpget.obj"
 	-@erase "$(INTDIR)\pipe.WIN32.obj"
 	-@erase "$(INTDIR)\self_draining_queue.obj"
@@ -207,6 +213,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\daemon_core_main.obj" \
 	"$(INTDIR)\datathread.obj" \
 	"$(INTDIR)\exphnd.WIN32.obj" \
+	"$(INTDIR)\HookClient.obj" \
+	"$(INTDIR)\HookClientMgr.obj" \
 	"$(INTDIR)\httpget.obj" \
 	"$(INTDIR)\pipe.WIN32.obj" \
 	"$(INTDIR)\self_draining_queue.obj" \
@@ -304,6 +312,18 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /F
 
 
 !ENDIF 
+
+SOURCE=..\src\condor_daemon_core.V6\HookClient.C
+
+"$(INTDIR)\HookClient.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_daemon_core.V6\HookClientMgr.C
+
+"$(INTDIR)\HookClientMgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
 
 SOURCE=..\src\condor_daemon_core.V6\httpget.C
 

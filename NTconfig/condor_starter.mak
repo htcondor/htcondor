@@ -72,6 +72,7 @@ CLEAN :
 	-@erase "$(INTDIR)\starter_privsep_helper.WINDOWS.obj"
 	-@erase "$(INTDIR)\starter_user_policy.obj"
 	-@erase "$(INTDIR)\starter_v61_main.obj"
+	-@erase "$(INTDIR)\StarterHookMgr.obj"
 	-@erase "$(INTDIR)\stream_handler.obj"
 	-@erase "$(INTDIR)\tool_daemon_proc.obj"
 	-@erase "$(INTDIR)\user_proc.obj"
@@ -153,13 +154,14 @@ LINK32_OBJS= \
 	"$(INTDIR)\starter_privsep_helper.WINDOWS.obj" \
 	"$(INTDIR)\starter_user_policy.obj" \
 	"$(INTDIR)\starter_v61_main.obj" \
+	"$(INTDIR)\StarterHookMgr.obj" \
 	"$(INTDIR)\stream_handler.obj" \
 	"$(INTDIR)\tool_daemon_proc.obj" \
 	"$(INTDIR)\user_proc.obj" \
 	"$(INTDIR)\vanilla_proc.obj" \
-	"$(INTDIR)\vm_proc.obj" \
 	"$(INTDIR)\vm_gahp_request.obj" \
 	"$(INTDIR)\vm_gahp_server.obj" \
+	"$(INTDIR)\vm_proc.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -223,6 +225,7 @@ CLEAN :
 	-@erase "$(INTDIR)\starter_privsep_helper.WINDOWS.obj"
 	-@erase "$(INTDIR)\starter_user_policy.obj"
 	-@erase "$(INTDIR)\starter_v61_main.obj"
+	-@erase "$(INTDIR)\StarterHookMgr.obj"
 	-@erase "$(INTDIR)\stream_handler.obj"
 	-@erase "$(INTDIR)\tool_daemon_proc.obj"
 	-@erase "$(INTDIR)\user_proc.obj"
@@ -302,13 +305,14 @@ LINK32_OBJS= \
 	"$(INTDIR)\starter_privsep_helper.WINDOWS.obj" \
 	"$(INTDIR)\starter_user_policy.obj" \
 	"$(INTDIR)\starter_v61_main.obj" \
+	"$(INTDIR)\StarterHookMgr.obj" \
 	"$(INTDIR)\stream_handler.obj" \
 	"$(INTDIR)\tool_daemon_proc.obj" \
 	"$(INTDIR)\user_proc.obj" \
 	"$(INTDIR)\vanilla_proc.obj" \
-	"$(INTDIR)\vm_proc.obj" \
 	"$(INTDIR)\vm_gahp_request.obj" \
 	"$(INTDIR)\vm_gahp_server.obj" \
+	"$(INTDIR)\vm_proc.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -794,6 +798,12 @@ SOURCE=..\src\condor_starter.V6.1\starter_user_policy.C
 SOURCE=..\src\condor_starter.V6.1\starter_v61_main.C
 
 "$(INTDIR)\starter_v61_main.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_starter.V6.1\StarterHookMgr.C
+
+"$(INTDIR)\StarterHookMgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

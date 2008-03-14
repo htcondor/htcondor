@@ -111,6 +111,7 @@ CLEAN :
 	-@erase "$(INTDIR)\get_mysubsystem.obj"
 	-@erase "$(INTDIR)\HashTable.obj"
 	-@erase "$(INTDIR)\historysnapshot.obj"
+	-@erase "$(INTDIR)\hook_utils.obj"
 	-@erase "$(INTDIR)\iso_dates.obj"
 	-@erase "$(INTDIR)\java_config.obj"
 	-@erase "$(INTDIR)\job_lease.obj"
@@ -294,6 +295,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\get_mysubsystem.obj" \
 	"$(INTDIR)\HashTable.obj" \
 	"$(INTDIR)\historysnapshot.obj" \
+	"$(INTDIR)\hook_utils.obj" \
 	"$(INTDIR)\iso_dates.obj" \
 	"$(INTDIR)\java_config.obj" \
 	"$(INTDIR)\job_lease.obj" \
@@ -444,6 +446,7 @@ CLEAN :
 	-@erase "$(INTDIR)\get_mysubsystem.obj"
 	-@erase "$(INTDIR)\HashTable.obj"
 	-@erase "$(INTDIR)\historysnapshot.obj"
+	-@erase "$(INTDIR)\hook_utils.obj"
 	-@erase "$(INTDIR)\iso_dates.obj"
 	-@erase "$(INTDIR)\java_config.obj"
 	-@erase "$(INTDIR)\job_lease.obj"
@@ -626,6 +629,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\get_mysubsystem.obj" \
 	"$(INTDIR)\HashTable.obj" \
 	"$(INTDIR)\historysnapshot.obj" \
+	"$(INTDIR)\hook_utils.obj" \
 	"$(INTDIR)\iso_dates.obj" \
 	"$(INTDIR)\java_config.obj" \
 	"$(INTDIR)\job_lease.obj" \
@@ -1204,6 +1208,12 @@ SOURCE="..\src\condor_c++_util\HashTable.C"
 SOURCE="..\src\condor_c++_util\historysnapshot.C"
 
 "$(INTDIR)\historysnapshot.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\hook_utils.C"
+
+"$(INTDIR)\hook_utils.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

@@ -271,6 +271,14 @@ SOURCE=..\src\condor_starter.V6.1\starter_v61_main.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_starter.V6.1\StarterHookMgr.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\StarterHookMgr.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_starter.V6.1\stream_handler.C
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
@@ -304,14 +312,6 @@ SOURCE=..\src\condor_starter.V6.1\vanilla_proc.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\vm_proc.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_starter.V6.1\vm_proc.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_starter.V6.1\vm_gahp_request.C
 # End Source File
 # Begin Source File
@@ -325,6 +325,14 @@ SOURCE=..\src\condor_starter.V6.1\vm_gahp_server.C
 # Begin Source File
 
 SOURCE=..\src\condor_starter.V6.1\vm_gahp_server.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\vm_proc.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\vm_proc.h
 # End Source File
 # End Target
 # End Project

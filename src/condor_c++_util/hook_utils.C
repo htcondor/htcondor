@@ -39,6 +39,7 @@ validateHookPath( const char* hook_param )
 			free(tmp);
 			return NULL;
 		}
+#if !defined(WIN32)
 		mode_t mode = si.GetMode();
 		if (mode & S_IWOTH) {
 			dprintf(D_ALWAYS, "ERROR: path specified for %s (%s) "
@@ -47,6 +48,7 @@ validateHookPath( const char* hook_param )
 			free(tmp);
 			return NULL;
 		}
+#endif
 		if (!si.IsExecutable()) {
 			dprintf(D_ALWAYS, "ERROR: path specified for %s (%s) "
 					"is not executable.\n", hook_param, tmp);
@@ -56,6 +58,7 @@ validateHookPath( const char* hook_param )
 			// TODO: forbid symlinks, too?
 		
 			// Now, make sure the parent directory isn't world-writable.
+#if !defined(WIN32)
 		StatInfo dir_si(si.DirPath());
 		mode_t dir_mode = dir_si.GetMode();
 		if (dir_mode & S_IWOTH) {
@@ -65,6 +68,7 @@ validateHookPath( const char* hook_param )
 			free(tmp);
 			return NULL;
 		}
+#endif
 	}
 
 		// If we got this far, we've either got a valid hook or it

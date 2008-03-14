@@ -147,6 +147,22 @@ SOURCE=..\src\condor_daemon_core.V6\exphnd.WIN32.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_daemon_core.V6\HookClient.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\HookClient.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\HookClientMgr.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\HookClientMgr.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_daemon_core.V6\httpget.C
 # End Source File
 # Begin Source File

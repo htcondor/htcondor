@@ -250,6 +250,14 @@ SOURCE=..\src\condor_startd.V6\startd_main.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_startd.V6\StartdHookMgr.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\StartdHookMgr.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_startd.V6\Starter.C
 # End Source File
 # Begin Source File
@@ -274,11 +282,11 @@ SOURCE=..\src\condor_startd.V6\util.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\vm_common.h
+SOURCE=..\src\condor_startd.V6\vm_common.C
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\vm_common.C
+SOURCE=..\src\condor_startd.V6\vm_common.h
 # End Source File
 # Begin Source File
 

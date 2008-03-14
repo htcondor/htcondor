@@ -68,6 +68,7 @@ CLEAN :
 	-@erase "$(INTDIR)\startd_cronjob.obj"
 	-@erase "$(INTDIR)\startd_cronmgr.obj"
 	-@erase "$(INTDIR)\startd_main.obj"
+	-@erase "$(INTDIR)\StartdHookMgr.obj"
 	-@erase "$(INTDIR)\Starter.obj"
 	-@erase "$(INTDIR)\starter_mgr.obj"
 	-@erase "$(INTDIR)\util.obj"
@@ -147,6 +148,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\startd_cronjob.obj" \
 	"$(INTDIR)\startd_cronmgr.obj" \
 	"$(INTDIR)\startd_main.obj" \
+	"$(INTDIR)\StartdHookMgr.obj" \
 	"$(INTDIR)\Starter.obj" \
 	"$(INTDIR)\starter_mgr.obj" \
 	"$(INTDIR)\util.obj" \
@@ -213,6 +215,7 @@ CLEAN :
 	-@erase "$(INTDIR)\startd_cronjob.obj"
 	-@erase "$(INTDIR)\startd_cronmgr.obj"
 	-@erase "$(INTDIR)\startd_main.obj"
+	-@erase "$(INTDIR)\StartdHookMgr.obj"
 	-@erase "$(INTDIR)\Starter.obj"
 	-@erase "$(INTDIR)\starter_mgr.obj"
 	-@erase "$(INTDIR)\util.obj"
@@ -289,6 +292,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\startd_cronjob.obj" \
 	"$(INTDIR)\startd_cronmgr.obj" \
 	"$(INTDIR)\startd_main.obj" \
+	"$(INTDIR)\StartdHookMgr.obj" \
 	"$(INTDIR)\Starter.obj" \
 	"$(INTDIR)\starter_mgr.obj" \
 	"$(INTDIR)\util.obj" \
@@ -731,6 +735,12 @@ SOURCE=..\src\condor_startd.V6\startd_cronmgr.C
 SOURCE=..\src\condor_startd.V6\startd_main.C
 
 "$(INTDIR)\startd_main.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_startd.V6\StartdHookMgr.C
+
+"$(INTDIR)\StartdHookMgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
