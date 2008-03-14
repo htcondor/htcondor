@@ -39,7 +39,7 @@ StartdHookMgr::StartdHookMgr()
 	  m_keyword_hook_paths(MyStringHash)
 {
 	dprintf( D_FULLDEBUG, "Instantiating a StartdHookMgr\n" );
-	m_slot_hook_keywords.setFiller(NULL);
+	m_slot_hook_keywords.fill(NULL);
 	m_startd_job_hook_keyword = NULL;
 }
 
