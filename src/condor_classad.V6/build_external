@@ -26,7 +26,12 @@
 cd $PACKAGE_BUILD_DIR/$PACKAGE_NAME/
 
 ##### Configure and Build ClassAds #####
-./configure --disable-shared --enable-static --enable-namespace --prefix=$PACKAGE_INSTALL_DIR CC=g++
+
+# Why --with-pic?  On some platforms, the shared.so library needed by the
+# dlopen tests in 'make check' cannot link to libclassad.a unless it is
+# compiled -fPIC.
+
+./configure --with-pic --disable-shared --enable-static --enable-namespace --prefix=$PACKAGE_INSTALL_DIR CC=g++
 if [ $? -ne 0 ]
 then
     echo "Configure failed"
