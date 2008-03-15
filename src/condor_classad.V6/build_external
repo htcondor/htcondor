@@ -31,7 +31,12 @@ cd $PACKAGE_BUILD_DIR/$PACKAGE_NAME/
 # dlopen tests in 'make check' cannot link to libclassad.a unless it is
 # compiled -fPIC.
 
-./configure --with-pic --disable-shared --enable-static --enable-namespace --prefix=$PACKAGE_INSTALL_DIR CC=g++
+# Why --without-pcre?  Because if we want to link to PCRE, we should
+# explicitly define PCRE as an external dependency, and we should
+# explicitly point at that version.  Also, all other things that link
+# with classads must then link with pcre as well (e.g. blahp external).
+
+./configure --with-pic --without-pcre --disable-shared --enable-static --enable-namespace --prefix=$PACKAGE_INSTALL_DIR CC=g++
 if [ $? -ne 0 ]
 then
     echo "Configure failed"
