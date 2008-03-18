@@ -418,8 +418,13 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 												  attributeStr,
 												  false );
 				val.Clear( );
-				rval = wantSig ? attrRef->Evaluate( state, val, sig )
-					: attrRef->Evaluate( state, val );
+					// Create new EvalState, within this scope, because
+					// attrRef is only temporary, so we do not want to
+					// cache the evaluated result in the outer state object.
+				EvalState tstate;
+				tstate.SetScopes(state.curAd);
+				rval = wantSig ? attrRef->Evaluate( tstate, val, sig )
+					: attrRef->Evaluate( tstate, val );
 				delete attrRef;
 				if( !rval ) {
 					return( EVAL_FAIL );
