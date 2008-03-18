@@ -20,7 +20,7 @@
 
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.8.6.2 2008-03-11 17:56:03 bt Exp $
+# $Id: remote_declare.pl,v 1.8.6.3 2008-03-18 20:46:45 bt Exp $
 # generate list of all tests to run
 ######################################################################
 
@@ -116,6 +116,7 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) )
     		print $_;
 		}
 	}
+	close (TESTCONFIG);
 	$configstat = $?;
 	print "CONFIGURE returned a code of $configstat\n"; 
 	($configstat == 0) || die "CONFIGURE failed, aborting testsuite run.\n";  
