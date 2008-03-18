@@ -20,6 +20,7 @@
 
 #include "classad/common.h"
 #include "classad/util.h"
+#include "config.h"
 #include <limits.h>
 
 using namespace std;
