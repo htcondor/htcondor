@@ -76,14 +76,7 @@ sysapi_ckptpltfrm_raw(void)
 	strcat(_sysapi_ckptpltfrm, kernel_version);
 	strcat(_sysapi_ckptpltfrm, " ");
 	strcat(_sysapi_ckptpltfrm, memory_model);
-#if defined(LINUX) && defined(GLIBC25)
-	/* for now, only rhel5 has this part of the ckptpltform to allow other
-		full ports of linux to be backwards compatible when upgrading to
-		condor 7.0.1, when this code went in. The 7.1 branch should allow
-		this for all platforms. Once this code goes into 7.1, it means that
-		upgrading a 7.0 pool to 7.1 will make stduniv jobs not match anymore
-		unless you condor_qedit the job ad's LastCheckpointPlatform attribute.
-	*/
+#ifndef WIN32
 	strcat(_sysapi_ckptpltfrm, " ");
 	strcat(_sysapi_ckptpltfrm, vsyscall_page);
 #endif
