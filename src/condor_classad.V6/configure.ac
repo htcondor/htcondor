@@ -34,7 +34,7 @@ AC_DEFUN([gl_COMPILER_FLAGS],
 
 
 AC_PREREQ(2.57)
-AC_INIT([classad], [1.0-rc2], [condor-admin@cs.wisc.edu])
+AC_INIT([classad], [1.0-rc5], [condor-admin@cs.wisc.edu])
 #AC_CONFIG_AUX_DIR([build-aux])
 #AM_INIT_AUTOMAKE([1.6.3 -Wall -Werror foreign])
 AM_INIT_AUTOMAKE([1.6.3 foreign])
@@ -90,6 +90,14 @@ AC_CHECK_FUNC(dlopen,
      AC_DEFINE([HAVE_DLOPEN], [], [dlopen available])]))
 AC_CHECK_FUNC([regcomp], [HAVE_POSIX_REGEX=yes])
 
+# On BSD, a function named timezone() is defined in time.h.
+# On other platforms, extern long timezone exists.
+AC_MSG_CHECKING([if long timezone conflicts])
+AC_COMPILE_IFELSE([#include <time.h>
+                   extern long timezone;],[
+                   AC_MSG_RESULT([no])
+                   AC_DEFINE([HAVE_LONG_TIMEZONE],[1],[long timezone does not conflict])],[
+                   AC_MSG_RESULT([yes])])
 
 # Checks for libraries.
 AC_ARG_WITH([pcre],

@@ -24,7 +24,7 @@
 
 using namespace std;
 
-#if !defined(__APPLE_CC__) && !defined(WIN32)
+#if HAVE_LONG_TIMEZONE
 extern DLL_IMPORT_MAGIC long timezone;
 #endif
 
@@ -66,7 +66,9 @@ double get_random_real(void)
 
 long timezone_offset(void)
 {
-#ifdef __APPLE_CC__
+#if HAVE_LONG_TIMEZONE
+    return ::timezone;
+#else
     static long tz_offset = 0;
     static bool have_tz_offset = false;
 
@@ -82,8 +84,6 @@ long timezone_offset(void)
         }
     }
     return tz_offset;
-#else
-    return ::timezone;
 #endif
 }
 
@@ -396,9 +396,15 @@ int classad_isinf(double x)
     }
 }
 #else
-int classad_isinf(double x) 
+int classad_isinf(double x)
 {
-    return isinf(x);
+    if (!isinf(x) || x != x) {
+        return 0;
+    } else if (x > 0) {
+        return 1;
+    } else {
+        return -1;
+    }
 }
 #endif 
 
