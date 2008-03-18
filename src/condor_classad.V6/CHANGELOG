@@ -1,4 +1,4 @@
-Changes for version 1.0rc2  (Released 2008-03-11)
+Changes for version 1.0rc5  (Released 2008-03-17)
 * The WANT_NAMESPACES define is now WANT_CLASSAD_NAMESPACE
 * New warning flags were added to the distribution build
  - A number of minor changes were made to eliminate warnings
@@ -12,6 +12,7 @@ Changes for version 1.0rc2  (Released 2008-03-11)
 * memory leak in fnCall.C:regex_helper fixed (PCRE only issue)
 * Fixed printing of escaped characters in strings when printing in old-classad
   mode.
+* Fixed evaluation of attribute reference applied to lists.
 
 Changes for version 1.0rc1
 * Build now uses autotools, and has the following changes:
