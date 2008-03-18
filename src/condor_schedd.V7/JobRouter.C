@@ -36,9 +36,9 @@
 #include "my_popen.h"
 
 template class HashTable<std::string,RoutedJob *>;
-template HashTable<std::string,JobRoute *>;
-template HashTable<std::string,std::string>;
-template std::vector<JobRoute *>;
+template class HashTable<std::string,JobRoute *>;
+template class HashTable<std::string,std::string>;
+template class std::vector<JobRoute *>;
 
 const char JR_ATTR_MAX_JOBS[] = "MaxJobs";
 const char JR_ATTR_MAX_IDLE_JOBS[] = "MaxIdleJobs";
