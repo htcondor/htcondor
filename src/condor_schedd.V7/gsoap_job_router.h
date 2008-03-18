@@ -17,6 +17,6 @@
  *
  ***************************************************************/
 
-//gsoap condor service name: condorSchedd
+//gsoap condor service name: condorJobRouter
  
 #import "gsoap_daemon_core.h"

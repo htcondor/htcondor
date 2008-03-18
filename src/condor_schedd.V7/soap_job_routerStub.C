@@ -17,6 +17,6 @@
  *
  ***************************************************************/
 
-#include "condorSchedd.nsmap"
+#include "condorJobRouter.nsmap"
    
 #include "soap_daemon_core.cpp"
