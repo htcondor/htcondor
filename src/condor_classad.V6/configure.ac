@@ -157,5 +157,5 @@ CPPFLAGS="$CPPFLAGS -DCLASSAD_DISTRIBUTION"
 AC_OUTPUT
 
 # Remove rpath junk from libtool
-sed -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
-sed -i 's|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool
+sed 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g
+     s|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool > libtool.new && mv libtool.new libtool
