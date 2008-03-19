@@ -27,16 +27,12 @@ cd $PACKAGE_BUILD_DIR/$PACKAGE_NAME/
 
 ##### Configure and Build ClassAds #####
 
-# Why --with-pic?  On some platforms, the shared.so library needed by the
-# dlopen tests in 'make check' cannot link to libclassad.a unless it is
-# compiled -fPIC.
-
 # Why --without-pcre?  Because if we want to link to PCRE, we should
 # explicitly define PCRE as an external dependency, and we should
 # explicitly point at that version.  Also, all other things that link
 # with classads must then link with pcre as well (e.g. blahp external).
 
-./configure --with-pic --without-pcre --disable-shared --enable-static --enable-namespace --prefix=$PACKAGE_INSTALL_DIR CC=g++
+./configure --without-pcre --disable-shared --enable-static --enable-namespace --prefix=$PACKAGE_INSTALL_DIR CC=g++
 if [ $? -ne 0 ]
 then
     echo "Configure failed"

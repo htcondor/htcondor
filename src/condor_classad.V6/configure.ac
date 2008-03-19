@@ -151,6 +151,11 @@ AC_ARG_ENABLE([namespace],
 
 AM_CONDITIONAL([ENABLE_NAMESPACE], [test "x$enable_namespace" = xyes])
 
+AC_ARG_ENABLE([dlopen-check],
+  AC_HELP_STRING([--enable-dlopen-check],
+    [Test dlopen (default: no)]))
+AM_CONDITIONAL([ENABLE_DLOPEN_CHECK], [test "x$enable_dlopen_check" = xyes])
+AS_IF([test "x$enable_dlopen_check" != xyes],[AC_DEFINE([DISABLE_DLOPEN_CHECK], [1], [testing of dlopen disabled])])
 
 AC_ARG_ENABLE([flexible-member],
   AC_HELP_STRING([--enable-flexible-member],

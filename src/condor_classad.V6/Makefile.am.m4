@@ -176,6 +176,12 @@ MF_DEFINE_PROGRAM([extra_tests], [],
   [-DTEST_LIBNAME='"shared.so"'],
   [-DTEST_LIBNAME='"shared_ns.so"'])
 
+# The following method of building the libraries for testing dlopen
+# does not work on all platforms, so it is disabled by default.
+# On some platforms, when configured with --disable-shared, it is
+# necessary to also configure --with-pic in order for the dlopen test
+# to work.
+if ENABLE_DLOPEN_CHECK
 extra_tests_DEPENDENCIES = shared.so
 MF_IF_NAMESPACE([extra_tests_ns_DEPENDENCIES = shared_ns.so])
 
@@ -184,6 +190,7 @@ shared.so:
 
 shared_ns.so:
 	$(CXXCOMPILE) $(NAMESPACE) -fPIC -shared -o shared_ns.so shared.C -L.libs -lclassad_ns
+endif
 
 Makefile.am: Makefile.am.m4
 	rm -f Makefile.am

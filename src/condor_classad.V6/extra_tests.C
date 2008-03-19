@@ -582,7 +582,7 @@ static void test_user_functions(void)
 
 	FunctionCall::RegisterFunction(name, triple);
 
-#if defined(HAVE_DLOPEN)
+#if defined(HAVE_DLOPEN) && !defined(DISABLE_DLOPEN_CHECK)
 	bool opened_library;
 	char path[10240];
 	string libname;
@@ -611,7 +611,7 @@ static void test_user_functions(void)
 		cout << test << ") correctly.\n";
 	}
 
-#if defined(HAVE_DLOPEN)
+#if defined(HAVE_DLOPEN) && !defined(DISABLE_DLOPEN_CHECK)
 	if (opened_library) {
 		// The library defines triple, but it shouldn't be allowed to
 		// overwrite the original defintion, so we verify that the

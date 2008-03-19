@@ -22,6 +22,8 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
+#include <strings.h>
+
 #if defined( WANT_CLASSAD_NAMESPACE ) && defined(__cplusplus)
 #define BEGIN_NAMESPACE( x ) namespace x {
 #define END_NAMESPACE }
@@ -37,10 +39,6 @@
 
 #ifndef __EXTENSIONS__
 #define __EXTENSIONS__ /* to get gmtime_r and localtime_r on Solaris */
-#endif
-
-#ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199506L /* To get asctime_r */
 #endif
 
 #ifdef WIN32
