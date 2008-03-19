@@ -1,0 +1,45 @@
+#!/bin/sh
+
+PrintUsage() {
+  echo "USAGE: $0 [router_rm options] [condor_rm options]"
+  echo
+  echo "This is a convenience wrapper around condor_rm for removing"
+  echo "jobs being managed by the condor job router."
+  echo
+  echo "router_rm options:"
+  echo "  -route <name>  remove only jobs on specified route"
+  echo "  -idle          remove only idle jobs"
+  echo "  -held          remove only held jobs"
+  echo "  -constraint X  remove jobs matching specified constraint"
+  echo
+  echo "Usage for condor_rm follows:"
+  condor_rm -h
+}
+
+CONSTRAINT='RouteName =!= UNDEFINED'
+while true; do
+  if [ "$1" = "-idle" ]; then
+    CONSTRAINT="$CONSTRAINT && JobStatus == 1"
+    shift
+  elif [ "$1" = "-held" ]; then
+    CONSTRAINT="$CONSTRAINT && JobStatus == 5"
+    shift
+  elif [ "$1" = "-constraint" ]; then
+    CONSTRAINT="$CONSTRAINT && ($2)"
+    shift
+    shift
+  elif [ "$1" = "-route" ] || [ "$1" = "-site" ]; then
+    shift
+    CONSTRAINT="$CONSTRAINT && RouteName =?= \"$1\""
+    shift
+  elif [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
+    PrintUsage
+    exit 0
+  else
+    break
+  fi
+
+  break
+done
+
+condor_rm -constraint "$CONSTRAINT" "$@"

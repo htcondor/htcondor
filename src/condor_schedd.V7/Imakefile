@@ -23,6 +23,10 @@ template_inst( JobRouter.C, JobRouter.o )
 c_plus_target($(VANILLATOGRID),$(VANILLATOGRID_OBJS),$(VANILLATOGRID_LIB))
 public_c_plus_target($(NAME),libexec,$(OBJ),$(LIB))
 
+public_copy_target(condor_router_q,bin,condor_router_q,EXECUTABLE_MODE)
+public_copy_target(condor_router_rm,bin,condor_router_rm,EXECUTABLE_MODE)
+public_copy_target(condor_router_history,bin,condor_router_history,EXECUTABLE_MODE)
+
 html:
 release:: all
 stripped:: all
