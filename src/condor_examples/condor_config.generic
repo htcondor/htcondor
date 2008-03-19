@@ -537,6 +537,9 @@ MASTER_DEBUG		=
 ##  When the master starts up, should it truncate it's log file?
 #TRUNC_MASTER_LOG_ON_OPEN        = False
 
+MAX_JOB_ROUTER_LOG      = 1000000
+JOB_ROUTER_DEBUG        =
+
 ## The daemons touch their log file periodically, even when they have
 ## nothing to write. When a daemon starts up, it prints the last time
 ## the log file was modified. This lets you estimate when a previous
@@ -878,6 +881,7 @@ SCHEDD_LOG	= $(LOG)/SchedLog
 SHADOW_LOG	= $(LOG)/ShadowLog
 STARTD_LOG	= $(LOG)/StartLog
 STARTER_LOG	= $(LOG)/StarterLog
+JOB_ROUTER_LOG  = $(LOG)/JobRouterLog
 
 ##  Lock files
 SHADOW_LOCK	= $(LOCK)/ShadowLock
