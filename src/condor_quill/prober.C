@@ -135,8 +135,8 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 	if (fstat(job_queue_fd, &filestat) == -1)
 		dprintf(D_ALWAYS,"ERROR: calling stat()\n");
 	
-	dprintf(D_ALWAYS, "=== Current Probing Information ===\n");
-	dprintf(D_ALWAYS, "fsize: %ld\t\tmtime: %ld\n", 
+	dprintf(D_FULLDEBUG, "=== Current Probing Information ===\n");
+	dprintf(D_FULLDEBUG, "fsize: %ld\t\tmtime: %ld\n", 
 				(long)filestat.st_size, (long)filestat.st_mtime);
 
 	// get the new state
@@ -162,7 +162,7 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 				caLogParser.getCurCALogEntry()->op_type);
 	}
 
-	dprintf(D_ALWAYS, "first log entry: %s %s %s\n", 
+	dprintf(D_FULLDEBUG, "first log entry: %s %s %s\n", 
 			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->key,
 			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->name,
 			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->value);
