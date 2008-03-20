@@ -52,5 +52,6 @@ template class List< ExtArray< ValueRange * > >;
 template class List< MultiIndexedInterval >;
 template class List< ExtArray< HyperRect * > >;
 template class List< IndexSet >;
-template class SimpleList< int >;
+//The following is also defined in c++ utils instantiate
+//template class SimpleList< int >;
 template class std::set< std::string, classad::CaseIgnLTStr >;

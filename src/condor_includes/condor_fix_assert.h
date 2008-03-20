@@ -50,6 +50,9 @@ so, please.... don't use it... okay?
 #elif __GNUC__ == 4
 #       define CONDOR_HAD_GNUC_4
 #else
+    /*NOTE: if you add another GNUC version above, make sure you
+            also add it near the end of this file where __GNUC__
+            is restored to its original value.*/
 #	error "Please fix the definition of CONDOR_HAD_GNUC."
 #endif
 #	undef __GNUC__
@@ -67,6 +70,8 @@ so, please.... don't use it... okay?
 #	define __GNUC__ 2
 #elif defined(CONDOR_HAD_GNUC_3)
 #	define __GNUC__ 3
+#elif defined(CONDOR_HAD_GNUC_4)
+#   define __GNUC__ 4
 #endif
 
 

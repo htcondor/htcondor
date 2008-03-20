@@ -39,6 +39,7 @@
 #include "killfamily.h"
 #include "passwd_cache.h"
 #include "proc_family_direct.h"
+#include "credential.h"
 
 template class ExtArray<ParamValue>;
 template class SimpleList<ClassAd*>;
@@ -81,6 +82,7 @@ template class List<LogRecord>;
 template class Item<LogRecord>;
 template class HashTable<YourSensitiveString,LogRecordList *>;
 template class HashTable<pid_t, ProcFamilyDirectContainer*>;
+template class SimpleList <Credential*>;
 
 #if defined(Solaris)
 template class ExtArray<long>;
