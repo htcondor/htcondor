@@ -26,6 +26,7 @@
 #if defined (LINUX)
 #include "execinfo.h"
 
+/*
 void
 __stack_chk_fail() {
   void *trace[2];
@@ -35,6 +36,7 @@ __stack_chk_fail() {
   messages = backtrace_symbols(trace, 2);
   EXCEPT("Stack overflow at: %s\n", messages[1]);
 }
+*/
 #endif
 
 #ifdef LINT
