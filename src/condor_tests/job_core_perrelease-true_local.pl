@@ -144,6 +144,8 @@ $submit = sub {
 		print "Bad - Job $cluster.$job failed to go on hold.\n";
 		exit(1);
 	}
+
+	CondorTest::setJobAd($cluster, foo, true, bool);
 };
 
 ##
