@@ -185,8 +185,10 @@ public:
 	virtual int get_ptr(void *&, char);
     ///
 	virtual int peek(char &);
-    ///
-	void setOwner( const char * );
+
+	/// This is called when using an existing session.
+	virtual void setFullyQualifiedUser(char const * u);
+
     ///
 	int authenticate( const char* methods, CondorError* errstack );
     ///
@@ -298,7 +300,13 @@ protected:
 	Authentication * authob;
 	int is_client;
 	char *hostAddr;
-    char * fqu_;
+
+	// These user name variables are only set if authob is NULL.
+	// This means we got these values from our parent, or from an
+	// existing security session.
+    char * _fqu;
+	char * _user;
+	char * _domain;
 };
 
 #endif

@@ -95,16 +95,6 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
 		return( 0 );
 	}
 
-    // This is really stupid. Why are we authenticate first and 
-    // then reauthenticate again? Looks like the schedd is calling
-    // Q_SOCK->unAuthenticate(), which forces the client to 
-    // reauthenticate. Have to fix this.  Hao 2/2002
-
-    // Okay, let's fix it. Hao
-    qmgmt_sock->setOwner( username );
-
-	//dprintf(D_FULLDEBUG,"Connecting to queue as user \"%s\"\n", username );
-
 	/* Get the schedd to handle Q ops. */
 
     /* Get rid of all the code below */

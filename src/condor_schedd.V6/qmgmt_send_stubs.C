@@ -45,7 +45,6 @@ InitializeConnection( const char *owner, const char * /* domain */ )
 	qmgmt_sock->encode();
 	assert( qmgmt_sock->code(CurrentSysCall) );
 
-	qmgmt_sock->setOwner( owner );
 	return( 0 );
 }
 
@@ -57,7 +56,6 @@ InitializeReadOnlyConnection( const char *owner )
 	qmgmt_sock->encode();
 	assert( qmgmt_sock->code(CurrentSysCall) );
 
-	qmgmt_sock->setOwner( owner );
 	return( 0 );
 }
 

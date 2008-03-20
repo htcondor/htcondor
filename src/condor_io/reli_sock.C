@@ -59,7 +59,9 @@ ReliSock::init()
 	is_client = 0;
 	authob = NULL;
 	hostAddr = NULL;
-    fqu_ = NULL;
+    _fqu = NULL;
+	_user = NULL;
+	_domain = NULL;
 	snd_msg.buf.reset();                                                    
 	rcv_msg.buf.reset();   
 	rcv_msg.init_parent(this);
@@ -102,10 +104,14 @@ ReliSock::~ReliSock()
 		hostAddr = NULL;
 	}
 
-    if (fqu_) {
-        free( fqu_ );
-        fqu_ = NULL;
-    }
+	free( _fqu );
+	_fqu = NULL;
+
+	free( _user );
+	_user = NULL;
+
+	free( _domain );
+	_domain = NULL;
 }
 
 
@@ -1218,10 +1224,7 @@ ReliSock::serialize(char *buf)
     memset(sinful_string, 0 , 28);
 
 	// here we want to restore our state from the incoming buffer
-	if (fqu_ != NULL) {
-		free(fqu_);
-	}
-    fqu_ = NULL;
+	setFullyQualifiedUser(NULL);
 
 	// first, let our parent class restore its state
     ptmp = Sock::serialize(buf);
@@ -1255,7 +1258,7 @@ ReliSock::serialize(char *buf)
                 }
                 else {
                     // We are cozy
-                    fqu_ = strdup(fqu);
+					setFullyQualifiedUser(fqu);
                 }
             }
         }
@@ -1369,19 +1372,12 @@ ReliSock::authenticate(const char* methods, CondorError* errstack )
 }
 
 
-void
-ReliSock::setOwner( const char *newOwner ) {
-	if ( authob ) {
-		authob->setOwner( newOwner );
-	}
-}
-
 const char *
 ReliSock::getOwner() {
 	if ( authob ) {
 		return( authob->getOwner() );
 	}
-	return NULL;
+	return _user;
 }
 
 const char *
@@ -1389,10 +1385,42 @@ ReliSock::getFullyQualifiedUser() const {
 	if ( authob ) {
 		return( authob->getFullyQualifiedUser() );
 	}
-    else if (fqu_) {
-        return fqu_;
-    }
-	return NULL;
+	return _fqu;
+}
+
+void
+ReliSock::setFullyQualifiedUser(char const * u) {
+	if( u && authob && authob->getFullyQualifiedUser() != NULL ) {
+		if( strcmp(u,authob->getFullyQualifiedUser()) == 0 ) {
+			return; // ignore, because setting it to the same value
+		}
+		EXCEPT("ReliSock::setFullyQualifiedUser(%s) called when authob is "
+			   "already present: authob->getFullyQualifiedUser() = %s",
+			   u, authob->getFullyQualifiedUser());
+	}
+	if( u && authob ) {
+			// there is an authob, but it doesn't have an fqu, so delete it
+		delete authob;
+		authob = NULL;
+	}
+
+	free(_fqu);
+	_fqu = NULL;
+
+	free( _user );
+	_user = NULL;
+
+	free( _domain );
+	_domain = NULL;
+
+	if (u) {
+		MyString user,domain;
+		Authentication::split_canonical_name(u,user,domain);
+
+		_fqu = strdup(u);
+		_user = strdup(user.Value());
+		_domain = strdup(domain.Value());
+	}
 }
 
 const char * ReliSock::getDomain()
@@ -1400,7 +1428,7 @@ const char * ReliSock::getDomain()
     if (authob) {
         return ( authob->getDomain() );
     }
-    return NULL;
+    return _domain;
 }
 
 const char * ReliSock::getHostAddress() {
@@ -1413,6 +1441,12 @@ const char * ReliSock::getHostAddress() {
 int
 ReliSock::isAuthenticated() const
 {
+	if( _fqu && *_fqu ) {
+			// authenticated external to this socket instance
+			// (e.g. using a cached security session)
+		return 1;
+	}
+
 	if ( !authob ) {
 		return 0;
 	}
@@ -1422,6 +1456,9 @@ ReliSock::isAuthenticated() const
 void
 ReliSock::unAuthenticate()
 {
+	free( _fqu );
+	_fqu = NULL;
+
 	if ( authob ) {
 		authob->unAuthenticate();
 	}
