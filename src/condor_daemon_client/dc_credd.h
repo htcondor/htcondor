@@ -30,7 +30,6 @@
 #include "simplelist.h"
 
 class Credential;
-template class SimpleList <Credential*>;
 
 
 class DCCredd : public Daemon {
