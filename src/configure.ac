@@ -2390,10 +2390,8 @@ esac
 AC_MSG_RESULT([$_cv_has_krb5])
 
 AC_MSG_CHECKING([if classads is supported])
-_cv_has_classads=no
-AS_IF([test "x$_cv_libc_kind-$_cv_libc_major-$_cv_libc_minor" = xGLIBC-2-3],
-  [AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -o "x$os-$_cv_arch" = xLinux-X86_64 -o "x$os-$_cv_arch" = xLinux-PPC64],
-    [_cv_has_classads=yes])])
+_cv_has_classads=yes
+AS_IF([test "x$_cv_op_sys" = xSolaris],[_cv_has_classads=no])
 AC_MSG_RESULT([$_cv_has_classads])
 
 AC_MSG_CHECKING([if blahp is supported])
