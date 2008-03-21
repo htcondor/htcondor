@@ -390,6 +390,13 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 			value.IsStringValue(buf);
             start = buf.c_str();
 			rvalue = strtod(start, &end);
+
+				// On HPUX11, an input value of "INF" fails in
+				// a strange way: end points beyond the null.
+			if( classad_isinf(rvalue) && end > start+strlen(start) ) {
+				end = (char *)start+strlen(start);
+			}
+
 			if (end == start && rvalue == 0.0) {
 				// strtod() returned an error
 				realValue.SetErrorValue();

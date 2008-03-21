@@ -18,9 +18,11 @@
  ***************************************************************/
 
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "classad/common.h"
 #include "classad/util.h"
-#include "config.h"
 #include <limits.h>
 
 using namespace std;

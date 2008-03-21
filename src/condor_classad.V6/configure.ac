@@ -93,11 +93,28 @@ AC_CHECK_FUNC([regcomp], [HAVE_POSIX_REGEX=yes])
 # On BSD, a function named timezone() is defined in time.h.
 # On other platforms, extern long timezone exists.
 AC_MSG_CHECKING([if long timezone conflicts])
+AC_LANG(C)
 AC_COMPILE_IFELSE([#include <time.h>
                    extern long timezone;],[
                    AC_MSG_RESULT([no])
                    AC_DEFINE([HAVE_LONG_TIMEZONE],[1],[long timezone does not conflict])],[
                    AC_MSG_RESULT([yes])])
+
+# On HPUX11, localtime_r() and gmtime_r() are not defined unless
+# _REENTRANT is defined.  Test for that case here.
+
+AC_MSG_CHECKING([if localtime_r() needs _REENTRANT])
+AC_LANG(C++)
+AC_COMPILE_IFELSE([#include <time.h>
+                   void testfunc() {localtime_r(NULL,NULL);}],[
+		   AC_MSG_RESULT([no])],[
+                   AC_COMPILE_IFELSE([
+                     #define _REENTRANT
+                     #include <time.h>
+                     void testfunc() {localtime_r(NULL,NULL);}],[
+		     AC_MSG_RESULT([yes])
+                     AC_DEFINE([_REENTRANT],[1],[needed for localtime_r() and gmtime_r()])],[
+                   AC_MSG_RESULT([test failed])])])
 
 # Checks for libraries.
 AC_ARG_WITH([pcre],
