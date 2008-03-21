@@ -2390,8 +2390,8 @@ esac
 AC_MSG_RESULT([$_cv_has_krb5])
 
 AC_MSG_CHECKING([if classads is supported])
+# currently, all platforms support the classad external
 _cv_has_classads=yes
-AS_IF([test "x$_cv_op_sys" = xSolaris],[_cv_has_classads=no])
 AC_MSG_RESULT([$_cv_has_classads])
 
 AC_MSG_CHECKING([if blahp is supported])
