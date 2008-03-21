@@ -21,14 +21,15 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Condor no longer supports root configuration files
-(e.g. \File{/etc/condor/condor\_config.root},
+(for example, \File{/etc/condor/condor\_config.root},
 \File{~condor/condor\_config.root}, and
+the file defined by the configuration variable
 \MacroNI{LOCAL\_ROOT\_CONFIG\_FILE}).  This feature was intended to
-give limited powers to a unix administrator to configure some aspects
+give limited powers to a Unix administrator to configure some aspects
 of Condor without gaining root powers.  However, given the flexibility
 of the configuration system, we decided that this was not practical.
 As long as Condor is started up as root, it should be clearly
-understood that whoever has the ability to edit the condor
+understood that whoever has the ability to edit the Condor
 configuration files can effectively run arbitrary programs as root.
 
 \end{itemize}
