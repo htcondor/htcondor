@@ -8,6 +8,10 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+03/21/08 V7_1_0-root and V7_1_0-branch
+   A branch for the 7.1.0 doc series of the manual, created from
+   V7_1_0-root on the trunk of the doc module.
+
 03/13/08 trunk-pre-merge-V7_0-merge-2
          trunk-post-merge-V7_0-merge-2
    The state of the doc directory in trunk before and after
