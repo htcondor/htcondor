@@ -422,6 +422,16 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 
 }
 
+void Authentication::split_canonical_name(char const *can_name,char **user,char **domain) {
+		// This version of the function exists to avoid use of MyString
+		// in ReliSock, because that gets linked into std univ jobs.
+		// This function is stubbed out in cedar_no_ckpt.C.
+	MyString my_user,my_domain;
+	split_canonical_name(can_name,my_user,my_domain);
+	*user = strdup(my_user.Value());
+	*domain = strdup(my_domain.Value());
+}
+
 void Authentication::split_canonical_name(MyString can_name, MyString& user, MyString& domain ) {
 
     char local_user[256];

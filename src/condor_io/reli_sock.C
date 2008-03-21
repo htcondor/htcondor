@@ -1414,12 +1414,9 @@ ReliSock::setFullyQualifiedUser(char const * u) {
 	_domain = NULL;
 
 	if (u) {
-		MyString user,domain;
-		Authentication::split_canonical_name(u,user,domain);
+		Authentication::split_canonical_name(u,&_user,&_domain);
 
 		_fqu = strdup(u);
-		_user = strdup(user.Value());
-		_domain = strdup(domain.Value());
 	}
 }
 

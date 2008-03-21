@@ -27,6 +27,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_io.h"
+#include "authentication.h"
 
 
 int
@@ -63,3 +64,7 @@ ReliSock::put_x509_delegation( filesize_t *, const char * )
 	return FALSE;
 }
 
+void Authentication::split_canonical_name(char const *can_name,char **user,char **domain) {
+	EXCEPT( "Authentication::split_canonical_name() should never be "
+			"called within the Condor syscall library" );
+}
