@@ -34,6 +34,7 @@
 #include "HashTable.h"
 #include "condor_id.h"
 #include <iosfwd>
+#include <string>
 
 class MultiLogFiles
 {
