@@ -77,7 +77,14 @@ AC_C_VOLATILE
 
 # Checks for library functions.
 AC_FUNC_ERROR_AT_LINE
-AC_FUNC_MALLOC
+
+# AC_FUNC_MALLOC defines malloc to rpl_malloc on systems where malloc(0)
+# returns NULL.  Unfortunately, this conflicts with some STL headers on
+# ppc_aix_5.2 (gcc 3.3.2).  Since we are not aware of any case where
+# classads cares about malloc(0), we therefore are disabling this check
+# on all platforms.
+#AC_FUNC_MALLOC
+
 AC_FUNC_MKTIME
 AC_FUNC_STRFTIME
 AC_FUNC_STRTOD
