@@ -21,6 +21,10 @@
 // This is a program that does a bunch of testing that is easier to do
 // without user input, like in test_classads.
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #if defined( CLASSAD_DISTRIBUTION )
 #include "classad/classad_distribution.h"
 #else
@@ -30,10 +34,6 @@
 #include <fstream>
 #include <iostream>
 #include <ctype.h>
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
 using namespace std;
 #ifdef WANT_CLASSAD_NAMESPACE

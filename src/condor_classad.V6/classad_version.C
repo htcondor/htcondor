@@ -18,14 +18,14 @@
  ***************************************************************/
 
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #if defined(CLASSAD_DISTRIBUTION)
 #include "classad/classad_distribution.h"
 #else
 #include "condor_classad.h"
-#endif
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
 #endif
 
 #include <iostream>

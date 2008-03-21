@@ -18,15 +18,15 @@
  ***************************************************************/
 
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "classad/common.h"
 #include "classad/exprTree.h"
 #include "classad/source.h"
 #include "classad/sink.h"
 #include "classad/util.h"
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
 #if defined USE_POSIX_REGEX 
   #include <regex.h>
