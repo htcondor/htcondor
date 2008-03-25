@@ -24,11 +24,39 @@
 #include "classad/common.h"
 #include "classad/util.h"
 #include <limits.h>
+#include <math.h>
 
 using namespace std;
 
 #if HAVE_LONG_TIMEZONE
 extern DLL_IMPORT_MAGIC long timezone;
+#endif
+
+// The following definitions of isnan() and isinf() are recommended here:
+// http://www.gnu.org/software/libtool/manual/autoconf/Function-Portability.html
+// We have observed isinf(HUGE_VAL) to return 0 on HPUX, but only apparently
+// because of an errant #pragma extern applied to this constant in the system
+// header files.  When passed a normal variable assigned to HUGE_VAL, isinf()
+// does the right thing on that platform.
+
+#ifndef isnan
+# define isnan(x) \
+    (sizeof (x) == sizeof (long double) ? isnan_ld (x) \
+     : sizeof (x) == sizeof (double) ? isnan_d (x) \
+     : isnan_f (x))
+static inline int isnan_f  (float       x) { return x != x; }
+static inline int isnan_d  (double      x) { return x != x; }
+static inline int isnan_ld (long double x) { return x != x; }
+#endif
+          
+#ifndef isinf
+# define isinf(x) \
+    (sizeof (x) == sizeof (long double) ? isinf_ld (x) \
+     : sizeof (x) == sizeof (double) ? isinf_d (x) \
+     : isinf_f (x))
+static inline int isinf_f  (float       x) { return isnan (x - x); }
+static inline int isinf_d  (double      x) { return isnan (x - x); }
+static inline int isinf_ld (long double x) { return isnan (x - x); }
 #endif
 
 BEGIN_NAMESPACE( classad )
