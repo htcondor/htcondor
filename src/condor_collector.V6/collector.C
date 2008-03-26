@@ -783,12 +783,6 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	__query__ = &query;
 	__numAds__ = 0;
 
-	sock->encode();
-	if (!sock->put(0) || !sock->end_of_message()) {
-		dprintf( D_ALWAYS, "Unable to acknowledge invalidation\n" );
-		return;
-	}
-
 	// first set all the "LastHeardFrom" attributes to low values ...
 	AdTypes queryAds = (whichAds == GENERIC_AD) ? ANY_AD : whichAds;
 	collector.walkHashTable (queryAds, invalidation_scanFunc);
