@@ -136,14 +136,25 @@ os=`uname -s`
 if test "$os" = "HP-UX"; then
   _cv_op_sys="HPUX"
   _cv_opsys="HPUX"
-  _cv_arch="HPPA"
   if test "$osrelease" = "B.10.20" ; then
     _cv_opsys_vers="HPUX10"
     _cv_sysname="hp_ux102"
   elif test "$osrelease" = "B.11.11" ; then
     _cv_opsys_vers="HPUX11"
     _cv_sysname="hp_ux110"
+  elif test "$osrelease" = "B.11.31" ; then
+    _cv_opsys_vers="HPUX11"
+    _cv_sysname="hp_ux113"
   fi
+
+  hpux_arch=`uname -m`
+  if test "x$hpux_arch" = "xia64" ; then
+    _cv_arch="IA64"
+  else
+    _cv_arch="HPPA"
+  fi
+
+  _cv_kernel_rev=`uname -r | sed -e 's#^B\.##'`;
 
 elif test $os = "Linux" ; then
   # linux is a big mess, since we have different distributions,
@@ -842,6 +853,12 @@ case "$gcc_vers" in
     CompilerMinor="1"
     CompilerPatch="2"
     ;;
+ "4.2.3" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="2"
+    CompilerPatch="3"
+    ;;
  * )
     if test "x$enable_gcc_version_check" = "xyes"; then
       AC_MSG_RESULT([ERROR])
@@ -882,6 +899,8 @@ case "$os" in
     elif test $os = "HP-UX" && test "$osversion" = "B.11.00" ; then
       # we support only 64-bit compilations of condor on hpux 11.00
       CRT_BEGIN=/usr/ccs/lib/pa20_64/crt0.o
+    elif test $os = "HP-UX" && test "$osversion" = "B.11.31" ; then
+      CRT_BEGIN=/usr/ccs/lib/hpux32/crt0.o
     fi
     ;;
   "AIX" )
@@ -1582,7 +1601,7 @@ _cv_objcopy_debuglink_flag=""
 if test ! $ac_objcopy = "no"; then
 	AC_MSG_CHECKING([if objcopy supports --add-gnu-debuglink])
 	`$ac_objcopy --help 2>&1 | $GREP add-gnu-debuglink > /dev/null 2>&1`
-	if test $? = 0; then
+	if test $? = 0 -a ! \( "x$_cv_sysname" = "xhp_ux113" \)  ; then
 		# If this flag exists, then the other ones I need should exist as well.
 		_cv_objcopy_keepdebug_flag="--only-keep-debug"
 		_cv_objcopy_stripunneeded_flag="--strip-unneeded"
@@ -2144,7 +2163,13 @@ AC_MSG_RESULT([$_cv_has_globus])
 
 AC_MSG_CHECKING([if gsoap is supported])
 case "$os" in
-  HP-UX ) _cv_has_gsoap=yes ;;
+  HP-UX )
+	if  test "x$_cv_sysname" = "xhp_ux113" ; then
+  	   _cv_has_gsoap=no
+	else
+  	   _cv_has_gsoap=yes
+	fi
+	;;
   Linux|SunOS|Darwin|FreeBSD|AIX ) _cv_has_gsoap=yes ;;
   * )
     AC_MSG_RESULT([error])
@@ -2313,7 +2338,7 @@ fi
 
 # Build drmaa on any platform with pthreads available, except for the following
 # platforms where the build is known to fail
-if test x$_cv_sysname != "xppc_aix52" -a x$_cv_linux_distro != "xRH72" -a  x$_cv_sysname != "xsun4x_58" -a x$_cv_sysname != "xsun4x_59" -a x$_cv_sysname != "xalpha_dux51" ; then
+if test x$_cv_sysname != "xppc_aix52" -a x$_cv_linux_distro != "xRH72" -a  x$_cv_sysname != "xsun4x_58" -a x$_cv_sysname != "xsun4x_59" -a x$_cv_sysname != "xalpha_dux51" -a x$_cv_sysname != "xhp_ux113" ; then
   if test x$_cv_sysname = "xppc_macosx" -o $ac_pthreads = "yes"; then
    CHECK_EXTERNAL([drmaa],[1.5.1], [soft])
   fi
@@ -2394,12 +2419,17 @@ if test $HAVE_ORACLE_OCI = yes; then
   AC_DEFINE(HAVE_ORACLE,1,[Do we have Oracle support])
 fi
 
-CHECK_EXTERNAL([postgresql], [8.0.2], [hard],
+# Figure out which postgresql we need.
+
+if test "x$_cv_sysname" = "xhp_ux113" ; then
+  pgsql_ver="8.3.0";
+else
+  pgsql_ver="8.0.2";
+fi
+
+CHECK_EXTERNAL([postgresql], [$pgsql_ver], [hard],
                [use PostgreSQL (provides Quill and other support)],
                MF_LIB_CHECK([postgresql], [[pq PQconnectdb]]))
-#AC_MSG_CHECKING([postgresql])
-#AC_MSG_RESULT([$_cv_ext_postgresql_version])
-#AC_SUBST(ext_postgresql_version,$_cv_ext_postgresql_version)
 
 CHECK_EXTERNAL([globus],[4.0.5], [soft])
 
