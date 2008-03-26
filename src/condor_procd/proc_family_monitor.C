@@ -420,10 +420,6 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
 	}
 
-	// get as up to date as possible
-	//
-	snapshot();
-
 	// get usage from the requested family and all subfamilies
 	//
 	dprintf(D_ALWAYS,
