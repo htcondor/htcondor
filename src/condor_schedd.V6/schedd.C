@@ -1022,6 +1022,13 @@ count( ClassAd *job )
 	int		max_hosts;
 	int		universe;
 
+		// we may get passed a NULL job ad if, for instance, the job ad was
+		// removed via condor_rm -f when some function didn't expect it.
+		// So check for it here before continuing onward...
+	if ( job == NULL ) {  
+		return 0;
+	}
+
 	if (job->LookupInteger(ATTR_JOB_STATUS, status) == 0) {
 		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
 				ATTR_JOB_STATUS);
@@ -9218,11 +9225,22 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// down in the logic below
 	shadow_rec *srec = this->FindSrecByProcID( job_id );
 	
+		// Get job status.  Note we only except if there is no job status AND the job
+		// is still in the queue, since we do not want to except if the job ad is gone
+		// perhaps due to condor_rm -f.
 	int q_status;
-	if ( GetAttributeInt( job_id.cluster, job_id.proc, 
-							ATTR_JOB_STATUS, &q_status) < 0 ) {
-		EXCEPT( "ERROR no job status for %d.%d in Scheduler::jobExitCode()!",
+	if (GetAttributeInt(job_id.cluster,job_id.proc,
+						ATTR_JOB_STATUS,&q_status) < 0)	
+	{
+		if ( GetJobAd(job_id.cluster,job_id.proc) ) {
+			// job exists, but has no status.  impossible!
+			EXCEPT( "ERROR no job status for %d.%d in Scheduler::jobExitCode()!",
 				job_id.cluster, job_id.proc );
+		} else {
+			// job does not exist anymore, so we have no work to do here.
+			// since we have nothing to do in this function, return.
+			return ret;
+		}
 	}
 	
 		// We get the name of the daemon that had a problem for 
