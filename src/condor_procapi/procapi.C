@@ -732,7 +732,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 			"%ld %ld %ld %ld "
 			"%lu %lu %lu %lu %lu "
 			"%ld %ld %ld %ld %ld %ld "
-			"%lu %lu %ld %lu %lu %lu %lu %lu %lu %lu %lu "
+			"%lu %lu %llu %lu %lu %lu %lu %lu %lu %lu %lu "
 			"%ld %ld %ld %ld %lu",
 			&procRaw.pid, s, &c, &procRaw.ppid, 
 			&i, &i, &i, &i, 

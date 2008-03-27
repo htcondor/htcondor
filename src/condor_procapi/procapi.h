@@ -182,9 +182,12 @@ enum {
 #if defined(WIN32)
 typedef __int64 birthday_t;
 #define PROCAPI_BIRTHDAY_FORMAT "%I64d"
+#elif defined(LINUX)
+typedef unsigned long long birthday_t;
+#define PROCAPI_BIRTHDAY_FORMAT "%llu"
 #else
 typedef long birthday_t;
-#define PROCAPI_BIRTHDAY_FORMAT "%lu"
+#define PROCAPI_BIRTHDAY_FORMAT "%ld"
 #endif
 
 /** This is the structure that is returned from the getProcInfo() 
@@ -257,7 +260,7 @@ struct procInfo {
   long creation_time;
 
   /// The time of birth in system-specific units (e.g. Linux returns
-  /// this in seconds since boot time) This is useful since
+  /// this in jiffies since boot time) This is useful since
   /// (hopefully) it is not subject to wobble caused by converting it
   /// to different units and thus can be used for accurate process
   /// birthday comparisons.
@@ -306,7 +309,7 @@ typedef struct procInfoRaw{
 	long user_time_2;
 	long sys_time_1;
 	long sys_time_2;
-	long creation_time;
+	birthday_t creation_time;
 	long sample_time;
 #endif // not defined WIN32
 
