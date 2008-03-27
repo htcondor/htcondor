@@ -77,6 +77,11 @@ verbosity settings than it did previously.
 \item \Condor{preen} no longer deletes MyProxy password files in the
 Condor spool directory.
 
+\item When using TCP updates (UDP updates are the default) The
+\Condor{collector} would sometimes freeze for 20 seconds when
+receiving an invalidation notice (i.e. when condor is being turned off
+on a machine in the pool).
+
 \end{itemize}
 
 \noindent Known Bugs:
