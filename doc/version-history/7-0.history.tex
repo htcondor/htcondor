@@ -82,6 +82,15 @@ Condor spool directory.
 receiving an invalidation notice (i.e. when condor is being turned off
 on a machine in the pool).
 
+\item Fixed a case in which the \Condor{schedd}'s job queue log file
+could get corrupted when encountering errors writing to the disk such
+as `out of space'.  This type of corruption was detected by the
+\Condor{schedd} the next time it restarted and read the file to
+restore the job queue, so you would only have been affected by this
+problem if your \Condor{schedd} refused to start up until you fixed or
+removed the job queue log file.  This bug has existed in all versions
+of Condor, but it became more likely to happen in 6.9.4.
+
 \end{itemize}
 
 \noindent Known Bugs:
