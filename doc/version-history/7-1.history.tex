@@ -103,6 +103,12 @@ way; this is especially helpful for nested DAGs.
 See the rescue DAG subsection~\pageref{sec:DAGRescue} of the \Condor{dagman}
 manual section for more information.
 
+\item A new (optional) daemon named \Condor{job\_router} has been
+added, so far only on unix.  It may be configured to transform vanilla
+universe jobs into grid universe jobs, for example to send excess jobs
+to other sites via Condor-C or Condor-G.  For details, see
+page~\pageref{sec:JobRouter}.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
