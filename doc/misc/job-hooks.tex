@@ -50,9 +50,9 @@ a higher rank.
 If the slot is unavailable for whatever reason, the \Condor{startd}
 will refuse the fetched job and ignore it.
 Either way, once the \Condor{startd} decides what it should do with
-the fetched job, it will invoke another hook to reply to the claim
-request, so that the external system knows what happened to that work
-unit.
+the fetched job, it will invoke another hook to reply to the attempt
+to fetch work, so that the external system knows what happened to that
+work unit.
 
 If the job is accepted, a claim is created for it and the slot moves
 into the Claimed state.
@@ -132,14 +132,14 @@ page~\pageref{sec:cod-application-attributes}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:job-hooks-reply-claim}
-Hook: Reply Claim}
+\subsubsection{\label{sec:job-hooks-reply-fetch}
+Hook: Reply Fetch}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Job hooks!Hooks!Reply to a claim}
+\index{Job hooks!Hooks!Reply to fetched work}
 
-\Macro{HOOK\_REPLY\_CLAIM} is invoked whenever
+\Macro{HOOK\_REPLY\_FETCH} is invoked whenever
 \Macro{HOOK\_FETCH\_WORK} returns data and the the \Condor{startd}
-decides if it's going to accept the job or not.
+decides if it's going to accept the fetched job or not.
 
 \begin{description}
 \item[Arguments]
@@ -418,7 +418,7 @@ uses a custom keyword to handle work fetched from a web service.
   # for each attempted claim.
   DATABASE_HOOK_DIR = /usr/local/condor/fetch/database
   DATABASE_HOOK_FETCH_WORK = $(DATABASE_HOOK_DIR)/fetch_work.php
-  DATABASE_HOOK_REPLY_CLAIM = $(DATABASE_HOOK_DIR)/reply_claim.php
+  DATABASE_HOOK_REPLY_FETCH = $(DATABASE_HOOK_DIR)/reply_fetch.php
 
   # The web system only needs to fetch work.
   WEB_HOOK_DIR = /usr/local/condor/fetch/web
