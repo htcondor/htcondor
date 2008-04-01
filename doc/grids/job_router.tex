@@ -9,14 +9,14 @@ supported by Condor (e.g. gt2, gt4, Condor-C). The idea is to do as
 little scheduling in advance as possible and to only feed jobs to the
 sites as they consume them. Meanwhile, the jobs waiting to be routed
 are ordinary vanilla universe jobs, so they may run in the local
-condor pool or in other pools via flocking. Except for having your
+Condor pool or in other pools via flocking. Except for having your
 excess jobs queue up in the vanilla universe job queue, you can get a
 similar effect by submitting all of your jobs as grid universe jobs
 and using Condor-G matchmaking.  However, the router adds some
 additional convenience features: tracking of aggregate job states for
 use in routing policy, MaxIdleJobs, and blackhole throttling.
 
-JobRouter is most appropriate for high throughput workflows, where you
+JobRouter is most appropriate for high throughput work flows, where you
 have many more jobs than computers and you just want to keep as many
 of the computers busy as possible.  It is less suitable for a
 situation where you have a small number of jobs and you need a
@@ -58,17 +58,17 @@ jobs are suitable.
 \subsection{Usage Case: sending excess jobs to the grid}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Suppose you submit jobs to a condor pool and you would like to send
+Suppose you submit jobs to a Condor pool and you would like to send
 excess jobs to other available sites, such as resources on the Open
 Science Grid.  Here is how you could use JobRouter to make this work:
 
 \begin{enumerate}
 
 \item Jobs appropriate for routing to the grid must not rely on access to
-a shared filesystem or other services that are only available at your
-\textit{home} site.  For example, rather than relying on a shared filesystem
+a shared file system or other services that are only available at your
+\textit{home} site.  For example, rather than relying on a shared file system
 to access input files and write output files, you could use Condor's file
-transfer mechanism.  In the condor submit file:
+transfer mechanism.  In the Condor submit file:
 
 \begin{verbatim}
 should_transfer_files = yes
@@ -133,7 +133,7 @@ queue
 
 \item Watch the status of the job.  As usual, the job \textit{user log} will
 contain the final completion status of the job.  Before it finishes,
-you can see the status of it by looking in the condor job queue.  Once
+you can see the status of it by looking in the Condor job queue.  Once
 it is picked up by JobRouter, a second job will enter the job queue.
 This is the transformed copy of the original job, turned into a grid
 universe job.
@@ -231,7 +231,7 @@ JOB_ROUTER_ENTRIES = \
    ]
 
 
-# Reminder: you must restart condor for changes to DAEMON_LIST to take effect.
+# Reminder: you must restart Condor for changes to DAEMON_LIST to take effect.
 DAEMON_LIST = $(DAEMON_LIST) JOB_ROUTER
 
 # For testing, set this to a small value to speed things up.
@@ -263,7 +263,7 @@ syntax is slightly different from much of the rest of Condor, because
 it uses \emph{New ClassAds}, a re-implementation of ClassAds that
 Condor is gradually adopting and which may one day completely replace
 the old implementation.  A good place to learn about the syntax of New
-Classads is the Informal Language Description in the C++ ClassAds
+ClassAds is the Informal Language Description in the C++ ClassAds
 tutorial: \URL{http://www.cs.wisc.edu/condor/classad/c++tut.html}.
 For the most part, everything in the old ClassAds language is
 supported by New ClassAds, with the exception of a number of ClassAd
@@ -282,22 +282,22 @@ evaluated by \Condor{schedd}, so it may only use features of Old
 ClassAds.  As long as the expressions you use in the routing table are
 compatible with both implementations of ClassAds, you do not need to
 be concerned about this detail.  In case you do need to use special
-features, the expressions that are evaulated (as New ClassAds) by the
+features, the expressions that are evaluated (as New ClassAds) by the
 JobRouter will be identified in the reference below.
 
 The most basic thing to know about New ClassAd syntax is simply that
 each ClassAd is surrounded by square brackets, and each assignment
 statement in the ClassAd should end with a semicolon.  When the
-ClassAd is embedded in a condor configuration file, it could all
+ClassAd is embedded in a Condor configuration file, it could all
 appear on a single line, but the readability of the ClassAd is often
 improved by inserting line continuations (i.e. backslashes followed by
 newlines) after each assignment statement in the ClassAd, as in the
 examples above.  Unfortunately, this makes it a little awkward to
 insert configuration comments in the ClassAd, because of the way line
-continuations and the condor configuration comment character `\#' work.
+continuations and the Condor configuration comment character `\#' work.
 One alternative is to use C-style comments \verb|/* ... */| as in the
 examples above.  Another option is to read in the JobRouter entries
-from a separate file, rather than embedding them in the condor
+from a separate file, rather than embedding them in the Condor
 configuration file.
 
 The JobRouter configuration parameters are listed below:
@@ -372,7 +372,7 @@ evaluated for each job that finishes to determine whether it was a
 failure.  The default is to assume the job was a success.  An example
 expression to treat all jobs running for less than 30 minutes as
 failures: other.RemoteWallClockTime < 1800.  A more flexible
-expression could reference a peroperty or expression of the job that
+expression could reference a property or expression of the job that
 specifies a failure condition specific to the type of job.  Routed
 jobs that are removed (e.g. by \Attr{PeriodicRemove}) are considered
 to be failures.
@@ -388,7 +388,7 @@ example, simply require users to submit jobs with \Attr{X509UserProxy}
 set in their submit file.)  If you do need this feature, use the
 boolean expression to only allow specific values of \Expr{other.Owner}
 to use this shared proxy file.  The shared proxy file should be owned
-by the condor user.  Currently, to use a shared proxy, you must also
+by the \Login{condor} user.  Currently, to use a shared proxy, you must also
 turn on sandboxing with \Attr{JobShouldBeSandboxed}.
 
 \item[SharedX509UserProxy] See \Attr{UseSharedX509UserProxy}.
@@ -439,7 +439,7 @@ original expression.
 This specifies a file that contains the ClassAds describing the
 routing table.  The format of this file is the same as
 \Macro{JOB\_ROUTER\_ENTRIES}, except that it is interpreted directly
-by the ClassAd parser, rather than first by the condor configuration
+by the ClassAd parser, rather than first by the Condor configuration
 system.  The biggest difference therefore is that you do not need to
 use line continuations (backslashes before newlines).  The specified
 file is periodically reread to check for new information.  This
@@ -450,7 +450,7 @@ happens every \Macro{JOB\_ROUTER\_ENTRIES\_REFRESH} seconds.
 (plus arguments) to run.  The output of the program should be ClassAds
 describing the routing table.  The format of this file is the same as
 \Macro{JOB\_ROUTER\_ENTRIES}, except that it is interpreted directly
-by the ClassAd parser, rather than first by the condor configuration
+by the ClassAd parser, rather than first by the Condor configuration
 system.  The biggest difference therefore is that you do not need to
 use line continuations (backslashes before newlines).  The specified
 command is periodically rerun to check for new information.  This
@@ -458,7 +458,7 @@ happens every \Macro{JOB\_ROUTER\_ENTRIES\_REFRESH} seconds.  If you
 need to enter spaces in any arguments or in the command name itself,
 surround the whole configuration value with double quotes and use
 single quotes around individual arguments that contain spaces, just
-like when dealing with spaces in job arguments in a condor submit
+like when dealing with spaces in job arguments in a Condor submit
 file.  For an example of \MacroNI{JOB\_ROUTER\_ENTRIES\_CMD}, see
 page~\pageref{JobRouterReSSExample}.
 
