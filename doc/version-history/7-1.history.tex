@@ -183,7 +183,16 @@ fatal error (it is now a warning).
 
 \begin{itemize}
 
-\item None.
+\item No hook is invoked if a fetched job does not contain enough data
+  to be spawned by a \Condor{starter} or if other errors prevent the
+  job from being run after the \Condor{startd} agrees to accept the
+  work.
+  This limitation will be addressed in a future version of Condor,
+  most likely via the addition of a new hook invoked whenver the
+  \Condor{starter} fails to spawn a job.
+  For more information about the new hook system included in Condor
+  version 7.1.0, read section~\ref{sec:job-hooks} on
+  page~\pageref{sec:job-hooks}.
 
 \end{itemize}
 
