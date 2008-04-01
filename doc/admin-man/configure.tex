@@ -3976,8 +3976,11 @@ See section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks} on
   The expression is evaluated in the context of the slot ClassAd, and
   the ClassAd of the currently running job (if any).
   The expression must evaluate to an integer.
-  If not defined, the \Condor{startd} will attempt to re-fetch every
-  second.
+  If not defined, the \Condor{startd} will wait 300 seconds (five
+  minutes) between attempts to fetch work.
+  For more information about this expression, see
+  section~\ref{sec:job-hooks-fetch-work-delay} on
+  page~\pageref{sec:job-hooks-fetch-work-delay}.
 
 \end{description}
 

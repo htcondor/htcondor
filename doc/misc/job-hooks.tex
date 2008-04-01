@@ -103,9 +103,14 @@ Hook: Fetch Work}
 
 \Macro{HOOK\_FETCH\_WORK} is invoked whenever the \Condor{startd}
 wants to see if there is any work to fetch.
-This is the most important hook in the whole system, and is the only
-hook that must be defined for any of the other \Condor{startd} hooks
-to operate.
+There is a related configuration expression called
+\Macro{FetchWorkDelay} which determines how long the \Condor{startd}
+will wait between attempts to fetch work, which is described in detail
+in section~\ref{sec:job-hooks-fetch-work-delay} on
+page~\pageref{sec:job-hooks-fetch-work-delay} below.
+\MacroNI{HOOK\_FETCH\_WORK} is the most important hook in the whole
+system, and is the only hook that must be defined for any of the other
+\Condor{startd} hooks to operate.
 
 \begin{description}
 \item[Arguments]
@@ -428,5 +433,58 @@ uses a custom keyword to handle work fetched from a web service.
 The keywords ``DATABASE'' and ``WEB'' are completely arbitrary, so
 each site is encouraged to use different (more specific) names as
 appropriate for their own needs.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:job-hooks-fetch-work-delay}
+Defining the FetchWorkDelay Expression}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!FetchWorkDelay}
+
+There are two events that trigger the \Condor{startd} to attempt to
+fetch new work:
+\begin{itemize}
+\item Whenever the \Condor{startd} evaluates its own state.
+\item Whenever the \Condor{starter} exits after completing some
+  fetched work.
+\end{itemize}
+
+Even if a given compute slot is already busy running other work, it's
+possible that if it fetched new work, the \Condor{startd} would prefer
+the fetched work (via the \AdAttr{Rank} expression) over the work it
+is currently running.
+However, the \Condor{startd} frequently evaluates its own state,
+especially when a slot is claimed.
+Therefore, administrators can define an expression which controls how
+long the \Condor{startd} will wait between attempts to fetch new work.
+This expression is called \AdAttr{FetchWorkDelay}.
+
+The \AdAttr{FetchWorkDelay} expression must evaluate to an integer,
+which defines the number of seconds since the last fetch attempt
+completed before the \Condor{startd} will attempt to fetch more work.
+However, as a ClassAd expression (evaluated in the context of the
+ClassAd of the slot considering if it should fetch more work, and the
+ClassAd of the currently running job, if any), the length of the delay
+can be based on the current state the slot and even the currently
+running job.
+
+For example, a very common configuration would be to always wait 5
+minutes (300 seconds) between attempts to fetch work, unless the slot
+is Claimed/Idle, in which case the \Condor{startd} should fetch
+immediately:
+
+\footnotesize
+\begin{verbatim}
+FetchWorkDelay = ifThenElse(State == "Claimed" && Activity == "Idle", 0, 300) 
+\end{verbatim}
+\normalsize
+
+If the \Condor{startd} wants to fetch work, but the time since the
+last attempted fetch is shorter than the current value of the delay
+expression, the \Condor{startd} will set a timer to fetch as soon as
+the delay expires.
+
+If this expression is not defined, the \Condor{startd} will default to
+a five minute (300 second) delay between all attempts to fetch work.
 
 \index{Job hooks|)}
