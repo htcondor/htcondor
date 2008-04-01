@@ -20,6 +20,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Upgrading to 7.1.0 from previous versions of Condor will make
+existing Standard Universe jobs that have already run fail to match to
+machines running Condor 7.1.0 unless the job previously ran on a
+machine using the Red Hat 5.0 release of Condor.  This is because the
+value of the \Attr{CheckpointPlatform} attribute of the machine
+ClassAd has changed in order to better represent checkpoint
+compatibility.  If this affects you, you can use \Condor{qedit} to
+change the \Attr{LastCheckpointPlatform} attribute of existing
+Standard Universe jobs to match the new \Attr{CheckpointPlatform}
+advertised by the machine ClassAd where the job last ran.
+
 \item Condor no longer supports root configuration files
 (for example, \File{/etc/condor/condor\_config.root},
 \File{~condor/condor\_config.root}, and
@@ -108,6 +119,10 @@ added, so far only on unix.  It may be configured to transform vanilla
 universe jobs into grid universe jobs, for example to send excess jobs
 to other sites via Condor-C or Condor-G.  For details, see
 page~\pageref{sec:JobRouter}.
+
+\item Previously, \condor{q} \Opt{-better-analyze} was supported on most
+but not all versions of Linux.  It is now supported on all Unix platforms
+but not yet on Windows.
 
 \end{itemize}
 
