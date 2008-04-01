@@ -212,7 +212,7 @@ elif test $os = "Linux" ; then
        _cv_linux_distro="RHEL5"
        ;;
      "5.1" )
-       _cv_linux_distro="RHEL51"
+       _cv_linux_distro="RHEL5"
       ;;
      "4.2" )
        _cv_linux_distro="CENTOS42"
