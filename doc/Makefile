@@ -110,6 +110,7 @@ local.html: $(wildcard *.tex) $(wildcard */*.tex)
 	makeindex ref
 	latex ref.tex -interaction=batchmode
 	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
+	rm -rf  $(LOCALDIR)
 	mv    ref $(LOCALDIR)
 	touch local.html
 
