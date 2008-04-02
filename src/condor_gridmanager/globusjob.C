@@ -2192,6 +2192,12 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					strncpy( holdReason, errorString.Value(),
 							 sizeof(holdReason) - 1 );
 				}
+				if ( holdReason[0] == '\0' && globusStateErrorCode == 0 &&
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
+					snprintf( holdReason, 1024, "Job failed, no reason given by GRAM server" );
+					holdCode = CONDOR_HOLD_CODE_GlobusGramError;
+					holdSubCode = 0;
+				}
 				if ( holdReason[0] == '\0' && globusStateErrorCode != 0 ) {
 					snprintf( holdReason, 1024, "Globus error %d: %s",
 							  globusStateErrorCode,
