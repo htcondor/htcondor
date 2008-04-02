@@ -51,6 +51,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that could sometimes cause the \Condor{schedd} to either EXCEPT or
+	crash shortly after a user issues a \Condor{rm} command with the
+	\Opt{-forcex} option.
+
 \item \Condor{history} in a quill environment, when given the -constraint option,
 would ignore attributes from the vertical schema.  This has been fixed.
 
