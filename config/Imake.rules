@@ -1425,7 +1425,7 @@ compiledir/Imakefile: FImakefile				@@\
 								@@\
 compiledir/Makefile: compiledir compiledir/Imakefile	@@\
 	cd compiledir; ../../condor_imake -I../../../config \	@@\
-		-I.. -DFORTRAN_HAS_RECURSION=has_recursion \	@@\
+		-I.. \	@@\
 		-DF_COMPILER=compiler	\			@@\
 		-DFLAGS_MACRO_NAME=flags_macro_name		@@\
 								@@\
