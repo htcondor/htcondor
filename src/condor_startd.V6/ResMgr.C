@@ -410,6 +410,8 @@ ResMgr::reconfig_resources( void )
 	m_hook_mgr->reconfig();
 #endif
 
+		// Tell each resource to reconfig itself.
+	walk(&Resource::reconfig);
 
 		// See if any new types were defined.  Don't except if there's
 		// any errors, just dprintf().

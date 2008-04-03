@@ -35,12 +35,9 @@ StartdHookMgr::StartdHookMgr()
 	: HookClientMgr(),
 	  NUM_HOOKS(3),
 	  UNDEFINED((char*)1),
-	  m_slot_hook_keywords(resmgr->numSlots()),
 	  m_keyword_hook_paths(MyStringHash)
 {
 	dprintf( D_FULLDEBUG, "Instantiating a StartdHookMgr\n" );
-	m_slot_hook_keywords.fill(NULL);
-	m_startd_job_hook_keyword = NULL;
 }
 
 
@@ -57,19 +54,7 @@ StartdHookMgr::~StartdHookMgr()
 void
 StartdHookMgr::clearHookPaths()
 {
-	if (m_startd_job_hook_keyword) {
-		free(m_startd_job_hook_keyword);
-		m_startd_job_hook_keyword = NULL;
-	}
-
 	int i;
-	for (i=0; i <= m_slot_hook_keywords.getlast(); i++) {
-		if (m_slot_hook_keywords[i] && m_slot_hook_keywords[i] != UNDEFINED) {
-			free(m_slot_hook_keywords[i]);
-		}
-		m_slot_hook_keywords[i] = NULL;
-	}
-
 	MyString key;
 	char** hook_paths;
 	m_keyword_hook_paths.startIterations();
@@ -99,9 +84,6 @@ StartdHookMgr::reconfig()
 		// Clear out our old copies of each hook's path.
 	clearHookPaths();
 
-		// Grab the global setting if the per-slot keywords aren't defined.
-	m_startd_job_hook_keyword = param("STARTD_JOB_HOOK_KEYWORD");
-
 	return true;
 }
 
@@ -109,7 +91,7 @@ StartdHookMgr::reconfig()
 char*
 StartdHookMgr::getHookPath(HookType hook_type, Resource* rip)
 {
-	char* keyword = getHookKeyword(rip);
+	char* keyword = rip->getHookKeyword();
 
 	if (!keyword) {
 			// Nothing defined, bail now.
@@ -146,24 +128,6 @@ StartdHookMgr::getHookPath(HookType hook_type, Resource* rip)
 		path = NULL;
 	}
 	return path;
-}
-
-
-char*
-StartdHookMgr::getHookKeyword(Resource* rip)
-{
-	int slot_id = rip->r_id;
-	char* keyword = m_slot_hook_keywords[slot_id];
-	if (!keyword) {
-		MyString param_name;
-		param_name.sprintf("%s_JOB_HOOK_KEYWORD", rip->r_id_str);
-		keyword = param(param_name.Value());
-		m_slot_hook_keywords[slot_id] = keyword ? keyword : UNDEFINED;
-	}
-	else if (keyword == UNDEFINED) {
-		keyword = NULL;
-	}
-	return keyword ? keyword : m_startd_job_hook_keyword;
 }
 
 
@@ -240,15 +204,15 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 		// and if not, insert this slot's keyword.
 	char buf[1];	// We don't care what it is, just if it's there.
 	if (!job_ad->LookupString(ATTR_HOOK_KEYWORD, buf, 1)) {
-		char* keyword = getHookKeyword(rip);
+		char* keyword = rip->getHookKeyword();
 		ASSERT(keyword && keyword != UNDEFINED);
 		MyString keyword_attr;
 		keyword_attr.sprintf("%s = \"%s\"", ATTR_HOOK_KEYWORD, keyword);
 		job_ad->Insert(keyword_attr.Value());
 	}
 
-		// No matter what, if the reply claim hook is configured, invoke it.
-	hookReplyClaim(willing, job_ad, rip);
+		// No matter what, if the reply fetch hook is configured, invoke it.
+	hookReplyFetch(willing, job_ad, rip);
 
 	if (!willing) {
 			// TODO-fetch: matchmaking on other slots?
@@ -299,23 +263,23 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 }
 
 void
-StartdHookMgr::hookReplyClaim(bool claimed, ClassAd* job_ad, Resource* rip)
+StartdHookMgr::hookReplyFetch(bool accepted, ClassAd* job_ad, Resource* rip)
 {
-	char* hook_path = getHookPath(HOOK_REPLY_CLAIM, rip);
+	char* hook_path = getHookPath(HOOK_REPLY_FETCH, rip);
 	if (!hook_path) {
 		return;
 	}
 
 		// Since we're not saving the output, this can just live on
 		// the stack and be destroyed as soon as we return.
-	HookClient hook_client(HOOK_REPLY_CLAIM, hook_path, false);
+	HookClient hook_client(HOOK_REPLY_FETCH, hook_path, false);
 
 		// Construct the output to write to STDIN.
 	MyString hook_stdin;
 	job_ad->sPrint(hook_stdin);
 	hook_stdin += "-----\n";  // TODO-fetch: better delimiter?
 	rip->r_classad->sPrint(hook_stdin);
-	if (claimed) {
+	if (accepted) {
 			// Also include the claim id in the slot classad.
 		hook_stdin += ATTR_CLAIM_ID;
 		hook_stdin += " = \"";
@@ -324,7 +288,7 @@ StartdHookMgr::hookReplyClaim(bool claimed, ClassAd* job_ad, Resource* rip)
 	}
 
 	ArgList args;
-	args.AppendArg((claimed ? "accept" : "reject"));
+	args.AppendArg((accepted ? "accept" : "reject"));
 
 	spawn(&hook_client, &args, &hook_stdin);
 }

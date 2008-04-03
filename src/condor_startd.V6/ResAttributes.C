@@ -511,7 +511,9 @@ CpuAttributes::compute( amask_t how_much )
 		c_condor_load = rip->compute_condor_load();
 
 		c_total_disk = sysapi_disk_space(rip->executeDir());
-		dprintf( D_FULLDEBUG, "Total execute space: %lu\n", c_total_disk );
+		if (IS_UPDATE(how_much)) {
+			dprintf(D_FULLDEBUG, "Total execute space: %lu\n", c_total_disk);
+		}
 
 		val = c_total_disk * c_disk_fraction;
 		c_disk = (unsigned long)floor( val );

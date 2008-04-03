@@ -6016,10 +6016,11 @@ find_idle_local_jobs( ClassAd *job )
 				dprintf( D_FULLDEBUG, "Failed expression '%s'\n", exp );
 				free( exp );
 			}
-			dprintf(D_FULLDEBUG,"Schedd ad that failed to match:\n");
-			scheddAd.dPrint(D_FULLDEBUG);
-			dprintf(D_FULLDEBUG,"Job ad that failed to match:\n");
-			job->dPrint(D_FULLDEBUG);
+			// This is too verbose.
+			//dprintf(D_FULLDEBUG,"Schedd ad that failed to match:\n");
+			//scheddAd.dPrint(D_FULLDEBUG);
+			//dprintf(D_FULLDEBUG,"Job ad that failed to match:\n");
+			//job->dPrint(D_FULLDEBUG);
 			return ( 0 );
 		}
 

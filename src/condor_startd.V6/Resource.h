@@ -148,6 +148,7 @@ public:
 	int		init_classad( void );		
 	void	refresh_classad( amask_t mask );	
 	int		force_benchmark( void );
+	int		reconfig( void );
 
 	int		update( void );		// Schedule to update the central manager.
 	int		do_update( void );			// Actually update the CM
@@ -183,6 +184,11 @@ public:
 	void	terminateFetchedWork( void );
 	void	startedFetch( void );
 	void	fetchCompleted( void );
+		/**
+		   Find the keyword to use for the given resource/slot.
+		   @return Hook keyword to use, or NULL if none.
+		*/
+	char* getHookKeyword();
 #endif /* HAVE_JOB_HOOKS */
 
 	bool    claimWorklifeExpired();
@@ -244,6 +250,8 @@ private:
 	int		evalNextFetchWorkDelay( void );
 	void	createFetchClaim( ClassAd* job_ad, float rank = 0 );
 	void	resetFetchWorkTimer( int next_fetch = 0 );
+	char*	m_hook_keyword;
+	bool	m_hook_keyword_initialized;
 #endif /* HAVE_JOB_HOOKS */
 
 };

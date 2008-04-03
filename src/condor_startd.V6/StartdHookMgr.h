@@ -75,13 +75,13 @@ public:
 	bool handleHookFetchWork(FetchClient* fetch_client);
 
 		/**
-		   Invoke the REPLY_CLAIM hook to tell the outside world what
-		   we decided to do with a given claim request.
-		   @param claimed Did we accept the claim or not?
+		   Invoke the REPLY_FETCH hook to tell the outside world what
+		   we decided to do with a given piece of fetched work.
+		   @param accepted Did we accept the work or not?
 		   @param job_ad ClassAd of the job we considered.
-		   @param rip Resource that considered the claim.
+		   @param rip Resource that considered the work.
 		 */
-	void hookReplyClaim(bool claimed, ClassAd* job_ad, Resource* rip);
+	void hookReplyFetch(bool accepted, ClassAd* job_ad, Resource* rip);
 
 		/**
 		   Invoke the EVICT_CLAIM hook to tell the outside world that
@@ -107,13 +107,6 @@ private:
 	FetchClient* buildFetchClient(Resource* rip);
 
 		/**
-		   Find the keyword to use for the given resource/slot.
-		   @param rip Resource you want the keyword for.
-		   @return Hook keyword to use, or NULL if none.
-		*/
-	char* getHookKeyword(Resource* rip);
-
-		/**
 		   Returns the valid path for the given hook on a specific slot.
 		   @param hook_type What kind of hook we need the path for.
 		   @param rip Resource you need the path for.
@@ -125,14 +118,6 @@ private:
 	void clearHookPaths( void );
 
 		/**
-		   Array of hook keywords for each slot.  Indexed by slot id.
-		   If uninitialized, the value is NULL.  If we already
-		   searched for the keyword and it's not defined in the config
-		   file, the value is the 'UNDEFINED' constant declared above.
-		*/
-	ExtArray<char*> m_slot_hook_keywords;
-
-		/**
 		   HashTable that contains an array of strings for each
 		   keyword. Table is hashed on hook keyword.  Each array is
 		   indexed by the HookType enum, and stores the validated path
@@ -141,9 +126,6 @@ private:
 		   hasn't been initialized yet.
 		*/
 	HashTable<MyString, char**> m_keyword_hook_paths;
-
-		/// Default hook keyword if the per-slot settings aren't defined.
-	char* m_startd_job_hook_keyword;
 
 };
 

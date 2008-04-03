@@ -101,6 +101,8 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	m_next_fetch_work_delay = -1;
 	m_next_fetch_work_tid = -1;
 	m_currently_fetching = false;
+	m_hook_keyword = NULL;
+	m_hook_keyword_initialized = false;
 #endif
 
 	if( r_attr->type() ) {
@@ -129,6 +131,9 @@ Resource::~Resource()
 					  "daemonCore error\n", m_next_fetch_work_tid);
 		}
 		m_next_fetch_work_tid = -1;
+	}
+	if (m_hook_keyword) {
+		free(m_hook_keyword);
 	}
 #endif /* HAVE_JOB_HOOKS */
 
@@ -827,6 +832,22 @@ Resource::force_benchmark( void )
 	resmgr->m_attr->benchmark( this, 1 );
 	return TRUE;
 }
+
+
+int
+Resource::reconfig( void )
+{
+#if HAVE_JOB_HOOKS
+	if (m_hook_keyword) {
+		free(m_hook_keyword);
+		m_hook_keyword = NULL;
+	}
+	m_hook_keyword_initialized = false;
+#endif /* HAVE_JOB_HOOKS */
+	// This bogus return makes the prototype happy for ResMgr::walk().
+	return TRUE;  
+}
+
 
 int
 Resource::update( void )
@@ -1939,6 +1960,31 @@ Resource::willingToRun(ClassAd* request_ad)
 			delete(tmp_starter);
 			req_requirements = 1;
 		}
+
+			// The following dprintfs are only done if request_ad !=
+			// NULL, because this function is frequently called with
+			// request_ad==NULL when the startd is evaluating its
+			// state internally, and it is not unexpected for START to
+			// locally evaluate to false in that case.
+
+		if (!slot_requirements || !req_requirements) {
+			if (!slot_requirements) {
+				dprintf(D_FAILURE|D_ALWAYS, "Slot requirements not satisfied.\n");
+			}
+			if (!req_requirements) {
+				dprintf(D_FAILURE|D_ALWAYS, "Job requirements not satisfied.\n");
+			}
+		}
+
+			// Possibly print out the ads we just got to the logs.
+		if (DebugFlags & D_JOB) {
+			dprintf(D_JOB, "REQ_CLASSAD:\n");
+			request_ad->dPrint(D_JOB);
+		}
+		if (DebugFlags & D_MACHINE) {
+			dprintf(D_MACHINE, "MACHINE_CLASSAD:\n");
+			r_classad->dPrint(D_MACHINE);
+		}
 	}
 	else {
 			// All we can do is locally evaluate START.  We don't want
@@ -1949,25 +1995,6 @@ Resource::willingToRun(ClassAd* request_ad)
 				// Without a request classad, treat UNDEFINED as TRUE.
 			slot_requirements = 1;
 		}
-	}
-
-	if (!slot_requirements || !req_requirements) {
-		if (!slot_requirements) {
-			dprintf(D_FAILURE|D_ALWAYS, "Slot requirements not satisfied.\n");
-		}
-		if (!req_requirements) {
-			dprintf(D_FAILURE|D_ALWAYS, "Job requirements not satisfied.\n");
-		}
-	}
-
-		// Possibly print out the ads we just got to the logs.
-	if (request_ad && (DebugFlags & D_JOB)) {
-		dprintf(D_JOB, "REQ_CLASSAD:\n");
-		request_ad->dPrint(D_JOB);
-	}
-	if (DebugFlags & D_MACHINE) {
-		dprintf(D_MACHINE, "MACHINE_CLASSAD:\n");
-		r_classad->dPrint(D_MACHINE);
 	}
 
 	if (!slot_requirements || !req_requirements) {
@@ -2095,13 +2122,14 @@ Resource::evalNextFetchWorkDelay(void)
 		job_ad = r_cur->ad();
 	}
 	if (r_classad->EvalInteger(ATTR_FETCH_WORK_DELAY, job_ad, value) == 0) { 
-			// If undefined, disable the throttle completely.
+			// If undefined, default to 5 minutes (300 seconds).
 		if (!warned_undefined) { 
-			dprintf(D_FULLDEBUG, "%s is UNDEFINED, no throttle in use\n",
+			dprintf(D_FULLDEBUG,
+					"%s is UNDEFINED, using 5 minute default delay.\n",
 					ATTR_FETCH_WORK_DELAY);
 			warned_undefined = true;
 		}
-		value = 0;
+		value = 300;
 	}
 	m_next_fetch_work_delay = value;
 	return value;
@@ -2111,7 +2139,13 @@ Resource::evalNextFetchWorkDelay(void)
 bool
 Resource::tryFetchWork(void)
 {
-		// First, make sure we're not currently fetching.
+		// First, make sure we're configured for fetching at all.
+	if (!getHookKeyword()) {
+			// No hook keyword for ths slot, bail out.
+		return false;
+	}
+
+		// Then, make sure we're not currently fetching.
 	if (m_currently_fetching) {
 			// No need to log a message about this, it's not an error.
 		return false;
@@ -2179,6 +2213,22 @@ Resource::resetFetchWorkTimer(int next_fetch)
 			// Already registered, just reset it.
 		daemonCore->Reset_Timer(m_next_fetch_work_tid, next, 100000);
 	}
+}
+
+
+char*
+Resource::getHookKeyword()
+{
+	if (!m_hook_keyword_initialized) {
+		MyString param_name;
+		param_name.sprintf("%s_JOB_HOOK_KEYWORD", r_id_str);
+		m_hook_keyword = param(param_name.Value());
+		if (!m_hook_keyword) {
+			m_hook_keyword = param("STARTD_JOB_HOOK_KEYWORD");
+		}
+		m_hook_keyword_initialized = true;
+	}
+	return m_hook_keyword;
 }
 
 
