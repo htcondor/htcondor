@@ -2,31 +2,51 @@
 \section{\label{sec:job-hooks}Job Hooks}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Job hooks|(}
-\index{Job hooks}
 
 \index{Job hooks!introduction} 
 In the past, Condor has always sent work to the execute machines by
-pushing jobs to the \Condor{startd}, either from the \Condor{schedd}
-or via \Condor{cod}.
-Beginning with the 7.1.* series, the \Condor{startd} now has the
+pushing jobs to the \Condor{startd} daemon, either from the \Condor{schedd}
+daemon or via \Condor{cod}.
+Beginning with the Condor 7.1.0, the \Condor{startd} daemon now has the
 ability to pull work by fetching jobs via a system of plug-ins or
 hooks.
-Any site can configure a set of plug-ins to fetch work completely
+Any site can configure a set of hooks to fetch work completely
 outside of the usual Condor matchmaking system.
 
-A hook is an external program or script invoked by Condor at various
-points during the lifecycle of a job.
+A \Term{hook} is an external program or script invoked by Condor at various
+points during the life cycle of a job.
 Instead of putting all the code and logic directly into the Condor
-daemons to handle all the sorts of external systems to fetch work
-from, sites can write their own programs or scripts and just let
-Condor invoke these plug-ins at the right moments to accomplish the
+daemons to handle the variety of external systems from which it
+might fetch work,
+sites can write their own programs or scripts and allow
+Condor to invoke these hooks at the right moments to accomplish the
 desired outcome.
+This eliminates the expense of the matchmaking and 
+scheduling provided by the the \Condor{schedd} and
+the \Condor{negotiator}, although at the price of the flexibility
+they offer.
+Therefore, the hooks allow Condor to more easily and directly interface with
+external scheduling systems.
 
-The following sections will describe how this system of hooks works,
+A projected use of the hook mechanism implements what might
+be termed a \Term{glide-in factory}, especially where the
+factory is behind a firewall.
+Without using the hook mechanism to fetch work,
+a glide-in \Condor{startd} daemon behind a firewall
+depends on GCB to help it listen and eventually receive
+work pushed from elsewhere.
+With the hook mechanism, a glide-in \Condor{startd} daemon
+behind a firewall uses the hook to pull work.
+The hook needs only an outbound network connection to complete
+its task,
+thereby being able to operate from behind the firewall,
+without the intervention of GCB.
+
+The following sections describe how this system of hooks works,
 the semantics of fetched jobs, the interaction between fetched work
 and regular Condor jobs, what hooks are invoked by Condor at various
-stages of the job work-flow, how to configure a machine to fetch jobs,
-and how to write your own plug-in hooks.
+stages of the job work flow, how to configure a machine to fetch jobs,
+and how to write your own hooks.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
