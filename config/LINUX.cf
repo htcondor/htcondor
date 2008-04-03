@@ -62,9 +62,6 @@
 #define HAS_RANLIB_TOUCH		NO
 /*?????*/
 #define HAS_CP_PRESERVE			NO
-#ifndef FORTRAN_HAS_RECURSION
-#  define FORTRAN_HAS_RECURSION		NO
-#endif
 #define HAS_FLOCK			NO
 
 /**************************************************************************

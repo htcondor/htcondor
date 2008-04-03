@@ -64,8 +64,6 @@ TESTCLASS(job_ckpt_f-areauc_std,stduniv)
 TESTCLASS(job_ckpt_f-areauc_std,quick)
 TESTCLASS(job_ckpt_f-areauc_std,ckpt)
 
-#if FORTRAN_HAS_RECURSION
-
 DESC(job_ckpt_f-floats_std,"Do Fortran jobs ckpt/restore floating point nums?")
 CBUILD($(Fortran),job_ckpt_f-floats_std,f)
 DEP_SYMLINK_EXT(job_ckpt_f-floats_std,cmd)
@@ -81,8 +79,6 @@ RUN(job_ckpt_f-integers_std)
 TESTCLASS(job_ckpt_f-integers_std,stduniv)
 TESTCLASS(job_ckpt_f-integers_std,quick)
 TESTCLASS(job_ckpt_f-integers_std,ckpt)
-
-#endif /* FORTRAN_HAS_RECURSION */
 
 #endif /* ! IS_CLIPPED */
 
