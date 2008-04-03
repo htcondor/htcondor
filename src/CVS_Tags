@@ -1,3 +1,10 @@
+04/02/08 V7_1_0
+  The offical tag for 7.1.0, from the V7_0_1-branch.
+  (Actually, from abandoned CVS trunk, which was merged to V7_1_0-branch
+  later, after the release.)
+  $CondorVersion: 7.1.0 Apr  1 2008 BuildID: 80895 $
+  Original build tag: BUILD-V7_1-trunk-2008-4-1
+
 04/02/08 V7_1_0-branch
   A new branch for the V7_1_0 release.
   This actually just contains changes that were committed to the CVS trunk
