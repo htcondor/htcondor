@@ -1,3 +1,10 @@
+04/02/08 V7_1_0-branch
+  A new branch for the V7_1_0 release.
+  This actually just contains changes that were committed to the CVS trunk
+  after CVS was abandoned on 03/22/08.  V7_1_0 was released from the CVS
+  trunk on 03/01/08 and then a final merge was done from CVS trunk to
+  git V7_1_0-branch, which was then merged to the git trunk.
+  
 03/13/08 V7_1-fetchwork-merge-1
   The state of the V7_1-fetchwork-branch before merging back into HEAD.
 
