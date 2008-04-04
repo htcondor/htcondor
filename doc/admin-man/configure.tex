@@ -7073,11 +7073,18 @@ These macros affect the high availability operation of Condor.
         MASTER_HA_LIST = SCHEDD
         SPOOL = /share/spool
         HA_LOCK_URL = file:/share/spool
+        VALID_SPOOL_FILES = SCHEDD.lock
 \end{verbatim}
 
   A separate lock is created for each \emph{High Availability} daemon.
 
   There is no default value for \MacroNI{HA\_LOCK\_URL}.
+
+  Lock files are in the form \verb@<@SUBSYS\verb@>@.lock.
+  \Condor{preen} is not currently aware of the lock files and will
+  delete them if they are placed in the \MacroNI{SPOOL} directory, so be
+  sure to add \verb@<@SUBSYS\verb@>@.lock to \Macro{VALID\_SPOOL\_FILES} for each
+  \emph{High Availability} daemon.
 
 \item[\Macro{HA\_<SUBSYS>\_LOCK\_URL}]
   \label{param:HASubsysLockURL} This macro controls the 

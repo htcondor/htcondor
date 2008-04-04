@@ -58,6 +58,7 @@ of any and all machines that are able to run the \Condor{schedd} daemon
 MASTER_HA_LIST = SCHEDD
 SPOOL = /share/spool
 HA_LOCK_URL = file:/share/spool
+VALID_SPOOL_FILES = SCHEDD.lock
 \end{verbatim}
 
 Configuration macro \Macro{MASTER\_HA\_LIST} identifies the 
@@ -71,6 +72,9 @@ and is currently specified only with a file URL.
 The configuration specifies the shared space
 (\MacroNI{SPOOL}),
 and the URL of the lock.
+\Condor{preen} is not currently aware of the lock file and will
+delete it if it is placed in the \MacroNI{SPOOL} directory, so be
+sure to add SCHEDD.lock to \Macro{VALID\_SPOOL\_FILES}.
 
 As Condor starts on machines that are configured to run
 the single \Condor{schedd} daemon, 
