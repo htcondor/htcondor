@@ -40,15 +40,15 @@ int CondorErrno;
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch)
 {
-    major = 0;
-    minor = 9;
-    patch = 8;
+    major = 1;
+    minor = 0;
+    patch = 0;
     return;
 }
 
 void ClassAdLibraryVersion(string &version_string)
 {
-    version_string = "1.0-rc5";
+    version_string = "1.0";
     return;
 }
 

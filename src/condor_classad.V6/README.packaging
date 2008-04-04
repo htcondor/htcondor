@@ -10,8 +10,7 @@ Edit classad.C and change the version number:
     version_string = "1.0-rc4";
 
 The other version of ClassAdLibraryVersion(major,minor,patch) in classad.C
-should also be updated.  However, we haven't officially released 1.0 yet,
-so I have avoided changing this so far.
+should also be updated.
 
 Edit README to update the version number and release date at the top
 of the file.
