@@ -5786,7 +5786,16 @@ void CreateProcessForkit::exec() {
 			m_nice_inc = 19;
 		}
 		dprintf ( D_DAEMONCORE, "calling nice(%d)\n", m_nice_inc );
-		nice( m_nice_inc );
+		errno = 0;
+		int newnice = nice( m_nice_inc );
+		/* The standards say that newnice should be m_nice_inc on success and
+		 * -1 on failure.  However, implementations vary.  For example, old
+		 * Linux glibcs return 0 on success. Checking errno should be safer
+		 * (and indeed is recommended by the Linux man page.
+		 */
+		if(errno != 0) {
+			dprintf(D_ALWAYS, "Warning: When attempting to exec a new process, failed to nice(%d): return code: %d, errno: %d %s\n", m_nice_inc, newnice, errno, strerror(errno));
+		}
 	}
 
 	MyString msg = "Printing fds to inherit: ";
