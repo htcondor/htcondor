@@ -191,6 +191,10 @@ public:
 	char* getHookKeyword();
 #endif /* HAVE_JOB_HOOKS */
 
+#if HAVE_HIBERNATE
+	int	evaluateHibernate();
+#endif /* HAVE_HIBERNATE */
+
 	bool    claimWorklifeExpired();
 	int		retirementExpired( void );
 	int		mayUnretire( void );

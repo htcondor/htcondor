@@ -827,6 +827,22 @@ SOURCE="..\src\condor_c++_util\pgsqldatabase.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\power_hibernator.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\power_hibernator.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\power_manager.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\power_manager.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\print_wrapped_text.C"
 # End Source File
 # Begin Source File

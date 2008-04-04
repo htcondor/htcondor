@@ -101,15 +101,7 @@ SOURCE="..\src\condor_vm-gahp\pbuffer.h"
 # Begin Source File
 
 SOURCE="..\src\condor_vm-gahp\soap_vmgahpC.C"
-
-!IF  "$(CFG)" == "condor_vm-gahp - Win32 Debug"
-
-!ELSEIF  "$(CFG)" == "condor_vm-gahp - Win32 Release"
-
 # SUBTRACT CPP /YX /Yc /Yu
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
@@ -118,28 +110,12 @@ SOURCE="..\src\condor_vm-gahp\soap_vmgahpH.h"
 # Begin Source File
 
 SOURCE="..\src\condor_vm-gahp\soap_vmgahpServer.C"
-
-!IF  "$(CFG)" == "condor_vm-gahp - Win32 Debug"
-
-!ELSEIF  "$(CFG)" == "condor_vm-gahp - Win32 Release"
-
 # SUBTRACT CPP /YX /Yc /Yu
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\condor_vm-gahp\soap_vmgahpStub.C"
-
-!IF  "$(CFG)" == "condor_vm-gahp - Win32 Debug"
-
-!ELSEIF  "$(CFG)" == "condor_vm-gahp - Win32 Release"
-
 # SUBTRACT CPP /YX /Yc /Yu
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 

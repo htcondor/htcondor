@@ -1241,6 +1241,24 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 }
 
 
+#if HAVE_HIBERNATE
+
+int
+Resource::evaluateHibernate() {
+	ClassAd *ad = NULL;
+	if ( NULL != r_cur ) {
+		ad = r_cur->ad();
+	}
+	int level = 0;
+	if ( 0 == r_classad->EvalInteger( "HIBERNATE", ad, level ) ) {
+		return 0;
+	}
+	return level;
+}
+
+#endif /* HAVE_HIBERNATE */
+
+
 int
 Resource::eval_kill()
 {

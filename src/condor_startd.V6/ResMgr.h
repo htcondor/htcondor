@@ -36,6 +36,10 @@
 #include "starter_mgr.h"
 #include "vmuniverse_mgr.h"
 
+#if HAVE_HIBERNATE
+#include "power_manager.h"
+#endif /* HAVE_HIBERNATE */
+
 #if HAVE_JOB_HOOKS
 #include "StartdHookMgr.h"
 #endif /* HAVE_JOB_HOOKS */
@@ -191,6 +195,11 @@ public:
 	void startdHookMgrDone();
 #endif /* HAVE_JOB_HOOKS */
 
+#if HAVE_HIBERNATE
+	PowerManager const& getPowerManager () const;
+	void updateHibernateConfiguration();
+#endif /* HAVE_HIBERNATE */
+
 	time_t	now( void ) { return cur_time; };
 
 	void FillExecuteDirsList( class StringList *list );
@@ -303,6 +312,20 @@ private:
 	bool fetchWorkConfig( void );
 	bool m_startd_hook_shutdown_pending;
 #endif /* HAVE_JOB_HOOKS */
+
+#if HAVE_HIBERNATE
+	PowerManager m_power_manager;
+	int			 m_hibernate_tid;
+	int			 m_recovery_tid;
+	void checkHibernate() /* const -- should be */;
+	int	 allHibernating() /* const -- should be */;
+	int  startHibernateTimer();
+	void resetHibernateTimer();
+	void cancelHibernateTimer();
+	void doHibernateRecovery();
+	int  startRecoveryTimer();
+	void cancelRecoveryTimer();
+#endif /* HAVE_HIBERNATE */
 
 };
 

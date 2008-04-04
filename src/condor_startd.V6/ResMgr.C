@@ -45,6 +45,11 @@ ResMgr::ResMgr()
 	m_hook_mgr = NULL;
 #endif
 
+#if HAVE_HIBERNATE
+	m_hibernate_tid = -1;
+	m_recovery_tid = -1;
+#endif /* HAVE_HIBERNATE */
+
 	id_disp = NULL;
 
 	nresources = 0;
@@ -75,6 +80,11 @@ ResMgr::~ResMgr()
 		delete m_hook_mgr;
 	}
 #endif
+
+#if HAVE_HIBERNATE
+	cancelHibernateTimer();
+	cancelRecoveryTimer();
+#endif /* HAVE_HIBERNATE */
 
 	if( resources ) {
 		for( i = 0; i < nresources; i++ ) {
@@ -129,6 +139,9 @@ ResMgr::init_config_classad( void )
 #if HAVE_JOB_HOOKS
 	configInsert( config_classad, ATTR_FETCH_WORK_DELAY, false );
 #endif /* HAVE_JOB_HOOKS */
+#if HAVE_HIBERNATE
+	configInsert( config_classad, "HIBERNATE", false );
+#endif /* HAVE_HIBERNATE */
 
 		// Next, try the IS_OWNER expression.  If it's not there, give
 		// them a resonable default, instead of leaving it undefined. 
@@ -409,6 +422,10 @@ ResMgr::reconfig_resources( void )
 #if HAVE_JOB_HOOKS
 	m_hook_mgr->reconfig();
 #endif
+
+#if HAVE_HIBERNATE
+	updateHibernateConfiguration();
+#endif /* HAVE_HIBERNATE */
 
 		// Tell each resource to reconfig itself.
 	walk(&Resource::reconfig);
@@ -1761,6 +1778,11 @@ ResMgr::reset_timers( void )
 		daemonCore->Reset_Timer( up_tid, update_interval, 
 								 update_interval );
 	}
+
+#if HAVE_HIBERNATE
+	resetHibernateTimer();
+#endif /* HAVE_HIBERNATE */
+
 }
 
 
@@ -1902,6 +1924,171 @@ ResMgr::processAllocList( void )
 
 	return true; 	// Since we're done allocating.
 }
+
+
+#if HAVE_HIBERNATE
+
+PowerManager const& 
+ResMgr::getPowerManager () const {
+	return m_power_manager;
+}
+
+
+void ResMgr::updateHibernateConfiguration() {
+	m_power_manager.update();
+	if ( -1 == m_recovery_tid ) { 
+			// We only want to (re)start the hibernation timer if
+			// we have not just come back from hibernation and someone
+			// issued a condor_reconfig, etc.: in which case we 
+			// let doHibernateRecovery() restart the hibernation timer
+		if ( m_power_manager.wantsHibernate() ) {
+			if ( -1 == m_hibernate_tid ) {
+				startHibernateTimer();
+			}
+		} else {
+			if ( -1 != m_hibernate_tid ) {
+				cancelHibernateTimer();
+			}
+		}
+	}
+}
+
+
+int 
+ResMgr::allHibernating() {
+		// fail if there is no resource or if we are
+		// configured not to hibernate
+	if(    !resources
+		|| !m_power_manager.wantsHibernate() ) {
+		return 0;
+	}
+		// The following may evaluate to true even if there
+		// is a claim on one or more of the resources, so we
+		// don't bother checking for claims first. 
+		// 
+		// We take largest value as the representative 
+		// hibernation level for this machine
+	int max = 0;
+	for( int i = 0; i < nresources; i++ ) {
+		int rval = resources[i]->evaluateHibernate();
+		if( 0 == rval ) {
+			return 0;
+		}
+		max = max( max, rval );
+	}
+	return max;
+}
+
+
+void 
+ResMgr::checkHibernate() {	
+		// If all resources have gone unused for some time	
+		// then put the machine to sleep
+	int level = allHibernating();
+	if( level > 0 ) {
+		if( m_power_manager.canHibernate() ) {
+			dprintf ( D_ALWAYS, "ResMgr: This machine is about to enter hibernation\n" );
+			//
+			// Hibernate the machine and start a recovery timer.  This will
+			// cancel checks for hibernation for about about an hour after 
+			// it is set, and resume them once it has finished.
+			//
+			startRecoveryTimer();
+			m_power_manager.doHibernate( level );
+		} else {
+			dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
+				"HIBERNATE: Machine does not support any "
+				"sleep states.\n" );
+		}
+	}
+}
+
+
+int
+ResMgr::startHibernateTimer() {
+	int interval = m_power_manager.getHibernateCheckInterval();
+	m_hibernate_tid = daemonCore->Register_Timer( 
+		interval, interval,
+		(TimerHandlercpp)&ResMgr::checkHibernate,
+		"ResMgr::startHibernateTimer()", this );
+	if( m_hibernate_tid < 0 ) {
+		EXCEPT( "Can't register hibernation timer" );
+	}
+	dprintf( D_FULLDEBUG, "Started hibernation timer.\n" );
+	return TRUE;
+}
+
+
+void
+ResMgr::resetHibernateTimer() {
+	if ( m_power_manager.wantsHibernate() ) {
+		if( m_hibernate_tid != -1 ) {
+			int internal = m_power_manager.getHibernateCheckInterval();
+			daemonCore->Reset_Timer( 
+				m_hibernate_tid, 
+				internal, internal );
+		}
+	}
+}
+
+
+void
+ResMgr::cancelHibernateTimer() {
+	int rval;
+	if( m_hibernate_tid != -1 ) {
+		rval = daemonCore->Cancel_Timer( m_hibernate_tid );
+		if( rval < 0 ) {
+			dprintf( D_ALWAYS, "Failed to cancel hibernation timer (%d): "
+				"daemonCore error\n", m_hibernate_tid );
+		} else {
+			dprintf( D_FULLDEBUG, "Canceled hibernation timer (%d)\n",
+				m_hibernate_tid );
+		}
+		m_hibernate_tid = -1;
+	}
+}
+
+
+void ResMgr::doHibernateRecovery() {
+	dprintf ( D_FULLDEBUG, "ResMgr: Restarting hibernation timer\n" );
+		// The recovery time is up, restart the hibernation timer
+	cancelRecoveryTimer();		
+	startHibernateTimer();
+}
+
+
+int
+ResMgr::startRecoveryTimer() {
+	cancelHibernateTimer();
+	int interval = ( 1 * HOUR );
+	m_recovery_tid = daemonCore->Register_Timer( 
+		interval, (TimerHandlercpp)&ResMgr::doHibernateRecovery,
+		"ResMgr::startRecoveryTimer()", this );
+	if( m_recovery_tid < 0 ) {
+		EXCEPT( "Can't register hibernation recovery timer" );
+	}
+	dprintf( D_FULLDEBUG, "Started hibernation recovery timer.\n" );
+	return TRUE;
+}
+
+
+void
+ResMgr::cancelRecoveryTimer() {
+	int rval;
+	if( m_recovery_tid != -1 ) {
+		rval = daemonCore->Cancel_Timer( m_recovery_tid );
+		if( rval < 0 ) {
+			dprintf( D_ALWAYS, "Failed to cancel hibernation recovery timer (%d): "
+				"daemonCore error\n", m_recovery_tid );
+		} else {
+			dprintf( D_FULLDEBUG, "Canceled hibernation recovery timer (%d)\n",
+				m_hibernate_tid );
+		}
+		m_recovery_tid = -1;
+	}
+}
+
+#endif /* HAVE_HIBERNATE */
 
 
 void

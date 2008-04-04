@@ -32,7 +32,9 @@
 //***************************************************************
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "..\condor_daemon_core.V6\condor_daemon_core.h"
+#include "master.h"
 
 #include "condor_fix_iostream.h"
 #include <windows.h>
@@ -42,6 +44,7 @@
 // Externs
 extern int dc_main(int, char**);
 extern int line_where_service_stopped;
+extern Daemons daemons;
 
 // Static variables
 // The name of the service
@@ -78,6 +81,85 @@ VOID StopService()
 	}
 }
 
+#if HAVE_HIBERNATE
+
+// Handles any power state change notifications
+DWORD 
+PowerEventHander(DWORD eventType, LPVOID eventData) {
+	
+	//
+	// Events here are sometimes requests so we can return NO_ERROR 
+	// to grant the request and an error code to deny the request
+	// 
+	DWORD status = NO_ERROR;	
+	
+	switch( eventType ) {
+	case PBT_APMQUERYSUSPEND:
+		//
+		// An process is requesting permission to suspend 
+		// the machine.  It may, optionally, give us 
+		// permission to query the user interactively. 
+		// Here we can afforded a graceful shutdown, although
+		// we may need to update the SCM on occasion: 
+		// informing it that we are still doing our thing.
+		//
+		dprintf( D_ALWAYS, "PowerEventHander: Some driver/application "
+			"is asking if we can enter hibernation\n" );
+		break;
+		
+	case PBT_APMSUSPEND:
+		//
+		// The machine is about to enter a suspended state.
+		//
+		dprintf ( D_ALWAYS, "PowerEventHander: Machine entering "
+			"hibernation\n" );
+		break;
+		
+	case PBT_APMRESUMESUSPEND:
+		//
+		// The machine has resumed operation after being 
+		// suspended. 
+		// 
+		dprintf( D_ALWAYS, "PowerEventHander: "
+			"Waking machine (APM)\n" );
+		break;
+		
+	case PBT_APMRESUMEAUTOMATIC:
+		//
+		// The the machine has waken up automatically 
+		// to handle an event.  If the machine detects 
+		// activity it will send a PBT_APMRESUMESUSPEND 
+		//
+		// Should we create some activity here?  Maybe WOL 
+		// packets create this type of wake event.  Further
+		// testing is necessary.
+		//
+		dprintf( D_ALWAYS, "PowerEventHander: Waking machine to "
+			"handle an event (Automatic)\n" );
+		break;
+		
+	case PBT_APMRESUMECRITICAL:
+		//
+		// The machine has resumed after a critical 
+		// suspension caused by a failing battery.
+		// In this case we do a "peaceful" restart 
+		// since we may not have had the chance to 
+		// turn off all the daemons gracefully.
+		// 
+		dprintf( D_ALWAYS, "PowerEventHander: Resuming machine after "
+			"a critical suspension (possible battery failure?)\n" );
+		break;
+		
+	default:
+		break;
+	}
+	
+	return status;
+	
+}
+
+#endif /* HAVE_HIBERNATE */
+
 // This function consolidates the activities of 
 // updating the service status with
 // SetServiceStatus
@@ -99,11 +181,22 @@ BOOL SendStatusToSCM (DWORD dwCurrentState,
 	// no control events, else accept anything
 	if (dwCurrentState == SERVICE_START_PENDING)
 		serviceStatus.dwControlsAccepted = 0;
-	else
+	else {
 		serviceStatus.dwControlsAccepted = 
 			SERVICE_ACCEPT_STOP |
 			// SERVICE_ACCEPT_PAUSE_CONTINUE |
 			SERVICE_ACCEPT_SHUTDOWN;
+
+#if HAVE_HIBERNATE
+		//
+		// Service will be notified when the computer's 
+		// power status has changed. 
+		//
+		serviceStatus.dwControlsAccepted |= 
+			SERVICE_ACCEPT_POWEREVENT;
+#endif /* HAVE_HIBERNATE */
+	
+	}
 
 	// if a specific exit code is defines, set up
 	// the win32 exit code properly
@@ -133,9 +226,25 @@ BOOL SendStatusToSCM (DWORD dwCurrentState,
 
 // Dispatches events received from the service 
 // control manager
-VOID ServiceCtrlHandler (DWORD controlCode) 
-{
-	// DWORD  currentState = 0;
+#if HAVE_HIBERNATE
+
+DWORD WINAPI 
+ServiceCtrlHandler (
+	DWORD  controlCode, // requested control code
+	DWORD  eventType,   // event type
+	LPVOID eventData,   // event data
+	LPVOID context      // user-defined context data
+	) {
+
+#else
+
+VOID WINAPI
+ServiceCtrlHandler (
+	DWORD  controlCode  // requested control code
+	) {
+
+#endif /* HAVE_HIBERNATE */
+	
 	DWORD currentState = SERVICE_RUNNING;
 	BOOL success;
 
@@ -157,7 +266,11 @@ VOID ServiceCtrlHandler (DWORD controlCode)
 			// Stop the service
 			line_where_service_stopped = __LINE__;
 			StopService();
+#if HAVE_HIBERNATE
+			return NO_ERROR;
+#else
 			return;
+#endif /* HAVE_HIBERNATE */
 
 		// Pause the service- a NOOP for now
 		case SERVICE_CONTROL_PAUSE:
@@ -180,7 +293,22 @@ VOID ServiceCtrlHandler (DWORD controlCode)
 		case SERVICE_CONTROL_SHUTDOWN:
 			daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
 			line_where_service_stopped = __LINE__;
+#if HAVE_HIBERNATE
+			return NO_ERROR;
+#else
 			return;
+#endif /* HAVE_HIBERNATE */
+
+#if HAVE_HIBERNATE
+
+		// Handle any power events
+		case SERVICE_CONTROL_POWEREVENT:
+			line_where_service_stopped = __LINE__;
+			return PowerEventHander ( eventType, eventData );			
+			break;
+
+#endif /* HAVE_HIBERNATE */
+
 		default:
 			line_where_service_stopped = __LINE__;
  			break;
@@ -188,6 +316,10 @@ VOID ServiceCtrlHandler (DWORD controlCode)
 	//line_where_service_stopped = __LINE__;
 	SendStatusToSCM(currentState, NO_ERROR,
 		0, 0, 0);
+#if HAVE_HIBERNATE
+	return NO_ERROR;
+#endif /* HAVE_HIBERNATE */
+
 }
 
 // Handle an error from ServiceMain by cleaning up
@@ -217,10 +349,18 @@ VOID ServiceMain(DWORD argc, LPTSTR *argv)
 	BOOL success;
 
 	// immediately call Registration function
+#if HAVE_HIBERNATE
 	serviceStatusHandle =
-		RegisterServiceCtrlHandler(
-			SERVICE_NAME,
-			(LPHANDLER_FUNCTION) ServiceCtrlHandler);
+		RegisterServiceCtrlHandlerEx(		
+		SERVICE_NAME,		
+		(LPHANDLER_FUNCTION_EX) ServiceCtrlHandler,
+		NULL);
+#else
+	serviceStatusHandle =
+		RegisterServiceCtrlHandler(		
+		SERVICE_NAME,		
+		(LPHANDLER_FUNCTION) ServiceCtrlHandler);
+#endif HAVE_HIBERNATE
 	if (!serviceStatusHandle)
 	{
 		terminate(GetLastError());

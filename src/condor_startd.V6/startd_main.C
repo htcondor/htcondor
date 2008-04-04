@@ -389,6 +389,10 @@ main_init( int, char* argv[] )
 
 	resmgr->start_update_timer();
 
+#if HAVE_HIBERNATE
+	resmgr->updateHibernateConfiguration();
+#endif /* HAVE_HIBERNATE */
+
 		// Evaluate the state of all resources and update CM 
 		// We don't just call eval_and_update_all() b/c we don't need
 		// to recompute anything.

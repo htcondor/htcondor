@@ -136,6 +136,8 @@ CLEAN :
 	-@erase "$(INTDIR)\ntsysinfo.obj"
 	-@erase "$(INTDIR)\perm.obj"
 	-@erase "$(INTDIR)\pgsqldatabase.obj"
+	-@erase "$(INTDIR)\power_hibernator.obj"
+	-@erase "$(INTDIR)\power_manager.obj"
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
 	-@erase "$(INTDIR)\proc_family_direct.obj"
 	-@erase "$(INTDIR)\proc_family_interface.obj"
@@ -320,6 +322,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\ntsysinfo.obj" \
 	"$(INTDIR)\perm.obj" \
 	"$(INTDIR)\pgsqldatabase.obj" \
+	"$(INTDIR)\power_hibernator.obj" \
+	"$(INTDIR)\power_manager.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\proc_family_direct.obj" \
 	"$(INTDIR)\proc_family_interface.obj" \
@@ -471,6 +475,8 @@ CLEAN :
 	-@erase "$(INTDIR)\ntsysinfo.obj"
 	-@erase "$(INTDIR)\perm.obj"
 	-@erase "$(INTDIR)\pgsqldatabase.obj"
+	-@erase "$(INTDIR)\power_hibernator.obj"
+	-@erase "$(INTDIR)\power_manager.obj"
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
 	-@erase "$(INTDIR)\proc_family_direct.obj"
 	-@erase "$(INTDIR)\proc_family_interface.obj"
@@ -654,6 +660,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\ntsysinfo.obj" \
 	"$(INTDIR)\perm.obj" \
 	"$(INTDIR)\pgsqldatabase.obj" \
+	"$(INTDIR)\power_hibernator.obj" \
+	"$(INTDIR)\power_manager.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\proc_family_direct.obj" \
 	"$(INTDIR)\proc_family_interface.obj" \
@@ -1376,6 +1384,18 @@ SOURCE="..\src\condor_c++_util\perm.C"
 SOURCE="..\src\condor_c++_util\pgsqldatabase.C"
 
 "$(INTDIR)\pgsqldatabase.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\power_hibernator.C"
+
+"$(INTDIR)\power_hibernator.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\power_manager.C"
+
+"$(INTDIR)\power_manager.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
