@@ -732,7 +732,7 @@ sub checkoutSubmitInfo
     print "Attempting to fetch $submit_info from $tag...\n";
     my $cmd = "/bin/false FATAL ERROR, UNKNOWN VCS";
     if (defined($opt_git)) {
-	$cmd = "git archive --remote=$GITROOT_SRC origin/$tag $submit_info | tar x";
+	$cmd = "git archive --remote=$GITROOT_SRC $tag $submit_info | tar x";
     } else {
 	$cmd = "cvs -d $CVSROOT co -r $tag $submit_info";
     }
