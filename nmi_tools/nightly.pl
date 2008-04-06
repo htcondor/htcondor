@@ -19,7 +19,10 @@ GetOptions('git' => \$opt_git);
 $home = '/home/cndrauto/condor';
 $log_file = $home .'/nightly.log' . (defined $opt_git ? ".git" : "");
 $CVS="/usr/bin/cvs -d /space/cvs/CONDOR_SRC";
-$GIT="git archive --remote=/space/git/CONDOR_SRC.git master";
+$GIT="/prereq/git-1.5.4/bin/git";
+$GIT_SRC_ROOT="/space/git/CONDOR_SRC.git";
+$GIT_EXT_ROOT="/space/git/CONDOR_EXT.git";
+$GIT_DOC_ROOT="/space/git/CONDOR_DOC.git";
 
 
 # Open log file and setup autoflushing
@@ -45,11 +48,24 @@ print LOG "Starting: ". `date` ."\n";
 
 chdir $home || die "Can't chdir($home): $!\n";
 
+# We need to make sure the clones are current, since they aren't
+# rsync'd constantly anymore
+if (defined $opt_git) {
+    @roots = ($GIT_SRC_ROOT, $GIT_DOC_ROOT, $GIT_EXT_ROOT);
+    foreach $root (@roots) {
+	open(OUT, "$GIT --git-dir=$root fetch 2>&1|")
+	    || die "Can't fetch $root: $!\n";
+	while (<OUT>) {
+	    print LOG;
+	}
+    }
+}
+
 $CNS = "nmi_tools/condor_nmi_submit";
 
 print LOG "Updating copy of nmi_tools, including $CNS\n";
 if (defined $opt_git) {
-    $checkout_cmd = "$GIT nmi_tools | tar xv";
+    $checkout_cmd = "$GIT archive --remote=$GIT_SRC_ROOT master nmi_tools | tar xv";
 } else {
     $checkout_cmd = "$CVS co -l nmi_tools";
 }
