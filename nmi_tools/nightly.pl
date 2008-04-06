@@ -65,7 +65,7 @@ $CNS = "nmi_tools/condor_nmi_submit";
 
 print LOG "Updating copy of nmi_tools, including $CNS\n";
 if (defined $opt_git) {
-    $checkout_cmd = "$GIT archive --remote=$GIT_SRC_ROOT master nmi_tools | tar xv";
+    $checkout_cmd = "$GIT archive --remote=$GIT_SRC_ROOT origin/master nmi_tools | tar xv";
 } else {
     $checkout_cmd = "$CVS co -l nmi_tools";
 }

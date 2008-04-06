@@ -732,7 +732,7 @@ sub checkoutSubmitInfo
     print "Attempting to fetch $submit_info from $tag...\n";
     my $cmd = "/bin/false FATAL ERROR, UNKNOWN VCS";
     if (defined($opt_git)) {
-	$cmd = "git archive --remote=$GITROOT_SRC $tag $submit_info | tar x";
+	$cmd = "git archive --remote=$GITROOT_SRC origin/$tag $submit_info | tar x";
     } else {
 	$cmd = "cvs -d $CVSROOT co -r $tag $submit_info";
     }
@@ -1254,13 +1254,13 @@ sub makeFetchFileVCS
 	print FILE "git_root = $gitroot\n";
 	print FILE "git_path = $module\n" unless $is_module;
 	if( $tag ) {
-	    print FILE "git_tree = $tag\n";
+	    print FILE "git_tree = origin/$tag\n";
 	} else {
 	    # the "master" branch is essentially like the CVS
 	    # TRUNK. it should always exist, but it is possible for
 	    # someone to rename it. hopefully we won't do that in the
 	    # NMI copy of the repository
-	    print FILE "git_tree = master\n";
+	    print FILE "git_tree = origin/master\n";
 	}
     } else {
 	print FILE "method = cvs\n";
