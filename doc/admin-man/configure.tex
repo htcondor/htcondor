@@ -3981,6 +3981,63 @@ See section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks} on
 
 \end{description}
 
+These macros control the power management capabilities of the 
+\Condor{startd} to optionally put the machine in to a low power state.
+See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
+``Power Management'' for more details.
+
+\begin{description}
+
+\item[\Macro{HIBERNATE\_CHECK\_INTERVAL}]
+\label{param:HibernateCheckInterval}
+  Determines how often the \Condor{startd} should check if the 
+  machine is ready to enter a low power state.  If the value is 
+  of \MacroNI{HIBERNATE\_CHECK\_INTERVAL} is 0, then the check is 
+  disabled; otherwise, the \Expr{HIBERNATE} expression will be 
+  evaluated in the context of each slot at the given interval.  
+  This macro is defined in terms of seconds and defaults to 0,
+  if used, a value $\ge300$ (5 minutes) is recommended.
+
+  There is one special case when this interval is ignored: when the 
+  machine has just returned from a low power state (excluding 
+  shutdown (5)).  In order to avoid machines from volleying between 
+  a running state and a low power state, an hour of uptime is enforced
+  after a machine has been woken.  After this time has passed, regular
+  checks will resume.
+
+\item[\Macro{HIBERNATE}]
+\label{param:Hibernate}
+  A integer expression that, when non-zero, causes Condor to put the 
+  machine into a low power state given by the evaluation of the 
+  expression.  The following values are supported:
+
+  \begin{itemize}
+  \item[] 0 - No-op: do not enter a low power state
+  \item[] 1 - On Windows, see 3
+  \item[] 2 - On Windows, see 3
+  \item[] 3 - Sleep (standby)
+  \item[] 4 - Hibernate
+  \item[] 5 - Shutdown (soft-off)
+  \end{itemize}
+  
+  The \MacroNI{HIBERNATE} expression is written in terms of the S-states
+  as defined in the Advanced Configuration and Power Interface 
+  (ACPI) specification.  The S-states take the form S$n$, where $n$ is 
+  an integer in the range $0$ to $5$, inclusive.  The number that results 
+  from evaluating the expression determines which S-state to enter. The 
+  $n$ from S$n$ notation was adopted because at this junction in time 
+  it appears to be the standard naming scheme for power states on several
+  popular Operating Systems, including various flavors of Windows and Linux
+  distributions.
+
+  Since this expression is evaluated in the context of each slot on the
+  machine, any one slot has veto power over the other slots.  If the 
+  evaluation of \MacroNI{HIBERNATE} in one slot evaluates to 0, then
+  the machine will not be placed into a low power state.  On the other
+  hand, if all slots evaluate to a non-zero value, but differ in value, 
+  then the largest value is used as the representative power state.
+
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Schedd-Config-File-Entries}\condor{schedd}
