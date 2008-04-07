@@ -1254,7 +1254,7 @@ sub makeFetchFileVCS
 	print FILE "git_root = $gitroot\n";
 	print FILE "git_path = $module\n" unless $is_module;
 	if( $tag ) {
-	    print FILE "git_tree = origin/$tag\n";
+	    print FILE "git_tree = $tag\n";
 	} else {
 	    # the "master" branch is essentially like the CVS
 	    # TRUNK. it should always exist, but it is possible for
