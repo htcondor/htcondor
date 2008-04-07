@@ -438,7 +438,7 @@ XCOMM End translation of func(release_target)
 #define release_library(lib,dir) 			@@\
 XCOMM Begin translation of func(release_library) @@\
 $(RELEASE_DIR)/dir/lib: lib					@@\
-	ln lib $(RELEASE_DIR)/dir 2>/dev/null || COPY_LIBRARY(lib,$(RELEASE_DIR)/dir/lib)		@@\
+	if [ -h lib ]; then COPY_LIBRARY(lib,$(RELEASE_DIR)/dir/lib); else ln lib $(RELEASE_DIR)/dir 2>/dev/null || COPY_LIBRARY(lib,$(RELEASE_DIR)/dir/lib); fi@@\
 	RANLIB_TOUCH($(RELEASE_DIR)/dir/lib)			@@\
 release:: $(RELEASE_DIR)/dir/lib	@@\
 XCOMM End translation of func(release_library)
