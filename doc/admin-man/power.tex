@@ -1,0 +1,152 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:power-man}Power Management}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{power managment}
+\index{installation!power managment}
+
+\Note{This information is in a preliminary state and refers to 
+functionality only present on the Windows platform.}
+
+Condor can be configured to place a machine in a low power state.  
+To do this, Condor must given the details of the power capabilities 
+of the machine. 
+
+This section discusses a starting point for those users interested in 
+experimenting with power conservation in their Condor pool.  This is 
+especially relevant when machines are not in heavy use, or when there 
+are known periods of low activity in the pool.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Entering low power states}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+By default, Condor's power management is turned off.  To enable it is a matter
+of configuring the time interval that determines when slots should be queried
+for their readiness to hibernate.  A slot's readiness is determined by the 
+evaluating the \Macro{HIBERNATE} expression in it's context.  We will return 
+to this point shortly.
+
+To start power management set the \Macro{HIBERNATE\_CHECK\_INTERVAL} to a
+non-zero value.  This value is interpreted in seconds, so it need not 
+be a small number: it is a trade off between accuracy of measurement and 
+unnecessary computation.  
+
+For instance, if we want to put the machine in a low power state very rapidly
+after it has become idle, we may want to check the each slot's state quite
+frequently:
+
+\begin{verbatim}
+HIBERNATE_CHECK_INTERVAL = 20
+\end{verbatim}
+
+This would make Condor check each slot's readiness every 20 seconds; however,
+for a more common value would be:
+
+\begin{verbatim}
+HIBERNATE_CHECK_INTERVAL = 300
+\end{verbatim}
+
+This checks the slots every 5 minutes.  This setting, while losing some 
+degree of granularity, is more reasonable as machine are likely to be put 
+in to a low power state after a few hours, rather than minutes.
+ 
+A slot's readiness|or \textit{willingness}|to enter a low power state is 
+determined by the \Macro{HIBERNATE} expression.  As was mentioned above, this 
+expression is evaluated in the context of each slot on the machine, and not 
+on the machine itself; meaning that any one slot can veto a change of power 
+state.  
+
+Because \Macro{HIBERNATE} is an expression, it can be made to include a wide
+array of variables.  A change in power state might occur, for instance, if 
+none of the slots are claimed, or if the slots are not in the ``Owner'' state.
+These are just a few of the options available.
+
+As an example, let's assume that the \Macro{START} expression is not set to
+always be trivially be true.  This allows us to easily determine if
+we are in an ``Unclaimed'' state.  The following expression evaluates
+to True if:
+
+\begin{itemize}
+\item The keyboard has been idle long enough, and
+\item the cpu is idle, and
+\item the slot haves been ``Unclaimed'' for more than 2 hours:
+\end{itemize}
+
+\begin{verbatim}
+ShouldHibernate = ((KeyboardIdle > $(StartIdleTime)) \
+                        && $(CPUIdle) \
+                               && ($(StateTimer) > (2 * $(HOUR)))
+\end{verbatim}
+
+Note that we have not defined the \Macro{HIBERNATE} expression here, only an 
+auxiliary macro to help us with the actual definition.  Using this macro we 
+can create a clean hibernation expression:
+
+\begin{verbatim}
+HIBERNATE = ifThenElse($(ShouldHibernate), 3, 0)
+\end{verbatim} %$ -- just there to fix emacs' bad dollar parsing
+
+The actual hibernation expression says: We should enter power state $3$,
+i.e. sleep (or standby), if \Code{ShouldHibernate} evaluates to true; 
+otherwise, enter power state $0$|which is a no-op: it tells Condor to leave 
+the machine up and running in it's current state. 
+
+Here we see can clearly see how one slot can veto the decision of all the 
+other slots.  If any slot returns $0$, Condor will not put the machine in 
+to a low power state.  If the numbers returned by the slots are all non-zero, 
+but differ, then the largest value is used as the representative power 
+state, and Condor will attempt to put the machine in to this power state.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsection{Returning from a low power state}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Troubleshooting}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+If after a suitable amount of time, the machine has not entered the expected 
+power state, Condor is having difficulty exercising the OS's low power 
+capabilities.  While the cause of this can be very specific to the machine's
+hardware, it may also be due to improperly configured software.  
+With regards to hardware, most likely the configuration needs to be dealt with
+in the machine's BIOS, which we can offer little guidance, due to the 
+large variety of hardware out there.  In the case of the OS, we can offer
+a few hints:
+
+On Vista the \Prog{powercfg} tool can be used to discover the available 
+power states on the machine.  The following example illustrates how to
+list all of the supported power states of the machine:
+
+\begin{verbatim}
+> powercfg -A
+The following sleep states are available on this system: 
+Standby (S3) Hibernate Hybrid Sleep
+The following sleep states are not available on this system:
+Standby (S1)
+        The system firmware does not support this standby state.
+Standby (S2)
+        The system firmware does not support this standby state.
+\end{verbatim}
+
+% TODO(?): maybe move this and re-work it into the body of the 
+% admin-doc proper or into the HIBERNATE expression's description
+Note that the \Macro{HIBERNATE} expression is written in terms of the 
+S$n$ state, where $n$ is the number returned by evaluating expression.
+
+This tool can also be used to enable and disable other sleep states.  As 
+an example, the following will turn hibernation on:
+
+\begin{verbatim}
+powercfg -h on
+\end{verbatim}
+
+If this tool is insufficient for configuring the machine in the manner that 
+is required, the \textit{Power Options} control panel application offers
+the full extent of the machine's power management abilities.
+
+On Windows 2000/XP, unfortunately, lacks the \Prog{powercfg} so all 
+configuration must be done via the \textit{Power Options} control panel 
+application.
