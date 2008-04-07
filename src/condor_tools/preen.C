@@ -234,6 +234,9 @@ check_spool_dir()
 	well_known_list.append( "Accountantnew.log" );
 	well_known_list.append( "local_univ_execute" );
 	well_known_list.append( "EventdShutdownRate.log" );
+		// SCHEDD.lock: High availability lock file.  Current
+		// manual recommends putting it in the spool, so avoid it.
+	well_known_list.append( "SCHEDD.lock" );
 
 	// connect to the Q manager
 	if (!(qmgr = ConnectQ (0))) {
