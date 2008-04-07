@@ -58,7 +58,7 @@ static void Usage(char* name)
 		"\t\t-l\t\t\tVerbose output (entire classads)\n"
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 #ifdef WANT_QUILL
-		"\t\t-name <quill-name>\tRead history data from Quill database\n"
+		"\t\t-name <schedd-name>\tRead history data from Quill database\n"
 		"\t\t-completedsince <time>\tDisplay jobs completed on/after time\n"
 #endif
 		"\t\trestriction list\n"
