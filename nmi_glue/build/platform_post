@@ -130,14 +130,14 @@ my $cmd = "";
 my $cmd1 = "";
 my $cmd2 = "--platforms=$platform "; 
 my $cmd3 = "$notify_arg $opt_test_args $xtests_arg";
-my $cmd4 = (defined $opt_git ? " --git" : "");
+my $git_cmd_arg = (defined $opt_git ? "--git" : "");
 if($mode ne "workspace") {
-   	$cmd1 = "$cns --test --buildid=$runid --tag=$tag --module=$module ";
+   	$cmd1 = "$cns --test --buildid=$runid --tag=$tag --module=$module $git_cmd_arg ";
 } else {
 	# set up tests for a workspace build
-   	$cmd1 = "$cns --test --buildid=$runid "; 
+   	$cmd1 = "$cns --test --buildid=$runid $git_cmd_arg "; 
 }
-$cmd = $cmd1 . $cmd2 . $cmd3 . $cmd4;
+$cmd = $cmd1 . $cmd2 . $cmd3;
 
 # submit the tests for the native build
 print "Invoking CNS ($cmd)\n";
