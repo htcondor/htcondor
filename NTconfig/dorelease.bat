@@ -18,6 +18,8 @@ if not exist %1\lib\NUL mkdir %1\lib
 if not exist %1\lib\webservice\NUL mkdir %1\lib\webservice
 if not exist %1\etc\NUL mkdir %1\etc
 if not exist %1\sql\NUL mkdir %1\sql
+if not exist %1\src\NUL mkdir %1\src
+if not exist %1\src\chirp\NUL mkdir %1\src\chirp
 echo Copying files...
 copy ..\Release\*.exe %1\bin
 copy ..\Release\*.dll %1\bin
@@ -29,6 +31,10 @@ copy ..\src\condor_examples\condor_vmgahp_config.vmware %1\etc
 copy ..\src\condor_vm-gahp\condor_vm_vmware.pl %1\bin
 copy ..\src\condor_vm-gahp\*.dll %1\bin
 copy ..\src\condor_vm-gahp\mkisofs.exe %1\bin
+copy ..\src\condor_chirp\chirp_* %1\src\chirp
+copy ..\src\condor_chirp\PROTOCOL %1\src\chirp
+copy ..\src\condor_chirp\chirp\LICENSE %1\src\chirp
+copy ..\src\condor_chirp\chirp\doc\Condor %1\src\chirp\README
 copy msvcrt.dll %1\bin
 copy msvcirt.dll %1\bin
 copy pdh.dll %1\bin
@@ -58,7 +64,6 @@ cd ..
 if not exist include\NUL mkdir include
 copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\include\* include
 copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\lib\* lib
-if not exist src\NUL mkdir src
 if not exist src\drmaa\NUL mkdir src\drmaa
 copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\src\* src\drmaa
 popd
