@@ -1,3 +1,7 @@
+04/08/09 V7_1-BGP-branch
+  Based from the master on this date, this branch is for the work
+  dedicated to supporting the BlueGene/P machine.
+
 04/02/08 V7_1_0
   The offical tag for 7.1.0, from the V7_0_1-branch.
   (Actually, from abandoned CVS trunk, which was merged to V7_1_0-branch
