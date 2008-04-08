@@ -1,0 +1,22 @@
+NAME = condor_bgd
+all_target( $(NAME) )
+
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
+
+soapobjs(bgd)
+
+OBJ = bgd_main.o $(SOAP_OBJS)
+
+c_plus_target($(NAME),$(OBJ),$(LIB))
+
+html:
+release:: all
+stripped:: all
+static:: all
+clean::
+
+gen_soapfiles(bgd,condorBgd)
+
+testbin:: all
