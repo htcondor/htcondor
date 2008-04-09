@@ -45,10 +45,6 @@ condor_setup: condor_setup.c
 condor_set_acls: condor_set_acls.c
 	cl /nologo condor_set_acls.c /link /nologo advapi32.lib user32.lib 
 
-# Build the utility to hide the set_perms.exe utility from the users view
-condor_set_perms_masker: condor_set_perms_masker.c
-	cl /nologo condor_set_perms_masker.c /link /nologo user32.lib
-
 # build the actual MSI package
 msi: condor_setup condor.mm
 	cmd /c if not exist MakeMSI ..\\tar xf makemsi.tar
@@ -75,7 +71,6 @@ version_file:
 config_file:
 	cmd /c copy /Y condor_setup.exe    $(CONDORRELEASEDIR)
 	cmd /c copy /Y condor_set_acls.exe $(CONDORRELEASEDIR)
-	cmd /c copy /Y condor_set_perms_masker.exe $(CONDORRELEASEDIR)
 	cmd /c copy /Y condor_config.local $(CONDORRELEASEDIR)
 	cmd /c awk -f $(BASE)\\src\\condor_examples\\convert_config_to_win32.awk $(BASE)\\src\\condor_examples\\condor_config.generic > $(CONDORRELEASEDIR)\\condor_config
 	cmd /c awk -f $(BASE)\\src\\condor_examples\\convert_vmgahp_config_to_win32.awk $(BASE)\\src\\condor_examples\\condor_vmgahp_config.vmware > $(CONDORRELEASEDIR)\\etc\\condor_vmgahp_config.vmware
