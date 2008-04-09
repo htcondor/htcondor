@@ -25,9 +25,9 @@ my $datacruncher = "filter_sendfile";
 my $crunch = $datalocation . $datacruncher;
 #my @datafiles = ( "sendfile-v6.0", "sendfile-v6.1", "sendfile-v6.2", "sendfile-v6.3", "sendfile-v6.4", "sendfile-v6.5", "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9","sendfile-v7.0", "sendfile-v7.1" );
 #my @datafiles = ( "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9","sendfile-v7.0", "sendfile-v7.1" );
-my @datafiles = ( "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9", "sendfile-v7.0" );
+my @datafiles = ( "sendfile-v6.8", "sendfile-v6.9", "sendfile-v7.0", "sendfile-v7.1" );
 my $stable = "sendfile-v7.0";
-my $developer = "sendfile-v6.9";
+my $developer = "sendfile-v7.1";
 #my @datafiles = ( "sendfile-v6.8" );
 
 GetOptions (
@@ -48,6 +48,36 @@ my %months = (
     "Oct" => "October",
     "Nov" => "November",
     "Dec" => "December",
+);
+
+my %previousmonth = (
+    "Feb" => "January",
+    "Mar" => "February",
+    "Apr" => "March",
+    "May" => "April",
+    "Jun" => "May",
+    "Jul" => "June",
+    "Aug" => "July",
+    "Sep" => "August",
+    "Oct" => "September",
+    "Nov" => "October",
+    "Dec" => "November",
+    "Jan" => "December",
+);
+
+my %monthdays = (
+    "Jan" => 31,
+    "Feb" => 28,
+    "Mar" => 31,
+    "Apr" => 30,
+    "May" => 31,
+    "Jun" => 30,
+    "Jul" => 31,
+    "Aug" => 31,
+    "Sep" => 30,
+    "Oct" => 31,
+    "Nov" => 30,
+    "Dec" => 31,
 );
 
 my %nummonths = (
@@ -95,6 +125,7 @@ $year;
 $skip = "true";
 $trimdata = "no";
 $firstoutput;
+my @queue = ();
 
 #print "$crunch\n";
 foreach $log (@datafiles) {
@@ -105,12 +136,15 @@ foreach $log (@datafiles) {
 	$image = $log . ".png";
 	$trimdata = "no";
 	$skip = "true";
+	 @queue = ();
 	open(LOGDATA,"$crunch $datafile 2>&1|") || die "logdata bad: $!\n";
 	open(OUT,">$outfile") || die "Failed to open $outfile: $!\n";
 	while(<LOGDATA>) {
 		chomp;
-		$line = $_;
-		#print "$_\n";
+        unshift @queue, $_;
+    }
+    reorderQueue();
+	while( $line  = pop(@queue)) {
 		if($line =~ /^\s+[\?MB]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):\s(condor[-_]).*/) {
 			if( $skip eq "true" )  {
 				$skip = "false";
@@ -208,6 +242,66 @@ Options:
 	\n";
 }
 
+# =================================
+# reorderQueue will go through the queue
+# looking for day changes. If it pops back
+# within 2 more items it saves the data points
+# finds them in the queue and places them with 
+# their kin
+# =================================
+
+sub reorderQueue
+{
+    @outoforder = ();
+    $outmax = 2; # look for two matching
+    $outcount = 0;
+    @reorder = ();
+    $outvalue = 0;
+    $thisday = 0;
+    $first = "true";
+    while( $line = pop(@queue)) {
+        if($line =~ /^\s*[\*\?MB]+\s+(\w+)\s+(\w+)\s+(\d+)\s+.*$/) {
+            # either good or bad
+            if($irst eq "true") {
+                # first
+                $thisday = $3;
+                $first = "false";
+                push @reorder, $line;
+            } else {
+                # rest
+                if($3 == $thisday) {
+                    # match
+                    push @reorder, $line;
+                } else {
+                    # mismatch
+                    if($outcount == 0) {
+                        # first of new value
+                        $outcount = $outcount + 1;
+                        push @outoforder, $line;
+                        $outvalue = $3;
+                    } else {
+                        #second assumed same value
+                        $requeue = pop(@outoforder);
+                        push  @reorder, $requeue;
+                        push @reorder, $line;
+                        $outcount = 0;
+						$thisday = $3;
+                    }
+                }
+            }
+        }
+    }
+	# what if we have the last value be first of a day?
+	# If we are holding one at the end , drop it out
+	if($outcount != 0){
+		$requeue = pop(@outoforder);
+		push  @reorder, $requeue;
+	}
+
+    while( $line = pop(@reorder)) {
+        push @queue, $line;
+    }
+}
 
 # =================================
 # Scale the data and return position info. Which
@@ -285,8 +379,13 @@ sub DoOutput
 		#ok if we start a data set on the 1st of the month we "should"
 		# roll the data to the previous month....
 		print "starting 0 data point\n";
-		$dayearly = $day - 1;
-		print OUT "$months{$month} $dayearly $year, 0, 0, 0, 0, 0, 0\n";
+		if($day == 1) {
+            $dayearly = $monthdays{$month};
+            print OUT "$previousmonth{$month} $dayearly $year, 0, 0, 0, 0, 0, 0\n";
+        } else {
+            $dayearly = $day - 1;
+            print OUT "$months{$month} $dayearly $year, 0, 0, 0, 0, 0, 0\n";
+        }
 		$firstoutput = 1;
 	}
 	if( $scale == 0 ) {
