@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
+#include "condor_bgd.h"
 
 /* Using daemoncore, you get the benefits of a logging system with dprintf
 	and you can read config files automatically. To start testing
@@ -38,9 +39,14 @@ char* mySubSystem = "BGD";		// used by Daemon Core
 
 //-------------------------------------------------------------
 
-int main_init(int /* argc */, char * /* argv */ [])
+BGD g_bgd;
+
+int main_init(int argc, char * argv [])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
+
+	g_bgd.init(argc, argv);
+
 	return TRUE;
 }
 

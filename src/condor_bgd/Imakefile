@@ -7,9 +7,19 @@ LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
 soapobjs(bgd)
 
-OBJ = bgd_main.o $(SOAP_OBJS)
+OBJ = bgd_main.o bgd.o $(SOAP_OBJS)
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
+public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
+
+public_copy_target(bgd_query_work_loads,libexec,bgd_query_work_loads,EXECUTABLE_MODE)
+public_copy_target(bgd_generate_partition,libexec,bgd_generate_partition,EXECUTABLE_MODE)
+public_copy_target(bgd_destroy_partition,libexec,bgd_destroy_partition,EXECUTABLE_MODE)
+public_copy_target(bgd_available_partitions,libexec,bgd_available_partitions,EXECUTABLE_MODE)
+public_copy_target(bgd_activate_a_partition,libexec,bgd_activate_a_partition,EXECUTABLE_MODE)
+public_copy_target(bgd_deactivate_a_partition,libexec,bgd_deactivate_a_partition,EXECUTABLE_MODE)
+public_copy_target(bgd_activated_partitions,libexec,bgd_activated_partitions,EXECUTABLE_MODE)
+public_copy_target(bgd_glidein_to_partition,libexec,bgd_glidein_to_partition,EXECUTABLE_MODE)
+
 
 html:
 release:: all
