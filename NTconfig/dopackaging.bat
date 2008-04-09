@@ -35,7 +35,7 @@ popd
 REM Finally, make the zipfile.
 if not A%ERRORLEVEL%==A0 (exit /b 1)
 set PATH=%PATH_SAVE%
-zip -r condor.zip %CONDORRELEASEDIR%
+izip -r condor.zip %CONDORRELEASEDIR%
 move /y condor.zip %CONDOROUTPUTDIR%
 
 REM rename the zip file to match that of the msi
