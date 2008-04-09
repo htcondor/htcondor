@@ -33,7 +33,7 @@ CONDOROUTPUTDIR=$(BASE)\\public
 #PATH=C:\Windows\system32;C:\condor\workspaces\v67\NTconfig;C:\Perl\bin
 
 
-all: clean license condor_setup condor_set_acls condor_set_perms_masker config_file version_file msi 
+all: clean license condor_setup condor_set_acls config_file version_file msi 
 	"mkdir" -p $(CONDOROUTPUTDIR)
 	cmd /c copy /y out\\condor.mm\\MSI\\*.msi $(CONDOROUTPUTDIR)
 
