@@ -438,9 +438,14 @@ set ARGS=%ARGS% INSTALLDIR_NTS="C:\Condor"
 set ARGS=%ARGS% POOLHOSTNAME="$(FULL_HOSTNAME)"
 set ARGS=%ARGS% ACCOUNTINGDOMAIN="none"
 set ARGS=%ARGS% JVMLOCATION="C:\Windows\system32\java.exe"
+set ARGS=%ARGS% USEVMUNIVERSE=Y
+set ARGS=%ARGS% VMVERSION="server1.4"
+set ARGS=%ARGS% VMMEMORY="128"
+set ARGS=%ARGS% VMMAXNUMBER="$(NUM_CPUS)"
+set ARGS=%ARGS% VMNETWORKING=N
 set ARGS=%ARGS% STARTSERVICE="Y"
 
-msiexec /qb /l* condor-install-log.txt /i condor-6.7.18-winnt50-x86.msi %ARGS%
+msiexec /qb /l* condor-install-log.txt /i condor-7.1.0-winnt50-x86.msi %ARGS%
 \end{verbatim}
 
 Each property corresponds to answers supplied in the interactive installer
@@ -520,7 +525,30 @@ defines the path to Java virtual machine on the target machine.
 \item[SMTPSERVER]
 defines the host name of the SMTP server that the target machine is to
 use to send e-mail.
-\end{description}
+
+\item [USEVMUNIVERSE = $<$ Y \Bar\ N $>$]
+will cause the installer to enable VM Universe jobs on the target machine.
+
+\item [VMVERSION]
+defines the version of VMware installed on the target machine.
+
+\item [VMMEMORY]
+an integer value that defines the maximum memory each VM run on the target
+machine.
+
+\item [VMMAXNUMBER]
+an integer value that defines the number of VMs that can be run in parallel
+on the target machine.
+
+\item [VMNETWORKING = $<$ N \Bar\ A \Bar\ B \Bar\ C $>$]
+determines if VM Universe can use networking. This can be set to:
+\begin{itemize}
+\item None (N)
+\item NAT (A)
+\item Bridged (B)
+\item NAT and Bridged (C)
+\end{itemize}
+\end {description}
 
 \begin{description}
 \item [STARTSERVICE = $<$ Y \Bar\ N $>$]
