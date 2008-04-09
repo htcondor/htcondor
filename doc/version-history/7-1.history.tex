@@ -28,7 +28,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added the capability to the \Condor{startd} to allow it to power 
+  down machines based a user specified policy.  See 
+  section~\ref{sec:power-man} on \pageref{sec:power-man} on
+  ``Power Management'' for more details.
 
 \end{itemize}
 
@@ -36,7 +39,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added the \MacroNI{HIBERNATE\_CHECK\_INTERVAL} macro, which, if
+  set to a non-zero value, enables the \Condor{startd} to place the 
+  machine in a low power state based on the evaluation of the
+  \MacroNI{HIBERNATE} expression.  See 
+  page~\pageref{param:HibernateCheckInterval} for more information.
+
+\item Added the \MacroNI{HIBERNATE} expression, which, when evaluated in
+  the context of each slot, determines if it a machine should enter
+  a low power state. See page~\pageref{param:Hibernate} for more 
+  information.
 
 \end{itemize}
 

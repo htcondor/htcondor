@@ -3993,7 +3993,7 @@ See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
   Determines how often the \Condor{startd} should check if the 
   machine is ready to enter a low power state.  If the value is 
   of \MacroNI{HIBERNATE\_CHECK\_INTERVAL} is 0, then the check is 
-  disabled; otherwise, the \Expr{HIBERNATE} expression will be 
+  disabled; otherwise, the \MacroNI{HIBERNATE} expression will be 
   evaluated in the context of each slot at the given interval.  
   This macro is defined in terms of seconds and defaults to 0,
   if used, a value $\ge300$ (5 minutes) is recommended.
@@ -4007,7 +4007,7 @@ See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
 
 \item[\Macro{HIBERNATE}]
 \label{param:Hibernate}
-  A integer expression that, when non-zero, causes Condor to put the 
+  An integer expression that, when non-zero, causes Condor to put the 
   machine into a low power state given by the evaluation of the 
   expression.  The following values are supported:
 
