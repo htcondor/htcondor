@@ -941,7 +941,9 @@ sub writeCommonInfo
 	if( defined $opt_input_platform ) {
 		# brand binaries being tested on this platform so we can find it later
 		# its a cross test
-        print $fh "component_version = $opt_input_platform\n";
+		# adjust for api change where all platforms now begin with "nmi:".
+		my $adjusted_platform = "nmi:" . "$opt_input_platform";
+        print $fh "component_version = $adjusted_platform\n";
     } elsif( $runtype eq "test") {
 		# when the optional input is not used its a native test 
         print $fh "component_version = native\n";
@@ -1141,7 +1143,9 @@ sub generateTestFetchFiles
         my @fetch_platforms;
         my $platform;
         foreach $platform (@platforms ) {        
-            push( @fetch_platforms, "$opt_input_platform:$platform" );
+			# new double colon syntax as of 2.5.0
+			my $target = "$opt_input_platform" . "::" . "$platform";
+            push( @fetch_platforms, $target );
         }
         print RUNIDFILE "platforms = " . join(', ', @fetch_platforms);
     }
