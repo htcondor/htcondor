@@ -60,6 +60,19 @@ The details of each version are described below.
   longer fail to install because of a missing "Users" group; instead, it
   will use the regionally appropriate group.
 
+\item Interoperability with Samba (as a PDC) has been improved.  Condor 
+  uses a fast form of login during credential validation.  Unfortunately, 
+  this login procedure fails under Samba, even if the credentials are 
+  valid.  The new behavior is to attempt the fast login and, on failure, 
+  fall back to the slower form.
+
+\item Windows slot users no longer have the Batch Privilege added, nor 
+  does Condor first attempt a Batch login for slot users.  This was 
+  causing permission problems on hardened versions of Windows, such 
+  as Windows Sever 2003, in that not interactive users lacked the 
+  permission to run batch files (via the cmd.exe tool). This affected 
+  any user submitting jobs that used batch files as the executable.
+
 \end{itemize}
 
 \noindent Known Bugs:
