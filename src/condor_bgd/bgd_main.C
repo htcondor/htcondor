@@ -47,6 +47,8 @@ int main_init(int argc, char * argv [])
 
 	g_bgd.init(argc, argv);
 
+	g_bgd.register_timers();
+
 	return TRUE;
 }
 

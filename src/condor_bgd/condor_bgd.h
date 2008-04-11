@@ -16,9 +16,14 @@ class BGD : public Service
 		// TRUE for good init, FALSE for bad.
 		int init(int argc, char *argv[]);
 
+		// Start the daemon's work up.
+		void register_timers(void);
+
 		// The timer which initiates the daemon to try and alter the
 		// BG partitions to match the workload required.
-		int BGD::adjust_partitions(void);
+		int adjust_partitions(void);
+
+		void reconfig(void);
 
 	private:
 		// Various scripts which do the work.
