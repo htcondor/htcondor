@@ -843,8 +843,10 @@ sub createSubmitFiles
     } else {
 	 	print CMDFILE "+periodic_remove = (((JobStatus == 2)&&(JobUniverse == 5)&&((CurrentTime - JobCurrentStartDate) > (60 * 60 * 8))) =?= TRUE)\n";
         print CMDFILE "run_type = test\n";
+		# allow tests on changing systems "unmanaged like unmanaged-x86_rhap_5.1"
+		print CMDFILE "++unmanaged = true \n";
         writeTestPrereqs( *CMDFILE );
-        writeTestGlue( *CMDFILE );
+		writeTestGlue( *CMDFILE );
     }
 
 	 close CMDFILE;
