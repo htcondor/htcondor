@@ -124,7 +124,7 @@ typedef unsigned __int32 uint32_t;
 #define S_IRWXO 2
 #define S_ISDIR(mode) (((mode)&_S_IFDIR) == _S_IFDIR)
 #define S_ISREG(mode) (((mode)&_S_IFREG) == _S_IFREG)
-#define rint(num) floor(num + .5)
+#define rint(num) ((num<0.)? -floor(-num+.5):floor(num+.5))
 
 #define ETIMEDOUT ERROR_TIMEOUT
 
