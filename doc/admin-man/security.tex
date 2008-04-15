@@ -2539,17 +2539,17 @@ The name of the control lists have the following form:
 \normalsize
 
 The two parts of this name that can vary are
-PERMISSION-LEVEL and the <SUBSYS>.
+PERMISSION-LEVEL and the \verb@<@SUBSYS\verb@>@.
 The PERMISSION-LEVEL can be any of the security access levels
 described earlier in this section.
 Examples include \DCPerm{WRITE}, \DCPerm{OWNER}, and \DCPerm{CONFIG}.
 
-The <SUBSYS> is an optional portion of the name. 
+The \verb@<@SUBSYS\verb@>@ is an optional portion of the name. 
 It can be used to
 define separate rules for which configuration attributes can be set
 for each kind of Condor daemon (for example, STARTD, SCHEDD, MASTER).
 There are many configuration settings that can be defined differently
-for each daemon that use this <SUBSYS> naming convention.
+for each daemon that use this \verb@<@SUBSYS\verb@>@ naming convention.
 See section~\ref{sec:Condor-Subsystem-Names} on
 page~\pageref{sec:Condor-Subsystem-Names} for a list.
 If there is no daemon-specific value for a given daemon, Condor will
