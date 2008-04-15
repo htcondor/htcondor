@@ -131,7 +131,7 @@ my @queue = ();
 foreach $log (@datafiles) {
 	$firstoutput = 0;
 	$datafile = $datalocation . $log;
-	print "$log\n";
+	print "$crunch $datafile $log\n";
 	$outfile = $log . ".data";
 	$image = $log . ".png";
 	$trimdata = "no";
@@ -145,7 +145,10 @@ foreach $log (@datafiles) {
     }
     reorderQueue();
 	while( $line  = pop(@queue)) {
-		if($line =~ /^\s+[\?MB]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):\s(condor[-_]).*/) {
+		#print "-----<$line>-----\n";
+		# NOTE if you change matching criteria make SURE to
+		# adjust matching criteria in reorderQueue().
+		if($line =~ /^\s+[\?MBR]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):\s(condor[-_]).*/) {
 			if( $skip eq "true" )  {
 				$skip = "false";
 				$firstdate = $3 . " " . $months{$2} . " " . $5;
@@ -167,8 +170,10 @@ foreach $log (@datafiles) {
 			if($filename =~ /^condor_.*/) {
 				$totalsrc = $totalsrc + 1;
 			}
-			#print "Good $2 $3 $5\n";
-		} elsif($line =~ /^\*[\?MB]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):.*/) {
+			#print "Good $2 $3 $5 <$totalgood|$line>\n";
+		} elsif($line =~ /^\s+[\?MBR]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):\s+condordebug.*$/) {
+			#print "Ignore debugsysmbols|$l;ine\n";
+		} elsif($line =~ /^\*[\?MBR]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):.*/) {
 			if( $skip eq "true" )  {
 				$skip = "false";
 				$firstdate = $3 . " " . $months{$2} . " " . $5;
@@ -186,9 +191,9 @@ foreach $log (@datafiles) {
 			$month = $2;
 			$year = $5;
 			$totalbad = $totalbad + 1;
-			#print "Bad $2 $3 $5\n";
+			#print "Bad $2 $3 $5 <$totalbad|$line>\n";
 		} else {
-			#print "Can not determine\n";
+			#print "Mismatch:<$line>\n";
 		}
 
 		if($trimdata eq "yes") {
@@ -260,7 +265,7 @@ sub reorderQueue
     $thisday = 0;
     $first = "true";
     while( $line = pop(@queue)) {
-        if($line =~ /^\s*[\*\?MB]+\s+(\w+)\s+(\w+)\s+(\d+)\s+.*$/) {
+        if($line =~ /^\s*[\*\?MBR]+\s+(\w+)\s+(\w+)\s+(\d+)\s+.*$/) {
             # either good or bad
             if($irst eq "true") {
                 # first
