@@ -798,23 +798,20 @@ Note that this implemented by setting the value of
 \MacroNI{GSI\_DAEMON\_DIRECTORY}.
 \end{enumerate}
 
-When a daemon acts as the client within authentication, its
-authorization policy for what servers it trusts may be specified via
-\MacroNI{ALLOW\_CLIENT} and \MacroNI{DENY\_CLIENT}, which work like
-other \MacroNI{ALLOW}/\MacroNI{DENY} settings.  
-Prior to Condor 7.1.0, those controls did not exist, 
-so the client had to rely on a more
-rudamentary authorization method: \Macro{GSI\_DAEMON\_NAME}.
-This is a list of all server X.509 names trusted by the client.  
-This name is specified with the following format, 
-where each distinguished name may
-contain up to 1 asterix as a wildcard character:
-
+When a daemon acts as the client within authentication,
+the daemon needs a listing of those from which it
+will accept certificates.
+This is done with \MacroNI{GSI\_DAEMON\_NAME}.
+This name is specified with the following format
 \footnotesize
 \begin{verbatim}
 GSI_DAEMON_NAME = /X.509/name/of/server/1,/X.509/name/of/server/2,...
 \end{verbatim}
 \normalsize
+
+A complete example that has the question marks filled in and the
+daemon's user name filled in is given in the 
+example configuration below.
 
 Condor will also need a way to map an X.509 distinguished
 name to a Condor user id.
@@ -1360,6 +1357,11 @@ Due to this, more than one line (mapping) within the unified
 map file may match.
 Lookups are therefore defined to use the first mapping that
 matches.
+
+A regular expression may need to contain spaces, and in this case the
+entire expression can be surrounded by double-quotes. If a
+double-quote character also needs to appear in such an expression, it
+should be preceeded by a backslash.
 
 The default behavior of Condor when no mapfile is specified is to
 do the following mappings, with some additional logic noted below:
@@ -2570,17 +2572,17 @@ The name of the control lists have the following form:
 \normalsize
 
 The two parts of this name that can vary are
-PERMISSION-LEVEL and the <SUBSYS>.
+PERMISSION-LEVEL and the \verb@<@SUBSYS\verb@>@.
 The PERMISSION-LEVEL can be any of the security access levels
 described earlier in this section.
 Examples include \DCPerm{WRITE}, \DCPerm{OWNER}, and \DCPerm{CONFIG}.
 
-The <SUBSYS> is an optional portion of the name. 
+The \verb@<@SUBSYS\verb@>@ is an optional portion of the name. 
 It can be used to
 define separate rules for which configuration attributes can be set
 for each kind of Condor daemon (for example, STARTD, SCHEDD, MASTER).
 There are many configuration settings that can be defined differently
-for each daemon that use this <SUBSYS> naming convention.
+for each daemon that use this \verb@<@SUBSYS\verb@>@ naming convention.
 See section~\ref{sec:Condor-Subsystem-Names} on
 page~\pageref{sec:Condor-Subsystem-Names} for a list.
 If there is no daemon-specific value for a given daemon, Condor will
