@@ -56,12 +56,8 @@ page~\pageref{sec:platform-linux}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor!source code}
 
-At this time we do \Bold{not} distribute source code publicly, but
-instead consider requests on a case-by-case basis.
-If you need the source code, please e-mail us at
-\Email{condor-admin@cs.wisc.edu} explaining why, and we'll get back to
-you.
-
+For 7.0.0 and later releases, the Condor source code is available for 
+public download alongside the binary distributions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{How do I upgrade the Unix machines in my pool from 6.4.x to 6.6.x?}
@@ -1638,17 +1634,19 @@ see Microsoft Article Q184802.
 
 Usually when Condor daemons exit in this manner, it is because the system in
 question has a non-standard Winsock Layered Service Provider (LSP) installed
-on it. An LSP is in effect a plug-in for the TCP/IP protocol stack. We have
-seen LSPs installed as part of anti-virus software and other security-related
+on it. An LSP is, in effect, a plug-in for the TCP/IP protocol stack.
+LSPs have been 
+installed as part of anti-virus software and other security-related
 packages.
 
 There are several tools available to check your system for the
-presence of LSPs. One that we have had success with lspfix, available
-at http://www.cexx.org/lspfix.htm. Any non-Microsoft LSPs that this
-tool shows may potentially be causing the WSAENOTSOCK error in
-Condor. Although the lspfix tool allows you to remove an LSP directly,
-it is probably more advisable to completely remove the application the
-LSP is part of via Control Panel.
+presence of LSPs. One with which we have had success is \Prog{LSP-Fix},
+available at \URL{http://www.cexx.org/lspfix.htm}.
+Any non-Microsoft LSPs identified by
+this tool may potentially be causing the WSAENOTSOCK error in Condor.
+Although the \Prog{LSP-Fix} tool allows the direct removal of an LSP,
+it is likely advisable to completely remove the application for which
+the LSP is a part via the Control Panel.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Grid Computing}
