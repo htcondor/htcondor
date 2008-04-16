@@ -1,0 +1,5 @@
+#! /usr/bin/perl
+
+print "OK\n";
+
+exit 0;
