@@ -148,6 +148,8 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 	int total_smp_idle;
 	int total_dual_idle;
 	int total_vn_idle;
+	MyString name;
+	bool val = true;
 
 	// figure out the big picture workload to satisfy
 	wkld_mgr.total_idle(total_smp_idle, total_dual_idle, total_vn_idle);
@@ -167,6 +169,8 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 					m_parts[idx].get_name().Value(),
 					m_parts[idx].get_size());
 				m_parts[idx].back(back_script);
+				name = m_parts[idx].get_name();
+				m_assigned.insert(name,val);
 				goto SCHED_DUAL;
 			}
 		}
@@ -193,6 +197,8 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 					m_parts[idx].get_name().Value(),
 					m_parts[idx].get_size());
 				m_parts[idx].back(back_script);
+				name = m_parts[idx].get_name();
+				m_assigned.insert(name,val);
 				goto SCHED_VN;
 			}
 		}
@@ -218,6 +224,8 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 					m_parts[idx].get_name().Value(),
 					m_parts[idx].get_size());
 				m_parts[idx].back(back_script);
+				name = m_parts[idx].get_name();
+				m_assigned.insert(name,val);
 				goto DONE;
 			}
 		}
