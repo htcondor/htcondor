@@ -108,8 +108,6 @@ BGD::register_timers(void)
 int
 BGD::adjust_partitions(void)
 {
-	int idx;
-
 	dprintf(D_ALWAYS, "=================================\n");
 	dprintf(D_ALWAYS, "Adjusting partitions to workload!\n");
 	dprintf(D_ALWAYS, "=================================\n");
