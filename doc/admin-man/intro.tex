@@ -331,7 +331,16 @@ is optional in general but it must be used if privilege separation
 (see Section~\ref{sec:PrivSep}) or group-ID based tracking (see
 Section~\ref{sec:GroupTracking}) is enabled.
 
+\item[\Condor{job\_router}] This daemon 
+\index{Condor daemon!condor\_job\_router@\Condor{job\_router}}
+\index{daemon!condor\_job\_router@\Condor{job\_router}}
+\index{condor\_job\_router daemon} 
+transforms \SubmitCmd{vanilla} universe jobs into \SubmitCmd{grid}
+universe jobs, such that the transformed jobs are capable
+of running elsewhere, as appropriate.
+
 \end{description} 
+
 
 See figure~\ref{fig:pool-arch} for a graphical representation of the
 pool architecture. 
