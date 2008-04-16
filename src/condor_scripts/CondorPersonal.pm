@@ -1412,4 +1412,126 @@ sub SaveMeSetup
 	return($mypid);
 }
 
+sub PersonalSystem 
+{
+	my $args = shift @_;
+	my $dumpLogs = $ENV{DUMP_CONDOR_LOGS};
+	my $mypid = $$;
+	
+	if(defined $dumpLogs) {
+		print "Dump Condor Logs if things go south\n";
+		print "Pid dir is  $mypid\n";
+		system("pwd");
+	}
+
+
+	my $catch = "vsystem$$";
+	$args = $args . " 2>" . $catch;
+	my $rc = 0xffff & system $args;
+
+	printf "system(%s) returned %#04x: ", $args, $rc;
+
+	if ($rc == 0) 
+	{
+		print "ran with normal exit\n";
+		system("pwd");
+		return $rc;
+	}
+	elsif ($rc == 0xff00) 
+	{
+		print "command failed: $!\n";
+	}
+	elsif (($rc & 0xff) == 0) 
+	{
+		$rc >>= 8;
+		print "ran with non-zero exit status $rc\n";
+	}
+	else 
+	{
+		print "ran with ";
+		if ($rc &   0x80) 
+		{
+			$rc &= ~0x80;
+			print "coredump from ";
+		}
+		print "signal $rc\n"
+	}
+
+	if( !open( MACH, "<$catch" )) { 
+		warn "Can't look at command  output <$catch>:$!\n";
+	} else {
+    	while(<MACH>) {
+        	print "ERROR: $_";
+    	}
+    	close(MACH);
+	}
+
+	if(defined $dumpLogs) {
+		print "Dumping Condor Logs\n";
+		my $savedir = getcwd();
+		chdir("$mypid");
+		system("ls");
+		PersonalDumpLogs($mypid);
+		chdir("$savedir");
+		system("pwd");
+	}
+
+	return $rc;
+}
+
+sub PersonalDumpLogs
+{
+	my $piddir = shift;
+	local *PD;
+	#print "PersonalDumpLogs for $piddir\n";
+	#system("pwd");
+	#system("ls -la");
+	opendir PD, "." || die "failed to open . : $!\n";
+	#print "Open worked.... listing follows.....\n";
+	foreach $file (readdir PD)
+	{
+		#print "Consider: $file\n";
+		next if $file =~ /^\.\.?$/; # skip . and ..
+		if(-f $file ) {
+			#print "F:$file\n";
+		} elsif( -d $file ) {
+			#print "D:$file\n";
+			my $logdir = $file . "/log";
+			PersonalDumpCondorLogs($logdir);
+		}
+	}
+	close(PD);
+}
+
+sub PersonalDumpCondorLogs
+{
+	my $logdir = shift;
+	local *LD;
+	#print "PersonalDumpLogs for $logdir\n";
+	$now = getcwd();
+	chdir("$logdir");
+	#system("pwd");
+	#system("ls -la");
+	print "\n\n******************* DUMP $logdir ******************\n\n";
+	opendir LD, "." || die "failed to open . : $!\n";
+	#print "Open worked.... listing follows.....\n";
+	foreach $file (readdir LD)
+	{
+		#print "Consider: $file\n";
+		next if $file =~ /^\.\.?$/; # skip . and ..
+		if(-f $file ) {
+			print "\n\n******************* DUMP $file ******************\n\n";
+			open(FF,"<$file") || die "Can not open logfile<$file>: $!\n";
+			while(<FF>){
+				print "$_";
+			}
+			close(FF);
+		} elsif( -d $file ) {
+			#print "D:$file\n";
+		}
+	}
+	close(LD);
+	chdir("$now");
+}
+
 1;
