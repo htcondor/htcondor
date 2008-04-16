@@ -1,0 +1,34 @@
+#! /usr/bin/perl
+
+# This script queries all of the schedd's and prints out what is going
+# on with them concerning wrapped partitions and workloads to be done.
+
+# each classad described one schedd's glidded in startds and workloads.
+
+print qq|WorkloadName = "psilord\@cs.wisc.edu"\n|;
+print qq|SMPIdle = 23\n|;
+print qq|SMPRunning = 32324\n|;
+print qq|DUALIdle = 123\n|;
+print qq|DUALRunning = 3223\n|;
+print qq|VNIdle = 123\n|;
+print qq|VNRunning = 3223\n|;
+
+print qq|---\n|;
+print qq|WorkloadName = "gthain\@cs.wisc.edu"\n|;
+print qq|SMPIdle = 3\n|;
+print qq|SMPRunning = 2324\n|;
+print qq|DUALIdle = 23\n|;
+print qq|DUALRunning = 223\n|;
+print qq|VNIdle = 23\n|;
+print qq|VNRunning = 223\n|;
+
+print qq|---\n|;
+print qq|WorkloadName = "gquinn\@cs.wisc.edu"\n|;
+print qq|SMPIdle = 1024\n|;
+print qq|SMPRunning = 0\n|;
+print qq|DUALIdle = 0\n|;
+print qq|DUALRunning = 0\n|;
+print qq|VNIdle = 256\n|;
+print qq|VNRunning = 0\n|;
+
+exit 0;

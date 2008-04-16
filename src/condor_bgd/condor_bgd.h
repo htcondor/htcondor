@@ -1,11 +1,15 @@
 #ifndef CONDOR_BGD_H
 #define CONDOR_BGD_H
 
+#include "condor_common.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "extArray.h"
 #include "MyString.h"
-#include "file_transfer.h"
-#include "condor_transfer_request.h"
-#include "exit.h"
+#include "condor_partition.h"
+#include "condor_partition_mgr.h"
+#include "condor_workload.h"
+#include "condor_workload_mgr.h"
+#include "XXX_bgd_attrs.h"
 
 class BGD : public Service
 {
@@ -23,27 +27,44 @@ class BGD : public Service
 		// BG partitions to match the workload required.
 		int adjust_partitions(void);
 
+		// pull in all of the config file variables.
 		void reconfig(void);
 
 	private:
-		// Various scripts which do the work.
+		////////////////////////////////////////////////////////////////
+		// Functions
+		////////////////////////////////////////////////////////////////
+		
+
+		////////////////////////////////////////////////////////////////
+		// Variables
+		////////////////////////////////////////////////////////////////
+
+		// what partitions are available and what state are they in?
+		char *m_script_available_partitions;
+
+		// who has work that I need to worry about?
 		char *m_script_query_work_loads;
+
+		// for now, these are unused
 		char *m_script_generate_partition;
 		char *m_script_destroy_partition;
-		char *m_script_available_partitions;
-		char *m_script_activate_a_partition;
-		char *m_script_deactivate_a_partition;
-		char *m_script_activated_partitions;
-		char *m_script_glidein_to_partition;
-};
 
-/*
-    daemonCore->Register_Timer( 0, 20,
-	        (TimerHandlercpp)&TransferD::exit_due_to_inactivity_timer,
-			        "TransferD::exit_due_to_inactivity_timer", this );
-int
-TransferD::exit_due_to_inactivity_timer(void)
-*/
+		// boot/shutdown a partition
+		char *m_script_boot_partition;
+		char *m_script_shutdown_partition;
+
+		// make a startd back a known booted partition.
+		char *m_script_back_partition;
+
+		// Holds the partition data of what is available on the BG/P
+		PartitionManager	m_part_mgr;
+
+		// Holds the current snapshot of the schedd's work loads and
+		// computes how to alter the partition manager to satisfy the
+		// entire workload set.
+		WorkloadManager		m_wklds_mgr;
+};
 
 extern BGD g_bgd;
 

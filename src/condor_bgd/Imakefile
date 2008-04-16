@@ -7,7 +7,9 @@ LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
 soapobjs(bgd)
 
-OBJ = bgd_main.o bgd.o $(SOAP_OBJS)
+OBJ = bgd_main.o bgd.o partition.o partition_mgr.o bgd_instantiate.o \
+	workload.o workload_mgr.o \
+	$(SOAP_OBJS)
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 

@@ -2,31 +2,41 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_bgd.h"
+#include "condor_partition.h"
+#include "condor_partition_mgr.h"
+#include "condor_workload.h"
+#include "condor_workload_mgr.h"
 
 
 BGD::BGD()
 {
+	// what partitions are available and what state are they in?
+	m_script_available_partitions = NULL;
+
+	// who has work that I need to worry about?
 	m_script_query_work_loads = NULL;
+
+	// for now, these are unused
 	m_script_generate_partition = NULL;
 	m_script_destroy_partition = NULL;
-	m_script_available_partitions = NULL;
-	m_script_activate_a_partition = NULL;
-	m_script_deactivate_a_partition = NULL;
-	m_script_activated_partitions = NULL;
-	m_script_glidein_to_partition = NULL;
+
+	// boot/shutdown a partition
+	m_script_boot_partition = NULL;
+	m_script_shutdown_partition = NULL;
+
+	// make a startd back a known booted partition.
+	m_script_back_partition = NULL;
 }
 
 BGD::~BGD()
 {
 }
 
-/* soak up the various scripts I need to do my work */
 int
 BGD::init(int argc, char *argv[])
 {
-	this->reconfig();
-
-
+	// load the config file attributes I need
+	reconfig();
 
 	dprintf(D_ALWAYS, "BGD Initialized\n");
 
@@ -36,6 +46,12 @@ BGD::init(int argc, char *argv[])
 void
 BGD::reconfig(void)
 {
+	if (m_script_available_partitions != NULL) {
+		free(m_script_available_partitions);
+	}
+	m_script_available_partitions =
+		param_or_except("BGD_SCRIPT_AVAILABLE_PARTITIONS");
+
 	if (m_script_query_work_loads != NULL) {
 		free(m_script_query_work_loads);
 	}
@@ -54,55 +70,82 @@ BGD::reconfig(void)
 	m_script_destroy_partition =
 		param_or_except("BGD_SCRIPT_DESTROY_PARTITION");
 
-	if (m_script_available_partitions != NULL) {
-		free(m_script_available_partitions);
+	if (m_script_boot_partition != NULL) {
+		free(m_script_boot_partition);
 	}
-	m_script_available_partitions =
-		param_or_except("BGD_SCRIPT_AVAILABLE_PARTITIONS");
-
-	if (m_script_activate_a_partition != NULL) {
-		free(m_script_activate_a_partition);
-	}
-	m_script_activate_a_partition =
-		param_or_except("BGD_SCRIPT_ACTIVATE_A_PARTITION");
+	m_script_boot_partition =
+		param_or_except("BGD_SCRIPT_BOOT_PARTITION");
 	
-	if (m_script_deactivate_a_partition != NULL) {
-		free(m_script_deactivate_a_partition);
+	if (m_script_shutdown_partition != NULL) {
+		free(m_script_shutdown_partition);
 	}
-	m_script_deactivate_a_partition =
-		param_or_except("BGD_SCRIPT_DEACTIVATE_A_PARTITION");
+	m_script_shutdown_partition =
+		param_or_except("BGD_SCRIPT_SHUTDOWN_PARTITION");
 
-	if (m_script_activated_partitions != NULL) {
-		free(m_script_activated_partitions);
+	if (m_script_back_partition != NULL) {
+		free(m_script_back_partition);
 	}
-	m_script_activated_partitions =
-		param_or_except("BGD_SCRIPT_ACTIVATED_PARTITIONS");
-
-	if (m_script_glidein_to_partition != NULL) {
-		free(m_script_glidein_to_partition);
-	}
-	m_script_glidein_to_partition =
-		param_or_except("BGD_SCRIPT_GLIDEIN_TO_PARTITION");
+	m_script_back_partition =
+		param_or_except("BGD_SCRIPT_BACK_PARTITION");
 }
 
 void
 BGD::register_timers(void)
 {
+	// Every 20 minutes check to see if the partitions need readjustment
+	// to match the workload.
 	daemonCore->Register_Timer( 0, 20,
 		(TimerHandlercpp)&BGD::adjust_partitions,
 			"BGD::adjust_partitions", this );
 }
 
+
 /* This timer queries the schedds, figures out how many partitions of what
-	kind it needs, then starts them up  (and possibly tears them down if
-	there are too many paritions available for the workload already being
+	kind it needs, then starts them up (and possibly tears them down if
+	there are too many partitions available for the workload already being
 	done).
 */
 int
 BGD::adjust_partitions(void)
 {
+	int idx;
+
+	dprintf(D_ALWAYS, "=================================\n");
+	dprintf(D_ALWAYS, "Adjusting partitions to workload!\n");
+	dprintf(D_ALWAYS, "=================================\n");
+
+	dprintf(D_ALWAYS, "-----------------------------\n");
+	dprintf(D_ALWAYS, "0) Query Available Partitions\n");
+	dprintf(D_ALWAYS, "-----------------------------\n");
+
+	// Soak up the available partitions into a structure
+	m_part_mgr.query_available_partitions(m_script_available_partitions);
+
+	m_part_mgr.dump(D_ALWAYS);
+
+	dprintf(D_ALWAYS, "-------------------------\n");
+	dprintf(D_ALWAYS, "1) Querying for Workloads\n");
+	dprintf(D_ALWAYS, "-------------------------\n");
+
+	// get a snapshot of what the workloads are
+	m_wklds_mgr.query_workloads(m_script_query_work_loads);
+
+	m_wklds_mgr.dump(D_ALWAYS);
+
+	dprintf(D_ALWAYS, "------------------------\n");
+	dprintf(D_ALWAYS, "2) Scheduling Partitions\n");
+	dprintf(D_ALWAYS, "------------------------\n");
+
+	m_part_mgr.schedule_partitions(m_wklds_mgr,
+		m_script_boot_partition,
+		m_script_back_partition);
+
 	return TRUE;
 }
+
+
+
+
 
 
 

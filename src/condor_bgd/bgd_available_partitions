@@ -1,0 +1,57 @@
+#! /usr/bin/perl
+
+# This script figures out the state of the partitions by querying the
+# mmcs and the collector for partitions backed by startds
+
+########################################
+# generated, booted to smp, backed by startd
+########################################
+print qq|Partition = "R00-M0-N00"\n|;
+print qq|Size = 32\n|;
+print qq|State = "BACKED"\n|;
+# if exists and booted
+print qq|Kind = "SMP"\n|;
+# if exists and booted and backed
+print qq|Backer = "R00-M0-N00\@fqdn.com"\n|;
+
+########################################
+# generated, booted to dual, backed by startd
+########################################
+print qq|---\n|;
+print qq|Partition = "R01-M0-N00"\n|;
+print qq|Size = 64\n|;
+print qq|State = "BACKED"\n|;
+# if exists and booted
+print qq|Kind = "DUAL"\n|;
+# if exists and booted and backed
+print qq|Backer = "R01-M0-N00\@fqdn.com"\n|;
+
+########################################
+# generated, booted to DUAL, not backed by startd
+########################################
+print qq|---\n|;
+print qq|Partition = "R02-M0-N00"\n|;
+print qq|Size = 128\n|;
+print qq|State = "BOOTED"\n|;
+# if exists and booted
+print qq|Kind = "DUAL"\n|;
+
+########################################
+# generated, booted to VN, not backed by startd
+########################################
+print qq|---\n|;
+print qq|Partition = "R03-M0-N00"\n|;
+print qq|Size = 128\n|;
+print qq|State = "BOOTED"\n|;
+# if exists and booted
+print qq|Kind = "VN"\n|;
+
+########################################
+# generated, not booted, not backed by startd
+########################################
+print qq|---\n|;
+print qq|Partition = "R04-M0-N00"\n|;
+print qq|Size = 256\n|;
+print qq|State = "GENERATED"\n|;
+
+exit 0;
