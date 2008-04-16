@@ -513,8 +513,7 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 	);
 	LogonUserError = GetLastError();
 
-	if ( (retval == 0) && ((LogonUserError == ERROR_PRIVILEGE_NOT_HELD ) || 
-		 (LogonUserError == ERROR_LOGON_TYPE_NOT_GRANTED )) ) {
+	if ( 0 == retval ) {
 		
 		dprintf(D_FULLDEBUG, "NETWORK logon failed. Attempting INTERACTIVE\n");
 
