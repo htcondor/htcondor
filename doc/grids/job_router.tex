@@ -1,0 +1,557 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:JobRouter}The Condor Job Router}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job Router}
+\index{Condor daemon!condor\_job\_router@\Condor{job\_router}}
+\index{daemon!condor\_job\_router@\Condor{job\_router}}
+\index{condor\_job\_router daemon}
+
+The \Condor{job\_router} daemon allows you to specify a policy for routing vanilla universe
+jobs to one or more grid sites, through any of the grid protocols
+supported by Condor (e.g. gt2, gt4, Condor-C). The idea is to do as
+little scheduling in advance as possible and to only feed jobs to the
+sites as they consume them. Meanwhile, the jobs waiting to be routed
+are ordinary vanilla universe jobs, so they may run in the local
+Condor pool or in other pools via flocking. Except for having your
+excess jobs queue up in the vanilla universe job queue, you can get a
+similar effect by submitting all of your jobs as grid universe jobs
+and using Condor-G matchmaking.  However, the router adds some
+additional convenience features: tracking of aggregate job states for
+use in routing policy, MaxIdleJobs, and blackhole throttling.
+
+The \Condor{job\_router} daemon is most appropriate for high throughput work flows, where you
+have many more jobs than computers and you just want to keep as many
+of the computers busy as possible.  It is less suitable for a
+situation where you have a small number of jobs and you need a
+scheduler to choose the best place to run the jobs in order to finish
+them as quickly as possible.  The JobRouter doesn't know which site
+will run your jobs faster, but it can decide whether to send more jobs
+to a site based on whether jobs already submitted to that site are
+sitting idle or not and whether you have experienced a lot of recent
+job failures at that site.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{What does it mean to route a job?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+What is meant by \textit{job routing} is this: a vanilla universe job is
+transformed into a grid universe job by making a copy of the job
+ClassAd and modifying some attributes of the job as described by a
+configurable policy.  The copy of the ClassAd shows up in the job
+queue as a new job id.  It is referred to as the routed copy of the
+job.
+
+Until the routed job finishes or is removed, the original copy of the
+job passively mirrors the state of the routed job.  During this time,
+it is not available for matchmaking as a normal vanilla universe job,
+because it is tied to the routed job.  It also does not evaluate
+periodic expressions, such as \Attr{PeriodicHold}.  Only the periodic
+expressions of the routed job are evaluated.  When the routed job
+completes, the original job ClassAd is updated so that it reflects the
+final status of the job.  If the routed job is removed, the original
+job returns to the normal idle state and may be available for
+matchmaking or rerouting as usual.  If instead the original job is
+removed or goes on hold, the routed job is removed.
+
+Not all jobs are suitable for routing.  The following section gives a
+more specific example of how job routing can be used and what types of
+jobs are suitable.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Usage Case: sending excess jobs to the grid}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Suppose you submit jobs to a Condor pool and you would like to send
+excess jobs to other available sites, such as resources on the Open
+Science Grid.  Here is how you could use JobRouter to make this work:
+
+\begin{enumerate}
+
+\item Jobs appropriate for routing to the grid must not rely on access to
+a shared file system or other services that are only available at your
+\textit{home} site.  For example, rather than relying on a shared file system
+to access input files and write output files, you could use Condor's file
+transfer mechanism.  In the Condor submit file:
+
+\begin{verbatim}
+should_transfer_files = yes
+when_to_transfer_output = ON_EXIT
+input_files = input1,input2
+output_files = output1,output2
+\end{verbatim}
+
+Note that unlike in the vanilla universe, if your job is
+transformed into a globus job and you have not explicitly listed
+output files, files produced in the working directory of your job will
+not be automatically transferred back when the job completes.  Only
+files your explicitly list will be returned.
+
+\item Your job must satisfy the requirements of the JobRouter.  The example
+routing configuration that will be described below requires that your job
+define an expression WantJobRouter that evaluates to True.  Example of
+what you could put in a submit file:
+
+\begin{verbatim}
++WantJobRouter = True
+\end{verbatim}
+
+You could make this expression fancier.  For example, suppose you want
+jobs to first be rejected by your local Condor matchmaker before being
+candidates for routing to the grid:
+
+\begin{verbatim}
++WantJobRouter = LastRejMatchTime =!= UNDEFINED
+\end{verbatim}
+
+\item If necessary, create a grid proxy and specify it in your submit
+file.  Example:
+
+\begin{verbatim}
+x509userproxy = /tmp/x509up_u275
+\end{verbatim}
+
+This is not necessary if the \Condor{job\_router} daemon is configured to add a grid proxy
+to your job for you.
+
+\item Submit your job as usual.  Example:
+
+\begin{verbatim}
+$ condor_submit job1.sub
+\end{verbatim}
+
+where \verb|job1.sub| might look like this:
+
+\begin{verbatim}
+universe = vanilla
+executable = my_executable
+output = job1.stdout
+error = job1.stderr
+log = job1.ulog
+should_transfer_files = true
+when_to_transfer_output = on_exit
++WantJobRouter = LastRejMatchTime =!= UNDEFINED
+x509userproxy = /tmp/x509up_u275
+queue
+\end{verbatim}
+
+\item Watch the status of the job.  As usual, the job \textit{user log} will
+contain the final completion status of the job.  Before it finishes,
+you can see the status of it by looking in the Condor job queue.  Once
+it is picked up by the \Condor{job\_router} daemon, a second job will enter the job queue.
+This is the transformed copy of the original job, turned into a grid
+universe job.
+
+To see the full job queue, use \Condor{q} as usual.  To
+see a more specialized view of the routed jobs, use
+\Condor{router\_q}.  Example:
+
+\begin{verbatim}
+$ condor_router_q -S
+   JOBS ST Route      GridResource
+     40  I Site1      site1.edu/jobmanager-condor
+     10  I Site2      site2.edu/jobmanager-pbs
+      2  R Site3      condor submit.site3.edu condor.site3.edu
+\end{verbatim}
+
+To see history of routed jobs, use \Condor{router\_history}.  Example:
+
+\begin{verbatim}
+$ condor_router_history
+Routed job history from 2007-06-27 23:38 to 2007-06-28 23:38
+
+Site            Hours    Jobs    Runs
+                      Completed Aborted
+-------------------------------------------------------
+Site1              10       2     0
+Site2               8       2     1
+Site3              40       6     0
+-------------------------------------------------------
+TOTAL              58      10     1
+\end{verbatim}
+
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Example Configuration}\label{ExampleJobRouterConfiguration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is a specific example of how you could configure the \Condor{job\_router} daemon to send
+jobs to grid sites.  A general discussion of configuration options
+will follow.
+
+This example sets up three routes for jobs.  One is a Condor site
+accessed via the Globus gt2 protocol.  Another is a PBS site also
+accessed via Globus gt2.  The third site is a Condor site accessed by
+schedd-to-schedd job submission, a.k.a Condor-C.  The \Condor{job\_router} daemon
+doesn't know which site would be best for a given job, but, as
+specified in the following policy, it will stop sending more jobs to a
+site if ten jobs that have already been sent there are idle.
+
+These configuration settings should be made in the local config file
+of the submit machine.  If you have not already successfully submitted
+grid jobs from this machine, it is a good idea to get that working
+before you attempt to use JobRouter.  Typically, the only thing you
+need to add (supposing you are using GSI authentication for the grid)
+is an X509 trusted certification authority directory in a place
+recognized by Condor (e.g. /etc/grid-security/certificates).  The VDT
+(\URL{http://vdt.cs.wisc.edu}) provides a convenient way to setup and
+install trusted CAs if you are using one of the common CAs in your
+grid.
+
+\begin{verbatim}
+
+# These settings become the default settings for all routes
+JOB_ROUTER_DEFAULTS = \
+  [ \
+    requirements=target.WantJobRouter is True; \
+    MaxIdleJobs = 10; \
+    MaxJobs = 200; \
+\
+    /* now modify routed job attributes */ \
+    /* remove routed job if it goes on hold or stays idle for over 6 hours */ \
+    set_PeriodicRemove = JobStatus == 5 || \
+                        (JobStatus == 1 && (CurrentTime - QDate) > 3600*6); \
+    set_WantJobRouter = false; \
+    set_requirements = true; \
+  ]
+
+# This could be made an attribute of the job, rather than being hard-coded
+ROUTED_JOB_MAX_TIME = 1440
+
+# Now we define each of the routes to send jobs on
+JOB_ROUTER_ENTRIES = \
+   [ GridResource = "gt2 site1.edu/jobmanager-condor"; \
+     name = "Site 1"; \
+   ] \
+   [ GridResource = "gt2 site2.edu/jobmanager-pbs"; \
+     name = "Site 2"; \
+     set_GlobusRSL = "(maxwalltime=$(ROUTED_JOB_MAX_TIME))(jobType=single)"; \
+   ] \
+   [ GridResource = "condor submit.site3.edu condor.site3.edu"; \
+     name = "Site 3"; \
+     set_remote_jobuniverse = 5; \
+   ]
+
+
+# Reminder: you must restart Condor for changes to DAEMON_LIST to take effect.
+DAEMON_LIST = $(DAEMON_LIST) JOB_ROUTER
+
+# For testing, set this to a small value to speed things up.
+# Once you are running at large scale, set it to a higher value
+# to prevent the JobRouter from using too much cpu.
+JOB_ROUTER_POLLING_PERIOD = 10
+
+#It is good to save lots of schedd queue history
+#for use with the router_history command.
+MAX_HISTORY_ROTATIONS = 20
+\end{verbatim}
+
+
+Some questions you may have after reading the above policy: Can the
+routing table be dynamically generated from grid information systems?
+Do users have to have their own grid credentials or can the \Condor{job\_router} daemon
+insert service credentials for them?  What's up with the syntax of the
+routing table: C-style comments, strange ClassAd expressions, escaped
+end of lines?  The next section covers the specifics of the \Condor{job\_router} daemon
+configuration.  Read on!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{The \Condor{job\_router} Daemon Configuration Details}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The \Condor{job\_router} daemon is configured with a \textit{routing table}, which is a list
+of ClassAds describing each site where jobs may be sent.  The ClassAd
+syntax is slightly different from much of the rest of Condor, because
+it uses \emph{New ClassAds}, a re-implementation of ClassAds that
+Condor is gradually adopting and which may one day completely replace
+the old implementation.  A good place to learn about the syntax of New
+ClassAds is the Informal Language Description in the C++ ClassAds
+tutorial: \URL{http://www.cs.wisc.edu/condor/classad/c++tut.html}.
+For the most part, everything in the old ClassAds language is
+supported by New ClassAds, with the exception of a number of ClassAd
+functions that have not yet been added to New ClassAds.  So if job
+ClassAds make use of ClassAd functions, they cannot currently be
+routed.
+
+Since the \Condor{job\_router} daemon is configured with New ClassAds but is operating on
+Old ClassAds stored in the job queue, it may be confusing at first to
+understand which ClassAd expressions are evaluated as New ClassAds and
+which are evaluated as Old ClassAds.  For example, the
+\Attr{requirements} expression of routes in the routing table are
+evaluated by the \Condor{job\_router} daemon, so they may use New ClassAds features,
+whereas the \Attr{PeriodicHold} expression in the routed job is
+evaluated by \Condor{schedd}, so it may only use features of Old
+ClassAds.  As long as the expressions you use in the routing table are
+compatible with both implementations of ClassAds, you do not need to
+be concerned about this detail.  In case you do need to use special
+features, the expressions that are evaluated (as New ClassAds) by the
+\Condor{job\_router} daemon will be identified in the reference below.
+
+The most basic thing to know about New ClassAd syntax is simply that
+each ClassAd is surrounded by square brackets, and each assignment
+statement in the ClassAd should end with a semicolon.  When the
+ClassAd is embedded in a Condor configuration file, it could all
+appear on a single line, but the readability of the ClassAd is often
+improved by inserting line continuations (i.e. backslashes followed by
+newlines) after each assignment statement in the ClassAd, as in the
+examples above.  Unfortunately, this makes it a little awkward to
+insert configuration comments in the ClassAd, because of the way line
+continuations and the Condor configuration comment character `\#' work.
+One alternative is to use C-style comments \verb|/* ... */| as in the
+examples above.  Another option is to read in the \Condor{job\_router} daemon entries
+from a separate file, rather than embedding them in the Condor
+configuration file.
+
+The \Condor{job\_router} daemon configuration parameters are listed below:
+
+\begin{description}
+
+\item[\Macro{JOB\_ROUTER\_DEFAULTS}] \label{param:JobRouterDefaults}
+This is a single New ClassAd that is used to provide default values
+for all routes in the \Condor{job\_router} daemon's routing table.  The meaning of the
+attributes in this ad is identical to the attributes of
+\MacroNI{JOB\_ROUTER\_ENTRIES}.  If a route ClassAd sets an
+attribute by the same name, this overrides the attribute from the
+defaults.
+
+\item[\Macro{JOB\_ROUTER\_ENTRIES}] \label{param:JobRouterEntries}
+This specifies the job routing table.  It is a list of New ClassAds
+(each surrounded by []'s and separated from each other by spaces).
+Each entry in the routing table describes a site you want jobs to be
+routed to.
+
+You may modify the routing table and issue \Condor{reconfig} to have
+the \Condor{job\_router} daemon rebuild the routing table.  If you do so and you change the
+name of a route, then the count of currently routed jobs on that route
+will not be accurate until the existing jobs finish.  Another option
+if you want dynamic routing is to read the routing table from an
+external source via \Macro{JOB\_ROUTER\_ENTRIES\_FILE} or
+\Macro{JOB\_ROUTER\_ENTRIES\_CMD}.
+
+The meaning of each attribute in the routing entries is listed below.
+
+
+{\Large Job Route ClassAd Attributes}
+
+\begin{description}
+
+\item[GridResource] This specifies the GridResource attribute that
+will be inserted into the routed job ClassAd.
+
+\item[name] This is an optional identifier that will be used in log
+messages concerning this route.  If no name is specified, the default
+is the value of \Attr{GridResource}.
+
+\item[requirements] This is a requirements expression (in New ClassAd
+syntax) that specifies which jobs may be matched to the route.  Note
+that, as with all settings, if you specify the requirements in
+\MacroNI{JOB\_ROUTER\_ENTRIES}, it overrides the setting in
+\MacroNI{JOB\_ROUTER\_DEFAULTS}.  To specify global requirements, that
+are not overridden by \MacroNI{JOB\_ROUTER\_ENTRIES}, use
+\MacroNI{JOB\_ROUTER\_SOURCE\_JOB\_CONSTRAINT} instead.
+
+\item[MaxJobs] This is the maximum number of jobs to allow on the route at
+one time. The default is 100.
+
+\item[MaxIdleJobs] This is the maximum number of routed jobs in the
+idle state.  At or above this level, no more jobs will be routed.
+This is intended to prevent too many jobs from being sent to sites
+which are too busy to run them.  The disadvantage of setting this too
+small is that it will slow down the rate of job submission to the
+site, because the \Condor{job\_router} daemon will submit jobs up to this limit, wait to see
+some of them enter the running state, and then submit more.  The
+disadvantage of setting it too high is that a lot of jobs may be sent
+to a site only to site idle for hours or days.  The default is 50.
+
+\item[FailureRateThreshold] Maximum tolerated rate of job failures.
+Failure is determined by the \Attr{JobFailureTest} expression.  The
+default threshold is 0.03 jobs/sec.  If the failure rate is exceeded,
+submission of new jobs is throttled until jobs begin succeeding and
+failures are less than the threshold.
+
+\item[JobFailureTest] This is an expression (in New ClassAds syntax),
+evaluated for each job that finishes to determine whether it was a
+failure.  The default is to assume the job was a success.  An example
+expression to treat all jobs running for less than 30 minutes as
+failures: other.RemoteWallClockTime < 1800.  A more flexible
+expression could reference a property or expression of the job that
+specifies a failure condition specific to the type of job.  Routed
+jobs that are removed (e.g. by \Attr{PeriodicRemove}) are considered
+to be failures.
+
+\item[UseSharedX509UserProxy] If this (New ClassAds) expression
+evaluates to true, then the value of \Attr{SharedX509UserProxy} will
+be used as the x509 user proxy for the routed job.  NOTE: if the \Condor{job\_router} daemon
+is running as root, the copy of this file that is given to the job
+will have its ownership set to that of the user running the job.  This
+means you must trust the user to have access to the proxy file.  It is
+therefore recommended to avoid this mechanism when possible.  (For
+example, simply require users to submit jobs with \Attr{X509UserProxy}
+set in their submit file.)  If you do need this feature, use the
+boolean expression to only allow specific values of \Expr{other.Owner}
+to use this shared proxy file.  The shared proxy file should be owned
+by the \Login{condor} user.  Currently, to use a shared proxy, you must also
+turn on sandboxing with \Attr{JobShouldBeSandboxed}.
+
+\item[SharedX509UserProxy] See \Attr{UseSharedX509UserProxy}.
+
+\item[JobShouldBeSandboxed] If this (New ClassAds) expression
+evaluates to true, the copy of the job that is created will be
+sandboxed.  This means a copy of the input files will be placed in the
+schedd's spool area for the target job, and when the job runs, the
+output will be staged back into the spool area.  Once all of the
+output has been successfully staged back, then it will be copied
+again, this time from the spool area of the sandboxed job back to the
+original job's output locations.  By default, sandboxing is turned
+off.  You would only want to turn it on if you are using a shared x509
+user proxy or if you do not want direct staging of remote output files
+back to the final output locations.
+
+\item[OverrideRoutingEntry] When true, this indicates that this entry
+in the routing table should replace any previous entry in the table
+with the same name.  When false, it indicates that if there is a
+previous entry by the same name, the previous entry should be retained
+and this entry should be ignored.  The default is true.
+
+\item[set\_ATTRIBUTE] Sets the value of \Attr{ATTRIBUTE} in the routed
+job ClassAd to the specified value.  The \Attr{PeriodicRemove}
+expression is an example of something you might want to set in the
+routed job.  (For example, if the routed job goes on hold or stays
+idle for too long, remove it and return the original copy of the job to
+a normal state.)
+
+\item[eval\_set\_ATTRIBUTE] Sets the value of \Attr{ATTRIBUTE} in the
+routed job ClassAd to the result gotten by evaluating the specified
+expression.  Note that the expression is evaluated using New ClassAds
+syntax.  One reason to force evaluation by the \Condor{job\_router} daemon is when you need
+to use New ClassAds features in the expression.  Otherwise, the
+unevaluated expression is inserted into the ClassAd and if it is
+incompatible with Old ClassAds, the ClassAd conversion will fail when
+the routed job is submitted to \Condor{schedd}.
+
+\item[copy\_ATTRIBUTE] Copies the value of \Attr{ATTRIBUTE} from the
+original job ClassAd into the specified attribute of the routed job
+ClassAd.  This may be useful if you need to save the value of an
+expression before replacing it with something else that references the
+original expression.
+
+\end{description}
+
+\item[\Macro{JOB\_ROUTER\_ENTRIES\_FILE}] \label{param:JobRouterEntriesFile}
+This specifies a file that contains the ClassAds describing the
+routing table.  The format of this file is the same as
+\Macro{JOB\_ROUTER\_ENTRIES}, except that it is interpreted directly
+by the ClassAd parser, rather than first by the Condor configuration
+system.  The biggest difference therefore is that you do not need to
+use line continuations (backslashes before newlines).  The specified
+file is periodically reread to check for new information.  This
+happens every \Macro{JOB\_ROUTER\_ENTRIES\_REFRESH} seconds.
+
+\item[\Macro{JOB\_ROUTER\_ENTRIES\_CMD}]
+\label{param:JobRouterEntriesCmd} This specifies an external program
+(plus arguments) to run.  The output of the program should be ClassAds
+describing the routing table.  The format of this file is the same as
+\Macro{JOB\_ROUTER\_ENTRIES}, except that it is interpreted directly
+by the ClassAd parser, rather than first by the Condor configuration
+system.  The biggest difference therefore is that you do not need to
+use line continuations (backslashes before newlines).  The specified
+command is periodically rerun to check for new information.  This
+happens every \Macro{JOB\_ROUTER\_ENTRIES\_REFRESH} seconds.  If you
+need to enter spaces in any arguments or in the command name itself,
+surround the whole configuration value with double quotes and use
+single quotes around individual arguments that contain spaces, just
+like when dealing with spaces in job arguments in a Condor submit
+file.  For an example of \MacroNI{JOB\_ROUTER\_ENTRIES\_CMD}, see
+page~\pageref{JobRouterReSSExample}.
+
+\item[\Macro{JOB\_ROUTER\_ENTRIES\_REFRESH}]
+\label{param:JobRouterEntriesRefresh} This specifies the number of
+seconds between checks for updates to the routing table described by
+\Macro{JOB\_ROUTER\_ENTRIES\_FILE} or
+\Macro{JOB\_ROUTER\_ENTRIES\_CMD}.  The default is 0, meaning updates
+will only be read whenever \Condor{reconfig} is run or
+\Condor{job\_router} restarts.
+
+\item[\Macro{JOB\_ROUTER\_SOURCE\_JOB\_CONSTRAINT}]
+\label{JobRouterSourceJobConstraint} This specifies global
+requirements that must be met by all routed jobs in addition to
+requirements specified within the routing table.
+
+\item[\Macro{JOB\_ROUTER\_MAX\_JOBS}] \label{JobRouterMaxJobs} This
+specifies the maximum number of jobs that may be routed summed over
+all routes.  The default is -1, which means unlimited.
+
+\item[\Macro{MAX\_JOB\_MIRROR\_UPDATE\_LAG}]
+\label{MaxJobMirrorUpdateLag} This specifies the maximum number of
+seconds the \Condor{job\_router} daemon should wait before giving up when waiting to see
+routed jobs appear in the \Condor{schedd}'s job queue log file.  The
+default is 600.  We do not expect that you will need to adjust this.
+
+\item[\Macro{JOB\_ROUTER\_POLLING\_PERIOD}]
+\label{JobRouterPollingPeriod} This specifies the number of seconds
+between cycles in the \Condor{job\_router} daemon's task loop.  The default is 10
+seconds.  A small value makes the \Condor{job\_router} daemon quick to see new candidate
+jobs for routing.  A large value makes the \Condor{job\_router} daemon generate less
+overhead at the cost of being slower to see new candidates for
+routing.  If you have very large job queues and a few minutes of
+routing latency is no problem for you, increasing this to a few
+hundred seconds would be reasonable.
+
+\item[\Macro{JOB\_ROUTER\_NAME}] \label{JobRouterName} This is only
+useful if you wish to run multiple instances of the \Condor{job\_router} daemon in the same
+instance of Condor on a given machine.  Each one must have a different
+name (or all but the first to start up will refuse to run).
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Example: constructing the routing table from ReSS}
+\label{JobRouterReSSExample}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The Open Science Grid has a service called ReSS (Resource Selection
+Service).  It presents grid sites as ClassAds in a Condor collector.
+This example builds a routing table from the site ClassAds in the ReSS
+collector.
+
+Using \Macro{JOB\_ROUTER\_ENTRIES\_CMD}, we tell the \Condor{job\_router} daemon to call a
+simple script which queries the collector and outputs a routing table.
+The script, called \verb|osg_ress_routing_table.sh|, is just this:
+
+\begin{verbatim}
+#!/bin/sh
+
+# you _MUST_ change this:
+export condor_status=/path/to/condor_status
+# if no command line arguments specify -pool, use this:
+export _CONDOR_COLLECTOR_HOST=osg-ress-1.fnal.gov
+
+$condor_status -format '[ ' BeginAd \
+              -format 'GridResource = "gt2 %s"; ' GlueCEInfoContactString \
+	      -format ']\n' EndAd "$@" | uniq
+\end{verbatim}
+
+Save this script to a file and make sure the permissions on the file
+mark it as executable.  Test this script by calling it by hand before
+trying to use it with the \Condor{job\_router} daemon.  You may supply additional arguments
+such as \Opt{-constraint} to limit the sites which are returned.
+
+Once you are satisfied that the routing table constructed by the
+script is what you want, configure the \Condor{job\_router} daemon to use it:
+
+\begin{verbatim}
+# command to build the routing table
+JOB_ROUTER_ENTRIES_CMD = /path/to/osg_ress_routing_table.sh <extra arguments>
+
+# how often to rebuild the routing table:
+JOB_ROUTER_ENTRIES_REFRESH = 3600
+\end{verbatim}
+
+Using the previous example of the \Condor{job\_router} daemon configuration on
+page~\pageref{ExampleJobRouterConfiguration}, you may simply use the
+above settings to replace \Macro{JOB\_ROUTER\_ENTRIES}.  (Or you may
+leave \Macro{JOB\_ROUTER\_ENTRIES} there and have a routing table
+containing entries from both sources.)  When you restart or reconfig
+the \Condor{job\_router} daemon, you should see messages in JobRouterLog indicating that it
+is adding more routes to the table.

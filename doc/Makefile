@@ -159,7 +159,7 @@ $(TARGETDIR):
 	mkdir $(TARGETDIR)
 
 clean:
-	rm -rf ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps user-man/dagman-node.eps admin-man/pool-arch.eps *.out
+	rm -rf ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps user-man/dagman-node.eps admin-man/pool-arch.eps *.out symbol.tex figuresizing.tex fontsize.tex
 	cd makeman; make clean
 
 reallyclean: clean

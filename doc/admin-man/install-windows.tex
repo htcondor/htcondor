@@ -444,6 +444,7 @@ set ARGS=%ARGS% VMMEMORY="128"
 set ARGS=%ARGS% VMMAXNUMBER="$(NUM_CPUS)"
 set ARGS=%ARGS% VMNETWORKING=N
 set ARGS=%ARGS% STARTSERVICE="Y"
+set ARGS=%ARGS% USEVMUNIVERSE="N"
 
 msiexec /qb /l* condor-install-log.txt /i condor-7.1.0-winnt50-x86.msi %ARGS%
 \end{verbatim}
@@ -526,9 +527,6 @@ defines the path to Java virtual machine on the target machine.
 defines the host name of the SMTP server that the target machine is to
 use to send e-mail.
 
-\item [USEVMUNIVERSE = $<$ Y \Bar\ N $>$]
-will cause the installer to enable VM Universe jobs on the target machine.
-
 \item [VMVERSION]
 defines the version of VMware installed on the target machine.
 
@@ -550,7 +548,14 @@ determines if VM Universe can use networking. This can be set to:
 \end{itemize}
 \end {description}
 
-\begin{description}
+\item [USEVMUNIVERSE = $<$ Y \Bar\ N $>$]
+will cause the installer to enable VM Universe jobs on the target machine.
+
+
+\item[PERLLOCATION]
+defines the path to Perl on the target machine. This is required if you
+are using VM Universe.
+
 \item [STARTSERVICE = $<$ Y \Bar\ N $>$]
 determines whether the Condor service will be started after the installation
 completes.

@@ -353,6 +353,7 @@ the library routine which parses the configuration files.
   \item \verb@REPLICATION@
   \item \verb@QUILL@
   \item \verb@DBMSD@
+  \item \verb@JOB_ROUTER@
     \label{list:subsystem names}
   \end{itemize}
 
@@ -3976,8 +3977,11 @@ See section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks} on
   The expression is evaluated in the context of the slot ClassAd, and
   the ClassAd of the currently running job (if any).
   The expression must evaluate to an integer.
-  If not defined, the \Condor{startd} will attempt to re-fetch every
-  second.
+  If not defined, the \Condor{startd} will wait 300 seconds (five
+  minutes) between attempts to fetch work.
+  For more information about this expression, see
+  section~\ref{sec:job-hooks-fetch-work-delay} on
+  page~\pageref{sec:job-hooks-fetch-work-delay}.
 
 \end{description}
 
@@ -6040,6 +6044,19 @@ in the example configuration is \File{\MacroUNI{SBIN}/nordugrid\_gahp}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:JobRouter-Config-File-Entries}\condor{job\_router}
+Configuration File Entries}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{configuration!condor\_job\_router configuration variables}
+These macros affect the \Condor{job\_router}.
+
+\Todo
+%\begin{description}
+%\end{description}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:GridMonitor-Config-File-Entries}grid\_monitor
 Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -7238,11 +7255,18 @@ These macros affect the high availability operation of Condor.
         MASTER_HA_LIST = SCHEDD
         SPOOL = /share/spool
         HA_LOCK_URL = file:/share/spool
+        VALID_SPOOL_FILES = SCHEDD.lock
 \end{verbatim}
 
   A separate lock is created for each \emph{High Availability} daemon.
 
   There is no default value for \MacroNI{HA\_LOCK\_URL}.
+
+  Lock files are in the form \verb@<@SUBSYS\verb@>@.lock.
+  \Condor{preen} is not currently aware of the lock files and will
+  delete them if they are placed in the \MacroNI{SPOOL} directory, so be
+  sure to add \verb@<@SUBSYS\verb@>@.lock to \Macro{VALID\_SPOOL\_FILES} for each
+  \emph{High Availability} daemon.
 
 \item[\Macro{HA\_<SUBSYS>\_LOCK\_URL}]
   \label{param:HASubsysLockURL} This macro controls the 

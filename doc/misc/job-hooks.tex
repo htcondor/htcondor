@@ -2,31 +2,51 @@
 \section{\label{sec:job-hooks}Job Hooks}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Job hooks|(}
-\index{Job hooks}
 
 \index{Job hooks!introduction} 
 In the past, Condor has always sent work to the execute machines by
-pushing jobs to the \Condor{startd}, either from the \Condor{schedd}
-or via \Condor{cod}.
-Beginning with the 7.1.* series, the \Condor{startd} now has the
+pushing jobs to the \Condor{startd} daemon, either from the \Condor{schedd}
+daemon or via \Condor{cod}.
+Beginning with the Condor 7.1.0, the \Condor{startd} daemon now has the
 ability to pull work by fetching jobs via a system of plug-ins or
 hooks.
-Any site can configure a set of plug-ins to fetch work completely
+Any site can configure a set of hooks to fetch work completely
 outside of the usual Condor matchmaking system.
 
-A hook is an external program or script invoked by Condor at various
-points during the lifecycle of a job.
+A \Term{hook} is an external program or script invoked by Condor at various
+points during the life cycle of a job.
 Instead of putting all the code and logic directly into the Condor
-daemons to handle all the sorts of external systems to fetch work
-from, sites can write their own programs or scripts and just let
-Condor invoke these plug-ins at the right moments to accomplish the
+daemons to handle the variety of external systems from which it
+might fetch work,
+sites can write their own programs or scripts and allow
+Condor to invoke these hooks at the right moments to accomplish the
 desired outcome.
+This eliminates the expense of the matchmaking and 
+scheduling provided by the the \Condor{schedd} and
+the \Condor{negotiator}, although at the price of the flexibility
+they offer.
+Therefore, the hooks allow Condor to more easily and directly interface with
+external scheduling systems.
 
-The following sections will describe how this system of hooks works,
+A projected use of the hook mechanism implements what might
+be termed a \Term{glide-in factory}, especially where the
+factory is behind a firewall.
+Without using the hook mechanism to fetch work,
+a glide-in \Condor{startd} daemon behind a firewall
+depends on GCB to help it listen and eventually receive
+work pushed from elsewhere.
+With the hook mechanism, a glide-in \Condor{startd} daemon
+behind a firewall uses the hook to pull work.
+The hook needs only an outbound network connection to complete
+its task,
+thereby being able to operate from behind the firewall,
+without the intervention of GCB.
+
+The following sections describe how this system of hooks works,
 the semantics of fetched jobs, the interaction between fetched work
 and regular Condor jobs, what hooks are invoked by Condor at various
-stages of the job work-flow, how to configure a machine to fetch jobs,
-and how to write your own plug-in hooks.
+stages of the job work flow, how to configure a machine to fetch jobs,
+and how to write your own hooks.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -50,9 +70,9 @@ a higher rank.
 If the slot is unavailable for whatever reason, the \Condor{startd}
 will refuse the fetched job and ignore it.
 Either way, once the \Condor{startd} decides what it should do with
-the fetched job, it will invoke another hook to reply to the claim
-request, so that the external system knows what happened to that work
-unit.
+the fetched job, it will invoke another hook to reply to the attempt
+to fetch work, so that the external system knows what happened to that
+work unit.
 
 If the job is accepted, a claim is created for it and the slot moves
 into the Claimed state.
@@ -101,26 +121,17 @@ Hook: Fetch Work}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Job hooks!Hooks!Fetch work}
 
+The hook defined by the configuration variable
 \Macro{HOOK\_FETCH\_WORK} is invoked whenever the \Condor{startd}
 wants to see if there is any work to fetch.
-This is the most important hook in the whole system, and is the only
-hook that must be defined for any of the other \Condor{startd} hooks
-to operate.
-
-\begin{description}
-\item[Arguments]
-  None.
-
-\item[Standard input]
-  ClassAd of the slot that is looking for work.
-
-\item[Expected output]
-  ClassAd of a job that can be run.
-  If there is no work, the hook should return no output.
-
-\item[Exit status]
-  Ignored.
-\end{description}
+There is a related configuration expression called
+\Macro{FetchWorkDelay} which determines how long the \Condor{startd}
+will wait between attempts to fetch work, which is described in detail
+in section~\ref{sec:job-hooks-fetch-work-delay} on
+page~\pageref{sec:job-hooks-fetch-work-delay} below.
+\MacroNI{HOOK\_FETCH\_WORK} is the most important hook in the whole
+system, and is the only hook that must be defined for any of the other
+\Condor{startd} hooks to operate.
 
 The job ClassAd returned by the hook needs to contain enough
 information for the \Condor{starter} to eventually spawn the work.
@@ -130,36 +141,53 @@ section~\ref{sec:cod-application-attributes}
 ``COD Application Attributes'' on
 page~\pageref{sec:cod-application-attributes}.
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:job-hooks-reply-claim}
-Hook: Reply Claim}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Job hooks!Hooks!Reply to a claim}
-
-\Macro{HOOK\_REPLY\_CLAIM} is invoked whenever
-\Macro{HOOK\_FETCH\_WORK} returns data and the the \Condor{startd}
-decides if it's going to accept the job or not.
-
 \begin{description}
-\item[Arguments]
-  Either the string \verb@accept@ or \verb@reject@.
-
-\item[Standard input]
-  A copy of the job ClassAd and the slot ClassAd
-  (separated by the string \verb@-----@ and a new line).
-
-\item[Expected output]
+\item[Command-line arguments passed to the hook]
   None.
 
-\item[Exit status]
+\item[Standard input given to the hook]
+  ClassAd of the slot that is looking for work.
+
+\item[Expected standard output from the hook]
+  ClassAd of a job that can be run.
+  If there is no work, the hook should return no output.
+
+\item[Exit status of the hook]
   Ignored.
 \end{description}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:job-hooks-reply-fetch}
+Hook: Reply Fetch}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!Hooks!Reply to fetched work}
+
+The hook defined by the configuration variable
+\Macro{HOOK\_REPLY\_FETCH} is invoked whenever
+\Macro{HOOK\_FETCH\_WORK} returns data and the the \Condor{startd}
+decides if it is going to accept the fetched job or not.
 
 The \Condor{startd} will not wait for this hook to return before
 taking other actions, and ignores all output.
 The hook is simply advisory, and has no impact on the behavior of the
 \Condor{startd}.
+
+\begin{description}
+\item[Command-line arguments passed to the hook]
+  Either the string \verb@accept@ or \verb@reject@.
+
+\item[Standard input given to the hook]
+  A copy of the job ClassAd and the slot ClassAd
+  (separated by the string \verb@-----@ and a new line).
+
+\item[Expected standard output from the hook]
+  None.
+
+\item[Exit status of the hook]
+  Ignored.
+\end{description}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -168,28 +196,29 @@ Hook: Evict Claim}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Job hooks!Hooks!Evict a claim}
 
+The hook defined by the configuration variable
 \Macro{HOOK\_EVICT\_CLAIM} is invoked whenever the \Condor{startd}
 needs to evict a claim representing fetched work.
-
-\begin{description}
-\item[Arguments]
-  None.
-
-\item[Standard input]
-  A copy of the job ClassAd and the slot ClassAd
-  (separated by the string \verb@-----@ and a new line).
-
-\item[Expected output]
-  None.
-
-\item[Exit status]
-  Ignored.
-\end{description}
 
 The \Condor{startd} will not wait for this hook to return before
 taking other actions, and ignores all output.
 The hook is simply advisory, and has no impact on the behavior of the
 \Condor{startd}.
+
+\begin{description}
+\item[Command-line arguments passed to the hook]
+  None.
+
+\item[Standard input given to the hook]
+  A copy of the job ClassAd and the slot ClassAd
+  (separated by the string \verb@-----@ and a new line).
+
+\item[Expected standard output from the hook]
+  None.
+
+\item[Exit status of the hook]
+  Ignored.
+\end{description}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -198,31 +227,32 @@ Hook: Prepare Job}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Job hooks!Hooks!Prepare job}
 
+The hook defined by the configuration variable
 \Macro{HOOK\_PREPARE\_JOB} is invoked by the \Condor{starter} before
 a job is going to be run.
 This hook provides a chance to execute commands to setup the job
 environment, for example to transfer input files.
 
-\begin{description}
-\item[Arguments]
-  None.
-
-\item[Standard input]
-  A copy of the job ClassAd and the slot ClassAd
-  (separated by the string \verb@-----@ and a new line).
-
-\item[Expected output]
-  None.
-
-\item[Exit status]
-  0 for success preparing the job, any non-zero value on failure.
-\end{description}
-
 The \Condor{starter} waits until this hook returns before
 attempting to execute the job.
 If the hook returns a non-zero exit status, the \Condor{starter} will
-assume an error was reached while attempting to setup the job
+assume an error was reached while attempting to set up the job
 environment and abort the job.
+
+\begin{description}
+\item[Command-line arguments passed to the hook]
+  None.
+
+\item[Standard input given to the hook]
+  A copy of the job ClassAd and the slot ClassAd
+  (separated by the string \verb@-----@ and a new line).
+
+\item[Expected standard output from the hook]
+  None.
+
+\item[Exit status of the hook]
+  0 for success preparing the job, any non-zero value on failure.
+\end{description}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -231,6 +261,7 @@ Hook: Update Job Info}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Job hooks!Hooks!Update job info}
 
+The hook defined by the configuration variable
 \Macro{HOOK\_UPDATE\_JOB\_INFO} is invoked periodically during the
 life of the job to update information about the status of the job.
 When the job is first spawned, the \Condor{starter} will invoke this
@@ -240,32 +271,33 @@ Thereafter, the \Condor{starter} will invoke the hook every
 \Macro{STARTER\_INITIAL\_UPDATE\_INTERVAL} seconds (defaults to 300,
 in other words, every 5 minutes).
 
-\begin{description}
-\item[Arguments]
-  None.
-
-\item[Standard input]
-  A copy of the job ClassAd that has been augmented with additional
-  attributes describing the current status and execution behavior of
-  the job.
-
-\item[Expected output]
-  None.
-
-\item[Exit status]
-  Ignored.
-\end{description}
-
 The \Condor{starter} will not wait for this hook to return before
 taking other actions, and ignores all output.
 The hook is simply advisory, and has no impact on the behavior of the
 \Condor{starter}.
 
+
+\begin{description}
+\item[Command-line arguments passed to the hook]
+  None.
+
+\item[Standard input given to the hook]
+  A copy of the job ClassAd that has been augmented with additional
+  attributes describing the current status and execution behavior of
+  the job.
+
+\item[Expected standard output from the hook]
+  None.
+
+\item[Exit status of the hook]
+  Ignored.
+\end{description}
+
 The additional attributes included inside the job ClassAd are:
 \begin{description}
 \item[\AdAttr{JobState}]
   The current state of the job.
-  Can be either ``Running'' or ``Suspended''.
+  Can be either \AdStr{Running} or \AdStr{Suspended}.
 
 \item[\AdAttr{JobPid}]
   The process identifier for the initial job directly spawned by the
@@ -295,11 +327,19 @@ Hook: Job Exit}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Job hooks!Hooks!Job Exit}
 
+The hook defined by the configuration variable
 \Macro{HOOK\_JOB\_EXIT} is invoked whenever a job exits, either on its
 own or when being evicted from an execution slot.
 
+The \Condor{starter} will wait for this hook to return before
+taking any other actions.
+In the case of jobs that are being managed by a \Condor{shadow}, this
+hook is invoked before the \Condor{starter} does its own optional file
+transfer back to the submission machine, writes to the local user log
+file, or notifies the \Condor{shadow} that the job has exited.
+
 \begin{description}
-\item[Arguments]
+\item[Command-line arguments passed to the hook]
   A string describing how the job exited:
   \begin{itemize}
     \item \verb@exit@ The job exited or died with a signal on its own.
@@ -312,24 +352,17 @@ own or when being evicted from an execution slot.
     \Condor{startd}, \Condor{vacate}, \Condor{off}, etc).
   \end{itemize}
 
-\item[Standard input]
+\item[Standard input given to the hook]
   A copy of the job ClassAd that has been augmented with additional
   attributes describing the execution behavior of the job and its
   final results.
 
-\item[Expected output]
+\item[Expected standard output from the hook]
   None.
 
-\item[Exit status]
+\item[Exit status of the hook]
   Ignored.
 \end{description}
-
-The \Condor{starter} will wait for this hook to return before
-taking any other actions.
-In the case of jobs that are being managed by a \Condor{shadow}, this
-hook is invoked before the \Condor{starter} does its own optional file
-transfer back to the submission machine, writes to the local user log
-file, or notifies the \Condor{shadow} that the job has exited.
 
 The job ClassAd passed to this hook contains all of the extra
 attributes described above for \Macro{HOOK\_UPDATE\_JOB\_INFO}, and
@@ -386,10 +419,11 @@ This way, a given machine can have multiple sets of hooks, each set
 identified by a specific keyword.
 
 Each slot on the machine can define a separate keyword for the set
-of hooks that should be used (\Macro{[SLOTN\_JOB\_HOOK\_KEYWORD}).
-Note that the ``N'' in ``SLOTN'' should be replaced with the slot
-identification number, for example, on slot1, the setting would be
-called \MacroNI{[SLOT1\_JOB\_HOOK\_KEYWORD}.
+of hooks that should be used (\Macro{SLOTN\_JOB\_HOOK\_KEYWORD}).
+Note that the \Expr{N} in \Expr{SLOTN} should be replaced with the slot
+identification number. 
+For example, on slot1, the setting would be
+called \MacroNI{SLOT1\_JOB\_HOOK\_KEYWORD}.
 If the slot-specific keyword is not defined, the \Condor{startd} will
 use a global keyword (\Macro{STARTD\_JOB\_HOOK\_KEYWORD}).
 
@@ -418,7 +452,7 @@ uses a custom keyword to handle work fetched from a web service.
   # for each attempted claim.
   DATABASE_HOOK_DIR = /usr/local/condor/fetch/database
   DATABASE_HOOK_FETCH_WORK = $(DATABASE_HOOK_DIR)/fetch_work.php
-  DATABASE_HOOK_REPLY_CLAIM = $(DATABASE_HOOK_DIR)/reply_claim.php
+  DATABASE_HOOK_REPLY_FETCH = $(DATABASE_HOOK_DIR)/reply_fetch.php
 
   # The web system only needs to fetch work.
   WEB_HOOK_DIR = /usr/local/condor/fetch/web
@@ -428,5 +462,58 @@ uses a custom keyword to handle work fetched from a web service.
 The keywords ``DATABASE'' and ``WEB'' are completely arbitrary, so
 each site is encouraged to use different (more specific) names as
 appropriate for their own needs.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:job-hooks-fetch-work-delay}
+Defining the FetchWorkDelay Expression}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!FetchWorkDelay}
+
+There are two events that trigger the \Condor{startd} to attempt to
+fetch new work:
+\begin{itemize}
+\item Whenever the \Condor{startd} evaluates its own state.
+\item Whenever the \Condor{starter} exits after completing some
+  fetched work.
+\end{itemize}
+
+Even if a given compute slot is already busy running other work, it's
+possible that if it fetched new work, the \Condor{startd} would prefer
+the fetched work (via the \AdAttr{Rank} expression) over the work it
+is currently running.
+However, the \Condor{startd} frequently evaluates its own state,
+especially when a slot is claimed.
+Therefore, administrators can define an expression which controls how
+long the \Condor{startd} will wait between attempts to fetch new work.
+This expression is called \AdAttr{FetchWorkDelay}.
+
+The \AdAttr{FetchWorkDelay} expression must evaluate to an integer,
+which defines the number of seconds since the last fetch attempt
+completed before the \Condor{startd} will attempt to fetch more work.
+However, as a ClassAd expression (evaluated in the context of the
+ClassAd of the slot considering if it should fetch more work, and the
+ClassAd of the currently running job, if any), the length of the delay
+can be based on the current state the slot and even the currently
+running job.
+
+For example, a very common configuration would be to always wait 5
+minutes (300 seconds) between attempts to fetch work, unless the slot
+is Claimed/Idle, in which case the \Condor{startd} should fetch
+immediately:
+
+\footnotesize
+\begin{verbatim}
+FetchWorkDelay = ifThenElse(State == "Claimed" && Activity == "Idle", 0, 300) 
+\end{verbatim}
+\normalsize
+
+If the \Condor{startd} wants to fetch work, but the time since the
+last attempted fetch is shorter than the current value of the delay
+expression, the \Condor{startd} will set a timer to fetch as soon as
+the delay expires.
+
+If this expression is not defined, the \Condor{startd} will default to
+a five minute (300 second) delay between all attempts to fetch work.
 
 \index{Job hooks|)}
