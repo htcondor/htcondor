@@ -114,7 +114,7 @@ if( ! -e "job_condorc_xxx_van.in" )
 print "Looking for schedds at B remote point of AB - Condor-C\n";
 system("condor_status -pool $currenthost:$remport -schedd -format '%s\n' Name");
 
-my $result = system("./job_condorc_ab_van.pl $mysubmitnm");
+my $result = CondorPersonal::PersonalSystem("./job_condorc_ab_van.pl $mysubmitnm");
 print "Result of crafted Condor-C job is  $result\n";
 
 system("cp *condorc* $mysaveme");
