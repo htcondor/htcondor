@@ -149,7 +149,6 @@ void Workload::dump(int flags)
 {
 	StringList sl;
 	MyString parts;
-	char *tmp;
 
 	if (m_initialized == false) {
 		dprintf(flags, "Workload is not initialized for printing!\n");

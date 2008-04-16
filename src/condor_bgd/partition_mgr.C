@@ -42,7 +42,6 @@ void PartitionManager::query_available_partitions(char *script)
 
 void PartitionManager::read_partitions(FILE *fin)
 {
-	char *delim = " \t";
 	int idx;
 	ClassAd *ad = NULL;
 	int eof, error, empty;
@@ -149,7 +148,6 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 	int total_smp_idle;
 	int total_dual_idle;
 	int total_vn_idle;
-	PKind gen_kind;
 
 	// figure out the big picture workload to satisfy
 	wkld_mgr.total_idle(total_smp_idle, total_dual_idle, total_vn_idle);
