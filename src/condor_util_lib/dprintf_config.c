@@ -120,7 +120,7 @@ dprintf_config( char *subsys )
 				if (debug_level == 0 && first_time) {
 					struct stat stat_buf;
 					if ( stat( DebugFile[debug_level], &stat_buf ) >= 0 ) {
-						DebugLastMod = stat_buf.st_mtime;
+						DebugLastMod = stat_buf.st_mtime > stat_buf.st_ctime ? stat_buf.st_mtime : stat_buf.st_ctime;
 					} else {
 						DebugLastMod = -errno;
 					}

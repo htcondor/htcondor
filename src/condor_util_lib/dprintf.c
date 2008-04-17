@@ -891,7 +891,17 @@ void
 dprintf_touch_log()
 {
 	if ( _condor_dprintf_works ) {
-		utime( DebugFile[0], NULL );
+		if (DebugFile[0]) {
+#ifdef WIN32
+			utime( DebugFile[0], NULL );
+#else
+		/* The following updates the ctime without touching 
+			the mtime of the file.  This way, we can differentiate
+			a "heartbeat" touch from a append touch
+		*/
+			chmod( DebugFile[0], 0644);
+#endif
+		}
 	}
 }
 
