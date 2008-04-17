@@ -3198,7 +3198,11 @@ MyString *GlobusJob::buildSubmitRSL()
 	buff.sprintf( ")(proxy_timeout=%d", JM_MIN_PROXY_TIME );
 	*rsl += buff;
 
-	int commit_timeout = param_integer("GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT", JM_COMMIT_TIMEOUT);
+	int default_timeout = JM_COMMIT_TIMEOUT;
+	if ( default_timeout < 2 * probeInterval ) {
+		default_timeout = 2 * probeInterval;
+	}
+	int commit_timeout = param_integer("GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT", default_timeout);
 
 	buff.sprintf( ")(save_state=yes)(two_phase=%d)"
 				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))",
