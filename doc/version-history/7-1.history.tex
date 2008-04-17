@@ -28,6 +28,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Condor daemons now periodically update the ctime of their
+log files, instead of the mtime, as they used to.  At startup, the
+daemons use this ctime to determine how long they may have been down.
+
 \item Added the capability to the \Condor{startd} to allow it to power 
   down machines based a user specified policy.  See 
   section~\ref{sec:power-man} on \pageref{sec:power-man} on
