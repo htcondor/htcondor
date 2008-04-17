@@ -217,6 +217,9 @@ PKind Partition::get_pkind(void)
 	return PKIND_ERROR;
 }
 
+// This is a blocking call and must provide a fully booted partition when it
+// returns. Otherwise, this partition could be overcommitted given the 
+// nature of the use of this call.
 // script partition_name size kind
 void Partition::boot(char *script, PKind pkind)
 {
