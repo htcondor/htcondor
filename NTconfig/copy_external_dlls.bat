@@ -24,8 +24,8 @@ set DEBUG_DIR=%cd%\..\Debug
 set RELEASE_DIR=%cd%\..\Release
 if not exist %DEBUG_DIR%\NUL mkdir %DEBUG_DIR%
 if not exist %RELEASE_DIR%\NUL mkdir %RELEASE_DIR%
-for /R %EXTERN_DIR% %%w in (*.dll) do (copy /Y %%w %DEBUG_DIR% || set RET_CODE=1) > NUL: 2>1
-for /R %EXTERN_DIR% %%w in (*.dll) do (copy /Y %%w %RELEASE_DIR% || set RET_CODE=1) > NUL: 2>1
+for /R %EXTERN_DIR% %%w in (*.dll) do (copy /Y %%w %DEBUG_DIR% || set RET_CODE=1) > NUL: 2>&1
+for /R %EXTERN_DIR% %%w in (*.dll) do (copy /Y %%w %RELEASE_DIR% || set RET_CODE=1) > NUL: 2>&1
 
 
 REM Since we changed the cwd above, switch back and exit.
