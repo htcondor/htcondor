@@ -7,10 +7,6 @@ Condor's Dedicated Scheduling}
 
 Applications that require multiple resources,
 yet must not be preempted, are handled gracefully by Condor.
-%OLD PROSE
-%Beginning with Condor version 6.3.0, users can submit applications to
-%Condor which require multiple resources, and will not be preempted by
-%the machine's user.
 Condor combines
 \index{scheduling!opportunistic}
 \index{opportunistic scheduling}
@@ -71,14 +67,6 @@ All of Condor's other resource requirements for a submit machine apply to
 this machine, such as having enough disk space in the spool
 directory to hold jobs. See section~\ref{sec:Preparing-to-Install} on
 page~\pageref{sec:Preparing-to-Install} for details on these issues. 
-
-%Once you have selected a machine to serve as the dedicated scheduler,
-%ensure that the machine is running version of the \Condor{schedd}
-%and \Condor{shadow} daemons that support MPI jobs.
-%These versions must be the same,
-%and they should be at least 6.3.0.
-%The default configuration files with Condor version 6.3.0 include all
-%required settings.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Configure-Dedicated-Resource}
