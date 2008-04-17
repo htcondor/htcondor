@@ -10,6 +10,7 @@
 #include "condor_workload.h"
 #include "condor_workload_mgr.h"
 #include "condor_classad.h"
+#include "condor_uid.h"
 
 WorkloadManager::WorkloadManager()
 {
@@ -28,11 +29,13 @@ void WorkloadManager::query_workloads(char *script)
 	int eof, error, empty;
 	char *classad_delimitor = "---\n";
 	ArgList args;
+	priv_state priv;
 
 	dprintf(D_ALWAYS, "Querying workloads with: %s\n", script);
 
 	args.AppendArg(script);
 
+	priv = set_root_priv();
 	fin = my_popen(args, "r", TRUE);
 
 	if (fin == NULL) {
@@ -66,6 +69,7 @@ void WorkloadManager::query_workloads(char *script)
 	delete(ad);
 
 	my_pclose(fin);
+	set_priv(priv);
 }
 
 void WorkloadManager::total_idle(int &smp, int &dual, int &vn)

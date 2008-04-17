@@ -5,6 +5,7 @@
 #include "condor_partition.h"
 #include "condor_debug.h"
 #include "condor_classad.h"
+#include "condor_uid.h"
 #include "XXX_bgd_attrs.h"
 
 MyString pkind_xlate(PKind pkind);
@@ -226,6 +227,7 @@ void Partition::boot(char *script, PKind pkind)
 	FILE *fin = NULL;
 	ArgList args;
 	MyString line;
+	priv_state priv;
 
 	// we're told what kind of partition this is going to be
 	set_pkind(pkind);
@@ -241,9 +243,11 @@ void Partition::boot(char *script, PKind pkind)
 	args.AppendArg(get_size());
 	args.AppendArg(pkind_xlate(get_pkind()).Value());
 
+	priv = set_root_priv();
 	fin = my_popen(args, "r", TRUE);
 	line.readLine(fin); // read back OK or NOT_OK, XXX ignore
 	my_pclose(fin);
+	set_priv(priv);
 
 	// Now that the script is done, mark it booted.
 	set_pstate(BOOTED);
@@ -254,6 +258,7 @@ void Partition::back(char *script)
 	FILE *fin = NULL;
 	ArgList args;
 	MyString line;
+	priv_state priv;
 
 	dprintf(D_ALWAYS, "\t%s %s %d %s\n",
 		script,
@@ -266,9 +271,11 @@ void Partition::back(char *script)
 	args.AppendArg(get_size());
 	args.AppendArg(pkind_xlate(get_pkind()).Value());
 
+	priv = set_root_priv();
 	fin = my_popen(args, "r", TRUE);
 	line.readLine(fin); // read back OK or NOT_OK, XXX ignore
 	my_pclose(fin);
+	set_priv(priv);
 
 	// we don't know it is backed until the BGD_SCRIPT_AVAILABLE_PARTITIONS
 	// tells us it is actually backed. This prevents overcommit of a
