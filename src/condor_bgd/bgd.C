@@ -30,6 +30,41 @@ BGD::BGD()
 
 BGD::~BGD()
 {
+	if (m_script_available_partitions != NULL) {
+		free(m_script_available_partitions);
+		m_script_available_partitions = NULL;
+	}
+
+	if (m_script_query_work_loads != NULL) {
+		free(m_script_query_work_loads);
+		m_script_query_work_loads = NULL;
+	}
+
+	if (m_script_generate_partition != NULL) {
+		free(m_script_generate_partition);
+		m_script_generate_partition = NULL;
+	}
+
+	if (m_script_destroy_partition != NULL) {
+		free(m_script_destroy_partition);
+		m_script_destroy_partition = NULL;
+	}
+
+	if (m_script_boot_partition != NULL) {
+		free(m_script_boot_partition);
+		m_script_boot_partition = NULL;
+	}
+
+	if (m_script_shutdown_partition != NULL) {
+		free(m_script_shutdown_partition);
+		m_script_shutdown_partition = NULL;
+	}
+
+	if (m_script_back_partition != NULL) {
+		free(m_script_back_partition);
+		m_script_back_partition = NULL;
+	}
+
 }
 
 int

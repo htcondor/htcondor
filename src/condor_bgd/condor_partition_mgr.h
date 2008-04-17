@@ -34,8 +34,6 @@ class PartitionManager
 		// partitions are activated from 0 to end of array and deactivated in
 		// reverse manner.
 		ExtArray<Partition> m_parts;
-		// the next index yet to be activated
-		int m_end_of_activated;
 
 		// which partitions have I labeled as assigned but haven't gone
 		// to backed yet?  This data must be preserved over the backing

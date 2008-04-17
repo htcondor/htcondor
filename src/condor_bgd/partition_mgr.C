@@ -16,6 +16,16 @@ PartitionManager::PartitionManager() :
 
 PartitionManager::~PartitionManager()
 {
+	int idx;
+	ClassAd *ad = NULL;
+
+	for (idx = 0; idx < m_parts.length(); idx++)
+	{
+		ad = m_parts[idx].detach();
+		if (ad != NULL) {
+			delete ad;
+		}
+	}
 }
 
 void PartitionManager::query_available_partitions(char *script)
@@ -94,9 +104,6 @@ void PartitionManager::read_partitions(FILE *fin)
 
 	// The last ad is empty, doesn't get recorded anywhere, and is deleted.
 	delete(ad);
-
-	// This represents the index AFTER the last valid one read in.
-	m_end_of_activated = idx;
 }
 
 // return true is partition exists by this name
