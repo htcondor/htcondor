@@ -227,7 +227,7 @@ void Partition::boot(char *script, PKind pkind)
 	// we're told what kind of partition this is going to be
 	set_pkind(pkind);
 
-	dprintf(D_ALWAYS, "Exec: %s %s %d %s\n",
+	dprintf(D_ALWAYS, "\t%s %s %d %s\n",
 		script,
 		get_name().Value(),
 		get_size(),
@@ -252,7 +252,7 @@ void Partition::back(char *script)
 	ArgList args;
 	MyString line;
 
-	dprintf(D_ALWAYS, "Exec: %s %s %d %s\n",
+	dprintf(D_ALWAYS, "\t%s %s %d %s\n",
 		script,
 		get_name().Value(),
 		get_size(),
