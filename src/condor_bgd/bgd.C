@@ -127,9 +127,8 @@ BGD::reconfig(void)
 void
 BGD::register_timers(void)
 {
-	// Every 20 minutes check to see if the partitions need readjustment
-	// to match the workload.
-	daemonCore->Register_Timer( 0, 20,
+	// every 7 minutes try to adjust the partitions...
+	daemonCore->Register_Timer( 0, 60*7,
 		(TimerHandlercpp)&BGD::adjust_partitions,
 			"BGD::adjust_partitions", this );
 }

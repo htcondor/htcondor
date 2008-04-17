@@ -171,7 +171,9 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 	if (total_smp_idle > 0) {
 		// find a booted one first if possible
 		for (idx = 0; idx < m_parts.length(); idx++) {
-			if (m_parts[idx].get_pstate() == BOOTED) {
+			if (m_parts[idx].get_pstate() == BOOTED &&
+				m_parts[idx].get_pkind() == SMP)
+			{
 				dprintf(D_ALWAYS, "Backing SMP partition: %s %d\n",
 					m_parts[idx].get_name().Value(),
 					m_parts[idx].get_size());
@@ -199,7 +201,9 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 	if (total_dual_idle > 0) {
 		// find a booted one first if possible
 		for (idx = 0; idx < m_parts.length(); idx++) {
-			if (m_parts[idx].get_pstate() == BOOTED) {
+			if (m_parts[idx].get_pstate() == BOOTED &&
+				m_parts[idx].get_pkind() == DUAL)
+			{
 				dprintf(D_ALWAYS, "Backing DUAL partition: %s %d\n",
 					m_parts[idx].get_name().Value(),
 					m_parts[idx].get_size());
@@ -226,7 +230,9 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 	if (total_vn_idle > 0) {
 		// find a booted one first if possible
 		for (idx = 0; idx < m_parts.length(); idx++) {
-			if (m_parts[idx].get_pstate() == BOOTED) {
+			if (m_parts[idx].get_pstate() == BOOTED &&
+				m_parts[idx].get_pkind() == VN)
+			{
 				dprintf(D_ALWAYS, "Backing VN partition: %s %d\n",
 					m_parts[idx].get_name().Value(),
 					m_parts[idx].get_size());
