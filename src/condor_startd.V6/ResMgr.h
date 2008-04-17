@@ -37,7 +37,7 @@
 #include "vmuniverse_mgr.h"
 
 #if HAVE_HIBERNATE
-#include "power_manager.h"
+#include "power_hibernation_manager.h"
 #endif /* HAVE_HIBERNATE */
 
 #if HAVE_JOB_HOOKS
@@ -196,7 +196,7 @@ public:
 #endif /* HAVE_JOB_HOOKS */
 
 #if HAVE_HIBERNATE
-	PowerManager const& getPowerManager () const;
+	HibernationManager const& getHibernationManager () const;
 	void updateHibernateConfiguration();
 #endif /* HAVE_HIBERNATE */
 
@@ -314,9 +314,9 @@ private:
 #endif /* HAVE_JOB_HOOKS */
 
 #if HAVE_HIBERNATE
-	PowerManager m_power_manager;
-	int			 m_hibernate_tid;
-	int			 m_recovery_tid;
+	HibernationManager	m_hibernation_manager;
+	int					m_hibernate_tid;
+	int					m_recovery_tid;
 	void checkHibernate() /* const -- should be */;
 	int	 allHibernating() /* const -- should be */;
 	int  startHibernateTimer();

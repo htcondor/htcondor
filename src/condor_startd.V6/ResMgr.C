@@ -1928,20 +1928,19 @@ ResMgr::processAllocList( void )
 
 #if HAVE_HIBERNATE
 
-PowerManager const& 
-ResMgr::getPowerManager () const {
-	return m_power_manager;
+HibernationManager const& ResMgr::getHibernationManager() const {
+	return m_hibernation_manager;
 }
 
 
 void ResMgr::updateHibernateConfiguration() {
-	m_power_manager.update();
+	m_hibernation_manager.update();
 	if ( -1 == m_recovery_tid ) { 
 			// We only want to (re)start the hibernation timer if
 			// we have not just come back from hibernation and someone
 			// issued a condor_reconfig, etc.: in which case we 
 			// let doHibernateRecovery() restart the hibernation timer
-		if ( m_power_manager.wantsHibernate() ) {
+		if ( m_hibernation_manager.wantsHibernate() ) {
 			if ( -1 == m_hibernate_tid ) {
 				startHibernateTimer();
 			}
@@ -1959,7 +1958,7 @@ ResMgr::allHibernating() {
 		// fail if there is no resource or if we are
 		// configured not to hibernate
 	if(    !resources
-		|| !m_power_manager.wantsHibernate() ) {
+		|| !m_hibernation_manager.wantsHibernate() ) {
 		return 0;
 	}
 		// The following may evaluate to true even if there
@@ -1986,7 +1985,7 @@ ResMgr::checkHibernate() {
 		// then put the machine to sleep
 	int level = allHibernating();
 	if( level > 0 ) {
-		if( m_power_manager.canHibernate() ) {
+		if( m_hibernation_manager.canHibernate() ) {
 			dprintf ( D_ALWAYS, "ResMgr: This machine is about to enter hibernation\n" );
 			//
 			// Hibernate the machine and start a recovery timer.  This will
@@ -1994,7 +1993,7 @@ ResMgr::checkHibernate() {
 			// it is set, and resume them once it has finished.
 			//
 			startRecoveryTimer();
-			m_power_manager.doHibernate( level );
+			m_hibernation_manager.doHibernate( level );
 		} else {
 			dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
 				"HIBERNATE: Machine does not support any "
@@ -2006,7 +2005,7 @@ ResMgr::checkHibernate() {
 
 int
 ResMgr::startHibernateTimer() {
-	int interval = m_power_manager.getHibernateCheckInterval();
+	int interval = m_hibernation_manager.getHibernateCheckInterval();
 	m_hibernate_tid = daemonCore->Register_Timer( 
 		interval, interval,
 		(TimerHandlercpp)&ResMgr::checkHibernate,
@@ -2021,9 +2020,9 @@ ResMgr::startHibernateTimer() {
 
 void
 ResMgr::resetHibernateTimer() {
-	if ( m_power_manager.wantsHibernate() ) {
+	if ( m_hibernation_manager.wantsHibernate() ) {
 		if( m_hibernate_tid != -1 ) {
-			int internal = m_power_manager.getHibernateCheckInterval();
+			int internal = m_hibernation_manager.getHibernateCheckInterval();
 			daemonCore->Reset_Timer( 
 				m_hibernate_tid, 
 				internal, internal );

@@ -136,8 +136,8 @@ CLEAN :
 	-@erase "$(INTDIR)\ntsysinfo.obj"
 	-@erase "$(INTDIR)\perm.obj"
 	-@erase "$(INTDIR)\pgsqldatabase.obj"
+	-@erase "$(INTDIR)\power_hibernation_manager.obj"
 	-@erase "$(INTDIR)\power_hibernator.obj"
-	-@erase "$(INTDIR)\power_manager.obj"
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
 	-@erase "$(INTDIR)\proc_family_direct.obj"
 	-@erase "$(INTDIR)\proc_family_interface.obj"
@@ -323,7 +323,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\perm.obj" \
 	"$(INTDIR)\pgsqldatabase.obj" \
 	"$(INTDIR)\power_hibernator.obj" \
-	"$(INTDIR)\power_manager.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\proc_family_direct.obj" \
 	"$(INTDIR)\proc_family_interface.obj" \
@@ -357,7 +356,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj"
+	"$(INTDIR)\windows_firewall.obj" \
+	"$(INTDIR)\power_hibernation_manager.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -475,8 +475,8 @@ CLEAN :
 	-@erase "$(INTDIR)\ntsysinfo.obj"
 	-@erase "$(INTDIR)\perm.obj"
 	-@erase "$(INTDIR)\pgsqldatabase.obj"
+	-@erase "$(INTDIR)\power_hibernation_manager.obj"
 	-@erase "$(INTDIR)\power_hibernator.obj"
-	-@erase "$(INTDIR)\power_manager.obj"
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
 	-@erase "$(INTDIR)\proc_family_direct.obj"
 	-@erase "$(INTDIR)\proc_family_interface.obj"
@@ -661,7 +661,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\perm.obj" \
 	"$(INTDIR)\pgsqldatabase.obj" \
 	"$(INTDIR)\power_hibernator.obj" \
-	"$(INTDIR)\power_manager.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\proc_family_direct.obj" \
 	"$(INTDIR)\proc_family_interface.obj" \
@@ -695,7 +694,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj"
+	"$(INTDIR)\windows_firewall.obj" \
+	"$(INTDIR)\power_hibernation_manager.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -1387,15 +1387,15 @@ SOURCE="..\src\condor_c++_util\pgsqldatabase.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE="..\src\condor_c++_util\power_hibernator.C"
+SOURCE="..\src\condor_c++_util\power_hibernation_manager.C"
 
-"$(INTDIR)\power_hibernator.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\power_hibernation_manager.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE="..\src\condor_c++_util\power_manager.C"
+SOURCE="..\src\condor_c++_util\power_hibernator.C"
 
-"$(INTDIR)\power_manager.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\power_hibernator.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
