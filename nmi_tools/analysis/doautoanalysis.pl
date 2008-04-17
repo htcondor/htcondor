@@ -55,6 +55,10 @@ system("$toollocation/make-graphs --daily --input $tmp_testdata2 --output $place
 system("$toollocation/condor_readNMIdb.pl --type=times --date=2007-12-10 --branch=$branch1 --save=$timefiles --new");
 system("$toollocation/condor_readNMIdb.pl --type=times --date=2007-12-10 --branch=$branch2 --save=$timefiles --append");
 
+# due to the api change and the name use change of platform we
+# must take the newer data and place with the older data
+system("$toollocation/blendplatforms.pl");
+
 open(TIMEDFILES,"<$timefiles") || die "Can not find timed data<$timefiles>: $!\n";
 $current = "";
 $relocate = "";
