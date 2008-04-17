@@ -505,7 +505,7 @@ sub CrunchErrors
 
 			#print "Parsing $test\n";
 			# entire platform or some tests
-			@partial = split /:/, $test;
+			@partial = split /#/, $test;
 			$index = GetPlatformData($partial[0]);
 
 				$p = $platformresults[$index];
@@ -628,7 +628,7 @@ sub PrintResults()
 
 		my $Platformerrors = $p->platform_errs( );
 	#print "Into PrintResults and platform errors currently <<$Platformerrors>>\n";
-		printf "%-16s (%d):		Passed = %d	Failed = %d	",$p->platform(),$p->expected(),
+		printf "%-29s (%d):   Passed = %d   Failed = %d	",$p->platform(),$p->expected(),
 			$p->passed(),$p->failed();
 		if($p->build_errs( ) > 0) {
 			printf " BUILD ";
@@ -687,7 +687,7 @@ sub AddTestGids
 		if($platform =~ /all/) {
 			LoadAll4BuildResults($platform);
 		} else {
-			@buildblame = split /:/, $platform;
+			@buildblame = split /#/, $platform;
 			$entry = Platform_info->new();
 			#print "Call GetHistExpected($buildblame[0]\n";
 			$expected = GetHistExpected($buildblame[0]);
