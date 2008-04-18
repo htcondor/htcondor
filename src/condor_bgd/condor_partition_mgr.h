@@ -25,6 +25,8 @@ class PartitionManager
 		void schedule_partitions(WorkloadManager &wkld_mgr, 
 			char *boot_script, char *back_script);
 
+		void partition_realization(int &tot_smp, int &tot_dual, int &tot_vn);
+
 		void dump(int flags);
 
 	private:
@@ -46,6 +48,7 @@ class PartitionManager
 		// Functions
 		//////////////////////////////////////////////////////////
 		void read_partitions(FILE *fin);
+
 };
 
 #endif

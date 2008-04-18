@@ -172,6 +172,10 @@ BGD::adjust_partitions(void)
 		m_script_boot_partition,
 		m_script_back_partition);
 
+	dprintf(D_ALWAYS, "-------------------\n");
+	dprintf(D_ALWAYS, "Finished adjustment\n");
+	dprintf(D_ALWAYS, "-------------------\n");
+
 	return TRUE;
 }
 

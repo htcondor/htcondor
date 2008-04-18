@@ -152,6 +152,40 @@ MyString PartitionManager::get_partition_backer(MyString part_name)
 	return none;
 }
 
+// What is the maximum number of jobs that could potentially run on the
+// backed partitions of each kind?
+void PartitionManager::partition_realization(int &tot_smp, int &tot_dual, 
+	int &tot_vn)
+{
+	int idx;
+
+	tot_smp = 0;
+	tot_dual = 0;
+	tot_vn = 0;
+
+	for (idx = 0; idx < m_parts.length(); idx++) {
+		if (m_parts[idx].get_pstate() == BACKED) {
+			switch(m_parts[idx].get_pkind()) {
+				case SMP:
+					tot_smp += m_parts[idx].get_size();
+					break;
+
+				case DUAL:
+					tot_dual += m_parts[idx].get_size();
+					break;
+
+				case VN:
+					tot_dual += m_parts[idx].get_size();
+					break;
+
+				default:
+					EXCEPT("PartitionManager::total_backed_partitions(): "
+						"Programmer error!");
+			}
+		}
+	}
+}
+
 void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 	char *boot_script, char *back_script)
 {
@@ -161,18 +195,60 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 	int total_vn_idle;
 	MyString name;
 	bool val = true;
+	int smp_realized;
+	int dual_realized;
+	int vn_realized;
 
 	// figure out the big picture workload to satisfy
 	wkld_mgr.total_idle(total_smp_idle, total_dual_idle, total_vn_idle);
 
+	// figure out the maximum number of jobs the currently backed 
+	// partitions are able to realize
+	partition_realization(smp_realized, dual_realized, vn_realized);
+
 	dprintf(D_ALWAYS, "Total Idle: SMP: %d, DUAL: %d, VN: %d\n",
 		total_smp_idle, total_dual_idle, total_vn_idle);
 
-	// This is a crappy algorithm which will boot (if needed) and then
+	// Tell the user if I have to grab more partitions of a various type.
+	if (total_smp_idle > smp_realized) {
+		dprintf(D_ALWAYS, "Only %d realizable SMP jobs, checking to see if "
+			"more partitions can be backed to satisfy the demand.\n",
+			smp_realized);
+	} else {
+		dprintf(D_ALWAYS, "There are %d realizable SMP jobs, which is enough "
+			"for the current SMP load.\n", smp_realized);
+	}
+
+	if (total_dual_idle > dual_realized) {
+		dprintf(D_ALWAYS, "Only %d realizable DUAL jobs, checking to see if "
+			"more partitions can be backed to satisfy the demand.\n",
+			dual_realized);
+	} else {
+		dprintf(D_ALWAYS, "There are %d realizable DUAL jobs, which is enough "
+			"for the current DUAL load.\n", dual_realized);
+	}
+
+	if (total_vn_idle > vn_realized) {
+		dprintf(D_ALWAYS, "Only %d realizable VN jobs, checking to see if "
+			"more partitions can be backed to satisfy the demand.\n",
+			vn_realized);
+	} else {
+		dprintf(D_ALWAYS, "There are %d realizable VN jobs, which is enough "
+			"for the current VN load.\n", vn_realized);
+	}
+
+	// This is a crappy algorithm which will boot and then
 	// back a single partition for each kind of idle job.
 
+	// Only try to back a partition of there are more jobs than 
+	// the current backed partitions can realize. Otherwise if a
+	// single job in one schedd doesn't run for a while, eventually
+	// all available partitions will be allocated to it. So, stop
+	// when we know there are enough compute elements of a certain kind 
+	// to satisfy the workloads.
+
 	SCHED_SMP:
-	if (total_smp_idle > 0) {
+	if (total_smp_idle > smp_realized) {
 		// find a booted one first if possible
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == BOOTED &&
@@ -202,7 +278,7 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 	}
 
 	SCHED_DUAL:
-	if (total_dual_idle > 0) {
+	if (total_dual_idle > dual_realized) {
 		// find a booted one first if possible
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == BOOTED &&
@@ -231,7 +307,7 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 	}
 
 	SCHED_VN:
-	if (total_vn_idle > 0) {
+	if (total_vn_idle > vn_realized) {
 		// find a booted one first if possible
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == BOOTED &&
