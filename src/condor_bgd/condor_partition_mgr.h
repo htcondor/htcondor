@@ -23,7 +23,7 @@ class PartitionManager
 		MyString get_partition_backer(MyString part_name);
 
 		void schedule_partitions(WorkloadManager &wkld_mgr, 
-			char *boot_script, char *back_script);
+			char *boot_script, char *back_script, char *shutdown_script);
 
 		void partition_realization(int &tot_smp, int &tot_dual, int &tot_vn);
 

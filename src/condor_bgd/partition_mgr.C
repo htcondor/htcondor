@@ -187,7 +187,7 @@ void PartitionManager::partition_realization(int &tot_smp, int &tot_dual,
 }
 
 void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
-	char *boot_script, char *back_script)
+	char *boot_script, char *back_script, char *shutdown_script)
 {
 	int idx;
 	int total_smp_idle;
@@ -334,6 +334,20 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 
 	DONE:
 		;
+	
+	// Now that we've potentially backed partitions, let's take a look at the 
+	// partitions again and see if we can evict any ones which are only booted.
+	// This state represents a non-backed partition (due to a startd
+	// killing itself due to lack of work) which we don't need.
+	for (idx = 0; idx < m_parts.length(); idx++) {
+		if (m_parts[idx].get_pstate() == BOOTED) {
+			dprintf(D_ALWAYS, "Shutting down unused partition: %s %d %s\n",
+				m_parts[idx].get_name().Value(),
+				m_parts[idx].get_size(),
+				pkind_xlate(m_parts[idx].get_pkind()).Value());
+			m_parts[idx].shutdown(shutdown_script);
+		}
+	}
 }
 
 void PartitionManager::dump(int flags)

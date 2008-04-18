@@ -181,7 +181,8 @@ BGD::adjust_partitions(void)
 
 	m_part_mgr.schedule_partitions(m_wklds_mgr,
 		m_script_boot_partition,
-		m_script_back_partition);
+		m_script_back_partition,
+		m_script_shutdown_partition);
 
 	dprintf(D_ALWAYS, "-------------------\n");
 	dprintf(D_ALWAYS, "Finished adjustment\n");

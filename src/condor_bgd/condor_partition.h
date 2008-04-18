@@ -51,7 +51,7 @@ class Partition
 		MyString get_name(void);
 
 		// Which, if any, startd backs this partition?
-		void set_backer(MyString &owner);
+		void set_backer(MyString &name);
 		MyString get_backer(void);
 
 		void set_size(size_t size);
@@ -69,12 +69,21 @@ class Partition
 		void dump(int flags);
 
 		void boot(char *script, PKind pkind);
+		void shutdown(char *script);
+
 		void back(char *script);
 
 	private:
 		bool	m_initialized;
 		ClassAd	*m_data;
 };
+
+MyString pkind_xlate(PKind pkind);
+PKind pkind_xlate(MyString pkind);
+
+MyString pstate_xlate(PState pstate);
+PState pstate_xlate(MyString pstate);
+
 
 #endif
 

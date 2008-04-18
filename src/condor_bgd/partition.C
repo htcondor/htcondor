@@ -8,12 +8,6 @@
 #include "condor_uid.h"
 #include "XXX_bgd_attrs.h"
 
-MyString pkind_xlate(PKind pkind);
-PKind pkind_xlate(MyString pkind);
-
-MyString pstate_xlate(PState pstate);
-PState pstate_xlate(MyString pstate);
-
 Partition::Partition() {
 	m_data = NULL;
 	m_initialized = false;
@@ -254,6 +248,33 @@ void Partition::boot(char *script, PKind pkind)
 
 	// Now that the script is done, mark it booted.
 	set_pstate(BOOTED);
+}
+
+// This is a blocking call and must provide a fully shutdown partition when it
+// returns.
+// script partition_name 
+void Partition::shutdown(char *script)
+{
+	FILE *fin = NULL;
+	ArgList args;
+	MyString line;
+	priv_state priv;
+
+	dprintf(D_ALWAYS, "\t%s %s\n",
+		script,
+		get_name().Value());
+
+	args.AppendArg(script);
+	args.AppendArg(get_name());
+
+	priv = set_root_priv();
+	fin = my_popen(args, "r", TRUE);
+	line.readLine(fin); // read back OK or NOT_OK, XXX ignore
+	my_pclose(fin);
+	set_priv(priv);
+
+	// Now that the script is done, mark it simply generated.
+	set_pstate(GENERATED);
 }
 
 void Partition::back(char *script)
