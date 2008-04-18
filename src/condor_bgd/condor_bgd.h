@@ -57,6 +57,9 @@ class BGD : public Service
 		// make a startd back a known booted partition.
 		char *m_script_back_partition;
 
+		// how often the partition adjustments should happen in seconds.
+		int m_adjustment_interval;
+
 		// Holds the partition data of what is available on the BG/P
 		PartitionManager	m_part_mgr;
 

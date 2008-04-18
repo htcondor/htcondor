@@ -26,6 +26,10 @@ BGD::BGD()
 
 	// make a startd back a known booted partition.
 	m_script_back_partition = NULL;
+
+	// How often I should adjust the partitions
+	// defaults to 7 minutes (if init() isn't called).
+	m_adjustment_interval = 60*7;
 }
 
 BGD::~BGD()
@@ -122,13 +126,20 @@ BGD::reconfig(void)
 	}
 	m_script_back_partition =
 		param_or_except("BGD_SCRIPT_BACK_PARTITION");
+	
+	// default to 7 minutes if not specified
+	m_adjustment_interval = param_integer("BGD_ADJUSTMENT_INTERVAL", 60*7);
+	if (m_adjustment_interval < 20) {
+		// don't let it go smaller than 20 seconds.
+		m_adjustment_interval = 20;
+	}
 }
 
 void
 BGD::register_timers(void)
 {
-	// every 7 minutes try to adjust the partitions...
-	daemonCore->Register_Timer( 0, 60*7,
+	// This is the main workhorse of the daemon
+	daemonCore->Register_Timer( 0, m_adjustment_interval,
 		(TimerHandlercpp)&BGD::adjust_partitions,
 			"BGD::adjust_partitions", this );
 }
