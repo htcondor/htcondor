@@ -11,6 +11,9 @@
 MyString pkind_xlate(PKind pkind);
 PKind pkind_xlate(MyString pkind);
 
+MyString pstate_xlate(PState pstate);
+PState pstate_xlate(MyString pstate);
+
 Partition::Partition() {
 	m_data = NULL;
 	m_initialized = false;
@@ -303,13 +306,13 @@ void Partition::dump(int flags)
 	}
 
 	dprintf(flags, "\tSize: %d\n", get_size());
-	dprintf(flags, "\tPState: %d\n", get_pstate());
+	dprintf(flags, "\tPState: %s\n", pstate_xlate(get_pstate()).Value());
 
 	switch(get_pstate()) {
 		case BOOTED:
 		case ASSIGNED:
 		case BACKED:
-			dprintf(flags, "\tPKind: %d\n", get_pkind());
+			dprintf(flags, "\tPKind: %s\n", pkind_xlate(get_pkind()).Value());
 			break;
 		default:
 			dprintf(flags, "\tPKind: N/A\n");
@@ -376,6 +379,82 @@ PKind pkind_xlate(MyString pkind)
 
 	return PKIND_ERROR;
 }
+
+
+MyString pstate_xlate(PState pstate)
+{
+	MyString p;
+
+	switch(pstate) {
+		case PSTATE_ERROR:
+			p = "PSTATE_ERROR";
+			break;
+
+		case NOT_GENERATED:
+			p = "NOT_GENERATED";
+			break;
+
+		case GENERATED:
+			p = "GENERATED";
+			break;
+
+		case BOOTED:
+			p = "BOOTED";
+			break;
+
+		case ASSIGNED:
+			p = "ASSIGNED";
+			break;
+
+		case BACKED:
+			p = "BACKED";
+			break;
+
+		case PSTATE_END:
+			p = "PSTATE_END";
+			break;
+
+		default:
+			p = "PKIND_ERROR";
+			break;
+	}
+
+	return p;
+}
+
+PState pstate_xlate(MyString pstate)
+{
+	if (pstate == "PSTATE_ERROR") {
+		return PSTATE_ERROR;
+	}
+
+	if (pstate == "NOT_GENERATED") {
+		return NOT_GENERATED;
+	}
+
+	if (pstate == "GENERATED") {
+		return GENERATED;
+	}
+
+	if (pstate == "BOOTED") {
+		return BOOTED;
+	}
+
+	if (pstate == "ASSIGNED") {
+		return ASSIGNED;
+	}
+
+	if (pstate == "BACKED") {
+		return BACKED;
+	}
+
+	if (pstate == "PSTATE_END") {
+		return PSTATE_END;
+	}
+
+	return PSTATE_ERROR;
+}
+
 
 
 
