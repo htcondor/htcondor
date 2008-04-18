@@ -296,7 +296,7 @@ void Partition::dump(int flags)
 		return;
 	}
 
-	dprintf(flags, "Parition: %s\n", get_name().Value());
+	dprintf(flags, "Partition: %s\n", get_name().Value());
 
 	backer = get_backer();
 	if (backer == "") {
