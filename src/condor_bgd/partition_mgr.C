@@ -7,6 +7,7 @@
 #include "condor_classad.h"
 #include "condor_arglist.h"
 #include "my_popen.h"
+#include "condor_uid.h"
 #include "XXX_bgd_attrs.h"
 
 PartitionManager::PartitionManager() :
@@ -32,6 +33,7 @@ void PartitionManager::query_available_partitions(char *script)
 {
 	FILE *fin = NULL;
 	ArgList args;
+	priv_state priv;
 
 	/* load a description of the available partitions */
 
@@ -39,6 +41,7 @@ void PartitionManager::query_available_partitions(char *script)
 
 	args.AppendArg(script);
 
+	priv = set_root_priv();
 	fin = my_popen(args, "r", TRUE);
 
 	if (fin == NULL) {
@@ -48,6 +51,7 @@ void PartitionManager::query_available_partitions(char *script)
 	read_partitions(fin);
 
 	my_pclose(fin);
+	set_priv(priv);
 }
 
 void PartitionManager::read_partitions(FILE *fin)
