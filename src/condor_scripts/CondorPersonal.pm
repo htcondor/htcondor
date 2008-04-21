@@ -1399,7 +1399,8 @@ sub SaveMeSetup
 	}
 	# make a symbolic link for personal condor module to use
 	# if we get pid recycling, blow the symbolic link 
-	$res = CondorTest::verbose_system("rm -f $mypid");
+	# This might not be a symbolic link, so use -r to be sure
+	$res = CondorTest::verbose_system("rm -fr $mypid");
 	if($res != 0) {
 		print "SaveMeSetup: Could not remove prior pid directory\n";
 		return(0);
