@@ -68,6 +68,21 @@ public:
 	//
 	int get_max_snapshot_interval() { return m_max_snapshot_interval; }
 
+	// since we maintain the tree of process families in
+	// ProcFamilyMonitor, not here, we need help in maintaining the
+	// maximum image size seen for our family of processes (in order
+	// to take into account processes that are in child families).
+	// this method will be called from ProcFamilyMonitor after each
+	// snapshot. the parameter will contain the total image size from
+	// processes in our child families. we'll update m_max_image_size
+	// if needed and then return our total image size
+	//
+	unsigned long update_max_image_size(unsigned long children_imgsize);
+
+	// return the maximum image size
+	//
+	unsigned long get_max_image_size() { return m_max_image_size; }
+
 	// fill in usage information about this family
 	//
 	void aggregate_usage(ProcFamilyUsage*);
@@ -118,11 +133,15 @@ private:
 	//
 	int m_max_snapshot_interval;
 
-	// usage from exited processes
+	// CPU usage from exited processes
 	//
-	long          m_exited_user_cpu_time;
-	long          m_exited_sys_cpu_time;
-	unsigned long m_exited_max_image_size;
+	long m_exited_user_cpu_time;
+	long m_exited_sys_cpu_time;
+
+	// max total image size of all our family's (and child familes')
+	// processes
+	//
+	unsigned long m_max_image_size;
 
 	// lists of member processes; at the beginning of a snapshot (i.e.
 	// when takesnapshot() in our containing ProcFamilyMonitor begins
