@@ -1565,13 +1565,7 @@ of whatever magic is implemented there.  Notice that this works for
 both remote and local system calls.
 */
 
-#if defined(LINUX) 
-ssize_t readv( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(OSF1) || defined(Solaris)
 ssize_t readv( int fd, const struct iovec *iov, int iovcnt )
-#else
-int readv( int fd, struct iovec *iov, int iovcnt )
-#endif
 {
 	int i, rval = 0, cc;
 
@@ -1593,13 +1587,7 @@ of whatever magic is implemented there.  Notice that this works for
 both remote and local system calls.
 */
 
-#if defined(LINUX) 
-ssize_t writev( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(Solaris) || defined(OSF1)
 ssize_t writev( int fd, const struct iovec *iov, int iovcnt )
-#else
-int writev( int fd, struct iovec *iov, int iovcnt )
-#endif
 {
 	int i, rval = 0, cc;
 

@@ -93,37 +93,6 @@
 #	define WCOREFLG 0200
 #endif 
 
-#if defined(GLIBC)
-/* glibc defines the 3rd arg of readv and writev to be int, even
-   though the man page (and our code) says it should be size_t. 
-   -Derek Wright 4/17/98 */
-#define readv __hide_readv
-#define __readv ____hide_readv
-#define writev __hide_writev
-#define __writev ____hide_writev
-#endif /* GLIBC */
-#include <sys/uio.h>
-#if defined(GLIBC)
-#undef readv
-#undef __readv
-#undef writev
-#undef __writev
-BEGIN_C_DECLS
-#if !defined(IA64) && !defined(X86_64)
-int readv(int, const struct iovec *, size_t);
-int __readv(int, const struct iovec *, size_t);
-int writev(int, const struct iovec *, size_t);
-int __writev(int, const struct iovec *, size_t);
-#else
-ssize_t readv(int, const struct iovec *, size_t);
-ssize_t __readv(int, const struct iovec *, size_t);
-ssize_t writev(int, const struct iovec *, size_t);
-ssize_t __writev(int, const struct iovec *, size_t);
-#endif
-END_C_DECLS
-#endif /* GLIBC */
-
-
 #if !defined(GLIBC20) && !defined(GLIBC21)
 #include <search.h>
 #endif
