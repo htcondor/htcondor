@@ -48,6 +48,9 @@ class GT4Resource : public BaseResource
 	const char *getDelegationURI( Proxy *job_proxy );
 	const char *getDelegationError( Proxy *job_proxy );
 
+	bool RequestDestroy( GT4Job *job );
+	void DestroyComplete( GT4Job *job );
+
 	static const char *CanonicalName( const char *name );
 	static const char *HashName( const char *resource_name,
 								 const char *proxy_subject );
@@ -74,6 +77,12 @@ class GT4Resource : public BaseResource
 	char *delegationServiceUri;
 	List<GT4ProxyDelegation> delegatedProxies;
 	static int gahpCallTimeout;
+
+		// We need to throttle the number of destroy requests going to each
+		// resource.
+	List<GT4Job> destroysWanted;
+	List<GT4Job> destroysAllowed;
+	int destroyLimit;
 
 	GahpClient *gahp;
 	GahpClient *deleg_gahp;
