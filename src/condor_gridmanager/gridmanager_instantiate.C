@@ -94,6 +94,8 @@ template class Item<GlobusJob>;
 
 template class HashTable<HashKey, GT4Resource *>;
 template class HashBucket<HashKey, GT4Resource *>;
+template class List<GT4Job>;
+template class Item<GT4Job>;
 
 template class HashTable<HashKey, CreamResource *>;
 template class HashBucket<HashKey, CreamResource *>;

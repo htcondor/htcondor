@@ -1011,11 +1011,15 @@ int GT4Job::doEvaluateState()
 		case GM_DONE_COMMIT: {
 			// Tell the jobmanager it can clean up and exit.
 			CHECK_PROXY;
+			if ( myResource->RequestDestroy( this ) == false ) {
+				break;
+			}
 			rc = gahp->gt4_gram_client_job_destroy( jobContact );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
+			myResource->DestroyComplete( this );
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
 				LOG_GLOBUS_ERROR( "gt4_gram_client_job_destroy()", rc );
@@ -1045,11 +1049,15 @@ int GT4Job::doEvaluateState()
 			if ( globusState != GT4_JOB_STATE_DONE &&
 				 globusState != GT4_JOB_STATE_FAILED ) {
 				CHECK_PROXY;
+				if ( myResource->RequestDestroy( this ) == false ) {
+					break;
+				}
 				rc = gahp->gt4_gram_client_job_destroy( jobContact );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
+				myResource->DestroyComplete( this );
 				if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "gt4_gram_client_job_destroy()", rc );
@@ -1060,6 +1068,7 @@ int GT4Job::doEvaluateState()
 				myResource->CancelSubmit( this );
 				SetRemoteJobId( NULL );
 			}
+			myResource->DestroyComplete( this );
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
@@ -1075,11 +1084,15 @@ int GT4Job::doEvaluateState()
 			// isn't pending/running or the user has told us to
 			// forget lost job submissions.
 			CHECK_PROXY;
+			if ( myResource->RequestDestroy( this ) == false ) {
+				break;
+			}
 			rc = gahp->gt4_gram_client_job_destroy( jobContact );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
+			myResource->DestroyComplete( this );
 			if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 				LOG_GLOBUS_ERROR( "gt4_gram_client_job_destroy", rc );
@@ -1158,6 +1171,7 @@ int GT4Job::doEvaluateState()
 			jmLifetime = 0;
 			UpdateJobLeaseSent( -1 );
 			myResource->CancelSubmit( this );
+			myResource->DestroyComplete( this );
 			if ( jobContact != NULL ) {
 				SetRemoteJobId( NULL );
 			}
