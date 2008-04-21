@@ -1661,8 +1661,7 @@ Claim::finishReleaseCmd( void )
 		// now that we're done replying, we need to delete this stream
 		// so we don't leak memory, since DaemonCore's not going to do
 		// that for us in this case
-	delete c_request_stream;
-	c_request_stream = NULL;
+	setRequestStream(NULL);
 	c_pending_cmd = -1;
 	
 	dprintf( D_ALWAYS, "Finished releasing claim %s (owner: '%s')\n", 
@@ -1702,8 +1701,7 @@ Claim::finishDeactivateCmd( void )
 		// now that we're done replying, we need to delete this stream
 		// so we don't leak memory, since DaemonCore's not going to do
 		// that for us in this case
-	delete c_request_stream;
-	c_request_stream = NULL;
+	setRequestStream(NULL);
 	c_pending_cmd = -1;
 
 	dprintf( D_ALWAYS, "Finished deactivating claim %s (owner: '%s')\n", 
