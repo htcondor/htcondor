@@ -9172,10 +9172,20 @@ Scheduler::child_exit(int pid, int status)
 	int				StartJobsFlag=TRUE;
 	PROC_ID			job_id;
 	bool			srec_was_local_universe = false;
+	MyString        claim_id;
+		// if we do not start a new job, should we keep the claim?
+	bool            keep_claim = false; // by default, no
+	bool            srec_keep_claim_attributes;
 
 	srec = FindSrecByPid(pid);
 	job_id.cluster = srec->job_id.cluster;
 	job_id.proc = srec->job_id.proc;
+
+	if( srec->match ) {
+		claim_id = srec->match->claimId();
+	}
+		// store this in case srec is deleted before we need it
+	srec_keep_claim_attributes = srec->keepClaimAttributes;
 
 		//
 		// If it is a SCHEDULER universe job, then we have a special
@@ -9249,6 +9259,11 @@ Scheduler::child_exit(int pid, int status)
 	 			// that we can do for it
 			dprintf( D_FAILURE|D_ALWAYS, "%s pid %d died with %s\n",
 					 name, pid, daemonCore->GetExceptionString(status) );
+
+				// If the shadow was killed (i.e. by this schedd) and
+				// we are preserving the claim for reconnect, then
+				// do not delete the claim.
+			 keep_claim = srec_keep_claim_attributes;
 		}
 		
 			// We always want to delete the shadow record regardless 
@@ -9279,6 +9294,11 @@ Scheduler::child_exit(int pid, int status)
 		// activate all our claims and start jobs on them.
 	if( ! ExitWhenDone && StartJobsFlag ) {
 		this->StartJobs();
+	}
+	else if( !keep_claim ) {
+		if( !claim_id.IsEmpty() ) {
+			DelMrec( claim_id.Value() );
+		}
 	}
 }
 
@@ -10782,7 +10802,9 @@ void
 Scheduler::attempt_shutdown()
 {
 	if ( numShadows ) {
-		preempt( 1 );
+		if( !daemonCore->GetPeacefulShutdown() ) {
+			preempt( 1 );
+		}
 		return;
 	}
 

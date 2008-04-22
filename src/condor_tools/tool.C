@@ -71,7 +71,7 @@ char* subsys = NULL;
 int takes_subsys = 0;
 int cmd_set = 0;
 char *subsys_arg = NULL;
-
+bool IgnoreMissingDaemon = false;
 
 template class HashBucket<MyString, bool>;
 template class HashTable<MyString, bool>;
@@ -709,11 +709,13 @@ main( int argc, char *argv[] )
 	// then we have to deal here with the fact that the master only
 	// transmits a graceful (not peaceful) signal to its children.  In
 	// anticipation of this, we need to turn on peaceful mode in the
-	// relavent children.
+	// relavent children.  Currently, only the startd and schedd have
+	// special peaceful behavior.
 
 	if( peaceful_shutdown && real_dt == DT_MASTER ) {
 		if( (real_cmd == DAEMONS_OFF) ||
-			(real_cmd == DAEMON_OFF && !strcmp(subsys,"startd")) ||
+			(real_cmd == DAEMON_OFF && subsys && !strcmp(subsys,"startd")) ||
+			(real_cmd == DAEMON_OFF && subsys && !strcmp(subsys,"schedd")) ||
 			(real_cmd == DC_OFF_GRACEFUL) ||
 			(real_cmd == RESTART)) {
 
@@ -721,18 +723,32 @@ main( int argc, char *argv[] )
 			daemon_t orig_real_dt = real_dt;
 			int orig_real_cmd = real_cmd;
 			int orig_cmd = cmd;
+			bool orig_IgnoreMissingDaemon = IgnoreMissingDaemon;
 
 			cmd = real_cmd = DC_SET_PEACEFUL_SHUTDOWN;
 
-			// We only care about peacefully shutting down the startd.
-			real_dt = DT_STARTD;
-			rc = doCommands(argc,argv,MyName);
-			if(rc) return rc;
+			// do not abort if the child daemon is not there, because
+			// A) we have no reason to beleave that it _should_ be there
+			// B) if it should be there, the user will get an error when
+			//    the real command is sent following this peaceful command
+			IgnoreMissingDaemon = true;
+
+			if( !subsys || !strcmp(subsys,"startd") ) {
+				real_dt = DT_STARTD;
+				rc = doCommands(argc,argv,MyName);
+				if(rc) return rc;
+			}
+			if( !subsys || !strcmp(subsys,"schedd") ) {
+				real_dt = DT_SCHEDD;
+				rc = doCommands(argc,argv,MyName);
+				if(rc) return rc;
+			}
 
 			// Restore globals.
 			real_dt = orig_real_dt;
 			real_cmd = orig_real_cmd;
 			cmd = orig_cmd;
+			IgnoreMissingDaemon = orig_IgnoreMissingDaemon;
 		}
 	}
 
@@ -841,6 +857,9 @@ doCommands(int argc,char *argv[],char *MyName) {
 			// command to the local host. 
 		Daemon local_d( real_dt, NULL );
 		if( ! local_d.locate() ) {
+			if( IgnoreMissingDaemon ) {
+				return 0;
+			}
 			fprintf( stderr, "Can't find address for %s\n", local_d.idStr() );
 			fprintf( stderr, "Perhaps you need to query another pool.\n" ); 
 			return 1;
@@ -1018,6 +1037,9 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 		had_error = true;
 	} else if( ads.Length() <= 0 ) { 
 			// TODO make this message better
+		if( IgnoreMissingDaemon ) {
+			return true;
+		}
 		fprintf( stderr, "Found no ClassAds when querying pool (%s)\n",
 				 pool ? pool->name() : "local" );
 		had_error = true;
