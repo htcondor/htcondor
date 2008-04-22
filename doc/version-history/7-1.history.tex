@@ -37,6 +37,15 @@ daemons use this ctime to determine how long they may have been down.
   section~\ref{sec:power-man} on \pageref{sec:power-man} on
   ``Power Management'' for more details.
 
+\item \Condor{off} now supports the \Opt{-peaceful} option for the
+schedd, in addition to the existing support that already existed for
+the startd.  When peacefully shut down, the schedd stops starting new
+jobs and waits for all running jobs to finish before exiting.  The
+default shutdown behavior is still \Opt{-graceful}, which checkpoints
+and stops all running standard universe jobs and gracefully
+disconnects from other types of jobs in the hopes of later restarting
+and reconnecting to them without any disturbance to the running job.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
