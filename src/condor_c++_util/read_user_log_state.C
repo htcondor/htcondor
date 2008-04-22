@@ -47,6 +47,7 @@ ReadUserLogState::ReadUserLogState(
 
 		m_base_path = new char[len+1];
 		strcpy(m_base_path, path );
+		m_initialized = true;	
 	}
 	else {
 		m_base_path = NULL;
@@ -61,6 +62,8 @@ ReadUserLogState::ReadUserLogState(
 	Reset( RESET_INIT );
 	m_max_rot = max_rot;
 	m_recent_thresh = recent_thresh;
+
+	// Sets m_initialized and m_init_error as appropriate
 	SetState( state );
 }
 
@@ -74,6 +77,8 @@ ReadUserLogState::Reset( ResetType type )
 {
 	// Initial reset: Set pointers to NULL
 	if ( RESET_INIT == type ) {
+		m_initialized = false;
+		m_init_error = false;
 		m_base_path = NULL;
 	}
 
@@ -96,11 +101,16 @@ ReadUserLogState::Reset( ResetType type )
 
 	m_offset = 0;
 	m_log_type = LOG_TYPE_UNKNOWN;
+
 }
 
 int
-ReadUserLogState::Rotation( int rotation, bool store_stat )
+ReadUserLogState::Rotation( int rotation, bool store_stat, bool initializing )
 {
+	// If we're not initializing and we're not initialized, something is wrong
+	if ( !initializing && !m_initialized ) {
+		return -1;
+	}
 	if ( rotation > m_max_rot ) {
 		return -1;
 	}
@@ -114,13 +124,19 @@ ReadUserLogState::Rotation( int rotation, bool store_stat )
 	}
 	else {
 		StatStructType	statbuf;
-		return Rotation( rotation, statbuf );
+		return Rotation( rotation, statbuf, initializing );
 	}
 }
 
 int
-ReadUserLogState::Rotation( int rotation, StatStructType &statbuf ) 
+ReadUserLogState::Rotation( int rotation, StatStructType &statbuf,
+							bool initializing ) 
 {
+	// If we're not initializing and we're not initialized, something is wrong
+	if ( !initializing && !m_initialized ) {
+		return -1;
+	}
+
 	// Check the rotation parameter
 	if (  ( rotation < 0 ) || ( rotation > m_max_rot )  ) {
 		return -1;
@@ -132,7 +148,7 @@ ReadUserLogState::Rotation( int rotation, StatStructType &statbuf )
 	}
 
 	m_uniq_id = "";
-	GeneratePath( rotation, m_cur_path );
+	GeneratePath( rotation, m_cur_path, initializing );
 	m_cur_rot = rotation;
 	m_log_type = LOG_TYPE_UNKNOWN;
 
@@ -140,8 +156,14 @@ ReadUserLogState::Rotation( int rotation, StatStructType &statbuf )
 }
 
 bool
-ReadUserLogState::GeneratePath( int rotation, MyString &path ) const
+ReadUserLogState::GeneratePath( int rotation, MyString &path,
+								bool initializing ) const
 {
+	// If we're not initializing and we're not initialized, something is wrong
+	if ( !initializing && !m_initialized ) {
+		return -1;
+	}
+
 	// Check the rotation parameter
 	if (  ( rotation < 0 ) || ( rotation > m_max_rot )  ) {
 		return false;
@@ -362,6 +384,7 @@ ReadUserLogState::InitState( ReadUserLog::FileState &state )
 			 FileStateSignature,
 			 sizeof(istate->signature) );
 	istate->signature[sizeof(istate->signature) - 1] = '\0';
+	istate->version = FILESTATE_VERSION;
 
 	state.buf = (void *) istate;
 	state.size = sizeof( FileState );
@@ -387,14 +410,19 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 	ReadUserLogState::FileState	*istate =
 		(ReadUserLogState::FileState *) state.buf;
 
-	// Verify that the signature matches
+	// Verify that the signature and version matches
 	if ( strcmp( istate->signature, FileStateSignature ) ) {
+		return false;
+	}
+	if ( istate->version != FILESTATE_VERSION ) {
 		return false;
 	}
 
 	// The paths shouldn't change... copy them only the first time
-	if( !istate->path.Length() ) {
-		istate->path = m_base_path;
+	if( !strlen( istate->path ) ) {
+		int size = sizeof(istate->path) - 1;
+		strncpy( istate->path, m_base_path, size );
+		istate->path[size] = '\0';
 	}
 
 	// The signature is set in the InitFileState()
@@ -432,17 +460,20 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 
 	// Verify that the signature matches
 	if ( strcmp( istate->signature, FileStateSignature ) ) {
+		m_init_error = true;
+		return false;
+	}
+	if ( istate->version != FILESTATE_VERSION ) {
+		m_init_error = true;
 		return false;
 	}
 
-	int		len;
-
-	len = istate->path.Length();
+	int len = strlen( istate->path );
 	m_base_path = new char[ len+1 ];
-	strcpy( m_base_path, istate->path.Value() );
+	strcpy( m_base_path, istate->path );
 
 	// Set the rotation & path
-	Rotation( istate->rotation, false );
+	Rotation( istate->rotation, false, true );
 
 	m_log_type = istate->log_type;
 	m_uniq_id = istate->uniq_id;
@@ -454,6 +485,8 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 	m_stat_valid = true;
 
 	m_offset = istate->offset.asint;
+
+	m_initialized = true;
 
 	MyString	str;
 	GetState( str, "Restored reader state" );
@@ -474,10 +507,46 @@ ReadUserLogState::GetState( MyString &str, const char *label ) const
 		"  CurPath = %s\n"
 		"  UniqId = %s, seq = %d\n"
 		"  rotation = %d; offset = %ld; type = %d\n"
-		"  inode = %d; ctime = %d; size = %ld\n",
+		"  inode = %u; ctime = %d; size = %ld\n",
 		m_base_path, m_cur_path.GetCStr(),
 		m_uniq_id.GetCStr() ? m_uniq_id.GetCStr() : "", m_sequence,
 		m_cur_rot, (long) m_offset, m_log_type,
-		(int)m_stat_buf.st_ino, (int)m_stat_buf.st_ctime,
+		(unsigned)m_stat_buf.st_ino, (int)m_stat_buf.st_ctime,
 		(long)m_stat_buf.st_size );
+}
+
+void
+ReadUserLogState::GetState(
+	const ReadUserLog::FileState	&state,
+	MyString						&str,
+	const char						*label
+  ) const
+{
+	const ReadUserLogState::FileState	*istate =
+		(const ReadUserLogState::FileState *) state.buf;
+	if ( ( !istate ) || ( !istate->version ) ) {
+		if ( label ) {
+			str.sprintf( "%s: no state", label );
+		}
+		else {
+			str = "no state\n";
+		}
+		return;
+	}
+
+	str = "";
+	if ( NULL != label ) {
+		str.sprintf( "%s:\n", label );
+	}
+	str.sprintf_cat (
+		"  signature = '%s'; version = %d; update = %ld\n"
+		"  path = '%s'\n"
+		"  UniqId = %s, seq = %d\n"
+		"  rotation = %d; offset = "FILESIZE_T_FORMAT"; type = %d\n"
+		"  inode = %u; ctime = %ld; size = "FILESIZE_T_FORMAT"\n",
+		istate->signature, istate->version, istate->update_time,
+		istate->path,
+		istate->uniq_id, istate->sequence,
+		istate->rotation, istate->offset.asint, istate->log_type,
+		(unsigned)istate->inode, istate->ctime, istate->size.asint );
 }

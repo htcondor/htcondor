@@ -455,6 +455,8 @@ class ReadUserLog
 		@param label to put at the header of the string
 	 */
 	void FormatFileState( MyString &str, const char *label = NULL ) const;
+	void FormatFileState( const ReadUserLog::FileState &state,
+						  MyString &str, const char *label = NULL ) const;
 	
   private:
 
