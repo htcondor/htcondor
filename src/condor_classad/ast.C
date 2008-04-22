@@ -1606,7 +1606,7 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 		successful_eval = FunctionIfThenElse(attrlist1,attrlist2,result);
 		done = true;
 	} else
-	if ( !strcasecmp(name,"string")  ||
+	if ( 
 		 !strcasecmp(name,"strcat") ||
 		 !strcasecmp(name,"strcmp") ||
 		 !strcasecmp(name,"stricmp") ||
@@ -2068,18 +2068,45 @@ int Function::FunctionString(
 	EvalResult *evaluated_args, // IN:  the arguments to the function
 	EvalResult *result)         // OUT: the result of calling the function
 {
-	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
-	// BEFORE THIS FUNCTION WAS INVOKED.
-	
 	if ( number_of_args != 1 ) {
 		result->type = LX_ERROR;
 		return FALSE;
 	}
 
-	ASSERT(evaluated_args[0].type == LX_STRING);
-
-	result->type = LX_STRING;
-	result->s = strnewp(evaluated_args[0].s);
+	switch(evaluated_args[0].type) {
+		case LX_FLOAT:
+			result->s = new char[20];
+			sprintf(result->s,"%lf", evaluated_args[0].f);
+			result->type = LX_STRING;
+			break;
+		case LX_BOOL:	
+			result->s = new char[6];
+			result->type = LX_STRING;
+			if (evaluated_args[0].i) {
+				sprintf(result->s,"%s", "TRUE");
+			} else {
+				sprintf(result->s,"%s", "FALSE");
+			}	
+			break;
+		case LX_INTEGER:
+			result->s = new char[20];
+			sprintf(result->s,"%d", evaluated_args[0].i);
+			result->type = LX_STRING;
+			break;
+		case LX_STRING:
+			result->type = LX_STRING;
+			result->s = strnewp(evaluated_args[0].s);
+			break;
+		case LX_UNDEFINED:
+			result->type = LX_UNDEFINED;
+			break;
+		case LX_ERROR:
+			result->type = LX_ERROR;
+			return FALSE;
+			break;
+		default:
+			ASSERT("Unknown classad result type");
+	}
 
 	return TRUE;
 }
