@@ -52,6 +52,10 @@ public:
 	// Reset parameters about the current file (offset, stat info, etc.)
 	void Reset( ResetType type = RESET_FILE );
 
+	// Initialized?
+	bool Initialized( void ) const { return m_initialized; };
+	bool InitializeError( void ) const { return m_init_error; };
+
 	// Accessors
 	const char *BasePath( void ) const { return m_base_path; };
 	const char *CurPath( void ) const { return m_cur_path.GetCStr( ); };
@@ -60,8 +64,10 @@ public:
 	bool IsValid( void ) const { return (m_cur_rot >= 0); };
 
 	// Set methods
-	int Rotation( int rotation, bool store_stat = false );
-	int Rotation( int rotation, StatStructType &statbuf );
+	int Rotation( int rotation, bool store_stat = false,
+				  bool initializing = false );
+	int Rotation( int rotation, StatStructType &statbuf,
+				  bool initializing = false );
 	filesize_t Offset( filesize_t offset )
 		{ return m_offset = offset; };
 
@@ -87,7 +93,8 @@ public:
 	int StatFile( int fd );
 
 	// Method to generate log path
-	bool GeneratePath( int rotation, MyString &path ) const;
+	bool GeneratePath( int rotation, MyString &path,
+					   bool initializing = false ) const;
 
 	// Check the file for differences
 	int ScoreFile( int rot = -1 ) const;
@@ -117,12 +124,16 @@ public:
 
 	// Debugging: Get file state into a formated string
 	void GetState( MyString &str, const char *label = NULL ) const;
+	void GetState( const ReadUserLog::FileState &state,
+				   MyString &str, const char *label = NULL ) const;
 
 	// This is the file state buffer that we generate for the init/get/set
 	// methods
+#define FILESTATE_VERSION		101
 	struct FileState {
 		char			signature[64];		// File state signature
-		MyString		path;				// The log's path
+		int				version;			// Version #
+		char			path[512];			// The log's path
 		char			uniq_id[128];		// File's uniq identifier
 		int				sequence;			// File's sequence number
 		int				rotation;			// 0 == the "current" file
@@ -136,14 +147,15 @@ public:
 		time_t			update_time;		// Time of last struct update
 
 		FileState() {
-			memset(signature,0,sizeof(signature));
-			memset(uniq_id,0,sizeof(uniq_id));
+			memset( signature, 0, sizeof(signature) );
+			memset( path, 0, sizeof(path) );
+			memset( uniq_id, 0, sizeof(uniq_id) );
 			sequence = 0;
 			rotation = 0;
 			log_type = LOG_TYPE_UNKNOWN;
 			ctime = 0;
-			memset(size.bytes,0,sizeof(size.bytes));
-			memset(offset.bytes,0,sizeof(offset.bytes));
+			memset( size.bytes, 0, sizeof(size.bytes) );
+			memset( offset.bytes, 0, sizeof(offset.bytes) );
 			update_time = 0;
 		};
 	};
@@ -155,6 +167,9 @@ private:
 	int StatFile( const char *path, StatStructType &statbuf ) const;
 
 	// Private data
+	bool			m_init_error;		// Error initializing?
+	bool			m_initialized;		// Initialized OK?
+
 	char			*m_base_path;		// The log's base path
 	MyString		m_cur_path;			// The current (reading) log's path
 	int				m_cur_rot;			// Current file rotation number
