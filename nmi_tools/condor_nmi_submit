@@ -840,6 +840,16 @@ sub createSubmitFiles
         writeBuildPrereqs( *CMDFILE );
         writeBuildGlue( *CMDFILE, $tag, $module );
 		writeBuildXTestSpecs( *CMDFILE );
+
+	# This disk requirement is intended to override the default
+	# requirement inserted by condor_submit.  This is a temporary
+	# workaround for the problem of interrupted jobs failing to
+	# rerun because the slot Disk advertised by a number of platforms
+	# is not actually big enough for Condor builds.  The automatic
+	# requirements fail because the job's DiskUsage gets updated
+	# in the first attempt to run the job and then prevent the job
+	# from matching in the second attempt.
+	print CMDFILE "append_requirements = Disk =!= UNDEFINED && TotalDisk >= 18000000\n";
     } else {
 	 	print CMDFILE "+periodic_remove = (((JobStatus == 2)&&(JobUniverse == 5)&&((CurrentTime - JobCurrentStartDate) > (60 * 60 * 8))) =?= TRUE)\n";
         print CMDFILE "run_type = test\n";
