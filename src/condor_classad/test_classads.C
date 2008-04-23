@@ -2686,7 +2686,7 @@ static void test_function_string(
 
 	char classad_string[] = 
 							"BC0=string(\"-3\"):"
-							"BC1=string(-3):"
+							"BC1=string(123):"
 							"E0=isError(BC1):"
 							"";
 
@@ -2714,14 +2714,13 @@ static void test_function_string(
 			results->AddResult(false);
 		}
 
-		if (classad->EvalBool("E0", NULL, integer) &&
-				(integer == 1)) {
-			printf("Passed: Evaluating bad string passed in : %d in line %d\n", 
-				   integer, __LINE__);
+		if (classad->EvalString("BC1", NULL, big_string)) {
+			printf("Passed: Evaluating integer passed in to string: %s in line %d\n", 
+				   big_string, __LINE__);
 			results->AddResult(true);
 		} else {
-			printf("Failed: missed bad string passed in) : %d in line %d\n", 
-				   integer, __LINE__);
+			printf("Failed: missed bad string passed in : %s in line %d\n", 
+				   big_string, __LINE__);
 			results->AddResult(false);
 		}
         delete classad;
