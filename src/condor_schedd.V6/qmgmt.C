@@ -2719,11 +2719,13 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 				if(name[0] == '[' && name[namelen-1] == ']') {
 					// This is a classad expression to be considered
 
-					MyString expr_to_add = name + 1;
-					expr_to_add.setChar(expr_to_add.Length()-1, 0);
+					MyString expr_to_add;
+					expr_to_add.sprintf("string(%s", name + 1);
+					expr_to_add.setChar(expr_to_add.Length()-1, ')');
 
 					ClassAd tmpJobAd(*ad);
 					const char * INTERNAL_DD_EXPR = "InternalDDExpr";
+
 					bool isok = tmpJobAd.AssignExpr(INTERNAL_DD_EXPR, expr_to_add.Value());
 					if( ! isok ) {
 						attribute_not_found = true;
