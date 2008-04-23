@@ -433,7 +433,7 @@ class ReadUserLog
 		@param file state buffer
 		@return true on success
 	 */
-	bool UninitFileState( ReadUserLog::FileState &state ) const;
+	static bool UninitFileState( ReadUserLog::FileState &state );
 
 	/** Use this method to get the current state (before saving it off)
 		@param file state buffer

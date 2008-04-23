@@ -378,7 +378,13 @@ ReadUserLogState::CompareUniqId( const MyString &id ) const
 bool
 ReadUserLogState::InitState( ReadUserLog::FileState &state )
 {
-	ReadUserLogState::FileState	*istate = new ReadUserLogState::FileState;
+	state.buf  = (void *) new ReadUserLogState::FileStatePub;
+	state.size = sizeof( ReadUserLogState::FileStatePub );
+
+	ReadUserLogState::FileState	*istate = GetFileState( state );
+
+	memset( istate, 0, sizeof(ReadUserLogState::FileStatePub) );
+	istate->log_type = LOG_TYPE_UNKNOWN;
 
 	strncpy( istate->signature,
 			 FileStateSignature,
@@ -386,16 +392,14 @@ ReadUserLogState::InitState( ReadUserLog::FileState &state )
 	istate->signature[sizeof(istate->signature) - 1] = '\0';
 	istate->version = FILESTATE_VERSION;
 
-	state.buf = (void *) istate;
-	state.size = sizeof( FileState );
 	return true;
 }
 
 bool
-ReadUserLogState::UninitState( ReadUserLog::FileState &state ) const
+ReadUserLogState::UninitState( ReadUserLog::FileState &state )
 {
-	ReadUserLogState::FileState	*istate =
-		(ReadUserLogState::FileState *) state.buf;
+	ReadUserLogState::FileStatePub	*istate =
+		(ReadUserLogState::FileStatePub *) state.buf;
 	
 	delete istate;
 	state.buf = NULL;
@@ -407,8 +411,7 @@ ReadUserLogState::UninitState( ReadUserLog::FileState &state ) const
 bool
 ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 {
-	ReadUserLogState::FileState	*istate =
-		(ReadUserLogState::FileState *) state.buf;
+	ReadUserLogState::FileState *istate = GetFileState( state );
 
 	// Verify that the signature and version matches
 	if ( strcmp( istate->signature, FileStateSignature ) ) {
@@ -442,6 +445,7 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 		memset( istate->uniq_id, 0, sizeof(istate->uniq_id) );
 	}
 	istate->sequence = m_sequence;
+	istate->max_rotation = m_max_rot;
 
 	istate->inode = m_stat_buf.st_ino;
 	istate->ctime = m_stat_buf.st_ctime;
@@ -455,8 +459,7 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 bool
 ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 {
-	ReadUserLogState::FileState	*istate =
-		(ReadUserLogState::FileState *) state.buf;
+	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
 
 	// Verify that the signature matches
 	if ( strcmp( istate->signature, FileStateSignature ) ) {
@@ -473,6 +476,7 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 	strcpy( m_base_path, istate->path );
 
 	// Set the rotation & path
+	m_max_rot = istate->max_rotation;
 	Rotation( istate->rotation, false, true );
 
 	m_log_type = istate->log_type;
@@ -506,13 +510,28 @@ ReadUserLogState::GetState( MyString &str, const char *label ) const
 		"  BasePath = %s\n"
 		"  CurPath = %s\n"
 		"  UniqId = %s, seq = %d\n"
-		"  rotation = %d; offset = %ld; type = %d\n"
+		"  rotation = %d; max = %d; offset = %ld; type = %d\n"
 		"  inode = %u; ctime = %d; size = %ld\n",
 		m_base_path, m_cur_path.GetCStr(),
 		m_uniq_id.GetCStr() ? m_uniq_id.GetCStr() : "", m_sequence,
-		m_cur_rot, (long) m_offset, m_log_type,
+		m_cur_rot, m_max_rot, (long) m_offset, m_log_type,
 		(unsigned)m_stat_buf.st_ino, (int)m_stat_buf.st_ctime,
 		(long)m_stat_buf.st_size );
+}
+
+const ReadUserLogState::FileState *
+ReadUserLogState::GetFileStateConst( const ReadUserLog::FileState &state )
+{
+	const ReadUserLogState::FileStatePub *buf =
+		(const ReadUserLogState::FileStatePub *) state.buf;
+	return &buf->actual_state;
+}
+ReadUserLogState::FileState *
+ReadUserLogState::GetFileState( ReadUserLog::FileState &state )
+{
+	ReadUserLogState::FileStatePub *buf =
+		(ReadUserLogState::FileStatePub *) state.buf;
+	return &buf->actual_state;
 }
 
 void
@@ -522,8 +541,7 @@ ReadUserLogState::GetState(
 	const char						*label
   ) const
 {
-	const ReadUserLogState::FileState	*istate =
-		(const ReadUserLogState::FileState *) state.buf;
+	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
 	if ( ( !istate ) || ( !istate->version ) ) {
 		if ( label ) {
 			str.sprintf( "%s: no state", label );
@@ -542,11 +560,12 @@ ReadUserLogState::GetState(
 		"  signature = '%s'; version = %d; update = %ld\n"
 		"  path = '%s'\n"
 		"  UniqId = %s, seq = %d\n"
-		"  rotation = %d; offset = "FILESIZE_T_FORMAT"; type = %d\n"
+		"  rotation = %d; max = %d; offset = "FILESIZE_T_FORMAT"; type = %d\n"
 		"  inode = %u; ctime = %ld; size = "FILESIZE_T_FORMAT"\n",
 		istate->signature, istate->version, istate->update_time,
 		istate->path,
 		istate->uniq_id, istate->sequence,
-		istate->rotation, istate->offset.asint, istate->log_type,
+		istate->rotation, istate->max_rotation,
+		istate->offset.asint, istate->log_type,
 		(unsigned)istate->inode, istate->ctime, istate->size.asint );
 }
