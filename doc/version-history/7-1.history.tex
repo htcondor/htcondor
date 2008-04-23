@@ -28,6 +28,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Condor now coerces the result of \$\$([]) expressions in
+submit files to strings.  This means that submit files can do simple 
+math.  For example, you can describe a command-line argument as:
+
+arguments = \$\$([\$(PROCESS)+100])
+
+and condor\_submit will expand the argument to be the expected
+value.
+
 \item Condor daemons now periodically update the ctime of their
 log files, instead of the mtime, as they used to.  At startup, the
 daemons use this ctime to determine how long they may have been down.
@@ -68,6 +77,9 @@ and reconnecting to them without any disturbance to the running job.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed bug in classad string function, so that it now properly
+converts integers and floats to their string representation.
 
 \item Windows Installer is now completely internationalized: it will no 
   longer fail to install because of a missing "Users" group; instead, it
