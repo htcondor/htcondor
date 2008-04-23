@@ -25,7 +25,7 @@
 #include "condor_header_features.h"
 
 #if defined(__cplusplus)
-#include "MyString.h"
+class MyString;
 template <class Item> class ExtArray;
 #endif
 

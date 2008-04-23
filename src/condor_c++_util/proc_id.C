@@ -22,6 +22,7 @@
 #include "proc.h"
 #include "string_list.h"
 #include "extArray.h"
+#include "MyString.h"
 
 extern "C" 
 PROC_ID
