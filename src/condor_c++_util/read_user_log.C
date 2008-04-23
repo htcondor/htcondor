@@ -1101,9 +1101,9 @@ ReadUserLog::InitFileState( ReadUserLog::FileState &state )
 }
 
 bool
-ReadUserLog::UninitFileState( ReadUserLog::FileState &state ) const
+ReadUserLog::UninitFileState( ReadUserLog::FileState &state )
 {
-	return m_state->UninitState( state );
+	return ReadUserLogState::UninitState( state );
 }
 
 bool

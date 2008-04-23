@@ -116,7 +116,7 @@ CheckArgs(int argc, char **argv, Arguments &args)
 		"  -no-rotation: disable rotation handling\n"
 		"  -sleep <number>: how many seconds to sleep between events\n"
 		"  -term <number>: number of terminate events to exit after\n"
-		"  -usage: print this message and exit\n"
+		"  -usage|-help|-h: print this message and exit\n"
 		"  -v: Increase verbosity level by 1\n"
 		"  -verbosity <number>: set verbosity level (default is 1)\n"
 		"  -version: print the version number and compile date\n"
@@ -209,7 +209,9 @@ CheckArgs(int argc, char **argv, Arguments &args)
 				args.term = atoi(argv[index]);
 			}
 
-		} else if ( !strcmp(argv[index], "-usage") ) {
+		} else if ( ( !strcmp(argv[index], "-usage") )		||
+					( !strcmp(argv[index], "-h") )			||
+					( !strcmp(argv[index], "-help") )  )	{
 			printf("%s", usage);
 			status = STATUS_CANCEL;
 
@@ -464,6 +466,7 @@ ReadEvents(Arguments &args)
 		fputs( "  Done\n", stdout );
 	}
 
+	ReadUserLog::UninitFileState( state );
 	return result;
 }
 

@@ -118,9 +118,9 @@ public:
 
 	// Generate an external file state structure
 	static bool InitState( ReadUserLog::FileState &state );
+	static bool UninitState( ReadUserLog::FileState &state );
 	bool GetState( ReadUserLog::FileState &state ) const;
 	bool SetState( const ReadUserLog::FileState &state );
-	bool UninitState( ReadUserLog::FileState &state ) const;
 
 	// Debugging: Get file state into a formated string
 	void GetState( MyString &str, const char *label = NULL ) const;
@@ -129,7 +129,7 @@ public:
 
 	// This is the file state buffer that we generate for the init/get/set
 	// methods
-#define FILESTATE_VERSION		101
+#define FILESTATE_VERSION		102
 	struct FileState {
 		char			signature[64];		// File state signature
 		int				version;			// Version #
@@ -137,6 +137,7 @@ public:
 		char			uniq_id[128];		// File's uniq identifier
 		int				sequence;			// File's sequence number
 		int				rotation;			// 0 == the "current" file
+		int				max_rotation;		// Max rotation level
 		UserLogType		log_type;			// The log's type
 		StatStructInode	inode;				// The log's inode #
 		time_t			ctime;				// The log's creation time
@@ -145,26 +146,25 @@ public:
 			filesize_t	asint;
 		}				size, offset;		// log's size and our offset
 		time_t			update_time;		// Time of last struct update
-
-		FileState() {
-			memset( signature, 0, sizeof(signature) );
-			memset( path, 0, sizeof(path) );
-			memset( uniq_id, 0, sizeof(uniq_id) );
-			sequence = 0;
-			rotation = 0;
-			log_type = LOG_TYPE_UNKNOWN;
-			ctime = 0;
-			memset( size.bytes, 0, sizeof(size.bytes) );
-			memset( offset.bytes, 0, sizeof(offset.bytes) );
-			update_time = 0;
-		};
 	};
+	// "Public" file state
+	typedef union {
+		ReadUserLogState::FileState	actual_state;
+		char						filler [2048];
+	} FileStatePub;
+		
 
 private:
 	// Private methods
 	void Clear( bool init = false );
 	int StatFile( StatStructType &statbuf ) const;
 	int StatFile( const char *path, StatStructType &statbuf ) const;
+
+	// Get the "internal" state pointer from the application file state
+	static const ReadUserLogState::FileState *
+		GetFileStateConst( const ReadUserLog::FileState &state );
+	static ReadUserLogState::FileState *
+		GetFileState( ReadUserLog::FileState &state );
 
 	// Private data
 	bool			m_init_error;		// Error initializing?
