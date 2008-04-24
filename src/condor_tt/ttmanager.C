@@ -939,7 +939,7 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 							machine_id = attVal;
 						}
 
-						attValList.sprintf("('%s'", attVal);
+						attValList.sprintf("('%s'", strchr(attVal,'\'') ? " " : attVal);
 						break;
 					case CONDOR_TT_TYPE_BOOL:
 							// boolean value are stored as string in db, but 
@@ -1013,7 +1013,7 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 							machine_id = attVal;
 						}
 
-						tmpVal.sprintf("'%s'", attVal);
+						tmpVal.sprintf("'%s'", strchr(attVal,'\'') ? " " : attVal);
 						break;
 					case CONDOR_TT_TYPE_BOOL:
 							// boolean value are stored as string in db, but 
@@ -1336,6 +1336,8 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 				return QUILL_FAILURE;
 			}		 
 		} else {
+			aVal.replaceString("'"," ");
+			aVal.replaceString("\""," ");
 			sql_stmt.sprintf("INSERT INTO Machines_Vertical (machine_id, attr, val, start_time) SELECT '%s', '%s', '%s', %s FROM dummy_single_row_table WHERE NOT EXISTS (SELECT * FROM Machines_Vertical WHERE machine_id = '%s' AND attr = '%s')", machine_id.Value(), aName.Value(), aVal.Value(), lastReportedTime.Value(), machine_id.Value(), aName.Value());
 
 			if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
