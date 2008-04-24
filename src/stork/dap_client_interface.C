@@ -213,9 +213,6 @@ stork_submit (
 		return FALSE;
 	}
 
-
-	char line[MAX_TCP_BUF];
-
 	sock->encode();
 
 	classad::ClassAdUnParser unparser;
@@ -243,17 +240,16 @@ stork_submit (
 	sock->eom();
 	sock->decode();
 
-	char * pline = (char*)line;
-	if (!sock->code (pline)) {
+	char *line = NULL;
+	if (!sock->code (line)) {
 		_error_reason = strdup("Client recv error");
 		delete sock;
 		return FALSE;
 	}
-	
 	sock->eom();
 
 	_error_reason = NULL;
-	id=strdup(line);
+	id=line;
 
 	sock->close();
 	delete sock;
@@ -267,9 +263,6 @@ stork_rm (
 			const char * host, 
 			char * & result,
 			char * & _error_reason) {
-
-	char buff[MAX_TCP_BUF];
-	char * pbuff = (char*)buff;
 
 		// Get a connection
 	MyString error_reason;
@@ -286,8 +279,7 @@ stork_rm (
 
 	sock->encode();
 
-	strcpy (buff, id);
-	if (!sock->code (pbuff)) {
+	if (!sock->put (id)) {
 		_error_reason = strdup ("Client send error");
 		delete sock;
 		return FALSE;
@@ -299,18 +291,19 @@ stork_rm (
 	int rc=0;
   
 		//listen to the reply from dap server
-	if (!(sock->code(rc) && sock->code(pbuff))) {
+	char *buff = NULL;
+	if (!(sock->code(rc) && sock->code(buff))) {
 		_error_reason = strdup ("Client recv error");
 		delete sock;
 		return FALSE;
 	}
 
 	if (rc) {
-		result = strdup (pbuff);
+		result = buff;
 		_error_reason = NULL;
 	} else {
 		result = NULL;
-		_error_reason = strdup(pbuff);
+		_error_reason = buff;
 	}
 
 	sock->close();
@@ -325,9 +318,6 @@ stork_status (
 			const char * host, 
 			classad::ClassAd * & result,
 			char * & _error_reason) {
-
-	char buff[MAX_TCP_BUF];
-	char * pbuff = (char*)buff;
 
 		// Get a connection
 	MyString error_reason;
@@ -344,8 +334,7 @@ stork_status (
 
 	sock->encode();
 
-	strcpy (buff, id);
-	if (!sock->code (pbuff)) {
+	if (!sock->put (id)) {
 		_error_reason = strdup ("Client send error");
 		delete sock;
 		return FALSE;
@@ -356,7 +345,8 @@ stork_status (
  
 	int rc = 0;
  		//listen to the reply from dap server
-	if (!(sock->code(rc) && sock->code(pbuff))) {
+	MyString	buf;
+	if (!(sock->code(rc) && sock->code(buf))) {
 		_error_reason = strdup ("Client recv error");
 		delete sock;
 		return FALSE;
@@ -365,7 +355,7 @@ stork_status (
 
 	if (rc) {
 			classad::ClassAdParser parser;
-			result = parser.ParseClassAd (pbuff);
+			result = parser.ParseClassAd ( buf.Value() );
 			if (!result) {
 				_error_reason=strdup("Unable to parse result");
 				rc=0;
@@ -374,7 +364,7 @@ stork_status (
 			}
 	} else {
 		result = NULL;
-		_error_reason = strdup(pbuff);
+		_error_reason = buf.StrDup( );
 	}
 
 	sock->close();
@@ -391,9 +381,6 @@ stork_list (
 			int & result_size, 
 			classad::ClassAd ** & result,
 			char * & _error_reason) {
-
-	char buff[MAX_TCP_BUF];
-	char * pbuff = (char*)buff;
 
 		// Get a connection
 	MyString error_reason;
@@ -419,18 +406,18 @@ stork_list (
 	result_size = rc;
 	int i;
 
+	MyString	buf;
 	classad::ClassAdParser parser;
 
-//	result = (ClassAd**)malloc (sizeof(ClassAd*) * result_size);
 	result = new classad::ClassAd*[result_size];
 	for (i=0; i<result_size; i++) {
-		if (!sock->code(pbuff)) {
+		if (!sock->code(buf)) {
 			_error_reason = strdup ("Client recv error");
 			delete sock;
 			return FALSE;
 		}
 		
-		result[i] = parser.ParseClassAd(pbuff);
+		result[i] = parser.ParseClassAd( buf.Value() );
 	}
 	_error_reason = NULL;
 
