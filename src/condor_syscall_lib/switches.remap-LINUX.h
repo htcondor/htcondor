@@ -183,7 +183,11 @@ REMAP_THREE( msync, __libc_msync, int , void *, size_t , int )
 REMAP_TWO( munmap, __munmap, int, void *, size_t )
 REMAP_ONE( pipe, __pipe, int , int *)
 
+#if defined(GLIBC25)
 REMAP_THREE( readlink, __readlink, ssize_t , const char *, char *, size_t )
+#else
+REMAP_THREE( readlink, __readlink, int , const char *, char *, size_t )
+#endif
 
 REMAP_THREE( readv, __readv, ssize_t, int, const struct iovec *, int )
 REMAP_THREE( readv, __libc_readv, ssize_t, int, const struct iovec *, int )
