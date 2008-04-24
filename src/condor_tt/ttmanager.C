@@ -263,6 +263,11 @@ TTManager::maintain()
 
 		scheddname = jqDBManager.getScheddname();
 
+		ret_st = DBObj->beginTransaction();
+		if (ret_st == QUILL_FAILURE) {
+			dprintf(D_ALWAYS, "Begin transaction failed in TTManager::maintain\n");
+		}
+
 		if (dt == T_ORACLE) {
 			MyString ts_expr_val;
 
