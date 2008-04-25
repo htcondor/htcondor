@@ -290,8 +290,18 @@ typedef struct procInfo * piPTR;
   are determined by the OS.
 */
 typedef struct procInfoRaw{
+
+		// Virtual size and working set size
+		// are reported as 64-bit quantities
+		// on Windows
+#ifndef WIN32
 	unsigned long imgsize;
 	unsigned long rssize;
+#else
+	__int64 imgsize;
+	__int64 rssize;
+#endif
+
 	long minfault;
 	long majfault;
 	pid_t pid;
