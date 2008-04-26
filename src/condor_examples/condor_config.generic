@@ -1968,12 +1968,17 @@ QUILL_ADDRESS_FILE = $(LOG)/.quill_address
 
 # What kind of database server is this?
 # For now, only PGSQL is supported
-#QUILL_DB_TYPE = "PGSQL"
+#QUILL_DB_TYPE = PGSQL
 
 # The machine and port of the postgres server.
 # Although this says IP Addr, it can be a DNS name. 
 # It must match whatever format you used for the .pgpass file, however
 #QUILL_DB_IP_ADDR = machine.domain.com:5432
+
+# The login to use to attach to the database for updating information.
+# There should be an entry in file $SPOOL/.pgpass that gives the password 
+# for this login id.
+#QUILL_DB_USER = quillwriter
 
 # Polling period, in seconds, for when quill reads transactions out of the
 # schedd's job queue log file and puts them into the database.
