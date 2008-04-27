@@ -3378,29 +3378,33 @@ static int file_checksum(char *filePathName, int fileSize, char *sum) {
 
 static QuillErrCode append(char *destF, char *srcF) 
 {	
-	int dest, src;
+	int dest = -1;
+	int src = -1;
 	char buffer[4097];
 	int rv;
+	QuillErrCode result = QUILL_SUCCESS;
 
 	dest = safe_open_wrapper (destF, O_WRONLY|O_CREAT|O_APPEND, 0644);
 	src = safe_open_wrapper (srcF, O_RDONLY);
 
 	rv = read(src, buffer, 4096);
+	if ( rv < 0 ) {
+		result = QUILL_FAILURE;
+	}
 
 	while(rv > 0) {
 		if (write(dest, buffer, rv) < 0) {
-			close (dest);
-			close (src);
-			return QUILL_FAILURE;
+			result = QUILL_FAILURE;
+			break;
 		}
 		
 		rv = read(src, buffer, 4096);
 	}
 
-	close (dest);
-	close (src);
+	if (dest != -1) close (dest);
+	if (src != -1 ) close (src);
 
-	return QUILL_SUCCESS;
+	return result;
 }
 
 // hash function for strings
