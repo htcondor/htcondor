@@ -980,11 +980,10 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 
 ##  Which daemons use the Condor DaemonCore library (i.e., not the
 ##  checkpoint server or custom user daemons)?
-##  Note: Daemons in this list cannot use a static command port.
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
 #VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
-#QUILL
+#DBMSD, QUILL
 
 
 ##  Where are the binaries for these daemons?
