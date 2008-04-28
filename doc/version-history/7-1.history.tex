@@ -55,6 +55,12 @@ and stops all running standard universe jobs and gracefully
 disconnects from other types of jobs in the hopes of later restarting
 and reconnecting to them without any disturbance to the running job.
 
+\item The \Condor{job\_router} now supports deletion of attributes
+when transforming job ClassAds from vanilla to grid universe.  It also
+behaves more deterministically when choosing from multiple possible
+routes.  Rather than picking one randomly, it simply uses round-robin
+scheduling.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
