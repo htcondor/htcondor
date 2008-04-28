@@ -1145,12 +1145,14 @@ processCommandLineArguments (int argc, char *argv[])
 			exit(0);
 		}
 		else
-		if (match_prefix( arg , "analyze")) {
+		if (match_prefix( arg , "analyze")
+			|| match_prefix( arg , "analyse")) {
 			analyze = true;
 			attrs.clearAll();
 		}
         else
-        if (match_prefix( arg, "better-analyze")) {
+        if (match_prefix( arg, "better-analyze")
+			|| match_prefix( arg , "better-analyse")) {
 #ifdef WANT_CLASSAD_ANALYSIS
             analyze = true;
             better_analyze = true;
