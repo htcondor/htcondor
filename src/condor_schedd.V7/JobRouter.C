@@ -1804,6 +1804,15 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 			return false;
 		}
 	}
+	// Do attribute deletion
+	for( itr = m_route_ad.begin( ); itr != m_route_ad.end( ); itr++ ) {
+		char const *attr = itr->first.c_str();
+		if(strncmp(attr,"delete_",7)) continue;
+		attr = attr + 7;
+		dprintf(D_FULLDEBUG,"JobRouter (route=%s): Deleting attribute %s\n",Name(),attr);
+
+		src_ad->Delete(attr);
+	}
 	// Do attribute assignments
 	for( itr = m_route_ad.begin( ); itr != m_route_ad.end( ); itr++ ) {
 		char const *attr = itr->first.c_str();
