@@ -942,7 +942,9 @@ JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 	}
 
 	if(!matches.size()) return NULL;
-	unsigned choice = (unsigned)(rand()/(RAND_MAX + 1.0) * matches.size());
+
+	static unsigned round_robin = 0;
+	unsigned choice = (round_robin++) % matches.size();
 	ASSERT(choice < matches.size());
 	route = matches[choice];
 
