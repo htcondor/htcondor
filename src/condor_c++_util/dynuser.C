@@ -269,10 +269,11 @@ bool dynuser::logon_user(){
 			dprintf(D_ALWAYS, "dynuser::logon_user() - Failed to add account to users group!\n");
 		}
 
-		// Give this user the right to run as a batch job. 
-		if (!this->add_batch_privilege() ) {	
-			dprintf(D_ALWAYS, "dynuser::logon_user() - Failed to add batch privilege to account!\n");
+		if (!this->hide_user()) {	// Hide this user
+			dprintf(D_ALWAYS, "dynuser::logon_user() - Failed to "
+				"hide the user from the welcome screen!\n");
 		}
+
 	} else {	// if update_psid is successful, set the password
 				//	on the account we're reusing
 
@@ -518,49 +519,6 @@ void InitString( UNICODE_STRING &us, wchar_t *psz ) {
 	us.Buffer = psz;
 }
 
-bool dynuser::add_batch_privilege() {
-	bool retval = true;
-	wchar_t *priv = L"SeBatchLogonRight"; //SeLogonBatch
-
-	UNICODE_STRING machine;
-	{
-		PWKSTA_INFO_100 pwkiWorkstationInfo;
-		DWORD netret = NetWkstaGetInfo( NULL, 100, 
-			(LPBYTE *)&pwkiWorkstationInfo);
-		if ( netret != NERR_Success ) {
-			EXCEPT("dynuser::add_batch_privilege(): Cannot determine workstation name\n");
-		}
-		InitString( machine, 
-			(wchar_t *)pwkiWorkstationInfo->wki100_computername);
-	}
-
-
-	LSA_HANDLE hPolicy = 0;
-	LSA_OBJECT_ATTRIBUTES oa;//	= { sizeof oa };
-	ZeroMemory(&oa, sizeof(oa));
-	if (LsaOpenPolicy(&machine,	// Computer Name (NULL == this machine?)
-		&oa, 					// object attributes
-		POLICY_LOOKUP_NAMES | POLICY_CREATE_ACCOUNT, // Type of access required
-		&hPolicy ) != STATUS_SUCCESS)	// Pointer to the policy handles
-	{
-		dprintf(D_ALWAYS,"dynuser::add_batch_priv() LsaOpenPolicy failed\n");
-	}
-
-	UNICODE_STRING usPriv; InitString( usPriv, priv );
-
-	SetLastError(0);
-
-	if (retval && LsaAddAccountRights( hPolicy, psid, &usPriv, 1 )
-	   	!= STATUS_SUCCESS) {
-		dprintf(D_ALWAYS,
-			"dynuser::add_batch_priv() LsaAddAccountRights failed\n");
-		retval = false;
-	}
-
-	LsaClose( hPolicy );
-	return retval;
-}
-
 ////
 //
 // dynuser::createaccount() -- make the account
@@ -599,6 +557,80 @@ void dynuser::createaccount() {
 
 }
 
+////
+//
+// dynuser::hide_user:  inhibit the user from being displayed in the
+//						Windows welcome screen
+//
+// I believe, unfortunately, that this setting is only observed after
+// a reboot.  Not really a big deal, just a comment to answer the
+// inevitable RUST ticket asking about slot users not actually being
+// hidden :)
+//
+////
+
+bool dynuser::hide_user() {
+
+	HKEY	subkey		= NULL;
+	LPCTSTR	subkey_name = "SOFTWARE\\Microsoft\\Windows NT\\"
+		"CurrentVersion\\Winlogon\\SpecialAccounts\\UserList";
+	DWORD	hide_user = 0;
+	LONG	ok			= ERROR_SUCCESS;
+	
+	__try {
+
+		/* create or open the registry sub-key for removing users
+			from the Windows */
+		ok = RegCreateKey (
+			HKEY_LOCAL_MACHINE,
+			subkey_name,
+			&subkey );
+
+		if ( ERROR_SUCCESS != ok || NULL == subkey ) {
+			dprintf ( D_FULLDEBUG,"dynuser::hide_user() "
+				"RegCreateKey(HKEY_LOCAL_MACHINE, %s) failed "
+				"(error=%d)\n", subkey_name, GetLastError () );
+			__leave;
+		}
+		
+		/* tell Windows to hide this user from the Welcome Screen */
+		ok = RegSetValueEx (
+			subkey,
+			accountname,
+			0, // Reserved
+			REG_DWORD,
+			(LPBYTE) &hide_user,
+			sizeof ( DWORD ) );
+
+		if ( ERROR_SUCCESS != ok ) {
+			dprintf ( D_FULLDEBUG,"dynuser::hide_user() "
+				"RegSetValueEx(%s, hide_user=0)) failed "
+				"(error=%d)\n", accountname, GetLastError () );
+			__leave;
+		}
+
+		/* the subkey will be closed regardless of success of failure,
+			so we don't do it here explicitly */
+		
+	}
+	__finally {
+		
+		if ( NULL != subkey ) {
+			RegCloseKey ( subkey );
+		}
+		
+	}
+
+	if ( ERROR_SUCCESS != ok ) {
+		dprintf ( D_FULLDEBUG,"dynuser::hide_user() failed "
+			"to hide user \"%s\" from the Windows Welcom Screen "
+			"(error=%d)\n", accountname, GetLastError () );
+		return false;
+	}
+
+	return true;
+
+}
 
 ////
 //

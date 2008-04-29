@@ -90,7 +90,7 @@ private:
 	void disable_account();
 	void update_t();
 	
-	bool add_batch_privilege();
+	bool hide_user();
 	bool add_users_group();
 
     bool del_users_group();
