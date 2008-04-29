@@ -28,10 +28,38 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Condor now coerces the result of \$\$([]) expressions in
+submit files to strings.  This means that submit files can do simple 
+math.  For example, you can describe a command-line argument as:
+
+arguments = \$\$([\$(PROCESS)+100])
+
+and condor\_submit will expand the argument to be the expected
+value.
+
+\item Condor daemons now periodically update the ctime of their
+log files, instead of the mtime, as they used to.  At startup, the
+daemons use this ctime to determine how long they may have been down.
+
 \item Added the capability to the \Condor{startd} to allow it to power 
   down machines based a user specified policy.  See 
   section~\ref{sec:power-man} on \pageref{sec:power-man} on
   ``Power Management'' for more details.
+
+\item \Condor{off} now supports the \Opt{-peaceful} option for the
+schedd, in addition to the existing support that already existed for
+the startd.  When peacefully shut down, the schedd stops starting new
+jobs and waits for all running jobs to finish before exiting.  The
+default shutdown behavior is still \Opt{-graceful}, which checkpoints
+and stops all running standard universe jobs and gracefully
+disconnects from other types of jobs in the hopes of later restarting
+and reconnecting to them without any disturbance to the running job.
+
+\item The \Condor{job\_router} now supports deletion of attributes
+when transforming job ClassAds from vanilla to grid universe.  It also
+behaves more deterministically when choosing from multiple possible
+routes.  Rather than picking one randomly, it simply uses round-robin
+scheduling.
 
 \end{itemize}
 
@@ -55,6 +83,9 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed bug in classad string function, so that it now properly
+converts integers and floats to their string representation.
 
 \item Windows Installer is now completely internationalized: it will no 
   longer fail to install because of a missing "Users" group; instead, it
