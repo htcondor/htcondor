@@ -2202,11 +2202,6 @@ AS_IF([test "x$_cv_libc_kind-$_cv_libc_major-$_cv_libc_minor" = xGLIBC-2-3],
     [_cv_has_classads=yes])])
 AC_MSG_RESULT([$_cv_has_classads])
 
-AC_MSG_CHECKING([if blahp is supported])
-AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_has_globus" = xyes -a "x$_cv_has_classads" = xyes],
-  [_cv_has_blahp=yes],
-  [_cv_has_blahp=no])
-AC_MSG_RESULT([$_cv_has_blahp])
 
 # This check is a bit of a hack. We need to checkout the OpenSSL
 # external on platforms other than Windows. OpenSSL is only checked
@@ -2397,6 +2392,10 @@ CHECK_EXTERNAL([pcre], [7.6], [hard],
 AS_IF([test "x$cv_ext_pcre" = xyes],
   [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
 
+AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_has_globus" = xyes -a -n "$_cv_ext_classads_version"],
+  [_cv_has_blahp=yes],
+  [_cv_has_blahp=no])
+AC_MSG_RESULT([$_cv_has_blahp])
 CHECK_EXTERNAL([blahp], [1.7.0], [soft])
 
 # When --with-proper the detection of the man pages is a little
