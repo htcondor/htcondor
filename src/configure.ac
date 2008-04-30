@@ -2360,6 +2360,12 @@ CHECK_EXTERNAL([krb5], [1.4.3], [soft],
                MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
 fi
 
+CHECK_EXTERNAL([globus],[4.0.5], [soft])
+
+if test -z "$_cv_ext_globus_version"; then
+  _cv_has_globus=no;
+fi
+
 _cv_has_gahp=$_cv_has_globus
 CHECK_EXTERNAL([gahp],[1.0.15], [soft])
 
@@ -2436,8 +2442,6 @@ fi
 CHECK_EXTERNAL([postgresql], [$pgsql_ver], [hard],
                [use PostgreSQL (provides Quill and other support)],
                MF_LIB_CHECK([postgresql], [[pq PQconnectdb]]))
-
-CHECK_EXTERNAL([globus],[4.0.5], [soft])
 
 # if globus is available on this platform and we actually have it
 if test "x$_cv_has_globus" = xyes -a "x$cv_ext_globus" = xyes; then
