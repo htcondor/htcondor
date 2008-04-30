@@ -720,7 +720,7 @@ sub find_owner(;$) {
             log_message("Condor is being configured to use the daemon user, which "
                         . "will work, but usually isn't "
                         . "what you want. Usually it's the condor user, which doesn't "
-                        . "exist on this system. If you like, you can rerun the condor_configure "
+                        . "exist on this system. If you like, you can rerun "
                         . "$Program with the --owner option when you decide which user "
                         . "should be used by the Condor daemons.\n");
         } else {
