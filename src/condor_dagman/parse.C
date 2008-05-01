@@ -21,6 +21,9 @@
 //----------------------------------------------------------------
 // IMPORTANT NOTE:  Any changes in the DAG file implemented here
 // must also be reflected in Dag::Rescue().
+// Except for the concept of splicing--when the spliciing is finished all of
+// the nodes are merged into the main dag as if they had physically appeared
+// in the main dag file with the correct names.
 //----------------------------------------------------------------
 
 #include "condor_common.h"
@@ -35,9 +38,14 @@
 #include "dagman_main.h"
 #include "tmp_dir.h"
 #include "basename.h"
+#include "extArray.h"
+#include "condor_string.h"  /* for strnewp() */
 
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
+
+static ExtArray<char*> _spliceScope;
+static bool _useDagDir = false;
 
 static int _thisDagNum = -1;
 static bool _mungeNames = true;
@@ -63,8 +71,10 @@ static bool parse_priority(Dag *dag,
 		const char *filename, int lineNumber);
 static bool parse_category(Dag *dag, const char *filename, int lineNumber);
 static bool parse_maxjobs(Dag *dag, const char *filename, int lineNumber);
+static bool parse_splice(Dag *dag, const char *filename, int lineNumber);
 static MyString munge_job_name(const char *jobName);
 
+static MyString current_splice_scope(void);
 
 void exampleSyntax (const char * example) {
     debug_printf( DEBUG_QUIET, "Example syntax is: %s\n", example);
@@ -108,6 +118,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	ASSERT( dag != NULL );
 
 	++_thisDagNum;
+
+	_useDagDir = useDagDir;
 
 		//
 		// If useDagDir is true, we have to cd into the directory so we can
@@ -262,6 +274,12 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		else if(strcasecmp(token, "CONFIG") == 0) {
 			parsed_line_successfully = true;
 		}
+
+		// Handle a Splice spec
+		else if(strcasecmp(token, "SPLICE") == 0) {
+			parsed_line_successfully = parse_splice(dag, filename,
+						lineNumber);
+		}
 		
 		// None of the above means that there was bad input.
 		else {
@@ -279,6 +297,12 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	}
 
 	fclose(fp);
+
+
+	// always remember which were the inital and final nodes for this dag.
+	// If this dag is used as a splice, then this information is very
+	// important to preserve when building dependancy links.
+	dag->RecordInitialAndFinalNodes();
 
 	if ( useDagDir ) {
 		MyString	errMsg;
@@ -301,6 +325,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 	MyString example;
 	MyString whynot;
 	bool done = false;
+	Dag *tmp = NULL;
 
 	MyString expectedSyntax;
 	expectedSyntax.sprintf( "Expected syntax: %s nodename submitfile "
@@ -377,6 +402,17 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 			return false;
 	}
+
+	// check to see if this node name is also a splice name for this dag.
+	if (dag->LookupSplice(MyString(nodeName), tmp) == 0) {
+		debug_printf( DEBUG_QUIET, 
+			  "%s (line %d): "
+			  "Node name '%s' must not also be a splice name.\n",
+			  dagFile, lineNum, nodeName );
+		return false;
+	}
+
+	// looks ok, so add it
 	if( !AddNode( dag, nodeType, nodeName, directory,
 				submitFile, NULL, NULL, done, whynot ) )
 	{
@@ -536,25 +572,53 @@ parse_parent(
 	int  lineNumber)
 {
 	const char * example = "PARENT p1 p2 p3 CHILD c1 c2 c3";
+	Dag *splice_dag;
 	
 	List<Job> parents;
+	ExtArray<Job*> *splice_initial;
+	ExtArray<Job*> *splice_final;
+	int i;
+	Job *job;
 	
 	const char *jobName;
 	
+	// get the job objects for the parents
 	while ((jobName = strtok (NULL, DELIMITERS)) != NULL &&
 		   strcasecmp (jobName, "CHILD") != 0) {
 		const char *jobNameOrig = jobName; // for error output
 		MyString tmpJobName = munge_job_name(jobName);
 		const char *jobName2 = tmpJobName.Value();
 
-		Job * job = dag->FindNodeByName( jobName2 );
-		if (job == NULL) {
-			debug_printf( DEBUG_QUIET, 
+		// if splice name then deal with that first...
+		if (dag->LookupSplice(jobName2, splice_dag) == 0) {
+			// grab all of the final nodes of the splice and make them parents
+			// for this job.
+
+			debug_printf( DEBUG_QUIET, "%s (line %d): "
+				"Detected slice %s as a parent....\n", filename, lineNumber,
+					jobName2);
+
+			splice_final = splice_dag->FinalRecordedNodes();
+			// now add each final node as a parent
+			for (i = 0; i < splice_final->length(); i++) {
+				job = (*splice_final)[i];
+				parents.Append(job);
+			}
+
+		} else {
+
+			// orig code
+			// if the name is not a splice, then see if it is a true node name.
+			job = dag->FindNodeByName( jobName2 );
+			if (job == NULL) {
+				// oops, it was neither a splice nor a parent name, bail
+				debug_printf( DEBUG_QUIET, 
 						  "%s (line %d): Unknown Job %s\n",
 						  filename, lineNumber, jobNameOrig );
-			return false;
+				return false;
+			}
+			parents.Append (job);
 		}
-		parents.Append (job);
 	}
 	
 	// There must be one or more parent job names before
@@ -577,19 +641,50 @@ parse_parent(
 	
 	List<Job> children;
 	
+	// get the job objects for the children
 	while ((jobName = strtok (NULL, DELIMITERS)) != NULL) {
 		const char *jobNameOrig = jobName; // for error output
 		MyString tmpJobName = munge_job_name(jobName);
 		const char *jobName2 = tmpJobName.Value();
 
-		Job * job = dag->FindNodeByName( jobName2 );
-		if (job == NULL) {
-			debug_printf( DEBUG_QUIET, 
+		// if splice name then deal with that first...
+		if (dag->LookupSplice(jobName2, splice_dag) == 0) {
+			// grab all of the initial nodes of the splice and make them 
+			// children for this job.
+
+			debug_printf( DEBUG_QUIET, "%s (line %d): "
+				"Detected slice %s as a child....\n", filename, lineNumber,
+					jobName2);
+
+			splice_initial = splice_dag->InitialRecordedNodes();
+			debug_printf( DEBUG_QUIET, "Adding %d initial nodes\n", 
+				splice_initial->length());
+
+			// now add each initial node as a child
+			for (i = 0; i < splice_initial->length(); i++) {
+				job = (*splice_initial)[i];
+
+				children.Append(job);
+
+				debug_printf( DEBUG_QUIET, 
+					"Add initial node as child node: %s\n", 
+					job->GetJobName());
+			}
+
+		} else {
+
+			// orig code
+			// if the name is not a splice, then see if it is a true node name.
+			job = dag->FindNodeByName( jobName2 );
+			if (job == NULL) {
+				// oops, it was neither a splice nor a child name, bail
+				debug_printf( DEBUG_QUIET, 
 						  "%s (line %d): Unknown Job %s\n",
 						  filename, lineNumber, jobNameOrig );
-			return false;
+				return false;
+			}
+			children.Append (job);
 		}
-		children.Append (job);
 	}
 	
 	if (children.Number() < 1) {
@@ -1006,7 +1101,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 						"names cannot begin with \"queue\"\n", varName.Value() );
 			return false;
 		}
-		
+
 		debug_printf(DEBUG_DEBUG_1, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", varName.Value(), varValue.Value());
 		job->varNamesFromDag->Append(new MyString(varName));
 		job->varValsFromDag->Append(new MyString(varValue));
@@ -1188,6 +1283,122 @@ parse_category(
 	return true;
 }
 
+static bool
+parse_splice(
+	Dag *dag,
+	const char *filename,
+	int lineNumber)
+{
+	const char *example = "SPLICE SpliceName SpliceFileName";
+	Dag *splice_dag = NULL;
+	MyString spliceName, spliceFile;
+	Dag *tmp = NULL;
+
+	//
+	// Next token is the splice name
+	// 
+	spliceName = strtok(NULL, DELIMITERS);
+	if ( spliceName == "" ) {
+		debug_printf( DEBUG_QUIET, 
+					  "%s (line %d): Missing SPLICE name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	// Check to make sure we don't already have a node with the name of the
+	// splice.
+	if (dag->NodeExists(spliceName.Value()) == true) {
+		debug_printf( DEBUG_QUIET, 
+					  "%s (line %d): "
+					  " Splice name '%s' must not also be a node name.\n",
+					  filename, lineNumber, spliceName.Value() );
+		return false;
+	}
+
+	/* "push" it onto the scoping "stack" which will be used later to
+		munge the names of the nodes to have the splice name in them so
+		the same splice dag file with different splice names don't conflict.
+	*/
+	_spliceScope.add(strdup(spliceName.Value()));
+
+	//
+	// Next token is the splice file name
+	// 
+	spliceFile = strtok(NULL, DELIMITERS);
+	if ( spliceFile == "" ) {
+		debug_printf( DEBUG_QUIET, 
+					  "%s (line %d): Missing SPLICE file name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	/* make a new dag to put everything into */
+
+	/* parse increments this number, however, we want the splice nodes to
+		be munged into the numeric identification of the invoking dag, so
+		decrement it here so when it is incremented, nothing happened. */
+	--_thisDagNum;
+
+	// This "copy" is tailored to be correct according to Dag::~Dag()
+	splice_dag = new Dag(	dag->DagFiles(),
+							strnewp(dag->CondorLogName()), // freed by ~Dag
+							dag->MaxJobsSubmitted(),
+							dag->MaxPreScripts(),
+							dag->MaxPostScripts(),
+							strnewp(dag->DapLogName()), // freed by ~Dag
+							dag->AllowLogError(),
+							dag->UseDagDir(),
+							dag->MaxIdleJobProcs(),
+							dag->RetrySubmitFirst(),
+							dag->RetryNodeFirst(),
+							dag->CondorRmExe(),
+							dag->StorkRmExe(),
+							dag->DAGManJobId(),
+							dag->ProhibitMultiJobs(),
+							dag->SubmitDepthFirst() );
+
+	dprintf(D_ALWAYS, "Parsing Splice %s:%s\n", 
+		spliceName.Value(), spliceFile.Value());
+
+	// parse the splice file into a separate dag.
+	if (!parse(splice_dag, spliceFile.Value(), _useDagDir)) {
+		debug_error(1, DEBUG_QUIET, "Failed to parse splice %s in file %s\n",
+			spliceName.Value(), spliceFile.Value());
+		return false;
+	}
+
+	// munge the splice name XXX???
+	spliceName = munge_job_name(spliceName.Value());
+
+	// XXX I'm not sure this goes here quite yet....
+	splice_dag->PrefixAllNodeNames(MyString(current_splice_scope()));
+
+
+	debug_printf(DEBUG_QUIET, "Inserting splice %s into dag\n", spliceName.Value());
+
+	// associate the splice_dag with its name in _this_ dag, later I'll merge
+	// the nodes from this splice into _this_ dag.
+	if (dag->InsertSplice(spliceName, splice_dag) == -1) {
+		debug_printf( DEBUG_QUIET, "Splice name '%s' used for multiple "
+			"splices. Splice names must be unique per dag file.\n", 
+			spliceName.Value());
+		return false;
+	}
+
+	// print out the stuff before I lift it
+	splice_dag->PrintJobList();
+
+	dag->LiftChildSplices();
+
+	// pop the just pushed value off of the end of the ext array
+	free(_spliceScope[_spliceScope.getlast()]);
+	_spliceScope.truncate(_spliceScope.getlast() - 1);
+
+	return true;
+}
+
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_maxjobs
@@ -1270,11 +1481,33 @@ static MyString munge_job_name(const char *jobName)
 		// Munge the node name if necessary.
 		//
 	MyString newName;
+	MyString foo;
+
+	foo = /* current_splice_scope() + */ jobName;
+
 	if ( _mungeNames ) {
-		newName = MyString(_thisDagNum) + "." + jobName;
+		newName = MyString(_thisDagNum) + "." + foo;
 	} else {
-		newName = jobName;
+		newName = foo;
 	}
 
 	return newName;
 }
+
+static MyString current_splice_scope(void)
+{
+	int i;
+	MyString scope;
+	MyString tmp;
+
+	for (i = 0; i < _spliceScope.length(); i++)
+	{
+		tmp = _spliceScope[i];
+		scope += tmp + ":";
+	}
+
+	return scope;
+}
+
+
+

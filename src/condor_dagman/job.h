@@ -111,10 +111,16 @@ class Job {
     */
     static const char *queue_t_names[];
   
-		/** Returns how many direct parents a node has.
-			@return number of parents
-		*/
+	/** Returns how many direct parents a node has.
+		@return number of parents
+	*/
 	int NumParents() const;
+
+
+	/** Returns how many direct children a node has.
+		@return number of children
+	*/
+	int NumChildren() const;
 
     /** The Status of a Job
         If you update this enum, you *must* also update status_t_names
@@ -152,6 +158,7 @@ class Job {
   
     ~Job();
 
+	void PrefixName(const MyString &prefix);
 	inline const char* GetJobName() const { return _jobName; }
 	inline const char* GetDirectory() const { return _directory; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
@@ -297,6 +304,11 @@ class Job {
 	*/
 	ThrottleByCategory::ThrottleInfo *GetThrottleInfo() {
 			return _throttleInfo; }
+	
+	/** Interpolate any vars values with $(JOB) with the name of the job
+		@return void
+	*/
+	void ResolveVarsInterpolations(void);
 
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
