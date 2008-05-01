@@ -736,7 +736,7 @@ void TTManager::checkAndThrowBigFiles() {
 			snprintf(tmp, 512, "machine_id = \"%s\"", my_full_hostname());
 			tmpClP1->Insert(tmp);		
 
-			snprintf(tmp, 512, "size = %d", (int)file_status.st_size);
+			snprintf(tmp, 512, "log_size = %d", (int)file_status.st_size);
 			tmpClP1->Insert(tmp);		
 			
 			snprintf(tmp, 512, "throwtime = %d", (int)file_status.st_mtime);
