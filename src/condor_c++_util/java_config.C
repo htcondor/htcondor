@@ -44,7 +44,7 @@ int java_config( MyString &cmd, ArgList *args, StringList *extra_classpath )
 
 	tmp = param("JAVA_MAXHEAP_ARGUMENT");
 	if(tmp) {
-		arg_buf.sprintf("%s%dm",tmp,sysapi_phys_memory());
+		arg_buf.sprintf("%s%dm",tmp,sysapi_phys_memory()/ sysapi_ncpus());
 		args->AppendArg(arg_buf.Value());
 		free(tmp);
 	}
