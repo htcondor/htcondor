@@ -2384,8 +2384,10 @@ Dag::IncludeExtraDotCommands(
 
 	include_file = safe_fopen_wrapper(_dot_include_file_name, "r");
 	if (include_file == NULL) {
-        debug_printf(DEBUG_NORMAL, "Can't open dot include file %s\n",
+		if (_dot_include_file_name != NULL) {
+        	debug_printf(DEBUG_NORMAL, "Can't open dot include file %s\n",
 					_dot_include_file_name);
+		}
 	} else {
 		char line[100];
 		fprintf(dot_file, "// Beginning of commands included from %s.\n", 
@@ -2425,38 +2427,38 @@ Dag::DumpDotFileNodes(FILE *temp_dot_file)
 		switch (node->GetStatus()) {
 		case Job::STATUS_READY:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=ellipse label=\"%s (I)\"];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=ellipse label=\"%s (I)\"];\n",
+				node_name, node_name);
 			break;
 		case Job::STATUS_PRERUN:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=ellipse label=\"%s (Pre)\" style=dotted];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=ellipse label=\"%s (Pre)\" style=dotted];\n",
+				node_name, node_name);
 			break;
 		case Job::STATUS_SUBMITTED:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=ellipse label=\"%s (R)\" peripheries=2];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=ellipse label=\"%s (R)\" peripheries=2];\n",
+				node_name, node_name);
 			break;
 		case Job::STATUS_POSTRUN:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=ellipse label=\"%s (Post)\" style=dotted];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=ellipse label=\"%s (Post)\" style=dotted];\n",
+				node_name, node_name);
 			break;
 		case Job::STATUS_DONE:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=ellipse label=\"%s (Done)\" style=bold];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=ellipse label=\"%s (Done)\" style=bold];\n",
+				node_name, node_name);
 			break;
 		case Job::STATUS_ERROR:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=box label=\"%s (E)\"];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=box label=\"%s (E)\"];\n",
+				node_name, node_name);
 			break;
 		default:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=ellipse label=\"%s (I)\"];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=ellipse label=\"%s (I)\"];\n",
+				node_name, node_name);
 			break;
 		}
 	}
@@ -2498,7 +2500,7 @@ Dag::DumpDotFileArcs(FILE *temp_dot_file)
 			
 			child_name  = child->GetJobName();
 			if (parent_name != NULL && child_name != NULL) {
-				fprintf(temp_dot_file, "    %s -> %s;\n",
+				fprintf(temp_dot_file, "    \"%s\" -> \"%s\";\n",
 						parent_name, child_name);
 			}
 		}
