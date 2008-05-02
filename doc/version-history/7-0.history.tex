@@ -120,6 +120,13 @@ Previously, this did not work.
 \item Fixed a problem that caused occasional failure to detect hung
 Condor daemons.
 
+\item Fixed a file descriptor leak in the negotiator.  The leak happened
+whenever the negotiator failed to initiate the NEGOTIATE command to
+a schedd (for example if security negotiation failed with the schedd).
+Under unix, this would eventually cause the negotiator to run out of
+file descriptors, exit, and restart.  This bug affected all previous
+versions of Condor.
+
 \end{itemize}
 
 \noindent Known Bugs:
