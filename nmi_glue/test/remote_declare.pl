@@ -96,7 +96,7 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) )
 	print "****************************************************\n";
 	print "**** running CONFIGURE ...\n"; 
 	print "****************************************************\n";
-	open( TESTCONFIG, "./configure --without-externals $opt_configure 2>&1 |") ||
+	open( TESTCONFIG, "./configure --with-externals $opt_configure 2>&1 |") ||
     	die "Can't open configure as a pipe: $!\n";
 	while ( <TESTCONFIG> ) {
     	print $_;
