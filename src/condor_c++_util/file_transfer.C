@@ -2916,7 +2916,7 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 
 		(*catalog)->startIterations();
 		while((*catalog)->iterate(entry_pointer)) {
-			free(entry_pointer);
+			delete entry_pointer;
 		}
 		delete (*catalog);
 	}
