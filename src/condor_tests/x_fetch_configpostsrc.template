@@ -1,6 +1,6 @@
 # Startd hooks
 TEST_FETCH_HOOK_FETCH_WORK = xxxxxx/job_fetch.pl
-TEST_FETCH_HOOK_REPLY_CLAIM = xxxxxx/reply.pl
+TEST_FETCH_HOOK_REPLY_FETCH = xxxxxx/reply.pl
 TEST_FETCH_HOOK_EVICT_CLAIM = xxxxxx/job_evict.pl
 
 # Starter hooks

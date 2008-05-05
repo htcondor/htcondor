@@ -116,6 +116,7 @@ foreach $file (readdir DH)
 	close(OLD);
 	system("mv $file $file.old");
 	system("mv $new $file");
+	system("chmod 755 $file");
 }
 
 chdir("$here");
@@ -154,8 +155,8 @@ system("condor_config_val COLLECTOR_HOST");
 
 my $bail = 0;
 
-#my $fetchstatus = CondorTest::verbose_system("./fetck_work-basic.pl");
-#print "Status of work fetch is \"$fetchstatus\"\n";
+my $fetchstatus = CondorTest::verbose_system("./fetch_work-basic.pl $work");
+print "Status of work fetch is \"$fetchstatus\"\n";
 
 print "Saving things and cleaning up....\n";
 
