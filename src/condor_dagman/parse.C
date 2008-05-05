@@ -1359,7 +1359,7 @@ parse_splice(
 							dag->ProhibitMultiJobs(),
 							dag->SubmitDepthFirst() );
 
-	dprintf(D_ALWAYS, "Parsing Splice %s:%s\n", 
+	dprintf(D_ALWAYS, "Parsing Splice %s with file %s\n", 
 		spliceName.Value(), spliceFile.Value());
 
 	// parse the splice file into a separate dag.
@@ -1376,8 +1376,6 @@ parse_splice(
 	splice_dag->PrefixAllNodeNames(MyString(current_splice_scope()));
 
 
-	debug_printf(DEBUG_QUIET, "Inserting splice %s into dag\n", spliceName.Value());
-
 	// associate the splice_dag with its name in _this_ dag, later I'll merge
 	// the nodes from this splice into _this_ dag.
 	if (dag->InsertSplice(spliceName, splice_dag) == -1) {
@@ -1387,9 +1385,7 @@ parse_splice(
 		return false;
 	}
 
-	// print out the stuff before I lift it
-	splice_dag->PrintJobList();
-
+	// For now, we only keep track of the splice level just below this dag.
 	dag->LiftChildSplices();
 
 	// pop the just pushed value off of the end of the ext array
