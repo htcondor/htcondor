@@ -244,11 +244,12 @@ environment and abort the job.
   None.
 
 \item[Standard input given to the hook]
-  A copy of the job ClassAd and the slot ClassAd
-  (separated by the string \verb@-----@ and a new line).
+  A copy of the job ClassAd.
 
 \item[Expected standard output from the hook]
-  None.
+  A set of attributes to insert or update into the job ad.  For example,
+  changing the Cmd attribute to a quoted string changes the executable 
+  to be run.
 
 \item[Exit status of the hook]
   0 for success preparing the job, any non-zero value on failure.
