@@ -28,6 +28,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The PrepareJobHook can now modify the job ad before execution.
+For a complete description of the new hook system, read
+section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks}.
+
 \item Condor now coerces the result of \$\$([]) expressions in
 submit files to strings.  This means that submit files can do simple 
 math.  For example, you can describe a command-line argument as:
@@ -83,6 +87,10 @@ scheduling.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed bug in Java universe where each slot would be told to
+potentially use all the memory on the machine.  Now, each java vm
+gets the physical memory divided by the number of slots.
 
 \item On Windows, slot users would sometimes show up in the Windows Welcome
   Screen.  This has now been resolved (but the slot users need to be manually
