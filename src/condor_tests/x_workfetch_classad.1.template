@@ -1,5 +1,6 @@
 Cmd = "/bin/date"
 Iwd = "/tmp"
+Out = "/tmp/foo"
 Owner = "bt"
 User = "bt@cs.wisc.edu"
 JobUniverse = 5
