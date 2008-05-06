@@ -18,10 +18,54 @@
 ##
 ##**************************************************************
 
-$workdir = $ARGV[0];
+$workdir = $ARGV[0]; 
+$resultsdir = $ARGV[1];
+$version = $ARGV[2];
+$template = "x_workfetch_classad.1.template";
 $classad = "x_workfetch_classad.1";
+$line = "";
+$counter = 0;
+$maxwait = 180; # better happen in 3 minutes
+
+# create unique classad
+open(TEMP,"<$template") || die "Can not open $template:$!\n";
+open(CA,">$classad") || die "Can not open $classad:$!\n";
+while(<TEMP>) {
+	chomp();
+	$line = $_;
+	if($line =~ /^.*XXXXXX.*$/ ) {
+		print CA "Iwd = \"$resultsdir\"\n";
+	} elsif($line =~ /^.*YYYYYY.*$/ ) {
+		print CA "Out = \"$resultsdir\/$version\"\n";
+	} elsif($line =~ /^.*ZZZZZZ.*$/ ) {
+		print CA "Args = \"$classad\"\n";
+	} else {
+		print CA "$line\n";
+	}
+}
+close(TEMP);
+close(CA);
+
+# trigger the test by placing classad in work dir
 print "Good  sending work to $workdir\n";
+print "Good  sending copy to $resultsdir\n";
 print "Work is $classad\n";
+system("cp $classad $resultsdir");
 system("cp $classad $workdir");
-sleep 60;
-exit(0);
+
+# wait
+while($counter < $maxwait) {
+	if( ! ( -f "$resultsdir/$classad.results")) {
+		sleep 3;
+	} else {
+		last;
+	}
+	$counter += 3;
+}
+if( $counter >= $maxwait ) {
+	print "Error took $maxwit seconds\n";
+	exit(1);
+}
+
+$status = system("diff $resultsdir/$version $resultsdir/$classad");
+exit($status);
