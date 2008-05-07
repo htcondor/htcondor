@@ -32,10 +32,12 @@ class VanillaToGrid
 public:
 	/*
 	ad - Class ad to rewrite.  Only vanilla jobs are tested currently.
-	gridresource - where to send the job.  In ATTR_GRID_RESOURCE
-		format. 
+	target_universe - Condor universe number
+	gridresource - if non-NULL where to send the job.  In ATTR_GRID_RESOURCE
+	               format. 
+	is_sandboxed - true if target job is to have its own sandbox
 	*/
-	static bool vanillaToGrid(classad::ClassAd * ad, const char * gridresource, bool is_sandboxed);
+	static bool vanillaToGrid(classad::ClassAd * ad, int target_universe, const char * gridresource, bool is_sandboxed);
 private:
 };
 

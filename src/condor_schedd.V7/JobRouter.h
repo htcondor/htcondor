@@ -183,6 +183,7 @@ class JobRoute {
 	int MaxJobs() {return m_max_jobs;}
 	int MaxIdleJobs() {return m_max_idle_jobs;}
 	int CurrentRoutedJobs() {return m_num_jobs;}
+	int TargetUniverse() {return m_target_universe;}
 	char const *GridResource() {return m_grid_resource.c_str();}
 	classad::ExprTree *RouteRequirementExpr() {return m_route_requirements;}
 	char const *RouteRequirementsString() {return m_route_requirements_str.c_str();}
@@ -239,7 +240,8 @@ class JobRoute {
 
 	// stuff extracted from the route_ad:
 	std::string m_name;           // name distinguishing this route from others
-	std::string m_grid_resource;  // the target to which jobs are routed
+	int m_target_universe;        // universe of routed job
+	std::string m_grid_resource;  // if routing to grid universe, the grid site
 	int m_max_jobs;               // maximum jobs to route
 	int m_max_idle_jobs;          // maximum jobs in the idle state (requirement for submitting more jobs)
 	classad::ExprTree *m_route_requirements; // jobs must match these requirements
@@ -291,6 +293,7 @@ class RoutedJob {
 	time_t submission_time;
 	time_t retirement_time;
 
+	int target_universe;
 	std::string grid_resource; // In ATTR_GRID_RESOURCE format
 	std::string route_name;
 

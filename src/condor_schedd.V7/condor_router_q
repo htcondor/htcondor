@@ -80,7 +80,7 @@ done
 
 if [ "$show_route_summary" = "1" ]; then
   awk 'BEGIN {printf("%7s %2s %-10s %s\n","JOBS","ST","Route","GridResource")}'
-  condor_q -constraint "$CONSTRAINT" -f "%s" JobStatus -f " %s" RouteName -f " %s\n" GridResource |
+  condor_q -constraint "$CONSTRAINT" -f "%s" JobStatus -f " %s" RouteName -f " %s" GridResource -f "\n" eol |
     awk '{
       jobstatus=$1;
       if(jobstatus == 0) jobstatus = "U";

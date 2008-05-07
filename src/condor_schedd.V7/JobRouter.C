@@ -55,6 +55,7 @@ const char JR_ATTR_JOB_SANDBOXED_TEST[] = "JobShouldBeSandboxed";
 const char JR_ATTR_USE_SHARED_X509_USER_PROXY[] = "UseSharedX509UserProxy";
 const char JR_ATTR_SHARED_X509_USER_PROXY[] = "SharedX509UserProxy";
 const char JR_ATTR_OVERRIDE_ROUTING_ENTRY[] = "OverrideRoutingEntry";
+const char JR_ATTR_TARGET_UNIVERSE[] = "TargetUniverse";
 
 const int THROTTLE_UPDATE_INTERVAL = 600;
 
@@ -508,6 +509,7 @@ RoutedJob::RoutedJob() {
 	is_sandboxed = false;
 	submission_time = 0;
 	proxy_file_copy_chowned = false;
+	target_universe = CONDOR_UNIVERSE_GRID;
 }
 RoutedJob::~RoutedJob() {
 }
@@ -896,6 +898,7 @@ JobRouter::GetCandidateJobs() {
 
 		RoutedJob *job = new RoutedJob();
 		job->state = RoutedJob::UNCLAIMED;
+		job->target_universe = route->TargetUniverse();
 		job->grid_resource = route->GridResource();
 		job->route_name = route->Name();
 
@@ -1017,7 +1020,7 @@ JobRouter::SubmitJob(RoutedJob *job) {
 	if(job->state != RoutedJob::CLAIMED) return;
 
 	job->dest_ad = job->src_ad;
-	VanillaToGrid::vanillaToGrid(&job->dest_ad,job->grid_resource.c_str(),job->is_sandboxed);
+	VanillaToGrid::vanillaToGrid(&job->dest_ad,job->target_universe,job->grid_resource.c_str(),job->is_sandboxed);
 
 	// Now we apply any edits to the job ClassAds as defined in the route ad.
 
@@ -1618,6 +1621,7 @@ JobRoute::JobRoute() {
 	m_failure_rate_threshold = 0;
 	m_throttle = 0;
 	m_override_routing_entry = -1;
+	m_target_universe = CONDOR_UNIVERSE_GRID;
 }
 
 JobRoute::~JobRoute() {
@@ -1725,13 +1729,23 @@ JobRoute::DigestRouteAd(bool allow_empty_requirements) {
 	if( !m_route_ad.EvaluateAttrReal( JR_ATTR_FAILURE_RATE_THRESHOLD, m_failure_rate_threshold ) ) {
 		m_failure_rate_threshold = 0.03;
 	}
-	if( !m_route_ad.EvaluateAttrString( ATTR_GRID_RESOURCE, m_grid_resource ) ) {
-		dprintf(D_ALWAYS, "JobRouter: Missing or invalid %s in job route.\n",ATTR_GRID_RESOURCE);
-		return false;
-	}	
+	if( !m_route_ad.EvaluateAttrInt( JR_ATTR_TARGET_UNIVERSE, m_target_universe ) ) {
+		m_target_universe = CONDOR_UNIVERSE_GRID;
+	}
+	if( m_target_universe == CONDOR_UNIVERSE_GRID ) {
+		if( !m_route_ad.EvaluateAttrString( ATTR_GRID_RESOURCE, m_grid_resource ) ) {
+			dprintf(D_ALWAYS, "JobRouter: Missing or invalid %s in job route.\n",ATTR_GRID_RESOURCE);
+			return false;
+		}	
+	}
 	if( !m_route_ad.EvaluateAttrString( ATTR_NAME, m_name ) ) {
 		// If no name is specified, use the GridResource as the name.
 		m_name = m_grid_resource;
+
+		if( m_name.empty() ) {
+			dprintf(D_ALWAYS, "JobRouter: Missing or invalid %s in job route.\n",ATTR_NAME);
+			return false;
+		}
 	}
 	m_route_requirements = m_route_ad.Lookup( ATTR_REQUIREMENTS );
 	if(!m_route_requirements) {

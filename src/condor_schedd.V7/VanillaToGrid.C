@@ -30,7 +30,7 @@
 #include "classad/classad_distribution.h"
 
 
-bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, const char * gridresource, bool is_sandboxed)
+bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, const char * gridresource, bool is_sandboxed)
 {
 	ASSERT(ad);
 	ASSERT(gridresource);
@@ -71,7 +71,6 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, const char * gridresour
 	ad->Delete("CondorPlatform"); // TODO: Find #define
 	ad->Delete("CondorVersion");  // TODO: Find #define
 	ad->Delete(ATTR_CORE_SIZE);
-	ad->Delete(ATTR_CURRENT_HOSTS);
 	ad->Delete(ATTR_GLOBAL_JOB_ID); // Store in different ATTR here?
 	//ad->Delete(ATTR_OWNER); // How does schedd filter? 
 	ad->Delete(ATTR_Q_DATE);
@@ -102,8 +101,6 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, const char * gridresour
 
 	//ad->Delete(ATTR_MY_TYPE); // Should be implied
 	//ad->Delete(ATTR_TARGET_TYPE); // Should be implied.
-	// Set the grid resource
-	ad->InsertAttr(ATTR_GRID_RESOURCE, gridresource);
 
 	// Remap the universe
 	classad::ExprTree * tmp;
@@ -116,9 +113,17 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, const char * gridresour
 		EXCEPT("Unable to copy old universe");
 	}
 
-	ad->InsertAttr(ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID);
+	ad->InsertAttr(ATTR_JOB_UNIVERSE, target_universe);
 	ad->Insert(remoteattr.Value(), olduniv);
 		// olduniv is now controlled by ClassAd
+
+	if( target_universe == CONDOR_UNIVERSE_GRID ) {
+		ad->Delete(ATTR_CURRENT_HOSTS);
+
+		// Set the grid resource
+		if( gridresource ) {
+			ad->InsertAttr(ATTR_GRID_RESOURCE, gridresource);
+		}
 
 		// Grid universe, unlike vanilla universe expects full output
 		// paths for Out/Err.  In vanilla, these are basenames that
@@ -128,56 +133,58 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, const char * gridresour
 		// in place in that case.  Otherwise, we undo the remaps and
 		// let the grid job write directly to the correct output
 		// paths.
-	std::string remaps;
-	ad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_REMAPS,remaps);
-	if( !is_sandboxed && remaps.size() ) {
-		MyString remap_filename;
-		std::string filename,filenames;
 
-			// Don't need the remaps in the grid copy of the ad.
-		ad->Delete(ATTR_TRANSFER_OUTPUT_REMAPS);
+		std::string remaps;
+		ad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_REMAPS,remaps);
+		if( !is_sandboxed && remaps.size() ) {
+			MyString remap_filename;
+			std::string filename,filenames;
 
-		if( ad->EvaluateAttrString(ATTR_JOB_OUTPUT,filename) ) {
-			if( filename_remap_find(remaps.c_str(),filename.c_str(),remap_filename) ) {
-				ad->InsertAttr(ATTR_JOB_OUTPUT,remap_filename.Value());
-			}
-		}
+				// Don't need the remaps in the grid copy of the ad.
+			ad->Delete(ATTR_TRANSFER_OUTPUT_REMAPS);
 
-		if( ad->EvaluateAttrString(ATTR_JOB_ERROR,filename) ) {
-			if( filename_remap_find(remaps.c_str(),filename.c_str(),remap_filename) ) {
-				ad->InsertAttr(ATTR_JOB_ERROR,remap_filename.Value());
-			}
-		}
-
-			// TransferOutputFiles appears to be different.  If it
-			// behaved similarly to Out/Err, then we would want to
-			// do the following:
-#if 0
-		if( ad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_FILES,filename) ) {
-			StringList output_files(filename.c_str(),",");
-			StringList new_list;
-			char const *fname;
-
-			output_files.rewind();
-			while( (fname=output_files.next()) ) {
-				if( filename_remap_find(remaps.c_str(),fname,remap_filename) )
-					{
-						new_list.append(remap_filename.Value());
-					}
-				else {
-					new_list.append(fname);
+			if( ad->EvaluateAttrString(ATTR_JOB_OUTPUT,filename) ) {
+				if( filename_remap_find(remaps.c_str(),filename.c_str(),remap_filename) ) {
+					ad->InsertAttr(ATTR_JOB_OUTPUT,remap_filename.Value());
 				}
 			}
 
-			char *new_list_str = new_list.print_to_string();
-			ASSERT( new_list_str );
+			if( ad->EvaluateAttrString(ATTR_JOB_ERROR,filename) ) {
+				if( filename_remap_find(remaps.c_str(),filename.c_str(),remap_filename) ) {
+					ad->InsertAttr(ATTR_JOB_ERROR,remap_filename.Value());
+				}
+			}
 
-			ad->InsertAttr(ATTR_TRANSFER_OUTPUT_FILES,new_list_str);
+				// TransferOutputFiles appears to be different.  If it
+				// behaved similarly to Out/Err, then we would want to
+				// do the following:
+#if 0
+			if( ad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_FILES,filename) ) {
+				StringList output_files(filename.c_str(),",");
+				StringList new_list;
+				char const *fname;
 
-			free( new_list_str );
-		}
+				output_files.rewind();
+				while( (fname=output_files.next()) ) {
+					if( filename_remap_find(remaps.c_str(),fname,remap_filename) )
+						{
+							new_list.append(remap_filename.Value());
+						}
+					else {
+						new_list.append(fname);
+					}
+				}
+
+				char *new_list_str = new_list.print_to_string();
+				ASSERT( new_list_str );
+
+				ad->InsertAttr(ATTR_TRANSFER_OUTPUT_FILES,new_list_str);
+
+				free( new_list_str );
+			}
 #endif
 
+		}
 	}
 
 	return true;
