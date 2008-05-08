@@ -106,6 +106,13 @@ TESTCLASS(job_flocking_to,quick)
 TESTCLASS(job_flocking_to,quicknolink)
 TESTCLASS(job_flocking_to,btdebug)
 
+DESC(fetch_work-basic,"work fetch smoke test")
+RUN(fetch_work-basic)
+TESTCLASS(fetch_work-basic,core)
+TESTCLASS(fetch_work-basic,quick)
+TESTCLASS(fetch_work-basic,quicknolink)
+TESTCLASS(fetch_work-basic,btdebug)
+
 /*
 **
 ** Not in use till endurance testing done
