@@ -148,7 +148,11 @@ Hibernator::stringToSleepState ( char const* name ) {
 
 #if defined ( WIN32 )
 
+/* Remove me when NMI updates the SDKs.  Need for the XP SDKs which
+   do NOT declare the functions as C functions... */
+extern "C" {
 #include <powrprof.h>
+}
 
 MsWindowsHibernator::MsWindowsHibernator () throw () 
 : Hibernator () {
@@ -241,3 +245,4 @@ MsWindowsHibernator::enterState ( SLEEP_STATE level, bool force ) const {
 }
 
 #endif // WIN32
+
