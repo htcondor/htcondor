@@ -263,6 +263,11 @@ TTManager::maintain()
 
 		scheddname = jqDBManager.getScheddname();
 
+		ret_st = DBObj->beginTransaction();
+		if (ret_st == QUILL_FAILURE) {
+			dprintf(D_ALWAYS, "Begin transaction failed in TTManager::maintain\n");
+		}
+
 		if (dt == T_ORACLE) {
 			MyString ts_expr_val;
 
@@ -736,7 +741,7 @@ void TTManager::checkAndThrowBigFiles() {
 			snprintf(tmp, 512, "machine_id = \"%s\"", my_full_hostname());
 			tmpClP1->Insert(tmp);		
 
-			snprintf(tmp, 512, "size = %d", (int)file_status.st_size);
+			snprintf(tmp, 512, "log_size = %d", (int)file_status.st_size);
 			tmpClP1->Insert(tmp);		
 			
 			snprintf(tmp, 512, "throwtime = %d", (int)file_status.st_mtime);
@@ -3373,29 +3378,33 @@ static int file_checksum(char *filePathName, int fileSize, char *sum) {
 
 static QuillErrCode append(char *destF, char *srcF) 
 {	
-	int dest, src;
+	int dest = -1;
+	int src = -1;
 	char buffer[4097];
 	int rv;
+	QuillErrCode result = QUILL_SUCCESS;
 
 	dest = safe_open_wrapper (destF, O_WRONLY|O_CREAT|O_APPEND, 0644);
 	src = safe_open_wrapper (srcF, O_RDONLY);
 
 	rv = read(src, buffer, 4096);
+	if ( rv < 0 ) {
+		result = QUILL_FAILURE;
+	}
 
 	while(rv > 0) {
 		if (write(dest, buffer, rv) < 0) {
-			close (dest);
-			close (src);
-			return QUILL_FAILURE;
+			result = QUILL_FAILURE;
+			break;
 		}
 		
 		rv = read(src, buffer, 4096);
 	}
 
-	close (dest);
-	close (src);
+	if (dest != -1) close (dest);
+	if (src != -1 ) close (src);
 
-	return QUILL_SUCCESS;
+	return result;
 }
 
 // hash function for strings

@@ -2202,11 +2202,6 @@ AS_IF([test "x$_cv_libc_kind-$_cv_libc_major-$_cv_libc_minor" = xGLIBC-2-3],
     [_cv_has_classads=yes])])
 AC_MSG_RESULT([$_cv_has_classads])
 
-AC_MSG_CHECKING([if blahp is supported])
-AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_has_globus" = xyes -a "x$_cv_has_classads" = xyes],
-  [_cv_has_blahp=yes],
-  [_cv_has_blahp=no])
-AC_MSG_RESULT([$_cv_has_blahp])
 
 # This check is a bit of a hack. We need to checkout the OpenSSL
 # external on platforms other than Windows. OpenSSL is only checked
@@ -2360,6 +2355,12 @@ CHECK_EXTERNAL([krb5], [1.4.3], [soft],
                MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
 fi
 
+CHECK_EXTERNAL([globus],[4.0.5], [soft])
+
+if test -z "$_cv_ext_globus_version"; then
+  _cv_has_globus=no;
+fi
+
 _cv_has_gahp=$_cv_has_globus
 CHECK_EXTERNAL([gahp],[1.0.15], [soft])
 
@@ -2391,6 +2392,10 @@ CHECK_EXTERNAL([pcre], [7.6], [hard],
 AS_IF([test "x$cv_ext_pcre" = xyes],
   [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
 
+AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_has_globus" = xyes -a -n "$_cv_ext_classads_version"],
+  [_cv_has_blahp=yes],
+  [_cv_has_blahp=no])
+AC_MSG_RESULT([$_cv_has_blahp])
 CHECK_EXTERNAL([blahp], [1.7.0], [soft])
 
 # When --with-proper the detection of the man pages is a little
@@ -2436,8 +2441,6 @@ fi
 CHECK_EXTERNAL([postgresql], [$pgsql_ver], [hard],
                [use PostgreSQL (provides Quill and other support)],
                MF_LIB_CHECK([postgresql], [[pq PQconnectdb]]))
-
-CHECK_EXTERNAL([globus],[4.0.5], [soft])
 
 # if globus is available on this platform and we actually have it
 if test "x$_cv_has_globus" = xyes -a "x$cv_ext_globus" = xyes; then
