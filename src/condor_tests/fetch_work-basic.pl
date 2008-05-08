@@ -25,7 +25,9 @@ $template = "x_workfetch_classad.1.template";
 $classad = "x_workfetch_classad.1";
 $line = "";
 $counter = 0;
-$maxwait = 180; # better happen in 3 minutes
+$maxwait = 720; # better happen in 3 minutes
+
+system("date");
 
 # create unique classad
 open(TEMP,"<$template") || die "Can not open $template:$!\n";
@@ -34,7 +36,7 @@ while(<TEMP>) {
 	chomp();
 	$line = $_;
 	if($line =~ /^.*XXXXXX.*$/ ) {
-		print CA "Iwd = \"$resultsdir\"\n";
+		print CA "Iwd = \"\.\"\n";
 	} elsif($line =~ /^.*YYYYYY.*$/ ) {
 		print CA "Out = \"$resultsdir\/$version\"\n";
 	} elsif($line =~ /^.*ZZZZZZ.*$/ ) {
@@ -56,14 +58,17 @@ system("cp $classad $workdir");
 # wait
 while($counter < $maxwait) {
 	if( ! ( -f "$resultsdir/$classad.results")) {
-		sleep 3;
+		system("date");
+		print "Waiting for $resultsdir/$classad.results\n";
+		system("ls $resultsdir");
+		sleep 6;
 	} else {
 		last;
 	}
 	$counter += 3;
 }
 if( $counter >= $maxwait ) {
-	print "Error took $maxwit seconds\n";
+	print "Error took $maxwait seconds\n";
 	exit(1);
 }
 
