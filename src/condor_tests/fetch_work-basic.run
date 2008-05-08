@@ -27,8 +27,8 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testname = 'fetck_work-basic';
-$corename = "fetck_work-basic";
+$testname = 'fetch_work-basic';
+$corename = "fetch_work-basic";
 
 # where am I running
 $currenthost = `hostname`;
@@ -155,7 +155,7 @@ system("condor_config_val COLLECTOR_HOST");
 
 my $bail = 0;
 
-my $fetchstatus = CondorTest::verbose_system("./fetch_work-basic.pl $work");
+my $fetchstatus = CondorTest::verbose_system("./fetch_work-basic.pl $work $results $version");
 print "Status of work fetch is \"$fetchstatus\"\n";
 
 print "Saving things and cleaning up....\n";

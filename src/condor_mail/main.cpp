@@ -74,6 +74,17 @@ CString my_getline() {
 	return retval;
 }
 
+int usage(const char *myname)
+{
+
+	printf(
+		"\n USAGE: %s [-s subject] -relay smtp-relay-hostname user@address [user@address ...]\n"
+		" Then give the message to send via stdin.\n",
+		myname);
+
+	exit(1);
+}
+
 int main( int argc, char *argv[ ], char *envp[ ]) {
 	CString subject, relay, recipient;  // Stuff passed in on the command line
 	CString header;						// For the generated header
@@ -108,12 +119,15 @@ int main( int argc, char *argv[ ], char *envp[ ]) {
 
 	if (!tosomeone) {
 		printf("You forgot to add who you are sending this message too.\n");
-		return 1;
+		usage(argv[0]);	// never returns
 	}
 
 	if (!arelay) {
-		// Nicely figure out the relay.
+		// Someday, nicely figure out the relay.  
+		// For now, consider no relay specified to be an error.
+		usage(argv[0]);	// never returns
 	}
+
 	if (!AfxSocketInit()) {
 		TRACE(_T("Failed to initialise the Winsock stack\n"));
 		return 1;
