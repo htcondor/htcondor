@@ -1425,6 +1425,10 @@ sub getPlatformsFromRunid() {
     $handle->execute();
     while ( my $row = $handle->fetchrow_hashref() ) {
         $platform = $row->{'platform'};
+		# remove the problem cause by no API and plaform becomming nmi:platform
+		$_ = $platform;
+		s/nmi://;
+		$platform = $_;
         push(@platforms, $platform) unless $platform =~ /local/;
     }
     $handle->finish();
