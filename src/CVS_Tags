@@ -1,3 +1,7 @@
+05/08/09 V7_1-ian_cmd_hash-branch
+  Based from the master, this branch is for the code in common between
+  signed ClassAds and shared executables in the spool.
+
 04/08/09 V7_1-BGP-branch
   Based from the master on this date, this branch is for the work
   dedicated to supporting the BlueGene/P machine.
