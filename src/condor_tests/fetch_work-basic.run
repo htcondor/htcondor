@@ -27,8 +27,8 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testname = 'fetck_work-basic';
-$corename = "fetck_work-basic";
+$testname = 'fetch_work-basic';
+$corename = "fetch_work-basic";
 
 # where am I running
 $currenthost = `hostname`;
