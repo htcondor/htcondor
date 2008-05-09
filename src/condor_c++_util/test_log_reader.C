@@ -38,6 +38,7 @@ struct Arguments {
 	bool			readPersist;
 	bool			writePersist;
 	bool			rotation;
+	int				max_rotations;
 	bool			dumpState;
 	bool			missedCheck;
 	bool			exitAfterInit;
@@ -102,7 +103,7 @@ CheckArgs(int argc, char **argv, Arguments &args)
 	Status	status = STATUS_OK;
 
 	const char *	usage =
-		"Usage: test_log_reader [options] <filename>\n"
+		"Usage: test_log_reader [options] [filename]\n"
 		"  -debug <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  -maxexec <number>: maximum number of execute events to read\n"
 		"  -misscheck: Enable missed event checking "
@@ -112,7 +113,7 @@ CheckArgs(int argc, char **argv, Arguments &args)
 		"  -ro|-rw|-wo: Set persitent state to "
 		"read-only/read-write/write-only\n"
 		"  -init-only: exit after initialization\n"
-		"  -rotation: enable rotation handling\n"
+		"  -rotation <n>: enable rotation handling, set max #\n"
 		"  -no-rotation: disable rotation handling\n"
 		"  -sleep <number>: how many seconds to sleep between events\n"
 		"  -term <number>: number of terminate events to exit after\n"
@@ -120,7 +121,7 @@ CheckArgs(int argc, char **argv, Arguments &args)
 		"  -v: Increase verbosity level by 1\n"
 		"  -verbosity <number>: set verbosity level (default is 1)\n"
 		"  -version: print the version number and compile date\n"
-		"  <filename>: the log file to read\n";
+		"  [filename]: the log file to read\n";
 
 	args.logFile = NULL;
 	args.persistFile = NULL;
@@ -131,6 +132,7 @@ CheckArgs(int argc, char **argv, Arguments &args)
 	args.term = 1;
 	args.verbosity = 1;
 	args.rotation = false;
+	args.max_rotations = 0;
 	args.exitAfterInit = false;
 	args.dumpState = false;
 	args.missedCheck = false;
@@ -165,6 +167,7 @@ CheckArgs(int argc, char **argv, Arguments &args)
 			} else {
 				args.persistFile = argv[index];
 				args.rotation = true;
+				args.rotation = 0;
 				args.readPersist = true;
 				args.writePersist = true;
 			}
@@ -184,11 +187,19 @@ CheckArgs(int argc, char **argv, Arguments &args)
 			args.writePersist = true;
 
 		} else if ( !strcmp(argv[index], "-rotation") ) {
-			args.rotation = true;
+			if ( ++index >= argc ) {
+				fprintf(stderr, "Value needed for -rotation argument\n");
+				printf("%s", usage);
+				status = STATUS_ERROR;
+			} else {
+				args.max_rotations = atoi( argv[index] );
+				args.rotation = args.max_rotations > 0;
+			}
 
 
 		} else if ( !strcmp(argv[index], "-no-rotation") ) {
 			args.rotation = false;
+			args.max_rotations = -1;
 
 
 		} else if ( !strcmp(argv[index], "-sleep") ) {
@@ -245,8 +256,8 @@ CheckArgs(int argc, char **argv, Arguments &args)
 		}
 	}
 
-	if ( status == STATUS_OK && args.logFile == NULL ) {
-		fprintf(stderr, "Log file must be specified\n");
+	if ( status == STATUS_OK && !args.readPersist && args.logFile == NULL ) {
+		fprintf(stderr, "Log file must be specified if not restoring state\n");
 		printf("%s", usage);
 		status = STATUS_ERROR;
 	}
@@ -274,7 +285,7 @@ ReadEvents(Arguments &args)
 				return STATUS_ERROR;
 			}
 			close( fd );
-			if ( !log.initialize( state, args.rotation ) ) {
+			if ( !log.initialize( state, args.max_rotations ) ) {
 				fprintf( stderr, "Failed to initialize from state\n" );
 				return STATUS_ERROR;
 			}
@@ -293,7 +304,9 @@ ReadEvents(Arguments &args)
 
 	// If, after the above, the reader isn't initialized, do so now
 	if ( !log.isInitialized() ) {
-		if ( !log.initialize( args.logFile, args.rotation, args.rotation ) ) {
+		if ( !log.initialize( args.logFile,
+							  args.max_rotations,
+							  args.rotation) ) {
 			fprintf( stderr, "Failed to initialize with file\n" );
 			return STATUS_ERROR;
 		}
@@ -404,7 +417,7 @@ ReadEvents(Arguments &args)
 				}
 				else {
 					int	l = strlen( generic->info );
-					char	*p = (char*)generic->info+l-1;
+					char	*p = const_cast <char*>(generic->info+l-1);
 					while( l && isspace(*p) ) {
 						*p = '\0';
 						p--;

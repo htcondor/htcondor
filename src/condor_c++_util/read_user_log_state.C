@@ -36,11 +36,11 @@ static const char FileStateSignature[] = "UserLogReader::FileState";
 
 ReadUserLogState::ReadUserLogState(
 	const char		*path,
-	int				 max_rot,
+	int				 max_rotations,
 	int				 recent_thresh )
 {
 	Reset( RESET_INIT );
-	m_max_rot = max_rot;
+	m_max_rotations = max_rotations;
 	m_recent_thresh = recent_thresh;
 	if ( path ) {
 		int		len = strlen( path );
@@ -56,11 +56,9 @@ ReadUserLogState::ReadUserLogState(
 
 ReadUserLogState::ReadUserLogState(
 	const ReadUserLog::FileState	&state,
-	int								 max_rot,
 	int								 recent_thresh )
 {
 	Reset( RESET_INIT );
-	m_max_rot = max_rot;
 	m_recent_thresh = recent_thresh;
 
 	// Sets m_initialized and m_init_error as appropriate
@@ -111,7 +109,7 @@ ReadUserLogState::Rotation( int rotation, bool store_stat, bool initializing )
 	if ( !initializing && !m_initialized ) {
 		return -1;
 	}
-	if ( rotation > m_max_rot ) {
+	if ( rotation > m_max_rotations ) {
 		return -1;
 	}
 	if ( store_stat ) {
@@ -138,7 +136,7 @@ ReadUserLogState::Rotation( int rotation, StatStructType &statbuf,
 	}
 
 	// Check the rotation parameter
-	if (  ( rotation < 0 ) || ( rotation > m_max_rot )  ) {
+	if (  ( rotation < 0 ) || ( rotation > m_max_rotations )  ) {
 		return -1;
 	}
 
@@ -165,7 +163,7 @@ ReadUserLogState::GeneratePath( int rotation, MyString &path,
 	}
 
 	// Check the rotation parameter
-	if (  ( rotation < 0 ) || ( rotation > m_max_rot )  ) {
+	if (  ( rotation < 0 ) || ( rotation > m_max_rotations )  ) {
 		return false;
 	}
 
@@ -178,7 +176,12 @@ ReadUserLogState::GeneratePath( int rotation, MyString &path,
 	// For starters, copy the base path
 	path = m_base_path;
 	if ( rotation ) {
-		path += ".old";
+		if ( m_max_rotations > 1 ) {
+			path.sprintf_cat( ".%d", rotation );
+		}
+		else {
+			path += ".old";
+		}
 	}
 
 	return true;
@@ -243,7 +246,7 @@ ReadUserLogState::SecondsSinceUpdate( void ) const
 int
 ReadUserLogState::ScoreFile( int rot ) const
 {
-	if ( rot > m_max_rot ) {
+	if ( rot > m_max_rotations ) {
 		return -1;
 	}
 	else if ( rot < 0 ) {
@@ -445,7 +448,7 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 		memset( istate->uniq_id, 0, sizeof(istate->uniq_id) );
 	}
 	istate->sequence = m_sequence;
-	istate->max_rotation = m_max_rot;
+	istate->max_rotations = m_max_rotations;
 
 	istate->inode = m_stat_buf.st_ino;
 	istate->ctime = m_stat_buf.st_ctime;
@@ -476,7 +479,7 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 	strcpy( m_base_path, istate->path );
 
 	// Set the rotation & path
-	m_max_rot = istate->max_rotation;
+	m_max_rotations = istate->max_rotations;
 	Rotation( istate->rotation, false, true );
 
 	m_log_type = istate->log_type;
@@ -514,7 +517,7 @@ ReadUserLogState::GetState( MyString &str, const char *label ) const
 		"  inode = %u; ctime = %d; size = %ld\n",
 		m_base_path, m_cur_path.GetCStr(),
 		m_uniq_id.GetCStr() ? m_uniq_id.GetCStr() : "", m_sequence,
-		m_cur_rot, m_max_rot, (long) m_offset, m_log_type,
+		m_cur_rot, m_max_rotations, (long) m_offset, m_log_type,
 		(unsigned)m_stat_buf.st_ino, (int)m_stat_buf.st_ctime,
 		(long)m_stat_buf.st_size );
 }
@@ -565,7 +568,7 @@ ReadUserLogState::GetState(
 		istate->signature, istate->version, istate->update_time,
 		istate->path,
 		istate->uniq_id, istate->sequence,
-		istate->rotation, istate->max_rotation,
+		istate->rotation, istate->max_rotations,
 		istate->offset.asint, istate->log_type,
 		(unsigned)istate->inode, istate->ctime, istate->size.asint );
 }
