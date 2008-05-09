@@ -135,7 +135,7 @@ int writeRemoteErrorEvent()
 	remoteerror.setExecuteHost("<128.105.165.12:32779>");
 	remoteerror.setDaemonName("<write job log test>");
 	remoteerror.setErrorText("this is the write test error string");
-	remoteerror.setCriticalError(TRUE);
+	remoteerror.setCriticalError(true);
 	if ( !log.writeEvent(&remoteerror) ) {
 	        printf("Complain about bad remoteerror write\n");
 			exit(1);
