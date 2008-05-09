@@ -130,6 +130,11 @@ Under unix, this would eventually cause the negotiator to run out of
 file descriptors, exit, and restart.  This bug affected all previous
 versions of Condor.
 
+\item Fixed several bugs in the user log reader that caused it to
+  generate an invalid persisted state if no events had been read in.
+  When read back in, this persisted state would cause the reader to
+  segfault during initialization.
+
 \end{itemize}
 
 \noindent Known Bugs:
