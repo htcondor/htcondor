@@ -323,13 +323,20 @@ pool's state. This state provides a better transition
 from one machine to the next, in the event 
 that the central manager machine stops working.
 
-\item[\Condor{procd}] This daemon \index{Condor
-daemon!condor\_procd@\Condor{procd}}
-\index{daemon!condor\_procd@\Condor{procd}} \index{condor\_procd
-daemon} controls and monitors process families within Condor. Its use
+\item[\Condor{procd}] This daemon
+\index{Condor daemon!condor\_procd@\Condor{procd}}
+\index{daemon!condor\_procd@\Condor{procd}}
+\index{condor\_procd daemon}
+controls and monitors process families within Condor. Its use
 is optional in general but it must be used if privilege separation
 (see Section~\ref{sec:PrivSep}) or group-ID based tracking (see
 Section~\ref{sec:GroupTracking}) is enabled.
+
+\item[\Stork{server}] This daemon
+\index{Condor daemon!stork\_server@\Stork{server}}
+\index{daemon!stork\_server@\Stork{server}}
+\index{stork\_server daemon}
+handles requests for Stork data placement jobs.
 
 \end{description} 
 
