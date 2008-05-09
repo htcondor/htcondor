@@ -141,7 +141,7 @@ private:
 
 #if defined ( WIN32 )
 	int				m_got_windows_version_info;
-	OSVERSIONINFO	m_window_version_info;
+	OSVERSIONINFOEX	m_window_version_info;
 #endif
 
 };	
