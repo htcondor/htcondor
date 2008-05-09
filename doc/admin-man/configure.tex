@@ -5322,6 +5322,14 @@ UWCS_NEGOTIATOR_POST_JOB_RANK = \
   section \ref{sec:Disabling Preemption} for a general discussion of
   limiting preemption.
 
+\item[\Macro{PREEMPTION\_REQUIREMENTS\_STABLE}]
+  \label{param:PreemptionRequirementsStable} 
+  A boolean value that defaults to \Expr{True}, implying that all attributes
+  utilized to define the \MacroNI{PREEMPTION\_REQUIREMENTS} variable will not
+  change within a negotiation period time interval.
+  If utilized attributes will change during the 
+  negotiation period time interval, then set this variable to \Expr{False}. 
+
 \item[\Macro{PREEMPTION\_RANK}] \label{param:PreemptionRank} Resources
   that match a request are first sorted by
   \MacroNI{NEGOTIATOR\_PRE\_JOB\_RANK}.  If there are any ties in the
@@ -5339,6 +5347,14 @@ UWCS_NEGOTIATOR_POST_JOB_RANK = \
   the same.  However, the negotiator will always prefer to match the
   job with an idle machine over a preemptable machine, if none of the
   other ranks express a preference between them.
+
+\item[\Macro{PREEMPTION\_RANK\_STABLE}]
+  \label{param:PreemptionRankStable}
+  A boolean value that defaults to \Expr{True}, implying that all attributes
+  utilized to define the \MacroNI{PREEMPTION\_RANK} variable will not
+  change within a negotiation period time interval.
+  If utilized attributes will change during the 
+  negotiation period time interval, then set this variable to \Expr{False}.
 
 \item[\Macro{NEGOTIATOR\_DEBUG}] \label{param:NegotiatorDebug} This macro
   (and other settings related to debug logging in the negotiator) is
