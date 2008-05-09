@@ -135,6 +135,15 @@ versions of Condor.
   When read back in, this persisted state would cause the reader to
   segfault during initialization.
 
+\item Fixed a bug causing communication problems if different portions
+of a Condor pool were configured with different values of
+\MacroNI{SEC\_DEFAULT\_SESSION\_DURATION}.  This bug affects all
+previous versions of Condor.  The client side of the connection was
+always using its own security session duration, even if the server's
+duration was shorter.  Among other potential problems, this was
+observed to cause file transfer failures when the starter was
+configured with a longer session duration than the shadow.
+
 \end{itemize}
 
 \noindent Known Bugs:
