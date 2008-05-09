@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+
+# Prepare work scripts for SMP OpenMPI jobs
+
+# This an example of using a PrepareWork hook to run an
+# OpenMPI job on a local node.  That is, assuming the node
+# has four cores, and we only want to run the job on this 
+# machine.
+
+# To use, set the OMPI_DIR below to the appropriate value.
+# Then, put this script in the libexec directory, and
+# in the config file for this machine, set
+# SMPMPI_HOOK_PREPARE_JOB=$(LIBEXEC)/smpmpi_prepare_hook
+
+# Finally, in the job submit file, set
+# +HookKeyword="SMPMPI"
+
+# The advantage to this setup is that it allows a machine
+# administrator to configure MPI on the machine with minimal
+# information needed by the user to access it.
+
+$OMPI_DIR= "/path/to/installed/openmpi";
+
+# Read the job ad from stdin
+while (<>) {
+	chomp;
+	(my $attr, my $val, my $dummy) = split(/ = /);
+	$jobad{$attr} = $val;
+}
+
+
+# Pull out the original arguments, and remove surrounding double quotes
+my $orig_args = $jobad{"Arguments"};
+$orig_args =~ s/^.//;
+$orig_args =~ s/.$//;
+
+# Pull out the original Cmd, and remove surrounding double quotes
+my $orig_cmd = $jobad{"Cmd"};
+$orig_cmd =~ s/^.//;
+$orig_cmd =~ s/.$//;
+
+# Emit the new Cmd, arguments and environment
+
+print "Cmd = \"$OMPI_DIR/bin/mpirun\"\n";
+print "Arguments = \"-np 4 -mca btl self $orig_cmd $orig_args\"\n";
+print "Environment = \"LD_LIBRARY_PATH=$OMPI_DIR/lib PATH=$OMPI_DIR/bin:/bin:/usr/bin:. \"\n";
+
+exit 0;
