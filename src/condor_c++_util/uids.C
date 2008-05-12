@@ -1110,6 +1110,12 @@ set_file_owner_ids( uid_t uid, gid_t gid )
 
 
 priv_state
+get_priv_state(void)
+{
+	return CurrentPrivState;
+}
+
+priv_state
 _set_priv(priv_state s, char file[], int line, int dologging)
 {
 	priv_state PrevPrivState = CurrentPrivState;
