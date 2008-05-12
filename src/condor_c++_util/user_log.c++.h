@@ -145,10 +145,9 @@ class UserLog {
         will return a successful value.
 
         @param event the event to be written
-        @return 0 for failure, 1 for success
-		NOTE: This will be changed to a C++ bool true/false in 7.1+
+        @return false for failure, true for success
     */
-    int writeEvent (ULogEvent *event, ClassAd *jobad = NULL);
+    bool writeEvent (ULogEvent *event, ClassAd *jobad = NULL);
 
   private:
 
@@ -172,9 +171,6 @@ class UserLog {
 
     /// Deprecated.  condorID subproc of the next event.
     int         subproc;
-
-    /// Deprecated.  Are we currently in a block?
-    int         in_block;
 
 	/** Write to the user log? */		 bool		m_write_user_log;
     /** Copy of path to the log file */  char     * m_path;
