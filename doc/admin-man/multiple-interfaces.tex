@@ -79,17 +79,17 @@ will be bound to all network interfaces on the machine.
 This means that so long as remote clients know the right port, they can
 use any IP address on the machine and still contact a given Condor daemon.
 
-To enable this functionality, the boolean configuration
+This functionality is on by default.  To disenable this functionality, 
+the boolean configuration
 variable
 \MacroNI{BIND\_ALL\_INTERFACES}
-is defined and set to \Expr{True}:
+is defined and set to \Expr{False}:
 
 \begin{verbatim}
-BIND_ALL_INTERFACES = TRUE
+BIND_ALL_INTERFACES = FALSE
 \end{verbatim}
 
-This functionality has limitations,
-and therefore has a default value of \Expr{False}.
+This functionality has limitations.
 Here are descriptions of the limitations.
 
 \begin{description}

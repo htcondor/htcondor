@@ -1712,12 +1712,10 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
 
 \item[\Macro{BIND\_ALL\_INTERFACES}] \label{param:BindAllInterfaces}
   For systems with multiple network interfaces, if this configuration
-  setting is not defined, Condor binds all network sockets to first
-  interface found, or the IP address specified with
-  \MacroNI{NETWORK\_INTERFACE} (described below).
-  Starting with version 6.7.13, \MacroNI{BIND\_ALL\_INTERFACES} can be
-  set to \Expr{True} to cause Condor to bind to all interfaces on the
-  machine.
+  setting is set to FALSE, Condor will only bind network sockets to 
+  the IP address specified with
+  \MacroNI{NETWORK\_INTERFACE} (described below).  If set to TRUE,
+  the default value, condor will listen on all interfaces.
   However, currently Condor is still only able to advertise a single
   IP address, even if it is listening on multiple interfaces.  By
   default, it will advertise the IP address of the network interface
@@ -1735,7 +1733,8 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   To bind to a specific network interface other than the
   first one, this \MacroNI{NETWORK\_INTERFACE} should be set to 
   the IP address to use.
-  When \MacroNI{BIND\_ALL\_INTERFACES} is set to \Expr{True}, this
+  When \MacroNI{BIND\_ALL\_INTERFACES} is set to \Expr{True} (the
+  default), this
   setting simply controls what IP address a given Condor host will
   advertise.
   More information about configuring Condor on machines with multiple
