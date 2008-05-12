@@ -15,10 +15,11 @@
    # get args
    $type = "test";
    $user = "cndrauto";
-   $test = $_REQUEST["test"];
+   $test = rawurldecode($_REQUEST["test"]);
    $branch = $_REQUEST["branch"];
 	$rows   = ($_REQUEST["rows"] ? $_REQUEST["rows"] : 30);
 
+//echo "Test< $test >\n";
    
    define('PLATFORM_PENDING', 'pending');
    define('PLATFORM_FAILED',  'failed');

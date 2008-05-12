@@ -225,7 +225,7 @@
       echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display</td>\n";
    } // FOREACH 
    foreach ($data AS $task => $arr) {
-		$history_url = sprintf(HISTORY_URL,$branch,$task);
+		$history_url = sprintf(HISTORY_URL,$branch,rawurlencode($task));
 		$history_disp = "<a href=\"$history_url\">".limitSize($task, 30)."</a>";
       echo "<tr>\n".
            "<td ".($task_status[$task] != PLATFORM_PASSED ? 
