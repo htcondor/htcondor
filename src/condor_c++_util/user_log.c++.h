@@ -150,13 +150,6 @@ class UserLog {
     */
     int writeEvent (ULogEvent *event, ClassAd *jobad = NULL);
 
-#if 0 /* deprecated cruft */    
-    /** Deprecated Function. */  void put( const char *fmt, ... );
-    /** Deprecated Function. */  void display();
-    /** Deprecated Function. */  void begin_block();
-    /** Deprecated Function. */  void end_block();
-#endif
-
   private:
 
 	bool initialize_global_log();
@@ -170,11 +163,6 @@ class UserLog {
 
 	bool handleGlobalLogRotation();
 
-	
-#if 0 /* deprecated cruft */
-    /// Deprecated Function.  Print the header to the log.
-    void        output_header();
-#endif
     
     /// Deprecated.  condorID cluster of the next event.
     int         cluster;
@@ -583,32 +571,6 @@ class ReadUserLog
 };
 
 #endif /* __cplusplus */
-
-#if 0 /* deprecated cruft */
-typedef void LP;
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-    /// Deprecated.
-    LP *InitUserLog( const char *own, const char *domain, const char *file,
-		   	int c, int p, int s );
-
-    /// Deprecated.
-    void CloseUserLog( LP * lp );
-
-    /// Deprecated.
-    void PutUserLog( LP *lp,  const char *fmt, ... );
-
-    /// Deprecated.
-    void BeginUserLogBlock( LP *lp );
-
-    /// Deprecated.
-    void EndUserLogBlock( LP *lp );
-#if defined(__cplusplus)
-}
-#endif
-#endif
 
 #endif /* _CONDOR_USER_LOG_CPP_H */
 

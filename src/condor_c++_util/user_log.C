@@ -17,9 +17,6 @@
  *
  ***************************************************************/
 
-
- 
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include <stdarg.h>
@@ -382,18 +379,6 @@ UserLog::~UserLog()
 	if (m_global_uniq_base != NULL) free( m_global_uniq_base );
 }
 
-#if 0 /* deprecated cruft */
-void
-UserLog::display()
-{
-	dprintf( D_ALWAYS, "Path = \"%s\"\n", m_path );
-	dprintf( D_ALWAYS, "Job = %d.%d.%d\n", proc, cluster, subproc );
-	dprintf( D_ALWAYS, "fp = %p\n", m_fp );
-	lock->display();
-	dprintf( D_ALWAYS, "in_block = %s\n", in_block ? "TRUE" : "FALSE" );
-}
-#endif
-
 	// This method is called from doWriteEvent() - we expect the file to
 	// be locked, seeked to the end of the file, and in condor priv state.
 	// return true if log was rotated, either by us or someone else.
@@ -644,138 +629,6 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 
 	return TRUE;
 }
-
-#if 0 /* deprecated cruft */	
-void
-UserLog::put( const char *fmt, ... )
-{
-	va_list		ap;
-	va_start( ap, fmt );
-
-	if( !m_fp ) {
-		return;
-	}
-
-	if( !in_block ) {
-		lock->obtain( WRITE_LOCK );
-		fseek( m_fp, 0, SEEK_END );
-	}
-
-	output_header();
-	vfprintf( m_fp, fmt, ap );
-
-	if( !in_block ) {
-		lock->release();
-	}
-}
-
-void
-UserLog::begin_block()
-{
-	struct tm	*tm;
-	time_t		clock;
-
-	if( !m_fp ) {
-		return;
-	}
-
-	lock->obtain( WRITE_LOCK );
-	fseek( m_fp, 0, SEEK_END );
-
-	(void)time(  (time_t *)&clock );
-	tm = localtime( (time_t *)&clock );
-	fprintf( m_fp, "(%d.%d.%d) %d/%d %02d:%02d:%02d\n",
-		cluster, proc, subproc,
-		tm->tm_mon + 1, tm->tm_mday,
-		tm->tm_hour, tm->tm_min, tm->tm_sec
-	);
-	in_block = TRUE;
-}
-
-void
-UserLog::end_block()
-{
-	if( !m_fp ) {
-		return;
-	}
-
-	in_block = FALSE;
-	lock->release();
-}
-
-void
-UserLog::output_header()
-{
-	struct tm	*tm;
-	time_t		clock;
-
-	if( !m_fp ) {
-		return;
-	}
-
-	if( in_block ) {
-		fprintf( m_fp, "(%d.%d.%d) ", cluster, proc, subproc );
-	} else {
-		(void)time(  (time_t *)&clock );
-		tm = localtime( (time_t *)&clock );
-		fprintf( m_fp, "(%d.%d.%d) %d/%d %02d:%02d:%02d ",
-			cluster, proc, subproc,
-			tm->tm_mon + 1, tm->tm_mday,
-			tm->tm_hour, tm->tm_min, tm->tm_sec
-		);
-	}
-}
-
-extern "C" LP *
-InitUserLog( const char *own, const char *domain, const char *file,
-	   	int c, int p, int s )
-{
-	UserLog	*answer;
-
-	answer = new UserLog( own, domain, file, c, p, s, NULL );
-	return (LP *)answer;
-}
-
-extern "C" void
-CloseUserLog( LP *lp )
-{
-	delete (UserLog*)lp;
-}
-
-extern "C" void
-PutUserLog( LP *lp, const char *fmt, ... )
-{
-	va_list		ap;
-	char	buf[1024];
-
-	if( !lp ) {
-		return;
-	}
-	va_start( ap, fmt );
-	vsprintf( buf, fmt, ap );
-
-	((UserLog *)lp) -> put( buf );
-}
-
-extern "C" void
-BeginUserLogBlock( LP *lp )
-{
-	if( !lp ) {
-		return;
-	}
-	((UserLog *)lp) -> begin_block();
-}
-
-extern "C" void
-EndUserLogBlock( LP *lp )
-{
-	if( !lp ) {
-		return;
-	}
-	((UserLog *)lp) -> end_block();
-}
-
-#endif  /* deprecated cruft */
 
 // Generates a uniq global file ID
 void
