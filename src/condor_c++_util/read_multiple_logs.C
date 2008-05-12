@@ -851,10 +851,8 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 				}
 
 			// here we recurse into a splice to discover logfiles that it might
-			// bring in. However, only do this when looking for the JOB
-			// keyword, otherwise we'll do this multiple times, each time for
-			// a JOB and then for a DATA keyword, etc.
-			} else if ( jobKeyword == "job" && !stricmp(word, "splice") )  {
+			// bring in.
+			} else if ( !stricmp(word, "splice") )  {
 				MyString spliceName = tokens.next();
 				MyString spliceDagFile = tokens.next();
 

@@ -591,14 +591,11 @@ parse_parent(
 
 		// if splice name then deal with that first...
 		if (dag->LookupSplice(jobName2, splice_dag) == 0) {
+
 			// grab all of the final nodes of the splice and make them parents
 			// for this job.
-
-			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"Detected slice %s as a parent....\n", filename, lineNumber,
-					jobName2);
-
 			splice_final = splice_dag->FinalRecordedNodes();
+
 			// now add each final node as a parent
 			for (i = 0; i < splice_final->length(); i++) {
 				job = (*splice_final)[i];
@@ -665,10 +662,6 @@ parse_parent(
 				job = (*splice_initial)[i];
 
 				children.Append(job);
-
-				debug_printf( DEBUG_QUIET, 
-					"Add initial node as child node: %s\n", 
-					job->GetJobName());
 			}
 
 		} else {
@@ -1320,7 +1313,7 @@ parse_splice(
 		munge the names of the nodes to have the splice name in them so
 		the same splice dag file with different splice names don't conflict.
 	*/
-	_spliceScope.add(strdup(spliceName.Value()));
+	_spliceScope.add(strdup(munge_job_name(spliceName.Value()).Value()));
 
 	//
 	// Next token is the splice file name
@@ -1499,7 +1492,12 @@ static MyString current_splice_scope(void)
 	for (i = 0; i < _spliceScope.length(); i++)
 	{
 		tmp = _spliceScope[i];
-		scope += tmp + ":";
+		// While a natural choice might have been : as a splice scoping
+		// separator, this character was chosen because it is a valid character
+		// on all the file systems we use (whereas : can't be a file system
+		// character on macosx or windows). It, and really any other choice,
+		// isn't the best one. Sorry.
+		scope += tmp + "+";
 	}
 
 	return scope;
