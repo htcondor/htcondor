@@ -168,7 +168,7 @@ _condor_bind_all_interfaces( void )
 
 	if( (tmp = getenv("_condor_BIND_ALL_INTERFACES")) == NULL ) {
         dprintf(D_NETWORK, "_condor_BIND_ALL_INTERFACES undefined\n");
-		return FALSE;
+		return TRUE;
     }
 	
 	switch( tmp[0] ) {

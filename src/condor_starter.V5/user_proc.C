@@ -1412,7 +1412,7 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	}
 	/* end - Port regulation for user job */
 
-	if( param_boolean("BIND_ALL_INTERFACES", false) ) {
+	if( param_boolean("BIND_ALL_INTERFACES", true) ) {
 		buf.sprintf( "_condor_BIND_ALL_INTERFACES=TRUE" );
 	} else {
 		buf.sprintf( "_condor_BIND_ALL_INTERFACES=FALSE" );

@@ -146,6 +146,7 @@ class UserLog {
 
         @param event the event to be written
         @return 0 for failure, 1 for success
+		NOTE: This will be changed to a C++ bool true/false in 7.1+
     */
     int writeEvent (ULogEvent *event, ClassAd *jobad = NULL);
 
@@ -163,8 +164,8 @@ class UserLog {
 	bool open_file( const char *file, bool log_as_user, FileLock* & lock, 
 					FILE* & fp );
 
-	int doWriteEvent( ULogEvent *event, bool is_global_event, ClassAd *ad);
-	int doWriteEvent( FILE *fp, ULogEvent *event, bool do_use_xml );
+	bool doWriteEvent( ULogEvent *event, bool is_global_event, ClassAd *ad);
+	bool doWriteEvent( FILE *fp, ULogEvent *event, bool do_use_xml );
 	void GenerateGlobalId( MyString &id );
 
 	bool handleGlobalLogRotation();
