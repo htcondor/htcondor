@@ -19,7 +19,7 @@ select(STDERR);
 chdir("/p/condor/public/html/developers/download_stats");
 
 my $tooldir = "/p/condor/home/tools/build-test-plots/";
-#my $tooldir = "./";
+#my $tooldir = ".";
 my $datalocation = "/p/condor/public/license/";
 my $datacruncher = "filter_sendfile";
 my $crunch = $datalocation . $datacruncher;
@@ -115,6 +115,7 @@ if ( $help )    { help() and exit(0); }
 $line;
 $totalgood = 0;
 $totalbad = 0;
+$totaluniquegood = 0;
 $totsrc = 0;
 $negbad = 0;
 $total = 0;
@@ -125,6 +126,7 @@ $year;
 $skip = "true";
 $trimdata = "no";
 $firstoutput;
+%unique;
 my @queue = ();
 
 #print "$crunch\n";
@@ -133,12 +135,18 @@ foreach $log (@datafiles) {
 	$datafile = $datalocation . $log;
 	print "$crunch $datafile $log\n";
 	$outfile = $log . ".data";
+	$uniquefile = $log . ".unique.data";
+	$totalsfile = $log . ".total.data";
 	$image = $log . ".png";
+	$uniqueimage = $log . ".unique.png";
+	$totalsimage = $log . ".total.png";
 	$trimdata = "no";
 	$skip = "true";
-	 @queue = ();
+	@queue = ();
+	%unique = ();
 	open(LOGDATA,"$crunch $datafile 2>&1|") || die "logdata bad: $!\n";
 	open(OUT,">$outfile") || die "Failed to open $outfile: $!\n";
+	open(UNIQUE,">$uniquefile") || die "Failed to open $uniquefile: $!\n";
 	while(<LOGDATA>) {
 		chomp;
         unshift @queue, $_;
@@ -148,7 +156,7 @@ foreach $log (@datafiles) {
 		#print "-----<$line>-----\n";
 		# NOTE if you change matching criteria make SURE to
 		# adjust matching criteria in reorderQueue().
-		if($line =~ /^\s+[\?MBR]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):\s(condor[-_]).*/) {
+		if($line =~ /^\s+[\?MBR]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):\s(condor[-_]).*\s+([^\s]+@[^\s]+).*$/) {
 			if( $skip eq "true" )  {
 				$skip = "false";
 				$firstdate = $3 . " " . $months{$2} . " " . $5;
@@ -167,6 +175,12 @@ foreach $log (@datafiles) {
 			$year = $5;
 			$totalgood = $totalgood + 1;
 			$filename = $6;
+			$useremail = $7;
+			if(!(exists $unique{$useremail})) {
+				$totaluniquegood += 1;
+				$unique{$useremail} = 1;
+				#print "Adding unique email <$useremail> for $2/$3\n";
+			}
 			if($filename =~ /^condor_.*/) {
 				$totalsrc = $totalsrc + 1;
 			}
@@ -210,11 +224,38 @@ foreach $log (@datafiles) {
 
 	#close the date file and generate image
 	close(LOGDATA);
+	close(UNIQUE);
 	close(OUT);
-	$graphcmd = "$tooldir/make-graphs-hist --firstdate \"$firstdate\" --detail downloadlogs --daily --input $outfile --output $image";
-	#print "About to execute this:\n";
-	#print "$graphcmd\n";
+
+	# create running total data file
+	$line = "";
+	my $runningtotalsrc = 0;
+	my $runningtotalbin = 0;
+	open(DATA,"<$outfile") || die "Failed to open $outfile: $!\n";
+	open(TOT,">$totalsfile") || die "Failed to open $totalsfile: $!\n";
+	while(<DATA>) {
+		chomp();
+		$line = $_;
+		if($line =~ /^(\s*\w*\s+\d+\s+\d+),\s+(\d+),\s(\d+),\s+(.*)$/) {
+			$runningtotalsrc += $2;
+			$runningtotalbin += $3;
+			#print "$totalsfile src $2 bin $3 tsrc $runningtotalsrc tbin $runningtotalbin\n";
+			print TOT "$1, $runningtotalsrc, $runningtotalbin, $4\n";
+		}
+	}
+	close(DATA);
+	close(TOT);
+	# make plots for accumulated plot
+	$graphcmd = "$tooldir/make-graphs-hist --firstdate \"$firstdate\" --detail totaldownloadlogs --daily --input $totalsfile --output $totalsimage";
 	system("$graphcmd");
+
+	# make plots for this series
+	$graphcmd = "$tooldir/make-graphs-hist --firstdate \"$firstdate\" --detail downloadlogs --daily --input $outfile --output $image";
+	system("$graphcmd");
+	$uniquegraphcmd = "$tooldir/make-graphs-hist --firstdate \"$firstdate\" --detail uniquedownloadlogs --daily --input $uniquefile --output $uniqueimage";
+	print "About to execute this:\n";
+	print "$graphcmd\n";
+	system("$uniquegraphcmd");
 
 	# prepare a 2 month plot for key downloads
 
@@ -372,8 +413,10 @@ sub ResetCounters
 {
 	$total = 0;
 	$totalgood = 0;
+	$totaluniquegood = 0;
 	$totalbad = 0;
 	$totalsrc = 0;
+	%unique = ();
 }
 
 sub DoOutput
@@ -393,6 +436,7 @@ sub DoOutput
         }
 		$firstoutput = 1;
 	}
+	print UNIQUE "$months{$month} $day $year, 0, $totaluniquegood, 0, 0, 0, 0, 0\n";
 	if( $scale == 0 ) {
 		print OUT "$months{$month} $day $year, $totalsrc, $totalgood, $negbad, 0, 0, 0, 0\n";
 	} elsif( $scale == 1 ) {
