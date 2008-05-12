@@ -190,6 +190,9 @@ ReadUserLog::initialize( const ReadUserLog::FileState &state,
 	m_max_rot = handle_rotation ? 1 : 0;
 
 	m_state = new ReadUserLogState( state, m_max_rot, SCORE_RECENT_THRESH );
+	if ( ! m_state->Initialized() ) {
+		return false;
+	}
 	m_match = new ReadUserLogMatch( m_state );
 	return initialize( handle_rotation, false, true, true );
 }
@@ -203,6 +206,9 @@ ReadUserLog::initialize( const char *filename,
 	m_max_rot = handle_rotation ? 1 : 0;
 
 	m_state = new ReadUserLogState( filename, m_max_rot, SCORE_RECENT_THRESH );
+	if ( ! m_state->Initialized() ) {
+		return false;
+	}
 	m_match = new ReadUserLogMatch( m_state );
 
 	bool	enable_header_read = handle_rotation;
@@ -1095,9 +1101,9 @@ ReadUserLog::InitFileState( ReadUserLog::FileState &state )
 }
 
 bool
-ReadUserLog::UninitFileState( ReadUserLog::FileState &state ) const
+ReadUserLog::UninitFileState( ReadUserLog::FileState &state )
 {
-	return m_state->UninitState( state );
+	return ReadUserLogState::UninitState( state );
 }
 
 bool
@@ -1242,7 +1248,7 @@ ReadUserLog::releaseResources( void )
 }
 
 void
-ReadUserLog::FormatFileState ( MyString &str, const char *label ) const
+ReadUserLog::FormatFileState( MyString &str, const char *label ) const
 {
 	if ( ! m_state ) {
 		if ( label ) {
@@ -1255,6 +1261,13 @@ ReadUserLog::FormatFileState ( MyString &str, const char *label ) const
 	}
 
 	m_state->GetState( str, label );
+}
+
+void
+ReadUserLog::FormatFileState( const ReadUserLog::FileState &state,
+							  MyString &str, const char *label ) const
+{
+	m_state->GetState( state, str, label );
 }
 
 

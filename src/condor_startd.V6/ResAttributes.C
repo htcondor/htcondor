@@ -67,13 +67,22 @@ MachAttributes::MachAttributes()
 	m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
 
 #if defined ( WIN32 )
-	// get the version information of the copy of Windows we are running
-	ZeroMemory ( &m_window_version_info, sizeof ( OSVERSIONINFO ) );
-	m_window_version_info.dwOSVersionInfoSize = sizeof ( OSVERSIONINFO );	
-	m_got_windows_version_info = GetVersionEx ( &m_window_version_info );
+	// Get the version information of the copy of Windows 
+	// we are running
+	ZeroMemory ( &m_window_version_info, sizeof ( OSVERSIONINFOEX ) );
+	m_window_version_info.dwOSVersionInfoSize = 
+		sizeof ( OSVERSIONINFOEX );	
+	m_got_windows_version_info = 
+		GetVersionEx ( (OSVERSIONINFO*) &m_window_version_info );
 	if ( !m_got_windows_version_info ) {
-		dprintf ( D_ALWAYS, "MachAttributes::publish: failed to get "
-			"Windows version information\n" );			
+		m_window_version_info.dwOSVersionInfoSize = 
+			sizeof ( OSVERSIONINFO );	
+		m_got_windows_version_info = 
+			GetVersionEx ( (OSVERSIONINFO*) &m_window_version_info );
+		if ( !m_got_windows_version_info ) {
+			dprintf ( D_ALWAYS, "MachAttributes::publish: failed to "
+				"get Windows version information\n" );
+		}
 	}
 #endif
 
@@ -257,13 +266,23 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 			sprintf(line, "%s = %lu", ATTR_WINDOWS_BUILD_NUMBER, 
 				m_window_version_info.dwBuildNumber );
 			cp->Insert ( line ); 
-		} else {
-			sprintf ( line, "%s = \"Undefined\"", ATTR_WINDOWS_MAJOR_VERSION );
-			cp->Insert ( line ); 
-			sprintf ( line, "%s = \"Undefined\"", ATTR_WINDOWS_MINOR_VERSION );
-			cp->Insert ( line ); 
-			sprintf ( line, "%s = \"Undefined\"", ATTR_WINDOWS_BUILD_NUMBER );
-			cp->Insert ( line ); 
+			// publish the extended Windows version information if we
+			// have it at our disposal
+			if ( sizeof ( OSVERSIONINFOEX ) == 
+				 m_window_version_info.dwOSVersionInfoSize ) {
+				sprintf(line, "%s = %lu", 
+					ATTR_WINDOWS_SERVICE_PACK_MAJOR, 
+					m_window_version_info.wServicePackMajor );
+				cp->Insert ( line ); 
+				sprintf(line, "%s = %lu", 
+					ATTR_WINDOWS_SERVICE_PACK_MINOR, 
+					m_window_version_info.wServicePackMinor );
+				cp->Insert ( line ); 
+				sprintf(line, "%s = %lu", 
+					ATTR_WINDOWS_PRODUCT_TYPE, 
+					m_window_version_info.wProductType );
+				cp->Insert ( line ); 
+			}
 		}
 #endif
 
