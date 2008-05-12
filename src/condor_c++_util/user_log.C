@@ -466,8 +466,6 @@ UserLog::doWriteEvent( ULogEvent *event, bool is_global_event, ClassAd *)
 		use_xml = m_use_xml;
 		priv = set_user_priv();
 	}
-	dprintf( D_FULLDEBUG, "doWriteEvent: set priv state to %s\n",
-			 priv_to_string(get_priv_state()) );
 
 	lock->obtain (WRITE_LOCK);
 	fseek (fp, 0, SEEK_END);
