@@ -129,8 +129,8 @@ _condor_bind_all_interfaces( void )
 	int bind_all = FALSE;
 	char* tmp = param( "BIND_ALL_INTERFACES" );
 	if( ! tmp ) {
-			// not defined, defaualts to FALSE;
-		return FALSE;
+			// not defined, defaualts to TRUE;
+		return TRUE;
 	}
 	switch( tmp[0] ) {
 	case 'T':
