@@ -169,11 +169,11 @@ get_env_val( const char *str )
     return answer;
 }
 
-bool UserLog::
-open_file(const char *file, 
-		  bool log_as_user, // if false, we are logging to the global file
-		  FileLock* & lock, 
-		  FILE* & fp )
+bool
+UserLog::open_file(const char *file, 
+				   bool log_as_user, // if false, logging to the global file
+				   FileLock* & lock, 
+				   FILE* & fp )
 {
 	int 			fd;
 
@@ -239,8 +239,8 @@ open_file(const char *file,
 	return true;
 }
 
-bool UserLog::
-initialize_global_log()
+bool
+UserLog::initialize_global_log()
 {
 	bool ret_val = true;
 
@@ -258,44 +258,49 @@ initialize_global_log()
 	}
 
 	m_global_path = param("EVENT_LOG");
-	m_global_use_xml = param_boolean("EVENT_LOG_USE_XML",false);
+	m_global_use_xml = param_boolean("EVENT_LOG_USE_XML", false);
 
-	if ( m_global_path ) {
-		ret_val = open_file(m_global_path, false, m_global_lock, m_global_fp);
-
-		if( m_global_path ) {
-			StatWrapper		statinfo;
-			if (  ( !(statinfo.Stat(m_global_path))  ) && 
-				  ( !(statinfo.GetStatBuf()->st_size) )  ) {
-				GenericEvent	event;
-				MyString file_id;
-				GenerateGlobalId( file_id );
-				snprintf(event.info, sizeof(event.info),
-						 "Global JobLog: "
-						 "ctime=%d id=%s sequence=%d size=%ld events=%ld",
-						 (int) time(NULL),
-						 file_id.GetCStr(), m_global_sequence,
-						 0L, 0L
-						 );
-				m_global_sequence++;
-				dprintf( D_FULLDEBUG, "Writing log header: '%s'\n",
-						 event.info );
-				int		len = strlen( event.info );
-				while( len < 256 ) {
-					strcat( event.info, " " );
-					len++;
-				}
-				ret_val = doWriteEvent( m_global_fp, &event,
-										m_global_use_xml );
-			}
-		}
+	if ( ! m_global_path ) {
+		return true;
 	}
 
+	priv_state priv = set_condor_priv();
+	ret_val = open_file(m_global_path, false, m_global_lock, m_global_fp);
+
+	if ( ! ret_val ) {
+		set_priv( priv );
+		return false;
+	}
+
+	StatWrapper		statinfo;
+	if (  ( !(statinfo.Stat(m_global_path))   )  &&
+		  ( !(statinfo.GetStatBuf()->st_size) )  ) {
+		GenericEvent	event;
+		MyString file_id;
+		GenerateGlobalId( file_id );
+		snprintf(event.info, sizeof(event.info),
+				 "Global JobLog: "
+				 "ctime=%d id=%s sequence=%d size=%ld events=%ld",
+				 (int) time(NULL),
+				 file_id.GetCStr(), m_global_sequence,
+				 0L, 0L
+				 );
+		m_global_sequence++;
+		dprintf( D_FULLDEBUG, "Writing log header: '%s'\n", event.info );
+		int		len = strlen( event.info );
+		while( len < 256 ) {
+			strcat( event.info, " " );
+			len++;
+		}
+		ret_val = doWriteEvent( m_global_fp, &event, m_global_use_xml );
+	}
+
+	set_priv( priv );
 	return ret_val;
 }
 
-bool UserLog::
-initialize( const char *file, int c, int p, int s, const char *gjid)
+bool
+UserLog::initialize( const char *file, int c, int p, int s, const char *gjid)
 {
 		// Save parameter info
 	m_path = new char[ strlen(file) + 1 ];
@@ -318,9 +323,9 @@ initialize( const char *file, int c, int p, int s, const char *gjid)
 	return initialize(c, p, s, gjid);
 }
 
-bool UserLog::
-initialize( const char *owner, const char *domain, const char *file,
-	   	int c, int p, int s, const char *gjid )
+bool
+UserLog::initialize( const char *owner, const char *domain, const char *file,
+					 int c, int p, int s, const char *gjid )
 {
 	priv_state		priv;
 
@@ -342,8 +347,8 @@ initialize( const char *owner, const char *domain, const char *file,
 	return res;
 }
 
-bool UserLog::
-initialize( int c, int p, int s, const char *gjid )
+bool
+UserLog::initialize( int c, int p, int s, const char *gjid )
 {
 	cluster = c;
 	proc = p;
@@ -352,14 +357,16 @@ initialize( int c, int p, int s, const char *gjid )
 		// Important for performance : note we do not re-open the global log
 		// if we already have done so (i.e. if m_global_fp is not NULL).
 	if ( m_write_global_log && !m_global_fp ) {
+		priv_state priv = set_condor_priv();
 		initialize_global_log();
+		set_priv( priv );
 	}
 
 	if(gjid) {
 		m_gjid = strdup(gjid);
 	}
 
-	return TRUE;
+	return true;
 }
 
 UserLog::~UserLog()
@@ -439,8 +446,8 @@ handleGlobalLogRotation()
 	return rotated;
 }
 
-int UserLog::
-doWriteEvent( ULogEvent *event, bool is_global_event, ClassAd *)
+bool
+UserLog::doWriteEvent( ULogEvent *event, bool is_global_event, ClassAd *)
 {
 	int success;
 	FILE* fp;
@@ -459,6 +466,8 @@ doWriteEvent( ULogEvent *event, bool is_global_event, ClassAd *)
 		use_xml = m_use_xml;
 		priv = set_user_priv();
 	}
+	dprintf( D_FULLDEBUG, "doWriteEvent: set priv state to %s\n",
+			 priv_to_string(get_priv_state()) );
 
 	lock->obtain (WRITE_LOCK);
 	fseek (fp, 0, SEEK_END);
@@ -495,11 +504,11 @@ doWriteEvent( ULogEvent *event, bool is_global_event, ClassAd *)
 	return success;
 }
 
-int
+bool
 UserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 {
 	ClassAd* eventAd = NULL;
-	int success = TRUE;
+	bool success = true;
 
 	if( use_xml ) {
 		dprintf( D_ALWAYS, "Asked to write event of number %d.\n",
@@ -508,16 +517,16 @@ UserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 		eventAd = event->toClassAd();	// must delete eventAd eventually
 		MyString adXML;
 		if (!eventAd) {
-			success = FALSE;
+			success = false;
 		} else {
 			ClassAdXMLUnparser xmlunp;
 			xmlunp.SetUseCompactSpacing(FALSE);
 			xmlunp.SetOutputTargetType(FALSE);
 			xmlunp.Unparse(eventAd, adXML);
 			if (fprintf ( fp, adXML.GetCStr()) < 0) {
-				success = FALSE;
+				success = false;
 			} else {
-				success = TRUE;
+				success = true;
 			}
 		}
 	} else {
@@ -526,7 +535,7 @@ UserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 			fputc ('\n', fp);
 		}
 		if (fprintf ( fp, SynchDelimiter) < 0) {
-			success = FALSE;
+			success = false;
 		}
 	}
 
@@ -540,8 +549,8 @@ UserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 
 
 // Return FALSE(0) on error, TRUE(1) on goodness
-int UserLog::
-writeEvent ( ULogEvent *event, ClassAd *param_jobad)
+int
+UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 {
 	// the the log is not initialized, don't bother --- just return OK
 	if (!m_fp && !m_global_fp) {
@@ -567,7 +576,7 @@ writeEvent ( ULogEvent *event, ClassAd *param_jobad)
 	
 	// write global event
 	if ( m_write_global_log && m_global_fp && 
-		 doWriteEvent(event,true,param_jobad)==FALSE ) 
+		 doWriteEvent(event, true, param_jobad ) == false ) 
 	{
 		return FALSE;
 	}
@@ -620,7 +629,7 @@ writeEvent ( ULogEvent *event, ClassAd *param_jobad)
 			info_event.cluster = cluster;
 			info_event.proc = proc;
 			info_event.subproc = subproc;
-			doWriteEvent(&info_event,true,param_jobad);
+			doWriteEvent(&info_event, true, param_jobad);
 			delete eventAd;
 		}
 	}
@@ -630,7 +639,8 @@ writeEvent ( ULogEvent *event, ClassAd *param_jobad)
 	}
 		
 	// write ulog event
-	if ( m_write_user_log && m_fp && doWriteEvent(event,false,param_jobad)==FALSE ) {
+	if ( m_write_user_log && m_fp && doWriteEvent(event, false, param_jobad)
+		 == false ) {
 		return FALSE;
 	}
 
