@@ -149,7 +149,7 @@ public:
 	};
 	// "Public" file state
 	typedef union {
-		ReadUserLogState::FileState	actual_state;
+		FileState	actual_state;
 		char						filler [2048];
 	} FileStatePub;
 		
