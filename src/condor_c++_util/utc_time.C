@@ -28,10 +28,13 @@
 
 
 
-UtcTime::UtcTime()
+UtcTime::UtcTime( bool get_time )
 {
 	sec = 0;
 	usec = 0;
+	if ( get_time ) {
+		getTime( );
+	}
 }
 
 
@@ -55,17 +58,20 @@ UtcTime::getTime()
 #endif
 }
 
-
 double
-UtcTime::difference( UtcTime* other_time )
+UtcTime::difference( const UtcTime* other_time ) const
 {
 	if( ! other_time ) {
 		return 0.0;
 	}
-	double other = other_time->seconds() + 
-		((double)other_time->microseconds() / 1000000);
+	return difference( *other_time );
+}
 
-	double me = sec + ((double)usec/1000000);
+double
+UtcTime::difference( const UtcTime &other_time ) const
+{
+	double other = other_time.combined();
+	double me = combined();
 
 	return me - other;
 }

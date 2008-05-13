@@ -32,8 +32,8 @@ class UtcTime
 {
 public:
 
-		/// Default constructor, does not compute current time
-	UtcTime();
+		/// Default constructor, does not compute current time by default
+	UtcTime( bool get_time = false );
 
 		/// Compute the current time
 	void getTime( void );
@@ -44,6 +44,10 @@ public:
 		/// Return mircosecond field of the last computed epoch time
 	long microseconds( void ) const { return usec; };
 
+		// Return the last computed time as a floating point combination
+		// of seconds and microseconds
+	double combined( void ) const { return( sec + usec/1000000.0 ); };
+
 		/** How much time elapsed between the two times.  This method
 			subtracts the time of the other UtcTime object we're
 			passed from the value in this current object.
@@ -52,7 +56,8 @@ public:
 			double precision float, with both seconds and micro
 			seconds in the same number.
 		 */
-	double difference( UtcTime* other_time );
+	double difference( const UtcTime* other_time ) const;
+	double difference( const UtcTime &other_time ) const;
 
 private:
 
