@@ -19,8 +19,6 @@
    $branch = $_REQUEST["branch"];
 	$rows   = ($_REQUEST["rows"] ? $_REQUEST["rows"] : 30);
 
-//echo "Test< $test >\n";
-   
    define('PLATFORM_PENDING', 'pending');
    define('PLATFORM_FAILED',  'failed');
    define('PLATFORM_PASSED',  'passed');
@@ -59,8 +57,8 @@
    include "last.inc";
 	
 	# Create the set of all the runid's we're interested in
-# This is the MAX(runid) i.e. latest run  
-# for each (branch, type) tuple
+	# This is the MAX(runid) i.e. latest run  
+	# for each (branch, type) tuple
 
 	echo "<h1>Test History - $branch ($test)</h1>\n";
 
@@ -81,6 +79,8 @@ $sql = "SELECT description,
        " LIMIT $rows";
 //die($sql);
 $results = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
+
+// For every runid of a build
 while ($runidrow = mysql_fetch_array($results)) {
   	$runid      = $runidrow["runid"];
   	$desc       = $runidrow["description"];
@@ -107,7 +107,7 @@ while ($runidrow = mysql_fetch_array($results)) {
    //
    // Platforms
    //
-   // Original platforms we actually built on
+   // Save original platforms we actually built on
    $sql = "SELECT DISTINCT(platform) AS platform ".
           "  FROM Run, Task ".
           " WHERE Task.runid = $runid ".
@@ -127,7 +127,6 @@ while ($runidrow = mysql_fetch_array($results)) {
    //
    // Test
    //
-   //} elseif ($type == 'test') {
    if ($type == 'test') {
       $sql = "SELECT DISTINCT(Task.name) AS name ".
              "  FROM Task, Method_nmi ".
@@ -173,6 +172,8 @@ while ($runidrow = mysql_fetch_array($results)) {
              " WHERE Task.runid IN (".implode(",", $testrunids).") ".
              "   AND Task.name = '$task_name'";
       $task_result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
+
+
       while ($task_row = mysql_fetch_array($task_result)) {
          $platform = $task_row["platform"];
          $platform_runids[$platform] = $task_row["runid"];
@@ -201,24 +202,26 @@ while ($runidrow = mysql_fetch_array($results)) {
    
 ?>
 
-<table border="0" cellspacing="0" >
-<tr>
-   <td></td>
 <?php
-   foreach ($platforms AS $platform) {
-      $display = $platform;
-      $idx = strpos($display, "_");
-      $display[$idx] = " ";
-		$filepath = "";
-   
-      echo "<td align=\"center\">$display</td>\n";
-   } // FOREACH 
-?>
-<?php
+	if( sizeof($data) == 0 ) {
+		echo "<h4>No Tests on ".date("m/d/Y", $start)."</h4>\n";
+	} 
    foreach ($data AS $task => $arr) {
 		// we are focusing on a single test history, skip the rest
 		$diff = strcmp($task,$test);
 		if($diff ==  0) {
+			echo "<table border=\"0\" cellspacing=\"0\" >\n";
+			echo "<tr>\n";
+			echo "<td>&nbsp</td>\n";
+   		foreach ($platforms AS $platform) {
+      				$display = $platform;
+      				$idx = strpos($display, "_");
+      				$display[$idx] = " ";
+						$filepath = "";
+  		 
+      				echo "<td align=\"center\">$display</td>\n";
+   		} // FOREACH 
+      	echo "</tr>\n";
       	echo "<tr>\n".
 				"<td>".
  			//"<td ".($task_status[$task] != PLATFORM_PASSED ? 
@@ -241,9 +244,9 @@ while ($runidrow = mysql_fetch_array($results)) {
          	}
       	}
       	echo "</td>\n";
-		}
+   		echo "</table>";
+		} 
    } // FOREACH
-   echo "</table>";
 
 }
    function limitSize($str, $cnt) {

@@ -42,10 +42,9 @@ public:
 	};
 
 	ReadUserLogState( const char *path,
-					  int max_rot,
+					  int max_rotations,
 					  int recent_thresh );
 	ReadUserLogState( const ReadUserLog::FileState &state,
-					  int max_rot,
 					  int recent_thresh );
 	~ReadUserLogState( void );
 
@@ -62,6 +61,12 @@ public:
 	int Rotation( void ) const { return m_cur_rot; };
 	filesize_t Offset( void ) const { return m_offset; };
 	bool IsValid( void ) const { return (m_cur_rot >= 0); };
+
+	// Get/set maximum rotations
+	int MaxRotations( void ) { return m_max_rotations; }
+	int MaxRotations( int max_rotations ) {
+		return m_max_rotations = max_rotations;
+	}
 
 	// Set methods
 	int Rotation( int rotation, bool store_stat = false,
@@ -137,7 +142,7 @@ public:
 		char			uniq_id[128];		// File's uniq identifier
 		int				sequence;			// File's sequence number
 		int				rotation;			// 0 == the "current" file
-		int				max_rotation;		// Max rotation level
+		int				max_rotations;		// Max rotation level
 		UserLogType		log_type;			// The log's type
 		StatStructInode	inode;				// The log's inode #
 		time_t			ctime;				// The log's creation time
@@ -183,7 +188,7 @@ private:
 	UserLogType		m_log_type;			// Type of this log
 	filesize_t		m_offset;			// Our current offset
 
-	int				m_max_rot;			// Max rot #
+	int				m_max_rotations;	// Max rot #
 	int				m_recent_thresh;	// Max time for a stat to be "recent"
 
 	// Score factors

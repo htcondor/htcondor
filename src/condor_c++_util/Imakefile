@@ -41,8 +41,9 @@ URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o MapFile.o
 
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
-	condor_event.o user_log.o read_user_log.o read_user_log_state.o \
-	strnewp.o stat_wrapper.o \
+	condor_event.o user_log.o \
+	read_user_log.o read_user_log_state.o \
+	strnewp.o stat_wrapper.o stat_wrapper_internal.o \
 	read_multiple_logs.o CondorError.o check_events.o tmp_dir.o
 
 #if HAVE_EXT_OPENSSL
@@ -125,6 +126,7 @@ CONLIBAPI_OBJ = \
 	format_time.o \
 	utc_time.o \
 	stat_wrapper.o \
+	stat_wrapper_internal.o \
 	../condor_util_lib/dprintf_common.o \
 	../condor_util_lib/dprintf.o \
 	../condor_util_lib/basename.o \
@@ -160,11 +162,13 @@ DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	alarm.o user_job_policy.o classad_support.o \
-	directory.o stat_wrapper.o my_hostname.o file_lock.o sig_name.o \
+	directory.o stat_info.o stat_wrapper.o stat_wrapper_internal.o \
+	my_hostname.o file_lock.o sig_name.o \
 	email.o env.o c++_util_instantiate.o \
 	string_list.o net_string_list.o condor_event.o $(URL_OBJ) \
 	get_daemon_name.o \
-	user_log.o read_user_log.o read_user_log_state.o \
+	user_log.o \
+	read_user_log.o read_user_log_state.o \
 	config.o condor_config.o \
 	stringSpace.o condor_state.o \
 	$(API_OBJ) $(DAEMON_CLIENT_OBJ) \
@@ -235,6 +239,7 @@ c_plus_nowrap_target(test_libcondorapi_shared,test_libcondorapi.o,libcondorapi.s
 c_plus_target(test_check_events,test_check_events.o,$(LIB) New_classads_lib)
 c_plus_target(test_multi_log,test_multi_log.o,$(LIB) New_classads_lib)
 c_plus_target(test_log_writer,test_log_writer.o,$(LIB))
+c_plus_target(test_stat_wrapper,test_stat_wrapper.o,$(LIB))
 c_plus_target(test_log_reader,test_log_reader.o,$(LIB))
 c_plus_target(test_write_term,test_write_term.o,$(LIB))
 c_plus_target(test_prioritysimplelist,test_prioritysimplelist.o,)

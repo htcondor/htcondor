@@ -22,54 +22,117 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "stat_struct.h"
+#include "stat_wrapper_internal.h"
 
-	// Define a "standard" StatBuf type
-#if HAVE_STAT64
-typedef struct stat64 StatStructType;
-typedef ino_t StatStructInode;
-#elif HAVE__STATI64
-typedef struct _stati64 StatStructType;
-typedef _ino_t StatStructInode;
-#else
-typedef struct stat StatStructType;
-typedef ino_t StatStructInode;
-#endif
+// Pre-declare internal class
+class StatWrapperIntBase;
+class StatWrapperIntPath;
+class StatWrapperIntFd;
+class StatWrapperIntNop;
+class StatWrapperOp;
+
 
 class StatWrapper
 {
 public:
-	StatWrapper( const char *path );
-	StatWrapper( int fd );
+	// Operation selector
+	// Valid ops for the constructor and Stat() methods:
+	//  _NONE, _STAT, _LSTAT, _BOTH, _FSTAT, _ALL, _LAST
+	// Valid ops for for the "get" methods:
+	//  _LSTAT, _STAT, _FSTAT, and _LAST
+	enum StatOpType {
+		STATOP_NONE = 0,			// No operation
+		STATOP_MIN = STATOP_NONE,	// Min operation #
+		STATOP_STAT,				// stat()
+		STATOP_LSTAT,				// last() (when available)
+		STATOP_BOTH,				// Both stat() and lstat()
+		STATOP_FSTAT,				// fstat()
+		STATOP_ALL,					// All of stat(), lstat() and fstat()
+		STATOP_LAST,				// Last operation
+		STATOP_MAX = STATOP_LAST,	// Max operation #
+		STATOP_NUM,					// # of operations
+	};
+
+	// Constructors & destructors
+	StatWrapper( const char *path, StatOpType which = STATOP_STAT );
+	StatWrapper( const MyString &path, StatOpType which = STATOP_STAT );
+	StatWrapper( int fd, StatOpType which = STATOP_FSTAT );
 	StatWrapper( void );
-	~StatWrapper( );
+	~StatWrapper( void );
+
+	// Methods to set the path and FD
+	bool SetPath( const char *path );
+	bool SetPath( const MyString &path );
+	bool SetFD( int fd );
+
+	// Methods to actually perform the stat() (or lstat() or fstat() )
+	int Stat( StatOpType which = STATOP_STAT,
+			  bool force = true );
+	int Stat( const MyString &path,
+			  StatOpType which = STATOP_STAT,
+			  bool force = true );
+	int Stat( const char *path,
+			  StatOpType which = STATOP_STAT,
+			  bool force = true );
+	int Stat( int fd, bool force = true );	
 	int Retry( void );
 
-	int Stat( const char *path );
-	int Stat( int fd );
+	// Get the type of most recent operation
+	StatOpType GetLastOpType( void ) const
+		{ return m_last_which; };
 
-	const char *GetStatFn( void ) const { return m_name; };
-	int GetStatus( void ) const { return m_stat_rc; };
-	int GetErrno( void ) const { return m_stat_errno; };
-	const StatStructType *GetStatBuf( void ) const { return &m_stat_buf; };
-	const StatStructType *GetLstatBuf( void ) const { return &m_lstat_buf; };
-	bool GetStatBuf( StatStructType & ) const;
-	bool GetLstatBuf( StatStructType & ) const;
+	// Methods to perform get specific results (all default to last op)
+	// If previous Stat() operation was _BOTH or _ALL, then
+	//  these _LAST will return info on the last of these that was actually
+	//  used (for _BOTH: _LSTAT; for _ALL: _FSTAT)
+	bool IsBufValid( StatOpType which = STATOP_LAST ) const
+		{ return IsBufValid(GetStat(which) ); };
+	int GetStatus( StatOpType which = STATOP_LAST ) const
+		{ return GetRc( which ); };
+	int GetRc( StatOpType which = STATOP_LAST ) const
+		{ return GetRc(GetStat(which) ); };
+	int GetErrno( StatOpType which = STATOP_LAST ) const
+		{ return GetErrno(GetStat(which) ); };
+	const char *GetStatFn( StatOpType which = STATOP_LAST ) const
+		{ return GetStatFn(GetStat(which) ); };
+	const StatStructType *GetBuf( StatOpType which = STATOP_LAST ) const
+		{ return GetBuf(GetStat(which) ); };
+	bool GetBuf( StatStructType &buf, StatOpType which = STATOP_LAST ) const
+		{ return GetBuf(GetStat(which), buf); };
 
 private:
-	void Clean( bool init );
-	int DoStat( const char *path );
-	int DoStat( int fd );
+	// Initialize the object
+	void init( void );
 
-	StatStructType	m_stat_buf;
-	StatStructType	m_lstat_buf;
-	bool			m_stat_valid;
-	bool			m_lstat_valid;
-	const char		*m_name;
-	int				m_stat_rc;		// stat() return code
-	int				m_stat_errno;	// errno from stat()
-	int				m_fd;
-	char			*m_path;
+	// Internal methods to return the expected info
+	StatWrapperIntBase *GetStat( StatOpType which ) const;
+	
+	// Get info from one of the internal stat objects
+	int GetErrno( const StatWrapperIntBase * ) const;
+	int GetRc( const StatWrapperIntBase * ) const;
+	bool IsBufValid( const StatWrapperIntBase * ) const;
+	bool IsValid( const StatWrapperIntBase * ) const;
+	const StatStructType *GetBuf( const StatWrapperIntBase * ) const;
+	bool GetBuf( const StatWrapperIntBase *, StatStructType & ) const;
+	const char *GetStatFn( const StatWrapperIntBase * ) const;
+
+	// Given a "which", should we do these operations?
+	bool ShouldStat( StatOpType which );
+	bool ShouldLstat( StatOpType which );
+	bool ShouldFstat( StatOpType which );
+	
+	// The stat types
+	StatWrapperIntNop	*m_nop;
+	StatWrapperIntPath	*m_stat;
+	StatWrapperIntPath	*m_lstat;
+	StatWrapperIntFd	*m_fstat;
+
+	// Which did we do last?
+	StatOpType			 m_last_which;
+	StatWrapperOp		*m_last_op;
+	StatWrapperOp		*m_ops[ STATOP_MAX ];
+	StatWrapperIntBase	*m_last_stat;
 };
-
 
 #endif

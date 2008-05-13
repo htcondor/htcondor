@@ -184,17 +184,23 @@ ReadUserLog::ReadUserLog ( const ReadUserLog::FileState &state )
 //  restored in "state" passed to us by the application
 bool
 ReadUserLog::initialize( const ReadUserLog::FileState &state,
-						 bool handle_rotation )
+						 int max_rotations )
 {
-	m_handle_rot = handle_rotation;
-	m_max_rot = handle_rotation ? 1 : 0;
-
-	m_state = new ReadUserLogState( state, m_max_rot, SCORE_RECENT_THRESH );
+	m_state = new ReadUserLogState( state, SCORE_RECENT_THRESH );
 	if ( ! m_state->Initialized() ) {
 		return false;
 	}
+
+	// If max rotations specified, store it away
+	if ( max_rotations > 0 ) {
+		m_state->MaxRotations( max_rotations );
+	}
+	else if ( max_rotations < 0 ) {
+		m_state->MaxRotations( 0 );
+	}
+
 	m_match = new ReadUserLogMatch( m_state );
-	return initialize( handle_rotation, false, true, true );
+	return InternalInitialize( max_rotations, false, true, true );
 }
 
 bool
@@ -202,32 +208,39 @@ ReadUserLog::initialize( const char *filename,
 						 bool handle_rotation,
 						 bool check_for_old )
 {
-	m_handle_rot = handle_rotation;
-	m_max_rot = handle_rotation ? 1 : 0;
+	return initialize( filename, handle_rotation ? 1 : 0, check_for_old );
+}
 
-	m_state = new ReadUserLogState( filename, m_max_rot, SCORE_RECENT_THRESH );
+bool
+ReadUserLog::initialize( const char *filename,
+						 int max_rotations,
+						 bool check_for_old )
+{
+	bool handle_rotation = ( max_rotations > 0 );
+	m_state = new ReadUserLogState( filename, max_rotations,
+									SCORE_RECENT_THRESH );
 	if ( ! m_state->Initialized() ) {
 		return false;
 	}
 	m_match = new ReadUserLogMatch( m_state );
 
-	bool	enable_header_read = handle_rotation;
-	if (! initialize( handle_rotation, check_for_old,
-					  false, enable_header_read ) ) {
+	if (! InternalInitialize( max_rotations, check_for_old,
+							  false, handle_rotation ) ) {
 		return false;
 	}
 
 	return true;
 }
 
+// Internal only initialization
 bool
-ReadUserLog::initialize ( bool handle_rotation,
-						  bool check_for_rotation,
-						  bool restore,
-						  bool enable_header_read )
-{	
-	m_handle_rot = handle_rotation;
-	m_max_rot = handle_rotation ? 1 : 0;
+ReadUserLog::InternalInitialize ( int max_rotations,
+								  bool check_for_rotation,
+								  bool restore,
+								  bool enable_header_read )
+{
+	m_handle_rot = ( max_rotations > 0 );
+	m_max_rotations = max_rotations;
 	m_read_header = enable_header_read;
 
 	// Set the score factor in the file state manager
@@ -246,14 +259,13 @@ ReadUserLog::initialize ( bool handle_rotation,
 		// Do nothing
 	}
 	else if ( m_handle_rot && check_for_rotation ) {
-		m_max_rot = 1;
-		if (! FindPrevFile( m_max_rot, 0, true ) ) {
+		if (! FindPrevFile( m_max_rotations, 0, true ) ) {
 			releaseResources();
 			return false;
 		}
 	}
 	else {
-		m_max_rot = 0;
+		m_max_rotations = 0;
 		if ( m_state->Rotation( 0, true ) ) {
 			releaseResources();
 			return false;
@@ -605,7 +617,7 @@ ReadUserLog::ReopenLogFile( void )
 	if ( ! m_state->IsValid() ) {
 		if ( m_handle_rot ) {
 			dprintf( D_FULLDEBUG, "reopen: looking for previous file...\n" );
-			if (! FindPrevFile( m_max_rot, 0, true ) ) {
+			if (! FindPrevFile( m_max_rotations, 0, true ) ) {
 				return ULOG_NO_EVENT;
 			}
 		}
@@ -622,9 +634,9 @@ ReadUserLog::ReopenLogFile( void )
 	int new_rot = -1;
 	int max_score = -1;
 	int max_score_rot = -1;
-	int *scores = new int[m_max_rot+1];
+	int *scores = new int[m_max_rotations+1];
 	int	start = m_state->Rotation();
-	for( int rot = start; (rot <= m_max_rot) && (new_rot < 0); rot++ ) {
+	for( int rot = start; (rot <= m_max_rotations) && (new_rot < 0); rot++ ) {
 		int		score;
 
 		ReadUserLogMatch::MatchResult result =

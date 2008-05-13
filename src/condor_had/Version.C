@@ -36,9 +36,9 @@ time_t Version::m_lastModifiedTime = -1;
 static void
 createFile(const MyString& filePath)
 {
-	StatWrapper statWrapper( filePath.GetCStr( ) );
+	StatWrapper statWrapper( filePath );
 	// if no state file found, create one
-	if ( statWrapper.GetStatus( ) && statWrapper.GetErrno() == ENOENT) {
+	if ( statWrapper.GetRc( ) && statWrapper.GetErrno() == ENOENT) {
    		ofstream file( filePath.GetCStr( ) );
     }
 }
@@ -81,9 +81,9 @@ Version::synchronize(bool isLogicalClockIncremented)
     load( );        
     createFile( m_stateFilePath );
 
-    StatWrapper statWrapper( m_stateFilePath.GetCStr( ) );
+    StatWrapper statWrapper( m_stateFilePath );
     
-	const StatStructType* status      = statWrapper.GetStatBuf( );
+	const StatStructType* status      = statWrapper.GetBuf( );
     time_t                currentTime = time( NULL );
     // to contain the time strings produced by 'ctime_r' function, which is
     // reentrant unlike 'ctime' one
@@ -363,13 +363,13 @@ Version::save( )
     versionFile << m_gid << endl << m_logicalClock;
     //versionFile.close( );
     // finding the new last modification time
-//    StatWrapper statWrapper( m_stateFilePath.GetCStr( ) );
+//    StatWrapper statWrapper( m_stateFilePath );
 //
-//    if ( statWrapper.GetStatus( ) ) {
+//    if ( statWrapper.GetRc( ) ) {
 //        EXCEPT("Version::synchronize cannot get %s status "
 //               "due to errno = %d", 
 //               m_versionFilePath.GetCStr( ), 
 //				 statWrapper.GetErrno());
 //    }
-//    m_lastModifiedTime = statWrapper.GetStatBuf( )->st_mtime;
+//    m_lastModifiedTime = statWrapper.GetBuf( )->st_mtime;
 }

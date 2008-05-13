@@ -26,19 +26,6 @@
 /* Since this is a Condor API header file, we want to minimize our
    reliance on other Condor files to ease distribution.  -Jim B. */
 
-#if !defined(WIN32)
-#ifndef BOOLEAN_TYPE_DEFINED
-typedef int BOOLEAN;
-typedef int BOOL_T;
-#define BOOLEAN_TYPE_DEFINED
-#endif
-
-#if !defined(TRUE)
-#   define TRUE 1
-#   define FALSE 0
-#endif
-#endif
-
 #if defined(NEW_PROC)
 #include "proc.h"
 #endif
@@ -90,7 +77,7 @@ class UserLog {
         @param clu  condorID cluster to put into each ULogEvent
         @param proc condorID proc    to put into each ULogEvent
         @param subp condorID subproc to put into each ULogEvent
-		@param xml  make this TRUE to write XML logs, FALSE to use the old form
+		@param xml  make this true to write XML logs, false to use the old form
 		@param gjid global job ID
     */
     UserLog(const char *owner, const char *domain, const char *file,
@@ -111,7 +98,7 @@ class UserLog {
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
         @param gjid the condor global job id to put into each ULogEvent
-		@return TRUE on success
+		@return true on success
     */
     bool initialize(const char *owner, const char *domain, const char *file,
 		   	int c, int p, int s, const char *gjid);
@@ -121,7 +108,7 @@ class UserLog {
         @param c the condor ID cluster to put into each ULogEvent
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
-		@return TRUE on success
+		@return true on success
     */
     bool initialize(const char *file, int c, int p, int s, const char *gjid);
    
@@ -133,7 +120,7 @@ class UserLog {
         @param c the condor ID cluster to put into each ULogEvent
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
-		@return TRUE on success
+		@return true on success
     */
     bool initialize(uid_t, gid_t, const char *, int, int, int, const char *gjid);
 #endif
@@ -144,7 +131,7 @@ class UserLog {
         @param c the condor ID cluster to put into each ULogEvent
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
-		@return TRUE on success
+		@return true on success
     */
     bool initialize(int c, int p, int s, const char *gjid);
 
@@ -158,17 +145,9 @@ class UserLog {
         will return a successful value.
 
         @param event the event to be written
-        @return 0 for failure, 1 for success
-		NOTE: This will be changed to a C++ bool true/false in 7.1+
+        @return false for failure, true for success
     */
-    int writeEvent (ULogEvent *event, ClassAd *jobad = NULL);
-
-#if 0 /* deprecated cruft */    
-    /** Deprecated Function. */  void put( const char *fmt, ... );
-    /** Deprecated Function. */  void display();
-    /** Deprecated Function. */  void begin_block();
-    /** Deprecated Function. */  void end_block();
-#endif
+    bool writeEvent (ULogEvent *event, ClassAd *jobad = NULL);
 
   private:
 
@@ -183,11 +162,6 @@ class UserLog {
 
 	bool handleGlobalLogRotation();
 
-	
-#if 0 /* deprecated cruft */
-    /// Deprecated Function.  Print the header to the log.
-    void        output_header();
-#endif
     
     /// Deprecated.  condorID cluster of the next event.
     int         cluster;
@@ -197,9 +171,6 @@ class UserLog {
 
     /// Deprecated.  condorID subproc of the next event.
     int         subproc;
-
-    /// Deprecated.  Are we currently in a block?
-    int         in_block;
 
 	/** Write to the user log? */		 bool		m_write_user_log;
     /** Copy of path to the log file */  char     * m_path;
@@ -311,28 +282,40 @@ class ReadUserLog
     bool isInitialized( void ) const { return m_initialized; };
 
 
-    /** Initialize the log file.  This function will return FALSE
+    /** Initialize the log file.  This function will return false
         if it can't open the log file (among other things).
         @param file the file to read from
 		@param handle_rotation enables the reader to handle rotating
 		 log files (only useful for global user logs)
 		@param check_for_rotated try to open the rotated (".old") file first?
-        @return TRUE for success
+        @return true for success
     */
     bool initialize (const char *filename,
 					 bool handle_rotation = false,
 					 bool check_for_rotated = false );
 
+    /** Initialize the log file.  This function will return false
+        if it can't open the log file (among other things).
+        @param file the file to read from
+		@param max_rotation maximum rotation value
+		 log files (only useful for global user logs)
+		@param check_for_rotated try to open the rotated (".old") file first?
+        @return true for success
+    */
+    bool initialize (const char *filename,
+					 int max_rotation,
+					 bool check_for_rotated = false );
+
     /** Initialize the log file from a saved state.
-		This function will return FALSE
+		This function will return false
         if it can't open the log file (among other things).
         @param FileState saved file state
-		@param handle_rotation enables the reader to handle rotating
-		 log files (only useful for global user logs)
-        @return TRUE for success
+		@param max_rotations max rotations value of the logs
+		 (0 => use value from the state, -1 => disable )
+        @return true for success
     */
     bool initialize (const ReadUserLog::FileState &state,
-					 bool handle_rotation = true );
+					 int max_rotations = 0 );
 
     /** Read the next event from the log file.  The event pointer to
         set to point to a newly instatiated ULogEvent object.
@@ -347,7 +330,7 @@ class ReadUserLog
         "bad" event (i.e., read up to and including the event separator (...))
         so that the rest of the events can be read.
 
-        @return TRUE: success, FALSE: failure
+        @return true: success, false: failure
     */
     bool synchronize ();
 
@@ -362,23 +345,27 @@ class ReadUserLog
 	void Lock(void)   { Lock(true);   };
 	void Unlock(void) { Unlock(true); };
 
+	/** Set the # of rotations used
+	 */
+	void setRotations( int rotations ) { m_max_rotations = rotations; }
+
 	/** Set whether the log file should be treated as XML. The constructor will
 		attempt to figure this out on its own.
-		@param is_xml should be TRUE if we have an XML log file, FALSE otherwise
+		@param is_xml should be true if we have an XML log file, false otherwise
 	*/
 	void setIsXMLLog( bool is_xml );
 
 	/** Determine whether this ReadUserLog thinks its log file is XML.
 		Note that false may mean that the type is not yet known (e.g.,
 		the log file is empty).
-		@return TRUE if XML, FALSE otherwise
+		@return true if XML, false otherwise
 	*/
 	bool getIsXMLLog( void ) const;
 
 	/** Set whether the log file should be treated as "old-style" (non-XML).
 	    The constructor will attempt to figure this out on its own.
-		@param is_old should be TRUE if we have a "old-style" log file,
-		FALSE otherwise
+		@param is_old should be true if we have a "old-style" log file,
+		false otherwise
 	*/
 	void setIsOldLog( bool is_old );
 
@@ -386,7 +373,7 @@ class ReadUserLog
 	    (non-XML).
 		Note that false may mean that the type is not yet known (e.g.,
 		the log file is empty).
-		@return TRUE if "old-style", FALSE otherwise
+		@return true if "old-style", false otherwise
 	*/
 	bool getIsOldLog( void ) const;
 
@@ -461,18 +448,18 @@ class ReadUserLog
 	
   private:
 
-    /** Internal initializer.  This function will return FALSE
+    /** Internal initializer.  This function will return false
         if it can't open the log file (among other things).
 		@param Handle file rotation?
 		@param check_for_old try to open rotated (".old") file first?
 		@param Restore previous file position
 		@param Enable reading of the file header?
-        @return TRUE for success
+        @return true for success
     */
-    bool initialize ( bool handle_rotation,
-					  bool check_for_rotated,
-					  bool restore_position,
-					  bool enable_header_read );
+    bool InternalInitialize ( int max_rotation,
+							  bool check_for_rotated,
+							  bool restore_position,
+							  bool enable_header_read );
 
 	/** Internal lock/unlock methods
 		@param Verify that initialization has been done
@@ -513,7 +500,7 @@ class ReadUserLog
 	/** Skip the XML header of this log, if there is one.
 	    @param the first character after the opening '<'
 		@param the initial file position
-        @return TRUE for success, FALSE otherwise
+        @return true for success, false otherwise
 	*/
 	bool skipXMLHeader(char afterangle, long filepos);
 
@@ -570,7 +557,7 @@ class ReadUserLog
 
 	bool				 m_close_file;	/** Close file between operations? */
 	bool				 m_handle_rot;	/** Do we handle file rotation? */
-	int					 m_max_rot;		/** Max rotation number */
+	int					 m_max_rotations; /** Max rotation number */
 	bool				 m_read_header;	/** Read the file's header? */
 
 	bool				 m_lock_file;	/** Should we lock the file?  */
@@ -581,30 +568,10 @@ class ReadUserLog
 
 #endif /* __cplusplus */
 
-#if 0 /* deprecated cruft */
-typedef void LP;
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-    /// Deprecated.
-    LP *InitUserLog( const char *own, const char *domain, const char *file,
-		   	int c, int p, int s );
-
-    /// Deprecated.
-    void CloseUserLog( LP * lp );
-
-    /// Deprecated.
-    void PutUserLog( LP *lp,  const char *fmt, ... );
-
-    /// Deprecated.
-    void BeginUserLogBlock( LP *lp );
-
-    /// Deprecated.
-    void EndUserLogBlock( LP *lp );
-#if defined(__cplusplus)
-}
-#endif
-#endif
-
 #endif /* _CONDOR_USER_LOG_CPP_H */
+
+/*
+### Local Variables: ***
+### mode:C++ ***
+### End: **
+*/
