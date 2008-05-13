@@ -1368,6 +1368,8 @@ parse_splice(
 	// XXX I'm not sure this goes here quite yet....
 	splice_dag->PrefixAllNodeNames(MyString(current_splice_scope()));
 
+	// Print out a useful piece of debugging...
+	// splice_dag->PrintJobList();
 
 	// associate the splice_dag with its name in _this_ dag, later I'll merge
 	// the nodes from this splice into _this_ dag.
