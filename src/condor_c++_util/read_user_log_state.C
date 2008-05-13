@@ -212,7 +212,7 @@ ReadUserLogState::StatFile( const char *path, StatStructType &statbuf ) const
 		return statwrap.GetStatus( );
 	}
 
-	statwrap.GetStatBuf( statbuf );
+	statwrap.GetBuf( statbuf );
 
 	return 0;
 }
@@ -222,13 +222,13 @@ ReadUserLogState::StatFile( const char *path, StatStructType &statbuf ) const
 int
 ReadUserLogState::StatFile( int fd )
 {
-	StatWrapper	statwrap( fd );
-	if ( statwrap.GetStatus( )  ) {
+	StatWrapper	statwrap;
+	if ( statwrap.Stat( fd )  ) {
 		dprintf( D_FULLDEBUG, "StatFile: errno = %d\n", statwrap.GetErrno() );
-		return statwrap.GetStatus( );
+		return statwrap.GetRc( );
 	}
 
-	statwrap.GetStatBuf( m_stat_buf );
+	statwrap.GetBuf( m_stat_buf );
 	m_update_time = time( NULL );
 	m_stat_valid = true;
 

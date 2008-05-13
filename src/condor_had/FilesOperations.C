@@ -98,9 +98,9 @@ FilesOperations::unlinkFile( const char* filePath,
     temporaryFilePath += ".";
     temporaryFilePath += temporaryFilesExtension;
 
-	StatWrapper statWrapper( temporaryFilePath.GetCStr( ) );
+	StatWrapper statWrapper( temporaryFilePath );
 	
-	if ( statWrapper.GetStatus( ) && statWrapper.GetErrno( ) == ENOENT ) {
+	if ( statWrapper.GetRc( ) && statWrapper.GetErrno( ) == ENOENT ) {
 		dprintf( D_ALWAYS, "FilesOperations::unlinkFile the specified file %s"
 						   "does not exist\n", temporaryFilePath.GetCStr( ) );
 		return true;

@@ -270,7 +270,7 @@ UserLog::initialize_global_log()
 
 	StatWrapper		statinfo;
 	if (  ( !(statinfo.Stat(m_global_path))   )  &&
-		  ( !(statinfo.GetStatBuf()->st_size) )  ) {
+		  ( !(statinfo.GetBuf()->st_size) )  ) {
 		GenericEvent	event;
 		MyString file_id;
 		GenerateGlobalId( file_id );
@@ -391,7 +391,7 @@ handleGlobalLogRotation()
 	if (!m_global_path) return false;
 
 	StatWrapper	swrap( m_global_path );
-	current_filesize = swrap.GetStatBuf()->st_size;
+	current_filesize = swrap.GetBuf()->st_size;
 
 	int global_max_filesize = param_integer("MAX_EVENT_LOG",1000000);
 	if ( current_filesize > global_max_filesize ) {

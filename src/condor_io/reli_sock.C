@@ -691,13 +691,13 @@ ReliSock::put_file( filesize_t *size, int fd )
 
 
 	StatWrapper	filestat( fd );
-	if ( filestat.GetStatus() ) {
+	if ( filestat.GetRc() ) {
 		int		staterr = filestat.GetErrno( );
 		dprintf(D_ALWAYS, "ReliSock: put_file: StatBuf failed: %d %s\n",
 				staterr, strerror( staterr ) );
 		return -1;
 	}
-	filesize = filestat.GetStatBuf( )->st_size;
+	filesize = filestat.GetBuf( )->st_size;
 	dprintf( D_FULLDEBUG, "put_file: Found file size %lld\n", filesize );
 
 	// Send the file size to the reciever
