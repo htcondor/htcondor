@@ -1285,7 +1285,6 @@ parse_splice(
 	const char *example = "SPLICE SpliceName SpliceFileName";
 	Dag *splice_dag = NULL;
 	MyString spliceName, spliceFile;
-	Dag *tmp = NULL;
 
 	//
 	// Next token is the splice name
@@ -1476,14 +1475,11 @@ static MyString munge_job_name(const char *jobName)
 		// Munge the node name if necessary.
 		//
 	MyString newName;
-	MyString foo;
-
-	foo = /* current_splice_scope() + */ jobName;
 
 	if ( _mungeNames ) {
-		newName = MyString(_thisDagNum) + "." + foo;
+		newName = MyString(_thisDagNum) + "." + jobName;
 	} else {
-		newName = foo;
+		newName = jobName;
 	}
 
 	return newName;
@@ -1501,8 +1497,8 @@ static MyString current_splice_scope(void)
 		// While a natural choice might have been : as a splice scoping
 		// separator, this character was chosen because it is a valid character
 		// on all the file systems we use (whereas : can't be a file system
-		// character on macosx or windows). It, and really any other choice,
-		// isn't the best one. Sorry.
+		// character on windows). The plus, and really anything other than :,
+		// isn't the best choice. Sorry.
 		scope += tmp + "+";
 	}
 
