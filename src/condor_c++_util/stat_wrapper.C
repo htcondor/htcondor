@@ -50,7 +50,7 @@ extern "C" {
 #  define LSTAT_FUNC lstat64
    const char *LSTAT_NAME = "lstat64";
 #  define HAVE_AN_LSTAT
-#elif defined(HAVE__STATI64)
+#elif defined(HAVE__LSTATI64)
 #  define LSTAT_FUNC _lstati64
    const char *LSTAT_NAME = "_lstati64";
 #  define HAVE_AN_LSTAT
