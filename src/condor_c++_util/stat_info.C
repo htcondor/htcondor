@@ -234,7 +234,7 @@ StatInfo::init( StatWrapper *statbuf )
 	{
 		// the do_stat succeeded
 		const StatStructType *sb =
-			statbuf->GetBuf( StatWrapper::STATOP_STAT );
+			statbuf->GetBuf( StatWrapper::STATOP_LAST );
 		const StatStructType *lsb =
 			statbuf->GetBuf( StatWrapper::STATOP_LSTAT );
 
