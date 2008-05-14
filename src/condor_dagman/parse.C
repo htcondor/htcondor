@@ -1366,10 +1366,12 @@ parse_splice(
 	spliceName = munge_job_name(spliceName.Value());
 
 	// XXX I'm not sure this goes here quite yet....
+	debug_printf(DEBUG_QUIET, "Splice scope is: %s\n", 
+		current_splice_scope().Value());
 	splice_dag->PrefixAllNodeNames(MyString(current_splice_scope()));
 
 	// Print out a useful piece of debugging...
-	// splice_dag->PrintJobList();
+	splice_dag->PrintJobList();
 
 	// associate the splice_dag with its name in _this_ dag, later I'll merge
 	// the nodes from this splice into _this_ dag.
@@ -1380,8 +1382,10 @@ parse_splice(
 		return false;
 	}
 
-	// For now, we only keep track of the splice level just below this dag.
+	// For now, we only keep track of the splice levels just below this dag.
 	dag->LiftChildSplices();
+
+	debug_printf(DEBUG_QUIET, "Done parsing splice %s\n", spliceName.Value());
 
 	// pop the just pushed value off of the end of the ext array
 	free(_spliceScope[_spliceScope.getlast()]);

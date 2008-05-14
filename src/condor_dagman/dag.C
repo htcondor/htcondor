@@ -2550,6 +2550,8 @@ Dag::ChooseDotFileName(MyString &dot_file_name)
 //---------------------------------------------------------------------------
 bool Dag::Add( Job& job )
 {
+	debug_printf(DEBUG_QUIET, "Dag::Add() Creating name view for node %s\n", 
+		job.GetJobName());
 	int insertResult = _nodeNameHash.insert( job.GetJobName(), &job );
 	ASSERT( insertResult == 0 );
 
@@ -3161,30 +3163,40 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 {
     Job *job = NULL;
 	MyString key;
-	MyString prekey;
+
+	debug_printf(DEBUG_QUIET, "Entering: Dag::PrefixAllNodeNames()\n");
 
     _jobs.Rewind();
-
     while( (job = _jobs.Next()) ) {
       ASSERT( job != NULL );
 	  job->PrefixName(prefix);
     }
 
+	// Here we must reindex the hash view with the prefixed name.
 	// also fix my node name hash view of the jobs
 
+	// First, wipe out the index.
 	_nodeNameHash.startIterations();
 	while(_nodeNameHash.iterate(key,job)) {
 		_nodeNameHash.remove(key);
-		prekey = prefix + key;
-		// if by some unlucky chance a prefixed name already exists in the
-		// name hash, bail for now...
-		if (_nodeNameHash.insert(prekey, job) != 0) {
-			debug_error(1, DEBUG_QUIET, 
-				"Error: While prefixing nodename '%s', I discovered "
-				"that '%s' was already a pre-existing nodename\n", 
-				key.Value(), prekey.Value());
-		}
 	}
+
+	// Then, reindex all the jobs keyed by their new name
+    _jobs.Rewind();
+    while( (job = _jobs.Next()) ) {
+      ASSERT( job != NULL );
+	  key = job->GetJobName();
+		if (_nodeNameHash.insert(key, job) != 0) {
+			// I'm reinserting everything newly, so this should never happen
+			// unless two jobs have an identical name, which means another
+			// part o the code failed to keep the constraint that all jobs have
+			// unique names
+			debug_error(1, DEBUG_QUIET, 
+				"Dag::PrefixAllNodeNames(): This is an impossible error\n");
+		}
+    }
+
+	debug_printf(DEBUG_QUIET, "Leaving: Dag::PrefixAllNodeNames()\n");
 }
 
 
@@ -3254,8 +3266,6 @@ Dag::RelinquishNodeOwnership(void)
 {
 	Job *job = NULL;
 	MyString key;
-	JobID_t key_id;
-	int key_int;
 
 	ExtArray<Job*> *nodes = new ExtArray<Job*>();
 
@@ -3293,7 +3303,11 @@ Dag::LiftSplices(SpliceLayer layer)
 		// this function moves what it needs out of the returned object
 		AssumeOwnershipofNodes(om);
 		delete om;
+	}
 
+	// Now delete all of them.
+	_splices.startIterations();
+	while(_splices.iterate(key, splice)) {
 		_splices.remove(key);
 		delete splice;
 	}
@@ -3309,13 +3323,13 @@ Dag::LiftChildSplices(void)
 	MyString key;
 	Dag *splice = NULL;
 
-	debug_printf(DEBUG_QUIET, "Lifting child splices\n");
+	debug_printf(DEBUG_QUIET, "Lifting child splices...\n");
 	_splices.startIterations();
 	while( _splices.iterate(key, splice) ) {
 		debug_printf(DEBUG_QUIET, "Lifting child splice: %s\n", key.Value());
 		splice->LiftSplices(SELF);
 	}
-	debug_printf(DEBUG_QUIET, "Done lifting child splices\n");
+	debug_printf(DEBUG_QUIET, "Done lifting child splices.\n");
 }
 
 
@@ -3331,7 +3345,6 @@ Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
 	int i;
 	MyString key;
 	JobID_t key_id;
-	int key_int;
 
 	ExtArray<Job*> *nodes = om->nodes;
 
@@ -3357,10 +3370,26 @@ Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
 	// 2. Update our name hash to include the new nodes.
 	for (i = 0; i < nodes->length(); i++) {
 		key = (*nodes)[i]->GetJobName();
+
+		debug_printf(DEBUG_QUIET, "Creating view hash fixup for: job %s\n", 
+			key.Value());
+
 		if (_nodeNameHash.insert(key, (*nodes)[i]) != 0) {
-			debug_error(1, DEBUG_QUIET, 
+			debug_printf(DEBUG_QUIET, 
 				"Found name collision while taking ownership of node: %s\n",
 				key.Value());
+			debug_printf(DEBUG_QUIET, "Trying to insert key %s, node:\n",
+				key.Value());
+			(*nodes)[i]->Dump();
+			debug_printf(DEBUG_QUIET, "but it collided with key %s, node:\n", 
+				key.Value());
+			if (_nodeNameHash.lookup(key, job) == 0) {
+				job->Dump();
+			} else {
+				debug_error(1, DEBUG_QUIET, "What? This is impossible!\n");
+			}
+
+			debug_error(1, DEBUG_QUIET, "Aborting.\n");
 		}
 	}
 
