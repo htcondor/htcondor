@@ -26,6 +26,7 @@
 #include "read_multiple_logs.h"
 #include "prioritysimplelist.h"
 #include "binary_search.h"
+#include "extArray.h"
 
 template class List<Job>;
 template class List<MyString>;
@@ -44,3 +45,5 @@ CHECK_EVENTS_HASH_INSTANCE;
 template class HashTable<MyString, Job *>;
 template class HashTable<JobID_t, Job *>;
 template class HashTable<MyString, ThrottleByCategory::ThrottleInfo *>;
+template class HashTable<MyString, Dag*>;
+template class ExtArray<Job*>;

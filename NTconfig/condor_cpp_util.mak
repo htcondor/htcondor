@@ -27,10 +27,10 @@ NULL=nul
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-OUTDIR=..\Debug
-INTDIR=..\Debug
+OUTDIR=.\..\Debug
+INTDIR=.\..\Debug
 # Begin Custom Macros
-OutDir=..\Debug
+OutDir=.\..\Debug
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -153,7 +153,9 @@ CLEAN :
 	-@erase "$(INTDIR)\setenv.obj"
 	-@erase "$(INTDIR)\sig_name.obj"
 	-@erase "$(INTDIR)\sqlquery.obj"
+	-@erase "$(INTDIR)\stat_info.obj"
 	-@erase "$(INTDIR)\stat_wrapper.obj"
+	-@erase "$(INTDIR)\stat_wrapper_internal.obj"
 	-@erase "$(INTDIR)\status_string.obj"
 	-@erase "$(INTDIR)\store_cred.obj"
 	-@erase "$(INTDIR)\string_list.obj"
@@ -322,6 +324,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\ntsysinfo.obj" \
 	"$(INTDIR)\perm.obj" \
 	"$(INTDIR)\pgsqldatabase.obj" \
+	"$(INTDIR)\power_hibernation_manager.obj" \
 	"$(INTDIR)\power_hibernator.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\proc_family_direct.obj" \
@@ -357,7 +360,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\power_hibernation_manager.obj"
+	"$(INTDIR)\stat_wrapper_internal.obj" \
+	"$(INTDIR)\stat_info.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -366,10 +370,10 @@ LIB32_OBJS= \
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-OUTDIR=..\Release
-INTDIR=..\Release
+OUTDIR=.\..\Release
+INTDIR=.\..\Release
 # Begin Custom Macros
-OutDir=..\Release
+OutDir=.\..\Release
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -492,7 +496,9 @@ CLEAN :
 	-@erase "$(INTDIR)\setenv.obj"
 	-@erase "$(INTDIR)\sig_name.obj"
 	-@erase "$(INTDIR)\sqlquery.obj"
+	-@erase "$(INTDIR)\stat_info.obj"
 	-@erase "$(INTDIR)\stat_wrapper.obj"
+	-@erase "$(INTDIR)\stat_wrapper_internal.obj"
 	-@erase "$(INTDIR)\status_string.obj"
 	-@erase "$(INTDIR)\store_cred.obj"
 	-@erase "$(INTDIR)\string_list.obj"
@@ -660,6 +666,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\ntsysinfo.obj" \
 	"$(INTDIR)\perm.obj" \
 	"$(INTDIR)\pgsqldatabase.obj" \
+	"$(INTDIR)\power_hibernation_manager.obj" \
 	"$(INTDIR)\power_hibernator.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\proc_family_direct.obj" \
@@ -695,7 +702,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\power_hibernation_manager.obj"
+	"$(INTDIR)\stat_wrapper_internal.obj" \
+	"$(INTDIR)\stat_info.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -1489,9 +1497,21 @@ SOURCE="..\src\condor_c++_util\sqlquery.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE="..\src\condor_c++_util\stat_info.C"
+
+"$(INTDIR)\stat_info.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE="..\src\condor_c++_util\stat_wrapper.C"
 
 "$(INTDIR)\stat_wrapper.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\stat_wrapper_internal.C"
+
+"$(INTDIR)\stat_wrapper_internal.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
