@@ -84,6 +84,10 @@ scheduling.
   a low power state. See page~\pageref{param:Hibernate} for more 
   information.
 
+\item \Macro{VALID\_SPOOL\_FILES} now automatically includes "SCHEDD.lock",
+the lock file used for high availability \Condor{schedd} fail over.  Other
+high availability lock files are not currently included.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
