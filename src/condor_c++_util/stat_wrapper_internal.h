@@ -74,6 +74,9 @@ public:
 	StatWrapperIntPath( const StatWrapperIntPath &other );
 	~StatWrapperIntPath( void );
 
+	// Type of the stat function
+	typedef int ( * StatFnPtr ) ( const char *, StatStructType * );
+	
 	// Copy another object
 	void Copy( const StatWrapperIntPath & );
 
@@ -84,13 +87,11 @@ public:
 	int Stat( bool force );
 
 	// Accessors
-	int (* GetFn( void ) const) (const char *, StatStructType *) const
-		{ return m_fn; };
-	const char *GetPath( void ) const
-		{ return m_path; };
+	const StatFnPtr  GetFn  ( void ) const { return m_fn; };
+	const char      *GetPath( void ) const { return m_path; };
 
 private:
-	int (* const m_fn) ( const char *, StatStructType *);
+	StatFnPtr	m_fn;
 	const char *m_path;
 
 };
@@ -104,6 +105,9 @@ public:
 	StatWrapperIntFd( const StatWrapperIntFd &other );
 	~StatWrapperIntFd( void );
 
+	// Type of the stat function
+	typedef int ( * StatFnPtr ) ( int, StatStructType * );
+
 	// Copy another object
 	void Copy( const StatWrapperIntFd & );
 
@@ -114,14 +118,12 @@ public:
 	int Stat( bool force );
 
 	// Accessors
-	int (* GetFn( void ) const) (int, StatStructType *) const
-		{ return m_fn; };
-	int GetFd( void ) const
-		{ return m_fd; };
+	const StatFnPtr GetFn( void ) const { return m_fn; };
+	int             GetFd( void ) const { return m_fd; };
 
 private:
-	int (* const m_fn) ( int, StatStructType *);
-	int m_fd;
+	StatFnPtr	m_fn;
+	int			m_fd;
 };
 
 // StatWrapper internal -- NOP Version
@@ -133,6 +135,9 @@ public:
 	StatWrapperIntNop( const StatWrapperIntNop &other );
 	~StatWrapperIntNop( void );
 
+	// Type of the stat function
+	typedef int ( * StatFnPtr ) ( int, StatStructType * );
+
 	// Copy another object
 	void Copy( const StatWrapperIntNop & );
 
@@ -140,11 +145,10 @@ public:
 	int Stat( bool force );
 
 	// Accessors
-	int (* GetFn( void ) const) (int, StatStructType *) const
-		{ return m_fn; };
+	const StatFnPtr GetFn( void ) const { return m_fn; };
 
 private:
-	int (* const m_fn) ( int, StatStructType *);
+	StatFnPtr	m_fn;
 };
 
 
