@@ -625,6 +625,13 @@ Job::NumParents() const
 	return n;
 }
 
+int
+Job::NumChildren() const
+{
+	int n = _queues[Q_CHILDREN].Number();
+	return n;
+}
+
 void
 Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 {
@@ -643,3 +650,34 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 		_throttleInfo = catThrottles.AddCategory( &tmpName );
 	}
 }
+
+
+void
+Job::PrefixName(const MyString &prefix)
+{
+	MyString tmp = _jobName;
+
+	tmp = prefix + tmp;
+
+	delete[] (char*)_jobName;
+
+	_jobName = strnewp(tmp.Value());
+}
+
+
+// iterate across the Job's var values, and for any which have $(JOB) in them, 
+// substitute it. This substitution is draconian and will always happen.
+void
+Job::ResolveVarsInterpolations(void)
+{
+	MyString *val;
+
+	varValsFromDag->Rewind();
+	while( val = varValsFromDag->Next() ) {
+		// XXX No way to escape $(JOB) in case, for some crazy reason, you
+		// want a filename component actually to be '$(JOB)'.
+		// It isn't hard to fix, I'll do it later.
+		val->replaceString("$(JOB)", GetJobName());
+	}
+}
+
