@@ -77,10 +77,55 @@ $sql = "SELECT description,
        (!empty($user) ? " AND user = '$user'" : "").
        " ORDER BY runid DESC ".
        " LIMIT $rows";
-//die($sql);
+
+// This time through the runids gather ALL Platforms ever used during the period
 $results = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
 
+$platforms = Array();
+
+while ($runidrow = mysql_fetch_array($results)) {
+  	$runid      = $runidrow["runid"];
+	// for each runid find all platforms but only insert
+	// them into the platforms array if not there yet
+
+   //
+   // Platforms
+   //
+   // Save original platforms we actually built on
+   $sql_pls = "SELECT DISTINCT(platform) AS platform ".
+          "  FROM Run, Task ".
+          " WHERE Task.runid = $runid ".
+          "   AND Task.runid = Run.runid ".
+          "   AND Run.user = '$user' ".
+          "   AND Task.platform != 'local' ".
+          " ORDER BY (IF (platform='local', 'zzz', platform))";
+   $platform_results = mysql_query($sql_pls) or die ("Query $sql_pls failed : " . mysql_error());
+	while ($row = mysql_fetch_array($platform_results)) {
+		if( array_key_exists($row["platform"],$platforms)) {
+      	//$tmpp = $row["platform"];
+			//echo "<H4>skip $tmpp</H4>";
+		} else {
+		//if( isset($platforms[$row["platform"]] == false)) {
+      	$tmpp = $platforms[$row["platform"]] = $row["platform"];
+			//echo "<H4>adding $tmpp</H4>";
+		}
+   }
+   mysql_free_result($platform_results);
+   
+}
+mysql_free_result($results);
+
+// This time through the runids show results
+$results = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
+
+// Ideally start table now
+// reproduce platform row every 10-15 rows
+// make missed test runs a <tr><td>Missed tests x/y/z</td></tr>
+// end table when all done
+
 // For every runid of a build
+$rowcount = 0;
+echo "<table border=\"0\" cellspacing=\"0\" >\n";
 while ($runidrow = mysql_fetch_array($results)) {
   	$runid      = $runidrow["runid"];
   	$desc       = $runidrow["description"];
@@ -107,21 +152,7 @@ while ($runidrow = mysql_fetch_array($results)) {
    //
    // Platforms
    //
-   // Save original platforms we actually built on
-   $sql = "SELECT DISTINCT(platform) AS platform ".
-          "  FROM Run, Task ".
-          " WHERE Task.runid = $runid ".
-          "   AND Task.runid = Run.runid ".
-          "   AND Run.user = '$user' ".
-          "   AND Task.platform != 'local' ".
-          " ORDER BY (IF (platform='local', 'zzz', platform))";
-   $result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
-   $platforms = Array();
-   while ($row = mysql_fetch_array($result)) {
-      $tmpp = $platforms[] = $row["platform"];
-		//echo "<H3>$tmpp</H3>";
-   }
-   mysql_free_result($result);
+   // Saved in the very beginning 
    
    $testrunids = Array();
    //
@@ -204,24 +235,26 @@ while ($runidrow = mysql_fetch_array($results)) {
 
 <?php
 	if( sizeof($data) == 0 ) {
-		echo "<h4>No Tests on ".date("m/d/Y", $start)."</h4>\n";
+		echo "<tr><td>No Tests on ".date("m/d/Y", $start)."</td></tr>\n";
 	} 
    foreach ($data AS $task => $arr) {
 		// we are focusing on a single test history, skip the rest
 		$diff = strcmp($task,$test);
 		if($diff ==  0) {
-			echo "<table border=\"0\" cellspacing=\"0\" >\n";
-			echo "<tr>\n";
-			echo "<td>&nbsp</td>\n";
-   		foreach ($platforms AS $platform) {
+			if(($rowcount % 10) == 0) {
+				//echo "<table border=\"0\" cellspacing=\"0\" >\n";
+				echo "<tr>\n";
+				echo "<td>&nbsp</td>\n";
+   			foreach ($platforms AS $platform) {
       				$display = $platform;
       				$idx = strpos($display, "_");
       				$display[$idx] = " ";
 						$filepath = "";
   		 
-      				echo "<td align=\"center\">$display</td>\n";
-   		} // FOREACH 
-      	echo "</tr>\n";
+      				echo "<td>$display</td>\n";
+   			} // FOREACH 
+      		echo "</tr>\n";
+			}
       	echo "<tr>\n".
 				"<td>".
  			//"<td ".($task_status[$task] != PLATFORM_PASSED ? 
@@ -243,12 +276,14 @@ while ($runidrow = mysql_fetch_array($results)) {
 					}
          	}
       	}
+			$rowcount++;
       	echo "</td>\n";
-   		echo "</table>";
+   		//echo "</table>";
 		} 
    } // FOREACH
 
 }
+echo "</table>";
    function limitSize($str, $cnt) {
       if (strlen($str) > $cnt) {
          $str = substr($str, 0, $cnt - 3)."...";
