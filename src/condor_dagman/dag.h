@@ -28,6 +28,7 @@
 #include "user_log.c++.h"          /* from condor_c++_util/ directory */
 #include "condor_constants.h"      /* from condor_includes/ directory */
 #include "HashTable.h"
+#include "extArray.h"
 #include "condor_daemon_core.h"
 #include "read_multiple_logs.h"
 #include "check_events.h"
@@ -41,7 +42,35 @@ enum Log_source{
   DAPLOG
 };
 
+// Which layer of splices do we want to lift?
+enum SpliceLayer {
+	SELF,
+	DESCENDENTS,
+};
+
 class Dagman;
+class MyString;
+
+// used for RelinquishNodeOwnership and AssumeOwnershipofNodes
+// This class owns the containers with which it was constructed, but
+// not the memory in those containers. Even though there is one thing
+// in here, the design of the overall codebase say that eventually more
+// things will probably end up in this class when lifting a splice into
+// a container dag.
+class OwnedMaterials
+{
+	public:
+		// this structure owns the containers passed to it, but not the memory 
+		// contained in the containers...
+		OwnedMaterials(ExtArray<Job*> *a) :
+				nodes (a) {};
+		~OwnedMaterials() 
+		{
+			delete nodes;
+		};
+
+	ExtArray<Job*> *nodes;
+};
 
 //------------------------------------------------------------------------
 /** A Dag instance stores information about a job dependency graph,
@@ -243,6 +272,11 @@ class Dag {
         @return true if the node exists, false otherwise
     */
     bool NodeExists( const char *nodeName ) const;
+
+	/** Prefix all of the nodenames with a specified label.
+		@param prefix a MyString of the prefix for all nodes.
+	*/
+	void PrefixAllNodeNames(const MyString &prefix);
 
     /** Set the event checking level.
 		@param allowEvents what "bad" events to treat as non-fatal (as
@@ -466,11 +500,102 @@ class Dag {
 		// Node category throttle information for the DAG.
 	ThrottleByCategory		_catThrottles;
 
+	int MaxJobsSubmitted(void) { return _maxJobsSubmitted; }
+
+	// do not free this pointer
+	const char* DapLogName(void) { return _dapLogName; }
+
+	bool AllowLogError(void) { return _allowLogError; }
+
+	bool UseDagDir(void) { return _useDagDir; }
+
+	int MaxIdleJobProcs(void) { return _maxIdleJobProcs; }
+	int MaxPreScripts(void) { return _maxPreScripts; }
+	int MaxPostScripts(void) { return _maxPostScripts; }
+
+	bool RetrySubmitFirst(void) { return m_retrySubmitFirst; }
+
+	bool RetryNodeFirst(void) { return m_retryNodeFirst; }
+
+	// do not free this pointer
+	const char* CondorRmExe(void) { return _condorRmExe; }
+
+	// do not free this pointer
+	const char* StorkRmExe(void) { return _storkRmExe; }
+
+	const CondorID* DAGManJobId(void) { return _DAGManJobId; }
+
+	bool SubmitDepthFirst(void) { return _submitDepthFirst; }
+
+	StringList& DagFiles(void) { return _dagFiles; }
+
+	// do not free this pointer
+	const char* CondorLogName(void) {return _condorLogName; }
+
 		// The absolute maximum allowed rescue DAG number (the real maximum
 		// is normally configured lower).
 	static const int ABS_MAX_RESCUE_DAG_NUM;
 
+	// return same thing as HashTable.insert()
+	int InsertSplice(MyString spliceName, Dag *splice_dag);
+
+	// return same thing as HashTable.lookup()
+	int LookupSplice(MyString name, Dag *&splice_dag);
+
+	// return an array of job pointers to all of the nodes with no
+	// parents in this dag.
+	// These pointers are aliased and should not be freed.
+	// However the array itself is allocated and must be freed.
+	ExtArray<Job*>* InitialRecordedNodes(void);
+
+	// return an array of job pointers to all of the nodes with no
+	// children in this dag.
+	// These pointers are aliased and should not be freed.
+	// However the array itself is allocated and must be freed.
+	ExtArray<Job*>* FinalRecordedNodes(void);
+
+	// called just after a parse of a dag, this will keep track of the
+	// original intial and final nodes of a dag (after all parent and
+	// child dependencies have been added or course).
+	void RecordInitialAndFinalNodes(void);
+
+	// Recursively lift all splices into each other and then me
+	OwnedMaterials* LiftSplices(SpliceLayer layer);
+
+	// recursively lift only the cild splices.
+	void LiftChildSplices(void);
+
+	// The dag will give back an array of all nodes and delete those nodes
+	// from its internal lists. This is used when a splice is being
+	// lifted into the containing dag.
+	OwnedMaterials* RelinquishNodeOwnership(void);
+
+	// Take an array from RelinquishNodeOwnership) and store it in my self.
+	void AssumeOwnershipofNodes(OwnedMaterials *om);
+
+	// This must be called after the toplevel dag has been parsed and
+	// the splices lifted. It will resolve the use of $(JOB) in the value
+	// of the VARS attribute.
+	void ResolveVarsInterpolations(void);
+
   protected:
+
+	// move the nodes from the splice into the parent
+	void LiftSplice(Dag *parent, Dag *splice);
+
+    // Just after we parse a splice dag file, we record what the initial
+	// and final nodes were for the dag. This is so when we are using this
+	// dag as a parent or a child, we can always reference the correct nodes
+	// even in the face of AddDependency().
+	ExtArray<Job*> _splice_initial_nodes;
+	ExtArray<Job*> _splice_final_nodes;
+
+  	// A hash table with key of a splice name and value of the dag parse 
+	// associated with the splice.
+	HashTable<MyString, Dag*> _splices;
+
+	// A reference to something the dagman passes into the constructor
+  	StringList& _dagFiles;
 
 	/** Print a numbered list of the DAG files.
 	    @param The list of DAG files being run.
@@ -588,6 +713,9 @@ class Dag {
 			@return a pointer to the appropriate hash table
 		*/
 	const HashTable<int, Job *> *		GetEventIDHash(int jobType) const;
+
+	// run DAGs in directories from DAG file paths if true
+	bool _useDagDir;
 
 		// The log file name specified by the -Condorlog command line
 		// argument (not used for much anymore).

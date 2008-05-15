@@ -225,14 +225,19 @@
       echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display</td>\n";
    } // FOREACH 
    foreach ($data AS $task => $arr) {
-		$history_url = sprintf(HISTORY_URL,$branch,rawurlencode($task));
-		$history_disp = "<a href=\"$history_url\">".limitSize($task, 30)."</a>";
-      echo "<tr>\n".
+   	if ($type == 'test') {
+			$history_url = sprintf(HISTORY_URL,$branch,rawurlencode($task));
+			$history_disp = "<a href=\"$history_url\">".limitSize($task, 30)."</a>";
+      	echo "<tr>\n".
            "<td ".($task_status[$task] != PLATFORM_PASSED ? 
                   "class=\"".$task_status[$task]."\"" : "").">".
-                  //"<span title=\"$task\">".limitSize($task, 30)."</span></td>\n";
                   "<span title=\"$task\">$history_disp</span></td>\n";
-      
+		} else {
+      	echo "<tr>\n".
+           "<td ".($task_status[$task] != PLATFORM_PASSED ? 
+                  "class=\"".$task_status[$task]."\"" : "").">".
+                  "<span title=\"$task\">".limitSize($task, 30)."</span></td>\n";
+		}
       foreach ($platforms AS $platform) {
          $result = $arr[$platform];
          if ($result == PLATFORM_PENDING) {

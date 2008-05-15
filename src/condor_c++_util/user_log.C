@@ -17,9 +17,6 @@
  *
  ***************************************************************/
 
-
- 
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include <stdarg.h>
@@ -80,7 +77,6 @@ UserLog::Reset( void )
 	cluster = -1;
 	proc = -1;
 	subproc = -1;
-	in_block = FALSE; 
 
 	m_write_user_log = true;
 	m_path = NULL;
@@ -274,7 +270,7 @@ UserLog::initialize_global_log()
 
 	StatWrapper		statinfo;
 	if (  ( !(statinfo.Stat(m_global_path))   )  &&
-		  ( !(statinfo.GetStatBuf()->st_size) )  ) {
+		  ( !(statinfo.GetBuf()->st_size) )  ) {
 		GenericEvent	event;
 		MyString file_id;
 		GenerateGlobalId( file_id );
@@ -305,7 +301,6 @@ UserLog::initialize( const char *file, int c, int p, int s, const char *gjid)
 		// Save parameter info
 	m_path = new char[ strlen(file) + 1 ];
 	strcpy( m_path, file );
-	in_block = FALSE;
 
 	if( m_fp ) {
 		if( fclose( m_fp ) != 0 ) {
@@ -332,7 +327,7 @@ UserLog::initialize( const char *owner, const char *domain, const char *file,
 	uninit_user_ids();
 	if (!  init_user_ids(owner, domain) ) {
 		dprintf(D_ALWAYS, "init_user_ids() failed!\n");
-		return FALSE;
+		return false;
 	}
 
 		// switch to user priv, saving the current user
@@ -382,18 +377,6 @@ UserLog::~UserLog()
 	if (m_global_uniq_base != NULL) free( m_global_uniq_base );
 }
 
-#if 0 /* deprecated cruft */
-void
-UserLog::display()
-{
-	dprintf( D_ALWAYS, "Path = \"%s\"\n", m_path );
-	dprintf( D_ALWAYS, "Job = %d.%d.%d\n", proc, cluster, subproc );
-	dprintf( D_ALWAYS, "fp = %p\n", m_fp );
-	lock->display();
-	dprintf( D_ALWAYS, "in_block = %s\n", in_block ? "TRUE" : "FALSE" );
-}
-#endif
-
 	// This method is called from doWriteEvent() - we expect the file to
 	// be locked, seeked to the end of the file, and in condor priv state.
 	// return true if log was rotated, either by us or someone else.
@@ -408,7 +391,7 @@ handleGlobalLogRotation()
 	if (!m_global_path) return false;
 
 	StatWrapper	swrap( m_global_path );
-	current_filesize = swrap.GetStatBuf()->st_size;
+	current_filesize = swrap.GetBuf()->st_size;
 
 	int global_max_filesize = param_integer("MAX_EVENT_LOG",1000000);
 	if ( current_filesize > global_max_filesize ) {
@@ -518,8 +501,8 @@ UserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 			success = false;
 		} else {
 			ClassAdXMLUnparser xmlunp;
-			xmlunp.SetUseCompactSpacing(FALSE);
-			xmlunp.SetOutputTargetType(FALSE);
+			xmlunp.SetUseCompactSpacing(false);
+			xmlunp.SetOutputTargetType(false);
 			xmlunp.Unparse(eventAd, adXML);
 			if (fprintf ( fp, adXML.GetCStr()) < 0) {
 				success = false;
@@ -546,24 +529,24 @@ UserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 
 
 
-// Return FALSE(0) on error, TRUE(1) on goodness
-int
+// Return false on error, true on goodness
+bool
 UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 {
 	// the the log is not initialized, don't bother --- just return OK
 	if (!m_fp && !m_global_fp) {
-		return TRUE;
+		return true;
 	}
 	
 	// make certain some parameters we will need are initialized
 	if (!event) {
-		return FALSE;
+		return false;
 	}
 	if (m_fp) {
-		if (!m_lock) return FALSE;
+		if (!m_lock) return false;
 	}
 	if (m_global_fp) {
-		if (!m_global_lock) return FALSE;
+		if (!m_global_lock) return false;
 	}
 
 	// fill in event context
@@ -576,7 +559,7 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	if ( m_write_global_log && m_global_fp && 
 		 doWriteEvent(event, true, param_jobad ) == false ) 
 	{
-		return FALSE;
+		return false;
 	}
 
 	char *attrsToWrite = param("EVENT_LOG_JOB_AD_INFORMATION_ATTRS");
@@ -639,143 +622,11 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	// write ulog event
 	if ( m_write_user_log && m_fp && doWriteEvent(event, false, param_jobad)
 		 == false ) {
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
-
-#if 0 /* deprecated cruft */	
-void
-UserLog::put( const char *fmt, ... )
-{
-	va_list		ap;
-	va_start( ap, fmt );
-
-	if( !m_fp ) {
-		return;
-	}
-
-	if( !in_block ) {
-		lock->obtain( WRITE_LOCK );
-		fseek( m_fp, 0, SEEK_END );
-	}
-
-	output_header();
-	vfprintf( m_fp, fmt, ap );
-
-	if( !in_block ) {
-		lock->release();
-	}
-}
-
-void
-UserLog::begin_block()
-{
-	struct tm	*tm;
-	time_t		clock;
-
-	if( !m_fp ) {
-		return;
-	}
-
-	lock->obtain( WRITE_LOCK );
-	fseek( m_fp, 0, SEEK_END );
-
-	(void)time(  (time_t *)&clock );
-	tm = localtime( (time_t *)&clock );
-	fprintf( m_fp, "(%d.%d.%d) %d/%d %02d:%02d:%02d\n",
-		cluster, proc, subproc,
-		tm->tm_mon + 1, tm->tm_mday,
-		tm->tm_hour, tm->tm_min, tm->tm_sec
-	);
-	in_block = TRUE;
-}
-
-void
-UserLog::end_block()
-{
-	if( !m_fp ) {
-		return;
-	}
-
-	in_block = FALSE;
-	lock->release();
-}
-
-void
-UserLog::output_header()
-{
-	struct tm	*tm;
-	time_t		clock;
-
-	if( !m_fp ) {
-		return;
-	}
-
-	if( in_block ) {
-		fprintf( m_fp, "(%d.%d.%d) ", cluster, proc, subproc );
-	} else {
-		(void)time(  (time_t *)&clock );
-		tm = localtime( (time_t *)&clock );
-		fprintf( m_fp, "(%d.%d.%d) %d/%d %02d:%02d:%02d ",
-			cluster, proc, subproc,
-			tm->tm_mon + 1, tm->tm_mday,
-			tm->tm_hour, tm->tm_min, tm->tm_sec
-		);
-	}
-}
-
-extern "C" LP *
-InitUserLog( const char *own, const char *domain, const char *file,
-	   	int c, int p, int s )
-{
-	UserLog	*answer;
-
-	answer = new UserLog( own, domain, file, c, p, s, NULL );
-	return (LP *)answer;
-}
-
-extern "C" void
-CloseUserLog( LP *lp )
-{
-	delete (UserLog*)lp;
-}
-
-extern "C" void
-PutUserLog( LP *lp, const char *fmt, ... )
-{
-	va_list		ap;
-	char	buf[1024];
-
-	if( !lp ) {
-		return;
-	}
-	va_start( ap, fmt );
-	vsprintf( buf, fmt, ap );
-
-	((UserLog *)lp) -> put( buf );
-}
-
-extern "C" void
-BeginUserLogBlock( LP *lp )
-{
-	if( !lp ) {
-		return;
-	}
-	((UserLog *)lp) -> begin_block();
-}
-
-extern "C" void
-EndUserLogBlock( LP *lp )
-{
-	if( !lp ) {
-		return;
-	}
-	((UserLog *)lp) -> end_block();
-}
-
-#endif  /* deprecated cruft */
 
 // Generates a uniq global file ID
 void

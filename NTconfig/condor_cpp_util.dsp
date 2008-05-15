@@ -971,11 +971,27 @@ SOURCE="..\src\condor_c++_util\sqlquery.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\stat_info.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\stat_info.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\stat_wrapper.C"
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\stat_wrapper.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\stat_wrapper_internal.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\stat_wrapper_internal.h"
 # End Source File
 # Begin Source File
 
