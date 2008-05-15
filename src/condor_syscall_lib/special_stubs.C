@@ -32,6 +32,7 @@
 #include "shared_utils.h"
 #include "get_port_range.h"
 #include "condor_netdb.h"
+#include "simplelist.h"
 
 extern	ReliSock* syscall_sock;
 
@@ -233,6 +234,11 @@ GCB_local_bind(int fd, struct sockaddr *my_addr, socklen_t addrlen)
 	return bind(fd, my_addr, addrlen);
 }
 #endif /* HAVE_EXT_GCB */
+
+/* For MyString */
+template class SimpleList<int>; 
+int vprintf_length(const char *format, va_list args) { return 0; }
+
 
 } /* extern "C" */
 
