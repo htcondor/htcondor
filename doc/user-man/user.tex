@@ -1223,17 +1223,6 @@ transfer mechanism is enabled by default with the following values:
   when_to_transfer_output = ON_EXIT
 \end{verbatim}
 
-\Note Prior to Condor version 6.5.2, different attributes were used to
-control when and if files should be transferred.
-Previously, a single attribute was used to control both things, and
-the \verb@IF_NEEDED@ value was not supported.
-This older attribute is still allowed in newer versions of Condor but
-it is now deprecated.
-\SubmitCmd{when\_to\_transfer\_output} and
-\SubmitCmd{should\_transfer\_files} should be used instead.
-However, beware that these settings will not work with Condor versions
-older than 6.5.2. 
-
 
 %%%%%%%%%%%% 
 \subsubsection{Specifying What Files to Transfer}
@@ -1614,9 +1603,6 @@ Here are the default clauses corresponding to the different values of
 the clause \verb@(HasFileTransfer)@.
   If the job is always going to transfer files, it is required to 
   match with a machine that has the capability to transfer files.
-  This is a backward compatibility issue, since all versions
-  of Condor since version 6.3.3 support file transfer and have
-  \Attr{HasFileTransfer} defined to \verb@TRUE@.
 
 \item 
 \verb@should_transfer_files = NO@ results in the addition of
@@ -1683,30 +1669,6 @@ rank = kflops + (10000 * (TARGET.FileSystemDomain == MY.FileSystemDomain))
 \end{verbatim}
 
 %%%%%%%%%%%% 
-\subsubsection{Old Attributes for File Transfer}
-%%%%%%%%%%%%
-
-The \verb@should_transfer_files@ and \verb@when_to_transfer_output@
-commands in the submit description file result in two corresponding string
-attributes in the job ClassAd: \Attr{ShouldTransferFiles} and
-\Attr{WhenToTransferOutput}.
-These attributes are only defined when the job is matched with an
-execute machine running Condor version 6.5.3 or a more recent version.
-So, for backward compatibility, \Condor{submit} also includes the old
-attribute used to control this feature: \Attr{TransferFiles}.
-If you examine a job with the \Opt{-long} option to \Condor{q}, and
-you see \Attr{TransferFiles}, that attribute is only there for
-backward compatibility, and it is ignored if matched with a machine
-running version 6.5.3 or greater.  
-There were problems with this old attribute, since it
-was not flexible enough to handle the new \verb@IF_NEEDED@
-functionality, and it was confusing for users.
-Therefore, \Attr{TransferFiles} is deprecated, and we will no longer
-document its use.
-If your submit file refers to \verb@transfer_files@,
-consider switching it to use the settings described here.
-
-%%%%%%%%%%%% 
 \subsection{Environment Variables}
 %%%%%%%%%%%% 
 
@@ -1757,8 +1719,8 @@ when the job stops running on a machine, no matter how the job completes.
 gives the name of the slot (for SMP machines), on which the job is run.
 On machines with only a single slot, the value of this variable will be
 \verb@1@, just like the \AdAttr{SlotID} attribute in the machine's
-classified ad.
-This setting is available in all universes, and was added in version 6.9.3.
+ClassAd.
+This setting is available in all universes.
 See section~\ref{sec:Configuring-SMP} for more details about SMP
 machines and their configuration.
 
