@@ -493,6 +493,10 @@ enclosed in double quotes.
 To use a double quote inside \Arg{string},
 escape it with the backslash character (\verb@\@).
 To add the backslash character itself, use two backslashes (\verb@\\@).
+The string \$(JOB) maybe used in \Arg{string} and will expand to
+\Arg{JobName}. 
+If the \Opt{VARS} line appears in a DAG file used as a splice file, 
+then \$(JOB) will be the fully scoped name of the node.
 
 Note that macro names cannot begin with the string "queue"
 (in any combination of upper and lower case).
@@ -688,6 +692,22 @@ for this DAG.
 
 For more information about how \Condor{dagman} configuration files work,
 see section~\ref{sec:DAGConfig}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{SPLICE}
+
+\index{DAGMan!SPLICE}
+
+The \Arg{SPLICE} keyword creates a named instance of a DAG as specified
+in another file as an entity which may have \Arg{PARENT} and \Arg{CHILD}
+dependencies associated with other splice names or node names in the
+including DAG file.
+The syntax for \Arg{SPLICE} is
+
+\Opt{SPLICE} \Arg{SpliceName} \Arg{DagFileName}
+
+For detailed information about how splices work, see 
+section~\ref{sec:DAGSplicing}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Submit Description File}
@@ -1183,6 +1203,226 @@ the renaming of nodes may be disabled by
 setting the configuration variable \Macro{DAGMAN\_MUNGE\_NODE\_NAMES}
 to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
 % Karen has edited to this point.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGSplicing}DAG Splicing}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!Splicing DAGs into each other}
+
+Some of the weaknesses of submitting a DAG within a DAG as described
+above are that each executing independent DAG requires an invocation of
+\Condor{dagman} to be running (thereby producing scaling problems when
+the same semantic DAG wants to be reused hundreds or thousands of times
+in a larger DAG) and there could be many rescue DAGs created if a problem
+occurs. To alleviate these concerns, the concept of graph splicing has
+been introduced into the DAGMan language. 
+
+A splice is a named instance of a subgraph which is specified in a
+separate DAG file.  It is treated as a whole entity during dependency
+specification in the including DAG--which may also have been a splice.
+The same DAG file may be reused as differently named splices each one
+producing a copy of the dependency graph (and nodes therein) into the
+including DAG. Different splices in an including DAG may have dependencies
+between their sets of initial and final nodes. If splices are brought
+into an including DAG, but no dependencies are specified with respect
+to the splice, then the spliced DAG brought in will be a disjoint DAG
+with the including DAG.  The nodes in a splice are scoped according to
+the hierarchy of names associated with the splices as they are parsed
+from the top level DAG file.  The scoping character which describes the
+inclusion hierarchy of nodes into the top level dag is ``+''. This is due
+to restriction of allowable characters which may be in a file name across
+the ports Condor supports.  In any DAG file, all splices must have unique
+names, but the same splice name may be reused in different DAG files.
+
+If a splice, through various inclusions, includes itself, a recursion
+will happen. This case will be detected and corrected in a future revision
+of this feature--however, for now it is upon the user of the splicing feature
+to ensure this does not happen.
+
+Next follows a small set of examples which use a single submit file as
+the submit file for the jobs. The simple Condor submit file is:
+
+\begin{verbatim}
+	# BEGIN SUBMIT FILE submit.condor
+	executable   = /bin/echo
+	arguments    = OK
+	universe     = vanilla
+	output       = $(jobname).out
+	error        = $(jobname).err
+	log          = submit.log
+	Notification = NEVER
+	queue
+	# END SUBMIT FILE submit.condor
+\end{verbatim}
+
+This is a very simple example which shows the splicing of a diamond DAG in
+between two nodes in a top level DAG file.
+
+\begin{verbatim}
+	# BEGIN DAG FILE diamond.dag
+	JOB A submit.condor
+	VARS A jobname="$(JOB)"
+
+	JOB B submit.condor
+	VARS B jobname="$(JOB)"
+
+	JOB C submit.condor
+	VARS C jobname="$(JOB)"
+
+	JOB D submit.condor
+	VARS D jobname="$(JOB)"
+
+	PARENT A CHILD B C
+	PARENT B C CHILD D
+	# END DAG FILE diamond.dag
+\end{verbatim}
+
+And now the top level dag which will include the diamond splice:
+
+\begin{verbatim}
+	# BEGIN DAG FILE toplevel.dag
+	JOB A submit.condor
+	VARS A jobname="$(JOB)"
+
+	JOB B submit.condor
+	VARS B jobname="$(JOB)"
+
+	# This is an instance of diamond.dag, given the symbolic name DIAMOND
+	SPLICE DIAMOND diamond.dag
+
+	# Set up a relationship between the nodes in this dag and the splice
+
+	PARENT A CHILD DIAMOND
+	PARENT DIAMOND CHILD B
+
+	# END DAG FILE toplevel.dag
+\end{verbatim}
+
+Figure~\ref{fig:dagman-splice-simple} illustrates the dependencies
+produced. 
+Notice how the nodes of the diamond.dag file have been scoped with the
+splice name used in the toplevel.dag DAG file. 
+No matter how many nodes splices may bring in, they will always have a
+unique name associated with the hierarchy of splice names.
+
+\begin{figure}
+\centering
+\includegraphics{user-man/splice-simple.eps}
+\caption{\label{fig:dagman-splice-simple} The diamond DAG spliced between two nodes.}
+\end{figure}
+
+This next example is a complex splice which displays many of
+the spatial constructs one may perform with this feature.
+Pay particular attention to the notion that each named splice creates a
+new graph--even if the same DAG file is specified.
+
+File s2.dag.
+
+\begin{verbatim}
+	# BEGIN DAG FILE s2.dag
+
+	JOB A submit.condor
+	VARS A jobname="$(JOB)"
+
+	JOB B submit.condor
+	VARS B jobname="$(JOB)"
+
+	JOB C submit.condor
+	VARS C jobname="$(JOB)"
+
+	JOB D submit.condor
+	VARS D jobname="$(JOB)"
+
+	JOB E submit.condor
+	VARS E jobname="$(JOB)"
+
+	JOB F submit.condor
+	VARS F jobname="$(JOB)"
+
+	JOB G submit.condor
+	VARS G jobname="$(JOB)"
+
+	# Make a "X" style dependency graph
+	PARENT A B C CHILD D
+	PARENT D CHILD E F G
+
+	# END DAG FILE s2.dag
+\end{verbatim}
+
+File s1.dag.
+
+\begin{verbatim}
+	# BEGIN DAG FILE s1.dag
+
+	JOB A submit.condor
+	VARS A jobname="$(JOB)"
+
+	JOB B submit.condor
+	VARS B jobname="$(JOB)"
+
+	# define three individual splices which all use the DAG structure defined
+	# in s2.dag
+	SPLICE S1 s2.dag
+	SPLICE S2 s2.dag
+	SPLICE S3 s2.dag
+
+	# Create dependencies between the splices
+	# A must complete before the initial nodes in S1 can start
+	PARENT A CHILD S1
+	# All final nodes in S1 must finish before the initial nodes in S2 can begin
+	PARENT S1 CHILD S2
+	# All final nodes in S2 must finish before the initial nodes in S3 can begin
+	PARENT S2 CHILD S3
+	# All final nodes in S3 must finish before B may begin.
+	PARENT S3 CHILD B
+
+	# END DAG FILE s1.dag
+
+\end{verbatim}
+
+File toplevel.dag.
+
+\begin{verbatim}
+	# BEGIN DAG FILE toplevel.dag
+
+	JOB A submit.condor
+	VARS A jobname="$(JOB)"
+
+	JOB B submit.condor
+	VARS B jobname="$(JOB)"
+
+	JOB C submit.condor
+	VARS C jobname="$(JOB)"
+
+	JOB D submit.condor
+	VARS D jobname="$(JOB)"
+
+	# the usual diamond dag.
+	PARENT A CHILD B C
+	PARENT B C CHILD D
+
+	# This splice of s2.dag must run AFTER the diamond dag finishes
+	SPLICE S1 s2.dag
+	PARENT D CHILD S1
+
+	# Since there are no dependencies for S2, the splice  will be 
+	# disjoint to the graph specified by the PARENT/CHILD relationships in this
+	# DAG file
+	SPLICE S2 s1.dag
+
+	# END DAG FILE toplevel.dag
+\end{verbatim}
+
+Figure~\ref{fig:dagman-splice-complex} illustrates the dependency graph
+for the toplevel.dag DAG file. 
+Notice how the DAG has two disjoint graphs in it as a result of splice
+S2 not having any dependencies associated with it in toplevel.dag.
+
+\begin{figure}
+\centering
+\includegraphics{user-man/splice-complex.eps}
+\caption{\label{fig:dagman-splice-complex} The complex splice example DAG.}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGPaths}File Paths in DAGs}
