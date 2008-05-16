@@ -36,8 +36,8 @@ extern "C" {
  *   ignoring locking failures on NFS).
  */
 
-int lock_file( int fd, LOCK_TYPE type, int do_block );
-int lock_file_plain( int fd, LOCK_TYPE type, int do_block );
+int lock_file( int fd, LOCK_TYPE type, bool do_block );
+int lock_file_plain( int fd, LOCK_TYPE type, bool do_block );
 
 #if defined(__cplusplus)
 }		/* End of extern "C" declaration */
@@ -51,38 +51,101 @@ int lock_file_plain( int fd, LOCK_TYPE type, int do_block );
 	// the config file says otherwise.  We do this because (a) filesystem
 	// locks are often broken over NFS, and (b) filesystem locks are often
 	// not FIFO, so some lock waiters can starve.  -Todd Tannenbaum 7/2007
-class FileLock {
-public:
-	FileLock( int fd, FILE *fp = NULL, const char* path = NULL );
-	FileLock( const char* path );
-	~FileLock();
+class FileLockBase
+{
+  public:
+	FileLockBase( void )
+		{ m_state = UN_LOCK, m_blocking = true; };
+	virtual ~FileLockBase(void) { };
 
-		// Set the file descriptor  & pointer
-	void SetFdFp( int fd, FILE *fp = NULL );
-	
 		// Read only access functions
-	bool		is_blocking();		// whether or not operations will block
-	LOCK_TYPE	get_state();		// cur state READ_LOCK, WRITE_LOCK, UN_LOCK
-	void		display();
+	bool isBlocking(void) const			// whether or not operations will block
+		{ return m_blocking; };
+	bool isLocked(void) const			// false if state == UN_LOCK
+		{ return ( UN_LOCK != m_state ); };
+	bool isUnlocked(void) const			// true if state == UN_LOCK
+		{ return ( UN_LOCK == m_state ); };
+	LOCK_TYPE	getState(void) const	// cur state {READ,WRITE,UN}_LOCK
+		{ return m_state; };
+	virtual bool isFakeLock(void) const = 0;	// true if this is a fake lock
 
 		// Control functions
-	void		set_blocking( bool );	// set blocking TRUE or FALSE
-	bool		obtain( LOCK_TYPE t );		// get a lock
-	bool		release();					// release a lock
+	virtual bool obtain( LOCK_TYPE t ) = 0;		// get a lock
+	virtual bool release(void) = 0;				// release a lock
+	virtual void SetFdFp( int fd, FILE *fp = NULL ) = 0;
 
-private:
-	void Reset( void );
+		// Set lock mode
+	void setBlocking( bool val )		// set blocking TRUE or FALSE
+		{ m_blocking = val; };
+	
+		// Read only access functions
+	virtual void display(void) const = 0;
+	const char *getStateString( LOCK_TYPE state ) const;
 
-	int			m_fd;		// File descriptor to deal with
+  protected:
+	bool		m_blocking;				// Whether or not to block
+	LOCK_TYPE	m_state;				// Type of lock we are holding
+};
+
+class FileLock : public FileLockBase
+{
+  public:
+	FileLock( int fd, FILE *fp = NULL, const char* path = NULL );
+	FileLock( const char* path );
+	~FileLock(void);
+
+		// Not a fake lock
+	bool isFakeLock(void) const { return false; };
+	
+		// Set the file descriptor  & pointer
+	void SetFdFp( int fd, FILE *fp = NULL );
+
+		// Control functions
+	bool obtain( LOCK_TYPE t );		// get a lock
+	bool release(void);				// release a lock
+
+		// Read only access functions
+	virtual void display(void) const;
+
+  private:
+	int			 m_fd;			// File descriptor to deal with
 	FILE		*m_fp;
-	bool		blocking;	// Whether or not to block
-	LOCK_TYPE	state;		// Type of lock we are holding
-	char*		m_path;		// Path to the file being locked, or NULL
-	int			use_kernel_mutex;	// -1=unitialized,0=false,1=true
-	int			lock_via_mutex(LOCK_TYPE type);
-#ifdef WIN32
-	HANDLE		debug_win32_mutex;
-#endif
+	char		*m_path;		// Path to the file being locked, or NULL
+	int			 m_use_kernel_mutex;	// -1=unitialized,0=false,1=true
+
+	// Private methods
+	void		Reset( void );
+	int			lock_via_mutex( LOCK_TYPE type );
+# ifdef WIN32
+	HANDLE		m_debug_win32_mutex;
+# endif
+};
+
+class FakeFileLock : public FileLockBase
+{
+  public:
+	FakeFileLock( void ) : FileLockBase( ) { };
+	FakeFileLock( const char* path ) : FileLockBase( ) { };
+	~FakeFileLock( void ) { };
+
+		// Is a fake lock
+	bool isFakeLock(void) const { return true; };
+
+		// Set the file descriptor  & pointer
+	void SetFdFp( int fd, FILE *fp = NULL )
+		{ (void) fd; (void) fp; };
+
+		// Read only access functions
+	void display(void) const
+		{ };
+
+		// Control functions
+	bool obtain( LOCK_TYPE t )			// obtain the lock
+		{ m_state = t; return true; };
+	bool release( void )				// release the lock
+		{ m_state = UN_LOCK; return true; };
+
+  private:
 
 };
 

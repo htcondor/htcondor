@@ -104,11 +104,11 @@ CheckArgs(int argc, char **argv, Arguments &args)
 
 	const char *	usage =
 		"Usage: test_log_reader [options] [filename]\n"
-		"  -debug <level>: debug level (e.g., D_FULLDEBUG)\n"
+		"  -d[ebug] <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  -maxexec <number>: maximum number of execute events to read\n"
 		"  -misscheck: Enable missed event checking "
 		"(valid only with test writer)\n"
-		"  -persist <filename>: file to persist to/from (implies -rotation)\n"
+		"  -p[ersist] <file>: file to persist to/from (implies -rotation)\n"
 		"  -persist-dump: dump the persistent file state after reading it\n"
 		"  -ro|-rw|-wo: Set persitent state to "
 		"read-only/read-write/write-only\n"
@@ -138,9 +138,10 @@ CheckArgs(int argc, char **argv, Arguments &args)
 	args.missedCheck = false;
 
 	for ( int index = 1; index < argc; ++index ) {
-		if ( !strcmp(argv[index], "-debug") ) {
+		if (  (!strcmp(argv[index], "-debug")) ||
+			  (!strcmp(argv[index], "-d"))     ) {
 			if ( ++index >= argc ) {
-				fprintf(stderr, "Value needed for -debug argument\n");
+				fprintf(stderr, "Value needed for -d[ebug] argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			} else {
@@ -159,9 +160,10 @@ CheckArgs(int argc, char **argv, Arguments &args)
 		} else if ( !strcmp(argv[index], "-misscheck") ) {
 			args.missedCheck = true;
 
-		} else if ( !strcmp(argv[index], "-persist") ) {
+		} else if (  (!strcmp(argv[index], "-persist")) ||
+					 (!strcmp(argv[index], "-p"))       )  {
 			if ( ++index >= argc ) {
-				fprintf(stderr, "Value needed for -persist argument\n");
+				fprintf(stderr, "Value needed for -p[ersist] argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			} else {

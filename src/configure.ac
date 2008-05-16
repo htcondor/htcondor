@@ -2119,6 +2119,12 @@ AC_CHECK_TYPES([id_t])
 
 AC_CHECK_FUNCS([strsignal				\
 		lstat					\
+		lstat					\
+		lstat64					\
+		fstat64					\
+		_stati64				\
+		_lstati64				\
+		_fstati64				\
 		stat64					\
 		lstat64					\
 		fstat64					\

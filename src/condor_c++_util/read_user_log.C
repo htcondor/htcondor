@@ -17,8 +17,6 @@
  *
  ***************************************************************/
 
-
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include <stdarg.h>
@@ -31,7 +29,7 @@
 #include "stat_wrapper.h"
 #include "../condor_privsep/condor_privsep.h"
 #include "read_user_log_state.h"
-
+#include "user_log_header.h"
 
 static const char SynchDelimiter[] = "...\n";
 
@@ -65,42 +63,6 @@ const int SCORE_FACTOR_SHRUNK		= -5;
 // Threshold to consider file stat's as recent (seconds)
 const int SCORE_RECENT_THRESH		= 60;
 
-
-// Simple class to extract info from a log file header event
-class ReadUserLogHeader
-{
-public:
-	ReadUserLogHeader( void ) { m_valid = false; };
-	ReadUserLogHeader( const ULogEvent *event ) {
-		m_valid = false;
-		ExtractEvent( event );
-	};
-	~ReadUserLogHeader( void ) { };
-
-	// Read the header from a file
-	int ReadFileHeader( int rot,
-						const char *path,
-						const ReadUserLogState *state );
-
-	// Extract data from an event
-	int ExtractEvent( const ULogEvent *);
-
-	// Valid?
-	bool IsValid( void ) const { return m_valid; };
-
-	// Get extracted info
-	void Id( MyString &id ) const { id = m_id; };
-	const MyString &Id( void ) const { return m_id; };
-	int Sequence( void ) const { return m_sequence; };
-	time_t Ctime( void ) const { return m_ctime; };
-
-private:
-	MyString	m_id;
-	int			m_sequence;
-	time_t		m_ctime;
-
-	bool		m_valid;
-};
 
 
 // Class to manage score the user logs
@@ -171,38 +133,36 @@ ReadUserLog::ReadUserLog (const char * filename)
     }
 }
 
-ReadUserLog::ReadUserLog ( const ReadUserLog::FileState &state )
+// Create a log reader with minimal functionality
+// Only reads from the file, will not lock, write the header, etc.
+ReadUserLog::ReadUserLog ( FILE *fp, bool is_xml )
 {
 	clear();
-
-    if ( !initialize(state, true ) ) {
-		dprintf( D_ALWAYS, "Failed to open from state\n" );
-    }
-}
-
-// In this case, we don't stat the file, but use the stat info
-//  restored in "state" passed to us by the application
-bool
-ReadUserLog::initialize( const ReadUserLog::FileState &state,
-						 int max_rotations )
-{
-	m_state = new ReadUserLogState( state, SCORE_RECENT_THRESH );
-	if ( ! m_state->Initialized() ) {
-		return false;
+	if ( ! fp ) {
+		return;
 	}
+	m_fp = fp;
+	m_fd = fileno( fp );
+	m_never_close_fp = true;
+	m_close_file = false;
+	m_handle_rot = false;
 
-	// If max rotations specified, store it away
-	if ( max_rotations > 0 ) {
-		m_state->MaxRotations( max_rotations );
-	}
-	else if ( max_rotations < 0 ) {
-		m_state->MaxRotations( 0 );
-	}
+	m_lock_enable = false;
+	m_lock = new FakeFileLock( );
 
+	m_state = new ReadUserLogState( );
 	m_match = new ReadUserLogMatch( m_state );
-	return InternalInitialize( max_rotations, false, true, true );
+
+	m_initialized = true;
+
+	setIsXMLLog( is_xml );
 }
 
+// ***************************************
+// * Initializers which take a file name
+// ***************************************
+
+// Default initializer
 bool
 ReadUserLog::initialize( const char *filename,
 						 bool handle_rotation,
@@ -211,6 +171,7 @@ ReadUserLog::initialize( const char *filename,
 	return initialize( filename, handle_rotation ? 1 : 0, check_for_old );
 }
 
+// Initializer which allows the specifying of the max rotation level
 bool
 ReadUserLog::initialize( const char *filename,
 						 int max_rotations,
@@ -232,16 +193,77 @@ ReadUserLog::initialize( const char *filename,
 	return true;
 }
 
+// ***************************************
+// * Initializers which take a state
+// ***************************************
+
+// Restore from state, use rotation parameters from state, too.
+bool
+ReadUserLog::initialize( const ReadUserLog::FileState &state )
+{
+	return InternalInitialize( state, false );
+}
+
+// Restore from state, setting the rotation parameters
+bool
+ReadUserLog::initialize( const ReadUserLog::FileState &state,
+						 int max_rotations )
+{
+	return InternalInitialize( state, true, max_rotations );
+}
+
+// Get / set rotation parameters
+int
+ReadUserLog::getMaxRot( bool handle_rotation )
+{
+	return (handle_rotation ? 1 : 0);
+}
+
+void
+ReadUserLog::initRotParms( int max_rotation )
+{
+	m_handle_rot = max_rotation ? true : false;
+	m_max_rotations = max_rotation;
+}
+
+// ***************************************
+// * Internal Initializers
+// ***************************************
+
+// Internal initialization from state
+// In this case, we don't stat the file, but use the stat info
+//  restored in "state" passed to us by the application
+bool
+ReadUserLog::InternalInitialize( const ReadUserLog::FileState &state,
+								 bool set_rotations,
+								 int max_rotations )
+{
+	m_state = new ReadUserLogState( state, SCORE_RECENT_THRESH );
+	if ( ! m_state->Initialized() ) {
+		return false;
+	}
+
+	// If max rotations specified, store it away
+	if ( set_rotations ) {
+		m_state->MaxRotations( max_rotations );
+	}
+
+	m_match = new ReadUserLogMatch( m_state );
+	return InternalInitialize( max_rotations, false, true, true );
+}
+
 // Internal only initialization
 bool
 ReadUserLog::InternalInitialize ( int max_rotations,
 								  bool check_for_rotation,
 								  bool restore,
-								  bool enable_header_read )
+								  bool enable_header_read,
+								  bool force_disable_locking )
 {
 	m_handle_rot = ( max_rotations > 0 );
 	m_max_rotations = max_rotations;
 	m_read_header = enable_header_read;
+	m_lock = NULL;
 
 	// Set the score factor in the file state manager
 	m_state->SetScoreFactor( ReadUserLogState::SCORE_CTIME,
@@ -273,7 +295,11 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 	}
 
 	// Should we be locking?
-	m_lock_file = param_boolean( "ENABLE_USERLOG_LOCKING", true );
+	if ( force_disable_locking ) {
+		m_lock_enable = false;
+	} else {
+		m_lock_enable = param_boolean( "ENABLE_USERLOG_LOCKING", true );
+	}
 
 	// Should we close the file between operations?
 # if defined(WIN32)
@@ -321,12 +347,21 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 	return true;
 }
 
+ReadUserLog::FileStatus
+ReadUserLog::CheckFileStatus( void )
+{
+	if ( !m_state ) {
+		return ReadUserLog::LOG_STATUS_ERROR;
+	}
+	return m_state->CheckFileStatus( m_fd );
+}
+
 bool
 ReadUserLog::CloseLogFile( void )
 {
 
 	// Close the file pointer
-    if ( m_fp ) {
+    if ( m_fp && !m_never_close_fp ) {
 		fclose( m_fp );
 		m_fp = NULL;
 		m_fd = -1;
@@ -339,9 +374,8 @@ ReadUserLog::CloseLogFile( void )
 	}
 
 	// And, unlock it
-	if ( m_is_locked ) {
+	if ( m_lock->isLocked() ) {
 		m_lock->release();
-		m_is_locked = false;
 		m_lock_rot = -1;
 	}
 
@@ -392,7 +426,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 	}
 
 	// Prepare to lock the file
-	if ( m_lock_file ) {
+	if ( m_lock_enable ) {
 
 		// If the lock isn't for the current file (rotation #), destroy it
 		if ( ( !is_lock_current ) && m_lock ) {
@@ -404,6 +438,8 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 		// Create a lock if none exists
 		// otherwise, update the lock's fd & fp
 		if ( ! m_lock ) {
+			dprintf( D_FULLDEBUG, "Creating file lock(%d,%p,%s)\n",
+					 m_fd, m_fp, m_state->CurPath() );
 			m_lock = new FileLock( m_fd, m_fp, m_state->CurPath() );
 			if( ! m_lock ) {
 				CloseLogFile( );
@@ -414,6 +450,14 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 		else {
 			m_lock->SetFdFp( m_fd, m_fp );
 		}
+	}
+	else {
+		if ( m_lock ) {
+			delete m_lock;
+			m_lock = NULL;
+			m_lock_rot = -1;
+		}
+		m_lock = new FakeFileLock;
 	}
 
 	// Determine the type of the log file (if needed)
@@ -428,20 +472,34 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 
 	// Read the file's header event
 	if ( read_header && m_read_header && ( !m_state->ValidUniqId()) ) {
-		ReadUserLogHeader	header;
-		if ( ! header.ReadFileHeader( m_state->Rotation(),
-									  m_state->CurPath(),
-									  m_state ) ) {
-			m_state->UniqId( header.Id() );
-			m_state->Sequence( header.Sequence() );
+		const char *path = m_state->CurPath( );
+
+		// If no path provided, generate one
+		MyString temp_path;
+		if (  NULL == path ) {
+			m_state->GeneratePath( m_state->Rotation(), temp_path );
+			path = temp_path.GetCStr( );
+		}
+
+		// Finally, no path -- give up
+		ReadUserLog			log_reader;
+		ReadUserLogHeader	header_reader;
+		if (  ( path ) &&
+			  ( log_reader.initialize( path, false, false ) ) &&
+			  ( header_reader.Read( log_reader ) == ULOG_OK )  ) {
+			m_state->UniqId( header_reader.getId() );
+			m_state->Sequence( header_reader.getSequence() );
 			dprintf( D_FULLDEBUG,
 					 "%s: Set UniqId to '%s', sequence to %d\n",
 					 m_state->CurPath(),
-					 header.Id().GetCStr(),
-					 header.Sequence() );
+					 header_reader.getId().GetCStr(),
+					 header_reader.getSequence() );
+		}
+		else {
+			dprintf( D_FULLDEBUG, "%s: Failed to read file header\n",
+					 m_state->CurPath() );
 		}
 	}
-	
 
 	return ULOG_OK;
 }
@@ -817,7 +875,7 @@ ReadUserLog::readEvent( ULogEvent *& event, bool *try_again )
 }
 
 ULogEventOutcome
-ReadUserLog::readEventXML(ULogEvent *& event)
+ReadUserLog::readEventXML( ULogEvent *& event )
 {
 	ClassAdXMLParser xmlp;
 
@@ -873,7 +931,7 @@ ReadUserLog::readEventXML(ULogEvent *& event)
 }
 
 ULogEventOutcome
-ReadUserLog::readEventOld(ULogEvent *& event)
+ReadUserLog::readEventOld( ULogEvent *& event )
 {
 	long   filepos;
 	int    eventnumber;
@@ -882,7 +940,7 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 	// we obtain a write lock here not because we want to write
 	// anything, but because we want to ensure we don't read
 	// mid-way through someone else's write
-	if (!m_is_locked) {
+	if ( m_lock->isUnlocked() ) {
 		m_lock->obtain( WRITE_LOCK );
 	}
 
@@ -892,7 +950,7 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 	{
 		dprintf( D_FULLDEBUG,
 				 "ReadUserLog: invalid m_fp, or ftell() failed\n" );
-		if (!m_is_locked) {
+		if ( m_lock->isUnlocked() ) {
 			m_lock->release();
 		}
 		return ULOG_UNK_ERROR;
@@ -916,7 +974,7 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 		if( feof( m_fp ) ) {
 			event = NULL;  // To prevent FMR: Free memory read
 			clearerr( m_fp );
-			if( !m_is_locked ) {
+			if( m_lock->isUnlocked() ) {
 				m_lock->release();
 			}
 			return ULOG_NO_EVENT;
@@ -930,7 +988,7 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 	if (!event) 
 	{
 		dprintf( D_FULLDEBUG, "ReadUserLog: unable to instantiate event\n" );
-		if (!m_is_locked) {
+		if ( m_lock->isUnlocked()) {
 			m_lock->release();
 		}
 		return ULOG_UNK_ERROR;
@@ -942,7 +1000,8 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 	// check if error in reading event
 	if (!retval1 || !retval2)
 	{	
-		dprintf( D_FULLDEBUG, "ReadUserLog: error reading event; re-trying\n" );
+		dprintf( D_FULLDEBUG,
+				 "ReadUserLog: error reading event; re-trying\n" );
 
 		// we could end up here if file locking did not work for
 		// whatever reason (usual NFS bugs, whatever).  so here
@@ -955,16 +1014,16 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 		// NOTE: this code is important, so don't remove or "fix"
 		// it unless you *really* know what you're doing and test it
 		// extermely well
-		if( !m_is_locked ) {
+		if( m_lock->isUnlocked() ) {
 			m_lock->release();
 		}
 		sleep( 1 );
-		if( !m_is_locked ) {
+		if( m_lock->isUnlocked() ) {
 			m_lock->obtain( WRITE_LOCK );
 		}                             
 		if( fseek( m_fp, filepos, SEEK_SET)) {
 			dprintf( D_ALWAYS, "fseek() failed in %s:%d", __FILE__, __LINE__ );
-			if (!m_is_locked) {
+			if ( m_lock->isUnlocked() ) {
 				m_lock->release();
 			}
 			return ULOG_UNK_ERROR;
@@ -975,7 +1034,7 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 			if (fseek (m_fp, filepos, SEEK_SET))
 			{
 				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
-				if (!m_is_locked) {
+				if ( m_lock->isUnlocked() ) {
 					m_lock->release();
 				}
 				return ULOG_UNK_ERROR;
@@ -987,24 +1046,25 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 			eventnumber = -1;
 			retval1 = fscanf (m_fp, "%d", &eventnumber);
 			if( retval1 == 1 ) {
-			  if( eventnumber != oldeventnumber ) {
-			    if( event ) {
-			      delete event;
-			    }
-			    // allocate event object; check if allocated
-			    // successfully
-			    event =
-			      instantiateEvent( (ULogEventNumber)eventnumber );
-			    if( !event ) { 
-				  dprintf( D_FULLDEBUG, "ReadUserLog: unable to "
-				  			"instantiate event\n" );
-			      if( !m_is_locked ) {
-					m_lock->release();
-			      }
-			      return ULOG_UNK_ERROR;
-			    }
-			  }
-			  retval2 = event->getEvent( m_fp );
+				if( eventnumber != oldeventnumber ) {
+					if( event ) {
+						delete event;
+					}
+
+					// allocate event object; check if allocated
+					// successfully
+					event =
+						instantiateEvent( (ULogEventNumber)eventnumber );
+					if( !event ) { 
+						dprintf( D_FULLDEBUG, "ReadUserLog: unable to "
+								 "instantiate event\n" );
+						if( m_lock->isUnlocked() ) {
+							m_lock->release();
+						}
+						return ULOG_UNK_ERROR;
+					}
+				}
+				retval2 = event->getEvent( m_fp );
 			}
 
 			// if failed again, we have a parse error
@@ -1015,7 +1075,7 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 				delete event;
 				event = NULL;  // To prevent FMR: Free memory read
 				synchronize ();
-				if (!m_is_locked) {
+				if (m_lock->isUnlocked()) {
 					m_lock->release();
 				}
 				return ULOG_RD_ERROR;
@@ -1025,7 +1085,7 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 			  // finally got the event successfully --
 			  // synchronize the log
 			  if( synchronize() ) {
-			    if( !m_is_locked ) {
+			    if( m_lock->isUnlocked() ) {
 			      m_lock->release();
 			    }
 			    return ULOG_OK;
@@ -1039,7 +1099,7 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 			    delete event;
 			    event = NULL;  // To prevent FMR: Free memory read
 			    clearerr( m_fp );
-			    if( !m_is_locked ) {
+			    if( m_lock->isUnlocked() ) {
 			      m_lock->release();
 			    }
 			    return ULOG_NO_EVENT;
@@ -1054,7 +1114,7 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 			if (fseek (m_fp, filepos, SEEK_SET))
 			{
 				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
-				if (!m_is_locked) {
+				if (m_lock->isUnlocked()) {
 					m_lock->release();
 				}
 				return ULOG_UNK_ERROR;
@@ -1062,7 +1122,7 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 			clearerr (m_fp);
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
-			if (!m_is_locked) {
+			if (m_lock->isUnlocked()) {
 				m_lock->release();
 			}
 			return ULOG_NO_EVENT;
@@ -1073,7 +1133,7 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 		// got the event successfully -- synchronize the log
 		if (synchronize ())
 		{
-			if (!m_is_locked) {
+			if (m_lock->isUnlocked()) {
 				m_lock->release();
 			}
 			return ULOG_OK;
@@ -1088,7 +1148,7 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
 			clearerr (m_fp);
-			if (!m_is_locked) {
+			if (m_lock->isUnlocked() ) {
 				m_lock->release();
 			}
 			return ULOG_NO_EVENT;
@@ -1096,7 +1156,7 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 	}
 
 	// will not reach here
-	if (!m_is_locked) {
+	if (m_lock->isUnlocked()) {
 		m_lock->release();
 	}
 
@@ -1106,12 +1166,14 @@ ReadUserLog::readEventOld(ULogEvent *& event)
 	return ULOG_UNK_ERROR;
 }
 
+// Static method for initializing a file state
 bool
 ReadUserLog::InitFileState( ReadUserLog::FileState &state )
 {
 	return ReadUserLogState::InitState( state );
 }
 
+// Static method for un-initializing a file state
 bool
 ReadUserLog::UninitFileState( ReadUserLog::FileState &state )
 {
@@ -1137,10 +1199,10 @@ ReadUserLog::Lock( bool verify_init )
 	if( verify_init ) {
 		ASSERT ( m_initialized );
 	}
-	if ( !m_is_locked ) {
-		m_is_locked = m_lock->obtain( WRITE_LOCK );
+	if ( m_lock->isUnlocked() ) {
+		m_lock->obtain( WRITE_LOCK );
 	}
-	ASSERT( m_is_locked );
+	ASSERT( m_lock->isLocked() );
 }
 
 void
@@ -1149,14 +1211,14 @@ ReadUserLog::Unlock( bool verify_init )
 	if( verify_init ) {
 		ASSERT ( m_initialized );
 	}
-	if ( m_is_locked ) {
-		m_is_locked = ! m_lock->release();
+	if ( m_lock->isLocked( ) ) {
+		m_lock->release( );
 	}
-	ASSERT( !m_is_locked );
+	ASSERT( m_lock->isUnlocked() );
 }
 
 bool
-ReadUserLog::synchronize ()
+ReadUserLog::synchronize ( void )
 {
 	if ( !m_initialized ) {
 		return false;
@@ -1173,7 +1235,7 @@ ReadUserLog::synchronize ()
 }
 
 void
-ReadUserLog::outputFilePos(const char *pszWhereAmI)
+ReadUserLog::outputFilePos( const char *pszWhereAmI )
 {
 	ASSERT ( m_initialized );
 	dprintf(D_ALWAYS, "Filepos: %ld, context: %s\n", ftell(m_fp), pszWhereAmI);
@@ -1185,7 +1247,7 @@ ReadUserLog::setIsXMLLog( bool is_xml )
 	if( is_xml ) {
 	    m_state->LogType( ReadUserLogState::LOG_TYPE_XML );
 	} else {
-	    m_state->LogType( ReadUserLogState::LOG_TYPE_UNKNOWN );
+	    m_state->LogType( ReadUserLogState::LOG_TYPE_OLD );
 	}
 }
 
@@ -1221,7 +1283,6 @@ ReadUserLog::clear( void )
     m_fd = -1;
 	m_fp = NULL;
 	m_lock = NULL;
-	m_is_locked = false;
 	m_lock_rot = -1;
 }
 
@@ -1238,8 +1299,13 @@ ReadUserLog::releaseResources( void )
 		m_state = NULL;
 	}
 
-    if (m_fp) {
-		fclose(m_fp);
+	if ( m_lock && m_lock->isLocked() ) {
+		m_lock->release();
+		m_lock_rot = -1;
+	}
+
+    if ( m_fp && !m_never_close_fp ) {
+		fclose( m_fp );
 		m_fp = NULL;
 		m_fd = -1;
 	}
@@ -1247,12 +1313,6 @@ ReadUserLog::releaseResources( void )
 	if (m_fd != -1) {
 	    close(m_fd);
 		m_fd = -1;
-	}
-
-	if (m_is_locked) {
-		m_lock->release();
-		m_is_locked = false;
-		m_lock_rot = -1;
 	}
 
 	delete m_lock;
@@ -1280,85 +1340,6 @@ ReadUserLog::FormatFileState( const ReadUserLog::FileState &state,
 							  MyString &str, const char *label ) const
 {
 	m_state->GetState( state, str, label );
-}
-
-
-// **********************************
-// ReadUserLogHeader methods
-// **********************************
-
-// Read the header from a file
-int
-ReadUserLogHeader::ReadFileHeader(
-	int						 rot,
-	const char				*path,
-	const ReadUserLogState	*state )
-{
-	// Here, we have an indeterminate result
-	// Read the file's header info
-
-	// We'll instantiate a new log reader to do this for us
-	// Note: we disable rotation for this one, so we won't recurse infinitely
-	ReadUserLog			 reader;
-
-	// If no path provided, generate one
-	MyString temp_path;
-	if ( NULL == path ) {
-		state->GeneratePath( rot, temp_path );
-		path = temp_path.GetCStr( );
-	}
-
-	// Initialize the reader
-	if ( !reader.initialize( path, false, false ) ) {
-		return -1;
-	}
-
-	// Now, read the event itself
-	ULogEvent			*event;
-	ULogEventOutcome	outcome;
-	outcome = reader.readEvent( event );
-	if ( ULOG_RD_ERROR == outcome ) {
-		return -1;
-	}
-	else if ( ULOG_OK != outcome ) {
-		return 1;
-	}
-
-	// Finally, if it's a generic event, let's see if we can parse it
-	int status = ExtractEvent( event );
-	delete event;
-
-	return status;
-}
-
-// Extract info from an event
-int
-ReadUserLogHeader::ExtractEvent( const ULogEvent *event )
-{
-	// Not a generic event -- ignore it
-	if ( ULOG_GENERIC != event->eventNumber ) {
-		return 1;
-	}
-
-	const GenericEvent	*generic = dynamic_cast <const GenericEvent*>( event );
-	if ( ! generic ) {
-		dprintf( D_ALWAYS, "Can't pointer cast generic event!\n" );
-		return -1;
-	} else {
-		int		ctime;
-		int		sequence;
-		char	id[256];
-		if ( sscanf( generic->info,
-					 "Global JobLog: ctime=%d id=%s sequence=%d\n",
-					 &ctime, id, &sequence ) == 3) {
-			m_id = id;
-			m_ctime = ctime;
-			m_sequence = sequence;
-			m_valid = true;
-			return 0;
-		}
-		return 1;
-	}
 }
 
 
@@ -1430,8 +1411,7 @@ ReadUserLogMatch::MatchInternal(
 	int				 match_thresh,
 	int				*score_ptr ) const
 {
-	ULogEventOutcome	outcome;
-	int					score = *score_ptr;
+	int		score = *score_ptr;
 
 	// If no path provided, generate one
 	MyString path_str;
@@ -1457,36 +1437,29 @@ ReadUserLogMatch::MatchInternal(
 
 	// We'll instantiate a new log reader to do this for us
 	// Note: we disable rotation for this one, so we won't recurse infinitely
-	ReadUserLog			 reader;
+	ReadUserLog			 log_reader;
 	dprintf( D_FULLDEBUG, "Match: reading file %s\n", path_str.GetCStr() );
 
 	// Initialize the reader
-	if ( !reader.initialize( path_str.GetCStr(), false, false ) ) {
+	if ( !log_reader.initialize( path_str.GetCStr(), false, false ) ) {
 		return MATCH_ERROR;
-	}
-
-	// Now, read the event itself
-	ULogEvent			*event;
-	outcome = reader.readEvent( event );
-	if ( ULOG_RD_ERROR == outcome ) {
-		return MATCH_ERROR;
-	}
-	else if ( ULOG_OK != outcome ) {
-		return NOMATCH;
 	}
 
 	// Read the file's header info
-	ReadUserLogHeader	header;
-	int status = header.ReadFileHeader( rot, path_str.GetCStr(), m_state );
-	if( status < 0 ) {
-		return MATCH_ERROR;
+	ReadUserLogHeader	header_reader;
+	int status = header_reader.Read( log_reader );
+	if ( ULOG_OK == status ) {
+		// Do nothing
 	}
-	else if ( status > 0 ) {
+	else if ( ULOG_NO_EVENT == status ) {
 		return EvalScore( match_thresh, score );
+	}
+	else {
+		return MATCH_ERROR;
 	}
 
 	// Finally, extract the ID & store it
-	int	id_result = m_state->CompareUniqId( header.Id() );
+	int	id_result = m_state->CompareUniqId( header_reader.getId() );
 	const char *result_str = "unknown";
 	if ( id_result > 0 ) {
 		score += SCORE_FACTOR_UNIQ_MATCH;
@@ -1497,7 +1470,7 @@ ReadUserLogMatch::MatchInternal(
 		result_str = "no match";
 	}
 	dprintf( D_FULLDEBUG, "Read ID from '%s' as '%s': %d (%s)\n",
-			 path_str.GetCStr(), header.Id().GetCStr(),
+			 path_str.GetCStr(), header_reader.getId().GetCStr(),
 			 id_result, result_str );
 
 	// And, last but not least, re-evaluate the score
@@ -1506,7 +1479,9 @@ ReadUserLogMatch::MatchInternal(
 }
 
 ReadUserLogMatch::MatchResult
-ReadUserLogMatch::EvalScore( int match_thresh, int score ) const
+ReadUserLogMatch::EvalScore(
+	int				match_thresh,
+	int				score ) const
 {
 
 	// < 0 is an error
@@ -1543,4 +1518,3 @@ ReadUserLogMatch::MatchStr( ReadUserLogMatch::MatchResult value ) const
 	};
 	
 }
-		

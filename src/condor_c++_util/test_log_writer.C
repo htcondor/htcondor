@@ -112,18 +112,18 @@ CheckArgs(int argc, char **argv, Arguments &args)
 
 	const char *	usage =
 		"Usage: test_log_writer [options] <filename>\n"
-		"  -cluster <number>: Use cluster %d (default = getpid())\n"
+		"  -cluster <number>: Use cluster %d [default = getpid()]\n"
 		"  -debug <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  -generic <string>: Write generic event\n"
 		"  -jobid <c.p.s>: combined -cluster, -proc, -subproc\n"
-		"  -numexec <number>: number of execute events to write / proc\n"
-		"  -numprocs <number>: Number of procs (default = 10)\n"
+		"  -numexec <number>: number of execute events to write / proc [1]\n"
+		"  [-numprocs|-n] <number>: Number of procs [default = 10]\n"
 		"  -persist <file>: persist writer state to file (for jobid gen)\n"
-		"  -proc <number>: Use proc %d (default = 0)\n"
-		"  -sleep <number>: how many seconds to sleep between events\n"
+		"  -proc <number>: Use proc %d [default = 0]\n"
+		"  -sleep <number>: how many seconds to sleep between events [5.0]\n"
 		"  -stork: simulate Stork (-1 for proc and subproc)\n"
 		"  -submit_note <string>: submit event note\n"
-		"  -subproc <number>: Use subproc %d (default = 0)\n"
+		"  -subproc <number>: Use subproc %d [default = 0]\n"
 		"  -usage: print this message and exit\n"
 		"  -v: increase verbose level by 1\n"
 		"  -verbosity <number>: set verbosity level (default is 1)\n"
@@ -199,7 +199,8 @@ CheckArgs(int argc, char **argv, Arguments &args)
 				args.numExec = atoi(argv[index]);
 			}
 
-		} else if ( !strcmp(argv[index], "-numprocs") ) {
+		} else if (  (!strcmp(argv[index], "-numprocs") ) ||
+					 (!strcmp(argv[index], "-n"))   ) {
 			if ( ++index >= argc ) {
 				fprintf(stderr, "Value needed for -numprocs argument\n");
 				printf("%s", usage);
@@ -259,7 +260,9 @@ CheckArgs(int argc, char **argv, Arguments &args)
 				args.submitNote = argv[index];
 			}
 
-		} else if ( !strcmp(argv[index], "-usage") ) {
+		} else if (  ( !strcmp(argv[index], "-usage") ) ||
+					 ( !strcmp(argv[index], "-h") )		||
+					 ( !strcmp(argv[index], "-help") )  )  {
 			printf("%s", usage);
 			status = STATUS_CANCEL;
 

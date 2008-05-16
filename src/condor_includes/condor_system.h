@@ -210,10 +210,6 @@ typedef fd_set *SELECT_FDSET_PTR;
 #if defined( HAVE_STDINT_H )
 # include <stdint.h>
 #endif
-#if defined( HAVE_INTTYPES_H )
-# define __STDC_FORMAT_MACROS
-# include <inttypes.h>
-#endif
 
 /* Define _O_BINARY, etc. if they're not defined as zero */
 #ifndef _O_BINARY
@@ -224,18 +220,6 @@ typedef fd_set *SELECT_FDSET_PTR;
 #endif
 #ifndef O_LARGEFILE
  #define O_LARGEFILE	0x0
-#endif
-
-/* If no inttypes, try to define our own (make a guess) */
-/* The win 32 include file defines the win32 versions */
-#if !defined( PRId64 )
-# define PRId64 "lld"
-#endif
-#if !defined( PRIi64 )
-# define PRIi64 "lli"
-#endif
-#if !defined( PRIu64 )
-# define PRIu64 "llu"
 #endif
 
 // Define a 'filesize_t' type and FILESIZE_T_FORMAT printf format string

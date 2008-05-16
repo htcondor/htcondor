@@ -38,4 +38,22 @@
 #  define HAVE_INT64_T 1
 # endif
 
+#if defined( HAVE_INTTYPES_H )
+# define __STDC_FORMAT_MACROS
+# include <inttypes.h>
+#endif
+
+/* If no inttypes, try to define our own (make a guess) */
+/* The win 32 include file defines the win32 versions */
+#if !defined( PRId64 )
+# define PRId64 "lld"
+#endif
+#if !defined( PRIi64 )
+# define PRIi64 "lli"
+#endif
+#if !defined( PRIu64 )
+# define PRIu64 "llu"
+#endif
+
+
 #endif /* CONDOR_SYS_TYPES_H */

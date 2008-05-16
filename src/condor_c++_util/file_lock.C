@@ -17,16 +17,32 @@
  *
  ***************************************************************/
 
-
- 
-
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "file_lock.h"
+#include "utc_time.h"
+
+extern "C" int lock_file( int fd, LOCK_TYPE type, bool do_block );
+
+const char *
+FileLockBase::getStateString( LOCK_TYPE state ) const
+{
+	switch( state ) {
+	case READ_LOCK:
+		return "READ";
+	case WRITE_LOCK:
+		return "WRITE";
+	case UN_LOCK:
+		return "UNLOCKED";
+	default:
+		return "UNKNOWN";
+	}
+}
 
 FileLock::FileLock( int fd, FILE *fp_arg, const char* path )
+		: FileLockBase( )
 {
 	Reset( );
 	m_fd = fd;
@@ -37,6 +53,7 @@ FileLock::FileLock( int fd, FILE *fp_arg, const char* path )
 }
 
 FileLock::FileLock( const char *path )
+		: FileLockBase( )
 {
 	Reset( );
 	if (path) {
@@ -44,16 +61,16 @@ FileLock::FileLock( const char *path )
 	}
 }
 
-FileLock::~FileLock()
+FileLock::~FileLock( void )
 {
-	if( state != UN_LOCK ) {
+	if( m_state != UN_LOCK ) {
 		release();
 	}
-	use_kernel_mutex = -1;
+	m_use_kernel_mutex = -1;
 #ifdef WIN32
-	if (debug_win32_mutex) {
-		::CloseHandle(debug_win32_mutex);
-		debug_win32_mutex = NULL;
+	if (m_debug_win32_mutex) {
+		::CloseHandle(m_debug_win32_mutex);
+		m_debug_win32_mutex = NULL;
 	}
 #endif
 	if ( m_path) free(m_path);
@@ -64,12 +81,12 @@ FileLock::Reset( void )
 {
 	m_fd = -1;
 	m_fp = NULL;
-	blocking = true;
-	state = UN_LOCK;
+	m_blocking = true;
+	m_state = UN_LOCK;
 	m_path = NULL;
-	use_kernel_mutex = -1;
+	m_use_kernel_mutex = -1;
 #ifdef WIN32
-	debug_win32_mutex = NULL;
+	m_debug_win32_mutex = NULL;
 #endif
 }
 
@@ -81,39 +98,11 @@ FileLock::SetFdFp( int fd, FILE *fp )
 }
 
 void
-FileLock::display()
+FileLock::display( void ) const
 {
 	dprintf( D_FULLDEBUG, "fd = %d\n", m_fd );
-	dprintf( D_FULLDEBUG, "blocking = %s\n", blocking ? "TRUE" : "FALSE" );
-	switch( state ) {
-	  case READ_LOCK:
-		dprintf( D_FULLDEBUG, "state = READ\n" );
-		break;
-	  case WRITE_LOCK:
-		dprintf( D_FULLDEBUG, "state = WRITE\n" );
-		break;
-	  case UN_LOCK:
-		dprintf( D_FULLDEBUG, "state = UNLOCKED\n" );
-		break;
-	}
-}
-
-bool
-FileLock::is_blocking()
-{
-	return blocking;
-}
-
-LOCK_TYPE
-FileLock::get_state()
-{
-	return state;
-}
-
-void
-FileLock::set_blocking( bool val )
-{
-	blocking = val;
+	dprintf( D_FULLDEBUG, "blocking = %s\n", m_blocking ? "TRUE" : "FALSE" );
+	dprintf( D_FULLDEBUG, "state = %s\n", getStateString( m_state ) );
 }
 
 int
@@ -128,7 +117,7 @@ FileLock::lock_via_mutex(LOCK_TYPE type)
 	char *ptr = NULL;
 	char mutex_name[MAX_PATH];
 
-	
+
 		// If we made it here, we want to use a kernel mutex.
 		//
 		// We use a kernel mutex by default to fix a major shortcoming
@@ -138,7 +127,7 @@ FileLock::lock_via_mutex(LOCK_TYPE type)
 		// on the other hand, is FIFO --- thus starvation is avoided.
 
 		// first, open a handle to the mutex if we haven't already
-	if ( debug_win32_mutex == NULL && m_path ) {
+	if ( m_debug_win32_mutex == NULL && m_path ) {
 			// Create the mutex name based upon the lock file
 			// specified in the config file.  				
 		char * filename = strdup(m_path);
@@ -168,20 +157,20 @@ FileLock::lock_via_mutex(LOCK_TYPE type)
 			// Note: someday, to make BoundsChecker happy, we should
 			// add a dprintf subsystem shutdown routine to nicely
 			// deallocate this stuff instead of relying on the OS.
-		debug_win32_mutex = ::CreateMutex(0,FALSE,mutex_name);
+		m_debug_win32_mutex = ::CreateMutex(0,FALSE,mutex_name);
 	}
 
 		// now, if we have mutex, grab it or release it as needed
-	if ( debug_win32_mutex ) {
+	if ( m_debug_win32_mutex ) {
 		if ( type == UN_LOCK ) {
 				// release mutex
-			ReleaseMutex(debug_win32_mutex);
+			ReleaseMutex(m_debug_win32_mutex);
 			result = 0;	// 0 means success
 		} else {
 				// grab mutex
 				// block 10 secs if do_block is false, else block forever
-			result = WaitForSingleObject(debug_win32_mutex, 
-				blocking ? INFINITE : 10 * 1000);	// time in milliseconds
+			result = WaitForSingleObject(m_debug_win32_mutex, 
+				m_blocking ? INFINITE : 10 * 1000);	// time in milliseconds
 				// consider WAIT_ABANDONED as success so we do not EXCEPT
 			if ( result==WAIT_OBJECT_0 || result==WAIT_ABANDONED ) {
 				result = 0;
@@ -208,12 +197,12 @@ FileLock::obtain( LOCK_TYPE t )
 // interchangeably...
 	int		status = -1;
 
-	if ( use_kernel_mutex == -1 ) {
-		use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+	if ( m_use_kernel_mutex == -1 ) {
+		m_use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
 	}
 
 		// If we have the path, we can try to lock via a mutex.  
-	if ( m_path && use_kernel_mutex ) {
+	if ( m_path && m_use_kernel_mutex ) {
 		status = lock_via_mutex(t);
 	}
 
@@ -227,7 +216,7 @@ FileLock::obtain( LOCK_TYPE t )
 			lPosBeforeLock = ftell(m_fp); 
 		}
 		
-		status = lock_file( m_fd, t, blocking );
+		status = lock_file( m_fd, t, m_blocking );
 		
 		if (m_fp)
 		{
@@ -237,17 +226,23 @@ FileLock::obtain( LOCK_TYPE t )
 	}
 
 	if( status == 0 ) {
-		state = t;
+		m_state = t;
 	}
 	if ( status != 0 ) {
 		dprintf( D_ALWAYS, "FileLock::obtain(%d) failed - errno %d (%s)\n",
 	                t, errno, strerror(errno) );
 	}
+	else {
+		UtcTime	now( true );
+		dprintf( D_FULLDEBUG,
+				 "FileLock::obtain(%d) - @%.6f lock on %s now %s\n",
+				 t, now.combined(), m_path, getStateString(t) );
+	}
 	return status == 0;
 }
 
 bool
-FileLock::release()
+FileLock::release(void)
 {
 	return obtain( UN_LOCK );
 }

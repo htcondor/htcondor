@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "util_lib_proto.h"
 #include <stdarg.h>
 #include "user_log.c++.h"
 #include <time.h>
@@ -27,14 +28,38 @@
 #include "condor_config.h"
 #include "utc_time.h"
 #include "stat_wrapper.h"
-
+#include "user_log_header.h"
 
 static const char SynchDelimiter[] = "...\n";
 
-extern "C" char *find_env (const char *, const char *);
-extern "C" char *get_env_val (const char *);
-extern "C" int rotate_file(const char *old_filename, const char *new_filename);
+// Simple class to normalize use of 64 bit ints
+class UserLogInt64_t
+{
+public:
+	UserLogInt64_t( void )
+		{ m_value = 0; };
+	UserLogInt64_t( int64_t value )
+		{ m_value = value; };
+	~UserLogInt64_t( void );
 
+	int64_t Set( int64_t value )
+		{ return m_value = value; };
+	int64_t Get( void ) const
+		{ return m_value; };
+	UserLogInt64_t& operator =( int64_t value )
+		{ m_value = value; return *this; };
+	UserLogInt64_t& operator +=( int64_t value )
+		{ m_value += value; return *this; };
+
+private:
+	int64_t		m_value;
+
+};
+class UserLogFilesize_t : public UserLogInt64_t
+{
+};
+
+// UserLog class methods 
 UserLog::UserLog( void )
 {
 	Reset( );
@@ -71,228 +96,18 @@ UserLog::UserLog (const char *owner,
 	initialize (owner, NULL, file, c, p, s, NULL);
 }
 
-void
-UserLog::Reset( void )
+// Destructor
+UserLog::~UserLog()
 {
-	cluster = -1;
-	proc = -1;
-	subproc = -1;
+	if (m_path) delete [] m_path;
+	if (m_lock) delete m_lock;
+	if (m_gjid) free(m_gjid);
+	if (m_fp != NULL) fclose( m_fp );
 
-	m_write_user_log = true;
-	m_path = NULL;
-	m_fp = NULL; 
-	m_lock = NULL;
-
-	m_write_global_log = true;
-	m_global_path = NULL;
-	m_global_fp = NULL; 
-	m_global_lock = NULL;
-
-	m_use_xml = XML_USERLOG_DEFAULT;
-	m_gjid = NULL;
-
-	MyString	base;
-	base = "";
-	base += getuid();
-	base += '.';
-	base += getpid();
-	base += '.';
-
-	UtcTime	utc;
-	utc.getTime();
-	base += utc.seconds();
-	base += '.';
-	base += utc.microseconds();
-	base += '.';
-
-	m_global_uniq_base = strdup( base.GetCStr( ) );
-	m_global_sequence = 1;
-}
-
-/* --- The following two functions are taken from the shadow's ulog.c --- */
-/*
-  Find the value of an environment value, given the condor style envrionment
-  string which may contain several variable definitions separated by 
-  semi-colons.
-*/
-char *
-find_env( const char * name, const char * env )
-{
-    const char  *ptr;
-
-    for( ptr=env; *ptr; ptr++ ) {
-        if( strncmp(name,ptr,strlen(name)) == 0 ) {
-            return get_env_val( ptr );
-        }
-    }
-    return NULL;
-}
-
-/*
-  Given a pointer to the a particular environment substring string
-  containing the desired value, pick out the value and return a
-  pointer to it.  N.B. this is copied into a static data area to
-  avoid introducing NULL's into the original environment string,
-  and a pointer into the static area is returned.
-*/
-char *
-get_env_val( const char *str )
-{
-    const char  *src;
-    char *dst;
-    static char answer[512];
-
-        /* Find the '=' */
-    for( src=str; *src && *src != '='; src++ )
-        ;
-    if( *src != '=' ) {
-        return NULL;
-    }
-
-        /* Skip over any white space */
-    src += 1;
-    while( *src && isspace(*src) ) {
-        src++;
-    }
-
-        /* Now we are at beginning of result */
-    dst = answer;
-    while( *src && !isspace(*src) && *src != ';' ) {
-        *dst++ = *src++;
-    }
-    *dst = '\0';
-
-    return answer;
-}
-
-bool
-UserLog::open_file(const char *file, 
-				   bool log_as_user, // if false, logging to the global file
-				   FileLock* & lock, 
-				   FILE* & fp )
-{
-	int 			fd;
-
-	if ( file && strcmp(file,UNIX_NULL_FILE)==0 ) {
-		// special case - deal with /dev/null.  we don't really want
-		// to open /dev/null, but we don't want to fail in this case either
-		// because this is common when the user does not want a log, but
-		// the condor admin desires a global event log.
-		// Note: we always check UNIX_NULL_FILE, since we canonicalize
-		// to this even on Win32.
-		fp = NULL;
-		lock = NULL;
-		return true;
-	}
-	
-# if !defined(WIN32)
-	// Unix
-	int	flags = O_WRONLY | O_CREAT;
-	mode_t mode = 0664;
-	fd = safe_open_wrapper( file, flags, mode );
-	if( fd < 0 ) {
-		dprintf( D_ALWAYS,
-		         "UserLog::initialize: "
-		             "safe_open_wrapper(\"%s\") failed - errno %d (%s)\n",
-		         file,
-		         errno,
-		         strerror(errno) );
-		return false;
-	}
-
-		// attach it to stdio stream
-	if( (fp = fdopen(fd,"a")) == NULL ) {
-		dprintf( D_ALWAYS, "UserLog::initialize: "
-				 "fdopen(%i) failed - errno %d (%s)\n", fd, errno,
-				 strerror(errno) );
-		close( fd );
-		return false;
-	}
-# else
-	// Windows (Visual C++)
-	if( (fp = safe_fopen_wrapper(file,"a+tc")) == NULL ) {
-		dprintf( D_ALWAYS, "UserLog::initialize: "
-				 "safe_fopen_wrapper(\"%s\") failed - errno %d (%s)\n", 
-				 file, errno, strerror(errno) );
-		return false;
-	}
-
-	fd = _fileno(fp);
-# endif
-
-		// set the stdio stream for line buffering
-	if( setvbuf( fp,NULL,_IOLBF,BUFSIZ) < 0 ) {
-		dprintf( D_ALWAYS, "setvbuf failed in UserLog::initialize\n" );
-	}
-
-	// prepare to lock the file.	
-	if ( param_boolean("ENABLE_USERLOG_LOCKING",true) ) {
-		lock = new FileLock( fd, fp, file );
-	} else {
-		lock = new FileLock( -1 );
-	}
-
-	return true;
-}
-
-bool
-UserLog::initialize_global_log()
-{
-	bool ret_val = true;
-
-	if (m_global_path) {
-		free(m_global_path);
-		m_global_path = NULL;
-	}
-	if (m_global_lock) {
-		delete m_global_lock;
-		m_global_lock = NULL;
-	}
-	if (m_global_fp != NULL) {
-		fclose(m_global_fp);
-		m_global_fp = NULL;
-	}
-
-	m_global_path = param("EVENT_LOG");
-	m_global_use_xml = param_boolean("EVENT_LOG_USE_XML", false);
-
-	if ( ! m_global_path ) {
-		return true;
-	}
-
-	priv_state priv = set_condor_priv();
-	ret_val = open_file(m_global_path, false, m_global_lock, m_global_fp);
-
-	if ( ! ret_val ) {
-		set_priv( priv );
-		return false;
-	}
-
-	StatWrapper		statinfo;
-	if (  ( !(statinfo.Stat(m_global_path))   )  &&
-		  ( !(statinfo.GetBuf()->st_size) )  ) {
-		GenericEvent	event;
-		MyString file_id;
-		GenerateGlobalId( file_id );
-		snprintf(event.info, sizeof(event.info),
-				 "Global JobLog: "
-				 "ctime=%d id=%s sequence=%d size=%ld events=%ld",
-				 (int) time(NULL),
-				 file_id.GetCStr(), m_global_sequence,
-				 0L, 0L
-				 );
-		m_global_sequence++;
-		dprintf( D_FULLDEBUG, "Writing log header: '%s'\n", event.info );
-		int		len = strlen( event.info );
-		while( len < 256 ) {
-			strcat( event.info, " " );
-			len++;
-		}
-		ret_val = doWriteEvent( m_global_fp, &event, m_global_use_xml );
-	}
-
-	set_priv( priv );
-	return ret_val;
+	if (m_global_path) free(m_global_path);
+	if (m_global_lock) delete m_global_lock;
+	if (m_global_fp != NULL) fclose(m_global_fp);
+	if (m_global_uniq_base != NULL) free( m_global_uniq_base );
 }
 
 bool
@@ -311,7 +126,8 @@ UserLog::initialize( const char *file, int c, int p, int s, const char *gjid)
 		m_fp = NULL;
 	}
 
-	if ( m_write_user_log && !open_file(file,true,m_lock,m_fp) ) {
+	if ( m_write_user_log &&
+		 !openFile(file, true, m_enable_locking, true, m_lock, m_fp) ) {
 		return false;
 	}
 
@@ -353,7 +169,8 @@ UserLog::initialize( int c, int p, int s, const char *gjid )
 		// if we already have done so (i.e. if m_global_fp is not NULL).
 	if ( m_write_global_log && !m_global_fp ) {
 		priv_state priv = set_condor_priv();
-		initialize_global_log();
+		UserLogHeader	header;
+		initializeGlobalLog( header );
 		set_priv( priv );
 	}
 
@@ -364,24 +181,194 @@ UserLog::initialize( int c, int p, int s, const char *gjid )
 	return true;
 }
 
-UserLog::~UserLog()
+void
+UserLog::Reset( void )
 {
-	if (m_path) delete [] m_path;
-	if (m_lock) delete m_lock;
-	if (m_gjid) free(m_gjid);
-	if (m_fp != NULL) fclose( m_fp );
+	cluster = -1;
+	proc = -1;
+	subproc = -1;
 
-	if (m_global_path) free(m_global_path);
-	if (m_global_lock) delete m_global_lock;
-	if (m_global_fp != NULL) fclose(m_global_fp);
-	if (m_global_uniq_base != NULL) free( m_global_uniq_base );
+	m_write_user_log = true;
+	m_path = NULL;
+	m_fp = NULL; 
+	m_lock = NULL;
+
+	m_write_global_log = true;
+	m_global_path = NULL;
+	m_global_fp = NULL; 
+	m_global_lock = NULL;
+
+	m_use_xml = XML_USERLOG_DEFAULT;
+	m_gjid = NULL;
+
+	m_global_path = param( "EVENT_LOG" );
+	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
+	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
+	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
+	m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000 );
+	m_global_max_rotations = param_integer( "MAX_EVENT_LOG_ROTATIONS", 1 );
+
+	MyString	base;
+	base = "";
+	base += getuid();
+	base += '.';
+	base += getpid();
+	base += '.';
+
+	UtcTime	utc;
+	utc.getTime();
+	base += utc.seconds();
+	base += '.';
+	base += utc.microseconds();
+	base += '.';
+
+	m_global_uniq_base = strdup( base.GetCStr( ) );
+	m_global_sequence = 1;
+}
+
+bool
+UserLog::openFile(
+	const char	*file, 
+	bool		log_as_user, // if false, we are logging to the global file
+	bool		use_lock,		// use the lock
+	bool		append,			// append mode?
+	FileLock* & lock, 
+	FILE* &		fp )
+{
+	(void)  log_as_user;	// Quiet warning
+	int 	fd = 0;
+
+	if ( file && strcmp(file,UNIX_NULL_FILE)==0 ) {
+		// special case - deal with /dev/null.  we don't really want
+		// to open /dev/null, but we don't want to fail in this case either
+		// because this is common when the user does not want a log, but
+		// the condor admin desires a global event log.
+		// Note: we always check UNIX_NULL_FILE, since we canonicalize
+		// to this even on Win32.
+		fp = NULL;
+		lock = NULL;
+		return true;
+	}
+	
+# if !defined(WIN32)
+	// Unix
+	int	flags = O_WRONLY | O_CREAT;
+	mode_t mode = 0664;
+	fd = safe_open_wrapper( file, flags, mode );
+	if( fd < 0 ) {
+		dprintf( D_ALWAYS,
+		         "UserLog::initialize: "
+		             "safe_open_wrapper(\"%s\") failed - errno %d (%s)\n",
+		         file,
+		         errno,
+		         strerror(errno) );
+		return false;
+	}
+
+		// attach it to stdio stream
+	const char *fmode = append ? "a" : "w";
+	fp = fdopen( fd, fmode );
+	if( NULL == fp ) {
+		dprintf( D_ALWAYS, "UserLog::initialize: "
+				 "fdopen(%i,%s) failed - errno %d (%s)\n",
+				 fd, fmode, errno, strerror(errno) );
+		close( fd );
+		return false;
+	}
+# else
+	// Windows (Visual C++)
+	const char *fmode = append ? "a+tc" : "w+tc";
+	if( NULL == fp ) {
+		dprintf( D_ALWAYS, "UserLog::initialize: "
+				 "safe_fopen_wrapper(\"%s\",%s) failed - errno %d (%s)\n", 
+				 file, fmode, errno, strerror(errno) );
+		return false;
+	}
+
+	fd = _fileno(fp);
+# endif
+
+		// set the stdio stream for line buffering
+	if( setvbuf( fp,NULL,_IOLBF,BUFSIZ) < 0 ) {
+		dprintf( D_ALWAYS, "setvbuf failed in UserLog::initialize\n" );
+	}
+
+	// prepare to lock the file.	
+	if ( use_lock ) {
+		lock = new FileLock( fd, fp, file );
+	} else {
+		lock = new FileLock( -1 );
+	}
+
+	return true;
+}
+
+
+bool
+UserLog::initializeGlobalLog( UserLogHeader &header )
+{
+	bool ret_val = true;
+
+	if (m_global_lock) {
+		delete m_global_lock;
+		m_global_lock = NULL;
+	}
+	if (m_global_fp != NULL) {
+		fclose(m_global_fp);
+		m_global_fp = NULL;
+	}
+
+	if ( ! m_global_path ) {
+		return true;
+	}
+
+	priv_state priv = set_condor_priv();
+	ret_val = openFile(m_global_path, false, m_enable_locking, true,
+					   m_global_lock, m_global_fp);
+
+	if ( ! ret_val ) {
+		set_priv( priv );
+		return false;
+	}
+
+	StatWrapper		statinfo;
+	if (  ( !(statinfo.Stat(m_global_path))   )  &&
+		  ( !(statinfo.GetBuf()->st_size) )  ) {
+
+		// Generate a header event
+		WriteUserLogHeader writer( header );
+
+		MyString file_id;
+		GenerateGlobalId( file_id );
+		writer.setId( file_id );
+
+		writer.addFileOffset( writer.getSize() );
+		writer.setSize( 0 );
+
+		writer.addEventOffset( writer.getNumEvents() );
+		writer.setNumEvents( 0 );
+
+		writer.incSequence( );
+
+		ret_val = writer.Write( *this );
+
+		// TODO: we should should add the number of events in the
+		// previous file to the "first event number" of this one.
+		// The problem is that we don't know the number of events
+		// in the previous file, and we can't (other processes
+		// could write to it, too) without manually counting them
+		// all.
+	}
+
+	set_priv( priv );
+	return ret_val;
 }
 
 	// This method is called from doWriteEvent() - we expect the file to
 	// be locked, seeked to the end of the file, and in condor priv state.
 	// return true if log was rotated, either by us or someone else.
-bool UserLog::
-handleGlobalLogRotation()
+bool
+UserLog::handleGlobalLogRotation( void )
 {
 	bool rotated = false;
 	static long previous_filesize = 0L;
@@ -389,25 +376,136 @@ handleGlobalLogRotation()
 
 	if (!m_global_fp) return false;
 	if (!m_global_path) return false;
+	if ( !m_global_lock ||
+		 m_global_lock->isFakeLock() ||
+		 m_global_lock->isUnlocked() ) {
+		dprintf( D_ALWAYS, "checking for event log rotation, but no lock\n" );
+	}
 
 	StatWrapper	swrap( m_global_path );
+	if ( swrap.Stat() ) {
+		return false;			// What should we do here????
+	}
 	current_filesize = swrap.GetBuf()->st_size;
 
-	int global_max_filesize = param_integer("MAX_EVENT_LOG",1000000);
-	if ( current_filesize > global_max_filesize ) {
+	ReadUserLogHeader	reader;
+	if ( current_filesize > m_global_max_filesize ) {
+		UtcTime	start_time( true );
+		dprintf( D_FULLDEBUG, "Rotating inode #%ld @ %.6f\n",
+				 (long)swrap.GetBuf()->st_ino, start_time.combined() );
+		m_global_lock->display();
+
+		// Read the old header, use it to write an updated one
+		FILE *fp = safe_fopen_wrapper( m_global_path, "r" );
+		if ( !fp ) {
+			dprintf( D_ALWAYS,
+					 "UserLog: "
+					 "safe_fopen_wrapper(\"%s\") failed - errno %d (%s)\n", 
+					 m_global_path, errno, strerror(errno) );
+		}
+		else {
+			ReadUserLog	log_reader( fp, m_global_use_xml );
+			reader.Read( log_reader );
+
+			if ( m_global_count_events ) {
+				int		events = 0;
+				UtcTime	time1( true );
+				while( 1 ) {
+					ULogEvent		*event = NULL;
+					ULogEventOutcome outcome = log_reader.readEvent( event );
+					if ( ULOG_OK != outcome ) {
+						break;
+					}
+					events++;
+					delete event;
+				}
+				UtcTime	time2( true );
+				double	elapsed = time2.difference( time1 );
+				double	eps = ( events / elapsed );
+
+				reader.setNumEvents( events );
+				dprintf( D_ALWAYS,
+						 "UserLog: Read %d events in %.4fs = %.0f/s\n",
+						 events, elapsed, eps );
+			}
+			fclose( fp );
+		}
+		reader.setSize( current_filesize );
+
+		// Craft a header writer object from the reader
+		FILE		*header_fp = NULL;
+		FileLock	*fake_lock = NULL;
+		if( !openFile( m_global_path, false, false, false,
+					   fake_lock, header_fp ) ) {
+			dprintf( D_ALWAYS,
+					 "UserLog: failed to open %s for header rewrite:"
+					 " %d (%s)\n", 
+					 m_global_path, errno, strerror(errno) );
+		}
+
+		WriteUserLogHeader	writer( reader );
+
+		// And write the updated header
+		writer.Write( *this, header_fp );
+		if ( header_fp ) {
+			fclose( header_fp );
+		}
+		if ( fake_lock ) {
+			delete fake_lock;
+		}
+
+		// Now, rotate files
+		UtcTime	time1( true );
+		int		num_rotations = 0;
 		MyString old_name(m_global_path);
-		old_name += ".old";
-#ifdef WIN32
+		if ( 1 == m_global_max_rotations ) { 
+			old_name += ".old";
+		}
+		else {
+			int			i;
+			old_name += ".1";
+			for( i=m_global_max_rotations; i>1; i--) {
+				MyString old1(m_global_path);
+				old1.sprintf_cat(".%d", i-1 );
+
+				StatWrapper	s( old1, StatWrapper::STATOP_STAT );
+				if ( 0 == s.GetRc() ) {
+					MyString old2(m_global_path);
+					old2.sprintf_cat(".%d", i );
+					rename( old1.GetCStr(), old2.GetCStr() );
+					num_rotations++;
+				}
+			}
+		}
+#     ifdef WIN32
 		if ( m_global_fp) {
 			fclose(m_global_fp);	// on win32, cannot rename an open file
 			m_global_fp = NULL;
 		}
-#endif
+#     endif
+		UtcTime before(true);
 		if ( rotate_file(m_global_path,old_name.Value()) == 0 ) {
+			UtcTime after(true);
+			dprintf(D_FULLDEBUG, "before @%.6f\n", before.combined() );
+			dprintf(D_FULLDEBUG, "after @%.6f\n", after.combined() );
 			rotated = true;
 			dprintf(D_ALWAYS,"Rotated event log %s at size %ld bytes\n",
 					m_global_path, current_filesize);
+			num_rotations++;
 		}
+
+		UtcTime	end_time( true );
+		if ( rotated ) {
+			dprintf( D_FULLDEBUG,
+					 "Done rotating files (inode = %ld) @ %.6f\n",
+					 (long)swrap.GetBuf()->st_ino, end_time.combined() );
+		}
+		double	elapsed = end_time.difference( time1 );
+		double	rps = ( num_rotations / elapsed );
+		dprintf( D_FULLDEBUG,
+				 "Rotated %d files in %.4fs = %.0f/s\n",
+				 num_rotations, elapsed, rps );
+
 	}
 
 	if  ( rotated == true ||						// we rotated the log
@@ -415,7 +513,9 @@ handleGlobalLogRotation()
 	{
 			// log was rotated, so we need to reopen/create it and also
 			// recreate our lock.
-		initialize_global_log();	// this will re-open and re-create locks
+
+		// this will re-open and re-create locks
+		initializeGlobalLog( reader );
 		rotated = true;
 		if ( m_global_lock ) {
 			m_global_lock->obtain(WRITE_LOCK);
@@ -427,10 +527,31 @@ handleGlobalLogRotation()
 	previous_filesize = current_filesize;
 
 	return rotated;
+
+}
+
+int
+UserLog::writeGlobalEvent( ULogEvent &event, FILE *fp, bool is_header_event )
+{
+	if ( NULL == fp ) {
+		fp = m_global_fp;
+	}
+
+	if ( is_header_event && fseek( fp, 0, SEEK_SET ) ) {
+		dprintf( D_ALWAYS,
+				 "Failed to seek to end of global log file: %d / %s\n",
+				 errno, strerror( errno ) );
+		return -1;
+	}
+
+	return doWriteEvent( fp, &event, m_global_use_xml );
 }
 
 bool
-UserLog::doWriteEvent( ULogEvent *event, bool is_global_event, ClassAd *)
+UserLog::doWriteEvent( ULogEvent *event,
+					   bool is_global_event,
+					   bool is_header_event,
+					   ClassAd *)
 {
 	int success;
 	FILE* fp;
@@ -451,7 +572,22 @@ UserLog::doWriteEvent( ULogEvent *event, bool is_global_event, ClassAd *)
 	}
 
 	lock->obtain (WRITE_LOCK);
-	fseek (fp, 0, SEEK_END);
+	int			status;
+	const char	*whence;
+	if ( is_header_event ) {
+		status = fseek( fp, 0, SEEK_SET );
+		whence = "SEEK_SET";
+	}
+	else {
+		status = fseek (fp, 0, SEEK_END);
+		whence = "SEEK_END";
+	}
+	if ( status ) {
+		dprintf( D_ALWAYS,
+				 "fseek(%s) failed in UserLog::doWriteEvent - "
+				 "errno %d (%s)\n",
+				 whence, errno, strerror(errno) );
+	}
 
 		// rotate the global event log if it is too big
 	if ( is_global_event ) {
@@ -556,9 +692,9 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	event->setGlobalJobId(m_gjid);
 	
 	// write global event
-	if ( m_write_global_log && m_global_fp && 
-		 doWriteEvent(event, true, param_jobad ) == false ) 
-	{
+	if ( m_write_global_log &&
+		 m_global_fp && 
+		 (doWriteEvent(event, true, false, param_jobad) == false)  ) {
 		return false;
 	}
 
@@ -610,7 +746,7 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 			info_event.cluster = cluster;
 			info_event.proc = proc;
 			info_event.subproc = subproc;
-			doWriteEvent(&info_event, true, param_jobad);
+			doWriteEvent(&info_event, true, false, param_jobad);
 			delete eventAd;
 		}
 	}
@@ -620,8 +756,9 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	}
 		
 	// write ulog event
-	if ( m_write_user_log && m_fp && doWriteEvent(event, false, param_jobad)
-		 == false ) {
+	if ( m_write_user_log && 
+		 m_fp &&
+		 ( doWriteEvent(event, false, false, param_jobad) == false ) ) {
 		return false;
 	}
 

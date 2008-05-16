@@ -40,6 +40,7 @@
 
 /* Predeclare some classes */
 class MyString;
+class UserLogHeader;
 
 
 /** API for writing a log file.  Since an API for reading a log file
@@ -149,14 +150,39 @@ class UserLog {
     */
     bool writeEvent (ULogEvent *event, ClassAd *jobad = NULL);
 
+    /** Write an event to the global log file.  Caution: if the log file is
+        not initialized, then no event will be written, and this function
+        will return a successful value.  This is a specialized method
+		for designed internal use in the writing of the event log header.
+
+        @param event the event to be written
+        @param file pointer to write event to (or NULL for default global FP)
+        @param Seek to the start of the file before writing event?
+        @return 0 for failure, 1 for success
+    */
+    int writeGlobalEvent ( ULogEvent &event,
+						   FILE *fp,
+						   bool is_header_event = true );
+
   private:
 
-	bool initialize_global_log();
+	bool initializeGlobalLog( UserLogHeader & );
 
-	bool open_file( const char *file, bool log_as_user, FileLock* & lock, 
-					FILE* & fp );
+	// Write header event to global file
+	bool writeHeaderEvent ( const UserLogHeader &header );
 
-	bool doWriteEvent( ULogEvent *event, bool is_global_event, ClassAd *ad);
+	bool openFile( const char *file,
+				   bool log_as_user,
+				   bool use_lock,
+				   bool append,
+				   FileLock* & lock, 
+				   FILE* & fp );
+
+	bool doWriteEvent( ULogEvent *event,
+					   bool is_global_event,
+					   bool is_header_event,
+					   ClassAd *ad);
+
 	bool doWriteEvent( FILE *fp, ULogEvent *event, bool do_use_xml );
 	void GenerateGlobalId( MyString &id );
 
@@ -177,6 +203,8 @@ class UserLog {
     /** The log file                 */  FILE     * m_fp;
     /** The log file lock            */  FileLock * m_lock;
 
+    /** Enable locking?              */  bool		m_enable_locking;
+
 	/** Write to the global log? */		 bool		m_write_global_log;
     /** Copy of path to global log   */  char     * m_global_path;
     /** The global log file          */  FILE     * m_global_fp;
@@ -184,6 +212,9 @@ class UserLog {
 	/** Whether we use XML or not    */  bool       m_global_use_xml;
 	/** The log file uniq ID base    */  char     * m_global_uniq_base;
 	/** The current sequence number  */  int        m_global_sequence;
+	/** Count event log events?      */  bool       m_global_count_events;
+	/** Max size of event log        */  int		m_global_max_filesize;
+	/** Max event log rotations      */  int		m_global_max_rotations;
 
 	/** Whether we use XML or not    */  bool       m_use_xml;
 
@@ -259,19 +290,35 @@ class ReadUserLog
 		int		size;
 	};
 
+	/** Returned values from the file status check operation
+	 */
+	enum FileStatus {
+		LOG_STATUS_ERROR = -1,
+		LOG_STATUS_NOCHANGE,
+		LOG_STATUS_GROWN,
+		LOG_STATUS_SHRUNK,
+	};
+
     /** Default constructor.
 	*/
-    ReadUserLog() { clear(); }
+    ReadUserLog(void) { clear(); }
+
+    /** Constructor for a limited functionality reader
+		- No rotation handling
+		- No locking
+        @param fp the file to read from
+	*/
+    ReadUserLog( FILE *fp, bool is_xml );
 
     /** Constructor.
-        @param file the file to read from
+        @param filename the file to read from
 	*/
-    ReadUserLog (const char * filename);
+    ReadUserLog(const char * filename);
 
     /** Constructor.
         @param State to restore from
 	*/
-    ReadUserLog ( const FileState &state );
+    ReadUserLog( const FileState &state );
                                       
     /** Destructor.
 	*/
@@ -283,39 +330,49 @@ class ReadUserLog
 
 
     /** Initialize the log file.  This function will return false
-        if it can't open the log file (among other things).
+        if it can't open the log file (among other problems).
         @param file the file to read from
 		@param handle_rotation enables the reader to handle rotating
 		 log files (only useful for global user logs)
-		@param check_for_rotated try to open the rotated (".old") file first?
+		@param check_for_rotated try to open the rotated
+		 (".old" or ".1", ".2", ..) files first?
         @return true for success
     */
     bool initialize (const char *filename,
 					 bool handle_rotation = false,
 					 bool check_for_rotated = false );
 
-    /** Initialize the log file.  This function will return false
-        if it can't open the log file (among other things).
+    /** Initialize the log file.  Similar to above, but takes an integer
+		as it's second parameter. This function will return false
+        if it can't open the log file (among other problems).
         @param file the file to read from
-		@param max_rotation maximum rotation value
-		 log files (only useful for global user logs)
-		@param check_for_rotated try to open the rotated (".old") file first?
+		@param max_rotation sets max rotation file # the reader will
+		 try to read (0 disables) (only useful for global user logs)
+		@param check_for_rotated try to open the rotated
+		 (".old" or ".1", ".2", ..) files first?
         @return true for success
     */
     bool initialize (const char *filename,
 					 int max_rotation,
-					 bool check_for_rotated = false );
+					 bool check_for_rotated = true );
 
     /** Initialize the log file from a saved state.
-		This function will return false
-        if it can't open the log file (among other things).
+		This function will return false if it can't open the log file
+		 (among other problems).
         @param FileState saved file state
-		@param max_rotations max rotations value of the logs
-		 (0 => use value from the state, -1 => disable )
         @return true for success
     */
-    bool initialize (const ReadUserLog::FileState &state,
-					 int max_rotations = 0 );
+    bool initialize (const ReadUserLog::FileState &state );
+
+    /** Initialize the log file from a saved state and set the
+		  rotation parameters
+		This function will return false if it can't open the log file
+		 (among other problems).
+        @param FileState saved file state
+        @param  Maximum rotation files
+        @return true for success
+    */
+    bool initialize (const ReadUserLog::FileState &state, int max_rotations );
 
     /** Read the next event from the log file.  The event pointer to
         set to point to a newly instatiated ULogEvent object.
@@ -323,21 +380,18 @@ class ReadUserLog
         @return the outcome of attempting to read the log
     */
     ULogEventOutcome readEvent (ULogEvent * & event);
-
+	
     /** Synchronize the log file if the last event read was an error.  This
         safe guard function should be called if there is some error reading an
         event, but there are events after it in the file.  Will skip over the
         "bad" event (i.e., read up to and including the event separator (...))
         so that the rest of the events can be read.
-
         @return true: success, false: failure
     */
     bool synchronize ();
 
-    /// Get the log's file descriptor
-    int getfd() const { return m_fd; }
-	FILE *getfp() const { return m_fp; }
-
+	/** Output the current file position
+	 */
 	void outputFilePos(const char *pszWhereAmI);
 
 	/** Lock / unlock the file
@@ -345,13 +399,18 @@ class ReadUserLog
 	void Lock(void)   { Lock(true);   };
 	void Unlock(void) { Unlock(true); };
 
+	/** Enable / disable locking
+	 */
+	void setLock( bool enable ) { m_lock_enable = enable; };
+
 	/** Set the # of rotations used
 	 */
 	void setRotations( int rotations ) { m_max_rotations = rotations; }
 
 	/** Set whether the log file should be treated as XML. The constructor will
 		attempt to figure this out on its own.
-		@param is_xml should be true if we have an XML log file, false otherwise
+		@param is_xml should be true if we have an XML log file,
+		 false otherwise
 	*/
 	void setIsXMLLog( bool is_xml );
 
@@ -361,6 +420,11 @@ class ReadUserLog
 		@return true if XML, false otherwise
 	*/
 	bool getIsXMLLog( void ) const;
+
+    /** Check the status of the file - has it grown, shrunk, etc.
+		@return LOG_STATUS_{ERROR,NOCHANGE,GROWN,SHRUNK}
+	 */
+    FileStatus CheckFileStatus( void );
 
 	/** Set whether the log file should be treated as "old-style" (non-XML).
 	    The constructor will attempt to figure this out on its own.
@@ -448,10 +512,23 @@ class ReadUserLog
 	
   private:
 
+    /** Internal initializer from saved state.
+		This function will return falseif it can't open the log file
+		 (among other problems).
+        @param FileState saved file state
+        @param Change the max rotation value?
+		@param max_rotations max rotations value of the logs
+        @return true for success
+    */
+    bool InternalInitialize (const ReadUserLog::FileState &state,
+							 bool set_rotations,
+							 int max_rotations = 0 );
+
     /** Internal initializer.  This function will return false
         if it can't open the log file (among other things).
-		@param Handle file rotation?
-		@param check_for_old try to open rotated (".old") file first?
+		@param max_rotation sets max rotation file # the reader will
+		 try to read (0 disables) (only useful for global user logs)
+		@param Max number of rotations to handle (0 = none)
 		@param Restore previous file position
 		@param Enable reading of the file header?
         @return true for success
@@ -459,7 +536,18 @@ class ReadUserLog
     bool InternalInitialize ( int max_rotation,
 							  bool check_for_rotated,
 							  bool restore_position,
-							  bool enable_header_read );
+							  bool enable_header_read ,
+							  bool force_disable_locking = false );
+
+	/** Initialize rotation parameters
+		@param Max number of rotations to handle (0 = none)
+	 */
+	void initRotParms( int max_rotation );
+
+	/** Get max rotation parameter based
+		@param Handle rotations?
+	 */
+	int getMaxRot( bool handle_rotation );
 
 	/** Internal lock/unlock methods
 		@param Verify that initialization has been done
@@ -555,14 +643,14 @@ class ReadUserLog
     int    				 m_fd;			/** The log's file descriptor */
     FILE				*m_fp;			/** The log's file pointer    */
 
+	bool				 m_never_close_fp; /** Never close the FP? */
 	bool				 m_close_file;	/** Close file between operations? */
 	bool				 m_handle_rot;	/** Do we handle file rotation? */
 	int					 m_max_rotations; /** Max rotation number */
 	bool				 m_read_header;	/** Read the file's header? */
 
-	bool				 m_lock_file;	/** Should we lock the file?  */
-    FileLock			*m_lock;		/** The log file lock         */
-	bool				 m_is_locked;	/** Is the file locked?       */
+	bool				 m_lock_enable;	/** Should we lock the file?  */
+    FileLockBase		*m_lock;		/** The log file lock         */
 	int					 m_lock_rot;	/** Lock managing what rotation #? */
 };
 
