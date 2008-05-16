@@ -235,7 +235,7 @@ while ($runidrow = mysql_fetch_array($results)) {
 
 <?php
 	if( sizeof($data) == 0 ) {
-		echo "<tr><td>No Tests on ".date("m/d/Y", $start)."</td></tr>\n";
+		echo "<tr><td></td><td colspan=\"8\"><strong>No Tests on ".date("m/d/Y", $start)." - Runid $runid - </strong></td></tr>\n";
 	} 
    foreach ($data AS $task => $arr) {
 		// we are focusing on a single test history, skip the rest
