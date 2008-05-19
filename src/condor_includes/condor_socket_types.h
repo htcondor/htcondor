@@ -203,11 +203,7 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_COUNT_TYPE int
 #elif defined(Darwin) 
 	#define SOCKET_DATA_TYPE void*
-	#if defined(CONDOR_HAD_GNUC_4)
-		#define SOCKET_LENGTH_TYPE socklen_t
-	#else
-		#define SOCKET_LENGTH_TYPE int
-	#endif
+	#define SOCKET_LENGTH_TYPE socklen_t
 	#define SOCKET_ALTERNATE_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_DATA_CONST const
 	#define SOCKET_MSG_CONST const

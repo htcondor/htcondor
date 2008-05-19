@@ -20,8 +20,6 @@
 #ifndef STAT_WRAPPER_H
 #define STAT_WRAPPER_H
 
-#include "condor_common.h"
-#include "condor_config.h"
 #include "stat_struct.h"
 #include "stat_wrapper_internal.h"
 

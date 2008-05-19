@@ -45,6 +45,8 @@
 #include "condor_string.h"  /* for strnewp() */
 #include "string_list.h"
 #include "condor_daemon_core.h"
+#include "extArray.h"
+#include "HashTable.h"
 
 const CondorID Dag::_defaultCondorId;
 
@@ -70,25 +72,24 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		  const char* dapLogName, bool allowLogError,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
-		  const char *storkRmExe, const CondorID *DAGManJobId,
+		  const char *storkRmExe, const CondorID *DAGManJobID,
 		  bool prohibitMultiJobs, bool submitDepthFirst) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	DAG_ERROR_CONDOR_SUBMIT_FAILED (-1001),
 	DAG_ERROR_CONDOR_JOB_ABORTED (-1002),
 	MAX_SIGNAL			  (64),
+	_splices              (200, hashFuncMyString, rejectDuplicateKeys),
+	_dagFiles             (dagFiles),
+	_useDagDir            (useDagDir),
 	_condorLogName		  (NULL),
     _condorLogInitialized (false),
     _dapLogName           (NULL),
     _dapLogInitialized    (false),             //<--DAP
-	_nodeNameHash		  (NODE_HASH_SIZE, MyStringHash,
-							rejectDuplicateKeys),
-	_nodeIDHash			  (NODE_HASH_SIZE, hashFuncInt,
-							rejectDuplicateKeys),
-	_condorIDHash		  (NODE_HASH_SIZE, hashFuncInt,
-							rejectDuplicateKeys),
-	_storkIDHash		  (NODE_HASH_SIZE, hashFuncInt,
-							rejectDuplicateKeys),
+	_nodeNameHash		  (NODE_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
+	_nodeIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
+	_condorIDHash		  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
+	_storkIDHash		  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
     _numNodesDone         (0),
     _numNodesFailed       (0),
     _numJobsSubmitted     (0),
@@ -100,7 +101,7 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	m_retryNodeFirst	  (retryNodeFirst),
 	_condorRmExe		  (condorRmExe),
 	_storkRmExe			  (storkRmExe),
-	_DAGManJobId		  (DAGManJobId),
+	_DAGManJobId		  (DAGManJobID),
 	_preRunNodeCount	  (0),
 	_postRunNodeCount	  (0),
 	_checkCondorEvents    (),
@@ -123,7 +124,7 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 
 	PrintDagFiles( dagFiles );
 
-	FindLogFiles( dagFiles, useDagDir );
+	FindLogFiles( dagFiles, _useDagDir );
 
 	ASSERT( TotalLogFileCount() > 0 ) ;
 
@@ -2383,8 +2384,10 @@ Dag::IncludeExtraDotCommands(
 
 	include_file = safe_fopen_wrapper(_dot_include_file_name, "r");
 	if (include_file == NULL) {
-        debug_printf(DEBUG_NORMAL, "Can't open dot include file %s\n",
+		if (_dot_include_file_name != NULL) {
+        	debug_printf(DEBUG_NORMAL, "Can't open dot include file %s\n",
 					_dot_include_file_name);
+		}
 	} else {
 		char line[100];
 		fprintf(dot_file, "// Beginning of commands included from %s.\n", 
@@ -2424,38 +2427,38 @@ Dag::DumpDotFileNodes(FILE *temp_dot_file)
 		switch (node->GetStatus()) {
 		case Job::STATUS_READY:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=ellipse label=\"%s (I)\"];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=ellipse label=\"%s (I)\"];\n",
+				node_name, node_name);
 			break;
 		case Job::STATUS_PRERUN:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=ellipse label=\"%s (Pre)\" style=dotted];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=ellipse label=\"%s (Pre)\" style=dotted];\n",
+				node_name, node_name);
 			break;
 		case Job::STATUS_SUBMITTED:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=ellipse label=\"%s (R)\" peripheries=2];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=ellipse label=\"%s (R)\" peripheries=2];\n",
+				node_name, node_name);
 			break;
 		case Job::STATUS_POSTRUN:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=ellipse label=\"%s (Post)\" style=dotted];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=ellipse label=\"%s (Post)\" style=dotted];\n",
+				node_name, node_name);
 			break;
 		case Job::STATUS_DONE:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=ellipse label=\"%s (Done)\" style=bold];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=ellipse label=\"%s (Done)\" style=bold];\n",
+				node_name, node_name);
 			break;
 		case Job::STATUS_ERROR:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=box label=\"%s (E)\"];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=box label=\"%s (E)\"];\n",
+				node_name, node_name);
 			break;
 		default:
 			fprintf(temp_dot_file, 
-				   "    %s [shape=ellipse label=\"%s (I)\"];\n",
-				   node_name, node_name);
+				"    \"%s\" [shape=ellipse label=\"%s (I)\"];\n",
+				node_name, node_name);
 			break;
 		}
 	}
@@ -2497,7 +2500,7 @@ Dag::DumpDotFileArcs(FILE *temp_dot_file)
 			
 			child_name  = child->GetJobName();
 			if (parent_name != NULL && child_name != NULL) {
-				fprintf(temp_dot_file, "    %s -> %s;\n",
+				fprintf(temp_dot_file, "    \"%s\" -> \"%s\";\n",
 						parent_name, child_name);
 			}
 		}
@@ -2547,6 +2550,8 @@ Dag::ChooseDotFileName(MyString &dot_file_name)
 //---------------------------------------------------------------------------
 bool Dag::Add( Job& job )
 {
+	debug_printf(DEBUG_QUIET, "Dag::Add() Creating name view for node %s\n", 
+		job.GetJobName());
 	int insertResult = _nodeNameHash.insert( job.GetJobName(), &job );
 	ASSERT( insertResult == 0 );
 
@@ -3151,3 +3156,268 @@ Dag::UpdateJobCounts( Job *node, int change )
 		ASSERT( node->GetThrottleInfo()->_currentJobs >= 0 );
 	}
 }
+
+//---------------------------------------------------------------------------
+void
+Dag::PrefixAllNodeNames(const MyString &prefix)
+{
+    Job *job = NULL;
+	MyString key;
+
+	debug_printf(DEBUG_QUIET, "Entering: Dag::PrefixAllNodeNames()\n");
+
+    _jobs.Rewind();
+    while( (job = _jobs.Next()) ) {
+      ASSERT( job != NULL );
+	  job->PrefixName(prefix);
+    }
+
+	// Here we must reindex the hash view with the prefixed name.
+	// also fix my node name hash view of the jobs
+
+	// First, wipe out the index.
+	_nodeNameHash.startIterations();
+	while(_nodeNameHash.iterate(key,job)) {
+		_nodeNameHash.remove(key);
+	}
+
+	// Then, reindex all the jobs keyed by their new name
+    _jobs.Rewind();
+    while( (job = _jobs.Next()) ) {
+      ASSERT( job != NULL );
+	  key = job->GetJobName();
+		if (_nodeNameHash.insert(key, job) != 0) {
+			// I'm reinserting everything newly, so this should never happen
+			// unless two jobs have an identical name, which means another
+			// part o the code failed to keep the constraint that all jobs have
+			// unique names
+			debug_error(1, DEBUG_QUIET, 
+				"Dag::PrefixAllNodeNames(): This is an impossible error\n");
+		}
+    }
+
+	debug_printf(DEBUG_QUIET, "Leaving: Dag::PrefixAllNodeNames()\n");
+}
+
+
+//---------------------------------------------------------------------------
+int 
+Dag::InsertSplice(MyString spliceName, Dag *splice_dag)
+{
+	return _splices.insert(spliceName, splice_dag);
+}
+
+//---------------------------------------------------------------------------
+int
+Dag::LookupSplice(MyString name, Dag *&splice_dag)
+{
+	return _splices.lookup(name, splice_dag);
+}
+
+//---------------------------------------------------------------------------
+// This represents not the actual initial nodes of the dag just after
+// the file containing the dag had been parsed.
+// You must NOT free the returned array or the contained pointers.
+ExtArray<Job*>*
+Dag::InitialRecordedNodes(void)
+{
+	return &_splice_initial_nodes;
+}
+
+//---------------------------------------------------------------------------
+// This represents not the actual final nodes of the dag just after
+// the file containing the dag had been parsed.
+// You must NOT free the returned array or the contained pointers.
+ExtArray<Job*>*
+Dag::FinalRecordedNodes(void)
+{
+	return &_splice_final_nodes;
+}
+
+
+//---------------------------------------------------------------------------
+// After we parse the dag, let's remember which ones were the initial and 
+// final nodes in the dag (in case this dag was used as a splice).
+void
+Dag::RecordInitialAndFinalNodes(void)
+{
+	Job *job = NULL;
+
+	_jobs.Rewind();
+	while( (job = _jobs.Next()) ) {
+
+		// record the initial nodes
+		if (job->NumParents() == 0) {
+			_splice_initial_nodes.add(job);
+		}
+
+		// record the final nodes
+		if (job->NumChildren() == 0) {
+			_splice_final_nodes.add(job);
+		}
+	}
+}
+
+//---------------------------------------------------------------------------
+// Make a copy of the _jobs array and return it. This will also remove the
+// nodes out of _jobs so the destructor doesn't delete them.
+OwnedMaterials*
+Dag::RelinquishNodeOwnership(void)
+{
+	Job *job = NULL;
+	MyString key;
+
+	ExtArray<Job*> *nodes = new ExtArray<Job*>();
+
+	// 1. Copy the jobs
+	_jobs.Rewind();
+	while( (job = _jobs.Next()) ) {
+		nodes->add(job);
+		_jobs.DeleteCurrent();
+	}
+
+	// shove it into a packet and give it back
+	return new OwnedMaterials(nodes);
+}
+
+
+//---------------------------------------------------------------------------
+OwnedMaterials*
+Dag::LiftSplices(SpliceLayer layer)
+{
+	Dag *splice = NULL;
+	MyString key;
+	OwnedMaterials *om = NULL;
+
+	// if this splice contains no other splices, then relinquish the nodes I own
+	if (layer == DESCENDENTS && _splices.getNumElements() == 0) {
+		return RelinquishNodeOwnership();
+	}
+
+	// recurse down the splice tree moving everything up into myself.
+	_splices.startIterations();
+	while(_splices.iterate(key, splice)) {
+
+		debug_printf(DEBUG_QUIET, "Lifting splice %s\n", key.Value());
+		om = splice->LiftSplices(DESCENDENTS);
+		// this function moves what it needs out of the returned object
+		AssumeOwnershipofNodes(om);
+		delete om;
+	}
+
+	// Now delete all of them.
+	_splices.startIterations();
+	while(_splices.iterate(key, splice)) {
+		_splices.remove(key);
+		delete splice;
+	}
+
+	// base case is above.
+	return NULL;
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::LiftChildSplices(void)
+{
+	MyString key;
+	Dag *splice = NULL;
+
+	debug_printf(DEBUG_QUIET, "Lifting child splices...\n");
+	_splices.startIterations();
+	while( _splices.iterate(key, splice) ) {
+		debug_printf(DEBUG_QUIET, "Lifting child splice: %s\n", key.Value());
+		splice->LiftSplices(SELF);
+	}
+	debug_printf(DEBUG_QUIET, "Done lifting child splices.\n");
+}
+
+
+//---------------------------------------------------------------------------
+// Grab all of the nodes out of the splice, and place them into here.
+// If the splice, after parsing of the dag file representing 'here', still
+// have true initial or final nodes, then those must move over the the
+// recorded inital and final nodes for 'here'.
+void
+Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
+{
+	Job *job = NULL;
+	int i;
+	MyString key;
+	JobID_t key_id;
+
+	ExtArray<Job*> *nodes = om->nodes;
+
+	// 1. Take ownership of the nodes
+
+	// 1a. If there are any actual initial/final nodes, then ensure to record
+	// it into the recorded initial and final nodes for this node.
+	for (i = 0; i < nodes->length(); i++) {
+		if ((*nodes)[i]->NumParents() == 0) {
+			_splice_initial_nodes.add((*nodes)[i]);
+			continue;
+		}
+		if ((*nodes)[i]->NumChildren() == 0) {
+			_splice_final_nodes.add((*nodes)[i]);
+		}
+	}
+
+	// 1b. Copy the nodes into _jobs.
+	for (i = 0; i < nodes->length(); i++) {
+		_jobs.Append((*nodes)[i]);
+	}
+
+	// 2. Update our name hash to include the new nodes.
+	for (i = 0; i < nodes->length(); i++) {
+		key = (*nodes)[i]->GetJobName();
+
+		debug_printf(DEBUG_QUIET, "Creating view hash fixup for: job %s\n", 
+			key.Value());
+
+		if (_nodeNameHash.insert(key, (*nodes)[i]) != 0) {
+			debug_printf(DEBUG_QUIET, 
+				"Found name collision while taking ownership of node: %s\n",
+				key.Value());
+			debug_printf(DEBUG_QUIET, "Trying to insert key %s, node:\n",
+				key.Value());
+			(*nodes)[i]->Dump();
+			debug_printf(DEBUG_QUIET, "but it collided with key %s, node:\n", 
+				key.Value());
+			if (_nodeNameHash.lookup(key, job) == 0) {
+				job->Dump();
+			} else {
+				debug_error(1, DEBUG_QUIET, "What? This is impossible!\n");
+			}
+
+			debug_error(1, DEBUG_QUIET, "Aborting.\n");
+		}
+	}
+
+	// 3. Update our node id hash to include the new nodes.
+	for (i = 0; i < nodes->length(); i++) {
+		key_id = (*nodes)[i]->GetJobID();
+		if (_nodeIDHash.insert(key_id, (*nodes)[i]) != 0) {
+			debug_error(1, DEBUG_QUIET, 
+				"Found job id collision while taking ownership of node: %s\n",
+				(*nodes)[i]->GetJobName());
+		}
+	}
+}
+
+
+//---------------------------------------------------------------------------
+// iterate over the whole dag and ask each job to interpolate the $(JOB) 
+// macro in any vars that it may have.
+void
+Dag::ResolveVarsInterpolations(void)
+{
+	Job *job = NULL;
+
+	_jobs.Rewind();
+	while((job = _jobs.Next())) {
+		job->ResolveVarsInterpolations();
+	}
+}
+
+
+

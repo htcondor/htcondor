@@ -250,7 +250,7 @@ foreach $tag (sort keys %tags ) {
     print "Working on $tag\n";
     chdir($workspace) || die "Can't chdir($workspace): $!\n";
     if( ! -d $tag ) {
-        mkdir( $tag ) || die "Can't mkdir($tag): $!\n";
+        system("mkdir -p $tag" ) && die "Can't mkdir -p $tag: $!\n";
     }
     chdir( $tag ) || die "Can't chdir($tag): $!\n";
 
@@ -811,6 +811,7 @@ sub createSubmitFiles
     my $cmdfile = "cmdfile";
     if( defined $tag ) {
         $cmdfile .= "-$tag";
+	$cmdfile =~ s,/,,g;
     } else {
         $cmdfile .= "-workspace";
     }
@@ -1183,6 +1184,7 @@ sub generateBuildFetchFiles
 
     if( defined $tag ) {
         my $srcfile = "source-$tag.src";
+	$srcfile =~ s,/,,g;
         makeFetchFileVCS( $srcfile, TRUE, SRC, $module, $tag );
         push( @fetch_files, $srcfile );
 
@@ -1192,10 +1194,12 @@ sub generateBuildFetchFiles
 	# visible at the makeFetchFileVCS level.
 	if( defined $opt_git ) {
 	    my $extfile = "externals-$tag.src";
+	    $extfile =~ s,/,,g;
 	    makeFetchFileVCS( $extfile, TRUE, EXT, $module, $tag );
 	    push( @fetch_files, $extfile );
 
 	    my $docfile = "manual-$tag.src";
+	    $docfile =~ s,/,,g;
 	    makeFetchFileVCS( $docfile, TRUE, DOC, $module, $tag );
 	    push( @fetch_files, $docfile );
 	}

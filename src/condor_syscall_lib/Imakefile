@@ -173,9 +173,11 @@ COMPRESS_LIB = libcondorzsyscall.a
 SYSCALL_SUPPORT_OBJ=senders.o receivers.o syscall_mode.o syscall_connect.o remote_syscall.o syscall_numbers.o xfer_file.o
 
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
-	internet.o $(PLATFORM_UTIL_OBJ) mkargv.o filename_tools.o
+	internet.o $(PLATFORM_UTIL_OBJ) mkargv.o filename_tools.o \
+	strupr.o
 
-CPP_UTIL_OBJ = condor_version.o stat_wrapper.o condor_open.o selector.o
+CPP_UTIL_OBJ = condor_version.o stat_wrapper.o stat_wrapper_internal.o condor_open.o selector.o \
+	MyString.o
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
 IO_OBJ = stream.o sock.o safe_sock.o reli_sock.o buffers.o $(CONDOR_TYPE_OBJ) condor_rw.o SafeMsg.o
@@ -211,7 +213,7 @@ SPECIAL_OBJ = special_stubs.o cedar_no_ckpt_stubs.o
 
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
 	$(CKPT_OBJ) $(UTIL_EXTRACT) $(IOS_STUBS) $(IO_OBJ) $(SPECIAL_IO_OBJ) \
-	$(SPECIAL_OBJ) $(CPP_UTIL_OBJ) $(NEST_OBJ)
+	$(CPP_UTIL_OBJ) $(SPECIAL_OBJ) $(NEST_OBJ)
 
 SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o libcondorc++support.a
 SYSCALL_LIB = libcondorsyscall.a
@@ -347,7 +349,7 @@ uppercase_target($(SIMPLE_LIBC),fork.o,FORK_TMP.o,fork,FORK)
 
 FORK.o: FORK_TMP.o
 	./ToUpper FORK_TMP.o FORK.o __FORK_lock __fork_lock
-	
+
 #else
 uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
 #endif

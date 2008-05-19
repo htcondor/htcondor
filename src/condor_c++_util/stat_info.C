@@ -233,10 +233,18 @@ StatInfo::init( StatWrapper *statbuf )
 	else
 	{
 		// the do_stat succeeded
-		const StatStructType *sb =
-			statbuf->GetBuf( StatWrapper::STATOP_STAT );
-		const StatStructType *lsb =
-			statbuf->GetBuf( StatWrapper::STATOP_LSTAT );
+		const StatStructType *sb;
+		const StatStructType *lsb;
+
+		sb = statbuf->GetBuf( StatWrapper::STATOP_STAT );
+		if ( !sb ) {
+			sb = statbuf->GetBuf( StatWrapper::STATOP_FSTAT );
+		}
+		if ( !sb ) {
+			sb = statbuf->GetBuf( StatWrapper::STATOP_LAST );
+		}
+		ASSERT(sb);
+		lsb = statbuf->GetBuf( StatWrapper::STATOP_LSTAT );
 
 		si_error = SIGood;
 		access_time = sb->st_atime;

@@ -198,15 +198,18 @@ char* index(const char *s, int c);
 
 END_C_DECLS
 
-/* Some Win32 specifics */
+
+/* Some Win32 specifics - These should all be detected by configure */
 #if defined(WIN32)
-/* Win32 uses _stati64(); this *should* be detected by configure */
+/* Win32 uses _stati64() and _fstati64() */
 # define HAVE__STATI64	1
 # undef  HAVE__LSTATI64
 # define HAVE__FSTATI64	1
-  /* Win32 has a __int64 type defined; this *should* be detected by configure*/
+
+/* Win32 has a __int64 type defined*/
 # define HAVE___INT64	1
 #endif
+
 
 /* Define the PRIx64 macros */
 

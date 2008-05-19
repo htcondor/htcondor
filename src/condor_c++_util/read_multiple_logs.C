@@ -769,7 +769,8 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 			StringList	tokens(logicalLine, " \t");
 			tokens.rewind();
 
-			if ( !stricmp(tokens.next(), jobKeyword.Value()) ) {
+			char *word = tokens.next();
+			if ( !stricmp(word, jobKeyword.Value()) ) {
 
 					// Get the node submit file name.
 				const char *nodeName = tokens.next();
@@ -842,6 +843,24 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 				if (!bAlreadyInList) {
 						// Note: append copies the string here.
 					listLogFilenames.append(strLogFilename.Value());
+				}
+
+			// here we recurse into a splice to discover logfiles that it might
+			// bring in.
+			} else if ( !stricmp(word, "splice") )  {
+				MyString spliceName = tokens.next();
+				MyString spliceDagFile = tokens.next();
+
+				dprintf(D_FULLDEBUG, "getJobLogsFromSubmitFiles(): "
+					"Processing SPLICE %s %s\n",
+					spliceName.Value(), spliceDagFile.Value());
+
+				errorMsg = getJobLogsFromSubmitFiles( spliceDagFile, 
+					jobKeyword, dirKeyword, listLogFilenames);
+
+				if (errorMsg != "") {
+					return "Splice[" + spliceName + ":" + 
+						spliceDagFile + "]: " + errorMsg;
 				}
 			}
 		}

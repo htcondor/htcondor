@@ -107,3 +107,14 @@ clean::
 
 html:
 testbin: all
+
+# The following bit runs condor_compile to make sure that it works
+# It is easy to have class file dependencies sneak into the standard
+# universe code in such a way that everything builds, but condor_compile
+# will not work.  The below code makes such problems into build-time problems.
+
+#if IS_LINUX && ! IS_CLIPPED 
+all::
+	_condor_LIB=../condor_syscall_lib CONDOR_CONFIG=/dev/null PATH=.:../condor_scripts:$$PATH condor_compile gcc ckpttest.c 
+
+#endif
