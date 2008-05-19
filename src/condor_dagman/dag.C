@@ -2550,8 +2550,6 @@ Dag::ChooseDotFileName(MyString &dot_file_name)
 //---------------------------------------------------------------------------
 bool Dag::Add( Job& job )
 {
-	debug_printf(DEBUG_QUIET, "Dag::Add() Creating name view for node %s\n", 
-		job.GetJobName());
 	int insertResult = _nodeNameHash.insert( job.GetJobName(), &job );
 	ASSERT( insertResult == 0 );
 

@@ -747,8 +747,8 @@ int main_init (int argc, char ** const argv) {
 	// fix up any use of $(JOB) in the vars values for any node
 	dagman.dag->ResolveVarsInterpolations();
 
-	debug_printf(DEBUG_QUIET, "COMPLETED DAG!\n");
-	dagman.dag->PrintJobList();
+/*	debug_printf(DEBUG_QUIET, "COMPLETED DAG!\n");*/
+/*	dagman.dag->PrintJobList();*/
 
 #ifndef NOT_DETECT_CYCLE
 	if( dagman.startup_cycle_detect && dagman.dag->isCycle() )
