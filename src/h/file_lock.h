@@ -20,6 +20,8 @@
 #ifndef FILE_LOCK_H
 #define FILE_LOCK_H
 
+#include "condor_constants.h"
+
 typedef enum { READ_LOCK, WRITE_LOCK, UN_LOCK } LOCK_TYPE;
 
 #if defined(__cplusplus)
@@ -36,8 +38,8 @@ extern "C" {
  *   ignoring locking failures on NFS).
  */
 
-int lock_file( int fd, LOCK_TYPE type, bool do_block );
-int lock_file_plain( int fd, LOCK_TYPE type, bool do_block );
+int lock_file( int fd, LOCK_TYPE lock_type, BOOLEAN do_block );
+int lock_file_plain( int fd, LOCK_TYPE lock_type, BOOLEAN do_block );
 
 #if defined(__cplusplus)
 }		/* End of extern "C" declaration */

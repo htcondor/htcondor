@@ -24,7 +24,7 @@
 #include "file_lock.h"
 #include "utc_time.h"
 
-extern "C" int lock_file( int fd, LOCK_TYPE type, bool do_block );
+extern "C" int lock_file( int fd, LOCK_TYPE type, BOOLEAN do_block );
 
 const char *
 FileLockBase::getStateString( LOCK_TYPE state ) const

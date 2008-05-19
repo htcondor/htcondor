@@ -29,7 +29,6 @@
 #if defined(NEW_PROC)
 #include "proc.h"
 #endif
-#include "file_lock.h"
 #include "condor_event.h"
 
 #define XML_USERLOG_DEFAULT 0
@@ -41,6 +40,8 @@
 /* Predeclare some classes */
 class MyString;
 class UserLogHeader;
+class FileLockBase;
+class FileLock;
 
 
 /** API for writing a log file.  Since an API for reading a log file
@@ -89,9 +90,6 @@ class UserLog {
 			int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
     ///
     ~UserLog();
-
-	///
-    void Reset( void );
     
     /** Initialize the log file, if not done by constructor.
         @param file the path name of the log file to be written (copied)
@@ -136,6 +134,11 @@ class UserLog {
     */
     bool initialize(int c, int p, int s, const char *gjid);
 
+	/** Read in the configuration parameters
+		@return true on success
+	*/
+	bool Configure( void );
+
 	void setUseXML(bool new_use_xml){ m_use_xml = new_use_xml; }
 
 	void setWriteUserLog(bool b){ m_write_user_log = b; }
@@ -165,6 +168,9 @@ class UserLog {
 						   bool is_header_event = true );
 
   private:
+
+	///
+    void Reset( void );
 
 	bool initializeGlobalLog( UserLogHeader & );
 

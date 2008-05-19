@@ -59,7 +59,10 @@ class UserLogFilesize_t : public UserLogInt64_t
 {
 };
 
-// UserLog class methods 
+
+// ***************************
+//   UserLog constructors
+// ***************************
 UserLog::UserLog( void )
 {
 	Reset( );
@@ -110,6 +113,10 @@ UserLog::~UserLog()
 	if (m_global_uniq_base != NULL) free( m_global_uniq_base );
 }
 
+
+// ********************************
+//   UserLog initialize() methods
+// ********************************
 bool
 UserLog::initialize( const char *file, int c, int p, int s, const char *gjid)
 {
@@ -150,7 +157,7 @@ UserLog::initialize( const char *owner, const char *domain, const char *file,
 	priv = set_user_priv();
 
 		// initialize log file
-	bool res = initialize(file,c,p,s,gjid);
+	bool res = initialize(file, c, p, s, gjid);
 
 		// get back to whatever UID and GID we started with
 	set_priv(priv);
@@ -165,6 +172,8 @@ UserLog::initialize( int c, int p, int s, const char *gjid )
 	proc = p;
 	subproc = s;
 
+	Configure( );
+
 		// Important for performance : note we do not re-open the global log
 		// if we already have done so (i.e. if m_global_fp is not NULL).
 	if ( m_write_global_log && !m_global_fp ) {
@@ -177,6 +186,20 @@ UserLog::initialize( int c, int p, int s, const char *gjid )
 	if(gjid) {
 		m_gjid = strdup(gjid);
 	}
+
+	return true;
+}
+
+// Read in our configuration information
+bool
+UserLog::Configure( void )
+{
+	m_global_path = param( "EVENT_LOG" );
+	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
+	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
+	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
+	m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000 );
+	m_global_max_rotations = param_integer( "MAX_EVENT_LOG_ROTATIONS", 1 );
 
 	return true;
 }
@@ -201,12 +224,12 @@ UserLog::Reset( void )
 	m_use_xml = XML_USERLOG_DEFAULT;
 	m_gjid = NULL;
 
-	m_global_path = param( "EVENT_LOG" );
-	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
-	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
-	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
-	m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000 );
-	m_global_max_rotations = param_integer( "MAX_EVENT_LOG_ROTATIONS", 1 );
+	m_global_path = NULL;
+	m_global_use_xml = false;
+	m_global_count_events = false;
+	m_enable_locking = true;
+	m_global_max_filesize = 1000000;
+	m_global_max_rotations = 1;
 
 	MyString	base;
 	base = "";
