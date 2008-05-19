@@ -116,7 +116,7 @@ CheckArgs(int argc, char **argv, Arguments &args)
 		"  -no-rotation: disable rotation handling\n"
 		"  -sleep <number>: how many seconds to sleep between events\n"
 		"  -term <number>: number of terminate events to exit after\n"
-		"  -usage: print this message and exit\n"
+		"  -usage|-help|-h: print this message and exit\n"
 		"  -v: Increase verbosity level by 1\n"
 		"  -verbosity <number>: set verbosity level (default is 1)\n"
 		"  -version: print the version number and compile date\n"
@@ -209,7 +209,9 @@ CheckArgs(int argc, char **argv, Arguments &args)
 				args.term = atoi(argv[index]);
 			}
 
-		} else if ( !strcmp(argv[index], "-usage") ) {
+		} else if ( ( !strcmp(argv[index], "-usage") )		||
+					( !strcmp(argv[index], "-h") )			||
+					( !strcmp(argv[index], "-help") )  )	{
 			printf("%s", usage);
 			status = STATUS_CANCEL;
 
@@ -281,8 +283,11 @@ ReadEvents(Arguments &args)
 		}
 		if ( args.dumpState ) {
 			MyString	str;
-			log.FormatFileState( str, "Restore File State" );
+			log.FormatFileState( state, str, "Restore File State (raw)" );
 			puts( str.GetCStr() );
+
+			log.FormatFileState( str, "Restore File State" );
+			puts( str.GetCStr() );	
 		}
 	}
 
@@ -306,7 +311,7 @@ ReadEvents(Arguments &args)
 
 	int		executeEventCount = 0;
 	int		terminatedEventCount = 0;
-	bool	done = false;
+	bool	done = (args.term == 0);
 	bool	missedLast = false;
 	int		prevCluster=999, prevProc=999, prevSubproc=999;
 
@@ -380,7 +385,7 @@ ReadEvents(Arguments &args)
 				if ( args.verbosity >= VERB_ALL ) {
 					printf(" (terminated)\n");
 				}
-				if ( args.term != 0 && ++terminatedEventCount >= args.term ) {
+				if ( args.term > 0 && ++terminatedEventCount >= args.term ) {
 					if ( args.verbosity >= VERB_ALL ) {
 						printf( "Reached terminated event limit (%d); %s\n",
 								args.term, "exiting" );
@@ -437,8 +442,13 @@ ReadEvents(Arguments &args)
 		delete event;
 	}
 
+	log.GetFileState( state );
 	if ( args.dumpState ) {
 		MyString	str;
+
+		log.FormatFileState( state, str, "Final File State (raw)" );
+		puts( str.GetCStr() );
+
 		log.FormatFileState( str, "Final File State" );
 		puts( str.GetCStr() );
 	}
@@ -456,6 +466,7 @@ ReadEvents(Arguments &args)
 		fputs( "  Done\n", stdout );
 	}
 
+	ReadUserLog::UninitFileState( state );
 	return result;
 }
 

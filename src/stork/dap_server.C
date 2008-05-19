@@ -1406,8 +1406,6 @@ int call_main()
  * ==========================================================================*/
 int write_requests_to_file(ReliSock * sock)
 {
-	char line[MAX_TCP_BUF];
-
 		// Require authentication 
     if (!sock->isAuthenticated()) {
 		CondorError errstack;
@@ -1421,8 +1419,8 @@ int write_requests_to_file(ReliSock * sock)
 
     sock->decode();
 
-    char * pline = (char*)line;
-    if (!sock->code(pline)) {
+    MyString	buf;
+    if (!sock->code(buf)) {
 		dprintf( D_ALWAYS,
 				"%s:%d: Server: recv error (request)!: (%d)%s\n",
 				__FILE__, __LINE__,
@@ -1448,9 +1446,9 @@ int write_requests_to_file(ReliSock * sock)
 		cred_buff = malloc (cred_size);
 		if (!sock->code_bytes(cred_buff, cred_size)) {
 			dprintf(D_ALWAYS, "%s:%d Server: recv error (cred)!: (%d)%s\n",
-				__FILE__, __LINE__,
-				errno, strerror(errno)
-		);
+					__FILE__, __LINE__,
+					errno, strerror(errno)
+					);
 			return FALSE;
 		}
     }
@@ -1463,9 +1461,8 @@ int write_requests_to_file(ReliSock * sock)
     char last_dapstr[MAXSTR];
     classad::ExprTree *expr = NULL;
 
-	std::string linestr = line;
 		//check the validity of the request
-    requestAd = parser.ParseClassAd(linestr);
+    requestAd = parser.ParseClassAd( buf.Value() );
     if (requestAd == NULL) {
 		dprintf(D_ALWAYS, "Invalid input format! Not a valid classad!\n");
 		return FALSE;
@@ -1605,8 +1602,8 @@ int write_requests_to_file(ReliSock * sock)
     snprintf(response, MAXSTR, "%s", last_dapstr);
 
     sock->encode();
-    pline = (char*)response;
-    if ( !sock->code (pline)){
+
+    if ( !sock->put ( response )){
 		dprintf( D_ALWAYS,
 				"%s:%d: Server: send error)!: (%d)%s\n",
 				__FILE__, __LINE__,

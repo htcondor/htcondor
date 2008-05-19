@@ -23,6 +23,7 @@
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_debug.h"
+#include "MyString.h"
 
 #ifdef HAVE_EXT_OPENSSL
 #include "condor_crypt_blowfish.h"
@@ -107,8 +108,6 @@ Stream::code( char	&c)
 
 	return FALSE;	/* will never get here	*/
 }
-
-
 
 int 
 Stream::code( unsigned char	&c)
@@ -350,6 +349,26 @@ Stream::code( char	*&s)
 			break;
 		default:
 			EXCEPT("ERROR: Stream::code(char *&s)'s _coding is illegal!");
+			break;
+	}
+
+	return FALSE;	/* will never get here	*/
+}
+
+
+int 
+Stream::code( MyString	&s)
+{
+	switch(_coding){
+		case stream_encode:
+			return put(s);
+		case stream_decode:
+			return get(s);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(MyString &s) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(MyString &s)'s _coding is illegal!");
 			break;
 	}
 
@@ -1332,6 +1351,14 @@ Stream::put( char const *s)
 
 
 int 
+Stream::put( const MyString &s)
+{
+	return put( s.Value() );
+}
+
+
+
+int 
 Stream::put( char const *s, int		l)
 {
     NETWORK_TRACE("put string \"" << s << "\" and int " <<   l);
@@ -1930,6 +1957,34 @@ Stream::get_string_ptr( char const *&s ) {
 		NETWORK_TRACE("get string ptr NULL");
 	}
 	return TRUE;
+}
+
+/* Get the next string on the stream.  This function copies the
+ * string into the passed in MyString object.
+ * When a message has not been received, its behaviour is dependent on
+ * the current value of 'timeout', which can be set by
+ * 'timeout(int)'. If 'timeout' is 0, it blocks until a message is
+ * ready at the port, otherwise, it returns FALSE after waiting that
+ * amount of time.
+ *
+ */
+int 
+Stream::get( MyString	&s)
+{
+	char const *ptr = NULL;
+	int result = get_string_ptr(ptr);
+	if( result == TRUE ) {
+		if( ptr ) {
+			s = ptr;
+		}
+		else {
+			s = NULL;
+		}
+	}
+	else {
+		s = NULL;
+	}
+	return result;
 }
 
 int 

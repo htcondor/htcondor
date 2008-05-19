@@ -159,6 +159,7 @@ class UserLog {
 
         @param event the event to be written
         @return 0 for failure, 1 for success
+		NOTE: This will be changed to a C++ bool true/false in 7.1+
     */
     int writeEvent (ULogEvent *event, ClassAd *jobad = NULL);
 
@@ -176,8 +177,8 @@ class UserLog {
 	bool open_file( const char *file, bool log_as_user, FileLock* & lock, 
 					FILE* & fp );
 
-	int doWriteEvent( ULogEvent *event, bool is_global_event, ClassAd *ad);
-	int doWriteEvent( FILE *fp, ULogEvent *event, bool do_use_xml );
+	bool doWriteEvent( ULogEvent *event, bool is_global_event, ClassAd *ad);
+	bool doWriteEvent( FILE *fp, ULogEvent *event, bool do_use_xml );
 	void GenerateGlobalId( MyString &id );
 
 	bool handleGlobalLogRotation();
@@ -433,7 +434,7 @@ class ReadUserLog
 		@param file state buffer
 		@return true on success
 	 */
-	bool UninitFileState( ReadUserLog::FileState &state ) const;
+	static bool UninitFileState( ReadUserLog::FileState &state );
 
 	/** Use this method to get the current state (before saving it off)
 		@param file state buffer
@@ -455,6 +456,8 @@ class ReadUserLog
 		@param label to put at the header of the string
 	 */
 	void FormatFileState( MyString &str, const char *label = NULL ) const;
+	void FormatFileState( const ReadUserLog::FileState &state,
+						  MyString &str, const char *label = NULL ) const;
 	
   private:
 
@@ -501,9 +504,9 @@ class ReadUserLog
     ULogEventOutcome readEvent (ULogEvent * & event, bool *try_again );
 
 	/** Determine the type of log this is; note that if called on an
-	    empty log, this will return TRUE and the log type will stay
+	    empty log, this will return true and the log type will stay
 		LOG_TYPE_UNKNOWN.
-        @return TRUE for success, FALSE otherwise
+        @return true for success, false otherwise
 	*/
 	bool determineLogType( void );
 

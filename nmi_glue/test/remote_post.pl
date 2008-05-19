@@ -180,6 +180,11 @@ while( <TASKFILE> ) {
 	# and we really only need to tar up the results once.
 	# Except 1/15/08 we are taring after the individual tests to
 	# keep disk use lower.
+	# Except, 5/15/08, if the test is timed out the saveme never
+	# gets tared up. So if it is still there, tar it up now
+	if( -d "$testname.saveme") {
+		system("tar -zcvf $testname.saveme.tar.gz $testname.saveme");
+	}
     if( (-f "$testname.saveme.tar.gz") && ($testcopy == 1) ) {
             print "Saving $testname.saveme.tar.gz.\n";
             copy_file( "$testname.saveme.tar.gz", $resultdir, true );
