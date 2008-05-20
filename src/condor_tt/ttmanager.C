@@ -475,7 +475,7 @@ TTManager::event_maintain()
 
 	int  buflength=0;
 	bool firststmt = true;
-	char optype[7], eventtype[CONDOR_TT_EVENTTYPEMAXLEN];
+	char optype[8], eventtype[CONDOR_TT_EVENTTYPEMAXLEN];
 	AttrList *ad = 0, *ad1 = 0;
 	MyString *line_buf = 0;
 	
@@ -554,7 +554,7 @@ TTManager::event_maintain()
 				// init the optype and eventtype
 			strcpy(optype, "");
 			strcpy(eventtype, "");
-			sscanf(buf, "%7s %50s", optype, eventtype);
+			sscanf(buf, "%7s %49s", optype, eventtype);
 
 			if (strcmp(optype, "NEW") == 0) {
 					// first read in the classad until the seperate ***
