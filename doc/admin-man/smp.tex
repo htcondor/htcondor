@@ -6,7 +6,7 @@ Configuring The Startd for SMP Machines}
 \index{SMP machines!configuration|(}
 This section describes how to configure the \Condor{startd} for SMP
 (Symmetric Multi-Processor) machines.
-Beginning with Condor version 6.1, machines with more than one CPU can
+Machines with more than one CPU may
 be configured to run more than one job at a time.
 As always, owners of the resources have great flexibility in defining
 the policy under which multiple jobs may run, suspend, vacate, etc.  
@@ -87,7 +87,7 @@ There are two main ways to go about partitioning an SMP machine:
 
 \end{description}
 
-Beginning with Condor version 6.1.6, the number of each type being
+The number of each type being
 reported can be changed at run-time, by issuing a reconfiguration
 command to
 the \Condor{startd} daemon (sending a SIGHUP or using \Condor{reconfig}).

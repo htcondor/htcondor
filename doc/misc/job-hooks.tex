@@ -269,7 +269,7 @@ When the job is first spawned, the \Condor{starter} will invoke this
 hook after \Macro{STARTER\_INITIAL\_UPDATE\_INTERVAL} seconds
 (defaults to 8).
 Thereafter, the \Condor{starter} will invoke the hook every 
-\Macro{STARTER\_INITIAL\_UPDATE\_INTERVAL} seconds (defaults to 300,
+\Macro{STARTER\_UPDATE\_INTERVAL} seconds (defaults to 300,
 in other words, every 5 minutes).
 
 The \Condor{starter} will not wait for this hook to return before

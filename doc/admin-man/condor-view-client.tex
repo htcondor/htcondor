@@ -53,9 +53,6 @@ The server logs information on disk in order to provide a persistent,
 historical database of pool statistics.
 The CondorView Client makes queries over the network to this
 database.
-% commented out by Karen for 6.8.2
-%The \Condor{collector} included with version 6.2.x and 6.1.x
-%Condor includes this database support.
 The \Condor{collector} includes this database support.
 To activate the persistent database logging, add the following entries to
 the configuration file on the central manager: 
@@ -69,7 +66,7 @@ This directory should be one published by a web server, so that HTML
 files which exist in this directory can be accessed using a web browser.  
 This directory is referred to as the \File{VIEWDIR} directory.
 
-\item Download the 6.1.8 \Prog{view\_client} contrib module.
+\item Download the \Prog{view\_client} contrib module.
 
 \item Unpack or untar this contrib module into the
 directory \File{VIEWDIR}.
@@ -99,10 +96,6 @@ The parameters are
 	directory which contains the \Condor{stats} binary.
 	The \Condor{stats} program is included in the \Release{bin}
 	directory. 
-	%commented out by Karen for 6.8.2
-	%with Condor version 6.1 and above; for Condor version
-	%6.0x, the \Condor{stats} program can be found in the CondorView
-	%Server Contrib module.
 	The value for \MacroNI{STATSDIR} is added to the \MacroNI{PATH}
 	parameter by default.  
 
