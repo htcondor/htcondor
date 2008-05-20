@@ -6573,6 +6573,15 @@ The default value is 20 seconds.
 Scalability issues with a large pool would be the only basis
 for a change from the default value.
 
+\item[\Macro{SEC\_DAFAULT\_AUTHENTICATON\_TIMEOUT}]
+\label{param:SecDaemonAuthenticationTimeout}]
+The length of time in seconds that Condor should attempt
+authenticating network connections before giving up.  The default is
+20 seconds.  Like other security settings, \MacroNI{DEFAULT} may be
+replaced by a different access level to specify the timeout to use for
+different types of commands.  Example:
+\Macro{SEC\_CLIENT\_AUTHENTICATON\_TIMEOUT}.
+
 \item[\Macro{SEC\_PASSWORD\_FILE}]
 \label{param:SecPasswordFile} For Unix machines, the path and file name
 of  the file containing the pool password for password authentication.

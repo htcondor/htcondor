@@ -91,6 +91,14 @@ scheduling.
 the lock file used for high availability \Condor{schedd} fail over.  Other
 high availability lock files are not currently included.
 
+\item Added \MacroNI{SEC\_DEFAULT\_AUTHENTICATION\_TIMEOUT}, where
+\emph{DEFAULT} may be replaced by the usual list of contexts for
+security settings (e.g. \MacroNI{CLIENT}, \MacroNI{READ},
+\MacroNI{WRITE}).  This specifies the number of seconds Condor should
+allow for authentication of network connections to complete.  Previously,
+GSI authentication was hard-coded to allow 5 minutes for authentication.
+Now it uses the same default as all other methods: 20 seconds.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
