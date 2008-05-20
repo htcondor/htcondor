@@ -139,10 +139,11 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
 			}
 		}
 
-        //temporarily change timeout to 5 minutes so the user can type passwd
-        //MUST do this even on server side, since client side might call
-        //authenticate_self_gss() while server is waiting on authenticate!!
-        int time = mySock_->timeout(60 * 5); 
+		int gsi_auth_timeout = param_integer("GSI_AUTHENTICATION_TIMEOUT",-1);
+        int old_timeout=0;
+		if (gsi_auth_timeout>=0) {
+			old_timeout = mySock_->timeout(gsi_auth_timeout); 
+		}
         
         switch ( mySock_->isClient() ) {
         case 1: 
@@ -152,7 +153,10 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
             status = authenticate_server_gss(errstack);
             break;
         }
-        mySock_->timeout(time); //put it back to what it was before
+
+		if (gsi_auth_timeout>=0) {
+			mySock_->timeout(old_timeout); //put it back to what it was before
+		}
     }
     
     return( status );

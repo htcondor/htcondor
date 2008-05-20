@@ -1894,12 +1894,12 @@ bool Sock :: is_hdr_encrypt(){
 	return FALSE;
 }
 
-int Sock :: authenticate(KeyInfo *&, const char * /* methods */, CondorError* /* errstack */)
+int Sock :: authenticate(KeyInfo *&, const char * /* methods */, CondorError* /* errstack */, int /*timeout*/)
 {
 	return -1;
 }
 
-int Sock :: authenticate(const char * /* methods */, CondorError* /* errstack */)
+int Sock :: authenticate(const char * /* methods */, CondorError* /* errstack */, int /*timeout*/)
 {
 	/*
 	errstack->push("AUTHENTICATE", AUTHENTICATE_ERR_NOT_BUILT,

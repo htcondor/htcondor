@@ -80,9 +80,9 @@ Authentication::~Authentication()
 }
 
 int Authentication::authenticate( char *hostAddr, KeyInfo *& key, 
-								  const char* auth_methods, CondorError* errstack)
+								  const char* auth_methods, CondorError* errstack, int timeout)
 {
-    int retval = authenticate(hostAddr, auth_methods, errstack);
+    int retval = authenticate(hostAddr, auth_methods, errstack, timeout);
     
 #if !defined(SKIP_AUTHENTICATION)
     if (retval) {        // will always try to exchange key!
@@ -101,7 +101,25 @@ int Authentication::authenticate( char *hostAddr, KeyInfo *& key,
 }
 
 int Authentication::authenticate( char *hostAddr, const char* auth_methods,
-		CondorError* errstack)
+		CondorError* errstack, int timeout)
+{
+	int retval;
+	int old_timeout=0;
+	if (timeout>=0) {
+		old_timeout=mySock->timeout(timeout);
+	}
+
+	retval = authenticate_inner(hostAddr,auth_methods,errstack,timeout);
+
+	if (timeout>=0) {
+		mySock->timeout(old_timeout);
+	}
+
+	return retval;
+}
+
+int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods,
+		CondorError* errstack, int timeout)
 {
 #if defined(SKIP_AUTHENTICATION)
 	dprintf(D_ALWAYS, "Skipping....\n");
@@ -111,7 +129,8 @@ int Authentication::authenticate( char *hostAddr, const char* auth_methods,
 	*/
 	return 0;
 #else
-Condor_Auth_Base * auth = NULL;
+	Condor_Auth_Base * auth = NULL;
+	int auth_timeout_time = time(0) + timeout;
 
 	if (DebugFlags & D_FULLDEBUG) {
 		if (hostAddr) {
@@ -129,6 +148,12 @@ Condor_Auth_Base * auth = NULL;
 	method_used = NULL;
  
 	while (auth_status == CAUTH_NONE ) {
+		if (timeout>0 && auth_timeout_time <= time(0)) {
+			dprintf(D_SECURITY, "AUTHENTICATE: exceeded %ds timeout\n",
+					timeout);
+			errstack->pushf( "AUTHENTICATE", AUTHENTICATE_ERR_TIMEOUT, "exceeded %ds timeout during authentication", timeout );
+			break;
+		}
 		if (DebugFlags & D_FULLDEBUG) {
 			dprintf(D_SECURITY, "AUTHENTICATE: can still try these methods: %s\n", methods_to_try.Value());
 		}

@@ -1683,7 +1683,8 @@ SecManStartCommand::startCommand_inner_noauth()
 				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods);
 			}
 
-			if (!m_sock->authenticate(ki, auth_methods, m_errstack)) {
+			int auth_timeout = m_sec_man.getSecTimeout( CLIENT_PERM );
+			if (!m_sock->authenticate(ki, auth_methods, m_errstack,auth_timeout)) {
 				if(ki) {
 					delete ki;
 				}
@@ -2643,7 +2644,8 @@ SecMan::authenticate_sock(Sock *s,DCpermission perm, CondorError* errstack)
 	MyString methods;
 	getAuthenticationMethods( perm, &methods );
 	ASSERT(s);
-	return s->authenticate(methods.Value(),errstack);
+	int auth_timeout = getSecTimeout(perm);
+	return s->authenticate(methods.Value(),errstack,auth_timeout);
 }
 
 int
@@ -2652,5 +2654,19 @@ SecMan::authenticate_sock(Sock *s,KeyInfo *&ki, DCpermission perm, CondorError* 
 	MyString methods;
 	getAuthenticationMethods( perm, &methods );
 	ASSERT(s);
-	return s->authenticate(ki,methods.Value(),errstack);
+	int auth_timeout = getSecTimeout(perm);
+	return s->authenticate(ki,methods.Value(),errstack,auth_timeout);
+}
+
+int
+SecMan::getSecTimeout(DCpermission perm)
+{
+	MyString param_name;
+	char *value = getSecSetting("SEC_%s_AUTHENTICATION_TIMEOUT",perm,&param_name);
+	int auth_timeout = -1;
+	if (value) {
+		auth_timeout = param_integer(param_name.Value(),-1);
+		free(value);
+	}
+	return auth_timeout;
 }
