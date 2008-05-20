@@ -162,14 +162,8 @@ B = $(A)
 are not allowed.
 They create definitions that Condor refuses to parse. 
 
-% commented out in 2005, as it is too old, and is now confusing
-%\Note Condor used to distinguish between ``macros'' and ``expressions''
-%in its config files.
-%Beginning with Condor version 6.1.13, this distinction has been
-%removed.
-%For backward compatibility, you can still use ``:'' instead of ``=''
-%in your config files, and these attributes will just be treated as
-%macros.
+\Note Macros should not be incrementally defined in the
+\Macro{LOCAL\_ROOT\_CONFIG\_FILE} for security reasons.
 
 All entries in a configuration file must have an operator,
 which will be an equals sign (\verb@=@).
@@ -349,6 +343,7 @@ the library routine which parses the configuration files.
   \item \verb@SUBMIT@
   \item \verb@GRIDMANAGER@
   \item \verb@TOOL@
+  \item \verb@STORK@
   \item \verb@HAD@
   \item \verb@REPLICATION@
   \item \verb@QUILL@
@@ -538,19 +533,22 @@ File System Configuration File Entries''.
 
 \item[\Macro{NEGOTIATOR\_HOST}] \label{param:NegotiatorHost} 
   This configuration variable is no longer used.
-  The port where the \Condor{negotiator} is listening is normally
-  dynamically allocated since version 6.7.4.
+  It previously defined the host name of the machine where 
+  the \Condor{negotiator} is running.
+  At present, the port where the \Condor{negotiator} is listening 
+  is dynamically allocated.
 
-  For pools running 6.7.3 and older versions: The
-  host name of the machine where the \Condor{negotiator} is running for
-  the pool.
-  Normally, it is defined relative to the \MacroUNI{CONDOR\_HOST}
-  macro.  There is no default value for this macro;
-  \MacroNI{NEGOTIATOR\_HOST} must be defined for the pool to work
-  properly.
-  This variable may also be used to optionally define a network port for
-  the \Condor{negotiator} daemon, as explained for the
-  \MacroNI{COLLECTOR\_HOST} variable.
+  % commented out by Karen in 2008, as this 6.7ism is too old
+  %For pools running 6.7.3 and older versions: The
+  %host name of the machine where the \Condor{negotiator} is running for
+  %the pool.
+  %Normally, it is defined relative to the \MacroUNI{CONDOR\_HOST}
+  %macro.  There is no default value for this macro;
+  %\MacroNI{NEGOTIATOR\_HOST} must be defined for the pool to work
+  %properly.
+  %This variable may also be used to optionally define a network port for
+  %the \Condor{negotiator} daemon, as explained for the
+  %\MacroNI{COLLECTOR\_HOST} variable.
 
 \item[\Macro{CONDOR\_VIEW\_HOST}] \label{param:CondorViewHost} The
   host name of the machine, optionally appended by a colon and the
@@ -1524,43 +1522,6 @@ server, shadow, and starter, none of which use DaemonCore yet).
   before they do a hard shutdown.  It is defined in terms of seconds.
   The default is 1800 (30 minutes).
 
-  % This macro existed for 6.2.x, but does not exist any more.
-  %\item[\Macro{AUTHENTICATION\_METHODS}]\label{param:AuthenticationMethods}
-  %  There are many instances when the Condor system needs to authenticate
-  %  the identity of the user.  For instance, when a job is submitted with
-  %  \Condor{submit}, Condor needs to authenticate the user so that the job
-  %  goes into the queue and runs with the proper credentials.  The
-  %  \MacroNI{AUTHENTICATION\_METHODS} parameter is a list of
-  %  permitted authentication methods.  The list is ordered by
-  %  preference.  The actual authentication method used is the first method
-  %  in this list that both the server and client are able to perform.
-  %  Possible values are:
-  %  \begin{itemize}
-  %	\item NTSSPI Use NT's standard LAN-MANAGER challenge-response protocol.
-  %	\Note This is the default method used on Windows NT.
-  %	\item FS Use the filesystem to authenticate the user.  
-  %		The server requests the client to create a specified temporary
-  %		file, then the server verifies the ownership of that file. \Note
-  %		This is the default method used on Unix systems.
-  %	\item FS\_REMOTE Use a shared filesystem to authenticate the user.
-  %		This is useful for submitting jobs to a remote \Condor{schedd}.
-  %		Similar to FS authentication, except the temporary file to be
-  %		created by the user must be on a shared filesystem (AFS, NFS, etc.)
-  %		If the client's submit description file does not define the 
-  %		command \Opt{rendezvousdir}, the \Opt{initialdir} value is used 
-  %		as the default directory in which to create the temporary file.
-  %		\Note Normal AFS issues apply here: Condor must be able to write
-  %		to the directory used.
-  % commented out by Karen for 6.4.3
-  %       \item GSS Use Generic Security Services, which is implemented in Condor 
-  %		with X.509 certificates. See section~\ref{sec:X509-Authentication}.
-  %		These X.509 certificates are compatible with the Globus system from
-  %		Argonne National Labs.
-  %	\item CLAIMTOBE The server should simply trust the client.  
-  %		\Note You had better trust all users who have access to your Condor
-  %		pool if you enable CLAIMTOBE authentication.
-  %  \end{itemize}
-
 \item[\MacroB{<SUBSYS>\_ADDRESS\_FILE}]
   \label{param:SubsysAddressFile}
   \index{SUBSYS\_ADDRESS\_FILE macro@\texttt{<SUBSYS>\_ADDRESS\_FILE} macro}
@@ -1715,7 +1676,7 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   setting is not defined, Condor binds all network sockets to first
   interface found, or the IP address specified with
   \MacroNI{NETWORK\_INTERFACE} (described below).
-  Starting with version 6.7.13, \MacroNI{BIND\_ALL\_INTERFACES} can be
+  \MacroNI{BIND\_ALL\_INTERFACES} can be
   set to \Expr{True} to cause Condor to bind to all interfaces on the
   machine.
   However, currently Condor is still only able to advertise a single
@@ -3068,12 +3029,12 @@ Configuring The Startd Policy.
   \MacroNI{<SUBSYS>\_ADDRESS\_FILE} 
 
 \item[\Macro{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE}] \label{param:StartdShouldWriteClaimIdFile}
-  Starting with version 6.7.10, the \Condor{startd} can be configured
+  The \Condor{startd} can be configured
   to write out the \Attr{ClaimId} for the next available claim on all
   slots to separate files.
   This boolean attribute controls whether the \Condor{startd} should
   write these files.
-  The default value is true.
+  The default value is \Expr{True}.
   
 \item[\Macro{STARTD\_CLAIM\_ID\_FILE}] \label{param:StartdClaimIdFile}
   This macro controls what file names are used if the above
@@ -4264,16 +4225,6 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   of seconds and defaults to 3600 (one hour).  A value of 0 will
   disable wall clock checkpoints.
 
-\item[\Macro{ALLOW\_REMOTE\_SUBMIT}] \label{param:AllowRemoteSubmit}
-  Starting with Condor Version 6.0, users can run \Condor{submit} on
-  one machine and actually submit jobs to another machine in the
-  pool.  This is called a \Term{remote submit}.  Jobs submitted in
-  this way are entered into the job queue owned by the Unix user
-  nobody.
-  This macro determines whether this is allowed.
-  It defaults to \Expr{False}.
-
-
 \item[\Macro{QUEUE\_ALL\_USERS\_TRUSTED}]. \label{param:QueueAllUsersTrusted}
   Defaults to False. If set to True, then unauthenticated users are allowed
   to write to the queue, and also we always trust whatever the \Attr{Owner}
@@ -4364,21 +4315,6 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   has the collector and negotiator running on the same machine,
   \MacroUNI{FLOCK\_COLLECTOR\_HOSTS} should have the same definition as
   \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS}.
-
-% No longer needed as of 6.5.2.  Now done automatically.
-%\item[\Macro{FLOCK\_VIEW\_SERVERS}] \label{param:FlockViewServers}
-% This macro defines a list of hostnames where the condor-view server
-% is running in the pools to which you want your jobs to flock.  The
-% order of this list must correspond to the order of the
-% \MacroUNI{FLOCK\_COLLECTOR\_HOSTS} and
-% \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS} lists.  List items may be empty
-% for pools which don't use a separate condor-view server.
-% \MacroUNI{FLOCK\_VIEW\_SERVER} may be left undefined if no remote
-% pools use separate condor-view servers.  Note: It is required that
-% the same hostname does not appear twice in the
-% \MacroUNI{FLOCK\_VIEW\_SERVERS} list and that the
-% \MacroUNI{CONDOR\_VIEW\_HOST} does not appear in the
-% \MacroUNI{FLOCK\_VIEW\_SERVERS} list.
 
 \item[\Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER}]
   \label{param:NegotiateAllJobsInCluster}
@@ -5454,6 +5390,14 @@ UWCS_NEGOTIATOR_POST_JOB_RANK = \
   section \ref{sec:Disabling Preemption} for a general discussion of
   limiting preemption.
 
+\item[\Macro{PREEMPTION\_REQUIREMENTS\_STABLE}]
+  \label{param:PreemptionRequirementsStable} 
+  A boolean value that defaults to \Expr{True}, implying that all attributes
+  utilized to define the \MacroNI{PREEMPTION\_REQUIREMENTS} variable will not
+  change within a negotiation period time interval.
+  If utilized attributes will change during the 
+  negotiation period time interval, then set this variable to \Expr{False}. 
+
 \item[\Macro{PREEMPTION\_RANK}] \label{param:PreemptionRank} Resources
   that match a request are first sorted by
   \MacroNI{NEGOTIATOR\_PRE\_JOB\_RANK}.  If there are any ties in the
@@ -5471,6 +5415,14 @@ UWCS_NEGOTIATOR_POST_JOB_RANK = \
   the same.  However, the negotiator will always prefer to match the
   job with an idle machine over a preemptable machine, if none of the
   other ranks express a preference between them.
+
+\item[\Macro{PREEMPTION\_RANK\_STABLE}]
+  \label{param:PreemptionRankStable}
+  A boolean value that defaults to \Expr{True}, implying that all attributes
+  utilized to define the \MacroNI{PREEMPTION\_RANK} variable will not
+  change within a negotiation period time interval.
+  If utilized attributes will change during the 
+  negotiation period time interval, then set this variable to \Expr{False}.
 
 \item[\Macro{NEGOTIATOR\_DEBUG}] \label{param:NegotiatorDebug} This macro
   (and other settings related to debug logging in the negotiator) is

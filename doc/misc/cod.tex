@@ -8,20 +8,6 @@
 Computing On Demand (COD) extends Condor's high throughput
 computing abilities to include
 a method for running short-term jobs on instantly-available resources.
-Support for COD was added to Condor in version 6.5.2.   
-
-%This section describes how to execute short-running interactive
-%applications on batch resources controlled by Condor.
-%This functionality is known as \Term{Computing on Demand} or
-%\Term{COD}.
-%Support for Computing On Demand was added to Condor in version 6.5.2.   
-
-%In the following sections, we will describe the concept and what kinds
-%of applications it is meant to be used for, give an overview of how it
-%works and interacts with Condor, describe how to configure Condor
-%resources to provide this service, explain how to use various tools
-%included with Condor to manage COD applications, and explore some
-%current limitations in Condor's support for COD.
 
 The motivation for COD extends Condor's job management to
 include interactive, compute-intensive jobs,
@@ -981,7 +967,7 @@ their COD jobs will run.
 For example, sites wishing to spawn the \Condor{starter} using glexec
 will need a copy of this credential before the claim can be activated.
 Therefore, beginning with Condor version 6.9.2, COD users have access
-to a new command, called \verb@delegate_proxy@.
+to a the command \verb@delegate_proxy@.
 If users do not specifically require this proxy delegation, this
 command should not be used and the rest of this section can be skipped.
 

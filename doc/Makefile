@@ -135,7 +135,7 @@ user-man/dagman-node.eps: user-man/dagman-node.fig
 
 figures: admin-man/machine-states.eps admin-man/machine-activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps user-man/dagman-node.eps
 
-HTML_FOR_NROFF = $(shell \ls ref/condor_*.html)
+HTML_FOR_NROFF = $(shell \ls $(LOCALDIR)/condor_*.html)
 
 nroff: local.html
 	\rm -rf man
@@ -147,7 +147,7 @@ nroff: local.html
 	for html in $(HTML_FOR_NROFF); do \
 		makeman/makeman -v -i $$html -s 1; \
 	done
-	mv ref/*.1 man/man1/
+	mv $(LOCALDIR)/*.1 man/man1/
 
 ref.nroff: nroff $(TARGETDIR)
 	rm -f condor-$(SUBVER)-man.tar.gz condor-$(SUBVER)-man.tar
@@ -159,7 +159,7 @@ $(TARGETDIR):
 	mkdir $(TARGETDIR)
 
 clean:
-	rm -rf ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps user-man/dagman-node.eps admin-man/pool-arch.eps *.out symbol.tex figuresizing.tex fontsize.tex
+	rm -rf $(LOCALDIR) ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps user-man/dagman-node.eps admin-man/pool-arch.eps *.out
 	cd makeman; make clean
 
 reallyclean: clean

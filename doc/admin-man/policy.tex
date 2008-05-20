@@ -31,12 +31,6 @@ Before the details, there are a few things to note:
 Please read through section~\ref{classad-reference} on
 ClassAd expressions before continuing.
 
-\item If you are primarily familiar with the version 6.0 policy
-expressions and what they do, read
-section~\ref{sec:V60-Policy-diffs} on
-page~\pageref{sec:V60-Policy-diffs}.  This section explains the differences
-between the version 6.0 policy expressions and later versions.  
-
 \item If defining the policy for an SMP machine
 (a multi-CPU machine),
 also read section~\ref{sec:Configuring-SMP} for specific information on
@@ -2007,39 +2001,3 @@ The following line appears in the job's submit description file as
 +IsHighPrioJob = True
 \end{verbatim}
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:V60-Policy-diffs}Differences from the 
-Version 6.0 Policy Settings}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\index{policy!version differences}
-This section describes how the current policy expressions
-differ from the policy expressions in previous versions of Condor.
-If you have never used Condor version 6.0 or earlier, or you never looked
-closely at the policy settings, skip this section.
-
-In summary, there is no longer a \Macro{VACATE} expression, and the
-\Macro{KILL} expression is not evaluated while a machine is claimed. 
-There is a \Macro{PREEMPT} expression which describes the
-conditions when a machine will move from the Claimed state to the
-Preempting state.
-Once a machine is transitioning into the Preempting state, the
-\Macro{WANT\_VACATE} expression controls whether the job should
-be vacated with a checkpoint or directly killed.
-The \MacroNI{KILL} expression determines the transition from
-Preempting/Vacating to Preempting/Killing.  
-
-In previous versions of Condor,
-the \MacroNI{KILL} expression handled three distinct cases
-(the transitions from Claimed/Busy, Claimed/Suspended and
-Preempting/Vacating), and the \MacroNI{VACATE} expression handled
-two cases (the transitions from Claimed/Busy and Claimed/Suspended).
-In the current version of Condor, \Macro{PREEMPT} handles the
-same two cases as the previous \Macro{VACATE} expression,
-but the \MacroNI{KILL} expression handles one case.
-Very complex policies can now be specified using all of
-the default expressions, only tuning the \MacroNI{WANT\_VACATE} and
-\MacroNI{WANT\_SUSPEND} expressions.
-In previous versions, heavy use of the \MacroNI{WANT\_*}
-expressions caused a complex \MacroNI{KILL} expression.
