@@ -6117,9 +6117,12 @@ Scheduler::StartJobs()
 			// Now that the shadow has spawned, consider this match "ACTIVE"
 		rec->setStatus( M_ACTIVE );
 	}
-	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
-		StartLocalJobs();
-	}
+
+		// Now, scan the queue and update our job counts.
+		// Also start any local universe jobs that can run.
+		// NOTE: this is expensive for large queues, so it protects
+		// itself against being called too frequently.
+	timeout();
 
 	/* Reset our Timer */
 	daemonCore->Reset_Timer(startjobsid,(int)SchedDInterval.getDefaultInterval());
@@ -6908,14 +6911,6 @@ Scheduler::tryNextJob()
 							(Eventcpp)&Scheduler::StartJobHandler,
 							"start_job", this ); 
 	} else {
-			/* 
-			   if there are no more jobs in the queue, this is a great
-			   time to update the central manager since things are
-			   pretty "stable".  this way, "condor_status -sub" and
-			   other views such as "condor_status -run" will be more
-			   likely to match
-			*/
-		timeout();
 		StartJobs();
 	}
 }
