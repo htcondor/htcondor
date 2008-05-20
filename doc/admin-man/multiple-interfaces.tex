@@ -3,53 +3,15 @@
 Machines With Multiple Network Interfaces } 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% CMNT I'm going to leave the original documentation here in case someone
-% CMNT needs the CM_IP_ADDR stuff better documented. For now, though, I've
-% CMNT removed it from the documentation because the code should deal with
-% CMNT CONDOR_HOST being a straight ip_addr just fine. The new docs I've
-% CMNT written don't even reference CM_IP_ADDR because it seems the code
-% CMNT doesn't need it.
-
-%Beginning with Condor version 6.1.5, Condor can run on machines with
-%multiple network interfaces.
-%Basically, you tell each host with multiple interfaces which IP
-%address you want the host to use for ingoing and outgoing Condor
-%network communication.
-%You do this by setting the \Macro{NETWORK\_INTERFACE} parameter in
-%the local config file for each host you need to.
-%There are a few other special cases you might have to deal with,
-%described below.
-%
-%If your Central Manager is on a machine with multiple interfaces,
-%instead of defining the \Macro{COLLECTOR\_HOST} or
-%\Macro{NEGOTIATOR\_HOST} parameters (which are usually both defined in
-%terms of \Macro{CONDOR\_HOST}), you should set the
-%\Macro{CM\_IP\_ADDR}.
-%
-%\Warn The default \Macro{HOSTALLOW\_ADMINISTRATOR} setting in the
-%config file references \MacroU{CONDOR\_HOST}, and the default
-%\Macro{HOSTALLOW\_NEGOTIATOR} setting references
-%\MacroU{NEGOTIATOR\_HOST}.
-%So you'll need to change both of these settings to reference
-%\MacroU{CM\_IP\_ADDR} instead.   
-%
-%If your Checkpoint Server is on a machine with multiple interfaces,
-%the only way to get things to work is if your different interfaces
-%have different hostnames associated with them, and you set
-%\Macro{CKPT\_SERVER\_HOST} to the hostname that corresponds with the
-%IP address you want to use.  
-%You will still need to specify \Macro{NETWORK\_INTERFACE} in the local
-%config file for your Checkpoint Server.
-%
-%XXX
-
 \index{multiple network interfaces}
 \index{network interfaces!multiple}
 \index{NICs}
 
-Beginning with Condor version 6.1.5, Condor can run on machines with
+Condor can run on machines with
 multiple network interfaces.
-However, starting with Condor version 6.7.13, new functionality is
+Starting with Condor version 6.7.13
+(and therefore all Condor 6.8 and more recent versions),
+new functionality is
 available that allows even better support for multi-homed
 machines, using the configuration variable \MacroNI{BIND\_ALL\_INTERFACES}.
 A multi-homed machine is one that has more than one
@@ -66,7 +28,7 @@ when using this new configuration variable.
 BIND\_ALL\_INTERFACES}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Starting with Condor version 6.7.13, machines can be configured such that
+Machines can be configured such that
 whenever Condor daemons or tools
 call \Syscall{bind}, the daemons or tools use all network interfaces on
 the machine.

@@ -1,14 +1,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:kbdd}Installing the \Condor{kbdd}}
+\subsection{\label{sec:kbdd}The \Condor{kbdd}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The condor keyboard daemon (\Condor{kbdd}) monitors X events on
+The Condor keyboard daemon (\Condor{kbdd}) monitors X events on
 machines where the operating system does not provide a way of
-monitoring the idle time of the keyboard or mouse.  In particular,
-this is necessary on Digital Unix machines.
-
-\Note If you are running on Solaris, Linux, or HP/UX, you do
-not need to use the keyboard daemon.
+monitoring the idle time of the keyboard or mouse.
+It is not needed for most platforms, as Condor has other ways
+of detecting keyboard and mouse activity.
 
 Although great measures have been taken to make this daemon as robust
 as possible, the X window system was not designed to facilitate such a
@@ -16,7 +14,7 @@ need, and thus is less then optimal on machines where many users log
 in and out on the console frequently.
 
 In order to work with X authority, the system by which X authorizes
-processes to connect to X servers, the condor keyboard daemon needs to
+processes to connect to X servers, the \Condor{kbdd} needs to
 run with super user privileges.  Currently, the daemon assumes that X
 uses the \Env{HOME} environment variable in order to locate a file
 named \File{.Xauthority}, which contains keys necessary to connect to
@@ -28,46 +26,57 @@ keyboard daemon is not allowed to attach to the X server, the state of
 a machine may be incorrectly set to idle when a user is, in fact,
 using the machine.
 
-In some environments, the keyboard daemon will not be able to connect to the X
+In some environments, the  \Condor{kbdd} will not be able to connect to the X
 server because the user currently logged into the system keeps their
 authentication token for using the X server in a place that no local user on
-the current machine can get to.  This may be the case if you are running AFS
-and have the user's X authority file in an AFS home directory.  There may also
-be cases where you cannot run the daemon with super user privileges because of
-political reasons, but you would still like to be able to monitor X activity.
-In these cases, you will need to change your XDM configuration in order to
-start up the keyboard daemon with the permissions of the currently logging in
+the current machine can get to.  
+This may be the case for AFS where
+the user's \File{.Xauthority} file is in an AFS home directory.
+There may also
+be cases where the  \Condor{kbdd} may not be run with super user privileges
+because of political reasons,
+but it is still desired to be able to monitor X activity.
+In these cases, change the XDM configuration in order to
+start up the \Condor{kbdd} with the permissions of the currently logging in
 user.  Although your situation may differ, if you are running X11R6.3, you
-will probably want to edit the files in /usr/X11R6/lib/X11/xdm.  The Xsession
-file should have the keyboard daemon startup at the end, and the Xreset file
-should have the keyboard daemon shutdown.  As of patch level 4 of Condor
-version 6.0, the keyboard daemon has some additional command line options to
-facilitate this.  The -l option can be used to write the daemons log file to a
+will probably want to edit the files in \File{/usr/X11R6/lib/X11/xdm}.
+The \File{.xsession}
+file should have the keyboard daemon start up at the end,
+and the \File{.Xreset} file
+should have the keyboard daemon shut down.  
+The \Opt{-l} option can be used to write the daemon's log file to a
 place where the user running the daemon has permission to write a file.  We
-recommend something akin to \$HOME/.kbdd.log since this is a place where every
-user can write and won't get in the way.  The -pidfile and -k options allow
-for easy shutdown of the daemon by storing the process id in a file.  You will
-need to add lines to your XDM config that look something like this:
+recommend something akin to \File{\$HOME/.kbdd.log},
+since this is a place where every
+user can write, and it will not get in the way.
+The \Opt{-pidfile} and \Opt{-k}
+options allow
+for easy shut down of the daemon by storing the process id in a file.  
+It will be necessary
+to add lines to the XDM configuration that look something like:
 
+\footnotesize
 \begin{verbatim}
-	condor_kbdd -l $HOME/.kbdd.log -pidfile $HOME/.kbdd.pid
+  condor_kbdd -l $HOME/.kbdd.log -pidfile $HOME/.kbdd.pid
 \end{verbatim}
+\normalsize
 
-This will start the keyboard daemon as the user who is currently logging in
-and write the log to a file in the directory \$HOME/.kbdd.log/.  Also, this
-will save the process id of the daemon to ~/.kbdd.pid, so that when the user
-logs out, XDM can simply do a:
+This will start the \Condor{kbdd} as the user who is currently logging in
+and write the log to a file in the directory 
+\File{\$HOME/.kbdd.log/}.  Also, this
+will save the process id of the daemon to \File{\Tilde/.kbdd.pid}, so that when the user
+logs out, XDM can do:
 
+\footnotesize
 \begin{verbatim}
-	condor_kbdd -k $HOME/.kbdd.pid
+  condor_kbdd -k $HOME/.kbdd.pid
 \end{verbatim}
+\normalsize
 
-This will shutdown the process recorded in ~/.kbdd.pid and exit.
+This will shut down the process recorded in \File{\Tilde/.kbdd.pid} and exit.
 
-To see how well the keyboard daemon is working on your system, review
+To see how well the keyboard daemon is working, review
 the log for the daemon and look for successful connections to the X
-server.  If you see none, you may have a situation where the keyboard
-daemon is unable to connect to your machines X server.  If this
-happens, please send mail to \Email{condor-admin@cs.wisc.edu} and let
-us know about your situation.
+server.  If there are none, the \Condor{kbdd}
+is unable to connect to the machine's X server.
 

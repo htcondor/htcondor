@@ -238,6 +238,15 @@ matchmaking.
 
 \begin{itemize}
 
+\item The new configuration variables \Macro{PREEMPTION\_REQUIREMENTS\_STABLE}
+  and \Macro{PREEMPTION\_RANK\_STABLE} are boolean values to
+  identify whether or not attributes used within the definition of
+  \Macro{PREEMPTION\_REQUIREMENTS} and \Macro{PREEMPTION\_RANK} remain
+  unchanged during a negotiation cycle.
+  See section~\ref{param:PreemptionRequirementsStable} on
+  page~\pageref{param:PreemptionRequirementsStable} for 
+  complete definitions.
+
 \item The new configuration variable \Macro{STARTER\_UPLOAD\_SECONDS}
 prevents a hang if the \Condor{shadow} delays a write 
 for more than the specified time.
