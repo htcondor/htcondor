@@ -1728,7 +1728,7 @@ format_globusHostAndJM( char *, AttrList *ad )
 
 				// copy the jobmanager name
 				p = strcspn( tmp, ":" );
-				if ( p > (int) sizeof(jm) )
+				if ( p >= (int) sizeof(jm) )
 					p = sizeof(jm) - 1;
 				strncpy( jm, tmp, p );
 				jm[p] = '\0';
