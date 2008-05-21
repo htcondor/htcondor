@@ -8710,6 +8710,17 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 						dprintf( D_ALWAYS, 
 								"Sent signal %d to %s [pid %d] for job %d.%d\n",
 								SIGKILL, rec->match->peer, rec->pid, cluster, proc );
+							// Keep iterating and preempting more without
+							// decrementing n here.  Why?  Because we didn't
+							// really preempt this job: we just killed the
+							// shadow and left the job running so that we
+							// can reconnect to it later.  No need to throttle
+							// the rate of preemption to avoid i/o overload
+							// from checkpoints or anything.  In fact, it
+							// is better to quickly kill all the shadows so
+							// that we can restart and reconnect before the
+							// lease expires.
+						continue;
 					}
 				} else {
 						/*
