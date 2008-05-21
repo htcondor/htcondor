@@ -16,6 +16,10 @@ BOINC_OBJS = boinc_mgr.o
 BACKFILL_OBJS = $(BOINC_OBJS) backfill_mgr.o
 #endif /* HAVE_BACKFILL */
 
+#if IS_LINUX
+GLEXEC_OBJ = glexec_starter.o
+#endif
+
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
@@ -26,8 +30,8 @@ OBJ = LoadQueue.o claim.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
 	Resource.o Starter.o command.o startd_main.o util.o \
 	startd_cronmgr.o startd_cronjob.o starter_mgr.o mds.o \
 	setsyscalls.o startd_instantiate.o AvailStats.o cod_mgr.o \
-	vm_common.o VMManager.o VMRegister.o VMMachine.o vmuniverse_mgr.o\
-	$(BACKFILL_OBJS) $(SOAP_OBJS)
+	vm_common.o VMManager.o VMRegister.o VMMachine.o vmuniverse_mgr.o \
+	$(BACKFILL_OBJS) $(GLEXEC_OBJ) $(SOAP_OBJS)
 
 template_inst( startd_instantiate.C, startd_instantiate.o )
 
@@ -35,6 +39,11 @@ public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 #if HAVE_EXT_GLOBUS
 public_copy_target(glexec_starter_setup.sh,libexec,glexec_starter_setup.sh,EXECUTABLE_MODE)
+public_c_plus_nowrap_target(condor_glexec_wrapper, \
+                            libexec, \
+                            glexec_wrapper.o, \
+                            $(STD_LIBS))
+c_plus_nowrap_target(fdpass_test,fdpass_test.o fdpass.o,$(STD_LIBS))
 #endif
 
 c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o startd_instantiate.o,$(LIB))
