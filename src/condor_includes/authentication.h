@@ -46,15 +46,17 @@ class Authentication {
     
     ~Authentication();
     
-    int authenticate( char *hostAddr, const char* auth_methods, CondorError* errstack);
+    int authenticate( char *hostAddr, const char* auth_methods, CondorError* errstack, int timeout);
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr     -- host to authenticate
 	//          auth_methods -- protocols to use
+	//          timeout      -- 0 for none, o.w. seconds before timing out
+	//                          -1 means use existing timeout
     // RETURNS: -1 -- failure
     //------------------------------------------
 
-    int authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack);
+    int authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack, int timeout);
     //------------------------------------------
     // PURPOSE: To send the secret key over. this method
     //          is written to keep compatibility issues
@@ -190,8 +192,9 @@ class Authentication {
 
 	void map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name);
 
-    
 #endif /* !SKIP_AUTHENTICATION */
+    
+    int authenticate_inner( char *hostAddr, const char* auth_methods, CondorError* errstack, int timeout);
     
     //------------------------------------------
     // Data (private)

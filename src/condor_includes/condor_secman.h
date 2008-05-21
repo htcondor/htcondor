@@ -139,6 +139,8 @@ public:
 		// and parse it as REQUIRED, OPTIONAL, etc.
 	sec_req         sec_req_param( const char* fmt, DCpermission auth_level, sec_req def );
 
+
+	static int              getSecTimeout( DCpermission );
 	bool 					sec_is_negotiable (sec_req r);
 	SecMan::sec_feat_act 	sec_req_to_feat_act (sec_req r);
 

@@ -295,9 +295,9 @@ protected:
 	///
 	virtual bool is_hdr_encrypt();
     ///
-	virtual int authenticate(const char * auth_methods, CondorError* errstack);
+	virtual int authenticate(const char * auth_methods, CondorError* errstack, int timeout);
     ///
-	virtual int authenticate(KeyInfo *&ki, const char * auth_methods, CondorError* errstack);
+	virtual int authenticate(KeyInfo *&ki, const char * auth_methods, CondorError* errstack, int timeout);
     ///
 	virtual int isAuthenticated() const;
     ///
