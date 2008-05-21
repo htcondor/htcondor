@@ -67,7 +67,7 @@ char *time_to_iso8601(const struct tm &time, ISO8601Format format,
  * -1. Also note that we maintain the goofiness of the 
  * "struct tm": the year 2001 is represented as 101, January
  * is month 0, etc.
- * @param iso_time The date in IS 8601 format
+ * @param iso_time The date in ISO 8601 format
  * @param time This is filled in with the time.
  * @param is_utc This is set to true if it's UTC. Assume localtime 
  *        otherwise. */
