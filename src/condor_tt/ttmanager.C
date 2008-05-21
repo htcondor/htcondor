@@ -475,7 +475,7 @@ TTManager::event_maintain()
 
 	int  buflength=0;
 	bool firststmt = true;
-	char optype[7], eventtype[CONDOR_TT_EVENTTYPEMAXLEN];
+	char optype[8], eventtype[CONDOR_TT_EVENTTYPEMAXLEN];
 	AttrList *ad = 0, *ad1 = 0;
 	MyString *line_buf = 0;
 	
@@ -544,6 +544,9 @@ TTManager::event_maintain()
 			}
 
 			if(firststmt) {
+				if (dt == T_PGSQL) {
+					QuillErrCode err = DBObj->execCommand("create temp table ad(attr varchar(4000),val varchar(4000)) on commit delete rows");
+				}
 				if((DBObj->beginTransaction()) == QUILL_FAILURE) {
 					dprintf(D_ALWAYS, "Begin transaction --- Error\n");
 					goto DBERROR;
@@ -1248,6 +1251,21 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 		return QUILL_FAILURE;
 	}
 	 
+	MyString bulk;
+	if (dt == T_PGSQL) {
+		QuillErrCode err = DBObj->execCommand("truncate ad");
+		if (err == QUILL_FAILURE) {
+			dprintf(D_ALWAYS, "Error running truncate ad\n");
+			errorSqlStmt = "truncate ad";
+			return QUILL_FAILURE;
+		}
+		err = DBObj->execCommand("COPY ad from STDIN");
+		if (err == QUILL_FAILURE) {
+			dprintf(D_ALWAYS, "Error running COPY ad from STDIN\n");
+			errorSqlStmt = "Copy ad";
+			return QUILL_FAILURE;
+		}
+	}
 	newClAd.startIterations();
 	while (newClAd.iterate(aName, aVal)) {
 		 
@@ -1343,6 +1361,9 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 		} else {
 			aVal.replaceString("'"," ");
 			aVal.replaceString("\""," ");
+			aVal.replaceString("\t"," ");
+
+#ifdef WAY_TOO_MUCH_SQL
 			sql_stmt.sprintf("INSERT INTO Machines_Vertical (machine_id, attr, val, start_time) SELECT '%s', '%s', '%s', %s FROM dummy_single_row_table WHERE NOT EXISTS (SELECT * FROM Machines_Vertical WHERE machine_id = '%s' AND attr = '%s')", machine_id.Value(), aName.Value(), aVal.Value(), lastReportedTime.Value(), machine_id.Value(), aName.Value());
 
 			if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
@@ -1371,7 +1392,71 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 				errorSqlStmt = sql_stmt;
 				return QUILL_FAILURE;
 			}		 
+#endif
+		bulk.sprintf_cat("%s\t%s\n", aName.Value(), aVal.Value());
 		}
+
+	}
+
+	if (dt == T_PGSQL) {
+		DBObj->sendBulkData(bulk.Value());
+		DBObj->sendBulkDataEnd();
+
+		sql_stmt.sprintf(
+	"INSERT INTO Machines_Vertical(machine_id, attr, val, start_time) "
+	" 		select '%s', ad.attr, ad.val, %s "
+	"       from ad "
+	"       where attr not in (select attr from Machines_vertical as mv "
+    "                                       where mv.machine_id = '%s')"
+		
+		, machine_id.Value(), lastReportedTime.Value(), machine_id.Value());
+
+		if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
+			dprintf(D_ALWAYS, "Executing Statement --- Error\n");
+			dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());
+			errorSqlStmt = sql_stmt;
+			return QUILL_FAILURE;
+		}		 
+
+			// Copy any attributes for this machine whose value have
+			// changed since last time to the machines_vertical_history
+			// table.
+		sql_stmt.sprintf(
+	"INSERT INTO Machines_Vertical_History(machine_id, attr, val, start_time, end_time)"
+	"  select '%s', ad.attr, ad.val, mv.start_time, %s "
+	"         from ad, Machines_Vertical as mv "
+	"         where mv.machine_id = '%s' and ad.attr = mv.attr and "
+	"              ad.val != mv.val "
+
+		, machine_id.Value(), lastReportedTime.Value(), machine_id.Value());
+
+		if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
+			dprintf(D_ALWAYS, "Executing Statement --- Error\n");
+			dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());
+			errorSqlStmt = sql_stmt;
+			return QUILL_FAILURE;
+		}		 
+
+
+			// Update any attributes in the machines_vertical table
+			// that were already there, but now have new values
+		sql_stmt.sprintf(
+	"UPDATE Machines_Vertical "
+	"       SET val = ad.val, start_time = %s "
+	"			from ad "
+	"		where "
+	"             Machines_Vertical.machine_id = '%s' and "
+	"             Machines_Vertical.attr = ad.attr and "
+	"             Machines_Vertical.val != ad.val"
+
+		, lastReportedTime.Value(), machine_id.Value());
+	}
+
+	if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
+		dprintf(D_ALWAYS, "Executing Statement --- Error\n");
+		dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());		
+		errorSqlStmt = sql_stmt;
+		return QUILL_FAILURE;
 	}
 
 	return QUILL_SUCCESS;
