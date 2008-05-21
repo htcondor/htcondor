@@ -16,6 +16,10 @@ BOINC_OBJS = boinc_mgr.o
 BACKFILL_OBJS = $(BOINC_OBJS) backfill_mgr.o
 #endif /* HAVE_BACKFILL */
 
+#if IS_LINUX
+GLEXEC_OBJ = glexec_starter.o
+#endif
+
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
@@ -27,8 +31,7 @@ OBJ = LoadQueue.o claim.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
 	startd_cronmgr.o startd_cronjob.o starter_mgr.o mds.o \
 	setsyscalls.o startd_instantiate.o AvailStats.o cod_mgr.o \
 	vm_common.o VMManager.o VMRegister.o VMMachine.o vmuniverse_mgr.o \
-	glexec_starter.o fdpass.o \
-	$(BACKFILL_OBJS) $(SOAP_OBJS)
+	$(BACKFILL_OBJS) $(GLEXEC_OBJ) $(SOAP_OBJS)
 
 template_inst( startd_instantiate.C, startd_instantiate.o )
 

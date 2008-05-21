@@ -33,7 +33,10 @@
 #include "setenv.h"
 #include "my_popen.h"
 #include "basename.h"
+
+#if defined(LINUX)
 #include "glexec_starter.h"
+#endif
 
 #ifdef WIN32
 extern dynuser *myDynuser;
@@ -594,7 +597,7 @@ Starter::exited()
 	ASSERT( executeDir() );
 	cleanup_execute_dir( s_pid, executeDir() );
 
-#if !defined(WIN32)
+#if defined(LINUX)
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
 		cleanupAfterGlexec();
 	}
@@ -801,7 +804,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		EXCEPT("Failed to register ClassAd update socket.");
 	}
 
-#if !defined(WIN32)
+#if defined(LINUX)
 	// see if we should be using glexec to spawn the starter.
 	// if we are, the cmd, args, env, and stdin to use will be
 	// modified
@@ -855,7 +858,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		s_pid = 0;
 	}
 
-#if !defined(WIN32)
+#if defined(LINUX)
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
 		// if we used glexec to spawn the Starter, we now need to send
 		// the Starter's environment to our glexec wrapper script so it
@@ -990,7 +993,7 @@ Starter::execOldStarter( void )
 #endif
 }
 
-#if !defined(WIN32)
+#if defined(LINUX)
 void
 Starter::cleanupAfterGlexec()
 {
@@ -1007,7 +1010,7 @@ Starter::cleanupAfterGlexec()
 		s_claim->client()->setProxyFile(NULL);
 	}
 }
-#endif // !WIN32
+#endif
 
 bool
 Starter::isCOD()
