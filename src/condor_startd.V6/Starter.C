@@ -33,6 +33,7 @@
 #include "setenv.h"
 #include "my_popen.h"
 #include "basename.h"
+#include "fdpass.h"
 
 #ifdef WIN32
 extern dynuser *myDynuser;
@@ -802,19 +803,32 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 
 #if !defined(WIN32)
 	// see if we should be using glexec to spawn the starter.
-	// if we are, the cmd, args, and env to use will be modified
+	// if we are, the cmd, args, env, and stdin to use will be
+	// modified
 	ArgList glexec_args;
 	Env glexec_env;
+	int glexec_std_fds[3];
+	int glexec_sock_fds[2];
+	int glexec_starter_stdin;
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
-		if( ! prepareForGlexec( args, env, glexec_args, glexec_env ) ) {
+		if( ! prepareForGlexec( args,
+		                        env,
+		                        std_fds,
+		                        glexec_args,
+		                        glexec_env,
+		                        glexec_std_fds,
+		                        glexec_sock_fds,
+		                        glexec_starter_stdin ) )
+		{
 			// something went wrong; prepareForGlexec will
 			// have already logged it
 			cleanupAfterGlexec();
 			return 0;
 		}
+		final_path = glexec_args.GetArg(0);
 		final_args = &glexec_args;
 		env = &glexec_env;
-		final_path = glexec_args.GetArg(0);
+		std_fds = glexec_std_fds;
 	}
 #endif
 								   
@@ -842,6 +856,27 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
 	}
+
+#if !defined(WIN32)
+	if( param_boolean( "GLEXEC_STARTER", false ) ) {
+		// if we used glexec to spawn the Starter, we now need to send
+		// the Starter's environment to our glexec wrapper script so it
+		// can exec the Starter with all the environment variablew we rely
+		// on it inheriting
+		//
+		if ( ! handleGlexecEnvironment(s_pid,
+		                               glexec_env,
+		                               glexec_sock_fds,
+		                               glexec_starter_stdin) )
+		{
+			// something went wrong; handleGlexecEnvironment will
+			// have already logged it
+			cleanupAfterGlexec();
+			return 0;
+		}
+	}
+#endif
+
 	return s_pid;
 }
 
@@ -963,8 +998,14 @@ Starter::execOldStarter( void )
 
 #if !defined(WIN32)
 bool
-Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
-                           ArgList& glexec_args, Env& glexec_env )
+Starter::prepareForGlexec( const ArgList& orig_args,
+                           const Env* orig_env,
+                           const int orig_std_fds[3],
+                           ArgList& glexec_args,
+                           Env& glexec_env,
+                           int glexec_std_fds[3],
+                           int glexec_sock_fds[2],
+                           int& glexec_starter_stdin )
 {
 	// if GLEXEC_STARTER is set, use glexec to invoke the
 	// starter (or fail if we can't). this involves:
@@ -975,10 +1016,14 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	//     setup the starter's "private directory" for a copy
 	//     of the job's proxy to go into, as well as the StarterLog
 	//     and execute dir
-	//   - adding the contents of the GLEXEC config param
-	//     to the front of the command line
+	//   - adding the contents of the GLEXEC and config param
+	//     and the path to 'condor_glexec_wrapper' to the front
+	//     of the command line
 	//   - setting up glexec's environment (setting the
 	//     mode, handing off the proxy, etc.)
+        //   - creating a UNIX-domain socket to use to communicate
+	//     with our wrapper script, and munging the std_fds
+	//     array
 
 	// verify that we have a stored proxy
 	if( s_claim->client()->proxyFile() == NULL ) {
@@ -1054,14 +1099,15 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	}
 
 	// set up the rest of the arguments for the glexec setup script
-	char* libexec = param("LIBEXEC");
-	if (libexec == NULL) {
+	char* tmp = param("LIBEXEC");
+	if (tmp == NULL) {
 		dprintf( D_ALWAYS,
 		         "GLEXEC: LIBEXEC not defined; can't find setup script\n" );
 		free( glexec_argstr );
 	}
+	MyString libexec = tmp;
+	free(tmp);
 	MyString setup_script = libexec;
-	free(libexec);
 	setup_script += "/glexec_starter_setup.sh";
 	glexec_setup_args.AppendArg(setup_script.Value());
 	glexec_setup_args.AppendArg(glexec_private_dir.Value());
@@ -1095,7 +1141,7 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	}
 
 	// now prepare the starter command line, starting with glexec and its
-	// options (if any).
+	// options (if any), then condor_glexec_wrapper.
 	MyString err;
 	if( ! glexec_args.AppendArgsV1RawOrV2Quoted( glexec_argstr,
 	                                             &err ) ) {
@@ -1106,6 +1152,9 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 		return 0;
 	}
 	free( glexec_argstr );
+	MyString wrapper_path = libexec;
+	wrapper_path += "/condor_glexec_wrapper";
+	glexec_args.AppendArg(wrapper_path.Value());
 
 	// complete the command line by adding in the original
 	// arguments. we also make sure that the full path to the
@@ -1174,6 +1223,130 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	procd_address += "/procd_pipe";
 	glexec_env.SetEnv( "_CONDOR_PROCD_ADDRESS", procd_address.Value() );
 
+	// now set up a socket pair for communication with
+	// condor_glexec_wrapper
+	//
+	if (socketpair(PF_UNIX, SOCK_STREAM, 0, glexec_sock_fds) == -1)
+	{
+		dprintf(D_ALWAYS,
+		        "GLEXEC: socketpair error: %s\n",
+		        strerror(errno));
+		return false;
+	}
+	glexec_std_fds[0] = glexec_sock_fds[1];
+	if (orig_std_fds == NULL) {
+		glexec_starter_stdin = -1;
+		glexec_std_fds[1] = glexec_std_fds[2] = -1;
+	}
+	else {
+		glexec_starter_stdin = orig_std_fds[0];
+		glexec_std_fds[1] = orig_std_fds[1];
+		glexec_std_fds[2] = orig_std_fds[2];
+	}
+
+	return true;
+}
+
+bool
+Starter::handleGlexecEnvironment(pid_t p,
+                                 Env& glexec_env,
+                                 int glexec_sock_fds[2],
+                                 int glexec_starter_stdin)
+{
+	// we can now close the end of the socket that we handed down
+	// to the wrapper; the other end we'll use to send stuff over
+	//
+	close(glexec_sock_fds[1]);
+	int sock_fd = glexec_sock_fds[0];
+
+	// if pid is 0, Create_Process failed; just close the socket
+	// and return
+	//
+	if (p == 0) {
+		close(sock_fd);
+		return false;
+	}
+
+	// before sending the environment, scrub some stuff that was
+	// only for glexec
+	//
+	glexec_env.SetEnv("GLEXEC_MODE", "");
+	glexec_env.SetEnv("SSL_CLIENT_CERT", "");
+	glexec_env.SetEnv("GLEXEC_SOURCE_PROXY", "");
+	glexec_env.SetEnv("GLEXEC_TARGET_PROXY", "");
+
+	// now send over the environment; what we send over is our own
+	// environment with the stuff we added in prepareForGlexec
+	// added in
+	//
+	Env env_to_send;
+	env_to_send.MergeFrom(environ);
+	env_to_send.MergeFrom(glexec_env);
+	char* env_buf = env_to_send.getNullDelimitedString();
+	int env_len = 1;
+	char* ptr = env_buf;
+	while (*ptr != '\0') {
+		int len = strlen(ptr) + 1;
+		env_len += len;
+		ptr += len;
+	}
+	errno = 0;
+	if (write(sock_fd, &env_len, sizeof(env_len)) != sizeof(env_len)) {
+		dprintf(D_ALWAYS,
+		        "GLEXEC: error sending env size to wrapper: %s\n",
+		        strerror(errno));
+		close(sock_fd);
+		return false;
+	}
+	errno = 0;
+	if (write(sock_fd, env_buf, env_len) != env_len) {
+		dprintf(D_ALWAYS,
+		        "GLEXEC: error sending env to wrapper: %s\n",
+		        strerror(errno));
+		close(sock_fd);
+		return false;
+	}
+	delete[] env_buf;
+
+	// now send over the FD that the Starter should use for stdin, if any
+	// (we send a flag whether there is an FD to send first)
+	//
+	int flag = (glexec_starter_stdin != -1) ? 1 : 0;
+	if (write(sock_fd, &flag, sizeof(flag)) != sizeof(flag)) {
+		dprintf(D_ALWAYS,
+		        "GLEXEC: error sending flag to wrapper: %s\n",
+		        strerror(errno));
+		close(sock_fd);
+		return false;
+	}
+	if (flag) {
+		if (fdpass_send(sock_fd, glexec_starter_stdin) == -1) {
+			dprintf(D_ALWAYS, "GLEXEC: fdpass_send failed\n");
+			close(sock_fd);
+			return false;
+		}
+	}
+
+	// now read any error messages produced by the wrapper
+	//
+	char err[256];
+	ssize_t bytes = read(sock_fd, err, sizeof(err) - 1);
+	if (bytes == -1) {
+		dprintf(D_ALWAYS,
+		        "GLEXEC: error reading message from wrapper: %s\n",
+		        strerror(errno));
+		close(sock_fd);
+		return false;
+	}
+	if (bytes > 0) {
+		err[bytes] = '\0';
+		dprintf(D_ALWAYS, "GLEXEC: error from wrapper: %s\n", err);
+		return false;
+	}
+
+	// if we're here, it all worked
+	//
+	close(sock_fd);
 	return true;
 }
 
