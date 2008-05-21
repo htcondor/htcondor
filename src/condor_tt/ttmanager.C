@@ -478,6 +478,9 @@ TTManager::event_maintain()
 	char optype[8], eventtype[CONDOR_TT_EVENTTYPEMAXLEN];
 	AttrList *ad = 0, *ad1 = 0;
 	MyString *line_buf = 0;
+	bool useTempTable = false;
+	
+	useTempTable = param_boolean("QUILL_USE_TEMP_TABLE", false);
 	
 		/* copy event log files */	
 	int i;
@@ -545,7 +548,8 @@ TTManager::event_maintain()
 
 			if(firststmt) {
 				if (dt == T_PGSQL) {
-					QuillErrCode err = DBObj->execCommand("create temp table ad(attr varchar(4000),val varchar(4000)) on commit delete rows");
+					if (useTempTable)
+						QuillErrCode err = DBObj->execCommand("create temp table ad(attr varchar(4000),val varchar(4000)) on commit delete rows");
 				}
 				if((DBObj->beginTransaction()) == QUILL_FAILURE) {
 					dprintf(D_ALWAYS, "Begin transaction --- Error\n");
@@ -876,6 +880,7 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 	MyString lastReportedTime = "";
 	MyString lastReportedTimeValue = "";
 	MyString clob_comp_expr;
+	bool useTempTable = param_boolean("QUILL_USE_TEMP_TABLE", false);;
 
 		// previous LastReportedTime from the current classad
 		// previous LastReportedTime from the database's machines_horizontal
@@ -1363,7 +1368,7 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 			aVal.replaceString("\""," ");
 			aVal.replaceString("\t"," ");
 
-#ifdef WAY_TOO_MUCH_SQL
+		if (!useTempTable) {
 			sql_stmt.sprintf("INSERT INTO Machines_Vertical (machine_id, attr, val, start_time) SELECT '%s', '%s', '%s', %s FROM dummy_single_row_table WHERE NOT EXISTS (SELECT * FROM Machines_Vertical WHERE machine_id = '%s' AND attr = '%s')", machine_id.Value(), aName.Value(), aVal.Value(), lastReportedTime.Value(), machine_id.Value(), aName.Value());
 
 			if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
@@ -1392,13 +1397,14 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 				errorSqlStmt = sql_stmt;
 				return QUILL_FAILURE;
 			}		 
-#endif
+		}
 		bulk.sprintf_cat("%s\t%s\n", aName.Value(), aVal.Value());
 		}
 
 	}
 
 	if (dt == T_PGSQL) {
+		if (useTempTable) {
 		DBObj->sendBulkData(bulk.Value());
 		DBObj->sendBulkDataEnd();
 
@@ -1457,6 +1463,7 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 		dprintf(D_ALWAYS, "sql = %s\n", sql_stmt.Value());		
 		errorSqlStmt = sql_stmt;
 		return QUILL_FAILURE;
+	}
 	}
 
 	return QUILL_SUCCESS;
