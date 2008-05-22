@@ -243,6 +243,38 @@ AC_DEFUN([MF_LIB_CHECK],
           CFLAGS="$_cflags_save"])
         [cv_ext_]m4_tolower($1)[=yes])])
 
+#
+## THIS SHOULD WORK, BUT DOESN'T! FOR SOME REASON AC_CHECK_HEADER DOES
+## NOT BEHAVE LIKE AC_CHECK_LIB
+#
+# MF_HEADER_CHECK(name,
+#                 header)
+#
+# This is a useful function that can be provided as a test to
+# CHECK_EXTERNAL. It checks for a header file to determine if the
+# external is available.
+#
+# Arguments:
+#  * name: The externals name 
+#  * header: A header file to test for,
+#             e.g. [classad/classad_distribution.h]
+#
+# Results:
+# * cv_ext_<name> set to yes, if the header is found
+#                        no, otherwise
+#
+# Note: This function uses _dir if it is set. It should be set to a
+# path that includes a lib/ and include/ directory.
+#
+AC_DEFUN([MF_HEADER_CHECK],
+  [_cflags_save="$CFLAGS"
+   AS_IF([test "x$_dir" != x],
+    [CFLAGS="$CFLAGS -I$_dir/include"])
+   AC_CHECK_HEADER([$2],
+     [cv_ext_]m4_tolower($1)[=yes],
+     [cv_ext_]m4_tolower($1)[=no
+      CFLAGS="$_cflags_save"
+      AC_MSG_WARN([$1: could not find $2])])])
 
 #######################################################################
 # CONDOR_EXTERNAL_VERSION written by Derek Wright
