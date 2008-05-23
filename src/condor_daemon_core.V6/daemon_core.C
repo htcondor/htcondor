@@ -776,6 +776,11 @@ int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
 	return( t.NewTimer(s, deltawhen, event, event_descrip, period, -1) );
 }
 
+int DaemonCore::Register_Timer (Timeslice timeslice,Eventcpp event,char * event_descrip,Service* s)
+{
+	return t.NewTimer(s, timeslice, event, event_descrip, -1 );
+}
+
 int	DaemonCore::Cancel_Timer( int id )
 {
 	return( t.CancelTimer(id) );

@@ -850,6 +850,18 @@ class DaemonCore : public Service
                         char *    event_descrip,
                         Service * s);
 
+    /** 
+        @param timeslice       Timeslice object specifying interval parameters
+        @param event           Function to call when timer fires.
+        @param event_descrip   String describing the function.
+        @param s               Service object of which function is a member.
+        @return                Timer id or -1 on error
+    */
+    int Register_Timer (Timeslice timeslice,
+                        Eventcpp   event,
+                        char *     event_descrip,
+                        Service*   s);
+
     /** Not_Yet_Documented
         @param id The timer's ID
         @return Not_Yet_Documented

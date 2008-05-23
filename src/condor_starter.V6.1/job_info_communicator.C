@@ -771,15 +771,18 @@ JobInfoCommunicator::startUpdateTimer( void )
 		return;
 	}
 
-	// default interval is 5 minutes, with 8 seconds as the initial value.
-	int update_interval = param_integer( "STARTER_UPDATE_INTERVAL", 300 );
-	int initial_interval = param_integer( "STARTER_INITIAL_UPDATE_INTERVAL", 8 );
+	Timeslice interval;
 
-	if( update_interval < initial_interval ) {
-		initial_interval = update_interval;
+	// default interval is 5 minutes, with 8 seconds as the initial value.
+	interval.setDefaultInterval( param_integer( "STARTER_UPDATE_INTERVAL", 300, 0 ) );
+	interval.setTimeslice( param_double( "STARTER_UPDATE_INTERVAL_TIMESLICE", 0.1, 0, 1 ) );
+	interval.setInitialInterval( param_integer( "STARTER_INITIAL_UPDATE_INTERVAL", 8 ) );
+
+	if( interval.getDefaultInterval() < interval.getInitialInterval() ) {
+		interval.setInitialInterval( interval.getDefaultInterval() );
 	}
 	m_periodic_job_update_tid = daemonCore->
-		Register_Timer(initial_interval, update_interval,
+		Register_Timer(interval,
 	      (TimerHandlercpp)&JobInfoCommunicator::periodicJobUpdateTimerHandler,
 		  "JobInfoCommunicator::periodicJobUpdateTimerHandler", this);
 	if( m_periodic_job_update_tid < 0 ) {
