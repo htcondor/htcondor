@@ -4742,6 +4742,14 @@ The amount of time (in seconds) between ClassAd updates that the
 \Condor{starter} daemon sends to the \Condor{shadow} and \Condor{startd}
 daemons.  Defaults to 300 (5 minutes).
 
+\item[\Macro{STARTER\_UPDATE\_INTERVAL\_TIMESLICE}]
+\label{param:StarterUpdateIntervalTimeslice} This specifies the
+highest fraction of time the starter should spend collecting
+monitoring information about the job, such as disk usage.  It defaults
+to 0.1.  If monitoring such as checking disk usage takes a long time,
+the starter will monitor less frequently than specified by
+\MacroNI{STARTER\_UPDATE\_INTERVAL}.
+
 \item[\Macro{USER\_JOB\_WRAPPER}] \label{param:UserJobWrapper} 
   The full path to an executable or script.
   This macro

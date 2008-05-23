@@ -99,6 +99,13 @@ allow for authentication of network connections to complete.  Previously,
 GSI authentication was hard-coded to allow 5 minutes for authentication.
 Now it uses the same default as all other methods: 20 seconds.
 
+\item Added \MacroNI{STARTER\_UPDATE\_INTERVAL\_TIMESLICE}.  This
+specifies the highest fraction of time the starter should spend
+collecting monitoring information about the job, such as disk usage.
+It defaults to 0.1.  If checking the disk usage of the job takes a
+long time, the starter will monitor less frequently than specified by
+\MacroNI{STARTER\_UPDATE\_INTERVAL}.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
