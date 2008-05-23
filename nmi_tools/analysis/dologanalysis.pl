@@ -144,6 +144,7 @@ foreach $log (@datafiles) {
 	$skip = "true";
 	@queue = ();
 	%unique = ();
+	%uniquefiles = ();
 	open(LOGDATA,"$crunch $datafile 2>&1|") || die "logdata bad: $!\n";
 	open(OUT,">$outfile") || die "Failed to open $outfile: $!\n";
 	open(UNIQUE,">$uniquefile") || die "Failed to open $uniquefile: $!\n";
@@ -156,7 +157,7 @@ foreach $log (@datafiles) {
 		#print "-----<$line>-----\n";
 		# NOTE if you change matching criteria make SURE to
 		# adjust matching criteria in reorderQueue().
-		if($line =~ /^\s+[\?MBR]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):\s(condor[-_]).*\s+([^\s]+@[^\s]+).*$/) {
+		if($line =~ /^\s+[\?MBR]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):\s(condor[-_])([\d\w\.\-]+).*\s+([^\s]+@[^\s]+).*$/) {
 			if( $skip eq "true" )  {
 				$skip = "false";
 				$firstdate = $3 . " " . $months{$2} . " " . $5;
@@ -173,18 +174,28 @@ foreach $log (@datafiles) {
 			$day = $3;
 			$month = $2;
 			$year = $5;
-			$totalgood = $totalgood + 1;
-			$filename = $6;
-			$useremail = $7;
-			if(!(exists $unique{$useremail})) {
-				$totaluniquegood += 1;
-				$unique{$useremail} = 1;
-				#print "Adding unique email <$useremail> for $2/$3\n";
+			$filename = $6 . $7;
+			$useremail = $8;
+			# filter our multicounted good downloads
+			my $datenow = $month . "/" . $day . " " . $year;
+			my $gooduserfile = $useremail . "-" . $filename;
+			print "Consider $gooduserfile $datenow\n";
+			if( !(exists $uniquefile{$gooduserfile})) {
+				$uniquefile{$gooduserfile} = 1;
+				print "Adding $gooduserfile\n";
+				$totalgood = $totalgood + 1;
+				if(!(exists $unique{$useremail})) {
+					$totaluniquegood += 1;
+					$unique{$useremail} = 1;
+					#print "Adding unique email <$useremail> for $2/$3\n";
+				}
+				if($filename =~ /^condor_.*/) {
+					$totalsrc = $totalsrc + 1;
+				}
+			} else {
+				print "skip $gooduserfile\n";
 			}
-			if($filename =~ /^condor_.*/) {
-				$totalsrc = $totalsrc + 1;
-			}
-			#print "Good $2 $3 $5 <$totalgood|$line>\n";
+		#print "Good $2 $3 $5 <$totalgood|$line>\n";
 		} elsif($line =~ /^\s+[\?MBR]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):\s+condordebug.*$/) {
 			#print "Ignore debugsysmbols|$l;ine\n";
 		} elsif($line =~ /^\*[\?MBR]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):.*/) {
@@ -417,6 +428,7 @@ sub ResetCounters
 	$totalbad = 0;
 	$totalsrc = 0;
 	%unique = ();
+	%uniquefiles = ();
 }
 
 sub DoOutput

@@ -3903,7 +3903,8 @@ int DaemonCore::HandleReq(Stream *insock)
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
 					}
 
-					if (!sock->authenticate(the_key, auth_methods, &errstack)) {
+					int auth_timeout = getSecMan()->getSecTimeout( comTable[cmd_index].perm );
+					if (!sock->authenticate(the_key, auth_methods, &errstack, auth_timeout)) {
 						free( auth_methods );
 						dprintf( D_ALWAYS,
 								 "DC_AUTHENTICATE: authenticate failed: %s\n",

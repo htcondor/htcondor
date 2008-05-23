@@ -215,6 +215,8 @@ public:
 		}		
 	}
 
+	virtual QuillErrCode	sendBulkData(const char *){return QUILL_FAILURE;}
+	virtual QuillErrCode	sendBulkDataEnd() {return QUILL_FAILURE;}
 protected:
 	bool	connected; 	//!< connection status
 };

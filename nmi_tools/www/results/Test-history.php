@@ -241,7 +241,7 @@ while ($runidrow = mysql_fetch_array($results)) {
 		// we are focusing on a single test history, skip the rest
 		$diff = strcmp($task,$test);
 		if($diff ==  0) {
-			if(($rowcount % 10) == 0) {
+			if(($rowcount % 20) == 0) {
 				//echo "<table border=\"0\" cellspacing=\"0\" >\n";
 				echo "<tr>\n";
 				echo "<td>&nbsp</td>\n";

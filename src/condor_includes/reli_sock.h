@@ -190,9 +190,9 @@ public:
 	virtual void setFullyQualifiedUser(char const * u);
 
     ///
-	int authenticate( const char* methods, CondorError* errstack );
+	int authenticate( const char* methods, CondorError* errstack, int auth_timeout );
     ///
-	int authenticate( KeyInfo *& key, const char* methods, CondorError* errstack );
+	int authenticate( KeyInfo *& key, const char* methods, CondorError* errstack, int auth_timeout );
     ///
     virtual const char * getFullyQualifiedUser() const;
     ///
@@ -241,7 +241,8 @@ protected:
 
 	int prepare_for_nobuffering( stream_coding = stream_unknown);
 	int perform_authenticate( bool with_key, KeyInfo *& key, 
-							  const char* methods, CondorError* errstack );
+							  const char* methods, CondorError* errstack,
+							  int auth_timeout );
 
 	// This is used internally to recover sanity on the stream after
 	// failing to open a file in put_file().
