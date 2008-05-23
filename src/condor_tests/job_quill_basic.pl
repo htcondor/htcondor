@@ -257,7 +257,7 @@ $submitted = sub
 		print "Size of array is $#adarray\n";
 		%skip = ("Submitter", 1, "LocalSysCpu", 1, "LocalUserCpu", 1,
 					"Rank", 1, "RemoteSysCpu", 1, "RemoteWallClockTime", 1,
-					"ServerTime", 1, "RemoteUserCpu", 1);
+					"ServerTime", 1, "RemoteUserCpu", 1, "Environment", 1);
 		system("date");
 		@adarray = sort(@adarray);
 		@bdarray = sort(@bdarray);
