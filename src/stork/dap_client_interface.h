@@ -20,9 +20,9 @@
 #ifndef _DAP_CLIENT_INTERFACE_H
 #define _DAP_CLIENT_INTERFACE_H
 
-#define WANT_NAMESPACES
+#define WANT_CLASSAD_NAMESPACE
 #include "condor_fix_iostream.h"
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 /** dap_submit()
 	Submits a specified request to Stork server

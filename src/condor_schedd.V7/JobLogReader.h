@@ -24,9 +24,9 @@
 #include "../condor_quill/classadlogparser.h"
 #include "../condor_quill/prober.h"
 
-#define WANT_NAMESPACES
+#define WANT_CLASSAD_NAMESPACE
 #undef open
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 class JobLogReader {
 public:

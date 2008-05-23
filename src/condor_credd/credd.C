@@ -24,8 +24,8 @@
 #include "credential.h"
 #include "X509credential.h"
 #include "X509credentialWrapper.h"
-#include "xmlSource.h"
-#include "xmlSink.h"
+#include "classad/xmlSource.h"
+#include "classad/xmlSink.h"
 #include "env.h"
 #include "internet.h"
 #include "condor_config.h"
@@ -46,7 +46,6 @@
 #define MAX_CRED_DATA_SIZE 100000
 #define DEF_CRED_CHECK_INTERVAL		60	/* seconds */
 
-template class SimpleList<Credential*>;
 template class SimpleList<CredentialWrapper*>;
 
 SimpleList <CredentialWrapper*> credentials;

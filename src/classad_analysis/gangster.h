@@ -21,8 +21,8 @@
 #ifndef __GANGSTER_H__
 #define __GANGSTER_H__
 
-#define WANT_NAMESPACES
-#include "classad_distribution.h"
+#define WANT_CLASSAD_NAMESPACE
+#include "classad/classad_distribution.h"
 #include "gmr.h"
 
 class Gangster {

@@ -2196,10 +2196,8 @@ esac
 AC_MSG_RESULT([$_cv_has_krb5])
 
 AC_MSG_CHECKING([if classads is supported])
-_cv_has_classads=no
-AS_IF([test "x$_cv_libc_kind-$_cv_libc_major-$_cv_libc_minor" = xGLIBC-2-3],
-  [AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -o "x$os-$_cv_arch" = xLinux-X86_64],
-    [_cv_has_classads=yes])])
+# currently, all platforms support the classad external
+_cv_has_classads=yes
 AC_MSG_RESULT([$_cv_has_classads])
 
 
@@ -2382,7 +2380,7 @@ CHECK_EXTERNAL([zlib], [1.2.3], [$_cv_zlib_requirement],
                [use zlib (provides compression support)],
                MF_LIB_CHECK([zlib], [[z deflate]]))
 
-CHECK_EXTERNAL([classads], [0.9.8-b4], [soft])
+CHECK_EXTERNAL([classads], [1.0rc5], [soft])
 
 CHECK_EXTERNAL([srb], [3.2.1], [soft])
 
@@ -2396,7 +2394,7 @@ AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_has_globus" = xyes -a -n "$
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.7.0], [soft])
+CHECK_EXTERNAL([blahp], [1.7.0-p1], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what

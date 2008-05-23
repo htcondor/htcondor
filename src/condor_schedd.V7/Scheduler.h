@@ -23,9 +23,9 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
-#define WANT_NAMESPACES
+#define WANT_CLASSAD_NAMESPACE
 #undef open
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 #include "JobLogReader.h"
 

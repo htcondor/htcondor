@@ -22,8 +22,8 @@
 #include "dc_stork.h"
 #include "dap_client_interface.h"
 
-#define WANT_NAMESPACES
-#include "classad_distribution.h"
+#define WANT_CLASSAD_NAMESPACE
+#include "classad/classad_distribution.h"
 
 DCStork::
 DCStork (const char * _host) {

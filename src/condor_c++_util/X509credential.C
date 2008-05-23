@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "globus_utils.h"
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 X509Credential::X509Credential (const classad::ClassAd& class_ad) : Credential (class_ad) {
 	std::string val;

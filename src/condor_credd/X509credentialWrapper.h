@@ -20,7 +20,7 @@
 #ifndef __X509CREDENTIALWRAPPER_H__
 #define __X509CREDENTIALWRAPPER_H__
 #include "X509credential.h"
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 
 #define CREDATTR_STORAGE_NAME "_StorageName"
 

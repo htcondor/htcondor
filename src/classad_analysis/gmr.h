@@ -21,8 +21,8 @@
 #ifndef __GMR_H__
 #define __GMR_H__
 
-#define WANT_NAMESPACES
-#include "classad_distribution.h"
+#define WANT_CLASSAD_NAMESPACE
+#include "classad/classad_distribution.h"
 
 class GMR {
 public:

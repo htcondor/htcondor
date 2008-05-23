@@ -24,11 +24,11 @@
 #include "condor_string.h" // for strnewp()
 #include "tmp_dir.h"
 #ifdef HAVE_EXT_CLASSADS
-#ifndef WANT_NAMESPACES
-#define WANT_NAMESPACES
+#ifndef WANT_CLASSAD_NAMESPACE
+#define WANT_CLASSAD_NAMESPACE
 #endif
 #include "condor_fix_iostream.h"
-#include "classad_distribution.h"
+#include "classad/classad_distribution.h"
 #endif
 #include "fs_util.h"
 
