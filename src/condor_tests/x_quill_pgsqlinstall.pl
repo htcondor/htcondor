@@ -325,12 +325,12 @@ unless($command->expect(10,"test=>")) {
 }
 print $command "\\i $testsrc/../condor_tt/common_createddl.sql\n";
 
-unless($command->expect(10,"test=>")) {
+unless($command->expect(180,"test=>")) {
 	die "Prompt after attempted install of common schema failed\n";
 }
 print $command "\\i $testsrc/../condor_tt/pgsql_createddl.sql\n";
 
-unless($command->expect(10,"test=>")) {
+unless($command->expect(180,"test=>")) {
 	die "Prompt after attempted install of postgress schema failed\n";
 }
 print $command "\quit\n";
