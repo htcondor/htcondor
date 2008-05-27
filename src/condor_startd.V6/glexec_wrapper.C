@@ -56,13 +56,13 @@ main(int, char* argv[])
 	}
 
 	// set up an Env object that we'll use for the job. we'll initialize
-	// it with the environment that glexec prepared for us then merge on
-	// top of that the environment that Condor sends us
+	// it with the environment that Condor sends us then merge on top of
+	// that the environment that glexec prepared for us
 	//
 	Env env;
-	env.MergeFrom(environ);
 	char* env_buf = read_env(sock_fd);
 	env.MergeFrom(env_buf);
+	env.MergeFrom(environ);
 	delete[] env_buf;
 
 	// now receive an FD on our stdin (which is a UNIX domain socket)
