@@ -234,8 +234,10 @@ glexec_starter_prepare(const char* starter_path,
 	glexec_env.SetEnv( "GLEXEC_TARGET_PROXY", child_proxy_file.Value() );
 
 	// _CONDOR_GSI_DAEMON_PROXY - starter's proxy
-	MyString var_name = "_CONDOR_";
-	var_name += STR_GSI_DAEMON_PROXY;
+	MyString var_name;
+	var_name.sprintf("_CONDOR_%s", STR_GSI_DAEMON_PROXY);
+	glexec_env.SetEnv( var_name.Value(), child_proxy_file.Value() );
+	var_name.sprintf("_condor_%s", STR_GSI_DAEMON_PROXY);
 	glexec_env.SetEnv( var_name.Value(), child_proxy_file.Value() );
 #endif
 
@@ -245,6 +247,7 @@ glexec_starter_prepare(const char* starter_path,
 	MyString execute_dir = glexec_private_dir;
 	execute_dir += "/execute";
 	glexec_env.SetEnv ( "_CONDOR_EXECUTE", execute_dir.Value());
+	glexec_env.SetEnv ( "_condor_EXECUTE", execute_dir.Value());
 
 	// the LOG dir should be owned by the mapped user.  we created this
 	// earlier, and now we override it in the condor_config via the
@@ -252,6 +255,7 @@ glexec_starter_prepare(const char* starter_path,
 	MyString log_dir = glexec_private_dir;
 	log_dir += "/log";
 	glexec_env.SetEnv ( "_CONDOR_LOG", log_dir.Value());
+	glexec_env.SetEnv ( "_condor_LOG", log_dir.Value());
 
 	// PROCD_ADDRESS: the Starter that we are about to create will
 	// not have access to our ProcD. we'll explicitly set PROCD_ADDRESS
@@ -262,6 +266,7 @@ glexec_starter_prepare(const char* starter_path,
 	MyString procd_address = log_dir;
 	procd_address += "/procd_pipe";
 	glexec_env.SetEnv( "_CONDOR_PROCD_ADDRESS", procd_address.Value() );
+	glexec_env.SetEnv( "_condor_PROCD_ADDRESS", procd_address.Value() );
 
 	// now set up a socket pair for communication with
 	// condor_glexec_wrapper
