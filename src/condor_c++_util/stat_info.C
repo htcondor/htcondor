@@ -92,6 +92,7 @@ StatInfo::StatInfo( const char* dirpath, const char* filename,
 	file_size = fsize;
 	m_isDirectory = is_dir;
 	m_isSymlink = is_symlink;
+	m_onlyLstatIfDir = false;
 }
 #endif /* WIN32 */
 
