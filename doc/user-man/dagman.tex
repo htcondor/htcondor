@@ -78,7 +78,7 @@ within the cluster, and/or a POST script.
 
 \index{DAGMan!input file example}
 The input file used by DAGMan is called a DAG input file.
-It may specify eleven types of items:
+It may specify twelve types of items:
 \begin{enumerate}
 \item
 A list of the nodes in the DAG which cause the submission of
@@ -110,6 +110,8 @@ A maxjobs specification for a given node category.
 A node's exit value that causes the entire DAG to abort.
 \item
 A configuration file.
+\item
+A splice to be included within the DAG.
 \end{enumerate}
 
 All items are optional, but there must be at least one \Arg{JOB}
@@ -136,7 +138,7 @@ A very simple DAG input file for this diamond-shaped DAG is
 
 \footnotesize
 \begin{verbatim}
-    # Filename: diamond.dag
+    # File name: diamond.dag
     #
     JOB  A  A.condor 
     JOB  B  B.condor 
@@ -360,7 +362,7 @@ The DAG input file becomes
 
 \footnotesize
 \begin{verbatim}
-    # Filename: diamond.dag
+    # File name: diamond.dag
     #
     JOB  A  A.condor 
     JOB  B  B.condor 
@@ -443,7 +445,7 @@ retry node C:
 
 \footnotesize
 \begin{verbatim}
-    # Filename: diamond.dag
+    # File name: diamond.dag
     #
     JOB  A  A.condor 
     JOB  B  B.condor 
@@ -504,7 +506,7 @@ Note that macro names cannot begin with the string "queue"
 If the DAG input file contains
 \footnotesize
 \begin{verbatim}
-    # Filename: diamond.dag
+    # File name: diamond.dag
     #
     JOB  A  A.condor 
     JOB  B  B.condor 
@@ -567,7 +569,7 @@ Adding \Arg{PRIORITY} for node C in the diamond-shaped
 DAG
 \footnotesize
 \begin{verbatim}
-    # Filename: diamond.dag
+    # File name: diamond.dag
     #
     JOB  A  A.condor 
     JOB  B  B.condor 
@@ -592,7 +594,7 @@ The syntax for CATEGORY is
 \Opt{CATEGORY} \Arg{JobName} \Arg{CategoryName}
 
 Node categories are used for job submission throttling (see \Opt{MAXJOBS}
-below).  Category names cannot contain whitespace.
+below).  Category names cannot contain white space.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{MAXJOBS}
@@ -652,7 +654,7 @@ Adding \Arg{ABORT-DAG-ON} for node C in the diamond-shaped
 DAG
 \footnotesize
 \begin{verbatim}
-    # Filename: diamond.dag
+    # File name: diamond.dag
     #
     JOB  A  A.condor 
     JOB  B  B.condor 
@@ -706,7 +708,9 @@ The syntax for \Arg{SPLICE} is
 
 \Opt{SPLICE} \Arg{SpliceName} \Arg{DagFileName}
 
-For detailed information about how splices work, see 
+After parsing incorporates a splice,
+all nodes within the spice become nodes within the including DAG.
+For detailed information about splices, see 
 section~\ref{sec:DAGSplicing}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -740,7 +744,7 @@ The modification has each node use the same
 submit description file.
 
 \begin{verbatim}
-    # Filename: diamond.dag
+    # File name: diamond.dag
     #
     JOB  A  diamond_job.condor 
     JOB  B  diamond_job.condor 
@@ -755,7 +759,7 @@ for this DAG:
 
 \index{DAGMan!example submit description file}
 \begin{verbatim}
-    # Filename: diamond_job.condor
+    # File name: diamond_job.condor
     #
     executable   = /path/diamond.exe
     output       = diamond.out.$(cluster)
@@ -1117,7 +1121,7 @@ The goal is to generate a Condor submit description file for this inner DAG.
 Here is a very simple linear DAG input file used as
 an example of the inner DAG.
 \begin{verbatim}
-    # Filename: inner.dag
+    # File name: inner.dag
     #
     JOB  X  X.submit
     JOB  Y  Y.submit
@@ -1138,7 +1142,7 @@ The naming of the file is the name of the DAG input file
 
 A simple example of a DAG input file for the outer DAG is
 \begin{verbatim}
-# Filename: diamond.dag
+# File name: diamond.dag
 #
     JOB  A  A.submit 
     JOB  B  inner.dag.condor.sub
@@ -1207,108 +1211,120 @@ to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGSplicing}DAG Splicing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{DAGMan!Splicing DAGs into each other}
+\index{DAGMan!Splicing DAGs}
 
-Some of the weaknesses of submitting a DAG within a DAG as described
-above are that each executing independent DAG requires an invocation of
-\Condor{dagman} to be running (thereby producing scaling problems when
-the same semantic DAG wants to be reused hundreds or thousands of times
-in a larger DAG) and there could be many rescue DAGs created if a problem
-occurs. To alleviate these concerns, the concept of graph splicing has
-been introduced into the DAGMan language. 
+A weakness in scalability exists when submitting a DAG within a DAG.
+Each executing independent DAG requires its own invocation of
+\Condor{dagman} to be running.
+The scaling issue presents itself when
+the same semantic DAG is reused hundreds or thousands of times
+in a larger DAG.
+Further, there may be many rescue DAGs created if a problem occurs.
+To alleviate these concerns, the DAGMan language introduces
+the concept of graph splicing.
 
 A splice is a named instance of a subgraph which is specified in a
-separate DAG file.  It is treated as a whole entity during dependency
-specification in the including DAG--which may also have been a splice.
-The same DAG file may be reused as differently named splices each one
-producing a copy of the dependency graph (and nodes therein) into the
-including DAG. Different splices in an including DAG may have dependencies
-between their sets of initial and final nodes. If splices are brought
-into an including DAG, but no dependencies are specified with respect
-to the splice, then the spliced DAG brought in will be a disjoint DAG
-with the including DAG.  The nodes in a splice are scoped according to
-the hierarchy of names associated with the splices as they are parsed
-from the top level DAG file.  The scoping character which describes the
-inclusion hierarchy of nodes into the top level dag is ``+''. This is due
-to restriction of allowable characters which may be in a file name across
-the ports Condor supports.  In any DAG file, all splices must have unique
-names, but the same splice name may be reused in different DAG files.
+separate DAG file.
+The splice is treated as a whole entity during dependency
+specification in the including DAG.
+The same DAG file may be reused as differently named splices,
+each one
+incorporating a copy of the dependency graph (and nodes therein) into the
+including DAG. 
+Any splice in an including DAG may have dependencies
+between the sets of initial and final nodes.
+A splice may be incorporated into an including DAG without any
+dependencies; it is considered
+a disjoint DAG within the including DAG.
+The nodes within a splice are scoped according to
+a hierarchy of names associated with the splices,
+as the splices are parsed from the top level DAG file.
+The scoping character to describe the
+inclusion hierarchy of nodes into the top level dag is 
+\verb@'+'@.
+This character is chosen due
+to a restriction in the allowable characters which may be in a file name
+across the variety of ports that Condor supports.
+In any DAG file, all splices must have unique names,
+but the same splice name may be reused in different DAG files.
 
-If a splice, through various inclusions, includes itself, a recursion
-will happen. This case will be detected and corrected in a future revision
-of this feature--however, for now it is upon the user of the splicing feature
-to ensure this does not happen.
+Condor does not detect nor support splices that form a cycle
+within the DAG.
+A DAGMan job that causes a cyclic inclusion of splices will
+eventually exhaust available memory and crash.
 
-Next follows a small set of examples which use a single submit file as
-the submit file for the jobs. The simple Condor submit file is:
-
-\begin{verbatim}
-	# BEGIN SUBMIT FILE submit.condor
-	executable   = /bin/echo
-	arguments    = OK
-	universe     = vanilla
-	output       = $(jobname).out
-	error        = $(jobname).err
-	log          = submit.log
-	Notification = NEVER
-	queue
-	# END SUBMIT FILE submit.condor
-\end{verbatim}
-
-This is a very simple example which shows the splicing of a diamond DAG in
-between two nodes in a top level DAG file.
+The following series of examples illustrate potential uses of
+splicing. To simplify the examples,
+presume that each and every job uses the same,
+simple Condor submit description file:
 
 \begin{verbatim}
-	# BEGIN DAG FILE diamond.dag
-	JOB A submit.condor
-	VARS A jobname="$(JOB)"
-
-	JOB B submit.condor
-	VARS B jobname="$(JOB)"
-
-	JOB C submit.condor
-	VARS C jobname="$(JOB)"
-
-	JOB D submit.condor
-	VARS D jobname="$(JOB)"
-
-	PARENT A CHILD B C
-	PARENT B C CHILD D
-	# END DAG FILE diamond.dag
+  # BEGIN SUBMIT FILE submit.condor
+  executable   = /bin/echo
+  arguments    = OK
+  universe     = vanilla
+  output       = $(jobname).out
+  error        = $(jobname).err
+  log          = submit.log
+  notification = NEVER
+  queue
+# END SUBMIT FILE submit.condor
 \end{verbatim}
 
-And now the top level dag which will include the diamond splice:
+This first simple example splices a diamond-shaped DAG in
+between the two nodes of a top level DAG.
+Here is the DAG input file for the diamond-shaped DAG:
 
 \begin{verbatim}
-	# BEGIN DAG FILE toplevel.dag
-	JOB A submit.condor
-	VARS A jobname="$(JOB)"
+  # BEGIN DAG FILE diamond.dag
+  JOB A submit.condor
+  VARS A jobname="$(JOB)"
 
-	JOB B submit.condor
-	VARS B jobname="$(JOB)"
+  JOB B submit.condor
+  VARS B jobname="$(JOB)"
 
-	# This is an instance of diamond.dag, given the symbolic name DIAMOND
-	SPLICE DIAMOND diamond.dag
+  JOB C submit.condor
+  VARS C jobname="$(JOB)"
 
-	# Set up a relationship between the nodes in this dag and the splice
+  JOB D submit.condor
+  VARS D jobname="$(JOB)"
 
-	PARENT A CHILD DIAMOND
-	PARENT DIAMOND CHILD B
-
-	# END DAG FILE toplevel.dag
+  PARENT A CHILD B C
+  PARENT B C CHILD D
+  # END DAG FILE diamond.dag
 \end{verbatim}
 
-Figure~\ref{fig:dagman-splice-simple} illustrates the dependencies
-produced. 
-Notice how the nodes of the diamond.dag file have been scoped with the
-splice name used in the toplevel.dag DAG file. 
-No matter how many nodes splices may bring in, they will always have a
-unique name associated with the hierarchy of splice names.
+The top level DAG incorporates the diamond-shaped splice:
+
+\begin{verbatim}
+  # BEGIN DAG FILE toplevel.dag
+  JOB X submit.condor
+  VARS X jobname="$(JOB)"
+
+  JOB Y submit.condor
+  VARS Y jobname="$(JOB)"
+
+  # This is an instance of diamond.dag, given the symbolic name DIAMOND
+  SPLICE DIAMOND diamond.dag
+
+  # Set up a relationship between the nodes in this dag and the splice
+
+  PARENT X CHILD DIAMOND
+  PARENT DIAMOND CHILD Y
+
+  # END DAG FILE toplevel.dag
+\end{verbatim}
+
+Figure~\ref{fig:dagman-splice-simple} illustrates the resulting
+top level DAG and the dependencies produced. 
+Notice the naming of nodes
+scoped with the splice name.
+This hierarchy of splice names assures unique names associated with all nodes.
 
 \begin{figure}
 \centering
 \includegraphics{user-man/splice-simple.eps}
-\caption{\label{fig:dagman-splice-simple} The diamond DAG spliced between two nodes.}
+\caption{\label{fig:dagman-splice-simple} The diamond-shaped DAG spliced between two nodes.}
 \end{figure}
 
 This next example is a complex splice which displays many of

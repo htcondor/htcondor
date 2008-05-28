@@ -6,14 +6,14 @@ digraph DAG {
     "DIAMOND+C" [shape=ellipse label="DIAMOND+C"];
     "DIAMOND+D" [shape=ellipse label="DIAMOND+D"];
 
-    "A" [shape=ellipse label="A"];
-    "B" [shape=ellipse label="B"];
+    "X" [shape=ellipse label="X"];
+    "Y" [shape=ellipse label="Y"];
 
 
-	"A" -> "DIAMOND+A";
+	"X" -> "DIAMOND+A";
     "DIAMOND+A" -> "DIAMOND+B";
     "DIAMOND+A" -> "DIAMOND+C";
     "DIAMOND+B" -> "DIAMOND+D";
     "DIAMOND+C" -> "DIAMOND+D";
-    "DIAMOND+D" -> "B";
+    "DIAMOND+D" -> "Y";
 }
