@@ -72,19 +72,6 @@ glexec_starter_prepare(const char* starter_path,
 		return false;
 	}
 
-	// read the cert into a string
-	FILE* fp = safe_fopen_wrapper( proxy_file, "r" );
-	if( fp == NULL ) {
-		dprintf( D_ALWAYS,
-		         "cannot use glexec to spawn starter: "
-		         "couldn't open proxy: %s (%d)\n",
-		         strerror(errno), errno );
-		return false;
-	}
-	MyString pem_str;
-	while( pem_str.readLine( fp, true ) );
-	fclose( fp );
-
 	// using the file name of the proxy that was stashed ealier, construct
 	// the name of the starter's "private directory". the naming scheme is
 	// (where XXXXXX is randomly generated via condor_mkstemp):
@@ -161,15 +148,13 @@ glexec_starter_prepare(const char* starter_path,
 	// the only thing actually needed by glexec at this point is the cert, so
 	// that it knows who to map to.  the pipe outputs the username that glexec
 	// ended up using, on a single text line by itself.
-	SetEnv( "SSL_CLIENT_CERT", pem_str.Value() );
+	SetEnv( "GLEXEC_CLIENT_CERT", proxy_file );
 
 	// create the starter's private dir
 	int ret = my_system(glexec_setup_args);
 
-	// clean up, since there's private info in there.  i wish we didn't have to
-	// put this in the environment to begin with, but alas, that's just how
-	// glexec works.
-	UnsetEnv( "SSL_CLIENT_CERT");
+	// clean up
+	UnsetEnv( "GLEXEC_CLIENT_CERT");
 
 	if ( ret != 0 ) {
 		dprintf(D_ALWAYS,
@@ -212,8 +197,8 @@ glexec_starter_prepare(const char* starter_path,
 	// GLEXEC_MODE - get account from lcmaps
 	glexec_env.SetEnv( "GLEXEC_MODE", "lcmaps_get_account" );
 
-	// SSL_CLIENT_CERT - cert to use for the mapping
-	glexec_env.SetEnv( "SSL_CLIENT_CERT", pem_str.Value() );
+	// GLEXEC_CLIENT_CERT - cert to use for the mapping
+	glexec_env.SetEnv( "GLEXEC_CLIENT_CERT", proxy_file );
 
 #if defined(HAVE_EXT_GLOBUS) && !defined(SKIP_AUTHENTICATION)
 	// GLEXEC_SOURCE_PROXY -  proxy to provide to the child
@@ -319,7 +304,7 @@ glexec_starter_handle_env(pid_t pid)
 	// only for glexec
 	//
 	s_saved_env.SetEnv("GLEXEC_MODE", "");
-	s_saved_env.SetEnv("SSL_CLIENT_CERT", "");
+	s_saved_env.SetEnv("GLEXEC_CLIENT_CERT", "");
 	s_saved_env.SetEnv("GLEXEC_SOURCE_PROXY", "");
 	s_saved_env.SetEnv("GLEXEC_TARGET_PROXY", "");
 
