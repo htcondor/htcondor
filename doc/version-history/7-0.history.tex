@@ -43,7 +43,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable
+\Macro{GRIDMANAGER\_MAX\_WS\_DESTROYS\_PER\_RESOURCE} limits the number
+of simultaneous WS destroy commands issued to a given server for grid
+universe jobs of type gt4. The default value is 5.
 
 \end{itemize}
 
@@ -148,6 +151,15 @@ configured with a longer session duration than the shadow.
 
 \item Fixed a bug in the user log writer that was causing the writing
   of events to the global event log fail in some conditions.
+
+\item In the grid universe, submission of nordugrid jobs is now properly
+throttled by configuration paramters
+\Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE} and
+\Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}.
+
+\item The NorduGrid GAHP server can now properly extract job execution
+information from newer NorduGrid servers. Previously, the GAHP could crash
+when talking to newer servers.
 
 \end{itemize}
 

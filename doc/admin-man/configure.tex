@@ -5765,6 +5765,13 @@ of \Condor{reconfig} while the \Condor{gridmanager} is running
 or if some globus-job-managers take a few extra seconds to exit.
 The value 0 means there is no limit. The default value is 10.
 
+\item[\Macro{GRIDMANAGER\_MAX\_WS\_DESTROYS\_PER\_RESOURCE}]
+\label{param:GridmanagerMaxWsDestroysPerResource}
+For grid jobs of type \SubmitCmd{gt4}, limits the number of destroy
+commands that the \Condor{gridmanager} will issue at a time to each
+WS GRAM server. Too many destory commands can have severe effects on
+the server. The default value is 5.
+
 \item[\Macro{GAHP}]
 \label{param:Gahp} The full path to the binary of the GAHP server.
 This configuration variable is no longer used.
