@@ -2381,7 +2381,7 @@ _cv_has_unicoregahp=$_cv_has_globus
 CHECK_EXTERNAL([unicoregahp],[1.2.0], [soft])
 
 _cv_has_nordugridgahp=$_cv_has_globus
-CHECK_EXTERNAL([nordugridgahp],[1.1.2], [soft])
+CHECK_EXTERNAL([nordugridgahp],[1.1.3], [soft])
 
 if test "x$CLIPPED" = xyes; then
   _cv_zlib_requirement=soft
