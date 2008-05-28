@@ -398,8 +398,14 @@ elif test $os = "FreeBSD" ; then
       _cv_arch="IA64"
    elif test $arch = "ppc" -o $arch = "ppc64" ; then
       _cv_arch="CONDOR_PPC"
-   elif test $arch = "x86_64" ; then
-      _cv_arch="X86_64"
+   ##
+   ## Globus does not work on 64-bit
+   ## We will use the i386 build until this gets fixed (hopefully not by me!)
+   ## Andy - 01/25/2008
+   ##
+   elif test $arch = "amd64" -o $arch = "x86_64" ; then
+      _cv_arch="I386"
+      #_cv_arch="X86_64"
    fi
 
    ##
@@ -864,6 +870,12 @@ case "$gcc_vers" in
     CompilerMajor="4"
     CompilerMinor="2"
     CompilerPatch="3"
+    ;;
+ "4.2.1" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="2"
+    CompilerPatch="1"
     ;;
  * )
     if test "x$enable_gcc_version_check" = "xyes"; then
