@@ -1327,112 +1327,128 @@ This hierarchy of splice names assures unique names associated with all nodes.
 \caption{\label{fig:dagman-splice-simple} The diamond-shaped DAG spliced between two nodes.}
 \end{figure}
 
-This next example is a complex splice which displays many of
-the spatial constructs one may perform with this feature.
+Figure~\ref{fig:dagman-splice-X} illustrates the starting point
+for a more complex example.
+The DAG input file \File{X.dag} describes this X-shaped DAG.
+The completed example displays more of
+the spatial constructs provided by splices.
 Pay particular attention to the notion that each named splice creates a
-new graph--even if the same DAG file is specified.
+new graph, even when the same DAG input file is specified.
 
-File s2.dag.
-
-\begin{verbatim}
-	# BEGIN DAG FILE s2.dag
-
-	JOB A submit.condor
-	VARS A jobname="$(JOB)"
-
-	JOB B submit.condor
-	VARS B jobname="$(JOB)"
-
-	JOB C submit.condor
-	VARS C jobname="$(JOB)"
-
-	JOB D submit.condor
-	VARS D jobname="$(JOB)"
-
-	JOB E submit.condor
-	VARS E jobname="$(JOB)"
-
-	JOB F submit.condor
-	VARS F jobname="$(JOB)"
-
-	JOB G submit.condor
-	VARS G jobname="$(JOB)"
-
-	# Make a "X" style dependency graph
-	PARENT A B C CHILD D
-	PARENT D CHILD E F G
-
-	# END DAG FILE s2.dag
-\end{verbatim}
-
-File s1.dag.
 
 \begin{verbatim}
-	# BEGIN DAG FILE s1.dag
+  # BEGIN DAG FILE X.dag
 
-	JOB A submit.condor
-	VARS A jobname="$(JOB)"
+  JOB A submit.condor
+  VARS A jobname="$(JOB)"
 
-	JOB B submit.condor
-	VARS B jobname="$(JOB)"
+  JOB B submit.condor
+  VARS B jobname="$(JOB)"
 
-	# define three individual splices which all use the DAG structure defined
-	# in s2.dag
-	SPLICE S1 s2.dag
-	SPLICE S2 s2.dag
-	SPLICE S3 s2.dag
+  JOB C submit.condor
+  VARS C jobname="$(JOB)"
 
-	# Create dependencies between the splices
-	# A must complete before the initial nodes in S1 can start
-	PARENT A CHILD S1
-	# All final nodes in S1 must finish before the initial nodes in S2 can begin
-	PARENT S1 CHILD S2
-	# All final nodes in S2 must finish before the initial nodes in S3 can begin
-	PARENT S2 CHILD S3
-	# All final nodes in S3 must finish before B may begin.
-	PARENT S3 CHILD B
+  JOB D submit.condor
+  VARS D jobname="$(JOB)"
 
-	# END DAG FILE s1.dag
+  JOB E submit.condor
+  VARS E jobname="$(JOB)"
 
+  JOB F submit.condor
+  VARS F jobname="$(JOB)"
+
+  JOB G submit.condor
+  VARS G jobname="$(JOB)"
+
+  # Make an X-shaped dependency graph
+  PARENT A B C CHILD D
+  PARENT D CHILD E F G
+
+  # END DAG FILE X.dag
 \end{verbatim}
 
-File toplevel.dag.
+\begin{figure}
+\centering
+\includegraphics{user-man/splice-X.eps}
+\caption{\label{fig:dagman-splice-X} The X-shaped DAG.}
+\end{figure}
+
+
+File \File{s1.dag} continues the example, presenting
+the DAG input file that
+incorporates two separate splices of the X-shaped DAG.
+Figure~\ref{fig:dagman-splice-s1} illustrates the resulting DAG.
 
 \begin{verbatim}
-	# BEGIN DAG FILE toplevel.dag
+  # BEGIN DAG FILE s1.dag
 
-	JOB A submit.condor
-	VARS A jobname="$(JOB)"
+  JOB A submit.condor
+  VARS A jobname="$(JOB)"
 
-	JOB B submit.condor
-	VARS B jobname="$(JOB)"
+  JOB B submit.condor
+  VARS B jobname="$(JOB)"
 
-	JOB C submit.condor
-	VARS C jobname="$(JOB)"
+  # name two individual splices of the X-shaped DAG
+  SPLICE X1 X.dag
+  SPLICE X2 X.dag
 
-	JOB D submit.condor
-	VARS D jobname="$(JOB)"
+  # Define dependencies
+  # A must complete before the initial nodes in X1 can start
+  PARENT A CHILD X1
+  # All final nodes in X1 must finish before the initial nodes in X2 can begin
+  PARENT X1 CHILD X2
+  # All final nodes in X2 must finish before B may begin.
+  PARENT X2 CHILD B
 
-	# the usual diamond dag.
-	PARENT A CHILD B C
-	PARENT B C CHILD D
+  # END DAG FILE s1.dag
 
-	# This splice of s2.dag must run AFTER the diamond dag finishes
-	SPLICE S1 s2.dag
-	PARENT D CHILD S1
-
-	# Since there are no dependencies for S2, the splice  will be 
-	# disjoint to the graph specified by the PARENT/CHILD relationships in this
-	# DAG file
-	SPLICE S2 s1.dag
-
-	# END DAG FILE toplevel.dag
 \end{verbatim}
 
-Figure~\ref{fig:dagman-splice-complex} illustrates the dependency graph
-for the toplevel.dag DAG file. 
-Notice how the DAG has two disjoint graphs in it as a result of splice
-S2 not having any dependencies associated with it in toplevel.dag.
+\begin{figure}
+\centering
+\includegraphics{user-man/splice-s1.eps}
+\caption{\label{fig:dagman-splice-s1} The DAG described by \File{s1.dag}.}
+\end{figure}
+
+
+
+The top level DAG in the hierarchy of this complex example
+is described by the DAG input file \File{toplevel.dag}.
+Figure~\ref{fig:dagman-splice-complex} illustrates the final DAG.
+Notice that the DAG has two disjoint graphs in it as a result of splice
+S3 not having any dependencies associated with it in this top level DAG.
+
+\begin{verbatim}
+  # BEGIN DAG FILE toplevel.dag
+
+  JOB A submit.condor
+  VARS A jobname="$(JOB)"
+
+  JOB B submit.condor
+  VARS B jobname="$(JOB)"
+
+  JOB C submit.condor
+  VARS C jobname="$(JOB)"
+
+  JOB D submit.condor
+  VARS D jobname="$(JOB)"
+
+  # a diamond-shaped DAG
+  PARENT A CHILD B C
+  PARENT B C CHILD D
+
+  # This splice of the X-shaped DAG can only run after
+  # the diamond dag finishes
+  SPLICE S2 X.dag
+  PARENT D CHILD S2
+
+  # Since there are no dependencies for S3,
+  # the following splice is disjoint 
+  SPLICE S3 s1.dag
+
+  # END DAG FILE toplevel.dag
+\end{verbatim}
+
 
 \begin{figure}
 \centering
