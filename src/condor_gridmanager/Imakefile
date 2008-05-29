@@ -12,7 +12,7 @@ ORACLE_JOB_LIB = /p/condor/workspaces/jfrey/oracle/OraHome1/lib/libclient9.a /p/
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(ORACLE_JOB_FLAGS) $(STD_C_PLUS_FLAGS)
-LIB = $(ORACLE_JOB_LIB) $(DAEMONCORE_LIB) $(STD_LIBS)
+LIB = $(ORACLE_JOB_LIB) $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 
 soapobjs(gridmanager)
 

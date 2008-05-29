@@ -10,7 +10,7 @@ all_target($(NAME) $(RSH_NAME) condor_gridshell)
 CFLAGS = $(STD_C_FLAGS) -I../condor_schedd.V6
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_schedd.V6
 
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 RSH_LIB = $(STD_LIBS) $(CLASSAD_LIB)
 
 #if IS_SGI_IRIX62

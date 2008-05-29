@@ -2499,11 +2499,13 @@ CHECK_EXTERNAL([gsoap], [2.7.6c-p2], [soft],
                 LDFLAGS="$LDFLAGS -Wl[,]--unresolved-symbols=ignore-in-shared-libs"
                 AS_IF([test "x$cv_ext_globus" = xyes -o "x$cv_ext_openssl" = xyes],
                   [MF_LIB_CHECK([gsoap],
-                                [[gsoapssl++ soap_ssl_accept]])],
+                                [[gsoapssl++ soap_ssl_accept]], [gsoap])],
                   [MF_LIB_CHECK([gsoap],
-                                [[gsoap++ soap_accept]])])
+                                [[gsoap++ soap_accept]], [gsoap])])
                 AS_IF([test "x$cv_ext_gsoap" = xno],
                   [LDFLAGS="$_ldflags_save"])])
+AC_SUBST(GSOAP_LDFLAGS, $GSOAP_LDFLAGS)
+AC_SUBST(GSOAP_CFLAGS, $GSOAP_CFLAGS)
 
 # We need to make sure HAVE_OPENSSL_SSL_H is defined otherwise
 # programs will not link properly as stdsoap2.h will not include ssl

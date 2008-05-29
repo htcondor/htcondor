@@ -24,7 +24,7 @@ GSOAP_OBJS = soap_core.o httpget.o
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC) $(PURIFY_FLAG) $(GSOAP_FLAGS)
-LIB = $(STD_LIBS)
+LIB = $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 
 OBJ = $(GSOAP_OBJS) timer_manager.o daemon_core.o daemon_core_main.o \
   daemon_core_instantiate.o condor_ipverify.o condor_perms.o \
