@@ -44,14 +44,8 @@ close( VERS );
 if( ! $vers ) {
     die "Can't find Condor version in $vers_file!\n";
 }
-print "Condor version: $vers\n";
-$src_file = "condor-$vers.tar.gz";
-system("rm -f $src_file");
-<<<<<<< HEAD:nmi_glue/test/platform_post
-=======
 print "Remove unwanted binaries ....\n";
 $binaries_file = "condor-$vers*tar.gz";
 system("rm -f $binaries_file");
->>>>>>> V7_0-branch:nmi_glue/test/platform_post
 
 exit(0);
