@@ -209,8 +209,19 @@ main_pre_dc_init( int argc, char* argv[] )
 	if( argc == 2 && strincmp(argv[1],"-cla",4) == MATCH ) {
 			// needed for Java stuff
 		config(true);
-			// log any errors to stderr
-		Termlog = 1;
+
+			// Would like to log errors to stderr if stderr is not
+			// /dev/null to make it easier for users to debug, but not
+			// sure how to do that on windows.  On Windows, when
+			// condor_starter is run by the startd, setting Termlog=1
+			// causes a dprintf to abort with an error if any calls to
+			// dprintf() are made in a debug level that is turned on.
+			// I have not found a way to detect when stderr is in this
+			// state, so I am just leaving Termlog turned off in all
+			// cases.
+
+		//Termlog = 1;
+
 		dprintf_config(mySubSystem);
 
 		printClassAd();
