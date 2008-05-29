@@ -3,10 +3,10 @@ NAME = condor_quill
 all_target($(NAME))
 
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(TT_INC)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_POSTGRESQL_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(TT_INC) $(CONFIGURE_POSTGRESQL_CFLAGS)
 LDFLAGS = $(STD_LDFLAGS) $(LIBCRYPT)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(TT_LIB) $(CONFIGURE_GSOAP_LDFLAGS) ../condor_quill/libquill.a
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(TT_LIB) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_POSTGRESQL_LDFLAGS) ../condor_quill/libquill.a
 
 OBJ = tt_main.o ttmanager.o jobqueuecollection.o jobqueuedbmanager.o condor_ttdb.o
 

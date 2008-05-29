@@ -2450,7 +2450,14 @@ fi
 
 CHECK_EXTERNAL([postgresql], [$pgsql_ver], [hard],
                [use PostgreSQL (provides Quill and other support)],
-               MF_LIB_CHECK([postgresql], [[pq PQconnectdb]]))
+               MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
+#AC_MSG_CHECKING([postgresql])
+#AC_MSG_RESULT([$_cv_ext_postgresql_version])
+#AC_SUBST(ext_postgresql_version,$_cv_ext_postgresql_version)
+AC_SUBST(POSTGRESQL_LDFLAGS, $POSTGRESQL_LDFLAGS)
+AC_SUBST(POSTGRESQL_CFLAGS, $POSTGRESQL_CFLAGS)
+
+CHECK_EXTERNAL([globus],[4.0.5], [soft])
 
 # if globus is available on this platform and we actually have it
 if test "x$_cv_has_globus" = xyes -a "x$cv_ext_globus" = xyes; then
