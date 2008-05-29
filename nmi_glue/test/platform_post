@@ -24,6 +24,8 @@
 ##################################################################
 
 $appinput = "../../" . $ENV{NMI_PLATFORM} . "_app_input.tar.gz";
+print "../.. has the following:\n";
+system("ls -l ../..");
 print "Looking to see is $appinput is around and removing\n";
 system("rm -f $appinput");
 
@@ -45,5 +47,11 @@ if( ! $vers ) {
 print "Condor version: $vers\n";
 $src_file = "condor-$vers.tar.gz";
 system("rm -f $src_file");
+<<<<<<< HEAD:nmi_glue/test/platform_post
+=======
+print "Remove unwanted binaries ....\n";
+$binaries_file = "condor-$vers*tar.gz";
+system("rm -f $binaries_file");
+>>>>>>> V7_0-branch:nmi_glue/test/platform_post
 
 exit(0);

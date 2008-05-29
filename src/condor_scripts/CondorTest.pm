@@ -713,6 +713,38 @@ sub FetchMachineAdValue
 }
 
 #
+# Some tests need to wait to be started and as such we will
+# use qedit to change the job add.
+#
+
+sub setJobAd
+{
+	my @status;
+	my $qstatcluster = shift;
+	my $qattribute = shift; # change which job ad?
+	my $qvalue = shift;		# whats the new value?
+	my $qtype = shift;		# quote if a string...
+	my $cmd = "condor_qedit $qstatcluster $qattribute ";
+	if($qtype eq "string") {
+		$cmd = $cmd . "\"$qvalue\"";
+	} else {
+		$cmd = $cmd . "$qvalue";
+	}
+	print "Running this command: <$cmd> \n";
+	# shhhhhhhh third arg 0 makes it hush its output
+	my $qstat = CondorTest::runCondorTool($cmd,\@status,0);
+	if(!$qstat)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+	    return(1)
+	}
+	foreach $line (@status)
+	{
+		#print "Line: $line\n";
+	}
+}
+
+#
 # Is condor_q able to respond at this time? We'd like to get
 # a valid response for whoever is asking.
 #
@@ -732,7 +764,7 @@ sub getJobStatus
 
 	foreach $line (@status)
 	{
-		#print "Line: $line\n";
+		#print "jobstatus: $line\n";
 		if( $line =~ /^(\d).*/)
 		{
 			return($1);

@@ -159,6 +159,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\tool_daemon_proc.obj" \
 	"$(INTDIR)\user_proc.obj" \
 	"$(INTDIR)\vanilla_proc.obj" \
+	"$(INTDIR)\vm_proc.obj" \
 	"$(INTDIR)\vm_gahp_request.obj" \
 	"$(INTDIR)\vm_gahp_server.obj" \
 	"$(INTDIR)\vm_proc.obj" \
@@ -310,6 +311,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\tool_daemon_proc.obj" \
 	"$(INTDIR)\user_proc.obj" \
 	"$(INTDIR)\vanilla_proc.obj" \
+	"$(INTDIR)\vm_proc.obj" \
 	"$(INTDIR)\vm_gahp_request.obj" \
 	"$(INTDIR)\vm_gahp_server.obj" \
 	"$(INTDIR)\vm_proc.obj" \

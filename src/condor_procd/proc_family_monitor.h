@@ -157,6 +157,13 @@ private:
 	// snapshot intervals"
 	//
 	int get_snapshot_interval(Tree<ProcFamily*>*);
+
+	// since we maintain the tree of process families in this class,
+	// each ProcFamily object needs our help in maintaining the maximum
+	// image size seen for its family of processes (in order to take
+	// into account processes that are in child families)
+	//
+	unsigned long update_max_image_sizes(Tree<ProcFamily*>*);
 	
 	// aggregate usage information from the given family and all
 	// subfamilies

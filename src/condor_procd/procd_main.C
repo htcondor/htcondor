@@ -245,7 +245,7 @@ main(int argc, char* argv[])
 	//
 	extern FILE* debug_fp;
 	if (log_file_name != NULL) {
-		debug_fp = safe_fopen_wrapper(log_file_name, "w");
+		debug_fp = safe_fopen_wrapper(log_file_name, "a");
 		if (debug_fp == NULL) {
 			fprintf(stderr,
 			        "error: couldn't open file \"%s\" for logging: %s (%d)",
@@ -254,6 +254,9 @@ main(int argc, char* argv[])
 			        errno);
 			exit(1);
 		}
+		dprintf(D_ALWAYS, "***********************************\n");
+		dprintf(D_ALWAYS, "* condor_procd STARTING UP\n");
+		dprintf(D_ALWAYS, "***********************************\n");
 	}
 
 	// if a maximum snapshot interval was given, it needs to be either

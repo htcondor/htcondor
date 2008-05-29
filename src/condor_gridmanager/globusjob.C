@@ -1142,6 +1142,7 @@ int GlobusJob::doEvaluateState()
 				gmState = GM_SUBMITTED;
 				break;
 			}
+				// JEF Handle GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STDIO_UPDATE)", rc );
@@ -1320,6 +1321,7 @@ int GlobusJob::doEvaluateState()
 					connect_failure_jobmanager = true;
 					break;
 				}
+				// JEF Handle GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND
 				if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_REQUEST)", rc );
@@ -1414,6 +1416,7 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				proxyRefreshRefused = false;
+					// JEF handled JOB_CONTACT_NOT_FOUND here
 				if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 					LOG_GLOBUS_ERROR("refresh_credentials()",rc);
@@ -1447,7 +1450,11 @@ int GlobusJob::doEvaluateState()
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_status()", rc );
 					globusError = rc;
-					gmState = GM_STOP_AND_RESTART;
+					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND ) {
+						gmState = GM_RESTART;
+					} else {
+						gmState = GM_STOP_AND_RESTART;
+					}
 					break;
 				}
 				UpdateGlobusState( status, error );
@@ -1517,7 +1524,11 @@ int GlobusJob::doEvaluateState()
 					// HACK!
 					retryStdioSize = true;
 					globusError = rc;
-					gmState = GM_STOP_AND_RESTART;
+					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND ) {
+						gmState = GM_RESTART;
+					} else {
+						gmState = GM_STOP_AND_RESTART;
+					}
 					dprintf( D_FULLDEBUG, "(%d.%d) Requesting jobmanager restart because of unknown error\n",
 							 procID.cluster, procID.proc);
 				}
@@ -1610,7 +1621,11 @@ int GlobusJob::doEvaluateState()
 				// unhandled error
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
 				globusError = rc;
-				gmState = GM_STOP_AND_RESTART;
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND ) {
+					gmState = GM_RESTART;
+				} else {
+					gmState = GM_STOP_AND_RESTART;
+				}
 				break;
 			}
 				// Clear the contact string here because it may not get
@@ -1650,7 +1665,8 @@ int GlobusJob::doEvaluateState()
 				connect_failure_jobmanager = true;
 				break;
 			}
-			if ( rc != GLOBUS_SUCCESS ) {
+			if ( rc != GLOBUS_SUCCESS &&
+				 rc != GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND ) {
 				// unhandled error
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STOP_MANAGER)", rc );
 				globusError = rc;
@@ -1906,7 +1922,11 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_cancel()", rc );
 					globusError = rc;
-					gmState = GM_CLEAR_REQUEST;
+					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND ) {
+						gmState = GM_RESTART;
+					} else {
+						gmState = GM_CLEAR_REQUEST;
+					}
 					break;
 				}
 			}
@@ -2024,7 +2044,11 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 						// unhandled error
 						LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
 						globusError = rc;
-						gmState = GM_STOP_AND_RESTART;
+						if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND ) {
+							gmState = GM_RESTART;
+						} else {
+							gmState = GM_STOP_AND_RESTART;
+						}
 						break;
 					}
 
@@ -2192,6 +2216,12 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					strncpy( holdReason, errorString.Value(),
 							 sizeof(holdReason) - 1 );
 				}
+				if ( holdReason[0] == '\0' && globusStateErrorCode == 0 &&
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
+					snprintf( holdReason, 1024, "Job failed, no reason given by GRAM server" );
+					holdCode = CONDOR_HOLD_CODE_GlobusGramError;
+					holdSubCode = 0;
+				}
 				if ( holdReason[0] == '\0' && globusStateErrorCode != 0 ) {
 					snprintf( holdReason, 1024, "Globus error %d: %s",
 							  globusStateErrorCode,
@@ -2266,7 +2296,11 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				// unhandled error
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STOP_MANAGER)", rc );
 				globusError = rc;
-				gmState = GM_CANCEL;
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND ) {
+					gmState = GM_JOBMANAGER_ASLEEP;
+				} else {
+					gmState = GM_CANCEL;
+				}
 			} else {
 				if ( !jmShouldBeStoppingTime ) {
 					jmShouldBeStoppingTime = now;
@@ -3164,7 +3198,11 @@ MyString *GlobusJob::buildSubmitRSL()
 	buff.sprintf( ")(proxy_timeout=%d", JM_MIN_PROXY_TIME );
 	*rsl += buff;
 
-	int commit_timeout = param_integer("GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT", JM_COMMIT_TIMEOUT);
+	int default_timeout = JM_COMMIT_TIMEOUT;
+	if ( default_timeout < 2 * probeInterval ) {
+		default_timeout = 2 * probeInterval;
+	}
+	int commit_timeout = param_integer("GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT", default_timeout);
 
 	buff.sprintf( ")(save_state=yes)(two_phase=%d)"
 				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))",

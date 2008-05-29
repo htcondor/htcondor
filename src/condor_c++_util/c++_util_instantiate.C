@@ -84,10 +84,7 @@ template class List<LogRecord>;
 template class Item<LogRecord>;
 template class HashTable<YourSensitiveString,LogRecordList *>;
 template class HashTable<pid_t, ProcFamilyDirectContainer*>;
-
-#if HAVE_EXT_CLASSADS 
 template class SimpleList <Credential*>;
-#endif
 
 #if defined(Solaris)
 template class ExtArray<long>;

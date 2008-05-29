@@ -38,6 +38,7 @@ ALL : "$(OUTDIR)\condor_daemon_core.lib"
 
 CLEAN :
 	-@erase "$(INTDIR)\accessdesktop.WIN32.obj"
+	-@erase "$(INTDIR)\condor_ipverify.obj"
 	-@erase "$(INTDIR)\condor_lock.obj"
 	-@erase "$(INTDIR)\condor_lock_base.obj"
 	-@erase "$(INTDIR)\condor_lock_file.obj"
@@ -104,6 +105,7 @@ LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_daemon_core.lib" 
 LIB32_OBJS= \
 	"$(INTDIR)\accessdesktop.WIN32.obj" \
+	"$(INTDIR)\condor_ipverify.obj" \
 	"$(INTDIR)\condor_lock.obj" \
 	"$(INTDIR)\condor_lock_base.obj" \
 	"$(INTDIR)\condor_lock_file.obj" \
@@ -140,6 +142,7 @@ ALL : "$(OUTDIR)\condor_daemon_core.lib"
 
 CLEAN :
 	-@erase "$(INTDIR)\accessdesktop.WIN32.obj"
+	-@erase "$(INTDIR)\condor_ipverify.obj"
 	-@erase "$(INTDIR)\condor_lock.obj"
 	-@erase "$(INTDIR)\condor_lock_base.obj"
 	-@erase "$(INTDIR)\condor_lock_file.obj"
@@ -205,6 +208,7 @@ LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_daemon_core.lib" 
 LIB32_OBJS= \
 	"$(INTDIR)\accessdesktop.WIN32.obj" \
+	"$(INTDIR)\condor_ipverify.obj" \
 	"$(INTDIR)\condor_lock.obj" \
 	"$(INTDIR)\condor_lock_base.obj" \
 	"$(INTDIR)\condor_lock_file.obj" \
@@ -244,6 +248,12 @@ LIB32_OBJS= \
 SOURCE=..\src\condor_daemon_core.V6\accessdesktop.WIN32.C
 
 "$(INTDIR)\accessdesktop.WIN32.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.C
+
+"$(INTDIR)\condor_ipverify.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

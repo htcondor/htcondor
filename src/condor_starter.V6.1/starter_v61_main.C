@@ -100,9 +100,6 @@ printClassAd( void )
 	printf( "%s = True\n", ATTR_HAS_JIC_LOCAL_CONFIG );
 	printf( "%s = True\n", ATTR_HAS_JIC_LOCAL_STDIN );
 
-		// Java stuff
-	config(true);
-
 	ClassAd *ad = java_detect();
 	if(ad) {
 		int gotone=0;
@@ -210,6 +207,12 @@ main_pre_dc_init( int argc, char* argv[] )
 		// need to do this *after* we set mySubSystem, since this ends
 		// up calling functions that rely on it being defined...  
 	if( argc == 2 && strincmp(argv[1],"-cla",4) == MATCH ) {
+			// needed for Java stuff
+		config(true);
+			// log any errors to stderr
+		Termlog = 1;
+		dprintf_config(mySubSystem);
+
 		printClassAd();
 		exit(0);
 	}

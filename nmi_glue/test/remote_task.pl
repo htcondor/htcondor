@@ -20,7 +20,6 @@
 
 
 ######################################################################
-# $Id: remote_task.pl,v 1.11 2008-03-05 21:12:50 gquinn Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed

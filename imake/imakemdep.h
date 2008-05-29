@@ -40,11 +40,7 @@ in this Software without prior written authorization from The Open Group.
  *     make variable BOOTSTRAPCFLAGS.
  */
 #ifdef hpux
-#ifdef hp9000s800
 #define imake_ccflags "-DSYSV"
-#else
-#define imake_ccflags "-Wc,-Nd4000,-Ns3000 -DSYSV"
-#endif
 #endif
 
 #if defined(macII) || defined(_AUX_SOURCE)

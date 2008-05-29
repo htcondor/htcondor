@@ -412,8 +412,12 @@ get_hpux_arch( )
 		and if it is not the user can force the setting in the 
 		ARCH config file setting
    	*/
-	
+#if defined(IS_IA64_HPUX)	
+	return strdup("IA64");
+#else
 	return strdup("HPPA2");
+#endif
+
 }
 #endif /* HPUX */
 

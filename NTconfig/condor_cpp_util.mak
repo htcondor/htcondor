@@ -362,6 +362,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\windows_firewall.obj" \
 	"$(INTDIR)\stat_wrapper_internal.obj" \
 	"$(INTDIR)\stat_info.obj"
+	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -704,6 +705,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\windows_firewall.obj" \
 	"$(INTDIR)\stat_wrapper_internal.obj" \
 	"$(INTDIR)\stat_info.obj"
+	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<

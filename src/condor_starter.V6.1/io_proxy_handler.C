@@ -353,7 +353,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		if(result==0) {
 			sprintf(line,"%u",(unsigned int)strlen(recv_expr));
 			r->put_line_raw(line);
-			r->put_bytes_raw(expr,strlen(recv_expr));
+			r->put_bytes_raw(recv_expr,strlen(recv_expr));
 		} else {
 			sprintf(line,"%d",convert(result,errno));
 			r->put_line_raw(line);

@@ -151,7 +151,7 @@ sub compare_2arrays_byrows
 		$current = ${$harray1}[$location];
 		$current =~ /^\s*(\w*)\s*=\s*(.*)\s*$/;
 		$thiskey = $1;
-		print "Current<<$current>> Thiskey<<$thiskey>>\n";
+		#print "Current<<$current>> Thiskey<<$thiskey>>\n";
 		print "${$href}{$thiskey}\n";
 		if($current =~ /^.*Submitter.*$/) {
 			print "Skip Submitter entry\n";
@@ -161,9 +161,11 @@ sub compare_2arrays_byrows
 			print "${$harray1}[$location] vs ${$harray2}[$location]\n";
 		} else {
 			if(${$harray1}[$location] eq ${$harray2}[$location]){
-				print "Good match:${$harray1}[$location] at entry $location\n";
+				#print "Good match:${$harray1}[$location] at entry $location\n";
 			} else {
-				print "Match FAIL position <<$location>>: 1: ${$harray1}[$location] 2: ${$harray2}[$location]\n";
+				print "Match FAIL position <<$location>>\n";
+				print "    schedd: ${$harray1}[$location]\n";
+				print "    rdbms : ${$harray2}[$location]\n";
 				return(1);
 			}
 		}
@@ -255,7 +257,7 @@ $submitted = sub
 		print "Size of array is $#adarray\n";
 		%skip = ("Submitter", 1, "LocalSysCpu", 1, "LocalUserCpu", 1,
 					"Rank", 1, "RemoteSysCpu", 1, "RemoteWallClockTime", 1,
-					"ServerTime", 1, "RemoteUserCpu", 1);
+					"ServerTime", 1, "RemoteUserCpu", 1, "Environment", 1);
 		system("date");
 		@adarray = sort(@adarray);
 		@bdarray = sort(@bdarray);

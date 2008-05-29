@@ -17,14 +17,21 @@
  *
  ***************************************************************/
 
+// This module contains fdpass_send() and fdpass_recv(), a pair of utility
+// functions for passing file descriptors over UNIX domain sockets.
 
-#ifndef _PROCD_COMMON_H
-#define _PROCD_COMMON_H
+#ifndef _FDPASS_H
+#define _FDPASS_H
 
-#include "../condor_procapi/procapi.h"
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
-birthday_t procd_atob(char*);
+int fdpass_send(int uds_fd, int fd);
+int fdpass_recv(int uds_fd);
 
-void send_signal(procInfo*, int);
+#if defined(__cplusplus)
+}
+#endif
 
 #endif

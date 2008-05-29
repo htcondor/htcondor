@@ -144,6 +144,8 @@ $submit = sub {
 		print "Bad - Job $cluster.$job failed to go on hold.\n";
 		exit(1);
 	}
+
+	CondorTest::setJobAd($cluster, foo, true, bool);
 };
 
 ##
@@ -227,6 +229,7 @@ CondorTest::RegisterRelease( $testname, $release );
 ## suffice for now
 ##
 CondorTest::RegisterTimed($testname, $timed, 600);
+CondorTest::RegisterTimed($testname, $timed, 90);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "$testname: SUCCESS\n";

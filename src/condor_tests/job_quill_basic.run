@@ -207,6 +207,8 @@ if($pgresult == 0) {
 }
 
 system("cp *quill_basic* $mysaveme");
+# catch the ads which were compared.... 
+system("cp quill_*_ads $mysaveme");
 
 if( -e "$mysubmitnm" )
 {

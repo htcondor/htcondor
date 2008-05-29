@@ -17,14 +17,33 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
+#include "fdpass.h"
 
-#ifndef _PROCD_COMMON_H
-#define _PROCD_COMMON_H
+int
+main(void)
+{
+	int fds[2];
+	if (socketpair(PF_UNIX, SOCK_STREAM, 0, fds) == -1) {
+		perror("socketpair");
+		exit(1);
+	}
 
-#include "../condor_procapi/procapi.h"
+	printf("fd[0] = %d\n", fds[0]);
+	printf("fd[1] = %d\n", fds[1]);
 
-birthday_t procd_atob(char*);
+	if (fdpass_send(fds[0], 0) == -1) {
+		fprintf(stderr, "fdpass_send failed\n");
+		exit(1);
+	}
 
-void send_signal(procInfo*, int);
+	int fd = fdpass_recv(fds[1]);
+	if (fd == -1) {
+		fprintf(stderr, "fdpass_recv failed\n");
+		exit(1);
+	}
 
-#endif
+	printf("recvied fd %d\n", fd);
+
+	return 0;
+}

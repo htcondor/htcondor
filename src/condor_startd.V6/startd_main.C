@@ -77,7 +77,7 @@ bool	compute_avail_stats = false;
 
 char* Name = NULL;
 
-#define DEFAULT_PID_SNAPSHOT_INTERVAL 50
+#define DEFAULT_PID_SNAPSHOT_INTERVAL 15
 int		pid_snapshot_interval = DEFAULT_PID_SNAPSHOT_INTERVAL;
     // How often do we take snapshots of the pid families? 
 

@@ -24,6 +24,7 @@
 
 #include "condor_common.h"
 #include "condor_crypt.h"             // For now, we include it
+#include "MyString.h"
 #include "CryptKey.h"                 // KeyInfo
 // This #define is a desperate move. GNU g++ seems to choke at runtime on our
 // inline function for eom.  Someday not needed ?
@@ -236,6 +237,8 @@ public:
     ///
 	int code(char *&);
     ///
+	int code(MyString &);
+    ///
 	int code(char *&, int &);
     ///
 	int code_bytes(void *, int);
@@ -388,6 +391,7 @@ public:
 	int put(float);
 	int put(double);
 	int put(char const *);
+	int put(const MyString &);
 	int put(char const *, int);
 
 
@@ -408,6 +412,8 @@ public:
 	int get(unsigned short &);
 	int get(float &);
 	int get(double &);
+
+	int get(MyString &);
 
 		// This function assigns the argument to a freshly mallocated string
 		// or NULL.  The caller should free the string.

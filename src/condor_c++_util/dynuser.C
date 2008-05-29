@@ -304,24 +304,13 @@ bool dynuser::logon_user(){
 	if (!LogonUser(accountname,		// accountname
 		".",						// domain
 		password,					// password
-		LOGON32_LOGON_BATCH,		// logon type
+		LOGON32_LOGON_INTERACTIVE,	// logon type
 		LOGON32_PROVIDER_DEFAULT,	// Logon provider
 		&logon_token)				// And the token to stuff it in.
-		) 
-	{
-		// LogonUser failed; try again as an interactive login
-
-		if (!LogonUser(accountname,		// accountname
-			".",						// domain
-			password,					// password
-			LOGON32_LOGON_INTERACTIVE,	// logon type
-			LOGON32_PROVIDER_DEFAULT,	// Logon provider
-			&logon_token)				// And the token to stuff it in.
-			) {
-				dprintf(D_ALWAYS,"LogonUser(%s, ... ) failed with status %d\n",
-					accountname,GetLastError());
-				return false;
-		}		
+		) {
+			dprintf(D_ALWAYS,"LogonUser(%s, ... ) failed with status %d\n",
+				accountname,GetLastError());
+			return false;
 	}
 	
 	dprintf(D_FULLDEBUG,"dynuser::createuser(%s) successful\n",accountname);
