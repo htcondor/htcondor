@@ -105,6 +105,28 @@ SOURCE="..\src\condor_vm-gahp\soap_vmgahpC.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_vm-gahp\soap_vmgahpH.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_vm-gahp\soap_vmgahpServer.C"
+# SUBTRACT CPP /YX /Yc /Yu
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_vm-gahp\soap_vmgahpStub.C"
+
+!IF  "$(CFG)" == "condor_vmgahp - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "condor_vmgahp - Win32 Release"
+
+# SUBTRACT CPP /YX /Yc /Yu
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_vm-gahp\soap_vmgahpStub.h"
 # End Source File
 # Begin Source File
