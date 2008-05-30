@@ -66,7 +66,7 @@ TESTCLASS(lib_chirpio_van,quick)
 
 /* User log and log reader used by dagman tests */
 
-/* NOTE: since we're linking these with external libraries, we need
+/* NOTE: since we are linking these with external libraries, we need
 the BUILD_DEP_LIB() rule, which provides maximum flexibility.  but, in
 this case, we only need to specify libs, not dependent .o files, so we
 leave the 4th argument empty...
@@ -367,14 +367,13 @@ DEPS(lib_eventlog-xml,x_read_joblog.exe)
 TESTCLASS(lib_eventlog-xml,core)
 TESTCLASS(lib_eventlog-xml,quick)
 
-#if defined(IS_I386_LINUX_RH80) || defined(IS_I386_LINUX_RHEL3) || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_PPC_OSX_10_3) || defined(IS_IA64_LINUX_RHEL3) || defined(IS_I386_LINUX_RHEL5)
-/*
+#if defined(IS_IA64_LINUX_RHEL3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_PPC_OSX_10_4) || defined(IS_CONDOR_PPC_LINUX_YD50) || defined(IS_X86_64_LINUX_RHEL5)  || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_I386_CONDOR_FREEBSD) || defined(IS_I386_OSX_10_4) || defined(IS_I386_LINUX_RHEL5) || defined(IS_I386_LINUX_RHEL51)
 DESC(job_quill_basic,"Basic Quill Test")
 RUN(job_quill_basic)
 TESTCLASS(job_quill_basic,core)
 TESTCLASS(job_quill_basic,quick)
 TESTCLASS(job_quill_basic,quicknolink)
-*/
+TESTCLASS(job_quill_basic,btdebug)
 #endif
 
 DESC(job_core_basic_par,"Basic Parallel Universe")

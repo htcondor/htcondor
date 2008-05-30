@@ -419,3 +419,18 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
 	}
 }
+
+bool
+UniShadow::getMachineName( MyString &machineName )
+{
+	if( remRes ) {
+		char *name = NULL;
+		remRes->getMachineName(name);
+		if( name ) {
+			machineName = name;
+			delete [] name;
+			return true;
+		}
+	}
+	return false;
+}

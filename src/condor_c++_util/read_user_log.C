@@ -199,6 +199,10 @@ ReadUserLog::initialize( const ReadUserLog::FileState &state,
 		m_state->MaxRotations( 0 );
 	}
 
+	m_state = new ReadUserLogState( *m_state);
+	if ( ! m_state->Initialized() ) {
+		return false;
+	}
 	m_match = new ReadUserLogMatch( m_state );
 	return InternalInitialize( max_rotations, false, true, true );
 }

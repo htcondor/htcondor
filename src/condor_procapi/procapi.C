@@ -732,7 +732,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 			"%ld %ld %ld %ld "
 			"%lu %lu %lu %lu %lu "
 			"%ld %ld %ld %ld %ld %ld "
-			"%lu %lu %ld %lu %lu %lu %lu %lu %lu %lu %lu "
+			"%lu %lu %llu %lu %lu %lu %lu %lu %lu %lu %lu "
 			"%ld %ld %ld %ld %lu",
 			&procRaw.pid, s, &c, &procRaw.ppid, 
 			&i, &i, &i, &i, 
@@ -1644,8 +1644,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 		/* Clean up and convert the raw data */
 	
 		// convert the memory fields from bytes to KB
-	pi->imgsize   = procRaw.imgsize / 1024;
-    pi->rssize    = procRaw.rssize / 1024;
+	pi->imgsize   = (unsigned long)(procRaw.imgsize / 1024);
+    pi->rssize    = (unsigned long)(procRaw.rssize / 1024);
 
 
 		// convert the time fields from the object time scale
@@ -1793,11 +1793,15 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
         *((LARGE_INTEGER*)(ctrblk + offsets->utime));
     LARGE_INTEGER st = (LARGE_INTEGER) 
         *((LARGE_INTEGER*)(ctrblk + offsets->stime));
+    LARGE_INTEGER imgsz = (LARGE_INTEGER) 
+        *((LARGE_INTEGER*)(ctrblk + offsets->imgsize));
+    LARGE_INTEGER rss = (LARGE_INTEGER) 
+        *((LARGE_INTEGER*)(ctrblk + offsets->rssize));
 
     procRaw.pid       = (long) *((long*)(ctrblk + offsets->procid  ));
     procRaw.ppid      = ntSysInfo.GetParentPID(pid);
-    procRaw.imgsize   = (long) (*((long*)(ctrblk + offsets->imgsize )));
-    procRaw.rssize    = (long) (*((long*)(ctrblk + offsets->rssize  )));
+    procRaw.imgsize   = imgsz.QuadPart;
+    procRaw.rssize    = rss.QuadPart;
 
 	procRaw.majfault  = (long) *((long*)(ctrblk + offsets->faults  ));
 	procRaw.minfault  = 0;  // not supported by NT; all faults lumped into major.
@@ -2825,26 +2829,57 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
     pThisCounter = firstCounter(pThisObject);
 //    printcounter ( stdout, pThisCounter );
     offsets->pctcpu = pThisCounter->CounterOffset; // % cpu
+	if (pThisCounter->CounterSize != 8) {
+		EXCEPT("Unexpected performance counter size for total CPU: "
+		           "%d (expected 8)\n",
+		       pThisCounter->CounterSize);
+	}
     
     pThisCounter = nextCounter(pThisCounter);
 //    printcounter ( stdout, pThisCounter );
     offsets->utime = pThisCounter->CounterOffset;  // % user time
+	if (pThisCounter->CounterSize != 8) {
+		EXCEPT("Unexpected performance counter size for user CPU: "
+		           "%d (expected 8)\n",
+		       pThisCounter->CounterSize);
+	}
   
     pThisCounter = nextCounter(pThisCounter);
 //    printcounter ( stdout, pThisCounter );
     offsets->stime = pThisCounter->CounterOffset;  // % sys time
+	if (pThisCounter->CounterSize != 8) {
+		EXCEPT("Unexpected performance counter size for system CPU: "
+		           "%d (expected 8)\n",
+		       pThisCounter->CounterSize);
+	}
   
     pThisCounter = nextCounter(pThisCounter);
     pThisCounter = nextCounter(pThisCounter);
 //    printcounter ( stdout, pThisCounter );
     offsets->imgsize = pThisCounter->CounterOffset;  // image size
+	if (pThisCounter->CounterSize != 8) {
+		EXCEPT("Unexpected performance counter size for image size: "
+		           "%d (expected 8)\n",
+		       pThisCounter->CounterSize);
+	}
   
     pThisCounter = nextCounter(pThisCounter);
 //    printcounter ( stdout, pThisCounter );
     offsets->faults = pThisCounter->CounterOffset;   // page faults
+	if (pThisCounter->CounterSize != 4) {
+		EXCEPT("Unexpected performance counter size for page faults: "
+		           "%d (expected 4)\n",
+		       pThisCounter->CounterSize);
+	}
     
     pThisCounter = nextCounter(pThisCounter);
     offsets->rssize = pThisCounter->CounterOffset;   // working set peak 
+	if (pThisCounter->CounterSize != 8) {
+		EXCEPT("Unexpected performance counter size for working set: "
+		           "%d (expected 8)\n",
+		       pThisCounter->CounterSize);
+	}
+
 //    printcounter ( stdout, pThisCounter );
 	pThisCounter = nextCounter(pThisCounter);		 // working set
 	pThisCounter = nextCounter(pThisCounter);
@@ -2857,10 +2892,20 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
     pThisCounter = nextCounter(pThisCounter);
 //    printcounter ( stdout, pThisCounter );
     offsets->elapsed = pThisCounter->CounterOffset;  // elapsed time (age)
+	if (pThisCounter->CounterSize != 8) {
+		EXCEPT("Unexpected performance counter size for elapsed time: "
+		           "%d (expected 8)\n",
+		       pThisCounter->CounterSize);
+	}
     
     pThisCounter = nextCounter(pThisCounter);
 //    printcounter ( stdout, pThisCounter );
     offsets->procid = pThisCounter->CounterOffset;   // process id
+		if (pThisCounter->CounterSize != 4) {
+		EXCEPT("Unexpected performance counter size for PID: "
+		           "%d (expected 4)\n",
+		       pThisCounter->CounterSize);
+	}
 }
 
 /* This function exists to convert a LARGE_INTEGER into a double.  This is

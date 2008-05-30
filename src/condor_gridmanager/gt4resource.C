@@ -29,6 +29,7 @@
 
 #define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
+#define DEFAULT_MAX_WS_DESTROYS_PER_RESOURCE		5
 
 template class List<GT4ProxyDelegation>;
 template class Item<GT4ProxyDelegation>;
@@ -184,6 +185,22 @@ void GT4Resource::Reconfig()
 	BaseResource::Reconfig();
 
 	gahp->setTimeout( gahpCallTimeout );
+
+	destroyLimit = param_integer( "GRIDMANAGER_MAX_WS_DESTROYS_PER_RESOURCE",
+								  DEFAULT_MAX_WS_DESTROYS_PER_RESOURCE );
+	if ( destroyLimit == 0 ) {
+		destroyLimit = GM_RESOURCE_UNLIMITED;
+	}
+
+	// If the destroyLimit was widened, move jobs from Wanted to Allowed and
+	// signal them
+	while ( destroysAllowed.Length() < destroyLimit &&
+			destroysWanted.Length() > 0 ) {
+		GT4Job *wanted_job = destroysWanted.Head();
+		destroysWanted.Delete( wanted_job );
+		destroysAllowed.Append( wanted_job );
+		wanted_job->SetEvaluateState();
+	}
 }
 
 const char *GT4Resource::CanonicalName( const char *name )
@@ -492,6 +509,59 @@ dprintf(D_FULLDEBUG,"    signalling jobs for %s\n",next_deleg->deleg_uri?next_de
 		}
 	}
 	return 0;
+}
+
+bool GT4Resource::RequestDestroy( GT4Job *job )
+{
+	GT4Job *jobptr;
+
+	destroysWanted.Rewind();
+	while ( destroysWanted.Next( jobptr ) ) {
+		if ( jobptr == job ) {
+			return false;
+		}
+	}
+
+	destroysAllowed.Rewind();
+	while ( destroysAllowed.Next( jobptr ) ) {
+		if ( jobptr == job ) {
+			return true;
+		}
+	}
+
+	if ( destroysAllowed.Length() < destroyLimit &&
+		 destroysWanted.Length() > 0 ) {
+		EXCEPT("In GT4Resource for %s, destroysWanted is not empty and "
+			   "destroysAllowed is not full\n",resourceName);
+	}
+
+	if ( destroysAllowed.Length() < destroyLimit ) {
+		destroysAllowed.Append( job );
+		return true;
+	} else {
+		destroysWanted.Append( job );
+		return false;
+	}
+}
+
+void GT4Resource::DestroyComplete( GT4Job *job )
+{
+	if ( destroysAllowed.Delete( job ) ) {
+		if ( destroysAllowed.Length() < destroyLimit &&
+			 destroysWanted.Length() > 0 ) {
+
+			GT4Job *queued_job = destroysWanted.Head();
+			destroysWanted.Delete( queued_job );
+			destroysAllowed.Append( queued_job );
+			queued_job->SetEvaluateState();
+		}
+	} else {
+		// We only have to check destroysWanted if the job wasn't in
+		// destroysAllowed.
+		destroysWanted.Delete( job );
+	}
+
+	return;
 }
 
 void GT4Resource::DoPing( time_t& ping_delay, bool& ping_complete,

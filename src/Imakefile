@@ -13,12 +13,6 @@
 #define StdUnvProgs shadow.V6 starter.V5 
 #define StdUnvLibs ckpt syscall_lib
 
-#if HAVE_EXT_GLOBUS
-#define GlobusProgs gridmanager globus
-#else
-#define GlobusProgs
-#endif
-
 #if HAVE_EXT_CLASSADS && HAVE_EXT_GLOBUS
 #define CreddProgs credd
 #else
@@ -70,7 +64,7 @@
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools KbddProgs collector.V6 dagman userlog Eventd \
-		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp had \
+		gridmanager globus starter.V6.1 shadow.V6.1 dcskel c-gahp had \
 		CreddProgs StorkProgs \
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp JobRouterProgs
@@ -265,10 +259,9 @@ condor_object_target(daemon_core.V6)
 condor_object_target(daemon_client)
 condor_object_target(prio)
 condor_object_target(scripts)
-#if HAVE_EXT_GLOBUS
-    condor_object_target(gridmanager)
-	condor_object_target(globus)
-#endif
+condor_object_target(gridmanager)
+condor_object_target(globus)
+
 #if HAVE_EXT_CLASSADS && HAVE_EXT_GLOBUS
 	condor_object_target(credd)
 #endif
@@ -524,14 +517,24 @@ man-current: $(real_man_dir)/man-current.tar.gz
 	(cd $(real_man_dir) ; gzip -cd man-current.tar.gz | tar x)
 
 man_target(condor_advertise.1)
+man_target(condor_check_userlogs.1)
 man_target(condor_checkpoint.1)
+man_target(condor_chirp.1)
+man_target(condor_cod.1)
+man_target(condor_cold_start.1)
+man_target(condor_cold_stop.1)
 man_target(condor_compile.1)
 man_target(condor_configure.1)
+man_target(condor_config_bind.1)
 man_target(condor_config_val.1)
+man_target(condor_convert_history.1)
+man_target(condor_dagman.1)
+man_target(condor_fetchlog.1)
 man_target(condor_findhost.1)
 man_target(condor_glidein.1)
 man_target(condor_history.1)
 man_target(condor_hold.1)
+man_target(condor_load_history.1)
 man_target(condor_master.1)
 man_target(condor_master_off.1)
 man_target(condor_off.1)
@@ -552,11 +555,14 @@ man_target(condor_status.1)
 man_target(condor_store_cred.1)
 man_target(condor_submit.1)
 man_target(condor_submit_dag.1)
+man_target(condor_transfer_data.1)
 man_target(condor_updates_stats.1)
 man_target(condor_userlog.1)
 man_target(condor_userprio.1)
 man_target(condor_vacate.1)
 man_target(condor_vacate_job.1)
+man_target(condor_version.1)
+man_target(condor_wait.1)
 #else
 manpages::
 	@echo "You're trying to package Condor but you don't want man pages!"

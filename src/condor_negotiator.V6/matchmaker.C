@@ -1751,14 +1751,12 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		sock = schedd.reliSock( NegotiatorTimeout );
 		if( ! sock ) {
 			dprintf( D_ALWAYS, "    Failed to connect to %s\n", scheddAddr );
-				// invalidateSock() might be unecessary, but doesn't hurt...
-			sockCache->invalidateSock( scheddAddr );
 			return MM_ERROR;
 		}
 		if( ! schedd.startCommand(negotiate_command, sock, NegotiatorTimeout) ) {
 			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE to %s\n",
 					 scheddAddr );
-			sockCache->invalidateSock( scheddAddr );
+			delete sock;
 			return MM_ERROR;
 		}
 			// finally, add it to the cache for later...

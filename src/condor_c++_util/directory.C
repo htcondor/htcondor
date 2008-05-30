@@ -67,8 +67,8 @@ Directory::Directory( const char *name, priv_state priv )
 #ifndef WIN32
 	owner_ids_inited = false;
 	if( priv == PRIV_FILE_OWNER ) {
-		EXCEPT( "Programmer error: Directory object instantiated with "
-				"PRIV_FILE_OWNER requested, but no StatInfo object!" );
+		EXCEPT( "Internal error: "
+		           "Directory instantiated with PRIV_FILE_OWNER" );
 	}
 #endif
 }
@@ -85,6 +85,10 @@ Directory::Directory( StatInfo* info, priv_state priv )
 	owner_uid = info->GetOwner();
 	owner_gid = info->GetGroup();
 	owner_ids_inited = true;
+	if( priv == PRIV_FILE_OWNER ) {
+		EXCEPT( "Internal error: "
+		           "Directory instantiated with PRIV_FILE_OWNER" );
+	}
 #endif
 }
 
@@ -345,7 +349,7 @@ Directory::do_remove_dir( const char* path )
 		// (directories without owner write perms).  In this case, we
 		// can recursively chmod() it and try again.
 
-	Directory subdir( si2, PRIV_FILE_OWNER );
+	Directory subdir( si2, desired_priv_state );
 		// delete this now that we're done with it so we don't leak.
 	delete si2;
 	si2 = NULL;
@@ -693,10 +697,6 @@ Directory::Rewind()
 					// before we called Set_Access_Priv()...
 				return_and_resetpriv(false);
 			}
-				// if we're here, doing the opendir() as the owner
-				// worked, so we should save this as the priv state to
-				// use for the various operations we might perform...
-			desired_priv_state = PRIV_FILE_OWNER;
 		}
 	}
 	rewinddir( dirp );

@@ -20,7 +20,6 @@
 
 
 ######################################################################
-# $Id: platform_pre,v 1.7 2008-03-05 21:12:50 gquinn Exp $
 # Submit-side NMI build system infrastructure to setup platform
 # specific input for test jobs.  All we have to do is trim down the
 # architecture-dependent results.tar.gz file to remove all the

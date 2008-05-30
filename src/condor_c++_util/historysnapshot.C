@@ -34,6 +34,7 @@ HistorySnapshot::HistorySnapshot(const char* dbcon_str)
 {
 	char *tmp;
 
+	dt = T_PGSQL; // assume PGSQL by default
 	tmp = param("QUILL_DB_TYPE");
 	if (tmp) {
 		if (strcasecmp(tmp, "ORACLE") == 0) {
@@ -42,9 +43,7 @@ HistorySnapshot::HistorySnapshot(const char* dbcon_str)
 			dt = T_PGSQL;
 		}
 		free(tmp);
-	} else {
-		dt = T_PGSQL; // assume PGSQL by default
-	}
+	} 
 
 	switch (dt) {				
 	case T_ORACLE:

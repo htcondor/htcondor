@@ -100,10 +100,13 @@ startdClaimIdFile( int slot_id )
 	return strdup( filename.Value() );
 }
 
-char* my_timezone(int isdst) 
+const char* my_timezone(int isdst) 
 {
   tzset();
 
+#ifndef WIN32
+	// On Unix, return tzname which is CST, CDT, PST, etc.
+  
 	  // if daylight is in effect (isdst is positive)
   if (isdst > 0) {
     return tzname[1];
@@ -111,6 +114,27 @@ char* my_timezone(int isdst)
   {
     return tzname[0];
   }
+#else
+	// On Win32, tzname is useless.  It return a string like
+	// "Central Standard Time", which doesn't follow any standard,
+	// and thus cannot be used in things like valid SQL statements.
+	// So instead on Win32, return a string like "-6:00" which is
+	// a timezone that at least is in common use, and won't cause
+	// systems like PostgreSQL to barf.
+  	static char buf[15];
+	int answer;
+	char c = '+';
+
+	answer = -1 * (timezone / 3600);	// note: timezone is global
+	if ( answer < 0 ) {
+		c = '-';
+		answer *= -1;
+	}
+
+	sprintf(buf,"%c%d:00",c,answer);
+	return buf;
+#endif
+
 }
 
 

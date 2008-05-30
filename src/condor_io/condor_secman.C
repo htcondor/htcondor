@@ -1582,6 +1582,7 @@ SecManStartCommand::startCommand_inner_noauth()
 			m_sec_man.sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION );
 			m_sec_man.sec_copy_attribute( auth_info, auth_response, ATTR_SEC_ENCRYPTION );
 			m_sec_man.sec_copy_attribute( auth_info, auth_response, ATTR_SEC_INTEGRITY );
+			m_sec_man.sec_copy_attribute( auth_info, auth_response, ATTR_SEC_SESSION_DURATION );
 			// sec_copy_attribute( auth_info, auth_response, ATTR_SEC_VALID_COMMANDS );
 			// sec_copy_attribute( auth_info, auth_response, ATTR_SEC_USER );
 			// sec_copy_attribute( auth_info, auth_response, ATTR_SEC_SID );

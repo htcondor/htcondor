@@ -2255,9 +2255,13 @@ DaemonCore::ReInit()
 		if ( send_update < 1 )
 			send_update = 1;
 		if ( send_child_alive_timer == -1 ) {
-			send_child_alive_timer = Register_Timer(1, (unsigned)send_update,
+			send_child_alive_timer = Register_Timer((unsigned)send_update, (unsigned)send_update,
 					(TimerHandlercpp)&DaemonCore::SendAliveToParent,
 					"DaemonCore::SendAliveToParent", this );
+
+				// Send this immediately, because if we hang before
+				// sending this message, our parent will not kill us.
+			SendAliveToParent();
 		} else {
 			Reset_Timer(send_child_alive_timer, 1, send_update);
 		}

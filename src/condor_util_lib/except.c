@@ -23,6 +23,22 @@
 #include "exit.h"
 #include "condor_debug.h"
 
+#if defined (LINUX)
+#include "execinfo.h"
+
+/*
+void
+__stack_chk_fail() {
+  void *trace[2];
+  char **messages = (char **)NULL;
+
+  backtrace(trace, 2);
+  messages = backtrace_symbols(trace, 2);
+  EXCEPT("Stack overflow at: %s\n", messages[1]);
+}
+*/
+#endif
+
 #ifdef LINT
 /* VARARGS */
 _EXCEPT_(foo)

@@ -373,7 +373,7 @@ PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
 
 
 /* common ld flags which should be first in the list */
-COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) $(GCC_STACK_PROTECTOR) -lm \
+COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) $(GCC_STACK_PROTECTOR) $(GCC_HASH_STYLE_FLAG) -lm \
                 $(LDFLAGS) $(CONFIGURE_LIBS) $(CONFIGURE_LDFLAGS)
 
 /* common ld flags which should be last in the list */

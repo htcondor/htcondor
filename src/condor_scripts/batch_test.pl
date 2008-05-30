@@ -49,6 +49,7 @@
 #	path, we can assume it is a nightly test run.
 # Nov 07 : Added repaeating a test n times by adding "-a n" to args
 # Nov 07 : Added condor_personal setup only by adding -p (pretest work);
+# Mar 17 : Added condor cleanup functionality by adding -c option.
 #
 
 #require 5.0;
@@ -75,6 +76,7 @@ $hush = 0;
 $timestamp = 0;
 $kindwait = 1; # run tests one at a time
 $repeat = 1; # run test/s repeatedly
+$cleanupcondor = 0;
 $nightly;
 $testpersonalcondorlocation = "$BaseDir/TestingPersonalCondor";
 $wintestpersonalcondorlocation = "";
@@ -86,6 +88,8 @@ $wintestpersonalcondorlocation = "";
 
 $targetconfig = $testpersonalcondorlocation . "/condor_config";
 $targetconfiglocal = $testpersonalcondorlocation . "/condor_config.local";
+$condorpidfile = "/tmp/condor.pid.$$";
+@extracondorargs;
 
 $localdir = $testpersonalcondorlocation . "/local";
 $installdir;
@@ -128,6 +132,7 @@ $ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
 # -b[buildandtest]: set up a personal condor and generic configs
 # -a[again]: how many times do we run each test?
 # -p[pretest]: get are environment set but run no tests
+# -c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.
 #
 while( $_ = shift( @ARGV ) ) {
   SWITCH: {
@@ -181,6 +186,12 @@ while( $_ = shift( @ARGV ) ) {
         }
         if( /-m.*/ ) {
                 $timestamp = 1;
+                next SWITCH;
+        }
+        if( /-c.*/ ) {
+                # This is not used on windows systems at the moment.
+                $cleanupcondor = 1;
+                push (@extracondorargs, "-pidfile $condorpidfile");
                 next SWITCH;
         }
   }
@@ -250,7 +261,7 @@ if(!($wantcurrentdaemons)) {
 			debug( "\"$mcmd\"\n");
 			system("$mcmd");
 		} else {
-			system("$installdir/sbin/condor_master -f &");
+			system("$installdir/sbin/condor_master @extracondorargs -f &");
 		}
 		print "Done Starting Personal Condor\n";
 	}
@@ -568,6 +579,19 @@ for $test_name (@failed_tests)
 close OUTF;
 close SUMOUTF;
 
+if ( $cleanupcondor )
+{
+   if ( $iswindows ) 
+   {
+      # Currently not implemented.
+   }
+   else
+   {
+      $pid=`cat $condorpidfile`;
+      system("kill $pid");
+      system("rm -f $condorpidfile");
+   }
+}
 exit $num_failed;
 
 sub CleanFromPath

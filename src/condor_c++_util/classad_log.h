@@ -64,7 +64,7 @@ public:
 	~ClassAdLog();
 
 	void AppendLog(LogRecord *log);	// perform a log operation
-	void TruncLog();				// clean log file on disk
+	bool TruncLog();				// clean log file on disk
 
 	void BeginTransaction();
 	bool AbortTransaction();

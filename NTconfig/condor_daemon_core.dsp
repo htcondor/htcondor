@@ -90,6 +90,14 @@ SOURCE=..\src\condor_daemon_core.V6\condor_daemon_core.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_daemon_core.V6\condor_lock.C
 # End Source File
 # Begin Source File

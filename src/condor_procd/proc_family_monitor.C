@@ -420,10 +420,6 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
 	}
 
-	// get as up to date as possible
-	//
-	snapshot();
-
 	// get usage from the requested family and all subfamilies
 	//
 	dprintf(D_ALWAYS,
@@ -433,10 +429,14 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 	usage->user_cpu_time = 0;
 	usage->sys_cpu_time = 0;
 	usage->percent_cpu = 0.0;
-	usage->max_image_size = 0;
 	usage->total_image_size = 0;
 	usage->num_procs = 0;
 	get_family_usage(tree, usage);
+
+	// max image size is handled separately; we request it directly from
+	// the top-level family
+	//
+	usage->max_image_size = tree->get_data()->get_max_image_size();
 
 	return PROC_FAMILY_ERROR_SUCCESS;
 }
@@ -561,6 +561,11 @@ ProcFamilyMonitor::snapshot()
 	//
 	delete_unwatched_families(m_tree);
 
+	// now walk the tree and update the families' maximum image size
+	// bookkeeping
+	//
+	update_max_image_sizes(m_tree);
+
 	dprintf(D_ALWAYS, "...snapshot complete\n");
 }
 
@@ -677,6 +682,26 @@ ProcFamilyMonitor::get_snapshot_interval(Tree<ProcFamily*>* tree)
 	}
 
 	return ret_value;
+}
+
+unsigned long
+ProcFamilyMonitor::update_max_image_sizes(Tree<ProcFamily*>* tree)
+{
+	// recurse on children, keeping sum of their total image
+	// size as we go
+	//
+	unsigned long sum = 0;
+	Tree<ProcFamily*>* child = tree->get_child();
+	while (child != NULL) {
+		sum += update_max_image_sizes(child);
+		child = child->get_sibling();
+	}
+
+	// now call update_image_size on the current node, passing
+	// it the sum of our children's image sizes, and return our
+	// own total image size
+	//
+	return tree->get_data()->update_max_image_size(sum);
 }
 
 void

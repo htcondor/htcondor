@@ -654,8 +654,13 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 void
 BaseShadow::evictJob( int reason )
 {
-	dprintf( D_ALWAYS, "Job %d.%d is being evicted\n",
-			 getCluster(), getProc() );
+	MyString from_where;
+	MyString machine;
+	if( getMachineName(machine) ) {
+		from_where.sprintf(" from %s",machine.Value());
+	}
+	dprintf( D_ALWAYS, "Job %d.%d is being evicted%s\n",
+			 getCluster(), getProc(), from_where.Value() );
 
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In evictJob() w/ NULL JobAd!" );
@@ -1259,4 +1264,10 @@ display_dprintf_header(FILE *fp)
 	}	
 
 	return TRUE;
+}
+
+bool
+BaseShadow::getMachineName( MyString & /*machineName*/ )
+{
+	return false;
 }

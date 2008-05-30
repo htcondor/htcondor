@@ -35,15 +35,6 @@ procd_atob(char* str)
 #endif
 }
 
-unsigned long get_image_size(procInfo* pi)
-{
-#if defined(WIN32)
-	return pi->rssize;
-#else
-	return pi->imgsize;
-#endif
-}
-
 void
 send_signal(procInfo* pi, int sig)
 {

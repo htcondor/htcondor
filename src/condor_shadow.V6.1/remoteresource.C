@@ -179,8 +179,8 @@ RemoteResource::activateClaim( int starterVersion )
 		switch( reply ) {
 		case OK:
 			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s was ACCEPTED\n",
-							 dc_startd->addr() );
+							 "Request to run on %s %s was ACCEPTED\n",
+							 machineName ? machineName:"", dc_startd->addr() );
 				// first, set a timeout on the socket 
 			claim_sock->timeout( 300 );
 				// Now, register it for remote system calls.
@@ -194,8 +194,8 @@ RemoteResource::activateClaim( int starterVersion )
 			break;
 		case CONDOR_TRY_AGAIN:
 			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s was DELAYED (previous job still being vacated)\n",
-							 dc_startd->addr() ); 
+							 "Request to run on %s %s was DELAYED (previous job still being vacated)\n",
+							 machineName ? machineName:"", dc_startd->addr() );
 			num_retries++;
 			if( num_retries > max_retries ) {
 				dprintf( D_ALWAYS, "activateClaim(): Too many retries, "
@@ -209,22 +209,22 @@ RemoteResource::activateClaim( int starterVersion )
 			break;
 
 		case CONDOR_ERROR:
-			shadow->dprintf( D_ALWAYS, "%s\n", dc_startd->error() );
+			shadow->dprintf( D_ALWAYS, "%s: %s\n", machineName ? machineName:"", dc_startd->error() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
 
 		case NOT_OK:
 			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s was REFUSED\n",
-							 dc_startd->addr() );
+							 "Request to run on %s %s was REFUSED\n",
+							 machineName ? machineName:"", dc_startd->addr() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
 		default:
 			shadow->dprintf( D_ALWAYS, "Got unknown reply(%d) from "
-							 "request to run on %s\n", reply,
-							 dc_startd->addr() );
+							 "request to run on %s %s\n", reply,
+							 machineName ? machineName:"", dc_startd->addr() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;

@@ -25,6 +25,7 @@ use Cwd;
 $cmd = "cmd_wait_shows.cmd";
 
 my $pid = $$;
+system("rm -rf $pid");
 system("mkdir $pid");
 my $curcwd = getcwd();
 print "current directory is $curcwd\n";

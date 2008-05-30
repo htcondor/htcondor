@@ -1023,6 +1023,13 @@ count( ClassAd *job )
 	int		max_hosts;
 	int		universe;
 
+		// we may get passed a NULL job ad if, for instance, the job ad was
+		// removed via condor_rm -f when some function didn't expect it.
+		// So check for it here before continuing onward...
+	if ( job == NULL ) {  
+		return 0;
+	}
+
 	if (job->LookupInteger(ATTR_JOB_STATUS, status) == 0) {
 		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
 				ATTR_JOB_STATUS);
@@ -5571,6 +5578,11 @@ Scheduler::startdContactSockHandler( Stream *sock )
 
 	rescheduleContactQueue();
 
+		// The claim has been successfully requested, and this sock is
+		// about to be closed, so remove the saved reference to it
+		// from the match_rec.
+	mrec->request_claim_sock = NULL;
+
 	return TRUE;
 }
 #undef BAILOUT
@@ -6984,14 +6996,6 @@ Scheduler::tryNextJob()
 							(Eventcpp)&Scheduler::StartJobHandler,
 							"start_job", this ); 
 	} else {
-			/* 
-			   if there are no more jobs in the queue, this is a great
-			   time to update the central manager since things are
-			   pretty "stable".  this way, "condor_status -sub" and
-			   other views such as "condor_status -run" will be more
-			   likely to match
-			*/
-		timeout();
 		StartJobs();
 	}
 }
@@ -8797,6 +8801,17 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 						dprintf( D_ALWAYS, 
 								"Sent signal %d to %s [pid %d] for job %d.%d\n",
 								SIGKILL, rec->match->peer, rec->pid, cluster, proc );
+							// Keep iterating and preempting more without
+							// decrementing n here.  Why?  Because we didn't
+							// really preempt this job: we just killed the
+							// shadow and left the job running so that we
+							// can reconnect to it later.  No need to throttle
+							// the rate of preemption to avoid i/o overload
+							// from checkpoints or anything.  In fact, it
+							// is better to quickly kill all the shadows so
+							// that we can restart and reconnect before the
+							// lease expires.
+						continue;
 					}
 				} else {
 						/*
@@ -9327,11 +9342,22 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// down in the logic below
 	shadow_rec *srec = this->FindSrecByProcID( job_id );
 	
+		// Get job status.  Note we only except if there is no job status AND the job
+		// is still in the queue, since we do not want to except if the job ad is gone
+		// perhaps due to condor_rm -f.
 	int q_status;
-	if ( GetAttributeInt( job_id.cluster, job_id.proc, 
-							ATTR_JOB_STATUS, &q_status) < 0 ) {
-		EXCEPT( "ERROR no job status for %d.%d in Scheduler::jobExitCode()!",
+	if (GetAttributeInt(job_id.cluster,job_id.proc,
+						ATTR_JOB_STATUS,&q_status) < 0)	
+	{
+		if ( GetJobAd(job_id.cluster,job_id.proc) ) {
+			// job exists, but has no status.  impossible!
+			EXCEPT( "ERROR no job status for %d.%d in Scheduler::jobExitCode()!",
 				job_id.cluster, job_id.proc );
+		} else {
+			// job does not exist anymore, so we have no work to do here.
+			// since we have nothing to do in this function, return.
+			return ret;
+		}
 	}
 	
 		// We get the name of the daemon that had a problem for 

@@ -667,7 +667,6 @@ dnl The license on the macro is listed as "AllPermissive" which according to
 dnl http://ac-archive.sourceforge.net/doc/contribute.html
 dnl means "assumed MIT-style"
 dnl
-dnl $Id: aclocal.m4,v 1.9 2008-03-05 21:12:50 gquinn Exp $
 dnl
 dnl @synopsis AX_LIB_ORACLE_OCI([MINIMUM-VERSION])
 dnl
@@ -701,7 +700,6 @@ dnl
 dnl @category InstalledPackages
 dnl @category Cxx
 dnl @author Mateusz Loskot <mateusz@loskot.net>
-dnl @version $Date: 2008-03-05 21:12:50 $
 dnl @license AllPermissive
 dnl
 AC_DEFUN([AX_LIB_ORACLE_OCI],

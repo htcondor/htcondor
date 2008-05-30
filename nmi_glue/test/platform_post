@@ -24,6 +24,8 @@
 ##################################################################
 
 $appinput = "../../" . $ENV{NMI_PLATFORM} . "_app_input.tar.gz";
+print "../.. has the following:\n";
+system("ls -l ../..");
 print "Looking to see is $appinput is around and removing\n";
 system("rm -f $appinput");
 
@@ -42,8 +44,8 @@ close( VERS );
 if( ! $vers ) {
     die "Can't find Condor version in $vers_file!\n";
 }
-print "Condor version: $vers\n";
-$src_file = "condor-$vers.tar.gz";
-system("rm -f $src_file");
+print "Remove unwanted binaries ....\n";
+$binaries_file = "condor-$vers*tar.gz";
+system("rm -f $binaries_file");
 
 exit(0);
