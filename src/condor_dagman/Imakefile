@@ -12,7 +12,7 @@ C_PLUS_FLAGS = -I. $(STD_C_PLUS_FLAGS) \
 	-Wall
 
 CFLAGS = $(STD_C_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) New_classads_lib
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) New_classads_lib
 TOOL_LIB = $(STD_LIBS) New_classads_lib
 
 soapobjs(dagman)

@@ -72,19 +72,6 @@ glexec_starter_prepare(const char* starter_path,
 		return false;
 	}
 
-	// read the cert into a string
-	FILE* fp = safe_fopen_wrapper( proxy_file, "r" );
-	if( fp == NULL ) {
-		dprintf( D_ALWAYS,
-		         "cannot use glexec to spawn starter: "
-		         "couldn't open proxy: %s (%d)\n",
-		         strerror(errno), errno );
-		return false;
-	}
-	MyString pem_str;
-	while( pem_str.readLine( fp, true ) );
-	fclose( fp );
-
 	// using the file name of the proxy that was stashed ealier, construct
 	// the name of the starter's "private directory". the naming scheme is
 	// (where XXXXXX is randomly generated via condor_mkstemp):
@@ -161,15 +148,13 @@ glexec_starter_prepare(const char* starter_path,
 	// the only thing actually needed by glexec at this point is the cert, so
 	// that it knows who to map to.  the pipe outputs the username that glexec
 	// ended up using, on a single text line by itself.
-	SetEnv( "SSL_CLIENT_CERT", pem_str.Value() );
+	SetEnv( "GLEXEC_CLIENT_CERT", proxy_file );
 
 	// create the starter's private dir
 	int ret = my_system(glexec_setup_args);
 
-	// clean up, since there's private info in there.  i wish we didn't have to
-	// put this in the environment to begin with, but alas, that's just how
-	// glexec works.
-	UnsetEnv( "SSL_CLIENT_CERT");
+	// clean up
+	UnsetEnv( "GLEXEC_CLIENT_CERT");
 
 	if ( ret != 0 ) {
 		dprintf(D_ALWAYS,
@@ -212,8 +197,8 @@ glexec_starter_prepare(const char* starter_path,
 	// GLEXEC_MODE - get account from lcmaps
 	glexec_env.SetEnv( "GLEXEC_MODE", "lcmaps_get_account" );
 
-	// SSL_CLIENT_CERT - cert to use for the mapping
-	glexec_env.SetEnv( "SSL_CLIENT_CERT", pem_str.Value() );
+	// GLEXEC_CLIENT_CERT - cert to use for the mapping
+	glexec_env.SetEnv( "GLEXEC_CLIENT_CERT", proxy_file );
 
 #if defined(HAVE_EXT_GLOBUS) && !defined(SKIP_AUTHENTICATION)
 	// GLEXEC_SOURCE_PROXY -  proxy to provide to the child
@@ -234,8 +219,10 @@ glexec_starter_prepare(const char* starter_path,
 	glexec_env.SetEnv( "GLEXEC_TARGET_PROXY", child_proxy_file.Value() );
 
 	// _CONDOR_GSI_DAEMON_PROXY - starter's proxy
-	MyString var_name = "_CONDOR_";
-	var_name += STR_GSI_DAEMON_PROXY;
+	MyString var_name;
+	var_name.sprintf("_CONDOR_%s", STR_GSI_DAEMON_PROXY);
+	glexec_env.SetEnv( var_name.Value(), child_proxy_file.Value() );
+	var_name.sprintf("_condor_%s", STR_GSI_DAEMON_PROXY);
 	glexec_env.SetEnv( var_name.Value(), child_proxy_file.Value() );
 #endif
 
@@ -245,6 +232,7 @@ glexec_starter_prepare(const char* starter_path,
 	MyString execute_dir = glexec_private_dir;
 	execute_dir += "/execute";
 	glexec_env.SetEnv ( "_CONDOR_EXECUTE", execute_dir.Value());
+	glexec_env.SetEnv ( "_condor_EXECUTE", execute_dir.Value());
 
 	// the LOG dir should be owned by the mapped user.  we created this
 	// earlier, and now we override it in the condor_config via the
@@ -252,6 +240,7 @@ glexec_starter_prepare(const char* starter_path,
 	MyString log_dir = glexec_private_dir;
 	log_dir += "/log";
 	glexec_env.SetEnv ( "_CONDOR_LOG", log_dir.Value());
+	glexec_env.SetEnv ( "_condor_LOG", log_dir.Value());
 
 	// PROCD_ADDRESS: the Starter that we are about to create will
 	// not have access to our ProcD. we'll explicitly set PROCD_ADDRESS
@@ -262,6 +251,7 @@ glexec_starter_prepare(const char* starter_path,
 	MyString procd_address = log_dir;
 	procd_address += "/procd_pipe";
 	glexec_env.SetEnv( "_CONDOR_PROCD_ADDRESS", procd_address.Value() );
+	glexec_env.SetEnv( "_condor_PROCD_ADDRESS", procd_address.Value() );
 
 	// now set up a socket pair for communication with
 	// condor_glexec_wrapper
@@ -314,7 +304,7 @@ glexec_starter_handle_env(pid_t pid)
 	// only for glexec
 	//
 	s_saved_env.SetEnv("GLEXEC_MODE", "");
-	s_saved_env.SetEnv("SSL_CLIENT_CERT", "");
+	s_saved_env.SetEnv("GLEXEC_CLIENT_CERT", "");
 	s_saved_env.SetEnv("GLEXEC_SOURCE_PROXY", "");
 	s_saved_env.SetEnv("GLEXEC_TARGET_PROXY", "");
 

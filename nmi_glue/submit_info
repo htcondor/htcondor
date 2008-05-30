@@ -182,6 +182,7 @@ testplatforms = unmanaged-x86_rhap_5.1
 [
 platforms = x86_64_rhap_5
 test_append_prereqs = java-1.4.2_05
+x_test_platforms_x86_64_rhap_5 = x86_64_fc_4
 ]
 
 [

@@ -398,8 +398,14 @@ elif test $os = "FreeBSD" ; then
       _cv_arch="IA64"
    elif test $arch = "ppc" -o $arch = "ppc64" ; then
       _cv_arch="CONDOR_PPC"
-   elif test $arch = "x86_64" ; then
-      _cv_arch="X86_64"
+   ##
+   ## Globus does not work on 64-bit
+   ## We will use the i386 build until this gets fixed (hopefully not by me!)
+   ## Andy - 01/25/2008
+   ##
+   elif test $arch = "amd64" -o $arch = "x86_64" ; then
+      _cv_arch="I386"
+      #_cv_arch="X86_64"
    fi
 
    ##
@@ -873,6 +879,12 @@ case "$gcc_vers" in
     CompilerMajor="4"
     CompilerMinor="2"
     CompilerPatch="3"
+    ;;
+ "4.2.1" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="2"
+    CompilerPatch="1"
     ;;
  * )
     if test "x$enable_gcc_version_check" = "xyes"; then
@@ -2622,7 +2634,7 @@ _cv_has_unicoregahp=$_cv_has_globus
 CHECK_EXTERNAL([unicoregahp],[1.2.0], [soft])
 
 _cv_has_nordugridgahp=$_cv_has_globus
-CHECK_EXTERNAL([nordugridgahp],[1.1.2], [soft])
+CHECK_EXTERNAL([nordugridgahp],[1.1.3], [soft])
 
 if test "x$CLIPPED" = xyes; then
   _cv_zlib_requirement=soft
@@ -2691,7 +2703,14 @@ fi
 
 CHECK_EXTERNAL([postgresql], [$pgsql_ver], [hard],
                [use PostgreSQL (provides Quill and other support)],
-               MF_LIB_CHECK([postgresql], [[pq PQconnectdb]]))
+               MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
+#AC_MSG_CHECKING([postgresql])
+#AC_MSG_RESULT([$_cv_ext_postgresql_version])
+#AC_SUBST(ext_postgresql_version,$_cv_ext_postgresql_version)
+AC_SUBST(POSTGRESQL_LDFLAGS, $POSTGRESQL_LDFLAGS)
+AC_SUBST(POSTGRESQL_CFLAGS, $POSTGRESQL_CFLAGS)
+
+CHECK_EXTERNAL([globus],[4.0.5], [soft])
 
 # if globus is available on this platform and we actually have it
 if test "x$_cv_has_globus" = xyes -a "x$cv_ext_globus" = xyes; then
@@ -2740,11 +2759,13 @@ CHECK_EXTERNAL([gsoap], [2.7.6c-p2], [soft],
                 LDFLAGS="$LDFLAGS -Wl[,]--unresolved-symbols=ignore-in-shared-libs"
                 AS_IF([test "x$cv_ext_globus" = xyes -o "x$cv_ext_openssl" = xyes],
                   [MF_LIB_CHECK([gsoap],
-                                [[gsoapssl++ soap_ssl_accept]])],
+                                [[gsoapssl++ soap_ssl_accept]], [gsoap])],
                   [MF_LIB_CHECK([gsoap],
-                                [[gsoap++ soap_accept]])])
+                                [[gsoap++ soap_accept]], [gsoap])])
                 AS_IF([test "x$cv_ext_gsoap" = xno],
                   [LDFLAGS="$_ldflags_save"])])
+AC_SUBST(GSOAP_LDFLAGS, $GSOAP_LDFLAGS)
+AC_SUBST(GSOAP_CFLAGS, $GSOAP_CFLAGS)
 
 # We need to make sure HAVE_OPENSSL_SSL_H is defined otherwise
 # programs will not link properly as stdsoap2.h will not include ssl

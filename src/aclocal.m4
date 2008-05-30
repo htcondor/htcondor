@@ -220,6 +220,8 @@ AC_DEFUN([MF_LIB_CHECK],
   [AS_IF([test "x$_dir" != x],
     [_ldflags_save="$LDFLAGS"
      _cflags_save="$CFLAGS"
+     _ldflags="-L$_dir/lib"
+     _cflags="-I$_dir/include"
      LDFLAGS="$LDFLAGS -L$_dir/lib"
      CFLAGS="$CFLAGS -I$_dir/include"])
      _libs=
@@ -233,8 +235,13 @@ AC_DEFUN([MF_LIB_CHECK],
         LDFLAGS=$_ldflags_save
         CFLAGS=$_cflags_save
         AC_MSG_WARN([$1: could not find $_failure])],
-       [cv_ext_]m4_tolower($1)[=yes
-        LIBS="$LIBS $_libs"])])
+        m4_if(x$3, x,
+         [LIBS="$LIBS $_libs"],
+         m4_toupper($3)[_LDFLAGS="$_ldflags $_libs"]
+         m4_toupper($3)[_CFLAGS="$_cflags"]
+         [LDFLAGS="$_ldflags_save"
+          CFLAGS="$_cflags_save"])
+        [cv_ext_]m4_tolower($1)[=yes])])
 
 
 #######################################################################
