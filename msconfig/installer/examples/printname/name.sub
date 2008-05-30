@@ -1,0 +1,7 @@
+universe = vanilla
+environment = path=c:\winnt\system32
+executable = printname.bat
+output = printname.out
+error = printname.err
+log = printname.log
+queue
