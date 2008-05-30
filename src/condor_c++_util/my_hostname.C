@@ -339,7 +339,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
             return;
         }
 
-        char *ref = strstr(old_expr_string,my_default_ip);
+        char const *ref = strstr(old_expr_string,my_default_ip);
         if(ref) {
             // Replace the default IP address with the one I am actually using.
 

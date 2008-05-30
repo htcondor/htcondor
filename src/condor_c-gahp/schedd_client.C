@@ -1456,7 +1456,7 @@ get_ulong (const char * blah, unsigned long * s) {
 int
 get_job_id (const char * s, int * cluster_id, int * proc_id) {
 
-	char * pdot = strchr(s, '.');
+	char const *pdot = strchr(s, '.');
 	if (pdot) {
 		char * buff = strdup (s);
 		buff[pdot-s]='\0';

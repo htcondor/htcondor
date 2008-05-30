@@ -144,7 +144,7 @@ const char* spool
 	port = (char *) malloc(len * sizeof(char));
 	
 		//split the <ipaddress:port> into its two parts accordingly
-	char *ptr_colon = strchr(jobQueueDBIpAddress, ':');
+	char const *ptr_colon = strchr(jobQueueDBIpAddress, ':');
 	strncpy(host, jobQueueDBIpAddress, 
 			ptr_colon - jobQueueDBIpAddress);
 		// terminate the string properly

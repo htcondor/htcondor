@@ -97,7 +97,7 @@ isReservedWord( const char *token )
 
 bool
 isDelimiter( char c ) {
-	char* tmp = strchr( DELIMITERS, (int)c );
+	char const* tmp = strchr( DELIMITERS, (int)c );
 	return tmp ? true : false;
 }
 

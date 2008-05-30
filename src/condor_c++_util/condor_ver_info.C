@@ -361,7 +361,7 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 		return false;
 	}
 
-	char *ptr = strchr(verstring,' ');
+	char const *ptr = strchr(verstring,' ');
 	ptr++;		// skip space after the colon
 
 	sscanf(ptr,"%d.%d.%d ",&ver.MajorVer,&ver.MinorVer,&ver.SubMinorVer);
@@ -444,7 +444,7 @@ CondorVersionInfo::string_to_PlatformData(const char *platformstring,
 		return false;
 	}
 
-	char *ptr = strchr(platformstring,' ');
+	char const *ptr = strchr(platformstring,' ');
 	ptr++;		// skip space after the colon
 
 	char *tempStr = strdup(ptr);	

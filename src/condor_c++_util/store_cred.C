@@ -431,7 +431,7 @@ void store_cred_handler(void *, int i, Stream *s)
 
 	if ( user ) {
 			// ensure that the username has an '@' delimteter
-		char *tmp = strchr(user, '@');
+		char const *tmp = strchr(user, '@');
 		if ((tmp == NULL) || (tmp == user)) {
 			dprintf(D_ALWAYS, "store_cred_handler: user not in user@domain format\n");
 			answer = FAILURE;
@@ -670,7 +670,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 
 			// first see if we're operating on the pool password
 		int cmd = STORE_CRED;
-		char *tmp = strchr(user, '@');
+		char const *tmp = strchr(user, '@');
 		if (tmp == NULL || tmp == user || *(tmp + 1) == '\0') {
 			dprintf(D_ALWAYS, "store_cred: user not in user@domain format\n");
 			return FAILURE;

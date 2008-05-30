@@ -648,7 +648,7 @@ bool perm::volume_has_acls( const char *filename )
 	}
 	else if (filename[0] == '\\' && filename[1] == '\\') {
 		// UNC path: strip down to the form: "\\SERVER\SHARE\"
-		char* next_backslash;
+		char const *next_backslash;
 		next_backslash = strchr(&filename[2], '\\');
 		if (!next_backslash) {
 			dprintf(D_ALWAYS,

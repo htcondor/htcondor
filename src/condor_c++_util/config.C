@@ -81,7 +81,7 @@ is_piped_command(const char* filename)
 {
 	bool retVal = false;
 
-	char* pdest = strchr( filename, '|' );
+	char const *pdest = strchr( filename, '|' );
 	if ( pdest != NULL ) {
 		// This is not a filename (still not sure it's a valid command though)
 		retVal = true;

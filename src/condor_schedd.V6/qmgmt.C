@@ -1927,8 +1927,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				}
 				else {
 						// find the closest power of 10
-					int magnitude = (int)(log(fabs(fvalue/5))/log(10) + 1);
-					double roundto = pow(10,magnitude) * percent/100.0;
+					int magnitude = (int)(log(fabs((double)fvalue/5))/log((double)10) + 1);
+					double roundto = pow((double)10,magnitude) * percent/100.0;
 					fvalue = ceil( fvalue/roundto )*roundto;
 
 					if( token.type == LX_INTEGER ) {

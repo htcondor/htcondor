@@ -912,7 +912,7 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 			attName = (char *)malloc(strlen(iter));
 
 			sscanf(iter, "%s =", attName);
-			attVal = strstr(iter, "= ");
+			attVal = (char*)strstr(iter, "= ");
 			attVal += 2;
 
 			if (strcasecmp(attName, "PrevLastReportedTime") == 0) {
@@ -1510,7 +1510,7 @@ QuillErrCode TTManager::insertScheddAd(AttrList *ad) {
 		{
 			attName = (char *)malloc(strlen(iter));
 			sscanf(iter, "%s =", attName);
-			attVal = strstr(iter, "= ");
+			attVal = (char*)strstr(iter, "= ");
 			attVal += 2;
 
 			if (strcasecmp(attName, "PrevLastReportedTime") == 0) {
@@ -1875,7 +1875,7 @@ QuillErrCode TTManager::insertMasterAd(AttrList *ad) {
 		{
 			attName = (char *)malloc(strlen(iter));
 			sscanf(iter, "%s =", attName);
-			attVal = strstr(iter, "= ");
+			attVal = (char*)strstr(iter, "= ");
 			attVal += 2;
 
 			if (strcasecmp(attName, "PrevLastReportedTime") == 0) {
@@ -2305,7 +2305,7 @@ QuillErrCode TTManager::insertNegotiatorAd(AttrList *ad) {
 		{
 			attName = (char *)malloc(strlen(iter));
 			sscanf(iter, "%s =", attName);
-			attVal = strstr(iter, "= ");
+			attVal = (char*)strstr(iter, "= ");
 			attVal += 2;
 
 			if (strcasecmp(attName, "PrevLastReportedTime") == 0) {
@@ -2572,7 +2572,7 @@ QuillErrCode TTManager::insertBasic(AttrList *ad, char *tableName) {
 			attName = (char *)malloc(strlen(iter));
 			
 			sscanf(iter, "%s =", attName);
-			attVal = strstr(iter, "= ");
+			attVal = (char*)strstr(iter, "= ");
 			attVal += 2;
 
 			if ((isMatches && 
@@ -2697,7 +2697,7 @@ QuillErrCode TTManager::insertRuns(AttrList *ad) {
 			attName = (char *)malloc(strlen(iter));
 			
 			sscanf(iter, "%s =", attName);
-			attVal = strstr(iter, "= ");
+			attVal = (char*)strstr(iter, "= ");
 			attVal += 2;
 
 			if ((strcasecmp(attName, "startts") == 0) || 
@@ -2783,7 +2783,7 @@ QuillErrCode TTManager::insertEvents(AttrList *ad) {
 			attName = (char *)malloc(strlen(iter));
 			
 			sscanf(iter, "%s =", attName);
-			attVal = strstr(iter, "= ");
+			attVal = (char*)strstr(iter, "= ");
 			attVal += 2;
 
 			if (strcasecmp(attName, "eventtime") == 0) {
@@ -2872,7 +2872,7 @@ QuillErrCode TTManager::insertFiles(AttrList *ad) {
 			attName = (char *)malloc(strlen(iter));
 			
 			sscanf(iter, "%s =", attName);
-			attVal = strstr(iter, "= ");
+			attVal = (char*)strstr(iter, "= ");
 			attVal += 2;
 
 				// strip double quotes if any
@@ -2971,7 +2971,7 @@ QuillErrCode TTManager::insertFileusages(AttrList *ad) {
 			attName = (char *)malloc(strlen(iter));
 			
 			sscanf(iter, "%s =", attName);
-			attVal = strstr(iter, "= ");
+			attVal = (char*)strstr(iter, "= ");
 			attVal += 2;
 
 			stripdoublequotes(attVal);
@@ -3068,7 +3068,7 @@ QuillErrCode TTManager::insertTransfers(AttrList *ad) {
     // the attribute name can't be longer than the log entry line size
     attName = (char *)malloc(strlen(iter));
     sscanf(iter, "%s =", attName);
-    attVal = strstr(iter, "= ");
+    attVal = (char*)strstr(iter, "= ");
     attVal += 2;
 
 	stripdoublequotes(attVal);
@@ -3207,7 +3207,7 @@ QuillErrCode TTManager::updateBasic(AttrList *info, AttrList *condition,
 			attName = (char *)malloc(strlen(iter));
 			
 			sscanf(iter, "%s =", attName);
-			attVal = strstr(iter, "= ");
+			attVal = (char*)strstr(iter, "= ");
 			attVal += 2;
 
 			if (isRuns && (strcasecmp(attName, "endts") == 0)) {
@@ -3262,7 +3262,7 @@ QuillErrCode TTManager::updateBasic(AttrList *info, AttrList *condition,
 				attName = (char *)malloc(strlen(iter));
 				
 				sscanf(iter, "%s =", attName);
-				attVal = strstr(iter, "= ");
+				attVal = (char*)strstr(iter, "= ");
 				attVal += 2;			
 
 					// change smth=null (in classad) to smth is null (in sql)

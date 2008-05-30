@@ -38,7 +38,7 @@ char*
 get_full_hostname( const char* host, struct in_addr* sin_addrp ) 
 {
 	struct hostent *host_ptr;
-	char* tmp;
+	char const *tmp;
     char **pptr;
     struct in_addr *inaddr;
 	bool have_full = false;

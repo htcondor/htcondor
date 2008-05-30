@@ -24,7 +24,7 @@
 // keep this function in sync with filename_split() in filename_tools.c
 int filename_split( const char *path, MyString &dir, MyString &file )
 {
-	char *last_slash;
+	char const *last_slash;
 
 	last_slash = strrchr(path,DIR_DELIM_CHAR);
 	if(last_slash) {

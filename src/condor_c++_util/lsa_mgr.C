@@ -350,7 +350,7 @@ lsa_mgr::loadDataFromRegistry() {
 			}
 			
 		} else {
-			DataBuffer->Buffer = (USHORT*) DataOut.pbData;
+			DataBuffer->Buffer = (PWSTR) DataOut.pbData;
 			DataBuffer->Length = (USHORT) DataOut.cbData;
 		}
 		
@@ -420,7 +420,7 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
     }
 
 
-	lsaString->Buffer = (USHORT*)DataOut.pbData;
+	lsaString->Buffer = (PWSTR)DataOut.pbData;
 	lsaString->Length = (USHORT)DataOut.cbData;
 
 	dprintf(D_FULLDEBUG, "Attempting to store %d bytes to reg key...\n",

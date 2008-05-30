@@ -24,6 +24,9 @@
 
 #define VC_EXTRALEAN		// Exclude rarely-used stuff from Windows headers
 
+#define _WIN32_WINNT 0x0500
+#define WINVER 0x0500
+
 #include <afxwin.h>         // MFC core and standard components
 #include <afxext.h>         // MFC extensions
 #include <afxtempl.h>			  // MFC template classes

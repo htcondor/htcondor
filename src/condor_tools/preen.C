@@ -323,7 +323,7 @@ is_ckpt_file( const char *name )
 inline int
 grab_val( const char *str, const char *pattern )
 {
-	char	*ptr;
+	char const *ptr;
 
 	if( (ptr = strstr(str,pattern)) ) {
 		return atoi(ptr + strlen(pattern) );

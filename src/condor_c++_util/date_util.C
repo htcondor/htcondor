@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#include "date_util.h"
 #include "condor_common.h"
+#include "date_util.h"
 #include <math.h>
   
 //

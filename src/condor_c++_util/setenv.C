@@ -50,8 +50,8 @@ int SetEnv( const char *key, const char *value)
 #ifdef WIN32
 	if ( !SetEnvironmentVariable(key, value) ) {
 		dprintf(D_ALWAYS,
-				"SetEnvironmentVariable failed, errno=%d\n",
-				GetLastError());
+			"SetEnv(%s, %s): SetEnvironmentVariable failed, "
+			"errno=%d\n", key, value, GetLastError());
 		return FALSE;
 	}
 #else
@@ -132,8 +132,8 @@ int UnsetEnv( const char *env_var )
 #ifdef WIN32
 	if ( !SetEnvironmentVariable(env_var, NULL) ) {
 		dprintf(D_ALWAYS,
-				"SetEnvironmentVariable failed, errno=%d\n",
-				GetLastError());
+			"UnsetEnv(%s): SetEnvironmentVariable failed, errno=%d\n",
+			env_var, GetLastError());
 		return FALSE;
 	}
 #else

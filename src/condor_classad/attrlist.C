@@ -2449,7 +2449,7 @@ bool AttrList::IsExternalReference(const char *name, char **simplified_name) con
 		is_external = false;
 	}
 
-	seperator = strchr(name,'.');
+	seperator = (char*)strchr(name,'.');
 
 	// We have a prefix, so we examine it. 
 	if (seperator) {

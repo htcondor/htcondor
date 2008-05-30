@@ -6204,9 +6204,18 @@ int DaemonCore::Create_Process(
 	// we do _not_ want our child to inherit our file descriptors
 	// unless explicitly requested.  so, set the underlying handle
 	// of all files opened via the C runtime library to non-inheritable.
+	//
+	// TODO: find a way to do this properly for all types of handles
+	// and for the total number of possible handles (and all types: 
+	// files, pipes, etc.)... and if it's even required (see if _fopen 
+	// sets inherit option... actually inherit option comes from 
+	// CreateProcess, we should be enumerating all open handles... 
+	// see sysinternals handles app for insights).
+	/*
 	for (i = 0; i < 100; i++) {
 		SetFDInheritFlag(i,FALSE);
 	}
+	*/
 
 	// handle re-mapping of stdout,in,err if desired.  note we just
 	// set all our file handles to non-inheritable, so for any files
