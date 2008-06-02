@@ -28,47 +28,47 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added a new feature to the DAGMan language called ``splicing''. Please
+\item Added a new feature to the DAGMan language called splicing. Please
 read section~\ref{sec:DAGSplicing} on page \pageref{sec:DAGSplicing}.
 
-\item The BIND\_ALL\_INTERFACES knob now defaults to true.
-
-\item The PrepareJobHook can now modify the job ad before execution.
+\item The Prepare Job Hook can now modify the job ClassAd before execution.
 For a complete description of the new hook system, read
 section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks}.
 
-\item Condor now coerces the result of \$\$([]) expressions in
-submit files to strings.  This means that submit files can do simple 
-math.  For example, you can describe a command-line argument as:
+\item Condor now coerces the result of \$\$([]) expressions within
+submit description files to strings.
+This means that submit files can do simple arithmetic.
+For example, you can describe a command-line argument as:
 
 arguments = \$\$([\$(PROCESS)+100])
 
-and condor\_submit will expand the argument to be the expected
-value.
+and \Condor{submit} will expand the argument to be the expected value.
 
-\item Condor daemons now periodically update the ctime of their
-log files, instead of the mtime, as they used to.  At startup, the
-daemons use this ctime to determine how long they may have been down.
+\item Condor daemons now periodically update the \Code{ctime} of their
+  log files, instead of the \Code{mtime}, as they previously did.
+  At start up, the daemons use this \Code{ctime} 
+  to determine how long they may have been down.
 
 \item Added the capability to the \Condor{startd} to allow it to power 
   down machines based a user specified policy.  See 
   section~\ref{sec:power-man} on \pageref{sec:power-man} on
-  ``Power Management'' for more details.
+  Power Management for more details.
 
 \item \Condor{off} now supports the \Opt{-peaceful} option for the
-schedd, in addition to the existing support that already existed for
-the startd.  When peacefully shut down, the schedd stops starting new
-jobs and waits for all running jobs to finish before exiting.  The
-default shutdown behavior is still \Opt{-graceful}, which checkpoints
-and stops all running standard universe jobs and gracefully
-disconnects from other types of jobs in the hopes of later restarting
-and reconnecting to them without any disturbance to the running job.
+  \Condor{schedd}, in addition to the existing support that already existed for
+  the \Condor{startd}.  When peacefully shut down,
+  the \Condor{schedd} stops starting new
+  jobs and waits for all running jobs to finish before exiting.  The
+  default shut down behavior is still \Opt{-graceful}, which checkpoints
+  and stops all running standard universe jobs and gracefully
+  disconnects from other types of jobs in the hopes of later restarting
+  and reconnecting to them without any disturbance to the running job.
 
 \item The \Condor{job\_router} now supports deletion of attributes
-when transforming job ClassAds from vanilla to grid universe.  It also
-behaves more deterministically when choosing from multiple possible
-routes.  Rather than picking one randomly, it simply uses round-robin
-scheduling.
+  when transforming job ClassAds from vanilla to grid universe.  It also
+  behaves more deterministically when choosing from multiple possible
+  routes.  Rather than picking one at random, it uses a round-robin
+  selection.
 
 \end{itemize}
 
@@ -76,35 +76,42 @@ scheduling.
 
 \begin{itemize}
 
-\item Added the \MacroNI{HIBERNATE\_CHECK\_INTERVAL} macro, which, if
-  set to a non-zero value, enables the \Condor{startd} to place the 
+\item The existing \Macro{BIND\_ALL\_INTERFACES} configuration variable
+  now defaults to \Expr{True}.
+
+\item Added the \Macro{HIBERNATE} expression, which, when evaluated in
+  the context of each slot, determines if a machine should enter
+  a low power state. See page~\pageref{param:Hibernate} for more 
+  information.
+
+\item Added the \Macro{HIBERNATE\_CHECK\_INTERVAL} configuration variable,
+  which, if set to a non-zero value, enables the \Condor{startd} to place the 
   machine in a low power state based on the evaluation of the
   \MacroNI{HIBERNATE} expression.  See 
   page~\pageref{param:HibernateCheckInterval} for more information.
 
-\item Added the \MacroNI{HIBERNATE} expression, which, when evaluated in
-  the context of each slot, determines if it a machine should enter
-  a low power state. See page~\pageref{param:Hibernate} for more 
-  information.
+\item The existing \Macro{VALID\_SPOOL\_FILES} configuration variable
+  now automatically includes \File{SCHEDD.lock},
+  the lock file used for high availability \Condor{schedd} fail over.
+  Other high availability lock files are not currently included.
 
-\item \Macro{VALID\_SPOOL\_FILES} now automatically includes "SCHEDD.lock",
-the lock file used for high availability \Condor{schedd} fail over.  Other
-high availability lock files are not currently included.
+\item Added the \Macro{SEC\_DEFAULT\_AUTHENTICATION\_TIMEOUT} configuration
+  variable, where the definition \Expr{DEFAULT} may be replaced
+  by the usual list of contexts for security settings
+  (for example, \Expr{CLIENT}, \Expr{READ}, and \Expr{WRITE}).
+  This specifies the number of seconds that Condor should
+  allow for the authentication of network connections to complete.
+  Previously, GSI authentication was hard-coded to allow 5 minutes
+  for authentication.
+  Now it uses the same default as all other methods: 20 seconds.
 
-\item Added \MacroNI{SEC\_DEFAULT\_AUTHENTICATION\_TIMEOUT}, where
-\emph{DEFAULT} may be replaced by the usual list of contexts for
-security settings (e.g. \MacroNI{CLIENT}, \MacroNI{READ},
-\MacroNI{WRITE}).  This specifies the number of seconds Condor should
-allow for authentication of network connections to complete.  Previously,
-GSI authentication was hard-coded to allow 5 minutes for authentication.
-Now it uses the same default as all other methods: 20 seconds.
-
-\item Added \MacroNI{STARTER\_UPDATE\_INTERVAL\_TIMESLICE}.  This
-specifies the highest fraction of time the starter should spend
-collecting monitoring information about the job, such as disk usage.
-It defaults to 0.1.  If checking the disk usage of the job takes a
-long time, the starter will monitor less frequently than specified by
-\MacroNI{STARTER\_UPDATE\_INTERVAL}.
+\item Added the \Macro{STARTER\_UPDATE\_INTERVAL\_TIMESLICE} configuration
+  variable, which
+  specifies the highest fraction of time that the \Condor{starter} should spend
+  collecting monitoring information about the job, such as disk usage.
+  It defaults to 0.1.  If checking the disk usage of the job takes a
+  long time, the \Condor{starter} will monitor less frequently than 
+  specified by \MacroNI{STARTER\_UPDATE\_INTERVAL}.
 
 \end{itemize}
 
@@ -112,33 +119,35 @@ long time, the starter will monitor less frequently than specified by
 
 \begin{itemize}
 
-\item Fixed bug in Java universe where each slot would be told to
-potentially use all the memory on the machine.  Now, each java vm
-gets the physical memory divided by the number of slots.
+\item Fixed a bug in Java universe where each slot would be told to
+  potentially use all the memory on the machine.  Now, each JVM 
+  receives the physical memory divided by the number of slots.
 
 \item On Windows, slot users would sometimes show up in the Windows Welcome
-  Screen.  This has now been resolved (but the slot users need to be manually
+  Screen.  This has now been resolved.
+  The slot users need to be manually
   removed for this to take effect and the machine may need to be rebooted for
-  the setting to be honored).
+  the setting to be honored.
 
-\item Fixed bug in classad string function, so that it now properly
-converts integers and floats to their string representation.
+\item Fixed a bug in the ClassAd \Procedure{string} function.
+  The function now properly converts integers and floats
+  to their string representation.
 
-\item Windows Installer is now completely internationalized: it will no 
+\item The Windows Installer is now completely internationalized: it will no 
   longer fail to install because of a missing "Users" group; instead, it
   will use the regionally appropriate group.
 
 \item Interoperability with Samba (as a PDC) has been improved.  Condor 
   uses a fast form of login during credential validation.  Unfortunately, 
   this login procedure fails under Samba, even if the credentials are 
-  valid.  The new behavior is to attempt the fast login and, on failure, 
+  valid.  The new behavior is to attempt the fast login, and on failure, 
   fall back to the slower form.
 
 \item Windows slot users no longer have the Batch Privilege added, nor 
   does Condor first attempt a Batch login for slot users.  This was 
   causing permission problems on hardened versions of Windows, such 
   as Windows Sever 2003, in that not interactive users lacked the 
-  permission to run batch files (via the cmd.exe tool). This affected 
+  permission to run batch files (via the \Prog{cmd.exe} tool). This affected 
   any user submitting jobs that used batch files as the executable.
 
 \end{itemize}
@@ -156,7 +165,7 @@ converts integers and floats to their string representation.
 \begin{itemize}
 
 \item The manual now contains Windows installation instructions for
-  controlling the configuration of VM Universe.
+  controlling the configuration for the \SubmitCmd{vm} universe.
 
 \end{itemize}
 
