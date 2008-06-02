@@ -113,7 +113,7 @@ struct OwnerData {
 class match_rec: public ClaimIdParser
 {
  public:
-    match_rec(char*, char*, PROC_ID*, const ClassAd*, char*, char* pool);
+    match_rec(char*, char*, PROC_ID*, const ClassAd*, char*, char* pool,bool is_dedicated);
 	~match_rec();
 
     char*   		peer;
@@ -138,6 +138,7 @@ class match_rec: public ClaimIdParser
 	char*			user;
 	char*			pool;		// negotiator hostname if flocking; else NULL
 	bool			sent_alive_interval;
+	bool            is_dedicated; // true if this match belongs to ded. sched.
 	bool			allocated;	// For use by the DedicatedScheduler
 	bool			scheduled;	// For use by the DedicatedScheduler
 	bool			needs_release_claim;
@@ -291,6 +292,7 @@ class Scheduler : public Service
     int         	DelMrec(char const*);
     int         	DelMrec(match_rec*);
 	match_rec*      FindMrecByJobID(PROC_ID);
+	match_rec*      FindMrecByClaimID(char const *claim_id);
 	void            SetMrecJobID(match_rec *rec, int cluster, int proc);
 	void            SetMrecJobID(match_rec *match, PROC_ID job_id);
 	shadow_rec*		FindSrecByPid(int);
@@ -676,8 +678,8 @@ private:
 // Other prototypes
 int		get_job_prio(ClassAd *ad, bool compute_autoclusters = false);
 extern void set_job_status(int cluster, int proc, int status);
-extern bool claimStartd( match_rec* mrec, bool is_dedicated );
-extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad, bool is_dedicated );
+extern bool claimStartd( match_rec* mrec );
+extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);
 extern bool sendAlive( match_rec* mrec );
 extern void fixReasonAttrs( PROC_ID job_id, JobAction action );
 extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,  

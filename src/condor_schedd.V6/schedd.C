@@ -178,7 +178,8 @@ dc_reconfig()
 
 
 match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id, 
-					  const ClassAd *match, char *the_user, char *my_pool ):
+					  const ClassAd *match, char *the_user, char *my_pool,
+					  bool is_dedicated_arg ):
 	ClaimIdParser(claim_id)
 {
 	peer = strdup( p );
@@ -206,6 +207,7 @@ match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id,
 		pool = NULL;
 	}
 	sent_alive_interval = false;
+	this->is_dedicated = is_dedicated_arg;
 	allocated = false;
 	scheduled = false;
 	needs_release_claim = false;
@@ -5263,18 +5265,16 @@ Scheduler::vacate_service(int, Stream *sock)
 void
 Scheduler::contactStartd( ContactStartdArgs* args ) 
 {
-	if( args->isDedicated() ) {
-			// If this was a match for the dedicated scheduler, let it
-			// handle it from here.
-		dedicated_scheduler.contactStartd( args );
-		return;
-	}
-
 	dprintf( D_FULLDEBUG, "In Scheduler::contactStartd()\n" );
 
-	HashKey mrec_key(args->claimId());
 	match_rec *mrec = NULL;
-	matches->lookup(mrec_key,mrec);
+
+	if( args->isDedicated() ) {
+		mrec = dedicated_scheduler.FindMrecByClaimID(args->claimId());
+	}
+	else {
+		mrec = scheduler.FindMrecByClaimID(args->claimId());
+	}
 
 	if(!mrec) {
 		// The match must have gotten deleted during the time this
@@ -5287,7 +5287,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 			 mrec->user, mrec->peer, mrec->cluster,
 			 mrec->proc ); 
 
-	if( ! claimStartd(mrec, false) ) {
+	if( ! claimStartd(mrec) ) {
 		DelMrec( mrec );
 		return;
 	}
@@ -5295,7 +5295,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 
 
 bool
-claimStartd( match_rec* mrec, bool is_dedicated )
+claimStartd( match_rec* mrec )
 {
 	DCStartd matched_startd ( mrec->peer, NULL );
 	Sock* sock = NULL;
@@ -5312,18 +5312,11 @@ claimStartd( match_rec* mrec, bool is_dedicated )
 	char to_startd[256];
 	sprintf ( to_startd, "to startd %s", mrec->peer );
 
-	int reg_rc;
-	if( is_dedicated ) {
-		reg_rc = daemonCore->
-			Register_Socket( sock, "<Startd Contact Socket>",
-			  (SocketHandlercpp)&DedicatedScheduler::startdContactConnectHandler,
-			  to_startd, &dedicated_scheduler, ALLOW );
-	} else {
-		reg_rc = daemonCore->
+	int reg_rc = daemonCore->
 			Register_Socket( sock, "<Startd Contact Socket>",
 			  (SocketHandlercpp)&Scheduler::startdContactConnectHandler,
 			  to_startd, &scheduler, ALLOW );
-	}
+
 	if(reg_rc < 0) {
 		dprintf( D_ALWAYS,
 		         "Failed to register socket to contact startd at %s.  "
@@ -5344,7 +5337,7 @@ claimStartd( match_rec* mrec, bool is_dedicated )
 
 
 bool
-claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad, bool is_dedicated )
+claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad )
 {
 	DCStartd matched_startd ( mrec->peer, NULL );
 
@@ -5450,17 +5443,11 @@ claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad, bool is_dedi
 	sprintf ( to_startd, "to startd %s", mrec->peer );
 
 	daemonCore->Cancel_Socket( sock ); //Allow us to re-register this socket.
-	if( is_dedicated ) {
-		daemonCore->
-			Register_Socket( sock, "<Startd Contact Socket>",
-			  (SocketHandlercpp)&DedicatedScheduler::startdContactSockHandler,
-			  to_startd, &dedicated_scheduler, ALLOW );
-	} else {
-		daemonCore->
-			Register_Socket( sock, "<Startd Contact Socket>",
-			  (SocketHandlercpp)&Scheduler::startdContactSockHandler,
-			  to_startd, &scheduler, ALLOW );
-	}
+	daemonCore->
+		Register_Socket( sock, "<Startd Contact Socket>",
+		  (SocketHandlercpp)&Scheduler::startdContactSockHandler,
+		  to_startd, &scheduler, ALLOW );
+
 	ASSERT( daemonCore->Register_DataPtr( mrec ) );
 
 	scheduler.addRegContact();
@@ -5480,7 +5467,13 @@ Scheduler::startdContactConnectHandler( Stream *sock )
 
 		// We need an expanded job ad here so that the startd can see
 		// NegotiatorMatchExpr values.
-	ClassAd *jobAd = GetJobAd( mrec->cluster, mrec->proc, true );
+	ClassAd *jobAd;
+	if( mrec->is_dedicated ) {
+		jobAd = dedicated_scheduler.GetMatchRequestAd( mrec );
+	}
+	else {
+		jobAd = GetJobAd( mrec->cluster, mrec->proc, true );
+	}
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS,
 				 "failed to find/expand job %d.%d after connecting to "
@@ -5490,7 +5483,7 @@ Scheduler::startdContactConnectHandler( Stream *sock )
 		return KEEP_STREAM; // socket was already deleted in DelMrec()
 	}
 
-	if( !claimStartdConnected( (Sock *)sock, mrec, jobAd, false ) ) {
+	if( !claimStartdConnected( (Sock *)sock, mrec, jobAd ) ) {
 		DelMrec( mrec );
 		delete jobAd;
 		return KEEP_STREAM; // socket was already deleted in DelMrec()
@@ -5574,7 +5567,14 @@ Scheduler::startdContactSockHandler( Stream *sock )
 	// to Cancel_Socket.
 	mrec->request_claim_sock = NULL;
 
-	StartJob( mrec );
+	if( mrec->is_dedicated ) {
+			// Set a timer to call handleDedicatedJobs() when we return,
+			// since we might be able to spawn something now.
+		dedicated_scheduler.handleDedicatedJobTimer( 0 );
+	}
+	else {
+		StartJob( mrec );
+	}
 
 	rescheduleContactQueue();
 
@@ -11070,14 +11070,13 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 				   char *user, char *pool)
 {
 	match_rec *rec;
-	char* addr;
 
 	if(!id || !peer)
 	{
 		dprintf(D_ALWAYS, "Null parameter --- match not added\n"); 
 		return NULL;
 	} 
-	rec = new match_rec(id, peer, jobId, my_match_ad, user, pool);
+	rec = new match_rec(id, peer, jobId, my_match_ad, user, pool, false);
 	if(!rec)
 	{
 		EXCEPT("Out of memory!");
@@ -11137,49 +11136,7 @@ Scheduler::DelMrec(char const* id)
 		return -1;
 	}
 
-	if( rec->request_claim_sock ) {
-			// NOTE: the value passed to Register_DataPtr() for this
-			// registered socket is just a pointer to this match_rec,
-			// so there is no need to worry about deallocating that.
-		daemonCore->Cancel_Socket( rec->request_claim_sock );
-		delete rec->request_claim_sock;
-		rec->request_claim_sock = NULL;
-		rescheduleContactQueue();
-	}
-
-	// release the claim on the startd
-	if( rec->needs_release_claim) {
-		send_vacate(rec, RELEASE_CLAIM);
-	}
-
-	dprintf( D_ALWAYS, "Match record (%s, %d, %d) deleted\n",
-			 rec->peer, rec->cluster, rec->proc ); 
-	dprintf( D_FULLDEBUG, "ClaimId of deleted match: %s\n", rec->publicClaimId() );
-	matches->remove(key);
-
-	PROC_ID jobId;
-	jobId.cluster = rec->cluster;
-	jobId.proc = rec->proc;
-	matchesByJobID->remove(jobId);
-
-		// fill any authorization hole we made for this match
-	if (rec->auth_hole_id != NULL) {
-		IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
-		if (!ipv->FillHole(DAEMON, *rec->auth_hole_id)) {
-			dprintf(D_ALWAYS,
-			        "WARNING: IpVerify::FillHole error for %s\n",
-			        rec->auth_hole_id->Value());
-		}
-		delete rec->auth_hole_id;
-	}
-
-		// Remove this match from the associated shadowRec.
-	if (rec->shadowRec)
-		rec->shadowRec->match = NULL;
-	delete rec;
-	
-	numMatches--; 
-	return 0;
+	return DelMrec( rec );
 }
 
 
@@ -11191,7 +11148,57 @@ Scheduler::DelMrec(match_rec* match)
 		dprintf(D_ALWAYS, "Null parameter --- match not deleted\n");
 		return -1;
 	}
-	return DelMrec(match->claimId());
+
+	if( match->is_dedicated ) {
+			// This is a convenience for code that is shared with
+			// DedicatedScheduler, such as contactStartd().
+		return dedicated_scheduler.DelMrec( match );
+	}
+
+	if( match->request_claim_sock ) {
+			// NOTE: the value passed to Register_DataPtr() for this
+			// registered socket is just a pointer to this match_rec,
+			// so there is no need to worry about deallocating that.
+		daemonCore->Cancel_Socket( match->request_claim_sock );
+		delete match->request_claim_sock;
+		match->request_claim_sock = NULL;
+		rescheduleContactQueue();
+	}
+
+	// release the claim on the startd
+	if( match->needs_release_claim) {
+		send_vacate(match, RELEASE_CLAIM);
+	}
+
+	dprintf( D_ALWAYS, "Match record (%s, %d, %d) deleted\n",
+			 match->peer, match->cluster, match->proc ); 
+	dprintf( D_FULLDEBUG, "ClaimId of deleted match: %s\n", match->publicClaimId() );
+	HashKey key(match->claimId());
+	matches->remove(key);
+
+	PROC_ID jobId;
+	jobId.cluster = match->cluster;
+	jobId.proc = match->proc;
+	matchesByJobID->remove(jobId);
+
+		// fill any authorization hole we made for this match
+	if (match->auth_hole_id != NULL) {
+		IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
+		if (!ipv->FillHole(DAEMON, *match->auth_hole_id)) {
+			dprintf(D_ALWAYS,
+			        "WARNING: IpVerify::FillHole error for %s\n",
+			        match->auth_hole_id->Value());
+		}
+		delete match->auth_hole_id;
+	}
+
+		// Remove this match from the associated shadowRec.
+	if (match->shadowRec)
+		match->shadowRec->match = NULL;
+	delete match;
+	
+	numMatches--; 
+	return 0;
 }
 
 shadow_rec*
@@ -11284,6 +11291,13 @@ Scheduler::FindMrecByJobID(PROC_ID job_id) {
 		return NULL;
 	}
 	return match;
+}
+
+match_rec *
+Scheduler::FindMrecByClaimID(char const *claim_id) {
+	match_rec *rec = NULL;
+	matches->lookup(claim_id, rec);
+	return rec;
 }
 
 void

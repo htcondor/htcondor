@@ -1189,7 +1189,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				// "DedicatedScheduler" owner, which is why we call
 				// owner() here...
 			mrec = new match_rec( claim_id, sinful, &id,
-			                       my_match_ad, owner(), negotiator_name );
+			                       my_match_ad, owner(), negotiator_name, true );
 
 			machine_name = NULL;
 			if( ! mrec->my_match_ad->LookupString(ATTR_NAME, &machine_name) ) {
@@ -1288,136 +1288,6 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 	EXCEPT( "while(1) loop exited!" );
 	return NR_ERROR;
 }
-
-
-/*
-  This function is used to request a claim on a startd we're supposed
-  to be able to control.  It creates a match record for it, stores
-  that in our table, then calls claimStartd() to actually do the
-  work of the claiming protocol.
-*/
-void
-DedicatedScheduler::contactStartd( ContactStartdArgs *args )
-{
-	HashKey mrec_key(args->claimId());
-	match_rec *mrec = NULL;
-	all_matches_by_id->lookup(mrec_key, mrec);
-
-	dprintf( D_FULLDEBUG, "In DedicatedScheduler::contactStartd()\n" );
-
-	if(!mrec) {
-		// The match must have gotten deleted during the time this
-		// operation was queued.
-		dprintf( D_FULLDEBUG, "no match record found for %s", args->claimId() );
-		return;
-	}
-
-
-    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", mrec->publicClaimId(), 
-			 mrec->user, mrec->peer, mrec->cluster,
-			 mrec->proc ); 
-
-	if( !claimStartd(mrec, true) ) {
-		DelMrec(mrec);
-	}
-}
-
-
-int
-DedicatedScheduler::startdContactConnectHandler( Stream *sock )
-{
-	match_rec *mrec = (match_rec *)daemonCore->GetDataPtr();
-
-	ASSERT( mrec );
-	ASSERT( mrec->request_claim_sock == sock );
-
-	if(!claimStartdConnected( (Sock *)sock, mrec, &dummy_job, true )) {
-		DelMrec(mrec);
-		return KEEP_STREAM; // socket was already deleted in DelMrec()
-	}
-
-	// The stream will be closed when we get a callback
-	// in startdContactSockHandler.  Keep it open for now.
-	return KEEP_STREAM;
-}
-
-// Before each bad return we check to see if there's a pending call in
-// the contact queue.
-#define BAILOUT                         \
-		DelMrec(mrec);					\
-		return KEEP_STREAM; // sock was already deleted in DelMrec()
-
-int
-DedicatedScheduler::startdContactSockHandler( Stream *sock )
-{
-	int reply;
-		// all return values are non - KEEP_STREAM.  
-		// Therefore, DaemonCore will cancel this socket at the
-		// end of this function, which is exactly what we want!
-
-	match_rec *mrec = (match_rec *) daemonCore->GetDataPtr();
-
-	ASSERT( mrec );
-	ASSERT( mrec->request_claim_sock == sock );
-
-		// since all possible returns from here result in the socket being
-		// cancelled, we begin by decrementing the # of contacts.
-	scheduler.delRegContact();
-
-	dprintf ( D_FULLDEBUG,
-			  "Reading response for request to claim %s for job %d.%d.\n",
-			  mrec->publicClaimId(), mrec->cluster, mrec->proc );
-
-	mrec->setStatus( M_CLAIMED ); // we assume things will work out.
-
-	// Now, we set the timeout on the socket to 1 second.  Since we 
-	// were called by as a Register_Socket callback, this should not 
-	// block if things are working as expected.  
-	// However, if the Startd wigged out and sent a 
-	// partial int or some such, we cannot afford to block. -Todd 3/2000
-	sock->timeout(1);
-
- 	if( !sock->rcv_int(reply, TRUE) ) {
-		dprintf( D_ALWAYS, "Response problem from startd on %s (match %s).\n",mrec->peer,mrec->publicClaimId() );	
-		BAILOUT;
-	}
-
-	if( reply == OK ) {
-		dprintf (D_PROTOCOL, "(Request was accepted)\n");
-		if( !mrec->sent_alive_interval ) {
-	 		sock->encode();
-			if( !sock->put(scheduler.dcSockSinful()) ) {
-				dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n");
-				BAILOUT;
-			}
-			if( !sock->snd_int(scheduler.aliveInterval(), TRUE) ) {
-				dprintf( D_ALWAYS, "Couldn't send aliveInterval to startd.\n");
-				BAILOUT;
-			}
-		}
-	} else if( reply == NOT_OK ) {
-		dprintf( D_PROTOCOL, "(Request was NOT accepted)\n" );
-		BAILOUT;
-	} else {
-		dprintf( D_ALWAYS, "Unknown reply from startd.\n");
-		BAILOUT;
-	}
-
-	scheduler.checkContactQueue();
-
-		// Set a timer to call handleDedicatedJobs() when we return,
-		// since we might be able to spawn something now.
-	handleDedicatedJobTimer( 0 );
-
-		// The claim has been successfully requested, and this sock is
-		// about to be closed, so remove the saved reference to it
-		// from the match_rec.
-	mrec->request_claim_sock = NULL;
-
-	return TRUE;
-}
-#undef BAILOUT
-
 
 void
 DedicatedScheduler::handleDedicatedJobTimer( int seconds )
@@ -3425,6 +3295,8 @@ DedicatedScheduler::DelMrec( char const* id )
 		return false;
 	}
 
+	ASSERT( rec->is_dedicated );
+
 	if (all_matches_by_id->remove(key) < 0) {
 		dprintf(D_ALWAYS, "DelMrec::all_matches_by_id->remove < 0\n");	
 	}
@@ -4267,7 +4139,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 
 			match_rec *mrec = 
 				new match_rec(claim, sinful, &id,
-						  machineAd, owner(), NULL);
+						  machineAd, owner(), NULL, true);
 
 			mrec->setStatus(M_CLAIMED);
 
@@ -4323,6 +4195,12 @@ DedicatedScheduler::FindMRecByJobID(PROC_ID job_id) {
 	
 }
 
+match_rec *
+DedicatedScheduler::FindMrecByClaimID(char const *claim_id) {
+	match_rec *rec = NULL;
+	all_matches_by_id->lookup(claim_id, rec);
+	return rec;
+}
 
 
 //////////////////////////////////////////////////////////////
@@ -4557,4 +4435,10 @@ RankSorter(const void *ptr1, const void *ptr2) {
 	return n1->cluster_id - n2->cluster_id;
 }
 
+ClassAd *
+DedicatedScheduler::GetMatchRequestAd( match_rec * /*mrec*/ ) {
+	ClassAd *ad = new ClassAd();
+	*ad = dummy_job;
+	return ad;
+}
 
