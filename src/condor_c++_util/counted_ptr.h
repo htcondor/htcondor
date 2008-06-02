@@ -123,6 +123,8 @@ public:
     X* get()        const throw()   {return itsCounter ? itsCounter->ptr : 0;}
     bool unique()   const throw()
         {return (itsCounter ? itsCounter->count == 1 : true);}
+	bool is_null()	const throw()
+		{return (((!itsCounter) || (itsCounter->count == 0)) ? true : false);}
 
 	int operator== (const counted_ptr& r)
 	{

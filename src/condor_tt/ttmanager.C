@@ -157,6 +157,9 @@ TTManager::config(bool reconfig)
 
 	maintain_db_conn = param_boolean("QUILL_MAINTAIN_DB_CONN", true);
 
+	bool maintain_soft_state = param_boolean("QUILL_MAINTAIN_SOFT_STATE", true);
+	AttributeCache.setMaintainSoftState(maintain_soft_state);
+
 	jqDBManager.config(reconfig);
 	jqDBManager.init();
 
@@ -544,7 +547,7 @@ TTManager::event_maintain()
 				delete line_buf;
 				line_buf = new MyString();
 				continue;
-			}
+			}			
 
 			if(firststmt) {
 				if (dt == T_PGSQL) {
@@ -556,6 +559,7 @@ TTManager::event_maintain()
 					goto DBERROR;
 				}
 				firststmt = false;
+				AttributeCache.clearAttributesTransaction();
 			}
 
 				// init the optype and eventtype
@@ -571,7 +575,7 @@ TTManager::event_maintain()
 				} 				
 
 				if (strcasecmp(eventtype, "Machines") == 0) {		
-					if  (insertMachines(ad) == QUILL_FAILURE) 
+					if  (insertMachines(ad) == QUILL_FAILURE)   // has vert
 						goto DBERROR;
 				} else if (strcasecmp(eventtype, "Events") == 0) {
 					if  (insertEvents(ad) == QUILL_FAILURE) 
@@ -586,13 +590,13 @@ TTManager::event_maintain()
 					if  (insertHistoryJob(ad) == QUILL_FAILURE) 
 						goto DBERROR;
 				} else if (strcasecmp(eventtype, "ScheddAd") == 0) {
-					if  (insertScheddAd(ad) == QUILL_FAILURE) 
+					if  (insertScheddAd(ad) == QUILL_FAILURE)  // has vert
 						goto DBERROR;	
 				} else if (strcasecmp(eventtype, "MasterAd") == 0) {
-					if  (insertMasterAd(ad) == QUILL_FAILURE) 
+					if  (insertMasterAd(ad) == QUILL_FAILURE)  // has vert
 						goto DBERROR;
 				} else if (strcasecmp(eventtype, "NegotiatorAd") == 0) {
-					if  (insertNegotiatorAd(ad) == QUILL_FAILURE) 
+					if  (insertNegotiatorAd(ad) == QUILL_FAILURE) // has vert
 						goto DBERROR;
 				} else if (strcasecmp(eventtype, "Runs") == 0) {
 					if  (insertRuns(ad) == QUILL_FAILURE) 
@@ -648,6 +652,7 @@ TTManager::event_maintain()
 				dprintf(D_ALWAYS, "End transaction --- Error\n");
 				goto DBERROR;
 			}
+			AttributeCache.commitAttributesTransaction();
 		}
 
 		if(filesqlobj) {
@@ -865,7 +870,7 @@ TTManager::xml_maintain()
 
 
 QuillErrCode TTManager::insertMachines(AttrList *ad) {
-	HashTable<MyString, MyString> newClAd(200, attHashFunction, updateDuplicateKeys);
+	AttributeHashSmartPtrType newClAd = AttributeCache.newAttributeHash(); // for holding attributes going to vertical table
 	MyString sql_stmt;
 	MyString classAd;
 	const char *iter;
@@ -1076,7 +1081,7 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 				aName = attName;
 				aVal = attVal;
 				// insert into new ClassAd too (since this needs to go into DB)
-				newClAd.insert(aName, aVal);
+				newClAd->insert(aName, aVal);
 				if (inlist.IsEmpty()) {					
 					inlist.sprintf("('%s'", attName);
 				} else {
@@ -1271,9 +1276,23 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 			return QUILL_FAILURE;
 		}
 	}
-	newClAd.startIterations();
-	while (newClAd.iterate(aName, aVal)) {
-		 
+	 
+		// Put this set of attributes into our soft-state transaction cache.
+		// This transaction cache will be committed when we commit to the 
+		// database.
+	AttributeCache.insertTransaction(MACHINE_HASH, machine_id);
+
+	newClAd->startIterations();
+	while (newClAd->iterate(aName, aVal)) {
+
+			// See if this attribute name/value pair was previously committed
+			// into the database.  If so, continue on to the next attribute.
+		if ( AttributeCache.alreadyCommitted(aName, aVal) ) {
+			// skip
+			dprintf(D_FULLDEBUG,"Skipping update of unchanged attr %s\n",aName.Value());
+			continue;
+		}
+
 			// we use binded update for oracle to avoid repeated parse
 		if (dt == T_ORACLE) {
 
@@ -1470,7 +1489,7 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 }
 
 QuillErrCode TTManager::insertScheddAd(AttrList *ad) {
-	HashTable<MyString, MyString> newClAd(200, attHashFunction, updateDuplicateKeys); // for holding attributes going to vertical table
+	AttributeHashSmartPtrType newClAd = AttributeCache.newAttributeHash(); // for holding attributes going to vertical table
 
 	MyString sql_stmt;
 	MyString classAd;
@@ -1592,7 +1611,7 @@ QuillErrCode TTManager::insertScheddAd(AttrList *ad) {
 				aVal = attVal;
 
 					// insert into new ClassAd to be inserted into DB
-				newClAd.insert(aName, aVal);				
+				newClAd->insert(aName, aVal);				
 
 					// build an inlist of the vertical attribute names
 				if (inlist.IsEmpty()) {
@@ -1702,9 +1721,23 @@ QuillErrCode TTManager::insertScheddAd(AttrList *ad) {
 		 return QUILL_FAILURE;
 	 }
 
+		// Put this set of attributes into our soft-state transaction cache.
+		// This transaction cache will be committed when we commit to the 
+		// database.
+	AttributeCache.insertTransaction(SCHEDD_HASH, daemonName);
+
 		 // insert the vertical attributes
-	 newClAd.startIterations();
-	 while (newClAd.iterate(aName, aVal)) {
+	 newClAd->startIterations();
+	 while (newClAd->iterate(aName, aVal)) {
+
+			// See if this attribute name/value pair was previously committed
+			// into the database.  If so, continue on to the next attribute.
+		if ( AttributeCache.alreadyCommitted(aName, aVal) ) {
+			// skip
+			dprintf(D_FULLDEBUG,"Skipping update of unchanged attr %s\n",aName.Value());
+			continue;
+		}
+
 
 		 if (dt == T_ORACLE) {
 			 int bndcnt = 0;
@@ -1832,7 +1865,7 @@ QuillErrCode TTManager::insertScheddAd(AttrList *ad) {
 }
 
 QuillErrCode TTManager::insertMasterAd(AttrList *ad) {
-	HashTable<MyString, MyString> newClAd(200, attHashFunction, updateDuplicateKeys); // for holding attributes going to vertical table
+	AttributeHashSmartPtrType newClAd = AttributeCache.newAttributeHash(); // for holding attributes going to vertical table
 
 	MyString sql_stmt;
 	MyString classAd;
@@ -1959,7 +1992,7 @@ QuillErrCode TTManager::insertMasterAd(AttrList *ad) {
 				aVal = attVal;
 
 					// insert into new ClassAd to be inserted into DB
-				newClAd.insert(aName, aVal);				
+				newClAd->insert(aName, aVal);				
 
 					// build an inlist of the vertical attribute names
 				if (inlist.IsEmpty()) {
@@ -2139,9 +2172,22 @@ QuillErrCode TTManager::insertMasterAd(AttrList *ad) {
 		 return QUILL_FAILURE;
 	 }	 
 
+		// Put this set of attributes into our soft-state transaction cache.
+		// This transaction cache will be committed when we commit to the 
+		// database.
+	AttributeCache.insertTransaction(MASTER_HASH, daemonName);
+
 		 // insert the vertical attributes
-	 newClAd.startIterations();
-	 while (newClAd.iterate(aName, aVal)) {
+	 newClAd->startIterations();
+	 while (newClAd->iterate(aName, aVal)) {
+
+ 			// See if this attribute name/value pair was previously committed
+			// into the database.  If so, continue on to the next attribute.
+		if ( AttributeCache.alreadyCommitted(aName, aVal) ) {
+			// skip
+			dprintf(D_FULLDEBUG,"Skipping update of unchanged attr %s\n",aName.Value());
+			continue;
+		}
 
 		 if (dt == T_ORACLE) {
 
@@ -2267,7 +2313,7 @@ QuillErrCode TTManager::insertMasterAd(AttrList *ad) {
 }
 
 QuillErrCode TTManager::insertNegotiatorAd(AttrList *ad) {
-	HashTable<MyString, MyString> newClAd(200, attHashFunction, updateDuplicateKeys); // for holding attributes going to vertical table
+	AttributeHashSmartPtrType newClAd = AttributeCache.newAttributeHash(); // for holding attributes going to vertical table
 
 	MyString sql_stmt;
 	MyString classAd;
@@ -2388,7 +2434,7 @@ QuillErrCode TTManager::insertNegotiatorAd(AttrList *ad) {
 				aVal = attVal;
 
 					// insert into new ClassAd to be inserted into DB
-				newClAd.insert(aName, aVal);				
+				newClAd->insert(aName, aVal);				
 
 					// build an inlist of the vertical attribute names
 				if (inlist.IsEmpty()) {
@@ -2499,9 +2545,23 @@ QuillErrCode TTManager::insertNegotiatorAd(AttrList *ad) {
 		 return QUILL_FAILURE;
 	 }	 
 
+ 		// Put this set of attributes into our soft-state transaction cache.
+		// This transaction cache will be committed when we commit to the 
+		// database.
+	AttributeCache.insertTransaction(NEGOTIATOR_HASH, daemonName);
+
 		 // insert the vertical attributes
-	 newClAd.startIterations();
-	 while (newClAd.iterate(aName, aVal)) {
+	 newClAd->startIterations();
+	 while (newClAd->iterate(aName, aVal)) {
+
+			// See if this attribute name/value pair was previously committed
+			// into the database.  If so, continue on to the next attribute.
+		if ( AttributeCache.alreadyCommitted(aName, aVal) ) {
+			// skip
+			dprintf(D_FULLDEBUG,"Skipping update of unchanged attr %s\n",aName.Value());
+			continue;
+		}
+
 		 sql_stmt.sprintf("INSERT INTO daemons_vertical (MyType, name, attr, val, lastreportedtime) SELECT 'Negotiator', '%s', '%s', '%s', %s FROM dummy_single_row_table WHERE NOT EXISTS (SELECT * FROM daemons_vertical WHERE MyType = 'Negotiator' AND name = '%s' AND attr = '%s')", daemonName.Value(), aName.Value(), aVal.Value(), lastReportedTime.Value(), daemonName.Value(), aName.Value());
 
 		 if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
@@ -3427,17 +3487,20 @@ void TTManager::handleErrorSqlLog()
 
 }
 
+
 static int file_checksum(char *filePathName, int fileSize, char *sum) {
-	int fd;
-	char data[4097];
 	Condor_MD_MAC *checker = new Condor_MD_MAC();
 	unsigned char *checksum;
-	int rv;
+
 
 	if (!filePathName || !sum) 
 		return FALSE;
 
 #if 0
+	int fd;
+	char data[4097];
+	int rv;
+
 	fd = safe_open_wrapper(filePathName, O_RDONLY);
 	if (fd < 0) {
 		dprintf(D_FULLDEBUG, "schedd_file_checksum: can't open %s\n", filePathName);
@@ -3503,14 +3566,162 @@ static QuillErrCode append(char *destF, char *srcF)
 
 // hash function for strings
 static unsigned attHashFunction (const MyString &str)
-{
-        int i = str.Length() - 1;
-		unsigned hashVal = 0;
-        while (i >= 0)
-        {
-                hashVal += str[i];
-                i--;
-        }
+{       
+		unsigned hashVal = str.Hash();
         return hashVal;
 }
 
+
+
+
+TTManager::AttributeCache::AttributeCache()
+{
+	maintain_soft_state = true;
+
+	MachineHash = new NamedAdHashType(50,MyStringHash,updateDuplicateKeys);
+	ASSERT(MachineHash);
+	ScheddHash = new NamedAdHashType(50,MyStringHash,updateDuplicateKeys);
+	ASSERT(ScheddHash);
+	MasterHash = new NamedAdHashType(50,MyStringHash,updateDuplicateKeys);
+	ASSERT(MasterHash);
+	NegotiatorHash = new NamedAdHashType(50,MyStringHash,updateDuplicateKeys);
+	ASSERT(NegotiatorHash);
+
+	temp_MachineHash = NULL;
+	temp_ScheddHash = NULL;
+	temp_MasterHash = NULL; 						
+	temp_NegotiatorHash = NULL; 						
+
+		// note: no need to free m_nullAdHash, it is a counted_ptr
+	m_nullAdHash = (AttributeHashSmartPtrType) (new AttributeHash(2,attHashFunction,updateDuplicateKeys)); 
+}
+
+void TTManager::AttributeCache::clear(NamedAdHashType* & p)
+{
+	delete p;
+	p = NULL;
+}
+
+TTManager::AttributeCache::~AttributeCache()
+{
+	clearAttributesTransaction();
+
+	clear(MachineHash);
+	clear(ScheddHash);
+	clear(MasterHash);
+	clear(NegotiatorHash);
+}
+
+TTManager::AttributeHashSmartPtrType TTManager::AttributeCache::newAttributeHash()
+{
+	AttributeHash* newClAd = new AttributeHash(200, attHashFunction, updateDuplicateKeys);
+	ASSERT(newClAd);
+	AttributeHashSmartPtrType smartPtr(newClAd);
+
+	m_currentAdHash = smartPtr;
+
+	return smartPtr;
+}
+
+bool TTManager::AttributeCache::setMaintainSoftState(bool new_val)
+{
+	bool old_val = maintain_soft_state;
+	maintain_soft_state = new_val;
+	return old_val;
+}
+
+void TTManager::AttributeCache::insertTransaction(TTManager::AttrHashType aType,
+												  const MyString & name)
+{
+	NamedAdHashType **namedAdHash;
+
+	m_currentTransactionAdHash = m_nullAdHash;
+	m_currentCommittedAdHash = m_nullAdHash;
+
+	if ( maintain_soft_state == false ) {
+		return;
+	}
+
+	if ( name.IsEmpty() ) {
+		return;
+	}
+
+	switch ( aType ) {
+	case MACHINE_HASH:
+		namedAdHash = &temp_MachineHash;
+		MachineHash->lookup(name,m_currentCommittedAdHash);
+		break;
+	case SCHEDD_HASH:
+		namedAdHash = &temp_ScheddHash;
+		ScheddHash->lookup(name,m_currentCommittedAdHash);
+		break;
+	case MASTER_HASH:
+		namedAdHash = &temp_MasterHash;
+		MasterHash->lookup(name,m_currentCommittedAdHash);
+		break;
+	case NEGOTIATOR_HASH:
+		namedAdHash = &temp_NegotiatorHash;
+		NegotiatorHash->lookup(name,m_currentCommittedAdHash);
+		break;
+	default:
+		dprintf(D_FULLDEBUG,"Unknown ClassAd type=%d  LINE=%d\n",aType,__LINE__);
+		return;
+	}
+
+	if (*namedAdHash == NULL) {
+		*namedAdHash = new NamedAdHashType(50,MyStringHash,updateDuplicateKeys);
+		ASSERT(*namedAdHash);
+	} else {
+		(*namedAdHash)->lookup(name,m_currentTransactionAdHash);		
+	}
+
+	(*namedAdHash)->insert(name,m_currentAdHash);
+}
+
+bool TTManager::AttributeCache::alreadyCommitted(const MyString& aName, const MyString& aVal)
+{
+	MyString tmpVal;
+
+	if ( m_currentTransactionAdHash->lookup(aName,tmpVal)==0 &&
+		 tmpVal == aVal )
+	{
+		return true;
+	}
+
+	if ( m_currentCommittedAdHash->lookup(aName,tmpVal)==0 &&
+		 tmpVal == aVal )
+	{
+		return true;
+	}
+
+	return false;
+}
+
+void TTManager::AttributeCache::commit(NamedAdHashType* transaction, NamedAdHashType* committed)
+{
+	AttributeHashSmartPtrType tmp;
+	MyString aName;
+
+	if ( transaction && committed ) {
+		transaction->startIterations();
+		while (transaction->iterate(aName, tmp)) {
+			committed->insert(aName,tmp);
+		}
+	}	
+}
+
+void TTManager::AttributeCache::commitAttributesTransaction()
+{
+	commit(temp_MachineHash,MachineHash);
+	commit(temp_ScheddHash,ScheddHash);
+	commit(temp_MasterHash,MasterHash);
+	commit(temp_NegotiatorHash,NegotiatorHash);
+}
+
+void TTManager::AttributeCache::clearAttributesTransaction()
+{
+	clear(temp_MachineHash);
+	clear(temp_ScheddHash);
+	clear(temp_MasterHash);
+	clear(temp_NegotiatorHash);
+}
