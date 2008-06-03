@@ -27,8 +27,8 @@ REM exceeding 255 chars, so be careful when editing this file! It's
 REM totally lame but there's nothing we can do about it.
 REM ======================================================================
 
-rem We assume all software is installed on the main system drive, but 
-rem in the case that it is not, change the variable bellow.
+REM We assume all software is installed on the main system drive, but 
+REM in the case that it is not, change the variable bellow.
 set ROOT_DRIVE=%SystemDrive%
 
 REM Set paths to Visual C++, the Platform SDKs, and Perl
@@ -39,10 +39,10 @@ set SDK_DIR=%ROOT_DRIVE%\Program Files\Microsoft Platform SDK
 set PERL_DIR=%ROOT_DRIVE%\Perl\bin
 set DBG_DIR=%ROOT_DRIVE%\Program Files\Debugging Tools for Windows
 
-rem Specify symbol image path for debugging
+REM Specify symbol image path for debugging
 if A%_NT_SYMBOL_PATH%==A set _NT_SYMBOL_PATH=SRV*%ROOT_DRIVE%\Symbols*http://msdl.microsoft.com/download/symbols
 
-rem For externals: it just tells them we would like to have manifest 
+REM For externals: it just tells them we would like to have manifest 
 REM files embeded in the rem DLLs (In the future, when we do not have 
 REM VC6, we can remove this.  After we--of course--remove any reference 
 REM to it from the externals)
@@ -71,16 +71,21 @@ REM like awk, gunzip, tar, bison, yacc...
 set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VC_DIR%;%VC_BIN%;%SDK_DIR%;%DOTNET_DIR%;%DBG_DIR%
 
 REM ======================================================================
-rem ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
-rem Since we a still stuck in the past (i.e. supporting Win2K) we must
-rem lie to the setenv script, and pretend the DevEnvDir environment
-rem is alredy configured properly (yay! jump to VC2K8, but support
-rem Win2K... *sigh*) 
+REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
+REM Since we a still stuck in the past (i.e. supporting Win2K) we must
+REM lie to the setenv script, and pretend the DevEnvDir environment
+REM is alredy configured properly (yay! jump to VC2K8, but support
+REM Win2K... *sigh*) 
 set MSVCDir=%VC_DIR%
 set DevEnvDir=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\Common7\IDE
 SET MSVCVer=9.0
-rem ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
+REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
+
+REM Dump the Windows build environment at this point
+echo ----------------------- WIN ENV DUMP ----------------------
+set
+echo ----------------------- WIN ENV DUMP ----------------------
 
 call vcvarsall.bat x86
 if not defined INCLUDE ( echo . && echo *** Failed to run vcvarsall.bat! Is Microsoft Visual Studio installed? && exit /B 1 )
