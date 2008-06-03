@@ -1,5 +1,5 @@
 digraph DAG {
-	size = "6,7"
+	size = "5,6"
 
     "A" [shape=ellipse label="A"];
     "B" [shape=ellipse label="B"];
