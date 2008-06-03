@@ -1,4 +1,5 @@
 REM @echo off
+@echo on
 REM ======================================================================
 REM 
 REM  Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -88,9 +89,9 @@ set
 echo ----------------------- WIN ENV DUMP ----------------------
 
 call vcvarsall.bat x86
-if not defined INCLUDE ( echo . && echo *** Failed to run vcvarsall.bat! Is Microsoft Visual Studio installed? && exit /B 1 )
+if not defined INCLUDE ( echo. && echo *** Failed to run vcvarsall.bat! Is Microsoft Visual Studio installed? && exit /B 1 )
 call setenv /2000 /RETAIL
-if not defined MSSDK ( echo . && echo *** Failed to run setenv.cmd! Are the Microsoft Platform SDK installed? && exit /B 1 )
+if not defined MSSDK ( echo. && echo *** Failed to run setenv.cmd! Are the Microsoft Platform SDK installed? && exit /B 1 )
 
 REM Add msconfig back to the start of the path, since the above 
 REM bump us out of place.
@@ -119,7 +120,7 @@ set CONDOR_NOWARN=/D_CRT_SECURE_NO_DEPRECATE /D_CRT_SECURE_NO_WARNINGS /D_CRT_NO
 REM /D_CONST_RETURN
 set CONDOR_DEFINE=%CONDOR_NOWARN% /DHAVE_BACKFILL /DHAVE_BOINC /DHAVE_SNPRINTF /DHAVE_JOB_HOOKS /DHAVE_HIBERNATE /DBUILDID=%BID%
 set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" /GR
-set CONDOR_LIB=Crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib advapi32.lib ws2_32.lib user32.lib oleaut32.lib ole32.lib powrprof.lib 
+set CONDOR_LIB=Crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib advapi32.lib ws2_32.lib user32.lib oleaut32.lib ole32.lib powrprof.lib iphlpapi.lib
 set CONDOR_LIBPATH=
 
 REM ======================================================================
