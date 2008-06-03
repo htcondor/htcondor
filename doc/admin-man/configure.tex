@@ -1667,19 +1667,23 @@ which use DaemonCore).
   Linux systems other than IA-64, but not when GCB is enabled.
 
 \item[\Macro{NOT\_RESPONDING\_TIMEOUT}] \label{param:NotRespondingTimeout}
-  When a Condor daemon's parent process is another Condor daemon, it will
-  periodically send a short message to that parent saying that it's alive
-  and well. If the parent doesn't hear from the child for a while, it will
-  assume the child is hung, kill it, and restart it. This parameter
+  When a Condor daemon's parent process is another Condor daemon, 
+  the child daemon will
+  periodically send a short message to its parent stating that it is alive
+  and well. If the parent does not hear from the child for a while,
+  the parent assumes that the child is hung,
+  kills the child, and restarts the child. This parameter
   controls how long the parent waits before killing the child. It is defined
   in terms of seconds and defaults to 3600 (1 hour). The child sends its
-  ``alive'' messages at an interval of one third of this value.
+  alive and well messages at an interval of one third of this value.
 
-\item[\MacroB{<SUBSYS>\_NOT\_RESPONDING\_TIMEOUT}] \label{param:SubsysNotRespondingTimeout}
-  Identical to \Macro{NOT\_RESPONDING\_TIMEOUT}, but controls the timeout
+\item[\MacroB{<SUBSYS>\_NOT\_RESPONDING\_TIMEOUT}]
+  \label{param:SubsysNotRespondingTimeout}
+  Identical to \MacroNI{NOT\_RESPONDING\_TIMEOUT}, but controls the timeout
   for a specific type of daemon. For example,
-  \Macro{SCHEDD\_NOT\_RESPONDING\_TIMEOUT} controls how long the
-  \Condor{schedd}'s parent daemon will wait without receiving an ``alive''
+  \MacroNI{SCHEDD\_NOT\_RESPONDING\_TIMEOUT} controls how long the
+  \Condor{schedd}'s parent daemon will wait without receiving an 
+  alive and well
   message from the \Condor{schedd} before killing it.
 
 \end{description}
