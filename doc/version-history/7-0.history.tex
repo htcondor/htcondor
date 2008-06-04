@@ -85,11 +85,11 @@ universe jobs of type gt4. The default value is 5.
 \item \Condor{history} in a quill environment, when given the -constraint option,
 would ignore attributes from the vertical schema.  This has been fixed.
 
-\item In unix, when started as root, the \Condor{master} now changes the
+\item In Unix, when started as root, the \Condor{master} now changes the
 effective user id back to root (instead of condor) when restarting itself
 (e.g. due to the command \Condor{restart}).  This makes no difference unless
 you have wrapped the \Condor{master} with a script of some kind and this
-script expects to be run as root not only on initial startup but on restart
+script expects to be run as root not only on initial start up but on restart
 as well.
 
 \item The dedicated scheduler would sometimes take two negotiation cycles
@@ -99,7 +99,7 @@ fixed.
 % PR 938
 \item \Condor{dagman} no longer prints "Argument added" and
 "Retry Abort Value" diagnostic messages at the default verbosity,
-to reduce the size of the dagman.out file and the startup time
+to reduce the size of the dagman.out file and the start up time
 for very large DAGs.
 
 \item \Condor{dagman} now prints a few fatal parse errors at lower
@@ -131,7 +131,7 @@ Condor daemons.
 \item Fixed a file descriptor leak in the negotiator.  The leak happened
 whenever the negotiator failed to initiate the NEGOTIATE command to
 a schedd (for example if security negotiation failed with the schedd).
-Under unix, this would eventually cause the negotiator to run out of
+Under Unix, this would eventually cause the negotiator to run out of
 file descriptors, exit, and restart.  This bug affected all previous
 versions of Condor.
 
@@ -153,7 +153,7 @@ configured with a longer session duration than the shadow.
   of events to the global event log fail in some conditions.
 
 \item In the grid universe, submission of nordugrid jobs is now properly
-throttled by configuration paramters
+throttled by configuration parameters
 \Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE} and
 \Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}.
 
@@ -516,7 +516,7 @@ See section~\ref{param:SystemPeriodicHold} for definitions.
   claiming the \MacroNI{EXECUTE} directory has improper permissions,
   when PrivSep is enabled.
 
-\item Lookups of ClassAd attribute \Attr{CurrentTime} are now
+\item Look ups of ClassAd attribute \Attr{CurrentTime} are now
   case-insensitive, just like all other attributes.
 
 \item Fixed problems causing the following error message in the log file:
