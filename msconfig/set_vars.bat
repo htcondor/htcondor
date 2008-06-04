@@ -42,7 +42,7 @@ set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows
 set DOTNET_DIR=%ROOT_DRIVE%\Windows\Microsoft.NET\Framework\v3.5
 
 REM For some reason this is not defined whilst in NMI
-if A%VS90COMNTOOLS%==A set VS90COMNTOOLS=%VS_DIR%\Common7\Tools
+if "A%VS90COMNTOOLS%"=="A" set VS90COMNTOOLS=%VC_DIR%\Common7\Tools
 
 REM Specify symbol image path for debugging
 if A%_NT_SYMBOL_PATH%==A set _NT_SYMBOL_PATH=SRV*%ROOT_DRIVE%\Symbols*http://msdl.microsoft.com/download/symbols
@@ -54,7 +54,7 @@ REM to it from the externals)
 set NEED_MANIFESTS_IN_EXTERNALS=True
 
 REM Where do the completed externals live?
-if A%EXTERN_DIR%==A set EXTERN_DIR=%cd%\..\externals
+if "A%EXTERN_DIR%"=="A" set EXTERN_DIR="%cd%\..\externals"
 set EXT_INSTALL=%EXTERN_DIR%\install
 set EXT_TRIGGERS=%EXTERN_DIR%\triggers
 
