@@ -48,7 +48,7 @@ REM lie to the setenv script, and pretend the DevEnvDir environment
 REM is alredy configured properly (yay! jump to VC2K8, but support
 REM Win2K... *sigh*) 
 set MSVCDir=%VC_DIR%
-set DevEnvDir=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio\COMMON\MSDev98\Bin
+set DevEnvDir=C:\Program Files\Microsoft Visual Studio\COMMON\MSDev98\Bin
 SET MSVCVer=6.0
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
