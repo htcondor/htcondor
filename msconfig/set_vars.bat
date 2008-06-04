@@ -1,5 +1,4 @@
-REM @echo off
-@echo on
+@echo off
 REM ======================================================================
 REM 
 REM  Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
