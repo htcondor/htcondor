@@ -147,41 +147,6 @@ x_test_platforms_x86_rhap_5 = unmanaged-x86_rhap_5.1
 [
 platforms = x86_64_rhap_5
 test_append_prereqs = java-1.4.2_05
-]
-
-[
-testplatforms = x86_rhas_4, x86_slc_3, x86_fc_3, x86_suse_10.0, \
-				x86_sles_9, x86_ubuntu_5.10, sun4u_sol_5.10, \
-				x86_deb_3.1
-testprereqs = tar-1.14, make-3.80
-testonly_append_prereqs = java-1.4.2_05
-]
-
-[
-testplatforms = x86_fc_4
-testprereqs = tar-1.14, make-3.80
-testonly_append_prereqs = java-1.5.0_08
-]
-
-[
-testplatforms = x86_rh_9
-testprereqs = tar-1.14, make-3.80
-testonly_append_prereqs = java-1.5.0_08
-]
-
-[
-testplatforms = ia64_rhas_4, x86_64_rhas_4, x86_64_fc_4
-testprereqs = tar-1.14, make-3.80
-testonly_append_prereqs = java-1.4.2_05
-]
-
-[
-testplatforms = unmanaged-x86_rhap_5.1
-]
-
-[
-platforms = x86_64_rhap_5
-test_append_prereqs = java-1.4.2_05
 #x_test_platforms_x86_64_rhap_5 = x86_64_fc_4
 ]
 
@@ -191,6 +156,16 @@ testplatforms = x86_rhas_4, x86_slc_3, x86_fc_3, x86_suse_10.0, \
 				x86_deb_3.1
 testprereqs = tar-1.14, make-3.80
 testonly_append_prereqs = java-1.4.2_05
+]
+
+[
+testplatforms = x86_rh_9
+testprereqs = tar-1.14, make-3.80
+testonly_append_prereqs = java-1.5.0_08
+]
+
+[
+testplatforms = unmanaged-x86_rhap_5.1
 ]
 
 [
@@ -205,6 +180,3 @@ testprereqs = tar-1.14, make-3.80
 testonly_append_prereqs = java-1.4.2_05
 ]
 
-[
-testplatforms =  unmanaged-x86_rhap_5.1
-]
