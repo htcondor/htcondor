@@ -33,12 +33,16 @@ REM in the case that it is not, change the variable bellow.
 set ROOT_DRIVE=%SystemDrive%
 
 REM Set paths to Visual C++, the Platform SDKs, and Perl
-set VC_DIR=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC
-set VC_BIN=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\bin
-set DOTNET_DIR=%ROOT_DRIVE%\Windows\Microsoft.NET\Framework\v3.5
-set SDK_DIR=%ROOT_DRIVE%\Program Files\Microsoft Platform SDK
+set VS_DIR=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0
+set VC_DIR=%VS_DIR%\VC
+set VC_BIN=%VC_DIR%\bin
 set PERL_DIR=%ROOT_DRIVE%\Perl\bin
-set DBG_DIR=%ROOT_DRIVE%\Program Files\Debugging Tools for Windows
+set SDK_DIR=%ProgramFiles%\Microsoft Platform SDK
+set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows
+set DOTNET_DIR=%ROOT_DRIVE%\Windows\Microsoft.NET\Framework\v3.5
+
+REM For some reason this is not defined whilst in NMI
+if A%VS90COMNTOOLS%==A set VS90COMNTOOLS=%VS_DIR%\Common7\Tools
 
 REM Specify symbol image path for debugging
 if A%_NT_SYMBOL_PATH%==A set _NT_SYMBOL_PATH=SRV*%ROOT_DRIVE%\Symbols*http://msdl.microsoft.com/download/symbols
@@ -69,7 +73,7 @@ set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VER
 
 REM Put msconfig in the PATH, since it's got lots of stuff we need
 REM like awk, gunzip, tar, bison, yacc...
-set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VC_DIR%;%VC_BIN%;%SDK_DIR%;%DOTNET_DIR%;%DBG_DIR%
+set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VS_DIR%;%VC_DIR%;%VC_BIN%;%SDK_DIR%;%DOTNET_DIR%;%DBG_DIR%
 
 REM ======================================================================
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
