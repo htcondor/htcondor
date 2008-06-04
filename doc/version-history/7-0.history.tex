@@ -161,6 +161,11 @@ throttled by configuration paramters
 information from newer NorduGrid servers. Previously, the GAHP could crash
 when talking to newer servers.
 
+\item Fixed a bug that caused \Condor{config\_val} \Opt{-set} or
+\Opt{-rset} to fail if security negotiation was turned off
+(e.g. \MacroNI{SEC\_DEFAULT\_NEGOTIATION=NEVER}).  This bug was introduced
+in Condor 7.0.0.
+
 \end{itemize}
 
 \noindent Known Bugs:
