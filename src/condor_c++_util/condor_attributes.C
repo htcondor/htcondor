@@ -224,6 +224,7 @@ const char *ATTR_MYPROXY_CRED_NAME		 = "MyProxyCredentialName";
 const char *ATTR_MYPROXY_REFRESH_THRESHOLD = "MyProxyRefreshThreshold";
 const char *ATTR_MYPROXY_NEW_PROXY_LIFETIME = "MyProxyNewProxyLifetime";
 // END ckireyev myproxy
+const char *ATTR_HARDWARE_ADDRESS         = "HardwareAddress";
 const char *ATTR_HAS_CHECKPOINTING        = "HasCheckpointing";
 const char *ATTR_HAS_FILE_TRANSFER        = "HasFileTransfer";
 const char *ATTR_HAS_PER_FILE_ENCRYPTION  = "HasPerFileEncryption";
