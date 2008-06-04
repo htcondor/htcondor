@@ -42,7 +42,7 @@ set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows
 set DOTNET_DIR=%ROOT_DRIVE%\Windows\Microsoft.NET\Framework\v3.5
 
 REM For some reason this is not defined whilst in NMI
-if "A%VS90COMNTOOLS%"=="A" set VS90COMNTOOLS=%VC_DIR%\Common7\Tools
+if "A%VS90COMNTOOLS%"=="A" set VS90COMNTOOLS=%VC_DIR%\Common7\Tools\
 
 REM Specify symbol image path for debugging
 if "A%_NT_SYMBOL_PATH%"=="A" set _NT_SYMBOL_PATH=SRV*%ROOT_DRIVE%\Symbols*http://msdl.microsoft.com/download/symbols
