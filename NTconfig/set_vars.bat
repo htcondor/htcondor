@@ -9,9 +9,9 @@ REM totally lame but there's nothing we can do about it.
 REM ======================================================================
 
 REM Set paths to Visual C++, the Platform SDKs, and Perl
-set VC_DIR=C:\Program Files\Microsoft Visual Studio\VC98\Bin
+set VC_DIR=C:\Program Files\Microsoft Visual Studio\VC98
+set VC_BIN=C:\Program Files\Microsoft Visual Studio\VC98\Bin
 set SDK_DIR=C:\Program Files\Microsoft Platform SDK
-set SDK_XP_DIR=C:\Program Files\Microsoft Platform SDK for Windows XP SP2
 set PERL_DIR=C:\Perl\bin
 set DBG_DIR=C:\Program Files\Debugging Tools for Windows
 
@@ -39,7 +39,19 @@ set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VER
 
 REM Put NTConfig in the PATH, since it's got lots of stuff we need
 REM like awk, gunzip, tar, bison, yacc...
-set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VC_DIR%;%SDK_DIR%;%SDK_XP_DIR%;%DBG_DIR%
+set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VC_DIR%;%SDK_DIR%;%VC_BIN%;%DBG_DIR%
+
+REM ======================================================================
+REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
+REM Since we a still stuck in the past (i.e. supporting Win2K) we must
+REM lie to the setenv script, and pretend the DevEnvDir environment
+REM is alredy configured properly (yay! jump to VC2K8, but support
+REM Win2K... *sigh*) 
+set MSVCDir=%VC_DIR%
+set DevEnvDir=C:\Program Files\Microsoft Visual Studio\COMMON\MSDev98\Bin
+SET MSVCVer=6.0
+REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
+REM ======================================================================
 
 call vcvars32.bat
 if not defined INCLUDE ( echo . && echo *** Failed to run VCVARS32.BAT! Is Microsoft Visual Studio 6.0 installed? && exit /B 1 )
