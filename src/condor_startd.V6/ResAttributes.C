@@ -240,9 +240,11 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
             m_hardware_address = 
                 string_to_hardware_address(sinful);
         }
-        sprintf( line, "%s = \"%s\"", ATTR_HARDWARE_ADDRESS,
-            m_hardware_address );
-        cp->Insert( line );
+        if (NULL != m_hardware_address) {
+            sprintf( line, "%s = \"%s\"", ATTR_HARDWARE_ADDRESS,
+                m_hardware_address );
+            cp->Insert( line );
+        }
 
 		sprintf( line, "%s = \"%s\"", ATTR_ARCH, m_arch );
 		cp->Insert( line );
