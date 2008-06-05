@@ -19,6 +19,7 @@
 use Date::Manip;
 use File::Temp qw(tempfile);
 use File::Spec;
+use Time::Local;
 use Carp;
 use strict;
 
@@ -28,6 +29,7 @@ use strict;
 # First date to graph.  Useful to filter out the occasional
 # insane message claiming to be from Midnight, Jan 1, 1970.
 my $FIRST_DATE = '1 June 2005 00:00:00';
+my $originaldate;
 
 # Width of output in pixels. Height is based on ratio
 my $WIDTH = 1000;
@@ -73,6 +75,7 @@ my $MIN_PNG_SIZE = 10_000;
 my $image_source = "";
 my $failure_details = 0;
 my $details = "";
+my $morextics = "";
 
 exit main();
 
@@ -90,8 +93,8 @@ sub main {
 			}
 			$binset = 1;
 		} elsif($ARGV[$i] eq '--daily') { 
-			$BINSIZE = $BIN_DAY;
-			if($binset) {
+				$BINSIZE = $BIN_DAY;
+				if($binset) {
 				print STDERR "Warning: Multiple durations set.  Only the last one will take effect.\n";
 			}
 			$binset = 1;
@@ -131,6 +134,14 @@ sub main {
 				fatal_error("--detail must be followed with a kind of plot.");
 			}
 			$details = $ARGV[$i];
+		} elsif($ARGV[$i] eq '--xtics') {
+			$i++;
+			if($i > @ARGV) {
+				usage();
+				fatal_error("--xtics must be followed with a file with labels for kind of plot.");
+			}
+			print "XTICS = $ARGV[$i]\n";
+			$morextics = $ARGV[$i];
 		} elsif($ARGV[$i] eq '--firstdate') {
 			$i++;
 			if($i > @ARGV) {
@@ -150,8 +161,12 @@ sub main {
 	}
 
 
+	$originaldate = $FIRST_DATE;
 
 	my $firstdate = parse_date($FIRST_DATE);
+
+	print "<<<<<<<<< Firstdate $firstdate >>>>>>>>>>>>>>>>>>\n";
+
 	$firstdate = bindate($BINSIZE, $firstdate);
 
 	# Find source files.
@@ -179,11 +194,16 @@ sub main {
 			$first = 1;
 			foreach my $item (@dataline) {
 				if($first) {
-					$date = parse_date($item);
-					$date = bindate($BINSIZE, $date);
-					#print "Date is <<$date>>\n";
-					my $epoch_date = epoch_date($date);
-					print $datafh "$epoch_date ";
+					if($details eq "weeklydownloadlogs") {
+						print $datafh "$item ";
+					} else {
+						$date = parse_date($item);
+						$date = bindate($BINSIZE, $date);
+						#print "BinDate is <<$date>>\n";
+						my $epoch_date = epoch_date($date);
+						#print "EpochDate is <<$date>>\n";
+						print $datafh "$epoch_date ";
+					}
 					$first = 0;
 				} else {
 					print $datafh "$item ";
@@ -209,6 +229,8 @@ sub main {
 		datafile => $datafile,
 		binsize => describe_binsize($BINSIZE),
 		);
+
+	print "FULL PLOT command:<<$cmds>>\n";
 
 	local *GP;
 	open GP, "|-", $GNUPLOT or fatal_error("unable to run $GNUPLOT because of $!");
@@ -375,6 +397,10 @@ sub gnuplot_commands {
 	} elsif($details eq "testsperplatform") {
 		$ylabel = "Average Tests per Platform";
 		$xtics = "691200";
+	} elsif($details eq "weeklydownloadlogs") {
+		$ylabel = "Download Results per Week";
+		$title = "Condor Download Plots";
+		#$xtics = "691200";
 	} elsif($details eq "downloadlogs") {
 		$ylabel = "Download Results per Day";
 		$title = "Condor Download Plots";
@@ -405,7 +431,7 @@ sub gnuplot_commands {
 	$myret = $myret . "set size ratio $RATIO $SCALE,$SCALE\n";
 	
 	#colors
-	$myret = $myret . "set key outside left top\n";
+	$myret = $myret . "set key outside right top\n";
 	$myret = $myret . "#sea green\n";
 	$myret = $myret . "set style line 1  lt rgb \"#2e8b57\" \n";
 	$myret = $myret . "#firebrick\n";
@@ -433,21 +459,51 @@ sub gnuplot_commands {
 	$myret = $myret . "set style data histograms\n";
 
 	$myret = $myret . "set ylabel \"$ylabel\"\n";
-	$myret = $myret . "set xdata time\n";
-	$myret = $myret . "set timefmt \"\%s\"\n";
-	$myret = $myret . "set format x \"\%b\\n%d\\n\%y\"\n";
 	
 	$myret = $myret . "# day in seconds 86400\n";
 	$myret = $myret . "# week in seconds 604800\n";
-	$myret = $myret . "set xtics $xtics\n";
 	$myret = $myret . "# Quarters in seconds\n";
 	$myret = $myret . "# set xtics 7884000\n";
+	#$myret = $myret . "set xtics rotate 90\n";
+	#$myret = $myret . "set xtics $xtics\n";
 	$myret = $myret . "# monthly (1/3 of a quarter)\n";
-	$myret = $myret . "set mxtics 4\n";
+	#$myret = $myret . "set mxtics 4\n";
 
 	$myret = $myret . "set mytics 2\n";
-	$myret = $myret . "set xrange [\"$startdate\":]\n";
-	$myret = $myret . "set grid \n";
+	#$myret = $myret . "set xrange [\"$startdate\":]\n";
+	#$myret = $myret . "set grid \n";
+
+	if($details eq "weeklydownloadlogs") {
+		$RATIO = 0.5;
+		$SCALE= 2;
+		$myret = $myret . "set size ratio $RATIO $SCALE,$SCALE\n";
+		$myret = $myret . "set xtics rotate by -45\n";
+		$myret = $myret . "set xdata time\n";
+		#$myret = $myret . "set timefmt \"\%s\"\n";
+		$myret = $myret . "set timefmt \"\%B \%d \%Y\"\n";
+		$myret = $myret . "set format x \"\%b\\n%d\\n\%y\"\n";
+		#$myret = $myret . "set grid xtics\n";
+		$myret = $myret . "set xrange [\"$originaldate\":*]\n";
+		#$myret = $myret . "set xtics $xtics\n";
+		if( -f $morextics ){
+		 	open(XTICS,"<$morextics") || die "tried to open<$morextics>:$!\n";
+			while(<XTICS>){
+				chomp();
+				$morextics = $_;
+				print "XTICS = $morextics\n";
+				$myret = $myret . "set xtics $morextics\n";
+				$myret = $myret . "set grid \n";
+				$myret = $myret . "show xrange\n";
+				#$myret = $myret . "show xtics\n";
+			}
+		}
+	} else {
+		$myret = $myret . "set xdata time\n";
+		$myret = $myret . "set timefmt \"\%s\"\n";
+		$myret = $myret . "set format x \"\%b\\n%d\\n\%y\"\n";
+		$myret = $myret . "set xrange [\"$startdate\":]\n";
+		$myret = $myret . "set xtics $xtics\n";
+	}
 
 	if($details eq "analdetail") {
 		$myret = $myret . "plot \"$datafile\" using 1:9 with boxes   ls 5 title \"Framework\", \"$datafile\" using 1:7 with boxes   ls 6 title \"Platform\", \"$datafile\" using 1:5 with boxes   ls 7 title \"Condor\", \"$datafile\" using 1:3 with boxes ls 4 title \"Tests\"\n";
@@ -460,7 +516,9 @@ sub gnuplot_commands {
 	} elsif($details eq "testsperplatform") {
 		$myret = $myret . "plot \"$datafile\" using 1:2 with boxes   ls 1 title \"Tests per Platform\"\n";
 	} elsif($details eq "downloadlogs") {
-		$myret = $myret . "plot \"$datafile\" using 1:3 with boxes   ls 5 title \"Good Downloads\", \"$datafile\" using 1:2 with boxes   ls 9 title \"Good Source Downloads\", \"$datafile\" using 1:4 with boxes   ls 7 title \"Bad Downloads\", \"$datafile\" using 1:5 with boxes   ls 3 title \"Good Downloads/20\", \"$datafile\" using 1:6 with boxes   ls 8 title \"Bad Downloads/20\", \"$datafile\" using 1:7 with boxes   ls 1 title \"Good Downloads/200\", \"$datafile\" using 1:8 with boxes   ls 2 title \"Bad Downloads/200\"\n";
+		$myret = $myret . "plot \"$datafile\" using 1:3 with boxes   ls 5 title \"Good Downloads\", \"$datafile\" using 1:2 with boxes   ls 9 title \"Good Source Downloads\", \"$datafile\" using 1:4 with boxes   ls 7 title \"Bad Downloads\", \"$datafile\" using 1:5 with boxes   ls 3 title \"Good Downloads/20\", \"$datafile\" using 1:6 with boxes   ls 8 title \"Bad Downloads/20\"\n";
+	} elsif($details eq "weeklydownloadlogs") {
+		$myret = $myret . "plot \"$datafile\" using 1:5 with boxes   ls 5 title \"Good Downloads\", \"$datafile\" using 1:4 with boxes   ls 9 title \"Good Source Downloads\", \"$datafile\" using 1:6 with boxes   ls 7 title \"Bad Downloads\"\n";
 	} elsif($details eq "uniquedownloadlogs") {
 		$myret = $myret . "plot \"$datafile\" using 1:3 with boxes   ls 5 title \"Good Unique Downloads\"\n";
 	} elsif($details eq "totaldownloadlogs") {
