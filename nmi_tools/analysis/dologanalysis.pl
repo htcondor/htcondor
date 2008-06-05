@@ -2,6 +2,7 @@
 use File::Copy;
 use File::Path;
 use Getopt::Long;
+use Time::Local;
 
 system("mkdir -p /tmp/btplots");
 
@@ -25,7 +26,8 @@ my $datacruncher = "filter_sendfile";
 my $crunch = $datalocation . $datacruncher;
 #my @datafiles = ( "sendfile-v6.0", "sendfile-v6.1", "sendfile-v6.2", "sendfile-v6.3", "sendfile-v6.4", "sendfile-v6.5", "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9","sendfile-v7.0", "sendfile-v7.1" );
 #my @datafiles = ( "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9","sendfile-v7.0", "sendfile-v7.1" );
-my @datafiles = ( "sendfile-v6.8", "sendfile-v6.9", "sendfile-v7.0", "sendfile-v7.1" );
+#my @datafiles = ( "sendfile-v6.8", "sendfile-v6.9", "sendfile-v7.0", "sendfile-v7.1" );
+my @datafiles = ( "sendfile-v7.0", "sendfile-v7.1" );
 my $stable = "sendfile-v7.0";
 my $developer = "sendfile-v7.1";
 #my @datafiles = ( "sendfile-v6.8" );
@@ -95,6 +97,21 @@ my %nummonths = (
     "Dec" => 12,
 );
 
+my %monthtonum = (
+    "January" => 0,
+	"February" => 1,
+	"March" => 2,
+    "April" => 3,
+    "May" => 4,
+    "June" => 5,
+    "July" => 6,
+    "August" => 7,
+    "September" => 8,
+    "October" => 9,
+    "November" => 10,
+    "December" => 11,
+);
+
 my %monthnums = (
     1 => "Jan",
     2 => "Feb",
@@ -127,6 +144,7 @@ $skip = "true";
 $trimdata = "no";
 $firstoutput;
 %unique;
+%sigevents;
 my @queue = ();
 
 #print "$crunch\n";
@@ -135,16 +153,21 @@ foreach $log (@datafiles) {
 	$datafile = $datalocation . $log;
 	print "$crunch $datafile $log\n";
 	$outfile = $log . ".data";
+	$weeklyoutfile = $log . ".weekly.data";
 	$uniquefile = $log . ".unique.data";
 	$totalsfile = $log . ".total.data";
 	$image = $log . ".png";
 	$uniqueimage = $log . ".unique.png";
 	$totalsimage = $log . ".total.png";
+	$events = $tooldir . $log . ".events";
+	$saveevents =  $log . ".xtics";
 	$trimdata = "no";
 	$skip = "true";
 	@queue = ();
 	%unique = ();
+	%sigevents = ();
 	%uniquefiles = ();
+
 	open(LOGDATA,"$crunch $datafile 2>&1|") || die "logdata bad: $!\n";
 	open(OUT,">$outfile") || die "Failed to open $outfile: $!\n";
 	open(UNIQUE,">$uniquefile") || die "Failed to open $uniquefile: $!\n";
@@ -160,7 +183,8 @@ foreach $log (@datafiles) {
 		if($line =~ /^\s+[\?MBR]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):\s(condor[-_])([\d\w\.\-]+).*\s+([^\s]+@[^\s]+).*$/) {
 			if( $skip eq "true" )  {
 				$skip = "false";
-				$firstdate = $3 . " " . $months{$2} . " " . $5;
+				#$firstdate = $3 . " " . $months{$2} . " " . $5;
+				$firstdate = $months{$2} . " " . $3 . " " . $5;
 				$month = $2;
 				print "Starting: $firstdate\n";
 			} else {
@@ -179,10 +203,10 @@ foreach $log (@datafiles) {
 			# filter our multicounted good downloads
 			my $datenow = $month . "/" . $day . " " . $year;
 			my $gooduserfile = $useremail . "-" . $filename;
-			print "Consider $gooduserfile $datenow\n";
+			#print "Consider $gooduserfile $datenow\n";
 			if( !(exists $uniquefile{$gooduserfile})) {
 				$uniquefile{$gooduserfile} = 1;
-				print "Adding $gooduserfile\n";
+				#print "Adding $gooduserfile\n";
 				$totalgood = $totalgood + 1;
 				if(!(exists $unique{$useremail})) {
 					$totaluniquegood += 1;
@@ -193,7 +217,7 @@ foreach $log (@datafiles) {
 					$totalsrc = $totalsrc + 1;
 				}
 			} else {
-				print "skip $gooduserfile\n";
+				#print "skip $gooduserfile\n";
 			}
 		#print "Good $2 $3 $5 <$totalgood|$line>\n";
 		} elsif($line =~ /^\s+[\?MBR]+\s+(\w+)\s+(\w+)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+):\s+condordebug.*$/) {
@@ -256,16 +280,133 @@ foreach $log (@datafiles) {
 	}
 	close(DATA);
 	close(TOT);
+
+	# look for significant events for plot x axis labeling
+	if( -f $events) {
+		$line = "";
+		open(EVENTS,"<$events") || print "failed to open $events:$!\n";
+		while(<EVENTS>) {
+			chomp();
+			$line = $_;
+			if($line =~ /^(\s*\w*\s+\d+\s+\d+),\s*\"(.*)\".*$/) {
+				print "Found and added $2 on the $1\n";
+				$sigevents{$1} = $2;
+			}
+		}
+		close(EVENTS);
+	}
+
+	# convert the the download log to a weekly total for the non- 2 month plot
+	# create a version of the data file which tracks weekly totals
+	# and we may switch to using the first column to label the X axis
+	# later. If we had a list of release dates, we could label the week
+	# of the release by changing the date in the first column to the release
+	# date string.....
+	my $wdate = "";
+	my $wsrc = 0;
+	my $wgood = 0;
+	my $wbad = 0;
+	my $wcount = 0;
+	my $datapoint = 0;
+	my $timestamp = 0;
+	my $xticslabels = "";
+	open(DATA,"<$outfile") || die "Failed to open $outfile: $!\n";
+	open(WEEKLY,">$weeklyoutfile") || die "Failed to open $weeklyoutfile: $!\n";
+	while(<DATA>) {
+		chomp();
+		$line = $_;
+		if($line =~ /^(\s*\w*\s+\d+\s+\d+),\s*(\d+),\s*(\d+),\s*[-]?(\d+),\s*(\d+),\s*[-]?(\d+),\s*(\d+),\s*[-]?(\d+)\s*.*$/) {
+			#print "Working on weekly totals for week containing $1\n";
+			$wdate = $1;
+			$wsrc += $2;
+			$wgood += $3;
+			$wbad += $4;
+			$wcount += 1;
+			# look for events for the week to replace date as label
+			# last one per 7 days will be used
+			if( exists $sigevents{$wdate} ) {
+				$foundevent = $sigevents{$wdate};
+			}
+			if($wcount == 7) {
+				print WEEKLY "$wdate, $wsrc, $wgood, -$wbad, 0, 0, 0, 0\n";
+				if( $wdate =~ /^(\w+)\s+(\d+)\s+(\d+)$/) {
+					#print "turning $wdate to a timestamp\n";
+					my $mon = $monthtonum{$1};
+					my $year = $3;
+					$timestamp = timelocal("00","00","00",$2,$mon,$year);
+					print "Month $mon Day $2 Year $year, $timestamp \n";
+				} else {
+					die "Can not parse date <$wdate>\n";
+				}
+				if($foundevent ne "") {
+					if($xticslabels eq "") {
+						$xticslabels = $xticslabels  . "\"$foundevent\" \"$wdate\" ";
+					} else {
+						$xticslabels = $xticslabels  . ",\"$foundevent\" \"$wdate\" ";
+					}
+				} else {
+					if($xticslabels eq "") {
+						$xticslabels = $xticslabels  . "\"$wdate\" \"$wdate\" ";
+					} else {
+						$xticslabels = $xticslabels  . ",\"$wdate\" \"$wdate\" ";
+					}
+				}
+				$datapoint = $datapoint + 1;
+				$wsrc = 0;
+				$wgood = 0;
+				$wbad = 0;
+				$wcount = 0;
+				$foundevent = "";
+			}
+		}
+	}
+	close(DATA);
+	close(WEEKLY);
+
+	#partial week?
+	if($wgood != 0) {
+		print WEEKLY "$wdate, $wsrc, $wgood, -$wbad, 0, 0, 0, 0\n";
+		if( $wdate =~ /^(\w+)\s+(\d+)\s+(\d+)$/) {
+			#print "turning $wdate to a timestamp\n";
+			my $mon = $monthtonum{$1};
+			my $year = ($3 - 1900);
+			print "Month $mon Year $year\n";
+			$timestamp = timelocal("00","00","00",$2,$mon,$year);
+			print "Month $mon Day $2 Year $year, $timestamp \n";
+		} else {
+			die "Can not parse date <$wdate>\n";
+		}
+		if($foundevent ne "") {
+			if($xticslabels eq "") {
+				$xticslabels = $xticslabels  . "\"$foundevent\" \"$wdate\" ";
+			} else {
+				$xticslabels = $xticslabels  . ",\"$foundevent\" \"$wdate\" ";
+			}
+		} else {
+			if($xticslabels eq "") {
+				$xticslabels = $xticslabels  . "\"$wdate\" \"$wdate\" ";
+			} else {
+				$xticslabels = $xticslabels  . ",\"$wdate\" \"$wdate\" ";
+			}
+		}
+		$datapoint = $datapoint + 1;
+	}
+
+	# save xtics for the plot
+	print "XTICS = $xticslabels\n";
+	open(XTICS,">$saveevents") || die "Need XTICS failed to open<$saveevents>:$!\n";
+	print XTICS "( $xticslabels )\n";
+	close(XTICS);
+
 	# make plots for accumulated plot
 	$graphcmd = "$tooldir/make-graphs-hist --firstdate \"$firstdate\" --detail totaldownloadlogs --daily --input $totalsfile --output $totalsimage";
 	system("$graphcmd");
 
 	# make plots for this series
-	$graphcmd = "$tooldir/make-graphs-hist --firstdate \"$firstdate\" --detail downloadlogs --daily --input $outfile --output $image";
-	system("$graphcmd");
+	$weeklygraphcmd = "$tooldir/make-graphs-hist --firstdate \"$firstdate\" --detail weeklydownloadlogs --weekly --input $weeklyoutfile --output $image --xtics $saveevents";
+	system("$weeklygraphcmd");
+
 	$uniquegraphcmd = "$tooldir/make-graphs-hist --firstdate \"$firstdate\" --detail uniquedownloadlogs --daily --input $uniquefile --output $uniqueimage";
-	print "About to execute this:\n";
-	print "$graphcmd\n";
 	system("$uniquegraphcmd");
 
 	# prepare a 2 month plot for key downloads
