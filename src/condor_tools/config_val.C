@@ -589,10 +589,6 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 			fprintf( stderr, "Can't send config setting (%s)\n", param_value );
 			my_exit(1);
 		}
-		if( !s.put('\n') ) {
-			fprintf( stderr, "Can't send newline\n" );
-			my_exit(1);
-		}
 	} else {
 		if( !s.put("") ) {
 			fprintf( stderr, "Can't send config setting\n" );
