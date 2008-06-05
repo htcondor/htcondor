@@ -1,4 +1,4 @@
-REM @echo off
+@echo off
 REM ======================================================================
 REM 
 REM  Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -32,15 +32,19 @@ REM in the case that it is not, change the variable bellow.
 set ROOT_DRIVE=%SystemDrive%
 
 REM Set paths to Visual C++, the Platform SDKs, and Perl
-set VC_DIR=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC
-set VC_BIN=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\bin
-set DOTNET_DIR=%ROOT_DRIVE%\Windows\Microsoft.NET\Framework\v3.5
-set SDK_DIR=%ROOT_DRIVE%\Program Files\Microsoft Platform SDK
+set VS_DIR=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0
+set VC_DIR=%VS_DIR%\VC
+set VC_BIN=%VC_DIR%\bin
 set PERL_DIR=%ROOT_DRIVE%\Perl\bin
-set DBG_DIR=%ROOT_DRIVE%\Program Files\Debugging Tools for Windows
+set SDK_DIR=%ProgramFiles%\Microsoft Platform SDK
+set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows
+set DOTNET_DIR=%ROOT_DRIVE%\Windows\Microsoft.NET\Framework\v3.5
+
+REM For some reason this is not defined whilst in NMI
+if "A%VS90COMNTOOLS%"=="A" set VS90COMNTOOLS=%VS_DIR%\Common7\Tools\
 
 REM Specify symbol image path for debugging
-if A%_NT_SYMBOL_PATH%==A set _NT_SYMBOL_PATH=SRV*%ROOT_DRIVE%\Symbols*http://msdl.microsoft.com/download/symbols
+if "A%_NT_SYMBOL_PATH%"=="A" set _NT_SYMBOL_PATH=SRV*%ROOT_DRIVE%\Symbols*http://msdl.microsoft.com/download/symbols
 
 REM For externals: it just tells them we would like to have manifest 
 REM files embeded in the rem DLLs (In the future, when we do not have 
@@ -49,7 +53,7 @@ REM to it from the externals)
 set NEED_MANIFESTS_IN_EXTERNALS=True
 
 REM Where do the completed externals live?
-if A%EXTERN_DIR%==A set EXTERN_DIR=%cd%\..\externals
+if "A%EXTERN_DIR%"=="A" set EXTERN_DIR=%cd%\..\externals
 set EXT_INSTALL=%EXTERN_DIR%\install
 set EXT_TRIGGERS=%EXTERN_DIR%\triggers
 
@@ -68,7 +72,7 @@ set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VER
 
 REM Put msconfig in the PATH, since it's got lots of stuff we need
 REM like awk, gunzip, tar, bison, yacc...
-set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VC_DIR%;%VC_BIN%;%SDK_DIR%;%DOTNET_DIR%;%DBG_DIR%
+set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VS_DIR%;%VC_DIR%;%VC_BIN%;%SDK_DIR%;%DOTNET_DIR%;%DBG_DIR%
 
 REM ======================================================================
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
@@ -77,7 +81,7 @@ REM lie to the setenv script, and pretend the DevEnvDir environment
 REM is alredy configured properly (yay! jump to VC2K8, but support
 REM Win2K... *sigh*) 
 set MSVCDir=%VC_DIR%
-set DevEnvDir=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\Common7\IDE
+set DevEnvDir=%VS_DIR%\Common7\IDE
 SET MSVCVer=9.0
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
@@ -88,9 +92,9 @@ set
 echo ----------------------- WIN ENV DUMP ----------------------
 
 call vcvarsall.bat x86
-if not defined INCLUDE ( echo . && echo *** Failed to run vcvarsall.bat! Is Microsoft Visual Studio installed? && exit /B 1 )
+if not defined INCLUDE ( echo. && echo *** Failed to run vcvarsall.bat! Is Microsoft Visual Studio installed? && exit /B 1 )
 call setenv /2000 /RETAIL
-if not defined MSSDK ( echo . && echo *** Failed to run setenv.cmd! Are the Microsoft Platform SDK installed? && exit /B 1 )
+if not defined MSSDK ( echo. && echo *** Failed to run setenv.cmd! Are the Microsoft Platform SDK installed? && exit /B 1 )
 
 REM Add msconfig back to the start of the path, since the above 
 REM bump us out of place.
@@ -119,7 +123,7 @@ set CONDOR_NOWARN=/D_CRT_SECURE_NO_DEPRECATE /D_CRT_SECURE_NO_WARNINGS /D_CRT_NO
 REM /D_CONST_RETURN
 set CONDOR_DEFINE=%CONDOR_NOWARN% /DHAVE_BACKFILL /DHAVE_BOINC /DHAVE_SNPRINTF /DHAVE_JOB_HOOKS /DHAVE_HIBERNATE /DBUILDID=%BID%
 set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" /GR
-set CONDOR_LIB=Crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib advapi32.lib ws2_32.lib user32.lib oleaut32.lib ole32.lib powrprof.lib 
+set CONDOR_LIB=Crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib advapi32.lib ws2_32.lib user32.lib oleaut32.lib ole32.lib powrprof.lib iphlpapi.lib
 set CONDOR_LIBPATH=
 
 REM ======================================================================

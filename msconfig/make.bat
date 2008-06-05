@@ -63,10 +63,10 @@ REM Build condor (build order is now preserved in project)
 echo Building Condor...
 msbuild condor.sln /nologo /t:condor /p:Configuration=%CONFIGURATION% || goto failure 
 
-echo .
+echo.
 echo *** Done.  Build is all happy.  Congrats!  Go drink beer.  
 exit %INTERACTIVE% 0
 :failure
-echo .
+echo.
 echo *** Build Stopped.  Please fix errors and try again.
 exit %INTERACTIVE% 1

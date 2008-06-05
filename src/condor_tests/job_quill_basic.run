@@ -112,6 +112,9 @@ print ">>>\n";
 $perlinstall = system("./x_quill_buildperlmods.pl");
 print "Perl module install result was $perlinstall\n";
 
+print "Current SysV IPC state\n";
+system("ipcs -a");
+
 print "About to install Postgres: <<<";
 system("date");
 print ">>>\n";

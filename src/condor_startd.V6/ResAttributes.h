@@ -138,6 +138,7 @@ private:
 	char*			m_subnet;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
 	char*			m_ckptpltfrm;
+	char*			m_hardware_address;
 
 #if defined ( WIN32 )
 	int				m_got_windows_version_info;

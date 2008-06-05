@@ -164,6 +164,7 @@ extern const char * ATTR_MYPROXY_CRED_NAME;
 extern const char * ATTR_MYPROXY_REFRESH_THRESHOLD;
 extern const char * ATTR_MYPROXY_NEW_PROXY_LIFETIME;
 // END ckireyev myproxy
+extern const char * ATTR_HARDWARE_ADDRESS;
 extern const char * ATTR_HAS_CHECKPOINTING;
 extern const char * ATTR_HAS_FILE_TRANSFER;
 extern const char * ATTR_HAS_PER_FILE_ENCRYPTION;

@@ -38,6 +38,7 @@ MachAttributes::MachAttributes()
 	m_subnet = NULL;
 	m_idle_interval = -1;
 	m_ckptpltfrm = NULL;
+    m_hardware_address = NULL;
 
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
@@ -97,6 +98,7 @@ MachAttributes::~MachAttributes()
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_subnet ) free( m_subnet );
 	if( m_ckptpltfrm ) free( m_ckptpltfrm );
+    if( m_hardware_address ) free( m_hardware_address );
 }
 
 
@@ -159,7 +161,7 @@ MachAttributes::compute( amask_t how_much )
 			free(m_ckptpltfrm);
 		}
 		m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
-	}
+    }
 
 
 	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
@@ -224,13 +226,25 @@ void
 MachAttributes::publish( ClassAd* cp, amask_t how_much) 
 {
 	char line[100];
+    char *sinful = NULL;
 
 	if( IS_STATIC(how_much) || IS_PUBLIC(how_much) ) {
 
-			// STARTD_IP_ADDR 
+			// STARTD_IP_ADDR
+        sinful = daemonCore->InfoCommandSinfulString();
 		sprintf( line, "%s = \"%s\"", ATTR_STARTD_IP_ADDR, 
-				 daemonCore->InfoCommandSinfulString() );
+				 sinful );
 		cp->Insert( line );
+
+        if (NULL == m_hardware_address) {
+            m_hardware_address = 
+                string_to_hardware_address(sinful);
+        }
+        if (NULL != m_hardware_address) {
+            sprintf( line, "%s = \"%s\"", ATTR_HARDWARE_ADDRESS,
+                m_hardware_address );
+            cp->Insert( line );
+        }
 
 		sprintf( line, "%s = \"%s\"", ATTR_ARCH, m_arch );
 		cp->Insert( line );
