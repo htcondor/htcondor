@@ -80,6 +80,8 @@ TTManager::config(bool reconfig)
 	numLogs = 0;
 
 	pollingTimeId = -1;
+	totalSqlProcessed = 0;
+	lastBatchSqlProcessed = 0;
 
 		/* check all possible log parameters */
 	while (logParamList[i][0] != '\0') {
@@ -214,6 +216,9 @@ TTManager::maintain()
 	QuillErrCode retcode;
 	bool bothOk = TRUE;
 	QuillErrCode ret_st;
+
+	totalSqlProcessed += lastBatchSqlProcessed;
+	lastBatchSqlProcessed = 0;
 
 	if (maintain_db_conn == false) {
 		dprintf(D_FULLDEBUG, "TTManager::maintain: connect to DB\n");
@@ -353,7 +358,6 @@ TTManager::maintain()
  */
 
 void TTManager::updateQuillAd(void) {
-	/*
 
 	char expr[1000];
 
@@ -366,13 +370,13 @@ void TTManager::updateQuillAd(void) {
 	quillad->Insert(expr);
 
 	sprintf( expr, "%s = %d", "TimeToProcessLastBatch", 
-			 secsLastBatch);
+			 0); // secsLastBatch);
 	quillad->Insert(expr);
 
 	sprintf( expr, "%s = %d", "IsConnectedToDB", 
-			 isConnectedToDB);
+			 (DBObj == 0) ? false : DBObj->isConnected());
 	quillad->Insert(expr);
-	*/
+
 }
 
 //! create the QUILL_AD sent to the collector
@@ -574,6 +578,7 @@ TTManager::event_maintain()
 					goto ERROREXIT;
 				} 				
 
+	   			lastBatchSqlProcessed++;
 				if (strcasecmp(eventtype, "Machines") == 0) {		
 					if  (insertMachines(ad) == QUILL_FAILURE)   // has vert
 						goto DBERROR;

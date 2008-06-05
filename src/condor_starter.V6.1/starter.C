@@ -522,12 +522,34 @@ CStarter::createTempExecuteDir( void )
 		return true;
 	}
 
-		// On Unix, be sure we're in user priv for this.
-		// But on NT (at least for now), we should be in Condor priv
-		// because the execute directory on NT is not wworld writable.
+		// On Unix, we stat() the execute directory to determine how
+		// the sandbox directory should be created. If it is world-
+		// writable, we do a mkdir() as the user. If it is not, we do
+		// the mkdir() as condor then chown() it over to the user.
+		//
+		// On NT (at least for now), we should be in Condor priv
+		// because the execute directory on NT is not world writable.
 #ifndef WIN32
 		// UNIX
-	priv_state priv = set_user_priv();
+	bool use_chown = false;
+	if (can_switch_ids()) {
+		struct stat st;
+		if (stat(Execute, &st) == -1) {
+			EXCEPT("stat failed on %s: %s",
+			       Execute,
+			       strerror(errno));
+		}
+		if (!(st.st_mode & S_IWOTH)) {
+			use_chown = true;
+		}
+	}
+	priv_state priv;
+	if (use_chown) {
+		priv = set_condor_priv();
+	}
+	else {
+		priv = set_user_priv();
+	}
 #else
 		// WIN32
 	priv_state priv = set_condor_priv();
@@ -538,11 +560,27 @@ CStarter::createTempExecuteDir( void )
 	}
 	else {
 		if( mkdir(WorkingDir.Value(), 0777) < 0 ) {
-			dprintf( D_FAILURE|D_ALWAYS, "couldn't create dir %s: %s\n", 
-					 WorkingDir.Value(), strerror(errno) );
+			dprintf( D_FAILURE|D_ALWAYS,
+			         "couldn't create dir %s: %s\n",
+			         WorkingDir.Value(),
+			         strerror(errno) );
 			set_priv( priv );
 			return false;
 		}
+#if !defined(WIN32)
+		if (use_chown) {
+			priv_state p = set_root_priv();
+			if (chown(WorkingDir.Value(),
+			          get_user_uid(),
+			          get_user_gid()) == -1)
+			{
+				EXCEPT("chown error on %s: %s",
+				       WorkingDir.Value(),
+				       strerror(errno));
+			}
+			set_priv(p);
+		}
+#endif
 	}
 
 #ifdef WIN32
