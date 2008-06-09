@@ -26,7 +26,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item On Unix, Condor no longer requires its \Macro{EXECUTE} directory to
+be world-writable, as long as it's not on a root-squashed NFS mount and is
+owned by the user given in the \Macro{CONDOR\_IDS} setting (or by Condor's
+real UID, if not started as \Login{root}). Condor will automatically remove
+world-writability from existing \MacroNI{EXECUTE} directories where possible.
+(Note: The \MacroNI{EXECUTE} directory has never been required to be
+world-writable on Windows.)
 
 \end{itemize}
 
@@ -172,6 +178,31 @@ in Condor 7.0.0.
 
 \item Fixed a bug that could cause incorrect IP addresses to be advertised
 when the \Condor{collector} was on a multi-homed host.
+
+\item Fixed a problem where unexpected ownership and permissions on files
+inside a job's working directory could cause the \Condor{starter} to EXCEPT.
+
+\item Improved the speed at which the \Condor{startd} can handle claim
+requests, particularly when the \Condor{startd} manages a large number
+of slots.
+
+\item Fixed an error in the way the \Condor{procd} calculates image size for
+jobs that involve multiple processes. Previously the maximum image size for
+any single process was being used. Now the image size sum across all
+processes is used.
+
+\item The \Condor{procd} no longer truncates its log file on startup.
+(Enabling a log file for the \Condor{procd} is only recommended for
+debugging, since it is not rotated to conserve disk space.)
+
+\item Fixed a problem present in Condor 7.0.1 and 7.1.0 where the
+\Condor{startd} will crash upon deactivating or releasing a COD claim.
+
+\item Condor on Windows can now correctly handle job image size when
+processes are created that allocate more than 2GB of address space.
+
+\item The \Macro{JOB\_INHERITS\_STARTER\_ENVIRONMENT} setting now works when
+the \Macro{GLEXEC\_STARTER} feature is in use.
 
 \end{itemize}
 
