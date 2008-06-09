@@ -5853,6 +5853,13 @@ universe job fails to ping the gatekeeper,
 the job will be put on hold.
 Defaults to 5 days (in seconds).
 
+\item[\Macro{GRIDFTP\_URL\_BASE}]
+\label{param:GridftpUrlBase} 
+Specifies an existing gridftp server on the local system to be used for
+file transfers for gt4 grid universe jobs. The value is given as the base
+of a URL, like \URL{gsiftp://mycomp.foo.edu:2118}. The default is for
+Condor to launch temporary gridftp servers as-needed for file transfer.
+
 \item[\Macro{C\_GAHP\_LOG}]
 \label{param:CGAHPLog} The complete path and file name of the
 Condor GAHP server's log.
