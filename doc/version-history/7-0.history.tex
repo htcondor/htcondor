@@ -41,7 +41,8 @@ world-writable on Windows.)
 
 \begin{itemize}
 
-\item A clipped port to FreeBSD 7.0 x86 and x86\_64 is available.
+\item A clipped port to FreeBSD 7.0 x86 and x86\_64 is available but at this
+time not downloadable as a binary package.
 
 \end{itemize}
 
@@ -59,6 +60,10 @@ universe jobs of type gt4. The default value is 5.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in the standard universe where if a Linux machine was
+configured to use the Network Service Cache Daemon (nscd) checkpointing
+would be deferred indefinitely.
 
 \item Fixed a bug that cause the Quill daemon to crash.
 
