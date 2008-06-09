@@ -192,6 +192,13 @@ specified with at least \Opt{-de} to avoid conflict with the
 \item \Condor{dagman} no longer considers duplicate edges in a DAG a
 fatal error (it is now a warning).
 
+% issue [#1516]
+\item If the \AdAttr{IWD} is not defined in a fetched job classified
+ad, the \Condor{starter} no longer treats this as a fatal error, and
+instead uses the temporary job execution sandbox as the initial
+working directory.
+
+
 \end{itemize}
 
 \noindent Known Bugs:

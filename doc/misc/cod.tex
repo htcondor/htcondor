@@ -198,20 +198,6 @@ The following attributes are \emph{required}:
    quotation marks (\verb@"@).
    There is no default.
 
- \item[\Attr{IWD}] IWD is an acronym for Initial Working Directory.
-\index{COD!required attributes!IWD} 
-   It defines the full path to the directory where a given COD
-   application are to be run.
-   Unless the application changes its current working directory, any
-   relative path names used by the application will be relative to
-   the IWD.
-   If any other attributes that define file names (for example,
-   \Attr{In}, \Attr{Out}, and so on) do not contain a full path, the
-   \Attr{IWD} will automatically be pre-pended to those filenames.
-   It is a string attribute, and must therefore be enclosed in 
-   quotation marks (\verb@"@).
-   There is no default.
-
  \item[\Attr{Owner}] If the \Condor{startd} daemon is executing as root on
 \index{COD!required attributes!Owner} 
    the resource where a COD application will run, the user must also
@@ -242,6 +228,22 @@ The following attributes are \emph{required}:
 The following list of attributes are \emph{optional}:
 
 \begin{description}
+
+ \item[\Attr{IWD}] IWD is an acronym for Initial Working Directory.
+\index{COD!optional attributes!IWD} 
+   It defines the full path to the directory where a given COD
+   application are to be run.
+   Unless the application changes its current working directory, any
+   relative path names used by the application will be relative to
+   the IWD.
+   If any other attributes that define file names (for example,
+   \Attr{In}, \Attr{Out}, and so on) do not contain a full path, the
+   \Attr{IWD} will automatically be pre-pended to those filenames.
+   It is a string attribute, and must therefore be enclosed in 
+   quotation marks (\verb@"@).
+   If the \Attr{IWD} is not specified, the temporary execution sandbox
+   created by the \Condor{starter} will be used as the initial working
+   directory.
 
  \item[\Attr{In}] This string defines the path to the file on the
 \index{COD!optional attributes!In} 
