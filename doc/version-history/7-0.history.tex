@@ -59,23 +59,27 @@ universe jobs of type gt4. The default value is 5.
 % condor-admin 17847
 \item Fixed a bug that caused Stork to be completely broken.
 
-\item (Back-port from 7.1.x) Windows Installer is now completely
+\item As a backport from Condor versions 7.1,
+  the Windows Installer is now completely
   internationalized: it will no longer fail to install because of a
   missing "Users" group; instead, it will use the regionally appropriate
   group.
 
-\item (Back-port from 7.1.x) Interoperability with Samba (as a PDC) has
-  been improved.  Condor uses a fast form of login during credential
-  validation.  Unfortunately, this login procedure fails under Samba,
+\item As a backport from Condor versions 7.1,
+  interoperability with Samba (as a PDC) has been improved.
+  Condor uses a fast form of login during credential validation.
+  Unfortunately, this login procedure fails under Samba,
   even if the credentials are valid.  The new behavior is to attempt
-  the fast login and, on failure, fall back to the slower form.
+  the fast login, and on failure, fall back to the slower form.
 
-\item (Back-port from 7.1.x) Windows slot users no longer have the
+\item As a backport from Condor versions 7.1,
+  Windows slot users no longer have the
   Batch Privilege added, nor does Condor first attempt a Batch login
   for slot users.  This was causing permission problems on hardened
   versions of Windows, such as Windows Sever 2003, in that not
-  interactive users lacked the permission to run batch files (via
-  the cmd.exe tool). This affected any user submitting jobs that used
+  interactive users lacked the permission to run batch files 
+  (via the \Prog{cmd.exe} tool). 
+  This affected any user submitting jobs that used
   batch files as the executable.
 
 \item Fixed a bug that could sometimes cause the \Condor{schedd} to either EXCEPT or
