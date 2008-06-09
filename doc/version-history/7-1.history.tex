@@ -150,6 +150,13 @@ and \Condor{submit} will expand the argument to be the expected value.
   permission to run batch files (via the \Prog{cmd.exe} tool). This affected 
   any user submitting jobs that used batch files as the executable.
 
+% issue [#1516]
+\item If the \AdAttr{IWD} is not defined in a job classified
+  ad that was either fetched by the \Condor{startd} via job hooks, or
+  pushed to the \Condor{startd} via COD, the \Condor{starter} no
+  longer treats this as a fatal error, and instead uses the temporary
+  job execution sandbox as the initial working directory.
+
 \end{itemize}
 
 \noindent Known Bugs:
