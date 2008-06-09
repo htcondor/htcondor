@@ -44,6 +44,10 @@ world-writable on Windows.)
 \item A clipped port to FreeBSD 7.0 x86 and x86\_64 is available but at this
 time not downloadable as a binary package.
 
+\item Previously, \condor{q} \Opt{-better-analyze} was supported on most
+but not all versions of Linux.  It is now supported on all Unix platforms
+but not yet on Windows.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -208,6 +212,16 @@ processes are created that allocate more than 2GB of address space.
 
 \item The \Macro{JOB\_INHERITS\_STARTER\_ENVIRONMENT} setting now works when
 the \Macro{GLEXEC\_STARTER} feature is in use.
+
+\item Fixed a problem causing \Condor{schedd} to perform poorly when
+handling large job queues in which there are any idle local or
+scheduler universe jobs (e.g. Condor cron jobs).
+
+\item Sped up \Condor{schedd} graceful shutdown when disconnecting
+from running jobs that have job leases.  Previously, it would only
+disconnect from one such job at a time, so if there were a lot of jobs
+running, \Condor{schedd} could take so long to shut down that job leases
+expire before it has a chance to restart and reconnect to the jobs.
 
 \end{itemize}
 
