@@ -350,9 +350,9 @@ JICLocal::initJobInfo( void )
 
 		// stash the iwd name in orig_job_iwd
 	if( ! job_ad->LookupString(ATTR_JOB_IWD, &orig_job_iwd) ) {
-		dprintf( D_ALWAYS, "Error in JICLocal::initJobInfo(): "
-				 "Can't find %s in job ad\n", ATTR_JOB_IWD );
-		return false;
+		dprintf(D_ALWAYS, "%s not found in job ad, setting to %s\n",
+				ATTR_JOB_IWD, Starter->GetWorkingDir());
+		job_ad->Assign(ATTR_JOB_IWD, Starter->GetWorkingDir());
 	} else {
 			// put the orig job iwd in class ad
 		dprintf(D_ALWAYS, "setting the orig job iwd in starter\n");
