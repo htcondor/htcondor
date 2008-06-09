@@ -93,6 +93,12 @@ echo ----------------------- WIN ENV DUMP ----------------------
 
 call vcvarsall.bat x86
 if not defined INCLUDE ( echo. && echo *** Failed to run vcvarsall.bat! Is Microsoft Visual Studio installed? && exit /B 1 )
+REM ======================================================================
+REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
+REM We set this here as the above script will find the wrong version
+WindowsSdkDir=%SDK_DIR%
+REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
+REM ======================================================================
 call setenv /2000 /RETAIL
 if not defined MSSDK ( echo. && echo *** Failed to run setenv.cmd! Are the Microsoft Platform SDK installed? && exit /B 1 )
 
