@@ -83,8 +83,6 @@ REM Win2K... *sigh*)
 set MSVCDir=%VC_DIR%
 set DevEnvDir=%VS_DIR%\Common7\IDE
 set MSVCVer=9.0
-REM Attempt to remove the access dennied errors in NMI
-cmd.exe /c echo y | cacls %cd% /t /g Everyone:F
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
