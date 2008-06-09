@@ -361,10 +361,13 @@ foreach $log (@datafiles) {
 		}
 	}
 	close(DATA);
-	close(WEEKLY);
 
 	#partial week?
+	print "Looking for partial week...... wgood now <$wgood>\n";
 	if($wgood != 0) {
+
+		print "Adding partial week.......\n";
+		print "$wdate, $wsrc, $wgood, -$wbad, 0, 0, 0, 0\n";
 		print WEEKLY "$wdate, $wsrc, $wgood, -$wbad, 0, 0, 0, 0\n";
 		if( $wdate =~ /^(\w+)\s+(\d+)\s+(\d+)$/) {
 			#print "turning $wdate to a timestamp\n";
@@ -391,6 +394,7 @@ foreach $log (@datafiles) {
 		}
 		$datapoint = $datapoint + 1;
 	}
+	close(WEEKLY);
 
 	# save xtics for the plot
 	print "XTICS = $xticslabels\n";
