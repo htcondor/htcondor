@@ -40,7 +40,7 @@ set SDK_DIR=%ProgramFiles%\Microsoft Platform SDK
 set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows
 set DOTNET_DIR=%ROOT_DRIVE%\Windows\Microsoft.NET\Framework\v3.5
 
-REM For some reason this is not defined whilst in NMI
+REM For some reason this is not defined whilst in some environments
 if "A%VS90COMNTOOLS%"=="A" set VS90COMNTOOLS=%VS_DIR%\Common7\Tools\
 
 REM Specify symbol image path for debugging
@@ -82,7 +82,9 @@ REM is alredy configured properly (yay! jump to VC2K8, but support
 REM Win2K... *sigh*) 
 set MSVCDir=%VC_DIR%
 set DevEnvDir=%VS_DIR%\Common7\IDE
-SET MSVCVer=9.0
+set MSVCVer=9.0
+REM Attempt to remove the access dennied errors in NMI
+cmd.exe /c echo y | cacls %cd% /t /g Everyone:F
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 

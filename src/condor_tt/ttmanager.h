@@ -140,6 +140,8 @@ class TTManager : public Service
 		void commit(NamedAdHashType*, NamedAdHashType*);
 	} AttributeCache;
 
+	int totalSqlProcessed;
+	int lastBatchSqlProcessed;
 };
 
 #endif /* _TTMANAGER_H_ */
