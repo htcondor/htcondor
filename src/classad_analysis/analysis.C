@@ -1979,6 +1979,19 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 			 op == classad::Operation::ISNT_OP ) {
 			// we need multiple intervals
 		switch( type ) {
+		case classad::Value::UNDEFINED_VALUE: {
+			if( op != classad::Operation::ISNT_OP ) {
+				vr->EmptyOut( );
+				return true;
+			}
+			if( vr->IsInitialized( ) ) {
+				vr->IntersectUndef( false );
+			}
+			else {
+				vr->InitUndef( false );
+			}
+			return true;
+		}
 		case classad::Value::BOOLEAN_VALUE: {
 			bool b;
 			if( val.IsBooleanValue( b ) ) {
