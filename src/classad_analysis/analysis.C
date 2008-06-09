@@ -1774,7 +1774,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 	Interval *ival = NULL;
 	refdAttrs.Rewind( );
 	int i = 0;
-	while( refdAttrs.Next( refdAttr ) ) { 
+	while( bestHR && refdAttrs.Next( refdAttr ) ) { 
 		bestHR->GetInterval( i, ival );
 		currAttrExplain = new AttributeExplain( );
 		if( ival == NULL ) {
