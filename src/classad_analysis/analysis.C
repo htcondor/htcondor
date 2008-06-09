@@ -2066,7 +2066,9 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 		}
 		return true;
 		default: {
-			cerr << "AddConstraint: Condition value not literal" << endl;
+			string expr;
+			condition->ToString(expr);
+			cerr << "AddConstraint: Condition value not literal: '" << val << "' in '" << expr << "'" << endl;
 			return false;
 		}
 		}
