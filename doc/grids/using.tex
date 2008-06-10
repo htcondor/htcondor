@@ -394,7 +394,7 @@ chomp $gassUrl;
 $ENV{LD_LIBRARY_PATH} = $ENV{GLOBUS_LOCATION}. "/lib";
 $urlCopy = $ENV{GLOBUS_LOCATION}."/bin/globus-url-copy";
 
-# globus-url-copy needs a full pathname
+# globus-url-copy needs a full path name
 $pwd = getcwd();
 print "$urlCopy $gassUrl/etc/hosts file://$pwd/temporary.hosts\n\n";
 `$urlCopy $gassUrl/etc/hosts file://$pwd/temporary.hosts`;
@@ -525,13 +525,13 @@ explicitly listed using \SubmitCmd{transfer\_output\_files}.
 The underlying transfer mechanism requires a \Prog{GridFTP} server
 to be running on the machine where the job
 is submitted. Condor will start one automatically. It will appear in the
-job queue as an addtional job. It will leave the queue when there are
-no more \SubmitCmd{gt4} in the queue.
-If the submit machine has a permanent \Prog{GridFTP} server running, you
-can instruct Condor to use it by setting \Macro{GRIDFTP\_URL\_BASE}.
-Here's an example:
+job queue as an additional job. It will leave the queue when there are
+no more \SubmitCmd{gt4} jobs in the queue.
+If the submit machine has a permanent \Prog{GridFTP} server running,
+instruct Condor to use it by setting the \Macro{GRIDFTP\_URL\_BASE}
+configuration variable.  Here is an example setting:
 \begin{verbatim}
-GRIDFTP_URL_BASE = gsiftp://mycomp.foo.edu
+  GRIDFTP_URL_BASE = gsiftp://mycomp.foo.edu
 \end{verbatim}
 
 On the submit machine,
