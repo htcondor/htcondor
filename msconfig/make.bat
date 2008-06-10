@@ -37,7 +37,7 @@ REM Rename source files so the the object file names will collide
 call :FIX_SOURCE_NAMES
 if %ERRORLEVEL% NEQ 0 goto :FAIL
 
-call :GENRATE_SYSCALL_NUMBERS
+call :GENERATE_SYSCALL_NUMBERS
 if %ERRORLEVEL% NEQ 0 goto :FAIL
 
 REM Build the externals
@@ -100,7 +100,7 @@ if not errorlevel 2 call dorenames.bat >NUL
 exit /b 0
 
 REM ======================================================================
-:GENRATE_SYSCALL_NUMBERS
+:GENERATE_SYSCALL_NUMBERS
 REM ======================================================================
 REM Although we have it as a rule in the .dsp files, somehow our prebuild 
 REM rule for syscall_numbers.h gets lost into the translation to .mak files, 
