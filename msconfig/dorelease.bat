@@ -21,6 +21,10 @@ if not exist %1\sql\NUL mkdir %1\sql
 if not exist %1\src\NUL mkdir %1\src
 if not exist %1\src\chirp\NUL mkdir %1\src\chirp
 REM if not exist %1\profiles\NUL mkdir %1\profiles
+if not exist %1\examples\NUL mkdir %1\examples
+if not exist %1\examples\cpusoak\NUL mkdir %1\examples\cpusoak
+if not exist %1\examples\printname\NUL mkdir %1\examples\printname
+if not exist %1\examples\rc5\NUL mkdir %1\examples\rc5
 
 echo. & echo Copying root Condor files...
 copy ..\Release\*.exe %1\bin
@@ -44,6 +48,12 @@ copy ..\src\condor_chirp\chirp\doc\Condor %1\src\chirp\README
 echo. & echo Copying example configurations...
 copy ..\src\condor_examples\condor_config.* %1\etc
 copy ..\src\condor_examples\condor_vmgahp_config.vmware %1\etc
+
+echo. & echo Copying example submit files...
+copy installer\examples\*.* %1\examples
+copy installer\examples\cpusoak\*.* %1\examples\cpusoak
+copy installer\examples\printname\*.* %1\examples\printname
+copy installer\examples\rc5\*.* %1\examples\rc5
 
 echo. & echo Copying SQL files...
 copy ..\src\condor_tt\*.sql %1\sql
