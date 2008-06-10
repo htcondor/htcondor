@@ -86,24 +86,31 @@ set MSVCVer=9.0
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
+REM Configure Visual C++
 call vcvarsall.bat x86
 if not defined INCLUDE ( echo. && echo *** Failed to run vcvarsall.bat! Is Microsoft Visual Studio installed? && exit /B 1 )
+
 REM ======================================================================
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM We set these here as the above script will find the wrong versions
-REM *sigh*
+REM of everything... *sigh*
 set WindowsSdkDir=%SDK_DIR%
-set INCLUDE=%WindowsSdkDir%\Include;%INCLUDE%
-set LIB=%WindowsSdkDir%\Lib;%LIB%
-set LIBPATH=%WindowsSdkDir%\Lib;%LIBPATH%
+REM set INCLUDE=%WindowsSdkDir%\Include;%INCLUDE%
+REM set LIB=%WindowsSdkDir%\Lib;%LIB%
+REM set LIBPATH=%WindowsSdkDir%\Lib;%LIBPATH%
+set INCLUDE=C:\Program Files\Microsoft Visual Studio 9.0\VC\include;C:\Program Files\Microsoft Visual Studio 9.0\VC\atlmfc\include
+set LIB=C:\Program Files\Microsoft Visual Studio 9.0\VC\lib;C:\Program Files\Microsoft Visual Studio 9.0\VC\atlmfc\lib
+set LIBPATH=%LIB%
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
+
+REM Configure the Platform SDK environment
 call setenv /2000 /RETAIL
 if not defined MSSDK ( echo. && echo *** Failed to run setenv.cmd! Are the Microsoft Platform SDK installed? && exit /B 1 )
 
 REM Add msconfig back to the start of the path, since the above 
 REM bump us out of place.
-set PATH=%cd%;%PATH%
+REM set PATH=%cd%;%PATH%
 
 REM Set up some stuff for BISON
 set BISON_SIMPLE=%cd%\bison.simple
