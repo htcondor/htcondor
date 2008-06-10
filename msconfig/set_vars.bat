@@ -86,11 +86,6 @@ set MSVCVer=9.0
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
-REM Dump the Windows build environment at this point
-echo ----------------------- WIN ENV DUMP ----------------------
-set
-echo ----------------------- WIN ENV DUMP ----------------------
-
 call vcvarsall.bat x86
 if not defined INCLUDE ( echo. && echo *** Failed to run vcvarsall.bat! Is Microsoft Visual Studio installed? && exit /B 1 )
 REM ======================================================================
@@ -116,6 +111,11 @@ set BISON_HAIRY=%cd%\bison.hairy
 
 REM Tell the build system where we can find soapcpp2
 set SOAPCPP2=%EXT_INSTALL%\%EXT_GSOAP_VERSION%\soapcpp2.exe
+
+REM Dump the Windows build environment at this point
+echo ----------------------- WIN ENV DUMP ----------------------
+set
+echo ----------------------- WIN ENV DUMP ----------------------
 
 REM Determine the build id, if it is defined
 pushd ..
