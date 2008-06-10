@@ -21,52 +21,135 @@ REM ======================================================================
 REM Build Condor from a batch file
 REM Todd Tannenbaum <tannenba@cs.wisc.edu> Feb 2002
 
+REM ======================================================================
+REM ======================================================================
+REM Main entry point
+REM ======================================================================
+REM ======================================================================
+
 REM We want to be able to make the build exit with an exit code
 REM instead of setting ERRORLEVEL, if, say, we're calling the bat file
 REM from Perl, which doesn't understand ERRORLEVEL.
 set INTERACTIVE=/b
 IF "%1" == "/exit" set INTERACTIVE=
 
-call dorenames.bat > NUL
-if not errorlevel 2 call dorenames.bat > NUL
+REM Rename source files so the the object file names will collide
+call :FIX_SOURCE_NAMES
+if %ERRORLEVEL% NEQ 0 goto :FAIL
+
+call :GENRATE_SYSCALL_NUMBERS
+if %ERRORLEVEL% NEQ 0 goto :FAIL
 
 REM Build the externals
-call make_win32_externals.bat
-if %ERRORLEVEL% NEQ 0 goto failure
+call :BUILD_EXTERNALS
+if %ERRORLEVEL% NEQ 0 goto :EXTERNALS_FAIL
 
 REM Copy any .dll files created by the externals in debug and release
 call copy_external_dlls.bat
-if %ERRORLEVEL% NEQ 0 goto failure
+if %ERRORLEVEL% NEQ 0 goto :FAIL
 
-REM Configure the environment
-call set_vars.bat
-if %ERRORLEVEL% NEQ 0 goto failure
+REM Copy any .dll files created by the externals in debug and release
+call :DETERMINE_CONFIGRATION
+if %ERRORLEVEL% NEQ 0 goto :FAIL
 
+REM Make gsoap stubs, etc.
+call :MAKE_GSOAP
+if %ERRORLEVEL% NEQ 0 goto :GSOAP_FAIL
+
+REM ======================================================================
+REM NOTE: make_win32_externals.bat implicitly calls set_vars.bat, so just 
+REM run the build as long as the extenals built ok.
+REM ======================================================================
+
+REM Launch the Visual Studio IDE
+call :RUN_BUILD
+if %ERRORLEVEL% NEQ 0 goto :FAIL
+
+REM We're done, let's get out of here
+echo *** Done. Build is all happy. Congrats! Go drink beer.
+endlocal
+goto :EOF
+
+REM ======================================================================
+REM ======================================================================
+REM Functions
+REM ======================================================================
+REM ======================================================================
+
+REM ======================================================================
+:FAIL
+REM ======================================================================
+REM All the failure calls
+REM ======================================================================
+echo *** Build Stopped. Please fix errors and try again.
+exit %INTERACTIVE% 1
+:EXTERNALS_FAIL
+echo *** Failed to build externals ***
+exit %INTERACTIVE% 1
+:GSOAP_FAIL
+echo *** gsoap stub generator failed ***
+exit %INTERACTIVE% 1
+
+REM ======================================================================
+:FIX_SOURCE_NAMES
+REM ======================================================================
+REM Rename source files so the the object file names will collide
+REM ======================================================================
+call dorenames.bat >NUL
+if not errorlevel 2 call dorenames.bat >NUL
+exit /b 0
+
+REM ======================================================================
+:GENRATE_SYSCALL_NUMBERS
+REM ======================================================================
+REM Although we have it as a rule in the .dsp files, somehow our prebuild 
+REM rule for syscall_numbers.h gets lost into the translation to .mak files, 
+REM so we deal with it here explicitly.
+REM ======================================================================
+if not exist ..\src\h\syscall_numbers.h awk -f ..\src\h\awk_prog.include_file ..\src\h\syscall_numbers.tmpl > ..\src\h\syscall_numbers.h
+exit /b 0
+
+REM ======================================================================
+:BUILD_EXTERNALS
+REM ======================================================================
+REM Build the externals and copy any .dll files created by the externals 
+REM in debug and release
+REM ======================================================================
+call make_win32_externals.bat
+if %ERRORLEVEL% NEQ 0 exit /b 1
+call copy_external_dlls.bat
+if %ERRORLEVEL% NEQ 0 exit /b 1
+exit /b 0
+
+REM ======================================================================
+:DETERMINE_CONFIGRATION
+REM ======================================================================
+REM Determine the build type
+REM ======================================================================
 set CONFIGURATION=Release
 if /i A%1==Arelease shift
 if /i A%1==Adebug (
     set CONFIGURATION=Debug 
     shift 
-    echo Debug Build - Output going to ..\Debug
-) else (
-    echo Release Build - Output going to ..\Release
 )
+echo *** %CONFIGURATION% Build
+exit /b 0
 
-call dorenames.bat > NUL
-if not errorlevel 2 call dorenames.bat > NUL
+REM ======================================================================
+:MAKE_GSOAP
+REM ======================================================================
+REM Make gsoap stubs, etc.
+REM ======================================================================
+nmake /NOLOGO /f gsoap.mak
+if %ERRORLEVEL% NEQ 0 exit /b 1
+exit /b 0
 
-REM Generate the SOAP API
-echo Building gsoap...
-nmake /NOLOGO /f gsoap.mak || goto failure
-
+REM ======================================================================
+:RUN_BUILD
+REM ======================================================================
 REM Build condor (build order is now preserved in project)
+REM ======================================================================
 echo Building Condor...
-msbuild condor.sln /nologo /t:condor /p:Configuration=%CONFIGURATION% || goto failure 
-
-echo.
-echo *** Done.  Build is all happy.  Congrats!  Go drink beer.  
-exit %INTERACTIVE% 0
-:failure
-echo.
-echo *** Build Stopped.  Please fix errors and try again.
-exit %INTERACTIVE% 1
+msbuild condor.sln /nologo /t:condor /p:Configuration=%CONFIGURATION%
+if %ERRORLEVEL% NEQ 0 exit /b 1
+exit /b 0
