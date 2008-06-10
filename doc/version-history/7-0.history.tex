@@ -27,12 +27,12 @@ The details of each version are described below.
 \begin{itemize}
 
 \item On Unix, Condor no longer requires its \Macro{EXECUTE} directory to
-be world-writable, as long as it's not on a root-squashed NFS mount and is
+be world-writable, as long as it is not on a root-squashed NFS mount and is
 owned by the user given in the \Macro{CONDOR\_IDS} setting (or by Condor's
 real UID, if not started as \Login{root}). Condor will automatically remove
 world-writability from existing \MacroNI{EXECUTE} directories where possible.
-(Note: The \MacroNI{EXECUTE} directory has never been required to be
-world-writable on Windows.)
+Note: The \MacroNI{EXECUTE} directory has never been required to be
+world-writable on Windows.
 
 \item With this release, a binary package for IA64 SUSE Linux Enterprise 8
 will no longer be made available.
@@ -44,12 +44,12 @@ will no longer be made available.
 
 \begin{itemize}
 
-\item A clipped port to FreeBSD 7.0 x86 and x86\_64 is available but at this
-time not downloadable as a binary package.
+\item A clipped port to FreeBSD 7.0 x86 and x86\_64 is available, but at this
+time is not downloadable as a binary package.
 
-\item Previously, \condor{q} \Opt{-better-analyze} was supported on most
-but not all versions of Linux.  It is now supported on all Unix platforms
-but not yet on Windows.
+\item Previously, \Condor{q} \Opt{-better-analyze} was supported on most
+but not all versions of Linux.  It is now supported on all Unix platforms,
+but not yet on Windows platforms.
 
 \end{itemize}
 
@@ -69,16 +69,16 @@ universe jobs of type gt4. The default value is 5.
 \begin{itemize}
 
 \item Fixed a bug in the standard universe where if a Linux machine was
-configured to use the Network Service Cache Daemon (nscd) checkpointing
-would be deferred indefinitely.
+  configured to use the Network Service Cache Daemon (nscd), taking
+  a checkpoint would be deferred indefinitely.
 
 \item Fixed a bug that caused the Quill daemon to crash.
 
 \item Fixed bug that prevented Quill, when running on a
-	Windows host, from successfully updating the database.
+  Windows host, from successfully updating the database.
 
 \item Fixed a bug that prevented Quill's \Condor{dbmsd} daemon from proper
-	shutting down upon request when running on Windows platforms.
+  shutting down upon request when running on Windows platforms.
 
 % condor-admin 17847
 \item Fixed a bug that caused Stork to be completely broken.
@@ -106,40 +106,44 @@ would be deferred indefinitely.
   This affected any user submitting jobs that used
   batch files as the executable.
 
-\item Fixed a bug that could sometimes cause the \Condor{schedd} to either EXCEPT or
-	crash shortly after a user issues a \Condor{rm} command with the
-	\Opt{-forcex} option.
+\item Fixed a bug that could sometimes cause the \Condor{schedd}
+  to either EXCEPT or crash shortly after a user issues a \Condor{rm}
+  command with the \Opt{-forcex} option.
 
-\item \Condor{history} in a quill environment, when given the -constraint option,
-would ignore attributes from the vertical schema.  This has been fixed.
+\item \Condor{history} in a Quill environment,
+  when given the \Opt{-constraint} option,
+  would ignore attributes from the vertical schema.  This has been fixed.
 
-\item In Unix, when started as root, the \Condor{master} now changes the
-effective user id back to root (instead of condor) when restarting itself
-(e.g. due to the command \Condor{restart}).  This makes no difference unless
-you have wrapped the \Condor{master} with a script of some kind and this
-script expects to be run as root not only on initial start up but on restart
-as well.
+\item In Unix, when started as \Login{root},
+  the \Condor{master} now changes the
+  effective user id back to \Login{root} (instead of condor)
+  when restarting itself.
+  This occurs for example due to the command \Condor{restart}.
+  This makes no difference unless the \Condor{master} is wrapped
+  with a script, and the script expects to be run as \Login{root}
+  not only on initial start up, but on restart as well.
 
 \item The dedicated scheduler would sometimes take two negotiation cycles
-to acquire all the machines it needed to run a job.  This has been now
-fixed.
+  to acquire all the machines it needed to run a job.
+  This has been now fixed.
 
 % PR 938
 \item \Condor{dagman} no longer prints "Argument added" and
-"Retry Abort Value" diagnostic messages at the default verbosity,
-to reduce the size of the dagman.out file and the start up time
-for very large DAGs.
+  "Retry Abort Value" diagnostic messages at the default verbosity,
+  to reduce the size of the \File{dagman.out} file and the start up time
+  for very large DAGs.
 
 \item \Condor{dagman} now prints a few fatal parse errors at lower
-verbosity settings than it did previously.
+  verbosity settings than it did previously.
 
-\item \Condor{preen} no longer deletes MyProxy password files in the
-Condor spool directory.
+\item \Condor{preen} no longer deletes \Prog{MyProxy} password files in the
+  Condor spool directory.
 
-\item When using TCP updates (UDP updates are the default) The
-\Condor{collector} would sometimes freeze for 20 seconds when
-receiving an invalidation notice (i.e. when condor is being turned off
-on a machine in the pool).
+\item When using TCP updates (UDP updates are the default), the
+  \Condor{collector} would sometimes freeze for 20 seconds when
+  receiving an invalidation notice.  
+  The notice is received when Condor is being turned off
+  on a machine in the pool.
 
 \item Fixed a case in which the \Condor{schedd}'s job queue log file
 could get corrupted when encountering errors writing to the disk such
@@ -148,7 +152,7 @@ as `out of space'.  This type of corruption was detected by the
 restore the job queue, so you would only have been affected by this
 problem if your \Condor{schedd} refused to start up until you fixed or
 removed the job queue log file.  This bug has existed in all versions
-of Condor, but it became more likely to happen in 6.9.4.
+of Condor, but it became more likely to occur in 6.9.4.
 
 \item The configuration setting \MacroNI{JAVA} may now contain spaces.
 Previously, this did not work.
@@ -157,11 +161,12 @@ Previously, this did not work.
 Condor daemons.
 
 \item Fixed a file descriptor leak in the negotiator.  The leak happened
-whenever the negotiator failed to initiate the NEGOTIATE command to
-a schedd (for example if security negotiation failed with the schedd).
-Under Unix, this would eventually cause the negotiator to run out of
-file descriptors, exit, and restart.  This bug affected all previous
-versions of Condor.
+  whenever the negotiator failed to initiate the NEGOTIATE command to
+  a \Condor{schedd}, for example if security negotiation failed
+  with the \Condor{schedd}.
+  Under Unix, this would eventually cause the \Condor{negotiator} to run out of
+  file descriptors, exit, and restart.  This bug affected all previous
+  versions of Condor.
 
 \item Fixed several bugs in the user log reader that caused it to
   generate an invalid persisted state if no events had been read in.
@@ -190,9 +195,10 @@ information from newer NorduGrid servers. Previously, the GAHP could crash
 when talking to newer servers.
 
 \item Fixed a bug that caused \Condor{config\_val} \Opt{-set} or
-\Opt{-rset} to fail if security negotiation was turned off
-(e.g. \MacroNI{SEC\_DEFAULT\_NEGOTIATION=NEVER}).  This bug was introduced
-in Condor 7.0.0.
+  \Opt{-rset} to fail if security negotiation was turned off.
+  This happens, for example, if
+  \Expr{SEC\_DEFAULT\_NEGOTIATION = NEVER}.
+  This bug was introduced in Condor 7.0.0.
 
 \item Fixed a bug that could cause incorrect IP addresses to be advertised
 when the \Condor{collector} was on a multi-homed host.
@@ -209,9 +215,9 @@ jobs that involve multiple processes. Previously the maximum image size for
 any single process was being used. Now the image size sum across all
 processes is used.
 
-\item The \Condor{procd} no longer truncates its log file on startup.
-(Enabling a log file for the \Condor{procd} is only recommended for
-debugging, since it is not rotated to conserve disk space.)
+\item The \Condor{procd} no longer truncates its log file on start up.
+  Enabling a log file for the \Condor{procd} is only recommended for
+  debugging, since it is not rotated to conserve disk space.
 
 \item Fixed a problem present in Condor 7.0.1 and 7.1.0 where the
 \Condor{startd} will crash upon deactivating or releasing a COD claim.
@@ -224,7 +230,7 @@ the \Macro{GLEXEC\_STARTER} feature is in use.
 
 \item Fixed a problem causing \Condor{schedd} to perform poorly when
 handling large job queues in which there are any idle local or
-scheduler universe jobs (e.g. Condor cron jobs).
+scheduler universe jobs (for example, Condor cron jobs).
 
 \item Sped up \Condor{schedd} graceful shutdown when disconnecting
 from running jobs that have job leases.  Previously, it would only
