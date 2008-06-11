@@ -1,1 +1,1 @@
-cmd /k
+start cmd
