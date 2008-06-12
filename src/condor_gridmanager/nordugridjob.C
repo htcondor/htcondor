@@ -115,6 +115,9 @@ void NordugridJobReconfig()
 	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
 	NordugridJob::setProbeInterval( tmp_int );
 
+	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
+	NordugridJob::setGahpCallTimeout( tmp_int );
+
 	// Tell all the resource objects to deal with their new config values
 	NordugridResource *next_resource;
 
@@ -286,6 +289,7 @@ NordugridJob::~NordugridJob()
 void NordugridJob::Reconfig()
 {
 	BaseJob::Reconfig();
+	gahp->setTimeout( gahpCallTimeout );
 }
 
 int NordugridJob::doEvaluateState()
