@@ -22,11 +22,5 @@ http://www.cs.wisc.edu/condor.  For documentation on how the parts of
 the contrib modules work, be sure to read the Condor Version 6.1
 manual, not the 6.0 manual.
 
-Source is no longer being distributed for Condor, so there are no
-instructions for compiling.  Please go to the Condor home page, 
-http://www.cs.wisc.edu/condor to find binaries for all major UNIX
-operating systems.  If you would like source to Condor, please contact
-the Condor team directly at condor-admin@cs.wisc.edu.
-
 If you have any problems, questions, or bugs, please send them to
 condor-admin@cs.wisc.edu.  
