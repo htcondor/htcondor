@@ -35,6 +35,7 @@ class DaemonCoreSockAdapterClass {
  public:
 	typedef int (DaemonCore::*Register_Socket_fnptr)(Stream*,const char*,SocketHandlercpp,const char*,Service*,DCpermission);
 	typedef int (DaemonCore::*Cancel_Socket_fnptr)( Stream *sock );
+	typedef void (DaemonCore::*CallSocketHandler_fnptr)( Stream *sock, bool default_to_HandleCommand );
     typedef int (DaemonCore::*Register_DataPtr_fnptr)( void *data );
     typedef void *(DaemonCore::*GetDataPtr_fnptr)();
 	typedef int (DaemonCore::*Register_Timer_fnptr)(unsigned deltawhen,Eventcpp event,char * event_descrip,Service* s);
@@ -48,6 +49,7 @@ class DaemonCoreSockAdapterClass {
 		DaemonCore *dC,
 		Register_Socket_fnptr Register_Socket_fptr,
 		Cancel_Socket_fnptr Cancel_Socket_fptr,
+		CallSocketHandler_fnptr CallSocketHandler_fptr,
 		Register_DataPtr_fnptr Register_DataPtr_fptr,
 		GetDataPtr_fnptr GetDataPtrFun_fptr,
 		Register_Timer_fnptr Register_Timer_fptr,
@@ -58,6 +60,7 @@ class DaemonCoreSockAdapterClass {
 		m_daemonCore = dC;
 		m_Register_Socket_fnptr = Register_Socket_fptr;
 		m_Cancel_Socket_fnptr = Cancel_Socket_fptr;
+		m_CallSocketHandler_fnptr = CallSocketHandler_fptr;
 		m_Register_DataPtr_fnptr = Register_DataPtr_fptr;
 		m_GetDataPtr_fnptr = GetDataPtrFun_fptr;
 		m_Register_Timer_fnptr = Register_Timer_fptr;
@@ -72,6 +75,7 @@ class DaemonCoreSockAdapterClass {
 	DaemonCore *m_daemonCore;
 	Register_Socket_fnptr m_Register_Socket_fnptr;
 	Cancel_Socket_fnptr m_Cancel_Socket_fnptr;
+	CallSocketHandler_fnptr m_CallSocketHandler_fnptr;
 	Register_DataPtr_fnptr m_Register_DataPtr_fnptr;
 	GetDataPtr_fnptr m_GetDataPtr_fnptr;
 	Register_Timer_fnptr m_Register_Timer_fnptr;
@@ -94,6 +98,12 @@ class DaemonCoreSockAdapterClass {
 	{
 		ASSERT(m_daemonCore);
 		return (m_daemonCore->*m_Cancel_Socket_fnptr)(stream);
+	}
+
+	void CallSocketHandler( Stream *stream, bool default_to_HandleCommand=false )
+	{
+		ASSERT(m_daemonCore);
+		(m_daemonCore->*m_CallSocketHandler_fnptr)(stream,default_to_HandleCommand);
 	}
 
     int Register_DataPtr( void *data )

@@ -74,6 +74,100 @@ DCStartd::setClaimId( const char* id )
 }
 
 
+ClaimStartdMsg::ClaimStartdMsg( char const *the_claim_id, ClassAd const *job_ad, char const *the_description, char const *scheduler_addr, int alive_interval ):
+ DCMsg(REQUEST_CLAIM)
+{
+
+	m_claim_id = the_claim_id;
+	m_job_ad = *job_ad;
+	m_description = the_description;
+	m_scheduler_addr = scheduler_addr;
+	m_alive_interval = alive_interval;
+	m_reply = 0;
+}
+
+void
+ClaimStartdMsg::cancelMessage() {
+	dprintf(D_ALWAYS,"Canceling request for claim %s\n", description());
+	DCMsg::cancelMessage();
+}
+
+bool
+ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
+		// save startd fqu for hole punching
+	m_startd_fqu = sock->getFullyQualifiedUser();
+	m_startd_ip_addr = sock->endpoint_ip_str();
+
+	if( !sock->put( m_claim_id.Value() ) ||
+	    !m_job_ad.put( *sock ) ||
+	    !sock->put( m_scheduler_addr.Value() ) ||
+	    !sock->put( m_alive_interval ) )
+	{
+		dprintf(failureDebugLevel(),
+				"Couldn't encode request claim to startd %s\n",
+				description() );
+		return false;
+	}
+		// eom() is done by caller
+
+	return true;
+}
+
+DCMsg::MessageClosureEnum
+ClaimStartdMsg::messageSent(DCMessenger *messenger, Sock *sock ) {
+	messenger->startReceiveMsg( this, sock );
+	return MESSAGE_CONTINUING;
+}
+
+bool
+ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
+	// Now, we set the timeout on the socket to 1 second.  Since we 
+	// were called by as a Register_Socket callback, this should not 
+	// block if things are working as expected.  
+	// However, if the Startd wigged out and sent a 
+	// partial int or some such, we cannot afford to block. -Todd 3/2000
+	sock->timeout(1);
+
+ 	if( !sock->get(m_reply) ) {
+		dprintf( failureDebugLevel(),
+				 "Response problem from startd when requesting claim %s.\n",
+				 description() );	
+		return false;
+	}
+
+	if( m_reply == OK ) {
+			// no need to log success, because DCMsg::reportSuccess() will
+	} else if( m_reply == NOT_OK ) {
+		dprintf( failureDebugLevel(), "Request was NOT accepted for claim %s\n", description() );
+	} else {
+		dprintf( failureDebugLevel(), "Unknown reply from startd when requesting claim %s\n",description());
+	}
+		// eom() is done by caller
+
+	return true;
+}
+
+
+void
+DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, classy_counted_ptr<DCMsgCallback> cb )
+{
+	dprintf(D_FULLDEBUG|D_PROTOCOL,"Requesting claim %s\n",description);
+
+	setCmdStr( "requestClaim" );
+	ASSERT( checkClaimId() );
+	ASSERT( checkAddr() );
+
+	classy_counted_ptr<ClaimStartdMsg> msg = new ClaimStartdMsg( claim_id, req_ad, description, scheduler_addr, alive_interval );
+
+	ASSERT( msg.get() );
+	msg->setCallback(cb);
+
+	msg->setSuccessDebugLevel(D_ALWAYS|D_PROTOCOL);
+
+	sendMsg(msg.get(),Stream::reli_sock,timeout);
+}
+
+
 bool 
 DCStartd::deactivateClaim( bool graceful )
 {

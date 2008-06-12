@@ -661,6 +661,13 @@ class DaemonCore : public Service
     */
     int Cancel_Socket ( Stream * insock );
 
+		// Call the registered socket handler for this socket
+		// sock - previously registered socket
+		// default_to_HandleCommand - true if HandleCommand() should be called
+		//                          if there is no other callback function
+		// it will index the next registered socket.
+	void CallSocketHandler( Stream *sock, bool default_to_HandleCommand=false );
+
 	/// Cancel and close all registed sockets.
 	int Cancel_And_Close_All_Sockets(void);
 
@@ -1639,6 +1646,17 @@ class DaemonCore : public Service
 
 	// misc helper functions
 	void CheckPrivState( void );
+
+		// Call the registered socket handler for this socket
+		// i - index of registered socket
+		// default_to_HandleCommand - true if HandleCommand() should be called
+		//                          if there is no other callback function
+		// On return, i may be modified so that when incremented,
+		// it will index the next registered socket.
+	void CallSocketHandler( int &i, bool default_to_HandleCommand );
+
+		// Returns index of registered socket or -1 if not found.
+	int GetRegisteredSocketIndex( Stream *sock );
 
     // these need to be in thread local storage someday
     void **curr_dataptr;

@@ -242,6 +242,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		// compilers have trouble choosing which one to use.
 		(DaemonCoreSockAdapterClass::Register_Socket_fnptr)&DaemonCore::Register_Socket,
 		&DaemonCore::Cancel_Socket,
+		&DaemonCore::CallSocketHandler,
 		&DaemonCore::Register_DataPtr,
 		&DaemonCore::GetDataPtr,
 		(DaemonCoreSockAdapterClass::Register_Timer_fnptr)&DaemonCore::Register_Timer,
@@ -2889,64 +2890,8 @@ void DaemonCore::Driver()
 							}
 						}
 
-						char *handlerName = NULL;
-
-						// if the user provided a handler for this socket, then
-						// call it now.  otherwise, call the daemoncore
-						// HandleReq() handler which strips off the command
-						// request number and calls any registered command
-						// handler.
-
-						// log a message
-						if ( (*sockTable)[i].handler || (*sockTable)[i].handlercpp )
-						{
-							dprintf(D_DAEMONCORE,
-									"Calling Handler <%s> for Socket <%s>\n",
-									(*sockTable)[i].handler_descrip,
-									(*sockTable)[i].iosock_descrip);
-							handlerName = strdup((*sockTable)[i].handler_descrip);
-							dprintf(D_COMMAND, "Calling Handler <%s>\n", handlerName);
-						}
-
-						// Update curr_dataptr for GetDataPtr()
-						curr_dataptr = &( (*sockTable)[i].data_ptr);
 						recheck_status = true;
-						if ( (*sockTable)[i].handler ) {
-							// a C handler
-							result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
-							dprintf(D_COMMAND, "Return from Handler <%s>\n", handlerName);
-							free(handlerName);
-						} else 
-						if ( (*sockTable)[i].handlercpp ) {
-							// a C++ handler
-							result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
-							dprintf(D_COMMAND, "Return from Handler <%s>\n", handlerName);
-							free(handlerName);
-						}
-						else
-							// no handler registered, so this is a command
-							// socket.  call the DaemonCore handler which
-							// takes care of command sockets.
-							result = HandleReq(i);
-
-						// Make sure we didn't leak our priv state
-						CheckPrivState();
-
-						// Clear curr_dataptr
-						curr_dataptr = NULL;
-
-						// Check result from socket handler, and if
-						// not KEEP_STREAM, then
-						// delete the socket and the socket handler.
-						if ( result != KEEP_STREAM ) {
-							// delete the cedar socket
-							delete (*sockTable)[i].iosock;
-							// cancel the socket handler
-							Cancel_Socket( (*sockTable)[i].iosock );
-							// decrement i, since sockTable[i] may now
-							// point to a new valid socket
-							i--;
-						}
+						CallSocketHandler( i, true );
 
 					}	// if call_handler is True
 				}	// if valid entry in sockTable
@@ -2955,6 +2900,104 @@ void DaemonCore::Driver()
 		}	// if rv > 0
 
 	}	// end of infinite for loop
+}
+
+int
+DaemonCore::GetRegisteredSocketIndex( Stream *sock )
+{
+	int i;
+
+	for (i=0;i<nSock;i++) {
+		if ( (*sockTable)[i].iosock == sock ) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+void
+DaemonCore::CallSocketHandler( Stream *sock, bool default_to_HandleCommand )
+{
+	int i = GetRegisteredSocketIndex( sock );
+
+	if ( i == -1 ) {
+		dprintf( D_ALWAYS,"CallSocketHandler: called on non-registered socket!\n");
+		dprintf( D_ALWAYS,"Offending socket number %d\n", i );
+		DumpSocketTable( D_DAEMONCORE );
+		return;
+	}
+
+	CallSocketHandler( i, default_to_HandleCommand );
+}
+
+void
+DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
+{
+	char *handlerName = NULL;
+	int result;
+
+		// if the user provided a handler for this socket, then
+		// call it now.  otherwise, call the daemoncore
+		// HandleReq() handler which strips off the command
+		// request number and calls any registered command
+		// handler.
+
+		// log a message
+	if ( (*sockTable)[i].handler || (*sockTable)[i].handlercpp )
+		{
+			dprintf(D_DAEMONCORE,
+					"Calling Handler <%s> for Socket <%s>\n",
+					(*sockTable)[i].handler_descrip,
+					(*sockTable)[i].iosock_descrip);
+			handlerName = strdup((*sockTable)[i].handler_descrip);
+			dprintf(D_COMMAND, "Calling Handler <%s>\n", handlerName);
+		}
+
+		// Update curr_dataptr for GetDataPtr()
+	curr_dataptr = &( (*sockTable)[i].data_ptr);
+
+	if ( (*sockTable)[i].handler ) {
+			// a C handler
+		result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
+		dprintf(D_COMMAND, "Return from Handler <%s>\n", handlerName);
+		free(handlerName);
+	} else if ( (*sockTable)[i].handlercpp ) {
+			// a C++ handler
+		result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
+		dprintf(D_COMMAND, "Return from Handler <%s>\n", handlerName);
+		free(handlerName);
+	}
+	else if( default_to_HandleCommand ) {
+			// no handler registered, so this is a command
+			// socket.  call the DaemonCore handler which
+			// takes care of command sockets.
+		result = HandleReq(i);
+	}
+	else {
+			// No registered callback, and we were told not to
+			// call HandleCommand() by default, so just cancel
+			// this socket.
+		result = FALSE;
+	}
+
+		// Make sure we didn't leak our priv state
+	CheckPrivState();
+
+		// Clear curr_dataptr
+	curr_dataptr = NULL;
+
+		// Check result from socket handler, and if
+		// not KEEP_STREAM, then
+		// delete the socket and the socket handler.
+	if ( result != KEEP_STREAM ) {
+			// delete the cedar socket
+		delete (*sockTable)[i].iosock;
+			// cancel the socket handler
+		Cancel_Socket( (*sockTable)[i].iosock );
+			// decrement i, since sockTable[i] may now
+			// point to a new valid socket
+		i--;
+	}
 }
 
 void
