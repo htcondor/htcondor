@@ -1031,9 +1031,9 @@ Init2( Interval *i1, Interval *i2, bool undef )
 }
 
 bool ValueRange::
-InitUndef( )
+InitUndef( bool undef )
 {
-	undefined = true;
+	undefined = undef;
 	initialized = true;
 	return true;
 }
@@ -1388,7 +1388,7 @@ Intersect2( Interval *i1, Interval *i2, bool undef )
 }	
 
 bool ValueRange::
-IntersectUndef( )
+IntersectUndef( bool undef )
 {
 	if( !initialized ) {
 		return false;
@@ -1397,7 +1397,7 @@ IntersectUndef( )
 		return false;
 	}
 	EmptyOut( );
-	undefined = true;
+	undefined = undef;
 	return true;
 }
 		

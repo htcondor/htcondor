@@ -1774,7 +1774,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 	Interval *ival = NULL;
 	refdAttrs.Rewind( );
 	int i = 0;
-	while( refdAttrs.Next( refdAttr ) ) { 
+	while( bestHR && refdAttrs.Next( refdAttr ) ) { 
 		bestHR->GetInterval( i, ival );
 		currAttrExplain = new AttributeExplain( );
 		if( ival == NULL ) {
@@ -1979,6 +1979,19 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 			 op == classad::Operation::ISNT_OP ) {
 			// we need multiple intervals
 		switch( type ) {
+		case classad::Value::UNDEFINED_VALUE: {
+			if( op != classad::Operation::ISNT_OP ) {
+				vr->EmptyOut( );
+				return true;
+			}
+			if( vr->IsInitialized( ) ) {
+				vr->IntersectUndef( false );
+			}
+			else {
+				vr->InitUndef( false );
+			}
+			return true;
+		}
 		case classad::Value::BOOLEAN_VALUE: {
 			bool b;
 			if( val.IsBooleanValue( b ) ) {
@@ -2066,7 +2079,9 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 		}
 		return true;
 		default: {
-			cerr << "AddConstraint: Condition value not literal" << endl;
+			string expr;
+			condition->ToString(expr);
+			cerr << "AddConstraint: Condition value not literal: '" << val << "' in '" << expr << "'" << endl;
 			return false;
 		}
 		}
