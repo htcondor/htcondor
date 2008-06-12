@@ -53,7 +53,12 @@ high availability lock files are not currently included.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a problem sometimes causing minutes or more of lag between
+the time of job suspension/unsuspension and the corresponding entries
+in the job userlog.
+
+\item Fixed a problem in \Condor{q} \Opt{-better-analyze} handling
+requirements expressions containing anything =!= UNDEFINED.
 
 \end{itemize}
 
