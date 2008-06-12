@@ -820,6 +820,7 @@ ClassAd::initFromString(char const *str,MyString *err_msg)
 	}
 
 	updateBoundVariables();
+    return true; // is this correct?
 }
 
 

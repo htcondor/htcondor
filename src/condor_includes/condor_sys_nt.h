@@ -75,8 +75,10 @@ typedef unsigned __int32 uint32_t;
 #define MAXPATHLEN 1024
 #define MAXHOSTNAMELEN 64
 #if _MSC_VER > 1200 // i.e. not VC6
-#define	_POSIX_PATH_MAX 512
-#define PATH_MAX _POSIX_PATH_MAX
+#ifndef _POSIX_PATH_MAX
+# define _POSIX_PATH_MAX 512
+# define PATH_MAX _POSIX_PATH_MAX
+#endif
 #endif
 #define	_POSIX_ARG_MAX 4096
 #define pipe(fds) _pipe(fds,2048,_O_BINARY)

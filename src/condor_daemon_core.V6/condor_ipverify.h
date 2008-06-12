@@ -149,8 +149,8 @@ private:
 	void fill_table( PermTypeEntry * pentry, perm_mask_t mask, char * list, bool allow);
 	int cache_DNS_results;
     void split_entry(const char * entry, char ** host, char ** user);
-	inline perm_mask_t allow_mask(DCpermission perm) { return (1 << (1+2*perm)); }
-	inline perm_mask_t deny_mask(DCpermission perm) { return (1 << (2+2*perm)); }
+	inline perm_mask_t allow_mask(DCpermission perm) { return ((perm_mask_t)1 << (1+2*perm)); }
+	inline perm_mask_t deny_mask(DCpermission perm) { return ((perm_mask_t)1 << (2+2*perm)); }
 
 	void PermMaskToString(perm_mask_t mask, MyString &mask_str);
 	void UserHashToString(UserHash_t *user_hash, MyString &result);
