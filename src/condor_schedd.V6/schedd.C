@@ -8338,7 +8338,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// flag is set. This means that we want this job to reconnect
 		// when the schedd comes back online.
 		//
-	if ( ! rec->keepClaimAttributes && ! ExitWhenDone ) {
+	if ( ! rec->keepClaimAttributes ) {
 		DeleteAttribute( cluster, proc, ATTR_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_CLAIM_IDS );
@@ -8362,7 +8362,14 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// Nothing written in this transaction requires immediate sync to disk.
 	CommitTransaction( NONDURABLE );
 
-	check_zombie( pid, &(rec->job_id) );
+	if( ! rec->keepClaimAttributes ) {
+			// We do _not_ want to call check_zombie if we are detaching
+			// from a job for later reconnect, because check_zombie
+			// does stuff that should only happen if the shadow actually
+			// exited, such as setting CurrentHosts=0.
+		check_zombie( pid, &(rec->job_id) );
+	}
+
 		// If the shadow went away, this match is no longer
 		// "ACTIVE", it's just "CLAIMED"
 	if( rec->match ) {
@@ -11250,6 +11257,14 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 		return FALSE;
 
 	if( FindMrecByJobID(*id) ) {
+			// It is possible for there to be a match rec but no shadow rec,
+			// if the job is waiting in the runnable job queue before the
+			// shadow is launched.
+		return TRUE;
+	}
+	if( FindSrecByProcID(*id) ) {
+			// It is possible for there to be a shadow rec but no match rec,
+			// if the match was deleted but the shadow has not yet gone away.
 		return TRUE;
 	}
 	return FALSE;
