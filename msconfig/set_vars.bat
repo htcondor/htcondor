@@ -98,8 +98,8 @@ set WindowsSdkDir=%SDK_DIR%
 REM set INCLUDE=%WindowsSdkDir%\Include;%INCLUDE%
 REM set LIB=%WindowsSdkDir%\Lib;%LIB%
 REM set LIBPATH=%WindowsSdkDir%\Lib;%LIBPATH%
-set INCLUDE=C:\Program Files\Microsoft Visual Studio 9.0\VC\include;C:\Program Files\Microsoft Visual Studio 9.0\VC\atlmfc\include
-set LIB=C:\Program Files\Microsoft Visual Studio 9.0\VC\lib;C:\Program Files\Microsoft Visual Studio 9.0\VC\atlmfc\lib
+set INCLUDE=%WindowsSdkDir%\Include;%WindowsSdkDir%\Include\crt;%WindowsSdkDir%\Include\crt\sys;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\include;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\atlmfc\include
+set LIB=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\lib;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\atlmfc\lib
 set LIBPATH=%LIB%
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
