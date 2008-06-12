@@ -107,11 +107,11 @@ class ValueRange
 	~ValueRange( );
 	bool Init( Interval *, bool undef=false, bool notString=false );
 	bool Init2( Interval *, Interval *, bool undef=false );
-	bool InitUndef( );
+	bool InitUndef( bool undef=true );
 	bool Init( ValueRange *, int index, int numIndeces );
 	bool Intersect( Interval *, bool undef=false, bool notString=false );
 	bool Intersect2( Interval *, Interval *, bool undef=false );
-	bool IntersectUndef( );
+	bool IntersectUndef( bool undef=true );
 	bool Union( ValueRange *, int index );
 	bool IsEmpty( );
 	bool EmptyOut( );
