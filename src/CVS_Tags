@@ -1,3 +1,8 @@
+06/10/08 V_0_2
+  The official tag for 7.0.2, for the V7_0-branch.
+  $CondorVersion: 7.0.2 Jun  9 2008 BuildID: 89891 $
+  Original build tag: BUILD-V7_0-branch-2008-6-9
+
 5/23/09 V7_1-ian_sca-3-branch
   Branch based on master (for rebasing).  See ian_sca below.
 
