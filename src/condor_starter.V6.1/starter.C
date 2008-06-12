@@ -1135,9 +1135,20 @@ CStarter::SpawnJob( void )
 int
 CStarter::RemoteSuspend(int)
 {
-		// notify our JobInfoCommunicator that the jobs are suspended
+	int retval = this->Suspend();
+
+		// Notify our JobInfoCommunicator that the jobs are suspended.
+		// Ideally, this would be done _before_ suspending the job, so
+		// that we commit information about this change of state
+		// reliably.  However, this would require additional changes
+		// to do it right, because before the job is suspended, the
+		// bookkeeping about the state of the job has not been updated yet,
+		// so the job info communicator won't advertise the imminent
+		// change of state.  For now, we have decided that it is acceptable
+		// to simply log suspend events after the change of state.
+
 	jic->Suspend();
-	return ( this->Suspend( ) );
+	return retval;
 }
 
 /**
@@ -1181,9 +1192,20 @@ CStarter::Suspend( void ) {
 int
 CStarter::RemoteContinue(int)
 {
-		// notify our JobInfoCommunicator that the job is being continued
+	int retval = this->Continue();
+
+		// Notify our JobInfoCommunicator that the job is being continued.
+		// Ideally, this would be done _before_ unsuspending the job, so
+		// that we commit information about this change of state
+		// reliably.  However, this would require additional changes
+		// to do it right, because before the job is unsuspended, the
+		// bookkeeping about the state of the job has not been updated yet,
+		// so the job info communicator won't advertise the imminent
+		// change of state.  For now, we have decided that it is acceptable
+		// to simply log unsuspend events after the change of state.
+
 	jic->Continue();
-	return ( this->Continue( ) );
+	return retval;
 }
 
 /**
