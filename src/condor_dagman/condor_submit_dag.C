@@ -1,4 +1,3 @@
-//TEMPTEMP -dorescue flag should probably check that the file exists...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -297,6 +296,19 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 {
 	int maxRescueDagNum = param_integer("DAGMAN_MAX_RESCUE_NUM",
 				MAX_RESCUE_DAG_DEFAULT, 0, ABS_MAX_RESCUE_DAG_NUM);
+
+	if (opts.doRescueFrom > 0)
+	{
+		MyString rescueDagName = RescueDagName(opts.primaryDagFile.Value(),
+				opts.dagFiles.number() > 1, opts.doRescueFrom);
+		if (!fileExists(rescueDagName))
+		{
+			fprintf( stderr, "-dorescuefrom %d specified, but rescue "
+						"DAG file %s does not exist!\n", opts.doRescueFrom,
+						rescueDagName.Value() );
+	    	exit( 1 );
+		}
+	}
 
 	if (opts.bForce)
 	{
