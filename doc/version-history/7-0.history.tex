@@ -63,6 +63,14 @@ requirements expressions containing anything =!= UNDEFINED.
 \item Configuration parameter \Macro{GRIDMANAGER\_GAHP\_CALL\_TIMEOUT}
 is now recognized for nordugrid grid universe jobs.
 
+\item Fixed a bug that could cause \Condor{schedd} to abort (and restart)
+some time after a graceful restart when jobs to which the schedd reconnected
+were preempted.
+
+\item Fixed a bug causing failure to reconnect to jobs which use
+\$\$([\textit{expression}]) in their ClassAds.  The jobs would go on
+hold with a hold reason, ``Cannot expand \$\$([\textit{expression}]).''
+
 \end{itemize}
 
 \noindent Known Bugs:
