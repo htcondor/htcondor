@@ -116,8 +116,9 @@ class match_rec: public ClaimIdParser
     match_rec(char*, char*, PROC_ID*, const ClassAd*, char*, char* pool,bool is_dedicated);
 	~match_rec();
 
-    char*   		peer;
-	
+    char*   		peer; //sinful address of startd
+	MyString        m_description;
+
 		// cluster of the job we used to obtain the match
 	int				origcluster; 
 
@@ -142,7 +143,7 @@ class match_rec: public ClaimIdParser
 	bool			allocated;	// For use by the DedicatedScheduler
 	bool			scheduled;	// For use by the DedicatedScheduler
 	bool			needs_release_claim;
-	Sock*           request_claim_sock;
+	classy_counted_ptr<DCMsgCallback> claim_requester;
 
 		// if we created a dynamic hole in the DAEMON auth level
 		// to support flocking, this will be set to the id of the
@@ -152,6 +153,11 @@ class match_rec: public ClaimIdParser
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)
 	void	setStatus( int stat );
+
+	void makeDescription();
+	char const *description() {
+		return m_description.Value();
+	}
 };
 
 class UserIdentity {
@@ -330,9 +336,6 @@ class Scheduler : public Service
 #endif
 
 		// Public startd socket management functions
-	void			addRegContact( void ) { num_reg_contacts++; };
-	void			delRegContact( void ) { num_reg_contacts--; };
-	int				numRegContacts( void ) { return num_reg_contacts; };
 	void            checkContactQueue();
 
 		/** Used to enqueue another set of information we need to use
@@ -510,8 +513,6 @@ private:
 
 	int				shadowReaperId; // daemoncore reaper id for shadows
 
-		// used so that we don't register too many Sockets at once & fd panic
-	int             num_reg_contacts;  
 		// Here we enqueue calls to 'contactStartd' when we can't just 
 		// call it any more.  See contactStartd and the call to it...
 	Queue<ContactStartdArgs*> startdContactQueue;
@@ -611,6 +612,7 @@ private:
 			@return false on failure and true on success
 		 */
 	void	contactStartd( ContactStartdArgs* args );
+	void claimedStartd( DCMsgCallback *cb );
 
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
 	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);

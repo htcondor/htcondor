@@ -176,7 +176,6 @@ dc_reconfig()
 	return TRUE;
 }
 
-
 match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id, 
 					  const ClassAd *match, char *the_user, char *my_pool,
 					  bool is_dedicated_arg ):
@@ -211,8 +210,32 @@ match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id,
 	allocated = false;
 	scheduled = false;
 	needs_release_claim = false;
-	request_claim_sock = NULL;
+	claim_requester = NULL;
 	auth_hole_id = NULL;
+
+	makeDescription();
+}
+
+void
+match_rec::makeDescription() {
+	m_description = "";
+	if( my_match_ad ) {
+		my_match_ad->LookupString(ATTR_NAME,m_description);
+	}
+
+	if( m_description.Length() ) {
+		m_description += " ";
+	}
+	if( DebugFlags & D_FULLDEBUG ) {
+		m_description += publicClaimId();
+	}
+	else if( peer ) {
+		m_description += peer;
+	}
+	if( user ) {
+		m_description += " for ";
+		m_description += user;
+	}
 }
 
 match_rec::~match_rec()
@@ -228,6 +251,13 @@ match_rec::~match_rec()
 	}
 	if( pool ) {
 		free(pool);
+	}
+	if( claim_requester.get() ) {
+			// misc_data points to this object, so NULL it out, just to be safe
+		claim_requester->setMiscDataPtr( NULL );
+		claim_requester->cancelMessage();
+		claim_requester = NULL;
+		scheduler.rescheduleContactQueue();
 	}
 }
 
@@ -343,8 +373,6 @@ Scheduler::Scheduler() :
 	quill_db_ip_addr = NULL;
 	quill_db_query_password = NULL;
 #endif
-
-	num_reg_contacts = 0;
 
 	checkContactQueue_tid = -1;
 	checkReconnectQueue_tid = -1;
@@ -540,7 +568,7 @@ Scheduler::check_claim_request_timeouts()
 				time_t time_left = rec->entered_current_status + \
 				                 RequestClaimTimeout - time(NULL);
 				if(time_left < 0) {
-					dprintf(D_ALWAYS,"timed out requesting claim from %s after REQUEST_CLAIM_TIMEOUT=%d seconds\n",rec->peer,RequestClaimTimeout);
+					dprintf(D_ALWAYS,"Timed out requesting claim %s after REQUEST_CLAIM_TIMEOUT=%d seconds.\n",rec->description(),RequestClaimTimeout);
 						// We could just do send_vacate() here and
 						// wait for the startd contact socket to call
 						// us back when the connection closes.
@@ -5261,7 +5289,6 @@ Scheduler::vacate_service(int, Stream *sock)
 	return;
 }
 
-
 void
 Scheduler::contactStartd( ContactStartdArgs* args ) 
 {
@@ -5283,187 +5310,9 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		return;
 	}
 
-    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", mrec->publicClaimId(), 
-			 mrec->user, mrec->peer, mrec->cluster,
-			 mrec->proc ); 
-
-	if( ! claimStartd(mrec) ) {
-		DelMrec( mrec );
-		return;
-	}
-}
-
-
-bool
-claimStartd( match_rec* mrec )
-{
-	DCStartd matched_startd ( mrec->peer, NULL );
-	Sock* sock = NULL;
-
-	dprintf( D_PROTOCOL, "Requesting resource from %s ...\n",
-			 mrec->peer ); 
-
-	if (!(sock = matched_startd.reliSock( STARTD_CONTACT_TIMEOUT, NULL, true ))) {
-		dprintf( D_FAILURE|D_ALWAYS, "Couldn't initiate connection to %s\n",
-		         mrec->peer );
-		return false;
-	}
-
-	char to_startd[256];
-	sprintf ( to_startd, "to startd %s", mrec->peer );
-
-	int reg_rc = daemonCore->
-			Register_Socket( sock, "<Startd Contact Socket>",
-			  (SocketHandlercpp)&Scheduler::startdContactConnectHandler,
-			  to_startd, &scheduler, ALLOW );
-
-	if(reg_rc < 0) {
-		dprintf( D_ALWAYS,
-		         "Failed to register socket to contact startd at %s.  "
-		         "Register_Socket returned %d.\n",
-		         mrec->peer,reg_rc);
-		delete sock;
-		return false;
-	}
-	ASSERT(daemonCore->Register_DataPtr( mrec ));
-
-	ASSERT( mrec->request_claim_sock == NULL );
-	mrec->request_claim_sock = sock;
-
-	mrec->setStatus( M_CONNECTING );
-
-	return true;
-}
-
-
-bool
-claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad )
-{
-	DCStartd matched_startd ( mrec->peer, NULL );
-
-	if (!sock) {
-		dprintf( D_FAILURE|D_ALWAYS, "NULL sock when connecting to startd %s\n",
-				 mrec->peer );
-		return false;
-	}
-	if (!sock->is_connected()) {
-		dprintf( D_FAILURE|D_ALWAYS,
-				 "Failed to connect to startd %s for match %s job %d.%d.\n",
-				 mrec->peer,mrec->publicClaimId(),mrec->cluster,mrec->proc );
-		return false;
-	}
-
-	dprintf( D_FULLDEBUG,
-			 "Connected to startd to request match %s for job %d.%d.\n",
-			 mrec->publicClaimId(), mrec->cluster, mrec->proc );
-
-	if (!matched_startd.startCommand(REQUEST_CLAIM, sock,
-	                                 STARTD_CONTACT_TIMEOUT )) {
-		dprintf( D_FAILURE|D_ALWAYS, "Couldn't send REQUEST_CLAIM to startd at %s\n",
-				 mrec->peer );
-		return false;
-	}
-
-	// now that we've completed authentication (if enabled), punch a hole
-	// in our DAEMON authorization level for the execute machine user/IP
-	// (if we're flocking, which is why we check mrec->pool)
-	//
-	if ((mrec->auth_hole_id == NULL)) {
-		mrec->auth_hole_id = new MyString;
-		ASSERT(mrec->auth_hole_id != NULL);
-		const char* fqu = sock->getFullyQualifiedUser();
-		if (fqu != NULL) {
-			mrec->auth_hole_id->sprintf("%s/%s",
-			                            fqu,
-			                            sock->endpoint_ip_str());
-		}
-		else {
-			*mrec->auth_hole_id = sock->endpoint_ip_str();
-		}
-		IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
-		if (!ipv->PunchHole(DAEMON, *mrec->auth_hole_id)) {
-			dprintf(D_ALWAYS,
-			        "WARNING: IpVerify::PunchHole error for %s: "
-			            "job %d.%d may fail to execute\n",
-			        mrec->auth_hole_id->Value(),
-			        mrec->cluster,
-			        mrec->proc);
-			delete mrec->auth_hole_id;
-			mrec->auth_hole_id = NULL;
-		}
-	}
-
-	sock->encode();
-
-	if( !sock->put( mrec->claimId() ) ) {
-		dprintf( D_ALWAYS, "Couldn't send ClaimId to startd.\n" );	
-		return false;
-	}
-
-	if( !job_ad->put( *sock ) ) {
-		dprintf( D_ALWAYS, "Couldn't send job classad to startd.\n" );	
-		return false;
-	}	
-
-	char startd_version[150];
-	startd_version[0] = '\0';
-	if ( mrec->my_match_ad  &&
-		 mrec->my_match_ad->LookupString(ATTR_VERSION,startd_version) ) 
-	{	
-		CondorVersionInfo ver(startd_version,"STARTD");
-
-		if( ver.built_since_version(6,1,11) &&
-			ver.built_since_date(1,28,2000) ) {
-				// We are talking to a startd which understands sending the
-				// post 6.1.11 change to the claim protocol.
-			if( !sock->put( scheduler.dcSockSinful() ) ) {
-				dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n" ); 
-				return false;
-			}
-			if( !sock->snd_int(scheduler.aliveInterval(), FALSE) ) {
-				dprintf(D_ALWAYS, "Couldn't send alive_interval to startd.\n");
-				return false;
-			}
-			mrec->sent_alive_interval = true;
-		}
-	}
-
-	if ( !mrec->sent_alive_interval ) {
-		dprintf( D_FULLDEBUG, "Startd expects pre-v6.1.11 claim protocol\n" );
-	}
-
-	if( !sock->end_of_message() ) {
-		dprintf( D_ALWAYS, "Couldn't send eom to startd.\n" );	
-		return false;
-	}
-
-	mrec->setStatus( M_STARTD_CONTACT_LIMBO );
-
-	char to_startd[256];
-	sprintf ( to_startd, "to startd %s", mrec->peer );
-
-	daemonCore->Cancel_Socket( sock ); //Allow us to re-register this socket.
-	daemonCore->
-		Register_Socket( sock, "<Startd Contact Socket>",
-		  (SocketHandlercpp)&Scheduler::startdContactSockHandler,
-		  to_startd, &scheduler, ALLOW );
-
-	ASSERT( daemonCore->Register_DataPtr( mrec ) );
-
-	scheduler.addRegContact();
-
-	dprintf ( D_FULLDEBUG, "Registered startd contact socket.\n" );
-
-	return true;
-}
-
-int
-Scheduler::startdContactConnectHandler( Stream *sock )
-{
-	match_rec *mrec = (match_rec *)daemonCore->GetDataPtr();
-
-	ASSERT( mrec );
-	ASSERT( mrec->request_claim_sock == sock );
+	MyString description;
+	description.sprintf( "%s %d.%d", mrec->description(),
+						 mrec->cluster, mrec->proc ); 
 
 		// We need an expanded job ad here so that the startd can see
 		// NegotiatorMatchExpr values.
@@ -5478,114 +5327,96 @@ Scheduler::startdContactConnectHandler( Stream *sock )
 		dprintf( D_ALWAYS,
 				 "failed to find/expand job %d.%d after connecting to "
 				 "request claim %s\n", mrec->cluster, mrec->proc,
-				 mrec->publicClaimId() ); 
+				 mrec->description() ); 
 		DelMrec( mrec );
-		return KEEP_STREAM; // socket was already deleted in DelMrec()
+		return;
 	}
 
-	if( !claimStartdConnected( (Sock *)sock, mrec, jobAd ) ) {
-		DelMrec( mrec );
-		delete jobAd;
-		return KEEP_STREAM; // socket was already deleted in DelMrec()
-	}
+	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
+		(DCMsgCallback::CppFunction)&Scheduler::claimedStartd,
+		this,
+		mrec);
+
+	ASSERT( !mrec->claim_requester.get() );
+	mrec->claim_requester = cb;
+	mrec->setStatus( M_STARTD_CONTACT_LIMBO );
+
+	classy_counted_ptr<DCStartd> startd = new DCStartd(mrec->description(),NULL,mrec->peer,mrec->claimId());
+
+	startd->asyncRequestOpportunisticClaim(
+		jobAd,
+		description.Value(),
+		scheduler.dcSockSinful(),
+		scheduler.aliveInterval(),
+		STARTD_CONTACT_TIMEOUT,
+		cb );
+
 	delete jobAd;
 
-	// The stream will be closed when we get a callback
-	// in startdContactSockHandler.  Keep it open for now.
-	return KEEP_STREAM;
+		// Now wait for callback...
 }
 
-/* note new BAILOUT def:
-   before each bad return we check to see if there's a pending call
-   in the contact queue. */
-#define BAILOUT               \
-		DelMrec( mrec );      \
-		return KEEP_STREAM; // sock was already deleted in DelMrec()
+void
+Scheduler::claimedStartd( DCMsgCallback *cb ) {
+	ClaimStartdMsg *msg = (ClaimStartdMsg *)cb->getMessage();
 
-int
-Scheduler::startdContactSockHandler( Stream *sock )
-{
-		// all return values are non - KEEP_STREAM.  
-		// Therefore, DaemonCore will cancel this socket at the
-		// end of this function, which is exactly what we want!
+	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED ) {
+			// do nothing, because misc_data points to a deleted match_rec
+		return;
+	}
+	match_rec *match = (match_rec *)cb->getMiscDataPtr();
+	ASSERT( match );
 
-	int reply;
+		// Remove callback pointer from the match record, since the claim
+		// request operation is finished.
+	match->claim_requester = NULL;
 
-	match_rec *mrec = (match_rec *) daemonCore->GetDataPtr();
-
-	ASSERT( mrec );
-	ASSERT( mrec->request_claim_sock == sock );
-
-		// since all possible returns from here result in the socket being
-		// cancelled, we begin by decrementing the # of contacts.
-	delRegContact();
-
-	dprintf ( D_FULLDEBUG,
-			  "Reading response for request to claim %s for job %d.%d.\n",
-			  mrec->publicClaimId(), mrec->cluster, mrec->proc );
-
-	mrec->setStatus( M_CLAIMED ); // we assume things will work out.
-
-	// Now, we set the timeout on the socket to 1 second.  Since we 
-	// were called by as a Register_Socket callback, this should not 
-	// block if things are working as expected.  
-	// However, if the Startd wigged out and sent a 
-	// partial int or some such, we cannot afford to block. -Todd 3/2000
-	sock->timeout(1);
-
- 	if( !sock->rcv_int(reply, TRUE) ) {
-		dprintf( D_ALWAYS, "Response problem from startd on %s (match %s).\n", mrec->peer, mrec->publicClaimId() );	
-		BAILOUT;
+	if( !msg->claimed_startd_success() ) {
+		scheduler.DelMrec(match);
+		return;
 	}
 
-	if( reply == OK ) {
-		dprintf (D_PROTOCOL, "(Request was accepted)\n");
-		if ( !mrec->sent_alive_interval ) {
-	 		sock->encode();
-			if( !sock->code(MySockName) ) {
-				dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n");
-				BAILOUT;
-			}
-			if( !sock->snd_int(alive_interval, TRUE) ) {
-				dprintf( D_ALWAYS, "Couldn't send aliveInterval to startd.\n");
-				BAILOUT;
-			}
+	match->setStatus( M_CLAIMED );
+
+	// now that we've completed authentication (if enabled), punch a hole
+	// in our DAEMON authorization level for the execute machine user/IP
+	// (if we're flocking, which is why we check match->pool)
+	//
+	if ((match->auth_hole_id == NULL)) {
+		match->auth_hole_id = new MyString;
+		ASSERT(match->auth_hole_id != NULL);
+		if (msg->startd_fqu() && *msg->startd_fqu()) {
+			match->auth_hole_id->sprintf("%s/%s",
+			                            msg->startd_fqu(),
+			                            msg->startd_ip_addr());
 		}
-	} else if( reply == NOT_OK ) {
-		dprintf( D_PROTOCOL, "(Request was NOT accepted)\n" );
-		mrec->needs_release_claim = false;
-		BAILOUT;
-	} else {
-		dprintf( D_ALWAYS, "Unknown reply from startd.\n");
-		BAILOUT;
+		else {
+			*match->auth_hole_id = msg->startd_ip_addr();
+		}
+		IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
+		if (!ipv->PunchHole(DAEMON, *match->auth_hole_id)) {
+			dprintf(D_ALWAYS,
+			        "WARNING: IpVerify::PunchHole error for %s: "
+			            "job %d.%d may fail to execute\n",
+			        match->auth_hole_id->Value(),
+			        match->cluster,
+			        match->proc);
+			delete match->auth_hole_id;
+			match->auth_hole_id = NULL;
+		}
 	}
 
-	// The claim has been successfully requested, and this sock is
-	// about to be closed by DaemonCore, so remove the saved reference
-	// to it from the match_rec. We do this before calling StartJob,
-	// since the mrec could be deleted and we don't want it to try
-	// to Cancel_Socket.
-	mrec->request_claim_sock = NULL;
-
-	if( mrec->is_dedicated ) {
+	if( match->is_dedicated ) {
 			// Set a timer to call handleDedicatedJobs() when we return,
 			// since we might be able to spawn something now.
 		dedicated_scheduler.handleDedicatedJobTimer( 0 );
 	}
 	else {
-		StartJob( mrec );
+		scheduler.StartJob( match );
 	}
 
-	rescheduleContactQueue();
-
-		// The claim has been successfully requested, and this sock is
-		// about to be closed, so remove the saved reference to it
-		// from the match_rec.
-	mrec->request_claim_sock = NULL;
-
-	return TRUE;
+	scheduler.rescheduleContactQueue();
 }
-#undef BAILOUT
 
 
 bool
@@ -6118,20 +5949,20 @@ Scheduler::StartJob(match_rec *rec)
 	ASSERT( rec );
 	switch(rec->status) {
 	case M_UNCLAIMED:
-		dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->publicClaimId());
+		dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->description());
 		return;
 	case M_CONNECTING:
-		dprintf(D_FULLDEBUG, "match (%s) waiting for connection\n", rec->publicClaimId());
+		dprintf(D_FULLDEBUG, "match (%s) waiting for connection\n", rec->description());
 		return;
 	case M_STARTD_CONTACT_LIMBO:
 		dprintf ( D_FULLDEBUG, "match (%s) waiting for startd contact\n", 
-				  rec->publicClaimId() );
+				  rec->description() );
 		return;
 	case M_ACTIVE:
 	case M_CLAIMED:
 		if ( rec->shadowRec ) {
 			dprintf(D_FULLDEBUG, "match (%s) already running a job\n",
-					rec->publicClaimId());
+					rec->description());
 			return;
 		}
 			// Go ahead and start a shadow.
@@ -6154,8 +5985,8 @@ Scheduler::StartJob(match_rec *rec)
 	if(id.proc < 0) {
 			// no more jobs to run
 		dprintf(D_ALWAYS,
-				"match (%s) out of jobs (cluster id %d); relinquishing\n",
-				rec->publicClaimId(), id.cluster);
+				"match (%s) out of jobs; relinquishing\n",
+				rec->description() );
 		Relinquish(rec);
 		return;
 	}
@@ -6173,8 +6004,8 @@ Scheduler::StartJob(match_rec *rec)
 			// functioning and we don't know why. We might as well get another
 			// match.
 
-		dprintf(D_ALWAYS,"Failed to start job %s; relinquishing\n",
-				rec->publicClaimId());
+		dprintf(D_ALWAYS,"Failed to start job for %s; relinquishing\n",
+				rec->description());
 		Relinquish(rec);
 		mark_job_stopped( &id );
 
@@ -6205,7 +6036,7 @@ Scheduler::StartJob(match_rec *rec)
 		return;
 	}
 	dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",
-			rec->publicClaimId(), id.cluster, id.proc);
+			rec->description(), id.cluster, id.proc);
 		// If we're reusing a match to start another job, then cluster
 		// and proc may have changed, so we keep them up-to-date here.
 		// This is important for Scheduler::AlreadyMatched(), and also
@@ -6915,9 +6746,9 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		return;
 	}
 
-	dprintf( D_ALWAYS, "Started shadow for job %d.%d on \"%s\", "
+	dprintf( D_ALWAYS, "Started shadow for job %d.%d on %s, "
 			 "(shadow pid = %d)\n", job_id->cluster, job_id->proc,
-			 mrec->peer, srec->pid );
+			 mrec->description(), srec->pid );
 
 		// If this is a reconnect shadow, update the mrec with some
 		// important info.  This usually happens in StartJobs(), but
@@ -6928,7 +6759,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		mrec->cluster = job_id->cluster;
 		mrec->proc = job_id->proc;
 		dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",
-		        mrec->publicClaimId(), mrec->cluster, mrec->proc );
+		        mrec->description(), mrec->cluster, mrec->proc );
 
 		/*
 		  If we just spawned a reconnect shadow, we want to update
@@ -11155,24 +10986,14 @@ Scheduler::DelMrec(match_rec* match)
 		return dedicated_scheduler.DelMrec( match );
 	}
 
-	if( match->request_claim_sock ) {
-			// NOTE: the value passed to Register_DataPtr() for this
-			// registered socket is just a pointer to this match_rec,
-			// so there is no need to worry about deallocating that.
-		daemonCore->Cancel_Socket( match->request_claim_sock );
-		delete match->request_claim_sock;
-		match->request_claim_sock = NULL;
-		rescheduleContactQueue();
-	}
-
 	// release the claim on the startd
 	if( match->needs_release_claim) {
 		send_vacate(match, RELEASE_CLAIM);
 	}
 
-	dprintf( D_ALWAYS, "Match record (%s, %d, %d) deleted\n",
-			 match->peer, match->cluster, match->proc ); 
-	dprintf( D_FULLDEBUG, "ClaimId of deleted match: %s\n", match->publicClaimId() );
+	dprintf( D_ALWAYS, "Match record (%s, %d.%d) deleted\n",
+			 match->description(), match->cluster, match->proc ); 
+
 	HashKey key(match->claimId());
 	matches->remove(key);
 
@@ -11387,7 +11208,7 @@ sendAlive( match_rec* mrec )
 
 	msg->setSuccessDebugLevel(D_PROTOCOL);
 
-	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", mrec->publicClaimId());
+	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", mrec->description());
 
 	startd->sendMsg( msg.get(), Stream::safe_sock, STARTD_CONTACT_TIMEOUT );
 
@@ -11668,7 +11489,6 @@ Scheduler::dumpState(int, Stream* s) {
 		// These items we want to keep in here because they're
 		// not needed for the general info produced by publish()
 		//
-	job_ad.Assign( "num_reg_contacts", num_reg_contacts );
 	job_ad.Assign( "leaseAliveInterval", leaseAliveInterval );
 	job_ad.Assign( "alive_interval", alive_interval );
 	job_ad.Assign( "startjobsid", startjobsid );
