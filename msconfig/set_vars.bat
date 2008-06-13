@@ -95,12 +95,6 @@ REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM We set these here as the above script will find the wrong versions
 REM of everything... *sigh*
 set WindowsSdkDir=%SDK_DIR%
-REM set INCLUDE=%WindowsSdkDir%\Include;%INCLUDE%
-REM set LIB=%WindowsSdkDir%\Lib;%LIB%
-REM set LIBPATH=%WindowsSdkDir%\Lib;%LIBPATH%
-set INCLUDE=%WindowsSdkDir%\Include;%WindowsSdkDir%\Include\crt;%WindowsSdkDir%\Include\crt\sys;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\include;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\atlmfc\include
-set LIB=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\lib;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\atlmfc\lib
-set LIBPATH=%LIB%
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
@@ -108,9 +102,13 @@ REM Configure the Platform SDK environment
 call setenv /2000 /RETAIL
 if not defined MSSDK ( echo. && echo *** Failed to run setenv.cmd! Are the Microsoft Platform SDK installed? && exit /B 1 )
 
-REM Add msconfig back to the start of the path, since the above 
-REM bump us out of place.
-REM set PATH=%cd%;%PATH%
+REM ======================================================================
+REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
+set INCLUDE=%ROOT_DRIVE%\Program Files\Microsoft Platform SDK\Include;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\ATLMFC\INCLUDE;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\INCLUDE;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\ATLMFC\INCLUDE;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\INCLUDE;
+set LIB=%ROOT_DRIVE%\Program Files\Microsoft Platform SDK\Lib;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\ATLMFC\LIB;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\LIB;
+set LIBPATH=%ROOT_DRIVE%\WINDOWS\Microsoft.NET\Framework\v3.5;c:\WINDOWS\Microsoft.NET\Framework\v2.0.50727;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\ATLMFC\LIB;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\LIB;
+REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
+REM ======================================================================
 
 REM Set up some stuff for BISON
 set BISON_SIMPLE=%cd%\bison.simple
@@ -118,11 +116,6 @@ set BISON_HAIRY=%cd%\bison.hairy
 
 REM Tell the build system where we can find soapcpp2
 set SOAPCPP2=%EXT_INSTALL%\%EXT_GSOAP_VERSION%\soapcpp2.exe
-
-REM Dump the Windows build environment at this point
-echo ----------------------- WIN ENV DUMP ----------------------
-set
-echo ----------------------- WIN ENV DUMP ----------------------
 
 REM Determine the build id, if it is defined
 pushd ..
@@ -172,5 +165,10 @@ REM ** PCRE
 set CONDOR_PCRE_INCLUDE=/I %EXT_INSTALL%\%EXT_PCRE_VERSION%\include
 set CONDOR_PCRE_LIB=libpcre.lib
 set CONDOR_PCRE_LIBPATH=/LIBPATH:%EXT_INSTALL%\%EXT_PCRE_VERSION%\lib
+
+REM Dump the Windows build environment at this point
+echo ----------------------- WIN ENV DUMP ----------------------
+set
+echo ----------------------- WIN ENV DUMP ----------------------
 
 exit /B 0
