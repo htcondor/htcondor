@@ -2631,9 +2631,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 
 		index = -1;	
 		AttrsToExpand.rewind();
-		bool no_startd_ad = false;
 		bool attribute_not_found = false;
-		while ( !no_startd_ad && !attribute_not_found ) 
+		while ( !attribute_not_found ) 
 		{
 			index++;
 			curr_attr_to_expand = AttrsToExpand.next();
@@ -2641,6 +2640,29 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 			if ( curr_attr_to_expand == NULL ) {
 				// all done; no more attributes to try and expand
 				break;
+			}
+
+			MyString cachedAttrName = MATCH_EXP;
+			cachedAttrName += curr_attr_to_expand;
+
+			if( !startd_ad ) {
+					// No startd ad, so try to find cached value from back
+					// when we did have a startd ad.
+				ExprTree *cached_value = ad->Lookup(cachedAttrName.Value());
+				if( cached_value ) {
+					char *cached_value_buf = NULL;
+					ASSERT( cached_value->RArg() );
+					cached_value->RArg()->PrintToNewStr(&cached_value_buf);
+					ASSERT(cached_value_buf);
+					expanded_ad->AssignExpr(curr_attr_to_expand,cached_value_buf);
+					free(cached_value_buf);
+					continue;
+				}
+
+					// No cached value, so try to expand the attribute
+					// without the cached value.  If it is an
+					// expression that refers only to job attributes,
+					// it can succeed, even without the startd.
 			}
 
 			if (attribute_value != NULL) {
@@ -2709,10 +2731,6 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 					get_var(attribute_value,&left,&name,&right,NULL,true,search_pos) )
 			{
 				expanded_something = true;
-				if (!startd_ad && job_universe != CONDOR_UNIVERSE_GRID) {
-					no_startd_ad = true;
-				}
-
 				
 				size_t namelen = strlen(name);
 				if(name[0] == '[' && name[namelen-1] == ']') {
@@ -2875,13 +2893,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 				// Cache the expanded string so that we still
 				// have it after, say, a restart and the collector
 				// is no longer available.
-				MyString attrName = MATCH_EXP;
-				attrName += curr_attr_to_expand;
 
-				if ( SetAttribute(cluster_id,proc_id,attrName.Value(),attribute_value) < 0 )
+				if ( SetAttribute(cluster_id,proc_id,cachedAttrName.Value(),attribute_value) < 0 )
 				{
 					EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
-						attrName.Value(), attribute_value, cluster_id, proc_id);
+						cachedAttrName.Value(), attribute_value, cluster_id, proc_id);
 				}
 			}
 
