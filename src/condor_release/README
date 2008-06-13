@@ -23,12 +23,5 @@ http://www.cs.wisc.edu/condor/manual/.  You can also find various
 papers, publications and research about Condor on the web page, at
 http://www.cs.wisc.edu/condor.
 
-Source is no longer being distributed for Condor, so there are no
-instructions for compiling.  Please go to the Condor home page,
-http://www.cs.wisc.edu/condor to find binaries for all major UNIX
-operating systems, Windows, and Mac OSX.  If you would like source to
-Condor, please contact the Condor team directly at
-condor-admin@cs.wisc.edu.
-
 If you have any problems, questions, or bugs, please send them to
 condor-admin@cs.wisc.edu.  

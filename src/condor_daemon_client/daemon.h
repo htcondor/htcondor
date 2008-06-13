@@ -689,6 +689,7 @@ protected:
 		   startCommand().
 		*/
 	friend struct StartCommandConnectCallback;
+	friend class DCMessenger;
 };
 
 // Prototype to get sinful string.

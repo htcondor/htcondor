@@ -113,11 +113,12 @@ struct OwnerData {
 class match_rec: public ClaimIdParser
 {
  public:
-    match_rec(char*, char*, PROC_ID*, const ClassAd*, char*, char* pool);
+    match_rec(char*, char*, PROC_ID*, const ClassAd*, char*, char* pool,bool is_dedicated);
 	~match_rec();
 
-    char*   		peer;
-	
+    char*   		peer; //sinful address of startd
+	MyString        m_description;
+
 		// cluster of the job we used to obtain the match
 	int				origcluster; 
 
@@ -138,10 +139,11 @@ class match_rec: public ClaimIdParser
 	char*			user;
 	char*			pool;		// negotiator hostname if flocking; else NULL
 	bool			sent_alive_interval;
+	bool            is_dedicated; // true if this match belongs to ded. sched.
 	bool			allocated;	// For use by the DedicatedScheduler
 	bool			scheduled;	// For use by the DedicatedScheduler
 	bool			needs_release_claim;
-	Sock*           request_claim_sock;
+	classy_counted_ptr<DCMsgCallback> claim_requester;
 
 		// if we created a dynamic hole in the DAEMON auth level
 		// to support flocking, this will be set to the id of the
@@ -151,6 +153,11 @@ class match_rec: public ClaimIdParser
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)
 	void	setStatus( int stat );
+
+	void makeDescription();
+	char const *description() {
+		return m_description.Value();
+	}
 };
 
 class UserIdentity {
@@ -291,6 +298,7 @@ class Scheduler : public Service
     int         	DelMrec(char const*);
     int         	DelMrec(match_rec*);
 	match_rec*      FindMrecByJobID(PROC_ID);
+	match_rec*      FindMrecByClaimID(char const *claim_id);
 	void            SetMrecJobID(match_rec *rec, int cluster, int proc);
 	void            SetMrecJobID(match_rec *match, PROC_ID job_id);
 	shadow_rec*		FindSrecByPid(int);
@@ -328,9 +336,6 @@ class Scheduler : public Service
 #endif
 
 		// Public startd socket management functions
-	void			addRegContact( void ) { num_reg_contacts++; };
-	void			delRegContact( void ) { num_reg_contacts--; };
-	int				numRegContacts( void ) { return num_reg_contacts; };
 	void            checkContactQueue();
 
 		/** Used to enqueue another set of information we need to use
@@ -508,8 +513,6 @@ private:
 
 	int				shadowReaperId; // daemoncore reaper id for shadows
 
-		// used so that we don't register too many Sockets at once & fd panic
-	int             num_reg_contacts;  
 		// Here we enqueue calls to 'contactStartd' when we can't just 
 		// call it any more.  See contactStartd and the call to it...
 	Queue<ContactStartdArgs*> startdContactQueue;
@@ -609,6 +612,7 @@ private:
 			@return false on failure and true on success
 		 */
 	void	contactStartd( ContactStartdArgs* args );
+	void claimedStartd( DCMsgCallback *cb );
 
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
 	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);
@@ -676,8 +680,8 @@ private:
 // Other prototypes
 int		get_job_prio(ClassAd *ad, bool compute_autoclusters = false);
 extern void set_job_status(int cluster, int proc, int status);
-extern bool claimStartd( match_rec* mrec, bool is_dedicated );
-extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad, bool is_dedicated );
+extern bool claimStartd( match_rec* mrec );
+extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);
 extern bool sendAlive( match_rec* mrec );
 extern void fixReasonAttrs( PROC_ID job_id, JobAction action );
 extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,  
