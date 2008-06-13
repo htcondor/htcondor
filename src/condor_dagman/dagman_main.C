@@ -31,6 +31,7 @@
 #include "condor_environ.h"
 #include "dagman_main.h"
 #include "dagman_commands.h"
+#include "dagman_multi_dag.h"
 #include "util.h"
 #include "condor_getcwd.h"
 
@@ -113,7 +114,7 @@ Dagman::Dagman() :
 	_dagmanConfigFile (NULL), // so Coverity is happy
 	autoRescue(false),
 	doRescueFrom(0),
-	maxRescueDagNum(Dag::ABS_MAX_RESCUE_DAG_NUM),
+	maxRescueDagNum(ABS_MAX_RESCUE_DAG_NUM),
 	rescueFileToRun("")
 {
 }
@@ -299,8 +300,8 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %d\n",
 				autoRescue );
 	
-	maxRescueDagNum = param_integer( "DAGMAN_MAX_RESCUE_NUM", 100, 0,
-				Dag::ABS_MAX_RESCUE_DAG_NUM );
+	maxRescueDagNum = param_integer( "DAGMAN_MAX_RESCUE_NUM",
+				MAX_RESCUE_DAG_DEFAULT, 0, ABS_MAX_RESCUE_DAG_NUM );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n",
 				maxRescueDagNum );
 
@@ -414,6 +415,7 @@ int main_init (int argc, char ** const argv) {
 		// wait for a developer to attach with a debugger...
 	volatile int wait_for_debug = 0;
 
+//TEMPTEMP -- move this to the pre_dc part?!?
 		// process any config vars -- this happens before we process
 		// argv[], since arguments should override config settings
 	dagman.Config();
@@ -662,11 +664,11 @@ int main_init (int argc, char ** const argv) {
 	if ( dagman.doRescueFrom != 0 ) {
 		rescueDagNum = dagman.doRescueFrom;
 		rescueDagMsg.sprintf( "Rescue DAG number %d specified", rescueDagNum );
-		Dag::RenameRescueDagsAfter( dagman.primaryDagFile.Value(),
+		RenameRescueDagsAfter( dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum, dagman.maxRescueDagNum );
 
 	} else if ( dagman.autoRescue ) {
-		rescueDagNum = Dag::FindLastRescueDagNum(
+		rescueDagNum = FindLastRescueDagNum(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, dagman.maxRescueDagNum );
 		rescueDagMsg.sprintf( "Found rescue DAG number %d", rescueDagNum );
@@ -677,7 +679,7 @@ int main_init (int argc, char ** const argv) {
 		// files list accordingly.
 		//
 	if ( rescueDagNum > 0 ) {
-		dagman.rescueFileToRun = Dag::RescueDagName(
+		dagman.rescueFileToRun = RescueDagName(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum );
 		debug_printf ( DEBUG_QUIET, "%s; running %s instead of normal "
@@ -954,6 +956,8 @@ void condor_event_timer () {
 void
 main_pre_dc_init( int, char*[] )
 {
+//TEMPTEMP -- maybe we *can* muck with the dagman.out name...
+//TEMPTEMP -- have we done param stuff by the time we get here?
 	DC_Skip_Auth_Init();
 
 		// Convert the DAGMan log file name to an absolute path if it's
