@@ -150,7 +150,7 @@ REM ======================================================================
 REM Build condor (build order is now preserved in project)
 REM ======================================================================
 echo Building Condor...
-REM msbuild condor.sln /nologo /t:condor /p:Configuration=%CONFIGURATION%
-devenv condor.sln /useenv /build "%CONFIGURATION%"
+msbuild condor.sln /nologo /t:condor /p:Configuration=%CONFIGURATION%
+REM devenv condor.sln /useenv /build "%CONFIGURATION%"
 if %ERRORLEVEL% NEQ 0 exit /b 1
 exit /b 0
