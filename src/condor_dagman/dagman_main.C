@@ -415,7 +415,6 @@ int main_init (int argc, char ** const argv) {
 		// wait for a developer to attach with a debugger...
 	volatile int wait_for_debug = 0;
 
-//TEMPTEMP -- move this to the pre_dc part?!?
 		// process any config vars -- this happens before we process
 		// argv[], since arguments should override config settings
 	dagman.Config();
@@ -686,6 +685,10 @@ int main_init (int argc, char ** const argv) {
 					"DAG file%s\n", rescueDagMsg.Value(),
 					dagman.rescueFileToRun.Value(),
 					dagman.multiDags ? "s" : "");
+		debug_printf ( DEBUG_QUIET,
+					"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+		debug_printf ( DEBUG_QUIET, "RUNNING RESCUE DAG %s\n",
+					dagman.rescueFileToRun.Value() );
 			// Note: if we ran multiple DAGs and they failed, the
 			// whole thing is condensed into a single rescue DAG.
 			// wenger 2007-02-27
@@ -956,8 +959,6 @@ void condor_event_timer () {
 void
 main_pre_dc_init( int, char*[] )
 {
-//TEMPTEMP -- maybe we *can* muck with the dagman.out name...
-//TEMPTEMP -- have we done param stuff by the time we get here?
 	DC_Skip_Auth_Init();
 
 		// Convert the DAGMan log file name to an absolute path if it's
