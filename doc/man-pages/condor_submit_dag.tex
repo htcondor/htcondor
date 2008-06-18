@@ -49,7 +49,13 @@ description.
      to give verbose error messages.}
   \OptItem{\Opt{-force}}{Require \Condor{submit\_dag} to overwrite
      the files that it produces, if the files already exist.  Note that
-     \File{dagman.out} will be appended to, not overwritten.}
+     \File{dagman.out} will be appended to, not overwritten.  If
+     "new-style" rescue DAG mode (see section~\ref{sec:DAGRescueNew})
+     is in effect, and any "new-style" rescue DAGs exist, the \Opt{-force} flag
+     will cause them to be renamed, and the original DAG will be run.
+     If "old-style" rescue DAG mode (see section~\ref{sec:DAGRescueOld}
+     is in effect, any existing "old-style" rescue DAGs will be deleted,
+     and the original DAG will be run.}
   \OptItem{\OptArg{-maxidle}{NumberOfJobs}}{Sets the maximum number of idle
      jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
      idle jobs start to run, \Condor{dagman} will resume submitting jobs.
@@ -111,6 +117,8 @@ description.
      \Condor{dagman} to run each specified DAG as if \Condor{submit\_dag}
      had been run in the directory containing that DAG file.  This option
      is most useful when running multiple DAGs in a single \Condor{dagman}.
+     Note that the \Opt{-usedagdir} flag must not be used when running
+     an "old-style" rescue DAG (see section~\ref{sec:DAGRescueOld}).
      }
   \OptItem{\OptArg{-outfile\_dir}{directory}}{
      Specifies the directory in which the \File{.dagman.out} file will
@@ -155,8 +163,8 @@ description.
     conflict.
   }
   \OptItem{\OptArg{-oldrescue}{0|1}}{Whether to use "old-style" rescue
-    DAG naming when creating a rescue DAG
-    (0 = \Expr{false}, 1 = \Expr{true}).
+    DAG naming (see section~\ref{sec:DAGRescueOld}) when creating a
+    rescue DAG (0 = \Expr{false}, 1 = \Expr{true}).
   }
   \OptItem{\OptArg{-autorescue}{0|1}}{Whether to automatically run the
     newest rescue DAG for the given DAG file, if one exists
@@ -165,7 +173,7 @@ description.
   \OptItem{\OptArg{-dorescuefrom}{number}}{Forces \Condor{dagman} to
     run the specified rescue DAG number for the given DAG.  A value
     of 0 is the same as not specifying this option.  Specifying a
-    non-existant rescue DAG is a fatal error.
+    non-existent rescue DAG is a fatal error.
   }
   \end{Options}
 
