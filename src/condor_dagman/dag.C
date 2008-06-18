@@ -50,10 +50,6 @@
 
 const CondorID Dag::_defaultCondorId;
 
-	// The absolute maximum allowed rescue DAG number (the real maximum
-	// is normally configured lower).
-const int Dag::ABS_MAX_RESCUE_DAG_NUM = 999;
-
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
     int fd = safe_open_wrapper(filename, O_RDWR | O_CREAT, 0600);
@@ -1869,82 +1865,6 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 	_catThrottles.PrintThrottles( fp );
 
     fclose(fp);
-}
-
-//-------------------------------------------------------------------------
-int
-Dag::FindLastRescueDagNum( const char *primaryDagFile, bool multiDags,
-			int maxRescueDagNum )
-{
-	int lastRescue = 0;
-	bool done = false;
-
-	for ( int test = 1; test <= maxRescueDagNum; test++ ) {
-		MyString testName = RescueDagName( primaryDagFile, multiDags,
-					test );
-		if ( access( testName.Value(), F_OK ) == 0 ) {
-			if ( test > lastRescue + 1 ) {
-				debug_printf( DEBUG_QUIET, "Warning: found rescue DAG "
-							"number %d, but not rescue DAG number %d\n",
-							test, test - 1);
-			}
-			lastRescue = test;
-		}
-	}
-	
-	if ( lastRescue >= maxRescueDagNum ) {
-		debug_printf( DEBUG_QUIET,
-					"Warning: Dag::FindLastRescueDagNum() hit maximum "
-					"rescue DAG number: %d\n", maxRescueDagNum );
-		done = true;
-	}
-
-	return lastRescue;
-}
-
-//-------------------------------------------------------------------------
-MyString
-Dag::RescueDagName(const char *primaryDagFile, bool multiDags,
-			int rescueDagNum)
-{
-	ASSERT( rescueDagNum >= 1 );
-
-	MyString fileName(primaryDagFile);
-	if ( multiDags ) {
-		fileName += "_multi";
-	}
-	fileName += ".rescue";
-	fileName.sprintf_cat( "%.3d", rescueDagNum );
-
-	return fileName;
-}
-
-//-------------------------------------------------------------------------
-void
-Dag::RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags,
-			int rescueDagNum, int maxRescueDagNum)
-{
-	ASSERT( rescueDagNum >= 1 );
-
-	debug_printf( DEBUG_QUIET, "Renaming rescue DAGs newer than number %d\n",
-				rescueDagNum );
-
-	int firstToDelete = rescueDagNum + 1;
-	int lastToDelete = FindLastRescueDagNum( primaryDagFile, multiDags,
-				maxRescueDagNum );
-
-	for ( int rescueNum = firstToDelete; rescueNum <= lastToDelete;
-				rescueNum++ ) {
-		MyString rescueDagName = RescueDagName( primaryDagFile, multiDags,
-					rescueNum );
-		debug_printf( DEBUG_QUIET, "Renaming %s\n", rescueDagName.Value() );
-		MyString newName = rescueDagName + ".old";
-		if ( rename( rescueDagName.Value(), newName.Value() ) != 0 ) {
-			EXCEPT( "Fatal error: unable to rename old rescue file "
-						"%s: error %d (%s)\n", rescueDagName.Value(),
-						errno, strerror( errno ) );
-		}
-	}
 }
 
 //===========================================================================
