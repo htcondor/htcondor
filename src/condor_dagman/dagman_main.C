@@ -695,6 +695,13 @@ int main_init (int argc, char ** const argv) {
 		dagman.dagFiles.clearAll();
 		dagman.dagFiles.append( dagman.rescueFileToRun.Value() );
 		dagman.dagFiles.rewind();
+
+		if ( dagman.useDagDir ) {
+			debug_printf ( DEBUG_NORMAL,
+						"Unsetting -useDagDir flag because we're running "
+						"a rescue DAG\n" );
+			dagman.useDagDir = false;
+		}
 	}
 
     //
