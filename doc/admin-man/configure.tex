@@ -4812,7 +4812,7 @@ do not specify their own with:
   command will override this default.  If this macro is undefined, a
   default size of 32 KB will be used.
 
-\item[\Macro{SUBMIT\_SKIP\_FILECHECK}] \label{param:SubmitSkipFilecheck}
+\item[\Macro{SUBMIT\_SKIP\_FILECHECKS}] \label{param:SubmitSkipFilechecks}
   If True, \Condor{submit} behaves as if the \Opt{-d} 
   command-line option is used.
   This tells \Condor{submit} to disable file permission checks when
@@ -5383,25 +5383,28 @@ UWCS_NEGOTIATOR_POST_JOB_RANK = \
   described in section~\ref{param:SubsysDebug} as \MacroNI{<SUBSYS>\_DEBUG}.
 
 \item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}]
-\label{param:NegotiatorMaxTimePerSubmitter} This macro limits the
-amount of time the negotiator will spend with a submitter during one
-negotiation cycle.  Once this time limit has been reached, the
-negotiator will still finish its current ``pie spin'' but will skip
-over the submitter if subsequent pie spins are needed to dish out all
-of the available machines.  It defaults to one year.  See
-\MacroNI{NEGOTIATOR\_MAX\_TIME\_PER\_PIESPIN} for more information.
+  \label{param:NegotiatorMaxTimePerSubmitter} The maximum number of seconds
+  the \Condor{negotiator} will spend with a submitter during one
+  negotiation cycle.  Once this time limit has been reached, the
+  \Condor{negotiator} will still finish its current pie spin, but it will skip
+  over the submitter if subsequent pie spins are needed to dish out all
+  of the available machines.  It defaults to one year.  See
+  \MacroNI{NEGOTIATOR\_MAX\_TIME\_PER\_PIESPIN} for more information.
 
 \item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_PIESPIN}]
-\label{param:NegotiatorMaxTimePerPieSpin} The maximum number of seconds the
-negotiator will spend with a submitter in one \emph{pie spin}.  A
-negotiation cycle is composed of at least one pie spin, possibly more,
-depending on whether there are still machines left over after
-computing fair shares and negotiating with each submitter.  By
-limiting the maximum length of a pie spin or the maximum time per
-submitter per negotiation cycle, you can protect the negotiator
-against spending a long time talking to one submitter (e.g. someone
-with a very slow schedd), but this can result in unfair allocation of
-machines or some machines not being allocated at all.
+  \label{param:NegotiatorMaxTimePerPieSpin} The maximum number of seconds the
+  \Condor{negotiator} will spend with a submitter in one pie spin.
+  A negotiation cycle is composed of at least one pie spin, possibly more,
+  depending on whether there are still machines left over after
+  computing fair shares and negotiating with each submitter.  By
+  limiting the maximum length of a pie spin or the maximum time per
+  submitter per negotiation cycle, the \Condor{negotiator} is protected
+  against spending a long time talking to one submitter, for example someone
+  with a very slow \Condor{schedd} daemon.
+  But, this can result in unfair allocation of
+  machines or some machines not being allocated at all.
+  See section~\ref{sec:PieSlice} on page~\pageref{sec:PieSlice}
+  for a description of a pie slice.
 
 \item[\Macro{NEGOTIATOR\_MATCH\_EXPRS}]
 \label{param:NegotiatorMatchExprs} This macro specifies a list of macro names
@@ -5849,6 +5852,13 @@ which if a gt2 grid
 universe job fails to ping the gatekeeper,
 the job will be put on hold.
 Defaults to 5 days (in seconds).
+
+\item[\Macro{GRIDFTP\_URL\_BASE}]
+\label{param:GridftpUrlBase} 
+Specifies an existing \Prog{GridFTP} server on the local system to be used for
+file transfers for gt4 grid universe jobs. The value is given as the base
+of a URL, such as \Expr{gsiftp://mycomp.foo.edu:2118}. The default is for
+Condor to launch temporary \Prog{GridFTP} servers as needed for file transfer.
 
 \item[\Macro{C\_GAHP\_LOG}]
 \label{param:CGAHPLog} The complete path and file name of the
