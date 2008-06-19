@@ -43,7 +43,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item \Macro{VALID\_SPOOL\_FILES} now automatically includes "SCHEDD.lock",
+\item The configuration variable \Macro{VALID\_SPOOL\_FILES} now automatically 
+includes \File{SCHEDD.lock},
 the lock file used for high availability \Condor{schedd} fail over.  Other
 high availability lock files are not currently included.
 
@@ -54,22 +55,24 @@ high availability lock files are not currently included.
 \begin{itemize}
 
 \item Fixed a problem sometimes causing minutes or more of lag between
-the time of job suspension/unsuspension and the corresponding entries
-in the job userlog.
+the time of job suspension or unsuspension and the corresponding entries
+in the job user log.
 
 \item Fixed a problem in \Condor{q} \Opt{-better-analyze} handling
-requirements expressions containing anything =!= UNDEFINED.
+requirements expressions containing  the expression \Expr{=!= UNDEFINED}.
 
-\item Configuration parameter \Macro{GRIDMANAGER\_GAHP\_CALL\_TIMEOUT}
+\item Configuration variable \Macro{GRIDMANAGER\_GAHP\_CALL\_TIMEOUT}
 is now recognized for nordugrid grid universe jobs.
 
-\item Fixed a bug that could cause \Condor{schedd} to abort (and restart)
-some time after a graceful restart when jobs to which the schedd reconnected
-were preempted.
+\item Fixed a bug that could cause the \Condor{schedd} daemon to abort
+and restart some time after a graceful restart,
+when jobs to which the \Condor{schedd} daemon reconnected were preempted.
 
 \item Fixed a bug causing failure to reconnect to jobs which use
-\$\$([\textit{expression}]) in their ClassAds.  The jobs would go on
-hold with a hold reason, ``Cannot expand \$\$([\textit{expression}]).''
+\Expr{\$\$([\textit{expression}])}
+in their ClassAds.  The jobs would go on
+hold with the hold reason:
+\AdStr{Cannot expand \$\$([\textit{expression}]).}
 
 \end{itemize}
 
