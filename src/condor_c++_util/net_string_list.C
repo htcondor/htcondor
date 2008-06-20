@@ -34,13 +34,15 @@ NetStringList::NetStringList(const char *s, const char *delim )
 
 // contains_withnetmask() is just like the contains() method except that
 // list members can be IP addresses with netmasks in them, and anything on
-// the subnet is a match.  two forms are allowed:
+// the subnet is a match.  four forms are allowed:
 //
+// 192.168.10.1
+// 192.168.*
 // 192.168.0.0/24 
 // 192.168.0.0/255.255.255.0
 //
-// this only checks against strings which are in netmask form.  so, just an
-// IP address or hostname will not match in this function.
+// this only checks against strings which are in the above form.  so, just a
+// hostname will not match in this function.
 //
 // function returns a string pointer to the pattern it matched against.
 

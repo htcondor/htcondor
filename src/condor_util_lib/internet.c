@@ -315,22 +315,9 @@ host_in_domain( const char *host, const char *domain )
 }
 
 
-/*
-  is_ipaddr() returns TRUE if buf is an ascii IP address (like
-  "144.11.11.11") and false if not (like "cs.wisc.edu").  Allow
-  wildcard "*".  If we return TRUE, and we were passed in a non-NULL 
-  sin_addr, it's filled in with the integer version of the ip address. 
-NOTE: it looks like sin_addr may be modified even if the return
-  value is FALSE.  -zmiller
-*/
-/* XXX:  Known problems:  This function succeeds even if something with less
- * than four octets is passed in without a wildcard.  Also, strings with
- * multiple wildcards (such as 192.168.*.*) are not allowed, perhaps those
- * should be considered the same as 192.168.*  ~tristan 8/16/07
- */
-/* This function has a unit test. */
-int
-is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
+
+static int
+is_ipaddr_implementation(const char *inbuf, struct in_addr *sin_addr, struct in_addr *mask_addr,int allow_wildcard)
 {
 	int len;
 	char buf[17];
@@ -338,23 +325,22 @@ is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
 	int i,j,x;
 	char save_char;
 	unsigned char *cur_byte = NULL;
+	unsigned char *cur_mask_byte = NULL;
 	if( sin_addr ) {
 		cur_byte = (unsigned char *) sin_addr;
 	}
+	if( mask_addr ) {
+		cur_mask_byte = (unsigned char *) mask_addr;
+	}
 
 	len = strlen(inbuf);
-	if ( len < 3 || len > 15 ) 
+	if ( len < 1 || len > 15 ) 
 		return FALSE;
-		// shortest possible IP addr is "1.*" - 3 chars
+		// shortest possible IP addr is "*" - 1 char
 		// longest possible IP addr is "123.123.123.123" - 15 chars
 	
 	// copy to our local buf
 	strncpy( buf, inbuf, 16 );
-
-	// on IP addresses, wildcards only permitted at the end, 
-	// i.e. 144.92.* , _not_ *.92.11
-	if ( buf[0] == '*' ) 
-		return FALSE;
 
 	// strip off any trailing wild card or '.'
 	if ( buf[len-1] == '*' || buf[len-1] == '.' ) {
@@ -367,7 +353,7 @@ is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
 	// Make certain we have a valid IP address, and count the parts,
 	// and fill in sin_addr
 	i = 0;
-	for(;;) {
+	for(;buf[i];) {
 		
 		j = i;
 		while (buf[i] >= '0' && buf[i] <= '9') i++;
@@ -385,6 +371,9 @@ is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
 			*cur_byte = x;	/* save into sin_addr */
 			cur_byte++;
 		}
+		if( cur_mask_byte ) {
+			*(cur_mask_byte++) = 255;
+		}
 		buf[i] = save_char;
 
 		part++;
@@ -400,14 +389,62 @@ is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
 		if ( part >= 4 )
 			return FALSE;
 	}
-	
+
+	if( !allow_wildcard && part != 4 ) {
+		return FALSE;
+	}
+
 	if( cur_byte ) {
 		for (i=0; i < 4 - part; i++) {
 			*cur_byte = (unsigned char) 255;
 			cur_byte++;
 		}
 	}
+	if( cur_mask_byte ) {
+		for (i=0; i < 4 - part; i++) {
+			*(cur_mask_byte++) = 0;
+		}
+	}
 	return TRUE;
+}
+
+
+/*
+  is_ipaddr() returns TRUE if buf is an ascii IP address (like
+  "144.11.11.11") and false if not (like "cs.wisc.edu").  Allow
+  wildcard "*".  If we return TRUE, and we were passed in a non-NULL 
+  sin_addr, it's filled in with the integer version of the ip address. 
+NOTE: it looks like sin_addr may be modified even if the return
+  value is FALSE.  -zmiller
+*/
+/* XXX:  Known problems:  This function succeeds even if something with less
+ * than four octets is passed in without a wildcard.  Also, strings with
+ * multiple wildcards (such as 192.168.*.*) are not allowed, perhaps those
+ * should be considered the same as 192.168.*  ~tristan 8/16/07
+ */
+/* This function has a unit test. */
+int
+is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
+{
+		// In keeping with the historical definition of this function,
+		// we allow wildcards, even though the caller did not explicitly
+		// ask for them.  This usage needs to be reviewed.
+	return is_ipaddr_implementation(inbuf,sin_addr,NULL,1);
+}
+
+int
+is_ipaddr_no_wildcard(const char *inbuf, struct in_addr *sin_addr)
+{
+		// In keeping with the historical definition of this function,
+		// we allow wildcards, even though the caller did not explicitly
+		// ask for them.  This usage needs to be reviewed.
+	return is_ipaddr_implementation(inbuf,sin_addr,NULL,0);
+}
+
+int
+is_ipaddr_wildcard(const char *inbuf, struct in_addr *sin_addr, struct in_addr *mask_addr)
+{
+	return is_ipaddr_implementation(inbuf,sin_addr,mask_addr,1);
 }
 
 
@@ -439,26 +476,31 @@ is_valid_network( const char *network, struct in_addr *ip, struct in_addr *mask)
 
 	// find a slash and make sure both sides are valid
 	tmp = strchr(nmcopy, '/');
-	if (tmp) {
+	if( !tmp ) {
+		if( is_ipaddr_wildcard(nmcopy,ip,mask) ) {
+				// this is just a plain IP or IP.*
+			return TRUE;
+		}
+	}
+	else {
 		// separate by overwriting the slash with a null, and moving tmp
 		// to point to the begining of the second string.
 		*tmp++ = 0;
 
 		// now validate
-		if (is_ipaddr(nmcopy, ip)) {
+		if (is_ipaddr_no_wildcard(nmcopy, ip)) {
 			// first part is a valid ip, now validate the netmask.  two
 			// different formats are valid, we check for both.
-			if (is_ipaddr(tmp, mask)) {
+			if (is_ipaddr_no_wildcard(tmp, mask)) {
 				// format is a.b.c.d/m.a.s.k
 				// is_ipaddr fills in the value for both ip and mask,
 				// so we are done!
 				return TRUE;
 			} else {
 				// try format a.b.c.d/num
-				// this doesn't allow /0, but that isn't useful
-				// anyways... easier to say '*'.
-				numbits = atoi(tmp);
-				if (numbits) {
+				char *end = NULL;
+				numbits = strtol(tmp,&end,10);
+				if (end && *end == '\0') {
 					if (mask) {
 						// fill in the structure
 					    mask->s_addr = 0;

@@ -94,6 +94,8 @@ char* calc_subnet_name(void);
 
 int is_ipaddr(const char *inbuf, struct in_addr *sin_addr);
 
+int is_ipaddr_wildcard(const char *inbuf, struct in_addr *sin_addr, struct in_addr *mask_addr);
+
 int is_valid_network( const char *network, struct in_addr *ip, struct in_addr *mask);
 
 int is_valid_sinful( const char *sinful );

@@ -94,13 +94,6 @@ public:
 	*/
 	int Verify( DCpermission perm, const struct sockaddr_in *sin, const char * user = NULL );
 
-	/** Not_Yet_Ducumented
-		@param flag TRUE or FALSE.	TRUE means cache resolver lookups in our
-			   hashtable cache, FALSE means do a gethostbyaddr() lookup
-			   every time.
-	*/
-	void CacheDnsResults(int flag) { cache_DNS_results = flag; }
-
 	/** Dynamically opens a hole in the authorization settings for the
 	    given (user, IP) at the given perm level.
 	        @param  perm The permission level to open.
@@ -144,10 +137,10 @@ private:
 		~PermTypeEntry(); 
 	};
 
-    bool has_user(UserPerm_t * , const char *, perm_mask_t &);
+    bool has_user(UserPerm_t * , const char *, perm_mask_t &, bool require_nonwild_match = false );
+	bool LookupCachedVerifyResult( DCpermission perm, const struct in_addr &sin, const char * user, perm_mask_t & mask);
 	int add_hash_entry(const struct in_addr & sin_addr, const char * user, perm_mask_t new_mask);
 	void fill_table( PermTypeEntry * pentry, perm_mask_t mask, char * list, bool allow);
-	int cache_DNS_results;
     void split_entry(const char * entry, char ** host, char ** user);
 	inline perm_mask_t allow_mask(DCpermission perm) { return (1 << (1+2*perm)); }
 	inline perm_mask_t deny_mask(DCpermission perm) { return (1 << (2+2*perm)); }
@@ -160,8 +153,6 @@ private:
 	bool lookup_user(StringList * list, const char * user);
 	char * merge(char * newPerm, char * oldPerm);
 	int did_init;
-
-	bool add_host_entry( const char* addr, perm_mask_t new_mask );
 
 	PermTypeEntry* PermTypeArray[LAST_PERM];
 
