@@ -26,7 +26,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item This is a bugfix release.  A bug in 7.0.2 sometimes caused
+the schedd to become unresponsive for 20 seconds when starting
+\Condor{shadow} to run a job, so anyone running 7.0.2 is strongly
+encouraged to upgrade.
 
 \end{itemize}
 
@@ -73,6 +76,9 @@ when jobs to which the \Condor{schedd} daemon reconnected were preempted.
 in their ClassAds.  The jobs would go on
 hold with the hold reason:
 \AdStr{Cannot expand \$\$([\textit{expression}]).}
+
+\item Fixed a bug in 7.0.2 that sometimes caused the schedd to become
+unresponsive for 20 seconds when starting \Condor{shadow} to run a job.
 
 \end{itemize}
 
