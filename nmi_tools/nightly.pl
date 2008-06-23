@@ -53,7 +53,8 @@ chdir $home || die "Can't chdir($home): $!\n";
 # We need to make sure the clones are current, since they aren't
 # rsync'd constantly anymore
 if (defined $opt_git) {
-    @roots = ($GIT_SRC_ROOT, $GIT_DOC_ROOT, $GIT_EXT_ROOT, $GIT_TSTCNF_ROOT, $GIT_TSTLRG_ROOT);
+    #@roots = ($GIT_SRC_ROOT, $GIT_DOC_ROOT, $GIT_EXT_ROOT, $GIT_TSTCNF_ROOT, $GIT_TSTLRG_ROOT);
+    @roots = ($GIT_SRC_ROOT, $GIT_DOC_ROOT, $GIT_EXT_ROOT, $GIT_TSTCNF_ROOT);
     foreach $root (@roots) {
 	open(OUT, "$GIT --git-dir=$root fetch 2>&1|")
 	    || die "Can't fetch $root: $!\n";
