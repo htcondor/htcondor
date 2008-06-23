@@ -3,7 +3,7 @@ PROGRAMS =  	condor_config_val condor_preen condor_stats \
 		view_collection condor_qedit condor_advertise condor_version \
 		condor_fetchlog condor_findhost condor_cod condor_wait \
 		condor_store_cred condor_convert_history condor_dump_history \
-		condor_load_history condor_ckpt_probe
+		condor_load_history condor_ckpt_probe condor_test_auth
 
 all_target( $(PROGRAMS) )
 
@@ -90,6 +90,8 @@ public_link_target(bin,condor,condor_reschedule)
 public_c_plus_target(condor_stats,bin,stats.o,$(LIB))
 
 c_plus_target(test_calc,test_calc.o,$(LIB))
+
+c_plus_target(condor_test_auth,test_auth.o,../condor_daemon_core.V6/condor_ipverify.o ../condor_daemon_core.V6/daemon_core_instantiate.o $(LIB))
 
 c_plus_target(view_collection,view_collection.o,$(LIB))
 
