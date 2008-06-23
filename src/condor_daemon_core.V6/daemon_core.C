@@ -2256,13 +2256,26 @@ DaemonCore::ReInit()
 		if ( send_update < 1 )
 			send_update = 1;
 		if ( send_child_alive_timer == -1 ) {
-			send_child_alive_timer = Register_Timer((unsigned)send_update, (unsigned)send_update,
+
+				// 2008-06-18 7.0.3: commented out direct call to
+				// SendAliveToParent(), because it causes deadlock
+				// between the shadow and schedd if the job classad
+				// that the schedd is writing over a pipe to the
+				// shadow is larger than the pipe buffer size.
+				// For now, register timer for 0 seconds instead
+				// of calling SendAliveToParent() immediately.
+				// This means we are vulnerable to a race condition,
+				// in which we hang before the first CHILDALIVE.  If
+				// that happens, our parent will never kill us.
+
+			send_child_alive_timer = Register_Timer(0, (unsigned)send_update,
 					(TimerHandlercpp)&DaemonCore::SendAliveToParent,
 					"DaemonCore::SendAliveToParent", this );
 
 				// Send this immediately, because if we hang before
 				// sending this message, our parent will not kill us.
-			SendAliveToParent();
+				// (Commented out.  See reason above.)
+				// SendAliveToParent();
 		} else {
 			Reset_Timer(send_child_alive_timer, 1, send_update);
 		}

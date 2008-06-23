@@ -99,6 +99,21 @@ TESTCLASS(lib_procapi_pidtracking-snapshot,quick)
 TESTCLASS(lib_procapi_pidtracking-snapshot,quicknolink)
 #endif
 
+# Required ligo test needs to be enabled by configure
+# but until then it is always on and will run correctly
+# in the nightlies where the confidential tests are 
+# correctly integrated with a trigger file in the config dir.
+# bt 6/19/08
+
+#if defined(IS_X86_64_LINUX_RHEL5) 
+DESC(job_ligo_x86-64-chkpttst,"Special LIGO test")
+RUN(job_ligo_x86-64-chkpttst)
+TESTCLASS(job_ligo_x86-64-chkpttst,core)
+TESTCLASS(job_ligo_x86-64-chkpttst,quick)
+TESTCLASS(job_ligo_x86-64-chkpttst,quicknolink)
+TESTCLASS(job_ligo_x86-64-chkpttst,btdebug)
+#endif
+
 DESC(job_flocking_to,"Simple flocking test")
 RUN(job_flocking_to)
 TESTCLASS(job_flocking_to,core)

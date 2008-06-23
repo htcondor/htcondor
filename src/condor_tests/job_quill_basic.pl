@@ -152,7 +152,7 @@ sub compare_2arrays_byrows
 		$current =~ /^\s*(\w*)\s*=\s*(.*)\s*$/;
 		$thiskey = $1;
 		#print "Current<<$current>> Thiskey<<$thiskey>>\n";
-		print "${$href}{$thiskey}\n";
+		#print "${$href}{$thiskey}\n";
 		if($current =~ /^.*Submitter.*$/) {
 			print "Skip Submitter entry\n";
 			print "${$harray1}[$location] vs ${$harray2}[$location]\n";
@@ -259,25 +259,25 @@ $submitted = sub
 					"Rank", 1, "RemoteSysCpu", 1, "RemoteWallClockTime", 1,
 					"ServerTime", 1, "RemoteUserCpu", 1, "Environment", 1);
 		system("date");
-		@adarray = sort(@adarray);
-		@bdarray = sort(@bdarray);
-		$scheddout = "quill_schedd_ads";
-		$rdbsout = "quill_rdbs_ads";
+		@scheddads = sort(@adarray);
+		@rdbmsads = sort(@bdarray);
+		$scheddout = "job_quill_basic.schedd_ads";
+		$rdbsout = "job_quill_basic.rdbms_ads";
 		print "Done sorting arrays\n";
 		open(SCHEDD,">>$scheddout") or die "Can not open $scheddout:$!\n";
 		open(RDBS,">>$rdbsout") or die "Can not open $rdbsout:$!\n";
-		foreach $ad (@adarray) {
+		foreach $ad (@scheddads) {
 			print SCHEDD "$ad\n";
 		}
 		print SCHEDD "*******************\n";
-		foreach $ad (@bdarray) {
+		foreach $ad (@rdbmsads) {
 			print RDBS "$ad\n";
 		}
 		print RDBS "*******************\n";
 		close(SCHEDD);
 		close(RDBS);
 		system("date");
-		$result = compare_2arrays_byrows(\@adarray, \@bdarray, \%skip);
+		$result = compare_2arrays_byrows(\@scheddads, \@rdbmsads, \%skip);
 		# save the time and leave the jobs behind before stopping condor
 		if( $result != 0 ) {
 			die "Ads from all three sources were not the same!!!\n";

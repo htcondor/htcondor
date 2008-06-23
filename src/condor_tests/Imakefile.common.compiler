@@ -13,7 +13,6 @@ all_symlink_target(../../condor_scripts/safe_append.pl,safe_append.pl)
 all_symlink_target(../../condor_scripts/batch_test.pl,batch_test.pl)
 all_symlink_target(../x_fake_ckpt.c,x_fake_ckpt.c)
 all_symlink_target(../x_waste_second.c,x_waste_second.c)
-all_symlink_target(../x_compute_bogokips.c,x_compute_bogokips.c)
 
 CBUILD_DEP($(CC),x_return-n,c,x_waste_second.o)
 
