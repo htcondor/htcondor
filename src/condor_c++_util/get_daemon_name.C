@@ -60,7 +60,8 @@ get_host_part( const char* name )
 char*
 get_daemon_name( const char* name )
 {
-	char *tmp, *fullname, *tmpname, *daemon_name = NULL;
+	char *tmp, *tmpname, *daemon_name = NULL;
+	char *fullname = NULL;
 	int size;
 
 	dprintf( D_HOSTNAME, "Finding proper daemon name for \"%s\"\n",
@@ -81,9 +82,8 @@ get_daemon_name( const char* name )
 			fullname = get_full_hostname( tmp );
 		} else {
 			dprintf( D_HOSTNAME, "Daemon name has no data after the '@', "
-					 "trying to use the local host\n" ); 
-				// There was nothing after the @, use localhost:
-			fullname = strnewp( my_full_hostname() );
+					 "we'll assume that's by design\n" ); 
+			daemon_name = strnewp( name );
 		}
 		if( fullname ) {
 			size = strlen(tmpname) + strlen(fullname) + 2;
@@ -129,6 +129,8 @@ build_valid_daemon_name( char* name )
 		// everything after the '@'.
 	bool just_host = false;
 
+	bool just_name = false;
+
 	if( name && *name ) {
 		tmpname = strnewp( name );
 		tmp = strrchr( tmpname, '@' );
@@ -136,6 +138,8 @@ build_valid_daemon_name( char* name )
 				// name we were passed has an '@', ignore everything
 				// after (and including) the '@'.  
 			*tmp = '\0';
+
+			just_name = true;
 		} else {
 				// no '@', see if what we have is our hostname
 			if( (tmp = get_full_hostname(name)) ) {
@@ -154,9 +158,13 @@ build_valid_daemon_name( char* name )
 	if( just_host ) {
 		daemon_name = strnewp( my_full_hostname() );
 	} else {
-		size = strlen(tmpname) + strlen(my_full_hostname()) + 2; 
-		daemon_name = new char[size];
-		sprintf( daemon_name, "%s@%s", tmpname, my_full_hostname() ); 
+		if( just_name ) {
+			daemon_name = strnewp( name );
+		} else {
+			size = strlen(tmpname) + strlen(my_full_hostname()) + 2; 
+			daemon_name = new char[size];
+			sprintf( daemon_name, "%s@%s", tmpname, my_full_hostname() ); 
+		}
 	}
 	delete [] tmpname;
 	return daemon_name;
