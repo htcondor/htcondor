@@ -26,6 +26,13 @@
 #ifndef DAGMAN_MULTI_DAG_H
 #define DAGMAN_MULTI_DAG_H
 
+	// The default maximum rescue DAG number.
+const int MAX_RESCUE_DAG_DEFAULT = 100;
+
+	// The absolute maximum allowed rescue DAG number (the real maximum
+	// is normally configured lower).
+const int ABS_MAX_RESCUE_DAG_NUM = 999;
+
 /** Get the log files from an entire set of DAGs, dealing with
     DAG paths if necessary.
 	@param dagFiles: all of the DAG files we're using.
@@ -72,5 +79,37 @@ bool GetConfigFile(/* const */ StringList &dagFiles, bool useDagDir,
 	@return true if the operation succeeded; otherwise false
 */
 bool MakePathAbsolute(MyString &filePath, MyString &errMsg);
+
+/** Finds the number of the last existing rescue DAG file for the
+	given "primary" DAG.
+	@param primaryDagFile The primary DAG file name
+	@param multiDags Whether we have multiple DAGs
+	@param maxRescueDagNum the maximum legal rescue DAG number
+	@return The number of the last existing rescue DAG (0 if there
+		is none)
+*/
+int FindLastRescueDagNum(const char *primaryDagFile,
+			bool multiDags, int maxRescueDagNum);
+
+/** Creates a rescue DAG name, given a primary DAG name and rescue
+	DAG number
+	@param primaryDagFile The primary DAG file name
+	@param multiDags Whether we have multiple DAGs
+	@param rescueDagNum The rescue DAG number
+	@return The full name of the rescue DAG
+*/
+MyString RescueDagName(const char *primaryDagFile,
+			bool multiDags, int rescueDagNum);
+
+/** Renames all rescue DAG files for this primary DAG after the
+	given one (as long as the numbers are contiguous).  For example,
+	if rescueDagNum is 3, we will rename .rescue4, .rescue5, etc.
+	@param primaryDagFile The primary DAG file name
+	@param multiDags Whether we have multiple DAGs
+	@param rescueDagNum The rescue DAG number to rename *after*
+	@param maxRescueDagNum the maximum legal rescue DAG number
+*/
+void RenameRescueDagsAfter(const char *primaryDagFile,
+			bool multiDags, int rescueDagNum, int maxRescueDagNum);
 
 #endif /* #ifndef DAGMAN_MULTI_DAG_H */

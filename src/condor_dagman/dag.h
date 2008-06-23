@@ -385,38 +385,6 @@ class Dag {
     void WriteRescue (const char * rescue_file,
 				const char * datafile) /* const */;
 
-	/** Finds the number of the last existing rescue DAG file for the
-		given "primary" DAG.
-		@param primaryDagFile The primary DAG file name
-		@param multiDags Whether we have multiple DAGs
-		@param maxRescueDagNum the maximum legal rescue DAG number
-		@return The number of the last existing rescue DAG (0 if there
-			is none)
-	*/
-	static int FindLastRescueDagNum(const char *primaryDagFile,
-				bool multiDags, int maxRescueDagNum);
-
-	/** Creates a rescue DAG name, given a primary DAG name and rescue
-		DAG number
-		@param primaryDagFile The primary DAG file name
-		@param multiDags Whether we have multiple DAGs
-		@param rescueDagNum The rescue DAG number
-		@return The full name of the rescue DAG
-	*/
-	static MyString RescueDagName(const char *primaryDagFile,
-				bool multiDags, int rescueDagNum);
-
-	/** Renames all rescue DAG files for this primary DAG after the
-		given one (as long as the numbers are contiguous).  For example,
-		if rescueDagNum is 3, we will rename .rescue4, .rescue5, etc.
-		@param primaryDagFile The primary DAG file name
-		@param multiDags Whether we have multiple DAGs
-		@param rescueDagNum The rescue DAG number to rename *after*
-		@param maxRescueDagNum the maximum legal rescue DAG number
-	*/
-	static void RenameRescueDagsAfter(const char *primaryDagFile,
-				bool multiDags, int rescueDagNum, int maxRescueDagNum);
-
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );
 

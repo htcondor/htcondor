@@ -31,6 +31,7 @@
 #include "condor_environ.h"
 #include "dagman_main.h"
 #include "dagman_commands.h"
+#include "dagman_multi_dag.h"
 #include "util.h"
 #include "condor_getcwd.h"
 
@@ -113,7 +114,7 @@ Dagman::Dagman() :
 	_dagmanConfigFile (NULL), // so Coverity is happy
 	autoRescue(false),
 	doRescueFrom(0),
-	maxRescueDagNum(Dag::ABS_MAX_RESCUE_DAG_NUM),
+	maxRescueDagNum(ABS_MAX_RESCUE_DAG_NUM),
 	rescueFileToRun("")
 {
 }
@@ -299,8 +300,8 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %d\n",
 				autoRescue );
 	
-	maxRescueDagNum = param_integer( "DAGMAN_MAX_RESCUE_NUM", 100, 0,
-				Dag::ABS_MAX_RESCUE_DAG_NUM );
+	maxRescueDagNum = param_integer( "DAGMAN_MAX_RESCUE_NUM",
+				MAX_RESCUE_DAG_DEFAULT, 0, ABS_MAX_RESCUE_DAG_NUM );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n",
 				maxRescueDagNum );
 
@@ -662,11 +663,11 @@ int main_init (int argc, char ** const argv) {
 	if ( dagman.doRescueFrom != 0 ) {
 		rescueDagNum = dagman.doRescueFrom;
 		rescueDagMsg.sprintf( "Rescue DAG number %d specified", rescueDagNum );
-		Dag::RenameRescueDagsAfter( dagman.primaryDagFile.Value(),
+		RenameRescueDagsAfter( dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum, dagman.maxRescueDagNum );
 
 	} else if ( dagman.autoRescue ) {
-		rescueDagNum = Dag::FindLastRescueDagNum(
+		rescueDagNum = FindLastRescueDagNum(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, dagman.maxRescueDagNum );
 		rescueDagMsg.sprintf( "Found rescue DAG number %d", rescueDagNum );
@@ -677,19 +678,30 @@ int main_init (int argc, char ** const argv) {
 		// files list accordingly.
 		//
 	if ( rescueDagNum > 0 ) {
-		dagman.rescueFileToRun = Dag::RescueDagName(
+		dagman.rescueFileToRun = RescueDagName(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum );
 		debug_printf ( DEBUG_QUIET, "%s; running %s instead of normal "
 					"DAG file%s\n", rescueDagMsg.Value(),
 					dagman.rescueFileToRun.Value(),
 					dagman.multiDags ? "s" : "");
+		debug_printf ( DEBUG_QUIET,
+					"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+		debug_printf ( DEBUG_QUIET, "RUNNING RESCUE DAG %s\n",
+					dagman.rescueFileToRun.Value() );
 			// Note: if we ran multiple DAGs and they failed, the
 			// whole thing is condensed into a single rescue DAG.
 			// wenger 2007-02-27
 		dagman.dagFiles.clearAll();
 		dagman.dagFiles.append( dagman.rescueFileToRun.Value() );
 		dagman.dagFiles.rewind();
+
+		if ( dagman.useDagDir ) {
+			debug_printf ( DEBUG_NORMAL,
+						"Unsetting -useDagDir flag because we're running "
+						"a rescue DAG\n" );
+			dagman.useDagDir = false;
+		}
 	}
 
     //
