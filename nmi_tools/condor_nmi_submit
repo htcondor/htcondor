@@ -133,6 +133,9 @@ my $GITROOT_EXT = "/space/git/CONDOR_EXT.git";
 # Root of the GIT Confidential Test repository
 my $GITROOT_TSTCNF = "/space/git/CONDOR_TEST_CNFDTL.git";
 
+# Root of the GIT Large Test repository
+my $GITROOT_TSTLRG = "/space/git/CONDOR_TEST_LRG.git";
+
 # name of the submit_info file
 my $submit_info_basename = "submit_info";
 
@@ -1213,6 +1216,11 @@ sub generateBuildFetchFiles
 	    	$test_cnffile =~ s,/,,g;
 	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_CNF, $module, $tag );
 	    	push( @fetch_files, $test_cnffile );
+
+	    	my $test_cnffile = "largetests-$tag.src";
+	    	$test_cnffile =~ s,/,,g;
+	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_LRG, $module, $tag );
+	    	push( @fetch_files, $test_cnffile );
 		}
     }
     elsif( defined $src_workspace ) {
@@ -1287,6 +1295,8 @@ sub makeFetchFileVCS
 			$gitroot = $GITROOT_DOC;
 		} elsif(TST_CNF == $repo) {
 			$gitroot = $GITROOT_TSTCNF;
+		} elsif(TST_LRG == $repo) {
+			$gitroot = $GITROOT_TSTLRG;
 		} else {
 			$gitroot = $GITROOT_SRC;
 		}
