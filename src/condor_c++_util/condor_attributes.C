@@ -289,6 +289,7 @@ const char *ATTR_JOB_JAVA_VM_ARGS2        = "JavaVMArguments";
 const char *ATTR_ORIG_JOB_IWD				 = "OrigIwd";
 const char *ATTR_JOB_REMOTE_IWD			 = "RemoteIwd";
 const char *ATTR_JOB_RUNAS_OWNER			 = "RunAsOwner";
+const char *ATTR_JOB_LOAD_USER_PROFILE   = "LoadUserProfile";
 const char *ATTR_JOB_LOCAL_CPU			 = "LocalCpu";
 const char *ATTR_JOB_LOCAL_SYS_CPU		 = "LocalSysCpu";
 const char *ATTR_JOB_LOCAL_USER_CPU		 = "LocalUserCpu";

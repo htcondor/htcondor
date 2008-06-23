@@ -109,6 +109,10 @@ private:
 
 	bool m_using_priv_sep;
 
+#if defined ( WIN32 )
+    bool m_loaded_user_profile;
+#endif
+
 };
 
 #endif

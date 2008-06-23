@@ -229,6 +229,7 @@ extern const char * ATTR_JOB_JAVA_VM_ARGS2;
 extern const char * ATTR_ORIG_JOB_IWD;
 extern const char * ATTR_JOB_REMOTE_IWD;
 extern const char * ATTR_JOB_RUNAS_OWNER;
+extern const char * ATTR_JOB_LOAD_USER_PROFILE;
 extern const char * ATTR_JOB_LOCAL_CPU;
 extern const char * ATTR_JOB_LOCAL_SYS_CPU;
 extern const char * ATTR_JOB_LOCAL_USER_CPU;

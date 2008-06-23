@@ -341,6 +341,7 @@ char	*CronPrepTime	= "cron_prep_time";
 
 #if defined(WIN32)
 char	*RunAsOwner = "run_as_owner";
+char	*LoadUserProfile = "load_user_profile";
 #endif
 
 //
@@ -400,6 +401,7 @@ void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void 	SetTDP();
 #if defined(WIN32)
 void	SetRunAsOwner();
+void    SetLoadUserProfile();
 #endif
 void	SetRank();
 void 	SetIWD();
@@ -4245,6 +4247,30 @@ SetRunAsOwner()
 		DoCleanup(0,0,NULL);
 		exit(1);
 	}
+}
+
+void 
+SetLoadUserProfile()
+{
+    char *load_user_profile = condor_param (
+        LoadUserProfile, 
+        ATTR_JOB_LOAD_USER_PROFILE );
+
+    if ( NULL == load_user_profile ) {
+        return;
+    }
+
+    if ( !isTrue ( load_user_profile ) ) {
+        free ( load_user_profile );
+        return;
+    }
+    free ( load_user_profile );
+
+    MyString buffer;
+    buffer.sprintf ( "%s = True", ATTR_JOB_LOAD_USER_PROFILE );
+    InsertJobExpr ( buffer );
+
+    /* SetRunAsOwner() has already made sure we have a CredD */
 }
 #endif
 

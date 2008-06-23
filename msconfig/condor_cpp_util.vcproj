@@ -3135,6 +3135,22 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\profile_helpers.WINDOWS.C"
+			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\profile_helpers.WINDOWS.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\query_result_type.h"
 			>
 		</File>
@@ -3535,6 +3551,22 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\string_conversion.WINDOWS.C"
+			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\string_conversion.WINDOWS.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\string_list.C"
 			>
 			<FileConfiguration
@@ -3613,6 +3645,22 @@
 					CompileAs="2"
 				/>
 			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\system_info.WINDOWS.C"
+			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\system_info.WINDOWS.h"
+			>
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\time_offset.C"

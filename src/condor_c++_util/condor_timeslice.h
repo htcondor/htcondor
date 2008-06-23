@@ -141,7 +141,7 @@ class Timeslice {
 
 	time_t getNextStartTime() const { return m_next_start_time; }
 
-	int getTimeToNextRun() const { return m_next_start_time - time(NULL); }
+	int getTimeToNextRun() const { return int(m_next_start_time - time(NULL)); }
 
 	bool isTimeToRun() const { return getTimeToNextRun() <= 0; }
 

@@ -891,6 +891,14 @@ SOURCE="..\src\condor_c++_util\process_control.WINDOWS.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\profile_helpers.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\profile_helpers.WINDOWS.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\query_result_type.h"
 # End Source File
 # Begin Source File
@@ -1011,6 +1019,14 @@ SOURCE="..\src\condor_c++_util\store_cred.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\string_conversion.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\string_conversion.WINDOWS.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\string_list.C"
 # End Source File
 # Begin Source File
@@ -1028,6 +1044,14 @@ SOURCE="..\src\condor_c++_util\stringSpace.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\strnewp.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\system_info.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\system_info.WINDOWS.h"
 # End Source File
 # Begin Source File
 
