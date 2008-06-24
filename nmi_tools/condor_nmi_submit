@@ -1217,10 +1217,10 @@ sub generateBuildFetchFiles
 	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_CNF, $module, $tag );
 	    	push( @fetch_files, $test_cnffile );
 
-	    	#my $test_cnffile = "largetests-$tag.src";
-	    	#$test_cnffile =~ s,/,,g;
-	    	#makeFetchFileVCS( $test_cnffile, TRUE, TST_LRG, $module, $tag );
-	    	#push( @fetch_files, $test_cnffile );
+	    	my $test_cnffile = "largetests-$tag.src";
+	    	$test_cnffile =~ s,/,,g;
+	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_LRG, $module, $tag );
+	    	push( @fetch_files, $test_cnffile );
 		}
     }
     elsif( defined $src_workspace ) {
