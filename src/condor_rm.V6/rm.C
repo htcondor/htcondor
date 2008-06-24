@@ -181,21 +181,21 @@ main( int argc, char *argv[] )
 	// 'condor_hold.exe' or 'condor_hold_wrapped' are all legal argv[0]'s
 	// for condor_hold.
 
-	if (cmd_str && strncmp( cmd_str, "_hold", strlen("_hold") ) == MATCH) { 
+	if (cmd_str && strnicmp( cmd_str, "_hold", strlen("_hold") ) == MATCH) { 
 
 		mode = JA_HOLD_JOBS;
 
 	} else if ( cmd_str && 
-			strncmp( cmd_str, "_release", strlen("_release") ) == MATCH ) {
+			strnicmp( cmd_str, "_release", strlen("_release") ) == MATCH ) {
 
 		mode = JA_RELEASE_JOBS;
 
 	} else if ( cmd_str && 
-			strncmp( cmd_str, "_rm", strlen("_rm") ) == MATCH ) {
+			strnicmp( cmd_str, "_rm", strlen("_rm") ) == MATCH ) {
 
 		mode = JA_REMOVE_JOBS;
 
-	} else if( cmd_str && ! strncmp(cmd_str, "_vacate_job",
+	} else if( cmd_str && ! strnicmp(cmd_str, "_vacate_job",
 									strlen("_vacate_job")) ) {  
 
 		mode = JA_VACATE_JOBS;
