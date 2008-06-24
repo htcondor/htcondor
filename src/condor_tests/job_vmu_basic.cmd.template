@@ -1,7 +1,0 @@
-vm_type = vmware
-universe = vm
-vmware_dir = XXXXXX
-vmware_should_transfer_files = true
-executable = "foo"
-log = "job_vmu_basic.log"
-queue
