@@ -645,6 +645,13 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 
 			// see if a authorization hole has been dyamically punched (via
 			// PunchHole) for this perm / user / IP
+			// Note that the permission hierarchy is dealt with in
+			// PunchHole(), by punching a hole for all implied levels.
+			// Therefore, if there is a hole or an implied hole, we will
+			// always find it here before we get into the subsequent code
+			// which recursively calls Verify() to traverse the hierarchy.
+			// This is important, because we do not want holes to find
+			// there way into the authorization cache.
 			//
 		if ( PermTypeArray[perm]->hole_punch_table != NULL ) {
 			HolePunchTable_t* hpt = PermTypeArray[perm]->hole_punch_table;
@@ -886,6 +893,14 @@ IpVerify::PunchHole(DCpermission perm, MyString& id)
 		        count);
 	}
 
+	DCpermissionHierarchy hierarchy( perm );
+	DCpermission const *implied_perms=hierarchy.getImpliedPerms();
+	for(; implied_perms[0] != LAST_PERM; implied_perms++ ) {
+		if( perm != implied_perms[0] ) {
+			PunchHole(implied_perms[0],id);
+		}
+	}
+
 	return true;
 }
 
@@ -934,6 +949,14 @@ IpVerify::FillHole(DCpermission perm, MyString& id)
 		        PermString(perm),
 		        id.Value(),
 		        count);
+	}
+
+	DCpermissionHierarchy hierarchy( perm );
+	DCpermission const *implied_perms=hierarchy.getImpliedPerms();
+	for(; implied_perms[0] != LAST_PERM; implied_perms++ ) {
+		if( perm != implied_perms[0] ) {
+			FillHole(implied_perms[0],id);
+		}
 	}
 
 	return true;
