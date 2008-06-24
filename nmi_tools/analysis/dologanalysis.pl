@@ -67,6 +67,21 @@ my %previousmonth = (
     "Jan" => "December",
 );
 
+my %nextmonth = (
+    "Dec" => "January",
+    "Jan" => "February",
+    "Feb" => "March",
+    "Mar" => "April",
+    "Apr" => "May",
+    "May" => "June",
+    "Jun" => "July",
+    "Jul" => "August",
+    "Aug" => "September",
+    "Sep" => "October",
+    "Oct" => "November",
+    "Nov" => "December",
+);
+
 my %monthdays = (
     "Jan" => 31,
     "Feb" => 28,
@@ -310,6 +325,7 @@ foreach $log (@datafiles) {
 	my $datapoint = 0;
 	my $timestamp = 0;
 	my $xticslabels = "";
+	my $last7totaldate = "";
 	open(DATA,"<$outfile") || die "Failed to open $outfile: $!\n";
 	open(WEEKLY,">$weeklyoutfile") || die "Failed to open $weeklyoutfile: $!\n";
 	while(<DATA>) {
@@ -329,6 +345,7 @@ foreach $log (@datafiles) {
 			}
 			if($wcount == 7) {
 				print WEEKLY "$wdate, $wsrc, $wgood, -$wbad, 0, 0, 0, 0\n";
+				$last7totaldate = $wdate; # save for calc of partial week
 				if( $wdate =~ /^(\w+)\s+(\d+)\s+(\d+)$/) {
 					#print "turning $wdate to a timestamp\n";
 					my $mon = $monthtonum{$1};
@@ -368,28 +385,31 @@ foreach $log (@datafiles) {
 
 		print "Adding partial week.......\n";
 		print "$wdate, $wsrc, $wgood, -$wbad, 0, 0, 0, 0\n";
-		print WEEKLY "$wdate, $wsrc, $wgood, -$wbad, 0, 0, 0, 0\n";
 		if( $wdate =~ /^(\w+)\s+(\d+)\s+(\d+)$/) {
 			#print "turning $wdate to a timestamp\n";
 			my $mon = $monthtonum{$1};
 			my $year = ($3 - 1900);
-			print "Month $mon Year $year\n";
-			$timestamp = timelocal("00","00","00",$2,$mon,$year);
+			#print "Month $mon Year $year\n";
+			#$timestamp = timelocal("00","00","00",$2,$mon,$year);
 			print "Month $mon Day $2 Year $year, $timestamp \n";
 		} else {
 			die "Can not parse date <$wdate>\n";
 		}
+
+		$newdate = MakeWeekSince($last7totaldate);
+		print WEEKLY "$newdate, $wsrc, $wgood, -$wbad, 0, 0, 0, 0\n";
+
 		if($foundevent ne "") {
 			if($xticslabels eq "") {
-				$xticslabels = $xticslabels  . "\"$foundevent\" \"$wdate\" ";
+				$xticslabels = $xticslabels  . "\"$foundevent\" \"$newdate\" ";
 			} else {
-				$xticslabels = $xticslabels  . ",\"$foundevent\" \"$wdate\" ";
+				$xticslabels = $xticslabels  . ",\"$foundevent\" \"$newdate\" ";
 			}
 		} else {
 			if($xticslabels eq "") {
-				$xticslabels = $xticslabels  . "\"$wdate\" \"$wdate\" ";
+				$xticslabels = $xticslabels  . "\"$newdate\" \"$newdate\" ";
 			} else {
-				$xticslabels = $xticslabels  . ",\"$wdate\" \"$wdate\" ";
+				$xticslabels = $xticslabels  . ",\"$newdate\" \"$newdate\" ";
 			}
 		}
 		$datapoint = $datapoint + 1;
@@ -506,8 +526,59 @@ sub reorderQueue
 }
 
 # =================================
-# Scale the data and return position info. Which
-# data location is correct for color coding of data.
+# make the partial weekly total have a 
+# full week range for the plot
+# =================================
+
+sub MakeWeekSince
+{
+	my $lastdate = shift;
+	my $monthnum =  0;
+	my $shortmonth = "";
+	my $monthdays = 0;
+	my $newday = 0;
+	print "MakeWeekSince $lastdate\n";
+	if( $lastdate =~ /^(\w+)\s+(\d+)\s+(\d+)$/) {
+		print "Month $1 Day $2 Year $3\n";
+		$monthnum = $monthtonum{$1};
+		$shortmonth = $monthnums{$monthnum};
+		$monthdays = $monthdays{$shortmonth};
+		print "MakeWeekSince Month # $monthnum Short Month $shortmonth\n";
+		$newday = $2 + 7;
+		print "MakeWeekSince New Day $newday  Month Days $monthdays\n";
+		if( $newday <= $monthdays) {
+			$newdate =  $1 . " " . $newday . " " . $3;
+			print "MakeWeekSince $lastdate\n";
+			print "MakeWeekSince Done $newdate\n";
+			return($newdate);
+		} else {
+			print "MakeWeekSince New Day $newday  Month Days $monthdays\n";
+			print "MakeWeekSince Complicated......\n";
+			$daysthismonth =  $monthdays - $2;
+			$daysnextmonth = 7 - $daysthismonth;
+			my $year = $3;
+			if( $monthnum == 12 ) {
+				$monthnum = 1;
+				$year += 1;
+			} else {
+				$monthnum = $monthnum + 1;
+			}
+			$shortmonth = $monthnums{$monthnum};
+			$regularmonth = $month{$shortmonth};
+			$newdate =  $regularmonth . " " . $daysnextmonth . " " . $year;
+			print "MakeWeekSince $lastdate\n";
+			print "MakeWeekSince Done $newdate\n";
+			return($newdate);
+		}
+	} else {
+		print "MakeWeekSince not parsing date\n";
+	}
+	print "MakeWeekSince $lastdate\n";
+	print "MakeWeekSince Done\n";
+}
+
+# =================================
+# Make a zero amount starting date a day earlier
 # =================================
 
 sub mk2month_strtdate
