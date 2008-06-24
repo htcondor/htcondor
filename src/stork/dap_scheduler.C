@@ -176,6 +176,9 @@ unsigned int Scheduler::get_numjobs()
  * ======================================================================== */
 void Scheduler::print()
 {
+	return;		// Disabling this function because of severe performance
+				// penalties
+#if 0
   Request *p;
 
   dprintf(D_ALWAYS, "============================\n");
@@ -190,6 +193,7 @@ void Scheduler::print()
   }
 
   dprintf(D_ALWAYS, "============================\n");
+#endif
 }
 
 

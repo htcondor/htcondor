@@ -1,6 +1,6 @@
 #if HAVE_EXT_CLASSADS
-#define New_classads_includes	-I$(NEW_CLASSADS_INC)
-#define New_classads_obj		dc_credd.o
+#define New_classads_includes	-I$(NEW_CLASSADS_INC) -I../classad_analysis
+#define New_classads_obj	dc_credd.o dc_match_maker.o dc_match_maker_lease.o
 #else
 #define New_classads_includes
 #define New_classads_obj

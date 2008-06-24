@@ -40,6 +40,8 @@
 #define STORAGE_ADTYPE		"Storage"
 #define NEGOTIATOR_ADTYPE	"Negotiator"
 #define HAD_ADTYPE		"HAD"
+#define XFER_SERVICE_ADTYPE	"XferService"
+#define MATCH_MAKER_ADTYPE	"MatchMaker"
 #define CREDD_ADTYPE		"CredD"
 #define ANY_ADTYPE		"Any"
 #define SUBMITTER_ADTYPE	"Submitter"

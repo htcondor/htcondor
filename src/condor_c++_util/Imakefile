@@ -1,8 +1,8 @@
 #if HAVE_EXT_CLASSADS
-#define New_classads_includes	-I$(NEW_CLASSADS_INC)
-#define New_classads_obj		credential.o X509credential.o
-#define New_classads_dc_obj		dc_credd.o
-#define New_classads_lib		-L$(NEW_CLASSADS_LIB) -lclassad_ns
+#define New_classads_includes	-I$(NEW_CLASSADS_INC) -I../classad_analysis
+#define New_classads_obj	credential.o X509credential.o classad_oldnew.o newclassad_stream.o
+#define New_classads_dc_obj	dc_credd.o dc_match_maker.o dc_match_maker_lease.o
+#define New_classads_lib	-L$(NEW_CLASSADS_LIB) -lclassad_ns
 #else
 #define New_classads_includes
 #define New_classads_obj
@@ -177,6 +177,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	classad_helpers.o classad_merge.o classad_namedlist.o \
 	linebuffer.o cron.o cronmgr.o cronjob.o cronjob_classad.o \
 	distribution.o \
+	debug_timer.o \
 	condor_attributes.o condor_environ.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o access.o get_mysubsystem.o \

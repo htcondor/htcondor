@@ -17,34 +17,36 @@
  *
  ***************************************************************/
 
-#ifndef _DAP_UTILITY_H
-#define  _DAP_UTILITY_H
+#ifndef __MATCH_MAKER_LEASE_H__
+#define __MATCH_MAKER_LEASE_H__
 
-#include "condor_common.h"
-#include "string"
+#include <list>
+#include <string>
+using namespace std;
 
+class MatchMakerLease
+{
+  public:
+	MatchMakerLease( void );
+	MatchMakerLease( const string &lease_id,
+					int duration = -1,
+					bool rel = true );
+	~MatchMakerLease( void );
 
-#if 0
-void parse_url( const std::string &url,
-				std::string &protocol,
-				std::string &host,
-				std::string &filename);
-#endif
-void parse_url(const std::string &url,
-			   char *protocol, char *host, char *filename);
-void parse_url(const char *url,
-			   char *protocol, char *host, char *filename);
-char *strip_str(char *str);
+	void setLeaseId( const string & );
+	void setLeaseDuration( int );
+	void setReleaseWhenDone( bool );
 
-// Create a predictable unique path, given a directory, basename, job id, and
-// pid.  The return value points to a statically allocated string.  This
-// function is not reentrant.
-const char *
-job_filepath(
-		const char *basename,
-		const char *suffix,
-		const char *dap_id,
-		pid_t pid
-);
+	const string &getLeaseId( void ) const { return m_id; };
+	int getDuration( void ) const { return m_duration; };
+	int getReleaseWhenDone( void ) const { return m_release_when_done; };
 
-#endif
+  private:
+	string		m_id;
+	int			m_duration;
+	bool		m_release_when_done;
+};
+
+void MatchMakerLease_FreeList( list<MatchMakerLease *> &lease_list );
+
+#endif//__MATCH_MAKER_LEASE_H__

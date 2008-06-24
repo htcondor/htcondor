@@ -53,6 +53,12 @@
 #define QuillProgs
 #endif
 
+#if WANT_MATCHMAKER
+#define MatchMakerProgs matchmaker.V7
+#else
+#define MatchMakerProgs
+#endif
+
 #ifdef WANT_TT
 #define TTProgs tt dbmsd
 #else
@@ -71,7 +77,7 @@
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools KbddProgs collector.V6 dagman userlog Eventd \
 		gridmanager globus starter.V6.1 shadow.V6.1 dcskel c-gahp had \
-		CreddProgs StorkProgs \
+		CreddProgs StorkProgs MatchMakerProgs \
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
 		JobRouterProgs
@@ -289,6 +295,10 @@ condor_object_target(amazon)
 
 #if HAVE_EXT_DRMAA
 condor_object_target(drmaa)
+#endif
+
+#if WANT_MATCHMAKER
+condor_object_target(matchmaker.V7)
 #endif
 
 #if WANT_CLASSAD_ANALYSIS

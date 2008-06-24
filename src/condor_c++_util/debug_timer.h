@@ -17,34 +17,25 @@
  *
  ***************************************************************/
 
-#ifndef _DAP_UTILITY_H
-#define  _DAP_UTILITY_H
+#ifndef __DEBUG_TIMER_H__
+#define __DEBUG_TIMER_H__
 
 #include "condor_common.h"
-#include "string"
 
+class DebugTimerBase
+{
+  public:
+	DebugTimerBase( bool start = true );
+	virtual ~DebugTimerBase( void );
+	void Start( void );
+	void Stop( void );
+	void Log( const char *s, int count = -1, bool stop = true );
+	virtual void Output( const char *) = 0;
 
-#if 0
-void parse_url( const std::string &url,
-				std::string &protocol,
-				std::string &host,
-				std::string &filename);
-#endif
-void parse_url(const std::string &url,
-			   char *protocol, char *host, char *filename);
-void parse_url(const char *url,
-			   char *protocol, char *host, char *filename);
-char *strip_str(char *str);
+  private:
+	bool	on;
+	double	t1, t2;
+	double dtime( void );
+};
 
-// Create a predictable unique path, given a directory, basename, job id, and
-// pid.  The return value points to a statically allocated string.  This
-// function is not reentrant.
-const char *
-job_filepath(
-		const char *basename,
-		const char *suffix,
-		const char *dap_id,
-		pid_t pid
-);
-
-#endif
+#endif//__DEBUG_TIMER_H__

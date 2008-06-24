@@ -691,6 +691,8 @@ extern const char *ATTR_AMAZON_INSTANCE_TYPE;
 extern const char * ATTR_WAITPID_STATUS;
 extern const char * ATTR_TERMINATION_REASON;
 
+const char ATTR_MATCH_MAKER_IP_ADDR     [] = "MatchMakerIpAddr";
+
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)
 extern const char * MANAGED_EXTERNAL;

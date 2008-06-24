@@ -1,0 +1,48 @@
+NAME = condor_match_maker
+all_target( $(NAME) )
+TESTS =  	condor_match_maker_test
+
+CLASSAD_ANALYSIS = ../classad_analysis
+CLASSAD_CONVERSION = $(CLASSAD_CONVERSION)
+CLASSAD_CONVERSION_INC = -I$(CLASSAD_ANALYSIS)
+CLASSAD_CONVERSION_LIBDEFS =  -L$(CLASSAD_ANALYSIS) -lconversion
+NEW_CLASSAD_LIBDEFS = -L$(NEW_CLASSADS_LIB) -lclassad_ns
+
+SC_DEMO_DEFS =
+SC_DEMO_INCLUDES = -I$(NEW_CLASSADS_INC) $(CLASSAD_CONVERSION_INC)
+SC_DEMO_FLAGS = $(SC_DEMO_DEFS) $(SC_DEMO_INCLUDES)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SC_DEMO_FLAGS)
+INST_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_VERS_FLAGS) $(SC_DEMO_FLAGS)
+CFLAGS  = $(STD_C_FLAGS) $(SC_DEMO_FLAGS)
+
+CFLAGS = $(STD_C_FLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(NEW_CLASSAD_LIBDEFS) \
+	$(CLASSAD_CONVERSION_LIBDEFS)
+TEST_LIB =  $(STD_LIBS) $(NEW_CLASSAD_LIBDEFS) \
+	$(CLASSAD_CONVERSION_LIBDEFS)
+
+OBJ =	match_maker_main.o		\
+	match_maker.o			\
+	match_maker_resources.o		\
+	match_maker_lease.o
+
+c_plus_target($(NAME),$(OBJ),$(LIB))
+template_inst( match_maker.C, match_maker.o )
+template_inst( match_maker_resources.C, match_maker_resources.o )
+soapobjs(matchMaker)
+
+release_target($(NAME),sbin,EXECUTABLE_MODE)
+strip_target($(NAME),sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+
+c_plus_target( condor_match_maker_test,match_maker_test.o,$(TEST_LIB) )
+template_inst( match_maker_test.C, match_maker_test.o )
+
+
+html:
+
+tests: $(TESTS)
+
+-include Makelocal.i

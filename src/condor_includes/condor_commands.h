@@ -274,6 +274,15 @@ const int INVALIDATE_HAD_ADS = 57;
 const int UPDATE_AD_GENERIC = 58;
 const int INVALIDATE_ADS_GENERIC = 59;
 
+const int UPDATE_XFER_SERVICE_AD	= 60;
+const int QUERY_XFER_SERVICE_ADS	= 61;
+const int INVALIDATE_XFER_SERVICE_ADS  = 62;
+
+const int UPDATE_MATCH_MAKER_AD	= 63;
+const int QUERY_MATCH_MAKER_ADS	= 64;
+const int INVALIDATE_MATCH_MAKER_ADS  = 65;
+
+
 /*
 *** Daemon Core Signals
 */
@@ -407,6 +416,14 @@ const int INVALIDATE_ADS_GENERIC = 59;
 #define CREDD_GET_PASSWD (CREDD_BASE+99)	// used by the Win32 credd only
 #define CREDD_NOP (CREDD_BASE+100)			// used by the Win32 credd only
 
+
+/*
+*** Commands used by the new matchmaker daemon
+*/
+#define MATCHMAKER_BASE				74000
+#define MATCHMAKER_GET_MATCH		(MATCHMAKER_BASE+0)
+#define MATCHMAKER_RENEW_LEASE		(MATCHMAKER_BASE+1)
+#define MATCHMAKER_RELEASE_LEASE	(MATCHMAKER_BASE+2)
 
 /*
 *** Replies used in various stages of various protocols

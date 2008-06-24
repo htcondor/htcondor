@@ -49,7 +49,9 @@ SubmitJob (const classad::ClassAd * request,
 			
 	ClearError();
 
-	return stork_submit (request,
+	return stork_submit (
+						 NULL,
+						 request,
 						 this->sinful_string,
 						 cred,
 						 cred_size,

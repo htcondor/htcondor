@@ -17,34 +17,30 @@
  *
  ***************************************************************/
 
-#ifndef _DAP_UTILITY_H
-#define  _DAP_UTILITY_H
-
 #include "condor_common.h"
-#include "string"
+#include "Set.h"
+#include "stork-mm.h"
+#include "dc_match_maker_lease.h"
+#include "condor_config.h"
 
+list<DCMatchMakerLease*>mylist;
+int main ( int argc, char **argv )
+{
+	DCMatchMakerLease	l;
+	mylist.push_back( &l );
+	mylist.remove( &l);
 
-#if 0
-void parse_url( const std::string &url,
-				std::string &protocol,
-				std::string &host,
-				std::string &filename);
-#endif
-void parse_url(const std::string &url,
-			   char *protocol, char *host, char *filename);
-void parse_url(const char *url,
-			   char *protocol, char *host, char *filename);
-char *strip_str(char *str);
+	config();
+	Termlog = 1;
+	dprintf_config("TOOL",2);
 
-// Create a predictable unique path, given a directory, basename, job id, and
-// pid.  The return value points to a statically allocated string.  This
-// function is not reentrant.
-const char *
-job_filepath(
-		const char *basename,
-		const char *suffix,
-		const char *dap_id,
-		pid_t pid
-);
+	StorkMatchMaker	mm;
+	printf( "mm size %d @ %p\n", sizeof(mm), &mm );
+	const char *result = NULL;
+	result = mm.getTransferDirectory(NULL);
+	printf("TODD dest = %s\n", result ? result : "(NULL)" );
+	result = mm.getTransferDirectory(NULL);
+	printf("TODD dest = %s\n", result ? result : "(NULL)" );
 
-#endif
+	
+}

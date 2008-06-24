@@ -343,6 +343,21 @@ makeGenericAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 	return adLookup( "Generic", ad, ATTR_NAME, NULL, hk.name );
 }
 
+bool
+makeXferServiceAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
+{
+	return makeNegotiatorAdHashKey( hk, ad, from );
+}
+
+
+bool
+makeMatchMakerAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
+{
+	return makeNegotiatorAdHashKey( hk, ad, from );
+}
+
+
+
 // utility function:  parse the string "<aaa.bbb.ccc.ddd:pppp>"
 //  Extracts the ip address portion ("aaa.bbb.ccc.ddd")
 bool 

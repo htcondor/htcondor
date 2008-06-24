@@ -17,34 +17,26 @@
  *
  ***************************************************************/
 
-#ifndef _DAP_UTILITY_H
-#define  _DAP_UTILITY_H
+#ifndef _ClassAdOldNew_H
+#define _ClassAdOldNew_H
+ 
+/*
+  This file holds utility functions that rely on *new* ClassAds.
+*/
+#include "stream.h"
 
-#include "condor_common.h"
-#include "string"
-
-
-#if 0
-void parse_url( const std::string &url,
-				std::string &protocol,
-				std::string &host,
-				std::string &filename);
+#ifndef WANT_CLASSAD_NAMESPACE
+#define WANT_CLASSAD_NAMESPACE
 #endif
-void parse_url(const std::string &url,
-			   char *protocol, char *host, char *filename);
-void parse_url(const char *url,
-			   char *protocol, char *host, char *filename);
-char *strip_str(char *str);
+#include "classad/classad_distribution.h"
+using namespace std;
+BEGIN_NAMESPACE( classad )
 
-// Create a predictable unique path, given a directory, basename, job id, and
-// pid.  The return value points to a statically allocated string.  This
-// function is not reentrant.
-const char *
-job_filepath(
-		const char *basename,
-		const char *suffix,
-		const char *dap_id,
-		pid_t pid
-);
+ClassAd* getOldClassAd( Stream *sock );
+bool getOldClassAd( Stream *sock, ClassAd& ad );
+bool getOldClassAdNoTypes( Stream *sock, ClassAd& ad );
+bool putOldClassAd ( Stream *sock, ClassAd& ad );
+bool putOldClassAdNoTypes ( Stream *sock, ClassAd& ad );
+END_NAMESPACE // classad
 
 #endif

@@ -37,6 +37,8 @@ extern char *clientagenthost;
 void write_dap_log(const char *logfilename, const char *status, const char *param1, const char *value1, const char *param2, const char *value2, const char *param3, const char *value3, const char *param4, const char *value4, const char *param5, const char *value5, const char *param6, const char *value6)
 {
   
+	if (! param_boolean("STORK_HISTORY_LOGGING", true) ) return;
+
   // -------- ClassAd stuff ------------------------------
   
   //create ClassAd
@@ -335,6 +337,7 @@ write_xml_user_log(
 		const char *param10, const char *value10
 )
 {
+  if (! logfilename ) return;
 
 	// this function has been replaced by user_log() below.  However, disable
 	// this function, but keep it around for a release or two, as this is
@@ -349,8 +352,10 @@ write_xml_user_log(
   std::string adbuffer = "";
   FILE *flog;
 
+
   //create ClassAd
   classad::ClassAd *classad = new classad::ClassAd;
+  ASSERT(classad);
 
   //insert attributes to ClassAd
   classad->Insert("EventTime",classad::Literal::MakeAbsTime());
@@ -406,12 +411,15 @@ write_xml_user_log(
   //convert classad to XML
   xmlunparser.SetCompactSpacing(false);
   xmlunparser.Unparse(adbuffer, classad);
-  
-  //write the classad to classad file
+
+  //destroy the ClassAd
+  //  delete expr;
+  delete classad;
+
+  //write the classad buffer to classad file
   if ((flog = safe_fopen_wrapper(logfilename,"a+")) == NULL){
     dprintf(D_ALWAYS,
 	    "cannot open user logfile :%s...\n",logfilename);
-	if (classad) delete classad;
 	return;
   }
   fprintf (flog,"%s",adbuffer.c_str());
@@ -421,7 +429,6 @@ write_xml_user_log(
   }
       
   fclose(flog);
-  if (classad) delete classad;
   return;
 }
 

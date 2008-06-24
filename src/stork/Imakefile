@@ -9,9 +9,9 @@
 #if IS_LINUX_DEBIAN40
 /* SRB is not a free package, and so therefore not possible to release with
 	Debian. */
-#	define WANT_STORK_SRB			NO
+#	define WANT_STORK_SRB		NO
 #else
-#	define WANT_STORK_SRB			YES
+#	define WANT_STORK_SRB		YES
 #endif
 #define WANT_STORK_UNITREE		YES
 #define WANT_STORK_SRM_CASTOR	YES
@@ -20,6 +20,7 @@
  * license.
  */
 #define WANT_STORK_NEST			NO
+
 /* Note the IBP data transfer protocol still has several issues.  First,
  * a this protocol relies upon a private copy of the IBP API.  Instead a new
  * Condor IBP external should be created.  Second, this protocol builds, but
@@ -27,7 +28,12 @@
  */
 #define WANT_STORK_IBP			NO
 
-/* END USER CONFIGURATION *****************************************************/
+/* Do you want to enable hackery used for the SC 2005 Demo?
+ */
+#define WANT_SC2005_DEMO		NO
+
+
+/* END USER CONFIGURATION ****************************************************/
 
 /* Core Stork functionality */
 
@@ -42,11 +48,23 @@ NEW_CLASSADS_LINK =  -L$(NEW_CLASSADS_LIB) -lclassad_ns
 LARGEFILE_DEFS	= \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
 #endif /* IS_GLIBC23 */
-STORK_DEFS = $(LARGEFILE_DEFS)
-STORK_INCLUDES = -I$(NEW_CLASSADS_INC)
-STORK_FLAGS = $(STORK_DEFS) $(STORK_INCLUDES)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STORK_FLAGS)
-CFLAGS  = $(STD_C_FLAGS) $(STORK_FLAGS)
+
+/* SC2005 Demo */
+#if WANT_SC2005_DEMO
+SC2005_DEFS		= -DSC2005_DEMO
+#endif
+
+STORK_DEFS			= $(LARGEFILE_DEFS) $(SC2005_DEFS)
+STORK_INCLUDES		= -I$(NEW_CLASSADS_INC) $(CLASSAD_CONV_INC)
+STORK_FLAGS			= $(STORK_DEFS) $(STORK_INCLUDES) -fimplicit-templates
+C_PLUS_FLAGS		= $(STD_C_PLUS_FLAGS) $(STORK_FLAGS)
+CFLAGS				= $(STD_C_FLAGS) $(STORK_FLAGS)
+INST_C_PLUS_FLAGS	= $(STD_C_FLAGS) $(GPP_VERS_FLAGS) $(STORK_FLAGS)
+
+CLASSAD_ANALYSIS	= ../classad_analysis
+CLASSAD_CONV		= $(CLASSAD_CONV)
+CLASSAD_CONV_INC	= -I$(CLASSAD_ANALYSIS)
+CLASSAD_CONV_LIBDEFS= -L$(CLASSAD_ANALYSIS) -lconversion
 
 /* internal Stork utilities library */
 UTIL_LIB_OBJS = \
@@ -63,11 +81,13 @@ SERVER_OBJS  = \
 	dap_scheduler.o \
 	dap_logger.o \
 	dap_classad_reader.o \
+	stork-mm.o \
 	$(STORK_UTIL)
 SERVER_LIBS = \
 	$(DAEMONCORE_LIB) \
 	$(STD_LIBS) \
 	$(NEW_CLASSADS_LINK)
+
 public_c_plus_nowrap_target(stork_server,sbin,$(SERVER_OBJS),$(SERVER_LIBS))
 
 /* user tools */
@@ -298,8 +318,29 @@ strip_library($(CLIENT_LIB),lib)
 static_library($(CLIENT_LIB),lib)
 #endif /* WANT_STORK_API */
 
+#if 1 /* Nick added this */
+TEST_LIB = $(STD_LIBS) $(NEW_CLASSADS_LINK) $(CLASSAD_CONVERSION_LIBDEFS)
+tests: stork-mm-test stork-mm-test2
+c_plus_target( stork-mm-test,stork-mm-test.o stork-mm-nodc.o,$(TEST_LIB) )
+template_inst( stork-mm-test.C, stork-mm-test.o )
+stork-mm-nodc.o: stork-mm.C
+	$(CPlusPlus) $(INST_C_PLUS_FLAGS) -DTEST_VERSION -c stork-mm.C -o stork-mm-nodc.o
+
+c_plus_target( stork-mm-test2, stork-mm-test2.o,
+	 stork-mm.o $(DAEMONCORE_LIB) $(TEST_LIB) )
+template_inst( stork-mm-test2.C, stork-mm-test2.o )
+#endif /* Nick */
+
 XCOMM Uncomment to build contrib modules as part of default build
 all:: contrib
 
-
 testbin:: all
+
+-include Makelocal.i
+
+### Local Variables: ***
+### mode:Makefile ***
+### tab-width:4 ***
+### comment-column:0 ***
+### comment-start: "# "  ***
+### End: ***

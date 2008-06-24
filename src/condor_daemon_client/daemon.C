@@ -903,6 +903,9 @@ Daemon::locate( void )
 	case DT_TRANSFERD:
 		rval = getDaemonInfo( "TRANSFERD", ANY_AD );
 		break;
+	case DT_MATCHMAKER:
+		rval = getDaemonInfo( "MATCHMAKER", MATCH_MAKER_AD, true );
+		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::init", (int)_type );
 	}
@@ -1072,7 +1075,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 			}
 			delete [] my_name;
 		}
-	} else if ( _type != DT_NEGOTIATOR ) {
+	} else if ( ( _type != DT_NEGOTIATOR ) && ( _type != DT_MATCHMAKER ) ) {
 			// We were passed neither a name nor an address, so use
 			// the local daemon, unless we're NEGOTIATOR, in which case
 			// we'll still query the collector even if we don't have the 
@@ -1133,7 +1136,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 			buf.sprintf( "%s == \"%s\"", ATTR_NAME, _name ); 
 			query.addANDConstraint( buf.Value() );
 		} else {
-			if ( _type != DT_NEGOTIATOR ) {
+			if ( ( _type != DT_NEGOTIATOR ) && ( _type != DT_MATCHMAKER ) ) {
 					// If we're not querying for negotiator
 					//    (which there's only one of)
 					// and we don't have the name

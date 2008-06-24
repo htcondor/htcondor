@@ -19,6 +19,7 @@
 
 #include "dap_constants.h"
 #include "dap_utility.h"
+#include "my_hostname.h"
 
 char *strip_str(char *str)
 {
@@ -34,9 +35,80 @@ char *strip_str(char *str)
   return str;
 }
 
-void parse_url(char *url, char *protocol, char *host, char *filename)
+void
+parse_url(const std::string &url, char *protocol, char *host, char *filename)
 {
+	parse_url( url.c_str(), protocol, host, filename );
+}
 
+#if 0
+void parse_url( const std::string &url,
+				std::string &protocol,
+				std::string &host,
+				std::string &filename)
+{
+	char temp_url[MAXSTR];
+	char unstripped[MAXSTR];
+	char *p;
+  
+	//initialize
+	protocol = "";
+	host = "";
+	filename = "";
+  
+	strcpy(unstripped, url.c_str() );
+	strcpy(temp_url, strip_str(unstripped));
+
+	//get protocola
+	if (strcmp(temp_url,"")) {
+		protocol = strtok(temp_url, "://");
+	}
+	else {
+		protocol = "";       
+		printf("Error in parsing URL %s\n", url);
+		return;
+	}
+
+	//if protocol == file
+	if (!strcmp(protocol.c_str(), "file")){
+		strcpy(host, "localhost");
+	}
+	else { //get the hostname
+		p = strtok(NULL, "/");
+		if (p != NULL){
+			host = p;                 
+		}
+		else {
+			host = "";
+		}
+	}
+
+	// Get rest of the filename
+	//  Prepend "/" to filename, if (protocol != nest or file)
+	p = strtok(NULL,"");
+
+	if (p != NULL){
+		if ( strcmp(protocol.c_str(), "nest") &&
+			 strcmp(protocol.c_str(), "file") ) {
+			filename = "/" + p;
+			//strcat(strcpy(filename, "/"), p);   //get file name
+		}
+		else {
+			filename = p;
+		}
+	}
+	else {
+		filename = "";
+	}
+
+	//printf("protocol:%s\n",protocol);
+	//printf("host:%s\n",host);
+	//printf("filename:%s\n",filename);
+}
+#endif
+
+void parse_url(const char *url, char *protocol, char *host, char *filename)
+{
   char temp_url[MAXSTR];
   char unstripped[MAXSTR];
   char *p;
@@ -92,11 +164,21 @@ void parse_url(char *url, char *protocol, char *host, char *filename)
 
 }
 
+// Create a predictable unique path, given a directory, basename, job id, and
+// pid.  The return value points to a statically allocated string.  This
+// function is not reentrant.
+const char *
+job_filepath(
+		const char *basename,
+		const char *suffix,
+		const char *dap_id,
+		pid_t pid
+)
+{
+	static char path[_POSIX_PATH_MAX];
 
-
-
-
-
-
-
+	sprintf(path, "%s%s-job%s-pid%u",
+			basename, suffix, dap_id, pid);
+	return path;
+}
 

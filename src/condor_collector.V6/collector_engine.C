@@ -63,11 +63,13 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	LicenseAds    (GREATER_TABLE_SIZE, &adNameHashFunction),
 	MasterAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
 	StorageAds    (GREATER_TABLE_SIZE, &adNameHashFunction),
+	XferServiceAds(GREATER_TABLE_SIZE, &adNameHashFunction),
 	CkptServerAds (LESSER_TABLE_SIZE , &adNameHashFunction),
 	GatewayAds    (LESSER_TABLE_SIZE , &adNameHashFunction),
 	CollectorAds  (LESSER_TABLE_SIZE , &adNameHashFunction),
 	NegotiatorAds (LESSER_TABLE_SIZE , &adNameHashFunction),
 	HadAds        (LESSER_TABLE_SIZE , &adNameHashFunction),
+	MatchMakerAds (LESSER_TABLE_SIZE , &adNameHashFunction),
 	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction)
 {
 	clientTimeout = 20;
@@ -97,6 +99,8 @@ CollectorEngine::
 	killHashTable (GatewayAds);
 	killHashTable (NegotiatorAds);
 	killHashTable (HadAds);
+	killHashTable (XferServiceAds);
+	killHashTable (MatchMakerAds);
 	GenericAds.walk(killGenericHashTable);
 
 	if(m_collector_requirements) {
@@ -235,6 +239,14 @@ invokeHousekeeper (AdTypes adtype)
 				cleanHashTable (*cht, now, makeGenericAdHashKey);
 			}
 
+		case XFER_SERVICE_AD:
+			cleanHashTable (NegotiatorAds, now, makeXferServiceAdHashKey);
+			break;
+
+		case MATCH_MAKER_AD:
+			cleanHashTable (NegotiatorAds, now, makeMatchMakerAdHashKey);
+			break;
+
 		default:
 			return 0;
 	}
@@ -329,6 +341,14 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &HadAds;
 		break;
 
+	  case XFER_SERVICE_AD:
+		table = &XferServiceAds;
+		break;
+
+	  case MATCH_MAKER_AD:
+		table = &MatchMakerAds;
+		break;
+
 	  case ANY_AD:
 		return
 			StorageAds.walk(scanFunction) &&
@@ -345,7 +365,8 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 			HadAds.walk(scanFunction) &&
 			walkGenericTables(scanFunction);
 
-
+			XferServiceAds.walk(scanFunction) &&
+			MatchMakerAds.walk(scanFunction);
 	  default:
 		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
 		return 0;
@@ -833,6 +854,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		retVal=updateClassAd (HadAds, "HadAd  ", "HAD",
 							  clientAd, hk, hashString, insert, from );
 		break;
+
 	  case UPDATE_AD_GENERIC:
 	  {
 		  const char *type_str = clientAd->GetMyTypeName();
@@ -862,7 +884,37 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 					 hk, hashString, insert, from);
 		  break;
 	  }
-		  
+
+	  case UPDATE_XFER_SERVICE_AD:
+		if (!makeXferServiceAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
+			retVal = 0;
+			break;
+		}
+		hashString.Build( hk );
+		retVal=updateClassAd (XferServiceAds, "XferServiceAd  ",
+							  "XferService",
+							  clientAd, hk, hashString, insert, from );
+		break;
+
+	  case UPDATE_MATCH_MAKER_AD:
+		if (!makeMatchMakerAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
+			retVal = 0;
+			break;
+		}
+		hashString.Build( hk );
+			// first, purge all the existing MatchMaker ads, since we
+			// want to enforce that *ONLY* 1 matchmaker is in the
+			// collector any given time.
+		purgeHashTable( MatchMakerAds );
+		retVal=updateClassAd (MatchMakerAds, "MatchMakerAd  ", "MatchMaker",
+							  clientAd, hk, hashString, insert, from );
+		break;
 
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
@@ -874,6 +926,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	  case QUERY_COLLECTOR_ADS:
   	  case QUERY_NEGOTIATOR_ADS:
   	  case QUERY_HAD_ADS:
+  	  case QUERY_XFER_SERVICE_ADS:
+  	  case QUERY_MATCH_MAKER_ADS:
 	  case INVALIDATE_STARTD_ADS:
 	  case INVALIDATE_SCHEDD_ADS:
 	  case INVALIDATE_MASTER_ADS:
@@ -883,6 +937,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	  case INVALIDATE_COLLECTOR_ADS:
 	  case INVALIDATE_NEGOTIATOR_ADS:
 	  case INVALIDATE_HAD_ADS:
+	  case INVALIDATE_XFER_SERVICE_ADS:
+	  case INVALIDATE_MATCH_MAKER_ADS:
 		// these are not implemented in the engine, but we allow another
 		// daemon to detect that these commands have been given
 	    insert = -2;
@@ -968,6 +1024,16 @@ lookup (AdTypes adType, AdNameHashKey &hk)
 				return 0;
 			break;
 
+		case XFER_SERVICE_AD:
+			if (XferServiceAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+
+		case MATCH_MAKER_AD:
+			if (MatchMakerAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+
 		default:
 			val = 0;
 	}
@@ -1018,6 +1084,12 @@ remove (AdTypes adType, AdNameHashKey &hk)
 
 		case HAD_AD:
 			return !HadAds.remove (hk);
+
+		case XFER_SERVICE_AD:
+			return !XferServiceAds.remove (hk);
+
+		case MATCH_MAKER_AD:
+			return !MatchMakerAds.remove (hk);
 
 		default:
 			return 0;
@@ -1140,6 +1212,12 @@ housekeeper()
 
 	dprintf (D_ALWAYS, "\tCleaning HadAds ...\n");
 	cleanHashTable (HadAds, now, makeHadAdHashKey);
+
+	dprintf (D_ALWAYS, "\tCleaning XferServiceAds ...\n");
+	cleanHashTable (XferServiceAds, now, makeXferServiceAdHashKey);
+
+	dprintf (D_ALWAYS, "\tCleaning MatchMakerAds ...\n");
+	cleanHashTable (MatchMakerAds, now, makeMatchMakerAdHashKey);
 
 	dprintf (D_ALWAYS, "\tCleaning Generic Ads ...\n");
 	CollectorHashTable *cht;
