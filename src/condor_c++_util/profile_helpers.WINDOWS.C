@@ -36,7 +36,8 @@
 /* Constants                                                            */
 /************************************************************************/
 
-const char *PARAM_PROFILE_TEMPLATE = "PROFILE_TEMPLATE";
+const char *PARAM_PROFILE_USER_TEMPLATE = "PROFILE_USER_TEMPLATE";
+const char *PARAM_PROFILE_CACHE_DIR = "PROFILE_CACHE_DIR";
 
 /************************************************************************/
 /* Forward declarations                                                 */
@@ -338,7 +339,7 @@ CondorCreateUserProfile () {
 
     HANDLE      user_token          = priv_state_get_handle ();
 	PCSTR		user_name			= get_user_loginname ();
-	PSTR		profile_template	= param ( PARAM_PROFILE_TEMPLATE ),
+	PSTR		profile_template	= param ( PARAM_PROFILE_USER_TEMPLATE ),
 				profile_directory   = NULL;
 	BOOL		profile_loaded		= FALSE,
 				profile_exists		= TRUE;
@@ -364,6 +365,17 @@ CondorCreateUserProfile () {
         profile_info.dwFlags	= PI_NOUI;
         profile_info.lpUserName	= (char*)user_name;
 
+        /* create a directory name based on the user's name 
+        and the root of the common user's directory */ 
+        length = strlen ( profile_directory ) 
+            + strlen ( user_name ) + 1 ; /* +1 for \ */
+        profile_directory = new CHAR[length + 1];            
+        sprintf ( 
+            profile_directory, 
+            "%s\\%s", 
+            profile_template, 
+            user_name );
+
         /* Some users may want their condor-slot accounts based on 
         different profile than the one supplied by the system */	
         if ( NULL != profile_template ) {		
@@ -372,38 +384,20 @@ CondorCreateUserProfile () {
             will have the wrong ACLs */
             priv = set_user_priv ();
 
-            profile_directory = new CHAR[
-                strlen ( profile_template ) + 1];
-            ASSERT ( profile_directory );
-            strcpy ( 
-                profile_directory, 
-                profile_template );
-
-            /* create a directory name based on the user's name 
-            and the root of the common user's directory */ 
-            length = strlen ( profile_directory ) 
-                + strlen ( user_name ) + 1 ; /* +1 for \ */
-            profile_directory = new CHAR[length + 1];            
-            sprintf ( 
-                profile_directory, 
-                "%s\\%s", 
-                profile_template, 
-                user_name );
-
             /* copy the template directory to the slot-user's 
             new profile directory */
             CondorCopyDirectory (
                 profile_template,
                 profile_directory );
 
-            /* let the load profile function load the information
-            from the new location */
-            profile_info.lpDefaultPath = profile_directory;
-
             /* return to previous privilege level */
             set_priv ( priv );
 
         }
+
+        /* let the load profile function load the information
+        from the new location */
+        profile_info.lpDefaultPath = profile_directory;
 		
 		/* load the user's profile for the first time-- this will 
         create it */
@@ -479,20 +473,21 @@ CondorLoadUserProfile () {
 		return TRUE;
 	}
 
-	HANDLE			user_token		    = priv_state_get_handle ();
-    PCSTR			domain_name		    = ".",
-					user_name		    = get_user_loginname (),
-                    backup_directory   = param ( "SPOOL" );
-	HANDLE			have_access		    = NULL;
-	DWORD			last_error		    = 0,
-					length			    = 0,
-					i				    = 0;
+	HANDLE			user_token		      = priv_state_get_handle ();
+    PCSTR			domain_name		      = ".",
+					user_name		      = get_user_loginname (),
+                    profile_user_template = param ( PARAM_PROFILE_USER_TEMPLATE ),
+                    profile_cache_dir     = param ( PARAM_PROFILE_CACHE_DIR );                  
+	HANDLE			have_access		      = NULL;
+	DWORD			last_error		      = 0,
+					length			      = 0,
+					i				      = 0;
 	PROFILEINFO		profile_info;
-	PUSER_INFO_4	puser_info		    = NULL;
-	BOOL			backup_created	    = FALSE,
-					profile_exists	    = FALSE,
-					profile_loaded	    = FALSE,					
-					ok				    = TRUE;	
+	PUSER_INFO_4	puser_info		      = NULL;
+	BOOL			backup_created	      = FALSE,
+					profile_exists	      = FALSE,
+					profile_loaded	      = FALSE,					
+					ok				      = TRUE;	
 	priv_state		priv;
 
 		
@@ -564,14 +559,14 @@ CondorLoadUserProfile () {
 						ok ? "succeeded" : "failed", 
 						ok ? 0 : GetLastError () );
 					
-					if ( !ok ) {
+                    /* we no longer have a profile directory, so flag 
+                    it as such (this will induce the creation of one;
+                    see bellow for the fun and exciting details)*/
+                    profile_exists = FALSE;
+                    
+                    if ( !ok ) {
 						__leave;
 					}
-
-					/* we no longer have a profile directory, so flag 
-					it as such (this will induce the creation of one;
-					see bellow for the fun and exciting details)*/
-					profile_exists = FALSE;
 
 				}
 				
@@ -620,9 +615,9 @@ CondorLoadUserProfile () {
 		/************************************************************/ 
 		
         /* create a backup directory name based on the profile 
-		directory (i.e. backup_directory) and the user's login 
+		directory (i.e. profile_cache_dir) and the user's login 
         name */ 
-		length = strlen ( backup_directory ) 
+		length = strlen ( profile_cache_dir ) 
 			+ strlen ( user_name ) + 1
             + 10; /* +1 for \ +10 for pid */
 		UserProfileBackupDirectory = new CHAR[length + 1];
@@ -630,7 +625,7 @@ CondorLoadUserProfile () {
 		sprintf ( 
             UserProfileBackupDirectory, 
             "%s\\%s-%d", 
-            backup_directory, 
+            profile_cache_dir, 
 			user_name,
             GetCurrentProcessId () );
 

@@ -20,7 +20,7 @@ if not exist %1\etc\NUL mkdir %1\etc
 if not exist %1\sql\NUL mkdir %1\sql
 if not exist %1\src\NUL mkdir %1\src
 if not exist %1\src\chirp\NUL mkdir %1\src\chirp
-REM if not exist %1\profiles\NUL mkdir %1\profiles
+if not exist %1\profiles\NUL mkdir %1\profiles
 if not exist %1\examples\NUL mkdir %1\examples
 if not exist %1\examples\cpusoak\NUL mkdir %1\examples\cpusoak
 if not exist %1\examples\printname\NUL mkdir %1\examples\printname
