@@ -146,6 +146,13 @@ TESTCLASS(lib_unit_tests,quick)
 TESTCLASS(lib_unit_tests,quicknolink)
 TESTCLASS(lib_unit_tests,btdebug)
 
+DESC(lib_auth_config,"Run Authorization Config Tests")
+RUN(lib_auth_config)
+TESTCLASS(lib_auth_config,core)
+TESTCLASS(lib_auth_config,quick)
+TESTCLASS(lib_auth_config,quicknolink)
+TESTCLASS(lib_auth_config,btdebug)
+
 DESC(lib_classads,"Run ClassAd Tests")
 RUN(lib_classads)
 TESTCLASS(lib_classads,core)

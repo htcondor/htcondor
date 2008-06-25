@@ -1,0 +1,21 @@
+# testing DENY
+
+ALLOW_READ = *
+DENY_READ = 10.2.3.4, 192.168.2.1
+
+ALLOW_WRITE = 10.20.3.4
+DENY_WRITE = 192.168.20.1, *
+
+ALLOW_ADMINISTRATOR = admin@domain/*
+DENY_ADMINISTRATOR = admin@domain/10.2.3.4, badguy@*, badguy2@*/*, *@baddomain
+
+#NOTE: this use of condor.cs.wisc.edu (as of the time of this writing)
+#tests an additional case: condor.cs.wisc.edu is a cname that points
+#to astro.cs.wisc.edu.  Calls to gethostbyaddr() do
+#not return condor.cs.wisc.edu in the list of host aliases, so correct
+#functioning depends on resolving condor.cs.wisc.edu.
+ALLOW_NEGOTIATOR = *.cs.wisc.edu
+DENY_NEGOTIATOR = condor.cs.wisc.edu
+
+ALLOW_CONFIG = config@domain/*.cs.wisc.edu
+DENY_CONFIG = config@domain/condor.cs.wisc.edu

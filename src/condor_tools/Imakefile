@@ -93,6 +93,8 @@ c_plus_target(test_calc,test_calc.o,$(LIB))
 
 c_plus_target(condor_test_auth,test_auth.o,../condor_daemon_core.V6/condor_ipverify.o ../condor_daemon_core.V6/daemon_core_instantiate.o $(LIB))
 
+testbin_target(condor_test_auth,755)
+
 c_plus_target(view_collection,view_collection.o,$(LIB))
 
 c_plus_target(condor_invalidate_host,invalidate_host.o,$(LIB))
@@ -108,4 +110,3 @@ clean::
 	rm -f condor_kill condor_master_on *.o
 
 html:
-testbin: all

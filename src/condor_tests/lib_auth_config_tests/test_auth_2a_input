@@ -1,0 +1,2 @@
+READ reader@domain 10.2.3.4 ALLOWED
+READ * 10.2.3.4 ALLOWED
