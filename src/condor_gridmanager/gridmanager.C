@@ -47,6 +47,10 @@
 #include "gt4job.h"
 #include "infnbatchjob.h"
 
+// added by fangcao for amazon job 
+#include "amazonjob.h"
+// end of adding by fangcao 
+
 #if !defined(WIN32)
 #  include "creamjob.h"
 #endif
@@ -340,7 +344,19 @@ Init()
 	new_type->AdMatchFunc = NordugridJobAdMatch;
 	new_type->CreateFunc = NordugridJobCreate;
 	jobTypes.Append( new_type );
-
+	
+	/* ******* added by fangcao for Amazon Job  ********* */ 
+	
+	new_type = new JobType;
+	new_type->Name = strdup( "Amazon" );
+	new_type->InitFunc = AmazonJobInit;
+	new_type->ReconfigFunc = AmazonJobReconfig;
+	new_type->AdMatchFunc = AmazonJobAdMatch;
+	new_type->CreateFunc = AmazonJobCreate;
+	jobTypes.Append( new_type );
+	
+	/************* end of adding by fangcao ********************/
+	
 	new_type = new JobType;
 	new_type->Name = strdup( "Unicore" );
 	new_type->InitFunc = UnicoreJobInit;

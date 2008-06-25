@@ -1,0 +1,51 @@
+AMAZON_GAHP = amazon-gahp
+
+PROGRAMS = $(AMAZON_GAHP)
+
+all_target( $(PROGRAMS) )
+
+CFLAGS = $(STD_C_FLAGS)
+
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -D_REENTRANT -I$(GSOAP_SHARE)/plugin
+LIB = $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(OPENSSL_LIB) -lpthread
+
+SOAP_CLIENT_OBJ = gsoap_commands.o dom.o wsseapi.o smdevp.o soapC.o soapClient.o
+
+AMAZON_GAHP_OBJ = PipeBuffer_no_dc.o io_loop_pthread.o amazongahp_common.o request.o amazonCommands.o amazongahp_instantiate.o amazon_io_checkfn.o ../condor_util_lib/my_getopt.o $(SOAP_CLIENT_OBJ) 
+
+template_inst( amazongahp_instantiate.C, amazongahp_instantiate.o )
+
+public_c_plus_target($(AMAZON_GAHP),sbin,$(AMAZON_GAHP_OBJ),$(LIB))
+
+html:
+
+IMPORT_LINKS = ../../config/import_links
+import(../condor_util_lib, setsyscalls.o )
+
+2007-08-29.ec2.wsdl:
+	wget "http://ec2.amazonaws.com/doc/2007-08-29/AmazonEC2.wsdl"
+
+2007-08-29.ec2.h: 2007-08-29.ec2.wsdl
+	$(WSDL2H) -s -nec2 -Nec2 2007-08-29.ec2.wsdl
+	echo "NOTICE: patching 2007-08-29.ec2.h"
+	echo "#import \"wsse.h\"" >> 2007-08-29.ec2.h
+	echo "struct SOAP_ENV__Header { _wsse__Security *wsse__Security; };" >> 2007-08-29.ec2.h
+
+gsoap_commands.C: soapH.h
+
+soapH.h soapStub.h soapC.C soapClient.C: 2007-08-29.ec2.h
+	$(SOAPCPP2) -C -L -w -x -I$(GSOAP_SHARE)/import 2007-08-29.ec2.h
+	mv soapC.cpp soapC.C
+	mv soapClient.cpp soapClient.C
+
+wsseapi.C:
+	cp $(GSOAP_SHARE)/plugin/wsseapi.c wsseapi.C
+#	patch -p3 < wsseapi.patch
+
+smdevp.C:
+	cp $(GSOAP_SHARE)/plugin/smdevp.c smdevp.C
+
+clean::
+	rm -f smdevp.C wsseapi.C
+
+testbin::

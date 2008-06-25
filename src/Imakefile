@@ -67,7 +67,8 @@
 		gridmanager globus starter.V6.1 shadow.V6.1 dcskel c-gahp had \
 		CreddProgs StorkProgs \
 		TTProgs DeploymentTools \
-		eventd.V2 transferd procd privsep vm-gahp JobRouterProgs
+		eventd.V2 transferd procd privsep vm-gahp amazon \
+		JobRouterProgs
 
 #define Libraries \
 		util_lib daemon_core.V6 daemon_client classad c++_util	\
@@ -275,6 +276,8 @@ condor_object_target(procd)
 condor_object_target(privsep)
 condor_object_target(dcskel)
 condor_object_target(vm-gahp)
+
+condor_object_target(amazon)
 
 #if HAVE_EXT_DRMAA
 condor_object_target(drmaa)
