@@ -44,8 +44,8 @@
 extern char* mySubSystem;
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
-template class HashTable<MyString, class SecManStartCommand *>;
-template class SimpleList<class SecManStartCommand *>;
+template class HashTable<MyString, classy_counted_ptr<SecManStartCommand> >;
+template class SimpleList<classy_counted_ptr<SecManStartCommand> >;
 
 void SecMan::key_printf(int debug_levels, KeyInfo *k) {
 	if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
@@ -87,7 +87,7 @@ char* SecMan::sec_req_rev[] = {
 
 KeyCache* SecMan::session_cache = NULL;
 HashTable<MyString,MyString>* SecMan::command_map = NULL;
-HashTable<MyString,class SecManStartCommand *>* SecMan::tcp_auth_in_progress = NULL;
+HashTable<MyString,classy_counted_ptr<SecManStartCommand> >* SecMan::tcp_auth_in_progress = NULL;
 int SecMan::sec_man_ref_count = 0;
 char* SecMan::_my_unique_id = 0;
 char* SecMan::_my_parent_unique_id = 0;
@@ -797,6 +797,16 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		m_already_tried_TCP_auth = false;
 	}
 
+	~SecManStartCommand() {
+		if( m_pending_socket_registered ) {
+			m_pending_socket_registered = false;
+			daemonCoreSockAdapter.decrementPendingSockets();
+		}
+			// The callback function _must_ have been called
+			// (and set to NULL) by now.
+		ASSERT( !m_callback_fn );
+	}
+
 		// This function starts a command, as specified by the data
 		// passed into the constructor.  The real work is done in
 		// startCommand_inner(), but this function exists to guarantee
@@ -814,19 +824,12 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		}
 	}
 
-	~SecManStartCommand() {
-		if( m_pending_socket_registered ) {
-			m_pending_socket_registered = false;
-			daemonCoreSockAdapter.decrementPendingSockets();
-		}
-		if(m_nonblocking && !m_callback_fn) {
-			DestructCallerData();
-		}
+	int operator== (const SecManStartCommand &other) {
+			// We do not care about a deep comparison.
+			// This is just to make the compiler happy on
+			// SimpleList< classy_counted_ptr< SecManStartCommand > >
+		return this == &other;
 	}
-
-		// This deletes sock and errstack.  It is called when in
-		// non-blocking mode when there is no callback function.
-	void DestructCallerData();
 
  private:
 	int m_cmd;
@@ -844,39 +847,43 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 
 	MyString m_session_key; // "addr,<cmd>"
 	bool m_already_tried_TCP_auth;
-	SimpleList<SecManStartCommand *> m_waiting_for_tcp_auth;
+	SimpleList<classy_counted_ptr<SecManStartCommand> > m_waiting_for_tcp_auth;
+	classy_counted_ptr<SecManStartCommand> m_tcp_auth_command;
 
-		// This wraps startCommand_inner_noauth().  This function
-		// ensures that the client authorizes the server.  The caller
-		// of this function must ensure correct cleanup (e.g. callback
-		// function being called etc.)
-	StartCommandResult startCommand_inner();
+		// All functions that call _inner() functions must
+		// pass the result of the _inner() function to doCallback().
+		// This ensures that when SecManStartCommand is done, the
+		// registered callback function will be called in all cases.
+	StartCommandResult doCallback( StartCommandResult result );
 
 		// This does most of the work of the startCommand() protocol.
 		// It is called from within a wrapper function that guarantees
 		// correct cleanup (e.g. callback function being called etc.)
-	StartCommandResult startCommand_inner_noauth();
+	StartCommandResult startCommand_inner();
 
-		// This is called when the TCP auth socket is connected.
-		// This function guarantees correct cleanup.
-	int TCPAuthConnected( Stream *stream );
+		// When trying to start a UDP command, this is called to first
+		// get a security session via TCP.  It will continue with the
+		// rest of the startCommand protocol once the TCP auth attempt
+		// is completed.
+	StartCommandResult DoTCPAuth_inner();
 
-		// This is called to do the TCP auth command.
-		// It is called from within a wrapper function that guarantees
-		// correct cleanup (e.g. callback function being called etc.)
-	StartCommandResult TCPAuthConnected_inner( Sock *tcp_auth_sock, bool *auth_succeeded=NULL );
+		// This is called when the TCP auth attempt completes.
+	static void TCPAuthCallback(bool success,Sock *sock,CondorError *errstack,void *misc_data);
+
+		// This is the _inner() function for TCPAuthCallback().
+	StartCommandResult TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_sock );
 
 		// This is called when we were waiting for another
-		// instance to finish a TCP auth session.  This
-		// function guarantees correct cleanup.
+		// instance to finish a TCP auth session.
 	void ResumeAfterTCPAuth(bool auth_succeeded);
 
-		// This is called either after finishing our own TCP auth
-		// session, or after waiting for another instance to finish a
-		// TCP auth session that we can use.  It is called from within
-		// a wrapper function that guarantees correct cleanup
-		// (e.g. callback function being called etc.)
-	StartCommandResult ResumeAfterTCPAuth_inner();
+		// This is called when we want to wait for a
+		// non-blocking socket operation to complete.
+	StartCommandResult WaitForSocketCallback();
+
+		// This is where we get called back when a
+		// non-blocking socket operation finishes.
+	int SocketCallback( Stream *stream );
 };
 
 StartCommandResult
@@ -893,56 +900,14 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_neg, CondorError* errstack, 
 
 	ASSERT(sc.get());
 
-	StartCommandResult rc = sc->startCommand();
-
-	return rc;
-}
-
-
-StartCommandResult
-SecManStartCommand::startCommand()
-{
-	// NOTE: if there is a callback function, we _must_ guarantee that it is
-	// eventually called in all code paths.
-
-	// never deallocate this class until we release this reference
-	incRefCount();
-
-	StartCommandResult rc = startCommand_inner();
-
-	if(rc == StartCommandInProgress) {
-		// do nothing
-	}
-	else if(m_callback_fn) {
-		bool success = rc == StartCommandSucceeded;
-		(*m_callback_fn)(success,m_sock,m_errstack,m_misc_data);
-
-		// We just called back with the success/failure code.  Therefore,
-		// we simply return success to indicate that we successfully
-		// called back.
-		rc = StartCommandSucceeded;
-	}
-
-	// we are done with this; if everyone else is too, then destruct
-	decRefCount();
-
-	return rc;
+	return sc->startCommand();
 }
 
 StartCommandResult
-SecManStartCommand::startCommand_inner()
+SecManStartCommand::doCallback( StartCommandResult result )
 {
-
-	// NOTE: the caller of this function must ensure that
-	// the m_callback_fn is called (if there is one).
-
-	ASSERT(m_sock);
-	ASSERT(m_errstack);
-
-	StartCommandResult rc = startCommand_inner_noauth();
-
-	if( rc == StartCommandSucceeded ) {
-			// Check out policy to make sure the server we have just
+	if( result == StartCommandSucceeded ) {
+			// Check our policy to make sure the server we have just
 			// connected to is authorized.
 
 		char const *server_fqu = m_sock->getFullyQualifiedUser();
@@ -965,19 +930,67 @@ SecManStartCommand::startCommand_inner()
 			         "the client).\n",
 					 server_fqu ? server_fqu : "*",
 					 m_sock->endpoint_ip_str() );
-			rc = StartCommandFailed;
+			result = StartCommandFailed;
 		}
 	}
 
-	return rc;
+
+	if(result == StartCommandInProgress) {
+			// Do nothing.
+			// We will (MUST) be called again in the future
+			// once the final result is known.
+
+		if(!m_callback_fn) {
+				// Caller wants us to go ahead and get a session key,
+				// but caller will try sending the UDP command later,
+				// rather than dealing with a callback.
+			result = StartCommandWouldBlock;
+		}
+	}
+	else if(m_callback_fn) {
+		bool success = result == StartCommandSucceeded;
+		(*m_callback_fn)(success,m_sock,m_errstack,m_misc_data);
+
+		m_callback_fn = NULL;
+		m_misc_data = NULL;
+
+			// Caller is responsible for deallocating the following:
+		m_errstack = NULL;
+		m_sock = NULL;
+
+			// We just called back with the success/failure code.
+			// Therefore, we simply return success to indicate that we
+			// successfully called back.
+		result = StartCommandSucceeded;
+	}
+
+	if( result == StartCommandWouldBlock ) {
+			// It is caller's responsibility to delete socket when we
+			// return StartCommandWouldBlock, so ensure that we never
+			// reference the socket again from now on.
+		m_sock = NULL;
+	}
+
+	return result;
 }
 
 StartCommandResult
-SecManStartCommand::startCommand_inner_noauth()
+SecManStartCommand::startCommand()
 {
+	// NOTE: if there is a callback function, we _must_ guarantee that it is
+	// eventually called in all code paths leading from here.
 
-	// NOTE: the caller of this function must ensure that
-	// the m_callback_fn is called (if there is one).
+	// prevent *this from being deleted while this function is executing
+	classy_counted_ptr<SecManStartCommand> self = this;
+
+	return doCallback( startCommand_inner() );
+}
+
+StartCommandResult
+SecManStartCommand::startCommand_inner()
+{
+	// NOTE: like all _inner() functions, the caller of this function
+	// must ensure that the m_callback_fn is called (if there is one).
 
 	ASSERT(m_sock);
 	ASSERT(m_errstack);
@@ -994,9 +1007,23 @@ SecManStartCommand::startCommand_inner_noauth()
 	// get this value handy
 	bool is_tcp = (m_sock->type() == Stream::reli_sock);
 
-
 	bool have_session = false;
 	bool new_session = false;
+
+	if( m_nonblocking && m_sock->is_connect_pending() ) {
+		dprintf(D_SECURITY,"SECMAN: waiting for TCP connection to %s.\n",
+				m_sock->get_sinful_peer());
+		return WaitForSocketCallback();
+	}
+	else if( is_tcp && !m_sock->is_connected()) {
+		dprintf(D_SECURITY,"SECMAN: TCP connection to %s failed",
+				m_sock->get_sinful_peer());
+		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
+		                "TCP connection to %s failed\n",
+		                m_sock->get_sinful_peer());
+
+		return StartCommandFailed;
+	}
 
 
 	// find out if we have a session id to use for this command
@@ -1166,116 +1193,7 @@ SecManStartCommand::startCommand_inner_noauth()
 
 	} else if ((!have_session) && (!is_tcp) && (!m_already_tried_TCP_auth)) {
 		// can't use a cookie, so try to start a session.
-
-		if(m_nonblocking) {
-				// Check if there is already a non-blocking TCP auth in progress
-			SecManStartCommand *sc = NULL;
-			if(m_sec_man.tcp_auth_in_progress->lookup(m_session_key,sc) == 0) {
-					// Rather than starting yet another TCP session for this session key,
-					// simply add ourselves to the list of things waiting for the
-					// pending session to be ready for use.
-
-					// Do not allow ourselves to be deleted until after
-					// ResumeAfterTCPAuth() is called.
-				incRefCount();
-
-					// Make daemonCore aware that we are holding onto this
-					// UDP socket while waiting for other events to complete.
-				incrementPendingSockets();
-
-				sc->m_waiting_for_tcp_auth.Append(this);
-
-				if(DebugFlags & D_FULLDEBUG) {
-					dprintf( D_SECURITY, "SECMAN: waiting for pending session %s to be ready\n",
-							 m_session_key.Value());
-				}
-
-				if(!m_callback_fn) {
-						// Caller wants us to go ahead and get a session key,
-						// but caller will try sending the UDP command later,
-						// rather than dealing with a callback.
-					return StartCommandWouldBlock;
-				}
-				return StartCommandInProgress;
-			}
-		}
-
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: need to start a session via TCP\n");
-		}
-
-		// we'll have to authenticate via TCP
-		ReliSock *tcp_auth_sock = new ReliSock;
-
-		ASSERT(tcp_auth_sock);
-
-		// the timeout
-		int TCP_SOCK_TIMEOUT = param_integer("SEC_TCP_SESSION_TIMEOUT", 20);
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: setting timeout to %i seconds.\n", TCP_SOCK_TIMEOUT);
-		}
-		tcp_auth_sock->timeout(TCP_SOCK_TIMEOUT);
-
-		// we already know the address - condor uses the same TCP port as it does UDP port.
-		MyString tcp_addr = m_sock->get_sinful_peer();
-		if (!tcp_auth_sock->connect(tcp_addr.Value(),0,m_nonblocking)) {
-			dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.Value());
-			m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-					"TCP auth connection to %s failed\n", tcp_addr.Value());
-			delete tcp_auth_sock;
-			return StartCommandFailed;
-		}
-
-		if(m_nonblocking && tcp_auth_sock->is_connect_pending()) {
-
-			int reg_rc = daemonCoreSockAdapter.Register_Socket(
-				tcp_auth_sock,
-				"<StartCommand TCP Auth Socket>",
-				(SocketHandlercpp)&SecManStartCommand::TCPAuthConnected,
-				tcp_auth_sock->get_sinful_peer(),
-				this,
-				ALLOW);
-
-			if(reg_rc < 0) {
-				MyString msg;
-				msg.sprintf("TCP auth connection to %s failed because "
-				            "Register_Socket returned %d",
-				            m_sock->get_sinful_peer(),
-				            reg_rc);
-				dprintf(D_SECURITY, "SECMAN: %s\n", msg.Value());
-				m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-				                  "%s\n", msg.Value());
-
-				delete tcp_auth_sock;
-				return StartCommandFailed;
-			}
-
-			ASSERT(daemonCoreSockAdapter.Register_DataPtr( this ));
-
-			// Do not allow ourselves to be deleted until after
-			// ConnectCallbackFn is called.
-			incRefCount();
-
-				// Make daemonCore aware that we are holding onto this
-				// UDP socket while waiting for the (registered) TCP
-				// socket to connect etc.
-			incrementPendingSockets();
-
-				// Make note that this operation to do the TCP
-				// auth operation is in progress, so others
-				// wanting the same session key can wait for it.
-			SecMan::tcp_auth_in_progress->insert(m_session_key,this);
-
-			if(!m_callback_fn) {
-					// Caller wants us to go ahead and get a session key,
-					// but caller will try sending the UDP command later,
-					// rather than dealing with a callback.
-				return StartCommandWouldBlock;
-			}
-			return StartCommandInProgress;
-		}
-
-		return TCPAuthConnected_inner( tcp_auth_sock );
+		return DoTCPAuth_inner();
 	} else if ((!have_session) && (!is_tcp) && m_already_tried_TCP_auth) {
 			// there still is no session.
 			//
@@ -1860,46 +1778,155 @@ SecManStartCommand::startCommand_inner_noauth()
 	return StartCommandSucceeded;
 }
 
-int
-SecManStartCommand::TCPAuthConnected( Stream *stream )
+StartCommandResult
+SecManStartCommand::DoTCPAuth_inner()
 {
-	Sock *sock = (Sock *)stream;
+	ASSERT( !m_already_tried_TCP_auth );
+	m_already_tried_TCP_auth = true;
 
-	daemonCoreSockAdapter.Cancel_Socket( stream );
+	if(m_nonblocking) {
+			// Make daemonCore aware that we are holding onto this
+			// UDP socket while waiting for other events to complete.
+		incrementPendingSockets();
 
-	if(DebugFlags & D_FULLDEBUG) {
-		dprintf(D_SECURITY,"Non-blocking connection for TCP authentication to %s finished (connected=%d)\n",sock->get_sinful_peer(),sock->is_connected());
+			// Check if there is already a non-blocking TCP auth in progress
+		classy_counted_ptr<SecManStartCommand> sc;
+		if(m_sec_man.tcp_auth_in_progress->lookup(m_session_key,sc) == 0) {
+				// Rather than starting yet another TCP session for
+				// this session key, simply add ourselves to the list
+				// of things waiting for the pending session to be
+				// ready for use.
+
+			if(m_nonblocking && !m_callback_fn) {
+					// Caller wanted us to get a session key but did
+					// not want to bother about handling a
+					// callback. Since somebody else is already
+					// getting a session, we are done.
+				return StartCommandWouldBlock;
+			}
+
+			sc->m_waiting_for_tcp_auth.Append(this);
+
+			if(DebugFlags & D_FULLDEBUG) {
+				dprintf(D_SECURITY,
+						"SECMAN: waiting for pending session %s to be ready\n",
+						m_session_key.Value());
+			}
+
+			return StartCommandInProgress;
+		}
 	}
 
-	bool auth_succeeded = false;
-	StartCommandResult rc = TCPAuthConnected_inner(sock,&auth_succeeded);
+	if (DebugFlags & D_FULLDEBUG) {
+		dprintf ( D_SECURITY, "SECMAN: need to start a session via TCP\n");
+	}
 
-	if(m_callback_fn) {
-		bool success = rc == StartCommandSucceeded;
-		(*m_callback_fn)(success,m_sock,m_errstack,m_misc_data);
+		// we'll have to authenticate via TCP
+	ReliSock *tcp_auth_sock = new ReliSock;
 
-			// Caller is responsible for deallocating the following:
-		m_errstack = NULL;
-		m_sock = NULL;
+	ASSERT(tcp_auth_sock);
+
+		// the timeout
+	int TCP_SOCK_TIMEOUT = param_integer("SEC_TCP_SESSION_TIMEOUT", 20);
+	tcp_auth_sock->timeout(TCP_SOCK_TIMEOUT);
+
+		// we already know the address - condor uses the same TCP port as it does UDP port.
+	MyString tcp_addr = m_sock->get_sinful_peer();
+	if (!tcp_auth_sock->connect(tcp_addr.Value(),0,m_nonblocking)) {
+		dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.Value());
+		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
+						  "TCP auth connection to %s failed\n", tcp_addr.Value());
+		delete tcp_auth_sock;
+		return StartCommandFailed;
+	}
+
+		// Make note that this operation to do the TCP
+		// auth operation is in progress, so others
+		// wanting the same session key can wait for it.
+	SecMan::tcp_auth_in_progress->insert(m_session_key,this);
+
+	m_tcp_auth_command = new SecManStartCommand(
+		DC_AUTHENTICATE,
+		tcp_auth_sock,
+		m_can_negotiate,
+		m_errstack,
+		m_cmd,
+		m_nonblocking ? SecManStartCommand::TCPAuthCallback : NULL,
+		m_nonblocking ? this : NULL,
+		m_nonblocking,
+		&m_sec_man);
+
+	StartCommandResult auth_result = m_tcp_auth_command->startCommand();
+
+	if( !m_nonblocking ) {
+			// We did not pass a callback function to the TCP
+			// startCommand(), because we need to pass back the final
+			// result to the caller directly.
+
+		return TCPAuthCallback_inner(
+			auth_result == StartCommandSucceeded,
+			tcp_auth_sock );
+	}
+
+	return StartCommandInProgress;
+}
+
+void
+SecManStartCommand::TCPAuthCallback(bool success,Sock *sock,CondorError * /*errstack*/,void * misc_data)
+{
+	classy_counted_ptr<SecManStartCommand> self = (SecManStartCommand *)misc_data;
+
+	self->doCallback( self->TCPAuthCallback_inner(success,sock) );
+}
+
+StartCommandResult
+SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_sock )
+{
+	// in case we discovered anything new about security negotiation
+	m_can_negotiate = m_tcp_auth_command->m_can_negotiate;
+	m_tcp_auth_command = NULL;
+
+		// close the TCP socket, the rest will be UDP.
+	tcp_auth_sock->eom();
+	tcp_auth_sock->close();
+	delete tcp_auth_sock;
+	tcp_auth_sock = NULL;
+
+	StartCommandResult rc;
+
+	if(m_nonblocking && !m_callback_fn) {
+		// Caller wanted us to get a session key but did not
+		// want to bother about handling a callback.  Therefore,
+		// we are done.  No need to start the command again.
+		rc = StartCommandWouldBlock;
+
+		// NOTE: m_sock is expected to be NULL, because caller may
+		// have deleted it by now.
+		ASSERT( m_sock == NULL );
+	}
+	else if( !auth_succeeded ) {
+		dprintf ( D_SECURITY,
+				  "SECMAN: unable to create security session to %s via TCP, "
+		          "failing.\n", m_sock->get_sinful_peer() );
+		m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
+		                 "Failed to create security session to %s with TCP",
+		                 m_sock->get_sinful_peer());
+		rc = StartCommandFailed;
 	}
 	else {
-		if ( DebugFlags & D_FULLDEBUG) {
-			dprintf( D_SECURITY,
-				"SECMAN: caller did not want a callback, "
-				"so aborting startCommand(%d) to %s\n",
-				 m_cmd,
-				 m_sock->get_sinful_peer());
+		if( (DebugFlags & D_FULLDEBUG) ) {
+			dprintf ( D_SECURITY,
+					  "SECMAN: succesfully created security session to %s via "
+					  "TCP!\n", m_sock->get_sinful_peer() );
 		}
-
-		// The original caller should have left one remaining
-		// reference count in order to assure this object would
-		// persist, but now we are done, so get rid of it.
-		decRefCount();
+		rc = startCommand_inner();
 	}
 
 		// Remove ourselves from SecMan's list of pending TCP auth sessions.
-	SecManStartCommand *sc = NULL;
-	if(SecMan::tcp_auth_in_progress->lookup(m_session_key,sc) == 0 && sc == this) {
+	classy_counted_ptr<SecManStartCommand> sc;
+	if( SecMan::tcp_auth_in_progress->lookup(m_session_key,sc) == 0 &&
+	    sc.get() == this )
+	{
 		ASSERT(SecMan::tcp_auth_in_progress->remove(m_session_key) == 0);
 	}
 
@@ -1907,47 +1934,11 @@ SecManStartCommand::TCPAuthConnected( Stream *stream )
 		// to be done.
 	m_waiting_for_tcp_auth.Rewind();
 	while( m_waiting_for_tcp_auth.Next(sc) ) {
-		if(!auth_succeeded) {
-			sc->m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
-			                      "Was waiting for TCP auth session to %s, "
-			                      "but it failed.",
-			                      sc->m_sock->get_sinful_peer());
-		}
 		sc->ResumeAfterTCPAuth(auth_succeeded);
-
-			// This instance had incRefCount() called when getting
-			// added to this list.  Now we are done with the
-			// reference.
-
-		sc->decRefCount();
 	}
 	m_waiting_for_tcp_auth.Clear();
 
-	// We did incRefCount() when registering this callback.
-	// Now we are done with the reference.
-	decRefCount();
-
-	return KEEP_STREAM;
-}
-
-StartCommandResult
-SecManStartCommand::ResumeAfterTCPAuth_inner()
-{
-	// Now try again to initiate the UDP command.  This time,
-	// we should have a session key cached as a consequence
-	// of the TCP exchange we just did, but just in case
-	// we don't have one, disable the code path that landed us
-	// here so we don't get into an infinite loop.
-	m_already_tried_TCP_auth = true;
-
-	if(m_nonblocking && !m_callback_fn) {
-		// Caller wanted us to get a session key but did not
-		// want to bother about handling a callback.  Therefore,
-		// we are done.  No need to start the command again.
-		return StartCommandSucceeded;
-	}
-
-	return startCommand_inner();
+	return rc;
 }
 
 void
@@ -1958,129 +1949,72 @@ SecManStartCommand::ResumeAfterTCPAuth(bool auth_succeeded)
 		// of getting one that we could use.  When that object
 		// finished getting the session, it called us here.
 
-	StartCommandResult rc = StartCommandFailed;
-
-	if(DebugFlags & D_FULLDEBUG) {
-		dprintf(D_SECURITY,"SECMAN: done waiting for TCP auth to %s\n",
-		        m_sock->get_sinful_peer());
+	if( DebugFlags & D_FULLDEBUG ) {
+		dprintf(D_SECURITY,"SECMAN: done waiting for TCP auth to %s (%s)\n",
+		        m_sock->get_sinful_peer(),
+				auth_succeeded ? "succeeded" : "failed");
+	}
+	if(!auth_succeeded) {
+		m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
+						  "Was waiting for TCP auth session to %s, "
+						  "but it failed.",
+						  m_sock->get_sinful_peer());
 	}
 
+	StartCommandResult rc;
 	if(auth_succeeded) {
-		rc = ResumeAfterTCPAuth_inner();
-	}
-
-	if(m_callback_fn) {
-		bool success = rc == StartCommandSucceeded;
-		(*m_callback_fn)(success,m_sock,m_errstack,m_misc_data);
-
-			// Caller is responsible for deallocating the following:
-		m_errstack = NULL;
-		m_sock = NULL;
+		rc = startCommand_inner();
 	}
 	else {
-		if ( DebugFlags & D_FULLDEBUG) {
-			dprintf( D_SECURITY,
-				"SECMAN: caller did not want a callback, "
-				"so aborting startCommand(%d) to %s\n",
-				 m_cmd,
-				 m_sock->get_sinful_peer());
-		}
-
-		// The original caller should have left one remaining
-		// reference count in order to assure this object would
-		// persist, but now we are done, so get rid of it.
-		decRefCount();
+		rc = StartCommandFailed;
 	}
-}
 
+	doCallback( rc );
+}
 
 StartCommandResult
-SecManStartCommand::TCPAuthConnected_inner( Sock *tcp_auth_sock, bool *auth_succeeded )
+SecManStartCommand::WaitForSocketCallback()
 {
 
-	// We are now connected to the TCP authentication socket.
-	// We got here because we wanted to start a UDP command,
-	// but we didn't have a session key.  We now get a session
-	// key and then resume with the UDP command.
+	int reg_rc = daemonCoreSockAdapter.Register_Socket(
+		m_sock,
+		"<SecManStartCommand::WaitForSocketCallback>",
+		(SocketHandlercpp)&SecManStartCommand::SocketCallback,
+		m_sock->get_sinful_peer(),
+		this,
+		ALLOW);
 
-	// NOTE: the caller of this function must ensure that
-	// the m_callback_fn is called (if there is one).
-
-	if(auth_succeeded) {
-		*auth_succeeded = false; // set default result
-	}
-
-	if(!tcp_auth_sock->is_connected()) {
-		dprintf(D_SECURITY,"SECMAN: failed in non-blocking TCP connect to %s",
-				tcp_auth_sock->get_sinful_peer());
+	if(reg_rc < 0) {
+		MyString msg;
+		msg.sprintf("StartCommand to %s failed because "
+					"Register_Socket returned %d",
+					m_sock->get_sinful_peer(),
+					reg_rc);
+		dprintf(D_SECURITY, "SECMAN: %s\n", msg.Value());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-		                "TCP connection to %s failed\n",
-		                tcp_auth_sock->get_sinful_peer());
+						  "%s\n", msg.Value());
 
-		delete tcp_auth_sock;
 		return StartCommandFailed;
 	}
 
-	// For now, we do the TCP command as a blocking call,
-	// because it happens to use blocking read/writes anyway.
+		// Do not allow ourselves to be deleted until after
+		// SocketCallback is called.
+	incRefCount();
 
-	const bool auth_nonblocking = false;
-	classy_counted_ptr<SecManStartCommand> sc = new SecManStartCommand(
-		DC_AUTHENTICATE,
-		tcp_auth_sock,
-		m_can_negotiate,
-		m_errstack,
-		m_cmd,
-		NULL,
-		NULL,
-		auth_nonblocking,
-		&m_sec_man);
-
-	StartCommandResult auth_result = sc->startCommand();
-	if(auth_succeeded) {
-		*auth_succeeded = auth_result == StartCommandSucceeded;
-	}
-
-	// in case we discovered anything new about security negotiation
-	m_can_negotiate = sc->m_can_negotiate;
-
-	if (DebugFlags & D_FULLDEBUG) {
-		dprintf ( D_SECURITY, "SECMAN: sending eom() and closing TCP sock.\n");
-	}
-
-		// close the TCP socket, the rest will be UDP.
-	tcp_auth_sock->eom();
-	tcp_auth_sock->close();
-	delete tcp_auth_sock;
-	tcp_auth_sock = NULL;
-
-
-	if (auth_result != StartCommandSucceeded) {
-		dprintf ( D_SECURITY,"SECMAN: unable to start session to %s via TCP, "
-		          "failing.\n",m_sock->get_sinful_peer());
-		m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
-		                 "Failed to start a session to %s with TCP",
-		                 m_sock->get_sinful_peer());
-		return StartCommandFailed;
-	}
-	if (DebugFlags & D_FULLDEBUG) {
-		dprintf ( D_SECURITY, "SECMAN: succesfully sent NOP via TCP!\n");
-	}
-
-	return ResumeAfterTCPAuth_inner();
+	return StartCommandInProgress;
 }
 
-void
-SecManStartCommand::DestructCallerData()
+int
+SecManStartCommand::SocketCallback( Stream *stream )
 {
-	if(m_sock) {
-		delete m_sock;
-		m_sock = NULL;
-	}
-	if(m_errstack) {
-		delete m_errstack;
-		m_errstack = NULL;
-	}
+	daemonCoreSockAdapter.Cancel_Socket( stream );
+
+	doCallback( startCommand_inner() );
+
+		// get rid of ref counted when callback was registered
+	decRefCount();
+
+	return KEEP_STREAM;
 }
 
 
@@ -2319,7 +2253,7 @@ SecMan::SecMan(int nbuckets) {
 		command_map = new HashTable<MyString,MyString>(nbuckets, MyStringHash, updateDuplicateKeys);
 	}
 	if (tcp_auth_in_progress == NULL) {
-		tcp_auth_in_progress = new HashTable<MyString,class SecManStartCommand *>(256, MyStringHash, rejectDuplicateKeys);
+		tcp_auth_in_progress = new HashTable<MyString,classy_counted_ptr<SecManStartCommand> >(256, MyStringHash, rejectDuplicateKeys);
 	}
 	sec_man_ref_count++;
 }
