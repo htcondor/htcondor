@@ -355,7 +355,7 @@ the library routine which parses the configuration files.
 \end{description}
 
 This second set of macros are entries whose default values are
-determined automatically at runtime but which can be overwritten.  
+determined automatically at run time but which can be overwritten.  
 \index{configuration file!macros}
 \begin{description}
 
@@ -974,7 +974,7 @@ File System Configuration File Entries''.
   it leaves in place whatever limit was in effect
   when the Condor daemons (normally the \Condor{master}) were started.
   This allows Condor to inherit the default system core file generation
-  behavior at startup.  For Unix operating systems, this behavior can
+  behavior at start up.  For Unix operating systems, this behavior can
   be inherited from the parent shell, or specified in a shell script
   that starts Condor.
   If this parameter is set and \Expr{True}, the limit is increased to
@@ -1445,7 +1445,8 @@ but across all users and user's jobs.
 Please read section~\ref{sec:DaemonCore} for details
 on DaemonCore.  There are certain configuration file settings that
 DaemonCore uses which affect all Condor daemons (except the checkpoint
-server, shadow, and starter, none of which use DaemonCore yet).
+server, standard universe shadow, and standard universe starter, none of
+which use DaemonCore).
 \begin{description}
 
 \item[\Macro{HOSTALLOW\Dots}] \label{param:HostAllow} All
@@ -1458,7 +1459,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
 \item[\Macro{ENABLE\_RUNTIME\_CONFIG}]
   \label{param:EnableRuntimeConfig}
   The \Condor{config\_val} tool has an option \Opt{-rset} for
-  dynamically setting runtime configuration values (which only effect
+  dynamically setting run time configuration values (which only effect
   the in-memory configuration variables).
   Because of the potential security implications of this feature, by
   default, Condor daemons will not honor these requests.
@@ -1658,6 +1659,26 @@ server, shadow, and starter, none of which use DaemonCore yet).
   using a large amount of memory (e.g. a \Condor{schedd} with a lot of
   jobs in the queue). Currently, the use of \Expr{clone} is available on
   Linux systems other than IA-64, but not when GCB is enabled.
+
+\item[\Macro{NOT\_RESPONDING\_TIMEOUT}] \label{param:NotRespondingTimeout}
+  When a Condor daemon's parent process is another Condor daemon, 
+  the child daemon will
+  periodically send a short message to its parent stating that it is alive
+  and well. If the parent does not hear from the child for a while,
+  the parent assumes that the child is hung,
+  kills the child, and restarts the child. This parameter
+  controls how long the parent waits before killing the child. It is defined
+  in terms of seconds and defaults to 3600 (1 hour). The child sends its
+  alive and well messages at an interval of one third of this value.
+
+\item[\MacroB{<SUBSYS>\_NOT\_RESPONDING\_TIMEOUT}]
+  \label{param:SubsysNotRespondingTimeout}
+  Identical to \MacroNI{NOT\_RESPONDING\_TIMEOUT}, but controls the timeout
+  for a specific type of daemon. For example,
+  \MacroNI{SCHEDD\_NOT\_RESPONDING\_TIMEOUT} controls how long the
+  \Condor{schedd}'s parent daemon will wait without receiving an 
+  alive and well
+  message from the \Condor{schedd} before killing it.
 
 \end{description}
 
@@ -2253,7 +2274,7 @@ Tracking process family by login "cndrusr1"
   both the submitting machine and the remote machine about to execute
   the job match, and the \MacroUNI{FILESYSTEM\_DOMAIN} claimed by the
   submit machine is indeed found to be a subset of what an inverse
-  lookup to a DNS (domain name server) reports as the fully qualified
+  look up to a DNS (domain name server) reports as the fully qualified
   domain name for the submit machine's IP address (this security
   measure safeguards against the submit machine from lying),
   \emph{then} the job will access files using a local system call,
@@ -2846,7 +2867,7 @@ Configuring The Startd Policy.
    A larger value for a specific job ranks that job above
    others with lower values for \MacroNI{RANK}.
 
-\item[\Macro{IS\_VALID\_CHECKPOINT\_PLATFORM}] \label{param:IsValidCheckpointPlatform} A boolean expression that is logically anded with the
+\item[\Macro{IS\_VALID\_CHECKPOINT\_PLATFORM}] \label{param:IsValidCheckpointPlatform} A boolean expression that is logically ANDed with the
    with the \MacroNI{START} expression to limit which machines a
    standard universe job may continue execution on once they have
    produced a checkpoint.
@@ -2986,7 +3007,7 @@ Configuring The Startd Policy.
   \AdAttr{ConsoleIdle}
   time in the \Condor{startd}'s ClassAd.  Give a comma-separated list of
   the names of devices considered the console, without the
-  \File{/dev/} portion of the pathname.  The defaults vary from
+  \File{/dev/} portion of the path name.  The defaults vary from
   platform to platform, and are usually correct.  
 
   One possible exception to this is on Linux, where
@@ -3129,7 +3150,7 @@ Configuring The Startd Policy.
   evaluates to \Expr{True}, benchmarks will be run.
   If RunBenchmarks is specified and set to anything other than \Expr{False},
   additional benchmarks will be run when the \Condor{startd} initially starts.
-  To disable startup benchmarks, set \MacroNI{RunBenchmarks} to \Expr{False},
+  To disable start up benchmarks, set \MacroNI{RunBenchmarks} to \Expr{False},
   or comment it out of the configuration file.
 
 \item[\Macro{DedicatedScheduler}] \label{param:DedicatedScheduler}
@@ -3459,7 +3480,7 @@ This set is to be used for all new applications.
 
 \item[\Macro{STARTD\_CRON\_JOBLIST}]
 \label{param:StartdCronJobList}
-  This configuration variable is defined by a whitespace separated
+  This configuration variable is defined by a white space separated
   list of job names (called modules) to run.
   Each of these is the logical name of the module.  This name
   must be unique (no two modules may have the same name).
@@ -3679,14 +3700,14 @@ Future releases of Condor may disable the use of this set.
   The list of the modules to execute.  In Hawkeye, this is usually
   named HAWKEYE\_JOBS.
   This configuration variable is defined by
-  a whitespace or newline separated list of jobs (called modules) to run,
+  a white space or newline separated list of jobs (called modules) to run,
   where each module is specified using the format
 \begin{verbatim}
    modulename:prefix:executable:period[:options]
 \end{verbatim}
   Each of these fields can be surrounded by matching quote characters
   (single quote or double quote, but they must match).  This allows
-  colon and whitespace characters to be specified.  For example, the
+  colon and white space characters to be specified.  For example, the
   following specifies an executable name with a colon and a space in it:
 \begin{verbatim}
    foo:foo_:"c:/some dir/foo.exe":10m
@@ -3751,7 +3772,7 @@ Future releases of Condor may disable the use of this set.
     \end{itemize}
 	
   \end{itemize}
-\Note The configuration file parsing logic will strip whitespace from
+\Note The configuration file parsing logic will strip white space from
 the beginning and end of continuation lines.  Thus, a job list like
 below will be misinterpreted and will not work as expected:
 \begin{verbatim}
@@ -4124,7 +4145,7 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   \MacroUNI{JOB\_START\_COUNT} jobs at a time, then delays for
   \MacroUNI{JOB\_START\_DELAY} seconds before starting the next set of jobs.
   This delay prevents a sudden, large load on resources required by
-  the jobs during their startup phase.
+  the jobs during their start up phase.
   The resulting job start rate
   averages as fast as
   (\MacroUNI{JOB\_START\_COUNT}/\MacroUNI{JOB\_START\_DELAY}) jobs/second.
@@ -4705,7 +4726,7 @@ daemons.  Defaults to 300 (5 minutes).
         exec $*
 \end{verbatim}
   This can potentially lose information about the arguments.
-  Any argument with embedded whitespace will be split into multiple
+  Any argument with embedded white space will be split into multiple
   arguments.
   For example the argument "argument one" will become the two arguments
   "argument" and "one".
@@ -4858,7 +4879,7 @@ do not specify their own with:
   command will override this default.  If this macro is undefined, a
   default size of 32 KB will be used.
 
-\item[\Macro{SUBMIT\_SKIP\_FILECHECK}] \label{param:SubmitSkipFilecheck}
+\item[\Macro{SUBMIT\_SKIP\_FILECHECKS}] \label{param:SubmitSkipFilechecks}
   If True, \Condor{submit} behaves as if the \Opt{-d} 
   command-line option is used.
   This tells \Condor{submit} to disable file permission checks when
@@ -5428,8 +5449,29 @@ UWCS_NEGOTIATOR_POST_JOB_RANK = \
   (and other settings related to debug logging in the negotiator) is
   described in section~\ref{param:SubsysDebug} as \MacroNI{<SUBSYS>\_DEBUG}.
 
-\item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}] \label{param:NegotiatorMaxTimePerSubmitter} This macro limits the amount of time the negotiator will 
-spend with a submitter. It defaults to one year.
+\item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}]
+  \label{param:NegotiatorMaxTimePerSubmitter} The maximum number of seconds
+  the \Condor{negotiator} will spend with a submitter during one
+  negotiation cycle.  Once this time limit has been reached, the
+  \Condor{negotiator} will still finish its current pie spin, but it will skip
+  over the submitter if subsequent pie spins are needed to dish out all
+  of the available machines.  It defaults to one year.  See
+  \MacroNI{NEGOTIATOR\_MAX\_TIME\_PER\_PIESPIN} for more information.
+
+\item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_PIESPIN}]
+  \label{param:NegotiatorMaxTimePerPieSpin} The maximum number of seconds the
+  \Condor{negotiator} will spend with a submitter in one pie spin.
+  A negotiation cycle is composed of at least one pie spin, possibly more,
+  depending on whether there are still machines left over after
+  computing fair shares and negotiating with each submitter.  By
+  limiting the maximum length of a pie spin or the maximum time per
+  submitter per negotiation cycle, the \Condor{negotiator} is protected
+  against spending a long time talking to one submitter, for example someone
+  with a very slow \Condor{schedd} daemon.
+  But, this can result in unfair allocation of
+  machines or some machines not being allocated at all.
+  See section~\ref{sec:PieSlice} on page~\pageref{sec:PieSlice}
+  for a description of a pie slice.
 
 \item[\Macro{NEGOTIATOR\_MATCH\_EXPRS}]
 \label{param:NegotiatorMatchExprs} This macro specifies a list of macro names
@@ -5814,6 +5856,13 @@ of \Condor{reconfig} while the \Condor{gridmanager} is running
 or if some globus-job-managers take a few extra seconds to exit.
 The value 0 means there is no limit. The default value is 10.
 
+\item[\Macro{GRIDMANAGER\_MAX\_WS\_DESTROYS\_PER\_RESOURCE}]
+\label{param:GridmanagerMaxWsDestroysPerResource}
+For grid jobs of type \SubmitCmd{gt4}, limits the number of destroy
+commands that the \Condor{gridmanager} will issue at a time to each
+WS GRAM server. Too many destroy commands can have severe effects on
+the server. The default value is 5.
+
 \item[\Macro{GAHP}]
 \label{param:Gahp} The full path to the binary of the GAHP server.
 This configuration variable is no longer used.
@@ -5870,6 +5919,13 @@ which if a gt2 grid
 universe job fails to ping the gatekeeper,
 the job will be put on hold.
 Defaults to 5 days (in seconds).
+
+\item[\Macro{GRIDFTP\_URL\_BASE}]
+\label{param:GridftpUrlBase} 
+Specifies an existing \Prog{GridFTP} server on the local system to be used for
+file transfers for gt4 grid universe jobs. The value is given as the base
+of a URL, such as \Expr{gsiftp://mycomp.foo.edu:2118}. The default is for
+Condor to launch temporary \Prog{GridFTP} servers as needed for file transfer.
 
 \item[\Macro{C\_GAHP\_LOG}]
 \label{param:CGAHPLog} The complete path and file name of the
@@ -5972,7 +6028,7 @@ These macros affect the \Prog{grid\_monitor}.
   for more information.
 
 \item[\Macro{GRID\_MONITOR}] \label{param:GridMonitor}
-  The complete pathname of the \Prog{grid\_monitor} tool used to reduce load on
+  The complete path name of the \Prog{grid\_monitor} tool used to reduce load on
   Globus gatekeepers.  This parameter only affects 
   grid jobs of type \SubmitCmd{gt2}.
   This parameter is not referenced unless

@@ -307,7 +307,7 @@ Condor's other services are still available for these commercial packages.
 \index{supported platforms}
 \index{platforms supported}
 Condor is currently available as a free download from the Internet via the World Wide Web at  
-URL \URL{http://www.cs.wisc.edu/condor/downloads}.
+URL \URL{http://www.cs.wisc.edu/condor/downloads-v2}.
 Binary distributions of Condor are available for the platforms 
 detailed in Table~\ref{supported-platforms}.  A platform is an 
 architecture/operating system combination.  
@@ -345,16 +345,16 @@ Intel x86 & - Red Hat Linux 9 \\
  & - Windows 2000 Professional and Server (clipped) \\
  & - Windows 2003 Server (Win NT 5.0) (clipped) \\
  & - Windows XP Professional (Win NT 5.1) (clipped) \\
- & - FreeBSD 6 (clipped) \\
+ & - FreeBSD 6, 7 (clipped) \\
  & - Macintosh OS X 10.4 (clipped) \\ \hline
 PowerPC & - Macintosh OS X 10.4 (clipped) \\
  & - AIX 5.2, 5.3 (clipped) \\
  & - Yellowdog Linux 5.0 (clipped) \\
  & - SuSE Linux Enterprise Server 9 (clipped) \\ \hline
-Itanium IA64 & - Red Hat Enterprise Linux 3 (clipped) \\
- & - SuSE Linux Enterprise Server 8.1 (clipped) \\ \hline
+Itanium IA64 & - Red Hat Enterprise Linux 3 (clipped) \\ \hline
 Opteron x86\_64 & - Red Hat Enterprise Linux 3 \\ 
- & - Red Hat Enterprise Linux 5 \\ \hline
+ & - Red Hat Enterprise Linux 5 \\ 
+ & - FreeBSD 7 (clipped) \\ \hline
 \end{tabular}
 \caption{\label{supported-platforms}Condor \VersionNotice\ supported platforms}
 \end{table}
@@ -392,13 +392,11 @@ Solaris (all versions) on SPARC & & \\
 & cc, CC & use the standard, native compiler \\ 
 & f77, f90 & use the standard, native compiler \\ 
 \hline
-Red Hat Linux, version 9 on x86 & gcc, g++, and g77 & as shipped  \\ 
-\hline
 Red Hat Enterprise Linux 3, 4, 5 on x86 & gcc, g++, and g77 & as shipped  \\ 
 \hline
 Red Hat Debian Linux 3.1 (sarge) on x86 & gcc up to version 3.4.1 &  \\ 
 \hline
-Fedora Core 1, 2, 3, 4, 5 on x86 & gcc, g++, and g77 & as shipped  \\ 
+Fedora Core 1, 2, 3, 4, 5, 6, 7 on x86 & gcc, g++, and g77 & as shipped  \\ 
 \hline
 \end{tabular}
 \caption{\label{supported-compile}Supported compilers under Condor \VersionNotice\ }
@@ -420,18 +418,17 @@ supported, the support is automatic.
 \emph{Platform} & \emph{Large File Transfer Supported?} \\ \hline \hline
 Hewlett Packard PA-RISC with HPUX 11.00 & Yes \\ \hline
 Sun SPARC Sun4m,Sun4c, Sun UltraSPARC with Solaris 8, 9 & Yes \\ \hline
-Intel x86 with Red Hat Linux 9 & Yes \\ 
-Intel x86 with Enterprise Linux 3, Debian Linux 3.1 (sarge) & Yes \\ 
-Intel x86 with Fedora Core 1, 2, 3, 4, 5 & Yes \\
+Intel x86 with Red Hat Enterprise Linux 3, 4, 5, Debian Linux 3.1 & Yes \\ 
+Intel x86 with Fedora Core 1, 2, 3, 4, 5, 6, 7 & Yes \\
 Intel x86 with Windows 2000 Professional and Server  & Yes \\ 
 Intel x86 with 2003 Server (Win NT 5.0) & Yes \\ 
 Intel x86 with Windows XP Professional (Win NT 5.1) & Yes \\ \hline
+Intel x86 with Windows Vista & Yes \\ \hline
 PowerPC with Macintosh OS X  & No \\
 PowerPC with AIX 5.2  & Yes \\
 PowerPC with Yellowdog Linux 5.0 & Yes \\ \hline
 Itanium with Red Hat Enterprise Linux 3 & Yes \\
-Itanium with SuSE Linux Enterprise 8.1, 9 & Yes \\ \hline
-Opteron x86\_64 with Enterprise Linux 3  & Yes \\ \hline
+Opteron x86\_64 with Enterprise Linux 3, 4, 5  & Yes \\ \hline
 \end{tabular}
 \caption{\label{large-file-support}Supported platforms for large file transfer of vanilla universe job files}
 \end{table}

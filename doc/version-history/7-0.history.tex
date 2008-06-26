@@ -18,8 +18,9 @@ New features will be added in the 7.1.x development series.
 
 The details of each version are described below.
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-0-2}Version 7.0.2}
+\subsection*{\label{sec:New-7-0-4}Version 7.0.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -51,62 +52,233 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-0-3}Version 7.0.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item This is a release to fix a bug.  A bug in 7.0.2 sometimes caused
+the \Condor{schedd} to become unresponsive for 20 seconds when starting
+the \Condor{shadow} to run a job.
+Therefore, anyone running 7.0.2 is strongly encouraged to upgrade.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable Additions and Changes:
+
+\begin{itemize}
+
+\item The configuration variable \Macro{VALID\_SPOOL\_FILES} now automatically 
+includes \File{SCHEDD.lock},
+the lock file used for high availability \Condor{schedd} fail over.  Other
+high availability lock files are not currently included.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a problem sometimes causing minutes or more of lag between
+the time of job suspension or unsuspension and the corresponding entries
+in the job user log.
+
+\item Fixed a problem in \Condor{q} \Opt{-better-analyze} handling
+requirements expressions containing  the expression \Expr{=!= UNDEFINED}.
+
+\item Configuration variable \Macro{GRIDMANAGER\_GAHP\_CALL\_TIMEOUT}
+is now recognized for nordugrid grid universe jobs.
+
+\item Fixed a bug that could cause the \Condor{schedd} daemon to abort
+and restart some time after a graceful restart,
+when jobs to which the \Condor{schedd} daemon reconnected were preempted.
+
+\item Fixed a bug causing failure to reconnect to jobs which use
+\Expr{\$\$([\textit{expression}])}
+in their ClassAds.  The jobs would go on
+hold with the hold reason:
+\AdStr{Cannot expand \$\$([\textit{expression}]).}
+
+\item Fixed a bug in 7.0.2 that sometimes caused the schedd to become
+unresponsive for 20 seconds when starting \Condor{shadow} to run a job.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-0-2}Version 7.0.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item On Unix, Condor no longer requires its \Macro{EXECUTE} directory to
+be world-writable, as long as it is not on a root-squashed NFS mount and is
+owned by the user given in the \Macro{CONDOR\_IDS} setting (or by Condor's
+real UID, if not started as \Login{root}). Condor will automatically remove
+world-writability from existing \MacroNI{EXECUTE} directories where possible.
+Note: The \MacroNI{EXECUTE} directory has never been required to be
+world-writable on Windows.
+
+\item With this release, a binary package for IA64 SUSE Linux Enterprise 8
+will no longer be made available.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item A clipped port to FreeBSD 7.0 x86 and x86\_64 is available, but at this
+time is not downloadable as a binary package.
+
+\item Previously, \Condor{q} \Opt{-better-analyze} was supported on most
+but not all versions of Linux.  It is now supported on all Unix platforms,
+but not yet on Windows platforms.
+
+\end{itemize}
+
+\noindent Configuration Variable Additions and Changes:
+
+\begin{itemize}
+
+\item The new configuration variable
+\Macro{GRIDMANAGER\_MAX\_WS\_DESTROYS\_PER\_RESOURCE} limits the number
+of simultaneous WS destroy commands issued to a given server for grid
+universe jobs of type gt4. The default value is 5.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in the standard universe where if a Linux machine was
+  configured to use the Network Service Cache Daemon (nscd), taking
+  a checkpoint would be deferred indefinitely.
+
+\item Fixed a bug that caused the Quill daemon to crash.
+
+\item Fixed bug that prevented Quill, when running on a
+  Windows host, from successfully updating the database.
+
+\item Fixed a bug that prevented Quill's \Condor{dbmsd} daemon from proper
+  shutting down upon request when running on Windows platforms.
+
 % condor-admin 17847
 \item Fixed a bug that caused Stork to be completely broken.
 
-\item (Back-port from 7.1.x) Windows Installer is now completely
+\item As a backport from Condor versions 7.1,
+  the Windows Installer is now completely
   internationalized: it will no longer fail to install because of a
   missing "Users" group; instead, it will use the regionally appropriate
   group.
 
-\item (Back-port from 7.1.x) Interoperability with Samba (as a PDC) has
-  been improved.  Condor uses a fast form of login during credential
-  validation.  Unfortunately, this login procedure fails under Samba,
+\item As a backport from Condor versions 7.1,
+  interoperability with Samba (as a PDC) has been improved.
+  Condor uses a fast form of login during credential validation.
+  Unfortunately, this login procedure fails under Samba,
   even if the credentials are valid.  The new behavior is to attempt
-  the fast login and, on failure, fall back to the slower form.
+  the fast login, and on failure, fall back to the slower form.
 
-\item (Back-port from 7.1.x) Windows slot users no longer have the
+\item As a backport from Condor versions 7.1,
+  Windows slot users no longer have the
   Batch Privilege added, nor does Condor first attempt a Batch login
   for slot users.  This was causing permission problems on hardened
   versions of Windows, such as Windows Sever 2003, in that not
-  interactive users lacked the permission to run batch files (via
-  the cmd.exe tool). This affected any user submitting jobs that used
+  interactive users lacked the permission to run batch files 
+  (via the \Prog{cmd.exe} tool). 
+  This affected any user submitting jobs that used
   batch files as the executable.
 
-\item Fixed a bug that could sometimes cause the \Condor{schedd} to either EXCEPT or
-	crash shortly after a user issues a \Condor{rm} command with the
-	\Opt{-forcex} option.
+\item Fixed a bug that could sometimes cause the \Condor{schedd}
+  to either EXCEPT or crash shortly after a user issues a \Condor{rm}
+  command with the \Opt{-forcex} option.
 
-\item \Condor{history} in a quill environment, when given the -constraint option,
-would ignore attributes from the vertical schema.  This has been fixed.
+\item \Condor{history} in a Quill environment,
+  when given the \Opt{-constraint} option,
+  would ignore attributes from the vertical schema.  This has been fixed.
 
-\item In unix, when started as root, the \Condor{master} now changes the
-effective user id back to root (instead of condor) when restarting itself
-(e.g. due to the command \Condor{restart}).  This makes no difference unless
-you have wrapped the \Condor{master} with a script of some kind and this
-script expects to be run as root not only on initial startup but on restart
-as well.
+\item In Unix, when started as \Login{root},
+  the \Condor{master} now changes the
+  effective user id back to \Login{root} (instead of condor)
+  when restarting itself.
+  This occurs for example due to the command \Condor{restart}.
+  This makes no difference unless the \Condor{master} is wrapped
+  with a script, and the script expects to be run as \Login{root}
+  not only on initial start up, but on restart as well.
 
 \item The dedicated scheduler would sometimes take two negotiation cycles
-to acquire all the machines it needed to run a job.  This has been now
-fixed.
+  to acquire all the machines it needed to run a job.
+  This has been now fixed.
 
 % PR 938
 \item \Condor{dagman} no longer prints "Argument added" and
-"Retry Abort Value" diagnostic messages at the default verbosity,
-to reduce the size of the dagman.out file and the startup time
-for very large DAGs.
+  "Retry Abort Value" diagnostic messages at the default verbosity,
+  to reduce the size of the \File{dagman.out} file and the start up time
+  for very large DAGs.
 
 \item \Condor{dagman} now prints a few fatal parse errors at lower
-verbosity settings than it did previously.
+  verbosity settings than it did previously.
 
-\item \Condor{preen} no longer deletes MyProxy password files in the
-Condor spool directory.
+\item \Condor{preen} no longer deletes \Prog{MyProxy} password files in the
+  Condor spool directory.
 
-\item When using TCP updates (UDP updates are the default) The
-\Condor{collector} would sometimes freeze for 20 seconds when
-receiving an invalidation notice (i.e. when condor is being turned off
-on a machine in the pool).
+\item When using TCP updates (UDP updates are the default), the
+  \Condor{collector} would sometimes freeze for 20 seconds when
+  receiving an invalidation notice.  
+  The notice is received when Condor is being turned off
+  on a machine in the pool.
 
 \item Fixed a case in which the \Condor{schedd}'s job queue log file
 could get corrupted when encountering errors writing to the disk such
@@ -115,7 +287,7 @@ as `out of space'.  This type of corruption was detected by the
 restore the job queue, so you would only have been affected by this
 problem if your \Condor{schedd} refused to start up until you fixed or
 removed the job queue log file.  This bug has existed in all versions
-of Condor, but it became more likely to happen in 6.9.4.
+of Condor, but it became more likely to occur in 6.9.4.
 
 \item The configuration setting \MacroNI{JAVA} may now contain spaces.
 Previously, this did not work.
@@ -124,11 +296,12 @@ Previously, this did not work.
 Condor daemons.
 
 \item Fixed a file descriptor leak in the negotiator.  The leak happened
-whenever the negotiator failed to initiate the NEGOTIATE command to
-a schedd (for example if security negotiation failed with the schedd).
-Under unix, this would eventually cause the negotiator to run out of
-file descriptors, exit, and restart.  This bug affected all previous
-versions of Condor.
+  whenever the negotiator failed to initiate the NEGOTIATE command to
+  a \Condor{schedd}, for example if security negotiation failed
+  with the \Condor{schedd}.
+  Under Unix, this would eventually cause the \Condor{negotiator} to run out of
+  file descriptors, exit, and restart.  This bug affected all previous
+  versions of Condor.
 
 \item Fixed several bugs in the user log reader that caused it to
   generate an invalid persisted state if no events had been read in.
@@ -146,6 +319,62 @@ configured with a longer session duration than the shadow.
 
 \item Fixed a bug in the user log writer that was causing the writing
   of events to the global event log fail in some conditions.
+
+\item In the grid universe, submission of nordugrid jobs is now properly
+throttled by configuration parameters
+\Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE} and
+\Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}.
+
+\item The NorduGrid GAHP server can now properly extract job execution
+information from newer NorduGrid servers. Previously, the GAHP could crash
+when talking to newer servers.
+
+\item Fixed a bug that caused \Condor{config\_val} \Opt{-set} or
+  \Opt{-rset} to fail if security negotiation was turned off.
+  This happens, for example, if
+  \Expr{SEC\_DEFAULT\_NEGOTIATION = NEVER}.
+  This bug was introduced in Condor 7.0.0.
+
+\item Fixed a bug that could cause incorrect IP addresses to be advertised
+when the \Condor{collector} was on a multi-homed host.
+
+\item Fixed a problem where unexpected ownership and permissions on files
+inside a job's working directory could cause the \Condor{starter} to EXCEPT.
+
+\item Improved the speed at which the \Condor{startd} can handle claim
+requests, particularly when the \Condor{startd} manages a large number
+of slots.
+
+\item Fixed an error in the way the \Condor{procd} calculates image size for
+jobs that involve multiple processes. Previously the maximum image size for
+any single process was being used. Now the image size sum across all
+processes is used.
+
+\item The \Condor{procd} no longer truncates its log file on start up.
+  Enabling a log file for the \Condor{procd} is only recommended for
+  debugging, since it is not rotated to conserve disk space.
+
+\item Fixed a problem present in Condor 7.0.1 and 7.1.0 where the
+\Condor{startd} will crash upon deactivating or releasing a COD claim.
+
+\item Condor on Windows can now correctly handle job image size when
+processes are created that allocate more than 2GB of address space.
+
+\item The \Macro{JOB\_INHERITS\_STARTER\_ENVIRONMENT} setting now works when
+the \Macro{GLEXEC\_STARTER} feature is in use.
+
+\item Fixed a problem causing \Condor{schedd} to perform poorly when
+handling large job queues in which there are any idle local or
+scheduler universe jobs (for example, Condor cron jobs).
+
+\item Sped up \Condor{schedd} graceful shutdown when disconnecting
+from running jobs that have job leases.  Previously, it would only
+disconnect from one such job at a time, so if there were a lot of jobs
+running, \Condor{schedd} could take so long to shut down that job leases
+expire before it has a chance to restart and reconnect to the jobs.
+
+\item Fixed a bug that could cause incorrect IP addresses to be advertised
+when the \Condor{collector} was on a multi-homed host.
 
 \end{itemize}
 
@@ -497,7 +726,7 @@ See section~\ref{param:SystemPeriodicHold} for definitions.
   claiming the \MacroNI{EXECUTE} directory has improper permissions,
   when PrivSep is enabled.
 
-\item Lookups of ClassAd attribute \Attr{CurrentTime} are now
+\item Look ups of ClassAd attribute \Attr{CurrentTime} are now
   case-insensitive, just like all other attributes.
 
 \item Fixed problems causing the following error message in the log file:
