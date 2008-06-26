@@ -795,6 +795,9 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		m_sec_man(*sec_man)
 	{
 		m_already_tried_TCP_auth = false;
+		if( !m_errstack ) {
+			m_errstack = &m_internal_errstack;
+		}
 	}
 
 	~SecManStartCommand() {
@@ -836,7 +839,8 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	int m_subcmd;
 	Sock *m_sock;
 	bool m_can_negotiate;
-	CondorError* m_errstack;
+	CondorError* m_errstack; // caller's errstack, if any, o.w. internal
+	CondorError m_internal_errstack;
 	StartCommandCallbackType *m_callback_fn;
 	void *m_misc_data;
 	bool m_nonblocking;
@@ -925,7 +929,7 @@ SecManStartCommand::doCallback( StartCommandResult result )
 			server_fqu );
 
 		if( authorized != USER_AUTH_SUCCESS ) {
-			dprintf( D_ALWAYS,
+			m_errstack->pushf("SECMAN", SECMAN_ERR_CLIENT_AUTH_FAILED,
 			         "DENIED authorization of server '%s/%s' (I am acting as "
 			         "the client).\n",
 					 server_fqu ? server_fqu : "*",
@@ -933,6 +937,17 @@ SecManStartCommand::doCallback( StartCommandResult result )
 			result = StartCommandFailed;
 		}
 	}
+
+	if( result == StartCommandFailed && m_errstack == &m_internal_errstack ) {
+			// caller did not provide an errstack, so print out the
+			// internal one
+
+		char const *error_msg = m_internal_errstack.getFullText();
+		if(error_msg && *error_msg) {
+			dprintf(D_ALWAYS, "ERROR: %s\n",error_msg);
+		}
+	}
+
 
 
 	if(result == StartCommandInProgress) {
@@ -949,13 +964,16 @@ SecManStartCommand::doCallback( StartCommandResult result )
 	}
 	else if(m_callback_fn) {
 		bool success = result == StartCommandSucceeded;
-		(*m_callback_fn)(success,m_sock,m_errstack,m_misc_data);
+		CondorError *cb_errstack = m_errstack == &m_internal_errstack ?
+		                           NULL : m_errstack;
+		(*m_callback_fn)(success,m_sock,cb_errstack,m_misc_data);
 
 		m_callback_fn = NULL;
 		m_misc_data = NULL;
 
-			// Caller is responsible for deallocating the following:
-		m_errstack = NULL;
+			// Caller is responsible for deallocating the following
+			// in the callback, so do not point to them anymore.
+		m_errstack = &m_internal_errstack;
 		m_sock = NULL;
 
 			// We just called back with the success/failure code.
