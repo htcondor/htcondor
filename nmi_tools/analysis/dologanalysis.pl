@@ -112,6 +112,21 @@ my %nummonths = (
     "Dec" => 12,
 );
 
+my %monthtoregnum = (
+    "January" => 1,
+	"February" => 2,
+	"March" => 3,
+    "April" => 4,
+    "May" => 5,
+    "June" => 6,
+    "July" => 7,
+    "August" => 8,
+    "September" => 9,
+    "October" => 10,
+    "November" => 11,
+    "December" => 12,
+);
+
 my %monthtonum = (
     "January" => 0,
 	"February" => 1,
@@ -540,7 +555,7 @@ sub MakeWeekSince
 	print "MakeWeekSince $lastdate\n";
 	if( $lastdate =~ /^(\w+)\s+(\d+)\s+(\d+)$/) {
 		print "Month $1 Day $2 Year $3\n";
-		$monthnum = $monthtonum{$1};
+		$monthnum = $monthtoregnum{$1};
 		$shortmonth = $monthnums{$monthnum};
 		$monthdays = $monthdays{$shortmonth};
 		print "MakeWeekSince Month # $monthnum Short Month $shortmonth\n";
@@ -564,7 +579,7 @@ sub MakeWeekSince
 				$monthnum = $monthnum + 1;
 			}
 			$shortmonth = $monthnums{$monthnum};
-			$regularmonth = $month{$shortmonth};
+			$regularmonth = $months{$shortmonth};
 			$newdate =  $regularmonth . " " . $daysnextmonth . " " . $year;
 			print "MakeWeekSince $lastdate\n";
 			print "MakeWeekSince Done $newdate\n";
