@@ -55,7 +55,7 @@ The CondorView Client makes queries over the network to this
 database.
 The \Condor{collector} includes this database support.
 To activate the persistent database logging, add the following entries to
-the configuration file on the central manager: 
+the configuration file for the \Condor{collector} chosen to act as the ViewServer.
 \begin{verbatim}
     POOL_HISTORY_DIR = /full/path/to/directory/to/store/historical/data 
     KEEP_POOL_HISTORY = True 
