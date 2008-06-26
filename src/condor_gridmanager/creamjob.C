@@ -374,7 +374,7 @@ CreamJob::CreamJob( ClassAd *classad )
 			buff2 += job_output;
 			localOutput = strdup( buff2.Value() );
 
-			bool_value = 1;
+			bool_value = 0;
 			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
 			streamOutput = (bool_value != 0);
 			stageOutput = !streamOutput;
@@ -395,7 +395,7 @@ CreamJob::CreamJob( ClassAd *classad )
 			buff2 += job_error;
 			localError = strdup( buff2.Value() );
 
-			bool_value = 1;
+			bool_value = 0;
 			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );
 			streamError = (bool_value != 0);
 			stageError = !streamError;

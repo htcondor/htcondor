@@ -434,7 +434,7 @@ GT4Job::GT4Job( ClassAd *classad )
 			full_job_output += job_output;
 			localOutput = strdup( full_job_output.Value() );
 
-			bool_value = 1;
+			bool_value = 0;
 			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
 			streamOutput = (bool_value != 0);
 			stageOutput = !streamOutput;
@@ -455,7 +455,7 @@ GT4Job::GT4Job( ClassAd *classad )
 			full_job_error += job_error;
 			localError = strdup( full_job_error.Value() );
 
-			bool_value = 1;
+			bool_value = 0;
 			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );
 			streamError = (bool_value != 0);
 			stageError = !streamError;
