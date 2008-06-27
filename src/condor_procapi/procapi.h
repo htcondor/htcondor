@@ -120,9 +120,10 @@ struct Offset {       // There will be one instance of this structure in
 	DWORD faults;
 	DWORD pctcpu;       // this info is gotten by grabOffsets()
 	DWORD utime;
-	DWORD stime;
-	DWORD elapsed;
+	DWORD stime;        // this structure additionally holds data width
+	DWORD elapsed;      // info for counters for which it can vary
 	DWORD procid;
+	int rssize_width;
 };
 
 
