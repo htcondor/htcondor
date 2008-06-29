@@ -130,6 +130,50 @@ int InDBX = 0;
 
 #define DPRINTF_ERR_MAX 255
 
+#define FCLOSE_RETRY_MAX 10
+
+#if 1 //TEMP -- move to a better location
+int fclose_wrapper( FILE *stream, int maxRetries );
+
+int retry_errno(void);
+
+int retry_errno(void)
+{
+#ifdef WIN32
+	return FALSE/*TEMP*/;
+#else
+	return errno == EINTR;
+#endif
+}
+
+int
+fclose_wrapper( FILE *stream, int maxRetries )
+{
+	int		result = 0;
+
+	int		retryCount = 0;
+	BOOLEAN	done = FALSE; //TEMP -- why won't bool work here?
+
+	while ( !done ) {
+		if ( fclose( stream ) != 0 ) {
+			if ( retry_errno() && retryCount < maxRetries ) {
+				retryCount++;
+			} else {
+				fprintf( stderr, "fclose_wrapper() failed after %d retries; "
+							"errno: %d (%s)\n",
+							retryCount, errno, strerror( errno ) );
+				done = TRUE/*TEMP*/;
+				result = -1;
+			}
+		} else {
+			done = TRUE/*TEMP*/;
+		}
+	}
+
+	return result;
+}
+#endif //TEMP
+
 /*
 ** Print a nice log message, but only if "flags" are included in the
 ** current debugging flags.
@@ -482,7 +526,7 @@ debug_lock(int debug_level)
 			/* Seek to the end */
 		if( (length=lseek(fileno(DebugFP),0,2)) < 0 ) {
 			if (debug_level > 0) {
-				fclose( DebugFP );
+				fclose_wrapper( DebugFP, FCLOSE_RETRY_MAX );
 				DebugFP = NULL;
 				return NULL;
 			}
@@ -546,7 +590,7 @@ debug_unlock(int debug_level)
 
 	if( DebugFile[debug_level] ) {
 		if (DebugFP) {
-			int close_result = fclose( DebugFP );
+			int close_result = fclose_wrapper( DebugFP, FCLOSE_RETRY_MAX );
 			if (close_result < 0) {
 				DebugUnlockBroken = 1;
 				_condor_dprintf_exit(errno, "Can't fclose debug log file\n");
@@ -582,7 +626,7 @@ preserve_log_file(int debug_level)
 	fprintf( DebugFP, "Saving log file to \"%s\"\n", old );
 	(void)fflush( DebugFP );
 
-	fclose( DebugFP );
+	fclose_wrapper( DebugFP, FCLOSE_RETRY_MAX );
 	DebugFP = NULL;
 
 #if defined(WIN32)
@@ -841,7 +885,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 			if( tail[0] ) {
 				fprintf( fail_fp, "%s", tail );
 			}
-			fclose( fail_fp );
+			fclose_wrapper( fail_fp, FCLOSE_RETRY_MAX );
 			wrote_warning = TRUE;
 		} 
 		free( tmp );

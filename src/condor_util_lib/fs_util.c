@@ -1,3 +1,4 @@
+//TEMPTEMP -- maybe put fclose wrapper in here?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
