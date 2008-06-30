@@ -427,10 +427,8 @@ matchmaking.
   page~\pageref{param:PreemptionRequirementsStable} for 
   complete definitions.
 
-\item The new configuration variable \Macro{STARTER\_UPLOAD\_SECONDS}
-prevents a hang if the \Condor{shadow} delays a write 
-for more than the specified time.
-The default is 300.
+\item The configuration variable \Macro{STARTER\_UPLOAD\_TIMEOUT}
+  changed its default value to 300 seconds.
 
 \item The new configuration variable \Macro{CKPT\_PROBE} 
 specifies an internal to Condor

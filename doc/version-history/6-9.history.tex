@@ -992,8 +992,8 @@ job lease expires.
 
 % condor-admin 15254
 \item Added new configuration knob \Macro{STARTER\_UPLOAD\_TIMEOUT}
-which sets the timeout for the starter to upload output files to the
-shadow on job exit.  The default value is 200 seconds, which should
+which sets the timeout for the \Condor{starter} to upload output files to the
+\Condor{shadow} on job exit.  The default value is 200 seconds, which should
 be sufficient for serial jobs.  For parallel jobs, this may need to
 be increased if many large output files are sent back to the shadow
 on job exit.
