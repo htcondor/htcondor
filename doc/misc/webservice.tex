@@ -336,7 +336,7 @@ once the job has been Middle Aged (been completed) for 24 hours.
 % should be forced into old-age if they have been in middle-age for a day.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{WebService-Implementation} Implementation Details}
+\subsubsection{\label{sec:WebService-Implementation} Implementation Details}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor daemons understand and communicate using the
@@ -351,10 +351,26 @@ The WSDL must be run through a toolkit to produce
 language-specific routines that do communication.
 The application is compiled with these routines.
 
+\index{Web Service API!\Condor{schedd} daemon command port}
 Condor must be configured to enable responses to SOAP calls.
 Please see 
 section~\ref{sec:API-Config-File-Entries} for definitions of the
 configuration variables related to the web services API.
+The WS interface is listening on the \Condor{schedd} daemon's command port. 
+To obtain a list of all the the \Condor{schedd} daemons in the
+pool with a WS interface, issue the command:
+\footnotesize
+\begin{verbatim}
+  %  condor_status -schedd -constraint "HasSOAPInterface=?=TRUE"
+\end{verbatim}
+\normalsize
+With this information,
+a further command locates the port number to use:
+\footnotesize
+\begin{verbatim}
+  % condor_status -schedd -constraint "HasSOAPInterface=?=TRUE" -l | grep MyAddress 
+\end{verbatim}
+\normalsize
 
 The API's routines can be roughly categorized into ones that
 deal with
