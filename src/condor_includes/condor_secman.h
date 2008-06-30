@@ -36,6 +36,7 @@
 // #include "HashTable.h"
 #include "KeyCache.h"
 // #include "condor_daemon_core.h"
+#include "classy_counted_ptr.h"
 
 
 typedef void StartCommandCallbackType(bool success,Sock *sock,CondorError *errstack,void *misc_data);
@@ -55,6 +56,8 @@ typedef enum {
   is expected to try again later (because by then the session key may
   be ready for use).
 */
+
+class SecManStartCommand;
 
 class SecMan {
 
@@ -81,13 +84,23 @@ public:
 	static int sec_man_ref_count;
 
 		// The following is indexed by session index name ( "addr,<cmd>" )
-	static HashTable<MyString, class SecManStartCommand *> *tcp_auth_in_progress;
+	static HashTable<MyString, classy_counted_ptr<SecManStartCommand> > *tcp_auth_in_progress;
 
 	SecMan(int numbuckets = 209);  // years of careful research... HA HA HA HA
 	SecMan(const SecMan &);
 	~SecMan();
 	const SecMan & operator=(const SecMan &);
 
+		// Prepare a socket for sending a CEDAR command.  This takes
+		// care of security negotiation and authentication.
+		// If callback_fn is NULL, it is caller's responsibility to
+		// delete sock and errstack after this call, even if nonblocking.
+		// When nonblocking with no callback_fn, this function will return
+		// StartCommandWouldBlock if any blocking operations are required.
+		// As a side-effect, in the case of UDP sockets, this will
+		// spawn off a non-blocking attempt to create a security
+		// session so that in the future, a UDP command could succeed
+		// without StartCommandWouldBlock.
 	StartCommandResult startCommand( int cmd, Sock* sock, bool can_neg, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking);
 
 		// Authenticate a socket using whatever authentication methods

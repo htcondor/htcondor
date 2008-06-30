@@ -44,6 +44,18 @@ REM Put NTConfig in the PATH, since it's got lots of stuff we need
 REM like awk, gunzip, tar, bison, yacc...
 set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VC_DIR%;%SDK_DIR%;%DBG_DIR%
 
+REM ======================================================================
+REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
+REM Since we a still stuck in the past (i.e. supporting Win2K) we must
+REM lie to the setenv script, and pretend the DevEnvDir environment
+REM is alredy configured properly (yay! jump to VC2K8, but support
+REM Win2K... *sigh*) 
+set MSVCDir=%VC_DIR%
+set DevEnvDir=C:\Program Files\Microsoft Visual Studio\COMMON\MSDev98\Bin
+SET MSVCVer=6.0
+REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
+REM ======================================================================
+
 call vcvars32.bat
 if not defined INCLUDE ( echo . && echo *** Failed to run VCVARS32.BAT! Is Microsoft Visual Studio 6.0 installed? && exit /B 1 )
 call setenv /2000 /RETAIL

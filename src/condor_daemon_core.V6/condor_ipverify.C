@@ -321,6 +321,16 @@ IpVerify::add_hash_entry(const struct in_addr & sin_addr, const char * user, per
     return TRUE;
 }
 
+perm_mask_t 
+IpVerify::allow_mask(DCpermission perm) { 
+	return ((perm_mask_t)1 << (1+2*perm));
+}
+
+perm_mask_t 
+IpVerify::deny_mask(DCpermission perm) { 
+	return ((perm_mask_t)1 << (2+2*perm));
+}
+ 
 void
 IpVerify::PermMaskToString(perm_mask_t mask, MyString &mask_str)
 {
