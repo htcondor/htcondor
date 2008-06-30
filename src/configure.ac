@@ -221,6 +221,13 @@ elif test $os = "Linux" ; then
        ;;
      "5" )
        _cv_linux_distro="RHEL5"
+	   # Hack hack hack
+	   # We should just switch on the code name in parens
+	   # I don't have time to look them all up
+	   if grep -q ^Fedora /etc/redhat-release
+	   then
+	   		_cv_linux_distro="FC5"
+	   fi
        ;;
      "5.1" )
        _cv_linux_distro="RHEL5"
