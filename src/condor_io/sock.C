@@ -1268,6 +1268,11 @@ Sock::bytes_available_to_read()
 	return ret_val;
 }
 
+bool
+Sock::readReady() {
+	return bytes_available_to_read() > 0;
+}
+
 /* NOTE: on timeout() we return the previous timeout value, or a -1 on an error.
  * Once more: we do _not_ return FALSE on Error like most other CEDAR functions;
  * we return a -1 !! 

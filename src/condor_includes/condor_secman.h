@@ -45,7 +45,8 @@ typedef enum {
 	StartCommandFailed = 0,
 	StartCommandSucceeded = 1,
 	StartCommandWouldBlock = 2,
-	StartCommandInProgress = 3
+	StartCommandInProgress = 3,
+	StartCommandContinue = 4, // used internally by SecManStartCommand
 }StartCommandResult;
 
 /*

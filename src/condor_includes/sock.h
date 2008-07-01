@@ -178,6 +178,10 @@ public:
 	*/
 	int bytes_available_to_read();
 
+	/**	@return true if > 0 bytes ready to read without blocking
+	*/
+	bool readReady();
+
 	/*
 	**	Stream protocol
 	*/
