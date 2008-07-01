@@ -15,6 +15,7 @@
 \oOpt{-waitfordebug}
 \oOptArg{-autorescue}{0|1}
 \oOptArg{-dorescuefrom}{number}
+\OptArg{-csdversion}{version\_string}
 \OptArg{-dag}{dag\_file}
 \oArg{\OptArg{-dag}{dag\_file\_2} \Dots \OptArg{-dag}{dag\_file\_n} }
 
@@ -142,6 +143,10 @@ Level values and what they produce is described as
        run the specified rescue DAG number for the given DAG.  A value
        of 0 is the same as not specifying this option.  Specifying a
        non-existant rescue DAG is a fatal error.}
+    \OptItem{\OptArg{-csdversion}{version\_string}}{\Arg{version\_string}
+       is the version of the \Condor{submit\_dag} program.  At startup,
+       \Condor{dagman} checks for a version mismatch with the
+       \Condor{submit\_dag} version in this argument.}
     \OptItem{\OptArg{-dag}{filename}}{\Arg{filename} is the name of the
        DAG input file that is set as an argument to \Condor{submit\_dag},
        and passed to \Condor{dagman}.}
