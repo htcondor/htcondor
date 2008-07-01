@@ -142,6 +142,13 @@ void debug_error   (int error, debug_level_t level, char *fmt, ...) CHECK_PRINTF
 
 //@}
 
+void debug_cache_disable(void);
+void debug_cache_enable(void);
+void debug_cache_flush(void);
+
+/* set to zero to restore original default of DEFAULT_CACHE_SIZE */
+void debug_cache_set_size(int size);
+
 END_C_DECLS /* from condor_header_features.h */
 
 #endif /* ifndef DAGMAN_DEBUG_H */
