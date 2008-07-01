@@ -29,6 +29,7 @@
 #include "read_multiple_logs.h"
 #include "condor_getcwd.h"
 #include "condor_string.h" // for getline()
+#include "condor_version.h"
 
 
 #ifdef WIN32
@@ -514,6 +515,9 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	{
 		args.AppendArg("-UseDagDir");
 	}
+
+	args.AppendArg("-CsdVersion");
+	args.AppendArg(CondorVersion());
 
 	MyString arg_str,args_error;
 	if(!args.GetArgsStringV1WackedOrV2Quoted(&arg_str,&args_error)) {
