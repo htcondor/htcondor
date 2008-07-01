@@ -116,6 +116,10 @@ void dprintf_wrapup_fork_child( void );
 time_t dprintf_last_modification(void);
 void dprintf_touch_log(void);
 
+/* wrapper for fclose() that soaks up EINTRs up to maxRetries number of times.
+ */
+int fclose_wrapper( FILE *stream, int maxRetries );
+
 /*
 **	Definition of exception macro
 */

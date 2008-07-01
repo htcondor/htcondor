@@ -132,48 +132,6 @@ int InDBX = 0;
 
 #define FCLOSE_RETRY_MAX 10
 
-#if 1 //TEMP -- move to a better location
-int fclose_wrapper( FILE *stream, int maxRetries );
-
-int retry_errno(void);
-
-int retry_errno(void)
-{
-#ifdef WIN32
-	return FALSE/*TEMP*/;
-#else
-	return errno == EINTR;
-#endif
-}
-
-int
-fclose_wrapper( FILE *stream, int maxRetries )
-{
-	int		result = 0;
-
-	int		retryCount = 0;
-	BOOLEAN	done = FALSE; //TEMP -- why won't bool work here?
-
-	while ( !done ) {
-		if ( fclose( stream ) != 0 ) {
-			if ( retry_errno() && retryCount < maxRetries ) {
-				retryCount++;
-			} else {
-				fprintf( stderr, "fclose_wrapper() failed after %d retries; "
-							"errno: %d (%s)\n",
-							retryCount, errno, strerror( errno ) );
-				done = TRUE/*TEMP*/;
-				result = -1;
-			}
-		} else {
-			done = TRUE/*TEMP*/;
-		}
-	}
-
-	return result;
-}
-#endif //TEMP
-
 /*
 ** Print a nice log message, but only if "flags" are included in the
 ** current debugging flags.
@@ -944,6 +902,51 @@ dprintf_touch_log()
 	if ( _condor_dprintf_works ) {
 		utime( DebugFile[0], NULL );
 	}
+}
+
+int dprintf_retry_errno(void);
+
+int dprintf_retry_errno(void)
+{
+#ifdef WIN32
+	return FALSE;
+#else
+	return errno == EINTR;
+#endif
+}
+
+/* This function calls fclose(), soaking up EINTRs up to maxRetries times.
+   The motivation for this function is Gnats PR 937 (DAGMan crashes if
+   straced).  Psilord investigated this and found that, because LIGO
+   had their dagman.out files on NFS, stracing DAGMan could interrupt
+   an fclose() on the dagman.out file.  So hopefully this will fix the
+   problem...   wenger 2008-07-01.
+ */
+int
+fclose_wrapper( FILE *stream, int maxRetries )
+{
+	int		result = 0;
+
+	int		retryCount = 0;
+	BOOLEAN	done = FALSE;
+
+	while ( !done ) {
+		if ( fclose( stream ) != 0 ) {
+			if ( dprintf_retry_errno() && retryCount < maxRetries ) {
+				retryCount++;
+			} else {
+				fprintf( stderr, "fclose_wrapper() failed after %d retries; "
+							"errno: %d (%s)\n",
+							retryCount, errno, strerror( errno ) );
+				done = TRUE;
+				result = -1;
+			}
+		} else {
+			done = TRUE;
+		}
+	}
+
+	return result;
 }
 
 int
