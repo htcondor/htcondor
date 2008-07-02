@@ -22,35 +22,93 @@
 
 #include "debug.h"
 #include "condor_daemon_core.h"
+#include "MyString.h"
 
 debug_level_t debug_level    = DEBUG_NORMAL;
 const char *        debug_progname = NULL;
+
+// sometimes we want to keep a cache for our log message when DAGMan is
+// emitting thousands of them quickly and we could be writing the log to
+// and NFS server.
+static bool cache_enabled = false;		// do I honor start/stop requests?
+static bool cache_is_caching = false;	// have I started caching or stopped it?
+static MyString cache;
+
+// NOTE: if this isn't changed via a config file or something, then all lines
+// are immediately written as they enter the cache.
+static int cache_size = 0;
+
+
+// from condor_util_lib/dprintf.c
+extern int DebugUseTimestamps;
+extern int DebugFlags;
+extern FILE *DebugFP;
+
+static void debug_cache_insert(int flags, const char *fmt, va_list args);
+
 
 /*--------------------------------------------------------------------------*/
 void
 debug_printf( debug_level_t level, char *fmt, ... ) {
 	if( DEBUG_LEVEL( level ) ) {
-		va_list args;
-		va_start( args, fmt );
-		_condor_dprintf_va( D_ALWAYS, fmt, args );
-		va_end( args );
+		if (cache_enabled == false ||
+			(cache_enabled == true && cache_is_caching == false))
+		{
+			// let it go through right away
+			va_list args;
+			va_start( args, fmt );
+			_condor_dprintf_va( D_ALWAYS, fmt, args );
+			va_end( args );
+		} else {
+			// store it for later flushing
+			va_list args;
+			va_start( args, fmt );
+			debug_cache_insert( D_ALWAYS, fmt, args );
+			va_end( args );
+		}
 	}
 }
 
 /*--------------------------------------------------------------------------*/
 void
 debug_dprintf( int flags, debug_level_t level, char *fmt, ... ) {
+
 	if( DEBUG_LEVEL( level ) ) {
+
+		if (cache_enabled == true && cache_is_caching == true) {
+			// This call is uncachable because I haven't implemented how we
+			// can cache a debug_dprintf() because it specifies the flags
+			// parameter that _condor_dprintf_va needs. So for now, we'll
+			// just flush the cache and this isn't so bad because the place
+			// where we need the caching doesn't call debug_dprintf() within
+			// the critical section of the caching.
+
+			// Note: After thinking about it, maybe I can
+			// check the flag against DebugFlags and see if
+			// it should pass, if so, we can shove it into
+			// the cache. I'll attempt it later.
+
+			dprintf(D_ALWAYS, "Uncachable dprintf forcing log line flush.\n");
+			debug_cache_flush();
+		}
+
 		va_list args;
 		va_start( args, fmt );
 		_condor_dprintf_va( flags, fmt, args );
 		va_end( args );
+			
 	}
 }
 
 /*--------------------------------------------------------------------------*/
 void
 debug_error( int error, debug_level_t level, char *fmt, ... ) {
+
+	// make sure these come out before emitting the error
+	debug_cache_flush();
+	debug_cache_stop_caching();
+	debug_cache_disable();
+
     if( DEBUG_LEVEL( level ) ) {
         va_list args;
         va_start( args, fmt );
@@ -59,3 +117,141 @@ debug_error( int error, debug_level_t level, char *fmt, ... ) {
     }
 	DC_Exit( error );
 }
+
+/*--------------------------------------------------------------------------*/
+void
+debug_cache_enable(void)
+{
+	cache_enabled = true;
+	dprintf(D_ALWAYS, 
+		"Enabling log line cache for increased NFS performance.\n");
+}
+
+/*--------------------------------------------------------------------------*/
+void
+debug_cache_disable(void)
+{
+	debug_cache_flush();
+	cache_enabled = false;
+	dprintf(D_ALWAYS, "Disabling log line cache.\n");
+}
+
+/*--------------------------------------------------------------------------*/
+void
+debug_cache_start_caching(void)
+{
+	if (cache_enabled) {
+		cache_is_caching = true;
+		dprintf(D_ALWAYS, "Starting to cache log lines.\n");
+	}
+}
+
+/*--------------------------------------------------------------------------*/
+void
+debug_cache_stop_caching(void)
+{
+	if (cache_enabled) {
+		debug_cache_flush();
+		cache_is_caching = false;
+		dprintf(D_ALWAYS, "Stopping the caching of log lines.\n");
+	}
+}
+
+/*--------------------------------------------------------------------------*/
+void
+debug_cache_insert(int flags, const char *fmt, va_list args)
+{
+	time_t clock_now;
+	struct tm *tm = NULL;
+
+	MyString tstamp, fds, line, pid;
+	pid_t my_pid;
+
+	// XXX TODO
+	// handle flags...
+	// For now, always assume D_ALWAYS since the caller assumes it as well.
+
+	// HACK
+	// Note: This nasty bit of code is copied in spirit from dprintf.c
+	// It needs abstracting out a little bit from there into its own
+	// function, but this is a quick hack for LIGO. I'll come back to it
+	// and do it better later when I have time.
+	clock_now = time(NULL);
+	if (!DebugUseTimestamps) {
+		tm = localtime(&clock_now);
+	}
+
+	if (((DebugFlags|flags) & D_NOHEADER) == 0) {
+		if (DebugUseTimestamps) {
+			tstamp.sprintf("(%d) ", (int)clock_now);
+		} else {
+			tstamp.sprintf("%d/%d %02d:%02d:%02d ",
+				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
+				tm->tm_min, tm->tm_sec );
+		}
+
+		if ((DebugFlags|flags) & D_FDS) {
+			fds.sprintf("(fd:%d) ", fileno(DebugFP) );
+		}
+
+		if ((DebugFlags|flags) & D_PID) {
+#ifdef WIN32
+			my_pid = (int) GetCurrentProcessId();
+#else
+			my_pid = (int) getpid();
+#endif
+			pid.sprintf("(pid:%d) ", my_pid );
+
+		}
+
+		// We skip running of the DebugId function, since it needs to
+		// emit to a FILE* and we can't store it in the cache. It, as of this
+		// time, isn't used in condor_dagman.
+	}
+
+	// figure out the line the user needs to emit.
+	line.vsprintf(fmt, args);
+
+	// build the cached line and add it to the cache
+	cache += (tstamp + fds + line);
+
+	// if the cache has surpassed the highwater mark, then flush it.
+	if (cache.Length() > cache_size) {
+		debug_cache_flush();
+	}
+}
+
+/*--------------------------------------------------------------------------*/
+void
+debug_cache_flush(void)
+{
+	// This emits a dprintf call which could write out up to the maximum
+	// size of the cache. The lines in the cache are newline delimited.
+	// We bracket the output a bit so people know what happened.
+
+	if (cache != "") {
+		dprintf(D_ALWAYS, "LOG LINE CACHE: Begin Flush\n");
+		dprintf(D_ALWAYS | D_NOHEADER, "%s", cache.Value());
+		dprintf(D_ALWAYS, "LOG LINE CACHE: End Flush\n");
+		cache = "";
+	}
+}
+
+/*--------------------------------------------------------------------------*/
+void debug_cache_set_size(int size)
+{
+	// Get rid of what is there, if anything.
+	if (cache_enabled && cache_is_caching) {
+		debug_cache_flush();
+	}
+
+	if (size < 0) {
+		cache_size = 0;
+	}
+
+	cache_size = size;
+}
+
+
+
+

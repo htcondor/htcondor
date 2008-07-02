@@ -252,6 +252,16 @@ bool Dag::Bootstrap (bool recovery) {
     if (recovery) {
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
 
+		// as we read the event log files, we emit lots of imformation into
+		// the logfile. If this is on NFS, then we pay a *very* large price
+		// for the open/close of each line in the log file.
+		// Whether or not this caching is honored is dependant on if the
+		// cache was originally enabled or not. If the cache is not
+		// enabled, then debug_cache_start_caching() and 
+		// debug_cache_stop_caching() are effectively noops.
+
+		debug_cache_start_caching();
+
 		if( _condorLogFiles.number() > 0 ) {
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
 				_recovery = false;
@@ -272,6 +282,8 @@ bool Dag::Bootstrap (bool recovery) {
 				_postScriptQ->Run( job->_scriptPost );
 			}
 		}
+
+		debug_cache_stop_caching();
     }
 	
     if( DEBUG_LEVEL( DEBUG_DEBUG_2 ) ) {
