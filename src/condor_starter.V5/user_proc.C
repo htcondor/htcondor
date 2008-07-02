@@ -36,6 +36,7 @@
 #include "../condor_privsep/condor_privsep.h"
 #include "../condor_procd/proc_family_client.h"
 #include "condor_pers.h"
+#include "procd_config.h"
 
 
 #if defined(AIX32)
@@ -593,20 +594,15 @@ UserProc::execute()
 			// signals to it
 			//
 		if (privsep_enabled() == true) {
-			char *tmp = NULL;
+			MyString procd_address;
 			bool response;
 			bool ret;
 			ProcFamilyClient pfc;
 
-			tmp = param("PROCD_ADDRESS");
-			if (tmp != NULL) {
-				ret = pfc.initialize(tmp);
-				if (ret == false) {
-					EXCEPT("Failure to initialize the ProcFamilyClient object");
-				}
-				free(tmp);
-			} else {
-				EXCEPT("privsep is enabled, but PROCD_ADDRESS is not defined!");
+			procd_address = get_procd_address();
+			ret = pfc.initialize(procd_address.Value());
+			if (ret == false) {
+				EXCEPT("Failure to initialize the ProcFamilyClient object");
 			}
 
 			ret = pfc.register_subfamily(getpid(), getppid(), 60, response);
