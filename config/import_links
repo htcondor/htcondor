@@ -37,8 +37,10 @@ do
 	SRC=${DIR}/$1
 	DST=$1
 
-	if [ ! -e ${DST} ] 
-	then			
+	if ls ${DST} > /dev/null 2>&1
+	then
+		:
+	else			
 		# doesn't exist - create the symlink
 		echo ln -s ${SRC} ${DST}
 		ln -s ${SRC} ${DST}
