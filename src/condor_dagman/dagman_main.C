@@ -141,6 +141,9 @@ Dagman::~Dagman()
 bool
 Dagman::Config()
 {
+	int debug_cache_size;
+	bool debug_cache_enabled;
+
 		// Note: debug_printfs are DEBUG_NORMAL here because when we
 		// get here we haven't processed command-line arguments yet.
 
@@ -163,6 +166,16 @@ Dagman::Config()
 					NULL, true );
 	}
 
+	debug_cache_size = 
+		param_integer( "DAGMAN_DEBUG_CACHE_SIZE", ((1024*1024)*5), 0, INT_MAX);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_SIZE setting: %d\n",
+				debug_cache_size );
+
+	debug_cache_enabled = 
+		param_boolean( "DAGMAN_DEBUG_CACHE_ENABLE", false );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_ENABLE setting: %s\n",
+				debug_cache_enabled?"True":"False" );
+
 	submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", 0, 0, 60 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DELAY setting: %d\n",
 				submit_delay );
@@ -178,6 +191,7 @@ Dagman::Config()
 		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL", 5, 1, 1000 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n",
 				max_submits_per_interval );
+
 
 		// Event checking setup...
 
@@ -304,6 +318,12 @@ Dagman::Config()
 				MAX_RESCUE_DAG_DEFAULT, 0, ABS_MAX_RESCUE_DAG_NUM );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n",
 				maxRescueDagNum );
+
+	// enable up the debug cache if needed
+	if (debug_cache_enabled) {
+		debug_cache_set_size(debug_cache_size);
+		debug_cache_enable();
+	}
 
 	return true;
 }

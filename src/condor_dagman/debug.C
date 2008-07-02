@@ -24,17 +24,19 @@
 #include "condor_daemon_core.h"
 #include "MyString.h"
 
-#define DEFAULT_CACHE_SIZE ((1024 * 1024) * 5)
-
 debug_level_t debug_level    = DEBUG_NORMAL;
 const char *        debug_progname = NULL;
 
 // sometimes we want to keep a cache for our log message when DAGMan is
 // emitting thousands of them quickly and we could be writing the log to
 // and NFS server.
-static bool cache_enabled = false;
+static bool cache_enabled = false;		// do I honor start/stop requests?
+static bool cache_is_caching = false;	// have I started caching or stopped it?
 static MyString cache;
-static int cache_size = DEFAULT_CACHE_SIZE;
+
+// NOTE: if this isn't changed via a config file or something, then all lines
+// are immediately written as they enter the cache.
+static int cache_size = 0;
 
 
 // from condor_util_lib/dprintf.c
@@ -49,12 +51,16 @@ static void debug_cache_insert(int flags, const char *fmt, va_list args);
 void
 debug_printf( debug_level_t level, char *fmt, ... ) {
 	if( DEBUG_LEVEL( level ) ) {
-		if (cache_enabled == false) {
+		if (cache_enabled == false ||
+			(cache_enabled == true && cache_is_caching == false))
+		{
+			// let it go through right away
 			va_list args;
 			va_start( args, fmt );
 			_condor_dprintf_va( D_ALWAYS, fmt, args );
 			va_end( args );
 		} else {
+			// store it for later flushing
 			va_list args;
 			va_start( args, fmt );
 			debug_cache_insert( D_ALWAYS, fmt, args );
@@ -66,15 +72,22 @@ debug_printf( debug_level_t level, char *fmt, ... ) {
 /*--------------------------------------------------------------------------*/
 void
 debug_dprintf( int flags, debug_level_t level, char *fmt, ... ) {
+
 	if( DEBUG_LEVEL( level ) ) {
 
-		if (cache_enabled == true) {
-			// This is only uncachable because I haven't implemented how we
+		if (cache_enabled == true && cache_is_caching == true) {
+			// This call is uncachable because I haven't implemented how we
 			// can cache a debug_dprintf() because it specifies the flags
 			// parameter that _condor_dprintf_va needs. So for now, we'll
 			// just flush the cache and this isn't so bad because the place
 			// where we need the caching doesn't call debug_dprintf() within
 			// the critical section of the caching.
+
+			// Note: After thinking about it, maybe I can
+			// check the flag against DebugFlags and see if
+			// it should pass, if so, we can shove it into
+			// the cache. I'll attempt it later.
+
 			dprintf(D_ALWAYS, "Uncachable dprintf forcing log line flush.\n");
 			debug_cache_flush();
 		}
@@ -93,6 +106,7 @@ debug_error( int error, debug_level_t level, char *fmt, ... ) {
 
 	// make sure these come out before emitting the error
 	debug_cache_flush();
+	debug_cache_stop_caching();
 	debug_cache_disable();
 
     if( DEBUG_LEVEL( level ) ) {
@@ -124,6 +138,27 @@ debug_cache_disable(void)
 
 /*--------------------------------------------------------------------------*/
 void
+debug_cache_start_caching(void)
+{
+	if (cache_enabled) {
+		cache_is_caching = true;
+		dprintf(D_ALWAYS, "Starting to cache log lines.\n");
+	}
+}
+
+/*--------------------------------------------------------------------------*/
+void
+debug_cache_stop_caching(void)
+{
+	if (cache_enabled) {
+		debug_cache_flush();
+		cache_is_caching = false;
+		dprintf(D_ALWAYS, "Stopping the caching of log lines.\n");
+	}
+}
+
+/*--------------------------------------------------------------------------*/
+void
 debug_cache_insert(int flags, const char *fmt, va_list args)
 {
 	time_t clock_now;
@@ -134,6 +169,7 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 
 	// XXX TODO
 	// handle flags...
+	// For now, always assume D_ALWAYS since the caller assumes it as well.
 
 	// HACK
 	// Note: This nasty bit of code is copied in spirit from dprintf.c
@@ -189,25 +225,28 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 void
 debug_cache_flush(void)
 {
-
-	dprintf(D_ALWAYS, "LOG LINE CACHE: Begin Flush\n");
-
-	// This emits ONE dprintf call which could write out up to the maximum
+	// This emits a dprintf call which could write out up to the maximum
 	// size of the cache. The lines in the cache are newline delimited.
+	// We bracket the output a bit so people know what happened.
 
 	if (cache != "") {
+		dprintf(D_ALWAYS, "LOG LINE CACHE: Begin Flush\n");
 		dprintf(D_ALWAYS | D_NOHEADER, "%s", cache.Value());
+		dprintf(D_ALWAYS, "LOG LINE CACHE: End Flush\n");
 		cache = "";
 	}
-
-	dprintf(D_ALWAYS, "LOG LINE CACHE: End Flush\n");
 }
 
 /*--------------------------------------------------------------------------*/
 void debug_cache_set_size(int size)
 {
-	if (size <= 0) {
-		cache_size = DEFAULT_CACHE_SIZE;
+	// Get rid of what is there, if anything.
+	if (cache_enabled && cache_is_caching) {
+		debug_cache_flush();
+	}
+
+	if (size < 0) {
+		cache_size = 0;
 	}
 
 	cache_size = size;

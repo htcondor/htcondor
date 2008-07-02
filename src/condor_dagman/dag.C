@@ -255,7 +255,12 @@ bool Dag::Bootstrap (bool recovery) {
 		// as we read the event log files, we emit lots of imformation into
 		// the logfile. If this is on NFS, then we pay a *very* large price
 		// for the open/close of each line in the log file.
-		debug_cache_enable();
+		// Whether or not this caching is honored is dependant on if the
+		// cache was originally enabled or not. If the cache is not
+		// enabled, then debug_cache_start_caching() and 
+		// debug_cache_stop_caching() are effectively noops.
+
+		debug_cache_start_caching();
 
 		if( _condorLogFiles.number() > 0 ) {
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
@@ -278,7 +283,7 @@ bool Dag::Bootstrap (bool recovery) {
 			}
 		}
 
-		debug_cache_disable();
+		debug_cache_stop_caching();
     }
 	
     if( DEBUG_LEVEL( DEBUG_DEBUG_2 ) ) {

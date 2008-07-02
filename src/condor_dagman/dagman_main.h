@@ -166,7 +166,6 @@ class Dagman {
 		// current run fails.
 	MyString rescueFileToRun;
 
-
     bool Config();
 };
 
