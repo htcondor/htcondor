@@ -28,6 +28,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added a new feature to \Condor{dagman} which caches the log lines
+emitted to the dagman.out file when in recovery mode and emits the
+cache as one call to the logging subsystem when the cache size limit is
+reached. Under NFS conditions, this prevents an open and close per line
+of the log and greatly improves performance. This feature is off by
+default and is controlled by \Attr{DAGMAN\_DEBUG\_CACHE\_ENABLE}, which
+takes a boolean, and  \Attr{DAGMAN\_DEBUG\_CACHE\_SIZE}, which is an
+integer in bytes of how big the cache should be before flushing.
+
 \item Included some Windows example jobs (submit files and binaries).
 
 \item Added a new feature to the DAGMan language called splicing. Please
@@ -77,6 +86,14 @@ and \Condor{submit} will expand the argument to be the expected value.
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
+
+\item Added \Attr{DAGMAN\_DEBUG\_CACHE\_ENABLE} and 
+  \Attr{DAGMAN\_DEBUG\_CACHE\_SIZE} which allow DAGMan to maintain a
+  cache of loglines and write out the cache as one open/write/close
+  sequence.  \Attr{DAGMAN\_DEBUG\_CACHE\_ENABLE} is a boolean
+  which turns on the ability for caching and defaults to \Expr{False}.
+  \Attr{DAGMAN\_DEBUG\_CACHE\_SIZE} is a positive integer and represents
+  the size of the cache in bytes and defaults to 5 Megabytes.
 
 \item The existing \Macro{BIND\_ALL\_INTERFACES} configuration variable
   now defaults to \Expr{True}.

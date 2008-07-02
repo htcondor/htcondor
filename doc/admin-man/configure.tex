@@ -6155,6 +6155,27 @@ These macros affect the operation of DAGMan and DAGMan
 jobs within Condor.
 
 \begin{description}
+\item[\Macro{DAGMAN\_DEBUG\_CACHE\_ENABLE}]
+\label{param:DAGManDebugCacheEnable}
+A boolean value that determines if log line caching for the dagman.out
+file should be enabled in the \Condor{dagman} process to increase
+performance (potentially by orders of magnitude) when writing the
+dagman.out file to an NFS server. Currently, this cache is only utilized
+in Recovery Mode.  
+If not defined, it defaults to \Expr{False}.
+
+\item[\Macro{DAGMAN\_DEBUG\_CACHE\_SIZE}]
+\label{param:DAGManDebugCacheSize}
+An integer value in bytes which controls how many bytes of log lines are to
+be stored in the log line cache. When the cache surpasses this number the
+entries are written out in one call to the logging subsystem. A value of
+zero is not recommended since each log line would surpass the cache size 
+and be emitted inaddition to bracketing log lines explaining that the 
+flushing was happening.
+The legal range of values is 0 to INT\_MAX.
+If defined with a value less than 0, the  value 0 will be used.
+If not defined, it defaults to 5 Megabytes.
+
 \item[\Macro{DAGMAN\_MAX\_SUBMITS\_PER\_INTERVAL}]
 \label{param:DAGManMaxSubmitsPerInterval}
 An integer that controls how many individual jobs
