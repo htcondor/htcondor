@@ -1355,13 +1355,13 @@ Condor user name may utilize regular expressions as defined
 by PCRE (Perl-Compatible Regular Expressions).
 Due to this, more than one line (mapping) within the unified
 map file may match.
-Lookups are therefore defined to use the first mapping that
+Look ups are therefore defined to use the first mapping that
 matches.
 
 A regular expression may need to contain spaces, and in this case the
 entire expression can be surrounded by double-quotes. If a
 double-quote character also needs to appear in such an expression, it
-should be preceeded by a backslash.
+should be preceded by a backslash.
 
 The default behavior of Condor when no mapfile is specified is to
 do the following mappings, with some additional logic noted below:
@@ -1599,7 +1599,7 @@ for integrity checks over all access levels.
 Where a specific macro is present, its value takes
 precedence over any default given.
 
-A signed MD5 checksum is currently the only available method
+A signed MD5 check sum is currently the only available method
 for integrity checking.
 Its use is implied whenever integrity checks occur.
 If more methods are implemented, then there will be further
@@ -1971,7 +1971,7 @@ in a session that does not use a strong authentication method.
 Establishing a secure session requires that either the encryption or the integrity options be enabled.
 If the encryption capability is enabled, then the session will be restarted using the session key
 as the encryption key.
-If integrity capability is enabled, then the checksum includes the session key even
+If integrity capability is enabled, then the check sum includes the session key even
 though it is not transmitted.
 Without either of these two methods enabled,
 it is possible for an
