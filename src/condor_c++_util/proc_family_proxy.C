@@ -28,6 +28,7 @@
 #include "directory.h"
 #include "basename.h"
 #include "../condor_privsep/condor_privsep.h"
+#include "procd_config.h"
 
 // this class is just used to forward reap events to the real
 // ProcFamilyProxy object; we do this in a separate class to
@@ -62,34 +63,7 @@ ProcFamilyProxy::ProcFamilyProxy(char* address_suffix) :
 
 	// get the address that we'll use to contact the ProcD
 	//
-	char* procd_addr = param("PROCD_ADDRESS");
-	if (procd_addr != NULL) {
-		m_procd_addr = procd_addr;
-		free(procd_addr);
-	}
-	else {
-		// setup a good default for PROCD_ADDRESS.
-#ifdef WIN32
-		// Win32
-		//
-		m_procd_addr = "//./pipe/procd_pipe";
-#else
-		// Unix - default to $(LOCK)/procd_pipe
-		//
-		char *lockdir = param("LOCK");
-		if (!lockdir) {
-			lockdir = param("LOG");
-		}
-		if (!lockdir) {
-			EXCEPT("PROCD_ADDRESS not defined in configuration");
-		}
-		char *temp = dircat(lockdir,"procd_pipe");
-		ASSERT(temp);
-		m_procd_addr = temp;
-		free(lockdir);
-		delete [] temp;
-#endif
-	}
+	m_procd_addr = get_procd_address();
 
 	// if we were handed a non-NULL address_suffix argument, tack
 	// it on. this is meant so that if we are in a situation where

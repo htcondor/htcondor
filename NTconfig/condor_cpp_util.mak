@@ -27,10 +27,10 @@ NULL=nul
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-OUTDIR=..\Debug
-INTDIR=..\Debug
+OUTDIR=.\..\Debug
+INTDIR=.\..\Debug
 # Begin Custom Macros
-OutDir=..\Debug
+OutDir=.\..\Debug
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -140,6 +140,7 @@ CLEAN :
 	-@erase "$(INTDIR)\proc_family_interface.obj"
 	-@erase "$(INTDIR)\proc_family_proxy.obj"
 	-@erase "$(INTDIR)\proc_id.obj"
+	-@erase "$(INTDIR)\procd_config.obj"
 	-@erase "$(INTDIR)\process_control.WINDOWS.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
 	-@erase "$(INTDIR)\read_user_log.obj"
@@ -322,6 +323,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\proc_family_interface.obj" \
 	"$(INTDIR)\proc_family_proxy.obj" \
 	"$(INTDIR)\proc_id.obj" \
+	"$(INTDIR)\procd_config.obj" \
 	"$(INTDIR)\process_control.WINDOWS.obj" \
 	"$(INTDIR)\read_multiple_logs.obj" \
 	"$(INTDIR)\read_user_log.obj" \
@@ -358,10 +360,10 @@ LIB32_OBJS= \
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-OUTDIR=..\Release
-INTDIR=..\Release
+OUTDIR=.\..\Release
+INTDIR=.\..\Release
 # Begin Custom Macros
-OutDir=..\Release
+OutDir=.\..\Release
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -471,6 +473,7 @@ CLEAN :
 	-@erase "$(INTDIR)\proc_family_interface.obj"
 	-@erase "$(INTDIR)\proc_family_proxy.obj"
 	-@erase "$(INTDIR)\proc_id.obj"
+	-@erase "$(INTDIR)\procd_config.obj"
 	-@erase "$(INTDIR)\process_control.WINDOWS.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
 	-@erase "$(INTDIR)\read_user_log.obj"
@@ -652,6 +655,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\proc_family_interface.obj" \
 	"$(INTDIR)\proc_family_proxy.obj" \
 	"$(INTDIR)\proc_id.obj" \
+	"$(INTDIR)\procd_config.obj" \
 	"$(INTDIR)\process_control.WINDOWS.obj" \
 	"$(INTDIR)\read_multiple_logs.obj" \
 	"$(INTDIR)\read_user_log.obj" \
@@ -1392,6 +1396,12 @@ SOURCE="..\src\condor_c++_util\proc_family_proxy.C"
 SOURCE="..\src\condor_c++_util\proc_id.C"
 
 "$(INTDIR)\proc_id.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\procd_config.C"
+
+"$(INTDIR)\procd_config.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
