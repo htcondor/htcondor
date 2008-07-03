@@ -128,6 +128,7 @@ The priority boost factors for individual users can be set with the
 Details may be found in the \Condor{userprio} manual page 
 on page~\pageref{man-condor-userprio}.
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Priorities and Preemption}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -349,6 +350,50 @@ will change the
 definition of what the \Condor{schedd} considers a cluster from the
 default definition of all jobs that share the same \Attr{ClusterId}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:PieSlice}The Layperson's Description of the Pie Spin and Pie Slice}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{pie slice}
+\index{pie spin}
+\index{scheduling!pie slice}
+\index{scheduling!pie spin}
+
+Condor schedules in a variety of ways.
+First, it takes all users who have submitted jobs and calculates their priority.
+Then, it totals the number of resources available at the moment,
+and using the ratios of the user priorities,
+it calculates the number of machines each user could get.
+This is their \Term{pie slice}.
+
+The Condor matchmaker goes in user priority order, 
+contacts each user, and asks for job information. 
+The \Condor{schedd} daemon (on behalf of a user)
+tells the matchmaker about a job,
+and the matchmaker looks at available resources
+to create a list of resources that match the requirements expression.
+With the list of resources that match,
+it sorts them according to the rank expressions within ClassAds.
+If a machine prefers a job, the job is assigned to that machine,
+potentially preempting a job that might already be running on that machine.
+Otherwise, give the machine to the job that the job ranks highest.
+If the machine ranked highest is already running a job,
+we may preempt running job
+for the new job. 
+A default policy for preemption states that the user must
+have a 20\Percent\  better priority in order for preemption to succeed.
+If the job has no preferences as to what sort of machine it gets,
+matchmaking gives it the first idle resource to meet its requirements.
+
+This matchmaking cycle continues until the user has recieved all of the
+machines in their pie slice.
+The matchmaker then contacts the next highest
+priority user and offers that user their pie slice worth of machines.
+After contacting all users,
+the cycle is repeated with any still available resources
+and recomputed pie slices.
+The matchmaker continues \Term{spinning the pie} 
+until it runs out of machines or all the \Condor{schedd} daemons
+say they have no more jobs. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:group-accounting}Group Accounting}

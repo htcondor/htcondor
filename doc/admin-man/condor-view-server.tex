@@ -10,19 +10,19 @@ that logs information on disk, providing a
 persistent, historical database of pool state.
 This includes machine state, as well as the state of jobs submitted by
 users.
-Historical information logging can be turned on or off, so you can
-install the CondorView collector without using up disk space for
-historical information if you do not want it.
 
-The CondorView collector is a \Condor{collector} that has been specially 
-configured \emph{and is running on a different machine from the main
-\Condor{collector}}.
-Unfortunately, installing the CondorView collector on a separate host
-generates more network traffic (from all the duplicate updates that
-are sent from each machine in your pool to both collectors).
+An existing \Condor{collector} may act as the
+CondorView collector through configuration.  
+This is the simplest situation, because the only change
+needed is to turn on the logging of historical information.
+The alternative of configuring a new \Condor{collector} to act as the
+CondorView collector is slightly more complicated,
+while it offers the
+advantage that the same CondorView collector may be used
+for several pools as desired, to aggregate information into one place.
 
 The following sections describe how to configure a machine to run a
-CondorView server and to configure your pool to send updates to it. 
+CondorView server and to configure a pool to send updates to it. 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -32,23 +32,21 @@ Configuring a Machine to be a CondorView Server}
 
 \index{CondorView!configuration}
 
-To configure the CondorView collector, you have to add a few settings
-to the \emph{local} configuration file of the chosen machine (a
-separate machine from the main \Condor{collector}) to enable
-historical data collection.
-These settings are described in detail in the Condor \VersionNotice\ 
-Administrator's Manual, in
+To configure the CondorView collector, a few configuration variables
+are added or modified
+for the \Condor{collector} chosen to act
+as the CondorView collector.
+These configuration variables are described in 
 section~\ref{sec:Collector-Config-File-Entries} on
 page~\pageref{sec:Collector-Config-File-Entries}.
-A short explanation of the entries you must customize is provided
-below.
+Here are brief explanations of the entries that must be customized:
 
 \begin{description}
 
-\item[\Macro{POOL\_HISTORY\_DIR}] This is the directory where
+\item[\Macro{POOL\_HISTORY\_DIR}] The directory where
 historical data will be stored.
 This directory must be writable by whatever user the CondorView
-collector is running as (usually the user condor).  
+collector is running as (usually the user \Login{condor}).  
 There is a configurable limit to the maximum space required for all
 the files created by the CondorView server called
 (\Macro{POOL\_HISTORY\_MAX\_STORAGE}). 
@@ -59,41 +57,51 @@ Condor.
 There are a few problems putting these files into either of those
 directories.
 
-\item[\Macro{KEEP\_POOL\_HISTORY}] This is a boolean value that determines
+\item[\Macro{KEEP\_POOL\_HISTORY}] A boolean value that determines
 if the CondorView collector should store the historical information.
-It is false by default, which is why you must specify it as true in
-your local configuration file to enable data collection.
+It is \Expr{False} by default, and must be specified as \Expr{True} in
+the local configuration file to enable data collection.
 
 \end{description}
 
-Once these settings are in place in the local configuration file for your
-CondorView server host, you must to create the directory you specified
-in \MacroNI{POOL\_HISTORY\_DIR} and make it writable by the user your
+Once these settings are in place in the configuration file for the
+CondorView server host, create the directory specified
+in \MacroNI{POOL\_HISTORY\_DIR} and make it writable by the user the
 CondorView collector is running as.
 This is the same user that owns the \File{CollectorLog} file in
-your \File{log} directory. The user is usually condor.
+the \File{log} directory. The user is usually \Login{condor}.
 
-After you've configured the CondorView attributes, you must configure
-Condor to automatically start the CondorView server. 
-You do this by adding \MacroNI{VIEW\_SERVER} to the
-\Macro{DAEMON\_LIST} on this machine and defining what
-\Expr{VIEW\_SERVER} means.
-For example:
+If using the existing \Condor{collector} as the CondorView collector,
+no further configuration is needed.  
+To run a different
+\Condor{collector} to act as the CondorView collector, configure
+Condor to automatically start it.
+
+If using a separate host for the CondorView collector,
+to start it, add the value \Expr{COLLECTOR} to
+\MacroNI{DAEMON\_LIST}, and restart Condor on that host.
+To run the CondorView collector on the same host as another 
+\Condor{collector},
+ensure that the two \Condor{collector} daemons use different network ports.
+Here is an example configuration in which the main \Condor{collector} and the
+CondorView collector are started up by the same \Condor{master} daemon on
+the same machine.  In this example, the CondorView collector uses
+port 12345.
+
+\footnotesize
 \begin{verbatim}
-        VIEW_SERVER = $(SBIN)/condor_collector
-        DAEMON_LIST = MASTER, STARTD, SCHEDD, VIEW_SERVER
+  VIEW_SERVER = $(COLLECTOR)
+  VIEW_SERVER_ARGS = -f -p 12345
+  VIEW_SERVER_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog"
+  DAEMON_LIST = MASTER, NEGOTIATOR, COLLECTOR, VIEW_SERVER
 \end{verbatim}
-For this change to take effect, you must re-start the
-\Condor{master} on this host (which you can do with the
-\Condor{restart} command, if you run the command from a machine with 
-administrator access to your pool.
-(See section~\ref{sec:Host-Security} on
-page~\pageref{sec:Host-Security} for full details of IP/host-based
-security in Condor).
+\normalsize
 
-\Note Before you spawn the CondorView server by restarting your
-\Condor{master}, you should make sure \MacroNI{CONDOR\_VIEW\_HOST} is
-defined in your configuration (as described in the following section).
+For this change to take effect, restart the
+\Condor{master} on this host.
+This may be accomplished with the \Condor{restart} command,
+if the command is run with
+administrator access to the pool.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -101,34 +109,42 @@ defined in your configuration (as described in the following section).
 Configuring a Pool to Report to the CondorView Server} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-For the CondorView server to function, configure the pool to
-send updates to it.
-Configrue the your existing \Condor{collector} daemon to forward
-its updates to the CondorView server.
+For the CondorView server to function, configure the existing collector to
+forward ClassAd updates to it.
+This configuration is only necessary if 
+the CondorView collector is a different collector from the existing
+\Condor{collector} for the pool.
 All the Condor daemons in the pool send their ClassAd updates to the
 regular \Condor{collector}, which in turn will forward them on to the
 CondorView server.
 
 Define the following configuration variable:
+\footnotesize
 \begin{verbatim}
   CONDOR_VIEW_HOST = full.hostname[:portnumber]
 \end{verbatim}
+\normalsize
 where \verb@full.hostname@ is the full host name of the machine 
 running the CondorView collector.
 The full host name is optionally followed by a colon and
-port number.
+port number.  This is only necessary if the CondorView
+collector is configured to use a port number other than the default.
 
-Place this setting in the global configuration file, since
-it should be the same for both the main \Condor{collector} and the
-CondorView server.
-If you do not have a shared global configuration file for Condor, you
-should put the same value in the configuration files on both the main
-\Condor{collector} and the CondorView server host.
+Place this setting in the configuration file used by the existing 
+\Condor{collector}.
+It is acceptable to place it in the global configuration file.  The
+CondorView collector will ignore this setting (as it should) as it notices
+that it is being asked to forward ClassAds to itself.
 
-Once this setting is in place, you can finally restart the
-\Condor{master} at your CondorView server host (or spawn the
-\Condor{master} if it is not yet running).
-Once the CondorView server is running, you can finally send a
-\Condor{reconfig} to your main \Condor{collector} for the change to
-take effect so it will begin forwarding updates.
+Once the CondorView server is running with this 
+change, send a
+\Condor{reconfig} command to the main \Condor{collector} for the change to
+take effect, so it will begin forwarding updates.  
+A query to the CondorView collector will verify that it is working.
+A query example:
 
+\footnotesize
+\begin{verbatim}
+  condor_status -pool condor.view.host[:portnumber]
+\end{verbatim}
+\normalsize
