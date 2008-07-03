@@ -904,14 +904,14 @@ dprintf_touch_log()
 	}
 }
 
-int dprintf_retry_errno(void);
+int dprintf_retry_errno( int value );
 
-int dprintf_retry_errno(void)
+BOOLEAN dprintf_retry_errno( int value )
 {
 #ifdef WIN32
 	return FALSE;
 #else
-	return errno == EINTR;
+	return value == EINTR;
 #endif
 }
 
@@ -925,21 +925,22 @@ int dprintf_retry_errno(void)
 int
 fclose_wrapper( FILE *stream, int maxRetries )
 {
+	ASSERT( maxRetries >= 0 );
+
 	int		result = 0;
 
 	int		retryCount = 0;
 	BOOLEAN	done = FALSE;
 
 	while ( !done ) {
-		if ( fclose( stream ) != 0 ) {
-			if ( dprintf_retry_errno() && retryCount < maxRetries ) {
+		if ( ( result = fclose( stream ) ) != 0 ) {
+			if ( dprintf_retry_errno( errno ) && retryCount < maxRetries ) {
 				retryCount++;
 			} else {
 				fprintf( stderr, "fclose_wrapper() failed after %d retries; "
 							"errno: %d (%s)\n",
 							retryCount, errno, strerror( errno ) );
 				done = TRUE;
-				result = -1;
 			}
 		} else {
 			done = TRUE;
