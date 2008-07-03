@@ -129,6 +129,8 @@ int InDBX = 0;
 
 #define DPRINTF_ERR_MAX 255
 
+#define FCLOSE_RETRY_MAX 10
+
 /*
 ** Print a nice log message, but only if "flags" are included in the
 ** current debugging flags.
@@ -481,7 +483,7 @@ debug_lock(int debug_level)
 			/* Seek to the end */
 		if( (length=lseek(fileno(DebugFP),0,2)) < 0 ) {
 			if (debug_level > 0) {
-				fclose( DebugFP );
+				fclose_wrapper( DebugFP, FCLOSE_RETRY_MAX );
 				DebugFP = NULL;
 				return NULL;
 			}
@@ -545,7 +547,7 @@ debug_unlock(int debug_level)
 
 	if( DebugFile[debug_level] ) {
 		if (DebugFP) {
-			int close_result = fclose( DebugFP );
+			int close_result = fclose_wrapper( DebugFP, FCLOSE_RETRY_MAX );
 			if (close_result < 0) {
 				DebugUnlockBroken = 1;
 				_condor_dprintf_exit(errno, "Can't fclose debug log file\n");
@@ -581,7 +583,7 @@ preserve_log_file(int debug_level)
 	fprintf( DebugFP, "Saving log file to \"%s\"\n", old );
 	(void)fflush( DebugFP );
 
-	fclose( DebugFP );
+	fclose_wrapper( DebugFP, FCLOSE_RETRY_MAX );
 	DebugFP = NULL;
 
 #if defined(WIN32)
@@ -840,7 +842,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 			if( tail[0] ) {
 				fprintf( fail_fp, "%s", tail );
 			}
-			fclose( fail_fp );
+			fclose_wrapper( fail_fp, FCLOSE_RETRY_MAX );
 			wrote_warning = TRUE;
 		} 
 		free( tmp );
@@ -909,6 +911,58 @@ dprintf_touch_log()
 #endif
 		}
 	}
+}
+
+int dprintf_retry_errno( int value );
+
+BOOLEAN dprintf_retry_errno( int value )
+{
+#ifdef WIN32
+	return FALSE;
+#else
+	return value == EINTR;
+#endif
+}
+
+/* This function calls fclose(), soaking up EINTRs up to maxRetries times.
+   The motivation for this function is Gnats PR 937 (DAGMan crashes if
+   straced).  Psilord investigated this and found that, because LIGO
+   had their dagman.out files on NFS, stracing DAGMan could interrupt
+   an fclose() on the dagman.out file.  So hopefully this will fix the
+   problem...   wenger 2008-07-01.
+ */
+int
+fclose_wrapper( FILE *stream, int maxRetries )
+{
+	ASSERT( maxRetries >= 0 );
+
+	int		result = 0;
+
+	int		retryCount = 0;
+	BOOLEAN	done = FALSE;
+
+	while ( !done ) {
+		if ( ( result = fclose( stream ) ) != 0 ) {
+			if ( dprintf_retry_errno( errno ) && retryCount < maxRetries ) {
+				retryCount++;
+			} else {
+				fprintf( stderr, "fclose_wrapper() failed after %d retries; "
+							"errno: %d (%s)\n",
+							retryCount, errno, strerror( errno ) );
+				done = TRUE;
+			}
+		} else {
+			done = TRUE;
+		}
+	}
+
+	return result;
+}
+
+int
+mkargv( int* argc, char* argv[], char* line )
+{
+	return( _condor_mkargv(argc, argv, line) );
 }
 
 static void

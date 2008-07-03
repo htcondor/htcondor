@@ -883,6 +883,14 @@ SOURCE="..\src\condor_c++_util\proc_id.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\procd_config.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\procd_config.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\process_control.WINDOWS.C"
 # End Source File
 # Begin Source File
