@@ -71,6 +71,11 @@ were preempted.
 \$\$([\textit{expression}]) in their ClassAds.  The jobs would go on
 hold with a hold reason, ``Cannot expand \$\$([\textit{expression}]).''
 
+%PR 937
+\item Fixed a problem that could cause \Condor{dagman} to core dump
+if straced (especially if the \File{dagman.out} file is on a shared
+filesystem).
+
 \end{itemize}
 
 \noindent Known Bugs:
