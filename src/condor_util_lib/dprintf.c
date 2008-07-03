@@ -904,7 +904,7 @@ dprintf_touch_log()
 	}
 }
 
-int dprintf_retry_errno( int value );
+BOOLEAN dprintf_retry_errno( int value );
 
 BOOLEAN dprintf_retry_errno( int value )
 {
