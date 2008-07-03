@@ -1,4 +1,4 @@
-#!/bin/csh -f
+#!/bin/sh
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -24,30 +24,28 @@
 # Import a set of ".o" files from the given directory as a set of
 # symbolic links.
 
-if( $#argv < 2 ) then
+if [ $# -lt 2 ]
+then
 	echo Usage $0 directory obj_file ...
-endif
+fi
 
-set DIR = $1
+DIR=$1
 shift
 
-while ($#argv)
-	set SRC = ${DIR}/${argv[1]} 
-	set DST = ${argv[1]}
+while [ $# -gt 0 ]
+do
+	SRC=${DIR}/$1
+	DST=$1
 
-		# Check to see that the target is a ".o" file
-#	if( ${DST:e} != o ) then
-#		echo ${DST}: Not an object file
-#		exit 1
-#	endif
-
-	if( ! -e ${DST} ) then			# doesn't exist - create the symlink
+	if ls ${DST} > /dev/null 2>&1
+	then
+		:
+	else			
+		# doesn't exist - create the symlink
 		echo ln -s ${SRC} ${DST}
 		ln -s ${SRC} ${DST}
-#	else if( ! -l ${DST} ) then		# does exist - make sure it is a symlink
-#		echo Warning: ${DST} - not a symbolic link
-	endif
+	fi
 
 	shift
-end
+done
 exit 0
