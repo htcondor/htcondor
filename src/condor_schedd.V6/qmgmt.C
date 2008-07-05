@@ -1430,15 +1430,15 @@ NewProc(int cluster_id)
 		// also insert the appropriate GlobalJobId while we're at it.
 	MyString gjid = "\"";
 	gjid += Name;             // schedd's name
+	gjid += "#";
+	gjid += cluster_id;
+	gjid += ".";
+	gjid += proc_id;
 	if (param_boolean("GLOBAL_JOB_ID_WITH_TIME", true)) {
 		int now = (int)time(0);
 		gjid += "#";
 		gjid += now;
 	}
-	gjid += "#";
-	gjid += cluster_id;
-	gjid += ".";
-	gjid += proc_id;
 	gjid += "\"";
 	JobQueue->SetAttribute( key, ATTR_GLOBAL_JOB_ID, gjid.Value() );
 
