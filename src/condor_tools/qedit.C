@@ -72,26 +72,32 @@ main(int argc, char *argv[])
 	}
 
 	// if it is present, it must be first
-	if (argv[1][0] == '-' && argv[1][1] == 'n') {
+	if (argv[nextarg][0] == '-' && argv[nextarg][1] == 'n') {
+		nextarg++;
 		// use the given name as the schedd name to connect to
-		if (argc < 3) {
+		if (argc <= nextarg) {
 			fprintf(stderr, "%s: -n requires another argument\n", 
 					argv[0]);
 			exit(1);
 		}				
-		schedd_name = argv[2];
-		nextarg = 3;
+		schedd_name = argv[nextarg];
+		nextarg++;
+	}
+
+	if (argc <= nextarg) {
+		usage(argv[0]);
 	}
 
 	// if it is present, it must be just after -n flag
-	if (argv[3][0] == '-' && argv[3][1] == 'p') {
-		if (argc < 5) {
+	if (argv[nextarg][0] == '-' && argv[nextarg][1] == 'p') {
+		nextarg++;
+		if (argc <= nextarg) {
 			fprintf(stderr, "%s: -pool requires another argument\n", 
 					argv[0]);
 			exit(1);
 		}
-		pool_name = argv[4];
-		nextarg = 5;
+		pool_name = argv[nextarg];
+		nextarg++;
 	}
 
 	DCSchedd schedd(schedd_name.GetCStr(), pool_name.GetCStr());
