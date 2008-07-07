@@ -683,8 +683,6 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 
 int CollectorDaemon::query_scanFunc (ClassAd *cad)
 {
-	if (cad < CollectorEngine::THRESHOLD) return 1;
-
     if ((*cad) >= (*__query__))
     {
 		// Found a match --- append to our results list
@@ -703,10 +701,6 @@ Otherwise, return 1.
 
 int CollectorDaemon::select_by_match( ClassAd *cad )
 {
-	if(cad<CollectorEngine::THRESHOLD) {
-		return 1;
-	}
-
 	if( query_any_request <= *cad ) {
 		query_any_result = cad;
 		return 0;
@@ -762,8 +756,6 @@ int CollectorDaemon::invalidation_scanFunc (ClassAd *cad)
 	static char buffer[64];
 	
 	sprintf( buffer, "%s = -1", ATTR_LAST_HEARD_FROM );
-
-	if (cad < CollectorEngine::THRESHOLD) return 1;
 
     if ((*cad) >= (*__query__))
     {
@@ -929,7 +921,6 @@ void CollectorDaemon::Config()
     ClientTimeout = param_integer ("CLIENT_TIMEOUT",30);
     QueryTimeout = param_integer ("QUERY_TIMEOUT",60);
     ClassadLifetime = param_integer ("CLASSAD_LIFETIME",900);
-    MasterCheckInterval = param_integer ("MASTER_CHECK_INTERVAL",0);
 
     if (CollectorName) free (CollectorName);
     CollectorName = param("COLLECTOR_NAME");
@@ -995,7 +986,6 @@ void CollectorDaemon::Config()
     // set the appropriate parameters in the collector engine
     collector.setClientTimeout( ClientTimeout );
     collector.scheduleHousekeeper( ClassadLifetime );
-    if (MasterCheckInterval>0) collector.scheduleDownMasterCheck( MasterCheckInterval );
 
     // if we're not the View Collector, let's set something up to forward
     // all of our ads to the view collector.
