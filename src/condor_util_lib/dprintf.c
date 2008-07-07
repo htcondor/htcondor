@@ -934,13 +934,13 @@ BOOLEAN dprintf_retry_errno( int value )
 int
 fclose_wrapper( FILE *stream, int maxRetries )
 {
-	ASSERT( maxRetries >= 0 );
 
 	int		result = 0;
 
 	int		retryCount = 0;
 	BOOLEAN	done = FALSE;
 
+	ASSERT( maxRetries >= 0 );
 	while ( !done ) {
 		if ( ( result = fclose( stream ) ) != 0 ) {
 			if ( dprintf_retry_errno( errno ) && retryCount < maxRetries ) {
