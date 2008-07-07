@@ -34,6 +34,7 @@
 #include "dagman_multi_dag.h"
 #include "util.h"
 #include "condor_getcwd.h"
+#include "condor_version.h"
 
 void ExitSuccess();
 
@@ -60,17 +61,18 @@ static void Usage() {
 	    "\t\t-Storklog <stork_userlog>\n"                       //-->DAP
             "\t\t-Lockfile <NAME.dag.lock>\n"
             "\t\t-Dag <NAME.dag>\n"
-            "\t\t-Rescue <Rescue.dag>\n"
-            "\t\t[-MaxIdle] <int N>\n\n"
-            "\t\t[-MaxJobs] <int N>\n\n"
-            "\t\t[-MaxPre] <int N>\n\n"
-            "\t\t[-MaxPost] <int N>\n\n"
+            "\t\t-CsdVersion <version string>\n\n"
+            "\t\t[-Rescue <Rescue.dag>]\n\n"
+            "\t\t[-MaxIdle <int N>]\n\n"
+            "\t\t[-MaxJobs <int N>]\n\n"
+            "\t\t[-MaxPre <int N>]\n\n"
+            "\t\t[-MaxPost <int N>]\n\n"
             "\t\t[-WaitForDebug]\n\n"
             "\t\t[-NoEventChecks]\n\n"
             "\t\t[-AllowLogError]\n\n"
             "\t\t[-UseDagDir]\n\n"
-            "\t\t[-AutoRescue] <0|1>\n\n"
-            "\t\t[-DoRescueFrom] <int N>\n\n"
+            "\t\t[-AutoRescue <0|1>]\n\n"
+            "\t\t[-DoRescueFrom <int N>]\n\n"
             "\twherei NAME is the name of your DAG.\n"
             "\twhere N is Maximum # of Jobs to run at once "
             "(0 means unlimited)\n"
@@ -457,6 +459,9 @@ int main_init (int argc, char ** const argv) {
     char *condorLogName  = NULL;
     char *dapLogName  = NULL;                      //<--DAP
 
+		// condor_submit_dag version from .condor.sub
+	const char *csdVersion = "undefined";
+
 	int i;
     for (i = 0 ; i < argc ; i++) {
         debug_printf( DEBUG_NORMAL, "argv[%d] == \"%s\"\n", i, argv[i] );
@@ -582,6 +587,14 @@ int main_init (int argc, char ** const argv) {
             }
             dagman.doRescueFrom = atoi (argv[i]);
 
+        } else if( !strcasecmp( "-CsdVersion", argv[i] ) ) {
+            i++;
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+                debug_printf( DEBUG_SILENT, "No CsdVersion value specified\n" );
+                Usage();
+            }
+			csdVersion = argv[i];
+
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );
@@ -596,6 +609,12 @@ int main_init (int argc, char ** const argv) {
     //
     // Check the arguments
     //
+	if( strcmp( CondorVersion(), csdVersion ) != 0 ) {
+        debug_printf( DEBUG_SILENT, "Version mismatch: condor_submit_dag "
+					"(%s) vs. condor_dagman (%s)\n", csdVersion,
+					CondorVersion() );
+		DC_Exit( EXIT_ERROR );
+	}
 
     if( dagman.primaryDagFile == "" ) {
         debug_printf( DEBUG_SILENT, "No DAG file was specified\n" );

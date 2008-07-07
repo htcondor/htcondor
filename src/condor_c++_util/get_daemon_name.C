@@ -53,14 +53,15 @@ get_host_part( const char* name )
 
 // Return a pointer to a newly allocated string that contains the
 // valid daemon name that corresponds with the given name.  Basically,
-// see if there's an '@'.  If so, resolve everything after it as a
-// hostname.  If not, resolve what we were passed as a hostname.
-// The string is allocated with strnewp() (or it's equivalent), so you
-// should deallocate it with delete [].
+// see if there's an '@'.  If so, leave the name alone. If not,
+// resolve what we were passed as a hostname.  The string is allocated
+// with strnewp() (or it's equivalent), so you should deallocate it
+// with delete [].
 char*
 get_daemon_name( const char* name )
 {
-	char *tmp, *fullname, *tmpname, *daemon_name = NULL;
+	char *tmp, *tmpname, *daemon_name = NULL;
+	char *fullname = NULL;
 	int size;
 
 	dprintf( D_HOSTNAME, "Finding proper daemon name for \"%s\"\n",
@@ -71,26 +72,8 @@ get_daemon_name( const char* name )
 	tmp = strrchr( tmpname, '@' );
 	if( tmp ) {
 			// There's a '@'.
-		*tmp = '\0';
-		tmp++;
-		if( *tmp ) {
-				// There was something after the @, try to resolve it
-				// as a full hostname:
-			dprintf( D_HOSTNAME, "Daemon name has data after the '@', "
-					 "trying to resolve \"%s\"\n", tmp ); 
-			fullname = get_full_hostname( tmp );
-		} else {
-			dprintf( D_HOSTNAME, "Daemon name has no data after the '@', "
-					 "trying to use the local host\n" ); 
-				// There was nothing after the @, use localhost:
-			fullname = strnewp( my_full_hostname() );
-		}
-		if( fullname ) {
-			size = strlen(tmpname) + strlen(fullname) + 2;
-			daemon_name = new char[size];
-			sprintf( daemon_name, "%s@%s", tmpname, fullname );
-			delete [] fullname;
-		} 
+		dprintf( D_HOSTNAME, "Daemon name has an '@', we'll leave it alone\n" );
+		daemon_name = strnewp( name );
 	} else {
 			// There's no '@', just try to resolve the hostname.
 		dprintf( D_HOSTNAME, "Daemon name contains no '@', treating as a "
@@ -111,11 +94,11 @@ get_daemon_name( const char* name )
 
 
 // Given some name, create a valid name for ourself with our full
-// hostname.  If the name contains an '@', strip off everything after
-// it and append my_full_hostname().  If there's no '@', try to
-// resolve what we have and see if it's my_full_hostname.  If so, use
-// it, otherwise, use name@my_full_hostname().  We return the answer
-// in a string which should be deallocated w/ delete [].
+// hostname.  If the name contains an '@', leave it alone.  If there's
+// no '@', try to resolve what we have and see if it's
+// my_full_hostname.  If so, use it, otherwise, use
+// name@my_full_hostname().  We return the answer in a string which
+// should be deallocated w/ delete [].
 char*
 build_valid_daemon_name( char* name ) 
 {
@@ -125,17 +108,19 @@ build_valid_daemon_name( char* name )
 		// This flag determines if we want to just return a copy of
 		// my_full_hostname(), or if we want to append
 		// "@my_full_hostname" to the name we were given.  The name we
-		// were given might include an '@', in which case, we trim off
-		// everything after the '@'.
+		// were given might include an '@', in which case, we leave it
+		// alone.
 	bool just_host = false;
+
+	bool just_name = false;
 
 	if( name && *name ) {
 		tmpname = strnewp( name );
 		tmp = strrchr( tmpname, '@' );
 		if( tmp ) {
-				// name we were passed has an '@', ignore everything
-				// after (and including) the '@'.  
-			*tmp = '\0';
+				// name we were passed has an '@', we just want to
+				// leave the name alone
+			just_name = true;
 		} else {
 				// no '@', see if what we have is our hostname
 			if( (tmp = get_full_hostname(name)) ) {
@@ -154,9 +139,13 @@ build_valid_daemon_name( char* name )
 	if( just_host ) {
 		daemon_name = strnewp( my_full_hostname() );
 	} else {
-		size = strlen(tmpname) + strlen(my_full_hostname()) + 2; 
-		daemon_name = new char[size];
-		sprintf( daemon_name, "%s@%s", tmpname, my_full_hostname() ); 
+		if( just_name ) {
+			daemon_name = strnewp( name );
+		} else {
+			size = strlen(tmpname) + strlen(my_full_hostname()) + 2; 
+			daemon_name = new char[size];
+			sprintf( daemon_name, "%s@%s", tmpname, my_full_hostname() ); 
+		}
 	}
 	delete [] tmpname;
 	return daemon_name;
