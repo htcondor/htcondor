@@ -1067,7 +1067,7 @@ void CollectorDaemon::Config()
 	time_t garbage_interval = param_integer( "COLLECTOR_STATS_SWEEP", DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL );
 	collectorStats.setGarbageCollectionInterval( garbage_interval );
 
-    size = param_integer ("COLLECTOR_QUERY_WORKERS",0);
+    size = param_integer ("COLLECTOR_QUERY_WORKERS", 32);
     forkQuery.setMaxWorkers( size );
 
     return;
