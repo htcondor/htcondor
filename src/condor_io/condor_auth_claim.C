@@ -54,7 +54,17 @@ int Condor_Auth_Claim :: authenticate(const char * /* remoteHost */, CondorError
 		//  just give us the username that we were invoked
 		//  as, which is also what we want)
 		priv_state priv = set_condor_priv();
-		char* tmpOwner = my_username();
+		char* tmpOwner = NULL; 
+		char* tmpSwitchUser = param("SEC_CLAIMTOBE_USER");
+		if(tmpSwitchUser) {
+			tmpOwner = tmpSwitchUser;
+			dprintf(D_ALWAYS, "SEC_CLAIMTOBE_USER to %s!\n", tmpSwitchUser);
+		} else {
+			tmpOwner = my_username();
+		}
+		// remove temptation to use this variable to see if we were
+		// specifying the claim to be user
+		tmpSwitchUser = NULL;
 		set_priv(priv);
 		if ( !tmpOwner ) {
 			//send 0
