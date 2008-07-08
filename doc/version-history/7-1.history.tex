@@ -143,6 +143,12 @@ It is a fatal error for the versions to differ.
 
 \begin{itemize}
 
+\item Fixed a bug introduced in 7.1.0 affecting configurations in
+which authentication of all communication between the \Condor{shadow}
+and \Condor{schedd} is required.  This caused failure in the final update
+after the job had finished running.  The result was that the job would return
+to the idle state to run again.
+
 \item Fixed a bug in Java universe where each slot would be told to
   potentially use all the memory on the machine.  Now, each JVM 
   receives the physical memory divided by the number of slots.
