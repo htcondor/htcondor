@@ -27,7 +27,7 @@ $cmd = "job_core_basic_par.cmd";
 $corename = "job_core_basic-security_par";
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");

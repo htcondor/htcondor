@@ -29,7 +29,7 @@ $testname = 'job_core_periodicremove_van - Test periodicremove / wallclockcheckp
 $corename = "job_core_periodicremove_van";
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 CondorPersonal::DebugOff();
 

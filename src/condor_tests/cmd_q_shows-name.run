@@ -20,7 +20,6 @@
 
 use CondorTest;
 use CondorPersonal;
-use Net::Domain qw(hostfqdn);
 
 CondorPersonal::DebugOff();
 Condor::DebugOff();
@@ -30,7 +29,7 @@ $testname = 'cmd_q_shows-name - Simple condor_ -name test';
 $corename = "cmd_q_shows-name";
 
 # where am I running
-$currenthost = hostfqdn();
+$currenthost = CondorTest::getFqdnHost();
 chomp($currenthost);
 $primarycollector = $currenthost;
 

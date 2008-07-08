@@ -38,7 +38,7 @@ my $numberoftests = 4;
 my $numberoferrors = 0;
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");
