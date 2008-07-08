@@ -42,7 +42,7 @@ $mycertfile = "ssl_keys/host.crt";
 $mykeyfile = "ssl_keys/host.key";
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");

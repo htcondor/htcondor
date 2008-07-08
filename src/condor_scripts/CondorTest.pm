@@ -29,6 +29,7 @@ require 5.0;
 use Carp;
 use Condor;
 use FileHandle;
+use Net::Domain qw(hostfqdn);
 
 BEGIN
 {
@@ -1152,6 +1153,22 @@ sub spawn_cmd
 		# we are done
 		return($toppid);
 	}
+}
+
+##############################################################################
+#
+# getFqdnHost
+#
+# hostname sometimes does not return a fully qualified
+# domain name and we must ensure we have one. We will call
+# this function in the tests wherever we were calling
+# hostname.
+##############################################################################
+
+sub getFqdnHost
+{
+	my $host = hostfqdn();
+	return($host);
 }
 
 1;

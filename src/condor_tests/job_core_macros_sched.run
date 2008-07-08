@@ -60,7 +60,7 @@ $success = sub
 	my $cluster = $args{"cluster"};
 	my $home;
 	my $workdir = getcwd();
-	my $host = hostname;
+	my $host = CondorTest::getFqdnHost();
 	my $random;
 
 	chdir;

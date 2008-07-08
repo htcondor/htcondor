@@ -29,7 +29,7 @@ $testname = 'job_condorc_ab_van - Simple Condor-C A&B with Vanilla job';
 $corename = "job_condorc_ab_van";
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 CondorPersonal::DebugOff();
 

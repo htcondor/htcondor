@@ -33,7 +33,7 @@ $mycmdfile = "lib_procapi_cputracking-snapshot.cmd";
 
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");

@@ -30,7 +30,7 @@ $cmd = "lib_eventlog.cmd";
 $corename = "lib_eventlog";
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");

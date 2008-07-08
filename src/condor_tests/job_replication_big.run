@@ -53,7 +53,7 @@ if(! -f "$topDirectory/$testingSystemConfigName")
 print "Working directory is $topDirectory\n";
 
 # Operating system environment variables of the test
-my $currentHost = `hostname`;
+my $currentHost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currentHost);
 
 my $currentIp   = &GetMyIpAddress();

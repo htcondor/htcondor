@@ -30,7 +30,7 @@ $testname = 'job_flocking_to';
 $corename = "job_flocking_to";
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 chomp($currenthost);
 $primarycollector = $currenthost;
 my @adarray;
