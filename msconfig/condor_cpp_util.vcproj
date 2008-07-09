@@ -3107,6 +3107,22 @@
 			</FileConfiguration>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\procd_config.C"
+			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\procd_config.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\process_control.WINDOWS.C"
 			>
 			<FileConfiguration
