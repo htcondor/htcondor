@@ -94,7 +94,7 @@ It is a fatal error for the versions to differ.
 
 \item Added \Attr{DAGMAN\_DEBUG\_CACHE\_ENABLE} and 
   \Attr{DAGMAN\_DEBUG\_CACHE\_SIZE} which allow DAGMan to maintain a
-  cache of loglines and write out the cache as one open/write/close
+  cache of log lines and write out the cache as one open/write/close
   sequence.  \Attr{DAGMAN\_DEBUG\_CACHE\_ENABLE} is a boolean
   which turns on the ability for caching and defaults to \Expr{False}.
   \Attr{DAGMAN\_DEBUG\_CACHE\_SIZE} is a positive integer and represents
@@ -310,14 +310,6 @@ configuration files can effectively run arbitrary programs as root.
   a \Condor{negotiator} then uses as its source of information for
   matchmaking.
 
-\item Added client-side authorization controls
-\MacroNI{ALLOW\_CLIENT}, \MacroNI{DENY\_CLIENT}.  When using a mutual
-authentication method (e.g. GSI, SSL, Kerberos), this allows you to
-specify what authenticated servers Condor tools and daemons should
-trust when they form a connection to the server.  This deprecates
-\MacroNI{GSI\_DAEMON\_NAME}, which provided rudimentary support for
-client-side authorization in a GSI-specific way.
-
 % PR 598/788
 \item \Condor{dagman} deals with rescue DAGs in a more sophisticated
 way; this is especially helpful for nested DAGs.
@@ -328,7 +320,7 @@ manual section for more information.
 identify problems.
 
 \item A new (optional) daemon named \Condor{job\_router} has been
-added, so far only on unix.  It may be configured to transform vanilla
+added, so far only on Unix.  It may be configured to transform vanilla
 universe jobs into grid universe jobs, for example to send excess jobs
 to other sites via Condor-C or Condor-G.  For details, see
 page~\pageref{sec:JobRouter}.
@@ -342,6 +334,17 @@ but not yet on Windows.
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
+
+\item Added new configuration variables
+  \MacroNI{ALLOW\_CLIENT} and \MacroNI{DENY\_CLIENT} as
+  client-side authorization controls.
+  When using a mutual authentication method (such as GSI, SSL, or Kerberos),
+  these variables allow the specification of
+  which authenticated servers the Condor tools and daemons should
+  trust when they form a connection to the server.
+  Because of the addition of these variables,
+  the GSI-specific, client-side authorization configuration variable
+  \Macro{GSI\_DAEMON\_NAME} is retired, and no longer valid.
 
 % PR 921
 \item Added the \Macro{DAGMAN\_INSERT\_SUB\_FILE} variable, which allows a file
