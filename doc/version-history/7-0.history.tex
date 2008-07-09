@@ -52,7 +52,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+%PR 937
+\item Fixed a problem that could cause \Condor{dagman} to core dump
+if straced, especially if the \File{dagman.out} file is on a shared
+file system.
 
 \end{itemize}
 
@@ -133,11 +136,6 @@ hold with the hold reason:
 
 \item Fixed a bug in 7.0.2 that sometimes caused the schedd to become
 unresponsive for 20 seconds when starting \Condor{shadow} to run a job.
-
-%PR 937
-\item Fixed a problem that could cause \Condor{dagman} to core dump
-if straced (especially if the \File{dagman.out} file is on a shared
-filesystem).
 
 \end{itemize}
 
