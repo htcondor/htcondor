@@ -464,7 +464,7 @@ AmazonVMStart::gsoapRequest(void)
 
 		int file_size = 0;
 		StatWrapper swrap(fd);
-		file_size = swrap.GetStatBuf()->st_size;
+		file_size = swrap.GetBuf()->st_size;
 
 		char *readbuffer = (char*)malloc(file_size);
 		ASSERT(readbuffer);
