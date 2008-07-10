@@ -266,6 +266,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 		args.AppendArg("1");
 	} else {
 		args.AppendArg(gahp_min_workers);
+		free(gahp_min_workers);
 	}
 
 		// FIXME: Change amazon-gahp to accept AMAZON_GAHP_WORKER_MAX_NUM
