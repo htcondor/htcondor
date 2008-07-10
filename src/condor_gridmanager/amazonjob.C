@@ -281,6 +281,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	}
 
 	gahp = new GahpClient( buff, gahp_path, &args );
+	free(gahp_path);
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
