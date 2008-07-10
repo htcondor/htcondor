@@ -118,15 +118,8 @@ build_valid_daemon_name( char* name )
 		tmpname = strnewp( name );
 		tmp = strrchr( tmpname, '@' );
 		if( tmp ) {
-<<<<<<< HEAD:src/condor_c++_util/get_daemon_name.C
 				// name we were passed has an '@', we just want to
 				// leave the name alone
-=======
-				// name we were passed has an '@', ignore everything
-				// after (and including) the '@'.  
-			*tmp = '\0';
-
->>>>>>> V7_0-branch:src/condor_c++_util/get_daemon_name.C
 			just_name = true;
 		} else {
 				// no '@', see if what we have is our hostname
