@@ -1202,7 +1202,7 @@ StringList* AmazonJob::build_groupnames()
 	//    the default security group (by just keeping group_names is empty).
 	
 	if ( jobAd->LookupString( ATTR_AMAZON_SECURITY_GROUPS, &buffer ) ) {
-		group_names = new StringList( strdup(buffer), " " );
+		group_names = new StringList( buffer, " " );
 	} else {
 		group_names = new StringList();
 	}
