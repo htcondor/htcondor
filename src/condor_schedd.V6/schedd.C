@@ -223,6 +223,15 @@ match_rec::~match_rec()
 	if( pool ) {
 		free(pool);
 	}
+	if( request_claim_sock ) {
+			// NOTE: the value passed to Register_DataPtr() for this
+			// registered socket is just a pointer to this match_rec,
+			// so there is no need to worry about deallocating that.
+		daemonCore->Cancel_Socket( request_claim_sock );
+		delete request_claim_sock;
+		request_claim_sock = NULL;
+		scheduler.rescheduleContactQueue();
+	}
 }
 
 
@@ -11047,16 +11056,6 @@ Scheduler::DelMrec(char const* id)
 	if( matches->lookup(key, rec) != 0 ) {
 			// Couldn't find it, return failure
 		return -1;
-	}
-
-	if( rec->request_claim_sock ) {
-			// NOTE: the value passed to Register_DataPtr() for this
-			// registered socket is just a pointer to this match_rec,
-			// so there is no need to worry about deallocating that.
-		daemonCore->Cancel_Socket( rec->request_claim_sock );
-		delete rec->request_claim_sock;
-		rec->request_claim_sock = NULL;
-		rescheduleContactQueue();
 	}
 
 	// release the claim on the startd
