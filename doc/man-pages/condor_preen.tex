@@ -13,42 +13,39 @@
 \Condor{preen} examines the directories belonging to Condor, 
 and removes extraneous files and directories which may be left over from
 Condor processes which terminated abnormally either due to internal errors or
-a system crash. The directories checked are the LOG, EXECUTE, and SPOOL
+a system crash. The directories checked are 
+the \MacroNI{LOG}, \MacroNI{EXECUTE}, and \MacroNI{SPOOL}
 directories as defined in the Condor configuration files. \Condor{preen} is
-intended to be run as user root (or user condor) periodically as a backup
+intended to be run as user \Login{root} or user \Login{condor}
+periodically as a backup
 method to ensure reasonable file system cleanliness in the face of
-errors. This is done automatically by default by the \Condor{master}. 
+errors. This is done automatically by default by the \Condor{master} daemon. 
 It may also be explicitly invoked on an as needed basis.
 
-When \Condor{preen} cleans the SPOOL directory, it always leaves
-behind the files specified in the \Macro{VALID\_SPOOL\_FILES} list in
-your config file.
-For the log directory, the only files removed or reported are those
-listed in the  \Macro{INVALID\_LOG\_FILES} list.
-The reason for this difference is that, in general, you want to leave
-all files in the LOG directory alone, with a few exceptions (namely,
-core files).
-There are new log files for different things introduced all the time,
-and you wouldn't want to have to keep updating a list of files to
-leave alone in the LOG directory.
-For example, the SMP startd can spawn an arbitrary number of
-\Condor{starter} processes, each with its own log file.  
-On the other hand, there are only a small, fixed number of files in
-the SPOOL directory that the \Condor{schedd} needs to keep around, so
-it is easier to specify the files you want to keep instead of the ones
-you want to get rid of.
+When \Condor{preen} cleans the \MacroNI{SPOOL} directory, it always leaves
+behind the files specified in the configuration variable
+\Macro{VALID\_SPOOL\_FILES} as given by the configuration.
+For the \MacroNI{LOG} directory, the only files removed or reported are those
+listed within the configuration variable \Macro{INVALID\_LOG\_FILES} list.
+The reason for this difference is that, in general,
+the files in the \MacroNI{LOG} directory ought to be left alone,
+with few exceptions.
+An example of exceptions are core files.
+As there are new log files introduced regularly,
+it is less effort to specify those that ought to be removed
+than those that are not to be removed.
 
 \begin{Options}
 
-	\OptItem{\Opt{-mail}}{Send mail to the \Macro{PREEN\_ADMIN} as
-	defined in the Condor configuration files instead of writing
-	to the standard output}
+	\OptItem{\Opt{-mail}}{Send mail to the user defined in the
+	\Macro{PREEN\_ADMIN} configuration variable,
+	instead of writing to the standard output.}
 
 	\OptItem{\Opt{-remove}}{Remove the offending files and directories
-	rather than just reporting on them}
+	rather than reporting on them.}
 
 	\OptItem{\Opt{-verbose}}{List all files found in the Condor
-	directories, even those which are not considered extraneous}
+	directories, even those which are not considered extraneous.}
 
 \end{Options}
 

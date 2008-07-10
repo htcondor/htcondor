@@ -52,7 +52,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+%PR 937
+\item Fixed a problem that could cause \Condor{dagman} to core dump
+if straced, especially if the \File{dagman.out} file is on a shared
+file system.
 
 \end{itemize}
 
@@ -80,7 +83,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item This is a release to fix a bug.  A bug in 7.0.2 sometimes caused
+\item This is a bug fix release.  A bug in Condor version 7.0.2 sometimes caused
 the \Condor{schedd} to become unresponsive for 20 seconds when starting
 the \Condor{shadow} to run a job.
 Therefore, anyone running 7.0.2 is strongly encouraged to upgrade.
@@ -131,8 +134,10 @@ in their ClassAds.  The jobs would go on
 hold with the hold reason:
 \AdStr{Cannot expand \$\$([\textit{expression}]).}
 
-\item Fixed a bug in 7.0.2 that sometimes caused the schedd to become
-unresponsive for 20 seconds when starting \Condor{shadow} to run a job.
+\item Fixed a bug in Condor version 7.0.2 that sometimes caused 
+the \Condor{schedd} daemon to become
+unresponsive for 20 seconds when starting the \Condor{shadow} daemon
+to run a job.
 
 \end{itemize}
 
@@ -148,7 +153,10 @@ unresponsive for 20 seconds when starting \Condor{shadow} to run a job.
 
 \begin{itemize}
 
-\item None.
+\item See 
+  section~\ref{sec:WebService-Implementation}
+  for documentation on finding the port number the \Condor{schedd} daemon
+  is listening on for use with the web service API.
 
 \end{itemize}
 
@@ -476,10 +484,8 @@ matchmaking.
   page~\pageref{param:PreemptionRequirementsStable} for 
   complete definitions.
 
-\item The new configuration variable \Macro{STARTER\_UPLOAD\_SECONDS}
-prevents a hang if the \Condor{shadow} delays a write 
-for more than the specified time.
-The default is 300.
+\item The configuration variable \Macro{STARTER\_UPLOAD\_TIMEOUT}
+  changed its default value to 300 seconds.
 
 \item The new configuration variable \Macro{CKPT\_PROBE} 
 specifies an internal to Condor

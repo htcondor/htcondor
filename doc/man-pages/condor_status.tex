@@ -40,35 +40,47 @@ options} may be specified.
     \ToolDebugDesc
     \OptItem{\Opt{-help}}{(Help option) Display usage information}
     \OptItem{\Opt{-diagnose}}{(Help option) Print out query ad without 
-		performing query}
+      performing query}
     \OptItem{\Opt{-any}}{(Query option) Query all ads and display their type,
-		target type, and name}
+      target type, and name}
     \OptItem{\Opt{-avail}}{(Query option) Query \Condor{startd} ads and identify
-		resources which are available}
+      resources which are available}
     \OptItem{\Opt{-ckptsrvr}}{(Query option) Query \Condor{ckpt\_server} ads
-		and display checkpoint server attributes}
+      and display checkpoint server attributes}
     \OptItem{\Opt{-claimed}}{(Query option) Query \Condor{startd} ads and print 
-		information about claimed resources}
+      information about claimed resources}
+    \OptItem{\Opt{-cod}}{(Query option) Display only machine ClassAds
+      that have COD claims. Information displayed includes
+      the claim ID, the owner of the claim, and the state
+      of the COD claim.}
     \OptItem{\OptArg{-direct}{hostname}}{(Query option) Go directly to
-    the given host name to get the ads to display}
+      the given host name to get the ads to display}
     \OptItem{\Opt{-java}}{(Query option) Display only Java-capable resources.}
+    \OptItem{\Opt{-license}}{(Query option) Display license attributes.}
     \OptItem{\Opt{-master}}{(Query option) Query \Condor{master} ads and display
-		daemon master attributes}
+      daemon master attributes}
     \OptItem{\Opt{-negotiator}}{(Query option) Query \Condor{negotiator} ads
-                and display attributes}
+      and display attributes}
     \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
-    {(Query option) Query the specified central manager using an
-        optional port number. 
-	(\Condor{status} queries \Macro{COLLECTOR\_HOST} by default)}
+      {(Query option) Query the specified central manager using an
+      optional port number. 
+      \Condor{status} queries the machine specified by the configuration
+      variable \MacroNI{COLLECTOR\_HOST} by default.}
+    \OptItem{\Opt{-quill}}{(Query option) Display attributes of machines
+      running Quill.}
+    \OptItem{\Opt{-run}}{(Query option) Display information about machines
+      currently running jobs.}
     \OptItem{\Opt{-schedd}}{(Query option) Query \Condor{schedd} ads and display
-		attributes}
+      attributes}
     \OptItem{\Opt{-server}}{(Query option) Query \Condor{startd} ads and 
-		display resource attributes}
+      display resource attributes}
     \OptItem{\Opt{-startd}}{(Query option) Query \Condor{startd} ads} 
     \OptItem{\Opt{-state}}{(Query option) Query \Condor{startd} ads and display 
-		resource state information}
+      resource state information}
+    \OptItem{\Opt{-storage}}{(Query option) Display attributes of machines
+      with network storage resources.}
     \OptItem{\Opt{-submitters}}{(Query option) Query ads sent by submitters and
-		display important submitter attributes}
+      display important submitter attributes}
     \OptItem{\OptArg{-subsystem}{type}}{(Query option) If \Arg{type} is
       one of \Arg{collector}, \Arg{negotiator}, \Arg{master},
       \Arg{schedd}, \Arg{startd}, or \Arg{quill},
@@ -77,54 +89,49 @@ options} may be specified.
       \OptArg{-subsystem}{collector} is the same as \Opt{-collector}.
       A value of \Arg{type} of \Arg{CkptServer},
       \Arg{Machine}, \Arg{DaemonMaster}, or \Arg{Scheduler}
-      targets that type of ClassAd.
-      }
-    \OptItem{\Opt{-cod}}{(Display option) Display only machine ClassAds
-		that have COD claims. Information displayed includes
-		the claim ID, the owner of the claim, and the state
-		of the COD claim.}
+      targets that type of ClassAd.  }
+    \OptItem{\Opt{-vm}}{(Query option) Query \Condor{startd} ads and display 
+      only VM-enabled machines}
     \OptItem{\Opt{-expert}}{(Display option) Display shortened error messages}
     \OptItem{\Opt{-long}}{(Display option) Display entire ClassAds 
-		(same as \Opt{-verbose})}
+      (same as \Opt{-verbose})}
     \OptItem{\OptArg{-sort}{attr}}{(Display option) Display entries in
-                ascending order based on the value of the named attribute} 
+      ascending order based on the value of the named attribute} 
     \OptItem{\Opt{-total}}{(Display option) Display totals only}
     \OptItem{\Opt{-verbose}}{(Display option) Display entire ClassAds.  Implies
-		that totals will not be displayed.}
+      that totals will not be displayed.}
     \OptItem{\Opt{-xml}}{(Display option) Display entire ClassAds,
-                in xml format.  The xml format is fully defined at
-		\URL{http://www.cs.wisc.edu/condor/classad/refman/}.}
+      in XML format.  The XML format is fully defined at
+      \URL{http://www.cs.wisc.edu/condor/classad/refman/}.}
     \OptItem{\OptArg{-constraint}{const}}{(Custom option) Add constraint 
-		expression.  See section~\ref{sec:classadref} for
-		details on writing expressions.}
-	\OptItem{\OptArg{-format}{fmt attr}}{(Custom option) Display attribute
-	            or expression
-              	\Arg{attr} in format \Arg{fmt}.
-		To display the attribute or expression the format must contain a single
-		\Code{printf(3)} style conversion specifier.
-		Attributes must be from the resource ClassAd.
-		Expressions are ClassAd expressions and may
-		refer to attributes in the resource ClassAd.
-		If the
-		attribute is not present in a given ClassAd and cannot 
-		be parsed as an expression then the
-		format option will be silently skipped.
-		The conversion specifier must match the type of the
-		attribute or expression.   \%s is suitable for strings such as \Attr{Name},
-		\%d for integers such as \Attr{LastHeardFrom},
-		and \%f for floating point numbers such as \Attr{LoadAvg}.
-		An incorrect format
-		will result in undefined behavior.
-		Do not use more than one conversion specifier in a given
-		format.  More than one conversion specifier will result
-		in undefined behavior.  To output multiple attributes
-		repeat the \Opt{-format} option once for each desired
-		attribute.
-		Like \Code{printf(3)} style formats, you can include other
-		text that will be reproduced directly.   You can specify
-		a format without any conversion specifiers, but you must
-		still give an attribute.
-		You can include \Bs n to add specify a line break. }
+      expression.  See section~\ref{sec:classadref} for
+      details on writing expressions.}
+    \OptItem{\OptArg{-format}{fmt attr}}{(Custom option) Display attribute
+      or expression \Arg{attr} in format \Arg{fmt}.
+      To display the attribute or expression the format must contain a single
+      \Code{printf(3)} style conversion specifier.
+      Attributes must be from the resource ClassAd.
+      Expressions are ClassAd expressions and may
+      refer to attributes in the resource ClassAd.
+      If the attribute is not present in a given ClassAd and cannot 
+      be parsed as an expression, then the
+      format option will be silently skipped.
+      The conversion specifier must match the type of the
+      attribute or expression.
+      \%s is suitable for strings such as \Attr{Name},
+      \%d for integers such as \Attr{LastHeardFrom},
+      and \%f for floating point numbers such as \Attr{LoadAvg}.
+      An incorrect format will result in undefined behavior.
+      Do not use more than one conversion specifier in a given
+      format.  More than one conversion specifier will result
+      in undefined behavior.  To output multiple attributes
+      repeat the \Opt{-format} option once for each desired
+      attribute.
+      Like \Code{printf(3)} style formats, one may include other
+      text that will be reproduced directly.
+      A format without any conversion specifiers may be specified,
+      but an attribute is still required.
+      Include \Bs n to specify a line break. }
 \end{Options}
 
 \GenRem
