@@ -73,6 +73,11 @@ public:
 	//
 	bool write_data(void*, int);
 
+	// update the file timestamps on our named pipe(s). this prevents
+	// things like tmpwatch from removing them from the file system
+	//
+	void touch();
+
 private:
 
 	// set once we're successfully initialized
@@ -88,7 +93,6 @@ private:
 	HANDLE      m_event;
 	OVERLAPPED* m_accept_overlapped;
 #else
-	char*                    m_pipe_addr;
 	NamedPipeWatchdogServer* m_watchdog_server;
 	NamedPipeReader*         m_reader;
 	NamedPipeWriter*         m_writer;

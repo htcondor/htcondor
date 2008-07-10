@@ -215,3 +215,10 @@ LocalServer::write_data(void* buffer, int len)
 
 	return true;
 }
+
+void
+LocalServer::touch()
+{
+	// we don't have to worry about our named pipe being cleaned up
+	// by things like tmpwatch on Windows
+}
