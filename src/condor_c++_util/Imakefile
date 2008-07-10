@@ -269,8 +269,8 @@ tester: tester.o $(LIB)
 	$(CC) $(CFLAGS) -Wl,-u._fpdata_size -o tester tester.o $(LIB)
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_util_lib,mkargv.o)
-import(../condor_daemon_client,$(DAEMON_CLIENT_OBJ))
+import_objs(../condor_util_lib,mkargv.o)
+import_objs(../condor_daemon_client,$(DAEMON_CLIENT_OBJ))
 
 public_library(libcondorapi.a,lib)
 libcondorapi-release:: $(RELEASE_DIR)/lib/libcondorapi.a

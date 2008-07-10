@@ -1724,15 +1724,15 @@ XCOMM End translation of func(awk_target)
 ** Make macro "IMPORT_LINKS" which must be initialized to the
 ** "import_links" shell script in this directory.
 */
-#ifndef import
-#define import(dir,obj)			@@\
-XCOMM Begin translation of func(import) @@\
+#ifndef import_objs
+#define import_objs(dir,obj)			@@\
+XCOMM Begin translation of func(import_objs) @@\
 obj:						@@\
 	$(IMPORT_LINKS) dir obj			@@\
 clean::						@@\
 	rm -f obj	@@\
-XCOMM End translation of func(import)
-#endif /* import */
+XCOMM End translation of func(import_objs)
+#endif /* import_objs */
 
 
 /*

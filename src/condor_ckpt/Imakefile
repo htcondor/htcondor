@@ -304,7 +304,7 @@ clean::
 html:
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_c++_util,$(CPP_UTIL_OBJ))
-import(../condor_util_lib,$(UTIL_OBJ))
+import_objs(../condor_c++_util,$(CPP_UTIL_OBJ))
+import_objs(../condor_util_lib,$(UTIL_OBJ))
 
 testbin:: all

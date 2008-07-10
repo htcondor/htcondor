@@ -20,7 +20,7 @@ public_c_plus_target($(AMAZON_GAHP),sbin,$(AMAZON_GAHP_OBJ),$(LIB))
 html:
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_util_lib, setsyscalls.o )
+import_objs(../condor_util_lib, setsyscalls.o )
 
 2007-08-29.ec2.wsdl:
 	wget "http://ec2.amazonaws.com/doc/2007-08-29/AmazonEC2.wsdl"

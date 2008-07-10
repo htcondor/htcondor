@@ -27,7 +27,7 @@ public_c_plus_target($(IO_THREAD),sbin,$(IO_THREAD_OBJ),$(LIB))
 html:
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_util_lib, setsyscalls.o )
+import_objs(../condor_util_lib, setsyscalls.o )
 
 gen_soapfiles(cgahp,condorCgahp)
 
