@@ -45,7 +45,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% PR 945
+\item Fixed a bug in \Condor{dagman} that caused the user log file of
+the first node job in a DAG to get created with 0600 permissions,
+regardless of the user's umask.  (Note that this fix involved removing
+the \Opt{-condorlog} and \Opt{-storklog} command-line arguments from
+\Condor{submit\_dag} and \Condor{dagman}.)
 
 \end{itemize}
 

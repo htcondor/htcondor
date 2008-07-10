@@ -10,7 +10,6 @@
 \oOpt{-noeventchecks}
 \oOpt{-allowlogerror}
 \oOpt{-usedagdir}
-(\OptArg{-condorlog}{filename} \Bar \OptArg{-storklog}{filename})
 \OptArg{-lockfile}{filename}
 \oOpt{-waitfordebug}
 \oOptArg{-autorescue}{0|1}
@@ -121,11 +120,6 @@ Level values and what they produce is described as
        containing that DAG file was the current working directory.  This
        option is most useful when running multiple DAGs in a single
        \Condor{dagman}.}
-    \OptItem{\OptArg{-storklog}{filename}}{Sets the file name of
-       the Stork log for data placement jobs.  }
-    \OptItem{\OptArg{-condorlog}{filename}}{Sets the file name of
-       the file used in conjunction with the \OptArg{-lockfile}{filename}
-       in determining whether to run in recovery mode.  }
     \OptItem{\OptArg{-lockfile}{filename}}{Names the file
        created and used as a lock file.
        The lock file prevents execution of two of the 

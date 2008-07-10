@@ -9,7 +9,6 @@
 \oOptArg{-dagman}{DagmanExecutable}
 \oOptArg{-maxpre}{NumberOfPREscripts}
 \oOptArg{-maxpost}{NumberOfPOSTscripts}
-\oOptArg{-storklog}{LogFileName}
 \oOptArg{-notification}{value}
 \oOpt{-noeventchecks}
 \oOpt{-allowlogerror}
@@ -80,9 +79,6 @@ description.
      POST scripts within the DAG that may be running at one time.
      \Arg{NumberOfPOSTScripts} is a positive integer. If this option is
      omitted, the default number of POST scripts is unlimited.}
-  \OptItem{\OptArg{-log}{LogFileName}}{Deprecated option; do not use.}
-  \OptItem{\OptArg{-storklog}{LogFileName}}{Sets the file name for the
-     Stork log for data placement jobs.}
   \OptItem{\OptArg{-notification}{value}}{Sets the e-mail notification
      for DAGMan itself. This information will be used within the Condor
      submit description file for DAGMan. This file is produced by
