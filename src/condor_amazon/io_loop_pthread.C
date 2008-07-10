@@ -17,11 +17,12 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
+
 #include <pthread.h>
 #include <signal.h>
 #include <time.h>
 
-#include "condor_common.h"
 #include "condor_debug.h"
 #include "string_list.h"
 #include "MyString.h"
