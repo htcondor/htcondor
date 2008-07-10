@@ -7755,17 +7755,20 @@ int GahpClient::amazon_vm_s3_upload_file( const char * publickeyfile, const char
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
-	// keyname is optional. if client doesn't assign keyname, we should assign filename to it
-	if (keyname == NULL) 
-		keyname = strdup(filename);
-	
 	MyString reqline;
 	
 	char* esc1 = strdup( escapeGahpString(publickeyfile) );
 	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
 	char* esc3 = strdup( escapeGahpString(filename) );
 	char* esc4 = strdup( escapeGahpString(bucketname) );
-	char* esc5 = strdup( escapeGahpString(keyname) );
+	char* esc5;
+	// keyname is optional. if client doesn't assign keyname, we
+	// should assign filename to it
+	if (keyname == NULL) {
+		esc5 = strdup( escapeGahpString(filename) );
+	} else {
+		esc5 = strdup( escapeGahpString(keyname) );
+	}
 	
 	bool x = reqline.sprintf("%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5);
 	
