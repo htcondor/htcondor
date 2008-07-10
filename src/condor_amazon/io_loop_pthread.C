@@ -613,8 +613,6 @@ IOProcess::createNewWorker(void)
 		return NULL;
 	}
 
-	memcpy(&new_worker->m_thread_t, &thread, sizeof(thread));
-
 	// Deatch this thread 
 	pthread_detach(thread);
 

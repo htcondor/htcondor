@@ -46,7 +46,6 @@ class Worker {
 	bool removeRequest(int req_id);
 	int numOfRequest(void) { return m_request_list.Number(); }
 	
-	pthread_t m_thread_t;
 	int m_id;
 
 	bool m_can_use;
