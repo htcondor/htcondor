@@ -388,7 +388,7 @@ REPLICATION_ARGS = -p $(REPLICATION_PORT)
 ## as HAD_LIST. In addition, for each hostname, it should specify 
 ## the port number of condor_replication daemon running on that host.
 ## This parameter is mandatory and has no default value
-REPLICATION_LIST = $(CENTRAL_MANAGER1):$(REPLICATION_PORT),$(CENTRAL_MANAGER2):$( REPLICATION_PORT)
+REPLICATION_LIST = $(CENTRAL_MANAGER1):$(REPLICATION_PORT),$(CENTRAL_MANAGER2):$(REPLICATION_PORT)
 
 ## The following list must contain the same addresses in the same order 
 ## as COLLECTOR_HOST. In addition, for each hostname, it should specify 
