@@ -57,6 +57,15 @@ The details of each version are described below.
 if straced, especially if the \File{dagman.out} file is on a shared
 file system.
 
+\item Fixed a problem introduced in 7.0.1 that could cause the \Condor{schedd}
+to crash when starting parallel or MPI universe jobs.  In some cases,
+the problem would result in the following log message:
+
+\begin{verbatim}
+ERROR ``Assertion ERROR on (mrec->request_claim_sock == sock)'' \
+  at line 1361 in file dedicated_scheduler.C
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Known Bugs:
