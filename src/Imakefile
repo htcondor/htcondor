@@ -59,6 +59,12 @@
 #define TTProgs
 #endif
 
+#if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP
+#define EC2 amazon
+#else
+#define EC2
+#endif
+
 #define Programs \
 		procapi sysapi unit_tests accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
@@ -67,7 +73,7 @@
 		gridmanager globus starter.V6.1 shadow.V6.1 dcskel c-gahp had \
 		CreddProgs StorkProgs \
 		TTProgs DeploymentTools \
-		eventd.V2 transferd procd privsep vm-gahp amazon \
+		eventd.V2 transferd procd privsep vm-gahp EC2 \
 		JobRouterProgs
 
 #define Libraries \
@@ -277,7 +283,9 @@ condor_object_target(privsep)
 condor_object_target(dcskel)
 condor_object_target(vm-gahp)
 
+#if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP
 condor_object_target(amazon)
+#endif
 
 #if HAVE_EXT_DRMAA
 condor_object_target(drmaa)
