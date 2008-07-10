@@ -84,6 +84,7 @@ AmazonResource::AmazonResource( const char *resource_name,
 	args.AppendArg("-f");
 
 	gahp = new GahpClient( buff.Value(), gahp_path, &args );
+	free(gahp_path);
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( AmazonJob::gahpCallTimeout );
