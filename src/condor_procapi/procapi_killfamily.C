@@ -52,8 +52,9 @@ ProcAPI::getPidFamily( pid_t daddypid, PidEnvID *penvid, ExtArray<pid_t>& pidFam
     dwStatus = GetSystemPerfData ( TEXT("230") );
     
 	if ( dwStatus != ERROR_SUCCESS ) {
-        dprintf( D_ALWAYS, 
-				 "ProcAPI::getProcSetInfo failed to get performance info.\n");
+        dprintf( D_ALWAYS,
+				 "ProcAPI::getPidFamily failed to get performance "
+				 "info (last-error = %u).\n", dwStatus );
 		status = PROCAPI_UNSPECIFIED;
         return PROCAPI_FAILURE;
     }
@@ -675,9 +676,9 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi, int &status ) {
     dwStatus = GetSystemPerfData( TEXT("230") );
     
     if( dwStatus != ERROR_SUCCESS ) {
-        dprintf( D_ALWAYS, "ProcAPI::getProcSetInfo failed to get "
-				 "performance info.\n");
-
+		dprintf( D_ALWAYS,
+			"ProcAPI::getProcSetInfo failed to get performance "
+			"info (last-error = %u).\n", dwStatus );
 		status = PROCAPI_UNSPECIFIED;
         return PROCAPI_FAILURE;
     }
