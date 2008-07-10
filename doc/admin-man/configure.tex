@@ -4780,7 +4780,8 @@ This variable does not apply to standard universe jobs.
 \label{param:StarterUploadTimeout} 
 An integer value that specifies the network communication timeout to use
 when transferring files back to the submit machine.  The default value is
-200.  You may need to increase this value if the disk on the submit machine
+set by the \Condor{shadow} daemon to 300.
+Increase this value if the disk on the submit machine
 cannot keep up with large bursts of activity, such as many jobs all
 completing at the same time.
 
