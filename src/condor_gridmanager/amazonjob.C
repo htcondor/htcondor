@@ -276,6 +276,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 		args.AppendArg("D_ALWAYS");
 	} else {
 		args.AppendArg(gahp_debug);
+		free(gahp_debug);
 	}
 
 	gahp = new GahpClient( buff, gahp_path, &args );
