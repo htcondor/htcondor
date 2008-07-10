@@ -923,14 +923,10 @@ void SafeSock::setFullyQualifiedUser(char const * u) {
 	if (u) {
 		_fqu = strnewp(u);
 	}
+	_authenticated = (_fqu != NULL && *_fqu);
 }
 
 int SafeSock :: isAuthenticated() const
 {
     return _authenticated;
-}
-
-void SafeSock :: setAuthenticated(bool authenticated)
-{
-    _authenticated = authenticated;
 }

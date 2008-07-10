@@ -48,6 +48,6 @@ soap_core.C:: ../condor_includes/stdsoap2.h
 #endif
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_util_lib,condor_perms.o)
+import_objs(../condor_util_lib,condor_perms.o)
 
 testbin:: all

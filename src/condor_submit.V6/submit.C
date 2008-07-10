@@ -353,6 +353,17 @@ char    *VM_Checkpoint = "vm_checkpoint";
 char    *VM_Networking = "vm_networking";
 char    *VM_Networking_Type = "vm_networking_type";
 
+//
+// Amazon EC2 Parameters
+//
+char* AmazonPublicKey = "amazon_public_key";
+char* AmazonPrivateKey = "amazon_private_key";
+char* AmazonAmiID = "amazon_ami_id";
+char* AmazonUserData = "amazon_user_data";
+char* AmazonUserDataFile = "amazon_user_data_file";
+char* AmazonSecurityGroups = "amazon_security_groups";
+char* AmazonKeyPairFile = "amazon_keypair_file";
+char* AmazonInstanceType = "amazon_instance_type";
 
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
@@ -1680,6 +1691,7 @@ SetUniverse()
 				(stricmp (JobGridType, "naregi") == MATCH) ||
 				(stricmp (JobGridType, "condor") == MATCH) ||
 				(stricmp (JobGridType, "nordugrid") == MATCH) ||
+				(stricmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
 				(stricmp (JobGridType, "unicore") == MATCH) ||
 				(stricmp (JobGridType, "oracle") == MATCH) ||
 				(stricmp (JobGridType, "cream") == MATCH)){
@@ -4670,6 +4682,7 @@ SetGlobusParams()
 	char *tmp;
 	bool unified_syntax;
 	MyString buffer;
+	FILE* fp;
 
 	if ( JobUniverse != CONDOR_UNIVERSE_GRID )
 		return;
@@ -5038,6 +5051,111 @@ SetGlobusParams()
 				"parameter\n", KeystorePassphraseFile );
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
+	}
+	
+	//
+	// Amazon grid-type submit attributes
+	//
+	if ( (tmp = condor_param( AmazonPublicKey, ATTR_AMAZON_PUBLIC_KEY )) ) {
+		// check public key file can be opened
+		if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+			exit(1);
+		}
+		fclose(fp);
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_PUBLIC_KEY, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && stricmp( JobGridType, "amazon" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonPublicKey );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	if ( (tmp = condor_param( AmazonPrivateKey, ATTR_AMAZON_PRIVATE_KEY )) ) {
+		// check private key file can be opened
+		if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+			exit(1);
+		}
+		fclose(fp);
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_PRIVATE_KEY, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && stricmp( JobGridType, "amazon" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonPrivateKey );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	// AmazonKeyPairFile is not a necessary parameter
+	if( (tmp = condor_param( AmazonKeyPairFile, ATTR_AMAZON_KEY_PAIR_FILE )) ) {
+		// for the relative path, the keypair output file will be written to the IWD
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_KEY_PAIR_FILE, full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	// AmazonGroupName is not a necessary parameter
+	if( (tmp = condor_param( AmazonSecurityGroups, ATTR_AMAZON_SECURITY_GROUPS )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_SECURITY_GROUPS, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	if ( (tmp = condor_param( AmazonAmiID, ATTR_AMAZON_AMI_ID )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_AMI_ID, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && stricmp( JobGridType, "amazon" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonAmiID );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	// AmazonInstanceType is not a necessary parameter
+	if( (tmp = condor_param( AmazonInstanceType, ATTR_AMAZON_INSTANCE_TYPE )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_INSTANCE_TYPE, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	// AmazonUserData and AmazonUserDataFile cannot exist in the same submit file
+	bool has_userdata = false;
+	bool has_userdatafile = false;
+	
+	// AmazonUserData is not a necessary parameter
+	if( (tmp = condor_param( AmazonUserData, ATTR_AMAZON_USER_DATA )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_USER_DATA, tmp);
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+		has_userdata = true;
+	}	
+
+	// AmazonUserDataFile is not a necessary parameter
+	if( (tmp = condor_param( AmazonUserDataFile, ATTR_AMAZON_USER_DATA_FILE )) ) {
+		// check user data file can be opened
+		if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+			exit(1);
+		}
+		fclose(fp);
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_USER_DATA_FILE, 
+				full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+		has_userdatafile = true;
+	}
+	
+	if (has_userdata && has_userdatafile) {
+		// two attributes appear in the same submit file
+		fprintf(stderr, "\nERROR: Parameters \"%s\" and \"%s\" exist in same Amazon job\n", 
+						AmazonUserData, AmazonUserDataFile);
+		DoCleanup( 0, 0, NULL );
+		exit(1);
 	}
 }
 

@@ -258,6 +258,12 @@
 <$Component "CreateLogFolder" Create="Y" Directory_="LOGDIR">
 	<$DirectoryTree Key="LOGDIR" Dir="[INSTALLDIR]\log" MAKE="Y">
 <$/Component>
+<$Component "CreateWMGahpLogsFolder" Create="Y" Directory_="WMGAPHLOGSDIR" Condition=^USEVMUNIVERSE = "Y"^>
+	<$DirectoryTree Key="WMGAPHLOGSDIR" Dir="[LOGDIR]\VMGahpLogs" MAKE="Y">
+<$/Component>
+<$Component "CreateProfilesFolder" Create="Y" Directory_="PROFILESDIR">
+	<$DirectoryTree Key="PROFILESDIR" Dir="[INSTALLDIR]\profiles" MAKE="Y">
+<$/Component>
 
 
 ;--- Add the files (components generated) -----------------------------------

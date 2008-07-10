@@ -577,6 +577,11 @@ OsProc::JobExit( void )
     if ( m_loaded_user_profile ) {
         CondorUnloadUserProfile ();
     }
+
+    /* at this point too, we can revoke the user's logion's session's
+    permission to the visible desktop */
+    int RevokeDesktopAccess(HANDLE); // prototype
+    RevokeDesktopAccess ( priv_state_get_handle () );
 #endif
 
 	return Starter->jic->notifyJobExit( exit_status, reason, this );

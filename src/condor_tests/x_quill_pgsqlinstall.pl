@@ -35,7 +35,7 @@ print "$prefix $installlog $tarfile $pgsqlversion $condorconfigadd $morelibs $te
 
 my $startpostmasterport = 5432;
 my $postmasterinc = int(rand(100) + 13);
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 $domain = `dnsdomainname`;
 CondorTest::fullchomp($currenthost);
 CondorTest::fullchomp($domain);

@@ -4,11 +4,11 @@ CFLAGS = $(STD_C_FLAGS) -DPROCD_DEBUG=1
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DPROCD_DEBUG=1
 
 IMPORT_LINKS=../../config/import_links
-import(../condor_util_lib,condor_full_io.o)
-import(../condor_util_lib,condor_blkng_full_disk_io.o)
-import(../condor_util_lib,condor_pidenvid.o)
-import(../condor_c++_util,condor_open.o)
-import(../condor_procapi,procapi.o)
+import_objs(../condor_util_lib,condor_full_io.o)
+import_objs(../condor_util_lib,condor_blkng_full_disk_io.o)
+import_objs(../condor_util_lib,condor_pidenvid.o)
+import_objs(../condor_c++_util,condor_open.o)
+import_objs(../condor_procapi,procapi.o)
 IMPORT_OBJ=condor_full_io.o condor_blkng_full_disk_io.o condor_pidenvid.o condor_open.o
 
 PROCD_OBJ=procd_main.o procd_common.o \

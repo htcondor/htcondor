@@ -299,7 +299,7 @@ GCB_FLAGS = -I$(GCB_INC)
  end of externals-specific settings and flags
 ********************************************/
 
-VENDOR_C_FLAGS = -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
+VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) -I$(DAEMONCLIENT_INCLUDE) \
 		 -I$(DAEMONCORE_INCLUDE) \
 		 $(CONFIGURE_DEFS) -D$(ARCH_FLAG)=$(ARCH_FLAG) \

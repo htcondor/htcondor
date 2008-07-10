@@ -32,7 +32,7 @@ $topdir = getcwd();
 print "Working Directory is $topdir\n";
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");

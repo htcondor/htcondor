@@ -729,7 +729,7 @@ sub CreateConfig
 	# The only change we need to make to the generic configuration
 	# file is to set the release-dir and local-dir. (non-windows)
 	# change RELEASE_DIR and LOCAL_DIR    
-	$currenthost = `hostname`;
+	$currenthost = CondorTest::getFqdnHost();
 	chomp($currenthost);
 
 	debug( "Set RELEASE_DIR and LOCAL_DIR\n");    

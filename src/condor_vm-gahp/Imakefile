@@ -27,6 +27,6 @@ html:
 testbin:: all
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_util_lib, setsyscalls.o)
+import_objs(../condor_util_lib, setsyscalls.o)
 
 gen_soapfiles(vmgahp,condorVMgahp)

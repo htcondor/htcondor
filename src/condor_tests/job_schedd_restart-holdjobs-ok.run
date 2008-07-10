@@ -27,7 +27,7 @@ $cmd = "job_schedd_restart-holdjobs-ok.cmd";
 $corename = "job_schedd_restart-holdjobs-ok";
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");

@@ -44,7 +44,7 @@ $mygridmap = "gsi_keys/mapfiles/grid-mapfile";
 $myx509certdir = "gsi_keys/certificates";
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");

@@ -28,7 +28,7 @@ $testname = 'Condor PERIODIC_RELEASE policy test - local U';
 $corename = "job_core_perrelease_local";
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 CondorPersonal::DebugOff();
 

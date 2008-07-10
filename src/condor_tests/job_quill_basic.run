@@ -31,7 +31,7 @@ $topdir = getcwd();
 $ourtarfile = "";
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");

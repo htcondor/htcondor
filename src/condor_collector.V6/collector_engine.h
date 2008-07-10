@@ -40,9 +40,6 @@ class CollectorEngine : public Service
 	int scheduleHousekeeper (int = 300);
 	int invokeHousekeeper (AdTypes);
 
-	// interval to check for down masters
-	int scheduleDownMasterCheck (int = 10800);
-
 	// want collector to log messages?  Default: yes
 	void toggleLogging (void);
 
@@ -99,14 +96,10 @@ class CollectorEngine : public Service
 	// relevant variables from the config file
 	int	clientTimeout; 
 	int	machineUpdateInterval;
-	int	masterCheckInterval;
 
 	// should we log?
 	bool log;
 
-	void checkMasterStatus (ClassAd *);
-	int  masterCheck ();
-	int  masterCheckTimerID;
 	int  housekeeper ();
 	int  housekeeperTimerID;
 	void cleanHashTable (CollectorHashTable &, time_t,
@@ -125,13 +118,6 @@ class CollectorEngine : public Service
 	CollectorStats	*collectorStats;
 
 	ClassAd *m_collector_requirements;
-  public:
-	// pointer values for representing master states
-	static ClassAd* RECENTLY_DOWN;
-	static ClassAd* DONE_REPORTING;
-	static ClassAd* LONG_GONE;
-	static ClassAd* THRESHOLD;
-
 };
 
 

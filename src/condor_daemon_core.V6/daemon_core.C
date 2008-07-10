@@ -3465,7 +3465,6 @@ int DaemonCore::HandleReq(Stream *insock)
 
         if (who != NULL) {
             ((SafeSock*)stream)->setFullyQualifiedUser(who);
-            ((SafeSock*)stream)->setAuthenticated(true);
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticated UDP message is from %s.\n", who);
         }
 	}
@@ -4239,17 +4238,19 @@ int DaemonCore::HandleReq(Stream *insock)
 
 		// Check the daemon core permission for this command handler
 
+		// When re-using security sessions, need to set the socket's
+		// authenticated user name from the value stored in the cached
+		// session.
+		if( user.Length() && !((Sock*)stream)->getFullyQualifiedUser() ) {
+			((Sock*)stream)->setFullyQualifiedUser(user.Value());
+		}
+
 		// grab the user from the socket
         if (is_tcp) {
             const char *u = ((ReliSock*)stream)->getFullyQualifiedUser();
 			if (u) {
 				user = u;
 			}
-        } else {
-			// user is filled in above, but we should make it part of
-			// the SafeSock too.
-			((SafeSock*)stream)->setFullyQualifiedUser(user.Value());
-            ((SafeSock*)stream)->setAuthenticated(true);
 		}
 
 		if ( (perm = Verify(comTable[index].perm, ((Sock*)stream)->endpoint(), user.Value())) != USER_AUTH_SUCCESS )

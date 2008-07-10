@@ -94,8 +94,9 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin) {
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
 
 	int pid = daemonCore->
-		Create_Process(hook_path, final_args, PRIV_CONDOR, reaper_id,
-					   FALSE, NULL, NULL, &fi, NULL, std_fds);
+		Create_Process(hook_path, final_args, PRIV_CONDOR_FINAL,
+					  reaper_id, FALSE, NULL, NULL, &fi,
+					  NULL, std_fds);
 	client->setPid(pid);
 	if (pid == FALSE) {
 		dprintf( D_ALWAYS, "ERROR: Create_Process failed in HookClient::spawn()!\n");

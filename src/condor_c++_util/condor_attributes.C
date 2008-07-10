@@ -752,3 +752,18 @@ const char *ATTR_PREV_LAST_HEARD_FROM	= "PrevLastHeardFrom";
 const char *ATTR_TRY_AGAIN = "TryAgain";
 const char *ATTR_DOWNLOADING = "Downloading";
 const char *ATTR_TIMEOUT = "Timeout";
+
+
+//************* Added for Amazon Jobs ***************************//
+const char *ATTR_AMAZON_PUBLIC_KEY = "AmazonPublicKey";
+const char *ATTR_AMAZON_PRIVATE_KEY = "AmazonPrivateKey";
+const char *ATTR_AMAZON_AMI_ID = "AmazonAmiID";
+const char *ATTR_AMAZON_SECURITY_GROUPS = "AmazonSecurityGroups";
+const char *ATTR_AMAZON_KEY_PAIR_FILE = "AmazonKeyPairFile";
+const char *ATTR_AMAZON_USER_DATA = "AmazonUserData";
+const char *ATTR_AMAZON_USER_DATA_FILE = "AmazonUserDataFile";
+const char *ATTR_AMAZON_REMOTE_VM_NAME = "AmazonRemoteVirtualMachineName";
+const char *ATTR_AMAZON_INSTANCE_TYPE = "AmazonInstanceType";
+//************* End of changes for Amamzon Jobs *****************//
+
+

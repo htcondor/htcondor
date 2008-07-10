@@ -33,7 +33,7 @@ $mycmdfile = "lib_auth_protocol-fs.cmd";
 
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");

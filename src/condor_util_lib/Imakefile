@@ -119,7 +119,7 @@ clean::
 	rm -f y.tab.c y.tab.h
 
 IMPORT_LINKS = ../../config/import_links
-import(../h,syscall_numbers.c)
+import_objs(../h,syscall_numbers.c)
 
 release:: all
 stripped:: all

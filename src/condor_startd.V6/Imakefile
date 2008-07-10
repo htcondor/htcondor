@@ -60,7 +60,7 @@ c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o startd_instantiate.o,$(LI
 html:
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_util_lib, setsyscalls.o )
+import_objs(../condor_util_lib, setsyscalls.o )
 
 gen_soapfiles(startd,condorStartd)
 

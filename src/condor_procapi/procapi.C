@@ -1658,7 +1658,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	double now_secs = (double)procRaw.sample_time / procRaw.object_frequency;
 
 		// calculate the age
-	double age_wrong_scale = procRaw.sample_time - procRaw.creation_time;
+	double age_wrong_scale = (double)(procRaw.sample_time - procRaw.creation_time);
 	pi->age = (long)(age_wrong_scale / procRaw.object_frequency);
 
 			// copy the remainder of the field
@@ -1795,13 +1795,18 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
         *((LARGE_INTEGER*)(ctrblk + offsets->stime));
     LARGE_INTEGER imgsz = (LARGE_INTEGER) 
         *((LARGE_INTEGER*)(ctrblk + offsets->imgsize));
-    LARGE_INTEGER rss = (LARGE_INTEGER) 
-        *((LARGE_INTEGER*)(ctrblk + offsets->rssize));
 
     procRaw.pid       = (long) *((long*)(ctrblk + offsets->procid  ));
     procRaw.ppid      = ntSysInfo.GetParentPID(pid);
     procRaw.imgsize   = imgsz.QuadPart;
-    procRaw.rssize    = rss.QuadPart;
+
+	if (offsets->rssize_width == 4) {
+		procRaw.rssize = *(long*)(ctrblk + offsets->rssize);
+	}
+	else {
+		procRaw.rssize =
+			((LARGE_INTEGER*)(ctrblk + offsets->rssize))->QuadPart;
+	}
 
 	procRaw.majfault  = (long) *((long*)(ctrblk + offsets->faults  ));
 	procRaw.minfault  = 0;  // not supported by NT; all faults lumped into major.
@@ -1862,8 +1867,16 @@ ProcAPI::buildProcInfoList()
         pi->pid = *(pid_t*)(ctrblk + offsets->procid);
 		pi->ppid = ntSysInfo.GetParentPID(pi->pid);
 
-        pi->imgsize = *(long*)(ctrblk + offsets->imgsize) / 1024;
-        pi->rssize = *(long*)(ctrblk + offsets->rssize) / 1024;
+		LARGE_INTEGER* liptr;
+		liptr = (LARGE_INTEGER*)(ctrblk + offsets->imgsize);
+		pi->imgsize = (unsigned long)(liptr->QuadPart / 1024);
+		if (offsets->rssize_width == 4) {
+			pi->rssize = *(long*)(ctrblk + offsets->rssize) / 1024;
+		}
+		else {
+			liptr = (LARGE_INTEGER*)(ctrblk + offsets->rssize);
+			pi->rssize = (unsigned long)(liptr->QuadPart / 1024);
+		}
 
 		pi->user_time = (long)(ut.QuadPart / objectFrequency);
 		pi->sys_time = (long) (st.QuadPart / objectFrequency);
@@ -2874,10 +2887,11 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
     
     pThisCounter = nextCounter(pThisCounter);
     offsets->rssize = pThisCounter->CounterOffset;   // working set peak 
-	if (pThisCounter->CounterSize != 8) {
+	offsets->rssize_width = pThisCounter->CounterSize;
+	if ((offsets->rssize_width != 4) && (offsets->rssize_width != 8)) {
 		EXCEPT("Unexpected performance counter size for working set: "
-		           "%d (expected 8)\n",
-		       pThisCounter->CounterSize);
+		           "%d (expected 4 or 8)\n",
+		       offsets->rssize_width);
 	}
 
 //    printcounter ( stdout, pThisCounter );

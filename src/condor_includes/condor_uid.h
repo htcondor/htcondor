@@ -53,6 +53,7 @@ typedef enum {
 	PRIV_UNKNOWN,
 	PRIV_ROOT,
 	PRIV_CONDOR,
+	PRIV_CONDOR_FINAL,
 	PRIV_USER,
 	PRIV_USER_FINAL,
 	PRIV_FILE_OWNER,
@@ -65,6 +66,7 @@ typedef enum {
 #define set_priv(s)	_set_priv(s, __FILE__, __LINE__, 1)
 #define set_priv_no_memory_changes(s) _set_priv(s, __FILE__, __LINE__, NO_PRIV_MEMORY_CHANGES)
 #define set_condor_priv() _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 1)
+#define set_condor_priv_final() _set_priv(PRIV_CONDOR_FINAL, __FILE__, __LINE__, 1)
 #define set_user_priv()	_set_priv(PRIV_USER, __FILE__, __LINE__, 1)
 #define set_user_priv_final() _set_priv(PRIV_USER_FINAL, __FILE__, __LINE__, 1)
 #define set_file_owner_priv() _set_priv(PRIV_FILE_OWNER, __FILE__, __LINE__, 1)
