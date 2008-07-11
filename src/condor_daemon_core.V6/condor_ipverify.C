@@ -186,12 +186,12 @@ IpVerify::Init()
 				pentry->behavior = USERVERIFY_USE_TABLE;
 			}
 			if ( pAllow ) {
-                fill_table( pentry, allow_mask(perm), pAllow, true );
+                fill_table( pentry, pAllow, true );
 				free(pAllow);
                 pAllow = NULL;
 			}
 			if ( pDeny ) {
-				fill_table( pentry,	deny_mask(perm), pDeny, false );
+				fill_table( pentry,	pDeny, false );
 				free(pDeny);
                 pDeny = NULL;
 			}
@@ -250,29 +250,20 @@ char * IpVerify :: merge(char * pNewList, char * pOldList)
     return pList;
 }
 
-bool IpVerify :: has_user(UserPerm_t * perm, const char * user, perm_mask_t & mask, bool require_nonwild_match )
+bool IpVerify :: has_user(UserPerm_t * perm, const char * user, perm_mask_t & mask )
 {
     // Now, let's see if the user is there
-    int found_user = -1;
-    int found_wild = -1;
-    perm_mask_t user_mask = 0;
-    perm_mask_t wild_mask = 0;
     MyString user_key;
     assert(perm);
 
-    user_key = TotallyWild;
-    found_wild = perm->lookup(user_key, wild_mask);
-
-    if( user && *user && strcmp(user,TotallyWild)!=0 ) {
-        user_key = user;
-        found_user = perm->lookup(user_key, user_mask);
-    }
-
-    mask = user_mask | wild_mask;
-	if( require_nonwild_match ) {
-		return found_user != -1;
+    if( !user || !*user ) {
+		user_key = TotallyWild;
 	}
-    return found_wild != -1 || found_user != -1;
+	else {
+		user_key = user;
+	}
+
+    return perm->lookup(user_key, mask) != -1;
 }   
 
 
@@ -283,11 +274,7 @@ IpVerify::LookupCachedVerifyResult( DCpermission perm, const struct in_addr &sin
 
 	if( PermHashTable->lookup(sin, ptable) != -1 ) {
 
-			// If user is not "*", then we do not want to return true
-			// unless there is a cached entry for this specific user.
-
-		bool require_nonwild_match = user && *user && strcmp(user,TotallyWild) != 0;
-		if (has_user(ptable, user, mask, require_nonwild_match)) {
+		if (has_user(ptable, user, mask)) {
 
 				// We do not want to return true unless there is
 				// a cached result for this specific perm level.
@@ -312,15 +299,9 @@ IpVerify::add_hash_entry(const struct in_addr & sin_addr, const char * user, per
 		// found an existing entry.  
 
 		if (has_user(perm, user, old_mask)) {
-            // hueristic: if the mask already contains what we
-            // want, we are done.
-            if ( (old_mask & new_mask) == new_mask ) {
-                return TRUE;
-            }
-
-            // remove it because we are going to edit the mask below
-            // and re-insert it.
-            perm->remove(user_key);
+			// remove it because we are going to edit the mask below
+			// and re-insert it.
+			perm->remove(user_key);
         }
 	}
     else {
@@ -402,7 +383,7 @@ IpVerify::PrintAuthTable(int dprintf_level) {
 
 		ptable->startIterations();
 		while( ptable->iterate(userid,mask) ) {
-				// Call has_user() to get the full mask, including user=*.
+				// Call has_user() to get the full mask
 			has_user(ptable, userid.Value(), mask);
 
 			MyString auth_entry_str;
@@ -464,7 +445,7 @@ ExpandHostAddresses(char const *host,StringList *list)
 }
 
 void
-IpVerify::fill_table(PermTypeEntry * pentry, perm_mask_t mask, char * list, bool allow)
+IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 {
     NetStringList * whichHostList = NULL;
     UserHash_t * whichUserHash = NULL;
@@ -618,12 +599,10 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 int
 IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char * user )
 {
-	perm_mask_t mask, temp_mask;
-	int i;
+	perm_mask_t mask;
 	struct in_addr sin_addr;
 	char *thehost;
 	char **aliases;
-    UserPerm_t * ptable = NULL;
     const char * who = user;
 
 	memcpy(&sin_addr,&sin->sin_addr,sizeof(sin_addr));
@@ -683,7 +662,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		
 		if( !LookupCachedVerifyResult(perm,sin_addr,who,mask) ) {
 			mask = 0;
-            const char * hoststring = NULL;
+
 				// if the deny bit is already set, skip further DENY analysis
 			perm_mask_t const deny_resolved = deny_mask(perm);
 				// if the allow or deny bit is already set,
@@ -691,42 +670,17 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			perm_mask_t const allow_resolved = allow_mask(perm)|deny_mask(perm);
 
 			// check for matching subnets in ip/mask style
-			char tmpbuf[16];
+			char ipstr[IP_STRING_BUF_SIZE];
 			const unsigned char *byte_array = (const unsigned char *) &(sin->sin_addr);
-			sprintf(tmpbuf, "%u.%u.%u.%u", byte_array[0], byte_array[1],
+			sprintf(ipstr, "%u.%u.%u.%u", byte_array[0], byte_array[1],
 					byte_array[2], byte_array[3]);
 
-			StringList * userList;
-			if ( !(mask&deny_resolved) &&
-				 PermTypeArray[perm]->deny_hosts &&
-				 (hoststring = PermTypeArray[perm]->deny_hosts->
-				  string_withnetwork(tmpbuf))) {
-				dprintf ( D_SECURITY, "IPVERIFY: matched with %s\n", hoststring);
-				if (PermTypeArray[perm]->deny_users->lookup(hoststring, userList) != -1) {
-					if (lookup_user(userList, who)) {  
-						dprintf ( D_ALWAYS, "IPVERIFY: denied user %s from %s\n", who, hoststring);
-						mask |= deny_mask(perm);
-					}
-				}
+			if ( !(mask&deny_resolved) && lookup_user_ip_deny(perm,who,ipstr)) {
+				mask |= deny_mask(perm);
 			}
 
-			if ( !(mask&allow_resolved) &&
-				 PermTypeArray[perm]->allow_hosts &&
-				 (hoststring = PermTypeArray[perm]->allow_hosts->
-				  string_withnetwork(tmpbuf))) {
-				// See if the user exist
-				if (PermTypeArray[perm]->allow_users->lookup(hoststring, userList) != -1) {
-					if (lookup_user(userList, who)) {
-						dprintf ( D_SECURITY, "IPVERIFY: matched with host %s and user %s\n",
-								hoststring, (who && *who) ? who : "*");
-						mask |= allow_mask(perm);
-					} else {
-						dprintf ( D_SECURITY, "IPVERIFY: matched with host %s, but not user %s!\n",
-								hoststring, (who && *who) ? who : "*");
-					}
-				} else {
-					dprintf( D_SECURITY, "IPVERIFY: ip not matched: %s\n", tmpbuf);
-				}
+			if ( !(mask&allow_resolved) && lookup_user_ip_allow(perm,who,ipstr)) {
+				mask |= allow_mask(perm);
 			}
 
 
@@ -737,38 +691,17 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			else {
 				thehost = NULL;
 			}
-			i = 0;
 			while ( thehost ) {
-                MyString     host(thehost);
-                if ( !(mask&deny_resolved) &&
-					 PermTypeArray[perm]->deny_hosts &&
-                     (hoststring = PermTypeArray[perm]->deny_hosts->
-                      string_anycase_withwildcard(thehost))) {
-                    if (PermTypeArray[perm]->deny_users->lookup(hoststring, userList) != -1) {
-                        if (lookup_user(userList, who)) {  
-							dprintf ( D_SECURITY, "IPVERIFY: matched %s at %s to deny list\n", who,hoststring);
-                            mask |= deny_mask(perm);
-                        }
-                    }
+                if ( !(mask&deny_resolved) && lookup_user_host_deny(perm,who,thehost) ) {
+					mask |= deny_mask(perm);
                 }
 
-                if ( !(mask&allow_resolved) &&
-					 PermTypeArray[perm]->allow_hosts &&
-                     (hoststring = PermTypeArray[perm]->allow_hosts->
-                      string_anycase_withwildcard(thehost))) {
-                    // See if the user exist
-					dprintf ( D_SECURITY, "IPVERIFY: matched with %s\n", hoststring);
-                    if (PermTypeArray[perm]->allow_users->lookup(hoststring, userList) != -1) {
-                        if (lookup_user(userList, who)) {
-                            mask |= allow_mask(perm);
-                        }
-                    }
-                } else {
-					dprintf( D_SECURITY, "IPVERIFY: hoststring: %s\n", thehost);
+                if ( !(mask&allow_resolved) && lookup_user_host_allow(perm,who,thehost) ) {
+					mask |= allow_mask(perm);
 				}
                 
 				// check all aliases for this IP as well
-				thehost = aliases[i++];
+				thehost = *(aliases++);
 			}
 			// if we found something via our hostname or subnet mactching, we now have 
 			// a mask, and we should add it into our table so we need not
@@ -806,7 +739,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 
 			// finally, add the mask we computed into the table with this IP addr
 			add_hash_entry(sin->sin_addr, who, mask);			
-		}  // end of if find_match is FALSE
+		}
 
 		// decode the mask and return True or False to the user.
 		if ( mask & deny_mask(perm) )
@@ -825,20 +758,67 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 	return FALSE;
 }
 
-bool IpVerify :: lookup_user(StringList * list, const char * user)
+bool
+IpVerify::lookup_user_ip_allow(DCpermission perm, char const *user, char const *ip)
 {
-    bool found = false;
-    if (user == NULL) {
-        if (list->contains("*")) {
-            found = true;
-        }
+	PermTypeEntry *permentry = PermTypeArray[perm];
+	return lookup_user(permentry->allow_hosts,permentry->allow_users,user,ip,NULL,true);
+}
+
+bool
+IpVerify::lookup_user_ip_deny(DCpermission perm, char const *user, char const *ip)
+{
+	PermTypeEntry *permentry = PermTypeArray[perm];
+	return lookup_user(permentry->deny_hosts,permentry->deny_users,user,ip,NULL,false);
+}
+
+bool
+IpVerify::lookup_user_host_allow(DCpermission perm, char const *user, char const *hostname)
+{
+	PermTypeEntry *permentry = PermTypeArray[perm];
+	return lookup_user(permentry->allow_hosts,permentry->allow_users,user,NULL,hostname,true);
+}
+
+bool
+IpVerify::lookup_user_host_deny(DCpermission perm, char const *user, char const *hostname)
+{
+	PermTypeEntry *permentry = PermTypeArray[perm];
+	return lookup_user(permentry->deny_hosts,permentry->deny_users,user,NULL,hostname,false);
+}
+
+bool
+IpVerify::lookup_user(NetStringList *hosts, UserHash_t *users, char const *user, char const *ip, char const *hostname, bool is_allow_list)
+{
+	if( !hosts || !users ) {
+		return false;
+	}
+	ASSERT( user );
+
+		// we look up by ip OR by hostname, not both
+	ASSERT( !ip || !hostname );
+	ASSERT( ip || hostname);
+
+	char const * hostmatch = NULL;
+	if( ip ) {
+		hostmatch = hosts->string_withnetwork(ip);
+	}
+	else if( hostname ) {
+		hostmatch = hosts->string_anycase_withwildcard(hostname);
+	}
+
+	if( !hostmatch ) {
+		return false;
+	}
+	StringList *userlist;
+	ASSERT( users->lookup(hostmatch,userlist) != -1 );
+
+	if (userlist->contains_anycase_withwildcard(user)) {
+		dprintf ( D_SECURITY, "IPVERIFY: matched user %s from %s to %s list\n",
+				  user, hostmatch, is_allow_list ? "allow" : "deny" );
+		return true;
     }
-    else {
-        if (list->contains(user) || list->contains_anycase_withwildcard(user)) {
-            found = true;
-        }
-    }
-    return found;
+
+	return false;
 }
 
 

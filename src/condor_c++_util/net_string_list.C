@@ -32,9 +32,7 @@ NetStringList::NetStringList(const char *s, const char *delim )
 }
 
 
-// contains_withnetmask() is just like the contains() method except that
-// list members can be IP addresses with netmasks in them, and anything on
-// the subnet is a match.  four forms are allowed:
+// string_withnetmask() handles the following four forms:
 //
 // 192.168.10.1
 // 192.168.*

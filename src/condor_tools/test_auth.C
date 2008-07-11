@@ -55,6 +55,8 @@ usage()
 	fprintf( stderr, "\n" );
 	fprintf( stderr, "perm user ip [expected result]\n" );
 	fprintf( stderr, "Example: WRITE badguy@some.domain 192.168.4.3 DENIED\n");
+	fprintf( stderr, "\n" );
+	fprintf( stderr, "Use '*' for the user to represent an unauthenticated user.\n");
 	fprintf( stderr, "\n   Valid options are:\n" );
 	fprintf( stderr, "   -daemontype name\t(schedd, startd, ...)\n" );
 	fprintf( stderr, "   -debug\n" );

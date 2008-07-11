@@ -137,10 +137,10 @@ private:
 		~PermTypeEntry(); 
 	};
 
-    bool has_user(UserPerm_t * , const char *, perm_mask_t &, bool require_nonwild_match = false );
+    bool has_user(UserPerm_t * , const char *, perm_mask_t &);
 	bool LookupCachedVerifyResult( DCpermission perm, const struct in_addr &sin, const char * user, perm_mask_t & mask);
 	int add_hash_entry(const struct in_addr & sin_addr, const char * user, perm_mask_t new_mask);
-	void fill_table( PermTypeEntry * pentry, perm_mask_t mask, char * list, bool allow);
+	void fill_table( PermTypeEntry * pentry, char * list, bool allow);
     void split_entry(const char * entry, char ** host, char ** user);
 	inline perm_mask_t allow_mask(DCpermission perm) { return (1 << (1+2*perm)); }
 	inline perm_mask_t deny_mask(DCpermission perm) { return (1 << (2+2*perm)); }
@@ -150,7 +150,16 @@ private:
 	void AuthEntryToString(const struct in_addr & host, const char * user, perm_mask_t mask, MyString &result);
 	void PrintAuthTable(int dprintf_level);
 
-	bool lookup_user(StringList * list, const char * user);
+		// See if there is an authorization policy entry for a specific user at
+		// a specific ip/hostname.
+	bool lookup_user_ip_allow(DCpermission perm, char const *user, char const *ip);
+	bool lookup_user_ip_deny(DCpermission perm, char const *user, char const *ip);
+	bool lookup_user_host_allow(DCpermission perm, char const *user, char const *hostname);
+	bool lookup_user_host_deny(DCpermission perm, char const *user, char const *hostname);
+
+		// This is the low-level function called by the other lookup_user functions.
+	bool lookup_user(NetStringList *hosts, UserHash_t *users, char const *user, char const *ip, char const *hostname, bool is_allow_list);
+
 	char * merge(char * newPerm, char * oldPerm);
 	int did_init;
 

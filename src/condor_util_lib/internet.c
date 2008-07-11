@@ -435,9 +435,6 @@ is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
 int
 is_ipaddr_no_wildcard(const char *inbuf, struct in_addr *sin_addr)
 {
-		// In keeping with the historical definition of this function,
-		// we allow wildcards, even though the caller did not explicitly
-		// ask for them.  This usage needs to be reviewed.
 	return is_ipaddr_implementation(inbuf,sin_addr,NULL,0);
 }
 
@@ -450,9 +447,7 @@ is_ipaddr_wildcard(const char *inbuf, struct in_addr *sin_addr, struct in_addr *
 
 // checks to see if 'network' is a valid ip/netmask.  if given pointers to
 // ip_addr structs, they will be filled in.
-/* XXX:  Known Problems:  This function simply checks to see if the string is
-   <ip address>/<ip address> using the is_ipaddr() function call.  This means
-   either may have wildcards, and the netmask doesn't have to be a valid
+/* XXX:  Known Problems: The netmask doesn't have to be a valid
    netmask, as long as it looks something like an IP address.  ~tristan 8/16/07
  */
 /* This function has a unit test. */
