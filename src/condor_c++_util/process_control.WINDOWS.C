@@ -255,6 +255,8 @@ windows_suspend(DWORD pid)
 				ASSERT(st != NULL);
 				st->handle = handle;
 				st->num_suspends = 0;
+				ret = sp->insert(tid_array[i], st);
+				ASSERT(ret != -1);
 			}
 
 			// now suspend the thread
