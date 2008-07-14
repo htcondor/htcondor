@@ -52,16 +52,43 @@ system("chmod -R 777 .");
 # seed log with 1 runs
 system("$writelog $flowlog submit 1");
 
+my $count = 0;
+while(!(-f $flowlog)) {
+	print "<<$flowlog>> should have been here by now....\n";
+	$count += 1;
+	if($count > 20) {
+		system("ls -lR $pid");
+		die "Flowlog should have existed by now\n";
+	}
+	sleep(1);
+}
+
+print "About to spawn condor_wait -wait 30\n";
+system("date");
+
 # Start condor_wait
 $spawncmd = "condor_wait -wait 30 $flowlog";
 CondorTest::spawn_cmd($spawncmd, $resultfile);
 
+print "Back from spawn condor_wait -wait 30\n";
+system("date");
+
 sleep(5);
+
+print "Slept 5, about to drop execute event\n";
+system("date");
+
 # start 1 runs
 system("$writelog $flowlog execute 1");
 
+print "droped execute event, about to drop terminated event\n";
+system("date");
+
 # end 1 runs
 system("$writelog $flowlog terminated 1");
+
+print "droped terminate event, about to check results\n";
+system("date");
 
 while(!(-f $resultfile)) {
 	print "Waiting for $resultfile to exist\n";
@@ -81,14 +108,17 @@ open(RES,"<$resultfile") || die "Can not open <$resultfile>:$!\n";
 $line = "";
 while(<RES>) {
 	$line = $_;
+	print "RESULTS: $line\n";
 	if($line =~ /^Exit\s+(\d+)\s+Signal\s+\d+$/) {
 		if($1 == 0) {
 			print "Exit status of 0, expected. Good!\n";
 			exit(0);
 		} else {
+			print "Exit status of non-0, not expected. ERROR!\n";
 			exit(1);
 		}
 	} else {
+			print "This was an unexpected result. ERROR\n";
 			exit(1);
 	}
 }

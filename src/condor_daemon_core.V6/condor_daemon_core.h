@@ -1006,6 +1006,7 @@ class DaemonCore : public Service
         @return Pointer to this daemon's SecMan
     */
     SecMan* getSecMan();
+	IpVerify* getIpVerify() {return &ipverify;}
     KeyCache* getKeyCache();
 	//@}
 

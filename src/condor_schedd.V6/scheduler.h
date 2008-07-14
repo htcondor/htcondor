@@ -143,6 +143,11 @@ class match_rec: public ClaimIdParser
 	bool			needs_release_claim;
 	Sock*           request_claim_sock;
 
+		// if we created a dynamic hole in the DAEMON auth level
+		// to support flocking, this will be set to the id of the
+		// punched hole
+	MyString*		auth_hole_id;
+
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)
 	void	setStatus( int stat );
