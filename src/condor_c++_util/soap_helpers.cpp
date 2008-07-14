@@ -125,7 +125,15 @@ convert_ad_to_adStruct(struct soap *s,
 	// new ClassAds.
 	if (0 == strcmp(((Variable*)tree->LArg())->Name(), ATTR_MY_TYPE) ||
 		0 == strcmp(((Variable*)tree->LArg())->Name(), ATTR_TARGET_TYPE) ||
-		0 == strcmp(((Variable*)tree->LArg())->Name(), ATTR_SERVER_TIME)) {
+		0 == strcmp(((Variable*)tree->LArg())->Name(), ATTR_SERVER_TIME)) 
+	{
+		continue;
+	}
+
+	// Ignore any attributes that are considered private - we don't wanna 
+	// be handing out private attributes to soap clients.
+	if ( ClassAd::ClassAdAttributeIsPrivate(((Variable*)tree->LArg())->Name()) )
+	{
 		continue;
 	}
 
