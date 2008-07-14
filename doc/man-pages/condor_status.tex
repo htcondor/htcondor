@@ -90,8 +90,11 @@ options} may be specified.
       A value of \Arg{type} of \Arg{CkptServer},
       \Arg{Machine}, \Arg{DaemonMaster}, or \Arg{Scheduler}
       targets that type of ClassAd.  }
-    \OptItem{\Opt{-vm}}{(Query option) Query \Condor{startd} ads and display 
-      only VM-enabled machines}
+    \OptItem{\Opt{-vm}}{(Query option) Query \Condor{startd} ClassAds,
+      and display only VM-enabled machines.  Information displayed includes
+      the the machine name, the virtual machine software version,
+      the state of machine, the virtual machine memory,
+      and the type of networking.}
     \OptItem{\Opt{-expert}}{(Display option) Display shortened error messages}
     \OptItem{\Opt{-long}}{(Display option) Display entire ClassAds 
       (same as \Opt{-verbose})}
