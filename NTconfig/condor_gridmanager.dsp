@@ -88,6 +88,22 @@ LINK32=link.exe
 # Name "condor_gridmanager - Win32 Release"
 # Begin Source File
 
+SOURCE=..\src\condor_gridmanager\amazonjob.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\amazonjob.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\amazonresource.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\amazonresource.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_gridmanager\basejob.C
 # End Source File
 # Begin Source File
