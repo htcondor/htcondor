@@ -886,6 +886,12 @@ FileTransfer::ComputeFilesToSend()
 			// object treats that just like we do: don't switch... 
 		Directory dir( Iwd, desired_priv_state );
 
+		char *proxy_file = NULL;
+		char buf[ATTRLIST_MAX_EXPRESSION];
+		if(jobAd.LookupString(ATTR_X509_USER_PROXY, buf)) {
+			proxy_file = rindex(buf, '/')+1;
+		}
+
 		const char *f;
 		while( (f=dir.Next()) ) {
 			// don't send back condor_exec.exe
@@ -894,6 +900,11 @@ FileTransfer::ComputeFilesToSend()
 				continue;
 			}
 			if ( file_strcmp(f,"condor_exec.bat")==MATCH ) {
+				dprintf( D_FULLDEBUG, "Skipping %s\n", f );
+				continue;
+			}
+
+			if( proxy_file && file_strcmp(f, proxy_file) == MATCH ) {
 				dprintf( D_FULLDEBUG, "Skipping %s\n", f );
 				continue;
 			}
