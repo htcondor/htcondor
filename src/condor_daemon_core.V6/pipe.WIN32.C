@@ -396,12 +396,6 @@ bool WritePipeEnd::io_ready()
 
 int WritePipeEnd::write(const void* buffer, int len)
 {
-	// len can be at most the size of the pipe buffer.
-	// The caller should be able to handle short writes
-	if (len > m_pipe_size) {
-		len = m_pipe_size;
-	}
-	
 	// set errno to something other than EWOULDBLOCK
 	errno = EINVAL;
 
