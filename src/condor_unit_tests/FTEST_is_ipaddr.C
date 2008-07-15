@@ -145,10 +145,10 @@ static bool test_only_wildcard() {
 	int result = is_ipaddr( input, NULL );
 	free( input );
 	e.emit_output_expected_header();
-	e.emit_retval("%s", tfstr(FALSE));
+	e.emit_retval("%s", tfstr(TRUE));
 	e.emit_output_actual_header();
 	e.emit_retval("%s", tfstr(result));
-	if(result != FALSE) {
+	if(result != TRUE) {
 		e.emit_result_failure(__LINE__);
 		return false;
 	}

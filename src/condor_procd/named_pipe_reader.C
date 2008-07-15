@@ -66,30 +66,18 @@ NamedPipeReader::~NamedPipeReader()
 	free(m_addr);
 }
 
+char*
+NamedPipeReader::get_path()
+{
+	ASSERT(m_initialized);
+	return m_addr;
+}
+
 void
 NamedPipeReader::set_watchdog(NamedPipeWatchdog* watchdog)
 {
 	ASSERT(m_initialized);
 	m_watchdog = watchdog;
-}
-
-bool
-NamedPipeReader::change_owner(uid_t uid)
-{
-	ASSERT(m_initialized);
-
-	// chown the pipe to the uid in question
-	//
-	if (chown(m_addr, uid, (gid_t)-1) < 0) {
-		dprintf(D_ALWAYS,
-		        "chown of %s error: %s (%d)\n",
-		        m_addr,
-		        strerror(errno),
-		        errno);
-		return false;
-	}
-
-	return true;
 }
 
 bool
