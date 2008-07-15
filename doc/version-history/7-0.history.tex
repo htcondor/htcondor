@@ -27,13 +27,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a problem causing incorrect handling of wildcards in
-authorization lists (\MacroNI{ALLOW\_WRITE}, \MacroNI{DENY\_WRITE},
-\MacroNI{HOSTALLOW\_WRITE}, \MacroNI{HOSTDENY\_WRITE}, and so on).
-If you use `*' in your authorization policy, it is advisable to
-upgrade, especially if you use it in any \MacroNI{DENY} list, since
-this problem could result in access being allowed when it should
-have been denied.
+\item This release Fixes a problem causing possible incorrect handling
+of wildcards in authorization lists (\MacroNI{ALLOW\_WRITE},
+\MacroNI{DENY\_WRITE}, \MacroNI{HOSTALLOW\_WRITE},
+\MacroNI{HOSTDENY\_WRITE}, and so on).  If you use `*' in your
+authorization policy, it is advisable to upgrade, especially if you
+use wildcards in any \MacroNI{DENY} list, since this problem could result in
+access being allowed when it should have been denied.  This issue affects
+all previous versions of Condor.
 
 \end{itemize}
 
