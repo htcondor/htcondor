@@ -2459,10 +2459,15 @@ character are ignored by the submit description file parser.
   to stderr. }
 
 \OptItem{\OptArg{-name}{schedd\_name}}{Submit to the specified \Condor{schedd}.
-Use this option to submit to a \Condor{schedd} other than the default local one.}
+Use this option to submit to a \Condor{schedd} other than the default local one.
+\Arg{schedd\_name} is the value of the \Attr{Name} ClassAd attribute on
+the machine where the \Condor{schedd} daemon runs.}
+
 
 \OptItem{\OptArg{-remote}{schedd\_name}}{Submit to the specified
 \Condor{schedd}, spooling all required input files over the network connection.
+\Arg{schedd\_name} is the value of the \Attr{Name} ClassAd attribute
+on the machine where the \Condor{schedd} daemon runs.
 This option is equivalent to using both \Opt{-name} and \Opt{-spool}.}
 
 \OptItem{\OptArg{-pool}{pool\_name}}{Look in the specified pool for the 
