@@ -25,7 +25,7 @@
 #include "hashkey.h"
 #include "extArray.h"
 
-#define DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL (3600*24*2)
+#define DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL (3600*4)
 
 // Base
 class CollectorBaseStats
