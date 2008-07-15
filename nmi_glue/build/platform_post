@@ -126,13 +126,21 @@ if( ! -x $cns ) {
 	. "and chmod() failed: $!\n";
 }
 
+# Is it the Saturday am build and test?
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+
 my $cmd = "";
 my $cmd1 = "";
 my $cmd2 = "--platforms=$platform "; 
 my $cmd3 = "$notify_arg $opt_test_args $xtests_arg";
 my $git_cmd_arg = (defined $opt_git ? "--git" : "");
 if($mode ne "workspace") {
-   	$cmd1 = "$cns --test --buildid=$runid --tag=$tag --module=$module $git_cmd_arg ";
+	if((! defined $opt_test_args) && ($wday == 6)) {
+		# run even the long tests tonight/saturday 2am bt
+        $cmd1 = "$cns --test --buildid=$runid --tag=$tag --module=$module --test-args=full $git_cmd_arg ";
+    } else {
+        $cmd1 = "$cns --test --buildid=$runid --tag=$tag --module=$module $git_cmd_arg ";
+    }
 } else {
 	# set up tests for a workspace build
    	$cmd1 = "$cns --test --buildid=$runid $git_cmd_arg "; 
