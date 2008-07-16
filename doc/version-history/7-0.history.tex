@@ -27,7 +27,24 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item This release fixes a problem causing possible incorrect handling
+of wildcards in authorization lists.
+Examples of the configuration variables that specify
+authorization lists are
+\begin{verbatim}
+  ALLOW_WRITE
+  DENY_WRITE
+  HOSTALLOW_WRITE
+  HOSTDENY_WRITE
+\end{verbatim}
+If a configuration variable uses the asterisk character
+(\verb@*@) in configuration variables that specify the
+authorization policy, it is advisable to upgrade.
+This is especially true for the 
+use of wildcards in any \MacroNI{DENY} list,
+since this problem could result in
+access being allowed, when it should have been denied.
+This issue affects all previous versions of Condor.
 
 \end{itemize}
 
@@ -56,6 +73,15 @@ The details of each version are described below.
 \item Fixed a problem that could cause \Condor{dagman} to core dump
 if straced, especially if the \File{dagman.out} file is on a shared
 file system.
+
+\item Fixed a problem introduced in 7.0.1 that could cause the \Condor{schedd}
+to crash when starting parallel or MPI universe jobs.  In some cases,
+the problem would result in the following log message:
+
+\begin{verbatim}
+ERROR ``Assertion ERROR on (mrec->request_claim_sock == sock)'' \
+  at line 1361 in file dedicated_scheduler.C
+\end{verbatim}
 
 \end{itemize}
 
