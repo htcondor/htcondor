@@ -73,6 +73,12 @@ description.
 
 \begin{itemize}
 
+\item Fixed a bug in the \Condor{c-gahp} that caused it to fail repeatedly
+on Windows if more than 2 Condor-C jobs were submitted at the same time.
+
+\item Fixed a problem that caused the \Condor{collector}'s memory usage
+to increase dramatically if \Condor{findhost} was run repeatedly.
+
 \item Fixed a bug where Windows jobs suspended by Condor would never
 be continued, despite log files indicating successful continuation.
 This problem has existed since the 6.9.2 release of Condor.
