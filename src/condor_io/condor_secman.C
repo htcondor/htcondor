@@ -520,9 +520,8 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 			// but you never know with file transfer and all.
 			ad->Assign ( ATTR_SEC_SESSION_DURATION, "3600" );
 		} else {
-			// default for daemons is 100 days.  this is a temporary workaround
-			// for 6.6.X until automatic re-negotiation is implemented.
-			ad->Assign ( ATTR_SEC_SESSION_DURATION, "8640000" );
+			// default for daemons is one day.
+			ad->Assign ( ATTR_SEC_SESSION_DURATION, "86400" );
 		}
 	}
 
