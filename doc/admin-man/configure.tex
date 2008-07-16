@@ -2709,33 +2709,29 @@ will not want to change them for any reason.
 
 \item[\Macro{MASTER\_NAME}] \label{param:MasterName}
   Defines a unique name given for a \Condor{master} daemon on a machine.
-  Defaults to the fully qualified host name.
-  If more than one \Condor{master} is running on the same host (for
-  example, because of multiple Personal Condor installations running
-  as different users) the \MacroNI{MASTER\_NAME} for each
-  \Condor{master} should be defined to uniquely identify the separate
+  For a \Condor{master} running as \Login{root},
+  it defaults to the fully qualified host name.
+  When \emph{not} running as \Login{root},
+  it defaults to the user that instantiates the
+  \Condor{master}, concatenated with an at symbol (\verb$@$),
+  concatenated with the fully qualified host name.
+  If more than one \Condor{master} is running on the same host, 
+  then the \MacroNI{MASTER\_NAME} for each
+  \Condor{master} must be defined to uniquely identify the separate
   daemons. 
 
-  If the \MacroNI{MASTER\_NAME} contains more than a host name,
-  it must
-  have the form \verb$identifying-string@full.host.name$.
-  If the string specified with \MacroNI{MASTER\_NAME} already includes
-  an \verb$@$ sign, Condor will replace whatever follows the \verb$@$
+  A defined \MacroNI{MASTER\_NAME} is presumed to be of the form
+  \verb$identifying-string@full.host.name$.
+  When this definition includes
+  an \verb$@$ sign, Condor replaces whatever follows the \verb$@$
   sign with the fully qualified host name of the local machine.
   If the string does not include an \verb$@$ sign,
-  Condor will append one, followed by the host name.
-  The \verb$identifying-string$ portion can contain any
-  alphanumeric ASCII characters or punctuation marks except \verb$@$
-  (which is used to delimit the name from the host name).
-  We recommend that the string does not contain the \verb$:$
+  Condor appends one, followed by the fully qualified host name
+  of the local machine.
+  The \verb$identifying-string$ portion may contain any
+  alphanumeric ASCII characters or punctuation marks, except the \verb$@$ sign.
+  We recommend that the string does not contain the \verb$:$ (colon)
   character, since that might cause problems with certain tools.
-  In the example of many Personal Condor installations on the same
-  host, the user name that each \Condor{master} is executing as
-  is, by convention,
-  the \verb$identifying-string$.
-  This is easily accomplished by setting
-  \verb@MASTER_NAME = $(USERNAME)@ in the
-  configuration file.
 
   If the \MacroNI{MASTER\_NAME} setting is used, and the
   \Condor{master} is configured to spawn a \Condor{schedd},
@@ -3143,15 +3139,15 @@ Configuring The Startd Policy.
   as available.
 
 \item[\Macro{STARTD\_NAME}] \label{param:StartdName}
-  Used to give an alternative name in the \Condor{startd}'s
-  class ad.
+  Used to give an alternative value to the \Attr{Name} attribute
+  in the \Condor{startd}'s ClassAd.
   This esoteric configuration macro might be used in the situation
   where there are two \Condor{startd} daemons running on one machine,
   and each reports to the same \Condor{collector}.
   Different names will distinguish the two daemons.
   See the description of \MacroNI{MASTER\_NAME} in
   section~\ref{param:MasterName} on page~\pageref{param:MasterName}
-  for a description of valid Condor daemon names.
+  for defaults and composition of valid Condor daemon names.
 
 \item[\Macro{RUNBENCHMARKS}] \label{param:RunBenchmarks}
   Specifies when to run benchmarks.
@@ -4217,20 +4213,12 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   This macro is defined relative to the \MacroUNI{LOCK} macro.
 
 \item[\Macro{SCHEDD\_NAME}] \label{param:ScheddName}
-  A unique name given for a \Condor{schedd} daemon on a machine.
-  Defaults to the fully qualified hostname of the machine where the
-  \Condor{schedd} is running.
-  However, this configuration macro is used to uniquely identify
-  \Condor{schedd} ClassAds if more than one \Condor{schedd} is running
-  on the same host, for example, with many Personal Condor
-  installations running as different users on the same machine.
-  In that case, the recommended form for \MacroNI{SCHEDD\_NAME} is
-  \verb$username@full.host.name$, where \verb$username$ is the
-  user that a given \Condor{schedd} is running as. 
+  Used to give an alternative value to the \Attr{Name} attribute 
+  in the \Condor{schedd}'s ClassAd.
 
   See the description of \MacroNI{MASTER\_NAME} in
   section~\ref{param:MasterName} on page~\pageref{param:MasterName}
-  for a description of valid Condor daemon names.
+  for defaults and composition of valid Condor daemon names.
   Also, note that if the \MacroNI{MASTER\_NAME} setting is defined for
   the \Condor{master} that spawned a given \Condor{schedd}, that name
   will take precedence over whatever is defined in
@@ -4999,11 +4987,11 @@ These macros affect the \Condor{collector}.
 \item[\Macro{COLLECTOR\_NAME}] \label{param:CollectorName}
   This macro is used to specify a short description of your pool.
   It should be about 20 characters long.  For example, the name of the
-  UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.  
+  UW-Madison Computer Science Condor Pool is \AdStr{UW-Madison CS}.  
   While this macro might seem similar to \MacroNI{MASTER\_NAME} or
-  \MacroNI{SCHEDD\_NAME}, it is totally unrelated.
-  Those settings are used to unique identify (and locate) a specific
-  set of Condor daemons if there are more than one running on the same
+  \MacroNI{SCHEDD\_NAME}, it is unrelated.
+  Those settings are used to uniquely identify (and locate) a specific
+  set of Condor daemons, if there are more than one running on the same
   machine.
   The \MacroNI{COLLECTOR\_NAME} setting is just used as a
   human-readable string to describe the pool, which is included in the
@@ -7392,14 +7380,12 @@ management and interface to its representation of the job queue.
 
 \item[\Macro{QUILL\_NAME}] \label{param:QuillName}
   A string that uniquely identifies an instance of the \Condor{quill}
-  daemon, as there be more than \Condor{quill} daemon per pool.
+  daemon, as there may be more than \Condor{quill} daemon per pool.
   The string must not be the same as for any \Condor{schedd} daemon.
-  A convenient definition to choose is of the form
-\footnotesize
-\begin{verbatim}
-quill-for-schedd_name@machinename.fully.qualified.address
-\end{verbatim}
-\normalsize
+
+  See the description of \MacroNI{MASTER\_NAME} in
+  section~\ref{param:MasterName} on page~\pageref{param:MasterName}
+  for defaults and composition of valid Condor daemon names.
 
 \item[\Macro{QUILL\_USE\_SQL\_LOG}] \label{param:QuillUseSQLLog}
   In order for Quill to store historical job information or resource
