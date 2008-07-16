@@ -24,26 +24,46 @@
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "condor_uid.h"
 #include "file_lock.h"
 
 extern "C" int lock_file( int fd, LOCK_TYPE type, bool do_block );
+
+FileLock::FileLockEntry* FileLock::m_all_locks = NULL;
 
 FileLock::FileLock( int fd, FILE *fp_arg, const char* path )
 {
 	Reset( );
 	m_fd = fd;
 	m_fp = fp_arg;
+
+	// check to ensure that if we have a real fd or fp_arg, the file is
+	// defined. However, if the fd nor the fp_arg is defined, the file may be
+	// NULL.
+	if ((path == NULL && (fd >= 0 || fp_arg != NULL)))
+	{
+		EXCEPT("FileLock::FileLock(). You must supply a valid file argument "
+			"with a valid fd or fp_arg");
+	}
+
+	// path could be NULL if fd is -1 and fp is NULL, in which case we don't
+	// insert ourselves into a the m_all_locks list.
 	if (path) {
 		m_path = strdup(path);
+		update_lock_timestamp();
+		record_existence();
 	}
 }
 
 FileLock::FileLock( const char *path )
 {
 	Reset( );
-	if (path) {
-		m_path = strdup(path);
-	}
+
+	ASSERT(path != NULL);
+
+	m_path = strdup(path);
+	update_lock_timestamp();
+	record_existence();
 }
 
 FileLock::~FileLock()
@@ -51,6 +71,7 @@ FileLock::~FileLock()
 	if( state != UN_LOCK ) {
 		release();
 	}
+
 	use_kernel_mutex = -1;
 #ifdef WIN32
 	if (debug_win32_mutex) {
@@ -58,7 +79,11 @@ FileLock::~FileLock()
 		debug_win32_mutex = NULL;
 	}
 #endif
-	if ( m_path) free(m_path);
+	if ( m_path) {
+		free(m_path);
+		m_path = NULL;
+		erase_existence();
+	}
 }
 
 void
@@ -76,10 +101,48 @@ FileLock::Reset( void )
 }
 
 void
-FileLock::SetFdFp( int fd, FILE *fp )
+FileLock::SetFdFpFile( int fd, FILE *fp, const char *file )
 {
+	// if I'm -1, NULL, NULL, that's ok, however, if file != NULL, then
+	// either the fd or the fp must also be valid.
+	if ((file == NULL && (fd >= 0 || fp != NULL)))
+	{
+		EXCEPT("FileLock::SetFdFpFile(). You must supply a valid file argument "
+			"with a valid fd or fp_arg");
+	}
+
 	m_fd = fd;
 	m_fp = fp;
+
+	// Make sure we record our existence in the static list properly depending
+	// on what the user is setting the variables to...
+	if (m_path == NULL && file != NULL) {
+		// moving from a NULL object to a object needed to update the timestamp
+
+		m_path = strdup(file);
+		// This will use the new lock file in m_path
+		update_lock_timestamp();
+
+		// check to see if I'm already in the list, if not, then add me.
+		// This is for the case where the lock object was initialized with
+		// -1, NULL, NULL, and now I'm using this function to add in the
+		// information.
+		record_existence();
+
+	} else if (m_path != NULL && file == NULL) {
+		// moving from an updatable timestamped object to a NULL object
+
+		free(m_path);
+		m_path = NULL;
+		erase_existence();
+
+	} else if (m_path != NULL && file != NULL) {
+		// keeping the updatability of the object, but updating the path.
+
+		free(m_path);
+		m_path = strdup(file);
+		update_lock_timestamp();
+	}
 }
 
 void
@@ -253,3 +316,141 @@ FileLock::release()
 {
 	return obtain( UN_LOCK );
 }
+
+void
+FileLock::update_lock_timestamp(void)
+{
+	priv_state p;
+
+	if (m_path) {
+
+		dprintf(D_FULLDEBUG, "FileLock object is updating timestamp on: %s\n",
+			m_path);
+
+		// NOTE:
+		// At the time of writing, if we try to update the lock and fail
+		// because the lock is not owned by Condor, we ignore it and leave the
+		// lock timestamp not updated and we don't even write a message about
+		// it in the logs. This behaviour is warranted because the main reason
+		// why this is here at all if to prevent Condor owned lock files from
+		// being deleted by tmpwatch and other administrative programs.
+		// According to Todd 07/15/2008, a new feature will shortly be going
+		// into Condor which will make *ALL* file locking use separate lock
+		// file elsewhere which will all be owned by Condor, in which case this
+		// will work perfectly.
+
+		// One of the main reasons why we just don't store the privledge state
+		// of the process when this object is created is because the semantics
+		// of this object have been that the caller is resposible for 
+		// maintaining the correct priv state when dealing with the lock
+		// object. If we circumvent that by having the lock object alter
+		// it privstate to match what it was constructed under, it will be 
+		// very surprising if the caller knows a file has changed ownership
+		// or similar things.
+
+		p = set_condor_priv();
+
+		// set the updated atime and mtime for the file to now.
+		if (utime(m_path, NULL) < 0) {
+
+			// Only emit message if it isn't a permission problem....
+			if (errno != EACCES && errno != EPERM) {
+				dprintf(D_FULLDEBUG, "FileLock::update_lock_time(): utime() "
+					"failed %d(%s) on lock file %s. Not updating timestamp.\n",
+					errno, strerror(errno), m_path);
+			}
+		}
+		set_priv(p);
+
+		return;
+	}
+}
+
+void
+FileLock::update_all_lock_timestamps(void)
+{
+	FileLockEntry *fle = NULL;
+
+	fle = m_all_locks;
+
+	// walk the locks list and have each one update its timestamp
+	while(fle != NULL) {
+		fle->fl->update_lock_timestamp();
+		fle = fle->next;
+	}
+}
+
+void 
+FileLock::record_existence(void)
+{
+	FileLockEntry *fle = new FileLockEntry;
+	
+	fle->fl = this;
+
+	// insert it at the head of the singly linked list
+	fle->next = m_all_locks;
+	m_all_locks = fle;
+}
+
+void 
+FileLock::erase_existence(void)
+{
+	// do a little brother style removal in the singly linked list
+
+	FileLockEntry *prev = NULL;
+	FileLockEntry *curr = NULL;
+	FileLockEntry *del = NULL;
+
+	if (m_all_locks == NULL) {
+		goto bail_out;
+	}
+
+	// is it the first one?
+	if (m_all_locks->fl == this) {
+		del = m_all_locks;
+		m_all_locks = m_all_locks->next;
+		delete del;
+		return;
+	}
+
+	// if it is the second one or beyond, find it and delete the entry
+	// from the list.
+	prev = m_all_locks;
+	curr = m_all_locks->next;
+
+	while(curr != NULL) {
+		if (curr->fl == this) {
+			// found it, mark it for deletion.
+			del = curr;
+			// remove it from the list.
+			prev->next = curr->next;
+			del->next = NULL;
+			delete del;
+
+			// all done.
+			return;
+		}
+		curr = curr->next;
+		prev = prev->next;
+	}
+
+	bail_out:
+	// I *must* have recorded my existence before erasing it, so if not, then
+	// a programmer error has happened.
+	EXCEPT("FileLock::erase_existence(): Programmer error. A FileLock to "
+			"be erased was not found.");
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

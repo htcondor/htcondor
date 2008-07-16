@@ -140,7 +140,7 @@ JobRouter::GetInstanceLock() {
 	if(m_router_lock_fd == -1) {
 		EXCEPT("Failed to open lock file %s: %s",lock_fullname.c_str(),strerror(errno));
 	}
-	FileLock *lock = new FileLock(m_router_lock_fd);
+	FileLock *lock = new FileLock(m_router_lock_fd, NULL,lock_fullname.c_str());
 	m_router_lock = lock;
 	m_router_lock_fname = lock_fullname;
 
