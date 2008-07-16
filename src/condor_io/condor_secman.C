@@ -522,13 +522,13 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 			// but you never know with file transfer and all.
 			ad->Assign ( ATTR_SEC_SESSION_DURATION, "3600" );
 		} else {
-			// default for daemons is 2 hours.  
+			// default for daemons is one day.
 
 			// Note that pre 6.6 condors have bugs with re-negotiation
 			// of security sessions, so we used to set this to 100 days.
 			// That caused memory bloating for dynamic pools.  
 
-			ad->Assign ( ATTR_SEC_SESSION_DURATION, "7200" );
+			ad->Assign ( ATTR_SEC_SESSION_DURATION, "86400" );
 		}
 	}
 
