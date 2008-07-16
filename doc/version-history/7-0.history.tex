@@ -36,7 +36,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added functionality to periodically update timestamps on lock files. 
+This prevents administrative programs from deleting in-use lock files and
+causing undefined behavior.
 
 \end{itemize}
 
@@ -44,7 +46,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added configuration variable: \Expr{LOCK\_FILE\_UPDATE\_INTERVAL}.
+Please see page~\pageref{param:LockFileUpdateInterval} for a complete
+description.
 
 \end{itemize}
 
