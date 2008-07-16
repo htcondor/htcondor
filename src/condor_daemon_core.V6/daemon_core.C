@@ -4030,7 +4030,13 @@ int DaemonCore::HandleReq(Stream *insock)
 					char *return_addr = NULL;
 					the_policy->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
 
-					int expiration_time = time(0) + atoi(dur);
+					// we add 20 seconds for "slop".  the idea is that if the client were
+					// to start a session just as it was expiring, the server will allow a
+					// window of 20 seconds to receive the command before throwing out the
+					// cached session.
+					int slop = param_integer("SEC_SESSION_DURATION_SLOP", 20);
+					int durint = atoi(dur) + slop;
+					int expiration_time = time(0) + durint;
 
 					// add the key to the cache
 
@@ -4041,7 +4047,7 @@ int DaemonCore::HandleReq(Stream *insock)
 					// port as its command socket.
 					KeyCacheEntry tmp_key(the_sid, NULL, the_key, the_policy, expiration_time);
 					sec_man->session_cache->insert(tmp_key);
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %s seconds (return address is %s).\n", the_sid, dur, return_addr ? return_addr : "unknown");
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (return address is %s).\n", the_sid, durint, return_addr ? return_addr : "unknown");
 					if (DebugFlags & D_FULLDEBUG) {
 						the_policy->dPrint(D_SECURITY);
 					}
