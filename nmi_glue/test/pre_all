@@ -50,6 +50,10 @@ if( defined($opt_src) ) {
     setupDefaultSrc();
 }
 
+# Set up environment file for talking to tests on remote execute node
+
+setupTestEnvFile();
+
 # Either we already unpacked the contents of results.tar.gz or we're
 # not using it... in both cases we want to unlink it now so that it
 # doesn't clobber anything when the framework copies the contents of
@@ -60,6 +64,20 @@ unlink( $results ) || die "Can't unlink($results): $!\n";
 print "All steps completed successfully\n";
 exit 0;
 
+sub setupTestEnvFile
+{
+    ######################################################################
+    # set up environment and create env file for test tasks
+    ######################################################################
+
+    print "Setting up environtment file 'setup_test_env' for other scripts\n";
+    open( ENVSETUP, ">test_task_env" ) ||
+    die "cannot open test_task_env for writing\n";
+
+    print ENVSETUP "GCBTARGET=nmi-s006.cs.wisc.edu\n";
+    print ENVSETUP "export GCBTARGET\n";
+    close(ENVSETUP);
+}
 
 # Setup the test run using the default source tarball from the build
 sub setupDefaultSrc()

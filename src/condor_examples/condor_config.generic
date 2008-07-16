@@ -886,6 +886,15 @@ JOB_ROUTER_LOG  = $(LOG)/JobRouterLog
 ##  Lock files
 SHADOW_LOCK	= $(LOCK)/ShadowLock
 
+## This setting controls how often any lock files currently in use have their
+## timestamp updated. Updating the timestamp prevents administrative programs 
+## like 'tmpwatch' from deleting long lived lock files. The parameter is
+## an integer in seconds with a minimum of 60 seconds. The default if not
+## specified is 28800 seconds, or 8 hours.
+## This attribute only takes effect on restart of the daemons or at the next
+## update time.
+# LOCK_FILE_UPDATE_INTERVAL = 28800
+
 ##  This setting primarily allows you to change the port that the
 ##  collector is listening on.  By default, the collector uses port
 ##  9618, but you can set the port with a ":port", such as:

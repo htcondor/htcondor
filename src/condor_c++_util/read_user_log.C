@@ -416,7 +416,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 			m_lock_rot = m_state->Rotation( );
 		}
 		else {
-			m_lock->SetFdFp( m_fd, m_fp );
+			m_lock->SetFdFpFile( m_fd, m_fp, m_state->CurPath() );
 		}
 	}
 
