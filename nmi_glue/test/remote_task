@@ -26,6 +26,7 @@
 # corresponding perl script for a given stage of the test.
 
 ENV_FILE=setup_test_env
+TEST_FILE=test_task_env
 
 # include the environment info from the pre-script
 if [ ! -f $ENV_FILE ]; then
@@ -33,5 +34,13 @@ if [ ! -f $ENV_FILE ]; then
     exit 1
 fi
 . $ENV_FILE
+
+# look for passed in test environment file
+if [ ! -f $TEST_FILE ]; then
+    echo "No task environment file found!"
+else
+    echo "Found environment file for tests!"
+    .  $TEST_FILE
+fi
 
 exec remote_task.pl $*

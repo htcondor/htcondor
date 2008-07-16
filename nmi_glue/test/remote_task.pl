@@ -42,6 +42,9 @@ if( ! defined $ENV{_NMI_TASKNAME} ) {
 }
 my $fulltestname = $ENV{_NMI_TASKNAME};
 
+my $testenvtst =   $ENV{GCBTARGET};
+print "Test for test environment variable GCBTARGET yields <$testenvtst>\n";
+
 if( $fulltestname =~ /remote_task/) {
 	die "_NMI_TASKNAME set to remote_task meaning 0 tests seen!\n";
 }
