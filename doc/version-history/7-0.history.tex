@@ -28,7 +28,7 @@ The details of each version are described below.
 \begin{itemize}
 
 \item This release fixes a problem causing possible incorrect handling
-of wildcards in authorization lists.
+of wild cards in authorization lists.
 Examples of the configuration variables that specify
 authorization lists are
 \begin{verbatim}
@@ -41,7 +41,7 @@ If a configuration variable uses the asterisk character
 (\verb@*@) in configuration variables that specify the
 authorization policy, it is advisable to upgrade.
 This is especially true for the 
-use of wildcards in any \MacroNI{DENY} list,
+use of wild cards in any \MacroNI{DENY} list,
 since this problem could result in
 access being allowed, when it should have been denied.
 This issue affects all previous versions of Condor.
@@ -57,10 +57,12 @@ This issue affects all previous versions of Condor.
 This prevents administrative programs from deleting in-use lock files and
 causing undefined behavior.
 
-\item When the configuration paramter \Expr{SCHEDD\_NAME} ends in `@',
-the \Condor{schedd} will no longer insert its hostname into the value.
-This makes it possible to configure a fail-over \Condor{schedd} on a
-backup machine.
+\item When the configuration variable \Macro{SCHEDD\_NAME} ends in 
+the \verb$@$ symbol,
+Condor will no longer append the fully qualified
+host name to the value.
+This makes it possible to configure a high availability
+job queue that works with the remote submission of jobs.
 
 \end{itemize}
 
@@ -79,10 +81,10 @@ description.
 \begin{itemize}
 
 \item Fixed a bug in the \Condor{c-gahp} that caused it to fail repeatedly
-on Windows if more than 2 Condor-C jobs were submitted at the same time.
+on Windows, if more than two Condor-C jobs were submitted at the same time.
 
 \item Fixed a problem that caused the \Condor{collector}'s memory usage
-to increase dramatically if \Condor{findhost} was run repeatedly.
+to increase dramatically, if \Condor{findhost} was run repeatedly.
 
 \item Fixed a bug where Windows jobs suspended by Condor would never
 be continued, despite log files indicating successful continuation.
@@ -94,32 +96,34 @@ if straced, especially if the \File{dagman.out} file is on a shared
 file system.
 
 \item Fixed a problem introduced in 7.0.1 that could cause the \Condor{schedd}
-to crash when starting parallel or MPI universe jobs.  In some cases,
+daemon to crash when starting parallel or MPI universe jobs.  In some cases,
 the problem would result in the following log message:
 
+\footnotesize
 \begin{verbatim}
 ERROR ``Assertion ERROR on (mrec->request_claim_sock == sock)'' \
   at line 1361 in file dedicated_scheduler.C
 \end{verbatim}
+\normalsize
 
-\item The \Condor{procd} now periodically updates the timestamps on
+\item The \Condor{procd} daemon now periodically updates the timestamps on
 the named pipe file system objects that it uses for communication.
 This prevents these objects from being cleaned up by programs like
 \Prog{tmpwatch}, which would result in Condor daemon exceptions.
 
 \item Fixed a problem introduced in Condor 7.0.2 that would cause daemons
-to fail on startup on Windows 2000.
+to fail on start up on Windows 2000.
 
 \item Fixed a problem where standard universe jobs would fail to start
-when using PrivSep, if the \Macro{PROCD\_ADDRESS} setting were not
+when using PrivSep, if the \Macro{PROCD\_ADDRESS} configuration variable was not
 defined.
 
 \item If the X509 proxy of a vanilla universe job has been refreshed, the
 updated file will no longer be returned when the job completes.
 
-\item If attributes \Attr{StreamOut} or \Attr{StreamErr} are missing from
-the job classads of grid universe jobs, the default value is now
-\Attr{False}.
+\item If ClassAd attributes \Attr{StreamOut} or \Attr{StreamErr} are
+missing from the job ClassAd of a grid universe job,
+the default value for these attributes is now \Expr{False}.
 
 \end{itemize}
 
@@ -252,7 +256,7 @@ will no longer be made available.
 \begin{itemize}
 
 \item A clipped port to FreeBSD 7.0 x86 and x86\_64 is available, but at this
-time is not downloadable as a binary package.
+time, it is not available for download as a binary package.
 
 \item Previously, \Condor{q} \Opt{-better-analyze} was supported on most
 but not all versions of Linux.  It is now supported on all Unix platforms,
