@@ -46,6 +46,11 @@ since this problem could result in
 access being allowed, when it should have been denied.
 This issue affects all previous versions of Condor.
 
+\item The default daemon-to-daemon security session duration has been
+changed from 100 days to 1 day. This should reduce memory usage in the
+\Condor{collector} in pools with short-lived \Condor{startd}s (e.g. 
+glidein pools or pools whose machines are rebooted every night).
+
 \end{itemize}
 
 
@@ -73,6 +78,10 @@ job queue that works with the remote submission of jobs.
 \item Added configuration variable: \Expr{LOCK\_FILE\_UPDATE\_INTERVAL}.
 Please see page~\pageref{param:LockFileUpdateInterval} for a complete
 description.
+
+\item Changed the default value of configuration variable
+\Expr{SEC\_DEFAULT\_SESSION\_DURATION} from 8640000 seconds (100 days)
+to 86400 seconds (1 day).
 
 \end{itemize}
 
