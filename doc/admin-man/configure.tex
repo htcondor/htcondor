@@ -2722,9 +2722,11 @@ will not want to change them for any reason.
 
   A defined \MacroNI{MASTER\_NAME} is presumed to be of the form
   \verb$identifying-string@full.host.name$.
-  When this definition includes
+  When this definition includes, but does not end with
   an \verb$@$ sign, Condor replaces whatever follows the \verb$@$
   sign with the fully qualified host name of the local machine.
+  When this definition ends with an \verb$@$ sign,
+  Condor does not modify the value.
   If the string does not include an \verb$@$ sign,
   Condor appends one, followed by the fully qualified host name
   of the local machine.
