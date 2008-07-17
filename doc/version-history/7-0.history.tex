@@ -57,6 +57,11 @@ This issue affects all previous versions of Condor.
 This prevents administrative programs from deleting in-use lock files and
 causing undefined behavior.
 
+\item When the configuration paramter \Expr{SCHEDD\_NAME} ends in `@',
+the \Condor{schedd} will no longer insert its hostname into the value.
+This makes it possible to configure a fail-over \Condor{schedd} on a
+backup machine.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -108,6 +113,13 @@ to fail on startup on Windows 2000.
 \item Fixed a problem where standard universe jobs would fail to start
 when using PrivSep, if the \Macro{PROCD\_ADDRESS} setting were not
 defined.
+
+\item If the X509 proxy of a vanilla universe job has been refreshed, the
+updated file will no longer be returned when the job completes.
+
+\item If attributes \Attr{StreamOut} or \Attr{StreamErr} are missing from
+the job classads of grid universe jobs, the default value is now
+\Attr{False}.
 
 \end{itemize}
 
