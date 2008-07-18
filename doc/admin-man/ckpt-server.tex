@@ -188,7 +188,7 @@ about your new server:
    TRUE (the default).
 
    \item[\Macro{CKPT\_SERVER\_HOST}] This parameter should be set to
-   the full hostname of the machine that is now running your checkpoint
+   the full host name of the machine that is now running your checkpoint
    server.  
 \end{description}
 
@@ -254,12 +254,12 @@ For convenience, set these parameters in the
 global configuration file.
 
 Second, set \Macro{CKPT\_SERVER\_HOST} on each machine.
-As described, this is set to the full hostname of the
+As described, this is set to the full host name of the
 checkpoint server machine.
 In the case of multiple checkpoint servers, set this
 in the local configuraton file.
 It is
-the hostname of the nearest server to the machine.
+the host name of the nearest server to the machine.
 
 Third, send a
 \Condor{reconfig} to all machines in the pool so the changes take
