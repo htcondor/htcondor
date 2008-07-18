@@ -2715,9 +2715,6 @@ will not want to change them for any reason.
 
   A defined \MacroNI{MASTER\_NAME} is presumed to be of the form
   \verb$identifying-string@full.host.name$.
-  When this definition includes
-  an \verb$@$ sign, Condor replaces whatever follows the \verb$@$
-  sign with the fully qualified host name of the local machine.
   If the string does not include an \verb$@$ sign,
   Condor appends one, followed by the fully qualified host name
   of the local machine.
@@ -2725,6 +2722,13 @@ will not want to change them for any reason.
   alphanumeric ASCII characters or punctuation marks, except the \verb$@$ sign.
   We recommend that the string does not contain the \verb$:$ (colon)
   character, since that might cause problems with certain tools.
+  Previous to Condor 7.1.1, when the string included
+  an \verb$@$ sign, Condor replaced whatever followed the \verb$@$
+  sign with the fully qualified host name of the local machine.
+  Condor does not modify any portion of the string, if it
+  contains an \verb$@$ sign.
+  This is useful for remote job submissions under the high availability
+  of the job queue.
 
   If the \MacroNI{MASTER\_NAME} setting is used, and the
   \Condor{master} is configured to spawn a \Condor{schedd},
@@ -6628,9 +6632,7 @@ X.509 distinguished names to Condor user ids.
 \item[\Macro{SEC\_DEFAULT\_SESSION\_DURATION}]
 \label{param:SessionDuration} The amount of time in seconds before
 a communication session expires.
-%Defaults to 3600 seconds (1 hour).
-Defaults to 8640000 seconds (100 days) to avoid a bug in session
-renegotiation for Condor Version 6.6.0.
+Defaults to 86400 seconds (1 day).
 A session is a record of necessary information to do communication
 between a client and daemon, and is protected by a shared secret key.
 The session expires to reduce the window of opportunity where
