@@ -112,6 +112,49 @@ for details relating to the configuration variables
 used to set timing and polling intervals.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:HA-remote-submit} Working with Remote Job Submission}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{High Availability!of job queue, with remote job submission}
+
+Remote job submission requires identification of the job queue,
+submitting with a command similar to:
+\footnotesize
+\begin{verbatim}
+  % condor_submit -remote condor@example.com myjob.submit
+\end{verbatim}
+\normalsize
+This implies the identification of a single \Condor{schedd} daemon,
+running on a single machine.
+With the high availability of the job queue, there are
+multiple \Condor{schedd} daemons, of which only one at a time is acting
+as the single submission point.
+To make remote submission of jobs work properly,
+set the configuration variable \Macro{SCHEDD\_NAME} in the local
+configuration to have
+the same value for each potentially running \Condor{schedd} daemon.
+In addition, the value chosen for the variable \MacroNI{SCHEDD\_NAME}
+must end with the at symbol (\verb$@$),
+such that Condor will not modify the value set for this variable.
+See the description of \MacroNI{MASTER\_NAME} in
+section~\ref{param:MasterName} on page~\pageref{param:MasterName}
+for defaults and composition of valid values for \MacroNI{SCHEDD\_NAME}.
+As an example, include in each local configuration a value similar to:
+\footnotesize
+\begin{verbatim}
+SCHEDD_NAME = had-schedd@
+\end{verbatim}
+\normalsize
+
+
+Then, with this sample configuration, the
+submit command appears as:
+\footnotesize
+\begin{verbatim}
+  % condor_submit -remote had-schedd@  myjob.submit
+\end{verbatim}
+\normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:HA-negotiator} High Availability of the
 Central Manager} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
