@@ -1680,6 +1680,15 @@ which use DaemonCore).
   alive and well
   message from the \Condor{schedd} before killing it.
 
+\item[\Macro{LOCK\_FILE\_UPDATE\_INTERVAL}] \label{param:LockFileUpdateInterval}
+	This setting controls how often valid lock files should have their on disk
+	timetamps updated. Updating the timestamps prevents administrative programs
+	such as \Prog{tmpwatch} from deleting long lived lock files. The
+	value of this parameter must be an integer representing seconds. If less
+	than 60, the update time will be limited to 60 seconds. By default,
+	the seconds are 28800, which is 8 hours. This setting only takes effect
+	at the start or restart of a daemon.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -6623,9 +6632,7 @@ X.509 distinguished names to Condor user ids.
 \item[\Macro{SEC\_DEFAULT\_SESSION\_DURATION}]
 \label{param:SessionDuration} The amount of time in seconds before
 a communication session expires.
-%Defaults to 3600 seconds (1 hour).
-Defaults to 8640000 seconds (100 days) to avoid a bug in session
-renegotiation for Condor Version 6.6.0.
+Defaults to 86400 seconds (1 day).
 A session is a record of necessary information to do communication
 between a client and daemon, and is protected by a shared secret key.
 The session expires to reduce the window of opportunity where
