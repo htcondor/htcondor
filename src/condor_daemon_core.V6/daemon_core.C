@@ -5147,8 +5147,22 @@ DaemonCore::Forked_Child_Wants_Exit_By_Exec( bool exit_by_exec )
 	 * daemonCore daemons).  So doing it this way works for all cases.
 	 */
 extern "C" {
+
+#if HAVE_GNU_LD
+void __real_exit(int status);
+void __wrap_exit(int status)
+{
+	if ( _condor_exit_with_exec == 0 ) {
+			// The advantage of calling the real exit() rather than
+			// _exit() is that things like gprof and google-perftools
+			// can write a final profile dump.
+		__real_exit(status);
+	}
+
+#else
 void exit(int status)
 {
+#endif
 
 		// turns out that _exit() does *not* always flush STDOUT and
 		// STDERR, that it's "implementation dependent".  so, to

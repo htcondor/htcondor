@@ -294,6 +294,9 @@ WRAP_LDFLAGS = -Wl,--wrap,socket -Wl,--wrap,bind -Wl,--wrap,listen -Wl,--wrap,co
 GCB_FLAGS = -I$(GCB_INC)
 #endif
 
+#if HAVE_GNU_LD
+DAEMONCORE_WRAP_LDFLAGS = -Wl,--wrap,exit
+#endif
 
 /********************************************
  end of externals-specific settings and flags
@@ -367,7 +370,7 @@ CPLUS_LIB = ../condor_c++_util/cplus_lib.a
 PROCAPI_LIB = ../condor_procapi/libprocapi.a
 SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 ACCT_LIB    = ../condor_accountant.V6/libacct.a
-DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB)
+DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB) $(DAEMONCORE_WRAP_LDFLAGS)
 PROCD_CLIENT_LIB = ../condor_procd/procd_client.a
 PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
 
