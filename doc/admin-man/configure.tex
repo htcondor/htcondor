@@ -1687,13 +1687,13 @@ which use DaemonCore).
   message from the \Condor{schedd} before killing it.
 
 \item[\Macro{LOCK\_FILE\_UPDATE\_INTERVAL}] \label{param:LockFileUpdateInterval}
-	This setting controls how often valid lock files should have their on disk
-	timetamps updated. Updating the timestamps prevents administrative programs
-	such as \Prog{tmpwatch} from deleting long lived lock files. The
-	value of this parameter must be an integer representing seconds. If less
-	than 60, the update time will be limited to 60 seconds. By default,
-	the seconds are 28800, which is 8 hours. This setting only takes effect
-	at the start or restart of a daemon.
+  An integer value representing seconds,
+  controlling how often valid lock files should have their on disk
+  timestamps updated. Updating the timestamps prevents administrative programs,
+  such as \Prog{tmpwatch}, from deleting long lived lock files.
+  If set to a value less than 60, the update time will be 60 seconds.
+  The default value is 28800, which is 8 hours. 
+  This variable only takes effect at the start or restart of a daemon.
 
 \end{description}
 
