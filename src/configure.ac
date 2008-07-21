@@ -1418,6 +1418,16 @@ esac
 AC_SUBST([_cv_platform_ld_flags], [$_cv_platform_ld_flags])
 
 
+# Check to see if the confidential test suite is present
+AC_CHECK_FILE(../config/CONDOR_TEST_CNFDTL, 
+	AC_DEFINE(HAVE_CONDOR_TEST_CNFDTL,[1],[Do we have the confidential test suite available to us?]))
+
+
+# Check to see if the large test suite is present
+AC_CHECK_FILE(../config/CONDOR_TEST_LRG, 
+	AC_DEFINE(HAVE_CONDOR_TEST_LRG,[1],[Do we have the large test suite available to us?]))
+
+
 #####################
 # everything else
 #####################
@@ -1773,6 +1783,14 @@ if test "$ac_purify" = "purify"; then
       AC_MSG_RESULT( created )
    fi
 fi
+
+AC_PATH_PROG(ac_vmware,vmware,no,[$PATH])
+if test $ac_vmware = "no"; then
+  AC_MSG_WARN( [vmware not found] )
+else
+  AC_DEFINE([HAVE_VMWARE],[1],[Define if vmware is available])
+fi
+AC_SUBST(VMWARE,$ac_vmware)
 
 AC_PATH_PROG(ac_javac,javac,no,[$PATH])
 if test $ac_javac = "no"; then
