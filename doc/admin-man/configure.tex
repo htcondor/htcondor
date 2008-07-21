@@ -5015,11 +5015,11 @@ These macros affect the \Condor{collector}.
   your pool is small or your central manager has very little RAM, considering
   setting this parameter to a lower value (perhaps 256000 or 128000).
 
-\Note For some Linux distributions, it may be necessary to configure
-a larger value than the default; this parameter is
-/proc/sys/net/core/rmem\_max .  You can see the values that the
-\Condor{collector} actually used by enabling D\_FULLDEBUG for the
-collector and looking at the log line that looks like this:
+\Note For some Linux distributions, it may be necessary to raise the
+OS's system-wide limit for network buffer sizes. The parameter that
+controls this limit is /proc/sys/net/core/rmem\_max. You can see the
+values that the \Condor{collector} actually uses by enabling D\_FULLDEBUG
+for the collector and looking at the log line that looks like this:
 
 Reset OS socket buffer size to 2048k (UDP), 255k (TCP).
 
