@@ -1451,6 +1451,7 @@ trimStartdAds(ClassAdList &startdAds)
 	ClassAd *ad = NULL;
 	char curState[80];
 	char *unclaimed = state_to_string(unclaimed_state);
+	char const *owner_state_str = state_to_string(owner_state);
 	ASSERT(unclaimed);
 
 		// If we are not considering preemption, we can save time
@@ -1465,7 +1466,7 @@ trimStartdAds(ClassAdList &startdAds)
 	startdAds.Open();
 	while( (ad=startdAds.Next()) ) {
 		if(ad->LookupString(ATTR_STATE, curState, sizeof(curState))) {
-			if ( strcmp(curState,unclaimed) ) {
+			if ( strcmp(curState,unclaimed) && strcmp(curState,owner_state_str) ) {
 				startdAds.Delete(ad);
 				removed++;
 			}
