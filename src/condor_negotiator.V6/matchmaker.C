@@ -1391,16 +1391,18 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 static int
 comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
 {
-	char	scheddName1[64];
-	char	scheddName2[64];
+	char	*scheddName1 = NULL;
+	char	*scheddName2 = NULL;
 	double	prio1, prio2;
 	Matchmaker *mm = (Matchmaker *) m;
 
 
 
-	if (!ad1->LookupString (ATTR_NAME, scheddName1) ||
-		!ad2->LookupString (ATTR_NAME, scheddName2))
+	if (!ad1->LookupString (ATTR_NAME, &scheddName1) ||
+		!ad2->LookupString (ATTR_NAME, &scheddName2))
 	{
+		if (scheddName1) free(scheddName1);
+		if (scheddName2) free(scheddName2);
 		return -1;
 	}
 
@@ -1415,6 +1417,8 @@ comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
 
 	if (prio1==prio2) {
 		int namecomp = strcmp(scheddName1,scheddName2);
+		free(scheddName1);
+		free(scheddName2);
 		if (namecomp != 0) return (namecomp < 0);
 
 			// We don't always want to negotiate with schedds with the
@@ -1435,6 +1439,8 @@ comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
 		return ( (ts1 % 1009) < (ts2 % 1009) );
 	}
 
+	free(scheddName1);
+	free(scheddName2);
 	return (prio1 < prio2);
 }
 
@@ -1445,6 +1451,7 @@ trimStartdAds(ClassAdList &startdAds)
 	ClassAd *ad = NULL;
 	char curState[80];
 	char *unclaimed = state_to_string(unclaimed_state);
+	char const *owner_state_str = state_to_string(owner_state);
 	ASSERT(unclaimed);
 
 		// If we are not considering preemption, we can save time
@@ -1459,7 +1466,7 @@ trimStartdAds(ClassAdList &startdAds)
 	startdAds.Open();
 	while( (ad=startdAds.Next()) ) {
 		if(ad->LookupString(ATTR_STATE, curState, sizeof(curState))) {
-			if ( strcmp(curState,unclaimed) ) {
+			if ( strcmp(curState,unclaimed) && strcmp(curState,owner_state_str) ) {
 				startdAds.Delete(ad);
 				removed++;
 			}

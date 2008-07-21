@@ -18,7 +18,7 @@ library_target(collector_engine.a, $(ENGINE_OBJ))
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_status.V6,totals.o)
+import_objs(../condor_status.V6,totals.o)
 
 gen_soapfiles(collector,condorCollector)
 

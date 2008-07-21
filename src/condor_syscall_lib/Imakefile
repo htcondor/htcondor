@@ -509,16 +509,16 @@ clean::
 /*depend_target($(SRC)) */
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_io,$(IO_OBJ))
-import(../condor_util_lib,$(UTIL_OBJ))
-import(../condor_c++_util,$(CPP_UTIL_OBJ))
-import(../condor_ckpt,condor_rt0.o)
-import(../condor_ckpt,$(CKPT_OBJ))
-import(../condor_ckpt,$(COMPRESS_OBJ))
-import(../h,syscall_numbers.c)
-import(../condor_util_lib,stub_gen)
-import(../condor_shadow.V6,pseudo_ops.h)
-import(../condor_ckpt,libcondorc++support.a)
+import_objs(../condor_io,$(IO_OBJ))
+import_objs(../condor_util_lib,$(UTIL_OBJ))
+import_objs(../condor_c++_util,$(CPP_UTIL_OBJ))
+import_objs(../condor_ckpt,condor_rt0.o)
+import_objs(../condor_ckpt,$(CKPT_OBJ))
+import_objs(../condor_ckpt,$(COMPRESS_OBJ))
+import_objs(../h,syscall_numbers.c)
+import_objs(../condor_util_lib,stub_gen)
+import_objs(../condor_shadow.V6,pseudo_ops.h)
+import_objs(../condor_ckpt,libcondorc++support.a)
 #ifdef DOES_CHECKPOINTING
 XCOMM Always needed for the file table compressed files feature.
 XCOMM If checkpoints may be compressed, it is needed for that too.

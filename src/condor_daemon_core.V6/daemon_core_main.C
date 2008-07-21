@@ -483,6 +483,32 @@ dc_touch_log_file( Service* )
 	return TRUE;
 }
 
+int
+dc_touch_lock_files(Service *)
+{
+	priv_state p;
+
+	// For any outstanding lock objects that are associated with the real lock
+	// file, update their timestamps. Do it as Condor, and ignore files that we
+	// don't have permissions to alter. This allows things like the Instance
+	// lock to be updated, but doesn't update things like the job event log.
+
+	// do this here to make the priv switching operations fast in the 
+	// FileLock Object.
+	p = set_condor_priv();
+
+	FileLock::update_all_lock_timestamps();
+
+	set_priv(p);
+
+	// reset the timer for next incarnation of the update.
+	daemonCore->Register_Timer(
+		param_integer("LOCK_FILE_UPDATE_INTERVAL", 3600 * 8, 60, INT_MAX),
+		(TimerHandler)dc_touch_lock_files, "dc_touch_lock_files" );
+
+	return TRUE;
+}
+
 
 void
 set_dynamic_dir( char* param_name, const char* append_str )
@@ -1827,6 +1853,9 @@ int main( int argc, char** argv )
 
 	daemonCore->Register_Timer( 0,
 				(TimerHandler)dc_touch_log_file, "dc_touch_log_file" );
+
+	daemonCore->Register_Timer( 0,
+				(TimerHandler)dc_touch_lock_files, "dc_touch_lock_files" );
 
 	daemonCore->Register_Timer( 0, 5 * 60,
 				(TimerHandler)check_session_cache, "check_session_cache" );

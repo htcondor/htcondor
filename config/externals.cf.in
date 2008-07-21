@@ -123,11 +123,13 @@ GT4GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT4GAHP_VERSION)
 
 #if HAVE_EXT_GSOAP
 GSOAP_DIR = $(EXT_INSTALL)/$(EXT_GSOAP_VERSION)
+GSOAP_SHARE = $(GSOAP_DIR)/share/gsoap
 SOAPCPP2 = $(GSOAP_DIR)/bin/soapcpp2
+WSDL2H = $(GSOAP_DIR)/bin/wsdl2h
 #if HAVE_EXT_OPENSSL
-GSOAP_LIB = $(GSOAP_DIR)/lib/libgsoapssl++.a
+GSOAP_LIB = $(GSOAP_DIR)/lib/libgsoapssl++.a $(ZLIB_LIB)/libz.a
 #else
-GSOAP_LIB = $(GSOAP_DIR)/lib/libgsoap++.a
+GSOAP_LIB = $(GSOAP_DIR)/lib/libgsoap++.a $(ZLIB_LIB)/libz.a
 #endif
 #endif
 
@@ -174,6 +176,8 @@ SRB_DIR =
 SRB_LIB =
 SRB_INC =
 GSOAP_DIR = /usr
+GSOAP_SHARE = $(GSOAP_DIR)/share/gsoap
 SOAPCPP2 = soapcpp2
+WSDL2H = wsdl2h
 
 #endif

@@ -1,0 +1,42 @@
+#ALLOW_READ = *
+#DENY_READ = 10.2.3.4, 192.168.2.1
+READ * 10.0.0.1 ALLOWED
+READ user@domain 10.2.3.5 ALLOWED
+READ * 10.2.3.4 DENIED
+READ user@domain 10.2.3.4 DENIED
+READ user@domain 192.168.2.1 DENIED
+READ * 192.168.2.1 DENIED
+
+#ALLOW_WRITE = 10.2.3.4
+#DENY_WRITE = 192.168.2.1, *
+WRITE * 10.2.3.4 DENIED
+WRITE user@domain 10.2.3.4 DENIED
+WRITE user@domain 192.168.2.1 DENIED
+WRITE user@domain 10.0.0.1 DENIED
+
+#ALLOW_ADMINISTRATOR = admin@domain/*
+#DENY_ADMINISTRATOR = admin@domain/10.2.3.4, badguy@*, badguy2@*/*, *@baddomain
+ADMINISTRATOR admin@domain 10.2.3.41 ALLOWED
+ADMINISTRATOR admin@domain 10.2.3.4 DENIED
+ADMINISTRATOR admin@domain2 10.2.3.41 DENIED
+ADMINISTRATOR admin2@domain 10.2.3.41 DENIED
+ADMINISTRATOR badguy@domain 10.2.3.41 DENIED
+ADMINISTRATOR badguy2@domain 10.2.3.41 DENIED
+ADMINISTRATOR admin@baddomain 10.2.3.41 DENIED
+ADMINISTRATOR * 10.2.3.41 DENIED
+
+
+#ALLOW_NEGOTIATOR = *.cs.wisc.edu
+#DENY_NEGOTIATOR = condor.cs.wisc.edu
+NEGOTIATOR user@domain www.cs.wisc.edu ALLOWED
+NEGOTIATOR user@domain condor.cs.wisc.edu DENIED
+NEGOTIATOR user@domain www.wisc.edu DENIED
+NEGOTIATOR * www.cs.wisc.edu ALLOWED
+NEGOTIATOR * condor.cs.wisc.edu DENIED
+
+#ALLOW_CONFIG = config@domain/*.cs.wisc.edu
+#DENY_CONFIG = config@domain/condor.cs.wisc.edu
+CONFIG config@domain www.cs.wisc.edu ALLOWED
+CONFIG config@domain condor.cs.wisc.edu DENIED
+CONFIG config2@domain condor.cs.wisc.edu DENIED
+CONFIG config2@domain www.cs.wisc.edu DENIED

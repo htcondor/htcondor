@@ -252,6 +252,7 @@ match_rec::~match_rec()
 	if( pool ) {
 		free(pool);
 	}
+
 	if( claim_requester.get() ) {
 			// misc_data points to this object, so NULL it out, just to be safe
 		claim_requester->setMiscDataPtr( NULL );
@@ -5629,7 +5630,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		mrec->auth_hole_id = new MyString(startd_principal);
 		ASSERT(mrec->auth_hole_id != NULL);
 		free(startd_principal);
-		IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
+		IpVerify* ipv = daemonCore->getIpVerify();
 		if (!ipv->PunchHole(DAEMON, *mrec->auth_hole_id)) {
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::PunchHole error for %s: "

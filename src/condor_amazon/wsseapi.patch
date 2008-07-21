@@ -1,0 +1,13 @@
+diff --git a/src/condor_amazon/wsseapi.C b/src/condor_amazon/wsseapi.C
+index 4f1253a..8a7250b 100644
+--- a/src/condor_amazon/wsseapi.C
++++ b/src/condor_amazon/wsseapi.C
+@@ -1307,7 +1307,7 @@ soap_wsse_get_BinarySecurityTokenX509(struct soap *soap, const char *id)
+   if (!soap_wsse_get_BinarySecurityToken(soap, id, &valueType, &data, &size)
+    && valueType
+    && !strcmp(valueType, wsse_X509v3URI))
+-    cert = d2i_X509(NULL, (unsigned char**)&data, size);
++    cert = d2i_X509(NULL, (const unsigned char**)&data, size);
+   /* verify the certificate */
+   if (!cert || soap_wsse_verify_X509(soap, cert))
+     return NULL;

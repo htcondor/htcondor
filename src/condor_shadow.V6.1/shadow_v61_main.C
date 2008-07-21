@@ -293,7 +293,7 @@ main_init(int argc, char *argv[])
 		//
 	MyString auth_hole_id;
 	if (ad->LookupString(ATTR_STARTD_PRINCIPAL, auth_hole_id)) {
-		IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
+		IpVerify* ipv = daemonCore->getIpVerify();
 		if (!ipv->PunchHole(DAEMON, auth_hole_id)) {
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::PunchHole error for %s: "

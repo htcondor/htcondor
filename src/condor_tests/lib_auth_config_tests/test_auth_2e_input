@@ -1,0 +1,5 @@
+CONFIG config@domain 10.2.192.0 ALLOWED
+CONFIG config@domain 10.2.192.255 ALLOWED
+CONFIG config@domain 10.2.193.255 ALLOWED
+CONFIG config@domain 10.2.7.255 DENIED
+CONFIG config@domain 192.168.7.255 DENIED

@@ -45,8 +45,6 @@ struct SubmitDagOptions
 	bool bVerbose;
 	bool bForce;
 	MyString strNotification;
-	MyString strJobLog;
-	MyString strStorkLog;
 	int iMaxIdle;
 	int iMaxJobs;
 	int iMaxPre;
@@ -82,7 +80,6 @@ struct SubmitDagOptions
 		bVerbose = false;
 		bForce = false;
 		strNotification = "";
-		strJobLog = "";
 		iMaxIdle = 0;
 		iMaxJobs = 0;
 		iMaxPre = 0;
@@ -186,50 +183,36 @@ submitDag( SubmitDagOptions &opts )
 		
 	ensureOutputFilesExist(opts);
 
-	if (opts.strJobLog != "")
-	{
-		printf("Assuming %s is the log file shared by all jobs in this DAG.\n", opts.strJobLog.Value());
-		printf("Please be sure you know what you're doing and that all jobs use this file.\n");
-	}
-	else
-	{
-		printf("Checking all your submit files for log file names.\n");
-		printf("This might take a while... \n");
+	printf("Checking all your submit files for log file names.\n");
+	printf("This might take a while... \n");
 
-		StringList	condorLogFiles;
-		StringList	storkLogFiles;
-
-		MyString	msg;
-		if ( !GetLogFiles( opts.dagFiles, opts.useDagDir, condorLogFiles,
-					storkLogFiles, msg ) ) {
-			fprintf( stderr, "ERROR: %s\n", msg.Value() );
-			if ( opts.bAllowLogError ) {
-				fprintf( stderr, "Continuing anyhow because of "
-							"-AllowLogError flag (beware!)\n" );
-			} else {
-				fprintf( stderr, "Aborting -- try again with the "
-							"-AllowLogError flag if you *really* think "
-							"this shouldn't be a fatal error\n" );
-				return 1;
-			}
-		}
-
-		if (LogFileNfsError(condorLogFiles, storkLogFiles)) {
-			return 1;
-		}
-
-		condorLogFiles.rewind();
-		storkLogFiles.rewind();
-
-		if ( condorLogFiles.number() > 0 ) {
-			opts.strJobLog = condorLogFiles.next();
-		} else if ( storkLogFiles.number() > 0 ) {
-			opts.strJobLog = storkLogFiles.next();
-		}
-		printf("Done.\n");
-	}
+	StringList	condorLogFiles;
+	StringList	storkLogFiles;
 
 	MyString	msg;
+	if ( !GetLogFiles( opts.dagFiles, opts.useDagDir, condorLogFiles,
+				storkLogFiles, msg ) ) {
+		fprintf( stderr, "ERROR: %s\n", msg.Value() );
+		if ( opts.bAllowLogError ) {
+			fprintf( stderr, "Continuing anyhow because of "
+						"-AllowLogError flag (beware!)\n" );
+		} else {
+			fprintf( stderr, "Aborting -- try again with the "
+						"-AllowLogError flag if you *really* think "
+						"this shouldn't be a fatal error\n" );
+			return 1;
+		}
+	}
+
+	if (LogFileNfsError(condorLogFiles, storkLogFiles)) {
+		return 1;
+	}
+
+	condorLogFiles.rewind();
+	storkLogFiles.rewind();
+
+	printf("Done.\n");
+
 	if ( !GetConfigFile( opts.dagFiles, opts.useDagDir,
 				opts.strConfigFile, msg) ) {
 		fprintf( stderr, "ERROR: %s\n", msg.Value() );
@@ -250,13 +233,6 @@ submitDag( SubmitDagOptions &opts )
 	printf("Log of the life of condor_dagman itself          : %s\n",
 		   	opts.strSchedLog.Value());
 	printf("\n");
-	printf("Condor Log file for all jobs of this DAG         : %s\n", 
-			opts.strJobLog.Value());
-
-	if (opts.strStorkLog != "") {
-		printf("Stork Log file for all DaP jobs of this DAG      : %s\n",
-			   	opts.strStorkLog.Value());
-	}
 
 	if (opts.bSubmit)
 	{
@@ -458,14 +434,6 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	args.AppendArg("-DoRescueFrom");
 	args.AppendArg(opts.doRescueFrom);
 
-	if ( opts.strJobLog == "" ) {
-			// Condor_dagman can't parse command-line args if we have
-			// an empty value for the log file name.
-		opts.strJobLog = opts.primaryDagFile + ".log";
-	}
-	args.AppendArg("-Condorlog");
-	args.AppendArg(opts.strJobLog.Value());
-	
 	opts.dagFiles.rewind();
 	while ( (dagFile = opts.dagFiles.next()) != NULL ) {
 		args.AppendArg("-Dag");
@@ -495,11 +463,6 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	{
 		args.AppendArg("-MaxPost");
 		args.AppendArg(opts.iMaxPost);
-    }
-    if(opts.strStorkLog != "") 
-	{
-		args.AppendArg("-Storklog");
-		args.AppendArg(opts.strStorkLog.Value());
     }
 	if(opts.bNoEventChecks)
 	{
@@ -632,14 +595,6 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 				}
 				opts.strNotification = argv[++iArg];
 			}
-			else if (strArg.find("-l") != -1) // -log
-			{
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-log argument needs a value\n");
-					printUsage();
-				}
-				opts.strJobLog = argv[++iArg];
-			}
 			else if (strArg.find("-maxi") != -1) // -maxidle
 			{
 				if (iArg + 1 >= argc) {
@@ -687,14 +642,6 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 					printUsage();
 				}
 				opts.strDagmanPath = argv[++iArg];
-			}
-			else if (strArg.find("-storklog") != -1)
-			{
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-storklog argument needs a value\n");
-					printUsage();
-				}
-				opts.strStorkLog = argv[++iArg];
 			}
 			else if (strArg.find("-de") != -1) // -debug
 			{
@@ -829,11 +776,6 @@ int printUsage()
     printf("    -maxjobs <number>   (Maximum number of jobs ever submitted at once)\n");
     printf("    -MaxPre <number>    (Maximum number of PRE scripts to run at once)\n");
     printf("    -MaxPost <number>   (Maximum number of POST scripts to run at once)\n");
-    printf("    -log <filename>     (Deprecated -- don't use)\n");
-// -->STORK
-    printf("    -storklog <filename> (Specify the Stork log file shared by all DaP jobs\n");
-    printf("        in the DAG)\n");
-// <--STORK
     printf("    -notification <value> (Determines how much email you get from Condor.\n");
     printf("        See the condor_submit man page for values.)\n");
     printf("    -NoEventChecks      (Now ignored -- use DAGMAN_ALLOW_EVENTS)\n"); 

@@ -57,8 +57,6 @@ static Dagman dagman;
 static void Usage() {
     debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
             "\t\t[-Debug <level>]\n"
-            "\t\t-Condorlog <NAME.dag.condor.log>\n"
-	    "\t\t-Storklog <stork_userlog>\n"                       //-->DAP
             "\t\t-Lockfile <NAME.dag.lock>\n"
             "\t\t-Dag <NAME.dag>\n"
             "\t\t-CsdVersion <version string>\n\n"
@@ -456,9 +454,6 @@ int main_init (int argc, char ** const argv) {
     debug_progname = condor_basename(argv[0]);
     debug_level = DEBUG_NORMAL;  // Default debug level is normal output
 
-    char *condorLogName  = NULL;
-    char *dapLogName  = NULL;                      //<--DAP
-
 		// condor_submit_dag version from .condor.sub
 	const char *csdVersion = "undefined";
 
@@ -484,20 +479,6 @@ int main_init (int argc, char ** const argv) {
                 Usage();
             }
             debug_level = (debug_level_t) atoi (argv[i]);
-        } else if( !strcasecmp( "-Condorlog", argv[i] ) ) {
-            i++;
-            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
-                debug_printf( DEBUG_SILENT, "No condor log specified" );
-                Usage();
-           }
-            condorLogName = argv[i];
-		} else if( !strcasecmp( "-Storklog", argv[i] ) ) {
-            i++;
-            if (argc <= i) {
-                debug_printf( DEBUG_SILENT, "No stork log specified" );
-                Usage();
-           }
-            dapLogName = argv[i];        
         } else if( !strcasecmp( "-Lockfile", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -618,11 +599,6 @@ int main_init (int argc, char ** const argv) {
 
     if( dagman.primaryDagFile == "" ) {
         debug_printf( DEBUG_SILENT, "No DAG file was specified\n" );
-        Usage();
-    }
-    if( !condorLogName && !dapLogName ) {
-        debug_printf( DEBUG_SILENT,
-					  "ERROR: no Condor or DaP log files were specified\n" );
         Usage();
     }
     if (lockFileName == NULL) {
@@ -747,9 +723,8 @@ int main_init (int argc, char ** const argv) {
     // Create the DAG
     //
 
-    dagman.dag = new Dag( dagman.dagFiles, condorLogName, dagman.maxJobs,
+    dagman.dag = new Dag( dagman.dagFiles, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
-						  dapLogName, //<-- DaP
 						  dagman.allowLogError, dagman.useDagDir,
 						  dagman.maxIdle, dagman.retrySubmitFirst,
 						  dagman.retryNodeFirst, dagman.condorRmExe,
@@ -824,10 +799,7 @@ int main_init (int argc, char ** const argv) {
     // mode
   
     {
-      bool recovery = ( (access(lockFileName,  F_OK) == 0 &&
-			 access(condorLogName, F_OK) == 0) 
-			|| (access(lockFileName,  F_OK) == 0 &&
-			    access(dapLogName, F_OK) == 0) ) ; //--> DAP
+      bool recovery = access(lockFileName,  F_OK) == 0;
       
         if (recovery) {
             debug_printf( DEBUG_VERBOSE, "Lock file %s detected, \n",
@@ -860,9 +832,6 @@ int main_init (int argc, char ** const argv) {
             debug_error( 1, DEBUG_QUIET, "ERROR while bootstrapping\n");
         }
     }
-
-
-	ASSERT( condorLogName || dapLogName );
 
     dprintf( D_ALWAYS, "Registering condor_event_timer...\n" );
     daemonCore->Register_Timer( 1, 5, (TimerHandler)condor_event_timer,

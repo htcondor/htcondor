@@ -87,15 +87,12 @@ class Dag {
   
     /** Create a DAG
 		@param dagFile the DAG file name
-		@param condorLogName the log file name specified by the -Condorlog
-		       command line argument
         @param maxJobsSubmitted the maximum number of jobs to submit to Condor
                at one time
         @param maxPreScripts the maximum number of PRE scripts to spawn at
 		       one time
         @param maxPostScripts the maximum number of POST scripts to spawn at
 		       one time
-		@param dapLogName the name of the Stork (DaP) log file
 		@param allowLogError whether to allow the DAG to run even if we
 			   have an error determining the job log files
 		@param useDagDir run DAGs in directories from DAG file paths
@@ -115,10 +112,10 @@ class Dag {
 			   in depth-first (as opposed to breadth-first) order
     */
 
-    Dag( /* const */ StringList &dagFiles, char *condorLogName,
+    Dag( /* const */ StringList &dagFiles,
 		 const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
-		 const char *dapLogName, bool allowLogError,
+		 bool allowLogError,
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const char *storkRmExe, const CondorID *DAGManJobId,
@@ -470,9 +467,6 @@ class Dag {
 
 	int MaxJobsSubmitted(void) { return _maxJobsSubmitted; }
 
-	// do not free this pointer
-	const char* DapLogName(void) { return _dapLogName; }
-
 	bool AllowLogError(void) { return _allowLogError; }
 
 	bool UseDagDir(void) { return _useDagDir; }
@@ -496,9 +490,6 @@ class Dag {
 	bool SubmitDepthFirst(void) { return _submitDepthFirst; }
 
 	StringList& DagFiles(void) { return _dagFiles; }
-
-	// do not free this pointer
-	const char* CondorLogName(void) {return _condorLogName; }
 
 		// The absolute maximum allowed rescue DAG number (the real maximum
 		// is normally configured lower).
@@ -685,10 +676,6 @@ class Dag {
 	// run DAGs in directories from DAG file paths if true
 	bool _useDagDir;
 
-		// The log file name specified by the -Condorlog command line
-		// argument (not used for much anymore).
-	char *		_condorLogName;
-
     // name of consolidated condor log
 	StringList _condorLogFiles;
 
@@ -699,10 +686,6 @@ class Dag {
     bool          _condorLogInitialized;
 
     //-->DAP
-		// The log file name specified by the -Storklog command line
-		// argument.
-    const char* _dapLogName;
-
 		// The list of all Stork log files (generated from the relevant
 		// submit files).
 	StringList	_storkLogFiles;

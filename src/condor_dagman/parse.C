@@ -1334,11 +1334,9 @@ parse_splice(
 
 	// This "copy" is tailored to be correct according to Dag::~Dag()
 	splice_dag = new Dag(	dag->DagFiles(),
-							strnewp(dag->CondorLogName()), // freed by ~Dag
 							dag->MaxJobsSubmitted(),
 							dag->MaxPreScripts(),
 							dag->MaxPostScripts(),
-							strnewp(dag->DapLogName()), // freed by ~Dag
 							dag->AllowLogError(),
 							dag->UseDagDir(),
 							dag->MaxIdleJobProcs(),

@@ -251,7 +251,7 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 
 	mySubSystem = "SUBMIT";
 	config_fill_ad(&requestAd);
-	mySubSystem = "INTERACTIVE";
+	mySubSystem = "TOOL";
 	config_fill_ad(&requestAd);
 
 	requestAd.Assign(ATTR_INTERACTIVE, true);
@@ -417,7 +417,7 @@ main(int argc, char *argv[])
 	HashTable<HashKey, int>	*slot_counts;
 
 	slot_counts = new HashTable <HashKey, int> (25, hashFunction); 
-	mySubSystem = "INTERACTIVE";
+	mySubSystem = "TOOL";
 	myDistro->Init( argc, argv );
 	config();
 

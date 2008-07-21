@@ -62,10 +62,10 @@ void touch (const char * filename) {
 static const int NODE_HASH_SIZE = 10007; // prime, allow for big DAG...
 
 //---------------------------------------------------------------------------
-Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
+Dag::Dag( /* const */ StringList &dagFiles,
 		  const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
-		  const char* dapLogName, bool allowLogError,
+		  bool allowLogError,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const char *storkRmExe, const CondorID *DAGManJobID,
@@ -78,9 +78,7 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	_splices              (200, hashFuncMyString, rejectDuplicateKeys),
 	_dagFiles             (dagFiles),
 	_useDagDir            (useDagDir),
-	_condorLogName		  (NULL),
     _condorLogInitialized (false),
-    _dapLogName           (NULL),
     _dapLogInitialized    (false),             //<--DAP
 	_nodeNameHash		  (NODE_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
 	_nodeIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
@@ -109,14 +107,6 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	_submitDepthFirst	  (submitDepthFirst)
 {
 	ASSERT( dagFiles.number() >= 1 );
-
-	_condorLogName = strnewp( condorLogName );
-	ASSERT( _condorLogName );
-
-	if( dapLogName ) {
-		_dapLogName = strnewp( dapLogName );
-		ASSERT( _dapLogName );
-	}
 
 	PrintDagFiles( dagFiles );
 
@@ -159,15 +149,6 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 //-------------------------------------------------------------------------
 Dag::~Dag() {
 		// remember kids, delete is safe *even* if ptr == NULL...
-
-	delete[] _condorLogName;
-
-    // NOTE: we cast this to char* because older MS compilers
-    // (contrary to the ISO C++ spec) won't allow you to delete a
-    // const.  This has apparently been fixed in Visual C++ .NET, but
-    // as of 6/2004 we don't yet use that.  For details, see:
-    // http://support.microsoft.com/support/kb/articles/Q131/3/22.asp
-    delete[] (char*) _dapLogName;
 
     // delete all jobs in _jobs
     Job *job = NULL;
@@ -226,8 +207,6 @@ Dag::InitializeDagFiles( bool deleteOldLogs )
 
 	MultiLogFiles::TruncateLogs( _condorLogFiles );
 	MultiLogFiles::TruncateLogs( _storkLogFiles );
-
-	if ( _condorLogName != NULL ) touch (_condorLogName);  //<-- DAP
 	}
 }
 
@@ -1186,10 +1165,6 @@ Dag::PrintDagFiles( /* const */ StringList &dagFiles )
 void
 Dag::FindLogFiles( /* const */ StringList &dagFiles, bool useDagDir )
 {
-
-	if ( _dapLogName ) {
-		_storkLogFiles.append( _dapLogName );
-	}
 
 	MyString	msg;
 	if ( !GetLogFiles( dagFiles, useDagDir, _condorLogFiles, _storkLogFiles,

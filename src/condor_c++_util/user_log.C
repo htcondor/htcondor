@@ -229,7 +229,7 @@ UserLog::open_file(const char *file,
 	if ( param_boolean("ENABLE_USERLOG_LOCKING",true) ) {
 		lock = new FileLock( fd, fp, file );
 	} else {
-		lock = new FileLock( -1 );
+		lock = new FileLock( -1, NULL, NULL );
 	}
 
 	return true;

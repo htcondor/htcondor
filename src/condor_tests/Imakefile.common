@@ -27,6 +27,11 @@ all_lists:: list_all
 TESTCLASS_DECL(quick)
 TESTCLASS_DECL(long)
 
+/* Every long or quick test must be in class full
+	for when we weekly run regular and the long tests
+*/
+TESTCLASS_DECL(full)
+
 /* 
 	Tests which do not link to condor libraries(32 bit binary testing 
 	on 64 bit platforms

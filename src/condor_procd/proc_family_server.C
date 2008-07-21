@@ -280,7 +280,16 @@ ProcFamilyServer::wait_loop()
 		// see if we need to run our timer handler
 		//
 		if (snapshot_countdown == 0) {
+
+			// touch our named pipe(s), to ensure the don't get
+			// garbage collected by tmpwatch or whatever
+			//
+			m_server->touch();
+
+			// take our periodic snapshot
+			//
 			m_monitor.snapshot();
+
 			snapshot_countdown = snapshot_interval;
 		}
 	

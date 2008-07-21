@@ -360,16 +360,9 @@ SOAP_SRC = Concat(soapname(daemon),C).C Concat(soapname(daemon),Server).C Concat
 */
 #define gen_soapfiles(daemon,service) @@\
 soapfiles:: gsoapname(daemon).h @@\
-	/bin/rm -rf junkdir(daemon) @@\
-	/bin/mkdir junkdir(daemon) @@\
-	$(SOAPCPP2) -I ../condor_daemon_core.V6 -d junkdir(daemon) -p soapname(daemon) gsoapname(daemon).h @@\
-	cp junkdir(daemon)/Concat(soapname(daemon),C).cpp Concat(soapname(daemon),C).C @@\
-	cp junkdir(daemon)/Concat(soapname(daemon),Server).cpp Concat(soapname(daemon),Server).C @@\
-	cp junkdir(daemon)/service.nsmap . @@\
-	cp junkdir(daemon)/Concat(soapname(daemon),H).h . @@\
-	cp junkdir(daemon)/Concat(soapname(daemon),Stub).h . @@\
-	cp junkdir(daemon)/service.wsdl . @@\
-	/bin/rm -rf junkdir(daemon) @@\
+	$(SOAPCPP2) -I ../condor_daemon_core.V6 -S -L -x -p soapname(daemon) gsoapname(daemon).h @@\
+	mv Concat(soapname(daemon),C).cpp Concat(soapname(daemon),C).C @@\
+	mv Concat(soapname(daemon),Server).cpp Concat(soapname(daemon),Server).C @@\
 	touch soapfiles @@\
 	@@\
 release_copy_target(service.wsdl,lib/webservice,service.wsdl,TEXT_MODE) @@\
@@ -1731,15 +1724,15 @@ XCOMM End translation of func(awk_target)
 ** Make macro "IMPORT_LINKS" which must be initialized to the
 ** "import_links" shell script in this directory.
 */
-#ifndef import
-#define import(dir,obj)			@@\
-XCOMM Begin translation of func(import) @@\
+#ifndef import_objs
+#define import_objs(dir,obj)			@@\
+XCOMM Begin translation of func(import_objs) @@\
 obj:						@@\
 	$(IMPORT_LINKS) dir obj			@@\
 clean::						@@\
 	rm -f obj	@@\
-XCOMM End translation of func(import)
-#endif /* import */
+XCOMM End translation of func(import_objs)
+#endif /* import_objs */
 
 
 /*
