@@ -899,27 +899,19 @@ File System Configuration File Entries''.
   job queue.
 
 \item[\Macro{DEFAULT\_DOMAIN\_NAME}] \label{param:DefaultDomainName}
-  If you do not use a fully qualified name in file \File{/etc/hosts}
-  (or NIS, etc.) for either your official host name or as an
-  alias, Condor would not normally be able to use fully qualified names
-  in places that it wants to.  You can set this macro to the
-  domain to be appended to your host name, if changing your host
-  information is not a good option.  This macro must be set in the
-  global configuration file (not the \MacroUNI{LOCAL\_CONFIG\_FILE}.
-  The reason for this is that the special \MacroUNI{FULL\_HOSTNAME}
-  macro is used by the configuration file code in Condor needs
-  to know the full host name.  So, for \MacroUNI{DEFAULT\_DOMAIN\_NAME} to
-  take effect, Condor must already have read in its value.  However,
-  Condor must set the \MacroUNI{FULL\_HOSTNAME} special macro since you
-  might use that to define where your local configuration file is.  After
-  reading the global configuration file, Condor figures out the right values
-  for \MacroUNI{HOSTNAME} and \MacroUNI{FULL\_HOSTNAME} and inserts them
-  into its configuration table.
-  % PKK
-  % Described in default config file: YES
-  % Defined in the default config file: NO
-  % Default definition in config file: bogus value
-  % Result if not defined or RHS is empty: autodiscovered domain, if any, is used.
+  The value to be appended to a machine's host name,
+  representing a domain name, which Condor then uses
+  to form a fully qualified host name.
+  This is required if there is no fully qualified host name 
+  in file \File{/etc/hosts} or in NIS.
+  Set the value in the global configuration file,
+  as Condor may depend on knowing this value in order to locate
+  the local configuration file(s).
+  The default value as given in the sample configuration file of
+  the Condor download is bogus, and must be changed.
+  If this variable is removed from the global configuration file,
+  or if the definition is empty, then Condor attempts to discover
+  the value.
 
 \item[\Macro{NO\_DNS}] \label{param:NoDNS}
   A boolean value that defaults to \Expr{False}.
