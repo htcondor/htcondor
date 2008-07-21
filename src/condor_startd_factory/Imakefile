@@ -1,14 +1,14 @@
-NAME = condor_bgd
+NAME = condor_startd_factory
 all_target( $(NAME) )
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
-soapobjs(bgd)
+soapobjs(startd_factory)
 
-OBJ = bgd_main.o bgd.o partition.o partition_mgr.o bgd_instantiate.o \
-	workload.o workload_mgr.o \
+OBJ = startd_factory_main.o startd_factory.o partition.o partition_mgr.o \
+	startd_factory_instantiate.o workload.o workload_mgr.o \
 	$(SOAP_OBJS)
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
@@ -27,6 +27,6 @@ stripped:: all
 static:: all
 clean::
 
-gen_soapfiles(bgd,condorBgd)
+gen_soapfiles(startd_factory,condorStartdFactory)
 
 testbin:: all

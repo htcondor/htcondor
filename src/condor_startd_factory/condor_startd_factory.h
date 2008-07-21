@@ -9,7 +9,7 @@
 #include "condor_partition_mgr.h"
 #include "condor_workload.h"
 #include "condor_workload_mgr.h"
-#include "XXX_bgd_attrs.h"
+#include "XXX_startd_factory_attrs.h"
 
 class BGD : public Service
 {

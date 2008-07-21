@@ -4,7 +4,7 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "string_list.h"
-#include "XXX_bgd_attrs.h"
+#include "XXX_startd_factory_attrs.h"
 
 Workload::Workload()
 {

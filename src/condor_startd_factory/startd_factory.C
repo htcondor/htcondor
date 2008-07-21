@@ -1,7 +1,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_bgd.h"
+#include "condor_startd_factory.h"
 #include "condor_partition.h"
 #include "condor_partition_mgr.h"
 #include "condor_workload.h"

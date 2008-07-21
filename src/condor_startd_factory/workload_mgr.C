@@ -4,7 +4,7 @@
 #include "string_list.h"
 #include "condor_arglist.h"
 #include "my_popen.h"
-#include "XXX_bgd_attrs.h"
+#include "XXX_startd_factory_attrs.h"
 #include "condor_partition.h"
 #include "condor_partition_mgr.h"
 #include "condor_workload.h"

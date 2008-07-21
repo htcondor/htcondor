@@ -19,6 +19,6 @@
 
 #include "condor_common.h"
 
-#include "condorBgd.nsmap"
+#include "condorStartdFactory.nsmap"
    
 #include "soap_daemon_core.cpp"

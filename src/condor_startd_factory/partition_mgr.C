@@ -8,7 +8,7 @@
 #include "condor_arglist.h"
 #include "my_popen.h"
 #include "condor_uid.h"
-#include "XXX_bgd_attrs.h"
+#include "XXX_startd_factory_attrs.h"
 
 PartitionManager::PartitionManager() :
 	m_assigned(2000, hashFuncMyString)

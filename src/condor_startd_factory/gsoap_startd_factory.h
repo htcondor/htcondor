@@ -17,6 +17,6 @@
  *
  ***************************************************************/
 
-//gsoap condor service name: condorBgd
+//gsoap condor service name: condorStartdFactory
  
 #import "gsoap_daemon_core.h"
