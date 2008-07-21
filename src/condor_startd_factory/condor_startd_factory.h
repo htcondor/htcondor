@@ -1,5 +1,5 @@
-#ifndef CONDOR_BGD_H
-#define CONDOR_BGD_H
+#ifndef CONDOR_STARTD_FACTORY_H
+#define CONDOR_STARTD_FACTORY_H
 
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
@@ -11,11 +11,11 @@
 #include "condor_workload_mgr.h"
 #include "XXX_startd_factory_attrs.h"
 
-class BGD : public Service
+class StartdFactory : public Service
 {
 	public:
-		BGD();
-		~BGD();
+		StartdFactory();
+		~StartdFactory();
 		
 		// TRUE for good init, FALSE for bad.
 		int init(int argc, char *argv[]);
@@ -69,6 +69,6 @@ class BGD : public Service
 		WorkloadManager		m_wklds_mgr;
 };
 
-extern BGD g_bgd;
+extern StartdFactory g_bgd;
 
 #endif

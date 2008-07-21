@@ -35,19 +35,19 @@
 //-------------------------------------------------------------
 
 // about self
-char* mySubSystem = "BGD";		// used by Daemon Core
+char* mySubSystem = "STARTD_FACTORY";		// used by Daemon Core
 
 //-------------------------------------------------------------
 
-BGD g_bgd;
+StartdFactory g_sf;
 
 int main_init(int argc, char * argv [])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
-	g_bgd.init(argc, argv);
+	g_sf.init(argc, argv);
 
-	g_bgd.register_timers();
+	g_sf.register_timers();
 
 	return TRUE;
 }

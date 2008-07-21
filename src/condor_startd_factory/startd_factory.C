@@ -8,7 +8,7 @@
 #include "condor_workload_mgr.h"
 
 
-BGD::BGD()
+StartdFactory::StartdFactory()
 {
 	// what partitions are available and what state are they in?
 	m_script_available_partitions = NULL;
@@ -32,7 +32,7 @@ BGD::BGD()
 	m_adjustment_interval = 60*7;
 }
 
-BGD::~BGD()
+StartdFactory::~StartdFactory()
 {
 	if (m_script_available_partitions != NULL) {
 		free(m_script_available_partitions);
@@ -72,7 +72,7 @@ BGD::~BGD()
 }
 
 int
-BGD::init(int argc, char *argv[])
+StartdFactory::init(int argc, char *argv[])
 {
 	// load the config file attributes I need
 	reconfig();
@@ -83,7 +83,7 @@ BGD::init(int argc, char *argv[])
 }
 
 void
-BGD::reconfig(void)
+StartdFactory::reconfig(void)
 {
 	if (m_script_available_partitions != NULL) {
 		free(m_script_available_partitions);
@@ -136,12 +136,12 @@ BGD::reconfig(void)
 }
 
 void
-BGD::register_timers(void)
+StartdFactory::register_timers(void)
 {
 	// This is the main workhorse of the daemon
 	daemonCore->Register_Timer( 0, m_adjustment_interval,
-		(TimerHandlercpp)&BGD::adjust_partitions,
-			"BGD::adjust_partitions", this );
+		(TimerHandlercpp)&StartdFactory::adjust_partitions,
+			"StartdFactory::adjust_partitions", this );
 }
 
 
@@ -151,7 +151,7 @@ BGD::register_timers(void)
 	done).
 */
 int
-BGD::adjust_partitions(void)
+StartdFactory::adjust_partitions(void)
 {
 	dprintf(D_ALWAYS, "=================================\n");
 	dprintf(D_ALWAYS, "Adjusting partitions to workload!\n");
