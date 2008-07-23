@@ -180,6 +180,8 @@ $saveme = $testname . ".saveme";
 if( -d $saveme ) {
 	$tarfile = $testname . ".saveme.tar.gz";
 	system("tar -zcvf $tarfile $saveme");
+	print "Contents of SAVEME tar follows.....\n";
+	system("tar -ztvf $tarfile $saveme");
 	system("rm -rf $saveme");
 }
 

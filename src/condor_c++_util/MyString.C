@@ -530,7 +530,10 @@ MyString::vsprintf_cat(const char *format,va_list args)
     s_len = vprintf_length(format,args);
 #endif
     if( Len + s_len > capacity || !Data ) {
-		if(!reserve_at_least( Len + s_len )) return false;
+		if(!reserve_at_least( Len + s_len )) {
+			free(buffer);
+			return false;
+		}
     }
 #if HAVE_VASPRINTF
 		// Ideally this would not be necessary, instead we'd just

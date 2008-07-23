@@ -2877,9 +2877,9 @@ calculateNormalizationFactor (ClassAdList &scheddAds,
 							  double &maxAbs, double &normalAbsFactor)
 {
 	ClassAd *ad;
-	char	scheddName[64];
+	char	*scheddName = NULL;
 	double	prio, prioFactor;
-	char	old_scheddName[64];
+	char	*old_scheddName = NULL;
 
 	// find the maximum of the priority values (i.e., lowest priority)
 	max = maxAbs = DBL_MIN;
@@ -2887,11 +2887,13 @@ calculateNormalizationFactor (ClassAdList &scheddAds,
 	while ((ad = scheddAds.Next()))
 	{
 		// this will succeed (comes from collector)
-		ad->LookupString (ATTR_NAME, scheddName);
+		ad->LookupString (ATTR_NAME, &scheddName);
 		prio = accountant.GetPriority (scheddName);
 		if (prio > max) max = prio;
 		prioFactor = accountant.GetPriorityFactor (scheddName);
 		if (prioFactor > maxAbs) maxAbs = prioFactor;
+		free(scheddName);
+		scheddName = NULL;
 	}
 	scheddAds.Close();
 
@@ -2901,17 +2903,34 @@ calculateNormalizationFactor (ClassAdList &scheddAds,
 	// machines.
 	normalFactor = 0.0;
 	normalAbsFactor = 0.0;
-	old_scheddName[0] = '\0';
 	scheddAds.Open();
 	while ((ad = scheddAds.Next()))
 	{
-		ad->LookupString (ATTR_NAME, scheddName);
-		if ( strcmp(scheddName,old_scheddName) == 0) continue;
-		strncpy(old_scheddName,scheddName,sizeof(old_scheddName));
+		ad->LookupString (ATTR_NAME, &scheddName);
+		if ( scheddName != NULL && old_scheddName != NULL )
+		{
+			if ( strcmp(scheddName,old_scheddName) == 0 )
+			{
+				free(old_scheddName);
+				old_scheddName = scheddName;
+				continue;
+			}
+		}
+		if ( old_scheddName != NULL )
+		{
+			free(old_scheddName);
+			old_scheddName = NULL;
+		}
+		old_scheddName = scheddName;
 		prio = accountant.GetPriority (scheddName);
 		normalFactor = normalFactor + max/prio;
 		prioFactor = accountant.GetPriorityFactor (scheddName);
 		normalAbsFactor = normalAbsFactor + maxAbs/prioFactor;
+	}
+	if ( scheddName != NULL )
+	{
+		free(scheddName);
+		scheddName = NULL;
 	}
 	scheddAds.Close();
 
