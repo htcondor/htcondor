@@ -2712,41 +2712,26 @@ AssignExpr(char const *variable,char const *value)
 int AttrList::
 Assign(char const *variable, MyString &value)
 {
-	return Assign(variable, value.Value());
+	MyString buf(variable);
+
+	if (value.IsEmpty()) {
+		buf += "=UNDEFINED";
+	} else {
+		buf += "=\"";
+		buf += value.EscapeChars("\"", '\\');
+		buf += "\"";
+	}
+
+	return Insert(buf.GetCStr());
 }
 
 /* This is used for %s = "%s" style constructs */
 int AttrList::
 Assign(char const *variable,char const *value)
 {
-	MyString buf;
+	MyString tmp(value);
 
-	buf += variable;
-
-	if(!value) {
-		buf += " = UNDEFINED";
-	}
-	else {
-		buf += " = \"";
-		while(*value) {
-			// NOTE: in old classads, we do not escape backslashes.
-			// There is a hacky provision for dealing with the case
-			// where a backslash comes at the end of the string.
-			size_t len = strcspn(value,"\"");
-
-			buf.sprintf_cat("%.*s",len,value);
-			value += len;
-
-			if(*value) {
-				//escape special characters
-				buf += '\\';
-				buf += *(value++);
-			}
-		}
-		buf += '\"';
-	}
-
-	return Insert(buf.GetCStr());
+	return Assign(variable, tmp);
 }
 int AttrList::
 Assign(char const *variable,int value)

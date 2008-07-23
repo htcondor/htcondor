@@ -2215,6 +2215,7 @@ AC_CHECK_FUNCS([strsignal				\
 		snprintf				\
 		setenv					\
 		unsetenv					\
+		vasprintf				\
 		clearenv])
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 AC_SEARCH_LIBS([dlopen], [dl],
