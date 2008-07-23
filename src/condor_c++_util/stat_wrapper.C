@@ -171,7 +171,7 @@ StatWrapper::~StatWrapper( void )
 	delete m_lstat;
 	delete m_fstat;
 
-	for(int i=0; i<STATOP_MAX; i++ ) {
+	for(int i=0; i<=STATOP_MAX; i++ ) {
 		if( m_ops[i] ) {
 			delete m_ops[i];
 		}
