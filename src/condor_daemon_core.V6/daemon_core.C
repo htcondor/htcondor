@@ -5885,12 +5885,16 @@ void CreateProcessForkit::exec() {
 		}
 	}
 
-	MyString msg = "Printing fds to inherit: ";
-	for ( int a=0 ; a<m_numInheritFds ; a++ ) {
-		msg += m_inheritFds[a];
-		msg += ' ';
+	if( DebugFlags & D_DAEMONCORE ) {
+			// This MyString is scoped to free itself before the call to
+			// exec().  Otherwise, it would be a leak.
+		MyString msg = "Printing fds to inherit: ";
+		for ( int a=0 ; a<m_numInheritFds ; a++ ) {
+			msg += m_inheritFds[a];
+			msg += ' ';
+		}
+		dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
 	}
-	dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
 
 	// Set up the hard limit core size this process should get.
 	// Of course, if I'm asking for a limit larger than this process'
