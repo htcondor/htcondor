@@ -187,6 +187,10 @@ while( <TASKFILE> ) {
     if( (-f "$testname.saveme.tar.gz") && ($testcopy == 1) ) {
             print "Saving $testname.saveme.tar.gz.\n";
             copy_file( "$testname.saveme.tar.gz", $resultdir, true );
+			if( $testname eq "lib_auth_protocol-negot" ) {
+				print "lib_auth_protocol-negot.tar.gz contains:\n";
+				system("tar -ztvf lib_auth_protocol-negot.saveme.tar.gz");
+			}
     }
 }
 
