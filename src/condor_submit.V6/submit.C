@@ -1489,7 +1489,7 @@ SetExecutable()
 	// $$(arch).$$(opsys) are specified  (note that if we are simply
 	// dumping the class-ad to a file, we won't actually transfer
 	// or do anything [nothing that follows will affect the ad])
-	if ( !strstr(ename,"$$") && transfer_it && && !DumpClassAdToFile ) {
+	if ( !strstr(ename,"$$") && transfer_it && !DumpClassAdToFile ) {
 
 		StatInfo si(ename);
 		if ( SINoFile == si.Error () && 
