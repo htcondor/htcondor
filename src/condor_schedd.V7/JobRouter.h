@@ -28,9 +28,14 @@
 #undef open
 #include "classad/classad_distribution.h"
 
+#if HAVE_JOB_HOOKS
+#include "JobRouterHookMgr.h"
+#endif /* HAVE_JOB_HOOKS */
+
 class RoutedJob;
 class Scheduler;
 class JobRoute;
+class JobRouterHookMgr;
 
 typedef HashTable<std::string,JobRoute *> RoutingTable;
 
@@ -71,6 +76,13 @@ class JobRouter: public Service {
 	//other daemons that claim jobs in the originating schedd's job
 	//collection.
 	std::string JobRouterName() {return m_job_router_name;}
+
+#if HAVE_JOB_HOOKS
+	JobRouterHookMgr* m_hook_mgr;
+#endif /* HAVE_JOB_HOOKS */
+
+	// Finish the job submission process.
+	void FinishSubmitJob(RoutedJob *job);
 
  private:
 	HashTable<std::string,RoutedJob *> m_jobs;  //key="src job id"

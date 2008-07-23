@@ -73,6 +73,10 @@ JobRouter::JobRouter(Scheduler *scheduler): m_jobs(5000,hashFuncStdString,reject
 
 	m_router_lock_fd = -1;
 	m_router_lock = NULL;
+
+#if HAVE_JOB_HOOKS
+	m_hook_mgr = NULL;
+#endif
 }
 
 JobRouter::~JobRouter() {
@@ -95,12 +99,24 @@ JobRouter::~JobRouter() {
 	if( m_job_router_refresh_timer >= 0 ) {
 		daemonCore->Cancel_Timer( m_job_router_refresh_timer );
 	}
+
+#if HAVE_JOB_HOOKS
+        if (m_hook_mgr)
+	{
+		delete m_hook_mgr;
+	}
+#endif
 }
 
 #include "condor_new_classads.h"
 
 void
 JobRouter::init() {
+#if HAVE_JOB_HOOKS
+	m_hook_mgr = new JobRouterHookMgr;
+	m_hook_mgr->initialize();
+	dprintf(D_ALWAYS, "finished initialize\n");
+#endif
 	config();
 	GetInstanceLock();
 }
@@ -171,6 +187,10 @@ void
 JobRouter::config() {
 	bool allow_empty_requirements = false;
 	m_enable_job_routing = true;
+
+#if HAVE_JOB_HOOKS
+	m_hook_mgr->reconfig();
+#endif
 
 	m_job_router_entries_refresh = param_integer(PARAM_JOB_ROUTER_ENTRIES_REFRESH,0);
 	if( m_job_router_refresh_timer >= 0 ) {
@@ -1019,9 +1039,21 @@ void
 JobRouter::SubmitJob(RoutedJob *job) {
 	if(job->state != RoutedJob::CLAIMED) return;
 
+	dprintf(D_ALWAYS, "SubmitJob called\n");
+#if HAVE_JOB_HOOKS
+	if (m_hook_mgr->hookVanillaToGrid(job) == false)
+	{
+#endif
 	job->dest_ad = job->src_ad;
 	VanillaToGrid::vanillaToGrid(&job->dest_ad,job->target_universe,job->grid_resource.c_str(),job->is_sandboxed);
+	FinishSubmitJob(job);
+#if HAVE_JOB_HOOKS
+	}
+#endif
+}
 
+void
+JobRouter::FinishSubmitJob(RoutedJob *job) {
 	// Now we apply any edits to the job ClassAds as defined in the route ad.
 
 	JobRoute *route = GetRouteByName(job->route_name.c_str());

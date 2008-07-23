@@ -49,7 +49,8 @@ struct Translation HookTypeTranslation[] = {
 	{ "PREPARE_JOB", HOOK_PREPARE_JOB },
 	{ "UPDATE_JOB_INFO", HOOK_UPDATE_JOB_INFO },
 	{ "JOB_EXIT", HOOK_JOB_EXIT },
-	{ "EVICT_JOB", HOOK_EVICT_JOB }
+	{ "EVICT_JOB", HOOK_EVICT_JOB },
+	{ "VANILLA_TO_GRID", HOOK_VANILLA_TO_GRID }
 };
 
 
