@@ -1516,8 +1516,10 @@ SetExecutable()
 	IckptName = gen_ckpt_name(0,ClusterId,ICKPT,0);
 
 	// ensure the executables exist and spool them only if no 
-	// $$(arch).$$(opsys) are specified
-	if ( !strstr(ename,"$$") && transfer_it ) {
+	// $$(arch).$$(opsys) are specified  (note that if we are simply
+	// dumping the class-ad to a file, we won't actually transfer
+	// or do anything [nothing that follows will affect the ad])
+	if ( !strstr(ename,"$$") && transfer_it && && !DumpClassAdToFile ) {
 
 		StatInfo si(ename);
 		if ( SINoFile == si.Error () && 
