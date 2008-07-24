@@ -5057,22 +5057,27 @@ SetGSICredentials()
 				// versions and daemon core's CreateProcess() can't
 				// handle spaces in command line arguments. So if
 				// we're talking to an older schedd, use the old format.
-			CondorVersionInfo vi( MySchedd->version() );
+			CondorVersionInfo *vi = NULL;
+			if ( !DumpClassAdToFile ) {
+				vi = new CondorVersionInfo( MySchedd->version() );
+			}
 
 			if ( check_x509_proxy(proxy_file) != 0 ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				if ( vi ) delete vi;
 				exit( 1 );
 			}
 
 			/* Insert the proxy subject name into the ad */
 			char *proxy_subject;
-			if ( !vi.built_since_version(6,7,3) ) {
+			if ( vi && !vi->built_since_version(6,7,3) ) {
 				proxy_subject = x509_proxy_subject_name(proxy_file);
 			} else {
 				proxy_subject = x509_proxy_identity_name(proxy_file);
 			}
 			if ( !proxy_subject ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				if ( vi ) delete vi;
 				exit( 1 );
 			}
 			/* Dreadful hack: replace all the spaces in the cert subject
@@ -5081,7 +5086,7 @@ SetGSICredentials()
 			* daemoncore handles command-line args w/ an argv array, spaces
 			* will cause trouble.  
 			*/
-			if ( !vi.built_since_version(6,7,3) ) {
+			if ( vi && !vi->built_since_version(6,7,3) ) {
 				char *space_tmp;
 				do {
 					if ( (space_tmp = strchr(proxy_subject,' ')) ) {
@@ -5089,6 +5094,8 @@ SetGSICredentials()
 					}
 				} while (space_tmp);
 			}
+			if ( vi ) delete vi;
+
 			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
 						   proxy_subject);
 			InsertJobExpr(buffer);	
