@@ -153,7 +153,12 @@ printClassAd( void )
 				if (sock->end_of_message()) {
 					printf("%s = \"%s\"\n", ATTR_LOCAL_CREDD, credd_host);
 				}
+			} else {
+				dprintf( D_ALWAYS, "Failed to communicate with the "
+					"credd host: '%s'\n", credd.name() );
 			}
+		} else {
+			dprintf( D_ALWAYS, "Failed to locate the credd host\n" );
 		}
 		free(credd_host);
 	}
