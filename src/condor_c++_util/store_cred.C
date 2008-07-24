@@ -290,7 +290,8 @@ char* getStoredCredential(const char *username, const char *domain)
 	SecureZeroMemory(w_pw, wcslen(w_pw)*sizeof(wchar_t));
 	delete[](w_pw);
 
-	dprintf(D_FULLDEBUG, "Found credential for user '%s'\n", username);
+	dprintf(D_FULLDEBUG, "Found credential for user '%s@%s'\n",
+		username, domain );
 	return strdup(pw);
 }
 
