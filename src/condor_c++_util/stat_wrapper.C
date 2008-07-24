@@ -76,7 +76,10 @@ extern "C" {
    const char *FSTAT_NAME = "fstat";
 #endif
 
+
+//
 // Simple class to wrap which we should do
+//
 class StatWrapperOp
 {
 public:
@@ -129,6 +132,10 @@ StatWrapperOp::StatAll( bool force )
 	return 0;
 }
 
+
+//
+// StatWrapper proper class methods
+//
 StatWrapper::StatWrapper( const MyString &path, StatOpType which )
 {
 	init( );
@@ -166,16 +173,16 @@ StatWrapper::StatWrapper( void )
 
 StatWrapper::~StatWrapper( void )
 {
-	delete m_nop;
-	delete m_stat;
-	delete m_lstat;
-	delete m_fstat;
-
-	for(int i=0; i<=STATOP_MAX; i++ ) {
+	for(int i=STATOP_MIN; i<=STATOP_MAX; i++ ) {
 		if( m_ops[i] ) {
 			delete m_ops[i];
 		}
 	}
+
+	delete m_nop;
+	delete m_stat;
+	delete m_lstat;
+	delete m_fstat;
 }
 
 void
