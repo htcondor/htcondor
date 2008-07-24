@@ -4631,10 +4631,18 @@ SetGlobusParams()
 	if ( JobUniverse != CONDOR_UNIVERSE_GRID )
 		return;
 
-		// Does the schedd support the new unified syntax for grid universe
-		// jobs (i.e. GridResource and GridJobId used for all types)?
-	CondorVersionInfo vi( MySchedd->version() );
-	unified_syntax = vi.built_since_version(6,7,11);
+		// If we are dumping to a file we can't call
+		// MySchedd->version(), because MySchedd is NULL. Instead we
+		// assume we'd be talking to a Schedd just as current as we
+		// are.
+	if ( DumpClassAdToFile ) {
+		unified_syntax = true;
+	} else {
+			// Does the schedd support the new unified syntax for grid universe
+			// jobs (i.e. GridResource and GridJobId used for all types)?
+		CondorVersionInfo vi( MySchedd->version() );
+		unified_syntax = vi.built_since_version(6,7,11);
+	}
 
 	tmp = condor_param( GridResource, ATTR_GRID_RESOURCE );
 	if ( tmp ) {
