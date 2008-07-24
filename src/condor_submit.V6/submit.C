@@ -4689,10 +4689,18 @@ SetGlobusParams()
 	if ( JobUniverse != CONDOR_UNIVERSE_GRID )
 		return;
 
-		// Does the schedd support the new unified syntax for grid universe
-		// jobs (i.e. GridResource and GridJobId used for all types)?
-	CondorVersionInfo vi( MySchedd->version() );
-	unified_syntax = vi.built_since_version(6,7,11);
+		// If we are dumping to a file we can't call
+		// MySchedd->version(), because MySchedd is NULL. Instead we
+		// assume we'd be talking to a Schedd just as current as we
+		// are.
+	if ( DumpClassAdToFile ) {
+		unified_syntax = true;
+	} else {
+			// Does the schedd support the new unified syntax for grid universe
+			// jobs (i.e. GridResource and GridJobId used for all types)?
+		CondorVersionInfo vi( MySchedd->version() );
+		unified_syntax = vi.built_since_version(6,7,11);
+	}
 
 	tmp = condor_param( GridResource, ATTR_GRID_RESOURCE );
 	if ( tmp ) {
@@ -5212,22 +5220,27 @@ SetGSICredentials()
 				// versions and daemon core's CreateProcess() can't
 				// handle spaces in command line arguments. So if
 				// we're talking to an older schedd, use the old format.
-			CondorVersionInfo vi( MySchedd->version() );
+			CondorVersionInfo *vi = NULL;
+			if ( !DumpClassAdToFile ) {
+				vi = new CondorVersionInfo( MySchedd->version() );
+			}
 
 			if ( check_x509_proxy(proxy_file) != 0 ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				if ( vi ) delete vi;
 				exit( 1 );
 			}
 
 			/* Insert the proxy subject name into the ad */
 			char *proxy_subject;
-			if ( !vi.built_since_version(6,7,3) ) {
+			if ( vi && !vi->built_since_version(6,7,3) ) {
 				proxy_subject = x509_proxy_subject_name(proxy_file);
 			} else {
 				proxy_subject = x509_proxy_identity_name(proxy_file);
 			}
 			if ( !proxy_subject ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				if ( vi ) delete vi;
 				exit( 1 );
 			}
 			/* Dreadful hack: replace all the spaces in the cert subject
@@ -5236,7 +5249,7 @@ SetGSICredentials()
 			* daemoncore handles command-line args w/ an argv array, spaces
 			* will cause trouble.  
 			*/
-			if ( !vi.built_since_version(6,7,3) ) {
+			if ( vi && !vi->built_since_version(6,7,3) ) {
 				char *space_tmp;
 				do {
 					if ( (space_tmp = strchr(proxy_subject,' ')) ) {
@@ -5244,6 +5257,8 @@ SetGSICredentials()
 					}
 				} while (space_tmp);
 			}
+			if ( vi ) delete vi;
+
 			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
 						   proxy_subject);
 			InsertJobExpr(buffer);	
