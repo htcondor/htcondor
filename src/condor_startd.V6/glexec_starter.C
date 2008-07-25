@@ -130,6 +130,7 @@ glexec_starter_prepare(const char* starter_path,
 		dprintf( D_ALWAYS,
 		         "GLEXEC: LIBEXEC not defined; can't find setup script\n" );
 		free( glexec_argstr );
+		return 0;
 	}
 	MyString libexec = tmp;
 	free(tmp);
