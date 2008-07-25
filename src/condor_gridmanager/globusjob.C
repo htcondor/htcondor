@@ -1344,13 +1344,12 @@ int GlobusJob::doEvaluateState()
 				gmState = GM_FAILED;
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
+			} else if ( GetCallbacks() ) {
+				reevaluate_state = true;
+				break;
 			} else if ( JmShouldSleep() ) {
 				gmState = GM_PUT_TO_SLEEP;
 			} else {
-				if ( GetCallbacks() == true ) {
-					reevaluate_state = true;
-					break;
-				}
 					// The jobmanager doesn't accept proxy refresh commands
 					// once it hits stage-out state
 				if ( jmProxyExpireTime < jobProxy->expiration_time &&
