@@ -880,6 +880,7 @@ ResMgr::GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *parti
 	}
 	ASSERT( partition_value );
 	*partition_id = partition_value;
+	free(partition_value);
 }
 
 /* 
