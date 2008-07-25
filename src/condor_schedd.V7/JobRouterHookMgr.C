@@ -108,7 +108,6 @@ JobRouterHookMgr::getHookKeyword()
 char*
 JobRouterHookMgr::getHookPath(HookType hook_type)
 {
-	dprintf(D_ALWAYS, "Getting path for %d\n", hook_type);
 	if (!m_hook_keyword)
 	{
 		return NULL;
@@ -116,20 +115,18 @@ JobRouterHookMgr::getHookPath(HookType hook_type)
 	MyString _param;
 	_param.sprintf("%s_HOOK_%s", m_hook_keyword, getHookTypeString(hook_type));
 
-	dprintf(D_ALWAYS, "Using hook path %s\n", _param.Value());
 	return validateHookPath(_param.Value());
 }
 
 
-bool
+int
 JobRouterHookMgr::hookVanillaToGrid(RoutedJob* r_job)
 {
 	ClassAd temp_ad;
 
-	dprintf(D_ALWAYS|D_FAILURE, "Called hookVanillaToGrid %s\n", m_hook_vanilla_to_grid);
 	if (m_hook_vanilla_to_grid == NULL)
 	{
-		return false;
+		return 0;
 	}
 
 	if (new_to_old(r_job->src_ad, temp_ad) == false)
@@ -137,7 +134,7 @@ JobRouterHookMgr::hookVanillaToGrid(RoutedJob* r_job)
 		dprintf(D_ALWAYS|D_FAILURE,
 			"ERROR in JobRouterHookMgr::hookVanillaToGrid: "
 			"failed to convert classad");
-		return false;
+		return -1;
 	}
 
 	MyString hook_stdin;
@@ -146,19 +143,19 @@ JobRouterHookMgr::hookVanillaToGrid(RoutedJob* r_job)
 	TranslateClient* translate_client = new TranslateClient(HOOK_VANILLA_TO_GRID, m_hook_vanilla_to_grid, r_job);
 	if (translate_client == NULL)
 	{
-		return false;
+		return -1;
 	}
 	if (spawn(translate_client, NULL, &hook_stdin) == 0)
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookVanillaToGrid: "
 				"failed to spawn VANILLA_TO_GRID (%s)\n", m_hook_vanilla_to_grid);
-		return false;
+		return -1;
 
 	}
 	dprintf(D_FULLDEBUG, "HOOK_VANILLA_TO_GRID (%s) invoked.\n",
 			m_hook_vanilla_to_grid);
-	return true;
+	return 1;
 }
 
 
@@ -274,7 +271,6 @@ TranslateClient::~TranslateClient()
 void
 TranslateClient::hookExited(int exit_status)
 {
-	dprintf(D_ALWAYS, "hookExited called\n");
 	HookClient::hookExited(exit_status);
 
 	if (m_std_err.Length())
@@ -295,7 +291,6 @@ TranslateClient::hookExited(int exit_status)
 			{
 				dprintf(D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
 						"ignoring invalid hook output\n", hook_line);
-				job_router->FinishSubmitJob(m_routed_job);
 				return;
 			}
 		}
@@ -310,6 +305,7 @@ TranslateClient::hookExited(int exit_status)
 	{
 		dprintf(D_ALWAYS, "Failed to translate ClassAd.  Hook %s (pid %d) returned no data.\n",
 				m_hook_path, (int)m_pid);
+		return;
 	}
 	job_router->FinishSubmitJob(m_routed_job);
 }

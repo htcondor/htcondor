@@ -1041,15 +1041,28 @@ JobRouter::SubmitJob(RoutedJob *job) {
 
 	dprintf(D_ALWAYS, "SubmitJob called\n");
 #if HAVE_JOB_HOOKS
-	if (m_hook_mgr->hookVanillaToGrid(job) == false)
+	if (m_hook_mgr)
 	{
+		int rval = m_hook_mgr->hookVanillaToGrid(job);
+		switch (rval)
+		{
+			case -1:    // Error
+				return;
+				break;
+			case 0:    // Hook not configured
+				break;
+			case 1:    // Spawned the hook
+					// Done for now.  Let the handler call
+					// FinishSubmitJob() when the hook
+					// exits.
+				return;
+				break;
+		}
+	}
 #endif
 	job->dest_ad = job->src_ad;
 	VanillaToGrid::vanillaToGrid(&job->dest_ad,job->target_universe,job->grid_resource.c_str(),job->is_sandboxed);
 	FinishSubmitJob(job);
-#if HAVE_JOB_HOOKS
-	}
-#endif
 }
 
 void

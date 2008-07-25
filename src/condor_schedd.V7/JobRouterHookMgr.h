@@ -26,7 +26,7 @@ public:
 	bool initialize();
 	bool reconfig();
 
-	bool hookVanillaToGrid(RoutedJob* r_job);
+	int hookVanillaToGrid(RoutedJob* r_job);
 	bool hookJobExit(classad::ClassAd src, classad::ClassAd &dst);
 	bool hookUpdateJobInfo(classad::ClassAd src, classad::ClassAd &dst);
 
