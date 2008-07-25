@@ -3476,7 +3476,10 @@ GlobusJob::JmShouldSleep()
 	if ( probeNow == true ) {
 		return false;
 	}
-	if ( jmProxyExpireTime < jobProxy->expiration_time ) {
+	if ( jmProxyExpireTime < jobProxy->expiration_time &&
+		 time(NULL) >= jmProxyExpireTime - 6*3600 ) {
+		daemonCore->Reset_Timer( evaluateStateTid,
+								 ( jmProxyExpireTime - 6*3600 ) - time(NULL) );
 		return false;
 	}
 	if ( condorState != IDLE && condorState != RUNNING ) {
