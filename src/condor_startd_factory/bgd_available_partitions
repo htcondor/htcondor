@@ -4,6 +4,9 @@
 # This script figures out the state of the partitions by querying the
 # mmcs and the collector for partitions backed by startds
 
+# XXX TODO emit classads for not generated partition, basically, they are just
+# availble to be used partition names only.
+
 use warnings;
 use strict;
 use IPC::Open3; # stdin & stdout/err of a process

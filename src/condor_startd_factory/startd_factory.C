@@ -77,7 +77,7 @@ StartdFactory::init(int argc, char *argv[])
 	// load the config file attributes I need
 	reconfig();
 
-	dprintf(D_ALWAYS, "BGD Initialized\n");
+	dprintf(D_ALWAYS, "Startd Factory Initialized\n");
 
 	return TRUE;
 }
@@ -89,46 +89,47 @@ StartdFactory::reconfig(void)
 		free(m_script_available_partitions);
 	}
 	m_script_available_partitions =
-		param_or_except("BGD_SCRIPT_AVAILABLE_PARTITIONS");
+		param_or_except("STARTD_FACTORY_SCRIPT_AVAILABLE_PARTITIONS");
 
 	if (m_script_query_work_loads != NULL) {
 		free(m_script_query_work_loads);
 	}
 	m_script_query_work_loads = 
-		param_or_except("BGD_SCRIPT_QUERY_WORK_LOADS");
+		param_or_except("STARTD_FACTORY_SCRIPT_QUERY_WORK_LOADS");
 	
 	if (m_script_generate_partition != NULL) {
 		free(m_script_generate_partition);
 	}
 	m_script_generate_partition =
-		param_or_except("BGD_SCRIPT_GENERATE_PARTITION");
+		param_or_except("STARTD_FACTORY_SCRIPT_GENERATE_PARTITION");
 
 	if (m_script_destroy_partition != NULL) {
 		free(m_script_destroy_partition);
 	}
 	m_script_destroy_partition =
-		param_or_except("BGD_SCRIPT_DESTROY_PARTITION");
+		param_or_except("STARTD_FACTORY_SCRIPT_DESTROY_PARTITION");
 
 	if (m_script_boot_partition != NULL) {
 		free(m_script_boot_partition);
 	}
 	m_script_boot_partition =
-		param_or_except("BGD_SCRIPT_BOOT_PARTITION");
+		param_or_except("STARTD_FACTORY_SCRIPT_BOOT_PARTITION");
 	
 	if (m_script_shutdown_partition != NULL) {
 		free(m_script_shutdown_partition);
 	}
 	m_script_shutdown_partition =
-		param_or_except("BGD_SCRIPT_SHUTDOWN_PARTITION");
+		param_or_except("STARTD_FACTORY_SCRIPT_SHUTDOWN_PARTITION");
 
 	if (m_script_back_partition != NULL) {
 		free(m_script_back_partition);
 	}
 	m_script_back_partition =
-		param_or_except("BGD_SCRIPT_BACK_PARTITION");
+		param_or_except("STARTD_FACTORY_SCRIPT_BACK_PARTITION");
 	
 	// default to 7 minutes if not specified
-	m_adjustment_interval = param_integer("BGD_ADJUSTMENT_INTERVAL", 60*7);
+	m_adjustment_interval = 
+		param_integer("STARTD_FACTORY_ADJUSTMENT_INTERVAL", 60*7);
 	if (m_adjustment_interval < 20) {
 		// don't let it go smaller than 20 seconds.
 		m_adjustment_interval = 20;
@@ -180,9 +181,11 @@ StartdFactory::adjust_partitions(void)
 	dprintf(D_ALWAYS, "------------------------\n");
 
 	m_part_mgr.schedule_partitions(m_wklds_mgr,
+		m_script_generate_partition,
 		m_script_boot_partition,
 		m_script_back_partition,
-		m_script_shutdown_partition);
+		m_script_shutdown_partition,
+		m_script_destroy_partition);
 
 	dprintf(D_ALWAYS, "-------------------\n");
 	dprintf(D_ALWAYS, "Finished adjustment\n");

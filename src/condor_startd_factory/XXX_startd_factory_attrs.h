@@ -1,5 +1,5 @@
-#ifndef BGD_ATTRS_H
-#define BGD_ATTRS_H
+#ifndef STARTD_FACTORY_ATTRS_H
+#define STARTD_FACTORY_ATTRS_H
 
 // Attrs to represent a partition
 #define ATTR_PARTITION_NAME		"Partition"

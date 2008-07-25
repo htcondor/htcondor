@@ -68,6 +68,7 @@ class Partition
 		// dprintf out the structure.
 		void dump(int flags);
 
+		bool generate(char *script, int size); 
 		void boot(char *script, PKind pkind);
 		void shutdown(char *script);
 

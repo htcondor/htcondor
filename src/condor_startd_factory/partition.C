@@ -215,6 +215,13 @@ PKind Partition::get_pkind(void)
 	return PKIND_ERROR;
 }
 
+// This is a blocking call and must provide a fully generate partition when
+// it returns. 
+bool Partition::generate(char *script, int size)
+{
+	return true;
+}
+
 // This is a blocking call and must provide a fully booted partition when it
 // returns. Otherwise, this partition could be overcommitted given the 
 // nature of the use of this call.
@@ -301,7 +308,8 @@ void Partition::back(char *script)
 	my_pclose(fin);
 	set_priv(priv);
 
-	// we don't know it is backed until the BGD_SCRIPT_AVAILABLE_PARTITIONS
+	// we don't know it is backed until the 
+	// STARTD_FACTORY_SCRIPT_AVAILABLE_PARTITIONS
 	// tells us it is actually backed. This prevents overcommit of a
 	// partition to multiple startds.
 	set_pstate(ASSIGNED);

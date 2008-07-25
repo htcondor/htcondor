@@ -187,7 +187,8 @@ void PartitionManager::partition_realization(int &tot_smp, int &tot_dual,
 }
 
 void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
-	char *boot_script, char *back_script, char *shutdown_script)
+	char *generate_script, char *boot_script, char *back_script, 
+	char *shutdown_script, char *destroy_script)
 {
 	int idx;
 	int total_smp_idle;
@@ -244,8 +245,10 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 	// when we know there are enough compute elements of a certain kind 
 	// to satisfy the workloads.
 
+	// ********* SCHEDULE FOR SMP JOBS **************
 	SCHED_SMP:
 	if (total_smp_idle > smp_backed) {
+
 		// find a booted one first if possible
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == BOOTED &&
@@ -262,6 +265,7 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 		}
 
 		// if not, we'll use a generated one
+		SCHED_SMP_GENERATE:
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == GENERATED) {
 				dprintf(D_ALWAYS, "Booting SMP partition: %s %d\n",
@@ -272,10 +276,26 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 				goto SCHED_SMP;
 			}
 		}
+		
+		// if there are no generated partitions, we have to generate one
+		for (idx = 0; idx < m_parts.length(); idx++) {
+			if (m_parts[idx].get_pstate() == NOT_GENERATED) {
+				dprintf(D_ALWAYS, 
+					"Generating a partition for DUAL jobs: 32 nodes\n");
+				if (m_parts[idx].generate(generate_script, 32) == true) {
+					// we'll find this generated partition and then boot it.
+					goto SCHED_SMP_GENERATE;
+				}
+				// if the generation fails, we fall through...
+			}
+		}
+
 	}
 
+	// ********* SCHEDULE FOR DUAL JOBS **************
 	SCHED_DUAL:
 	if (total_dual_idle > dual_backed) {
+
 		// find a booted one first if possible
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == BOOTED &&
@@ -291,6 +311,8 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 			}
 		}
 
+		// if not, we'll use a generated one
+		SCHED_DUAL_GENERATE:
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == GENERATED) {
 				dprintf(D_ALWAYS, "Booting DUAL partition: %s %d\n",
@@ -301,8 +323,22 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 				goto SCHED_DUAL;
 			}
 		}
+
+		// if there are no generated partitions, we have to generate one
+		for (idx = 0; idx < m_parts.length(); idx++) {
+			if (m_parts[idx].get_pstate() == NOT_GENERATED) {
+				dprintf(D_ALWAYS, 
+					"Generating a partition for DUAL jobs: 32 nodes\n");
+				if (m_parts[idx].generate(generate_script, 32) == true) {
+					// we'll find this generated partition and then boot it.
+					goto SCHED_DUAL_GENERATE;
+				}
+				// if the generation fails, we fall through...
+			}
+		}
 	}
 
+	// ********* SCHEDULE FOR VN JOBS **************
 	SCHED_VN:
 	if (total_vn_idle > vn_backed) {
 		// find a booted one first if possible
@@ -320,6 +356,8 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 			}
 		}
 
+		// if not, we'll use a generated one
+		SCHED_VN_GENERATE:
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == GENERATED) {
 				dprintf(D_ALWAYS, "Booting VN partition: %s %d\n",
@@ -328,6 +366,19 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 				m_parts[idx].boot(boot_script, VN);
 				// we'll find this booted partition and then back it.
 				goto SCHED_VN;
+			}
+		}
+
+		// if there are no generated partitions, we have to generate one
+		for (idx = 0; idx < m_parts.length(); idx++) {
+			if (m_parts[idx].get_pstate() == NOT_GENERATED) {
+				dprintf(D_ALWAYS, 
+					"Generating a partition for VN jobs: 32 nodes\n");
+				if (m_parts[idx].generate(generate_script, 32) == true) {
+					// we'll find this generated partition and then boot it.
+					goto SCHED_VN_GENERATE;
+				}
+				// if the generation fails, we fall through...
 			}
 		}
 	}
