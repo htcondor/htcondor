@@ -10173,7 +10173,11 @@ Scheduler::Init()
 
 	startd_sends_alives = param_boolean("STARTD_SENDS_ALIVES",false);
 
-	alive_interval = param_integer("ALIVE_INTERVAL",300,0,leaseAliveInterval);
+	alive_interval = param_integer("ALIVE_INTERVAL",300,0);
+	if( alive_interval > leaseAliveInterval ) {
+			// adjust alive_interval to shortest interval of jobs in the queue
+		alive_interval = leaseAliveInterval;
+	}
 		// Don't allow the user to specify an alive interval larger
 		// than leaseAliveInterval, or the startd may start killing off
 		// jobs before ATTR_JOB_LEASE_DURATION has passed, thereby screwing
