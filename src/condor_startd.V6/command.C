@@ -86,7 +86,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 	response_ad.Assign(ATTR_START,!claim_is_closing);
 	if( !response_ad.put(*stream) || !stream->eom() ) {
 		dprintf(D_FULLDEBUG,"Failed to send response ClassAd in deactivate_claim.\n");
-			// Prior to 7.1.3, no response ClassAd was expected.
+			// Prior to 7.0.5, no response ClassAd was expected.
 			// Anyway, failure to send it is not (currently) critical
 			// in any way.
 	}
