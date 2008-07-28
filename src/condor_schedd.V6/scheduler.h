@@ -517,6 +517,8 @@ private:
 		// call it any more.  See contactStartd and the call to it...
 	Queue<ContactStartdArgs*> startdContactQueue;
 	int				checkContactQueue_tid;	// DC Timer ID to check queue
+	int num_pending_startd_contacts;
+	int max_pending_startd_contacts;
 
 		// If we we need to reconnect to disconnected starters, we
 		// stash the proc IDs in here while we read through the job

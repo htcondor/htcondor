@@ -377,6 +377,8 @@ Scheduler::Scheduler() :
 
 	checkContactQueue_tid = -1;
 	checkReconnectQueue_tid = -1;
+	num_pending_startd_contacts = 0;
+	max_pending_startd_contacts = 0;
 
 	job_is_finished_queue.
 		registerHandlercpp( (ServiceDataHandlercpp)
@@ -5344,6 +5346,8 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 
 	classy_counted_ptr<DCStartd> startd = new DCStartd(mrec->description(),NULL,mrec->peer,mrec->claimId());
 
+	this->num_pending_startd_contacts++;
+
 	startd->asyncRequestOpportunisticClaim(
 		jobAd,
 		description.Value(),
@@ -5360,6 +5364,8 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 void
 Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	ClaimStartdMsg *msg = (ClaimStartdMsg *)cb->getMessage();
+
+	this->num_pending_startd_contacts--;
 
 	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED ) {
 			// do nothing, because misc_data points to a deleted match_rec
@@ -5470,6 +5476,8 @@ Scheduler::checkContactQueue()
 		// daemonCore, which ensures we do not run ourselves out
 		// of socket descriptors.
 	while( !daemonCore->TooManyRegisteredSockets() &&
+		   (num_pending_startd_contacts < max_pending_startd_contacts
+            || max_pending_startd_contacts <= 0) &&
 		   (!startdContactQueue.IsEmpty()) ) {
 			// there's a pending registration in the queue:
 
@@ -10029,7 +10037,13 @@ Scheduler::Init()
 	JobsThisBurst = -1;
 
 	MaxJobsRunning = param_integer( "MAX_JOBS_RUNNING", 200 );
-	
+
+		// Limit number of simultaenous connection attempts to startds.
+		// This avoids the schedd getting so busy authenticating with
+		// startds that it can't keep up with shadows.
+		// note: the special value 0 means 'unlimited'
+	max_pending_startd_contacts = param_integer( "MAX_PENDING_STARTD_CONTACTS", 10, 0 );
+
 		//
 		// Start Local Universe Expression
 		// This will be added into the requirements expression for
