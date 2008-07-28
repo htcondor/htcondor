@@ -24,7 +24,7 @@ information:
 \begin{description}
 \item[Job] The cluster/process id of the Condor job.
 \item[Host] The host where the job ran.  By default, the host's IP
-address is displayed.  If \Opt{-hostname} is specified, the hostname
+address is displayed.  If \Opt{-hostname} is specified, the host name
 will be displayed instead.
 \item[Start Time] The time (month/day hour:minute) when the job began
 running on the host.
@@ -48,7 +48,7 @@ the completion of this job.
 \Condor{userlog} will then display summary statistics per host:
 
 \begin{description}
-\item[Host/Job] The IP address or hostname for the host.
+\item[Host/Job] The IP address or host name for the host.
 \item[Wall Time] The workstation time (days+hours:minutes) allocated by
 this host to the jobs specified in the query.  By default, all jobs in
 the log are included in the query.
@@ -101,7 +101,7 @@ jobs.
     \OptItem{\Opt{-j}}{Select a specific cluster or cluster.proc}
     \OptItem{\Opt{-evict}}{Select only allocations which ended due to eviction}
     \OptItem{\Opt{-all}}{Select all clusters and all allocations}
-    \OptItem{\Opt{-hostname}}{Display hostname instead of IP address}
+    \OptItem{\Opt{-hostname}}{Display host name instead of IP address}
 \end{Options}
 
 \GenRem

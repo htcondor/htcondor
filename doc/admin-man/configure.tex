@@ -308,12 +308,11 @@ the library routine which parses the configuration files.
 \begin{description}
   
 \item[\MacroU{FULL\_HOSTNAME}] \label{param:FullHostname}
-  The
-  fully qualified hostname of the local machine (hostname plus domain
-  name).
+  The fully qualified host name of the local machine, 
+  which is host name plus domain name.
   
 \item[\MacroU{HOSTNAME}] \label{param:Hostname}
-  The hostname of the local machine (no domain name).
+  The host name of the local machine (no domain name).
   
 \item[\MacroU{IP\_ADDRESS}] \label{param:IpAddress}
   The ASCII string version of the local machine's IP address.
@@ -403,7 +402,7 @@ determined automatically at run time but which can be overwritten.
 \item[\MacroU{FILESYSTEM\_DOMAIN}]
   \label{param:FilesystemDomain}
   Defaults to the fully
-  qualified hostname of the machine it is evaluated on.  See
+  qualified host name of the machine it is evaluated on.  See
   section~\ref{sec:Shared-Filesystem-Config-File-Entries}, Shared
   File System Configuration File Entries for the full description of
   its use and under what conditions you would want to change it.
@@ -411,7 +410,7 @@ determined automatically at run time but which can be overwritten.
 \item[\MacroU{UID\_DOMAIN}]
   \label{param:UIDDomain}
   Defaults to the fully
-  qualified hostname of the machine it is evaluated on.  See
+  qualified host name of the machine it is evaluated on.  See
   section~\ref{sec:Shared-Filesystem-Config-File-Entries} 
   for the full description of this configuration variable.
 
@@ -509,16 +508,16 @@ File System Configuration File Entries''.
   IP/host-based security in Condor for details.
   
 \item[\Macro{COLLECTOR\_HOST}] \label{param:CollectorHost} The
-  hostname of the machine where the \Condor{collector} is running for
+  host name of the machine where the \Condor{collector} is running for
   your pool.  Normally, it is defined relative to
   the \MacroUNI{CONDOR\_HOST}
   macro.  There is no default value for this macro;
   \MacroNI{COLLECTOR\_HOST} must be defined for the pool to work
   properly.
 
-  In addition to defining the hostname, this setting can optionally be
+  In addition to defining the host name, this setting can optionally be
   used to specify the network port of the \Condor{collector}.
-  The port is separated from the hostname by a colon ('\verb@:@').
+  The port is separated from the host name by a colon ('\verb@:@').
   For example,
   \begin{verbatim}
     COLLECTOR_HOST = $(CONDOR_HOST):1234
@@ -563,7 +562,7 @@ File System Configuration File Entries''.
   page~\pageref{sec:Contrib-CondorView-Install} for more details.
 
 \item[\Macro{SCHEDD\_HOST}] \label{param:ScheddHost} The
-  hostname of the machine where the \Condor{schedd} is running for
+  host name of the machine where the \Condor{schedd} is running for
   your pool.  This is the host that queues submitted jobs.  Note that,
   in most condor installations, there is a \Condor{schedd} running on
   each host from which jobs are submitted.  The default value of
@@ -900,27 +899,19 @@ File System Configuration File Entries''.
   job queue.
 
 \item[\Macro{DEFAULT\_DOMAIN\_NAME}] \label{param:DefaultDomainName}
-  If you do not use a fully qualified name in file \File{/etc/hosts}
-  (or NIS, etc.) for either your official hostname or as an
-  alias, Condor would not normally be able to use fully qualified names
-  in places that it wants to.  You can set this macro to the
-  domain to be appended to your hostname, if changing your host
-  information is not a good option.  This macro must be set in the
-  global configuration file (not the \MacroUNI{LOCAL\_CONFIG\_FILE}.
-  The reason for this is that the special \MacroUNI{FULL\_HOSTNAME}
-  macro is used by the configuration file code in Condor needs
-  to know the full hostname.  So, for \MacroUNI{DEFAULT\_DOMAIN\_NAME} to
-  take effect, Condor must already have read in its value.  However,
-  Condor must set the \MacroUNI{FULL\_HOSTNAME} special macro since you
-  might use that to define where your local configuration file is.  After
-  reading the global configuration file, Condor figures out the right values
-  for \MacroUNI{HOSTNAME} and \MacroUNI{FULL\_HOSTNAME} and inserts them
-  into its configuration table.
-  % PKK
-  % Described in default config file: YES
-  % Defined in the default config file: NO
-  % Default definition in config file: bogus value
-  % Result if not defined or RHS is empty: autodiscovered domain, if any, is used.
+  The value to be appended to a machine's host name,
+  representing a domain name, which Condor then uses
+  to form a fully qualified host name.
+  This is required if there is no fully qualified host name 
+  in file \File{/etc/hosts} or in NIS.
+  Set the value in the global configuration file,
+  as Condor may depend on knowing this value in order to locate
+  the local configuration file(s).
+  The default value as given in the sample configuration file of
+  the Condor download is bogus, and must be changed.
+  If this variable is removed from the global configuration file,
+  or if the definition is empty, then Condor attempts to discover
+  the value.
 
 \item[\Macro{NO\_DNS}] \label{param:NoDNS}
   A boolean value that defaults to \Expr{False}.
@@ -949,7 +940,7 @@ File System Configuration File Entries''.
   Condor to send email for your site, you can define the default
   domain to use for email.
   A common example would be to set \MacroNI{EMAIL\_DOMAIN} to the fully
-  qualified hostname of each machine in your pool, so users submitting
+  qualified host name of each machine in your pool, so users submitting
   jobs from a specific machine would get email sent to
   user@machine.your.domain, instead of user@your.domain.  
   You would do this by setting \MacroNI{EMAIL\_DOMAIN} to
@@ -1687,13 +1678,13 @@ which use DaemonCore).
   message from the \Condor{schedd} before killing it.
 
 \item[\Macro{LOCK\_FILE\_UPDATE\_INTERVAL}] \label{param:LockFileUpdateInterval}
-	This setting controls how often valid lock files should have their on disk
-	timetamps updated. Updating the timestamps prevents administrative programs
-	such as \Prog{tmpwatch} from deleting long lived lock files. The
-	value of this parameter must be an integer representing seconds. If less
-	than 60, the update time will be limited to 60 seconds. By default,
-	the seconds are 28800, which is 8 hours. This setting only takes effect
-	at the start or restart of a daemon.
+  An integer value representing seconds,
+  controlling how often valid lock files should have their on disk
+  timestamps updated. Updating the timestamps prevents administrative programs,
+  such as \Prog{tmpwatch}, from deleting long lived lock files.
+  If set to a value less than 60, the update time will be 60 seconds.
+  The default value is 28800, which is 8 hours. 
+  This variable only takes effect at the start or restart of a daemon.
 
 \end{description}
 
@@ -2232,7 +2223,7 @@ Tracking process family by login "cndrusr1"
 
   Note that if you do not set 
   \MacroUNI{FILESYSTEM\_DOMAIN}, Condor defaults
-  to setting the macro's value to be the fully qualified hostname
+  to setting the macro's value to be the fully qualified host name
   of the local machine.
   Since each machine will have a different
   \MacroUNI{FILESYSTEM\_DOMAIN},
@@ -2366,7 +2357,7 @@ checkpoint server host (see below).
 \begin{description}
   
 \item[\Macro{CKPT\_SERVER\_HOST}] \label{param:CkptServerHost} The
-  hostname of a checkpoint server.
+  host name of a checkpoint server.
 
 \item[\Macro{STARTER\_CHOOSES\_CKPT\_SERVER}]
   \label{param:StarterChoosesCkptServer} If this parameter is \Expr{True} 
@@ -5024,11 +5015,11 @@ These macros affect the \Condor{collector}.
   your pool is small or your central manager has very little RAM, considering
   setting this parameter to a lower value (perhaps 256000 or 128000).
 
-\Note For some Linux distributions, it may be necessary to configure
-a larger value than the default; this parameter is
-/proc/sys/net/core/rmem\_max .  You can see the values that the
-\Condor{collector} actually used by enabling D\_FULLDEBUG for the
-collector and looking at the log line that looks like this:
+\Note For some Linux distributions, it may be necessary to raise the
+OS's system-wide limit for network buffer sizes. The parameter that
+controls this limit is /proc/sys/net/core/rmem\_max. You can see the
+values that the \Condor{collector} actually uses by enabling D\_FULLDEBUG
+for the collector and looking at the log line that looks like this:
 
 Reset OS socket buffer size to 2048k (UDP), 255k (TCP).
 
