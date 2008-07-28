@@ -57,6 +57,14 @@ this no longer results in machines in the Owner state being ignored
 during matchmaking.  Previously, even if \MacroNI{START} was true,
 machines in the Owner state were disregarded.
 
+\item Setting \Attr{JobLeaseDuration} less than 15 minutes caused the
+\Condor{schedd} to abort and restart the next time \Condor{reconfig} was
+run.  The error message in the \Condor{schedd} log looked like this:
+
+\begin{verbatim}
+ALIVE_INTERVAL in the condor configuration is too high (300).
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Known Bugs:
