@@ -82,6 +82,7 @@ static QmgmtPeer *Q_SOCK = NULL;
 int		do_Q_request(ReliSock *,bool &may_fork);
 void	FindPrioJob(PROC_ID &);
 
+static bool qmgmt_was_initialized = false;
 static ClassAdCollection *JobQueue = 0;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
@@ -89,6 +90,9 @@ static int active_cluster_num = -1;	// client is restricted to only insert jobs 
 static int old_cluster_num = -1;	// next_cluster_num at start of transaction
 static bool JobQueueDirty = false;
 static time_t xact_start_time = 0;	// time at which the current transaction was started
+static int cluster_initial_val = 1;		// first cluster number to use
+static int cluster_increment_val = 1;	// increment for cluster numbers of successive submissions 
+
 
 class Service;
 
@@ -618,6 +622,9 @@ InitQmgmt()
 	StringList s_users;
 	char* tmp;
 	int i;
+
+	qmgmt_was_initialized = true;
+
 	if( super_users ) {
 		for( i=0; i<num_super_users; i++ ) {
 			delete [] super_users[i];
@@ -662,6 +669,9 @@ InitQmgmt()
 	forker.Initialize();
 	int max_forkers = param_integer ("SCHEDD_QUERY_WORKERS",3,0);
 	forker.setMaxWorkers( max_forkers );
+
+	cluster_initial_val = param_integer("SCHEDD_CLUSTER_INITIAL_VALUE",1,1);
+	cluster_increment_val = param_integer("SCHEDD_CLUSTER_INCREMENT_VALUE",1,1);
 }
 
 void
@@ -680,7 +690,8 @@ GetOriginalJobQueueBirthdate()
 void
 InitJobQueue(const char *job_queue_name,int max_historical_logs)
 {
-	assert(!JobQueue);
+	ASSERT(qmgmt_was_initialized);	// make certain our parameters are setup
+	ASSERT(!JobQueue);
 	JobQueue = new ClassAdCollection(job_queue_name,max_historical_logs);
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(37,compute_clustersize_hash);
 	TotalJobsCount = 0;
@@ -725,16 +736,16 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// it, and we don't want to confuse things any further.
 	correct_scheduler.sprintf( "DedicatedScheduler!%s", Name );
 
-	next_cluster_num = 1;
+	next_cluster_num = cluster_initial_val;
 	JobQueue->StartIterateAllClassAds();
 	while (JobQueue->IterateAllClassAds(ad,key)) {
 		const char *tmp = key.value();
 		if ( *tmp == '0' ) continue;	// skip cluster & header ads
 		if ( (cluster_num = atoi(tmp)) ) {
 
-			// find highest cluster, set next_cluster_num to one higher
+			// find highest cluster, set next_cluster_num to one increment higher
 			if (cluster_num >= next_cluster_num) {
-				next_cluster_num = cluster_num + 1;
+				next_cluster_num = cluster_num + cluster_increment_val;
 			}
 
 			// link all proc ads to their cluster ad, if there is one
@@ -1379,7 +1390,8 @@ NewCluster()
 	}
 
 	next_proc_num = 0;
-	active_cluster_num = next_cluster_num++;
+	active_cluster_num = next_cluster_num;
+	next_cluster_num += cluster_increment_val;
 	sprintf(cluster_str, "%d", next_cluster_num);
 //	log = new LogSetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
 //	JobQueue->AppendLog(log);
