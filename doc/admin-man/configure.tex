@@ -4122,14 +4122,6 @@ These macros control the \Condor{schedd}.
   error (exception) before the \Condor{schedd} will relinquish
   the match associated with the dying shadow.  Defaults to 5.
 
-\item[\Macro{MAX\_PENDING\_STARTD\_CONTACTS}]
-\label{param:MaxPendingStartdContacts} This limits the number of
-simultaneous connection attempts by the \Condor{schedd} when it is
-requesting claims from the \Condor{startd}s.  The intention is to
-protect the \Condor{schedd} from being overloaded by authentication
-operations.  The default is 10.  The special value 0 indicates no
-limit.
-
 \item[\Macro{MAX\_CONCURRENT\_DOWNLOADS}]
   \label{param:MaxConcurrentDownloads} This specifies the maximum
   number of simultaneous transfers of output files from execute
