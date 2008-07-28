@@ -29,7 +29,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Improved Condor's authentication handshake so that daemons such
+as \Condor{schedd} which initiate connections to other daemons spend
+less time waiting for responses.  Authentication over high latency
+networks is still rather expensive in Condor, so it still may be
+necessary to scale up by running more schedds and collectors than one
+would need for equivalent workloads on a low latency network.  We plan
+to make additional improvements in this area.
 
 \end{itemize}
 
