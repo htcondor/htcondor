@@ -65,6 +65,10 @@ run.  The error message in the \Condor{schedd} log looked like this:
 ALIVE_INTERVAL in the condor configuration is too high (300).
 \end{verbatim}
 
+\item Fixed a slow memory leak affecting the \Condor{startd},
+\Condor{schedd}, and \Condor{collector}.  This leak would probably
+require many months of continuous operation before causing noticeable problems.
+
 \end{itemize}
 
 \noindent Known Bugs:
