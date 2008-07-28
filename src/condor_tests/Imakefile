@@ -911,11 +911,14 @@ TESTCLASS(job_core_copytospool_van,full)
 TESTCLASS(job_core_copytospool_van,quicknolink)
 #endif
 
+/*
+** too much environment tweaking to have this test on
 DESC(job_core_getenv_van,"Vanilla: job which tests getenv both on and off")
 RUN(job_core_getenv_van)
 TESTCLASS(job_core_getenv_van,core)
 TESTCLASS(job_core_getenv_van,long)
 TESTCLASS(job_core_getenv_van,full)
+*/
 
 DESC(job_core_doublejeopardy_van,"Vanilla: make sure condor does not generate an abort AND the expected abnormal termination.")
 RUN(job_core_doublejeopardy_van)

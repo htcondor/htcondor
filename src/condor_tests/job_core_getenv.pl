@@ -26,6 +26,13 @@ my $cfig = $ENV{CONDOR_CONFIG};
 my $pfig = $ENV{PATH};
 my $ufig = $ENV{UNIVERSE};
 
+print "Mode is $arg\n";
+
+print "Extracting CONDOR_CONFIG, PATH and UNIVERSE from environment\n";
+print "CONDOR_CONFIG = $cfig\n";
+print "PATH = $pfig\n";
+print "UNIVERSE = $ufig\n";
+
 if ( $cfig eq undef )
 {
 	print "{$arg}CONDOR_CONFIG is undefined\n";
@@ -45,7 +52,10 @@ if ( $pfig eq undef )
 else
 {
 	print "{$arg}PATH is $pfig\n";
-	if( $arg ne "failnotok" ) { exit(1); }
+	if( $arg ne "failnotok" ) { 
+	 print "NMI places PATH into the environment, OK\n";
+	 	exit(1); 
+	 }
 }
 
 if ( $ufig eq undef )
