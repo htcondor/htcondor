@@ -207,6 +207,8 @@ class BaseShadow : public Service
 
 	virtual int getExitReason( void ) = 0;
 
+	virtual bool claimIsClosing( void ) = 0;
+
 		/** Initializes the user log.  'Nuff said. 
 		 */
 	void initUserLog();

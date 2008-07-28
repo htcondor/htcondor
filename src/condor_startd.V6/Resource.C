@@ -1083,6 +1083,16 @@ Resource::preemptIsTrue()
 }
 
 bool
+Resource::curClaimIsClosing()
+{
+	return
+		hasPreemptingClaim() ||
+		activity() == retiring_act ||
+		state() == preempting_state ||
+		claimWorklifeExpired();
+}
+
+bool
 Resource::claimWorklifeExpired()
 {
 	//This function evaulates to true if the claim has been alive

@@ -28,6 +28,8 @@
 
 extern "C" int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 
+static int deactivate_claim(Stream *stream, Resource *rip, bool graceful);
+
 int
 command_handler( Service*, int cmd, Stream* stream )
 {
@@ -48,10 +50,8 @@ command_handler( Service*, int cmd, Stream* stream )
 		rval = rip->got_alive();
 		break;
 	case DEACTIVATE_CLAIM:
-		rval = rip->deactivate_claim();
-		break;
 	case DEACTIVATE_CLAIM_FORCIBLY:
-		rval = rip->deactivate_claim_forcibly();
+		rval = deactivate_claim(stream,rip,cmd == DEACTIVATE_CLAIM);
 		break;
 	case PCKPT_FRGN_JOB:
 		rval = rip->periodic_checkpoint();
@@ -68,6 +68,31 @@ command_handler( Service*, int cmd, Stream* stream )
 	return rval;
 }
 
+int
+deactivate_claim(Stream *stream, Resource *rip, bool graceful)
+{
+	int rval;
+	bool claim_is_closing = rip->curClaimIsClosing();
+	if(graceful) {
+		rval = rip->deactivate_claim();
+	}
+	else {
+		rval = rip->deactivate_claim_forcibly();
+	}
+
+	stream->encode();
+
+	ClassAd response_ad;
+	response_ad.Assign(ATTR_START,!claim_is_closing);
+	if( !response_ad.put(*stream) || !stream->eom() ) {
+		dprintf(D_FULLDEBUG,"Failed to send response ClassAd in deactivate_claim.\n");
+			// Prior to 7.1.3, no response ClassAd was expected.
+			// Anyway, failure to send it is not (currently) critical
+			// in any way.
+	}
+
+	return rval;
+}
 
 int
 command_activate_claim( Service*, int cmd, Stream* stream )

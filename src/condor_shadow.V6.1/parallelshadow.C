@@ -398,6 +398,11 @@ ParallelShadow::cleanUp( void )
 	}		
 }
 
+bool
+ParallelShadow::claimIsClosing( void )
+{
+	return false;
+}
 
 void 
 ParallelShadow::gracefulShutDown( void )

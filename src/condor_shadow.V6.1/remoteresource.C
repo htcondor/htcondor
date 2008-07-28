@@ -71,6 +71,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	claim_sock = NULL;
 	last_job_lease_renewal = 0;
 	exit_reason = -1;
+	claim_is_closing = false;
 	exited_by_signal = false;
 	exit_value = -1;
 	memset( &remote_rusage, 0, sizeof(struct rusage) );
@@ -251,7 +252,7 @@ RemoteResource::killStarter( bool graceful )
 		return false;
 	}
 
-	if( ! dc_startd->deactivateClaim(graceful) ) {
+	if( ! dc_startd->deactivateClaim(graceful,&claim_is_closing) ) {
 		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
 						 "Could not send command to startd\n" );
 		return false;
@@ -512,6 +513,12 @@ int
 RemoteResource::getExitReason()
 {
 	return exit_reason;
+}
+
+bool
+RemoteResource::claimIsClosing()
+{
+	return claim_is_closing;
 }
 
 

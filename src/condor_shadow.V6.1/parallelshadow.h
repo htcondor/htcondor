@@ -86,6 +86,8 @@ class ParallelShadow : public BaseShadow
 
 	int getExitReason( void );
 
+	bool claimIsClosing( void );
+
 	float bytesSent( void );
 	float bytesReceived( void );
 

@@ -9406,6 +9406,12 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			}
 			break;
 
+		case JOB_EXITED_AND_CLAIM_CLOSING:
+			if( srec->match ) {
+					// startd is not accepting more jobs on this claim
+				DelMrec(srec->match);
+			}
+				// no break, fall through
 		case JOB_EXITED:
 			dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
 				// no break, fall through and do the action
