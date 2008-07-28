@@ -989,7 +989,7 @@ particular, the same UID, which is important for file systems like
 NFS) are considered part of the same UID domain.
 
 The default configuration for Condor places each machine
-in its own UID domain and file system domain, using the full hostname of the
+in its own UID domain and file system domain, using the full host name of the
 machine as the name of the domains.
 So, if a pool \emph{does} have access to a shared file system,
 the pool administrator \emph{must} correctly configure Condor 
@@ -1020,7 +1020,7 @@ Most of the pool, including the compute cluster, has access to a
 shared file system, but some of the desktop machines do not.
 In this case, the administrators would probably define the
 \AdAttr{FileSystemDomain} to be \File{cs.wisc.edu} for all the machines
-that mounted the shared files, and to the full hostname for each
+that mounted the shared files, and to the full host name for each
 machine that did not. An example is \File{jimi.cs.wisc.edu}.
 
 In this example,

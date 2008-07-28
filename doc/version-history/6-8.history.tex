@@ -511,7 +511,7 @@ ClassAd functions that do regular expression matching operations.
 \item Fixed a bug that was preventing Condor daemons from caching DNS
 information for hosts authenticated via HOSTALLOW settings (i.e. no
 strong authentication).  The collector, in particular, should spend
-much less time on IP to hostname lookups.
+much less time on IP to host name lookups.
 
 \item When a job has an X509 proxy file (as indicated by the
 \Attr{X509UserProxy} attribute in the job ad), the \Condor{starter}
@@ -571,7 +571,7 @@ fail to correctly perform the PASSWORD authentication method.
 \item The Windows \Condor{credd} now uses the configuration parameter
 \Attr{CREDD\_HOST}, if defined, to set its name when advertising itself
 to the \Condor{collector}. Thus, if \Attr{CREDD\_HOST} is set to something
-other than then \Condor{credd}'s hostname, clients can still locate the
+other than then \Condor{credd}'s host name, clients can still locate the
 daemon.
 
 \item Fixed a bug in the \Condor{c-gahp} that could cause it to not
