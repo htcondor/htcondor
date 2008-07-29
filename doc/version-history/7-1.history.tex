@@ -30,12 +30,13 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Improved Condor's authentication handshake so that daemons such
-as \Condor{schedd} which initiate connections to other daemons spend
-less time waiting for responses.  Authentication over high latency
+as the \Condor{schedd}, which initiate connections to other daemons,
+spend less time waiting for responses.
+Authentication over high latency
 networks is still rather expensive in Condor, so it still may be
-necessary to scale up by running more schedds and collectors than one
-would need for equivalent workloads on a low latency network.  We plan
-to make additional improvements in this area.
+necessary to scale up by running more \Condor{schedd} and \Condor{collector}
+daemons than one would need for equivalent workloads on a low latency network.
+Additional improvements in this area are planned.
 
 \end{itemize}
 
@@ -54,9 +55,9 @@ to make additional improvements in this area.
 % PR 945
 \item Fixed a bug in \Condor{dagman} that caused the user log file of
 the first node job in a DAG to get created with 0600 permissions,
-regardless of the user's umask.  (Note that this fix involved removing
+regardless of the user's umask.  Note that this fix involved removing
 the \Opt{-condorlog} and \Opt{-storklog} command-line arguments from
-\Condor{submit\_dag} and \Condor{dagman}.)
+\Condor{submit\_dag} and \Condor{dagman}.
 
 \end{itemize}
 
