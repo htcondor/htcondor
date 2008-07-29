@@ -39,9 +39,9 @@ foreach $line (@got) {
 }
 
 
-if($lastsave =~ /^.*All\s+322\s+tests\s+passed.*$/) {
-	print "ClassAd Test passed with 322 successful tests!\n";
+if($lastsave =~ /^.*All\s+329\s+tests\s+passed.*$/) {
+	print "ClassAd Test passed with 329 successful tests!\n";
 } else {
-	die "322 tests were expected to pass <$lastsave>\n";
+	die "329 tests were expected to pass <$lastsave>\n";
 }
 
