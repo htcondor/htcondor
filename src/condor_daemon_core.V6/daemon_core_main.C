@@ -1545,7 +1545,13 @@ int main( int argc, char** argv )
 	}
 
 		// call config so we can call param.  
-	config( wantsQuiet );
+	if ( strcmp(mySubSystem,"SHADOW") == 0 ) {
+			// Try to minimize shadow footprint by not loading
+			// the "extra" info from the config file
+			config( wantsQuiet, false, false );
+	} else {
+			config( wantsQuiet, false, true );
+	}
 
     // call dc_config_GSI to set GSI related parameters so that all
     // the daemons will know what to do.

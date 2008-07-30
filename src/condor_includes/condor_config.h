@@ -112,7 +112,7 @@ class ParamValue {
 	odd since if a .c file includes this, these prototypes technically don't
 	exist.... */
 extern "C" {
-	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false );
+	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false, bool wantsExtra = false );
 	void config_host( char* host=NULL );
 	void config_fill_ad( ClassAd*, const char* prefix=NULL );
 	void condor_net_remap_config( bool force_param=false );
@@ -246,7 +246,7 @@ BEGIN_C_DECLS
 	of size TABLESIZE.
 	*/
 	char * macro_expand ( const char *name );
-	void init_config ( void );
+	void init_config ( bool );
 	void clear_config ( void );
 	void set_debug_flags( char * );
 	void config_insert( const char*, const char* );

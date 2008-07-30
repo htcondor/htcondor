@@ -88,7 +88,7 @@
 extern "C" {
 	
 // Function prototypes
-void real_config(char* host, int wantsQuiet);
+void real_config(char* host, int wantsQuiet, bool wantExtraInfo);
 int Read_config(const char*, BUCKET**, int, int, bool,
 				ExtraParamTable* = NULL);
 bool is_piped_command(const char* filename);
@@ -99,7 +99,6 @@ char* find_file(const char*, const char*);
 void init_tilde();
 void fill_attributes();
 void check_domain_attributes();
-void init_config();
 void clear_config();
 void reinsert_specials(char*);
 void process_config_source(char*, char*, char*, int);
@@ -321,12 +320,12 @@ static int ParamValueNameAscendingSort(const void *l, const void *r)
 
 
 void
-config( int wantsQuiet, bool ignore_invalid_entry )
+config( int wantsQuiet, bool ignore_invalid_entry, bool wantsExtraInfo )
 {
 #ifdef WIN32
 	setlocale( LC_ALL, "English" );
 #endif
-	real_config( NULL, wantsQuiet );
+	real_config( NULL, wantsQuiet, wantsExtraInfo );
 	validate_entries( ignore_invalid_entry );
 }
 
@@ -334,7 +333,7 @@ config( int wantsQuiet, bool ignore_invalid_entry )
 void
 config_host( char* host )
 {
-	real_config( host, 0 );
+	real_config( host, 0, true );
 }
 
 /* This function initialize GSI (maybe other) authentication related
@@ -574,7 +573,7 @@ condor_net_remap_config( bool force_param )
 
 
 void
-real_config(char* host, int wantsQuiet)
+real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 {
 	char* config_source = NULL;
 	char* tmp = NULL;
@@ -583,12 +582,16 @@ real_config(char* host, int wantsQuiet)
 	static int first_time = TRUE;
 	if( first_time ) {
 		first_time = FALSE;
-		init_config();
+		init_config(wantExtraInfo);
 	} else {
 			// Clear out everything in our config hash table so we can
 			// rebuild it from scratch.
 		clear_config();
-		extra_info = new ExtraParamTable();
+		if (wantExtraInfo) {
+			extra_info = new ExtraParamTable();
+		} else {
+			extra_info = new DummyExtraParamTable();
+		}
 	}
 
 		/*
@@ -1283,10 +1286,15 @@ check_domain_attributes()
 
 
 void
-init_config()
+init_config(bool wantExtraInfo  /* = true */)
 {
 	memset( (char *)ConfigTab, 0, (TABLESIZE * sizeof(BUCKET*)) ); 
-	extra_info = new ExtraParamTable();
+	if (wantExtraInfo) {
+		extra_info = new ExtraParamTable();
+	} else {
+		extra_info = new DummyExtraParamTable();
+	}
+
 	return;
 }
 
