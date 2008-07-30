@@ -29,6 +29,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a memory leak, introduced in 7.1.1, which caused the
+startd to grow without bound.
+
 \item Added \Procedure{formatTime}, a built-in ClassAd function to create a
 	formatted representation of the time.  A detailed description of this
 	function is available in section~\ref{sec:classadFunctions}, which
