@@ -51,6 +51,8 @@ class GT4Resource : public BaseResource
 	bool RequestDestroy( GT4Job *job );
 	void DestroyComplete( GT4Job *job );
 
+	bool IsGram42() { return m_isGram42; }
+
 	static const char *CanonicalName( const char *name );
 	static const char *HashName( const char *resource_name,
 								 const char *proxy_subject );
@@ -68,6 +70,7 @@ class GT4Resource : public BaseResource
 	void DoPing( time_t& ping_delay, bool& ping_complete,
 				 bool& ping_succeeded );
 	int checkDelegation();
+	bool ConfigureGahp();
 
 	bool initialized;
 
@@ -86,6 +89,8 @@ class GT4Resource : public BaseResource
 
 	GahpClient *gahp;
 	GahpClient *deleg_gahp;
+
+	bool m_isGram42;
 };
 
 #endif

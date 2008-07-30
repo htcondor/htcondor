@@ -93,13 +93,14 @@ GT4Resource::GT4Resource( const char *resource_name,
 	proxySubject = strdup( proxy_subject );
 	delegationTimerId = daemonCore->Register_Timer( 0,
 							(TimerHandlercpp)&GT4Resource::checkDelegation,
-							"GT4REsource::checkDelegation", (Service*)this );
+							"GT4Resource::checkDelegation", (Service*)this );
 	activeDelegationCmd = NULL;
 	delegationServiceUri = NULL;
 	gahp = NULL;
 	deleg_gahp = NULL;
 	submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
 	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
+	m_isGram42 = false;
 
 	const char service_name[] = "/wsrf/services/DelegationFactoryService";
 	const char *name_ptr;
@@ -157,7 +158,8 @@ bool GT4Resource::Init()
 	}
 
 		// TODO This assumes that at least one GT4Job has already
-		// initialized the gahp server. Need a better solution.
+		// instantiated a GahpClient. Need a better solution.
+/*
 	MyString gahp_name;
 	gahp_name.sprintf( "GT4/%s", proxySubject );
 
@@ -172,6 +174,10 @@ bool GT4Resource::Init()
 	deleg_gahp->setNotificationTimerId( delegationTimerId );
 	deleg_gahp->setMode( GahpClient::normal );
 	deleg_gahp->setTimeout( gahpCallTimeout );
+*/
+	if ( ConfigureGahp() == false ) {
+		return false;
+	}
 
 	initialized = true;
 
@@ -378,6 +384,10 @@ dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
 
 	daemonCore->Reset_Timer( delegationTimerId, CHECK_DELEGATION_INTERVAL );
 
+	if ( resourceDown || !firstPingDone ) {
+		return 0;
+	}
+
 	delegatedProxies.Rewind();
 
 	while ( (next_deleg = delegatedProxies.Next()) != NULL ) {
@@ -513,6 +523,10 @@ dprintf(D_FULLDEBUG,"    signalling jobs for %s\n",next_deleg->deleg_uri?next_de
 
 bool GT4Resource::RequestDestroy( GT4Job *job )
 {
+	if ( m_isGram42 ) {
+		return true;
+	}
+
 	GT4Job *jobptr;
 
 	destroysWanted.Rewind();
@@ -546,6 +560,10 @@ bool GT4Resource::RequestDestroy( GT4Job *job )
 
 void GT4Resource::DestroyComplete( GT4Job *job )
 {
+	if ( m_isGram42 ) {
+		return;
+	}
+
 	if ( destroysAllowed.Delete( job ) ) {
 		if ( destroysAllowed.Length() < destroyLimit &&
 			 destroysWanted.Length() > 0 ) {
@@ -587,11 +605,86 @@ void GT4Resource::DoPing( time_t& ping_delay, bool& ping_complete,
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		ping_complete = false;
-	} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
-		ping_complete = true;
-		ping_succeeded = false;
-	} else {
+	} else if ( rc == 0 ) {
 		ping_complete = true;
 		ping_succeeded = true;
+	} else {
+		if ( m_isGram42 == false &&
+			 strncmp( gahp->getErrorString(), "Addressing header is a "
+					  "draft version of WS Addressing:", 54 ) == 0 ) {
+
+			m_isGram42 = true;
+			if ( ConfigureGahp() ) {
+				ping_delay = 0;
+				ping_complete = false;
+				daemonCore->Reset_Timer( pingTimerId, 0 );
+			} else {
+				m_isGram42 = false;
+				ping_complete = true;
+				ping_succeeded = true;
+			}
+		} else if ( strncmp( gahp->getErrorString(),
+							 "java.net.ConnectException:", 26 ) == 0 ) {
+			ping_complete = true;
+			ping_succeeded = false;
+		} else {
+			ping_complete = true;
+			ping_succeeded = true;
+		}
 	}
+	if ( ping_complete && ping_succeeded ) {
+			// The proxy delegation code may be waiting for a successful
+			// ping. Wake it up.
+		daemonCore->Reset_Timer( delegationTimerId, 0 );
+	}
+}
+
+bool
+GT4Resource::ConfigureGahp()
+{
+	GahpClient *new_gahp = NULL;
+	GahpClient *new_deleg_gahp = NULL;
+
+dprintf(D_ALWAYS,"JEF: ConfigureGahp()\n");
+	if ( m_isGram42 && !registeredJobs.IsEmpty() ) {
+dprintf(D_ALWAYS,"JEF: Telling jobs to switch to Gram 42\n");
+		bool failed = true;
+		GT4Job *next_job;
+		registeredJobs.Rewind();
+		while ( (next_job = (GT4Job*)registeredJobs.Next()) != NULL ) {
+			bool result = next_job->SwitchToGram42();
+			if ( result ) {
+				failed = false;
+			}
+		}
+		if ( failed ) {
+			return false;
+		}
+	}
+
+	MyString gahp_name;
+	if ( m_isGram42 ) {
+		gahp_name.sprintf( "GT42/%s", proxySubject );
+	} else {
+		gahp_name.sprintf( "GT4/%s", proxySubject );
+	}
+
+	new_gahp = new GahpClient( gahp_name.Value() );
+
+	new_gahp->setNotificationTimerId( pingTimerId );
+	new_gahp->setMode( GahpClient::normal );
+	new_gahp->setTimeout( gahpCallTimeout );
+
+	new_deleg_gahp = new GahpClient( gahp_name.Value() );
+
+	new_deleg_gahp->setNotificationTimerId( delegationTimerId );
+	new_deleg_gahp->setMode( GahpClient::normal );
+	new_deleg_gahp->setTimeout( gahpCallTimeout );
+
+	delete gahp;
+	gahp = new_gahp;
+	delete deleg_gahp;
+	deleg_gahp = new_deleg_gahp;
+
+	return true;
 }
