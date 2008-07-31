@@ -230,21 +230,22 @@ invokeHousekeeper (AdTypes adtype)
 
 		case HAD_AD:
 			cleanHashTable (HadAds, now, makeHadAdHashKey);
-			break;			
+			break;
 
-	        case GENERIC_AD:
+		case GENERIC_AD:
 			CollectorHashTable *cht;
 			GenericAds.startIterations();
 			while (GenericAds.iterate(cht)) {
 				cleanHashTable (*cht, now, makeGenericAdHashKey);
 			}
+			break;
 
 		case XFER_SERVICE_AD:
-			cleanHashTable (NegotiatorAds, now, makeXferServiceAdHashKey);
+			cleanHashTable (XferServiceAds, now, makeXferServiceAdHashKey);
 			break;
 
 		case MATCH_MAKER_AD:
-			cleanHashTable (NegotiatorAds, now, makeMatchMakerAdHashKey);
+			cleanHashTable (MatchMakerAds, now, makeMatchMakerAdHashKey);
 			break;
 
 		default:

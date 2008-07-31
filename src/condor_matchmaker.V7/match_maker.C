@@ -333,7 +333,8 @@ MatchMaker::commandHandler_GetMatch(int command, Stream *stream)
 			break;
 		}
 		// Now randomize our vector
-		random_shuffle(randomized_match_list.begin(),randomized_match_list.end());
+		random_shuffle( randomized_match_list.begin(),
+						randomized_match_list.end() );
 
 		// Loop through the randomly shuffled matches in our vector
 		curr_resource = randomized_match_list.begin();
@@ -555,7 +556,7 @@ MatchMaker::timerHandler_Update ( void )
 	m_resources.GetStats( stats );
 
 	MyString line;
-	line.sprintf("%s = %d", "NumberM_Resources", stats.m_num_resources );
+	line.sprintf("%s = %d", "Number_Resources", stats.m_num_resources );
 	m_publicAd.Insert( line.Value() );
 	line.sprintf("%s = %d", "NumberTransferRecords", stats.m_num_xfer_records);
 	m_publicAd.Insert( line.Value() );

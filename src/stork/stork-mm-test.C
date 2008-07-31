@@ -26,13 +26,16 @@
 list<DCMatchMakerLease*>mylist;
 int main ( int argc, char **argv )
 {
+	(void) argc;
+	(void) argv;
+
 	DCMatchMakerLease	l;
 	mylist.push_back( &l );
 	mylist.remove( &l);
 
 	config();
 	Termlog = 1;
-	dprintf_config("TOOL",2);
+	dprintf_config("TOOL");
 
 	StorkMatchMaker	mm;
 	printf( "mm size %d @ %p\n", sizeof(mm), &mm );

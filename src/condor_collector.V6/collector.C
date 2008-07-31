@@ -513,7 +513,7 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 		whichAds = STORAGE_AD;
 		break;
 
-          case INVALIDATE_ADS_GENERIC:
+	  case INVALIDATE_ADS_GENERIC:
 		dprintf(D_ALWAYS, "Got INVALIDATE_ADS_GENERIC\n");
 		whichAds = GENERIC_AD;
 		break;
