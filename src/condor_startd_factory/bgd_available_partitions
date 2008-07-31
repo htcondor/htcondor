@@ -3,9 +3,10 @@
 
 # This script figures out the state of the partitions by querying the
 # mmcs and the collector for partitions backed by startds
+# See the example output at the bottom of the script.
 
 # XXX TODO emit classads for not generated partition, basically, they are just
-# availble to be used partition names only.
+# availble to be used as partition names only.
 
 use warnings;
 use strict;
@@ -47,6 +48,33 @@ my @g_parts =
 			{
 				"Size" => 32,
 				"State" => "GENERATED",
+			}
+	},
+
+	{
+		"R01-M0-N01" =>
+			{
+				# These are classad attribute names;
+				"State" => "NOT_GENERATED",
+
+			}
+	},
+	{
+		"R01-M0-N02" =>
+			{
+				"State" => "NOT_GENERATED",
+			}
+	},
+	{
+		"R01-M0-N03" =>
+			{
+				"State" => "NOT_GENERATED",
+			}
+	},
+	{
+		"R01-M1-N00" =>
+			{
+				"State" => "NOT_GENERATED",
 			}
 	},
 
@@ -206,8 +234,9 @@ sub main
 exit main();
 
 
+# example of style of classads emitted by this script.
 
-sub orig
+sub examples
 {
 ########################################
 # generated, booted to smp, backed by startd
@@ -260,5 +289,28 @@ print qq|Partition = "R04-M0-N00"\n|;
 print qq|Size = 256\n|;
 print qq|State = "GENERATED"\n|;
 
-exit 0;
+########################################
+# not generated, not booted, not backed by startd
+########################################
+print qq|Partition = "R01-M0-N01"\n|;
+print qq|State = "NOT_GENERATED"\n|;
+
+########################################
+# not generated, not booted, not backed by startd
+########################################
+print qq|Partition = "R01-M0-N02"\n|;
+print qq|State = "NOT_GENERATED"\n|;
+
+########################################
+# not generated, not booted, not backed by startd
+########################################
+print qq|Partition = "R01-M0-N03"\n|;
+print qq|State = "NOT_GENERATED"\n|;
+
+########################################
+# not generated, not booted, not backed by startd
+########################################
+print qq|Partition = "R01-M1-N00"\n|;
+print qq|State = "NOT_GENERATED"\n|;
+
 }

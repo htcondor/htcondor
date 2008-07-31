@@ -35,7 +35,8 @@ void PartitionManager::query_available_partitions(char *script)
 	ArgList args;
 	priv_state priv;
 
-	/* load a description of the available partitions */
+	/* load a description of the available partitions which could be 
+		backed, booted, or generatable. */
 
 	dprintf(D_ALWAYS, "Finding available partitions with: %s\n", script);
 
