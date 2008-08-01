@@ -416,6 +416,10 @@ ext_target(EXT_GT3GAHP_VERSION,$(NULL))
 ext_target(EXT_GT4GAHP_VERSION,$(NULL))
 #endif
 
+#if HAVE_EXT_GT42GAHP
+ext_target(EXT_GT24GAHP_VERSION,$(NULL))
+#endif
+
 #if HAVE_EXT_UNICOREGAHP
 ext_target(EXT_UNICOREGAHP_VERSION,$(NULL))
 #endif

@@ -32,6 +32,7 @@ EXT_GAHP_VERSION = @ext_gahp_version@
 EXT_ZLIB_VERSION = @ext_zlib_version@
 EXT_MAN_VERSION = man-current
 EXT_GT4GAHP_VERSION = @ext_gt4gahp_version@
+EXT_GT42GAHP_VERSION = @ext_gt42gahp_version@
 EXT_CLASSADS_VERSION = @ext_classads_version@
 EXT_SRB_VERSION = @ext_srb_version@
 EXT_GSOAP_VERSION = @ext_gsoap_version@
@@ -119,6 +120,10 @@ GCB_BIN = $(GCB_DIR)/bin
 
 #if HAVE_EXT_GT4GAHP
 GT4GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT4GAHP_VERSION)
+#endif
+
+#if HAVE_EXT_GT42GAHP
+GT42GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT42GAHP_VERSION)
 #endif
 
 #if HAVE_EXT_GSOAP
