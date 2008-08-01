@@ -408,10 +408,6 @@ ext_target(EXT_GLOBUS_VERSION,$(NULL))
 ext_target(EXT_GAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
 #endif
 
-#if HAVE_EXT_GT3GAHP
-ext_target(EXT_GT3GAHP_VERSION,$(NULL))
-#endif
-
 #if HAVE_EXT_GT4GAHP
 ext_target(EXT_GT4GAHP_VERSION,$(NULL))
 #endif
