@@ -87,11 +87,14 @@ class GahpServer : public Service {
 
 	bool m_in_results;
 
+	static int m_reaperid;
+
+	static void Reaper(Service *,int pid,int status);
+
 	void read_argv(Gahp_Args &g_args);
 	void read_argv(Gahp_Args *g_args) { read_argv(*g_args); }
 	void write_line(const char *command);
 	void write_line(const char *command,int req,const char *args);
-	void Reaper(int pid,int status);
 	int pipe_ready();
 	int err_pipe_ready();
 
@@ -161,7 +164,6 @@ class GahpServer : public Service {
 	Queue<int> waitingToSubmit;
 
 	int m_gahp_pid;
-	int m_reaperid;
 	int m_gahp_readfd;
 	int m_gahp_writefd;
 	int m_gahp_errorfd;

@@ -52,6 +52,8 @@ HashTable <HashKey, GahpServer *>
 
 const int GahpServer::m_buffer_size = 4096;
 
+int GahpServer::m_reaperid = -1;
+
 const char *escapeGahpString(const char * input);
 
 void GahpReconfig()
@@ -101,7 +103,6 @@ GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 {
 	m_gahp_pid = -1;
-	m_reaperid = -1;
 	m_gahp_readfd = -1;
 	m_gahp_writefd = -1;
 	m_gahp_errorfd = -1;
@@ -158,7 +159,9 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 
 GahpServer::~GahpServer()
 {
+	GahpServersById.remove( HashKey( my_id ) );
 	free( m_buffer );
+	delete m_commands_supported;
 	if ( globus_gass_server_url != NULL ) {
 		free( globus_gass_server_url );
 	}
@@ -173,6 +176,18 @@ GahpServer::~GahpServer()
 	}
 	if ( binary_path != NULL ) {
 		free(binary_path);
+	}
+	if ( m_gahp_readfd != -1 ) {
+		daemonCore->Close_Pipe( m_gahp_readfd );
+	}
+	if ( m_gahp_writefd != -1 ) {
+		daemonCore->Close_Pipe( m_gahp_writefd );
+	}
+	if ( m_gahp_errorfd != -1 ) {
+		daemonCore->Close_Pipe( m_gahp_errorfd );
+	}
+	if ( poll_tid != -1 ) {
+		daemonCore->Cancel_Timer( poll_tid );
 	}
 	if ( master_proxy != NULL ) {
 		ReleaseProxy( master_proxy->proxy );
@@ -256,21 +271,40 @@ GahpServer::write_line(const char *command, int req, const char *args)
 }
 
 void
-GahpServer::Reaper(int pid,int status)
+GahpServer::Reaper(Service *,int pid,int status)
 {
 	/* This should be much better.... for now, if our Gahp Server
 	   goes away for any reason, we EXCEPT. */
 
-	char buf2[800];
+	GahpServer *dead_server = NULL;
+	GahpServer *next_server = NULL;
 
-	if( WIFSIGNALED(status) ) {
-		sprintf( buf2, "died due to %s", 
-			daemonCore->GetExceptionString(status) );
-	} else {
-		sprintf( buf2, "exited with status %d", WEXITSTATUS(status) );
+	GahpServersById.startIterations();
+	while ( GahpServersById.iterate( next_server ) != 0 ) {
+		if ( pid == next_server->m_gahp_pid ) {
+			dead_server = next_server;
+			break;
+		}
 	}
 
-	EXCEPT("Gahp Server (pid=%d) %s\n",pid,buf2);
+	MyString buf;
+
+	buf.sprintf( "Gahp Server (pid=%d) ", pid );
+
+	if( WIFSIGNALED(status) ) {
+		buf.sprintf_cat( "died due to %s", 
+			daemonCore->GetExceptionString(status) );
+	} else {
+		buf.sprintf_cat( "exited with status %d", WEXITSTATUS(status) );
+	}
+
+	if ( dead_server ) {
+		buf.sprintf_cat( " unexpectedly" );
+		EXCEPT( buf.Value() );
+	} else {
+		buf.sprintf_cat( "\n" );
+		dprintf( D_ALWAYS, buf.Value() );
+	}
 }
 
 
@@ -300,14 +334,15 @@ GahpClient::~GahpClient()
 		// call clear_pending to remove this object from hash table,
 		// and deallocate any memory associated w/ a pending command.
 	clear_pending();
-	server->RemoveGahpClient();
-	server->m_reference_count--;
 	if ( normal_proxy != NULL ) {
 		server->UnregisterProxy( normal_proxy->proxy );
 	}
 	if ( deleg_proxy != NULL ) {
 		server->UnregisterProxy( deleg_proxy->proxy );
 	}
+	server->RemoveGahpClient();
+		// The GahpServer may have deleted itself in RemoveGahpClient().
+		// Don't refer to it below here!
 }
 
 
@@ -557,7 +592,10 @@ void
 GahpServer::RemoveGahpClient()
 {
 	m_reference_count--;
-		// TODO arrange to de-allocate GahpServer when this hits zero
+
+	if ( m_reference_count <= 0 ) {
+		delete this;
+	}
 }
 
 bool
@@ -656,9 +694,9 @@ GahpServer::Startup()
 	if ( m_reaperid == -1 ) {
 		m_reaperid = daemonCore->Register_Reaper(
 				"GAHP Server",					
-				(ReaperHandlercpp)&GahpServer::Reaper,	// handler
+				(ReaperHandler)&GahpServer::Reaper,	// handler
 				"GahpServer::Reaper",
-				this
+				NULL
 				);
 	}
 
