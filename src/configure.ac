@@ -2652,7 +2652,7 @@ _cv_has_gahp=$_cv_has_globus
 CHECK_EXTERNAL([gahp],[1.0.15], [soft])
 
 _cv_has_gt4gahp=$_cv_has_globus
-CHECK_EXTERNAL([gt4gahp],[1.7.1], [soft])
+CHECK_EXTERNAL([gt4gahp],[1.7.2], [soft])
 
 _cv_has_unicoregahp=$_cv_has_globus
 CHECK_EXTERNAL([unicoregahp],[1.2.0], [soft])
