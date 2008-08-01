@@ -1784,6 +1784,17 @@ GT4_GAHP = $(SBIN)/gt4_gahp
 GT4_LOCATION = $(LIB)/gt4
 
 ##
+## The location of the wrapper for invoking
+## GT4 GAHP server
+##
+GT42_GAHP = $(SBIN)/gt42_gahp
+
+##
+## The location of GT4 files. This should normally be lib/gt4
+##
+GT42_LOCATION = $(LIB)/gt42
+
+##
 ## gt4 gram requires a gridftp server to perform file transfers.
 ## If GRIDFTP_URL_BASE is set, then Condor assumes there is a gridftp
 ## server set up at that URL suitable for its use. Otherwise, Condor
