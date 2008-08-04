@@ -588,7 +588,7 @@ void Server::HandleRequest(int req_sd,
 			if (errno != EINTR) {
 				rt_alarm.ResetAlarm();
 				close(new_req_sd);
-				sprintf(log_msg, 
+				sprintf(log_msg,
 						"Incomplete request packet from %s [REJECTING]",
 						inet_ntoa(shadow_sa.sin_addr));
 				Log(req_ID, log_msg);
