@@ -346,9 +346,9 @@ else {
 		if ( !check_release_dir($opt_prefix_dir) ) {
 			warn <<END_BAD_PREFIX_DIR;
 No condor installation found in $opt_prefix_dir
-  You probably need to specify the release directory to install from
-  with the '--install=<dir>' option
-  or run condor_install instead of condor_configure
+  You probably need to install condor into $opt_prefix_dir by specifying
+  the '--install=<dir>' option
+  or perhaps run 'condor_install' instead of 'condor_configure'
   Run 'condor_install --help' for help.
 END_BAD_PREFIX_DIR
 			exit( 1 );
