@@ -99,7 +99,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "proc_family_interface.h"
 #include "condor_netdb.h"
 
-#if defined(LINUX)
+#if defined(HAVE_VALGRIND_H)
 #include "valgrind.h"
 #endif
 
@@ -2354,7 +2354,7 @@ DaemonCore::reconfig(void) {
 	else {
 		m_use_clone_to_create_processes = param_boolean("USE_CLONE_TO_CREATE_PROCESSES", true);
 	}
-#if defined(LINUX)
+#if defined(HAVE_VALGRIND_H)
 	if (RUNNING_ON_VALGRIND) {
 		dprintf(D_ALWAYS, "Looks like we are under valgrind, forcing USE_CLONE_TO_CREATE_PROCESSES to FALSE.\n");
 		m_use_clone_to_create_processes = false;
