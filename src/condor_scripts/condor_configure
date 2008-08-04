@@ -38,6 +38,7 @@
 umask 0022;			# default file creation permissions
 use strict;			# restrict unsafe constructs
 use warnings;		# warn about bad things
+use Cwd;
 
 require 5.006;		# Perl version for function prototypes
 
@@ -331,28 +332,31 @@ debug ("Condor will be run as user: " . $pwuid[0]);
 if (defined($opt_release_dir)) {
     # Install
     if ($opt_prefix_dir) {
-		$release_dir=install($opt_prefix_dir);
-		set_mail_settings();
-		set_domain_settings();
-		set_java_jvm_path();
+		$release_dir=install( $opt_prefix_dir );
     } else {
-		chomp($release_dir=`pwd`);
-		$release_dir=install($release_dir);
-		set_mail_settings();
-		set_domain_settings();
-		set_java_jvm_path();
+		$release_dir=install( $release_dir=getcwd() );
     }
+	set_mail_settings();
+	set_domain_settings();
+	set_java_jvm_path();
 }
 else {
     # Verify Install diretory
     if ($opt_prefix_dir) {
-		check_release_dir($opt_prefix_dir) or
-			die "Invalid install directory: $opt_prefix_dir!\n";
+		if ( !check_release_dir($opt_prefix_dir) ) {
+			warn <<END_BAD_PREFIX_DIR;
+No condor installation found in $opt_prefix_dir
+  You probably need to specify the release directory to install from
+  with the '--install=<dir>' option
+  or run condor_install instead of condor_configure
+  Run 'condor_install --help' for help.
+END_BAD_PREFIX_DIR
+			exit( 1 );
+		}
 		$release_dir=$opt_prefix_dir;
 		chomp ($release_dir=`pushd $release_dir >> /dev/null && pwd && popd >> /dev/null`);
     } else {
-		chomp (my $pwd=`pwd`);
-		$release_dir=find_release_dir($pwd);
+		$release_dir=find_release_dir( getcwd() );
     }
 
     $config_file = find_config_file() or exit(1);
@@ -817,16 +821,17 @@ sub install( $ ) {
 
     my @release_dirs = qw( etc include src lib libexec bin sbin sql man );
 
-	chomp(my $curdir=`pwd`);
-    my $release_src_dir="$curdir";
+	# Get the absolute path to the release directory
+	my $release_src_dir;
     if ($opt_release_dir) {
-		$release_src_dir=$opt_release_dir;
+		my $old = getcwd();
+		chdir( $opt_release_dir ) or die "Can't chdir to $opt_release_dir";
+		$release_src_dir = getcwd();	# Get the complete absolute path
+		chdir( $old ) or die "Can't chdir back to $old";
     }
-
-	my $old = $ENV{PWD};
-    chdir "$release_src_dir" or die "Can't chdir to $release_src_dir";
-    chomp ($release_src_dir=`pwd`); # Get the complete absolute path
-	chdir( $old ) or die "Can't chdir back to $old";
+	else {
+		$release_src_dir = getcwd();	# Get the complete absolute path
+	}
 
 	my @missing;
 	foreach my $d ( @release_dirs ) {
@@ -1081,7 +1086,7 @@ sub install( $ ) {
 
     chdir "$release_dir";
 
-    chomp ($release_dir=`pwd`); # Get the complete absolute path
+    $release_dir = getcwd();	# Get the complete absolute path
 
 	my $install_in_place = 0;
 	if ( $release_dir eq $release_src_dir ) {
@@ -1271,7 +1276,7 @@ sub check_release_dir( $ ) {
     foreach my $sub ("bin", "sbin", "etc") {
 		my $full = "$dir/$sub";
 		if ( ! -d $full ) {
-			print STDERR "Directory $full does not exit\n";
+			print STDERR "Directory $full does not exist\n";
 			return 0;
 		}
 	}
