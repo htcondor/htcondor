@@ -927,9 +927,10 @@ int ViewServer::StartdScanFunc(ClassAd* cad)
 		st=VIEW_STATE_BACKFILL;
 		break;
 	default:
-		EXCEPT( "Unknown machine state %d from '%s'",
-				(int)StateEnum, Name );
-		return 0;
+		dprintf( D_ALWAYS,
+				 "WARNING: Unknown machine state %d from '%s' (ignoring)",
+				 (int)StateEnum, Name );
+		return 1;
 	}
 
 	// Get Group Name
