@@ -50,7 +50,9 @@ indicates no limit.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug in the View Collector that caused it to ``except''
+  (crash) when it received a machine ad without a valid state.  It now
+  logs this (D\_ALWAYS) and ignores the ad.
 
 \end{itemize}
 
