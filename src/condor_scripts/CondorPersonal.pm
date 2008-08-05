@@ -954,7 +954,7 @@ sub StartPersonalCondor
 
 	debug( "Using this path: --$newpath--\n");
 
-	#debug( "Want $configfile for config file\n");
+	debug( "Want $configfile for config file\n");
 
 	if( $ENV{NMI_PLATFORM} =~ /win/ ){
 		$figpath = `cygpath -w $fullconfig`;
@@ -976,6 +976,7 @@ sub StartPersonalCondor
 
 	# set up to use the existing generated configfile
 	$ENV{CONDOR_CONFIG} = $fullconfig;
+	debug( "Is personal condor running config<$fullconfig>\n");
 	my $condorstate = IsPersonalRunning($fullconfig);
 	debug( "Condor state is $condorstate\n");
 	my $fig = $ENV{CONDOR_CONFIG};
@@ -1037,8 +1038,10 @@ sub IsPersonalRunning
         $pathtoconfig =~ s/\\/\\\\/g;
     }
 
+	debug("call - condor_config_val -config -master log \n");
     open(CONFIG, "condor_config_val -config -master log 2>&1 |") || die "condor_config_val: $
 !\n";
+	debug("parse - condor_config_val -config -master log \n");
     while(<CONFIG>) {
         CondorTest::fullchomp($_);
         $line = $_;

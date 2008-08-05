@@ -26,6 +26,8 @@ CondorPersonal::DebugOff();
 Condor::DebugOff();
 
 my $topleveldir = getcwd();
+my $name4test = `whoami`;
+print "Adjusting mapfile for <$name4test>\n";
 
 $param_template = "x_param.protocol-ssl.template";
 $testname = 'lib_auth_protocol-ssl - Security Protocol SSL Authentication Test';
@@ -36,25 +38,16 @@ $mytestnegotiation_result = "yes";
 $mycmdfile = "lib_auth_protocol-ssl.cmd";
 $mysslcerts = "x_lib_auth-ssl_keys.tgz";
 
-$mycafile = "ssl_keys/root-ca.crt";
+$mycafile = "ssl_keys/ca-cert.pem";
 $mycadir = "ssl_keys/cadir";
-$mycertfile = "ssl_keys/host.crt";
-$mykeyfile = "ssl_keys/host.key";
+$mycertfile = "ssl_keys/user.cert";
+$mykeyfile = "ssl_keys/user.key";
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");
-
-$pid = $$;
-$mypid = $pid;
-
-$pidleveldir = $topleveldir . "/" . $mypid;
-system("mkdir -p $pidleveldir");
-chdir("$pidleveldir");
-system("tar -zxvf ../$mysslcerts");
-chdir("$topleveldir");
 
 $myvariation = 1;
 
@@ -64,6 +57,36 @@ $mysaveme = $corename . ".saveme";
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
+
+$pidleveldir = $topleveldir . "/" . $mypid;
+chdir("$mypid");
+system("pwd");
+system("ls");
+system("tar -zxvf ../../$mysslcerts");
+chdir("ssl_keys");
+
+$newmap = "condor_mapfile.new";
+$oldmap = "condor_mapfile";
+
+open(OLD,"<$oldmap") || die "Can't open mapfile:$!\n";
+open(NEW,">$newmap") || die "Can't open new mapfile:$!\n";
+$line = "";
+while(<OLD>) {
+	chomp;
+	$line = $_;
+	if($line =~ /^SSL\s+(.*)\s+USER$/ ) {
+		print NEW "SSL $1 $name4test\n";
+		print "SSL $1 $name4test\n";
+	} else {
+		print NEW;
+	}
+}
+close(OLD);
+close(NEW);
+system("mv $oldmap $oldmap.old");
+system("mv $newmap $oldmap");
+
+chdir("$topleveldir");
 
 #print "$line\n";
 $myparamname = $corename . $mypid . ".param";

@@ -196,6 +196,10 @@ class RemoteResource : public Service {
 		*/ 
 	int  getExitReason();
 
+		/** @return true if startd is not accepting more jobs on this claim.
+		*/ 
+	bool claimIsClosing();
+
 		/** Return a pointer to our DCStartd object, so callers can
 			access information in there directly, without having to
 			add other methods in here...
@@ -374,6 +378,7 @@ class RemoteResource : public Service {
 	char *uid_domain;
 	ReliSock *claim_sock;
 	int exit_reason;
+	bool claim_is_closing;
 	int exit_value;
 	bool exited_by_signal;
 

@@ -53,6 +53,9 @@ public:
 		// Quickly kill starter but keep claim
 	int		deactivate_claim_forcibly( void );
 
+		// True if no more jobs will be accepted on the current claim.
+	bool curClaimIsClosing();
+
 		// Remove the given claim from this Resource
 	void	removeClaim( Claim* );
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.

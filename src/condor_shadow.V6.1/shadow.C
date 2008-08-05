@@ -195,6 +195,15 @@ UniShadow::getExitReason( void )
 	return -1;
 }
 
+bool
+UniShadow::claimIsClosing( void )
+{
+	if( remRes ) {
+		return remRes->claimIsClosing();
+	}
+	return false;
+}
+
 
 void
 UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )

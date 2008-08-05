@@ -9279,6 +9279,12 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			}
 			break;
 
+		case JOB_EXITED_AND_CLAIM_CLOSING:
+			if( srec->match ) {
+					// startd is not accepting more jobs on this claim
+				DelMrec(srec->match);
+			}
+				// no break, fall through
 		case JOB_EXITED:
 			dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
 				// no break, fall through and do the action
@@ -10752,8 +10758,8 @@ Scheduler::shutdown_fast()
 			// Call the blocking form of Send_Signal, rather than
 			// sendSignalToShadow().
 		daemonCore->Send_Signal(rec->pid,sig);
-		dprintf( D_ALWAYS, "Sent signal %d to %s [pid %d] for job %d.%d\n",
-					sig, rec->match->peer, rec->pid,
+		dprintf( D_ALWAYS, "Sent signal %d to shadow [pid %d] for job %d.%d\n",
+					sig, rec->pid,
 					rec->job_id.cluster, rec->job_id.proc );
 	}
 

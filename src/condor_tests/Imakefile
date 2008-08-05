@@ -194,6 +194,13 @@ TESTCLASS(lib_auth_protocol-ctb,quicknolink)
 /* GNATS 764 - SSL missing on Dux 5.1 and HPUX 11 machines */
 #if !defined( IS_ALPHA_DUX5) && !defined( IS_HPUX11 )
 
+DESC(lib_auth_protocol-ssl,"SSL authentication test")
+RUN(lib_auth_protocol-ssl)
+TESTCLASS(lib_auth_protocol-ssl,core)
+TESTCLASS(lib_auth_protocol-ssl,quick)
+TESTCLASS(lib_auth_protocol-ssl,full)
+TESTCLASS(lib_auth_protocol-ssl,quicknolink)
+
 /* Turn off till certs fixed 8/13/7
 DESC(lib_auth_protocol-pw,"PW authentication test")
 RUN(lib_auth_protocol-pw)
@@ -201,13 +208,6 @@ TESTCLASS(lib_auth_protocol-pw,core)
 TESTCLASS(lib_auth_protocol-pw,quick)
 TESTCLASS(lib_auth_protocol-pw,full)
 TESTCLASS(lib_auth_protocol-pw,quicknolink)
-
-DESC(lib_auth_protocol-ssl,"SSL authentication test")
-RUN(lib_auth_protocol-ssl)
-TESTCLASS(lib_auth_protocol-ssl,core)
-TESTCLASS(lib_auth_protocol-ssl,quick)
-TESTCLASS(lib_auth_protocol-ssl,full)
-TESTCLASS(lib_auth_protocol-ssl,quicknolink)
 
 DESC(lib_auth_protocol-gsi,"GSI authentication test")
 RUN(lib_auth_protocol-gsi)
@@ -919,11 +919,14 @@ TESTCLASS(job_core_copytospool_van,full)
 TESTCLASS(job_core_copytospool_van,quicknolink)
 #endif
 
+/*
+** too much environment tweaking to have this test on
 DESC(job_core_getenv_van,"Vanilla: job which tests getenv both on and off")
 RUN(job_core_getenv_van)
 TESTCLASS(job_core_getenv_van,core)
 TESTCLASS(job_core_getenv_van,long)
 TESTCLASS(job_core_getenv_van,full)
+*/
 
 DESC(job_core_doublejeopardy_van,"Vanilla: make sure condor does not generate an abort AND the expected abnormal termination.")
 RUN(job_core_doublejeopardy_van)

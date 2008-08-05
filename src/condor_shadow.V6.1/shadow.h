@@ -93,6 +93,11 @@ class UniShadow : public BaseShadow
 		*/
 	int getExitReason( void );
 
+		/** Return true if the startd is not accepting more jobs on
+			this claim.
+		*/
+	bool claimIsClosing( void );
+
 	float bytesSent();
 	float bytesReceived();
 

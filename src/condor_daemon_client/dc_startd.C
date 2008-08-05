@@ -169,10 +169,14 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 
 
 bool 
-DCStartd::deactivateClaim( bool graceful )
+DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 {
 	dprintf( D_FULLDEBUG, "Entering DCStartd::deactivateClaim(%s)\n",
 			 graceful ? "graceful" : "forceful" );
+
+	if( claim_is_closing ) {
+		*claim_is_closing = false;
+	}
 
 	setCmdStr( "deactivateClaim" );
 	if( ! checkClaimId() ) {
@@ -225,6 +229,22 @@ DCStartd::deactivateClaim( bool graceful )
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
 		return false;
 	}
+
+	reli_sock.decode();
+	ClassAd response_ad;
+	if( !response_ad.initFromStream(reli_sock) || !reli_sock.eom() ) {
+		dprintf( D_FULLDEBUG, "DCStartd::deactivateClaim: failed to read response ad.\n");
+			// The response ad is not critical and is expected to be missing
+			// if the startd is from before 7.0.5.
+	}
+	else {
+		bool start = true;
+		response_ad.LookupBool(ATTR_START,start);
+		if( claim_is_closing ) {
+			*claim_is_closing = !start;
+		}
+	}
+
 		// we're done
 	dprintf( D_FULLDEBUG, "DCStartd::deactivateClaim: "
 			 "successfully sent command\n" );

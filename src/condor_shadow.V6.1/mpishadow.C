@@ -1146,6 +1146,12 @@ MPIShadow::getExitReason( void )
 	return -1;
 }
 
+bool
+MPIShadow::claimIsClosing( void )
+{
+	return false;
+}
+
 
 bool
 MPIShadow::setMpiMasterInfo( char* str )
