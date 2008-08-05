@@ -509,6 +509,7 @@ Scheduler::timeout()
 	static bool min_interval_timer_set = false;
 
 		// If we are called too frequently, delay.
+	SchedDInterval.expediteNextRun();
 	int time_to_next_run = SchedDInterval.getTimeToNextRun();
 	if ( time_to_next_run > 0 ) {
 		if (!min_interval_timer_set) {
@@ -552,10 +553,10 @@ Scheduler::timeout()
 		dprintf(D_ALWAYS,"Negotiator gone, trying to use our local startd\n");
 	}
 
-	/* Reset our timer */
-	daemonCore->Reset_Timer(timeoutid,(int)SchedDInterval.getDefaultInterval());
-
 	SchedDInterval.setFinishTimeNow();
+
+	/* Reset our timer */
+	daemonCore->Reset_Timer(timeoutid,(int)SchedDInterval.getTimeToNextRun());
 }
 
 void
