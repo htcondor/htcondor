@@ -1522,7 +1522,7 @@ Scheduler::downloadJobFiles(int mode, Stream* s)
 	rsock->timeout( 10 );  
 	rsock->decode();
 
-	if( ! rsock->isAuthenticated() ) {
+	if( ! rsock->triedAuthentication() ) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(rsock, WRITE, &errstack) ) {
 				// we failed to authenticate, we should bail out now
