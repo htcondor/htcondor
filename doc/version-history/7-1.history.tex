@@ -67,6 +67,10 @@ regardless of the user's umask.  Note that this fix involved removing
 the \Opt{-condorlog} and \Opt{-storklog} command-line arguments from
 \Condor{submit\_dag} and \Condor{dagman}.
 
+\item Fixed a problem in 7.1.1 in some cases causing the
+\Condor{starter} to stop sending updates about the job status or
+to send updates too frequently.
+
 \end{itemize}
 
 \noindent Known Bugs:
