@@ -1407,7 +1407,7 @@ int call_main()
 int write_requests_to_file(ReliSock * sock)
 {
 		// Require authentication 
-    if (!sock->isAuthenticated()) {
+    if (!sock->triedAuthentication()) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(sock, WRITE, &errstack) ) {
 			dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
@@ -1624,7 +1624,7 @@ int list_queue(ReliSock * sock)
 
 
 		// Require authentication
-	if (!sock->isAuthenticated()) {
+	if (!sock->triedAuthentication()) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(sock, WRITE, &errstack) ) {
 			dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
@@ -1702,7 +1702,7 @@ int send_dap_status_to_client(ReliSock * sock)
 
 
 		// Require authentication
-	if (!sock->isAuthenticated()) {
+	if (!sock->triedAuthentication()) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(sock, WRITE, &errstack) ) {
 			dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
@@ -1806,7 +1806,7 @@ int remove_requests_from_queue(ReliSock * sock)
 	int rc = 0;
 	
 		// Require authentication 
-	if (!sock->isAuthenticated()) {
+	if (!sock->triedAuthentication()) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(sock, WRITE, &errstack) ) {
 			dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
@@ -2304,7 +2304,7 @@ get_cred_from_credd (const char * request, void *& buff, int & size) {
 
 	
 	// Authenticate
-	if (!sock->isAuthenticated()) {
+	if (!sock->triedAuthentication()) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(sock, CLIENT_PERM, &errstack) ) {
 		  dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");

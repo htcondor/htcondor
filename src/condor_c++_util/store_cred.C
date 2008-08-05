@@ -708,7 +708,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 		// for remote updates (which send the password), verify we have a secure channel,
 		// unless "force" is specified
 		if (((mode == ADD_MODE) || (mode == DELETE_MODE)) && !force && (d != NULL) &&
-			((sock->type() != Stream::reli_sock) || !((ReliSock*)sock)->isAuthenticated() || !sock->get_encryption())) {
+			((sock->type() != Stream::reli_sock) || !((ReliSock*)sock)->triedAuthentication() || !sock->get_encryption())) {
 			dprintf(D_ALWAYS, "STORE_CRED: blocking attempt to update over insecure channel\n");
 			delete sock;
 			return FAILURE_NOT_SECURE;

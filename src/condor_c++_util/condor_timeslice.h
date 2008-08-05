@@ -62,6 +62,7 @@ class Timeslice {
 		m_last_duration = 0;
 		m_next_start_time = 0;
 		m_never_ran_before = true;
+		m_expedite_next_run = true;
 	}
 
 	double getLastDuration() const { return m_last_duration; }
@@ -104,6 +105,7 @@ class Timeslice {
 		finish_time.getTime();
 		m_last_duration = finish_time.difference(&m_start_time);
 		m_never_ran_before = false;
+		m_expedite_next_run = false;
 		updateNextStartTime();
 	}
 
@@ -111,17 +113,24 @@ class Timeslice {
 		m_last_duration = 0;
 		m_start_time = UtcTime();
 		m_never_ran_before = true;
+		m_expedite_next_run = false;
 		updateNextStartTime();
 	}
 
 	void updateNextStartTime() {
 		double delay = m_default_interval;
+		if( m_expedite_next_run ) { // ignore default
+			delay = 0;
+		}
 		if( m_start_time.seconds() == 0 ) {
 				// never got here before
 			setStartTimeNow();
 		}
 		else if( m_timeslice > 0 ) {
-			delay = m_last_duration/m_timeslice;
+			double slice_delay = m_last_duration/m_timeslice;
+			if( delay < slice_delay ) {
+				delay = slice_delay;
+			}
 		}
 		if( m_max_interval > 0 && delay > m_max_interval ) {
 			delay = m_max_interval;
@@ -145,6 +154,14 @@ class Timeslice {
 
 	bool isTimeToRun() const { return getTimeToNextRun() <= 0; }
 
+	// When computing time til next run, ignore the default interval.
+	// The next interval will be as small as is allowed by the
+	// min interval and max timeslice.
+	void expediteNextRun() {
+		m_expedite_next_run = true;
+		updateNextStartTime();
+	}
+
  private:
 	double m_timeslice;        // maximum fraction of time to consume
 	double m_min_interval;     // minimum delay between runs
@@ -155,6 +172,7 @@ class Timeslice {
 	double m_last_duration;    // how long it took to run last time
 	time_t m_next_start_time;  // utc second number when to run next time
 	bool m_never_ran_before;   // true if never ran before
+	bool m_expedite_next_run;  // true if should ignore default interval
 };
 
 #endif

@@ -511,6 +511,7 @@ Scheduler::timeout()
 	static bool min_interval_timer_set = false;
 
 		// If we are called too frequently, delay.
+	SchedDInterval.expediteNextRun();
 	int time_to_next_run = SchedDInterval.getTimeToNextRun();
 	if ( time_to_next_run > 0 ) {
 		if (!min_interval_timer_set) {
@@ -554,10 +555,10 @@ Scheduler::timeout()
 		dprintf(D_ALWAYS,"Negotiator gone, trying to use our local startd\n");
 	}
 
-	/* Reset our timer */
-	daemonCore->Reset_Timer(timeoutid,(int)SchedDInterval.getDefaultInterval());
-
 	SchedDInterval.setFinishTimeNow();
+
+	/* Reset our timer */
+	daemonCore->Reset_Timer(timeoutid,(int)SchedDInterval.getTimeToNextRun());
 }
 
 void
@@ -3347,7 +3348,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	rsock->timeout( 10 );  
 	rsock->decode();
 
-	if( ! rsock->isAuthenticated() ) {
+	if( ! rsock->triedAuthentication() ) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(rsock, WRITE, &errstack) ) {
 				// we failed to authenticate, we should bail out now
@@ -3602,7 +3603,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	rsock->timeout( 10 );  
 	rsock->decode();
 
-	if( ! rsock->isAuthenticated() ) {
+	if( ! rsock->triedAuthentication() ) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(rsock, WRITE, &errstack) ) {
 				// we failed to authenticate, we should bail out now
@@ -3804,7 +3805,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		// block long trying to read from our client.   
 	rsock->timeout( 10 );  
 	rsock->decode();
-	if( ! rsock->isAuthenticated() ) {
+	if( ! rsock->triedAuthentication() ) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(rsock, WRITE, &errstack) ) {
 				// we failed to authenticate, we should bail out now

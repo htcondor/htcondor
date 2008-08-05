@@ -3468,6 +3468,10 @@ int DaemonCore::HandleReq(Stream *insock)
             if (who == NULL) {
                 session->policy()->LookupString(ATTR_SEC_USER, &who);
             }
+			bool tried_authentication = false;
+			session->policy()->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
+			((SafeSock*)stream)->setTriedAuthentication(tried_authentication);
+
 			free( sess_id );
 			if (return_address_ss) {
 				free( return_address_ss );
@@ -3781,6 +3785,10 @@ int DaemonCore::HandleReq(Stream *insock)
 						free( the_user );
 						the_user = NULL;
 					}
+
+					bool tried_authentication=false;
+					the_policy->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
+					((ReliSock*)stream)->setTriedAuthentication(tried_authentication);
 				}
 				new_session = false;
 
@@ -4080,6 +4088,30 @@ int DaemonCore::HandleReq(Stream *insock)
 					if ( fully_qualified_user ) {
 						pa_ad.Assign(ATTR_SEC_USER,fully_qualified_user);
 					}
+
+					if (sock->triedAuthentication()) {
+							// Clients older than 7.1.2 behave differently when re-using a
+							// security session.  If they reach a point in the code where
+							// authentication is forced (e.g. to submit jobs), they will
+							// always re-authenticate at that point.  Therefore, we only
+							// set TriedAuthentication=True for newer clients which respect
+							// that setting.  When the setting is not there or false, the server
+							// and client will re-authenticate at such points because
+							// triedAuthentication() (or isAuthenticated() in the older code)
+							// will be false.
+						char * remote_version = NULL;
+						the_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
+						CondorVersionInfo verinfo(remote_version);
+						free(remote_version);
+
+						if (verinfo.built_since_version(7,1,2)) {
+							pa_ad.Assign(ATTR_SEC_TRIED_AUTHENTICATION,sock->triedAuthentication());
+						}
+
+					}
+
+						// remember on the server side what we told the client
+					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_TRIED_AUTHENTICATION );
 
 					// session id
 					pa_ad.Assign(ATTR_SEC_SID, the_sid);

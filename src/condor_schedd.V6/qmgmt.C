@@ -603,7 +603,7 @@ int
 QmgmtPeer::isAuthenticated() const
 {
 	if ( sock ) {
-		return sock->isAuthenticated();
+		return sock->triedAuthentication();
 	} else {
 		if ( qmgmt_all_users_trusted ) {
 			return TRUE;

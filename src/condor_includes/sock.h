@@ -240,7 +240,26 @@ public:
 
 	void ignoreTimeoutMultiplier() { ignore_timeout_multiplier = true; }
 
-	virtual const char * getFullyQualifiedUser() const;
+	const char * getFullyQualifiedUser() const { return _fqu; }
+
+		/// Get user portion of fqu
+	const char *getOwner() const { return _fqu_user_part; }
+
+		/// Get domain portion of fqu
+	const char *getDomain() const { return _fqu_domain_part; }
+
+	void setFullyQualifiedUser(char const *fqu);
+
+		/// True if socket has tried to authenticate or socket is
+		/// using a security session that tried to authenticate.
+		/// Authentication may or may not have succeeded and
+		/// fqu may or may not be set.  (For example, we may
+		/// have authenticated but the method was not mutual,
+		/// so the other side knows who we are, but we do not
+		/// know who the other side is.)
+	bool triedAuthentication() const { return _tried_authentication; }
+
+	void setTriedAuthentication(bool toggle) { _tried_authentication = toggle; }
 
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
@@ -291,8 +310,6 @@ protected:
     char * serializeMdInfo(char * buf);
     char * serializeMdInfo() const;
         
-	virtual void setFullyQualifiedUser(char const * u);
-	///
 	virtual int encrypt(bool);
 	///
 	virtual int hdr_encrypt();
@@ -302,10 +319,6 @@ protected:
 	virtual int authenticate(const char * auth_methods, CondorError* errstack, int timeout);
     ///
 	virtual int authenticate(KeyInfo *&ki, const char * auth_methods, CondorError* errstack, int timeout);
-    ///
-	virtual int isAuthenticated() const;
-    ///
-	virtual void unAuthenticate();
     ///
 	virtual bool is_encrypt();
 #ifdef WIN32
@@ -330,6 +343,10 @@ protected:
 	sock_state		_state;
 	int				_timeout;
 	struct sockaddr_in _who;	// endpoint of "connection"
+	char *          _fqu;
+	char *          _fqu_user_part;
+	char *          _fqu_domain_part;
+	bool            _tried_authentication;
 
 	static int timeout_multiplier;
 

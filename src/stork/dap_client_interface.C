@@ -175,7 +175,7 @@ start_stork_command_and_authenticate (
 
 	ReliSock * reli_sock = (ReliSock*)sock;
 
-	if (!reli_sock->isAuthenticated()) { 
+	if (!reli_sock->triedAuthentication()) { 
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(reli_sock, CLIENT_PERM, &errstack) ) {
 			error_reason = "Authentication error";

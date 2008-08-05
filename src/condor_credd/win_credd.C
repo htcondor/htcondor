@@ -178,7 +178,7 @@ CredDaemon::get_passwd_handler(int i, Stream *s)
 
 	ReliSock* sock = (ReliSock*)s;
 
-	if ( !sock->isAuthenticated() ) {
+	if ( !sock->triedAuthentication() ) {
 		dprintf(D_ALWAYS,
 			"WARNING - password fetch attempt without authentication from %s\n",
 			sin_to_string(sock->endpoint()));
