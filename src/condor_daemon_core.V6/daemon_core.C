@@ -3786,7 +3786,7 @@ int DaemonCore::HandleReq(Stream *insock)
 						the_user = NULL;
 					}
 
-					bool tried_authentication;
+					bool tried_authentication=false;
 					the_policy->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
 					((ReliSock*)stream)->setTriedAuthentication(tried_authentication);
 				}
