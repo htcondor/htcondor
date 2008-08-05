@@ -10877,8 +10877,8 @@ Scheduler::shutdown_fast()
 			// Call the blocking form of Send_Signal, rather than
 			// sendSignalToShadow().
 		daemonCore->Send_Signal(rec->pid,sig);
-		dprintf( D_ALWAYS, "Sent signal %d to %s [pid %d] for job %d.%d\n",
-					sig, rec->match->peer, rec->pid,
+		dprintf( D_ALWAYS, "Sent signal %d to shadow [pid %d] for job %d.%d\n",
+					sig, rec->pid,
 					rec->job_id.cluster, rec->job_id.proc );
 	}
 
