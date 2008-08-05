@@ -108,7 +108,7 @@ getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
         // block long trying to read from our client.   
     s->timeout( 10 );  
     s->decode();
-    if( force_auth && ! s->isAuthenticated() ) {
+    if( force_auth && ! s->triedAuthentication() ) {
 		CondorError errstack;
         if( ! SecMan::authenticate_sock(s, WRITE, &errstack) ) {
                 // we failed to authenticate, we should bail out now

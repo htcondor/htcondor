@@ -1785,6 +1785,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			if( m_sock->getFullyQualifiedUser() ) {
 				m_auth_info.Assign( ATTR_SEC_AUTHENTICATED_USER, m_sock->getFullyQualifiedUser() );
 			}
+			m_sec_man.sec_copy_attribute( m_auth_info, post_auth_info, ATTR_SEC_TRIED_AUTHENTICATION );
 
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf (D_SECURITY, "SECMAN: policy to be cached:\n");
@@ -1872,6 +1873,10 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			m_sock->setFullyQualifiedUser( fqu );
 			free( fqu );
 		}
+
+		bool tried_authentication = false;
+		m_auth_info.LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
+		m_sock->setTriedAuthentication(tried_authentication);
 	}
 
 	m_sock->encode();

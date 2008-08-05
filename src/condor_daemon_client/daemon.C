@@ -1919,7 +1919,7 @@ Daemon::forceAuthentication( ReliSock* rsock, CondorError* errstack )
 	}
 
 		// If we're already authenticated, return success...
-	if( rsock->isAuthenticated() ) {
+	if( rsock->triedAuthentication() ) {
 		return true;
 	}
 

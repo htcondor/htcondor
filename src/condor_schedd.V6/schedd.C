@@ -3345,7 +3345,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	rsock->timeout( 10 );  
 	rsock->decode();
 
-	if( ! rsock->isAuthenticated() ) {
+	if( ! rsock->triedAuthentication() ) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(rsock, WRITE, &errstack) ) {
 				// we failed to authenticate, we should bail out now
@@ -3600,7 +3600,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	rsock->timeout( 10 );  
 	rsock->decode();
 
-	if( ! rsock->isAuthenticated() ) {
+	if( ! rsock->triedAuthentication() ) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(rsock, WRITE, &errstack) ) {
 				// we failed to authenticate, we should bail out now
@@ -3802,7 +3802,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		// block long trying to read from our client.   
 	rsock->timeout( 10 );  
 	rsock->decode();
-	if( ! rsock->isAuthenticated() ) {
+	if( ! rsock->triedAuthentication() ) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(rsock, WRITE, &errstack) ) {
 				// we failed to authenticate, we should bail out now

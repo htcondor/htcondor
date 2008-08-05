@@ -76,7 +76,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	// Authenticate the socket
 	////////////////////////////////////////////////////////////////////////
 
-	if( ! rsock->isAuthenticated() ) {
+	if( ! rsock->triedAuthentication() ) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(rsock, WRITE, &errstack) ) {
 				// we failed to authenticate, we should bail out now
