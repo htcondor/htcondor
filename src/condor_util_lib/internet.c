@@ -1057,7 +1057,7 @@ string_to_hardware_address(const char *sinful) {
                 looking for, so we can bail out early */
                 __leave;
             } 
-            adapter = adapter_info->Next;
+            adapter = adapter->Next;
         }
 
     }
