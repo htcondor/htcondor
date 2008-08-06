@@ -1473,19 +1473,13 @@ SecManStartCommand::sendAuthInfo_inner()
 
 
 	if (m_is_tcp) {
+
 		if (! m_sock->end_of_message()) {
 			dprintf ( D_ALWAYS, "SECMAN: failed to end classad message\n");
 			m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 						"Failed to end classad message" );
 			return StartCommandFailed;
 		}
-		if (m_have_session) {
-			char * authuser = NULL;
-			m_auth_info.LookupString ( ATTR_SEC_USER, &authuser );
-			m_sock->setFullyQualifiedUser(authuser);
-			// resuming a session, save the fact that we did authenticate
-			return StartCommandSucceeded;
-		} 		
 	}
 
 	m_state = ReceiveAuthInfo;
