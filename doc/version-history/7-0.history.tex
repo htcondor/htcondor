@@ -73,6 +73,10 @@ ALIVE_INTERVAL in the condor configuration is too high (300).
 \Condor{schedd}, and \Condor{collector} daemons.  This leak would probably
 require many months of continuous operation before causing noticeable problems.
 
+\item Fixed a \Condor{schedd} crash when doing a fast shutdown of running
+local universe jobs or any job that had been reconnected to when the schedd
+started up.
+
 \end{itemize}
 
 \noindent Known Bugs:
