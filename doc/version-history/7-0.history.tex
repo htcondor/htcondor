@@ -52,21 +52,25 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item When \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} is defined to be false,
+\item When \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} is defined to be
+\Expr{False},
 this no longer results in machines in the Owner state being ignored
-during matchmaking.  Previously, even if \MacroNI{START} was true,
+during matchmaking.  Previously, even if \MacroNI{START} was \Expr{True},
 machines in the Owner state were disregarded.
 
-\item Setting \Attr{JobLeaseDuration} less than 15 minutes caused the
-\Condor{schedd} to abort and restart the next time \Condor{reconfig} was
-run.  The error message in the \Condor{schedd} log looked like this:
+\item Setting \Attr{JobLeaseDuration} to be less than 15 minutes caused the
+\Condor{schedd} daemon to abort and restart the next time a
+\Condor{reconfig} command was executed.
+The error message in the \Condor{schedd} log appeared as:
 
+\footnotesize
 \begin{verbatim}
 ALIVE_INTERVAL in the condor configuration is too high (300).
 \end{verbatim}
+\normalsize
 
 \item Fixed a slow memory leak affecting the \Condor{startd},
-\Condor{schedd}, and \Condor{collector}.  This leak would probably
+\Condor{schedd}, and \Condor{collector} daemons.  This leak would probably
 require many months of continuous operation before causing noticeable problems.
 
 \end{itemize}
