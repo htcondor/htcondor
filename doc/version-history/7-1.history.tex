@@ -29,15 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a memory leak, introduced in 7.1.1, which caused the
-startd to grow without bound.
-
 \item Added \Procedure{formatTime}, a built-in ClassAd function to create a
-	formatted representation of the time.  A detailed description of this
-	function is available in section~\ref{sec:classadFunctions}, which
-	documents all of the available built-in ClassAd functions.
+  formatted representation of the time.  A detailed description of this
+  function is available in section~\ref{sec:classadFunctions}, which
+  documents all of the available built-in ClassAd functions.
 
-\item Improved Condor's authentication handshake so that daemons such
+\item Improved Condor's authentication handshake, so that daemons such
 as the \Condor{schedd}, which initiate connections to other daemons,
 spend less time waiting for responses.
 Authentication over high latency
@@ -60,6 +57,9 @@ Additional improvements in this area are planned.
 
 \begin{itemize}
 
+\item Fixed a memory leak, introduced in Condor version 7.1.1, which caused the
+  \Condor{startd} daemon to grow without bound.
+
 % PR 945
 \item Fixed a bug in \Condor{dagman} that caused the user log file of
 the first node job in a DAG to get created with 0600 permissions,
@@ -67,7 +67,7 @@ regardless of the user's umask.  Note that this fix involved removing
 the \Opt{-condorlog} and \Opt{-storklog} command-line arguments from
 \Condor{submit\_dag} and \Condor{dagman}.
 
-\item Fixed a problem in 7.1.1 in some cases causing the
+\item Fixed a problem from Condor version 7.1.1 that in some cases caused the
 \Condor{starter} to stop sending updates about the job status or
 to send updates too frequently.
 

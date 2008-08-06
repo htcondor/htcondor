@@ -428,48 +428,50 @@ Optional parameters are given within square brackets.
     as the ClassAd attribute \Attr{CurrentTime}.
     This is the time, in seconds, since midnight of January 1, 1970.
 
-	\index{ClassAd functions!formatTime()}
+  \index{ClassAd functions!formatTime()}
   \item[\Code{String formatTime(\Lbr\ Integer time \Rbr\ \Lbr\ , String format \Rbr)}]
 
-		Returns a formatted string that is a representation of \Expr{time}.
-		The argument \Expr{time} is interpreted as coordinated universe time in
-		seconds, since midnight of January 1, 1970. If not specified,
-		\Expr{time} will default to the value of attribute \Attr{CurrentTime}.
+    Returns a formatted string that is a representation of \Expr{time}.
+    The argument \Expr{time} is interpreted as coordinated universe time in
+    seconds, since midnight of January 1, 1970. If not specified,
+    \Expr{time} will default to the value of attribute \Attr{CurrentTime}.
 		
-		The argument \Expr{format} is interpreted similarly to the format
-		argument of the ANSI C strftime function. It consists of arbitrary text
-		plus placeholders for elements of the time. These placeholders are
-		percent signs (\%) followed by a single letter. To have a percent sign in
-		your output, you must use a double percent sign (\%\%).  If
-		\Expr{format} is not specified, it will default to ``\%c''.
+    The argument \Expr{format} is interpreted similarly to the format
+    argument of the ANSI C strftime function. It consists of arbitrary text
+    plus placeholders for elements of the time. These placeholders are
+    percent signs (\Percent) followed by a single letter.
+    To have a percent sign in
+    the output, use a double percent sign (\Percent\Percent).  If
+    \Expr{format} is not specified, it defaults to \Expr{\%c}.
 
-		Because the implementation uses strftime() to implement this, and some
-		versions implement extra, non-ANSI C options, the exact options
-		available to an implementation may vary. An implementation is only
-		required to implement the ANSI C options, which are: 
-		\begin{description}
-			\item[\%a] abbreviated weekday name
-			\item[\%A] full weekday name
-			\item[\%b] abbreviated month name
-			\item[\%B] full month name
-			\item[\%c] local date and time representation
-			\item[\%d] day of the month (01-31)
-			\item[\%H] hour in the 24-hour clock (0-23)
-			\item[\%I] hour in the 12-hour clock (01-12)
-			\item[\%j] day of the year (001-366)
-			\item[\%m] month (01-12)
-			\item[\%M] minute (00-59)
-			\item[\%p] local equivalent of AM or PM
-			\item[\%S] second (00-59)
-			\item[\%U] week number of the year (Sunday as first day of week) (00-53)
-			\item[\%w] weekday (0-6, Sunday is 0)
-			\item[\%W] week number of the year (Monday as first day of week) (00-53)
-			\item[\%x] local date representation
-			\item[\%X] local time representation
-			\item[\%y] year without century (00-99)
-			\item[\%Y] year with century
-			\item[\%Z] time zone name, if any
-		\end{description}
+    Because the implementation uses \Procedure{strftime} to implement this,
+    and some
+    versions implement extra, non-ANSI C options, the exact options
+    available to an implementation may vary. An implementation is only
+    required to implement the ANSI C options, which are: 
+    \begin{description}
+    \item[\Expr{\%a}] abbreviated weekday name
+    \item[\Expr{\%A}] full weekday name
+    \item[\Expr{\%b}] abbreviated month name
+    \item[\Expr{\%B}] full month name
+    \item[\Expr{\%c}] local date and time representation
+    \item[\Expr{\%d}] day of the month (01-31)
+    \item[\Expr{\%H}] hour in the 24-hour clock (0-23)
+    \item[\Expr{\%I}] hour in the 12-hour clock (01-12)
+    \item[\Expr{\%j}] day of the year (001-366)
+    \item[\Expr{\%m}] month (01-12)
+    \item[\Expr{\%M}] minute (00-59)
+    \item[\Expr{\%p}] local equivalent of AM or PM
+    \item[\Expr{\%S}] second (00-59)
+    \item[\Expr{\%U}] week number of the year (Sunday as first day of week) (00-53)
+    \item[\Expr{\%w}] weekday (0-6, Sunday is 0)
+    \item[\Expr{\%W}] week number of the year (Monday as first day of week) (00-53)
+    \item[\Expr{\%x}] local date representation
+    \item[\Expr{\%X}] local time representation
+    \item[\Expr{\%y}] year without century (00-99)
+    \item[\Expr{\%Y}] year with century
+    \item[\Expr{\%Z}] time zone name, if any
+    \end{description}
 
   \index{ClassAd functions!interval()}
   \item[\Code{String interval(Integer seconds)}]
