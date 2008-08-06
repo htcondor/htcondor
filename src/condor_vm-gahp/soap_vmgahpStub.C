@@ -17,6 +17,8 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
+
 #include "condorVMgahp.nsmap"
    
 #include "soap_daemon_core.cpp"
