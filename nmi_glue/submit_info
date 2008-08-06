@@ -71,7 +71,7 @@ x_test_platforms_x86_rhas_3 =  x86_rhas_4,  x86_fc_3, x86_fc_4, \
 						#x86_64_rhas_3, x86_64_rhas_4, x86_64_fc_4, \
 						#x86_64_fc_5
 #x_test_platforms_sun4u_sol_5.9 = sun4u_sol_5.10(compiler mismatch)
-#x_test_platforms_ppc_aix_5.2-pl5 = ppc_aix_5.3
+#x_test_platforms_ppc_aix_5.2-pl5 = ppc_aix_5.2, ppc_aix_5.3
 ]   
 
 ########################################
@@ -106,6 +106,7 @@ test_append_prereqs = java-1.4.2_05
 x_test_platforms_ia64_rhas_3 = ia64_rhas_4
 x_test_platforms_x86_64_rhas_3 = x86_64_rhas_4, x86_64_fc_4
 #x_test_platforms_x86_64_rhas_3 = x86_64_fc_5
+x_test_platforms_ppc_aix_5.2-pl5 = ppc_aix_5.2, ppc_aix_5.3
 ]
 
 [
