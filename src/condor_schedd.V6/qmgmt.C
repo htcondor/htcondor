@@ -3131,12 +3131,16 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			 	mrec = scheduler.FindMrecByJobID( job_id );
 			}
 
-			if( !mrec ) {
-				// pretty weird... no match rec, nothing we can do
-				// could be a PVM job?
-				return new ClassAd(*ad);
+			if( mrec ) {
+				startd_ad = mrec->my_match_ad;
+			} else {
+				// no match rec, probably a local universe type job.
+				// set startd_ad to NULL and continue on - after all,
+				// the expression we are expanding may not even reference
+				// a startd attribute.
+				startd_ad = NULL;
 			}
-			startd_ad = mrec->my_match_ad;
+			
 		}
 
 		return dollarDollarExpand(cluster_id, proc_id, ad, startd_ad);
