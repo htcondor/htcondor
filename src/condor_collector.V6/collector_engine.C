@@ -364,10 +364,11 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 			QuillAds.walk(scanFunction) &&
 #endif
 			HadAds.walk(scanFunction) &&
-			walkGenericTables(scanFunction);
 
 			XferServiceAds.walk(scanFunction) &&
-			MatchMakerAds.walk(scanFunction);
+			MatchMakerAds.walk(scanFunction) &&
+
+			walkGenericTables(scanFunction);
 	  default:
 		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
 		return 0;
