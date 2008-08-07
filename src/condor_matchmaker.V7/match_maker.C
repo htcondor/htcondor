@@ -307,39 +307,19 @@ MatchMaker::commandHandler_GetMatch(int command, Stream *stream)
 	while( num_matches < request_count ) {
 		int		loop_matches = 0;	// Matches this loop
 
-		// ---Create a vector of m_resources that match, then
-		//    randomly shuffle the list so we don't pick on
-		//    any one resource and get better round-robin.
-		vector< classad::ClassAd *> randomized_match_list;
-		vector< classad::ClassAd *>::iterator curr_resource;
-		bool give_up = true;
 		// Start the query
 		if ( !m_resources.QueryStart( request_ad ) ) {
 			dprintf (D_ALWAYS, "GetMatch: Query failed\n");
 			stream->put( NOT_OK );		// Query failed
 			return FALSE;
 		}
-		// Loop through the matches and add to our vector
+
+		// Loop through the matches
 		do {
 			classad::ClassAd	*resource_ad = m_resources.QueryCurrent( );
 			if ( !resource_ad ) {
 				break;
 			}
-			randomized_match_list.push_back(resource_ad);
-			give_up = false;
-		} while ( m_resources.QueryNext() );
-		// If we did not add anything to the vector, break out now
-		if ( give_up ) {
-			break;
-		}
-		// Now randomize our vector
-		random_shuffle( randomized_match_list.begin(),
-						randomized_match_list.end() );
-
-		// Loop through the randomly shuffled matches in our vector
-		curr_resource = randomized_match_list.begin();
-		do {
-			classad::ClassAd	*resource_ad = *curr_resource;
 			int	target = request_count - num_matches;
 
 			string	resource_name;
@@ -356,7 +336,7 @@ MatchMaker::commandHandler_GetMatch(int command, Stream *stream)
 			num_matches += count;
 			dprintf( D_FULLDEBUG, "Got %d from %s; total %d, loop %d\n",
 					 count, resource_name.c_str(), num_matches, loop_matches);
-		} while(  ( ++curr_resource != randomized_match_list.end() ) &&
+		} while(  ( m_resources.QueryNext() ) &&
 				  ( num_matches < request_count )  );
 
 		// If we didn't get any, give up
