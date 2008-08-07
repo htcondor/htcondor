@@ -46,9 +46,12 @@ if( defined $ENV{_NMI_STEP_FAILED} ) {
 ######################################################################
 
 
+print "Seeing if personal condor needs killing\n";
+
 if( -f "$SrcDir/condor_tests/TestingPersonalCondor/local/log/.scheduler_address" ) {
     #  Came up and had a scheduler running. good
 	$ENV{"CONDOR_CONFIG"} = "$SrcDir/condor_tests/TestingPersonalCondor/condor_config";
+	print "calling condor_off\n";
 	system("$BaseDir/userdir/condor/sbin/condor_off -master");
 } else {
     # if there's no pid_file, there must be no personal condor running
@@ -78,6 +81,7 @@ if( ! -f "tasklist.nmi" || -z "tasklist.nmi" ) {
     exit $exit_status;
 }
 
+print "cding to $BaseDir \n";
 chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
 
 my $etc_dir = "$BaseDir/results/etc";
@@ -134,6 +138,7 @@ if( -d $log_dir ) {
 # save output from tests
 #----------------------------------------
 
+print "Saving test output \n";
 system( "cp tasklist.nmi $BaseDir/results/" );
 if( $? ) {
     print "Can't copy tasklist.nmi to $BaseDir/results\n";
