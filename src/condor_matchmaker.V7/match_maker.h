@@ -74,6 +74,7 @@ class MatchMaker : public Service
 	MatchMakerResources			m_resources;
 	ClassAd						m_publicAd;
 	char						*m_my_name;
+	int							m_MaxAds;
 
 	int m_TimerId_GetAds;
 	int m_Interval_GetAds;
@@ -81,7 +82,6 @@ class MatchMaker : public Service
 	int m_Interval_Update;
 	int m_TimerId_Prune;
 	int m_Interval_Prune;
-
 };
 
 

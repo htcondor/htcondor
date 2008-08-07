@@ -39,17 +39,20 @@
 
 #include "dc_match_maker.h"
 
+template class list<DCMatchMakerLease*>;
+template class list<const DCMatchMakerLease*>;
+
 const int dflag = D_ALWAYS | D_NOHEADER | D_FULLDEBUG;
 
-void show_leases( list< DCMatchMakerLease *> &leases )
+void show_leases( const char *label, list< const DCMatchMakerLease *> &leases )
 {
-	printf( "%d leases:\n", leases.size() );
+	printf( "%s: %d leases:\n", label, leases.size() );
 
-	for( list< DCMatchMakerLease *>::iterator iter = leases.begin( );
+	for( list< const DCMatchMakerLease *>::iterator iter = leases.begin( );
 		 iter != leases.end( );
 		 iter++ ) {
-		DCMatchMakerLease	*lease = *iter;
-		classad::ClassAd	*ad = lease->LeaseAd( );
+		const DCMatchMakerLease	*lease = *iter;
+		classad::ClassAd		*ad = lease->LeaseAd( );
 		string	name;
 		ad->EvaluateAttrString( "ResourceName", name );
 		printf( "  Resource=%s, LeaseID=%s, duration=%d, rlwd=%d\n",
@@ -58,6 +61,12 @@ void show_leases( list< DCMatchMakerLease *> &leases )
 				lease->LeaseDuration(),
 				lease->ReleaseLeaseWhenDone() );
 	}
+}
+
+// Show leases -- const list version
+void show_leases( const char *label, list< DCMatchMakerLease *> &leases )
+{
+	show_leases( label, *DCMatchMakerLease_GetConstList(&leases) );
 }
 
 int min_lease_duration( list< DCMatchMakerLease *> &leases )
@@ -72,14 +81,6 @@ int min_lease_duration( list< DCMatchMakerLease *> &leases )
 		}
 	}
 	return min_duration;
-}
-
-list<const DCMatchMakerLease *> *get_const_list(
-	list<DCMatchMakerLease *> *non_const_list )
-{
-	list<const DCMatchMakerLease *> *const_list =
-		(list<const DCMatchMakerLease *>*) non_const_list;
-	return const_list;
 }
 
 static	bool stop = false;
@@ -112,7 +113,7 @@ void dump( const char *s, int num, double t1 )
 	}
 	char	buf[128];
 	snprintf( buf, sizeof( buf ),
-			  " -> %15s %4d in %.5fs => %.6fs %8.3f/s\n",
+			  "  ==>> %15s %4d in %.5fs => %.6fs %8.3f/s\n",
 			  s, num, t2 - t1, per, per_sec );
 	fputs( buf, stdout );
 	if ( perf_fp ) {
@@ -126,17 +127,17 @@ int main( int argc, char* argv[] )
 
 	if ( argc < 3 ) {
 		fprintf( stderr,
-				 "usage: match_maker_test name count duration"
-				 " [runtime] [max] [perf-file] [req] [attr=val]..\n" );
+				 "usage: match_maker_test name lease-count duration"
+				 " [runtime] [max leases] [perf-file] [req] [attr=val]..\n" );
 		exit( 1 );
 	}
-	char	*name = argv[1];
-	int		lease_req_count = atoi( argv[2] );
-	int		duration = atoi( argv[3] );
-	int		runtime = duration * 2;
-	unsigned	max = (unsigned) lease_req_count * 10;
-	char	*requirements = NULL;
-	char	*perf_file = NULL;
+	char		*name = argv[1];
+	int			lease_req_count = atoi( argv[2] );
+	int			duration = atoi( argv[3] );
+	int			runtime = duration * 2;
+	unsigned	max_leases = (unsigned) lease_req_count * 10;
+	char		*requirements = NULL;
+	char		*perf_file = NULL;
 
 	if ( argc >= 5 ) {
 		int		t = -1;
@@ -146,7 +147,7 @@ int main( int argc, char* argv[] )
 	if ( argc >= 6 ) {
 		int		t = -1;
 		t = atoi( argv[5] );
-		if ( t > 0 ) max = t;
+		if ( t > 0 ) max_leases = t;
 	}
 	if ( argc >= 7 ) {
 		if ( *argv[6] != '-' ) {
@@ -205,7 +206,7 @@ int main( int argc, char* argv[] )
 	printf( "count: %d\n", lease_req_count );
 	printf( "duration: %d\n", duration );
 	printf( "runtime: %d\n", runtime );
-	printf( "max: %d\n", max );
+	printf( "leases: %d\n", max_leases );
 	printf( "req: %s\n", requirements );
 
 	// Loop for a while...
@@ -262,8 +263,8 @@ int main( int argc, char* argv[] )
 
 			// Now, do the renew
 			double	t1 = dtime();
-			if ( !mm->renewLeases( *get_const_list( &renew_list ),
-								   renewed_list ) ) {
+			if ( !mm->renewLeases(*DCMatchMakerLease_GetConstList(&renew_list),
+								  renewed_list ) ) {
 				printf( "Renew failed!!!\n" );
 			} else {
 				dump( "renew", renew_list.size(), t1 );
@@ -273,13 +274,18 @@ int main( int argc, char* argv[] )
 
 				// Update the renewed leases
 				DCMatchMakerLease_UpdateLeases(
-					leases, *get_const_list(&renewed_list) );
+					leases, *DCMatchMakerLease_GetConstList(&renewed_list) );
 
 				// Remove the leases that are still marked as false
-				printf( "Removing the %d marked leases\n",
-						DCMatchMakerLease_CountMarkedLeases(
-							*get_const_list( &leases ), false ) );
-				DCMatchMakerLease_RemoveMarkedLeases( leases, false );
+				list<const DCMatchMakerLease *> remove_list;
+				int count = DCMatchMakerLease_GetMarkedLeases(
+					*DCMatchMakerLease_GetConstList( &leases ),
+					false, remove_list );
+				if ( count ) {
+					show_leases( "non-renewed", remove_list );
+					printf( "Removing the %d marked leases\n", count );
+					DCMatchMakerLease_RemoveLeases( leases, remove_list );
+				}
 			}
 
 			// Finally, remove the renewed leases themselves
@@ -287,8 +293,8 @@ int main( int argc, char* argv[] )
 		}
 
 		// Get more leases
-		if ( leases.size() < max ) {
-			int		num = max - leases.size();
+		if ( leases.size() < max_leases ) {
+			int		num = max_leases - leases.size();
 			if ( num > lease_req_count ) {
 				num = lease_req_count;
 			}
@@ -304,13 +310,13 @@ int main( int argc, char* argv[] )
 			}
 			dump( "request", leases.size() - oldsize, t1 );
 		}
-		show_leases( leases );
+		show_leases( "current", leases );
 	}
 
 	if ( leases.size() ) {
 		printf( "Releasing leases\n" );
 		double	t1 = dtime();
-		if ( !mm->releaseLeases( *get_const_list(&leases) )  ) {
+		if ( !mm->releaseLeases( *DCMatchMakerLease_GetConstList(&leases) ) ) {
 			fprintf( stderr, "release failed\n" );
 		}
 		dump( "release", leases.size(), t1 );
