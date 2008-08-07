@@ -7354,6 +7354,11 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	starter_args.AppendArg("-job-proc");
 	starter_args.AppendArg(job_id->proc);
 
+	starter_args.AppendArg("-header");
+	MyString header;
+	header.sprintf("(%d.%d) ",job_id->cluster,job_id->proc);
+	starter_args.AppendArg(header.Value());
+
 	starter_args.AppendArg("-job-input-ad");
 	starter_args.AppendArg("-");
 	starter_args.AppendArg("-schedd-addr");
