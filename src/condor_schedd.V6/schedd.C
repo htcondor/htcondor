@@ -9321,6 +9321,15 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 						 "job %d.%d\n", ATTR_HOLD_REASON, _error.Value(), 
 						 job_id.cluster, job_id.proc );
 			}
+			if ( SetAttributeInt(job_id.cluster, job_id.proc,
+								 ATTR_HOLD_REASON_CODE,
+								 CONDOR_HOLD_CODE_MissedDeferredExecutionTime)
+				 < 0 ) {
+				dprintf( D_ALWAYS, "WARNING: Failed to set %s to %d for "
+						 "job %d.%d\n", ATTR_HOLD_REASON_CODE,
+						 CONDOR_HOLD_CODE_MissedDeferredExecutionTime,
+						 job_id.cluster, job_id.proc );
+			}
 			dprintf( D_ALWAYS, "Job %d.%d missed its deferred execution time\n",
 							job_id.cluster, job_id.proc );
 		}

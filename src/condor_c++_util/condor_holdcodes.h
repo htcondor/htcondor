@@ -101,7 +101,5 @@ const int CONDOR_HOLD_CODE_InvalidTransferGoAhead = 18;
 const int CONDOR_HOLD_CODE_HookPrepareJobFailure = 19;
 #endif /* HAVE_JOB_HOOKS */
 
-// Note: just because the above code was conditionally defined, the
-// next available code should be 20 (and please delete this comment).
-
+const int CONDOR_HOLD_CODE_MissedDeferredExecutionTime = 20;
 #endif
