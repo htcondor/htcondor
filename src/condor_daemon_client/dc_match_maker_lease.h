@@ -97,28 +97,44 @@ class DCMatchMakerLease {
 };
 
 // Free a list of leases
-void DCMatchMakerLease_FreeList(
+void
+DCMatchMakerLease_FreeList(
 	list<DCMatchMakerLease *>		&lease_list
 	);
-int DCMatchMakerLease_RemoveLeases(
+int
+DCMatchMakerLease_RemoveLeases(
 	list<DCMatchMakerLease *>		&lease_list,
 	const list<const DCMatchMakerLease *> &remove_list
 	);
-int DCMatchMakerLease_UpdateLeases(
+int
+DCMatchMakerLease_UpdateLeases(
 	list<DCMatchMakerLease *>		&lease_list,
 	const list<const DCMatchMakerLease *> &update_list
 	);
-int DCMatchMakerLease_MarkLeases(
+int
+DCMatchMakerLease_MarkLeases(
 	list<DCMatchMakerLease *>		&lease_list,
 	bool							mark
 	);
-int DCMatchMakerLease_RemoveMarkedLeases(
+int
+DCMatchMakerLease_RemoveMarkedLeases(
 	list<DCMatchMakerLease *>		&lease_list,
 	bool							mark
 	);
-int DCMatchMakerLease_CountMarkedLeases(
+int
+DCMatchMakerLease_GetMarkedLeases(
+	const list<const DCMatchMakerLease *> &lease_list,
+	bool								mark,
+	list<const DCMatchMakerLease *> 	&marked_lease_list
+	);
+int
+DCMatchMakerLease_CountMarkedLeases(
 	const list<const DCMatchMakerLease *> &lease_list,
 	bool							mark
+	);
+list<const DCMatchMakerLease *> *
+DCMatchMakerLease_GetConstList(
+	list<DCMatchMakerLease *>		*non_const_list
 	);
 
 #endif /* _CONDOR_DC_MATCH_MAKER_LEASE_H */

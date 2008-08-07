@@ -38,7 +38,7 @@ using namespace std;
 
 #include <stdio.h>
 
-// *** DCMatchMakerLease (class to hold lease informat)  class methods ***
+// *** DCMatchMakerLease (class to hold lease information) class methods ***
 
 DCMatchMakerLease::DCMatchMakerLease( time_t now )
 {
@@ -291,21 +291,15 @@ DCMatchMakerLease_RemoveMarkedLeases(
 	bool							mark
 	)
 {
-	list<DCMatchMakerLease *> remove_list;
+	list<const DCMatchMakerLease *> remove_list;
+	list<const DCMatchMakerLease *> const_list =
+		*DCMatchMakerLease_GetConstList( &lease_list );
+	DCMatchMakerLease_GetMarkedLeases( const_list, mark, remove_list );
 
-	for( list<DCMatchMakerLease *>::iterator iter = lease_list.begin();
-		 iter != lease_list.end();
-		 iter++ ) {
-		DCMatchMakerLease	*lease = *iter;
-		if ( lease->getMark() == mark ) {
-			remove_list.push_back( lease );
-		}
-	}
-
-	for( list<DCMatchMakerLease *>::iterator iter = remove_list.begin();
+	for( list<const DCMatchMakerLease *>::iterator iter = remove_list.begin();
 		 iter != remove_list.end();
 		 iter++ ) {
-		DCMatchMakerLease	*lease = *iter;
+		DCMatchMakerLease *lease = const_cast<DCMatchMakerLease*>( *iter );
 		lease_list.remove( lease );
 		delete lease;
 	}
@@ -330,4 +324,35 @@ DCMatchMakerLease_CountMarkedLeases(
 		}
 	}
 	return count;
+}
+
+int
+DCMatchMakerLease_GetMarkedLeases(
+	const list<const DCMatchMakerLease *>	&lease_list,
+	bool									mark,
+	list<const DCMatchMakerLease *>			&marked_lease_list
+	)
+{
+	int		count = 0;
+	list<const DCMatchMakerLease *>::const_iterator iter;
+	for( iter  = lease_list.begin();
+		 iter != lease_list.end();
+		 iter ++ ) {
+		const DCMatchMakerLease	*lease = *iter;
+		if ( lease->getMark() == mark ) {
+			marked_lease_list.push_back( lease );
+			count++;
+		}
+	}
+	return count;
+}
+
+list<const DCMatchMakerLease *> *
+DCMatchMakerLease_GetConstList(
+	list<DCMatchMakerLease *>		*non_const_list
+	)
+{
+	list<const DCMatchMakerLease *> *const_list =
+		(list<const DCMatchMakerLease *>*) non_const_list;
+	return const_list;
 }
