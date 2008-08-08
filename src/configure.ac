@@ -2225,6 +2225,8 @@ AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 AC_SEARCH_LIBS([dlopen], [dl],
   AC_DEFINE([HAVE_DLOPEN], [1], [dlopen function is available]))
 
+AC_CHECK_FUNCS(backtrace)
+
 # If we can't find clone() on linux (for fast forking from large
 # processes), then somebody better understand why; so produce a fatal
 # error here.  Under IA64, there is a different interface to clone

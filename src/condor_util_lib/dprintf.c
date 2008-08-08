@@ -44,6 +44,9 @@
 #include "basename.h"
 #include "get_mysubsystem.h"
 #include "file_lock.h"
+#if HAVE_BACKTRACE
+#include "execinfo.h"
+#endif
 
 FILE *debug_lock(int debug_level);
 FILE *open_debug_file( int debug_level, char flags[] );
@@ -1153,5 +1156,55 @@ dprintf_wrapup_fork_child( ) {
 		LockFd = -1;
 	}
 }
+
+#if HAVE_BACKTRACE
+void
+dprintf_dump_stack(void) {
+	priv_state	priv;
+	int fd;
+	void *trace[50];
+	int trace_size;
+	char notice[100];
+
+		/* In case we are dumping stack in the segfault handler, we
+		   want this to be a simple as possible.  Calling malloc()
+		   could be fatal, since the heap may be trashed.  Therefore,
+		   we dispense with some of the formalities... */
+
+	if (DprintfBroken || !_condor_dprintf_works || !DebugFile[0]) {
+			// Note that although this would appear to enable
+			// backtrace printing to stderr before dprintf is
+			// configured, the backtrace sighandler is only installed
+			// when dprintf is configured, so we won't even get here
+			// in that case.  Therefore, most command-line tools need
+			// -debug to enable the backtrace.
+		fd = 2;
+	}
+	else {
+		priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
+		fd = safe_open_wrapper(DebugFile[0],O_APPEND|O_WRONLY|O_CREAT,0644);
+		_set_priv(priv, __FILE__, __LINE__, 0);
+		if( fd==-1 ) {
+			fd=2;
+		}
+	}
+
+	trace_size = backtrace(trace,50);
+
+	sprintf(notice,"Stack dump for process %d at timestamp %ld (%d frames)\n",getpid(),(long)time(NULL),trace_size);
+	write(fd,notice,strlen(notice));
+
+	backtrace_symbols_fd(trace,trace_size,fd);
+
+	if (fd!=2) {
+		close(fd);
+	}
+}
+#else
+void
+dprintf_dump_stack(void) {
+		// this platform does not support backtrace()
+}
+#endif
 
 #endif

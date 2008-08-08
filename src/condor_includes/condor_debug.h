@@ -113,6 +113,8 @@ void dprintf_init_fork_child( void );
  */
 void dprintf_wrapup_fork_child( void );
 
+void dprintf_dump_stack(void);
+
 time_t dprintf_last_modification(void);
 void dprintf_touch_log(void);
 

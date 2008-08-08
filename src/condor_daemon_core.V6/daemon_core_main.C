@@ -585,6 +585,8 @@ static char *core_dir = NULL;
 void
 linux_sig_coredump(int signum)
 {
+	dprintf_dump_stack();
+
 		// Just in case we're running as condor or a user.
 	setuid(0);
 	setgid(0);
