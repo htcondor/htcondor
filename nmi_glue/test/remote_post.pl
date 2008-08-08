@@ -131,6 +131,7 @@ if( ! -d $log_dir ) {
 }
 if( -d $log_dir ) {
     print "Copying log files to $log_dir\n";
+    system( "cp $SrcDir/condor_tests/TestingPersonalCondor/local/log/core* $log_dir" );
     system( "cp $SrcDir/condor_tests/TestingPersonalCondor/local/log/*Log* $log_dir" );
     if( $? >> 8 ) {
         print "Can't copy $SrcDir/condor_tests/TestingPersonalCondor/local/log/ to $log_dir\n";
