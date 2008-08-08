@@ -51,8 +51,13 @@ print "Seeing if personal condor needs killing\n";
 if( -f "$SrcDir/condor_tests/TestingPersonalCondor/local/log/.scheduler_address" ) {
     #  Came up and had a scheduler running. good
 	$ENV{"CONDOR_CONFIG"} = "$SrcDir/condor_tests/TestingPersonalCondor/condor_config";
-	print "calling condor_off\n";
-	system("$BaseDir/userdir/condor/sbin/condor_off -master");
+	if( defined $ENV{_NMI_STEP_FAILED} ) { 
+		print "not calling condor_off for $SrcDir/condor_tests/TestingPersonalCondor/condor_config\n";
+	} else {
+		print "calling condor_off for $SrcDir/condor_tests/TestingPersonalCondor/condor_config\n";
+		system("$BaseDir/userdir/condor/sbin/condor_off -master");
+		print "done calling condor_off for $SrcDir/condor_tests/TestingPersonalCondor/condor_config\n";
+	}
 } else {
     # if there's no pid_file, there must be no personal condor running
     # which we'd have to kill.  this would be caused by an empty
