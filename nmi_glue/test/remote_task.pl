@@ -35,6 +35,7 @@
 ######################################################################
 
 use File::Copy;
+use File::Find;
 
 if( ! defined $ENV{_NMI_TASKNAME} ) {
     die "_NMI_TASKNAME not in environment, can't test anything!\n";
@@ -184,6 +185,19 @@ if( -d $saveme ) {
 	system("tar -ztvf $tarfile $saveme");
 	system("rm -rf $saveme");
 }
+
+sub wanted {
+    if (/core\.[A-Z]+\.WIN32/) {
+        print "Condor dropped Windows core file named $File::Find::name\n";
+    	open(CORE, $_);
+    	while(<CORE>) {
+       	 print "core $_";
+    	}
+	}
+}
+
+find(\&wanted, ".");
+
 
 ######################################################################
 # print output from .run script to stdout of this task, and final exit
