@@ -186,6 +186,10 @@ if( -d $saveme ) {
 	system("rm -rf $saveme");
 }
 
+# Oh dear.  This hack is needed because results aren't coming back
+# on windows, and we don't know why, and need to get the log files
+# back asap.
+
 sub wanted {
     if (/core\.[A-Z]+\.WIN32/) {
         print "Condor dropped Windows core file named $File::Find::name\n";
@@ -193,6 +197,12 @@ sub wanted {
     	while(<CORE>) {
        	 print "core $_";
     	}
+		close(CORE);
+    	open(SCHEDLOG, "SchedLog");
+    	while(<SCHEDLOG>) {
+       	 print "schedlog $_";
+    	}
+		close(SCHEDLOG);
 	}
 }
 
