@@ -61,6 +61,7 @@ JICLocalSchedd::JICLocalSchedd( const char* classad_filename,
 	m_max_cleanup_retries = param_integer("LOCAL_UNIVERSE_MAX_JOB_CLEANUP_RETRIES", 5);
 	m_cleanup_retry_delay = param_integer("LOCAL_UNIVERSE_JOB_CLEANUP_RETRY_DELAY", 30);
 	this->starter_user_policy = NULL;
+	m_tried_notify_job_exit = false;
 }
 
 
@@ -121,7 +122,7 @@ JICLocalSchedd::init( void )
  * @return true if the jobs were told to be put on hold
  */
 bool
-JICLocalSchedd::holdJob( const char *reason ) {
+JICLocalSchedd::holdJob( const char *reason, int hold_reason_code, int hold_reason_subcode ) {
 		//
 		// First tell the Starter to put the job on hold
 		// This method will not call gotHold() back on us,
@@ -133,6 +134,8 @@ JICLocalSchedd::holdJob( const char *reason ) {
 		// Insert the reason into the job ad 
 		//
 	this->job_ad->Assign( ATTR_HOLD_REASON, reason );
+	this->job_ad->Assign( ATTR_HOLD_REASON_CODE, hold_reason_code );
+	this->job_ad->Assign( ATTR_HOLD_REASON_SUBCODE, hold_reason_subcode );
 	return true;
 }
 
@@ -201,6 +204,11 @@ JICLocalSchedd::requeueJob( const char *reason ) {
 void
 JICLocalSchedd::allJobsGone( void )
 {
+	if( !m_tried_notify_job_exit && this->exit_code == JOB_SHOULD_HOLD ) {
+			// The job startup must have failed.
+			// Notify the schedd of the hold reason etc.
+		notifyJobExit(this->exit_code,JOB_KILLED,NULL);
+	}
 		// Since there's no shadow to tell us to go away, we have to
 		// exit ourselves.  However, we need to use the right code so
 		// the schedd knows to remove the job from the queue
@@ -208,13 +216,26 @@ JICLocalSchedd::allJobsGone( void )
 	Starter->StarterExit( exit_code );
 }
 
+void
+JICLocalSchedd::setExitCodeToRequeue()
+{
+	switch(exit_code) {
+	case JOB_SHOULD_HOLD:
+	case JOB_SHOULD_REMOVE:
+	case JOB_MISSED_DEFERRAL_TIME:
+			// Ignore JOB_SHOULD_REQUEUE, because we are already set
+			// to do something more drastic.
+		break;
+	default:
+		exit_code = JOB_SHOULD_REQUEUE;
+	}
+}
 
 void
 JICLocalSchedd::gotShutdownFast( void )
 {
 	JobInfoCommunicator::gotShutdownFast();
-	exit_code = JOB_SHOULD_REQUEUE;
-
+	setExitCodeToRequeue();
 }
 
 
@@ -222,7 +243,7 @@ void
 JICLocalSchedd::gotShutdownGraceful( void )
 {
 	JobInfoCommunicator::gotShutdownGraceful();
-	exit_code = JOB_SHOULD_REQUEUE;
+	setExitCodeToRequeue();
 }
 
 
@@ -289,13 +310,17 @@ JICLocalSchedd::notifyJobExit( int exit_status, int reason,
 	static bool did_check_at_exit = false;
 	static bool did_ulog_event = false;
 
+	m_tried_notify_job_exit = true;
+ 
 	if (!did_final_ad_publish) {
 			// Prepare to update the job queue.  In this case, we want
 			// to publish all the same attribute we'd otherwise send
 			// to the shadow, but instead, just stick them directly
 			// into our copy of the job classad.
 		Starter->publishPreScriptUpdateAd( job_ad );
-		user_proc->PublishUpdateAd( job_ad );
+		if( user_proc ) {
+			user_proc->PublishUpdateAd( job_ad );
+		}
 		Starter->publishPostScriptUpdateAd( job_ad );
 		did_final_ad_publish = true;
 	}
@@ -504,4 +529,14 @@ JICLocalSchedd::retryJobCleanupHandler( void )
     dprintf(D_ALWAYS, "Retrying job cleanup, calling allJobsDone()\n");
     Starter->allJobsDone();
     return TRUE;
+}
+
+bool
+JICLocalSchedd::notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode )
+{
+	JICLocal::notifyStarterError(err_msg,critical,hold_reason_code,hold_reason_subcode);
+	if( hold_reason_code ) {
+		holdJob( err_msg, hold_reason_code, hold_reason_subcode );
+	}
+	return true;
 }

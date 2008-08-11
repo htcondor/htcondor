@@ -91,7 +91,7 @@ public:
 		 * JICShadow does not need to implement these 
 		 * at this time
 		 **/ 
-	virtual bool holdJob( const char* ) { return ( false ); }
+	virtual bool holdJob( const char*, int /*hold_reason_code*/, int /*hold_reason_subcode*/ ) { return ( false ); }
 	virtual bool removeJob( const char* ) { return ( false ); }
 	virtual bool terminateJob( const char* ) { return ( false ); }
 	virtual bool requeueJob( const char* ) { return ( false ); }

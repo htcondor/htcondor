@@ -83,7 +83,7 @@ public:
 		 * derived classes. Currently, on JICLocalSchedd only has
 		 * any real logic to do something with these.
 		 **/
-	virtual bool holdJob( const char* ) = 0;
+	virtual bool holdJob( const char*, int hold_reason_code, int hold_reason_subcode ) = 0;
 	virtual bool removeJob( const char* ) = 0;
 	virtual bool terminateJob( const char* ) = 0;
 	virtual bool requeueJob( const char* ) = 0;
