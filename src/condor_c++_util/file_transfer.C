@@ -935,12 +935,18 @@ FileTransfer::ComputeFilesToSend()
 						 f, dir.GetModifyTime(), (long) dir.GetFileSize() );
 				send_it = true;
 			}
-			else if(final_files_to_send.file_contains(f)) {
+			else if (final_files_to_send.file_contains(f)) {
 				dprintf( D_FULLDEBUG, 
 						 "Sending previously changed file %s\n", f);
 				send_it = true;
 			}
-			else if(filesize == -1) {
+			else if (OutputFiles && OutputFiles->file_contains(f)) {
+				dprintf(D_FULLDEBUG, 
+				        "Sending dynamically added output file %s\n",
+				        f);
+				send_it = true;
+			}
+			else if (filesize == -1) {
 				// this is a special block of code that should eventually go
 				// away.  essentially, setting the filesize to -1 means that
 				// we only transfer the file if the timestamp is newer than
@@ -960,12 +966,12 @@ FileTransfer::ComputeFilesToSend()
 					// if filesize was -1 but the timestamp was earlier than
 					// modification_time, do NOT include the file.
 					dprintf( D_FULLDEBUG,
-					 	"Not sending file %s, t: %ld<=%ld, s: N/A\n",
+					 	"Skipping file %s, t: %ld<=%ld, s: N/A\n",
 					 	f, dir.GetModifyTime(), modification_time);
 					continue;
 				}
 			}
-			else if((filesize != dir.GetFileSize()) ||
+			else if ((filesize != dir.GetFileSize()) ||
 					(modification_time != dir.GetModifyTime()) ) {
 				// file has changed in size or modification time.  this
 				// doesn't catch the case where the file was modified
@@ -981,7 +987,7 @@ FileTransfer::ComputeFilesToSend()
 			}
 			else {
 				dprintf( D_FULLDEBUG,
-					 "Not sending file %s, t: %ld==%ld, s: %lld==%lld\n",
+					 "Skipping file %s, t: %ld==%ld, s: %lld==%lld\n",
 					 f, dir.GetModifyTime(), modification_time,
 					 dir.GetFileSize(), filesize );
 				continue;
@@ -2783,9 +2789,10 @@ bool
 FileTransfer::addOutputFile( const char* filename )
 {
 	if( ! OutputFiles ) {
-		return false;
+		OutputFiles = new StringList;
+		ASSERT(OutputFiles != NULL);
 	}
-	if( OutputFiles->file_contains(filename) ) {
+	else if( OutputFiles->file_contains(filename) ) {
 		return true;
 	}
 	OutputFiles->append( filename );

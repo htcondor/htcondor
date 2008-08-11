@@ -128,6 +128,10 @@ JICShadow::init( void )
 		return false;
 	}
 
+		// stash a copy of the unmodified job ad in case we decide
+		// below that we want to write out an execution visa
+	ClassAd orig_ad = *job_ad;	
+
 		// now that we have the job ad, see if we should go into an
 		// infinite loop, waiting for someone to attach w/ the
 		// debugger.
@@ -190,6 +194,11 @@ JICShadow::init( void )
 	if( ! u_log->initFromJobAd(job_ad) ) {
 		return false;
 	}
+
+		// Drop a job ad "visa" into the sandbox now if the job
+		// requested it
+	writeExecutionVisa(orig_ad);
+
 	return true;
 }
 
@@ -348,6 +357,14 @@ JICShadow::transferOutput( void )
 		// since we do not want to be interrupted by anything
 		// short of a hardkill. 
 	if( filetrans && ((requested_exit == false) || transfer_at_vacate) ) {
+
+			// add any dynamically-added output files to the FT
+			// object's list
+		m_added_output_files.rewind();
+		char* filename;
+		while ((filename = m_added_output_files.next()) != NULL) {
+			filetrans->addOutputFile(filename);
+		}
 
 			// make sure we can access the files
 		if (privsep_enabled()) {
@@ -819,14 +836,10 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	daemonCore->publish(ad);
 }
 
-
 void
 JICShadow::addToOutputFiles( const char* filename )
 {
-	if( ! filetrans ) {
-		return;
-	}
-	filetrans->addOutputFile( filename );
+	m_added_output_files.append(filename);
 }
 
 bool

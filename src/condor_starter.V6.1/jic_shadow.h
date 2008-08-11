@@ -405,6 +405,11 @@ private:
 	bool job_cleanup_disconnected;
 
 	Stream *m_job_startd_update_sock;
+
+		/** A list of output files that have been dynamically added
+		    (e.g. a core file dumped by the job)
+		*/
+	StringList m_added_output_files;
 };
 
 

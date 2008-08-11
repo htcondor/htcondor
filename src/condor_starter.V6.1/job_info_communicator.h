@@ -422,6 +422,10 @@ protected:
 		 */
 	virtual void checkForStarterDebugging( void );
 
+		/** Helper for dumping a copy of the job ad to the sandbox.
+		*/
+	virtual void writeExecutionVisa( ClassAd& );
+
 
 		// // // // // // // // // // // //
 		// Protected data members

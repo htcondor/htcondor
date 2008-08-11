@@ -29,6 +29,7 @@
 #include "../condor_privsep/condor_privsep.h"
 #include "condor_vm_universe_types.h"
 #include "hook_utils.h"
+#include "classad_visa.h"
 
 
 extern CStarter *Starter;
@@ -717,6 +718,35 @@ JobInfoCommunicator::checkForStarterDebugging( void )
 		dprintf( D_JOB, "*** Job ClassAd ***\n" );  
 		job_ad->dPrint( D_JOB );
         dprintf( D_JOB, "--- End of ClassAd ---\n" );
+	}
+}
+
+
+void
+JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
+{
+	int value;
+	if (!job_ad->EvalBool(ATTR_WANT_STARTER_EXECUTION_VISA, NULL, value) ||
+	    !value)
+	{
+		return;
+	}
+	MyString iwd;
+	if (!job_ad->LookupString(ATTR_JOB_IWD, iwd)) {
+		dprintf(D_ALWAYS,
+		        "writeExecutionVisa error: no IWD in job ad!\n");
+		return;
+	}
+	priv_state priv = set_user_priv();
+	MyString filename;
+	bool ok = classad_visa_write(&visa_ad,
+	                             mySubSystem,
+	                             daemonCore->InfoCommandSinfulString(),
+	                             iwd.Value(),
+	                             &filename);
+	set_priv(priv);
+	if (ok) {
+		addToOutputFiles(filename.Value());
 	}
 }
 

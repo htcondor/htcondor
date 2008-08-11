@@ -59,6 +59,10 @@ JICLocal::init( void )
 		return false;
 	}
 
+		// stash a copy of the unmodified job ad in case we decide
+		// below that we want to write out an execution visa
+	ClassAd orig_ad = *job_ad;	
+
 		// now that we have the job ad, see if we should go into an
 		// infinite loop, waiting for someone to attach w/ the
 		// debugger.
@@ -97,6 +101,10 @@ JICLocal::init( void )
 	if( ! initLocalUserLog() ) {
 		return false;
 	}
+
+		// Drop a job ad "visa" into the job's IWD now if the job
+		// requested it
+	writeExecutionVisa(orig_ad);
 
 	return true;
 }

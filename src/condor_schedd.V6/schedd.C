@@ -80,6 +80,7 @@
 #include "file_sql.h"
 #include "condor_getcwd.h"
 #include "set_user_priv_from_ad.h"
+#include "classad_visa.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 #define DEFAULT_JOB_START_COUNT 1
@@ -146,7 +147,7 @@ bool jobCleanupNeedsThread( int cluster, int proc );
 bool jobExternallyManaged(ClassAd * ad);
 bool jobManagedDone(ClassAd * ad);
 int  count( ClassAd *job );
-static void WriteSandboxJobAdFile(ClassAd* ad);
+static void WriteCompletionVisa(ClassAd* ad);
 
 
 int	WallClockCkptInterval = 0;
@@ -2452,7 +2453,7 @@ jobIsFinished( int cluster, int proc, void* )
 		// completion of a job and its removal from the queue would
 		// not be present in the job ad file, but that should be of
 		// little consequence.
-	WriteSandboxJobAdFile(job_ad);
+	WriteCompletionVisa(job_ad);
 
 		/*
 		  make sure we can switch uids.  if not, there's nothing to
@@ -12779,93 +12780,35 @@ Scheduler::sendSignalToShadow(pid_t pid,int sig,PROC_ID proc)
 
 static
 void
-WriteSandboxJobAdFile(ClassAd* ad)
+WriteCompletionVisa(ClassAd* ad)
 {
 	priv_state prev_priv_state;
-	int cluster, proc, i, value;
-	int fd = -1;
-	FILE *file = NULL;
-	MyString filename, iwd;
+	int value;
+	MyString iwd;
 
 	ASSERT(ad);
 
-	value = 0;
-	if (!ad->EvalBool(ATTR_JOB_SANDBOX_JOBAD, NULL, value) || !value) {
-		return;
-	}
-
-	if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "WriteSandboxJobAdFile ERROR: Job contained no CLUSTER_ID\n");
-		return;
-	}
-
-	if (!ad->LookupInteger(ATTR_PROC_ID, proc)) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "WriteSandboxJobAdFile ERROR: Job contained no PROC_ID\n");
-		return;
+	if (!ad->EvalBool(ATTR_WANT_SCHEDD_COMPLETION_VISA, NULL, value) ||
+	    !value)
+	{
+		if (!ad->EvalBool(ATTR_JOB_SANDBOX_JOBAD, NULL, value) ||
+		    !value)
+		{
+			return;
+		}
 	}
 
 	if (!ad->LookupString(ATTR_JOB_IWD, iwd)) {
 		dprintf(D_ALWAYS | D_FAILURE,
-		        "WriteSandboxJobAdFile ERROR: Job contained no IWD\n");
+		        "WriteCompletionVisa ERROR: Job contained no IWD\n");
 		return;
 	}
 
 	prev_priv_state = set_user_priv_from_ad(*ad);
-
-		// Construct the file name to be: jobad.CLUSTER.PROC[.X],
-		// where X is the lowest number possible to make the file name
-		// unique, e.g. if jobad.0.0 exists then jobad.0.0.0 and if
-		// jobad.0.0.0 exists then jobad.0.0.1 and so on
-
-	i = 0;
-	filename.sprintf("%s/jobad.%d.%d", iwd.GetCStr(), cluster, proc);
-	while (-1 == (fd = safe_open_wrapper(filename.GetCStr(),
-										 O_WRONLY|O_CREAT|O_EXCL))) {
-		if (EEXIST != errno) {
-			dprintf(D_ALWAYS | D_FAILURE,
-					"WriteSandboxJobAdFile ERROR: '%s', %d (%s)\n",
-					filename.GetCStr(), errno, strerror(errno));
-			goto EXIT;
-		}
-
-		dprintf(D_ALWAYS,
-				"WriteSandboxJobAdFile WARNING: Drop file '%s' already exists\n",
-				filename.GetCStr());
-
-		filename.sprintf("%s/jobad.%d.%d.%d", iwd.GetCStr(), cluster, proc, i++);
-	}
-
-	if (NULL == (file = fdopen(fd, "w"))) {
-		dprintf(D_ALWAYS | D_FAILURE,
-				"WriteSandboxJobAdFile ERROR: error %d (%s) opening file '%s'\n",
-				errno, strerror(errno), filename.GetCStr());
-		goto EXIT;
-	}
-										   
-	if (!ad->fPrint(file)) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "WriteSandboxJobAdFile ERROR: Error writing to file '%s'\n",
-		        filename.GetCStr());
-		goto EXIT;
-	}
-
-	dprintf(D_FULLDEBUG,
-			"WriteSandboxJobAdFile: Wrote Job Ad to '%s'\n",
-			filename.GetCStr());
-
- EXIT:
-
-	if (file) {
-		fclose(file);
-	} else {
-		if (-1 != fd) {
-			close(fd);
-		}
-	}
-
+	classad_visa_write(ad,
+	                   mySubSystem,
+	                   daemonCore->InfoCommandSinfulString(),
+	                   iwd.Value(),
+	                   NULL);
 	set_priv(prev_priv_state);
-
-	return;
 }
