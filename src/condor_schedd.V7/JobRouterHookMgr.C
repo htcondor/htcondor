@@ -171,7 +171,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	MyString hook_stdin;
 	temp_ad.sPrint(hook_stdin);
 
-	UpdateClient* status_client = new UpdateClient(m_hook_update_job_info, r_job);
+	StatusClient* status_client = new StatusClient(m_hook_update_job_info, r_job);
 	if (status_client == NULL)
 	{
 		return false;
@@ -245,10 +245,10 @@ TranslateClient::hookExited(int exit_status)
 
 
 // // // // // // // // // // // // 
-// UpdateClient class
+// StatusClient class
 // // // // // // // // // // // // 
 
-UpdateClient::UpdateClient(const char* hook_path, RoutedJob* r_job)
+StatusClient::StatusClient(const char* hook_path, RoutedJob* r_job)
 	: HookClient(HOOK_UPDATE_JOB_INFO, hook_path, true)
 {
 	m_routed_job = r_job;
@@ -256,7 +256,7 @@ UpdateClient::UpdateClient(const char* hook_path, RoutedJob* r_job)
 
 
 void
-TranslateClient::hookExited(int exit_status)
+StatusClient::hookExited(int exit_status)
 {
 	HookClient::hookExited(exit_status);
 

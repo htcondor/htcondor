@@ -13,6 +13,7 @@
 
 
 class TranslateClient;
+class StatusClient;
 class RoutedJob;
 
 
