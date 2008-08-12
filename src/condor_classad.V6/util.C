@@ -439,17 +439,10 @@ int classad_isinf(double x)
 }
 #endif 
 
-#ifdef  __APPLE_CC__
-int classad_isnan(double x)
-{
-    return __isnan(x);
-}
-#else
 int classad_isnan(double x)
 {
     return isnan(x);
 }
-#endif
 
 END_NAMESPACE // classad
 
