@@ -1763,12 +1763,9 @@ Daemons::FinishRestartMaster()
 	}
 }
 
-// Function that actually does the restart of the master.
 void
-Daemons::FinalRestartMaster()
+Daemons::CleanupBeforeRestart()
 {
-	int i;
-
 		// Tell DaemonCore to cleanup the ProcFamily subsystem. We need
 		// to do this here since we are about to restart without calling
 		// DC_Exit
@@ -1790,7 +1787,7 @@ Daemons::FinalRestartMaster()
 		// condor_master does not inherit them.
 		// Note: Not needed (or wanted) on Win32, as CEDAR creates 
 		//		Winsock sockets as non-inheritable by default.
-	for (i=0; i < max_fds; i++) {
+	for (int i=0; i < max_fds; i++) {
 		close(i);
 	}
 #endif
@@ -1803,6 +1800,27 @@ Daemons::FinalRestartMaster()
 	char	tmps[256];
 	sprintf( tmps, "%s=", EnvGetName( ENV_INHERIT ) );
 	putenv( tmps );
+}
+
+void
+Daemons::ExecMaster()
+{
+	if( MasterName ) {
+		(void)execl(daemon_ptr[master]->process_name, 
+					"condor_master", "-f", "-n", MasterName, 0);
+	} else {
+		(void)execl(daemon_ptr[master]->process_name, 
+					"condor_master", "-f", 0);
+	}
+}
+
+// Function that actually does the restart of the master.
+void
+Daemons::FinalRestartMaster()
+{
+	int i;
+
+	CleanupBeforeRestart();
 
 #ifdef WIN32
 	dprintf(D_ALWAYS,"Running as NT Service = %d\n", NT_ServiceFlag);
@@ -1841,13 +1859,7 @@ Daemons::FinalRestartMaster()
 				// root rather than effective uid condor.
 			priv_state saved_priv = set_priv(PRIV_ROOT);
 
-			if( MasterName ) {
-				(void)execl(daemon_ptr[master]->process_name, 
-							"condor_master", "-f", "-n", MasterName, 0);
-			} else {
-				(void)execl(daemon_ptr[master]->process_name, 
-							"condor_master", "-f", 0);
-			}
+			ExecMaster();
 
 			set_priv(saved_priv);
 		}
