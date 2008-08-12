@@ -213,6 +213,7 @@ DCMessenger::DCMessenger( classy_counted_ptr<Daemon> daemon )
 
 DCMessenger::DCMessenger( Sock *sock )
 {
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::DCMessenger(): this=%p\n",this);
 	m_sock = sock;
 	m_callback_msg = NULL;
 	m_callback_sock = NULL;
@@ -221,6 +222,7 @@ DCMessenger::DCMessenger( Sock *sock )
 
 DCMessenger::~DCMessenger()
 {
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::~DCMessenger(): this=%p\n",this);
 		// should never get deleted in the middle of a pending operation
 	ASSERT(!m_callback_msg.get());
 	ASSERT(!m_callback_sock);
@@ -389,22 +391,31 @@ void DCMessenger::writeMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 void DCMessenger::startReceiveMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 {
 		// Currently, only one pending message per messenger.
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg() this=%p, sock=%p, msg=%p\n",this,sock,msg.get());
 	ASSERT( !m_callback_msg.get() );
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 1\n");
 	ASSERT( !m_callback_sock );
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 2\n");
 	ASSERT( m_pending_operation == NOTHING_PENDING );
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 3\n");
 
 	msg->setMessenger( this );
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 4\n");
 
 	MyString name;
 	name.sprintf("<%s>", msg->name());
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 5\n");
 
 	incRefCount();
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 6\n");
 
 	int reg_rc = daemonCoreSockAdapter.
 		Register_Socket( sock, peerDescription(),
 						 (SocketHandlercpp)&DCMessenger::receiveMsgCallback,
 						 name.Value(), this, ALLOW );
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 7\n");
 	if(reg_rc < 0) {
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 8\n");
 		msg->addError(
 			CEDAR_ERR_REGISTER_SOCK_FAILED,
 			"failed to register socket (Register_Socket returned %d)",
@@ -415,9 +426,13 @@ void DCMessenger::startReceiveMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 		return;
 	}
 
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 9\n");
 	m_callback_msg = msg; // prevent msg from going out of reference
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 10\n");
 	m_callback_sock = sock;
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 11\n");
 	m_pending_operation = RECEIVE_MSG_PENDING;
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): done\n");
 }
 
 int
