@@ -29,9 +29,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The StarterLog for local universe jobs now displays the job id
-in each line in the file so that intermingled messages relevant to
-different jobs running concurrently can be understood.
+\item The \File{StarterLog} for local universe jobs now displays the job id
+in each line in the file, so that intermingled messages relevant to
+different jobs running concurrently can be identified.
 
 \end{itemize}
 
@@ -52,9 +52,9 @@ indicates no limit.
 
 \begin{itemize}
 
-\item Fixed a bug in the View Collector that caused it to ``except''
-  (crash) when it received a machine ad without a valid state.  It now
-  logs this (D\_ALWAYS) and ignores the ad.
+\item Fixed a bug in the CondorView server (collector) that caused it
+to except (crash) when it received a machine ClassAd without a valid state.
+It now logs this under level \MacroNI{D\_ALWAYS} and ignores the ClassAd.
 
 \end{itemize}
 

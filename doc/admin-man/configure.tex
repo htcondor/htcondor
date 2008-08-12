@@ -4123,12 +4123,12 @@ These macros control the \Condor{schedd}.
   the match associated with the dying shadow.  Defaults to 5.
 
 \item[\Macro{MAX\_PENDING\_STARTD\_CONTACTS}]
-\label{param:MaxPendingStartdContacts} This limits the number of
-simultaneous connection attempts by the \Condor{schedd} when it is
-requesting claims from the \Condor{startd}s.  The intention is to
-protect the \Condor{schedd} from being overloaded by authentication
-operations.  The default is 10.  The special value 0 indicates no
-limit.
+  \label{param:MaxPendingStartdContacts} An integer value that limits
+  the number of simultaneous connection attempts by the \Condor{schedd}
+  when it is requesting claims from one or more \Condor{startd} daemons.
+  The intention is to protect the \Condor{schedd} from being overloaded
+  by authentication operations.  The default value is 10.
+  The special value 0 indicates no limit.
 
 \item[\Macro{MAX\_CONCURRENT\_DOWNLOADS}]
   \label{param:MaxConcurrentDownloads} This specifies the maximum
@@ -6171,7 +6171,7 @@ An integer value in bytes which controls how many bytes of log lines are to
 be stored in the log line cache. When the cache surpasses this number the
 entries are written out in one call to the logging subsystem. A value of
 zero is not recommended since each log line would surpass the cache size 
-and be emitted inaddition to bracketing log lines explaining that the 
+and be emitted in addition to bracketing log lines explaining that the 
 flushing was happening.
 The legal range of values is 0 to INT\_MAX.
 If defined with a value less than 0, the  value 0 will be used.
@@ -6660,14 +6660,16 @@ The default value is 20 seconds.
 Scalability issues with a large pool would be the only basis
 for a change from the default value.
 
-\item[\Macro{SEC\_DAFAULT\_AUTHENTICATON\_TIMEOUT}]
-\label{param:SecDaemonAuthenticationTimeout}]
-The length of time in seconds that Condor should attempt
-authenticating network connections before giving up.  The default is
-20 seconds.  Like other security settings, \MacroNI{DEFAULT} may be
-replaced by a different access level to specify the timeout to use for
-different types of commands.  Example:
-\Macro{SEC\_CLIENT\_AUTHENTICATON\_TIMEOUT}.
+\item[\Macro{SEC\_DEFAULT\_AUTHENTICATION\_TIMEOUT}]
+  \label{param:SecDefaultAuthenticationTimeout}
+  The length of time in seconds that Condor should attempt
+  authenticating network connections before giving up.
+  The default is 20 seconds.
+  Like other security settings, the portion of the configuration variable
+  name, \MacroNI{DEFAULT}, 
+  may be replaced by a different access level to specify the timeout to use for
+  different types of commands, for example
+  \MacroNI{SEC\_CLIENT\_AUTHENTICATION\_TIMEOUT}.
 
 \item[\Macro{SEC\_PASSWORD\_FILE}]
 \label{param:SecPasswordFile} For Unix machines, the path and file name
