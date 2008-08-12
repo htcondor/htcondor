@@ -39,6 +39,7 @@
 #  elif defined( IS_IA64 )
 #  elif defined( IS_CONDOR_PPC )
 #  elif defined( IS_X86_64 )
+#  elif defined( IS_MIPS64 )
 #  else
 #    error CONDOR DOES NOT YET SUPPORT THIS LINUX PLATFORM 
 #  endif
