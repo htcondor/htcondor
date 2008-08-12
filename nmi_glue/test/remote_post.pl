@@ -192,7 +192,13 @@ while( <TASKFILE> ) {
 	# keep disk use lower.
 	# Except, 5/15/08, if the test is timed out the saveme never
 	# gets tared up. So if it is still there, tar it up now
-	if( -d "$testname.saveme") {
+
+	# Except, 8/12/08, if the test didn't time out, but the
+	# remove wasn't able to remove all the files in the saveme dir, say
+	# because they were still in use.  In _that_ case, the .tar.gz exists
+	# so don't overwrite it.
+
+	if (! -f "$testname.saveme.tar.gz" && ( -d "$testname.saveme")) {
 		system("tar -zcvf $testname.saveme.tar.gz $testname.saveme");
 	}
     if( (-f "$testname.saveme.tar.gz") && ($testcopy == 1) ) {
