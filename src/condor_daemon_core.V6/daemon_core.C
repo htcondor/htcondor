@@ -6570,17 +6570,15 @@ int DaemonCore::Create_Process(
 	// job starts in a new console windows.  This allows Condor to 
 	// find the window when we want to send it a WM_CLOSE
 	//
-	if ( priv == PRIV_USER_FINAL || priv == PRIV_CONDOR_FINAL) {
+	if ( priv == PRIV_USER_FINAL ) {
 		create_process_flags |= CREATE_NEW_CONSOLE;
 	}	
 
-   	if ( ( priv != PRIV_USER_FINAL && priv != PRIV_CONDOR_FINAL ) ||
-		 !can_switch_ids() ) {
+   	if ( priv != PRIV_USER_FINAL || !can_switch_ids() ) {
 		cp_result = ::CreateProcess(bIs16Bit ? NULL : executable,(char*)strArgs.Value(),NULL,
 			NULL,inherit_handles, create_process_flags,newenv,cwd,&si,&piProcess);
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
-		// or PRIV_CONDOR_FINAL
 
 			// Get the token for the user
 		HANDLE user_token = priv_state_get_handle();
@@ -6620,17 +6618,12 @@ int DaemonCore::Create_Process(
 			//
 			// "Who's your Daddy ?!?!?!   JEFF B.!"
 
-		// we set_user_priv() or set_condor_priv here because it really doesn't hurt, and more importantly,
+		// we set_user_priv() here because it really doesn't hurt, and more importantly,
 		// if we're using an encrypted execute directory, SYSTEM can't read the user's
 		// executable, so the CreateProcessAsUser() call fails. We avoid this by
-		// flipping into user or condor priv mode first, then making the call, and all is well.
+		// flipping into user priv mode first, then making the call, and all is well.
 
-		priv_state s;
-		if ( priv == PRIV_USER_FINAL ) {
-			s = set_user_priv();
-		} else {
-			s = set_condor_priv();
-		}
+		priv_state s = set_user_priv();
 
 		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : executable,
 			(char *)strArgs.Value(),NULL,NULL, inherit_handles,
