@@ -173,19 +173,6 @@ if( $batchteststatus != 0 ) {
     $teststatus = 0;
 }
 
-######################################################################
-# tar up any saveme directories pull full dir
-######################################################################
-
-$saveme = $testname . ".saveme";
-if( -d $saveme ) {
-	$tarfile = $testname . ".saveme.tar.gz";
-	system("tar -zcvf $tarfile $saveme");
-	print "Contents of SAVEME tar follows.....\n";
-	system("tar -ztvf $tarfile $saveme");
-	system("rm -rf $saveme");
-}
-
 # Oh dear.  This hack is needed because results aren't coming back
 # on windows, and we don't know why, and need to get the log files
 # back asap.
@@ -207,6 +194,20 @@ sub wanted {
 }
 
 find(\&wanted, ".");
+
+######################################################################
+# tar up any saveme directories pull full dir
+######################################################################
+
+$saveme = $testname . ".saveme";
+if( -d $saveme ) {
+	$tarfile = $testname . ".saveme.tar.gz";
+	system("tar -zcvf $tarfile $saveme");
+	print "Contents of SAVEME tar follows.....\n";
+	system("tar -ztvf $tarfile $saveme");
+	system("rm -rf $saveme");
+}
+
 
 
 ######################################################################
