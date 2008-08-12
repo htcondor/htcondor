@@ -927,17 +927,19 @@ chown_func(const char *filename, const struct stat *buf, void *data)
     (void)buf;
 
     /*
-       This may follow a symlink, but there's no real (well, easy and
-       portable) way around that. Additionally, a job may hard link to
-       something outside of its sandbox, which can even be owned by
-       someone else. Therefore, we'll do open and fstat (as the expected
-       source user), then only fchown (as root) if the expected source user
-       is correct. Note that this function expects to be called with our
-       EUID set to the (expected) source user.
+       A job may hard link to something outside of its sandbox, which can
+       even be owned by someone else. Therefore, we'll open and fstat (as
+       the expected source user), then only fchown (as root) if the expected
+       source user is correct. Note that this function expects to be called
+       with our EUID set to the (expected) source user. Also, detect and skip
+       symlinks since their ownership is inconsequential.
     */
-    fd = open(filename, O_RDONLY | O_NONBLOCK);
-    if (fd == -1) {
+    if (safe_open_no_follow(filename, &fd, NULL) == -1) {
         return -1;
+    }
+    if (fd == -1) {
+        /* detected a symlink; skip it */
+        return 0;
     }
     r = fstat(fd, &stat_buf);
     if (r == -1) {

@@ -2997,6 +2997,66 @@ opendir_with_fd(const char *path,
 #endif
 
 /*
+ * safe_open_no_follow
+ *      opens the given path and optionally returns stat information. this
+ *      function ensures that the _last_ component in this path is not a
+ *      symlink, but makes no such promise for other path components.
+ *      this function can only be used to obtain an O_RDONLY FD
+ *
+ * parameters
+ *      path
+ *              the path to open
+ *      fd_ptr
+ *              on success, this location is set to the open FD if
+ *              the path was opened, or -1 if a symlink was detected.
+ *              the location may be altered even on failure
+ *      stat_buf
+ *              optionally, a pointer to a stat buffer to receive info on
+ *              the opened path. the buffer may be altered even if noting
+ *              is opened
+ * returns
+ *      0 on success (which means either the path was opened or a symlink
+ *        was detected)
+ *     -1 on error
+ */
+int
+safe_open_no_follow(const char* path, int* fd_ptr, struct stat* st)
+{
+    dev_t dev;
+    ino_t ino;
+    struct stat buf;
+
+    if (st == NULL) {
+        st = &buf;
+    }
+
+    *fd_ptr = open(path, O_RDONLY | O_NONBLOCK);
+    if (*fd_ptr == -1) {
+        return -1;
+    }
+
+    if (fstat(*fd_ptr, st) == -1) {
+        close(*fd_ptr);
+        return -1;
+    }
+
+    dev = st->st_dev;
+    ino = st->st_ino;
+
+    if (lstat(path, st) == -1) {
+        close(*fd_ptr);
+        return -1;
+    }
+
+    if ((st->st_dev != dev) || (st->st_ino != ino)) {
+         close(*fd_ptr);
+         *fd_ptr = -1;
+    }
+
+    return 0;
+}
+
+/*
  * chdir_no_follow
  *
  * parameters
@@ -3006,39 +3066,18 @@ opendir_with_fd(const char *path,
  *       0 on success
  *      -1 on error
  */
-static int chdir_no_follow(const char* dir_name)
+static int
+chdir_no_follow(const char* dir_name)
 {
     int fd;
-    dev_t dev;
-    ino_t ino;
     struct stat stat_buf;
 
-    fd = open(dir_name, O_RDONLY | O_NONBLOCK);
+    if (safe_open_no_follow(dir_name, &fd, &stat_buf)) {
+        return -1;
+    }
     if (fd == -1) {
+        /* symlink; bail */
         return -1;
-    }
-
-    if (fstat(fd, &stat_buf) == -1) {
-        close(fd);
-        return -1;
-    }
-
-    if (!S_ISDIR(stat_buf.st_mode)) {
-        close(fd);
-        return -1;
-    }
-
-    dev = stat_buf.st_dev;
-    ino = stat_buf.st_ino;
-
-    if (lstat(dir_name, &stat_buf) == -1) {
-        close(fd);
-        return -1;
-    }
-
-    if ((stat_buf.st_dev != dev) || (stat_buf.st_ino != ino)) {
-         close(fd);
-         return -1;
     }
 
     if (fchdir(fd) == -1) {

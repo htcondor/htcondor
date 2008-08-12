@@ -143,4 +143,6 @@ typedef int (*safe_dir_walk_func) (const char *path,
 int safe_dir_walk(const char *path, safe_dir_walk_func func, void *data,
                   int num_fds);
 
+int safe_open_no_follow(const char* path, int* fd_ptr, struct stat* st);
+
 #endif
