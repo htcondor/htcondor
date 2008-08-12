@@ -27,8 +27,7 @@ public:
 	bool reconfig();
 
 	int hookVanillaToGrid(RoutedJob* r_job);
-	bool hookJobExit(classad::ClassAd src, classad::ClassAd &dst);
-	bool hookUpdateJobInfo(classad::ClassAd src, classad::ClassAd &dst);
+	bool hookUpdateJobInfo(RoutedJob* r_job);
 
 private:
 
@@ -36,7 +35,6 @@ private:
 	bool m_hook_keyword_initialized;
 
 	char* m_hook_vanilla_to_grid;
-	char* m_hook_job_exit;
 	char* m_hook_update_job_info;
 
 	char* getHookPath(HookType hook_type);
@@ -51,12 +49,24 @@ public:
 
 	friend class JobRouterHookMgr;
 
-	TranslateClient(HookType hook_type, const char* hook_path, RoutedJob* r_job);
-	virtual ~TranslateClient();
+	TranslateClient(const char* hook_path, RoutedJob* r_job);
 	virtual void hookExited(int exit_status);
 
-	bool isDone();
-	classad::ClassAd* reply();
+protected:
+
+	RoutedJob* m_routed_job;
+
+};
+
+
+class StatusClient : public HookClient
+{
+public:
+
+	friend class JobRouterHookMgr;
+
+	StatusClient(const char* hook_path, RoutedJob* r_job);
+	virtual void hookExited(int exit_status);
 
 protected:
 
