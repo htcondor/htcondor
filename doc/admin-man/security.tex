@@ -184,8 +184,11 @@ a \DCPerm{READ} or both a
    \DCPerm{READ} and \DCPerm{WRITE} access.
 
 \item[\DCPerm{SOAP}] \label{sec-level-soap} This
-   access level is required for any party that will use the
-   Web Services (SOAP) interface to Condor.
+   access level is required for the authorization of any party that will 
+   use the Web Services (SOAP) interface to Condor.
+   It is not a general access level to be used with the variety
+   of configuration variables for authentication, encryption,
+   and integrity checks.
 
 \item[\DCPerm{CONFIG}] \label{sec-level-config} This access level is
    required to modify a daemon's configuration using
