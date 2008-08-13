@@ -372,6 +372,13 @@ a further command locates the port number to use:
 \end{verbatim}
 \normalsize
 
+Condor's security configuration must be set up such that 
+access is authorized for the SOAP client.
+See Section~\ref{sec:Security-Authorization}
+for information on how to set the
+\MacroNI{ALLOW\_SOAP} and \MacroNI{DENY\_SOAP} configuration variables.
+
+
 The API's routines can be roughly categorized into ones that
 deal with
 \begin{itemize}

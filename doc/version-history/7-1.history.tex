@@ -92,7 +92,19 @@ It now logs this under level \MacroNI{D\_ALWAYS} and ignores the ClassAd.
 
 \begin{itemize}
 
-\item None.
+\item Added \Procedure{formatTime}, a built-in ClassAd function to create a
+  formatted representation of the time.  A detailed description of this
+  function is available in section~\ref{sec:classadFunctions}, which
+  documents all of the available built-in ClassAd functions.
+
+\item Improved Condor's authentication handshake, so that daemons such
+as the \Condor{schedd}, which initiate connections to other daemons,
+spend less time waiting for responses.
+Authentication over high latency
+networks is still rather expensive in Condor, so it still may be
+necessary to scale up by running more \Condor{schedd} and \Condor{collector}
+daemons than one would need for equivalent workloads on a low latency network.
+Additional improvements in this area are planned.
 
 \end{itemize}
 
@@ -108,12 +120,19 @@ It now logs this under level \MacroNI{D\_ALWAYS} and ignores the ClassAd.
 
 \begin{itemize}
 
+\item Fixed a memory leak, introduced in Condor version 7.1.1, which caused the
+  \Condor{startd} daemon to grow without bound.
+
 % PR 945
 \item Fixed a bug in \Condor{dagman} that caused the user log file of
 the first node job in a DAG to get created with 0600 permissions,
-regardless of the user's umask.  (Note that this fix involved removing
+regardless of the user's umask.  Note that this fix involved removing
 the \Opt{-condorlog} and \Opt{-storklog} command-line arguments from
-\Condor{submit\_dag} and \Condor{dagman}.)
+\Condor{submit\_dag} and \Condor{dagman}.
+
+\item Fixed a problem from Condor version 7.1.1 that in some cases caused the
+\Condor{starter} to stop sending updates about the job status or
+to send updates too frequently.
 
 \end{itemize}
 

@@ -4759,17 +4759,20 @@ These settings affect the \Condor{starter}.
   \MacroUNI{<SUBSYS>\_DEBUG}.
 
 \item[\Macro{STARTER\_UPDATE\_INTERVAL}] \label{param:StarterUpdateInterval}
-The amount of time (in seconds) between ClassAd updates that the
-\Condor{starter} daemon sends to the \Condor{shadow} and \Condor{startd}
-daemons.  Defaults to 300 (5 minutes).
+  An integer value representing the number of seconds between 
+  ClassAd updates that the \Condor{starter} daemon sends to the 
+  \Condor{shadow} and \Condor{startd} daemons. 
+  Defaults to 300 (5 minutes).
 
 \item[\Macro{STARTER\_UPDATE\_INTERVAL\_TIMESLICE}]
-\label{param:StarterUpdateIntervalTimeslice} This specifies the
-highest fraction of time the starter should spend collecting
-monitoring information about the job, such as disk usage.  It defaults
-to 0.1.  If monitoring such as checking disk usage takes a long time,
-the starter will monitor less frequently than specified by
-\MacroNI{STARTER\_UPDATE\_INTERVAL}.
+  \label{param:StarterUpdateIntervalTimeslice} A floating point
+  value, specifying the highest fraction of time that the 
+  \Condor{starter} daemon should spend collecting
+  monitoring information about the job, such as disk usage.
+  The default  value is 0.1.  
+  If monitoring, such as checking disk usage takes a long time,
+  the \Condor{starter} will monitor less frequently than specified by
+  \MacroNI{STARTER\_UPDATE\_INTERVAL}.
 
 \item[\Macro{USER\_JOB\_WRAPPER}] \label{param:UserJobWrapper} 
   The full path to an executable or script.
@@ -6629,7 +6632,7 @@ The Gridmap file is used to map
 X.509 distinguished names to Condor user ids.
 
 \item[\Macro{SEC\_DEFAULT\_SESSION\_DURATION}]
-\label{param:SessionDuration} The amount of time in seconds before
+\label{param:SecDefaultSessionDuration} The amount of time in seconds before
 a communication session expires.
 Defaults to 86400 seconds (1 day).
 A session is a record of necessary information to do communication
