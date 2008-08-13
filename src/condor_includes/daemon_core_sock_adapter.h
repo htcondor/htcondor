@@ -90,7 +90,10 @@ class DaemonCoreSockAdapterClass {
                          Service*             s,
                          DCpermission         perm = ALLOW)
 	{
+dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCoreSockAdapterClass::Register_Socket() this=%p\n",this);
+dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCoreSockAdapterClass::Register_Socket() m_daemonCore=%p\n",m_daemonCore);
 		ASSERT(m_daemonCore);
+dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCoreSockAdapterClass::Register_Socket() 2\n");
 		return (m_daemonCore->*m_Register_Socket_fnptr)(iosock,iosock_descrip,handlercpp,handler_descrip,s,perm);
 	}
 

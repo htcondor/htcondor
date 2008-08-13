@@ -204,6 +204,7 @@ DCMsg::sockFailed( Sock *sock )
 
 DCMessenger::DCMessenger( classy_counted_ptr<Daemon> daemon )
 {
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::DCMessenger(): this=%p,daemon=%p\n",this,daemon.get());
 	m_daemon = daemon;
 	m_sock = NULL;
 	m_callback_msg = NULL;
@@ -213,7 +214,7 @@ DCMessenger::DCMessenger( classy_counted_ptr<Daemon> daemon )
 
 DCMessenger::DCMessenger( Sock *sock )
 {
-dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::DCMessenger(): this=%p\n",this);
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::DCMessenger(): this=%p,sock=%p\n",this,sock);
 	m_sock = sock;
 	m_callback_msg = NULL;
 	m_callback_sock = NULL;
@@ -408,6 +409,8 @@ dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 5\n");
 
 	incRefCount();
 dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 6\n");
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 6A: %s\n",peerDescription());
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 6B: %s\n",name.Value());
 
 	int reg_rc = daemonCoreSockAdapter.
 		Register_Socket( sock, peerDescription(),
