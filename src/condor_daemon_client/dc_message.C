@@ -406,6 +406,10 @@ dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 4\n");
 	MyString name;
 	name.sprintf("<%s>", msg->name());
 dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 5\n");
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 5A '%p'\n",msg->name());
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 5B '%s'\n",msg->name());
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 5C '%p'\n",name.Value());
+dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 5D '%s'\n",name.Value());
 
 	incRefCount();
 dprintf(D_ALWAYS,"DAN DEBUGGING: DCMessenger::startReceiveMsg(): 6\n");
