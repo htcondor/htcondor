@@ -1209,7 +1209,6 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
     int     i;
     int     j;
 
-dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() this=%p\n",this);
     // In sockTable, unlike the others handler tables, we allow for a NULL
 	// handler and a NULL handlercpp - this means a command socket, so use
 	// the default daemon core socket handler which strips off the command.
@@ -1223,7 +1222,6 @@ dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() this=%p\n",this);
 		return -1;
     }
 
-dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() 2\n");
 	i = nSock;
 
 	// Make certain that entry i is empty.
@@ -1233,7 +1231,6 @@ dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() 2\n");
 		EXCEPT("DaemonCore: Socket table messed up");
 	}
 
-dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() 3\n");
 	// Verify that this socket has not already been registered
 	int fd_to_register = ((Sock *)iosock)->get_file_desc();
 	for ( j=0; j < nSock; j++ )
@@ -1258,7 +1255,6 @@ dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() 3\n");
 		}
 	}
 
-dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() 4\n");
 		// Check that we are within the file descriptor safety limit
 		// We currently only do this for non-blocking connection attempts because
 		// in most other places, the code does not check the return value
@@ -1285,7 +1281,6 @@ dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() 4\n");
 		}
 	}
 
-dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() 5\n");
 	// Found a blank entry at index i. Now add in the new data.
 	(*sockTable)[i].call_handler = false;
 	(*sockTable)[i].iosock = (Sock *)iosock;
@@ -1308,20 +1303,17 @@ dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() 5\n");
 	(*sockTable)[i].perm = perm;
 	(*sockTable)[i].service = s;
 	(*sockTable)[i].data_ptr = NULL;
-dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() 6\n");
 	free_descrip((*sockTable)[i].iosock_descrip);
 	if ( iosock_descrip )
 		(*sockTable)[i].iosock_descrip = strdup(iosock_descrip);
 	else
 		(*sockTable)[i].iosock_descrip = EMPTY_DESCRIP;
-dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() 7\n");
 	free_descrip((*sockTable)[i].handler_descrip);
 	if ( handler_descrip )
 		(*sockTable)[i].handler_descrip = strdup(handler_descrip);
 	else
 		(*sockTable)[i].handler_descrip = EMPTY_DESCRIP;
 
-dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() 8\n");
 	// Increment the counter of total number of entries
 	nSock++;
 
@@ -1336,7 +1328,6 @@ dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() 8\n");
 	// Conditionally dump what our table looks like
 	DumpSocketTable(D_FULLDEBUG | D_DAEMONCORE);
 
-dprintf(D_ALWAYS,"DAN DEBUGGING: DaemonCore::Register_Socket() 9\n");
 	return i;
 }
 
