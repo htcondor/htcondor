@@ -348,22 +348,23 @@ Daemon::idStr( void )
 	} else {
 		dt_str = daemonString(_type);
 	}
-	char buf[128];
+	MyString buf;
 	if( _is_local ) {
-		sprintf( buf, "local %s", dt_str );
+		ASSERT( dt_str );
+		buf.sprintf( "local %s", dt_str );
 	} else if( _name ) {
-		sprintf( buf, "%s %s", dt_str, _name );
+		ASSERT( dt_str );
+		buf.sprintf( "%s %s", dt_str, _name );
 	} else if( _addr ) {
-		sprintf( buf, "%s at %s", dt_str, _addr );
+		ASSERT( dt_str );
+		buf.sprintf( "%s at %s", dt_str, _addr );
 		if( _full_hostname ) {
-			strcat( buf, " (" );
-			strcat( buf, _full_hostname );
-			strcat( buf, ")" );
+			buf.sprintf_cat( " (%s)", _full_hostname );
 		}
 	} else {
 		return "unknown daemon";
 	}
-	_id_str = strnewp( buf );
+	_id_str = strnewp( buf.Value() );
 	return _id_str;
 }
 
