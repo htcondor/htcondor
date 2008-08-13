@@ -52,10 +52,32 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item When \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} is defined to be false,
+\item When \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} is defined to be
+\Expr{False},
 this no longer results in machines in the Owner state being ignored
-during matchmaking.  Previously, even if \MacroNI{START} was true,
+during matchmaking.  Previously, even if \MacroNI{START} was \Expr{True},
 machines in the Owner state were disregarded.
+
+\item Setting \Attr{JobLeaseDuration} to be less than 15 minutes caused the
+\Condor{schedd} daemon to abort and restart the next time a
+\Condor{reconfig} command was executed.
+The error message in the \Condor{schedd} log appeared as:
+
+\footnotesize
+\begin{verbatim}
+ALIVE_INTERVAL in the condor configuration is too high (300).
+\end{verbatim}
+\normalsize
+
+\item Fixed a slow memory leak affecting the \Condor{startd},
+\Condor{schedd}, and \Condor{collector} daemons.  This leak would probably
+require many months of continuous operation before causing noticeable problems.
+
+\item Fixed a bug that caused a \Condor{schedd} daemon crash.
+The crash occurred during a fast shut down of the
+\Condor{schedd} daemon as it dealt with local universe
+jobs or with any job that required reconnection when
+the \Condor{schedd} daemon started up.
 
 \end{itemize}
 
@@ -132,12 +154,12 @@ job queue that works with the remote submission of jobs.
 
 \begin{itemize}
 
-\item Added configuration variable: \Expr{LOCK\_FILE\_UPDATE\_INTERVAL}.
+\item Added configuration variable: \Macro{LOCK\_FILE\_UPDATE\_INTERVAL}.
 Please see page~\pageref{param:LockFileUpdateInterval} for a complete
 description.
 
 \item Changed the default value of configuration variable
-\Expr{SEC\_DEFAULT\_SESSION\_DURATION} from 8640000 seconds (100 days)
+\Macro{SEC\_DEFAULT\_SESSION\_DURATION} from 8640000 seconds (100 days)
 to 86400 seconds (1 day).
 
 \end{itemize}
