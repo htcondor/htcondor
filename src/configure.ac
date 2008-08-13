@@ -171,6 +171,8 @@ elif test $os = "Linux" ; then
     _cv_arch="CONDOR_PPC"
   elif test $arch = "x86_64" ; then
     _cv_arch="X86_64"
+  elif test $arch = "mips64" ; then
+    _cv_arch="MIPS64"
   fi
 
   # next, figure out what linux distribution this is
@@ -199,6 +201,18 @@ elif test $os = "Linux" ; then
        AC_MSG_WARN([Condor is not yet ported to yellowdog version $_yd_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor])
        _cv_linux_distro="YD_UNKNOWN"
+       ;;
+    esac
+  elif test -f "/etc/gentoo-release" ; then
+    _gentoo_vers=`cat /etc/gentoo-release|$PERL -ne '/Gentoo Base System release (.*)/;print $1;'`
+    case "$_gentoo_vers" in
+     "1.12.11.1" )
+       _cv_linux_distro="GENTOO1.12.11.1"
+       ;;
+     * )
+       AC_MSG_WARN([Condor is not yet ported to gentoo version $_gentoo_vers])
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor])
+       _cv_linux_distro="GENTOO_UNKNOWN"
        ;;
     esac
   elif test -f "/etc/redhat-release" ; then
