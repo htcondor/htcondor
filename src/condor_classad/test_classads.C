@@ -142,12 +142,7 @@ public:
 
 	void PrintResults(void)
 	{
-		if (number_of_tests_failed == 0) {
-			printf("All %d tests passed.\n", number_of_tests);
-		} else {
-			printf("%d of %d tests failed.\n",
-				   number_of_tests_failed, number_of_tests);
-		}
+		printf("%d of %d tests passed.\n", number_of_tests_passed, number_of_tests);
 		return;
 	}
 
