@@ -237,7 +237,7 @@ char const *DCMessenger::peerDescription()
 		return m_daemon->idStr();
 	}
 	if( m_sock ) {
-		return m_sock->get_sinful_peer();
+		return m_sock->peer_description();
 	}
 	EXCEPT("No daemon or sock object in DCMessenger::peerDescription()");
 	return NULL;
@@ -286,7 +286,8 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg, Stream::stream_ty
 		&msg->m_errstack,
 		&DCMessenger::connectCallback,
 		this,
-		nonblocking );
+		nonblocking,
+		msg->name() );
 }
 
 void
@@ -297,7 +298,8 @@ DCMessenger::sendBlockingMsg( classy_counted_ptr<DCMsg> msg, Stream::stream_type
 		msg->m_cmd,
 		st,
 		timeout,
-		&msg->m_errstack);
+		&msg->m_errstack,
+		msg->name() );
 
 	if( !sock ) {
 		msg->callMessageSendFailed( this );
@@ -396,7 +398,7 @@ void DCMessenger::startReceiveMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 	msg->setMessenger( this );
 
 	MyString name;
-	name.sprintf("<%s>", msg->name());
+	name.sprintf("DCMessenger::receiveMsgCallback %s", msg->name());
 
 	incRefCount();
 

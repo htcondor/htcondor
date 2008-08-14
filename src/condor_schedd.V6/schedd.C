@@ -5310,7 +5310,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	if(!mrec) {
 		// The match must have gotten deleted during the time this
 		// operation was queued.
-		dprintf( D_FULLDEBUG, "no match record found for %s", args->claimId() );
+		dprintf( D_FULLDEBUG, "In contactStartd(): no match record found for %s", args->claimId() );
 		return;
 	}
 
@@ -5328,9 +5328,18 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		jobAd = GetJobAd( mrec->cluster, mrec->proc, true );
 	}
 	if( ! jobAd ) {
+		char const *reason = "find/expand";
+		if( !mrec->is_dedicated ) {
+			if( GetJobAd( mrec->cluster, mrec->proc, false ) ) {
+				reason = "expand";
+			}
+			else {
+				reason = "find";
+			}
+		}
 		dprintf( D_ALWAYS,
-				 "failed to find/expand job %d.%d after connecting to "
-				 "request claim %s\n", mrec->cluster, mrec->proc,
+				 "Failed to %s job %d.%d when starting to request claim %s\n",
+				 reason, mrec->cluster, mrec->proc,
 				 mrec->description() ); 
 		DelMrec( mrec );
 		return;

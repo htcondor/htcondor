@@ -417,6 +417,7 @@ Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking, bool ignore
 	}
 	ReliSock* reli;
 	reli = new ReliSock();
+	reli->set_peer_description(idStr());
 	if( sec ) {
 		reli->timeout( sec );
 		if( ignore_timeout_multiplier ) {
@@ -446,6 +447,7 @@ Daemon::safeSock( int sec, CondorError* errstack, bool non_blocking )
 	}
 	SafeSock* safe;
 	safe = new SafeSock();
+	safe->set_peer_description(idStr());
 	if( sec ) {
 		safe->timeout( sec );
 	}
@@ -464,7 +466,7 @@ Daemon::safeSock( int sec, CondorError* errstack, bool non_blocking )
 
 
 StartCommandResult
-Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char *version, SecMan *sec_man )
+Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *version, SecMan *sec_man )
 {
 	// This function may be either blocking or non-blocking, depending
 	// on the flag that is passed in.  All versions of Daemon::startCommand()
@@ -501,7 +503,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 		}
 	}
 
-	start_command_result = sec_man->startCommand(cmd, sock, other_side_can_negotiate, errstack, 0, callback_fn, misc_data, nonblocking);
+	start_command_result = sec_man->startCommand(cmd, sock, other_side_can_negotiate, errstack, 0, callback_fn, misc_data, nonblocking, cmd_description);
 
 	if(callback_fn) {
 		// SecMan::startCommand() called the callback function, so we just return here
@@ -514,7 +516,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 }
 
 StartCommandResult
-Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking )
+Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description )
 {
 	// This function may be either blocking or non-blocking, depending on
 	// the flag that was passed in.
@@ -553,17 +555,18 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 						 callback_fn,
 						 misc_data,
 						 nonblocking,
+						 cmd_description,
 						 _version,
 						 &_sec_man);
 }
 
 Sock*
-Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError* errstack )
+Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError* errstack, char const *cmd_description )
 {
 	// This is a blocking version of startCommand.
 	const bool nonblocking = false;
 	Sock *sock = NULL;
-	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,NULL,NULL,nonblocking);
+	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,NULL,NULL,nonblocking,cmd_description);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return sock;
@@ -581,30 +584,30 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError*
 }
 
 StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data )
+Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description )
 {
 	// This is a nonblocking version of startCommand.
 	const int nonblocking = true;
 	Sock *sock = NULL;
 	// We require that callback_fn be non-NULL. The startCommand() we call
 	// here does that check.
-	return startCommand(cmd,st,&sock,timeout,errstack,callback_fn,misc_data,nonblocking);
+	return startCommand(cmd,st,&sock,timeout,errstack,callback_fn,misc_data,nonblocking,cmd_description);
 }
 
 StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data )
+Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description )
 {
 	// This is the nonblocking version of startCommand().
 	const bool nonblocking = true;
-	return startCommand(cmd,sock,timeout,errstack,callback_fn,misc_data,nonblocking,_version,&_sec_man);
+	return startCommand(cmd,sock,timeout,errstack,callback_fn,misc_data,nonblocking,cmd_description,_version,&_sec_man);
 }
 
 bool
-Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack )
+Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description )
 {
 	// This is a blocking version of startCommand().
 	const bool nonblocking = false;
-	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,NULL,NULL,nonblocking,_version,&_sec_man);
+	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,NULL,NULL,nonblocking,cmd_description,_version,&_sec_man);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return true;
@@ -619,17 +622,17 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack )
 }
 
 bool
-Daemon::sendCommand( int cmd, Sock* sock, int sec, CondorError* errstack )
+Daemon::sendCommand( int cmd, Sock* sock, int sec, CondorError* errstack, char const *cmd_description )
 {
 	
-	if( ! startCommand( cmd, sock, sec, errstack )) {
+	if( ! startCommand( cmd, sock, sec, errstack, cmd_description )) {
 		return false;
 	}
 	if( ! sock->eom() ) {
-		char err_buf[256];
-		sprintf( err_buf, "Can't send eom for %d to %s", cmd,  
+		MyString err_buf;
+		err_buf.sprintf( "Can't send eom for %d to %s", cmd,  
 				 idStr() );
-		newError( CA_COMMUNICATION_ERROR, err_buf );
+		newError( CA_COMMUNICATION_ERROR, err_buf.Value() );
 		return false;
 	}
 	return true;
@@ -637,17 +640,17 @@ Daemon::sendCommand( int cmd, Sock* sock, int sec, CondorError* errstack )
 
 
 bool
-Daemon::sendCommand( int cmd, Stream::stream_type st, int sec, CondorError* errstack )
+Daemon::sendCommand( int cmd, Stream::stream_type st, int sec, CondorError* errstack, char const *cmd_description )
 {
-	Sock* tmp = startCommand( cmd, st, sec, errstack );
+	Sock* tmp = startCommand( cmd, st, sec, errstack, cmd_description );
 	if( ! tmp ) {
 		return false;
 	}
 	if( ! tmp->eom() ) {
-		char err_buf[256];
-		sprintf( err_buf, "Can't send eom for %d to %s", cmd,  
+		MyString err_buf;
+		err_buf.sprintf( "Can't send eom for %d to %s", cmd,  
 				 idStr() );
-		newError( CA_COMMUNICATION_ERROR, err_buf );
+		newError( CA_COMMUNICATION_ERROR, err_buf.Value() );
 		delete tmp;
 		return false;
 	}

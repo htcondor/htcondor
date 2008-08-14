@@ -69,7 +69,8 @@ Stream :: Stream(stream_code c) :
     _coding(stream_encode),
 	allow_empty_message_flag(FALSE),
 	decrypt_buf(NULL),
-	decrypt_buf_len(0)
+	decrypt_buf_len(0),
+	m_peer_description_str(NULL)
 {
 }
 
@@ -88,6 +89,7 @@ Stream :: ~Stream()
 	if( decrypt_buf ) {
 		free( decrypt_buf );
 	}
+	free(m_peer_description_str);
 }
 
 int 
@@ -2226,3 +2228,25 @@ Stream::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
     return inited;
 }
 
+char const *
+Stream::peer_description() {
+	if(m_peer_description_str) {
+		return m_peer_description_str;
+	}
+	char const *desc = default_peer_description();
+	if(!desc) {
+		return "(unknown peer)";
+	}
+	return desc;
+}
+
+void
+Stream::set_peer_description(char const *str) {
+	free(m_peer_description_str);
+	if(str) {
+		m_peer_description_str = strdup(str);
+	}
+	else {
+		m_peer_description_str = NULL;
+	}
+}

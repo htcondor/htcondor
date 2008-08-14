@@ -785,7 +785,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	SecManStartCommand (
 		int cmd,Sock *sock,bool can_negotiate,
 		CondorError *errstack,int subcmd,StartCommandCallbackType *callback_fn,
-		void *misc_data,bool nonblocking,SecMan *sec_man):
+		void *misc_data,bool nonblocking,char const *cmd_description,SecMan *sec_man):
 
 		m_cmd(cmd),
 		m_subcmd(subcmd),
@@ -808,6 +808,15 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		m_state = SendAuthInfo;
 		m_enc_key = NULL;
 		m_private_key = NULL;
+		if(cmd_description) {
+			m_cmd_description = cmd_description;
+		}
+		else {
+			cmd_description = getCommandString(m_cmd);
+			if(cmd_description) {
+				m_cmd_description = cmd_description;
+			}
+		}
 	}
 
 	~SecManStartCommand() {
@@ -851,6 +860,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
  private:
 	int m_cmd;
 	int m_subcmd;
+	MyString m_cmd_description;
 	Sock *m_sock;
 	bool m_can_negotiate;
 	CondorError* m_errstack; // caller's errstack, if any, o.w. internal
@@ -927,7 +937,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 };
 
 StartCommandResult
-SecMan::startCommand( int cmd, Sock* sock, bool can_neg, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking)
+SecMan::startCommand( int cmd, Sock* sock, bool can_neg, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description)
 {
 	// This function is simply a convenient wrapper around the
 	// SecManStartCommand class, which does the actual work.
@@ -936,7 +946,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_neg, CondorError* errstack, 
 	// The blocking case could avoid use of the heap, but for simplicity,
 	// we just do the same in both cases.
 
-	classy_counted_ptr<SecManStartCommand> sc = new SecManStartCommand(cmd,sock,can_neg,errstack,subcmd,callback_fn,misc_data,nonblocking,this);
+	classy_counted_ptr<SecManStartCommand> sc = new SecManStartCommand(cmd,sock,can_neg,errstack,subcmd,callback_fn,misc_data,nonblocking,cmd_description,this);
 
 	ASSERT(sc.get());
 
@@ -1962,6 +1972,7 @@ SecManStartCommand::DoTCPAuth_inner()
 		m_nonblocking ? SecManStartCommand::TCPAuthCallback : NULL,
 		m_nonblocking ? this : NULL,
 		m_nonblocking,
+		m_cmd_description.Value(),
 		&m_sec_man);
 
 	StartCommandResult auth_result = m_tcp_auth_command->startCommand();
@@ -2083,12 +2094,14 @@ SecManStartCommand::ResumeAfterTCPAuth(bool auth_succeeded)
 StartCommandResult
 SecManStartCommand::WaitForSocketCallback()
 {
-
+	MyString req_description;
+	req_description.sprintf("SecManStartCommand::WaitForSocketCallback %s",
+							m_cmd_description.Value());
 	int reg_rc = daemonCoreSockAdapter.Register_Socket(
 		m_sock,
-		"<SecManStartCommand::WaitForSocketCallback>",
+		m_sock->peer_description(),
 		(SocketHandlercpp)&SecManStartCommand::SocketCallback,
-		m_sock->get_sinful_peer(),
+		req_description.Value(),
 		this,
 		ALLOW);
 

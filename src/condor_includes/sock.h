@@ -219,7 +219,7 @@ public:
 	char * get_sinful_peer();
 
 	/// sinful address of peer, suitable for passing to dprintf() (never NULL)
-	virtual char const *peer_description();
+	virtual char const *default_peer_description();
 
 	/// local file descriptor (fd) of this socket
 	int get_file_desc() { return _sock; }

@@ -500,9 +500,15 @@ public:
 	/// For stream types that support it, this returns the ip address we are connecting to.
 	virtual char const *endpoint_ip_str() = 0;
 
+	/// For stream types that support it, this is the sinful address of peer.
+	virtual char const *default_peer_description() = 0;
+
 	/// For stream types that support it, this is the sinful address of peer
+	/// or a more descriptive string assigned by set_peer_description().
 	/// This is suitable for passing to dprintf() (never NULL).
-	virtual char const *peer_description() = 0;
+	char const *peer_description();
+
+	void set_peer_description(char const *str);
 
 	/** Get this stream's type.
         @return the type of this stream
@@ -651,6 +657,7 @@ protected:
 
 	char *decrypt_buf;
 	int decrypt_buf_len;
+	char *m_peer_description_str;
 };
 
 

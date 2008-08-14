@@ -1705,7 +1705,7 @@ Sock::get_sinful_peer()
 }
 
 char const *
-Sock::peer_description()
+Sock::default_peer_description()
 {
 	char const *retval = get_sinful_peer();
 	if( !retval ) {

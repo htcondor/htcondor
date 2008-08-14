@@ -102,7 +102,7 @@ public:
 		// spawn off a non-blocking attempt to create a security
 		// session so that in the future, a UDP command could succeed
 		// without StartCommandWouldBlock.
-	StartCommandResult startCommand( int cmd, Sock* sock, bool can_neg, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking);
+	StartCommandResult startCommand( int cmd, Sock* sock, bool can_neg, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description);
 
 		// Authenticate a socket using whatever authentication methods
 		// have been configured for the specified perm level.

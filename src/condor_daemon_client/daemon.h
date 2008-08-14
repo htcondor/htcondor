@@ -297,7 +297,8 @@ public:
 		  */
 	bool sendCommand( int cmd, 
 					   Stream::stream_type st = Stream::reli_sock,
-					   int sec = 0, CondorError* errstack = NULL );
+					   int sec = 0, CondorError* errstack = NULL,
+					  char const *cmd_description=NULL );
 	
 		/** Send the given command to the daemon.  The caller gives
 		  the command they want to send, a pointer to the Sock they
@@ -311,7 +312,7 @@ public:
 		  @param sec The timeout you want to use on your Sock.
 		  @return Success or failure.
 		  */
-	bool sendCommand( int cmd, Sock* sock, int sec = 0, CondorError* errstack = NULL );
+	bool sendCommand( int cmd, Sock* sock, int sec = 0, CondorError* errstack = NULL, char const *cmd_description=NULL );
 
 		/** Start sending the given command to the daemon.  The caller
 		  gives the command they want to send, and the type of Sock
@@ -329,7 +330,8 @@ public:
 		  */
 	Sock* startCommand( int cmd, 
 				Stream::stream_type st = Stream::reli_sock,
-				int sec = 0, CondorError* errstack = NULL );
+				int sec = 0, CondorError* errstack = NULL,
+				char const *cmd_description = NULL );
 	
 		/** Start sending the given command to the daemon.  The caller
 		  gives the command they want to send, and a pointer to the
@@ -344,7 +346,8 @@ public:
 		  @return false on error, true on success.
 		*/
 	bool startCommand( int cmd, Sock* sock,
-			int sec = 0, CondorError* errstack = NULL );
+			int sec = 0, CondorError* errstack = NULL,
+			char const *cmd_description=NULL );
 			
 		/** Start sending the given command to the daemon.  This
 			command claims to be nonblocking, but currently it only
@@ -374,7 +377,7 @@ public:
 			@param misc_data any data caller wants passed to callback_fn
 			@return see definition of StartCommandResult enumeration.
 		  */
-	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data );
+	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL );
 
 		/** Start sending the given command to the daemon.  This
 			command claims to be nonblocking, but currently it only
@@ -403,7 +406,7 @@ public:
 			@param misc_data any data caller wants passed to callback_fn
 			@return see definition of StartCommandResult enumeration.
 		*/
-	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data );
+	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL );
 
 		/**
 		 * Asynchronously send a message (command + whatever) to the
@@ -674,7 +677,7 @@ protected:
 		   It may be either blocking or nonblocking, depending on the
 		   nonblocking flag.  This version uses an existing socket.
 		 */
-	static StartCommandResult startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char *version, SecMan *sec_man );
+	static StartCommandResult startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *version, SecMan *sec_man );
 
 		/**
 		   Internal function used by public versions of startCommand().
@@ -682,7 +685,7 @@ protected:
 		   nonblocking flag.  This version creates a socket of the
 		   specified type and connects it.
 		 */
-	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking );
+	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description=NULL );
 
 		/**
 		   Class used internally to handle non-blocking connects for
