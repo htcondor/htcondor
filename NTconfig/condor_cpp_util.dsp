@@ -167,6 +167,14 @@ SOURCE="..\src\condor_c++_util\classad_namedlist.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\classad_visa.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\classad_visa.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\command_strings.C"
 # End Source File
 # Begin Source File
