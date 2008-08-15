@@ -181,6 +181,8 @@ public:
 	friend class DCMessenger;
 private:
 	int m_cmd;
+	char const *m_cmd_str;
+	MyString m_cmd_str_buf;
 	classy_counted_ptr<DCMsgCallback> m_cb;
 	int m_msg_success_debug_level;
 	int m_msg_failure_debug_level;

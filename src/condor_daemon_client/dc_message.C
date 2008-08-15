@@ -27,6 +27,7 @@
 
 DCMsg::DCMsg(int cmd) {
 	m_cmd = cmd;
+	m_cmd_str = NULL;
 	m_msg_success_debug_level = D_FULLDEBUG;
 	m_msg_failure_debug_level = (D_ALWAYS|D_FAILURE);
 	m_delivery_status = DELIVERY_PENDING;
@@ -60,7 +61,15 @@ DCMsg::doCallback()
 char const *
 DCMsg::name()
 {
-	return getCommandString( m_cmd );
+	if( m_cmd_str ) {
+		return m_cmd_str;
+	}
+	m_cmd_str = getCommandString( m_cmd );
+	if( !m_cmd_str ) {
+		m_cmd_str_buf.sprintf("command %d",m_cmd);
+		m_cmd_str = m_cmd_str_buf.Value();
+	}
+	return m_cmd_str;
 }
 
 void
@@ -163,7 +172,7 @@ void
 DCMsg::reportSuccess( DCMessenger *messenger )
 {
 	dprintf( m_msg_success_debug_level, "Sent %s to %s\n",
-			 getCommandString( m_cmd),
+			 name(),
 			 messenger->peerDescription() );
 }
 
@@ -171,7 +180,7 @@ void
 DCMsg::reportFailure( DCMessenger *messenger )
 {
 	dprintf( m_msg_failure_debug_level, "Failed to send %s to %s: %s\n",
-			 getCommandString( m_cmd ),
+			 name(),
 			 messenger->peerDescription(),
 			 m_errstack.getFullText() );
 }

@@ -816,6 +816,9 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 			if(cmd_description) {
 				m_cmd_description = cmd_description;
 			}
+			else {
+				m_cmd_description.sprintf("command %d",m_cmd);
+			}
 		}
 	}
 
