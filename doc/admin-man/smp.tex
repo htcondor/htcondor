@@ -37,7 +37,7 @@ All shared system resources (like RAM, disk space, swap space, etc.)
 can either be divided evenly among all the slots, with each
 CPU getting its own slot, or you can define your own
 \Term{slot types}, so that resources can be unevenly
-partitioned.  Regardless of the partioning scheme used, it is important
+partitioned.  Regardless of the partitioning scheme used, it is important
 to remember the goal is to create a representative slot
 ClassAd, to be used for matchmaking with jobs.  Condor does not
 directly enforce slot shared resource allocations, and jobs
@@ -423,9 +423,9 @@ a 2-CPU machine with no Condor activity, and the keyboard connected to
 both slots:
 \begin{verbatim}
 11/25 18:15 Swap space: 131064
-11/25 18:15 number of kbytes available for (/home/condor/execute): 1345063
+11/25 18:15 number of Kbytes available for (/home/condor/execute): 1345063
 11/25 18:15 Looking up RESERVED_DISK parameter
-11/25 18:15 Reserving 5120 kbytes for file system
+11/25 18:15 Reserving 5120 Kbytes for file system
 11/25 18:15 Disk space: 1339943
 11/25 18:15 Load avg: 0.340000 0.800000 1.170000
 11/25 18:15 Idle Time: user= 0 , console= 4 seconds
@@ -460,10 +460,10 @@ average or state of each slot) get the special header appended.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-exprs}
-Configuring STARTD\_EXPRS on a per-slot basis}
+Configuring STARTD\_ATTRS on a per-slot basis}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The \Expr{STARTD\_ATTRS} (and legacy \Expr{STARTD\_EXPRS}) settings
+The \Macro{STARTD\_ATTRS} (and legacy \MacroNI{STARTD\_EXPRS}) settings
 can be configured on a per-slot basis.
 The \Condor{startd} daemon builds the list of items to
 advertise by combining the lists in this order:
@@ -476,9 +476,9 @@ advertise by combining the lists in this order:
 
 For example, consider the following configuration:
 \begin{verbatim}
-STARTD_EXPRS = favorite_color, favorite_season
-SLOT1_STARTD_EXPRS = favorite_movie
-SLOT2_STARTD_EXPRS = favorite_song
+STARTD_ATTRS = favorite_color, favorite_season
+SLOT1_STARTD_ATTRS = favorite_movie
+SLOT2_STARTD_ATTRS = favorite_song
 \end{verbatim}
 
 This will result in the \Condor{startd} ClassAd for
@@ -488,15 +488,14 @@ and \Attr{favorite\_movie}.
 slot2 will have values for
 \Attr{favorite\_color}, \Attr{favorite\_season}, and \Attr{favorite\_song}.
 
-Attributes themselves in the \Expr{STARTD\_EXPRS}
-and \Expr{STARTD\_ATTRS} list
+Attributes themselves in the \Expr{STARTD\_ATTRS} list
 can also be defined on a per-slot basis.
 Here is another example:
 
 \begin{verbatim}
 favorite_color = "blue"
 favorite_season = "spring"
-STARTD_EXPRS = favorite_color, favorite_season
+STARTD_ATTRS = favorite_color, favorite_season
 SLOT2_favorite_color = "green"
 SLOT3_favorite_season = "summer"
 \end{verbatim}

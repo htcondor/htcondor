@@ -447,9 +447,9 @@ The cause of each transition is described below.
 
 \item[D] The transition from Unclaimed directly to Claimed also happens
   if the \Condor{negotiator} matches this resource with a Condor job.
-  In this case the \Condor{schedd} recieves the match and initiates
+  In this case the \Condor{schedd} receives the match and initiates
   the claiming protocol with the machine before the \Condor{startd}
-  recieves the match notification from the \Condor{negotiator}.
+  receives the match notification from the \Condor{negotiator}.
 
 \item[E] The transition from Unclaimed to Backfill happens if the
   machine is configured to run backfill computations (see
@@ -464,7 +464,7 @@ The cause of each transition is described below.
 \begin{description}
 
 \item[F] The machine moves from Matched to Owner if either the
-  \Expr{START} expression locally evalutes to FALSE, or if the 
+  \Expr{START} expression locally evaluates to FALSE, or if the 
   \Macro{MATCH\_TIMEOUT} timer expires.
   This timeout is used to ensure that if a machine is matched with a
   given \Condor{schedd}, but that \Condor{schedd} does not contact the
@@ -478,7 +478,7 @@ The cause of each transition is described below.
   \Condor{schedd} attempts to perform the claiming protocol but
   encounters some sort of error.
   Finally, the machine will move into the Owner state if the
-  \Condor{startd} recieves a \Condor{vacate} command while it is in
+  \Condor{startd} receives a \Condor{vacate} command while it is in
   the Matched state.
 
 \item[G] The transition from Matched to Claimed occurs when the
@@ -520,7 +520,7 @@ The cause of each transition is described below.
 
 \item[J] The resource will move from Preempting to Owner if the
   \Expr{PREEMPT} expression had evaluated to TRUE, if \Condor{vacate}
-  was used, or if the \Expr{START} expression locally evalutes to
+  was used, or if the \Expr{START} expression locally evaluates to
   FALSE when the \Condor{startd} has finished evicting whatever job it
   was running when it entered the Preempting state.
 
@@ -534,7 +534,7 @@ The cause of each transition is described below.
 \item[K] The resource will move from Backfill to Owner for the
   following reasons:
   \begin{itemize}
-  \item The \Expr{EVICT\_BACKFILL} expression evalutes to TRUE
+  \item The \Expr{EVICT\_BACKFILL} expression evaluates to TRUE
   \item The \Condor{startd} receives a \Condor{vacate} command
   \item The \Condor{startd} is being shutdown
   \end{itemize}
@@ -1101,9 +1101,9 @@ For the Claimed/Retiring state, the following transitions may occur:
 
 \begin{description}
 
-\item[Preempting] If the job finishes or the job's runtime exceeds
+\item[Preempting] If the job finishes or the job's run time exceeds
 \Expr{MaxJobRetirementTime}, the Preempting state is entered
-(transition \Bold{18}).  The runtime is computed from the time when the
+(transition \Bold{18}).  The run time is computed from the time when the
 job was started by the startd minus any suspension time.  (When retiring
 due to startd shutdown or restart, it is possible for the admin to issue a
 ``peaceful'' shutdown command, which causes \Expr{MaxJobRetirementTime}
@@ -1205,7 +1205,7 @@ backfill computation, if a specific backfill manager has been
 installed and configured, and if the machine is otherwise idle (not
 being used interactively or for regular Condor computations).
 If the machine meets all these requirements, and the
-\Expr{START\_BACKFILL} expression evalutes to TRUE, the machine will
+\Expr{START\_BACKFILL} expression evaluates to TRUE, the machine will
 move from the Unclaimed/Idle state to Backfill/Idle (transition
 \Bold{7}).
 
@@ -1955,10 +1955,6 @@ CPU may be adapted from this example.  Instead of having 2 slots,
 you would have 2 times the number of physical CPUs.  Half of the slots
 would be for high priority jobs and the other half would be for suspendable
 jobs.
-
-Section~\ref{sec:Startd-Config-File-Entries} contains details of
-the \Macro{STARTD\_SLOT\_EXPRS} configuration macro,
-utilized in this policy example.
 
 \footnotesize
 \begin{verbatim}
