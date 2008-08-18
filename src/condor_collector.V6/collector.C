@@ -407,6 +407,14 @@ CollectorDaemon::receive_query_public( int command )
 		whichAds = MATCH_MAKER_AD;
 		break;
 
+#   if 0
+		// This is disabled because QUERY_GENERIC_ADS == QUERY_ANY_ADS
+	  case QUERY_GENERIC_ADS:
+		dprintf (D_FULLDEBUG,"Got QUERY_GENERIC_ADS\n");
+		whichAds = MATCH_MAKER_AD;
+		break;
+#   endif
+
 	  case QUERY_ANY_ADS:
 		dprintf (D_FULLDEBUG,"Got QUERY_ANY_ADS\n");
 		whichAds = ANY_AD;

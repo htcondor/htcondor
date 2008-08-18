@@ -105,6 +105,7 @@ main (int argc, char *argv[])
 		fprintf (stderr, "Error:  Out of memory\n");
 		exit (1);
 	}
+	printf( "Type = %d\n", type );
 
 	// set pretty print style implied by the type of entity being queried
 	// but do it with default priority, so that explicitly requested options
@@ -145,12 +146,12 @@ main (int argc, char *argv[])
 		setPPstyle(PP_NEGOTIATOR_NORMAL, 0, DEFAULT);
 		break;
 
-	  case ANY_AD:
-		setPPstyle(PP_ANY_NORMAL, 0, DEFAULT);
-		break;
-
 	  case GENERIC_AD:
 		setPPstyle(PP_GENERIC, 0, DEFAULT);
+		break;
+
+	  case ANY_AD:
+		setPPstyle(PP_ANY_NORMAL, 0, DEFAULT);
 		break;
 
 	  default:
@@ -171,10 +172,11 @@ main (int argc, char *argv[])
 	  case MODE_COLLECTOR_NORMAL:
 	  case MODE_NEGOTIATOR_NORMAL:
 	  case MODE_STORAGE_NORMAL:
+	  case MODE_GENERIC_NORMAL:
 	  case MODE_ANY_NORMAL:
 		break;
 
-	  case MODE_GENERIC:
+	  case MODE_OTHER:
 			// tell the query object what the type we're querying is
 		query->setGenericQueryType(genericType);
 		free(genericType);
@@ -291,8 +293,9 @@ main (int argc, char *argv[])
 		case MODE_COLLECTOR_NORMAL:
 		case MODE_LICENSE_NORMAL:
 		case MODE_STORAGE_NORMAL:
-		case MODE_GENERIC:
+		case MODE_GENERIC_NORMAL:
 		case MODE_ANY_NORMAL:
+		case MODE_OTHER:
 				// These have to go to the collector, anyway.
 			break;
 		default:
@@ -387,6 +390,7 @@ usage ()
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
+		"\t-generic\t\t\tDisplay attributes of 'generic' ads\n"
 		"\t-subsystem <type>\t\tDisplay classads of the given type\n"
 		"\t-negotiator\t\tDisplay negotiator attributes\n"
 		"\t-storage\t\tDisplay network storage resources\n"
@@ -572,6 +576,9 @@ firstPass (int argc, char *argv[])
 			if (matchPrefix (argv[i], "collector", 9)) {
 				setMode (MODE_COLLECTOR_NORMAL, i, argv[i]);
 			} else
+			if (matchPrefix (argv[i], "generic", 7)) {
+				setMode (MODE_GENERIC_NORMAL, i, argv[i]);
+			} else
 			if (*argv[i] == '-') {
 				fprintf(stderr, "%s: -subsystem requires another argument\n",
 						myName);
@@ -579,7 +586,7 @@ firstPass (int argc, char *argv[])
 				exit(1);
 			} else {
 				genericType = strdup(argv[i]);
-				setMode (MODE_GENERIC, i, argv[i]);
+				setMode (MODE_OTHER, i, argv[i]);
 			}
 		} else
 #ifdef WANT_QUILL 
@@ -595,6 +602,9 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-negotiator", 2)) {
 			setMode (MODE_NEGOTIATOR_NORMAL, i, argv[i]);
+		} else
+		if (matchPrefix (argv[i], "-generic", 3)) {
+			setMode (MODE_GENERIC_NORMAL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-any", 3)) {
 			setMode (MODE_ANY_NORMAL, i, argv[i]);
@@ -742,8 +752,9 @@ secondPass (int argc, char *argv[])
   			  case MODE_NEGOTIATOR_NORMAL:
 			  case MODE_STORAGE_NORMAL:
 			  case MODE_ANY_NORMAL:
-			  case MODE_GENERIC:
+			  case MODE_GENERIC_NORMAL:
     		  case MODE_STARTD_AVAIL:
+    		  case MODE_OTHER:
 				sprintf(buffer,"(TARGET.%s==\"%s\") || (TARGET.%s==\"%s\")", 
 						 ATTR_NAME, daemonname, ATTR_MACHINE, daemonname );
 				if (diagnose) {

@@ -137,6 +137,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				printStorageNormal(ad);
 				break;
 
+			  case PP_GENERIC_NORMAL:
 			  case PP_GENERIC:
 			  case PP_ANY_NORMAL:
 				printAnyNormal(ad);

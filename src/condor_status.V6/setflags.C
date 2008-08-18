@@ -45,7 +45,8 @@ getPPStyleStr ()
     	case PP_STARTD_COD:		return "COD";
 		case PP_STARTD_STATE:	return "State";
 		case PP_STORAGE_NORMAL:	return "Storage";
-		case PP_ANY_NORMAL:	return "Any";
+		case PP_GENERIC_NORMAL:	return "Generic";
+		case PP_ANY_NORMAL:		return "Any";
     	case PP_VERBOSE:		return "Verbose";
     	case PP_XML:		    return "XML";
     	case PP_CUSTOM:			return "Custom";
@@ -163,12 +164,12 @@ setType (char *dtype, int i, char *argv)
         } else
         if (strcmp (dtype, "STORAGE") == 0) {
             type = STORAGE_AD;
-        } else
-        if (strcmp(dtype, "ANY") == 0) {
-            type = ANY_AD;
 		} else
 		if (strcmp(dtype, "GENERIC") == 0) {
 			type = GENERIC_AD;
+        } else
+        if (strcmp(dtype, "ANY") == 0) {
+            type = ANY_AD;
         } else {
             fprintf (stderr, "Error:  Unknown entity type: %s\n", dtype);
             exit (1);
@@ -188,7 +189,6 @@ getModeStr()
 	switch (mode)
 	{
 		case MODE_NOTSET:				return "Not set";
-		case MODE_GENERIC:				return "Generic";
 		case MODE_STARTD_NORMAL:		return "Normal (Startd)";
 		case MODE_STARTD_AVAIL:			return "Available (Startd)";
 		case MODE_STARTD_RUN:			return "Run (Startd)";
@@ -203,7 +203,9 @@ getModeStr()
 		case MODE_CKPT_SRVR_NORMAL:		return "Normal (CkptSrvr)";
 		case MODE_COLLECTOR_NORMAL:		return "Normal (Collector)";
 	    case MODE_NEGOTIATOR_NORMAL:	return "Normal (Negotiator)";
-		case MODE_STORAGE_NORMAL:			return "Normal (Storage)";
+		case MODE_STORAGE_NORMAL:		return "Normal (Storage)";
+		case MODE_GENERIC_NORMAL:		return "Normal (Generic)";
+		case MODE_OTHER:				return "Generic";
 		case MODE_ANY_NORMAL:			return "Normal (Any)";
 		default:				return "<Unknown!>";
 	}
@@ -293,12 +295,17 @@ setMode (Mode mod, int i, char *argv)
 			setPPstyle (PP_STORAGE_NORMAL, i, argv);
 			break;
 
+		  case MODE_GENERIC_NORMAL:
+			setType ("GENERIC", i, argv);
+			setPPstyle (PP_GENERIC_NORMAL, i, argv);
+			break;
+
 		  case MODE_ANY_NORMAL:
 			setType ("ANY", i, argv);
 			setPPstyle (PP_ANY_NORMAL, i, argv);
 			break;
 
-		  case MODE_GENERIC:
+		  case MODE_OTHER:
 			setType ("GENERIC", i, argv);
 			setPPstyle (PP_GENERIC, i, argv);
 			break;

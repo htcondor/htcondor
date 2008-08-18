@@ -282,6 +282,7 @@ const int UPDATE_MATCH_MAKER_AD	= 63;
 const int QUERY_MATCH_MAKER_ADS	= 64;
 const int INVALIDATE_MATCH_MAKER_ADS  = 65;
 
+const int QUERY_GENERIC_ADS = QUERY_ANY_ADS;	// == 48
 
 /*
 *** Daemon Core Signals
