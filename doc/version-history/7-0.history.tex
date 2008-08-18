@@ -94,6 +94,12 @@ the \Condor{schedd} daemon started up.
 \Attr{JobRunCount} attribute in the job ClassAd when an attempt to run
 the job was made.  This problem was introduced in 6.9.5.
 
+\item Some rare types of failures during file transfer caused the
+Condor daemon conducting the transfer to hang indefinitely.  For
+example, if the file transfer process created by the \Condor{schedd}
+was killed by an administrator or crashed due to an internal error,
+the \Condor{schedd} would become unresponsive.
+
 \end{itemize}
 
 \noindent Known Bugs:
