@@ -42,12 +42,15 @@ MatchMaker	*match_maker;
 
 int main_init(int argc, char *argv[])
 {
-	(void) argc;
-	(void) argv;
 	dprintf(D_ALWAYS, "main_init() called\n");
 
+	const char	*name = NULL;
+	if ( (argc > 1)  &&  (*argv[1] != '-') ) {
+		name = argv[1];
+	}
+
 	match_maker = new MatchMaker;
-	match_maker->init( );
+	match_maker->init( name );
 
 
 	return TRUE;

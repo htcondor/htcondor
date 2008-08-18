@@ -125,17 +125,17 @@ int main( int argc, char* argv[] )
 {
 	config();
 
-	if ( argc < 3 ) {
+	if ( argc < 4 ) {
 		fprintf( stderr,
-				 "usage: match_maker_test name lease-count duration"
-				 " [runtime] [max leases] [perf-file] [req] [attr=val]..\n" );
+				 "usage: match_maker_test name max-leases duration"
+				 " [runtime] [# leases/req] [perf-file] [req] [attr=val]..\n");
 		exit( 1 );
 	}
 	char		*name = argv[1];
-	int			lease_req_count = atoi( argv[2] );
+	unsigned	max_leases = (unsigned) atoi( argv[2] );
+	int			lease_req_count = 1 + (max_leases / 10);
 	int			duration = atoi( argv[3] );
-	int			runtime = duration * 2;
-	unsigned	max_leases = (unsigned) lease_req_count * 10;
+	int			runtime = duration * 5;
 	char		*requirements = NULL;
 	char		*perf_file = NULL;
 
@@ -147,7 +147,7 @@ int main( int argc, char* argv[] )
 	if ( argc >= 6 ) {
 		int		t = -1;
 		t = atoi( argv[5] );
-		if ( t > 0 ) max_leases = t;
+		if ( t > 0 ) lease_req_count = t;
 	}
 	if ( argc >= 7 ) {
 		if ( *argv[6] != '-' ) {
@@ -159,6 +159,12 @@ int main( int argc, char* argv[] )
 			requirements = argv[7];
 		}
 	}
+
+	printf( "My name is '%s'\n", name );
+	printf( "Requesting %u leases / round (duration %ds), max of %u\n",
+			lease_req_count, duration, max_leases );
+	printf( "Running for %d seconds, perf file: '%s', req: '%s'\n",
+			runtime, perf_file, requirements );
 
 	// Install handlers
 	signal( SIGINT, handler); 

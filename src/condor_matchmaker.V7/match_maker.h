@@ -35,16 +35,26 @@ using namespace std;
 #endif
 #include "classad/classad_distribution.h"
 
+
+class MatchMakerIntervalTimer;
+
 class MatchMaker : public Service
 {
+	friend class MatchMakerIntervalTimer;
+
   public:
 	// ctor/dtor
 	MatchMaker( void );
 	~MatchMaker( void );
-	int init( void );
-	int config( bool init = false );
+	int init( const char *name = NULL );
+	int config( void );
 	int shutdownFast(void);
 	int shutdownGraceful(void);
+
+  protected:
+	bool ParamInt( const char *param_name, int &value,
+				   int default_value,
+				   int min_value = INT_MIN, int max_value = INT_MAX );
 
   private:
 	// Command handlers
@@ -70,18 +80,25 @@ class MatchMaker : public Service
 		list<MatchMakerLease *>			&lease_list
 		);
 
-	CollectorList*				m_Collectors;
+	CollectorList*				m_collectorList;
 	MatchMakerResources			m_resources;
 	ClassAd						m_publicAd;
-	char						*m_my_name;
-	int							m_MaxAds;
+	char						*m_myName;
 
-	int m_TimerId_GetAds;
-	int m_Interval_GetAds;
-	int m_TimerId_Update;
-	int m_Interval_Update;
-	int m_TimerId_Prune;
-	int m_Interval_Prune;
+	// Details on how to query the collector
+	AdTypes						m_queryAdtypeNum;
+	string						m_queryAdtypeStr;
+	string						m_queryConstraints;
+
+	MatchMakerIntervalTimer		*m_GetAdsTimer;
+	MatchMakerIntervalTimer		*m_UpdateTimer;
+	MatchMakerIntervalTimer		*m_PruneTimer;
+	int							m_TimerId_GetAds;
+	int							m_Interval_GetAds;
+	int							m_TimerId_Update;
+	int							m_Interval_Update;
+	int							m_TimerId_Prune;
+	int							m_Interval_Prune;
 };
 
 

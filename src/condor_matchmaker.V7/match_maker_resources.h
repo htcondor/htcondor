@@ -47,9 +47,9 @@ struct MatchMakerLeaseEnt
 struct MatchMakerStats
 {
 	int			m_num_resources;
-	int			m_num_xfer_records;
-	int			m_num_valid_xfers;
-	int			m_num_busy_xfers;
+	int			m_num_lease_records;
+	int			m_num_valid_leases;
+	int			m_num_busy_leases;
 };
 
 class MatchMakerResources
@@ -121,14 +121,14 @@ class MatchMakerResources
 	void setAdDebug(
 		bool						enable = false
 		);
-	void setMaxLease(
+	void setMaxLeaseDuration(
 		int							max
 		);
-	void setMaxLeaseTotal(
+	void setMaxLeaseTotalDuration(
 		int							max
 		);
-	void setDefaultMaxLease(
-		int							def
+	void setDefaultMaxLeaseDuration(
+		int							default_max
 		);
 
   private:
@@ -181,7 +181,7 @@ class MatchMakerResources
 	// Other lease maniuplations
 	int SetLeaseStates(
 		const string				&resource_name,
-		int							resource_transfers,
+		int							max_resource_leases,
 		classad::ClassAd			&leases_ad,
 		int							&lease_count
 		);

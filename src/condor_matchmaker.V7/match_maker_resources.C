@@ -45,9 +45,9 @@ MatchMakerResources::MatchMakerResources( void )
 	m_collection_log = NULL;
 
 	m_stats.m_num_resources = 0;
-	m_stats.m_num_xfer_records = 0;
-	m_stats.m_num_valid_xfers = 0;
-	m_stats.m_num_busy_xfers = 0;
+	m_stats.m_num_lease_records = 0;
+	m_stats.m_num_valid_leases = 0;
+	m_stats.m_num_busy_leases = 0;
 }
 
 MatchMakerResources::~MatchMakerResources( void )
@@ -86,19 +86,19 @@ MatchMakerResources::setAdDebug( bool enable )
 }
 
 void
-MatchMakerResources::setDefaultMaxLease( int def )
+MatchMakerResources::setDefaultMaxLeaseDuration( int def )
 {
 	m_default_max_lease_duration = def;
 }
 
 void
-MatchMakerResources::setMaxLease( int max )
+MatchMakerResources::setMaxLeaseDuration( int max )
 {
 	m_max_lease_duration = max;
 }
 
 void
-MatchMakerResources::setMaxLeaseTotal( int max )
+MatchMakerResources::setMaxLeaseTotalDuration( int max )
 {
 	m_max_lease_total = max;
 }
@@ -324,12 +324,12 @@ MatchMakerResources::QuerySetAd( const classad::ClassAd &ad )
 	string expr_str;
 	classad::ExprTree	*req_expr = ad.Lookup( "Requirements" );
 	if ( ! req_expr ) {
-		expr_str = "( (other.MaxTransfers - other._LeasesUsed) > 0 )";
+		expr_str = "( (other.MaxLeases - other._LeasesUsed) > 0 )";
 	} else {
 		unparser.Unparse( expr_str, req_expr );
 		expr_str =
 			" ( ( " + expr_str +
-			" ) && ( (other.MaxTransfers - other._LeasesUsed) > 0 ) )";
+			" ) && ( (other.MaxLeases - other._LeasesUsed) > 0 ) )";
 	}
 
 	// Parse the 'new expr' string into the new expression
@@ -551,7 +551,7 @@ MatchMakerResources::GetLeases( classad::ClassAd &resource_ad,
 	}
 
 	// Finally, update counts, etc.
-	m_stats.m_num_busy_xfers += count;
+	m_stats.m_num_busy_leases += count;
 	used_count += count;
 
 	// Update the leases ad
@@ -691,16 +691,16 @@ int
 MatchMakerResources::AddResource( classad::ClassAd *new_res_ad )
 {
 	// Extract info from the resource ad
-	int			max_transfers;
-	if ( !new_res_ad->EvaluateAttrInt( "MaxTransfers", max_transfers ) ) {
+	int			max_leases;
+	if ( !new_res_ad->EvaluateAttrInt( "MaxLeases", max_leases ) ) {
 		dprintf( D_ALWAYS,
-				 "AddResource: No MaxTransfers in resource ad;"
+				 "AddResource: No MaxLeases in resource ad;"
 				 " assumming 1\n" );
-		max_transfers = 1;
-	} else if ( max_transfers < 0 ) {
+		max_leases = 1;
+	} else if ( max_leases < 0 ) {
 		dprintf( D_ALWAYS,
-				 "AddResource: MaxTransfers < 0; setting to zero\n" );
-		max_transfers = 0;
+				 "AddResource: MaxLeases < 0; setting to zero\n" );
+		max_leases = 0;
 	}
 	string		resource_name;
 	if ( !new_res_ad->EvaluateAttrString( "Name", resource_name ) ) {
@@ -710,7 +710,7 @@ MatchMakerResources::AddResource( classad::ClassAd *new_res_ad )
 	}
 	dprintf( D_FULLDEBUG,
 			 "AddResource: Looking to add resource %s (max = %d) @ %p\n",
-			 resource_name.c_str(), max_transfers, new_res_ad );
+			 resource_name.c_str(), max_leases, new_res_ad );
 
 	// Do we have an old ad to replace?
 	classad::ClassAd	*old_res_ad;
@@ -814,7 +814,7 @@ MatchMakerResources::AddResource( classad::ClassAd *new_res_ad )
 	}
 
 	// Finally, do the work..
-	return SetLeaseStates( resource_name, max_transfers,
+	return SetLeaseStates( resource_name, max_leases,
 						   *leases_ad, lease_count );
 
 }
@@ -822,13 +822,13 @@ MatchMakerResources::AddResource( classad::ClassAd *new_res_ad )
 int
 MatchMakerResources::SetLeaseStates(
 	const string		&resource_name,
-	int					resource_transfers,
+	int					max_resource_leases,
 	classad::ClassAd	&leases_ad,
 	int					&lease_count )
 {	
 
 	// If the count hasn't changed, we're done
-	if ( lease_count == resource_transfers ) {
+	if ( lease_count == max_resource_leases ) {
 		dprintf( D_FULLDEBUG, "SetLeaseStates: Lease count unchanged\n" );
 		return 0;
 	}
@@ -846,7 +846,7 @@ MatchMakerResources::SetLeaseStates(
 
 	// Add new lease ads as required
 	int		num_leases_added = 0;
-	while( lease_states->size() < resource_transfers ) {
+	while( lease_states->size() < max_resource_leases ) {
 		int		lease_number = lease_states->size( ) + 1;
 
 		// Create a new lease ad
@@ -893,7 +893,7 @@ MatchMakerResources::SetLeaseStates(
 					 resource_name.c_str( ) );
 			continue;
 		}
-		bool	valid = ( lease_number <= resource_transfers );
+		bool	valid = ( lease_number <= max_resource_leases );
 
 		// If it's changed, update the ad
 		if ( old_valid != valid ) {
@@ -910,11 +910,11 @@ MatchMakerResources::SetLeaseStates(
 	}
 
 	// Update statistics
-	m_stats.m_num_xfer_records += num_leases_added;
-	m_stats.m_num_valid_xfers += ( resource_transfers - lease_count );
+	m_stats.m_num_lease_records += num_leases_added;
+	m_stats.m_num_valid_leases += ( max_resource_leases - lease_count );
 
 	// Finally, update the lease count
-	lease_count = resource_transfers;
+	lease_count = max_resource_leases;
 	classad::ClassAd	*updates = new classad::ClassAd;
 	updates->InsertAttr( "LeaseCount", lease_count );
 	if ( !UpdateLeasesAd( resource_name, updates ) ) {
@@ -933,9 +933,9 @@ int
 MatchMakerResources::GetStats( MatchMakerStats & stats )
 {
 	stats.m_num_resources    = m_stats.m_num_resources;
-	stats.m_num_xfer_records = m_stats.m_num_xfer_records;
-	stats.m_num_valid_xfers  = m_stats.m_num_valid_xfers;
-	stats.m_num_busy_xfers   = m_stats.m_num_busy_xfers;
+	stats.m_num_lease_records = m_stats.m_num_lease_records;
+	stats.m_num_valid_leases  = m_stats.m_num_valid_leases;
+	stats.m_num_busy_leases   = m_stats.m_num_busy_leases;
 
 	return 0;
 }
@@ -1083,7 +1083,7 @@ MatchMakerResources::PruneExpired( void )
 					 name.c_str() );
 
 			// Mark # of resources as zero
-			ad->InsertAttr( "MaxTransfers", 0 );
+			ad->InsertAttr( "MaxLeases", 0 );
 
 			// Set the lease states
 			if ( SetLeaseStates( name, 0, *leases_ad, lease_count ) ) {
@@ -1154,7 +1154,7 @@ MatchMakerResources::TerminateLease( MatchMakerLeaseEnt	&lease )
 	}
 
 	// Now, do the real work
-	m_stats.m_num_busy_xfers--;
+	m_stats.m_num_busy_leases--;
 	used_count--;
 
 	// Update the leases ad

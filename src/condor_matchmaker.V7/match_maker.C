@@ -35,35 +35,146 @@ using namespace std;
 #include "newclassad_stream.h"
 #include "debug_timer_dprintf.h"
 
+class MatchMakerIntervalTimer
+{
+public:
+	MatchMakerIntervalTimer(
+		const char		*name,
+		const char		*param_name,
+		int				 initial_value,
+		int				 default_value,
+		MatchMaker		*match_maker,
+		TimerHandlercpp	 handler );
+	~MatchMakerIntervalTimer( void );
+	bool Config( void );
+	
+private:
+	const char		*m_Name;
+	const char		*m_ParamName;
+	int				m_Initial;
+	int				m_Default;
+	MatchMaker		*m_MatchMaker;
+	TimerHandlercpp	 m_Handler;
+	int				m_TimerId;
+	int				m_Interval;
+};
+
+MatchMakerIntervalTimer::MatchMakerIntervalTimer(
+	const char		*name,
+	const char		*param_name,
+	int				 initial_value,
+	int				 default_value,
+	MatchMaker		*match_maker,
+	TimerHandlercpp	 handler )
+{
+	m_Name = name;
+	m_ParamName = param_name;
+	m_Initial = initial_value;
+	m_Default = default_value;
+	m_MatchMaker = match_maker;
+	m_Handler = handler;
+	m_TimerId = -1;
+	m_Interval = -1;
+}
+
+MatchMakerIntervalTimer::~MatchMakerIntervalTimer( void )
+{
+}
+
+bool
+MatchMakerIntervalTimer::Config( void )
+{
+	// Get the update interval
+	int  value;
+	bool found = m_MatchMaker->ParamInt( m_ParamName, value, m_Default, 5 );
+
+	// Apply the changes
+	if (  ( m_Interval <= 0 ) || ( ( value != m_Interval )  &&  found )  ) {
+		// Set the interval value
+		if ( found && (value > 0) ) {
+			m_Interval = value;
+		} else if ( m_Interval < 0 ) {
+			m_Interval = 60;
+		}
+
+		dprintf( D_FULLDEBUG, "Setting %s interval to %d\n",
+				 m_Name, m_Interval );
+		// And, set the timer
+		if ( m_TimerId < 0 ) {
+			char		handler_name[128];
+			snprintf( handler_name, sizeof(handler_name),
+					  "MatchMaker::timerHandler_%s()", m_Name );
+			handler_name[sizeof(handler_name)-1] = '\0';
+			m_TimerId = daemonCore->Register_Timer(
+				m_Initial, m_Interval, m_Handler, handler_name, m_MatchMaker );
+			if ( m_TimerId < 0 ) {
+				EXCEPT( "MatchMaker: Failed to %s create timer\n", m_Name );
+			}
+		} else {
+			daemonCore->Reset_Timer( m_TimerId, m_Interval, m_Interval );
+		}
+	}
+
+	return true;
+}
 
 MatchMaker::MatchMaker( void )
 {
-	m_Collectors = NULL;
+	m_collectorList = NULL;
+
+	m_GetAdsTimer = new MatchMakerIntervalTimer (
+		"GetAds", "GETADS_INTERVAL", 2, 60,
+		this, (TimerHandlercpp)&MatchMaker::timerHandler_GetAds );
+
+	m_UpdateTimer = new MatchMakerIntervalTimer (
+		"Update", "UPDATE_INTERVAL", 5, 60,
+		this, (TimerHandlercpp)&MatchMaker::timerHandler_Update );
+
+	m_PruneTimer = new MatchMakerIntervalTimer (
+		"Prune", "PRUNE_INTERVAL", -1, 60,
+		this, (TimerHandlercpp)&MatchMaker::timerHandler_Prune );
+
 }
 
 MatchMaker::~MatchMaker( void )
 {
-	if ( m_Collectors ) {
-		delete m_Collectors;
+	if ( m_PruneTimer ) {
+		delete m_PruneTimer;
 	}
-	if ( m_my_name ) {
-		delete m_my_name;
+	if ( m_UpdateTimer ) {
+		delete m_UpdateTimer;
 	}
+	if ( m_GetAdsTimer ) {
+		delete m_GetAdsTimer;
+	}
+
+	if ( m_collectorList ) {
+		delete m_collectorList;
+	}
+	if ( m_myName ) {
+		delete m_myName;
+	}
+
 }
 
 int
-MatchMaker::init( void )
+MatchMaker::init( const char *name )
 {
-	m_my_name = NULL;
+	if ( name && strlen(name) ) {
+		dprintf( D_ALWAYS, "Setting my name to '%s'\n", name );
+		int len = strlen(name);
+		m_myName = new char[len+1];
+		strcpy( m_myName, name );
+	}
+	else {
+		m_myName = NULL;
+	}
 
 	// Read our Configuration parameters
-	config( true );
-
-	// Should go somewhere else...
-	initPublicAd( );
+	config( );
 
 	//Collectors = CollectorList::createForNegotiator();
-	m_Collectors = CollectorList::create();
+	m_collectorList = CollectorList::create();
 
 	// Initialize the resources
 	m_resources.init( );
@@ -98,126 +209,38 @@ MatchMaker::shutdownGraceful( void )
 }
 
 int
-MatchMaker::config( bool is_init )
+MatchMaker::config( void )
 {
-	char	*tmp;
-	int		value;
+	char		*tmp;
+	int			value;
+	MyString	name;
 
-	// Initial values
-	if ( is_init ) {
-		m_Interval_GetAds = -1;
-		m_Interval_Update = -1;
-		m_Interval_Prune = -1;
-		m_TimerId_GetAds = -1;
-		m_TimerId_Update = -1;
-		m_TimerId_Prune = -1;
-	}
-
-	// Get the "get ads" interval
-	tmp = param( "MATCH_MAKER_GETADS_INTERVAL" );
-	value = -1;
-	if( tmp ) {
-		value = atoi ( tmp );
-		free( tmp );
-	}
-
-	// Apply the changes
-	if (  ( m_Interval_GetAds <= 0 ) ||
-		  ( ( value != m_Interval_GetAds ) && ( value > 0 ) )  ) {
-		// Set the interval value
-		if ( value > 0 ) {
-			m_Interval_GetAds = value;
-		} else if ( m_Interval_GetAds < 0 ) {
-			m_Interval_GetAds = 60;
-		}
-		dprintf( D_FULLDEBUG, "Setting GetAds interval to %d\n",
-				 m_Interval_GetAds );
-		// And, set the timer
-		if ( m_TimerId_GetAds < 0 ) {
-			m_TimerId_GetAds = daemonCore->Register_Timer(
-				2, m_Interval_GetAds,
-				(TimerHandlercpp)&MatchMaker::timerHandler_GetAds,
-				"MatchMaker::GetAds()", this );
-		} else {
-			daemonCore->Reset_Timer( m_TimerId_GetAds,
-									 m_Interval_GetAds,
-									 m_Interval_GetAds );
-		}
-	}
-
-	// Get the update interval
-	tmp = param( "MATCH_MAKER_UPDATE_INTERVAL" );
-	value = -1;
-	if( tmp ) {
-		value = atoi ( tmp );
-		free( tmp );
-	}
-
-	// Apply the changes
-	if (  ( m_Interval_Update <= 0 ) ||
-		  ( ( value != m_Interval_Update ) && ( value > 0 ) )  ) {
-		// Set the interval value
-		if ( value > 0 ) {
-			m_Interval_Update = value;
-		} else if ( m_Interval_Update < 0 ) {
-			m_Interval_Update = 60;
-		}
-		dprintf( D_FULLDEBUG, "Setting Update interval to %d\n",
-				 m_Interval_Update );
-		// And, set the timer
-		if ( m_TimerId_Update < 0 ) {
-			m_TimerId_Update = daemonCore->Register_Timer(
-				5, m_Interval_Update,
-				(TimerHandlercpp)&MatchMaker::timerHandler_Update,
-				"MatchMaker::Update()", this );
-		} else {
-			daemonCore->Reset_Timer( m_TimerId_Update,
-									 m_Interval_Update,
-									 m_Interval_Update );
-		}
-	}
-
-	// Get the prune interval
-	tmp = param( "MATCH_MAKER_PRUNE_INTERVAL" );
-	value = -1;
-	if( tmp ) {
-		value = atoi ( tmp );
-		free( tmp );
-	}
-
-	// Apply the changes
-	if (  ( m_Interval_Prune <= 0 ) ||
-		  ( ( value != m_Interval_Prune ) && ( value > 0 ) )  ) {
-		// Set the interval value
-		if ( value > 0 ) {
-			m_Interval_Prune = value;
-		} else if ( m_Interval_Prune < 0 ) {
-			m_Interval_Prune = 60;
-		}
-		dprintf( D_FULLDEBUG, "Setting Prune interval to %d\n",
-				 m_Interval_Prune );
-		// And, set the timer
-		if ( m_TimerId_Prune < 0 ) {
-			m_TimerId_Prune = daemonCore->Register_Timer(
-				m_Interval_Prune, m_Interval_Prune,
-				(TimerHandlercpp)&MatchMaker::timerHandler_Prune,
-				"MatchMaker::Prune()", this );
-		} else {
-			daemonCore->Reset_Timer( m_TimerId_Prune,
-									 m_Interval_Prune,
-									 m_Interval_Prune );
-		}
-	}
+	m_GetAdsTimer->Config( );
+	m_UpdateTimer->Config( );
+	m_PruneTimer ->Config( );
 
 	// Get the classad log file
-	tmp = param( "MATCH_MAKER_CLASSAD_LOG" );
+	tmp = NULL;
+	if ( m_myName ) {
+		name.sprintf( "MATCH_MAKER_%s_CLASSAD_LOG", m_myName );
+		tmp = param( name.GetCStr() );
+	}
+	if ( NULL == tmp ) {
+		tmp = param( "MATCH_MAKER_CLASSAD_LOG" );
+	}
 	if ( tmp ) {
 		m_resources.setCollectionLog( tmp );
 		free( tmp );
 	}
 
 	// Enable verbose logging of ads?
-	tmp = param( "MATCH_MAKER_DEBUG_ADS" );
+	if ( m_myName ) {
+		name.sprintf( "MATCH_MAKER_%s_DEBUG_ADS", m_myName );
+		tmp = param( name.GetCStr() );
+	}
+	if ( NULL == tmp ) {
+		tmp = param( "MATCH_MAKER_DEBUG_ADS" );
+	}
 	if ( tmp ) {
 		if ( ( *tmp == 't' ) || ( *tmp == 'T' ) ) {
 			m_resources.setAdDebug( true );
@@ -230,36 +253,90 @@ MatchMaker::config( bool is_init )
 	}
 
 	// Get max lease duration
-	tmp = param( "MATCH_MAKER_MAX_LEASE" );
-	if ( tmp ) {
-		if ( isdigit( *tmp ) ) {
-			int		t = atoi( tmp );
-			m_resources.setMaxLease( t );
-		}
-		free( tmp );
+	if ( ParamInt( "MAX_LEASE_DURATION", value, -1, 1 ) ) {
+		m_resources.setMaxLeaseDuration( value );
 	}
 
 	// Get default max lease duration
-	tmp = param( "MATCH_MAKER_DEFAULT_MAX_LEASE" );
-	if ( tmp ) {
-		if ( isdigit( *tmp ) ) {
-			int		t = atoi( tmp );
-			m_resources.setDefaultMaxLease( t );
-		}
-		free( tmp );
+	if ( ParamInt( "DEFAULT_MAX_LEASE_DURATION", value, -1, 1 ) ) {
+		m_resources.setDefaultMaxLeaseDuration( value );
 	}
 
 	// Get max lease duration
-	tmp = param( "MATCH_MAKER_MAX_TOTAL_LEASE" );
+	if ( ParamInt( "MAX_TOTAL_LEASE_DURATION", value, -1, 1 ) ) {
+		m_resources.setMaxLeaseTotalDuration( value );
+	}
+
+	// Query type
+	if ( m_myName ) {
+		name.sprintf( "MATCH_MAKER_%s_QUERY_ADTYPE", m_myName );
+		tmp = param( name.GetCStr() );
+	}
+	if ( NULL == tmp ) {
+		tmp = param( "MATCH_MAKER_QUERY_ADTYPE");
+	}
 	if ( tmp ) {
-		if ( isdigit( *tmp ) ) {
-			int		t = atoi( tmp );
-			m_resources.setMaxLeaseTotal( t );
+		AdTypes	type = AdTypeFromString( tmp );
+		if ( type == NO_AD ) {
+			dprintf( D_ALWAYS, "Invalid query ad type '%s'\n", tmp );
+			EXCEPT( "Invalid query ad type" );
 		}
+		m_queryAdtypeNum = type;
+		m_queryAdtypeStr = tmp;
+		free( tmp );
+	}
+	else {
+		m_queryAdtypeNum = ANY_AD;
+		m_queryAdtypeStr = ANY_ADTYPE;
+	}
+
+	// Query constraints
+	tmp = NULL;
+	if ( m_myName ) {
+		name.sprintf( "MATCH_MAKER_%s_QUERY_CONSTRAINTS", m_myName );
+		tmp = param( name.GetCStr() );
+	}
+	if ( NULL == tmp ) {
+		tmp = param( "MATCH_MAKER_QUERY_CONSTRAINTS" );
+	}
+	if ( tmp ) {
+		m_queryConstraints = tmp;
 		free( tmp );
 	}
 
+	dprintf( D_FULLDEBUG, "Query ad type is %d '%s'\n",
+			 m_queryAdtypeNum, m_queryAdtypeStr.c_str() );
+	if ( m_queryConstraints.length() ) {
+		dprintf( D_FULLDEBUG, "Query constraint '%s'\n",
+			 m_queryConstraints.c_str() );
+	}
+
+	// Build the public ad
+	initPublicAd( );
+
 	return 0;
+}
+
+bool
+MatchMaker::ParamInt( const char *param_name, int &value,
+					  int default_value, int min_value, int max_value )
+{
+	MyString	full_name;
+	bool		found = false;
+
+	if ( m_myName ) {
+		full_name.sprintf( "MATCH_MAKER_%s_%s", m_myName, param_name );
+		found = param_integer( full_name.GetCStr(), value, 
+							   true, default_value,
+							   true, min_value, max_value );
+	}
+	if ( ! found ) {
+		full_name.sprintf( "MATCH_MAKER_%s", param_name );
+		found = param_integer( full_name.GetCStr(), value,
+							   true, default_value,
+							   true, min_value, max_value );
+	}
+	return found;
 }
 
 int
@@ -300,7 +377,7 @@ MatchMaker::commandHandler_GetMatch(int command, Stream *stream)
 	dprintf( D_FULLDEBUG, "Match Ad=%s\n", adbuffer.c_str() );
 
 	// Keep running queries 'til we're all matched up
-	dprintf( D_FULLDEBUG, "Trying to acquire %d m_resources\n", request_count );
+	dprintf( D_FULLDEBUG, "Trying to acquire %d resources\n", request_count );
 	int		num_matches = 0;	// Total matches so far
 	list< classad::ClassAd *> match_list;
 	DebugTimerDprintf	timer;
@@ -449,13 +526,16 @@ MatchMaker::commandHandler_ReleaseLease(int command, Stream *stream)
 int
 MatchMaker::timerHandler_GetAds ( void )
 {
-	CondorQuery query(XFER_SERVICE_AD);
+	CondorQuery query( m_queryAdtypeNum );
+	if ( m_queryConstraints.length() ) {
+		query.addANDConstraint( m_queryConstraints.c_str() );
+	}
 	QueryResult result;
 	ClassAdList ads;
 
-	dprintf(D_ALWAYS, "  Getting all xfer service ads ...\n");
-	result = m_Collectors->query( query, ads );
-	if( result!=Q_OK ) {
+	dprintf(D_ALWAYS, "  Getting all resource ads ...\n" );
+	result = m_collectorList->query( query, ads );
+	if( result != Q_OK ) {
 		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n",
 				getStrQueryResult(result));
 		return false;
@@ -491,34 +571,35 @@ MatchMaker::timerHandler_GetAds ( void )
 int
 MatchMaker::initPublicAd( void )
 {
-	MyString line;
+	m_publicAd.clear();
 
 	m_publicAd.SetMyTypeName( MATCH_MAKER_ADTYPE );
 	m_publicAd.SetTargetTypeName( "" );
 
-	line.sprintf ("%s = \"%s\"", ATTR_MACHINE, my_full_hostname());
-	m_publicAd.Insert( line.Value() );
+	m_publicAd.Assign( ATTR_MACHINE, my_full_hostname() );
 
 	char* defaultName = NULL;
-	if( m_my_name ) {
-		line.sprintf("%s = \"%s\"", ATTR_NAME, m_my_name );
+	if( m_myName ) {
+		m_publicAd.Assign( ATTR_NAME, m_myName );
 	} else {
 		defaultName = default_daemon_name( );
 		if( ! defaultName ) {
 			EXCEPT( "default_daemon_name() returned NULL" );
 		}
-		line.sprintf("%s = \"%s\"", ATTR_NAME, defaultName );
-		delete [] defaultName;
+		m_publicAd.Assign( ATTR_NAME, defaultName );
 	}
-	m_publicAd.Insert( line.Value() );
 
-	line.sprintf ("%s = \"%s\"", ATTR_MATCH_MAKER_IP_ADDR,
-			daemonCore->InfoCommandSinfulString() );
-	m_publicAd.Insert(line.Value());
+	m_publicAd.Assign( ATTR_MATCH_MAKER_IP_ADDR,
+					   daemonCore->InfoCommandSinfulString() );
+
+	m_publicAd.Assign( "QueryAdType",    m_queryAdtypeStr.c_str() );
+	m_publicAd.Assign( "QueryAdTypeNum", m_queryAdtypeNum );
+	if ( m_queryConstraints.length() ) {
+		m_publicAd.Assign( "QueryConstraints", m_queryConstraints.c_str() );
+	}
 
 #if !defined(WIN32)
-	line.sprintf("%s = %d", ATTR_REAL_UID, (int)getuid() );
-	m_publicAd.Insert(line.Value());
+	m_publicAd.Assign( ATTR_REAL_UID, (int)getuid() );
 #endif
 
 	config_fill_ad( &m_publicAd );
@@ -535,19 +616,14 @@ MatchMaker::timerHandler_Update ( void )
 	MatchMakerStats	stats;
 	m_resources.GetStats( stats );
 
-	MyString line;
-	line.sprintf("%s = %d", "Number_Resources", stats.m_num_resources );
-	m_publicAd.Insert( line.Value() );
-	line.sprintf("%s = %d", "NumberTransferRecords", stats.m_num_xfer_records);
-	m_publicAd.Insert( line.Value() );
-	line.sprintf("%s = %d", "NumberValidTransfers", stats.m_num_valid_xfers );
-	m_publicAd.Insert( line.Value() );
-	line.sprintf("%s = %d", "NumberBusyTransfers", stats.m_num_busy_xfers );
-	m_publicAd.Insert( line.Value() );
+	m_publicAd.Assign( "NumberResources", stats.m_num_resources );
+	m_publicAd.Assign( "NumberLeaseRecords", stats.m_num_lease_records);
+	m_publicAd.Assign( "NumberValidLeases", stats.m_num_valid_leases );
+	m_publicAd.Assign( "NumberBusyLeases", stats.m_num_busy_leases );
    
-	if ( m_Collectors ) {
-		m_Collectors->sendUpdates( UPDATE_MATCH_MAKER_AD, &m_publicAd,
-								   NULL, true );
+	if ( m_collectorList ) {
+		m_collectorList->sendUpdates( UPDATE_MATCH_MAKER_AD, &m_publicAd,
+									  NULL, true );
 	}
 
 	// Reset the timer so we don't do another period update until 
