@@ -170,7 +170,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	user_log.o \
 	read_user_log.o read_user_log_state.o \
 	config.o condor_config.o \
-	stringSpace.o condor_state.o \
+	stringSpace.o condor_state.o condor_adtypes.o \
 	$(API_OBJ) $(DAEMON_CLIENT_OBJ) \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o print_wrapped_text.o \
