@@ -1293,6 +1293,15 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		}
 	}
 
+		// Close the write end of the pipe so we don't block trying
+		// to read from it if the child closes it prematurely.
+		// We don't do this until this late stage in the game, because
+		// in windows everything currently happens in the main thread.
+	if( transobject->TransferPipe[1] != -1 ) {
+		close(transobject->TransferPipe[1]);
+		transobject->TransferPipe[1] = -1;
+	}
+
 	int n;
 
 	if(!read_failed) {
@@ -1357,8 +1366,7 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	}
 
 	close(transobject->TransferPipe[0]);
-	close(transobject->TransferPipe[1]);
-	transobject->TransferPipe[0] = transobject->TransferPipe[1] = -1;
+	transobject->TransferPipe[0] = -1;
 
 	// If Download was successful (it returns 1 on success) and
 	// upload_changed_files is true, then we must record the current
