@@ -101,6 +101,11 @@ class ParamValue {
 	ExtArray<ParamValue>* param_all(void);
     int param_integer( const char *name, int default_value,
 					   int min_value = INT_MIN, int max_value = INT_MAX );
+	// Alternate param_integer():
+	bool param_integer( const char *name, int &value,
+						bool use_default, int default_value,
+						bool check_ranges = true,
+						int min_value = INT_MIN, int max_value = INT_MAX );
     double param_double( const char *name, double default_value,
 					   double min_value = DBL_MIN, double max_value = DBL_MAX );
 	bool param_boolean( const char *name, const bool default_value, bool do_log = true );

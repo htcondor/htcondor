@@ -1379,14 +1379,18 @@ param( const char *name )
 
 /*
 ** Return the integer value associated with the named paramter.
+** This version returns true if a the parameter was found, or false
+** otherwise.
 ** If the value is not defined or not a valid integer, then
-** return the default_value argument.  The min_value and max_value
+** return the default_value argument .  The min_value and max_value
 ** arguments are optional and default to MININT and MAXINT.
+** These range checks are disabled if check_ranges is false.
 */
 
-int
-param_integer( const char *name, int default_value,
-			   int min_value, int max_value )
+bool
+param_integer( const char *name, int &value,
+			   bool use_default, int default_value,
+			   bool check_ranges, int min_value, int max_value )
 {
 	int result;
 	long long_result;
@@ -1398,7 +1402,10 @@ param_integer( const char *name, int default_value,
 	if( ! string ) {
 		dprintf( D_CONFIG, "%s is undefined, using default value of %d\n",
 				 name, default_value );
-		return default_value;
+		if ( use_default ) {
+			value = default_value;
+		}
+		return false;
 	}
 
 	long_result = strtol(string,&endptr,10);
@@ -1419,24 +1426,46 @@ param_integer( const char *name, int default_value,
 		        name, string, min_value, max_value, default_value );
 	}
 	else if( (long)result != long_result ) {
-		EXCEPT( "%s in the condor configuration is out of bounds for an integer (%s)."
-		        "  Please set it to an integer in the range %d to %d"
-		        " (default %d).",
-		        name, string, min_value, max_value, default_value );
+		EXCEPT( "%s in the condor configuration is out of bounds for"
+				" an integer (%s)."
+				"  Please set it to an integer in the range %d to %d"
+				" (default %d).",
+				name, string, min_value, max_value, default_value );
 	}
-	else if( result < min_value ) {
+	else if ( check_ranges  &&  ( result < min_value )  ) {
 		EXCEPT( "%s in the condor configuration is too low (%s)."
-		        "  Please set it to an integer in the range %d to %d"
-		        " (default %d).",
-		        name, string, min_value, max_value, default_value );
+				"  Please set it to an integer in the range %d to %d"
+				" (default %d).",
+				name, string, min_value, max_value, default_value );
 	}
-	else if( result > max_value ) {
+	else if ( check_ranges  && ( result > max_value )  ) {
 		EXCEPT( "%s in the condor configuration is too high (%s)."
-		        "  Please set it to an integer in the range %d to %d"
-		        " (default %d).",
-		        name, string, min_value, max_value, default_value );
+				"  Please set it to an integer in the range %d to %d"
+				" (default %d).",
+				name, string, min_value, max_value, default_value );
 	}
 	free( string );
+
+	value = result;
+	return true;
+}
+
+
+/*
+** Return the integer value associated with the named paramter.
+** If the value is not defined or not a valid integer, then
+** return the default_value argument.  The min_value and max_value
+** arguments are optional and default to MININT and MAXINT.
+*/
+
+int
+param_integer( const char *name, int default_value,
+			   int min_value, int max_value )
+{
+	int result;
+
+	param_integer( name, result, true, default_value,
+				   true, min_value, max_value );
 	return result;
 }
 
