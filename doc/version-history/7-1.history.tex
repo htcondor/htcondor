@@ -46,6 +46,17 @@ is to protect the \Condor{schedd} from being overloaded by
 authentication operations.  The default is 10.  The special value 0
 indicates no limit.
 
+\item Added \Macro{SEC\_INVALIDATE\_SESSIONS\_VIA\_TCP}.  This
+defaults to true.  Previously, attempts to use an invalid security
+session resulted in a UDP rather than TCP response.  In networks with
+different firewall rules for UDP and TCP, filtering of the session
+invalidation messages was easily overlooked, since it would not
+typically happen during the initial vetting of the pool.  If these
+packets were filtered out, then the next time the \Condor{collector}
+restarted, no daemons would be able to advertise themselves to the
+pool until their existing security sessions expired.  The old behavior
+can be achieved by setting this configuration parameter to false.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

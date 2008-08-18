@@ -6640,6 +6640,13 @@ between a client and daemon, and is protected by a shared secret key.
 The session expires to reduce the window of opportunity where
 the key may be compromised by attack.
 
+\item[\Macro{SEC\_INVALIDATE\_SESSIONS\_VIA\_TCP}]
+\label{param:SecInvalidateSessionsViaTcp} Use TCP (if True) or UDP (if False)
+for responding to attempts to use an invalid security session.  This happens,
+for example, if a daemon restarts and receives incomming commands from
+other daemons that are still using a previously established security session.
+The default is True.
+
 \item[\Macro{FS\_REMOTE\_DIR}]
 \label{param:FSRemoteDir}
 The location of a file visible to both server and client in
