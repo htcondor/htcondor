@@ -164,7 +164,8 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 
 	msg->setSuccessDebugLevel(D_ALWAYS|D_PROTOCOL);
 
-	sendMsg(msg.get(),Stream::reli_sock,timeout);
+	msg->setTimeout(timeout);
+	sendMsg(msg.get());
 }
 
 

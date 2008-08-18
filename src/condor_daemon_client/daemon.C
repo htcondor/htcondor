@@ -466,7 +466,7 @@ Daemon::safeSock( int sec, CondorError* errstack, bool non_blocking )
 
 
 StartCommandResult
-Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *version, SecMan *sec_man )
+Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *version, SecMan *sec_man, bool raw_protocol )
 {
 	// This function may be either blocking or non-blocking, depending
 	// on the flag that is passed in.  All versions of Daemon::startCommand()
@@ -483,8 +483,6 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 	// If caller wants non-blocking with no callback function,
 	// we _must_ be using UDP.
 	ASSERT(!nonblocking || callback_fn || sock->type() == Stream::safe_sock);
-
-	dprintf ( D_SECURITY, "STARTCOMMAND: starting %i to %s on %s port %i.\n", cmd, sin_to_string(sock->endpoint()), (sock->type() == Stream::safe_sock) ? "UDP" : "TCP", sock->get_port());
 
 	// set up the timeout
 	if( timeout ) {
@@ -503,7 +501,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 		}
 	}
 
-	start_command_result = sec_man->startCommand(cmd, sock, other_side_can_negotiate, errstack, 0, callback_fn, misc_data, nonblocking, cmd_description);
+	start_command_result = sec_man->startCommand(cmd, sock, other_side_can_negotiate, raw_protocol, errstack, 0, callback_fn, misc_data, nonblocking, cmd_description);
 
 	if(callback_fn) {
 		// SecMan::startCommand() called the callback function, so we just return here
@@ -516,7 +514,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 }
 
 StartCommandResult
-Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description )
+Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, bool raw_protocol )
 {
 	// This function may be either blocking or non-blocking, depending on
 	// the flag that was passed in.
@@ -557,16 +555,17 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 						 nonblocking,
 						 cmd_description,
 						 _version,
-						 &_sec_man);
+						 &_sec_man,
+						 raw_protocol);
 }
 
 Sock*
-Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError* errstack, char const *cmd_description )
+Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol )
 {
 	// This is a blocking version of startCommand.
 	const bool nonblocking = false;
 	Sock *sock = NULL;
-	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,NULL,NULL,nonblocking,cmd_description);
+	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,NULL,NULL,nonblocking,cmd_description,raw_protocol);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return sock;
@@ -577,6 +576,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError*
 		return NULL;
 	case StartCommandInProgress:
 	case StartCommandWouldBlock: //impossible!
+	case StartCommandContinue: //impossible!
 		break;
 	}
 	EXCEPT("startCommand(blocking=true) returned an unexpected result: %d\n",rc);
@@ -584,30 +584,30 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError*
 }
 
 StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description )
+Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol )
 {
 	// This is a nonblocking version of startCommand.
 	const int nonblocking = true;
 	Sock *sock = NULL;
 	// We require that callback_fn be non-NULL. The startCommand() we call
 	// here does that check.
-	return startCommand(cmd,st,&sock,timeout,errstack,callback_fn,misc_data,nonblocking,cmd_description);
+	return startCommand(cmd,st,&sock,timeout,errstack,callback_fn,misc_data,nonblocking,cmd_description,raw_protocol);
 }
 
 StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description )
+Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol )
 {
 	// This is the nonblocking version of startCommand().
 	const bool nonblocking = true;
-	return startCommand(cmd,sock,timeout,errstack,callback_fn,misc_data,nonblocking,cmd_description,_version,&_sec_man);
+	return startCommand(cmd,sock,timeout,errstack,callback_fn,misc_data,nonblocking,cmd_description,_version,&_sec_man,raw_protocol);
 }
 
 bool
-Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description )
+Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol )
 {
 	// This is a blocking version of startCommand().
 	const bool nonblocking = false;
-	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,NULL,NULL,nonblocking,cmd_description,_version,&_sec_man);
+	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,NULL,NULL,nonblocking,cmd_description,_version,&_sec_man,raw_protocol);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return true;
@@ -615,6 +615,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, c
 		return false;
 	case StartCommandInProgress:
 	case StartCommandWouldBlock: //impossible!
+	case StartCommandContinue: //impossible!
 		break;
 	}
 	EXCEPT("startCommand(nonblocking=false) returned an unexpected result: %d\n",rc);
@@ -2089,16 +2090,20 @@ Daemon::getTimeOffsetRange( long &min_range, long &max_range )
 										   min_range, max_range ) );
 }
 
-void Daemon::sendMsg( classy_counted_ptr<DCMsg> msg, Stream::stream_type st, int timeout, bool blocking )
+void Daemon::sendMsg( classy_counted_ptr<DCMsg> msg )
 {
 		// DCMessenger is garbage collected via ClassyCountedPtr.
 		// Ditto for the daemon and message objects.
 	DCMessenger *messenger = new DCMessenger(this);
 
-	if(blocking) {
-		messenger->sendBlockingMsg( msg, st, blocking );
-	}
-	else {
-		messenger->startCommand( msg, st, timeout );
-	}
+	messenger->startCommand( msg );
+}
+
+void Daemon::sendBlockingMsg( classy_counted_ptr<DCMsg> msg )
+{
+		// DCMessenger is garbage collected via ClassyCountedPtr.
+		// Ditto for the daemon and message objects.
+	DCMessenger *messenger = new DCMessenger(this);
+
+	messenger->sendBlockingMsg( msg );
 }

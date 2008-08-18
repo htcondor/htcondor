@@ -367,6 +367,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 		// Note: this cannot be modified on reconfig, requires restart.
 	m_wants_dc_udp = param_boolean("WANT_UDP_COMMAND_SOCKET", true);
+	m_invalidate_sessions_via_tcp = true;
 	dc_rsock = NULL;
 	dc_ssock = NULL;
 
@@ -2363,6 +2364,8 @@ DaemonCore::reconfig(void) {
 
 #endif /* HAVE CLONE */
 
+	m_invalidate_sessions_via_tcp = param_boolean("SEC_INVALIDATE_SESSIONS_VIA_TCP", true);
+
 #ifdef HAVE_EXT_GSOAP
 	if( param_boolean("ENABLE_SOAP",false) ||
 		param_boolean("ENABLE_WEB_SERVER",false) )
@@ -3334,7 +3337,7 @@ int DaemonCore::HandleReq(Stream *insock)
 
 				// but first, we should be nice and send a message back to
 				// the people who sent us the wrong session id.
-				sec_man->send_invalidate_packet ( return_address_ss, sess_id );
+				send_invalidate_session ( return_address_ss, sess_id );
 
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -3425,7 +3428,7 @@ int DaemonCore::HandleReq(Stream *insock)
 				// no session... we outta here!
 
 				// but first, see above behavior in MD5 code above.
-				sec_man->send_invalidate_packet( return_address_ss, sess_id );
+				send_invalidate_session( return_address_ss, sess_id );
 
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -3732,7 +3735,7 @@ int DaemonCore::HandleReq(Stream *insock)
 
 					char * return_addr = NULL;
 					if( auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr)) {
-						sec_man->send_invalidate_packet( return_addr, the_sid );
+						send_invalidate_session( return_addr, the_sid );
 						free (return_addr);
 					}
 
@@ -4234,7 +4237,7 @@ int DaemonCore::HandleReq(Stream *insock)
 		if (reqFound) {
 			// need to check our security policy to see if this is allowed.
 
-			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i.\n", req);
+			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i %s.\n", req, comTable[index].command_descrip);
 
 			// if the command was registered as "ALLOW", then it doesn't matter what the
 			// security policy says, we just allow it.
@@ -4589,6 +4592,7 @@ void DaemonCore::Send_Signal_nonblocking(classy_counted_ptr<DCSignalMsg> msg) {
 			break;
 		case DCMsg::DELIVERY_FAILED:
 		case DCMsg::DELIVERY_PENDING:
+		case DCMsg::DELIVERY_CANCELED:
 				// Send_Signal() typically only sets the delivery status to
 				// SUCCEEDED; so if things fail, the status will remain
 				// PENDING.
@@ -4797,18 +4801,23 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	}
 
 	classy_counted_ptr<Daemon> d = new Daemon( DT_ANY, destination );
-	Stream::stream_type sock_type = Stream::reli_sock;
-	int timeout = 20;
-	bool blocking = !nonblocking;
 
 	// now destination process is local, send via UDP; if remote, send via TCP
 	if ( is_local == TRUE ) {
-		sock_type = Stream::safe_sock;
-		if( !nonblocking ) timeout = 3;
+		msg->setStreamType(Stream::safe_sock);
+		if( !nonblocking ) msg->setTimeout(3);
+	}
+	else {
+		msg->setStreamType(Stream::reli_sock);
 	}
 
 	msg->messengerDelivery( true ); // we really are sending this message
-	d->sendMsg( msg.get(), sock_type, timeout, blocking );
+	if( nonblocking ) {
+		d->sendMsg( msg.get() );
+	}
+	else {
+		d->sendBlockingMsg( msg.get() );
+	}
 }
 
 int DaemonCore::Shutdown_Fast(pid_t pid)
@@ -9441,4 +9450,29 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
         }
     }
 	return TRUE;
+}
+
+void DaemonCore::send_invalidate_session ( char* sinful, char* sessid ) {
+	if ( !sinful ) {
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't invalidate session %s... don't know who it is from!\n", sessid);
+		return;
+	}
+
+	classy_counted_ptr<Daemon> daemon = new Daemon(DT_ANY,sinful,NULL);
+
+	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg(
+		DC_INVALIDATE_KEY,
+		sessid );
+
+	msg->setSuccessDebugLevel(D_SECURITY);
+	msg->setRawProtocol(true);
+
+	if( m_invalidate_sessions_via_tcp ) {
+		msg->setStreamType(Stream::reli_sock);
+	}
+	else {
+		msg->setStreamType(Stream::safe_sock);
+	}
+
+	daemon->sendMsg( msg.get() );
 }

@@ -1321,6 +1321,7 @@ class DaemonCore : public Service
   private:      
 
 	bool m_wants_dc_udp; // do we want a udp comment socket at all?
+	bool m_invalidate_sessions_via_tcp;
 	ReliSock* dc_rsock;	// tcp command socket
 	SafeSock* dc_ssock;	// udp command socket
 
@@ -1714,6 +1715,8 @@ class DaemonCore : public Service
 		   themselves.
 		*/
 	void initCollectorList(void);
+
+	void send_invalidate_session ( char* sinful, char* sessid );
 
 	bool m_wants_restart;
 	bool m_in_daemon_shutdown;

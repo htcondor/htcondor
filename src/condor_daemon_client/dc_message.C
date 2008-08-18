@@ -31,6 +31,9 @@ DCMsg::DCMsg(int cmd) {
 	m_msg_success_debug_level = D_FULLDEBUG;
 	m_msg_failure_debug_level = (D_ALWAYS|D_FAILURE);
 	m_delivery_status = DELIVERY_PENDING;
+	m_stream_type = Stream::reli_sock;
+	m_timeout = DEFAULT_CEDAR_TIMEOUT;
+	m_raw_protocol = false;
 }
 
 DCMsg::~DCMsg() {
@@ -252,7 +255,7 @@ char const *DCMessenger::peerDescription()
 	return NULL;
 }
 
-void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg, Stream::stream_type st, int timeout )
+void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 {
 	MyString error;
 	msg->setMessenger( this );
@@ -265,6 +268,7 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg, Stream::stream_ty
 		// For a UDP message, we may need to register two sockets, one for
 		// the SafeSock and another for a ReliSock to establish the
 		// security session.
+	Stream::stream_type st = msg->getStreamType();
 	if( daemonCoreSockAdapter.TooManyRegisteredSockets(-1,&error,st==Stream::safe_sock?2:1) ) {
 			// Try again in a sec
 			// Eventually, it would be better to queue this centrally
@@ -273,7 +277,7 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg, Stream::stream_ty
 			// priority of different messages etc.
 		dprintf(D_FULLDEBUG, "Delaying delivery of %s to %s, because %s\n",
 				msg->name(),peerDescription(),error.Value());
-		startCommandAfterDelay( 1, msg, st, timeout );
+		startCommandAfterDelay( 1, msg );
 		return;
 	}
 
@@ -291,24 +295,26 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg, Stream::stream_ty
 		msg->m_cmd,
 		st,
 		&m_callback_sock,
-		timeout,
+		msg->getTimeout(),
 		&msg->m_errstack,
 		&DCMessenger::connectCallback,
 		this,
 		nonblocking,
-		msg->name() );
+		msg->name(),
+		msg->getRawProtocol() );
 }
 
 void
-DCMessenger::sendBlockingMsg( classy_counted_ptr<DCMsg> msg, Stream::stream_type st, int timeout )
+DCMessenger::sendBlockingMsg( classy_counted_ptr<DCMsg> msg )
 {
 	msg->setMessenger( this );
 	Sock *sock = m_daemon->startCommand (
 		msg->m_cmd,
-		st,
-		timeout,
+		msg->getStreamType(),
+		msg->getTimeout(),
 		&msg->m_errstack,
-		msg->name() );
+		msg->name(),
+		msg->getRawProtocol() );
 
 	if( !sock ) {
 		msg->callMessageSendFailed( this );
@@ -509,18 +515,14 @@ DCMessenger::cancelMessage( classy_counted_ptr<DCMsg> msg )
 
 struct QueuedCommand {
 	classy_counted_ptr<DCMsg> msg;
-	Stream::stream_type stream_type;
-	int timeout;
 	int timer_handle;
 };
 
 void
-DCMessenger::startCommandAfterDelay( unsigned int delay, classy_counted_ptr<DCMsg> msg, Stream::stream_type st, int timeout )
+DCMessenger::startCommandAfterDelay( unsigned int delay, classy_counted_ptr<DCMsg> msg )
 {
 	QueuedCommand *qc = new QueuedCommand;
 	qc->msg = msg;
-	qc->stream_type = st;
-	qc->timeout = timeout;
 
 	incRefCount();
 	qc->timer_handle = daemonCoreSockAdapter.Register_Timer(
@@ -537,7 +539,7 @@ int DCMessenger::startCommandAfterDelay_alarm()
 	QueuedCommand *qc = (QueuedCommand *)daemonCoreSockAdapter.GetDataPtr();
 	ASSERT(qc);
 
-	startCommand(qc->msg,qc->stream_type,qc->timeout);
+	startCommand(qc->msg);
 
 	delete qc;
 	decRefCount();

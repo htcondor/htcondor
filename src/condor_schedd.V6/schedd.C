@@ -8717,6 +8717,8 @@ send_vacate(match_rec* match,int cmd)
 	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg( cmd, match->claimId() );
 
 	msg->setSuccessDebugLevel(D_ALWAYS);
+	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
+
 
 		// Eventually we should keep info in the match record about if 
 		// the startd is able to receive incoming UDP (it will know
@@ -8725,12 +8727,13 @@ send_vacate(match_rec* match,int cmd)
 	if ( param_boolean("SCHEDD_SEND_VACATE_VIA_TCP",false) ) {
 		dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d ) via TCP\n", 
 				 match->peer, cmd );
-		startd->sendMsg( msg.get(), Stream::reli_sock, STARTD_CONTACT_TIMEOUT );
+		msg->setStreamType(Stream::reli_sock);
 	} else {
 		dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d ) via UDP\n", 
 				 match->peer, cmd );
-		startd->sendMsg( msg.get(), Stream::safe_sock, STARTD_CONTACT_TIMEOUT );
+		msg->setStreamType(Stream::safe_sock);
 	}
+	startd->sendMsg( msg.get() );
 }
 
 void
@@ -11272,10 +11275,12 @@ sendAlive( match_rec* mrec )
 	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg( ALIVE, mrec->claimId() );
 
 	msg->setSuccessDebugLevel(D_PROTOCOL);
+	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
+	msg->setStreamType( Stream::safe_sock );
 
 	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", mrec->description());
 
-	startd->sendMsg( msg.get(), Stream::safe_sock, STARTD_CONTACT_TIMEOUT );
+	startd->sendMsg( msg.get() );
 
 	if( msg->deliveryStatus() == DCMsg::DELIVERY_FAILED ) {
 			// Status may also be DELIVERY_PENDING, in which case, we

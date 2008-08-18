@@ -94,6 +94,8 @@ public:
 
 		// Prepare a socket for sending a CEDAR command.  This takes
 		// care of security negotiation and authentication.
+		// (If raw_protocol=true, then no security negotiation or
+		// anything is done.  The command is just sent directly.)
 		// If callback_fn is NULL, it is caller's responsibility to
 		// delete sock and errstack after this call, even if nonblocking.
 		// When nonblocking with no callback_fn, this function will return
@@ -102,7 +104,7 @@ public:
 		// spawn off a non-blocking attempt to create a security
 		// session so that in the future, a UDP command could succeed
 		// without StartCommandWouldBlock.
-	StartCommandResult startCommand( int cmd, Sock* sock, bool can_neg, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description);
+	StartCommandResult startCommand( int cmd, Sock* sock, bool peer_can_negotiate, bool raw_protocol, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description);
 
 		// Authenticate a socket using whatever authentication methods
 		// have been configured for the specified perm level.
@@ -119,10 +121,10 @@ public:
     void                    invalidateExpiredCache();
 	bool					invalidateByParentAndPid(const char * parent, int pid);
 
-	void					send_invalidate_packet ( char* sinful, char* sessid );
 
 	bool	FillInSecurityPolicyAd( DCpermission auth_level,
-									ClassAd* ad, bool otherside_can_neg=true);
+									ClassAd* ad, bool peer_can_neg=true,
+									bool raw_protocol=false);
 	ClassAd * 				ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
 	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, ClassAd &cli_ad, ClassAd &srv_ad);

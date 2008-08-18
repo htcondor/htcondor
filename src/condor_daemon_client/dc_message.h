@@ -56,7 +56,9 @@ desired), and send it, using Daemon::sendMsg().  Example:
 
 
 	// Send the message to the startd asynchronously, using TCP.
-	startd->sendMsg( msg.get(), Stream::reli_sock, STARTD_CONTACT_TIMEOUT );
+	msg->setStreamType( Stream::reli_sock );
+	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
+	startd->sendMsg( msg.get() );
 
 
 	// To cancel a message that is waiting on asynchronous events, use
@@ -90,6 +92,26 @@ class DCMsg: public ClassyCountedPtr {
 public:
 	DCMsg(int cmd);
 	virtual ~DCMsg();
+
+		// CEDAR connection parameters
+		// Use TCP by default.
+	void setStreamType(Stream::stream_type st=Stream::reli_sock) {
+		m_stream_type = st;
+	}
+		// Timeout to use on each network operation
+		// The special value 0 means no timeout.
+	void setTimeout(int timeout=DEFAULT_CEDAR_TIMEOUT) {
+		m_timeout = timeout;
+	}
+		// Set to true to use raw CEDAR protocol with no security negotiation
+	void setRawProtocol(bool raw_protocol=false) {
+		m_raw_protocol=raw_protocol;
+	}
+
+	Stream::stream_type getStreamType() {return m_stream_type;}
+	int getTimeout() {return m_timeout;}
+	bool getRawProtocol() {return m_raw_protocol;}
+
 
 	enum MessageClosureEnum {
 		MESSAGE_FINISHED,  // tells DCMessenger that sock may be closed
@@ -190,6 +212,12 @@ private:
 	DeliveryStatus m_delivery_status;
 	classy_counted_ptr<DCMessenger> m_messenger;
 
+		// CEDAR connection parameters
+	Stream::stream_type m_stream_type;
+	int m_timeout;
+	bool m_raw_protocol;
+
+
 	void connectFailure( DCMessenger *messenger );
 
 	void callMessageSendFailed( DCMessenger *messenger );
@@ -232,17 +260,17 @@ public:
 		// Start a command, doing a non-blocking connection if necessary.
 		// This operation calls inc/decRefCount() to manage garbage collection
 		// of this messenger object as well as the message object.
-	void startCommand( classy_counted_ptr<DCMsg> msg, Stream::stream_type st = Stream::reli_sock, int timeout = 0 );
+	void startCommand( classy_counted_ptr<DCMsg> msg );
 
 		// Like startCommand(), except set a timer for delay seconds
 		// before starting the command.
-	void startCommandAfterDelay( unsigned int delay, classy_counted_ptr<DCMsg> msg, Stream::stream_type st = Stream::reli_sock, int timeout = 0 );
+	void startCommandAfterDelay( unsigned int delay, classy_counted_ptr<DCMsg> msg );
 
 		// Send a message from beginning to end, right now.  By the time
 		// this command returns, the message delivery status should be
 		// set to success/failure, and the message delivery hooks will
 		// have been called.
-	void sendBlockingMsg( classy_counted_ptr<DCMsg> msg, Stream::stream_type st = Stream::reli_sock, int timeout = 0 );
+	void sendBlockingMsg( classy_counted_ptr<DCMsg> msg );
 
 		// Registers this messenger to receive notice when a message arrives
 		// on this socket and then call msg->readMsg() when one does.

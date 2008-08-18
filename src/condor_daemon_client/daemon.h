@@ -325,13 +325,15 @@ public:
 		  @param st The type of the Sock you want to use.
 		  @param sec The timeout you want to use on your Sock.
 		  @param errstack NULL or error stack to dump errors into.
+		  @param raw_protocol to bypass all security negotiation, set to true
 		  @return NULL on error, or the Sock object to use for the
 		  rest of the command on success.
 		  */
 	Sock* startCommand( int cmd, 
 				Stream::stream_type st = Stream::reli_sock,
 				int sec = 0, CondorError* errstack = NULL,
-				char const *cmd_description = NULL );
+				char const *cmd_description = NULL,
+				bool raw_protocol=false );
 	
 		/** Start sending the given command to the daemon.  The caller
 		  gives the command they want to send, and a pointer to the
@@ -343,11 +345,13 @@ public:
 		  @param sock The Sock you want to use.
 		  @param sec The timeout you want to use on your Sock.
 		  @param errstack NULL or error stack to dump errors into.
+		  @param raw_protocol to bypass all security negotiation, set to true
 		  @return false on error, true on success.
 		*/
 	bool startCommand( int cmd, Sock* sock,
 			int sec = 0, CondorError* errstack = NULL,
-			char const *cmd_description=NULL );
+			char const *cmd_description=NULL,
+			bool raw_protocol=false );
 			
 		/** Start sending the given command to the daemon.  This
 			command claims to be nonblocking, but currently it only
@@ -375,9 +379,10 @@ public:
 			@param callback_fn function to call when finished
 			                   Must be non-NULL
 			@param misc_data any data caller wants passed to callback_fn
+			@param raw_protocol to bypass all security negotiation, set to true
 			@return see definition of StartCommandResult enumeration.
 		  */
-	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL );
+	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false );
 
 		/** Start sending the given command to the daemon.  This
 			command claims to be nonblocking, but currently it only
@@ -404,9 +409,10 @@ public:
 							   StartCommandWouldBlock if TCP session key
 							   setup is in progress.
 			@param misc_data any data caller wants passed to callback_fn
+			@param raw_protocol to bypass all security negotiation, set to true
 			@return see definition of StartCommandResult enumeration.
 		*/
-	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL );
+	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false );
 
 		/**
 		 * Asynchronously send a message (command + whatever) to the
@@ -417,7 +423,18 @@ public:
 		 * @param msg - the message to send
 		 * @return void - all error handling should happen in DCMsg
 		 */
-	void sendMsg( classy_counted_ptr<DCMsg> msg, Stream::stream_type st=Stream::reli_sock, int timeout=0, bool blocking=false );
+	void sendMsg( classy_counted_ptr<DCMsg> msg );
+
+		/**
+		 * Synchronously send a message (command + whatever) to the
+		 * daemon.  Both this daemon object and the msg object should
+		 * be allocated on the heap so that they are not deleted
+		 * before this operation completes.  Garbage collection is
+		 * handled via reference-counting ala ClassyCountedPtr.
+		 * @param msg - the message to send
+		 * @return void - all error handling should happen in DCMsg
+		 */
+	void sendBlockingMsg( classy_counted_ptr<DCMsg> msg );
 
 		/**
 		 * Contact another daemon and initiate the time offset range 
@@ -677,7 +694,7 @@ protected:
 		   It may be either blocking or nonblocking, depending on the
 		   nonblocking flag.  This version uses an existing socket.
 		 */
-	static StartCommandResult startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *version, SecMan *sec_man );
+	static StartCommandResult startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *version, SecMan *sec_man, bool raw_protocol );
 
 		/**
 		   Internal function used by public versions of startCommand().
@@ -685,7 +702,7 @@ protected:
 		   nonblocking flag.  This version creates a socket of the
 		   specified type and connects it.
 		 */
-	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description=NULL );
+	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description=NULL, bool raw_protocol=false );
 
 		/**
 		   Class used internally to handle non-blocking connects for
