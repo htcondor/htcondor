@@ -1266,6 +1266,7 @@ int
 FileTransfer::Reaper(Service *, int pid, int exit_status)
 {
 	FileTransfer *transobject;
+	bool read_failed = false;
 	if ( TransThreadTable->lookup(pid,transobject) < 0) {
 		dprintf(D_ALWAYS, "unknown pid %d in FileTransfer::Reaper!\n", pid);
 		return FALSE;
@@ -1276,9 +1277,11 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	transobject->Info.duration = time(NULL)-transobject->TransferStart;
 	transobject->Info.in_progress = false;
 	if( WIFSIGNALED(exit_status) ) {
-		dprintf( D_ALWAYS, "File transfer failed (killed by signal=%d)\n",
-				 WTERMSIG(exit_status) );
 		transobject->Info.success = false;
+		transobject->Info.try_again = true;
+		transobject->Info.error_desc.sprintf("File transfer failed (killed by signal=%d)", WTERMSIG(exit_status));
+		read_failed = true; // do not try to read from the pipe
+		dprintf( D_ALWAYS, "%s\n", transobject->Info.error_desc.Value() );
 	} else {
 		if( WEXITSTATUS(exit_status) != 0 ) {
 			dprintf( D_ALWAYS, "File transfer completed successfully.\n" );
@@ -1290,7 +1293,6 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		}
 	}
 
-	bool read_failed = false;
 	int n;
 
 	if(!read_failed) {
@@ -1348,8 +1350,10 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	if(read_failed) {
 		transobject->Info.success = false;
 		transobject->Info.try_again = true;
-		transobject->Info.error_desc.sprintf("Failed to read status report from file transfer pipe (errno %d): %s",errno,strerror(errno));
-		dprintf(D_ALWAYS,"%s\n",transobject->Info.error_desc.Value());
+		if( transobject->Info.error_desc.IsEmpty() ) {
+			transobject->Info.error_desc.sprintf("Failed to read status report from file transfer pipe (errno %d): %s",errno,strerror(errno));
+			dprintf(D_ALWAYS,"%s\n",transobject->Info.error_desc.Value());
+		}
 	}
 
 	close(transobject->TransferPipe[0]);
