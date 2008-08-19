@@ -123,7 +123,7 @@ extern "C" {
 	void condor_net_remap_config( bool force_param=false );
 	int param_integer_c( const char *name, int default_value,
 					   int min_value, int max_value);
-    int  param_boolean_int( const char *name, int default_value );  
+    int  param_boolean_int( const char *name, int default_value );
 	int  set_persistent_config(char *admin, char *config);
 	int  set_runtime_config(char *admin, char *config);
 	/** Expand parameter references of the form "left$(middle)right".  
