@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -51,7 +51,7 @@
  * They will be overwritten by the values in the Stork Config file.
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 unsigned long Max_num_jobs;       //max number of concurrent jobs running
-unsigned long Max_retry;          //max number of times a job will be retried 
+unsigned long Max_retry;          //max number of times a job will be retried
 unsigned long Max_delayInMinutes; //max time a job is allowed to finish
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -108,7 +108,7 @@ read_config_file(void)
 			10,							// default
 			1							// minimum value
 		);
-	dprintf(D_ALWAYS, "STORK_MAX_NUM_JOBS = %ld\n", Max_num_jobs);  
+	dprintf(D_ALWAYS, "STORK_MAX_NUM_JOBS = %ld\n", Max_num_jobs);
 
 	//get value for Max_retry
 	Max_retry =
@@ -117,7 +117,7 @@ read_config_file(void)
 			10,						// default
 			1						// minimum value
 		);
-	dprintf(D_ALWAYS, "STORK_MAX_RETRY = %ld\n", Max_retry);  
+	dprintf(D_ALWAYS, "STORK_MAX_RETRY = %ld\n", Max_retry);
 
 	//get value for Max_delayInMinutes
 	Max_delayInMinutes =
@@ -126,7 +126,7 @@ read_config_file(void)
 			10,						// default
 			1						// minimum value
 		);
-	dprintf(D_ALWAYS, "STORK_MAXDELAY_INMINUTES = %ld\n", Max_delayInMinutes);  
+	dprintf(D_ALWAYS, "STORK_MAXDELAY_INMINUTES = %ld\n", Max_delayInMinutes);
 
 	//get value for STORK_TMP_CRED_DIR
 	if (Cred_tmp_dir) free(Cred_tmp_dir);
@@ -162,7 +162,7 @@ read_config_file(void)
 
 	static int old_job_q_clean_interval = CLEAN_Q_INTERVAL_MIN - 1;
 	static int cleanid = -1;
-	int job_q_clean_interval = 
+	int job_q_clean_interval =
 		param_integer(
 				"STORK_QUEUE_CLEAN_INTERVAL",	// parameter name
 				CLEAN_Q_INTERVAL_DEFAULT,
@@ -293,7 +293,7 @@ close_module_stdio( module_stdio_t module_stdio)
 }
 
 /* ============================================================================
- * check whether the status of a dap job is already logged or not 
+ * check whether the status of a dap job is already logged or not
  * ==========================================================================*/
 int
 already_logged(char *dap_id, char *status)
@@ -377,7 +377,7 @@ get_last_dapid(void)
 	std::string             key;
 	char unstripped[MAXSTR];
 
-	query.Bind(dapcollection);  
+	query.Bind(dapcollection);
 	query.Query("root", NULL);
 	query.ToFirst();
 
@@ -397,7 +397,7 @@ get_last_dapid(void)
 			}
 		}while (query.Next(key));
 	}
-  
+
 		//check also the history log file for max dapid
 	ClassAd_Reader adreader(historyfilename.Value());
 	while(1) {
@@ -412,7 +412,7 @@ get_last_dapid(void)
 		}
 	}
 		//end of while
-  
+
 	last_dap = max_dapid;
 }
 
@@ -466,11 +466,11 @@ dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 #endif
 
 	strcpy(unstripped, src_url);
-	strncpy(src_url, strip_str(unstripped), MAXSTR);  
+	strncpy(src_url, strip_str(unstripped), MAXSTR);
 
 	// For dynamic destinations ...
 	// FIXME: This is an awful detection algorithm
-	//if (! strcmp(dest_host, DYNAMIC_XFER_DEST_HOST) ) 
+	//if (! strcmp(dest_host, DYNAMIC_XFER_DEST_HOST) )
 	if (strstr( _dest_url, DYNAMIC_XFER_DEST_HOST) ) {
 
 		dynamic_xfer_dest = true;
@@ -494,7 +494,7 @@ dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 				Matchmaker->getTransferDirectory(dest_protocol);
 			if (tmp == NULL) {
 				// No dynamic destination URLs are available for this protocol.
-				write_collection_log(dapcollection, dap_id, 
+				write_collection_log(dapcollection, dap_id,
 									 "status = \"request_rescheduled\";"
 									 "error_code = \"no match found\";"
 									 );
@@ -573,8 +573,8 @@ dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 		src_url_value.sprintf("\"%s\"", src_url);
 		dest_url_value.sprintf("\"%s\"", dest_url.c_str() );
 
-		write_xml_user_log(userlogfilename, "MyType", "\"GenericEvent\"", 
-						   "EventTypeNumber", "8", 
+		write_xml_user_log(userlogfilename, "MyType", "\"GenericEvent\"",
+						   "EventTypeNumber", "8",
 						   "Cluster", dap_id,
 						   "Proc", "-1",
 						   "Subproc", "-1",
@@ -620,7 +620,7 @@ dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 			dap_id,src_url,dest_url.c_str());
 		return DAP_ERROR;                  //--> Find a better soln!
 	}
-  
+
 }
 
 /* ============================================================================
@@ -636,9 +636,9 @@ reserve_dap(char *dap_id, char *reserve_id, char *reserve_size,
 	ArgList args;
 
 	(void) reserve_id;		// quiet warning
-  
+
 	parse_url(dest_url, dest_protocol, dest_host, dest_file);
-  
+
 		//dynamically create a shell script to execute
 	snprintf(commandbody, MAXSTR, "%sreserve.%s",
 		DAP_CATALOG_NAMESPACE, dest_protocol);
@@ -696,7 +696,7 @@ release_dap(char *dap_id, char *reserve_id, char *dest_url)
 	char command[MAXSTR], commandbody[MAXSTR];
 	int pid;
 	ArgList args;
-  
+
 	parse_url(dest_url, dest_protocol, dest_host, dest_file);
 
 		//get the corresponding lot_id
@@ -710,11 +710,11 @@ release_dap(char *dap_id, char *reserve_id, char *dest_url)
 	constraint = "other.dap_type == \"reserve\"";
 	classad::ExprTree *constraint_tree = parser.ParseExpression( constraint );
 	if (!constraint_tree) {
-		dprintf(D_ALWAYS, 
+		dprintf(D_ALWAYS,
 				"Error in parsing constraint: %s\n", constraint.c_str());
 	}
 
-	query.Bind(dapcollection);  
+	query.Bind(dapcollection);
 	query.Query("root", constraint_tree);
 	query.ToFirst();
 
@@ -740,10 +740,10 @@ release_dap(char *dap_id, char *reserve_id, char *dest_url)
 		//dynamically create a shell script to execute
 	snprintf(commandbody, MAXSTR, "%srelease.%s",
 		DAP_CATALOG_NAMESPACE, dest_protocol);
-  
+
 		//dynamically create a shell script to execute
 	snprintf(command, MAXSTR, "%s/%s",  Module_dir, commandbody);
-  
+
 		//create a new process to transfer the files
 	args.AppendArg(commandbody);
 	args.AppendArg(dest_host);
@@ -792,10 +792,10 @@ requestpath_dap(char *dap_id, char *src_url, char *dest_url)
 	char command[MAXSTR], commandbody[MAXSTR];
 	int pid;
 	ArgList args;
-  
+
 	parse_url(src_url, src_protocol, src_host, src_file);
 	parse_url(dest_url, dest_protocol, dest_host, dest_file);
-  
+
 		//dynamically create a shell script to execute
 	snprintf(commandbody, MAXSTR, "%srequestpath.%s",
 		DAP_CATALOG_NAMESPACE, src_protocol);
@@ -851,34 +851,34 @@ process_request(classad::ClassAd *currentAd)
 	char dap_id[MAXSTR], dap_type[MAXSTR];
 	char unstripped[MAXSTR];
 	bool status;
-  
+
 		//get the dap_id of the request
-	getValue(currentAd, "dap_id", unstripped); 
+	getValue(currentAd, "dap_id", unstripped);
 	strncpy(dap_id, strip_str(unstripped), MAXSTR);
 
 		//log the new status of the request
-	write_collection_log(dapcollection, dap_id, 
+	write_collection_log(dapcollection, dap_id,
 						 "status = \"processing_request\"");
-  
+
 	user_log(currentAd, ULOG_EXECUTE);
 
 	char lognotes[MAXSTR];
 	getValue(currentAd, "LogNotes", lognotes);
-  
+
 	// FIXME delete this old userlog writer
-	write_xml_user_log(userlogfilename, "MyType", "\"ExecuteEvent\"", 
-					   "EventTypeNumber", "1", 
+	write_xml_user_log(userlogfilename, "MyType", "\"ExecuteEvent\"",
+					   "EventTypeNumber", "1",
 					   "Cluster", dap_id,
 					   "Proc", "-1",
 					   "Subproc", "-1",
 					   "LogNotes", lognotes);
 
-  
+
 		//write_xml_log(xmllogfilename, currentAd, "\"processing_request\"");
-  
+
 
 		//get the dap_type
-	getValue(currentAd, "dap_type", unstripped); 
+	getValue(currentAd, "dap_type", unstripped);
 	strncpy(dap_type, strip_str(unstripped), MAXSTR);
 
 
@@ -981,7 +981,7 @@ process_request(classad::ClassAd *currentAd)
 					 cred_name.c_str());
 		}
 	}
- 
+
 		// If proxy was submitted directly to stork, use it
 	if (cred_file_name == NULL) {
 		std::string cred_file_name_str;
@@ -991,7 +991,7 @@ process_request(classad::ClassAd *currentAd)
 
 		//if dap_type == transfer
 	if (!strcmp(dap_type, "transfer")){
-    
+
 		char src_url[MAXSTR], dest_url[MAXSTR], arguments[MAXSTR];
 		char use_protocol[MAXSTR], alt_protocols[MAXSTR];
 		char src_alt_protocol[MAXSTR], dest_alt_protocol[MAXSTR];
@@ -1020,8 +1020,8 @@ process_request(classad::ClassAd *currentAd)
 						   "dap_id",dap_id,
 						   "error_code","\"bad arguments\"" );
 			write_xml_user_log( userlogfilename,
-								"MyType", "\"JobCompletedEvent\"", 
-								"EventTypeNumber", "5", 
+								"MyType", "\"JobCompletedEvent\"",
+								"EventTypeNumber", "5",
 								"TerminatedNormally", "0",
 								"ReturnValue", "1",
 								"Cluster", dap_id,
@@ -1036,10 +1036,10 @@ process_request(classad::ClassAd *currentAd)
 			//select which protocol to use
 		getValue(currentAd, "use_protocol", use_protocol);
 		protocol_num = atoi(use_protocol);
-    
+
 		if (!strcmp(use_protocol, "0")){
-				//dprintf(D_ALWAYS, "use_protocol: %s\n", use_protocol);      
-			status = 
+				//dprintf(D_ALWAYS, "use_protocol: %s\n", use_protocol);
+			status =
 				transfer_dap(dap_id, src_url, dest_url, args, cred_file_name,
 							 currentAd);
 			if (! status) {
@@ -1048,7 +1048,7 @@ process_request(classad::ClassAd *currentAd)
 				user_log(currentAd, ULOG_GENERIC);
 				currentAd->InsertAttr("termination_type", "server_error");
 				user_log(currentAd, ULOG_JOB_TERMINATED);
-				write_dap_log(historyfilename.Value(), "\"request_removed\"", 
+				write_dap_log(historyfilename.Value(), "\"request_removed\"",
 							  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
 				remove_job( dap_id);
 			}
@@ -1056,7 +1056,7 @@ process_request(classad::ClassAd *currentAd)
 		else{
 			getValue(currentAd, "alt_protocols", alt_protocols);
 			dprintf(D_ALWAYS, "alt. protocols = %s\n", alt_protocols);
-      
+
 			if (!strcmp(alt_protocols,"")) { //if no alt. protocol defined
 				status = transfer_dap(dap_id, src_url, dest_url, args,
 									  cred_file_name, currentAd);
@@ -1066,23 +1066,23 @@ process_request(classad::ClassAd *currentAd)
 					user_log(currentAd, ULOG_GENERIC);
 					currentAd->InsertAttr("termination_type", "server_error");
 					user_log(currentAd, ULOG_JOB_TERMINATED);
-					write_dap_log(historyfilename.Value(), "\"request_removed\"", 
+					write_dap_log(historyfilename.Value(), "\"request_removed\"",
 						  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
 					remove_job( dap_id);
 				}
 			}
 			else{ //use alt. protocols
-				strcpy(next_protocol, strtok(alt_protocols, ",") );   
+				strcpy(next_protocol, strtok(alt_protocols, ",") );
 	
 				for(int i=1;i<protocol_num;i++){
-					strcpy(next_protocol, strtok(NULL, ",") );   
+					strcpy(next_protocol, strtok(NULL, ",") );
 				}
 
 				dprintf(D_FULLDEBUG, "next protocol = %s\n", next_protocol);
 	
 				if (strcmp(next_protocol,"")) {
-					strcpy(src_alt_protocol, strtok(next_protocol, "-") );   
-					strcpy(dest_alt_protocol, strtok(NULL, "") );   
+					strcpy(src_alt_protocol, strtok(next_protocol, "-") );
+					strcpy(dest_alt_protocol, strtok(NULL, "") );
 				}
 	
 				char src_alt_url[MAXSTR], dest_alt_url[MAXSTR];
@@ -1093,15 +1093,15 @@ process_request(classad::ClassAd *currentAd)
 				parse_url(dest_url, dest_protocol, dest_host, dest_file);
 	
 				if (!strcmp(strip_str(src_alt_protocol), "file"))
-					snprintf(src_alt_url, MAXSTR, "file:%s", src_file);  
+					snprintf(src_alt_url, MAXSTR, "file:%s", src_file);
 				else
-					snprintf(src_alt_url, MAXSTR, "%s://%s/%s", 
+					snprintf(src_alt_url, MAXSTR, "%s://%s/%s",
 							 strip_str(src_alt_protocol), src_host, src_file);
 	
 				if (!strcmp(strip_str(dest_alt_protocol), "file"))
-					snprintf(dest_alt_url, MAXSTR, "file:%s", dest_file);  
+					snprintf(dest_alt_url, MAXSTR, "file:%s", dest_file);
 				else
-					snprintf(dest_alt_url, MAXSTR, "%s://%s/%s", 
+					snprintf(dest_alt_url, MAXSTR, "%s://%s/%s",
 							 strip_str(dest_alt_protocol),dest_host,dest_file);
 	
 	
@@ -1115,7 +1115,7 @@ process_request(classad::ClassAd *currentAd)
 					currentAd->InsertAttr("termination_type", "server_error");
 					user_log(currentAd, ULOG_JOB_TERMINATED);
 					write_dap_log(historyfilename.Value(),
-								  "\"request_removed\"", 
+								  "\"request_removed\"",
 								  "dap_id", dap_id,
 								  "error_code", "\"REMOVED!\"");
 					remove_job( dap_id);
@@ -1124,7 +1124,7 @@ process_request(classad::ClassAd *currentAd)
 		}
 	}
 
-		//if dap_type == reserve 
+		//if dap_type == reserve
 	else if(!strcmp(dap_type, "reserve")){
 
 		char dest_host[MAXSTR], reserve_size[MAXSTR];
@@ -1133,17 +1133,17 @@ process_request(classad::ClassAd *currentAd)
 
 		getValue(currentAd, "dest_host", dest_host);
 		strncpy(dest_host, strip_str(dest_host), MAXSTR);
-    
-		getValue(currentAd, "output_file", output_file); 
+
+		getValue(currentAd, "output_file", output_file);
 		strncpy(output_file, strip_str(output_file), MAXSTR);
 
-		getValue(currentAd, "reserve_size", reserve_size); 
+		getValue(currentAd, "reserve_size", reserve_size);
 		strncpy(reserve_size, strip_str(reserve_size), MAXSTR);
 
-		getValue(currentAd, "duration", duration); 
+		getValue(currentAd, "duration", duration);
 		strncpy(duration, strip_str(duration), MAXSTR);
 
-		getValue(currentAd, "reserve_id", reserve_id); 
+		getValue(currentAd, "reserve_id", reserve_id);
 		strncpy(reserve_id, strip_str(reserve_id), MAXSTR);
 
 		reserve_dap(dap_id, reserve_id, reserve_size, duration, dest_host, output_file);
@@ -1151,32 +1151,32 @@ process_request(classad::ClassAd *currentAd)
 
 		//if dap_type == release
 	else if(!strcmp(dap_type, "release")){
-  
+
 		char dest_host[MAXSTR], reserve_id[MAXSTR];
 
-		getValue(currentAd, "dest_host", dest_host); 
+		getValue(currentAd, "dest_host", dest_host);
 		strncpy(dest_host, strip_str(dest_host), MAXSTR);
-    
-		getValue(currentAd, "reserve_id", reserve_id); 
+
+		getValue(currentAd, "reserve_id", reserve_id);
 		strncpy(reserve_id, strip_str(reserve_id), MAXSTR);
 
 		release_dap(dap_id, reserve_id, dest_host);
 	}
-  
+
 		//if dap_type == requestpath
 	else if(!strcmp(dap_type, "requestpath")){
-  
+
 		char src_host[MAXSTR], dest_host[MAXSTR];
 
-		getValue(currentAd, "src_host", src_host); 
+		getValue(currentAd, "src_host", src_host);
 		strncpy(src_host, strip_str(src_host), MAXSTR);
 
-		getValue(currentAd, "dest_host", dest_host); 
+		getValue(currentAd, "dest_host", dest_host);
 		strncpy(dest_host, strip_str(dest_host), MAXSTR);
 
-			//getValue(currentAd, "path_id", path_id); 
+			//getValue(currentAd, "path_id", path_id);
 			//strncpy(path_id, strip_str(path_id), MAXSTR);
-    
+
 		requestpath_dap(dap_id, src_host, dest_host);
 	}
 
@@ -1204,7 +1204,7 @@ low_water_reaper(Service *,int pid,int exit_status)
 	return DAP_SUCCESS;
 }
 
-// count total jobs in ClassAdCollection job queue, in all states.  Note that 
+// count total jobs in ClassAdCollection job queue, in all states.  Note that
 // Scheduler::get_numjobs() only returns the count of running jobs.  For the
 // purposes of the demo, it would be better to count the number of idle jobs.
 // However, this would require performing a query, and walking the returned
@@ -1286,7 +1286,7 @@ low_water_timer(void)
 
 
 /* ============================================================================
- * regularly check for requests which are in the state of being processed but 
+ * regularly check for requests which are in the state of being processed but
  * not completed yet
  * ==========================================================================*/
 void
@@ -1298,22 +1298,22 @@ regular_check_for_requests_in_process(void)
 	std::string             key, constraint;
 	char   dap_id[MAXSTR];
 	int timediff_inseconds, maxdelay_inseconds;
-	int num_attempts = 0; 
+	int num_attempts = 0;
 		
 		//  printf("regular check for requests in process..\n");
-  
+
 	maxdelay_inseconds = Max_delayInMinutes * 60;
-  
+
 		//set the constraint for the query
 	constraint = "other.status == \"processing_request\"";
 		//constraint = "other.status == \"request_completed\"";
 	classad::ExprTree *constraint_tree = parser.ParseExpression( constraint );
 	if (!constraint_tree) {
-		dprintf(D_ALWAYS, 
+		dprintf(D_ALWAYS,
 				"Error in parsing constraint: %s\n", constraint.c_str());
 	}
 
-	query.Bind(dapcollection);  
+	query.Bind(dapcollection);
 	query.Query("root", constraint_tree);
 	query.ToFirst();
 
@@ -1340,8 +1340,8 @@ regular_check_for_requests_in_process(void)
 				// if the elapsed time is greater than the maximum delay
 				// allowed, then reprocess the request..
 				if (timediff_inseconds > maxdelay_inseconds){
-					getValue(job_ad, "dap_id", dap_id); 
-					dprintf(D_ALWAYS, 
+					getValue(job_ad, "dap_id", dap_id);
+					dprintf(D_ALWAYS,
 							"job id: %s may be hung.  "
 							"Elapsed time: %d min, limit: %lu min .  "
 							"Reprocessing ...\n",
@@ -1349,7 +1349,7 @@ regular_check_for_requests_in_process(void)
 							timediff_inseconds/60,
 							Max_delayInMinutes
 					   );
-	  
+	
 					unsigned int pid;
 					if (dap_queue.get_pid(pid, dap_id) == DAP_SUCCESS){
 
@@ -1407,28 +1407,28 @@ regular_check_for_requests_in_process(void)
 									//		  sstatus = "\"request_rescheduled\"";
 								modify_s += "status = \"request_rescheduled\";";
 							}
-		 
+		
 							else{
 									//		  sstatus = "\"request_failed\"";
 								modify_s += "status = \"request_failed\";";
 							}
-		 
-							snprintf(tempstr, MAXSTR, 
+		
+							snprintf(tempstr, MAXSTR,
 									 "num_attempts = %d;",num_attempts + 1);
-		 
+		
 							modify_s +=  tempstr;
 							modify_s += "error_code = \"\"";
-		 
+		
 							write_collection_log(dapcollection, dap_id, modify_s.c_str());
-		 
-								//when request is failed for good, remove it from the collection 
+		
+								//when request is failed for good, remove it from the collection
 								//and log it to the history log file..
 
 
 
 							char lognotes[MAXSTR] ;
 							getValue(job_ad, "LogNotes", lognotes);
-		   
+		
 							if (num_attempts + 1 >=  (int)Max_retry){
 
 								remove_credential (dap_id);
@@ -1441,31 +1441,31 @@ regular_check_for_requests_in_process(void)
 
 								dapcollection->RemoveClassAd(key);
 								write_dap_log(historyfilename.Value(),
-										"\"request_failed\"", 
+										"\"request_failed\"",
 											  "dap_id", dap_id, "error_code", "\"ABORTED!\"");
-		   
+		
 								//write XML user logs
 								// FIXME delete this old userlog writer
 								char exit_status_str[MAXSTR];
 								snprintf(exit_status_str, MAXSTR, "%d", 9);
-								write_xml_user_log(userlogfilename, "MyType", "\"JobCompletedEvent\"", 
-												   "EventTypeNumber", "5", 
+								write_xml_user_log(userlogfilename, "MyType", "\"JobCompletedEvent\"",
+												   "EventTypeNumber", "5",
 												   "TerminatedNormally", "1",
 												   "ReturnValue", exit_status_str,
 												   "Cluster", dap_id,
 												   "Proc", "-1",
 												   "Subproc", "-1",
 												   "LogNotes", lognotes);
-		   
+		
 								dprintf(D_ALWAYS, "Request aborted!\n");
 								continue;
 							}
-		 
+		
 						} // remove PID from dap_queue
 						else{
 							dprintf(D_ALWAYS, "Error in Removing process %d\n", pid);
 						}
-	      
+	
 					}
 
 					char use_protocol[MAXSTR];
@@ -1503,7 +1503,7 @@ regular_check_for_requests_in_process(void)
         daemonCore->Cancel_Timer(HungJobMonitorTid);
     }
 
-	HungJobMonitorTid = 
+	HungJobMonitorTid =
 		daemonCore->Register_Timer(
 			HungJobMonitorInterval,		// deltawhen
 			HungJobMonitorInterval,		// period
@@ -1525,7 +1525,7 @@ startup_check_for_requests_in_process(void)
 	classad::ClassAdParser  parser;
 	std::string             key, constraint;
 	time_t	right_now = time(NULL);
-  
+
 		//set the constraint for the query
 	constraint = "other.status == \"processing_request\"";
 	classad::ExprTree *constraint_tree = parser.ParseExpression( constraint );
@@ -1533,7 +1533,7 @@ startup_check_for_requests_in_process(void)
 		dprintf(D_ALWAYS,"Error in parsing constraint!\n");
 	}
 
-	query.Bind(dapcollection);  
+	query.Bind(dapcollection);
 	query.Query("root", constraint_tree);
 	query.ToFirst();
 
@@ -1544,7 +1544,7 @@ startup_check_for_requests_in_process(void)
 				break;
 			}
 			else{
-				if ( (dap_queue.get_numjobs() < Max_num_jobs) && 
+				if ( (dap_queue.get_numjobs() < Max_num_jobs) &&
 					 dynamicOK(job_ad,right_now) ) {
 					process_request(job_ad);
 				} else {
@@ -1567,7 +1567,7 @@ regular_check_for_rescheduled_requests(void)
 	classad::ClassAdParser  parser;
 	std::string             key, constraint;
 	time_t right_now = time(NULL);
-  
+
 		//set the constraint for the query
 	constraint = "other.status == \"request_rescheduled\"";
 	classad::ExprTree *constraint_tree = parser.ParseExpression( constraint );
@@ -1575,7 +1575,7 @@ regular_check_for_rescheduled_requests(void)
 		dprintf(D_ALWAYS,"Error in parsing constraint!\n");
 	}
 
-	query.Bind(dapcollection);  
+	query.Bind(dapcollection);
 	query.Query("root", constraint_tree);
 	query.ToFirst();
 
@@ -1616,7 +1616,7 @@ regular_check_for_rescheduled_requests(void)
         daemonCore->Cancel_Timer(RescheduledJobMonitorTid);
     }
 
-	RescheduledJobMonitorTid = 
+	RescheduledJobMonitorTid =
 		daemonCore->Register_Timer(
 			RescheduledJobMonitorInterval,		// deltawhen
 			RescheduledJobMonitorInterval,		// period
@@ -1627,7 +1627,7 @@ regular_check_for_rescheduled_requests(void)
 }
 
 /* ============================================================================
- * initialize dapcollection 
+ * initialize dapcollection
  * ==========================================================================*/
 void
 initialize_dapcollection(void)
@@ -1682,7 +1682,7 @@ initializations(void)
 		return FALSE;
 	}
 
-		//initialize dapcollection 
+		//initialize dapcollection
 	initialize_dapcollection();
 
 		// instantiate matchmaker
@@ -1692,10 +1692,10 @@ initializations(void)
 	dprintf(D_FULLDEBUG, "It's %p, size %d\n", Matchmaker, sizeof(*Matchmaker));
 	ASSERT(Matchmaker);
 
-		//init history file name 
+		//init history file name
 	historyfilename.sprintf( "%s.history", logfilename);
 
-		//init xml log file name 
+		//init xml log file name
 		//  sprintf(xmllogfilename, "%s.xml", logfilename);<-- change this
 
 	if (!userlogfilename){
@@ -1711,9 +1711,9 @@ initializations(void)
 			);
 		}
 	}
-  
+
 		//get the last dap_id from dap-jobs-to-process
-	get_last_dapid();  
+	get_last_dapid();
 
 		//check the logfile for noncompleted requests at startup
 	startup_check_for_requests_in_process();
@@ -1741,18 +1741,18 @@ returnDynamicMatches(void)
 	classad::ClassAd       *job_ad;
 	classad::ClassAdParser  parser;
 	std::string             key, constraint;
-  
+
     // set the constraint for the query
 	//constraint = "other.status == \"processing_request\"";
 	constraint = "dest_transfer_url is defined";
 	classad::ExprTree *constraint_tree = parser.ParseExpression( constraint );
 	if (!constraint_tree) {
-		dprintf(D_ALWAYS, 
+		dprintf(D_ALWAYS,
 				"Error in parsing constraint: %s\n", constraint.c_str());
         return;
 	}
 
-	query.Bind(dapcollection);  
+	query.Bind(dapcollection);
 	query.Query("root", constraint_tree);
 	query.ToFirst();
 
@@ -1842,7 +1842,7 @@ call_main(void)
 	std::string                  key, constraint;
 	int period;
 	time_t right_now = time(NULL);
-  
+
 	// Avoid query if possible.
 	if (dap_queue.get_numjobs() < Max_num_jobs ) {
 
@@ -1855,8 +1855,8 @@ call_main(void)
 			dprintf(D_ALWAYS, "Error in parsing constraint!\n");
 		}
 
-	  
-		query.Bind(dapcollection);  
+	
+		query.Bind(dapcollection);
 		query.Query("root", constraint_tree);
 		query.ToFirst();
 
@@ -1897,7 +1897,7 @@ call_main(void)
         daemonCore->Cancel_Timer(IdleJobMonitorTid);
     }
 
-	IdleJobMonitorTid = 
+	IdleJobMonitorTid =
 		daemonCore->Register_Timer(
 			IdleJobMonitorInterval,		// deltawhen
 			IdleJobMonitorInterval,		// period
@@ -1914,7 +1914,7 @@ call_main(void)
 int
 write_requests_to_file(ReliSock * sock)
 {
-		// Require authentication 
+		// Require authentication
     if (!sock->triedAuthentication()) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(sock, WRITE, &errstack) ) {
@@ -1948,7 +1948,7 @@ write_requests_to_file(ReliSock * sock)
 		// user.
 	}
     int cred_size;
-    
+
 
     if (!sock->code(cred_size)) {
 		dprintf(D_ALWAYS, "%s:%d Server: recv error (cred size)!: (%d)%s\n",
@@ -1958,7 +1958,7 @@ write_requests_to_file(ReliSock * sock)
 		return FALSE;
     }
 
-   
+
     void*cred_buff = NULL;
     if (cred_size > 0) {
 		cred_buff = malloc (cred_size);
@@ -2088,14 +2088,14 @@ write_requests_to_file(ReliSock * sock)
 
 		//add the rquest classad to dap collection
     dapcollection->AddClassAd(keystr, requestAd);
-    
+
 		//increment last dap_id
     last_dap ++;
 
     unparser.Unparse(adbuffer, requestAd);
     dprintf(D_ALWAYS, "New Request => %s\n",adbuffer.c_str());
 
-    
+
 		//---> XML Stuff
 		//ClassAdXMLUnParser  xmlunparser;
 		//string xmlstring;
@@ -2103,27 +2103,27 @@ write_requests_to_file(ReliSock * sock)
 		//xmlunparser.Unparse(xmlstring, requestAd);
 		//printf("new Request in XML format=> %s\n",xmlstring.c_str());
 		//write_xml_log(xmllogfilename, requestAd, "\"request_received\"");
-    
-    
+
+
 	//write user log
 	user_log(requestAd, ULOG_SUBMIT);
 
 	// FIXME delete this old userlog writer
     char lognotes[MAXSTR];
     getValue(requestAd, "LogNotes", lognotes);
-    write_xml_user_log(userlogfilename, "MyType", "\"SubmitEvent\"", 
-					   "EventTypeNumber", "0", 
+    write_xml_user_log(userlogfilename, "MyType", "\"SubmitEvent\"",
+					   "EventTypeNumber", "0",
 					   "Cluster", last_dapstr,
 					   "Proc", "-1",
 					   "Subproc", "-1",
 					   "LogNotes", lognotes);
-    
+
 
 
 
 		//send response to the client
     char response[MAXSTR];
-    
+
     snprintf(response, MAXSTR, "%s", last_dapstr);
 
     sock->encode();
@@ -2176,13 +2176,13 @@ list_queue(ReliSock * sock)
 	classad::ClassAdParser parser;
 	classad::ExprTree *constraint_tree = parser.ParseExpression( constraint );
 	if (!constraint_tree) {
-		dprintf(D_ALWAYS, 
+		dprintf(D_ALWAYS,
 				"Error in parsing constraint: %s\n", constraint.c_str());
 		return FALSE;
 	}
 
 	classad::LocalCollectionQuery query;
-	query.Bind(dapcollection);  
+	query.Bind(dapcollection);
 	query.Query("root", constraint_tree);
 	query.ToFirst();
 
@@ -2272,11 +2272,11 @@ send_dap_status_to_client(ReliSock * sock)
 	} else {
 		// If not, try getting it from the history file
 		ClassAd_Reader adreader(historyfilename.Value());
-      
+
 		while(adreader.readAd()) {
-			adreader.getValue("dap_id", unstripped); 
+			adreader.getValue("dap_id", unstripped);
 			strncpy(nextdap, strip_str(unstripped), MAXSTR);
-      
+
 			if ( !strcmp(dap_id, nextdap) ){
 				found_job = true;
 				unparser.Unparse (adbuffer, adreader.getCurrentAd());
@@ -2284,27 +2284,27 @@ send_dap_status_to_client(ReliSock * sock)
 			}
 		}
 	}
-    
+
 	int rc = 1;
 
 
 		//if the history for dap_id still not found:
     if (!found_job) {
 		rc = 0;
-		dprintf(D_ALWAYS, 
-				"Unable to get status for job with job id: %s\n", 
+		dprintf(D_ALWAYS,
+				"Unable to get status for job with job id: %s\n",
 				dap_id);
 		adbuffer = "Couldn't find DaP job: ";
 		adbuffer += dap_id;
     } else {
 		rc = 1;
-		dprintf(D_FULLDEBUG, 
+		dprintf(D_FULLDEBUG,
 				"status report for the job with job id: %s ==>\n%s\n",
-				dap_id, 
-				adbuffer.c_str());    
+				dap_id,
+				adbuffer.c_str());
 	}
 	if (dap_id) free (dap_id);
-    
+
     sock->encode();
 
     char * pstr = strdup(adbuffer.c_str());
@@ -2335,7 +2335,7 @@ remove_requests_from_queue(ReliSock * sock)
 	classad::ClassAdUnParser unparser;
 	int rc = 0;
 	
-		// Require authentication 
+		// Require authentication
 	if (!sock->triedAuthentication()) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(sock, WRITE, &errstack) ) {
@@ -2344,7 +2344,7 @@ remove_requests_from_queue(ReliSock * sock)
 		}
 	}
 
-  
+
     char * dap_id = NULL;
 
     sock->decode();
@@ -2395,8 +2395,8 @@ remove_requests_from_queue(ReliSock * sock)
 		else{
 			dprintf(D_ALWAYS, "Corresponding process for job: %s not found\n", dap_id);
 		}
-      
-      
+
+
 		if (dap_queue.remove(dap_id) == DAP_SUCCESS){
 			// THIS IS A BUG.  dap_reaper() will attempt to retrieve the PID
 			// for the job when it terminates, and fail.
@@ -2408,33 +2408,33 @@ remove_requests_from_queue(ReliSock * sock)
 		}
 
 		remove_credential (dap_id);
-      
+
 		std::string modify_s = "status = \"request_removed\"";
 		write_collection_log(dapcollection, dap_id, modify_s.c_str());
-	  
+	
 		char lognotes[MAXSTR] ;
 		getValue(job_ad, "LogNotes", lognotes);
-      
+
 		user_log(job_ad, ULOG_JOB_ABORTED);
 
 		dapcollection->RemoveClassAd(key);
 
-		write_dap_log(historyfilename.Value(), "\"request_removed\"", 
+		write_dap_log(historyfilename.Value(), "\"request_removed\"",
 					  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
-      
+
 		// FIXME delete this old userlog writer
-		write_xml_user_log(userlogfilename, "MyType", "\"JobAbortedEvent\"", 
-						   "EventTypeNumber", "9", 
+		write_xml_user_log(userlogfilename, "MyType", "\"JobAbortedEvent\"",
+						   "EventTypeNumber", "9",
 						   "TerminatedNormally", "0",
 						   "Cluster", dap_id,
 						   "Proc", "-1",
 						   "Subproc", "-1",
 						   "LogNotes", lognotes);
-      
+
 
 		adbuffer += "DaP job ";
 		adbuffer += dap_id;
-		adbuffer += " is removed from queue.";      
+		adbuffer += " is removed from queue.";
 		rc = 1;
     }//if
     else {
@@ -2444,7 +2444,7 @@ remove_requests_from_queue(ReliSock * sock)
 		rc = 0;
     }
 	if (dap_id) free (dap_id);
-    
+
 		//send response to the client
     sock->encode();
     char * pstr = strdup(adbuffer.c_str());
@@ -2461,7 +2461,7 @@ remove_requests_from_queue(ReliSock * sock)
 		return FALSE;
     }
     if (pstr) free (pstr);
-    
+
 	return TRUE;
 }
 
@@ -2477,8 +2477,8 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 	classad::ClassAd *job_ad;
 	std::string key = "key = ";
 	char unstripped[MAXSTR];
-  
-	dprintf(D_ALWAYS, "Process %d terminated with exit status %d \n", 
+
+	dprintf(D_ALWAYS, "Process %d terminated with exit status %d \n",
 			pid, exit_status);
 	snprintf(fname, MAXSTR, "%s/out.%d", Log_dir, pid);
 
@@ -2525,7 +2525,7 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 				  modify_s += ";";
 				*/
 		} // dap_type == reserve
-    
+
 		modify_s += "status = \"request_completed\"";
 		write_collection_log(dapcollection, dap_id, modify_s.c_str());
 
@@ -2548,7 +2548,7 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 				dprintf(D_ALWAYS, "Error in parsing constraint: %s\n", constraint.c_str());
 			}
 
-			query.Bind(dapcollection);  
+			query.Bind(dapcollection);
 			query.Query("root", constraint_tree);
 			query.ToFirst();
 
@@ -2562,7 +2562,7 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 					else{
 						getValue(job_ad2, "reserve_id", current_reserve_id);
 						strncpy(current_reserve_id, strip_str(current_reserve_id), MAXSTR);
-	    
+	
 						if (!strcmp(current_reserve_id, reserve_id)) {
 							getValue(job_ad2, "dap_id", reserve_dap_id);
 							strncpy(reserve_dap_id, strip_str(reserve_dap_id), MAXSTR);
@@ -2598,7 +2598,7 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 			}
 		}
 
-			//when request is comleted, remove it from the collection and 
+			//when request is comleted, remove it from the collection and
 			//log it to the history log file..
 		if (!strcmp(dap_type, "reserve")){
 				//this part commented temporarily, required by nest_reserve
@@ -2615,22 +2615,22 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 
 		write_dap_log(historyfilename.Value(), "\"request_completed\"", "dap_id", dap_id);
 			//    write_xml_log(xmllogfilename, job_ad, "\"request_completed\"");
-    
+
 		// FIXME delete this old userlog writer
-		write_xml_user_log(userlogfilename, "MyType", "\"JobCompleteEvent\"", 
-						   "EventTypeNumber", "5", 
+		write_xml_user_log(userlogfilename, "MyType", "\"JobCompleteEvent\"",
+						   "EventTypeNumber", "5",
 						   "TerminatedNormally", "1",
 						   "ReturnValue", "0",
 						   "Cluster", dap_id,
 						   "Proc", "-1",
 						   "Subproc", "-1",
 						   "LogNotes", lognotes);
-    
+
 	}
 
 		//---- if process failed (exit_status != 0) ----
 	else{
-		int num_attempts; 
+		int num_attempts;
 		char attempts[MAXSTR], tempstr[MAXSTR];
 		char use_protocol[MAXSTR], alt_protocols[MAXSTR];
 		int protocol_num, max_protocols = 0;
@@ -2642,7 +2642,7 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 			num_attempts = atoi(attempts);
 
 		dprintf(D_ALWAYS, "number of attempts = %d\n", num_attempts);
-    
+
 
 		if ( (f = safe_fopen_wrapper(fname, "r")) == NULL ){
 			dprintf(
@@ -2658,14 +2658,14 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 		}
 
 			//    string sstatus = "";
-    
+
 		std::string next_action;
 		if (num_attempts + 1 < (int)Max_retry){
 				//sstatus = "\"request_rescheduled\"";
 			modify_s += "status = \"request_rescheduled\";";
 			next_action = "Rescheduling.";
 		}
-    
+
 		else{
 				//      sstatus = "\"request_failed\"";
 			modify_s += "status = \"request_failed\";";
@@ -2692,7 +2692,7 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 			generic_event.sprintf(
 				"Job attempt %d exited by signal %d",
 				num_attempts+1, WTERMSIG( exit_status ) );
-#ifdef WCOREDUMP 
+#ifdef WCOREDUMP
 			if ( WCOREDUMP( exit_status) ) {
 				MyString core;
 				core.sprintf(
@@ -2701,7 +2701,7 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 				job_ad->InsertAttr("generic_event", core.Value() );
 				user_log(job_ad, ULOG_GENERIC);
 			}
-#endif // WCOREDUMP 
+#endif // WCOREDUMP
 		} else if ( WIFEXITED( exit_status) ) {
 			generic_event.sprintf(
 				"Job attempt %d exited with status %d",
@@ -2716,9 +2716,9 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 		job_ad->InsertAttr("generic_event", next_action );
 		user_log(job_ad, ULOG_GENERIC);
 
-		snprintf(tempstr, MAXSTR, 
+		snprintf(tempstr, MAXSTR,
 				 "num_attempts = %d;",num_attempts + 1);
-    
+
 		modify_s +=  tempstr;
 		modify_s += "error_code = \"";
 		modify_s += linebuf;
@@ -2727,19 +2727,19 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 			//get which protocol to use
 		getValue(job_ad, "use_protocol", use_protocol);
 		protocol_num = atoi(use_protocol);
-    
+
 		getValue(job_ad, "alt_protocols", alt_protocols);
-    
+
 		if (strcmp(alt_protocols,"")) {
-			strtok(alt_protocols, ",");   
+			strtok(alt_protocols, ",");
 			max_protocols ++;
-    
+
 			while( strtok(NULL, ",") != NULL){
 				max_protocols ++;
 				dprintf(D_ALWAYS, "max protocols = %d\n", max_protocols);
 			}
 		}
-    
+
 			//set which protocol to use
 		if (protocol_num < max_protocols){
 			snprintf(tempstr, MAXSTR, "use_protocol = %d;",protocol_num + 1);
@@ -2749,11 +2749,11 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 			snprintf(tempstr, MAXSTR, "use_protocol = %d;",0);
 			modify_s +=  tempstr;
 		}
-    
+
 		write_collection_log(dapcollection, dap_id, modify_s.c_str());
 			//    write_xml_log(xmllogfilename, job_ad, sstatus.c_str());
-      
-			//when request is failed for good, remove it from the collection and 
+
+			//when request is failed for good, remove it from the collection and
 			//log it to the history log file..
 		if (num_attempts + 1 >=  (int)Max_retry){
 			strncat(linebufstr, linebuf, MAXSTR-2);
@@ -2765,15 +2765,15 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 
 			dapcollection->RemoveClassAd(key);
 
-			write_dap_log(historyfilename.Value(), "\"request_failed\"", 
+			write_dap_log(historyfilename.Value(), "\"request_failed\"",
 						  "dap_id", dap_id, "error_code", linebufstr);
-            
+
 			char exit_status_str[MAXSTR];
 			snprintf(exit_status_str, MAXSTR, "%d", exit_status);
-      
+
 			// FIXME delete this old userlog writer
-			write_xml_user_log(userlogfilename, "MyType", "\"JobCompletedEvent\"", 
-							   "EventTypeNumber", "5", 
+			write_xml_user_log(userlogfilename, "MyType", "\"JobCompletedEvent\"",
+							   "EventTypeNumber", "5",
 							   "TerminatedNormally", "1",
 							   "ReturnValue", exit_status_str,
 							   "Cluster", dap_id,
@@ -2784,12 +2784,12 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 
 			remove_credential (dap_id);
 		}
-      
+
 		if (f != NULL){
 			fclose(f);
 			unlink(fname);
 		}
-    
+
 	}//else
 	return DAP_SUCCESS;
 }
@@ -2812,7 +2812,7 @@ reserve_dap_reaper(Service *,int pid,int exit_status)
 {
 	std::string modify_s = "";
 	return dap_reaper(modify_s, pid, exit_status);
-  
+
 }
 
 /* ============================================================================
@@ -2842,10 +2842,10 @@ remove_credential (char * dap_id)
 
 		// Switch to root
 	priv_state old_priv = set_root_priv();
-  
+
 	struct stat stat_buff;
 
-	if (stat ((const char*)filename, &stat_buff) == 0) {  
+	if (stat ((const char*)filename, &stat_buff) == 0) {
 		int rc = unlink (filename);
 
 		set_priv(old_priv);
@@ -2874,7 +2874,7 @@ int
 get_cred_from_credd (const char * request, void *& buff, int & size)
 {
 	dprintf (D_FULLDEBUG, "Requesting credential %s\n", request);
-  
+
 	priv_state priv = set_user_priv();
 
 	Daemon my_credd (DT_CREDD, NULL, NULL);

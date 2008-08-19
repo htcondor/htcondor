@@ -123,10 +123,10 @@ void parse_url(const char *url, char *protocol, char *host, char *filename)
 
   //get protocola
   if (strcmp(temp_url,"")) {
-    strcpy(protocol, strtok(temp_url, "://") );   
+    strcpy(protocol, strtok(temp_url, "://") );
   }
   else {
-    strcpy(protocol, "");       
+    strcpy(protocol, "");
     printf("Error in parsing URL %s\n", url);
     return;
   }

@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -170,10 +170,10 @@ StorkMatchEntry::operator< (const StorkMatchEntry& E2)
 }
 
 
-int 
+int
 StorkMatchEntry::operator== (const StorkMatchEntry& E2)
 {
-	// If both entries have a lease id, that must be equal 
+	// If both entries have a lease id, that must be equal
 
 	if (Lease &&  E2.Lease ) {
 		if ( ((Lease->LeaseId())==(E2.Lease->LeaseId())) ) {
@@ -270,9 +270,9 @@ StorkMatchMaker::getMatchesFromMatchmaker(void)
 {
 	StorkMatchEntry* match;
 
-		// Grab some matches from the matchmaker if we don't have 
+		// Grab some matches from the matchmaker if we don't have
 		// any locally cached.
-	if ( idleMatches.Count() == 0 ) 
+	if ( idleMatches.Count() == 0 )
 	{
 		list<DCMatchMakerLease *> leases;
 
@@ -350,7 +350,7 @@ StorkMatchMaker::getMatchesFromMatchmaker(void)
 		int count = 0;
 		for ( list<DCMatchMakerLease *>::iterator iter=leases.begin();
 			  iter != leases.end();
-			  iter++ ) 
+			  iter++ )
 		{
 			count++;
 			match = new StorkMatchEntry( *iter );
@@ -444,7 +444,7 @@ getTransferFile(const char *protocol)
 }
 
 
-// Return a dynamic transfer destination to the matchmaker. 
+// Return a dynamic transfer destination to the matchmaker.
 bool
 StorkMatchMaker::returnTransferDestination(const char * path,
 										   bool successful_transfer)
@@ -574,7 +574,7 @@ StorkMatchMaker::addToIdleSet(StorkMatchEntry* match)
 }
 
 bool
-StorkMatchMaker::fromBusyToIdle(StorkMatchEntry* match) 
+StorkMatchMaker::fromBusyToIdle(StorkMatchEntry* match)
 {
 	StorkMatchEntry* full_match = NULL;
 	StorkMatchEntry* temp;
@@ -696,7 +696,7 @@ StorkMatchMaker::timeout(void)
 			// send our list to the matchmaker
 		DCMatchMaker		dcmm( mm_name,mm_pool );
 		result = dcmm.releaseLeases(leases);
-		dprintf(D_ALWAYS,"MM: %s release %d leases\n", 
+		dprintf(D_ALWAYS,"MM: %s release %d leases\n",
 						result ? "Successful" : "Failed to ",
 						to_release.Count());
 			// deallocate memory
@@ -742,14 +742,14 @@ StorkMatchMaker::timeout(void)
 			// send our list to the matchmaker
 		DCMatchMaker		dcmm( mm_name,mm_pool );
 		result = dcmm.renewLeases(input_leases,output_leases);
-		dprintf(D_ALWAYS,"MM: %s renew %d leases\n", 
+		dprintf(D_ALWAYS,"MM: %s renew %d leases\n",
 						result ? "Successful" : "Failed to ",
 						to_renew.Count());
 			// update the expiration counters for all renewed leases
 		if ( result ) {
 			for ( list<DCMatchMakerLease *>::iterator iter=output_leases.begin();
 				  iter != output_leases.end();
-				  iter++ ) 
+				  iter++ )
 			{
 				bool found = false;
 				to_renew.StartIterations();
