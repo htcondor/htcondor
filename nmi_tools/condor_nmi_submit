@@ -869,7 +869,14 @@ sub createSubmitFiles
 		writeTestGlue( *CMDFILE );
     }
 
-	 close CMDFILE;
+	# Sometimes builds and tests get backed up.  If so, we would 
+	# like to eventually run all the jobs, but we'd like to see results from
+	# newer ones first.  Setting the user job prio to the Qdate should
+	# help with this.
+
+	print CMDFILE "+priority = QDate\n";
+
+	close CMDFILE;
     return $cmdfile;
 }
 
