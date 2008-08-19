@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -77,7 +77,7 @@ extern	void setPPstyle (ppOption, int, char *);
 extern	void setType    (char *, int, char *);
 extern	void setMode 	(Mode, int, char *);
 
-int 
+int
 main (int argc, char *argv[])
 {
 #if !defined(WIN32)
@@ -112,7 +112,7 @@ main (int argc, char *argv[])
 	// can override it
 	switch (type)
 	{
-#ifdef WANT_QUILL 
+#ifdef WANT_QUILL
 	  case QUILL_AD:
 		setPPstyle(PP_QUILL_NORMAL, 0, DEFAULT);
 		break;
@@ -160,14 +160,14 @@ main (int argc, char *argv[])
 
 	// set the constraints implied by the mode
 	switch (mode) {
-#ifdef WANT_QUILL 
+#ifdef WANT_QUILL
 	  case MODE_QUILL_NORMAL:
 #endif /* WANT_QUILL */
 
 	  case MODE_STARTD_NORMAL:
 	  case MODE_MASTER_NORMAL:
 	  case MODE_CKPT_SRVR_NORMAL:
-	  case MODE_SCHEDD_NORMAL: 
+	  case MODE_SCHEDD_NORMAL:
 	  case MODE_SCHEDD_SUBMITTORS:
 	  case MODE_COLLECTOR_NORMAL:
 	  case MODE_NEGOTIATOR_NORMAL:
@@ -185,7 +185,7 @@ main (int argc, char *argv[])
 
 	  case MODE_STARTD_AVAIL:
 			  // For now, -avail shows you machines avail to anyone.
-		sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_STATE, 
+		sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_STATE,
 					state_to_string(unclaimed_state));
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
@@ -195,7 +195,7 @@ main (int argc, char *argv[])
 
 
 	  case MODE_STARTD_RUN:
-		sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_STATE, 
+		sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_STATE,
 					state_to_string(claimed_state));
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
@@ -276,13 +276,13 @@ main (int argc, char *argv[])
 			d = new Daemon( DT_STARTD, direct, addr );
 			break;
 
-#ifdef WANT_QUILL 
-		case MODE_QUILL_NORMAL: 
+#ifdef WANT_QUILL
+		case MODE_QUILL_NORMAL:
 			d = new Daemon( DT_QUILL, direct, addr );
 			break;
 #endif /* WANT_QUILL */
 
-		case MODE_SCHEDD_NORMAL: 
+		case MODE_SCHEDD_NORMAL:
 		case MODE_SCHEDD_SUBMITTORS:
 			d = new Daemon( DT_SCHEDD, direct, addr );
 			break;
@@ -332,13 +332,13 @@ main (int argc, char *argv[])
 			}
 		}
 		else {
-			fprintf (stderr, "Error:  Could not fetch ads --- %s\n", 
+			fprintf (stderr, "Error:  Could not fetch ads --- %s\n",
 					 getStrQueryResult(q));
 		}
 		exit (1);
 	}
 
-	// sort the ad 
+	// sort the ad
 	if( sortLessThanExprs.getlast() > -1 ) {
 		result.Sort((SortFunctionType) customLessThanFunc );
 	} else {
@@ -384,7 +384,7 @@ usage ()
 		"\t-master\t\t\tDisplay daemon master attributes\n"
 		"\t-pool <name>\t\tGet information from collector <name>\n"
 		"\t-run\t\t\tSame as -claimed [deprecated]\n"
-#ifdef WANT_QUILL 
+#ifdef WANT_QUILL
 		"\t-quill\t\t\tDisplay attributes of quills\n"
 #endif /* WANT_QUILL */
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
@@ -402,9 +402,9 @@ usage ()
 		"\t-long\t\t\tDisplay entire classads\n"
 		"\t-sort <attr>\t\tSort entries by named attribute\n"
 		"\t-total\t\t\tDisplay totals only\n"
-		"\t-verbose\t\tSame as -long\n" 
-		"\t-xml\t\t\tDisplay entire classads, but in XML\n" 
-		"\t-expert\t\t\tDisplay shorter error messages\n" 
+		"\t-verbose\t\tSame as -long\n"
+		"\t-xml\t\t\tDisplay entire classads, but in XML\n"
+		"\t-expert\t\t\tDisplay shorter error messages\n"
 		"    and [custom-opts ...] are one or more of\n"
 		"\t-constraint <const>\tAdd constraint on classads\n"
 		"\t-format <fmt> <attr>\tRegister display format and attribute\n"
@@ -434,8 +434,8 @@ firstPass (int argc, char *argv[])
 			}
 			i++;
 			if( ! argv[i] ) {
-				fprintf( stderr, "%s: -pool requires a hostname as an argument.\n", 
-						 myName ); 
+				fprintf( stderr, "%s: -pool requires a hostname as an argument.\n",
+						 myName );
 				if (!expert) {
 					printf("\n");
 					print_wrapped_text("Extra Info: The hostname should be the central "
@@ -443,7 +443,7 @@ firstPass (int argc, char *argv[])
 									   stderr);
 					printf("\n");
 				}
-				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
 			pool = new DCCollector( argv[i] );
@@ -459,23 +459,23 @@ firstPass (int argc, char *argv[])
 									   stderr);
 				}
 				exit( 1 );
-			} 
+			}
 		} else
 		if (matchPrefix (argv[i], "-format", 2)) {
 			setPPstyle (PP_CUSTOM, i, argv[i]);
 			if( !argv[i+1] || !argv[i+2] ) {
-				fprintf( stderr, "%s: -format requires two other arguments\n", 
-						 myName ); 
-				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
+				fprintf( stderr, "%s: -format requires two other arguments\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
 			i += 2;			
 		} else
 		if (matchPrefix (argv[i], "-target", 5)) {
 			if( !argv[i+1] ) {
-				fprintf( stderr, "%s: -target requires one additional argument\n", 
-						 myName ); 
-				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
+				fprintf( stderr, "%s: -target requires one additional argument\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
 			i += 1;
@@ -488,9 +488,9 @@ firstPass (int argc, char *argv[])
 			// can add constraints on second pass only
 			i++;
 			if( ! argv[i] ) {
-				fprintf( stderr, "%s: -constraint requires another argument\n", 
-						 myName ); 
-				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
+				fprintf( stderr, "%s: -constraint requires another argument\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
 		} else
@@ -501,9 +501,9 @@ firstPass (int argc, char *argv[])
 			}
 			i++;
 			if( ! argv[i] ) {
-				fprintf( stderr, "%s: -direct requires another argument\n", 
-						 myName ); 
-				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
+				fprintf( stderr, "%s: -direct requires another argument\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
 			direct = strdup( argv[i] );
@@ -553,9 +553,9 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-subsystem", 5)) {
 			i++;
 			if( !argv[i] ) {
-				fprintf( stderr, "%s: -subsystem requires another argument\n", 
-						 myName ); 
-				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
+				fprintf( stderr, "%s: -subsystem requires another argument\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
 			if (matchPrefix (argv[i], "schedd", 6)) {
@@ -582,14 +582,14 @@ firstPass (int argc, char *argv[])
 			if (*argv[i] == '-') {
 				fprintf(stderr, "%s: -subsystem requires another argument\n",
 						myName);
-				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit(1);
 			} else {
 				genericType = strdup(argv[i]);
 				setMode (MODE_OTHER, i, argv[i]);
 			}
 		} else
-#ifdef WANT_QUILL 
+#ifdef WANT_QUILL
 		if (matchPrefix (argv[i], "-quill", 2)) {
 			setMode (MODE_QUILL_NORMAL, i, argv[i]);
 		} else
@@ -612,9 +612,9 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-sort", 3)) {
 			i++;
 			if( ! argv[i] ) {
-				fprintf( stderr, "%s: -sort requires another argument\n", 
-						 myName ); 
-				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
+				fprintf( stderr, "%s: -sort requires another argument\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
 			char	exprString[1024];
@@ -668,19 +668,19 @@ firstPass (int argc, char *argv[])
 		}
 	}
 	if( had_pool_error ) {
-		fprintf( stderr, 
+		fprintf( stderr,
 				 "Warning:  Multiple -pool arguments given, using \"%s\"\n",
 				 pool->name() );
 	}
 	if( had_direct_error ) {
-		fprintf( stderr, 
+		fprintf( stderr,
 				 "Warning:  Multiple -direct arguments given, using \"%s\"\n",
 				 direct );
 	}
 }
 
 
-void 
+void
 secondPass (int argc, char *argv[])
 {
 	char *daemonname;
@@ -697,7 +697,7 @@ secondPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-format", 2)) {
 			pm.registerFormat (argv[i+1], argv[i+2]);
 			if (diagnose) {
-				printf ("Arg %d --- register format [%s] for [%s]\n", 
+				printf ("Arg %d --- register format [%s] for [%s]\n",
 						i, argv[i+1], argv[i+2]);
 			}
 			i += 2;
@@ -741,7 +741,7 @@ secondPass (int argc, char *argv[])
 			switch (mode) {
 			  case MODE_STARTD_NORMAL:
 			  case MODE_STARTD_COD:
-#ifdef WANT_QUILL 
+#ifdef WANT_QUILL
 			  case MODE_QUILL_NORMAL:
 #endif /* WANT_QUILL */
 			  case MODE_SCHEDD_NORMAL:
@@ -749,21 +749,21 @@ secondPass (int argc, char *argv[])
 			  case MODE_MASTER_NORMAL:
 			  case MODE_COLLECTOR_NORMAL:
 			  case MODE_CKPT_SRVR_NORMAL:
-  			  case MODE_NEGOTIATOR_NORMAL:
+			  case MODE_NEGOTIATOR_NORMAL:
 			  case MODE_STORAGE_NORMAL:
 			  case MODE_ANY_NORMAL:
 			  case MODE_GENERIC_NORMAL:
-    		  case MODE_STARTD_AVAIL:
-    		  case MODE_OTHER:
-				sprintf(buffer,"(TARGET.%s==\"%s\") || (TARGET.%s==\"%s\")", 
-						 ATTR_NAME, daemonname, ATTR_MACHINE, daemonname );
+			  case MODE_STARTD_AVAIL:
+			  case MODE_OTHER:
+				sprintf(buffer,"(TARGET.%s==\"%s\") || (TARGET.%s==\"%s\")",
+						ATTR_NAME, daemonname, ATTR_MACHINE, daemonname );
 				if (diagnose) {
 					printf ("[%s]\n", buffer);
 				}
 				query->addORConstraint (buffer);
 				break;
 
-    		  case MODE_STARTD_RUN:
+			  case MODE_STARTD_RUN:
 				sprintf (buffer,"TARGET.%s == \"%s\"",ATTR_REMOTE_USER,argv[i]);
 				if (diagnose) {
 					printf ("[%s]\n", buffer);
@@ -776,7 +776,7 @@ secondPass (int argc, char *argv[])
 			}
 			delete [] daemonname;
 			daemonname = NULL;
-		} else 
+		} else
 		if (matchPrefix (argv[i], "-constraint", 4)) {
 			if (diagnose) {
 				printf ("[%s]\n", argv[i+1]);
@@ -815,9 +815,9 @@ lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 		buf2 = "";
 	}
 	val = strcmp( buf1.Value(), buf2.Value() );
-	if( val ) { 
+	if( val ) {
 		return (val < 0);
-	} 
+	}
 
 	if( !ad1->LookupString(ATTR_ARCH, buf1) ||
 		!ad2->LookupString(ATTR_ARCH, buf2) ) {
@@ -825,9 +825,9 @@ lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 		buf2 = "";
 	}
 	val = strcmp( buf1.Value(), buf2.Value() );
-	if( val ) { 
+	if( val ) {
 		return (val < 0);
-	} 
+	}
 
 	if( !ad1->LookupString(ATTR_MACHINE, buf1) ||
 		!ad2->LookupString(ATTR_MACHINE, buf2) ) {
@@ -835,9 +835,9 @@ lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 		buf2 = "";
 	}
 	val = strcmp( buf1.Value(), buf2.Value() );
-	if( val ) { 
+	if( val ) {
 		return (val < 0);
-	} 
+	}
 
 	if (!ad1->LookupString(ATTR_NAME, buf1) ||
 		!ad2->LookupString(ATTR_NAME, buf2))

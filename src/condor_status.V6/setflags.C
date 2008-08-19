@@ -64,7 +64,7 @@ setPPstyle (ppOption pps, int i, char *argv)
     static char *setArg = NULL;
 
 	if (argv == NULL) {
-		printf ("Set by arg %d (%-10s), PrettyPrint style = %s\n", 
+		printf ("Set by arg %d (%-10s), PrettyPrint style = %s\n",
 				setBy, setArg, getPPStyleStr());
 		return;
 	}
@@ -121,10 +121,10 @@ setType (char *dtype, int i, char *argv)
 				setBy, setArg, getTypeStr());
 		return;
 	}
-		 
+
 	// if the type has already been set, and is trying to be reset by default
 	// rules, override the default  (i.e., don't make a change)
-	if (setBy != 0 && i == 0) 
+	if (setBy != 0 && i == 0)
 		return;
 
     if (setArg == NULL) {
@@ -194,7 +194,7 @@ getModeStr()
 		case MODE_STARTD_RUN:			return "Run (Startd)";
 		case MODE_STARTD_COD:			return "COD (Startd)";
 #ifdef WANT_QUILL
-		case MODE_QUILL_NORMAL:		return "Normal (Quill)";
+		case MODE_QUILL_NORMAL:			return "Normal (Quill)";
 #endif /* WANT_QUILL */
 
 		case MODE_SCHEDD_NORMAL:		return "Normal (Schedd)";
@@ -207,7 +207,7 @@ getModeStr()
 		case MODE_GENERIC_NORMAL:		return "Normal (Generic)";
 		case MODE_OTHER:				return "Generic";
 		case MODE_ANY_NORMAL:			return "Normal (Any)";
-		default:				return "<Unknown!>";
+		default:						return "<Unknown!>";
 	}
 	// should never get here
 	exit (1);

@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -117,7 +117,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				break;
 
 			  case PP_XML:
-				  printXML (ad, (classad_index == 0), 
+				  printXML (ad, (classad_index == 0),
 							(classad_index == last_classad_index));
 				  break;
 
@@ -172,7 +172,7 @@ void
 printStartdNormal (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask alpm; 
+	static AttrListPrintMask alpm;
 	int    now;
 	int	   actvty;
 
@@ -187,7 +187,7 @@ printStartdNormal (ClassAd *ad)
 		arch_name = "Ver";
 		arch_attr = (char*) ATTR_JAVA_VERSION;	
 	} else if(vmMode) {
-		// For vm universe, we will print ATTR_VM_MEMORY 
+		// For vm universe, we will print ATTR_VM_MEMORY
 		// instead of ATTR_MEMORY
 		opsys_name = "VMType";
 		opsys_attr = (char*) ATTR_VM_TYPE;
@@ -207,13 +207,13 @@ printStartdNormal (ClassAd *ad)
 		{
 			if( vmMode ) {
 				printf ("\n%-18.18s %-6.6s %-10.10s %-9.9s %-8.8s %-6.6s "
-						"%-4.4s %-12.12s  %s\n\n", 
-						ATTR_NAME, opsys_name, arch_name, ATTR_STATE, ATTR_ACTIVITY, 
+						"%-4.4s %-12.12s  %s\n\n",
+						ATTR_NAME, opsys_name, arch_name, ATTR_STATE, ATTR_ACTIVITY,
 						ATTR_LOAD_AVG, mem_name, "ActvtyTime", "VMNetworking");
 			}else {
 				printf ("\n%-18.18s %-10.10s %-6.6s %-9.9s %-8.8s %-6.6s "
-						"%-4.4s  %s\n\n", 
-						ATTR_NAME, opsys_name, arch_name, ATTR_STATE, ATTR_ACTIVITY, 
+						"%-4.4s  %s\n\n",
+						ATTR_NAME, opsys_name, arch_name, ATTR_STATE, ATTR_ACTIVITY,
 						ATTR_LOAD_AVG, mem_name, "ActvtyTime");
 			}
 		
@@ -250,7 +250,7 @@ printStartdNormal (ClassAd *ad)
 			MyString networking_types;
 
 			ad->LookupBool(ATTR_VM_NETWORKING, vm_networking);
-			if( vm_networking && ( ad->LookupString( ATTR_VM_NETWORKING_TYPES, 
+			if( vm_networking && ( ad->LookupString( ATTR_VM_NETWORKING_TYPES,
 							networking_types) == 1 )) {
 				printf( " %s", networking_types.Value());
 			}else {
@@ -275,8 +275,8 @@ printServer (ClassAd *ad)
 		if (first)
 		{
 			printf ("\n%-13.13s %-11.11s %-6.6s %-6.6s %-6.6s  %-7.7s "
-					"%-10.10s %-10.10s\n\n", 
-				ATTR_NAME, ATTR_OPSYS, ATTR_ARCH, ATTR_LOAD_AVG, ATTR_MEMORY, 
+					"%-10.10s %-10.10s\n\n",
+				ATTR_NAME, ATTR_OPSYS, ATTR_ARCH, ATTR_LOAD_AVG, ATTR_MEMORY,
 				ATTR_DISK, ATTR_MIPS, ATTR_KFLOPS);
 		
 			alpm.registerFormat("%-13.13s ", ATTR_NAME, "[???????????] ");
@@ -299,7 +299,7 @@ void
 printState (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask alpm; 
+	static AttrListPrintMask alpm;
 
 	if (ad)
 	{
@@ -309,7 +309,7 @@ printState (ClassAd *ad)
 			printf ("\n%-10.10s %-3.3s %5.5s %-6.6s  "
 					"%-10.10s %-7.7s   %-11.11s"
 					"%-4.4s %-12.12s\n\n",
-				ATTR_NAME, ATTR_CPUS, ATTR_MEMORY, "LoadAv", 
+				ATTR_NAME, ATTR_CPUS, ATTR_MEMORY, "LoadAv",
 				"KbdIdle", ATTR_STATE, "StateTime",
 				ATTR_ACTIVITY, "ActvtyTime");
 		
@@ -321,11 +321,11 @@ printState (ClassAd *ad)
 									ATTR_KEYBOARD_IDLE,
 									"[??????????] ");
 			alpm.registerFormat(" %-7.7s ",  ATTR_STATE, "[????????]  ");
-			alpm.registerFormat( (IntCustomFmt) formatElapsedTime, 
+			alpm.registerFormat( (IntCustomFmt) formatElapsedTime,
 									ATTR_ENTERED_CURRENT_STATE,
 									"[??????????] ");
 			alpm.registerFormat(" %-4.4s ",  ATTR_ACTIVITY, "[????????]  ");
-			alpm.registerFormat( (IntCustomFmt) formatElapsedTime, 
+			alpm.registerFormat( (IntCustomFmt) formatElapsedTime,
 									ATTR_ENTERED_CURRENT_ACTIVITY,
 									"[??????????] ");
 			alpm.registerFormat("\n", "*bogus*", "\n");  // force newline
@@ -341,7 +341,7 @@ void
 printRun (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask alpm; 
+	static AttrListPrintMask alpm;
 
 	char *opsys_attr, *arch_attr;
 	char *opsys_name, *arch_name;
@@ -367,11 +367,11 @@ printRun (ClassAd *ad)
 		{
 			if(vmMode) {
 				printf ("\n%-13.13s %-11.11s %-6.6s %-6.6s %-20.20s %-15.15s\n\n",
-						ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG, 
+						ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG,
 						ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
 			}else {
 				printf ("\n%-13.13s %-6.6s %-11.11s %-6.6s %-20.20s %-15.15s\n\n",
-						ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG, 
+						ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG,
 						ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
 			}
 		
@@ -387,9 +387,9 @@ printRun (ClassAd *ad)
 			}
 
 			alpm.registerFormat("%-.3f  ",  ATTR_LOAD_AVG, "[???]  ");
-			alpm.registerFormat("%-20.20s ", ATTR_REMOTE_USER, 
+			alpm.registerFormat("%-20.20s ", ATTR_REMOTE_USER,
 													"[??????????????????] ");
-			alpm.registerFormat("%-15.15s\n", ATTR_CLIENT_MACHINE, 
+			alpm.registerFormat("%-15.15s\n", ATTR_CLIENT_MACHINE,
 													"[?????????????]\n");
 
 			first = false;
@@ -477,7 +477,7 @@ printCOD (ClassAd *ad)
 void
 printQuillNormal (ClassAd *ad) {
 	static bool first = true;
-	static AttrListPrintMask alpm; 
+	static AttrListPrintMask alpm;
 
 	if (ad)
 	{
@@ -485,16 +485,16 @@ printQuillNormal (ClassAd *ad) {
 		if (first)
 		{
 			printf ("\n%-20.20s %-10.10s %-16.16s %-18.18s\n\n",
-				ATTR_NAME, ATTR_MACHINE, ATTR_QUILL_SQL_TOTAL, 
+				ATTR_NAME, ATTR_MACHINE, ATTR_QUILL_SQL_TOTAL,
 				ATTR_QUILL_SQL_LAST_BATCH);
 		
-			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
+			alpm.registerFormat("%-20.20s ", ATTR_NAME,
 													"[??????????????????] ");
-			alpm.registerFormat("%-10.10s ", ATTR_MACHINE, 
+			alpm.registerFormat("%-10.10s ", ATTR_MACHINE,
 													"[????????] ");
 			alpm.registerFormat("%16d ",ATTR_QUILL_SQL_TOTAL,
 													"[??????????????] ");
-			alpm.registerFormat("%18d\n",ATTR_QUILL_SQL_LAST_BATCH, 
+			alpm.registerFormat("%18d\n",ATTR_QUILL_SQL_LAST_BATCH,
 													"[???????????]\n");
 			first = false;
 		}
@@ -508,7 +508,7 @@ void
 printScheddNormal (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask alpm; 
+	static AttrListPrintMask alpm;
 
 	if (ad)
 	{
@@ -516,16 +516,16 @@ printScheddNormal (ClassAd *ad)
 		if (first)
 		{
 			printf ("\n%-20.20s %-10.10s %-16.16s %-13.13s %-14.14s\n\n",
-				ATTR_NAME, ATTR_MACHINE, ATTR_TOTAL_RUNNING_JOBS, 
+				ATTR_NAME, ATTR_MACHINE, ATTR_TOTAL_RUNNING_JOBS,
 				ATTR_TOTAL_IDLE_JOBS, ATTR_TOTAL_HELD_JOBS);
 		
-			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
+			alpm.registerFormat("%-20.20s ", ATTR_NAME,
 													"[??????????????????] ");
-			alpm.registerFormat("%-10.10s ", ATTR_MACHINE, 
+			alpm.registerFormat("%-10.10s ", ATTR_MACHINE,
 													"[????????] ");
 			alpm.registerFormat("%16d ",ATTR_TOTAL_RUNNING_JOBS,
 													"[??????????????] ");
-			alpm.registerFormat("%13d ",ATTR_TOTAL_IDLE_JOBS, 
+			alpm.registerFormat("%13d ",ATTR_TOTAL_IDLE_JOBS,
 													"[???????????] ");
 			alpm.registerFormat("%14d\n",ATTR_TOTAL_HELD_JOBS,"[????????????]\n");
 
@@ -541,7 +541,7 @@ void
 printScheddSubmittors (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask alpm; 
+	static AttrListPrintMask alpm;
 
 	if (ad)
 	{
@@ -549,12 +549,12 @@ printScheddSubmittors (ClassAd *ad)
 		if (first)
 		{
 			printf ("\n%-20.20s %-10.10s  %8.8s %-8.8s %-8.8s\n\n",
-				ATTR_NAME, ATTR_MACHINE, "Running", ATTR_IDLE_JOBS, 
+				ATTR_NAME, ATTR_MACHINE, "Running", ATTR_IDLE_JOBS,
 				ATTR_HELD_JOBS);
 		
-			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
+			alpm.registerFormat("%-20.20s ", ATTR_NAME,
 													"[??????????????????] ");
-			alpm.registerFormat("%-10.10s  ", ATTR_MACHINE, 
+			alpm.registerFormat("%-10.10s  ", ATTR_MACHINE,
 													"[????????]  ");
 			alpm.registerFormat("%8d ", ATTR_RUNNING_JOBS, "[??????] ");
 			alpm.registerFormat("%8d ", ATTR_IDLE_JOBS, "[??????] ");
@@ -571,7 +571,7 @@ void
 printCollectorNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask alpm; 
+	static AttrListPrintMask alpm;
 
 	if (ad)
 	{
@@ -579,12 +579,12 @@ printCollectorNormal(ClassAd *ad)
 		if (first)
 		{
 			printf ("\n%-20.20s %-20.20s  %-8.8s %-8.8s  %s\n\n",
-				ATTR_NAME, ATTR_MACHINE, "Running", ATTR_IDLE_JOBS, 
+				ATTR_NAME, ATTR_MACHINE, "Running", ATTR_IDLE_JOBS,
 				ATTR_NUM_HOSTS_TOTAL);
 		
-			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
+			alpm.registerFormat("%-20.20s ", ATTR_NAME,
 													"[??????????????????] ");
-			alpm.registerFormat("%-20.20s ", ATTR_MACHINE, 
+			alpm.registerFormat("%-20.20s ", ATTR_MACHINE,
 													"[??????????????????] ");
 			alpm.registerFormat("%8d ", ATTR_RUNNING_JOBS, " [?????] ");
 			alpm.registerFormat("%8d  ", ATTR_IDLE_JOBS, " [?????]  ");
@@ -678,9 +678,9 @@ printNegotiatorNormal(ClassAd *ad)
 			printf ("\n%-20.20s %-20.20s\n\n",
 				ATTR_NAME, ATTR_MACHINE);
 		
-			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
+			alpm.registerFormat("%-20.20s ", ATTR_NAME,
 													"[??????????????????] ");
-			alpm.registerFormat("%-20.20s ", ATTR_MACHINE, 
+			alpm.registerFormat("%-20.20s ", ATTR_MACHINE,
 													"[??????????????????] ");
 
 			first = false;
@@ -691,8 +691,8 @@ printNegotiatorNormal(ClassAd *ad)
 }
 
 /*
-We can't use the AttrListPrintMask here, because the AttrList does not actually contain 
-the MyType and TargetType fields that we want to display.  
+We can't use the AttrListPrintMask here, because the AttrList does not actually contain
+the MyType and TargetType fields that we want to display. 
 These are actually contained in the ClassAd.
 */
 
