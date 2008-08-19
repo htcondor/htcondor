@@ -874,7 +874,7 @@ sub createSubmitFiles
 	# newer ones first.  Setting the user job prio to the Qdate should
 	# help with this.
 
-	print CMDFILE "+priority = QDate\n";
+	print CMDFILE "+priority = ", time, "\n";
 
 	close CMDFILE;
     return $cmdfile;
