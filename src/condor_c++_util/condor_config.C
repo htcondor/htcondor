@@ -1291,7 +1291,7 @@ check_domain_attributes()
 void
 init_config(bool wantExtraInfo  /* = true */)
 {
-	memset( (char *)ConfigTab, 0, (TABLESIZE * sizeof(BUCKET*)) ); 
+	memset( (char *)ConfigTab, 0, (TABLESIZE * sizeof(BUCKET*)) );
 	if (wantExtraInfo) {
 		extra_info = new ExtraParamTable();
 	} else {
