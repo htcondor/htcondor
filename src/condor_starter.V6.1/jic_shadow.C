@@ -1749,10 +1749,11 @@ JICShadow::beginFileTransfer( void )
 int
 JICShadow::transferCompleted( FileTransfer *ftrans )
 {
-		// Make certain the file transfer succeeded.  
-		// Until "multi-starter" has meaning, it's ok to EXCEPT here,
-		// since there's nothing else for us to do.
 	if ( ftrans ) {
+			// Make certain the file transfer succeeded.
+			// Until "multi-starter" has meaning, it's ok to
+			// EXCEPT here, since there's nothing else for us
+			// to do.
 		FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
 		if ( !ft_info.success ) {
 			if(!ft_info.try_again) {
@@ -1763,6 +1764,20 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 			}
 
 			EXCEPT( "Failed to transfer files" );
+		}
+			// If we transferred the executable, make sure it
+			// has its execute bit set.
+		MyString cmd;
+		if (job_ad->LookupString(ATTR_JOB_CMD, cmd) &&
+		    (cmd == CONDOR_EXEC))
+		{
+			if (chmod(CONDOR_EXEC, 0755) == -1) {
+				dprintf(D_ALWAYS,
+				        "warning: unable to chmod %s to "
+				            "ensure execute bit is set: %s\n",
+				        CONDOR_EXEC,
+				        strerror(errno));
+			}
 		}
 	}
 

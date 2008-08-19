@@ -92,34 +92,17 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// Arguments
 		// // // // // // 
 
-	// if name is condor_exec, we transferred it, so make certain
-	// it is executable.
-	//
-	// unless we're in PrivSep mode, since we won't be able to
-	// do the chmod. this should NOT be a problem though, since
-	// the file should have been transferred with the execute
-	// bit set
-	//
-	if ( (strcmp(CONDOR_EXEC,JobName.Value()) == 0) && !privsep_enabled() ) {
-			// also, prepend the full path to this name so that we
-			// don't have to rely on the PATH inside the
-			// USER_JOB_WRAPPER or for exec().
-		JobName.sprintf( "%s%c%s", Starter->GetWorkingDir(),
-				 DIR_DELIM_CHAR, CONDOR_EXEC );
-
-		priv_state old_priv = set_user_priv();
-		int retval = chmod( JobName.Value(), 0755 );
-		set_priv( old_priv );
-		if( retval != 0 ) {
-			dprintf ( D_ALWAYS, "Failed to chmod %s!\n",JobName.Value() );
-			return 0;
-		}
-	}
-	else if(is_relative_to_cwd(JobName.Value()) && job_iwd && *job_iwd) {
-		// prepend full path to executable name
+		// prepend the full path to this name so that we
+		// don't have to rely on the PATH inside the
+		// USER_JOB_WRAPPER or for exec().
+	if (is_relative_to_cwd(JobName.Value()) && job_iwd && *job_iwd) {
 		MyString full_name;
-		full_name.sprintf("%s%c%s",job_iwd,DIR_DELIM_CHAR,JobName.Value());
+		full_name.sprintf("%s%c%s",
+		                  job_iwd,
+		                  DIR_DELIM_CHAR,
+		                  JobName.Value());
 		JobName = full_name;
+
 	}
 
 	if( Starter->isGridshell() ) {
