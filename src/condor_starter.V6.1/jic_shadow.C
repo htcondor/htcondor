@@ -365,11 +365,6 @@ JICShadow::transferOutput( void )
 		while ((filename = m_added_output_files.next()) != NULL) {
 			filetrans->addOutputFile(filename);
 		}
-
-			// make sure we can access the files
-		if (privsep_enabled()) {
-			privsep_helper.chown_sandbox_to_condor();
-		}
 	
 			// true if job exited on its own
 		bool final_transfer = (requested_exit == false);	
@@ -847,11 +842,6 @@ JICShadow::uploadWorkingFiles(void)
 {
 	if( ! filetrans ) {
 		return false;
-	}
-
-	// make sure we can access the files
-	if( privsep_enabled() ){
-		privsep_helper.chown_sandbox_to_condor();
 	}
 
 	// The shadow may block on disk I/O for long periods of
@@ -1744,10 +1734,6 @@ JICShadow::beginFileTransfer( void )
 			filetrans->setPeerVersion( *shadow_version );
 		}
 
-		if (privsep_enabled()) {
-			privsep_helper.chown_sandbox_to_condor();
-		}
-
 		if( ! filetrans->DownloadFiles(false) ) { // do not block
 				// Error starting the non-blocking file transfer.  For
 				// now, consider this a fatal error
@@ -1767,9 +1753,6 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		// Until "multi-starter" has meaning, it's ok to EXCEPT here,
 		// since there's nothing else for us to do.
 	if ( ftrans ) {
-		if (privsep_enabled()) {
-			privsep_helper.chown_sandbox_to_user();
-		}
 		FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
 		if ( !ft_info.success ) {
 			if(!ft_info.try_again) {

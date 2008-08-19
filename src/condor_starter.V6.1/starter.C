@@ -688,6 +688,15 @@ int
 CStarter::jobEnvironmentReady( void )
 {
 		//
+		// Now that we are done preparing the job's environment,
+		// change the sandbox ownership to the user before spawning
+		// any job processes.
+		//
+	if (privsep_enabled()) {
+		privsep_helper.chown_sandbox_to_user();
+	}
+
+		//
 		// The Starter will determine when the job 
 		// should be started. This method will always return 
 		// immediately
@@ -1382,6 +1391,12 @@ CStarter::Reaper(int pid, int exit_status)
 bool
 CStarter::allJobsDone( void )
 {
+		// now that all user processes are complete, change the
+		// sandbox ownership back over to condor
+	if (privsep_enabled()) {
+		privsep_helper.chown_sandbox_to_condor();
+	}
+
 		// No more jobs, notify our JobInfoCommunicator.
 	if (jic->allJobsDone()) {
 			// JIC::allJobsDone returned true: we're ready to move on.

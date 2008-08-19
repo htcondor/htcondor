@@ -615,10 +615,6 @@ OsProc::checkCoreFile( void )
 #if defined(WIN32)
 		EXCEPT("PrivSep not yet available on Windows");
 #else
-		// shouldn't strictly be necessary, but i'm ascared to
-		// take it out on the eve of 7.0.0
-		privsep_helper.chown_sandbox_to_condor();
-
 		struct stat stat_buf;
 		if (stat(name_with_pid.Value(), &stat_buf) != -1) {
 			Starter->jic->addToOutputFiles(name_with_pid.Value());

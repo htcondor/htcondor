@@ -81,7 +81,7 @@ StarterPrivSepHelper::initialize_sandbox(const char* path)
 
 	dprintf(D_FULLDEBUG, "PrivSep: initializing sandbox: %s\n", path);
 
-	if (!privsep_create_dir(m_uid, path)) {
+	if (!privsep_create_dir(get_condor_uid(), path)) {
 		EXCEPT("StarterPrivSepHelper::initialize_sandbox: "
 		           "privsep_create_dir error on %s",
 		       path);
@@ -89,7 +89,7 @@ StarterPrivSepHelper::initialize_sandbox(const char* path)
 
 	m_sandbox_path = strdup(path);
 	ASSERT(m_sandbox_path);
-	m_sandbox_owned_by_user = true;
+	m_sandbox_owned_by_user = false;
 
 	m_sandbox_initialized = true;
 }
