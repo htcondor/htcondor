@@ -11071,7 +11071,7 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 	if( matches->lookup( HashKey( id ), tempRec ) == 0 ) {
 		dprintf( D_ALWAYS,
 				 "attempt to add pre-existing match \"%s\" ignored\n",
-				 id ? id : "(null)" );
+				 rec->publicClaimId() ? rec->publicClaimId() : "(null)" );
 		delete rec;
 		return NULL;
 	}
