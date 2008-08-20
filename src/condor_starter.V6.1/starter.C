@@ -44,7 +44,7 @@
 #include "directory.h"
 #include "exit.h"
 #include "condor_auth_x509.h"
-#include "starter_privsep_helper.h"
+#include "condor_privsep_helper.h"
 
 extern "C" int get_random_int();
 extern int main_shutdown_fast();
@@ -236,7 +236,7 @@ CStarter::Config()
 
 	if (!m_configured) {
 		if (privsep_enabled()) {
-			m_privsep_helper = new StarterPrivSepHelper;
+			m_privsep_helper = new CondorPrivSepHelper;
 			ASSERT(m_privsep_helper != NULL);
 		}
 	}

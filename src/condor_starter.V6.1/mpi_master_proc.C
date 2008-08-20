@@ -25,7 +25,6 @@
 #include "condor_string.h"  // for strnewp
 #include "my_hostname.h"
 #include "env.h"
-#include "starter_privsep_helper.h"
 
 extern int main_shutdown_graceful();
 

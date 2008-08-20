@@ -26,7 +26,6 @@
 #include "classad_helpers.h"
 #include "sig_name.h"
 #include "stream_handler.h"
-#include "starter_privsep_helper.h"
 
 extern CStarter *Starter;
 

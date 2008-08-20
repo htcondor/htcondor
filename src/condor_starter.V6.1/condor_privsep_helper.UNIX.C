@@ -19,15 +19,15 @@
 
 
 #include "condor_common.h"
+#include "condor_privsep_helper.h"
 #include "condor_debug.h"
-#include "starter_privsep_helper.h"
 #include "condor_uid.h"
 #include "condor_arglist.h"
 #include "condor_daemon_core.h"
 
-bool StarterPrivSepHelper::s_instantiated = false;
+bool CondorPrivSepHelper::s_instantiated = false;
 
-StarterPrivSepHelper::StarterPrivSepHelper() :
+CondorPrivSepHelper::CondorPrivSepHelper() :
 	m_user_initialized(false),
 	m_sandbox_initialized(false),
 	m_uid(0),
@@ -38,7 +38,7 @@ StarterPrivSepHelper::StarterPrivSepHelper() :
 	s_instantiated = true;
 }
 
-StarterPrivSepHelper::~StarterPrivSepHelper()
+CondorPrivSepHelper::~CondorPrivSepHelper()
 {
 	if (m_sandbox_path != NULL) {
 		free(m_sandbox_path);
@@ -46,7 +46,7 @@ StarterPrivSepHelper::~StarterPrivSepHelper()
 }
 
 void
-StarterPrivSepHelper::initialize_user(uid_t uid)
+CondorPrivSepHelper::initialize_user(uid_t uid)
 {
 	ASSERT(!m_user_initialized);
 
@@ -60,11 +60,11 @@ StarterPrivSepHelper::initialize_user(uid_t uid)
 }
 
 void
-StarterPrivSepHelper::initialize_user(const char* name)
+CondorPrivSepHelper::initialize_user(const char* name)
 {
 	uid_t uid;
 	if (!pcache()->get_user_uid(name, uid)) {
-		EXCEPT("StarterPrivSepHelper::initialize_user: "
+		EXCEPT("CondorPrivSepHelper::initialize_user: "
 		           "%s not found in passwd cache",
 		       name);
 	}
@@ -72,7 +72,7 @@ StarterPrivSepHelper::initialize_user(const char* name)
 }
 
 void
-StarterPrivSepHelper::initialize_sandbox(const char* path)
+CondorPrivSepHelper::initialize_sandbox(const char* path)
 {
 	ASSERT(m_user_initialized);
 	ASSERT(!m_sandbox_initialized);
@@ -80,7 +80,7 @@ StarterPrivSepHelper::initialize_sandbox(const char* path)
 	dprintf(D_FULLDEBUG, "PrivSep: initializing sandbox: %s\n", path);
 
 	if (!privsep_create_dir(get_condor_uid(), path)) {
-		EXCEPT("StarterPrivSepHelper::initialize_sandbox: "
+		EXCEPT("CondorPrivSepHelper::initialize_sandbox: "
 		           "privsep_create_dir error on %s",
 		       path);
 	}
@@ -93,20 +93,20 @@ StarterPrivSepHelper::initialize_sandbox(const char* path)
 }
 
 uid_t
-StarterPrivSepHelper::get_uid()
+CondorPrivSepHelper::get_uid()
 {
 	ASSERT(m_user_initialized);
 	return m_uid;
 }
 
 void
-StarterPrivSepHelper::chown_sandbox_to_user()
+CondorPrivSepHelper::chown_sandbox_to_user()
 {
 	ASSERT(m_sandbox_initialized);
 
 	if (m_sandbox_owned_by_user) {
 		dprintf(D_FULLDEBUG,
-		        "StarterPrivSepHelper::chown_sandbox_to_user: "
+		        "CondorPrivSepHelper::chown_sandbox_to_user: "
 		        	"sandbox already user-owned\n");
 		return;
 	}
@@ -120,13 +120,13 @@ StarterPrivSepHelper::chown_sandbox_to_user()
 }
 
 void
-StarterPrivSepHelper::chown_sandbox_to_condor()
+CondorPrivSepHelper::chown_sandbox_to_condor()
 {
 	ASSERT(m_sandbox_initialized);
 
 	if (!m_sandbox_owned_by_user) {
 		dprintf(D_FULLDEBUG,
-		        "StarterPrivSepHelper::chown_sandbox_to_condor: "
+		        "CondorPrivSepHelper::chown_sandbox_to_condor: "
 		        	"sandbox already condor-owned\n");
 		return;
 	}
@@ -140,11 +140,11 @@ StarterPrivSepHelper::chown_sandbox_to_condor()
 }
 
 int
-StarterPrivSepHelper::create_process(const char* path,
+CondorPrivSepHelper::create_process(const char* path,
                                      ArgList&    args,
                                      Env&        env,
                                      const char* iwd,
-									 int         std_fds[3],
+                                     int         std_fds[3],
                                      const char* std_file_names[3],
                                      int         nice_inc,
                                      size_t*     core_size_ptr,

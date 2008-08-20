@@ -33,7 +33,7 @@
 #include "directory.h"
 #include "nullfile.h"
 #include "basename.h"
-#include "starter_privsep_helper.h"
+#include "condor_privsep_helper.h"
 
 extern CStarter *Starter;
 
@@ -312,7 +312,7 @@ JICLocal::initUserPriv( void )
 		dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
 				 "passwd database for a local job\n", owner ); 
 	} else {
-		StarterPrivSepHelper* psh = Starter->privSepHelper();
+		CondorPrivSepHelper* psh = Starter->privSepHelper();
 		if (psh != NULL) {
 			psh->initialize_user(owner);
 		}

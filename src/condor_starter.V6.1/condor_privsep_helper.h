@@ -18,9 +18,10 @@
  ***************************************************************/
 
 
-#ifndef _STARTER_PRIVSEP_HELPER_H
-#define _STARTER_PRIVSEP_HELPER_H
+#ifndef _CONDOR_PRIVSEP_HELPER_H
+#define _CONDOR_PRIVSEP_HELPER_H
 
+#include "privsep_helper.h"
 #include "../condor_privsep/condor_privsep.h"
 
 // helper class for allowing the Starter to run in PrivSep mode. mainly,
@@ -29,18 +30,13 @@
 //   2) keeping track of who owns the sandbox. this will normally be the user,
 //      but the FileTransfer object will chown the sandbox to condor so it can
 //      do its thing
-//
 
-class ArgList;
-class Env;
-struct FamilyInfo;
-
-class StarterPrivSepHelper {
+class CondorPrivSepHelper : public PrivSepHelper {
 
 public:
 
-	StarterPrivSepHelper();
-	~StarterPrivSepHelper();
+	CondorPrivSepHelper();
+	~CondorPrivSepHelper();
 
 	// initialize the UID
 	//
@@ -73,12 +69,12 @@ public:
 	                   ArgList&    args,
 	                   Env&        env,
 	                   const char* iwd,
-					   int         std_fds[3],
+	                   int         std_fds[3],
 	                   const char* std_file_names[3],
 	                   int         nice_inc,
 	                   size_t*     core_size_ptr,
 	                   int         reaper_id,
-					   int         dc_job_opts,
+	                   int         dc_job_opts,
 	                   FamilyInfo* family_info);
 
 private:

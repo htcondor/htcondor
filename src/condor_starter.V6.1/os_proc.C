@@ -36,7 +36,7 @@
 #include "condor_uid.h"
 #include "filename_tools.h"
 #include "my_popen.h"
-#include "starter_privsep_helper.h"
+#include "condor_privsep_helper.h"
 #ifdef WIN32
 #include "perm.h"
 #include "profile.WINDOWS.h"
@@ -91,7 +91,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// some operations below will require a PrivSepHelper if
 		// PrivSep is enabled (if it's not, privsep_helper will be
 		// NULL)
-	StarterPrivSepHelper* privsep_helper = Starter->privSepHelper();
+	CondorPrivSepHelper* privsep_helper = Starter->privSepHelper();
 
 		// // // // // // 
 		// Arguments
