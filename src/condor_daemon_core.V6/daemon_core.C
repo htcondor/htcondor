@@ -4637,7 +4637,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	// if we're using priv sep, we may not have permission to send signals
 	// to our child processes; ask the ProcD to do it for us
 	//
-	if (privsep_enabled()) {
+	if (privsep_enabled() || param_boolean("GLEXEC_JOB", false)) {
 		if (!target_has_dcpm && pidinfo && pidinfo->new_process_group) {
 			ASSERT(m_proc_family != NULL);
 			bool ok =  m_proc_family->signal_process(pid, sig);
@@ -5264,11 +5264,13 @@ void exit(int status)
 
 // helper function for registering a family with our ProcFamily
 // logic. the first 3 arguments are mandatory for registration.
-// the last three are optional and specify what tracking methods
+// the next three are optional and specify what tracking methods
 // should be used for the new process family. if group is non-NULL
 // then we will ask the ProcD to track by supplementary group
 // ID - the ID that the ProcD chooses for this purpose is returned
-// in the location pointed to by the argument
+// in the location pointed to by the argument. the last argument
+// optionally specifies a proxy to give to the ProcD so that
+// it can use glexec to signal the processes in this family
 //
 bool
 DaemonCore::Register_Family(pid_t       child_pid,
@@ -5276,7 +5278,8 @@ DaemonCore::Register_Family(pid_t       child_pid,
                             int         max_snapshot_interval,
                             PidEnvID*   penvid,
                             const char* login,
-                            gid_t*      group)
+                            gid_t*      group,
+                            const char* glexec_proxy)
 {
 	bool success = false;
 	bool family_registered = false;
@@ -5323,6 +5326,17 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		EXCEPT("Internal error: "
 		           "group-based tracking unsupported on this platform");
 #endif
+	}
+	if (glexec_proxy != NULL) {
+		if (!m_proc_family->use_glexec_for_family(child_pid,
+		                                          glexec_proxy))
+		{
+			dprintf(D_ALWAYS,
+			        "Create_Process: error using GLExec for "
+				    "family with root %u\n",
+			        child_pid);
+			goto REGISTER_FAMILY_DONE;
+		}
 	}
 	success = true;
 REGISTER_FAMILY_DONE:
@@ -5816,11 +5830,12 @@ void CreateProcessForkit::exec() {
 
 			bool ok =
 				daemonCore->Register_Family(pid,
-			                                ppid,
-			                                m_family_info->max_snapshot_interval,
-			                                penvid_ptr,
-			                                m_family_info->login,
-			                                tracking_gid_ptr);
+				                            ppid,
+				                            m_family_info->max_snapshot_interval,
+				                            penvid_ptr,
+				                            m_family_info->login,
+				                            tracking_gid_ptr,
+				                            m_family_info->glexec_proxy);
 			if (!ok) {
 				errno = DaemonCore::ERRNO_REGISTRATION_FAILED;
 				write(m_errorpipe[1], &errno, sizeof(errno));
@@ -6662,7 +6677,8 @@ int DaemonCore::Create_Process(
 		                          family_info->max_snapshot_interval,
 		                          NULL,
 		                          family_info->login,
-		                          NULL);
+		                          NULL,
+		                          family_info->glexec_proxy);
 		if (!ok) {
 			EXCEPT("error registering process family with procd");
 		}
@@ -7057,7 +7073,8 @@ int DaemonCore::Create_Process(
 		                family_info->max_snapshot_interval,
 		                &pidtmp->penvid,
 		                family_info->login,
-		                NULL);
+		                NULL,
+		                family_info->glexec_proxy);
 	}
 #endif
 

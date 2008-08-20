@@ -17,10 +17,13 @@
  *
  ***************************************************************/
 
+#ifndef _GLEXEC_KILL_H
+#define _GLEXEC_KILL_H
 
-#ifndef _PROCD_COMMON_H
-#define _PROCD_COMMON_H
+void glexec_kill_init(char* glexec_kill, char* glexec);
 
-void send_signal(pid_t, int);
+bool glexec_kill_check();
+
+bool glexec_kill(char* proxy, pid_t target_pid, int sig);
 
 #endif

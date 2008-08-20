@@ -84,6 +84,11 @@ public:
 	//
 	proc_family_error_t unregister_subfamily(pid_t);
 
+	// associate a proxy with a family for cases when we need to use
+	// glexec to signal processes
+	//
+	proc_family_error_t use_glexec_for_family(pid_t, char* proxy);
+
 	// for sending signals to a single process
 	//
 	proc_family_error_t signal_process(pid_t, int);

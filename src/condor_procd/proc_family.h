@@ -87,9 +87,13 @@ public:
 	//
 	void aggregate_usage(ProcFamilyUsage*);
 
+	// send a signal to the root process in the family
+	//
+	void signal_root(int sig);
+
 	// send a signal to all processes in the family
 	//
-	void spree(int);
+	void spree(int sig);
 
 	// add a new family member
 	//
@@ -105,6 +109,11 @@ public:
 	// members we have in our list to our parent (passed in)
 	//
 	void fold_into_parent(ProcFamily*);
+
+	// set a proxy for this family, implying we need to use glexec to
+	// send signals
+	//
+	void set_proxy(char*);
 
 #if defined(PROCD_DEBUG)
 	// output the PIDs of all processes in this family
@@ -154,6 +163,11 @@ private:
 	// consdered to have exited
 	//
 	ProcFamilyMember* m_member_list;
+
+	// if glexec is needed to send signals to this family, we'll need
+	// a proxy to hand to glexec
+	//
+	char* m_proxy;
 };
 
 #endif

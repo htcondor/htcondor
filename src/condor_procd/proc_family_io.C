@@ -36,5 +36,7 @@ const char* proc_family_error_strings[] = {
 	"ERROR: Attempt to unregister root family",
 	"ERROR: Bad environment tracking information",
 	"ERROR: Bad login tracking information",
-	"ERROR: No group ID available for tracking"
+	"ERROR: Bad information for using GLExec",
+	"ERROR: No group ID available for tracking",
+	"ERROR: This ProcD is not able to use GLExec"
 };

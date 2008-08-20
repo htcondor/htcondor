@@ -309,6 +309,64 @@ ProcFamilyClient::track_family_via_supplementary_group(pid_t pid,
 #endif
 
 bool
+ProcFamilyClient::use_glexec_for_family(pid_t pid,
+                                        const char* proxy,
+                                        bool& response)
+{
+	ASSERT(m_initialized);
+
+	dprintf(D_PROCFAMILY,
+	        "About to tell ProcD to use glexec for family with root %u "
+	            "with proxy %s\n",
+	        pid,
+	        proxy);
+
+	int proxy_len = strlen(proxy) + 1;
+	int message_len = sizeof(proc_family_command_t) +
+	                  sizeof(pid_t) +
+	                  sizeof(int) +
+	                  proxy_len;
+	void* buffer = malloc(message_len);
+	ASSERT(buffer != NULL);
+	char* ptr = (char*)buffer;
+
+	*(proc_family_command_t*)ptr = PROC_FAMILY_USE_GLEXEC_FOR_FAMILY;
+	ptr += sizeof(proc_family_command_t);
+
+	*(pid_t*)ptr = pid;
+	ptr += sizeof(pid_t);
+
+	*(int*)ptr = proxy_len;
+	ptr += sizeof(int);
+
+	memcpy(ptr, proxy, proxy_len);
+	ptr += proxy_len;
+
+	ASSERT(ptr - (char*)buffer == message_len);
+
+	if (!m_client->start_connection(buffer, message_len)) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyClient: "
+		            "failed to start connection with ProcD\n");
+		free(buffer);
+		return false;
+	}
+	free(buffer);
+	proc_family_error_t err;
+	if (!m_client->read_data(&err, sizeof(proc_family_error_t))) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyClient: "
+		            "failed to read response from ProcD\n");
+		return false;
+	}
+	m_client->end_connection();
+
+	log_exit("use_glexec_for_family", err);
+	response = (err == PROC_FAMILY_ERROR_SUCCESS);
+	return true;
+}
+
+bool
 ProcFamilyClient::get_usage(pid_t pid, ProcFamilyUsage& usage, bool& response)
 {
 	ASSERT(m_initialized);

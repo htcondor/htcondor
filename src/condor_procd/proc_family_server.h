@@ -64,6 +64,7 @@ private:
 #if defined(LINUX)
 	void track_family_via_supplementary_group();
 #endif
+	void use_glexec_for_family();
 	void get_usage();
 	void signal_process();
 	void suspend_family();

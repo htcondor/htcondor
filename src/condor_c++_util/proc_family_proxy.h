@@ -85,6 +85,11 @@ public:
 	//
 	bool unregister_family(pid_t);
 
+	// tell the procd it'll need to use glexec (with the given
+	// proxy) in order to send signals to this family
+	//
+	bool use_glexec_for_family(pid_t, const char* proxy);
+
 	// reaper for the ProcD (called by our PrcFamilyProxyReaperHelper
 	// member)
 	//

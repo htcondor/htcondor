@@ -22,6 +22,7 @@
 #include "proc_family.h"
 #include "proc_family_monitor.h"
 #include "procd_common.h"
+#include "glexec_kill.h"
 
 ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
                        pid_t              root_pid,
@@ -36,7 +37,8 @@ ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
 	m_exited_user_cpu_time(0),
 	m_exited_sys_cpu_time(0),
 	m_max_image_size(0),
-	m_member_list(NULL)
+	m_member_list(NULL),
+	m_proxy(NULL)
 {
 }
 
@@ -54,6 +56,12 @@ ProcFamily::~ProcFamily()
 		delete member->m_proc_info;
 		delete member;
 		member = next_member;
+	}
+
+	// delete the proxy if we've been given one
+	//
+	if (m_proxy != NULL) {
+		free(m_proxy);
 	}
 }
 
@@ -127,11 +135,29 @@ ProcFamily::aggregate_usage(ProcFamilyUsage* usage)
 }
 
 void
+ProcFamily::signal_root(int sig)
+{
+	if (m_proxy != NULL) {
+		glexec_kill(m_proxy, m_root_pid, sig);
+	}
+	else {
+		send_signal(m_root_pid, sig);
+	}
+}
+
+void
 ProcFamily::spree(int sig)
 {
 	ProcFamilyMember* member = m_member_list;
 	while (member != NULL) {
-		send_signal(member->m_proc_info, sig);
+		if (m_proxy != NULL) {
+			glexec_kill(m_proxy,
+			            member->m_proc_info->pid,
+			            sig);
+		}
+		else {
+			send_signal(member->m_proc_info->pid, sig);
+		}
 		member = member->m_next;
 	}
 }
@@ -273,6 +299,16 @@ ProcFamily::fold_into_parent(ProcFamily* parent)
 	//
 	parent->m_member_list = m_member_list;
 	m_member_list = NULL;
+}
+
+void
+ProcFamily::set_proxy(char* proxy)
+{
+	if (m_proxy != NULL) {
+		free(m_proxy);
+	}
+	m_proxy = strdup(proxy);
+	ASSERT(m_proxy != NULL);
 }
 
 #if defined(PROCD_DEBUG)
