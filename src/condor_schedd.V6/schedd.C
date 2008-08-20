@@ -7919,14 +7919,15 @@ add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false)
 
 		// Update the job's counter for the number of times a shadow
 		// was started (if this job has a shadow at all, that is).
+		// For the local universe, "shadow" means local starter.
 	int num;
 	switch (job_univ) {
 	case CONDOR_UNIVERSE_SCHEDULER:
-	case CONDOR_UNIVERSE_LOCAL:
 			// CRUFT: ATTR_JOB_RUN_COUNT is deprecated
 		if (GetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, &num) < 0) {
 			num = 0;
 		}
+		num++;
 		SetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, num);
 		break;
 
@@ -10978,7 +10979,7 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 	if( matches->lookup( HashKey( id ), tempRec ) == 0 ) {
 		dprintf( D_ALWAYS,
 				 "attempt to add pre-existing match \"%s\" ignored\n",
-				 id ? id : "(null)" );
+				 rec->publicClaimId() ? rec->publicClaimId() : "(null)" );
 		delete rec;
 		return NULL;
 	}

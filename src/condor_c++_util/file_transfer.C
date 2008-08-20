@@ -1272,6 +1272,7 @@ int
 FileTransfer::Reaper(Service *, int pid, int exit_status)
 {
 	FileTransfer *transobject;
+	bool read_failed = false;
 	if ( TransThreadTable->lookup(pid,transobject) < 0) {
 		dprintf(D_ALWAYS, "unknown pid %d in FileTransfer::Reaper!\n", pid);
 		return FALSE;
@@ -1282,9 +1283,11 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	transobject->Info.duration = time(NULL)-transobject->TransferStart;
 	transobject->Info.in_progress = false;
 	if( WIFSIGNALED(exit_status) ) {
-		dprintf( D_ALWAYS, "File transfer failed (killed by signal=%d)\n",
-				 WTERMSIG(exit_status) );
 		transobject->Info.success = false;
+		transobject->Info.try_again = true;
+		transobject->Info.error_desc.sprintf("File transfer failed (killed by signal=%d)", WTERMSIG(exit_status));
+		read_failed = true; // do not try to read from the pipe
+		dprintf( D_ALWAYS, "%s\n", transobject->Info.error_desc.Value() );
 	} else {
 		if( WEXITSTATUS(exit_status) != 0 ) {
 			dprintf( D_ALWAYS, "File transfer completed successfully.\n" );
@@ -1296,7 +1299,15 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		}
 	}
 
-	bool read_failed = false;
+		// Close the write end of the pipe so we don't block trying
+		// to read from it if the child closes it prematurely.
+		// We don't do this until this late stage in the game, because
+		// in windows everything currently happens in the main thread.
+	if( transobject->TransferPipe[1] != -1 ) {
+		close(transobject->TransferPipe[1]);
+		transobject->TransferPipe[1] = -1;
+	}
+
 	int n;
 
 	if(!read_failed) {
@@ -1354,13 +1365,14 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	if(read_failed) {
 		transobject->Info.success = false;
 		transobject->Info.try_again = true;
-		transobject->Info.error_desc.sprintf("Failed to read status report from file transfer pipe (errno %d): %s",errno,strerror(errno));
-		dprintf(D_ALWAYS,"%s\n",transobject->Info.error_desc.Value());
+		if( transobject->Info.error_desc.IsEmpty() ) {
+			transobject->Info.error_desc.sprintf("Failed to read status report from file transfer pipe (errno %d): %s",errno,strerror(errno));
+			dprintf(D_ALWAYS,"%s\n",transobject->Info.error_desc.Value());
+		}
 	}
 
 	close(transobject->TransferPipe[0]);
-	close(transobject->TransferPipe[1]);
-	transobject->TransferPipe[0] = transobject->TransferPipe[1] = -1;
+	transobject->TransferPipe[0] = -1;
 
 	// If Download was successful (it returns 1 on success) and
 	// upload_changed_files is true, then we must record the current

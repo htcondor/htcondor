@@ -101,7 +101,7 @@ public:
 		 * will compile nicely. The logic that does real work
 		 * is in JICLocalSchedd
 		 **/ 
-	virtual bool holdJob( const char* ) { return ( false ); }
+	virtual bool holdJob( const char*, int /*hold_reason_code*/, int /*hold_reason_subcode*/ ) { return ( false ); }
 	virtual bool removeJob( const char* ) { return ( false ); }
 	virtual bool terminateJob( const char* ) { return ( false ); }
 	virtual bool requeueJob( const char* ) { return ( false ); }
@@ -133,7 +133,7 @@ public:
    			completely cleaned up.  Since there's no shadow to tell us
 			to go away, we have to exit ourselves.
 		*/
-	void allJobsGone( void );
+	virtual void allJobsGone( void );
 
 		/** Someone is attempting to reconnect to this job.
 		 */
@@ -156,7 +156,7 @@ public:
 	bool notifyJobExit( int exit_status, int reason, 
 						UserProc* user_proc );  
 
-	bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode );
+	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode );
 
 		// // // // // // // // // // // //
 		// Misc utilities
