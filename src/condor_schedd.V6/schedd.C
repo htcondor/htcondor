@@ -81,6 +81,7 @@
 #include "condor_getcwd.h"
 #include "set_user_priv_from_ad.h"
 #include "classad_visa.h"
+#include "../condor_privsep/condor_privsep.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -6293,7 +6294,7 @@ Scheduler::StartJobHandler()
 			continue;
 		}
 
-		if ( param_boolean("PRIVSEP_ENABLED", false) ) {
+		if ( privsep_enabled() ) {
 			// If there is no available transferd for this job (and it 
 			// requires it), then start one and put the job back into the queue
 			if ( jobNeedsTransferd(cluster, proc, srec->universe) ) {
@@ -6714,7 +6715,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	// send the location of the transferd the shadow should use for
 	// this user. Due to the nasty method of command line argument parsing
 	// by the shadow, this should be first on the command line.
-	if ( param_boolean("PRIVSEP_ENABLED", false) && 
+	if ( privsep_enabled() && 
 			jobNeedsTransferd(job_id->cluster, job_id->proc, universe) )
 	{
 		TransferDaemon *td = NULL;
