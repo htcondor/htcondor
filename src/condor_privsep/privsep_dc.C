@@ -164,7 +164,7 @@ privsep_spawn_procd(const char* path,
 	                              NULL,
 	                              0,
 	                              NULL,
-                                  reaper_id,
+	                              reaper_id,
 	                              0,
 	                              NULL,
 	                              0);
