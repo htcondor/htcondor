@@ -1638,7 +1638,7 @@ obtainAdsFromCollector (
 					EvalResult er;
 					int evalRet = expr->EvalTree(oldAd, ad, &er);
 
-					if( !evalRet || er.type != LX_BOOL) {
+					if( !evalRet || (er.type != LX_BOOL && er.type != LX_INTEGER)) {
 							// Something went wrong
 						dprintf(D_ALWAYS, "Can't evaluate STARTD_AD_REEVAL_EXPR %s as a bool, treating as TRUE\n", exprStr);
 						replace = true;
