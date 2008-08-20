@@ -110,8 +110,4 @@ private:
 	bool m_sandbox_owned_by_user;
 };
 
-// declare the Starter's (one and only) instantiation of StarterPrivSepHelper
-//
-extern StarterPrivSepHelper privsep_helper;
-
 #endif

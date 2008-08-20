@@ -312,8 +312,9 @@ JICLocal::initUserPriv( void )
 		dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
 				 "passwd database for a local job\n", owner ); 
 	} else {
-		if (privsep_enabled()) {
-			privsep_helper.initialize_user(owner);
+		StarterPrivSepHelper* psh = Starter->privSepHelper();
+		if (psh != NULL) {
+			psh->initialize_user(owner);
 		}
 		rval = true;
 		dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 

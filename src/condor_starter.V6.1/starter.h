@@ -26,7 +26,7 @@
 #include "user_proc.h"
 #include "job_info_communicator.h"
 
-
+class StarterPrivSepHelper;
 
 /** The starter class.  Basically, this class does some initialization
 	stuff and manages a set of UserProc instances, each of which 
@@ -233,6 +233,9 @@ public:
 
 	int updateX509Proxy( int cmd, Stream* );
 
+		/** This will return NULL if we're not using PrivSep */
+	StarterPrivSepHelper* privSepHelper() { return m_privsep_helper; }
+
 protected:
 	List<UserProc> m_job_list;
 	List<UserProc> m_reaped_job_list;
@@ -297,6 +300,17 @@ private:
 
 	UserProc* pre_script;
 	UserProc* post_script;
+
+		//
+		// If we're using PrivSep, we'll need a helper object to
+		// manage sandbox ownership and to launch the job.
+		//
+	StarterPrivSepHelper* m_privsep_helper;
+
+		//
+		// Flag to indicate whether Config() has been run
+		//
+	bool m_configured;
 };
 
 #endif

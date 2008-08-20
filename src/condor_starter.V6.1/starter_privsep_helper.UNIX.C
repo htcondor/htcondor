@@ -25,8 +25,6 @@
 #include "condor_arglist.h"
 #include "condor_daemon_core.h"
 
-StarterPrivSepHelper privsep_helper;
-
 bool StarterPrivSepHelper::s_instantiated = false;
 
 StarterPrivSepHelper::StarterPrivSepHelper() :

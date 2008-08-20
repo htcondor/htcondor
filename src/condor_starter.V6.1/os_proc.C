@@ -88,6 +88,11 @@ OsProc::StartJob(FamilyInfo* family_info)
 	const char* job_iwd = Starter->jic->jobRemoteIWD();
 	dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
 
+		// some operations below will require a PrivSepHelper if
+		// PrivSep is enabled (if it's not, privsep_helper will be
+		// NULL)
+	StarterPrivSepHelper* privsep_helper = Starter->privSepHelper();
+
 		// // // // // // 
 		// Arguments
 		// // // // // // 
@@ -227,7 +232,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 	MyString privsep_stdin_name;
 	MyString privsep_stdout_name;
 	MyString privsep_stderr_name;
-	if (privsep_enabled()) {
+	if (privsep_helper != NULL) {
 		stdin_ok = getStdFile(SFT_IN,
 		                      NULL,
 		                      true,
@@ -413,23 +418,23 @@ OsProc::StartJob(FamilyInfo* family_info)
 
 	set_priv ( priv );
 
-	if (privsep_enabled()) {
+	if (privsep_helper != NULL) {
 		const char* std_file_names[3] = {
 			privsep_stdin_name.Value(),
 			privsep_stdout_name.Value(),
 			privsep_stderr_name.Value()
 		};
-		JobPid = privsep_helper.create_process(JobName.Value(),
-		                                       args,
-		                                       job_env,
-		                                       job_iwd,
-		                                       fds,
-		                                       std_file_names,
-		                                       nice_inc,
-		                                       core_size_ptr,
-		                                       1,
-		                                       job_opt_mask,
-		                                       family_info);
+		JobPid = privsep_helper->create_process(JobName.Value(),
+		                                        args,
+		                                        job_env,
+		                                        job_iwd,
+		                                        fds,
+		                                        std_file_names,
+		                                        nice_inc,
+		                                        core_size_ptr,
+		                                        1,
+		                                        job_opt_mask,
+		                                        family_info);
 	}
 	else {
 		JobPid = daemonCore->Create_Process( JobName.Value(),
@@ -593,7 +598,7 @@ OsProc::checkCoreFile( void )
 	MyString name_with_pid;
 	name_with_pid.sprintf( "core.%d", JobPid );
 
-	if (privsep_enabled()) {
+	if (Starter->privSepHelper() != NULL) {
 
 #if defined(WIN32)
 		EXCEPT("PrivSep not yet available on Windows");

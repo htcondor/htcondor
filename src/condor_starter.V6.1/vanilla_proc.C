@@ -31,7 +31,6 @@
 #include "dynuser.h"
 #include "condor_config.h"
 #include "domain_tools.h"
-#include "../condor_privsep/condor_privsep.h"
 
 #ifdef WIN32
 extern dynuser* myDynuser;
@@ -146,7 +145,7 @@ VanillaProc::StartJob()
 	//
 	gid_t tracking_gid;
 	if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
-		if (!can_switch_ids() && !privsep_enabled()) {
+		if (!can_switch_ids() && (Starter->privSepHelper() == NULL)) {
 			EXCEPT("USE_GID_PROCESS_TRACKING enabled, but can't modify "
 			           "the group list of our children unless running as "
 			           "root or using PrivSep");

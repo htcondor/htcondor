@@ -66,6 +66,8 @@ CStarter::CStarter()
 	starter_stderr_fd = -1;
 	deferral_tid = -1;
 	suspended = false;
+	m_privsep_helper = NULL;
+	m_configured = false;
 }
 
 
@@ -232,8 +234,17 @@ CStarter::Config()
 		}
 	}
 
+	if (!m_configured) {
+		if (privsep_enabled()) {
+			m_privsep_helper = new StarterPrivSepHelper;
+			ASSERT(m_privsep_helper != NULL);
+		}
+	}
+
 		// Tell our JobInfoCommunicator to reconfig, too.
 	jic->config();
+
+	m_configured = true;
 }
 
 /**
@@ -555,8 +566,8 @@ CStarter::createTempExecuteDir( void )
 	priv_state priv = set_condor_priv();
 #endif
 
-	if (privsep_enabled()) {
-		privsep_helper.initialize_sandbox(WorkingDir.Value());
+	if (m_privsep_helper != NULL) {
+		m_privsep_helper->initialize_sandbox(WorkingDir.Value());
 	}
 	else {
 		if( mkdir(WorkingDir.Value(), 0777) < 0 ) {
@@ -692,8 +703,8 @@ CStarter::jobEnvironmentReady( void )
 		// change the sandbox ownership to the user before spawning
 		// any job processes.
 		//
-	if (privsep_enabled()) {
-		privsep_helper.chown_sandbox_to_user();
+	if (m_privsep_helper != NULL) {
+		m_privsep_helper->chown_sandbox_to_user();
 	}
 
 		//
@@ -1393,8 +1404,8 @@ CStarter::allJobsDone( void )
 {
 		// now that all user processes are complete, change the
 		// sandbox ownership back over to condor
-	if (privsep_enabled()) {
-		privsep_helper.chown_sandbox_to_condor();
+	if (m_privsep_helper != NULL) {
+		m_privsep_helper->chown_sandbox_to_condor();
 	}
 
 		// No more jobs, notify our JobInfoCommunicator.
@@ -1729,7 +1740,7 @@ CStarter::removeTempExecuteDir( void )
 	dir_name += (int)daemonCore->getpid();
 
 #if !defined(WIN32)
-	if (privsep_enabled()) {
+	if (m_privsep_helper != NULL) {
 		MyString path_name;
 		path_name.sprintf("%s/%s", Execute, dir_name.Value());
 		if (!privsep_remove_dir(path_name.Value())) {

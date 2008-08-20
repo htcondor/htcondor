@@ -947,6 +947,8 @@ JICShadow::initUserPriv( void )
 		}
 	}
 
+	StarterPrivSepHelper* privsep_helper = Starter->privSepHelper();
+
 	if( run_as_owner ) {
 			// Cool, we can try to use ATTR_OWNER directly.
 			// NOTE: we want to use the "quiet" version of
@@ -955,8 +957,8 @@ JICShadow::initUserPriv( void )
 			// possible this call will fail.  We don't want to fill up
 			// the logs with scary and misleading error messages.
 		if( init_user_ids_quiet(owner.Value()) ) {
-			if (privsep_enabled()) {
-				privsep_helper.initialize_user(owner.Value());
+			if (privsep_helper != NULL) {
+				privsep_helper->initialize_user(owner.Value());
 			}
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
 			         owner.Value() );
@@ -1047,8 +1049,8 @@ JICShadow::initUserPriv( void )
 				return false;
 			}
 
-			if (privsep_enabled()) {
-				privsep_helper.initialize_user((uid_t)user_uid);
+			if (privsep_helper != NULL) {
+				privsep_helper->initialize_user((uid_t)user_uid);
 			}
 		}
 	} 
@@ -1115,8 +1117,8 @@ JICShadow::initUserPriv( void )
 			free( nobody_user );
 			return false;
 		} else {
-			if (privsep_enabled()) {
-				privsep_helper.initialize_user(nobody_user);
+			if (privsep_helper != NULL) {
+				privsep_helper->initialize_user(nobody_user);
 			}
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n",
 				  nobody_user );

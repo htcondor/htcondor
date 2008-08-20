@@ -24,9 +24,6 @@
 
 // the methods in this file are all stubbed out for now, until we
 // have support for privilege separation on Windows
-//
-
-StarterPrivSepHelper privsep_helper;
 
 bool StarterPrivSepHelper::s_instantiated = false;
 
