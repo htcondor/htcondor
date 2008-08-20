@@ -8,11 +8,11 @@ parameterizability of the commands.
 Listing generated partitions:
 	?
 
-Listing the information of a booted partition
+Listing a booted partition
 	$name = R0-N0-N01
 	getblockinfo $name
 
-Listing the information of all booted partitions
+Listing all booted partitions
 	list_blocks
 
 Generating a partition:
