@@ -4540,6 +4540,8 @@ Scheduler::negotiate(int command, Stream* s)
 	char buffer[1024];
 	bool cant_spawn_shadow = false;
 	bool skip_negotiation = false;
+	match_rec *pre_existing_match = NULL;
+	int num_pre_existing_matches_received = 0;
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
@@ -4848,7 +4850,7 @@ Scheduler::negotiate(int command, Stream* s)
 			}
 		}
 
-		for (host_cnt = cur_hosts; host_cnt < max_hosts;) {
+		for (host_cnt = cur_hosts; host_cnt < max_hosts && !skip_negotiation;) {
 
 			/* Wait for manager to request job info */
 
@@ -5099,15 +5101,51 @@ Scheduler::negotiate(int command, Stream* s)
 					}
 						// sinful should now point to the sinful string
 						// of the startd we were matched with.
+					pre_existing_match = NULL;
 					mrec = AddMrec( claim_id, sinful, &id, my_match_ad,
-									owner, negotiator_name );
+									owner,negotiator_name,&pre_existing_match);
 
 						/* if AddMrec returns NULL, it means we can't
 						   use that match.  in that case, we'll skip
 						   over the attempt to stash the info, go
 						   straight to deallocating memory we used in
 						   this protocol, and break out of this case
+
+						   One reason this can happen is that the
+						   negotiator handed us a claim id that we
+						   already have.  If that happens a lot, it
+						   probably means the negotiator has a lot of
+						   stale info about the startds.  One
+						   pathalogical case where that can happen is
+						   when the negotiatior is configured to not
+						   send match info to the startds, so the
+						   startds keep advertising the same claimid
+						   until they get the claim request from the
+						   schedd.  If this schedd is behind on
+						   requesting claims and it starts negotiating
+						   for more jobs, only to receive a lot of
+						   stale claim ids, it will have wasted more
+						   than the usual amount of time in
+						   negotiation and so may fall even further
+						   behind in requesting claims.
+
+						   Therefore, if we get more than a handfull
+						   of claimids for startds we have not yet
+						   requested, abort this round of negotiation.
 						*/
+
+					if( !mrec && pre_existing_match &&
+						(pre_existing_match->status==M_UNCLAIMED ||
+						 pre_existing_match->status==M_STARTD_CONTACT_LIMBO))
+					{
+						if( ++num_pre_existing_matches_received > 10 ) {
+							dprintf(D_ALWAYS,"Too many pre-existing matches "
+							        "received (due to stale info in "
+							        "negotiator), so ending this round of "
+							        "negotiation.\n");
+							skip_negotiation = true;
+						}
+					}
 
 						// clear this out so we know if we use it...
 					args = NULL;
@@ -5970,9 +6008,6 @@ Scheduler::StartJob(match_rec *rec)
 	switch(rec->status) {
 	case M_UNCLAIMED:
 		dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->description());
-		return;
-	case M_CONNECTING:
-		dprintf(D_FULLDEBUG, "match (%s) waiting for connection\n", rec->description());
 		return;
 	case M_STARTD_CONTACT_LIMBO:
 		dprintf ( D_FULLDEBUG, "match (%s) waiting for startd contact\n", 
@@ -10959,10 +10994,13 @@ Scheduler::sendReschedule( bool checkRecent /* = true */ )
 
 match_rec*
 Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match_ad,
-				   char *user, char *pool)
+				   char *user, char *pool, match_rec **pre_existing)
 {
 	match_rec *rec;
 
+	if( pre_existing ) {
+		*pre_existing = NULL;
+	}
 	if(!id || !peer)
 	{
 		dprintf(D_ALWAYS, "Null parameter --- match not added\n"); 
@@ -10981,6 +11019,9 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 				 "attempt to add pre-existing match \"%s\" ignored\n",
 				 rec->publicClaimId() ? rec->publicClaimId() : "(null)" );
 		delete rec;
+		if( pre_existing ) {
+			*pre_existing = tempRec;
+		}
 		return NULL;
 	}
 	if( matches->insert( HashKey( id ), rec ) != 0 ) {

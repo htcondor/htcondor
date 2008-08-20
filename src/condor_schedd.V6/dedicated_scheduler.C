@@ -2036,8 +2036,7 @@ DedicatedScheduler::sortResources( void )
 
 			// If it is active, or on its way to becoming active,
 			// mark it as busy
-		if( (mrec->status == M_ACTIVE) ||
-			(mrec->status == M_CONNECTING) ){
+		if( (mrec->status == M_ACTIVE) ){
 			busy_resources->Append( res );
 			continue;
 		}
@@ -3757,7 +3756,6 @@ DedicatedScheduler::getUnusedTime( match_rec* mrec )
 	}
 	switch( mrec->status ) {
 	case M_UNCLAIMED:
-	case M_CONNECTING:
 	case M_STARTD_CONTACT_LIMBO:
     case M_ACTIVE:
 		return 0;
@@ -4253,7 +4251,6 @@ findAvailTime( match_rec* mrec )
 		// First, switch on the status of the mrec
 	switch( mrec->status ) {
 	case M_UNCLAIMED:
-	case M_CONNECTING:
 	case M_STARTD_CONTACT_LIMBO:
 			// Not yet claimed, so not yet available. 
 			// TODO: Be smarter here.
