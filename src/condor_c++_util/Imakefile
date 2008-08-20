@@ -133,6 +133,7 @@ CONLIBAPI_OBJ = \
 	../condor_util_lib/dprintf_common.o \
 	../condor_util_lib/dprintf_config.o \
 	../condor_util_lib/dprintf.o \
+	../condor_util_lib/sig_install.o \
 	../condor_util_lib/basename.o \
 	../condor_util_lib/mkargv.o \
 	../condor_util_lib/except.o \
