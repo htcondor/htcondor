@@ -8,8 +8,9 @@
 #include "condor_workload_mgr.h"
 
 
-/* This holds the partitions and knows which ones are active and in what
-	order to activate them. */
+/* Hold knowledge about partitions and what states they are in. Additionally,
+	schedule when partitions should state change.
+*/
 class PartitionManager
 {
 	public:
@@ -37,15 +38,16 @@ class PartitionManager
 		//////////////////////////////////////////////////////////
 		// Variables
 		//////////////////////////////////////////////////////////
-		// partitions are activated from 0 to end of array and deactivated in
-		// reverse manner.
+		// Each time STARTD_FACTORY_SCRIPT_AVAILABLE_PARTITIONS is invoked,
+		// this array is rebuilt with the current state of the partitions.
 		ExtArray<Partition> m_parts;
 
-		// which partitions have I labeled as assigned but haven't gone
-		// to backed yet?  This data must be preserved over the backing
-		// of partitions in order that a partition doesn't get backed more
-		// than once. If the daemon dies while a partition is assigned, then
-		// a race condition happens and an overcommit could happen.
+		// which partitions have I labeled as assigned but haven't gone to
+		// backed yet?  This data must be preserved over the rebuilding of the
+		// above array backing of partitions in order that a partition doesn't
+		// get backed more than once. If the daemon dies while a partition is
+		// assigned, then a race condition happens and an overcommit could
+		// happen.
 		HashTable<MyString, bool> m_assigned;
 
 		//////////////////////////////////////////////////////////
