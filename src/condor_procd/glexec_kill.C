@@ -42,6 +42,10 @@ glexec_kill_check()
 bool
 glexec_kill(char* proxy, pid_t target_pid, int sig)
 {
+	// TODO: once the ProcD is running as the user (and thus able to
+	// link in the various Condor util libraries), get rid of this home-
+	// rolled fork/exec and use my_popen or whatever
+
 	int ret;
 
 	if (glexec_kill_path == NULL) {
@@ -83,6 +87,9 @@ glexec_kill(char* proxy, pid_t target_pid, int sig)
 	}
 
 	if (child_pid == 0) {
+		for (int i = 0; i < 255; i++) {
+			close(i);
+		}
 		char* argv[] = {glexec_kill_path,
 		                glexec_path,
 		                proxy,
@@ -102,8 +109,9 @@ glexec_kill(char* proxy, pid_t target_pid, int sig)
 	}
 	if (!WIFEXITED(status) || (WEXITSTATUS(status) != 0)) {
 		dprintf(D_ALWAYS,
-		        "glexec_kill: abnormal exit from %s\n",
-		        glexec_kill_path);
+		        "glexec_kill: unexpected status from %s: %d\n",
+		        glexec_kill_path,
+		        status);
 		return false;
 	}
 
