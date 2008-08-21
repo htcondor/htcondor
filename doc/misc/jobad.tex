@@ -458,9 +458,22 @@ checkpoint attempted by this job during its lifetime.
 \index{NumShadowStarts!job ClassAd attribute}
 \item[\AdAttr{NumShadowStarts}:]  An integer count of the number of
   times a \Condor{shadow} daemon was started for a given job.
-  This attribute is not defined for \SubmitCmd{local} and
+  This attribute is not defined for
   \SubmitCmd{scheduler} universe jobs, since
   they do not have a \Condor{shadow} daemon associated with them.
+  For \SubmitCmd{local} universe jobs, this attribute \emph{is}
+  defined, even though the process that manages the job is technically
+  a starter rather than a shadow.  This is to keep the management of
+  local universe and other universes as similar as possible.
+
+%%% ClassAd attribute: NumShadowStarts
+\index{ClassAd job attribute!JobRunCount}
+\index{JobRunCount!job ClassAd attribute}
+\item[\AdAttr{JobRunCount}:]  This attribute is retained for backwards
+  compatibility.  It may go away in the future.  It is equivalent to
+  \AdAttr{NumShadowStarts} for all universes except \SubmitCmd{scheduler}.
+  For \SubmitCmd{scheduler} universe, this attribute is equivalent to
+  \AdAttr{NumJobStarts}.
 
 %%% ClassAd attribute: NumSystemHolds
 \index{ClassAd job attribute!NumSystemHolds}

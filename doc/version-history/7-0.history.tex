@@ -36,7 +36,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Local universe jobs now go on hold for the same specific reasons that
+vanilla jobs may go on hold (e.g. missing input or executable files).
+Previously, when local universe jobs failed in this way, they would return
+to the idle state in the job queue and then try to run again, failing
+over and over until the job was removed.
+
+\item Local universe jobs now have an attribute \Attr{NumShadowStarts}.
+Even though local universe jobs do not have a shadow process, this attribute
+has been added to keep management of local universe as similar to
+vanilla universe as possible.  For local universe jobs, this attribute
+is identical to \Attr{JobRunCount}, which indicates how many times a
+local starter process has been created to run the job.
 
 \end{itemize}
 
@@ -52,22 +63,42 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item When \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} is defined to be false,
+\item When \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} is defined to be
+\Expr{False},
 this no longer results in machines in the Owner state being ignored
-during matchmaking.  Previously, even if \MacroNI{START} was true,
+during matchmaking.  Previously, even if \MacroNI{START} was \Expr{True},
 machines in the Owner state were disregarded.
 
-\item Setting \Attr{JobLeaseDuration} less than 15 minutes caused the
-\Condor{schedd} to abort and restart the next time \Condor{reconfig} was
-run.  The error message in the \Condor{schedd} log looked like this:
+\item Setting \Attr{JobLeaseDuration} to be less than 15 minutes caused the
+\Condor{schedd} daemon to abort and restart the next time a
+\Condor{reconfig} command was executed.
+The error message in the \Condor{schedd} log appeared as:
 
+\footnotesize
 \begin{verbatim}
 ALIVE_INTERVAL in the condor configuration is too high (300).
 \end{verbatim}
+\normalsize
 
 \item Fixed a slow memory leak affecting the \Condor{startd},
-\Condor{schedd}, and \Condor{collector}.  This leak would probably
+\Condor{schedd}, and \Condor{collector} daemons.  This leak would probably
 require many months of continuous operation before causing noticeable problems.
+
+\item Fixed a bug that caused a \Condor{schedd} daemon crash.
+The crash occurred during a fast shut down of the
+\Condor{schedd} daemon as it dealt with local universe
+jobs or with any job that required reconnection when
+the \Condor{schedd} daemon started up.
+
+\item Local and scheduler universe jobs were failing to increment the
+\Attr{JobRunCount} attribute in the job ClassAd when an attempt to run
+the job was made.  This problem was introduced in 6.9.5.
+
+\item Some rare types of failures during file transfer caused the
+Condor daemon conducting the transfer to hang indefinitely.  For
+example, if the file transfer process created by the \Condor{schedd}
+was killed by an administrator or crashed due to an internal error,
+the \Condor{schedd} would become unresponsive.
 
 \end{itemize}
 
@@ -144,12 +175,12 @@ job queue that works with the remote submission of jobs.
 
 \begin{itemize}
 
-\item Added configuration variable: \Expr{LOCK\_FILE\_UPDATE\_INTERVAL}.
+\item Added configuration variable: \Macro{LOCK\_FILE\_UPDATE\_INTERVAL}.
 Please see page~\pageref{param:LockFileUpdateInterval} for a complete
 description.
 
 \item Changed the default value of configuration variable
-\Expr{SEC\_DEFAULT\_SESSION\_DURATION} from 8640000 seconds (100 days)
+\Macro{SEC\_DEFAULT\_SESSION\_DURATION} from 8640000 seconds (100 days)
 to 86400 seconds (1 day).
 
 \end{itemize}
