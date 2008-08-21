@@ -195,6 +195,13 @@ foreach $test (@crossplatforms) {
 		print "failed to submit cross tests for $platform on $test\n";
 		leavebadly($status);
 	}
+
+	# condor_nmi_submit is a heavy-weight activity, and thrashes the
+	# disks of the submit machine.  Running many in a row is
+	# impolite.  sleep for three minutes between submits to
+	# allow some breathing room.
+
+	sleep(180);
 }
 
 ##################################################################
