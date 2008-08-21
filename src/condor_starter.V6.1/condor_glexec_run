@@ -1,0 +1,43 @@
+#!/bin/sh
+
+if [ $# -lt 7 ]
+then
+	echo "usage: $0 <glexec> <proxy> <sandbox> <stdin> <stdout> <stderr> <cmd> [<arg> ...]" >&2
+	exit 1
+fi
+
+GLEXEC="$1"
+PROXY="$2"
+SANDBOX="$3"
+STDIN="$4"
+STDOUT="$5"
+STDERR="$6"
+
+shift 6
+
+# use glexec to fire up a script that:
+#   - changes into the right working directory
+#   - execs the job with std I/O handles redirected as needed
+#
+if [ "$STDIN" != - ]
+then
+        OPEN_STDIN=" < \"$STDIN\" "
+fi
+if [ "$STDOUT" != - ]
+then
+        OPEN_STDOUT="> \"$STDOUT\" "
+fi
+if [ "$STDERR" != - ]
+then
+        OPEN_STDERR="2> \"$STDERR\" "
+fi
+SH=`readlink -f /bin/sh`
+GLEXEC_CLIENT_CERT="$SANDBOX.condor/$PROXY"
+export GLEXEC_CLIENT_CERT
+exec "$GLEXEC" "$SH" -c "cd \"$SANDBOX\" && \
+                         exec \"$@\" \
+                         $OPEN_STDIN \
+                         $OPEN_STDOUT \
+                         $OPEN_STDERR \
+                         "
+

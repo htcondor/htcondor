@@ -25,8 +25,8 @@
 #include "list.h"
 #include "user_proc.h"
 #include "job_info_communicator.h"
-
-class CondorPrivSepHelper;
+#include "condor_privsep_helper.h"
+#include "glexec_privsep_helper.h"
 
 /** The starter class.  Basically, this class does some initialization
 	stuff and manages a set of UserProc instances, each of which 
@@ -233,8 +233,21 @@ public:
 
 	int updateX509Proxy( int cmd, Stream* );
 
+		/** This will return NULL if we're not using either
+		    PrivSep or GLExec */
+	PrivSepHelper* privSepHelper()
+	{
+		return m_privsep_helper;
+	}
 		/** This will return NULL if we're not using PrivSep */
-	CondorPrivSepHelper* privSepHelper() { return m_privsep_helper; }
+	CondorPrivSepHelper* condorPrivSepHelper()
+	{
+		return dynamic_cast<CondorPrivSepHelper*>(m_privsep_helper);
+	}
+	GLExecPrivSepHelper* glexecPrivSepHelper()
+	{
+		return dynamic_cast<GLExecPrivSepHelper*>(m_privsep_helper);
+	}
 
 protected:
 	List<UserProc> m_job_list;
@@ -305,7 +318,7 @@ private:
 		// If we're using PrivSep, we'll need a helper object to
 		// manage sandbox ownership and to launch the job.
 		//
-	CondorPrivSepHelper* m_privsep_helper;
+	PrivSepHelper* m_privsep_helper;
 
 		//
 		// Flag to indicate whether Config() has been run

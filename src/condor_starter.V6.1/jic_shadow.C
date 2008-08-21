@@ -38,7 +38,6 @@
 #include "directory.h"
 #include "nullfile.h"
 #include "stream_handler.h"
-#include "condor_privsep_helper.h"
 #include "condor_vm_universe_types.h"
 
 extern CStarter *Starter;
@@ -947,7 +946,7 @@ JICShadow::initUserPriv( void )
 		}
 	}
 
-	CondorPrivSepHelper* privsep_helper = Starter->privSepHelper();
+	CondorPrivSepHelper* privsep_helper = Starter->condorPrivSepHelper();
 
 	if( run_as_owner ) {
 			// Cool, we can try to use ATTR_OWNER directly.

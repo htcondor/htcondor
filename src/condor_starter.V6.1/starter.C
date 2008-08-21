@@ -44,7 +44,6 @@
 #include "directory.h"
 #include "exit.h"
 #include "condor_auth_x509.h"
-#include "condor_privsep_helper.h"
 
 extern "C" int get_random_int();
 extern int main_shutdown_fast();
@@ -235,8 +234,18 @@ CStarter::Config()
 	}
 
 	if (!m_configured) {
-		if (privsep_enabled()) {
+		bool ps = privsep_enabled();
+		bool gl = param_boolean("GLEXEC_JOB", false);
+		if (ps && gl) {
+			EXCEPT("can't support both "
+			           "PRIVSEP_ENABLED and GLEXEC_JOB");
+		}
+		if (ps) {
 			m_privsep_helper = new CondorPrivSepHelper;
+			ASSERT(m_privsep_helper != NULL);
+		}
+		else if (gl) {
+			m_privsep_helper = new GLExecPrivSepHelper;
 			ASSERT(m_privsep_helper != NULL);
 		}
 	}
@@ -566,8 +575,9 @@ CStarter::createTempExecuteDir( void )
 	priv_state priv = set_condor_priv();
 #endif
 
-	if (m_privsep_helper != NULL) {
-		m_privsep_helper->initialize_sandbox(WorkingDir.Value());
+	CondorPrivSepHelper* cpsh = condorPrivSepHelper();
+	if (cpsh != NULL) {
+		cpsh->initialize_sandbox(WorkingDir.Value());
 	}
 	else {
 		if( mkdir(WorkingDir.Value(), 0777) < 0 ) {
@@ -698,6 +708,24 @@ CStarter::createTempExecuteDir( void )
 int
 CStarter::jobEnvironmentReady( void )
 {
+		//
+		// For the GLEXEC_JOB case, we should now be able to
+		// initialize our helper object.
+		//
+	GLExecPrivSepHelper* gpsh = glexecPrivSepHelper();
+	if (gpsh != NULL) {
+		MyString proxy_path;
+		if (!jic->jobClassAd()->LookupString(ATTR_X509_USER_PROXY,
+		                                     proxy_path))
+		{
+			EXCEPT("configuration specifies use of glexec, "
+			           "but job has no proxy");
+		}
+		const char* proxy_name = condor_basename(proxy_path.Value());
+		gpsh->initialize(proxy_name, WorkingDir.Value());
+	}
+
+
 		//
 		// Now that we are done preparing the job's environment,
 		// change the sandbox ownership to the user before spawning
@@ -1740,7 +1768,7 @@ CStarter::removeTempExecuteDir( void )
 	dir_name += (int)daemonCore->getpid();
 
 #if !defined(WIN32)
-	if (m_privsep_helper != NULL) {
+	if (condorPrivSepHelper() != NULL) {
 		MyString path_name;
 		path_name.sprintf("%s/%s", Execute, dir_name.Value());
 		if (!privsep_remove_dir(path_name.Value())) {
