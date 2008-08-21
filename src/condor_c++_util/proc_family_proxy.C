@@ -463,12 +463,6 @@ ProcFamilyProxy::start_procd()
 	//
 	if (param_boolean("GLEXEC_JOB", false)) {
 		args.AppendArg("-I");
-		char* glexec = param("GLEXEC");
-		if (glexec == NULL) {
-			EXCEPT("GLEXEC_JOB is defined, but GLEXEC not configured");
-		}
-		args.AppendArg(glexec);
-		free(glexec);
 		char* libexec = param("LIBEXEC");
 		if (libexec == NULL) {
 			EXCEPT("GLEXEC_JOB is defined, but LIBEXEC not configured");
@@ -477,6 +471,12 @@ ProcFamilyProxy::start_procd()
 		glexec_kill.sprintf("%s/condor_glexec_kill", libexec);
 		free(libexec);
 		args.AppendArg(glexec_kill.Value());
+		char* glexec = param("GLEXEC");
+		if (glexec == NULL) {
+			EXCEPT("GLEXEC_JOB is defined, but GLEXEC not configured");
+		}
+		args.AppendArg(glexec);
+		free(glexec);
 	}
 
 	// done constructing the argument list; now register a reaper for
