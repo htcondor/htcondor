@@ -62,13 +62,13 @@ enum proc_family_error_t {
 	PROC_FAMILY_ERROR_BAD_LOGIN_INFO,
 	PROC_FAMILY_ERROR_BAD_GLEXEC_INFO,
 	PROC_FAMILY_ERROR_NO_GROUP_ID_AVAILABLE,
-	PROC_FAMILY_ERROR_NO_GLEXEC
+	PROC_FAMILY_ERROR_NO_GLEXEC,
+	PROC_FAMILY_ERROR_MAX
 };
 
-// an array of readable string representations of the above
-// return codes
+// returns readable string representations for the above error codes
 //
-extern const char* proc_family_error_strings[];
+const char* proc_family_error_lookup(proc_family_error_t);
 
 // structure for retrieving process family usage data from
 // the ProcD

@@ -34,10 +34,14 @@ log_exit(char* op_str, proc_family_error_t error_code)
 	if (error_code != PROC_FAMILY_ERROR_SUCCESS) {
 		debug_level = D_ALWAYS;
 	}
+	const char* result = proc_family_error_lookup(error_code);
+	if (result == NULL) {
+		result = "Unexpected return code";
+	}
 	dprintf(debug_level,
 	        "Result of \"%s\" operation from ProcD: %s\n",
 	        op_str,
-	        proc_family_error_strings[error_code]);
+	        result);
 }
 
 bool

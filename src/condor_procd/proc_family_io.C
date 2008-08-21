@@ -24,7 +24,7 @@
 // IMPORTANT: these string constants must match the proc_family_error_t
 // enumeration (in proc_family_io.h) in both number and order
 //
-const char* proc_family_error_strings[] = {
+static const char* proc_family_error_strings[] = {
 	"SUCCESS",
 	"ERROR: Invalid root PID",
 	"ERROR: Invalid watcher PID",
@@ -40,3 +40,14 @@ const char* proc_family_error_strings[] = {
 	"ERROR: No group ID available for tracking",
 	"ERROR: This ProcD is not able to use GLExec"
 };
+
+// helper for looking up error strings
+//
+const char*
+proc_family_error_lookup(proc_family_error_t error_code)
+{
+	if ((error_code < 0) || (error_code >= PROC_FAMILY_ERROR_MAX)) {
+		return NULL;
+	}
+	return proc_family_error_strings[error_code];
+}
