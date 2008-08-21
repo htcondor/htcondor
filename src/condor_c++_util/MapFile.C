@@ -137,11 +137,6 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 		offset = ParseField(input_line, offset, canonicalization);
 
 		method.lower_case();
-		dprintf(D_FULLDEBUG,
-				"MapFile: Canonicalization File: method='%s' principal='%s' canonicalization='%s'\n",
-				method.GetCStr(),
-				principal.GetCStr(),
-				canonicalization.GetCStr());
 
 		if (method.IsEmpty() ||
 			principal.IsEmpty() ||
@@ -151,6 +146,12 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 
 				continue;
 		}
+
+		dprintf(D_FULLDEBUG,
+				"MapFile: Canonicalization File: method='%s' principal='%s' canonicalization='%s'\n",
+				method.GetCStr(),
+				principal.GetCStr(),
+				canonicalization.GetCStr());
 
 /*
 		Regex *re = new Regex;
