@@ -16,45 +16,40 @@ my $cst_cmd = "/home/condor/bin/condor_status";
 my $mmcs_cmd = "/bgsys/drivers/ppcfloor/bin/mmcs_db_console";
 my $mmcs_c_cmd = "/home/condor/libexec/bgd_list_partitions";
 
-# initial configuration of partitions, assume only generated, then fill in
-# the hashes with what I find via various sources.
+# initial configuration of partitions, assume all are not generated, 
+# then fill in the hashes with what I find via various sources. After the
+# discovery phase, the hash entries will be in different states.
 my @g_parts = 
 (
 	{
 		"R00-M0-N01" =>
 			{
 				# These are classad attribute names;
-				"Size" => 32,
-				"State" => "GENERATED",
-
+				"State" => "NOT_GENERATED",
 			}
 	},
 	{
 		"R00-M0-N02" =>
 			{
-				"Size" => 32,
-				"State" => "GENERATED",
+				"State" => "NOT_GENERATED",
 			}
 	},
 	{
 		"R00-M0-N03" =>
 			{
-				"Size" => 32,
-				"State" => "GENERATED",
+				"State" => "NOT_GENERATED",
 			}
 	},
 	{
 		"R00-M1-N00" =>
 			{
-				"Size" => 32,
-				"State" => "GENERATED",
+				"State" => "NOT_GENERATED",
 			}
 	},
 
 	{
 		"R01-M0-N01" =>
 			{
-				# These are classad attribute names;
 				"State" => "NOT_GENERATED",
 
 			}
@@ -234,7 +229,8 @@ sub main
 exit main();
 
 
-# example of style of classads emitted by this script.
+# example of style of classads emitted by this script after the status' of
+# the various partition names have been determined.
 
 sub examples
 {
@@ -242,8 +238,8 @@ sub examples
 # generated, booted to smp, backed by startd
 ########################################
 print qq|Partition = "R00-M0-N00"\n|;
-print qq|Size = 32\n|;
 print qq|State = "BACKED"\n|;
+print qq|Size = 32\n|;
 # if exists and booted
 print qq|Kind = "SMP"\n|;
 # if exists and booted and backed
@@ -254,8 +250,8 @@ print qq|Backer = "R00-M0-N00\@fqdn.com"\n|;
 ########################################
 print qq|---\n|;
 print qq|Partition = "R01-M0-N00"\n|;
-print qq|Size = 64\n|;
 print qq|State = "BACKED"\n|;
+print qq|Size = 64\n|;
 # if exists and booted
 print qq|Kind = "DUAL"\n|;
 # if exists and booted and backed
@@ -266,8 +262,8 @@ print qq|Backer = "R01-M0-N00\@fqdn.com"\n|;
 ########################################
 print qq|---\n|;
 print qq|Partition = "R02-M0-N00"\n|;
-print qq|Size = 128\n|;
 print qq|State = "BOOTED"\n|;
+print qq|Size = 128\n|;
 # if exists and booted
 print qq|Kind = "DUAL"\n|;
 
@@ -276,8 +272,8 @@ print qq|Kind = "DUAL"\n|;
 ########################################
 print qq|---\n|;
 print qq|Partition = "R03-M0-N00"\n|;
-print qq|Size = 128\n|;
 print qq|State = "BOOTED"\n|;
+print qq|Size = 128\n|;
 # if exists and booted
 print qq|Kind = "VN"\n|;
 
@@ -286,8 +282,8 @@ print qq|Kind = "VN"\n|;
 ########################################
 print qq|---\n|;
 print qq|Partition = "R04-M0-N00"\n|;
-print qq|Size = 256\n|;
 print qq|State = "GENERATED"\n|;
+print qq|Size = 256\n|;
 
 ########################################
 # not generated, not booted, not backed by startd
