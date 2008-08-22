@@ -1284,6 +1284,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 			// in case we never actually call negotiate() below.
 			rejForNetwork = 0;
 			rejForNetworkShare = 0;
+			rejForConcurrencyLimit = 0;
 			rejPreemptForPrio = 0;
 			rejPreemptForPolicy = 0;
 			rejPreemptForRank = 0;
@@ -1951,6 +1952,9 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 				} else {
 					if (rejForNetworkShare) {
 						diagnostic_message = "network share exceeded";
+					} else if (rejForConcurrencyLimit) {
+						diagnostic_message =
+							"concurrency limit reached";
 					} else if (rejPreemptForPolicy) {
 						diagnostic_message =
 							"PREEMPTION_REQUIREMENTS == False";
@@ -2122,6 +2126,40 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		// request attributes
 	int				requestAutoCluster = -1;
 
+
+		// Check resource constraints requested by request
+	rejForConcurrencyLimit = 0;
+	MyString limits;
+	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
+		limits.strlwr();
+		StringList list(limits.GetCStr());
+		char *limit;
+		MyString str;
+		list.rewind();
+		while ((limit = list.next())) {
+			str = limit;
+			int count = accountant.GetLimit(str);
+
+			dprintf(D_FULLDEBUG,
+					"Concurrency Limit: %s is %d\n",
+					limit, count);
+
+			if (count < 0) {
+				EXCEPT("ERROR: Concurrency Limit %s is %d (below 0)",
+					   limit, count);
+			}
+
+			if (count >= 1) {
+				dprintf(D_FULLDEBUG,
+						"Concurrency Limit %s is %d, cannot exceed 1\n",
+						limit, count);
+
+				rejForConcurrencyLimit++;
+				return NULL;
+			}
+		}
+	}
+
 	request.LookupInteger(ATTR_AUTO_CLUSTER_ID, requestAutoCluster);
 
 		// If this incoming job is from the same user, same schedd,
@@ -2154,6 +2192,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 			MatchList->get_diagnostics(
 				rejForNetwork,
 				rejForNetworkShare,
+				rejForConcurrencyLimit,
 				rejPreemptForPrio,
 				rejPreemptForPolicy,
 				rejPreemptForRank);
@@ -2446,6 +2485,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 
 	if ( MatchList ) {
 		MatchList->set_diagnostics(rejForNetwork, rejForNetworkShare, 
+		    rejForConcurrencyLimit,
 			rejPreemptForPrio, rejPreemptForPolicy, rejPreemptForRank);
 			// only bother sorting if there is more than one entry
 		if ( MatchList->length() > 1 ) {
@@ -3076,6 +3116,7 @@ MatchListType(int maxlen)
 	adListHead = 0;
 	m_rejForNetwork = 0; 
 	m_rejForNetworkShare = 0;
+	m_rejForConcurrencyLimit = 0;
 	m_rejPreemptForPrio = 0;
 	m_rejPreemptForPolicy = 0; 
 	m_rejPreemptForRank = 0;
@@ -3106,12 +3147,14 @@ pop_candidate()
 void Matchmaker::MatchListType::
 get_diagnostics(int & rejForNetwork,
 					int & rejForNetworkShare,
+					int & rejForConcurrencyLimit,
 					int & rejPreemptForPrio,
 					int & rejPreemptForPolicy,
 					int & rejPreemptForRank)
 {
 	rejForNetwork = m_rejForNetwork;
 	rejForNetworkShare = m_rejForNetworkShare;
+	rejForConcurrencyLimit = m_rejForConcurrencyLimit;
 	rejPreemptForPrio = m_rejPreemptForPrio;
 	rejPreemptForPolicy = m_rejPreemptForPolicy;
 	rejPreemptForRank = m_rejPreemptForRank;
@@ -3120,12 +3163,14 @@ get_diagnostics(int & rejForNetwork,
 void Matchmaker::MatchListType::
 set_diagnostics(int rejForNetwork,
 					int rejForNetworkShare,
+					int rejForConcurrencyLimit,
 					int rejPreemptForPrio,
 					int rejPreemptForPolicy,
 					int rejPreemptForRank)
 {
 	m_rejForNetwork = rejForNetwork;
 	m_rejForNetworkShare = rejForNetworkShare;
+	m_rejForConcurrencyLimit = rejForConcurrencyLimit;
 	m_rejPreemptForPrio = rejPreemptForPrio;
 	m_rejPreemptForPolicy = rejPreemptForPolicy;
 	m_rejPreemptForRank = rejPreemptForRank;

@@ -66,6 +66,9 @@ public:
   void UpdatePriorities(); // update all the priorities
 
   void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
+
+  int GetLimit(const MyString& limit);
+
   AttrList* ReportState();
   AttrList* ReportState(const MyString& CustomerName, int * NumResources = NULL);
                                                 
@@ -79,8 +82,6 @@ private:
   //--------------------------------------------------------
   
   void RemoveMatch(const MyString& ResourceName, time_t T);
-
-  int GetLimit(const MyString& limit);
 
   void IncrementLimit(const MyString& limit);
   void DecrementLimit(const MyString& limit);
