@@ -259,7 +259,6 @@ match_rec::~match_rec()
 		claim_requester->setMiscDataPtr( NULL );
 		claim_requester->cancelMessage();
 		claim_requester = NULL;
-		scheduler.rescheduleContactQueue();
 	}
 }
 
@@ -555,6 +554,11 @@ Scheduler::timeout()
 	if ( claimLocalStartd() ) {
 		dprintf(D_ALWAYS,"Negotiator gone, trying to use our local startd\n");
 	}
+
+		// In case we were not able to drain the startd contact queue
+		// because of too many registered sockets or something, give it
+		// a spin.
+	scheduler.rescheduleContactQueue();
 
 	SchedDInterval.setFinishTimeNow();
 
@@ -5415,6 +5419,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	ClaimStartdMsg *msg = (ClaimStartdMsg *)cb->getMessage();
 
 	this->num_pending_startd_contacts--;
+	scheduler.rescheduleContactQueue();
 
 	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED ) {
 			// do nothing, because misc_data points to a deleted match_rec
@@ -5470,8 +5475,6 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	else {
 		scheduler.StartJob( match );
 	}
-
-	scheduler.rescheduleContactQueue();
 }
 
 
@@ -5495,6 +5498,9 @@ Scheduler::enqueueStartdContact( ContactStartdArgs* args )
 void
 Scheduler::rescheduleContactQueue()
 {
+	if( startdContactQueue.IsEmpty() ) {
+		return; // nothing to do
+	}
 		 /*
 		   If we haven't already done so, register a timer to go off
            in zero seconds to call checkContactQueue().  This will
