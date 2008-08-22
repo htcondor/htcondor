@@ -134,6 +134,7 @@ const char *ATTR_CLUSTER_ID               = "ClusterId";
 const char *ATTR_AUTO_CLUSTER_ID			 = "AutoClusterId";
 const char *ATTR_AUTO_CLUSTER_ATTRS		 = "AutoClusterAttrs";
 const char *ATTR_COMPLETION_DATE			 = "CompletionDate";
+const char *ATTR_CONCURRENCY_LIMITS = "ConcurrencyLimits";
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
 #define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
 const char *ATTR_CONSOLE_IDLE			 = "ConsoleIdle";

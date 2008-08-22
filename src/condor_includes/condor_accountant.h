@@ -25,6 +25,7 @@
 // #include "classad_log.h"
 
 #include "MyString.h"
+#include "HashTable.h"
 
 // this is the required minimum separation between two priorities for them
 // to be considered distinct values
@@ -77,8 +78,15 @@ private:
   // Private methods Methods
   //--------------------------------------------------------
   
-  void AddMatch(const MyString& CustomerName, const MyString& ResourceName, time_t T);
   void RemoveMatch(const MyString& ResourceName, time_t T);
+
+  int GetLimit(const MyString& limit);
+
+  void IncrementLimit(const MyString& limit);
+  void DecrementLimit(const MyString& limit);
+
+  void IncrementLimits(const MyString& limits);
+  void DecrementLimits(const MyString& limits);
 
   //--------------------------------------------------------
   // Configuration variables
@@ -101,6 +109,8 @@ private:
 
   ClassAdLog* AcctLog;
   int LastUpdateTime;
+
+  HashTable<MyString, int> concurrencyLimits;
 
   //--------------------------------------------------------
   // Static values

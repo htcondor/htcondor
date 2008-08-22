@@ -2751,6 +2751,14 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	netman.CommitPlacement(scheddName);
 #endif
 
+		// Stash the Concurrency Limits in the offer, they are part of
+		// what's being provided to the request afterall
+	MyString limits;
+	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
+		limits.strlwr();
+		offer->Assign(ATTR_CONCURRENCY_LIMITS, limits);
+	}
+
     // 4. notifiy the accountant
 	dprintf(D_FULLDEBUG,"      Notifying the accountant\n");
 	accountant.AddMatch(scheddName, offer);

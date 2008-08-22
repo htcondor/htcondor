@@ -31,6 +31,7 @@
 #include "enum_utils.h"
 #include "classad_log.h"
 #include "string_list.h"
+#include "HashTable.h"
 
 #define MIN_PRIORITY_FACTOR (1.0)
 
@@ -56,7 +57,8 @@ MyString Accountant::StartTimeAttr="StartTime";
 // Constructor - One time initialization
 //------------------------------------------------------------------
 
-Accountant::Accountant()
+Accountant::Accountant():
+	concurrencyLimits(256, MyStringHash, updateDuplicateKeys)
 {
   MinPriority=0.5;
   AcctLog=NULL;
@@ -247,6 +249,22 @@ void Accountant::Initialize()
 			  "(from a total of %d users)\n",
 			  total_overestimated_resources,total_overestimated_users,
 			  users.number() );
+	  }
+
+		// Catch up on information about all Concurrency Limits, they
+		// are stored in ResourceRecords
+	  AcctLog->table.startIterations();
+	  while (AcctLog->table.iterate(HK, ad)) {
+		MyString keybuf;
+		HK.sprint(keybuf);
+		char const *key = keybuf.Value();
+
+		if (strncmp(ResourceRecord.Value(), key, ResourceRecord.Length()))
+			continue;
+
+		MyString str;
+		GetAttributeString(key, ATTR_CONCURRENCY_LIMITS, str);
+		IncrementLimits(str);
 	  }
   }
 
@@ -460,11 +478,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   // Get resource name and the time
   MyString ResourceName=GetResourceName(ResourceAd);
   time_t T=time(0);
-  AddMatch(CustomerName,ResourceName,T);
-}
 
-void Accountant::AddMatch(const MyString& CustomerName, const MyString& ResourceName, time_t T)
-{
   // dprintf(D_ACCOUNTANT,"Accountant::AddMatch - CustomerName=%s, ResourceName=%s\n",CustomerName.Value(),ResourceName.Value());
 
   // Check if the resource is used
@@ -527,6 +541,13 @@ void Accountant::AddMatch(const MyString& CustomerName, const MyString& Resource
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
 
+  char *str;
+  if (ResourceAd->LookupString(ATTR_CONCURRENCY_LIMITS, &str)) {
+    SetAttributeString(ResourceRecord+ResourceName,ATTR_CONCURRENCY_LIMITS,str);
+    IncrementLimits(str);
+    free(str);
+  }	
+
   AcctLog->CommitTransaction();
 
   dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Added match between customer %s and resource %s\n",CustomerName.Value(),ResourceName.Value());
@@ -574,6 +595,9 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 	  }
 	}
 
+    MyString str;
+    GetAttributeString(ResourceRecord+ResourceName,ATTR_CONCURRENCY_LIMITS,str);
+    DecrementLimits(str);
 
 	AcctLog->BeginTransaction();
     // Update customer's resource usage count
@@ -1183,3 +1207,59 @@ MyString Accountant::GetDomain(const MyString& CustomerName)
   S=CustomerName.Substr(pos+1,CustomerName.Length()-1);
   return S;
 }
+
+//------------------------------------------------------------------
+// Functions for accessing and changing Concurrency Limits
+//------------------------------------------------------------------
+
+int Accountant::GetLimit(const MyString& limit)
+{
+	int count = 0;
+
+	if (-1 == concurrencyLimits.lookup(limit, count)) {
+		dprintf(D_ACCOUNTANT,
+				"Looking for Limit '%s' count, which does not exist\n",
+				limit.GetCStr());
+	}
+
+	return count;
+}
+
+void Accountant::IncrementLimit(const MyString& limit)
+{
+	dprintf(D_ACCOUNTANT, "IncrementLimit(%s)\n", limit.GetCStr());
+	concurrencyLimits.insert(limit, GetLimit(limit) + 1);
+}
+
+void Accountant::DecrementLimit(const MyString& limit)
+{
+	dprintf(D_ACCOUNTANT, "DecrementLimit(%s)\n", limit.GetCStr());
+	concurrencyLimits.insert(limit, GetLimit(limit) - 1);
+}
+
+void Accountant::IncrementLimits(const MyString& limits)
+{
+	StringList list(limits.GetCStr());
+	char *limit;
+	MyString str;
+	list.rewind();
+	while ((limit = list.next())) {
+		str = limit;
+		IncrementLimit(str);
+	}
+}
+
+void Accountant::DecrementLimits(const MyString& limits)
+{
+	StringList list(limits.GetCStr());
+	char *limit;
+	MyString str;
+	list.rewind();
+	while ((limit = list.next())) {
+		str = limit;
+		DecrementLimit(str);
+	}
+}
+
+// Templates must be explicit
+template class HashTable<MyString, int>;
