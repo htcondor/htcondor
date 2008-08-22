@@ -1,3 +1,8 @@
+08/18/08 V7_1_2
+  The official tag for the 7.1.1 release, from the V7_1_1-branch
+  Version string: $CondorVersion: 7.1.2 Aug 18 2008 BuildID: 100397 $
+  Original Build tag: BUILD-V7_1_2-branch-2008-8-18
+
 08/12/08 V7_1-ian_tct-branch
   Branch for "Transparent credential transformation", a.k.a.
   the minica.  Based from master.
