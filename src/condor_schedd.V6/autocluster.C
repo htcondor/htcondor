@@ -121,7 +121,7 @@ bool AutoCluster::config(const char* significant_target_attrs)
 		sig_attrs_changed = true;
 	} else {
 			// Merge everythying in new_sig_attrs into our existing
-			// significant_attrs.  Take note if signficant_attrs changed,
+			// significant_attrs.  Take note if significant_attrs changed,
 			// since we need to return this info to our caller.
 		StringList new_attrs(new_sig_attrs);
 		sig_attrs_changed = significant_attrs->create_union(new_attrs,true);
@@ -219,7 +219,7 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 		}
 	}
 		// now put significant attrs from self into the signature.
-		// note: only do this if signficant_attributes is not explicitly
+		// note: only do this if significant_attributes is not explicitly
 		// defined in our config file; if it is in our condor_config, then
 		// we only want to consider the attributes listed by the admin.
 	StringList internal_refs;	// this is what we want to know
