@@ -95,7 +95,7 @@ class Matchmaker : public Service
 
 		// auxillary functions
 		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList& );	
-		char * compute_signficant_attrs(ClassAdList & startdAds);
+		char * compute_significant_attrs(ClassAdList & startdAds);
 		
 		/** Negotiate w/ one schedd for one user, for one 'pie spin'.
 			@param scheddName Name attribute from the submitter ad.

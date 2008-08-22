@@ -703,12 +703,12 @@ static ClassAd * lookup_global( const char *constraint, void *arg )
 
 char *
 Matchmaker::
-compute_signficant_attrs(ClassAdList & startdAds)
+compute_significant_attrs(ClassAdList & startdAds)
 {
 	char *result = NULL;
 
 	// Figure out list of all external attribute references in all startd ads
-	dprintf(D_FULLDEBUG,"Entering compute_signficant_attrs()\n");
+	dprintf(D_FULLDEBUG,"Entering compute_significant_attrs()\n");
 	ClassAd *startd_ad = NULL;
 	ClassAd *sample_startd_ad = NULL;
 	startdAds.Open ();
@@ -741,7 +741,7 @@ compute_signficant_attrs(ClassAdList & startdAds)
 				extlen = strlen(result);
 				dprintf(D_FULLDEBUG,"CHANGE: Startd being considered in compute_significant_attrs() is:\n");
 				startd_ad->dPrint(D_FULLDEBUG);
-				dprintf(D_FULLDEBUG,"CHANGE: In compute_signficant_attrs() attr=%s - result=%s\n",
+				dprintf(D_FULLDEBUG,"CHANGE: In compute_significant_attrs() attr=%s - result=%s\n",
 						attr_name, result ? result : "(none)" );
 				if ( result ) {
 					free(result);
@@ -793,7 +793,7 @@ compute_signficant_attrs(ClassAdList & startdAds)
 	external_references.remove_anycase(ATTR_SUBMITTOR_PRIO);
 		// Note: print_to_string mallocs memory on the heap
 	result = external_references.print_to_string();
-	dprintf(D_FULLDEBUG,"Leaving compute_signficant_attrs() - result=%s\n",
+	dprintf(D_FULLDEBUG,"Leaving compute_significant_attrs() - result=%s\n",
 					result ? result : "(none)" );
 	return result;
 }
@@ -862,12 +862,12 @@ negotiationTime ()
 	// Register a lookup function that passes through the list of all ads.
 	// ClassAdLookupRegister( lookup_global, &allAds );
 
-	// Compute the signficant attributes to pass to the schedd, so
+	// Compute the significant attributes to pass to the schedd, so
 	// the schedd can do autoclustering to speed up the negotiation cycles.
 	if ( job_attr_references ) {
 		free(job_attr_references);
 	}
-	job_attr_references = compute_signficant_attrs(startdAds);
+	job_attr_references = compute_significant_attrs(startdAds);
 
 	// ----- Recalculate priorities for schedds
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
