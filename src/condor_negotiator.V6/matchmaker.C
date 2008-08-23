@@ -2140,19 +2140,25 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 			str = limit;
 			int count = accountant.GetLimit(str);
 
+			str += "_LIMIT";
+			int max =
+				param_integer(str.GetCStr(),
+							  param_integer("CONCURRENCY_LIMIT_DEFAULT",
+											2308032));
+
 			dprintf(D_FULLDEBUG,
 					"Concurrency Limit: %s is %d\n",
 					limit, count);
 
 			if (count < 0) {
-				EXCEPT("ERROR: Concurrency Limit %s is %d (below 0)",
+ 				EXCEPT("ERROR: Concurrency Limit %s is %d (below 0)",
 					   limit, count);
 			}
 
-			if (count >= 1) {
+			if (count >= max) {
 				dprintf(D_FULLDEBUG,
-						"Concurrency Limit %s is %d, cannot exceed 1\n",
-						limit, count);
+						"Concurrency Limit %s is %d, cannot exceed %d\n",
+						limit, count, max);
 
 				rejForConcurrencyLimit++;
 				return NULL;
