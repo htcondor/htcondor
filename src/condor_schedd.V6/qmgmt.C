@@ -3793,22 +3793,23 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 						// Ohh, indented sooo far!
 					MyString jobLimits, recordedLimits;
 					if (param_boolean("CLAIM_RECYCLING_CONSIDER_LIMITS", false)) {
-						if (ad->LookupString(ATTR_CONCURRENCY_LIMITS,
-											 jobLimits) &&
-							my_match_ad->LookupString(ATTR_CONCURRENCY_LIMITS,
-													  recordedLimits) &&
-							jobLimits == recordedLimits) {
+						ad->LookupString(ATTR_CONCURRENCY_LIMITS, jobLimits);
+						my_match_ad->LookupString(ATTR_CONCURRENCY_LIMITS,
+												  recordedLimits);
+						jobLimits.strlwr();
+						recordedLimits.strlwr();
+						
+						if (jobLimits == recordedLimit) {
 							dprintf(D_FULLDEBUG,
 									"ConcurrencyLimits match, can reuse claim\n");
 						} else {
-								dprintf(D_FULLDEBUG,
-										"ConcurrencyLimits do not match, cannot "
-										"reuse claim\n");
-								PrioRecAutoClusterRejected->
-									insert(PrioRec[i].auto_cluster_id, 1);
-								continue;
+							dprintf(D_FULLDEBUG,
+									"ConcurrencyLimits do not match, cannot "
+									"reuse claim\n");
+							PrioRecAutoClusterRejected->
+								insert(PrioRec[i].auto_cluster_id, 1);
+							continue;
 						}
-
 					}
 
 					jobid = PrioRec[i].id; // success!
