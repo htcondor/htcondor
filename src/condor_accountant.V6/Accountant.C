@@ -266,6 +266,8 @@ void Accountant::Initialize()
 		GetAttributeString(key, ATTR_CONCURRENCY_LIMITS, str);
 		IncrementLimits(str);
 	  }
+
+	  first_time = false;
   }
 
   // Update priorities
