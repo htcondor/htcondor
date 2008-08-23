@@ -3779,6 +3779,38 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 						}
 					}
 
+						// If Concurrency Limits are in play it is
+						// important not to reuse a claim from one job
+						// that has one set of limits for a job that
+						// has a different set. This is because the
+						// Accountant is keeping track of limits based
+						// on the matches that are being handed out.
+						//
+						// A future optimization here may be to allow
+						// jobs with a subset of the limits given to
+						// the current match to reuse it.
+						//
+						// Ohh, indented sooo far!
+					MyString jobLimits, recordedLimits;
+					if (param_boolean("CLAIM_RECYCLING_CONSIDER_LIMITS", false)) {
+						if (ad->LookupString(ATTR_CONCURRENCY_LIMITS,
+											 jobLimits) &&
+							my_match_ad->LookupString(ATTR_CONCURRENCY_LIMITS,
+													  recordedLimits) &&
+							jobLimits == recordedLimits) {
+							dprintf(D_FULLDEBUG,
+									"ConcurrencyLimits match, can reuse claim\n");
+						} else {
+								dprintf(D_FULLDEBUG,
+										"ConcurrencyLimits do not match, cannot "
+										"reuse claim\n");
+								PrioRecAutoClusterRejected->
+									insert(PrioRec[i].auto_cluster_id, 1);
+								continue;
+						}
+
+					}
+
 					jobid = PrioRec[i].id; // success!
 					return;
 				}

@@ -2718,6 +2718,25 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		free(savedReqStr);
 	}	
 
+		// Stash the Concurrency Limits in the offer, they are part of
+		// what's being provided to the request after all. The limits
+		// will be available to the Accountant when the match is added
+		// and also to the Schedd when considering to reuse a
+		// claim. Both are key, first so the Accountant can properly
+		// recreate its state on startup, and second so the Schedd has
+		// the option of checking if a claim should be reused for a
+		// job incase it has different limits. The second part is
+		// because the limits are not in the Requirements.
+		//
+		// NOTE: Because the Concurrency Limits should be available to
+		// the Schedd, they must be stashed before PERMISSION_AND_AD
+		// is sent.
+	MyString limits;
+	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
+		limits.strlwr();
+		offer->Assign(ATTR_CONCURRENCY_LIMITS, limits);
+	}
+
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 
 	if (want_claiming && want_inform_startd) {
@@ -2790,14 +2809,6 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// (this will generate D_BANDWIDTH debug messages)
 	netman.CommitPlacement(scheddName);
 #endif
-
-		// Stash the Concurrency Limits in the offer, they are part of
-		// what's being provided to the request afterall
-	MyString limits;
-	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
-		limits.strlwr();
-		offer->Assign(ATTR_CONCURRENCY_LIMITS, limits);
-	}
 
     // 4. notifiy the accountant
 	dprintf(D_FULLDEBUG,"      Notifying the accountant\n");
