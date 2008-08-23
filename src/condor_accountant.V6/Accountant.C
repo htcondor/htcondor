@@ -936,6 +936,8 @@ AttrList* Accountant::ReportState() {
     OwnerNum++;
   }
 
+  ReportLimits(ad);
+
   sprintf(tmp,"NumSubmittors = %d", OwnerNum-1);
   ad->Insert(tmp, false);
   return ad;
@@ -1223,6 +1225,18 @@ int Accountant::GetLimit(const MyString& limit)
 	}
 
 	return count;
+}
+
+void Accountant::ReportLimits(AttrList *attrList)
+{
+	MyString attr;
+	MyString limit;
+ 	int count;
+	concurrencyLimits.startIterations();
+	while (concurrencyLimits.iterate(limit, count)) {
+		attr.sprintf("ConcurrencyLimit.%s = %d\n", limit.GetCStr(), count);
+		attrList->Insert(attr.GetCStr());
+	}
 }
 
 void Accountant::IncrementLimit(const MyString& limit)
