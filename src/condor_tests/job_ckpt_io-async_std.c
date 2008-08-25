@@ -102,7 +102,7 @@ do_it( int data[], int fd, unsigned len )
 	int		i, bytes_read;
 	unsigned count;
 
-	for( i=0; i<100; i++ ) {
+	for( i=0; i<1000; i++ ) {
 		if( lseek(fd,0,0) < 0 ) {
 			perror( "lseek" );
 			exit( 1 );
