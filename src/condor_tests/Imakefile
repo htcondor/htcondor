@@ -119,7 +119,7 @@ TESTCLASS(job_ligo_x86-64-chkpttst,btdebug)
 #endif
 
 # vmuniverse smoke test in larg repository
-#if defined(HAVE_VMWARE)
+#if defined(HAVE_VMWARE) && defined(HAVE_CONDOR_TEST_LRG)
 DESC(job_vmu_basic,"VM Universe smoke test")
 RUN(job_vmu_basic)
 TESTCLASS(job_vmu_basic,core)
