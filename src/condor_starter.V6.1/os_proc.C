@@ -446,7 +446,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 		                                     family_info,
 		                                     NULL,
 		                                     fds,
-											 NULL,
+		                                     NULL,
 		                                     nice_inc,
 		                                     NULL,
 		                                     job_opt_mask, 
