@@ -33,6 +33,12 @@ The details of each version are described below.
 in each line in the file, so that intermingled messages relevant to
 different jobs running concurrently can be identified.
 
+\item Added the \Opt{-AllowVersionMismatch} command-line flag to
+\Condor{submit\_dag} and \Condor{dagman} to (if absolutely necessary)
+allow a version mismatch between \Condor{dagman} and the
+\File{.condor.sub} file used to submit it (or, in other words, between
+\Condor{submit\_dag} and \Condor{dagman}).
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
