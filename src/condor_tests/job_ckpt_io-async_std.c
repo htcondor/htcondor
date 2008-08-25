@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
 #endif
 
 int		Data[ 4096 ];
@@ -75,9 +76,11 @@ main( int argc, char *argv[] )
 
 	init_data( Data, sizeof(Data) );
 
-	for( i=0; i < count; i++ ) {
+	time_t b4 = time(0);
+	i = 0;
+	while ((time(0) - b4) < count) {
 		do_it( Data, fd, sizeof(Data) );
-		printf( "%d ", i );
+		printf( "%d ", i++ );
 		fflush( stdout );
 	}
 	printf( "\nNormal End Of Job\n" );
