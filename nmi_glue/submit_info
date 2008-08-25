@@ -183,5 +183,17 @@ testonly_append_prereqs = java-1.4.2_05
 ]
 
 [
+testplatforms = ppc_aix_5.3
+testprereqs = tar-1.14, make-3.80, patch-2.5.4
+testonly_append_prereqs = java-1.4.2_05
+]
+
+[
+testplatforms = ppc_aix_5.3
+testprereqs = tar-1.14, make-3.80, patch-2.5.4
+testonly_append_prereqs = java-1.4.2_05
+]
+
+[
 testplatforms =  unmanaged-x86_rhap_5.1
 ]
