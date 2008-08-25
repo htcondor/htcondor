@@ -64,6 +64,7 @@ struct SubmitDagOptions
 	bool oldRescue;
 	bool autoRescue;
 	int doRescueFrom;
+	bool allowVerMismatch;
 	
 	// non-command line options
 	MyString strLibOut;
@@ -95,6 +96,7 @@ struct SubmitDagOptions
 		oldRescue = param_boolean( "DAGMAN_OLD_RESCUE", false );
 		autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
 		doRescueFrom = 0; // 0 means no rescue DAG specified
+		allowVerMismatch = false;
 	}
 
 };
@@ -481,6 +483,9 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 
 	args.AppendArg("-CsdVersion");
 	args.AppendArg(CondorVersion());
+	if(opts.allowVerMismatch) {
+		args.AppendArg("-AllowVersionMismatch");
+	}
 
 	MyString arg_str,args_error;
 	if(!args.GetArgsStringV1WackedOrV2Quoted(&arg_str,&args_error)) {
@@ -655,7 +660,7 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 			{
 				opts.bNoEventChecks = true;
 			}
-			else if (strArg.find("-allow") != -1) // -allowlogerror
+			else if (strArg.find("-allowlog") != -1) // -allowlogerror
 			{
 				opts.bAllowLogError = true;
 			}
@@ -732,6 +737,10 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 					printUsage();
 				}
 				opts.doRescueFrom = atoi(argv[++iArg]);
+			}
+			else if (strArg.find("-allowver") != -1) // -AllowVersionMismatch
+			{
+				opts.allowVerMismatch = true;
 			}
 			else
 			{
