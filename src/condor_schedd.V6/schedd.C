@@ -782,6 +782,9 @@ Scheduler::count_jobs()
 	m_ad->Insert (tmp);
 
         // Tell negotiator to send us the startd ad
+		// As of 7.1.3, the negotiator no longer pays attention to this
+		// attribute; it _always_ sends the resource request ad.
+		// For backward compatibility with older negotiators, we still set it.
 	sprintf(tmp, "%s = True", ATTR_WANT_RESOURCE_AD );
 	m_ad->InsertOrUpdate(tmp);
 
@@ -4521,7 +4524,6 @@ Scheduler::negotiate(int command, Stream* s)
 	char*	claim_id = NULL;			// claim_id for each match made
 	char*	host = NULL;
 	char*	sinful = NULL;
-	char*	tmp;
 	int		jobs;						// # of jobs that CAN be negotiated
 	int		cur_cluster = -1;
 	int		cur_hosts;
@@ -4940,13 +4942,19 @@ Scheduler::negotiate(int command, Stream* s)
 					break;
 				}
 				case PERMISSION:
+						// No negotiator since 7.1.3 should ever send this
+						// command, and older ones should not send it either,
+						// since we advertise WantResAd=True.
+					dprintf( D_ALWAYS, "Negotiator sent PERMISSION rather than expected PERMISSION_AND_AD!  Aborting.\n");
+					return !(KEEP_STREAM);
+					break;
 				case PERMISSION_AND_AD:
 					/*
 					 * If things are cool, contact the startd.
 					 * But... of the claim_id is the string "null", that means
 					 * the resource does not support the claiming protocol.
 					 */
-					dprintf ( D_FULLDEBUG, "In case PERMISSION\n" );
+					dprintf ( D_FULLDEBUG, "In case PERMISSION_AND_AD\n" );
 
 					sprintf(buffer,"%s = %d",
 									ATTR_LAST_MATCH_TIME,(int)time(0));
@@ -4958,16 +4966,15 @@ Scheduler::negotiate(int command, Stream* s)
 						return (!(KEEP_STREAM));
 					}
 					my_match_ad = NULL;
-					if ( op == PERMISSION_AND_AD ) {
-						// get startd ad from negotiator as well
-						my_match_ad = new ClassAd();
-						if( !my_match_ad->initFromStream(*s) ) {
-							dprintf( D_ALWAYS,
-								"Can't get my match ad from mgr\n" );
-							delete my_match_ad;
-							FREE( claim_id );
-							return (!(KEEP_STREAM));
-						}
+
+					// get startd ad from negotiator as well
+					my_match_ad = new ClassAd();
+					if( !my_match_ad->initFromStream(*s) ) {
+						dprintf( D_ALWAYS,
+							"Can't get my match ad from mgr\n" );
+						delete my_match_ad;
+						FREE( claim_id );
+						return (!(KEEP_STREAM));
 					}
 					if( !s->end_of_message() ) {
 						dprintf( D_ALWAYS,
@@ -4977,10 +4984,6 @@ Scheduler::negotiate(int command, Stream* s)
 						FREE( claim_id );
 						return (!(KEEP_STREAM));
 					}
-						// claim_id is in the form
-						// "<xxx.xxx.xxx.xxx:xxxx>#xxxxxxx" 
-						// where everything upto the # is the sinful
-						// string of the startd
 
 					{
 						ClaimIdParser idp(claim_id);
@@ -4988,8 +4991,7 @@ Scheduler::negotiate(int command, Stream* s)
 						         "## 4. Received ClaimId %s\n", idp.publicClaimId() );
 					}
 
-					if ( my_match_ad ) {
-						dprintf(D_PROTOCOL,"Received match ad\n");
+					{
 
 							// Look to see if the job wants info about 
 							// old matches.  If so, store info about old
@@ -5084,25 +5086,18 @@ Scheduler::negotiate(int command, Stream* s)
 					////// CLAIMING LOGIC  
 					/////////////////////////////////////////////
 
-						// First pull out the sinful string from ClaimId,
-						// so we know whom to contact to claim.
-					sinful = strdup( claim_id );
-					tmp = strchr( sinful, '#');
-					if( tmp ) {
-						*tmp = '\0';
-					} else {
-						dprintf( D_ALWAYS, "Can't find '#' in ClaimId!\n" );
-							// What else should we do here?
-						FREE( sinful );
-						FREE( claim_id );
-						sinful = NULL;
-						claim_id = NULL;
-						if( my_match_ad ) {
+					{
+						Daemon startd(my_match_ad,DT_STARTD,NULL);
+						if( !startd.addr() ) {
+							dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
+							my_match_ad->dPrint(D_ALWAYS);
 							delete my_match_ad;
 							my_match_ad = NULL;
+							break;
 						}
-						break;
+						sinful = strdup( startd.addr() );
 					}
+
 						// sinful should now point to the sinful string
 						// of the startd we were matched with.
 					pre_existing_match = NULL;
@@ -5641,11 +5636,19 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		free( owner );
 		return;
 	}
+	if( GetAttributeStringNew(cluster, proc, ATTR_STARTD_IP_ADDR, &startd_addr) < 0 ) {
+			// We only expect to get here when reading a job queue created
+			// by a version of Condor older than 7.1.3, because we no longer
+			// rely on the claim id to tell us how to connect to the startd.
+		dprintf( D_ALWAYS, "WARNING: %s not in job queue for %d.%d, "
+				 "so using claimid.\n", ATTR_STARTD_IP_ADDR, cluster, proc );
+		startd_addr = getAddrFromClaimId( claim_id );
+		SetAttributeString(cluster, proc, ATTR_STARTD_IP_ADDR, startd_addr);
+	}
 	
 	int universe;
 	GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &universe );
 
-	startd_addr = getAddrFromClaimId( claim_id );
 	if( GetAttributeStringNew(cluster, proc, ATTR_REMOTE_POOL,
 							  &pool) < 0 ) {
 		free( pool );
@@ -8042,6 +8045,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 
 		SetAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->claimId() );
 		SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->publicClaimId() );
+		SetAttributeString( cluster, proc, ATTR_STARTD_IP_ADDR, mrec->peer );
 		SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL,
 						 (int)time(0) ); 
 
@@ -8332,6 +8336,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_CLAIM_IDS );
 		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_IDS );
+		DeleteAttribute( cluster, proc, ATTR_STARTD_IP_ADDR );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_HOST );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_SLOT_ID );

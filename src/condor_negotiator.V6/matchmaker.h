@@ -105,7 +105,6 @@ class Matchmaker : public Service
 			@param scheddLimit Give away this many matches max
 			@param startdAds
 			@param startdPvtAdss
-			@param send_ad_to_schedd
 			@param scheddVersion
 			@param ignore_schedd_limit After hit scheddLimit, keep 
 					negotiating but only consider startd rank.
@@ -120,7 +119,7 @@ class Matchmaker : public Service
 		   double priority, double share,
 		   int scheddLimit,
 		   ClassAdList &startdAds, ClassAdList &startdPvtAds, 
-		   int send_ad_to_schedd, const CondorVersionInfo & scheddVersion,
+		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, int &numMatched);
 
 		int negotiateWithGroup ( int untrimmed_num_startds,
@@ -133,8 +132,7 @@ class Matchmaker : public Service
 									  double=-1.0, double=1.0, bool=false);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
 						ClassAdList &startdPvtAds, Sock *sock,
-						char* scheddName, char* scheddAddr,
-						int send_ad_to_schedd);
+						char* scheddName, char* scheddAddr);
 		void calculateNormalizationFactor (ClassAdList &, double &, double &,
 										   double &, double &);
 
