@@ -292,6 +292,20 @@ DC_Skip_Auth_Init()
 	doAuthInit = false;
 }
 
+static void
+kill_daemon_ad_file()
+{
+	MyString param_name;
+	param_name.sprintf( "%s_DAEMON_AD_FILE", mySubSystem );
+	char *ad_file = param(param_name.Value());
+	if( !ad_file ) {
+		return;
+	}
+
+	unlink(ad_file);
+
+	free(ad_file);
+}
 
 void
 drop_addr_file()
@@ -1888,6 +1902,11 @@ int main( int argc, char** argv )
 		// or "-t", and thus we called FreeConsole() above.
 	AllocConsole();
 #endif
+
+		// Avoid possibility of stale info sticking around from previous run.
+		// For example, we had problems in 7.0.4 and earlier with reconnect
+		// shadows in parallel universe reading the old schedd ad file.
+	kill_daemon_ad_file();
 
 		// Now that we have our pid, we could dump our pidfile, if we
 		// want it. 
