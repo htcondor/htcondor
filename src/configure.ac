@@ -910,6 +910,12 @@ case "$gcc_vers" in
     CompilerMinor="2"
     CompilerPatch="1"
     ;;
+ "4.3.1" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="3"
+    CompilerPatch="1"
+    ;;
  * )
     if test "x$enable_gcc_version_check" = "xyes"; then
       AC_MSG_RESULT([ERROR])
