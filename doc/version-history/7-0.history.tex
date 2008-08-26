@@ -100,6 +100,12 @@ example, if the file transfer process created by the \Condor{schedd}
 was killed by an administrator or crashed due to an internal error,
 the \Condor{schedd} would become unresponsive.
 
+\item GCB was updated, fixing minor bugs with GCB temporary files (typically
+/tmp/gcb-inherit-*).  These bugs did not impact GCB functionality.  Earlier
+versions would leave temporary files behind. Temporary files would have
+permissions of 000.  With the fix, under normal operations the files should be
+deleted, and the condor user should have read and write access to the files.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -606,7 +612,7 @@ For more information on this, please see
 section~\ref{sec:Backfill-BOINC-Windows} on
 page~\pageref{sec:Backfill-BOINC-Windows}.
 
-\item Condor has been ported to Redhat Enterprise Linux
+\item Condor has been ported to Red Hat Enterprise Linux
 5.0 running on the 32-bit x86 architecture and on the 64-bit x86\_64
 architecture.
 
