@@ -453,6 +453,19 @@ int AmazonJob::doEvaluateState()
 				// will be our handle to the job until we get the instance
 				// id at the end of the submission process.
 
+				if ( (condorState == REMOVED) ||
+					 (condorState == HELD) ) {
+
+					gmState = GM_DELETE;
+				}
+
+				// Once RequestSubmit() is called at least once, you must
+				// CancelSubmit() once the submission process is complete
+				// or aborted.
+				if ( myResource->RequestSubmit( this ) == false ) {
+					break;
+				}
+
 				if ( m_key_pair == "" ) {
 					SetKeypairId( build_keypair().Value() );
 				}
@@ -912,17 +925,43 @@ int AmazonJob::doEvaluateState()
 
 			case GM_CREATE_KEYPAIR:
 				{
+				// Once RequestSubmit() is called at least once, you must
+				// CancelSubmit() once the submission process is complete
+				// or aborted.
+				if ( myResource->RequestSubmit( this ) == false ) {
+					// If we haven't started the CREATE_KEYPAIR call yet,
+					// we can abort the submission here for held and
+					// removed jobs.
+					if ( (condorState == REMOVED) ||
+						 (condorState == HELD) ) {
+
+						gmState = GM_DELETE;
+					}
+					break;
+				}
+
 				// now create and register this keypair by using amazon_vm_create_keypair()
 				rc = gahp->amazon_vm_create_keypair(m_public_key_file, m_private_key_file, 
 													m_key_pair.Value(), m_key_pair_file.Value(), gahp_error_code);
 
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+				if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				} else if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ) {
+					if ( (condorState == REMOVED) ||
+						 (condorState == HELD) ) {
+						gmState = GM_DELETE;
+					}
 					break;
 				}
 
 				if (rc == 0) {
-					gmState = GM_START_VM;
+					if ( (condorState == REMOVED) ||
+						 (condorState == HELD) ) {
 
+						gmState = GM_DESTROY_KEYPAIR;
+					} else {
+						gmState = GM_START_VM;
+					}
 				} else {
 					if ( strcmp(gahp_error_code, "NEED_CHECK_SSHKEY" ) == 0 ) {
 						

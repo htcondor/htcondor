@@ -480,6 +480,8 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 			continue;
 		}
 		split_entry(entry, &host, &user);
+		ASSERT( host );
+		ASSERT( user );
 
 			// If this is a hostname, get all IP addresses for it and
 			// add them to the list.  This ensures that if we are given
@@ -503,12 +505,8 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 			}
 		}
 
-		if (host) {
-			free(host);
-		}
-		if (user) {
-			free(user);
-		}
+		free(host);
+		free(user);
 	}
 
     if (allow) {
@@ -632,6 +630,8 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		return TRUE;
 		break;
 
+	default:
+		break;
 	}
 
 	memcpy(&sin_addr,&sin->sin_addr,sizeof(sin_addr));
