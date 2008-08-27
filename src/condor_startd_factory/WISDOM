@@ -8,7 +8,7 @@ parameterizability of the commands.
 Listing generated partitions:
 	?
 
-Listing a booted partition
+Listing a booted partition's info
 	$name = R0-N0-N01
 	getblockinfo $name
 
@@ -20,7 +20,7 @@ Generating a partition:
 	$sub = R0-M0
 	$node = N00
 	$size = 32
-	genblockinfo $name $sub BGP $size $size $node
+	gensmallblock $name $sub BGP $size $size $node
 
 Destroying a partition:
 	$name = R0-N0-N01
