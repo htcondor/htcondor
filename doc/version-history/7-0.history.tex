@@ -106,6 +106,12 @@ versions would leave temporary files behind. Temporary files would have
 permissions of 000.  With the fix, under normal operations the files should be
 deleted, and the condor user should have read and write access to the files.
 
+\item Reconnecting to parallel universe jobs after a restart of the
+\Condor{schedd} daemon, would sometimes fail.  The failure was caused
+by the \Condor{shadow} trying to connect to the address of the
+previous instance of the \Condor{schedd} rather than the address of
+the current instance.
+
 \end{itemize}
 
 \noindent Known Bugs:
