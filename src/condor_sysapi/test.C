@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -65,7 +65,7 @@ const double	MIPS_MAX_WARN_OK			= 0.2;		// Ratio: Max warnings to allow
 // Idle time
 const int		IDLETIME_TRIALS				= 5;		// Total # of trials
 const int		IDLETIME_INTERVAL			= 5;		// Interval time
-const int		IDLETIME_TOLERANCE			= 1;		// 
+const int		IDLETIME_TOLERANCE			= 1;		//
 const double	IDLETIME_MAX_WARN_OK		= 1.0;		// Ratio: Max warnings to allow
 
 // Load average test
@@ -89,7 +89,7 @@ const double	VIRTMEM_MAX_FAIL_OK			= 0.05;		// Ratio: Max failures to allow
 
 
 /* this function will dump out the state of the _sysapi_* variables, then
-   call sysapi_reconfig(), then dump out the stateof the variables again, 
+   call sysapi_reconfig(), then dump out the stateof the variables again,
    then actually call all of the sysapi_*(_raw)? functions and dump what
    those functions return. All of these functions are entry points and
    can be called seperately if need be to test stuff */
@@ -98,19 +98,19 @@ const double	VIRTMEM_MAX_FAIL_OK			= 0.05;		// Ratio: Max failures to allow
 extern "C" void
 sysapi_test_dump_internal_vars(void)
 {
-	dprintf(D_ALWAYS, "SysAPI: Dumping %s internal variables\n", 
+	dprintf(D_ALWAYS, "SysAPI: Dumping %s internal variables\n",
 		_sysapi_config==TRUE?"initialized":"uninitialized");
 
-	dprintf(D_ALWAYS, "SysAPI: _sysapi_config = %s\n", 
+	dprintf(D_ALWAYS, "SysAPI: _sysapi_config = %s\n",
 		_sysapi_config==TRUE?"TRUE":"FALSE");
 
-	dprintf(D_ALWAYS, 
+	dprintf(D_ALWAYS,
 		"SysAPI: _sysapi_console_devices = %p\n",_sysapi_console_devices);
-	dprintf(D_ALWAYS, 
+	dprintf(D_ALWAYS,
 		"SysAPI: _sysapi_last_x_event = %d\n", _sysapi_last_x_event);
-	dprintf(D_ALWAYS, "SysAPI: _sysapi_reserve_afs_cache = %s\n", 
+	dprintf(D_ALWAYS, "SysAPI: _sysapi_reserve_afs_cache = %s\n",
 		_sysapi_reserve_afs_cache==TRUE?"TRUE":"FALSE");
-	dprintf(D_ALWAYS, 
+	dprintf(D_ALWAYS,
 		"SysAPI: _sysapi_reserve_disk = %d\n", _sysapi_reserve_disk);
 	dprintf(D_ALWAYS, "SysAPI: _sysapi_startd_has_bad_utmp = %s\n",
 		_sysapi_startd_has_bad_utmp==TRUE?"TRUE":"FALSE");
@@ -302,14 +302,14 @@ sysapi_test_dump_all(int argc, char** argv)
 
 	if ((tests & KERN_MEMMOD) == KERN_MEMMOD) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN SysAPI DUMP!\n");
-		dprintf(D_ALWAYS, "SysAPI: Kernel memory model: %s\n", 
+		dprintf(D_ALWAYS, "SysAPI: Kernel memory model: %s\n",
 			sysapi_kernel_memory_model());
 		dprintf(D_ALWAYS, "SysAPI: END SysAPI DUMP!\n\n");
 	}
 
 	if ((tests & KERN_VERS) == KERN_VERS) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN SysAPI DUMP!\n");
-		dprintf(D_ALWAYS, "SysAPI: Kernel version: %s\n", 
+		dprintf(D_ALWAYS, "SysAPI: Kernel version: %s\n",
 			sysapi_kernel_version());
 		dprintf(D_ALWAYS, "SysAPI: END SysAPI DUMP!\n\n");
 	}
@@ -319,7 +319,7 @@ sysapi_test_dump_all(int argc, char** argv)
 		sysapi_test_dump_internal_vars();
 		sysapi_reconfig();
 		sysapi_test_dump_internal_vars();
-		dprintf(D_ALWAYS, "SysAPI: Checkpoint platform: %s\n", 
+		dprintf(D_ALWAYS, "SysAPI: Checkpoint platform: %s\n",
 			sysapi_ckptpltfrm());
 		dprintf(D_ALWAYS, "SysAPI: END SysAPI DUMP!\n\n");
 	}
@@ -352,7 +352,7 @@ sysapi_test_dump_all(int argc, char** argv)
 	if ((tests & FREE_FS_BLOCKS) == FREE_FS_BLOCKS) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN FREE_FS_BLOCKS_TEST:\n");
 		foo = 0;
-		foo = free_fs_blocks_test(FREEBLOCKS_TRIALS, 
+		foo = free_fs_blocks_test(FREEBLOCKS_TRIALS,
 								  FREEBLOCKS_TOLERANCE,
 								  FREEBLOCKS_MAX_WARN_OK );
 		dprintf(D_ALWAYS, "SysAPI: END FREE_FS_BLOCKS_TEST:\n");
@@ -481,7 +481,7 @@ sysapi_test_dump_all(int argc, char** argv)
 					buf[sizeof(buf)-1] = '\0';
 					if ( !strncmp( buf, "UNAME:", 6 ) && ( strlen(buf) > 6 ) ){
 						cpuinfo_num++;
-						if ( ( ( linux_num >= 0 ) && 
+						if ( ( ( linux_num >= 0 ) &&
 							   ( linux_num == cpuinfo_num ) ) ||
 							 ( linux_uname &&
 							   strstr( buf, linux_uname ) )   ) {
@@ -513,7 +513,7 @@ sysapi_test_dump_all(int argc, char** argv)
 				if ( ( linux_hthreads < 0 )		  &&
 					 ( linux_hthreads_core > 0 )  &&
 					 ( linux_processors > 0 )  )  {
-					linux_hthreads = (  linux_processors - 
+					linux_hthreads = (  linux_processors -
 										( linux_processors /
 										  linux_hthreads_core )  );
 				}
@@ -598,7 +598,7 @@ sysapi_test_dump_all(int argc, char** argv)
 				 _SysapiProcCpuinfo.found_processors,
 				 _SysapiProcCpuinfo.found_hthreads,
 				 _SysapiProcCpuinfo.found_ncpus );
-				 
+				
 #    endif
 	}
 	
