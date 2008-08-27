@@ -73,6 +73,10 @@ can be achieved by setting this configuration parameter to false.
 to except (crash) when it received a machine ClassAd without a valid state.
 It now logs this under level \MacroNI{D\_ALWAYS} and ignores the ClassAd.
 
+\item Fixed a bug in 7.1.2 that would cause condor daemons to start
+consuming a lot of cpu time after rare types of communication failures
+during security negotiation.
+
 \end{itemize}
 
 \noindent Known Bugs:
