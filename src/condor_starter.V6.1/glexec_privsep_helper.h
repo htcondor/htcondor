@@ -64,6 +64,13 @@ private:
 	//
 	int run_script(ArgList&);
 
+	// helper for interfacing with condor_glexec_wrapper
+	int feed_wrapper(int pid,
+	                 int sock_fds[2],
+	                 Env& env,
+	                 int dc_job_opts,
+	                 int std_in);
+
 	// set once we're initialized
 	//
 	bool m_initialized;
@@ -84,6 +91,7 @@ private:
 	//
 	MyString m_setup_script;
 	MyString m_run_script;
+	MyString m_wrapper_script;
 	MyString m_cleanup_script;
 
 	// tracks current ownership of the sandbox

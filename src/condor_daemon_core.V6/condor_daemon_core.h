@@ -774,6 +774,13 @@ class DaemonCore : public Service
 	*/
 	int Close_Pipe(int pipe_end);
 
+#if !defined(WIN32)
+	/** Get the FD underlying the given pipe end. Returns FALSE
+	 *  if not given a valid pipe end.
+	*/
+	int Get_Pipe_FD(int pipe_end, int* fd);
+#endif
+
 	/**
 	   Gain access to data written to a given DC process's std(out|err) pipe.
 
@@ -1499,6 +1506,7 @@ class DaemonCore : public Service
 	int maxPipeHandleIndex;
 	int pipeHandleTableInsert(PipeHandle);
 	void pipeHandleTableRemove(int);
+	int pipeHandleTableLookup(int, PipeHandle* = NULL);
 
 	// this table is for dispatching registered pipes
 	class PidEntry;  // forward reference

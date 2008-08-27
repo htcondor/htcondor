@@ -1451,6 +1451,21 @@ void DaemonCore::pipeHandleTableRemove(int index)
 	}
 }
 
+int DaemonCore::pipeHandleTableLookup(int index, PipeHandle* ph)
+{
+	if ((index < 0) || (index > maxPipeHandleIndex)) {
+		return FALSE;
+	}
+	PipeHandle tmp_ph = (*pipeHandleTable)[index];
+	if (tmp_ph == (PipeHandle)-1) {
+		return FALSE;
+	}
+	if (ph != NULL) {
+		*ph = tmp_ph;
+	}
+	return TRUE;
+}
+
 int DaemonCore::Create_Pipe( int *pipe_ends,
 			     bool can_register_read,
 			     bool can_register_write,
@@ -1599,11 +1614,10 @@ int DaemonCore::Register_Pipe(int pipe_end, char* pipe_descrip,
     int     j;
 
 	int index = pipe_end - PIPE_INDEX_OFFSET;
-
-    if ( index < 0 ) {
+	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_DAEMONCORE, "Register_Pipe: invalid index\n");
 		return -1;
-    }
+	}
 
 	i = nPipe;
 
@@ -1779,7 +1793,7 @@ unsigned __stdcall pipe_close_thread(void *arg)
 int DaemonCore::Close_Pipe( int pipe_end )
 {
 	int index = pipe_end - PIPE_INDEX_OFFSET;
-	if (index < 0) {
+	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_ALWAYS, "Close_Pipe on invalid pipe end: %d\n", pipe_end);
 		EXCEPT("Close_Pipe error");
 	}
@@ -1868,7 +1882,7 @@ DaemonCore::Read_Pipe(int pipe_end, void* buffer, int len)
 	}
 
 	int index = pipe_end - PIPE_INDEX_OFFSET;
-	if (index < 0) {
+	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_ALWAYS, "Read_Pipe: invalid pipe_end: %d\n", pipe_end);
 		EXCEPT("Read_Pipe");
 	}
@@ -1891,7 +1905,7 @@ DaemonCore::Write_Pipe(int pipe_end, const void* buffer, int len)
 	}
 
 	int index = pipe_end - PIPE_INDEX_OFFSET;
-	if (index < 0) {
+	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_ALWAYS, "Write_Pipe: invalid pipe_end: %d\n", pipe_end);
 		EXCEPT("Write_Pipe: invalid pipe end");
 	}
@@ -1905,6 +1919,14 @@ DaemonCore::Write_Pipe(int pipe_end, const void* buffer, int len)
 #endif
 }
 
+#if !defined(WIN32)
+int
+DaemonCore::Get_Pipe_FD(int pipe_end, int* fd)
+{
+	int index = pipe_end - PIPE_INDEX_OFFSET;
+	return pipeHandleTableLookup(index, fd);
+}
+#endif
 
 MyString*
 DaemonCore::Read_Std_Pipe(int pid, int std_fd) {
