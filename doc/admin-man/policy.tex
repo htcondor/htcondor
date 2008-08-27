@@ -1864,7 +1864,8 @@ kill signal.
 All that being said, there may be cases where it is appropriate
 to force 
 Condor to never kill jobs within some upper time limit.
-This can be achieved with the following configuration policy:
+This can be achieved with the following policy in the configuration of
+the execute nodes:
 
 \index{MAXJOBRETIREMENTTIME macro@\texttt{MAXJOBRETIREMENTTIME} macro}
 \index{configuration macro!\texttt{MAXJOBRETIREMENTTIME}}
@@ -1888,6 +1889,7 @@ of resources in the pool can become if there are long-running jobs.
 However, by preventing jobs from being killed, 
 you may decrease the number of
 cycles that are wasted on non-checkpointable jobs that are killed.
+That is the basic tradeoff.
 
 Note that the use of \MacroNI{MAXJOBRETIREMENTTIME} limits the killing
 of jobs, but it does not prevent the preemption of resource claims.
@@ -1898,7 +1900,10 @@ of jobs but not the preemption of claims.
 
 Limiting the preemption of jobs is often more desirable than limiting
 the preemption of resource claims.  
-The following configuration limits the preemptions of resource claims:
+However, if you really do want to limit the preemption of resource claims,
+the following policy may be used.  Some of these settings apply to the
+execute node and some apply to the central manager, so this policy should
+be configured so that it is read by both.
 
 \footnotesize
 \begin{verbatim}
@@ -1925,7 +1930,16 @@ some amount of time using \Macro{CLAIM\_WORKLIFE}.
 This enforces a time limit, beyond which no new jobs may be started on
 an existing claim; therefore the \Condor{schedd} daemon is forced to go back to
 the \Condor{negotiator} to request a new match, if there is still
-more work to do.
+more work to do.  Example execute machine configuration to include in
+addition to the example above:
+
+\footnotesize
+\begin{verbatim}
+# after 20 minutes, schedd must renegotiate to run
+# additional jobs on the machine
+CLAIM_WORKLIFE = 1200
+\end{verbatim}
+\normalsize
 
 Also be aware that in all versions of Condor prior to 6.8.1, it is
 not advisable to set \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} to False,

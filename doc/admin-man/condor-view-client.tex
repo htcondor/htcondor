@@ -25,7 +25,7 @@ Condor View.
 \begin{figure}[hbt]
 \centering
 \includegraphics{admin-man/view-screenshot.ps}
-\caption{\label{fig:view-screenshot}Screenshot of CondorView Client}
+\caption{\label{fig:view-screenshot}Screen shot of CondorView Client}
 \end{figure}
 
 After unpacking and installing the CondorView Client, a script named
@@ -71,6 +71,10 @@ This directory is referred to as the \File{VIEWDIR} directory.
 \item Unpack or untar this contrib module into the
 directory \File{VIEWDIR}.
 This creates several files and subdirectories.
+Further unpack the jar file within the \File{VIEWDIR} directory with:
+\begin{verbatim} 
+  jar -xf condorview.jar
+\end{verbatim}
 
 \item Edit the \Prog{make\_stats} script.  At the beginning of the file
 are six parameters to customize.
