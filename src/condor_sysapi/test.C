@@ -198,6 +198,7 @@ sysapi_test_dump_all(int argc, char** argv)
 	int print_help = 0;
 #if defined(LINUX)
 	const char *linux_cpuinfo_file = NULL;
+	int			linux_cpuinfo_debug = 0;
 	const char *linux_uname = NULL;
 	int 		linux_num = -1;
 	int			linux_processors = -1;
@@ -237,8 +238,9 @@ sysapi_test_dump_all(int argc, char** argv)
 			tests |= LOAD_AVG;
 		else if (strcmp(argv[i], "--mips") == 0)
 			tests |= MIPS;
-		else if (strcmp(argv[i], "--ncpus") == 0)
+		else if (strcmp(argv[i], "--ncpus") == 0) {
 			tests |= NCPUS;
+		}
 		else if (strcmp(argv[i], "--phys_mem") == 0)
 			tests |= PHYS_MEM;
 		else if (strcmp(argv[i], "--virt_mem") == 0)
@@ -248,8 +250,16 @@ sysapi_test_dump_all(int argc, char** argv)
 			skip = 1;
 		}
 #	  if defined(LINUX)
-		else if ( (strcmp(argv[i], "--proc_cpuinfo") == 0) && (i+2 < argc)  ) {
+		else if (strcmp(argv[i], "--proc_cpuinfo") == 0) {
+			tests |= NCPUS;
+			linux_cpuinfo_file = "/proc/cpuinfo";
+			linux_cpuinfo_debug = 1;	// Turn on debugging
+			linux_num = 0;
+		}
+		else if ( (strcmp(argv[i], "--cpuinfo_file") == 0) && (i+2 < argc)  ) {
+			tests |= NCPUS;
 			linux_cpuinfo_file = argv[i+1];
+			linux_cpuinfo_debug = 1;	// Turn on debugging
 			if ( isdigit( *argv[i+2] ) ) {
 				linux_num = atoi( argv[i+2] );
 			} else {
@@ -267,6 +277,7 @@ sysapi_test_dump_all(int argc, char** argv)
 
 		if (print_help != 0) {
 			printf("Please use zero or more or:\n");
+			printf("--debug <D_xxx>\n");
 			printf("--arch\n");
 			printf("--kern_vers\n");
 			printf("--kern_memmod\n");
@@ -282,7 +293,8 @@ sysapi_test_dump_all(int argc, char** argv)
 			printf("--phys_mem\n");
 			printf("--virt_mem\n");
 #		  if defined(LINUX)
-			printf("--proc_cpuinfo <file> <uname match string>|<cpuinfo #>\n");
+			printf("--proc_cpuinfo\n");
+			printf("--cpuinfo_file <file> <uname match string>|<cpuinfo #>\n");
 #		  endif
 			return 0;
 		}
@@ -437,7 +449,13 @@ sysapi_test_dump_all(int argc, char** argv)
 	/* Special test: /proc/cpuinfo on a file */
 #if defined(LINUX)
 	if ((tests & NCPUS) == NCPUS && linux_cpuinfo_file ) {
+		bool is_proc_cpuinfo = false;
+
 		/* set_debug_flags("D_FULLDEBUG"); */
+		if ( strcmp( linux_cpuinfo_file, "/proc/cpuinfo" ) == 0 ) {
+			is_proc_cpuinfo = true;
+			dprintf( D_ALWAYS, "Using the real /proc/cpuinfo\n" );
+		}
 
 		FILE	*fp = safe_fopen_wrapper( linux_cpuinfo_file, "r", 0644 );
 		if ( !fp ) {
@@ -453,43 +471,52 @@ sysapi_test_dump_all(int argc, char** argv)
 			int		linenum = 1;
 			int		cpuinfo_num = 0;		/* # of this cpuinfo block */
 
-			while( fgets( buf, sizeof(buf), fp) ) {
-				linenum++;
-				buf[sizeof(buf)-1] = '\0';
-				if ( !strncmp( buf, "UNAME:", 6 ) && ( strlen(buf) > 6 )  ) {
-					cpuinfo_num++;
-					if (  ( ( linux_num >= 0 ) && 
-							( linux_num == cpuinfo_num ) ) ||
-						  ( linux_uname &&
-							strstr( buf, linux_uname ) )   ) {
-						strcpy( uname, buf+6 );
-						found = linenum;
+			if ( is_proc_cpuinfo ) {
+				found = true;
+				strcpy( uname, "" );
+			}
+			else {
+				while( fgets( buf, sizeof(buf), fp) ) {
+					linenum++;
+					buf[sizeof(buf)-1] = '\0';
+					if ( !strncmp( buf, "UNAME:", 6 ) && ( strlen(buf) > 6 ) ){
+						cpuinfo_num++;
+						if ( ( ( linux_num >= 0 ) && 
+							   ( linux_num == cpuinfo_num ) ) ||
+							 ( linux_uname &&
+							   strstr( buf, linux_uname ) )   ) {
+							strncpy( uname, buf+6, sizeof(uname) );
+							found = linenum;
+						}
 					}
-				}
-				else if ( found ) {
-					if ( !strncmp( buf, "START", 5 ) && found ) {
-						break;
+					else if ( found ) {
+						if ( !strncmp( buf, "START", 5 ) && found ) {
+							break;
+						}
+						sscanf( buf, "PROCESSORS: %d", &linux_processors );
+						sscanf( buf, "HTHREADS: %d", &linux_hthreads );
+						sscanf( buf, "HTHREADS_CORE: %d",
+								&linux_hthreads_core );
 					}
-					sscanf( buf, "PROCESSORS: %d", &linux_processors );
-					sscanf( buf, "HTHREADS: %d", &linux_hthreads );
-					sscanf( buf, "HTHREADS_CORE: %d",
-							&linux_hthreads_core );
 				}
 			}
 
 			// Store the current file position & file name
 			_SysapiProcCpuinfo.file = linux_cpuinfo_file;
+			_SysapiProcCpuinfo.debug = linux_cpuinfo_debug;
 			_SysapiProcCpuinfo.offset = ftell( fp );
 			fclose( fp );
 			fp = NULL;
 
 			// Calculate total "non-primary" hyper threads
-			if ( ( linux_hthreads < 0 )		  &&
-				 ( linux_hthreads_core > 0 )  &&
-				 ( linux_processors > 0 )  )  {
-				linux_hthreads = (  linux_processors - 
-									( linux_processors /
-									  linux_hthreads_core )  );
+			if ( ! is_proc_cpuinfo ) {
+				if ( ( linux_hthreads < 0 )		  &&
+					 ( linux_hthreads_core > 0 )  &&
+					 ( linux_processors > 0 )  )  {
+					linux_hthreads = (  linux_processors - 
+										( linux_processors /
+										  linux_hthreads_core )  );
+				}
 			}
 
 			// Calculate the total # of CPUs
@@ -515,9 +542,11 @@ sysapi_test_dump_all(int argc, char** argv)
 				}
 				return(++failed_tests);
 			}
-			dprintf(D_ALWAYS,
-					"SysAPI: Using uname string on line %d:\n%s\n",
-					found, uname );
+			if ( strlen( uname ) ) {
+				dprintf(D_ALWAYS,
+						"SysAPI: Using uname string on line %d:\n%s\n",
+						found, uname );
+			}
 			ncpus_trials = 1;
 		}
 	}
@@ -559,8 +588,13 @@ sysapi_test_dump_all(int argc, char** argv)
 					_SysapiProcCpuinfo.found_ncpus,
 					linux_cpus );
 		}
-		dprintf( D_FULLDEBUG,
-				 "SysAPI: Detected %d Processors, %d HyperThreads = %d CPUS\n",
+		int	level = D_FULLDEBUG;
+		if (linux_cpuinfo_debug) {
+			level = D_ALWAYS;
+		}
+		dprintf( level,
+				 "SysAPI: Detected %d Processors, %d HyperThreads"
+				 " => %d CPUS\n",
 				 _SysapiProcCpuinfo.found_processors,
 				 _SysapiProcCpuinfo.found_hthreads,
 				 _SysapiProcCpuinfo.found_ncpus );

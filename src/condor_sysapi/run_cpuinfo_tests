@@ -36,11 +36,13 @@ while(<IN>)
     }
 }
 close(IN);
+die "Can't find any CPU entries" if ( $NumUnames <= 0 );
+print "Found $NumUnames entries\n";
 
 my @Failed;
 foreach my $i ( 1 .. $NumUnames )
 {
-    my $Cmd = "./condor_sysapi --ncpus --proc_cpuinfo $CpuInfoFile $i";
+    my $Cmd = "./condor_sysapi --cpuinfo_file $CpuInfoFile $i";
     my $Passed = 0;
     my $Failed = 0;
     my $Error = 0;
