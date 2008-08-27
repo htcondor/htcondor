@@ -944,7 +944,13 @@ int AmazonJob::doEvaluateState()
 				rc = gahp->amazon_vm_create_keypair(m_public_key_file, m_private_key_file, 
 													m_key_pair.Value(), m_key_pair_file.Value(), gahp_error_code);
 
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+				if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				} else if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ) {
+					if ( (condorState == REMOVED) ||
+						 (condorState == HELD) ) {
+						gmState = GM_DELETE;
+					}
 					break;
 				}
 
