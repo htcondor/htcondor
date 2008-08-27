@@ -65,10 +65,15 @@ $success = sub
 {
 	print "executed successfully\n";
 	print "Verifying output\n";
+	$diditpass = 1;
 	foreach $name (@outfiles) {
 		$line = "";
 		$passed = 0;
-		open(OUT,"<$name") || die "Can not open outfile<$name>:$!\n";
+		$canopen = open(OUT,"<$name");
+		if( ! (defined $canopen)) {
+			print "Can not open outfile<$name>:$!\n";
+			$diditpass = 0;
+		}
 		while(<OUT>) {
 			chomp();
 			$line = $_;
@@ -82,7 +87,15 @@ $success = sub
 			;
 		} else {
 			print "failed $name: $line\n";
+			$diditpass = 0;
 		}
+	}
+	# clean out old output files
+	foreach $name (@outfiles) {
+		system("rm -f $name");
+	}
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
 	}
 };
 
