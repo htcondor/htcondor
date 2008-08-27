@@ -3799,7 +3799,7 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 						jobLimits.strlwr();
 						recordedLimits.strlwr();
 						
-						if (jobLimits == recordedLimit) {
+						if (jobLimits == recordedLimits) {
 							dprintf(D_FULLDEBUG,
 									"ConcurrencyLimits match, can reuse claim\n");
 						} else {
