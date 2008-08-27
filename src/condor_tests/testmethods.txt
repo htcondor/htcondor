@@ -629,6 +629,58 @@ job_dagman_throttle.run*
 	Expects: Thee dag is expected to run successfully and then success depends on
 		good parsing of the user log.
 
+job_dagman_splice-1.run
+
+test1:
+    Test interpolating of the $(JOB) variable in to the right hand side of
+    a VARS variable for the job's submit file.
+
+test2:
+    Test inclusion of multiple splices in one dag file (which has
+    jobs and parent/child relationships between the jobs) with no
+    PARENT/CHILD relationships between the splices and anything else. The
+    result should be each splice is treated as a disjoint graph in
+    the entire dag.
+
+test3:
+    Test using a splice as a child of a regular JOB.
+
+test4:
+    Test using a splice as a parent of a regular JOB.
+
+test5:
+    Test using a JOB as a child and parent of a splice.
+
+test6:
+    Test using a splice as a child and parent of a regular JOB.
+
+test7:
+    Test using a splice as a parent of another splice.
+    This also tests using a splice as a child of a splice.
+
+test8:
+    Splices which include themselves and have no parent/child relationships
+    between them should all appear as disjoint graphs in the entire dag.
+
+test9:
+    If a splice has disjoint graphs, then make sure all the initial and
+    final nodes are treated properly when the splice is used as a parent/child
+    in a dependancy.
+
+test10:
+    Run condor_submit_dag with multiple dag files each bringing
+    in a splice.  Each main dag file (after splicing is resolved)
+    should be a disjoint graph to the other dag files. This tests to see
+    if the jobnames and splice names had been "munged" correctly.
+
+test11:
+    This was a dag geometry I stumbled across which flushed out a bug in
+    the prefixing of nodes and the reconstruction of the node name
+    index hash table. It had to do with the specific splice names
+    (S2 being used legally twice) and the bug in my code.
+
+job_dagman_splice-1.run
+
 job_dagman_uncomlog.run*
 	Description: Test Dagmans ability to have sepaarate job log files
 	Method: Specify all different logs files for nodes and see that Dagman
