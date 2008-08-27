@@ -321,7 +321,9 @@ drop_addr_file()
 	addrFile = param( addr_file );
 
 	if( addrFile ) {
-		if( (ADDR_FILE = safe_fopen_wrapper(addrFile, "w")) ) {
+		MyString newAddrFile;
+		newAddrFile.sprintf("%s.new",addrFile);
+		if( (ADDR_FILE = safe_fopen_wrapper(newAddrFile.Value(), "w")) ) {
 			// Always prefer the local, private address if possible.
 			const char* addr = daemonCore->privateNetworkIpAddr();
 			if (!addr) {
@@ -332,10 +334,16 @@ drop_addr_file()
 			fprintf( ADDR_FILE, "%s\n", CondorVersion() );
 			fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
 			fclose( ADDR_FILE );
+			if( rotate_file(newAddrFile.Value(),addrFile)!=0 ) {
+				dprintf( D_ALWAYS,
+						 "DaemonCore: ERROR: failed to rotate %s to %s\n",
+						 newAddrFile.Value(),
+						 addrFile);
+			}
 		} else {
 			dprintf( D_ALWAYS,
 					 "DaemonCore: ERROR: Can't open address file %s\n",
-					 addrFile );
+					 newAddrFile.Value() );
 		}
 	}
 }
