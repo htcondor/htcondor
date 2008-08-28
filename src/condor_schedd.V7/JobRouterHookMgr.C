@@ -14,8 +14,9 @@ JobRouterHookMgr::JobRouterHookMgr()
 	: HookClientMgr()
 {
 	m_hook_keyword = NULL;
-	m_hook_vanilla_to_grid = NULL;
+	m_hook_translate = NULL;
 	m_hook_update_job_info = NULL;
+        m_hook_job_exit = NULL;
 
 	dprintf( D_FULLDEBUG, "Instantiating a JobRouterHookMgr\n" );
 }
@@ -31,6 +32,7 @@ JobRouterHookMgr::~JobRouterHookMgr()
 	if (m_hook_keyword)
 	{
 		free(m_hook_keyword);
+		m_hook_keyword = NULL;
 	}
 }
 
@@ -38,15 +40,20 @@ JobRouterHookMgr::~JobRouterHookMgr()
 void
 JobRouterHookMgr::clearHookPaths()
 {
-	if (m_hook_vanilla_to_grid != NULL)
+	if (m_hook_translate != NULL)
 	{
-		free(m_hook_vanilla_to_grid);
-		m_hook_vanilla_to_grid = NULL;
+		free(m_hook_translate);
+		m_hook_translate = NULL;
 	}
 	if (m_hook_update_job_info != NULL)
 	{
 		free(m_hook_update_job_info);
 		m_hook_update_job_info = NULL;
+	}
+	if (m_hook_job_exit != NULL)
+	{
+		free(m_hook_job_exit);
+		m_hook_job_exit = NULL;
 	}
 }
 
@@ -54,19 +61,17 @@ JobRouterHookMgr::clearHookPaths()
 bool
 JobRouterHookMgr::initialize()
 {
-	char* tmp = param("JOB_ROUTER_JOB_HOOK_KEYWORD");
+	char* tmp = param("JOB_HOOK_KEYWORD");
 	if (tmp)
 	{
 		m_hook_keyword = tmp;
-		dprintf(D_FULLDEBUG, "Using JOB_ROUTER_JOB_HOOK_KEYWORD value from config file: \"%s\"\n", m_hook_keyword);
+		dprintf(D_FULLDEBUG, "Using JOB_HOOK_KEYWORD value from config file: \"%s\"\n", m_hook_keyword);
 	}
 	else
 	{
-		dprintf(D_FULLDEBUG, "No JOB_ROUTER_JOB_HOOK_HEYWORD defined so job router hooks will not be invoked.\n");
+		dprintf(D_FULLDEBUG, "No JOB_HOOK_HEYWORD defined so job router hooks will not be invoked.\n");
 		return false;
 	}
-	dprintf(D_FULLDEBUG, "Initiating reconfig\n");
-//	sleep(20);
 	reconfig();
 	return HookClientMgr::initialize();
 }
@@ -78,8 +83,9 @@ JobRouterHookMgr::reconfig()
 	// Clear out our old copies of each hook's path.
 	clearHookPaths();
 
-	m_hook_vanilla_to_grid = getHookPath(HOOK_VANILLA_TO_GRID);
+	m_hook_translate = getHookPath(HOOK_TRANSLATE_JOB);
 	m_hook_update_job_info = getHookPath(HOOK_UPDATE_JOB_INFO);
+	m_hook_job_exit = getHookPath(HOOK_JOB_EXIT);
 
 	return true;
 }
@@ -90,7 +96,7 @@ JobRouterHookMgr::getHookKeyword()
 {
 	if (!m_hook_keyword_initialized) {
 		MyString param_name;
-		m_hook_keyword = param("JOB_ROUTER_HOOK_KEYWORD");
+		m_hook_keyword = param("JOB_HOOK_KEYWORD");
 		m_hook_keyword_initialized = true;
 	}
 	return m_hook_keyword;
@@ -112,19 +118,20 @@ JobRouterHookMgr::getHookPath(HookType hook_type)
 
 
 int
-JobRouterHookMgr::hookVanillaToGrid(RoutedJob* r_job)
+JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job)
 {
 	ClassAd temp_ad;
 
-	if (m_hook_vanilla_to_grid == NULL)
+	if (NULL == m_hook_translate)
 	{
+		// hook not defined, which is ok
 		return 0;
 	}
 
-	if (new_to_old(r_job->src_ad, temp_ad) == false)
+	if (false == new_to_old(r_job->src_ad, temp_ad))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
-			"ERROR in JobRouterHookMgr::hookVanillaToGrid: "
+			"ERROR in JobRouterHookMgr::hookTranslateJob: "
 			"failed to convert classad");
 		return -1;
 	}
@@ -132,61 +139,126 @@ JobRouterHookMgr::hookVanillaToGrid(RoutedJob* r_job)
 	MyString hook_stdin;
 	temp_ad.sPrint(hook_stdin);
 
-	TranslateClient* translate_client = new TranslateClient(m_hook_vanilla_to_grid, r_job);
-	if (translate_client == NULL)
+	TranslateClient* translate_client = new TranslateClient(m_hook_translate, r_job);
+	if (NULL == translate_client)
 	{
+		dprintf(D_ALWAYS|D_FAILURE, 
+			"ERROR in JobRouterHookMgr::hookTranslateJob: "
+			"failed to create translation client");
 		return -1;
 	}
-	if (spawn(translate_client, NULL, &hook_stdin) == 0)
+	if (0 == spawn(translate_client, NULL, &hook_stdin))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
-				"ERROR in JobRouterHookMgr::hookVanillaToGrid: "
-				"failed to spawn HOOK_VANILLA_TO_GRID (%s)\n", m_hook_vanilla_to_grid);
+				"ERROR in JobRouterHookMgr::hookTranslateJob: "
+				"failed to spawn HOOK_TRANSLATE_JOB (%s)\n", m_hook_translate);
 		return -1;
 
 	}
-	dprintf(D_FULLDEBUG, "HOOK_VANILLA_TO_GRID (%s) invoked.\n",
-			m_hook_vanilla_to_grid);
+	dprintf(D_FULLDEBUG, "HOOK_TRANSLATE_JOB (%s) invoked.\n",
+			m_hook_translate);
 	return 1;
 }
 
 
-bool
+int
 JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 {
 	ClassAd temp_ad;
-	if (m_hook_update_job_info == NULL)
+	if (NULL == m_hook_update_job_info)
 	{
-		return false;
+		// hook not defined
+		return 0;
 	}
 
-	if (new_to_old(r_job->src_ad, temp_ad) == false)
+	if (false == new_to_old(r_job->dest_ad, temp_ad))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 			"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
 			"failed to convert classad");
-		return false;
+		return -1;
 	}
 
 	MyString hook_stdin;
 	temp_ad.sPrint(hook_stdin);
 
 	StatusClient* status_client = new StatusClient(m_hook_update_job_info, r_job);
-	if (status_client == NULL)
+	if (NULL == status_client)
 	{
-		return false;
+		dprintf(D_ALWAYS|D_FAILURE, 
+			"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
+			"failed to create status update client");
+		return -1;
 	}
-	if (spawn(status_client, NULL, &hook_stdin) == 0)
+	if (0 == spawn(status_client, NULL, &hook_stdin))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
 				"failed to spawn HOOK_UPDATE_JOB_INFO (%s)\n", m_hook_update_job_info);
-		return false;
+		return -1;
 
 	}
 	dprintf(D_FULLDEBUG, "HOOK_UPDATE_JOB_INFO (%s) invoked.\n",
-			m_hook_vanilla_to_grid);
-	return true;
+			m_hook_update_job_info);
+	return 1;
+}
+
+
+int
+JobRouterHookMgr::hookJobExit(RoutedJob* r_job, MyString sandbox)
+{
+	ClassAd temp_ad;
+	if (NULL == m_hook_job_exit)
+	{
+		dprintf(D_FULLDEBUG, "HOOK_JOB_EXIT not configured.\n");
+		return 0;
+	}
+
+	// Verify the exit hook hasn't already been spawned and that
+	// we're not waiting for it to return.
+	HookClient *hook_client;
+	m_client_list.Rewind();
+	while (m_client_list.Next(hook_client)) {
+		if (hook_client->type() == HOOK_JOB_EXIT) {
+			dprintf(D_FULLDEBUG, "JobRouterHookMgr::hookJobExit "
+				"retried while still waiting for HOOK_JOB_EXIT "
+				"to return - ignoring\n");
+			return 1;
+		}
+	}
+
+	if (false == new_to_old(r_job->dest_ad, temp_ad))
+	{
+		dprintf(D_ALWAYS|D_FAILURE,
+			"ERROR in JobRouterHookMgr::hookJobExit: "
+			"failed to convert classad");
+		return -1;
+	}
+
+	MyString hook_stdin;
+	temp_ad.sPrint(hook_stdin);
+
+	ArgList args;
+	args.AppendArg(sandbox);
+
+	hook_client = new ExitClient(m_hook_job_exit, r_job);
+	if (NULL == hook_client)
+	{
+		dprintf(D_ALWAYS|D_FAILURE, 
+			"ERROR in JobRouterHookMgr::hookJobExit: "
+			"failed to create status exit client");
+		return -1;
+	}
+	if (0 == spawn(hook_client, &args, &hook_stdin))
+	{
+		dprintf(D_ALWAYS|D_FAILURE,
+				"ERROR in JobRouterHookMgr::hookJobExit: "
+				"failed to spawn HOOK_JOB_EXIT (%s)\n", m_hook_job_exit);
+		return -1;
+
+	}
+	dprintf(D_FULLDEBUG, "HOOK_JOB_EXIT (%s) invoked.\n", m_hook_job_exit);
+	return 1;
 }
 
 
@@ -195,7 +267,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 // // // // // // // // // // // // 
 
 TranslateClient::TranslateClient(const char* hook_path, RoutedJob* r_job)
-	: HookClient(HOOK_VANILLA_TO_GRID, hook_path, true)
+	: HookClient(HOOK_TRANSLATE_JOB, hook_path, true)
 {
 	m_routed_job = r_job;
 }
@@ -208,7 +280,7 @@ TranslateClient::hookExited(int exit_status)
 
 	if (m_std_err.Length())
 	{
-		dprintf(D_ALWAYS,
+		dprintf(D_ALWAYS, "TranslateClient::hookExited: "
 				"Warning, hook %s (pid %d) printed to stderr: %s\n",
 				m_hook_path, (int)m_pid, m_std_err.Value());
 	}
@@ -222,21 +294,25 @@ TranslateClient::hookExited(int exit_status)
 		{
 			if (!old_job_ad.Insert(hook_line))
 			{
-				dprintf(D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
+				dprintf(D_ALWAYS, "TranslateClient::hookExited: "
+						"Failed to insert \"%s\" into ClassAd, "
 						"ignoring invalid hook output\n", hook_line);
 				return;
 			}
 		}
-		if (old_to_new(old_job_ad, new_job_ad) == false)
+		if (false == old_to_new(old_job_ad, new_job_ad))
 		{
-			dprintf(D_ALWAYS, "Failed to convert ClassAd, "
+			dprintf(D_ALWAYS, "TranslateClient::hookExited: "
+					"Failed to convert ClassAd, "
 					"ignoring invalid hook output\n");
+			return;
 		}
 		m_routed_job->dest_ad = new_job_ad;
+		m_routed_job->is_sandboxed = true;
 	}
 	else
 	{
-		dprintf(D_ALWAYS, "Failed to translate ClassAd.  Hook %s (pid %d) returned no data.\n",
+		dprintf(D_ALWAYS, "TranslateClient::hookExited: Hook %s (pid %d) returned no data.\n",
 				m_hook_path, (int)m_pid);
 		return;
 	}
@@ -263,7 +339,7 @@ StatusClient::hookExited(int exit_status)
 	if (m_std_err.Length())
 	{
 		dprintf(D_ALWAYS,
-				"Warning, hook %s (pid %d) printed to stderr: %s\n",
+				"StatusClient::hookExited: Warning, hook %s (pid %d) printed to stderr: %s\n",
 				m_hook_path, (int)m_pid, m_std_err.Value());
 	}
 	if (m_std_out.Length())
@@ -276,23 +352,47 @@ StatusClient::hookExited(int exit_status)
 		{
 			if (!old_job_ad.Insert(hook_line))
 			{
-				dprintf(D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
-						"ignoring invalid hook output\n", hook_line);
+				dprintf(D_ALWAYS, "StatusClient::hookExited: "
+						"Failed to insert \"%s\" into "
+						"ClassAd, ignoring invalid "
+						"hook output.  Job status NOT updated.\n", hook_line);
 				return;
 			}
 		}
-		if (old_to_new(old_job_ad, new_job_ad) == false)
+		if (false == old_to_new(old_job_ad, new_job_ad))
 		{
-			dprintf(D_ALWAYS, "Failed to convert ClassAd, "
-					"ignoring invalid hook output\n");
+			dprintf(D_ALWAYS, "StatusClient::hookExited: Failed "
+					"to convert ClassAd, ignoring invalid "
+					"hook output.  Job status NOT updated.\n");
+			return;
 		}
 		m_routed_job->dest_ad = new_job_ad;
 	}
 	else
 	{
-		dprintf(D_ALWAYS, "Failed to translate ClassAd.  Hook %s (pid %d) returned no data.\n",
+		dprintf(D_ALWAYS, "StatusClient::hookExited: Hook %s (pid %d) returned no data.\n",
 				m_hook_path, (int)m_pid);
 		return;
 	}
-	// TODO: Pass updated classed to JobRouter
+	job_router->UpdateJobStatus(m_routed_job);
+}
+
+
+// // // // // // // // // // // // 
+// ExitClient class
+// // // // // // // // // // // // 
+
+ExitClient::ExitClient(const char* hook_path, RoutedJob* r_job)
+	: HookClient(HOOK_UPDATE_JOB_INFO, hook_path, true)
+{
+	m_routed_job = r_job;
+}
+
+
+void
+ExitClient::hookExited(int exit_status)
+{
+	HookClient::hookExited(exit_status);
+	// Tell the JobRouter to finalize the job.
+	job_router->FinishFinalizeJob(m_routed_job);
 }

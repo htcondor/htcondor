@@ -115,7 +115,6 @@ JobRouter::init() {
 #if HAVE_JOB_HOOKS
 	m_hook_mgr = new JobRouterHookMgr;
 	m_hook_mgr->initialize();
-	dprintf(D_ALWAYS, "finished initialize\n");
 #endif
 	config();
 	GetInstanceLock();
@@ -1039,14 +1038,16 @@ void
 JobRouter::SubmitJob(RoutedJob *job) {
 	if(job->state != RoutedJob::CLAIMED) return;
 
-	dprintf(D_ALWAYS, "SubmitJob called\n");
 #if HAVE_JOB_HOOKS
 	if (m_hook_mgr)
 	{
-		int rval = m_hook_mgr->hookVanillaToGrid(job);
+		int rval = m_hook_mgr->hookTranslateJob(job);
 		switch (rval)
 		{
 			case -1:    // Error
+					// No need to print status messages
+					// as the lower levels should be
+					// handling that.
 				return;
 				break;
 			case 0:    // Hook not configured
@@ -1067,8 +1068,7 @@ JobRouter::SubmitJob(RoutedJob *job) {
 
 void
 JobRouter::FinishSubmitJob(RoutedJob *job) {
-	// Now we apply any edits to the job ClassAds as defined in the route ad.
-
+	// Apply any edits to the job ClassAds as defined in the route ad.
 	JobRoute *route = GetRouteByName(job->route_name.c_str());
 	if(!route) {
 		dprintf(D_FULLDEBUG,"JobRouter (%s): route has been removed before job could be submitted.\n",job->JobDesc().c_str());
@@ -1255,9 +1255,45 @@ static bool ClassAdHasDirtyAttributes(classad::ClassAd *ad) {
 }
 
 void
+JobRouter::UpdateJobStatus(RoutedJob *job) {
+	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
+	ad_collection->UpdateClassAd(job->dest_key, &job->dest_ad);
+	FinishCheckSubmittedJobStatus(job);
+}
+
+void
 JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 	if(job->state != RoutedJob::SUBMITTED) return;
 
+#if HAVE_JOB_HOOKS
+	if (m_hook_mgr)
+	{
+		int rval = m_hook_mgr->hookUpdateJobInfo(job);
+		switch (rval)
+		{
+			case -1:    // Error
+					// No need to print status messages
+					// as the lower levels should be
+					// handling that.
+				return;
+				break;
+			case 0:    // Hook not configured
+				break;
+			case 1:    // Spawned the hook
+					// Done for now.  Let the handler call
+					// FinishSubmitJob() when the hook
+					// exits.
+				return;
+				break;
+		}
+	}
+#endif
+
+	FinishCheckSubmittedJobStatus(job);
+}
+
+void
+JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 	classad::ClassAd *src_ad = ad_collection->GetClassAd(job->src_key);
 
@@ -1347,6 +1383,39 @@ void
 JobRouter::FinalizeJob(RoutedJob *job) {
 	if(job->state != RoutedJob::FINISHED) return;
 
+#if HAVE_JOB_HOOKS
+	if (m_hook_mgr)
+	{
+		char * Spool = param("SPOOL");
+		ASSERT(Spool);
+
+		MyString spoolDirectory = gen_ckpt_name(Spool, job->dest_proc_id.cluster, job->dest_proc_id.proc, 0);
+		int rval = m_hook_mgr->hookJobExit(job, spoolDirectory);
+		switch (rval)
+		{
+			case -1:    // Error
+					// No need to print status messages
+					// as the lower levels should be
+					// handling that.
+				return;
+				break;
+			case 0:    // Hook not configured
+				break;
+			case 1:    // Spawned the hook
+					// Done for now.  Let the handler call
+					// FinishFinalizeJob() when the hook
+					// exits.
+				return;
+				break;
+		}
+	}
+#endif
+
+	FinishFinalizeJob(job);
+}
+
+void
+JobRouter::FinishFinalizeJob(RoutedJob *job) {
 	if(!finalize_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,NULL,NULL,job->is_sandboxed)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to finalize job\n",job->JobDesc().c_str());
 

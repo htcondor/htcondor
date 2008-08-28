@@ -12,11 +12,15 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SCHEDD_FLAGS)
 INST_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_VERS_FLAGS) $(SCHEDD_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(SCHEDD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 
+#if HAVE_JOB_HOOKS
+JOB_HOOKS_OBJS = JobRouterHookMgr.o
+#endif /* HAVE_JOB_HOOKS */
+
 QUILL_OBJS = ../condor_quill/prober.o ../condor_quill/classadlogparser.o ../condor_quill/classadlogentry.o
 
 soapobjs(job_router)
 
-OBJ = classad_newold.o submit_job.o VanillaToGrid.o JobRouter.o JobLogReader.o Scheduler.o schedd_main.o schedd_v7_utils.o JobRouterHookMgr.o $(QUILL_OBJS) $(SOAP_OBJS)
+OBJ = classad_newold.o submit_job.o VanillaToGrid.o JobRouter.o JobLogReader.o Scheduler.o schedd_main.o schedd_v7_utils.o $(QUILL_OBJS) $(SOAP_OBJS) $(JOB_HOOKS_OBJS)
 
 template_inst( JobRouter.C, JobRouter.o )
 

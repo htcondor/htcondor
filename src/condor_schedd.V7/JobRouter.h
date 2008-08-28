@@ -84,6 +84,15 @@ class JobRouter: public Service {
 	// Finish the job submission process.
 	void FinishSubmitJob(RoutedJob *job);
 
+	// Update the status of the job.
+	void UpdateJobStatus(RoutedJob *job);
+
+	// Finish the job status update.
+	void FinishCheckSubmittedJobStatus(RoutedJob *job);
+
+	// Finish finalizing the job.
+	void FinishFinalizeJob(RoutedJob *job);
+
  private:
 	HashTable<std::string,RoutedJob *> m_jobs;  //key="src job id"
 	RoutingTable *m_routes; //key="route name"
