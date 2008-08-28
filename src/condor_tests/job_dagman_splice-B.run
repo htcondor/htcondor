@@ -20,7 +20,7 @@
 
 use CondorTest;
 
-$cmd = 'job_dagman_splice-2.dag';
+$cmd = 'job_dagman_splice-B.dag';
 $testname = 'Condor submit dag - basic splice test - scheduler U';
 $dagman_args = "-verbose";
 

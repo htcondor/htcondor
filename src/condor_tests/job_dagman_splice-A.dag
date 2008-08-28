@@ -1,7 +1,7 @@
-JOB  A  job_dagman_splice-1.cmd
+JOB  A  job_dagman_splice-A.cmd
 VARS A job="$(JOB)"
 
-JOB  B  job_dagman_splice-1.cmd
+JOB  B  job_dagman_splice-A.cmd
 VARS B job="$(JOB)"
 
-DOT job_dagman_splice-1.dot
+DOT job_dagman_splice-A.dot

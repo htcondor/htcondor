@@ -1,28 +1,28 @@
-JOB  A  job_dagman_splice-2.cmd
+JOB  A  job_dagman_splice-B.cmd
 VARS A job="$(JOB)"
 
-JOB  B  job_dagman_splice-2.cmd
+JOB  B  job_dagman_splice-B.cmd
 VARS B job="$(JOB)"
 
-JOB  C  job_dagman_splice-2.cmd
+JOB  C  job_dagman_splice-B.cmd
 VARS C job="$(JOB)"
 
-JOB  D  job_dagman_splice-2.cmd
+JOB  D  job_dagman_splice-B.cmd
 VARS D job="$(JOB)"
 
-JOB  E  job_dagman_splice-2.cmd
+JOB  E  job_dagman_splice-B.cmd
 VARS E job="$(JOB)"
 
-JOB  F  job_dagman_splice-2.cmd
+JOB  F  job_dagman_splice-B.cmd
 VARS F job="$(JOB)"
 
-JOB  G  job_dagman_splice-2.cmd
+JOB  G  job_dagman_splice-B.cmd
 VARS G job="$(JOB)"
 
-JOB  H  job_dagman_splice-2.cmd
+JOB  H  job_dagman_splice-B.cmd
 VARS H job="$(JOB)"
 
-JOB  I  job_dagman_splice-2.cmd
+JOB  I  job_dagman_splice-B.cmd
 VARS I job="$(JOB)"
 
 # many to one to many

@@ -1,8 +1,8 @@
-JOB	A	job_dagman_splice-4.cmd
+JOB	A	job_dagman_splice-D.cmd
 VARS A	outfilename="$(JOB)"
 
-SPLICE S1 job_dagman_splice-4-splice1.dag
+SPLICE S1 job_dagman_splice-D-splice1.dag
 
 PARENT S1 CHILD A
 
-DOT job_dagman_splice-4.dot
+DOT job_dagman_splice-D.dot
