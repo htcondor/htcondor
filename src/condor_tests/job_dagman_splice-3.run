@@ -25,8 +25,8 @@ $testname = 'Condor submit dag - basic splice test - scheduler U';
 $dagman_args = "-verbose";
 
 @outfiles = (
-				"S1+A.out", "S1+B.out", "S1+C.out", "S1+D.out", "S1+E.out",
-				"S1+F.out", "S1+G.out", "S1+H.out", "S1+I.out",
+				"S1+A", "S1+B", "S1+C", "S1+D", "S1+E",
+				"S1+F", "S1+G", "S1+H", "S1+I",
 			);
 
 my $killedchosen = 0;
@@ -72,9 +72,9 @@ $success = sub
 	foreach $name (@outfiles) {
 		$line = "";
 		$passed = 0;
-		$canopen = open(OUT,"<$name");
+		$canopen = open(OUT,"<$name.out");
 		if( ! (defined $canopen)) {
-			print "Can not open outfile<$name>:$!\n";
+			print "Can not open outfile<$name.out>:$!\n";
 			$diditpass = 0;
 		}
 		while(<OUT>) {
@@ -82,20 +82,20 @@ $success = sub
 			$line = $_;
 			if( $line =~ /^OK.*$/ ) {
 				$passed = 1;
-				print "$name: $line\n";
+				print "$name.out: $line\n";
 			}
 		}
 		close(OUT);
 		if($passed == 1 ) {
 			;
 		} else {
-			print "failed $name: $line\n";
+			print "failed $name.out: $line\n";
 			$diditpass = 0;
 		}
 	}
 	# clean out old output files
 	foreach $name (@outfiles) {
-		system("rm -f $name");
+		system("rm -f $name.out $name.err");
 	}
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
