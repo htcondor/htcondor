@@ -238,7 +238,8 @@ submitDag( SubmitDagOptions &opts )
 
 	if (opts.bSubmit)
 	{
-		MyString strCmdLine = "condor_submit " + opts.strRemoteSchedd + " " + opts.strSubFile;
+		MyString strCmdLine = "condor_submit " + opts.strRemoteSchedd +
+					" " + opts.strSubFile;
 		int retval = system(strCmdLine.Value());
 		if( retval != 0 ) {
 			fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
@@ -247,7 +248,8 @@ submitDag( SubmitDagOptions &opts )
 	}
 	else
 	{
-		printf("-no_submit given, not submitting DAG to Condor.  You can do this with:\n");
+		printf("-no_submit given, not submitting DAG to Condor.  "
+					"You can do this with:\n");
 		printf("\"condor_submit %s\"\n", opts.strSubFile.Value());
 	}
 	printf("-----------------------------------------------------------------------\n");
