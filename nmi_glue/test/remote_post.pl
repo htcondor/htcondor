@@ -81,6 +81,21 @@ if( ! -f "tasklist.nmi" || -z "tasklist.nmi" ) {
 
 chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
 
+#----------------------------------------
+# final tar and exit
+#----------------------------------------
+
+$results = "results.tar.gz";
+print "Tarring up all results\n";
+chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
+system( "tar zcf $results src/condor_tests local" );
+if( $? >> 8 ) {
+    print "Can't tar zcf src/condor_tests local\n";
+    $exit_status = 1;
+}
+
+exit $exit_status;
+
 my $etc_dir = "$BaseDir/results/etc";
 my $log_dir = "$BaseDir/results/log";
 
