@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -1242,8 +1242,7 @@ MatchMakerResources::FindLease( const MatchMakerLease &in_lease )
 
 int
 MatchMakerResources::GetLeaseDuration( const classad::ClassAd &resource_ad,
-									  const MatchMakerLease &request )
-									  
+									   const MatchMakerLease &request )
 {
 	int	requested_duration = request.getDuration( );
 	return GetLeaseDuration( resource_ad, requested_duration );
@@ -1251,8 +1250,7 @@ MatchMakerResources::GetLeaseDuration( const classad::ClassAd &resource_ad,
 
 int
 MatchMakerResources::GetLeaseDuration( const classad::ClassAd &resource_ad,
-									  const classad::ClassAd &request_ad )
-									  
+									   const classad::ClassAd &request_ad )
 {
 	int	requested_duration = -1;
 	request_ad.EvaluateAttrInt( "LeaseDuration", requested_duration );
@@ -1262,7 +1260,7 @@ MatchMakerResources::GetLeaseDuration( const classad::ClassAd &resource_ad,
 
 int
 MatchMakerResources::GetLeaseDuration( const classad::ClassAd &resource_ad,
-									  int requested_duration )
+									   int requested_duration )
 {
 	int	resource_max_duration = -1;
 	resource_ad.EvaluateAttrInt( "MaxLeaseDuration", resource_max_duration );
@@ -1299,7 +1297,6 @@ MatchMakerResources::GetResourceAd( const string &name )
 bool
 MatchMakerResources::InsertResourceAd( const string &name,
 									   classad::ClassAd *ad )
-									  
 {
 	string	key = "Resources/" + name;
 	return m_collection.AddClassAd( key, ad );

@@ -31,6 +31,7 @@
 
 // Instantiate some templates
 template class list<DCMatchMakerLease*>;
+template class list<const DCMatchMakerLease*>;
 template class HashTable<MyString, StorkMatchStatsEntry *>;
 #if defined( USING_ORDERED_SET )
   template class OrderedSet<StorkMatchEntry*>;

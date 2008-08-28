@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,8 +39,8 @@ char* mySubSystem = "MatchMaker";		// used by Daemon Core
 MatchMaker	*match_maker;
 
 //-------------------------------------------------------------
-
-int main_init(int argc, char *argv[])
+int
+main_init(int argc, char *argv[])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
@@ -57,8 +57,7 @@ int main_init(int argc, char *argv[])
 }
 
 //-------------------------------------------------------------
-
-int 
+int
 main_config( bool is_full )
 {
 	(void) is_full;
@@ -69,8 +68,8 @@ main_config( bool is_full )
 }
 
 //-------------------------------------------------------------
-
-int main_shutdown_fast()
+int
+main_shutdown_fast()
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 	match_maker->shutdownFast();
@@ -80,8 +79,8 @@ int main_shutdown_fast()
 }
 
 //-------------------------------------------------------------
-
-int main_shutdown_graceful()
+int
+main_shutdown_graceful()
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 	match_maker->shutdownGraceful();
@@ -91,7 +90,6 @@ int main_shutdown_graceful()
 }
 
 //-------------------------------------------------------------
-
 void
 main_pre_dc_init( int argc, char* argv[] )
 {
@@ -100,7 +98,7 @@ main_pre_dc_init( int argc, char* argv[] )
 	// dprintf isn't safe yet...
 }
 
-
+//-------------------------------------------------------------
 void
 main_pre_command_sock_init( )
 {

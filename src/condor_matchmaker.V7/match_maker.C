@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -182,15 +182,15 @@ MatchMaker::init( const char *name )
 		// Register admin commands
 	daemonCore->Register_Command(
 		MATCHMAKER_GET_MATCH, "GET_MATCH",
-		(CommandHandlercpp)&MatchMaker::commandHandler_GetMatch, 
+		(CommandHandlercpp)&MatchMaker::commandHandler_GetMatch,
 		"command_handler", (Service *)this, DAEMON );
 	daemonCore->Register_Command(
 		MATCHMAKER_RENEW_LEASE, "RENEW_LEASE",
-		(CommandHandlercpp)&MatchMaker::commandHandler_RenewLease, 
+		(CommandHandlercpp)&MatchMaker::commandHandler_RenewLease,
 		"command_handler", (Service *)this, DAEMON );
 	daemonCore->Register_Command(
 		MATCHMAKER_RELEASE_LEASE, "RELEASE_LEASE",
-		(CommandHandlercpp)&MatchMaker::commandHandler_ReleaseLease, 
+		(CommandHandlercpp)&MatchMaker::commandHandler_ReleaseLease,
 		"command_handler", (Service*)this, DAEMON );
 
 	return 0;
@@ -222,11 +222,11 @@ MatchMaker::config( void )
 	// Get the classad log file
 	tmp = NULL;
 	if ( m_myName ) {
-		name.sprintf( "MATCH_MAKER_%s_CLASSAD_LOG", m_myName );
+		name.sprintf( "MATCHMAKER_%s_CLASSAD_LOG", m_myName );
 		tmp = param( name.GetCStr() );
 	}
 	if ( NULL == tmp ) {
-		tmp = param( "MATCH_MAKER_CLASSAD_LOG" );
+		tmp = param( "MATCHMAKER_CLASSAD_LOG" );
 	}
 	if ( tmp ) {
 		m_resources.setCollectionLog( tmp );
@@ -235,11 +235,11 @@ MatchMaker::config( void )
 
 	// Enable verbose logging of ads?
 	if ( m_myName ) {
-		name.sprintf( "MATCH_MAKER_%s_DEBUG_ADS", m_myName );
+		name.sprintf( "MATCHMAKER_%s_DEBUG_ADS", m_myName );
 		tmp = param( name.GetCStr() );
 	}
 	if ( NULL == tmp ) {
-		tmp = param( "MATCH_MAKER_DEBUG_ADS" );
+		tmp = param( "MATCHMAKER_DEBUG_ADS" );
 	}
 	if ( tmp ) {
 		if ( ( *tmp == 't' ) || ( *tmp == 'T' ) ) {
@@ -269,11 +269,11 @@ MatchMaker::config( void )
 
 	// Query type
 	if ( m_myName ) {
-		name.sprintf( "MATCH_MAKER_%s_QUERY_ADTYPE", m_myName );
+		name.sprintf( "MATCHMAKER_%s_QUERY_ADTYPE", m_myName );
 		tmp = param( name.GetCStr() );
 	}
 	if ( NULL == tmp ) {
-		tmp = param( "MATCH_MAKER_QUERY_ADTYPE");
+		tmp = param( "MATCHMAKER_QUERY_ADTYPE");
 	}
 	if ( tmp ) {
 		AdTypes	type = AdTypeFromString( tmp );
@@ -293,11 +293,11 @@ MatchMaker::config( void )
 	// Query constraints
 	tmp = NULL;
 	if ( m_myName ) {
-		name.sprintf( "MATCH_MAKER_%s_QUERY_CONSTRAINTS", m_myName );
+		name.sprintf( "MATCHMAKER_%s_QUERY_CONSTRAINTS", m_myName );
 		tmp = param( name.GetCStr() );
 	}
 	if ( NULL == tmp ) {
-		tmp = param( "MATCH_MAKER_QUERY_CONSTRAINTS" );
+		tmp = param( "MATCHMAKER_QUERY_CONSTRAINTS" );
 	}
 	if ( tmp ) {
 		m_queryConstraints = tmp;
@@ -326,7 +326,7 @@ MatchMaker::ParamInt( const char *param_name, int &value,
 
 	if ( m_myName ) {
 		full_name.sprintf( "MATCH_MAKER_%s_%s", m_myName, param_name );
-		found = param_integer( full_name.GetCStr(), value, 
+		found = param_integer( full_name.GetCStr(), value,
 							   true, default_value,
 							   true, min_value, max_value );
 	}
@@ -620,13 +620,13 @@ MatchMaker::timerHandler_Update ( void )
 	m_publicAd.Assign( "NumberLeaseRecords", stats.m_num_lease_records);
 	m_publicAd.Assign( "NumberValidLeases", stats.m_num_valid_leases );
 	m_publicAd.Assign( "NumberBusyLeases", stats.m_num_busy_leases );
-   
+
 	if ( m_collectorList ) {
 		m_collectorList->sendUpdates( UPDATE_MATCH_MAKER_AD, &m_publicAd,
 									  NULL, true );
 	}
 
-	// Reset the timer so we don't do another period update until 
+	// Reset the timer so we don't do another period update until
 	//daemonCore->Reset_Timer( m_TimerId_Update,
 	//						 m_Interval_Update,
 	//						 m_Interval_Update );

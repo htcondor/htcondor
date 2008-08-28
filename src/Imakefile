@@ -1,4 +1,4 @@
-#define AllFiles etc include src lib libexec bin sbin sql man 
+#define AllFiles etc include src lib libexec bin sbin sql man
 
 #if NEEDS_KBDD
 #   define KbddProgs kbdd
