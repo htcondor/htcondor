@@ -1212,11 +1212,6 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 				 dprintf(D_ALWAYS, "%d seconds so far\n", totalTime);
 			}
 
-			// should we send the startd ad to this schedd?
-			send_ad_to_schedd = FALSE;
-			schedd->LookupBool( ATTR_WANT_RESOURCE_AD, send_ad_to_schedd);
-	
-
 			// store the verison of the schedd, so we can take advantage of
 			// protocol improvements in newer versions while still being
 			// backwards compatible.
@@ -1322,7 +1317,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 					result=negotiate( scheddName,scheddAddr,scheddPrio,
 								  scheddAbsShare, scheddLimit,
 								  startdAds, startdPvtAds, 
-								  send_ad_to_schedd, scheddVersion, ignore_schedd_limit,
+								  scheddVersion, ignore_schedd_limit,
 								  startTime, numMatched);
 					updateNegCycleEndTime(startTime, schedd);
 
@@ -1722,7 +1717,7 @@ int Matchmaker::
 negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		   int scheddLimit,
 		   ClassAdList &startdAds, ClassAdList &startdPvtAds, 
-		   int send_ad_to_schedd, const CondorVersionInfo & scheddVersion,
+		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, int &numMatched)
 {
 	ReliSock	*sock;
@@ -2009,7 +2004,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 
 			// 2e(ii).  perform the matchmaking protocol
 			result = matchmakingProtocol (request, offer, startdPvtAds, sock, 
-					scheddName, scheddAddr, send_ad_to_schedd);
+					scheddName, scheddAddr);
 
 			// 2e(iii). if the matchmaking protocol failed, do not consider the
 			//			startd again for this negotiation cycle.
@@ -2604,8 +2599,7 @@ insertNegotiatorMatchExprs(ClassAd *ad)
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
 						ClassAdList &startdPvtAds, Sock *sock,
-					    char* scheddName, char* scheddAddr,
-						int send_ad_to_schedd)
+					    char* scheddName, char* scheddAddr)
 {
 	int  cluster, proc;
 	char startdAddr[32];
@@ -2700,23 +2694,13 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	sock->encode();
 	send_failed = false;	
 
-	if ( send_ad_to_schedd ) 
-	{
-		dprintf(D_FULLDEBUG,
-			"      Sending PERMISSION, capability, startdAd to schedd\n");
-		if (!sock->put(PERMISSION_AND_AD) 	|| 
-			!sock->put(capability)	||
-			!offer->put(*sock)		||	// send startd ad to schedd
-			!sock->end_of_message())
-				send_failed = true;
-	} else {
-		dprintf(D_FULLDEBUG,
-			"      Sending PERMISSION with capability to schedd\n");
-		if (!sock->put(PERMISSION) 	|| 
-			!sock->put(capability)	||
-			!sock->end_of_message())
-				send_failed = true;
-	}
+	dprintf(D_FULLDEBUG,
+		"      Sending PERMISSION, capability, startdAd to schedd\n");
+	if (!sock->put(PERMISSION_AND_AD) 	|| 
+		!sock->put(capability)	||
+		!offer->put(*sock)		||	// send startd ad to schedd
+		!sock->end_of_message())
+			send_failed = true;
 
 	if ( send_failed )
 	{

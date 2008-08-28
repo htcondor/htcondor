@@ -111,7 +111,12 @@ int getPortFromAddr( const char* addr );
    allocated string which must be de-allocated with free(). */ 
 char* getHostFromAddr( const char* addr );
 
-/* returns the address from a given ClaimId.  the string returned is a
+/* Deprecated!  The claim id should no longer be used to get the startd
+   address, except for cases where this is required for backward
+   compatibility.  The startd ClassAd should be fed into a DCDaemon
+   object to get the address of the startd, because this handles
+   private network addresses etc.
+   returns the address from a given ClaimId.  the string returned is a
    newly allocated string which must be de-allocated with free().
 */ 
 char* getAddrFromClaimId( const char* id );

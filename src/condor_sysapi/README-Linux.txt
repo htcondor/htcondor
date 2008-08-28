@@ -7016,11 +7016,196 @@ END
 --------------------------------------------------------------------------
 
 --------------------------------------------------------------------------
-UNAME:
-PROCESSORS: 
-HTHREADS: 
-HTHREADS_CORE: 
+# CHTC node
+UNAME:Linux c005.chtc.wisc.edu 2.6.9-67.0.4.ELsmp #1 SMP Thu Jan 31 16:00:56 CST 2008 x86_64 x86_64 x86_64 GNU/Linux
+PROCESSORS: 8
+HTHREADS: 0
+#HTHREADS_CORE: 1
 START
+
+processor	: 0
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 7
+model name	: Intel(R) Xeon(R) CPU           E5440  @ 2.83GHz
+stepping	: 6
+cpu MHz		: 2826.306
+cache size	: 6144 KB
+physical id	: 0
+siblings	: 4
+core id		: 0
+cpu cores	: 4
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 10
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm syscall nx lm pni monitor ds_cpl est tm2 cx16 xtpr lahf_lm
+bogomips	: 5658.28
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 38 bits physical, 48 bits virtual
+power management:
+
+processor	: 1
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 7
+model name	: Intel(R) Xeon(R) CPU           E5440  @ 2.83GHz
+stepping	: 6
+cpu MHz		: 2826.306
+cache size	: 6144 KB
+physical id	: 1
+siblings	: 4
+core id		: 4
+cpu cores	: 4
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 10
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm syscall nx lm pni monitor ds_cpl est tm2 cx16 xtpr lahf_lm
+bogomips	: 5651.75
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 38 bits physical, 48 bits virtual
+power management:
+
+processor	: 2
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 7
+model name	: Intel(R) Xeon(R) CPU           E5440  @ 2.83GHz
+stepping	: 6
+cpu MHz		: 2826.306
+cache size	: 6144 KB
+physical id	: 0
+siblings	: 4
+core id		: 1
+cpu cores	: 4
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 10
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm syscall nx lm pni monitor ds_cpl est tm2 cx16 xtpr lahf_lm
+bogomips	: 5651.68
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 38 bits physical, 48 bits virtual
+power management:
+
+processor	: 3
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 7
+model name	: Intel(R) Xeon(R) CPU           E5440  @ 2.83GHz
+stepping	: 6
+cpu MHz		: 2826.306
+cache size	: 6144 KB
+physical id	: 0
+siblings	: 4
+core id		: 2
+cpu cores	: 4
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 10
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm syscall nx lm pni monitor ds_cpl est tm2 cx16 xtpr lahf_lm
+bogomips	: 5651.74
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 38 bits physical, 48 bits virtual
+power management:
+
+processor	: 4
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 7
+model name	: Intel(R) Xeon(R) CPU           E5440  @ 2.83GHz
+stepping	: 6
+cpu MHz		: 2826.306
+cache size	: 6144 KB
+physical id	: 0
+siblings	: 4
+core id		: 3
+cpu cores	: 4
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 10
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm syscall nx lm pni monitor ds_cpl est tm2 cx16 xtpr lahf_lm
+bogomips	: 5651.72
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 38 bits physical, 48 bits virtual
+power management:
+
+processor	: 5
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 7
+model name	: Intel(R) Xeon(R) CPU           E5440  @ 2.83GHz
+stepping	: 6
+cpu MHz		: 2826.306
+cache size	: 6144 KB
+physical id	: 1
+siblings	: 4
+core id		: 5
+cpu cores	: 4
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 10
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm syscall nx lm pni monitor ds_cpl est tm2 cx16 xtpr lahf_lm
+bogomips	: 5651.73
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 38 bits physical, 48 bits virtual
+power management:
+
+processor	: 6
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 7
+model name	: Intel(R) Xeon(R) CPU           E5440  @ 2.83GHz
+stepping	: 6
+cpu MHz		: 2826.306
+cache size	: 6144 KB
+physical id	: 1
+siblings	: 4
+core id		: 6
+cpu cores	: 4
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 10
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm syscall nx lm pni monitor ds_cpl est tm2 cx16 xtpr lahf_lm
+bogomips	: 5651.75
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 38 bits physical, 48 bits virtual
+power management:
+
+processor	: 7
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 7
+model name	: Intel(R) Xeon(R) CPU           E5440  @ 2.83GHz
+stepping	: 6
+cpu MHz		: 2826.306
+cache size	: 6144 KB
+physical id	: 1
+siblings	: 4
+core id		: 7
+cpu cores	: 4
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 10
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm syscall nx lm pni monitor ds_cpl est tm2 cx16 xtpr lahf_lm
+bogomips	: 5651.77
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 38 bits physical, 48 bits virtual
+power management:
 
 END
 --------------------------------------------------------------------------

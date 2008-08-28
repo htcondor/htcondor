@@ -1291,7 +1291,19 @@ Sock::bytes_available_to_read()
 
 bool
 Sock::readReady() {
-	return bytes_available_to_read() > 0;
+	Selector selector;
+
+	if ( (_state != sock_assigned) &&  
+		 (_state != sock_connect) &&
+		 (_state != sock_bound) )  {
+		return false;
+	}
+
+	selector.add_fd( _sock, Selector::IO_READ );
+	selector.set_timeout( 0 );
+	selector.execute();
+
+	return selector.has_ready();
 }
 
 /* NOTE: on timeout() we return the previous timeout value, or a -1 on an error.

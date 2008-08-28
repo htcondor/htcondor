@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -65,7 +65,7 @@ const double	MIPS_MAX_WARN_OK			= 0.2;		// Ratio: Max warnings to allow
 // Idle time
 const int		IDLETIME_TRIALS				= 5;		// Total # of trials
 const int		IDLETIME_INTERVAL			= 5;		// Interval time
-const int		IDLETIME_TOLERANCE			= 1;		// 
+const int		IDLETIME_TOLERANCE			= 1;		//
 const double	IDLETIME_MAX_WARN_OK		= 1.0;		// Ratio: Max warnings to allow
 
 // Load average test
@@ -89,7 +89,7 @@ const double	VIRTMEM_MAX_FAIL_OK			= 0.05;		// Ratio: Max failures to allow
 
 
 /* this function will dump out the state of the _sysapi_* variables, then
-   call sysapi_reconfig(), then dump out the stateof the variables again, 
+   call sysapi_reconfig(), then dump out the stateof the variables again,
    then actually call all of the sysapi_*(_raw)? functions and dump what
    those functions return. All of these functions are entry points and
    can be called seperately if need be to test stuff */
@@ -98,19 +98,19 @@ const double	VIRTMEM_MAX_FAIL_OK			= 0.05;		// Ratio: Max failures to allow
 extern "C" void
 sysapi_test_dump_internal_vars(void)
 {
-	dprintf(D_ALWAYS, "SysAPI: Dumping %s internal variables\n", 
+	dprintf(D_ALWAYS, "SysAPI: Dumping %s internal variables\n",
 		_sysapi_config==TRUE?"initialized":"uninitialized");
 
-	dprintf(D_ALWAYS, "SysAPI: _sysapi_config = %s\n", 
+	dprintf(D_ALWAYS, "SysAPI: _sysapi_config = %s\n",
 		_sysapi_config==TRUE?"TRUE":"FALSE");
 
-	dprintf(D_ALWAYS, 
+	dprintf(D_ALWAYS,
 		"SysAPI: _sysapi_console_devices = %p\n",_sysapi_console_devices);
-	dprintf(D_ALWAYS, 
+	dprintf(D_ALWAYS,
 		"SysAPI: _sysapi_last_x_event = %d\n", _sysapi_last_x_event);
-	dprintf(D_ALWAYS, "SysAPI: _sysapi_reserve_afs_cache = %s\n", 
+	dprintf(D_ALWAYS, "SysAPI: _sysapi_reserve_afs_cache = %s\n",
 		_sysapi_reserve_afs_cache==TRUE?"TRUE":"FALSE");
-	dprintf(D_ALWAYS, 
+	dprintf(D_ALWAYS,
 		"SysAPI: _sysapi_reserve_disk = %d\n", _sysapi_reserve_disk);
 	dprintf(D_ALWAYS, "SysAPI: _sysapi_startd_has_bad_utmp = %s\n",
 		_sysapi_startd_has_bad_utmp==TRUE?"TRUE":"FALSE");
@@ -198,6 +198,7 @@ sysapi_test_dump_all(int argc, char** argv)
 	int print_help = 0;
 #if defined(LINUX)
 	const char *linux_cpuinfo_file = NULL;
+	int			linux_cpuinfo_debug = 0;
 	const char *linux_uname = NULL;
 	int 		linux_num = -1;
 	int			linux_processors = -1;
@@ -237,8 +238,9 @@ sysapi_test_dump_all(int argc, char** argv)
 			tests |= LOAD_AVG;
 		else if (strcmp(argv[i], "--mips") == 0)
 			tests |= MIPS;
-		else if (strcmp(argv[i], "--ncpus") == 0)
+		else if (strcmp(argv[i], "--ncpus") == 0) {
 			tests |= NCPUS;
+		}
 		else if (strcmp(argv[i], "--phys_mem") == 0)
 			tests |= PHYS_MEM;
 		else if (strcmp(argv[i], "--virt_mem") == 0)
@@ -248,8 +250,16 @@ sysapi_test_dump_all(int argc, char** argv)
 			skip = 1;
 		}
 #	  if defined(LINUX)
-		else if ( (strcmp(argv[i], "--proc_cpuinfo") == 0) && (i+2 < argc)  ) {
+		else if (strcmp(argv[i], "--proc_cpuinfo") == 0) {
+			tests |= NCPUS;
+			linux_cpuinfo_file = "/proc/cpuinfo";
+			linux_cpuinfo_debug = 1;	// Turn on debugging
+			linux_num = 0;
+		}
+		else if ( (strcmp(argv[i], "--cpuinfo_file") == 0) && (i+2 < argc)  ) {
+			tests |= NCPUS;
 			linux_cpuinfo_file = argv[i+1];
+			linux_cpuinfo_debug = 1;	// Turn on debugging
 			if ( isdigit( *argv[i+2] ) ) {
 				linux_num = atoi( argv[i+2] );
 			} else {
@@ -267,6 +277,7 @@ sysapi_test_dump_all(int argc, char** argv)
 
 		if (print_help != 0) {
 			printf("Please use zero or more or:\n");
+			printf("--debug <D_xxx>\n");
 			printf("--arch\n");
 			printf("--kern_vers\n");
 			printf("--kern_memmod\n");
@@ -282,7 +293,8 @@ sysapi_test_dump_all(int argc, char** argv)
 			printf("--phys_mem\n");
 			printf("--virt_mem\n");
 #		  if defined(LINUX)
-			printf("--proc_cpuinfo <file> <uname match string>|<cpuinfo #>\n");
+			printf("--proc_cpuinfo\n");
+			printf("--cpuinfo_file <file> <uname match string>|<cpuinfo #>\n");
 #		  endif
 			return 0;
 		}
@@ -290,14 +302,14 @@ sysapi_test_dump_all(int argc, char** argv)
 
 	if ((tests & KERN_MEMMOD) == KERN_MEMMOD) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN SysAPI DUMP!\n");
-		dprintf(D_ALWAYS, "SysAPI: Kernel memory model: %s\n", 
+		dprintf(D_ALWAYS, "SysAPI: Kernel memory model: %s\n",
 			sysapi_kernel_memory_model());
 		dprintf(D_ALWAYS, "SysAPI: END SysAPI DUMP!\n\n");
 	}
 
 	if ((tests & KERN_VERS) == KERN_VERS) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN SysAPI DUMP!\n");
-		dprintf(D_ALWAYS, "SysAPI: Kernel version: %s\n", 
+		dprintf(D_ALWAYS, "SysAPI: Kernel version: %s\n",
 			sysapi_kernel_version());
 		dprintf(D_ALWAYS, "SysAPI: END SysAPI DUMP!\n\n");
 	}
@@ -307,7 +319,7 @@ sysapi_test_dump_all(int argc, char** argv)
 		sysapi_test_dump_internal_vars();
 		sysapi_reconfig();
 		sysapi_test_dump_internal_vars();
-		dprintf(D_ALWAYS, "SysAPI: Checkpoint platform: %s\n", 
+		dprintf(D_ALWAYS, "SysAPI: Checkpoint platform: %s\n",
 			sysapi_ckptpltfrm());
 		dprintf(D_ALWAYS, "SysAPI: END SysAPI DUMP!\n\n");
 	}
@@ -340,7 +352,7 @@ sysapi_test_dump_all(int argc, char** argv)
 	if ((tests & FREE_FS_BLOCKS) == FREE_FS_BLOCKS) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN FREE_FS_BLOCKS_TEST:\n");
 		foo = 0;
-		foo = free_fs_blocks_test(FREEBLOCKS_TRIALS, 
+		foo = free_fs_blocks_test(FREEBLOCKS_TRIALS,
 								  FREEBLOCKS_TOLERANCE,
 								  FREEBLOCKS_MAX_WARN_OK );
 		dprintf(D_ALWAYS, "SysAPI: END FREE_FS_BLOCKS_TEST:\n");
@@ -437,7 +449,13 @@ sysapi_test_dump_all(int argc, char** argv)
 	/* Special test: /proc/cpuinfo on a file */
 #if defined(LINUX)
 	if ((tests & NCPUS) == NCPUS && linux_cpuinfo_file ) {
+		bool is_proc_cpuinfo = false;
+
 		/* set_debug_flags("D_FULLDEBUG"); */
+		if ( strcmp( linux_cpuinfo_file, "/proc/cpuinfo" ) == 0 ) {
+			is_proc_cpuinfo = true;
+			dprintf( D_ALWAYS, "Using the real /proc/cpuinfo\n" );
+		}
 
 		FILE	*fp = safe_fopen_wrapper( linux_cpuinfo_file, "r", 0644 );
 		if ( !fp ) {
@@ -453,43 +471,52 @@ sysapi_test_dump_all(int argc, char** argv)
 			int		linenum = 1;
 			int		cpuinfo_num = 0;		/* # of this cpuinfo block */
 
-			while( fgets( buf, sizeof(buf), fp) ) {
-				linenum++;
-				buf[sizeof(buf)-1] = '\0';
-				if ( !strncmp( buf, "UNAME:", 6 ) && ( strlen(buf) > 6 )  ) {
-					cpuinfo_num++;
-					if (  ( ( linux_num >= 0 ) && 
-							( linux_num == cpuinfo_num ) ) ||
-						  ( linux_uname &&
-							strstr( buf, linux_uname ) )   ) {
-						strcpy( uname, buf+6 );
-						found = linenum;
+			if ( is_proc_cpuinfo ) {
+				found = true;
+				strcpy( uname, "" );
+			}
+			else {
+				while( fgets( buf, sizeof(buf), fp) ) {
+					linenum++;
+					buf[sizeof(buf)-1] = '\0';
+					if ( !strncmp( buf, "UNAME:", 6 ) && ( strlen(buf) > 6 ) ){
+						cpuinfo_num++;
+						if ( ( ( linux_num >= 0 ) &&
+							   ( linux_num == cpuinfo_num ) ) ||
+							 ( linux_uname &&
+							   strstr( buf, linux_uname ) )   ) {
+							strncpy( uname, buf+6, sizeof(uname) );
+							found = linenum;
+						}
 					}
-				}
-				else if ( found ) {
-					if ( !strncmp( buf, "START", 5 ) && found ) {
-						break;
+					else if ( found ) {
+						if ( !strncmp( buf, "START", 5 ) && found ) {
+							break;
+						}
+						sscanf( buf, "PROCESSORS: %d", &linux_processors );
+						sscanf( buf, "HTHREADS: %d", &linux_hthreads );
+						sscanf( buf, "HTHREADS_CORE: %d",
+								&linux_hthreads_core );
 					}
-					sscanf( buf, "PROCESSORS: %d", &linux_processors );
-					sscanf( buf, "HTHREADS: %d", &linux_hthreads );
-					sscanf( buf, "HTHREADS_CORE: %d",
-							&linux_hthreads_core );
 				}
 			}
 
 			// Store the current file position & file name
 			_SysapiProcCpuinfo.file = linux_cpuinfo_file;
+			_SysapiProcCpuinfo.debug = linux_cpuinfo_debug;
 			_SysapiProcCpuinfo.offset = ftell( fp );
 			fclose( fp );
 			fp = NULL;
 
 			// Calculate total "non-primary" hyper threads
-			if ( ( linux_hthreads < 0 )		  &&
-				 ( linux_hthreads_core > 0 )  &&
-				 ( linux_processors > 0 )  )  {
-				linux_hthreads = (  linux_processors - 
-									( linux_processors /
-									  linux_hthreads_core )  );
+			if ( ! is_proc_cpuinfo ) {
+				if ( ( linux_hthreads < 0 )		  &&
+					 ( linux_hthreads_core > 0 )  &&
+					 ( linux_processors > 0 )  )  {
+					linux_hthreads = (  linux_processors -
+										( linux_processors /
+										  linux_hthreads_core )  );
+				}
 			}
 
 			// Calculate the total # of CPUs
@@ -515,9 +542,11 @@ sysapi_test_dump_all(int argc, char** argv)
 				}
 				return(++failed_tests);
 			}
-			dprintf(D_ALWAYS,
-					"SysAPI: Using uname string on line %d:\n%s\n",
-					found, uname );
+			if ( strlen( uname ) ) {
+				dprintf(D_ALWAYS,
+						"SysAPI: Using uname string on line %d:\n%s\n",
+						found, uname );
+			}
 			ncpus_trials = 1;
 		}
 	}
@@ -559,12 +588,17 @@ sysapi_test_dump_all(int argc, char** argv)
 					_SysapiProcCpuinfo.found_ncpus,
 					linux_cpus );
 		}
-		dprintf( D_FULLDEBUG,
-				 "SysAPI: Detected %d Processors, %d HyperThreads = %d CPUS\n",
+		int	level = D_FULLDEBUG;
+		if (linux_cpuinfo_debug) {
+			level = D_ALWAYS;
+		}
+		dprintf( level,
+				 "SysAPI: Detected %d Processors, %d HyperThreads"
+				 " => %d CPUS\n",
 				 _SysapiProcCpuinfo.found_processors,
 				 _SysapiProcCpuinfo.found_hthreads,
 				 _SysapiProcCpuinfo.found_ncpus );
-				 
+				
 #    endif
 	}
 	

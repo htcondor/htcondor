@@ -1,0 +1,30 @@
+JOB  A  job_dagman_splice-C.cmd
+VARS A job="$(JOB)"
+
+JOB  B  job_dagman_splice-C.cmd
+VARS B job="$(JOB)"
+
+JOB  C  job_dagman_splice-C.cmd
+VARS C job="$(JOB)"
+
+JOB  D  job_dagman_splice-C.cmd
+VARS D job="$(JOB)"
+
+JOB  E  job_dagman_splice-C.cmd
+VARS E job="$(JOB)"
+
+JOB  F  job_dagman_splice-C.cmd
+VARS F job="$(JOB)"
+
+JOB  G  job_dagman_splice-C.cmd
+VARS G job="$(JOB)"
+
+JOB  H  job_dagman_splice-C.cmd
+VARS H job="$(JOB)"
+
+JOB  I  job_dagman_splice-C.cmd
+VARS I job="$(JOB)"
+
+# many to one to many
+PARENT A B C D CHILD E
+PARENT E CHILD F G H I
