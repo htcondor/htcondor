@@ -1,0 +1,10 @@
+SPLICE S1 job_dagman_splice-G-splice1.dag
+SPLICE S2 job_dagman_splice-G-splice1.dag
+SPLICE S3 job_dagman_splice-G-splice1.dag
+SPLICE S4 job_dagman_splice-G-splice1.dag
+
+PARENT S1 CHILD S2
+PARENT S2 CHILD S3
+PARENT S3 CHILD S4
+
+DOT job_dagman_splice-G.dot
