@@ -165,11 +165,10 @@ private:
 
 	PermTypeEntry* PermTypeArray[LAST_PERM];
 
+	HolePunchTable_t* PunchedHoleArray[LAST_PERM];
+
 	typedef HashTable <struct in_addr, UserPerm_t *> PermHashTable_t;
 	PermHashTable_t* PermHashTable;
-
-	typedef HashTable <MyString, perm_mask_t> HostHashTable_t; // <host, mask> pair
-	HostHashTable_t* AllowHostsTable;
 };
 	
 

@@ -62,6 +62,7 @@ IpVerify::IpVerify()
 	DCpermission perm;
 	for (perm=FIRST_PERM; perm<LAST_PERM; perm=NEXT_PERM(perm)) {
 		PermTypeArray[perm] = NULL;
+		PunchedHoleArray[perm] = NULL;
 	}
 
 	PermHashTable = new PermHashTable_t(797, compute_perm_hash);
@@ -86,12 +87,14 @@ IpVerify::~IpVerify()
 		delete PermHashTable;
 	}
 
-	// Clear the Permission Type Array
+	// Clear the Permission Type Array and Punched Hole Array
 	DCpermission perm;
 	for (perm=FIRST_PERM; perm<LAST_PERM; perm=NEXT_PERM(perm)) {
 		if ( PermTypeArray[perm] )
 			delete PermTypeArray[perm];
-	}
+		if ( PunchedHoleArray[perm] )
+			delete PunchedHoleArray[perm];
+	}	
 }
 
 
@@ -632,8 +635,8 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			// This is important, because we do not want holes to find
 			// there way into the authorization cache.
 			//
-		if ( PermTypeArray[perm]->hole_punch_table != NULL ) {
-			HolePunchTable_t* hpt = PermTypeArray[perm]->hole_punch_table;
+		if ( PunchedHoleArray[perm] != NULL ) {
+			HolePunchTable_t* hpt = PunchedHoleArray[perm];
 			char* ip_str = inet_ntoa(sin->sin_addr);
 			MyString id;
 			int count;
@@ -834,19 +837,18 @@ IpVerify::PunchHole(DCpermission perm, MyString& id)
 	if (PermTypeArray[perm] == NULL) {
 		return false;
 	}
-	PermTypeEntry* pte = PermTypeArray[perm];
 
 	int count = 0;
-	if (pte->hole_punch_table == NULL) {
-		pte->hole_punch_table =
+	if (PunchedHoleArray[perm] == NULL) {
+		PunchedHoleArray[perm] =
 			new HolePunchTable_t(compute_host_hash);
-		ASSERT(pte->hole_punch_table != NULL);
+		ASSERT(PunchedHoleArray[perm] != NULL);
 	}
 	else {
 		int c;
-		if (pte->hole_punch_table->lookup(id, c) != -1) {
+		if (PunchedHoleArray[perm]->lookup(id, c) != -1) {
 			count = c;
-			if (pte->hole_punch_table->remove(id) == -1) {
+			if (PunchedHoleArray[perm]->remove(id) == -1) {
 				EXCEPT("IpVerify::PunchHole: "
 				           "table entry removal error");
 			}
@@ -854,7 +856,7 @@ IpVerify::PunchHole(DCpermission perm, MyString& id)
 	}
 
 	count++;
-	if (pte->hole_punch_table->insert(id, count) == -1) {
+	if (PunchedHoleArray[perm]->insert(id, count) == -1) {
 		EXCEPT("IpVerify::PunchHole: table entry insertion error");
 	}
 
@@ -892,24 +894,24 @@ IpVerify::FillHole(DCpermission perm, MyString& id)
 	if (PermTypeArray[perm] == NULL) {
 		return false;
 	}
-	PermTypeEntry* pte = PermTypeArray[perm];
 
-	if (pte->hole_punch_table == NULL) {
+	HolePunchTable_t* table = PunchedHoleArray[perm];
+	if (table == NULL) {
 		return false;
 	}
 
 	int count;
-	if (pte->hole_punch_table->lookup(id, count) == -1) {
+	if (table->lookup(id, count) == -1) {
 		return false;
 	}
-	if (pte->hole_punch_table->remove(id) == -1) {
+	if (table->remove(id) == -1) {
 		EXCEPT("IpVerify::FillHole: table entry removal error");
 	}
 
 	count--;
 
 	if (count != 0) {
-		if (pte->hole_punch_table->insert(id, count) == -1) {
+		if (table->insert(id, count) == -1) {
 			EXCEPT("IpVerify::FillHole: "
 			           "table entry insertion error");
 		}
@@ -964,9 +966,6 @@ IpVerify::PermTypeEntry::~PermTypeEntry() {
 			delete value;
 		}
 		delete deny_users;
-	}
-	if (hole_punch_table) {
-		delete hole_punch_table;
 	}
 }
 
