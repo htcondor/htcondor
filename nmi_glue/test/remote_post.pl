@@ -51,6 +51,8 @@ if( -f "$SrcDir/condor_tests/TestingPersonalCondor/local/log/.scheduler_address"
     #  Came up and had a scheduler running. good
 	$ENV{"CONDOR_CONFIG"} = "$SrcDir/condor_tests/TestingPersonalCondor/condor_config";
 	system("$BaseDir/userdir/condor/sbin/condor_off -master");
+	# give some time for condor to shutdown
+	sleep(30);
 } else {
     # if there's no pid_file, there must be no personal condor running
     # which we'd have to kill.  this would be caused by an empty
@@ -89,10 +91,12 @@ $results = "results.tar.gz";
 print "Tarring up all results\n";
 chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
 system( "tar zcf $results src/condor_tests local" );
-if( $? >> 8 ) {
-    print "Can't tar zcf src/condor_tests local\n";
-    $exit_status = 1;
-}
+# don't care if condor is still running or sockets
+# are being skipped. Save what we can and don't bitch
+#if( $? >> 8 ) {
+    #print "Can't tar zcf src/condor_tests local\n";
+    #$exit_status = 1;
+#}
 
 exit $exit_status;
 
