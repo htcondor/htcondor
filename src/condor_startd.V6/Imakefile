@@ -51,7 +51,6 @@ public_c_plus_nowrap_target(condor_glexec_wrapper, \
                             libexec, \
                             glexec_wrapper.o, \
                             $(STD_LIBS))
-c_plus_nowrap_target(fdpass_test,fdpass_test.o fdpass.o,$(STD_LIBS))
 #endif
 #endif
 

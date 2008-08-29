@@ -188,3 +188,13 @@ testprereqs = tar-1.14, make-3.80
 testonly_append_prereqs = java-1.4.2_05
 ]
 
+[
+testplatforms = ppc_aix_5.3
+testprereqs = tar-1.14, make-3.80, patch-2.5.4, m4-1.4.1, flex-2.5.4a, \
+          byacc-1.9, bison-1.25
+testonly_append_prereqs = java-1.4.2_05
+]
+
+[
+testplatforms =  unmanaged-x86_rhap_5.1
+]
