@@ -108,7 +108,7 @@ TESTCLASS(lib_procapi_pidtracking-snapshot,quicknolink)
 # correctly integrated with a trigger file in the config dir.
 # bt 6/19/08
 
-#if defined(IS_X86_64_LINUX_RHEL5) 
+#if defined(IS_X86_64_LINUX_RHEL5) && defined(HAVE_CONDOR_TEST_CNFDTL)
 DESC(job_ligo_x86-64-chkpttst,"Special LIGO test")
 RUN(job_ligo_x86-64-chkpttst)
 TESTCLASS(job_ligo_x86-64-chkpttst,core)
@@ -181,6 +181,17 @@ TESTCLASS(job_dagman_splice-H,quick)
 TESTCLASS(job_dagman_splice-H,full)
 TESTCLASS(job_dagman_splice-H,quicknolink)
 TESTCLASS(job_dagman_splice-H,btdebug)
+
+# vmuniverse smoke test in larg repository
+#if defined(HAVE_VMWARE) && defined(HAVE_CONDOR_TEST_LRG)
+DESC(job_vmu_basic,"VM Universe smoke test")
+RUN(job_vmu_basic)
+TESTCLASS(job_vmu_basic,core)
+TESTCLASS(job_vmu_basic,quick)
+TESTCLASS(job_vmu_basic,full)
+TESTCLASS(job_vmu_basic,quicknolink)
+TESTCLASS(job_vmu_basic,btdebug)
+#endif 
 
 DESC(job_flocking_to,"Simple flocking test")
 RUN(job_flocking_to)

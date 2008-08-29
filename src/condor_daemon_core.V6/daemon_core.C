@@ -98,6 +98,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "selector.h"
 #include "proc_family_interface.h"
 #include "condor_netdb.h"
+#include "util_lib_proto.h"
 
 #if defined(HAVE_VALGRIND_H)
 #include "valgrind.h"
@@ -9245,13 +9246,21 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd)
     localAdFile = param( localAd_path );
 
     if( localAdFile ) {
-        if( (AD_FILE = safe_fopen_wrapper(localAdFile, "w")) ) {
+		MyString newLocalAdFile;
+		newLocalAdFile.sprintf("%s.new",localAdFile);
+        if( (AD_FILE = safe_fopen_wrapper(newLocalAdFile.Value(), "w")) ) {
             daemonAd->fPrint(AD_FILE);
             fclose( AD_FILE );
+			if( rotate_file(newLocalAdFile.Value(),localAdFile)!=0 ) {
+				dprintf( D_ALWAYS,
+						 "DaemonCore: ERROR: failed to rotate %s to %s\n",
+						 newLocalAdFile.Value(),
+						 localAdFile);
+			}
         } else {
             dprintf( D_ALWAYS,
                      "DaemonCore: ERROR: Can't open daemon address file %s\n",
-                     localAdFile );
+                     newLocalAdFile.Value() );
         }
     }
 }
