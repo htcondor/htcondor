@@ -1439,17 +1439,59 @@ int main( int argc, char** argv )
 			}
 			break;
 #endif
-		case 'l':		// specify Log directory 
-			ptr++;
-			if( ptr && *ptr ) {
-				logDir = *ptr;
-				dcargs += 2;
-			} else {
-				fprintf( stderr, "DaemonCore: ERROR: -log needs another "
-						 "argument\n" );
-				exit( 1 );
-			}				  
+		case 'l':	// -local-name or -log
+			// specify local name
+			if ( strcmp( &ptr[0][1], "-local-name" ) == 0 ) {
+				if( ptr && *ptr ) {
+					config_set_local_name( *ptr );
+					dcargs += 2;
+				}
+				else {
+					fprintf( stderr, "DaemonCore: ERROR: "
+							 "-local-name needs another argument.\n" );
+					fprintf( stderr, 
+							 "   Please specify the local name to use.\n" );
+					exit( 1 );
+				}
+			}
+
+			// specify Log directory 
+			else {
+				ptr++;
+				if( ptr && *ptr ) {
+					logDir = *ptr;
+					dcargs += 2;
+				} else {
+					fprintf( stderr, "DaemonCore: ERROR: -log needs another "
+							 "argument\n" );
+					exit( 1 );
+				}
+			}
 			break;
+
+		case 's':	// -subsys-name
+			// specify subsystem name
+			if ( strcmp( &ptr[0][1], "-subsys-name" ) == 0 ) {
+				if( ptr && *ptr ) {
+					config_set_subsystem_name( *ptr );
+					dcargs += 2;
+				}
+				else {
+					fprintf( stderr, "DaemonCore: ERROR: "
+							 "-subsys-name needs another argument.\n" );
+					fprintf( stderr, 
+							 "   Please specify the local name to use.\n" );
+					exit( 1 );
+				}
+			}
+			else {
+					// it's not -subsystem-name, so do NOT consume this arg!!
+					// in fact, we're done w/ DC args, since it's the
+					// first option we didn't recognize.
+				done = true;
+			}
+			break;
+
 		case 'h':		// -http <port> : specify port for HTTP and SOAP requests
 			if ( ptr[0][2] && ptr[0][2] == 't' ) {
 					// specify an HTTP port
@@ -1554,6 +1596,7 @@ int main( int argc, char** argv )
 	} else {
 			config( wantsQuiet, false, true );
 	}
+
 
     // call dc_config_GSI to set GSI related parameters so that all
     // the daemons will know what to do.

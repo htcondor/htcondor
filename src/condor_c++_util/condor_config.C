@@ -113,6 +113,10 @@ extern int	ConfigLineNo;
 
 extern char* mySubSystem;
 
+// Subsystem & local names
+static const char *config_subsystem_name = NULL;
+static const char *config_local_name = NULL;
+
 // Global variables
 BUCKET	*ConfigTab[TABLESIZE];
 static ExtraParamTable *extra_info = NULL;
@@ -138,14 +142,14 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 
 	if( !ad ) return;
 	
-	buffer.sprintf( "%s_EXPRS", mySubSystem );
+	buffer.sprintf( "%s_EXPRS", config_subsystem_name );
 	tmp = param( buffer.Value() );
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
 		free (tmp);
 	}
 
-	buffer.sprintf( "%s_ATTRS", mySubSystem );
+	buffer.sprintf( "%s_ATTRS", config_subsystem_name );
 	tmp = param( buffer.Value() );
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
@@ -153,14 +157,14 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 	}
 	
 	if(prefix) {
-		buffer.sprintf( "%s_%s_EXPRS", prefix, mySubSystem );
+		buffer.sprintf( "%s_%s_EXPRS", prefix, config_subsystem_name );
 		tmp = param( buffer.Value() );
 		if( tmp ) {
 			reqdExprs.initializeFromString (tmp);	
 			free (tmp);
 		}
 
-		buffer.sprintf( "%s_%s_ATTRS", prefix, mySubSystem );
+		buffer.sprintf( "%s_%s_ATTRS", prefix, config_subsystem_name );
 		tmp = param( buffer.Value() );
 		if( tmp ) {
 			reqdExprs.initializeFromString (tmp);	
@@ -186,7 +190,7 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 			if( !ad->Insert( buffer.Value() ) ) {
 				dprintf(D_ALWAYS,
 						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
-						buffer.Value(), mySubSystem );
+						buffer.Value(), config_subsystem_name );
 			}
 
 			free( expr );
@@ -582,10 +586,13 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	char* tmp = NULL;
 	int scm;
 
-	static int first_time = TRUE;
+	static bool first_time = true;
 	if( first_time ) {
-		first_time = FALSE;
+		first_time = false;
 		init_config(wantExtraInfo);
+		if ( NULL == config_subsystem_name ) {
+			config_subsystem_name = mySubSystem;
+		}
 	} else {
 			// Clear out everything in our config hash table so we can
 			// rebuild it from scratch.
@@ -1252,7 +1259,7 @@ fill_attributes()
 		extra_info->AddInternalParam("UNAME_OPSYS");
 	}
 
-	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
+	insert( "subsystem", config_subsystem_name, ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("subsystem");
 }
 
@@ -1287,6 +1294,24 @@ check_domain_attributes()
 	}
 }
 
+const char *
+config_set_subsystem_name( const char *name )
+{
+	if ( NULL == name ) {
+		config_subsystem_name = mySubSystem;
+	}
+	else {
+		config_subsystem_name = name;
+	}
+	return config_subsystem_name;
+}
+
+const char *
+config_set_local_name( const char *name )
+{
+	config_local_name = name;
+	return config_local_name;
+}
 
 void
 init_config(bool wantExtraInfo  /* = true */)
@@ -1339,28 +1364,46 @@ clear_config()
 char *
 param( const char *name )
 {
-	// prepend the subsystem and a period and check for that first.
+	char		*val = NULL;
+	MyString	 param_name;
 
-	MyString subsysparamname = mySubSystem;
-	subsysparamname += ".";
-	subsysparamname += name;
+	// Try in order to find the parameter
+	// As we walk through, any value (including empty string) will
+	// cause a 'match' since presumably it was set to empty
+	// specifically to clear this parameter for this specific
+	// subsystem / local.
 
-	char *val = lookup_macro( subsysparamname.GetCStr(), ConfigTab, TABLESIZE );
-
-	if( val == NULL ) {
-		// not present, so param for the actual name
+	// 1. "subsys.local.name"
+	if (  (NULL == val) && config_local_name ) {
+		param_name = config_subsystem_name;
+		param_name += ".";
+		param_name += config_local_name;
+		param_name += ".";
+		param_name += name;
+		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
+	}
+	// 2. "local.name"
+	if (  (NULL == val) && config_local_name ) {
+		param_name += config_local_name;
+		param_name += ".";
+		param_name += name;
+		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
+	}
+	// 3. "subsys.name"
+	if ( NULL == val ) {
+		param_name += config_subsystem_name;
+		param_name += ".";
+		param_name += name;
+		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
+	}
+	// 4. "name"
+	if ( NULL == val ) {
 		val = lookup_macro( name, ConfigTab, TABLESIZE );
+	}
 
-		// return NULL if not present or set to the empty string
-		if( val == NULL || val[0] == '\0' ) {
-			return( NULL );
-		}
-	} else if (val[0] == '\0' ) {
-		// the subsytem-specific setting was set to the empty string, so we
-		// return NULL without checking for the actual name since presumably
-		// it was set to empty specifically to clear this parameter for this
-		// specific subsystem.
-		return( NULL );
+	// Still nothing (or empty)?  Give up.
+	if ( (NULL == val) || (*val=='\0') ) {
+		return NULL;
 	}
 
 	// Ok, now expand it out...
@@ -1662,7 +1705,7 @@ reinsert_specials( char* host )
 		insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
 	}
 	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
-	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
+	insert( "subsystem", config_subsystem_name, ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("hostname");
 	extra_info->AddInternalParam("full_hostname");
 	extra_info->AddInternalParam("subsystem");
@@ -1840,7 +1883,7 @@ init_dynamic_config()
 		// if we're using runtime config, try a subsys-specific config
 		// knob for the root location
 	MyString filename_parameter;
-	filename_parameter.sprintf( "%s_CONFIG", mySubSystem );
+	filename_parameter.sprintf( "%s_CONFIG", config_subsystem_name );
 	tmp = param( filename_parameter.Value() );
 	if( tmp ) {
 		toplevel_persistent_config = tmp;
@@ -1851,8 +1894,8 @@ init_dynamic_config()
 	tmp = param( "PERSISTENT_CONFIG_DIR" );
 
 	if( !tmp ) {
-		if( strcmp(mySubSystem,"SUBMIT")==0 || 
-			strcmp(mySubSystem,"TOOL")==0 ||
+		if( strcmp(config_subsystem_name,"SUBMIT")==0 || 
+			strcmp(config_subsystem_name,"TOOL")==0 ||
 			! have_config_source)
 		{
 				/* 
@@ -1873,7 +1916,7 @@ init_dynamic_config()
 		}
 	}
 	toplevel_persistent_config.sprintf( "%s%c.config.%s", tmp,
-										DIR_DELIM_CHAR, mySubSystem );
+										DIR_DELIM_CHAR, config_subsystem_name);
 	free(tmp);
 }
 
