@@ -126,3 +126,7 @@ stripped:: all
 static:: all
 html:
 testbin::
+
+#if IS_LINUX
+c_plus_nowrap_target(fdpass_test,fdpass_test.o fdpass.o,$(STD_LIBS))
+#endif
