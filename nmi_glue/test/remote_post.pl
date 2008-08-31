@@ -90,7 +90,7 @@ chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
 $results = "results.tar.gz";
 print "Tarring up all results\n";
 chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
-system( "tar zcf $results src/condor_tests local" );
+system( "tar zcf $results --exclude *.exe src/condor_tests local" );
 # don't care if condor is still running or sockets
 # are being skipped. Save what we can and don't bitch
 #if( $? >> 8 ) {
