@@ -140,7 +140,34 @@ the default value for these attributes is now \Expr{False}.
 
 \begin{itemize}
 
-\item None.
+\item A bug in 7.0.4 affects jobs using Condor file transfer on schedd
+machines that are configured to deny write access from execute
+machines.  The result is that output from jobs may fail to be copied
+back to the schedd machine.  The problem may or may not affect jobs
+that run for less than eight hours but it definitely will affect jobs
+that run for more than eight hours.  An example of a configuration
+vulnerable to this problem is one where DAEMON-level access is allowed
+to all execute nodes but WRITE-level access is not.  When the problem
+happens, the ShadowLog will contain a line like the following:
+
+\begin{verbatim}
+DaemonCore: PERMISSION DENIED to unknown user from host ...
+for command 61001 (FILETRANS_DOWNLOAD), access level WRITE
+\end{verbatim}
+
+The workaround for this problem is to allow WRITE access from the
+execute nodes.  If the existing configuration requires WRITE access to
+be authenticated, then simply add WRITE access by the authenticated
+condor identities associated with all execute nodes.  If WRITE access
+is not currently required to be authenticated, then allow
+unauthenticated WRITE access from all worker nodes.  Note that this
+does \emph{not} imply that execute nodes will be able to modify the
+job queue without authenticating.  Remote commands that modify the job
+queue (e.g. \Condor{submit} or \Condor{qedit}) always require that the
+user be authenticated, no matter what configuration options you use;
+if no method of remote authentication can succeed in your pool for
+WRITE operations, then commands that modify the job queue can only run
+on the submit machine.
 
 \end{itemize}
 
