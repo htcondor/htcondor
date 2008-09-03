@@ -28,7 +28,7 @@ LoadPlugins()
 {
 	static bool skip = false;
 
-	char *error;
+	const char *error;
 	StringList plugins;
 	char *plugin_files;
 	MyString plugin_dir;
