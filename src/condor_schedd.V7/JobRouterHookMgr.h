@@ -37,7 +37,7 @@ public:
 
 	int hookTranslateJob(RoutedJob* r_job);
 	int hookUpdateJobInfo(RoutedJob* r_job);
-	int hookJobExit(RoutedJob* r_job, char* sandbox);
+	int hookJobExit(RoutedJob* r_job, const char* sandbox);
 
 	static bool checkHookKnown(std::string const &key, HookType hook);
 	static bool addKnownHook(std::string const &key, HookType hook);

@@ -253,7 +253,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 
 
 int
-JobRouterHookMgr::hookJobExit(RoutedJob* r_job, char* sandbox)
+JobRouterHookMgr::hookJobExit(RoutedJob* r_job, const char* sandbox)
 {
 	ClassAd temp_ad;
 	if (NULL == m_hook_job_exit)

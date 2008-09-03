@@ -1386,13 +1386,13 @@ JobRouter::FinalizeJob(RoutedJob *job) {
 #if HAVE_JOB_HOOKS
 	if (NULL != m_hook_mgr)
 	{
-		char* spoolDirectory = NULL;
-		if ( GetAttributeStringNew(job->src_proc_id.cluster, job->src_proc_id.proc, ATTR_JOB_IWD, &spoolDirectory) < 0 )
+		std::string spoolDirectory;
+		if (false == job->dest_ad.EvaluateAttrString(ATTR_JOB_IWD, spoolDirectory) < 0 )
 		{
 			dprintf(D_ALWAYS, "JobRouter Error: Failed to retrieve %s from the routed job\n", ATTR_JOB_IWD);
 			return;
 		}
-		int rval = m_hook_mgr->hookJobExit(job, spoolDirectory);
+		int rval = m_hook_mgr->hookJobExit(job, spoolDirectory.c_str());
 		switch (rval)
 		{
 			case -1:    // Error
@@ -1407,7 +1407,6 @@ JobRouter::FinalizeJob(RoutedJob *job) {
 					// Done for now.  Let the handler call
 					// FinishFinalizeJob() when the hook
 					// exits.
-				free(spoolDirectory);
 				return;
 				break;
 		}
