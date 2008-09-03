@@ -33,6 +33,12 @@ The details of each version are described below.
 in each line in the file, so that intermingled messages relevant to
 different jobs running concurrently can be identified.
 
+\item Added the \Opt{-AllowVersionMismatch} command-line flag to
+\Condor{submit\_dag} and \Condor{dagman} to (if absolutely necessary)
+allow a version mismatch between \Condor{dagman} and the
+\File{.condor.sub} file used to submit it (or, in other words, between
+\Condor{submit\_dag} and \Condor{dagman}).
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -66,6 +72,10 @@ can be achieved by setting this configuration parameter to false.
 \item Fixed a bug in the CondorView server (collector) that caused it
 to except (crash) when it received a machine ClassAd without a valid state.
 It now logs this under level \MacroNI{D\_ALWAYS} and ignores the ClassAd.
+
+\item Fixed a bug in 7.1.2 that would cause condor daemons to start
+consuming a lot of cpu time after rare types of communication failures
+during security negotiation.
 
 \end{itemize}
 

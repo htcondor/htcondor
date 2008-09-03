@@ -22,6 +22,7 @@
 \oOptArg{-oldrescue}{0|1}
 \oOptArg{-autorescue}{0|1}
 \oOptArg{-dorescuefrom}{number}
+\oOpt{-allowversionmismatch}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
@@ -109,7 +110,7 @@ description.
      \Condor{dagman} manual page on page~\pageref{man-condor-dagman}
      for detailed descriptions of these values.
      }
-  \OptItem{\Opt{-usedagdir}}{This optional argument has causes
+  \OptItem{\Opt{-usedagdir}}{This optional argument causes
      \Condor{dagman} to run each specified DAG as if \Condor{submit\_dag}
      had been run in the directory containing that DAG file.  This option
      is most useful when running multiple DAGs in a single \Condor{dagman}.
@@ -170,6 +171,14 @@ description.
     run the specified rescue DAG number for the given DAG.  A value
     of 0 is the same as not specifying this option.  Specifying a
     non-existent rescue DAG is a fatal error.
+  }
+  \OptItem{\Opt{-allowversionmismatch}}{This optional argument causes
+     \Condor{dagman} to allow a version mismatch between
+     \Condor{dagman} itself and the \File{.condor.sub} file produced
+     by \Condor{submit\_dag} (or, in other words, between
+     \Condor{submit\_dag} and \Condor{dagman}).  WARNING!  This option
+     should be used only if absolutely necessary.  Allowing version
+     mismatches can cause subtle problems when running DAGs.
   }
   \end{Options}
 

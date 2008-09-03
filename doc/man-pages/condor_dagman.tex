@@ -15,6 +15,7 @@
 \oOptArg{-autorescue}{0|1}
 \oOptArg{-dorescuefrom}{number}
 \OptArg{-csdversion}{version\_string}
+\oOpt{-allowversionmismatch}
 \OptArg{-dag}{dag\_file}
 \oArg{\OptArg{-dag}{dag\_file\_2} \Dots \OptArg{-dag}{dag\_file\_n} }
 
@@ -115,7 +116,7 @@ Level values and what they produce is described as
     \OptItem{\Opt{-allowlogerror}}{This optional argument has 
        \Condor{dagman} try to run the specified DAG, even in the case
        of detected errors in the user log specification. }
-    \OptItem{\Opt{-usedagdir}}{This optional argument has causes
+    \OptItem{\Opt{-usedagdir}}{This optional argument causes
        \Condor{dagman} to run each specified DAG as if the directory
        containing that DAG file was the current working directory.  This
        option is most useful when running multiple DAGs in a single
@@ -141,6 +142,13 @@ Level values and what they produce is described as
        is the version of the \Condor{submit\_dag} program.  At startup,
        \Condor{dagman} checks for a version mismatch with the
        \Condor{submit\_dag} version in this argument.}
+    \OptItem{\Opt{-allowversionmismatch}}{This optional argument causes
+       \Condor{dagman} to allow a version mismatch between
+       \Condor{dagman} itself and the \File{.condor.sub} file produced
+       by \Condor{submit\_dag} (or, in other words, between 
+       \Condor{submit\_dag} and \Condor{dagman}).  WARNING!  This option
+       should be used only if absolutely necessary.  Allowing version
+       mismatches can cause subtle problems when running DAGs.}
     \OptItem{\OptArg{-dag}{filename}}{\Arg{filename} is the name of the
        DAG input file that is set as an argument to \Condor{submit\_dag},
        and passed to \Condor{dagman}.}
