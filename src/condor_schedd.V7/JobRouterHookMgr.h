@@ -18,6 +18,13 @@ class ExitClient;
 class RoutedJob;
 
 
+typedef struct
+{
+	HookType hook_type;
+	MyString key;
+} HOOK_RUN_INFO;
+
+
 class JobRouterHookMgr : public HookClientMgr
 {
 public:
@@ -30,20 +37,32 @@ public:
 
 	int hookTranslateJob(RoutedJob* r_job);
 	int hookUpdateJobInfo(RoutedJob* r_job);
-	int hookJobExit(RoutedJob* r_job, MyString sandbox);
+	int hookJobExit(RoutedJob* r_job, char* sandbox);
+
+	static bool checkHookKnown(std::string const &key, HookType hook);
+	static bool addKnownHook(std::string const &key, HookType hook);
+	static bool removeKnownHook(std::string const &key, HookType hook);
+	static void removeAllKnownHooks();
+
+	// List of job ids and hooks currently running and awaiting output
+	static SimpleList<HOOK_RUN_INFO*> m_job_hook_list;
 
 private:
 
+	// Hook keyword for all hooks
 	char* m_hook_keyword;
+
+	// Only allow the hook heyword to be initialized once
 	bool m_hook_keyword_initialized;
 
+	// Hook definitions
 	char* m_hook_translate;
 	char* m_hook_update_job_info;
 	char* m_hook_job_exit;
 
 	char* getHookPath(HookType hook_type);
-	void clearHookPaths( void );
-	char* getHookKeyword();
+	void clearHookPaths(void);
+	char* getHookKeyword(void);
 
 };
 

@@ -101,7 +101,7 @@ JobRouter::~JobRouter() {
 	}
 
 #if HAVE_JOB_HOOKS
-        if (m_hook_mgr)
+        if (NULL != m_hook_mgr)
 	{
 		delete m_hook_mgr;
 	}
@@ -1039,7 +1039,7 @@ JobRouter::SubmitJob(RoutedJob *job) {
 	if(job->state != RoutedJob::CLAIMED) return;
 
 #if HAVE_JOB_HOOKS
-	if (m_hook_mgr)
+	if (NULL != m_hook_mgr)
 	{
 		int rval = m_hook_mgr->hookTranslateJob(job);
 		switch (rval)
@@ -1266,7 +1266,7 @@ JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 	if(job->state != RoutedJob::SUBMITTED) return;
 
 #if HAVE_JOB_HOOKS
-	if (m_hook_mgr)
+	if (NULL != m_hook_mgr)
 	{
 		int rval = m_hook_mgr->hookUpdateJobInfo(job);
 		switch (rval)
@@ -1384,12 +1384,14 @@ JobRouter::FinalizeJob(RoutedJob *job) {
 	if(job->state != RoutedJob::FINISHED) return;
 
 #if HAVE_JOB_HOOKS
-	if (m_hook_mgr)
+	if (NULL != m_hook_mgr)
 	{
-		char * Spool = param("SPOOL");
-		ASSERT(Spool);
-
-		MyString spoolDirectory = gen_ckpt_name(Spool, job->dest_proc_id.cluster, job->dest_proc_id.proc, 0);
+		char* spoolDirectory = NULL;
+		if ( GetAttributeStringNew(job->src_proc_id.cluster, job->src_proc_id.proc, ATTR_JOB_IWD, &spoolDirectory) < 0 )
+		{
+			dprintf(D_ALWAYS, "JobRouter Error: Failed to retrieve %s from the routed job\n", ATTR_JOB_IWD);
+			return;
+		}
 		int rval = m_hook_mgr->hookJobExit(job, spoolDirectory);
 		switch (rval)
 		{
@@ -1405,6 +1407,7 @@ JobRouter::FinalizeJob(RoutedJob *job) {
 					// Done for now.  Let the handler call
 					// FinishFinalizeJob() when the hook
 					// exits.
+				free(spoolDirectory);
 				return;
 				break;
 		}
