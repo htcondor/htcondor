@@ -984,7 +984,8 @@ int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
     return 0;
   }
 
-  if (string_to_state(state)!=claimed_state) return 0;
+  if (string_to_state(state)!=claimed_state &&
+      string_to_state(state)!=preempting_state) return 0;
   
   char RemoteUser[512];
   if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser)) {
@@ -1023,7 +1024,8 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
   }
 
   if (string_to_state(state)==matched_state) return 1;
-  if (string_to_state(state)!=claimed_state) {
+  if (string_to_state(state)!=claimed_state &&
+      string_to_state(state)!=preempting_state) {
     dprintf(D_ACCOUNTANT,"State was %s - not claimed or matched\n",state);
     return 0;
   }
