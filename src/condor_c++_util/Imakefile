@@ -10,6 +10,10 @@
 #define New_classads_lib
 #endif
 
+#if HAVE_DLOPEN
+PLUGIN_OBJ = ClassAdLogPlugin.o LoadPlugins.o
+#endif
+
 #if HAVE_CC_SHARED_FLAG
 LIBCONDORAPI = libcondorapi.a libcondorapi.so
 TEST_LIBCONDORAPI = test_libcondorapi test_libcondorapi_shared
@@ -204,6 +208,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	proc_family_interface.o proc_family_proxy.o proc_family_direct.o \
 	procd_config.o \
 	killfamily.o $(TT_OBJS) file_xml.o  vm_univ_utils.o condor_url.o \
+	$(PLUGIN_OBJ) \
 	forkwork.o filename_tools_cpp.o condor_getcwd.o \
 	set_user_priv_from_ad.o hook_utils.o classad_visa.o
 

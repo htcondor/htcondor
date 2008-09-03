@@ -82,6 +82,10 @@
 #include "set_user_priv_from_ad.h"
 #include "classad_visa.h"
 
+#if HAVE_DLOPEN
+#include "ScheddPlugin.h"
+#endif
+
 #define DEFAULT_SHADOW_SIZE 125
 #define DEFAULT_JOB_START_COUNT 1
 
@@ -792,6 +796,10 @@ Scheduler::count_jobs()
 
 		// log classad into sql log so that it can be updated to DB
 	FILESQL::daemonAdInsert(m_ad, "ScheddAd", FILEObj, prevLHF);
+
+#if HAVE_DLOPEN
+	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, m_ad);
+#endif
 	
 		// Update collectors
 	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, m_ad, NULL, true);
@@ -851,6 +859,9 @@ Scheduler::count_jobs()
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   Owners[i].Name, UidDomain );
 
+#if HAVE_DLOPEN
+	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, m_ad);
+#endif
 		// Update collectors
 	  num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, m_ad, NULL, true);
 	  dprintf( D_ALWAYS, "Sent ad to %d collectors for %s@%s\n", 
