@@ -550,6 +550,7 @@ RemoteResource::setStartdInfo( ClassAd* ad )
 	if( ! name ) {
 		ad->LookupString( ATTR_NAME, &name );
 		if( ! name ) {
+			ad->dPrint(D_ALWAYS);
 			EXCEPT( "ad includes neither %s nor %s!", ATTR_NAME,
 					ATTR_REMOTE_HOST );
 		}
@@ -565,9 +566,10 @@ RemoteResource::setStartdInfo( ClassAd* ad )
 		EXCEPT( "ad does not include %s!", ATTR_CLAIM_ID );
 	}
 
-	char* addr = getAddrFromClaimId( claim_id );
+	char* addr = NULL;
+	ad->LookupString( ATTR_STARTD_IP_ADDR, &addr );
 	if( ! addr ) {
-		EXCEPT( "invalid %s in ad (%s)", ATTR_CLAIM_ID, claim_id );
+		EXCEPT( "missing %s in ad", ATTR_STARTD_IP_ADDR);
 	}
 
 	initStartdInfo( name, pool, addr, claim_id );

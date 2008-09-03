@@ -292,6 +292,20 @@ DC_Skip_Auth_Init()
 	doAuthInit = false;
 }
 
+static void
+kill_daemon_ad_file()
+{
+	MyString param_name;
+	param_name.sprintf( "%s_DAEMON_AD_FILE", mySubSystem );
+	char *ad_file = param(param_name.Value());
+	if( !ad_file ) {
+		return;
+	}
+
+	unlink(ad_file);
+
+	free(ad_file);
+}
 
 void
 drop_addr_file()
@@ -307,7 +321,9 @@ drop_addr_file()
 	addrFile = param( addr_file );
 
 	if( addrFile ) {
-		if( (ADDR_FILE = safe_fopen_wrapper(addrFile, "w")) ) {
+		MyString newAddrFile;
+		newAddrFile.sprintf("%s.new",addrFile);
+		if( (ADDR_FILE = safe_fopen_wrapper(newAddrFile.Value(), "w")) ) {
 			// Always prefer the local, private address if possible.
 			const char* addr = daemonCore->privateNetworkIpAddr();
 			if (!addr) {
@@ -318,10 +334,16 @@ drop_addr_file()
 			fprintf( ADDR_FILE, "%s\n", CondorVersion() );
 			fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
 			fclose( ADDR_FILE );
+			if( rotate_file(newAddrFile.Value(),addrFile)!=0 ) {
+				dprintf( D_ALWAYS,
+						 "DaemonCore: ERROR: failed to rotate %s to %s\n",
+						 newAddrFile.Value(),
+						 addrFile);
+			}
 		} else {
 			dprintf( D_ALWAYS,
 					 "DaemonCore: ERROR: Can't open address file %s\n",
-					 addrFile );
+					 newAddrFile.Value() );
 		}
 	}
 }
@@ -1791,6 +1813,11 @@ int main( int argc, char** argv )
 		// or "-t", and thus we called FreeConsole() above.
 	AllocConsole();
 #endif
+
+		// Avoid possibility of stale info sticking around from previous run.
+		// For example, we had problems in 7.0.4 and earlier with reconnect
+		// shadows in parallel universe reading the old schedd ad file.
+	kill_daemon_ad_file();
 
 		// Now that we have our pid, we could dump our pidfile, if we
 		// want it. 

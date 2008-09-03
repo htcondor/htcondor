@@ -189,7 +189,7 @@ my_atoi( const char *str, int def )
 
 /* For testing, this can be set to an open file with proc cpuinfo output */
 SysapiProcCpuinfo	_SysapiProcCpuinfo = {
-	NULL, 0L, -1, -1, -1
+	NULL, 0L, -1, -1, -1, 0
 };
 
 static int
@@ -271,7 +271,7 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 
 		/* Empty line ends the current processor */
 		if( strlen( buf ) < 2 ) {
-			if( _SysapiProcCpuinfo.file && cur_processor ) {
+			if( _SysapiProcCpuinfo.debug && cur_processor ) {
 				dprintf( D_FULLDEBUG,
 						 "Processor %d:  "
 						 "Proc#:%d PhysID:%d CoreID:%d Sibs:%d Cores:%d\n",
@@ -415,8 +415,8 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 	cpuinfo->processors = array;
 	cpuinfo->num_processors = cur_processor_num;
 
-	if( _SysapiProcCpuinfo.file ) {
-		dprintf( D_FULLDEBUG,
+	if( _SysapiProcCpuinfo.debug ) {
+		dprintf( D_ALWAYS,
 				 "Processors detected = %d; CPUs detected = %d\n",
 				 cpuinfo->num_processors, cpuinfo->cpus_detected );
 	}

@@ -56,24 +56,23 @@ static Dagman dagman;
 //---------------------------------------------------------------------------
 static void Usage() {
     debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
-            "\t\t[-Debug <level>]\n"
             "\t\t-Lockfile <NAME.dag.lock>\n"
             "\t\t-Dag <NAME.dag>\n"
-            "\t\t-CsdVersion <version string>\n\n"
-            "\t\t[-Rescue <Rescue.dag>]\n\n"
-            "\t\t[-MaxIdle <int N>]\n\n"
-            "\t\t[-MaxJobs <int N>]\n\n"
-            "\t\t[-MaxPre <int N>]\n\n"
-            "\t\t[-MaxPost <int N>]\n\n"
-            "\t\t[-WaitForDebug]\n\n"
-            "\t\t[-NoEventChecks]\n\n"
-            "\t\t[-AllowLogError]\n\n"
-            "\t\t[-UseDagDir]\n\n"
-            "\t\t[-AutoRescue <0|1>]\n\n"
-            "\t\t[-DoRescueFrom <int N>]\n\n"
-            "\twherei NAME is the name of your DAG.\n"
-            "\twhere N is Maximum # of Jobs to run at once "
-            "(0 means unlimited)\n"
+            "\t\t-CsdVersion <version string>\n"
+            "\t\t[-Debug <level>]\n"
+            "\t\t[-Rescue <Rescue.dag>]\n"
+            "\t\t[-MaxIdle <int N>]\n"
+            "\t\t[-MaxJobs <int N>]\n"
+            "\t\t[-MaxPre <int N>]\n"
+            "\t\t[-MaxPost <int N>]\n"
+            "\t\t[-WaitForDebug]\n"
+            "\t\t[-NoEventChecks]\n"
+            "\t\t[-AllowLogError]\n"
+            "\t\t[-UseDagDir]\n"
+            "\t\t[-AutoRescue <0|1>]\n"
+            "\t\t[-DoRescueFrom <int N>]\n"
+			"\t\t[-AllowVersionMismatch]\n"
+            "\twhere NAME is the name of your DAG.\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
 	DC_Exit( EXIT_ERROR );
 }
@@ -455,6 +454,7 @@ int main_init (int argc, char ** const argv) {
     debug_level = DEBUG_NORMAL;  // Default debug level is normal output
 
 		// condor_submit_dag version from .condor.sub
+	bool allowVerMismatch = false;
 	const char *csdVersion = "undefined";
 
 	int i;
@@ -576,6 +576,9 @@ int main_init (int argc, char ** const argv) {
             }
 			csdVersion = argv[i];
 
+        } else if( !strcasecmp( "-AllowVersionMismatch", argv[i] ) ) {
+			allowVerMismatch = true;
+
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );
@@ -591,10 +594,17 @@ int main_init (int argc, char ** const argv) {
     // Check the arguments
     //
 	if( strcmp( CondorVersion(), csdVersion ) != 0 ) {
-        debug_printf( DEBUG_SILENT, "Version mismatch: condor_submit_dag "
-					"(%s) vs. condor_dagman (%s)\n", csdVersion,
-					CondorVersion() );
-		DC_Exit( EXIT_ERROR );
+		if ( allowVerMismatch ) {
+        	debug_printf( DEBUG_NORMAL, "Warning: version mismatch: "
+						"condor_submit_dag (%s) vs. condor_dagman (%s); "
+						"continuing because of -AllowVersionMismatch flag\n",
+						csdVersion, CondorVersion() );
+		} else {
+        	debug_printf( DEBUG_SILENT, "Version mismatch: condor_submit_dag "
+						"(%s) vs. condor_dagman (%s)\n", csdVersion,
+						CondorVersion() );
+			DC_Exit( EXIT_ERROR );
+		}
 	}
 
     if( dagman.primaryDagFile == "" ) {

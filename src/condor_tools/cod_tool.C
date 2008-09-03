@@ -825,23 +825,18 @@ parseArgv( int argc, char* argv[] )
 		usage( my_name );
 	}
 
-	if( needs_id ) {
+	if( addr ) {
+		target = addr;
+	} else if( name ) {
+		target = name;
+	} else if( claim_id ) {
+			// This is the last resort, because claim ids are
+			// no longer considered to be the correct place to
+			// get the startd's address.
 		target = getAddrFromClaimId( claim_id );
-		if( ! target ) {
-			fprintf( stderr, 
-					 "ERROR: Invalid ClaimId specified with -id (%s)\n",
-					 claim_id );
-			usage( my_name );
-		}
-	} else {
-		if( addr ) {
-			target = addr;
-		} else if( name ) {
-			target = name;
-		} else { 
-				// local startd
-			target = NULL;
-		}
+	} else { 
+			// local startd
+		target = NULL;
 	}
 
 	if( cmd == CA_ACTIVATE_CLAIM && ! (job_keyword || jobad_path) ) { 
@@ -965,25 +960,28 @@ usage( char *str )
 		break;
 	}
 
-	fprintf( stderr, "Usage: %s [target] [general-opts]%s\n", str,
+	fprintf( stderr, "Usage: %s %s[target] [general-opts]%s\n", str,
+			 needsID ? " [claimid] " : "",
 			 has_cmd_opt ? " [command-opts]" : "");
 
 	printCmd( cmd );
 	
 	if( needsID ) { 
-		fprintf( stderr, "\nWhere [target] must include:\n" );
+		fprintf( stderr, "\nWhere [claimid] must be specified as:\n");
 		fprintf( stderr, "   -id ClaimId\t\tAct on the given COD claim\n" );
-	} else {
-		fprintf( stderr, "\nWhere [target] can be zero or one of:\n" );
-		fprintf( stderr, "   -name hostname\tContact the startd on the "
-				 "given host\n" ); 
-		fprintf( stderr, "   -pool hostname\tUse the given central manager "
-				 "to find the startd\n\t\t\trequested with -name\n" );
-		fprintf( stderr, "   -addr <ip_addr:port>\tContact the startd at " 
-				 "the given \"sinful string\"\n" );
-		fprintf( stderr, "   (If no target is specified, the local "
-				 "host is used)\n" );
+		fprintf( stderr, "   (The startd address may be inferred from this in most cases, but it is better\n"
+				         "to specify the address explicitly.\n");
 	}
+
+	fprintf( stderr, "\nWhere [target] can be zero or one of:\n" );
+	fprintf( stderr, "   -name hostname\tContact the startd on the "
+			 "given host\n" ); 
+	fprintf( stderr, "   -pool hostname\tUse the given central manager "
+			 "to find the startd\n\t\t\trequested with -name\n" );
+	fprintf( stderr, "   -addr <ip_addr:port>\tContact the startd at " 
+			 "the given \"sinful string\"\n" );
+	fprintf( stderr, "   (If no target or claimid is specified, the local "
+			 "host is used)\n" );
 
 	fprintf( stderr, "\nWhere [general-opts] can either be one of:\n" );
 	fprintf( stderr, "   -help\t\tPrint this usage information and exit\n" );

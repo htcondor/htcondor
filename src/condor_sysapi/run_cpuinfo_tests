@@ -36,16 +36,19 @@ while(<IN>)
     }
 }
 close(IN);
+die "Can't find any CPU entries" if ( $NumUnames <= 0 );
+print "Found $NumUnames entries\n";
 
 my @Failed;
 foreach my $i ( 1 .. $NumUnames )
 {
-    my $Cmd = "./condor_sysapi --ncpus --proc_cpuinfo $CpuInfoFile $i";
+    my $Cmd = "./condor_sysapi --cpuinfo_file $CpuInfoFile $i";
     my $Passed = 0;
     my $Failed = 0;
     my $Error = 0;
     my $Line = -1;
     my $Uname;
+    my $Summary = "";
     open( TEST, "$Cmd 2>&1 |" ) or die "Can't run '$Cmd'";
     while( <TEST> )
     {
@@ -57,6 +60,10 @@ foreach my $i ( 1 .. $NumUnames )
 	elsif ( /^linux/i )
 	{
 	    $Uname = $_;
+	}
+	elsif ( /SysAPI: (Detected.*)/ )
+	{
+	    $Summary = $1;
 	}
 	elsif ( /Passed/ )
 	{
@@ -70,8 +77,9 @@ foreach my $i ( 1 .. $NumUnames )
     close( TEST );
     $Failed = !$Passed;
     printf
-	"%3d %5d %-60.60s\n\t%s\n",
+	"%03d %5d %-60.60s\n  %s\n  %s\n",
 	$i, $Line, $Uname,
+	$Summary,
 	( $Failed ? "FAILED" : ($Error ? "ERROR" : "PASSED" ) );
 
     push( @Failed, $i ) if ( not $Passed or $Error);
@@ -83,7 +91,7 @@ foreach my $i ( @Failed )
 {
     print "\nTest $i failed -- re-running with FULLDEBUG\n";
 
-    my $Cmd = "./condor_sysapi --ncpus --proc_cpuinfo $CpuInfoFile $i";
+    my $Cmd = "./condor_sysapi --cpuinfo_file $CpuInfoFile $i";
     $Cmd .= " --debug D_FULLDEBUG";
     open( TEST, "$Cmd 2>&1 |" ) or die "Can't run '$Cmd'";
     while( <TEST> )
