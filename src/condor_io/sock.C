@@ -1391,7 +1391,7 @@ char * Sock::serializeCryptoInfo() const
     const unsigned char * kserial = NULL;
     int len = 0;
 
-    if (get_encryption()) {
+    if (crypto_) {
         kserial = get_crypto_key().getKeyData();
         len = get_crypto_key().getKeyLength();
     }
@@ -1401,7 +1401,8 @@ char * Sock::serializeCryptoInfo() const
     if (len > 0) {
         int buflen = len*2+32;
         outbuf = new char[buflen];
-        sprintf(outbuf,"%d*%d*", len*2, (int)get_crypto_key().getProtocol());
+        sprintf(outbuf,"%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
+				(int)get_encryption());
 
         // Hex encode the binary key
         char * ptr = outbuf + strlen(outbuf);
@@ -1476,6 +1477,13 @@ char * Sock::serializeCryptoInfo(char * buf)
 		ASSERT( ptmp );
         ptmp++;
 
+        // read the encryption mode
+        int encryption_mode = 0;
+        sscanf(ptmp, "%d*", &encryption_mode);
+        ptmp = strchr(ptmp, '*');
+        ASSERT( ptmp );
+        ptmp++;
+
         // Now, convert from Hex back to binary
         unsigned char * ptr = kserial;
         unsigned int hex;
@@ -1488,7 +1496,7 @@ char * Sock::serializeCryptoInfo(char * buf)
 
         // Initialize crypto info
         KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol);
-        set_crypto_key(true, &k, 0);
+        set_crypto_key(encryption_mode==1, &k, 0);
         free(kserial);
 		ASSERT( *ptmp == '*' );
         // Now, skip over this one
