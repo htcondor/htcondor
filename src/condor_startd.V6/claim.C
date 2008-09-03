@@ -200,6 +200,12 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 			line.sprintf( "%s=\"%s\"", ATTR_CLIENT_MACHINE, tmp );
 			cad->Insert( line.Value() );
 		}
+
+		tmp = c_client->getConcurrencyLimits();
+		if (tmp) {
+			line.sprintf("%s=\"%s\"", ATTR_CONCURRENCY_LIMITS, tmp);
+			cad->Insert(line.Value());
+		}
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
@@ -282,6 +288,12 @@ Claim::publishPreemptingClaim( ClassAd* cad, amask_t how_much )
 				line.sprintf("%s=\"%s\"", ATTR_PREEMPTING_ACCOUNTING_GROUP, tmp );
 			}
 			cad->Insert( line.Value() );
+		}
+
+		tmp = c_client->getConcurrencyLimits();
+		if (tmp) {
+			line.sprintf("%s=\"%s\"", ATTR_PREEMPTING_CONCURRENCY_LIMITS, tmp);
+			cad->Insert(line.Value());
 		}
 	}
 	else {
@@ -669,6 +681,19 @@ Claim::loadAccountingInfo()
 			free( tmp );
 			tmp = NULL;
 		}
+	}
+}
+
+void
+Claim::loadRequestInfo()
+{
+		// Stash the ATTR_CONCURRENCY_LIMITS, necessary to advertise
+		// them if they exist
+	char* limits = NULL;
+	c_ad->LookupString(ATTR_CONCURRENCY_LIMITS, &limits);
+	if (limits) {
+		c_client->setConcurrencyLimits(limits);
+		free(limits); limits = NULL;
 	}
 }
 
@@ -1889,6 +1914,7 @@ Client::Client()
 	c_addr = NULL;
 	c_host = NULL;
 	c_proxyfile = NULL;
+	c_concurrencyLimits = NULL;
 }
 
 
@@ -1981,6 +2007,19 @@ Client::setProxyFile( const char* pf )
 		c_proxyfile = strdup( pf );
 	} else {
 		c_proxyfile = NULL;
+	}
+}
+
+void
+Client::setConcurrencyLimits( const char* limits )
+{
+	if( c_concurrencyLimits ) {
+		free( c_concurrencyLimits );
+	}
+	if ( limits ) {
+		c_concurrencyLimits = strdup( limits );
+	} else {
+		c_concurrencyLimits = NULL;
 	}
 }
 

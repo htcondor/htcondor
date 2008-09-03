@@ -75,6 +75,7 @@ extern const char * ATTR_AUTO_CLUSTER_ID;
 extern const char * ATTR_AUTO_CLUSTER_ATTRS;
 extern const char * ATTR_COMPLETION_DATE;
 extern const char * ATTR_CONCURRENCY_LIMITS;
+extern const char * ATTR_PREEMPTING_CONCURRENCY_LIMITS;
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
 #define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
 extern const char * ATTR_CONSOLE_IDLE;
