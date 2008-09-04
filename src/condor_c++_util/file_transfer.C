@@ -40,6 +40,7 @@
 #include "filename_tools.h"
 #include "condor_holdcodes.h"
 #include "file_transfer_db.h"
+#include "subsystem_info.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
 
@@ -1698,7 +1699,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		if( rc < 0 ) {
 			int the_error = errno;
 			error_buf.sprintf("%s at %s failed to receive file %s",
-			                  mySubSystem,s->sender_ip_str(),fullname.Value());
+			                  mySubSystem->getName(),
+							  s->sender_ip_str(),fullname.Value());
 			download_success = false;
 			if(rc == GET_FILE_OPEN_FAILED || rc == GET_FILE_WRITE_FAILED) {
 				// errno is well defined in this case, and transferred data
@@ -1761,7 +1763,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		record.elapsed  = elapsed;
     
 			// Get the name of the daemon calling DoDownload
-		strncpy(daemon, mySubSystem, 15);
+		strncpy(daemon, mySubSystem->getName(), 15);
 		record.daemon = daemon;
 
 		record.sockp =s;
@@ -1797,7 +1799,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		error_buf.sprintf("%s failed to receive file(s) from %s",
-						  mySubSystem,peer_ip_str);
+						  mySubSystem->getName(),peer_ip_str);
 		dprintf(D_ALWAYS,"DoDownload: %s; %s\n",
 				error_buf.Value(),upload_error_buf.Value());
 
@@ -2701,7 +2703,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 			MyString error_desc_to_send;
 			if(!upload_success) {
 				error_desc_to_send.sprintf("%s at %s failed to send file(s) to %s",
-										   mySubSystem,
+										   mySubSystem->getName(),
 										   s->sender_ip_str(),
 										   s->get_sinful_peer());
 				if(upload_error_desc) {
@@ -2733,7 +2735,9 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 			receiver_ip_str = "unknown recipient";
 		}
 
-		error_buf.sprintf("%s at %s failed to send file(s) to %s",mySubSystem,s->sender_ip_str(),receiver_ip_str);
+		error_buf.sprintf("%s at %s failed to send file(s) to %s",
+						  mySubSystem->getName(),
+						  s->sender_ip_str(),receiver_ip_str);
 		if(upload_error_desc) {
 			error_buf.sprintf_cat(": %s",upload_error_desc);
 		}

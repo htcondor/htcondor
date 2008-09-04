@@ -48,6 +48,7 @@
 #include "condor_distribution.h"
 #include "string_list.h"
 #include "condor_version.h"
+#include "subsystem_info.h"
 
 #ifdef WANT_CLASSAD_ANALYSIS
 #include "../classad_analysis/analysis.h"
@@ -125,7 +126,7 @@ static  bool directDBquery = false;
 	failover semantics */
 static unsigned int direct = DIRECT_ALL;
 
-static char    *mySubSystem = "TOOL";
+DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
 
 static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_held = 0;
 static  int use_xml = 0;

@@ -86,7 +86,7 @@ install_backtrace_handler(void)
 #endif
 
 void
-dprintf_config( char *subsys )
+dprintf_config( const char *subsys )
 {
 	char pname[ BUFSIZ ];
 	char *pval, *param();

@@ -27,14 +27,13 @@
 #include "schedd_client.h"
 #include "PipeBuffer.h"
 #include "globus_utils.h"
-
+#include "subsystem_info.h"
 
 
 const char * version = "$GahpVersion 2.0.1 Jun 27 2005 Condor\\ GAHP $";
 
 
-char *mySubSystem = "C_GAHP";	// used by Daemon Core
-
+DECL_SUBSYSTEM("C_GAHP", SUBSYSTEM_TYPE_GAHP);
 
 int async_mode = 0;
 int new_results_signaled = 0;

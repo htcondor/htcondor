@@ -32,7 +32,7 @@ class ProcFamilyProxy : public ProcFamilyInterface {
 
 public:
 
-	ProcFamilyProxy(char* address_suffix = NULL);
+	ProcFamilyProxy(const char* address_suffix = NULL);
 	~ProcFamilyProxy();
 
 #if !defined(WIN32)

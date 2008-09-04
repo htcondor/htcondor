@@ -38,6 +38,7 @@
 #include "condor_distribution.h"
 #include "condor_environ.h"
 #include "condor_holdcodes.h"
+#include "subsystem_info.h"
 
 #include "user_job_policy.h"
 
@@ -58,7 +59,9 @@
 
 int	UsePipes;
 
-char* mySubSystem = "SHADOW";
+/* For daemonCore, etc. */
+DECL_SUBSYSTEM( "SHADOW", SUBSYSTEM_TYPE_SHADOW );
+
 extern FILESQL *FILEObj;
 
 extern "C" {
@@ -305,7 +308,7 @@ main(int argc, char *argv[] )
 	*/ 
 	set_condor_priv();
 
-	dprintf_config( mySubSystem );
+	dprintf_config( mySubSystem->getName() );
 	DebugId = whoami;
 
 	// create a database connection object

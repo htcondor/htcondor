@@ -23,6 +23,7 @@
 #include "user_log.c++.h"
 #include "condor_config.h"
 #include "condor_debug.h"
+#include "subsystem_info.h"
 #include <stdio.h>
 
 static const char *	VERSION = "0.9.2";
@@ -48,7 +49,7 @@ struct Arguments {
 	const char *    persistFile;
 };
 
-char*	mySubSystem = "TEST_LOG_WRITER";
+DECL_SUBSYSTEM( "TEST_LOG_WRITER", SUBSYSTEM_TYPE_TOOL );
 
 Status
 CheckArgs(int argc, char **argv, Arguments &args);

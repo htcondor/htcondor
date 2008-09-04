@@ -19,9 +19,10 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include "subsystem_info.h"
 
 extern "C" int SetSyscalls(int val){return val;}
-char* mySubSystem = "COLLECTOR";
+DECL_SUBSYSTEM( "COLLECTOR", SUBSYSTEM_TYPE_COLLECTOR );
 
 class Foo : public Service
 {

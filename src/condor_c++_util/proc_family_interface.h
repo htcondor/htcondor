@@ -30,7 +30,7 @@ class ProcFamilyInterface {
 
 public:
 
-	static ProcFamilyInterface* create(char* subsys);
+	static ProcFamilyInterface* create(const char* subsys);
 
 	virtual ~ProcFamilyInterface() { }
 

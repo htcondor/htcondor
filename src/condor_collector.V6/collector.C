@@ -49,7 +49,6 @@
 
 //----------------------------------------------------------------
 
-extern char* mySubSystem;
 extern "C" char* CondorVersion( void );
 extern "C" char* CondorPlatform( void );
 

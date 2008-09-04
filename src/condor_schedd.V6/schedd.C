@@ -81,6 +81,7 @@
 #include "condor_getcwd.h"
 #include "set_user_priv_from_ad.h"
 #include "classad_visa.h"
+#include "subsystem_info.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 #define DEFAULT_JOB_START_COUNT 1
@@ -112,7 +113,6 @@ extern char * Name;
 static char * NameInEnv = NULL;
 extern char * JobHistoryFileName;
 extern char * PerJobHistoryDir;
-extern char * mySubSystem;
 
 extern bool        DoHistoryRotation; 
 extern filesize_t  MaxHistoryFileSize;
@@ -12864,7 +12864,7 @@ WriteCompletionVisa(ClassAd* ad)
 
 	prev_priv_state = set_user_priv_from_ad(*ad);
 	classad_visa_write(ad,
-	                   mySubSystem,
+	                   mySubSystem->getName(),
 	                   daemonCore->InfoCommandSinfulString(),
 	                   iwd.Value(),
 	                   NULL);

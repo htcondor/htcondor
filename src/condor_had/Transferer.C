@@ -18,6 +18,7 @@
  ***************************************************************/
 
 #include "condor_daemon_core.h"
+#include "subsystem_info.h"
 
 // replication classes
 #include "UploadReplicaTransferer.h"
@@ -27,11 +28,12 @@
 
 extern char* myName;
 // for daemon core
-char *mySubSystem = "TRANSFERER"; 
+DECL_SUBSYSTEM( "TRANSFERER", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
 
 // single 'condor_transferer' object
 BaseReplicaTransferer* replicaTransferer = NULL; 
-/*
+
+#if 0
 int
 uploadTerminateSignalHandler(Service* service, int signalNumber)
 {
@@ -76,7 +78,8 @@ downloadTerminateSignalHandler(Service* service, int signalNumber)
 
 	return 0;
 }
-*/
+#endif
+
 /* Function   : cleanTemporaryFiles 
  * Description: cleans all temporary files of the transferer: be it the
  * 				uploading one or the downloading one

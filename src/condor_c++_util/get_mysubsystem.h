@@ -25,10 +25,4 @@
  * linkage.
  */
 
-BEGIN_C_DECLS
-
-const char* get_mySubSystem(void);
-
-END_C_DECLS
-
 #endif /* GET_MY_SUBSYSTEM_H */

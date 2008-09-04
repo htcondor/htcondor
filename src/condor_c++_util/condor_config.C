@@ -80,6 +80,7 @@
 #include "basename.h"
 #include "condor_random_num.h"
 #include "extArray.h"
+#include "subsystem_info.h"
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -111,8 +112,6 @@ void check_params();
 extern int	ConfigLineNo;
 }  /* End extern "C" */
 
-extern char* mySubSystem;
-
 // Subsystem & local names
 static const char *config_subsystem_name = NULL;
 static const char *config_local_name = NULL;
@@ -131,6 +130,15 @@ static int ParamValueNameAscendingSort(const void *l, const void *r);
 
 
 // Function implementations
+
+void
+config_fill_ad_subsys( ClassAd* ad, const char *subsystem, const char *prefix )
+{
+	const char	*old_subsystem_name = config_subsystem_name;
+	config_subsystem_name = subsystem;
+	config_fill_ad( ad, prefix );
+	config_subsystem_name = old_subsystem_name;
+}
 
 void
 config_fill_ad( ClassAd* ad, const char *prefix )
@@ -591,7 +599,7 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		first_time = false;
 		init_config(wantExtraInfo);
 		if ( NULL == config_subsystem_name ) {
-			config_subsystem_name = mySubSystem;
+			config_subsystem_name = mySubSystem->getName();
 		}
 	} else {
 			// Clear out everything in our config hash table so we can
@@ -1298,7 +1306,7 @@ const char *
 config_set_subsystem_name( const char *name )
 {
 	if ( NULL == name ) {
-		config_subsystem_name = mySubSystem;
+		config_subsystem_name = mySubSystem->getName();
 	}
 	else {
 		config_subsystem_name = name;

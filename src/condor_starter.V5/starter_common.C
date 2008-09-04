@@ -30,10 +30,10 @@
 #include "condor_version.h"
 #include "basename.h"
 #include "internet.h"
+#include "subsystem_info.h"
 
 extern int		EventSigs[];
 extern char*	InitiatingHost;
-extern char*	mySubSystem;
 extern ReliSock	*SyscallStream;	// stream to shadow for remote system calls
 extern char*	UidDomain;				// Machines we share UID space with
 extern bool		TrustUidDomain;	// Should we trust what the submit side claims?
@@ -176,7 +176,7 @@ init_logging()
 
 	if( is_local ) {
 			// Use regular, local logging.
-		dprintf_config( mySubSystem );	// Log file on local machine 
+		dprintf_config( mySubSystem->getName() );// Log file on local machine 
 	} else {
 			// Set up to do logging through the shadow
 		close( fileno(stderr) );

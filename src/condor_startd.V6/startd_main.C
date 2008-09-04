@@ -20,6 +20,8 @@
 
 #include "condor_common.h"
 #include "condor_parameters.h"
+#include "subsystem_info.h"
+
 /*
  * Main routine and function for the startd.
  */
@@ -81,7 +83,7 @@ char* Name = NULL;
 int		pid_snapshot_interval = DEFAULT_PID_SNAPSHOT_INTERVAL;
     // How often do we take snapshots of the pid families? 
 
-char*	mySubSystem = "STARTD";
+DECL_SUBSYSTEM( "STARTD", SUBSYSTEM_TYPE_STARTD );
 
 int main_reaper = 0;
 
