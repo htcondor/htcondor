@@ -137,7 +137,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job)
 	// Verify the translate hook hasn't already been spawned and that
 	// we're not waiting for it to return.
 	std::string key = r_job->src_key;
-	if (JobRouterHookMgr::checkHookKnown(key, HOOK_TRANSLATE_JOB) == true)
+	if (JobRouterHookMgr::checkHookKnown(key.c_str(), HOOK_TRANSLATE_JOB) == true)
 	{
 		dprintf(D_FULLDEBUG, "JobRouterHookMgr::hookTranslateJob "
 			"retried while still waiting for translate hook to "
@@ -174,7 +174,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job)
 	}
 	
 	// Add our info to the list of hooks currently running for this job.
-	if (false == JobRouterHookMgr::addKnownHook(key, HOOK_TRANSLATE_JOB))
+	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_TRANSLATE_JOB))
 	{
 		dprintf(D_ALWAYS, "ERROR in JobRouterHookMgr::hookTranslateJob: "
 				"failed to add HOOK_TRANSLATE_JOB to list of "
@@ -201,7 +201,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	// Verify the status hook hasn't already been spawned and that
 	// we're not waiting for it to return.
 	std::string key = r_job->dest_key;
-	if (JobRouterHookMgr::checkHookKnown(key, HOOK_UPDATE_JOB_INFO) == true)
+	if (JobRouterHookMgr::checkHookKnown(key.c_str(), HOOK_UPDATE_JOB_INFO) == true)
 	{
 		dprintf(D_FULLDEBUG, "JobRouterHookMgr::hookUpdateJobInfo "
 			"retried while still waiting for status hook to return "
@@ -239,7 +239,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	}
 
 	// Add our info to the list of hooks currently running for this job.
-	if (false == JobRouterHookMgr::addKnownHook(key, HOOK_UPDATE_JOB_INFO))
+	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_UPDATE_JOB_INFO))
 	{
 		dprintf(D_ALWAYS, "ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
 				"failed to add HOOK_UPDATE_JOB_INFO to list of "
@@ -266,7 +266,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job, const char* sandbox)
 	// Verify the exit hook hasn't already been spawned and that
 	// we're not waiting for it to return.
 	std::string key = r_job->dest_key;
-	if (JobRouterHookMgr::checkHookKnown(key, HOOK_JOB_EXIT) == true)
+	if (JobRouterHookMgr::checkHookKnown(key.c_str(),HOOK_JOB_EXIT) == true)
 	{
 		dprintf(D_FULLDEBUG, "JobRouterHookMgr::hookJobExit "
 			"retried while still waiting for exit hook to return "
@@ -306,7 +306,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job, const char* sandbox)
 	}
 	
 	// Add our info to the list of hooks currently running for this job.
-	if (false == JobRouterHookMgr::addKnownHook(key, HOOK_JOB_EXIT))
+	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_JOB_EXIT))
 	{
 		dprintf(D_ALWAYS, "ERROR in JobRouterHookMgr::hookJobExit: "
 				"failed to add HOOK_JOB_EXIT to list of "
@@ -319,24 +319,28 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job, const char* sandbox)
 
 
 bool
-JobRouterHookMgr::addKnownHook(std::string const &key, HookType hook)
+JobRouterHookMgr::addKnownHook(const char* key, HookType hook)
 {
 	HOOK_RUN_INFO *hook_info = (HOOK_RUN_INFO*) malloc(sizeof(HOOK_RUN_INFO));
 	hook_info->hook_type = hook;
-	hook_info->key = key.c_str();
+	if (key == NULL)
+	{
+		return false;
+	}
+	hook_info->key = strdup(key);
 	return(m_job_hook_list.Append(hook_info));
 }
 
 
 bool
-JobRouterHookMgr::checkHookKnown(std::string const &key, HookType hook)
+JobRouterHookMgr::checkHookKnown(const char* key, HookType hook)
 {
 	HOOK_RUN_INFO *hook_info;
 	m_job_hook_list.Rewind();
-	MyString target_key = key.c_str();
 	while (m_job_hook_list.Next(hook_info))
 	{
-		if ((hook_info->key == target_key) && (hook_info->hook_type == hook))
+		if ((0 == strncmp(hook_info->key,key,strlen(hook_info->key))) &&
+			 (hook_info->hook_type == hook))
 		{
 			return true;
 		}
@@ -346,15 +350,15 @@ JobRouterHookMgr::checkHookKnown(std::string const &key, HookType hook)
 
 
 bool
-JobRouterHookMgr::removeKnownHook(std::string const &key, HookType hook)
+JobRouterHookMgr::removeKnownHook(const char* key, HookType hook)
 {
 	bool found = false;
 	HOOK_RUN_INFO *hook_info;
 	m_job_hook_list.Rewind();
-	MyString target_key = key.c_str();
 	while (m_job_hook_list.Next(hook_info))
 	{
-		if ((hook_info->key == target_key) && (hook_info->hook_type == hook))
+		if ((0 == strncmp(hook_info->key,key,strlen(hook_info->key))) &&
+			 (hook_info->hook_type == hook))
 		{
 			found = true;
 			break;
@@ -365,12 +369,13 @@ JobRouterHookMgr::removeKnownHook(std::string const &key, HookType hook)
 	{
 		// Delete the information about this hook process
 		m_job_hook_list.DeleteCurrent();
+		free(hook_info->key);
 		free(hook_info);
 	}
 	else
 	{
 		dprintf(D_FULLDEBUG, "JobRouterHookMgr::removeKnownHook "
-			"called for unknown job key %s.\n", key.c_str());
+			"called for unknown job key %s.\n", key);
 	}
 
 	return found;
@@ -385,6 +390,7 @@ JobRouterHookMgr::removeAllKnownHooks()
 	while (m_job_hook_list.Next(hook_info))
 	{
 		m_job_hook_list.DeleteCurrent();
+		free(hook_info->key);
 		free(hook_info);
 	}
 }
@@ -407,7 +413,7 @@ TranslateClient::hookExited(int exit_status)
 	HookClient::hookExited(exit_status);
 
 	std::string key = m_routed_job->src_key;
-	if (JobRouterHookMgr::removeKnownHook(key, HOOK_TRANSLATE_JOB) == false)
+	if (JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_TRANSLATE_JOB) == false)
 	{
 		dprintf(D_ALWAYS|D_FAILURE, "TranslateClient::hookExited "
 			"Failed to remove hook info for job key %s.\n", key.c_str());
@@ -473,7 +479,7 @@ StatusClient::hookExited(int exit_status)
 	HookClient::hookExited(exit_status);
 
 	std::string key = m_routed_job->dest_key;
-	if (JobRouterHookMgr::removeKnownHook(key, HOOK_UPDATE_JOB_INFO) == false)
+	if (JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_UPDATE_JOB_INFO) == false)
 	{
 		dprintf(D_ALWAYS|D_FAILURE, "StatusClient::hookExited "
 			"Failed to remove hook info for job key %s.\n", key.c_str());
@@ -539,7 +545,7 @@ ExitClient::hookExited(int exit_status)
 	HookClient::hookExited(exit_status);
 
 	std::string key = m_routed_job->dest_key;
-	if (JobRouterHookMgr::removeKnownHook(key, HOOK_JOB_EXIT) == false)
+	if (JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_JOB_EXIT) == false)
 	{
 		dprintf(D_ALWAYS|D_FAILURE, "ExitClient::hookExited: "
 			"Failed to remove hook info for job key %s.\n", key.c_str());

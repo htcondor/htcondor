@@ -21,7 +21,7 @@ class RoutedJob;
 typedef struct
 {
 	HookType hook_type;
-	MyString key;
+	char* key;
 } HOOK_RUN_INFO;
 
 
@@ -39,9 +39,9 @@ public:
 	int hookUpdateJobInfo(RoutedJob* r_job);
 	int hookJobExit(RoutedJob* r_job, const char* sandbox);
 
-	static bool checkHookKnown(std::string const &key, HookType hook);
-	static bool addKnownHook(std::string const &key, HookType hook);
-	static bool removeKnownHook(std::string const &key, HookType hook);
+	static bool checkHookKnown(const char* key, HookType hook);
+	static bool addKnownHook(const char* key, HookType hook);
+	static bool removeKnownHook(const char* key, HookType hook);
 	static void removeAllKnownHooks();
 
 	// List of job ids and hooks currently running and awaiting output

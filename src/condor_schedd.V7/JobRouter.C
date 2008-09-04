@@ -1387,7 +1387,7 @@ JobRouter::FinalizeJob(RoutedJob *job) {
 	if (NULL != m_hook_mgr)
 	{
 		std::string spoolDirectory;
-		if (false == job->dest_ad.EvaluateAttrString(ATTR_JOB_IWD, spoolDirectory) < 0 )
+		if (false == job->dest_ad.EvaluateAttrString(ATTR_JOB_IWD, spoolDirectory))
 		{
 			dprintf(D_ALWAYS, "JobRouter Error: Failed to retrieve %s from the routed job\n", ATTR_JOB_IWD);
 			return;
