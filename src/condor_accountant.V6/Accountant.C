@@ -250,24 +250,6 @@ void Accountant::Initialize()
 			  total_overestimated_resources,total_overestimated_users,
 			  users.number() );
 	  }
-
-		// Catch up on information about all Concurrency Limits, they
-		// are stored in ResourceRecords
-	  AcctLog->table.startIterations();
-	  while (AcctLog->table.iterate(HK, ad)) {
-		MyString keybuf;
-		HK.sprint(keybuf);
-		char const *key = keybuf.Value();
-
-		if (strncmp(ResourceRecord.Value(), key, ResourceRecord.Length()))
-			continue;
-
-		MyString str;
-		GetAttributeString(key, ATTR_CONCURRENCY_LIMITS, str);
-		IncrementLimits(str);
-	  }
-
-	  first_time = false;
   }
 
   // Update priorities
@@ -519,6 +501,12 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 	  }
   }
 
+  char *str;
+  if (ResourceAd->LookupString(ATTR_CONCURRENCY_LIMITS, &str)) {
+    IncrementLimits(str);
+    free(str); str = NULL;
+  }
+
   AcctLog->BeginTransaction(); 
   
   // Update customer's resource usage count
@@ -542,13 +530,6 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   // Set reosurce's info: user, and start-time
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
-
-  char *str;
-  if (ResourceAd->LookupString(ATTR_CONCURRENCY_LIMITS, &str)) {
-    SetAttributeString(ResourceRecord+ResourceName,ATTR_CONCURRENCY_LIMITS,str);
-    IncrementLimits(str);
-    free(str);
-  }	
 
   AcctLog->CommitTransaction();
 
@@ -826,6 +807,9 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
     if (IsClaimed(ResourceAd, CustomerName)) AddMatch(CustomerName, ResourceAd);
   }
   ResourceList.Close();
+
+	  // Recalculate limits from the set of resources that are reporting
+  LoadLimits(ResourceList);
 
   return;
 }
@@ -1218,6 +1202,39 @@ MyString Accountant::GetDomain(const MyString& CustomerName)
 // Functions for accessing and changing Concurrency Limits
 //------------------------------------------------------------------
 
+void Accountant::LoadLimits(ClassAdList &resourceList)
+{
+	ClassAd *resourceAd;
+
+		// Wipe out all the knowledge of limits we think we know
+	dprintf(D_ACCOUNTANT, "Previous Limits --\n");
+	ClearLimits();
+
+		// Record all the limits that are actually in use in the pool
+	resourceList.Open();
+	while (NULL != (resourceAd = resourceList.Next())) {
+		char *limits = NULL;
+
+		if (resourceAd->LookupString(ATTR_CONCURRENCY_LIMITS, &limits)) {
+			IncrementLimits(limits);
+			free(limits); limits = NULL;
+		}
+
+		if (resourceAd->LookupString(ATTR_PREEMPTING_CONCURRENCY_LIMITS,
+									  &limits)) {
+			IncrementLimits(limits);
+			free(limits); limits = NULL;
+		}
+	}
+	resourceList.Close();
+
+		// Print out the new limits, at D_ACCOUNTANT. This is useful
+		// because the list printed from ClearLimits can be compared
+		// to see if anything may be going wrong
+	dprintf(D_ACCOUNTANT, "Current Limits --\n");
+	DumpLimits();
+}
+
 int Accountant::GetLimit(const MyString& limit)
 {
 	int count = 0;
@@ -1231,6 +1248,16 @@ int Accountant::GetLimit(const MyString& limit)
 	return count;
 }
 
+void Accountant::DumpLimits()
+{
+	MyString limit;
+ 	int count;
+	concurrencyLimits.startIterations();
+	while (concurrencyLimits.iterate(limit, count)) {
+		dprintf(D_ACCOUNTANT, "  Limit: %s = %d\n", limit.GetCStr(), count);
+	}
+}
+
 void Accountant::ReportLimits(AttrList *attrList)
 {
 	MyString attr;
@@ -1240,6 +1267,17 @@ void Accountant::ReportLimits(AttrList *attrList)
 	while (concurrencyLimits.iterate(limit, count)) {
 		attr.sprintf("ConcurrencyLimit.%s = %d\n", limit.GetCStr(), count);
 		attrList->Insert(attr.GetCStr());
+	}
+}
+
+void Accountant::ClearLimits()
+{
+	MyString limit;
+ 	int count;
+	concurrencyLimits.startIterations();
+	while (concurrencyLimits.iterate(limit, count)) {
+		concurrencyLimits.insert(limit, 0);
+		dprintf(D_ACCOUNTANT, "  Limit: %s = %d\n", limit.GetCStr(), count);
 	}
 }
 

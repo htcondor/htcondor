@@ -84,6 +84,10 @@ private:
   
   void RemoveMatch(const MyString& ResourceName, time_t T);
 
+  void LoadLimits(ClassAdList &resourceList);
+  void ClearLimits();
+  void DumpLimits();
+
   void IncrementLimit(const MyString& limit);
   void DecrementLimit(const MyString& limit);
 
