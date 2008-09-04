@@ -27,6 +27,8 @@
 #include "MyString.h"
 #include "HashTable.h"
 
+#include "condor_state.h"
+
 // this is the required minimum separation between two priorities for them
 // to be considered distinct values
 static const float PriorityDelta = 0.5;
@@ -144,6 +146,7 @@ private:
   //--------------------------------------------------------
 
   static MyString GetResourceName(ClassAd* Resource);
+  bool GetResourceState(ClassAd* Resource, State& state);
   int IsClaimed(ClassAd* ResourceAd, MyString& CustomerName);
   int CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName);
   static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList);

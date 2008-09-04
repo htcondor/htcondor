@@ -501,12 +501,6 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 	  }
   }
 
-  char *str;
-  if (ResourceAd->LookupString(ATTR_CONCURRENCY_LIMITS, &str)) {
-    IncrementLimits(str);
-    free(str); str = NULL;
-  }
-
   AcctLog->BeginTransaction(); 
   
   // Update customer's resource usage count
@@ -530,6 +524,13 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   // Set reosurce's info: user, and start-time
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
+
+  char *str;
+  if (ResourceAd->LookupString(ATTR_CONCURRENCY_LIMITS, &str)) {
+    SetAttributeString(ResourceRecord+ResourceName,ATTR_CONCURRENCY_LIMITS,str);
+    IncrementLimits(str);
+    free(str);
+  }    
 
   AcctLog->CommitTransaction();
 
@@ -957,19 +958,36 @@ MyString Accountant::GetResourceName(ClassAd* ResourceAd)
 }
 
 //------------------------------------------------------------------
+// Extract the resource's state
+//------------------------------------------------------------------
+
+bool Accountant::GetResourceState(ClassAd* ResourceAd, State& state)
+{
+  char *str;
+
+  if (!ResourceAd->LookupString(ATTR_STATE, &str)) {
+    return false;
+  }
+
+  state = string_to_state(str);
+
+  free(str);
+  return true;
+}
+
+//------------------------------------------------------------------
 // Check class ad of startd to see if it's claimed
 // return 1 if it is (and set CustomerName to its remote_user), otherwise 0
 //------------------------------------------------------------------
 
 int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
-  char state[16];
-  if (!ResourceAd->LookupString(ATTR_STATE, state)) {
+  State state;
+  if (!GetResourceState(ResourceAd, state)) {
     dprintf (D_ALWAYS, "Could not lookup state --- assuming not claimed\n");
     return 0;
   }
 
-  if (string_to_state(state)!=claimed_state &&
-      string_to_state(state)!=preempting_state) return 0;
+  if (state!=claimed_state && state!=preempting_state) return 0;
   
   char RemoteUser[512];
   if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser)) {
@@ -1001,16 +1019,16 @@ int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
 //------------------------------------------------------------------
 
 int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName) {
-  char state[16];
-  if (!ResourceAd->LookupString(ATTR_STATE, state)) {
+  State state;
+  if (!GetResourceState(ResourceAd, state)) {
     dprintf (D_ALWAYS, "Could not lookup state --- assuming not claimed\n");
     return 0;
   }
 
-  if (string_to_state(state)==matched_state) return 1;
-  if (string_to_state(state)!=claimed_state &&
-      string_to_state(state)!=preempting_state) {
-    dprintf(D_ACCOUNTANT,"State was %s - not claimed or matched\n",state);
+  if (state==matched_state) return 1;
+  if (state!=claimed_state && state!=preempting_state) {
+	  dprintf(D_ACCOUNTANT,"State was %s - not claimed or matched\n",
+              state_to_string(state));
     return 0;
   }
 
@@ -1224,6 +1242,17 @@ void Accountant::LoadLimits(ClassAdList &resourceList)
 									  &limits)) {
 			IncrementLimits(limits);
 			free(limits); limits = NULL;
+		}
+
+			// If the resource is just in the Matched state it will
+			// not have information about Concurrency Limits
+			// associated, but we have that information in the log.
+		State state;
+		if (GetResourceState(resourceAd, state) && matched_state == state) {
+			MyString name = GetResourceName(resourceAd);
+			MyString str;
+			GetAttributeString(ResourceRecord+name,ATTR_CONCURRENCY_LIMITS,str);
+			IncrementLimits(str);
 		}
 	}
 	resourceList.Close();
