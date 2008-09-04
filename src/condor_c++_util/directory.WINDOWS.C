@@ -18,18 +18,18 @@
 ***************************************************************/
 
 #include "condor_common.h"
+#include "directory.WINDOWS.h "
+
 #include "condor_attributes.h"
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_uid.h"
 #include "directory.h"
-
-#include <winioctl.h>
-
-#include "directory.WINDOWS.h "
 #include "remote_close.WINDOWS.h"
 #include "string_conversion.WINDOWS.h"
 #include "security.WINDOWS.h"
+
+#include <winioctl.h>
 
 /***************************************************************
 /* Macros                                                       
@@ -49,9 +49,10 @@ static PCWSTR all_pattern = L"*.*",
 /* Types                                                        
 ***************************************************************/
 
-/* so we can use the stack to store our reparese point 
-information, we create a dummy one large enought to hold
-all the information */
+/* In order to use the stack to store our reparese point 
+information, we create a dummy information buffer that is
+large enough to hold all the information we would ever 
+receive. */
 typedef struct {
     REPARSE_GUID_DATA_BUFFER data;
     WCHAR buffer [MAX_PATH*3];

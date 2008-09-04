@@ -923,14 +923,6 @@ SOURCE="..\src\condor_c++_util\profile.WINDOWS.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c++_util\profile_helpers.WINDOWS.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\profile_helpers.WINDOWS.h"
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\condor_c++_util\query_result_type.h"
 # End Source File
 # Begin Source File
