@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+
 #include "string_conversion.WINDOWS.h"
 
 /* convert an ANSI string to Unicode */

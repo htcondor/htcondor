@@ -25,6 +25,9 @@ NULL=
 NULL=nul
 !ENDIF 
 
+CPP=cl.exe
+RSC=rc.exe
+
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
 OUTDIR=.\..\Debug
@@ -89,6 +92,7 @@ CLEAN :
 	-@erase "$(INTDIR)\dc_transfer_queue.obj"
 	-@erase "$(INTDIR)\dc_transferd.obj"
 	-@erase "$(INTDIR)\directory.obj"
+	-@erase "$(INTDIR)\directory.WINDOWS.obj"
 	-@erase "$(INTDIR)\distribution.obj"
 	-@erase "$(INTDIR)\domain_tools.obj"
 	-@erase "$(INTDIR)\dynuser.obj"
@@ -146,11 +150,14 @@ CLEAN :
 	-@erase "$(INTDIR)\proc_id.obj"
 	-@erase "$(INTDIR)\procd_config.obj"
 	-@erase "$(INTDIR)\process_control.WINDOWS.obj"
+	-@erase "$(INTDIR)\profile.WINDOWS.obj"
 	-@erase "$(INTDIR)\profile_helpers.WINDOWS.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
 	-@erase "$(INTDIR)\read_user_log.obj"
 	-@erase "$(INTDIR)\read_user_log_state.obj"
 	-@erase "$(INTDIR)\Regex.obj"
+	-@erase "$(INTDIR)\remote_close.WINDOWS.obj"
+	-@erase "$(INTDIR)\security.WINDOWS.obj"
 	-@erase "$(INTDIR)\selector.obj"
 	-@erase "$(INTDIR)\set_user_priv_from_ad.obj"
 	-@erase "$(INTDIR)\setenv.obj"
@@ -188,40 +195,7 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "..\src\condor_tt" /D "WIN32" /D "_DEBUG" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_cpp_util.bsc" 
 BSC32_SBRS= \
@@ -240,6 +214,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\classad_log.obj" \
 	"$(INTDIR)\classad_merge.obj" \
 	"$(INTDIR)\classad_namedlist.obj" \
+	"$(INTDIR)\classad_visa.obj" \
 	"$(INTDIR)\command_strings.obj" \
 	"$(INTDIR)\condor_arglist.obj" \
 	"$(INTDIR)\condor_attributes.obj" \
@@ -371,7 +346,10 @@ LIB32_OBJS= \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\classad_visa.obj"
+	"$(INTDIR)\remote_close.WINDOWS.obj" \
+	"$(INTDIR)\security.WINDOWS.obj" \
+	"$(INTDIR)\directory.WINDOWS.obj" \
+	"$(INTDIR)\profile.WINDOWS.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -442,6 +420,7 @@ CLEAN :
 	-@erase "$(INTDIR)\dc_transfer_queue.obj"
 	-@erase "$(INTDIR)\dc_transferd.obj"
 	-@erase "$(INTDIR)\directory.obj"
+	-@erase "$(INTDIR)\directory.WINDOWS.obj"
 	-@erase "$(INTDIR)\distribution.obj"
 	-@erase "$(INTDIR)\domain_tools.obj"
 	-@erase "$(INTDIR)\dynuser.obj"
@@ -499,11 +478,14 @@ CLEAN :
 	-@erase "$(INTDIR)\proc_id.obj"
 	-@erase "$(INTDIR)\procd_config.obj"
 	-@erase "$(INTDIR)\process_control.WINDOWS.obj"
+	-@erase "$(INTDIR)\profile.WINDOWS.obj"
 	-@erase "$(INTDIR)\profile_helpers.WINDOWS.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
 	-@erase "$(INTDIR)\read_user_log.obj"
 	-@erase "$(INTDIR)\read_user_log_state.obj"
 	-@erase "$(INTDIR)\Regex.obj"
+	-@erase "$(INTDIR)\remote_close.WINDOWS.obj"
+	-@erase "$(INTDIR)\security.WINDOWS.obj"
 	-@erase "$(INTDIR)\selector.obj"
 	-@erase "$(INTDIR)\set_user_priv_from_ad.obj"
 	-@erase "$(INTDIR)\setenv.obj"
@@ -540,40 +522,7 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /I "..\src\condor_tt" /D "WIN32" /D "NDEBUG" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_cpp_util.bsc" 
 BSC32_SBRS= \
@@ -592,6 +541,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\classad_log.obj" \
 	"$(INTDIR)\classad_merge.obj" \
 	"$(INTDIR)\classad_namedlist.obj" \
+	"$(INTDIR)\classad_visa.obj" \
 	"$(INTDIR)\command_strings.obj" \
 	"$(INTDIR)\condor_arglist.obj" \
 	"$(INTDIR)\condor_attributes.obj" \
@@ -723,7 +673,10 @@ LIB32_OBJS= \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\classad_visa.obj"
+	"$(INTDIR)\remote_close.WINDOWS.obj" \
+	"$(INTDIR)\security.WINDOWS.obj" \
+	"$(INTDIR)\directory.WINDOWS.obj" \
+	"$(INTDIR)\profile.WINDOWS.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -731,6 +684,36 @@ LIB32_OBJS= \
 <<
 
 !ENDIF 
+
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
 
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
@@ -1115,6 +1098,12 @@ SOURCE="..\src\condor_c++_util\directory.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE="..\src\condor_c++_util\directory.WINDOWS.C"
+
+"$(INTDIR)\directory.WINDOWS.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE="..\src\condor_c++_util\distribution.C"
 
 "$(INTDIR)\distribution.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -1475,6 +1464,12 @@ SOURCE="..\src\condor_c++_util\process_control.WINDOWS.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE="..\src\condor_c++_util\profile.WINDOWS.C"
+
+"$(INTDIR)\profile.WINDOWS.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE="..\src\condor_c++_util\profile_helpers.WINDOWS.C"
 
 "$(INTDIR)\profile_helpers.WINDOWS.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -1502,6 +1497,18 @@ SOURCE="..\src\condor_c++_util\read_user_log_state.C"
 SOURCE="..\src\condor_c++_util\Regex.C"
 
 "$(INTDIR)\Regex.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\remote_close.WINDOWS.C"
+
+"$(INTDIR)\remote_close.WINDOWS.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\security.WINDOWS.C"
+
+"$(INTDIR)\security.WINDOWS.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
