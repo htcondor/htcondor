@@ -139,6 +139,7 @@ CLEAN :
 	-@erase "$(INTDIR)\pgsqldatabase.obj"
 	-@erase "$(INTDIR)\power_hibernation_manager.obj"
 	-@erase "$(INTDIR)\power_hibernator.obj"
+	-@erase "$(INTDIR)\power_waker.obj"
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
 	-@erase "$(INTDIR)\proc_family_direct.obj"
 	-@erase "$(INTDIR)\proc_family_interface.obj"
@@ -240,6 +241,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\classad_log.obj" \
 	"$(INTDIR)\classad_merge.obj" \
 	"$(INTDIR)\classad_namedlist.obj" \
+	"$(INTDIR)\classad_visa.obj" \
 	"$(INTDIR)\command_strings.obj" \
 	"$(INTDIR)\condor_arglist.obj" \
 	"$(INTDIR)\condor_attributes.obj" \
@@ -331,6 +333,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\pgsqldatabase.obj" \
 	"$(INTDIR)\power_hibernation_manager.obj" \
 	"$(INTDIR)\power_hibernator.obj" \
+	"$(INTDIR)\power_waker.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\proc_family_direct.obj" \
 	"$(INTDIR)\proc_family_interface.obj" \
@@ -370,8 +373,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\classad_visa.obj"
+	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -492,6 +494,7 @@ CLEAN :
 	-@erase "$(INTDIR)\pgsqldatabase.obj"
 	-@erase "$(INTDIR)\power_hibernation_manager.obj"
 	-@erase "$(INTDIR)\power_hibernator.obj"
+	-@erase "$(INTDIR)\power_waker.obj"
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
 	-@erase "$(INTDIR)\proc_family_direct.obj"
 	-@erase "$(INTDIR)\proc_family_interface.obj"
@@ -592,6 +595,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\classad_log.obj" \
 	"$(INTDIR)\classad_merge.obj" \
 	"$(INTDIR)\classad_namedlist.obj" \
+	"$(INTDIR)\classad_visa.obj" \
 	"$(INTDIR)\command_strings.obj" \
 	"$(INTDIR)\condor_arglist.obj" \
 	"$(INTDIR)\condor_attributes.obj" \
@@ -683,6 +687,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\pgsqldatabase.obj" \
 	"$(INTDIR)\power_hibernation_manager.obj" \
 	"$(INTDIR)\power_hibernator.obj" \
+	"$(INTDIR)\power_waker.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\proc_family_direct.obj" \
 	"$(INTDIR)\proc_family_interface.obj" \
@@ -722,8 +727,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\classad_visa.obj"
+	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -1430,6 +1434,12 @@ SOURCE="..\src\condor_c++_util\power_hibernation_manager.C"
 SOURCE="..\src\condor_c++_util\power_hibernator.C"
 
 "$(INTDIR)\power_hibernator.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\power_waker.C"
+
+"$(INTDIR)\power_waker.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
