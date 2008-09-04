@@ -39,7 +39,7 @@
 #include "starter_privsep_helper.h"
 #ifdef WIN32
 #include "perm.h"
-#include "profile_helpers.WINDOWS.h"
+#include "profile.WINDOWS.h"
 #endif
 
 extern CStarter *Starter;
@@ -575,8 +575,8 @@ OsProc::JobExit( void )
 
 #if defined ( WIN32 )
     /* If we loaded the user's profile, then we should dump it now */
-    if ( m_loaded_user_profile ) {
-        CondorUnloadUserProfile ();
+    if ( owner_profile_.loaded () ) {
+        owner_profile_.unload ();
     }
 
     /* at this point too, we can revoke the user's logion's session's

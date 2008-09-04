@@ -755,6 +755,9 @@ CondorTryCopyReparsePoint (
         functions in place of a file handle.
         */
  
+        /* open the reparse point for reading as if we were a 
+        back-up application (which, in this situation, we 
+        are... kinda) */
         source = CreateFileW (
             w_source,
             GENERIC_READ,
@@ -762,8 +765,7 @@ CondorTryCopyReparsePoint (
             NULL,
             OPEN_EXISTING,
             FILE_FLAG_OPEN_REPARSE_POINT
-            | FILE_FLAG_BACKUP_SEMANTICS
-			| FILE_FLAG_SEQUENTIAL_SCAN,
+            | FILE_FLAG_BACKUP_SEMANTICS,
             NULL );
 
         if ( INVALID_HANDLE_VALUE == source ) {
@@ -781,6 +783,7 @@ CondorTryCopyReparsePoint (
 
         }
 
+        /* read the reparse point's information */
         io_success = DeviceIoControl (
             source,
             FSCTL_GET_REPARSE_POINT,
@@ -806,6 +809,8 @@ CondorTryCopyReparsePoint (
 
         }
 
+        /* create the directory which we'll make into a 
+        reparse point. this part seems a little  */
         created = CreateDirectoryW (
             w_destination,
             NULL );
@@ -825,6 +830,9 @@ CondorTryCopyReparsePoint (
 
         }
 
+        /* open the reparse point for reading as if we were a 
+        back-up application (which, in this situation, we 
+        are... kinda) */
         destination = CreateFileW (
             w_destination,
             GENERIC_WRITE,
@@ -850,6 +858,7 @@ CondorTryCopyReparsePoint (
 
         }
 
+        /* write out the reparse point's information */
         io_success = DeviceIoControl (
             destination,
             FSCTL_SET_REPARSE_POINT,
@@ -1154,7 +1163,7 @@ CondorCopyDirectory (
                 dprintf ( 
                     D_FULLDEBUG, 
                     "CondorRemoveDirectory: Failed to add "
-                    "'%s' privelage.\n",
+                    "'%s' privilege.\n",
                     privelages[i] ); 
                 
                 __leave;
@@ -1814,7 +1823,7 @@ CondorRemoveDirectory ( PCSTR directory ) {
                 dprintf ( 
                     D_FULLDEBUG, 
                     "CondorRemoveDirectory: Failed to add "
-                    "'%s' privelage.\n",
+                    "'%s' privilege.\n",
                     privelages[i] ); 
                 
                 __leave;
