@@ -3,6 +3,7 @@
 #include "hook_utils.h"
 #include "classad_newold.h"
 #include "JobRouterHookMgr.h"
+#include "status_string.h"
 
 extern JobRouter* job_router;
 
@@ -562,6 +563,20 @@ ExitClient::hookExited(int exit_status)
 
 	HookClient::hookExited(exit_status);
 
-	// Tell the JobRouter to finalize the job.
-	job_router->FinishFinalizeJob(m_routed_job);
+	// Only tell the job router to finalize the job if the hook exited
+	// successfully
+	if (true == WIFSIGNALED(exit_status) || 0 == WEXITSTATUS(exit_status))
+	{
+		// Tell the JobRouter to finalize the job.
+		job_router->FinishFinalizeJob(m_routed_job);
+	}
+	else
+	{
+		// Hook failed
+		MyString error_msg = "";
+		statusString(exit_status, error_msg);
+		dprintf(D_ALWAYS|D_FAILURE, "ExitClient::hookExited: "
+			"HOOK_JOB_EXIT (%s) failed (%s)\n", m_hook_path, 
+			error_msg.Value());
+	}
 }
