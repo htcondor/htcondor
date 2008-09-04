@@ -120,6 +120,18 @@ by the \Condor{shadow} trying to connect to the address of the
 previous instance of the \Condor{schedd} rather than the address of
 the current instance.
 
+\item Made the \Condor{gridmanager} less aggressive in forwarding refreshed
+proxies for gt2 grid universe jobs. Now, the refreshed proxy won't be
+forwarded until the old proxy has less than six hours of life before
+expiring.
+
+\item Fixed a bug in the \Condor{gridmanager} that could result in job
+status updates from the Grid Monitor to be ignored.
+
+\item The Grid Monitor no longer changes the last-modified time of GRAM
+state files whose job's status is FAILED. This should make it easier for
+file cleaners to remove the the GRAM state files of old, abandoned jobs.
+
 \end{itemize}
 
 \noindent Known Bugs:
