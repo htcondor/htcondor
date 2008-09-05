@@ -1,3 +1,4 @@
+//TEMPTEMP -- refactoring needs a little more testing
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -104,11 +105,16 @@ struct SubmitDagOptions
 
 };
 
-int printUsage(); // NOTE: printUsage calls exit(1), so it doesnt return
+int printUsage(); // NOTE: printUsage calls exit(1), so it doesn't return
 void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[]);
 int doRecursion( SubmitDagOptions &opts );
+int setUpOptions( SubmitDagOptions &opts );
+void ensureOutputFilesExist(const SubmitDagOptions &opts);
+int checkLogFiles( SubmitDagOptions &opts );
+void writeSubmitFile(/* const */ SubmitDagOptions &opts);
 int submitDag( SubmitDagOptions &opts );
 
+//---------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
 	printf("\n");
@@ -123,19 +129,63 @@ int main(int argc, char *argv[])
 		// Initialize our Distribution object -- condor vs. hawkeye, etc.
 	myDistro->Init( argc, argv );
 
+		// Load command-line arguments into the opts structure.
 	SubmitDagOptions opts;
 	parseCommandLine(opts, argc, argv);
 
+	int tmpResult;
+
+		// Recursively run ourself on nested DAGs.
 	if ( opts.recurse ) {
-		int tmpResult = doRecursion( opts );
+		tmpResult = doRecursion( opts );
 		if ( tmpResult != 0) {
 			fprintf( stderr, "Recursive submit(s) failed; exiting without "
 						"attempting top-level submit\n" );
-			exit( tmpResult );
+			return tmpResult;
 		}
 	}
 	
-//TEMPTEMP -- move this stuff into a function?
+		// Further work to get the opts structure set up properly.
+	tmpResult = setUpOptions( opts );
+	if ( tmpResult != 0 ) return tmpResult;
+
+		// Check whether the output files already exist; if so, we may
+		// abort depending on the -f flag and whether we're running
+		// a rescue DAG.
+	ensureOutputFilesExist(opts);
+
+		// Make sure that all node jobs have log files, the files
+		// aren't on NFS, etc.
+	tmpResult = checkLogFiles( opts );
+	if ( tmpResult != 0 ) return tmpResult;
+
+		// Write the actual submit file for DAGMan.
+	writeSubmitFile( opts );
+
+	return submitDag( opts );
+}
+
+//---------------------------------------------------------------------------
+/** Recursively call condor_submit_dag on nested DAGs.
+	@param opts: the condor_submit_dag options
+	@return 0 if successful, 1 if failed
+*/
+int
+doRecursion( SubmitDagOptions &opts )
+{
+	printf("DIAG doRecursion()\n");//TEMPTEMP
+
+	return 0;//TEMPTEMP
+}
+
+//---------------------------------------------------------------------------
+/** Set up things in opts that aren't directly specified on the command line.
+	@param opts: the condor_submit_dag options
+	@return 0 if successful, 1 if failed
+*/
+int
+setUpOptions( SubmitDagOptions &opts )
+{
 	opts.strLibOut = opts.primaryDagFile + ".lib.out";
 	opts.strLibErr = opts.primaryDagFile + ".lib.err";
 
@@ -178,33 +228,6 @@ int main(int argc, char *argv[])
 
 	opts.strLockFile = opts.primaryDagFile + ".lock";
 
-	return submitDag( opts );
-}
-
-/** Recursively call condor_submit_dag on nested DAGs.
-	@param opts: the condor_submit_dag options
-	@return 0 if successful, 1 if failed
-*/
-int
-doRecursion( SubmitDagOptions &opts )
-{
-	printf("DIAG doRecursion()\n");//TEMPTEMP
-
-	return 0;//TEMPTEMP
-}
-
-// utility fcns for submitDag
-void ensureOutputFilesExist(const SubmitDagOptions &opts);
-void writeSubmitFile(/* const */ SubmitDagOptions &opts);
-
-/** Create the DAGMan submit file, and submit it unless the -no_submit
-    option was given.
-	@param opts: the condor_submit_dag options
-	@return 0 if successful, 1 if failed
-*/
-int
-submitDag( SubmitDagOptions &opts )
-{
 	if (opts.strDagmanPath == "" ) {
 		opts.strDagmanPath = which( dagman_exe );
 	}
@@ -215,9 +238,26 @@ submitDag( SubmitDagOptions &opts )
 				 dagman_exe );
 		return 1;
 	}
-		
-	ensureOutputFilesExist(opts);
 
+	MyString	msg;
+	if ( !GetConfigFile( opts.dagFiles, opts.useDagDir,
+				opts.strConfigFile, msg) ) {
+		fprintf( stderr, "ERROR: %s\n", msg.Value() );
+		return 1;
+	}
+
+	return 0;
+}
+
+//---------------------------------------------------------------------------
+/** Make sure every node job has a log file, the log file isn't on
+    NFS, etc.
+	@param opts: the condor_submit_dag options
+	@return 0 if successful, 1 if failed
+*/
+int
+checkLogFiles( SubmitDagOptions &opts )
+{
 	printf("Checking all your submit files for log file names.\n");
 	printf("This might take a while... \n");
 
@@ -248,14 +288,17 @@ submitDag( SubmitDagOptions &opts )
 
 	printf("Done.\n");
 
-	if ( !GetConfigFile( opts.dagFiles, opts.useDagDir,
-				opts.strConfigFile, msg) ) {
-		fprintf( stderr, "ERROR: %s\n", msg.Value() );
-		return 1;
-	}
+	return 0;
+}
 
-	writeSubmitFile(opts);
-
+//---------------------------------------------------------------------------
+/** Submit the DAGMan submit file unless the -no_submit option was given.
+	@param opts: the condor_submit_dag options
+	@return 0 if successful, 1 if failed
+*/
+int
+submitDag( SubmitDagOptions &opts )
+{
 	printf("-----------------------------------------------------------------------\n");
 	printf("File for submitting this DAG to Condor           : %s\n", 
 			opts.strSubFile.Value());
@@ -290,13 +333,7 @@ submitDag( SubmitDagOptions &opts )
 	return 0;
 }
 
-MyString makeString(int iValue)
-{
-	char psToReturn[16];
-	sprintf(psToReturn,"%d",iValue);
-	return MyString(psToReturn);
-}
-
+//---------------------------------------------------------------------------
 bool fileExists(const MyString &strFile)
 {
 	int fd = safe_open_wrapper(strFile.Value(), O_RDONLY);
@@ -306,6 +343,7 @@ bool fileExists(const MyString &strFile)
 	return true;
 }
 
+//---------------------------------------------------------------------------
 void ensureOutputFilesExist(const SubmitDagOptions &opts)
 {
 	int maxRescueDagNum = param_integer("DAGMAN_MAX_RESCUE_NUM",
@@ -408,6 +446,7 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 	}
 }
 
+//---------------------------------------------------------------------------
 void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 {
 	FILE *pSubFile = safe_fopen_wrapper(opts.strSubFile.Value(), "w");
@@ -587,6 +626,7 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	
 }
 
+//---------------------------------------------------------------------------
 void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 {
 	for (int iArg = 1; iArg < argc; iArg++)
@@ -809,7 +849,7 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 	}
 }
 
-// condor_submit_dag diamond.dag
+//---------------------------------------------------------------------------
 int printUsage() 
 {
     printf("Usage: condor_submit_dag [options] dag_file [dag_file_2 ... dag_file_n]\n");
