@@ -137,6 +137,19 @@ status updates from the Grid Monitor to be ignored.
 state files whose job's status is FAILED. This should make it easier for
 file cleaners to remove the the GRAM state files of old, abandoned jobs.
 
+\item Fixed a problem that could cause flocked jobs to fail due to
+authorization errors in the \Condor{starter}. Such failures were more
+likely to occur for long-running jobs or if the \Condor{schedd} were
+issued a full reconfig during the job's execution.
+
+\item Fixed a \Condor{gridmanager} crash on Windows. This crash only
+appeared if \Macro{GRIDMANAGER\_DEBUG} were set to a higher level than
+the default.
+
+\item In PrivSep mode, a job would previously fail if it created a
+symlink in its sandbox pointing to a file owned by a UID other than
+that used to run the job. This behavior has been fixed.
+
 \end{itemize}
 
 \noindent Known Bugs:
