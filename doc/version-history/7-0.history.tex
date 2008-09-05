@@ -140,15 +140,15 @@ the default value for these attributes is now \Expr{False}.
 
 \begin{itemize}
 
-\item A bug in 7.0.4 affects jobs using Condor file transfer on schedd
+\item A bug in 7.0.4 affects jobs using Condor file transfer on submit
 machines that are configured to deny write access from execute
 machines.  The result is that output from jobs may fail to be copied
-back to the schedd machine.  The problem may or may not affect jobs
-that run for less than eight hours but it definitely will affect jobs
+back to the submit machine.  The problem may or may not affect jobs
+that run for less than eight hours, but it definitely will affect jobs
 that run for more than eight hours.  An example of a configuration
-vulnerable to this problem is one where DAEMON-level access is allowed
-to all execute nodes but WRITE-level access is not.  When the problem
-happens, the ShadowLog will contain a line like the following:
+vulnerable to this problem is one where DAEMON level access is allowed
+to all execute nodes but WRITE level access is not.  When the problem
+happens, the \Condor{shadow} log will contain a line like the following:
 
 \begin{verbatim}
 DaemonCore: PERMISSION DENIED to unknown user from host ...
@@ -163,9 +163,9 @@ is not currently required to be authenticated, then allow
 unauthenticated WRITE access from all worker nodes.  Note that this
 does \emph{not} imply that execute nodes will be able to modify the
 job queue without authenticating.  Remote commands that modify the job
-queue (e.g. \Condor{submit} or \Condor{qedit}) always require that the
-user be authenticated, no matter what configuration options you use;
-if no method of remote authentication can succeed in your pool for
+queue (for example, \Condor{submit} or \Condor{qedit}) always require that the
+user be authenticated, no matter what configuration options are used;
+if no method of remote authentication can succeed in the pool for
 WRITE operations, then commands that modify the job queue can only run
 on the submit machine.
 
