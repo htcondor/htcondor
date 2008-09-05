@@ -40,6 +40,7 @@ const char* dagman_exe = "condor_dagman";
 
 struct SubmitDagOptions
 {
+//TEMPTEMP -- what ones should get passed recursively? maybe not things like maxjobs???
 	// these options come from the command line
 	bool bSubmit;
 	bool bVerbose;
@@ -55,7 +56,7 @@ struct SubmitDagOptions
 	int iDebugLevel;
 	MyString primaryDagFile;
 	StringList	dagFiles;
-	MyString strDagmanPath;
+	MyString strDagmanPath; // path to dagman binary
 	bool useDagDir;
 	MyString strDebugDir;
 	MyString strConfigFile;
@@ -65,6 +66,7 @@ struct SubmitDagOptions
 	bool autoRescue;
 	int doRescueFrom;
 	bool allowVerMismatch;
+	bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
 	
 	// non-command line options
 	MyString strLibOut;
@@ -97,12 +99,14 @@ struct SubmitDagOptions
 		autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
 		doRescueFrom = 0; // 0 means no rescue DAG specified
 		allowVerMismatch = false;
+		recurse = true;
 	}
 
 };
 
 int printUsage(); // NOTE: printUsage calls exit(1), so it doesnt return
 void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[]);
+int doRecursion( SubmitDagOptions &opts );
 int submitDag( SubmitDagOptions &opts );
 
 int main(int argc, char *argv[])
@@ -116,10 +120,22 @@ int main(int argc, char *argv[])
 	DebugFlags = D_ALWAYS | D_NOHEADER;
 	config();
 
-	SubmitDagOptions opts;
+		// Initialize our Distribution object -- condor vs. hawkeye, etc.
 	myDistro->Init( argc, argv );
+
+	SubmitDagOptions opts;
 	parseCommandLine(opts, argc, argv);
+
+	if ( opts.recurse ) {
+		int tmpResult = doRecursion( opts );
+		if ( tmpResult != 0) {
+			fprintf( stderr, "Recursive submit(s) failed; exiting without "
+						"attempting top-level submit\n" );
+			exit( tmpResult );
+		}
+	}
 	
+//TEMPTEMP -- move this stuff into a function?
 	opts.strLibOut = opts.primaryDagFile + ".lib.out";
 	opts.strLibErr = opts.primaryDagFile + ".lib.err";
 
@@ -165,10 +181,27 @@ int main(int argc, char *argv[])
 	return submitDag( opts );
 }
 
+/** Recursively call condor_submit_dag on nested DAGs.
+	@param opts: the condor_submit_dag options
+	@return 0 if successful, 1 if failed
+*/
+int
+doRecursion( SubmitDagOptions &opts )
+{
+	printf("DIAG doRecursion()\n");//TEMPTEMP
+
+	return 0;//TEMPTEMP
+}
+
 // utility fcns for submitDag
 void ensureOutputFilesExist(const SubmitDagOptions &opts);
 void writeSubmitFile(/* const */ SubmitDagOptions &opts);
 
+/** Create the DAGMan submit file, and submit it unless the -no_submit
+    option was given.
+	@param opts: the condor_submit_dag options
+	@return 0 if successful, 1 if failed
+*/
 int
 submitDag( SubmitDagOptions &opts )
 {
@@ -743,6 +776,10 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 			else if (strArg.find("-allowver") != -1) // -AllowVersionMismatch
 			{
 				opts.allowVerMismatch = true;
+			}
+			else if (strArg.find("-no_rec") != -1) // -no_recurse
+			{
+				opts.recurse = false;
 			}
 			else
 			{
