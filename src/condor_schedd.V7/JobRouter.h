@@ -92,6 +92,9 @@ class JobRouter: public Service {
 
 	// Finish finalizing the job.
 	void FinishFinalizeJob(RoutedJob *job);
+	
+	// Finish cleaning up the job.
+	void FinishCleanupJob(RoutedJob *job);
 
  private:
 	HashTable<std::string,RoutedJob *> m_jobs;  //key="src job id"

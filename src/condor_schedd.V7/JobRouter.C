@@ -1588,6 +1588,35 @@ void
 JobRouter::CleanupJob(RoutedJob *job) {
 	if(job->state != RoutedJob::CLEANUP) return;
 
+#if HAVE_JOB_HOOKS
+	if (NULL != m_hook_mgr)
+	{
+		int rval = m_hook_mgr->hookFailureCleanup(job);
+		switch (rval)
+		{
+			case -1:    // Error
+					// No need to print status messages
+					// as the lower levels should be
+					// handling that.
+				return;
+				break;
+			case 0:    // Hook not configured
+				break;
+			case 1:    // Spawned the hook
+					// Done for now.  Let the handler call
+					// FinishCleanupJob() when the hook
+					// exits.
+				return;
+				break;
+		}
+	}
+#endif
+
+	FinishCleanupJob(job);
+}
+
+void
+JobRouter::FinishCleanupJob(RoutedJob *job) {
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 
 	if(!job->is_done && job->dest_proc_id.cluster != -1) {

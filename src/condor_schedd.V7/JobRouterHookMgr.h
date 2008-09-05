@@ -38,6 +38,7 @@ public:
 	int hookTranslateJob(RoutedJob* r_job);
 	int hookUpdateJobInfo(RoutedJob* r_job);
 	int hookJobExit(RoutedJob* r_job, const char* sandbox);
+	int hookFailureCleanup(RoutedJob* r_job);
 
 	static bool checkHookKnown(const char* key, HookType hook);
 	static bool addKnownHook(const char* key, HookType hook);
@@ -59,6 +60,7 @@ private:
 	char* m_hook_translate;
 	char* m_hook_update_job_info;
 	char* m_hook_job_exit;
+	char* m_hook_cleanup;
 
 	char* getHookPath(HookType hook_type);
 	void clearHookPaths(void);
@@ -106,6 +108,22 @@ public:
 	friend class JobRouterHookMgr;
 
 	ExitClient(const char* hook_path, RoutedJob* r_job);
+	virtual void hookExited(int exit_status);
+
+protected:
+
+	RoutedJob* m_routed_job;
+
+};
+
+
+class CleanupClient : public HookClient
+{
+public:
+
+	friend class JobRouterHookMgr;
+
+	CleanupClient(const char* hook_path, RoutedJob* r_job);
 	virtual void hookExited(int exit_status);
 
 protected:
