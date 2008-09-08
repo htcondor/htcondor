@@ -37,6 +37,10 @@
 
 # if HAVE_LINUX_HIBERNATION
 
+// Internal class to implement the various ways of interacting with the
+// Linux hibernation methods
+class BaseLinuxHibernator;
+
 class LinuxHibernator : public HibernatorBase
 {
   public:
@@ -52,15 +56,10 @@ protected:
 
 private:
 
-	/* Auxiliary function to shutdown the machine */
-	bool tryShutdown ( bool force ) const;
-
 	/* Discover supported sleep states */
 	virtual void initStates ();
 
-	bool		m_has_sys_if;		// Has /sys interface
-	bool		m_has_proc_if;	// Has /proc interface
-	bool		m_has_pm_utils;	// Has pm-utils
+	BaseLinuxHibernator	*m_real_hibernator;
 
 };
 #endif // HAVE_LINUX_HIBERNATION

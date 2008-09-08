@@ -27,7 +27,7 @@
  ***************************************************************/
 
 HibernatorBase::HibernatorBase () throw () 
-		: _states ( NONE )
+		: m_states ( NONE )
 {
 }
 
@@ -38,7 +38,7 @@ HibernatorBase::~HibernatorBase () throw ()
 bool 
 HibernatorBase::doHibernate ( SLEEP_STATE level, bool force ) const
 {
-	if ( level == ( _states & level ) ) {
+	if ( level == ( m_states & level ) ) {
 		dprintf ( D_FULLDEBUG, "Hibernator: Entering sleep "
 			"state '%s'.\n", sleepStateToString ( level ) );
 		return enterState ( level, force );
@@ -52,27 +52,34 @@ HibernatorBase::doHibernate ( SLEEP_STATE level, bool force ) const
 unsigned short 
 HibernatorBase::getStates () const
 {
-	return _states;
+	return m_states;
 }
 
 void
 HibernatorBase::setStates ( unsigned short states )
 {
-	_states = states;
+	m_states = states;
 }
 
 void
 HibernatorBase::addState ( SLEEP_STATE state )
 {
-	_states |= state;
+	m_states |= state;
 }
 
 void
 HibernatorBase::addState ( const char *statestr )
 {
 	SLEEP_STATE state = stringToSleepState ( statestr );
-	_states |= state;
+	m_states |= state;
 }
+
+HibernatorBase::SLEEP_STATE
+HibernatorBase::setState ( SLEEP_STATE state )
+{
+	m_state = state;
+}
+
 
 
 /***************************************************************

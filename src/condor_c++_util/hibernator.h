@@ -106,11 +106,10 @@ public:
 
 	//@}
 
-protected:
-
-	/* Override this to enter the given sleep state on a 
-	   particular OS */
-	virtual bool enterState ( SLEEP_STATE state, bool force ) const = 0;
+	/** Get the current state (as best as we know it)
+		@return current state
+	*/
+	SLEEP_STATE		getState( void ) { return m_state; };
 
 	/* Set the supported sleep states */
 	void setStates ( unsigned short states );
@@ -118,11 +117,21 @@ protected:
 	/* Add to the support sleep states */
 	void addState( SLEEP_STATE state );
 	void addState( const char *statestr );
+
+protected:
+
+	/* Override this to enter the given sleep state on a 
+	   particular OS */
+	virtual bool enterState ( SLEEP_STATE state, bool force ) const = 0;
+
+	// Set the current state as far as we know it
+	SLEEP_STATE		setState( SLEEP_STATE state );
 	
 private:
 	
 	/* OS agnostic sleep state representation */
-	unsigned short _states;
+	unsigned short	m_states;
+	SLEEP_STATE		m_state;
 
 };
 
