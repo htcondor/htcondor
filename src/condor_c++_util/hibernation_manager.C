@@ -20,26 +20,30 @@
  
 #include "condor_common.h"
 #include "condor_config.h"
-#include "power_hibernation_manager.h"
+#include "hibernation_manager.h"
+
 
 /***************************************************************
  * HibernationManager class
  ***************************************************************/
 
 HibernationManager::HibernationManager () throw ()
-:	_hibernator ( Hibernator::createHibernator () ), 
-	_interval ( 0 ) {
+:	_hibernator ( HibernatorBase::createHibernator () ), 
+	_interval ( 0 )
+{
 	update ();
 }
 
-HibernationManager::~HibernationManager () throw () {
+HibernationManager::~HibernationManager () throw ()
+{
 	if ( _hibernator ) {
 		delete _hibernator;
 	}
 }
 
 void 
-HibernationManager::update () {
+HibernationManager::update ()
+{
 	int previous_inteval = _interval;
 	_interval = param_integer ( "HIBERNATE_CHECK_INTERVAL", 
 		0 /* default */, 0 /* min; no max */ );	
@@ -51,26 +55,29 @@ HibernationManager::update () {
 }
 
 bool 
-HibernationManager::doHibernate ( int state ) const {
+HibernationManager::doHibernate ( int state ) const
+{
 	if ( _hibernator ) {
 		return _hibernator->doHibernate ( 
-			Hibernator::intToSleepState ( state ), 
+			HibernatorBase::intToSleepState ( state ), 
 			true /* force */ );
 	}
 	return false;
 }
 
 bool 
-HibernationManager::canHibernate () const {
+HibernationManager::canHibernate () const
+{
 	bool can = false;	
 	if ( _hibernator ) {
-		can = ( Hibernator::NONE != _hibernator->getStates () );
+		can = ( HibernatorBase::NONE != _hibernator->getStates () );
 	}
 	return can;
 }
 
 bool 
-HibernationManager::wantsHibernate () const {
+HibernationManager::wantsHibernate () const
+{
 	bool does = false;
 	if ( _hibernator ) {
 		if ( canHibernate () ) {
@@ -80,6 +87,7 @@ HibernationManager::wantsHibernate () const {
 	return does;
 }
 
-int HibernationManager::getHibernateCheckInterval () const {
+int HibernationManager::getHibernateCheckInterval () const
+{
 	return _interval;
 }

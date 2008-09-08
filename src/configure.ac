@@ -2187,6 +2187,7 @@ AC_CHECK_HEADERS([sys/personality.h])
 AC_CHECK_HEADERS([linux/personality.h])
 AC_CHECK_HEADERS([linux/magic.h])
 AC_CHECK_HEADERS([linux/nfsd/const.h])
+AC_CHECK_HEADERS([linux/sockios.h])
 AC_CHECK_HEADERS([sys/statfs.h])
 AC_CHECK_HEADERS([sys/statvfs.h])
 AC_CHECK_HEADERS([sys/vfs.h])
@@ -2364,6 +2365,9 @@ if test "$ac_cv_func_statfs" = yes ; then
       AC_MSG_RESULT(unknown)
       AC_MSG_ERROR([unable to determine number of arguments to statfs()])])])
 fi dnl test "$ac_cv_func_statfs" = yes
+
+# Do we have the "ethtool" declarations?
+AC_CHECK_DECLS([SIOCETHTOOL],,, [[#include <linux/sockios.h>]])
 
 # we don't actually want to add -lgen to our link line, but we do want
 # HAVE_LIBGEN defined correctly for our test suite builds...

@@ -24,13 +24,15 @@
  * Headers
  ***************************************************************/
 
-#include "power_hibernator.h"
+#include "hibernator.h"
+
 
 /***************************************************************
  * HibernationManager class
  ***************************************************************/
 
-class HibernationManager {
+class HibernationManager
+{
 
 public:
 
@@ -93,8 +95,8 @@ public:
 
 private:
 	
-	Hibernator				*_hibernator;
-	int						_interval;	
+	HibernatorBase		*_hibernator;
+	int					_interval;	
 
 };
 

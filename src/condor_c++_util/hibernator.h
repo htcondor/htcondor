@@ -24,7 +24,8 @@
  * Base Hibernator class
  ***************************************************************/
 
-class Hibernator {
+class HibernatorBase
+{
 
 public:
 
@@ -48,10 +49,10 @@ public:
 	//@{
 	
 	/// Constructor
-	Hibernator () throw ();
+	HibernatorBase () throw ();
 
 	/// Destructor
-	virtual ~Hibernator () throw (); 
+	virtual ~HibernatorBase () throw (); 
 
 	//@}
 
@@ -88,7 +89,7 @@ public:
 		level.
 		@return if the OS is supported a valid Hibernator*; otherwise NULL.
 	*/
-	static Hibernator* createHibernator ();
+	static HibernatorBase* createHibernator ();
 
 	
 	/** @name Conversion functions.
@@ -101,6 +102,7 @@ public:
 	static SLEEP_STATE intToSleepState ( int x );
 	static int sleepStateToInt ( SLEEP_STATE state );
 	static char const* sleepStateToString ( SLEEP_STATE state );
+	static SLEEP_STATE stringToSleepState ( char const* name );
 
 	//@}
 
@@ -113,46 +115,15 @@ protected:
 	/* Set the supported sleep states */
 	void setStates ( unsigned short states );
 
+	/* Add to the support sleep states */
+	void addState( SLEEP_STATE state );
+	void addState( const char *statestr );
+	
 private:
 	
 	/* OS agnostic sleep state representation */
 	unsigned short _states;
 
 };
-
-/***************************************************************
- * Specialized classes 
- ***************************************************************/
-
-/***************************************************************
- * MsWindowsHibernator class
- ***************************************************************/
-
-#if defined ( WIN32 )
-
-class MsWindowsHibernator : public Hibernator {
-
-public:
-
-	MsWindowsHibernator () throw ();
-	virtual ~MsWindowsHibernator () throw ();
-
-protected:
-
-	/* Enter the given sleep state.  Can be any of S[1-5],
-	   but only S[3-5] truly exist on Windows */
-	bool enterState ( SLEEP_STATE state, bool force ) const;
-
-private:
-
-	/* Auxiliary function to shutdown the machine */
-	bool tryShutdown ( bool force ) const;
-
-	/* Discover supported sleep states */
-	virtual void initStates ();
-
-};
-
-#endif // WIN32
 
 #endif // _HIBERNATER_H_
