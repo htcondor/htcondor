@@ -66,7 +66,7 @@ ModifyTokenPrivilege ( HANDLE token, LPCTSTR privilege, BOOL enable ) {
         
         } 
         */
-    
+
         /* lookup the local ID for the required privilege */    
         found_privelage = LookupPrivilegeValue (
             NULL, 

@@ -48,7 +48,9 @@ OwnerProfile::OwnerProfile () :
     user_token_ ( NULL ),
     user_name_ ( NULL ),
     domain_name_ ( NULL ),
-    profile_template_ ( NULL ) {
+    profile_directory_ ( NULL ),
+    profile_template_ ( NULL ),
+    profile_cache_ ( NULL ) {
 
     ZeroMemory ( 
         &user_profile_, 
@@ -60,17 +62,24 @@ OwnerProfile::~OwnerProfile () {
 
     if ( loaded () ) {
         unload ();
-        destroy ();
     }
 
     if ( NULL != profile_directory_ ) {
         delete [] profile_directory_;
+        profile_directory_ = NULL;
+    }
+    if ( NULL != profile_backup_ ) {
+        delete [] profile_backup_;
+        profile_backup_ = NULL;
     }
     
     if ( NULL != profile_template_ ) {
-        /* value was param'd */
         free ( profile_template_ );
         profile_template_ = NULL;
+    }
+    if ( NULL != profile_cache_ ) {
+        free ( profile_cache_ );
+        profile_cache_ = NULL;
     }
 
 }
@@ -158,10 +167,15 @@ BOOL OwnerProfile::update () {
             free ( profile_template_ );
             profile_template_ = NULL;
         }
+        if ( NULL != profile_cache_ ) {
+            free ( profile_cache_ );
+            profile_cache_ = NULL;
+        }
 
-        /* we always assume there is a fresh directory in the 
+        /* we always assume there is are fresh directorys in the 
         configuration file(s) */
         profile_template_ = param ( PARAM_PROFILE_TEMPLATE );
+        profile_cache_    = param ( PARAM_PROFILE_CACHE );
 
     }
     __finally {
@@ -455,7 +469,26 @@ OwnerProfile::load () {
 
         } 
 
-        /* load the user's profile */
+        /* now we transfer the user's profile directory to the cache 
+        so that we can revert back to it once the user is done doing 
+        their thang. */
+        backup_created = backup ();
+
+        dprintf ( 
+            D_FULLDEBUG, 
+            "OwnerProfile::load: Creating a backup of %s's "
+            "profile %s.\n",
+            user_name_,
+            backup_created ? "succeeded" : "failed" );
+
+        /* if we were unable to create the backup, we should bail out
+        before we allow the user to make changes to the template 
+        profile */
+        if ( !backup_created ) {
+            __leave;
+        }
+
+        /* finally, load the user's profile */
         profile_loaded = loadProfile ();
 
         if ( !profile_loaded ) {            
@@ -525,6 +558,24 @@ OwnerProfile::unload () {
         as we cannot _restore_ the original while the profile is 
         loaded */
         profile_loaded_ = FALSE;
+
+        /* Now we have unloaded user's profile we can restore the
+        original cached version */
+        backup_restored = restore ();
+
+        dprintf ( 
+            D_FULLDEBUG, 
+            "OwnerProfile::unload: Restoration of %s's "
+            "profile %s.\n",
+            user_name_,
+            backup_restored ? "succeeded" : "failed" );
+
+        /* if we were unable to create the backup, we should bail out
+        before we allow the user to make changes to the template 
+        profile */
+        if ( !backup_restored ) {
+            __leave;
+        }
 
         /* if we got here, then everything has been reverted */
         ok = TRUE;
@@ -715,6 +766,191 @@ OwnerProfile::directory () {
     }
 
     return dir;
+
+}
+
+/* returns TRUE if the user profile template was backup-ed up; 
+otherwise, FALSE.*/
+BOOL
+OwnerProfile::backup () {
+
+    dprintf ( D_FULLDEBUG, "In OwnerProfile::backup()\n" );
+
+    priv_state  priv            = PRIV_UNKNOWN;
+    int         length          = 0;
+    BOOL        backup_created  = FALSE,
+                ok              = FALSE;
+
+    __try {
+
+        /* can't backup while in use, we'd get tons of access denied 
+        errors, as a number of core files will be locked */
+        if ( loaded () ) {
+
+            dprintf ( 
+                D_FULLDEBUG, 
+                "OwnerProfile::backup: Cannot backup the profile "
+                "while it is in use.\n");
+
+            __leave;
+
+        }
+
+        /* we can do the following as the Condor because our copy 
+        mechanism is designed to preserve the directory's ACLs */
+        priv = set_user_priv ();
+
+        /* create a backup directory name based on the profile 
+        directory (i.e. profile_cache_), user's login name and 
+        the */ 
+        length = strlen ( profile_cache_ ) 
+            + strlen ( user_name_ ) + 1
+            + 10; /* +1 for \ +10 for pid */
+        profile_cache_ = new CHAR[length + 1];
+        ASSERT ( profile_cache_ );
+        
+        sprintf ( 
+            profile_backup_, 
+            "%s\\%s-%d", 
+            profile_cache_, 
+            user_name_,
+            GetCurrentProcessId () );
+
+        /* finally, copy the user's profile to the back-up directory */
+        backup_created = CondorCopyDirectory ( 
+            profile_directory_, 
+            profile_backup_ );
+
+        dprintf ( 
+            D_FULLDEBUG, 
+            "OwnerProfile::backup: Creating "
+            "profile backup %s (last-error = %u)\n", 
+            backup_created ? "succeeded" : "failed", 
+            backup_created ? 0 : GetLastError () );
+
+        if ( !backup_created ) {
+            __leave;
+        }
+
+        /* if we've arrived here, then all it well */
+        ok = TRUE;
+
+    }
+    __finally {
+
+        /* return to previous privilege level */
+        if ( PRIV_UNKNOWN != priv ) {
+            set_priv ( priv );
+        }
+
+    }
+
+    return ok;
+
+}
+
+/* returns TRUE if the user profile directory was restored; 
+otherwise, FALSE.*/
+BOOL
+OwnerProfile::restore () {
+    
+    dprintf ( D_FULLDEBUG, "In OwnerProfile::restore()\n" );
+
+    priv_state  priv            = PRIV_UNKNOWN;
+    int         length          = 0;
+    HANDLE      directory       = NULL;
+    BOOL        profile_deleted = FALSE,
+                backup_restored = FALSE,
+                backup_deleted  = FALSE,
+                ok              = FALSE;
+
+    __try {
+
+        /* can't restore while the profile is loaded */
+        if ( loaded () ) {
+
+            dprintf ( 
+                D_FULLDEBUG, 
+                "OwnerProfile::restore: Cannot restore the profile "
+                "while it is in use.\n");
+
+            __leave;
+
+        }
+
+        /* we can do the following as the Condor because our copy 
+        mechanism is designed to preserve the directory's ACLs */
+        priv = set_user_priv ();
+
+        /* use the directory created by the backup() call to 
+        roll-back the changes made during the job execution */        
+        profile_deleted = 
+            CondorRemoveDirectory ( profile_directory_ );
+        
+        dprintf ( 
+            D_FULLDEBUG, 
+            "OwnerProfile::restore: Deleting the "
+            "modified profile %s (last-error = %u)\n", 
+            profile_deleted ? "succeeded" : "failed", 
+            profile_deleted ? 0 : GetLastError () );
+
+        if ( !profile_deleted ) {
+            __leave;
+        }
+
+        /* having removed the modified profile directory, 
+        restore the back-up we made of the profile template */
+        backup_restored = CondorCopyDirectory ( 
+            profile_backup_,
+            profile_directory_ );
+
+        dprintf ( 
+            D_FULLDEBUG, 
+            "OwnerProfile::restore: Deleting the "
+            "profile backup %s (last-error = %u)\n", 
+            backup_restored ? "succeeded" : "failed", 
+            backup_restored ? 0 : GetLastError () );
+
+        if ( !backup_restored ) {
+            __leave;
+        }
+
+        /* finally, remove the back-up directory: this ensures
+        that each new job receives a fresh copy of the template */        
+        backup_deleted = 
+            CondorRemoveDirectory ( profile_backup_ );
+
+        dprintf ( 
+            D_FULLDEBUG, 
+            "OwnerProfile::restore: Deleting the "
+            "back-up directory %s (last-error = %u)\n", 
+            backup_deleted ? "succeeded" : "failed", 
+            backup_deleted ? 0 : GetLastError () );
+
+        if ( !backup_deleted ) {
+            __leave;
+        }
+
+        /* if we've arrived here, then all it well */
+        ok = TRUE;
+
+    }
+    __finally {
+
+        /* return to previous privilege level */
+        if ( PRIV_UNKNOWN != priv ) {
+            set_priv ( priv );
+        }
+
+        /* only if we were successful can we delete the 
+        name this session's of profile backup directory */
+        if ( ok ) { 
+            delete [] profile_backup_;
+        }
+
+    }
+
+    return ok;
 
 }
 

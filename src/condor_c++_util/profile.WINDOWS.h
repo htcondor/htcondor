@@ -90,6 +90,14 @@ protected:
        remedied by the code surrounding its invocation. */
     virtual BOOL destroy () const;
 
+     /* returns TRUE if the user profile template was backup-ed up; 
+    otherwise, FALSE.*/
+    virtual BOOL backup ();
+
+    /* returns TRUE if the user profile directory was restored; 
+    otherwise, FALSE.*/
+    virtual BOOL restore ();
+
 private:
 
     /***************************************************************
@@ -142,6 +150,14 @@ private:
     /* the directory we use as a template to create new user 
        profile directories */
     PSTR        profile_template_;
+
+    /* the directory we use as the root of our cache for 
+       user profile directories */
+    PSTR        profile_cache_;
+
+    /* a per-session directory we use as a cache for the current
+       user profile directory */
+    PSTR        profile_backup_;
     
 };
 

@@ -1131,20 +1131,49 @@ CondorCopyDirectory (
                 i;
     HANDLE      have_access   = NULL;
     PSTR        privelages[]  = { SE_BACKUP_NAME, SE_BACKUP_NAME };
-    BOOL        added         = FALSE,
+    BOOL        opened        = TRUE,
+                added         = FALSE,
                 copied        = FALSE,
                 removed       = FALSE,
                 ok            = FALSE;
     
     __try {
         
+        dprintf ( 
+            D_FULLDEBUG, 
+            "CondorCopyDirectory: Source: '%s'.\n", 
+            source );
+        
+        dprintf ( 
+            D_FULLDEBUG, 
+            "CondorCopyDirectory: Destination: '%s'.\n", 
+            destination );
+        
         /* do the following as the user */
         priv = set_user_priv ();
 
         /* store the user token */
-        user_token = priv_state_get_handle ();
+        opened = OpenProcessToken (
+            GetCurrentProcess (), 
+            TOKEN_ADJUST_PRIVILEGES 
+            | TOKEN_QUERY, 
+            &user_token );
 
-        /* do the following as condor */
+         if ( !opened ) {
+             
+             last_error = GetLastError ();
+             
+             dprintf ( 
+                 D_FULLDEBUG, 
+                 "CondorRemoveDirectory: Failed to open "
+                 "user token. (last-error = %d)\n",
+                 last_error ); 
+             
+             __leave;
+             
+         }
+
+        /* do the following as Condor */
         set_priv ( priv );
         priv = set_condor_priv ();
 
@@ -1176,16 +1205,6 @@ CondorCopyDirectory (
         /* finally, do the rest as the user */
         set_priv ( priv );
         priv = set_user_priv ();
-        
-        dprintf ( 
-            D_FULLDEBUG, 
-            "CondorCopyDirectory: Source: '%s'.\n", 
-            source );
-
-        dprintf ( 
-            D_FULLDEBUG, 
-            "CondorCopyDirectory: Destination: '%s'.\n", 
-            destination );
         
         /* create wide versions of the strings */
         w_source      = ProduceWFromA ( source );
@@ -1273,6 +1292,31 @@ CondorCopyDirectory (
     }
     __finally {
 
+        /* revoke the privelages we gave the user */
+        if ( NULL != user_token ) {
+            
+            for ( i = 0; i < condor_countof ( privelages ); ++i ) {
+                
+                removed = ModifyTokenPrivilege ( 
+                    user_token, 
+                    privelages[i], 
+                    FALSE );
+                
+                if ( !removed ) {
+                    
+                    dprintf ( 
+                        D_FULLDEBUG, 
+                        "CondorCopyDirectory: Failed to remove "
+                        "'%s' privilege. (last-error = %d)\n",
+                        privelages[i],
+                        GetLastError () ); 
+                    
+                }
+                
+            }
+            
+        }
+        
         /* propagate the last error */
         SetLastError ( ok ? ERROR_SUCCESS : last_error );
 
@@ -1283,18 +1327,6 @@ CondorCopyDirectory (
         if ( w_destination ) {
             delete [] w_destination;
             w_destination = NULL;
-        }
-
-        /* revoke the privelages we gave the user */
-        if ( NULL != user_token ) {
-            ModifyTokenPrivilege ( 
-                user_token, 
-                SE_BACKUP_NAME, 
-                TRUE );
-            ModifyTokenPrivilege ( 
-                user_token, 
-                SE_RESTORE_NAME, 
-                TRUE );
         }
 
         /* return to previous privilege level */
@@ -1792,7 +1824,8 @@ CondorRemoveDirectory ( PCSTR directory ) {
     DWORD       last_error   = ERROR_SUCCESS,
                 i;
     PSTR        privelages[] = { SE_BACKUP_NAME, SE_BACKUP_NAME };
-    BOOL        added        = FALSE,
+    BOOL        opened       = FALSE,
+                added        = FALSE,
                 removed      = FALSE,
                 ok           = FALSE;
     
@@ -1802,7 +1835,25 @@ CondorRemoveDirectory ( PCSTR directory ) {
         priv = set_user_priv ();
 
         /* store the user token */
-        user_token = priv_state_get_handle ();
+        opened = OpenProcessToken (
+            GetCurrentProcess (), 
+            TOKEN_ADJUST_PRIVILEGES 
+            | TOKEN_QUERY, 
+            &user_token );
+        
+        if ( !opened ) {
+            
+            last_error = GetLastError ();
+            
+            dprintf ( 
+                D_FULLDEBUG, 
+                "CondorRemoveDirectory: Failed to open "
+                "user token. (last-error = %d)\n",
+                last_error ); 
+            
+            __leave;
+            
+        }
 
         /* do the following as condor */
         set_priv ( priv );
@@ -1896,6 +1947,31 @@ CondorRemoveDirectory ( PCSTR directory ) {
     }
     __finally {
 
+        /* revoke the privelages we gave the user */
+        if ( NULL != user_token ) {
+            
+            for ( i = 0; i < condor_countof ( privelages ); ++i ) {
+                
+                removed = ModifyTokenPrivilege ( 
+                    user_token, 
+                    privelages[i], 
+                    FALSE );
+                
+                if ( !removed ) {
+                    
+                    dprintf ( 
+                        D_FULLDEBUG, 
+                        "CondorRemoveDirectory: Failed to remove "
+                        "'%s' privilege. (last-error = %d)\n",
+                        privelages[i],
+                        GetLastError () );
+                    
+                }
+                
+            }
+            
+        }
+        
         /* propagate the last error */
         SetLastError ( ok ? ERROR_SUCCESS : last_error );
 
@@ -1903,18 +1979,6 @@ CondorRemoveDirectory ( PCSTR directory ) {
             delete [] w_directory;
         } 
 
-        /* revoke the privelages we gave the user */
-        if ( NULL != user_token ) {
-            ModifyTokenPrivilege ( 
-                user_token, 
-                SE_BACKUP_NAME, 
-                TRUE );
-            ModifyTokenPrivilege ( 
-                user_token, 
-                SE_RESTORE_NAME, 
-                TRUE );
-        }
-        
         /* return to previous privilege level */
         set_priv ( priv );
 
