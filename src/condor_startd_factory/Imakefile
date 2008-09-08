@@ -13,13 +13,13 @@ OBJ = startd_factory_main.o startd_factory.o partition.o partition_mgr.o \
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
-public_copy_target(bgd_query_work_loads,libexec,bgd_query_work_loads,EXECUTABLE_MODE)
-public_copy_target(bgd_generate_partition,libexec,bgd_generate_partition,EXECUTABLE_MODE)
-public_copy_target(bgd_destroy_partition,libexec,bgd_destroy_partition,EXECUTABLE_MODE)
-public_copy_target(bgd_available_partitions,libexec,bgd_available_partitions,EXECUTABLE_MODE)
-public_copy_target(bgd_boot_partition,libexec,bgd_boot_partition,EXECUTABLE_MODE)
-public_copy_target(bgd_shutdown_partition,libexec,bgd_shutdown_partition,EXECUTABLE_MODE)
-public_copy_target(bgd_back_partition,libexec,bgd_back_partition,EXECUTABLE_MODE)
+public_copy_target(bgp_query_work_loads,libexec,bgp_query_work_loads,EXECUTABLE_MODE)
+public_copy_target(bgp_generate_partition,libexec,bgp_generate_partition,EXECUTABLE_MODE)
+public_copy_target(bgp_destroy_partition,libexec,bgp_destroy_partition,EXECUTABLE_MODE)
+public_copy_target(bgp_available_partitions,libexec,bgp_available_partitions,EXECUTABLE_MODE)
+public_copy_target(bgp_boot_partition,libexec,bgp_boot_partition,EXECUTABLE_MODE)
+public_copy_target(bgp_shutdown_partition,libexec,bgp_shutdown_partition,EXECUTABLE_MODE)
+public_copy_target(bgp_back_partition,libexec,bgp_back_partition,EXECUTABLE_MODE)
 
 html:
 release:: all

@@ -16,6 +16,7 @@ echo "LOCAL_CONFIG_FILE = $CD/condor_config.local" >> condor_config
 
 cp /home/condor/condor_config.local .
 
+echo "STARTD_NOCLAIM_SHUTDOWN = 300" >> condor_config.local
 echo "LOCAL_DIR = $CD" >> condor_config.local
 echo "STARTD_NAME=$PARTITION" >> condor_config.local
 echo "PARTITION_NAME = \"$PARTITION\"" >> condor_config.local

@@ -277,7 +277,13 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 				goto SCHED_SMP;
 			}
 		}
-		
+
+		// We don't implement the next section of code, so skip it, but
+		// leave it there so compilation checks it at least.
+		dprintf(D_ALWAYS, 
+			"WARNING: No suitable partitions found for SMP jobs.\n");
+		goto SMP_NOT_IMPL;
+
 		// if there are no generated partitions, we have to generate one
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == NOT_GENERATED) {
@@ -290,7 +296,7 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 				// if the generation fails, we fall through...
 			}
 		}
-
+		SMP_NOT_IMPL: ;
 	}
 
 	// ********* SCHEDULE FOR DUAL JOBS **************
@@ -325,6 +331,11 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 			}
 		}
 
+		// We don't implement the next section of code, so skip it, but
+		// leave it there so compilation checks it at least.
+		dprintf(D_ALWAYS, 
+			"WARNING: No suitable partitions found for DUAL jobs.\n");
+		goto DUAL_NOT_IMPL;
 		// if there are no generated partitions, we have to generate one
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == NOT_GENERATED) {
@@ -337,6 +348,7 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 				// if the generation fails, we fall through...
 			}
 		}
+		DUAL_NOT_IMPL: ;
 	}
 
 	// ********* SCHEDULE FOR VN JOBS **************
@@ -370,6 +382,9 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 			}
 		}
 
+		dprintf(D_ALWAYS, 
+			"WARNING: No suitable partitions found for DUAL jobs.\n");
+		goto VN_NOT_IMPL;
 		// if there are no generated partitions, we have to generate one
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == NOT_GENERATED) {
@@ -382,6 +397,7 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 				// if the generation fails, we fall through...
 			}
 		}
+		VN_NOT_IMPL: ;
 	}
 
 	DONE:
@@ -391,6 +407,10 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 	// partitions again and see if we can evict any ones which are only booted.
 	// This state represents a non-backed partition (due to a startd
 	// killing itself due to lack of work) which we don't need.
+	// XXX After getting rid of something, maybe we should try and restart
+	// the algorithm to see if something would have gotten booted and
+	// backed right away for a different type of HTC job. Otherwise we'll wait
+	// an entire cycle beofre trying to adjust the partitions again.
 	for (idx = 0; idx < m_parts.length(); idx++) {
 		if (m_parts[idx].get_pstate() == BOOTED) {
 			dprintf(D_ALWAYS, "Shutting down unused partition: %s %d %s\n",
