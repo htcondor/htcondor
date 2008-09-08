@@ -500,6 +500,7 @@ const char *ATTR_STREAM_ERROR			 = "StreamErr";
 const char *ATTR_SUBMITTER_ID			 = "SubmitterId";
 const char *ATTR_SUBMITTOR_PRIO           = "SubmittorPrio";
 const char *ATTR_SUBNET                   = "Subnet";
+const char *ATTR_SUBNET_MASK              = "SubnetMask";
 const char *ATTR_SUSPEND                  = "Suspend";
 const char *ATTR_SUSPEND_JOB_AT_EXEC      = "SuspendJobAtExec";
 const char *ATTR_TARGET_TYPE				 = "TargetType";

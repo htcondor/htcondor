@@ -439,6 +439,7 @@ extern const char * ATTR_STREAM_ERROR;
 extern const char * ATTR_SUBMITTER_ID;
 extern const char * ATTR_SUBMITTOR_PRIO;
 extern const char * ATTR_SUBNET;
+extern const char * ATTR_SUBNET_MASK;
 extern const char * ATTR_SUSPEND;
 extern const char * ATTR_SUSPEND_JOB_AT_EXEC;
 extern const char * ATTR_TARGET_TYPE;
