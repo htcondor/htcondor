@@ -1,0 +1,29 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Amazon}The amazon Grid Type }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Amazon EC2}
+\index{grid computing!submitting jobs to Amazon EC2}
+
+Condor jobs may be submitted to Amazon's Elastic Compute Cloud (EC2)
+service.
+See the Amazon EC2 webpage at \URL{http://aws.amazon.com/ec2} for more
+information about EC2.
+
+Condor jobs are submitted to EC2
+using the \SubmitCmd{grid} universe and the
+\SubmitCmd{grid\_resource} command  by placing the following
+into the submit description file.
+\begin{verbatim}
+grid_resource = amazon
+\end{verbatim}
+
+The amazon grid type requires several parameters to be set in the Condor
+configuration file:
+
+\footnotesize
+\begin{verbatim}
+AMAZON_GAHP=$(SBIN)/amazon-gahp
+AMAZON_GAHP_LOG=/tmp/AmazonGahpLog.$(USERNAME)
+\end{verbatim}
+\normalsize
+

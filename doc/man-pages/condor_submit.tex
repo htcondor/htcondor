@@ -1287,6 +1287,81 @@ conditions that were present when the job checkpointed.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
+%% amazon_ami_id
+%%%%%%%%%%%%%%%%%%%
+
+\item[amazon\_ami\_id = $<$Amazon EC2 AMI ID$>$]
+\index{submit commands!amazon\_ami\_id}
+AMI identifier of the VM image to run for \SubmitCmd{amazon} jobs.
+
+%%%%%%%%%%%%%%%%%%%
+%% amazon_instance_type
+%%%%%%%%%%%%%%%%%%%
+
+\item[amazon\_instance\_type = $<$VM Type$>$]
+\index{submit commands!amazon\_instance\_type}
+Identifier for the type of VM desired for an \SubmitCmd{amazon} job.
+The default value is ``m1.small''.
+
+%%%%%%%%%%%%%%%%%%%
+%% amazon_keypair_file
+%%%%%%%%%%%%%%%%%%%
+
+\item[amazon\_keypair\_file = $<$pathname$>$]
+\index{submit commands!amazon\_keypair\_file}
+The complete path and filename of a file into which Condor will write an
+ssh key for use with \SubmitCmd{amazon} jobs. The key can be used to
+ssh into the virtual machine once it is running.
+
+%%%%%%%%%%%%%%%%%%%
+%% amazon_private_key
+%%%%%%%%%%%%%%%%%%%
+
+\item[amazon\_private\_key = $<$pathname$>$]
+\index{submit commands!amazon\_private\_key}
+Used for \SubmitCmd{amazon} jobs. Path and filename of a file containing
+the private key to be used to authenticate with Amazon's EC2 service
+via SOAP.
+
+%%%%%%%%%%%%%%%%%%%
+%% amazon_public_key
+%%%%%%%%%%%%%%%%%%%
+
+\item[amazon\_public\_key = $<$pathname$>$]
+\index{submit commands!amazon\_public\_key}
+Used for \SubmitCmd{amazon} jobs. Path and filename of a file containing
+the public X509 certificate to be used to authenticate with Amazon's EC2
+service via SOAP.
+
+%%%%%%%%%%%%%%%%%%%
+%% amazon_security_groups
+%%%%%%%%%%%%%%%%%%%
+
+\item[amazon\_security\_groups = group1, group2, ...]
+\index{submit commands!amazon\_security\_groups}
+Used for \SubmitCmd{amazon} jobs. A list of Amazon EC2 security group
+names, which should be associated with the job.
+
+%%%%%%%%%%%%%%%%%%%
+%% amazon_user_data
+%%%%%%%%%%%%%%%%%%%
+
+\item[amazon\_user\_data = $<$data$>$]
+\index{submit commands!amazon\_user\_data}
+Used for \SubmitCmd{amazon} jobs. A block of data that can be accessed
+by the virtual machine job inside Amazon EC2.
+
+%%%%%%%%%%%%%%%%%%%
+%% amazon_user_data_file
+%%%%%%%%%%%%%%%%%%%
+
+\item[amazon\_user\_data\_file = $<$pathname$>$]
+\index{submit commands!amazon\_user\_data\_file}
+Used for \SubmitCmd{amazon} jobs.
+A file containing data that can be accessed
+by the virtual machine job inside Amazon EC2.
+
+%%%%%%%%%%%%%%%%%%%
 %% globus_rematch
 %%%%%%%%%%%%%%%%%%%
 
@@ -1370,6 +1445,10 @@ Allowable \SubmitCmd{grid-type-string} values are
 \SubmitCmd{condor}, \SubmitCmd{nordugrid}, and \SubmitCmd{unicore}.
 See section~\ref{sec:GridUniverse} for details on the variety of 
 grid types.
+
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{amazon}, no additional
+parameters are used.
+See section~\ref{sec:Amazon} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{condor},
 the first parameter is the name of the remote \Condor{schedd}
