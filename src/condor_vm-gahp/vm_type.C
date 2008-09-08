@@ -62,7 +62,7 @@ VMType::VMType(const char* prog_for_script, const char* scriptname, const char* 
 
 	// Use the script program to create a configuration file for VM ?
 	m_use_script_to_create_config = 
-		vmgahp_param_boolean("USE_SCRIPT_TO_CREATE_CONFIG", false);
+		param_boolean("USE_SCRIPT_TO_CREATE_CONFIG", false);
 
 	if( isSetUidRoot() && needChown() ) {
 		// Chown all files in the working directory to the user

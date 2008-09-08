@@ -37,8 +37,9 @@
 #define VMWARE_VMX_FILE_PERM	0770
 #define VMWARE_VMDK_FILE_PERM	0660
 
-#define VMWARE_VM_CONFIG_LOCAL_PARAMS_START "### Start local parameters ###"
-#define VMWARE_VM_CONFIG_LOCAL_PARAMS_END "### End local parameters ###"
+#define VMWARE_LOCAL_SETTINGS_PARAM "VMWARE_LOCAL_SETTINGS_FILE"
+#define VMWARE_LOCAL_SETTINGS_START_MARKER "### Start local parameters ###"
+#define VMWARE_LOCAL_SETTINGS_END_MARKER "### End local parameters ###"
 
 #define VMWARE_MONOLITHICSPARSE_VMDK_SEEK_BYTE	512
 #define VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE	800
@@ -611,13 +612,17 @@ VMwareType::adjustCkptConfig(const char* vmconfig)
 
 		// remove local parameters between VMWARE_VM_CONFIG_LOCAL_PARAMS_START 
 		// and VMWARE_VM_CONFIG_LOCAL_PARAMS_END
-		if( !strncasecmp(one_line.Value(), VMWARE_VM_CONFIG_LOCAL_PARAMS_START,
-					strlen(VMWARE_VM_CONFIG_LOCAL_PARAMS_START)) ) {
+		if( !strncasecmp(one_line.Value(),
+		                 VMWARE_LOCAL_SETTINGS_START_MARKER,
+		                 strlen(VMWARE_LOCAL_SETTINGS_START_MARKER)) )
+		{
 			in_local_param = true;
 			continue;
 		}
-		if( !strncasecmp(one_line.Value(), VMWARE_VM_CONFIG_LOCAL_PARAMS_END,
-					strlen(VMWARE_VM_CONFIG_LOCAL_PARAMS_END)) ) {
+		if( !strncasecmp(one_line.Value(),
+		                 VMWARE_LOCAL_SETTINGS_END_MARKER,
+		                 strlen(VMWARE_LOCAL_SETTINGS_END_MARKER)) )
+		{
 			in_local_param = false;
 			continue;
 		}
@@ -640,12 +645,12 @@ VMwareType::adjustCkptConfig(const char* vmconfig)
 
 				tmp_string.sprintf("VMWARE_%s_NETWORKING_TYPE", tmp_string2.Value());
 
-				char *net_type = vmgahp_param(tmp_string.Value());
+				char *net_type = param(tmp_string.Value());
 				if( net_type ) {
 					networking_type = delete_quotation_marks(net_type);
 					free(net_type);
 				}else {
-					net_type = vmgahp_param("VMWARE_NETWORKING_TYPE");
+					net_type = param("VMWARE_NETWORKING_TYPE");
 					if( net_type ) {
 						networking_type = delete_quotation_marks(net_type);
 						free(net_type);
@@ -687,14 +692,17 @@ VMwareType::adjustCkptConfig(const char* vmconfig)
 	}
 
 	// Insert local parameters
-	if( write_forced_vm_params_to_file(fp,
-			VMWARE_VM_CONFIG_LOCAL_PARAMS_START, 
-			VMWARE_VM_CONFIG_LOCAL_PARAMS_END) == false ) {
-		vmprintf(D_ALWAYS, "failed to fprintf in adjustCkptConfig (%s:%s)\n",
-				vmconfig, strerror(errno));
+	if (!write_local_settings_from_file(fp,
+	                                    VMWARE_LOCAL_SETTINGS_PARAM,
+	                                    VMWARE_LOCAL_SETTINGS_START_MARKER,
+	                                    VMWARE_LOCAL_SETTINGS_END_MARKER))
+	{
+		vmprintf(D_ALWAYS,
+		         "failed to add local settings in adjustCkptConfig\n");
 		fclose(fp);
 		return false;
 	}
+
 	fclose(fp);
 
 	// change permission
@@ -1821,12 +1829,12 @@ VMwareType::CreateConfigFile()
 
 		tmp_string.sprintf("VMWARE_%s_NETWORKING_TYPE", tmp_string2.Value());
 
-		char *net_type = vmgahp_param(tmp_string.Value());
+		char *net_type = param(tmp_string.Value());
 		if( net_type ) {
 			networking_type = delete_quotation_marks(net_type);
 			free(net_type);
 		}else {
-			net_type = vmgahp_param("VMWARE_NETWORKING_TYPE");
+			net_type = param("VMWARE_NETWORKING_TYPE");
 			if( net_type ) {
 				networking_type = delete_quotation_marks(net_type);
 				free(net_type);
@@ -1875,12 +1883,13 @@ VMwareType::CreateConfigFile()
 		}
 	}
 
-	if( write_forced_vm_params_to_file(config_fp,
-			VMWARE_VM_CONFIG_LOCAL_PARAMS_START, 
-			VMWARE_VM_CONFIG_LOCAL_PARAMS_END) == false ) {
-		vmprintf(D_ALWAYS, "failed to fprintf in CreateConfigFile(%s:%s)\n",
-				tmp_config_name.Value(), strerror(errno));
-
+	if (!write_local_settings_from_file(config_fp,
+	                                    VMWARE_LOCAL_SETTINGS_PARAM,
+	                                    VMWARE_LOCAL_SETTINGS_START_MARKER,
+	                                    VMWARE_LOCAL_SETTINGS_END_MARKER))
+	{
+		vmprintf(D_ALWAYS,
+		         "failed to add local settings in CreateConfigFile\n");
 		fclose(config_fp);
 		unlink(tmp_config_name.Value());
 		m_result_msg = VMGAHP_ERR_INTERNAL;
@@ -1982,10 +1991,10 @@ VMwareType::checkVMwareParams(VMGahpConfig* config)
 	}
 
 	// find perl program
-	config_value = vmgahp_param("VMWARE_PERL");
+	config_value = param("VMWARE_PERL");
 	if( !config_value ) {
-		vmprintf(D_ALWAYS, "\nERROR: You should define 'VMWARE_PERL' "
-				"in \"%s\"\n", config->m_configfile.Value());
+		vmprintf(D_ALWAYS,
+		         "\nERROR: 'VMWARE_PERL' not in configuration\n");
 		return false;
 	}
 	fixedvalue = delete_quotation_marks(config_value);
@@ -1993,11 +2002,10 @@ VMwareType::checkVMwareParams(VMGahpConfig* config)
 	config->m_prog_for_script = fixedvalue;
 
 	// find script program for VMware
-	config_value = vmgahp_param("VMWARE_SCRIPT");
+	config_value = param("VMWARE_SCRIPT");
 	if( !config_value ) {
-		vmprintf(D_ALWAYS, "\nERROR: You should define 'VMWARE_SCRIPT' for "
-				"the script program for VMware in \"%s\"\n", 
-				config->m_configfile.Value());
+		vmprintf(D_ALWAYS,
+		         "\nERROR: 'VMWARE_SCRIPT' not in configuration\n");
 		return false;
 	}
 	fixedvalue = delete_quotation_marks(config_value);

@@ -45,25 +45,18 @@ static unsigned long get_image_size(procInfo& pi)
 #endif
 }
 
-static bool check_vmgahp_permissions(const char* vmgahp, const char* gahpconfig, const char* vmtype)
+static bool check_vmgahp_permissions(const char* vmgahp, const char* vmtype)
 {
-	if( !vmgahp || vmgahp[0] == '\0' || !gahpconfig || gahpconfig[0] == '\0' || 
-			!vmtype || vmtype[0] == '\0' ) {
+	if( !vmgahp || vmgahp[0] == '\0' || !vmtype || vmtype[0] == '\0' ) {
 		return false;
 	}
 
 #if !defined(WIN32) 
 	bool vmgahp_has_setuid_root = false;
 	struct stat vmgahp_sbuf;
-	struct stat gahpconfig_sbuf;
 	if( stat(vmgahp, &vmgahp_sbuf) < 0 )  {
 		dprintf( D_ALWAYS, "ERROR: Failed to stat() for \"%s\":%s\n",
 				vmgahp, strerror(errno));
-		return false;
-	}
-	if( stat(gahpconfig, &gahpconfig_sbuf) < 0 )  {
-		dprintf( D_ALWAYS, "ERROR: Failed to stat() for \"%s\":%s\n",
-				gahpconfig, strerror(errno));
 		return false;
 	}
 
@@ -76,11 +69,6 @@ static bool check_vmgahp_permissions(const char* vmgahp, const char* gahpconfig,
 	if( vmgahp_sbuf.st_mode & S_IWOTH ) {
 		dprintf( D_ALWAYS, "ERROR: other writable bit is not allowed for \"%s\" "
 			   "due to security issues\n", vmgahp);
-		return false;
-	}
-	if( gahpconfig_sbuf.st_mode & S_IWOTH ) {
-		dprintf( D_ALWAYS, "ERROR: other writable bit is not allowed for \"%s\" "
-			   "due to security issues\n", gahpconfig);
 		return false;
 	}
 
@@ -128,22 +116,6 @@ static bool check_vmgahp_permissions(const char* vmgahp, const char* gahpconfig,
 			}
 		}
 
-		if( vmgahp_has_setuid_root || need_setuid_root ) {
-			// vmgahp has setuid-root
-			if( gahpconfig_sbuf.st_uid != 0 ) {
-				if( need_setuid_root ) {
-					dprintf(D_ALWAYS, "ERROR: Because vmgahp(\"%s\") need to have "
-							"setuid-root, the owner of both \"%s\" and script program "
-							"must be root\n", vmgahp, gahpconfig);
-				}else {
-					dprintf(D_ALWAYS, "ERROR: Because vmgahp(\"%s\") has setuid-root, "
-							"the owner of both \"%s\" and script program must be root\n",
-							vmgahp, gahpconfig);
-				}
-				return false;
-			}
-		}
-
 		if( need_setuid_root ) {
 			return false;
 		}
@@ -167,12 +139,6 @@ static bool check_vmgahp_permissions(const char* vmgahp, const char* gahpconfig,
 				return false;
 			}
 		}
-
-		if( gahpconfig_sbuf.st_uid != 0 ) {
-			dprintf(D_ALWAYS, "ERROR: For Xen vmgahp the owner of \"%s\" must be root\n", 
-					gahpconfig);
-			return false;
-		}
 #endif
 	}else if( !strcasecmp(vmtype, CONDOR_VM_UNIVERSE_VMWARE)) {
 #if !defined(WIN32) 
@@ -181,11 +147,6 @@ static bool check_vmgahp_permissions(const char* vmgahp, const char* gahpconfig,
 			if( !(vmgahp_sbuf.st_mode & S_IXOTH) ) {
 				dprintf(D_ALWAYS, "ERROR: \"%s\" must be executable for anybody.\n", 
 						vmgahp); 
-				return false;
-			}
-			if( !(gahpconfig_sbuf.st_mode & S_IROTH) ) {
-				dprintf(D_ALWAYS, "ERROR: \"%s\" must be readable for anybody.\n", 
-						gahpconfig); 
 				return false;
 			}
 		}
@@ -365,7 +326,6 @@ VMUniverseMgr::init( void )
 {
 	MyString vmtype;
 	MyString vmgahppath;
-	MyString vmgahpconfig;
 
 	m_vm_type = "";
 
@@ -401,15 +361,6 @@ VMUniverseMgr::init( void )
 	vmgahppath = tmp;
 	free(tmp);
 
-	tmp = param( "VM_GAHP_CONFIG" );
-	if( !tmp ) {
-		dprintf( D_ALWAYS, "To support vm universe, '%s' must be defined "
-				"in condor config file\n", "VM_GAHP_CONFIG"); 
-		return false;
-	}
-	vmgahpconfig = tmp;
-	free(tmp);
-
 	m_vm_max_num = 0;
 	tmp = param( "VM_MAX_NUMBER");
 	if( tmp ) {
@@ -421,11 +372,10 @@ VMUniverseMgr::init( void )
 	}
 
 	// now, we've got a path to a vmgahp server.  
-	// try to test it with given vmtype and gahp config file 
+	// try to test it with given vmtype 
 	// and grab the output (whose format should be a classad type), 
 	// and set the appropriate values for vm universe
-	if( testVMGahp(vmgahppath.Value(), vmgahpconfig.Value(), 
-				vmtype.Value()) == false ) {
+	if( testVMGahp(vmgahppath.Value(), vmtype.Value()) == false ) {
 		dprintf( D_ALWAYS, "Test of vmgahp for VM_TYPE('%s') failed. "
 				"So we disabled VM Universe\n", vmtype.Value());
 		m_vm_type = "";
@@ -519,7 +469,7 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t mask )
 }
 
 bool
-VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, const char* vmtype)
+VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 {
 	m_needCheck = false;
 
@@ -527,11 +477,11 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, cons
 		return false;
 	}
 
-	if( !gahppath || !gahpconfigfile || !vmtype ) {
+	if( !gahppath || !vmtype ) {
 		return false;
 	}
 
-	if( !check_vmgahp_permissions(gahppath, gahpconfigfile, vmtype) ) {
+	if( !check_vmgahp_permissions(gahppath, vmtype) ) {
 		return false;
 	}
 
@@ -555,7 +505,7 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, cons
 
 	// vmgahp is daemonCore, so we need to add -f -t options of daemonCore.
 	// Then, try to execute vmgahp with 
-	// "gahpconfig <gahpconfigfile> vmtype <vmtype>"
+	// vmtype <vmtype>"
 	// and grab the output as a ClassAd
 	ArgList systemcmd;
 	systemcmd.AppendArg(gahppath);
@@ -568,8 +518,6 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, cons
 	}
 	systemcmd.AppendArg("-M");
 	systemcmd.AppendArg(VMGAHP_TEST_MODE);
-	systemcmd.AppendArg("gahpconfig");
-	systemcmd.AppendArg(gahpconfigfile);
 	systemcmd.AppendArg("vmtype");
 	systemcmd.AppendArg(vmtype);
 
@@ -658,20 +606,9 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, cons
 
 			if( can_switch_ids() ) {
 				// Condor runs as root
-#if defined(WIN32)
-				err_msg2.sprintf("### - \"%s\" must be readable for anybody.\n", 
-						gahpconfigfile);
-				err_msg += err_msg2;
-#endif
-
 				err_msg += "### - The script program like 'condor_vm_vmware.pl'";
 				err_msg += " must be readable for anybody.\n";
 			}
-
-#if !defined(WIN32)
-			err_msg += "### - Other writable bit for the vmgahp config file and ";
-			err_msg += "script program is not allowed\n";
-#endif
 
 			err_msg += "### - Check the path of vmware-cmd, vmrun, and mkisofs ";
 			err_msg += "in 'condor_vm_vmware.pl\n'";
@@ -765,7 +702,6 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, cons
 	// Now, we received correct information from vmgahp
 	m_vm_type = tmp_vmtype;
 	m_vmgahp_server = gahppath;
-	m_vmgahp_config = gahpconfigfile;
 
 	return true;
 }
@@ -1030,8 +966,7 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 	if( !info ) {
 		return;
 	}
-	if( !m_vm_type.Length() || !m_vmgahp_server.Length() || 
-			!m_vmgahp_config.Length() ) {
+	if( !m_vm_type.Length() || !m_vmgahp_server.Length() ) {
 		return;
 	}
 
@@ -1061,7 +996,7 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 
 	// vmgahp is daemonCore, so we need to add -f -t options of daemonCore.
 	// Then, try to execute vmgahp with 
-	// "gahpconfig <gahpconfigfile> vmtype <vmtype> match <string>"
+	// vmtype <vmtype> match <string>"
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_vmgahp_server);
 	systemcmd.AppendArg("-f");
@@ -1073,8 +1008,6 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 	}
 	systemcmd.AppendArg("-M");
 	systemcmd.AppendArg(VMGAHP_KILL_MODE);
-	systemcmd.AppendArg("gahpconfig");
-	systemcmd.AppendArg(m_vmgahp_config);
 	systemcmd.AppendArg("vmtype");
 	systemcmd.AppendArg(m_vm_type);
 	systemcmd.AppendArg("match");

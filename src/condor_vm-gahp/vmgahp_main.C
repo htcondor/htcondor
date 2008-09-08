@@ -244,7 +244,7 @@ usage( char *name)
 {
 	vmprintf(D_ALWAYS, 
 			"Usage: \n"
-			"\tTestMode: %s -f -t -M 0 gahpconfig <configfile> vmtype <vmtype> \n"
+			"\tTestMode: %s -f -t -M 0 vmtype <vmtype> \n"
 			"\tIOMode: %s -f -t -M 1\n"
 			"\tWorkerMode: %s -f -t -M 2\n"
 			"\tStandAlone: %s -f -t -M 3\n", name, name, name, name);
@@ -254,7 +254,6 @@ usage( char *name)
 
 int main_init(int argc, char *argv[])
 {
-	MyString configfile;
 	MyString vmtype;
 	MyString matchstring;
 
@@ -316,7 +315,7 @@ int main_init(int argc, char *argv[])
 	vmprintf(D_ALWAYS, "VM-GAHP initialized with run-mode %d\n", vmgahp_mode);
 
 	if( (vmgahp_mode == VMGAHP_TEST_MODE) || (vmgahp_mode == VMGAHP_KILL_MODE )) {
-		char _gahpconfig[] = "gahpconfig";
+
 		char _vmtype[] = "vmtype";
 		char _match[] = "match";
 
@@ -329,16 +328,6 @@ int main_init(int argc, char *argv[])
 			opt = tmp[0];
 			arg = tmp[1];
 			opt_len = strlen(opt);
-
-			if( ! strncmp(opt, _gahpconfig, opt_len) ) {
-				// path of config file
-				if( !arg ) {
-					usage(argv[0]);
-				}
-				configfile = arg;
-				tmp++; //consume the arg so we don't get confused
-				continue;
-			}
 
 			if( ! strncmp(opt, _vmtype, opt_len) ) {
 				// vm type
@@ -364,23 +353,17 @@ int main_init(int argc, char *argv[])
 		}
 
 		if( vmgahp_mode == VMGAHP_TEST_MODE ) {
-			if( ( configfile.Length() == 0 ) || ( vmtype.Length() == 0 ) ) {
+			if( vmtype.Length() == 0 ) {
 				usage(argv[0]);
 			}
 		}else if( vmgahp_mode == VMGAHP_KILL_MODE ) {
-			if( ( configfile.Length() == 0 ) || ( vmtype.Length() == 0 ) ||
-					( matchstring.Length() == 0 )) {
+			if( ( vmtype.Length() == 0 ) ||
+			    ( matchstring.Length() == 0 ) )
+			{
 				usage(argv[0]);
 			}
 		}
 	}else {
-		// Read parameters from environment variables
-		configfile = getenv("VMGAHP_CONFIG");
-		if( configfile.IsEmpty() ) {
-			vmprintf(D_ALWAYS, "cannot find gahp config file\n");
-			DC_Exit(1);
-		}
-
 		vmtype = getenv("VMGAHP_VMTYPE");
 		if( vmtype.IsEmpty() ) {
 			vmprintf(D_ALWAYS, "cannot find vmtype\n");
@@ -419,26 +402,11 @@ int main_init(int argc, char *argv[])
 	}
 #endif
 
-	// check permissions of vmgahp config file
-	vmgahp_set_root_priv();
-	if( check_vmgahp_config_permission(configfile.Value(), 
-				vmtype.Value()) == false ) {
-		DC_Exit(1);
-	}
-
-	// Read config file
-	vmgahp_set_root_priv();
-	if( read_vmgahp_configfile(configfile.Value()) < 0 ) {
-		vmprintf( D_ALWAYS, "\nERROR: Failed to parse vmgahp "
-				"config file(%s)\n", configfile.Value()); 
-		DC_Exit(1);
-	}
-
 	// create VMGahpConfig and fill it with vmgahp config parameters
 	VMGahpConfig *gahpconfig = new VMGahpConfig;
 	ASSERT(gahpconfig);
 	vmgahp_set_root_priv();
-	if( gahpconfig->init(vmtype.Value(), configfile.Value()) == false ) {
+	if( gahpconfig->init(vmtype.Value()) == false ) {
 		DC_Exit(1);
 	}
 
@@ -454,7 +422,7 @@ int main_init(int argc, char *argv[])
 
 	vmgahp_set_condor_priv();
 
-	// Check if vm specific paramaters are valid in vmgahp config file
+	// Check if vm specific paramaters are valid in config file
 #if defined(LINUX)
 	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
 		priv_state priv = vmgahp_set_root_priv();

@@ -148,10 +148,6 @@ VMGahp::startWorker()
 	}
 	vmgahp_server = vmgahpserver;
 	free(vmgahpserver);
-
-	// vm gahp configuration file
-	MyString vmgahp_config;
-	vmgahp_config = m_gahp_config->m_configfile;
 	
 	// vm_type
 	MyString vm_type;
@@ -250,7 +246,6 @@ VMGahp::startWorker()
 #endif
 
 	// Set vmgahp env
-	job_env.SetEnv("VMGAHP_CONFIG", vmgahp_config.Value());
 	job_env.SetEnv("VMGAHP_VMTYPE", vm_type.Value());
 	job_env.SetEnv("VMGAHP_WORKING_DIR", m_workingdir.Value());
 

@@ -137,7 +137,6 @@ VMProc::cleanup()
 
 	m_vm_type = "";
 	m_vmgahp_server = "";
-	m_vmgahp_config = "";
 
 	// set is_suspended to false in os_proc.h 
 	is_suspended = false;
@@ -184,18 +183,6 @@ VMProc::StartJob()
 	}
 	m_vmgahp_server = vmgahpfile;
 	free(vmgahpfile);
-
-	// Find vmgahp config file
-	char* vmgahpconfig = param( "VM_GAHP_CONFIG" );
-	if( !vmgahpconfig || (access(vmgahpconfig,F_OK) < 0) ) {
-		// make certain the vmgahp config file exists
-		dprintf(D_ALWAYS, "vmgahp config file cannot be found\n");
-		reportErrorToStartd();
-		if (vmgahpconfig) { free(vmgahpconfig); vmgahpconfig = NULL; }
-		return false;
-	}
-	m_vmgahp_config = vmgahpconfig;
-	free(vmgahpconfig);
 
 	if( !JobAd ) {
 		dprintf(D_ALWAYS, "No JobAd in VMProc::StartJob()!\n");
@@ -330,8 +317,9 @@ VMProc::StartJob()
 	Starter->jic->notifyJobPreSpawn();
 
 	//create vmgahp server
-	m_vmgahp = new VMGahpServer(m_vmgahp_server.Value(), 
-			m_vmgahp_config.Value(), m_vm_type.Value(), JobAd);
+	m_vmgahp = new VMGahpServer(m_vmgahp_server.Value(),
+	                            m_vm_type.Value(),
+	                            JobAd);
 	ASSERT(m_vmgahp);
 
 	m_vmgahp->start_err_msg = "";

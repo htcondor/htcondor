@@ -44,14 +44,10 @@ bool check_vm_read_access_file(const char *file, bool is_root = false);
 bool check_vm_write_access_file(const char *file, bool is_root = false);
 bool check_vm_execute_file(const char *file, bool is_root = false);
 
-char *vmgahp_param(const char* name);
-int vmgahp_param_integer( const char* name, int default_value, int min_value = INT_MIN, int max_value = INT_MAX );
-bool vmgahp_param_boolean( const char* name, const bool default_value );
-
-int read_vmgahp_configfile( const char *config );
-bool check_vmgahp_config_permission(const char* configfile, const char* vmtype);
-bool write_specific_vm_params_to_file(const char *prefix, FILE *file);
-bool write_forced_vm_params_to_file(FILE *file, const char* startmark, const char* endmark);
+bool write_local_settings_from_file(FILE* out_fp,
+                                    const char* param_name,
+                                    const char* start_mark = NULL,
+                                    const char* end_mark = NULL);
 
 MyString parse_result_string( const char *result_string, int field_num);
 bool verify_digit_arg(const char *s);

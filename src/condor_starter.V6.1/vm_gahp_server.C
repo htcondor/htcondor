@@ -37,8 +37,10 @@
 #include "vm_gahp_request.h"
 #include "starter_privsep_helper.h"
 
-VMGahpServer::VMGahpServer(const char *vmgahpserver, const char *vmgahpconfig, 
-		const char *vmtype, ClassAd* job_ad) : m_request_table(20, &hashFuncInt)
+VMGahpServer::VMGahpServer(const char *vmgahpserver,
+                           const char *vmtype,
+                           ClassAd* job_ad) :
+	m_request_table(20, &hashFuncInt)
 {
 	m_is_initialized = false;
 	m_is_cleanuped = false;
@@ -62,7 +64,6 @@ VMGahpServer::VMGahpServer(const char *vmgahpserver, const char *vmgahpconfig,
 
 	m_vm_type = vmtype;
 	m_vmgahp_server = vmgahpserver;
-	m_vmgahp_config = vmgahpconfig;
 	m_job_ad = job_ad;
 
 	char *gahp_log_file = param("VM_GAHP_LOG");
@@ -354,8 +355,6 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	}
 #endif
 
-	// Set vmgahp env
-	job_env->SetEnv("VMGAHP_CONFIG", m_vmgahp_config.Value());
 	job_env->SetEnv("VMGAHP_VMTYPE", m_vm_type.Value());
 	job_env->SetEnv("VMGAHP_WORKING_DIR", workingdir);
 
@@ -1476,8 +1475,7 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 void
 VMGahpServer::killVM(void)
 {
-	if( m_vm_type.IsEmpty() || m_vmgahp_server.IsEmpty() || 
-			m_vmgahp_config.IsEmpty() ) {
+	if( m_vm_type.IsEmpty() || m_vmgahp_server.IsEmpty() ) {
 		return;
 	}
 
@@ -1506,7 +1504,7 @@ VMGahpServer::killVM(void)
 
 	// vmgahp is daemonCore, so we need to add -f -t options of daemonCore.
 	// Then, try to execute vmgahp with 
-	// "gahpconfig <gahpconfigfile> vmtype <vmtype> match <string>"
+	// vmtype <vmtype> match <string>"
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_vmgahp_server);
 	systemcmd.AppendArg("-f");
@@ -1515,8 +1513,6 @@ VMGahpServer::killVM(void)
 	}
 	systemcmd.AppendArg("-M");
 	systemcmd.AppendArg(VMGAHP_KILL_MODE);
-	systemcmd.AppendArg("gahpconfig");
-	systemcmd.AppendArg(m_vmgahp_config);
 	systemcmd.AppendArg("vmtype");
 	systemcmd.AppendArg(m_vm_type);
 	systemcmd.AppendArg("match");

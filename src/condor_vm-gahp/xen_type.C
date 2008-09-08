@@ -38,6 +38,9 @@
 #define XEN_MEM_SAVED_FILE "xen.mem.ckpt"
 #define XEN_CKPT_TIMESTAMP_FILE XEN_MEM_SAVED_FILE XEN_CKPT_TIMESTAMP_FILE_SUFFIX
 
+#define XEN_LOCAL_SETTINGS_PARAM "XEN_LOCAL_SETTINGS_FILE"
+#define XEN_LOCAL_VT_SETTINGS_PARAM "XEN_LOCAL_VT_SETTINGS_FILE"
+
 static MyString
 getScriptErrorString(const char* fname)
 {
@@ -738,7 +741,7 @@ XenType::CreateXMConfigFile(const char* filename)
 		}
 
 		if( m_xen_hw_vt ) {
-			xen_vif_param = vmgahp_param("XEN_VT_VIF");
+			xen_vif_param = param("XEN_VT_VIF");
 			if( xen_vif_param ) {
 				networking_type = delete_quotation_marks(xen_vif_param);
 				free(xen_vif_param);
@@ -753,13 +756,13 @@ XenType::CreateXMConfigFile(const char* filename)
 			tmp_string2.strupr();
 
 			tmp_string.sprintf("XEN_%s_VIF_PARAMETER", tmp_string2.Value());
-			xen_vif_param = vmgahp_param(tmp_string.Value());
+			xen_vif_param = param(tmp_string.Value());
 
 			if( xen_vif_param) {
 				networking_type = delete_quotation_marks(xen_vif_param);
 				free(xen_vif_param);
 			}else {
-				xen_vif_param = vmgahp_param("XEN_VIF_PARAMETER");
+				xen_vif_param = param("XEN_VIF_PARAMETER");
 				if( xen_vif_param ) {
 					networking_type = delete_quotation_marks(xen_vif_param);
 					free(xen_vif_param);
@@ -787,7 +790,7 @@ XenType::CreateXMConfigFile(const char* filename)
 	}
 
 	if( m_xen_hw_vt ) {
-		if( write_specific_vm_params_to_file("XEN_VT_", fp) == false ) {
+		if (!write_local_settings_from_file(fp, XEN_LOCAL_VT_SETTINGS_PARAM)) {
 			goto xmwriteerror;
 		}
 	}
@@ -798,9 +801,10 @@ XenType::CreateXMConfigFile(const char* filename)
 		}
 	}
 
-	if( write_forced_vm_params_to_file(fp, NULL, NULL) == false ) {
+	if (!write_local_settings_from_file(fp, XEN_LOCAL_SETTINGS_PARAM)) {
 		goto xmwriteerror;
 	}
+
 	fclose(fp);
 	fp = NULL;
 
@@ -847,7 +851,7 @@ XenType::CreateVirshConfigFile(const char* filename)
 		return false;
 	}
 
-	config_value = vmgahp_param( "XEN_BRIDGE_SCRIPT" );
+	config_value = param( "XEN_BRIDGE_SCRIPT" );
 	if( !config_value ) {
 		vmprintf(D_ALWAYS, "XEN_BRIDGE_SCRIPT is not defined in the "
 				 "vmgahp config file\n");
@@ -989,9 +993,10 @@ XenType::CreateVirshConfigFile(const char* filename)
 		goto virshwriteerror;
 	}
 
-	if( write_forced_vm_params_to_file(fp, NULL, NULL) == false ) {
+	if (!write_local_settings_from_file(fp, XEN_LOCAL_SETTINGS_PARAM)) {
 		goto virshwriteerror;
 	}
+
 	fclose(fp);
 	fp = NULL;
 
@@ -1053,7 +1058,7 @@ XenType::CreateConfigFile()
 	}
 
 	// First try to read XEN_CONTROLLER
-	config_value = vmgahp_param("XEN_CONTROLLER");
+	config_value = param("XEN_CONTROLLER");
 	if( !config_value ) {
 		vmprintf(D_ALWAYS, "\nERROR: You should define 'XEN_CONTROLLER' "
 				"in vmgahp config file\n");
@@ -1086,7 +1091,7 @@ XenType::CreateConfigFile()
 
 	if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_ANY) == 0) {
 		vmprintf(D_ALWAYS, "VMGahp will use default xen kernel\n");
-		config_value = vmgahp_param( "XEN_DEFAULT_KERNEL" );
+		config_value = param( "XEN_DEFAULT_KERNEL" );
 		if( !config_value ) {
 			vmprintf(D_ALWAYS, "Default xen kernel is not defined "
 					"in vmgahp config file\n");
@@ -1096,7 +1101,7 @@ XenType::CreateConfigFile()
 			m_xen_kernel_file = delete_quotation_marks(config_value);
 			free(config_value);
 
-			config_value = vmgahp_param( "XEN_DEFAULT_INITRD" );
+			config_value = param( "XEN_DEFAULT_INITRD" );
 			if( config_value ) {
 				m_xen_initrd_file = delete_quotation_marks(config_value);
 				free(config_value);
@@ -1104,7 +1109,7 @@ XenType::CreateConfigFile()
 		}
 	}else if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0) {
 		vmprintf(D_ALWAYS, "VMGahp will use xen bootloader\n");
-		config_value = vmgahp_param( "XEN_BOOTLOADER" );
+		config_value = param( "XEN_BOOTLOADER" );
 		if( !config_value ) {
 			vmprintf(D_ALWAYS, "xen bootloader is not defined "
 					"in vmgahp config file\n");
@@ -1122,7 +1127,7 @@ XenType::CreateConfigFile()
 		}
 		m_xen_hw_vt = true;
 		m_allow_hw_vt_suspend = 
-			vmgahp_param_boolean("XEN_ALLOW_HARDWARE_VT_SUSPEND", false);
+			param_boolean("XEN_ALLOW_HARDWARE_VT_SUSPEND", false);
 	}else {
 		// A job user defined a customized kernel
 		// make sure that the file for xen kernel is readable
@@ -1368,7 +1373,7 @@ XenType::makeXMDiskString(void)
 	char* tmp_ptr = NULL;
 
 	MyString iostring;
-	tmp_ptr = vmgahp_param("XEN_IMAGE_IO_TYPE" );
+	tmp_ptr = param("XEN_IMAGE_IO_TYPE" );
 	if( !tmp_ptr ) {
 		//Default io type is file:
 		iostring = "file:";
@@ -1381,7 +1386,7 @@ XenType::makeXMDiskString(void)
 	}
 
 	MyString devicestring;
-	tmp_ptr = vmgahp_param("XEN_DEVICE_TYPE_FOR_VT");
+	tmp_ptr = param("XEN_DEVICE_TYPE_FOR_VT");
 	if( tmp_ptr ) {
 		devicestring = delete_quotation_marks(tmp_ptr);
 		free(tmp_ptr);
@@ -1608,10 +1613,10 @@ XenType::checkXenParams(VMGahpConfig* config)
 	}
 
 	// First try to read XEN_CONTROLLER
-	config_value = vmgahp_param("XEN_CONTROLLER");
+	config_value = param("XEN_CONTROLLER");
 	if( !config_value ) {
-		vmprintf(D_ALWAYS, "\nERROR: You should define 'XEN_CONTROLLER' "
-				"in \"%s\"\n", config->m_configfile.Value());
+		vmprintf(D_ALWAYS,
+		         "\nERROR: 'XEN_CONTROLLER' not defined in configuration\n");
 		return false;
 	}
 	fixedvalue = delete_quotation_marks(config_value);
@@ -1621,18 +1626,17 @@ XenType::checkXenParams(VMGahpConfig* config)
 	const char* tmp_base_name = condor_basename(fixedvalue.Value());
 	if( strcmp(tmp_base_name, "xm") && strcmp(tmp_base_name, "virsh") ) {
 		vmprintf(D_ALWAYS, "\nERROR: Not supported xen controller(%s), "
-				"XEN_CONTROLLER should be either 'xm' or 'virsh' in \"%s\"\n", 
-				fixedvalue.Value(), config->m_configfile.Value());
+				"XEN_CONTROLLER should be either 'xm' or 'virsh'\n", 
+				fixedvalue.Value());
 		return false;
 	}
 	config->m_controller = fixedvalue;
 
 	// find script program for Xen
-	config_value = vmgahp_param("XEN_SCRIPT");
+	config_value = param("XEN_SCRIPT");
 	if( !config_value ) {
-		vmprintf(D_ALWAYS, "\nERROR: You should define 'XEN_SCRIPT' for "
-				"the script program for Xen in \"%s\"\n", 
-				config->m_configfile.Value());
+		vmprintf(D_ALWAYS,
+		         "\nERROR: 'XEN_SCRIPT' not defined in configuration\n");
 		return false;
 	}
 	fixedvalue = delete_quotation_marks(config_value);
@@ -1675,7 +1679,7 @@ XenType::checkXenParams(VMGahpConfig* config)
 	config->m_vm_script = fixedvalue;
 
 	// Read XEN_DEFAULT_KERNEL (required parameter)
-	config_value = vmgahp_param("XEN_DEFAULT_KERNEL");
+	config_value = param("XEN_DEFAULT_KERNEL");
 	if( !config_value ) {
 		vmprintf(D_ALWAYS, "\nERROR: You should define the default "
 				"kernel for Xen\n");
@@ -1690,7 +1694,7 @@ XenType::checkXenParams(VMGahpConfig* config)
 	}
 	
 	// Read XEN_DEFAULT_INITRD (optional parameter)
-	config_value = vmgahp_param("XEN_DEFAULT_INITRD");
+	config_value = param("XEN_DEFAULT_INITRD");
 	if( config_value ) {
 		fixedvalue = delete_quotation_marks(config_value);
 		free(config_value);
@@ -1702,7 +1706,7 @@ XenType::checkXenParams(VMGahpConfig* config)
 	}
 
 	// Read XEN_BOOTLOADER (required parameter)
-	config_value = vmgahp_param("XEN_BOOTLOADER");
+	config_value = param("XEN_BOOTLOADER");
 	if( !config_value ) {
 		vmprintf(D_ALWAYS, "\nERROR: You should define Xen bootloader\n");
 		return false;
