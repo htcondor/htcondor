@@ -167,7 +167,7 @@ CBUILD($(CC),job_ckpt_io-async_std,c)
 DEP_SYMLINK_EXT(job_ckpt_io-async_std,cmd)
 RUN(job_ckpt_io-async_std)
 TESTCLASS(job_ckpt_io-async_std,stduniv)
-TESTCLASS(job_ckpt_io-async_std,long)
+TESTCLASS(job_ckpt_io-async_std,quick)
 TESTCLASS(job_ckpt_io-async_std,full)
 TESTCLASS(job_ckpt_io-async_std,ckpt)
 

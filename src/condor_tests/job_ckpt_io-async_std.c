@@ -59,7 +59,8 @@ main( int argc, char *argv[] )
 	int		count;
 
 	if( argc != 2 ) {
-		fprintf( stderr, "Usage %s seconds\n", argv[0] );
+		fprintf( stderr, "Usage %s [seconds willing to wait for ckpt signal]\n",
+			argv[0] );
 		exit( 1 );
 	}
 
@@ -75,6 +76,14 @@ main( int argc, char *argv[] )
 	}
 
 	init_data( Data, sizeof(Data) );
+
+	/* ok, running for X seconds is a bit disingenuous because the program
+		could run for 5 seconds, checkpoint and be idle for > count seconds,
+		and when it restarts, immediately terminate. Since this test really
+		needs us to wait around for a checkpoint signal, the seconds count
+		is really the time we're willing to wait for a checkpoint signal
+		before stopping the io loop and exiting.
+	*/
 
 	time_t b4 = time(0);
 	i = 0;
