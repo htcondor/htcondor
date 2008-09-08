@@ -131,6 +131,10 @@ LinuxHibernator::tryShutdown ( bool force ) const
 	if ( m_has_pm_utils ) {
 		
 	}
+	else if ( m_has_sys_if ) {
+	}
+	else if ( m_has_proc_if ) {
+	}
 	return ok;
 }
 
