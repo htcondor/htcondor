@@ -9415,6 +9415,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		case JOB_EXITED_AND_CLAIM_CLOSING:
 			if( srec->match ) {
 					// startd is not accepting more jobs on this claim
+				srec->match->needs_release_claim = false;
 				DelMrec(srec->match);
 			}
 				// no break, fall through

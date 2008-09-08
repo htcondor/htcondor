@@ -90,6 +90,15 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 			// Anyway, failure to send it is not (currently) critical
 			// in any way.
 	}
+	else {
+		if( claim_is_closing && rip->r_cur ) {
+				// We told the submit-side this claim is closing, so there is
+				// no need to exchange RELEASE_CLAIM messages.  Behave as
+				// though the schedd has already sent us RELEASE_CLAIM.
+			rip->r_cur->scheddClosedClaim();
+			rip->release_claim();
+		}
+	}
 
 	return rval;
 }
