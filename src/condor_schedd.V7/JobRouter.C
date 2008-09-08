@@ -1041,7 +1041,18 @@ JobRouter::SubmitJob(RoutedJob *job) {
 #if HAVE_JOB_HOOKS
 	if (NULL != m_hook_mgr)
 	{
-		int rval = m_hook_mgr->hookTranslateJob(job);
+	        std::string route_info;
+
+	        // Retrieve the routing definition
+	        JobRoute *route = GetRouteByName(job->route_name.c_str());
+        	if(!route) {
+        		dprintf(D_FULLDEBUG,"JobRouter (%s): Unable to retrieve route information for translation hook.\n",job->JobDesc().c_str());
+        		GracefullyRemoveJob(job);
+        		return;
+        	}
+
+		route_info = route->RouteString();
+		int rval = m_hook_mgr->hookTranslateJob(job, route_info);
 		switch (rval)
 		{
 			case -1:    // Error
@@ -1386,6 +1397,7 @@ JobRouter::FinalizeJob(RoutedJob *job) {
 #if HAVE_JOB_HOOKS
 	if (NULL != m_hook_mgr)
 	{
+		// Retrive the IWD, which should be the spool directory
 		std::string spoolDirectory;
 		if (false == job->dest_ad.EvaluateAttrString(ATTR_JOB_IWD, spoolDirectory))
 		{

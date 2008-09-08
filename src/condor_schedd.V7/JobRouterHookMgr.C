@@ -131,7 +131,7 @@ JobRouterHookMgr::getHookPath(HookType hook_type)
 
 
 int
-JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job)
+JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 {
 	ClassAd temp_ad;
 
@@ -162,6 +162,8 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job)
 	}
 
 	MyString hook_stdin;
+	hook_stdin = route_info.c_str();
+	hook_stdin += "\n------\n";
 	temp_ad.sPrint(hook_stdin);
 
 	TranslateClient* translate_client = new TranslateClient(m_hook_translate, r_job);

@@ -35,7 +35,7 @@ public:
 	bool initialize();
 	bool reconfig();
 
-	int hookTranslateJob(RoutedJob* r_job);
+	int hookTranslateJob(RoutedJob* r_job, std::string &route_info);
 	int hookUpdateJobInfo(RoutedJob* r_job);
 	int hookJobExit(RoutedJob* r_job, const char* sandbox);
 	int hookFailureCleanup(RoutedJob* r_job);
