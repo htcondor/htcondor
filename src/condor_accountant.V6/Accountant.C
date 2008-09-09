@@ -579,10 +579,6 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 	  }
 	}
 
-    MyString str;
-    GetAttributeString(ResourceRecord+ResourceName,ATTR_CONCURRENCY_LIMITS,str);
-    DecrementLimits(str);
-
 	AcctLog->BeginTransaction();
     // Update customer's resource usage count
     if (ResourcesUsed>0) ResourcesUsed--;
