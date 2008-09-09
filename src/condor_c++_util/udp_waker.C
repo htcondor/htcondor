@@ -19,53 +19,11 @@
 
  
 #include "condor_common.h"
-#include "power_waker.h"
+#include "udp_waker.h"
 
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
-
-/***************************************************************
- * Base Waker class
- ***************************************************************/
-
-Waker::Waker () {
-}
-
-Waker::~Waker () throw () {
-}
-
-/***************************************************************
- * Hibernator static members 
- ***************************************************************/
-
-/* factory method */
-
-Waker* Waker::createWaker ( ClassAd *ad ) {
-    
-    Waker *waker = NULL;
-
-    if ( !strcmp ( 
-        ad->GetMyTypeName (), 
-        STARTD_ADTYPE ) ) {
-
-	    waker = new UdpWakeOnLanWaker ( ad );
-
-    } else {
-
-        dprintf ( 
-            D_ALWAYS, 
-            "Waker::createWaker: not a machine ad.\n" );
-
-    }
-	
-    return waker;
-
-}
-
-/***************************************************************
- * Specialized classes 
- ***************************************************************/
 
 /***************************************************************
  * UdpWakeOnLanWaker constants

@@ -18,69 +18,22 @@
  ***************************************************************/
 
 /***************************************************************
+ * Headers
+ ***************************************************************/
+
+#include "waker.h"
+
+/***************************************************************
  * Forward declarations
  ***************************************************************/
 
 class ClassAd;
 
 /***************************************************************
- * Base Waker class
- ***************************************************************/
-
-class Waker {
-
-public:
-
-    /** @name Factory method.		.
-		*/
-	//@{
-    
-    /** We use this to create wake objects so we don't need to 
-		deal with the differences between OSs at the invocation 
-		level.
-		@param Class-ad of the machine to be woken.
-        @return if the OS is supported a valid waker object; 
-        otherwise NULL.
-	*/
-	static Waker* createWaker ( ClassAd *ad );
-
-    //@}
-
-	/** @name Instantiation. 
-		*/
-	//@{
-	
-	/// Constructor
-    Waker () throw ();
-	
-    /// Destructor
-    virtual ~Waker () throw ();
-
-    //@}
-
-	/** @name Wake-up Mechanism.
-		Sends
-		*/
-	//@{
-
-    /** Caries out the wake process.
-        @return true if it was succesful; otherwise, false.
-    */
-    virtual bool doWake () const = 0;
-
-    //@}
-
-};
-
-/***************************************************************
- * Specialized classes 
- ***************************************************************/
-
-/***************************************************************
  * UdpWakeOnLanWaker class
  ***************************************************************/
 
-class UdpWakeOnLanWaker : public Waker {
+class UdpWakeOnLanWaker : public WakerBase {
 
 public:
 
