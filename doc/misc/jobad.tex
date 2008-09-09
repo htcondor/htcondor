@@ -67,6 +67,14 @@ seconds the job has spent in suspension for the life of the job.
 \item[\AdAttr{CurrentHosts}:]  The number of hosts in the claimed state,
 due to this job.
 
+%%% ClassAd attribute: DiskUsage
+\index{ClassAd job attribute!DiskUsage}
+\index{DiskUsage!job ClassAd attribute}
+\item[\AdAttr{DiskUsage}:] Amount of disk space (kbytes) in the Condor
+execute directory on the execute machine that this job has used.
+The initial estimate may be specified in the job
+submit file.
+
 %%% ClassAd attribute: EmailAttributes
 \index{ClassAd job attribute!EmailAttributes}
 \index{EmailAttributes!job ClassAd attribute}
@@ -134,6 +142,14 @@ Instead, see the attributes: \AdAttr{ExitBySignal},
 \item[\AdAttr{GridJobStatus}:] A string containing the job's status as
 reported by the remote job management system.
 
+%%% ClassAd attribute: HoldKillSig
+\index{ClassAd job attribute!HoldKillSig}
+\index{HoldKillSig!job ClassAd attribute}
+\item[\AdAttr{HoldKillSig}:]    Currently only for scheduler and local
+universe jobs,
+a string containing a name of
+a signal to be sent to the job if the job is put on hold.
+
 %%% ClassAd attribute: HoldReasonCode
 \index{ClassAd job attribute!HoldReasonCode}
 \index{HoldReasonCode!job ClassAd attribute}
@@ -187,14 +203,6 @@ information to go along with the \Attr{HoldReasonCode}, for
 some values of \Attr{HoldReasonCode}.
 See \Attr{HoldReasonCode} for the values.
 
-%%% ClassAd attribute: HoldKillSig
-\index{ClassAd job attribute!HoldKillSig}
-\index{HoldKillSig!job ClassAd attribute}
-\item[\AdAttr{HoldKillSig}:]    Currently only for scheduler and local
-universe jobs,
-a string containing a name of
-a signal to be sent to the job if the job is put on hold.
-
 %%% ClassAd attribute: HoldReason
 \index{ClassAd job attribute!HoldReason}
 \index{HoldReason!job ClassAd attribute}
@@ -221,14 +229,6 @@ checkpoint file contains the job's memory image).
 A vanilla universe job's \AdAttr{ImageSize} is recomputed
 internally every 15 seconds.
 
-%%% ClassAd attribute: DiskUsage
-\index{ClassAd job attribute!DiskUsage}
-\index{DiskUsage!job ClassAd attribute}
-\item[\AdAttr{DiskUsage}:] Amount of disk space (kbytes) in the Condor
-execute directory on the execute machine that this job has used.
-The initial estimate may be specified in the job
-submit file.
-
 %%% ClassAd attribute: JobLeaseDuration
 \index{ClassAd job attribute!JobLeaseDuration}
 \index{JobLeaseDuration!job ClassAd attribute}
@@ -244,6 +244,15 @@ See section~\ref{sec:Job-Lease} for details on job leases.
 \item[\AdAttr{JobPrio}:]  Integer priority for this job, set by
 \Condor{submit} or \Condor{prio}.  The default value is 0.  The higher
 the number, the greater (better) the priority.
+
+%%% ClassAd attribute: JobRunCount
+\index{ClassAd job attribute!JobRunCount}
+\index{JobRunCount!job ClassAd attribute}
+\item[\AdAttr{JobRunCount}:]  This attribute is retained for backwards
+  compatibility.  It may go away in the future.  It is equivalent to
+  \AdAttr{NumShadowStarts} for all universes except \SubmitCmd{scheduler}.
+  For the \SubmitCmd{scheduler} universe, this attribute is equivalent to
+  \AdAttr{NumJobStarts}.
 
 %%% ClassAd attribute: JobStartDate
 \index{ClassAd job attribute!JobStartDate}
@@ -463,9 +472,14 @@ checkpoint attempted by this job during its lifetime.
 \index{NumShadowStarts!job ClassAd attribute}
 \item[\AdAttr{NumShadowStarts}:]  An integer count of the number of
   times a \Condor{shadow} daemon was started for a given job.
-  This attribute is not defined for \SubmitCmd{local} and
+  This attribute is not defined for
   \SubmitCmd{scheduler} universe jobs, since
   they do not have a \Condor{shadow} daemon associated with them.
+  For \SubmitCmd{local} universe jobs, this attribute \emph{is}
+  defined, even though the process that manages the job is technically
+  a \Condor{starter} rather than a \Condor{shadow}.  
+  This keeps the management of the
+  local universe and other universes as similar as possible.
 
 %%% ClassAd attribute: NumSystemHolds
 \index{ClassAd job attribute!NumSystemHolds}
