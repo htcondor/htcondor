@@ -185,6 +185,7 @@ extern const char * ATTR_HAS_SOAP_API;
 extern const char * ATTR_HAS_WIN_RUN_AS_OWNER;
 extern const char * ATTR_HAS_VM;
 extern const char * ATTR_HELD_JOBS;
+extern const char * ATTR_HIBERNATION_LEVEL;
 extern const char * ATTR_HOLD_KILL_SIG;
 extern const char * ATTR_HOOK_KEYWORD;
 extern const char * ATTR_IDLE_JOBS;

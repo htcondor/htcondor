@@ -136,8 +136,13 @@ char *prt_fds(int maxfd, fd_set *fds);
 struct sockaddr_in *getSockAddr(int sockfd);
 
 /* Using a string of the form "<xx.xx.xx.xx:pppp>" return a 
-the hardware adapter asociated with it */
+the hardware adapter associated with it */
 char* string_to_hardware_address(const char *sinful);
+
+/* Using a string of the form "<xx.xx.xx.xx:pppp>" return a 
+the REAL subnet mask associated with it */
+char* string_to_subnet_mask(const char *sinful);
+
 
 #if defined(__cplusplus)
 }

@@ -127,6 +127,8 @@ private:
 	bool			m_seen_keypress;    // Have we seen our first keypress yet?
 	int				m_clock_day;
 	int				m_clock_min;
+    char*			m_hardware_address;
+    char*           m_subnet_mask;
 		// Static info
 	int				m_num_cpus;
 	int				m_num_real_cpus;
@@ -138,7 +140,6 @@ private:
 	char*			m_subnet;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
 	char*			m_ckptpltfrm;
-	char*			m_hardware_address;
 
 #if defined ( WIN32 )
 	int				m_got_windows_version_info;

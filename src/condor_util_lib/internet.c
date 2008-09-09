@@ -986,7 +986,7 @@ string_to_hardware_address(const char *sinful) {
                         last_address,
                         i;
     CHAR                component[4];
-    DWORD               ok = 0;
+    DWORD               ok                  = 0;
 
     __try {
 
@@ -1075,4 +1075,90 @@ string_to_hardware_address(const char *sinful) {
 #endif
 
     return hardware_address;
+
+}
+
+char*
+string_to_subnet_mask(const char *sinful) {
+
+    char                *subnet_mask   = NULL;
+
+#if defined ( WIN32 )
+
+    PIP_ADAPTER_INFO    adapter_info,
+                        adapter             = NULL;  
+    PCHAR               ip_address          = NULL,
+                        other_ip_address    = NULL,
+                        tmp                 = NULL;
+    PBYTE               address             = NULL;
+    ULONG               adapter_info_length;
+    DWORD               ok                  = 0;
+
+    __try {
+
+        /* Convert the sinful string to an IP string.  We use this
+        to match against the adapters on this host */
+        if (NULL == (tmp = string_to_ipstr(sinful))) {
+            dprintf(D_ALWAYS, "Error parsing address: '%s'\n", sinful);
+            __leave;
+        }
+        ip_address = strdup(tmp);
+        
+        /* Attempt to retrieve the information for all the hardware 
+        adapters on this host */
+        adapter_info_length = sizeof(IP_ADAPTER_INFO);
+        adapter_info = (IP_ADAPTER_INFO*)malloc(adapter_info_length);        
+        ok = GetAdaptersInfo(
+            adapter_info, 
+            &adapter_info_length);
+        if (ERROR_BUFFER_OVERFLOW == ok) {
+            free(adapter_info);
+            adapter_info = (IP_ADAPTER_INFO*)malloc(adapter_info_length); 
+            if (NULL == adapter_info) {
+                dprintf(D_ALWAYS, "Error allocating memory needed to "
+                    "call GetAdaptersinfo\n");
+                __leave;
+            }
+            ok = GetAdaptersInfo(
+                adapter_info, 
+                &adapter_info_length);
+            if (NO_ERROR != ok) {
+                dprintf(D_ALWAYS, "GetAdaptersInfo failed with "
+                    "error: %d\n", ok);
+                __leave;
+            }
+        }
+
+        /* Iterate through the list of adapters and find the one that
+        matches the IP address we are concerned with */
+        adapter = adapter_info;
+        while (NULL != adapter) {            
+            other_ip_address = adapter->IpAddressList.IpAddress.String;
+            if (MATCH == strcmp(ip_address, other_ip_address)) {
+                /* make a copy of the subnet mask */
+                subnet_mask = strdup(
+                    adapter->IpAddressList.IpMask.String);
+                /* If we get here it means we found the adapter we were 
+                looking for, so we can bail out early */
+                __leave;
+            } 
+            adapter = adapter->Next;
+        }
+
+    }
+    __finally {
+
+        if (NULL != ip_address) {
+            free(ip_address);
+        }
+        if (NULL != adapter_info) {
+            free(adapter_info);
+        }
+
+    }
+
+#endif
+
+    return subnet_mask;
+
 }

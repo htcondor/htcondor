@@ -245,6 +245,7 @@ const char *ATTR_HAS_SOAP_API            = "HasSOAPInterface";
 const char *ATTR_HAS_VM                   = "HasVM";
 const char *ATTR_HAS_WIN_RUN_AS_OWNER     = "HasWindowsRunAsOwner";
 const char *ATTR_HELD_JOBS				 = "HeldJobs";
+const char *ATTR_HIBERNATION_LEVEL        = "HibernationLevel";
 const char *ATTR_HOLD_KILL_SIG            = "HoldKillSig";
 const char *ATTR_HOOK_KEYWORD             = "HookKeyword";
 const char *ATTR_IDLE_JOBS                = "IdleJobs";
