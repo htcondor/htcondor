@@ -646,6 +646,30 @@ SOURCE="..\src\condor_c++_util\HashTable.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\hibernation_manager.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\hibernation_manager.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\hibernator.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\hibernator.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\hibernator.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\hibernator.WINDOWS.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\historysnapshot.C"
 # End Source File
 # Begin Source File
@@ -832,30 +856,6 @@ SOURCE="..\src\condor_c++_util\pgsqldatabase.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\pgsqldatabase.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\power_hibernation_manager.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\power_hibernation_manager.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\power_hibernator.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\power_hibernator.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\power_waker.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\power_waker.h"
 # End Source File
 # Begin Source File
 
@@ -1115,6 +1115,14 @@ SOURCE="..\src\condor_c++_util\translation_utils.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\udp_waker.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\udp_waker.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\uids.C"
 # End Source File
 # Begin Source File
@@ -1152,6 +1160,14 @@ SOURCE="..\src\condor_c++_util\vm_univ_utils.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\vm_univ_utils.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\waker.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\waker.h"
 # End Source File
 # Begin Source File
 

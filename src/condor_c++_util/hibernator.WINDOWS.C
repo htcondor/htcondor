@@ -17,15 +17,12 @@
  *
  ***************************************************************/
  
-#include "condor_common.h"
-#include "hibernator.h"
-#include "hibernator-win32.h"
-
 /***************************************************************
- * MsWindowsHibernator class
+ * Headers
  ***************************************************************/
 
-#if defined ( WIN32 )
+#include "condor_common.h"
+#include "hibernator.WINDOWS.h"
 
 /* Remove me when NMI updates the SDKs.  Need for the XP SDKs which
    do NOT declare the functions as C functions... */
@@ -33,8 +30,12 @@ extern "C" {
 #include <powrprof.h>
 }
 
+/***************************************************************
+ * MsWindowsHibernator class
+ ***************************************************************/
+
 MsWindowsHibernator::MsWindowsHibernator () throw () 
-: Hibernator () {
+: HibernatorBase () {
 	initStates ();
 }
 
@@ -122,6 +123,4 @@ MsWindowsHibernator::enterState ( SLEEP_STATE level, bool force ) const {
 	}
 	return ok;
 }
-
-#endif // WIN32
 

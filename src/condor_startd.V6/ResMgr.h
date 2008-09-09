@@ -37,7 +37,7 @@
 #include "vmuniverse_mgr.h"
 
 #if HAVE_HIBERNATE
-#include "power_hibernation_manager.h"
+#include "hibernation_manager.h"
 #endif /* HAVE_HIBERNATE */
 
 #if HAVE_JOB_HOOKS

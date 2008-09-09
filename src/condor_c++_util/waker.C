@@ -17,8 +17,13 @@
  *
  ***************************************************************/
 
+/***************************************************************
+ * Headers
+ ***************************************************************/
+
 #include "condor_common.h"
 #include "waker.h"
+#include "udp_waker.h"
 
 /***************************************************************
  * Base WakerBase class
@@ -30,3 +35,15 @@ WakerBase::WakerBase () {
 WakerBase::~WakerBase () throw () {
 }
 
+/***************************************************************
+ * WakerBase static members 
+ ***************************************************************/
+
+/* factory method */
+
+WakerBase* 
+WakerBase::createWaker ( ClassAd *ad )
+{
+	WakerBase *waker = new UdpWakeOnLanWaker ( ad );
+	return waker;
+}

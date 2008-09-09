@@ -16,18 +16,27 @@
  * limitations under the License.
  *
  ***************************************************************/
- 
+
+/***************************************************************
+ * Headers
+ ***************************************************************/
+
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "hibernator.h"
 
+#if defined ( WIN32 )
+#   include "hibernator.WINDOWS.h"
+#elif defined ( HAVE_LINUX_HIBERNATION )
+#   include "hibernator-linux.h"
+#endif
 
 /***************************************************************
  * Base Hibernator class
  ***************************************************************/
 
 HibernatorBase::HibernatorBase () throw () 
-		: m_states ( NONE )
+:   m_states ( NONE )
 {
 }
 
@@ -74,14 +83,6 @@ HibernatorBase::addState ( const char *statestr )
 	m_states |= state;
 }
 
-HibernatorBase::SLEEP_STATE
-HibernatorBase::setState ( SLEEP_STATE state )
-{
-	m_state = state;
-}
-
-
-
 /***************************************************************
  * Hibernator static members 
  ***************************************************************/
@@ -101,13 +102,12 @@ HibernatorBase::createHibernator ( void )
 }
 
 /* conversion methods */
-struct HibernatorStates {
+static const struct HibernatorStates {
 	int							number;
 	HibernatorBase::SLEEP_STATE	state;
 	char						*string;
 	char						*string2;
-};
-static HibernatorStates const states[] =
+} states[] =
 {
 	{ 0,  HibernatorBase::NONE, "NONE", NULL      },
 	{ 1,  HibernatorBase::S1,   "S1",   "standby" },

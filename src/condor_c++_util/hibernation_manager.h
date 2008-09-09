@@ -26,7 +26,6 @@
 
 #include "hibernator.h"
 
-
 /***************************************************************
  * HibernationManager class
  ***************************************************************/
@@ -86,7 +85,7 @@ public:
 		@see canHibernate
 		@see wantsHibernate
 		*/
-	int  getHibernateCheckInterval () const;
+	int getHibernateCheckInterval () const;
 
 	/** Reset all the internal values based on what the values in the 
 	    configuration file.

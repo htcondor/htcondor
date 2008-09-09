@@ -17,16 +17,18 @@
  *
  ***************************************************************/
 
-#ifndef _HIBERNATER_WIN32_H_
-#define _HIBERNATER_WIN32_H_
+#ifndef _HIBERNATER_WINDOWS_H_
+#define _HIBERNATER_WINDOWS_H_
+
+/***************************************************************
+ * Headers
+ ***************************************************************/
 
 #include "hibernator.h"
 
 /***************************************************************
  * MsWindowsHibernator class
  ***************************************************************/
-
-#if defined ( WIN32 )
 
 class MsWindowsHibernator : public HibernatorBase
 {
@@ -52,6 +54,4 @@ private:
 
 };
 
-#endif // WIN32
-
-#endif // _HIBERNATER_WIN32_H_
+#endif // _HIBERNATER_WINDOWS_H_

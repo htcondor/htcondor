@@ -17,6 +17,15 @@
  *
  ***************************************************************/
 
+#ifndef _WAKER_BASE_H_
+#define _WAKER_BASE_H_
+
+/***************************************************************
+ * Forward declarations
+ ***************************************************************/
+
+class ClassAd;
+
 /***************************************************************
  * Base Waker class
  ***************************************************************/
@@ -51,5 +60,12 @@ public:
 
     //@}
 
+    /** We use this to create waker objects so we don't need to deal 
+    with the differences between OSs at the invocation level.
+    @return if the OS is supported a valid WakerBase*; otherwise NULL.
+	*/
+	static WakerBase* createWaker ( ClassAd *ad );
+
 };
 
+#endif // _WAKER_BASE_H_

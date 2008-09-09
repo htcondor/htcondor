@@ -19,7 +19,7 @@
 
 
 #include "condor_common.h"
-#include "power_waker.h"
+#include "udp_waker.h"
 
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
@@ -67,17 +67,17 @@ static const char *errmsgs[] = {
 };
 
 /*
-Global Variables
+Global Variables 
 */
 
-static char     *program_name   = NULL; /* program name for error messages */
-static FILE     *in             = NULL; /* input file */
-static char     *fn_in          = NULL; /* name of input file */
-static char     *mac            = NULL; /* hardware address */
-static char     *subnet         = "255.255.255.255"; /* subnet to broadcast on */
-static int      port            = 9;    /* port number to use */
-static ClassAd  *ad             = NULL; /* machine class-ad */
-static Waker    *waker          = NULL; /* waking mechanism */
+static char      *program_name   = NULL; /* program name for error messages */
+static FILE      *in             = NULL; /* input file */
+static char      *fn_in          = NULL; /* name of input file */
+static char      *mac            = NULL; /* hardware address */
+static char      *subnet         = "255.255.255.255"; /* subnet to broadcast on */
+static int       port            = 9;    /* port number to use */
+static ClassAd   *ad             = NULL; /* machine class-ad */
+static WakerBase *waker          = NULL; /* waking mechanism */
 
 /*
 Functions
@@ -276,7 +276,7 @@ main ( int argc, char *argv[] ) {
     if ( ad ) {
 
         /* create the waking mechanism, and wake the machine */
-        waker = Waker::createWaker ( ad );
+        waker = WakerBase::createWaker ( ad );
 
         if ( !waker ) {
             error ( 

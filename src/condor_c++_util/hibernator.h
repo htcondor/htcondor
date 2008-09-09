@@ -82,12 +82,23 @@ public:
 		*/
 	unsigned short getStates () const;
 
+    /** Set the supported sleep states 
+        */
+    void setStates ( unsigned short states );
+    
+    /** Add to the supported sleep states 
+        @see SLEEP_STATE
+        */
+    void addState ( SLEEP_STATE state );
+	void addState ( const char *statestr );
+
 	//@}
 
-	/** We use this to create sleep objects so we don't need to 
+	/** We use this to create hibernation objects so we don't need to 
 		deal with the differences between OSs at the invocation 
 		level.
-		@return if the OS is supported a valid Hibernator*; otherwise NULL.
+		@return if the OS is supported a valid HibernatorBase*; 
+        otherwise NULL.
 	*/
 	static HibernatorBase* createHibernator ();
 
@@ -106,32 +117,16 @@ public:
 
 	//@}
 
-	/** Get the current state (as best as we know it)
-		@return current state
-	*/
-	SLEEP_STATE		getState( void ) { return m_state; };
-
-	/* Set the supported sleep states */
-	void setStates ( unsigned short states );
-
-	/* Add to the support sleep states */
-	void addState( SLEEP_STATE state );
-	void addState( const char *statestr );
-
 protected:
 
 	/* Override this to enter the given sleep state on a 
 	   particular OS */
 	virtual bool enterState ( SLEEP_STATE state, bool force ) const = 0;
 
-	// Set the current state as far as we know it
-	SLEEP_STATE		setState( SLEEP_STATE state );
-	
 private:
 	
 	/* OS agnostic sleep state representation */
-	unsigned short	m_states;
-	SLEEP_STATE		m_state;
+	unsigned short m_states;
 
 };
 
