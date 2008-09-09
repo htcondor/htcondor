@@ -203,8 +203,7 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 
 		tmp = c_client->getConcurrencyLimits();
 		if (tmp) {
-			line.sprintf("%s=\"%s\"", ATTR_CONCURRENCY_LIMITS, tmp);
-			cad->Insert(line.Value());
+			cad->Assign(ATTR_CONCURRENCY_LIMITS, tmp);
 		}
 	}
 
