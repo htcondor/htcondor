@@ -250,6 +250,10 @@ SCHEDD_DAEMON_AD_FILE   = $(LOG)/.schedd_classad
 
 \end{description}
 
+The default condor configuration file should already contain definitions
+for \MacroNI{QUILL} and \MacroNI{QUILL\_LOG}.  If you are upgrading from
+an old configuration that does not have these, you will need to define them.
+
 One machine should run the \Condor{dbmsd} daemon.  
 On this machine, add it to the \MacroNI{DAEMON\_LIST} configuration variable.
 All Quill-enabled machines should also run the \Condor{quill} daemon.
