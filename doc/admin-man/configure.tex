@@ -2866,6 +2866,12 @@ Configuring The Startd Policy.
    without taking the time to produce a checkpoint (for a standard
    universe job).
 
+\item[\Macro{PERIODIC\_CHECKPOINT}] \label{param:PeriodicCheckpoint}
+   A boolean expression that, when \Expr{True}, causes Condor to
+   initiate a checkpoint of the currently running job. This setting
+   applies to all standard universe jobs and to VM universe jobs
+   that have \SubmitCmd{vm\_checkpoint} set \Expr{True}.
+
 \item[\Macro{RANK}] \label{param:Rank}  A floating point value
    that Condor uses to compare potential jobs.
    A larger value for a specific job ranks that job above
