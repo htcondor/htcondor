@@ -39,12 +39,12 @@ ALL : "$(OUTDIR)\condor_power.exe"
 
 !ELSE 
 
-ALL : "condor_classad - Win32 Debug" "condor_util_lib - Win32 Debug" "condor_sysapi - Win32 Debug" "condor_io - Win32 Debug" "condor_cpp_util - Win32 Debug" "condor - Win32 Debug" "$(OUTDIR)\condor_power.exe"
+ALL : "condor_classad - Win32 Debug" "condor_util_lib - Win32 Debug" "condor_sysapi - Win32 Debug" "condor_io - Win32 Debug" "condor_cpp_util - Win32 Debug" "$(OUTDIR)\condor_power.exe"
 
 !ENDIF 
 
 !IF "$(RECURSE)" == "1" 
-CLEAN :"condor - Win32 DebugCLEAN" "condor_cpp_util - Win32 DebugCLEAN" "condor_io - Win32 DebugCLEAN" "condor_sysapi - Win32 DebugCLEAN" "condor_util_lib - Win32 DebugCLEAN" "condor_classad - Win32 DebugCLEAN" 
+CLEAN :"condor_cpp_util - Win32 DebugCLEAN" "condor_io - Win32 DebugCLEAN" "condor_sysapi - Win32 DebugCLEAN" "condor_util_lib - Win32 DebugCLEAN" "condor_classad - Win32 DebugCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
@@ -127,12 +127,12 @@ ALL : "$(OUTDIR)\condor_power.exe"
 
 !ELSE 
 
-ALL : "condor_classad - Win32 Release" "condor_util_lib - Win32 Release" "condor_sysapi - Win32 Release" "condor_io - Win32 Release" "condor_cpp_util - Win32 Release" "condor - Win32 Release" "$(OUTDIR)\condor_power.exe"
+ALL : "condor_classad - Win32 Release" "condor_util_lib - Win32 Release" "condor_sysapi - Win32 Release" "condor_io - Win32 Release" "condor_cpp_util - Win32 Release" "$(OUTDIR)\condor_power.exe"
 
 !ENDIF 
 
 !IF "$(RECURSE)" == "1" 
-CLEAN :"condor - Win32 ReleaseCLEAN" "condor_cpp_util - Win32 ReleaseCLEAN" "condor_io - Win32 ReleaseCLEAN" "condor_sysapi - Win32 ReleaseCLEAN" "condor_util_lib - Win32 ReleaseCLEAN" "condor_classad - Win32 ReleaseCLEAN" 
+CLEAN :"condor_cpp_util - Win32 ReleaseCLEAN" "condor_io - Win32 ReleaseCLEAN" "condor_sysapi - Win32 ReleaseCLEAN" "condor_util_lib - Win32 ReleaseCLEAN" "condor_classad - Win32 ReleaseCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
@@ -212,28 +212,6 @@ LINK32_OBJS= \
 
 
 !IF "$(CFG)" == "condor_power - Win32 Debug" || "$(CFG)" == "condor_power - Win32 Release"
-
-!IF  "$(CFG)" == "condor_power - Win32 Debug"
-
-"condor - Win32 Debug" : 
-   cd "."
-   cd "."
-
-"condor - Win32 DebugCLEAN" : 
-   cd "."
-   cd "."
-
-!ELSEIF  "$(CFG)" == "condor_power - Win32 Release"
-
-"condor - Win32 Release" : 
-   cd "."
-   cd "."
-
-"condor - Win32 ReleaseCLEAN" : 
-   cd "."
-   cd "."
-
-!ENDIF 
 
 !IF  "$(CFG)" == "condor_power - Win32 Debug"
 
