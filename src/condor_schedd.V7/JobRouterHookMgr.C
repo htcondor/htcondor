@@ -636,6 +636,13 @@ ExitClient::hookExited(int exit_status)
 
 	HookClient::hookExited(exit_status);
 
+	if (m_std_err.Length())
+	{
+		dprintf(D_ALWAYS,
+				"ExitClient::hookExited: Warning, hook %s (pid %d) printed to stderr: %s\n",
+				m_hook_path, (int)m_pid, m_std_err.Value());
+	}
+
 	// Only tell the job router to finalize the job if the hook exited
 	// successfully
 	if (true == WIFSIGNALED(exit_status) || 0 == WEXITSTATUS(exit_status))
@@ -681,6 +688,12 @@ CleanupClient::hookExited(int exit_status)
 	}
 
 	HookClient::hookExited(exit_status);
+	if (m_std_err.Length())
+	{
+		dprintf(D_ALWAYS,
+				"CleanupClient::hookExited: Warning, hook %s (pid %d) printed to stderr: %s\n",
+				m_hook_path, (int)m_pid, m_std_err.Value());
+	}
 
 	// Only tell the job router to finish the cleanup of the job if the
 	// hook exited successfully
