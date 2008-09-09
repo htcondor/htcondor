@@ -5239,6 +5239,10 @@ Reset OS socket buffer size to 2048k (UDP), 255k (TCP).
   be counted, and will not have attributes inserted (all modern Condor
   daemons which publish ClassAds publish these attributes).
 
+
+  \index{ClassAd attribute added by the \Condor{collector}!UpdatesTotal}
+  \index{ClassAd attribute added by the \Condor{collector}!UpdatesSequenced}
+  \index{ClassAd attribute added by the \Condor{collector}!UpdatesLost}
   The attributes inserted are ``UpdatesTotal'', ``UpdatesSequenced'',
   and ``UpdatesLost''.  ``UpdatesTotal'' is the total number of
   updates (of this ad type) the Collector has received from this host.
@@ -5247,6 +5251,8 @@ Reset OS socket buffer size to 2048k (UDP), 255k (TCP).
   daemon it is impossible to tell if any previous ones have been lost
   or not.  ``UpdatesLost'' is the number of updates that the Collector
   has detected as being lost.
+  See page~\pageref{sec:Collector-Added-Attributes} for more information on the
+  added attributes.
 
 \item[\Macro{COLLECTOR\_STATS\_SWEEP}]
   \label{param:CollectorStatsSweep} This value specifies the number of
@@ -5263,6 +5269,7 @@ Reset OS socket buffer size to 2048k (UDP), 255k (TCP).
   updates.  This macro is ignored if \MacroU{COLLECTOR\_DAEMON\_STATS}
   is not enabled.
 
+  \index{ClassAd attribute added by the \Condor{collector}!UpdatesHistory}
   If this has a non-zero value, the Collector will insert
   ``UpdatesHistory'' into the ClassAd (similar to ``UpdatesTotal''
   above).  ``UpdatesHistory'' is a hexadecimal string which represents
@@ -5281,6 +5288,10 @@ Reset OS socket buffer size to 2048k (UDP), 255k (TCP).
   "0x40" would be the history for the last 8 updates.  If the next
   updates are all successful, the values published, after each update,
   would be: 0x20, 0x10, 0x08, 0x04, 0x02, 0x01, 0x00.
+
+  See page~\pageref{sec:Collector-Added-Attributes} for more information on the
+  added attribute.
+
 
 \item[\Macro{COLLECTOR\_CLASS\_HISTORY\_SIZE}]
   \label{param:CollectorClassHistorySize} This macro controls the

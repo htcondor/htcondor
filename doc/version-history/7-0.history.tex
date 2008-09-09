@@ -20,7 +20,7 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-0-5}Version 7.0.5}
+\subsection*{\label{sec:New-7-0-6}Version 7.0.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -52,8 +52,77 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item When \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} is defined to be
-\Expr{False},
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-0-5}Version 7.0.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Local universe jobs now go on hold for the same specific reasons that
+vanilla jobs may go on hold.  Examples are missing input or executable files.
+Previously, when local universe jobs failed in this manner,
+the jobs returned to the idle state in the job queue,
+repetitively attempting to run, 
+and failing over and over until the job is removed.
+
+\item Local universe jobs now have the ClassAd attribute \Attr{NumShadowStarts}.
+Although local universe jobs do not have a \Condor{shadow} process, 
+this attribute
+is introduced to keep management of local universe as similar to
+vanilla universe as possible.  For local universe jobs, this attribute
+is identical to the attribute \Attr{JobRunCount}, 
+which indicates how many times a
+local \Condor{starter} process has been created to run the job.
+
+\end{itemize}
+
+\noindent Configuration Variable Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item When the configuration variable \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}
+is defined to be \Expr{False},
 this no longer results in machines in the Owner state being ignored
 during matchmaking.  Previously, even if \MacroNI{START} was \Expr{True},
 machines in the Owner state were disregarded.
@@ -78,6 +147,63 @@ The crash occurred during a fast shut down of the
 \Condor{schedd} daemon as it dealt with local universe
 jobs or with any job that required reconnection when
 the \Condor{schedd} daemon started up.
+
+\item Local and scheduler universe jobs were failing to increment the
+\Attr{JobRunCount} attribute in the job ClassAd when an attempt to run
+the job was made.  This problem was introduced in 6.9.5.
+
+\item Some rare types of failures during file transfer caused the
+Condor daemon conducting the transfer to hang indefinitely.  For
+example, if the file transfer process created by the \Condor{schedd}
+was killed by an administrator or crashed due to an internal error,
+the \Condor{schedd} would become unresponsive.
+
+\item GCB was updated, fixing minor bugs with GCB temporary files 
+(typically the file(s) \File{/tmp/gcb-inherit-*}).
+These bugs did not impact GCB functionality.  Earlier
+versions would leave temporary files behind. Temporary files would have
+permissions of 000.  With the fix, under normal operations the files should be
+deleted, and the \Login{condor} user should have read and write access to the files.
+
+\item Evaluation of the configuration variable \Macro{STARTD\_AD\_REEVAL\_EXPR}
+did not work for many types of expressions.
+The problem resulted in the following message in the 
+\Condor{negotiator} daemon log:
+
+\begin{verbatim}
+Can't evaluate STARTD_AD_REEVAL_EXPR \...
+\end{verbatim}
+
+\item Reconnecting to parallel universe jobs after a restart of the
+\Condor{schedd} daemon, would sometimes fail.  The failure was caused
+by the \Condor{shadow} trying to connect to the address of the
+previous instance of the \Condor{schedd} rather than the address of
+the current instance.
+
+\item Made the \Condor{gridmanager} less aggressive in forwarding refreshed
+proxies for gt2 grid universe jobs. Now, the refreshed proxy will not be
+forwarded until the old proxy has less than six hours of life until
+expiration.
+
+\item Fixed a bug in the \Condor{gridmanager} that could result in job
+status updates from the Grid Monitor to be ignored.
+
+\item The Grid Monitor no longer changes the last-modified time of GRAM
+state files whose job's status is FAILED. This should make it easier for
+file cleaners to remove the the GRAM state files of old, abandoned jobs.
+
+\item Fixed a problem that could cause flocked jobs to fail due to
+authorization errors in the \Condor{starter}. Such failures were more
+likely to occur for long-running jobs or if the \Condor{schedd} were
+issued a full reconfig during the job's execution.
+
+\item Fixed a \Condor{gridmanager} crash on Windows. This crash only
+appeared if \Macro{GRIDMANAGER\_DEBUG} were set to a higher level than
+the default.
+
+\item In PrivSep mode, a job would previously fail if it created a
+symlink in its sandbox pointing to a file owned by a UID other than
+that used to run the job. This behavior has been fixed.
 
 \end{itemize}
 
@@ -219,7 +345,34 @@ the default value for these attributes is now \Expr{False}.
 
 \begin{itemize}
 
-\item None.
+\item A bug in 7.0.4 affects jobs using Condor file transfer on submit
+machines that are configured to deny write access from execute
+machines.  The result is that output from jobs may fail to be copied
+back to the submit machine.  The problem may or may not affect jobs
+that run for less than eight hours, but it definitely will affect jobs
+that run for more than eight hours.  An example of a configuration
+vulnerable to this problem is one where DAEMON level access is allowed
+to all execute nodes but WRITE level access is not.  When the problem
+happens, the \Condor{shadow} log will contain a line like the following:
+
+\begin{verbatim}
+DaemonCore: PERMISSION DENIED to unknown user from host ...
+for command 61001 (FILETRANS_DOWNLOAD), access level WRITE
+\end{verbatim}
+
+The workaround for this problem is to allow WRITE access from the
+execute nodes.  If the existing configuration requires WRITE access to
+be authenticated, then simply add WRITE access by the authenticated
+condor identities associated with all execute nodes.  If WRITE access
+is not currently required to be authenticated, then allow
+unauthenticated WRITE access from all worker nodes.  Note that this
+does \emph{not} imply that execute nodes will be able to modify the
+job queue without authenticating.  Remote commands that modify the job
+queue (for example, \Condor{submit} or \Condor{qedit}) always require that the
+user be authenticated, no matter what configuration options are used;
+if no method of remote authentication can succeed in the pool for
+WRITE operations, then commands that modify the job queue can only run
+on the submit machine.
 
 \end{itemize}
 
@@ -585,7 +738,7 @@ For more information on this, please see
 section~\ref{sec:Backfill-BOINC-Windows} on
 page~\pageref{sec:Backfill-BOINC-Windows}.
 
-\item Condor has been ported to Redhat Enterprise Linux
+\item Condor has been ported to Red Hat Enterprise Linux
 5.0 running on the 32-bit x86 architecture and on the 64-bit x86\_64
 architecture.
 
