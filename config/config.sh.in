@@ -11,8 +11,6 @@ EXT_KERBEROS_VERSION=@ext_krb5_version@
 EXT_GLOBUS_VERSION=@ext_globus_version@
 GLOBUS_FLAVOR=@globus_flavor@
 
-EXT_GAHP_VERSION=@ext_gahp_version@
-
 EXT_ZLIB_VERSION=@ext_zlib_version@
 
 EXT_GT4GAHP_VERSION=@ext_gt4gahp_version@
@@ -30,8 +28,6 @@ EXT_PCRE_VERSION=@ext_pcre_version@
 EXT_POSTGRESQL_VERSION=@ext_postgresql_version@
 
 EXT_UNICOREGAHP_VERSION=@ext_unicoregahp_version@
-
-EXT_NORDUGRIDGAHP_VERSION=@ext_nordugridgahp_version@
 
 EXT_BLAHP_VERSION=@ext_blahp_version@
 

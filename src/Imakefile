@@ -65,6 +65,12 @@
 #define EC2
 #endif
 
+#if HAVE_EXT_GLOBUS
+#define GlobusGahps GT2_GAHP NORDUGRID_GAHP
+#else
+#define GlobusGahps
+#endif
+
 #define Programs \
 		procapi sysapi unit_tests accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
@@ -74,7 +80,7 @@
 		CreddProgs StorkProgs \
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
-		JobRouterProgs
+		JobRouterProgs GlobusGahps
 
 #define Libraries \
 		util_lib daemon_core.V6 daemon_client classad c++_util	\
@@ -304,6 +310,11 @@ object_dir_target(condor_bypass)
 object_dir_target(condor_sdk)
 #if WANT_STORK
 object_target(Stork,stork)
+#endif
+
+#if HAVE_EXT_GLOBUS
+object_target(GT2_GAHP,gt2_gahp)
+object_target(NORDUGRID_GAHP,nordugrid_gahp)
 #endif
 
 object_target(DeploymentTools,deployment_tools)
