@@ -25,6 +25,8 @@
 #include <string.h>
 #include <libgen.h>
 
+#include "config.h"
+
 #include "globus_gss_assist.h"
 #include "globus_io.h"
 #include "globus_ftp_client.h"

@@ -25,6 +25,8 @@
 #include <string.h>
 #include <errno.h>
 
+#include "config.h"
+
 #include "globus_gram_client.h"
 #include "globus_gass_server_ez.h"
 #include "globus_gss_assist.h"
