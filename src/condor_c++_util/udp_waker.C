@@ -72,7 +72,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 
         dprintf ( 
             D_ALWAYS, 
-            "UdpWakeOnLanWaker: not a hardware address "
+            "UdpWakeOnLanWaker: no hardware address "
             "(MAC) defined\n" );
 
         return;
