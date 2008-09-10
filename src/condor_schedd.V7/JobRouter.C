@@ -1279,6 +1279,13 @@ JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 #if HAVE_JOB_HOOKS
 	if (NULL != m_hook_mgr)
 	{
+		// Update the job ad incase it's been updated elsewhere
+		classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
+		classad::ClassAd *ad = ad_collection->GetClassAd(job->dest_key);
+		if (NULL != ad)
+		{
+			job->SetDestJobAd(ad);
+		}
 		int rval = m_hook_mgr->hookUpdateJobInfo(job);
 		switch (rval)
 		{
