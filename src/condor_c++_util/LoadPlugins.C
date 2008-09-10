@@ -49,13 +49,16 @@ LoadPlugins()
 	dprintf(D_FULLDEBUG, "Checking for PLUGINS config option\n");
 	plugin_files = param("PLUGINS");
 	if (!plugin_files) {
+		char *tmp;
 		dprintf(D_FULLDEBUG, "No PLUGINS config option, trying PLUGIN_DIR option\n");
-		plugin_dir = param("PLUGIN_DIR");
-		if (plugin_dir.IsEmpty()) {
+		tmp = param("PLUGIN_DIR");
+		if (!tmp) {
 			dprintf(D_FULLDEBUG, "No PLUGIN_DIR config option, no plugins loaded\n");
 
 			return;
 		} else {
+			plugin_dir = tmp;
+			free(tmp); tmp = NULL;
 			Directory directory(plugin_dir.GetCStr());
 			while (NULL != (plugin_file = directory.Next())) {
 					// NOTE: This should eventually support .dll for
@@ -74,6 +77,7 @@ LoadPlugins()
 		}
 	} else {
 		plugins.initializeFromString(plugin_files);
+		free(plugin_files); plugin_files = NULL;
 	}
 
 	dlerror(); // Clear error
