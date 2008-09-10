@@ -526,8 +526,8 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
 
   char *str;
-  if (ResourceAd->LookupString(ATTR_CONCURRENCY_LIMITS, &str)) {
-    SetAttributeString(ResourceRecord+ResourceName,ATTR_CONCURRENCY_LIMITS,str);
+  if (ResourceAd->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS, &str)) {
+    SetAttributeString(ResourceRecord+ResourceName,ATTR_MATCHED_CONCURRENCY_LIMITS,str);
     IncrementLimits(str);
     free(str);
   }    
@@ -1247,7 +1247,7 @@ void Accountant::LoadLimits(ClassAdList &resourceList)
 		if (GetResourceState(resourceAd, state) && matched_state == state) {
 			MyString name = GetResourceName(resourceAd);
 			MyString str;
-			GetAttributeString(ResourceRecord+name,ATTR_CONCURRENCY_LIMITS,str);
+			GetAttributeString(ResourceRecord+name,ATTR_MATCHED_CONCURRENCY_LIMITS,str);
 			IncrementLimits(str);
 		}
 	}

@@ -3794,7 +3794,7 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 					MyString jobLimits, recordedLimits;
 					if (param_boolean("CLAIM_RECYCLING_CONSIDER_LIMITS", true)) {
 						ad->LookupString(ATTR_CONCURRENCY_LIMITS, jobLimits);
-						my_match_ad->LookupString(ATTR_CONCURRENCY_LIMITS,
+						my_match_ad->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS,
 												  recordedLimits);
 						jobLimits.strlwr();
 						recordedLimits.strlwr();

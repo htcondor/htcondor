@@ -2734,9 +2734,9 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	MyString limits;
 	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
 		limits.strlwr();
-		offer->Assign(ATTR_CONCURRENCY_LIMITS, limits);
+		offer->Assign(ATTR_MATCHED_CONCURRENCY_LIMITS, limits);
 	} else {
-		offer->Delete(ATTR_CONCURRENCY_LIMITS);
+		offer->Delete(ATTR_MATCHED_CONCURRENCY_LIMITS);
 	}
 
 	// ---- real matchmaking protocol begins ----
