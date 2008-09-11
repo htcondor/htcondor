@@ -45,7 +45,7 @@ BOOL ModifyPrivilege ( LPCTSTR privilege, BOOL enable );
  ***************************************************************/
 
 /* Retrieves a user's SID. Return TRUE on success; otherwise, FALSE */
-BOOL GetUserSid ( HANDLE user_token, PSID *sid );
-void DeleteUserSid ( PSID sid );
+BOOL LoadUserSid ( HANDLE user_token, PSID *sid );
+void UnloadUserSid ( PSID sid );
 
 #endif // _SECURITY_WINDOWS_H_

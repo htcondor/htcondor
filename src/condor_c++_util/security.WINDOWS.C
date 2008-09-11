@@ -246,7 +246,7 @@ ModifyPrivilege ( LPCTSTR privilege, BOOL enable ) {
  ***************************************************************/
 
 BOOL 
-GetUserSid ( HANDLE token, PSID *sid ) {
+LoadUserSid ( HANDLE token, PSID *sid ) {
 
     DWORD       last_error  = ERROR_SUCCESS;
     PTOKEN_USER ptoken       = NULL;
@@ -378,6 +378,6 @@ GetUserSid ( HANDLE token, PSID *sid ) {
 }
 
 void 
-DeleteUserSid ( PSID sid ) {
+UnloadUserSid ( PSID sid ) {
     delete [] sid;
 }

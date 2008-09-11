@@ -28,10 +28,12 @@
 #include "string_conversion.WINDOWS.h"
 #include "remote_close.WINDOWS.h"
 #include "directory.WINDOWS.h"
+#include "security.WINDOWS.h"
 
 #include <userenv.h>    // for LoadUserProfile, etc.
-// #include <ntsecapi.h>
-#include <lm.h>         // for NetUserGetInfo
+#include <sddl.h>       // for ConvertSidToStringSid
+// #include <ntsecapi.h>    // USER_INFO_4
+// #include <lm.h>          // for NetUserGetInfo
 
 /***************************************************************
 * Constants
@@ -284,7 +286,11 @@ OwnerProfile::destroy () const {
 
     DWORD       last_error      = 0;
     priv_state  priv            = PRIV_UNKNOWN;
-    BOOL        profile_deleted = FALSE,
+    PSID        user_sid        = NULL;
+    LPSTR       user_sid_string = NULL;
+    BOOL        got_user_sid    = FALSE,
+                got_sid_string  = FALSE,
+                profile_deleted = FALSE,
                 ok              = FALSE;
 
     __try {
@@ -292,6 +298,59 @@ OwnerProfile::destroy () const {
         /* we must do the following as condor */
         priv = set_condor_priv ();
 
+        /* load the user's SID */
+        got_user_sid = LoadUserSid ( 
+            user_token_, 
+            &user_sid );
+
+        dprintf ( 
+            D_FULLDEBUG, 
+            "UserProfile::destroy: Loading %s's SID "
+            " %s. (last-error = %u)\n", 
+            user_name_,
+            got_user_sid ? "succeeded" : "failed", 
+            got_user_sid ? 0 : GetLastError () );
+
+        if ( !got_user_sid ) {
+            __leave;
+        }
+
+        /* convert the SID to a string */
+        got_sid_string = ConvertSidToStringSid (
+            user_sid,
+            &user_sid_string );
+
+        dprintf ( 
+            D_FULLDEBUG, 
+            "UserProfile::destroy: Converting SID to string "
+            " %s. (last-error = %u)\n", 
+            user_name_,
+            got_sid_string ? "succeeded" : "failed", 
+            got_sid_string ? 0 : GetLastError () );
+        
+        if ( !got_sid_string ) {
+            __leave;
+        }
+
+        /* let Windows remove the profile for us */
+        profile_deleted = DeleteProfile ( 
+            user_sid_string,
+            profile_directory_,
+            domain_name_ );
+
+        dprintf ( 
+            D_FULLDEBUG, 
+            "UserProfile::destroy: Removing %s's profile "
+            "directory %s. (last-error = %u)\n", 
+            user_name_,
+            profile_deleted ? "succeeded" : "failed", 
+            profile_deleted ? 0 : GetLastError () );
+        
+        if ( !profile_deleted ) {
+            __leave;
+        }
+
+#if 0
         /* just make sure we have the profile's directory */
         if ( NULL == profile_directory_ ) {
             __leave;
@@ -309,12 +368,10 @@ OwnerProfile::destroy () const {
             profile_deleted ? "succeeded" : "failed", 
             profile_deleted ? 0 : GetLastError () );
 
-        /* we no longer have a profile directory, so flag 
-        it as such (this will induce the creation of one;
-        see bellow for the fun and exciting details)*/
         if ( !profile_deleted ) {
             __leave;
         }
+#endif
 
         /* if we got here, all is well */
         ok = TRUE;
@@ -324,6 +381,13 @@ OwnerProfile::destroy () const {
 
         /* return to previous privilege level */
         set_priv ( priv );
+
+        if ( user_sid ) {
+            UnloadUserSid ( user_sid );
+        }
+        if ( user_sid_string ) {
+            LocalFree ( user_sid_string );
+        }
 
     }
 
@@ -342,7 +406,6 @@ OwnerProfile::load () {
     DWORD           last_error          = 0,
                     length              = 0,
                     i                   = 0;
-    PUSER_INFO_4    puser_info          = NULL;
     priv_state      priv                = PRIV_UNKNOWN;
     BOOL            backup_created      = FALSE,
                     profile_loaded      = FALSE,

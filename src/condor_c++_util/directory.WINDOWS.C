@@ -2075,7 +2075,7 @@ CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
                                 ok              = FALSE;
     __try {
 
-        got_sid = GetUserSid ( 
+        got_sid = LoadUserSid ( 
             user_token,
             &user_sid );
 
@@ -2291,7 +2291,7 @@ CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
     __finally {
 
         if ( user_sid ) {
-            DeleteUserSid ( user_sid );
+            UnloadUserSid ( user_sid );
         }
         if ( system_sid ) {
             FreeSid ( system_sid );
