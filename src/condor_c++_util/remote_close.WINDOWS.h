@@ -24,13 +24,6 @@
 * Functions
 ***************************************************************/
 
-/* These are used when handling Windows profiles.  They are, in a
-sense, a reproduction of part of the Directory object's functionality,
-with a small exception: they will forcibly delete any files they 
-cannot overwrite (see CloseRemoteHandle() for details) */
-BOOL CondorCopyDirectory ( PCSTR source, PCSTR destination );
-BOOL CondorRemoveDirectory ( PCSTR directory );
-
 /* Given the pid of a process and a handle in it's process space, this
 function will attempt to close the requested handle */
 DWORD CloseRemoteHandle ( DWORD pid, HANDLE handle );

@@ -26,10 +26,11 @@
 
 #include "profile.WINDOWS.h"
 #include "string_conversion.WINDOWS.h"
-#include "remote_close.WINDOWS.h "
+#include "remote_close.WINDOWS.h"
+#include "directory.WINDOWS.h"
 
 #include <userenv.h>    // for LoadUserProfile, etc.
-#include <ntsecapi.h>
+// #include <ntsecapi.h>
 #include <lm.h>         // for NetUserGetInfo
 
 /***************************************************************
@@ -50,7 +51,8 @@ OwnerProfile::OwnerProfile () :
     domain_name_ ( NULL ),
     profile_directory_ ( NULL ),
     profile_template_ ( NULL ),
-    profile_cache_ ( NULL ) {
+    profile_cache_ ( NULL ),
+    profile_backup_ ( NULL ) {
 
     ZeroMemory ( 
         &user_profile_, 
@@ -363,14 +365,6 @@ OwnerProfile::load () {
         has a roaming profile, this is when it's cached locally) */
         profile_directory_ = directory ();
 
-        dprintf ( 
-            D_FULLDEBUG, 
-            "OwnerProfile::load: %s's profile directory: '%s'. "
-            "(last-error = %u)\n",
-            user_name_,
-            profile_directory_, 
-            GetLastError () );
-
         /* if we have have a profile directory, let's make sure that 
         we also have permissions to it.  Sometimes, if the startd were
         to crash, heaven forbid, we may have access to the profile 
@@ -381,6 +375,14 @@ OwnerProfile::load () {
         resources). */
         if ( profile_directory_ ) {
 
+            dprintf ( 
+                D_FULLDEBUG, 
+                "OwnerProfile::load: %s's profile directory: '%s'. "
+                "(last-error = %u)\n",
+                user_name_,
+                profile_directory_, 
+                GetLastError () );
+            
             dprintf ( 
                 D_FULLDEBUG, 
                 "OwnerProfile::load: A profile directory is listed "
@@ -432,13 +434,12 @@ OwnerProfile::load () {
                         __leave;
                     }
 
-                } else {
-
-                    /* if we're here, then we can access the profile */
-                    profile_exists = TRUE;
-
                 }
+
             }
+
+            /* if we're here, then we can access the profile */
+            profile_exists = TRUE;
 
         }
 
@@ -469,6 +470,7 @@ OwnerProfile::load () {
 
         } 
 
+#if 0
         /* now we transfer the user's profile directory to the cache 
         so that we can revert back to it once the user is done doing 
         their thang. */
@@ -487,6 +489,7 @@ OwnerProfile::load () {
         if ( !backup_created ) {
             __leave;
         }
+#endif
 
         /* finally, load the user's profile */
         profile_loaded = loadProfile ();
@@ -559,6 +562,7 @@ OwnerProfile::unload () {
         loaded */
         profile_loaded_ = FALSE;
 
+#if 0
         /* Now we have unloaded user's profile we can restore the
         original cached version */
         backup_restored = restore ();
@@ -576,6 +580,7 @@ OwnerProfile::unload () {
         if ( !backup_restored ) {
             __leave;
         }
+#endif
 
         /* if we got here, then everything has been reverted */
         ok = TRUE;
@@ -684,8 +689,8 @@ OwnerProfile::directory () {
 
     priv_state  priv    = PRIV_UNKNOWN;
     DWORD       size    = MAX_PATH;
-    PSTR        dir     = NULL;
-    BOOL	ok	    = FALSE;
+    PSTR        buffer  = NULL;
+    BOOL	    ok	    = FALSE;
 
     __try {
 
@@ -693,7 +698,7 @@ OwnerProfile::directory () {
         shortcut this operation by returning the one we have stashed
         away */
         if ( profile_directory_ ) {
-            dir = profile_directory_;
+            buffer = profile_directory_;
             ok = TRUE;
             __leave;
         }
@@ -704,12 +709,12 @@ OwnerProfile::directory () {
         /* if we are here, then either we a first-time visitor, or 
         previous calls--heaven forbid--have failed so we will need
         to try and get the user's profile directory */
-        dir = new CHAR[size]; 
-        ASSERT ( dir );
+        buffer = new CHAR[size]; 
+        ASSERT ( buffer );
 
         if ( !GetUserProfileDirectory ( 
             user_token_, 
-            dir,
+            buffer,
             &size ) ) {
 
             /* since we only allocated MAX_PATH CHARs, we may fail 
@@ -718,16 +723,17 @@ OwnerProfile::directory () {
             GetUserProfileDirectory() */
             if ( ERROR_INSUFFICIENT_BUFFER == GetLastError () ) {
 
-                delete [] dir; /* kill the old buffer */
-                dir = new CHAR[size];
-                ASSERT ( dir );
+                delete [] buffer; /* kill the old buffer */
+                buffer = new CHAR[size];
+                ASSERT ( buffer );
 
                 if ( !GetUserProfileDirectory ( 
                     user_token_, 
-                    dir,
+                    buffer,
                     &size ) ) {
                         
-                        dprintf ( D_FULLDEBUG, 
+                        dprintf ( 
+                            D_FULLDEBUG, 
                             "OwnerProfile::directory: could not get "
                             "profile directory. (last-error = %u)\n",
                             GetLastError () );
@@ -738,8 +744,9 @@ OwnerProfile::directory () {
 
             } else {
 
-                /* print the fact the user has no home dir */
-                dprintf ( D_FULLDEBUG, 
+                /* print the fact the user has no home buffer */
+                dprintf ( 
+                    D_FULLDEBUG, 
                     "OwnerProfile::directory: this user has no "
                     "profile directory.\n" );				
                 
@@ -756,8 +763,8 @@ OwnerProfile::directory () {
     __finally {
 
         if ( !ok ) {
-            delete [] dir;
-            dir = NULL;
+            delete [] buffer;
+            buffer = NULL;
         }
 
         /* return to previous privilege level */
@@ -765,7 +772,7 @@ OwnerProfile::directory () {
 
     }
 
-    return dir;
+    return buffer;
 
 }
 
@@ -805,9 +812,9 @@ OwnerProfile::backup () {
         the */ 
         length = strlen ( profile_cache_ ) 
             + strlen ( user_name_ ) + 1
-            + 10; /* +1 for \ +10 for pid */
-        profile_cache_ = new CHAR[length + 1];
-        ASSERT ( profile_cache_ );
+            + 20; /* +1 for \ +20 for pid */
+        profile_backup_ = new CHAR[length + 1];
+        ASSERT ( profile_backup_ );
         
         sprintf ( 
             profile_backup_, 
@@ -823,8 +830,10 @@ OwnerProfile::backup () {
 
         dprintf ( 
             D_FULLDEBUG, 
-            "OwnerProfile::backup: Creating "
-            "profile backup %s (last-error = %u)\n", 
+            "OwnerProfile::backup: Copying '%s' to '%s' %s. "
+            "(last-error = %u)\n", 
+            profile_directory_,
+            profile_backup_,
             backup_created ? "succeeded" : "failed", 
             backup_created ? 0 : GetLastError () );
 
@@ -890,7 +899,7 @@ OwnerProfile::restore () {
         dprintf ( 
             D_FULLDEBUG, 
             "OwnerProfile::restore: Deleting the "
-            "modified profile %s (last-error = %u)\n", 
+            "modified profile %s. (last-error = %u)\n", 
             profile_deleted ? "succeeded" : "failed", 
             profile_deleted ? 0 : GetLastError () );
 
@@ -907,7 +916,7 @@ OwnerProfile::restore () {
         dprintf ( 
             D_FULLDEBUG, 
             "OwnerProfile::restore: Deleting the "
-            "profile backup %s (last-error = %u)\n", 
+            "profile backup %s. (last-error = %u)\n", 
             backup_restored ? "succeeded" : "failed", 
             backup_restored ? 0 : GetLastError () );
 
@@ -923,7 +932,7 @@ OwnerProfile::restore () {
         dprintf ( 
             D_FULLDEBUG, 
             "OwnerProfile::restore: Deleting the "
-            "back-up directory %s (last-error = %u)\n", 
+            "back-up directory %s. (last-error = %u)\n", 
             backup_deleted ? "succeeded" : "failed", 
             backup_deleted ? 0 : GetLastError () );
 
@@ -988,7 +997,7 @@ OwnerProfile::loadProfile () {
         because of a network outage, among other reasons. */
         user_profile_.dwFlags    = PI_NOUI;
         user_profile_.lpUserName = (char*)user_name_;
-
+        
         /* load the user's profile for the first time-- this will 
         effectively create it "for free", using the local "default"
         account as a template. */

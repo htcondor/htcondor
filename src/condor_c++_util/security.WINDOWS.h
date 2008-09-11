@@ -21,10 +21,31 @@
 #define _SECURITY_WINDOWS_H_
 
 /***************************************************************
-* Functions
-***************************************************************/
+ * Functions
+ ***************************************************************/
 
-/* return TRUE on success; otherwise, FALSE */
-BOOL ModifyTokenPrivilege ( HANDLE token, LPCTSTR privilege, BOOL enable );
+/***************************************************************
+ * File Security
+ ***************************************************************/
+
+/* Gathers a file's security attributes.  Returns TRUE on 
+success; otherwise, FALSE */
+BOOL GetFileSecurityAttributes ( PCWSTR w_source, PSECURITY_ATTRIBUTES *sa );
+
+/***************************************************************
+ * Token Security
+ ***************************************************************/
+
+/* Adds or removes a privilege to the current process token.  
+Returns TRUE on success; otherwise, FALSE */
+BOOL ModifyPrivilege ( LPCTSTR privilege, BOOL enable );
+
+/***************************************************************
+ * User Security
+ ***************************************************************/
+
+/* Retrieves a user's SID. Return TRUE on success; otherwise, FALSE */
+BOOL GetUserSid ( HANDLE user_token, PSID *sid );
+void DeleteUserSid ( PSID sid );
 
 #endif // _SECURITY_WINDOWS_H_

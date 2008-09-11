@@ -24,6 +24,14 @@
 * Functions
 ***************************************************************/
 
+/* returns TRUE if all the directories allong the given path were 
+created (or already existed); ortherwise, FALSE */
+BOOL CreateSubDirectory ( PCSTR path, LPSECURITY_ATTRIBUTES sa );
+
+/* returns TRUE when a directory is created with the user set 
+as the owner and has been locked down; otherwise, FALSE. */
+BOOL CreateUserDirectory ( HANDLE user_token, PCSTR directory );
+
 /* These are used when handling Windows profiles.  They are, in a
 sense, a reproduction of part of the Directory object's 
 functionality, with a small exception: they will forcibly delete 

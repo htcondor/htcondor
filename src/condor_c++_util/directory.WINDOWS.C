@@ -1124,13 +1124,12 @@ CondorCopyDirectory (
     PCSTR destination ) {
     
     priv_state  priv          = PRIV_UNKNOWN;
-    HANDLE      user_token    = NULL;
     PWSTR       w_source      = NULL,
                 w_destination = NULL;
     DWORD       last_error    = ERROR_SUCCESS,
                 i;
     HANDLE      have_access   = NULL;
-    PSTR        privelages[]  = { SE_BACKUP_NAME, SE_BACKUP_NAME };
+    PSTR        privelages[]  = { SE_BACKUP_NAME, SE_RESTORE_NAME };
     BOOL        opened        = TRUE,
                 added         = FALSE,
                 copied        = FALSE,
@@ -1138,6 +1137,9 @@ CondorCopyDirectory (
                 ok            = FALSE;
     
     __try {
+        
+        /* do the following as the user */
+        priv = set_user_priv ();
         
         dprintf ( 
             D_FULLDEBUG, 
@@ -1149,40 +1151,11 @@ CondorCopyDirectory (
             "CondorCopyDirectory: Destination: '%s'.\n", 
             destination );
         
-        /* do the following as the user */
-        priv = set_user_priv ();
-
-        /* store the user token */
-        opened = OpenProcessToken (
-            GetCurrentProcess (), 
-            TOKEN_ADJUST_PRIVILEGES 
-            | TOKEN_QUERY, 
-            &user_token );
-
-         if ( !opened ) {
-             
-             last_error = GetLastError ();
-             
-             dprintf ( 
-                 D_FULLDEBUG, 
-                 "CondorRemoveDirectory: Failed to open "
-                 "user token. (last-error = %d)\n",
-                 last_error ); 
-             
-             __leave;
-             
-         }
-
-        /* do the following as Condor */
-        set_priv ( priv );
-        priv = set_condor_priv ();
-
         /* give the user a few extra privelages so it can handle
         reparse points, et. al. */
         for ( i = 0; i < condor_countof ( privelages ); ++i ) {
 
-            added = ModifyTokenPrivilege ( 
-                user_token, 
+            added = ModifyPrivilege ( 
                 privelages[i], 
                 TRUE );
             
@@ -1202,10 +1175,6 @@ CondorCopyDirectory (
                 
         }
 
-        /* finally, do the rest as the user */
-        set_priv ( priv );
-        priv = set_user_priv ();
-        
         /* create wide versions of the strings */
         w_source      = ProduceWFromA ( source );
         w_destination = ProduceWFromA ( destination );
@@ -1293,25 +1262,20 @@ CondorCopyDirectory (
     __finally {
 
         /* revoke the privelages we gave the user */
-        if ( NULL != user_token ) {
+        for ( i = 0; i < condor_countof ( privelages ); ++i ) {
             
-            for ( i = 0; i < condor_countof ( privelages ); ++i ) {
+            removed = ModifyPrivilege ( 
+                privelages[i], 
+                FALSE );
+            
+            if ( !removed ) {
                 
-                removed = ModifyTokenPrivilege ( 
-                    user_token, 
-                    privelages[i], 
-                    FALSE );
-                
-                if ( !removed ) {
-                    
-                    dprintf ( 
-                        D_FULLDEBUG, 
-                        "CondorCopyDirectory: Failed to remove "
-                        "'%s' privilege. (last-error = %d)\n",
-                        privelages[i],
-                        GetLastError () ); 
-                    
-                }
+                dprintf ( 
+                    D_FULLDEBUG, 
+                    "CondorCopyDirectory: Failed to remove "
+                    "'%s' privilege. (last-error = %d)\n",
+                    privelages[i],
+                    GetLastError () ); 
                 
             }
             
@@ -1819,11 +1783,10 @@ BOOL
 CondorRemoveDirectory ( PCSTR directory ) {
 
     priv_state  priv         = PRIV_UNKNOWN;
-    HANDLE      user_token   = NULL;
     PWSTR       w_directory  = NULL;
     DWORD       last_error   = ERROR_SUCCESS,
                 i;
-    PSTR        privelages[] = { SE_BACKUP_NAME, SE_BACKUP_NAME };
+    PSTR        privelages[] = { SE_BACKUP_NAME, SE_RESTORE_NAME };
     BOOL        opened       = FALSE,
                 added        = FALSE,
                 removed      = FALSE,
@@ -1833,38 +1796,17 @@ CondorRemoveDirectory ( PCSTR directory ) {
 
         /* do the following as the user */
         priv = set_user_priv ();
-
-        /* store the user token */
-        opened = OpenProcessToken (
-            GetCurrentProcess (), 
-            TOKEN_ADJUST_PRIVILEGES 
-            | TOKEN_QUERY, 
-            &user_token );
         
-        if ( !opened ) {
-            
-            last_error = GetLastError ();
-            
-            dprintf ( 
-                D_FULLDEBUG, 
-                "CondorRemoveDirectory: Failed to open "
-                "user token. (last-error = %d)\n",
-                last_error ); 
-            
-            __leave;
-            
-        }
-
-        /* do the following as condor */
-        set_priv ( priv );
-        priv = set_condor_priv ();
-
+        dprintf ( 
+            D_FULLDEBUG, 
+            "CondorRemoveDirectory: Directory: '%s'.\n", 
+            directory );
+        
         /* give the user a few extra privelages so it can handle
         reparse points, et. al. */
         for ( i = 0; i < condor_countof ( privelages ); ++i ) {
 
-            added = ModifyTokenPrivilege ( 
-                user_token, 
+            added = ModifyPrivilege ( 
                 privelages[i], 
                 TRUE );
             
@@ -1884,10 +1826,6 @@ CondorRemoveDirectory ( PCSTR directory ) {
                 
         }
 
-        /* finally, do the rest as the user */
-        set_priv ( priv );
-        priv = set_user_priv ();
-        
         /* create wide versions of the strings */
         w_directory = ProduceWFromA ( directory );
 
@@ -1948,25 +1886,20 @@ CondorRemoveDirectory ( PCSTR directory ) {
     __finally {
 
         /* revoke the privelages we gave the user */
-        if ( NULL != user_token ) {
+        for ( i = 0; i < condor_countof ( privelages ); ++i ) {
             
-            for ( i = 0; i < condor_countof ( privelages ); ++i ) {
+            removed = ModifyPrivilege ( 
+                privelages[i], 
+                FALSE );
+            
+            if ( !removed ) {
                 
-                removed = ModifyTokenPrivilege ( 
-                    user_token, 
-                    privelages[i], 
-                    FALSE );
-                
-                if ( !removed ) {
-                    
-                    dprintf ( 
-                        D_FULLDEBUG, 
-                        "CondorRemoveDirectory: Failed to remove "
-                        "'%s' privilege. (last-error = %d)\n",
-                        privelages[i],
-                        GetLastError () );
-                    
-                }
+                dprintf ( 
+                    D_FULLDEBUG, 
+                    "CondorRemoveDirectory: Failed to remove "
+                    "'%s' privilege. (last-error = %d)\n",
+                    privelages[i],
+                    GetLastError () );
                 
             }
             
@@ -1988,3 +1921,391 @@ CondorRemoveDirectory ( PCSTR directory ) {
 
 }
 
+
+/* returns TRUE if all the directories allong the given path were 
+created (or already existed); ortherwise, FALSE */
+BOOL 
+CreateSubDirectory ( PCSTR path, LPSECURITY_ATTRIBUTES sa ) {
+
+    BOOL    ok          = FALSE;
+    DWORD   last_error  = ERROR_SUCCESS;
+    CHAR    *current    = NULL,
+            directory[MAX_PATH];
+            
+    
+    __try {
+
+        if ( !path || !(*path) ) {
+
+            dprintf ( 
+                D_FULLDEBUG,
+                "CreateSubDirectory: a NULL path was passed\n" );
+
+            __leave;
+
+        }
+
+        /* if we can create the top level path, then we are done */        
+        if ( CreateDirectory ( path, sa ) ) { 
+            ok = TRUE;
+            __leave;
+        }
+
+        last_error = GetLastError ();
+
+        /* if it already existed, then, again, then we are done */
+        if ( ERROR_ALREADY_EXISTS == last_error ) {
+            ok = TRUE;
+            __leave;     
+        }
+
+        /* if we've made it this far, it means we need to create
+        each directory along the path.  To this effect we copy the
+        original path to a temporary buffer and use that to create
+        all the path names we need. */
+        strncpy ( directory, path, MAX_PATH );
+
+        /* skip leading drive or relative path */
+        current = directory;
+        if ( ':' == directory[1] ) {
+
+            /* skip the drive letter */
+            current += 3;
+
+        } else if ( '\\' == directory[0] ) {
+
+            /* skip the leading \ */
+            current++;
+
+        }
+
+        /* start iterating through the subdirectories */
+        while ( *current++ ) {
+
+            while ( *current && '\\' != *current ) {
+                current++;
+            }
+            
+            if ( '\\' == *current ) {
+
+                /* NULL terminate, to create a "new" directory */
+                *current = '\0';
+                
+                /* attempt to create the next parent directory 
+                in the path */
+                if ( !CreateDirectory ( directory, NULL ) ) {
+                    
+                    last_error = GetLastError ();
+
+                    if ( ERROR_ALREADY_EXISTS != last_error ) {
+                        
+                        dprintf (
+                            D_FULLDEBUG,
+                            "CreateSubDirectory: failed. "
+                            "(last-error = %d)\n",
+                            last_error );
+
+                        __leave;
+
+                    }
+                }
+                
+                /* remove the NULL and continue to the next lower 
+                level directory name (if there are any left) */
+                *current++ = '\\';
+
+            }
+
+        }
+
+        /* create the top level path, if we can, then we 
+        are done */        
+        if ( !CreateDirectory ( path, sa ) ) { 
+            
+            last_error = GetLastError ();
+
+            /* if it already existed, then consider this a success */
+            if ( ERROR_ALREADY_EXISTS == last_error ) {
+                ok = TRUE;
+                __leave;
+            }
+
+        }
+
+        /* if we made it to the end, then we're all good */
+        ok = TRUE;
+
+    }
+    __finally {
+
+        /* propagate the error message */
+        SetLastError ( ok ? ERROR_SUCCESS : last_error );
+
+    }
+
+    return ok;
+
+}
+
+BOOL
+CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
+
+    SECURITY_DESCRIPTOR         security_descriptor;
+    SECURITY_ATTRIBUTES         security_attributes;
+    PACL                        acl             = NULL;
+    SID_IDENTIFIER_AUTHORITY    nt_authority    = SECURITY_NT_AUTHORITY;
+    PSID                        user_sid        = NULL,
+                                system_sid      = NULL,
+                                admin_sid       = NULL;
+    PSID                        sids[]          = { user_sid, 
+                                                    system_sid, 
+                                                    admin_sid };
+    DWORD                       last_error      = ERROR_SUCCESS,
+                                size            = 0,
+                                i               = 0,
+                                count           = 0;
+    ACE_HEADER                  *ace_header     = NULL;
+    BOOL                        got_sid         = FALSE,
+                                initialized     = FALSE,
+                                added           = FALSE,
+                                got_ace         = FALSE,
+                                sd_initialized  = FALSE,
+                                sd_set          = FALSE,
+                                created         = FALSE,
+                                ok              = FALSE;
+    __try {
+
+        got_sid = GetUserSid ( 
+            user_token,
+            &user_sid );
+
+        if ( !got_sid ) {
+
+            last_error = GetLastError ();
+
+            dprintf (
+                D_FULLDEBUG,
+                "CreateUserDirectory: Failed to get user SID. "
+                "(last-error = %d)\n",
+                last_error  );
+
+            __leave;
+
+        }
+
+        got_sid = AllocateAndInitializeSid (
+            &nt_authority,
+            1, 
+            SECURITY_LOCAL_SYSTEM_RID,
+            0, 0, 0, 0, 0, 0, 0,
+            &system_sid );
+        
+        if ( !got_sid ) {
+            
+            last_error = GetLastError ();            
+            
+            dprintf (
+                D_FULLDEBUG,
+                "CreateUserDirectory: Failed to get system SID. "
+                "(last-error = %d)\n",
+                last_error  );
+            
+            __leave;
+            
+        }
+
+        got_sid = AllocateAndInitializeSid (
+            &nt_authority,
+            2, 
+            SECURITY_BUILTIN_DOMAIN_RID,
+            DOMAIN_ALIAS_RID_ADMINS,
+            0, 0, 0, 0, 0, 0,
+            &admin_sid );
+        
+        if ( !got_sid ) {
+            
+            last_error = GetLastError ();            
+            
+            dprintf (
+                D_FULLDEBUG,
+                "CreateUserDirectory: Failed to get admin SID. "
+                "(last-error = %d)\n",
+                last_error  );
+            
+            __leave;
+            
+        }
+
+        size = sizeof ( ACL )
+             + ( 2 * GetLengthSid ( user_sid ) ) 
+             + ( 2 * GetLengthSid ( system_sid ) ) 
+             + ( 2 * GetLengthSid ( admin_sid ) )                  
+             + ( 6 * ( sizeof ( ACCESS_ALLOWED_ACE ) 
+                       - sizeof ( DWORD ) ) );
+
+        acl = (PACL) new BYTE[size];
+
+        initialized = InitializeAcl (
+            acl, 
+            size, 
+            ACL_REVISION );
+
+        if ( !initialized ) {
+
+            last_error = GetLastError ();            
+            
+            dprintf (
+                D_FULLDEBUG,
+                "CreateUserDirectory: Failed to Initialize ACL. "
+                "(last-error = %d)\n",
+                last_error );
+            
+            __leave;
+
+        }
+
+        /* add non-inheritable ACEs */
+        count = condor_countof ( sids );
+        for ( i = 0; i < count; ++i ) {
+            
+            added = AddAccessAllowedAce (
+                acl,
+                ACL_REVISION,
+                FILE_ALL_ACCESS,
+                sids[i] );
+            
+            if ( !added ) {
+                
+                last_error = GetLastError ();            
+                
+                dprintf (
+                    D_FULLDEBUG,
+                    "CreateUserDirectory: Failed to initialize "
+                    "non-inheritable access-control list. "
+                    "(last-error = %d)\n",
+                    last_error );
+                
+                __leave;
+                
+            }
+            
+        }
+
+        /* add the inheritable ACEs */
+        count *= 2;
+        for ( ; i < count; ++i ) {
+            
+            added = AddAccessAllowedAceEx (
+                acl,
+                ACL_REVISION,
+                OBJECT_INHERIT_ACE 
+                | CONTAINER_INHERIT_ACE 
+                | INHERIT_ONLY_ACE,
+                FILE_ALL_ACCESS,
+                sids[i] );
+            
+            if ( !added ) {
+                
+                last_error = GetLastError ();            
+                
+                dprintf (
+                    D_FULLDEBUG,
+                    "CreateUserDirectory: Failed to initialize "
+                    "inheritable access-control list. "
+                    "(last-error = %d)\n",
+                    last_error );
+                
+                __leave;
+                
+            }
+            
+        }
+
+        /* construct the security descriptor */
+        sd_initialized = InitializeSecurityDescriptor (
+            &security_descriptor,
+            SECURITY_DESCRIPTOR_REVISION );
+
+        if ( !sd_initialized ) {
+            
+            last_error = GetLastError ();            
+            
+            dprintf (
+                D_FULLDEBUG,
+                "CreateUserDirectory: Failed to initialize security "
+                "descriptor. (last-error = %d)\n",
+                last_error );
+            
+            __leave;
+            
+        }
+            
+        sd_set = SetSecurityDescriptorDacl (
+            &security_descriptor, 
+            TRUE, 
+            acl, 
+            FALSE );
+
+        if ( !sd_set ) {
+            
+            last_error = GetLastError ();            
+            
+            dprintf (
+                D_FULLDEBUG,
+                "CreateUserDirectory: Failed to initialize security "
+                "descriptor DACL. (last-error = %d)\n",
+                last_error );
+            
+            __leave;
+            
+        }  
+        
+        /* add the security descriptor to the security attributes */
+        security_attributes.nLength              = sizeof ( SECURITY_ATTRIBUTES );
+        security_attributes.lpSecurityDescriptor = &security_descriptor;
+        security_attributes.bInheritHandle       = FALSE;
+
+        /* finally, make the user's directory */
+        created = CreateSubDirectory ( 
+            directory,
+            &security_attributes );
+
+        if ( !created ) {
+            
+            last_error = GetLastError ();            
+            
+            dprintf (
+                D_FULLDEBUG,
+                "CreateUserDirectory: Failed to create user's "
+                "directory. (last-error = %d)\n",
+                last_error );
+            
+            __leave;
+            
+        }            
+
+        /* if we're here, we're golden */
+        ok = TRUE;
+
+    }
+    __finally {
+
+        if ( user_sid ) {
+            DeleteUserSid ( user_sid );
+        }
+        if ( system_sid ) {
+            FreeSid ( system_sid );
+        }
+        if ( admin_sid ) {
+            FreeSid ( admin_sid );
+        }
+
+        if ( acl ) {
+             GlobalFree ( acl );
+        }
+
+    }
+
+    return ok;
+
+}

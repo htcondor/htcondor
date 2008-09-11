@@ -29,43 +29,157 @@
 #define condor_roundup(x) (sizeof(DWORD)*(((x)+sizeof(DWORD)-1)/sizeof(DWORD)))
 
 /***************************************************************
-/* Generic security functions
+/* File Security
 ***************************************************************/
 
+/* return TRUE on a successful copy; otherwise, FALSE. */
+BOOL
+GetFileSecurityAttributes (
+    PCWSTR w_source, 
+    PSECURITY_ATTRIBUTES *security_attributes ) {
+
+    PSECURITY_ATTRIBUTES destination_attributes  = NULL;
+    PSECURITY_DESCRIPTOR source_descriptor       = NULL;
+    PBYTE                buffer                  = NULL;
+    DWORD	             size                    = 0,
+                         extra                   = condor_roundup ( sizeof ( PSECURITY_DESCRIPTOR ) ),
+                         last_error	             = ERROR_SUCCESS;
+	BOOL	             have_security_info      = FALSE,
+                         ok                      = FALSE;
+
+	__try {
+
+        /* first, determine the required buffer size */
+        have_security_info = GetFileSecurityW ( 
+            w_source,
+            SACL_SECURITY_INFORMATION 
+            | OWNER_SECURITY_INFORMATION
+            | GROUP_SECURITY_INFORMATION
+            | DACL_SECURITY_INFORMATION,
+            NULL,
+            0,
+            &size );
+
+        if ( !have_security_info ) {
+
+            last_error = GetLastError ();
+
+            __leave;
+
+        }
+
+        /* try and allocated the required buffer size, plus some 
+        wiggle room */
+        buffer = new BYTE[size + extra];
+
+        if ( !buffer ) {
+
+            last_error = GetLastError ();
+
+            __leave;
+
+        }
+
+        /* translate the buffer into the structure we want */
+        destination_attributes = (PSECURITY_ATTRIBUTES) buffer;
+
+        /* to simplify deletion, we've allocated everything as 
+        one big block: placing the descriptor at the end of 
+        the attributes structure. this means we only need to 
+        call delete [] once on the returned pointer */
+        source_descriptor = (PSECURITY_DESCRIPTOR) 
+            ( ( (ULONG) buffer ) + extra );
+        destination_attributes->lpSecurityDescriptor = 
+            source_descriptor;
+
+        /* now, with the buffers allocated, get the actual 
+        information we are interested in */
+        have_security_info = GetFileSecurityW ( 
+            w_source,
+            SACL_SECURITY_INFORMATION 
+            | OWNER_SECURITY_INFORMATION
+            | GROUP_SECURITY_INFORMATION
+            | DACL_SECURITY_INFORMATION,
+            source_descriptor,
+            size,
+            &size );
+
+        if ( !have_security_info ) {
+
+            last_error = GetLastError ();
+
+            __leave;
+
+        }
+
+        /* fill out the remaining parts of the security 
+        attributes structure */
+        destination_attributes->nLength = 
+            sizeof ( PSECURITY_ATTRIBUTES );
+        destination_attributes->bInheritHandle = FALSE;
+
+        /* we made it! */
+        ok = TRUE;
+
+    }
+    __finally {
+
+        /* propagate the last error */
+        SetLastError ( ok ? ERROR_SUCCESS : last_error );
+
+        if ( !ok ) {
+            *security_attributes = NULL;
+            delete [] buffer;
+            buffer = NULL;
+        }
+
+        *security_attributes = destination_attributes;
+
+    }
+
+	return ok;
+
+}
+
+/***************************************************************
+ * Token Security
+ ***************************************************************/
+
 BOOL 
-ModifyTokenPrivilege ( HANDLE token, LPCTSTR privilege, BOOL enable ) { 
+ModifyPrivilege ( LPCTSTR privilege, BOOL enable ) { 
 
     
     DWORD               last_error          = ERROR_SUCCESS;
     TOKEN_PRIVILEGES    token_privileges;
     LUID                luid;
     HANDLE              process_token       = NULL;
-    BOOL                found_privelage     = FALSE,
+    BOOL                have_pricess_token  = FALSE,
+                        found_privelage     = FALSE,
                         privelages_adjusted = FALSE,
                         ok                  = FALSE;
 
     __try {
     
-        /* we open the current process' token */ 
-        /*
+        /* we open the current process' ptoken */ 
         have_pricess_token = OpenProcessToken (
             GetCurrentProcess (), 
-            TOKEN_ADJUST_PRIVILEGES 
-            | TOKEN_QUERY, 
+            TOKEN_READ
+            | TOKEN_ADJUST_PRIVILEGES, 
             &process_token );
     
         if ( !have_pricess_token ) { 
         
             last_error = GetLastError ();
 
-            dprintf ( D_FULLDEBUG, "ModifyPrivilege: Failed to retrieve "
-                "the process' token. (last-error = %d)\n", 
+            dprintf ( 
+                D_FULLDEBUG, 
+                "ModifyPrivilege: Failed to retrieve "
+                "the process' ptoken. (last-error = %d)\n", 
                 last_error ); 
         
             __leave;
         
-        } 
-        */
+        }
 
         /* lookup the local ID for the required privilege */    
         found_privelage = LookupPrivilegeValue (
@@ -77,8 +191,8 @@ ModifyTokenPrivilege ( HANDLE token, LPCTSTR privilege, BOOL enable ) {
         
             last_error = GetLastError ();
         
-            dprintf ( D_FULLDEBUG, "ModifyPrivilege: Failed to retrieve "
-                "privilege name. (last-error = %d)\n", 
+            dprintf ( D_FULLDEBUG, "ModifyTokenPrivilege: Failed to "
+                "retrieve privilege name. (last-error = %d)\n", 
                 last_error ); 
         
             __leave;
@@ -93,7 +207,7 @@ ModifyTokenPrivilege ( HANDLE token, LPCTSTR privilege, BOOL enable ) {
     
         /* overwrite the current privileges */
         privelages_adjusted = AdjustTokenPrivileges (
-            token, 
+            process_token, 
             FALSE, 
             &token_privileges, 
             0, 
@@ -120,10 +234,6 @@ ModifyTokenPrivilege ( HANDLE token, LPCTSTR privilege, BOOL enable ) {
 
         /* propagate the last error */
         SetLastError ( ok ? ERROR_SUCCESS : last_error );
-
-        if ( NULL != process_token ) {
-            CloseHandle ( process_token ); 
-        }
     
     }
 
@@ -132,114 +242,142 @@ ModifyTokenPrivilege ( HANDLE token, LPCTSTR privilege, BOOL enable ) {
 }
 
 /***************************************************************
-/* File related security functions
-***************************************************************/
+ * User Security
+ ***************************************************************/
 
-/* return TRUE on a successful copy; otherwise, FALSE. */
-static BOOL
-CondorGetSecurityInformation (
-    PCWSTR w_source, 
-    SECURITY_ATTRIBUTES *security_attributes ) {
+BOOL 
+GetUserSid ( HANDLE token, PSID *sid ) {
 
-    PSECURITY_ATTRIBUTES destination_attributes  = NULL;
-    PSECURITY_DESCRIPTOR source_descriptor       = NULL;
-    PBYTE                buffer                  = NULL;
-    DWORD	             size                    = 0,
-                         extra                   = condor_roundup ( sizeof ( PSECURITY_DESCRIPTOR ) ),
-                         last_error	             = ERROR_SUCCESS;
-	BOOL	             have_security_info      = FALSE,
-                         ok                      = FALSE;
-
-	__try {
-
-        /* first, determine the required buffer size */
-       have_security_info = GetFileSecurityW ( 
-           w_source,
-           SACL_SECURITY_INFORMATION 
-           | OWNER_SECURITY_INFORMATION
-           | GROUP_SECURITY_INFORMATION
-           | DACL_SECURITY_INFORMATION,
-           NULL,
-           0,
-           &size );
-
-       if ( !have_security_info ) {
-
-           last_error = GetLastError ();
-
-           __leave;
-
-       }
-
-       /* try and allocated the required buffer size, plus some 
-	  wiggle room */
-       buffer = new BYTE[size + extra];
-       
-       if ( !buffer ) {
+    DWORD       last_error  = ERROR_SUCCESS;
+    PTOKEN_USER ptoken       = NULL;
+    DWORD       size        = 0x100, /* uneducated guess */
+                required    = 0;
+    BOOL        got_token   = FALSE,
+                copied      = FALSE,
+                ok          = FALSE;
     
-           last_error = GetLastError ();
-           
-           __leave;
+    __try {
 
-       }
-       
-       /* translate the buffer into the structure we want */
-       destination_attributes = (PSECURITY_ATTRIBUTES) buffer;
-       
-       /* to simplify deletion, we've allocated everything as 
-	  one big block: placing the descriptor at the end of 
-	  the attributes structure. this means we only need to 
-	  call delete [] once on the returned pointer */
-       source_descriptor = (PSECURITY_DESCRIPTOR) 
-           ( ( (ULONG) buffer ) + extra );
-       destination_attributes->lpSecurityDescriptor = 
-           source_descriptor;
+        /* point the return buffer to nowhere */
+        *sid = NULL;
 
-       /* now, with the buffers allocated, get the actual 
-	  information we are interested in */
-       have_security_info = GetFileSecurityW ( 
-           w_source,
-           SACL_SECURITY_INFORMATION 
-           | OWNER_SECURITY_INFORMATION
-           | GROUP_SECURITY_INFORMATION
-           | DACL_SECURITY_INFORMATION,
-           source_descriptor,
-           size,
-           &size );
-       
-       if ( !have_security_info ) {
-           
-           last_error = GetLastError ();
-           
-           __leave;
-           
-       }
+        /* try to allocate the buffer for the sid */
+        ptoken = (PTOKEN_USER) new BYTE[size];
 
-       /* fill out the remaining parts of the security 
-	  attributes structure */
-       destination_attributes->nLength = 
-           sizeof ( PSECURITY_ATTRIBUTES );
-       destination_attributes->bInheritHandle = FALSE;
+        if ( !ptoken ) {
 
-        /* we made it! */
-       ok = TRUE;
+            last_error = GetLastError ();
 
-}
-__finally {
+            dprintf ( 
+                D_FULLDEBUG, 
+                "GetUserSid: failed to allocate memory for "
+                "TOKEN_USER. (last-error = %d)\n",
+                last_error );
 
-        /* propagate the last error */
-        SetLastError ( ok ? ERROR_SUCCESS : last_error );
+            __leave;
 
-        if ( ok ) {
-            security_attributes = destination_attributes;
-        } else {
-            security_attributes = NULL;
-            delete [] buffer;
-            buffer = NULL;
         }
 
-	}
+        got_token = GetTokenInformation (
+            token,
+            TokenUser, 
+            &ptoken,
+            size,
+            &required );
 
-	return ok;
+        /* if we were short on memory, then add a little and retry */
+        if ( required > size ) {
+            
+            size = required;
+            delete [] ptoken;
+            ptoken = (PTOKEN_USER) new BYTE[size];
 
+            got_token = GetTokenInformation (
+                token,
+                TokenUser, 
+                &ptoken,
+                size,
+                &required );            
+            
+        }
+
+        /* make sure we have a copy of the user information */
+        if ( !got_token ) {
+
+            last_error = GetLastError ();
+
+            dprintf ( 
+                D_FULLDEBUG, 
+                "GetUserSid: failed to get user's token information. "
+                "(last-error = %d)\n",
+                last_error );
+            
+            __leave;
+
+        }
+
+        /* allocate room to return the token's SID */
+        size = GetLengthSid ( ptoken->User.Sid );
+        *sid = (PSID) new BYTE[size];
+
+        if ( !*sid ) {
+            
+            last_error = GetLastError ();
+
+            dprintf ( 
+                D_FULLDEBUG, 
+                "GetUserSid: failed to allocate memory for "
+                "the SID to be returned. (last-error = %d)\n",
+                last_error );
+
+            
+            __leave;
+            
+        }
+
+        /* make a copy of the token's SID */
+        copied = CopySid ( 
+            size,
+            *sid,
+            ptoken->User.Sid );
+
+        if ( !copied ) {
+            
+            last_error = GetLastError ();
+            
+            dprintf ( 
+                D_FULLDEBUG, 
+                "GetUserSid: failed to copy the user's SID. "
+                "(last-error = %d)\n",
+                last_error );
+            
+            __leave;
+            
+        }
+
+        /* if we are here, then it's all good */
+        ok = TRUE;
+
+    }
+    __finally {
+
+        /* propagate the error message */
+        SetLastError ( ok ? ERROR_SUCCESS : last_error );
+
+        if ( ptoken ) {
+            delete [] ptoken;
+        }
+        if ( !ok && *sid ) {
+            delete [] *sid;
+        }
+
+    }
+
+    return ok;
+
+}
+
+void 
+DeleteUserSid ( PSID sid ) {
+    delete [] sid;
 }
