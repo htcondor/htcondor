@@ -38,7 +38,10 @@ public:
 	BOOLEAN contains_anycase( const char * );
 	BOOLEAN contains_withwildcard( const char *str );				
 	BOOLEAN contains_anycase_withwildcard( const char * );
-    const char *  string_anycase_withwildcard( const char *);
+		// str: string to find
+		// matches: if not NULL, list to insert matches into
+		// returns true if any matching entries found
+    bool find_matches_anycase_withwildcard( const char *str, StringList *matches);
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
 	void append (const char* str) { strings.Append( strdup(str) ); }
@@ -77,7 +80,7 @@ public:
 	char* print_to_delimed_string(void);
 
 protected:
-    const char * contains_withwildcard(const char *string, bool anycase);
+    const char * contains_withwildcard(const char *string, bool anycase, StringList *matches=NULL);
 	List<char> strings;
 	char *delimiters;
 
