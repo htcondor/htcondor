@@ -259,8 +259,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match('d', "debug") ) {
 			if ( arg.HasOpt() ) {
-				index = arg.ConsumeOpt( );
 				set_debug_flags( const_cast<char *>(arg.Opt()) );
+				index = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for --debug argument\n");
 				printf("%s", usage);
