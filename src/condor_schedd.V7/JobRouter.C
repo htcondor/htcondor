@@ -355,7 +355,7 @@ JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *p
 
 	dprintf(D_FULLDEBUG,"Parsing %s=%s\n",param_name,routing_string.c_str());
 
-	unsigned offset = 0;
+	int offset = 0;
 	while(1) {
 		if(offset >= routing_string.size()) break;
 
@@ -1942,10 +1942,10 @@ JobRoute::RouteString() {
 }
 
 bool
-JobRoute::ParseClassAd(std::string routing_string,unsigned &offset,classad::ClassAd const *router_defaults_ad,bool allow_empty_requirements) {
+JobRoute::ParseClassAd(std::string routing_string,int &offset,classad::ClassAd const *router_defaults_ad,bool allow_empty_requirements) {
 	classad::ClassAdParser parser;
 	classad::ClassAd ad;
-	if(!parser.ParseClassAd(routing_string,ad,(int)offset)) {
+	if(!parser.ParseClassAd(routing_string,ad,offset)) {
 		return false;
 	}
 	m_route_ad = *router_defaults_ad;
