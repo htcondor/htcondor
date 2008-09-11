@@ -248,7 +248,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		}
 
 		if ( arg.Match( "cluster") ) {
-			if ( !arg.OptIsNumber() ) {
+			if ( arg.OptIsNumber() ) {
 				opts.cluster = atoi( arg.Opt() );
 				index = arg.ConsumeOpt( );
 			} else {
