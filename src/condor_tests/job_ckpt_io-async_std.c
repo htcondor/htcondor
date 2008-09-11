@@ -85,12 +85,14 @@ main( int argc, char *argv[] )
 		before stopping the io loop and exiting.
 	*/
 
+	{
 	time_t b4 = time(0);
 	i = 0;
 	while ((time(0) - b4) < count) {
 		do_it( Data, fd, sizeof(Data) );
 		printf( "%d ", i++ );
 		fflush( stdout );
+	}
 	}
 	printf( "\nNormal End Of Job\n" );
 	exit( 0 );
