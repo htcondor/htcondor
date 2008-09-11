@@ -105,6 +105,9 @@ protected:
     /* Determines which port to use */
     bool initializePort ();
 
+    /* Determines which broadcast address to use */
+    bool initializeBroadcastAddress ();
+
     /* Print the system-specific socket error */
 	void printLastSocketError () const;
 
@@ -112,17 +115,19 @@ protected:
 	   the hardware address repeated 16 times. The largest
        subnet is '255.255.255.255' plus the NULL character. */
 	enum { 
-        RAW_MAC_ADDRESS_SIZE    = 6,
-		STRING_MAC_ADDRESS_SIZE = 3*RAW_MAC_ADDRESS_SIZE,
-        WOL_PACKET_SIZE         = 17*RAW_MAC_ADDRESS_SIZE,
-        MAX_SUBNET_SIZE         = 16
+        RAW_MAC_ADDRESS_LENGTH    = 6,
+		STRING_MAC_ADDRESS_LENGTH = 3*RAW_MAC_ADDRESS_LENGTH,
+        WOL_PACKET_LENGTH         = 17*RAW_MAC_ADDRESS_LENGTH,
+        MAX_IP_ADDRESS_LENGTH     = 16
 	};	
 
-	char		    _mac[STRING_MAC_ADDRESS_SIZE],
-                    _subnet[MAX_SUBNET_SIZE],
-                    _raw_mac[RAW_MAC_ADDRESS_SIZE];
-	unsigned short	_port;
-	unsigned char	_packet[WOL_PACKET_SIZE];
+	char		    _mac[STRING_MAC_ADDRESS_LENGTH],
+                    _subnet[MAX_IP_ADDRESS_LENGTH],
+                    _public_ip[MAX_IP_ADDRESS_LENGTH],
+                    _raw_mac[RAW_MAC_ADDRESS_LENGTH];
+	sockaddr_in     _boardcast;
+    unsigned short	_port;
+	unsigned char	_packet[WOL_PACKET_LENGTH];
     bool            _can_wake;
 
 };

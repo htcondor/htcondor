@@ -213,11 +213,14 @@ parse_command_line ( int argc, char *argv[] ) {
 int
 main ( int argc, char *argv[] ) {
 
-    char    *name       = NULL;
+    char    *name       = NULL,
+            sinful[16 + 10];
     int     found_eof   = 0, 
             found_error = 0,
             empty       = 0;
     bool    sent_wake   = false;
+
+    my_ip_string ();
     
     /* retrieve the program's name */
     name = strrchr ( argv[0], DIR_DELIM_CHAR );
@@ -230,6 +233,9 @@ main ( int argc, char *argv[] ) {
     or standard input as input */
     if ( mac && *mac ) {
 
+        /* contrive a sinful string based on our IP address */
+        sprintf ( sinful, "<%s:1234>", my_ip_string () );
+
         /* we were give all the raw data, so we're going to create
         a fake machine ad that we will use when invoking the waking 
         mechanism */
@@ -238,6 +244,7 @@ main ( int argc, char *argv[] ) {
         ad->SetTargetTypeName ( JOB_ADTYPE );
         ad->Assign ( ATTR_HARDWARE_ADDRESS, mac );
         ad->Assign ( ATTR_SUBNET_MASK, subnet );
+        ad->Assign ( ATTR_PUBLIC_NETWORK_IP_ADDR, sinful );
 
     } else {
 

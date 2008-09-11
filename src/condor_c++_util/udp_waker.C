@@ -24,6 +24,7 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
+#include "my_hostname.h"
 
 /***************************************************************
  * UdpWakeOnLanWaker constants
@@ -47,8 +48,9 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 	unsigned short port )
 : _port ( port ) {
     
-    memcpy ( _mac, mac, STRING_MAC_ADDRESS_SIZE );
-    memcpy ( _subnet, subnet, MAX_SUBNET_SIZE );
+    strncpy ( _mac, mac, STRING_MAC_ADDRESS_LENGTH );
+    strncpy ( _subnet, subnet, MAX_IP_ADDRESS_LENGTH );
+    strncpy ( _public_ip, my_ip_string (), MAX_IP_ADDRESS_LENGTH );
     _can_wake = initialize ();	
 
 }
@@ -56,7 +58,10 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     ClassAd *ad ) {
 
-    int found = 0;
+    int     found   = 0;
+    char    *start  = NULL,
+            *end    = NULL,
+            sinful[MAX_IP_ADDRESS_LENGTH+10];
     
     /* make sure we are only capable of sending the WOL 
     magic packet if all of the initialization succeds */
@@ -66,7 +71,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     found = ad->LookupString (
         ATTR_HARDWARE_ADDRESS,
         _mac,
-        STRING_MAC_ADDRESS_SIZE );
+        STRING_MAC_ADDRESS_LENGTH );
     
     if ( !found ) {
 
@@ -79,11 +84,33 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 
     }
 
+    /* retrieve the IP from the ad */
+    found = ad->LookupString (
+        ATTR_PUBLIC_NETWORK_IP_ADDR,
+        sinful,
+        MAX_IP_ADDRESS_LENGTH );
+    
+    if ( !found ) {
+        
+        dprintf ( 
+            D_ALWAYS, 
+            "UdpWakeOnLanWaker: no IP address defined\n" );
+        
+        return;
+        
+    }
+
+    /* extract the IP from the public 'sinful' string */
+    start = sinful + 1;
+    end = strchr ( sinful, ':' );
+    *end = '\0';
+    strcpy ( _public_ip, start );
+
     /* retrieve the subnet from the ad */
     found = ad->LookupString (
         ATTR_SUBNET_MASK,
         _subnet,
-        MAX_SUBNET_SIZE );
+        MAX_IP_ADDRESS_LENGTH );
 
     if ( !found ) {
         
@@ -136,14 +163,25 @@ UdpWakeOnLanWaker::initialize () {
     }
 
     if ( !initializePort () ) {
-
+        
         dprintf ( 
             D_ALWAYS, 
             "UdpWakeOnLanWaker::initialize: "
-            "Failed to initialize port numbert\n" );
-
+            "Failed to initialize port number\n" );
+        
         return false;
-
+        
+    }
+    
+    if ( !initializeBroadcastAddress () ) {
+        
+        dprintf ( 
+            D_ALWAYS, 
+            "UdpWakeOnLanWaker::initialize: "
+            "Failed to initialize broadcast address\n" );
+        
+        return false;
+        
     }
 
     /* if we get here then we are fine */
@@ -163,7 +201,7 @@ UdpWakeOnLanWaker::initializePacket () {
 		&_raw_mac[2], &_raw_mac[3], 
 		&_raw_mac[4], &_raw_mac[5] );
 	
-	if ( c != 6 || strlen ( _mac ) < STRING_MAC_ADDRESS_SIZE - 1) {
+	if ( c != 6 || strlen ( _mac ) < STRING_MAC_ADDRESS_LENGTH - 1) {
 
         dprintf ( 
             D_ALWAYS, 
@@ -205,6 +243,68 @@ UdpWakeOnLanWaker::initializePort () {
 	}
 
     return true;
+
+}
+
+bool
+UdpWakeOnLanWaker::initializeBroadcastAddress () {
+
+    bool        ok = false;
+    sockaddr_in public_ip_address;
+
+    memset ( &_boardcast, 0, sizeof ( sockaddr_in ) );
+    _boardcast.sin_family = AF_INET;
+    _boardcast.sin_port   = htons ( _port );
+    
+    /* subnet address will always be provided in dotted notation */
+    if ( MATCH == strcmp ( _subnet, "255.255.255.255" ) ) {
+        
+        _boardcast.sin_addr.s_addr = htonl ( INADDR_BROADCAST );
+        
+    } else if ( INADDR_NONE == 
+        ( _boardcast.sin_addr.s_addr = inet_addr ( _subnet ) ) ) {
+        
+        dprintf ( 
+            D_ALWAYS, 
+            "UdpWakeOnLanWaker::doWake: Malformed subnet "
+            "'%s'\n", _subnet );
+        
+        goto Cleanup;
+        
+    }
+    
+    /* log display subnet */
+    dprintf ( 
+        D_FULLDEBUG, 
+        "UdpWakeOnLanWaker::doWake: "
+        "Broadcasting on subnet: %d.%d.%d.%d\n", 
+        _boardcast.sin_addr.S_un.S_un_b.s_b1, 
+        _boardcast.sin_addr.S_un.S_un_b.s_b2, 
+        _boardcast.sin_addr.S_un.S_un_b.s_b3, 
+		_boardcast.sin_addr.S_un.S_un_b.s_b4 );
+
+    /* invert the subnet mask (xor) */
+    _boardcast.sin_addr.s_addr ^= 0xffffffff;
+
+    /* logically or the IP address with the inverted subnet mast */
+    public_ip_address.sin_addr.s_addr = inet_addr ( _public_ip );
+    _boardcast.sin_addr.s_addr |= public_ip_address.sin_addr.s_addr;
+
+    /* log display broadcast address */
+    dprintf ( 
+        D_FULLDEBUG, 
+        "UdpWakeOnLanWaker::doWake: "
+        "Broadcast address: %d.%d.%d.%d\n", 
+        _boardcast.sin_addr.S_un.S_un_b.s_b1, 
+        _boardcast.sin_addr.S_un.S_un_b.s_b2, 
+        _boardcast.sin_addr.S_un.S_un_b.s_b3, 
+		_boardcast.sin_addr.S_un.S_un_b.s_b4 );
+
+    /* if we made it here, then it all went perfectly */
+    ok = true;
+
+Cleanup:
+    return ok;
 
 }
 
@@ -304,38 +404,6 @@ UdpWakeOnLanWaker::doWake () const {
 
 	}
 
-	sockaddr_in to;
-	memset ( &to, 0, sizeof ( sockaddr_in ) );
-	to.sin_family = AF_INET;
-	to.sin_port   = htons ( _port );
-	
-	/* subnet address will always be provided in dotted notation */
-	if ( MATCH == strcmp ( _subnet, "255.255.255.255" ) ) {
-		
-        to.sin_addr.s_addr = htonl ( INADDR_BROADCAST );
-
-	} else if ( INADDR_NONE == 
-		( to.sin_addr.s_addr = inet_addr ( _subnet ) ) ) {
-
-        dprintf ( 
-            D_ALWAYS, 
-            "UdpWakeOnLanWaker::doWake: Malformed subnet "
-            "'%s'\n", _subnet );
-
-		goto Cleanup;
-
-	}
-
-	/* log display subnet */
-    dprintf ( 
-        D_FULLDEBUG, 
-        "UdpWakeOnLanWaker::doWake: "
-		"Broadcasting on subnet: %d.%d.%d.%d\n", 
-		to.sin_addr.S_un.S_un_b.s_b1, 
-		to.sin_addr.S_un.S_un_b.s_b2, 
-		to.sin_addr.S_un.S_un_b.s_b3, 
-		to.sin_addr.S_un.S_un_b.s_b4 );
-
 	/* make this a broadcast socket */
 	error = setsockopt ( 
         sock, 
@@ -359,9 +427,9 @@ UdpWakeOnLanWaker::doWake () const {
 	error = sendto ( 
         sock, 
         (char const*) _packet, 
-        WOL_PACKET_SIZE, 
+        WOL_PACKET_LENGTH, 
 		0, 
-        (sockaddr*) &to, 
+        (sockaddr*) &_boardcast, 
         sizeof ( sockaddr_in ) );
 	
     if ( SOCKET_ERROR == error ) {
