@@ -17,3 +17,5 @@ LIB = $(PRE_EXT_LIBS) \
 OBJ = nordugrid_gahp.o globus_ftp_client_transfer.o globus_ftp_client_restart.o globus_ftp_client_state.o
 
 public_c_plus_nowrap_target($(NAME),sbin,$(OBJ),$(LIB))
+
+testbin::

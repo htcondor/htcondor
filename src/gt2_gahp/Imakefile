@@ -19,3 +19,5 @@ LIB = $(PRE_EXT_LIBS) \
 OBJ = my_ez.o gahp_server.o
 
 public_c_plus_nowrap_target($(NAME),sbin,$(OBJ),$(LIB))
+
+testbin::
