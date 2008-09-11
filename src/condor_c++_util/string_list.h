@@ -50,6 +50,7 @@ public:
 	void deleteCurrent();
 	int number (void) const { return strings.Number(); };
 	bool isEmpty(void) const { return strings.IsEmpty(); };
+	void qsort();
 
 	/** Add all members of a given stringlist into the current list, 
 		avoiding any duplicates.

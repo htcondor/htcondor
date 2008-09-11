@@ -487,3 +487,28 @@ StringList::deleteCurrent() {
 	}
 	strings.DeleteCurrent();
 }
+
+
+static int string_compare(const void *x, const void *y) {
+	return strcmp(*(char * const *) x, *(char * const *) y);
+}
+
+void
+StringList::qsort() {
+	char *str;
+ 	int i;
+	int count = strings.Length();
+	char **list = (char **) calloc(count, sizeof(char *));
+
+	for (i = 0, strings.Rewind(); (str = strings.Next()); i++) {
+		list[i] = strdup(str); // If only we had InsertAt on List...
+	}
+
+	::qsort(list, count, sizeof(char *), string_compare);
+
+	for (i = 0, clearAll(); i < count; i++) {
+		strings.Append(list[i]);
+	}
+
+	free(list);
+}

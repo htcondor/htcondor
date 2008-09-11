@@ -88,6 +88,7 @@ public:
 	char*	host()	{return c_host;};
 	char*	addr() 	{return c_addr;};
 	char*   proxyFile() {return c_proxyfile; };
+	char*   getConcurrencyLimits() {return c_concurrencyLimits; };
 
 	void	setuser(const char* user);
 	void	setowner(const char* owner);
@@ -95,6 +96,7 @@ public:
 	void	setaddr(const char* addr);
 	void	sethost(const char* host);
 	void    setProxyFile(const char* pf);
+	void    setConcurrencyLimits(const char* limits);
 
 		// send a message to the client and accountant that the claim
 		// is a being vacated
@@ -107,6 +109,7 @@ private:
 	char	*c_addr;	// <ip:port> of the client
 	char	*c_proxyfile;   // file holding delegated proxy
 		                // (used when using GLEXEC_STARTER)
+	char	*c_concurrencyLimits; // limits, if any
 
 };
 
@@ -140,6 +143,12 @@ public:
 			current classad.
 		 */
 	void loadAccountingInfo();
+
+		/**
+		 * Load information from the request (c_ad) into the client
+		 * (c_client).
+		 */
+	void loadRequestInfo();
 
 		/** 
 			We're servicing a request to activate a claim and we want

@@ -344,6 +344,9 @@ char	*RunAsOwner = "run_as_owner";
 char	*LoadUserProfile = "load_user_profile";
 #endif
 
+// Concurrency Limit parameters
+char    *ConcurrencyLimits = "concurrency_limits";
+
 //
 // VM universe Parameters
 //
@@ -467,6 +470,7 @@ void SetParallelStartupScripts(); //JDB
 void SetMaxJobRetirementTime();
 bool mightTransfer( int universe );
 bool isTrue( const char* attr );
+void SetConcurrencyLimits();
 void SetVMParams();
 void SetVMRequirements();
 bool parse_vm_option(char *value, bool& onoff);
@@ -5863,6 +5867,7 @@ queue(int num)
 		SetJarFiles();
 		SetJavaVMArgs();
 		SetParallelStartupScripts(); //JDB
+		SetConcurrencyLimits();
 		SetVMParams();
 
 			// SetForcedAttributes should be last so that it trumps values
@@ -7257,6 +7262,29 @@ void SetVMRequirements()
 	buffer.sprintf( "%s = %s", ATTR_REQUIREMENTS, vmanswer.Value());
 	JobRequirements = vmanswer;
 	InsertJobExpr (buffer);
+}
+
+
+void
+SetConcurrencyLimits()
+{
+	MyString tmp = condor_param_mystring(ConcurrencyLimits, NULL);
+
+	if (!tmp.IsEmpty()) {
+		char *str;
+
+		tmp.strlwr();
+
+		StringList list(tmp.GetCStr());
+
+		list.qsort();
+
+		str = list.print_to_string();
+		tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
+		InsertJobExpr(tmp.GetCStr());
+
+		free(str);
+	}
 }
 
 // this function must be called after SetUniverse

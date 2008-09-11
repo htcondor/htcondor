@@ -279,6 +279,7 @@ class Matchmaker : public Service
 		// did we reject the last match b/c of...
 		int rejForNetwork; 		//   - limited network capacity?
 		int rejForNetworkShare;	//   - limited network fair-share?
+		int rejForConcurrencyLimit;	//   - limited concurrency?
 		int rejPreemptForPrio;	//   - insufficient prio to preempt?
 		int rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 		int rejPreemptForRank;	//   - startd RANKs new job lower?
@@ -323,11 +324,13 @@ class Matchmaker : public Service
 			ClassAd* pop_candidate();
 			void get_diagnostics(int & rejForNetwork,
 					int & rejForNetworkShare,
+					int & rejForConcurrencyLimit,
 					int & rejPreemptForPrio,
 					int & rejPreemptForPolicy,
 					int & rejPreemptForRank);
 			void set_diagnostics(int rejForNetwork,
 					int rejForNetworkShare,
+					int rejForConcurrencyLimit,
 					int rejPreemptForPrio,
 					int rejPreemptForPolicy,
 					int rejPreemptForRank);
@@ -353,6 +356,7 @@ class Matchmaker : public Service
 			// rejection reasons
 			int m_rejForNetwork; 		//   - limited network capacity?
 			int m_rejForNetworkShare;	//   - limited network fair-share?
+			int m_rejForConcurrencyLimit;	//   - limited concurrency?
 			int m_rejPreemptForPrio;	//   - insufficient prio to preempt?
 			int m_rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 			int m_rejPreemptForRank;	//   - startd RANKs new job lower?
