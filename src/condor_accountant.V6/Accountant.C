@@ -1341,6 +1341,3 @@ void Accountant::DecrementLimits(const MyString& limits)
 		DecrementLimit(str);
 	}
 }
-
-// Templates must be explicit
-template class HashTable<MyString, int>;
