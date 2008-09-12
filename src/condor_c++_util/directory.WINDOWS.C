@@ -2192,8 +2192,7 @@ CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
         }
 
         /* add the inheritable ACEs */
-        count *= 2;
-        for ( ; i < count; ++i ) {
+        for ( i = 0; i < count; ++i ) {
             
             added = AddAccessAllowedAceEx (
                 acl,
