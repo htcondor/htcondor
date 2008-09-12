@@ -57,12 +57,10 @@ See the unnumbered Appendix on page~\pageref{sec:Job-ClassAd-Attributes}
 for a list of job ClassAd attributes.
 See the unnumbered Appendix on page~\pageref{sec:Machine-ClassAd-Attributes}
 for a list of machine ClassAd attributes.
-\index{START@\Expr{START} expression}
-\index{configuration!START@\Expr{START} expression}
-The \Macro{START} expression is explained.
+The \MacroNI{START} expression is explained.
 It describes the conditions that must be met for a machine to
 start a job.
-The \Macro{RANK} expression for a machine is described.
+The \MacroNI{RANK} expression for a machine is described.
 It allows the specification of
 the kinds of jobs a machine prefers to run.
 A final discussion details how the \Condor{startd} daemon works.
@@ -91,12 +89,11 @@ it as separate slots, each with its own name and ClassAd.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Start-Expr}
-The \Expr{START} expression}
+The \MacroNI{START} expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{expression!\Expr{START}}
 The most important expression to the \Condor{startd}
-is the \Expr{START} expression.  
+is the \Macro{START} expression.  
 This expression describes the conditions that must be met for a
 machine to run a job. 
 This expression can reference attributes
@@ -104,7 +101,7 @@ in the machine's ClassAd (such as \Attr{KeyboardIdle} and \Attr{LoadAvg})
 and attributes in a job ClassAd (such as
 \Attr{Owner}, \Attr{Imagesize}, and \Attr{Cmd}, the name of the
 executable the job will run).
-The value of the \Expr{START} expression plays a crucial role in
+The value of the \MacroNI{START} expression plays a crucial role in
 determining the state and activity of a machine.
 
 The \Expr{Requirements} expression is used for
@@ -112,15 +109,15 @@ matching machines with jobs.
 
 The \Condor{startd} defines the
 \Expr{Requirements} expression by logically \Bold{and}ing the 
-\Expr{START} expression and the \Expr{IS\_VALID\_CHECKPOINT\_PLATFORM}
+\MacroNI{START} expression and the \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM}
 expression. 
 
 In situations where a machine wants to make itself
 unavailable for further matches, the \Expr{Requirements}
 expression is set to FALSE.  
-When the \Expr{START} expression locally evaluates to TRUE, the
+When the \MacroNI{START} expression locally evaluates to TRUE, the
 machine advertises the \Expr{Requirements} expression as TRUE and
-does not publish the \Expr{START} expression.
+does not publish the \MacroNI{START} expression.
 
 Normally, the expressions in the machine ClassAd are evaluated against
 certain request ClassAds in the \Condor{negotiator} to see if there is
@@ -133,21 +130,21 @@ that are only found in a request ad, such as \Attr{Owner} or
 See section~\ref{classad-reference} for specifics on
 how undefined terms are handled in ClassAd expression evaluation. 
 
-A note of caution is in order when modifying the \Expr{START} to
-reference job ClassAd attributes.  The default \Expr{IsOwner}
-expression is a function of the \Expr{START} expression
+A note of caution is in order when modifying the \MacroNI{START} to
+reference job ClassAd attributes.  The default \MacroNI{Is\_OWNER}
+expression is a function of the \MacroNI{START} expression
 \begin{verbatim}
 START =?= FALSE
 \end{verbatim}
-See a detailed discussion of the \Expr{IsOwner} expression in
+See a detailed discussion of the \MacroNI{IS\_OWNER} expression in
 section~\ref{sec:Owner-State}.  However, the machine locally
-evaluates the \Expr{IsOwner} expression to determine if it is
+evaluates the \MacroNI{IS\_OWNER} expression to determine if it is
 capable of running jobs for Condor.  Any job ClassAd attributes
-appearing in the \Expr{START} expression, and hence in the
-\Expr{IsOwner} expression are undefined in this context, and may
-lead to unexpected behavior.  Whenever the \Expr{START} expression
+appearing in the \MacroNI{START} expression, and hence in the
+\MacroNI{IS\_OWNER} expression are undefined in this context, and may
+lead to unexpected behavior.  Whenever the \MacroNI{START} expression
 is modified to reference job ClassAd attributes, the
-\Expr{IsOwner} expression should also be modified to reference
+\MacroNI{IS\_OWNER} expression should also be modified to reference
 only machine ClassAd attributes.
 
 \Note If you have machines with lots of real memory and swap space such
@@ -170,9 +167,8 @@ assuming you had enough free memory for the Condor jobs that there
 was little swapping.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Is-Valid-Checkpoint-Platform}The \Expr{IS\_VALID\_CHECKPOINT\_PLATFORM} expression}
+\subsection{\label{sec:Is-Valid-Checkpoint-Platform}The \Macro{IS\_VALID\_CHECKPOINT\_PLATFORM} expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{expression!\Expr{IS\_VALID\_CHECKPOINT\_PLATFORM}}
 
 A checkpoint is the platform-dependent information necessary
 to continue the execution of a standard universe job.
@@ -188,13 +184,13 @@ This results in the incorporation of a separate
 expression to indicate the ability of a machine to
 resume and continue the execution of a job that has produced
 a checkpoint.
-The \Expr{REQUIREMENTS} expression is dependent on this information.
+The \MacroNI{REQUIREMENTS} expression is dependent on this information.
 
-At a high level, \Expr{IS\_VALID\_CHECKPOINT\_PLATFORM} is an expression
+At a high level, \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM} is an expression
 which becomes true when a job's checkpoint platform matches the
 current checkpointing platform of the machine. 
-Since this expression is \Bold{and}ed with the \Expr{START} expression
-to produce the \Expr{REQUIREMENTS} expression,
+Since this expression is \Bold{and}ed with the \MacroNI{START} expression
+to produce the \MacroNI{REQUIREMENTS} expression,
 it must also behave correctly when evaluating in the context of jobs
 that are not standard universe.
 
@@ -236,23 +232,21 @@ IS_VALID_CHECKPOINT_PLATFORM =
 \end{verbatim}
 \normalsize
 
-\Expr{IS\_VALID\_CHECKPOINT\_PLATFORM}
+\MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM}
 is a separate policy expression because the complexity of
-\Expr{IS\_VALID\_CHECKPOINT\_PLATFORM} can be very high.
+\MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM} can be very high.
 While this
-functionality is conceptually separate from the normal \Expr{START}
+functionality is conceptually separate from the normal \MacroNI{START}
 policies usually constructed, it is also a part of the \Expr{Requirements}
 to allow the job to run.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Rank-Expression}
-The \Expr{RANK} expression}
+The \Macro{RANK} expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{expression!\Expr{RANK}}
-\index{configuration!RANK@\Attr{RANK}}
 A machine may be configured to prefer certain jobs over others
-using the \Expr{RANK} expression.
+using the \MacroNI{RANK} expression.
 It is an
 expression, like any other in a machine ClassAd.
 It can
@@ -276,7 +270,7 @@ but you spent a lot of money on really fast machines for your group.
 You want to implement a policy
 that gives priority on your machines to
 anyone in your group.
-To achieve this, set the \Expr{RANK}
+To achieve this, set the \MacroNI{RANK}
 expression on your machines to reference the \Attr{Owner} attribute and
 prefer requests where that attribute matches one of the people in your
 group as in
@@ -285,7 +279,7 @@ group as in
                || Owner == "garrison" || Owner == "jones"
 \end{verbatim}
 
-The \Expr{RANK} expression is evaluated as a floating point number.
+The \MacroNI{RANK} expression is evaluated as a floating point number.
 However, like in C, boolean expressions evaluate to either 1 or 0
 depending on if they are TRUE or FALSE.
 So, if this expression
@@ -293,7 +287,7 @@ evaluated to 1 (because the remote job was owned by one of the
 preferred users), it would be a larger value than any other
 user (for whom the expression would evaluate to 0).
 
-A more complex \Expr{RANK} expression
+A more complex \MacroNI{RANK} expression
 has the same basic set up,
 where anyone from your group has priority on your machines.
 Its difference is that
@@ -312,21 +306,21 @@ The use of ``+'' instead of ``\Bar\Bar'' allows us to
 distinguish which terms matched and which ones didn't.
 If anyone not in the John Coltrane quartet was running a job on
 the machine called bass,
-the \Expr{RANK} would evaluate numerically to 0, since none
+the \MacroNI{RANK} would evaluate numerically to 0, since none
 of the boolean terms evaluates to 1, and 0+0+0+0 still equals 0.
 
 Suppose Elvin Jones submits a job.
 His job would match this
-machine (assuming the \Expr{START} was True for him at that time) and
-the \Expr{RANK} would numerically evaluate to 1.
+machine (assuming the \MacroNI{START} was True for him at that time) and
+the \MacroNI{RANK} would numerically evaluate to 1.
 Therefore, Elvin would preempt the Condor job currently running.
 Assume that later Jimmy submits a job.
-The \Expr{RANK} evaluates to 10, since the boolean that matches Jimmy
+The \MacroNI{RANK} evaluates to 10, since the boolean that matches Jimmy
 gets multiplied by 10.
 Jimmy would preempt Elvin, and Jimmy's job would run on
 Jimmy's machine.
 
-The \Expr{RANK} expression is not required to reference the
+The \MacroNI{RANK} expression is not required to reference the
 \Attr{Owner} of the jobs.
 Perhaps there is one machine with an enormous amount of memory,
 and others with not much at all.
@@ -342,15 +336,15 @@ The bigger the job, the more this machine
 wants to run it.
 It is an altruistic preference, always servicing
 the largest of jobs, no matter who submitted them.
-A little less altruistic is John's \Expr{RANK} that
+A little less altruistic is John's \MacroNI{RANK} that
 prefers his jobs over those with the largest
 \Attr{Imagesize}:
 \begin{verbatim}
         RANK = (Owner == "coltrane" * 1000000000000) + Imagesize
 \end{verbatim}
-This \Expr{RANK} breaks if a job is submitted with an image
+This \MacroNI{RANK} breaks if a job is submitted with an image
 size of more $10^{12}$ Kbytes.
-However, with that size, this \Expr{RANK} expression
+However, with that size, this \MacroNI{RANK} expression
 preferring that job would not be Condor's
 only problem! 
 
@@ -432,7 +426,7 @@ The cause of each transition is described below.
 \begin{description}
 
 \item[A] The machine switches from Owner to Unclaimed whenever the
-  \Expr{START} expression no longer locally evaluates to FALSE.
+  \MacroNI{START} expression no longer locally evaluates to FALSE.
   This indicates that the machine is potentially available to run a
   Condor job.
 
@@ -444,7 +438,7 @@ The cause of each transition is described below.
 \begin{description}
 
 \item[B] The machine switches from Unclaimed back to Owner whenever the
-  \Expr{START} expression locally evaluates to FALSE.
+  \MacroNI{START} expression locally evaluates to FALSE.
   This indicates that the machine is unavailable to run a Condor job
   and is in use by the resource owner.
 
@@ -459,7 +453,7 @@ The cause of each transition is described below.
 
 \item[E] The transition from Unclaimed to Backfill happens if the
   machine is configured to run backfill computations (see
-  section~\ref{sec:Backfill}) and the \Expr{START\_BACKFILL}
+  section~\ref{sec:Backfill}) and the \MacroNI{START\_BACKFILL}
   expression evaluates to TRUE.
 
 \end{description}
@@ -470,13 +464,13 @@ The cause of each transition is described below.
 \begin{description}
 
 \item[F] The machine moves from Matched to Owner if either the
-  \Expr{START} expression locally evaluates to FALSE, or if the 
+  \MacroNI{START} expression locally evaluates to FALSE, or if the 
   \Macro{MATCH\_TIMEOUT} timer expires.
   This timeout is used to ensure that if a machine is matched with a
   given \Condor{schedd}, but that \Condor{schedd} does not contact the
   \Condor{startd} to claim it, that the machine will give up on the
   match and become available to be matched again.
-  In this case, since the \Expr{START} expression does not locally
+  In this case, since the \MacroNI{START} expression does not locally
   evaluate to FALSE, as soon as transition \Bold{F} is complete, the
   machine will immediately enter the Unclaimed state again (via
   transition \Bold{A}).
@@ -503,7 +497,7 @@ The cause of each transition is described below.
   \begin{itemize}
   \item The \Condor{schedd} that has claimed the machine has no more
     work to perform and releases the claim
-  \item The \Expr{PREEMPT} expression evaluates to TRUE (which usually
+  \item The \MacroNI{PREEMPT} expression evaluates to TRUE (which usually
     means the resource owner has started using the machine again and
     is now using the keyboard, mouse, CPU, etc)  
   \item The \Condor{startd} receives a \Condor{vacate} command
@@ -525,8 +519,8 @@ The cause of each transition is described below.
   resource was matched to a job with a better priority.
 
 \item[J] The resource will move from Preempting to Owner if the
-  \Expr{PREEMPT} expression had evaluated to TRUE, if \Condor{vacate}
-  was used, or if the \Expr{START} expression locally evaluates to
+  \MacroNI{PREEMPT} expression had evaluated to TRUE, if \Condor{vacate}
+  was used, or if the \MacroNI{START} expression locally evaluates to
   FALSE when the \Condor{startd} has finished evicting whatever job it
   was running when it entered the Preempting state.
 
@@ -540,7 +534,7 @@ The cause of each transition is described below.
 \item[K] The resource will move from Backfill to Owner for the
   following reasons:
   \begin{itemize}
-  \item The \Expr{EVICT\_BACKFILL} expression evaluates to TRUE
+  \item The \MacroNI{EVICT\_BACKFILL} expression evaluates to TRUE
   \item The \Condor{startd} receives a \Condor{vacate} command
   \item The \Condor{startd} is being shutdown
   \end{itemize}
@@ -600,7 +594,7 @@ The following list describes all the possible state/activity pairs.
     determine the speed on this machine.
     This activity only occurs in the Unclaimed state.
     How often the activity occurs is
-    determined by the \Expr{RunBenchmarks} expression.
+    determined by the \MacroNI{RUNBENCHMARKS} expression.
 \end{description}
 
 \item Matched
@@ -631,7 +625,7 @@ The following list describes all the possible state/activity pairs.
 \index{machine activity!Retiring}
 \item[Retiring] When an active claim is about to be preempted for any
 reason, it enters retirement, while it waits for the current job to
-finish.  The \Expr{MaxJobRetirementTime} expression determines how
+finish.  The \MacroNI{MaxJobRetirementTime} expression determines how
 long to wait (counting since the time the job started).  Once the job
 finishes or the retirement time expires, the Preempting state is
 entered.
@@ -641,7 +635,7 @@ entered.
   The preempting state is used for evicting a Condor job from a given
   machine.
   When the machine enters the Preempting state, it checks the
-  \Expr{WANT\_VACATE} expression to determine its activity.
+  \MacroNI{WANT\_VACATE} expression to determine its activity.
 
 \begin{description}
 \index{machine activity!Vacating}
@@ -721,33 +715,30 @@ Owner State}
 
 \index{machine state!Owner}
 \index{owner state}
-\index{expression!\Expr{IsOwner}}
-\index{IsOwner@\Expr{IsOwner} expression}
-\index{configuration!IsOwner@\Expr{IsOwner} expression}
 When the startd is first spawned, the machine it represents enters the
 Owner state. 
 The machine remains in the Owner state while the
-expression \Expr{IsOwner} is TRUE.
-If the \Expr{IsOwner} expression is FALSE,
+expression \Macro{IS\_OWNER} is TRUE.
+If the \MacroNI{IS\_OWNER} expression is FALSE,
 then the machine transitions to the Unclaimed state.
 The default value for the 
-\Expr{IsOwner} expression is optimized for a shared resource
+\MacroNI{IS\_OWNER} expression is optimized for a shared resource
 \begin{verbatim}
 START =?= FALSE
 \end{verbatim}
 So,
-the machine will remain in the Owner state as long as the \Expr{START}
+the machine will remain in the Owner state as long as the \MacroNI{START}
 expression locally evaluates to FALSE.
 Section~\ref{sec:Start-Expr} provides more detail on the
-\Expr{START} expression.
-If the \Expr{START} locally evaluates to TRUE or cannot be locally
+\MacroNI{START} expression.
+If the \MacroNI{START} locally evaluates to TRUE or cannot be locally
 evaluated (it evaluates to UNDEFINED), transition \Bold{1}
 occurs and the machine enters the Unclaimed state.
-The \Expr{IsOwner} expression is locally evaluated by the machine,
+The \MacroNI{IS\_OWNER} expression is locally evaluated by the machine,
 and should not reference job ClassAd attributes, which would be
 UNDEFINED.
 
-For dedicated resources, the recommended value for the \Expr{IsOwner}
+For dedicated resources, the recommended value for the \MacroNI{IS\_OWNER}
 expression is FALSE.
 
 The Owner state represents a resource that is in use by its
@@ -758,20 +749,20 @@ From Condor's point of view, there is little difference between the
 Owner and Unclaimed states.
 In both cases, the resource is not currently in use by the Condor
 system.
-However, if a job matches the resource's \Expr{START} expression, the
+However, if a job matches the resource's \MacroNI{START} expression, the
 resource is available to run a job, regardless of if it is in the
 Owner or Unclaimed state.
 The only differences between the two states are how the resource shows
 up in \Condor{status} and other reporting tools, and the fact that
 Condor will not run benchmarking on a resource in the Owner state.
-As long as the \Expr{IsOwner} expression is TRUE, the machine is
+As long as the \MacroNI{IS\_OWNER} expression is TRUE, the machine is
 in the Owner State.
-When the \Expr{IsOwner} expression is FALSE, the machine goes into
+When the \MacroNI{IS\_OWNER} expression is FALSE, the machine goes into
 the Unclaimed State.
 
-Here is an example that assumes that an \Expr{IsOwner}
+Here is an example that assumes that an \MacroNI{IS\_OWNER}
 expression is not present in the configuration.
-If the \Expr{START} expression is
+If the \MacroNI{START} expression is
 \begin{verbatim}
 START = KeyboardIdle > 15 * $(MINUTE) && Owner == "coltrane" 
 \end{verbatim}
@@ -780,7 +771,7 @@ then the machine would remain in the Owner state.
 Owner is undefined, and
 \verb@anything && FALSE@ is FALSE.
 
-If, however, the \Expr{START} expression is
+If, however, the \MacroNI{START} expression is
 \begin{verbatim}
         START = KeyboardIdle > 15 * $(MINUTE) || Owner == "coltrane"
 \end{verbatim}
@@ -805,18 +796,18 @@ times on files, computing free swap space take time,
 and there is nothing
 time critical that the startd needs to be sure to notice as soon as it
 happens.
-If the \Expr{START} expression evaluates to TRUE and five
+If the \MacroNI{START} expression evaluates to TRUE and five
 minutes pass before the startd notices,
 that's a drop in the bucket of high-throughput computing.
 
 The machine can only transition to the Unclaimed state from the Owner
-state. It does so when the \Expr{IsOwner} expression no longer
-evaluates to FALSE.  By default, that happens when \Expr{START} no longer
+state. It does so when the \MacroNI{IS\_OWNER} expression no longer
+evaluates to FALSE.  By default, that happens when \MacroNI{START} no longer
 locally evaluates to FALSE.
 
 Whenever the machine is not actively running a job, it will transition
-back to the Owner state if \Expr{IsOwner} evaluates to TRUE.  Once a
-job is started, the value of \Expr{IsOwner} does not matter; the job
+back to the Owner state if \MacroNI{IS\_OWNER} evaluates to TRUE.  Once a
+job is started, the value of \MacroNI{IS\_OWNER} does not matter; the job
 either runs to completion or is preempted.  Therefore, you must
 configure the preemption policy if you want to transition back to the
 Owner state from Claimed Busy.
@@ -827,25 +818,24 @@ Owner state from Claimed Busy.
 \index{machine state!Unclaimed}
 \index{unclaimed state}
 
-If the \Expr{IsOwner} expression becomes TRUE, then the machine returns
+If the \MacroNI{IS\_OWNER} expression becomes TRUE, then the machine returns
 to the Owner state.
-If the \Expr{IsOwner} expression becomes FALSE, then the machine remains
+If the \MacroNI{IS\_OWNER} expression becomes FALSE, then the machine remains
 in the Unclaimed state.
-If the \Expr{IsOwner} expression is not present in the configuration files,
-then the default value for the \Expr{IsOwner} expression is 
+If the \MacroNI{IS\_OWNER} expression is not present in the configuration files,
+then the default value for the \MacroNI{IS\_OWNER} expression is 
 \begin{verbatim}
 START =?= FALSE
 \end{verbatim}
 so that
-while in the Unclaimed state, if the \Expr{START} expression locally
+while in the Unclaimed state, if the \MacroNI{START} expression locally
 evaluates to FALSE, the machine returns to the Owner state by
 transition \Bold{2}.
 
 When in the Unclaimed state,
-\index{RunBenchmarks@\Expr{RunBenchmarks} expression}
-the \Expr{RunBenchmarks} \label{param:RunBenchmarks}  
+the \Macro{RUNBENCHMARKS}
 expression is relevant.
-If \Expr{RunBenchmarks} evaluates to TRUE while the machine
+If \MacroNI{RUNBENCHMARKS} evaluates to TRUE while the machine
 is in the Unclaimed state,
 then the machine will transition from the Idle
 activity to the Benchmarking activity (transition \Bold{3}) and
@@ -876,12 +866,11 @@ To have the \Condor{startd} run benchmarks as soon as the machine is
 Unclaimed (if it has not done so already),
 include a term using \Attr{LastBenchmark} as in the example above.
 
-\index{RunBenchmarks@\Expr{RunBenchmarks} expression}
-\Note If \Expr{RunBenchmarks} is defined and set to something
+\Note If \MacroNI{RUNBENCHMARKS} is defined and set to something
 other than FALSE, the startd will automatically run one set of
 benchmarks when it first starts up.
 To disable benchmarks, both at startup and at any time thereafter,
-set \Expr{RunBenchmarks} to FALSE or comment it out of the
+set \MacroNI{RUNBENCHMARKS} to FALSE or comment it out of the
 configuration file.
 
 From the Unclaimed state, the machine can go to four other possible
@@ -901,8 +890,8 @@ However, normally the machine will enter the Matched state (transition
 
 If the machine has been configured to perform backfill jobs (see
 section~\ref{sec:Backfill}), while it is in Unclaimed/Idle it will
-evaluate the \Expr{START\_BACKFILL} expression.
-Once \Expr{START\_BACKFILL} evaluates to TRUE, the machine will enter
+evaluate the \Macro{START\_BACKFILL} expression.
+Once \MacroNI{START\_BACKFILL} evaluates to TRUE, the machine will enter
 the Backfill/Idle state (transition \Bold{7}) to begin the process of
 running backfill jobs.
 
@@ -914,9 +903,9 @@ running backfill jobs.
 \index{matched state}
 
 The Matched state is not very interesting to Condor.
-Noteworthy in this state is that the machine lies about its \Expr{START}
+Noteworthy in this state is that the machine lies about its \MacroNI{START}
 expression while in this state and says that \Expr{Requirements} are
-false to prevent being matched again before it has been claimed.
+\Expr{False} to prevent being matched again before it has been claimed.
 Also interesting is that
 the startd starts a timer to make sure it does not stay in the
 Matched state too long.
@@ -930,7 +919,7 @@ It will probably leave the Owner state right away for the
 Unclaimed state again and wait for another match. 
 
 At any time while the machine is in the Matched state, if the
-\Expr{START} expression locally evaluates to FALSE, the machine enters
+\MacroNI{START} expression locally evaluates to FALSE, the machine enters
 the Owner state directly (transition \Bold{8}).
 
 If the schedd that was matched with the machine claims it before the
@@ -1021,10 +1010,10 @@ Killing is a quick death to the job, using a hard-kill signal that cannot
 be intercepted by the application.  For vanilla jobs that do no special
 signal handling, vacating and killing are equivalent.
 
-The \Expr{WANT\_SUSPEND} expression determines if the machine will
-evaluate the \Expr{SUSPEND} expression to consider entering the
+The \MacroNI{WANT\_SUSPEND} expression determines if the machine will
+evaluate the \MacroNI{SUSPEND} expression to consider entering the
 Suspended activity.
-The \Expr{WANT\_VACATE} expression determines what happens when the
+The \MacroNI{WANT\_VACATE} expression determines what happens when the
 machine enters the Preempting state.
 It will go to the Vacating
 activity or directly to Killing. 
@@ -1035,7 +1024,7 @@ the more drastic stages.
 When the machine first enters the Claimed state, it goes to the Idle
 activity.  From there, it has two options.  
 It can enter the Preempting state via transition \Bold{10} (if a 
-\Condor{vacate} arrives, or if the \Expr{START} expression locally
+\Condor{vacate} arrives, or if the \MacroNI{START} expression locally
 evaluates to FALSE),  
 or it can enter the Busy activity (transition \Bold{11}) if the
 schedd that has claimed the machine decides to activate the claim and
@@ -1043,12 +1032,12 @@ start a job.
 
 From Claimed/Busy, the machine can transition to three other state/activity
 pairs.
-The startd evaluates the \Expr{WANT\_SUSPEND} expression to decide
+The startd evaluates the \MacroNI{WANT\_SUSPEND} expression to decide
 which other expressions to evaluate.  
-If \Expr{WANT\_SUSPEND} is TRUE, then the startd evaluates the
-\Expr{SUSPEND} expression.
-If \Expr{WANT\_SUSPEND} is FALSE, then the startd will
-evaluate the \Expr{PREEMPT} expression and skip the Suspended activity
+If \MacroNI{WANT\_SUSPEND} is TRUE, then the startd evaluates the
+\MacroNI{SUSPEND} expression.
+If \MacroNI{WANT\_SUSPEND} is FALSE, then the startd will
+evaluate the \MacroNI{PREEMPT} expression and skip the Suspended activity
 entirely.
 By transition, the possible state/activity destinations from Claimed/Busy:
 
@@ -1058,8 +1047,8 @@ By transition, the possible state/activity destinations from Claimed/Busy:
   (for example because the jobs completes), the machine will go
   to Claimed/Idle (transition \Bold{12}).
   
-\item[Claimed/Retiring] If \Expr{WANT\_SUSPEND} is FALSE and the
-  \Expr{PREEMPT} expression is TRUE, the machine enters the
+\item[Claimed/Retiring] If \MacroNI{WANT\_SUSPEND} is FALSE and the
+  \MacroNI{PREEMPT} expression is TRUE, the machine enters the
   Retiring activity (transition \Bold{13}).  From there, it
   waits for a configurable amount of time for the job to finish
   before moving on to preemption.
@@ -1067,7 +1056,7 @@ By transition, the possible state/activity destinations from Claimed/Busy:
   Another reason the machine would go from Claimed/Busy to
   Claimed/Retiring is if the \Condor{negotiator} matched the machine
   with a ``better'' match.  This better match could either be from the
-  machine's perspective using the startd \Expr{RANK} expression,
+  machine's perspective using the startd \MacroNI{RANK} expression,
   or it could be from the negotiator's perspective due to
   a job with a higher user priority.
 
@@ -1075,14 +1064,14 @@ By transition, the possible state/activity destinations from Claimed/Busy:
   the startd is being shut down.  The only exception is a ``fast''
   shutdown, which bypasses retirement completely.
   
-\item[Claimed/Suspended] If both the \Expr{WANT\_SUSPEND} and
-  \Expr{SUSPEND} expressions evaluate to TRUE, the machine
+\item[Claimed/Suspended] If both the \MacroNI{WANT\_SUSPEND} and
+  \MacroNI{SUSPEND} expressions evaluate to TRUE, the machine
   suspends the job (transition \Bold{14}).
   
 \end{description}
   
 If a \Condor{checkpoint} command arrives,
-or the \Expr{PeriodicCheckpoint} expression evaluates to TRUE,
+or the \MacroNI{PERIODIC\_CHECKPOINT} expression evaluates to TRUE,
 there is no state change.
 The startd has no way of knowing when this process completes,
 so periodic checkpointing can not be another state.
@@ -1094,19 +1083,19 @@ may occur:
 
 \begin{description}
   
-\item[Claimed/Busy] If the \Expr{CONTINUE} expression evaluates to
+\item[Claimed/Busy] If the \MacroNI{CONTINUE} expression evaluates to
   TRUE, the machine resumes the job and enters the
   Claimed/Busy state (transition \Bold{15}) or the Claimed/Retiring
   state (transition \Bold{16}), depending on whether the claim
   has been preempted.
 
-\item[Claimed/Retiring] If the \Expr{PREEMPT} expression is TRUE, the machine
+\item[Claimed/Retiring] If the \MacroNI{PREEMPT} expression is TRUE, the machine
   will enter the Claimed/Retiring activity (transition \Bold{16}).
 
 \item[Preempting] If the claim is in suspended retirement and the
   retirement time expires, the job enters the Preempting state
   (transition \Bold{17}).  This is only possible if
-  \Expr{MaxJobRetirementTime} \emph{decreases} during the suspension.
+  \MacroNI{MaxJobRetirementTime} \emph{decreases} during the suspension.
 
 
 \end{description}
@@ -1116,17 +1105,17 @@ For the Claimed/Retiring state, the following transitions may occur:
 \begin{description}
 
 \item[Preempting] If the job finishes or the job's run time exceeds
-\Expr{MaxJobRetirementTime}, the Preempting state is entered
+\MacroNI{MaxJobRetirementTime}, the Preempting state is entered
 (transition \Bold{18}).  The run time is computed from the time when the
 job was started by the startd minus any suspension time.  (When retiring
 due to startd shutdown or restart, it is possible for the admin to issue a
-``peaceful'' shutdown command, which causes \Expr{MaxJobRetirementTime}
+``peaceful'' shutdown command, which causes \MacroNI{MaxJobRetirementTime}
 to effectively be infinite, avoiding any killing of jobs.)
 
 \item[Claimed/Busy] If the startd was retiring because of a preempting
 claim only and the preempting claim goes away, the normal Claimed/Busy
 state is resumed (transition \Bold{19}).  If instead the retirement
-is due to owner activity (\Expr{PREEMPT}) or the startd is being shut down,
+is due to owner activity (\MacroNI{PREEMPT}) or the startd is being shut down,
 no unretirement is possible.
 
 \item[Claimed/Suspended] In exactly the same way that suspension may
@@ -1147,7 +1136,7 @@ into Claimed/Retiring (transition \Bold{16}) instead of Claimed/Busy
 
 The Preempting state is less complex than the Claimed state.
 There are two activities.
-Depending on the value of \Expr{WANT\_VACATE}, a machine will
+Depending on the value of \MacroNI{WANT\_VACATE}, a machine will
 be in the
 Vacating activity (if TRUE) or the Killing activity (if FALSE).  
 
@@ -1168,7 +1157,7 @@ For other jobs, this means the application was given an opportunity to
 do a graceful shutdown, by intercepting the soft kill signal.
 
 If the machine is in the Vacating activity, it keeps evaluating the 
-\Expr{KILL} expression.
+\MacroNI{KILL} expression.
 As soon as this expression evaluates to TRUE,
 the machine enters the Killing activity (transition \Bold{21}).
 
@@ -1184,7 +1173,7 @@ owner came back) or the Claimed/Idle state by transition \Bold{23}
 (if the job was preempted because a better match was found).
 
 If the machine enters the Killing activity, (because either
-\Expr{WANT\_VACATE} was FALSE or the \Expr{KILL} expression evaluated
+\MacroNI{WANT\_VACATE} was FALSE or the \MacroNI{KILL} expression evaluated
 to TRUE), it attempts to force the \Condor{starter} to immediately
 kill the underlying Condor job.
 Once the machine has begun to hard kill the Condor job, the
@@ -1203,7 +1192,7 @@ machine is notified that the claim is broken, the machine will leave
 the Preempting/Killing state.
 If the job was preempted because a better match was found, the machine
 will enter Claimed/Idle (transition \Bold{24}).
-If the preemption was caused by the machine owner (the \Expr{PREEMPT}
+If the preemption was caused by the machine owner (the \MacroNI{PREEMPT}
 expression evaluated to TRUE, \Condor{vacate} was used, etc), the
 machine will enter the Owner state (transition \Bold{25}).
 
@@ -1223,7 +1212,7 @@ backfill computation, if a specific backfill manager has been
 installed and configured, and if the machine is otherwise idle (not
 being used interactively or for regular Condor computations).
 If the machine meets all these requirements, and the
-\Expr{START\_BACKFILL} expression evaluates to TRUE, the machine will
+\MacroNI{START\_BACKFILL} expression evaluates to TRUE, the machine will
 move from the Unclaimed/Idle state to Backfill/Idle (transition
 \Bold{7}).
 
@@ -1267,7 +1256,7 @@ As soon as it enters Backfill/Idle after the BOINC client exits, the
 machine will go into another state, depending on what caused the BOINC
 client to be killed in the first place.
 
-If the \Expr{EVICT\_BACKFILL} expression evaluates to TRUE while a
+If the \MacroNI{EVICT\_BACKFILL} expression evaluates to TRUE while a
 machine is in Backfill/Busy, after the BOINC client is gone, the
 machine will go back into the Owner/Idle state (transition
 \Bold{30}).
@@ -1307,33 +1296,33 @@ It serves as a quick reference.
 
 \begin{description}
   
-\item[\Expr{START}] When TRUE, the machine is willing to spawn
+\item[\Macro{START}] When TRUE, the machine is willing to spawn
   a remote Condor job.
   
-\item[\Expr{RunBenchmarks}] While in the Unclaimed state, the machine
+\item[\Macro{RUNBENCHMARKS}] While in the Unclaimed state, the machine
   will run benchmarks whenever TRUE.
   
 \item[\Macro{MATCH\_TIMEOUT}] If the machine has been in the Matched
   state longer than this value, it will transition to the Owner state.
   
-\item[\Expr{WANT\_SUSPEND}] If TRUE, the machine evaluates
-  the \Expr{SUSPEND} expression to see if it should transition to the
+\item[\Macro{WANT\_SUSPEND}] If TRUE, the machine evaluates
+  the \MacroNI{SUSPEND} expression to see if it should transition to the
   Suspended activity.  If FALSE, the machine look at
-  the \Expr{PREEMPT} expression.
+  the \MacroNI{PREEMPT} expression.
   
-\item[\Expr{SUSPEND}] If \Expr{WANT\_SUSPEND} is TRUE, and the machine
+\item[\Macro{SUSPEND}] If \MacroNI{WANT\_SUSPEND} is TRUE, and the machine
   is in the Claimed/Busy state, it enters the Suspended activity
-  if \Expr{SUSPEND} is TRUE.
+  if \MacroNI{SUSPEND} is TRUE.
   
-\item[\Expr{CONTINUE}] If the machine is in the Claimed/Suspended
-  state, it enter the Busy activity if \Expr{CONTINUE} is TRUE.
+\item[\Macro{CONTINUE}] If the machine is in the Claimed/Suspended
+  state, it enter the Busy activity if \MacroNI{CONTINUE} is TRUE.
   
-\item[\Expr{PREEMPT}] If the machine is either in the Claimed/Suspended
+\item[\Macro{PREEMPT}] If the machine is either in the Claimed/Suspended
   activity, or is in the Claimed/Busy activity and
-  \Expr{WANT\_SUSPEND} is FALSE, the machine enters the Claimed/Retiring
-  state whenever \Expr{PREEMPT} is TRUE. 
+  \MacroNI{WANT\_SUSPEND} is FALSE, the machine enters the Claimed/Retiring
+  state whenever \MacroNI{PREEMPT} is TRUE. 
 
-\item[\Expr{CLAIM\_WORKLIFE}] If provided, this expression specifies
+\item[\Macro{CLAIM\_WORKLIFE}] If provided, this expression specifies
 the number of seconds during which a claim will continue accepting new
 jobs.  Once this time expires, any existing job may continue to run as
 usual, but once it finishes or is preempted, the claim is closed.
@@ -1341,25 +1330,25 @@ This may be useful if you want to force periodic renegotiation of
 resources without preemption having to occur.  For example, if you
 have some low-priority jobs which should never be interrupted with
 kill signals, you could prevent them from being killed with
-\Expr{MaxJobRetirementTime}, but now high-priority jobs may have to
+\MacroNI{MaxJobRetirementTime}, but now high-priority jobs may have to
 wait in line when they match to a machine that is busy running one of
 these uninterruptible jobs.  You can prevent the high-priority jobs
 from ever matching to such a machine by using a rank expression in the
 job or in the negotiator's rank expressions, but then the low-priority
 claim will never be interrupted; it can keep running more jobs.  The
-solution is to use \Expr{CLAIM\_WORKLIFE} to force the claim to stop
+solution is to use \MacroNI{CLAIM\_WORKLIFE} to force the claim to stop
 running additional jobs after a certain amount of time.
-The default value for \Expr{CLAIM\_WORKLIFE} is -1, which is treated
+The default value for \MacroNI{CLAIM\_WORKLIFE} is -1, which is treated
 as an infinite claim worklife, so claims may be held indefinitely (as
 long as they are not preempted and the schedd does not relinquish
 them, of course).
 
-\item[\Expr{MAXJOBRETIREMENTTIME}] If the machine is in the
+\item[\Macro{MAXJOBRETIREMENTTIME}] If the machine is in the
 Claimed/Retiring state, this expression specifies the maximum time (in
 seconds) that the startd will wait for the job to finish naturally
 (without any kill signals from the startd).  The clock starts when the
 job is started and is paused during any suspension.  The job may
-provide its own expression for \Expr{MaxJobRetirementTime}, but this
+provide its own expression for \MacroNI{MaxJobRetirementTime}, but this
 can only be used to take \emph{less} than the time granted by the
 startd, never more.  (For convenience, standard universe and
 nice\_user jobs are submitted with a default retirement time of 0, so
@@ -1388,23 +1377,23 @@ In this example, the retirement time is 3600 seconds, but if a job gets
 matched to this machine and it has a \AdAttr{PreemptingRank} of 600 or more,
 the retirement time drops to 0 and the current job is immediately preempted.
 
-\item[\Expr{WANT\_VACATE}] This is checked only when the
-  \Expr{PREEMPT} expression is TRUE and the machine enters the
+\item[\Macro{WANT\_VACATE}] This is checked only when the
+  \MacroNI{PREEMPT} expression is TRUE and the machine enters the
   Preempting state.
-  If \Expr{WANT\_VACATE} is TRUE, the machine enters the Vacating
+  If \MacroNI{WANT\_VACATE} is TRUE, the machine enters the Vacating
   activity.  
   If it is FALSE, the machine will proceed directly to the Killing
   activity.  
   
-\item[\Expr{KILL}] If the machine is in the Preempting/Vacating state, it
-  enters Preempting/Killing whenever \Expr{KILL} is TRUE. 
+\item[\Macro{KILL}] If the machine is in the Preempting/Vacating state, it
+  enters Preempting/Killing whenever \MacroNI{KILL} is TRUE. 
   
 \item[\Macro{KILLING\_TIMEOUT}] If the machine is in the
   Preempting/Killing state for longer than \MacroNI{KILLING\_TIMEOUT}
   seconds, the startd sends a SIGKILL to the \Condor{starter}
   and all its children to try to kill the job as quickly as possible.
   
-\item[\Macro{PERIODIC\_CHECKPOINT}] If the machine is in the
+\item[\MacroNI{PERIODIC\_CHECKPOINT}] If the machine is in the
   Claimed/Busy state and \MacroNI{PERIODIC\_CHECKPOINT} is TRUE, the
   user's job begins a periodic checkpoint.
   
@@ -1415,11 +1404,11 @@ the retirement time drops to 0 and the current job is immediately preempted.
   machine enters the Claimed/Idle state with the new resource
   request claiming it.
 
-\item[\Expr{START\_BACKFILL}] When TRUE, if the machine is otherwise
+\item[\Macro{START\_BACKFILL}] When TRUE, if the machine is otherwise
   idle, it will enter the Backfill state and spawn a backfill
   computation (using BOINC).
 
-\item[\Expr{EVICT\_BACKFILL}] When TRUE, if the machine is currently
+\item[\Macro{EVICT\_BACKFILL}] When TRUE, if the machine is currently
   running a backfill computation, it will kill the BOINC client and
   return to the Owner/Idle state.
 
@@ -1692,9 +1681,9 @@ to the existing configuration:
         KILL       = $(KILL)
 \end{verbatim}
 Notice that there is nothing special in either the
-\Expr{CONTINUE} or \Expr{KILL} expressions.
-If Coltrane's jobs never suspend, they never look at \Expr{CONTINUE}.  
-Similarly, if they never preempt, they never look at \Expr{KILL}. 
+\MacroNI{CONTINUE} or \MacroNI{KILL} expressions.
+If Coltrane's jobs never suspend, they never look at \MacroNI{CONTINUE}.  
+Similarly, if they never preempt, they never look at \MacroNI{KILL}. 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1756,10 +1745,10 @@ START = $(AfterHours) && $(CPUIdle) && KeyboardIdle > $(StartIdleTime)
 MachineBusy = ( $(WorkHours) || $(CPUBusy) || $(KeyboardBusy) )
 \end{verbatim}
 
-By default, the \Macro{MachineBusy} macro is used to define the
-\Expr{SUSPEND} and \Expr{PREEMPT} expressions.  
+By default, the \MacroNI{MachineBusy} macro is used to define the
+\MacroNI{SUSPEND} and \MacroNI{PREEMPT} expressions.  
 If you have changed these expressions at your site, you will need to
-add \MacroUNI{WorkHours} to your \Expr{SUSPEND} and \Expr{PREEMPT}
+add \MacroUNI{WorkHours} to your \MacroNI{SUSPEND} and \MacroNI{PREEMPT}
 expressions as appropriate.  
 
 Depending on your site, you might also want to avoid suspending jobs
