@@ -370,24 +370,29 @@ The possible states are
 \begin{description}
   
 \index{machine state!Owner}
+\index{owner state}
 \item[Owner] The machine is being used by the machine owner, and/or
   is not available to run Condor jobs.
   When the machine first starts up, it begins in this state.
   
 \index{machine state!Unclaimed}
+\index{unclaimed state}
 \item[Unclaimed] The machine is available to run Condor jobs, but it is
   not currently doing so.
   
 \index{machine state!Matched}
+\index{matched state}
 \item[Matched] The machine is available to run jobs, and it has been
   matched by the negotiator with a specific schedd.
   That schedd just has not yet claimed this machine.
   In this state, the machine is unavailable for further matches.
 
 \index{machine state!Claimed}
+\index{claimed state}
 \item[Claimed] The machine has been claimed by a schedd. 
   
 \index{machine state!Preempting}
+\index{preempting state}
 \item[Preempting] The machine was claimed by a schedd, but is now
   preempting that claim for one of the following reasons.
   \begin{enumerate}
@@ -397,6 +402,7 @@ The possible states are
   \end{enumerate}
 
 \index{machine state!Backfill}
+\index{backfill state}
 \item[Backfill] The machine is running a backfill computation while
   waiting for either the machine owner to come back or to be matched
   with a Condor job.
@@ -713,6 +719,8 @@ the Vacating activity longer than a specified amount of time.
 Owner State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{machine state!Owner}
+\index{owner state}
 \index{expression!\Expr{IsOwner}}
 \index{IsOwner@\Expr{IsOwner} expression}
 \index{configuration!IsOwner@\Expr{IsOwner} expression}
@@ -816,6 +824,8 @@ Owner state from Claimed Busy.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Unclaimed-State}Unclaimed State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{machine state!Unclaimed}
+\index{unclaimed state}
 
 If the \Expr{IsOwner} expression becomes TRUE, then the machine returns
 to the Owner state.
@@ -900,6 +910,8 @@ running backfill jobs.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Matched-State}Matched State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{machine state!Matched}
+\index{matched state}
 
 The Matched state is not very interesting to Condor.
 Noteworthy in this state is that the machine lies about its \Expr{START}
@@ -928,6 +940,8 @@ state (transition \Bold{9}).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Claimed-State}Claimed State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{machine state!Claimed}
+\index{claimed state}
 
 The Claimed state is certainly the most complex state.
 It has the most possible activities and the most expressions that
@@ -1128,6 +1142,8 @@ into Claimed/Retiring (transition \Bold{16}) instead of Claimed/Busy
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Preempting-State}Preempting State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{machine state!Preempting}
+\index{preempting state}
 
 The Preempting state is less complex than the Claimed state.
 There are two activities.
@@ -1195,6 +1211,8 @@ machine will enter the Owner state (transition \Bold{25}).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Backfill-State}Backfill State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{machine state!Backfill}
+\index{backfill state}
 
 The Backfill state is used whenever the machine is performing low
 priority background tasks to keep itself busy.
@@ -1386,11 +1404,11 @@ the retirement time drops to 0 and the current job is immediately preempted.
   seconds, the startd sends a SIGKILL to the \Condor{starter}
   and all its children to try to kill the job as quickly as possible.
   
-\item[\Expr{PERIODIC\_CHECKPOINT}] If the machine is in the
+\item[\Macro{PERIODIC\_CHECKPOINT}] If the machine is in the
   Claimed/Busy state and \MacroNI{PERIODIC\_CHECKPOINT} is TRUE, the
   user's job begins a periodic checkpoint.
   
-\item[\Expr{RANK}] If this expression evaluates to a higher number for
+\item[\Macro{RANK}] If this expression evaluates to a higher number for
   a pending resource request than it does for the current request, the
   machine preempts the current request (enters the
   Preempting/Vacating state).  When the preemption is complete, the
