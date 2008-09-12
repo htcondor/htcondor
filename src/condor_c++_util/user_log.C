@@ -191,7 +191,7 @@ UserLog::open_file(const char *file,
 	
 # if !defined(WIN32)
 	// Unix
-	int	flags = O_WRONLY | O_CREAT;
+	int	flags = O_WRONLY | O_CREAT | O_APPEND;
 	mode_t mode = 0664;
 	fd = safe_open_wrapper( file, flags, mode );
 	if( fd < 0 ) {
@@ -223,11 +223,6 @@ UserLog::open_file(const char *file,
 
 	fd = _fileno(fp);
 # endif
-
-		// set the stdio stream for line buffering
-	if( setvbuf( fp,NULL,_IOLBF,BUFSIZ) < 0 ) {
-		dprintf( D_ALWAYS, "setvbuf failed in UserLog::initialize\n" );
-	}
 
 	// prepare to lock the file.	
 	if ( param_boolean("ENABLE_USERLOG_LOCKING",true) ) {

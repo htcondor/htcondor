@@ -801,25 +801,26 @@ IpVerify::lookup_user(NetStringList *hosts, UserHash_t *users, char const *user,
 	ASSERT( !ip || !hostname );
 	ASSERT( ip || hostname);
 
-	char const * hostmatch = NULL;
+	StringList hostmatches;
 	if( ip ) {
-		hostmatch = hosts->string_withnetwork(ip);
+		hosts->find_matches_withnetwork(ip,&hostmatches);
 	}
 	else if( hostname ) {
-		hostmatch = hosts->string_anycase_withwildcard(hostname);
+		hosts->find_matches_anycase_withwildcard(hostname,&hostmatches);
 	}
 
-	if( !hostmatch ) {
-		return false;
-	}
-	StringList *userlist;
-	ASSERT( users->lookup(hostmatch,userlist) != -1 );
+	char const * hostmatch;
+	hostmatches.rewind();
+	while( (hostmatch=hostmatches.next()) ) {
+		StringList *userlist;
+		ASSERT( users->lookup(hostmatch,userlist) != -1 );
 
-	if (userlist->contains_anycase_withwildcard(user)) {
-		dprintf ( D_SECURITY, "IPVERIFY: matched user %s from %s to %s list\n",
-				  user, hostmatch, is_allow_list ? "allow" : "deny" );
-		return true;
-    }
+		if (userlist->contains_anycase_withwildcard(user)) {
+			dprintf ( D_SECURITY, "IPVERIFY: matched user %s from %s to %s list\n",
+					  user, hostmatch, is_allow_list ? "allow" : "deny" );
+			return true;
+		}
+	}
 
 	return false;
 }

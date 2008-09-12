@@ -1,0 +1,6 @@
+WRITE A 127.0.0.1 DENIED
+WRITE B 127.0.0.1 DENIED
+WRITE C 127.0.0.1 DENIED
+
+READ rA condor.cs.wisc.edu DENIED
+READ rB condor.cs.wisc.edu DENIED
