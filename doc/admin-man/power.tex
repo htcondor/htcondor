@@ -24,8 +24,8 @@ are known periods of low activity in the pool.
 By default, Condor's power management is turned off.  To enable it is a matter
 of configuring the time interval that determines when slots should be queried
 for their readiness to hibernate.  A slot's readiness is determined by the 
-evaluating the \Macro{HIBERNATE} expression in it's context.  We will return 
-to this point shortly.
+evaluating the \Macro{HIBERNATE} expression in the context of the slot.  We 
+will return to this point shortly.
 
 To start power management set the \Macro{HIBERNATE\_CHECK\_INTERVAL} to a
 non-zero value.  This value is interpreted in seconds, so it need not 
@@ -40,8 +40,8 @@ frequently:
 HIBERNATE_CHECK_INTERVAL = 20
 \end{verbatim}
 
-This would make Condor check each slot's readiness every 20 seconds; however,
-for a more common value would be:
+This would make Condor check each slot's readiness every 20 seconds.  This
+may be to small a value in practice. A more common value would be:
 
 \begin{verbatim}
 HIBERNATE_CHECK_INTERVAL = 300
@@ -90,7 +90,7 @@ HIBERNATE = ifThenElse($(ShouldHibernate), 3, 0)
 The actual hibernation expression says: We should enter power state $3$,
 i.e. sleep (or standby), if \Code{ShouldHibernate} evaluates to true; 
 otherwise, enter power state $0$|which is a no-op: it tells Condor to leave 
-the machine up and running in it's current state. 
+the machine in it's current state. 
 
 Here we see can clearly see how one slot can veto the decision of all the 
 other slots.  If any slot returns $0$, Condor will not put the machine in 
@@ -107,8 +107,8 @@ state, and Condor will attempt to put the machine in to this power state.
 \subsection{Troubleshooting}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-If after a suitable amount of time, the machine has not entered the expected 
-power state, Condor is having difficulty exercising the OS's low power 
+If after a suitable amount of time the machine has not entered the expected 
+power state, then Condor is having difficulty exercising the OS's low power 
 capabilities.  While the cause of this can be very specific to the machine's
 hardware, it may also be due to improperly configured software.  
 With regards to hardware, most likely the configuration needs to be dealt with
