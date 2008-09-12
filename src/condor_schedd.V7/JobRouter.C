@@ -1610,7 +1610,7 @@ JobRouter::CleanupJob(RoutedJob *job) {
 #if HAVE_JOB_HOOKS
 	if (NULL != m_hook_mgr)
 	{
-		int rval = m_hook_mgr->hookFailureCleanup(job);
+		int rval = m_hook_mgr->hookJobCleanup(job);
 		switch (rval)
 		{
 			case -1:    // Error

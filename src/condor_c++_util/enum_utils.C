@@ -51,7 +51,7 @@ struct Translation HookTypeTranslation[] = {
 	{ "JOB_EXIT", HOOK_JOB_EXIT },
 	{ "EVICT_JOB", HOOK_EVICT_JOB },
 	{ "TRANSLATE_JOB", HOOK_TRANSLATE_JOB },
-	{ "FAILURE_CLEANUP", HOOK_FAILURE_CLEANUP }
+	{ "JOB_CLEANUP", HOOK_JOB_CLEANUP }
 };
 
 

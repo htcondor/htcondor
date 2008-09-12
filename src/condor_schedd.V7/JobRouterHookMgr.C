@@ -118,7 +118,7 @@ JobRouterHookMgr::reconfig()
 	m_hook_translate = getHookPath(HOOK_TRANSLATE_JOB);
 	m_hook_update_job_info = getHookPath(HOOK_UPDATE_JOB_INFO);
 	m_hook_job_exit = getHookPath(HOOK_JOB_EXIT);
-	m_hook_cleanup = getHookPath(HOOK_FAILURE_CLEANUP);
+	m_hook_cleanup = getHookPath(HOOK_JOB_CLEANUP);
 
 	return true;
 }
@@ -348,22 +348,22 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job, const char* sandbox)
 
 
 int
-JobRouterHookMgr::hookFailureCleanup(RoutedJob* r_job)
+JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 {
 	ClassAd temp_ad;
 	if (NULL == m_hook_cleanup)
 	{
 		// hook not defined
-		dprintf(D_FULLDEBUG, "HOOK_FAILURE_CLEANUP not configured.\n");
+		dprintf(D_FULLDEBUG, "HOOK_JOB_CLEANUP not configured.\n");
 		return 0;
 	}
 
 	// Verify the cleanup hook hasn't already been spawned and that
 	// we're not waiting for it to return.
 	std::string key = r_job->dest_key;
-	if (true == JobRouterHookMgr::checkHookKnown(key.c_str(), HOOK_FAILURE_CLEANUP))
+	if (true == JobRouterHookMgr::checkHookKnown(key.c_str(), HOOK_JOB_CLEANUP))
 	{
-		dprintf(D_FULLDEBUG, "JobRouterHookMgr::hookFailureCleanup "
+		dprintf(D_FULLDEBUG, "JobRouterHookMgr::hookJobCleanup "
 			"retried while still waiting for cleanup hook to "
 			"return for job with key %s - ignoring\n", key.c_str());
 		return 1;
@@ -373,7 +373,7 @@ JobRouterHookMgr::hookFailureCleanup(RoutedJob* r_job)
 	if (false == new_to_old(r_job->dest_ad, temp_ad))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
-			"ERROR in JobRouterHookMgr::hookFailureCleanup: "
+			"ERROR in JobRouterHookMgr::hookJobCleanup: "
 			"failed to convert classad");
 		return -1;
 	}
@@ -385,28 +385,28 @@ JobRouterHookMgr::hookFailureCleanup(RoutedJob* r_job)
 	if (NULL == cleanup_client)
 	{
 		dprintf(D_ALWAYS|D_FAILURE, 
-			"ERROR in JobRouterHookMgr::hookFailureCleanup: "
+			"ERROR in JobRouterHookMgr::hookJobCleanup: "
 			"failed to create status update client");
 		return -1;
 	}
 	if (0 == spawn(cleanup_client, NULL, &hook_stdin))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
-				"ERROR in JobRouterHookMgr::FailureCleanup: "
-				"failed to spawn HOOK_FAILURE_CLEANUP (%s)\n", m_hook_cleanup);
+				"ERROR in JobRouterHookMgr::JobCleanup: "
+				"failed to spawn HOOK_JOB_CLEANUP (%s)\n", m_hook_cleanup);
 		return -1;
 
 	}
 
 	// Add our info to the list of hooks currently running for this job.
-	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_FAILURE_CLEANUP))
+	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_JOB_CLEANUP))
 	{
-		dprintf(D_ALWAYS, "ERROR in JobRouterHookMgr::hookFailureCleanup: "
-				"failed to add HOOK_FAILURE_CLEANUP to list of "
+		dprintf(D_ALWAYS, "ERROR in JobRouterHookMgr::hookJobCleanup: "
+				"failed to add HOOK_JOB_CLEANUP to list of "
 				"hooks running for job key %s\n", key.c_str());
 	}
 
-	dprintf(D_FULLDEBUG, "HOOK_FAILURE_CLEANUP (%s) invoked.\n",
+	dprintf(D_FULLDEBUG, "HOOK_JOB_CLEANUP (%s) invoked.\n",
 			m_hook_cleanup);
 	return 1;
 }
@@ -686,7 +686,7 @@ ExitClient::hookExited(int exit_status)
 // // // // // // // // // // // // 
 
 CleanupClient::CleanupClient(const char* hook_path, RoutedJob* r_job)
-	: HookClient(HOOK_FAILURE_CLEANUP, hook_path, true)
+	: HookClient(HOOK_JOB_CLEANUP, hook_path, true)
 {
 	m_routed_job = r_job;
 }
@@ -696,7 +696,7 @@ void
 CleanupClient::hookExited(int exit_status)
 {
 	std::string key = m_routed_job->dest_key;
-	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_FAILURE_CLEANUP))
+	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_JOB_CLEANUP))
 	{
 		dprintf(D_ALWAYS|D_FAILURE, "CleanupClient::hookExited: "
 			"Failed to remove hook info for job key %s.\n", key.c_str());
@@ -727,7 +727,7 @@ CleanupClient::hookExited(int exit_status)
 		MyString error_msg = "";
 		statusString(exit_status, error_msg);
 		dprintf(D_ALWAYS|D_FAILURE, "CleanupClient::hookExited: "
-			"HOOK_FAILURE_CLEANUP (%s) failed (%s)\n", m_hook_path, 
+			"HOOK_JOB_CLEANUP (%s) failed (%s)\n", m_hook_path, 
 			error_msg.Value());
 	}
 }
