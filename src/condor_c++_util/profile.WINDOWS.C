@@ -306,7 +306,7 @@ OwnerProfile::destroy () const {
         dprintf ( 
             D_FULLDEBUG, 
             "UserProfile::destroy: Loading %s's SID "
-            " %s. (last-error = %u)\n", 
+            "%s. (last-error = %u)\n", 
             user_name_,
             got_user_sid ? "succeeded" : "failed", 
             got_user_sid ? 0 : GetLastError () );
@@ -322,9 +322,8 @@ OwnerProfile::destroy () const {
 
         dprintf ( 
             D_FULLDEBUG, 
-            "UserProfile::destroy: Converting SID to string "
-            " %s. (last-error = %u)\n", 
-            user_name_,
+            "UserProfile::destroy: Converting SID to a string "
+            "%s. (last-error = %u)\n", 
             got_sid_string ? "succeeded" : "failed", 
             got_sid_string ? 0 : GetLastError () );
         
@@ -336,7 +335,7 @@ OwnerProfile::destroy () const {
         profile_deleted = DeleteProfile ( 
             user_sid_string,
             profile_directory_,
-            domain_name_ );
+            NULL /* local computer */ );
 
         dprintf ( 
             D_FULLDEBUG, 
@@ -487,7 +486,7 @@ OwnerProfile::load () {
 
                     dprintf ( 
                         D_FULLDEBUG, 
-                        "OwnerProfile::load: Destroying of %s's "
+                        "OwnerProfile::load: Destruction of %s's "
                         "profile %s. (last-error = %u)\n",
                         user_name_,
                         profile_destroyed ? "succeeded" : "failed", 

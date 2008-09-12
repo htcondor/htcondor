@@ -145,7 +145,7 @@ GetFileSecurityAttributes (
  * Token Security
  ***************************************************************/
 
-BOOL 
+ BOOL 
 ModifyPrivilege ( LPCTSTR privilege, BOOL enable ) { 
 
     
@@ -249,9 +249,8 @@ BOOL
 LoadUserSid ( HANDLE token, PSID *sid ) {
 
     DWORD       last_error  = ERROR_SUCCESS;
-    PTOKEN_USER ptoken       = NULL;
-    DWORD       size        = 0x100, /* uneducated guess */
-                required    = 0;
+    PTOKEN_USER ptoken      = NULL;
+    DWORD       size        = 0; /* uneducated guess */
     BOOL        got_token   = FALSE,
                 copied      = FALSE,
                 ok          = FALSE;
@@ -261,45 +260,53 @@ LoadUserSid ( HANDLE token, PSID *sid ) {
         /* point the return buffer to nowhere */
         *sid = NULL;
 
+        /* determine how much memory we need */
+        GetTokenInformation (
+            token,
+            TokenUser, 
+            NULL,
+            0,
+            &size );
+
+        if ( size <= 0 ) {
+            
+            last_error = GetLastError ();
+            
+            dprintf ( 
+                D_FULLDEBUG, 
+                "GetUserSid: failed determine how much memory "
+                "is required to store TOKEN_USER. "
+                "(last-error = %d)\n",
+                last_error );
+            
+            __leave;
+
+        }
+
         /* try to allocate the buffer for the sid */
         ptoken = (PTOKEN_USER) new BYTE[size];
-
+        
         if ( !ptoken ) {
-
+            
             last_error = GetLastError ();
-
+            
             dprintf ( 
                 D_FULLDEBUG, 
                 "GetUserSid: failed to allocate memory for "
                 "TOKEN_USER. (last-error = %d)\n",
                 last_error );
-
+            
             __leave;
-
+            
         }
-
+        
+        /* now try and actually get the infromation */
         got_token = GetTokenInformation (
             token,
             TokenUser, 
-            &ptoken,
+            ptoken,
             size,
-            &required );
-
-        /* if we were short on memory, then add a little and retry */
-        if ( required > size ) {
-            
-            size = required;
-            delete [] ptoken;
-            ptoken = (PTOKEN_USER) new BYTE[size];
-
-            got_token = GetTokenInformation (
-                token,
-                TokenUser, 
-                &ptoken,
-                size,
-                &required );            
-            
-        }
+            &size );
 
         /* make sure we have a copy of the user information */
         if ( !got_token ) {
@@ -317,7 +324,7 @@ LoadUserSid ( HANDLE token, PSID *sid ) {
         }
 
         /* allocate room to return the token's SID */
-        size = GetLengthSid ( ptoken->User.Sid );
+        size -= sizeof ( DWORD );
         *sid = (PSID) new BYTE[size];
 
         if ( !*sid ) {

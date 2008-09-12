@@ -36,8 +36,6 @@ BOOL GetFileSecurityAttributes ( PCWSTR w_source, PSECURITY_ATTRIBUTES *sa );
  * Token Security
  ***************************************************************/
 
-/* Adds or removes a privilege to the current process token.  
-Returns TRUE on success; otherwise, FALSE */
 BOOL ModifyPrivilege ( LPCTSTR privilege, BOOL enable );
 
 /***************************************************************

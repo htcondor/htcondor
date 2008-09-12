@@ -577,6 +577,11 @@ OsProc::JobExit( void )
     /* If we loaded the user's profile, then we should dump it now */
     if ( owner_profile_.loaded () ) {
         owner_profile_.unload ();
+        
+        /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
+        owner_profile_.destroy ();
+        /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
+
     }
 
     /* at this point too, we can revoke the user's logion's session's
