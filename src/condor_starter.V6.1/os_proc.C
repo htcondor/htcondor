@@ -39,7 +39,7 @@
 #include "starter_privsep_helper.h"
 #ifdef WIN32
 #include "perm.h"
-#include "profile_helpers.WINDOWS.h"
+#include "profile.WINDOWS.h"
 #endif
 
 extern CStarter *Starter;
@@ -56,9 +56,6 @@ OsProc::OsProc( ClassAd* ad )
 	num_pids = 0;
 	dumped_core = false;
 	m_using_priv_sep = false;
-#if defined ( WIN32 )
-    m_loaded_user_profile = false;
-#endif
 	UserProc::initialize();
 }
 
@@ -405,24 +402,28 @@ OsProc::StartJob(FamilyInfo* family_info)
 	}
 
 #if defined ( WIN32 )
-    /* Determine if we are to load the user's profile */
-    bool should_load_profile = false,
-         will_run_as_owner   = false;
-    JobAd->LookupBool ( ATTR_JOB_LOAD_USER_PROFILE, 
-        should_load_profile );
-    JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER, 
-        will_run_as_owner );
-    /* We currently only allow slot users to load their profiles */
-    if ( should_load_profile && !will_run_as_owner ) {
-        m_loaded_user_profile = CondorLoadUserProfile ();
-        if ( !m_loaded_user_profile ) {
-            dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to load"
-                "user's profile.\n" );
-        } else {
-            if ( !CondorCreateEnvironmentBlock ( job_env ) ) {
+    owner_profile_.update ();
+    /*************************************************************
+    NOTE: We currently *ONLY* support loading slot-user profiles.
+    This limitation will be addressed shortly, by allowing regular 
+    users to load their registry hive - Ben [2008-09-31]
+    **************************************************************/
+    bool load_profile = false,
+         run_as_owner = false;
+    JobAd->LookupBool ( ATTR_JOB_LOAD_PROFILE, load_profile );
+    JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
+    if ( load_profile && !run_as_owner ) {
+        if ( owner_profile_.load () ) {
+            /* publish the users environment into that of the main 
+
+            job's environment */
+            if ( !owner_profile_.environment ( job_env ) ) {
                 dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to "
-                    "load user's environment.\n" );
-            }
+                    "export owner's environment.\n" );
+            }            
+        } else {
+            dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to load "
+                "owner's profile.\n" );
         }
     }
 #endif
@@ -574,8 +575,13 @@ OsProc::JobExit( void )
 
 #if defined ( WIN32 )
     /* If we loaded the user's profile, then we should dump it now */
-    if ( m_loaded_user_profile ) {
-        CondorUnloadUserProfile ();
+    if ( owner_profile_.loaded () ) {
+        owner_profile_.unload ();
+        
+        /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
+        owner_profile_.destroy ();
+        /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
+
     }
 
     /* at this point too, we can revoke the user's logion's session's

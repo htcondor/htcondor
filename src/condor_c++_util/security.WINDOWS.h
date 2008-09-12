@@ -17,29 +17,33 @@
 *
 ***************************************************************/
 
-#ifndef _PROFILE_HELPERS_WINDOWS_H_
-#define _PROFILE_HELPERS_WINDOWS_H_
+#ifndef _SECURITY_WINDOWS_H_
+#define _SECURITY_WINDOWS_H_
 
 /***************************************************************
-* Headers
-***************************************************************/
-
-#include "env.h"
+ * Functions
+ ***************************************************************/
 
 /***************************************************************
-* Functions
-***************************************************************/
+ * File Security
+ ***************************************************************/
 
-/* returns TRUE if a user profile was created; otherwise, FALSE. */
-BOOL CondorCreateUserProfile ();
+/* Gathers a file's security attributes.  Returns TRUE on 
+success; otherwise, FALSE */
+BOOL GetFileSecurityAttributes ( PCWSTR w_source, PSECURITY_ATTRIBUTES *sa );
 
-/* returns TRUE if a user profile was loaded; otherwise, FALSE.*/
-BOOL CondorLoadUserProfile ();
+/***************************************************************
+ * Token Security
+ ***************************************************************/
 
-/* returns TRUE if a user profile was unloaded; otherwise, FALSE.*/
-BOOL CondorUnloadUserProfile ();
+BOOL ModifyPrivilege ( LPCTSTR privilege, BOOL enable );
 
-/* returns TRUE if a user's environment was loaded; otherwise, FALSE.*/
-BOOL CondorCreateEnvironmentBlock ( Env &env );
+/***************************************************************
+ * User Security
+ ***************************************************************/
 
-#endif // _PROFILE_HELPERS_WINDOWS_H_
+/* Retrieves a user's SID. Return TRUE on success; otherwise, FALSE */
+BOOL LoadUserSid ( HANDLE user_token, PSID *sid );
+void UnloadUserSid ( PSID sid );
+
+#endif // _SECURITY_WINDOWS_H_
