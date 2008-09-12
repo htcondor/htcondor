@@ -22,6 +22,7 @@ import re
 import os
 import sys
 import time
+import signal
 from optparse import *
 from condor_log_reader import *
 
@@ -44,15 +45,28 @@ class EventLogVerifier( EventLogParser ) :
             print >>sys.stderr, s
 
     def PrintSummary( self ) :
-        print "Summary:",len(self._errors),"errors detected:"
-        for e in self._errors :
-            print e
+        print "Summary:",self.GetNumEvents(),"events processed:"
+        names = self.GetEventNames()
+        for name in sorted(names) :
+            print "  %s: %d" % ( name, self.GetNumEvents(name) )
+        if len(self._errors) :
+            print "Summary:",len(self._errors),"errors detected:"
+            for e in self._errors :
+                print e
             
 
 class Verify ( object ) :
 
     def __init__( self ) :
         self.Options( )
+
+        signal.signal(signal.SIGTERM, self.SigHandler)
+        signal.signal(signal.SIGINT,  self.SigHandler)
+        signal.signal(signal.SIGQUIT, self.SigHandler)
+
+    # Install a signal handler
+    def SigHandler(self, signum, frame):
+        sys.exit(1)
 
     def Options( self ) :
         usage = "usage: %prog [options] file [...]"
