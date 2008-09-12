@@ -26,6 +26,7 @@
 #include "condor_random_num.h"
 #include "simple_arg.h"
 #include <stdio.h>
+#include <unistd.h>
 
 static const char *	VERSION = "0.9.3";
 
@@ -50,6 +51,9 @@ struct Options
 	int				verbosity;
 	const char *	genericEventStr;
 	const char *    persistFile;
+
+	int				num_forks;
+	int				fork_cluster_step;
 };
 
 class EventInfo
@@ -134,8 +138,11 @@ private:
 
 char*	mySubSystem = "TEST_LOG_WRITER";
 
-Status
+bool
 CheckArgs(int argc, const char **argv, Options &opts);
+
+bool // false == okay, true == error
+ForkJobs( const Options &opts );
 
 bool // false == okay, true == error
 WriteEvents(Options &opts, int cluster, int proc, int subproc );
@@ -145,9 +152,8 @@ static unsigned randint( unsigned maxval );
 
 // Simple term signal handler
 static bool	global_done = false;
-void handle_sig(int sig)
+void handle_sig(int /*sig*/)
 {
-	(void) sig;
 	printf( "Got signal; shutting down\n" );
 	global_done = true;
 }
@@ -166,12 +172,18 @@ main(int argc, const char **argv)
 	DebugFlags = D_ALWAYS;
 
 	bool	error = false;
-
 	Options	opts;
 
-	Status tmpStatus = CheckArgs(argc, argv, opts);
+	error = CheckArgs(argc, argv, opts);
+	if ( error ) {
+		fprintf( stderr, "Command line error\n" );
+		exit( 1 );
+	}
 
-	if ( tmpStatus == STATUS_OK ) {
+	if ( opts.num_forks ) {
+		error = ForkJobs( opts );
+	}
+	else {
 		int		max_proc = opts.proc + opts.numProcs - 1;
 		for( int proc = opts.proc; proc <= max_proc; proc++ ) {
 			error = WriteEvents(opts, opts.cluster, proc, 0 );
@@ -179,8 +191,6 @@ main(int argc, const char **argv)
 				break;
 			}
 		}
-	} else if ( tmpStatus == STATUS_ERROR ) {
-		error = true;
 	}
 
 	if ( error  &&  (opts.verbosity >= VERB_ERROR) ) {
@@ -190,10 +200,10 @@ main(int argc, const char **argv)
 	return (int) error;
 }
 
-Status
+bool
 CheckArgs(int argc, const char **argv, Options &opts)
 {
-	Status	status = STATUS_OK;
+	bool	status = false;
 
 	const char *	usage =
 		"Usage: test_log_writer [options] <filename>\n"
@@ -201,6 +211,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --proc <number>: Starting proc %d (default = 0)\n"
 		"  --subproc <number>: Starting subproc %d (default = 0)\n"
 		"  --jobid <c.p.s>: combined -cluster, -proc, -subproc\n"
+		"  --fork <number>: fork off <number> processes\n"
+		"  --fork-cluster-step <number>: with --fork: step # of cluster #"
+		" (default = 1000)\n"
 		"\n"
 		"  --numexec <number>: number of execute events to write / proc\n"
 		"  -n|--numprocs <number>: Number of procs (default = 10)\n"
@@ -223,28 +236,30 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"\n"
 		"  <filename>: the log file to write to\n";
 
-	opts.isXml			= false;
-	opts.logFile		= NULL;
-	opts.numExec		= 1;
-	opts.cluster		= -1;
-	opts.proc			= -1;
-	opts.subproc		= -1;
-	opts.numProcs		= 10;
-	opts.sleep_seconds	= 5;
-	opts.sleep_useconds	= 0;
-	opts.stork			= false;
-	opts.randomProb		= 0.0;
-	opts.submitNote		= "";
-	opts.verbosity		= 1;
-	opts.genericEventStr = NULL;
-	opts.persistFile	= NULL;
+	opts.isXml				= false;
+	opts.logFile			= NULL;
+	opts.numExec			= 1;
+	opts.cluster			= -1;
+	opts.proc				= -1;
+	opts.subproc			= -1;
+	opts.numProcs			= 10;
+	opts.sleep_seconds		= 5;
+	opts.sleep_useconds		= 0;
+	opts.stork				= false;
+	opts.randomProb			= 0.0;
+	opts.submitNote			= "";
+	opts.verbosity			= 1;
+	opts.genericEventStr	= NULL;
+	opts.persistFile		= NULL;
+	opts.num_forks			= 0;
+	opts.fork_cluster_step	= 1000;
 
 	for ( int index = 1; index < argc; ++index ) {
 		SimpleArg	arg( argv, argc, index );
 
 		if ( arg.Error() ) {
 			printf("%s", usage);
-			status = STATUS_ERROR;
+			status = true;
 		}
 
 		if ( arg.Match( "cluster") ) {
@@ -254,7 +269,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			} else {
 				fprintf(stderr, "Value needed for --cluster argument\n");
 				printf("%s", usage);
-				status = STATUS_ERROR;
+				status = true;
 			}
 
 		} else if ( arg.Match('d', "debug") ) {
@@ -264,7 +279,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			} else {
 				fprintf(stderr, "Value needed for --debug argument\n");
 				printf("%s", usage);
-				status = STATUS_ERROR;
+				status = true;
 			}
 
 		} else if ( arg.Match('j', "jobid") ) {
@@ -281,7 +296,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			} else {
 				fprintf(stderr, "Value needed for --jobid argument\n");
 				printf("%s", usage);
-				status = STATUS_ERROR;
+				status = true;
 			}
 
 		} else if ( arg.Match("generic") ) {
@@ -289,9 +304,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.genericEventStr = arg.Opt();
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -generic argument\n");
+				fprintf(stderr, "Value needed for --generic argument\n");
 				printf("%s", usage);
-				status = STATUS_ERROR;
+				status = true;
 			}
 
 		} else if ( arg.Match('n', "numexec") ) {
@@ -299,9 +314,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.numExec = atoi( arg.Opt() );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -numexec argument\n");
+				fprintf(stderr, "Value needed for --numexec argument\n");
 				printf("%s", usage);
-				status = STATUS_ERROR;
+				status = true;
 			}
 
 		} else if ( arg.Match("numprocs") ) {
@@ -309,9 +324,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.numProcs = atoi( arg.Opt() );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -numprocs argument\n");
+				fprintf(stderr, "Value needed for --numprocs argument\n");
 				printf("%s", usage);
-				status = STATUS_ERROR;
+				status = true;
 			}
 
 		} else if ( arg.Match("proc") ) {
@@ -319,9 +334,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				index = arg.ConsumeOpt( );
 				opts.proc = atoi( arg.Opt() );
 			} else {
-				fprintf(stderr, "Value needed for -proc argument\n");
+				fprintf(stderr, "Value needed for --proc argument\n");
 				printf("%s", usage);
-				status = STATUS_ERROR;
+				status = true;
 			}
 
 		} else if ( arg.Match("persist") ) {
@@ -329,9 +344,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				index = arg.ConsumeOpt( );
 				opts.persistFile = arg.Opt();
 			} else {
-				fprintf(stderr, "Value needed for -persist argument\n");
+				fprintf(stderr, "Value needed for --persist argument\n");
 				printf("%s", usage);
-				status = STATUS_ERROR;
+				status = true;
 			}
 
 		} else if ( arg.Match("sleep") ) {
@@ -342,9 +357,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 					(int) (1e6 * ( sec - opts.sleep_seconds ) );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -sleep argument\n");
+				fprintf(stderr, "Value needed for --sleep argument\n");
 				printf("%s", usage);
-				status = STATUS_ERROR;
+				status = true;
 			}
 
 		} else if ( arg.Match("no-sleep") ) {
@@ -359,9 +374,30 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.subproc = atoi(arg.Opt());
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -subproc argument\n");
+				fprintf(stderr, "Value needed for --subproc argument\n");
 				printf("%s", usage);
-				status = STATUS_ERROR;
+				status = true;
+			}
+
+		} else if ( arg.Match('f', "fork") ) {
+			if ( arg.OptIsNumber() ) {
+				opts.num_forks = atoi(arg.Opt());
+				index = arg.ConsumeOpt( );
+			} else {
+				fprintf(stderr, "Value needed for --fork argument\n");
+				printf("%s", usage);
+				status = true;
+			}
+
+		} else if ( arg.Match("fork-cluster-step") ) {
+			if ( arg.OptIsNumber() ) {
+				opts.fork_cluster_step = atoi(arg.Opt());
+				index = arg.ConsumeOpt( );
+			} else {
+				fprintf(stderr,
+						"Value needed for --fork-cluster-step argument\n");
+				printf("%s", usage);
+				status = true;
 			}
 
 		} else if ( arg.Match("random") ) {
@@ -369,9 +405,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.randomProb = atof(arg.Opt()) / 100.0;
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -random argument\n");
+				fprintf(stderr, "Value needed for --random argument\n");
 				printf("%s", usage);
-				status = STATUS_ERROR;
+				status = true;
 			}
 
 		} else if ( arg.Match("submit_note") ) {
@@ -379,9 +415,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.submitNote = arg.Opt();
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -submit_note argument\n");
+				fprintf(stderr, "Value needed for --submit_note argument\n");
 				printf("%s", usage);
-				status = STATUS_ERROR;
+				status = true;
 			}
 
 		} else if( arg.Match( 'h', "usage") ) {
@@ -393,9 +429,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.verbosity = atoi(arg.Opt());
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -verbosity argument\n");
+				fprintf(stderr, "Value needed for --verbosity argument\n");
 				printf("%s", usage);
-				status = STATUS_ERROR;
+				status = true;
 			}
 
 		} else if ( arg.Match('v') ) {
@@ -414,14 +450,14 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		} else {
 			fprintf(stderr, "Unrecognized argument: <%s>\n", arg.ArgStr() );
 			printf("%s", usage);
-			status = STATUS_ERROR;
+			status = true;
 		}
 	}
 
 	if ( status == STATUS_OK && opts.logFile == NULL ) {
 		fprintf(stderr, "Log file must be specified\n");
 		printf("%s", usage);
-		status = STATUS_ERROR;
+		status = true;
 	}
 
 	// Read the persisted file (if specified)
@@ -459,6 +495,22 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	}
 
 	return status;
+}
+
+void handle_sigchild(int /*sig*/ )
+{
+}
+
+bool
+ForkJobs( const Options &opts )
+{
+	fprintf( stderr, "--fork: Not implemented\n" );
+	return true;
+
+	signal( SIGCHLD, handle_sigchild );
+	for( int num = 0;  num < opts.num_forks;  num++ ) {
+		
+	}
 }
 
 bool
