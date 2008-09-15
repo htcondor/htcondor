@@ -24,13 +24,25 @@
 Distribution::Distribution()
 {
 	// Are we 'Condor' or 'Hawkeye'?
-		SetDistribution( "condor" );
+	SetDistribution( "condor" );
 }
 
-int Distribution::Init( int  /*argc*/, char **argv )
+int
+Distribution::Init( int  /*argc*/, const char **argv )
 {
-	char	*argv0 = argv[0];
+	return Init( argv[0] );
+}
 
+// Non-const version for backward compatibility
+int
+Distribution::Init( int  /*argc*/, char **argv )
+{
+	return Init( argv[0] );
+}
+
+int
+Distribution::Init( const char *argv0 )
+{
 	// Are we 'Condor' or 'Hawkeye'?
 	if (  ( strstr ( argv0, "hawkeye" ) ) ||
 		  ( strstr ( argv0, "Hawkeye" ) ) ||
