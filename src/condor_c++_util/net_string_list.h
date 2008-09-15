@@ -38,7 +38,16 @@
 class NetStringList : public StringList {
 public:
 	NetStringList(const char *s = NULL, const char *delim = " ," ); 
-	const char *  string_withnetwork( const char * );
+
+		// ip: the IP address to find
+		// matches: if not NULL, list in which to insert all matching entries
+		// returns true if any matches found
+		// The following sorts of entries may exist in our list:
+		// 192.168.10.1
+		// 192.168.*
+		// 192.168.0.0/24 
+		// 192.168.0.0/255.255.255.0
+	bool find_matches_withnetwork( const char *ip, StringList *matches );
 };
 
 #endif /* __CONDOR_NET_STRING_LIST_H */

@@ -263,9 +263,10 @@ StringList::contains_anycase_withwildcard(const char *string)
 }
 
 
-const char * StringList :: string_anycase_withwildcard( const char * string)
+bool
+StringList::find_matches_anycase_withwildcard( const char * string, StringList *matches)
 {
-    return contains_withwildcard(string, true);
+    return contains_withwildcard(string, true, matches)!=NULL;
 }
 
 
@@ -274,7 +275,7 @@ const char * StringList :: string_anycase_withwildcard( const char * string)
 // the string passed in is "pppmiron.cs.wisc.edu", and an entry in the
 // the list is "ppp*", then it will return TRUE.
 const char *
-StringList::contains_withwildcard(const char *string, bool anycase)
+StringList::contains_withwildcard(const char *string, bool anycase, StringList *matches)
 {
 	char *x;
 	char *matchstart;
@@ -298,10 +299,15 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 			} else {
 				temp = strcmp(x,string);
 			}
-			if ( temp == MATCH )
-				return x;
-			else
-				continue;
+			if ( temp == MATCH ) {
+				if( matches ) {
+					matches->append(x);
+				}
+				else {
+					return x;
+				}
+			}
+			continue;
 		}
 
 		if ( asterisk == x ) {
@@ -317,10 +323,14 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 				}
 				*asterisk2 = '*';
 				if ( pos ) {
-					return x;
-				} else {
-					continue;
+					if( matches ) {
+						matches->append( x );
+					}
+					else {
+						return x;
+					}
 				}
+				continue;
 			}
 			// asterisk at the start behavior
 			matchstart = NULL;
@@ -336,10 +346,14 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 				}
 				*asterisk = '*';	// replace asterisk
 				if ( temp == MATCH ) {
-					return x;
-				} else {
-					continue;
-				}				
+					if( matches ) {
+						matches->append( x );
+					}
+					else {
+						return x;
+					}
+				}
+				continue;
 			} else {
 				// asterisk must be in the middle somewhere				
 				matchstart = x;
@@ -379,11 +393,20 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 		}
 		*asterisk = '*';	// set asterisk back no matter what the result
 		if ( result == TRUE ) {
-			return x;
+			if( matches ) {
+				matches->append( x );
+			}
+			else {
+				return x;
+			}
 		}
 	
 	}	// end of while loop
 
+	if( matches && !matches->isEmpty() ) {
+		matches->rewind();
+		return matches->next();
+	}
 	return NULL;
 }
 
