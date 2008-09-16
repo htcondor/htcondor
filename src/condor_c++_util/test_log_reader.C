@@ -176,7 +176,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.writePersist = true;
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -persist argument\n");
+				fprintf(stderr, "Value needed for --persist argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
