@@ -56,19 +56,19 @@ public:
 		@return a string representation of the addapter's hardware 
         address
 	*/
-	virtual char* hardwareAddress () const = 0;
+	virtual const char* hardwareAddress (void) const = 0;
 
     /** Returns the adapter's hardware address
 		@return a string representation of the addapter's hardware 
         address
 	*/
-	virtual char* subnet () const = 0;
+	virtual const char* subnet (void) const = 0;
 
     /** Returns the adapter's hardware address
 		@return a string representation of the addapter's hardware 
         address
 	*/
-	virtual bool wakeAble () const = 0;
+	virtual bool wakeAble (void) const = 0;
 	
 	//@}
 

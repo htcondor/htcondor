@@ -2179,6 +2179,8 @@ AC_CHECK_LIB([pthread], [pthread_create],
 # checks for header files
 ############################################################
 
+AC_CHECK_HEADERS([net/if.h],[],[],[
+#include<netinet/in.h>])
 AC_CHECK_HEADERS([sys/types.h])
 AC_CHECK_HEADERS([sys/param.h])
 AC_CHECK_HEADERS([stdint.h])
@@ -2187,8 +2189,6 @@ AC_CHECK_HEADERS([sys/personality.h])
 AC_CHECK_HEADERS([linux/personality.h])
 AC_CHECK_HEADERS([linux/magic.h])
 AC_CHECK_HEADERS([linux/nfsd/const.h])
-AC_CHECK_HEADERS([linux/if.h],[],[],[
-#include<netinet/in.h>])
 AC_CHECK_HEADERS([linux/sockios.h])
 AC_CHECK_HEADERS([linux/ethtool.h])
 AC_CHECK_HEADERS([sys/statfs.h])

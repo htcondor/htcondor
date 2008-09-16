@@ -21,8 +21,8 @@
 #include "internet.h"
 #include "network_adapter.linux.h"
 
-#if HAVE_LINUX_IF_H
-# include <linux/if.h>
+#if HAVE_NET_IF_H
+# include <net/if.h>
 #endif
 #if HAVE_LINUX_SOCKIOS_H
 # include <linux/sockios.h>
@@ -31,13 +31,23 @@
 # include <linux/ethtool.h>
 #endif
 
-#if defined(HAVE_LINUX_IF_H) && defined(HAVE_LINUX_SOCKIOS_H) && \
+#if defined(HAVE_NET_IF_H) && 			\
+	defined(HAVE_LINUX_SOCKIOS_H) &&	\
 	defined(HAVE_LINUX_ETHTOOL_H)
 # define _HAVE_ALL_LNA_TYPES_ 1
 #endif
 
 // For now, the only wake-on-lan type we use is UDP magic
-#define WAKE_MASK	WAKE_MAGIC
+#define WAKE_MASK	( 0 | (WAKE_MAGIC) )
+
+// Possible values for the above (OR them together) :
+//	WAKE_PHY
+//	WAKE_UCAST
+//	WAKE_MCAST
+//	WAKE_BCAST
+//	WAKE_ARP
+//	WAKE_MAGIC
+//	WAKE_MAGICSECURE
 
 
 /***************************************************************
@@ -46,12 +56,13 @@
 LinuxNetworkAdapter::LinuxNetworkAdapter ( unsigned int ip_addr ) throw ()
 {
 	m_ip_addr = ip_addr;
-	m_device_name = NULL;
+	m_if_name = NULL;
 	m_wol = false;
 
 	// Linux specific things
 	m_wolopts = 0;
 	setIFR( NULL );
+	setHwAddr( NULL );
 
 	if ( !findAdapter() ) {
 		return;
@@ -62,9 +73,52 @@ LinuxNetworkAdapter::LinuxNetworkAdapter ( unsigned int ip_addr ) throw ()
 
 LinuxNetworkAdapter::~LinuxNetworkAdapter (void) throw ()
 {
+	if ( m_if_name ) {
+		free( const_cast<char *>(m_if_name) );
+		m_if_name = NULL;
+	}
 }
 
-#if defined HAVE_LINUX_IF_H
+#if defined HAVE_NET_IF_H
+void
+LinuxNetworkAdapter::setHwAddr( const struct ifreq *ifr )
+{
+	memset( const_cast<char *>(m_hw_addr), 0, sizeof(m_hw_addr) );
+	memset( const_cast<char *>(m_hw_addr_str), 0, sizeof(m_hw_addr_str) );
+
+	if ( ifr ) {
+		memcpy( const_cast<char *>(m_hw_addr), ifr->ifr_hwaddr.sa_data, 8 );
+
+		char	*str = const_cast<char *>(m_hw_addr_str);
+		for( int i = 0;  i < 6;  i++ ) {
+			char	tmp[3];
+			snprintf( tmp, sizeof(tmp), "%02x", m_hw_addr[i] );
+			if ( i ) {
+				strcat( tmp, ":" );
+			}
+			strcat( str, tmp );
+		}
+	}
+}
+
+void
+LinuxNetworkAdapter::setNetMask( const struct ifreq *ifr )
+{
+	
+	struct sockaddr *maskptr = const_cast<struct sockaddr *>(&m_netmask);
+	memset( maskptr, 0, sizeof(m_netmask) );
+
+	if ( ifr ) {
+		memcpy( maskptr, &(ifr->ifr_netmask), sizeof(m_netmask) );
+		char	*str = const_cast<char *>(m_netmask_str);
+		const struct sockaddr_in *
+			in_addr = (const struct sockaddr_in *) &(m_netmask);
+		strncpy( str,
+				 sin_to_string(in_addr),
+				 sizeof(m_netmask_str) );
+	}
+}
+
 void
 LinuxNetworkAdapter::setIFR( const struct ifreq *ifr )
 {
@@ -84,6 +138,14 @@ LinuxNetworkAdapter::getIFR( struct ifreq *ifr )
 
 #endif
 
+void
+LinuxNetworkAdapter::derror( const char *label ) const
+{
+	MyString	message;
+	dprintf( D_ALWAYS, "%s failed: %s (%d)\n",
+			 label, strerror(errno), errno );
+}
+
 bool
 LinuxNetworkAdapter::findAdapter( void )
 {
@@ -96,14 +158,14 @@ LinuxNetworkAdapter::findAdapter( void )
 	// Get a 'control socket' for the operations
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
-		dprintf( D_ALWAYS, "Cannot get control socket for WOL detection\n" );
+		derror( "Cannot get control socket for WOL detection" );
 		return NULL;
 	}
 
 	// Loop 'til we've read in all the interfaces, keep increasing
 	// the number that we try to read each time
-	const struct sockaddr_in *in_addr = NULL;
-	const struct ifreq		 *ifr = NULL;
+	struct sockaddr_in	 *in_addr = NULL;
+	struct ifreq		 *ifr = NULL;
 	while( NULL == ifr ) {
 		int size	= num_req * sizeof(struct ifreq);
 		ifc.ifc_buf	= (char *) calloc( num_req, sizeof(struct ifreq) );
@@ -111,15 +173,15 @@ LinuxNetworkAdapter::findAdapter( void )
 
 		int status = ioctl( sock, SIOCGIFCONF, &ifc );
 		if ( status < 0 ) {
+			derror( "ioctl(..,SIOCGIFCONF,..)" );
 			break;
 		}
 
 		// Did we find it?
-		int					 num = ifc.ifc_len / sizeof(struct ifreq);
-		const struct ifreq	*tmp_ifr = ifc.ifc_req;
+		int				 num = ifc.ifc_len / sizeof(struct ifreq);
+		struct ifreq	*tmp_ifr = ifc.ifc_req;
 		for ( int i = 0;  i < num;  i++ ) {
-			in_addr =
-				(const struct sockaddr_in *) &(tmp_ifr->ifr_addr.sa_data);
+			in_addr = (struct sockaddr_in *) &(tmp_ifr->ifr_addr.sa_data);
 			if ( ntohl(in_addr->sin_addr.s_addr) == m_ip_addr ) {
 				ifr = tmp_ifr;
 				break;
@@ -135,25 +197,50 @@ LinuxNetworkAdapter::findAdapter( void )
 		}
 	}
 
+	// Get the hardware address
+	if ( ifr ) {
+		strcpy( ifr->ifr_name, m_if_name );
+		int status = ioctl( sock, SIOCGIFHWADDR, ifr );
+		if ( status < 0 ) {
+			derror( "ioctl(..,SIOCGIFHWADDR,..)" );
+		}
+		else {
+			setHwAddr( ifr );
+		}
+	}
+
+	// Get the net mask
+	if ( ifr ) {
+		strcpy( ifr->ifr_name, m_if_name );
+		int status = ioctl( sock, SIOCGIFNETMASK, &ifr );
+		if ( status < 0 ) {
+			derror( "ioctl(..,SIOCGIFNETMASK,..)" );
+		}
+		else {
+			setNetMask( ifr );
+		}
+	}
+
 	// Don't forget to close the socket!
 	close( sock );
 
 	// Did we succeed?
 	if ( ifr ) {
 		dprintf( D_FULLDEBUG,
-				 "Found interface %s that matches %s\n",
-				 ifr->ifr_name,
+				 "Found interface %s (%s) that matches %s\n",
+				 interfaceName( ),
+				 hardwareAddress( ),
 				 sin_to_string( in_addr )
 				 );
 		setIFR(ifr);
-		m_device_name = strdup( ifr->ifr_name );
+		m_if_name = strdup( ifr->ifr_name );
 	}
 	else {
 		dprintf( D_FULLDEBUG,
 				 "No interface for address %s\n",
 				 sin_to_string( in_addr )
 				 );
-		m_device_name = NULL;
+		m_if_name = NULL;
 	}
 
 	// Make sure we free up the buffer memory
@@ -161,7 +248,7 @@ LinuxNetworkAdapter::findAdapter( void )
 # endif
 
 	// And, we're done
-	return m_device_name == NULL;
+	return m_if_name == NULL;
 }
 
 bool
@@ -183,14 +270,13 @@ LinuxNetworkAdapter::detectWOL ( void )
 
 	wolinfo.cmd = ETHTOOL_GWOL;
 	ifr.ifr_data = (caddr_t)&wolinfo;
-	err = ioctl(sock, SIOCETHTOOL, ifr);
+	err = ioctl(sock, SIOCETHTOOL, &ifr);
 	if (errno == EOPNOTSUPP) {
 		dprintf( D_ALWAYS, "SIOCETHTOOL not supported by this kernel\n" );
 		return false;
 	}
 	else if ( err ) {
-		dprintf( D_ALWAYS, "SIOCETHTOOL error: %d (%s)\n",
-				 errno, strerror(errno) );
+		derror( "ioctl(..,SIOCETHTOOL,..)" );
 		return false;
 	}
 
@@ -201,7 +287,7 @@ LinuxNetworkAdapter::detectWOL ( void )
 		m_wol = true;
 
 	dprintf( D_FULLDEBUG, "%s supports Wake-on: %s (raw: 0x%02x)\n",
-			 m_device_name, m_wol ? "yes" : "no", m_wolopts );
+			 m_if_name, m_wol ? "yes" : "no", m_wolopts );
 
 	close( sock );
 	return true;
