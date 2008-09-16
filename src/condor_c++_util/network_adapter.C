@@ -68,7 +68,7 @@ NetworkAdapterBase::publish ( ClassAd &ad ) {
         subnet () );
     ad->Assign ( line );
 
-    sprintf( line, "%s = \"%s\"", ATTR_SUBNET,
+    sprintf( line, "%s = \"%s\"", ATTR_IS_WAKE_ABLE,
         wakeAble () ? "TRUE" : "FALSE" );
     ad->Assign ( line );
 

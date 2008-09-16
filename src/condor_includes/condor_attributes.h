@@ -194,6 +194,7 @@ extern const char * ATTR_INTERACTIVE;
 extern const char * ATTR_IS_DAEMON_CORE;
 extern const char * ATTR_IS_OWNER;
 extern const char * ATTR_IS_QUEUE_SUPER_USER;
+extern const char * ATTR_IS_WAKE_ABLE;
 extern const char * ATTR_INACTIVE;
 extern const char * ATTR_JAR_FILES;
 extern const char * ATTR_JAVA_MFLOPS;

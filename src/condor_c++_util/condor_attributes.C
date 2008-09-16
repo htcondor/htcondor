@@ -254,6 +254,7 @@ const char *ATTR_INTERACTIVE			 = "Interactive";
 const char *ATTR_IS_DAEMON_CORE           = "IsDaemonCore";
 const char *ATTR_IS_OWNER                 = "IsOwner";
 const char *ATTR_IS_QUEUE_SUPER_USER      = "IsQueueSuperUser";
+const char *ATTR_IS_WAKE_ABLE             = "IsWakeAble";
 const char *ATTR_INACTIVE                 = "Inactive";
 const char *ATTR_JAR_FILES                = "JarFiles";
 const char *ATTR_JAVA_MFLOPS              = "JavaMFlops";
