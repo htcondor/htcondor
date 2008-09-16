@@ -341,7 +341,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
             cp->Insert( line );
         }        
         if (NULL != m_subnet_mask) {
-            sprintf( line, "%s = \"%s\"", ATTR_SUBNET_MASK,
+            sprintf( line, "%s = \"%s\"", ATTR_SUBNET,
                 m_subnet_mask );
             cp->Insert( line );
         } 

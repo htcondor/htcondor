@@ -108,7 +108,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 
     /* retrieve the subnet from the ad */
     found = ad->LookupString (
-        ATTR_SUBNET_MASK,
+        ATTR_SUBNET,
         _subnet,
         MAX_IP_ADDRESS_LENGTH );
 
@@ -142,6 +142,19 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 }
 
 UdpWakeOnLanWaker::~UdpWakeOnLanWaker () throw () {
+}
+
+/***************************************************************
+ * Private UdpWakeOnLanWaker ctors
+ ***************************************************************/
+
+UdpWakeOnLanWaker::UdpWakeOnLanWaker () {
+}
+
+UdpWakeOnLanWaker::UdpWakeOnLanWaker ( UdpWakeOnLanWaker const& ) {
+}
+
+UdpWakeOnLanWaker& UdpWakeOnLanWaker::operator = ( UdpWakeOnLanWaker const& ) {
 }
 
 /***************************************************************

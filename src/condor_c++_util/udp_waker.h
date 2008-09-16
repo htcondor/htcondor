@@ -119,7 +119,9 @@ protected:
 		STRING_MAC_ADDRESS_LENGTH = 3*RAW_MAC_ADDRESS_LENGTH,
         WOL_PACKET_LENGTH         = 17*RAW_MAC_ADDRESS_LENGTH,
         MAX_IP_ADDRESS_LENGTH     = 16
-	};	
+	};
+    
+private:
 
 	char		    _mac[STRING_MAC_ADDRESS_LENGTH],
                     _subnet[MAX_IP_ADDRESS_LENGTH],
@@ -133,3 +135,4 @@ protected:
 };
 
 #endif // _UDP_WAKER_H_
+
