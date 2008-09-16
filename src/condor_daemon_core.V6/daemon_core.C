@@ -3199,6 +3199,9 @@ int DaemonCore::HandleReq(Stream *insock)
 	bool is_http_get = false;   // must initialize to false
 #endif
 
+	UtcTime handle_req_start_time;
+	handle_req_start_time.getTime();
+
 	ASSERT(insock);
 
 	switch ( insock->type() ) {
@@ -4313,8 +4316,8 @@ int DaemonCore::HandleReq(Stream *insock)
 			// make result != to KEEP_STREAM, so we blow away this socket below
 			result = 0;
 			dprintf( D_ALWAYS,
-                     "DaemonCore: PERMISSION DENIED to %s from host %s for command %d (%s), access level %s\n",
-                     user.IsEmpty() ? "unknown user" : user.Value(), sin_to_string(((Sock*)stream)->endpoint()), req,
+                     "PERMISSION DENIED to %s from host %s for command %d (%s), access level %s\n",
+                     user.IsEmpty() ? "unauthenticated user" : user.Value(), sin_to_string(((Sock*)stream)->endpoint()), req,
                      comTable[index].command_descrip,
 					 PermString(comTable[index].perm));
 			// if UDP, consume the rest of this message to try to stay "in-sync"
@@ -4322,28 +4325,24 @@ int DaemonCore::HandleReq(Stream *insock)
 				stream->end_of_message();
 
 		} else {
-			dprintf(comTable[index].dprintf_flag,
-					"DaemonCore: Command received via %s%s%s from host %s, access level %s\n",
+			dprintf(comTable[index].dprintf_flag | D_COMMAND,
+					"Received %s command %d (%s) from %s %s, access level %s\n",
 					(is_tcp) ? "TCP" : "UDP",
-					!user.IsEmpty() ? " from " : "",
+					req,
+					comTable[index].command_descrip,
 					user.Value(),
-					sin_to_string(((Sock*)stream)->endpoint()),
+					stream->peer_description(),
 					PermString(comTable[index].perm));
-			dprintf(comTable[index].dprintf_flag,
-                    "DaemonCore: received command %d (%s), calling handler (%s)\n",
-                    req, comTable[index].command_descrip,
-                    comTable[index].handler_descrip);
 		}
 
 	} else {
-		dprintf(D_ALWAYS,
-				"DaemonCore: Command received via %s%s%s from host %s\n",
-				(is_tcp) ? "TCP" : "UDP",
-				!user.IsEmpty() ? " from " : "",
-				user.Value(),
-				sin_to_string(((Sock*)stream)->endpoint()) );
-		dprintf(D_ALWAYS,
-			"DaemonCore: received unregistered command request %d !\n",req);
+			dprintf(D_ALWAYS,
+					"Received %s command %d (%s) from %s %s\n",
+					(is_tcp) ? "TCP" : "UDP",
+					req,
+					"UNREGISTERED COMMAND!",
+					user.Value(),
+					stream->peer_description());
 		// make result != to KEEP_STREAM, so we blow away this socket below
 		result = 0;
 		// if UDP, consume the rest of this message to try to stay "in-sync"
@@ -4364,6 +4363,10 @@ int DaemonCore::HandleReq(Stream *insock)
 		curr_dataptr = &(comTable[index].data_ptr);
 
 		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d)\n", comTable[index].handler_descrip, inServiceCommandSocket_flag);
+
+		UtcTime handler_start_time;
+		handler_start_time.getTime();
+
 		if ( comTable[index].is_cpp ) {
 			// the handler is c++ and belongs to a 'Service' class
 			if ( comTable[index].handlercpp )
@@ -4373,7 +4376,13 @@ int DaemonCore::HandleReq(Stream *insock)
 			if ( comTable[index].handler )
 				result = (*(comTable[index].handler))(comTable[index].service,req,stream);
 		}
-		dprintf(D_COMMAND, "Return from HandleReq <%s>\n", comTable[index].handler_descrip);
+
+		UtcTime handler_stop_time;
+		handler_stop_time.getTime();
+		float handler_time = handler_stop_time.difference(&handler_start_time);
+		float sec_time = handler_start_time.difference(&handle_req_start_time);
+
+		dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.3fs, sec: %.3fs)\n", comTable[index].handler_descrip, handler_time, sec_time);
 
 		// clear curr_dataptr
 		curr_dataptr = NULL;
