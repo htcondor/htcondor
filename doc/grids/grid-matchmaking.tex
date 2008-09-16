@@ -300,6 +300,17 @@ one job, and is willing to accept a maximum of 9 jobs.
 If \Attr{CurMatches} does not appear in the ClassAd,
 Condor uses a default value of 0.
 
+\MacroIndex{NEGOTIATOR\_MATCHLIST\_CACHING}
+\MacroIndex{NEGOTIATOR\_IGNORE\_USER\_PRIORITIES}
+For multiple matching of a site ClassAd to work correctly,
+it is also necessary to add the following to the configuration file
+read by the \Condor{negotiator}:
+
+\begin{verbatim}
+NEGOTIATOR_MATCHLIST_CACHING = False
+NEGOTIATOR_IGNORE_USER_PRIORITIES = True
+\end{verbatim}
+
 % COMMENTED OUT, AS THERE IS NOTHING ANYWHERE THAT SAYS HOW TO DO THIS!
 % As an aside, we recommend that jobs that need specific applications
 % should bring them with them instead of relying on having them
