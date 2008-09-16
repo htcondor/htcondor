@@ -26,7 +26,10 @@
 #include "user_proc.h"
 #include "job_info_communicator.h"
 #include "condor_privsep_helper.h"
+
+#if !defined(WIN32)
 #include "glexec_privsep_helper.h"
+#endif
 
 /** The starter class.  Basically, this class does some initialization
 	stuff and manages a set of UserProc instances, each of which 
@@ -244,10 +247,12 @@ public:
 	{
 		return dynamic_cast<CondorPrivSepHelper*>(m_privsep_helper);
 	}
+#if !defined(WIN32)
 	GLExecPrivSepHelper* glexecPrivSepHelper()
 	{
 		return dynamic_cast<GLExecPrivSepHelper*>(m_privsep_helper);
 	}
+#endif
 
 protected:
 	List<UserProc> m_job_list;

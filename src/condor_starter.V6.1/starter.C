@@ -236,6 +236,11 @@ CStarter::Config()
 	if (!m_configured) {
 		bool ps = privsep_enabled();
 		bool gl = param_boolean("GLEXEC_JOB", false);
+#if defined(WIN32)
+		dprintf(D_ALWAYS,
+		        "GLEXEC_JOB not supported on Windows; ignoring\n");
+		gl = false;
+#endif
 		if (ps && gl) {
 			EXCEPT("can't support both "
 			           "PRIVSEP_ENABLED and GLEXEC_JOB");
@@ -245,8 +250,10 @@ CStarter::Config()
 			ASSERT(m_privsep_helper != NULL);
 		}
 		else if (gl) {
+#if !defined(WIN32)
 			m_privsep_helper = new GLExecPrivSepHelper;
 			ASSERT(m_privsep_helper != NULL);
+#endif
 		}
 	}
 
@@ -708,6 +715,7 @@ CStarter::createTempExecuteDir( void )
 int
 CStarter::jobEnvironmentReady( void )
 {
+#if !defined(WIN32)
 		//
 		// For the GLEXEC_JOB case, we should now be able to
 		// initialize our helper object.
@@ -724,7 +732,7 @@ CStarter::jobEnvironmentReady( void )
 		const char* proxy_name = condor_basename(proxy_path.Value());
 		gpsh->initialize(proxy_name, WorkingDir.Value());
 	}
-
+#endif
 
 		//
 		// Now that we are done preparing the job's environment,

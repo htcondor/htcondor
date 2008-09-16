@@ -160,6 +160,7 @@ ProcFamilyServer::track_family_via_supplementary_group()
 }
 #endif
 
+#if !defined(WIN32)
 void
 ProcFamilyServer::use_glexec_for_family()
 {
@@ -183,6 +184,7 @@ ProcFamilyServer::use_glexec_for_family()
 
 	write_to_client(&err, sizeof(proc_family_error_t));
 }
+#endif
 
 void
 ProcFamilyServer::get_usage()
@@ -376,11 +378,13 @@ ProcFamilyServer::wait_loop()
 				break;
 #endif
 
+#if !defined(WIN32)
 			case PROC_FAMILY_USE_GLEXEC_FOR_FAMILY:
 				dprintf(D_ALWAYS,
 				        "PROC_FAMILY_USE_GLEXEC_FOR_FAMILY\n");
 				use_glexec_for_family();
 				break;
+#endif
 
 			case PROC_FAMILY_SIGNAL_PROCESS:
 				dprintf(D_ALWAYS, "PROC_FAMILY_SIGNAL_PROCESS\n");

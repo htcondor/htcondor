@@ -110,10 +110,12 @@ public:
 	//
 	void fold_into_parent(ProcFamily*);
 
+#if !defined(WIN32)
 	// set a proxy for this family, implying we need to use glexec to
 	// send signals
 	//
 	void set_proxy(char*);
+#endif
 
 #if defined(PROCD_DEBUG)
 	// output the PIDs of all processes in this family
@@ -164,10 +166,12 @@ private:
 	//
 	ProcFamilyMember* m_member_list;
 
+#if !defined(WIN32)
 	// if glexec is needed to send signals to this family, we'll need
 	// a proxy to hand to glexec
 	//
 	char* m_proxy;
+#endif
 };
 
 #endif

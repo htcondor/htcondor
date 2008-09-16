@@ -24,7 +24,10 @@
 #include "login_tracker.h"
 #include "environment_tracker.h"
 #include "parent_tracker.h"
+
+#if !defined(WIN32)
 #include "glexec_kill.h"
+#endif
 
 #if defined(LINUX)
 #include "group_tracker.h"
@@ -342,6 +345,7 @@ ProcFamilyMonitor::unregister_subfamily(pid_t pid)
 	return PROC_FAMILY_ERROR_SUCCESS;
 }
 
+#if !defined(WIN32)
 proc_family_error_t
 ProcFamilyMonitor::use_glexec_for_family(pid_t pid, char* proxy)
 {
@@ -373,6 +377,7 @@ ProcFamilyMonitor::use_glexec_for_family(pid_t pid, char* proxy)
 
 	return PROC_FAMILY_ERROR_SUCCESS;
 }
+#endif
 
 int
 ProcFamilyMonitor::get_snapshot_interval()
