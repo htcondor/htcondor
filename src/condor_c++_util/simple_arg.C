@@ -17,9 +17,8 @@
  *
  ***************************************************************/
 
-#include <ctype.h>
-#include <string.h>
 #include "condor_common.h"
+#include <string.h>
 #include "condor_debug.h"
 #include "simple_arg.h"
 
