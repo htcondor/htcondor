@@ -39,8 +39,11 @@ public:
 	*/
 	//@{
 
+    /// Constructor
+	NetworkAdapterBase (void) throw ();
+
     /// Destructor
-	virtual ~NetworkAdapterBase () throw (); 
+	virtual ~NetworkAdapterBase (void) throw (); 
 
 	//@}
 	
@@ -88,9 +91,6 @@ private:
     That is, do not allow for a default constructor.
 	*/
 	//@{
-
-    /// Constructor
-	NetworkAdapterBase () throw ();
 
 	//@}
 	

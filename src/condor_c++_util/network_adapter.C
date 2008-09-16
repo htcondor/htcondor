@@ -17,10 +17,10 @@
 *
 ***************************************************************/
 
+
 /***************************************************************
  * Headers
  ***************************************************************/
-
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "internet.h"
@@ -31,10 +31,10 @@
 # include "network_adapter.linux.h"
 #endif
 
+
 /***************************************************************
  * Base NetworkAdapterBase class
  ***************************************************************/
-
 NetworkAdapterBase::NetworkAdapterBase () throw ()
 {
 }
@@ -43,10 +43,10 @@ NetworkAdapterBase::~NetworkAdapterBase () throw ()
 {
 }
 
+
 /***************************************************************
  * NetworkAdapterBase static members 
  ***************************************************************/
-
 NetworkAdapterBase* 
 NetworkAdapterBase::createNetworkAdapter ( char *sinful )
 {
@@ -64,7 +64,6 @@ NetworkAdapterBase::createNetworkAdapter ( char *sinful )
 /***************************************************************
  * NetworkAdapterBase members 
  ***************************************************************/
-
 void 
 NetworkAdapterBase::publish ( ClassAd &ad )
 {

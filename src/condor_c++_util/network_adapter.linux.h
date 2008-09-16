@@ -22,6 +22,17 @@
 
 #include "network_adapter.h"
 
+#if HAVE_LINUX_IF_H
+# include <linux/if.h>
+#endif
+#if HAVE_LINUX_SOCKIOS_H
+# include <linux/sockios.h>
+#endif
+#if HAVE_LINUX_ETHTOOL_H
+# include <linux/ethtool.h>
+#endif
+
+
 /***************************************************************
 * LinuxNetworkAdapter class
 * Given the name of a network adapter (the GUID), discovers all
@@ -68,20 +79,29 @@ public:
 		@return a string representation of the addapter's hardware 
         address
 	*/
-	virtual bool wakeAble () const;
+	virtual bool wakeAble () const { return m_wol; };
 	
 	//@}
 
 private:
 
-	unsigned	 m_ip_addr;
-	const char	*m_device_name;
-	bool		 m_wol;
+	unsigned			 m_ip_addr;
+	const char			*m_device_name;
+	bool				 m_wol;
 
+	// Very Linux specific definitions
+#  if defined HAVE_LINUX_IF_H
+	const struct ifreq	 m_ifr;
+#  endif
+	int					 m_wolopts;
 
 	// Internal methods
 	bool findAdapter( void );
 	bool detectWOL( void );
+#  if defined HAVE_LINUX_IF_H
+	void setIFR( const struct ifreq *ifr );
+	void getIFR( struct ifreq *ifr );
+#  endif
 	
 };
 

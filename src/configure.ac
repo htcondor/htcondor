@@ -2190,6 +2190,7 @@ AC_CHECK_HEADERS([linux/nfsd/const.h])
 AC_CHECK_HEADERS([linux/if.h],[],[],[
 #include<netinet/in.h>])
 AC_CHECK_HEADERS([linux/sockios.h])
+AC_CHECK_HEADERS([linux/ethtool.h])
 AC_CHECK_HEADERS([sys/statfs.h])
 AC_CHECK_HEADERS([sys/statvfs.h])
 AC_CHECK_HEADERS([sys/vfs.h])

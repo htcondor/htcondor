@@ -18,28 +18,42 @@
 ***************************************************************/
 
 #include "condor_common.h"
+#include "internet.h"
 #include "network_adapter.linux.h"
 
 #if HAVE_LINUX_IF_H
-# include "linux/if.h"
+# include <linux/if.h>
 #endif
 #if HAVE_LINUX_SOCKIOS_H
-# include "linux/sockios.h"
+# include <linux/sockios.h>
+#endif
+#if HAVE_LINUX_ETHTOOL_H
+# include <linux/ethtool.h>
 #endif
 
-#if defined(HAVE_LINUX_IF_H) && defined(HAVE_LINUX_SOCKIOS_H)
-# define _HAVE_LNA_TYPES_ 1
+#if defined(HAVE_LINUX_IF_H) && defined(HAVE_LINUX_SOCKIOS_H) && \
+	defined(HAVE_LINUX_ETHTOOL_H)
+# define _HAVE_ALL_LNA_TYPES_ 1
 #endif
+
+// For now, the only wake-on-lan type we use is UDP magic
+#define WAKE_MASK	WAKE_MAGIC
+
 
 /***************************************************************
 * LinuxNetworkAdapter class
 ***************************************************************/
-
 LinuxNetworkAdapter::LinuxNetworkAdapter ( unsigned int ip_addr ) throw ()
 {
 	m_ip_addr = ip_addr;
 	m_device_name = NULL;
-	if ( !findAdapter( ) ) {
+	m_wol = false;
+
+	// Linux specific things
+	m_wolopts = 0;
+	setIFR( NULL );
+
+	if ( !findAdapter() ) {
 		return;
 	}
 
@@ -50,30 +64,50 @@ LinuxNetworkAdapter::~LinuxNetworkAdapter (void) throw ()
 {
 }
 
+#if defined HAVE_LINUX_IF_H
+void
+LinuxNetworkAdapter::setIFR( const struct ifreq *ifr )
+{
+	if ( ifr ) {
+		memcpy( const_cast<struct ifreq*>(&m_ifr), ifr, sizeof(struct ifreq) );
+	}
+	else {
+		memset( const_cast<struct ifreq*>(&m_ifr), 0, sizeof(struct ifreq) );
+	}
+}
+
+void
+LinuxNetworkAdapter::getIFR( struct ifreq *ifr )
+{
+	memcpy( ifr, &m_ifr, sizeof(struct ifreq) );
+}
+
+#endif
+
 bool
 LinuxNetworkAdapter::findAdapter( void )
 {
-# if defined(_HAVE_LNA_TYPES_)
+# if defined(_HAVE_ALL_LNA_TYPES_)
     struct ifconf	ifc;
 	int				sock;
 	int				num_req = 3;	// Should be enough for a machine
 									// with lo, eth0, eth1
 
-	// Get a 'control socket'
+	// Get a 'control socket' for the operations
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
 		dprintf( D_ALWAYS, "Cannot get control socket for WOL detection\n" );
 		return NULL;
 	}
 
-
 	// Loop 'til we've read in all the interfaces, keep increasing
 	// the number that we try to read each time
-	struct ifreq	*ifr = NULL;
+	const struct sockaddr_in *in_addr = NULL;
+	const struct ifreq		 *ifr = NULL;
 	while( NULL == ifr ) {
-		int size	 = num_req * sizeof(struct ifreq);
-		ifc.ifc_buf  = calloc( num_req, sizeof(struct ifreq) )
-		ifc.ifc_size = size;
+		int size	= num_req * sizeof(struct ifreq);
+		ifc.ifc_buf	= (char *) calloc( num_req, sizeof(struct ifreq) );
+		ifc.ifc_len	= size;
 
 		int status = ioctl( sock, SIOCGIFCONF, &ifc );
 		if ( status < 0 ) {
@@ -81,10 +115,12 @@ LinuxNetworkAdapter::findAdapter( void )
 		}
 
 		// Did we find it?
-		int				 num = ifc.ifc_size / sizeof(struct ifreq);
-		struct ifreq	*tmp_ifr = ifc.ifc_req;
-		for ( i = 0;  i < num;  i++ ) {
-			if ( ifr_addr(tmp_ifr).s_addr == m_ip_addr ) {
+		int					 num = ifc.ifc_len / sizeof(struct ifreq);
+		const struct ifreq	*tmp_ifr = ifc.ifc_req;
+		for ( int i = 0;  i < num;  i++ ) {
+			in_addr =
+				(const struct sockaddr_in *) &(tmp_ifr->ifr_addr.sa_data);
+			if ( ntohl(in_addr->sin_addr.s_addr) == m_ip_addr ) {
 				ifr = tmp_ifr;
 				break;
 			}
@@ -106,15 +142,16 @@ LinuxNetworkAdapter::findAdapter( void )
 	if ( ifr ) {
 		dprintf( D_FULLDEBUG,
 				 "Found interface %s that matches %s\n",
-				 ifr_name(ifr),
-				 sin_to_string( ifr_addr(ifr) )
+				 ifr->ifr_name,
+				 sin_to_string( in_addr )
 				 );
-		m_device_name = strdup( ifr_name(ifr) );
+		setIFR(ifr);
+		m_device_name = strdup( ifr->ifr_name );
 	}
 	else {
 		dprintf( D_FULLDEBUG,
 				 "No interface for address %s\n",
-				 sin_to_string( ifr_addr(ifr) )
+				 sin_to_string( in_addr )
 				 );
 		m_device_name = NULL;
 	}
@@ -128,30 +165,25 @@ LinuxNetworkAdapter::findAdapter( void )
 }
 
 bool
-LinuxNetworkAdaptor::DetectWOL ( void )
+LinuxNetworkAdapter::detectWOL ( void )
 {
-	int err;
-	struct ethtool_cmd ecmd;
-	struct ethtool_wolinfo wolinfo;
-	struct ethtool_value edata;
-	struct ifreq ifr;
-	int fd;
-	__u32 wolopts;
+	int						err;
+	struct ethtool_wolinfo	wolinfo;
+	struct ifreq			ifr;
 
-	/* Setup our control structures. */
-	memset( &ifr, 0, sizeof(ifr) );
-	strcpy( ifr.ifr_name, m_interface_name );
+	// Copy our IFR
+	getIFR( &ifr );
 
-	/* Open control socket. */
-	fd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (fd < 0) {
+	// Open control socket.
+	int sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0) {
 		dprintf( D_ALWAYS, "Cannot get control socket for WOL detection\n" );
 		return false;
 	}
 
 	wolinfo.cmd = ETHTOOL_GWOL;
-	ifr->ifr_data = (caddr_t)&wolinfo;
-	err = ioctl(fd, SIOCETHTOOL, ifr);
+	ifr.ifr_data = (caddr_t)&wolinfo;
+	err = ioctl(sock, SIOCETHTOOL, ifr);
 	if (errno == EOPNOTSUPP) {
 		dprintf( D_ALWAYS, "SIOCETHTOOL not supported by this kernel\n" );
 		return false;
@@ -162,24 +194,15 @@ LinuxNetworkAdaptor::DetectWOL ( void )
 		return false;
 	}
 
-	wolopts = wol->supported;
-	if (wolopts & WAKE_PHY)
-		*p++ = 'p';
-	if (wolopts & WAKE_UCAST)
-		*p++ = 'u';
-	if (wolopts & WAKE_MCAST)
-		*p++ = 'm';
-	if (wolopts & WAKE_BCAST)
-		*p++ = 'b';
-	if (wolopts & WAKE_ARP)
-		*p++ = 'a';
-	if (wolopts & WAKE_MAGIC)
-		*p++ = 'g';
-	if (wolopts & WAKE_MAGICSECURE)
-		*p++ = 's';
+	m_wolopts = wolinfo.supported;
 
+	// For now, all we support is the "magic" packet
+	if (m_wolopts & WAKE_MASK)
+		m_wol = true;
 
-	fprintf(stdout, "	Supports Wake-on: %s\n",
-		unparse_wolopts(wol->supported));
+	dprintf( D_FULLDEBUG, "%s supports Wake-on: %s (raw: 0x%02x)\n",
+			 m_device_name, m_wol ? "yes" : "no", m_wolopts );
 
+	close( sock );
+	return true;
 }
