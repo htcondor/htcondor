@@ -51,9 +51,6 @@
 #if HAVE_EXT_COREDUMPER
 #include "google/coredumper.h"
 #endif
-#if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
-#include <resolv.h>
-#endif
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
@@ -1121,10 +1118,8 @@ unix_sigusr2(int)
 void
 dc_reconfig( bool is_full )
 {
-#if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
-		// re-initialize dns info (e.g. IP addresses of nameservers)
-	res_init();
-#endif
+		// do this first in case anything else depends on DNS
+	daemonCore->refreshDNS();
 
 		// Actually re-read the files...  Added by Derek Wright on
 		// 12/8/97 (long after this function was first written... 
@@ -1162,13 +1157,11 @@ dc_reconfig( bool is_full )
 	drop_core_in_log();
 
 	// Re-read everything from the config file DaemonCore itself cares about.
+	// This also cleares the DNS cache.
 	daemonCore->reconfig();
 
-	// If we're doing a full reconfig, also call ReInit to clear out
-	// the DNS info we have cashed for the IP verify code. Also clear
-	// out the passwd cache.
+	// Clear out the passwd cache.
 	if( is_full ) {
-		daemonCore->ReInit();
 		clear_passwd_cache();
 	}
 
@@ -1975,15 +1968,7 @@ int main( int argc, char** argv )
 								  (CommandHandler)time_offset_receive_cedar_stub,
 								  "time_offset_cedar_stub", 0, DAEMON );
 
-	// Call daemonCore's ReInit(), which clears the cached DNS info.
-	// It also initializes some stuff, which is why we call it now. 
-	// This function will set a timer to call itself again 8 hours
-	// after it's been called, so that even after an asynchronous
-	// reconfig, we still wait 8 hours instead of just using a
-	// periodic timer.  -Derek Wright <wright@cs.wisc.edu> 1/28/99 
-	daemonCore->ReInit();
-
-	// Call daemonCore's reconfig(), which reads everything else from
+	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes
 	// private data members, etc.
 	daemonCore->reconfig();

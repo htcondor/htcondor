@@ -79,11 +79,17 @@ public:
 	///
 	~IpVerify();
 
-	/** Params information out of the condor_config file and
-		sets up the initial permission hash table
-		@return Not_Yet_Ducumented
-	*/
-	int Init();
+	/** Tell IpVerify() to reconfigure itself.
+	 *  This also happens to clear cached authorization information,
+	 *  which serves as our "DNS cache".
+	 */
+	void reconfig();
+
+	/** Tell IpVerify() to get rid of cached DNS information.
+	 *  This just exists to make it clear what the caller wants.
+	 *  It is currently just a synonymn for reconfig().
+	 */
+	void refreshDNS();
 
 	/** Verify() method returns whether connection should be allowed or
 		refused.
@@ -137,6 +143,12 @@ private:
 		~PermTypeEntry(); 
 	};
 
+	/** Params information out of the condor_config file and
+		sets up the initial permission hash table
+		@return Not_Yet_Ducumented
+	*/
+	int Init();
+
     bool has_user(UserPerm_t * , const char *, perm_mask_t &);
 	bool LookupCachedVerifyResult( DCpermission perm, const struct in_addr &sin, const char * user, perm_mask_t & mask);
 	int add_hash_entry(const struct in_addr & sin_addr, const char * user, perm_mask_t new_mask);
@@ -161,7 +173,7 @@ private:
 	bool lookup_user(NetStringList *hosts, UserHash_t *users, char const *user, char const *ip, char const *hostname, bool is_allow_list);
 
 	char * merge(char * newPerm, char * oldPerm);
-	int did_init;
+	bool did_init;
 
 	PermTypeEntry* PermTypeArray[LAST_PERM];
 

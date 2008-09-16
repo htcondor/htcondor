@@ -293,16 +293,13 @@ class DaemonCore : public Service
     ~DaemonCore();
     void Driver();
 
-    /** Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int ReInit();
-
 		/**
 		   Re-read anything that the daemonCore object got from the
 		   config file that might have changed on a reconfig.
 		*/
     void reconfig();
+
+	void refreshDNS();
 
     /** Not_Yet_Documented
         @param perm Not_Yet_Documented
@@ -1581,6 +1578,8 @@ class DaemonCore : public Service
 			of this pid (where applicable) */
 		PidEnvID penvid;
     };
+
+	int m_refresh_dns_timer;
 
     typedef HashTable <pid_t, PidEntry *> PidHashTable;
     PidHashTable* pidTable;

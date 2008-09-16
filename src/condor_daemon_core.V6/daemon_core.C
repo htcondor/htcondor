@@ -44,6 +44,10 @@ void Generic_stop_logging();
 #include <sys/syscall.h>
 #endif
 
+#if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
+#include <resolv.h>
+#endif
+
 static const int DEFAULT_MAXCOMMANDS = 255;
 static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
@@ -416,6 +420,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 #endif
 
 	m_fake_create_thread = false;
+
+	m_refresh_dns_timer = -1;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -553,7 +559,6 @@ DaemonCore::~DaemonCore()
 		free(m_private_network_name);
 		m_private_network_name = NULL;
 	}
-
 }
 
 void DaemonCore::Set_Default_Reaper( int reaper_id )
@@ -2246,115 +2251,45 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 	dprintf(flag, "\n");
 }
 
-int
-DaemonCore::ReInit()
-{
-	static int tid = -1;
+void
+DaemonCore::refreshDNS() {
+#if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
+		// re-initialize dns info (e.g. IP addresses of nameservers)
+	res_init();
+#endif
 
-	SecMan *secman = getSecMan();
-	secman->reconfig();
-
-		// Handle our timer.  If this is the first time, we need to
-		// register it.  Otherwise, we just reset its value to go off
-		// 8 hours from now.  The reason we don't do this as a simple
-		// periodic timer is that if we get sent a RECONFIG, we call
-		// this anyway, and we don't want to clear out the cache soon
-		// after that, just b/c of a periodic timer.  -Derek 1/28/99
-	if( tid < 0 ) {
-		tid = daemonCore->
-			Register_Timer( 8*60*60, 0, (Eventcpp)&DaemonCore::ReInit,
-							"DaemonCore::ReInit()", daemonCore );
-	} else {
-		daemonCore->Reset_Timer( tid, 8*60*60, 0 );
-	}
-
-	// Setup a timer to send child keepalives to our parent, if we have
-	// a daemon core parent.
-	if ( ppid ) {
-		MyString buf;
-		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",mySubSystem);
-		max_hang_time = param_integer(buf.Value(),-1);
-		if( max_hang_time == -1 ) {
-			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
-		}
-		if ( !max_hang_time ) {
-			max_hang_time = 60 * 60;	// default to 1 hour
-		}
-		int send_update = (max_hang_time / 3) - 30;
-		if ( send_update < 1 )
-			send_update = 1;
-		if ( send_child_alive_timer == -1 ) {
-
-				// 2008-06-18 7.0.3: commented out direct call to
-				// SendAliveToParent(), because it causes deadlock
-				// between the shadow and schedd if the job classad
-				// that the schedd is writing over a pipe to the
-				// shadow is larger than the pipe buffer size.
-				// For now, register timer for 0 seconds instead
-				// of calling SendAliveToParent() immediately.
-				// This means we are vulnerable to a race condition,
-				// in which we hang before the first CHILDALIVE.  If
-				// that happens, our parent will never kill us.
-
-			send_child_alive_timer = Register_Timer(0, (unsigned)send_update,
-					(TimerHandlercpp)&DaemonCore::SendAliveToParent,
-					"DaemonCore::SendAliveToParent", this );
-
-				// Send this immediately, because if we hang before
-				// sending this message, our parent will not kill us.
-				// (Commented out.  See reason above.)
-				// SendAliveToParent();
-		} else {
-			Reset_Timer(send_child_alive_timer, 1, send_update);
-		}
-	}
-
-#ifdef HAVE_EXT_GSOAP
-#ifdef COMPILE_SOAP_SSL
-	MyString subsys = MyString(mySubSystem);
-	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
-	bool subsys_enable_soap_ssl =
-		param_boolean((subsys + "_ENABLE_SOAP_SSL").GetCStr(), false);
-	if (subsys_enable_soap_ssl ||
-		(enable_soap_ssl &&
-		 (!(NULL != param((subsys + "_ENABLE_SOAP_SSL").GetCStr())) ||
-		  subsys_enable_soap_ssl))) {
-		if (mapfile) {
-			delete mapfile; mapfile = NULL;
-		}
-		mapfile = new MapFile;
-		char * credential_mapfile;
-		if (NULL == (credential_mapfile = param("CERTIFICATE_MAPFILE"))) {
-			EXCEPT("DaemonCore: No CERTIFICATE_MAPFILE defined, "
-				   "unable to identify users, required by ENABLE_SOAP_SSL");
-		}
-		char * user_mapfile;
-		if (NULL == (user_mapfile = param("USER_MAPFILE"))) {
-			EXCEPT("DaemonCore: No USER_MAPFILE defined, "
-				   "unable to identify users, required by ENABLE_SOAP_SSL");
-		}
-		int line;
-		if (0 != (line = mapfile->ParseCanonicalizationFile(credential_mapfile))) {
-			EXCEPT("DaemonCore: Error parsing CERTIFICATE_MAPFILE at line %d",
-				   line);
-	}
-		if (0 != (line = mapfile->ParseUsermapFile(user_mapfile))) {
-			EXCEPT("DaemonCore: Error parsing USER_MAPFILE at line %d", line);
-		}
-	}
-#endif // COMPILE_SOAP_SSL
-#endif // HAVE_EXT_GSOAP
-
-	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
-
-	return TRUE;
+	getSecMan()->getIpVerify()->refreshDNS();
 }
-
 
 void
 DaemonCore::reconfig(void) {
 	// NOTE: this function is always called on initial startup, as well
 	// as at reconfig time.
+
+	// NOTE: on reconfig, refreshDNS() will have already been called
+	// by the time we get here, because it needs to be called early
+	// in the process.
+
+	SecMan *secman = getSecMan();
+	secman->reconfig();
+
+		// add a random offset to avoid pounding DNS
+	int dns_interval = param_integer("DNS_CACHE_REFRESH",
+									 8*60*60+(rand()%600), 0);
+	if( dns_interval > 0 ) {
+		if( m_refresh_dns_timer < 0 ) {
+			m_refresh_dns_timer =
+				Register_Timer( dns_interval, dns_interval,
+								(Eventcpp)&DaemonCore::refreshDNS,
+								"DaemonCore::refreshDNS()", daemonCore );
+		} else {
+			Reset_Timer( m_refresh_dns_timer, dns_interval, dns_interval );
+		}
+	}
+	else if( m_refresh_dns_timer != -1 ) {
+		daemonCore->Cancel_Timer( m_refresh_dns_timer );
+		m_refresh_dns_timer = -1;
+	}
 
 		// Grab a copy of our private network name (if any).
 	if (m_private_network_name) {
@@ -2407,6 +2342,42 @@ DaemonCore::reconfig(void) {
 		// though the structure is still allocated.
 	}
 #endif
+#ifdef HAVE_EXT_GSOAP
+#ifdef COMPILE_SOAP_SSL
+	MyString subsys = MyString(mySubSystem);
+	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
+	bool subsys_enable_soap_ssl =
+		param_boolean((subsys + "_ENABLE_SOAP_SSL").GetCStr(), false);
+	if (subsys_enable_soap_ssl ||
+		(enable_soap_ssl &&
+		 (!(NULL != param((subsys + "_ENABLE_SOAP_SSL").GetCStr())) ||
+		  subsys_enable_soap_ssl))) {
+		if (mapfile) {
+			delete mapfile; mapfile = NULL;
+		}
+		mapfile = new MapFile;
+		char * credential_mapfile;
+		if (NULL == (credential_mapfile = param("CERTIFICATE_MAPFILE"))) {
+			EXCEPT("DaemonCore: No CERTIFICATE_MAPFILE defined, "
+				   "unable to identify users, required by ENABLE_SOAP_SSL");
+		}
+		char * user_mapfile;
+		if (NULL == (user_mapfile = param("USER_MAPFILE"))) {
+			EXCEPT("DaemonCore: No USER_MAPFILE defined, "
+				   "unable to identify users, required by ENABLE_SOAP_SSL");
+		}
+		int line;
+		if (0 != (line = mapfile->ParseCanonicalizationFile(credential_mapfile))) {
+			EXCEPT("DaemonCore: Error parsing CERTIFICATE_MAPFILE at line %d",
+				   line);
+	}
+		if (0 != (line = mapfile->ParseUsermapFile(user_mapfile))) {
+			EXCEPT("DaemonCore: Error parsing USER_MAPFILE at line %d", line);
+		}
+	}
+#endif // COMPILE_SOAP_SSL
+#endif // HAVE_EXT_GSOAP
+
 
 		// FAKE_CREATE_THREAD is an undocumented config knob which turns
 		// Create_Thread() into a simple function call in the main process,
@@ -2418,6 +2389,49 @@ DaemonCore::reconfig(void) {
 		// Under unix, Create_Thread() is actually a fork, so it is safe.
 	m_fake_create_thread = param_boolean("FAKE_CREATE_THREAD",false);
 #endif
+
+	// Setup a timer to send child keepalives to our parent, if we have
+	// a daemon core parent.
+	if ( ppid ) {
+		MyString buf;
+		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",mySubSystem);
+		max_hang_time = param_integer(buf.Value(),-1);
+		if( max_hang_time == -1 ) {
+			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
+		}
+		if ( !max_hang_time ) {
+			max_hang_time = 60 * 60;	// default to 1 hour
+		}
+		int send_update = (max_hang_time / 3) - 30;
+		if ( send_update < 1 )
+			send_update = 1;
+		if ( send_child_alive_timer == -1 ) {
+
+				// 2008-06-18 7.0.3: commented out direct call to
+				// SendAliveToParent(), because it causes deadlock
+				// between the shadow and schedd if the job classad
+				// that the schedd is writing over a pipe to the
+				// shadow is larger than the pipe buffer size.
+				// For now, register timer for 0 seconds instead
+				// of calling SendAliveToParent() immediately.
+				// This means we are vulnerable to a race condition,
+				// in which we hang before the first CHILDALIVE.  If
+				// that happens, our parent will never kill us.
+
+			send_child_alive_timer = Register_Timer(0, (unsigned)send_update,
+					(TimerHandlercpp)&DaemonCore::SendAliveToParent,
+					"DaemonCore::SendAliveToParent", this );
+
+				// Send this immediately, because if we hang before
+				// sending this message, our parent will not kill us.
+				// (Commented out.  See reason above.)
+				// SendAliveToParent();
+		} else {
+			Reset_Timer(send_child_alive_timer, 1, send_update);
+		}
+	}
+
+	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
 }
 

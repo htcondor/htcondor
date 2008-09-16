@@ -92,7 +92,6 @@ int SecMan::sec_man_ref_count = 0;
 char* SecMan::_my_unique_id = 0;
 char* SecMan::_my_parent_unique_id = 0;
 bool SecMan::_should_check_env_for_unique_id = true;
-bool SecMan::m_ipverify_initialized = false;
 IpVerify SecMan::m_ipverify;
 
 SecMan::sec_req
@@ -2462,16 +2461,12 @@ SecMan::~SecMan() {
 void
 SecMan::reconfig()
 {
-	m_ipverify_initialized = false;
+	m_ipverify.reconfig();
 }
 
 IpVerify *
 SecMan::getIpVerify()
 {
-	if( !m_ipverify_initialized ) {
-		m_ipverify_initialized = true;
-		m_ipverify.Init();
-	}
 	return &m_ipverify;
 }
 

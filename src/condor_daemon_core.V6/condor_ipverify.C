@@ -607,6 +607,21 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 	free( permbuf );
 }
 
+void
+IpVerify::reconfig()
+{
+	did_init = false;
+}
+
+void
+IpVerify::refreshDNS() {
+		// NOTE: this may be called when the daemon is starting a reconfig.
+		// The new configuration may not have been read yet, but we do
+		// not care, because this just sets a flag and we do the actual
+		// work later.
+	reconfig();
+}
+
 int
 IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char * user )
 {
@@ -615,6 +630,10 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 	char *thehost;
 	char **aliases;
     const char * who = user;
+
+	if( !did_init ) {
+		Init();
+	}
 
 	/*
 	 * Be Warned:  careful about parameter "sin" being NULL.  It could be, in
