@@ -147,7 +147,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			status = STATUS_ERROR;
 		}
 
-		if ( arg.Match("-debug") ) {
+		if ( arg.Match("debug") ) {
 			if ( arg.HasOpt() ) {
 				set_debug_flags( const_cast<char *>(arg.Opt()) );
 				index = arg.ConsumeOpt( );
