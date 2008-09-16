@@ -150,7 +150,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				set_debug_flags( const_cast<char *>(arg.Opt()) );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -debug argument\n");
+				fprintf(stderr, "Value needed for --debug argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -160,7 +160,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.maxExec = atoi(argv[index]);
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -maxexec argument\n");
+				fprintf(stderr, "Value needed for --maxexec argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -208,7 +208,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.sleep = atoi(argv[index]);
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -sleep argument\n");
+				fprintf(stderr, "Value needed for --sleep argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -218,7 +218,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.term = atoi(argv[index]);
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -term argument\n");
+				fprintf(stderr, "Value needed for --term argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -237,7 +237,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.verbosity = atoi(argv[index]);
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for -verbosity argument\n");
+				fprintf(stderr, "Value needed for --verbosity argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -314,9 +314,9 @@ ReadEvents(Options &opts)
 		}
 	}
 
-	// -init-only ?
+	// --init-only ?
 	if ( opts.exitAfterInit ) {
-		printf( "Exiting after init (due to -init-only)\n" );
+		printf( "Exiting after init (due to --init-only)\n" );
 		return STATUS_OK;
 	}
 
