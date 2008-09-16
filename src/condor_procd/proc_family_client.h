@@ -61,6 +61,13 @@ public:
 	bool track_family_via_supplementary_group(pid_t pid, bool&, gid_t&);
 #endif
 
+	// tell the ProcD it needs to use glexec (along with the given
+	// proxy) in order to signal the specified family
+	//
+	bool use_glexec_for_family(pid_t pid,
+	                           const char* proxy,
+	                           bool& response);
+
 	// ask the procd for usage information about a process
 	// family
 	//

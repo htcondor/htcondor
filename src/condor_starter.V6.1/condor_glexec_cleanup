@@ -1,0 +1,27 @@
+#!/bin/sh
+
+if [ $# != 3 ]
+then
+	echo "usage: $0 <glexec> <proxy> <sandbox>" >&2
+	exit 1
+fi
+
+GLEXEC="$1"
+PROXY="$2"
+SANDBOX="$3"
+
+# tar up the contents of the user-owned sandbox and pipe them
+# back to a process running as the condor user. make sure not to
+# stomp on the condor-owned copy of the user proxy
+#
+SH=`readlink -f /bin/sh`
+GLEXEC_CLIENT_CERT="$SANDBOX.condor/$PROXY"
+export GLEXEC_CLIENT_CERT
+"$GLEXEC" "$SH" -c "rm \"$SANDBOX/$PROXY\" && \
+                        tar -C \"$SANDBOX\" -c . && \
+                        rm -rf \"$SANDBOX\"" | \
+    tar -C "$SANDBOX.condor" -x
+
+# move the condor-owned sandbox back in place
+#
+mv "$SANDBOX.condor" "$SANDBOX"

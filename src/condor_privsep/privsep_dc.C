@@ -106,11 +106,20 @@ privsep_create_process(const char* cmd,
 		return FALSE;
 	}
 
-	// feed the switchboard the args to give to the ProcD
+	// feed the switchboard information on how to create the new
+	// process
 	//
 	privsep_exec_set_uid(in_fp, uid);
 	privsep_exec_set_path(in_fp, path);
 	privsep_exec_set_args(in_fp, args);
+	Env tmp_env;
+	if (HAS_DCJOBOPT_ENV_INHERIT(dc_job_opts)) {
+		tmp_env.MergeFrom(environ);
+		if (env != NULL) {
+			tmp_env.MergeFrom(*env);
+		}
+		env = &tmp_env;
+	}
 	if (env != NULL) {
 		privsep_exec_set_env(in_fp, *env);
 	}
@@ -164,7 +173,7 @@ privsep_spawn_procd(const char* path,
 	                              NULL,
 	                              0,
 	                              NULL,
-                                  reaper_id,
+	                              reaper_id,
 	                              0,
 	                              NULL,
 	                              0);

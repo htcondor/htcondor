@@ -1451,6 +1451,21 @@ void DaemonCore::pipeHandleTableRemove(int index)
 	}
 }
 
+int DaemonCore::pipeHandleTableLookup(int index, PipeHandle* ph)
+{
+	if ((index < 0) || (index > maxPipeHandleIndex)) {
+		return FALSE;
+	}
+	PipeHandle tmp_ph = (*pipeHandleTable)[index];
+	if (tmp_ph == (PipeHandle)-1) {
+		return FALSE;
+	}
+	if (ph != NULL) {
+		*ph = tmp_ph;
+	}
+	return TRUE;
+}
+
 int DaemonCore::Create_Pipe( int *pipe_ends,
 			     bool can_register_read,
 			     bool can_register_write,
@@ -1599,11 +1614,10 @@ int DaemonCore::Register_Pipe(int pipe_end, char* pipe_descrip,
     int     j;
 
 	int index = pipe_end - PIPE_INDEX_OFFSET;
-
-    if ( index < 0 ) {
+	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_DAEMONCORE, "Register_Pipe: invalid index\n");
 		return -1;
-    }
+	}
 
 	i = nPipe;
 
@@ -1779,7 +1793,7 @@ unsigned __stdcall pipe_close_thread(void *arg)
 int DaemonCore::Close_Pipe( int pipe_end )
 {
 	int index = pipe_end - PIPE_INDEX_OFFSET;
-	if (index < 0) {
+	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_ALWAYS, "Close_Pipe on invalid pipe end: %d\n", pipe_end);
 		EXCEPT("Close_Pipe error");
 	}
@@ -1868,7 +1882,7 @@ DaemonCore::Read_Pipe(int pipe_end, void* buffer, int len)
 	}
 
 	int index = pipe_end - PIPE_INDEX_OFFSET;
-	if (index < 0) {
+	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_ALWAYS, "Read_Pipe: invalid pipe_end: %d\n", pipe_end);
 		EXCEPT("Read_Pipe");
 	}
@@ -1891,7 +1905,7 @@ DaemonCore::Write_Pipe(int pipe_end, const void* buffer, int len)
 	}
 
 	int index = pipe_end - PIPE_INDEX_OFFSET;
-	if (index < 0) {
+	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_ALWAYS, "Write_Pipe: invalid pipe_end: %d\n", pipe_end);
 		EXCEPT("Write_Pipe: invalid pipe end");
 	}
@@ -1905,6 +1919,14 @@ DaemonCore::Write_Pipe(int pipe_end, const void* buffer, int len)
 #endif
 }
 
+#if !defined(WIN32)
+int
+DaemonCore::Get_Pipe_FD(int pipe_end, int* fd)
+{
+	int index = pipe_end - PIPE_INDEX_OFFSET;
+	return pipeHandleTableLookup(index, fd);
+}
+#endif
 
 MyString*
 DaemonCore::Read_Std_Pipe(int pid, int std_fd) {
@@ -4646,7 +4668,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	// if we're using priv sep, we may not have permission to send signals
 	// to our child processes; ask the ProcD to do it for us
 	//
-	if (privsep_enabled()) {
+	if (privsep_enabled() || param_boolean("GLEXEC_JOB", false)) {
 		if (!target_has_dcpm && pidinfo && pidinfo->new_process_group) {
 			ASSERT(m_proc_family != NULL);
 			bool ok =  m_proc_family->signal_process(pid, sig);
@@ -5273,11 +5295,13 @@ void exit(int status)
 
 // helper function for registering a family with our ProcFamily
 // logic. the first 3 arguments are mandatory for registration.
-// the last three are optional and specify what tracking methods
+// the next three are optional and specify what tracking methods
 // should be used for the new process family. if group is non-NULL
 // then we will ask the ProcD to track by supplementary group
 // ID - the ID that the ProcD chooses for this purpose is returned
-// in the location pointed to by the argument
+// in the location pointed to by the argument. the last argument
+// optionally specifies a proxy to give to the ProcD so that
+// it can use glexec to signal the processes in this family
 //
 bool
 DaemonCore::Register_Family(pid_t       child_pid,
@@ -5285,7 +5309,8 @@ DaemonCore::Register_Family(pid_t       child_pid,
                             int         max_snapshot_interval,
                             PidEnvID*   penvid,
                             const char* login,
-                            gid_t*      group)
+                            gid_t*      group,
+                            const char* glexec_proxy)
 {
 	bool success = false;
 	bool family_registered = false;
@@ -5332,6 +5357,17 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		EXCEPT("Internal error: "
 		           "group-based tracking unsupported on this platform");
 #endif
+	}
+	if (glexec_proxy != NULL) {
+		if (!m_proc_family->use_glexec_for_family(child_pid,
+		                                          glexec_proxy))
+		{
+			dprintf(D_ALWAYS,
+			        "Create_Process: error using GLExec for "
+				    "family with root %u\n",
+			        child_pid);
+			goto REGISTER_FAMILY_DONE;
+		}
 	}
 	success = true;
 REGISTER_FAMILY_DONE:
@@ -5825,11 +5861,12 @@ void CreateProcessForkit::exec() {
 
 			bool ok =
 				daemonCore->Register_Family(pid,
-			                                ppid,
-			                                m_family_info->max_snapshot_interval,
-			                                penvid_ptr,
-			                                m_family_info->login,
-			                                tracking_gid_ptr);
+				                            ppid,
+				                            m_family_info->max_snapshot_interval,
+				                            penvid_ptr,
+				                            m_family_info->login,
+				                            tracking_gid_ptr,
+				                            m_family_info->glexec_proxy);
 			if (!ok) {
 				errno = DaemonCore::ERRNO_REGISTRATION_FAILED;
 				write(m_errorpipe[1], &errno, sizeof(errno));
@@ -6671,7 +6708,8 @@ int DaemonCore::Create_Process(
 		                          family_info->max_snapshot_interval,
 		                          NULL,
 		                          family_info->login,
-		                          NULL);
+		                          NULL,
+		                          family_info->glexec_proxy);
 		if (!ok) {
 			EXCEPT("error registering process family with procd");
 		}
@@ -7066,7 +7104,8 @@ int DaemonCore::Create_Process(
 		                family_info->max_snapshot_interval,
 		                &pidtmp->penvid,
 		                family_info->login,
-		                NULL);
+		                NULL,
+		                family_info->glexec_proxy);
 	}
 #endif
 
