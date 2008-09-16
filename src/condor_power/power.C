@@ -243,7 +243,7 @@ main ( int argc, char *argv[] ) {
         ad->SetMyTypeName ( STARTD_ADTYPE );
         ad->SetTargetTypeName ( JOB_ADTYPE );
         ad->Assign ( ATTR_HARDWARE_ADDRESS, mac );
-        ad->Assign ( ATTR_SUBNET_MASK, subnet );
+        ad->Assign ( ATTR_SUBNET, subnet );
         ad->Assign ( ATTR_PUBLIC_NETWORK_IP_ADDR, sinful );
 
     } else {
