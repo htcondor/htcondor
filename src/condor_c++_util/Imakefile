@@ -62,10 +62,9 @@ SETEUID_OBJ = ../condor_util_lib/seteuid.o
 SETEUID_OBJ = 
 #endif
 
+HIBERNATION_OBJS = hibernation_manager.o hibernator.o network_adapter.o
 #if IS_LINUX
-HIBERNATION_OBJS = hibernation_manager.o hibernator.o hibernator-linux.o 
-#else
-HIBERNATION_OBJS = hibernation_manager.o hibernator.o
+HIBERNATION_OBJS += hibernator.linux.o network_adapter.linux.o
 #endif
 
 #if !HAVE_SETEGID

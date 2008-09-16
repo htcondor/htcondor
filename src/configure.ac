@@ -2187,6 +2187,8 @@ AC_CHECK_HEADERS([sys/personality.h])
 AC_CHECK_HEADERS([linux/personality.h])
 AC_CHECK_HEADERS([linux/magic.h])
 AC_CHECK_HEADERS([linux/nfsd/const.h])
+AC_CHECK_HEADERS([linux/if.h],[],[],[
+#include<netinet/in.h>])
 AC_CHECK_HEADERS([linux/sockios.h])
 AC_CHECK_HEADERS([sys/statfs.h])
 AC_CHECK_HEADERS([sys/statvfs.h])

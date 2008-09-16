@@ -21,12 +21,7 @@
 #include "condor_debug.h"
 #include "stat_wrapper.h"
 #include "hibernator.h"
-#include "hibernator-linux.h"
-
-
-# if HAVE_LINUX_SOCKIOS_H
-#   include "linux/sockios.h"
-# endif
+#include "hibernator.linux.h"
 
 
 /***************************************************************
@@ -60,6 +55,9 @@ public:
 	// Detect if interface is available
 	virtual bool Detect( void ) = 0;
 
+	// Detect wake on lan
+	bool DetectWOL( void );
+
 	// Set us into the exected state
 	virtual HibernatorBase::SLEEP_STATE StandBy ( bool force ) const;
 	virtual HibernatorBase::SLEEP_STATE Suspend ( bool force ) const = 0;
@@ -81,11 +79,11 @@ public:
 			: BaseLinuxHibernator( hibernator ) { };
 	virtual ~PmUtilLinuxHibernator(void) { };
 
-	virtual bool Detect( void );
-	virtual HibernatorBase::SLEEP_STATE StandBy ( bool force ) const ;
-	virtual HibernatorBase::SLEEP_STATE Suspend ( bool force ) const;
-	virtual HibernatorBase::SLEEP_STATE Hibernate ( bool force ) const;
-	//virtual HibernatorBase::SLEEP_STATE PowerOff ( bool force ) const;
+	bool Detect( void );
+	HibernatorBase::SLEEP_STATE StandBy ( bool force ) const ;
+	HibernatorBase::SLEEP_STATE Suspend ( bool force ) const;
+	HibernatorBase::SLEEP_STATE Hibernate ( bool force ) const;
+	//HibernatorBase::SLEEP_STATE PowerOff ( bool force ) const;
 };
 
 class SysIfLinuxHibernator : public BaseLinuxHibernator
@@ -93,13 +91,13 @@ class SysIfLinuxHibernator : public BaseLinuxHibernator
 public:
 	SysIfLinuxHibernator( LinuxHibernator &hibernator) 
 			: BaseLinuxHibernator( hibernator ) { };
-	virtual ~SysIfLinuxHibernator(void);
+	~SysIfLinuxHibernator(void);
 
-	virtual bool Detect( void );
-	virtual HibernatorBase::SLEEP_STATE StandBy ( bool force ) const;
-	virtual HibernatorBase::SLEEP_STATE Suspend ( bool force ) const;
-	virtual HibernatorBase::SLEEP_STATE Hibernate ( bool force ) const;
-	//virtual HibernatorBase::SLEEP_STATE PowerOff ( bool force ) const;
+	bool Detect( void );
+	HibernatorBase::SLEEP_STATE StandBy ( bool force ) const;
+	HibernatorBase::SLEEP_STATE Suspend ( bool force ) const;
+	HibernatorBase::SLEEP_STATE Hibernate ( bool force ) const;
+	//HibernatorBase::SLEEP_STATE PowerOff ( bool force ) const;
 };
 
 class ProcIfLinuxHibernator : public BaseLinuxHibernator
@@ -109,11 +107,11 @@ public:
 			: BaseLinuxHibernator( hibernator ) { };
 	virtual ~ProcIfLinuxHibernator(void);
 
-	virtual bool Detect( void );
-	virtual HibernatorBase::SLEEP_STATE StandBy ( bool force ) const;
-	virtual HibernatorBase::SLEEP_STATE Suspend ( bool force ) const;
-	virtual HibernatorBase::SLEEP_STATE Hibernate ( bool force ) const;
-	virtual HibernatorBase::SLEEP_STATE PowerOff ( bool force ) const;
+	bool Detect( void );
+	HibernatorBase::SLEEP_STATE StandBy ( bool force ) const;
+	HibernatorBase::SLEEP_STATE Suspend ( bool force ) const;
+	HibernatorBase::SLEEP_STATE Hibernate ( bool force ) const;
+	HibernatorBase::SLEEP_STATE PowerOff ( bool force ) const;
 };
 
 
@@ -418,7 +416,7 @@ SysIfLinuxHibernator::Hibernate ( bool force ) const
 // Linux hibernator "Proc IF" class methods
 // *****************************************
 bool
-ProcIfLinuxHibernator::detect ( void ) const
+ProcIfLinuxHibernator::Detect ( void )
 {
 	FILE	*fp;
 	char	buf[128];
@@ -444,7 +442,7 @@ ProcIfLinuxHibernator::detect ( void ) const
 }
 
 HibernatorBase::SLEEP_STATE
-SysIfLinuxHibernator::Suspend ( bool force ) const
+ProcIfLinuxHibernator::Suspend ( bool force ) const
 {
 	(void) force;
 	if ( ! writeSysFile( PROC_POWER_FILE, "S3\n" ) ) {
@@ -454,7 +452,7 @@ SysIfLinuxHibernator::Suspend ( bool force ) const
 }
 
 HibernatorBase::SLEEP_STATE
-SysIfLinuxHibernator::Hibernate ( bool force ) const
+ProcIfLinuxHibernator::Hibernate ( bool force ) const
 {
 	(void) force;
 	if ( ! writeSysFile( PROC_POWER_FILE, "S4\n" ) ) {
@@ -464,7 +462,7 @@ SysIfLinuxHibernator::Hibernate ( bool force ) const
 }
 
 HibernatorBase::SLEEP_STATE
-SysIfLinuxHibernator::PowerOff ( bool force ) const
+ProcIfLinuxHibernator::PowerOff ( bool force ) const
 {
 	(void) force;
 	if ( ! writeSysFile( PROC_POWER_FILE, "S5\n" ) ) {

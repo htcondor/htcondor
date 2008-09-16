@@ -17,20 +17,18 @@
 *
 ***************************************************************/
 
-#ifndef _NETWORK_ADAPTER_BASE_BASE_H_
-#define _NETWORK_ADAPTER_BASE_BASE_H_
+#ifndef _NETWORK_ADAPTER_LINUX_H_
+#define _NETWORK_ADAPTER_LINUX_H_
+
+#include "network_adapter.h"
 
 /***************************************************************
- * Headers
- ***************************************************************/
+* LinuxNetworkAdapter class
+* Given the name of a network adapter (the GUID), discovers all
+* the required power information.
+***************************************************************/
 
-#include "condor_classad.h"
-
-/***************************************************************
- * NetworkAdapterBase class
- ***************************************************************/
-
-class NetworkAdapterBase
+class LinuxNetworkAdapter : public NetworkAdapterBase
 {
 
 public:
@@ -39,10 +37,15 @@ public:
 	*/
 	//@{
 
-    /// Destructor
-	virtual ~NetworkAdapterBase () throw (); 
+    /// Constructor
+	LinuxNetworkAdapter () throw ();
 
-	//@}
+	/// Constructor
+	LinuxNetworkAdapter ( unsigned int ip_addr ) throw ();
+
+	/// Destructor
+	virtual ~LinuxNetworkAdapter () throw (); 
+
 	
 	/** @name Adapter properties.
 	Basic device properties.
@@ -53,47 +56,33 @@ public:
 		@return a string representation of the addapter's hardware 
         address
 	*/
-	virtual char* hardwareAddress () const = 0;
+	virtual char* hardwareAddress () const;
 
     /** Returns the adapter's hardware address
 		@return a string representation of the addapter's hardware 
         address
 	*/
-	virtual char* subnet () const = 0;
+	virtual char* subnet () const;
 
     /** Returns the adapter's hardware address
 		@return a string representation of the addapter's hardware 
         address
 	*/
-	virtual bool wakeAble () const = 0;
+	virtual bool wakeAble () const;
 	
 	//@}
 
-
-    /** Published the network addapter's information into the given ad
-        */
-    void publish ( ClassAd &ad );
-
-
-    /** We use this to create adapter objects so we don't need to deal 
-        with the differences between OSs at the invocation level.
-        @return if successful a valid NetworkAdapterBase*; otherwise 
-        NULL.
-	*/
-	static NetworkAdapterBase* createNetworkAdapter ( char *sinful );
-
 private:
-    
-    /** @name Private Instantiation. 
-    That is, do not allow for a default constructor.
-	*/
-	//@{
 
-    /// Constructor
-	NetworkAdapterBase () throw ();
+	unsigned	 m_ip_addr;
+	const char	*m_device_name;
+	bool		 m_wol;
 
-	//@}
+
+	// Internal methods
+	bool findAdapter( void );
+	bool detectWOL( void );
 	
 };
 
-#endif // _NETWORK_ADAPTER_BASE_BASE_H_
+#endif // _NETWORK_ADAPTER_LINUX_H_

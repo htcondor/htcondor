@@ -17,6 +17,9 @@
 *
 ***************************************************************/
 
+#ifndef _NETWORK_ADAPTER_WINDOWS_H_
+#define _NETWORK_ADAPTER_WINDOWS_H_
+
 #include "setup_api_dll.h"
 
 /***************************************************************
@@ -93,3 +96,5 @@ private:
 		IN PRE_PROCESS_REISTRY_VALUE preprocess = NULL ) const;
 	
 };
+
+#endif //  _NETWORK_ADAPTER_WINDOWS_H_

@@ -17,26 +17,36 @@
  *
  ***************************************************************/
 
-#ifndef _HIBERNATER_WINDOWS_H_
-#define _HIBERNATER_WINDOWS_H_
-
-/***************************************************************
- * Headers
- ***************************************************************/
+#ifndef _HIBERNATER_LINUX_H_
+#define _HIBERNATER_LINUX_H_
 
 #include "hibernator.h"
 
+
 /***************************************************************
- * MsWindowsHibernator class
+ * Linux Hibernator class
  ***************************************************************/
 
-class MsWindowsHibernator : public HibernatorBase
+/* Do we have the ability to test WOL? */
+# if defined(LINUX)
+#   if HAVE_DECL_SIOCETHTOOL
+#     define HAVE_LINUX_HIBERNATION		1
+#     define HAVE_HIBERNATION			1
+#   endif
+# endif
+
+# if HAVE_LINUX_HIBERNATION
+
+// Internal class to implement the various ways of interacting with the
+// Linux hibernation methods
+class BaseLinuxHibernator;
+
+class LinuxHibernator : public HibernatorBase
 {
+  public:
 
-public:
-
-	MsWindowsHibernator () throw ();
-	virtual ~MsWindowsHibernator () throw ();
+	LinuxHibernator () throw ();
+	virtual ~LinuxHibernator () throw ();
 
 protected:
 
@@ -46,12 +56,12 @@ protected:
 
 private:
 
-	/* Auxiliary function to shutdown the machine */
-	bool tryShutdown ( bool force ) const;
-
 	/* Discover supported sleep states */
 	virtual void initStates ();
 
-};
+	BaseLinuxHibernator	*m_real_hibernator;
 
-#endif // _HIBERNATER_WINDOWS_H_
+};
+#endif // HAVE_LINUX_HIBERNATION
+
+#endif // _HIBERNATER_LINUX_H_

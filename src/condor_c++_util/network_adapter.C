@@ -1,6 +1,6 @@
 /***************************************************************
 *
-* Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+* Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
 * University of Wisconsin-Madison, WI.
 * 
 * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -22,19 +22,25 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#if defined ( WIN32 )
-#include "network_adapter.WINDOWS.h"
-#endif
+#include "condor_attributes.h"
+#include "internet.h"
 #include "network_adapter.h"
+#if defined ( WIN32 )
+# include "network_adapter.WINDOWS.h"
+#elif defined ( LINUX )
+# include "network_adapter.linux.h"
+#endif
 
 /***************************************************************
  * Base NetworkAdapterBase class
  ***************************************************************/
 
-NetworkAdapterBase::NetworkAdapterBase () throw () {
+NetworkAdapterBase::NetworkAdapterBase () throw ()
+{
 }
 
-NetworkAdapterBase::~NetworkAdapterBase () throw () {
+NetworkAdapterBase::~NetworkAdapterBase () throw ()
+{
 }
 
 /***************************************************************
@@ -42,12 +48,16 @@ NetworkAdapterBase::~NetworkAdapterBase () throw () {
  ***************************************************************/
 
 NetworkAdapterBase* 
-NetworkAdapterBase::createNetworkAdapter ( char *sinful ) {
+NetworkAdapterBase::createNetworkAdapter ( char *sinful )
+{
     NetworkAdapterBase *adapter = NULL;    
-#if defined ( WIN32 )
+#  if defined ( WIN32 )
     adapter = new WindowsNetworkAdapter ( 
         string_to_ipstr ( sinful ) );
-#endif
+#  elif defined ( LINUX )
+    adapter = new LinuxNetworkAdapter ( string_to_ip(sinful) );
+#  endif
+
 	return adapter;
 }
 
@@ -56,21 +66,9 @@ NetworkAdapterBase::createNetworkAdapter ( char *sinful ) {
  ***************************************************************/
 
 void 
-NetworkAdapterBase::publish ( ClassAd &ad ) {
-    
-    char line[200];
-
-    sprintf( line, "%s = \"%s\"", ATTR_HARDWARE_ADDRESS,
-        hardwareAddress () );
-    ad->Assign ( line );
-
-    sprintf( line, "%s = \"%s\"", ATTR_SUBNET,
-        subnet () );
-    ad->Assign ( line );
-
-    sprintf( line, "%s = \"%s\"", ATTR_IS_WAKE_ABLE,
-        wakeAble () ? "TRUE" : "FALSE" );
-    ad->Assign ( line );
-
-
+NetworkAdapterBase::publish ( ClassAd &ad )
+{
+    ad.Assign ( ATTR_HARDWARE_ADDRESS, hardwareAddress () );
+    ad.Assign ( ATTR_SUBNET, subnet () );
+	ad.Assign ( ATTR_IS_WAKE_ABLE, wakeAble () ? "TRUE" : "FALSE" );
 }
