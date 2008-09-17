@@ -1346,6 +1346,7 @@ int main( int argc, char** argv )
 		EXCEPT( "Programmer error: mySubSystem is NULL!" );
 	}
 	if( !mySubSystem->isValid() ) {
+		mySubSystem->printf( );
 		EXCEPT( "Programmer error: mySubSystem info is invalid(%s,%d,%s)!",
 				mySubSystem->getName(),
 				mySubSystem->getType(), mySubSystem->getTypeName() );

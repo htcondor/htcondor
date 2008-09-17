@@ -87,7 +87,7 @@ class SubsystemInfo
 	SubsystemType setTypeFromName( const char *name = NULL );
 
 	SubsystemType getType( void ) const { return m_Type; };
-	const char *getTypeName( void ) const { return m_TypeName; };
+	const char *getTypeName( void ) const;
 	bool isType( SubsystemType type ) const { return m_Type == type; };
 
 	// Get class info
@@ -96,12 +96,15 @@ class SubsystemInfo
 	bool isJob( void ) const { return m_Class == SUBSYSTEM_CLASS_JOB; };
 	bool isClient( void ) const { return m_Class == SUBSYSTEM_CLASS_CLIENT; };
 
+	void dprintf( int level ) const;
+	void printf( void ) const;
+	
   private:
-	const char		*m_Name;
-	bool			 m_NameValid;
-	SubsystemType	 m_Type;
-	SubsystemClass	 m_Class;
-	const char		*m_TypeName;
+	const char					*m_Name;
+	bool						 m_NameValid;
+	SubsystemType				 m_Type;
+	SubsystemClass				 m_Class;
+	const SubsystemInfoLookup	*m_Lookup;
 
 	// Internal only methods
 	SubsystemType setType( SubsystemType type, const char *name );

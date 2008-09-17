@@ -18,6 +18,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "subsystem_info.h"
 
 
@@ -185,6 +186,20 @@ SubsystemInfo::~SubsystemInfo( void )
 {
 }
 
+// Public interface to dump myself
+void
+SubsystemInfo::dprintf( int level ) const
+{
+	::dprintf( level, "Subsystem: type=%d class=%d name=%s typename=%s\n",
+			   m_Type, m_Class, m_Name, m_Lookup->Name() );
+}
+void
+SubsystemInfo::printf( void ) const
+{
+	::printf( "Subsystem: type=%d class=%d name=%s typename=%s\n",
+			  m_Type, m_Class, m_Name, m_Lookup->Name() );
+}
+
 // Public interface to set name
 const char *
 SubsystemInfo::setName( const char *name )
@@ -236,25 +251,34 @@ SubsystemInfo::setType( SubsystemType type, const char *type_name )
 
 // Internal set type method
 SubsystemType
-SubsystemInfo::setType( const SubsystemInfoLookup *lookup, const char *name )
+SubsystemInfo::setType( const SubsystemInfoLookup *lookup,
+						const char *type_name )
 {
-	m_Type  = lookup->Type();
+	m_Lookup = lookup;
+	m_Type   = lookup->Type();
 	m_Class = lookup->Class();
-	if ( NULL == name ) {
+	if ( NULL == type_name ) {
 		setName( lookup->Name() );
 	}
 	else {
-		setName( name );
+		setName( type_name );
 	}
 	return m_Type;
 }
+
+// Public method; Get our type name
+const char *
+SubsystemInfo::getTypeName( void ) const
+{
+	return m_Lookup->Name( );
+};
 
 // Public method; is everything valid?
 bool
 SubsystemInfo::isValid( void ) const
 {
 	if ( m_Class != SUBSYSTEM_CLASS_NONE ) {
-		return false;
+		return true;
 	}
 	return m_NameValid;
 }
