@@ -333,7 +333,6 @@ if (defined($opt_release_dir)) {
     # Install
     if ($opt_prefix_dir) {
 		$release_dir=install( $opt_prefix_dir );
-		$release_dir=install($opt_prefix_dir);
     } else {
 		$release_dir=install( $release_dir=getcwd() );
     }
