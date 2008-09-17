@@ -26,6 +26,8 @@
 #include "condor_daemon_core.h"
 #include "condor_privsep.h"
 
+extern char** environ;
+
 static int
 privsep_create_process(const char* cmd,
                        const char* path,
