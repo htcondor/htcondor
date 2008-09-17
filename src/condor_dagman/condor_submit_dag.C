@@ -1,4 +1,5 @@
 //TEMPTEMP -- refactoring needs a little more testing
+//TEMPTEMP -- preserve -maxjobs, etc., values in lower-level .condor.sub files when regenerating them
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -173,9 +174,44 @@ int main(int argc, char *argv[])
 int
 doRecursion( SubmitDagOptions &opts )
 {
-	printf("DIAG doRecursion()\n");//TEMPTEMP
+	int result = 0;
 
-	return 0;//TEMPTEMP
+	opts.dagFiles.rewind();
+
+	StringList submitFiles;
+	const char *dagFile;
+	while ( (dagFile = opts.dagFiles.next()) ) {
+		StringList tmpSubmitFiles;
+		MyString tmpResult = MultiLogFiles::getValuesFromFile(dagFile, "JOB",
+					tmpSubmitFiles, 1);
+		if ( tmpResult != "" ) {
+			fprintf( stderr, "Error in condor_submit_dag recursion: %s\n",
+						tmpResult.Value() );
+			result = 1;
+		} else {
+			submitFiles.create_union( tmpSubmitFiles, false );
+		}
+	}
+
+	opts.dagFiles.rewind();
+
+	const char *DAG_SUBMIT_FILE_SUFFIX = ".condor.sub";
+	submitFiles.rewind();
+	const char *submitFile;
+	while ( (submitFile = submitFiles.next()) ) {
+		MyString subFile( submitFile );
+
+			// If submit file ends in ".condor.sub", we assume it refers
+			// to a sub-DAG.
+		int start = subFile.find( DAG_SUBMIT_FILE_SUFFIX );
+		if ( start >= 0 && start + strlen( DAG_SUBMIT_FILE_SUFFIX) ==
+					subFile.Length() ) {
+			subFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
+			printf( "DIAG run condor_submit_dag -no_submit on %s\n", subFile.Value() );//TEMPTEMP
+		}
+	}
+
+	return result;
 }
 
 //---------------------------------------------------------------------------
