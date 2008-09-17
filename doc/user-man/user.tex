@@ -2300,7 +2300,7 @@ While the lease has not expired,
 the execute host continues to try to run the job,
 in the hope that the submit machine will come back to life
 and reconnect.
-If the job completes, the lease has not expired,yet the 
+If the job completes and the lease has not expired, yet the 
 submitting machine is still dead,
 the \Condor{starter} daemon will wait for a
 \Condor{shadow} daemon to reconnect, 
@@ -2309,7 +2309,11 @@ and its output files.
 Should the lease expire, the \Condor{startd} daemon
 kills off the \Condor{starter} daemon and user job.
 
-The user must set a value for \Attr{job\_lease\_duration}
+\index{ClassAd job attribute!JobLeaseDuration}
+\index{JobLeaseDuration!job ClassAd attribute}
+A default value equal to 20 minutes exists for a job's
+ClassAd attribute \Attr{job\_lease\_duration}, 
+or this attribute may be set in the submit description file
 to keep a job running in the case that the submit side no longer
 renews the lease.
 There is a trade off in setting the value of \Attr{job\_lease\_duration}. 
@@ -2318,9 +2322,8 @@ and the job might get killed before the submitting machine has a
 chance to recover.
 Forward progress on the job will be lost.
 Too large a value,
-and execute resource will be tied up waiting for the job lease to expire.
-The value 
-should be chosen based on how long is the user willing to tie up
+and an execute resource will be tied up waiting for the job lease to expire.
+The value should be chosen based on how long is the user willing to tie up
 the execute machines, how quickly submit machines come  back up,
 and how much work would be lost if the lease expires,
 the job is killed, and the job must start over from its beginning.

@@ -4108,19 +4108,27 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   taking jobs permanently out of the queue.  The default value is 0, which
   tells the \Condor{schedd} to not impose any delay.  
   
-\item[\Macro{ALIVE\_INTERVAL}] \label{param:AliveInterval} This
-  macro determines how often the \Condor{schedd} should send a keep
+\item[\Macro{ALIVE\_INTERVAL}] \label{param:AliveInterval} An initial
+  value for an integer number of seconds defining
+  how often the \Condor{schedd} sends a UDP keep
   alive message to any \Condor{startd} it has claimed.
-  When the \Condor{schedd} claims a \Condor{startd}, it tells the \Condor{startd} how often it is
+  When the \Condor{schedd} claims a \Condor{startd}, 
+  the \Condor{schedd} tells the \Condor{startd} how often it is
   going to send these messages.
+  The utilized interval for sending keep alive messages is the smallest of
+  the two values \MacroNI{ALIVE\_INTERVAL} and the expression
+  \Expr{JobLeaseDuration/3}, formed with the job ClassAd attribute
+  \Attr{JobLeaseDuration}.
+  The value of the interval is further constrained by the floor value 
+  of 10 seconds.
   If the \Condor{startd} does not receive any of these keep alive messages
   during a certain period of time (defined via
   \Macro{MAX\_CLAIM\_ALIVES\_MISSED}, described on
   page~\pageref{param:MaxClaimAlivesMissed})
   the \Condor{startd} releases the claim, and the \Condor{schedd} no longer pays for
   the resource (in terms of user priority in the system).
-  The macro is defined in terms of seconds and defaults to 300 (every
-  5 minutes).
+  The macro is defined in terms of seconds and defaults to 300, which is
+  5 minutes.
 
 \item[\Macro{REQUEST\_CLAIM\_TIMEOUT}]
   \label{param:RequestClaimTimeout} This macro sets the time (in
