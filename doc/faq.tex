@@ -1647,6 +1647,28 @@ it is likely advisable to completely remove the application for which
 the LSP is a part via the Control Panel.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why does the Windows Installer fails with ``Error 2738. Could not access VBScript run time for custom action''?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Sometimes it seems that VBScript engine is not registered.  Since our
+installer depends on the VBScript engine for custom steps, the installer 
+will fail if it cannot find it.
+
+The way to resolve this requires that you have Administrative privileges.
+The fix itself, is rather straight forward:
+
+\begin{itemize}
+\item First, launch the Command Prompt as the Administrator 
+(i.e. \texttt{cmd.exe}).
+\item In the Command Prompt, \texttt{cd} to the System32 folder, 
+under the Windows folder.
+\item Type \texttt{regsvr32 vbscript.dll} and press Enter.
+\end{itemize}
+
+If this is successful, you will receive the message
+``DllRegisterServer in vbscript.dll succeeded.''  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Grid Computing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1835,7 +1857,6 @@ Host-based authentiation is described in
 section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
 Information about other forms of authentication is provided in 
 section~\ref{sec:Config-Security} on page~\pageref{sec:Config-Security}.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{What happens if the central manager crashes?}
