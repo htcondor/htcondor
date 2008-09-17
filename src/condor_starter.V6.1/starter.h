@@ -27,7 +27,7 @@
 #include "job_info_communicator.h"
 #include "condor_privsep_helper.h"
 
-#if !defined(WIN32)
+#if defined(LINUX)
 #include "glexec_privsep_helper.h"
 #endif
 
@@ -247,7 +247,7 @@ public:
 	{
 		return dynamic_cast<CondorPrivSepHelper*>(m_privsep_helper);
 	}
-#if !defined(WIN32)
+#if defined(LINUX)
 	GLExecPrivSepHelper* glexecPrivSepHelper()
 	{
 		return dynamic_cast<GLExecPrivSepHelper*>(m_privsep_helper);
