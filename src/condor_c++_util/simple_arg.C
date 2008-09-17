@@ -17,10 +17,10 @@
  *
  ***************************************************************/
 
-#include <ctype.h>
-#include <string.h>
 #include "condor_common.h"
 #include "condor_debug.h"
+#include <ctype.h>
+#include <string.h>
 #include "simple_arg.h"
 
 SimpleArg::SimpleArg( const char **argv, int argc, int index )
