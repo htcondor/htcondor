@@ -236,9 +236,10 @@ CStarter::Config()
 	if (!m_configured) {
 		bool ps = privsep_enabled();
 		bool gl = param_boolean("GLEXEC_JOB", false);
-#if defined(WIN32)
+#if !defined(LINUX)
 		dprintf(D_ALWAYS,
-		        "GLEXEC_JOB not supported on Windows; ignoring\n");
+		        "GLEXEC_JOB not supported on this platform; "
+		            "ignoring\n");
 		gl = false;
 #endif
 		if (ps && gl) {
@@ -250,7 +251,7 @@ CStarter::Config()
 			ASSERT(m_privsep_helper != NULL);
 		}
 		else if (gl) {
-#if !defined(WIN32)
+#if defined(LINUX)
 			m_privsep_helper = new GLExecPrivSepHelper;
 			ASSERT(m_privsep_helper != NULL);
 #endif
@@ -715,7 +716,7 @@ CStarter::createTempExecuteDir( void )
 int
 CStarter::jobEnvironmentReady( void )
 {
-#if !defined(WIN32)
+#if defined(LINUX)
 		//
 		// For the GLEXEC_JOB case, we should now be able to
 		// initialize our helper object.
