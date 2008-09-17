@@ -517,4 +517,63 @@ the delay expires.
 If this expression is not defined, the \Condor{startd} will default to
 a five minute (300 second) delay between all attempts to fetch work.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:job-hooks-java-example}
+Example Job Hook: Making multiple java runtimes available}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!JavaExample}
+
+A common problem the Java Universe does not solve is when there
+are multiple Java virtual machines available to run user jobs.  If
+the user knows which jvm their job needs, the administrator can
+use the Job hooks feature to enable the user to select one java vm.
+The main idea is to use the prepare job hook to overwrite the
+Cmd attribute of the job ad.  This attribute is the name of the
+executable the starter will use to run the job.  When the job
+hook overwrites Cmd, it effectively picks which executable will run.  So,
+it is easy to put the execute machine in charge of selecting the specific
+java install.  To do this, define a job hook on the execute machine
+by adding the following line to the config file.
+
+\begin{verbatim}
+JAVA5_HOOK_PREPARE_JOB=$(LIBEXEC)/java5_prepare_hook
+\end{verbatim}
+
+With this line, if a user job asks for the JAVA5 job hook, by setting
+
+\begin{verbatim}
++HookKeyword="JAVA"
+\end{verbatim}
+
+in the condor\_submit file, the starter will run the program java5\_prepare\_hook 
+before running this job.  Note that the double quote characters are required.
+Any output from this program will be considered updates to the job ad.  
+So, a simple java5\_prepare\_hook script might look like this:
+
+\begin{verbatim}
+#!/bin/sh
+
+# Read and discard the job classad
+cat > /dev/null
+echo 'Cmd = "/usr/java/java5/bin/java"'
+\end{verbatim}
+
+A complete job submit file in this case might look like the following:
+\begin{verbatim}
+universe = vanilla
+executable = /usr/bin/java
+arguments = Hello
+
+should_transfer_files = always
+when_to_transfer_output = on_exit
+transfer_input_files = Hello.class
+
+output = o
+error  = e
+log    = log
+
++HookKeyword="JAVA5"
+queue
+
+\end{verbatim}
 \index{Job hooks|)}
