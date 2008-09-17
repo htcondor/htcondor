@@ -1,13 +1,18 @@
-/* Modified from Globus 4.0.5 for use with the NorduGrid GAHP server. */
+/* Modified from Globus 4.2.0 for use with the NorduGrid GAHP server. */
 /*
- * Portions of this file Copyright 1999-2005 University of Chicago
- * Portions of this file Copyright 1999-2005 The University of Southern California.
- *
- * This file or a portion of this file is licensed under the
- * terms of the Globus Toolkit Public License, found at
- * http://www.globus.org/toolkit/download/license.html.
- * If you redistribute this file, with or without
- * modifications, you must include this notice in the file.
+ * Copyright 1999-2006 University of Chicago
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #ifndef GLOBUS_DONT_DOCUMENT_INTERNAL
@@ -16,8 +21,8 @@
  * Globus FTP Client Library Restart Support.
  *
  * $RCSfile: globus_ftp_client_restart.c,v $
- * $Revision: 1.2 $
- * $Date: 2007/09/06 21:44:53 $
+ * $Revision: 1.14 $
+ * $Date: 2006/10/14 07:21:56 $
  */
 #endif
 

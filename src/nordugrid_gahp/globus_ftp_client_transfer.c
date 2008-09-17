@@ -1,13 +1,18 @@
-/* Modified from Globus 4.0.5 for use with the NorduGrid GAHP server. */
+/* Modified from Globus 4.2.0 for use with the NorduGrid GAHP server. */
 /*
- * Portions of this file Copyright 1999-2005 University of Chicago
- * Portions of this file Copyright 1999-2005 The University of Southern California.
- *
- * This file or a portion of this file is licensed under the
- * terms of the Globus Toolkit Public License, found at
- * http://www.globus.org/toolkit/download/license.html.
- * If you redistribute this file, with or without
- * modifications, you must include this notice in the file.
+ * Copyright 1999-2006 University of Chicago
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #ifndef GLOBUS_DONT_DOCUMENT_INTERNAL
@@ -15,8 +20,8 @@
  * @file
  *
  * $RCSfile: globus_ftp_client_transfer.c,v $
- * $Revision: 1.2 $
- * $Date: 2007/09/06 21:44:53 $
+ * $Revision: 1.40 $
+ * $Date: 2007/12/05 21:53:33 $
  */
 #endif
 
@@ -106,6 +111,33 @@ globus_l_ftp_client_transfer_normalize_attrs(
     const char *			dest_url,
     globus_ftp_client_operationattr_t *	dest_attr,
     globus_ftp_client_operationattr_t * normalized_dest_attr);
+
+
+typedef struct globus_i_ftp_client_operation_ent_s
+{
+    const char *			    source_url;
+    globus_ftp_client_operationattr_t *     source_attr;
+    const char *                            dest_url;
+    globus_ftp_client_operationattr_t *     dest_attr;
+    const char *                            eret_alg_str;
+    const char *                            esto_alg_str;
+    globus_off_t                            partial_offset;
+    globus_off_t                            partial_end_offset;
+    globus_ftp_client_restart_marker_t *    restart;
+    globus_ftp_client_complete_callback_t   complete_callback;
+    void *                                  callback_arg;
+    globus_byte_t **                        stat_buffer_out;
+    globus_size_t *                         stat_buffer_length;
+    int                                     chmod_mode;
+    globus_off_t *                          size_out;
+    globus_abstime_t *                      mdtm_out;
+    char *                                  cksm_out;
+    globus_off_t                            cksm_offset;
+    globus_off_t                            cksm_length;
+    const char *                            cksm_alg;
+} globus_i_ftp_client_operation_ent_t;
+    
+
 
 /**
  * @name Make Directory
@@ -2678,24 +2710,6 @@ globus_l_ftp_client_extended_get(
     handle->partial_offset = partial_offset;
     handle->partial_end_offset = partial_end_offset;
 
-    /* clean up old strings */
-    if(handle->eret_alg_str != GLOBUS_NULL)
-    {
-        globus_free(handle->eret_alg_str);
-        handle->eret_alg_str = GLOBUS_NULL;
-    }
-    if(handle->esto_alg_str != GLOBUS_NULL)
-    {
-        globus_free(handle->esto_alg_str);
-        handle->esto_alg_str = GLOBUS_NULL;
-    }
-
-    /* set new string in handle */
-    if(eret_alg_str != GLOBUS_NULL)
-    {
-        handle->eret_alg_str = globus_libc_strdup(eret_alg_str);
-    }
-
     /* In stream mode, we need to keep track of the base offset to
      * adjust the offsets returned from the control library.
      * (In extended block mode, the data blocks have headers which have
@@ -2750,6 +2764,15 @@ globus_l_ftp_client_extended_get(
     if(err != GLOBUS_SUCCESS)
     {
 	goto free_url_exit;
+    }
+    /* set new string in handle */
+    if(eret_alg_str != NULL)
+    {
+        if(handle->source->attr->module_alg_str != NULL)
+        {
+            free(handle->source->attr->module_alg_str);
+        }
+        handle->source->attr->module_alg_str = strdup(eret_alg_str);
     }
 
     /* Notify plugins that the GET is happening */
@@ -2877,18 +2900,6 @@ abort:
     globus_i_ftp_client_handle_unlock(handle);
     globus_i_ftp_client_handle_is_not_active(u_handle);
 
-    /* clean up old strings */
-    if(handle->eret_alg_str != GLOBUS_NULL)
-    {
-        globus_free(handle->eret_alg_str);
-        handle->eret_alg_str = GLOBUS_NULL;
-    }
-    if(handle->esto_alg_str != GLOBUS_NULL)
-    {
-        globus_free(handle->esto_alg_str);
-        handle->esto_alg_str = GLOBUS_NULL;
-    }
-    
     globus_i_ftp_client_debug_printf(1, 
         (stderr, "globus_l_ftp_client_extended_get() exiting after abort\n"));
 
@@ -3167,24 +3178,6 @@ globus_l_ftp_client_extended_put(
     handle->partial_offset = partial_offset;
     handle->partial_end_offset = partial_end_offset;
 
-    /* clean up old strings */
-    if(handle->eret_alg_str != GLOBUS_NULL)
-    {
-        globus_free(handle->eret_alg_str);
-        handle->eret_alg_str = GLOBUS_NULL;
-    }
-    if(handle->esto_alg_str != GLOBUS_NULL)
-    {
-        globus_free(handle->esto_alg_str);
-        handle->esto_alg_str = GLOBUS_NULL;
-    }
-
-    /* set new string in handle */
-    if(esto_alg_str != GLOBUS_NULL)
-    {
-        handle->esto_alg_str = globus_libc_strdup(esto_alg_str);
-    }
-
     /* In stream mode, we need to keep track of the base offset to
      * adjust the offsets returned from the control library.
      * (In extended block mode, the data blocks have headers which have
@@ -3236,6 +3229,15 @@ globus_l_ftp_client_extended_put(
     if(err != GLOBUS_SUCCESS)
     {
 	goto free_url_exit;
+    }
+
+    if(esto_alg_str != NULL)
+    {
+        if(handle->dest->attr->module_alg_str != NULL)
+        {
+            free(handle->dest->attr->module_alg_str);
+        }
+        handle->dest->attr->module_alg_str = strdup(esto_alg_str);
     }
 
     /* Notify plugins that the PUT is happening */
@@ -3313,18 +3315,6 @@ reset_handle_exit:
     handle->partial_offset = -1;
     handle->partial_end_offset = -1;
     globus_ftp_client_restart_marker_destroy(&handle->restart_marker);
-
-    /* clean up old strings */
-    if(handle->eret_alg_str != GLOBUS_NULL)
-    {
-        globus_free(handle->eret_alg_str);
-        handle->eret_alg_str = GLOBUS_NULL;
-    }
-    if(handle->esto_alg_str != GLOBUS_NULL)
-    {
-        globus_free(handle->esto_alg_str);
-        handle->esto_alg_str = GLOBUS_NULL;
-    }
 
 unlock_exit:
     /* Release the lock */
@@ -3745,31 +3735,32 @@ globus_l_ftp_client_extended_third_party_transfer(
     
     handle = *u_handle;
     u_handle = handle->handle;
-    
+            
     globus_i_ftp_client_handle_is_active(u_handle);
-
+    
     globus_i_ftp_client_handle_lock(handle);
+    
     if(handle->op != GLOBUS_FTP_CLIENT_IDLE)
     {
-	err = GLOBUS_I_FTP_CLIENT_ERROR_OBJECT_IN_USE("handle");
+        err = GLOBUS_I_FTP_CLIENT_ERROR_OBJECT_IN_USE("handle");
 
-	goto unlock_exit;
+        goto unlock_exit;
     }
     /* Make sure the attributes are compatible for a 3rd party operation,
      * tweaking things like default DCAU -> no DCAU when mixing GSI
      * and non-GSI servers
      */
     err = globus_l_ftp_client_transfer_normalize_attrs(
-	    source_url,
-	    source_attr,
-	    &normalized_source_attr,
-	    dest_url,
-	    dest_attr,
-	    &normalized_dest_attr);
+            source_url,
+            source_attr,
+            &normalized_source_attr,
+            dest_url,
+            dest_attr,
+            &normalized_dest_attr);
 
     if(err != GLOBUS_SUCCESS)
     {
-	goto unlock_exit;
+        goto unlock_exit;
     }
 
     /* Setup handle for third-party transfer operation */
@@ -3780,115 +3771,111 @@ globus_l_ftp_client_extended_third_party_transfer(
     handle->partial_offset = partial_offset;
     handle->partial_end_offset = partial_end_offset;
 
-    /* clean up old strings */
-    if(handle->eret_alg_str != GLOBUS_NULL)
-    {
-        globus_free(handle->eret_alg_str);
-        handle->eret_alg_str = GLOBUS_NULL;
-    }
-    if(handle->esto_alg_str != GLOBUS_NULL)
-    {
-        globus_free(handle->esto_alg_str);
-        handle->esto_alg_str = GLOBUS_NULL;
-    }
-
-    /* set new string in handle */
-    if(esto_alg_str != GLOBUS_NULL)
-    {
-        handle->esto_alg_str = globus_libc_strdup(esto_alg_str);
-    }
-    if(eret_alg_str != GLOBUS_NULL)
-    {
-        handle->eret_alg_str = globus_libc_strdup(eret_alg_str);
-    }
-
     if(restart)
     {
-	globus_ftp_client_restart_marker_copy(&handle->restart_marker,
-					      restart);
+        globus_ftp_client_restart_marker_copy(&handle->restart_marker,
+                                              restart);
     }
     else
     {
-	globus_ftp_client_restart_marker_init(&handle->restart_marker);
+        globus_ftp_client_restart_marker_init(&handle->restart_marker);
     }
     handle->source_url = globus_libc_strdup(source_url);
     if(handle->source_url == GLOBUS_NULL)
     {
-	err = GLOBUS_I_FTP_CLIENT_ERROR_OUT_OF_MEMORY();
+        err = GLOBUS_I_FTP_CLIENT_ERROR_OUT_OF_MEMORY();
 
-	goto reset_handle_exit;
+        goto reset_handle_exit;
     }
     handle->dest_url = globus_libc_strdup(dest_url);
     if(handle->dest_url == GLOBUS_NULL)
     {
-	err = GLOBUS_I_FTP_CLIENT_ERROR_OUT_OF_MEMORY();
+        err = GLOBUS_I_FTP_CLIENT_ERROR_OUT_OF_MEMORY();
 
-	goto free_source_url_exit;
+        goto free_source_url_exit;
     }
 
     if(normalized_source_attr)
     {
-	use_attr = normalized_source_attr;
+        use_attr = normalized_source_attr;
     }
     else if(source_attr)
     {
-	use_attr = *source_attr;
+        use_attr = *source_attr;
     }
     else
     {
-	use_attr = GLOBUS_NULL;
+        use_attr = GLOBUS_NULL;
     }
     /* Obtain a connection to the source FTP server, maybe cached */
     err = globus_i_ftp_client_target_find(handle,
-					  source_url,
-					  use_attr,
-					  &handle->source);
+                                          source_url,
+                                          use_attr,
+                                          &handle->source);
     if(err != GLOBUS_SUCCESS)
     {
-	goto free_dest_url_exit;
+        goto free_dest_url_exit;
     }
 
     /* Obtain a connection to the destination FTP server, maybe cached */
     if(normalized_dest_attr)
     {
-	use_attr = normalized_dest_attr;
+        use_attr = normalized_dest_attr;
     }
     else if(dest_attr)
     {
-	use_attr = *dest_attr;
+        use_attr = *dest_attr;
     }
     else
     {
-	use_attr = GLOBUS_NULL;
+        use_attr = GLOBUS_NULL;
     }
     err = globus_i_ftp_client_target_find(handle,
-					  dest_url,
-					  use_attr,
-					  &handle->dest);
+                                          dest_url,
+                                          use_attr,
+                                          &handle->dest);
 
     if(err != GLOBUS_SUCCESS)
     {
-	goto src_problem_exit;
+        goto src_problem_exit;
     }
+    if(esto_alg_str != NULL)
+    {
+        if(handle->dest->attr->module_alg_str != NULL)
+        {
+            free(handle->dest->attr->module_alg_str);
+        }
+        handle->dest->attr->module_alg_str = strdup(esto_alg_str);
+    }
+    if(eret_alg_str != NULL)
+    {
+        if(handle->source->attr->module_alg_str != NULL)
+        {
+            free(handle->source->attr->module_alg_str);
+        }
+        handle->source->attr->module_alg_str = strdup(eret_alg_str);
+    }
+
+
 
     /* Notify plugins that the TRANSFER is happening */
     globus_i_ftp_client_plugin_notify_transfer(
-	handle,
-	handle->source_url,
-	handle->source->attr,
-	handle->dest_url,
-	handle->dest->attr,
-	restart);
+        handle,
+        handle->source_url,
+        handle->source->attr,
+        handle->dest_url,
+        handle->dest->attr,
+        restart);
 
     if(handle->state == GLOBUS_FTP_CLIENT_HANDLE_ABORT)
     {
-	err = GLOBUS_I_FTP_CLIENT_ERROR_OPERATION_ABORTED();
+        err = GLOBUS_I_FTP_CLIENT_ERROR_OPERATION_ABORTED();
 
-	goto abort;
+        goto abort;
     }
     else if(handle->state == GLOBUS_FTP_CLIENT_HANDLE_RESTART)
     {
-	goto restart;
+        goto restart;
     }
 
     /*
@@ -3898,45 +3885,46 @@ globus_l_ftp_client_extended_third_party_transfer(
      * commands on the two
      */
     err = globus_i_ftp_client_target_activate(handle,
-					      handle->dest,
-					      &registered);
+                                              handle->dest,
+                                              &registered);
 
 
     if(registered == GLOBUS_FALSE)
     {
-	/* 
-	 * A restart or abort happened during activation, before any
-	 * callbacks were registered. We must deal with them here.
-	 */
-	globus_assert(handle->state == GLOBUS_FTP_CLIENT_HANDLE_ABORT ||
-		      handle->state == GLOBUS_FTP_CLIENT_HANDLE_RESTART ||
-		      err != GLOBUS_SUCCESS);
+        /* 
+         * A restart or abort happened during activation, before any
+         * callbacks were registered. We must deal with them here.
+         */
+        globus_assert(handle->state == GLOBUS_FTP_CLIENT_HANDLE_ABORT ||
+                      handle->state == GLOBUS_FTP_CLIENT_HANDLE_RESTART ||
+                      err != GLOBUS_SUCCESS);
 
-	if(handle->state == GLOBUS_FTP_CLIENT_HANDLE_ABORT)
-	{
-	    err = GLOBUS_I_FTP_CLIENT_ERROR_OPERATION_ABORTED();
-	    
-	    goto abort;
-	}
-	else if (handle->state ==
-		 GLOBUS_FTP_CLIENT_HANDLE_RESTART)
-	{
-	    goto restart;
-	}
-	else if(err != GLOBUS_SUCCESS)
-	{
-	    goto dest_problem_exit;
-	}
+        if(handle->state == GLOBUS_FTP_CLIENT_HANDLE_ABORT)
+        {
+            err = GLOBUS_I_FTP_CLIENT_ERROR_OPERATION_ABORTED();
+            
+            goto abort;
+        }
+        else if (handle->state ==
+                 GLOBUS_FTP_CLIENT_HANDLE_RESTART)
+        {
+            goto restart;
+        }
+        else if(err != GLOBUS_SUCCESS)
+        {
+            goto dest_problem_exit;
+        }
     }
 
     if(normalized_source_attr)
     {
-	globus_ftp_client_operationattr_destroy(&normalized_source_attr);
+        globus_ftp_client_operationattr_destroy(&normalized_source_attr);
     }
     if(normalized_dest_attr)
     {
-	globus_ftp_client_operationattr_destroy(&normalized_dest_attr);
+        globus_ftp_client_operationattr_destroy(&normalized_dest_attr);
     }
+
     globus_i_ftp_client_handle_unlock(handle);
     
     globus_i_ftp_client_debug_printf(1, (stderr, 
@@ -3976,18 +3964,6 @@ reset_handle_exit:
     handle->partial_offset = -1;
     handle->partial_end_offset = -1;
     globus_ftp_client_restart_marker_destroy(&handle->restart_marker);
-
-    /* clean up old strings */
-    if(handle->eret_alg_str != GLOBUS_NULL)
-    {
-        globus_free(handle->eret_alg_str);
-        handle->eret_alg_str = GLOBUS_NULL;
-    }
-    if(handle->esto_alg_str != GLOBUS_NULL)
-    {
-        globus_free(handle->esto_alg_str);
-        handle->esto_alg_str = GLOBUS_NULL;
-    }
 
 unlock_exit:
     /* release the lock */
@@ -5048,10 +5024,9 @@ globus_ftp_client_abort(
 		goto unlock_error;
 	    }
 	}
-	else
+	else if(handle->dest->state == 
+	    GLOBUS_FTP_CLIENT_TARGET_COMPLETED_OPERATION)
 	{
-	    globus_assert(handle->dest->state == 
-			  GLOBUS_FTP_CLIENT_TARGET_COMPLETED_OPERATION);
 	    result = globus_ftp_control_force_close(
 		handle->source->control_handle,
 		globus_i_ftp_client_force_close_callback,
@@ -5072,6 +5047,45 @@ globus_ftp_client_abort(
 		goto unlock_error; 
 	    }
 	}
+        else
+        {
+            result = globus_ftp_control_force_close(
+                handle->source->control_handle,
+                globus_i_ftp_client_force_close_callback,
+                handle->source);
+            if(result == GLOBUS_SUCCESS)
+            {
+                result = globus_ftp_control_force_close(
+                    handle->dest->control_handle,
+                    globus_i_ftp_client_force_close_callback,
+                    handle->dest);
+
+                if(result == GLOBUS_SUCCESS)
+                {
+                    handle->source->state = GLOBUS_FTP_CLIENT_TARGET_FAULT;
+                    handle->dest->state = GLOBUS_FTP_CLIENT_TARGET_FAULT;
+                    handle->state = GLOBUS_FTP_CLIENT_HANDLE_ABORT;
+
+                    handle->err = GLOBUS_I_FTP_CLIENT_ERROR_OPERATION_ABORTED();
+
+                    globus_i_ftp_client_plugin_notify_abort(handle);
+                }
+                else
+                {
+                    handle->source->state = GLOBUS_FTP_CLIENT_TARGET_FAULT;
+                    handle->dest->state = GLOBUS_FTP_CLIENT_TARGET_CLOSED;
+                    handle->state = GLOBUS_FTP_CLIENT_HANDLE_ABORT;
+
+                    handle->err = GLOBUS_I_FTP_CLIENT_ERROR_OPERATION_ABORTED();
+                }
+            }
+            else
+            {
+                err = globus_error_get(result);
+
+                goto unlock_error;
+            }
+        }           
 
     }
     globus_i_ftp_client_handle_unlock(handle);
@@ -5430,20 +5444,20 @@ globus_i_ftp_client_transfer_complete(
     /*
      * cache data connection info if possible.
      */
-    if(! globus_i_ftp_client_can_reuse_data_conn(client_handle))
+    if(!globus_i_ftp_client_can_reuse_data_conn(client_handle))
     {
-	if(client_handle->source)
-	{
-	    memset(&client_handle->source->cached_data_conn,
-		   '\0',
-		   sizeof(globus_i_ftp_client_data_target_t));
-	}
-	if(client_handle->dest)
-	{
-	    memset(&client_handle->dest->cached_data_conn,
-		   '\0',
-		   sizeof(globus_i_ftp_client_data_target_t));
-	}
+        if(client_handle->source)
+        {
+            memset(&client_handle->source->cached_data_conn,
+                   '\0',
+                   sizeof(globus_i_ftp_client_data_target_t));
+        }
+        if(client_handle->dest)
+        {
+            memset(&client_handle->dest->cached_data_conn,
+                   '\0',
+                   sizeof(globus_i_ftp_client_data_target_t));
+        }
     }
     /* Release any ftp targets back to the client handle's cache,
      * if requested by the user.
@@ -5453,15 +5467,15 @@ globus_i_ftp_client_transfer_complete(
      */
     if(client_handle->source)
     {
-	globus_i_ftp_client_target_release(client_handle,
-					   client_handle->source);
-	client_handle->source = GLOBUS_NULL;
+        globus_i_ftp_client_target_release(client_handle,
+                                           client_handle->source);
+        client_handle->source = GLOBUS_NULL;
     }
     if(client_handle->dest)
     {
-	globus_i_ftp_client_target_release(client_handle,
-					   client_handle->dest);
-	client_handle->dest = GLOBUS_NULL;
+        globus_i_ftp_client_target_release(client_handle,
+                                           client_handle->dest);
+        client_handle->dest = GLOBUS_NULL;
     }
 
     /*
@@ -5481,13 +5495,13 @@ globus_i_ftp_client_transfer_complete(
     client_handle->op = GLOBUS_FTP_CLIENT_IDLE;
     if(client_handle->source_url)
     {
-	globus_libc_free(client_handle->source_url);
-	client_handle->source_url = GLOBUS_NULL;
+        globus_libc_free(client_handle->source_url);
+        client_handle->source_url = GLOBUS_NULL;
     }
     if(client_handle->dest_url)
     {
-	globus_libc_free(client_handle->dest_url);
-	client_handle->dest_url = GLOBUS_NULL;
+        globus_libc_free(client_handle->dest_url);
+        client_handle->dest_url = GLOBUS_NULL;
     }
     client_handle->source_size = 0;
 
@@ -5497,22 +5511,10 @@ globus_i_ftp_client_transfer_complete(
     client_handle->partial_offset = -1;
     client_handle->partial_end_offset = -1;
 
-    /* clean up old strings */
-    if(client_handle->eret_alg_str != GLOBUS_NULL)
-    {
-        globus_free(client_handle->eret_alg_str);
-        client_handle->eret_alg_str = GLOBUS_NULL;
-    }
-    if(client_handle->esto_alg_str != GLOBUS_NULL)
-    {
-        globus_free(client_handle->esto_alg_str);
-        client_handle->esto_alg_str = GLOBUS_NULL;
-    }
-    
     if(client_handle->pasv_address != GLOBUS_NULL)
     {
-	globus_libc_free(client_handle->pasv_address);
-	client_handle->pasv_address = GLOBUS_NULL;
+        globus_libc_free(client_handle->pasv_address);
+        client_handle->pasv_address = GLOBUS_NULL;
     }
     client_handle->num_pasv_addresses = 0;
 
@@ -5528,12 +5530,14 @@ globus_i_ftp_client_transfer_complete(
     globus_i_ftp_client_handle_is_not_active(handle);
 
     (*callback)(callback_arg,
-		handle,
-		error);
+                    handle,
+                    error);
+    
     if(error)
     {
-	globus_object_free(error);
+        globus_object_free(error);
     }
+        
     
     globus_i_ftp_client_debug_printf(1, 
         (stderr, "globus_i_ftp_client_transfer_complete() exiting\n"));

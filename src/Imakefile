@@ -66,7 +66,7 @@
 #endif
 
 #if HAVE_EXT_GLOBUS
-#define GlobusGahps GT2_GAHP NORDUGRID_GAHP
+#define GlobusGahps GT2_GAHP NORDUGRID_GAHP GT4_GAHP GT42_GAHP
 #else
 #define GlobusGahps
 #endif
@@ -314,6 +314,8 @@ object_target(Stork,stork)
 
 #if HAVE_EXT_GLOBUS
 object_target(GT2_GAHP,gt2_gahp)
+object_target(GT4_GAHP,gt4_gahp)
+object_target(GT42_GAHP,gt42_gahp)
 object_target(NORDUGRID_GAHP,nordugrid_gahp)
 #endif
 
@@ -410,28 +412,16 @@ ext_target(EXT_GLIBC_VERSION,$(NULL))
 ext_target(EXT_KERBEROS_VERSION,$(NULL))
 #endif
 
+#if HAVE_EXT_OPENSSL
+ext_target(EXT_OPENSSL_VERSION,$(NULL))
+#endif
+
 #if HAVE_EXT_GLOBUS
-ext_target(EXT_GLOBUS_VERSION,$(NULL))
-#endif
-
-#if HAVE_EXT_GAHP
-ext_target(EXT_GAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
-#endif
-
-#if HAVE_EXT_GT4GAHP
-ext_target(EXT_GT4GAHP_VERSION,$(NULL))
-#endif
-
-#if HAVE_EXT_GT42GAHP
-ext_target(EXT_GT42GAHP_VERSION,$(NULL))
+ext_target(EXT_GLOBUS_VERSION,$(EXT_TRIGGER)/$(EXT_OPENSSL_VERSION))
 #endif
 
 #if HAVE_EXT_UNICOREGAHP
 ext_target(EXT_UNICOREGAHP_VERSION,$(NULL))
-#endif
-
-#if HAVE_EXT_NORDUGRIDGAHP
-ext_target(EXT_NORDUGRIDGAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
 #endif
 
 #if HAVE_EXT_BLAHP
@@ -447,7 +437,7 @@ ext_target(EXT_CLASSADS_VERSION, $(NULL))
 #endif
 
 #if HAVE_EXT_GSOAP
-ext_target(EXT_GSOAP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
+ext_target(EXT_GSOAP_VERSION,$(EXT_TRIGGER)/$(EXT_OPENSSL_VERSION))
 #endif
 
 #if HAVE_EXT_PCRE

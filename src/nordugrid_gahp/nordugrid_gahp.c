@@ -148,7 +148,7 @@ ptr_ref_count * current_cred = NULL;
    to be escaped or the gahp server gets confused. :(
    !!! BEWARE !!!
 */ 
-static char *VersionString ="$GahpVersion: 1.1.3 " __DATE__ " Nordugrid\\ Gahp $";
+static char *VersionString ="$GahpVersion: 1.1.4 " __DATE__ " Nordugrid\\ Gahp $";
 
 volatile int ResultsPending;
 volatile int AsyncResults;

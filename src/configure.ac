@@ -2463,18 +2463,18 @@ AC_MSG_NOTICE([determining availability of external packages])
 # or not.  for example, the test suite needs to know these things,
 # even though it's being configured using --without-externals.
 #-----------------------------------------------------------------
-# determine whether we will be using globus on this platform. this
-# logic used to be in the individual <platform>.cf files;
-AC_MSG_CHECKING([if globus is supported])
+# determine whether we will be using openssl and globus on this platform.
+# This logic used to be in the individual <platform>.cf files;
+AC_MSG_CHECKING([if openssl is supported])
 case "$os" in
-  HP-UX ) _cv_has_globus=no ;;
-  Linux|SunOS|Darwin|FreeBSD|AIX ) _cv_has_globus=yes ;;
+  HP-UX ) _cv_has_openssl=no ;;
+  Linux|SunOS|Darwin|FreeBSD|AIX ) _cv_has_openssl=yes ;;
   * )
     AC_MSG_RESULT([error])
     AC_MSG_ERROR([Unrecognized platform: $os])
   ;;
 esac
-AC_MSG_RESULT([$_cv_has_globus])
+AC_MSG_RESULT([$_cv_has_openssl])
 
 AC_MSG_CHECKING([if gsoap is supported])
 case "$os" in
@@ -2509,18 +2509,6 @@ AC_MSG_CHECKING([if classads is supported])
 _cv_has_classads=yes
 AC_MSG_RESULT([$_cv_has_classads])
 
-
-# This check is a bit of a hack. We need to checkout the OpenSSL
-# external on platforms other than Windows. OpenSSL is only checked
-# when Globus is not available, so when Globus is not available then
-# OpenSSL must be (artificially) turned off, since it is not checked
-# out as part of the externals. This breaks --with-proper on HP-UX,
-# since OpenSSL is available on the system but Globus is not
-# supported, which begs the question: Should _cv_has_EXT only apply to
-# the --without-proper case? Probably. - matt 2 oct 2007
-AC_MSG_CHECKING([if openssl is supported])
-_cv_has_openssl=$_cv_has_globus
-AC_MSG_RESULT([$_cv_has_openssl])
 
 #
 # Figure out if I need to use the linuclibcheaders package to build glibc.
@@ -2668,17 +2656,24 @@ CHECK_EXTERNAL([krb5], [1.4.3], [soft],
                MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
 fi
 
-CHECK_EXTERNAL([globus],[4.0.5], [soft])
+# CHECK_EXTERNAL([openssl],[0.9.8h],[soft])
+CHECK_EXTERNAL([openssl], [0.9.8h], [soft],
+               [use OpenSSL (provides authentication and encryption support)],
+               MF_LIB_CHECK([openssl],
+                            [[ssl SSL_connect], [crypto BF_encrypt]]))
+
+if test "x$_cv_ext_openssl_version" != x; then
+  # If we have openssl, we define HAVE_OPENSSL_SSL_H (meaning we
+  # have ssl.h) to make gsoap happy
+  AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl])
+
+  # Globus 4.2.0 is dependent on an external version of openssl
+  CHECK_EXTERNAL([globus],[4.2.0], [soft])
+fi
 
 if test -z "$_cv_ext_globus_version"; then
   _cv_has_globus=no;
 fi
-
-_cv_has_gt4gahp=$_cv_has_globus
-CHECK_EXTERNAL([gt4gahp],[1.7.2], [soft])
-
-_cv_has_gt42gahp=$_cv_has_globus
-CHECK_EXTERNAL([gt42gahp],[2.0.0], [soft])
 
 _cv_has_unicoregahp=$_cv_has_globus
 CHECK_EXTERNAL([unicoregahp],[1.2.0], [soft])
@@ -2697,7 +2692,7 @@ CHECK_EXTERNAL([classads], [1.0rc5], [soft],
 	       # This REALLY should test for headers, like most checks...
                MF_LIB_CHECK([classads], [[classad cclassad_create]]))	       
 
-CHECK_EXTERNAL([srb], [3.2.1], [soft])
+CHECK_EXTERNAL([srb], [3.2.1-p1], [soft])
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
@@ -2709,7 +2704,7 @@ AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_has_globus" = xyes -a -n "$
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.7.0-p1], [soft])
+CHECK_EXTERNAL([blahp], [1.7.0-p2], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what
@@ -2760,21 +2755,8 @@ CHECK_EXTERNAL([postgresql], [$pgsql_ver], [hard],
 AC_SUBST(POSTGRESQL_LDFLAGS, $POSTGRESQL_LDFLAGS)
 AC_SUBST(POSTGRESQL_CFLAGS, $POSTGRESQL_CFLAGS)
 
-CHECK_EXTERNAL([globus],[4.0.5], [soft])
-
 # if globus is available on this platform and we actually have it
-if test "x$_cv_has_globus" = xyes -a "x$cv_ext_globus" = xyes; then
-  # currently, if we are using globus (and the openssl
-  # within), we define HAVE_OPENSSL_SSL_H (meaning we
-  # have ssl.h) to make gsoap happy
-  AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl (via globus)])
-
-  # ALSO, since OpenSSL isn't really an external yet we need to make
-  # sure HAVE_EXT_OPENSSL is defined, basically having Globus gives us
-  # OpenSSL. -matt 082107
-  AC_DEFINE([HAVE_EXT_OPENSSL], [1], [if openssl external])
-  AC_DEFINE([USE_GLOBUS_OPENSSL], [1], [if openssl is from globus])
-
+if test "x$cv_ext_globus" = xyes; then
   AC_MSG_CHECKING([globus flavor])
   _cv_globus_flavor=gcc32dbg
   if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" -o "$_cv_arch" = "X86_64"; then
@@ -2784,16 +2766,11 @@ if test "x$_cv_has_globus" = xyes -a "x$cv_ext_globus" = xyes; then
   fi
   AC_MSG_RESULT([$_cv_globus_flavor])
   AC_SUBST(globus_flavor,$_cv_globus_flavor)
-else # else if no globus
-  CHECK_EXTERNAL([openssl], [0.9.8], [soft],
-                 [use OpenSSL (provides authentication and encryption support)],
-                 MF_LIB_CHECK([openssl],
-                              [[ssl SSL_connect], [crypto BF_encrypt]]))
 fi
 
 # The test for gsoap needs to happen after the openssl check, so
 # openssl libs, if found, will be in LIBS. Also, if we do not have
-# openssl or globus, which gives us openssl, then we need to link with
+# openssl, then we need to link with
 # a non ssl version of the gSOAP libraries.
 
 # The gsoap shared libraries contain unresolved symbols they expect
@@ -2803,7 +2780,7 @@ fi
 # NOTE: We don't need the --unresolved-symbols flag in the non-proper
 # case because in that case Condor links with the static libraries,
 # and the linker does not complain as much.
-CHECK_EXTERNAL([gsoap], [2.7.10-p1], [soft],
+CHECK_EXTERNAL([gsoap], [2.7.10-p2], [soft],
                [use gSOAP (enables Birdbath interface)],
                [_ldflags_save="$LDFLAGS"
                 LDFLAGS="$LDFLAGS -Wl[,]--unresolved-symbols=ignore-in-shared-libs"
