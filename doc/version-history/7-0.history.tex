@@ -27,18 +27,20 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item This release fixes a security-related problem introduced in
-  7.0.4 and 7.1.2.  It also fixes a related problem that affects all
-  previous versions.  The problem affects configurations that have
-  entries in the allow or deny lists which specify overlapping
-  netmasks.  For example, \verb|*|, \verb|192.*|, and \verb|192.168.*|
+\item \Security This release fixes a security-related problem introduced in
+  Condor versions 7.0.4 and 7.1.2.  
+  It also fixes a related problem that affects all previous versions.
+  The problem affects Condor where the configuration specifies
+  authorization with
+  allow or deny lists that have overlapping netmasks.
+  For example, \verb|*|, \verb|192.*|, and \verb|192.168.*|
   are overlapping netmasks.  The consequence of the bug is that some
   allow/deny entries may be ignored.  A similar problem in all
-  previous versions affects configurations with overlapping hostname
+  previous versions affects configurations with overlapping host name
   patterns.  For example, \verb|*.edu|, \verb|*.wisc.edu|, and
-  \verb|condor.wisc.edu| are overlapping hostname patterns.  If such
-  overlapping patters are used together in the same allow or deny list
-  in previous versions of condor, some of the entries would be effectively
+  \verb|condor.wisc.edu| are overlapping host name patterns.  If such
+  overlapping patterns are used together in the same allow or deny list
+  in previous versions of Condor, some of the entries would be effectively
   ignored when enforcing the policy.
 
 \end{itemize}
