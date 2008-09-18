@@ -1084,7 +1084,7 @@ For jobs submitted under the standard universe,
 the existence of a shared file system is not relevant.
 Access to files (input and output) is handled through Condor's
 remote system call mechanism.
-The executable and checkpoint files are transfered automatically, when
+The executable and checkpoint files are transferred automatically, when
 needed. 
 Therefore, the user does not need to change the submit description
 file if there is no shared file system.
@@ -1626,7 +1626,7 @@ the clause \verb@(HasFileTransfer)@.
 \end{enumerate}
 
 To ensure that the job is matched to a machine with enough local disk
-space to hold all the transfered files, Condor automatically adds the
+space to hold all the transferred files, Condor automatically adds the
 \Attr{DiskUsage} job attribute.
 This attribute includes the total
 size of the job's executable and all input files to be transferred.
@@ -2328,6 +2328,18 @@ the execute machines, how quickly submit machines come  back up,
 and how much work would be lost if the lease expires,
 the job is killed, and the job must start over from its beginning.
 
+As a special case, a submit description file setting of
+\begin{verbatim}
+ job_lease_duration = 0
+\end{verbatim}
+as well as utilizing submission other than \Condor{submit}
+that do not set \Attr{JobLeaseDuration}
+(such as using the web services interface)
+results in the corresponding job ClassAd attribute to be explicitly
+undefined.
+This has the further effect of changing the duration of a claim lease,
+the amount of time that the execution machine waits before
+dropping a claim due to missing keep alive messages.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Potential Problems}

@@ -2,7 +2,7 @@
 % while that makes it look neat, it also adds an extra space in 
 % the PDF output, so don't do it. 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Configuring-Policy}Startd Policy Configuration}
+\section{\label{sec:Configuring-Policy}Policy Configuration for the \Condor{startd}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!startd policy}
@@ -349,8 +349,7 @@ preferring that job would not be Condor's
 only problem! 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:States}
-Machine States}
+\subsection{\label{sec:States} Machine States}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{state!of a machine}
@@ -554,7 +553,55 @@ The cause of each transition is described below.
 
 \end{itemize}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:ClaimedState} The Claimed State and Leases}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{machine state!claimed, the claim lease}
+\index{claim lease}
 
+When a \Condor{schedd} claims a \Condor{startd}, there is a claim lease.
+So long as the keep alive updates from the \Condor{schedd} to the
+\Condor{startd} continue to arrive, the lease is reset.
+If the lease duration passes with no updates,
+the \Condor{startd} drops the claim and evicts any jobs the
+\Condor{schedd} sent over.
+
+The alive interval is the amount of time between,
+or the frequency at which the \Condor{schedd} sends keep alive updates 
+to all \Condor{schedd} daemons.
+An alive update resets the claim lease at the \Condor{startd}.
+Updates are UDP packets.
+
+Initially, as when the \Condor{schedd} starts up,
+the alive interval starts at the value set by the 
+configuration variable \Macro{ALIVE\_INTERVAL}.  
+It may be modified when a job is started.
+The job's ClassAd attribute \Attr{JobLeaseDuration} is checked.
+If the value of \Expr{JobLeaseDuration/3} is less than the current
+alive interval,
+then the alive interval is set to either this lower value
+or the imposed lowest limit on the alive interval of 10 seconds.
+Thus, the alive interval starts at \MacroNI{ALIVE\_INTERVAL} and goes down,
+never up.
+
+If a claim lease expires,
+the \Condor{startd} will drop the claim.
+The length of the claim lease is 
+the job's ClassAd attribute \Attr{JobLeaseDuration}.
+\Attr{JobLeaseDuration} defaults to 20 minutes time,
+except when explicitly
+set within the job's submit description file.
+If \Attr{JobLeaseDuration} is explicitly set to 0, 
+or it is not set as may be the case for a Web Services job
+that does not define the attribute, 
+then \Attr{JobLeaseDuration} is given the Undefined value.
+Further, when undefined,
+the claim lease duration is calculated with
+\Expr{MAX\_CLAIM\_ALIVES\_MISSED * alive interval}.
+The alive interval is the \emph{current} value,
+as sent by the \Condor{schedd}.
+If the \Condor{schedd} reduces the current alive interval,
+it does not update the \Condor{startd}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Activities}
@@ -1896,7 +1943,7 @@ of resources in the pool can become if there are long-running jobs.
 However, by preventing jobs from being killed, 
 you may decrease the number of
 cycles that are wasted on non-checkpointable jobs that are killed.
-That is the basic tradeoff.
+That is the basic trade off.
 
 Note that the use of \MacroNI{MAXJOBRETIREMENTTIME} limits the killing
 of jobs, but it does not prevent the preemption of resource claims.
