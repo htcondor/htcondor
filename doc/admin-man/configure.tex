@@ -4130,6 +4130,20 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   The macro is defined in terms of seconds and defaults to 300, which is
   5 minutes.
 
+%\item[\Macro{STARTD\_SEND\_ALIVES}] \label{param:StartdSendAlives}
+%  A boolean value that defaults to \Expr{False}.
+%  When \Expr{True}, the \Condor{startd} will send alive updates
+%  to the \Condor{schedd}, instead of the other way around.
+%  These alive upates are delivered via TCP.
+%  The alive interval for these updates is the
+%  claim lease duration divided by 3.
+%  This configuration variable must be set globally to be
+%  visible to all \Condor{schedd} and \Condor{startd} daemons that
+%  communicate.  If not visible, or if the two have
+%  different settings for this value, there is a good chance that
+%  keep alive updates will either never be sent, or will be dropped,
+%  resulting in expiring and evicted active claims.
+
 \item[\Macro{REQUEST\_CLAIM\_TIMEOUT}]
   \label{param:RequestClaimTimeout} This macro sets the time (in
   seconds) that the \Condor{schedd} will wait for a claim to be granted by the
