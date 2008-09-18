@@ -99,7 +99,13 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// prepend the full path to this name so that we
 		// don't have to rely on the PATH inside the
 		// USER_JOB_WRAPPER or for exec().
-	if (is_relative_to_cwd(JobName.Value()) && job_iwd && *job_iwd) {
+	if ( strcmp(CONDOR_EXEC,JobName.Value()) == 0 ) {
+		JobName.sprintf( "%s%c%s",
+		                 Starter->GetWorkingDir(),
+		                 DIR_DELIM_CHAR,
+		                 CONDOR_EXEC );
+        }
+	else if (is_relative_to_cwd(JobName.Value()) && job_iwd && *job_iwd) {
 		MyString full_name;
 		full_name.sprintf("%s%c%s",
 		                  job_iwd,
