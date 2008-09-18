@@ -104,6 +104,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "condor_netdb.h"
 #include "util_lib_proto.h"
 #include "subsystem_info.h"
+#include "condor_threads.h"
 
 #if defined(HAVE_VALGRIND_H)
 #include "valgrind.h"
@@ -369,7 +370,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 #ifndef WIN32
 	async_sigs_unblocked = FALSE;
 #endif
-	async_pipe_empty = TRUE;
+	async_pipe_empty = true;
 
 		// Note: this cannot be modified on reconfig, requires restart.
 	m_wants_dc_udp = param_boolean("WANT_UDP_COMMAND_SOCKET", true);
@@ -1228,7 +1229,11 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		return -1;
     }
 
-	i = nSock;
+	// Find empty slot, set to be i.
+	for (i=0;i <= nSock; i++) {
+		if ( (*sockTable)[i].iosock == NULL ) 
+			break;
+	}
 
 	// Make certain that entry i is empty.
 	if ( (*sockTable)[i].iosock ) {
@@ -1320,11 +1325,13 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	else
 		(*sockTable)[i].handler_descrip = EMPTY_DESCRIP;
 
-	// Increment the counter of total number of entries
-	nSock++;
+	// Increment the counter of total number of entries if we
+	// just filled our last slot.
+	if ( i == nSock  ) {
+		nSock++;
+	}
 
 	// If this is the first command sock, set initial_command_sock
-	// NOTE: When we remove sockets, the intial_command_sock can change!
 	if ( initial_command_sock == -1 && handler == 0 && handlercpp == 0 )
 		initial_command_sock = i;
 
@@ -1333,6 +1340,10 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 
 	// Conditionally dump what our table looks like
 	DumpSocketTable(D_FULLDEBUG | D_DAEMONCORE);
+
+	// If we are a worker thread, wake up select in the main thread
+	// so the main thread re-computes the fd_sets.
+	Wake_up_select();
 
 	return i;
 }
@@ -1344,13 +1355,11 @@ DaemonCore::Cancel_And_Close_All_Sockets(void)
 	// This method will cancel *and delete* all registered sockets.
 	// It will return the number of sockets cancelled + closed.
 	int i = 0;
+	int j = 0;
 
-	while ( nSock > 0 ) {
-		if ( (*sockTable)[0].iosock ) {	// if a valid entry....
-			Stream* insock = (*sockTable)[0].iosock;
-				// Note:  calling Cancel_Socket will decrement
-				// variable nSock (number of registered Sockets)
-				// by one.
+	for (j=0; j < nSock; j++) {
+		if ( (*sockTable)[j].iosock ) {	// if a valid entry....
+			Stream* insock = (*sockTable)[j].iosock;
 			Cancel_Socket( insock );
 			delete insock;
 			if( insock == (Stream*)dc_rsock ) {
@@ -1371,6 +1380,10 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 {
 	int i,j;
 
+	if (!insock) {
+		return FALSE;
+	}
+
 	i = -1;
 	for (j=0;j<nSock;j++) {
 		if ( (*sockTable)[j].iosock == insock ) {
@@ -1386,8 +1399,6 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 		return FALSE;
 	}
 
-	// Remove entry at index i by moving the last one in the table here.
-
 	// Clear any data_ptr which go to this entry we just removed
 	if ( curr_regdataptr == &( (*sockTable)[i].data_ptr) )
 		curr_regdataptr = NULL;
@@ -1398,22 +1409,23 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 	dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %d <%s> %p\n",
 			i,(*sockTable)[i].iosock_descrip, (*sockTable)[i].iosock );
 
-	// Remove entry, move the last one in the list into this spot
+	// Remove entry; mark it is available for next add via iosock=NULL
 	(*sockTable)[i].iosock = NULL;
 	free_descrip( (*sockTable)[i].iosock_descrip );
 	(*sockTable)[i].iosock_descrip = NULL;
 	free_descrip( (*sockTable)[i].handler_descrip );
 	(*sockTable)[i].handler_descrip = NULL;
-	if ( i < nSock - 1 ) {
-            // if not the last entry in the table, move the last one here
-		(*sockTable)[i] = (*sockTable)[nSock - 1];
-		(*sockTable)[nSock - 1].iosock = NULL;
-		(*sockTable)[nSock - 1].iosock_descrip = NULL;
-		(*sockTable)[nSock - 1].handler_descrip = NULL;
+	// If we just removed the last entry in the table, we can decrement nSock
+	if ( i == nSock - 1 ) {
+		nSock--;            
 	}
-	nSock--;
+	
 
 	DumpSocketTable(D_FULLDEBUG | D_DAEMONCORE);
+
+	// If we are a worker thread, wake up select in the main thread
+	// so the main thread re-computes the fd_sets.
+	Wake_up_select();
 
 	return TRUE;
 }
@@ -1667,6 +1679,13 @@ int DaemonCore::Register_Pipe(int pipe_end, char* pipe_descrip,
 	// Update curr_regdataptr for SetDataPtr()
 	curr_regdataptr = &((*pipeTable)[i].data_ptr);
 
+#ifndef WIN32
+	// On Unix, pipe fds are given to select.  So
+	// if we are a worker thread, wake up select in the main thread
+	// so the main thread re-computes the fd_sets.
+	Wake_up_select();
+#endif
+
 #ifdef WIN32
 	// On Win32, make a "pid entry" and pass it to our Pid Watcher thread.
 	// This thread will then watch over the pipe handle and notify us
@@ -1773,6 +1792,13 @@ int DaemonCore::Cancel_Pipe( int pipe_end )
 		(*pipeTable)[nPipe - 1].pentry = NULL;
 	}
 	nPipe--;
+
+#ifndef WIN32
+	// On Unix, pipe fds are passed into select.  So
+	// if we are a worker thread, wake up select in the main thread
+	// so the main thread re-computes the fd_sets.
+	Wake_up_select();
+#endif
 
 	return TRUE;
 }
@@ -2432,6 +2458,12 @@ DaemonCore::reconfig(void) {
 
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
+	// Cons up a thread pool.
+	CondorThreads::pool_init();
+	// Supply routines to call when code calls start_thread_safe() and
+	// stop_thread_safe().
+	_mark_thread_safe_callback(CondorThreads::start_thread_safe_block,
+							   CondorThreads::stop_thread_safe_block);
 }
 
 
@@ -2471,6 +2503,31 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const struct s
 	return result;
 }
 
+void
+DaemonCore::Wake_up_select()
+{
+
+	// no need to wake up select if we are the only thread
+	if ( CondorThreads::pool_size() == 0 ) {
+		return;
+	}
+
+	// no need to wake up select if we are the main thread
+	// note: main thread always has tid == 1
+	if ( CondorThreads::get_handle()->get_tid() == 1 ) {
+		return;
+	}
+
+	if ( async_pipe_empty ) {
+#ifdef WIN32
+		async_pipe[1].put( '!' );
+		async_pipe[1].end_of_message();
+#else
+		write(async_pipe[1],"!",1);
+#endif
+	}
+	async_pipe_empty = false;
+}
 
 // This function never returns. It is responsible for monitor signals and
 // incoming messages or requests and invoke corresponding handlers.
@@ -2567,13 +2624,20 @@ void DaemonCore::Driver()
 					}
 				}
 			}
+
 #ifndef WIN32
 		// Drain our async_pipe; we must do this before we unblock unix signals.
 		// Just keep reading while something is there.  async_pipe is set to
 		// non-blocking mode via fcntl, so the read below will not block.
 		while( read(async_pipe[0],asyncpipe_buf,8) > 0 );
+#else
+		if (async_pipe_empty == false) {
+			char c;
+			async_pipe[0].get(c);
+			async_pipe[0].end_of_message();
+		}
 #endif
-		async_pipe_empty = TRUE;
+		async_pipe_empty = true;
 
 		// Prepare to enter main select()
 
@@ -2656,12 +2720,20 @@ void DaemonCore::Driver()
 				}
 			}
         }
+#endif
+
 
 		// Add the read side of async_pipe to the list of file descriptors to
 		// select on.  We write to async_pipe if a unix async signal
 		// is delivered after we unblock signals and before we block on select.
+#ifdef WIN32
+		selector.add_fd( async_pipe[0].get_file_desc() , Selector::IO_READ );
+#else
 		selector.add_fd( async_pipe[0], Selector::IO_READ );
 #endif
+
+		// Let other threads run while we are waiting on select
+		CondorThreads::enable_parallel(true);
 
 #if !defined(WIN32)
 		// Set aync_sigs_unblocked flag to true so that Send_Signal()
@@ -2674,7 +2746,7 @@ void DaemonCore::Driver()
 		// select.
 		sigprocmask( SIG_SETMASK, &emptyset, NULL );
 #else
-		//Win32 - grab coarse-grained mutex
+		//Win32 - release coarse-grained mutex
 		LeaveCriticalSection(&Big_fat_mutex);
 #endif
 
@@ -2713,6 +2785,10 @@ void DaemonCore::Driver()
 			EXCEPT("select, error # = %d",WSAGetLastError());
 		}
 #endif
+
+		// For now, do not let other threads run while we are processing
+		// in the main loop.
+		CondorThreads::enable_parallel(false);
 
 		if ( selector.has_ready() ||
 			 ( selector.timed_out() && 
@@ -2983,8 +3059,59 @@ DaemonCore::CallSocketHandler( Stream *sock, bool default_to_HandleCommand )
 	CallSocketHandler( i, default_to_HandleCommand );
 }
 
+struct CallSocketHandler_args {
+	int i;
+	bool default_to_HandleCommand;
+	Stream *accepted_sock;
+};
+
 void
 DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
+{
+	// Queue up the parameters and add to our thread pool.
+	struct CallSocketHandler_args *args;
+	args = new struct CallSocketHandler_args;
+
+	// If a tcp listen socket, do the accept now in the main thread
+	// so that we don't go back to the select loop with the listen
+	// socket still set.
+	args->accepted_sock = NULL;
+	Stream *insock = (*sockTable)[i].iosock;
+	ASSERT(insock);
+	if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handler==NULL &&
+		 default_to_HandleCommand &&
+		 insock->type() == Stream::reli_sock &&
+		 ((ReliSock *)insock)->_state == Sock::sock_special &&
+		 ((ReliSock *)insock)->_special_state == ReliSock::relisock_listen 
+		 )
+	{
+		args->accepted_sock = (Stream *) ((ReliSock *)insock)->accept();
+
+		if ( !(args->accepted_sock) ) {
+				dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
+				// no need to add to work pool if we fail to accept
+				return;
+		}
+	}
+	args->i = i;
+	args->default_to_HandleCommand = default_to_HandleCommand;
+	CondorThreads::pool_add(DaemonCore::CallSocketHandler_worker_demarshall,args);
+}
+
+void
+DaemonCore::CallSocketHandler_worker_demarshall(void *arg)
+{
+	struct CallSocketHandler_args *args = (struct CallSocketHandler_args *)arg;
+
+	daemonCore->CallSocketHandler_worker( args->i, 
+						args->default_to_HandleCommand,
+						args->accepted_sock);
+
+	delete args;
+}
+
+void
+DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stream* asock )
 {
 	char *handlerName = NULL;
 	int result;
@@ -3024,7 +3151,7 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 			// no handler registered, so this is a command
 			// socket.  call the DaemonCore handler which
 			// takes care of command sockets.
-		result = HandleReq(i);
+		result = HandleReq(i,asock);
 	}
 	else {
 			// No registered callback, and we were told not to
@@ -3047,9 +3174,6 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 		delete (*sockTable)[i].iosock;
 			// cancel the socket handler
 		Cancel_Socket( (*sockTable)[i].iosock );
-			// decrement i, since sockTable[i] may now
-			// point to a new valid socket
-		i--;
 	}
 }
 
@@ -3200,16 +3324,16 @@ int DaemonCore::HandleReqSocketHandler(Stream *stream)
 }
 
 
-int DaemonCore::HandleReq(int socki)
+int DaemonCore::HandleReq(int socki, Stream* asock)
 {
 	Stream *insock;
 	
 	insock = (*sockTable)[socki].iosock;
 
-	return HandleReq(insock);
+	return HandleReq(insock, asock);
 }
 
-int DaemonCore::HandleReq(Stream *insock)
+int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 {
 	Stream				*stream = NULL;
 
@@ -3256,7 +3380,11 @@ int DaemonCore::HandleReq(Stream *insock)
 		if ( ((ReliSock *)insock)->_state == Sock::sock_special &&
 			((ReliSock *)insock)->_special_state == ReliSock::relisock_listen )
 		{
-			stream = (Stream *) ((ReliSock *)insock)->accept();
+			if ( asock ) {
+				stream = asock;
+			} else {
+				stream = (Stream *) ((ReliSock *)insock)->accept();
+			}
 			if ( !stream ) {
 				dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
 				// return KEEP_STEAM cuz insock is a listen socket
@@ -3643,6 +3771,9 @@ int DaemonCore::HandleReq(Stream *insock)
 	}
 
 	if (req == DC_AUTHENTICATE) {
+
+		// Allow thread to yield during all the authentication network round-trips
+		ScopedEnableParallel(true);
 
 		Sock* sock = (Sock*)stream;
 		sock->decode();
@@ -4406,6 +4537,9 @@ int DaemonCore::HandleReq(Stream *insock)
     }
 */
 	if ( reqFound == TRUE ) {
+		// Handlers should start out w/ parallel mode disabled by default
+		ScopedEnableParallel(false);
+
 		// call the handler function; first curr_dataptr for GetDataPtr()
 		curr_dataptr = &(comTable[index].data_ptr);
 
