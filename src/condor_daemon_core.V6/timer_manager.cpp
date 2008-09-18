@@ -151,6 +151,8 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 		// list is empty, place ours in front
 		timer_list = new_timer;
 		new_timer->next = NULL;
+			// since we have a new first timer, we must wake up select
+		daemonCore->Wake_up_select();
 	} else {
 		// list is not empty, so keep timer_list ordered from soonest to
 		// farthest (i.e. sorted on "when").
@@ -161,6 +163,8 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 			// make the this new timer first in line
 			new_timer->next = timer_list;
 			timer_list = new_timer;
+			// since we have a new first timer, we must wake up select
+			daemonCore->Wake_up_select();
 		} else {
 			Timer* trail_ptr = NULL;
 			for (timer_ptr = timer_list; timer_ptr != NULL; 

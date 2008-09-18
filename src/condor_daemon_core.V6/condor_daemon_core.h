@@ -1317,6 +1317,8 @@ class DaemonCore : public Service
 		*/
 	void WantSendChildAlive( bool send_alive )
 		{ m_want_send_child_alive = send_alive; }
+	
+	void Wake_up_select();
 
   private:      
 
@@ -1329,8 +1331,8 @@ class DaemonCore : public Service
 	void InitDCCommandSocket( int command_port );  // called in main()
 
     int HandleSigCommand(int command, Stream* stream);
-    int HandleReq(int socki);
-	int HandleReq(Stream *insock);
+    int HandleReq(int socki, Stream* accepted_sock=NULL);
+	int HandleReq(Stream *insock, Stream* accepted_sock=NULL);
 	int HandleReqSocketTimerHandler();
 	int HandleReqSocketHandler(Stream *stream);
     int HandleSig(int command, int sig);
@@ -1616,9 +1618,13 @@ class DaemonCore : public Service
     int SetFDInheritFlag(int fd, int flag);
 #endif
 
+	// Setup an async_pipe, used to wake up select from another thread.
+	// Implemented on Unix via a pipe, on Win32 via a pair of connected tcp sockets.
 #ifndef WIN32
     int async_pipe[2];  // 0 for reading, 1 for writing
     volatile int async_sigs_unblocked;
+#else
+	ReliSock async_pipe[2];  // 0 for reading, 1 for writing
 #endif
 	volatile bool async_pipe_empty;
 
@@ -1658,6 +1664,9 @@ class DaemonCore : public Service
 		// On return, i may be modified so that when incremented,
 		// it will index the next registered socket.
 	void CallSocketHandler( int &i, bool default_to_HandleCommand );
+	static void CallSocketHandler_worker_demarshall(void *args);
+	void CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stream* asock );
+	
 
 		// Returns index of registered socket or -1 if not found.
 	int GetRegisteredSocketIndex( Stream *sock );

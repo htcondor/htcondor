@@ -1986,11 +1986,11 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 									want_match_diagnostics);
 				char *diagnostic_message = NULL;
 				// no match found
-				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
+				dprintf(D_ALWAYS, "      Rejected %d.%d %s %s: ",
 						cluster, proc, scheddName, scheddAddr);
 				if (rejForNetwork) {
 					diagnostic_message = "insufficient bandwidth";
-					dprintf(D_ALWAYS|D_MATCH|D_NOHEADER, "%s\n",
+					dprintf(D_ALWAYS|D_NOHEADER, "%s\n",
 							diagnostic_message);
 #if WANT_NETMAN
 					netman.ShowDeniedRequests(D_BANDWIDTH);
@@ -2009,7 +2009,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 					} else {
 						diagnostic_message = "no match found";
 					}
-					dprintf(D_ALWAYS|D_MATCH|D_NOHEADER, "%s\n",
+					dprintf(D_ALWAYS|D_NOHEADER, "%s\n",
 							diagnostic_message);
 				}
 				sock->encode();
@@ -2846,7 +2846,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	if (offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr) == 0) {
 		strcpy(startdAddr, "<0.0.0.0:0>");
 	}
-	dprintf(D_MATCH, "      Matched %d.%d %s %s preempting %s %s %s\n",
+	dprintf(D_ALWAYS, "      Matched %d.%d %s %s preempting %s %s %s\n",
 			cluster, proc, scheddName, scheddAddr, remoteUser,
 			startdAddr, startdName.Value() );
 

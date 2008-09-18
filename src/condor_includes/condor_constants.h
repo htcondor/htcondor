@@ -101,8 +101,10 @@ static const char NiceUserName[] = "nice-user";
  */
 #ifdef WIN32
 #define THREAD_LOCAL_STORAGE __declspec( thread ) 
+#elif __GNUC__
+#define THREAD_LOCAL_STORAGE __thread
 #else
-#define THREAD_LOCAL_STORAGE /* Not supported on Unix */
+#define THREAD_LOCAL_STORAGE /* Dunno */
 #endif
 
 /* Max space needed to hold an IP string, as
