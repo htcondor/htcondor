@@ -47,6 +47,7 @@ public_copy_target($(WRAPPER_CLASS),lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
 public_copy_target($(INFO_CLASS),lib,$(INFO_CLASS),EXECUTABLE_MODE)
 public_copy_target($(BENCHMARK_CLASS),lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
 
+#if IS_LINUX
 public_copy_target(condor_glexec_setup, \
                    libexec, \
                    condor_glexec_setup, \
@@ -63,7 +64,6 @@ public_copy_target(condor_glexec_kill, \
                    libexec, \
                    condor_glexec_kill, \
                    EXECUTABLE_MODE)
-#if IS_LINUX
 public_c_plus_nowrap_target(condor_glexec_job_wrapper, \
                             libexec, \
                             glexec_job_wrapper.o, \
