@@ -1360,7 +1360,7 @@ sub CoreCheck {
 	my $count = 0;
 	$cmd = "condor_config_val log";
 	$log = `$cmd`;
-	chomp($log);
+	CondorTest::fullchomp($log);
 	$logdir = $log;
 	#print "Log directory is <$log>\n";
 	opendir LD, $log or die "Can not open log directory<$log>:$!\n";
