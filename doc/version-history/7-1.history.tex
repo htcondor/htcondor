@@ -45,12 +45,11 @@ allow a version mismatch between \Condor{dagman} and the
 
 \begin{itemize}
 
-\item Added \Macro{MAX\_PENDING\_STARTD\_CONTACTS}.  This limits
-the number of simultaneous connection attempts by the \Condor{schedd}
-when it is requesting claims from the \Condor{startd}s.  The intention
-is to protect the \Condor{schedd} from being overloaded by
-authentication operations.  The default is 10.  The special value 0
-indicates no limit.
+\item Added \Macro{MAX\_PENDING\_STARTD\_CONTACTS}.  This limits the
+number of simultaneous connection attempts by the \Condor{schedd} when
+it is requesting claims from the \Condor{startd}s.  The intention is
+to protect the \Condor{schedd} from being overloaded by authentication
+operations.  The default is 0, which indicates no limit.
 
 \item Added \Macro{SEC\_INVALIDATE\_SESSIONS\_VIA\_TCP}.  This
 defaults to true.  Previously, attempts to use an invalid security
