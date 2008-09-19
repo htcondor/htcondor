@@ -10191,7 +10191,7 @@ Scheduler::Init()
 		// This avoids the schedd getting so busy authenticating with
 		// startds that it can't keep up with shadows.
 		// note: the special value 0 means 'unlimited'
-	max_pending_startd_contacts = param_integer( "MAX_PENDING_STARTD_CONTACTS", 10, 0 );
+	max_pending_startd_contacts = param_integer( "MAX_PENDING_STARTD_CONTACTS", 0, 0 );
 
 		//
 		// Start Local Universe Expression
