@@ -1786,6 +1786,7 @@ int main( int argc, char** argv )
 		free( myFullName );
 		myFullName = NULL;
 	}
+	dprintf(D_FULLDEBUG, "** %s\n", mySubSystem->getString() );
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
 	dprintf(D_ALWAYS,"** PID = %lu\n", (unsigned long) daemonCore->getpid());

@@ -57,7 +57,7 @@ typedef enum {
 	SUBSYSTEM_CLASS_NONE = 0,
 	SUBSYSTEM_CLASS_DAEMON,
 	SUBSYSTEM_CLASS_CLIENT,
-	SUBSYSTEM_CLASS_JOB
+	SUBSYSTEM_CLASS_JOB,
 } SubsystemClass;
 
 // Declare C++ things
@@ -70,7 +70,10 @@ class SubsystemInfo
 
 	// Constructors
 	SubsystemInfo( const char *subsystem_name,
-				   SubsystemType type = SUBSYSTEM_TYPE_AUTO );
+				   SubsystemType _type = SUBSYSTEM_TYPE_AUTO );
+	SubsystemInfo( const char *subsystem_name,
+				   SubsystemType _type,
+				   SubsystemClass _class );
 	~SubsystemInfo( void );
 
 	// Verify the info
@@ -89,14 +92,16 @@ class SubsystemInfo
 
 	SubsystemType getType( void ) const { return m_Type; };
 	const char *getTypeName( void ) const;
-	bool isType( SubsystemType type ) const { return m_Type == type; };
+	bool isType( SubsystemType _type ) const { return m_Type == _type; };
 
 	// Get class info
-	bool isClass( SubsystemClass sclass ) const { return m_Class == sclass; };
+	bool isClass( SubsystemClass _class ) const { return m_Class == _class; };
 	bool isDaemon( void ) const { return m_Class == SUBSYSTEM_CLASS_DAEMON; };
 	bool isJob( void ) const { return m_Class == SUBSYSTEM_CLASS_JOB; };
 	bool isClient( void ) const { return m_Class == SUBSYSTEM_CLASS_CLIENT; };
+	const char *getClassName( void ) const { return m_ClassName; };
 
+	const char *getString( void ) const;
 	void dprintf( int level ) const;
 	void printf( void ) const;
 	
@@ -106,11 +111,12 @@ class SubsystemInfo
 	SubsystemType				 m_Type;
 	SubsystemClass				 m_Class;
 	const SubsystemInfoLookup	*m_Info;
+	const char					*m_ClassName;
 
 	// Internal only methods
-	SubsystemType setType( SubsystemType type, const char *name );
+	SubsystemType setType( SubsystemType _type, const char *name );
 	SubsystemType setType( const SubsystemInfoLookup *, const char *name );
-
+	SubsystemClass setClass ( const SubsystemInfoLookup * );
 };
 
 extern SubsystemInfo	*mySubSystem;

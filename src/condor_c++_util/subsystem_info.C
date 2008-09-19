@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -31,31 +31,31 @@ public:
 						 const char *, const char * );
 	~SubsystemInfoLookup( void ) { };
 
-	SubsystemType Type( void ) const { return m_type; };
-	SubsystemClass Class( void ) const { return m_class; } ;
-	const char * Name( void ) const { return m_name; };
-	const char * Substr( void ) const { return m_substr; };
+	SubsystemType getType( void ) const { return m_Type; };
+	SubsystemClass getClass( void ) const { return m_Class; } ;
+	const char * getTypeName( void ) const { return m_TypeName; };
+	const char * getTypeSubstr( void ) const { return m_TypeSubstr; };
 
-	bool match( SubsystemType _type ) const { return m_type == _type; };
-	bool match( SubsystemClass _class ) const { return m_class == _class; };
+	bool match( SubsystemType _type ) const { return m_Type == _type; };
+	bool match( SubsystemClass _class ) const { return m_Class == _class; };
 	bool match( const char *_name ) const
-		{ return !strcmp(m_name,_name); };
+		{ return !strcmp(m_TypeName,_name); };
 	bool matchSubstr( const char *_name ) const
-		{ return !strstr(m_substr,_name); };
-	bool isValid( ) const { return m_type != SUBSYSTEM_TYPE_INVALID; };
+		{ return !strstr(m_TypeSubstr,_name); };
+	bool isValid( ) const { return m_Type != SUBSYSTEM_TYPE_INVALID; };
 
 private:
-	SubsystemType	 m_type;
-	SubsystemClass	 m_class;
-	const char		*m_name;
-	const char		*m_substr;
+	SubsystemType	 m_Type;
+	SubsystemClass	 m_Class;
+	const char		*m_TypeName;
+	const char		*m_TypeSubstr;
 };
 SubsystemInfoLookup::SubsystemInfoLookup(
 	SubsystemType _type, SubsystemClass _class,
-	const char *_name, const char *_substr )
+	const char *_type_name, const char *_type_substr )
 {
-	m_type = _type; m_class = _class;
-	m_name = _name, m_substr = _substr;
+	m_Type = _type; m_Class = _class;
+	m_TypeName = _type_name, m_TypeSubstr = _type_substr;
 }
 
 //
@@ -161,14 +161,15 @@ SubsystemInfoTable::lookup( const char *_name ) const
 }
 static const SubsystemInfoTable *infoTable = new SubsystemInfoTable( );
 
+
 //
 // C++ SubsystemInfo methods
 //
 
-SubsystemInfo::SubsystemInfo( const char *name, SubsystemType type )
+SubsystemInfo::SubsystemInfo( const char *_name, SubsystemType _type )
 {
-	setName( name );
-	setType( type );
+	setName( _name );
+	setType( _type );
 }
 
 SubsystemInfo::~SubsystemInfo( void )
@@ -210,14 +211,15 @@ SubsystemInfo::setTypeFromName( const char *name )
 
 // Public set type method
 SubsystemType
-SubsystemInfo::setType( SubsystemType type )
+SubsystemInfo::setType( SubsystemType _type )
 {
-	return setType( type, NULL );
+	return setType( _type, NULL );
 }
 
 // Internal set type method
 SubsystemType
-SubsystemInfo::setType( SubsystemType type, const char *type_name )
+SubsystemInfo::setType( SubsystemType type,
+						const char *type_name )
 {
 	return setType( infoTable->lookup(type), type_name );
 }
@@ -227,38 +229,68 @@ SubsystemType
 SubsystemInfo::setType( const SubsystemInfoLookup *info,
 						const char *type_name )
 {
-	m_Type = info->Type();
-	m_Class = info->Class();
+	m_Type = info->getType();
+	setClass( info );
 	m_Info = info;
 	if ( NULL == type_name ) {
-		setName( info->Name() );
+		setName( info->getTypeName() );
 	}
 	else {
 		setName( type_name );
 	}
+
 	return m_Type;
+}
+
+// Internal set class method
+SubsystemClass
+SubsystemInfo::setClass( const SubsystemInfoLookup *info )
+{
+	static const char *_class_names[] = {
+		"None",
+		"DAEMON",
+		"CLIENT",
+		"JOB"
+	};
+	static int		_num = ( sizeof(_class_names) / sizeof(const char *) );
+
+	m_Class = info->getClass();
+	ASSERT ( ( m_Class >= 0 ) && ( m_Class <= _num ) );
+	m_ClassName = _class_names[m_Class];
+	return m_Class;
 }
 
 // Public dprintf / printf methods
 void
 SubsystemInfo::dprintf( int level ) const
 {
-	::dprintf( level,
-			   "SubsystemInfo: name=%s type=%d (%s) class=%d\n",
-			   m_Name, m_Type, m_Info->Name(), m_Class );
+	::dprintf( level, "%s\n", getString() );
 }
 void
 SubsystemInfo::printf( void ) const
 {
-	::printf( "SubsystemInfo: name=%s type=%d (%s) class=%d\n",
-			  m_Name, m_Type, m_Info->Name(), m_Class );
+	::printf( "%s\n", getString() );
+}
+const char *
+SubsystemInfo::getString( void ) const
+{
+	static char	 buf[128];
+	const char	*type_name = "UNKNOWN";
+
+	if ( m_Info ) {
+		type_name = m_Info->getTypeName();
+	}
+	snprintf( buf, sizeof(buf),
+			  "SubsystemInfo: name=%s type=%s (%d) class=%s (%d)",
+			  m_Name, type_name, m_Type, m_ClassName, m_Class );
+	return buf;
 }
 
 // Public method to get a type name
 const char *
 SubsystemInfo::getTypeName( void ) const
 {
-	return m_Info->Name( );
+	return m_Info->getTypeName( );
 }
 
 /* Helper function to retrieve the value of mySubSystem global variable
