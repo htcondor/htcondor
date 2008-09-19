@@ -55,6 +55,8 @@ static unsigned int torekHash(const YourString &s) {
 
 static const int hash_size = 79; // prime research
 
+static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
+
 ///////////////////////////////////////////////////////////////////////////////
 // AttrListElem constructor.
 ////////////////////////////////////////////////////////////////////////////////
@@ -2312,37 +2314,41 @@ int AttrList::put(Stream& s)
         return 0;
 
 	char *line;
-	// copy chained attrs first, so if there are duplicates, the get()
-	// method will overide the attrs from the chained ad with attrs
-	// from this ad.
-	if ( chainedAttrs ) {
-		for(elem = *chainedAttrs; elem; elem = elem->next) {
+	int pass;
+	for( pass=0; pass<2; pass++ ) {
+		if( pass==0 ) {
+				// copy chained attrs first, so if there are
+				// duplicates, the get() method will overide the attrs
+				// from the chained ad with attrs from this ad.
+			if( !chainedAttrs ) {
+				continue;
+			}
+			elem = *chainedAttrs;
+		}
+		else {
+			elem = exprList;
+		}
+
+		for(; elem; elem = elem->next) {
 			if( elem->tree->invisible ) {
 				continue;
 			}
 			line = NULL;
 			elem->tree->PrintToNewStr(&line);
 			ConvertDefaultIPToSocketIP(elem->name,&line,s);
-			if(!s.code(line)) {
+
+			if( ClassAdAttributeIsPrivate(elem->name) ) {
+				s.put(SECRET_MARKER); // tell other side we are sending secret
+				s.put_secret(line);   // send the secret
+			}
+			else if(!s.code(line)) {
 				free(line);
 				return 0;
 			}
 			free(line);
 		}
 	}
-    for(elem = exprList; elem; elem = elem->next) {
-		if( elem->tree->invisible ) {
-			continue;
-		}
-        line = NULL;
-        elem->tree->PrintToNewStr(&line);
-		ConvertDefaultIPToSocketIP(elem->name,&line,s);
-        if(!s.code(line)) {
-			free(line);
-            return 0;
-        }
-		free(line);
-    }
+
 	if ( send_server_time ) {
 		// insert in the current time from the server's (schedd)
 		// point of view.  this is used so condor_q can compute some
@@ -2510,6 +2516,8 @@ AttrList::initFromStream(Stream& s)
 		dprintf(D_FULLDEBUG,"Failed to read ClassAd size.\n");
         return 0;
 	}
+
+	char *secret_line = NULL;
     
     for(int i = 0; i < numExprs; i++) {
 
@@ -2519,6 +2527,18 @@ AttrList::initFromStream(Stream& s)
             succeeded = 0;
 			break;
         }
+
+		if( strcmp(line,SECRET_MARKER)==0 ) {
+			free(secret_line);
+			secret_line = NULL;
+			if( !s.get_secret(secret_line) ) {
+				dprintf(D_FULLDEBUG,"Failed to read encrypted ClassAd expression.\n");
+				succeeded = 0;
+				break;
+			}
+			line = secret_line;
+		}
+
 		if (!Insert(line)) {
 				// this debug message for tracking down initFromStream() bug
 			dprintf(D_FULLDEBUG,"Failed to parse ClassAd expression: '%s'\n",
@@ -2527,6 +2547,7 @@ AttrList::initFromStream(Stream& s)
 			break;
 		}
     }
+	free(secret_line);
 
     return succeeded;
 }
@@ -2712,6 +2733,16 @@ AssignExpr(char const *variable,char const *value)
 	return Insert(buf.GetCStr());
 }
 
+char const *
+AttrList::EscapeStringValue(char const *val,MyString &buf) {
+	if( !val || !strchr(val,'"') ) {
+		return val;
+	}
+	buf = val;
+	buf.replaceString("\"","\\\"");
+	return buf.Value();
+}
+
 /* This is used for %s = "%s" style constructs */
 int AttrList::
 Assign(char const *variable, MyString &value)
@@ -2720,27 +2751,33 @@ Assign(char const *variable, MyString &value)
 		return FALSE;
 	}
 
-	MyString buf(variable);
-
-	if (value.IsEmpty()) {
-		buf += "=UNDEFINED";
-	} else {
-		buf += "=\"";
-		buf += value.EscapeChars("\"", '\\');
-		buf += "\"";
-	}
-
-	return Insert(buf.GetCStr());
+	return Assign(variable,value.Value());
 }
 
 /* This is used for %s = "%s" style constructs */
 int AttrList::
 Assign(char const *variable,char const *value)
 {
-	MyString tmp(value);
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
 
-	return Assign(variable, tmp);
+	MyString buf(variable);
+	MyString escape_buf;
+
+	if (!value) {
+		buf += "=UNDEFINED";
+	} else {
+		value = EscapeStringValue(value,escape_buf);
+
+		buf += "=\"";
+		buf += value;
+		buf += "\"";
+	}
+
+	return Insert(buf.Value());
 }
+
 int AttrList::
 Assign(char const *variable,int value)
 {
@@ -2817,8 +2854,16 @@ bool AttrList::ClassAdAttributeIsPrivate( char const *name )
 			// This attribute contains the secret capability cookie
 		return true;
 	}
+	if( stricmp(name,ATTR_CAPABILITY) == 0 ) {
+			// This attribute contains the secret capability cookie
+		return true;
+	}
 	if( stricmp(name,ATTR_CLAIM_IDS) == 0 ) {
 			// This attribute contains secret capability cookies
+		return true;
+	}
+	if( stricmp(name,ATTR_TRANSFER_KEY) == 0 ) {
+			// This attribute contains the secret file transfer cookie
 		return true;
 	}
 	return false;
@@ -2829,6 +2874,8 @@ void AttrList::SetPrivateAttributesInvisible(bool make_invisible)
 		// keep this in sync with ClassAdAttributeIsPrivate()
 	SetInvisible(ATTR_CLAIM_ID,make_invisible);
 	SetInvisible(ATTR_CLAIM_IDS,make_invisible);
+	SetInvisible(ATTR_CAPABILITY,make_invisible);
+	SetInvisible(ATTR_TRANSFER_KEY,make_invisible);
 }
 
 //	Decides if a string is a valid attribute name, the LHS

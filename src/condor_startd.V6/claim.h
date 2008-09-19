@@ -53,13 +53,14 @@
 #include "enum_utils.h"
 #include "Starter.h"
 #include "condor_claimid_parser.h"
+#include "authentication.h"
 class CODMgr;
 
 
 class ClaimId
 {
 public:
-	ClaimId( ClaimType claim_type = CLAIM_OPPORTUNISTIC );
+	ClaimId( ClaimType claim_type, char const *slotname );
 	~ClaimId();
 
 	char*	id() {return c_id;};
@@ -67,6 +68,7 @@ public:
 	bool	matches( const char* id );
 	void	dropFile( int slot_id );
 	char const *publicClaimId() { return claimid_parser.publicClaimId(); }
+	char const *secSessionId() { return claimid_parser.secSessionId(); }
 
 private:
     char*   c_id;       // ClaimId string
@@ -173,12 +175,15 @@ public:
 	int sendAliveConnectHandler(Stream *sock);
 	int sendAliveResponseHandler( Stream *sock );
 
+	void scheddClosedClaim();
+
 		// Functions that return data
 	float		rank()			{return c_rank;};
 	float		oldrank()		{return c_oldrank;};
 	ClaimType	type()			{return c_type;};
 	char*		codId()			{return c_id->codId();};
     char*       id();
+	char const *secSessionId();
 	char const *publicClaimId();
     bool        idMatches( const char* id );
 	Client* 	client() 		{return c_client;};
@@ -314,6 +319,7 @@ private:
 	bool        c_may_unretire;
 	bool        c_retire_peacefully;
 	bool        c_preempt_was_true; //was PREEMPT ever true for this claim?
+	bool        c_schedd_closed_claim;
 
 
 		// Helper methods

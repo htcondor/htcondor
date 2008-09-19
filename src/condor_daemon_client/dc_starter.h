@@ -61,16 +61,20 @@ public:
 			@return true if we have the info, false if not */
 	bool locate( void );
 
+		/**
+		   @param timeout -1 to leave things alone; 0 for no timeout
+		   @param sec_session_id NULL for auto-negotiation
+		 */
 	bool reconnect( ClassAd* req, ClassAd* reply, ReliSock* rsock, 
-					int timeout = -1 );
+					int timeout, char const *sec_session_id);
 
 	// Error - Failed to update, a problem
 	// Okay - Success.  Updated
 	// Declined - Success.  Other side doesn't want it.  Don't bother
 	//      to try again.
 	enum X509UpdateStatus { XUS_Error = 0, XUS_Okay = 1, XUS_Declined = 2 };
-	X509UpdateStatus updateX509Proxy(const char * filename);
-	X509UpdateStatus delegateX509Proxy(const char * filename);
+	X509UpdateStatus updateX509Proxy(const char * filename, char const *sec_session_id);
+	X509UpdateStatus delegateX509Proxy(const char * filename, char const *sec_session_id);
 
  private:
 	bool is_initialized;

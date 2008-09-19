@@ -163,6 +163,13 @@ class AttrList : public AttrListAbstract
 		int Assign(char const *variable,double value);
 		int Assign(char const *variable,bool value);
 
+			// Escape double quotes in a value so that it can be
+			// safely turned into a ClassAd string by putting double
+			// quotes around it.  This function does _not_ add the
+			// surrounding double quotes.
+			// Returns the escaped string.
+		static char const * EscapeStringValue(char const *val,MyString &buf);
+
 		// Make an expression invisible when serializing the ClassAd.
 		// This (hopefully temporary hack) is to prevent the special
 		// attributes MyType and MyTargetType from being printed

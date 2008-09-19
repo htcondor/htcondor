@@ -70,7 +70,8 @@ Stream :: Stream(stream_code c) :
 	allow_empty_message_flag(FALSE),
 	decrypt_buf(NULL),
 	decrypt_buf_len(0),
-	m_peer_description_str(NULL)
+	m_peer_description_str(NULL),
+	m_peer_version(NULL)
 {
 }
 
@@ -90,6 +91,9 @@ Stream :: ~Stream()
 		free( decrypt_buf );
 	}
 	free(m_peer_description_str);
+	if( m_peer_version ) {
+		delete m_peer_version;
+	}
 }
 
 int 
@@ -1350,15 +1354,39 @@ Stream::put( char const *s)
 	return TRUE;
 }
 
-
-
 int 
 Stream::put( const MyString &s)
 {
 	return put( s.Value() );
 }
 
+int
+Stream::put_secret( char const *s )
+{
+	int retval;
 
+	prepare_crypto_for_secret();
+
+	retval = put(s);
+
+	restore_crypto_after_secret();
+
+	return retval;
+}
+
+int
+Stream::get_secret( char *&s )
+{
+	int retval;
+
+	prepare_crypto_for_secret();
+
+	retval = get(s);
+
+	restore_crypto_after_secret();
+
+	return retval;
+}
 
 int 
 Stream::put( char const *s, int		l)
@@ -2085,7 +2113,7 @@ Stream::unwrap(unsigned char* d_in,int l_in,
 void Stream::resetCrypto()
 {
 #ifdef HAVE_EXT_OPENSSL
-  if (get_encryption()) {
+  if (crypto_) {
     crypto_->resetState();
   }
 #endif
@@ -2176,53 +2204,18 @@ Stream::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
 
     // More check should be done here. what if keyId is NULL?
     if (inited) {
-        set_encryption_id(keyId);
+		if( enable ) {
+				// We do not set the encryption id if the default crypto
+				// mode is off, because setting the encryption id causes
+				// the UDP packet header to contain the encryption id,
+				// which causes a pre 7.1.3 receiver to think that encryption
+				// is turned on by default, even if that is not what was
+				// previously negotiated.
+			set_encryption_id(keyId);
+		}
 		set_crypto_mode(enable);
     }
 
-    /* 
-    // Now, if TCP, the first packet need to contain the key for verification purposes
-    // This key is encrypted with itself (along with rest of the packet).
-    if (type() == reli_sock) {
-        char * data = NULL;
-        int length;
-        static int PADDING_LEN = 24;
-        length = key->getKeyLength() + PADDING_LEN; // Pad with 24 bytes of random data
-        data = (char *)malloc(length + 1);
-        if (data == NULL) {
-            dprintf(D_NETWORK, "Out of memory!\n");
-            return false;
-        }
-    
-        if (_coding == stream_encode) {
-            // generate random data
-            unsigned char * ran = Condor_Crypt_Base::randomKey(PADDING_LEN);
-            memcpy(data, ran, PADDING_LEN);
-            memcpy(data+PADDING_LEN, key->getKeyData(), key->getKeyLength());
-            free(ran);
-            if (put_bytes(data, length) != length) {
-                // the crypto module is initialized, but send failed.
-                // For now, we also flag this as an error
-                inited = false;
-            }
-        }
-        else {
-            if (get_bytes(data, length) == length) {
-                // Only the first key->getKeyLength() are inspected
-                if (memcmp(data+PADDING_LEN, key->getKeyData(), key->getKeyLength()) != 0) {
-                    // this is definitely an error!
-                    inited = false;
-                }
-                else {
-                    inited = true;
-                }
-            }
-            else {
-                inited = false; 
-            }
-        } 
-    }
-    */
 #endif /* HAVE_EXT_OPENSSL */
 
     return inited;
@@ -2248,5 +2241,23 @@ Stream::set_peer_description(char const *str) {
 	}
 	else {
 		m_peer_description_str = NULL;
+	}
+}
+
+CondorVersionInfo *
+Stream::get_peer_version()
+{
+	return m_peer_version;
+}
+
+void
+Stream::set_peer_version(CondorVersionInfo *version)
+{
+	if( m_peer_version ) {
+		delete m_peer_version;
+		m_peer_version = NULL;
+	}
+	if( version ) {
+		m_peer_version = new CondorVersionInfo(*version);
 	}
 }

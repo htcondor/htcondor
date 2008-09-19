@@ -198,7 +198,7 @@ class Matchmaker : public Service
 		                                   /* result parameters: */
 		                              int &userprioCrumbs );
 
-		char *getCapability (const char *, const char *, ClassAdList &);
+		char const *getCapability (const char *, const char *, ClassAdList &, MyString &);
 		void addRemoteUserPrios( ClassAdList& );
 		void insertNegotiatorMatchExprs(ClassAd *ad);
 		void insertNegotiatorMatchExprs( ClassAdList &cal );

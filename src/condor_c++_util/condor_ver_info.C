@@ -51,6 +51,21 @@ CondorVersionInfo::CondorVersionInfo(const char *versionstring,
 	}
 }
 
+CondorVersionInfo::CondorVersionInfo(CondorVersionInfo &other)
+{
+	myversion = other.myversion;
+	mysubsys = NULL;
+	if( other.mysubsys ) {
+		mysubsys = strdup(other.mysubsys);
+	}
+	if( other.myversion.Arch ) {
+		myversion.Arch = strdup(other.myversion.Arch);
+	}
+	if( other.myversion.OpSys ) {
+		myversion.OpSys = strdup(other.myversion.OpSys);
+	}
+}
+
 CondorVersionInfo::~CondorVersionInfo()
 {
 	if (mysubsys) free(mysubsys);

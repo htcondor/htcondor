@@ -42,6 +42,8 @@ public:
 	CondorVersionInfo(const char *versionstring = NULL, 
 		const char *subsystem = NULL, const char *platformstring = NULL);
 
+	CondorVersionInfo(CondorVersionInfo &);
+
 	/// Destructor.
 	~CondorVersionInfo();
 

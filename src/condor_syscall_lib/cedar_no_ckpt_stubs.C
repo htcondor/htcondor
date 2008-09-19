@@ -68,3 +68,25 @@ void Authentication::split_canonical_name(char const *can_name,char **user,char 
 	EXCEPT( "Authentication::split_canonical_name() should never be "
 			"called within the Condor syscall library" );
 }
+
+void
+Stream::prepare_crypto_for_secret()
+{
+	EXCEPT( "Stream::prepare_crypto_for_secret() should never be "
+			"called within the Condor syscall library" );
+}
+
+void
+Stream::restore_crypto_after_secret()
+{
+	EXCEPT( "Stream::restore_crypto_after_secret() should never be "
+			"called within the Condor syscall library" );
+}
+
+bool
+Stream::prepare_crypto_for_secret_is_noop()
+{
+	EXCEPT( "Stream::prepare_crypto_for_secret_is_noop() should never be "
+			"called within the Condor syscall library" );
+	return true;
+}

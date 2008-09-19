@@ -109,6 +109,11 @@ class FileTransfer {
 		@return 1 on success, 0 on failure */
 	int InitDownloadFilenameRemaps(ClassAd *Ad);
 
+	/** @param session_id NULL (if should auto-negotiate) or
+		       security session id to use for outgoing file transfer
+		       commands */
+	void setSecuritySession(char const *session_id);
+
 	/** @return 1 on success, 0 on failure */
 	int DownloadFiles(bool blocking=true);
 
@@ -281,6 +286,7 @@ class FileTransfer {
 	bool m_use_file_catalog;
 	TransferQueueContactInfo m_xfer_queue_contact_info;
 	MyString m_jobid; // what job we are working on, for informational purposes
+	char *m_sec_session_id;
 
 	// called to construct the catalog of files in a direcotry
 	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable **catalog = NULL);

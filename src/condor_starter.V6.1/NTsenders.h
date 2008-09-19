@@ -52,6 +52,17 @@ extern "C" {
 	int REMOTE_CONDOR_get_job_attr( char *name, char *&expr );
 	int REMOTE_CONDOR_set_job_attr( char *name, char *expr );
 	int REMOTE_CONDOR_constrain( char *expr );
+
+    int REMOTE_CONDOR_get_sec_session_info(
+		char const *starter_reconnect_session_info,
+		MyString &reconnect_session_id,
+		MyString &reconnect_session_info,
+		MyString &reconnect_session_key,
+		char const *starter_filetrans_session_info,
+		MyString &filetrans_session_id,
+		MyString &filetrans_session_info,
+		MyString &filetrans_session_key);
+
 }
 
 #endif

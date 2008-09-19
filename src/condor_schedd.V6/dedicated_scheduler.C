@@ -2272,6 +2272,17 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 					// Grab the claim from the mrec
 				char const *claim = (*(*allocation->matches)[p])[i]->claimId();
 				char const *publicClaim = (*(*allocation->matches)[p])[i]->publicClaimId();
+
+				MyString claim_buf;
+				if( strchr(claim,',') ) {
+						// the claimid contains a comma, which is the delimiter
+						// in the list of claimids, so we must escape it
+					claim_buf = claim;
+					ASSERT( !strstr(claim_buf.Value(),"$(COMMA)") );
+					claim_buf.replaceString(",","$(COMMA)");
+					claim = claim_buf.Value();
+				}
+
 				claims.append(claim);
 				public_claims.append(publicClaim);
 
@@ -4079,14 +4090,23 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		char *claims = NULL;
 		GetAttributeStringNew(id.cluster, id.proc, ATTR_CLAIM_IDS, &claims);
 
+		StringList escapedClaimList(claims,",");
+		StringList claimList;
 		StringList hosts(remote_hosts);
-		StringList claimList(claims);
+
+		char *host;
+		char *claim;
+
+		escapedClaimList.rewind();
+		while( (claim = escapedClaimList.next()) ) {
+			MyString buf = claim;
+			buf.replaceString("$(COMMA)",",");
+			claimList.append(buf.Value());
+		}
 
 			// Foreach host in the stringlist, find matching machine by name
 		hosts.rewind();
 		claimList.rewind();
-		char *host;
-		char *claim;
 
 		while ( (host = hosts.next()) ) {
 

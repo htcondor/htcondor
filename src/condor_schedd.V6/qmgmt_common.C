@@ -56,7 +56,10 @@ int
 SetAttributeString(int cl, int pr, const char *name, const char *val)
 {
 	MyString buf;
+	MyString escape_buf;
 	int rval;
+
+	val = ClassAd::EscapeStringValue(val,escape_buf);
 
 	buf += '"';
 	buf +=  val;

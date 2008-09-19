@@ -93,10 +93,7 @@
 #define	MATCH_INFO			(SCHED_VERS+40)
 #define	ALIVE				(SCHED_VERS+41)
 #define REQUEST_CLAIM 		(SCHED_VERS+42)
-#define REQUEST_SERVICE		(SCHED_VERS+42)		// Old name for REQUEST_CLAIM
 #define RELEASE_CLAIM 		(SCHED_VERS+43)
-#define RELINQUISH_SERVICE	(SCHED_VERS+43)		// Old name for RELEASE_CLAIM
-#define VACATE_SERVICE		(SCHED_VERS+43)		// Old name for RELEASE_CLAIM
 #define ACTIVATE_CLAIM	 	(SCHED_VERS+44)
 #define PRIORITY_INFO       (SCHED_VERS+45)     /* negotiator to accountant */
 #define PCKPT_ALL_JOBS		(SCHED_VERS+46)

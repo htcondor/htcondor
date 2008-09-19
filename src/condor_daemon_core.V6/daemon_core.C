@@ -3493,7 +3493,19 @@ int DaemonCore::HandleReq(Stream *insock)
 				goto finalize;
 			}
 
-			if (!stream->set_crypto_key(true, session->key())) {
+				// NOTE: prior to 7.1.3, we _always_ set the encryption
+				// mode to "on" here, regardless of what was previously
+				// negotiated.  However, as of now, the sender never
+				// sends an encryption id in the UDP packet header unless
+				// we did negotiate to use encryption by default.  Once we
+				// no longer care about backwards compatibility with
+				// versions older than 7.1.3, we could allow the sender to
+				// set the encryption id and trust that we will set the mode
+				// as was previously negotiated.
+			SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*session->policy(), ATTR_SEC_ENCRYPTION);
+			bool turn_encryption_on = will_enable_encryption == SecMan::SEC_FEAT_ACT_YES;
+
+			if (!stream->set_crypto_key(turn_encryption_on, session->key())) {
 				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -3504,7 +3516,10 @@ int DaemonCore::HandleReq(Stream *insock)
 				result = FALSE;
 				goto finalize;
 			} else {
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled with key id %s.\n", sess_id);
+				dprintf (D_SECURITY,
+					"DC_AUTHENTICATE: encryption enabled with key id %s%s.\n",
+					sess_id,
+					turn_encryption_on ? "" : " (but encryption mode is off by default for this packet)");
 				sec_man->key_printf (D_SECURITY, session->key());
 			}
             // Lookup user if necessary
@@ -3682,6 +3697,12 @@ int DaemonCore::HandleReq(Stream *insock)
 			auth_info.dPrint (D_SECURITY);
 		}
 
+		MyString peer_version;
+		if( auth_info.LookupString( ATTR_SEC_REMOTE_VERSION, peer_version ) ) {
+			CondorVersionInfo ver_info( peer_version.Value() );
+			sock->set_peer_version( &ver_info );
+		}
+
 		// look at the ad.  get the command number.
 		int real_cmd = 0;
 		int tmp_cmd = 0;
@@ -3821,7 +3842,6 @@ int DaemonCore::HandleReq(Stream *insock)
 				if (the_policy) {
 					char *the_user  = NULL;
 					the_policy->LookupString( ATTR_SEC_USER, &the_user);
-
 					if (the_user) {
 						// copy this to the HandleReq() scope
 						user = the_user;
@@ -3960,6 +3980,26 @@ int DaemonCore::HandleReq(Stream *insock)
 						SecMan::sec_feat_act_rev[sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_ENACT)] );
 				}
 
+			}
+
+			if( !is_tcp ) {
+					// For UDP, if encryption is not on by default,
+					// configure it with the session key so that it
+					// can be programmatically toggled on and off for
+					// portions of the message (e.g. for secret stuff
+					// like claimids).  If encryption _is_ on by
+					// default, then it will have already been turned
+					// on by now, because the UDP header contains the
+					// encryption key in that case.
+
+				SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
+
+				if( will_enable_encryption != SecMan::SEC_FEAT_ACT_YES
+					&& the_key )
+				{
+					sock->set_crypto_key(false, the_key);
+					dprintf(D_SECURITY, "DC_AUTHENTICATE: encryption enabled with session key id %s (but encryption mode is off by default for this packet).\n", the_sid ? the_sid : "(null)");
+				}
 			}
 
 			if (is_tcp) {

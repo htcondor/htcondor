@@ -82,6 +82,7 @@
 #include "set_user_priv_from_ad.h"
 #include "classad_visa.h"
 #include "../condor_privsep/condor_privsep.h"
+#include "authentication.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -220,6 +221,41 @@ match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id,
 	auth_hole_id = NULL;
 
 	makeDescription();
+
+	bool suppress_sec_session = true;
+
+	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+		if( secSessionId() == NULL ) {
+			dprintf(D_FULLDEBUG,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: did not create security session from claim id, because claim id does not contain session information: %s\n",publicClaimId());
+		}
+		else {
+			bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+				DAEMON,
+				secSessionId(),
+				secSessionKey(),
+				secSessionInfo(),
+				EXECUTE_SIDE_MATCHSESSION_FQU,
+				peer,
+				0 );
+
+			if( rc ) {
+					// we're good to go; use the claimid security session
+				suppress_sec_session = false;
+			}
+			if( !rc ) {
+				dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session for %s, so will try to obtain a new security session\n",publicClaimId());
+			}
+		}
+	}
+	if( suppress_sec_session ) {
+		suppressSecSession( true );
+			// Now secSessionId() will always return NULL, so we will
+			// not try to do anything with the claimid security session.
+			// Most importantly, we will not try to delete it when this
+			// match rec is destroyed.  (If we failed to create the session,
+			// that may because it already exists, and this is a duplicate
+			// match record that will soon be thrown out.)
+	}
 }
 
 void
@@ -264,6 +300,15 @@ match_rec::~match_rec()
 		claim_requester->setMiscDataPtr( NULL );
 		claim_requester->cancelMessage();
 		claim_requester = NULL;
+	}
+
+	if( secSessionId() ) {
+			// Expire the session after enough time to let the final
+			// RELEASE_CLAIM command finish, in case it is still in
+			// progress.  This also allows us to more gracefully
+			// handle any final communication from the startd that may
+			// still be in flight.
+		daemonCore->getSecMan()->SetSessionExpiration(secSessionId(),time(NULL)+600);
 	}
 }
 
@@ -4972,7 +5017,7 @@ Scheduler::negotiate(int command, Stream* s)
 									ATTR_LAST_MATCH_TIME,(int)time(0));
 					cad->Insert(buffer);
 
-					if( !s->get(claim_id) ) {
+					if( !s->get_secret(claim_id) ) {
 						dprintf( D_ALWAYS,
 								"Can't receive ClaimId from mgr\n" );
 						return (!(KEEP_STREAM));
@@ -5312,15 +5357,15 @@ Scheduler::negotiate(int command, Stream* s)
 
 
 void
-Scheduler::vacate_service(int, Stream *sock)
+Scheduler::release_claim(int, Stream *sock)
 {
 	char	*claim_id = NULL;
 	match_rec *mrec;
 
-	dprintf( D_ALWAYS, "Got VACATE_SERVICE from %s\n", 
+	dprintf( D_ALWAYS, "Got RELEASE_CLAIM from %s\n", 
 			 sin_to_string(((Sock*)sock)->endpoint()) );
 
-	if (!sock->code(claim_id)) {
+	if (!sock->get_secret(claim_id)) {
 		dprintf (D_ALWAYS, "Failed to get ClaimId\n");
 		return;
 	}
@@ -5330,16 +5375,15 @@ Scheduler::vacate_service(int, Stream *sock)
 		dedicated_scheduler.DelMrec( claim_id );
 	}
 	else {
-			// The startd has sent us VACATE_SERVICE
-			// (a.k.a. RELEASE_CLAIM) because it has destroyed the
-			// claim.  There is therefore no need for us to send
-			// RELEASE_CLAIM to the startd.
+			// The startd has sent us RELEASE_CLAIM because it has
+			// destroyed the claim.  There is therefore no need for us
+			// to send RELEASE_CLAIM to the startd.
 		mrec->needs_release_claim = false;
 
 		DelMrec( mrec );
 	}
 	FREE (claim_id);
-	dprintf (D_PROTOCOL, "## 7(*)  Completed vacate_service\n");
+	dprintf (D_PROTOCOL, "## 7(*)  Completed release_claim\n");
 	return;
 }
 
@@ -8383,7 +8427,18 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 			// for this shadow record anymore... 
 		rec->match->setStatus( M_CLAIMED );
 	}
-	RemoveShadowRecFromMrec(rec);
+
+	if( rec->keepClaimAttributes &&  rec->match ) {
+			// We are shutting down and detaching from this claim.
+			// Remove the claim record without sending RELEASE_CLAIM
+			// to the startd.
+		rec->match->needs_release_claim = false;
+		DelMrec(rec->match);
+	}
+	else {
+		RemoveShadowRecFromMrec(rec);
+	}
+
 	if( pid ) {
 		shadowsByPid->remove(pid);
 	}
@@ -8773,11 +8828,11 @@ void
 send_vacate(match_rec* match,int cmd)
 {
 	classy_counted_ptr<DCStartd> startd = new DCStartd( match->peer );
-	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg( cmd, match->claimId() );
+	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( cmd, match->claimId() );
 
 	msg->setSuccessDebugLevel(D_ALWAYS);
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
-
+	msg->setSecSessionId( match->secSessionId() );
 
 		// Eventually we should keep info in the match record about if 
 		// the startd is able to receive incoming UDP (it will know
@@ -9360,6 +9415,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		case JOB_EXITED_AND_CLAIM_CLOSING:
 			if( srec->match ) {
 					// startd is not accepting more jobs on this claim
+				srec->match->needs_release_claim = false;
 				DelMrec(srec->match);
 			}
 				// no break, fall through
@@ -10549,9 +10605,9 @@ Scheduler::Register()
 			"reschedule_negotiator", this, WRITE);
 	 daemonCore->Register_Command( RECONFIG, "RECONFIG", 
 			(CommandHandler)&dc_reconfig, "reconfig", 0, OWNER );
-	 daemonCore->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", 
-			(CommandHandlercpp)&Scheduler::vacate_service, 
-			"vacate_service", this, WRITE);
+	 daemonCore->Register_Command(RELEASE_CLAIM, "RELEASE_CLAIM", 
+			(CommandHandlercpp)&Scheduler::release_claim, 
+			"release_claim", this, WRITE);
 	 daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
 			(CommandHandlercpp)&Scheduler::abort_job, 
 			"abort_job", this, WRITE);
@@ -11029,24 +11085,26 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 		dprintf(D_ALWAYS, "Null parameter --- match not added\n"); 
 		return NULL;
 	} 
+	// spit out a warning and return NULL if we already have this mrec
+	match_rec *tempRec;
+	if( matches->lookup( HashKey( id ), tempRec ) == 0 ) {
+		char const *pubid = tempRec->publicClaimId();
+		dprintf( D_ALWAYS,
+				 "attempt to add pre-existing match \"%s\" ignored\n",
+				 pubid ? pubid : "(null)" );
+		if( pre_existing ) {
+			*pre_existing = tempRec;
+		}
+		return NULL;
+	}
+
+
 	rec = new match_rec(id, peer, jobId, my_match_ad, user, pool, false);
 	if(!rec)
 	{
 		EXCEPT("Out of memory!");
 	} 
 
-	// spit out a warning and return NULL if we already have this mrec
-	match_rec *tempRec;
-	if( matches->lookup( HashKey( id ), tempRec ) == 0 ) {
-		dprintf( D_ALWAYS,
-				 "attempt to add pre-existing match \"%s\" ignored\n",
-				 rec->publicClaimId() ? rec->publicClaimId() : "(null)" );
-		delete rec;
-		if( pre_existing ) {
-			*pre_existing = tempRec;
-		}
-		return NULL;
-	}
 	if( matches->insert( HashKey( id ), rec ) != 0 ) {
 		dprintf( D_ALWAYS, "match \"%s\" insert failed\n",
 				 id ? id : "(null)" );
@@ -11337,11 +11395,12 @@ bool
 sendAlive( match_rec* mrec )
 {
 	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->peer );
-	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg( ALIVE, mrec->claimId() );
+	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( ALIVE, mrec->claimId() );
 
 	msg->setSuccessDebugLevel(D_PROTOCOL);
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
 	msg->setStreamType( Stream::safe_sock );
+	msg->setSecSessionId( mrec->secSessionId() );
 
 	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", mrec->description());
 
@@ -11383,7 +11442,7 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 
 	s->decode();
 	s->timeout(1);	// its a short message so data should be ready for us
-	s->code(claim_id);	// must free this; CEDAR will malloc cuz claimid=NULL
+	s->get_secret(claim_id);	// must free this; CEDAR will malloc cuz claimid=NULL
 	if ( !s->end_of_message() ) {
 		if (claim_id) free(claim_id);
 		return FALSE;
