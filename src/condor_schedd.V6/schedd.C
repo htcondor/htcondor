@@ -82,6 +82,11 @@
 #include "set_user_priv_from_ad.h"
 #include "classad_visa.h"
 #include "subsystem_info.h"
+#include "../condor_privsep/condor_privsep.h"
+
+#if HAVE_DLOPEN
+#include "ScheddPlugin.h"
+#endif
 
 #define DEFAULT_SHADOW_SIZE 125
 #define DEFAULT_JOB_START_COUNT 1
@@ -792,6 +797,10 @@ Scheduler::count_jobs()
 
 		// log classad into sql log so that it can be updated to DB
 	FILESQL::daemonAdInsert(m_ad, "ScheddAd", FILEObj, prevLHF);
+
+#if HAVE_DLOPEN
+	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, m_ad);
+#endif
 	
 		// Update collectors
 	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, m_ad, NULL, true);
@@ -851,6 +860,9 @@ Scheduler::count_jobs()
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   Owners[i].Name, UidDomain );
 
+#if HAVE_DLOPEN
+	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, m_ad);
+#endif
 		// Update collectors
 	  num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, m_ad, NULL, true);
 	  dprintf( D_ALWAYS, "Sent ad to %d collectors for %s@%s\n", 
@@ -6282,7 +6294,7 @@ Scheduler::StartJobHandler()
 			continue;
 		}
 
-		if ( param_boolean("PRIVSEP_ENABLED", false) ) {
+		if ( privsep_enabled() ) {
 			// If there is no available transferd for this job (and it 
 			// requires it), then start one and put the job back into the queue
 			if ( jobNeedsTransferd(cluster, proc, srec->universe) ) {
@@ -6703,7 +6715,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	// send the location of the transferd the shadow should use for
 	// this user. Due to the nasty method of command line argument parsing
 	// by the shadow, this should be first on the command line.
-	if ( param_boolean("PRIVSEP_ENABLED", false) && 
+	if ( privsep_enabled() && 
 			jobNeedsTransferd(job_id->cluster, job_id->proc, universe) )
 	{
 		TransferDaemon *td = NULL;

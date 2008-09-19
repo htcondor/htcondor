@@ -66,6 +66,7 @@ public:
 
 	virtual bool unregister_family(pid_t) = 0;
 
+	virtual bool use_glexec_for_family(pid_t, const char* proxy) = 0;
 };
 
 #endif

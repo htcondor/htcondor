@@ -1274,12 +1274,12 @@ sub DoChild
 			$newcmdout =  $piddir . "/" . $cmdout;
 
 			if( $nightly == 0) {
-				move($log, $newlog);
+				copy($log, $newlog);
 				copy($cmd, $newcmd);
-				move($out, $newout);
-				move($err, $newerr);
+				copy($out, $newout);
+				copy($err, $newerr);
 				copy($runout, $newrunout);
-				move($cmdout, $newcmdout);
+				copy($cmdout, $newcmdout);
 			} else {
 				copy($log, $newlog);
 				copy($cmd, $newcmd);

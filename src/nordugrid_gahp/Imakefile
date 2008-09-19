@@ -1,0 +1,21 @@
+NAME = nordugrid_gahp
+all_target($(NAME))
+
+/* We pick out the specific LIB targets we need to avoid accidently
+ * linking against any of the Condor libraries, which we don't want.
+ */
+CFLAGS = $(STD_C_FLAGS)
+LIB = $(PRE_EXT_LIBS) \
+	$(GLOBUS_DIR)/lib/libglobus_rsl_$(GlobusFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_ftp_client_$(GlobusFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_ftp_control_$(GlobusFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_io_$(GlobusFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_xio_$(GlobusFlavor).a \
+	$(GLOBUS_DIR)/lib/libgssapi_error_$(GlobusFlavor).a \
+	$(GSI_LIB) $(OPENSSL_LIB) $(POST_EXT_LIBS)
+
+OBJ = nordugrid_gahp.o globus_ftp_client_transfer.o globus_ftp_client_restart.o globus_ftp_client_state.o
+
+public_c_plus_nowrap_target($(NAME),sbin,$(OBJ),$(LIB))
+
+testbin::

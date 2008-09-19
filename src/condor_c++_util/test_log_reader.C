@@ -25,9 +25,10 @@
 #include "condor_distribution.h"
 #include "MyString.h"
 #include "subsystem_info.h"
+#include "simple_arg.h"
 #include <stdio.h>
 
-static const char *	VERSION = "0.9.2";
+static const char *	VERSION = "0.9.3";
 
 DECL_SUBSYSTEM( "TEST_LOG_READER", SUBSYSTEM_TYPE_TOOL );
 
@@ -35,7 +36,8 @@ enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
 enum Verbosity { VERB_NONE = 0, VERB_ERROR, VERB_WARNING, VERB_ALL };
 
-struct Arguments {
+struct Options
+{
 	const char *	logFile;
 	const char *	persistFile;
 	bool			readPersist;
@@ -52,10 +54,10 @@ struct Arguments {
 };
 
 Status
-CheckArgs(int argc, char **argv, Arguments &args);
+CheckArgs(int argc, const char **argv, Options &opts);
 
 int // 0 == okay, 1 == error
-ReadEvents(Arguments &args);
+ReadEvents(Options &opts);
 
 const char *timestr( struct tm &tm );
 
@@ -69,7 +71,7 @@ void handle_sig(int sig)
 }
 
 int
-main(int argc, char **argv)
+main(int argc, const char **argv)
 {
 	DebugFlags = D_ALWAYS;
 
@@ -83,17 +85,17 @@ main(int argc, char **argv)
 
 	int		result = 0;
 
-	Arguments	args;
+	Options	opts;
 
-	Status tmpStatus = CheckArgs(argc, argv, args);
-
+	Status tmpStatus = CheckArgs(argc, argv, opts);
+	
 	if ( tmpStatus == STATUS_OK ) {
-		result = ReadEvents(args);
+		result = ReadEvents(opts);
 	} else if ( tmpStatus == STATUS_ERROR ) {
 		result = 1;
 	}
 
-	if ( result != 0 && args.verbosity >= VERB_ERROR ) {
+	if ( result != 0 && opts.verbosity >= VERB_ERROR ) {
 		fprintf(stderr, "test_log_reader FAILED\n");
 	}
 
@@ -101,165 +103,175 @@ main(int argc, char **argv)
 }
 
 Status
-CheckArgs(int argc, char **argv, Arguments &args)
+CheckArgs(int argc, const char **argv, Options &opts)
 {
 	Status	status = STATUS_OK;
 
 	const char *	usage =
-		"Usage: test_log_reader [options] [filename]\n"
-		"  -debug <level>: debug level (e.g., D_FULLDEBUG)\n"
-		"  -maxexec <number>: maximum number of execute events to read\n"
-		"  -misscheck: Enable missed event checking "
+		"Usage: test_log_reader [options] <filename>\n"
+		"  --debug <level>: debug level (e.g., D_FULLDEBUG)\n"
+		"  --maxexec <number>: maximum number of execute events to read\n"
+		"  --misscheck: Enable missed event checking "
 		"(valid only with test writer)\n"
-		"  -persist <filename>: file to persist to/from (implies -rotation)\n"
-		"  -persist-dump: dump the persistent file state after reading it\n"
-		"  -ro|-rw|-wo: Set persitent state to "
+		"  --persist <filename>: file to persist to/from (implies -rotation)\n"
+		"  --persist-dump: dump the persistent file state after reading it\n"
+		"  --ro|--rw|--wo: Set persitent state to "
 		"read-only/read-write/write-only\n"
-		"  -init-only: exit after initialization\n"
-		"  -rotation <n>: enable rotation handling, set max #\n"
-		"  -no-rotation: disable rotation handling\n"
-		"  -sleep <number>: how many seconds to sleep between events\n"
-		"  -term <number>: number of terminate events to exit after\n"
-		"  -usage|-help|-h: print this message and exit\n"
+		"  --init-only: exit after initialization\n"
+		"  --rotation <n>: enable rotation handling, set max #\n"
+		"  --no-rotation: disable rotation handling\n"
+		"  --sleep <number>: how many seconds to sleep between events\n"
+		"  --term <number>: number of terminate events to exit after\n"
+		"  --usage|--help|-h: print this message and exit\n"
 		"  -v: Increase verbosity level by 1\n"
-		"  -verbosity <number>: set verbosity level (default is 1)\n"
-		"  -version: print the version number and compile date\n"
-		"  [filename]: the log file to read\n";
+		"  --verbosity <number>: set verbosity level (default is 1)\n"
+		"  --version: print the version number and compile date\n"
+		"  <filename>: the log file to read\n";
 
-	args.logFile = NULL;
-	args.persistFile = NULL;
-	args.readPersist = false;
-	args.writePersist = false;
-	args.maxExec = 0;
-	args.sleep = 5;
-	args.term = 1;
-	args.verbosity = 1;
-	args.rotation = false;
-	args.max_rotations = 0;
-	args.exitAfterInit = false;
-	args.dumpState = false;
-	args.missedCheck = false;
+	opts.logFile = NULL;
+	opts.persistFile = NULL;
+	opts.readPersist = false;
+	opts.writePersist = false;
+	opts.maxExec = 0;
+	opts.sleep = 5;
+	opts.term = 1;
+	opts.verbosity = 1;
+	opts.rotation = false;
+	opts.max_rotations = 0;
+	opts.exitAfterInit = false;
+	opts.dumpState = false;
+	opts.missedCheck = false;
 
 	for ( int index = 1; index < argc; ++index ) {
-		if ( !strcmp(argv[index], "-debug") ) {
-			if ( ++index >= argc ) {
-				fprintf(stderr, "Value needed for -debug argument\n");
+		SimpleArg	arg( argv, argc, index );
+
+		if ( arg.Error() ) {
+			printf("%s", usage);
+			status = STATUS_ERROR;
+		}
+
+		if ( arg.Match("debug") ) {
+			if ( arg.HasOpt() ) {
+				set_debug_flags( const_cast<char *>(arg.Opt()) );
+				index = arg.ConsumeOpt( );
+			} else {
+				fprintf(stderr, "Value needed for --debug argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
-			} else {
-				set_debug_flags( argv[index] );
 			}
 
-		} else if ( !strcmp(argv[index], "-maxexec") ) {
-			if ( ++index >= argc ) {
-				fprintf(stderr, "Value needed for -maxexec argument\n");
+		} else if ( arg.Match("maxexec") ) {
+			if ( arg.OptIsNumber() ) {
+				opts.maxExec = atoi(argv[index]);
+				index = arg.ConsumeOpt( );
+			} else {
+				fprintf(stderr, "Value needed for --maxexec argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
-			} else {
-				args.maxExec = atoi(argv[index]);
 			}
 
-		} else if ( !strcmp(argv[index], "-misscheck") ) {
-			args.missedCheck = true;
+		} else if ( arg.Match("misscheck") ) {
+			opts.missedCheck = true;
 
-		} else if ( !strcmp(argv[index], "-persist") ) {
-			if ( ++index >= argc ) {
-				fprintf(stderr, "Value needed for -persist argument\n");
+		} else if ( arg.Match("persist") ) {
+			if ( arg.HasOpt() ) {
+				opts.persistFile = argv[index];
+				opts.rotation = true;
+				opts.max_rotations = 0;
+				opts.readPersist = true;
+				opts.writePersist = true;
+				index = arg.ConsumeOpt( );
+			} else {
+				fprintf(stderr, "Value needed for --persist argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
-			} else {
-				args.persistFile = argv[index];
-				args.rotation = true;
-				args.rotation = 0;
-				args.readPersist = true;
-				args.writePersist = true;
 			}
 
-		} else if ( !strcmp(argv[index], "-persist-dump") ) {
-			args.dumpState = true;
+		} else if ( arg.Match("persist-dump") ) {
+			opts.dumpState = true;
 
-		} else if ( !strcmp(argv[index], "-init-only") ) {
-			args.exitAfterInit = true;
+		} else if ( arg.Match("init-only") ) {
+			opts.exitAfterInit = true;
 
-		} else if ( !strcmp(argv[index], "-ro") ) {
-			args.readPersist = true;
-			args.writePersist = false;
+		} else if ( arg.Match("ro") ) {
+			opts.readPersist = true;
+			opts.writePersist = false;
 
-		} else if ( !strcmp(argv[index], "-rw") ) {
-			args.readPersist = true;
-			args.writePersist = true;
+		} else if ( arg.Match("rw") ) {
+			opts.readPersist = true;
+			opts.writePersist = true;
 
-		} else if ( !strcmp(argv[index], "-rotation") ) {
-			if ( ++index >= argc ) {
-				fprintf(stderr, "Value needed for -rotation argument\n");
+
+		} else if ( arg.Match("rotation") ) {
+			if ( arg.OptIsNumber() ) {
+				opts.max_rotations = atoi(argv[index]);
+				opts.rotation = opts.max_rotations > 0;
+				index = arg.ConsumeOpt( );
+			} else {
+				fprintf(stderr, "Value needed for --rotation argument\n");
+			}
+
+		} else if ( arg.Match("no-rotation") ) {
+			opts.rotation = false;
+
+		} else if ( arg.Match("sleep") ) {
+			if ( arg.OptIsNumber() ) {
+				opts.sleep = atoi(argv[index]);
+				index = arg.ConsumeOpt( );
+			} else {
+				fprintf(stderr, "Value needed for --sleep argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
-			} else {
-				args.max_rotations = atoi( argv[index] );
-				args.rotation = args.max_rotations > 0;
 			}
 
-
-		} else if ( !strcmp(argv[index], "-no-rotation") ) {
-			args.rotation = false;
-			args.max_rotations = -1;
-
-
-		} else if ( !strcmp(argv[index], "-sleep") ) {
-			if ( ++index >= argc ) {
-				fprintf(stderr, "Value needed for -sleep argument\n");
+		} else if ( arg.Match("term") ) {
+			if ( arg.OptIsNumber() ) {
+				opts.term = atoi(argv[index]);
+				index = arg.ConsumeOpt( );
+			} else {
+				fprintf(stderr, "Value needed for --term argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
-			} else {
-				args.sleep = atoi(argv[index]);
 			}
 
-		} else if ( !strcmp(argv[index], "-term") ) {
-			if ( ++index >= argc ) {
-				fprintf(stderr, "Value needed for -term argument\n");
-				printf("%s", usage);
-				status = STATUS_ERROR;
-			} else {
-				args.term = atoi(argv[index]);
-			}
-
-		} else if ( ( !strcmp(argv[index], "-usage") )		||
-					( !strcmp(argv[index], "-h") )			||
-					( !strcmp(argv[index], "-help") )  )	{
+		} else if ( ( arg.Match("usage") )		||
+					( arg.Match('h') )			||
+					( arg.Match("help") )  )	{
 			printf("%s", usage);
 			status = STATUS_CANCEL;
 
-		} else if ( !strcmp(argv[index], "-v") ) {
-			args.verbosity++;
+		} else if ( arg.Match('v') ) {
+			opts.verbosity++;
 
-		} else if ( !strcmp(argv[index], "-verbosity") ) {
-			if ( ++index >= argc ) {
-				fprintf(stderr, "Value needed for -verbosity argument\n");
+		} else if ( arg.Match("verbosity") ) {
+			if ( arg.OptIsNumber() ) {
+				opts.verbosity = atoi(argv[index]);
+				index = arg.ConsumeOpt( );
+			} else {
+				fprintf(stderr, "Value needed for --verbosity argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
-			} else {
-				args.verbosity = atoi(argv[index]);
 			}
 
-		} else if ( !strcmp(argv[index], "-version") ) {
+		} else if ( arg.Match("version") ) {
 			printf("test_log_reader: %s, %s\n", VERSION, __DATE__);
 			status = STATUS_CANCEL;
 
-		} else if ( !strcmp(argv[index], "-wo") ) {
-			args.readPersist = false;
-			args.writePersist = true;
+		} else if ( arg.Match("wo") ) {
+			opts.readPersist = false;
+			opts.writePersist = true;
 
-		} else if ( argv[index][0] != '-' ) {
-			args.logFile = argv[index];
+		} else if ( !arg.ArgIsOpt() ) {
+			opts.logFile = arg.ArgStr();
 
 		} else {
-			fprintf(stderr, "Unrecognized argument: <%s>\n", argv[index]);
+			fprintf(stderr, "Unrecognized argument: <%s>\n", arg.ArgStr() );
 			printf("%s", usage);
 			status = STATUS_ERROR;
 		}
 	}
 
-	if ( status == STATUS_OK && !args.readPersist && args.logFile == NULL ) {
+	if ( status == STATUS_OK && !opts.readPersist && opts.logFile == NULL ) {
 		fprintf(stderr, "Log file must be specified if not restoring state\n");
 		printf("%s", usage);
 		status = STATUS_ERROR;
@@ -269,7 +281,7 @@ CheckArgs(int argc, char **argv, Arguments &args)
 }
 
 int
-ReadEvents(Arguments &args)
+ReadEvents(Options &opts)
 {
 	int		result = 0;
 
@@ -280,22 +292,22 @@ ReadEvents(Arguments &args)
 	ReadUserLog	log;
 
 	// Initialize the reader from the persisted state
-	if ( args.readPersist ) {
-		int	fd = safe_open_wrapper( args.persistFile, O_RDONLY, 0 );
+	if ( opts.readPersist ) {
+		int	fd = safe_open_wrapper( opts.persistFile, O_RDONLY, 0 );
 		if ( fd >= 0 ) {
 			if ( read( fd, state.buf, state.size ) != state.size ) {
 				fprintf( stderr, "Failed reading persistent file\n" );
 				return STATUS_ERROR;
 			}
 			close( fd );
-			if ( !log.initialize( state, args.max_rotations ) ) {
+			if ( !log.initialize( state, opts.max_rotations ) ) {
 				fprintf( stderr, "Failed to initialize from state\n" );
 				return STATUS_ERROR;
 			}
 			printf( "Initialized log reader from state %s\n",
-					args.persistFile );
+					opts.persistFile );
 		}
-		if ( args.dumpState ) {
+		if ( opts.dumpState ) {
 			MyString	str;
 			log.FormatFileState( state, str, "Restore File State (raw)" );
 			puts( str.GetCStr() );
@@ -307,17 +319,17 @@ ReadEvents(Arguments &args)
 
 	// If, after the above, the reader isn't initialized, do so now
 	if ( !log.isInitialized() ) {
-		if ( !log.initialize( args.logFile,
-							  args.max_rotations,
-							  args.rotation) ) {
+		if ( !log.initialize( opts.logFile,
+							  opts.max_rotations,
+							  opts.rotation) ) {
 			fprintf( stderr, "Failed to initialize with file\n" );
 			return STATUS_ERROR;
 		}
 	}
 
-	// -init-only ?
-	if ( args.exitAfterInit ) {
-		printf( "Exiting after init (due to -init-only)\n" );
+	// --init-only ?
+	if ( opts.exitAfterInit ) {
+		printf( "Exiting after init (due to --init-only)\n" );
 		return STATUS_OK;
 	}
 
@@ -327,7 +339,7 @@ ReadEvents(Arguments &args)
 
 	int		executeEventCount = 0;
 	int		terminatedEventCount = 0;
-	bool	done = (args.term == 0);
+	bool	done = (opts.term == 0);
 	bool	missedLast = false;
 	int		prevCluster=999, prevProc=999, prevSubproc=999;
 
@@ -336,15 +348,15 @@ ReadEvents(Arguments &args)
 
 		ULogEventOutcome	outcome = log.readEvent(event);
 		if ( outcome == ULOG_OK ) {
-			if ( args.verbosity >= VERB_ALL ) {
+			if ( opts.verbosity >= VERB_ALL ) {
 				printf( "Got an event from %d.%d.%d @ %s",
 						event->cluster, event->proc, event->subproc,
 						timestr(event->eventTime) );
 			}
 
 			// Store off the persisted state
-			if ( args.writePersist && log.GetFileState( state ) ) {
-				int	fd = safe_open_wrapper( args.persistFile,
+			if ( opts.writePersist && log.GetFileState( state ) ) {
+				int	fd = safe_open_wrapper( opts.persistFile,
 											O_WRONLY|O_CREAT,
 											S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
 				if ( fd >= 0 ) {
@@ -355,7 +367,7 @@ ReadEvents(Arguments &args)
 				}
 			}
 
-			if (args.missedCheck ) {
+			if (opts.missedCheck ) {
 				bool isPrevCluster = ( prevCluster == event->cluster );
 				bool isPrevProc = (  ( prevProc   == event->proc )  ||
 									 ( prevProc+1 == event->proc )  );
@@ -375,21 +387,21 @@ ReadEvents(Arguments &args)
 
 			switch ( event->eventNumber ) {
 			case ULOG_SUBMIT:
-				if ( args.verbosity >= VERB_ALL ) {
+				if ( opts.verbosity >= VERB_ALL ) {
 					printf(" (submit)\n");
 				}
 				missedLast = false;
 				break;
 
 			case ULOG_EXECUTE:
-				if ( args.verbosity >= VERB_ALL ) {
+				if ( opts.verbosity >= VERB_ALL ) {
 					printf(" (execute)\n");
 				}
-				if ( args.maxExec != 0 &&
-						++executeEventCount > args.maxExec ) {
-					if ( args.verbosity >= VERB_ERROR ) {
+				if ( opts.maxExec != 0 &&
+						++executeEventCount > opts.maxExec ) {
+					if ( opts.verbosity >= VERB_ERROR ) {
 						fprintf(stderr, "Maximum number of execute "
-								"events (%d) exceeded\n", args.maxExec);
+								"events (%d) exceeded\n", opts.maxExec);
 					}
 					result = 1;
 					done = true;
@@ -398,13 +410,13 @@ ReadEvents(Arguments &args)
 				break;
 
 			case ULOG_JOB_TERMINATED:
-				if ( args.verbosity >= VERB_ALL ) {
+				if ( opts.verbosity >= VERB_ALL ) {
 					printf(" (terminated)\n");
 				}
-				if ( args.term > 0 && ++terminatedEventCount >= args.term ) {
-					if ( args.verbosity >= VERB_ALL ) {
+				if ( opts.term > 0 && ++terminatedEventCount >= opts.term ) {
+					if ( opts.verbosity >= VERB_ALL ) {
 						printf( "Reached terminated event limit (%d); %s\n",
-								args.term, "exiting" );
+								opts.term, "exiting" );
 					}
 					done = true;
 				}
@@ -419,20 +431,22 @@ ReadEvents(Arguments &args)
 					fprintf( stderr, "Can't pointer cast generic event!\n" );
 				}
 				else {
-					int	l = strlen( generic->info );
-					char	*p = const_cast <char*>(generic->info+l-1);
+					char	*info = strdup( generic->info );
+					int		 l = strlen( info );
+					char	*p = info+l-1;
 					while( l && isspace(*p) ) {
 						*p = '\0';
 						p--;
 						l--;
 					}
-					printf( " (generic): '%s'\n", generic->info );
+					printf( " (generic): '%s'\n", info );
+					free( info );
 				}
 				break;
 			}
 
 			default:
-				if ( args.verbosity >= VERB_ALL ) {
+				if ( opts.verbosity >= VERB_ALL ) {
 					const char *name = event->eventName( );
 					printf(" (%s)\n", name ? name : "UNKNOWN" );
 				}
@@ -441,7 +455,7 @@ ReadEvents(Arguments &args)
 			}
 
 		} else if ( outcome == ULOG_NO_EVENT ) {
-			sleep(args.sleep);
+			sleep(opts.sleep);
 			missedLast = false;
 
 		} else if ( outcome == ULOG_MISSED_EVENT ) {
@@ -449,7 +463,7 @@ ReadEvents(Arguments &args)
 			missedLast = true;
 
 		} else if ( outcome == ULOG_RD_ERROR || outcome == ULOG_UNK_ERROR ) {
-			if ( args.verbosity >= VERB_ERROR ) {
+			if ( opts.verbosity >= VERB_ERROR ) {
 				fprintf(stderr, "Error reading event\n");
 			}
 			result = 1;
@@ -459,7 +473,7 @@ ReadEvents(Arguments &args)
 	}
 
 	log.GetFileState( state );
-	if ( args.dumpState ) {
+	if ( opts.dumpState ) {
 		MyString	str;
 
 		log.FormatFileState( state, str, "Final File State (raw)" );
@@ -468,9 +482,9 @@ ReadEvents(Arguments &args)
 		log.FormatFileState( str, "Final File State" );
 		puts( str.GetCStr() );
 	}
-	if ( args.writePersist ) {
+	if ( opts.writePersist ) {
 		fputs( "\nStoring final state...", stdout );
-		int	fd = safe_open_wrapper( args.persistFile,
+		int	fd = safe_open_wrapper( opts.persistFile,
 									O_WRONLY|O_CREAT,
 									S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
 		if ( fd >= 0 ) {

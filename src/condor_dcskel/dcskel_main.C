@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
+#include "subsystem_info.h"
 
 /* Using daemoncore, you get the benefits of a logging system with dprintf
 	and you can read config files automatically. To start testing
@@ -34,7 +35,7 @@
 //-------------------------------------------------------------
 
 // about self
-char* mySubSystem = "DCSKEL";		// used by Daemon Core
+DECL_SUBSYSTEM("DCSKEL", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
 //-------------------------------------------------------------
 

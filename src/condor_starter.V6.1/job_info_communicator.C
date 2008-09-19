@@ -449,7 +449,7 @@ JobInfoCommunicator::initUserPrivNoOwner( void )
 #endif
 
 		// if we're using PrivSep, we need ATTR_OWNER
-	if (privsep_enabled()) {
+	if (Starter->privSepHelper() != NULL) {
 		return false;
 	}
 

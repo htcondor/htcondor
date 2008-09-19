@@ -128,8 +128,13 @@ check_execute_dir_perms( char const *exec_path )
 	//     can do a mkdir as the condor UID then a chown to the job
 	//     owner UID)
 	//
+	// additionally, the GLEXEC_JOB feature requires world-writability
+	// on the execute dir
+	//
+	bool glexec_job = param_boolean("GLEXEC_JOB", false);
 	if ((st.st_uid == get_condor_uid()) &&
-	    (!can_switch_ids() || not_root_squashed(exec_path)))
+	    (!can_switch_ids() || not_root_squashed(exec_path)) &&
+	    !glexec_job)
 	{
 		// do the chown unless the current mode is exactly 755
 		//
@@ -143,10 +148,12 @@ check_execute_dir_perms( char const *exec_path )
 		if ((st.st_mode & 01777) != 01777) {
 			new_mode = 01777;
 		}
-		dprintf(D_ALWAYS,
-		        "WARNING: %s root-squashed or not condor-owned: "
-		            "requiring world-writability\n",
-	        exec_path);
+		if (!glexec_job) {
+			dprintf(D_ALWAYS,
+			        "WARNING: %s root-squashed or not condor-owned: "
+			            "requiring world-writability\n",
+			        exec_path);
+		}
 	}
 #endif
 	// now do a chmod if needed

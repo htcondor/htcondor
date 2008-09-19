@@ -23,6 +23,10 @@
 #include "proc_family_monitor.h"
 #include "procd_common.h"
 
+#if !defined(WIN32)
+#include "glexec_kill.h"
+#endif
+
 ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
                        pid_t              root_pid,
                        birthday_t         root_birthday,
@@ -38,6 +42,9 @@ ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
 	m_max_image_size(0),
 	m_member_list(NULL)
 {
+#if !defined(WIN32)
+	m_proxy = NULL;
+#endif
 }
 
 ProcFamily::~ProcFamily()
@@ -55,6 +62,14 @@ ProcFamily::~ProcFamily()
 		delete member;
 		member = next_member;
 	}
+
+#if !defined(WIN32)
+	// delete the proxy if we've been given one
+	//
+	if (m_proxy != NULL) {
+		free(m_proxy);
+	}
+#endif
 }
 
 unsigned long
@@ -127,12 +142,31 @@ ProcFamily::aggregate_usage(ProcFamilyUsage* usage)
 }
 
 void
+ProcFamily::signal_root(int sig)
+{
+#if !defined(WIN32)
+	if (m_proxy != NULL) {
+		glexec_kill(m_proxy, m_root_pid, sig);
+		return;
+	}
+#endif
+	send_signal(m_root_pid, sig);
+}
+
+void
 ProcFamily::spree(int sig)
 {
-	ProcFamilyMember* member = m_member_list;
-	while (member != NULL) {
-		send_signal(member->m_proc_info, sig);
-		member = member->m_next;
+	ProcFamilyMember* member;
+	for (member = m_member_list; member != NULL; member = member->m_next) {
+#if !defined(WIN32)
+		if (m_proxy != NULL) {
+			glexec_kill(m_proxy,
+			            member->m_proc_info->pid,
+			            sig);
+			continue;
+		}
+#endif
+		send_signal(member->m_proc_info->pid, sig);
 	}
 }
 
@@ -274,6 +308,18 @@ ProcFamily::fold_into_parent(ProcFamily* parent)
 	parent->m_member_list = m_member_list;
 	m_member_list = NULL;
 }
+
+#if !defined(WIN32)
+void
+ProcFamily::set_proxy(char* proxy)
+{
+	if (m_proxy != NULL) {
+		free(m_proxy);
+	}
+	m_proxy = strdup(proxy);
+	ASSERT(m_proxy != NULL);
+}
+#endif
 
 #if defined(PROCD_DEBUG)
 

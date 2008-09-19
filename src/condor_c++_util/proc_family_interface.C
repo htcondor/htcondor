@@ -57,6 +57,13 @@ ProcFamilyInterface* ProcFamilyInterface::create(const char* subsys)
 		            "ignoring USE_PROCD setting\n");
 		ptr = new ProcFamilyProxy;
 	}
+	else if (param_boolean("GLEXEC_JOB", false)) {
+
+		dprintf(D_ALWAYS,
+		        "GLEXEC_JOB requires use of ProcD; "
+		            "ignoring USE_PROCD setting\n");
+		ptr = new ProcFamilyProxy;
+	}
 	else {
 
 		ptr = new ProcFamilyDirect;

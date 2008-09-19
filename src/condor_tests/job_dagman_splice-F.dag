@@ -1,0 +1,10 @@
+JOB	A	job_dagman_splice-F.cmd
+VARS A	outfilename="$(JOB)"
+
+SPLICE S1 job_dagman_splice-F-splice1.dag
+SPLICE S2 job_dagman_splice-F-splice1.dag
+
+PARENT S1 CHILD A
+PARENT A CHILD S2
+
+DOT job_dagman_splice-F.dot

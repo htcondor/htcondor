@@ -52,9 +52,6 @@
 #if HAVE_EXT_COREDUMPER
 #include "google/coredumper.h"
 #endif
-#if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
-#include <resolv.h>
-#endif
 
 // Externs to Globals
 extern DLL_IMPORT_MAGIC char **environ;
@@ -291,6 +288,20 @@ DC_Skip_Auth_Init()
 	doAuthInit = false;
 }
 
+static void
+kill_daemon_ad_file()
+{
+	MyString param_name;
+	param_name.sprintf( "%s_DAEMON_AD_FILE", mySubSystem->getName() );
+	char *ad_file = param(param_name.Value());
+	if( !ad_file ) {
+		return;
+	}
+
+	unlink(ad_file);
+
+	free(ad_file);
+}
 
 void
 drop_addr_file()
@@ -306,7 +317,9 @@ drop_addr_file()
 	addrFile = param( addr_file );
 
 	if( addrFile ) {
-		if( (ADDR_FILE = safe_fopen_wrapper(addrFile, "w")) ) {
+		MyString newAddrFile;
+		newAddrFile.sprintf("%s.new",addrFile);
+		if( (ADDR_FILE = safe_fopen_wrapper(newAddrFile.Value(), "w")) ) {
 			// Always prefer the local, private address if possible.
 			const char* addr = daemonCore->privateNetworkIpAddr();
 			if (!addr) {
@@ -317,10 +330,16 @@ drop_addr_file()
 			fprintf( ADDR_FILE, "%s\n", CondorVersion() );
 			fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
 			fclose( ADDR_FILE );
+			if( rotate_file(newAddrFile.Value(),addrFile)!=0 ) {
+				dprintf( D_ALWAYS,
+						 "DaemonCore: ERROR: failed to rotate %s to %s\n",
+						 newAddrFile.Value(),
+						 addrFile);
+			}
 		} else {
 			dprintf( D_ALWAYS,
 					 "DaemonCore: ERROR: Can't open address file %s\n",
-					 addrFile );
+					 newAddrFile.Value() );
 		}
 	}
 }
@@ -1098,10 +1117,8 @@ unix_sigusr2(int)
 void
 dc_reconfig( bool is_full )
 {
-#if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
-		// re-initialize dns info (e.g. IP addresses of nameservers)
-	res_init();
-#endif
+		// do this first in case anything else depends on DNS
+	daemonCore->refreshDNS();
 
 		// Actually re-read the files...  Added by Derek Wright on
 		// 12/8/97 (long after this function was first written... 
@@ -1139,13 +1156,11 @@ dc_reconfig( bool is_full )
 	drop_core_in_log();
 
 	// Re-read everything from the config file DaemonCore itself cares about.
+	// This also cleares the DNS cache.
 	daemonCore->reconfig();
 
-	// If we're doing a full reconfig, also call ReInit to clear out
-	// the DNS info we have cashed for the IP verify code. Also clear
-	// out the passwd cache.
+	// Clear out the passwd cache.
 	if( is_full ) {
-		daemonCore->ReInit();
 		clear_passwd_cache();
 	}
 
@@ -1349,7 +1364,8 @@ int main( int argc, char** argv )
 		mySubSystem->printf( );
 		EXCEPT( "Programmer error: mySubSystem info is invalid(%s,%d,%s)!",
 				mySubSystem->getName(),
-				mySubSystem->getType(), mySubSystem->getTypeName() );
+				mySubSystem->getType(),
+				mySubSystem->getTypeName() );
 	}
 
 
@@ -1833,6 +1849,11 @@ int main( int argc, char** argv )
 	AllocConsole();
 #endif
 
+		// Avoid possibility of stale info sticking around from previous run.
+		// For example, we had problems in 7.0.4 and earlier with reconnect
+		// shadows in parallel universe reading the old schedd ad file.
+	kill_daemon_ad_file();
+
 		// Now that we have our pid, we could dump our pidfile, if we
 		// want it. 
 	if( pidFile ) {
@@ -1990,15 +2011,7 @@ int main( int argc, char** argv )
 								  (CommandHandler)time_offset_receive_cedar_stub,
 								  "time_offset_cedar_stub", 0, DAEMON );
 
-	// Call daemonCore's ReInit(), which clears the cached DNS info.
-	// It also initializes some stuff, which is why we call it now. 
-	// This function will set a timer to call itself again 8 hours
-	// after it's been called, so that even after an asynchronous
-	// reconfig, we still wait 8 hours instead of just using a
-	// periodic timer.  -Derek Wright <wright@cs.wisc.edu> 1/28/99 
-	daemonCore->ReInit();
-
-	// Call daemonCore's reconfig(), which reads everything else from
+	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes
 	// private data members, etc.
 	daemonCore->reconfig();

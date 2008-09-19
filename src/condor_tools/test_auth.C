@@ -115,7 +115,6 @@ main( int argc, char* argv[] )
 	config( 0, true );
 
 	IpVerify ipverify;
-	ipverify.Init();
 
 	MyString line;
 	while( line.readLine(input_fp) ) {

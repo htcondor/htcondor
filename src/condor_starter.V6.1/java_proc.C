@@ -25,7 +25,6 @@
 #include "condor_ver_info.h"
 #include "java_proc.h"
 #include "java_config.h"
-#include "starter_privsep_helper.h"
 
 extern CStarter * Starter;
 

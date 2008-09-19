@@ -118,8 +118,6 @@ extern SubsystemInfo	*mySubSystem;
 // Macro to declare subsystem info
 #define DECL_SUBSYSTEM(_name_,_type_) \
 	SubsystemInfo* mySubSystem = new SubsystemInfo(_name_,_type_)
-#define DECL_SUBSYSTEM_DAEMON(_name_) \
-	DECL_SUBSYSTEM(_name_,SUBSYSTEM_TYPE_DEAMON)
 
 #endif	// C++
 

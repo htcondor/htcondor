@@ -1,0 +1,1351 @@
+
+
+
+
+			GLOBUS ASCII HELPER PROTOCOL
+				 VERSION 1.0
+
+
+			      Todd Tannenbaum
+			   [tannenba@cs.wisc.edu]
+
+			       December 2001
+
+			       Condor Project  
+		       [http://www.condorproject.org]
+
+		      Department of Computer Sciences
+		      University of Wisconsin-Madison
+			   1210 W. Dayton Street 
+			     Madison, WI  53706
+			  [http://www.cs.wisc.edu]
+
+
+
+
+
+1.    INTRODUCTION
+
+	The objective of the Globus ASCII Helper Protocol (GAHP) is to provide
+	services from the Globus Toolkit via a simple ASCII-based protocol.  A
+	process which implements GAHP is referred to as a GAHP server.  GAHP
+	is designed to handle both synchronous (blocking) and asynchronous
+	(non-blocking) calls.  
+
+	The first GAHP specification focuses upon GRAM, GASS, MyPROXY,
+	and DUROC grid services.   This document assumes the reader is
+	familiar with general Globus Toolkit concepts and functionality. 
+
+1.1   WHY GAHP?
+
+	Although the Globus Toolkit provides a C API and implementation, and
+	CoG kits based upon Globus technology provide bindings in a variety of
+	other languages, there are several distinct advantages to using an
+	independent GAHP server process instead of linking a library into a
+	body of existing code.  For instance, parts of the native Globus
+	Toolkit API provide only synchronous/blocking calls.  Toolkit users
+	which require a non-blocking/asynchronous interface must make use of
+	multiple threads, which is assisted by the fact that the Globus
+	Toolkit is thread-safe.  However, thread safety requires that _all_
+	modules linked into the process be both re-entrant and in agreement
+	upon a threading model.   This may be a significant barrier when
+	trying to integrate Globus Toolkit services into legacy
+	non-thread-safe code, or when attempting to link with commercial
+	libraries which either have no support for threads or define their own
+	threading model.    But because the GAHP server runs as a separate
+	process, it can be easily implemented as a multi-threaded server, and
+	still present an asynchronous non-blocking protocol.
+
+	GAHP facilitates the construction of multi-tier systems.   A first
+	tier client can easily send ASCII commands via a socket (perhaps
+	securely via an SSH or SSL tunnel) to a second tier running a GAHP
+	server, allowing Grid services to be consolidated at the second or
+	third tier with minimal effort. 
+
+	Furthermore GAHP, like many other simple ASCII-based protocols,
+	supports the concept of component-based development independent of the
+	software language used with minimal complexity.  The C API for Globus
+	technologies differs from the Java bindings which differs from the
+	Perl bindings.  By using GAHP, a body of software could be written
+	once with one interface and then subsequently utilize a GAHP server
+	written in C, Java, or Perl -- and said GAHP server could be running
+	locally or as a daemon on a remote host.
+
+	Does this sound like many of the same advantages often associated with
+	web services? Absolutely. The "GAHP" is intended to "fill the gap"
+	until grid services are exposed as either web services or via the Open
+	Grid Services Architecture (OGSA). But this could take quite some time
+	-- until then, the GAHP protocol is useful to satisfy immediate needs.
+	The protocol is designed first and foremost for the ease and rapid
+	development of GAHP servers. 
+
+1.2   AVAILABLE GAHP SERVERS
+
+	The Condor Project at University of Wisconsin-Madison has developed a
+	GAHP server written in C using pthreads and the Globus Toolkit client
+	libraries.  Most Unix platforms are supported.  
+
+	The National Computing Science Alliance (NCSA) has developed a GAHP
+	server written in pure Java, using the Java CoG.  Any platform with a
+	Java 1.2 virtual machine available can run this GAHP server.  
+	
+	Both are available from
+		http://www.cs.wisc.edu/condor/gahp
+
+2.0   GAHP SERVER IMPLEMENTATION 
+	
+	GAHP itself, as a protocol, is independent of the underlying transport
+	protocol and requires only a reliable ordered data stream channel.
+
+	A GAHP server, however, is assumed to read and respond to GAHP command
+	solely via stdin and stdout.  Should stdin to a GAHP server be closed,
+	the GAHP server should immediately shutdown in a manner similar to the
+	receipt of a QUIT command.  Therefore, a GAHP server can be easily
+	invoked and managed via SSHD, inted, or rshd.  Software can spawn a
+	local GAHP server via an interface such as POSIX.2 popen().
+
+	Under no circumstances should a GAHP server block when issued any
+	command.  All commands need to return nearly instantaneously.
+	Therefore, most GAHP servers will be implemented as a multi-threaded
+	process.
+
+3.0   GAHP COMMANDS
+
+	The following commands can be recognized in GAHP as of version 1.0.0
+	of the protocol:
+
+		ASYNC_MODE_ON
+		ASYNC_MODE_OFF
+		COMMANDS
+		GASS_SERVER_INIT
+		GRAM_CALLBACK_ALLOW
+		GRAM_ERROR_STRING
+		GRAM_JOB_CALLBACK_REGISTER
+		GRAM_JOB_CANCEL
+		GRAM_JOB_REQUEST
+		GRAM_JOB_SIGNAL
+		GRAM_JOB_STATUS
+		GRAM_PING
+		INITIALIZE_FROM_FILE
+		INITIALIZE_FROM_MYPROXY
+		MYPROXY_DELEGATE
+		MYPROXY_DESTROY
+		MYPROXY_REFRESH
+		MYPROXY_RETRIEVE
+		PROXY_INFO
+		QUIT
+		REFRESH_PROXY_FROM_FILE
+		RESULTS
+		VERSION
+
+	Not all commands defined in the protocol must be implemented; the
+	existence of some commands will vary between GAHP server
+	implementations.  However, the following list of commands represents
+	the minimum implementation that is required for all servers:
+		
+		COMMANDS
+		GASS_SERVER_INIT
+		GRAM_CALLBACK_ALLOW
+		GRAM_JOB_CALLBACK_REGISTER
+		GRAM_JOB_CANCEL
+		GRAM_JOB_REQUEST
+		GRAM_JOB_SIGNAL
+		GRAM_JOB_STATUS
+		GRAM_PING
+		INITIALIZE_FROM_FILE
+		QUIT
+		RESULTS
+		VERSION
+
+3.1   CONVENTIONS AND TERMS USED IN SECTION 3.2
+
+	Below are definitions for the terms used in the sections to follow:
+
+	<CRLF>
+
+		The characters carriage return and line feed (in that
+		order), _or_ solely the line feed character.
+
+	<SP>
+
+		The space character.
+
+	line
+
+		A sequence of ASCII characters ending with a <CRLF>.
+
+	Request Line
+
+		A request for action on the part of the GAHP server.
+
+	Return Line
+		
+		A line immediately returned by the GAHP server upon
+		receiving a Request Line.
+
+	Result Line
+
+		A line sent by the GAHP server in response to a RESULTS
+		request, which communicates the results of a previous
+		asynchronous command Request.
+
+	S: and R:
+
+		In the Example sections for the commands below, the prefix
+		"S: " is used to signify what the client sends to the GAHP
+		server.   The prefix "R: " is used to signify what the
+		client receives from the GAHP server.  Note that the "S: "
+		or "R: " should not actually be sent or received.
+
+3.2   GAHP COMMAND STRUCTURE
+
+         GAHP commands consist of three parts:
+
+	    * Request Line
+	    * Return Line
+	    * Result Line
+	 
+	 Each of these "Lines" consists of a variable length character
+         string ending with the character sequence <CRLF>.  
+	
+	 A Request Line is a request from the client for action on the part of
+	 the GAHP server.  Each Request Line consists of a command code
+	 followed by argument field(s).  Command codes are a string of
+	 alphabetic characters.  Upper and lower case alphabetic characters
+	 are to be treated identically with respect to command codes.  Thus,
+	 any of the following may represent the gram_job_request command:
+            gram_job_request
+            Gram_Job_Request
+            grAm_joB_reQUEst
+            GRAM_JOB_REQUEST
+	In contrast, the argument fields of a Request Line are _case
+	sensitive_.
+
+	The Return Line is always generated by the server as an immediate
+	response to a Request Line.  The first character of a Return Line will
+	contain one the following characters:
+		S - for Success
+		F - for Failure
+		E - for a syntax or parse Error
+	Any Request Line which contains an unrecognized or unsupported command,
+	or a command with an insufficient number of arguments, will generate an
+	"E" response.
+
+	The Result Line is used to support commands that would otherwise
+	block.  Any GAHP command which may require the implementation to block
+	on network communication require a "request id" as part of the Request
+	Line.  For such commands, the Result Line just communicates if the
+	request has been successfully parsed and queued for service by the
+	GAHP server.  At this point, the GAHP server would typically dispatch
+	a new thread to actually service the request.  Once the request has
+	completed, the dispatched thread should create a Result Line and
+	enqueue it until the client issues a RESULT command.  
+
+3.3   TRANSPARENCY
+
+	Arguments on a particular Line (be it Request, Return, or Result) are
+	typically separated by a <SP>.  In the event that a string argument
+	needs to contain a <SP> within the string itself, it may be escaped by
+	placing a backslash ("\") in front of the <SP> character.  Thus, the
+	character sequence "\ " (no quotes) must not be treated as a
+	separator between arguments, but instead as a space character within a
+	string argument.
+
+3.4   SEQUENCE OF EVENTS
+
+	Upon startup, the GAHP server should output to stdout a banner string
+	which is identical to the output from the VERSION command without the
+	beginning "S " sequence (see example below).  Next, the GAHP server
+	should wait for a complete Request Line from the client (e.g. stdin).
+	The server is to take no action until a Request Line sequence is
+	received.
+
+	At startup, allowable commands are limited to the following:
+		COMMANDS
+		INITIALIZE_FROM_FILE
+		INITIALIZE_FROM_MYPROXY
+		QUIT
+		VERSION
+	Once a successful INITIALIZE_* command is completed, any other command
+	may be issued.  If any command outside of the above list is issued
+	before a successful INITIALIZE_* command, the Result Line should
+	consist of : 
+	   E <CRLF>
+
+	Example:
+
+		R: $GahpVersion: 1.0.0 Nov 26 2001 NCSA\ CoG\ Gahpd $
+		S: GRAM_PING 100 vulture.cs.wisc.edu/fork
+		R: E
+		S: RESULTS
+		R: E
+		S: COMMANDS
+		R: S COMMANDS GRAM_JOB_CANCEL GRAM_JOB_REQUEST GRAM_JOB_SIGNAL GRAM_JOB_STATUS GRAM_PING INITIALIZE_FROM_FILE QUIT RESULTS VERSION
+		S: VERSION
+		R: S $GahpVersion: 1.0.0 Nov 26 2001 NCSA\ CoG\ Gahpd $
+		S: INITIALIZE_FROM_FILE /tmp/grid_proxy_554523.txt
+		R: S
+		S: GRAM_PING 100 vulture.cs.wisc.edu/fork
+		R: S
+		S: RESULTS
+		R: S 0
+		S: RESULTS
+		R: S 1
+		R: 100 0
+		S: QUIT
+		R: S
+
+3.4   COMMAND SYNTAX 
+
+	This section contains the syntax for the Request, Return, and Result
+	line for each command.
+
+	-----------------------------------------------
+
+	INITIALIZE_FROM_FILE
+
+	Initialize the GAHP server and provide it with a GSI (Grid Security
+	Infrastructure) proxy certificate which will be used by the GAHP
+	server for all subsequent authentication which requires GSI
+	credentials.
+
+	+ Request Line:
+
+		INITIALIZE_FROM_FILE <SP> <path-to-local-proxy-file> <CRLF>
+
+		<path-to-local-proxy-file> = a fully-qualified pathname to a
+		file local to the GAHP server which contains a valid GSI
+		proxied certificate.
+
+	+ Return Line:
+
+		One of the following:
+
+		S <CRLF>
+		F <SP> <error-string> <CRLF>
+
+		Upon success, use the "S" version; if not recognized, use the
+		"F" version.
+
+		* error_string = brief string description of the error,
+		    appropriate for reporting to a human end-user.
+
+	+ Result Line:
+
+		None.
+
+	-----------------------------------------------
+
+	INITIALIZE_FROM_MYPROXY
+
+	Initialize the GAHP server and retrieve a GSI proxy credential
+	from a MyProxy server using username/passphrase
+	authentication.  The retrieved GSI proxy credential will be
+	used by the GAHP server for all subsequent authentication
+	which requires GSI credentials.
+
+	+ Request Line:
+
+		INITIALIZE_FROM_MYPROXY <SP> <path-to-local-proxy-file> <SP>
+		    <myproxy-server-hostname> <SP> <myproxy-server-port> <SP>
+		    <myproxy-username> <SP> <myproxy-passphrase> <SP>
+		    <proxy-lifetime> <CRLF>
+
+		* path-to-local-proxy-file = a fully-qualified
+		    pathname to a file local to the GAHP server where
+		    the GAHP server should store the proxy credential
+
+		* myproxy-server-hostname = the fully-qualified
+		    hostname of the MyProxy server
+
+		* myproxy-server-port = the TCP port of the MyProxy
+		    server, typically 7512
+
+		* myproxy-username = the username associated with the
+		    proxy credential on the MyProxy server
+
+		* myproxy-passphrase = the passphrase associated with
+		    the proxy credential on the MyProxy server
+
+		* proxy-lifetime = the requested lifetime of the
+		    retrieved proxy credential, in hours
+
+	+ Return Line:
+
+		One of the following:
+
+		S <CRLF>
+		F <SP> <error-string> <CRLF>
+
+		Upon success, use the "S" version; if not recognized, use the
+		"F" version.
+
+		* error_string = brief string description of the error,
+		    appropriate for reporting to a human end-user.
+
+	+ Result Line:
+
+		None.
+
+	-----------------------------------------------
+	
+	COMMANDS
+
+	List all the commands from this protocol specification which are
+	implemented by this GAHP server.
+
+	+ Request Line:
+		
+		COMMANDS <CRLF>
+
+	+ Return Line:
+
+		S <SP> <command 1> <SP> <command 2> <SP> ... <command X> <CRLF>
+
+
+	+ Result Line:
+	  
+	  	None.
+
+	-----------------------------------------------
+
+	VERSION 
+
+	Return the version string for this GAHP.  The version string follows
+	a specified format (see below).  Ideally, the version entire version
+	string, including the starting and ending dollar sign ($)
+	delimiters, should be a literal string in the text of the GAHP
+	server executable.  This way, the Unix/RCS "ident" command can
+	produce the version string.
+
+	The version returned should correspond to the version of the
+	protocol supported.  
+
+	+ Request Line:
+
+		VERSION <CRLF>
+
+	+ Return Line:
+
+		S <SP> $GahpVesion: <SP> <major>.<minor>.<subminor> <SP> 
+		    <build-month> <SP> <build-day-of-month> <SP>
+		    <build-year> <SP> <general-descrip> <SP>$ <CRLF>
+
+		* major.minor.subminor = for this version of the
+		    protocol, use version 1.0.0.
+
+		* build-month = string with the month abbreviation when
+		    this GAHP server was built or released.  Permitted
+		    values are: "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+		    "Jul", "Aug", "Sep", "Oct", "Nov", and "Dec".
+
+		* build-day-of-month = day of the month when GAHP server
+		    was built or released; an integer between 1 and 31
+		    inclusive.
+
+		* build-year = four digit integer specifying the year in
+		    which the GAHP server was built or released.
+
+		* general-descrip = a string identifying a particular 
+		    GAHP server implementation.
+
+	+ Result Line:
+
+		None.
+
+	+ Example:
+
+		S: VERSION
+		R: S $GahpVersion: 1.0.0 Nov 26 2001 NCSA\ CoG\ Gahpd $
+
+	-----------------------------------------------
+
+	ASYNC_MODE_ON
+		
+	Enable Asynchronous notification when the GAHP server has results
+	pending for a client. This is most useful for clients that do not
+	want to periodically poll the GAHP server with a RESULTS command.
+	When asynchronous notification mode is active, the GAHP server will
+	print out an 'R' (without the quotes) on column one when the
+	'RESULTS' command would return one or more lines. The 'R' is printed
+	only once between successive 'RESULTS' commands.	The 'R' is
+	also guaranteed to only appear in between atomic return lines; the
+	'R" will not interrupt another command's output.
+
+	If there are already pending results when the asynchronous results
+	available mode is activated, no indication of the presence of those
+	results will be given. A GAHP server is permitted to only consider
+	changes to it's result queue for additions after the ASYNC_MODE_ON
+	command has successfully completed. GAHP clients should issue a
+	'RESULTS' command immediately after enabling asynchronous
+	notification, to ensure that any results that may have been added to
+	the queue during the processing of the ASYNC_MODE_ON command are
+	accounted for.
+
+	+ Request Line:
+
+		ASYNC_MODE_ON <CRLF>
+	
+	+ Return Line:
+		
+		S <CRLF>
+
+		Immediately afterwards, the client should be prepared to
+		handle an R <CRLF> appearing in the output of the GAHP
+		server.
+
+	+ Result Line:
+		
+		None.
+
+	+ Example:
+
+		S: ASYNC_MODE_ON
+		R: S
+		S: GRAM_PING 00001 beak.cs.wisc.edu/jobmanager
+		R: S
+		S: GRAM_PING 00002 nostos.cs.wisc.edu/jobmanager
+		R: S
+		R: R	
+		S: RESULTS
+		R: S 2
+		R: 00001 0
+		R: 00002 0
+
+	Note that you are NOT guaranteed that the 'R' will not appear
+	between the dispatching of a command and the return line(s) of that
+	command; the GAHP server only guarantees that the 'R' will not
+	interrupt an in-progress return. The following is also a legal
+	example: 
+		S: ASYNC_MODE_ON
+		R: S
+		S: GRAM_PING 00001 beak.cs.wisc.edu/jobmanager
+		R: S
+		S: GRAM_PING 00002 nostos.cs.wisc.edu/jobmanager
+		R: R	
+		R: S
+		S: RESULTS
+		R: S 2
+		R: 00001 0
+		R: 00002 0
+	
+		(Note the reversal of the R and the S after GRAM_PING 00002)
+
+	-----------------------------------------------
+
+	ASYNC_MODE_OFF
+
+	Disable asynchronous results-available notification. In this mode,
+	the only way to discover available results is to poll with the
+	RESULTS command.  This mode is the default. Asynchronous mode can be
+	enable with the ASYNC_MODE_ON command.
+
+	+ Request Line:
+	
+		ASYNC_MODE_OFF <CRLF> 
+
+	+ Return Line:
+
+		S <CRLF>
+
+	+ Results Line:
+
+		None
+
+	+ Example:
+
+		S: ASYNC_MODE_OFF
+		R: S
+
+
+	-----------------------------------------------
+
+	QUIT
+
+	Free any/all system resources (close all sockets, etc) and terminate
+	as quickly as possible.
+
+	+ Request Line:
+
+		QUIT <CRLF>
+
+	+ Return Line:
+
+		S <CRLF>
+
+		Immediately afterwards, the command pipe should be closed
+		and the GAHP server should terminate.
+
+	+ Result Line:
+
+		None.
+
+	-----------------------------------------------
+
+	RESULTS
+
+	Display all of the Result Lines which have been queued since the
+	last RESULTS command was issued.  Upon success, the first return
+	line specifies the number of subsequent Result Lines which will be
+	displayed.  Then each result line appears (one per line) -- each
+	starts with the request ID which corresponds to the request ID
+	supplied when the corresponding command was submitted.  The exact
+	format of the Result Line varies based upon which corresponding
+	Request command was issued.  
+
+	IMPORTANT: Result Lines must be displayed in the _exact order_ in
+	which they were queued!!!  In other words, the Result Lines
+	displayed must be sorted in the order by which they were placed into
+	the GAHP's result line queue, from earliest to most recent.
+
+	+ Request Line:
+
+		RESULTS <CRLF>
+
+	+ Return Line(s):
+
+		S <SP> <num-of-subsequent-result-lines> <CRLF>
+		<reqid> <SP> ... <CRLF>
+		<reqid> <SP> ... <CRLF>
+		...
+
+		* reqid = integer Request ID, set to the value specified in
+		    the corresponding Request Line.
+
+	+ Result Line:
+
+		None.
+
+	+ Example:
+
+		S: RESULTS
+		R: S 1
+		R: 100 0
+
+	-----------------------------------------------
+	
+	GRAM_CALLBACK_ALLOW
+
+	Create a TCP port on which it listens for responses from the Job
+	Manager.  A Result Line will be generated for each callback message
+	sent to this socket.
+
+	Note: Unlike other asynchronous command requests, the Request ID
+	specified on the Request Line *cannot* be re-used after a Result
+	Line with the same Request ID is returned.  
+
+	+ Request Line: 
+			
+		GRAM_CALLBACK_ALLOW <SP> <reqid> <SP> <requested_port> <CRLF>
+
+		* reqid = non-zero integer Request ID 
+
+		* requested_port = an integer with a requested TCP port
+		    number.  If 0, then the subsequently created listen
+		    socket should be on a dynamic TCP port.  If non-zero,
+		    then the listen socket should be created on this port
+		    _if possible_.  It is not an error condition if the
+		    requested port cannot be used.
+
+	+ Return Line:
+
+		One of the following:
+
+		S <SP> <callback_contact> <CRLF>
+		F <SP> <integer_error_code> <SP> <error_string> <CRLF>
+
+		On success, use the "S" version; otherwise use the "F"
+		version.
+
+		* callback_contact = a string representing this callback
+		    channel; to be subsequently used with GRAM_JOB_REQUEST
+		    and/or GRAM_JOB_CALLBACK_REGISTER commands.
+
+		* error_string = brief string description of the error_code,
+		    appropriate for reporting to a human end-user.
+
+	+ Result Line:
+
+		None.
+
+	-----------------------------------------------
+	
+	GRAM_ERROR_STRING
+
+	Retrieve brief string description of an error code obtained in the
+	Result Line of any command that starts with "GRAM".
+
+	+ Request Line:
+
+		GRAM_ERROR_STRING <SP> <error_code> <CRLF>
+
+		* error_code = integer error code obtained from the Result 
+		    Line of any command that starts with "GRAM".
+
+	+ Return Line:
+
+		One of the following:
+
+		S <SP> <error-string> <CRLF>
+		F <SP> Unknown\ Error <CRLF>
+
+		If <error_code> is recognized, use the "S" version; if not
+		recognized, use the "F" version.
+
+		* error_string = brief string description of the error_code,
+		    appropriate for reporting to a human end-user.
+
+	+ Result Line:
+
+		None.
+
+	-----------------------------------------------
+
+	GRAM_JOB_REQUEST
+	
+	Submit a job request to a specified resource.  This will cause the
+	job to be submitted to Globus.
+
+	+ Request Line:
+	
+		GRAM_JOB_REQUEST <SP> <reqid> <SP> <resource_contact_string> 
+		    <SP> <callback_contact> <SP> <use_full_delegation> <SP> 
+		    <rsl> <CRLF>
+
+		* reqid = non-zero integer Request ID 
+
+		* resource_contact_string = valid url-style Resource Manager 
+		    Contact string representing a Gatekeeper; see
+  	    	    http://www.globus.org/gram/client/
+	      	        resource_manager_contact.html
+
+		* callback_contact = a string with a URL obtained from a
+		    GRAM_CALLBACK_ALLOW command which will receive messages
+		    about the job, or "NULL" (no quotes).  
+
+		* use_full_delegation = an integer; 0 for limited delegation,
+		    and 1 for full delegation of the credential sent to the
+		    remote resource.
+
+		* rsl = valid RSL string describing the job; see URL
+		    http://www.globus.org/gram/rsl_spec1.html
+
+	+ Return Line:
+
+		<result> <CRLF>
+
+		* result = the character "S" (no quotes) for successful
+		    submission of the request (meaning that the request is
+		    now pending), or an "E" for error on the
+		    parse of the request or its arguments (e.g. an
+		    unrecognized or unsupported command, or for missing or
+		    malformed arguments).  
+
+	+ Result Line:
+			
+		<reqid> <SP> <result-code> <SP> <job_contact_string> <CRLF>
+			
+		* reqid = integer Request ID, set to the value specified in
+		    the corresponding Request Line.
+
+		* result-code = integer equal to 0 on success, or an error code
+
+		* job_contact = on success, a string representing a unique 
+		    identifier for the job.  This identifier must not be bound
+		    to this GAHP server, but instead must be allowed to be
+		    used in subsequent GAHP server instantiations.  For
+		    instance, the job_contact must be implemented in such a
+		    fashion that the following sequence of events by the caller
+		    must be permissible:
+		    	a) issue a GRAM_JOB_REQUEST command
+			b) read the job_contact in the result line
+			c) store the job_contact persistently
+			d) subsequently kill and restart the GAHP server
+		  	   process
+			e) issue a GRAM_JOB_CANCEL command, passing it the
+			   stored job_contact value obtained in step (b).
+		    It is strongly suggested to GAHP server implementers use
+		    the Job Contact string as returned by the Gatekeeper, i.e.
+		    a unique contact string (URL) to a Globus Job Manager.
+
+	-----------------------------------------------
+
+	GRAM_JOB_CANCEL
+
+	This function removes a PENDING job request, or kill all processes
+	associated with an ACTIVE job, releasing any associated resources.
+
+	+ Request Line:
+	
+		GRAM_JOB_CANCEL <SP> <reqid> <SP> <job_contact> <CRLF>
+		
+		* reqid = non-zero integer Request ID 
+
+		* job_contact = job_contact (as returned from 
+		    GRAM_JOB_REQUEST) of the job to be canceled.
+	
+	+ Return Line:
+
+		<result> <CRLF>
+
+		* result = the character "S" (no quotes) for successful
+		    submission of the request (meaning that the request is
+		    now pending), or an "E" for error on the
+		    parse of the request or its arguments (e.g. an
+		    unrecognized or unsupported command, or for missing or
+		    malformed arguments).  
+
+	+ Result Line:
+			
+		<reqid> <SP> <result-code> <CRLF>
+			
+		* reqid = integer Request ID, set to the value specified in
+		    the corresponding Request Line.
+
+		* result-code = integer equal to 0 on success, or an error code
+
+	-----------------------------------------------
+
+	GRAM_JOB_STATUS 
+
+	Query and report the current status of a submitted job.
+
+	+ Request Line:
+
+		GRAM_JOB_STATUS <SP> <reqid> <SP> <job_contact> <CRLF>
+		
+		* reqid = non-zero integer Request ID 
+
+		* job_contact = job_contact (as returned from 
+		    GRAM_JOB_REQUEST) of the job whose status is desired.
+
+	+ Return Line:
+
+		<result> <CRLF>
+
+		* result = the character "S" (no quotes) for successful
+		    submission of the request (meaning that the request is
+		    now pending), or an "E" for error on the
+		    parse of the request or its arguments (e.g. an
+		    unrecognized or unsupported command, or for missing or
+		    malformed arguments).  
+
+	+ Result Line:
+			
+		<reqid> <SP> <result-code> <SP> <failure-code> <SP> 
+			<job_status> <CRLF>
+			
+		* reqid = integer Request ID, set to the value specified in
+		    the corresponding Request Line.
+
+		* result-code = integer equal to 0 on success, or an error code
+
+		* failure-code = an integer containing additional 
+		    information about a failure.
+
+		* job_status = if the result_code is 0 (success), then
+		    job_status is set to an integer based upon the status of
+		    the job as follows:
+			PENDING 1
+			ACTIVE 2
+			FAILED 4
+			DONE 8
+			SUSPENDED 16
+
+	-----------------------------------------------
+	
+	GRAM_JOB_SIGNAL 
+
+	Send a signal to the Job Manager associated with a specified job.
+
+	+ Request Line:
+	
+		GRAM_JOB_SIGNAL <SP> <reqid> <SP> <job_contact> <SP> <signal> 
+			<SP> <signal_arg> <CRLF>
+
+		* reqid = non-zero integer Request ID 
+
+		* job_contact = job_contact (as returned from 
+		    GRAM_JOB_REQUEST) of the job whose status is desired.
+
+		* signal = an integer with the signal to send
+
+		* signal_arg = a string which contains argument(s) for the
+			signal handler
+
+	+ Return Line:
+
+		<result> <CRLF>
+
+		* result = the character "S" (no quotes) for successful
+		    submission of the request (meaning that the request is
+		    now pending), or an "E" for error on the
+		    parse of the request or its arguments (e.g. an
+		    unrecognized or unsupported command, or for missing or
+		    malformed arguments).  
+
+	+ Result Line:
+			
+		<reqid> <SP> <result-code> <SP> <failure-code> <SP> 
+			<job_status> <CRLF>
+			
+		* reqid = integer Request ID, set to the value specified in
+		    the corresponding Request Line.
+
+		* result-code = integer equal to 0 on success, or an error code
+
+		* failure-code = an integer containing additional 
+		    information about a failure.
+
+		* job_status = if the result_code is 0 (success), then
+		    job_status is set to an integer based upon the status of
+		    the job as follows:
+			PENDING 1
+			ACTIVE 2
+			FAILED 4
+			DONE 8
+			SUSPENDED 16
+
+	-----------------------------------------------
+	
+	GRAM_PING 
+
+	Send a ping to a specified Globus Gatekeeper in order to determine
+	if that Gatekeeper is alive, reachable, authorizes the client's
+	credentials, and is responding to queries.
+
+	+ Request Line:
+	
+		GRAM_PING <SP> <reqid> <SP> <resource_contact> <CRLF>
+		
+		* reqid = non-zero integer Request ID 
+
+		* resource_contact = valid url-style Resource Manager 
+		    Contact string representing a Gatekeeper; see
+  	    	    http://www.globus.org/gram/client/
+	      	        resource_manager_contact.html
+
+	+ Return Line:
+
+		<result> <CRLF>
+
+		* result = the character "S" (no quotes) for successful
+		    submission of the request (meaning that the request is
+		    now pending), or an "E" for error on the
+		    parse of the request or its arguments (e.g. an
+		    unrecognized or unsupported command, or for missing or
+		    malformed arguments).  
+
+	+ Result Line:
+			
+		<reqid> <SP> <result-code> <CRLF>
+			
+		* reqid = integer Request ID, set to the value specified in
+		    the corresponding Request Line.
+
+		* result-code = integer equal to 0 if the Gatekeeper can 
+		    be successfully contacted and is responding, or an error
+		    code.
+
+	-----------------------------------------------
+
+	GRAM_JOB_CALLBACK_REGISTER 
+
+	Register the callback_contact with the job manager for job 
+	state changes.
+
+	+ Request Line:
+
+		GRAM_JOB_CALLBACK_REGISTER <SP> <reqid> <SP> <job_contact> 
+			<SP> <callback_contact> <CRLF>
+		
+		* reqid = non-zero integer Request ID 
+
+		* job_contact = job_contact (as returned from 
+		    GRAM_JOB_REQUEST) of the job whose status is desired.
+
+		* callback_contact = a string with a URL obtained from a
+		    GRAM_CALLBACK_ALLOW command which will receive messages
+		    about the job, or "NULL" (no quotes).  
+
+	+ Return Line:
+
+		<result> <CRLF>
+
+		* result = the character "S" (no quotes) for successful
+		    submission of the request (meaning that the request is
+		    now pending), or an "E" for error on the
+		    parse of the request or its arguments (e.g. an
+		    unrecognized or unsupported command, or for missing or
+		    malformed arguments).  
+
+	+ Result Line:
+			
+		<reqid> <SP> <result-code> <SP> <failure-code> <SP> 
+			<job_status> <CRLF>
+			
+		* reqid = integer Request ID, set to the value specified in
+		    the corresponding Request Line.
+
+		* result-code = integer equal to 0 on success, or an error code
+
+		* failure-code = an integer containing additional 
+		    information about a failure.
+
+		* job_status = if the result_code is 0 (success), then
+		    job_status is set to an integer based upon the status of
+		    the job as follows:
+			PENDING 1
+			ACTIVE 2
+			FAILED 4
+			DONE 8
+			SUSPENDED 16
+
+	-----------------------------------------------
+	
+	GASS_SERVER_INIT
+
+	Create a new listen socket, and dispatch a thread to service
+	incoming GASS file transfer protocol requests on this socket.
+
+	+ Request Line:
+
+		GASS_SERVER_INIT <SP> <reqid> <SP> <port> <CRLF>
+
+		<port> = a fully-qualified pathname to a
+		file local to the GAHP server which contains a valid GSI
+		proxied certificate.
+
+	+ Return Line:
+
+		<result> <CRLF>
+
+		* result = the character "S" (no quotes) for successful
+		    submission of the request (meaning that the request is
+		    now pending), or an "E" for error on the
+		    parse of the request or its arguments (e.g. an
+		    unrecognized or unsupported command, or for missing or
+		    malformed arguments).  
+
+	+ Result Line:
+			
+		<reqid> <SP> <result-code> <SP> <gass_url> <CRLF>
+			
+		* reqid = integer Request ID, set to the value specified in
+		    the corresponding Request Line.
+
+		* result-code = integer equal to 0 on success, or an error code
+
+		* gass_url = a string containing the base URL where the
+		    gass server is listening if result code is 0.  
+
+	-----------------------------------------------
+
+	REFRESH_PROXY_FROM_FILE
+
+	Reset the GSI (Grid Security Infrastructure) proxy certificate cached
+	by the GAHP server, which is used by the GAHP server for all
+	subsequent authentication which requires GSI credentials.  This
+	command can be used to tell the GAHP server to use a different
+	credential than the one initially specified via the
+	INITIALIZE_FROM_FILE command.  The intention is this command will be
+	used to refresh an about-to-expire credential used by the GAHP server.
+
+	+ Request Line:
+
+		REFRESH_PROXY_FROM_FILE <SP> <path-to-local-proxy-file> <CRLF>
+
+		<path-to-local-proxy-file> = a fully-qualified pathname to a
+		file local to the GAHP server which contains a valid GSI
+		proxied certificate.
+
+	+ Return Line:
+
+		One of the following:
+
+		S <CRLF>
+		F <SP> <error-string> <CRLF>
+
+		Upon success, use the "S" version; if not recognized, use the
+		"F" version.
+
+		* error_string = brief string description of the error,
+		    appropriate for reporting to a human end-user.
+
+	+ Result Line:
+
+		None.
+
+	-----------------------------------------------
+
+	MYPROXY_REFRESH
+
+	Use a MyProxy server to renew an existing proxy credential
+	before it expires.  The GAHP server must have been initialized
+	with a credential that has authorization to renew the proxy.
+	Possession of the credential to be renewed is typically not
+	sufficient for authorization because that would make all of
+	the user's proxy credentials renewable, bypassing the lifetime
+	restriction.  Instead, only specific trusted services are
+	allowed to renew credentials.  For example, a Condor-G server
+	running on denim.ncsa.uiuc.edu that wants to renew Jim
+	Basney's proxy credential would initialize the GAHP server
+	with its service credential (for example, /C=US/O=National
+	Computational Science Alliance/CN=condorg/denim.ncsa.uiuc.edu)
+	and pass the path to Jim's proxy credential as the second
+	argument to the MYPROXY_REFRESH command.
+	
+	+ Request Line:
+
+		MYPROXY_REFRESH <SP> <reqid> <SP>
+		    <path-to-expiring-proxy> <SP> <path-to-new-proxy> <SP>
+		    <myproxy-server-hostname> <SP> <myproxy-server-port> <SP>
+		    <myproxy-username> <SP> <proxy-lifetime> <CRLF>
+
+		* reqid = non-zero integer Request ID 
+
+		* path-to-expiring-proxy = a fully-qualified pathname
+		    to a file local to the GAHP server where the proxy
+		    credential that is about to expire is stored
+
+		* path-to-new-proxy = a fully-qualified pathname to a
+		    file local to the GAHP server where the GAHP
+		    server should store the new proxy credential
+
+		* myproxy-server-hostname = the fully-qualified
+		    hostname of the MyProxy server
+
+		* myproxy-server-port = the TCP port of the MyProxy
+		    server, typically 7512
+
+		* myproxy-username = the username associated with the
+		    proxy credential on the MyProxy server
+
+		* proxy-lifetime = the requested lifetime of the
+		    retrieved proxy credential, in hours
+
+	+ Return Line:
+
+		<result> <CRLF>
+
+		<result> = the character "S" (no quotes) for successful
+		    submission of the request (meaning that the request is
+		    now pending), or an "E" for error on the
+		    parse of the request or its arguments (e.g. an
+		    unrecognized or unsupported command, or for missing or
+		    malformed arguments).  
+
+	+ Result Line:
+
+		<reqid> <SP> <result-code> <CRLF>
+			
+		* reqid = integer Request ID, set to the value specified in
+		    the corresponding Request Line.
+
+		* result-code = integer equal to 0 on success, or an error code
+
+	-----------------------------------------------
+
+	MYPROXY_RETRIEVE
+
+	Retrieve a proxy credential from a MyProxy server.  The GAHP
+	server uses its current GSI proxy credential together with a
+	MyProxy username and passphrase to authenticate to the
+	server.  The GAHP server's proxy credential need not have the
+	same subject as the retrieved proxy credential.  The GAHP
+	server simply writes the retrieved proxy credential to the
+	specified file.  It does not use it for authentication.
+
+	+ Request Line:
+
+		MYPROXY_RETRIEVE <SP> <reqid> <SP>
+		    <path-to-local-proxy-file> <SP>
+		    <myproxy-server-hostname> <SP> <myproxy-server-port> <SP>
+		    <myproxy-username> <SP> <myproxy-passphrase> <SP>
+		    <proxy-lifetime> <CRLF>
+
+		* reqid = non-zero integer Request ID 
+
+		* path-to-local-proxy-file = a fully-qualified
+		    pathname to a file local to the GAHP server where
+		    the GAHP server should store the retrieved proxy
+		    credential
+
+		* myproxy-server-hostname = the fully-qualified
+		    hostname of the MyProxy server
+
+		* myproxy-server-port = the TCP port of the MyProxy
+		    server, typically 7512
+
+		* myproxy-username = the username associated with the
+		    proxy credential on the MyProxy server
+
+		* myproxy-passphrase = the passphrase associated with
+		    the proxy credential on the MyProxy server
+
+		* proxy-lifetime = the requested lifetime of the
+		    retrieved proxy credential, in hours
+
+	+ Return Line:
+
+		<result> <CRLF>
+
+		<result> = the character "S" (no quotes) for successful
+		    submission of the request (meaning that the request is
+		    now pending), or an "E" for error on the
+		    parse of the request or its arguments (e.g. an
+		    unrecognized or unsupported command, or for missing or
+		    malformed arguments).  
+
+	+ Result Line:
+
+		<reqid> <SP> <result-code> <CRLF>
+			
+		* reqid = integer Request ID, set to the value specified in
+		    the corresponding Request Line.
+
+		* result-code = integer equal to 0 on success, or an error code
+
+	-----------------------------------------------
+
+	PROXY_INFO
+
+	Return information about the GAHP server's proxy credential.
+
+	+ Request Line:
+
+		PROXY_INFO <CRLF>
+
+	+ Return Line:
+
+		One of the following:
+
+		S <subject> <SP> <issuer> <SP> <type> <SP>
+		    <strength> <SP> <timeleft> <CRLF>
+
+		F <SP> <error-string> <CRLF>
+
+		* subject = certificate subject name
+
+		* issuer = certificate issuer name
+
+		* type = either "full" or "limited"
+
+		* strength = number of bits
+
+		* timeleft = seconds to expiration
+
+	+ Result Line:
+
+		None.
+
+	+ Example:
+
+		S: PROXY_INFO
+		R: /C=US/O=National\ Computational\ Science\ Alliance/CN=Jim\ Basney/CN=proxy /C=US/O=National\ Computational\ Science\ Alliance/CN=Jim\ Basney full 512 342
+
+	-----------------------------------------------
+
+	MYPROXY_DESTROY
+
+	Remove a proxy stored on the MyProxy server.  The GAHP server
+	authenticates to the MyProxy server with its active
+	credential.  For example, if a user stores a proxy credential
+	on a MyProxy server, to be retrieved and renewed by a job
+	manager while the job is running, the job manager can remove
+	the proxy from the MyProxy server when the job completes.
+
+	+ Request Line:
+
+		MYPROXY_DESTROY <SP> <reqid> <SP>
+		    <myproxy-server-hostname> <SP> <myproxy-server-port> <SP>
+		    <myproxy-username> <CRLF>
+
+		* reqid = non-zero integer Request ID 
+
+		* myproxy-server-hostname = the fully-qualified
+		    hostname of the MyProxy server
+
+		* myproxy-server-port = the TCP port of the MyProxy
+		    server, typically 7512
+
+		* myproxy-username = the username associated with the
+		    proxy credential on the MyProxy server
+
+	+ Return Line:
+
+		<result> <CRLF>
+
+		<result> = the character "S" (no quotes) for successful
+		    submission of the request (meaning that the request is
+		    now pending), or an "E" for error on the
+		    parse of the request or its arguments (e.g. an
+		    unrecognized or unsupported command, or for missing or
+		    malformed arguments).  
+
+	+ Result Line:
+
+		<reqid> <SP> <result-code> <CRLF>
+			
+		* reqid = integer Request ID, set to the value specified in
+		    the corresponding Request Line.
+
+		* result-code = integer equal to 0 on success, or an error code
+
+	-----------------------------------------------
+
+	MYPROXY_DELEGATE
+
+	Delegate the GAHP server's credential to a MyProxy server for
+	later retrieval.
+
+	+ Request Line:
+
+		MYPROXY_DELEGATE <SP> <reqid> <SP>
+		    <myproxy-server-hostname> <SP> <myproxy-server-port> <SP>
+		    <myproxy-username> <SP> <myproxy-passphrase> <SP>
+		    <proxy-lifetime> <CRLF>
+
+		* reqid = non-zero integer Request ID 
+
+		* myproxy-server-hostname = the fully-qualified
+		    hostname of the MyProxy server
+
+		* myproxy-server-port = the TCP port of the MyProxy
+		    server, typically 7512
+
+		* myproxy-username = the username associated with the
+		    proxy credential on the MyProxy server
+
+		* myproxy-passphrase = the passphrase associated with
+		    the proxy credential on the MyProxy server
+
+		* proxy-lifetime = the maximum lifetime for proxies
+		    retrieved from the server using this proxy, in hours1
+
+	+ Return Line:
+
+		<result> <CRLF>
+
+		<result> = the character "S" (no quotes) for successful
+		    submission of the request (meaning that the request is
+		    now pending), or an "E" for error on the
+		    parse of the request or its arguments (e.g. an
+		    unrecognized or unsupported command, or for missing or
+		    malformed arguments).  
+
+	+ Result Line:
+
+		<reqid> <SP> <result-code> <CRLF>
+			
+		* reqid = integer Request ID, set to the value specified in
+		    the corresponding Request Line.
+
+		* result-code = integer equal to 0 on success, or an error code
+
+	-----------------------------------------------
+
+** FIRST DRAFT ** FIRST DRAFT ** FIRST DRAFT ** FIRST DRAFT ** FIRST DRAFT **
+
+
+

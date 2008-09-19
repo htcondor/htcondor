@@ -17,6 +17,9 @@ RSH_LIB = $(STD_LIBS) $(CLASSAD_LIB)
 JOB_HOOKS_OBJS = StarterHookMgr.o
 #endif /* HAVE_JOB_HOOKS */
 
+#if IS_LINUX
+GLEXEC_OBJS = glexec_privsep_helper.o
+#endif
 
 soapobjs(starter)
 
@@ -30,9 +33,9 @@ OBJ = starter_v61_main.o starter.o NTsenders.o user_proc.o \
 	job_info_communicator.o jic_shadow.o jic_local.o \
 	jic_local_config.o jic_local_file.o jic_local_schedd.o \
 	starter_user_policy.o \
-	starter_privsep_helper.UNIX.o \
+	condor_privsep_helper.UNIX.o \
 	vm_proc.o vm_gahp_request.o vm_gahp_server.o \
-	stream_handler.o $(SOAP_OBJS) $(JOB_HOOKS_OBJS)
+	stream_handler.o $(SOAP_OBJS) $(JOB_HOOKS_OBJS) $(GLEXEC_OBJS)
 
 RSH_OBJ = condor_rsh.o
 
@@ -43,6 +46,29 @@ html_target( starter.h user_proc.h os_proc.h vanilla_proc.h vm_proc.h )
 public_copy_target($(WRAPPER_CLASS),lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
 public_copy_target($(INFO_CLASS),lib,$(INFO_CLASS),EXECUTABLE_MODE)
 public_copy_target($(BENCHMARK_CLASS),lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
+
+#if IS_LINUX
+public_copy_target(condor_glexec_setup, \
+                   libexec, \
+                   condor_glexec_setup, \
+                   EXECUTABLE_MODE)
+public_copy_target(condor_glexec_run, \
+                   libexec, \
+                   condor_glexec_run, \
+                   EXECUTABLE_MODE)
+public_copy_target(condor_glexec_cleanup, \
+                   libexec, \
+                   condor_glexec_cleanup, \
+                   EXECUTABLE_MODE)
+public_copy_target(condor_glexec_kill, \
+                   libexec, \
+                   condor_glexec_kill, \
+                   EXECUTABLE_MODE)
+public_c_plus_nowrap_target(condor_glexec_job_wrapper, \
+                            libexec, \
+                            glexec_job_wrapper.o, \
+                            $(STD_LIBS))
+#endif
 
 testbin:: all
 

@@ -22,6 +22,10 @@
 #include "view_server.h"
 #include "subsystem_info.h"
 
+#if HAVE_DLOPEN
+#include "CollectorPlugin.h"
+#endif
+
 //-------------------------------------------------------------
 
 // about self
@@ -50,6 +54,13 @@ int main_init(int argc, char *argv[])
 	
 	Daemon=new ViewServer();
 	Daemon->Init();
+
+#if HAVE_DLOPEN
+	CollectorPluginManager::Load();
+
+	CollectorPluginManager::Initialize();
+#endif
+
 	return TRUE;
 }
 

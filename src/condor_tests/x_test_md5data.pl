@@ -72,6 +72,8 @@ if($oldmd5 eq $hexmd5)
 {
 	print "Check some of $oldfile and $newfile match!\n";
 	#verbose_system("touch WORKED");
+	unlink($oldfile);
+	unlink($newfile);
 	exit(0);
 }
 else

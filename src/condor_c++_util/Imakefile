@@ -10,6 +10,10 @@
 #define New_classads_lib
 #endif
 
+#if HAVE_DLOPEN
+PLUGIN_OBJ = ClassAdLogPlugin.o LoadPlugins.o
+#endif
+
 #if HAVE_CC_SHARED_FLAG
 LIBCONDORAPI = libcondorapi.a libcondorapi.so
 TEST_LIBCONDORAPI = test_libcondorapi test_libcondorapi_shared
@@ -158,7 +162,8 @@ CONLIBAPI_OBJ = \
 	$(SETEGID_OBJ) \
 	condor_open.o \
 	classad_merge.o \
-	condor_attributes.o
+	condor_attributes.o \
+	simple_arg.o
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
 	dc_schedd.o dc_collector.o dc_starter.o daemon_list.o \
@@ -186,7 +191,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o access.o subsystem_info.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
-	uids.o passwd_cache.o metric_units.o condor_ver_info.o condor_cred_base.o \
+	uids.o passwd_cache.o \
+	metric_units.o condor_ver_info.o condor_cred_base.o \
 	condor_md.o condor_credential.o \
 	proc_id.o HashTable.o MyString.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
@@ -204,9 +210,10 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	proc_family_interface.o proc_family_proxy.o proc_family_direct.o \
 	procd_config.o \
 	killfamily.o $(TT_OBJS) file_xml.o  vm_univ_utils.o condor_url.o \
+	$(PLUGIN_OBJ) \
 	forkwork.o filename_tools_cpp.o condor_getcwd.o \
-	set_user_priv_from_ad.o hook_utils.o classad_visa.o
-
+	set_user_priv_from_ad.o hook_utils.o classad_visa.o \
+	simple_arg.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))

@@ -56,6 +56,8 @@ if( -f "$SrcDir/condor_tests/TestingPersonalCondor/local/log/.scheduler_address"
 	} else {
 		print "calling condor_off for $SrcDir/condor_tests/TestingPersonalCondor/condor_config\n";
 		system("$BaseDir/userdir/condor/sbin/condor_off -master");
+		# give some time for condor to shutdown
+		sleep(30);
 		print "done calling condor_off for $SrcDir/condor_tests/TestingPersonalCondor/condor_config\n";
 	}
 } else {
@@ -88,6 +90,40 @@ if( ! -f "tasklist.nmi" || -z "tasklist.nmi" ) {
 
 print "cding to $BaseDir \n";
 chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
+
+#----------------------------------------
+# final tar and exit
+#----------------------------------------
+
+$results = "results.tar.gz";
+print "Tarring up all results\n";
+chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
+system( "tar zcf $results --exclude *.exe src/condor_tests local" );
+# don't care if condor is still running or sockets
+# are being skipped. Save what we can and don't bitch
+#if( $? >> 8 ) {
+    #print "Can't tar zcf src/condor_tests local\n";
+    #$exit_status = 1;
+#}
+
+exit $exit_status;
+
+#----------------------------------------
+# final tar and exit
+#----------------------------------------
+
+$results = "results.tar.gz";
+print "Tarring up all results\n";
+chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
+system( "tar zcf $results src/condor_tests local" );
+# don't care if condor is still running or sockets
+# are being skipped. Save what we can and don't bitch
+#if( $? >> 8 ) {
+    #print "Can't tar zcf src/condor_tests local\n";
+    #$exit_status = 1;
+#}
+
+exit $exit_status;
 
 my $etc_dir = "$BaseDir/results/etc";
 my $log_dir = "$BaseDir/results/log";

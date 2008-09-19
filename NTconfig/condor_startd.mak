@@ -56,7 +56,6 @@ CLEAN :
 	-@erase "$(INTDIR)\command.obj"
 	-@erase "$(INTDIR)\CondorSystrayNotifier.obj"
 	-@erase "$(INTDIR)\LoadQueue.obj"
-	-@erase "$(INTDIR)\mds.obj"
 	-@erase "$(INTDIR)\Reqexp.obj"
 	-@erase "$(INTDIR)\ResAttributes.obj"
 	-@erase "$(INTDIR)\ResMgr.obj"
@@ -136,7 +135,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\command.obj" \
 	"$(INTDIR)\CondorSystrayNotifier.obj" \
 	"$(INTDIR)\LoadQueue.obj" \
-	"$(INTDIR)\mds.obj" \
 	"$(INTDIR)\Reqexp.obj" \
 	"$(INTDIR)\ResAttributes.obj" \
 	"$(INTDIR)\ResMgr.obj" \
@@ -203,7 +201,6 @@ CLEAN :
 	-@erase "$(INTDIR)\command.obj"
 	-@erase "$(INTDIR)\CondorSystrayNotifier.obj"
 	-@erase "$(INTDIR)\LoadQueue.obj"
-	-@erase "$(INTDIR)\mds.obj"
 	-@erase "$(INTDIR)\Reqexp.obj"
 	-@erase "$(INTDIR)\ResAttributes.obj"
 	-@erase "$(INTDIR)\ResMgr.obj"
@@ -280,7 +277,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\command.obj" \
 	"$(INTDIR)\CondorSystrayNotifier.obj" \
 	"$(INTDIR)\LoadQueue.obj" \
-	"$(INTDIR)\mds.obj" \
 	"$(INTDIR)\Reqexp.obj" \
 	"$(INTDIR)\ResAttributes.obj" \
 	"$(INTDIR)\ResMgr.obj" \
@@ -609,12 +605,6 @@ SOURCE=..\src\condor_startd.V6\CondorSystrayNotifier.cpp
 SOURCE=..\src\condor_startd.V6\LoadQueue.C
 
 "$(INTDIR)\LoadQueue.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_startd.V6\mds.C
-
-"$(INTDIR)\mds.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

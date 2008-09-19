@@ -92,7 +92,6 @@ int SecMan::sec_man_ref_count = 0;
 char* SecMan::_my_unique_id = 0;
 char* SecMan::_my_parent_unique_id = 0;
 bool SecMan::_should_check_env_for_unique_id = true;
-bool SecMan::m_ipverify_initialized = false;
 IpVerify SecMan::m_ipverify;
 
 SecMan::sec_req
@@ -828,6 +827,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 			}
 		}
 		m_already_logged_startcommand = false;
+		m_negotiation = SecMan::SEC_REQ_UNDEFINED;
 	}
 
 	~SecManStartCommand() {
@@ -1236,7 +1236,12 @@ SecManStartCommand::sendAuthInfo_inner()
 
 		// just code the command and be done
 		m_sock->encode();
-		m_sock->code(m_cmd);
+		if(!m_sock->code(m_cmd)) {
+			m_errstack->pushf( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+							   "Failed to send raw command to %s.",
+							   m_sock->peer_description());
+			return StartCommandFailed;
+		}
 
 		// we must _NOT_ do an eom() here!  Ques?  See Todd or Zach 9/01
 
@@ -1465,7 +1470,12 @@ SecManStartCommand::sendAuthInfo_inner()
 		} else {
 			// UDP the old way...  who knows if they get it, we'll just assume they do.
 			m_sock->encode();
-			m_sock->code(m_cmd);
+			if( !m_sock->code(m_cmd) ) {
+				m_errstack->pushf( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+								   "Failed to send raw UDP command to %s.",
+								   m_sock->peer_description() );
+				return StartCommandFailed;
+			}
 			return StartCommandSucceeded;
 		}
 	}
@@ -1563,7 +1573,12 @@ SecManStartCommand::receiveAuthInfo_inner()
 				}
 
 				m_sock->encode();
-				m_sock->code(m_cmd);
+				if( !m_sock->code(m_cmd) ) {
+					m_errstack->pushf( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+									   "Failed to send raw command after reconnecting to %s.",
+									   m_sock->peer_description());
+					return StartCommandFailed;
+				}
 				return StartCommandSucceeded;
 			}
 
@@ -1846,7 +1861,10 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			char *dur = NULL;
 			m_auth_info.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
 
-			int expiration_time = time(0) + atoi(dur);
+			int expiration_time = 0;
+			if( dur ) {
+				expiration_time = time(0) + atoi(dur);
+			}
 
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
@@ -1856,6 +1874,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 
             if (dur) {
                 free(dur);
+				dur = NULL;
             }
 
 			// stick the key in the cache
@@ -2442,16 +2461,12 @@ SecMan::~SecMan() {
 void
 SecMan::reconfig()
 {
-	m_ipverify_initialized = false;
+	m_ipverify.reconfig();
 }
 
 IpVerify *
 SecMan::getIpVerify()
 {
-	if( !m_ipverify_initialized ) {
-		m_ipverify_initialized = true;
-		m_ipverify.Init();
-	}
 	return &m_ipverify;
 }
 

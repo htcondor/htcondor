@@ -134,6 +134,9 @@ const char *ATTR_CLUSTER_ID               = "ClusterId";
 const char *ATTR_AUTO_CLUSTER_ID			 = "AutoClusterId";
 const char *ATTR_AUTO_CLUSTER_ATTRS		 = "AutoClusterAttrs";
 const char *ATTR_COMPLETION_DATE			 = "CompletionDate";
+const char *ATTR_MATCHED_CONCURRENCY_LIMITS = "MatchedConcurrencyLimits";
+const char *ATTR_CONCURRENCY_LIMITS = "ConcurrencyLimits";
+const char *ATTR_PREEMPTING_CONCURRENCY_LIMITS = "PreemptingConcurrencyLimits";
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
 #define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
 const char *ATTR_CONSOLE_IDLE			 = "ConsoleIdle";
@@ -288,6 +291,7 @@ const char *ATTR_JOB_JAVA_VM_ARGS1        = "JavaVMArgs";
 const char *ATTR_JOB_JAVA_VM_ARGS2        = "JavaVMArguments";
 const char *ATTR_ORIG_JOB_IWD				 = "OrigIwd";
 const char *ATTR_JOB_REMOTE_IWD			 = "RemoteIwd";
+const char *ATTR_JOB_LOAD_PROFILE           = "LoadProfile";
 const char *ATTR_JOB_RUNAS_OWNER			 = "RunAsOwner";
 const char *ATTR_JOB_LOAD_USER_PROFILE   = "LoadUserProfile";
 const char *ATTR_JOB_LOCAL_CPU			 = "LocalCpu";

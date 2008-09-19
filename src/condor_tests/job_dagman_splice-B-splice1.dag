@@ -1,0 +1,19 @@
+# A simple diamond dag and one lone unconnected node.
+
+JOB  A  job_dagman_splice-B.cmd
+JOB  B  job_dagman_splice-B.cmd
+JOB  C  job_dagman_splice-B.cmd
+JOB  D  job_dagman_splice-B.cmd
+
+VARS A	job="$(JOB)"
+VARS B	job="$(JOB)"
+VARS C	job="$(JOB)"
+VARS D	job="$(JOB)"
+
+# no connections for this job
+JOB  E  job_dagman_splice-B.cmd
+VARS E	job="$(JOB)"
+
+# diamond dependancy between A-D
+PARENT A CHILD B C
+PARENT B C CHILD D

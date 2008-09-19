@@ -33,12 +33,6 @@ public_c_plus_target($(GT4GAHP_WRAPPER_NAME),sbin,$(GT4GAHP_WRAPPER_OBJ),$(STD_L
 
 public_c_plus_target($(GT42GAHP_WRAPPER_NAME),sbin,$(GT42GAHP_WRAPPER_OBJ),$(STD_LIBS))
 
-#if HAVE_EXT_GAHP
-release_copy_target($(GAHP_DIR)/gahp_server.dynamic,sbin,gahp_server,EXECUTABLE_MODE)
-static_copy_target($(GAHP_DIR)/gahp_server.static,sbin,gahp_server,EXECUTABLE_MODE)
-strip_copy_target($(GAHP_DIR)/gahp_server.dynamic,sbin,gahp_server,EXECUTABLE_MODE)
-#endif
-
 #if HAVE_EXT_GLOBUS
 release_copy_target($(GLOBUS_DIR)/sbin/globus-gridftp-server.dynamic,libexec,globus-gridftp-server,EXECUTABLE_MODE)
 static_copy_target($(GLOBUS_DIR)/sbin/globus-gridftp-server.static,libexec,globus-gridftp-server,EXECUTABLE_MODE)
@@ -52,22 +46,6 @@ grid_monitor.sh: grid_monitor_wrapper grid_manager_monitor_agent
 	cat grid_monitor_wrapper grid_manager_monitor_agent > grid_monitor.sh
 	chmod 755 grid_monitor.sh
 
-#if HAVE_EXT_GT4GAHP
-public_copy_target($(GT4GAHP_DIR)/gt4-gahp.jar,lib,gt4-gahp.jar,TEXT_MODE)
-
-release_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
-static_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
-strip_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
-#endif
-
-#if HAVE_EXT_GT42GAHP
-public_copy_target($(GT42GAHP_DIR)/gt42-gahp.jar,lib,gt42-gahp.jar,TEXT_MODE)
-
-release_recursive_copy_target($(GT42GAHP_DIR)/gt42,lib/gt42)
-static_recursive_copy_target($(GT42GAHP_DIR)/gt42,lib/gt42)
-strip_recursive_copy_target($(GT42GAHP_DIR)/gt42,lib/gt42)
-#endif
-
 #if HAVE_EXT_BLAHP
 release_recursive_copy_target($(BLAHP_DIR)/dynamic,lib/glite)
 static_recursive_copy_target($(BLAHP_DIR)/static,lib/glite)
@@ -76,17 +54,6 @@ strip_recursive_copy_target($(BLAHP_DIR)/dynamic,lib/glite)
 
 #if HAVE_EXT_UNICOREGAHP
 public_copy_target($(UNICOREGAHP_DIR)/ugahp.jar,lib,ugahp.jar,TEXT_MODE)
-#endif
-
-#if HAVE_EXT_NORDUGRIDGAHP
-release_copy_target($(NORDUGRIDGAHP_DIR)/bin/nordugrid_gahp.dynamic,sbin,nordugrid_gahp,EXECUTABLE_MODE)
-static_copy_target($(NORDUGRIDGAHP_DIR)/bin/nordugrid_gahp.static,sbin,nordugrid_gahp,EXECUTABLE_MODE)
-strip_copy_target($(NORDUGRIDGAHP_DIR)/bin/nordugrid_gahp.dynamic,sbin,nordugrid_gahp,EXECUTABLE_MODE)
-#endif
-
-#if HAVE_EXT_GAHP
-$(GAHP_DIR)/gahp_server:
-	/bin/true
 #endif
 
 html:

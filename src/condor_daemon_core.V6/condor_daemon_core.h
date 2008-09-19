@@ -170,6 +170,7 @@ struct FamilyInfo {
 #if defined(LINUX)
 	gid_t* group_ptr;
 #endif
+	const char* glexec_proxy;
 
 	FamilyInfo() {
 		max_snapshot_interval = -1;
@@ -177,6 +178,7 @@ struct FamilyInfo {
 #if defined(LINUX)
 		group_ptr = NULL;
 #endif
+		glexec_proxy = NULL;
 	}
 };
 
@@ -281,16 +283,13 @@ class DaemonCore : public Service
     ~DaemonCore();
     void Driver();
 
-    /** Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int ReInit();
-
 		/**
 		   Re-read anything that the daemonCore object got from the
 		   config file that might have changed on a reconfig.
 		*/
     void reconfig();
+
+	void refreshDNS();
 
     /** Not_Yet_Documented
         @param perm Not_Yet_Documented
@@ -761,6 +760,13 @@ class DaemonCore : public Service
 	 * been registed via Register_Pipe().
 	*/
 	int Close_Pipe(int pipe_end);
+
+#if !defined(WIN32)
+	/** Get the FD underlying the given pipe end. Returns FALSE
+	 *  if not given a valid pipe end.
+	*/
+	int Get_Pipe_FD(int pipe_end, int* fd);
+#endif
 
 	/**
 	   Gain access to data written to a given DC process's std(out|err) pipe.
@@ -1392,7 +1398,8 @@ class DaemonCore : public Service
 	                     int max_snapshot_interval,
 	                     PidEnvID* penvid,
 	                     const char* login,
-	                     gid_t* group);
+	                     gid_t* group,
+	                     const char* glexec_proxy);
 
 	void CheckForTimeSkip(time_t time_before, time_t okay_delta);
 
@@ -1486,6 +1493,7 @@ class DaemonCore : public Service
 	int maxPipeHandleIndex;
 	int pipeHandleTableInsert(PipeHandle);
 	void pipeHandleTableRemove(int);
+	int pipeHandleTableLookup(int, PipeHandle* = NULL);
 
 	// this table is for dispatching registered pipes
 	class PidEntry;  // forward reference
@@ -1560,6 +1568,8 @@ class DaemonCore : public Service
 			of this pid (where applicable) */
 		PidEnvID penvid;
     };
+
+	int m_refresh_dns_timer;
 
     typedef HashTable <pid_t, PidEntry *> PidHashTable;
     PidHashTable* pidTable;

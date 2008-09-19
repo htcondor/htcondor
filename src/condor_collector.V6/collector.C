@@ -47,6 +47,10 @@
 
 #include "collector.h"
 
+#if HAVE_DLOPEN
+#include "CollectorPlugin.h"
+#endif
+
 //----------------------------------------------------------------
 
 extern "C" char* CondorVersion( void );
@@ -497,6 +501,10 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	if (command == INVALIDATE_STARTD_ADS)
 		process_invalidation (STARTD_PVT_AD, cad, sock);
 
+#if HAVE_DLOPEN
+	CollectorPluginManager::Invalidate(command, cad);
+#endif
+
 	if(View_Collector && ((command == INVALIDATE_STARTD_ADS) || 
 		(command == INVALIDATE_SUBMITTOR_ADS)) ) {
 		send_classad_to_sock(command, View_Collector, &cad);
@@ -557,6 +565,10 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 				command);
 		}
 	}
+
+#if HAVE_DLOPEN
+	CollectorPluginManager::Update(command, *cad);
+#endif
 
 	if(View_Collector && ((command == UPDATE_STARTD_AD) || 
 			(command == UPDATE_SUBMITTOR_AD)) ) {

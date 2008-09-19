@@ -230,6 +230,7 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 		internal_refs.remove_anycase(ATTR_CURRENT_TIME);	// never want this attr
 		internal_refs.append(ATTR_REQUIREMENTS);	// always want these attrs
 		internal_refs.append(ATTR_NICE_USER);
+		internal_refs.append(ATTR_CONCURRENCY_LIMITS);
 
 		internal_refs.rewind();
 		next_attr = NULL;

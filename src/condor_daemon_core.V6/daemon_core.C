@@ -44,6 +44,10 @@ void Generic_stop_logging();
 #include <sys/syscall.h>
 #endif
 
+#if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
+#include <resolv.h>
+#endif
+
 static const int DEFAULT_MAXCOMMANDS = 255;
 static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
@@ -98,6 +102,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "selector.h"
 #include "proc_family_interface.h"
 #include "condor_netdb.h"
+#include "util_lib_proto.h"
 #include "subsystem_info.h"
 
 #if defined(HAVE_VALGRIND_H)
@@ -415,6 +420,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 #endif
 
 	m_fake_create_thread = false;
+
+	m_refresh_dns_timer = -1;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -552,7 +559,6 @@ DaemonCore::~DaemonCore()
 		free(m_private_network_name);
 		m_private_network_name = NULL;
 	}
-
 }
 
 void DaemonCore::Set_Default_Reaper( int reaper_id )
@@ -1450,6 +1456,21 @@ void DaemonCore::pipeHandleTableRemove(int index)
 	}
 }
 
+int DaemonCore::pipeHandleTableLookup(int index, PipeHandle* ph)
+{
+	if ((index < 0) || (index > maxPipeHandleIndex)) {
+		return FALSE;
+	}
+	PipeHandle tmp_ph = (*pipeHandleTable)[index];
+	if (tmp_ph == (PipeHandle)-1) {
+		return FALSE;
+	}
+	if (ph != NULL) {
+		*ph = tmp_ph;
+	}
+	return TRUE;
+}
+
 int DaemonCore::Create_Pipe( int *pipe_ends,
 			     bool can_register_read,
 			     bool can_register_write,
@@ -1598,11 +1619,10 @@ int DaemonCore::Register_Pipe(int pipe_end, char* pipe_descrip,
     int     j;
 
 	int index = pipe_end - PIPE_INDEX_OFFSET;
-
-    if ( index < 0 ) {
+	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_DAEMONCORE, "Register_Pipe: invalid index\n");
 		return -1;
-    }
+	}
 
 	i = nPipe;
 
@@ -1778,7 +1798,7 @@ unsigned __stdcall pipe_close_thread(void *arg)
 int DaemonCore::Close_Pipe( int pipe_end )
 {
 	int index = pipe_end - PIPE_INDEX_OFFSET;
-	if (index < 0) {
+	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_ALWAYS, "Close_Pipe on invalid pipe end: %d\n", pipe_end);
 		EXCEPT("Close_Pipe error");
 	}
@@ -1867,7 +1887,7 @@ DaemonCore::Read_Pipe(int pipe_end, void* buffer, int len)
 	}
 
 	int index = pipe_end - PIPE_INDEX_OFFSET;
-	if (index < 0) {
+	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_ALWAYS, "Read_Pipe: invalid pipe_end: %d\n", pipe_end);
 		EXCEPT("Read_Pipe");
 	}
@@ -1890,7 +1910,7 @@ DaemonCore::Write_Pipe(int pipe_end, const void* buffer, int len)
 	}
 
 	int index = pipe_end - PIPE_INDEX_OFFSET;
-	if (index < 0) {
+	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_ALWAYS, "Write_Pipe: invalid pipe_end: %d\n", pipe_end);
 		EXCEPT("Write_Pipe: invalid pipe end");
 	}
@@ -1904,6 +1924,14 @@ DaemonCore::Write_Pipe(int pipe_end, const void* buffer, int len)
 #endif
 }
 
+#if !defined(WIN32)
+int
+DaemonCore::Get_Pipe_FD(int pipe_end, int* fd)
+{
+	int index = pipe_end - PIPE_INDEX_OFFSET;
+	return pipeHandleTableLookup(index, fd);
+}
+#endif
 
 MyString*
 DaemonCore::Read_Std_Pipe(int pid, int std_fd) {
@@ -2223,115 +2251,45 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 	dprintf(flag, "\n");
 }
 
-int
-DaemonCore::ReInit()
-{
-	static int tid = -1;
+void
+DaemonCore::refreshDNS() {
+#if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
+		// re-initialize dns info (e.g. IP addresses of nameservers)
+	res_init();
+#endif
 
-	SecMan *secman = getSecMan();
-	secman->reconfig();
-
-		// Handle our timer.  If this is the first time, we need to
-		// register it.  Otherwise, we just reset its value to go off
-		// 8 hours from now.  The reason we don't do this as a simple
-		// periodic timer is that if we get sent a RECONFIG, we call
-		// this anyway, and we don't want to clear out the cache soon
-		// after that, just b/c of a periodic timer.  -Derek 1/28/99
-	if( tid < 0 ) {
-		tid = daemonCore->
-			Register_Timer( 8*60*60, 0, (Eventcpp)&DaemonCore::ReInit,
-							"DaemonCore::ReInit()", daemonCore );
-	} else {
-		daemonCore->Reset_Timer( tid, 8*60*60, 0 );
-	}
-
-	// Setup a timer to send child keepalives to our parent, if we have
-	// a daemon core parent.
-	if ( ppid ) {
-		MyString buf;
-		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",mySubSystem->getName());
-		max_hang_time = param_integer(buf.Value(),-1);
-		if( max_hang_time == -1 ) {
-			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
-		}
-		if ( !max_hang_time ) {
-			max_hang_time = 60 * 60;	// default to 1 hour
-		}
-		int send_update = (max_hang_time / 3) - 30;
-		if ( send_update < 1 )
-			send_update = 1;
-		if ( send_child_alive_timer == -1 ) {
-
-				// 2008-06-18 7.0.3: commented out direct call to
-				// SendAliveToParent(), because it causes deadlock
-				// between the shadow and schedd if the job classad
-				// that the schedd is writing over a pipe to the
-				// shadow is larger than the pipe buffer size.
-				// For now, register timer for 0 seconds instead
-				// of calling SendAliveToParent() immediately.
-				// This means we are vulnerable to a race condition,
-				// in which we hang before the first CHILDALIVE.  If
-				// that happens, our parent will never kill us.
-
-			send_child_alive_timer = Register_Timer(0, (unsigned)send_update,
-					(TimerHandlercpp)&DaemonCore::SendAliveToParent,
-					"DaemonCore::SendAliveToParent", this );
-
-				// Send this immediately, because if we hang before
-				// sending this message, our parent will not kill us.
-				// (Commented out.  See reason above.)
-				// SendAliveToParent();
-		} else {
-			Reset_Timer(send_child_alive_timer, 1, send_update);
-		}
-	}
-
-#ifdef HAVE_EXT_GSOAP
-#ifdef COMPILE_SOAP_SSL
-	MyString subsys = MyString(mySubSystem->getName());
-	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
-	bool subsys_enable_soap_ssl =
-		param_boolean((subsys + "_ENABLE_SOAP_SSL").GetCStr(), false);
-	if (subsys_enable_soap_ssl ||
-		(enable_soap_ssl &&
-		 (!(NULL != param((subsys + "_ENABLE_SOAP_SSL").GetCStr())) ||
-		  subsys_enable_soap_ssl))) {
-		if (mapfile) {
-			delete mapfile; mapfile = NULL;
-		}
-		mapfile = new MapFile;
-		char * credential_mapfile;
-		if (NULL == (credential_mapfile = param("CERTIFICATE_MAPFILE"))) {
-			EXCEPT("DaemonCore: No CERTIFICATE_MAPFILE defined, "
-				   "unable to identify users, required by ENABLE_SOAP_SSL");
-		}
-		char * user_mapfile;
-		if (NULL == (user_mapfile = param("USER_MAPFILE"))) {
-			EXCEPT("DaemonCore: No USER_MAPFILE defined, "
-				   "unable to identify users, required by ENABLE_SOAP_SSL");
-		}
-		int line;
-		if (0 != (line = mapfile->ParseCanonicalizationFile(credential_mapfile))) {
-			EXCEPT("DaemonCore: Error parsing CERTIFICATE_MAPFILE at line %d",
-				   line);
-	}
-		if (0 != (line = mapfile->ParseUsermapFile(user_mapfile))) {
-			EXCEPT("DaemonCore: Error parsing USER_MAPFILE at line %d", line);
-		}
-	}
-#endif // COMPILE_SOAP_SSL
-#endif // HAVE_EXT_GSOAP
-
-	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
-
-	return TRUE;
+	getSecMan()->getIpVerify()->refreshDNS();
 }
-
 
 void
 DaemonCore::reconfig(void) {
 	// NOTE: this function is always called on initial startup, as well
 	// as at reconfig time.
+
+	// NOTE: on reconfig, refreshDNS() will have already been called
+	// by the time we get here, because it needs to be called early
+	// in the process.
+
+	SecMan *secman = getSecMan();
+	secman->reconfig();
+
+		// add a random offset to avoid pounding DNS
+	int dns_interval = param_integer("DNS_CACHE_REFRESH",
+									 8*60*60+(rand()%600), 0);
+	if( dns_interval > 0 ) {
+		if( m_refresh_dns_timer < 0 ) {
+			m_refresh_dns_timer =
+				Register_Timer( dns_interval, dns_interval,
+								(Eventcpp)&DaemonCore::refreshDNS,
+								"DaemonCore::refreshDNS()", daemonCore );
+		} else {
+			Reset_Timer( m_refresh_dns_timer, dns_interval, dns_interval );
+		}
+	}
+	else if( m_refresh_dns_timer != -1 ) {
+		daemonCore->Cancel_Timer( m_refresh_dns_timer );
+		m_refresh_dns_timer = -1;
+	}
 
 		// Grab a copy of our private network name (if any).
 	if (m_private_network_name) {
@@ -2384,6 +2342,42 @@ DaemonCore::reconfig(void) {
 		// though the structure is still allocated.
 	}
 #endif
+#ifdef HAVE_EXT_GSOAP
+#ifdef COMPILE_SOAP_SSL
+	MyString subsys = MyString(mySubSystem->getName());
+	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
+	bool subsys_enable_soap_ssl =
+		param_boolean((subsys + "_ENABLE_SOAP_SSL").GetCStr(), false);
+	if (subsys_enable_soap_ssl ||
+		(enable_soap_ssl &&
+		 (!(NULL != param((subsys + "_ENABLE_SOAP_SSL").GetCStr())) ||
+		  subsys_enable_soap_ssl))) {
+		if (mapfile) {
+			delete mapfile; mapfile = NULL;
+		}
+		mapfile = new MapFile;
+		char * credential_mapfile;
+		if (NULL == (credential_mapfile = param("CERTIFICATE_MAPFILE"))) {
+			EXCEPT("DaemonCore: No CERTIFICATE_MAPFILE defined, "
+				   "unable to identify users, required by ENABLE_SOAP_SSL");
+		}
+		char * user_mapfile;
+		if (NULL == (user_mapfile = param("USER_MAPFILE"))) {
+			EXCEPT("DaemonCore: No USER_MAPFILE defined, "
+				   "unable to identify users, required by ENABLE_SOAP_SSL");
+		}
+		int line;
+		if (0 != (line = mapfile->ParseCanonicalizationFile(credential_mapfile))) {
+			EXCEPT("DaemonCore: Error parsing CERTIFICATE_MAPFILE at line %d",
+				   line);
+	}
+		if (0 != (line = mapfile->ParseUsermapFile(user_mapfile))) {
+			EXCEPT("DaemonCore: Error parsing USER_MAPFILE at line %d", line);
+		}
+	}
+#endif // COMPILE_SOAP_SSL
+#endif // HAVE_EXT_GSOAP
+
 
 		// FAKE_CREATE_THREAD is an undocumented config knob which turns
 		// Create_Thread() into a simple function call in the main process,
@@ -2395,6 +2389,49 @@ DaemonCore::reconfig(void) {
 		// Under unix, Create_Thread() is actually a fork, so it is safe.
 	m_fake_create_thread = param_boolean("FAKE_CREATE_THREAD",false);
 #endif
+
+	// Setup a timer to send child keepalives to our parent, if we have
+	// a daemon core parent.
+	if ( ppid ) {
+		MyString buf;
+		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",mySubSystem->getName());
+		max_hang_time = param_integer(buf.Value(),-1);
+		if( max_hang_time == -1 ) {
+			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
+		}
+		if ( !max_hang_time ) {
+			max_hang_time = 60 * 60;	// default to 1 hour
+		}
+		int send_update = (max_hang_time / 3) - 30;
+		if ( send_update < 1 )
+			send_update = 1;
+		if ( send_child_alive_timer == -1 ) {
+
+				// 2008-06-18 7.0.3: commented out direct call to
+				// SendAliveToParent(), because it causes deadlock
+				// between the shadow and schedd if the job classad
+				// that the schedd is writing over a pipe to the
+				// shadow is larger than the pipe buffer size.
+				// For now, register timer for 0 seconds instead
+				// of calling SendAliveToParent() immediately.
+				// This means we are vulnerable to a race condition,
+				// in which we hang before the first CHILDALIVE.  If
+				// that happens, our parent will never kill us.
+
+			send_child_alive_timer = Register_Timer(0, (unsigned)send_update,
+					(TimerHandlercpp)&DaemonCore::SendAliveToParent,
+					"DaemonCore::SendAliveToParent", this );
+
+				// Send this immediately, because if we hang before
+				// sending this message, our parent will not kill us.
+				// (Commented out.  See reason above.)
+				// SendAliveToParent();
+		} else {
+			Reset_Timer(send_child_alive_timer, 1, send_update);
+		}
+	}
+
+	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
 }
 
@@ -3197,6 +3234,9 @@ int DaemonCore::HandleReq(Stream *insock)
 	bool is_http_post = false;	// must initialize to false
 	bool is_http_get = false;   // must initialize to false
 #endif
+
+	UtcTime handle_req_start_time;
+	handle_req_start_time.getTime();
 
 	ASSERT(insock);
 
@@ -4312,8 +4352,8 @@ int DaemonCore::HandleReq(Stream *insock)
 			// make result != to KEEP_STREAM, so we blow away this socket below
 			result = 0;
 			dprintf( D_ALWAYS,
-                     "DaemonCore: PERMISSION DENIED to %s from host %s for command %d (%s), access level %s\n",
-                     user.IsEmpty() ? "unknown user" : user.Value(), sin_to_string(((Sock*)stream)->endpoint()), req,
+                     "PERMISSION DENIED to %s from host %s for command %d (%s), access level %s\n",
+                     user.IsEmpty() ? "unauthenticated user" : user.Value(), sin_to_string(((Sock*)stream)->endpoint()), req,
                      comTable[index].command_descrip,
 					 PermString(comTable[index].perm));
 			// if UDP, consume the rest of this message to try to stay "in-sync"
@@ -4321,28 +4361,24 @@ int DaemonCore::HandleReq(Stream *insock)
 				stream->end_of_message();
 
 		} else {
-			dprintf(comTable[index].dprintf_flag,
-					"DaemonCore: Command received via %s%s%s from host %s, access level %s\n",
+			dprintf(comTable[index].dprintf_flag | D_COMMAND,
+					"Received %s command %d (%s) from %s %s, access level %s\n",
 					(is_tcp) ? "TCP" : "UDP",
-					!user.IsEmpty() ? " from " : "",
+					req,
+					comTable[index].command_descrip,
 					user.Value(),
-					sin_to_string(((Sock*)stream)->endpoint()),
+					stream->peer_description(),
 					PermString(comTable[index].perm));
-			dprintf(comTable[index].dprintf_flag,
-                    "DaemonCore: received command %d (%s), calling handler (%s)\n",
-                    req, comTable[index].command_descrip,
-                    comTable[index].handler_descrip);
 		}
 
 	} else {
-		dprintf(D_ALWAYS,
-				"DaemonCore: Command received via %s%s%s from host %s\n",
-				(is_tcp) ? "TCP" : "UDP",
-				!user.IsEmpty() ? " from " : "",
-				user.Value(),
-				sin_to_string(((Sock*)stream)->endpoint()) );
-		dprintf(D_ALWAYS,
-			"DaemonCore: received unregistered command request %d !\n",req);
+			dprintf(D_ALWAYS,
+					"Received %s command %d (%s) from %s %s\n",
+					(is_tcp) ? "TCP" : "UDP",
+					req,
+					"UNREGISTERED COMMAND!",
+					user.Value(),
+					stream->peer_description());
 		// make result != to KEEP_STREAM, so we blow away this socket below
 		result = 0;
 		// if UDP, consume the rest of this message to try to stay "in-sync"
@@ -4363,6 +4399,10 @@ int DaemonCore::HandleReq(Stream *insock)
 		curr_dataptr = &(comTable[index].data_ptr);
 
 		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d)\n", comTable[index].handler_descrip, inServiceCommandSocket_flag);
+
+		UtcTime handler_start_time;
+		handler_start_time.getTime();
+
 		if ( comTable[index].is_cpp ) {
 			// the handler is c++ and belongs to a 'Service' class
 			if ( comTable[index].handlercpp )
@@ -4372,7 +4412,13 @@ int DaemonCore::HandleReq(Stream *insock)
 			if ( comTable[index].handler )
 				result = (*(comTable[index].handler))(comTable[index].service,req,stream);
 		}
-		dprintf(D_COMMAND, "Return from HandleReq <%s>\n", comTable[index].handler_descrip);
+
+		UtcTime handler_stop_time;
+		handler_stop_time.getTime();
+		float handler_time = handler_stop_time.difference(&handler_start_time);
+		float sec_time = handler_start_time.difference(&handle_req_start_time);
+
+		dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.3fs, sec: %.3fs)\n", comTable[index].handler_descrip, handler_time, sec_time);
 
 		// clear curr_dataptr
 		curr_dataptr = NULL;
@@ -4636,7 +4682,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	// if we're using priv sep, we may not have permission to send signals
 	// to our child processes; ask the ProcD to do it for us
 	//
-	if (privsep_enabled()) {
+	if (privsep_enabled() || param_boolean("GLEXEC_JOB", false)) {
 		if (!target_has_dcpm && pidinfo && pidinfo->new_process_group) {
 			ASSERT(m_proc_family != NULL);
 			bool ok =  m_proc_family->signal_process(pid, sig);
@@ -5263,11 +5309,13 @@ void exit(int status)
 
 // helper function for registering a family with our ProcFamily
 // logic. the first 3 arguments are mandatory for registration.
-// the last three are optional and specify what tracking methods
+// the next three are optional and specify what tracking methods
 // should be used for the new process family. if group is non-NULL
 // then we will ask the ProcD to track by supplementary group
 // ID - the ID that the ProcD chooses for this purpose is returned
-// in the location pointed to by the argument
+// in the location pointed to by the argument. the last argument
+// optionally specifies a proxy to give to the ProcD so that
+// it can use glexec to signal the processes in this family
 //
 bool
 DaemonCore::Register_Family(pid_t       child_pid,
@@ -5275,7 +5323,8 @@ DaemonCore::Register_Family(pid_t       child_pid,
                             int         max_snapshot_interval,
                             PidEnvID*   penvid,
                             const char* login,
-                            gid_t*      group)
+                            gid_t*      group,
+                            const char* glexec_proxy)
 {
 	bool success = false;
 	bool family_registered = false;
@@ -5322,6 +5371,17 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		EXCEPT("Internal error: "
 		           "group-based tracking unsupported on this platform");
 #endif
+	}
+	if (glexec_proxy != NULL) {
+		if (!m_proc_family->use_glexec_for_family(child_pid,
+		                                          glexec_proxy))
+		{
+			dprintf(D_ALWAYS,
+			        "Create_Process: error using GLExec for "
+				    "family with root %u\n",
+			        child_pid);
+			goto REGISTER_FAMILY_DONE;
+		}
 	}
 	success = true;
 REGISTER_FAMILY_DONE:
@@ -5815,11 +5875,12 @@ void CreateProcessForkit::exec() {
 
 			bool ok =
 				daemonCore->Register_Family(pid,
-			                                ppid,
-			                                m_family_info->max_snapshot_interval,
-			                                penvid_ptr,
-			                                m_family_info->login,
-			                                tracking_gid_ptr);
+				                            ppid,
+				                            m_family_info->max_snapshot_interval,
+				                            penvid_ptr,
+				                            m_family_info->login,
+				                            tracking_gid_ptr,
+				                            m_family_info->glexec_proxy);
 			if (!ok) {
 				errno = DaemonCore::ERRNO_REGISTRATION_FAILED;
 				write(m_errorpipe[1], &errno, sizeof(errno));
@@ -6661,7 +6722,8 @@ int DaemonCore::Create_Process(
 		                          family_info->max_snapshot_interval,
 		                          NULL,
 		                          family_info->login,
-		                          NULL);
+		                          NULL,
+		                          family_info->glexec_proxy);
 		if (!ok) {
 			EXCEPT("error registering process family with procd");
 		}
@@ -7056,7 +7118,8 @@ int DaemonCore::Create_Process(
 		                family_info->max_snapshot_interval,
 		                &pidtmp->penvid,
 		                family_info->login,
-		                NULL);
+		                NULL,
+		                family_info->glexec_proxy);
 	}
 #endif
 
@@ -9245,13 +9308,21 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd)
     localAdFile = param( localAd_path );
 
     if( localAdFile ) {
-        if( (AD_FILE = safe_fopen_wrapper(localAdFile, "w")) ) {
+		MyString newLocalAdFile;
+		newLocalAdFile.sprintf("%s.new",localAdFile);
+        if( (AD_FILE = safe_fopen_wrapper(newLocalAdFile.Value(), "w")) ) {
             daemonAd->fPrint(AD_FILE);
             fclose( AD_FILE );
+			if( rotate_file(newLocalAdFile.Value(),localAdFile)!=0 ) {
+				dprintf( D_ALWAYS,
+						 "DaemonCore: ERROR: failed to rotate %s to %s\n",
+						 newLocalAdFile.Value(),
+						 localAdFile);
+			}
         } else {
             dprintf( D_ALWAYS,
                      "DaemonCore: ERROR: Can't open daemon address file %s\n",
-                     localAdFile );
+                     newLocalAdFile.Value() );
         }
     }
 }

@@ -40,6 +40,11 @@
 #include "condor_netdb.h"
 #include "subsystem_info.h"
 
+#if HAVE_DLOPEN
+#include "ScheddPlugin.h"
+#include "ClassAdLogPlugin.h"
+#endif
+
 #if defined(BSD43) || defined(DYNIX)
 #	define WEXITSTATUS(x) ((x).w_retcode)
 #	define WTERMSIG(x) ((x).w_termsig)
@@ -104,6 +109,25 @@ main_init(int argc, char* argv[])
 		// for Local Universe jobs can share a single ProcD, instead of
 		// each creating their own
 	daemonCore->Proc_Family_Init();
+
+#if HAVE_DLOPEN
+		// Intialization of the plugin manager, i.e. loading all
+		// plugins, should be performed before the job queue log is
+		// read so plugins have a chance to learn about all jobs
+		// already in the queue
+	ClassAdLogPluginManager::Load();
+
+		// Load all ScheddPlugins. In reality this doesn't do much
+		// since initializing any plugin manager loads plugins for all
+		// plugin manager.
+	ScheddPluginManager::Load();
+
+		// Tell all ScheddPlugins to initialze themselves
+	ScheddPluginManager::Initialize();
+
+		// Tell all plugins to initialize themselves
+	ClassAdLogPluginManager::Initialize();
+#endif
 	
 		// Initialize all the modules
 	scheduler.Init();
