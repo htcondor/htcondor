@@ -1373,6 +1373,8 @@ int main( int argc, char** argv )
 	// from the front of the command line.
 	i = 0;
 	bool done = false;
+	const char	*subsys_config = mySubSystem->getName();
+	const char  *local_config  = "<NONE>";
 
 	for(ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++) {
 		if(ptr[0][0] != '-') {
@@ -1453,18 +1455,20 @@ int main( int argc, char** argv )
 			}
 			break;
 #endif
-		case 'l':	// -local-name or -log
-			// specify local name
-			if ( strcmp( &ptr[0][1], "-local-name" ) == 0 ) {
+		case 'l':	// -local-config or -log
+			// specify local config
+			if ( strcmp( &ptr[0][1], "local-config" ) == 0 ) {
+				ptr++;
 				if( ptr && *ptr ) {
-					config_set_local_name( *ptr );
+					local_config = *ptr;
+					config_set_local_name( local_config );
 					dcargs += 2;
 				}
 				else {
 					fprintf( stderr, "DaemonCore: ERROR: "
 							 "-local-name needs another argument.\n" );
 					fprintf( stderr, 
-							 "   Please specify the local name to use.\n" );
+							 "   Please specify the local config to use.\n" );
 					exit( 1 );
 				}
 			}
@@ -1483,23 +1487,27 @@ int main( int argc, char** argv )
 			}
 			break;
 
-		case 's':	// -subsys-name
-			// specify subsystem name
-			if ( strcmp( &ptr[0][1], "-subsys-name" ) == 0 ) {
+		case 's':	// -subsys-config
+			// specify subsystem configuration name
+			if ( strcmp( &ptr[0][1], "subsys-config" ) == 0 ) {
+				ptr++;
 				if( ptr && *ptr ) {
-					config_set_subsystem_name( *ptr );
+					subsys_config = *ptr;
+					config_set_subsystem_name( subsys_config );
 					dcargs += 2;
 				}
 				else {
 					fprintf( stderr, "DaemonCore: ERROR: "
-							 "-subsys-name needs another argument.\n" );
+							 "-subsys-config needs another argument.\n" );
 					fprintf( stderr, 
-							 "   Please specify the local name to use.\n" );
+							 "   Please specify subsystem name to use.\n" );
+					fprintf( stderr, 
+							 "   !!!USE WITH CAUTION!!!\n" );
 					exit( 1 );
 				}
 			}
 			else {
-					// it's not -subsystem-name, so do NOT consume this arg!!
+					// it's not -subsys-config, so do NOT consume this arg!!
 					// in fact, we're done w/ DC args, since it's the
 					// first option we didn't recognize.
 				done = true;
@@ -1686,9 +1694,9 @@ int main( int argc, char** argv )
 		// with it.  Unfortunately, some 3rd party tools were writing
 		// directly to these FDs.  Now, you might not that that this
 		// would be a problem, right?  Unfortunately, once you close
-		// an FD (say, 1 or 2), then next safe_open_wrapper() or socket() call can
-		// / will now return 1 (or 2).  So, when libfoo.a thinks it
-		// fprintf()ing an error message to fd 2 (the FD behind
+		// an FD (say, 1 or 2), then next safe_open_wrapper() or socket()
+		// call can / will now return 1 (or 2).  So, when libfoo.a thinks
+		// it fprintf()ing an error message to fd 2 (the FD behind
 		// stderr), it's actually sending that message over a socket
 		// to a process that has no idea how to handle it.
 		//
@@ -1786,7 +1794,13 @@ int main( int argc, char** argv )
 		free( myFullName );
 		myFullName = NULL;
 	}
-	dprintf(D_FULLDEBUG, "** %s\n", mySubSystem->getString() );
+	dprintf(D_ALWAYS,"** %s\n", mySubSystem->getString() );
+	dprintf(D_ALWAYS,"** Configuration: subsystem:%s / local:%s\n",
+			subsys_config, local_config );
+	if ( ! mySubSystem->nameMatch(subsys_config) ) {
+		dprintf(D_ALWAYS, "** WARNING: %s will use %s for configuration\n",
+				mySubSystem->getName(), subsys_config );
+	}
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
 	dprintf(D_ALWAYS,"** PID = %lu\n", (unsigned long) daemonCore->getpid());
