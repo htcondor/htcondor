@@ -2649,6 +2649,10 @@ AssignExpr(char const *variable,char const *value)
 {
 	MyString buf;
 
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
 	buf += variable;
 
 	if(!value) {
@@ -2673,6 +2677,10 @@ int AttrList::
 Assign(char const *variable,char const *value)
 {
 	MyString buf;
+
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
 
 	buf += variable;
 
@@ -2705,6 +2713,10 @@ int AttrList::
 Assign(char const *variable,int value)
 {
 	MyString buf;
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
 	buf.sprintf("%s = %d",variable,value);
 	return Insert(buf.GetCStr());
 }
@@ -2712,6 +2724,10 @@ int AttrList::
 Assign(char const *variable,float value)
 {
 	MyString buf;
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
 	buf.sprintf("%s = %f",variable,value);
 	return Insert(buf.GetCStr());
 }
@@ -2719,6 +2735,10 @@ int AttrList::
 Assign(char const *variable,double value)
 {
 	MyString buf;
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
 	/* WARNING: The internal representation may only store float sized 
 		quantities. but if this is ever fixed, the whole source base doesn't
 		need to be updated to deal with assigning double values due to the
@@ -2730,6 +2750,10 @@ int AttrList::
 Assign(char const *variable,bool value)
 {
 	MyString buf;
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
 	buf.sprintf("%s = %s",variable,value?"TRUE":"FALSE");
 	return Insert(buf.GetCStr());
 }
@@ -2773,4 +2797,35 @@ void AttrList::SetPrivateAttributesInvisible(bool make_invisible)
 		// keep this in sync with ClassAdAttributeIsPrivate()
 	SetInvisible(ATTR_CLAIM_ID,make_invisible);
 	SetInvisible(ATTR_CLAIM_IDS,make_invisible);
+}
+
+//	Decides if a string is a valid attribute name, the LHS
+//  of an expression.  As per the manual, valid names:
+//
+//  Attribute names are sequences of alphabetic characters, digits and 
+//  underscores, and may not begin with a digit
+
+/* static */ bool
+AttrList::IsValidAttrName(const char *name) {
+		// NULL pointer certainly false
+	if (!name) {
+		return false;
+	}
+
+		// Must start with alpha or _
+	if (!isalpha(*name) && *name != '_') {
+		return false;
+	}
+
+	name++;
+
+		// subsequent letters must be alphanum or _
+	while (*name) {
+		if (!isalnum(*name) && *name != '_') {
+			return false;
+		}
+		name++;
+	}
+
+	return true;
 }
