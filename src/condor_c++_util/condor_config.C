@@ -1392,14 +1392,14 @@ param( const char *name )
 	}
 	// 2. "local.name"
 	if (  (NULL == val) && config_local_name ) {
-		param_name += config_local_name;
+		param_name = config_local_name;
 		param_name += ".";
 		param_name += name;
 		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
 	}
 	// 3. "subsys.name"
 	if ( NULL == val ) {
-		param_name += config_subsystem_name;
+		param_name = config_subsystem_name;
 		param_name += ".";
 		param_name += name;
 		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
