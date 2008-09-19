@@ -100,7 +100,7 @@ command_activate_claim( Service*, int cmd, Stream* stream )
 	char* id = NULL;
 	Resource* rip;
 
-	if( ! stream->code(id) ) {
+	if( ! stream->get_secret(id) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		free( id );
 		return FALSE;
@@ -245,7 +245,7 @@ command_request_claim( Service*, int cmd, Stream* stream )
 	Resource* rip;
 	int rval;
 
-	if( ! stream->code(id) ) {
+	if( ! stream->get_secret(id) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		if( id ) { 
 			free( id );
@@ -313,7 +313,7 @@ command_release_claim( Service*, int cmd, Stream* stream )
 	char* id = NULL;
 	Resource* rip;
 
-	if( ! stream->code(id) ) {
+	if( ! stream->get_secret(id) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		if( id ) { 
 			free( id );
@@ -463,7 +463,7 @@ command_match_info( Service*, int cmd, Stream* stream )
 	Resource* rip;
 	int rval;
 
-	if( ! stream->code(id) ) {
+	if( ! stream->get_secret(id) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		free( id );
 		return FALSE;

@@ -4972,7 +4972,7 @@ Scheduler::negotiate(int command, Stream* s)
 									ATTR_LAST_MATCH_TIME,(int)time(0));
 					cad->Insert(buffer);
 
-					if( !s->get(claim_id) ) {
+					if( !s->get_secret(claim_id) ) {
 						dprintf( D_ALWAYS,
 								"Can't receive ClaimId from mgr\n" );
 						return (!(KEEP_STREAM));
@@ -5320,7 +5320,7 @@ Scheduler::vacate_service(int, Stream *sock)
 	dprintf( D_ALWAYS, "Got VACATE_SERVICE from %s\n", 
 			 sin_to_string(((Sock*)sock)->endpoint()) );
 
-	if (!sock->code(claim_id)) {
+	if (!sock->get_secret(claim_id)) {
 		dprintf (D_ALWAYS, "Failed to get ClaimId\n");
 		return;
 	}
@@ -8773,7 +8773,7 @@ void
 send_vacate(match_rec* match,int cmd)
 {
 	classy_counted_ptr<DCStartd> startd = new DCStartd( match->peer );
-	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg( cmd, match->claimId() );
+	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( cmd, match->claimId() );
 
 	msg->setSuccessDebugLevel(D_ALWAYS);
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
@@ -11337,7 +11337,7 @@ bool
 sendAlive( match_rec* mrec )
 {
 	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->peer );
-	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg( ALIVE, mrec->claimId() );
+	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( ALIVE, mrec->claimId() );
 
 	msg->setSuccessDebugLevel(D_PROTOCOL);
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
@@ -11383,7 +11383,7 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 
 	s->decode();
 	s->timeout(1);	// its a short message so data should be ready for us
-	s->code(claim_id);	// must free this; CEDAR will malloc cuz claimid=NULL
+	s->get_secret(claim_id);	// must free this; CEDAR will malloc cuz claimid=NULL
 	if ( !s->end_of_message() ) {
 		if (claim_id) free(claim_id);
 		return FALSE;

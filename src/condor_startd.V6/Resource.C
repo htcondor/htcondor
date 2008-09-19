@@ -1478,8 +1478,13 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// should get the ClaimId from r_cur.
 			// CRUFT: This shouldn't still be called ATTR_CAPABILITY
 			// in the ClassAd, but for backwards compatibility it is.
-			// When we finally remove all the evil startd private ad
-			// junk this can go away, too.
+			// As of 7.1.3, the negotiator accepts ATTR_CLAIM_ID
+			// ATTR_CAPABILITY, so once we no longer care about
+			// compatibility with negotiators older than that,
+			// we can ditch ATTR_CAPABILITY and switch the following
+			// over to ATTR_CLAIM_ID.  That will slightly simplify
+			// claimid-specific logic elsewhere, such as the private
+			// attributes in ClassAds.
 		if( r_pre_pre ) {
 			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre_pre->id() );
 			cap->Insert( line );

@@ -1321,13 +1321,9 @@ SecManStartCommand::sendAuthInfo_inner()
 
 	// extract the version attribute current in the classad - it is
 	// the version of the remote side.
-	char * rvtmp = NULL;
-	m_auth_info.LookupString ( ATTR_SEC_REMOTE_VERSION, &rvtmp );
-	if (rvtmp) {
-		m_remote_version = rvtmp;
-		free(rvtmp);
-	} else {
-		m_remote_version = "unknown";
+	if(m_auth_info.LookupString( ATTR_SEC_REMOTE_VERSION, m_remote_version )) {
+		CondorVersionInfo ver_info(m_remote_version.Value());
+		m_sock->set_peer_version(&ver_info);
 	}
 
 	// fill in our version
@@ -1433,24 +1429,24 @@ SecManStartCommand::sendAuthInfo_inner()
 				dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
 			} // if (will_enable_mac)
 
-			if (will_enable_enc == SecMan::SEC_FEAT_ACT_YES) {
+			bool turn_encryption_on = will_enable_enc == SecMan::SEC_FEAT_ACT_YES;
+			if (turn_encryption_on && !ki) {
+				dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
+				m_errstack->push( "SECMAN", SECMAN_ERR_NO_KEY,
+						"Failed to establish a crypto key" );
+				return StartCommandFailed;
+			}
 
-				if (!ki) {
-					dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
-					m_errstack->push( "SECMAN", SECMAN_ERR_NO_KEY,
-							"Failed to establish a crypto key" );
-					return StartCommandFailed;
-				}
-
+			if( ki ) {
 				if (DebugFlags & D_FULLDEBUG) {
 					dprintf (D_SECURITY, "SECMAN: about to enable encryption.\n");
 					m_sec_man.key_printf(D_SECURITY, ki);
 				}
 
-				// prepare the buffer to pass in udp header
+					// prepare the buffer to pass in udp header
 				MyString key_id = m_enc_key->id();
 
-				// stick our command socket sinful string in there
+					// stick our command socket sinful string in there
 				char* dcsss = global_dc_sinful();
 				if (dcsss) {
 					key_id += ",";
@@ -1459,12 +1455,12 @@ SecManStartCommand::sendAuthInfo_inner()
 
 
 				m_sock->encode();
-				m_sock->set_crypto_key(true, ki, key_id.Value());
+				m_sock->set_crypto_key(turn_encryption_on, ki, key_id.Value());
 
-				dprintf ( D_SECURITY, "SECMAN: successfully enabled encryption!\n");
-			} // if (will_enable_enc)
+				dprintf ( D_SECURITY,
+						  "SECMAN: successfully enabled encryption%s.\n",
+						  turn_encryption_on ? "" : " (but encryption mode is off by default for this packet)");
 
-			if (ki) {
 				delete ki;
 			}
 		} else {
@@ -1592,6 +1588,11 @@ SecManStartCommand::receiveAuthInfo_inner()
 			// explicitly delete it before we copy it.
 			m_auth_info.Delete(ATTR_SEC_REMOTE_VERSION);
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_REMOTE_VERSION );
+			m_auth_info.LookupString(ATTR_SEC_REMOTE_VERSION,m_remote_version);
+			if( !m_remote_version.IsEmpty() ) {
+				CondorVersionInfo ver_info(m_remote_version.Value());
+				m_sock->set_peer_version(&ver_info);
+			}
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ENACT );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS_LIST );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS );
@@ -1657,7 +1658,7 @@ SecManStartCommand::authenticate_inner()
 
 		if ((will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
 			if ((!m_new_session)) {
-				if (m_remote_version != "unknown") {
+				if( !m_remote_version.IsEmpty() ) {
 					dprintf( D_SECURITY, "SECMAN: resume, other side is %s, NOT reauthenticating.\n", m_remote_version.Value() );
 					will_authenticate = SecMan::SEC_FEAT_ACT_NO;
 				} else {

@@ -975,7 +975,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 
 	sock->encode();
 
-	if ( !sock->code( claimId ) || !sock->end_of_message() ) {
+	if ( !sock->put_secret( claimId ) || !sock->end_of_message() ) {
 			dprintf( D_FAILURE|D_ALWAYS, 
 				 "Failed to send Alive to schedd %s for job %d.%d id \n",
 				 c_addr, c_cluster, c_proc, publicClaimId() );
@@ -2041,7 +2041,7 @@ Client::vacate(char* id)
 		dprintf(D_FAILURE|D_ALWAYS, "Can't connect to schedd (%s)\n", c_addr);
 		return;
 	}
-	if( !sock->put( id ) ) {
+	if( !sock->put_secret( id ) ) {
 		dprintf(D_ALWAYS, "Can't send ClaimId to client\n");
 	} else if( !sock->eom() ) {
 		dprintf(D_ALWAYS, "Can't send EOM to client\n");
@@ -2141,7 +2141,7 @@ ClaimId::dropFile( int slot_id )
 
 	filename_new += ".new";
 
-	FILE* NEW_FILE = safe_fopen_wrapper( filename_new.Value(), "w" );
+	FILE* NEW_FILE = safe_fopen_wrapper( filename_new.Value(), "w", 0600 );
 	if( ! NEW_FILE ) {
 		dprintf( D_ALWAYS,
 				 "ERROR: can't open claim id file: %s: %s (errno: %d)\n",

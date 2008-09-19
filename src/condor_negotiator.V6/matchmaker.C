@@ -2566,7 +2566,8 @@ public:
 		dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n",
 		         idp.publicClaimId() );
 
-		if ( !sock->put ((char *)m_capability.Value()) || !sock->end_of_message())
+		if ( !sock->put_secret ((char *)m_capability.Value()) ||
+			 !sock->end_of_message())
 		{
 			dprintf (D_ALWAYS,
 			        "      Could not send MATCH_INFO/capability to %s\n",
@@ -2763,11 +2764,13 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 	dprintf(D_FULLDEBUG,
 		"      Sending PERMISSION, capability, startdAd to schedd\n");
-	if (!sock->put(PERMISSION_AND_AD) 	|| 
-		!sock->put(capability)	||
+	if (!sock->put(PERMISSION_AND_AD) ||
+		!sock->put_secret(capability) ||
 		!offer->put(*sock)		||	// send startd ad to schedd
 		!sock->end_of_message())
+	{
 			send_failed = true;
+	}
 
 	if ( send_failed )
 	{
@@ -3001,11 +3004,16 @@ getCapability (const char *startdName, const char *startdAddr, ClassAdList &star
 	startdPvtAds.Open();
 	while ((pvtAd = startdPvtAds.Next()))
 	{
+			// As of 7.1.3, we look up CLAIM_ID first and CAPABILITY
+			// second, because someday we will switch the startd over
+			// to sending CLAIM_ID instead of CAPABILITY, just to
+			// simplify things.
 		if (pvtAd->LookupString (ATTR_NAME, &name)			&&
 			strcmp (name, startdName) == 0					&&
 			pvtAd->LookupString (ATTR_STARTD_IP_ADDR, addr)	&&
 			strcmp (addr, startdAddr) == 0					&&
-			pvtAd->LookupString (ATTR_CAPABILITY, capability))
+			(pvtAd->LookupString(ATTR_CLAIM_ID, capability) ||
+			 pvtAd->LookupString(ATTR_CAPABILITY, capability)))
 		{
             free(name);
 			startdPvtAds.Close ();

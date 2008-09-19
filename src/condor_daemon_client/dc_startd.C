@@ -98,7 +98,7 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 	m_startd_fqu = sock->getFullyQualifiedUser();
 	m_startd_ip_addr = sock->endpoint_ip_str();
 
-	if( !sock->put( m_claim_id.Value() ) ||
+	if( !sock->put_secret( m_claim_id.Value() ) ||
 	    !m_job_ad.put( *sock ) ||
 	    !sock->put( m_scheduler_addr.Value() ) ||
 	    !sock->put( m_alive_interval ) )
@@ -218,7 +218,7 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 		return false;
 	}
 		// Now, send the ClaimId
-	if( ! reli_sock.code(claim_id) ) {
+	if( ! reli_sock.put_secret(claim_id) ) {
 		MyString err = "DCStartd::deactivateClaim: ";
 		err += "Failed to send ClaimId to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
@@ -288,7 +288,7 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		delete tmp;
 		return CONDOR_ERROR;
 	}
-	if( ! tmp->code(claim_id) ) {
+	if( ! tmp->put_secret(claim_id) ) {
 		MyString err = "DCStartd::activateClaim: ";
 		err += "Failed to send ClaimId to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
@@ -884,5 +884,33 @@ DCStartd::checkVacateType( VacateType t )
 		newError( CA_INVALID_REQUEST, err_msg.Value() );
 		return false;
 	}
+	return true;
+}
+
+DCClaimIdMsg::DCClaimIdMsg( int cmd, char const *claim_id ):
+	DCMsg( cmd )
+{
+	m_claim_id = claim_id;
+}
+
+bool DCClaimIdMsg::writeMsg( DCMessenger *, Sock *sock )
+{
+	if( !sock->put_secret( m_claim_id.Value() ) ) {
+		sockFailed( sock );
+		return false;
+	}
+	return true;
+}
+
+bool DCClaimIdMsg::readMsg( DCMessenger *, Sock *sock )
+{
+	char *str = NULL;
+	if( !sock->get_secret( str ) ){
+		sockFailed( sock );
+		return false;
+	}
+	m_claim_id = str;
+	free(str);
+
 	return true;
 }
