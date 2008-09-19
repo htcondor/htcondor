@@ -39,10 +39,10 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "subsystem_info.h"
 #include "exit.h"
 #include "condor_uid.h"
 #include "basename.h"
-#include "get_mysubsystem.h"
 #include "file_lock.h"
 #if HAVE_BACKTRACE
 #include "execinfo.h"
@@ -837,7 +837,8 @@ _condor_dprintf_exit( int error_code, const char* msg )
 
 	tmp = param( "LOG" );
 	if( tmp ) {
-		snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s", tmp, get_mySubSystem() );
+		snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s",
+				  tmp, get_mySubSystem() );
 		fail_fp = safe_fopen_wrapper( buf, "w",0644 );
 		if( fail_fp ) {
 			fprintf( fail_fp, "%s", header );

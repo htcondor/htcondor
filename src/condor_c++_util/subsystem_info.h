@@ -74,7 +74,8 @@ class SubsystemInfo
 	~SubsystemInfo( void );
 
 	// Verify the info
-	bool isValid( void ) const;
+	bool isValid( void ) const
+		{ return (  (m_Type != SUBSYSTEM_TYPE_INVALID) && m_NameValid ); };
 
 	// Accessors
 	const char *setName( const char *subsystem_name );
@@ -104,7 +105,7 @@ class SubsystemInfo
 	bool						 m_NameValid;
 	SubsystemType				 m_Type;
 	SubsystemClass				 m_Class;
-	const SubsystemInfoLookup	*m_Lookup;
+	const SubsystemInfoLookup	*m_Info;
 
 	// Internal only methods
 	SubsystemType setType( SubsystemType type, const char *name );
@@ -117,6 +118,8 @@ extern SubsystemInfo	*mySubSystem;
 // Macro to declare subsystem info
 #define DECL_SUBSYSTEM(_name_,_type_) \
 	SubsystemInfo* mySubSystem = new SubsystemInfo(_name_,_type_)
+#define DECL_SUBSYSTEM_DAEMON(_name_) \
+	DECL_SUBSYSTEM(_name_,SUBSYSTEM_TYPE_DEAMON)
 
 #endif	// C++
 

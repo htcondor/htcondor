@@ -21,29 +21,28 @@
 #include "condor_debug.h"
 #include "subsystem_info.h"
 
-
 //
-// Simple lookup class
+// Simple class to manage a single lookup item
 //
 class SubsystemInfoLookup
 {
 public:
-	SubsystemInfoLookup( SubsystemType	 _type,
-						 SubsystemClass	 _class,
-						 const char		*_name,
-						 const char		*_substr );
-	~SubsystemInfoLookup(void) { };
+	SubsystemInfoLookup( SubsystemType, SubsystemClass,
+						 const char *, const char * );
+	~SubsystemInfoLookup( void ) { };
 
-	bool match( SubsystemType _type ) const { return _type == m_type; };
-	bool match( const char *_name ) const
-		{ return ( !strcmp(m_name, _name) ); };
-	bool matchSubstr( const char *_substr ) const
-		{ return ( !strstr(m_substr, _substr) ); };
-
-	bool Valid( void ) const { return m_type != SUBSYSTEM_TYPE_INVALID; };
 	SubsystemType Type( void ) const { return m_type; };
-	SubsystemClass Class( void ) const { return m_class; };
-	const char *Name( void ) const { return m_name; };
+	SubsystemClass Class( void ) const { return m_class; } ;
+	const char * Name( void ) const { return m_name; };
+	const char * Substr( void ) const { return m_substr; };
+
+	bool match( SubsystemType _type ) const { return m_type == _type; };
+	bool match( SubsystemClass _class ) const { return m_class == _class; };
+	bool match( const char *_name ) const
+		{ return !strcmp(m_name,_name); };
+	bool matchSubstr( const char *_name ) const
+		{ return !strstr(m_substr,_name); };
+	bool isValid( ) const { return m_type != SUBSYSTEM_TYPE_INVALID; };
 
 private:
 	SubsystemType	 m_type;
@@ -51,117 +50,108 @@ private:
 	const char		*m_name;
 	const char		*m_substr;
 };
-
 SubsystemInfoLookup::SubsystemInfoLookup(
-	SubsystemType	 _type,
-	SubsystemClass   _class,
-	const char		*_name,
-	const char		*_substr )
+	SubsystemType _type, SubsystemClass _class,
+	const char *_name, const char *_substr )
 {
-	m_type   = _type;
-	m_class  = _class;
-	m_name   = _name;
-	m_substr = _substr;
-};
-
+	m_type = _type; m_class = _class;
+	m_name = _name, m_substr = _substr;
+}
 
 //
-// Simple lookup table class
+// Simple class to manage the lookup table
 //
-class SubsystemLookupTable
+class SubsystemInfoTable
 {
 public:
-	SubsystemLookupTable( void );
-	~SubsystemLookupTable( void );
+	SubsystemInfoTable( void );
+	~SubsystemInfoTable( void ) { };
+	const SubsystemInfoLookup *lookup( SubsystemType ) const;
+	const SubsystemInfoLookup *lookup( SubsystemClass ) const;
+	const SubsystemInfoLookup *lookup( const char * ) const;
+	const SubsystemInfoLookup *Invalid( void ) const { return m_Invalid; };
 
-	const SubsystemInfoLookup *lookup( const char *name ) const;
-	const SubsystemInfoLookup *lookup( SubsystemType type ) const;
-
-private :
-	const  SubsystemInfoLookup			*m_Invalid;
+private:
+	const SubsystemInfoLookup			*m_Invalid;
 	static const SubsystemInfoLookup	 m_Table[];
 };
 
-const SubsystemInfoLookup SubsystemLookupTable::m_Table [] =
+const SubsystemInfoLookup SubsystemInfoTable::m_Table[] =
 {
-	SubsystemInfoLookup (
-		SUBSYSTEM_TYPE_MASTER, SUBSYSTEM_CLASS_DAEMON,
-		"MASTER", "MASTER" ),
-	SubsystemInfoLookup( 
-		SUBSYSTEM_TYPE_COLLECTOR, SUBSYSTEM_CLASS_DAEMON,
-		"COLLECTOR", "COLLECTOR" ),
-	SubsystemInfoLookup( 
-		SUBSYSTEM_TYPE_NEGOTIATOR, SUBSYSTEM_CLASS_DAEMON,
-		"NEGOTIATOR", "NEGOTIATOR" ),
-	SubsystemInfoLookup( 
-		SUBSYSTEM_TYPE_SCHEDD, SUBSYSTEM_CLASS_DAEMON,
-		"SCHEDD", "SCHEDD" ),
-	SubsystemInfoLookup( 
-		SUBSYSTEM_TYPE_SHADOW, SUBSYSTEM_CLASS_DAEMON,
-		"SHADOW", "SHADOW" ),
-	SubsystemInfoLookup( 
-		SUBSYSTEM_TYPE_STARTD, SUBSYSTEM_CLASS_DAEMON,
-		"STARTD", "STARTD" ),
-	SubsystemInfoLookup( 
-		SUBSYSTEM_TYPE_STARTER, SUBSYSTEM_CLASS_DAEMON,
-		"STARTER", "STARTER" ),
-	SubsystemInfoLookup( 
-		SUBSYSTEM_TYPE_GAHP, SUBSYSTEM_CLASS_DAEMON,
-		"GAHP", "GAHP" ),
-	SubsystemInfoLookup( 
-		SUBSYSTEM_TYPE_TOOL, SUBSYSTEM_CLASS_CLIENT,
-		"TOOL", "TOOL" ),
-	SubsystemInfoLookup( 
-		SUBSYSTEM_TYPE_SUBMIT, SUBSYSTEM_CLASS_CLIENT,
-		"SUBMIT", "SUBMIT" ),
-	SubsystemInfoLookup( 
-		SUBSYSTEM_TYPE_JOB, SUBSYSTEM_CLASS_JOB,
-		"JOB", "JOB" ),
-	SubsystemInfoLookup( 
-		SUBSYSTEM_TYPE_DAEMON, SUBSYSTEM_CLASS_DAEMON,
-		"DAEMON", NULL ),
-	SubsystemInfoLookup (
-		SUBSYSTEM_TYPE_INVALID, SUBSYSTEM_CLASS_NONE,
-		"INVALID", "INVALID" )
+	SubsystemInfoLookup( SUBSYSTEM_TYPE_MASTER, SUBSYSTEM_CLASS_DAEMON,
+						 "MASTER", "MASTER" ),
+	SubsystemInfoLookup( SUBSYSTEM_TYPE_COLLECTOR, SUBSYSTEM_CLASS_DAEMON,
+						 "COLLECTOR", "COLLECTOR" ),
+	SubsystemInfoLookup( SUBSYSTEM_TYPE_NEGOTIATOR, SUBSYSTEM_CLASS_DAEMON,
+						 "NEGOTIATOR", "NEGOTIATOR" ),
+	SubsystemInfoLookup( SUBSYSTEM_TYPE_SCHEDD, SUBSYSTEM_CLASS_DAEMON,
+						 "SCHEDD", "SCHEDD" ),
+	SubsystemInfoLookup( SUBSYSTEM_TYPE_SHADOW, SUBSYSTEM_CLASS_DAEMON,
+						 "SHADOW", "SHADOW" ),
+	SubsystemInfoLookup( SUBSYSTEM_TYPE_STARTD, SUBSYSTEM_CLASS_DAEMON,
+						 "STARTD", "STARTD" ),
+	SubsystemInfoLookup( SUBSYSTEM_TYPE_STARTER, SUBSYSTEM_CLASS_DAEMON,
+						 "STARTER", "STARTER" ),
+	SubsystemInfoLookup( SUBSYSTEM_TYPE_GAHP, SUBSYSTEM_CLASS_DAEMON,
+						 "GAHP", "GAHP" ),
+	SubsystemInfoLookup( SUBSYSTEM_TYPE_TOOL, SUBSYSTEM_CLASS_CLIENT,
+						 "TOOL", "TOOL" ),
+	SubsystemInfoLookup( SUBSYSTEM_TYPE_SUBMIT, SUBSYSTEM_CLASS_CLIENT,
+						 "SUBMIT", "SUBMIT" ),
+	SubsystemInfoLookup( SUBSYSTEM_TYPE_JOB, SUBSYSTEM_CLASS_JOB,
+						 "JOB", "JOB" ),
+	SubsystemInfoLookup( SUBSYSTEM_TYPE_DAEMON, SUBSYSTEM_CLASS_DAEMON,
+						 "DAEMON", NULL ),
+	SubsystemInfoLookup( SUBSYSTEM_TYPE_INVALID, SUBSYSTEM_CLASS_NONE,
+						 "INVALID", "INVALID" )
 };
 
-SubsystemLookupTable::SubsystemLookupTable( void )
+SubsystemInfoTable::SubsystemInfoTable(void)
 {
-	m_Invalid = lookup( SUBSYSTEM_TYPE_INVALID );
-}
-
-// Internal method to lookup by name
-const SubsystemInfoLookup *
-SubsystemLookupTable::lookup( const char *name ) const
-{
-	const SubsystemInfoLookup	*cur;
-
-	// First, look for an exact match
-	for( cur = m_Table; cur->Valid(); cur++ ) {
-		if ( cur->match(name) ) {
-			return cur;
-		}
-	}
-
-	// Next, look for substring match
-	for( cur = m_Table; cur->Valid(); cur++ ) {
-		if ( cur->matchSubstr(name) ) {
-			return cur;
-		}
-	}
-
-	return m_Invalid;
+	int num = ( sizeof(m_Table) / sizeof(SubsystemInfoLookup) );
+	m_Invalid = &m_Table[num - 1];
+	ASSERT( m_Invalid != NULL );
+	ASSERT( m_Invalid->match(SUBSYSTEM_TYPE_INVALID) );
 }
 
 // Internal method to lookup by SubsystemType
 const SubsystemInfoLookup *
-SubsystemLookupTable::lookup( SubsystemType type ) const
+SubsystemInfoTable::lookup( SubsystemType _type ) const
 {
-	const SubsystemInfoLookup	*cur;
+	const SubsystemInfoLookup *cur;
+	for ( cur = m_Table;  cur->isValid();  cur++ ) {
+		if ( cur->match(_type) ) {
+			return cur;
+		}
+	}
+	return m_Invalid;
+}
 
-	// look for an exact match
-	for( cur = m_Table; cur->Valid(); cur++ ) {
-		if ( cur->match(type) ) {
+// Internal method to lookup by SubsystemClass
+const SubsystemInfoLookup *
+SubsystemInfoTable::lookup( SubsystemClass _class ) const
+{
+	const SubsystemInfoLookup *cur;
+	for ( cur = m_Table;  cur->isValid();  cur++ ) {
+		if ( cur->match(_class) ) {
+			return cur;
+		}
+	}
+	return m_Invalid;
+}
+
+const SubsystemInfoLookup *
+// Lookup by name
+SubsystemInfoTable::lookup( const char *_name ) const
+{
+	const SubsystemInfoLookup *cur;
+	for ( cur = m_Table;  cur->isValid();  cur++ ) {
+		if ( cur->match(_name) ) {
+			return cur;
+		}
+	}
+	for ( cur = m_Table;  cur->isValid();  cur++ ) {
+		if ( cur->matchSubstr(_name) ) {
 			return cur;
 		}
 	}
@@ -169,13 +159,12 @@ SubsystemLookupTable::lookup( SubsystemType type ) const
 	// Return the invalid entry
 	return m_Invalid;
 }
-
-static SubsystemLookupTable *lookupTable = new SubsystemLookupTable( );
-
+static const SubsystemInfoTable *infoTable = new SubsystemInfoTable( );
 
 //
 // C++ SubsystemInfo methods
 //
+
 SubsystemInfo::SubsystemInfo( const char *name, SubsystemType type )
 {
 	setName( name );
@@ -186,21 +175,6 @@ SubsystemInfo::~SubsystemInfo( void )
 {
 }
 
-// Public interface to dump myself
-void
-SubsystemInfo::dprintf( int level ) const
-{
-	::dprintf( level, "Subsystem: type=%d class=%d name=%s typename=%s\n",
-			   m_Type, m_Class, m_Name, m_Lookup->Name() );
-}
-void
-SubsystemInfo::printf( void ) const
-{
-	::printf( "Subsystem: type=%d class=%d name=%s typename=%s\n",
-			  m_Type, m_Class, m_Name, m_Lookup->Name() );
-}
-
-// Public interface to set name
 const char *
 SubsystemInfo::setName( const char *name )
 {
@@ -226,12 +200,11 @@ SubsystemInfo::setTypeFromName( const char *name )
 		return setType( SUBSYSTEM_TYPE_DAEMON );
 	}
 
-	const SubsystemInfoLookup	*cur;
-	cur = lookupTable->lookup( name );
-	if ( cur ) {
-		return setType( cur, name );
+	// First, look for an exact match
+	const SubsystemInfoLookup	*match = infoTable->lookup( name );
+	if ( match ) {
+		return setType( match, NULL );
 	}
-	
 	return setType( SUBSYSTEM_TYPE_DAEMON );
 }
 
@@ -246,19 +219,19 @@ SubsystemInfo::setType( SubsystemType type )
 SubsystemType
 SubsystemInfo::setType( SubsystemType type, const char *type_name )
 {
-	return setType( lookupTable->lookup(type), type_name );
+	return setType( infoTable->lookup(type), type_name );
 }
 
 // Internal set type method
 SubsystemType
-SubsystemInfo::setType( const SubsystemInfoLookup *lookup,
+SubsystemInfo::setType( const SubsystemInfoLookup *info,
 						const char *type_name )
 {
-	m_Lookup = lookup;
-	m_Type   = lookup->Type();
-	m_Class = lookup->Class();
+	m_Type = info->Type();
+	m_Class = info->Class();
+	m_Info = info;
 	if ( NULL == type_name ) {
-		setName( lookup->Name() );
+		setName( info->Name() );
 	}
 	else {
 		setName( type_name );
@@ -266,21 +239,26 @@ SubsystemInfo::setType( const SubsystemInfoLookup *lookup,
 	return m_Type;
 }
 
-// Public method; Get our type name
+// Public dprintf / printf methods
+void
+SubsystemInfo::dprintf( int level ) const
+{
+	::dprintf( level,
+			   "SubsystemInfo: name=%s type=%d (%s) class=%d\n",
+			   m_Name, m_Type, m_Info->Name(), m_Class );
+}
+void
+SubsystemInfo::printf( void ) const
+{
+	::printf( "SubsystemInfo: name=%s type=%d (%s) class=%d\n",
+			  m_Name, m_Type, m_Info->Name(), m_Class );
+}
+
+// Public method to get a type name
 const char *
 SubsystemInfo::getTypeName( void ) const
 {
-	return m_Lookup->Name( );
-};
-
-// Public method; is everything valid?
-bool
-SubsystemInfo::isValid( void ) const
-{
-	if ( m_Class != SUBSYSTEM_CLASS_NONE ) {
-		return true;
-	}
-	return m_NameValid;
+	return m_Info->Name( );
 }
 
 /* Helper function to retrieve the value of mySubSystem global variable
