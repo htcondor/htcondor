@@ -2654,7 +2654,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	char accountingGroup[256];
 	char remoteOwner[256];
     MyString startdName;
-	char *capability;
+	char const *capability;
 	SafeSock startdSock;
 	bool send_failed;
 	int want_claiming = -1;
@@ -2688,8 +2688,9 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	}
 
 	// find the startd's capability from the private ad
+	MyString capability_buf;
 	if ( want_claiming ) {
-		if (!(capability = getCapability (startdName.Value(), startdAddr, startdPvtAds)))
+		if (!(capability = getCapability (startdName.Value(), startdAddr, startdPvtAds, capability_buf)))
 		{
 			dprintf(D_ALWAYS,"      %s has no capability\n", startdName.Value());
 			return MM_BAD_MATCH;
@@ -2993,11 +2994,10 @@ calculateNormalizationFactor (ClassAdList &scheddAds,
 }
 
 
-char *Matchmaker::
-getCapability (const char *startdName, const char *startdAddr, ClassAdList &startdPvtAds)
+char const *Matchmaker::
+getCapability (const char *startdName, const char *startdAddr, ClassAdList &startdPvtAds, MyString &capability_buf)
 {
 	ClassAd *pvtAd;
-	static char	capability[80];
 	char	*name;
 	char	addr[64];
 
@@ -3012,12 +3012,12 @@ getCapability (const char *startdName, const char *startdAddr, ClassAdList &star
 			strcmp (name, startdName) == 0					&&
 			pvtAd->LookupString (ATTR_STARTD_IP_ADDR, addr)	&&
 			strcmp (addr, startdAddr) == 0					&&
-			(pvtAd->LookupString(ATTR_CLAIM_ID, capability) ||
-			 pvtAd->LookupString(ATTR_CAPABILITY, capability)))
+			(pvtAd->LookupString(ATTR_CLAIM_ID, capability_buf) ||
+			 pvtAd->LookupString(ATTR_CAPABILITY, capability_buf)))
 		{
             free(name);
 			startdPvtAds.Close ();
-			return capability;
+			return capability_buf.Value();
 		}
         free(name);
 	}

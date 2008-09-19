@@ -32,7 +32,7 @@ class SecMan;
 class KeyCacheEntry {
  public:
     KeyCacheEntry(
-			char * id,
+			char const * id,
 			struct sockaddr_in * addr,
 			KeyInfo * key,
 			ClassAd * policy,
@@ -48,6 +48,7 @@ class KeyCacheEntry {
     KeyInfo*              key();
     ClassAd*              policy();
     int                   expiration();
+	void                  setExpiration(int new_expiration);
 
  private:
 

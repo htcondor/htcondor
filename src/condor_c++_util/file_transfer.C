@@ -143,6 +143,7 @@ FileTransfer::FileTransfer()
 	simple_init = true;
 	simple_sock = NULL;
 	m_use_file_catalog = true;
+	m_sec_session_id = NULL;
 }
 
 FileTransfer::~FileTransfer()
@@ -201,6 +202,7 @@ FileTransfer::~FileTransfer()
 #ifdef WIN32
 	if (perm_obj) delete perm_obj;
 #endif
+	free(m_sec_session_id);
 }
 
 int
@@ -822,7 +824,7 @@ FileTransfer::DownloadFiles(bool blocking)
 			return FALSE;
 		}
 
-		d.startCommand(FILETRANS_UPLOAD, &sock, 0);
+		d.startCommand(FILETRANS_UPLOAD, &sock, 0, NULL, NULL, false, m_sec_session_id);
 
 		sock.encode();
 
@@ -1157,7 +1159,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 			return FALSE;
 		}
 
-		d.startCommand(FILETRANS_DOWNLOAD, &sock);
+		d.startCommand(FILETRANS_DOWNLOAD, &sock, clientSockTimeout, NULL, NULL, false, m_sec_session_id);
 
 		sock.encode();
 
@@ -3003,3 +3005,8 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 	return true;
 }
 
+void FileTransfer::setSecuritySession(char const *session_id) {
+	free(m_sec_session_id);
+	m_sec_session_id = NULL;
+	m_sec_session_id = session_id ? strdup(session_id) : NULL;
+}

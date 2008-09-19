@@ -347,6 +347,7 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		// preempting claim is being canceled by schedd
 		rip->dprintf( D_ALWAYS, 
 		              "State change: received RELEASE_CLAIM command from preempting claim\n" );
+		rip->r_pre->scheddClosedClaim();
 		rip->removeClaim(rip->r_pre);
 		free(id);
 		return TRUE;
@@ -355,6 +356,7 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		// preempting preempting claim is being canceled by schedd
 		rip->dprintf( D_ALWAYS, 
 		              "State change: received RELEASE_CLAIM command from preempting preempting claim\n" );
+		rip->r_pre_pre->scheddClosedClaim();
 		rip->removeClaim(rip->r_pre_pre);
 		free(id);
 		return TRUE;
@@ -364,6 +366,7 @@ command_release_claim( Service*, int cmd, Stream* stream )
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received RELEASE_CLAIM command\n" );
 			free(id);
+			rip->r_cur->scheddClosedClaim();
 			return rip->release_claim();
 		} else {
 			rip->log_ignore( cmd, s );
@@ -1842,7 +1845,6 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 	char* schedd_addr = NULL;
 	Claim* claim = NULL;
 	int rval = TRUE;
-	MyString line;
 	ClassAd reply;
 
 	req_ad->LookupString(ATTR_CLAIM_ID, &claimid);
@@ -1899,11 +1901,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 
 		// if we're still here, everything worked, so we can reply
 		// with success...
-	line = ATTR_RESULT;
-	line += " = \"";
-	line += getCAResultString( CA_SUCCESS );
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 
 	rval = sendCAReply( s, cmd_str, &reply );
 	if( ! rval ) {

@@ -3842,7 +3842,6 @@ int DaemonCore::HandleReq(Stream *insock)
 				if (the_policy) {
 					char *the_user  = NULL;
 					the_policy->LookupString( ATTR_SEC_USER, &the_user);
-
 					if (the_user) {
 						// copy this to the HandleReq() scope
 						user = the_user;

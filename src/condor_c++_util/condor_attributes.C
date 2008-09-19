@@ -666,12 +666,13 @@ const char *ATTR_SEC_PACKET_COUNT         = "PacketCount";
 const char *ATTR_SEC_NEGOTIATION          = "OutgoingNegotiation";
 const char *ATTR_SEC_VALID_COMMANDS       = "ValidCommands";
 const char *ATTR_SEC_SESSION_DURATION     = "SessionDuration";
+const char *ATTR_SEC_SESSION_EXPIRES      = "SessionExpires";
 const char *ATTR_SEC_USER                 = "User";
+const char *ATTR_SEC_MY_REMOTE_USER_NAME  = "MyRemoteUserName";
 const char *ATTR_SEC_NEW_SESSION          = "NewSession";
 const char *ATTR_SEC_USE_SESSION          = "UseSession";
 const char *ATTR_SEC_COOKIE               = "Cookie";
-extern const char * ATTR_SEC_AUTHENTICATED_USER = "AuthenticatedUser";
-extern const char * ATTR_SEC_TRIED_AUTHENTICATION = "TriedAuthentication";
+const char * ATTR_SEC_TRIED_AUTHENTICATION = "TriedAuthentication";
 
 const char *ATTR_MULTIPLE_TASKS_PER_PVMD  = "MultipleTasksPerPvmd";
 

@@ -30,12 +30,6 @@
 
 #define MAX_USERNAMELEN 128
 
-enum transfer_mode {
-  NORMAL = 1,
-  ENCRYPT,
-  ENCRYPT_HDR
-};
-
 class Authentication {
 	
     friend class ReliSock;
@@ -178,6 +172,12 @@ class Authentication {
 	static void split_canonical_name(char const *can_name,char **user,char **domain);
 #endif
 
+	enum transfer_mode {
+		NORMAL = 1,
+		ENCRYPT,
+		ENCRYPT_HDR
+	};
+
  private:
 #if !defined(SKIP_AUTHENTICATION)
     Authentication() {}; //should never be called, make private to help that!
@@ -211,6 +211,17 @@ class Authentication {
 };
 
 extern char const *UNMAPPED_DOMAIN;
+extern char const *MATCHSESSION_DOMAIN;
+
+/* This is the hard-coded name of the startd (and starter) as seen by
+   the schedd and shadow when using non-negotiated security sessions
+   based on the claim id. */
+extern char const *EXECUTE_SIDE_MATCHSESSION_FQU;
+
+/* This is the hard-coded name of the shadow as seen by the starter
+   when using non-negotiated security sessions based on the claim
+   id. */
+extern char const *SUBMIT_SIDE_MATCHSESSION_FQU;
 
 #endif /* AUTHENTICATION_H */
 

@@ -1486,15 +1486,12 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// claimid-specific logic elsewhere, such as the private
 			// attributes in ClassAds.
 		if( r_pre_pre ) {
-			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre_pre->id() );
-			cap->Insert( line );
+			cap->Assign( ATTR_CAPABILITY, r_pre_pre->id() );
 		}
 		else if( r_pre ) {
-			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre->id() );
-			cap->Insert( line );
+			cap->Assign( ATTR_CAPABILITY, r_pre->id() );
 		} else if( r_cur ) {
-			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_cur->id() );
-			cap->Insert( line );
+			cap->Assign( ATTR_CAPABILITY, r_cur->id() );
 		}		
 	}
 

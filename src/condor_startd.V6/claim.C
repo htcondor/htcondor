@@ -41,7 +41,7 @@
 Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 {
 	c_client = new Client;
-	c_id = new ClaimId( claim_type );
+	c_id = new ClaimId( claim_type, res_ip->r_id_str );
 	if( claim_type == CLAIM_OPPORTUNISTIC ) {
 		c_id->dropFile( res_ip->r_id );
 	}
@@ -83,6 +83,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	c_may_unretire = true;
 	c_retire_peacefully = false;
 	c_preempt_was_true = false;
+	c_schedd_closed_claim = false;
 }
 
 
@@ -122,14 +123,21 @@ Claim::~Claim()
 		free( c_cod_keyword );
 	}
 }	
-	
+
+void
+Claim::scheddClosedClaim() {
+		// This tells us that there is no need to send RELEASE_CLAIM
+		// to the schedd, because it was the schedd that told _us_
+		// to close the claim.
+	c_schedd_closed_claim = true;
+}	
 
 void
 Claim::vacate() 
 {
 	ASSERT( c_id );
 		// warn the client of this claim that it's being vacated
-	if( c_client && c_client->addr() ) {
+	if( c_client && c_client->addr() && !c_schedd_closed_claim ) {
 		c_client->vacate( c_id->id() );
 	}
 
@@ -966,7 +974,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 		// Protocl of sending an alive to the schedd: we send
 		// the claim id, and schedd responds with an int ack.
 
-	if (!matched_schedd.startCommand(ALIVE, sock, 20  )) {
+	if (!matched_schedd.startCommand(ALIVE, sock, 20, NULL, NULL, false, secSessionId() )) {
 		dprintf( D_FAILURE|D_ALWAYS, 
 				"Couldn't send ALIVE to schedd at %s\n",
 				 c_addr );
@@ -1220,6 +1228,15 @@ Claim::publicClaimId( void )
 	} else {
 		return "<unknown>";
 	}
+}
+
+char const*
+Claim::secSessionId( void )
+{
+	if( c_id ) {
+		return c_id->secSessionId();
+	}
+	return NULL;
 }
 
 
@@ -2034,9 +2051,13 @@ Client::vacate(char* id)
 
 	dprintf(D_FULLDEBUG, "Entered vacate_client %s %s...\n", c_addr, c_host);
 
+	ClaimIdParser cid(id);
+
 	Daemon my_schedd( DT_SCHEDD, c_addr, NULL);
 	sock = (ReliSock*)my_schedd.startCommand( RELEASE_CLAIM,
-											  Stream::reli_sock, 20 );
+											  Stream::reli_sock, 20,
+											  NULL, NULL, false,
+											  cid.secSessionId());
 	if( ! sock ) {
 		dprintf(D_FAILURE|D_ALWAYS, "Can't connect to schedd (%s)\n", c_addr);
 		return;
@@ -2074,15 +2095,23 @@ newIdString( char** id_str_ptr )
 	id += '#';
 	id += sequence_num;
 	id += "#";
-	unsigned char *rand_bytes = Condor_Crypt_Base::randomKey(sizeof(int));
-	id += *((unsigned int *)rand_bytes); // this is the "top-secret" cookie
-	free( rand_bytes );
+
+		// keylen is 20 in order to avoid generating claim ids that
+		// overflow the 80 byte buffer in pre-7.1.3 negotiators
+	const size_t keylen = 20;
+	unsigned char *keybuf = Condor_Crypt_Base::randomKey(keylen);
+	int i;
+	for(i=0;i<keylen;i++) {
+		id.sprintf_cat("%02x",keybuf[i]);
+	}
+	free( keybuf );
+
 	*id_str_ptr = strdup( id.Value() );
 	return sequence_num;
 }
 
 
-ClaimId::ClaimId( ClaimType claim_type )
+ClaimId::ClaimId( ClaimType claim_type, char const *slotname )
 {
 	int num = newIdString( &c_id );
 	claimid_parser.setClaimId(c_id);
@@ -2093,11 +2122,73 @@ ClaimId::ClaimId( ClaimType claim_type )
 	} else {
 		c_cod_id = NULL;
 	}
+
+	if( claim_type == CLAIM_OPPORTUNISTIC
+		&& param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) )
+	{
+		MyString fqu;
+		MyString session_id;
+		MyString session_key;
+		MyString session_info;
+			// there is no sec session info yet in the claim id, so
+			// we call secSessionId with ignore_session_info=true to
+			// force it to give us the session id
+		session_id = claimid_parser.secSessionId(/*ignore_session_info=*/true);
+		session_key = claimid_parser.secSessionKey();
+
+		bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+			DAEMON,
+			session_id.Value(),
+			session_key.Value(),
+			NULL,
+			SUBMIT_SIDE_MATCHSESSION_FQU,
+			NULL,
+			0 );
+
+		if( !rc ) {
+			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create "
+					"security session for claim id %s\n", session_id.Value());
+		}
+		else {
+				// fill in session_info so that schedd will have
+				// enough info to create a pre-built security session
+				// compatible with the one we just created.
+			rc = daemonCore->getSecMan()->ExportSecSessionInfo(
+				session_id.Value(),
+				session_info );
+
+			if( !rc ) {
+				dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to get "
+						"session info for claim id %s\n",session_id.Value());
+			}
+			else {
+				claimid_parser.setSecSessionInfo( session_info.Value() );
+				free( c_id );
+				c_id = strdup(claimid_parser.claimId());
+
+					// after rewriting session info, verify that session id
+					// and session key are the same that we used when we
+					// created the session
+				ASSERT( session_id == claimid_parser.secSessionId() );
+				ASSERT( session_key == claimid_parser.secSessionKey() );
+				ASSERT( session_info == claimid_parser.secSessionInfo() );
+			}
+		}
+	}
 }
 
 
 ClaimId::~ClaimId()
 {
+	if( claimid_parser.secSessionId() ) {
+			// Expire the session after enough time to let the final
+			// RELEASE_CLAIM command finish, in case it is still in
+			// progress.  This also allows us to more gracefully
+			// handle any final communication from the schedd that may
+			// still be in flight.
+		daemonCore->getSecMan()->SetSessionExpiration(claimid_parser.secSessionId(),time(NULL)+600);
+	}
+
 	free( c_id );
 	if( c_cod_id ) {
 		free( c_cod_id );
@@ -2108,17 +2199,10 @@ ClaimId::~ClaimId()
 bool
 ClaimId::matches( const char* req_id )
 {
-	// When we send the claim ID, the IP in it may get rewritten, depending
-	// on which interface we use to talk to the collector.  Therefore,
-	// do not compare the IP portion of the claim ID.
-
-	char const *id_after_ip = strchr(req_id,':');
-	char const *c_id_after_ip = strchr(c_id,':');
-
-	if(!id_after_ip) return false; //caller gave us a bogus claim id
-	ASSERT(c_id_after_ip); //should never happen -- our claim id is bogus
-
-	return( strcmp(id_after_ip, c_id_after_ip) == 0 );
+	if( !req_id ) {
+		return false;
+	}
+	return( strcmp(c_id, req_id) == 0 );
 }
 
 

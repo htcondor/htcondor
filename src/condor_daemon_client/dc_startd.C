@@ -26,6 +26,7 @@
 #include "command_strings.h"
 #include "daemon.h"
 #include "dc_startd.h"
+#include "condor_claimid_parser.h"
 
 
 DCStartd::DCStartd( const char* tName, const char* tPool ) 
@@ -164,6 +165,10 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 
 	msg->setSuccessDebugLevel(D_ALWAYS|D_PROTOCOL);
 
+		// if this claim is associated with a security session
+	ClaimIdParser cid(claim_id);
+	msg->setSecSessionId(cid.secSessionId());
+
 	msg->setTimeout(timeout);
 	sendMsg(msg.get());
 }
@@ -187,6 +192,10 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 		return false;
 	}
 
+		// if this claim is associated with a security session
+	ClaimIdParser cidp(claim_id);
+	char const *sec_session = cidp.secSessionId();
+
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
@@ -204,7 +213,7 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 	} else {
 		cmd = DEACTIVATE_CLAIM_FORCIBLY;
 	}
-	result = startCommand( cmd, (Sock*)&reli_sock ); 
+	result = startCommand( cmd, (Sock*)&reli_sock, 20, NULL, NULL, false, sec_session ); 
 	if( ! result ) {
 		MyString err = "DCStartd::deactivateClaim: ";
 		err += "Failed to send command ";
@@ -277,8 +286,12 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		return CONDOR_ERROR;
 	}
 
+		// if this claim is associated with a security session
+	ClaimIdParser cidp(claim_id);
+	char const *sec_session = cidp.secSessionId();
+
 	Sock* tmp;
-	tmp = startCommand( ACTIVATE_CLAIM, Stream::reli_sock, 20 ); 
+	tmp = startCommand( ACTIVATE_CLAIM, Stream::reli_sock, 20, NULL, NULL, false, sec_session ); 
 	if( ! tmp ) {
 		MyString err = "DCStartd::activateClaim: ";
 		err += "Failed to send command ";
@@ -385,15 +398,11 @@ DCStartd::activateClaim( const ClassAd* job_ad, ClassAd* reply,
 		return false;
 	}
 	ClassAd req( *job_ad );
-	char buf[1024]; 
 
 		// Add our own attributes to the request ad we're sending
-	sprintf( buf, "%s = \"%s\"", ATTR_COMMAND,
-			 getCommandString(CA_ACTIVATE_CLAIM) );
-	req.Insert( buf );
+	req.Assign( ATTR_COMMAND, getCommandString(CA_ACTIVATE_CLAIM) );
 
-	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_ID, claim_id );
-	req.Insert( buf );
+	req.Assign( ATTR_CLAIM_ID, claim_id );
 
 	return sendCACmd( &req, reply, true, timeout );
 }
@@ -408,15 +417,11 @@ DCStartd::suspendClaim( ClassAd* reply, int timeout )
 	}
 
 	ClassAd req;
-	char buf[1024]; 
 
 		// Add our own attributes to the request ad we're sending
-	sprintf( buf, "%s = \"%s\"", ATTR_COMMAND,
-			 getCommandString(CA_SUSPEND_CLAIM) );
-	req.Insert( buf );
+	req.Assign( ATTR_COMMAND, getCommandString(CA_SUSPEND_CLAIM) );
 
-	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_ID, claim_id );
-	req.Insert( buf );
+	req.Assign( ATTR_CLAIM_ID, claim_id );
 
 	return sendCACmd( &req, reply, true, timeout );
 }
@@ -434,12 +439,9 @@ DCStartd::resumeClaim( ClassAd* reply, int timeout )
 	char buf[1024]; 
 
 		// Add our own attributes to the request ad we're sending
-	sprintf( buf, "%s = \"%s\"", ATTR_COMMAND,
-			 getCommandString(CA_RESUME_CLAIM) );
-	req.Insert( buf );
+	req.Assign( ATTR_COMMAND, getCommandString(CA_RESUME_CLAIM) );
 
-	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_ID, claim_id );
-	req.Insert( buf );
+	req.Assign( ATTR_CLAIM_ID, claim_id );
 
 	return sendCACmd( &req, reply, true, timeout );
 }
@@ -458,19 +460,13 @@ DCStartd::deactivateClaim( VacateType vType, ClassAd* reply,
 	}
 
 	ClassAd req;
-	char buf[1024]; 
 
 		// Add our own attributes to the request ad we're sending
-	sprintf( buf, "%s = \"%s\"", ATTR_COMMAND,
-			 getCommandString(CA_DEACTIVATE_CLAIM) );
-	req.Insert( buf );
+	req.Assign( ATTR_COMMAND, getCommandString(CA_DEACTIVATE_CLAIM) );
 
-	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_ID, claim_id );
-	req.Insert( buf );
+	req.Assign( ATTR_CLAIM_ID, claim_id );
 
-	sprintf( buf, "%s = \"%s\"", ATTR_VACATE_TYPE,
-			 getVacateTypeString(vType) ); 
-	req.Insert( buf );
+	req.Assign( ATTR_VACATE_TYPE, getVacateTypeString(vType) ); 
 
  		// since deactivate could take a while, if we didn't already
 		// get told what timeout to use, set the timeout to 0 so we
@@ -496,19 +492,13 @@ DCStartd::releaseClaim( VacateType vType, ClassAd* reply,
 	}
 
 	ClassAd req;
-	char buf[1024]; 
 
 		// Add our own attributes to the request ad we're sending
-	sprintf( buf, "%s = \"%s\"", ATTR_COMMAND,
-			 getCommandString(CA_RELEASE_CLAIM) );
-	req.Insert( buf );
+	req.Assign( ATTR_COMMAND, getCommandString(CA_RELEASE_CLAIM) );
 
-	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_ID, claim_id );
-	req.Insert( buf );
+	req.Assign( ATTR_CLAIM_ID, claim_id );
 
-	sprintf( buf, "%s = \"%s\"", ATTR_VACATE_TYPE,
-			 getVacateTypeString(vType) );
-	req.Insert( buf );
+	req.Assign( ATTR_VACATE_TYPE, getVacateTypeString(vType) );
 
  		// since release could take a while, if we didn't already get
 		// told what timeout to use, set the timeout to 0 so we don't
@@ -555,32 +545,22 @@ DCStartd::locateStarter( const char* global_job_id,
 	setCmdStr( "locateStarter" );
 
 	ClassAd req;
-	MyString line;
 
 		// Add our own attributes to the request ad we're sending
-	line = ATTR_COMMAND;
-	line += "=\"";
-	line += getCommandString( CA_LOCATE_STARTER );
-	line += '"';
-	req.Insert( line.Value() );
+	req.Assign(ATTR_COMMAND,getCommandString( CA_LOCATE_STARTER ));
 
-	line = ATTR_GLOBAL_JOB_ID;
-	line += "=\"";
-	line += global_job_id;
-	line += '"';
-	req.Insert( line.Value() );
+	req.Assign(ATTR_GLOBAL_JOB_ID,global_job_id);
 
-	line = ATTR_CLAIM_ID;
-	line += "=\"";
-	line += claimId;
-	line += '"';
-	req.Insert( line.Value() );
+	req.Assign(ATTR_CLAIM_ID, claimId);
 
 	if ( schedd_public_addr ) {
 		req.Assign(ATTR_SCHEDD_IP_ADDR,schedd_public_addr);
 	}
 
-	return sendCACmd( &req, reply, false, timeout );
+		// if this claim is associated with a security session
+	ClaimIdParser cidp( claimId );
+
+	return sendCACmd( &req, reply, false, timeout, cidp.secSessionId() );
 }
 
 int
@@ -597,12 +577,16 @@ DCStartd::delegateX509Proxy( const char* proxy )
 		return CONDOR_ERROR;
 	}
 
+		// if this claim is associated with a security session
+	ClaimIdParser cidp(claim_id);
+
 	//
 	// 1) begin the DELEGATE_GSI_CRED_STARTD command
 	//
 	ReliSock* tmp = (ReliSock*)startCommand( DELEGATE_GSI_CRED_STARTD,
 	                                         Stream::reli_sock,
-	                                         20 ); 
+	                                         20, NULL, NULL, false,
+											 cidp.secSessionId() ); 
 	if( ! tmp ) {
 		MyString err = "DCStartd::delegateX509Proxy: "
 		               "Failed to send command "

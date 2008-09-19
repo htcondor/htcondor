@@ -52,6 +52,9 @@ MapFile* Authentication::global_map_file = NULL;
 bool Authentication::global_map_file_load_attempted = false;
 
 char const *UNMAPPED_DOMAIN = "unmappeduser";
+char const *MATCHSESSION_DOMAIN = "matchsession";
+extern char const *EXECUTE_SIDE_MATCHSESSION_FQU = "execute-side@matchsession";
+extern char const *SUBMIT_SIDE_MATCHSESSION_FQU = "submit-side@matchsession";
 
 Authentication::Authentication( ReliSock *sock )
 {
