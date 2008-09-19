@@ -826,7 +826,7 @@ FileTransfer::DownloadFiles(bool blocking)
 
 		sock.encode();
 
-		if ( !sock.code(TransKey) ||
+		if ( !sock.put_secret(TransKey) ||
 			!sock.end_of_message() ) {
 			return 0;
 		}
@@ -1161,7 +1161,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 
 		sock.encode();
 
-		if ( !sock.code(TransKey) ||
+		if ( !sock.put_secret(TransKey) ||
 			!sock.end_of_message() ) {
 			return 0;
 		}
@@ -1200,7 +1200,7 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 	sock->timeout(0);
 
 	// code() allocates memory for the string if the pointer is NULL.
-	if (!sock->code(transkey) ||
+	if (!sock->get_secret(transkey) ||
 		!sock->end_of_message() ) {
 		dprintf(D_FULLDEBUG,
 			    	"FileTransfer::HandleCommands failed to read transkey\n");

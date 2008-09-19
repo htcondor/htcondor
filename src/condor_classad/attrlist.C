@@ -2815,11 +2815,15 @@ bool AttrList::ClassAdAttributeIsPrivate( char const *name )
 		return true;
 	}
 	if( stricmp(name,ATTR_CAPABILITY) == 0 ) {
-			// This attribute contains secret capability cookies
+			// This attribute contains the secret capability cookie
 		return true;
 	}
 	if( stricmp(name,ATTR_CLAIM_IDS) == 0 ) {
 			// This attribute contains secret capability cookies
+		return true;
+	}
+	if( stricmp(name,ATTR_TRANSFER_KEY) == 0 ) {
+			// This attribute contains the secret file transfer cookie
 		return true;
 	}
 	return false;
@@ -2831,4 +2835,5 @@ void AttrList::SetPrivateAttributesInvisible(bool make_invisible)
 	SetInvisible(ATTR_CLAIM_ID,make_invisible);
 	SetInvisible(ATTR_CLAIM_IDS,make_invisible);
 	SetInvisible(ATTR_CAPABILITY,make_invisible);
+	SetInvisible(ATTR_TRANSFER_KEY,make_invisible);
 }
