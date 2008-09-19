@@ -287,6 +287,8 @@ class AttrList : public AttrListAbstract
 		friend	class	AttrListList;			// access "UpdateAgg()"
 		friend	class	ClassAd;
 
+		static bool		IsValidAttrName(const char *);
+
     protected :
 	    AttrListElem**	chainedAttrs;
 
