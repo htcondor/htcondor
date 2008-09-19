@@ -22,7 +22,25 @@
 
 #include "condor_common.h"
 
+
 // Subsystem type enum
+
+// -----------------------------------------------------------------
+// **** README README README README README README README README ****
+// -----------------------------------------------------------------
+// Only add an entry to this file *IF* some part of Condor
+// will need to act differently based on your new subsystem type.
+// Otherwise, you should just use SUBSYSTEM_TYPE_DAEMON or
+// SUBSYSTEM_TYPE_TOOL.
+//
+// IF, after reading the above, you decide that you really do need
+// add a new daemon type, make sure that you edit the table in
+// subsystem_info.C to match:
+//   const SubsystemInfoLookup SubsystemInfoTable::m_Table[]
+//
+// -----------------------------------------------------------------
+// **** README README README README README README README README ****
+// -----------------------------------------------------------------
 typedef enum {
 	SUBSYSTEM_TYPE_INVALID = 0,
 	SUBSYSTEM_TYPE_MIN = 1,	// Min valid subsystem type, don't start at zero
@@ -53,6 +71,12 @@ typedef enum {
 	SUBSYSTEM_TYPE_MAX = SUBSYSTEM_TYPE_COUNT - 1,
 } SubsystemType;
 
+// -----------------------------------------------------------------
+// **** README README README README README README README README ****
+// There's probably no reason for you to EVER add to this
+// enumeration.  IF you really really need to, add a isXxxx() method
+// to for this new class of subsystem.
+// -----------------------------------------------------------------
 typedef enum {
 	SUBSYSTEM_CLASS_NONE = 0,
 	SUBSYSTEM_CLASS_DAEMON,
@@ -71,9 +95,6 @@ class SubsystemInfo
 	// Constructors
 	SubsystemInfo( const char *subsystem_name,
 				   SubsystemType _type = SUBSYSTEM_TYPE_AUTO );
-	SubsystemInfo( const char *subsystem_name,
-				   SubsystemType _type,
-				   SubsystemClass _class );
 	~SubsystemInfo( void );
 
 	// Verify the info
@@ -83,15 +104,16 @@ class SubsystemInfo
 	// Accessors
 	const char *setName( const char *subsystem_name );
 	const char *getName( void ) const { return m_Name; };
+	bool nameMatch( const char *name ) const;
 	bool isNameValid( void ) const { return m_NameValid; };
 
 	SubsystemType setType( SubsystemType type );
 
 	// Guess at the type from the name -- pass NULL to use current name
-	SubsystemType setTypeFromName( const char *name = NULL );
+	SubsystemType setTypeFromName( const char *_type_name = NULL );
 
 	SubsystemType getType( void ) const { return m_Type; };
-	const char *getTypeName( void ) const;
+	const char *getTypeName( void ) const { return m_TypeName; };
 	bool isType( SubsystemType _type ) const { return m_Type == _type; };
 
 	// Get class info
@@ -109,13 +131,15 @@ class SubsystemInfo
 	const char					*m_Name;
 	bool						 m_NameValid;
 	SubsystemType				 m_Type;
+	const char					*m_TypeName;
 	SubsystemClass				 m_Class;
 	const SubsystemInfoLookup	*m_Info;
 	const char					*m_ClassName;
 
 	// Internal only methods
-	SubsystemType setType( SubsystemType _type, const char *name );
-	SubsystemType setType( const SubsystemInfoLookup *, const char *name );
+	SubsystemType setType( SubsystemType _type, const char *_type_name );
+	SubsystemType setType ( const SubsystemInfoLookup *,
+							const char *_type_name );
 	SubsystemClass setClass ( const SubsystemInfoLookup * );
 };
 
