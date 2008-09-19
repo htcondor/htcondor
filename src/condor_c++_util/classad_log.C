@@ -781,7 +781,11 @@ LogSetAttribute::LogSetAttribute(const char *k, const char *n, const char *val)
 	op_type = CondorLogOp_SetAttribute;
 	key = strdup(k);
 	name = strdup(n);
-	value = strdup(val);
+	if (val && strlen(val)) {
+		value = strdup(val);
+	} else {
+		value = strdup("UNDEFINED");
+	}
 }
 
 
