@@ -542,6 +542,12 @@ AC_ARG_WITH(buildid,
   [BUILDID=$withval],
   [BUILDID=no])
 
+AC_ARG_ENABLE(bgd-support,
+  [AS_HELP_STRING([--enable-bgd-support],
+     [Enable support for HTC mode on the BlueGene machine.])],
+  [],
+  [enable_bgd_support=no])
+
 AC_ARG_ENABLE(proper,
   [AS_HELP_STRING([--enable-proper],
      [Force this configure script to work in the proper (non-Condor) way (default: disabled)])],
