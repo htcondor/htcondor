@@ -99,14 +99,6 @@ pseudo_get_job_info(ClassAd *&ad)
 	the_ad = thisRemoteResource->getJobAd();
 	ASSERT( the_ad );
 
-		// There should be no ClaimId in the job ad that we send
-		// over to the starter.  The starter does not need it,
-		// and we don't worry about encrypting this transmission.
-		// The claimid, if any, should have been stripped out
-		// by now.
-	MyString claim_id;
-	ASSERT( the_ad->LookupString( ATTR_CLAIM_ID, claim_id ) == 0 );
-
 		// FileTransfer now makes sure we only do Init() once.
 		//
 		// New for WIN32: want_check_perms = false.
