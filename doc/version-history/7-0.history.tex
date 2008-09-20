@@ -27,21 +27,25 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item \Security This release fixes a security-related problem introduced in
-  Condor versions 7.0.4 and 7.1.2.  
-  It also fixes a related problem that affects all previous versions.
-  The problem affects Condor where the configuration specifies
-  authorization with
-  allow or deny lists that have overlapping netmasks.
-  For example, \verb|*|, \verb|192.*|, and \verb|192.168.*|
-  are overlapping netmasks.  The consequence of the bug is that some
-  allow/deny entries may be ignored.  A similar problem in all
-  previous versions affects configurations with overlapping host name
+\item \Security This release fixes a security-related problem
+  introduced in Condor versions 7.0.4 and 7.1.2.  It also fixes a
+  related problem that affects all previous versions.  The problem
+  affects Condor where the configuration specifies per-user
+  authorization entries in the allow or deny lists which specify
+  different but overlapping netmasks.  For example, \verb|*|,
+  \verb|192.*|, and \verb|192.168.*| are overlapping netmasks.  The
+  consequence of the bug is that in a specific allow or deny list, if
+  some users are entered with one netmask and other users are entered
+  with a different but overlapping netmask, some entries would be
+  ignored when enforcing the policy.  (If the users are identical for
+  both netmasks, then there is no problem.)  A similar problem in all
+  previous versions of Condor affects configurations with per-user
+  authorization entries having different but overlapping hostname
   patterns.  For example, \verb|*.edu|, \verb|*.wisc.edu|, and
-  \verb|condor.wisc.edu| are overlapping host name patterns.  If such
-  overlapping patterns are used together in the same allow or deny list
-  in previous versions of Condor, some of the entries would be effectively
-  ignored when enforcing the policy.
+  \verb|condor.wisc.edu| are overlapping hostname patterns.  Some
+  entries were effectively ignored if a specific allow or deny list
+  contained different users in different but overlapping hostname
+  patterns.
 
 \end{itemize}
 
