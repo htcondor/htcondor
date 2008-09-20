@@ -62,6 +62,19 @@ restarted, no daemons would be able to advertise themselves to the
 pool until their existing security sessions expired.  The old behavior
 can be achieved by setting this configuration parameter to false.
 
+\item Added \Macro{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION}.
+This is a special authentication mechanism designed to minimize
+overhead in the \Condor{schedd} when communicating with the execute
+machine.  Essentially, matchmaking results in a secret being shared
+between the \Condor{schedd} and \Condor{startd}, and this is used to
+establish a strong security session between the execute and submit
+daemons without going through the usual security negotiation protocol.
+This is especially important when operating at large scale over high
+latency networks (e.g. a glidein pool with one schedd and thousands of
+startds on a network with 0.1 second round trip times).  See
+\pageref{param:SecEnableMatchPasswordAuthentication} for
+configuration details.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

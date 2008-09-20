@@ -683,6 +683,15 @@ they both agree that Kerberos or NTSSPI may be used, then Kerberos
 will be tried first, and if there is a failure for any reason, then
 NTSSPI will be tried. 
 
+An additional specialized method of authentication exists for
+communication between the \Condor{schedd} and \Condor{startd}.  It is
+especially useful when operating at large scale over high latency
+networks or in situations where it is inconvenient to set up one of
+the other methods of strong authentication between the submit and
+execute daemons.  See the description of
+\MacroNI{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION} on
+\pageref{param:SecEnableMatchPasswordAuthentication} for
+details.
 
 If the configuration for a machine does not define any variable
 for \MacroNI{SEC\_<access-level>\_AUTHENTICATION},

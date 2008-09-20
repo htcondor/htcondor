@@ -6771,6 +6771,49 @@ with SSL.
 \label{param:CertificateMapfile}
 A path and file name of the unified map file.
 
+\item[\Macro{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION}]
+\label{param:SecEnableMatchPasswordAuthentication}
+This is a special authentication mechanism designed to minimize
+overhead in the \Condor{schedd} when communicating with the execute
+machine.  Essentially, matchmaking results in a secret being shared
+between the \Condor{schedd} and \Condor{startd}, and this is used to
+establish a strong security session between the execute and submit
+daemons without going through the usual security negotiation protocol.
+This is especially important when operating at large scale over high
+latency networks (e.g. a glidein pool with one schedd and thousands of
+startds on a network with 0.1 second round trip times).
+
+The default value for this configuration option is \Expr{False}.  To
+have any effect, it must be \Expr{True} in the configuration of both
+the execute side (startd) as well as the submit side (schedd).  When
+this authentication method is used, all other security negotiation
+between the submit and execute daemons is bypassed.  All inter-daemon
+communication between the submit and execute side will use the
+startd's settings for \MacroNI{SEC\_DAEMON\_ENCRYPTION} and
+\MacroNI{SEC\_DAEMON\_INTEGRITY}; the configuration of these values in
+the schedd, shadow, and starter are ignored.
+
+Important: For strong security, at least one of the two, integrity or
+encryption, should be enabled in the startd configuration.  Also, some
+form of strong mutual authentication (e.g. GSI) should be enabled
+between all daemons and the central manager or the shared secret which
+is exchanged in matchmaking cannot be safely encrypted when transmitted
+over the network.
+
+The schedd and shadow will be authenticated as
+\verb|submit-side@matchsession| when they talk to the startd and
+starter.  The startd and starter will be authenticated as
+\verb|execute-side@matchsession| when they talk to the schedd and
+shadow.  On the submit side, authorization of the execute side happens
+automatically.  On the execute side, it is necessary to explicitly
+authorize the submit side.  Example:
+
+\begin{verbatim}
+ALLOW_DAEMON = submit-side@matchsession/192.168.123.*
+\end{verbatim}
+
+Replace the example netmask with something suitable for your situation.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
