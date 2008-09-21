@@ -393,8 +393,6 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	peaceful_shutdown = false;
 
-	only_allow_soap = 0;
-
 #ifdef HAVE_EXT_GSOAP
 #ifdef COMPILE_SOAP_SSL
 	mapfile =  NULL;
@@ -2443,17 +2441,6 @@ DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin, const char 
 }
 
 
-void
-DaemonCore::Only_Allow_Soap(int duration)
-{
-	if ( duration <= 0 ) {
-		only_allow_soap = 0;
-	} else {
-		time_t now = time(NULL);
-		only_allow_soap = now + duration + 1;  // +1 cuz Matt worries
-	}
-}
-
 // This function never returns. It is responsible for monitor signals and
 // incoming messages or requests and invoke corresponding handlers.
 void DaemonCore::Driver()
@@ -2524,7 +2511,6 @@ void DaemonCore::Driver()
 	{
 		// call signal handlers for any pending signals
 		sent_signal = FALSE;	// set to True inside Send_Signal()
-		if ( !only_allow_soap ) {
 			for (i=0;i<maxSig;i++) {
 				if ( sigTable[i].handler || sigTable[i].handlercpp ) {
 					// found a valid entry; test if we should call handler
@@ -2550,7 +2536,6 @@ void DaemonCore::Driver()
 					}
 				}
 			}
-		}
 #ifndef WIN32
 		// Drain our async_pipe; we must do this before we unblock unix signals.
 		// Just keep reading while something is there.  async_pipe is set to
@@ -2572,10 +2557,7 @@ void DaemonCore::Driver()
 		//   and service this outstanding signal and yet we do not
 		//   starve commands...
 
-		timeout = 0;
-		if ( !only_allow_soap ) {	// call timers unless only allowing soap
 			timeout = t.Timeout();
-		}
 
 		if ( sent_signal == TRUE ) {
 			timeout = 0;
@@ -2649,30 +2631,6 @@ void DaemonCore::Driver()
 		// is delivered after we unblock signals and before we block on select.
 		selector.add_fd( async_pipe[0], Selector::IO_READ );
 #endif
-
-		if ( only_allow_soap ) {
-			time_t now = time(NULL);
-			if ( now >= only_allow_soap ) {
-				// the time has past... let everything in
-				only_allow_soap = 0;
-				// and call continue so our timers get called at the start
-				// of the infinite loop above.
-				continue;
-			} else {
-				// only allow soap commands for a while longer
-				timeout = only_allow_soap - now;
-				selector.reset();
-				selector.add_fd( (*sockTable)[initial_command_sock].iosock->get_file_desc(),
-								 Selector::IO_READ );
-					// This is ugly, and will break if the sockTable
-					// is ever "compacted" or otherwise rearranged
-					// after sockets are registered into it.
-				if (-1 != soap_ssl_sock) {
-					selector.add_fd( (*sockTable)[soap_ssl_sock].iosock->get_file_desc(),
-									 Selector::IO_READ );
-				}
-			}
-		}
 
 #if !defined(WIN32)
 		// Set aync_sigs_unblocked flag to true so that Send_Signal()
@@ -3639,18 +3597,6 @@ int DaemonCore::HandleReq(Stream *insock)
 		goto finalize;
 	}
 #endif // HAVE_EXT_GSOAP
-
-	if (only_allow_soap) {
-		dprintf(D_ALWAYS,
-			"Received CEDAR command during SOAP transaction... queueing\n");
-		if ( is_tcp ) {
-			dprintf(D_DAEMONCORE,
-					"stream fd being queued: %d\n",
-					((Sock *) stream)->get_file_desc());
-			Register_Command_Socket(stream);
-		}
-		return KEEP_STREAM;
-	}
 
 	// read in the command from the stream with a timeout value of just 1 second,
 	// since we know there is already some data waiting for us.
