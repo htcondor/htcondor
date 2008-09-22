@@ -81,6 +81,9 @@ configuration details.
 
 \begin{itemize}
 
+\item Fixed a bug in the \Condor{schedd} that would cause it to
+EXCEPT if a crontab entry was incorrectly formatted.
+
 \item Fixed a bug in the CondorView server (collector) that caused it
 to except (crash) when it received a machine ClassAd without a valid state.
 It now logs this under level \MacroNI{D\_ALWAYS} and ignores the ClassAd.
