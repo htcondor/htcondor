@@ -81,6 +81,8 @@ class Matchmaker : public Service
 		/// Invalidate our negotiator ad at the collector(s).
 		void invalidateNegotiatorAd( void );
 
+		Accountant & getAccountant() { return accountant; }
+
     protected:
 		char * NegotiatorName;
 		int update_interval;
