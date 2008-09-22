@@ -280,7 +280,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		vmgahp_args.AppendArg("-t");
 	}
 	vmgahp_args.AppendArg("-M");
-	vmgahp_args.AppendArg(VMGAHP_IO_MODE);
+	vmgahp_args.AppendArg(VMGAHP_STANDALONE_MODE);
 
 	MyString args_string;
 	vmgahp_args.GetArgsStringForDisplay(&args_string, 1);

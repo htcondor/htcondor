@@ -419,11 +419,7 @@ void vmprintf( int flags, const char *fmt, ... )
 			daemonCore->Reset_Timer(vmgahp_stderr_tid, 0, 2);
 		}
 	}else {
-		if( vmgahp_mode == VMGAHP_WORKER_MODE ) {
-			dprintf(flags, "Worker[%d]: %s", (int)mypid, output.Value());
-		}else {
-			dprintf(flags, "VMGAHP[%d]: %s", (int)mypid, output.Value());
-		}
+		dprintf(flags, "VMGAHP[%d]: %s", (int)mypid, output.Value());
 	}
 	oriDebugFlags = saved_flags;
 }

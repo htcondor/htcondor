@@ -245,9 +245,9 @@ usage( char *name)
 	vmprintf(D_ALWAYS, 
 			"Usage: \n"
 			"\tTestMode: %s -f -t -M 0 vmtype <vmtype> \n"
-			"\tIOMode: %s -f -t -M 1\n"
-			"\tWorkerMode: %s -f -t -M 2\n"
-			"\tStandAlone: %s -f -t -M 3\n", name, name, name, name);
+			"\tStandAlone: %s -f -t -M 3\n"
+			"\tKillMode: %s -f -t -M 4 vmtype <vmtype> match <matchstring>\n",
+			name, name, name);
 	DC_Exit(1);
 
 }
@@ -271,7 +271,10 @@ int main_init(int argc, char *argv[])
 	}
 
 	vmgahp_mode = atoi(argv[2]);
-	if( vmgahp_mode >= VMGAHP_MODE_MAX ) {
+	if( vmgahp_mode == VMGAHP_IO_MODE ) {
+		vmgahp_mode = VMGAHP_STANDALONE_MODE;
+	} else if( vmgahp_mode >= VMGAHP_MODE_MAX || vmgahp_mode < 0 ||
+			   vmgahp_mode == VMGAHP_WORKER_MODE ) {
 		usage(argv[0]);
 	}
 
@@ -508,16 +511,10 @@ int main_init(int argc, char *argv[])
 	vmgahp = new VMGahp(gahpconfig, workingdir.Value());
 	ASSERT(vmgahp);
 
-	if( vmgahp_mode == VMGAHP_IO_MODE ) {
-		vmgahp->startWorker();
-	}
-
 	/* Wait for command */
 	vmgahp->startUp();
 
-	if( vmgahp_mode != VMGAHP_WORKER_MODE ) {
-		write_to_daemoncore_pipe("%s\n", vmgahp_version);
-	}
+	write_to_daemoncore_pipe("%s\n", vmgahp_version);
 
 	return TRUE;
 }
