@@ -81,7 +81,6 @@ class VMGahp : public Service {
 		void removePendingRequest(VMRequest *req);
 
 		void movePendingReqToResultList(VMRequest *req);
-		void movePendingReqToOutputStream(VMRequest *req);
 
 		VMRequest *findPendingRequest(int req_id);
 		void printAllReqsWithResult();

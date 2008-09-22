@@ -321,21 +321,6 @@ VMGahp::movePendingReqToResultList(VMRequest *req)
 }
 
 void
-VMGahp::movePendingReqToOutputStream(VMRequest *req)
-{
-	if(!req) {
-		return;
-	}
-	MyString output = make_result_line(req);
-	output += "\n";
-
-	write_to_daemoncore_pipe(vmgahp_stdout_pipe, 
-			output.Value(), output.Length());
-
-	removePendingRequest(req);
-}
-
-void
 VMGahp::printAllReqsWithResult()
 {
 	char *one_result = NULL;
