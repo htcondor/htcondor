@@ -36,6 +36,10 @@
 #include "condor_claimid_parser.h"
 #include "misc_utils.h"
 
+#if HAVE_DLOPEN
+#include "NegotiatorPlugin.h"
+#endif
+
 // the comparison function must be declared before the declaration of the
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
 // is forced to be extern.)
@@ -194,6 +198,11 @@ initialize ()
 			(TimerHandlercpp) &Matchmaker::updateCollector,
 			"Update Collector", this );
 
+
+#if HAVE_DLOPEN
+	NegotiatorPluginManager::Load();
+	NegotiatorPluginManager::Initialize();
+#endif
 }
 
 int Matchmaker::
@@ -3351,8 +3360,11 @@ Matchmaker::updateCollector() {
 
 		// log classad into sql log so that it can be updated to DB
 	FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
-   
+
 	if (publicAd) {
+#if HAVE_DLOPEN
+		NegotiatorPluginManager::Update(*publicAd);
+#endif
 		daemonCore->sendUpdates(UPDATE_NEGOTIATOR_AD, publicAd, NULL, true);
 	}
 
