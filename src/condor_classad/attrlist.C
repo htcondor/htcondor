@@ -2337,7 +2337,9 @@ int AttrList::put(Stream& s)
 			elem->tree->PrintToNewStr(&line);
 			ConvertDefaultIPToSocketIP(elem->name,&line,s);
 
-			if( ClassAdAttributeIsPrivate(elem->name) ) {
+			if( ! s.prepare_crypto_for_secret_is_noop() &&
+				ClassAdAttributeIsPrivate(elem->name) )
+			{
 				s.put(SECRET_MARKER); // tell other side we are sending secret
 				s.put_secret(line);   // send the secret
 			}
