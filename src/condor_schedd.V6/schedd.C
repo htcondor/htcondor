@@ -12858,7 +12858,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			// message from that, otherwise look at the static 
 			// error log which will be populated on CronTab::validate()
 			//
-		MyString reason( "Invalid cron schedule parameters:\n" );
+		MyString reason( "Invalid cron schedule parameters: " );
 		if ( cronTab != NULL ) {
 			reason += cronTab->getError();
 		} else {
