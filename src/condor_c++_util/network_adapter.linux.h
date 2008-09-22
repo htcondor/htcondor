@@ -21,10 +21,7 @@
 #define _NETWORK_ADAPTER_LINUX_H_
 
 #include "network_adapter.h"
-
-#if HAVE_NET_IF_H
-# include <net/if.h>
-#endif
+#include "network_adapter.unix.h"
 
 
 /***************************************************************
@@ -33,7 +30,7 @@
 * the required power information.
 ***************************************************************/
 
-class LinuxNetworkAdapter : public NetworkAdapterBase
+class LinuxNetworkAdapter : public UnixNetworkAdapter
 {
 
 public:
@@ -43,77 +40,27 @@ public:
 	//@{
 
     /// Constructor
-	LinuxNetworkAdapter ( void ) throw ();
+	LinuxNetworkAdapter ( void ) throw();
 
 	/// Constructor
 	LinuxNetworkAdapter ( unsigned int ip_addr ) throw ();
 
 	/// Destructor
-	virtual ~LinuxNetworkAdapter ( void ) throw (); 
+	virtual ~LinuxNetworkAdapter ( void ) throw();
 
 
 	/** @name Adapter properties.
 	Basic device properties.
 	*/
 	//@{
-
-	/** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware 
-        address
-	*/
-	const char *hardwareAddress (void) const { return m_hw_addr_str; };
-
-    /** Returns the adapter's hardware address
-		@return a string representation of the subnet mask
-	*/
-	const char *subnet (void) const;
-
-    /** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware 
-        address
-	*/
-	virtual bool wakeAble (void) const { return m_wol; };
-
-	/** Returns the adapter's logical name
-		@return a string with the logical name
-	*/
-	const char *interfaceName( void ) const { return m_if_name; };
-
 	
 	//@}
 
 private:
-
-	unsigned			 m_ip_addr;
-	const char			*m_if_name;
-	bool				 m_wol;
-
-	// HW address & string rep of it
-    const char			 m_hw_addr[32];
-	const char			 m_hw_addr_str[32];
-
-	// Network mask
-    const struct sockaddr m_netmask;
-    const char		 	 m_netmask_str[32];
-	
-	// Very Linux specific definitions
-#  if defined HAVE_NET_IF_H
-	const struct ifreq	 m_ifr;
-#  endif
-	int					 m_wolopts;
-
 	// Internal methods
-	bool findAdapter( void );
-	bool detectWOL( void );
-#  if defined HAVE_NET_IF_H
-	void setIFR( const struct ifreq *ifr );
-	void getIFR( struct ifreq *ifr );
-	void setHwAddr( const struct ifreq *ifr );
-#  endif
-	void setNetMask( const struct ifreq *ifr );
+	virtual bool findAdapter( void );
+	virtual bool detectWOL( void );
 
-	// Dump out an error
-	void derror( const char *label ) const;
 };
 
 #endif // _NETWORK_ADAPTER_LINUX_H_

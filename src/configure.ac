@@ -2369,8 +2369,11 @@ if test "$ac_cv_func_statfs" = yes ; then
       AC_MSG_ERROR([unable to determine number of arguments to statfs()])])])
 fi dnl test "$ac_cv_func_statfs" = yes
 
-# Do we have the "ethtool" declarations?
-AC_CHECK_DECLS([SIOCETHTOOL],,, [[#include <linux/sockios.h>]])
+# Do we have the "ethtool" and similar declarations?
+AC_CHECK_DECLS([SIOCETHTOOL,SIOCGIFCONF],,, [[#include <linux/sockios.h>]])
+
+# Does net/if.h define struct ifreq ?
+AC_CHECK_TYPES([struct ifreq,struct ifconf],[],[],[#include <net/if.h>])
 
 # we don't actually want to add -lgen to our link line, but we do want
 # HAVE_LIBGEN defined correctly for our test suite builds...

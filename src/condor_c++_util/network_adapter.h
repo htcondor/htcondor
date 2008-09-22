@@ -83,7 +83,7 @@ public:
         @return if successful a valid NetworkAdapterBase*; otherwise 
         NULL.
 	*/
-	static NetworkAdapterBase* createNetworkAdapter ( char *sinful );
+	static NetworkAdapterBase* createNetworkAdapter ( const char *sinful );
 
 private:
     

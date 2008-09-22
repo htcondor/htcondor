@@ -31,14 +31,10 @@
 # include <linux/ethtool.h>
 #endif
 
-#if defined(HAVE_NET_IF_H) && 			\
-	defined(HAVE_LINUX_SOCKIOS_H) &&	\
-	defined(HAVE_LINUX_ETHTOOL_H)
-# define _HAVE_ALL_LNA_TYPES_ 1
-#endif
-
 // For now, the only wake-on-lan type we use is UDP magic
-#define WAKE_MASK	( 0 | (WAKE_MAGIC) )
+#if defined(HAVE_LINUX_ETHTOOL_H)
+# define WAKE_MASK	( 0 | (WAKE_MAGIC) )
+#endif
 
 // Possible values for the above (OR them together) :
 //	WAKE_PHY
@@ -53,104 +49,11 @@
 /***************************************************************
 * LinuxNetworkAdapter class
 ***************************************************************/
-LinuxNetworkAdapter::LinuxNetworkAdapter ( unsigned int ip_addr ) throw ()
-{
-	m_ip_addr = ip_addr;
-	m_if_name = NULL;
-	m_wol = false;
-
-	// Linux specific things
-	m_wolopts = 0;
-	setIFR( NULL );
-	setHwAddr( NULL );
-
-	if ( !findAdapter() ) {
-		return;
-	}
-
-	detectWOL( );
-}
-
-LinuxNetworkAdapter::~LinuxNetworkAdapter (void) throw ()
-{
-	if ( m_if_name ) {
-		free( const_cast<char *>(m_if_name) );
-		m_if_name = NULL;
-	}
-}
-
-#if defined HAVE_NET_IF_H
-void
-LinuxNetworkAdapter::setHwAddr( const struct ifreq *ifr )
-{
-	memset( const_cast<char *>(m_hw_addr), 0, sizeof(m_hw_addr) );
-	memset( const_cast<char *>(m_hw_addr_str), 0, sizeof(m_hw_addr_str) );
-
-	if ( ifr ) {
-		memcpy( const_cast<char *>(m_hw_addr), ifr->ifr_hwaddr.sa_data, 8 );
-
-		char	*str = const_cast<char *>(m_hw_addr_str);
-		for( int i = 0;  i < 6;  i++ ) {
-			char	tmp[3];
-			snprintf( tmp, sizeof(tmp), "%02x", m_hw_addr[i] );
-			if ( i ) {
-				strcat( tmp, ":" );
-			}
-			strcat( str, tmp );
-		}
-	}
-}
-
-void
-LinuxNetworkAdapter::setNetMask( const struct ifreq *ifr )
-{
-	
-	struct sockaddr *maskptr = const_cast<struct sockaddr *>(&m_netmask);
-	memset( maskptr, 0, sizeof(m_netmask) );
-
-	if ( ifr ) {
-		memcpy( maskptr, &(ifr->ifr_netmask), sizeof(m_netmask) );
-		char	*str = const_cast<char *>(m_netmask_str);
-		const struct sockaddr_in *
-			in_addr = (const struct sockaddr_in *) &(m_netmask);
-		strncpy( str,
-				 sin_to_string(in_addr),
-				 sizeof(m_netmask_str) );
-	}
-}
-
-void
-LinuxNetworkAdapter::setIFR( const struct ifreq *ifr )
-{
-	if ( ifr ) {
-		memcpy( const_cast<struct ifreq*>(&m_ifr), ifr, sizeof(struct ifreq) );
-	}
-	else {
-		memset( const_cast<struct ifreq*>(&m_ifr), 0, sizeof(struct ifreq) );
-	}
-}
-
-void
-LinuxNetworkAdapter::getIFR( struct ifreq *ifr )
-{
-	memcpy( ifr, &m_ifr, sizeof(struct ifreq) );
-}
-
-#endif
-
-void
-LinuxNetworkAdapter::derror( const char *label ) const
-{
-	MyString	message;
-	dprintf( D_ALWAYS, "%s failed: %s (%d)\n",
-			 label, strerror(errno), errno );
-}
-
 bool
 LinuxNetworkAdapter::findAdapter( void )
 {
-# if defined(_HAVE_ALL_LNA_TYPES_)
-    struct ifconf	ifc;
+# if (HAVE_STRUCT_IFCONF) && (HAVE_STRUCT_IFREQ) && (HAVE_DECL_SIOCGIFCONF)
+	struct ifconf	ifc;
 	int				sock;
 	int				num_req = 3;	// Should be enough for a machine
 									// with lo, eth0, eth1
@@ -245,15 +148,16 @@ LinuxNetworkAdapter::findAdapter( void )
 
 	// Make sure we free up the buffer memory
 	free( ifc.ifc_buf );
-# endif
 
 	// And, we're done
 	return m_if_name == NULL;
+# endif
 }
 
 bool
 LinuxNetworkAdapter::detectWOL ( void )
 {
+#if (HAVE_DECL_SIOCETHTOOL) && (HAVE_STRUCT_IFREQ)
 	int						err;
 	struct ethtool_wolinfo	wolinfo;
 	struct ifreq			ifr;
@@ -291,4 +195,7 @@ LinuxNetworkAdapter::detectWOL ( void )
 
 	close( sock );
 	return true;
+#  else
+	return false;
+#  endif
 }

@@ -28,6 +28,7 @@
 #if defined ( WIN32 )
 # include "network_adapter.WINDOWS.h"
 #elif defined ( LINUX )
+# include "network_adapter.unix.h"
 # include "network_adapter.linux.h"
 #endif
 
@@ -48,7 +49,7 @@ NetworkAdapterBase::~NetworkAdapterBase () throw ()
  * NetworkAdapterBase static members 
  ***************************************************************/
 NetworkAdapterBase* 
-NetworkAdapterBase::createNetworkAdapter ( char *sinful )
+NetworkAdapterBase::createNetworkAdapter ( const char *sinful )
 {
     NetworkAdapterBase *adapter = NULL;    
 #  if defined ( WIN32 )

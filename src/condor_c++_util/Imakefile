@@ -64,7 +64,8 @@ SETEUID_OBJ =
 
 HIBERNATION_OBJS = hibernation_manager.o hibernator.o network_adapter.o
 #if IS_LINUX
-HIBERNATION_OBJS += hibernator.linux.o network_adapter.linux.o
+HIBERNATION_OBJS += hibernator.linux.o \
+	network_adapter.unix.o network_adapter.linux.o
 #endif
 
 #if !HAVE_SETEGID
@@ -264,6 +265,7 @@ c_plus_target(test_log_reader,test_log_reader.o,$(LIB))
 c_plus_target(test_write_term,test_write_term.o,$(LIB))
 c_plus_target(test_prioritysimplelist,test_prioritysimplelist.o,)
 c_plus_target(test_binarysearch,test_binarysearch.o,)
+c_plus_target(test_network_adapter,test_network_adapter.o,$(LIB))
 
 c_plus_target(cat_url,cat_url.o,liburl.a)
 c_plus_target(access.t,access.t.o,$(LIB))
