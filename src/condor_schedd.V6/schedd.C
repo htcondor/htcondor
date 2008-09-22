@@ -442,7 +442,9 @@ Scheduler::Scheduler() :
 
 	last_reschedule_request = 0;
 	jobThrottleNextJobDelay = 0;
+#ifdef WANT_QUILL
 	prevLHF = 0;
+#endif
 }
 
 
@@ -841,7 +843,9 @@ Scheduler::count_jobs()
 	daemonCore->UpdateLocalAd(m_ad);
 
 		// log classad into sql log so that it can be updated to DB
+#ifdef WANT_QUILL
 	FILESQL::daemonAdInsert(m_ad, "ScheddAd", FILEObj, prevLHF);
+#endif
 
 #if HAVE_DLOPEN
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, m_ad);
