@@ -25,6 +25,9 @@ extern char *mySubSystem;
 extern "C" char *CondorVersion(void);
 extern "C" char *CondorPlatform(void);
 
+static const char *monthNames[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+	                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
 CondorVersionInfo::CondorVersionInfo(const char *versionstring, 
 									 const char *subsystem,
 									 const char *platformstring)
@@ -51,7 +54,7 @@ CondorVersionInfo::CondorVersionInfo(const char *versionstring,
 	}
 }
 
-CondorVersionInfo::CondorVersionInfo(CondorVersionInfo &other)
+CondorVersionInfo::CondorVersionInfo(CondorVersionInfo const &other)
 {
 	myversion = other.myversion;
 	mysubsys = NULL;
@@ -359,7 +362,42 @@ CondorVersionInfo::get_platform_from_file(const char* filename,
 		return NULL;
 	}
 }
-							
+
+char *
+CondorVersionInfo::get_version_string() const
+{
+	return VersionData_to_string( myversion );
+}
+
+char *
+CondorVersionInfo::VersionData_to_string(VersionData_t const &ver) const
+{
+	struct tm *tm;
+	tm = localtime( &ver.BuildDate );
+	if( !tm ) {
+		return NULL;
+	}
+	int day = tm->tm_mday;
+	int year = tm->tm_year + 1900;
+	char const *month = monthNames[tm->tm_mon];
+
+	const int buflen = 256;
+	char *buf = (char *)malloc(buflen);
+	if( !buf ) {
+		return NULL;
+	}
+
+	int n = snprintf(buf,buflen,"$CondorVersion: %d.%d.%d %s %d %d $",
+					 ver.MajorVer, ver.MinorVer, ver.SubMinorVer,
+					 month, day, year);
+	if( n>=buflen || n<0 ) {
+		free(buf);
+		return NULL;
+	}
+	buf[buflen-1] = '\0';
+	return buf;
+}
+
 bool
 CondorVersionInfo::string_to_VersionData(const char *verstring, 
 										 VersionData_t & ver) const
@@ -400,8 +438,6 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 	ptr++;	// skip space after the version numbers
 
 		// Convert month to a number 
-	const char *monthNames[] = { "Jan", "Feb", "Mar", "Apr", "May",
-		"Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 	int month = -1;
 	for (int i=0; i<12; i++) {
 		if (strncmp(monthNames[i],ptr,3) == 0) {
@@ -464,10 +500,11 @@ CondorVersionInfo::string_to_PlatformData(const char *platformstring,
 
 	char *tempStr = strdup(ptr);	
 	char *token; 
-	token = strtok(tempStr, "-");
+	char *last = NULL;
+	token = strtok_r(tempStr, "-", &last);
 	if(token) ver.Arch = strdup(token);
 		
-	token = strtok(NULL, "-");
+	token = strtok_r(NULL, "-", &last);
 	if(token) ver.OpSys = strdup(token);
 
 	if(ver.OpSys) {

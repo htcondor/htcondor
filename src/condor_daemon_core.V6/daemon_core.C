@@ -7508,7 +7508,8 @@ DaemonCore::Inherit( void )
 		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
 	}
 
-	if ( (ptmp=strtok(inheritbuf," ")) != NULL ) {
+	char *inheritbuf_last = NULL;
+	if ( (ptmp=strtok_r(inheritbuf," ",&inheritbuf_last)) != NULL ) {
 		// we read out CONDOR__INHERIT ok, ptmp is now first item
 
 		// insert ppid into table
@@ -7516,7 +7517,7 @@ DaemonCore::Inherit( void )
 		ppid = atoi(ptmp);
 		PidEntry *pidtmp = new PidEntry;
 		pidtmp->pid = ppid;
-		ptmp=strtok(NULL," ");
+		ptmp=strtok_r(NULL," ",&inheritbuf_last);
 		dprintf(D_DAEMONCORE,"Parent Command Sock = %s\n",ptmp);
 		strcpy(pidtmp->sinful_string,ptmp);
 		pidtmp->is_local = TRUE;
@@ -7566,7 +7567,7 @@ DaemonCore::Inherit( void )
 #endif
 
 		// inherit cedar socks
-		ptmp=strtok(NULL," ");
+		ptmp=strtok_r(NULL," ",&inheritbuf_last);
 		while ( ptmp && (*ptmp != '0') ) {
 			if (numInheritedSocks >= MAX_SOCKS_INHERITED) {
 				EXCEPT("MAX_SOCKS_INHERITED reached.");
@@ -7575,7 +7576,7 @@ DaemonCore::Inherit( void )
 				case '1' :
 					// inherit a relisock
 					dc_rsock = new ReliSock();
-					ptmp=strtok(NULL," ");
+					ptmp=strtok_r(NULL," ",&inheritbuf_last);
 					dc_rsock->serialize(ptmp);
 					dc_rsock->set_inheritable(FALSE);
 					dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
@@ -7584,7 +7585,7 @@ DaemonCore::Inherit( void )
 					break;
 				case '2':
 					dc_ssock = new SafeSock();
-					ptmp=strtok(NULL," ");
+					ptmp=strtok_r(NULL," ",&inheritbuf_last);
 					dc_ssock->serialize(ptmp);
 					dc_ssock->set_inheritable(FALSE);
 					dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
@@ -7595,7 +7596,7 @@ DaemonCore::Inherit( void )
 					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks");
 					break;
 			} // end of switch
-			ptmp=strtok(NULL," ");
+			ptmp=strtok_r(NULL," ",&inheritbuf_last);
 		}
 		inheritedSocks[numInheritedSocks] = NULL;
 
@@ -7604,14 +7605,14 @@ DaemonCore::Inherit( void )
 		// we then register rsock and ssock as command sockets below...
 		dc_rsock = NULL;
 		dc_ssock = NULL;
-		ptmp=strtok(NULL," ");
+		ptmp=strtok_r(NULL," ",&inheritbuf_last);
 		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
 			dprintf(D_DAEMONCORE,"Inheriting Command Sockets\n");
 			dc_rsock = new ReliSock();
 			((ReliSock *)dc_rsock)->serialize(ptmp);
 			dc_rsock->set_inheritable(FALSE);
 		}
-		ptmp=strtok(NULL," ");
+		ptmp=strtok_r(NULL," ",&inheritbuf_last);
 		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
 			dc_ssock = new SafeSock();
 			dc_ssock->serialize(ptmp);
