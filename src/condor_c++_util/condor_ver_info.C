@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_ver_info.h"
+#include "condor_debug.h"
 
 extern char *mySubSystem;
 extern "C" char *CondorVersion(void);
@@ -498,21 +499,26 @@ CondorVersionInfo::string_to_PlatformData(const char *platformstring,
 	char const *ptr = strchr(platformstring,' ');
 	ptr++;		// skip space after the colon
 
-	char *tempStr = strdup(ptr);	
-	char *token; 
-	char *last = NULL;
-	token = strtok_r(tempStr, "-", &last);
-	if(token) ver.Arch = strdup(token);
-		
-	token = strtok_r(NULL, "-", &last);
-	if(token) ver.OpSys = strdup(token);
 
-	if(ver.OpSys) {
-		token = strchr(ver.OpSys, '$');
-		if(token) *token = '\0';
-	}		
+	size_t len = strcspn(ptr,"-");
+	if( len ) {
+		ver.Arch = strdup(ptr);
+		ASSERT(ver.Arch);
+		ver.Arch[len] = '\0';
+		ptr += len;
+	}
 
-	free(tempStr);
+	if( *ptr == '-' ) {
+		ptr++;
+	}
+
+	len = strcspn(ptr," $");
+	if( len ) {
+		ver.OpSys = strdup(ptr);
+		ASSERT(ver.OpSys);
+		ver.OpSys[len] = '\0';
+		ptr += len;
+	}
 
 	return true;
 }
