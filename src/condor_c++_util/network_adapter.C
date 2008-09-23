@@ -28,7 +28,6 @@
 #if defined ( WIN32 )
 # include "network_adapter.WINDOWS.h"
 #elif defined ( LINUX )
-# include "network_adapter.unix.h"
 # include "network_adapter.linux.h"
 #endif
 

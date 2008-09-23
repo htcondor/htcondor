@@ -29,34 +29,42 @@
 /***************************************************************
 * UnixNetworkAdapter class
 ***************************************************************/
-UnixNetworkAdapter::UnixNetworkAdapter ( void ) throw ()
-{
-	return;
-}
 
+/// Constructor
 UnixNetworkAdapter::UnixNetworkAdapter ( unsigned int ip_addr ) throw ()
 {
 	m_ip_addr = ip_addr;
-	m_if_name = NULL;
 	m_wol = false;
+	m_found = false;
+	resetName( true );
 
-	// Linux specific things
-	m_wolopts = 0;
+	// IFR specific things
 #  if HAVE_STRUCT_IFREQ
-	setIFR( NULL );
-	setHwAddr( NULL );
+	resetNetMask( true );
+	resetHwAddr( true );
 #  endif
-
-	if ( !findAdapter() ) {
-		return;
-	}
-
-	detectWOL( );
 }
 
+/// Destructor
 UnixNetworkAdapter::~UnixNetworkAdapter (void) throw ()
 {
-	return;
+	resetName( );
+}
+
+/// Initializer
+bool
+UnixNetworkAdapter::initialize ( void )
+{
+	if ( !findAdapter() ) {
+		return false;
+	}
+	m_found = true;
+
+	// Detect if it supports Wake On Lan
+	detectWOL( );
+
+	// Done
+	return true;
 }
 
 bool
@@ -70,78 +78,119 @@ UnixNetworkAdapter::detectWOL ( void )
 	return false;
 }
 
+//
+// Memset like things which take const pointers
+//
+void *
+UnixNetworkAdapter::MemZero( const void *buf, unsigned size )
+{
+	void *p = const_cast<void *>( buf );
+	memset( p, 0, size );
+	return p;
+}
+char *
+UnixNetworkAdapter::StrZero( const char *buf, unsigned size )
+{
+	return (char *) MemZero( buf, size );
+}
+void *
+UnixNetworkAdapter::MemCopy( const void *dest, const void *src, unsigned size )
+{
+	void *p = const_cast<void *>( dest );
+	memcpy( p, src, size );
+	return p;
+}
+
+// Set interface name methods
+void
+UnixNetworkAdapter::setName( const char *name )
+{
+	resetName( );
+	m_if_name = strdup( name );
+}
+void
+UnixNetworkAdapter::resetName( bool init )
+{
+	if ( init ) {
+		m_if_name = NULL;
+	}
+	else if ( m_if_name ) {
+		free( const_cast<char*>(m_if_name) );
+		m_if_name = NULL;
+	}
+}
 
 //
 // This block of methods require 'struct ifreq' ...
 //
 #if HAVE_STRUCT_IFREQ
 
+// Set the interface name from the ifreq
+void
+UnixNetworkAdapter::setName( const struct ifreq &ifr )
+{
+	setName( ifr.ifr_name );
+}
+// Fill in the name field of an ifreq
+void
+UnixNetworkAdapter::getName( struct ifreq &ifr )
+{
+	strncpy( ifr.ifr_name, m_if_name, IFNAMSIZ );
+	ifr.ifr_name[IFNAMSIZ-1] = '\0';
+}
+
 // Set the hardware address from the ifreq
 void
-UnixNetworkAdapter::setHwAddr( const struct ifreq *ifr )
+UnixNetworkAdapter::resetHwAddr( bool /*init*/ )
 {
-	memset( const_cast<char *>(m_hw_addr), 0, sizeof(m_hw_addr) );
-	memset( const_cast<char *>(m_hw_addr_str), 0, sizeof(m_hw_addr_str) );
+	MemZero( m_hw_addr, sizeof(m_hw_addr) );
+	StrZero( m_hw_addr_str, sizeof(m_hw_addr_str) );
+}
+void
+UnixNetworkAdapter::setHwAddr( const struct ifreq &ifr )
+{
+	resetHwAddr( );
+	MemCopy( m_hw_addr, &(ifr.ifr_hwaddr.sa_data), 8 );
 
-	if ( ifr ) {
-		memcpy( const_cast<char *>(m_hw_addr), ifr->ifr_hwaddr.sa_data, 8 );
-
-		char	*str = const_cast<char *>(m_hw_addr_str);
-		for( int i = 0;  i < 6;  i++ ) {
-			char	tmp[3];
-			snprintf( tmp, sizeof(tmp), "%02x", m_hw_addr[i] );
-			if ( i ) {
-				strcat( tmp, ":" );
-			}
-			strcat( str, tmp );
+	char *str = const_cast<char*>(m_hw_addr_str);
+	for( int i = 0;  i < 6;  i++ ) {
+		char	tmp[3];
+		snprintf( tmp, sizeof(tmp), "%02x", m_hw_addr[i] );
+		if ( i < 5 ) {
+			strcat( tmp, ":" );
 		}
+		strcat( str, tmp );
 	}
 }
 
 // Set the net mask from the ifreq
 void
-UnixNetworkAdapter::setNetMask( const struct ifreq *ifr )
+UnixNetworkAdapter::resetNetMask( bool /*init*/ )
 {
-	
+	MemZero( &m_netmask, sizeof(m_netmask) );
+	StrZero( m_netmask_str, sizeof(m_netmask_str) );
+}
+void
+UnixNetworkAdapter::setNetMask( const struct ifreq &ifr )
+{
+	resetNetMask( );
+
 	struct sockaddr *maskptr = const_cast<struct sockaddr *>(&m_netmask);
-	memset( maskptr, 0, sizeof(m_netmask) );
+	MemCopy( maskptr, &(ifr.ifr_netmask), sizeof(m_netmask) );
 
-	if ( ifr ) {
-		memcpy( maskptr, &(ifr->ifr_netmask), sizeof(m_netmask) );
-		char	*str = const_cast<char *>(m_netmask_str);
-		const struct sockaddr_in *
-			in_addr = (const struct sockaddr_in *) &(m_netmask);
-		strncpy( str,
-				 sin_to_string(in_addr),
-				 sizeof(m_netmask_str) );
-	}
+	const struct sockaddr_in *in_addr =
+		(const struct sockaddr_in *) &(m_netmask);
+	char *str = const_cast<char *>(m_netmask_str);
+	strncpy( str, sin_to_string(in_addr), sizeof(m_netmask_str) );
 }
 
-// Store the ifrequst
-void
-UnixNetworkAdapter::setIFR( const struct ifreq *ifr )
-{
-	if ( ifr ) {
-		memcpy( const_cast<struct ifreq*>(&m_ifr), ifr, sizeof(struct ifreq) );
-	}
-	else {
-		memset( const_cast<struct ifreq*>(&m_ifr), 0, sizeof(struct ifreq) );
-	}
-}
-
-// Get the ifrequest
-void
-UnixNetworkAdapter::getIFR( struct ifreq *ifr )
-{
-	memcpy( ifr, &m_ifr, sizeof(struct ifreq) );
-}
 #endif
 
 // dprintf an error message
 void
 UnixNetworkAdapter::derror( const char *label ) const
 {
-	MyString	message;
-	dprintf( D_ALWAYS, "%s failed: %s (%d)\n",
+	dprintf( D_ALWAYS,
+			 "%s failed: %s (%d)\n",
 			 label, strerror(errno), errno );
 }

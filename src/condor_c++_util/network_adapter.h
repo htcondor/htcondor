@@ -46,11 +46,16 @@ public:
 	virtual ~NetworkAdapterBase (void) throw (); 
 
 	//@}
-	
+
 	/** @name Adapter properties.
 	Basic device properties.
 	*/
 	//@{
+
+	/** Initialize the adapter
+		@return true if successful, false if unsuccessful
+	*/
+	virtual bool initialize( void ) = 0;
 
 	/** Returns the adapter's hardware address
 		@return a string representation of the addapter's hardware 
@@ -58,17 +63,26 @@ public:
 	*/
 	virtual const char* hardwareAddress (void) const = 0;
 
+    /** Returns the adapter's IP address as a string
+		@return the addapter's IP address
+	*/
+	virtual unsigned ipAddress (void) const = 0;
+
     /** Returns the adapter's hardware address
 		@return a string representation of the addapter's hardware 
         address
 	*/
 	virtual const char* subnet (void) const = 0;
 
-    /** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware 
-        address
+    /** Returns wether the interface is wakeable or not
+		@return true if the interface is wakeable
 	*/
 	virtual bool wakeAble (void) const = 0;
+
+    /** Returns wether the interface was found or not
+		@return true if the interface is found
+	*/
+	virtual bool exists (void) const = 0;
 	
 	//@}
 

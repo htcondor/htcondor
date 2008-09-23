@@ -36,10 +36,10 @@ struct Options
 };
 
 bool
-CheckArgs(int argc, char **argv, Options &opts);
+CheckArgs(int argc, const char **argv, Options &opts);
 
 int
-main(int argc, char **argv)
+main(int argc, const char **argv)
 {
 	DebugFlags = D_ALWAYS;
 
@@ -51,9 +51,9 @@ main(int argc, char **argv)
 	Termlog = true;
 	dprintf_config("TEST_NETWORK_ADAPTER");
 
-	int		result = 0;
-
-	Options	opts;
+	const char	*tmp;
+	int			 result = 0;
+	Options		 opts;
 
 	if ( CheckArgs(argc, argv, opts) ) {
 		exit( 1 );
@@ -64,6 +64,31 @@ main(int argc, char **argv)
 	NetworkAdapterBase	*net =
 		NetworkAdapterBase::createNetworkAdapter( sinful.GetCStr() );
 
+	// Initialize it
+	if ( !net->initialize() ) {
+		printf( "Initialization of adaptor with address %s failed\n",
+				opts.m_address );
+		exit(1);
+	}
+
+	// And, check for it's existence
+	if ( !net->exists() ) {
+		printf( "Adaptor with address %s not found\n",
+				opts.m_address );
+		exit(1);
+	}
+
+	// Now, extract information from it
+	tmp = net->hardwareAddress();
+	if ( !tmp || !strlen(tmp) ) tmp = "<NONE>";
+	printf( "hardware address: %s\n", tmp );
+
+	tmp = net->subnet();
+	if ( !tmp || !strlen(tmp) ) tmp = "<NONE>";
+	printf( "subnet: %s\n", tmp );
+
+	printf( "wakable: %s\n", net->wakeAble() ? "YES" : "NO" );
+
 	if ( result != 0 && opts.m_verbosity >= 1 ) {
 		fprintf(stderr, "test_network_adapter FAILED\n");
 	}
@@ -72,17 +97,18 @@ main(int argc, char **argv)
 }
 
 bool
-CheckArgs(int argc, char **argv, Options &opts)
+CheckArgs(int argc, const char **argv, Options &opts)
 {
 	const char *	usage =
 		"Usage: test_network_adapter [options] <IP address>\n"
+		"  -d <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  --debug <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  --usage|--help|-h: print this message and exit\n"
 		"  -v: Increase verbosity level by 1\n"
 		"  --verbosity <number>: set verbosity level (default is 1)\n"
 		"  --version: print the version number and compile date\n";
 
-	opts.m_address = NULL;
+	opts.m_address = "127.0.0.1";
 	opts.m_verbosity = 1;
 
 	for ( int index = 1; index < argc; ++index ) {
@@ -93,7 +119,7 @@ CheckArgs(int argc, char **argv, Options &opts)
 			return true;
 		}
 
-		if ( arg.Match("debug") ) {
+		if ( arg.Match( 'd', "debug") ) {
 			if ( arg.HasOpt() ) {
 				set_debug_flags( const_cast<char *>(arg.Opt()) );
 				index = arg.ConsumeOpt( );
@@ -110,7 +136,7 @@ CheckArgs(int argc, char **argv, Options &opts)
 			return true;
 
 		} else if ( arg.Match('v') ) {
-			opts.verbosity++;
+			opts.m_verbosity++;
 
 		} else if ( arg.Match("verbosity") ) {
 			if ( arg.OptIsNumber() ) {

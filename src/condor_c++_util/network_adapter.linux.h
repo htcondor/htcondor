@@ -39,9 +39,6 @@ public:
 	*/
 	//@{
 
-    /// Constructor
-	LinuxNetworkAdapter ( void ) throw();
-
 	/// Constructor
 	LinuxNetworkAdapter ( unsigned int ip_addr ) throw ();
 
@@ -53,10 +50,13 @@ public:
 	Basic device properties.
 	*/
 	//@{
-	
+
+
 	//@}
 
 private:
+	int		m_wolopts;
+
 	// Internal methods
 	virtual bool findAdapter( void );
 	virtual bool detectWOL( void );

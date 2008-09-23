@@ -42,9 +42,6 @@ public:
 	*/
 	//@{
 
-    /// Constructor
-	UnixNetworkAdapter ( void ) throw ();
-
 	/// Constructor
 	UnixNetworkAdapter ( unsigned int ip_addr ) throw ();
 
@@ -57,22 +54,37 @@ public:
 	*/
 	//@{
 
+	/** Initialize the adapter
+		@return true if successful, false if unsuccessful
+	*/
+	virtual bool initialize( void );
+
 	/** Returns the adapter's hardware address
 		@return a string representation of the addapter's hardware 
         address
 	*/
 	const char *hardwareAddress (void) const { return m_hw_addr_str; };
 
+    /** Returns the adapter's IP address as a string
+		@return the addapter's IP address
+	*/
+	virtual unsigned ipAddress (void) const { return m_ip_addr; };
+
     /** Returns the adapter's hardware address
 		@return a string representation of the subnet mask
 	*/
-	const char *subnet (void) const;
+	const char *subnet (void) const { return m_netmask_str; };
 
     /** Returns the adapter's hardware address
 		@return a string representation of the addapter's hardware 
         address
 	*/
 	virtual bool wakeAble (void) const { return m_wol; };
+
+    /** Returns wether the interface was found or not
+		@return true if the interface is found
+	*/
+	bool exists (void) const { return m_found; };
 
 	/** Returns the adapter's logical name
 		@return a string with the logical name
@@ -83,6 +95,7 @@ public:
 	//@}
 
 protected:
+	bool				 m_found;
 
 	unsigned			 m_ip_addr;
 	const char			*m_if_name;
@@ -97,25 +110,33 @@ protected:
     const char		 	 m_netmask_str[32];
 	
 	// Very UNIX specific definitions
-#  if defined HAVE_STRUCT_IFREQ
-	const struct ifreq	 m_ifr;
-#  endif
-	int					 m_wolopts;
 
 	// Internal methods
 	virtual bool findAdapter( void );
 	virtual bool detectWOL( void );
 
-#  if defined(HAVE_STRUCT_IFREQ)
-	void setIFR( const struct ifreq *ifr );
-	void getIFR( struct ifreq *ifr );
-	void setHwAddr( const struct ifreq *ifr );
-#  endif
+	void setName( const char * );
 
-	void setNetMask( const struct ifreq *ifr );
+#  if defined(HAVE_STRUCT_IFREQ)
+	void getName( struct ifreq &ifr );
+
+	void resetName( bool init = false );
+	void resetHwAddr( bool init = false );
+	void resetNetMask( bool init = false );
+
+	void setName( const struct ifreq &ifr );
+	void setHwAddr( const struct ifreq &ifr );
+	void setNetMask( const struct ifreq &ifr );
+#  endif
 
 	// Dump out an error
 	void derror( const char *label ) const;
+
+	// Helper methods
+	void *MemZero( const void *buf, unsigned size );
+	char *StrZero( const char *buf, unsigned size );
+	void *MemCopy( const void *dest, const void *src, unsigned size );
+
 };
 
 #endif // _NETWORK_ADAPTER_UNIX_H_
