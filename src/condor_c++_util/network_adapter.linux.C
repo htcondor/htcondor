@@ -182,12 +182,12 @@ LinuxNetworkAdapter::detectWOL ( void )
 	int						err;
 	struct ethtool_wolinfo	wolinfo;
 	struct ifreq			ifr;
+	bool					ok = false;
 
 	// Open control socket.
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
 		dprintf( D_ALWAYS, "Cannot get control socket for WOL detection\n" );
-		return false;
 	}
 
 	// Fill in the WOL request and the ioctl request
@@ -195,26 +195,24 @@ LinuxNetworkAdapter::detectWOL ( void )
 	getName( ifr );
 	ifr.ifr_data = (caddr_t)(& wolinfo);
 	err = ioctl(sock, SIOCETHTOOL, &ifr);
-	if (errno == EOPNOTSUPP) {
-		dprintf( D_ALWAYS, "SIOCETHTOOL not supported by this kernel\n" );
-		return false;
+	if ( err < 0 ) {
+		derror( "ioctl(SIOCETHTOOL/GWOL)" );
+		m_wolopts = 0;
 	}
-	else if ( err ) {
-		derror( "ioctl(SIOCETHTOOL)" );
-		return false;
+	else {
+		m_wolopts = wolinfo.supported;
+		ok = true;
 	}
-
-	m_wolopts = wolinfo.supported;
 
 	// For now, all we support is the "magic" packet
-	if (m_wolopts & WAKE_MASK)
+	if (m_wolopts & WAKE_MASK) {
 		m_wol = true;
-
+	}
 	dprintf( D_FULLDEBUG, "%s supports Wake-on: %s (raw: 0x%02x)\n",
 			 m_if_name, m_wol ? "yes" : "no", m_wolopts );
 
 	close( sock );
-	return true;
+	return ok;
 #  else
 	return false;
 #  endif
