@@ -63,3 +63,8 @@ LoadDLL::unload () {
 		FreeLibrary ( _dll );
 	}
 }
+
+FARPROC 
+LoadDLL::getProcAddress ( LPCSTR name ) {
+    return GetProcAddress ( _dll, name );
+}

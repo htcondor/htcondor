@@ -128,9 +128,10 @@ public:
 	// The following signatures and structures were pulled from various
 	// parts of the DDK, so that we do not depend on it for compilation.
 	//
-	// Note the use of __stdcall in the signatures: it avoids busting the 
-	// stack (i.e. the ESP register; AKA the return address) since none of 
-	// these functions are 'C' (__cdecl) functions.  Stupid Windows...
+	// Note the use of __stdcall (i.e. WINAPI) in the signatures: it 
+    // avoids busting the stack (i.e. the ESP register; AKA the return
+    // address) since none of these functions are true 'C' (__cdecl) 
+    // functions.  Stupid Windows...
 	//
 
 	//

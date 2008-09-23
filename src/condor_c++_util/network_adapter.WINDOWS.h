@@ -20,16 +20,20 @@
 #ifndef _NETWORK_ADAPTER_WINDOWS_H_
 #define _NETWORK_ADAPTER_WINDOWS_H_
 
+/***************************************************************
+ * Headers
+ ***************************************************************/
+
+#include "network_adapter.h"
+#include "condor_constants.h"
 #include "setup_api_dll.h"
+#include <iptypes.h>
 
 /***************************************************************
-* WindowsNetworkAdapter class
-* Given the name of a network adapter (the GUID), discovers all
-* the required power information. Requires that setupapi.dll be 
-* loaded (i.e. we are running on post Windows 2K system).  
-***************************************************************/
+ * WindowsNetworkAdapter class
+ ***************************************************************/
 
-class WindowsNetworkAdapter {
+class WindowsNetworkAdapter : NetworkAdapterBase {
 
 public:
 
@@ -41,44 +45,67 @@ public:
 	WindowsNetworkAdapter () throw ();
 
 	/// Constructor
-	WindowsNetworkAdapter ( LPSTR device_name ) throw ();
+	WindowsNetworkAdapter ( LPCSTR ip_addr ) throw ();
 
 	/// Destructor
 	virtual ~WindowsNetworkAdapter () throw (); 
 
 	//@}
 	
-	/** @name Device parameters.
+	/** @name Device properties.
+	*/
+	//@{
+
+	/** Returns the adapter's hardware address
+		@return a string representation of the addapter's hardware 
+        address
+	*/
+	const char* hardwareAddress () const;
+
+    /** Returns the adapter's hardware address
+		@return a string representation of the subnet mask
+	*/
+	const char* subnet () const;
+
+    /** Returns the adapter's hardware address
+		@return a string representation of the addapter's hardware 
+        address
+	*/
+	bool wakeAble () const;
+	
+	//@}
+
+    /** @name Device parameters.
 	Basic Plug and Play device properties.
 	*/
 	//@{
 
-	/** Returns the device's driver key
-		@return The function retrieves a string identifying the 
-		device's software key (sometimes called the driver key).
-		This can be used to look up power management information
-		about the device in the registry. Use LocalFree() to 
-		release the memory
-		@param Name of the network device to query.
-		@see Registry Keys for Drivers in the MS DDK.		
-	*/
-	PCHAR getDriverKey () const;
-	
 	/** Returns the device's power information
 		@return The function retrieves the device's power management 
 		information. Use LocalFree) to release the memory.
-		@param Name of the network device to query.
 		*/
 	PCM_POWER_DATA getPowerData () const;
-	
-	//@}
 
+   //@}
+
+
+    /** Initialize the internal structures (can be called multiple
+        times--such as in the case of a reconfiguration) 
+		@return true if it was succesful; otherwise, false.
+		*/
+    bool initialize ();
+
+    
 private:
-	
-	static const int _device_name_length = MAX_ADAPTER_NAME_LENGTH + 4;
-	CHAR _device_name[_device_name_length];
 
-	/*	Some registry values require some preprocessing before they can 
+    /** Data members */
+    CHAR _ip_address[IP_STRING_BUF_SIZE],
+         _hardware_address[32],
+         _subnet[IP_STRING_BUF_SIZE],
+         _adapter_name[MAX_ADAPTER_NAME_LENGTH + 4];
+    bool _wake_able;
+
+    /**	Some registry values require some preprocessing before they can 
 		be queried, so we allow a user to specify a function to handle 
 		preprocessing.
 	*/
@@ -94,6 +121,7 @@ private:
 	PBYTE getRegistryProperty ( 
 		IN DWORD registry_property, 
 		IN PRE_PROCESS_REISTRY_VALUE preprocess = NULL ) const;
+	
 	
 };
 
