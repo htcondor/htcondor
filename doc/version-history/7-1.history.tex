@@ -29,6 +29,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added the ability for Windows slot-users to load and run their jobs
+in the context of their profile. This includes the ``My Documents'' directory 
+hierarchy (and its monikers) and the user's Registry hive.  To use it add
+\SubmitCmd{load\_profile} to your submit file.  Please note that this is 
+currently not supported when used in conjunction with 
+\SubmitCmd{run\_as\owner}. Please refer to 
+section~\ref{sec:windows-load-profile} for further details.
+
 \item The \File{StarterLog} file for local universe jobs now displays the job id
 in each line in the file, so that interleaved messages relevant to
 different jobs running concurrently can be identified.
