@@ -29,14 +29,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The \File{StarterLog} for local universe jobs now displays the job id
-in each line in the file, so that intermingled messages relevant to
+\item The \File{StarterLog} file for local universe jobs now displays the job id
+in each line in the file, so that interleaved messages relevant to
 different jobs running concurrently can be identified.
 
-\item Added the \Opt{-AllowVersionMismatch} command-line flag to
+\item Added the \Opt{-AllowVersionMismatch} command line option to
 \Condor{submit\_dag} and \Condor{dagman} to (if absolutely necessary)
 allow a version mismatch between \Condor{dagman} and the
-\File{.condor.sub} file used to submit it (or, in other words, between
+\File{.condor.sub} file used to submit it.
+This permits a Condor version mismatch between
 \Condor{submit\_dag} and \Condor{dagman}).
 
 \end{itemize}
@@ -45,24 +46,27 @@ allow a version mismatch between \Condor{dagman} and the
 
 \begin{itemize}
 
-\item Added \Macro{MAX\_PENDING\_STARTD\_CONTACTS}.  This limits the
+\item Added the new configuration variable
+\Macro{MAX\_PENDING\_STARTD\_CONTACTS}.  This limits the
 number of simultaneous connection attempts by the \Condor{schedd} when
 it is requesting claims from the \Condor{startd}s.  The intention is
 to protect the \Condor{schedd} from being overloaded by authentication
 operations.  The default is 0, which indicates no limit.
 
-\item Added \Macro{SEC\_INVALIDATE\_SESSIONS\_VIA\_TCP}.  This
-defaults to true.  Previously, attempts to use an invalid security
-session resulted in a UDP rather than TCP response.  In networks with
-different firewall rules for UDP and TCP, filtering of the session
+\item Added the new configuration variable
+\Macro{SEC\_INVALIDATE\_SESSIONS\_VIA\_TCP},  which
+defaults to \Expr{True}.  Previously, attempts to use an invalid security
+session resulted in a UDP rather than a TCP response.  In networks with
+different firewall rules for UDP and TCP, the filtering of the session
 invalidation messages was easily overlooked, since it would not
 typically happen during the initial vetting of the pool.  If these
-packets were filtered out, then the next time the \Condor{collector}
-restarted, no daemons would be able to advertise themselves to the
+packets were filtered out, then at the subsequent \Condor{collector}
+restart, no daemons would be able to advertise themselves to the
 pool until their existing security sessions expired.  The old behavior
-can be achieved by setting this configuration parameter to false.
+can be achieved by setting this configuration parameter to \Expr{False}.
 
-\item Added \Macro{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION}.
+\item Added the new configuration variable
+\Macro{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION}.
 This is a special authentication mechanism designed to minimize
 overhead in the \Condor{schedd} when communicating with the execute
 machine.  Essentially, matchmaking results in a secret being shared
@@ -70,10 +74,10 @@ between the \Condor{schedd} and \Condor{startd}, and this is used to
 establish a strong security session between the execute and submit
 daemons without going through the usual security negotiation protocol.
 This is especially important when operating at large scale over high
-latency networks (e.g. a glidein pool with one schedd and thousands of
-startds on a network with 0.1 second round trip times).  See
+latency networks, as in a glidein pool with one submit machine and thousands of
+execute machines on a network with 0.1 second round trip times.  See
 \pageref{param:SecEnableMatchPasswordAuthentication} for
-configuration details.
+details.
 
 \end{itemize}
 
@@ -82,13 +86,14 @@ configuration details.
 \begin{itemize}
 
 \item Fixed a bug in the \Condor{schedd} that would cause it to
-EXCEPT if a crontab entry was incorrectly formatted.
+except if a crontab entry was incorrectly formatted.
 
 \item Fixed a bug in the CondorView server (collector) that caused it
 to except (crash) when it received a machine ClassAd without a valid state.
 It now logs this under level \MacroNI{D\_ALWAYS} and ignores the ClassAd.
 
-\item Fixed a bug in 7.1.2 that would cause condor daemons to start
+\item Fixed a bug from Condor version 7.1.2 that would cause 
+Condor daemons to start
 consuming a lot of cpu time after rare types of communication failures
 during security negotiation.
 
