@@ -82,7 +82,26 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item \Security This release fixes a security-related problem
+  introduced in Condor versions 7.0.4 and 7.1.2.  It also fixes a
+  related problem that affects all previous versions.  The problem
+  affects Condor where the configuration specifies per-user
+  authorization entries in the allow or deny lists which specify
+  different, but overlapping net masks.  
+  For example, \verb|*|, \verb|192.*|, and \verb|192.168.*|
+  are overlapping net masks.  
+  The consequence of the bug is that in a specific allow or deny list, if
+  some users are entered with one net mask and other users are entered
+  with a different but overlapping net mask, some entries would be
+  ignored when enforcing the policy.  If the users are identical for
+  both net masks, then there is no problem.  A similar problem in all
+  previous versions of Condor affects configurations with per-user
+  authorization entries having different, but overlapping host name
+  patterns.  For example, \verb|*.edu|, \verb|*.wisc.edu|, and
+  \verb|condor.wisc.edu| are overlapping host name patterns.  Some
+  entries were effectively ignored, if a specific allow or deny list
+  contained different users in different, but overlapping host name
+  patterns.
 
 \end{itemize}
 
@@ -171,7 +190,7 @@ The problem resulted in the following message in the
 \Condor{negotiator} daemon log:
 
 \begin{verbatim}
-Can't evaluate STARTD_AD_REEVAL_EXPR \...
+Can't evaluate STARTD_AD_REEVAL_EXPR  ...
 \end{verbatim}
 
 \item Reconnecting to parallel universe jobs after a restart of the
