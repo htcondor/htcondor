@@ -55,8 +55,8 @@ public:
     /** @name Instantiation and Initialization. 
 		*/
 	//@{
-	
-	/** Constructor
+
+    /** Constructor
         The mac is of the form: xx:xx:xx:xx:xx:xx
 	    The subnet is of the form: x.x.x.x
 	    The port can be one of 0, 7, or 9
