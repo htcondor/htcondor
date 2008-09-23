@@ -145,19 +145,6 @@ UdpWakeOnLanWaker::~UdpWakeOnLanWaker () throw () {
 }
 
 /***************************************************************
- * Private UdpWakeOnLanWaker ctors
- ***************************************************************/
-
-UdpWakeOnLanWaker::UdpWakeOnLanWaker () {
-}
-
-UdpWakeOnLanWaker::UdpWakeOnLanWaker ( UdpWakeOnLanWaker const& ) {
-}
-
-UdpWakeOnLanWaker& UdpWakeOnLanWaker::operator = ( UdpWakeOnLanWaker const& ) {
-}
-
-/***************************************************************
  * UdpWakeOnLanWaker methods
  ***************************************************************/
 

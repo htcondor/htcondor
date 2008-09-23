@@ -79,6 +79,7 @@ SetupApiDLL::load () {
             __leave;
 	    }	
 
+#if 0
 		SetupDiGetClassDevs = 
 			_dll.getProcAddress<SetupApiDLL::SETUPDIGETCLASSDEVS> ( 
 			"SetupDiGetClassDevsA" );
@@ -122,6 +123,52 @@ SetupApiDLL::load () {
 		if ( !SetupDiDestroyDeviceInfoList ) {
 			printf ( "GetProcAddress: SetupDiDestroyDeviceInfoList\n" );
 			__leave;
+		}
+#endif 
+
+        SetupDiGetClassDevs = 
+            (SETUPDIGETCLASSDEVS) _dll.getProcAddress ( 
+            "SetupDiGetClassDevsA" );
+        
+        if ( !SetupDiGetClassDevs ) {
+            printf ( "GetProcAddress: SetupDiGetClassDevsA\n" );
+            __leave;
+        }
+        
+        SetupDiEnumDeviceInterfaces = 
+            (SETUPDIENUMDEVICEINTERFACES) _dll.getProcAddress ( 
+            "SetupDiEnumDeviceInterfaces" );
+        
+        if ( !SetupDiEnumDeviceInterfaces ) {
+            printf ( "GetProcAddress: SetupDiEnumDeviceInterfaces\n" );
+            __leave;
+        }
+        
+        SetupDiGetDeviceInterfaceDetail = 
+            (SETUPDIGETDEVICEINTERFACEDETAIL) _dll.getProcAddress ( 
+            "SetupDiGetDeviceInterfaceDetailA" );
+        
+        if ( !SetupDiGetDeviceInterfaceDetail ) {
+            printf ( "GetProcAddress: SetupDiGetDeviceInterfaceDetailA\n" );
+            __leave;
+        }
+        
+        SetupDiGetDeviceRegistryProperty = 
+            (SETUPDIGETDEVICEREGISTRYPROPERTY) _dll.getProcAddress ( 
+            "SetupDiGetDeviceRegistryPropertyA" );
+        
+        if ( !SetupDiGetDeviceRegistryProperty ) {
+            printf ( "GetProcAddress: SetupDiGetDeviceRegistryPropertyA\n" );
+            __leave;
+        }
+        
+        SetupDiDestroyDeviceInfoList = 
+            (SETUPDIDESTROYDEVICEINFOLIST) _dll.getProcAddress ( 
+            "SetupDiDestroyDeviceInfoList" );
+        
+        if ( !SetupDiDestroyDeviceInfoList ) {
+            printf ( "GetProcAddress: SetupDiDestroyDeviceInfoList\n" );
+            __leave;
 		}
 
         /* if we got here, then we have all the calls we need */

@@ -19,12 +19,15 @@
 
 #include "condor_common.h"
 #include "network_adapter.WINDOWS.h"
+#include "my_hostname.h"
+
+#include <iphlpapi.h>
 
 /***************************************************************
-* Ripped from the MS DDK
-***************************************************************/
+ * Ripped from the MS DDK
+ ***************************************************************/
 
-/*    {6B29FC40-CA47-1067-B31D-00DD010662DA}
+/*  {6B29FC40-CA47-1067-B31D-00DD010662DA}
     Length = 1[{] + 32[sizeof(GUID)*2] + 4[-] + 1[}]
     */
 #define GUID_STR_LENGTH ((sizeof(GUID)*2)+6)
@@ -35,14 +38,151 @@ DEFINE_GUID(GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f, 0x11d0, 0x8d,
             0xcb, 0x00, 0xc0, 0x4f, 0xc3, 0x35, 0x8c);
 
 /***************************************************************
-* WindowsNetworkAdapter class
-***************************************************************/
+ * Defines
+ ***************************************************************/
 
-WindowsNetworkAdapter::WindowsNetworkAdapter ( LPSTR device_name ) throw () {
-    strncpy ( _device_name, device_name, _device_name_length );
+#define WAKE_FROM_ANY_SUPPORTED (PDCAP_WAKE_FROM_D0_SUPPORTED| \
+                                 PDCAP_WAKE_FROM_D1_SUPPORTED| \
+                                 PDCAP_WAKE_FROM_D2_SUPPORTED| \
+                                 PDCAP_WAKE_FROM_D3_SUPPORTED)
+
+/***************************************************************
+ * WindowsNetworkAdapter class
+ ***************************************************************/
+
+WindowsNetworkAdapter::WindowsNetworkAdapter () throw () 
+: _wake_able ( false ) {
+    strncpy ( _ip_address, my_ip_string (), IP_STRING_BUF_SIZE );
+    initialize ();
+}
+
+WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR ip_addr ) throw ()
+: _wake_able ( false ) {
+    strncpy ( _ip_address, ip_addr, IP_STRING_BUF_SIZE );
+    initialize (); 
 }
 
 WindowsNetworkAdapter::~WindowsNetworkAdapter () throw () {
+}
+
+/***************************************************************
+ * WindowsNetworkAdapter class
+ ***************************************************************/
+
+bool
+WindowsNetworkAdapter::initialize () {
+
+    PIP_ADAPTER_INFO    adapters    = NULL,
+                        current     = NULL;
+	DWORD               error       = 0;
+	ULONG               size;
+    LPCSTR              other       = NULL;
+    unsigned int        i           = 0;
+    PCM_POWER_DATA      power_data  = NULL;
+    bool                ok          = false;
+
+    __try {
+
+        /* allocate a very small ammount of ram, which will cause the
+           call for information to fail, but will reveal the size
+           of the true structure */
+        size = sizeof ( IP_ADAPTER_INFO );
+        adapters = (PIP_ADAPTER_INFO) malloc ( size );
+        
+        if ( ERROR_SUCCESS != GetAdaptersInfo ( adapters, &size ) ) {
+            free ( adapters );
+            adapters = (PIP_ADAPTER_INFO) malloc ( size );
+	    }
+
+        /* now attempt to grab all the information we can for each 
+           adapter, then search through them until we find the one
+           which matches the IP we are looking for */
+        if ( NO_ERROR != ( error = GetAdaptersInfo ( adapters, &size ) ) ) {
+
+            /* failed to get the adapter information */
+            __leave;
+
+        } else {
+
+            /* got it, lets run through them and the one we 
+            are interested in */
+            current = adapters;
+
+	        while ( current ) {
+                
+                char *other = current->IpAddressList.IpAddress.String;
+                
+                if ( MATCH == strcmp ( _ip_address, other ) ) {
+                    
+                    /* record the adpater GUID */
+                    strncpy (
+                        _adapter_name, 
+                        current->AdapterName, 
+                        MAX_ADAPTER_NAME_LENGTH + 4 );
+                    
+                    /* using the GUID, get the device's power 
+                    capabilities */ 
+                    power_data = getPowerData ();
+                    if ( power_data ) {
+                        _wake_able = power_data->PD_Capabilities 
+                            & WAKE_FROM_ANY_SUPPORTED; // 0xF0;
+
+                        LocalFree ( power_data );
+                    }
+
+                    /* copy over the adapter's subnet */
+                    strncpy (
+                        _subnet,
+                        current->IpAddressList.IpMask.String,
+                        IP_STRING_BUF_SIZE );
+
+                    /* finally, format the hardware address in the 
+                    format our tools expect */
+                    for ( i = 0; i < current->AddressLength; ++i ) {
+                        printf ( "%.2X%c", current->Address[i], 
+				        i == current->AddressLength - 1 ? '\0' : ':' );
+                    }
+
+                    /* we found the one we want, so bail out early */
+                    __leave;
+
+                }
+
+                /* move on to the next one */
+                current = current->Next;
+            }
+
+        } 
+
+        /* if we got here, then the world is a happy place */
+        ok = true;
+
+    }
+    __finally {
+
+        if ( adapters ) {
+            free ( adapters );
+        }
+
+    }
+
+    return ok;
+
+}
+
+const char* 
+WindowsNetworkAdapter::hardwareAddress () const {
+    return _hardware_address;
+}
+
+const char* 
+WindowsNetworkAdapter::subnet () const {
+    return _subnet;
+}
+
+bool 
+WindowsNetworkAdapter::wakeAble () const {
+    return _wake_able;
 }
 
 /*    The power data registry values requires some preprocessing before 
@@ -63,12 +203,6 @@ WindowsNetworkAdapter::getPowerData () const {
 
 }
 
-PCHAR 
-WindowsNetworkAdapter::getDriverKey () const {
-    
-    return (PCHAR) getRegistryProperty ( SPDRP_DRIVER );
-
-}
 
 PBYTE 
 WindowsNetworkAdapter::getRegistryProperty ( 
@@ -246,7 +380,7 @@ WindowsNetworkAdapter::getRegistryProperty (
                     '\\' ) + 1;
 
                 if ( 0 != strnicmp ( 
-                        _device_name, 
+                        _adapter_name, 
                         short_name, 
                         GUID_STR_LENGTH ) ) {
 

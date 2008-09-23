@@ -49,8 +49,13 @@ public:
 	void unload ();
 	bool loaded () const;
 
-	template<class R>
+	/*
+    // not valid in VC6
+    template<class R>
 	R getProcAddress ( LPCSTR name );
+    */
+
+    FARPROC getProcAddress ( LPCSTR name );
 
 private:
 	
@@ -58,6 +63,8 @@ private:
 
 };
 
+/*
+// not valid in VC6
 template<class R>
 R 
 LoadDLL::getProcAddress ( LPCSTR name ) {
@@ -69,5 +76,6 @@ LoadDLL::getProcAddress ( LPCSTR name ) {
 	return (R) NULL;
 
 }
+*/
 
 #endif // _LOAD_DLL_
