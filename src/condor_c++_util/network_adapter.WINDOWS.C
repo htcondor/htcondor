@@ -32,10 +32,17 @@
     */
 #define GUID_STR_LENGTH ((sizeof(GUID)*2)+6)
 
+/*    Guid builder. (From DDK)
+*/
+#define CONDOR_DEFINE_GUID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
+const GUID name \
+            = { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
+
 /*    Guid for Lan Class. (From DDK)
 */
-DEFINE_GUID(GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f, 0x11d0, 0x8d, 
-            0xcb, 0x00, 0xc0, 0x4f, 0xc3, 0x35, 0x8c);
+CONDOR_DEFINE_GUID(CONDOR_GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f, 
+                   0x11d0, 0x8d, 0xcb, 0x00, 0xc0, 0x4f, 0xc3, 0x35,
+                   0x8c);
 
 /***************************************************************
  * Defines
@@ -50,19 +57,33 @@ DEFINE_GUID(GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f, 0x11d0, 0x8d,
  * WindowsNetworkAdapter class
  ***************************************************************/
 
-WindowsNetworkAdapter::WindowsNetworkAdapter () throw () 
-: _wake_able ( false ) {
+WindowsNetworkAdapter::WindowsNetworkAdapter () throw () : 
+_wake_able ( false ), 
+_exists ( false ), 
+_adapter_name ( NULL ), 
+_subnet ( NULL ) {
     strncpy ( _ip_address, my_ip_string (), IP_STRING_BUF_SIZE );
     initialize ();
 }
 
-WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR ip_addr ) throw ()
-: _wake_able ( false ) {
+WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR ip_addr ) throw () : 
+_wake_able ( false ), 
+_exists ( false ), 
+_adapter_name ( NULL ),
+_subnet ( NULL ) {
     strncpy ( _ip_address, ip_addr, IP_STRING_BUF_SIZE );
     initialize (); 
 }
 
 WindowsNetworkAdapter::~WindowsNetworkAdapter () throw () {
+    
+    if ( _adapter_name ) {
+        free ( _adapter_name );
+    }
+    if ( _subnet ) {
+        free ( _subnet );
+    }
+
 }
 
 /***************************************************************
@@ -77,13 +98,24 @@ WindowsNetworkAdapter::initialize () {
 	DWORD               error       = 0;
 	ULONG               size;
     LPCSTR              other       = NULL;
-    unsigned int        i           = 0;
+    PCHAR               offset      = NULL;
+    UINT                i           = 0,
+                        last;
     PCM_POWER_DATA      power_data  = NULL;
-    bool                ok          = false;
-
+    
     __try {
 
-        /* allocate a very small ammount of ram, which will cause the
+        /* load the Setup API DLL */
+        _exists = _setup_api.load ();
+
+        /* if we cannot load the dll then we won't be able to get the
+        power information, so we just bail and say that the interface
+        does not exist */
+        if ( !_exists ) {
+            __leave;
+        }
+
+        /* allocate a very small amount of ram, which will cause the
            call for information to fail, but will reveal the size
            of the true structure */
         size = sizeof ( IP_ADAPTER_INFO );
@@ -115,35 +147,34 @@ WindowsNetworkAdapter::initialize () {
                 if ( MATCH == strcmp ( _ip_address, other ) ) {
                     
                     /* record the adpater GUID */
-                    strncpy (
-                        _adapter_name, 
-                        current->AdapterName, 
-                        MAX_ADAPTER_NAME_LENGTH + 4 );
+                    _adapter_name = strdup (
+                        current->AdapterName );
                     
                     /* using the GUID, get the device's power 
                     capabilities */ 
                     power_data = getPowerData ();
                     if ( power_data ) {
-                        _wake_able = power_data->PD_Capabilities 
-                            & WAKE_FROM_ANY_SUPPORTED; // 0xF0;
-
+                        _wake_able = ( ( power_data->PD_Capabilities 
+                            & WAKE_FROM_ANY_SUPPORTED ) > 0 ); // 0xF0;
                         LocalFree ( power_data );
                     }
-
+                    
                     /* copy over the adapter's subnet */
-                    strncpy (
-                        _subnet,
-                        current->IpAddressList.IpMask.String,
-                        IP_STRING_BUF_SIZE );
+                    _subnet = strdup (
+                        current->IpAddressList.IpMask.String );
 
                     /* finally, format the hardware address in the 
                     format our tools expect */
+                    offset = _hardware_address; 
+                    last   = current->AddressLength - 1;
                     for ( i = 0; i < current->AddressLength; ++i ) {
-                        printf ( "%.2X%c", current->Address[i], 
-				        i == current->AddressLength - 1 ? '\0' : ':' );
+                        sprintf ( offset, "%.2X%c", current->Address[i], 
+				            i == last ? '\0' : ':' );
+                        offset += 3; // skip "XX:"
                     }
 
                     /* we found the one we want, so bail out early */
+                    _exists = true;
                     __leave;
 
                 }
@@ -152,10 +183,7 @@ WindowsNetworkAdapter::initialize () {
                 current = current->Next;
             }
 
-        } 
-
-        /* if we got here, then the world is a happy place */
-        ok = true;
+        }        
 
     }
     __finally {
@@ -166,7 +194,7 @@ WindowsNetworkAdapter::initialize () {
 
     }
 
-    return ok;
+    return _exists;
 
 }
 
@@ -185,14 +213,21 @@ WindowsNetworkAdapter::wakeAble () const {
     return _wake_able;
 }
 
+bool
+WindowsNetworkAdapter::exists () const {
+    return _exists;
+}
+
 /*    The power data registry values requires some preprocessing before 
     it can be queried, so we allow a user to specify a function to handle 
     preprocessing.
 */
 static void 
 processPowerData ( IN PBYTE p ) {
+
     PCM_POWER_DATA ppd = (PCM_POWER_DATA) p;
     ppd->PD_Size = sizeof ( ppd );
+
 }
 
 PCM_POWER_DATA 
@@ -225,7 +260,7 @@ WindowsNetworkAdapter::getRegistryProperty (
         __try {
 
             device_information = SetupApiDLL::SetupDiGetClassDevs ( 
-                &GUID_NDIS_LAN_CLASS, 
+                &CONDOR_GUID_NDIS_LAN_CLASS, 
                 0, 
                 0, 
                 DIGCF_PRESENT | DIGCF_DEVICEINTERFACE );
@@ -260,7 +295,7 @@ WindowsNetworkAdapter::getRegistryProperty (
                 enumerated_devices = SetupApiDLL::SetupDiEnumDeviceInterfaces (
                     device_information,
                     NULL,
-                    &GUID_NDIS_LAN_CLASS,
+                    &CONDOR_GUID_NDIS_LAN_CLASS,
                     index++,
                     &did );            
 
@@ -292,54 +327,58 @@ WindowsNetworkAdapter::getRegistryProperty (
                     0,
                     &required,
                     &dd );    // MSDN says this is optional,
-                              // but it is not... here...
+                              // but it is *not*... here...
 
                 if ( !got_device_details ) {
 
                     last_error = GetLastError ();
 
-                    if ( ERROR_INSUFFICIENT_BUFFER == last_error ) {
+                    if ( ERROR_SUCCESS != last_error ) {
+                        
+                        if ( ERROR_INSUFFICIENT_BUFFER == last_error ) {
 
-                        pdidd = (SetupApiDLL::PSP_DEVICE_INTERFACE_DETAIL_DATA)
-                            LocalAlloc ( 
-                                LPTR, 
-                                required );
+                            pdidd = (SetupApiDLL::PSP_DEVICE_INTERFACE_DETAIL_DATA)
+                                LocalAlloc ( 
+                                    LPTR, 
+                                    required );
 
-                        if  ( !pdidd ) {
+                            if  ( !pdidd ) {
                             
-                            last_error = GetLastError ();
+                                last_error = GetLastError ();
                             
+                                dprintf ( 
+                                    D_FULLDEBUG, 
+                                    "WindowsNetworkAdapter::"
+                                    "getRegistryProperty: "
+                                    "LocalAlloc call failed: "
+                                    "(last-error = %d)\n",
+                                    last_error );
+                            
+                                __leave;
+
+                            }
+
+                            pdidd->cbSize = sizeof ( *pdidd );
+
+                        } else {
+
                             dprintf ( 
                                 D_FULLDEBUG, 
                                 "WindowsNetworkAdapter::"
                                 "getRegistryProperty: "
-                                "LocalAlloc call failed: "
-                                "(last-error = %d)\n",
+                                "SetupDiGetDeviceInterfaceDetail (1st) "
+                                "call failed: (last-error = %d)\n",
                                 last_error );
-                            
+                        
                             __leave;
 
                         }
-
-                        pdidd->cbSize = sizeof ( *pdidd );
-
-                    } else {
-
-                        dprintf ( 
-                            D_FULLDEBUG, 
-                            "WindowsNetworkAdapter::"
-                            "getRegistryProperty: "
-                            "SetupDiGetDeviceInterfaceDetail (1st) "
-                            "call failed: (last-error = %d)\n",
-                            last_error );
-                        
-                        __leave;
 
                     }
 
                 } 
 
-                got_registry_property = SetupApiDLL::SetupDiGetDeviceInterfaceDetail (
+                got_device_details = SetupApiDLL::SetupDiGetDeviceInterfaceDetail (
                     device_information,
                     &did,
                     pdidd,
@@ -348,7 +387,7 @@ WindowsNetworkAdapter::getRegistryProperty (
                     NULL ); // here, however, it *is* optional?!
                             // (WTF!?!--pardon my French)
 
-                if ( !got_registry_property ) {
+                if ( !got_device_details ) {
                     
                     last_error = GetLastError ();
                     
@@ -363,7 +402,7 @@ WindowsNetworkAdapter::getRegistryProperty (
 
                 }
 
-                //dprintf ( D_FULLDEBUG, "DevicePath: %s\n", pdidd->DevicePath );
+                // dprintf ( D_FULLDEBUG, "DevicePath: %s\n", pdidd->DevicePath );
 
                 // 
                 // Device paths are of the form:
@@ -393,9 +432,9 @@ WindowsNetworkAdapter::getRegistryProperty (
 
                 }
 
-                //dprintf ( D_FULLDEBUG, "DevicePath: %s\n", pdidd->DevicePath );
+                // dprintf ( D_FULLDEBUG, "ShortName: %s\n", short_name );
 
-                got_registry_property = SetupApiDLL::SetupDiGetDeviceRegistryProperty (
+                SetupApiDLL::SetupDiGetDeviceRegistryProperty (
                     device_information,
                     &dd,
                     registry_property,
@@ -404,51 +443,39 @@ WindowsNetworkAdapter::getRegistryProperty (
                     0,
                     &required );
 
-                //dprintf ( D_FULLDEBUG, "registry_property required: %d\n", required );
+                if ( required <= 0 ) {
+                    
+                    dprintf ( 
+                        D_FULLDEBUG, 
+                        "WindowsNetworkAdapter::"
+                        "getRegistryProperty: "
+                        "SetupDiGetDeviceRegistryProperty (1st) "
+                        "call failed: memory requirements cannot be "
+                        "determined\n" );
 
-                if ( !got_registry_property ) {
-
-                    last_error = GetLastError ();
-
-                    if ( ERROR_INSUFFICIENT_BUFFER == last_error ) {
-
-                        value = (PBYTE) LocalAlloc ( 
-                            LPTR, 
-                            required );
-
-                        if  ( !value ) {
-
-                            last_error = GetLastError ();
-                            
-                            dprintf ( 
-                                D_FULLDEBUG, 
-                                "WindowsNetworkAdapter::"
-                                "getRegistryProperty: "
-                                "LocalAlloc call "
-                                "failed: (last-error = %d)\n",
-                                last_error );
-                            
-                            __leave;
-
-                        }
-
-                    } else {
-
-                        last_error = GetLastError ();
-                        
-                        dprintf ( 
-                            D_FULLDEBUG, 
-                            "WindowsNetworkAdapter::"
-                            "getRegistryProperty: "
-                            "SetupDiGetDeviceRegistryProperty (1st) "
-                            "call failed: (last-error = %d)\n",
-                            last_error );
-                        
-                        __leave;
-
-                    }
+                    __leave;
 
                 } 
+
+                value = (PBYTE) LocalAlloc ( 
+                    LPTR, 
+                    required );
+                
+                if  ( !value ) {
+                    
+                    last_error = GetLastError ();
+                    
+                    dprintf ( 
+                        D_FULLDEBUG, 
+                        "WindowsNetworkAdapter::"
+                        "getRegistryProperty: "
+                        "LocalAlloc call "
+                        "failed: (last-error = %d)\n",
+                        last_error );
+                    
+                    __leave;
+                    
+                }
 
                 //
                 // Do any preprocessing that may be required

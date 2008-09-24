@@ -58,25 +58,27 @@ public:
 	*/
 	virtual const char* hardwareAddress (void) const = 0;
 
-    /** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware 
-        address
+    /** Returns the adapter's subnet
+		@return a string representation of the addapter's subnet mask
 	*/
 	virtual const char* subnet (void) const = 0;
 
-    /** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware 
-        address
+    /** Ensures that the adapter can wake the machine.
+    @return true if the adapter can wake the machine; otherwise, false.
 	*/
 	virtual bool wakeAble (void) const = 0;
+
+    /** Checks that the adapter actually exists
+        @returns true if the adapter exists on the machine; 
+        otherwise, false.
+	*/
+	virtual bool exists (void) const = 0;
 	
 	//@}
-
 
     /** Published the network addapter's information into the given ad
         */
     void publish ( ClassAd &ad );
-
 
     /** We use this to create adapter objects so we don't need to deal 
         with the differences between OSs at the invocation level.

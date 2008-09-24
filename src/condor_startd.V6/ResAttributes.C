@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include "network_adapter.h"
 #include <math.h>
 
 
@@ -35,11 +36,9 @@ MachAttributes::MachAttributes()
 	m_opsys = NULL;
 	m_uid_domain = NULL;
 	m_filesystem_domain = NULL;
-	m_subnet = NULL;
 	m_idle_interval = -1;
 	m_ckptpltfrm = NULL;
-    m_hardware_address = NULL;
-    m_subnet_mask = NULL;
+    m_network_adapter = NULL;
 
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
@@ -97,9 +96,8 @@ MachAttributes::~MachAttributes()
 	if( m_opsys ) free( m_opsys );
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
-	if( m_subnet ) free( m_subnet );
 	if( m_ckptpltfrm ) free( m_ckptpltfrm );
-    if( m_hardware_address ) free( m_hardware_address );
+    if( m_network_adapter ) delete m_network_adapter;
 }
 
 
@@ -147,14 +145,6 @@ MachAttributes::compute( amask_t how_much )
 		dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_FILE_SYSTEM_DOMAIN,
 				 m_filesystem_domain );
 
-			// Subnet name
-		if( m_subnet ) {
-			free( m_subnet );
-		}
-		m_subnet = calc_subnet_name();
-		dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_SUBNET,
-				 m_subnet );
-
 		m_idle_interval = param_integer( "IDLE_INTERVAL", -1 );
 
 			// checkpoint platform signature
@@ -169,17 +159,16 @@ MachAttributes::compute( amask_t how_much )
 		m_virt_mem = sysapi_swap_space();
 		dprintf( D_FULLDEBUG, "Swap space: %lu\n", m_virt_mem );
 
-        /* assume the IP address has changed and get the new 
-        hardware address and subnet mask */
-        char const *sinful = daemonCore->InfoCommandSinfulString();
-        if (m_hardware_address) {
-            free(m_hardware_address);
+        /* assume the IP address has changed and construct a new 
+        network adapter */
+        if ( m_network_adapter ) {
+            delete m_network_adapter;
         }
-        m_hardware_address = string_to_hardware_address(sinful);
-        if (m_subnet_mask) {
-            free(m_subnet_mask);
+        char *sinful = daemonCore->InfoCommandSinfulString ();
+        if ( sinful && *sinful ) {
+            m_network_adapter = NetworkAdapterBase::createNetworkAdapter ( 
+                sinful );
         }
-        m_subnet_mask = string_to_subnet_mask(sinful);
 
 	}
 
@@ -263,9 +252,6 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 				 m_filesystem_domain );
 		cp->Insert( line );
 
-		sprintf( line, "%s = \"%s\"", ATTR_SUBNET, m_subnet );
-		cp->Insert( line );
-
 		sprintf( line, "%s = TRUE", ATTR_HAS_IO_PROXY );
 		cp->Insert(line);
 
@@ -334,16 +320,9 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		}
 
         /* these may change over time: if the IP we are advertising
-        changes, then these will as well */
-        if (NULL != m_hardware_address) {
-            sprintf( line, "%s = \"%s\"", ATTR_HARDWARE_ADDRESS,
-                m_hardware_address );
-            cp->Insert( line );
-        }        
-        if (NULL != m_subnet_mask) {
-            sprintf( line, "%s = \"%s\"", ATTR_SUBNET,
-                m_subnet_mask );
-            cp->Insert( line );
+        changes, then so will the network adapter's information */
+        if ( m_network_adapter && m_network_adapter->exists () ) {
+            m_network_adapter->publish ( *cp );
         } 
 		
 	}

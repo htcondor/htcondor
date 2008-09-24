@@ -59,21 +59,44 @@ public:
 	/** Returns the adapter's hardware address
 		@return a string representation of the addapter's hardware 
         address
-	*/
+	    */
 	const char* hardwareAddress () const;
 
-    /** Returns the adapter's hardware address
-		@return a string representation of the subnet mask
-	*/
+    /** Returns the adapter's subnet
+		@return a string representation of the addapter's subnet mask
+	    */
 	const char* subnet () const;
 
-    /** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware 
-        address
-	*/
+    /** Ensures that the adapter can wake the machine.
+        @return true if the adapter can wake the machine; otherwise, false.
+	    */
 	bool wakeAble () const;
-	
-	//@}
+
+    /** Checks that the adapter actually exists
+        @returns true if the adapter exists on the machine; 
+        otherwise, false.
+	    */
+	bool exists () const;
+    
+    //@}
+
+    /** Initialize the internal structures (can be called multiple
+        times--such as in the case of a reconfiguration) 
+		@return true if it was succesful; otherwise, false.
+		*/
+    bool initialize ();
+
+    
+private:
+
+    /** Data members */
+    CHAR        _ip_address[IP_STRING_BUF_SIZE],
+                _hardware_address[18],
+                *_subnet,
+                *_adapter_name;
+    bool        _wake_able,
+                _exists;
+    SetupApiDLL _setup_api;
 
     /** @name Device parameters.
 	Basic Plug and Play device properties.
@@ -86,24 +109,7 @@ public:
 		*/
 	PCM_POWER_DATA getPowerData () const;
 
-   //@}
-
-
-    /** Initialize the internal structures (can be called multiple
-        times--such as in the case of a reconfiguration) 
-		@return true if it was succesful; otherwise, false.
-		*/
-    bool initialize ();
-
-    
-private:
-
-    /** Data members */
-    CHAR _ip_address[IP_STRING_BUF_SIZE],
-         _hardware_address[32],
-         _subnet[IP_STRING_BUF_SIZE],
-         _adapter_name[MAX_ADAPTER_NAME_LENGTH + 4];
-    bool _wake_able;
+    //@}
 
     /**	Some registry values require some preprocessing before they can 
 		be queried, so we allow a user to specify a function to handle 
