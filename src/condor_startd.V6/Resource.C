@@ -374,6 +374,15 @@ Resource::shutdownAllClaims( bool graceful )
 	return TRUE;
 }
 
+int
+Resource::allowClaims( void )
+{
+        // Tell the negotiator that it can match on this slot.
+    r_reqexp->restore ();
+    update ();
+    return TRUE;
+}
+
 
 bool
 Resource::needsPolling( void )

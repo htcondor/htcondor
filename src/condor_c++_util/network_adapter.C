@@ -70,5 +70,5 @@ NetworkAdapterBase::publish ( ClassAd &ad )
 {
     ad.Assign ( ATTR_HARDWARE_ADDRESS, hardwareAddress () );
     ad.Assign ( ATTR_SUBNET, subnet () );
-	ad.Assign ( ATTR_IS_WAKE_ABLE, wakeAble () ? "TRUE" : "FALSE" );
+	ad.Assign ( ATTR_IS_WAKE_ABLE, wakeAble () );
 }

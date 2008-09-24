@@ -30,7 +30,6 @@
 
 class Resource;
 class ClassAd;
-class NetworkAdapterBase;
 
 typedef int amask_t;
 
@@ -127,7 +126,6 @@ private:
 	bool			m_seen_keypress;    // Have we seen our first keypress yet?
 	int				m_clock_day;
 	int				m_clock_min;
-    NetworkAdapterBase *m_network_adapter;
 		// Static info
 	int				m_num_cpus;
 	int				m_num_real_cpus;

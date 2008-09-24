@@ -204,6 +204,9 @@ public:
 
 	void FillExecuteDirsList( class StringList *list );
 
+    void shutdownAllResources ( void );
+    void restoreAllResources ( void );
+
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
@@ -316,15 +319,11 @@ private:
 #if HAVE_HIBERNATE
 	HibernationManager	m_hibernation_manager;
 	int					m_hibernate_tid;
-	int					m_recovery_tid;
 	void checkHibernate() /* const -- should be */;
 	int	 allHibernating() /* const -- should be */;
 	int  startHibernateTimer();
 	void resetHibernateTimer();
 	void cancelHibernateTimer();
-	void doHibernateRecovery();
-	int  startRecoveryTimer();
-	void cancelRecoveryTimer();
 #endif /* HAVE_HIBERNATE */
 
 };

@@ -2070,3 +2070,9 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 }
 
 
+int
+command_machine_woken( Service*, int, Stream* stream ) 
+{
+    resmgr->restoreAllResources ();
+    return TRUE;
+}

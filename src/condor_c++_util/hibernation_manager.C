@@ -23,7 +23,14 @@
  
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_daemon_core.h"
 #include "hibernation_manager.h"
+
+/***************************************************************
+ * External global variables
+ ***************************************************************/
+
+extern DaemonCore* daemonCore;
 
 /***************************************************************
  * HibernationManager class
@@ -31,6 +38,8 @@
 
 HibernationManager::HibernationManager () throw ()
 :	_hibernator ( HibernatorBase::createHibernator () ), 
+    _network_adpater ( NetworkAdapterBase::createNetworkAdapter ( 
+                  daemonCore->InfoCommandSinfulString () ) ),
 	_interval ( 0 )
 {
 	update ();
@@ -41,6 +50,9 @@ HibernationManager::~HibernationManager () throw ()
 	if ( _hibernator ) {
 		delete _hibernator;
 	}
+    if ( _network_adpater ) {
+        delete _network_adpater;
+    }
 }
 
 void 
@@ -54,6 +66,14 @@ HibernationManager::update ()
 		dprintf ( D_ALWAYS, "HibernationManager: Hibernation is %s\n", 
 			( _interval > 0 ? "enabled" : "disabled" ) );
 	}
+#if 0
+    /* always assume we have a new network adapter? */
+    if ( _network_adpater ) {
+        delete _network_adpater;
+    }
+    _network_adpater = NetworkAdapterBase::createNetworkAdapter ( 
+                  daemonCore->InfoCommandSinfulString () );
+#endif
 }
 
 bool 
@@ -73,8 +93,19 @@ HibernationManager::canHibernate () const
 	bool can = false;	
 	if ( _hibernator ) {
 		can = ( HibernatorBase::NONE != _hibernator->getStates () );
-	}
+	}    
 	return can;
+}
+
+bool
+HibernationManager::canWake () const
+{
+    bool can = false;
+    if ( _network_adpater ) {
+        can = _network_adpater->exists () 
+            && _network_adpater->wakeAble ();
+    }
+    return can;
 }
 
 bool 
@@ -82,7 +113,7 @@ HibernationManager::wantsHibernate () const
 {
 	bool does = false;
 	if ( _hibernator ) {
-		if ( canHibernate () ) {
+		if ( canHibernate () && canWake () ) {
 			does = ( _interval > 0 );
 		}
 	}
@@ -92,4 +123,19 @@ HibernationManager::wantsHibernate () const
 int HibernationManager::getHibernateCheckInterval () const
 {
 	return _interval;
+}
+
+void 
+HibernationManager::publish ( ClassAd &ad )
+{
+    /* "HibernationLevel" on a running StartD is always 
+    zero; that is, it's always "running" if it is up */
+    ad.Assign ( ATTR_HIBERNATION_LEVEL, 0 );
+
+    /* publish whether or not we can enter a state of hibernation */
+    ad.Assign ( ATTR_CAN_HIBERNATE, canHibernate () );
+
+    /* publish everything we know about the public 
+    network adapter */
+    _network_adpater->publish ( ad );   
 }

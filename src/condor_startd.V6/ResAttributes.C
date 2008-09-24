@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "startd.h"
-#include "network_adapter.h"
 #include <math.h>
 
 
@@ -38,7 +37,6 @@ MachAttributes::MachAttributes()
 	m_filesystem_domain = NULL;
 	m_idle_interval = -1;
 	m_ckptpltfrm = NULL;
-    m_network_adapter = NULL;
 
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
@@ -97,7 +95,6 @@ MachAttributes::~MachAttributes()
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_ckptpltfrm ) free( m_ckptpltfrm );
-    if( m_network_adapter ) delete m_network_adapter;
 }
 
 
@@ -158,18 +155,6 @@ MachAttributes::compute( amask_t how_much )
 	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
 		m_virt_mem = sysapi_swap_space();
 		dprintf( D_FULLDEBUG, "Swap space: %lu\n", m_virt_mem );
-
-        /* assume the IP address has changed and construct a new 
-        network adapter */
-        if ( m_network_adapter ) {
-            delete m_network_adapter;
-        }
-        char *sinful = daemonCore->InfoCommandSinfulString ();
-        if ( sinful && *sinful ) {
-            m_network_adapter = NetworkAdapterBase::createNetworkAdapter ( 
-                sinful );
-        }
-
 	}
 
 
@@ -290,11 +275,6 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		}
 #endif
 
-        /* HibernationLevel on a running StartD is always 
-        zero; that is, it's always "running" if it is up */
-        sprintf( line, "%s = 0", ATTR_HIBERNATION_LEVEL );
-		cp->Insert( line );
-
 	}
 
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
@@ -317,14 +297,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		if ( m_mips > 0 ) {
 			sprintf( line, "%s=%d", ATTR_MIPS, m_mips );
 			cp->Insert( line );
-		}
-
-        /* these may change over time: if the IP we are advertising
-        changes, then so will the network adapter's information */
-        if ( m_network_adapter && m_network_adapter->exists () ) {
-            m_network_adapter->publish ( *cp );
-        } 
-		
+		}		
 	}
 
 		// We don't want this inserted into the public ad automatically
