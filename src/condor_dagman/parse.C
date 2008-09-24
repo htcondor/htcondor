@@ -1281,9 +1281,10 @@ parse_splice(
 	const char *filename,
 	int lineNumber)
 {
-	const char *example = "SPLICE SpliceName SpliceFileName";
+	const char *example = "SPLICE SpliceName SpliceFileName [DIR directory]";
 	Dag *splice_dag = NULL;
 	MyString spliceName, spliceFile;
+	MyString errMsg;
 
 	//
 	// Next token is the splice name
@@ -1325,6 +1326,38 @@ parse_splice(
 		return false;
 	}
 
+	//
+	// next token (if any) is "DIR"
+	//
+	TmpDir spliceDir;
+	MyString dirTok = strtok( NULL, DELIMITERS );
+	MyString directory = ".";
+
+	dirTok.upper_case();
+	if ( dirTok == "DIR" ) {
+		// parse the directory name
+		directory = strtok( NULL, DELIMITERS );
+		if ( directory == "" ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: DIR requires a directory specification\n");
+			debug_printf( DEBUG_QUIET, "%s\n", example );
+			return false;
+		}
+
+	}
+
+	// 
+	// anything else is garbage
+	//
+	MyString garbage = strtok( 0, DELIMITERS );
+	if( garbage != "" ) {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
+						  "parameter \"%s\"\n", filename, lineNumber, 
+						  garbage.Value() );
+			debug_printf( DEBUG_QUIET, "%s\n", example );
+			return false;
+	}
+
 	/* make a new dag to put everything into */
 
 	/* parse increments this number, however, we want the splice nodes to
@@ -1347,14 +1380,32 @@ parse_splice(
 							dag->DAGManJobId(),
 							dag->ProhibitMultiJobs(),
 							dag->SubmitDepthFirst() );
+	
+	dprintf(D_ALWAYS, "Parsing Splice %s in directory %s with file %s\n", 
+		spliceName.Value(), directory.Value(), spliceFile.Value());
 
-	dprintf(D_ALWAYS, "Parsing Splice %s with file %s\n", 
-		spliceName.Value(), spliceFile.Value());
+	// CD into the DIR directory so we can continue parsing.
+	// This must be done AFTER the DAG is created due to the DAG object
+	// doing its own chdir'ing while looking for log files.
+	if ( !spliceDir.Cd2TmpDir(directory.Value(), errMsg) ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: can't change to directory %s: %s\n",
+					directory.Value(), errMsg.Value() );
+		return false;
+	}
 
 	// parse the splice file into a separate dag.
 	if (!parse(splice_dag, spliceFile.Value(), _useDagDir)) {
 		debug_error(1, DEBUG_QUIET, "Failed to parse splice %s in file %s\n",
 			spliceName.Value(), spliceFile.Value());
+		return false;
+	}
+
+	// CD back to main dir to keep processing.
+	if ( !spliceDir.Cd2MainDir(errMsg) ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: can't change to original directory: %s\n",
+					errMsg.Value() );
 		return false;
 	}
 

@@ -673,7 +673,7 @@ Job::ResolveVarsInterpolations(void)
 	MyString *val;
 
 	varValsFromDag->Rewind();
-	while( val = varValsFromDag->Next() ) {
+	while( (val = varValsFromDag->Next()) != NULL ) {
 		// XXX No way to escape $(JOB) in case, for some crazy reason, you
 		// want a filename component actually to be '$(JOB)'.
 		// It isn't hard to fix, I'll do it later.
