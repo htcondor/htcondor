@@ -1019,6 +1019,7 @@ class DaemonCore : public Service
 	static const int ERRNO_EXEC_AS_ROOT;
 	static const int ERRNO_PID_COLLISION;
 	static const int ERRNO_REGISTRATION_FAILED;
+	static const int ERRNO_EXIT;
 
     /** Methods for operating on a process family
     */
