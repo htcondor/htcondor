@@ -512,6 +512,7 @@ Starter::reallykill( int signo, int type )
 			dprintf(D_ALWAYS,
 			        "error killing process family of starter with pid %u\n",
 				s_pid);
+			ret = -1;
 		}
 		break;
 	}
@@ -1183,9 +1184,11 @@ Starter::startKillTimer( void )
 		}
 	}
 
+		// Create a periodic timer so that if the kill attempt fails,
+		// we keep trying.
 	s_kill_tid = 
 		daemonCore->Register_Timer( tmp_killing_timeout,
-						0, 
+						tmp_killing_timeout, 
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );
 	if( s_kill_tid < 0 ) {
@@ -1217,8 +1220,8 @@ Starter::cancelKillTimer( void )
 bool
 Starter::sigkillStarter( void )
 {
-		// Now that the timer has gone off, clear out the tid.
-	s_kill_tid = -1;
+		// In case the kill fails for some reason, we are on a periodic
+		// timer that will keep trying.
 
 	if( active() ) {
 		dprintf( D_ALWAYS, "starter (pid %d) is not responding to the "
