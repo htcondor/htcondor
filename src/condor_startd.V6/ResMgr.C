@@ -334,7 +334,7 @@ ResMgr::backfillConfig()
 void
 ResMgr::init_resources( void )
 {
-	int i;
+	int i, num_res;
 	CpuAttributes** new_cpu_attrs;
 
 		// These things can only be set once, at startup, so they
@@ -361,9 +361,9 @@ ResMgr::init_resources( void )
 	initTypes( 1 );
 
 		// First, see how many slots of each type are specified.
-	nresources = countTypes( &type_nums, true );
+	num_res = countTypes( &type_nums, true );
 
-	if( ! nresources ) {
+	if( ! num_res ) {
 			// We're not configured to advertise any nodes.
 		resources = NULL;
 		id_disp = new IdDispenser( num_cpus(), 1 );
@@ -373,16 +373,15 @@ ResMgr::init_resources( void )
 		// See if the config file allows for a valid set of
 		// CpuAttributes objects.  Since this is the startup-code
 		// we'll let it EXCEPT() if there is an error.
-	new_cpu_attrs = buildCpuAttrs( nresources, type_nums, true );
+	new_cpu_attrs = buildCpuAttrs( num_res, type_nums, true );
 	if( ! new_cpu_attrs ) {
 		EXCEPT( "buildCpuAttrs() failed and should have already EXCEPT'ed" );
 	}
 
 		// Now, we can finally allocate our resources array, and
 		// populate it.  
-	resources = new Resource*[nresources];
-	for( i=0; i<nresources; i++ ) {
-		resources[i] = new Resource( new_cpu_attrs[i], i+1 );
+	for( i=0; i<num_res; i++ ) {
+		addResource( new Resource( new_cpu_attrs[i], i+1 ) );
 	}
 
 		// We can now seed our IdDispenser with the right slot id. 
@@ -1788,25 +1787,43 @@ ResMgr::reset_timers( void )
 
 
 void
-ResMgr::deleteResource( Resource* rip )
+ResMgr::addResource( Resource *rip )
 {
-		// First, find the rip in the resources array:
-	int i, j, dead = -1;
+	Resource** new_resources;
+
+	if( !rip ) {
+		EXCEPT("Error: attempt to add a NULL resource\n");
+	}
+
+	new_resources = new Resource*[nresources + 1];
+	if( !new_resources ) {
+		EXCEPT("Failed to allocate memory for new resource\n");
+	}
+
+		// Copy over the old Resource pointers.  If nresources is 0
+		// (b/c we used to be configured to have no slots), this won't
+		// copy anything (and won't seg fault).
+	memcpy( (void*)new_resources, (void*)resources, 
+			(sizeof(Resource*)*nresources) );
+
+	new_resources[nresources] = rip;
+
+
+	if( resources ) {
+		delete [] resources;
+	}
+
+	resources = new_resources;
+	nresources++;
+}
+
+
+bool
+ResMgr::removeResource( Resource* rip )
+{
+	int i, j;
 	Resource** new_resources = NULL;
 	Resource* rip2;
-
-	for( i = 0; i < nresources; i++ ) {
-		if( resources[i] == rip ) {
-			dead = i;
-			break;
-		}
-	}
-	if( dead < 0 ) {
-			// Didn't find it.  This is where we'll hit if resources
-			// is NULL.  We should never get here, anyway (we'll never
-			// call deleteResource() if we don't have any resources. 
-		EXCEPT( "ResMgr::deleteResource() failed: couldn't find resource" );
-	}
 
 	if( nresources > 1 ) {
 			// There are still more resources after this one is
@@ -1815,10 +1832,14 @@ ResMgr::deleteResource( Resource* rip )
 		new_resources = new Resource* [ nresources - 1 ];
 		j = 0;
 		for( i = 0; i < nresources; i++ ) {
-			if( i == dead ) {
-				continue;
-			} 
-			new_resources[j++] = resources[i];
+			if( resources[i] != rip ) {
+				new_resources[j++] = resources[i];
+			}
+		}
+
+		if ( j == nresources ) { // j == i would work too
+				// The resource was not found, which should never happen
+			return false;
 		}
 	} 
 
@@ -1849,6 +1870,20 @@ ResMgr::deleteResource( Resource* rip )
 
 		// At last, we can delete the object itself.
 	delete rip;
+
+	return true;
+}
+
+
+void
+ResMgr::deleteResource( Resource* rip )
+{
+	if( ! removeResource( rip ) ) {
+			// Didn't find it.  This is where we'll hit if resources
+			// is NULL.  We should never get here, anyway (we'll never
+			// call deleteResource() if we don't have any resources. 
+		EXCEPT( "ResMgr::deleteResource() failed: couldn't find resource" );
+	}
 
 		// Now that a Resource is gone, see if we're done deleting
 		// Resources and see if we should allocate any. 
@@ -1894,31 +1929,15 @@ ResMgr::processAllocList( void )
 	}
 
 		// We're done destroying, and there's something to allocate.  
-	int i, new_size, new_num = alloc_list.Number();
-	new_size = nresources + new_num;
-	Resource** new_resources = new Resource* [ new_size ];
-	CpuAttributes* cap;
-
-		// Copy over the old Resource pointers.  If nresources is 0
-		// (b/c we used to be configured to have no slots), this won't
-		// copy anything (and won't seg fault).
-	memcpy( (void*)new_resources, (void*)resources, 
-			(sizeof(Resource*)*nresources) );
 
 		// Create the new Resource objects.
+	CpuAttributes* cap;
 	alloc_list.Rewind();
-	for( i=nresources; i<new_size; i++ ) {
-		alloc_list.Next(cap);
-		new_resources[i] = new Resource( cap, id_disp->next() );
+	while( alloc_list.Next(cap) ) {
+		addResource( new Resource( cap, id_disp->next() ) );
 		alloc_list.DeleteCurrent();
 	}	
 
-		// Switch over to new_resources:
-	if( resources ) {
-		delete [] resources;
-	}
-	resources = new_resources;
-	nresources = new_size;
 	delete [] type_nums;
 	type_nums = new_type_nums;
 	new_type_nums = NULL;

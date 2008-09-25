@@ -173,6 +173,9 @@ public:
 
 	void		init_config_classad( void );
 
+	void		addResource( Resource* );
+	bool		removeResource( Resource* );
+
 	void		deleteResource( Resource* );
 
 	void		makeAdList( ClassAdList* );   // Make a list of the
