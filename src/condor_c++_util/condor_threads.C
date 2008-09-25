@@ -35,9 +35,9 @@
 	we need on Windows if we are not linked w/ some Win32 pthread library
 */
 
-#if defined(WIN32) && !defined(HAVE_PTHREAD)
+#if defined(WIN32) && !defined(HAS_PTHREADS)
 
-#define HAVE_PTHREAD 1
+#define HAS_PTHREADS 1
 typedef CRITICAL_SECTION pthread_mutex_t;
 typedef DWORD pthread_t;
 typedef void pthread_mutexattr_t;
@@ -209,6 +209,13 @@ pthread_cond_signal (pthread_cond_t *cv)
 
 #include "threads_implementation.h"
 
+#ifndef WIN32
+	// explicit template instantiation
+	template HashTable<ThreadInfo,WorkerThreadPtr_t>;
+	template HashTable<int,WorkerThreadPtr_t>;
+	template Queue<WorkerThreadPtr_t>;
+#endif
+
 static ThreadImplementation* TI = NULL;
 
 /**********************************************************************/
@@ -247,6 +254,7 @@ WorkerThread::WorkerThread(char* name, condor_thread_func_t routine, void* arg)
 	routine_ = routine;
 	arg_ = arg;
 }
+
 
 // WorkerThread dtor
 WorkerThread::~WorkerThread()
@@ -326,7 +334,11 @@ ThreadImplementation::get_main_thread_ptr()
 }
 
 // The rest of the ThreadImplementaion class needs pthreads.
-#ifdef HAVE_PTHREAD
+#ifdef HAS_PTHREADS
+
+#ifndef WIN32
+	#include <pthread.h>
+#endif
 
 unsigned int
 ThreadImplementation::hashFuncThreadInfo(const ThreadInfo & mythread)
@@ -337,7 +349,7 @@ ThreadImplementation::hashFuncThreadInfo(const ThreadInfo & mythread)
 	// two platforms we will get a very nice distribution -vs- byte adding.
 	unsigned int hash = 0;
 
-	int j = sizeof(pthread_t);
+	unsigned int j = sizeof(pthread_t);
 	int i = 0;
 	pthread_t thread = mythread.get_pthread();
 	unsigned int *buf = (unsigned int *) &thread;
@@ -421,18 +433,6 @@ ThreadImplementation::pool_add(condor_thread_func_t routine, void *arg)
 	return mytid;
 }
 
-void
-ThreadImplementation::remove_tid(int tid)
-{
-	// don't remove tid 1
-	if (tid < 2 ) {
-		return;
-	}
-
-	pthread_mutex_lock(&(TI->get_handle_lock));	
-	hashTidToWorker.remove(tid);
-	pthread_mutex_unlock(&(TI->get_handle_lock));
-}
 
 const WorkerThreadPtr_t 
 ThreadImplementation::get_handle(int tid)
@@ -481,7 +481,7 @@ ThreadImplementation::get_handle(int tid)
 	return worker;
 }
 
-void
+ThreadStartFunc_t
 ThreadImplementation::threadStart(void *)
 {
 	WorkerThreadPtr_t item;
@@ -683,14 +683,27 @@ ThreadImplementation::stop_thread_safe_block()
 	return 0;
 }
 
-#else	// ifdef HAVE_PTHREAD
+void
+ThreadImplementation::remove_tid(int tid)
+{
+	// don't remove tid 1
+	if (tid < 2 ) {
+		return;
+	}
+
+	pthread_mutex_lock(&(TI->get_handle_lock));	
+	hashTidToWorker.remove(tid);
+	pthread_mutex_unlock(&(TI->get_handle_lock));
+}
+
+#else	// ifdef HAS_PTHREADS
 
 /* Stubs for systems that do not have pthreads */
 
 unsigned int
-ThreadImplementation::hashFuncThreadInfo(const ThreadInfo & mythread)
+ThreadImplementation::hashFuncThreadInfo(const ThreadInfo & /*mythread*/)
 {
-	return -1;
+	return 1;
 }
 
 ThreadImplementation::ThreadImplementation()
@@ -724,7 +737,7 @@ int ThreadImplementation::pool_init()
 	return -1;
 }
 
-int ThreadImplementation::pool_add(condor_thread_func_t routine, void *arg)
+int ThreadImplementation::pool_add(condor_thread_func_t , void *)
 {
 	return -1;
 }
@@ -734,14 +747,19 @@ const WorkerThreadPtr_t ThreadImplementation::get_handle(int /*tid*/)
 	return get_main_thread_ptr();
 }
 
-#endif	// ifdef else HAVE_PTHREAD
+void ThreadImplementation::remove_tid(int)
+{
+	return;
+}
+
+#endif	// ifdef else HAS_PTHREADS
 
 /**********************************************************************/
 
 int 
 CondorThreads::pool_init()
 {
-	static already_been_here = false;
+	static bool already_been_here = false;
 
 	// no reconfig support (yet)
 	if ( already_been_here ) return -2;
