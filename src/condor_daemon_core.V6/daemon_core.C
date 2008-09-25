@@ -3059,6 +3059,12 @@ int DaemonCore::ServiceCommandSocket()
 	Selector selector;
 	int commands_served = 0;
 
+	if ( inServiceCommandSocket_flag ) {
+			// this function is not reentrant
+			// and anyway, let's avoid potentially infinite recursion
+		return 0;
+	}
+
 	// Just return if there is no command socket
 	if ( initial_command_sock == -1 )
 		return 0;
@@ -3230,10 +3236,7 @@ int DaemonCore::HandleReq(Stream *insock)
 				// to read on this socket, we don't want to block here, so instead
 				// register it.  Also set a timer just in case nothing ever arrives, so 
 				// we can reclaim our socket.  
-				// NOTE: don't register if we got here via ServiceCommandSocket() to 
-				// prevent stack overflow!!
-			if ( ((ReliSock *)stream)->bytes_available_to_read() < 4 &&
-				 inServiceCommandSocket_flag == FALSE ) 
+			if ( ((ReliSock *)stream)->bytes_available_to_read() < 4 ) 
 			{
 					// set a timer for 200 seconds, in case nothing ever arrives...
 					// why 200 seconds -vs- the time honored 20 seconds?  
