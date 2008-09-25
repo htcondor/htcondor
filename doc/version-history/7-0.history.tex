@@ -52,7 +52,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item In some rare cases, the \Condor{startd} failed to fully preempt jobs.
+The job itself was killed, but the \Condor{starter} process watching over
+it would not be killed.  The slot would then stay in the Preempting state
+indefinitely.
 
 \end{itemize}
 
