@@ -228,31 +228,34 @@ run_as_owner = true
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:windows-load-profile}Executing Jobs with the User's profile loaded}
+\subsection{\label{sec:windows-load-profile}Executing Jobs with the User's Profile Loaded}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-On Windows, Condor can be configured, when using a dedicated ``run accounts'', 
+Condor can be configured when using dedicated run accounts, 
 to load the account's profile.  A user's profile includes a set of personal 
 directories and a registry hive loaded under \texttt{HKEY\_CURENT\_USER}.
 
 This may be useful if the job requires direct access to the user's registry 
-entries or because an application the job requires registry access. This 
-feature is always enabled on the \Condor{startd} but is limited to the 
-dedicated ``run account''.  For security reasons, these profiles are also 
-removed after the job has run to fruition and exited.  This and ensures 
-that malicious jobs cannot discover what any previous job has done or 
+entries.
+It also may be useful when the job requires an application, 
+and the application requires registry access. 
+This feature is always enabled on the \Condor{startd}, 
+but it is limited to the dedicated run account.
+For security reasons, the profiles are
+removed after the job has completed and exited.  
+This ensures 
+that malicious jobs cannot discover what any previous job has done, nor 
 sabotage the registry for future jobs. It also ensures the next job has 
 a fresh registry hive.
 
-A user that then wants a job to run using with a profile can simply
-use the \SubmitCmd{load\_profile} command in the job's submit file as
-follows:
+A user that then wants a job to run with a profile uses the
+\SubmitCmd{load\_profile} command in the job's submit description file:
 \begin{verbatim}
-load_profile = true
+load_profile = True
 \end{verbatim}
 
-\Note{This feature is currently not compatible with \SubmitCmd{run\_as\_owner} 
-and will be ignored if the two are combined.}
+This feature is currently not compatible with \SubmitCmd{run\_as\_owner}, 
+and will be ignored if both are specified.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Details on how Condor for Windows starts/stops a job}
