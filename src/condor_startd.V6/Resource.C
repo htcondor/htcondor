@@ -69,6 +69,10 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_attr = cap;
 	r_attr->attach( this );
 
+	tmp.sprintf( "SLOT_TYPE_%d_PARTITIONABLE", type() );
+	setResourceFeature( param_boolean( tmp.GetCStr(), false ) ?
+						PARTITIONABLE_SLOT : STANDARD_SLOT );
+
 	update_tid = -1;
 
 		// Set ckpt filename for avail stats here, since this object

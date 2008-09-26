@@ -226,7 +226,23 @@ public:
 
 	char const *executeDir() { return r_attr->executeDir(); }
 
+		// Types: STANDARD is the slot everyone knows and loves;
+		// PARTITIONABLE is a slot that never runs jobs itself,
+		// instead it spawns off DYNAMIC slots as claims arrive;
+		// DYNAMIC is a slot that only runs jobs, it is created by a
+		// PARTITIONABLE slot
+	enum ResourceFeature {
+		STANDARD_SLOT,
+		PARTITIONABLE_SLOT,
+		DYNAMIC_SLOT
+	};
+
+	void	setResourceFeature( ResourceFeature feature ) { m_resource_feature = feature; }
+	ResourceFeature	getResourceFeature( void ) { return m_resource_feature; }
+
 private:
+	ResourceFeature m_resource_feature;
+
 	int			update_tid;	// DaemonCore timer id for update delay
 	unsigned	update_sequence;	// Update sequence number
 
