@@ -108,6 +108,7 @@ UserLog::~UserLog()
 	if (m_fp != NULL) fclose( m_fp );
 
 	if (m_global_path) free(m_global_path);
+	if (m_global_lock_path) free(m_global_lock_path);
 	if (m_global_lock) delete m_global_lock;
 	if (m_global_fp != NULL) fclose(m_global_fp);
 	if (m_global_uniq_base != NULL) free( m_global_uniq_base );
@@ -134,7 +135,7 @@ UserLog::initialize( const char *file, int c, int p, int s, const char *gjid)
 	}
 
 	if ( m_write_user_log &&
-		 !openFile(file, true, m_enable_locking, true, m_lock, m_fp) ) {
+		 !openFile(file, true, m_enable_locking, true, file, m_lock, m_fp) ) {
 		return false;
 	}
 
@@ -195,6 +196,13 @@ bool
 UserLog::Configure( void )
 {
 	m_global_path = param( "EVENT_LOG" );
+	m_global_lock_path = param( "EVENT_LOG_LOCK" );
+	if ( NULL == m_global_lock_path ) {
+		int len = strlen(m_global_path) + 6;
+		char *tmp = (char*) malloc(len);
+		snprintf( tmp, len, "%s.lock", m_global_path );
+		m_global_lock_path = tmp;
+	}
 	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
 	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
@@ -251,12 +259,13 @@ UserLog::Reset( void )
 
 bool
 UserLog::openFile(
-	const char	*file, 
-	bool		log_as_user, // if false, we are logging to the global file
-	bool		use_lock,		// use the lock
-	bool		append,			// append mode?
-	FileLock* & lock, 
-	FILE* &		fp )
+	const char	 *file, 
+	bool		  log_as_user,	// if false, we are logging to the global file
+	bool		  use_lock,		// use the lock
+	bool		  append,		// append mode?
+	const char	 *lock_file, 
+	FileLock*    &lock, 
+	FILE		*&fp )
 {
 	(void)  log_as_user;	// Quiet warning
 	int 	fd = 0;
@@ -318,7 +327,7 @@ UserLog::openFile(
 
 	// prepare to lock the file.	
 	if ( use_lock ) {
-		lock = new FileLock( fd, fp, file );
+		lock = new FileLock( fd, fp, lock_file );
 	} else {
 		lock = new FileLock( -1 );
 	}
@@ -346,8 +355,8 @@ UserLog::initializeGlobalLog( UserLogHeader &header )
 	}
 
 	priv_state priv = set_condor_priv();
-	ret_val = openFile(m_global_path, false, m_enable_locking, true,
-					   m_global_lock, m_global_fp);
+	ret_val = openFile( m_global_path, false, m_enable_locking, true,
+						m_global_lock_path, m_global_lock, m_global_fp);
 
 	if ( ! ret_val ) {
 		set_priv( priv );
@@ -406,6 +415,7 @@ UserLog::handleGlobalLogRotation( void )
 	}
 
 	StatWrapper	swrap( m_global_path );
+	UtcTime	stat_time( true );
 	if ( swrap.Stat() ) {
 		return false;			// What should we do here????
 	}
@@ -414,8 +424,9 @@ UserLog::handleGlobalLogRotation( void )
 	ReadUserLogHeader	reader;
 	if ( current_filesize > m_global_max_filesize ) {
 		UtcTime	start_time( true );
-		dprintf( D_FULLDEBUG, "Rotating inode #%ld @ %.6f\n",
-				 (long)swrap.GetBuf()->st_ino, start_time.combined() );
+		dprintf( D_FULLDEBUG, "Rotating inode #%ld @ %.6f (stat @ %.6f)\n",
+				 (long)swrap.GetBuf()->st_ino, start_time.combined(),
+				 stat_time.combined() );
 		m_global_lock->display();
 
 		// Read the old header, use it to write an updated one
@@ -459,7 +470,7 @@ UserLog::handleGlobalLogRotation( void )
 		FILE		*header_fp = NULL;
 		FileLock	*fake_lock = NULL;
 		if( !openFile( m_global_path, false, false, false,
-					   fake_lock, header_fp ) ) {
+					   m_global_lock_path, fake_lock, header_fp ) ) {
 			dprintf( D_ALWAYS,
 					 "UserLog: failed to open %s for header rewrite:"
 					 " %d (%s)\n", 
@@ -469,6 +480,11 @@ UserLog::handleGlobalLogRotation( void )
 		WriteUserLogHeader	writer( reader );
 
 		// And write the updated header
+		{
+			UtcTime	now( true );
+			dprintf( D_ALWAYS, "UserLog: Writing header @ %.6f\n",
+					 now.combined() );
+		}
 		writer.Write( *this, header_fp );
 		if ( header_fp ) {
 			fclose( header_fp );
@@ -479,6 +495,8 @@ UserLog::handleGlobalLogRotation( void )
 
 		// Now, rotate files
 		UtcTime	time1( true );
+		dprintf( D_ALWAYS, "UserLog: Bulk rotation @ %.6f\n",
+				 time1.combined() );
 		int		num_rotations = 0;
 		MyString old_name(m_global_path);
 		if ( 1 == m_global_max_rotations ) { 
@@ -509,8 +527,8 @@ UserLog::handleGlobalLogRotation( void )
 		UtcTime before(true);
 		if ( rotate_file(m_global_path,old_name.Value()) == 0 ) {
 			UtcTime after(true);
-			dprintf(D_FULLDEBUG, "before @%.6f\n", before.combined() );
-			dprintf(D_FULLDEBUG, "after @%.6f\n", after.combined() );
+			dprintf(D_FULLDEBUG, "before .1 rot: %.6f\n", before.combined() );
+			dprintf(D_FULLDEBUG, "after  .1 rot: %.6f\n", after.combined() );
 			rotated = true;
 			dprintf(D_ALWAYS,"Rotated event log %s at size %ld bytes\n",
 					m_global_path, current_filesize);
