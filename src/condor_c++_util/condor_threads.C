@@ -832,3 +832,16 @@ CondorThreads::get_handle(int tid)
 	return ThreadImplementation::get_handle(tid);
 }
 
+	/* Some simple C wrappers for use by dprintf */
+extern "C" {
+	int CondorThreads_pool_size() 
+	{
+		return CondorThreads::pool_size();
+	}
+
+	int CondorThreads_gettid()
+	{
+		return CondorThreads::get_handle()->get_tid();
+
+	}
+}	// of extern C
