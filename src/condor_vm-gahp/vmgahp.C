@@ -743,11 +743,6 @@ VMGahp::executeStop(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_STOP <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_STOP command\n", 
-					req->m_args.argv[2]);
-		return;
-	}
 
 	MyString err_message;
 	VMType *vm = findVM(vm_id);
@@ -784,11 +779,6 @@ VMGahp::executeSuspend(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_SUSPEND <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_SUSPEND command\n", 
-				req->m_args.argv[2]);
-		return;
-	}
 
 	MyString err_message;
 	VMType *vm = findVM(vm_id);
@@ -823,11 +813,6 @@ VMGahp::executeSoftSuspend(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_SOFT_SUSPEND <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_SOFT_SUSPEND command\n", 
-				req->m_args.argv[2]);
-		return;
-	}
 
 	MyString err_message;
 	VMType *vm = findVM(vm_id);
@@ -863,11 +848,6 @@ VMGahp::executeResume(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_RESUME <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_RESUME command\n", 
-				req->m_args.argv[2]);
-		return;
-	}
 
 	MyString err_message;
 	VMType *vm = findVM(vm_id);
@@ -903,11 +883,6 @@ VMGahp::executeCheckpoint(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_CHECKPOINT <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_CHECKPOINT command\n", 
-				req->m_args.argv[2]);
-		return;
-	}
 
 	MyString err_message;
 	VMType *vm = findVM(vm_id);
@@ -943,11 +918,6 @@ VMGahp::executeStatus(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_STATUS <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_STATUS command\n", 
-				req->m_args.argv[2]);
-		return;
-	}
 
 	VMType *vm = findVM(vm_id);
 
@@ -982,11 +952,6 @@ VMGahp::executeGetpid(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_GETPID <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_GETPID command\n", 
-				req->m_args.argv[2]);
-		return;
-	}
 
 	MyString err_message;
 	VMType *vm = findVM(vm_id);
