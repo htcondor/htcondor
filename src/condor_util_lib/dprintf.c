@@ -44,6 +44,7 @@
 #include "condor_uid.h"
 #include "basename.h"
 #include "file_lock.h"
+#include "condor_threads.h"
 #if HAVE_BACKTRACE
 #include "execinfo.h"
 #endif
@@ -286,6 +287,11 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 						my_pid = (int) getpid();
 #endif
 						fprintf( DebugFP, "(pid:%d) ", my_pid );
+					}
+
+					/* include tid if we are configured to use a thread pool */
+					if ( CondorThreads_pool_size() > 0 ) {
+						fprintf(DebugFP, "(tid:%d) ", CondorThreads_gettid());
 					}
 
 					if( DebugId ) {
