@@ -215,9 +215,6 @@ private:
 	IdDispenser* id_disp;
 	bool 		is_shutting_down;
 
-		// Current slot type we're parsing. 
-	int			m_current_slot_type;		
-
 	int		num_updates;
 	int		up_tid;		// DaemonCore timer id for update timer
 	int		poll_tid;	// DaemonCore timer id for polling timer
@@ -239,7 +236,7 @@ private:
 
 		// Builds a CpuAttributes object to represent the slot
 		// described by the given machine type.
-	CpuAttributes*	buildSlot( int slot_id, int type, bool except = false );
+	CpuAttributes*	buildSlot( int slot_id, StringList* list, int type, bool except = false );
 
 		// Look up the configured value for the execute directory
 		// for a given slot.  Also get a unique identifier for the
@@ -248,7 +245,7 @@ private:
 
 	    // Returns the fraction represented by the given fraction or
 		// percent string.
-	float		parse_value( const char*, bool except = false );
+	float		parse_value( const char*, int type, bool except = false );
 
 		// All the logic of computing an integer number of cpus or
 		// physical memory out of a fractional share.   

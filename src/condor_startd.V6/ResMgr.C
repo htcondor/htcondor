@@ -564,9 +564,8 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 	num = 0;
 	for( i=0; i<max_types; i++ ) {
 		if( type_num_array[i] ) {
-			m_current_slot_type = i;
 			for( j=0; j<type_num_array[i]; j++ ) {
-				cap = buildSlot( num+1, i, except );
+				cap = buildSlot( num+1, type_strings[i], i, except );
 				if( avail.decrement(cap) ) {
 					cap_array[num] = cap;
 					num++;
@@ -748,9 +747,8 @@ ResMgr::typeNumCmp( int* a, int* b )
 
 
 CpuAttributes*
-ResMgr::buildSlot( int slot_id, int type, bool except )
+ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 {
-	StringList* list = type_strings[type];
 	char *attr, *val;
 	int cpus=0, ram=0;
 	float disk=0, swap=0, share;
@@ -773,10 +771,10 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 				// percentage or fraction for all attributes.
 				// For example "1/4" or "25%".  So, we can just parse
 				// it as a percentage and use that for everything.
-			default_share = parse_value( attr, except );
+			default_share = parse_value( attr, type, except );
 			if( default_share <= 0 && !IS_AUTO_SHARE(default_share) ) {
 				dprintf( D_ALWAYS, "ERROR: Bad description of slot type %d: ",
-						 m_current_slot_type );
+						 type );
 				dprintf( D_ALWAYS | D_NOHEADER,  "\"%s\" is invalid.\n", attr );
 				dprintf( D_ALWAYS | D_NOHEADER, 
 						 "\tYou must specify a percentage (like \"25%%\"), " );
@@ -803,14 +801,14 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 		if( ! val[1] ) {
 			dprintf( D_ALWAYS, 
 					 "Can't parse attribute \"%s\" in description of slot type %d\n",
-					 attr, m_current_slot_type );
+					 attr, type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
 				return NULL;
 			}
 		}
-		share = parse_value( &val[1], except );
+		share = parse_value( &val[1], type, except );
 		if( ! share ) {
 				// Invalid share.
 		}
@@ -831,7 +829,7 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 			} else {
 				dprintf( D_ALWAYS,
 						 "You must specify a percent or fraction for swap in slot type %d\n", 
-						 m_current_slot_type ); 
+						 type ); 
 				if( except ) {
 					DC_Exit( 4 );
 				} else {	
@@ -845,7 +843,7 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 			} else {
 				dprintf( D_ALWAYS, 
 						 "You must specify a percent or fraction for disk in slot type %d\n", 
-						m_current_slot_type ); 
+						type ); 
 				if( except ) {
 					DC_Exit( 4 );
 				} else {	
@@ -855,7 +853,7 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 			break;
 		default:
 			dprintf( D_ALWAYS, "Unknown attribute \"%s\" in slot type %d\n", 
-					 attr, m_current_slot_type );
+					 attr, type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
@@ -933,7 +931,7 @@ ResMgr::GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *parti
    value, not a fraction.
 */
 float
-ResMgr::parse_value( const char* str, bool except )
+ResMgr::parse_value( const char* str, int type, bool except )
 {
 	char *tmp, *foo = strdup( str );
 	float val;
@@ -952,7 +950,7 @@ ResMgr::parse_value( const char* str, bool except )
 		*tmp = '\0';
 		if( ! tmp[1] ) {
 			dprintf( D_ALWAYS, "Can't parse attribute \"%s\" in description of slot type %d\n",
-					 foo, m_current_slot_type );
+					 foo, type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
