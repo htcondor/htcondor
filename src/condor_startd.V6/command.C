@@ -969,7 +969,8 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 	ClassAd	*req_classad = new ClassAd;
 	int cmd;
-	float rank = 0, oldrank = 0;
+	float rank = 0;
+	float oldrank = 0;
 	char *client_addr = NULL;
 	int interval;
 	ClaimIdParser idp(id);
@@ -1036,6 +1037,73 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		
 	rip->dprintf( D_FULLDEBUG,
 				  "Received ClaimId from schedd (%s)\n", idp.publicClaimId() );
+
+	if( Resource::PARTITIONABLE_SLOT == rip->getResourceFeature() ) {
+		Resource *new_rip;
+		CpuAttributes *cpu_attrs;
+		MyString type;
+		StringList type_list;
+		int cpus, memory, disk;
+		int rid = resmgr->nextId();
+
+		if( req_classad->LookupInteger( "RequestCPUs", cpus ) ) {
+			type.sprintf_cat( "cpus=%d ", cpus );
+		}
+		if( req_classad->LookupInteger( "RequestMemory", memory ) ) {
+			type.sprintf_cat( "memory=%d ", memory );
+		}
+		if( req_classad->LookupInteger( "RequestDisk", disk ) ) {
+			type.sprintf_cat( "disk=%d/%lu", disk * 10240, rip->r_attr->get_disk() );
+		}
+
+		if( type.IsEmpty() ) {
+			rip->dprintf( D_FULLDEBUG,
+						  "Matched with partitionable slot, but requested no resources, aborting...\n" );
+			ABORT;
+		}
+
+		rip->dprintf( D_FULLDEBUG, "Match requesting resources: %s\n", type.GetCStr() );
+
+		type_list.initializeFromString( type.GetCStr() );
+		cpu_attrs = resmgr->buildSlot( rid, &type_list, -1, false );
+		if( ! cpu_attrs ) {
+			rip->dprintf( D_ALWAYS,
+						  "Failed to parse attributes for request, aborting\n" );
+			ABORT;
+		}
+
+		new_rip = new Resource( cpu_attrs, rid );
+		if( ! new_rip ) {
+			rip->dprintf( D_ALWAYS,
+						  "Failed to build new resource for request, aborting\n" );
+			ABORT;
+		}
+
+			// Recompute the partitionable slot's resources
+		rip->change_state( unclaimed_state );
+ 
+			// Initialize the rest of the Resource
+		new_rip->compute( A_ALL );
+		new_rip->compute( A_TIMEOUT | A_UPDATE ); // Compute disk space
+		new_rip->init_classad();
+		new_rip->refresh_classad( A_PUBLIC | A_EVALUATED ); 
+		new_rip->refresh_classad( A_PUBLIC | A_SHARED_SLOT ); 
+
+			// The new resource needs the claim from its
+			// parititionable parent
+		delete new_rip->r_cur;
+		new_rip->r_cur = rip->r_cur;
+		new_rip->r_cur->setResource( new_rip );
+
+			// And the partitionable parent needs a new claim
+		rip->r_cur = new Claim( rip );
+
+		resmgr->addResource( new_rip );
+
+			// Now we continue on with the newly spawned Resource
+			// getting claimed
+		rip = new_rip;
+	}
 
 		// Make sure we're willing to run this job at all.
 	if (!rip->willingToRun(req_classad)) {

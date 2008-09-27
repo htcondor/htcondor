@@ -747,7 +747,7 @@ ResState::enter_action( State s, Activity a,
 		break; 	// preempting_state
 
 	case delete_state:
-		if ( DYNAMIC_SLOT == rip->getResourceFeature() ) {
+		if ( Resource::DYNAMIC_SLOT == rip->getResourceFeature() ) {
 			resmgr->removeResource( rip );
 		} else {
 			resmgr->deleteResource( rip );

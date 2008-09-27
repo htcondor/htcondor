@@ -207,6 +207,12 @@ public:
 
 	void FillExecuteDirsList( class StringList *list );
 
+	int nextId( void ) { return id_disp->next(); };
+
+		// Builds a CpuAttributes object to represent the slot
+		// described by the given machine type.
+	CpuAttributes*	buildSlot( int slot_id, StringList* list, int type, bool except = false );
+
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
@@ -233,10 +239,6 @@ private:
 
 	// List of Supplemental ClassAds to publish
 	NamedClassAdList				extra_ads;
-
-		// Builds a CpuAttributes object to represent the slot
-		// described by the given machine type.
-	CpuAttributes*	buildSlot( int slot_id, StringList* list, int type, bool except = false );
 
 		// Look up the configured value for the execute directory
 		// for a given slot.  Also get a unique identifier for the

@@ -1932,7 +1932,7 @@ ResMgr::processAllocList( void )
 	CpuAttributes* cap;
 	alloc_list.Rewind();
 	while( alloc_list.Next(cap) ) {
-		addResource( new Resource( cap, id_disp->next() ) );
+		addResource( new Resource( cap, nextId() ) );
 		alloc_list.DeleteCurrent();
 	}	
 

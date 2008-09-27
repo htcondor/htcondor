@@ -182,6 +182,7 @@ public:
 	void dprintf( int, char*, ... );
 	void show_totals( int );
 
+	float get_disk() { return c_disk; }
 	float get_disk_fraction() { return c_disk_fraction; }
 	char const *executeDir() { return c_execute_dir.Value(); }
 	char const *executePartitionID() { return c_execute_partition_id.Value(); }
@@ -237,6 +238,7 @@ public:
 	AvailAttributes( MachAttributes* map );
 
 	bool decrement( CpuAttributes* cap );
+	bool increment( CpuAttributes* cap );
 	bool computeAutoShares( CpuAttributes* cap );
 	void show_totals( int dprintf_mask, CpuAttributes *cap );
 
