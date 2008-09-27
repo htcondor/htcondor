@@ -1083,6 +1083,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		rip->change_state( unclaimed_state );
  
 			// Initialize the rest of the Resource
+		new_rip->setResourceFeature( Resource::DYNAMIC_SLOT );
 		new_rip->compute( A_ALL );
 		new_rip->compute( A_TIMEOUT | A_UPDATE ); // Compute disk space
 		new_rip->init_classad();
