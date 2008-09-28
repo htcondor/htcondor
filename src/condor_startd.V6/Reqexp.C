@@ -33,11 +33,12 @@ Reqexp::Reqexp( Resource* res_ip )
 	this->rip = res_ip;
 	MyString tmp;
 
-	tmp.sprintf("%s = (%s) && (%s) && (%s)", 
-				ATTR_REQUIREMENTS,
-				"START",
-				ATTR_IS_VALID_CHECKPOINT_PLATFORM,
-				"IsStillPartitionable" );
+	tmp.sprintf("%s = (%s) && (%s)", 
+		ATTR_REQUIREMENTS, "START", ATTR_IS_VALID_CHECKPOINT_PLATFORM );
+
+	if( Resource::PARTITIONABLE_SLOT == res_ip->get_feature() ) {
+		tmp.sprintf("%s && (%s)", tmp.GetCStr(), "IsStillPartitionable" );
+	}
 
 	origreqexp = strdup( tmp.Value() );
 	origstart = NULL;
@@ -69,35 +70,9 @@ Reqexp::compute( amask_t how_much )
 
 	if( IS_STATIC(how_much) ) {
 
-		if (m_origisstillpartitionable != NULL) {
-			free(m_origisstillpartitionable);
-			m_origisstillpartitionable = NULL;
-		}
-
 		if (m_origvalidckptpltfrm != NULL) {
 			free(m_origvalidckptpltfrm);
 			m_origvalidckptpltfrm = NULL;
-		}
-
-		char *isp = param( "IsStillPartitionable" );
-		if( isp != NULL ) {
-			str.sprintf( "%s = %s", "IsStillPartitionable", isp );
-			m_origisstillpartitionable = strdup( str.Value() );
-			free(isp);
-		} else {
-			isp =
-			"("
-			   "((TARGET.RequestCpus =?= UNDEFINED) || "
-			    "(TARGET.RequestCpus <= MY.Cpus))"
-			  "&&"
-			   "((TARGET.RequestMemory =?= UNDEFINED) || "
-			    "(TARGET.RequestMemory <= MY.Memory))"
-			  "&&"
-			   "((TARGET.RequestDisk =?= UNDEFINED) || "
-			    "(TARGET.RequestDisk <= MY.Disk))"
-			")";
-			str.sprintf( "%s = %s", "IsStillPartitionable", isp );
-			m_origisstillpartitionable = strdup( str.Value() );
 		}
 
 		char *vcp = param( "IS_VALID_CHECKPOINT_PLATFORM" );
@@ -145,6 +120,34 @@ Reqexp::compute( amask_t how_much )
 				default_vcp_expr);
 
 			m_origvalidckptpltfrm = strdup( str.Value() );
+		}
+
+		if( Resource::PARTITIONABLE_SLOT == rip->get_feature() ) {
+			if( m_origisstillpartitionable != NULL ) {
+				free(m_origisstillpartitionable);
+				m_origisstillpartitionable = NULL;
+			}
+
+			char *isp = param( "IsStillPartitionable" );
+			if( isp != NULL ) {
+				str.sprintf( "%s = %s", "IsStillPartitionable", isp );
+				m_origisstillpartitionable = strdup( str.Value() );
+				free(isp);
+			} else {
+				isp =
+					"("
+					"((TARGET.RequestCpus =?= UNDEFINED) || "
+					"(TARGET.RequestCpus <= MY.Cpus))"
+					"&&"
+					"((TARGET.RequestMemory =?= UNDEFINED) || "
+					"(TARGET.RequestMemory <= MY.Memory))"
+					"&&"
+					"((TARGET.RequestDisk =?= UNDEFINED) || "
+					"(TARGET.RequestDisk <= MY.Disk))"
+					")";
+				str.sprintf( "%s = %s", "IsStillPartitionable", isp );
+				m_origisstillpartitionable = strdup( str.Value() );
+			}
 		}
 	}
 }
@@ -221,8 +224,10 @@ Reqexp::publish( ClassAd* ca, amask_t how_much )
 		ca->Insert( tmp.Value() );
 		tmp.sprintf( "%s", m_origvalidckptpltfrm );
 		ca->Insert( tmp.Value() );
-		tmp.sprintf( "%s", m_origisstillpartitionable );
-		ca->Insert( tmp.Value() );
+		if( m_origisstillpartitionable ) {
+			tmp.sprintf( "%s", m_origisstillpartitionable );
+			ca->Insert( tmp.Value() );
+		}
 		break;
 	case UNAVAIL_REQ:
 		tmp.sprintf( "%s = False", ATTR_REQUIREMENTS );
