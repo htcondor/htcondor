@@ -1053,7 +1053,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			type.sprintf_cat( "memory=%d ", memory );
 		}
 		if( req_classad->LookupInteger( "RequestDisk", disk ) ) {
-			type.sprintf_cat( "disk=%d/%lu", disk * 10240, rip->r_attr->get_disk() );
+			type.sprintf_cat( "disk=%d/%lu", disk, rip->r_attr->get_disk() );
 		}
 
 		if( type.IsEmpty() ) {
