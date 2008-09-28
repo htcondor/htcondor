@@ -372,6 +372,7 @@ const char *ATTR_LOCAL_CREDD              = "LocalCredd";
 const char *ATTR_LOCAL_FILES		= "LocalFiles";
 const char *ATTR_LOAD_AVG                 = "LoadAvg";
 const char *ATTR_MACHINE                  = "Machine";
+const char *ATTR_MACHINE_COUNT            = "MachineCount";
 const char *ATTR_MASTER_IP_ADDR			 = "MasterIpAddr";
 const char *ATTR_MAX_HOSTS				 = "MaxHosts";
 const char *ATTR_MAX_JOB_RETIREMENT_TIME  = "MaxJobRetirementTime";

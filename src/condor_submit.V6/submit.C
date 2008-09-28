@@ -1938,6 +1938,21 @@ SetMachineCount()
 		buffer.sprintf( "%s = %d", ATTR_MAX_HOSTS, tmp);
 		InsertJobExpr (buffer);
 
+	} else {
+		mach_count = condor_param( MachineCount, "MachineCount" );
+		if( mach_count ) { 
+			int tmp = atoi(mach_count);
+			free(mach_count);
+
+			if( tmp < 1 ) {
+				fprintf(stderr, "\nERROR: machine_count must be >= 1\n" );
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+			}
+
+			buffer.sprintf( "%s = %d", ATTR_MACHINE_COUNT, tmp);
+			InsertJobExpr (buffer);
+		}
 	}
 }
 

@@ -310,6 +310,7 @@ extern const char * ATTR_LOCAL_CREDD;
 extern const char * ATTR_LOCAL_FILES;
 extern const char * ATTR_LOAD_AVG;
 extern const char * ATTR_MACHINE;
+extern const char * ATTR_MACHINE_COUNT;
 extern const char * ATTR_MASTER_IP_ADDR;
 extern const char * ATTR_MAX_HOSTS;
 extern const char * ATTR_MAX_JOB_RETIREMENT_TIME;
