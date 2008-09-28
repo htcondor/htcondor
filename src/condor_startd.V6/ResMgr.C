@@ -1787,7 +1787,7 @@ ResMgr::reset_timers( void )
 void
 ResMgr::addResource( Resource *rip )
 {
-	Resource** new_resources;
+	Resource** new_resources = NULL;
 
 	if( !rip ) {
 		EXCEPT("Error: attempt to add a NULL resource\n");
