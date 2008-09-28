@@ -967,8 +967,8 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 {
 		// Formerly known as "reqservice"
 
-	ClassAd	*req_classad = new ClassAd;
-	int cmd;
+	ClassAd	*req_classad = new ClassAd, *mach_classad = rip->r_classad;
+	int cmd, mach_requirements = 1;
 	float rank = 0;
 	float oldrank = 0;
 	char *client_addr = NULL;
@@ -1045,6 +1045,21 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		StringList type_list;
 		int cpus, memory, disk;
 		int rid = resmgr->nextId();
+
+			// Make sure the partitionable slot itself is satisfied by
+			// the job. If not there is no point in trying to
+			// partition it. This check also prevents
+			// over-partitioning. The acceptability of the dynamic
+			// slot and job will be checked later, in the normal
+			// course of accepting the claim.
+		rip->r_reqexp->restore();
+		if( mach_classad->EvalBool( ATTR_REQUIREMENTS, 
+									req_classad, mach_requirements ) == 0 ) {
+			rip->dprintf( D_FAILURE|D_ALWAYS, 
+						  "Machine requirements not satisfied.\n" );
+			refuse( stream );
+			ABORT;
+		}
 
 //		if( req_classad->LookupInteger( "RequestCPUs", cpus ) ||
 		if( req_classad->LookupInteger( "MachineCount", cpus ) || 
