@@ -145,6 +145,7 @@ Resource::~Resource()
 		// If we have a parent, return our resources to it
 	if( m_parent ) {
 		*(m_parent->r_attr) += *(r_attr);
+		m_parent->update();
 		m_parent = NULL;
 	}
 

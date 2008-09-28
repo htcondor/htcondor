@@ -1081,20 +1081,17 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 			// Recompute the partitionable slot's resources
 		*(rip->r_attr) -= *(new_rip->r_attr);
-		rip->compute( A_ALL );
-		rip->compute( A_TIMEOUT | A_UPDATE );
-		rip->refresh_classad( A_PUBLIC | A_EVALUATED ); 
-		rip->refresh_classad( A_PUBLIC | A_SHARED_SLOT ); 
 		rip->change_state( unclaimed_state );
- 
+		rip->update();
+
 			// Initialize the rest of the Resource
 		new_rip->set_parent( rip );
 		new_rip->set_feature( Resource::DYNAMIC_SLOT );
 		new_rip->compute( A_ALL );
 		new_rip->compute( A_TIMEOUT | A_UPDATE ); // Compute disk space
 		new_rip->init_classad();
-		new_rip->refresh_classad( A_PUBLIC | A_EVALUATED ); 
-		new_rip->refresh_classad( A_PUBLIC | A_SHARED_SLOT ); 
+		new_rip->refresh_classad( A_EVALUATED ); 
+		new_rip->refresh_classad( A_SHARED_SLOT ); 
 
 			// The new resource needs the claim from its
 			// parititionable parent
