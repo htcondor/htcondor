@@ -223,6 +223,7 @@ char	*Requirements	= "requirements";
 char	*Preferences	= "preferences";
 char	*Rank				= "rank";
 char	*ImageSize		= "image_size";
+char	*DiskUsage		= "disk_usage";
 char	*Universe		= "universe";
 char	*Grid_Type		= "grid_type";
 char	*MachineCount	= "machine_count";
@@ -2066,8 +2067,23 @@ SetImageSize()
 		}
 		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, vm_disk_space);
 	}else {
-		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, 
-				executablesize + TransferInputSize);
+		unsigned int disk_usage = 0;
+
+		tmp = condor_param( DiskUsage, ATTR_DISK_USAGE );
+
+		if( tmp ) {
+			disk_usage = atoi(tmp);
+
+			if( disk_usage < 1 ) {
+				fprintf( stderr, "\nERROR: disk_usage must be >= 1\n" );
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+			}
+		} else {
+			disk_usage = executablesize + TransferInputSize;
+		}
+
+		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, disk_usage );
 	}
 	InsertJobExpr (buffer);
 }
