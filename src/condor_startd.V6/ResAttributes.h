@@ -184,6 +184,7 @@ public:
 
 	float get_disk() { return c_disk; }
 	float get_disk_fraction() { return c_disk_fraction; }
+	unsigned long get_total_disk() { return c_total_disk; }
 	char const *executeDir() { return c_execute_dir.Value(); }
 	char const *executePartitionID() { return c_execute_partition_id.Value(); }
 
