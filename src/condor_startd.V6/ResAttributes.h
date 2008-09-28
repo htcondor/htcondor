@@ -187,6 +187,9 @@ public:
 	char const *executeDir() { return c_execute_dir.Value(); }
 	char const *executePartitionID() { return c_execute_partition_id.Value(); }
 
+	CpuAttributes& operator+=( CpuAttributes& rhs);
+	CpuAttributes& operator-=( CpuAttributes& rhs);
+
 private:
 	Resource*	 	rip;
 	MachAttributes*	map;

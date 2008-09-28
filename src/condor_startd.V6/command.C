@@ -1038,7 +1038,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rip->dprintf( D_FULLDEBUG,
 				  "Received ClaimId from schedd (%s)\n", idp.publicClaimId() );
 
-	if( Resource::PARTITIONABLE_SLOT == rip->getResourceFeature() ) {
+	if( Resource::PARTITIONABLE_SLOT == rip->get_feature() ) {
 		Resource *new_rip;
 		CpuAttributes *cpu_attrs;
 		MyString type;
@@ -1053,7 +1053,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			type.sprintf_cat( "memory=%d ", memory );
 		}
 		if( req_classad->LookupInteger( "RequestDisk", disk ) ) {
-			type.sprintf_cat( "disk=%d/%lu", disk, rip->r_attr->get_disk() );
+			type.sprintf_cat( "disk=%d/%f", disk, rip->r_attr->get_disk() );
 		}
 
 		if( type.IsEmpty() ) {
@@ -1080,10 +1080,16 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		}
 
 			// Recompute the partitionable slot's resources
+		*(rip->r_attr) -= *(new_rip->r_attr);
+		rip->compute( A_ALL );
+		rip->compute( A_TIMEOUT | A_UPDATE );
+		rip->refresh_classad( A_PUBLIC | A_EVALUATED ); 
+		rip->refresh_classad( A_PUBLIC | A_SHARED_SLOT ); 
 		rip->change_state( unclaimed_state );
  
 			// Initialize the rest of the Resource
-		new_rip->setResourceFeature( Resource::DYNAMIC_SLOT );
+		new_rip->set_parent( rip );
+		new_rip->set_feature( Resource::DYNAMIC_SLOT );
 		new_rip->compute( A_ALL );
 		new_rip->compute( A_TIMEOUT | A_UPDATE ); // Compute disk space
 		new_rip->init_classad();

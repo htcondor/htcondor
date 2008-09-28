@@ -70,8 +70,10 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_attr->attach( this );
 
 	tmp.sprintf( "SLOT_TYPE_%d_PARTITIONABLE", type() );
-	setResourceFeature( param_boolean( tmp.GetCStr(), false ) ?
-						PARTITIONABLE_SLOT : STANDARD_SLOT );
+	set_feature( param_boolean( tmp.GetCStr(), false ) ?
+				 PARTITIONABLE_SLOT : STANDARD_SLOT );
+
+	set_parent( NULL );
 
 	update_tid = -1;
 
@@ -139,6 +141,12 @@ Resource::~Resource()
 		free(m_hook_keyword);
 	}
 #endif /* HAVE_JOB_HOOKS */
+
+		// If we have a parent, return our resources to it
+	if( m_parent ) {
+		*(m_parent->r_attr) += *(r_attr);
+		m_parent = NULL;
+	}
 
 	delete r_state;
 	delete r_classad;

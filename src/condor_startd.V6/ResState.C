@@ -357,7 +357,7 @@ ResState::eval( void )
 		break;	// case preempting_state:
 
 	case unclaimed_state:
-		if( Resource::DYNAMIC_SLOT == rip->getResourceFeature() ) {
+		if( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
 			return change( delete_state );
 		}
 
@@ -751,7 +751,7 @@ ResState::enter_action( State s, Activity a,
 		break; 	// preempting_state
 
 	case delete_state:
-		if ( Resource::DYNAMIC_SLOT == rip->getResourceFeature() ) {
+		if ( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
 			resmgr->removeResource( rip );
 		} else {
 			resmgr->deleteResource( rip );

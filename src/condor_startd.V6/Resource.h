@@ -237,11 +237,15 @@ public:
 		DYNAMIC_SLOT
 	};
 
-	void	setResourceFeature( ResourceFeature feature ) { m_resource_feature = feature; }
-	ResourceFeature	getResourceFeature( void ) { return m_resource_feature; }
+	void	set_feature( ResourceFeature feature ) { m_resource_feature = feature; }
+	ResourceFeature	get_feature( void ) { return m_resource_feature; }
+
+	void set_parent( Resource* rip ) { m_parent = rip; }
 
 private:
 	ResourceFeature m_resource_feature;
+
+	Resource*	m_parent;
 
 	int			update_tid;	// DaemonCore timer id for update delay
 	unsigned	update_sequence;	// Update sequence number
