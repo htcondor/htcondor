@@ -48,6 +48,7 @@ private:
 	char* 			origreqexp;
 	char* 			origstart;
 	char*			m_origvalidckptpltfrm;
+	char*			m_origisstillpartitionable;
 	reqexp_state	rstate;
 };
 

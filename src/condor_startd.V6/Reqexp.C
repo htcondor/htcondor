@@ -33,13 +33,17 @@ Reqexp::Reqexp( Resource* res_ip )
 	this->rip = res_ip;
 	MyString tmp;
 
-	tmp.sprintf("%s = (%s) && (%s)", 
-		ATTR_REQUIREMENTS, "START", ATTR_IS_VALID_CHECKPOINT_PLATFORM );
+	tmp.sprintf("%s = (%s) && (%s) && (%s)", 
+				ATTR_REQUIREMENTS,
+				"START",
+				ATTR_IS_VALID_CHECKPOINT_PLATFORM,
+				"IsStillPartitionable" );
 
 	origreqexp = strdup( tmp.Value() );
 	origstart = NULL;
 	rstate = ORIG_REQ;
 	m_origvalidckptpltfrm = NULL;
+	m_origisstillpartitionable = NULL;
 }
 
 void
@@ -65,9 +69,35 @@ Reqexp::compute( amask_t how_much )
 
 	if( IS_STATIC(how_much) ) {
 
+		if (m_origisstillpartitionable != NULL) {
+			free(m_origisstillpartitionable);
+			m_origisstillpartitionable = NULL;
+		}
+
 		if (m_origvalidckptpltfrm != NULL) {
 			free(m_origvalidckptpltfrm);
 			m_origvalidckptpltfrm = NULL;
+		}
+
+		char *isp = param( "IsStillPartitionable" );
+		if( isp != NULL ) {
+			str.sprintf( "%s = %s", "IsStillPartitionable", isp );
+			m_origisstillpartitionable = strdup( str.Value() );
+			free(isp);
+		} else {
+			isp =
+			"("
+			   "((TARGET.RequestCpus =?= UNDEFINED) || "
+			    "(TARGET.RequestCpus <= MY.Cpus))"
+			  "&&"
+			   "((TARGET.RequestMemory =?= UNDEFINED) || "
+			    "(TARGET.RequestMemory <= MY.Memory))"
+			  "&&"
+			   "((TARGET.RequestDisk =?= UNDEFINED) || "
+			    "(TARGET.RequestDisk <= MY.Disk))"
+			")";
+			str.sprintf( "%s = %s", "IsStillPartitionable", isp );
+			m_origisstillpartitionable = strdup( str.Value() );
 		}
 
 		char *vcp = param( "IS_VALID_CHECKPOINT_PLATFORM" );
@@ -124,6 +154,7 @@ Reqexp::~Reqexp()
 {
 	if( origreqexp ) free( origreqexp );
 	if( origstart ) free( origstart );
+	if( m_origisstillpartitionable ) free( m_origisstillpartitionable );
 	if( m_origvalidckptpltfrm ) free( m_origvalidckptpltfrm );
 }
 
@@ -189,6 +220,8 @@ Reqexp::publish( ClassAd* ca, amask_t how_much )
 		tmp.sprintf( "%s", origreqexp );
 		ca->Insert( tmp.Value() );
 		tmp.sprintf( "%s", m_origvalidckptpltfrm );
+		ca->Insert( tmp.Value() );
+		tmp.sprintf( "%s", m_origisstillpartitionable );
 		ca->Insert( tmp.Value() );
 		break;
 	case UNAVAIL_REQ:
