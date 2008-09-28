@@ -44,6 +44,15 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	}
 	r_id_str = strdup( tmp.Value() );
 
+		// we need this before we can call type()...
+	r_attr = cap;
+	r_attr->attach( this );
+
+		// we need this before we instantiate the Reqexp object...
+	tmp.sprintf( "SLOT_TYPE_%d_PARTITIONABLE", type() );
+	set_feature( param_boolean( tmp.GetCStr(), false ) ?
+				 PARTITIONABLE_SLOT : STANDARD_SLOT );
+
 	prevLHF = 0;
 	r_classad = NULL;
 	r_state = new ResState( this );
@@ -65,13 +74,6 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	} else {
 		r_name = strdup( tmpName );
 	}
-
-	r_attr = cap;
-	r_attr->attach( this );
-
-	tmp.sprintf( "SLOT_TYPE_%d_PARTITIONABLE", type() );
-	set_feature( param_boolean( tmp.GetCStr(), false ) ?
-				 PARTITIONABLE_SLOT : STANDARD_SLOT );
 
 	set_parent( NULL );
 

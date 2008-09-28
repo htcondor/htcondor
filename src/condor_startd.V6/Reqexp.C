@@ -37,7 +37,7 @@ Reqexp::Reqexp( Resource* res_ip )
 		ATTR_REQUIREMENTS, "START", ATTR_IS_VALID_CHECKPOINT_PLATFORM );
 
 	if( Resource::PARTITIONABLE_SLOT == res_ip->get_feature() ) {
-		tmp.sprintf("%s && (%s)", tmp.GetCStr(), "IsStillPartitionable" );
+		tmp.sprintf_cat( " && (%s)", "IsStillPartitionable" );
 	}
 
 	origreqexp = strdup( tmp.Value() );
