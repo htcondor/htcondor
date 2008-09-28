@@ -1067,39 +1067,34 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			ABORT;
 		}
 
-//		if( req_classad->LookupInteger( "RequestCPUs", cpus ) ||
 		if( req_classad->LookupInteger( "MachineCount", cpus ) || 
 			(cpus = 1) ) { // reasonable default, for sure
 			type.sprintf_cat( "cpus=%d ", cpus );
 		}
 
-//		if( req_classad->LookupInteger( "RequestMemory", memory ) ||
 		if( req_classad->LookupInteger( ATTR_IMAGE_SIZE, memory ) ) {
 			type.sprintf_cat( "memory=%d ", memory );
 		} else {
 				// some memory size must be available else we cannot
 				// match, plus a job ad without ATTR_MEMORY is sketchy
-			rip->dprintf( D_FULLDEBUG, "No memory request in incoming ad, aborting...\n" );
+			rip->dprintf( D_FULLDEBUG,
+						  "No memory request in incoming ad, aborting...\n" );
 			ABORT;
 		}
 
-//		if( req_classad->LookupInteger( "RequestDisk", disk ) ||
 		if( req_classad->LookupInteger( ATTR_DISK_USAGE, disk ) ) {
-			type.sprintf_cat( "disk=%d/%lu", disk + 1, rip->r_attr->get_total_disk() );
+			type.sprintf_cat( "disk=%d/%lu",
+							  disk + 1, rip->r_attr->get_total_disk() );
 		} else {
 				// some disk size must be available else we cannot
-			rip->dprintf( D_FULLDEBUG, "No disk request in incoming ad, aborting...\n" );
 				// match, plus a job ad without ATTR_DISK is sketchy
-			ABORT;
-		}
-
-		if( type.IsEmpty() ) {
 			rip->dprintf( D_FULLDEBUG,
-						  "Matched with partitionable slot, but requested no resources, aborting...\n" );
+						  "No disk request in incoming ad, aborting...\n" );
 			ABORT;
 		}
 
-		rip->dprintf( D_FULLDEBUG, "Match requesting resources: %s\n", type.GetCStr() );
+		rip->dprintf( D_FULLDEBUG,
+					  "Match requesting resources: %s\n", type.GetCStr() );
 
 		type_list.initializeFromString( type.GetCStr() );
 		cpu_attrs = resmgr->buildSlot( rid, &type_list, -1, false );
@@ -1119,7 +1114,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			// Recompute the partitionable slot's resources
 		*(rip->r_attr) -= *(new_rip->r_attr);
 		rip->change_state( unclaimed_state );
-		rip->update(); // in case we were never matched
+		rip->update(); // in case we were never matched, i.e. no state change
 
 			// Initialize the rest of the Resource
 		new_rip->set_parent( rip );

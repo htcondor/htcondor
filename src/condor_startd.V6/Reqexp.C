@@ -132,26 +132,6 @@ Reqexp::compute( amask_t how_much )
 			free(isp);
 		} else {
 			isp =
-//					"("
-//					" ("
-//					"  ((TARGET.MachineCount =?= UNDEFINED) || "
-//					"   (TARGET.MachineCount <= MY.Cpus)) && "
-//					"  ((TARGET.MachineCount =!= UNDEFINED) || "
-//					"   (1 <= MY.Cpus))"
-//					" )"
-//					" &&"
-//					" ("
-//					"  ((TARGET.ImageSize =?= UNDEFINED) || "
-//					"   (TARGET.ImsageSize <= MY.Memory)) && "
-//					"  (TARGET.ImageSize =!= UNDEFINED)"
-//					" )"
-//					" &&"
-//					" ("
-//					"  ((TARGET.DiskUsage =?= UNDEFINED) || "
-//					"   (TARGET.DiskUsage <= MY.Disk)) &&"
-//					"  (TARGET.DiskUsage =!= UNDEFINED)"
-//					" )"
-//					")";
 				"("
 				"ifThenElse(TARGET.MachineCount =!= UNDEFINED,"
 				"           TARGET.MachineCount <= MY.Cpus,"
