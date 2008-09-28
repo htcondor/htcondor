@@ -1046,14 +1046,30 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		int cpus, memory, disk;
 		int rid = resmgr->nextId();
 
-		if( req_classad->LookupInteger( "RequestCPUs", cpus ) ) {
+//		if( req_classad->LookupInteger( "RequestCPUs", cpus ) ||
+		if( req_classad->LookupInteger( "MachineCount", cpus ) || 
+			(cpus = 1) ) { // reasonable default, for sure
 			type.sprintf_cat( "cpus=%d ", cpus );
 		}
-		if( req_classad->LookupInteger( "RequestMemory", memory ) ) {
+
+//		if( req_classad->LookupInteger( "RequestMemory", memory ) ||
+		if( req_classad->LookupInteger( ATTR_IMAGE_SIZE, memory ) ) {
 			type.sprintf_cat( "memory=%d ", memory );
+		} else {
+				// some memory size must be available else we cannot
+				// match, plus a job ad without ATTR_MEMORY is sketchy
+			rip->dprintf( D_FULLDEBUG, "No memory request in incoming ad, aborting...\n" );
+			ABORT;
 		}
-		if( req_classad->LookupInteger( "RequestDisk", disk ) ) {
+
+//		if( req_classad->LookupInteger( "RequestDisk", disk ) ||
+		if( req_classad->LookupInteger( ATTR_DISK_USAGE, disk ) ) {
 			type.sprintf_cat( "disk=%d/%lu", disk, rip->r_attr->get_total_disk() );
+		} else {
+				// some disk size must be available else we cannot
+			rip->dprintf( D_FULLDEBUG, "No disk request in incoming ad, aborting...\n" );
+				// match, plus a job ad without ATTR_DISK is sketchy
+			ABORT;
 		}
 
 		if( type.IsEmpty() ) {
