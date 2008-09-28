@@ -1064,7 +1064,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 //		if( req_classad->LookupInteger( "RequestDisk", disk ) ||
 		if( req_classad->LookupInteger( ATTR_DISK_USAGE, disk ) ) {
-			type.sprintf_cat( "disk=%d/%lu", disk, rip->r_attr->get_total_disk() );
+			type.sprintf_cat( "disk=%d/%lu", disk + 1, rip->r_attr->get_total_disk() );
 		} else {
 				// some disk size must be available else we cannot
 			rip->dprintf( D_FULLDEBUG, "No disk request in incoming ad, aborting...\n" );
