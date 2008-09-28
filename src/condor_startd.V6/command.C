@@ -906,7 +906,9 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 #define ABORT \
 delete req_classad;						\
 if (client_addr) free(client_addr);		\
-return abort_claim(rip)
+return_code = abort_claim(rip);		\
+if( new_dynamic_slot ) rip->change_state( delete_state );	\
+return return_code;
 
 int
 abort_claim( Resource* rip )
@@ -974,6 +976,10 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	char *client_addr = NULL;
 	int interval;
 	ClaimIdParser idp(id);
+
+		// Used in ABORT macro, yuck
+	bool new_dynamic_slot = false;
+	int return_code;
 
 	if( !rip->r_cur ) {
 		EXCEPT( "request_claim: no current claim object." );
@@ -1138,6 +1144,14 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			// Now we continue on with the newly spawned Resource
 			// getting claimed
 		rip = new_rip;
+
+			// This is, unfortunately, part of the ABORT macro. The
+			// idea is that if we are aborting a claim at the same
+			// time that we are creating a dynamic slot for that
+			// claim, we should already remove the dynamic slot. We
+			// don't want to do this everytime an ABORT happens on a
+			// dynamic slot because it may be useful to other jobs.
+		new_dynamic_slot = true;
 	}
 
 		// Make sure we're willing to run this job at all.
