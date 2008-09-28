@@ -242,7 +242,6 @@ public:
 	AvailAttributes( MachAttributes* map );
 
 	bool decrement( CpuAttributes* cap );
-	bool increment( CpuAttributes* cap );
 	bool computeAutoShares( CpuAttributes* cap );
 	void show_totals( int dprintf_mask, CpuAttributes *cap );
 

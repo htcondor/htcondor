@@ -726,54 +726,6 @@ AvailAttributes::decrement( CpuAttributes* cap )
 }
 
 bool
-AvailAttributes::increment( CpuAttributes* cap ) 
-{
-	int new_cpus, new_phys_mem;
-	float new_virt_mem, new_disk, floor = -0.000001f;
-
-	new_cpus = a_num_cpus + cap->c_num_cpus;
-
-	new_phys_mem = a_phys_mem;
-	if( cap->c_phys_mem != AUTO_MEM ) {
-		new_phys_mem += cap->c_phys_mem;
-	}
-
-	new_virt_mem = a_virt_mem_fraction;
-	if( !IS_AUTO_SHARE(cap->c_virt_mem_fraction) ) {
-		new_virt_mem += cap->c_virt_mem_fraction;
-	}
-
-	AvailDiskPartition &partition = GetAvailDiskPartition( cap->executePartitionID() );
-	new_disk = partition.m_disk_fraction;
-	if( !IS_AUTO_SHARE(cap->c_disk_fraction) ) {
-		new_disk += cap->c_disk_fraction;
-	}
-
-	if( new_cpus < floor || new_phys_mem < floor || 
-		new_virt_mem < floor || new_disk < floor ) {
-		return false;
-	} else {
-		a_num_cpus = new_cpus;
-
-		a_phys_mem = new_phys_mem;
-		if( cap->c_phys_mem == AUTO_MEM ) {
-			a_phys_mem_auto_count -= 1;
-		}
-
-		a_virt_mem_fraction = new_virt_mem;
-		if( IS_AUTO_SHARE(cap->c_virt_mem_fraction) ) {
-			a_virt_mem_auto_count -= 1;
-		}
-
-		partition.m_disk_fraction = new_disk;
-		if( IS_AUTO_SHARE(cap->c_disk_fraction) ) {
-			partition.m_auto_count -= 1;
-		}
-	}
-	return true;
-}
-
-bool
 AvailAttributes::computeAutoShares( CpuAttributes* cap )
 {
 	if( cap->c_phys_mem == AUTO_MEM ) {
