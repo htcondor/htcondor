@@ -1113,7 +1113,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			// Recompute the partitionable slot's resources
 		*(rip->r_attr) -= *(new_rip->r_attr);
 		rip->change_state( unclaimed_state );
-		rip->update();
+		rip->update(); // in case we were never matched
 
 			// Initialize the rest of the Resource
 		new_rip->set_parent( rip );
