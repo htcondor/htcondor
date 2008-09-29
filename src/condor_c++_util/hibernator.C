@@ -93,11 +93,11 @@ HibernatorBase*
 HibernatorBase::createHibernator ( void )
 {
 	HibernatorBase *hibernator = NULL;
-# if defined ( WIN32 )
-	hibernator = new MsWindowsHibernator ();
-# elif defined( HAVE_LINUX_HIBERNATION )
 
+# if ( HIBERNATOR_TYPE_DEFINED )
+	hibernator = new RealHibernator ();
 # endif
+
 	return hibernator;
 }
 

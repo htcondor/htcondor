@@ -54,4 +54,7 @@ private:
 
 };
 
+#define HIBERNATOR_TYPE_DEFINED	1
+typedef MsWindowsHibernator	RealHibernator;
+
 #endif // _HIBERNATER_WINDOWS_H_

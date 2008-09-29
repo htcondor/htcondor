@@ -62,6 +62,10 @@ private:
 	BaseLinuxHibernator	*m_real_hibernator;
 
 };
+
+#define HIBERNATOR_TYPE_DEFINED	1
+typedef LinuxHibernator	RealHibernator;
+
 #endif // HAVE_LINUX_HIBERNATION
 
 #endif // _HIBERNATER_LINUX_H_
