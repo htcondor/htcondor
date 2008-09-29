@@ -1111,11 +1111,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			ABORT;
 		}
 
-			// Recompute the partitionable slot's resources
-		*(rip->r_attr) -= *(new_rip->r_attr);
-		rip->change_state( unclaimed_state );
-		rip->update(); // in case we were never matched, i.e. no state change
-
 			// Initialize the rest of the Resource
 		new_rip->set_parent( rip );
 		new_rip->set_feature( Resource::DYNAMIC_SLOT );
@@ -1133,6 +1128,10 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 			// And the partitionable parent needs a new claim
 		rip->r_cur = new Claim( rip );
+
+			// Recompute the partitionable slot's resources
+		rip->change_state( unclaimed_state );
+		rip->update(); // in case we were never matched, i.e. no state change
 
 		resmgr->addResource( new_rip );
 
