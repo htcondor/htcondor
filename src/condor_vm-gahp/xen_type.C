@@ -435,14 +435,7 @@ XenType::Resume()
 	}
 	m_restart_with_ckpt = false;
 
-	if( m_is_checkpointed ) {
-		if( m_is_chowned ) {
-			// Because files in the working directory were chowned to a caller.
-			// we need to restore ownership of files from caller uid to a job user
-			chownWorkingFiles(get_job_user_uid());
-		}
-		m_is_checkpointed = false;
-	}
+	m_is_checkpointed = false;
 
 	if( check_vm_read_access_file(m_suspendfile.Value(), true) == false ) {
 		m_result_msg = VMGAHP_ERR_VM_INVALID_SUSPEND_FILE;
@@ -1586,13 +1579,6 @@ XenType::createCkptFiles(void)
 		}
 		fclose(fp);
 		updateAllWriteDiskTimestamp(current_time);
-
-		if( m_is_chowned ) {
-			// Because files in the working directory were chowned to the user,
-			// we need to change ownership of files from a job user to caller uid
-			// So caller (aka Condor) can access these files.
-			chownWorkingFiles(get_caller_uid());
-		}
 
 		// checkpoint succeeds
 		m_is_checkpointed = true;

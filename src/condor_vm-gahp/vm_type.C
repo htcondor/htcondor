@@ -58,22 +58,10 @@ VMType::VMType(const char* prog_for_script, const char* scriptname, const char* 
 	m_status = VM_STOPPED;
 	m_cpu_time = 0;
 	m_delete_working_files = false;
-	m_is_chowned = false;
 
 	// Use the script program to create a configuration file for VM ?
 	m_use_script_to_create_config = 
 		param_boolean("USE_SCRIPT_TO_CREATE_CONFIG", false);
-
-	if( isSetUidRoot() && needChown() ) {
-		// Chown all files in the working directory to the user
-		uid_t user_uid = get_job_user_uid();
-		uid_t caller_uid = get_caller_uid();
-
-		if( user_uid != caller_uid ) {
-			chownWorkingFiles(user_uid);
-			m_is_chowned = true;
-		}
-	}
 
 	// Create initially transfered file list
 	createInitialFileList();
@@ -96,12 +84,6 @@ VMType::~VMType()
 			Directory working_dir(m_workingpath.Value());
 			working_dir.Remove_Entire_Directory();
 		}
-	}
-	if( m_is_chowned ) {
-		// Because files in the working directory were chowned to the user,
-		// we need to restore ownership of files from a job user to caller uid
-		// So caller (aka Condor) can access these files.
-		chownWorkingFiles(get_caller_uid());
 	}
 }
 
@@ -598,40 +580,6 @@ VMType::isTransferedFile(const char* file_name, MyString& fullname)
 		return false;
 	}
 	return false;
-}
-
-// macos 10.3 is the only known platform to be missing chown, and it
-// seems unlikely that we'll ever run xen or vmware on it.
- 
-#ifndef HAVE_LCHOWN
-#define lchown chown
-#endif
-
-void
-VMType::chownWorkingFiles(uid_t dst_uid)
-{
-#if !defined(WIN32)
-	if( m_workingpath.IsEmpty() ) {
-		return;
-	}
-	if( !canSwitchUid() ) {
-		return;
-	}
-
-	priv_state priv = vmgahp_set_root_priv();
-	Directory working_dir(m_workingpath.Value());
-	const char* filename = NULL;
-	while( (filename = working_dir.Next()) ) {
-		filename = working_dir.GetFullPath();
-		if( filename ) {
-			if( lchown(filename, dst_uid, (gid_t)-1) < 0 ) {
-				vmprintf(D_ALWAYS, "Cannot chown \"%s\" with %d\n",
-					filename, (int)dst_uid);
-			}
-		}
-	}
-	vmgahp_set_priv(priv);
-#endif
 }
 
 bool

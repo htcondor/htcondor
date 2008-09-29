@@ -44,8 +44,6 @@ int	oriDebugFlags = 0;
 MyString workingdir;
 
 // This variables come from vmgahp_common.C
-extern bool SetUid;
-extern bool needchown;
 extern MyString caller_name;
 extern MyString job_user_name;
 extern uid_t caller_uid;
@@ -159,26 +157,6 @@ main_pre_dc_init(int argc, char* argv[])
 			if( job_user_gid == ROOT_UID ) {
 				job_user_gid = job_user_uid;
 			}
-		}
-	}
-
-	// check setuid-root
-	if( SwitchUid && (caller_uid > 0) && (caller_euid > 0 ) )  {
-		// To make sure that daemonCore supports setuid-root
-		priv_state oldpriv = set_root_priv();
-		caller_euid = geteuid();
-		caller_egid = getegid();
-		set_priv(oldpriv);
-	}
-
-	if( (caller_uid > 0) && !caller_euid ) {
-		// This daemon has setuid-root
-		SetUid = true;
-
-		// check if vmgahp need to chown files 
-		// in working directory.
-		if( getenv("VMGAHP_NEED_CHOWN") ) {
-			needchown = true;
 		}
 	}
 
@@ -411,16 +389,6 @@ int main_init(int argc, char *argv[])
 	vmgahp_set_root_priv();
 	if( gahpconfig->init(vmtype.Value()) == false ) {
 		DC_Exit(1);
-	}
-
-	if( isSetUidRoot() ) {
-		// If vmgahp has setuid-root,  
-		// check if a local user calling this vmgahp is allowed
-		if( gahpconfig->isAllowUser(get_caller_name()) == false ) {
-			vmprintf( D_ALWAYS, "\nERROR: Local user(%s) is not allowed "
-					"to execute vmgahp server\n", get_caller_name());
-			DC_Exit(1);
-		}
 	}
 
 	vmgahp_set_condor_priv();

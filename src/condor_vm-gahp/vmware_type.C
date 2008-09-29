@@ -1372,16 +1372,7 @@ VMwareType::Resume()
 		return false;
 	}
 
-	if( m_is_checkpointed ) {
-		if( m_is_chowned ) {
-			// Because files in the working directory were 
-			// chowned to a caller uid.
-			// we need to restore ownership of files 
-			// from caller uid to a job user.
-			chownWorkingFiles(get_job_user_uid());
-		}
-		m_is_checkpointed = false;
-	}
+	m_is_checkpointed = false;
 
 	MyString tmpfilename;
 	tmpfilename.sprintf("%s%c%s", m_workingpath.Value(), 
@@ -1964,14 +1955,6 @@ VMwareType::createCkptFiles()
 			}
 		}
 
-		if( m_is_chowned ) {
-			// Because files in the working directory were 
-			// chowned to the user, we need to change ownership of 
-			// files from a job user to caller uid.
-			// So caller (aka Condor) can access these files.
-			chownWorkingFiles(get_caller_uid());
-		}
-
 		// checkpoint succeeds
 		m_is_checkpointed = true;
 		return true;
@@ -2018,15 +2001,6 @@ VMwareType::checkVMwareParams(VMGahpConfig* config)
 				"program for VMware:(%s:%s)\n", fixedvalue.Value(),
 				strerror(errno));
 		return false;
-	}
-
-	if( isSetUidRoot() ) {
-		// owner must be root
-		if( sbuf.st_uid != ROOT_UID ) {
-			vmprintf(D_ALWAYS, "\nFile Permission Error: "
-					"owner of \"%s\" must be root\n", fixedvalue.Value());
-			return false;
-		}
 	}
 
 	// Other writable bit

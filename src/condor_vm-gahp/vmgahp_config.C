@@ -37,11 +37,6 @@ operator=(const VMGahpConfig& old)
 	VMGahpConfig *oldp = NULL;
 	oldp = const_cast<VMGahpConfig *>(&old);
 
-	m_allow_user_list.clearAll();
-	if( old.m_allow_user_list.isEmpty() == false ) {
-		m_allow_user_list.create_union(oldp->m_allow_user_list, false);
-	}
-
 	m_vm_type = old.m_vm_type;
 	m_vm_version = old.m_vm_version;
 	m_vm_max_memory = old.m_vm_max_memory;
@@ -70,28 +65,6 @@ VMGahpConfig::init(const char* vmtype)
 
 	if( !vmtype ) {
 		return false;
-	}
-
-	if( isSetUidRoot() ) {
-		// vmgahp has setuid-root, 'ALLOW_USERS' is required.
-		// Read the list of local users eligible to execute vmgahp
-		config_value = param("ALLOW_USERS");
-		if( !config_value ) {
-			vmprintf(D_ALWAYS,
-			         "\nERROR: ALLOW_USERS not defined "
-			             "in configuration\n");
-			return false;
-		}
-
-		fixedvalue = delete_quotation_marks(config_value);
-		free(config_value);
-
-		m_allow_user_list.initializeFromString(fixedvalue.Value());
-		if( m_allow_user_list.isEmpty() ) {
-			vmprintf( D_ALWAYS, "\nERROR: 'ALLOW_USERS' must have at least "
-					"one local user\n");
-			return false;
-		}
 	}
 
 	// Handle VM_TYPE
@@ -170,23 +143,5 @@ VMGahpConfig::init(const char* vmtype)
 	// Read VM_HARDWARE_VT
 	m_vm_hardware_vt = param_boolean("VM_HARDWARE_VT", false);
 
-	return true;
-}
-
-bool 
-VMGahpConfig::isAllowUser(const char* user)
-{
-	if( !user || user[0] == '\0' ) {
-		return false;
-	}
-
-	if( m_allow_user_list.isEmpty() ) {
-		return false;
-	}
-
-	// Check if the given user is in 'ALLOW_USERS'
-	if( m_allow_user_list.contains(user) == false ) {
-		return false;
-	}
 	return true;
 }

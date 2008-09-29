@@ -34,8 +34,6 @@
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
 
-bool SetUid = false;
-bool needchown = false;
 MyString caller_name;
 MyString job_user_name;
 
@@ -503,16 +501,6 @@ const char*
 get_job_user_name(void)
 {
 	return job_user_name.Value();
-}
-
-bool isSetUidRoot(void)
-{
-	return SetUid;
-}
-
-bool needChown(void)
-{
-	return needchown;
 }
 
 bool canSwitchUid(void)

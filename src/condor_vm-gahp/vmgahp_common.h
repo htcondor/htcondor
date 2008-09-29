@@ -66,8 +66,6 @@ uid_t get_caller_uid(void);
 gid_t get_caller_gid(void);
 uid_t get_job_user_uid(void);
 gid_t get_job_user_gid(void);
-bool isSetUidRoot(void);
-bool needChown(void);
 const char* get_caller_name(void);
 const char* get_job_user_name(void);
 bool canSwitchUid(void);

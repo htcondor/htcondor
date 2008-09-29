@@ -33,9 +33,6 @@ class VMGahpConfig {
 		VMGahpConfig& operator=(const VMGahpConfig& old);
 
 		bool init(const char* vmtype);
-		bool isAllowUser(const char* user);
-
-		StringList m_allow_user_list;
 
 		MyString m_vm_type;
 		MyString m_vm_version;
