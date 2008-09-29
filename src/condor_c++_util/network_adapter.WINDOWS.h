@@ -2,13 +2,13 @@
 *
 * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
 * University of Wisconsin-Madison, WI.
-* 
+*
 * Licensed under the Apache License, Version 2.0 (the "License"); you
 * may not use this file except in compliance with the License.  You may
 * obtain a copy of the License at
-* 
+*
 *    http://www.apache.org/licenses/LICENSE-2.0
-* 
+*
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS,
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,11 +33,12 @@
  * WindowsNetworkAdapter class
  ***************************************************************/
 
-class WindowsNetworkAdapter : NetworkAdapterBase {
+class WindowsNetworkAdapter : NetworkAdapterBase
+{
 
 public:
 
-	/** @name Instantiation. 
+	/** @name Instantiation.
 	*/
 	//@{
 
@@ -45,19 +46,19 @@ public:
 	WindowsNetworkAdapter () throw ();
 
 	/// Constructor
-	WindowsNetworkAdapter ( LPCSTR ip_addr ) throw ();
+	WindowsNetworkAdapter ( LPCSTR ip_addr, unsigned int ) throw ();
 
 	/// Destructor
 	virtual ~WindowsNetworkAdapter () throw (); 
 
 	//@}
-	
+
 	/** @name Device properties.
 	*/
 	//@{
 
 	/** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware 
+		@return a string representation of the addapter's hardware
         address
 	*/
 	const char* hardwareAddress () const;
@@ -68,11 +69,11 @@ public:
 	const char* subnet () const;
 
     /** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware 
+		@return a string representation of the addapter's hardware
         address
 	*/
 	bool wakeAble () const;
-	
+
 	//@}
 
     /** @name Device parameters.
@@ -81,7 +82,7 @@ public:
 	//@{
 
 	/** Returns the device's power information
-		@return The function retrieves the device's power management 
+		@return The function retrieves the device's power management
 		information. Use LocalFree) to release the memory.
 		*/
 	PCM_POWER_DATA getPowerData () const;
@@ -90,12 +91,12 @@ public:
 
 
     /** Initialize the internal structures (can be called multiple
-        times--such as in the case of a reconfiguration) 
+        times--such as in the case of a reconfiguration)
 		@return true if it was succesful; otherwise, false.
 		*/
     bool initialize ();
 
-    
+
 private:
 
     /** Data members */
@@ -105,8 +106,8 @@ private:
          _adapter_name[MAX_ADAPTER_NAME_LENGTH + 4];
     bool _wake_able;
 
-    /**	Some registry values require some preprocessing before they can 
-		be queried, so we allow a user to specify a function to handle 
+    /**	Some registry values require some preprocessing before they can
+		be queried, so we allow a user to specify a function to handle
 		preprocessing.
 	*/
 	typedef void (*PRE_PROCESS_REISTRY_VALUE)(PBYTE);
@@ -116,13 +117,17 @@ private:
 		requested  information. Use LocalFree) to release the memory.
 		@param ID of the property to query.
 		@param Preprocessing function.
-		@see Registry Keys for Drivers in the MS DDK.		
+		@see Registry Keys for Drivers in the MS DDK.
 		*/
-	PBYTE getRegistryProperty ( 
-		IN DWORD registry_property, 
+	PBYTE getRegistryProperty (
+		IN DWORD registry_property,
 		IN PRE_PROCESS_REISTRY_VALUE preprocess = NULL ) const;
 	
 	
 };
+
+#define NETWORK_ADAPTER_TYPE_DEFINED	1
+typedef WindowsNetworkAdapter	NetworkAdapter;
+
 
 #endif //  _NETWORK_ADAPTER_WINDOWS_H_

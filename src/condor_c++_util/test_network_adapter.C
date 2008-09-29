@@ -65,7 +65,7 @@ main(int argc, const char **argv)
 		NetworkAdapterBase::createNetworkAdapter( sinful.GetCStr() );
 
 	// Initialize it
-	if ( !net->initialize() ) {
+	if ( !net->getInitStatus() ) {
 		printf( "Initialization of adaptor with address %s failed\n",
 				opts.m_address );
 		exit(1);

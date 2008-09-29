@@ -35,11 +35,11 @@
 /***************************************************************
  * Base NetworkAdapterBase class
  ***************************************************************/
-NetworkAdapterBase::NetworkAdapterBase () throw ()
+NetworkAdapterBase::NetworkAdapterBase (void) throw ()
 {
 }
 
-NetworkAdapterBase::~NetworkAdapterBase () throw ()
+NetworkAdapterBase::~NetworkAdapterBase (void) throw ()
 {
 }
 
@@ -51,12 +51,13 @@ NetworkAdapterBase*
 NetworkAdapterBase::createNetworkAdapter ( const char *sinful )
 {
     NetworkAdapterBase *adapter = NULL;    
-#  if defined ( WIN32 )
-    adapter = new WindowsNetworkAdapter ( 
-        string_to_ipstr ( sinful ) );
-#  elif defined ( LINUX )
-    adapter = new LinuxNetworkAdapter ( string_to_ip(sinful) );
-#  endif
+
+# if defined ( NETWORK_ADAPTER_TYPE_DEFINED )
+	adapter = new NetworkAdapter (
+		string_to_ipstr(sinful),
+		string_to_ip(sinful)  );
+	adapter->doInitialize( );
+# endif
 
 	return adapter;
 }
@@ -64,6 +65,13 @@ NetworkAdapterBase::createNetworkAdapter ( const char *sinful )
 /***************************************************************
  * NetworkAdapterBase members 
  ***************************************************************/
+bool
+NetworkAdapterBase::doInitialize ( void )
+{
+	m_initialization_status = initialize( );
+	return m_initialization_status;
+}
+
 void 
 NetworkAdapterBase::publish ( ClassAd &ad )
 {

@@ -40,7 +40,9 @@ public:
 	//@{
 
 	/// Constructor
-	LinuxNetworkAdapter ( unsigned int ip_addr ) throw ();
+	LinuxNetworkAdapter ( const char *ip_string,
+						  unsigned int ip_addr )
+		throw ();
 
 	/// Destructor
 	virtual ~LinuxNetworkAdapter ( void ) throw();
@@ -62,5 +64,8 @@ private:
 	virtual bool detectWOL( void );
 
 };
+
+#define NETWORK_ADAPTER_TYPE_DEFINED	1
+typedef LinuxNetworkAdapter	NetworkAdapter;
 
 #endif // _NETWORK_ADAPTER_LINUX_H_

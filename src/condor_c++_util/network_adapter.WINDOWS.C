@@ -56,7 +56,8 @@ WindowsNetworkAdapter::WindowsNetworkAdapter () throw ()
     initialize ();
 }
 
-WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR ip_addr ) throw ()
+WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR ip_addr,
+											   unsigned int /*ip*/ ) throw ()
 : _wake_able ( false ) {
     strncpy ( _ip_address, ip_addr, IP_STRING_BUF_SIZE );
     initialize (); 

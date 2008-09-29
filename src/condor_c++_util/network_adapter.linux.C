@@ -51,7 +51,8 @@
 ***************************************************************/
 
 /// Constructor
-LinuxNetworkAdapter::LinuxNetworkAdapter ( unsigned int ip_addr ) throw ()
+LinuxNetworkAdapter::LinuxNetworkAdapter ( const char */*ip_string*/,
+										   unsigned int ip_addr ) throw ()
 		: UnixNetworkAdapter( ip_addr )
 {
 }

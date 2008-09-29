@@ -55,7 +55,7 @@ public:
 	/** Initialize the adapter
 		@return true if successful, false if unsuccessful
 	*/
-	virtual bool initialize( void ) = 0;
+	virtual bool initialize( void ) { return true; };
 
 	/** Returns the adapter's hardware address
 		@return a string representation of the addapter's hardware 
@@ -91,6 +91,11 @@ public:
         */
     void publish ( ClassAd &ad );
 
+	/** Get the status of the initialization.
+		@return true:success, false:failed
+	 */
+	bool getInitStatus( void ) { return m_initialization_status; };
+
 
     /** We use this to create adapter objects so we don't need to deal 
         with the differences between OSs at the invocation level.
@@ -100,6 +105,9 @@ public:
 	static NetworkAdapterBase* createNetworkAdapter ( const char *sinful );
 
 private:
+	bool		m_initialization_status;
+
+	bool doInitialize( void );
     
     /** @name Private Instantiation. 
     That is, do not allow for a default constructor.
