@@ -36,7 +36,9 @@ Reqexp::Reqexp( Resource* res_ip )
 	tmp.sprintf("%s = (%s) && (%s)", 
 		ATTR_REQUIREMENTS, "START", ATTR_IS_VALID_CHECKPOINT_PLATFORM );
 
-	tmp.sprintf_cat( " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
+	if( Resource::STANDARD_SLOT != rip->get_feature() ) {
+		tmp.sprintf_cat( " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
+	}
 
 	origreqexp = strdup( tmp.Value() );
 	origstart = NULL;
@@ -221,8 +223,10 @@ Reqexp::publish( ClassAd* ca, amask_t how_much )
 		ca->Insert( tmp.Value() );
 		tmp.sprintf( "%s", m_origvalidckptpltfrm );
 		ca->Insert( tmp.Value() );
-		ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
-						m_within_resource_limits_expr );
+		if( Resource::STANDARD_SLOT != rip->get_feature() ) {
+			ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
+							m_within_resource_limits_expr );
+		}
 		break;
 	case UNAVAIL_REQ:
 		tmp.sprintf( "%s = False", ATTR_REQUIREMENTS );
