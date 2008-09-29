@@ -102,12 +102,14 @@ HibernatorBase::createHibernator ( void )
 }
 
 /* conversion methods */
-static const struct HibernatorStates {
+struct HibernatorStates
+{
 	int							number;
 	HibernatorBase::SLEEP_STATE	state;
 	char						*string;
 	char						*string2;
-} states[] =
+};
+static const HibernatorStates states[] =
 {
 	{ 0,  HibernatorBase::NONE, "NONE", NULL      },
 	{ 1,  HibernatorBase::S1,   "S1",   "standby" },
