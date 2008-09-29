@@ -33,7 +33,7 @@
 class Resource : public Service
 {
 public:
-	Resource( CpuAttributes*, int );
+	Resource( CpuAttributes*, int, Resource* _parent = NULL);
 	~Resource();
 
 		// Public methods that can be called from command handlers

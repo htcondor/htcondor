@@ -1104,7 +1104,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			ABORT;
 		}
 
-		new_rip = new Resource( cpu_attrs, rid );
+		new_rip = new Resource( cpu_attrs, rid, rip );
 		if( ! new_rip ) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to build new resource for request, aborting\n" );
@@ -1112,8 +1112,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		}
 
 			// Initialize the rest of the Resource
-		new_rip->set_parent( rip );
-		new_rip->set_feature( Resource::DYNAMIC_SLOT );
 		new_rip->compute( A_ALL );
 		new_rip->compute( A_TIMEOUT | A_UPDATE ); // Compute disk space
 		new_rip->init_classad();

@@ -28,7 +28,7 @@
 
 extern FILESQL *FILEObj;
 
-Resource::Resource( CpuAttributes* cap, int rid )
+Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 {
 	MyString tmp;
 	char* tmpName;
@@ -75,7 +75,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 		r_name = strdup( tmpName );
 	}
 
-	set_parent( NULL );
+	set_parent( _parent );
 
 	update_tid = -1;
 
@@ -177,6 +177,9 @@ Resource::set_parent( Resource* rip )
 		// If we have a parent, we consume its resources
 	if( m_parent ) {
 		*(m_parent->r_attr) -= *(r_attr);
+
+			// If we have a parent, we are dynamic
+		set_feature( DYNAMIC_SLOT );
 	}
 }
 
