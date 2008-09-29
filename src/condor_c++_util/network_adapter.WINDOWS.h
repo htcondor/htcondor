@@ -61,18 +61,30 @@ public:
 		@return a string representation of the addapter's hardware
         address
 	*/
-	const char* hardwareAddress () const;
+	const char* hardwareAddress (void) const;
 
     /** Returns the adapter's hardware address
 		@return a string representation of the subnet mask
 	*/
-	const char* subnet () const;
+	const char* subnet (void) const;
 
     /** Returns the adapter's hardware address
 		@return a string representation of the addapter's hardware
         address
 	*/
-	bool wakeAble () const;
+	bool wakeAble (void) const;
+
+    /** Checks that the adapter actually exists
+        @returns true if the adapter exists on the machine; 
+        otherwise, false.
+	    */
+	bool exists () const;
+
+    /** Initialize the internal structures (can be called multiple
+        times--such as in the case of a reconfiguration) 
+		@return true if it was succesful; otherwise, false.
+		*/
+    bool initialize ();
 
 	//@}
 

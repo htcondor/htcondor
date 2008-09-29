@@ -742,6 +742,14 @@ SOURCE="..\src\condor_c++_util\list.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\load_dll.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\load_dll.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\log.C"
 # End Source File
 # Begin Source File
@@ -832,6 +840,22 @@ SOURCE="..\src\condor_c++_util\net_string_list.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\net_string_list.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\network_adapter.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\network_adapter.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\network_adapter.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\network_adapter.WINDOWS.h"
 # End Source File
 # Begin Source File
 
@@ -980,6 +1004,14 @@ SOURCE="..\src\condor_c++_util\setenv.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\setenv.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\setup_api_dll.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\setup_api_dll.h"
 # End Source File
 # Begin Source File
 

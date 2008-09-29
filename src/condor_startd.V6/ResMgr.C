@@ -47,7 +47,6 @@ ResMgr::ResMgr()
 
 #if HAVE_HIBERNATE
 	m_hibernate_tid = -1;
-	m_recovery_tid = -1;
 #endif /* HAVE_HIBERNATE */
 
 	id_disp = NULL;
@@ -83,7 +82,6 @@ ResMgr::~ResMgr()
 
 #if HAVE_HIBERNATE
 	cancelHibernateTimer();
-	cancelRecoveryTimer();
 #endif /* HAVE_HIBERNATE */
 
 	if( resources ) {
@@ -1603,6 +1601,7 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 
 	starter_mgr.publish( cp, how_much );
 	m_vmuniverse_mgr.publish(cp, how_much);
+    m_hibernation_manager.publish(*cp);
 }
 
 
@@ -1936,19 +1935,13 @@ HibernationManager const& ResMgr::getHibernationManager() const {
 
 void ResMgr::updateHibernateConfiguration() {
 	m_hibernation_manager.update();
-	if ( -1 == m_recovery_tid ) { 
-			// We only want to (re)start the hibernation timer if
-			// we have not just come back from hibernation and someone
-			// issued a condor_reconfig, etc.: in which case we 
-			// let doHibernateRecovery() restart the hibernation timer
-		if ( m_hibernation_manager.wantsHibernate() ) {
-			if ( -1 == m_hibernate_tid ) {
-				startHibernateTimer();
-			}
-		} else {
-			if ( -1 != m_hibernate_tid ) {
-				cancelHibernateTimer();
-			}
+	if ( m_hibernation_manager.wantsHibernate() ) {
+		if ( -1 == m_hibernate_tid ) {
+			startHibernateTimer();
+		}
+	} else {
+		if ( -1 != m_hibernate_tid ) {
+			cancelHibernateTimer();
 		}
 	}
 }
@@ -1956,7 +1949,7 @@ void ResMgr::updateHibernateConfiguration() {
 
 int 
 ResMgr::allHibernating() {
-		// fail if there is no resource or if we are
+    	// fail if there is no resource or if we are
 		// configured not to hibernate
 	if(    !resources
 		|| !m_hibernation_manager.wantsHibernate() ) {
@@ -1989,11 +1982,15 @@ ResMgr::checkHibernate() {
 		if( m_hibernation_manager.canHibernate() ) {
 			dprintf ( D_ALWAYS, "ResMgr: This machine is about to enter hibernation\n" );
 			//
-			// Hibernate the machine and start a recovery timer.  This will
-			// cancel checks for hibernation for about about an hour after 
-			// it is set, and resume them once it has finished.
+			// Hibernate the machine and shutdown the slots on this 
+            // machine, so it will remove any jobs that are currently 
+            // running as well as stop accepting job, since, on 
+            // Windows anyway, there is the possibility that a job
+            // may be matched to this machine within the time frame it
+            // is told to enter a state of hibernation and the time 
+            // that is actually does.
 			//
-			startRecoveryTimer();
+			shutdownAllResources();
 			m_hibernation_manager.doHibernate( level );
 		} else {
 			dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
@@ -2048,45 +2045,6 @@ ResMgr::cancelHibernateTimer() {
 	}
 }
 
-
-void ResMgr::doHibernateRecovery() {
-	dprintf ( D_FULLDEBUG, "ResMgr: Restarting hibernation timer\n" );
-		// The recovery time is up, restart the hibernation timer
-	cancelRecoveryTimer();		
-	startHibernateTimer();
-}
-
-
-int
-ResMgr::startRecoveryTimer() {
-	cancelHibernateTimer();
-	int interval = ( 1 * HOUR );
-	m_recovery_tid = daemonCore->Register_Timer( 
-		interval, (TimerHandlercpp)&ResMgr::doHibernateRecovery,
-		"ResMgr::startRecoveryTimer()", this );
-	if( m_recovery_tid < 0 ) {
-		EXCEPT( "Can't register hibernation recovery timer" );
-	}
-	dprintf( D_FULLDEBUG, "Started hibernation recovery timer.\n" );
-	return TRUE;
-}
-
-
-void
-ResMgr::cancelRecoveryTimer() {
-	int rval;
-	if( m_recovery_tid != -1 ) {
-		rval = daemonCore->Cancel_Timer( m_recovery_tid );
-		if( rval < 0 ) {
-			dprintf( D_ALWAYS, "Failed to cancel hibernation recovery timer (%d): "
-				"daemonCore error\n", m_recovery_tid );
-		} else {
-			dprintf( D_FULLDEBUG, "Canceled hibernation recovery timer (%d)\n",
-				m_hibernate_tid );
-		}
-		m_recovery_tid = -1;
-	}
-}
 
 #endif /* HAVE_HIBERNATE */
 
@@ -2286,3 +2244,28 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 		}
 	}
 }
+
+int 
+shudown_resource_claims ( Resource *resource ) 
+{
+    return resource->killAllClaims ();
+}
+
+void 
+ResMgr::shutdownAllResources( void )
+{
+    walk ( &shudown_resource_claims );
+}
+
+int 
+restore_resource_claims ( Resource *resource ) 
+{
+    return resource->allowClaims ();
+}
+
+void 
+ResMgr::restoreAllResources( void )
+{
+    walk ( &restore_resource_claims );
+}
+

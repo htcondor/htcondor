@@ -63,7 +63,10 @@ public:
 		// Shutdown methods that deal w/ opportunistic *and* COD claims
 	int		shutdownAllClaims( bool graceful );
 	int		releaseAllClaims( void );
-	int		killAllClaims( void );
+	int		killAllClaims( void );    
+
+        // Restore the resource's "claimability"
+    int     allowClaims( void );
 
 		// Resource state methods
 	void	set_destination_state( State s ) { r_state->set_destination(s);};

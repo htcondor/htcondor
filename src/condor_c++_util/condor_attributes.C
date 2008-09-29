@@ -112,6 +112,7 @@ const char *ATTR_BUFFER_BLOCKS_USED	 = "BufferBlocksUsed";
 const char *ATTR_BUFFER_PREFETCH_SIZE	 = "BufferPrefetchSize";
 const char *ATTR_BYTES_SENT				 = "BytesSent";
 const char *ATTR_BYTES_RECVD				 = "BytesRecvd";
+const char *ATTR_CAN_HIBERNATE           = "CanHibernate";
 const char *ATTR_CAPABILITY				 = "Capability";
 const char *ATTR_CKPT_SERVER				 = "CkptServer";
 const char *ATTR_COD_CLAIMS               = "CODClaims";

@@ -110,7 +110,6 @@ public:
 	float		condor_load()	{ return m_condor_load; };
 	time_t		keyboard_idle() { return m_idle; };
 	time_t		console_idle()	{ return m_console_idle; };
-	char*		subnet()		{ return m_subnet; };
 
 private:
 		// Dynamic info
@@ -127,8 +126,6 @@ private:
 	bool			m_seen_keypress;    // Have we seen our first keypress yet?
 	int				m_clock_day;
 	int				m_clock_min;
-    char*			m_hardware_address;
-    char*           m_subnet_mask;
 		// Static info
 	int				m_num_cpus;
 	int				m_num_real_cpus;
@@ -137,7 +134,6 @@ private:
 	char*			m_opsys;
 	char*			m_uid_domain;
 	char*			m_filesystem_domain;
-	char*			m_subnet;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
 	char*			m_ckptpltfrm;
 

@@ -166,6 +166,7 @@ const struct Translation DCTranslation[] = {
 	{ "VM_UNIV_VMPID", VM_UNIV_VMPID },
 	{ "VM_UNIV_GUEST_IP", VM_UNIV_GUEST_IP },
 	{ "VM_UNIV_GUEST_MAC", VM_UNIV_GUEST_MAC },
+    { "MACHINE_WOKEN", MACHINE_WOKEN },
 	{ "NULL", 0 }
 };
 

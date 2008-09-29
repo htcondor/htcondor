@@ -163,6 +163,8 @@
 
 #define TRANSFER_QUEUE_REQUEST (SCHED_VERS+107) // request to do file transfer
 
+#define MACHINE_WOKEN (SCHED_VERS+108) // machine woken
+
 // HAD-related commands
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 #define HAD_SEND_ID_CMD                 (HAD_COMMANDS_BASE + 1)

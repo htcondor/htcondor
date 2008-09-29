@@ -30,10 +30,10 @@ RSC=rc.exe
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-OUTDIR=..\Debug
-INTDIR=..\Debug
+OUTDIR=.\..\Debug
+INTDIR=.\..\Debug
 # Begin Custom Macros
-OutDir=..\Debug
+OutDir=.\..\Debug
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -126,6 +126,7 @@ CLEAN :
 	-@erase "$(INTDIR)\KeyCache.obj"
 	-@erase "$(INTDIR)\killfamily.obj"
 	-@erase "$(INTDIR)\linebuffer.obj"
+	-@erase "$(INTDIR)\load_dll.obj"
 	-@erase "$(INTDIR)\log.obj"
 	-@erase "$(INTDIR)\log_transaction.obj"
 	-@erase "$(INTDIR)\lsa_mgr.obj"
@@ -140,6 +141,8 @@ CLEAN :
 	-@erase "$(INTDIR)\my_username.obj"
 	-@erase "$(INTDIR)\MyString.obj"
 	-@erase "$(INTDIR)\net_string_list.obj"
+	-@erase "$(INTDIR)\network_adapter.obj"
+	-@erase "$(INTDIR)\network_adapter.WINDOWS.obj"
 	-@erase "$(INTDIR)\ntsysinfo.obj"
 	-@erase "$(INTDIR)\perm.obj"
 	-@erase "$(INTDIR)\pgsqldatabase.obj"
@@ -158,6 +161,7 @@ CLEAN :
 	-@erase "$(INTDIR)\selector.obj"
 	-@erase "$(INTDIR)\set_user_priv_from_ad.obj"
 	-@erase "$(INTDIR)\setenv.obj"
+	-@erase "$(INTDIR)\setup_api_dll.obj"
 	-@erase "$(INTDIR)\sig_name.obj"
 	-@erase "$(INTDIR)\sqlquery.obj"
 	-@erase "$(INTDIR)\stat_info.obj"
@@ -277,6 +281,9 @@ LIB32_OBJS= \
 	"$(INTDIR)\get_full_hostname.obj" \
 	"$(INTDIR)\get_mysubsystem.obj" \
 	"$(INTDIR)\HashTable.obj" \
+	"$(INTDIR)\hibernation_manager.obj" \
+	"$(INTDIR)\hibernator.obj" \
+	"$(INTDIR)\hibernator.WINDOWS.obj" \
 	"$(INTDIR)\historysnapshot.obj" \
 	"$(INTDIR)\hook_utils.obj" \
 	"$(INTDIR)\iso_dates.obj" \
@@ -335,19 +342,20 @@ LIB32_OBJS= \
 	"$(INTDIR)\token_cache.obj" \
 	"$(INTDIR)\transfer_request.obj" \
 	"$(INTDIR)\translation_utils.obj" \
+	"$(INTDIR)\udp_waker.obj" \
 	"$(INTDIR)\uids.obj" \
 	"$(INTDIR)\usagemon.obj" \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\vm_univ_utils.obj" \
+	"$(INTDIR)\waker.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\hibernator.obj" \
-	"$(INTDIR)\hibernator.WINDOWS.obj" \
-	"$(INTDIR)\udp_waker.obj" \
-	"$(INTDIR)\waker.obj" \
-	"$(INTDIR)\hibernation_manager.obj"
+	"$(INTDIR)\network_adapter.WINDOWS.obj" \
+	"$(INTDIR)\network_adapter.obj" \
+	"$(INTDIR)\setup_api_dll.obj" \
+	"$(INTDIR)\load_dll.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -356,10 +364,10 @@ LIB32_OBJS= \
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-OUTDIR=..\Release
-INTDIR=..\Release
+OUTDIR=.\..\Release
+INTDIR=.\..\Release
 # Begin Custom Macros
-OutDir=..\Release
+OutDir=.\..\Release
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -452,6 +460,7 @@ CLEAN :
 	-@erase "$(INTDIR)\KeyCache.obj"
 	-@erase "$(INTDIR)\killfamily.obj"
 	-@erase "$(INTDIR)\linebuffer.obj"
+	-@erase "$(INTDIR)\load_dll.obj"
 	-@erase "$(INTDIR)\log.obj"
 	-@erase "$(INTDIR)\log_transaction.obj"
 	-@erase "$(INTDIR)\lsa_mgr.obj"
@@ -466,6 +475,8 @@ CLEAN :
 	-@erase "$(INTDIR)\my_username.obj"
 	-@erase "$(INTDIR)\MyString.obj"
 	-@erase "$(INTDIR)\net_string_list.obj"
+	-@erase "$(INTDIR)\network_adapter.obj"
+	-@erase "$(INTDIR)\network_adapter.WINDOWS.obj"
 	-@erase "$(INTDIR)\ntsysinfo.obj"
 	-@erase "$(INTDIR)\perm.obj"
 	-@erase "$(INTDIR)\pgsqldatabase.obj"
@@ -484,6 +495,7 @@ CLEAN :
 	-@erase "$(INTDIR)\selector.obj"
 	-@erase "$(INTDIR)\set_user_priv_from_ad.obj"
 	-@erase "$(INTDIR)\setenv.obj"
+	-@erase "$(INTDIR)\setup_api_dll.obj"
 	-@erase "$(INTDIR)\sig_name.obj"
 	-@erase "$(INTDIR)\sqlquery.obj"
 	-@erase "$(INTDIR)\stat_info.obj"
@@ -602,6 +614,9 @@ LIB32_OBJS= \
 	"$(INTDIR)\get_full_hostname.obj" \
 	"$(INTDIR)\get_mysubsystem.obj" \
 	"$(INTDIR)\HashTable.obj" \
+	"$(INTDIR)\hibernation_manager.obj" \
+	"$(INTDIR)\hibernator.obj" \
+	"$(INTDIR)\hibernator.WINDOWS.obj" \
 	"$(INTDIR)\historysnapshot.obj" \
 	"$(INTDIR)\hook_utils.obj" \
 	"$(INTDIR)\iso_dates.obj" \
@@ -660,19 +675,20 @@ LIB32_OBJS= \
 	"$(INTDIR)\token_cache.obj" \
 	"$(INTDIR)\transfer_request.obj" \
 	"$(INTDIR)\translation_utils.obj" \
+	"$(INTDIR)\udp_waker.obj" \
 	"$(INTDIR)\uids.obj" \
 	"$(INTDIR)\usagemon.obj" \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\vm_univ_utils.obj" \
+	"$(INTDIR)\waker.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\hibernator.obj" \
-	"$(INTDIR)\hibernator.WINDOWS.obj" \
-	"$(INTDIR)\udp_waker.obj" \
-	"$(INTDIR)\waker.obj" \
-	"$(INTDIR)\hibernation_manager.obj"
+	"$(INTDIR)\network_adapter.WINDOWS.obj" \
+	"$(INTDIR)\network_adapter.obj" \
+	"$(INTDIR)\setup_api_dll.obj" \
+	"$(INTDIR)\load_dll.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -1298,6 +1314,12 @@ SOURCE="..\src\condor_c++_util\linebuffer.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE="..\src\condor_c++_util\load_dll.C"
+
+"$(INTDIR)\load_dll.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE="..\src\condor_c++_util\log.C"
 
 "$(INTDIR)\log.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -1397,6 +1419,18 @@ SOURCE="..\src\condor_c++_util\MyString.C"
 SOURCE="..\src\condor_c++_util\net_string_list.C"
 
 "$(INTDIR)\net_string_list.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\network_adapter.C"
+
+"$(INTDIR)\network_adapter.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\network_adapter.WINDOWS.C"
+
+"$(INTDIR)\network_adapter.WINDOWS.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -1505,6 +1539,12 @@ SOURCE="..\src\condor_c++_util\set_user_priv_from_ad.C"
 SOURCE="..\src\condor_c++_util\setenv.C"
 
 "$(INTDIR)\setenv.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\setup_api_dll.C"
+
+"$(INTDIR)\setup_api_dll.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

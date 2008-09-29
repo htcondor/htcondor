@@ -25,6 +25,7 @@
  ***************************************************************/
 
 #include "hibernator.h"
+#include "network_adapter.h"
 
 /***************************************************************
  * HibernationManager class
@@ -58,15 +59,25 @@ public:
 		@return true if the machine will enter hibernation; otherwise, false.
 		@see canHibernate
 		@see wantsHibernate
+        @see canWake
 		*/
 	bool doHibernate ( int state ) const;
 
 	/** Determines if the power manager is capable of hibernating the machine.
-		@return true if the machine will can be hibernated; otherwise, false.
+		@return true if the machine can be hibernated; otherwise, false.
 		@see doHibernate
 		@see wantsHibernate
+        @see canWake
 		*/
 	bool canHibernate () const;
+
+    /** Determines if the network adapter is capable of waking the machine.
+		@return true if the machine can be woken; otherwise, false.
+		@see doHibernate
+		@see canHibernate
+        @see wantsHibernate
+		*/
+	bool canWake () const;
 
 	/** Determines if the user wants the machine to hibernate 
 	    (based on the configuration file).
@@ -74,6 +85,7 @@ public:
 		        hibernation; otherwise, false.
 		@see doHibernate
 		@see canHibernate
+        @see canWake
 		*/
 	bool wantsHibernate () const;
 
@@ -92,9 +104,14 @@ public:
 		*/
 	void update ();
 
+    /** Published the hibernation manager's information into 
+        the given ad */
+    void publish ( ClassAd &ad );
+
 private:
 	
 	HibernatorBase		*_hibernator;
+    NetworkAdapterBase  *_network_adpater;
 	int					_interval;	
 
 };

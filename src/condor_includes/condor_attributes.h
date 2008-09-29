@@ -52,6 +52,7 @@ extern const char * ATTR_BUFFER_BLOCKS_USED;
 extern const char * ATTR_BUFFER_PREFETCH_SIZE;
 extern const char * ATTR_BYTES_SENT;
 extern const char * ATTR_BYTES_RECVD;
+extern const char * ATTR_CAN_HIBERNATE;
 extern const char * ATTR_CAPABILITY;
 extern const char * ATTR_CKPT_SERVER;
 extern const char * ATTR_COD_CLAIMS;

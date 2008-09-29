@@ -68,24 +68,23 @@ public:
 	*/
 	virtual unsigned ipAddress (void) const = 0;
 
-    /** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware 
-        address
+    /** Returns the adapter's subnet
+		@return a string representation of the addapter's subnet mask
 	*/
 	virtual const char* subnet (void) const = 0;
 
-    /** Returns wether the interface is wakeable or not
-		@return true if the interface is wakeable
+    /** Ensures that the adapter can wake the machine.
+    @return true if the adapter can wake the machine; otherwise, false.
 	*/
 	virtual bool wakeAble (void) const = 0;
 
-    /** Returns wether the interface was found or not
-		@return true if the interface is found
+    /** Checks that the adapter actually exists
+        @returns true if the adapter exists on the machine; 
+        otherwise, false.
 	*/
 	virtual bool exists (void) const = 0;
 	
 	//@}
-
 
     /** Published the network addapter's information into the given ad
         */

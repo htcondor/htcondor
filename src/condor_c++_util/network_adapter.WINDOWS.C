@@ -50,20 +50,20 @@ DEFINE_GUID(GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f, 0x11d0, 0x8d,
  * WindowsNetworkAdapter class
  ***************************************************************/
 
-WindowsNetworkAdapter::WindowsNetworkAdapter () throw () 
+WindowsNetworkAdapter::WindowsNetworkAdapter (void) throw () 
 : _wake_able ( false ) {
     strncpy ( _ip_address, my_ip_string (), IP_STRING_BUF_SIZE );
     initialize ();
 }
 
 WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR ip_addr,
-											   unsigned int /*ip*/ ) throw ()
+											   unsigned int /*ip*/) throw ()
 : _wake_able ( false ) {
     strncpy ( _ip_address, ip_addr, IP_STRING_BUF_SIZE );
     initialize (); 
 }
 
-WindowsNetworkAdapter::~WindowsNetworkAdapter () throw () {
+WindowsNetworkAdapter::~WindowsNetworkAdapter (void) throw () {
 }
 
 /***************************************************************
@@ -71,7 +71,7 @@ WindowsNetworkAdapter::~WindowsNetworkAdapter () throw () {
  ***************************************************************/
 
 bool
-WindowsNetworkAdapter::initialize () {
+WindowsNetworkAdapter::initialize (void) {
 
     PIP_ADAPTER_INFO    adapters    = NULL,
                         current     = NULL;
@@ -172,17 +172,17 @@ WindowsNetworkAdapter::initialize () {
 }
 
 const char* 
-WindowsNetworkAdapter::hardwareAddress () const {
+WindowsNetworkAdapter::hardwareAddress (void) const {
     return _hardware_address;
 }
 
 const char* 
-WindowsNetworkAdapter::subnet () const {
+WindowsNetworkAdapter::subnet (void) const {
     return _subnet;
 }
 
 bool 
-WindowsNetworkAdapter::wakeAble () const {
+WindowsNetworkAdapter::wakeAble (void) const {
     return _wake_able;
 }
 
@@ -197,7 +197,7 @@ processPowerData ( IN PBYTE p ) {
 }
 
 PCM_POWER_DATA 
-WindowsNetworkAdapter::getPowerData () const {
+WindowsNetworkAdapter::getPowerData (void) const {
 
     return (PCM_POWER_DATA) getRegistryProperty ( 
         SPDRP_DEVICE_POWER_DATA, &processPowerData );
