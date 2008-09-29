@@ -240,7 +240,7 @@ public:
 	void	set_feature( ResourceFeature feature ) { m_resource_feature = feature; }
 	ResourceFeature	get_feature( void ) { return m_resource_feature; }
 
-	void set_parent( Resource* rip ) { m_parent = rip; }
+	void set_parent( Resource* rip );
 
 private:
 	ResourceFeature m_resource_feature;

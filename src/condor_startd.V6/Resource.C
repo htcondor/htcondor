@@ -169,6 +169,18 @@ Resource::~Resource()
 }
 
 
+void
+Resource::set_parent( Resource* rip )
+{
+	m_parent = rip;
+
+		// If we have a parent, we consume its resources
+	if( m_parent ) {
+		*(m_parent->r_attr) -= *(r_attr);
+	}
+}
+
+
 int
 Resource::retire_claim( void )
 {
