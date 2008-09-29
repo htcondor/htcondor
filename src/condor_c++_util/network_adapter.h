@@ -24,6 +24,7 @@
  * Headers
  ***************************************************************/
 
+#include "MyString.h"
 #include "condor_classad.h"
 
 /***************************************************************
@@ -35,6 +36,25 @@ class NetworkAdapterBase
 
 public:
 
+	/* The following are the wake-on-lan capability bits
+	*/
+	enum WOL_BITS {
+		WOL_NONE		= 0,		// No WOL cababilities
+		WOL_PHYSICAL	= (1 << 0),	// Supports physical packet
+		WOL_UCAST		= (1 << 1),	// Supports unicast packet
+		WOL_MCAST		= (1 << 2),	// Supports multicast packet
+		WOL_BCAST		= (1 << 3),	// Supports broadcast packet
+		WOL_ARP			= (1 << 4),	// Supports ARP packet
+		WOL_MAGIC		= (1 << 5),	// Supports UDD "magic" packet
+		WOL_MAGICSECURE	= (1 << 6),	// only meaningful if WOL_MAGIC
+
+		WOL_SUPPORTED	= ( WOL_MAGIC )	// Our currently supported mask
+	};
+	enum WOL_TYPE {
+		WOL_HW_SUPPORT,
+		WOL_HW_ENABLED
+	};
+			
 	/** @name Instantiation. 
 	*/
 	//@{
@@ -73,10 +93,67 @@ public:
 	*/
 	virtual const char* subnet (void) const = 0;
 
+	
     /** Ensures that the adapter can wake the machine.
-    @return true if the adapter can wake the machine; otherwise, false.
+		@return true if the adapter can wake the machine; otherwise, false.
 	*/
-	virtual bool wakeAble (void) const = 0;
+	bool isWakeSupported (void) const
+		{ return m_wol_support_bits & WOL_SUPPORTED; };
+
+	/** Returns the mask of WOL bits that the hardware supports
+		@return the bit mask (0==none)
+	 */
+	unsigned wakeSupportedBits (void) const
+		{ return m_wol_support_bits; };
+
+	/** Returns a string list of the supported types WOL types
+		@return comma separated list
+	 */
+	MyString & wakeSupportedString ( MyString &s) const
+		{ return getWolString( m_wol_support_bits, s ); };
+
+	/** Returns a string list of the supported types WOL types
+		@return comma separated list
+	 */
+	const char *wakeSupportedString ( void ) const {
+		static char buf[1024];
+		return getWolString( m_wol_support_bits, buf, sizeof(buf) );
+	};
+
+
+    /** Ensures that the adapter "waking" is enabled.
+		@return true if the adapter waking is enabled; otherwise, false.
+	*/
+	bool isWakeEnabled (void) const
+		{ return m_wol_enable_bits & WOL_SUPPORTED; };
+
+	/** Returns the mask of WOL bits that are enabled
+		@return the bit mask (0==none)
+	 */
+	unsigned wakeEnabledBits (void) const
+		{ return m_wol_enable_bits; };
+
+	/** Returns a string list of the supported types WOL types
+		@return comma separated list
+	 */
+	MyString & wakeEnabledString ( MyString &s) const
+		{ return getWolString( m_wol_enable_bits, s ); };
+
+	/** Returns a string list of the supported types WOL types
+		@return comma separated list
+	 */
+	const char *wakeEnabledString ( void ) const {
+		static char buf[1024];
+		return getWolString( m_wol_enable_bits, buf, sizeof(buf) );
+	};
+
+
+	/** Returns whether this whole combination is wakable or not
+		@return true if this adaptor is wakable as configured
+	*/
+	bool isWakeable( void ) const
+		{ return (m_wol_support_bits & m_wol_enable_bits) ? true : false; };
+	
 
     /** Checks that the adapter actually exists
         @returns true if the adapter exists on the machine; 
@@ -103,7 +180,28 @@ public:
 	*/
 	static NetworkAdapterBase* createNetworkAdapter ( const char *sinful );
 
-private:
+
+  protected:
+	void		wolResetSupportBits( void )
+		{ m_wol_support_bits = 0; };
+	unsigned	wolEnableSupportBit( WOL_BITS bit )
+		{ m_wol_support_bits|= bit; return m_wol_support_bits; };
+
+	void		wolResetEnableBits( void )
+		{ m_wol_enable_bits = 0; };
+	unsigned	wolEnableEnableBit( WOL_BITS bit )
+		{ m_wol_enable_bits|= bit; return m_wol_enable_bits; };
+
+	unsigned	wolSetBit( WOL_TYPE type, WOL_BITS bit );
+
+	// Get string representaions of the supported / enabled bits
+	MyString & getWolString( unsigned bits, MyString &s ) const;
+	char *getWolString( unsigned bits, char *buf, int bufsize ) const;
+
+	
+  private:
+	unsigned	m_wol_support_bits;
+	unsigned	m_wol_enable_bits;
 	bool		m_initialization_status;
 
 	bool doInitialize( void );

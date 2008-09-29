@@ -18,6 +18,7 @@
 ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_uid.h"
 #include "internet.h"
 #include "network_adapter.linux.h"
 
@@ -195,26 +196,66 @@ LinuxNetworkAdapter::detectWOL ( void )
 	wolinfo.cmd = ETHTOOL_GWOL;
 	getName( ifr );
 	ifr.ifr_data = (caddr_t)(& wolinfo);
+
+	priv_state saved_priv = set_priv( PRIV_ROOT );
 	err = ioctl(sock, SIOCETHTOOL, &ifr);
+	set_priv( saved_priv );
+
 	if ( err < 0 ) {
 		derror( "ioctl(SIOCETHTOOL/GWOL)" );
-		m_wolopts = 0;
+		m_wol_support_mask = 0;
+		m_wol_enable_mask = 0;
 	}
 	else {
-		m_wolopts = wolinfo.supported;
+		m_wol_support_mask = wolinfo.supported;
+		m_wol_enable_mask = wolinfo.wolopts;
 		ok = true;
 	}
 
 	// For now, all we support is the "magic" packet
-	if (m_wolopts & WAKE_MASK) {
-		m_wol = true;
-	}
+	setWolBits( NetworkAdapterBase::WOL_HW_SUPPORT, m_wol_support_mask );
+	setWolBits( NetworkAdapterBase::WOL_HW_ENABLED, m_wol_enable_mask );
 	dprintf( D_FULLDEBUG, "%s supports Wake-on: %s (raw: 0x%02x)\n",
-			 m_if_name, m_wol ? "yes" : "no", m_wolopts );
+			 m_if_name, m_wol_supported ? "yes" : "no", m_wol_support_mask );
+	dprintf( D_FULLDEBUG, "%s enabled Wake-on: %s (raw: 0x%02x)\n",
+			 m_if_name, m_wol_enabled ? "yes" : "no", m_wol_enable_mask );
 
 	close( sock );
 	return ok;
 #  else
 	return false;
 #  endif
+}
+
+struct WolTable
+{
+	unsigned						bit_mask;
+	NetworkAdapterBase::WOL_BITS	wol_bits;
+};
+static WolTable wol_table [] =
+{
+	{ WAKE_PHY,			NetworkAdapterBase::WOL_PHYSICAL },
+	{ WAKE_UCAST,		NetworkAdapterBase::WOL_UCAST },
+	{ WAKE_MCAST,		NetworkAdapterBase::WOL_MCAST },
+	{ WAKE_BCAST,		NetworkAdapterBase::WOL_BCAST },
+	{ WAKE_ARP,			NetworkAdapterBase::WOL_ARP }, 
+	{ WAKE_MAGIC,		NetworkAdapterBase::WOL_MAGIC },
+	{ WAKE_MAGICSECURE,	NetworkAdapterBase::WOL_MAGICSECURE },
+	{ 0,				NetworkAdapterBase::WOL_NONE }
+};
+
+void
+LinuxNetworkAdapter::setWolBits ( WOL_TYPE type, unsigned bits )
+{
+	if ( type == WOL_HW_SUPPORT ) {
+		wolResetSupportBits( );
+	}
+	else {
+		wolResetEnableBits( );
+	}
+	for( unsigned bit = 0;  wol_table[bit].bit_mask;  bit++ ) {
+		if ( wol_table[bit].bit_mask & bits ) {
+			wolSetBit( type, wol_table[bit].wol_bits );
+		}
+	}
 }

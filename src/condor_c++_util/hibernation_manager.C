@@ -102,8 +102,7 @@ HibernationManager::canWake () const
 {
     bool can = false;
     if ( _network_adpater ) {
-        can = _network_adpater->exists ()
-            && _network_adpater->wakeAble ();
+        can = _network_adpater->exists () && _network_adpater->isWakeable ();
     }
     return can;
 }

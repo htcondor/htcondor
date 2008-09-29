@@ -34,7 +34,6 @@
 UnixNetworkAdapter::UnixNetworkAdapter ( unsigned int ip_addr ) throw ()
 {
 	m_ip_addr = ip_addr;
-	m_wol = false;
 	m_found = false;
 	resetName( true );
 

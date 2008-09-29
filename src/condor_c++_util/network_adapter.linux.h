@@ -57,11 +57,14 @@ public:
 	//@}
 
 private:
-	int		m_wolopts;
+	unsigned	m_wol_support_mask;
+	unsigned	m_wol_enable_mask;
 
 	// Internal methods
 	virtual bool findAdapter( void );
 	virtual bool detectWOL( void );
+
+	void setWolBits ( WOL_TYPE type, unsigned bits );
 
 };
 

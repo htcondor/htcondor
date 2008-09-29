@@ -87,7 +87,18 @@ main(int argc, const char **argv)
 	if ( !tmp || !strlen(tmp) ) tmp = "<NONE>";
 	printf( "subnet: %s\n", tmp );
 
-	printf( "wakable: %s\n", net->wakeAble() ? "YES" : "NO" );
+	printf( "wakable: %s\n", net->isWakeable() ? "YES" : "NO" );
+
+	MyString	tmpstr;
+	net->wakeSupportedString( tmpstr );
+	printf( "wake support flags: %s\n", tmpstr.GetCStr() );
+
+	net->wakeEnabledString( tmpstr );
+	printf( "wake enable flags: %s\n", tmpstr.GetCStr() );
+
+	ClassAd	ad;
+	net->publish( ad );
+	ad.fPrint( stdout );
 
 	if ( result != 0 && opts.m_verbosity >= 1 ) {
 		fprintf(stderr, "test_network_adapter FAILED\n");

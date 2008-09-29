@@ -37,6 +37,8 @@
  ***************************************************************/
 NetworkAdapterBase::NetworkAdapterBase (void) throw ()
 {
+	wolResetSupportBits( );
+	wolResetEnableBits( );
 }
 
 NetworkAdapterBase::~NetworkAdapterBase (void) throw ()
@@ -77,5 +79,69 @@ NetworkAdapterBase::publish ( ClassAd &ad )
 {
     ad.Assign ( ATTR_HARDWARE_ADDRESS, hardwareAddress () );
     ad.Assign ( ATTR_SUBNET, subnet () );
-	ad.Assign ( ATTR_IS_WAKE_ABLE, wakeAble () );
+	ad.Assign ( ATTR_IS_WAKE_SUPPORTED, isWakeSupported () );
+	ad.Assign ( ATTR_IS_WAKE_ENABLED, isWakeEnabled () );
+	ad.Assign ( ATTR_IS_WAKEABLE, isWakeable() );
+
+	MyString	tmp;
+	ad.Assign ( ATTR_WAKE_SUPPORTED_FLAGS, wakeSupportedString(tmp) );
+	ad.Assign ( ATTR_WAKE_ENABLED_FLAGS, wakeEnabledString(tmp) );
 }
+
+unsigned
+NetworkAdapterBase::wolSetBit( WOL_TYPE type, WOL_BITS bit )
+{
+	if ( WOL_HW_SUPPORT == type ) {
+		return wolEnableSupportBit( bit );
+	}
+	else if ( WOL_HW_ENABLED == type ) {
+		return wolEnableEnableBit( bit );
+	}
+	return 0;
+}
+
+struct WolTable
+{
+	NetworkAdapterBase::WOL_BITS	 wol_bits;
+	const char						*string;
+};
+static WolTable wol_table [] =
+{
+	{ NetworkAdapterBase::WOL_PHYSICAL,		"Physical Packet" },
+	{ NetworkAdapterBase::WOL_UCAST,		"UniCast Packet", },
+	{ NetworkAdapterBase::WOL_MCAST,		"MultiCast Packet" },
+	{ NetworkAdapterBase::WOL_BCAST,		"BroadCast Packet" },
+	{ NetworkAdapterBase::WOL_ARP,			"ARP Packet" }, 
+	{ NetworkAdapterBase::WOL_MAGIC,		"Magic Packet" },
+	{ NetworkAdapterBase::WOL_MAGICSECURE,	"Secure Magic Packet" },
+	{ NetworkAdapterBase::WOL_NONE,			NULL },
+
+};
+
+char *
+NetworkAdapterBase::getWolString(unsigned bits, char *buf, int bufsize) const
+{
+	MyString	s;
+	getWolString( bits, s );
+	strncpy( buf, s.GetCStr(), bufsize );
+	buf[bufsize-1] = '\0';
+	return buf;
+}
+
+MyString &
+NetworkAdapterBase::getWolString ( unsigned bits, MyString &s ) const
+{
+	s = "";
+	int	count = 0;
+
+	for( unsigned bit = 0;  wol_table[bit].string;  bit++ ) {
+		if ( wol_table[bit].wol_bits & bits ) {
+			if ( count++ != 0 ) {
+				s += ",";
+			}
+			s += wol_table[bit].string;
+		}
+	}
+	return s;
+}
+

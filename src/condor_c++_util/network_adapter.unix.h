@@ -75,12 +75,6 @@ public:
 	*/
 	const char *subnet (void) const { return m_netmask_str; };
 
-    /** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware 
-        address
-	*/
-	virtual bool wakeAble (void) const { return m_wol; };
-
     /** Returns wether the interface was found or not
 		@return true if the interface is found
 	*/
@@ -99,7 +93,9 @@ protected:
 
 	unsigned			 m_ip_addr;
 	const char			*m_if_name;
-	bool				 m_wol;
+
+	bool				 m_wol_supported;
+	bool				 m_wol_enabled;
 
 	// HW address & string rep of it
     const char			 m_hw_addr[32];
