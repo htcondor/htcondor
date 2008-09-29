@@ -24,6 +24,10 @@
 #include "user_proc.h"
 #include "basename.h"
 
+#if defined ( WIN32 )
+#include "profile.WINDOWS.h"
+#endif
+
 /** This is a generic sort of "OS" process, the base for other types
 	of jobs.
 
@@ -110,7 +114,7 @@ private:
 	bool m_using_priv_sep;
 
 #if defined ( WIN32 )
-    bool m_loaded_user_profile;
+    OwnerProfile owner_profile_;
 #endif
 
 };

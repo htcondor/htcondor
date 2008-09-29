@@ -341,8 +341,11 @@ char	*CronPrepTime	= "cron_prep_time";
 
 #if defined(WIN32)
 char	*RunAsOwner = "run_as_owner";
-char	*LoadUserProfile = "load_user_profile";
+char	*LoadProfile = "load_profile";
 #endif
+
+// Concurrency Limit parameters
+char    *ConcurrencyLimits = "concurrency_limits";
 
 //
 // VM universe Parameters
@@ -412,7 +415,7 @@ void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void 	SetTDP();
 #if defined(WIN32)
 void	SetRunAsOwner();
-void    SetLoadUserProfile();
+void    SetLoadProfile();
 #endif
 void	SetRank();
 void 	SetIWD();
@@ -467,6 +470,7 @@ void SetParallelStartupScripts(); //JDB
 void SetMaxJobRetirementTime();
 bool mightTransfer( int universe );
 bool isTrue( const char* attr );
+void SetConcurrencyLimits();
 void SetVMParams();
 void SetVMRequirements();
 bool parse_vm_option(char *value, bool& onoff);
@@ -4264,27 +4268,33 @@ SetRunAsOwner()
 }
 
 void 
-SetLoadUserProfile()
+SetLoadProfile()
 {
-    char *load_user_profile = condor_param (
-        LoadUserProfile, 
-        ATTR_JOB_LOAD_USER_PROFILE );
+    char *load_profile_param = condor_param (
+        LoadProfile, 
+        ATTR_JOB_LOAD_PROFILE );
 
-    if ( NULL == load_user_profile ) {
+    if ( NULL == load_profile_param ) {
         return;
     }
 
-    if ( !isTrue ( load_user_profile ) ) {
-        free ( load_user_profile );
+    if ( !isTrue ( load_profile_param ) ) {
+        free ( load_profile_param );
         return;
     }
-    free ( load_user_profile );
-
+    
     MyString buffer;
-    buffer.sprintf ( "%s = True", ATTR_JOB_LOAD_USER_PROFILE );
+    buffer.sprintf ( "%s = True", ATTR_JOB_LOAD_PROFILE );
     InsertJobExpr ( buffer );
 
-    /* SetRunAsOwner() has already made sure we have a CredD */
+    /* If we've been called it means that SetRunAsOwner() has already 
+    made sure we have a CredD.  This will become more important when
+    we allow random users to load their profile (which will only at 
+    that point be the user's registry).  The limitation is to stop
+    heavy weight users profiles; you know the ones: they have20+ GBs 
+    of music, thousands of pictures and a few random movies from 
+    caching their profile on the local machine (which may be someone's
+    laptop, which may already be running low on disk-space). */
 }
 #endif
 
@@ -5823,6 +5833,7 @@ queue(int num)
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
 #if defined(WIN32)
 		SetRunAsOwner();
+        SetLoadProfile();
 #endif
 		SetPerFileEncryption();  // must be called _before_ SetRequirements()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
@@ -5863,6 +5874,7 @@ queue(int num)
 		SetJarFiles();
 		SetJavaVMArgs();
 		SetParallelStartupScripts(); //JDB
+		SetConcurrencyLimits();
 		SetVMParams();
 
 			// SetForcedAttributes should be last so that it trumps values
@@ -7257,6 +7269,29 @@ void SetVMRequirements()
 	buffer.sprintf( "%s = %s", ATTR_REQUIREMENTS, vmanswer.Value());
 	JobRequirements = vmanswer;
 	InsertJobExpr (buffer);
+}
+
+
+void
+SetConcurrencyLimits()
+{
+	MyString tmp = condor_param_mystring(ConcurrencyLimits, NULL);
+
+	if (!tmp.IsEmpty()) {
+		char *str;
+
+		tmp.strlwr();
+
+		StringList list(tmp.GetCStr());
+
+		list.qsort();
+
+		str = list.print_to_string();
+		tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
+		InsertJobExpr(tmp.GetCStr());
+
+		free(str);
+	}
 }
 
 // this function must be called after SetUniverse

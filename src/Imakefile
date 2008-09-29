@@ -19,7 +19,7 @@
 #define CreddProgs
 #endif
 
-#if HAVE_EXT_CLASSADS
+#if HAVE_EXT_CLASSADS && WANT_QUILL
 #define JobRouterProgs schedd.V7
 #else
 #define JobRouterProgs
@@ -49,13 +49,11 @@
 
 #ifdef WANT_QUILL
 #define QuillProgs quill
-#else
-#define QuillProgs
-#endif
-
-#ifdef WANT_TT
+#define LibQuill condor_quill/libquill.a 
 #define TTProgs tt dbmsd
 #else
+#define QuillProgs
+#define LibQuill
 #define TTProgs
 #endif
 
@@ -65,16 +63,22 @@
 #define EC2
 #endif
 
+#if HAVE_EXT_GLOBUS
+#define GlobusGahps GT2_GAHP NORDUGRID_GAHP GT4_GAHP GT42_GAHP
+#else
+#define GlobusGahps
+#endif
+
 #define Programs \
 		procapi sysapi unit_tests accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools KbddProgs collector.V6 dagman userlog Eventd \
-		gridmanager globus starter.V6.1 shadow.V6.1 dcskel c-gahp had \
+		gridmanager starter.V6.1 shadow.V6.1 dcskel c-gahp had \
 		CreddProgs StorkProgs \
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
-		JobRouterProgs
+		EC2 JobRouterProgs GlobusGahps startd_factory
 
 #define Libraries \
 		util_lib daemon_core.V6 daemon_client classad c++_util	\
@@ -83,8 +87,9 @@
 		condor_schedd.V6/libqmgmt.a				\
 		condor_accountant.V6/libacct.a StdUnvLibs NetmanLibs	\
 		condor_procd/procd_client.a \
-		condor_privsep/privsep_client.a condor_quill/libquill.a \
+		condor_privsep/privsep_client.a LibQuill \
 		chirp AnalysisLibs
+
 
 #if HAS_STATIC
 #define StaticDirectories \
@@ -229,9 +234,6 @@ condor_object_target(starter.V5)
 
 #ifdef WANT_QUILL
 condor_object_target(quill)
-#endif
-
-#ifdef WANT_TT
 condor_object_target(tt)
 condor_object_target(dbmsd)
 #endif
@@ -267,7 +269,6 @@ condor_object_target(daemon_client)
 condor_object_target(prio)
 condor_object_target(scripts)
 condor_object_target(gridmanager)
-condor_object_target(globus)
 
 #if HAVE_EXT_CLASSADS && HAVE_EXT_GLOBUS
 	condor_object_target(credd)
@@ -281,6 +282,7 @@ condor_object_target(c-gahp)
 condor_object_target(procd)
 condor_object_target(privsep)
 condor_object_target(dcskel)
+condor_object_target(startd_factory)
 condor_object_target(vm-gahp)
 
 #if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP
@@ -305,6 +307,13 @@ object_dir_target(condor_bypass)
 object_dir_target(condor_sdk)
 #if WANT_STORK
 object_target(Stork,stork)
+#endif
+
+#if HAVE_EXT_GLOBUS
+object_target(GT2_GAHP,gt2_gahp)
+object_target(GT4_GAHP,gt4_gahp)
+object_target(GT42_GAHP,gt42_gahp)
+object_target(NORDUGRID_GAHP,nordugrid_gahp)
 #endif
 
 object_target(DeploymentTools,deployment_tools)
@@ -379,8 +388,6 @@ pure_target(condor_collector.V6,condor_collector.pure)
 pure_target(condor_negotiator.V6,condor_negotiator.pure)
 pure_target(condor_dagman,condor_dagman.pure)
 
-pure_target(condor_tt,condor_tt.pure)
-
 #if HAS_EXTERNALS
 
 #if HAVE_EXT_ZLIB
@@ -400,28 +407,16 @@ ext_target(EXT_GLIBC_VERSION,$(NULL))
 ext_target(EXT_KERBEROS_VERSION,$(NULL))
 #endif
 
+#if HAVE_EXT_OPENSSL
+ext_target(EXT_OPENSSL_VERSION,$(NULL))
+#endif
+
 #if HAVE_EXT_GLOBUS
-ext_target(EXT_GLOBUS_VERSION,$(NULL))
-#endif
-
-#if HAVE_EXT_GAHP
-ext_target(EXT_GAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
-#endif
-
-#if HAVE_EXT_GT4GAHP
-ext_target(EXT_GT4GAHP_VERSION,$(NULL))
-#endif
-
-#if HAVE_EXT_GT42GAHP
-ext_target(EXT_GT42GAHP_VERSION,$(NULL))
+ext_target(EXT_GLOBUS_VERSION,$(EXT_TRIGGER)/$(EXT_OPENSSL_VERSION))
 #endif
 
 #if HAVE_EXT_UNICOREGAHP
 ext_target(EXT_UNICOREGAHP_VERSION,$(NULL))
-#endif
-
-#if HAVE_EXT_NORDUGRIDGAHP
-ext_target(EXT_NORDUGRIDGAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
 #endif
 
 #if HAVE_EXT_BLAHP
@@ -437,7 +432,7 @@ ext_target(EXT_CLASSADS_VERSION, $(NULL))
 #endif
 
 #if HAVE_EXT_GSOAP
-ext_target(EXT_GSOAP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
+ext_target(EXT_GSOAP_VERSION,$(EXT_TRIGGER)/$(EXT_OPENSSL_VERSION))
 #endif
 
 #if HAVE_EXT_PCRE

@@ -34,10 +34,8 @@
 #include "oracledatabase.h"
 #endif
 
-#include "pgsqldatabase.h"
-
 #ifdef WANT_QUILL
-
+#include "pgsqldatabase.h"
 #include "jobqueuesnapshot.h"
 
 static ClassAd* getDBNextJobByConstraint(const char* constraint, JobQueueSnapshot  *jqSnapshot);

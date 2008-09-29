@@ -21,10 +21,6 @@
 #ifndef _PROCD_COMMON_H
 #define _PROCD_COMMON_H
 
-#include "../condor_procapi/procapi.h"
-
-birthday_t procd_atob(char*);
-
-void send_signal(procInfo*, int);
+void send_signal(pid_t, int);
 
 #endif

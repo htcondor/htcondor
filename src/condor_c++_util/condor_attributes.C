@@ -134,6 +134,9 @@ const char *ATTR_CLUSTER_ID               = "ClusterId";
 const char *ATTR_AUTO_CLUSTER_ID			 = "AutoClusterId";
 const char *ATTR_AUTO_CLUSTER_ATTRS		 = "AutoClusterAttrs";
 const char *ATTR_COMPLETION_DATE			 = "CompletionDate";
+const char *ATTR_MATCHED_CONCURRENCY_LIMITS = "MatchedConcurrencyLimits";
+const char *ATTR_CONCURRENCY_LIMITS = "ConcurrencyLimits";
+const char *ATTR_PREEMPTING_CONCURRENCY_LIMITS = "PreemptingConcurrencyLimits";
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
 #define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
 const char *ATTR_CONSOLE_IDLE			 = "ConsoleIdle";
@@ -288,6 +291,7 @@ const char *ATTR_JOB_JAVA_VM_ARGS1        = "JavaVMArgs";
 const char *ATTR_JOB_JAVA_VM_ARGS2        = "JavaVMArguments";
 const char *ATTR_ORIG_JOB_IWD				 = "OrigIwd";
 const char *ATTR_JOB_REMOTE_IWD			 = "RemoteIwd";
+const char *ATTR_JOB_LOAD_PROFILE           = "LoadProfile";
 const char *ATTR_JOB_RUNAS_OWNER			 = "RunAsOwner";
 const char *ATTR_JOB_LOAD_USER_PROFILE   = "LoadUserProfile";
 const char *ATTR_JOB_LOCAL_CPU			 = "LocalCpu";
@@ -662,12 +666,13 @@ const char *ATTR_SEC_PACKET_COUNT         = "PacketCount";
 const char *ATTR_SEC_NEGOTIATION          = "OutgoingNegotiation";
 const char *ATTR_SEC_VALID_COMMANDS       = "ValidCommands";
 const char *ATTR_SEC_SESSION_DURATION     = "SessionDuration";
+const char *ATTR_SEC_SESSION_EXPIRES      = "SessionExpires";
 const char *ATTR_SEC_USER                 = "User";
+const char *ATTR_SEC_MY_REMOTE_USER_NAME  = "MyRemoteUserName";
 const char *ATTR_SEC_NEW_SESSION          = "NewSession";
 const char *ATTR_SEC_USE_SESSION          = "UseSession";
 const char *ATTR_SEC_COOKIE               = "Cookie";
-extern const char * ATTR_SEC_AUTHENTICATED_USER = "AuthenticatedUser";
-extern const char * ATTR_SEC_TRIED_AUTHENTICATION = "TriedAuthentication";
+const char * ATTR_SEC_TRIED_AUTHENTICATION = "TriedAuthentication";
 
 const char *ATTR_MULTIPLE_TASKS_PER_PVMD  = "MultipleTasksPerPvmd";
 

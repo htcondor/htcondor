@@ -73,6 +73,10 @@ JobRouter::JobRouter(Scheduler *scheduler): m_jobs(5000,hashFuncStdString,reject
 
 	m_router_lock_fd = -1;
 	m_router_lock = NULL;
+
+#if HAVE_JOB_HOOKS
+	m_hook_mgr = NULL;
+#endif
 }
 
 JobRouter::~JobRouter() {
@@ -95,12 +99,23 @@ JobRouter::~JobRouter() {
 	if( m_job_router_refresh_timer >= 0 ) {
 		daemonCore->Cancel_Timer( m_job_router_refresh_timer );
 	}
+
+#if HAVE_JOB_HOOKS
+        if (NULL != m_hook_mgr)
+	{
+		delete m_hook_mgr;
+	}
+#endif
 }
 
 #include "condor_new_classads.h"
 
 void
 JobRouter::init() {
+#if HAVE_JOB_HOOKS
+	m_hook_mgr = new JobRouterHookMgr;
+	m_hook_mgr->initialize();
+#endif
 	config();
 	GetInstanceLock();
 }
@@ -171,6 +186,10 @@ void
 JobRouter::config() {
 	bool allow_empty_requirements = false;
 	m_enable_job_routing = true;
+
+#if HAVE_JOB_HOOKS
+	m_hook_mgr->reconfig();
+#endif
 
 	m_job_router_entries_refresh = param_integer(PARAM_JOB_ROUTER_ENTRIES_REFRESH,0);
 	if( m_job_router_refresh_timer >= 0 ) {
@@ -336,7 +355,7 @@ JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *p
 
 	dprintf(D_FULLDEBUG,"Parsing %s=%s\n",param_name,routing_string.c_str());
 
-	unsigned offset = 0;
+	int offset = 0;
 	while(1) {
 		if(offset >= routing_string.size()) break;
 
@@ -1019,11 +1038,48 @@ void
 JobRouter::SubmitJob(RoutedJob *job) {
 	if(job->state != RoutedJob::CLAIMED) return;
 
+#if HAVE_JOB_HOOKS
+	if (NULL != m_hook_mgr)
+	{
+	        std::string route_info;
+
+	        // Retrieve the routing definition
+	        JobRoute *route = GetRouteByName(job->route_name.c_str());
+        	if(!route) {
+        		dprintf(D_FULLDEBUG,"JobRouter (%s): Unable to retrieve route information for translation hook.\n",job->JobDesc().c_str());
+        		GracefullyRemoveJob(job);
+        		return;
+        	}
+
+		route_info = route->RouteString();
+		int rval = m_hook_mgr->hookTranslateJob(job, route_info);
+		switch (rval)
+		{
+			case -1:    // Error
+					// No need to print status messages
+					// as the lower levels should be
+					// handling that.
+				return;
+				break;
+			case 0:    // Hook not configured
+				break;
+			case 1:    // Spawned the hook
+					// Done for now.  Let the handler call
+					// FinishSubmitJob() when the hook
+					// exits.
+				return;
+				break;
+		}
+	}
+#endif
 	job->dest_ad = job->src_ad;
 	VanillaToGrid::vanillaToGrid(&job->dest_ad,job->target_universe,job->grid_resource.c_str(),job->is_sandboxed);
+	FinishSubmitJob(job);
+}
 
-	// Now we apply any edits to the job ClassAds as defined in the route ad.
-
+void
+JobRouter::FinishSubmitJob(RoutedJob *job) {
+	// Apply any edits to the job ClassAds as defined in the route ad.
 	JobRoute *route = GetRouteByName(job->route_name.c_str());
 	if(!route) {
 		dprintf(D_FULLDEBUG,"JobRouter (%s): route has been removed before job could be submitted.\n",job->JobDesc().c_str());
@@ -1210,9 +1266,52 @@ static bool ClassAdHasDirtyAttributes(classad::ClassAd *ad) {
 }
 
 void
+JobRouter::UpdateJobStatus(RoutedJob *job) {
+	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
+	ad_collection->UpdateClassAd(job->dest_key, &job->dest_ad);
+	FinishCheckSubmittedJobStatus(job);
+}
+
+void
 JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 	if(job->state != RoutedJob::SUBMITTED) return;
 
+#if HAVE_JOB_HOOKS
+	if (NULL != m_hook_mgr)
+	{
+		// Update the job ad incase it's been updated elsewhere
+		classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
+		classad::ClassAd *ad = ad_collection->GetClassAd(job->dest_key);
+		if (NULL != ad)
+		{
+			job->SetDestJobAd(ad);
+		}
+		int rval = m_hook_mgr->hookUpdateJobInfo(job);
+		switch (rval)
+		{
+			case -1:    // Error
+					// No need to print status messages
+					// as the lower levels should be
+					// handling that.
+				return;
+				break;
+			case 0:    // Hook not configured
+				break;
+			case 1:    // Spawned the hook
+					// Done for now.  Let the handler call
+					// FinishSubmitJob() when the hook
+					// exits.
+				return;
+				break;
+		}
+	}
+#endif
+
+	FinishCheckSubmittedJobStatus(job);
+}
+
+void
+JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 	classad::ClassAd *src_ad = ad_collection->GetClassAd(job->src_key);
 
@@ -1302,6 +1401,42 @@ void
 JobRouter::FinalizeJob(RoutedJob *job) {
 	if(job->state != RoutedJob::FINISHED) return;
 
+#if HAVE_JOB_HOOKS
+	if (NULL != m_hook_mgr)
+	{
+		// Retrive the IWD, which should be the spool directory
+		std::string spoolDirectory;
+		if (false == job->dest_ad.EvaluateAttrString(ATTR_JOB_IWD, spoolDirectory))
+		{
+			dprintf(D_ALWAYS, "JobRouter Error: Failed to retrieve %s from the routed job\n", ATTR_JOB_IWD);
+			return;
+		}
+		int rval = m_hook_mgr->hookJobExit(job, spoolDirectory.c_str());
+		switch (rval)
+		{
+			case -1:    // Error
+					// No need to print status messages
+					// as the lower levels should be
+					// handling that.
+				return;
+				break;
+			case 0:    // Hook not configured
+				break;
+			case 1:    // Spawned the hook
+					// Done for now.  Let the handler call
+					// FinishFinalizeJob() when the hook
+					// exits.
+				return;
+				break;
+		}
+	}
+#endif
+
+	FinishFinalizeJob(job);
+}
+
+void
+JobRouter::FinishFinalizeJob(RoutedJob *job) {
 	if(!finalize_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,NULL,NULL,job->is_sandboxed)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to finalize job\n",job->JobDesc().c_str());
 
@@ -1472,6 +1607,35 @@ void
 JobRouter::CleanupJob(RoutedJob *job) {
 	if(job->state != RoutedJob::CLEANUP) return;
 
+#if HAVE_JOB_HOOKS
+	if (NULL != m_hook_mgr)
+	{
+		int rval = m_hook_mgr->hookJobCleanup(job);
+		switch (rval)
+		{
+			case -1:    // Error
+					// No need to print status messages
+					// as the lower levels should be
+					// handling that.
+				return;
+				break;
+			case 0:    // Hook not configured
+				break;
+			case 1:    // Spawned the hook
+					// Done for now.  Let the handler call
+					// FinishCleanupJob() when the hook
+					// exits.
+				return;
+				break;
+		}
+	}
+#endif
+
+	FinishCleanupJob(job);
+}
+
+void
+JobRouter::FinishCleanupJob(RoutedJob *job) {
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 
 	if(!job->is_done && job->dest_proc_id.cluster != -1) {
@@ -1778,10 +1942,10 @@ JobRoute::RouteString() {
 }
 
 bool
-JobRoute::ParseClassAd(std::string routing_string,unsigned &offset,classad::ClassAd const *router_defaults_ad,bool allow_empty_requirements) {
+JobRoute::ParseClassAd(std::string routing_string,int &offset,classad::ClassAd const *router_defaults_ad,bool allow_empty_requirements) {
 	classad::ClassAdParser parser;
 	classad::ClassAd ad;
-	if(!parser.ParseClassAd(routing_string,ad,(int)offset)) {
+	if(!parser.ParseClassAd(routing_string,ad,offset)) {
 		return false;
 	}
 	m_route_ad = *router_defaults_ad;

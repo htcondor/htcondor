@@ -1,0 +1,18 @@
+#!/bin/sh
+
+echo $0 "$@" > /tmp/glkout
+
+if [ $# != 4 ]
+then
+	echo "usage: $0 <glexec> <proxy> <pid> <signal>" >&2
+	exit 1
+fi
+
+GLEXEC="$1"
+PROXY="$2"
+PID="$3"
+SIGNAL="$4"
+
+# use glexec to kill the given PID with the given signal
+#
+GLEXEC_CLIENT_CERT="$PROXY" "$GLEXEC" /bin/kill -$SIGNAL $PID

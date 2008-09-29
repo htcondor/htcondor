@@ -177,7 +177,7 @@ UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
 	strupr.o
 
 CPP_UTIL_OBJ = condor_version.o stat_wrapper.o stat_wrapper_internal.o condor_open.o selector.o \
-	MyString.o
+	MyString.o condor_ver_info.o
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
 IO_OBJ = stream.o sock.o safe_sock.o reli_sock.o buffers.o $(CONDOR_TYPE_OBJ) condor_rw.o SafeMsg.o
@@ -197,7 +197,8 @@ OPENSSL_OBJ = md5_dgst.o md5_one.o rand_lib.o md_rand.o sha1dgst.o cryptlib.o \
 	tasn_new.o tasn_fre.o bn_rand.o bn_gcd.o tasn_utl.o a_type.o \
 	a_bitstr.o a_int.o bn_mod.o bn_mont.o bn_div.o bn_word.o bn_shift.o \
 	bn_add.o bn_asm.o bn_sqr.o bn_exp.o rsa_none.o rsa_pk1.o rsa_oaep.o \
-	rsa_ssl.o a_dup.o bn_recp.o bn_mul.o
+	rsa_ssl.o a_dup.o bn_recp.o bn_mul.o rsa_x931.o sha512.o sha256.o \
+	eng_ctrl.o bn_print.o evp_lib.o evp_asn1.o a_bytes.o
 
 #if HAVE_EXT_OPENSSL
 CONDOR_CRYPT_OBJ = CryptKey.o condor_crypt.o condor_md.o ../condor_util_lib/get_random_num.o \

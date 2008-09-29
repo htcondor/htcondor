@@ -53,13 +53,14 @@
 #include "enum_utils.h"
 #include "Starter.h"
 #include "condor_claimid_parser.h"
+#include "authentication.h"
 class CODMgr;
 
 
 class ClaimId
 {
 public:
-	ClaimId( ClaimType claim_type = CLAIM_OPPORTUNISTIC );
+	ClaimId( ClaimType claim_type, char const *slotname );
 	~ClaimId();
 
 	char*	id() {return c_id;};
@@ -67,6 +68,7 @@ public:
 	bool	matches( const char* id );
 	void	dropFile( int slot_id );
 	char const *publicClaimId() { return claimid_parser.publicClaimId(); }
+	char const *secSessionId() { return claimid_parser.secSessionId(); }
 
 private:
     char*   c_id;       // ClaimId string
@@ -88,6 +90,7 @@ public:
 	char*	host()	{return c_host;};
 	char*	addr() 	{return c_addr;};
 	char*   proxyFile() {return c_proxyfile; };
+	char*   getConcurrencyLimits() {return c_concurrencyLimits; };
 
 	void	setuser(const char* user);
 	void	setowner(const char* owner);
@@ -95,6 +98,7 @@ public:
 	void	setaddr(const char* addr);
 	void	sethost(const char* host);
 	void    setProxyFile(const char* pf);
+	void    setConcurrencyLimits(const char* limits);
 
 		// send a message to the client and accountant that the claim
 		// is a being vacated
@@ -107,6 +111,7 @@ private:
 	char	*c_addr;	// <ip:port> of the client
 	char	*c_proxyfile;   // file holding delegated proxy
 		                // (used when using GLEXEC_STARTER)
+	char	*c_concurrencyLimits; // limits, if any
 
 };
 
@@ -141,6 +146,12 @@ public:
 		 */
 	void loadAccountingInfo();
 
+		/**
+		 * Load information from the request (c_ad) into the client
+		 * (c_client).
+		 */
+	void loadRequestInfo();
+
 		/** 
 			We're servicing a request to activate a claim and we want
 			to save the request classad into our claim object for
@@ -164,12 +175,15 @@ public:
 	int sendAliveConnectHandler(Stream *sock);
 	int sendAliveResponseHandler( Stream *sock );
 
+	void scheddClosedClaim();
+
 		// Functions that return data
 	float		rank()			{return c_rank;};
 	float		oldrank()		{return c_oldrank;};
 	ClaimType	type()			{return c_type;};
 	char*		codId()			{return c_id->codId();};
     char*       id();
+	char const *secSessionId();
 	char const *publicClaimId();
     bool        idMatches( const char* id );
 	Client* 	client() 		{return c_client;};
@@ -305,6 +319,7 @@ private:
 	bool        c_may_unretire;
 	bool        c_retire_peacefully;
 	bool        c_preempt_was_true; //was PREEMPT ever true for this claim?
+	bool        c_schedd_closed_claim;
 
 
 		// Helper methods

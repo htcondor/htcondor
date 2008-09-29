@@ -1,0 +1,54 @@
+#! /usr/bin/perl
+
+use warnings;
+use strict;
+
+my $mmcs_cmd = "/bgsys/drivers/ppcfloor/bin/mmcs_db_console";
+#my $mmcs_cmd = "/bin/cat";
+my $boot_part = "/home/condor/libexec/htc_boot";
+
+sub main
+{
+	my ($pname, $size, $type) = @ARGV;
+
+	$type = lc($type);
+
+	if (!defined($pname) || !defined($size) || !defined($type)) {
+		print "NOT_OK\n";
+		exit 1;
+	}
+	
+	`$boot_part --partition $pname --owner root --mode $type`;
+	#do_mmcs("allocate $pname htc=$type", "quit");
+
+	print "OK\n";
+
+	return 0;
+}
+
+sub do_mmcs
+{
+	my @cmds = @_;
+	my $cmd;
+	my @result;
+
+	unlink("/tmp/fout.$$");
+
+	open(FOUT, "> /tmp/fout.$$") or die "Bad open";
+	foreach $cmd (@cmds) {
+		print FOUT "$cmd\n";
+	}
+	close(FOUT);
+
+	$ENV{"DB_PROPERTY"} = "/bgsys/local/etc/db.properties";
+	$ENV{"LD_LIBRARY_PATH"} = "/dbhome/bgpsysdb/sqllib/lib64:/dbhome/bgpsysdb/sqllib/lib32";
+
+	@result = `. /etc/profile.d/bgp.sh ; $mmcs_cmd < /tmp/fout.$$ 2>&1`;
+
+	unlink("/tmp/fout.$$");
+
+	return @result;
+}
+
+exit main();
+

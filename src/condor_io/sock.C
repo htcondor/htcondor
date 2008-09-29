@@ -1391,7 +1391,7 @@ char * Sock::serializeCryptoInfo() const
     const unsigned char * kserial = NULL;
     int len = 0;
 
-    if (get_encryption()) {
+    if (crypto_) {
         kserial = get_crypto_key().getKeyData();
         len = get_crypto_key().getKeyLength();
     }
@@ -1401,7 +1401,8 @@ char * Sock::serializeCryptoInfo() const
     if (len > 0) {
         int buflen = len*2+32;
         outbuf = new char[buflen];
-        sprintf(outbuf,"%d*%d*", len*2, (int)get_crypto_key().getProtocol());
+        sprintf(outbuf,"%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
+				(int)get_encryption());
 
         // Hex encode the binary key
         char * ptr = outbuf + strlen(outbuf);
@@ -1476,6 +1477,13 @@ char * Sock::serializeCryptoInfo(char * buf)
 		ASSERT( ptmp );
         ptmp++;
 
+        // read the encryption mode
+        int encryption_mode = 0;
+        sscanf(ptmp, "%d*", &encryption_mode);
+        ptmp = strchr(ptmp, '*');
+        ASSERT( ptmp );
+        ptmp++;
+
         // Now, convert from Hex back to binary
         unsigned char * ptr = kserial;
         unsigned int hex;
@@ -1488,7 +1496,7 @@ char * Sock::serializeCryptoInfo(char * buf)
 
         // Initialize crypto info
         KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol);
-        set_crypto_key(true, &k, 0);
+        set_crypto_key(encryption_mode==1, &k, 0);
         free(kserial);
 		ASSERT( *ptmp == '*' );
         // Now, skip over this one
@@ -1553,14 +1561,31 @@ char * Sock::serialize() const
 {
 	// here we want to save our state into a buffer
 	size_t fqu_len = _fqu ? strlen(_fqu) : 0;
+
+	size_t verstring_len = 0;
+	char * verstring = NULL;
+	CondorVersionInfo const *peer_version = get_peer_version();
+	if( peer_version ) {
+		verstring = peer_version->get_version_string();
+		if( verstring ) {
+			verstring_len = strlen(verstring);
+		}
+			// daemoncore does not like spaces in our serialized string
+		char *s;
+		while( (s=strchr(verstring,' ')) ) {
+			*s = '_';
+		}
+	}
+
 	char * outbuf = new char[500];
     if (outbuf) {
         memset(outbuf, 0, 500);
-        sprintf(outbuf,"%u*%d*%d*%d*%u*%s*",_sock,_state,_timeout,triedAuthentication(),fqu_len,_fqu ? _fqu : "");
+        sprintf(outbuf,"%u*%d*%d*%d*%u*%u*%s*%s*",_sock,_state,_timeout,triedAuthentication(),fqu_len,verstring_len,_fqu ? _fqu : "",verstring ? verstring : "");
     }
     else {
         dprintf(D_ALWAYS, "Out of memory!\n");
     }
+	free( verstring );
 	return( outbuf );
 }
 
@@ -1569,14 +1594,15 @@ char * Sock::serialize(char *buf)
 	int i;
 	SOCKET passed_sock;
 	size_t fqulen = 0;
+	size_t verstring_len = 0;
 	int pos;
 	int tried_authentication = 0;
 
 	ASSERT(buf);
 
 	// here we want to restore our state from the incoming buffer
-	i = sscanf(buf,"%u*%d*%d*%d*%u*%n",&passed_sock,(int*)&_state,&_timeout,&tried_authentication,&fqulen,&pos);
-	if (i!=5) {
+	i = sscanf(buf,"%u*%d*%d*%d*%u*%u*%n",&passed_sock,(int*)&_state,&_timeout,&tried_authentication,&fqulen,&verstring_len,&pos);
+	if (i!=6) {
 		EXCEPT("Failed to parse serialized socket information (%d,%d): '%s'\n",i,pos,buf);
 	}
 	buf += pos;
@@ -1592,6 +1618,26 @@ char * Sock::serialize(char *buf)
 	buf += fqulen;
 	if( *buf != '*' ) {
 		EXCEPT("Failed to parse serialized socket fqu (%d): '%s'\n",fqulen,buf);
+	}
+	buf++;
+
+	char *verstring = (char *)malloc(verstring_len+1);
+	ASSERT(verstring);
+	memset(verstring,0,verstring_len+1);
+	strncpy(verstring,buf,verstring_len);
+	if( verstring_len ) {
+			// daemoncore does not like spaces in our serialized string
+		char *s;
+		while( (s=strchr(verstring,'_')) ) {
+			*s = ' ';
+		}
+		CondorVersionInfo peer_version(verstring);
+		set_peer_version( &peer_version );
+	}
+	free( verstring );
+	buf += verstring_len;
+	if( *buf != '*' ) {
+		EXCEPT("Failed to parse serialized peer version string (%d): '%s'\n",verstring_len,buf);
 	}
 	buf++;
 

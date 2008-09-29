@@ -451,13 +451,6 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 
 	dprintf(D_FULLDEBUG, "SOAP SSL connection completed\n");
 
-		// BIG WARNING: The line below is a hack to get around the
-		// single transaction bug "fix" hack. It should be removed
-		// ASAP as it reverts the reliability of a daemon (mostly the
-		// Schedd) to that of a wet paper bag.
-// *** This can be commented out because of the soap_ssl_sock! ***
-		// daemonCore->Only_Allow_Soap(0);
-
 	return KEEP_STREAM;
 #else // No COMPILE_SOAP_SSL
 	ASSERT("SOAP SSL SUPPORT NOT AVAILABLE");

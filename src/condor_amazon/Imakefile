@@ -40,7 +40,7 @@ soapH.h soapStub.h soapC.C soapClient.C: 2007-08-29.ec2.h
 
 wsseapi.C:
 	cp $(GSOAP_SHARE)/plugin/wsseapi.c wsseapi.C
-#	patch -p3 < wsseapi.patch
+	patch -p3 < wsseapi.patch
 
 smdevp.C:
 	cp $(GSOAP_SHARE)/plugin/smdevp.c smdevp.C

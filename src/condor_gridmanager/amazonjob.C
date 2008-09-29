@@ -148,7 +148,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	MyString error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
-	char *gahp_min_workers = NULL;
+	int gahp_worker_cnt = NULL;
 	char *gahp_debug = NULL;
 	ArgList args;
 	
@@ -261,15 +261,12 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	}
 
 	args.AppendArg("-w");
-	gahp_min_workers = param( "AMAZON_GAHP_WORKER_MIN_NUM" );
-	if (!gahp_min_workers) {
-		args.AppendArg("1");
-	} else {
-		args.AppendArg(gahp_min_workers);
-		free(gahp_min_workers);
-	}
+	gahp_worker_cnt = param_integer( "AMAZON_GAHP_WORKER_MIN_NUM", 1 );
+	args.AppendArg(gahp_worker_cnt);
 
-		// FIXME: Change amazon-gahp to accept AMAZON_GAHP_WORKER_MAX_NUM
+	args.AppendArg("-m");
+	gahp_worker_cnt = param_integer( "AMAZON_GAHP_WORKER_MAX_NUM", 5 );
+	args.AppendArg(gahp_worker_cnt);
 
 	args.AppendArg("-d");
 	gahp_debug = param( "AMAZON_GAHP_DEBUG" );
