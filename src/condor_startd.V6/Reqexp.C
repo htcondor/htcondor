@@ -36,13 +36,13 @@ Reqexp::Reqexp( Resource* res_ip )
 	tmp.sprintf("%s = (%s) && (%s)", 
 		ATTR_REQUIREMENTS, "START", ATTR_IS_VALID_CHECKPOINT_PLATFORM );
 
-	tmp.sprintf_cat( " && (%s)", "IsStillPartitionable" );
+	tmp.sprintf_cat( " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
 
 	origreqexp = strdup( tmp.Value() );
 	origstart = NULL;
 	rstate = ORIG_REQ;
 	m_origvalidckptpltfrm = NULL;
-	m_origisstillpartitionable = NULL;
+	m_within_resource_limits_expr = NULL;
 }
 
 void
@@ -120,33 +120,31 @@ Reqexp::compute( amask_t how_much )
 			m_origvalidckptpltfrm = strdup( str.Value() );
 		}
 
-		if( m_origisstillpartitionable != NULL ) {
-			free(m_origisstillpartitionable);
-			m_origisstillpartitionable = NULL;
+		if( m_within_resource_limits_expr != NULL ) {
+			free(m_within_resource_limits_expr);
+			m_within_resource_limits_expr = NULL;
 		}
 
-		char *isp = param( "IsStillPartitionable" );
-		if( isp != NULL ) {
-			str.sprintf( "%s = %s", "IsStillPartitionable", isp );
-			m_origisstillpartitionable = strdup( str.Value() );
-			free(isp);
+		char *tmp = param( ATTR_WITHIN_RESOURCE_LIMITS );
+		if( tmp != NULL ) {
+			m_within_resource_limits_expr = strdup( tmp );
+			free(tmp);
 		} else {
-			isp =
+			tmp =
 				"("
-				"ifThenElse(TARGET.MachineCount =!= UNDEFINED,"
-				"           TARGET.MachineCount <= MY.Cpus,"
-				"           1 <= MY.Cpus)"
-				" &&"
-				"ifThenElse(TARGET.ImageSize =!= UNDEFINED,"
-				"           TARGET.ImageSize <= MY.Memory,"
-				"           FALSE)"
-				" &&"
-				"ifThenElse(TARGET.DiskUsage =!= UNDEFINED,"
-				"           TARGET.DiskUsage <= MY.Disk,"
-				"           FALSE)"
+				 "ifThenElse(TARGET.MachineCount =!= UNDEFINED,"
+				           "TARGET.MachineCount <= MY.Cpus,"
+				           "1 <= MY.Cpus)"
+				" && "
+				 "ifThenElse(TARGET.ImageSize =!= UNDEFINED,"
+				           "TARGET.ImageSize <= MY.Memory,"
+				           "FALSE)"
+				" && "
+				 "ifThenElse(TARGET.DiskUsage =!= UNDEFINED,"
+				           "TARGET.DiskUsage <= MY.Disk,"
+				           "FALSE)"
 				")";
-			str.sprintf( "%s = %s", "IsStillPartitionable", isp );
-			m_origisstillpartitionable = strdup( str.Value() );
+			m_within_resource_limits_expr = strdup( tmp );
 		}
 	}
 }
@@ -156,8 +154,8 @@ Reqexp::~Reqexp()
 {
 	if( origreqexp ) free( origreqexp );
 	if( origstart ) free( origstart );
-	if( m_origisstillpartitionable ) free( m_origisstillpartitionable );
 	if( m_origvalidckptpltfrm ) free( m_origvalidckptpltfrm );
+	if( m_within_resource_limits_expr ) free( m_within_resource_limits_expr );
 }
 
 
@@ -223,8 +221,8 @@ Reqexp::publish( ClassAd* ca, amask_t how_much )
 		ca->Insert( tmp.Value() );
 		tmp.sprintf( "%s", m_origvalidckptpltfrm );
 		ca->Insert( tmp.Value() );
-		tmp.sprintf( "%s", m_origisstillpartitionable );
-		ca->Insert( tmp.Value() );
+		ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
+						m_within_resource_limits_expr );
 		break;
 	case UNAVAIL_REQ:
 		tmp.sprintf( "%s = False", ATTR_REQUIREMENTS );

@@ -633,6 +633,8 @@ extern const char * ATTR_CHECKPOINT_PLATFORM;
 extern const char * ATTR_LAST_CHECKPOINT_PLATFORM;
 extern const char * ATTR_IS_VALID_CHECKPOINT_PLATFORM;
 
+extern const char * ATTR_WITHIN_RESOURCE_LIMITS;
+
 extern const char * ATTR_HAD_IS_ACTIVE;
 extern const char * ATTR_HAD_LIST;
 extern const char * ATTR_HAD_INDEX;
