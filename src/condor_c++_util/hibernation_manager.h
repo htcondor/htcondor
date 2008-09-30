@@ -53,15 +53,24 @@ public:
 		management capabilities of the OS.
 		*/
 	//@{
+
+    /** Set which hibernation level the computer should enter
+        @param the hibernation state to place machine into
+        @return true if the internal state ha changed; otherwise, false.
+        @see doHibernate
+        @see canHibernate
+        @see wantsHibernate
+        @see canWake
+        */
+    bool setState ( HibernatorBase::SLEEP_STATE state );
 	
 	/** Signals the OS to enter hibernation.
-		@param the hibernation state to place machine into
 		@return true if the machine will enter hibernation; otherwise, false.
 		@see canHibernate
 		@see wantsHibernate
         @see canWake
 		*/
-	bool doHibernate ( int state ) const;
+	bool doHibernate () const;
 
 	/** Determines if the power manager is capable of hibernating the machine.
 		@return true if the machine can be hibernated; otherwise, false.
@@ -110,9 +119,10 @@ public:
 
 private:
 	
-	HibernatorBase		*_hibernator;
-    NetworkAdapterBase  *_network_adpater;
-	int					_interval;	
+	HibernatorBase		        *_hibernator;
+    NetworkAdapterBase          *_network_adpater;
+	int					        _interval;
+    HibernatorBase::SLEEP_STATE _state;	
 
 };
 

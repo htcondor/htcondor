@@ -40,7 +40,8 @@ HibernationManager::HibernationManager () throw ()
 :	_hibernator ( HibernatorBase::createHibernator () ),
     _network_adpater ( NetworkAdapterBase::createNetworkAdapter (
                   daemonCore->InfoCommandSinfulString () ) ),
-	_interval ( 0 )
+	_interval ( 0 ),
+    _state ( HibernatorBase::NONE )
 {
 	update ();
 }
@@ -77,11 +78,17 @@ HibernationManager::update ()
 }
 
 bool
-HibernationManager::doHibernate ( int state ) const
+HibernationManager::setState ( HibernatorBase::SLEEP_STATE state ) {
+    _state = state;
+    return true;
+}
+
+bool
+HibernationManager::doHibernate () const
 {
 	if ( _hibernator ) {
 		return _hibernator->doHibernate (
-			HibernatorBase::intToSleepState ( state ),
+			HibernatorBase::intToSleepState ( _state ),
 			true /* force */ );
 	}
 	return false;
@@ -127,9 +134,11 @@ int HibernationManager::getHibernateCheckInterval () const
 void
 HibernationManager::publish ( ClassAd &ad )
 {
-    /* "HibernationLevel" on a running StartD is always
-    zero; that is, it's always "running" if it is up */
-    ad.Assign ( ATTR_HIBERNATION_LEVEL, 0 );
+    /* "HibernationLevel" on a running StartD is always zero; 
+    that is, it's always "running" if it is up. We still hold 
+    this in a variable, as we will publish the sleep state in 
+    the last ad that is sent to the Collector*/
+    ad.Assign ( ATTR_HIBERNATION_LEVEL, _state );
 
     /* publish whether or not we can enter a state of hibernation */
     ad.Assign ( ATTR_CAN_HIBERNATE, canHibernate () );

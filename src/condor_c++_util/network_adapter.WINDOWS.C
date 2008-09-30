@@ -176,6 +176,11 @@ WindowsNetworkAdapter::hardwareAddress (void) const {
     return _hardware_address;
 }
 
+unsigned 
+WindowsNetworkAdapter::ipAddress (void) const {
+    return 0; /* not used on Windows */
+}
+
 const char* 
 WindowsNetworkAdapter::subnet (void) const {
     return _subnet;
