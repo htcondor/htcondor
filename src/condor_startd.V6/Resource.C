@@ -111,6 +111,8 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	} else { 
 		dprintf( D_ALWAYS, "New machine resource allocated\n" );
 	}
+
+    m_hibernating = false;
 }
 
 
@@ -375,14 +377,33 @@ Resource::shutdownAllClaims( bool graceful )
 }
 
 int
-Resource::allowClaims( void )
+Resource::disableClaimAbility( void )
 {
-        // Tell the negotiator that it can match on this slot.
-    r_reqexp->restore ();
-    update ();
+    /* kill all the claims (this also sends an update to the 
+    collector) and then set a flag saying that we are disabled
+    due to an eminent hibernation */
+    killAllClaims();    
+    m_hibernating = true;
+	
     return TRUE;
 }
 
+int
+Resource::restoreClaimAbility( void )
+{
+    /* kill the hibernating flag and restore the resource's ability
+    to be claimed (and tell the Collector about this) */
+    m_hibernating = false;    
+    r_reqexp->restore ();
+    update ();
+    
+    return TRUE;
+}
+
+bool Resource::hibernating( void )
+{
+    return m_hibernating;
+}
 
 bool
 Resource::needsPolling( void )
@@ -1268,7 +1289,7 @@ Resource::evaluateHibernate() {
 	if ( NULL != r_cur ) {
 		ad = r_cur->ad();
 	}
-	int level = 0;
+    int level = 0;
 	if ( 0 == r_classad->EvalInteger( "HIBERNATE", ad, level ) ) {
 		return 0;
 	}

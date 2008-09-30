@@ -110,9 +110,9 @@ HibernationManager::canWake () const
 bool
 HibernationManager::wantsHibernate () const
 {
-	bool does = false;
+    bool does = false;
 	if ( _hibernator ) {
-		if ( canHibernate () && canWake () ) {
+		if ( canHibernate () ) {
 			does = ( _interval > 0 );
 		}
 	}

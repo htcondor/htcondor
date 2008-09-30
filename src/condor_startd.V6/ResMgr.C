@@ -1951,7 +1951,7 @@ int
 ResMgr::allHibernating() {
     	// fail if there is no resource or if we are
 		// configured not to hibernate
-	if(    !resources
+	if (   !resources
 		|| !m_hibernation_manager.wantsHibernate() ) {
 		return 0;
 	}
@@ -1963,8 +1963,8 @@ ResMgr::allHibernating() {
 		// hibernation level for this machine
 	int max = 0;
 	for( int i = 0; i < nresources; i++ ) {
-		int rval = resources[i]->evaluateHibernate();
-		if( 0 == rval ) {
+        int rval = resources[i]->evaluateHibernate();
+        if( 0 == rval ) {
 			return 0;
 		}
 		max = max( max, rval );
@@ -1974,29 +1974,43 @@ ResMgr::allHibernating() {
 
 
 void 
-ResMgr::checkHibernate() {	
+ResMgr::checkHibernate() {    
+
 		// If all resources have gone unused for some time	
 		// then put the machine to sleep
 	int level = allHibernating();
 	if( level > 0 ) {
-		if( m_hibernation_manager.canHibernate() ) {
-			dprintf ( D_ALWAYS, "ResMgr: This machine is about to enter hibernation\n" );
-			//
-			// Hibernate the machine and shutdown the slots on this 
-            // machine, so it will remove any jobs that are currently 
-            // running as well as stop accepting job, since, on 
-            // Windows anyway, there is the possibility that a job
-            // may be matched to this machine within the time frame it
-            // is told to enter a state of hibernation and the time 
-            // that is actually does.
-			//
-			shutdownAllResources();
-			m_hibernation_manager.doHibernate( level );
-		} else {
-			dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
-				"HIBERNATE: Machine does not support any "
-				"sleep states.\n" );
+
+        if( !m_hibernation_manager.canHibernate() ) {
+            dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
+                "HIBERNATE: Machine does not support any "
+                "sleep states.\n" );
+            return;
 		}
+
+        if( !m_hibernation_manager.wakeAble() ) {
+            dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
+                "HIBERNATE: Machine cannot be worken by its "
+                "public network adapter.\n" );
+            return;
+		}
+        
+
+		dprintf ( D_ALWAYS, "ResMgr: This machine is about to "
+            "enter hibernation\n" );
+
+        //
+		// Hibernate the machine and shutdown the slots on this 
+        // machine, so it will remove any jobs that are currently 
+        // running as well as stop accepting job, since, on 
+        // Windows anyway, there is the possibility that a job
+        // may be matched to this machine within the time it
+        // is told to enter a state of hibernation and the time 
+        // it actually does.
+		//
+		disableAllResources();
+		m_hibernation_manager.doHibernate( level );
+
 	}
 }
 
@@ -2246,21 +2260,21 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 }
 
 int 
-shudown_resource_claims ( Resource *resource ) 
+disable_resource_claims ( Resource *resource ) 
 {
-    return resource->killAllClaims ();
+    return resource->disableClaimAbility ();
 }
 
 void 
-ResMgr::shutdownAllResources( void )
+ResMgr::disableAllResources( void )
 {
-    walk ( &shudown_resource_claims );
+    walk ( &disable_resource_claims );
 }
 
 int 
 restore_resource_claims ( Resource *resource ) 
 {
-    return resource->allowClaims ();
+    return resource->restoreClaimAbility ();
 }
 
 void 

@@ -131,7 +131,15 @@ Reqexp::~Reqexp()
 bool
 Reqexp::restore()
 {
-	if( rip->isSuspendedForCOD() ) {
+    if ( rip->hibernating() ) {
+        if( rstate != UNAVAIL_REQ ) {
+            rstate = UNAVAIL_REQ;
+            publish( rip->r_classad, A_PUBLIC );
+            return true;
+        } else {
+            return false;
+		}
+    } else if( rip->isSuspendedForCOD() ) {
 		if( rstate != COD_REQ ) {
 			rstate = COD_REQ;
 			publish( rip->r_classad, A_PUBLIC );
