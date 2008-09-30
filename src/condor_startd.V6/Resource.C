@@ -53,6 +53,9 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	set_feature( param_boolean( tmp.GetCStr(), false ) ?
 				 PARTITIONABLE_SLOT : STANDARD_SLOT );
 
+		// This must happen before creating the Reqexp
+	set_parent( _parent );
+
 	prevLHF = 0;
 	r_classad = NULL;
 	r_state = new ResState( this );
@@ -74,8 +77,6 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	} else {
 		r_name = strdup( tmpName );
 	}
-
-	set_parent( _parent );
 
 	update_tid = -1;
 
