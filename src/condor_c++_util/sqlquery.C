@@ -387,7 +387,7 @@ createQueryString(query_types qtype, void **parameters) {
 			"DECLARE HISTORY_OWNER_VER_CUR CURSOR FOR SELECT hv.cluster_id,hv.proc_id,hv.attr,hv.val FROM "
 			"Jobs_Horizontal_History hh, Jobs_Vertical_History hv "
 			"WHERE hh.cluster_id=hv.cluster_id AND hh.proc_id=hv.proc_id AND hh.owner='%s' %s "
-			" ORDER BY hh.scheddname, cluster_id,proc_id;",
+			" ORDER BY scheddname, cluster_id,proc_id;",
 			((char *)parameters[0]), schedd_predicate_hh.Value() );
 		sprintf(fetch_cursor_str,
 			"FETCH FORWARD 5000 FROM HISTORY_OWNER_VER_CUR");
