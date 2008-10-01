@@ -803,7 +803,6 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 	int		max_reqs;
 	int		reqs_rejected = 0;
 	int		reqs_matched = 0;
-	int		serviced_other_commands = 0;	
 	int		op = -1;
 	PROC_ID	id;
 	NegotiationResult result;
@@ -823,26 +822,9 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 
 	while( resource_requests->dequeue(id) >= 0 ) {
 
-		// This may be a cause of schedd crashes, so leave
-		// it commented out
-
-		//serviced_other_commands += daemonCore->ServiceCommandSocket();
-
 			// TODO: All of this is different for these resource
 			// request ads.  We should try to handle rm or hold, but
 			// we can't do it with this mechanism.
-
-		if ( serviced_other_commands ) {
-			// we have run some other schedd command, like condor_rm
-			// or condor_q, while negotiating.  check and make certain
-			// the job is still runnable, since things may have
-			// changed since we built the prio_rec array (like,
-			// perhaps condor_hold or condor_rm was done).
-			if ( Runnable(&id) == FALSE ) {
-				continue;
-			}
-		}
-
 
 		ClassAd *job = GetJobAd(id.cluster, id.proc);
 

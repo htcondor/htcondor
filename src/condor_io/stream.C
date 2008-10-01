@@ -2244,14 +2244,14 @@ Stream::set_peer_description(char const *str) {
 	}
 }
 
-CondorVersionInfo *
-Stream::get_peer_version()
+CondorVersionInfo const *
+Stream::get_peer_version() const
 {
 	return m_peer_version;
 }
 
 void
-Stream::set_peer_version(CondorVersionInfo *version)
+Stream::set_peer_version(CondorVersionInfo const *version)
 {
 	if( m_peer_version ) {
 		delete m_peer_version;

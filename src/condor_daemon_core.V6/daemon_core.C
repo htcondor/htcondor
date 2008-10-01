@@ -112,6 +112,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 const int DaemonCore::ERRNO_EXEC_AS_ROOT = 666666;
 const int DaemonCore::ERRNO_PID_COLLISION = 666667;
 const int DaemonCore::ERRNO_REGISTRATION_FAILED = 666668;
+const int DaemonCore::ERRNO_EXIT = 666669;
 
 // Make this the last include to fix assert problems on Win32 -- see
 // the comments about assert at the end of condor_debug.h to understand
@@ -3058,6 +3059,12 @@ int DaemonCore::ServiceCommandSocket()
 	Selector selector;
 	int commands_served = 0;
 
+	if ( inServiceCommandSocket_flag ) {
+			// this function is not reentrant
+			// and anyway, let's avoid potentially infinite recursion
+		return 0;
+	}
+
 	// Just return if there is no command socket
 	if ( initial_command_sock == -1 )
 		return 0;
@@ -3229,10 +3236,7 @@ int DaemonCore::HandleReq(Stream *insock)
 				// to read on this socket, we don't want to block here, so instead
 				// register it.  Also set a timer just in case nothing ever arrives, so 
 				// we can reclaim our socket.  
-				// NOTE: don't register if we got here via ServiceCommandSocket() to 
-				// prevent stack overflow!!
-			if ( ((ReliSock *)stream)->bytes_available_to_read() < 4 &&
-				 inServiceCommandSocket_flag == FALSE ) 
+			if ( ((ReliSock *)stream)->bytes_available_to_read() < 4 ) 
 			{
 					// set a timer for 200 seconds, in case nothing ever arrives...
 					// why 200 seconds -vs- the time honored 20 seconds?  
@@ -5208,6 +5212,20 @@ DaemonCore::Forked_Child_Wants_Exit_By_Exec( bool exit_by_exec )
 	}
 }
 
+#if !defined(WIN32)
+int g_create_process_errorpipe = -1;
+
+void
+enterCreateProcessChild(int errorpipe) {
+	ASSERT( g_create_process_errorpipe == -1 );
+	g_create_process_errorpipe = errorpipe;
+}
+
+void
+exitCreateProcessChild() {
+	g_create_process_errorpipe = -1;
+}
+#endif
 
 #if !defined(WIN32) && !defined(DUX)
 	/* On Unix, we define our own exit() call.  The reason is messy:
@@ -5236,7 +5254,7 @@ extern "C" {
 void __real_exit(int status);
 void __wrap_exit(int status)
 {
-	if ( _condor_exit_with_exec == 0 ) {
+	if ( _condor_exit_with_exec == 0 && g_create_process_errorpipe == -1 ) {
 			// The advantage of calling the real exit() rather than
 			// _exit() is that things like gprof and google-perftools
 			// can write a final profile dump.
@@ -5257,6 +5275,13 @@ void exit(int status)
 		// Derek Wright <wright@cs.wisc.edu> 2004-03-28
 	fflush( stdout );
 	fflush( stderr );
+
+	if( g_create_process_errorpipe != -1 ) {
+			// We are inside fork() or clone() and we need to tell our
+			// parent process that something has gone horribly wrong.
+		int child_errno = DaemonCore::ERRNO_EXIT;
+		write(g_create_process_errorpipe, &child_errno, sizeof(child_errno));
+	}
 
 	if ( _condor_exit_with_exec == 0 ) {
 		_exit(status);
@@ -5565,11 +5590,15 @@ pid_t CreateProcessForkit::fork_exec() {
 			// SIGCHLD     - we want this signal when child dies, as opposed
 			//               to some other non-standard signal
 
+		enterCreateProcessChild(m_errorpipe[1]);
+
 		newpid = clone(
 			CreateProcessForkit::clone_fn,
 			child_stack_ptr,
 			(CLONE_VM|CLONE_VFORK|SIGCHLD),
 			this );
+
+		exitCreateProcessChild();
 
 			// Since we used the CLONE_VFORK flag, the child has exited
 			// or called exec by now.
@@ -5584,6 +5613,7 @@ pid_t CreateProcessForkit::fork_exec() {
 	newpid = fork();
 	if( newpid == 0 ) {
 			// in child
+		enterCreateProcessChild(m_errorpipe[1]);
 		exec(); // never returns
 	}
 
@@ -5605,13 +5635,18 @@ void CreateProcessForkit::exec() {
 		//   1. We got here by forking, (cannot modify parent's memory)
 		//   2. We got here by cloning, (can modify parent's memory)
 		// So don't screw up the parent's memory and don't allocate any
-		// memory assuming it will be freed on exec() or exit().  All objects
+		// memory assuming it will be freed on exec() or _exit().  All objects
 		// that allocate memory MUST BE in data structures that are cleaned
 		// up by the parent (e.g. this instance of CreateProcessForkit).
 		// We do have our own copy of the file descriptors and signal masks.
 
-		// Also note: all calls to exit() below are calling the DaemonCore
-		// version of exit(), which will call _exit(), like we want it to.
+		// All critical errors in this function should write out the error
+		// code to the error pipe and then should call _exit().  Since
+		// some of the functions called below may result in a call to
+		// exit() (e.g. dprintf could EXCEPT), we use daemonCore's
+		// exit() wrapper to catch these cases and do the right thing.
+		// That is, this function must be wrapped by calls to
+		// enterCreateProcessChild() and exitCreateProcessChild().
 
 		// make sure we're not going to try to share the lock file
 		// with our parent (if it's been defined).
@@ -5657,7 +5692,7 @@ void CreateProcessForkit::exec() {
 			// to bail out immediately so our parent can retry.
 		int child_errno = DaemonCore::ERRNO_PID_COLLISION;
 		write(m_errorpipe[1], &child_errno, sizeof(child_errno));
-		exit(4);
+		_exit(4);
 	}
 		// If we made it here, we didn't find the PID in our
 		// table, so it's safe to continue and eventually do the
@@ -5745,7 +5780,7 @@ void CreateProcessForkit::exec() {
 					// before we exit, make sure our parent knows something
 					// went wrong before the exec...
 				write(m_errorpipe[1], &errno, sizeof(errno));
-				exit(errno); // Yes, we really want to exit here.
+				_exit(errno);
 			}
 
 			// Propogate the ancestor history to the child's environment
@@ -5769,7 +5804,7 @@ void CreateProcessForkit::exec() {
 				// before we exit, make sure our parent knows something
 				// went wrong before the exec...
 			write(m_errorpipe[1], &errno, sizeof(errno));
-			exit(errno); // Yes, we really want to exit here.
+			_exit(errno);
 		}
 
 		// if the new entry fits into the penvid, then add it to the 
@@ -5784,7 +5819,7 @@ void CreateProcessForkit::exec() {
 			// before we exit, make sure our parent knows something
 			// went wrong before the exec...
 		write(m_errorpipe[1], &errno, sizeof(errno));
-		exit(errno); // Yes, we really want to exit here.
+		_exit(errno);
 	}
 		// END pid family environment id propogation 
 
@@ -5826,7 +5861,7 @@ void CreateProcessForkit::exec() {
 						// before we exit, make sure our parent knows something
 						// went wrong before the exec...
 					write(m_errorpipe[1], &errno, sizeof(errno));
-					exit(errno); // Yes, we really want to exit here.
+					_exit(errno);
 				}
 		}
 
@@ -5870,7 +5905,7 @@ void CreateProcessForkit::exec() {
 			if (!ok) {
 				errno = DaemonCore::ERRNO_REGISTRATION_FAILED;
 				write(m_errorpipe[1], &errno, sizeof(errno));
-				exit(4);
+				_exit(4);
 			}
 
 			if (tracking_gid_ptr != NULL) {
@@ -6078,7 +6113,7 @@ void CreateProcessForkit::exec() {
 		if( getuid() == 0 ) {
 			int priv_errno = DaemonCore::ERRNO_EXEC_AS_ROOT;
 			write(m_errorpipe[1], &priv_errno, sizeof(priv_errno));
-			exit(4);
+			_exit(4);
 		}
 	}
 
@@ -6088,7 +6123,7 @@ void CreateProcessForkit::exec() {
 				// before we exit, make sure our parent knows something
 				// went wrong before the exec...
 			write(m_errorpipe[1], &errno, sizeof(errno));
-			exit(errno); // Let's exit.
+			_exit(errno);
 		}
 	}
 
@@ -6103,7 +6138,7 @@ void CreateProcessForkit::exec() {
 		}
 		if (sigprocmask(SIG_SETMASK, new_mask, NULL) == -1) {
 			write(m_errorpipe[1], &errno, sizeof(errno));
-			exit(errno);
+			_exit(errno);
 		}
 	}
 
@@ -6111,7 +6146,7 @@ void CreateProcessForkit::exec() {
 	if( HAS_DCJOBOPT_SUSPEND_ON_EXEC(m_job_opt_mask) ) {
 		if(ptrace(PTRACE_TRACEME, 0, 0, 0) == -1) {
 			write(m_errorpipe[1], &errno, sizeof(errno));
-			exit (errno);
+			_exit (errno);
 		}
 	}
 #endif
@@ -6129,7 +6164,7 @@ void CreateProcessForkit::exec() {
 			// before we exit, make sure our parent knows something
 			// went wrong before the exec...
 		write(m_errorpipe[1], &errno, sizeof(errno));
-		exit(errno); // Yes, we really want to exit here.
+		_exit(errno);
 	}
 }
 #endif
@@ -6917,6 +6952,11 @@ int DaemonCore::Create_Process(
 				         "it failed to register itself with the ProcD\n" );
 				break;
 
+			case ERRNO_EXIT:
+				dprintf( D_ALWAYS, "Create_Process: child failed becuase "
+				         "it called exit(%d).\n", child_status );
+				break;
+
 			case ERRNO_PID_COLLISION:
 					/*
 					  see the big comment in the top of the child code
@@ -7508,7 +7548,13 @@ DaemonCore::Inherit( void )
 		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
 	}
 
-	if ( (ptmp=strtok(inheritbuf," ")) != NULL ) {
+	StringList inherit_list(inheritbuf," ");
+	if ( inheritbuf != NULL ) {
+		free( inheritbuf );
+		inheritbuf = NULL;
+	}
+	inherit_list.rewind();
+	if ( (ptmp=inherit_list.next()) != NULL && *ptmp ) {
 		// we read out CONDOR__INHERIT ok, ptmp is now first item
 
 		// insert ppid into table
@@ -7516,7 +7562,7 @@ DaemonCore::Inherit( void )
 		ppid = atoi(ptmp);
 		PidEntry *pidtmp = new PidEntry;
 		pidtmp->pid = ppid;
-		ptmp=strtok(NULL," ");
+		ptmp=inherit_list.next();
 		dprintf(D_DAEMONCORE,"Parent Command Sock = %s\n",ptmp);
 		strcpy(pidtmp->sinful_string,ptmp);
 		pidtmp->is_local = TRUE;
@@ -7566,7 +7612,7 @@ DaemonCore::Inherit( void )
 #endif
 
 		// inherit cedar socks
-		ptmp=strtok(NULL," ");
+		ptmp=inherit_list.next();
 		while ( ptmp && (*ptmp != '0') ) {
 			if (numInheritedSocks >= MAX_SOCKS_INHERITED) {
 				EXCEPT("MAX_SOCKS_INHERITED reached.");
@@ -7575,7 +7621,7 @@ DaemonCore::Inherit( void )
 				case '1' :
 					// inherit a relisock
 					dc_rsock = new ReliSock();
-					ptmp=strtok(NULL," ");
+					ptmp=inherit_list.next();
 					dc_rsock->serialize(ptmp);
 					dc_rsock->set_inheritable(FALSE);
 					dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
@@ -7584,7 +7630,7 @@ DaemonCore::Inherit( void )
 					break;
 				case '2':
 					dc_ssock = new SafeSock();
-					ptmp=strtok(NULL," ");
+					ptmp=inherit_list.next();
 					dc_ssock->serialize(ptmp);
 					dc_ssock->set_inheritable(FALSE);
 					dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
@@ -7595,7 +7641,7 @@ DaemonCore::Inherit( void )
 					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks");
 					break;
 			} // end of switch
-			ptmp=strtok(NULL," ");
+			ptmp=inherit_list.next();
 		}
 		inheritedSocks[numInheritedSocks] = NULL;
 
@@ -7604,14 +7650,14 @@ DaemonCore::Inherit( void )
 		// we then register rsock and ssock as command sockets below...
 		dc_rsock = NULL;
 		dc_ssock = NULL;
-		ptmp=strtok(NULL," ");
+		ptmp=inherit_list.next();
 		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
 			dprintf(D_DAEMONCORE,"Inheriting Command Sockets\n");
 			dc_rsock = new ReliSock();
 			((ReliSock *)dc_rsock)->serialize(ptmp);
 			dc_rsock->set_inheritable(FALSE);
 		}
-		ptmp=strtok(NULL," ");
+		ptmp=inherit_list.next();
 		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
 			dc_ssock = new SafeSock();
 			dc_ssock->serialize(ptmp);
@@ -7619,10 +7665,6 @@ DaemonCore::Inherit( void )
 		}
 
 	}	// end of if we read out CONDOR_INHERIT ok
-
-	if ( inheritbuf != NULL ) {
-		free( inheritbuf );
-	}
 }
 
 

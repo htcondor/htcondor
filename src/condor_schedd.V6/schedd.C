@@ -2936,7 +2936,6 @@ Scheduler::abort_job(int, Stream* s)
 		// any jobs which have a status = REMOVED or HELD
 		ClassAd *job_ad;
 		static bool already_removing = false;	// must be static!!!
-		unsigned int count=1;
 		char constraint[120];
 
 		// This could take a long time if the queue is large; do the
@@ -2969,24 +2968,8 @@ Scheduler::abort_job(int, Stream* s)
 
 			}
 			FreeJobAd(job_ad);
-			job_ad = NULL;
 
-			// users typically do a condor_q immediately after a condor_rm.
-			// if they condor_rm a lot of jobs, it could take a really long
-			// time since we need to twiddle the job_queue.log, move classads
-			// to the history file, and maybe write to the user log.  So, we
-			// service the command socket here so condor_q does not timeout.
-			// However, the command we service may start a new iteration
-			// thru the queue.  Thus if we serviced any commands we must
-			// start our iteration over from the beginning to make certain
-			// our iterator is not corrupt. -Todd <tannenba@cs.wisc.edu>
-			if ( (++count % 10 == 0) && daemonCore->ServiceCommandSocket() ) {
-				// we just handled a command, restart the iteration
-				job_ad = GetNextJobByConstraint(constraint,1);
-			} else {
-				// no command handled, iterator still safe - get next ad
-				job_ad = GetNextJobByConstraint(constraint,0);
-			}
+			job_ad = GetNextJobByConstraint(constraint,0);
 		}
 		already_removing = false;
 	}
@@ -4375,9 +4358,6 @@ Scheduler::actOnJobs(int, Stream* s)
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS:
 		 for( i=0; i<num_matches; i++ ) {
- 			if( i % 10 == 0 ) {
- 				daemonCore->ServiceCommandSocket();
- 			}
  			abort_job_myself( jobs[i], action, true, notify );		
 #ifdef WIN32
 			/*	This is a small patch so when DAGMan jobs are removed
@@ -4460,42 +4440,8 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 }
 
 int
-Scheduler::delayedNegotiatorHandler(Stream *stream)
-{
-	int rval;
-	int* iptr = NULL;
-
-	iptr = (int*)daemonCore->GetDataPtr();
-	ASSERT(iptr);
-	rval = negotiate(*iptr, stream);
-	if ( rval != KEEP_STREAM ) {
-		free(iptr);
-		iptr = NULL;
-		daemonCore->SetDataPtr(NULL);
-	}
-	// TODO if rval is KEEP_STREAM, shouldn't we be registering a socket?
-	return rval;
-}
-
-int
 Scheduler::doNegotiate (int i, Stream *s)
 {
-	if ( daemonCore->InServiceCommandSocket() == TRUE ) {
-		// We are currently in the middle of a negotiate with a
-		// different negotiator.  Stash this request to handle it later.
-		dprintf(D_FULLDEBUG,"Received Negotiate command while negotiating; stashing for later\n");
-		daemonCore->Register_Socket(s,"<Another-Negotiator-Socket>",
-			(SocketHandlercpp)&Scheduler::delayedNegotiatorHandler,
-			"delayedNegotiatorHandler()", this, ALLOW);
-		// Stash the command int as well, since we need to know later on what type
-		// of negotiate command we are dealing with
-		int* iptr = (int*)malloc(sizeof(int));
-		ASSERT(iptr);
-		*iptr = i;
-		daemonCore->Register_DataPtr( (void*)iptr );
-		return KEEP_STREAM;
-	}
-
 	int rval = negotiate(i, s);
 	if (rval == KEEP_STREAM)
 	{
@@ -4596,7 +4542,6 @@ Scheduler::negotiate(int command, Stream* s)
 	int		which_negotiator = 0; 		// >0 implies flocking
 	char*	negotiator_name = NULL;	// hostname of negotiator when flocking
 	Daemon*	neg_host = NULL;	
-	int		serviced_other_commands = 0;	
 	int		owner_num;
 	int		JobsRejected = 0;
 	Sock*	sock = (Sock*)s;
@@ -4836,8 +4781,6 @@ Scheduler::negotiate(int command, Stream* s)
 			continue;
 		}
 
-		serviced_other_commands += daemonCore->ServiceCommandSocket();
-
 		id = PrioRec[i].id;
 
 		int junk; // don't care about the value
@@ -4847,9 +4790,8 @@ Scheduler::negotiate(int command, Stream* s)
 			continue;
 		}
 
-		if ( serviced_other_commands || prio_rec_array_is_stale ) {
-			// we have run some other schedd command, like condor_rm or condor_q,
-			// while negotiating.  check and make certain the job is still
+		if ( prio_rec_array_is_stale ) {
+			// check and make certain the job is still
 			// runnable, since things may have changed since we built the 
 			// prio_rec array (like, perhaps condor_hold or condor_rm was done).
 			if ( Runnable(&id) == FALSE ) {

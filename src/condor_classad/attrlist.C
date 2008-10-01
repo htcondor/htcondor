@@ -2068,76 +2068,47 @@ void AttrListList::Insert(AttrList* AttrList)
 ////////////////////////////////////////////////////////////////////////////////
 int AttrListList::Delete(AttrList* attrList)
 {
+
+		// optimization: if attrList is in this list directly
+		// (i.e. not as an AttrListRep), then avoid searching
+		// through the list
+	if( attrList->inList == this ) {
+		if( attrList == ptr ) {
+			ptr = ptr->next;
+		}
+
+		if( attrList == head && attrList == tail ) {
+			head = tail = NULL;
+		}
+		else if( attrList == head ) {
+			head = head->next;
+			if( head ) {
+				head->prev = NULL;
+			}
+		}
+		else if( attrList == tail ) {
+			tail = attrList->prev;
+			if( tail ) {
+				tail->next = NULL;
+			}
+		}
+		else {
+			attrList->prev->next = attrList->next;
+			attrList->next->prev = attrList->prev;
+		}
+
+		delete attrList;
+		this->length--;
+		return TRUE;
+	}
+
+
     AttrListAbstract*	cur;
     AttrListRep*		tmpRep;
     
     for(cur = head; cur; cur = cur->next)
     {
-		if(cur->Type() == ATTRLISTENTITY) // this AttrList has no replicant
-		{
-			if(cur == attrList) // this is the AttrList to be deleted
-			{
-				if(cur == ptr) ptr = ptr->next;
-				if(cur == head && cur == tail)
-				// AttrList to be deleted is the only entry in the list
-				{
-					head = NULL;
-					tail = NULL;
-				}
-				else if(cur == head)
-				// AttrList to be deleted is at the head of the list
-				{
-					head = head->next;
-					if(head)
-					{
-						head->prev = NULL;
-					}
-				}
-				else if(cur == tail)
-				// AttrList to be deleted is at the tail of the list
-				{
-					tail = cur->prev;
-					if(tail)
-					{
-						tail->next = NULL;
-					}
-				}
-				else
-				// AttrList deleted is at neither the head nor the tail
-				{
-					// we should be able to say 
-					//    cur->prev->next = cur->next
-					// but sometimes cur->prev is NULL!!!!  since
-					// v6.1 will be completely replacing classads
-					// and I've spent quite some time and failed to
-					// find the bug, I've just patched the bug
-					// here.  -Todd 1/98
-					if ( cur->prev == NULL ) {
-						// this should not happen, but it did.
-						// figure out what cur->prev should be
-						// by traversing the next pointers.
-						// if we cannot figure it out by 
-						// traversing all the next pointers,
-						// we'll fall through and SEGV - this is
-						// better than an EXCEPT since we'll get a core
-						AttrListAbstract *cur1;
-						for (cur1=head; cur1; cur1=cur1->next ) {
-							if ( cur1->next == cur ) {
-								cur->prev = cur1;
-								break;
-							}
-						}
-					}
-					cur->prev->next = cur->next;
-					cur->next->prev = cur->prev;
-				}
-
-				delete cur;
-    			this->length--;
-				break;
-			}
-		}
-		else // a rep is used
+		if(cur->Type() == ATTRLISTREP)
 		{
 			if(((AttrListRep *)cur)->attrList == attrList)
 			{

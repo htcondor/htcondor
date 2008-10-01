@@ -539,10 +539,10 @@ public:
 
 	/// If we know the peer's version (e.g. from security handshake),
 	/// return it.  Otherwise, return NULL.
-	CondorVersionInfo *get_peer_version();
+	CondorVersionInfo const *get_peer_version() const;
 
 	/// Set the peer's version.
-	void set_peer_version(CondorVersionInfo *version);
+	void set_peer_version(CondorVersionInfo const *version);
 
 	/** Get this stream's type.
         @return the type of this stream

@@ -256,7 +256,6 @@ class Scheduler : public Service
 	// negotiation
 	int				doNegotiate(int, Stream *);
 	int				negotiatorSocketHandler(Stream *);
-	int				delayedNegotiatorHandler(Stream *);
 	int				negotiate(int, Stream *);
 	int				reschedule_negotiator(int, Stream *);
 
