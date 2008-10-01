@@ -1647,26 +1647,31 @@ it is likely advisable to completely remove the application for which
 the LSP is a part via the Control Panel.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why does the Windows Installer fails with ``Error 2738. Could not access VBScript run time for custom action''?}
+\subsection*{Why does the Windows Installer fail with ``Error 2738. Could not access VBScript run time for custom action''?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Sometimes it seems that the VBScript engine is not registered.  Since our
-installer depends on the VBScript engine for custom steps, the installer 
-will fail if it cannot find it.
+This error results when the VBScript engine is not registered.
+Since Condor's installer depends on the VBScript engine for custom steps,
+the installer will fail if it cannot find the VBScript engine.
 
-The way to resolve this requires that you have Administrative privileges.
-The fix itself, is rather straight forward:
+The fix is to register the VMScript engine.
+With Administrative privilege:
 
-\begin{itemize}
-\item First, launch the Command Prompt as the Administrator 
-(i.e. \texttt{cmd.exe}).
-\item In the Command Prompt, \texttt{cd} to the System32 folder, 
-under the Windows folder.
-\item Type \texttt{regsvr32 vbscript.dll} and press Enter.
-\end{itemize}
+\begin{enumerate}
+\item Launch the Command Prompt (\Prog{cmd.exe}) as the Administrator. 
+\item At the Command Prompt, change directories to the \File{System32} folder, 
+within the Windows folder.
+\item Issue the command 
+\begin{verbatim}
+  regsvr32 vbscript.dll
+\end{verbatim}
+\end{enumerate}
 
-If this is successful, you will receive the message
-``DllRegisterServer in vbscript.dll succeeded.''  
+If successful, the message
+\begin{verbatim}
+  DllRegisterServer in vbscript.dll succeeded.  
+\end{verbatim}
+is printed.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Grid Computing}
