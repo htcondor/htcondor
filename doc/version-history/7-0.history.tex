@@ -50,7 +50,6 @@ The details of each version are described below.
 
 \end{itemize}
 
-
 \noindent New Features:
 
 \begin{itemize}
@@ -84,6 +83,23 @@ local \Condor{starter} process has been created to run the job.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+% Fixed by Red Hat
+\item Fixed a segmentation fault bug with \Condor{submit} \Opt{-dump} when
+\Expr{universe=grid} or \Expr{x509userproxy=<anything>}.
+
+\item Fixed a buffer overflow which could cause the Condor daemons and tools
+to crash.
+
+\item Fixed a buffer overflow which could cause the \Condor{schedd} to crash.
+
+\item Fixed a stack overflows in the \Condor{Negotiator}.
+
+\item Fixed \Condor{submit} \Opt{-dump} such that it would function with the
+standard universe.
+
+\item Fixed a memory leak in the \Condor{startd} which happened during a
+\Condor{reconfig}.
 
 \item When the configuration variable \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}
 is defined to be \Expr{False},
@@ -499,20 +515,20 @@ universe jobs of type gt4. The default value is 5.
 % condor-admin 17847
 \item Fixed a bug that caused Stork to be completely broken.
 
-\item As a backport from Condor versions 7.1,
+\item As a back port from Condor versions 7.1,
   the Windows Installer is now completely
   internationalized: it will no longer fail to install because of a
   missing "Users" group; instead, it will use the regionally appropriate
   group.
 
-\item As a backport from Condor versions 7.1,
+\item As a back port from Condor versions 7.1,
   interoperability with Samba (as a PDC) has been improved.
   Condor uses a fast form of login during credential validation.
   Unfortunately, this login procedure fails under Samba,
   even if the credentials are valid.  The new behavior is to attempt
   the fast login, and on failure, fall back to the slower form.
 
-\item As a backport from Condor versions 7.1,
+\item As a back port from Condor versions 7.1,
   Windows slot users no longer have the
   Batch Privilege added, nor does Condor first attempt a Batch login
   for slot users.  This was causing permission problems on hardened
