@@ -43,11 +43,11 @@ class GlobusResource : public BaseResource
 	void Reconfig();
 	void UnregisterJob( GlobusJob *job );
 
-	bool RequestJM( GlobusJob *job );
+	bool RequestJM( GlobusJob *job, bool is_submit );
 	void JMComplete( GlobusJob *job );
 	void JMAlreadyRunning( GlobusJob *job );
-	int GetJMLimit()
-		{ return jmLimit; };
+	int GetJMLimit( bool for_submit )
+		{ return for_submit ? submitJMLimit : restartJMLimit; };
 
 	bool GridJobMonitorActive() { return monitorActive; }
 	int LastGridJobMonitorUpdate() { return jobStatusFileLastUpdate; }
@@ -92,11 +92,26 @@ class GlobusResource : public BaseResource
 	char *proxySubject;
 	static int gahpCallTimeout;
 
-	// jobs allowed allowed to have a jobmanager running
-	List<GlobusJob> jmsAllowed;
-	// jobs that want a jobmanager but can't due to jmLimit
-	List<GlobusJob> jmsWanted;
-	int jmLimit;		// max number of running jobmanagers
+	// We limit the number of jobmanagers we're willing to run at a time
+	// on each resource. We keep seperate queues for initial job
+	// submission and restarts for jobs already submitted. Each queue
+	// is guaranteed half of the overall limit. If either queue isn't
+	// using its full share, the other queue can borrow the unused slots
+	// until the original queue needs them again.
+
+	// jobs allowed allowed to have a jobmanager running for submission
+	List<GlobusJob> submitJMsAllowed;
+	// jobs that want a jobmanager for submission but can't due to jmLimit
+	List<GlobusJob> submitJMsWanted;
+	// max number of running jobmanagers for submission
+	int submitJMLimit;
+
+	// jobs allowed allowed to have a jobmanager running for restart
+	List<GlobusJob> restartJMsAllowed;
+	// jobs that want a jobmanager for restart but can't due to jmLimit
+	List<GlobusJob> restartJMsWanted;
+	// max number of running jobmanagers for restart
+	int restartJMLimit;
 
 		// When true, we'll try to run a grid monitor on each gt2
 		// gatekeeper.

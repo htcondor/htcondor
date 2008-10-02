@@ -1183,7 +1183,7 @@ int GlobusJob::doEvaluateState()
 				// running jobmanager (due to a failure), you must call
 				// JMComplete() as well.
 				if ( myResource->RequestSubmit(this) == false ||
-					 myResource->RequestJM(this) == false ) {
+					 myResource->RequestJM(this, true) == false ) {
 					break;
 				}
 				if ( RSL == NULL ) {
@@ -1700,7 +1700,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				// running jobmanager (due to a failure), you must call
 				// JMComplete() as well.
 				if ( myResource->RequestSubmit(this) == false ||
-					 myResource->RequestJM(this) == false ) {
+					 myResource->RequestJM(this, false) == false ) {
 					break;
 				}
 				if ( RSL == NULL ) {
@@ -2320,7 +2320,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				// call SubmitComplete() or CancelSubmit() once you're done
 				// with the request call
 				if ( myResource->RequestSubmit(this) == false ||
-					 myResource->RequestJM(this) == false ) {
+					 myResource->RequestJM(this, false) == false ) {
 					break;
 				}
 				if ( RSL == NULL ) {
@@ -3492,7 +3492,7 @@ GlobusJob::JmShouldSleep()
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE:
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED:
 		if ( ( !streamOutput && !streamError ) ||
-			 myResource->GetJMLimit() != GM_RESOURCE_UNLIMITED ) {
+			 myResource->GetJMLimit(true) != GM_RESOURCE_UNLIMITED ) {
 
 			return true;
 		} else {
