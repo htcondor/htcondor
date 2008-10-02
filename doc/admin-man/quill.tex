@@ -214,10 +214,11 @@ configured to use Quill, since by default Quill is configured to be off.
   This step may not be necessary, depending on which version of Condor 
   you are upgrading from. 
  
-\item Set up configuration variables that are specific
-  to the installation.
+\item Set up configuration variables that are specific to the installation,
+and check that the \MacroNI{HISTORY} variable is set.
 \footnotesize
 \begin{verbatim}
+HISTORY                 = $(SPOOL)/history
 QUILL_ENABLED           = TRUE
 QUILL_USE_SQL_LOG       = FALSE
 QUILL_NAME              = some-unique-quill-name.cs.wisc.edu
