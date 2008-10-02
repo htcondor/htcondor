@@ -28,8 +28,9 @@
 #define _CONDOR_RESMGR_H
 
 #include "simplelist.h"
-#include "extArray.h"
 #include "condor_classad_namedlist.h"
+
+#include "IdDispenser.h"
 
 #include "Resource.h"
 #include "claim.h"
@@ -58,16 +59,6 @@ typedef void (Resource::*ResourceMaskMember)(amask_t);
 typedef void (Resource::*VoidResourceMember)();
 typedef int (*ComparisonFunc)(const void *, const void *);
 
-
-class IdDispenser
-{
-public:
-	IdDispenser( int size, int seed );
-	int		next( void );
-	void	insert( int id );
-private:
-	ExtArray<bool> free_ids;
-};
 
 class ResMgr : public Service
 {

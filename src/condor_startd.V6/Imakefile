@@ -30,7 +30,8 @@ LIB= $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 
 soapobjs(startd)
 
-OBJ = LoadQueue.o claim.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
+OBJ = IdDispenser.o \
+	LoadQueue.o claim.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
 	Resource.o Starter.o command.o startd_main.o util.o \
 	startd_cronmgr.o startd_cronjob.o starter_mgr.o \
 	setsyscalls.o startd_instantiate.o AvailStats.o cod_mgr.o \
