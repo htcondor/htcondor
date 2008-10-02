@@ -117,9 +117,9 @@ public:
     //------------------------------------------
 	void 					invalidateAllCache();
 	bool  					invalidateKey(const char * keyid);
-	bool  					invalidateHost(const char * sin);
+	void  					invalidateHost(const char * sin);
     void                    invalidateExpiredCache();
-	bool					invalidateByParentAndPid(const char * parent, int pid);
+	void					invalidateByParentAndPid(const char * parent, int pid);
 
 
 	bool	FillInSecurityPolicyAd( DCpermission auth_level,
