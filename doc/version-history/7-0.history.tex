@@ -93,13 +93,13 @@ to crash.
 
 \item Fixed a buffer overflow which could cause the \Condor{schedd} to crash.
 
-\item Fixed a stack overflows in the \Condor{Negotiator}.
+\item Fixed a stack overflow bug in the \Condor{negotiator} daemon.
 
 \item Fixed \Condor{submit} \Opt{-dump} such that it would function with the
 standard universe.
 
-\item Fixed a memory leak in the \Condor{startd} which happened during a
-\Condor{reconfig}.
+\item Fixed a memory leak in the \Condor{startd}, which occurred during the
+handling of a \Condor{reconfig} command.
 
 \item When the configuration variable \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}
 is defined to be \Expr{False},
