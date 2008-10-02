@@ -141,6 +141,7 @@ private:
 
   static MyString RemoteUserAttr;
   static MyString StartTimeAttr;
+  static MyString Cpus;
 
   //--------------------------------------------------------
   // Utility functions
