@@ -1050,7 +1050,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		MyString type;
 		StringList type_list;
 		int cpus, memory, disk;
-		int rid = resmgr->nextId();
 
 			// Make sure the partitionable slot itself is satisfied by
 			// the job. If not there is no point in trying to
@@ -1097,14 +1096,14 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					  "Match requesting resources: %s\n", type.GetCStr() );
 
 		type_list.initializeFromString( type.GetCStr() );
-		cpu_attrs = resmgr->buildSlot( rid, &type_list, -1, false );
+		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -1, false );
 		if( ! cpu_attrs ) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to parse attributes for request, aborting\n" );
 			ABORT;
 		}
 
-		new_rip = new Resource( cpu_attrs, rid, rip );
+		new_rip = new Resource( cpu_attrs, rip->r_id, rip );
 		if( ! new_rip ) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to build new resource for request, aborting\n" );

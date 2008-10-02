@@ -37,10 +37,16 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	r_id = rid;
 	char* name_prefix = param( "STARTD_RESOURCE_PREFIX" );
 	if( name_prefix ) {
-		tmp.sprintf( "%s%d", name_prefix, rid );
+		tmp = name_prefix;
 		free( name_prefix );
 	} else { 
-		tmp.sprintf( "slot%d", rid );
+		tmp = "slot";
+	}
+	if( _parent ) {
+		r_sub_id = _parent->m_id_dispenser->next();
+		tmp.sprintf_cat( "%d.%d", r_id, r_sub_id );
+	} else {
+		tmp.sprintf_cat( "%d", r_id );
 	}
 	r_id_str = strdup( tmp.Value() );
 
@@ -48,10 +54,17 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	r_attr = cap;
 	r_attr->attach( this );
 
+	m_id_dispenser = NULL;
+
 		// we need this before we instantiate the Reqexp object...
 	tmp.sprintf( "SLOT_TYPE_%d_PARTITIONABLE", type() );
-	set_feature( param_boolean( tmp.GetCStr(), false ) ?
-				 PARTITIONABLE_SLOT : STANDARD_SLOT );
+	if( param_boolean( tmp.GetCStr(), false ) ) {
+		set_feature( PARTITIONABLE_SLOT );
+
+		m_id_dispenser = new IdDispenser( 3, 1 );
+	} else {
+		set_feature( STANDARD_SLOT );
+	}
 
 		// This must happen before creating the Reqexp
 	set_parent( _parent );
@@ -148,8 +161,14 @@ Resource::~Resource()
 		// If we have a parent, return our resources to it
 	if( m_parent ) {
 		*(m_parent->r_attr) += *(r_attr);
+		m_parent->m_id_dispenser->insert( r_sub_id );
 		m_parent->update();
 		m_parent = NULL;
+	}
+
+	if( m_id_dispenser ) {
+		delete m_id_dispenser;
+		m_id_dispenser = NULL;
 	}
 
 	delete r_state;

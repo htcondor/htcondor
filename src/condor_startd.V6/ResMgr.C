@@ -1858,7 +1858,11 @@ ResMgr::removeResource( Resource* rip )
 	nresources--;
 	
 		// Return this Resource's ID to the dispenser.
-	id_disp->insert( rip->r_id );
+		// If it is a dynamic slot it's reusing its partitionable
+		// parent's id, so we don't want to free the id.
+	if( Resource::DYNAMIC_SLOT != rip->get_feature() ) {
+		id_disp->insert( rip->r_id );
+	}
 
 		// Tell the collector this Resource is gone.
 	rip->final_update();

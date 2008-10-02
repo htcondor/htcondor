@@ -28,6 +28,7 @@
 #include "LoadQueue.h"
 #include "AvailStats.h"
 #include "cod_mgr.h"
+#include "IdDispenser.h"
 
 
 class Resource : public Service
@@ -218,6 +219,7 @@ public:
 	LoadQueue*		r_load_queue;  // Holds 1 minute avg % cpu usage
 	char*			r_name;		// Name of this resource
 	int				r_id;		// CPU id of this resource (int form)
+	int				r_sub_id;	// Sub id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
 	AvailStats		r_avail_stats; // computes resource availability stats
 	int             prevLHF;
@@ -246,6 +248,8 @@ private:
 	ResourceFeature m_resource_feature;
 
 	Resource*	m_parent;
+
+	IdDispenser* m_id_dispenser;
 
 	int			update_tid;	// DaemonCore timer id for update delay
 	unsigned	update_sequence;	// Update sequence number
