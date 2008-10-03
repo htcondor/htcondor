@@ -84,7 +84,7 @@ public:
 	virtual const char* hardwareAddress (void) const = 0;
 
     /** Returns the adapter's IP address as a string
-		@return the addapter's IP address
+		@return the adapter's IP address
 	*/
 	virtual unsigned ipAddress (void) const = 0;
 
@@ -95,7 +95,8 @@ public:
 
 	
     /** Ensures that the adapter can wake the machine.
-		@return true if the adapter can wake the machine; otherwise, false.
+		@return true if the adapter can wake the machine; otherwise, 
+		false.
 	*/
 	bool isWakeSupported (void) const
 		{ return m_wol_support_bits & WOL_SUPPORTED; };
@@ -119,7 +120,6 @@ public:
 		static char buf[1024];
 		return getWolString( m_wol_support_bits, buf, sizeof(buf) );
 	};
-
 
     /** Ensures that the adapter "waking" is enabled.
 		@return true if the adapter waking is enabled; otherwise, false.
@@ -147,14 +147,12 @@ public:
 		return getWolString( m_wol_enable_bits, buf, sizeof(buf) );
 	};
 
-
 	/** Returns whether this whole combination is wakable or not
 		@return true if this adaptor is wakable as configured
 	*/
 	bool isWakeable( void ) const
 		{ return (m_wol_support_bits & m_wol_enable_bits) ? true : false; };
 	
-
     /** Checks that the adapter actually exists
         @returns true if the adapter exists on the machine; 
         otherwise, false.
