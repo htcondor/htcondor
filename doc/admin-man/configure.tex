@@ -3984,20 +3984,21 @@ See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
 
 \item[\Macro{HIBERNATE\_CHECK\_INTERVAL}]
 \label{param:HibernateCheckInterval}
-  Determines how often the \Condor{startd} should check if the 
-  machine is ready to enter a low power state.  If the value is 
-  of \MacroNI{HIBERNATE\_CHECK\_INTERVAL} is 0, then the check is 
-  disabled; otherwise, the \MacroNI{HIBERNATE} expression will be 
-  evaluated in the context of each slot at the given interval.  
-  This macro is defined in terms of seconds and defaults to 0,
-  if used, a value $\ge300$ (5 minutes) is recommended.
+  An integer number of seconds that
+  determines how often the \Condor{startd} checks to see if the 
+  machine is ready to enter a low power state.
+  The default value is 0,
+  which disables the check.
+  If not 0, the \MacroNI{HIBERNATE} expression is
+  evaluated within the context of each slot at the given interval.  
+  If used, a value 300 (5 minutes) is recommended.
 
-  There is one special case when this interval is ignored: when the 
+  As a special case, the interval is ignored when the 
   machine has just returned from a low power state (excluding 
   shutdown (5)).  In order to avoid machines from volleying between 
   a running state and a low power state, an hour of uptime is enforced
-  after a machine has been woken.  After this time has passed, regular
-  checks will resume.
+  after a machine has been woken.  After the hour has passed,
+  regular checks resume.
 
 \item[\Macro{HIBERNATE}]
 \label{param:Hibernate}
@@ -4007,8 +4008,8 @@ See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
 
   \begin{itemize}
   \item[] 0 - No-op: do not enter a low power state
-  \item[] 1 - On Windows, see 3
-  \item[] 2 - On Windows, see 3
+  \item[] 1 - On Windows, Sleep (standby)
+  \item[] 2 - On Windows, Sleep (standby)
   \item[] 3 - Sleep (standby)
   \item[] 4 - Hibernate
   \item[] 5 - Shutdown (soft-off)
