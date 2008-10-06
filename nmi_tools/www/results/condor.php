@@ -26,137 +26,137 @@
 <body>
 
 <h1><a href="./Run-condor.php" class="title">Condor Latest Build/Test Results</a></h1>
-<table border=1 width="85%">
-   <tr>
-      <th>Branch<br><small>Click to see branch history</small></th>
-      <th>Last build</th>
-      <th>User</th>
-      <th>Build Results</th>
-      <th>Test Results</th>  
-      </tr>
+	<table border=1 width="85%">
+	   <tr>
+	      <th>Branch<br><small>Click to see branch history</small></th>
+	      <th>Last build</th>
+	      <th>User</th>
+	      <th>Build Results</th>
+	      <th>Test Results</th>  
+	      </tr>
 
-<?php
-$db = mysql_connect(DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
-mysql_select_db(DB_NAME) or die("Could not select database");
+	<?php
+	$db = mysql_connect(DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
+	mysql_select_db(DB_NAME) or die("Could not select database");
 
-$query_runids="
-SELECT 
-  LEFT(description,
-       (IF(LOCATE('branch-',description),
-         LOCATE('branch-',description)+5,
-         (IF(LOCATE('trunk-',description),
-            LOCATE('trunk-',description)+4,
-            CHAR_LENGTH(description)))))) AS branch,
-  MAX(convert_tz(start, 'GMT', 'US/Central')) as start,
-  run_type, 
-  max(runid) as runid,
-  user,
-  result
-FROM 
-  Run 
-WHERE 
-  component='condor' AND 
-  project='condor' AND
-  run_type='build' AND
-  description != '' AND 
-  DATE_SUB(CURDATE(), INTERVAL 10 DAY) <= start 
-GROUP BY 
-  branch,
-  user,
-  run_type 
-ORDER BY 
-  IF(user = '".CONDOR_USER."',0,1), runid desc
-";
+	$query_runids="
+	SELECT 
+	  LEFT(description,
+	       (IF(LOCATE('branch-',description),
+		 LOCATE('branch-',description)+5,
+		 (IF(LOCATE('trunk-',description),
+		    LOCATE('trunk-',description)+4,
+		    CHAR_LENGTH(description)))))) AS branch,
+	  MAX(convert_tz(start, 'GMT', 'US/Central')) as start,
+	  run_type, 
+	  max(runid) as runid,
+	  user,
+	  result
+	FROM 
+	  Run 
+	WHERE 
+	  component='condor' AND 
+	  project='condor' AND
+	  run_type='build' AND
+	  description != '' AND 
+	  DATE_SUB(CURDATE(), INTERVAL 10 DAY) <= start 
+	GROUP BY 
+	  branch,
+	  user,
+	  run_type 
+	ORDER BY 
+	  IF(user = '".CONDOR_USER."',0,1), runid desc
+	";
 
-$last_user = CONDOR_USER;
-$result = mysql_query($query_runids) or die ("Query ".$query_runids." failed : " . mysql_error());
-while ($row = mysql_fetch_array($result)) {
-   $runid      = $row["runid"];
-   $branch     = $row["branch"];
-   $start      = $row["start"];
-   $user       = $row["user"];
-   $run_result = $row["result"];
-   
-   //
-   // Apply a break for nightly builds
-   //
-   if ($last_user == CONDOR_USER && $user != CONDOR_USER) {
-      echo "<tr>\n".
-           "   <td colspan=\"5\"><B><i>One-off Builds</i></b></td>\n".
-           "</tr>\n";
-   }
+	$last_user = CONDOR_USER;
+	$result = mysql_query($query_runids) or die ("Query ".$query_runids." failed : " . mysql_error());
+	while ($row = mysql_fetch_array($result)) {
+	   $runid      = $row["runid"];
+	   $branch     = $row["branch"];
+	   $start      = $row["start"];
+	   $user       = $row["user"];
+	   $run_result = $row["result"];
+	   
+	   //
+	   // Apply a break for nightly builds
+	   //
+	   if ($last_user == CONDOR_USER && $user != CONDOR_USER) {
+	      echo "<tr>\n".
+		   "   <td colspan=\"5\"><B><i>One-off Builds</i></b></td>\n".
+		   "</tr>\n";
+	   }
 
-   // --------------------------------
-   // BUILDS
-   // --------------------------------
-   $sql = "SELECT SUM(IF(Task.result = 0, 1, 0)) AS passed, ".
-          "       SUM(IF(Task.result != 0, 1, 0)) AS failed, ".
-          "       SUM(IF(Task.result IS NULL, 1, 0)) AS pending ".
-          "  FROM Task, Run ".
-          " WHERE Run.runid = {$runid}  AND ".
-          "       Task.runid = Run.runid AND ".
-          "       Task.platform != 'local' ".
-          " GROUP BY Task.platform ";
-   $result2 = mysql_query($sql)
-                  or die ("Query {$sql} failed : " . mysql_error());
-   $data["build"] = Array();
-   while ($platforms = mysql_fetch_array($result2)) {
-      if (!empty($platforms["failed"])) {
-         $data["build"]["failed"]++;
-      } elseif (!empty($platforms["pending"])) {
-         $data["build"]["pending"]++;
-      } elseif (!empty($platforms["passed"])) {
-         $data["build"]["passed"]++;
-      }
-   } // WHILE
-   mysql_free_result($result2);
+	   // --------------------------------
+	   // BUILDS
+	   // --------------------------------
+	   $sql = "SELECT SUM(IF(Task.result = 0, 1, 0)) AS passed, ".
+		  "       SUM(IF(Task.result != 0, 1, 0)) AS failed, ".
+		  "       SUM(IF(Task.result IS NULL, 1, 0)) AS pending ".
+		  "  FROM Task, Run ".
+		  " WHERE Run.runid = {$runid}  AND ".
+		  "       Task.runid = Run.runid AND ".
+		  "       Task.platform != 'local' ".
+		  " GROUP BY Task.platform ";
+	   $result2 = mysql_query($sql)
+			  or die ("Query {$sql} failed : " . mysql_error());
+	   $data["build"] = Array();
+	   while ($platforms = mysql_fetch_array($result2)) {
+	      if (!empty($platforms["failed"])) {
+		 $data["build"]["failed"]++;
+	      } elseif (!empty($platforms["pending"])) {
+		 $data["build"]["pending"]++;
+	      } elseif (!empty($platforms["passed"])) {
+		 $data["build"]["passed"]++;
+	      }
+	   } // WHILE
+	   mysql_free_result($result2);
 
-   // --------------------------------
-   // TESTS
-   // --------------------------------
-   $sql = "SELECT SUM(IF(Task.result = 0, 1, 0)) AS passed, ".
-          "       SUM(IF(Task.result != 0, 1, 0)) AS failed, ".
-          "       SUM(IF(Task.result IS NULL, 1, 0)) AS pending ".
-          "  FROM Task, Run, Method_nmi ".
-          " WHERE Method_nmi.input_runid = {$runid} AND ".
-          "       Run.runid = Method_nmi.runid AND ".
-          "       Task.runid = Run.runid AND ".
-          "       Task.platform != 'local' ".
-          " GROUP BY Task.platform ";
-   $result2 = mysql_query($sql)
-                  or die ("Query {$sql} failed : " . mysql_error());
-   $data["test"] = Array();
-   while ($platforms = mysql_fetch_array($result2)) {
-      if (!empty($platforms["failed"])) {
-         $data["test"]["failed"]++;
-         $data["test"]["total"]++;
-      } elseif (!empty($platforms["pending"])) {
-         $data["test"]["pending"]++;
-         $data["test"]["total"]++;
-      } elseif (!empty($platforms["passed"])) {
-         $data["test"]["passed"]++;
-         $data["test"]["total"]++;
-      }
-   } // WHILE
-   mysql_free_result($result2);
+	   // --------------------------------
+	   // TESTS
+	   // --------------------------------
+	   $sql = "SELECT SUM(IF(Task.result = 0, 1, 0)) AS passed, ".
+		  "       SUM(IF(Task.result != 0, 1, 0)) AS failed, ".
+		  "       SUM(IF(Task.result IS NULL, 1, 0)) AS pending ".
+		  "  FROM Task, Run, Method_nmi ".
+		  " WHERE Method_nmi.input_runid = {$runid} AND ".
+		  "       Run.runid = Method_nmi.runid AND ".
+		  "       Task.runid = Run.runid AND ".
+		  "       Task.platform != 'local' ".
+		  " GROUP BY Task.platform ";
+	   $result2 = mysql_query($sql)
+			  or die ("Query {$sql} failed : " . mysql_error());
+	   $data["test"] = Array();
+	   while ($platforms = mysql_fetch_array($result2)) {
+	      if (!empty($platforms["failed"])) {
+		 $data["test"]["failed"]++;
+		 $data["test"]["total"]++;
+	      } elseif (!empty($platforms["pending"])) {
+		 $data["test"]["pending"]++;
+		 $data["test"]["total"]++;
+	      } elseif (!empty($platforms["passed"])) {
+		 $data["test"]["passed"]++;
+		 $data["test"]["total"]++;
+	      }
+	   } // WHILE
+	   mysql_free_result($result2);
 
-   //
-   // HTML Table Row
-   //
-   $branch_url = sprintf(BRANCH_URL, $branch, $user);
-   
-   //
-   // If there's nothing at all, just skip
-   //
-   // We only want to do this for one-off builds, if the nightly build
-   // completely crapped out on us, we need to show it
-   // Andy - 11/30/2006
-   //
-   if ($user != CONDOR_USER && !count($data["build"]) && !count($data["test"])) continue;
-   
-   echo <<<EOF
-   <tr>
-      <td><a href="{$branch_url}">{$branch}</a></td>
+	   //
+	   // HTML Table Row
+	   //
+	   $branch_url = sprintf(BRANCH_URL, $branch, $user);
+	   
+	   //
+	   // If there's nothing at all, just skip
+	   //
+	   // We only want to do this for one-off builds, if the nightly build
+	   // completely crapped out on us, we need to show it
+	   // Andy - 11/30/2006
+	   //
+	   if ($user != CONDOR_USER && !count($data["build"]) && !count($data["test"])) continue;
+	   
+	   echo <<<EOF
+	   <tr>
+	      <td><a href="{$branch_url}">{$branch}</a></td>
       <td align="center">{$start}</td>
       <td align="center">{$user}</td>
 EOF;
