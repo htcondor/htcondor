@@ -185,7 +185,6 @@ TESTCLASS(job_dagman_splice-H,btdebug)
 # vmuniverse smoke test in larg repository
 
 #if defined(HAVE_VMWARE) && defined(HAVE_CONDOR_TEST_LRG)
-/*
 DESC(job_vmu_basic,"VM Universe smoke test")
 RUN(job_vmu_basic)
 TESTCLASS(job_vmu_basic,core)
@@ -193,7 +192,6 @@ TESTCLASS(job_vmu_basic,quick)
 TESTCLASS(job_vmu_basic,full)
 TESTCLASS(job_vmu_basic,quicknolink)
 TESTCLASS(job_vmu_basic,btdebug)
-*/
 #endif 
 
 DESC(job_flocking_to,"Simple flocking test")

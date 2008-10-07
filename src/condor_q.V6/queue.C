@@ -2013,7 +2013,7 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 #endif /* WANT_QUILL */
 	} else {
 			// fetch queue from schedd and stash it in output_buffer.
-		Daemon schedd(DT_SCHEDD, scheddName);
+		Daemon schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
 		const char *version = schedd.version();
 		bool useFastPath = false;
 		if (version) {

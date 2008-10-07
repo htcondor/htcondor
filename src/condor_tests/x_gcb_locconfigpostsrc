@@ -1,0 +1,13 @@
+#  GCB things
+
+
+# GCB Settings
+#NET_REMAP_ENABLE = true
+#NET_REMAP_SERVICE = GCB
+#
+#NET_REMAP_INAGENT = 198.51.254.153, 198.51.254.86, 198.51.254.85, 198.51.254.84, 198.51.254.83
+#
+#BIND_ALL_INTERFACES = true
+ALL_DEBUG = D_SECURITY D_FULLDEBUG
+HOSTALLOW_NEGOTIATOR_SCHEDD = nmi-s006.batlab.cs.wisc.edu nmi-s006.cs.wisc.edu
+HOSTALLOW_NEGOTIATOR = nmi-s006.batlab.cs.wisc.edu nmi-s006.cs.wisc.edu
