@@ -20,14 +20,46 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Updated the version of Globus Toolkit: The Condor binaries are now
+	linked against Globus v4.2.0.
+
+\item Updated the version of OpenSSL: The Condor binaries are now linked
+	against OpenSSL 0.9.8h.
+
+\item Updated the version of GCB: The Condor binaries are now linked
+	against GCB 1.5.6.
+
+\item Changes to the \MacroNI{ALLOW\_*} and \MacroNI{DENY\_*} configuration
+	variables no longer require the use of the \Opt{-full} option to
+	\Condor{reconfig} upon reconfiguration.
 
 \end{itemize}
-
 
 \noindent New Features:
 
 \begin{itemize}
+
+\item Added a new mechanism termed \Term{Concurrency Limits}.  This
+	mechanism allows the Condor pool administrator to define an arbitrary
+	number of consumable resources in the configuration file of the
+	matchmaker.  The availability of these consumable resources will be taken
+	into account during the matchmaking process.  Individual jobs can specify
+	how many of each type of consumable resource is required.  
+	Typical applications of Concurrency Limits could include management of
+	software licenses, database connections, or any other consumable resource
+	that is external to Condor.  NOTE: Documentation still being written on
+	this feature.
+
+\item Added support for Condor to manage serial high throughput computing
+	workloads on the IBM Blue Gene supercomputer.  The IBM Blue Gene/P is now
+	a supported platform.
+
+\item Extended Job Hooks (see section~\ref{sec:job-hooks}) to allow for
+	alternate transformation and/or monitoring engines for the Job Router (see
+	section~\ref{sec:JobRouter}.  Routing is still controlled by the Job
+	Router, but if Job Router Hooks are configured, then external programs or
+	scripts can be used to transform and monitor the job instead of Condor's
+	internal engine.
 
 \item Added the ability for Windows slot users to load and run their jobs
 within the context of their profile. 
@@ -49,6 +81,10 @@ allow a version mismatch between \Condor{dagman} and the
 \File{.condor.sub} file used to submit it.
 This permits a Condor version mismatch between
 \Condor{submit\_dag} and \Condor{dagman}).
+
+\item Streamlined the protocol between submit and execute machines; in some
+	instances less messages will be exchanged over the network.
+
 
 \end{itemize}
 
@@ -89,6 +125,17 @@ execute machines on a network with 0.1 second round trip times.  See
 \pageref{param:SecEnableMatchPasswordAuthentication} for
 details.
 
+\item Added configuration entry \Macro{GLEXEC\_JOB} which replaces the
+	functionality previously encapsulated in \Macro{GLEXEC\_STARTER}.  Using
+	\Macro{GLEXEC\_JOB} enables privilege separation in Condor via glexec in a
+	manner much more consistent with how Condor's own privilege separation
+	machanism works.  Specifically, the user identity switching will now occur
+	between the \Condor{starter} and the actual user job.
+
+\item Added configuration parameter \Macro{AMAZON\_GAHP\_WORKER\_MAX\_NUM}
+	to specify a ceiling on the number of threads spawned on the submit
+	machine to support jobs running on Amazon EC2.  Defaults to 5.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -106,6 +153,19 @@ It now logs this under level \MacroNI{D\_ALWAYS} and ignores the ClassAd.
 Condor daemons to start
 consuming a lot of cpu time after rare types of communication failures
 during security negotiation.
+
+\item Fixed a bug from Condor version 7.1.2 that in rare cases could cause
+	Condor to fail to recognize when a call to exec() fails on Unix
+	platforms.
+
+\item Fixed problems with configuration parameter
+	\Macro{JOB\_INHERITS\_STARTER\_ENVIRONMENT} when using PrivSep.
+
+\item Improved the deletion of Amazon EC2 jobs when the server is
+	unreachable.
+
+\item Fixed problems with Condor parallel universe jobs when recovering from
+	a reboot of the submit machine.
 
 \end{itemize}
 
