@@ -57,6 +57,11 @@ The job itself was killed, but the \Condor{starter} process watching over
 it would not be killed.  The slot would then stay in the Preempting state
 indefinitely.
 
+\item \Condor{q} performed poorly when querying a remote pool, using
+\Opt{-pool}.  It was using an older latency-bound protocol even when
+the remote \Condor{schedd} was new enough to use the improved protocol
+that first appeared in version 6.9.3.
+
 \end{itemize}
 
 \noindent Known Bugs:
