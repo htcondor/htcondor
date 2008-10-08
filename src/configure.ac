@@ -2254,6 +2254,14 @@ fi
 # checks for libraries
 ############################################################
 
+# Check for PTHREADS library on this platform.
+AC_CHECK_LIB([pthread], [pthread_create],
+  [ac_pthreads=yes
+   AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])],
+  [ac_pthreads=no])
+
+# Check if this system supports Thread Local Storage class.
+AX_TLS
 
 ############################################################
 # checks for header files

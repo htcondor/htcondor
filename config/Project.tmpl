@@ -288,7 +288,7 @@ DAEMONCORE_WRAP_LDFLAGS = -Wl,--wrap,exit
  end of externals-specific settings and flags
 ********************************************/
 
-#if HAS_PTHREADS
+#if HAVE_PTHREADS
 PTHREAD_LIB = -lpthread
 #endif
 
