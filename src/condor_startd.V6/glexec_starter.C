@@ -254,6 +254,13 @@ glexec_starter_prepare(const char* starter_path,
 	glexec_env.SetEnv( "_CONDOR_PROCD_ADDRESS", procd_address.Value() );
 	glexec_env.SetEnv( "_condor_PROCD_ADDRESS", procd_address.Value() );
 
+	// CONDOR_GLEXEC_STARTER_CLEANUP_FLAG: this serves as a flag in the
+	// Starter's environment that it will check for in order to determine
+	// whether to do GLEXEC_STARTER-specific cleanup
+	//
+	glexec_env.SetEnv( "CONDOR_GLEXEC_STARTER_CLEANUP_FLAG",
+	                   "CONDOR_GLEXEC_STARTER_CLEANUP_FLAG" );
+
 	// now set up a socket pair for communication with
 	// condor_glexec_wrapper
 	//

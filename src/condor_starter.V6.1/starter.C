@@ -45,6 +45,7 @@
 #include "exit.h"
 #include "condor_auth_x509.h"
 #include "starter_privsep_helper.h"
+#include "setenv.h"
 
 extern "C" int get_random_int();
 extern int main_shutdown_fast();
@@ -207,7 +208,7 @@ CStarter::StarterExit( int code )
 {
 	removeTempExecuteDir();
 #if !defined(WIN32)
-	if( param_boolean( "GLEXEC_STARTER", false ) ) {
+	if ( GetEnv( "CONDOR_GLEXEC_STARTER_CLEANUP_FLAG" ) ) {
 		exitAfterGlexec( code );
 	}
 #endif
