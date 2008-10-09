@@ -65,6 +65,12 @@ The details of each version are described below.
 	scripts can be used to transform and monitor the job instead of Condor's
 	internal engine.
 
+\item Added support for the new protocol for WS GRAM introduced in Globus
+4.2. For each WS GRAM resource, Condor automatically determines whether it's
+speaking the 4.0 or 4.2 version of the protocol and responds appropriately.
+When setting \SubmitCmd{grid\_resource} in the submit file, use
+\SubmitCmd{gt4} for both WS GRAM 4.0 and 4.2.
+
 \item Added the ability for Windows slot users to load and run their jobs
 within the context of their profile. 
 This includes the \File{My Documents} directory 
