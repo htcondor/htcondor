@@ -113,6 +113,11 @@ close(TPLATE);
 close(CSUB);
 
 
+# make test data
+system("./x_chirpio_mkdata.pl --message='Testing message'");
+# remove marker files which pace parallel job
+system("rm -rf ALLDONE WRITEDONE");
+
 my $result = CondorPersonal::PersonalSystem("./job_core_chirp_par.pl $mysubmitnm");
 print "Result of chirp paarallel  job is  $result\n";
 
