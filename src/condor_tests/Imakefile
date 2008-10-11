@@ -63,6 +63,14 @@ RUN(lib_chirpio_van)
 TESTCLASS(lib_chirpio_van,lib)
 TESTCLASS(lib_chirpio_van,quick)
 TESTCLASS(lib_chirpio_van,full)
+
+DESC(job_core_chirp_par,"Exercise the chirp I/O C library in Parallel Universe")
+BUILD_DEP_LIB($(CC),job_core_chirp_par,c,,../release_dir/lib/libchirp_client.a)
+DEPS(job_core_chirp_par,job_core_chirp_par.exe)
+RUN(job_core_chirp_par)
+TESTCLASS(job_core_chirp_par,lib)
+TESTCLASS(job_core_chirp_par,quick)
+TESTCLASS(job_core_chirp_par,full)
 #endif 
 
 /* User log and log reader used by dagman tests */
