@@ -49,10 +49,10 @@ public:
 	//@{
 	
 	/// Constructor
-	HibernatorBase () throw ();
+	HibernatorBase ( void ) throw ();
 
 	/// Destructor
-	virtual ~HibernatorBase () throw (); 
+	virtual ~HibernatorBase ( void ) throw (); 
 
 	//@}
 
@@ -80,7 +80,7 @@ public:
 		@return a mask of the states supported by the OS.
 		@see SLEEP_STATE
 		*/
-	unsigned short getStates () const;
+	unsigned short getStates ( void ) const;
 
     /** Set the supported sleep states 
         */
@@ -100,7 +100,7 @@ public:
 		@return if the OS is supported a valid HibernatorBase*; 
         otherwise NULL.
 	*/
-	static HibernatorBase* createHibernator ();
+	static HibernatorBase* createHibernator ( void );
 
 	
 	/** @name Conversion functions.

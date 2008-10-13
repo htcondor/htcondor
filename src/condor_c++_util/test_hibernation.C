@@ -23,6 +23,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_distribution.h"
+#include "hibernation_manager.h"
 #include "MyString.h"
 #include "simple_arg.h"
 #include <stdio.h>
@@ -31,8 +32,10 @@ static const char *	VERSION = "0.1";
 
 struct Options
 {
-	int				 m_verbosity;
-	const char		*m_address;
+	int								 m_verbosity;
+	const char						*m_address;
+	HibernatorBase::SLEEP_STATE		 m_state;
+	const char						*m_state_str;
 };
 
 bool
@@ -49,7 +52,7 @@ main(int argc, const char **argv)
 
 		// Set up the dprintf stuff...
 	Termlog = true;
-	dprintf_config("TEST_HIBERNATION");
+	dprintf_config("TEST_NETWORK_ADAPTER");
 
 	const char	*tmp;
 	int			 result = 0;
@@ -100,6 +103,12 @@ main(int argc, const char **argv)
 	net->publish( ad );
 	ad.fPrint( stdout );
 
+	HibernationManager	hman;
+	hman.addInterface( net );
+
+	bool ch = hman.canHibernate( );
+	printf( "Can hibernate: %s\n", ch?"True":"False" );
+
 	if ( result != 0 && opts.m_verbosity >= 1 ) {
 		fprintf(stderr, "test_network_adapter FAILED\n");
 	}
@@ -111,7 +120,7 @@ bool
 CheckArgs(int argc, const char **argv, Options &opts)
 {
 	const char *	usage =
-		"Usage: test_network_adapter [options] <IP address>\n"
+		"Usage: test_hibernation [options] <IP address> <state>\n"
 		"  -d <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  --debug <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  --usage|--help|-h: print this message and exit\n"
@@ -120,8 +129,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --version: print the version number and compile date\n";
 
 	opts.m_address = "127.0.0.1";
+	opts.m_state = HibernatorBase::None;
 	opts.m_verbosity = 1;
 
+	int		fixed = 0;
 	for ( int index = 1; index < argc; ++index ) {
 		SimpleArg	arg( argv, argc, index );
 
@@ -135,7 +146,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				set_debug_flags( const_cast<char *>(arg.Opt()) );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --debug argument\n");
+				fprintf(stderr, "Value needed for %s argument\n", arg.Arg() );
 				printf("%s", usage);
 				return true;
 			}
@@ -154,7 +165,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.m_verbosity = atoi(argv[index]);
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --verbosity argument\n");
+				fprintf(stderr, "Value needed for %s argument\n", arg.Arg() );
 				printf("%s", usage);
 				return true;
 			}
@@ -163,8 +174,22 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			printf("test_log_reader: %s, %s\n", VERSION, __DATE__);
 			return true;
 
-		} else if ( !arg.ArgIsOpt() ) {
+		} else if ( !arg.ArgIsOpt() && (fixed++ == 0) ) {
 			opts.m_address = arg.ArgStr();
+			if ( ! isdigit( *opts.m_address ) ) {
+				fprintf(stderr,
+						"%s doesn't look like an IP address\n", arg.Arg() );
+				return true;
+			}
+
+		} else if ( !arg.ArgIsOpt() && (fixed++ == 1) ) {
+			opts.m_state_str = arg.ArgStr();
+			opts.m_state =
+				HibernatorBase::stringToSleepState( opt.m_state_str );
+			if ( opts.m_state == HibernatorBase::NONE ) {
+				fprintf( stderr, "Unknown state '%s'\n", arg.Arg() );
+				return true;
+			}
 
 		} else {
 			fprintf(stderr, "Unrecognized argument: <%s>\n", arg.ArgStr() );

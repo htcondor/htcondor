@@ -36,27 +36,36 @@ extern DaemonCore* daemonCore;
  * HibernationManager class
  ***************************************************************/
 
-HibernationManager::HibernationManager () throw ()
+HibernationManager::HibernationManager ( void ) throw ()
 :	_hibernator ( HibernatorBase::createHibernator () ),
     _network_adpater ( NetworkAdapterBase::createNetworkAdapter (
                   daemonCore->InfoCommandSinfulString () ) ),
 	_interval ( 0 )
 {
+	m_adapters = NULL;
 	update ();
 }
 
-HibernationManager::~HibernationManager () throw ()
+HibernationManager::~HibernationManager ( void ) throw ()
 {
 	if ( _hibernator ) {
 		delete _hibernator;
 	}
-    if ( _network_adpater ) {
-        delete _network_adpater;
-    }
+	while ( m_adapters ) {
+		next = m_adapter->next;
+		delete m_adapters;
+		m_adapters = next;
+	}
 }
 
 void
-HibernationManager::update ()
+HibernationManager::addInterface( NetworkAdapterBase &adapter )
+{
+	m_adapters = new HibernationManagerAdapter( adapter );
+}
+
+void
+HibernationManager::update( void )
 {
 	int previous_inteval = _interval;
 	_interval = param_integer ( "HIBERNATE_CHECK_INTERVAL",
@@ -66,14 +75,6 @@ HibernationManager::update ()
 		dprintf ( D_ALWAYS, "HibernationManager: Hibernation is %s\n",
 			( _interval > 0 ? "enabled" : "disabled" ) );
 	}
-#if 0
-    /* always assume we have a new network adapter? */
-    if ( _network_adpater ) {
-        delete _network_adpater;
-    }
-    _network_adpater = NetworkAdapterBase::createNetworkAdapter (
-                  daemonCore->InfoCommandSinfulString () );
-#endif
 }
 
 bool

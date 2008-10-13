@@ -41,10 +41,10 @@ public:
 	//@{
 	
 	/// Constructor
-	HibernationManager () throw ();
+	HibernationManager ( void ) throw ();
 	
 	/// Destructor
-	virtual ~HibernationManager () throw ();
+	virtual ~HibernationManager ( void ) throw ();
 	
 	//@}
 
@@ -53,7 +53,15 @@ public:
 		management capabilities of the OS.
 		*/
 	//@{
-	
+
+
+	/** Add an interface for the hibernation manager to monitor
+		@param The interface to add
+		@return true:suceess; false:failed
+	*/
+	bool addInterface( NetworkAdapterBase & );
+
+
 	/** Signals the OS to enter hibernation.
 		@param the hibernation state to place machine into
 		@return true if the machine will enter hibernation; otherwise, false.
@@ -69,7 +77,7 @@ public:
 		@see wantsHibernate
         @see canWake
 		*/
-	bool canHibernate () const;
+	bool canHibernate ( void ) const;
 
     /** Determines if the network adapter is capable of waking the machine.
 		@return true if the machine can be woken; otherwise, false.
@@ -77,7 +85,7 @@ public:
 		@see canHibernate
         @see wantsHibernate
 		*/
-	bool canWake () const;
+	bool canWake ( void ) const;
 
 	/** Determines if the user wants the machine to hibernate
 	    (based on the configuration file).
@@ -87,31 +95,57 @@ public:
 		@see canHibernate
         @see canWake
 		*/
-	bool wantsHibernate () const;
+	bool wantsHibernate ( void ) const;
 
 	//@}
 
 	/** Get the time interval for checking the HIBERNATE expression.
-		@return interval in seconds, or zero if no power management is to be used.
+		@return interval in seconds, or zero if no power management is
+		to be used.
 		@see doHibernate
 		@see canHibernate
 		@see wantsHibernate
 		*/
-	int getHibernateCheckInterval () const;
+	int getHibernateCheckInterval ( void ) const;
 
 	/** Reset all the internal values based on what the values in the
 	    configuration file.
 		*/
-	void update ();
+	void update ( void );
 
     /** Published the hibernation manager's information into
         the given ad */
     void publish ( ClassAd &ad );
 
 private:
-	
+
+	class Adapter
+	{
+	  public:
+		Adapter( NetworkAdapterBase &adapter, Adapter *head ) {
+			if ( head ) {
+				m_next = head->GetNext();
+			}
+			head = new Adapter( adapter, this );
+			return head;
+		}
+		Adapter *GetNext( void ) {
+			return m_next;
+		}
+		NetworkAdapterBase &GetAdapter( void ) {
+			return *m_adapter;
+		}
+		Adapter *Set( NetworkAdapterBase &adapter, Adapter *next ) {
+			m_adapter = &adapter;
+			m_next = next;
+			return this;
+		}
+	  private:
+		Adapter				*m_next;
+		NetworkAdapterBase	*m_adapter;
+	};
+	Adapter				*m_adapters;
 	HibernatorBase		*_hibernator;
-    NetworkAdapterBase  *_network_adpater;
 	int					_interval;	
 
 };
