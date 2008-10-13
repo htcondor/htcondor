@@ -65,8 +65,10 @@ public:
 	int		releaseAllClaims( void );
 	int		killAllClaims( void );    
 
-        // Restore the resource's "claimability"
-    int     allowClaims( void );
+        // Hibernation Disable/Restore the resource's "claim-ability"
+    int     disableClaimAbility( void );
+    int     restoreClaimAbility( void );
+    bool hibernating( void );
 
 		// Resource state methods
 	void	set_destination_state( State s ) { r_state->set_destination(s);};
@@ -263,6 +265,8 @@ private:
 	char*	m_hook_keyword;
 	bool	m_hook_keyword_initialized;
 #endif /* HAVE_JOB_HOOKS */
+
+    bool m_hibernating;
 
 };
 

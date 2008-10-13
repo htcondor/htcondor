@@ -204,8 +204,8 @@ public:
 
 	void FillExecuteDirsList( class StringList *list );
 
-    void shutdownAllResources ( void );
-    void restoreAllResources ( void );
+    void invalidateResource ( int level );
+    void restoreResources ( void );
 
 private:
 

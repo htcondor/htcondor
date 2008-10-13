@@ -278,6 +278,10 @@ int CollectorDaemon::receive_query_cedar(Service* s,
 		}
 	}
 
+#if defined ( HAVE_GREEN_PLUGIN )
+    green_plugin_.query ( command, cad );
+#endif
+
 	// send the results via cedar
 	sock->encode();
 	results.Rewind();
@@ -502,6 +506,10 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	if (command == INVALIDATE_STARTD_ADS)
 		process_invalidation (STARTD_PVT_AD, cad, sock);
 
+#if defined ( HAVE_GREEN_PLUGIN )
+    green_plugin_.invalidate ( command, cad );
+#endif
+
 #if HAVE_DLOPEN
 	CollectorPluginManager::Invalidate(command, cad);
 #endif
@@ -566,6 +574,10 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 				command);
 		}
 	}
+
+#if defined ( HAVE_GREEN_PLUGIN )
+    green_plugin_.update ( command, cad );
+#endif
 
 #if HAVE_DLOPEN
 	CollectorPluginManager::Update(command, *cad);

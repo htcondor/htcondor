@@ -63,6 +63,11 @@ public:
 	*/
 	const char* hardwareAddress (void) const;
 
+    /** Returns the adapter's IP address as a string
+		@return the adapter's's IP address
+	*/
+	virtual unsigned ipAddress (void) const;
+    
     /** Returns the adapter's hardware address
 		@return a string representation of the subnet mask
 	*/
@@ -101,14 +106,6 @@ public:
 
    //@}
 
-
-    /** Initialize the internal structures (can be called multiple
-        times--such as in the case of a reconfiguration)
-		@return true if it was succesful; otherwise, false.
-		*/
-    bool initialize ();
-
-
 private:
 
     /** Data members */
@@ -116,7 +113,7 @@ private:
          _hardware_address[32],
          _subnet[IP_STRING_BUF_SIZE],
          _adapter_name[MAX_ADAPTER_NAME_LENGTH + 4];
-    bool _wake_able;
+    bool _wake_able;    
 
     /**	Some registry values require some preprocessing before they can
 		be queried, so we allow a user to specify a function to handle

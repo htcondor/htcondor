@@ -28,7 +28,7 @@
 #include "collector_engine.h"
 #include "collector_stats.h"
 #include "dc_collector.h"
-
+#include "green_plugin.h"
 
 //----------------------------------------------------------------
 // Simple job universe stats
@@ -134,6 +134,7 @@ protected:
 	static int sockCacheHandler( Service*, Stream* sock );
 	static int stashSocket( Stream* sock );
 
+    GreenComputingCollectorPlugin green_plugin_;
 };
 
 #endif

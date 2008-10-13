@@ -61,15 +61,25 @@ public:
 	*/
 	bool addInterface( NetworkAdapterBase & );
 
+	//@{
+
+    /** Set which hibernation level the computer should enter
+        @param the hibernation state to place machine into
+        @return true if the internal state ha changed; otherwise, false.
+        @see doHibernate
+        @see canHibernate
+        @see wantsHibernate
+        @see canWake
+        */
+    bool setState ( HibernatorBase::SLEEP_STATE state );
 
 	/** Signals the OS to enter hibernation.
-		@param the hibernation state to place machine into
 		@return true if the machine will enter hibernation; otherwise, false.
 		@see canHibernate
 		@see wantsHibernate
         @see canWake
 		*/
-	bool doHibernate ( int state ) const;
+	bool doHibernate () const;
 
 	/** Determines if the power manager is capable of hibernating the machine.
 		@return true if the machine can be hibernated; otherwise, false.
@@ -144,9 +154,10 @@ private:
 		Adapter				*m_next;
 		NetworkAdapterBase	*m_adapter;
 	};
-	Adapter				*m_adapters;
-	HibernatorBase		*_hibernator;
-	int					_interval;	
+	Adapter						*m_adapters;
+	HibernatorBase				*m_hibernator;
+	int							 m_interval;	
+    HibernatorBase::SLEEP_STATE	 m_state;	
 
 };
 
