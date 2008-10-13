@@ -368,11 +368,6 @@ main_init( int, char* argv[] )
 								"command_vm_universe", 0, DAEMON, 
 								D_FULLDEBUG );
 
-        // Commands for Green Computing
-    daemonCore->Register_Command( MACHINE_WOKEN, "MACHINE_WOKEN", 
-                                (CommandHandler)command_machine_woken,
-							    "command_machine_woken", 0, DAEMON );
-
 		//////////////////////////////////////////////////
 		// Reapers 
 		//////////////////////////////////////////////////

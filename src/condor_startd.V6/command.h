@@ -84,11 +84,6 @@ int command_name_handler( Service*, int, Stream* );
 */
 int command_classad_handler( Service*, int, Stream* );
 
-/* 
-   Command handlers for Green Computing commands
-*/
-int command_machine_woken( Service*, int, Stream* );
-
 /*
   Since the protocol is complex and what we have to do so
   complicated, these functions are here that actually do the work of 
