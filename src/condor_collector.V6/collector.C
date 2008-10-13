@@ -236,7 +236,11 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(UPDATE_AD_GENERIC, "UPDATE_AD_GENERIC",
 				     (CommandHandler)receive_update,
 				     "receive_update", NULL, DAEMON);
-				     
+
+    // install command handlers for updates with acknowledgement 
+
+    daemonCore->Register_Command(UPDATE_STARTD_AD_WITH_ACK,"UPDATE_STARTD_AD_WITH_ACK",
+		(CommandHandler)receive_update_expect_ack,"receive_update",NULL,ADVERTISE_STARTD_PERM);				     
 
 	// ClassAd evaluations use this function to resolve names
 	// ClassAdLookupRegister( process_global_query, this );
@@ -278,9 +282,11 @@ int CollectorDaemon::receive_query_cedar(Service* s,
 		}
 	}
 
+/*
 #if defined ( HAVE_GREEN_PLUGIN )
     green_plugin_.query ( command, cad );
 #endif
+*/
 
 	// send the results via cedar
 	sock->encode();
@@ -506,9 +512,11 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	if (command == INVALIDATE_STARTD_ADS)
 		process_invalidation (STARTD_PVT_AD, cad, sock);
 
+/*
 #if defined ( HAVE_GREEN_PLUGIN )
     green_plugin_.invalidate ( command, cad );
 #endif
+*/
 
 #if HAVE_DLOPEN
 	CollectorPluginManager::Invalidate(command, cad);
@@ -575,9 +583,11 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 		}
 	}
 
+/*
 #if defined ( HAVE_GREEN_PLUGIN )
     green_plugin_.update ( command, cad );
 #endif
+*/
 
 #if HAVE_DLOPEN
 	CollectorPluginManager::Update(command, *cad);
@@ -593,6 +603,103 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 			// this socket for future updates...
 		return stashSocket( sock );
 	}
+
+	// let daemon core clean up the socket
+	return TRUE;
+}
+
+
+int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream *stream )
+{
+
+    Sock        *socket = (Sock*) stream;
+    ClassAd     updateAd;
+    const int   timeout = 5;
+    
+    socket->decode ();
+    socket->timeout ( timeout );
+    
+    if ( !updateAd.initFromStream ( *socket ) ) {
+
+        dprintf ( 
+            D_ALWAYS, 
+            "Failed to read class ad off the wire, aborting\n" );
+
+        return FALSE;
+
+    }
+
+    /* assume the ad is malformed */
+    int insert = -3;
+    
+    /* get endpoint */
+    sockaddr_in *from = socket->endpoint ();
+
+    /* "collect" the ad */
+    ClassAd *ad = collector.collect ( 
+        command, 
+        &updateAd, 
+        from, 
+        insert );
+
+    if ( !ad ) {
+
+        /* attempting to "collect" a QUERY or INVALIDATE command?!? */
+		if ( -2 == insert ) {
+
+			dprintf (
+                D_ALWAYS,
+                "Got QUERY or INVALIDATE command (%d); these are "
+                "not supported.\n",
+				command );
+		}
+
+        /* this happens when we get a classad for which a hash key 
+        could not been made. This occurs when certain attributes are 
+        needed for the particular catagory the ad is destined for, 
+        but they are not present in the ad. */
+		if ( -3 == insert ) {
+			
+			dprintf (D_ALWAYS,
+				"Received malformed ad from command (%d). Ignoring.\n",
+				command);
+		}
+
+    } else {
+
+        int ok = TRUE;
+
+        socket->encode ();
+        socket->timeout ( timeout );
+
+        /* send an acknowledgment of receipt */
+        if ( !socket->code ( ok ) ) {
+        
+            dprintf ( 
+                D_ALWAYS, 
+                "Failed to send acknowledgement to host %s, "
+                "aborting\n",
+                socket->sender_ip_str () );
+        
+            return FALSE;
+        
+        }
+
+        if ( !socket->eom () ) {
+        
+            dprintf ( 
+                D_FULLDEBUG, 
+                "Failed to send update EOM to host %s.\n", 
+                socket->sender_ip_str () );
+        
+	    }   
+        
+    }
+
+	if(View_Collector && ((command == UPDATE_STARTD_AD) || 
+			(command == UPDATE_SUBMITTOR_AD)) ) {
+		send_classad_to_sock(command, View_Collector, ad);
+	}	
 
 	// let daemon core clean up the socket
 	return TRUE;
