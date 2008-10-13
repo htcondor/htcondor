@@ -35,6 +35,7 @@ SimpleArg::SimpleArg( const char **argv, int argc, int index )
 	m_error = false;
 	m_is_opt = false;
 
+	// Define it as an 'option' if it starts with a '-'
 	if ( m_arg[0] == '-' ) {
 		m_is_opt = true;
 
@@ -47,16 +48,23 @@ SimpleArg::SimpleArg( const char **argv, int argc, int index )
 		else {
 			m_error = true;
 		}
-	}
-	else {
-		m_is_opt = false;
+
+		// Option is the next argument if it exists
+		// point m_opt at it
+		if ( index+1 < argc ) {
+			m_opt = argv[index+1];
+		}
+		else {
+			m_opt = NULL;
+		}
+
 	}
 
-	if ( index+1 < argc ) {
-		m_opt = argv[index+1];
-	}
+	// No '-'?  Not an option
 	else {
-		m_opt = NULL;
+		// point m_opt at current argument
+		m_is_opt = false;
+		m_opt = m_arg;
 	}
 }
 
