@@ -45,7 +45,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug where if log line caching was enabled in \Condor{dagman}
+and \Condor{dagman} failed during the recovery process, the cache would
+stay active. Now the cache is disabled in all cases at the end of recovery.
 
 \end{itemize}
 
