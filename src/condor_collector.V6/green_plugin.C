@@ -32,11 +32,6 @@
  ***************************************************************/
 
 /*
-GreenComputingCollectorPlugin& getPlugin () {
-    static GreenComputingCollectorPlugin gc;
-    return gc;
-}
-
 int __cdecl update ( const char *ad );
 int __cdecl publish ( const char **ads, int *n, int *m );
 int __cdecl invalidate ( const char *ad );
@@ -47,8 +42,7 @@ int __cdecl expiration ( const char *ad, time_t *ttl );
  * GreenComputingCollectorPlugin [c|d]tors
  ***************************************************************/
 
-GreenComputingCollectorPlugin::GreenComputingCollectorPlugin () throw () {
-    
+GreenComputingCollectorPlugin::GreenComputingCollectorPlugin () throw () { 
 }
 
 GreenComputingCollectorPlugin::~GreenComputingCollectorPlugin () {    
@@ -84,22 +78,6 @@ GreenComputingCollectorPlugin::update (
 }
 
 void
-GreenComputingCollectorPlugin::query ( 
-    int             command, 
-    const ClassAd   &ad ) {
-
-    /* make sure the command is relevant to us */
-    if ( INVALIDATE_STARTD_ADS == command ) {
-        
-        dprintf ( 
-            D_FULLDEBUG,
-            "In GreenComputingCollectorPlugin::query ()\n" );
-        
-    }
-
-}
-
-void
 GreenComputingCollectorPlugin::invalidate ( 
     int             command, 
     const ClassAd   &ad ) {
@@ -113,7 +91,7 @@ GreenComputingCollectorPlugin::invalidate (
         
     }
 
-    _ads.BeginTransaction ();
+    /* _ads.BeginTransaction (); */
 
 }
 

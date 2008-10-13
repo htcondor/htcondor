@@ -2015,8 +2015,9 @@ ResMgr::checkHibernate() {
 	    // plug-in will know the this ad belongs to it when the
 	    // Collector invalidates it.
 	    //
-	    invalidateResource( level );        
-	    m_hibernation_manager.doHibernate();
+        if ( disableResources( level ) ) {
+	        m_hibernation_manager.doHibernate();
+        }
 
     }
 
@@ -2267,28 +2268,40 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 	}
 }
 
+#if HAVE_HIBERNATE
+
 int 
 disable_resource_claims ( Resource *resource ) 
 {
-    return resource->disableClaimAbility ();
-}
+    /* THIS SUCKS and should be fixed in the second go around. When 
+    doing a blocking update we send the updates for each resource 
+    serially with a small contrived timeout between them so that we
+    do not overwhelm the poor Collector. */
 
-void 
-ResMgr::invalidateResource( int level )
-{
-    m_hibernation_manager.setState( level );	    
-    walk ( &disable_resource_claims );
+    /* kill the claim */
+    resource->kill_claim ();
+
+    /* let the negotiator know not to match any new jobs 
+    to this slot */
+    resource->r_reqexp->unavail ();
+
+    /* finally, send the staggered blocking updates */
+    return resource->update_with_ack ();
 }
 
 int 
-restore_resource_claims ( Resource *resource ) 
+ResMgr::disableResources( int level )
 {
-    return resource->restoreClaimAbility ();
+    /* set the sleep state so the green plugin will pickup on the
+    fact that we are */
+    m_hibernation_manager.setState ( 
+        (HibernatorBase::SLEEP_STATE) level );
+    for ( int i = 0; i < nresources; ++i ) {
+        if ( !disable_resource_claims ( resources[i] ) ) {
+            return FALSE;
+        }
+    }
+    return TRUE;
 }
 
-void 
-ResMgr::restoreResources( void )
-{
-    walk ( &restore_resource_claims );
-}
-
+#endif 

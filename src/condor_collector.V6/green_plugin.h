@@ -24,6 +24,7 @@
  * Headers
  ***************************************************************/
 
+#include "collectorplugin.h"
 #include "classad_log.h"
 
 /***************************************************************
@@ -44,12 +45,7 @@ public:
         */
 	void update ( int command, const ClassAd &ad );
 
-    /** Receive a ClassAd sent as part of an QUERY_ command,
-	    command int is provided.
-        */
-    void query ( int command, const ClassAd &ad );
-
-	/** Receive a ClassAd INVALIDATE_ command, command int
+    /** Receive a ClassAd INVALIDATE_ command, command int
 	    provided.
 	    */
 	void invalidate ( int command, const ClassAd &ad );

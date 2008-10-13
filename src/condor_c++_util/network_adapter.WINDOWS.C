@@ -32,10 +32,15 @@
     */
 #define GUID_STR_LENGTH ((sizeof(GUID)*2)+6)
 
+#define CONDOR_DEFINE_GUID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
+    extern const GUID name \
+                = { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
+
 /*    Guid for Lan Class. (From DDK)
 */
-DEFINE_GUID(GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f, 0x11d0, 0x8d, 
-            0xcb, 0x00, 0xc0, 0x4f, 0xc3, 0x35, 0x8c);
+CONDOR_DEFINE_GUID(CONDOR_GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f, 
+                    0x11d0, 0x8d, 0xcb, 0x00, 0xc0, 0x4f, 0xc3, 
+                    0x35, 0x8c);
 
 /***************************************************************
  * Defines
@@ -51,14 +56,14 @@ DEFINE_GUID(GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f, 0x11d0, 0x8d,
  ***************************************************************/
 
 WindowsNetworkAdapter::WindowsNetworkAdapter (void) throw () 
-: _wake_able ( false ) {
+: _wake_able ( false ), _exists ( false ) {
     strncpy ( _ip_address, my_ip_string (), IP_STRING_BUF_SIZE );
     initialize ();
 }
 
 WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR ip_addr,
 											   unsigned int /*ip*/) throw ()
-: _wake_able ( false ) {
+: _wake_able ( false ), _exists ( false ) {
     strncpy ( _ip_address, ip_addr, IP_STRING_BUF_SIZE );
     initialize (); 
 }
@@ -191,6 +196,11 @@ WindowsNetworkAdapter::wakeAble (void) const {
     return _wake_able;
 }
 
+bool
+WindowsNetworkAdapter::exists (void) const {
+    return _exists;
+}
+
 /*    The power data registry values requires some preprocessing before 
     it can be queried, so we allow a user to specify a function to handle 
     preprocessing.
@@ -231,7 +241,7 @@ WindowsNetworkAdapter::getRegistryProperty (
         __try {
 
             device_information = SetupApiDLL::SetupDiGetClassDevs ( 
-                &GUID_NDIS_LAN_CLASS, 
+                &CONDOR_GUID_NDIS_LAN_CLASS, 
                 0, 
                 0, 
                 DIGCF_PRESENT | DIGCF_DEVICEINTERFACE );
@@ -266,7 +276,7 @@ WindowsNetworkAdapter::getRegistryProperty (
                 enumerated_devices = SetupApiDLL::SetupDiEnumDeviceInterfaces (
                     device_information,
                     NULL,
-                    &GUID_NDIS_LAN_CLASS,
+                    &CONDOR_GUID_NDIS_LAN_CLASS,
                     index++,
                     &did );            
 
