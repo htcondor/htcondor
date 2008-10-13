@@ -244,12 +244,14 @@ bool Dag::Bootstrap (bool recovery) {
 		if( _condorLogFiles.number() > 0 ) {
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
 				_recovery = false;
+				debug_cache_stop_caching();
 				return false;
 			}
 		}
 		if( _storkLogFiles.number() > 0 ) {
 			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
 				_recovery = false;
+				debug_cache_stop_caching();
 				return false;
 			}
 		}
