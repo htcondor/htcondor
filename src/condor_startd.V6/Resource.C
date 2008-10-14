@@ -111,8 +111,6 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	} else { 
 		dprintf( D_ALWAYS, "New machine resource allocated\n" );
 	}
-
-    m_hibernating = false;
 }
 
 
@@ -374,35 +372,6 @@ Resource::shutdownAllClaims( bool graceful )
 	update();
 
 	return TRUE;
-}
-
-int
-Resource::disableClaimAbility( void )
-{
-    /* kill all the claims (this also sends an update to the 
-    collector) and then set a flag saying that we are disabled
-    due to an eminent hibernation */
-    killAllClaims();    
-    m_hibernating = true;
-	
-    return TRUE;
-}
-
-int
-Resource::restoreClaimAbility( void )
-{
-    /* kill the hibernating flag and restore the resource's ability
-    to be claimed (and tell the Collector about this) */
-    m_hibernating = false;    
-    r_reqexp->restore ();
-    update ();
-    
-    return TRUE;
-}
-
-bool Resource::hibernating( void )
-{
-    return m_hibernating;
 }
 
 bool
@@ -918,24 +887,9 @@ Resource::do_update( void )
 	int rval;
 	ClassAd private_ad;
 	ClassAd public_ad;
-
-	this->publish( &public_ad, A_ALL_PUB );
-	if( vmapi_is_usable_for_condor() == FALSE ) {
-		public_ad.InsertOrUpdate( "Start = False" );
-	}
-
-	if( vmapi_is_virtual_machine() == TRUE ) {
-		ClassAd* host_classad;
-		host_classad = vmapi_get_host_classAd();
-		MergeClassAds( &public_ad, host_classad, true);
-	}
-
-	this->publish( &private_ad, A_PRIVATE | A_ALL );
-
-		// log classad into sql log so that it can be updated to DB
-	if (FILEObj) {
-		FILESQL::daemonAdInsert(&public_ad, "Machines", FILEObj, prevLHF);
-	}	
+		
+        // Get the public and private ads
+    publish_for_update( &public_ad, &private_ad );
 
 		// Send class ads to collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
@@ -951,6 +905,28 @@ Resource::do_update( void )
 	update_tid = -1;
 
 	return rval;
+}
+
+void
+Resource::publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad ) 
+{
+    this->publish( public_ad, A_ALL_PUB );
+    if( vmapi_is_usable_for_condor() == FALSE ) {
+        public_ad->InsertOrUpdate( "Start = False" );
+    }
+    
+    if( vmapi_is_virtual_machine() == TRUE ) {
+        ClassAd* host_classad;
+        host_classad = vmapi_get_host_classAd();
+        MergeClassAds( public_ad, host_classad, true);
+    }
+    
+    this->publish( private_ad, A_PRIVATE | A_ALL );
+    
+    // log classad into sql log so that it can be updated to DB
+    if (FILEObj) {
+        FILESQL::daemonAdInsert(public_ad, "Machines", FILEObj, prevLHF);
+	}
 }
 
 
@@ -970,6 +946,103 @@ Resource::final_update( void )
 	invalidate_ad.Insert( line );
 
 	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
+}
+
+
+int
+Resource::update_with_ack( void )
+{
+    const int timeout = 5;    
+    Daemon    collector ( DT_COLLECTOR );
+
+    if ( !collector.locate () ) {
+        
+        dprintf ( 
+            D_FULLDEBUG, 
+            "Failed to locate collector host.\n" );
+        
+        return FALSE;
+
+    }
+    
+    char     *address = collector.addr ();    
+    ReliSock *socket  = (ReliSock*) collector.startCommand ( 
+        UPDATE_STARTD_AD_WITH_ACK );
+    
+    if ( !socket ) {
+
+        dprintf ( 
+            D_FULLDEBUG, 
+            "update_with_ack: "
+            "Failed to send UPDATE_STARTD_AD_WITH_ACK command "
+            "to collector host %s.\n", 
+            address );
+
+        return FALSE;
+
+	}
+
+    socket->timeout ( timeout );
+    socket->encode ();
+    
+    ClassAd public_ad, 
+            private_ad;
+    
+    /* get the public and private ads */
+    publish_for_update( &public_ad, &private_ad );
+
+    if ( !public_ad.put ( *socket ) ) {
+        
+        dprintf (
+            D_FULLDEBUG, 
+            "update_with_ack: "
+            "Failed to send public ad to collector host %s.\n", 
+            address );
+        
+    }
+
+    if ( !private_ad.put ( *socket ) ) {
+        
+        dprintf (
+            D_FULLDEBUG, 
+            "update_with_ack: "
+            "Failed to send private ad to collector host %s.\n", 
+            address );
+        
+    }
+
+    if ( !socket->eom () ) {
+        
+        dprintf ( 
+            D_FULLDEBUG, 
+            "update_with_ack: "
+            "Failed to send update EOM to collector host %s.\n", 
+            address );
+
+	}
+
+    socket->timeout ( timeout ); /* still more research... */
+	socket->encode ();
+
+    int ack     = 0, 
+        success = TRUE;
+    
+    if ( !socket->code ( ack ) ) {
+        
+        dprintf ( 
+            D_FULLDEBUG, 
+            "update_with_ack: "
+            "Failed to send query EOM to collector host %s.\n", 
+            address );
+        
+        success = FALSE; 
+
+    }
+
+    socket->eom ();
+
+    return success; 
+
 }
 
 

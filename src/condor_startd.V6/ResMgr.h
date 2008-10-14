@@ -197,15 +197,13 @@ public:
 
 #if HAVE_HIBERNATE
 	HibernationManager const& getHibernationManager () const;
-	void updateHibernateConfiguration();
+	void updateHibernateConfiguration ();
+    int disableResources ( int level );
 #endif /* HAVE_HIBERNATE */
 
 	time_t	now( void ) { return cur_time; };
 
 	void FillExecuteDirsList( class StringList *list );
-
-    void invalidateResource ( int level );
-    void restoreResources ( void );
 
 private:
 

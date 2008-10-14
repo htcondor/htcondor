@@ -166,12 +166,12 @@ const struct Translation DCTranslation[] = {
 	{ "VM_UNIV_VMPID", VM_UNIV_VMPID },
 	{ "VM_UNIV_GUEST_IP", VM_UNIV_GUEST_IP },
 	{ "VM_UNIV_GUEST_MAC", VM_UNIV_GUEST_MAC },
-    { "MACHINE_WOKEN", MACHINE_WOKEN },
-	{ "NULL", 0 }
+    { "NULL", 0 }
 };
 
 const struct Translation CollectorTranslation[] = {
 	{ "UPDATE_STARTD_AD", UPDATE_STARTD_AD },
+    { "UPDATE_STARTD_AD_WITH_ACK", UPDATE_STARTD_AD_WITH_ACK },
 	{ "UPDATE_SCHEDD_AD", UPDATE_SCHEDD_AD },
 	{ "UPDATE_MASTER_AD", UPDATE_MASTER_AD },
 	{ "UPDATE_GATEWAY_AD", UPDATE_GATEWAY_AD },

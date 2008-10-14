@@ -163,8 +163,6 @@
 
 #define TRANSFER_QUEUE_REQUEST (SCHED_VERS+107) // request to do file transfer
 
-#define MACHINE_WOKEN (SCHED_VERS+108) // machine woken
-
 // HAD-related commands
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 #define HAD_SEND_ID_CMD                 (HAD_COMMANDS_BASE + 1)
@@ -275,6 +273,8 @@ const int INVALIDATE_HAD_ADS = 57;
 
 const int UPDATE_AD_GENERIC = 58;
 const int INVALIDATE_ADS_GENERIC = 59;
+
+const int UPDATE_STARTD_AD_WITH_ACK = 60;
 
 /*
 *** Daemon Core Signals

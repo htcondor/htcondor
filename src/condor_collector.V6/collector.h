@@ -70,6 +70,7 @@ public:
 	static AdTypes receive_query_public( int );
 	static int receive_invalidation(Service*, int, Stream*);
 	static int receive_update(Service*, int, Stream*);
+    static int receive_update_expect_ack(Service*, int, Stream*);
 
 	static void process_query_public(AdTypes, ClassAd*, List<ClassAd>*);
 	static ClassAd * process_global_query( const char *constraint, void *arg );
@@ -134,7 +135,10 @@ protected:
 	static int sockCacheHandler( Service*, Stream* sock );
 	static int stashSocket( Stream* sock );
 
+private:
+
     GreenComputingCollectorPlugin green_plugin_;
+
 };
 
 #endif

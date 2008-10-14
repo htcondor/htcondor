@@ -113,7 +113,8 @@ private:
          _hardware_address[32],
          _subnet[IP_STRING_BUF_SIZE],
          _adapter_name[MAX_ADAPTER_NAME_LENGTH + 4];
-    bool _wake_able;    
+    bool _wake_able,
+         _exists;    
 
     /**	Some registry values require some preprocessing before they can
 		be queried, so we allow a user to specify a function to handle
