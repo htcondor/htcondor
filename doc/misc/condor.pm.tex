@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{condor-pm} The Condor Perl Module}
+\subsection{\label{sec:condor-pm} The Condor Perl Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Perl module}
 \index{API!Perl module}
@@ -141,6 +141,55 @@ Some of these subroutines take other subroutines as arguments.
 	\item [\Code{DebugOff()}]
 	Turn debug messages off.
 
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+  \item [\Code{SubmitDagman(DAG\_file, DAGMan\_args)}]
+  Takes the action of submitting a DAG using \Condor{dagman}.
+  The first argument is the name of the DAG input file, 
+  and the second argument is the command line arguments for
+  \Condor{dagman}.
+  Execution may be traced in an analogous manner to using
+  \Code{Submit()}.
+
+  \item [\Code{TestSubmit(command\_file)}]
+  This subroutine submits a job to Condor for testing, and places
+  all variables from the command file into 
+  the Perl hash \Code{\%submit\_info}.
+
+%  \item [\Code{SubmitDagman(DAG\_file, DAGMan\_args)}]
+%TestSubmitDagman( command file, dagman args )
+%	This subroutine submits a DAG to condor_dagman for testing and places
+%	all variables from the command file into the global %submit_info.
+%
+%RegisterEvictedWithRequeue( sub ) 
+%	Same as RegisterEvicted except that the handler is called when
+%	the job is requeued.
+%
+%RegisterShadow( sub )
+%	Get called back when a Shadow Exception happens.
+%
+%RegisterHold( sub )
+%	Get called back when the job goes on hold.
+%
+%RegisterRelease( sub )
+%	Get called back when the job gets released.
+%
+%RegisteriWantError( sub )
+%	Get called back when a command run through
+%	"runCommand" experiences an error.
+%
+%runCommand( string )
+%	Run a system call and really watch it full full
+%	reporting including output files it may have produced.
+%	If error occurs and RegisterWantError callback is set
+%	it will be called.
+%
+%RegisterTimed( sub, time delta )
+%	Set up a callback a number of seconds from now.
+%
+%RemoveTimed()
+%	Remove a timed callback.
+%%%%%%%%%%%%%%%%%%%%%%%%
 \end{description}
 
 

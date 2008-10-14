@@ -88,30 +88,19 @@ that first appeared in version 6.9.3.
 
 \noindent Release Notes:
 
-\begin{itemize}
+This release contains many bug fixes and some improvements to error handling
+of Local Universe jobs. Note that some of the bug fixes are
+security-related; therefore, we recommend sites either upgrade Condor, or
+restrict permissions on who is allowed to submit Condor jobs to trusted
+users. Bug fixes that are security related are clearly marked in the Bugs
+Fixed section below along with a description of the potential security
+impact. The Condor Project believes in the full disclosure of information,
+and therefore complete vulnerability details can be found at
+\URL{http://www.cs.wisc.edu/condor/security/}. However, in order to give an
+adequate upgrade window for production installations, we will delay posting
+the full vulnerability details fixed in this release for 30 days (until the
+week of November 3rd 2008). 
 
-\item \Security This release fixes a security-related problem
-  introduced in Condor versions 7.0.4 and 7.1.2.  It also fixes a
-  related problem that affects all previous versions.  The problem
-  affects Condor where the configuration specifies per-user
-  authorization entries in the allow or deny lists which specify
-  different, but overlapping net masks.  
-  For example, \verb|*|, \verb|192.*|, and \verb|192.168.*|
-  are overlapping net masks.  
-  The consequence of the bug is that in a specific allow or deny list, if
-  some users are entered with one net mask and other users are entered
-  with a different but overlapping net mask, some entries would be
-  ignored when enforcing the policy.  If the users are identical for
-  both net masks, then there is no problem.  A similar problem in all
-  previous versions of Condor affects configurations with per-user
-  authorization entries having different, but overlapping host name
-  patterns.  For example, \verb|*.edu|, \verb|*.wisc.edu|, and
-  \verb|condor.wisc.edu| are overlapping host name patterns.  Some
-  entries were effectively ignored, if a specific allow or deny list
-  contained different users in different, but overlapping host name
-  patterns.
-
-\end{itemize}
 
 \noindent New Features:
 
@@ -147,14 +136,36 @@ local \Condor{starter} process has been created to run the job.
 
 \begin{itemize}
 
+\item \Security A flaw was found and fixed in the way Condor processes user submitted
+jobs. It was possible for a user who had permissions to submit jobs into
+Condor to do so in a way that could cause that job to run as any other
+non-root user. We have not had any reported incidents exploiting this
+flaw. (CVE-2008-3826)
+
+\item \Security A stack-based buffer overflow flaw was found and fixed in the
+\Condor{schedd} daemon. A user who had permissions to submit a job could
+do so in a manner that could cause the \Condor{schedd} to crash, or
+potentially, execute arbitrary code on the submit machine with the
+\Condor{schedd}'s identity. We are not aware of any known exploits for
+this flaw. We have not had any reported incidents exploiting this flaw.
+(CVE-2008-3828)
+
+\item \Security A denial-of-service flaw was found and fixed in the \Condor{schedd}
+daemon. A user who had permissions to submit a job could have done so in a
+manner that would cause \Condor{schedd} to crash. 
+We have not had any reported incidents exploiting this flaw. (CVE-2008-3829)
+
+\item \Security A flaw was found and fixed in the way Condor processes allow and deny 
+net masks for access control. 
+If Condor's configuration file contained overlapping net masks in 
+the allow or deny rules, it could have caused those rules to be ignored, 
+potentially allowing unintended access to users in Condor's 
+deny authorization lists. 
+We have not had any reported incidents exploiting this flaw. (CVE-2008-3830) 
+
 % Fixed by Red Hat
 \item Fixed a segmentation fault bug with \Condor{submit} \Opt{-dump} when
 \Expr{universe=grid} or \Expr{x509userproxy=<anything>}.
-
-\item Fixed a buffer overflow which could cause the Condor daemons and tools
-to crash.
-
-\item Fixed a buffer overflow which could cause the \Condor{schedd} to crash.
 
 \item Fixed a stack overflow bug in the \Condor{negotiator} daemon.
 
@@ -262,7 +273,8 @@ that used to run the job. This behavior has been fixed.
 
 \begin{itemize}
 
-\item None.
+\item Descriptions of previously undocumented Condor Perl module subroutines
+  have been added to the manual.  See section~\ref{sec:condor-pm}.
 
 \end{itemize}
 
