@@ -141,6 +141,7 @@ extern const char * ATTR_GLOBAL_JOB_ID;
 extern const char * ATTR_GZIP;
 extern const char * ATTR_GLOBUS_CONTACT_STRING;
 extern const char * ATTR_GLOBUS_DELEGATION_URI;
+// Deprecated (cruft) -- no longer used
 extern const char * ATTR_GLOBUS_GRAM_VERSION;
 extern const char * ATTR_GLOBUS_RESOURCE;
 extern const char * ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME;
