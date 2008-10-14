@@ -92,6 +92,8 @@ int CollectorDaemon::UpdateTimerId;
 ClassAd *CollectorDaemon::query_any_result;
 ClassAd CollectorDaemon::query_any_request;
 
+OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
+
 //---------------------------------------------------------
 
 // prototypes of library functions
@@ -281,12 +283,6 @@ int CollectorDaemon::receive_query_cedar(Service* s,
 			process_query_public (whichAds, &cad, &results);
 		}
 	}
-
-/*
-#if defined ( HAVE_GREEN_PLUGIN )
-    green_plugin_.query ( command, cad );
-#endif
-*/
 
 	// send the results via cedar
 	sock->encode();
@@ -512,12 +508,9 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	if (command == INVALIDATE_STARTD_ADS)
 		process_invalidation (STARTD_PVT_AD, cad, sock);
 
-/*
-#if defined ( HAVE_GREEN_PLUGIN )
-    green_plugin_.invalidate ( command, cad );
-#endif
-*/
-
+    /* let the off-line plug-in invalidate the given ad */
+    offline_plugin_.invalidate ( command, cad );
+    
 #if HAVE_DLOPEN
 	CollectorPluginManager::Invalidate(command, cad);
 #endif
@@ -583,11 +576,8 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 		}
 	}
 
-/*
-#if defined ( HAVE_GREEN_PLUGIN )
-    green_plugin_.update ( command, cad );
-#endif
-*/
+    /* update the off-line plug-in with the new ad */
+    offline_plugin_.update ( command, *cad );
 
 #if HAVE_DLOPEN
 	CollectorPluginManager::Update(command, *cad);

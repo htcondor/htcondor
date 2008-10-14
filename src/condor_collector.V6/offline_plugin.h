@@ -24,7 +24,8 @@
  * Headers
  ***************************************************************/
 
-#include "classad_log.h"
+#include "mystring.h"
+#include "classad_collection.h"
 
 /***************************************************************
  * OfflineCollectorPlugin class
@@ -37,7 +38,12 @@ public:
     OfflineCollectorPlugin () throw ();
     virtual ~OfflineCollectorPlugin ();
 
-    void initialize ();
+    /* Methods */
+
+    /** Reconfigures the plug-in (also used in construction, to
+        initialize the plug-in) .
+        */
+    void update ();
 
     /** Receive a ClassAd sent as part of an UPDATE_ command,
 	    command int is provided.
@@ -49,14 +55,20 @@ public:
 	    */
 	void invalidate ( int command, const ClassAd &ad );
 
+    /* Attributes */
+
+    /** Returns true if the plug-in is enabled; otherwise, false.
+        */
+    bool enabled () const;  
+
 private:
 
     /** Persistent copies of machine class-ads to allow us 
         to wake hibernating machines. */
-    ClassAdLog  ads_;
+    ClassAdCollection   *ads_;
 
     /** Storage destination for persistent ads */
-    char        *persistent_store_;
+    char                *persistent_store_;
 
 };
 

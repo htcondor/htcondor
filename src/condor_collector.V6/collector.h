@@ -28,7 +28,7 @@
 #include "collector_engine.h"
 #include "collector_stats.h"
 #include "dc_collector.h"
-#include "green_plugin.h"
+#include "offline_plugin.h"
 
 //----------------------------------------------------------------
 // Simple job universe stats
@@ -137,7 +137,7 @@ protected:
 
 private:
 
-    OfflineCollectorPlugin green_plugin_;
+    static OfflineCollectorPlugin offline_plugin_;
 
 };
 

@@ -22,8 +22,11 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_commands.h"
+#include "condor_attributes.h"
+#include "hashkey.h"
 
 #include "offline_plugin.h"
 
@@ -43,14 +46,24 @@ int __cdecl expiration ( const char *ad, time_t *ttl );
  ***************************************************************/
 
 OfflineCollectorPlugin::OfflineCollectorPlugin () throw () 
-: persistent_store_ ( NULL ) { 
+: ads_ ( NULL), persistent_store_ ( NULL ) { 
+
+    /* configure the plug-in for first use */
+    update ();
+
 }
 
 OfflineCollectorPlugin::~OfflineCollectorPlugin () { 
     
-    if ( NULL != persistent_store_ ) {
-        /* was param'd so we must use free() */
+    if ( ads_ ) {
+        delete ads_;
+        ads_ = NULL;
+    }
+
+    if ( persistent_store_ ) {
+        /* was param()'d so we must use free() */
         free ( persistent_store_ );
+        persistent_store_ = NULL;
     }
 
 }
@@ -60,13 +73,35 @@ OfflineCollectorPlugin::~OfflineCollectorPlugin () {
  ***************************************************************/
 
 void 
-OfflineCollectorPlugin::initialize () {
+OfflineCollectorPlugin::update () {
 
     dprintf ( 
         D_FULLDEBUG,
-        "In OfflineCollectorPlugin::initialize ()\n" );
+        "In OfflineCollectorPlugin::reconfigure ()\n" );
 
-    persistent_store_ = param ( ATTR_OFFLINE );
+    if ( persistent_store_ ) {
+        /* was param()'d so we must use free() */
+        free ( persistent_store_ );
+        persistent_store_ = NULL;
+    }
+
+    persistent_store_ = param ( ATTR_OFFLINE_STORE );
+
+    if ( persistent_store_ ) {
+
+        dprintf ( 
+            D_ALWAYS,
+            "Off-line ad persistent store: %s\n",
+            persistent_store_ );
+
+        if ( ads_ ) {
+            delete ads_;
+            ads_ = NULL;
+        }
+        
+        ads_ = new ClassAdCollection ( persistent_store_ );
+
+    }
 
 }
 
@@ -75,17 +110,63 @@ OfflineCollectorPlugin::update (
     int             command, 
     const ClassAd   &ad ) {
 
-    /* bail out if there is no direct */
-    if ( !persistent_store_ ) {
+    dprintf ( 
+        D_FULLDEBUG,
+        "In OfflineCollectorPlugin::update ()\n" );
+
+    /* bail out if the plug-in is not enabled */
+    if ( !enabled ( ) ) {
         return;
     }
     
     /* make sure the command is relevant to us */
     if ( INVALIDATE_STARTD_ADS == command ) {
 
-        dprintf ( 
-            D_FULLDEBUG,
-            "In OfflineCollectorPlugin::update ()\n" );
+        AdNameHashKey hashKey;
+        if ( !makeStartdAdHashKey ( hashKey, (ClassAd*) &ad, NULL ) ) {
+
+            dprintf ( 
+                D_FULLDEBUG,
+                "OfflineCollectorPlugin::update: "
+                "failed to hash class ad. Ignoring.\n" );
+
+            return;
+
+        }
+
+        int offline = 0;
+        if ( 0 == ad.EvalInteger ( 
+            ATTR_OFFLINE, 
+            &ad, 
+            offline ) ) {
+            
+            dprintf ( 
+                D_FULLDEBUG,
+                "OfflineCollectorPlugin::update: "
+                "failed evaluate and determine offline status.\n" );
+            
+            return;
+            
+        }
+
+        ads_->BeginTransaction ();
+
+        MyString key;
+        hashKey.sprint ( key );
+        if ( !ads_->NewClassAd ( key.GetCStr (), (ClassAd*) &ad ) ) {
+
+            dprintf ( 
+                D_FULLDEBUG,
+                "OfflineCollectorPlugin::update: "
+                "failed add offline ad to the persistent store.\n" );
+            
+            ads_->AbortTransaction ();
+
+            return;
+
+        }
+
+        ads_->CommitTransaction ();
         
     }
 
@@ -96,16 +177,62 @@ OfflineCollectorPlugin::invalidate (
     int             command, 
     const ClassAd   &ad ) {
 
+    dprintf ( 
+        D_FULLDEBUG,
+        "In OfflineCollectorPlugin::invalidate ()\n" );
+    
+    /* bail out if the plug-in is not enabled */
+    if ( !enabled () ) {
+        return;
+    }
+
     /* make sure the command is relevant to us */
     if ( INVALIDATE_STARTD_ADS == command ) {
         
-        dprintf ( 
-            D_FULLDEBUG,
-            "In OfflineCollectorPlugin::invalidate ()\n" );
+        AdNameHashKey hashKey;
+        if ( !makeStartdAdHashKey ( 
+            hashKey, 
+            (ClassAd*) &ad, 
+            NULL ) ) {
+            
+            dprintf ( 
+                D_FULLDEBUG,
+                "OfflineCollectorPlugin::invalidate: "
+                "failed to hash class ad. Ignoring.\n" );
+            
+            return;
+            
+        }
+
+        ads_->BeginTransaction ();
+
+        MyString key;
+        hashKey.sprint ( key );
+        if ( !ads_->DestroyClassAd ( key.GetCStr () ) ) {
+            
+            dprintf ( 
+                D_FULLDEBUG,
+                "OfflineCollectorPlugin::invalidate: "
+                "failed remove offline ad from the persistent "
+                "store.\n" );
+            
+            ads_->AbortTransaction ();
+            
+            return;
+            
+        }
         
+        ads_->CommitTransaction ();
+
     }
 
     /* ads_.BeginTransaction (); */
 
 }
 
+bool
+OfflineCollectorPlugin::enabled () const {
+
+    return ( NULL != ads_ );
+
+}
