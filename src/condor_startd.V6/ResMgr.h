@@ -37,18 +37,18 @@
 #include "vmuniverse_mgr.h"
 
 #if HAVE_HIBERNATE
-#include "hibernation_manager.h"
-#endif /* HAVE_HIBERNATE */
+#  include "hibernation_manager.h"
+#endif
 
 #if HAVE_JOB_HOOKS
-#include "StartdHookMgr.h"
+#  include "StartdHookMgr.h"
 #endif /* HAVE_JOB_HOOKS */
 
 #if HAVE_BACKFILL
-#include "backfill_mgr.h"
-#if HAVE_BOINC
-#include "boinc_mgr.h"
-#endif /* HAVE_BOINC */
+#  include "backfill_mgr.h"
+#  if HAVE_BOINC
+#     include "boinc_mgr.h"
+#  endif /* HAVE_BOINC */
 #endif /* HAVE_BACKFILL */
 
 

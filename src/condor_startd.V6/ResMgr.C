@@ -51,7 +51,7 @@ ResMgr::ResMgr()
 	m_hibernation_manager = new HibernationManager( );
 	m_hibernation_manager->addInterface( m_netif );
 	m_hibernate_tid = -1;
-#endif /* HAVE_HIBERNATE */
+#endif
 
 	id_disp = NULL;
 
@@ -1607,7 +1607,7 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 	m_vmuniverse_mgr.publish(cp, how_much);
 
 #if HAVE_HIBERNATE
-    m_hibernation_manager.publish( *cp );
+    m_hibernation_manager->publish( *cp );
 #endif
 
 }
@@ -2280,7 +2280,9 @@ disable_resource_claims ( Resource *resource )
 void 
 ResMgr::invalidateResource( int level )
 {
-    m_hibernation_manager.setState( level );	    
+#if HAVE_HIBERNATE
+    m_hibernation_manager->setState( level );
+#endif
     walk ( &disable_resource_claims );
 }
 
@@ -2295,4 +2297,3 @@ ResMgr::restoreResources( void )
 {
     walk ( &restore_resource_claims );
 }
-
