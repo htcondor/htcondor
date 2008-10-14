@@ -19,6 +19,66 @@ New features will be added in the 7.1.x development series.
 The details of each version are described below.
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-0-6}Version 7.0.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item In some rare cases, the \Condor{startd} failed to fully preempt jobs.
+The job itself was killed, but the \Condor{starter} process watching over
+it would not be killed.  The slot would then stay in the Preempting state
+indefinitely.
+
+\item \Condor{q} performed poorly when querying a remote pool, using
+\Opt{-pool}.  It was using an older latency-bound protocol even when
+the remote \Condor{schedd} was new enough to use the improved protocol
+that first appeared in version 6.9.3.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -75,32 +135,36 @@ local \Condor{starter} process has been created to run the job.
 
 \begin{itemize}
 
-\item \Security A flaw was found in the way Condor processes user submitted
-jobs. It is possible for a user who has permissions to submit jobs into
+\item \Security A flaw was found and fixed in the way Condor processes user submitted
+jobs. It was possible for a user who had permissions to submit jobs into
 Condor to do so in a way that could cause that job to run as any other
 non-root user. We have not had any reported incidents exploiting this
 flaw. (CVE-2008-3826)
 
-\item \Security A stack-based buffer overflow flaw was found in the
-\Condor{schedd} daemon. A user who has permissions to submit a job could
-do so in a manner that could cause the \Condor{schedd} to crash or,
+\item \Security A stack-based buffer overflow flaw was found and fixed in the
+\Condor{schedd} daemon. A user who had permissions to submit a job could
+do so in a manner that could cause the \Condor{schedd} to crash, or
 potentially, execute arbitrary code on the submit machine with the
 \Condor{schedd}'s identity. We are not aware of any known exploits for
 this flaw. We have not had any reported incidents exploiting this flaw.
 (CVE-2008-3828)
 
-\item \Security A denial-of-service flaw was found in the \Condor{schedd} daemon. A user who has permissions to submit a job could do so in a manner that would cause \Condor{schedd} to crash. We have not had any reported incidents exploiting this flaw. (CVE-2008-3829)
+\item \Security A denial-of-service flaw was found and fixed in the \Condor{schedd}
+daemon. A user who had permissions to submit a job could have done so in a
+manner that would cause \Condor{schedd} to crash. 
+We have not had any reported incidents exploiting this flaw. (CVE-2008-3829)
 
-\item \Security A flaw was found in the way Condor processes allow and deny netmasks for access control. If Condor's configuration file contained overlapping netmasks in the allow or deny rules, it could cause those rules to be ignored, potentially allowing unintended access to users in Condor's deny authorization lists. We have not had any reported incidents exploiting this flaw. (CVE-2008-3830) 
+\item \Security A flaw was found and fixed in the way Condor processes allow and deny 
+net masks for access control. 
+If Condor's configuration file contained overlapping net masks in 
+the allow or deny rules, it could have caused those rules to be ignored, 
+potentially allowing unintended access to users in Condor's 
+deny authorization lists. 
+We have not had any reported incidents exploiting this flaw. (CVE-2008-3830) 
 
 % Fixed by Red Hat
 \item Fixed a segmentation fault bug with \Condor{submit} \Opt{-dump} when
 \Expr{universe=grid} or \Expr{x509userproxy=<anything>}.
-
-\item Fixed a buffer overflow which could cause the Condor daemons and tools
-to crash.
-
-\item Fixed a buffer overflow which could cause the \Condor{schedd} to crash.
 
 \item Fixed a stack overflow bug in the \Condor{negotiator} daemon.
 
@@ -208,7 +272,8 @@ that used to run the job. This behavior has been fixed.
 
 \begin{itemize}
 
-\item None.
+\item Descriptions of previously undocumented Condor Perl module subroutines
+  have been added to the manual.  See section~\ref{sec:condor-pm}.
 
 \end{itemize}
 
