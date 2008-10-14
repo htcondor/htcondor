@@ -696,6 +696,15 @@ if test $JOB_HOOKS != no; then
   AC_DEFINE([HAVE_JOB_HOOKS], [1], [Define to 1 to support invoking hooks throughout the workflow of a job])
 fi
 
+AC_ARG_ENABLE(hibernation,
+  [AS_HELP_STRING([--enable-hibernation],
+     [Support for Condor-controlled hibernation])],
+  [HIBERNATION=$enableval],
+  [HIBERNATION=yes])
+if test $HIBERNATION != no; then
+  AC_DEFINE([HAVE_HIBERNATION], [1], [Define to 1 to support Condor-controlled hibernation])
+fi
+
 
 ############################################################
 # checks for programs
