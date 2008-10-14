@@ -17,26 +17,25 @@
  *
  ***************************************************************/
 
-#ifndef _GREEN_COMPUTING_PLUGIN_H_
-#define _GREEN_COMPUTING_PLUGIN_H_
+#ifndef _OFFLINE_PLUGIN_H_
+#define _OFFLINE_PLUGIN_H_
 
 /***************************************************************
  * Headers
  ***************************************************************/
 
-#include "collectorplugin.h"
 #include "classad_log.h"
 
 /***************************************************************
- * GreenComputingCollectorPlugin class
+ * OfflineCollectorPlugin class
  ***************************************************************/
 
-class GreenComputingCollectorPlugin {
+class OfflineCollectorPlugin {
 
 public:
 
-    GreenComputingCollectorPlugin () throw ();
-    virtual ~GreenComputingCollectorPlugin ();
+    OfflineCollectorPlugin () throw ();
+    virtual ~OfflineCollectorPlugin ();
 
     void initialize ();
 
@@ -54,7 +53,10 @@ private:
 
     /** Persistent copies of machine class-ads to allow us 
         to wake hibernating machines. */
-    ClassAdLog _ads;
+    ClassAdLog  ads_;
+
+    /** Storage destination for persistent ads */
+    char        *persistent_store_;
 
 };
 

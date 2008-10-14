@@ -137,7 +137,7 @@ protected:
 
 private:
 
-    GreenComputingCollectorPlugin green_plugin_;
+    OfflineCollectorPlugin green_plugin_;
 
 };
 

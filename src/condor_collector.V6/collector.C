@@ -622,7 +622,8 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
     if ( !updateAd.initFromStream ( *socket ) ) {
 
         dprintf ( 
-            D_ALWAYS, 
+            D_ALWAYS,
+            "receive_update_expect_ack: "
             "Failed to read class ad off the wire, aborting\n" );
 
         return FALSE;
@@ -632,7 +633,7 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
     /* assume the ad is malformed */
     int insert = -3;
     
-    /* get endpoint */
+    /* get peer's IP/port */
     sockaddr_in *from = socket->endpoint ();
 
     /* "collect" the ad */
@@ -649,6 +650,7 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
 
 			dprintf (
                 D_ALWAYS,
+                "receive_update_expect_ack: "
                 "Got QUERY or INVALIDATE command (%d); these are "
                 "not supported.\n",
 				command );
@@ -660,9 +662,12 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
         but they are not present in the ad. */
 		if ( -3 == insert ) {
 			
-			dprintf (D_ALWAYS,
-				"Received malformed ad from command (%d). Ignoring.\n",
-				command);
+			dprintf (
+                D_ALWAYS,
+                "receive_update_expect_ack: "
+				"Received malformed ad from command (%d).\n",
+				command );
+
 		}
 
     } else {
@@ -672,11 +677,12 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
         socket->encode ();
         socket->timeout ( timeout );
 
-        /* send an acknowledgment of receipt */
+        /* send an acknowledgment that we received the ad */
         if ( !socket->code ( ok ) ) {
         
             dprintf ( 
-                D_ALWAYS, 
+                D_ALWAYS,
+                "receive_update_expect_ack: "
                 "Failed to send acknowledgement to host %s, "
                 "aborting\n",
                 socket->sender_ip_str () );
@@ -689,6 +695,7 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
         
             dprintf ( 
                 D_FULLDEBUG, 
+                "receive_update_expect_ack: "
                 "Failed to send update EOM to host %s.\n", 
                 socket->sender_ip_str () );
         
@@ -696,9 +703,8 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
         
     }
 
-	if(View_Collector && ((command == UPDATE_STARTD_AD) || 
-			(command == UPDATE_SUBMITTOR_AD)) ) {
-		send_classad_to_sock(command, View_Collector, ad);
+    if( View_Collector && UPDATE_STARTD_AD_WITH_ACK == command ) {
+		send_classad_to_sock ( command, View_Collector, ad );
 	}	
 
 	// let daemon core clean up the socket

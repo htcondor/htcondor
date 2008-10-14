@@ -25,7 +25,7 @@
 #include "condor_classad.h"
 #include "condor_commands.h"
 
-#include "green_plugin.h"
+#include "offline_plugin.h"
 
 /***************************************************************
  * 'C' stubs
@@ -39,46 +39,60 @@ int __cdecl expiration ( const char *ad, time_t *ttl );
 */
 
 /***************************************************************
- * GreenComputingCollectorPlugin [c|d]tors
+ * OfflineCollectorPlugin [c|d]tors
  ***************************************************************/
 
-GreenComputingCollectorPlugin::GreenComputingCollectorPlugin () throw () { 
+OfflineCollectorPlugin::OfflineCollectorPlugin () throw () 
+: persistent_store_ ( NULL ) { 
 }
 
-GreenComputingCollectorPlugin::~GreenComputingCollectorPlugin () {    
+OfflineCollectorPlugin::~OfflineCollectorPlugin () { 
+    
+    if ( NULL != persistent_store_ ) {
+        /* was param'd so we must use free() */
+        free ( persistent_store_ );
+    }
+
 }
 
 /***************************************************************
- * GreenComputingCollectorPlugin Methods
+ * OfflineCollectorPlugin Methods
  ***************************************************************/
 
 void 
-GreenComputingCollectorPlugin::initialize () {
+OfflineCollectorPlugin::initialize () {
 
     dprintf ( 
         D_FULLDEBUG,
-        "In GreenComputingCollectorPlugin::initialize ()\n" );
+        "In OfflineCollectorPlugin::initialize ()\n" );
+
+    persistent_store_ = param ( ATTR_OFFLINE );
 
 }
 
 void 
-GreenComputingCollectorPlugin::update ( 
+OfflineCollectorPlugin::update ( 
     int             command, 
     const ClassAd   &ad ) {
+
+    /* bail out if there is no direct */
+    if ( !persistent_store_ ) {
+        return;
+    }
     
     /* make sure the command is relevant to us */
     if ( INVALIDATE_STARTD_ADS == command ) {
 
         dprintf ( 
             D_FULLDEBUG,
-            "In GreenComputingCollectorPlugin::update ()\n" );
+            "In OfflineCollectorPlugin::update ()\n" );
         
     }
 
 }
 
 void
-GreenComputingCollectorPlugin::invalidate ( 
+OfflineCollectorPlugin::invalidate ( 
     int             command, 
     const ClassAd   &ad ) {
 
@@ -87,11 +101,11 @@ GreenComputingCollectorPlugin::invalidate (
         
         dprintf ( 
             D_FULLDEBUG,
-            "In GreenComputingCollectorPlugin::invalidate ()\n" );
+            "In OfflineCollectorPlugin::invalidate ()\n" );
         
     }
 
-    /* _ads.BeginTransaction (); */
+    /* ads_.BeginTransaction (); */
 
 }
 
