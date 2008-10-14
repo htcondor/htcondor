@@ -73,23 +73,32 @@ local \Condor{starter} process has been created to run the job.
 
 \begin{itemize}
 
-\item \Security A flaw was found in the way Condor processes user submitted
-jobs. It is possible for a user who has permissions to submit jobs into
+\item \Security A flaw was found and fixed in the way Condor processes user submitted
+jobs. It was possible for a user who had permissions to submit jobs into
 Condor to do so in a way that could cause that job to run as any other
 non-root user. We have not had any reported incidents exploiting this
 flaw. (CVE-2008-3826)
 
-\item \Security A stack-based buffer overflow flaw was found in the
-\Condor{schedd} daemon. A user who has permissions to submit a job could
-do so in a manner that could cause the \Condor{schedd} to crash or,
+\item \Security A stack-based buffer overflow flaw was found and fixed in the
+\Condor{schedd} daemon. A user who had permissions to submit a job could
+do so in a manner that could cause the \Condor{schedd} to crash, or
 potentially, execute arbitrary code on the submit machine with the
 \Condor{schedd}'s identity. We are not aware of any known exploits for
 this flaw. We have not had any reported incidents exploiting this flaw.
 (CVE-2008-3828)
 
-\item \Security A denial-of-service flaw was found in the \Condor{schedd} daemon. A user who has permissions to submit a job could do so in a manner that would cause \Condor{schedd} to crash. We have not had any reported incidents exploiting this flaw. (CVE-2008-3829)
+\item \Security A denial-of-service flaw was found and fixed in the \Condor{schedd}
+daemon. A user who had permissions to submit a job could have done so in a
+manner that would cause \Condor{schedd} to crash. 
+We have not had any reported incidents exploiting this flaw. (CVE-2008-3829)
 
-\item \Security A flaw was found in the way Condor processes allow and deny netmasks for access control. If Condor's configuration file contained overlapping netmasks in the allow or deny rules, it could cause those rules to be ignored, potentially allowing unintended access to users in Condor's deny authorization lists. We have not had any reported incidents exploiting this flaw. (CVE-2008-3830) 
+\item \Security A flaw was found and fixed in the way Condor processes allow and deny 
+net masks for access control. 
+If Condor's configuration file contained overlapping net masks in 
+the allow or deny rules, it could have caused those rules to be ignored, 
+potentially allowing unintended access to users in Condor's 
+deny authorization lists. 
+We have not had any reported incidents exploiting this flaw. (CVE-2008-3830) 
 
 % Fixed by Red Hat
 \item Fixed a segmentation fault bug with \Condor{submit} \Opt{-dump} when
