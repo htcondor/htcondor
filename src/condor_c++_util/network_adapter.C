@@ -50,15 +50,17 @@ NetworkAdapterBase::~NetworkAdapterBase (void) throw ()
  * NetworkAdapterBase static members 
  ***************************************************************/
 NetworkAdapterBase* 
-NetworkAdapterBase::createNetworkAdapter ( const char *sinful )
+NetworkAdapterBase::createNetworkAdapter ( const char *sinful,
+										   bool is_primary )
 {
-    NetworkAdapterBase *adapter = NULL;    
+    NetworkAdapterBase *adapter = NULL;
 
 # if defined ( NETWORK_ADAPTER_TYPE_DEFINED )
 	adapter = new NetworkAdapter (
 		string_to_ipstr(sinful),
 		string_to_ip(sinful)  );
 	adapter->doInitialize( );
+	adapter->setIsPrimary( is_primary );
 # endif
 
 	return adapter;

@@ -268,6 +268,7 @@ c_plus_target(test_write_term,test_write_term.o,$(LIB))
 c_plus_target(test_prioritysimplelist,test_prioritysimplelist.o,)
 c_plus_target(test_binarysearch,test_binarysearch.o,)
 c_plus_target(test_network_adapter,test_network_adapter.o,$(LIB))
+c_plus_target(test_hibernation,test_hibernation.o,$(LIB))
 
 c_plus_target(cat_url,cat_url.o,liburl.a)
 c_plus_target(access.t,access.t.o,$(LIB))
@@ -288,10 +289,12 @@ all-tests: access.t killfamily.t test_locks my_hostname.t
 USERLOG_TESTS = test_log_reader test_log_writer
 USERLOG_LIBAPI_TESTS = $(addsuffix _api, $(USERLOG_TESTS) )
 
-userlog-tests: $(USERLOG_TESTS) $(USERLOG_LIBAPI_TESTS)
+userlog-tests: all $(USERLOG_TESTS) $(USERLOG_LIBAPI_TESTS)
 
 test_log_reader: $(LIB) Makefile $(LIBCONDORAPI)
 test_log_writer: $(LIB) Makefile $(LIBCONDORAPI)
+
+green-tests: all test_network_adapter test_hibernation
 
 $(USERLOG_LIBAPI_TESTS): %_api : %.o $(LIBCONDORAPI) Makefile
 	$(CPlusPlus) $< -L. -Wl,-Bstatic -lcondorapi -Wl,-Bdynamic -ldl -o $@

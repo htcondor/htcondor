@@ -17,8 +17,8 @@
 *
 ***************************************************************/
 
-#ifndef _NETWORK_ADAPTER_BASE_BASE_H_
-#define _NETWORK_ADAPTER_BASE_BASE_H_
+#ifndef _NETWORK_ADAPTER_BASE_H_
+#define _NETWORK_ADAPTER_BASE_H_
 
 /***************************************************************
  * Headers
@@ -92,6 +92,11 @@ public:
 		@return a string representation of the addapter's subnet mask
 	*/
 	virtual const char* subnet (void) const = 0;
+
+    /** Is this the primary interface
+		@return a string representation of the addapter's subnet mask
+	*/
+	bool isPrimary (void) const { return m_is_primary; };
 
 	
     /** Ensures that the adapter can wake the machine.
@@ -176,7 +181,8 @@ public:
         @return if successful a valid NetworkAdapterBase*; otherwise 
         NULL.
 	*/
-	static NetworkAdapterBase* createNetworkAdapter ( const char *sinful );
+	static NetworkAdapterBase* createNetworkAdapter( const char *sinful,
+													 bool is_primary = false );
 
 
   protected:
@@ -201,8 +207,11 @@ public:
 	unsigned	m_wol_support_bits;
 	unsigned	m_wol_enable_bits;
 	bool		m_initialization_status;
+	bool		m_is_primary;
 
 	bool doInitialize( void );
+	bool setIsPrimary( bool is_primary )
+		{ return m_is_primary = is_primary; };
     
     /** @name Private Instantiation. 
     That is, do not allow for a default constructor.
@@ -213,4 +222,4 @@ public:
 	
 };
 
-#endif // _NETWORK_ADAPTER_BASE_BASE_H_
+#endif // _NETWORK_ADAPTER_BASE_H_

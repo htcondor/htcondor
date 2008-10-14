@@ -48,7 +48,7 @@ public:
 		m_detected = false;
 		m_hibernator = &hibernator;
 	};
-	virtual ~BaseLinuxHibernator(void) = 0;
+	virtual ~BaseLinuxHibernator(void) { };
 
 	bool isDetected( void ) { return m_detected; };
 
@@ -70,6 +70,9 @@ public:
 protected:
 	LinuxHibernator	*m_hibernator;
 	bool			 m_detected;
+
+	// Utility function
+	char *strip( char * ) const;
 };
 
 class PmUtilLinuxHibernator : public BaseLinuxHibernator
@@ -80,7 +83,7 @@ public:
 	virtual ~PmUtilLinuxHibernator(void) { };
 
 	bool Detect( void );
-	HibernatorBase::SLEEP_STATE StandBy ( bool force ) const ;
+	//HibernatorBase::SLEEP_STATE StandBy ( bool force ) const ;
 	HibernatorBase::SLEEP_STATE Suspend ( bool force ) const;
 	HibernatorBase::SLEEP_STATE Hibernate ( bool force ) const;
 	//HibernatorBase::SLEEP_STATE PowerOff ( bool force ) const;
@@ -91,10 +94,10 @@ class SysIfLinuxHibernator : public BaseLinuxHibernator
 public:
 	SysIfLinuxHibernator( LinuxHibernator &hibernator) 
 			: BaseLinuxHibernator( hibernator ) { };
-	~SysIfLinuxHibernator(void);
+	~SysIfLinuxHibernator(void) { };
 
 	bool Detect( void );
-	HibernatorBase::SLEEP_STATE StandBy ( bool force ) const;
+	//HibernatorBase::SLEEP_STATE StandBy ( bool force ) const;
 	HibernatorBase::SLEEP_STATE Suspend ( bool force ) const;
 	HibernatorBase::SLEEP_STATE Hibernate ( bool force ) const;
 	//HibernatorBase::SLEEP_STATE PowerOff ( bool force ) const;
@@ -105,10 +108,10 @@ class ProcIfLinuxHibernator : public BaseLinuxHibernator
 public:
 	ProcIfLinuxHibernator( LinuxHibernator &hibernator) 
 			: BaseLinuxHibernator( hibernator ) { };
-	virtual ~ProcIfLinuxHibernator(void);
+	virtual ~ProcIfLinuxHibernator(void) { };
 
 	bool Detect( void );
-	HibernatorBase::SLEEP_STATE StandBy ( bool force ) const;
+	//HibernatorBase::SLEEP_STATE StandBy ( bool force ) const;
 	HibernatorBase::SLEEP_STATE Suspend ( bool force ) const;
 	HibernatorBase::SLEEP_STATE Hibernate ( bool force ) const;
 	HibernatorBase::SLEEP_STATE PowerOff ( bool force ) const;
@@ -139,9 +142,11 @@ LinuxHibernator::initStates( void )
 		BaseLinuxHibernator	*hibernator = new PmUtilLinuxHibernator( *this );
 		if ( hibernator->Detect()  &&  hibernator->isDetected() ) {
 			m_real_hibernator = hibernator;
+			dprintf( D_FULLDEBUG, "hibernator: PMUtils detected\n" );
 		}
 		else {
 			delete hibernator;
+			dprintf( D_FULLDEBUG, "hibernator: PMUtils not detected\n" );
 		}
 	}
 
@@ -150,9 +155,11 @@ LinuxHibernator::initStates( void )
 		BaseLinuxHibernator	*hibernator = new SysIfLinuxHibernator( *this );
 		if ( hibernator->Detect()  &&  hibernator->isDetected() ) {
 			m_real_hibernator = hibernator;
+			dprintf( D_FULLDEBUG, "hibernator: /sys i/f detected\n" );
 		}
 		else {
 			delete hibernator;
+			dprintf( D_FULLDEBUG, "hibernator: /sys i/f not detected\n" );
 		}
 	}
 
@@ -161,12 +168,13 @@ LinuxHibernator::initStates( void )
 		BaseLinuxHibernator	*hibernator = new ProcIfLinuxHibernator( *this );
 		if ( hibernator->Detect()  &&  hibernator->isDetected() ) {
 			m_real_hibernator = hibernator;
+			dprintf( D_FULLDEBUG, "hibernator: /proc i/f detected\n" );
 		}
 		else {
 			delete hibernator;
+			dprintf( D_FULLDEBUG, "hibernator: /proc i/f detected\n" );
 		}
 	}
-
 
 }
 
@@ -269,6 +277,23 @@ BaseLinuxHibernator::writeSysFile ( const char *file, const char *str ) const
 	return true;
 }
 
+// Utility function to strip trailing whitespace
+char *
+BaseLinuxHibernator::strip ( char *s ) const
+{
+	int len = strlen( s );
+	if ( !len) {
+		return s;
+	}
+	char *p = s+(len-1);
+	while( len && isspace(*p) ) {
+		*p = '\0';
+		p--;
+		len--;
+	}
+	return s;
+}
+
 
 // *****************************************
 // Linux hibernator "PM Util" class methods
@@ -294,7 +319,7 @@ PmUtilLinuxHibernator::Detect ( void )
 	}
 
 	command = PM_UTIL_CHECK;
-	command += " --hibernation";
+	command += " --hibernate";
 	status = system( command.GetCStr() );
 	if ( (status >= 0)  &&  (WEXITSTATUS(status) == 0 ) ) {
 		m_hibernator->addState( HibernatorBase::S4 );
@@ -346,14 +371,18 @@ SysIfLinuxHibernator::Detect ( void )
 	// Look at the "/sys" file(s)
 	fp = safe_fopen_wrapper( SYS_POWER_FILE, "r" );
 	if ( NULL == fp ) {
+		printf( "failed to open %s\n", SYS_POWER_FILE );
 		return false;
 	}
 
 	if ( fgets( buf, sizeof(buf)-1, fp ) ) {
+		strip(buf);
 		char	*token, *save = NULL;
+		printf( "read '%s' from %s\n", buf, SYS_POWER_FILE );
 
 		token = strtok_r( buf, " ", &save );
 		while( token ) {
+			printf( "  <%s>\n", token );
 			m_hibernator->addState( token );
 			token = strtok_r( NULL, " ", &save );
 		}
@@ -363,11 +392,14 @@ SysIfLinuxHibernator::Detect ( void )
 	// If we can't read the disk file, we've had at least some success, right?
 	fp = safe_fopen_wrapper( SYS_DISK_FILE, "r" );
 	if ( NULL == fp ) {
+		printf( "failed to open %s\n", SYS_DISK_FILE );
 		return true;
 	}
 	if ( fgets( buf, sizeof(buf)-1, fp ) ) {
+		strip(buf);
 		char	*token, *save = NULL;
 
+		printf( "read '%s' from %s\n", buf, SYS_DISK_FILE );
 		token = strtok_r( buf, " ", &save );
 		while( token ) {
 			int len = strlen( token );
@@ -375,6 +407,7 @@ SysIfLinuxHibernator::Detect ( void )
 				token[len] = '\0';
 				token++;
 			}
+			printf( "  <%s>\n", token );
 			if ( strcmp( token, "platform" ) == 0 ) {
 				m_hibernator->addState( HibernatorBase::S4 );
 			}

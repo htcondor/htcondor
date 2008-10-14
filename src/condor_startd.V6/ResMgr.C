@@ -46,6 +46,10 @@ ResMgr::ResMgr()
 #endif
 
 #if HAVE_HIBERNATE
+	m_netif = new NetworkAdapterBase::createNetworkAdapter(
+		daemonCore->InfoCommandSinfulString (), true );
+	m_hibernation_manager = new HibernationManager( );
+	m_hibernation_manager->addInterface( m_netif );
 	m_hibernate_tid = -1;
 #endif /* HAVE_HIBERNATE */
 

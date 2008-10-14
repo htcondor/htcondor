@@ -33,6 +33,7 @@ struct Options
 {
 	int				 m_verbosity;
 	const char		*m_address;
+	bool			 m_is_primary;
 };
 
 bool
@@ -119,9 +120,13 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --verbosity <number>: set verbosity level (default is 1)\n"
 		"  --version: print the version number and compile date\n";
 
-	opts.m_address = "127.0.0.1";
 	opts.m_verbosity = 1;
 
+	opts.m_address = "127.0.0.1";
+	opts.m_is_primary = false;
+
+
+	int		optno = 0;
 	for ( int index = 1; index < argc; ++index ) {
 		SimpleArg	arg( argv, argc, index );
 
@@ -135,7 +140,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				set_debug_flags( const_cast<char *>(arg.Opt()) );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --debug argument\n");
+				fprintf(stderr, "Value needed for %s argument\n", arg.Arg() );
 				printf("%s", usage);
 				return true;
 			}
@@ -151,10 +156,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match("verbosity") ) {
 			if ( arg.OptIsNumber() ) {
-				opts.m_verbosity = atoi(argv[index]);
+				opts.m_verbosity = arg.getOptInt( );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --verbosity argument\n");
+				fprintf(stderr, "Value needed for %s argument\n", arg.Arg() );
 				printf("%s", usage);
 				return true;
 			}
@@ -163,11 +168,16 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			printf("test_log_reader: %s, %s\n", VERSION, __DATE__);
 			return true;
 
-		} else if ( !arg.ArgIsOpt() ) {
-			opts.m_address = arg.ArgStr();
+		} else if ( !arg.ArgIsOpt()  &&  (optno == 0)  &&  arg.isOptInt() ) {
+			opts.m_address = arg.getOptStr();
+			optno++;
+
+		} else if ( !arg.ArgIsOpt()  &&  (optno == 1)  &&  arg.isOptBool() ) {
+			opts.m_is_primary = arg.getOptBool();
+			optno++;
 
 		} else {
-			fprintf(stderr, "Unrecognized argument: <%s>\n", arg.ArgStr() );
+			fprintf(stderr, "Unrecognized argument: <%s>\n", arg.Arg() );
 			printf("%s", usage);
 			return true;
 		}

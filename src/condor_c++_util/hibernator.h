@@ -28,6 +28,7 @@ class HibernatorBase
 {
 
 public:
+	struct StateLookup;
 
 	/* The following are the standard sleep states: doHibernate()
 	   makes the machine to enter the given sleep state, while 
@@ -122,6 +123,10 @@ protected:
 	/* Override this to enter the given sleep state on a 
 	   particular OS */
 	virtual bool enterState ( SLEEP_STATE state, bool force ) const = 0;
+
+	static const HibernatorBase::StateLookup &Lookup( int n );
+	static const HibernatorBase::StateLookup &Lookup( SLEEP_STATE state );
+	static const HibernatorBase::StateLookup &Lookup( const char *name );
 
 private:
 	

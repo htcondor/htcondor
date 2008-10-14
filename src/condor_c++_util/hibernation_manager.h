@@ -17,13 +17,14 @@
  *
  ***************************************************************/
 
-#ifndef _POWER_MANAGER_H_
-#define _POWER_MANAGER_H_
+#ifndef _HIBERNATION_MANAGER_H_
+#define _HIBERNATION_MANAGER_H_
 
 /***************************************************************
  * Headers
  ***************************************************************/
 
+#include "extArray.h"
 #include "hibernator.h"
 #include "network_adapter.h"
 
@@ -129,36 +130,12 @@ public:
 
 private:
 
-	class Adapter
-	{
-	  public:
-		Adapter( NetworkAdapterBase &adapter, Adapter *head ) {
-			if ( head ) {
-				m_next = head->GetNext();
-			}
-			head = new Adapter( adapter, this );
-			return head;
-		}
-		Adapter *GetNext( void ) {
-			return m_next;
-		}
-		NetworkAdapterBase &GetAdapter( void ) {
-			return *m_adapter;
-		}
-		Adapter *Set( NetworkAdapterBase &adapter, Adapter *next ) {
-			m_adapter = &adapter;
-			m_next = next;
-			return this;
-		}
-	  private:
-		Adapter				*m_next;
-		NetworkAdapterBase	*m_adapter;
-	};
-	Adapter						*m_adapters;
-	HibernatorBase				*m_hibernator;
-	int							 m_interval;	
-    HibernatorBase::SLEEP_STATE	 m_state;	
+	ExtArray<NetworkAdapterBase *>	 m_adapters;
+	NetworkAdapterBase			 	*m_primary_adapter;
+	HibernatorBase					*m_hibernator;
+	int								 m_interval;	
+    HibernatorBase::SLEEP_STATE		 m_state;	
 
 };
 
-#endif // _POWER_MANAGER_H_
+#endif // _HIBERNATION_MANAGER_H_

@@ -33,7 +33,10 @@ static const char *	VERSION = "0.1";
 struct Options
 {
 	int								 m_verbosity;
+
 	const char						*m_address;
+	bool			 				 m_is_primary;
+
 	HibernatorBase::SLEEP_STATE		 m_state;
 	const char						*m_state_str;
 };
@@ -104,7 +107,7 @@ main(int argc, const char **argv)
 	ad.fPrint( stdout );
 
 	HibernationManager	hman;
-	hman.addInterface( net );
+	hman.addInterface( *net );
 
 	bool ch = hman.canHibernate( );
 	printf( "Can hibernate: %s\n", ch?"True":"False" );
@@ -129,7 +132,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --version: print the version number and compile date\n";
 
 	opts.m_address = "127.0.0.1";
-	opts.m_state = HibernatorBase::None;
+	opts.m_is_primary = false;
+
+	opts.m_state = HibernatorBase::NONE;
+	opts.m_state_str = "";
 	opts.m_verbosity = 1;
 
 	int		fixed = 0;
@@ -174,25 +180,26 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			printf("test_log_reader: %s, %s\n", VERSION, __DATE__);
 			return true;
 
-		} else if ( !arg.ArgIsOpt() && (fixed++ == 0) ) {
-			opts.m_address = arg.ArgStr();
-			if ( ! isdigit( *opts.m_address ) ) {
-				fprintf(stderr,
-						"%s doesn't look like an IP address\n", arg.Arg() );
-				return true;
-			}
+		} else if ( !arg.ArgIsOpt()  &&  (fixed == 0)  &&  arg.isOptInt() ) {
+			fixed++;
+			opts.m_address = arg.getOptStr();
 
-		} else if ( !arg.ArgIsOpt() && (fixed++ == 1) ) {
-			opts.m_state_str = arg.ArgStr();
+		} else if ( !arg.ArgIsOpt()  &&  (fixed == 1)  &&  arg.isOptBool() ) {
+			fixed++;
+			opts.m_is_primary = arg.getOptBool();
+
+		} else if ( !arg.ArgIsOpt() && (fixed == 1) ) {
+			fixed++;
+			opts.m_state_str = arg.getOptStr();
 			opts.m_state =
-				HibernatorBase::stringToSleepState( opt.m_state_str );
+				HibernatorBase::stringToSleepState( opts.m_state_str );
 			if ( opts.m_state == HibernatorBase::NONE ) {
 				fprintf( stderr, "Unknown state '%s'\n", arg.Arg() );
 				return true;
 			}
 
 		} else {
-			fprintf(stderr, "Unrecognized argument: <%s>\n", arg.ArgStr() );
+			fprintf(stderr, "Unrecognized argument: <%s>\n", arg.Arg() );
 			printf("%s", usage);
 			return true;
 		}

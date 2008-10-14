@@ -29,10 +29,8 @@
 
 /* Do we have the ability to test WOL? */
 # if defined(LINUX)
-#   if HAVE_DECL_SIOCETHTOOL
-#     define HAVE_LINUX_HIBERNATION		1
-#     define HAVE_HIBERNATION			1
-#   endif
+#   define HAVE_LINUX_HIBERNATION	1
+#   define HAVE_HIBERNATION			1
 # endif
 
 # if HAVE_LINUX_HIBERNATION

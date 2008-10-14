@@ -27,20 +27,22 @@
 
 #if defined ( WIN32 )
 #   include "hibernator.WINDOWS.h"
-#elif defined ( HAVE_LINUX_HIBERNATION )
-#   include "hibernator-linux.h"
+#elif defined ( LINUX )
+#   include "hibernator.linux.h"
 #endif
 
 /***************************************************************
  * Base Hibernator class
  ***************************************************************/
 
-HibernatorBase::HibernatorBase () throw () 
+HibernatorBase::HibernatorBase ( void ) throw () 
 :   m_states ( NONE )
 {
+	printf( "HB::HB\n" );
 }
 
-HibernatorBase::~HibernatorBase () throw ()
+
+HibernatorBase::~HibernatorBase ( void ) throw ()
 {
 }
 
@@ -59,7 +61,7 @@ HibernatorBase::doHibernate ( SLEEP_STATE level, bool force ) const
 }
 
 unsigned short 
-HibernatorBase::getStates () const
+HibernatorBase::getStates ( void ) const
 {
 	return m_states;
 }
@@ -102,64 +104,86 @@ HibernatorBase::createHibernator ( void )
 }
 
 /* conversion methods */
-struct HibernatorStates
+struct HibernatorBase::StateLookup
 {
 	int							number;
 	HibernatorBase::SLEEP_STATE	state;
-	char						*string;
-	char						*string2;
+	const char					**strings;
 };
-static const HibernatorStates states[] =
+static const char *s0names[] = { "NONE", NULL };
+static const char *s1names[] = {"S1", "standby", "sleep", NULL };
+static const char *s2names[] = {"S2", NULL};
+static const char *s3names[] = {"S3", "ram", "mem", NULL };
+static const char *s4names[] = {"S4", "disk", "hibernate", NULL };
+static const char *s5names[] = {"S5", "shutdown", NULL };
+static const char *sxnames[] = {NULL };
+static const HibernatorBase::StateLookup states[] =
 {
-	{ 0,  HibernatorBase::NONE, "NONE", NULL      },
-	{ 1,  HibernatorBase::S1,   "S1",   "standby" },
-	{ 2,  HibernatorBase::S2,   "S2",   NULL      },
-	{ 3,  HibernatorBase::S3,   "S3",   "ram"     },
-	{ 4,  HibernatorBase::S4,   "S4",   "disk"    },
-	{ 5,  HibernatorBase::S5,   "S5",   NULL      },
-	{ -1, HibernatorBase::NONE, NULL,   NULL      },
+	{ 0,  HibernatorBase::NONE, s0names, },
+	{ 1,  HibernatorBase::S1,   s1names, },
+	{ 2,  HibernatorBase::S2,   s2names, },
+	{ 3,  HibernatorBase::S3,   s3names, },
+	{ 4,  HibernatorBase::S4,   s4names, },
+	{ 5,  HibernatorBase::S5,   s5names, },
+	{ -1, HibernatorBase::NONE, sxnames, },
 };
 
 HibernatorBase::SLEEP_STATE 
-HibernatorBase::intToSleepState ( int x )
+HibernatorBase::intToSleepState ( int n )
 {
-	SLEEP_STATE state = NONE;
-	if ( x > 0 && x <= 5 ) {
-		state = states[x].state;
-	}
-	return state;
+	return Lookup(n).state;
 }
 
 int 
 HibernatorBase::sleepStateToInt ( HibernatorBase::SLEEP_STATE state )
 {
-	for( int i = 0;  states[i].string;  i++ ) {
-		if ( states[i].state == state ) {
-			return i;
-		}
-	}
-	return 0;
+	return Lookup(state).number;
 }
 
 char const* 
 HibernatorBase::sleepStateToString ( HibernatorBase::SLEEP_STATE state )
 {
 	int index = sleepStateToInt ( state );
-	return states[index].string;
+	return states[index].strings[0];
 }
 
 HibernatorBase::SLEEP_STATE 
 HibernatorBase::stringToSleepState ( char const* name )
 {
-	const HibernatorStates	*s = &states[0];
+	return Lookup(name).state;
+}
 
-	for( int i = 0;  states[i].string;  i++ ) {
-		s = &states[i];
-		if ( (strcmp( s->string, name ) == 0) ||
-			 ((s->string2) && (strcmp(s->string2, name) ) == 0) )
-		{
-			 break;
+const HibernatorBase::StateLookup &
+HibernatorBase::Lookup( int n )
+{
+	if ( (n > 0)  &&  (n <= 5) ) {
+		return states[n];
+	}
+	return states[0];
+}
+
+const HibernatorBase::StateLookup &
+HibernatorBase::Lookup( SLEEP_STATE state )
+{
+	for( int i = 0;  states[i].number >= 0;  i++ ) {
+		if ( states[i].state == state ) {
+			return states[i];
 		}
 	}
-	return s->state;
+	return states[0];
+}
+
+const HibernatorBase::StateLookup &
+HibernatorBase::Lookup( const char *name )
+{
+	for( int i = 0;  states[i].number >= 0;  i++ ) {
+		const HibernatorBase::StateLookup	&state = states[i];
+
+		for( int j = 0;  state.strings[j];  j++ ) {
+			if ( strcmp(state.strings[j], name ) == 0 ) {
+				return state;
+			}
+		}
+	}
+	return states[0];
 }

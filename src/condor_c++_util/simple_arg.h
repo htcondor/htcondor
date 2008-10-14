@@ -29,7 +29,7 @@ public:
 	~SimpleArg( void ) { };
 
 	bool Error(void) const { return m_error; };
-	const char *ArgStr( void ) const { return m_arg; };
+	const char *Arg( void ) const { return m_arg; };
 	bool ArgIsOpt( void ) const { return m_is_opt; };
 
 	bool Match( const char short_arg ) const;

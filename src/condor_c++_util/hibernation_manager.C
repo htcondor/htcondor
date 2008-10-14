@@ -25,72 +25,72 @@
 #include "condor_config.h"
 #include "condor_daemon_core.h"
 #include "hibernation_manager.h"
+#include "network_adapter.h"
 
 /***************************************************************
  * External global variables
  ***************************************************************/
 
-extern DaemonCore* daemonCore;
+template class ExtArray<NetworkAdapterBase *>;
 
 /***************************************************************
  * HibernationManager class
  ***************************************************************/
 
 HibernationManager::HibernationManager ( void ) throw ()
-:	_hibernator ( HibernatorBase::createHibernator () ),
-    _network_adpater ( NetworkAdapterBase::createNetworkAdapter (
-                  daemonCore->InfoCommandSinfulString () ) ),
-	_interval ( 0 ),
-    _state ( HibernatorBase::NONE )
+		:	m_hibernator ( HibernatorBase::createHibernator () ),
+			m_interval ( 0 ),
+			m_state ( HibernatorBase::NONE )
 {
-	m_adapters = NULL;
 	update ();
 }
 
 HibernationManager::~HibernationManager ( void ) throw ()
 {
-	if ( _hibernator ) {
-		delete _hibernator;
+	if ( m_hibernator ) {
+		delete m_hibernator;
 	}
-	while ( m_adapters ) {
-		next = m_adapter->next;
-		delete m_adapters;
-		m_adapters = next;
+	for ( int i = 0;  i < m_adapters.getlast();  i++ ) {
+		delete m_adapters[i];
 	}
 }
 
-void
+bool
 HibernationManager::addInterface( NetworkAdapterBase &adapter )
 {
-	m_adapters = new HibernationManagerAdapter( adapter );
+	m_adapters.add( &adapter );
+	if ( adapter.isPrimary()  ||  ( m_primary_adapter == NULL ) ) {
+		m_primary_adapter = &adapter;
+	}
+	return true;
 }
 
 void
 HibernationManager::update( void )
 {
-	int previous_inteval = _interval;
-	_interval = param_integer ( "HIBERNATE_CHECK_INTERVAL",
+	int previous_inteval = m_interval;
+	m_interval = param_integer ( "HIBERNATE_CHECK_INTERVAL",
 		0 /* default */, 0 /* min; no max */ );	
-	bool change = ( previous_inteval != _interval );
+	bool change = ( previous_inteval != m_interval );
 	if ( change ) {
 		dprintf ( D_ALWAYS, "HibernationManager: Hibernation is %s\n",
-			( _interval > 0 ? "enabled" : "disabled" ) );
+			( m_interval > 0 ? "enabled" : "disabled" ) );
 	}
 }
 
 bool
 HibernationManager::setState ( HibernatorBase::SLEEP_STATE state )
 {
-    _state = state;
+    m_state = state;
     return true;
 }
 
 bool
 HibernationManager::doHibernate (void) const
 {
-	if ( _hibernator ) {
-		return _hibernator->doHibernate (
-			HibernatorBase::intToSleepState ( _state ),
+	if ( m_hibernator ) {
+		return m_hibernator->doHibernate (
+			HibernatorBase::intToSleepState ( m_state ),
 			true /* force */ );
 	}
 	return false;
@@ -100,8 +100,8 @@ bool
 HibernationManager::canHibernate (void) const
 {
 	bool can = false;	
-	if ( _hibernator ) {
-		can = ( HibernatorBase::NONE != _hibernator->getStates () );
+	if ( m_hibernator ) {
+		can = ( HibernatorBase::NONE != m_hibernator->getStates () );
 	}
 	return can;
 }
@@ -110,9 +110,8 @@ bool
 HibernationManager::canWake (void) const
 {
     bool can = false;
-    if ( _network_adpater ) {
-        can = _network_adpater->exists () && _network_adpater->isWakeable ();
-    }
+
+	can = m_primary_adapter->exists()  &&  m_primary_adapter->isWakeable();
     return can;
 }
 
@@ -120,9 +119,9 @@ bool
 HibernationManager::wantsHibernate (void) const
 {
     bool does = false;
-	if ( _hibernator ) {
+	if ( m_hibernator ) {
 		if ( canHibernate () ) {
-			does = ( _interval > 0 );
+			does = ( m_interval > 0 );
 		}
 	}
 	return does;
@@ -130,7 +129,7 @@ HibernationManager::wantsHibernate (void) const
 
 int HibernationManager::getHibernateCheckInterval (void) const
 {
-	return _interval;
+	return m_interval;
 }
 
 void
@@ -140,12 +139,14 @@ HibernationManager::publish ( ClassAd &ad )
     that is, it's always "running" if it is up. We still hold
     this in a variable, as we will publish the sleep state in
     the last ad that is sent to the Collector*/
-    ad.Assign ( ATTR_HIBERNATION_LEVEL, _state );
+    ad.Assign ( ATTR_HIBERNATION_LEVEL, m_state );
 
     /* publish whether or not we can enter a state of hibernation */
     ad.Assign ( ATTR_CAN_HIBERNATE, canHibernate () );
 
     /* publish everything we know about the public
     network adapter */
-    _network_adpater->publish ( ad );
+	if ( m_primary_adapter ) {
+		m_primary_adapter->publish( ad );
+	}
 }
