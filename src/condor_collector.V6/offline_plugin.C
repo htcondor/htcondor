@@ -48,7 +48,7 @@ int __cdecl expiration ( const char *ad, time_t *ttl );
 OfflineCollectorPlugin::OfflineCollectorPlugin () throw () 
 : ads_ ( NULL), persistent_store_ ( NULL ) { 
 
-    /* configure the plug-in for first use */
+    /* update the plug-in for first use */
     update ();
 
 }
@@ -85,7 +85,7 @@ OfflineCollectorPlugin::update () {
         persistent_store_ = NULL;
     }
 
-    persistent_store_ = param ( ATTR_OFFLINE_STORE );
+    persistent_store_ = param ( "OFFLINE_ADS_FILE" );
 
     if ( persistent_store_ ) {
 
@@ -120,7 +120,7 @@ OfflineCollectorPlugin::update (
     }
     
     /* make sure the command is relevant to us */
-    if ( INVALIDATE_STARTD_ADS == command ) {
+    if ( UPDATE_STARTD_AD_WITH_ACK == command ) {
 
         AdNameHashKey hashKey;
         if ( !makeStartdAdHashKey ( hashKey, (ClassAd*) &ad, NULL ) ) {
@@ -226,13 +226,12 @@ OfflineCollectorPlugin::invalidate (
 
     }
 
-    /* ads_.BeginTransaction (); */
-
 }
 
 bool
 OfflineCollectorPlugin::enabled () const {
 
-    return ( NULL != ads_ );
+    return ( NULL != persistent_store_ && NULL != ads_ );
 
 }
+

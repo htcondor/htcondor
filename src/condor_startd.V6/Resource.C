@@ -998,6 +998,8 @@ Resource::update_with_ack( void )
             "update_with_ack: "
             "Failed to send public ad to collector host %s.\n", 
             address );
+
+        return FALSE;
         
     }
 
@@ -1008,6 +1010,8 @@ Resource::update_with_ack( void )
             "update_with_ack: "
             "Failed to send private ad to collector host %s.\n", 
             address );
+
+        return FALSE;
         
     }
 
@@ -1018,6 +1022,8 @@ Resource::update_with_ack( void )
             "update_with_ack: "
             "Failed to send update EOM to collector host %s.\n", 
             address );
+
+        return FALSE;
 
 	}
 
@@ -1035,6 +1041,11 @@ Resource::update_with_ack( void )
             "Failed to send query EOM to collector host %s.\n", 
             address );
         
+        /* looks like we didn't get the ack, so we need to fail so
+        that we don't enter hibernation and eventually become 
+        unreachable because our machine ad is invalidated by the 
+        collector */
+
         success = FALSE; 
 
     }

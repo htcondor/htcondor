@@ -576,9 +576,6 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 		}
 	}
 
-    /* update the off-line plug-in with the new ad */
-    offline_plugin_.update ( command, *cad );
-
 #if HAVE_DLOPEN
 	CollectorPluginManager::Update(command, *cad);
 #endif
@@ -677,8 +674,10 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
                 "aborting\n",
                 socket->sender_ip_str () );
         
-            return FALSE;
-        
+            /* it's ok if we fail here, since we won't drop the ad,
+            it's only on the client side that any error should be
+            treated as fatal */
+
         }
 
         if ( !socket->eom () ) {
@@ -688,7 +687,7 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
                 "receive_update_expect_ack: "
                 "Failed to send update EOM to host %s.\n", 
                 socket->sender_ip_str () );
-        
+            
 	    }   
         
     }

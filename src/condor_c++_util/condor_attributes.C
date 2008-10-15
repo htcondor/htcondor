@@ -430,7 +430,6 @@ const char *ATTR_NUM_SHADOW_STARTS	 = "NumShadowStarts";
 const char *ATTR_NUM_SYSTEM_HOLDS		 = "NumSystemHolds";
 const char *ATTR_NUM_USERS                = "NumUsers";
 const char *ATTR_OFFLINE                  ="Offline";
-const char *ATTR_OFFLINE_STORE            ="OfflineStore";
 const char *ATTR_OPSYS                    = "OpSys";
 const char *ATTR_ORIG_MAX_HOSTS			 = "OrigMaxHosts";
 const char *ATTR_OWNER                    = "Owner"; 

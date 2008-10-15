@@ -368,7 +368,6 @@ extern const char * ATTR_NUM_SHADOW_STARTS;
 extern const char * ATTR_NUM_SYSTEM_HOLDS;
 extern const char * ATTR_NUM_USERS;
 extern const char * ATTR_OFFLINE;
-extern const char * ATTR_OFFLINE_STORE;
 extern const char * ATTR_OPSYS;
 extern const char * ATTR_ORIG_MAX_HOSTS;
 extern const char * ATTR_OWNER;
