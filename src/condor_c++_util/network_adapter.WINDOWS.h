@@ -52,7 +52,7 @@ public:
 	WindowsNetworkAdapter ( LPCSTR description ) throw ();
 
 	/// Destructor
-	virtual ~WindowsNetworkAdapter () throw (); 
+	virtual ~WindowsNetworkAdapter () throw ();
 
 	//@}
 
@@ -83,13 +83,13 @@ public:
 	bool wakeAble (void) const;
 
     /** Checks that the adapter actually exists
-        @returns true if the adapter exists on the machine; 
+        @returns true if the adapter exists on the machine;
         otherwise, false.
 	    */
 	bool exists () const;
 
     /** Initialize the internal structures (can be called multiple
-        times--such as in the case of a reconfiguration) 
+        times--such as in the case of a reconfiguration)
 		@return true if it was succesful; otherwise, false.
 		*/
     bool initialize ();
@@ -118,7 +118,7 @@ private:
          _subnet[IP_STRING_BUF_SIZE],
          _adapter_name[MAX_ADAPTER_NAME_LENGTH + 4];
     bool _wake_able,
-         _exists;    
+         _exists;
 
     /**	Some registry values require some preprocessing before they can
 		be queried, so we allow a user to specify a function to handle
@@ -127,7 +127,7 @@ private:
 	typedef void (*PRE_PROCESS_REISTRY_VALUE)(PBYTE);
 
 	/** Returns the device's requested property
-		@return The function retrieves a buffer to the device's 
+		@return The function retrieves a buffer to the device's
 		requested  information. Use LocalFree) to release the memory.
 		@param ID of the property to query.
 		@param Preprocessing function.
