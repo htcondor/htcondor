@@ -2020,7 +2020,7 @@ ResMgr::checkHibernate() {
 	    // Collector invalidates it.
 	    //
         if ( disableResources( level ) ) {
-	        m_hibernation_manager.doHibernate();
+	        m_hibernation_manager.switchToTargetState();
         }
 
     }
@@ -2298,7 +2298,7 @@ ResMgr::disableResources( int level )
 {
 	/* set the sleep state so the green plugin will pickup on the
 	fact that we are */
-	m_hibernation_manager->setState (
+	m_hibernation_manager->setTargetState (
 		(HibernatorBase::SLEEP_STATE) level );
 	for ( int i = 0; i < nresources; ++i ) {
 		if ( !disable_resource_claims ( resources[i] ) ) {

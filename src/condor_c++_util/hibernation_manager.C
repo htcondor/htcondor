@@ -38,10 +38,11 @@ template class ExtArray<NetworkAdapterBase *>;
  ***************************************************************/
 
 HibernationManager::HibernationManager ( void ) throw ()
-		:	m_hibernator ( HibernatorBase::createHibernator () ),
-			m_interval ( 0 ),
-			m_primary_adapter( NULL ),
-			m_state ( HibernatorBase::NONE )
+		: m_primary_adapter( NULL ),
+		  m_hibernator ( HibernatorBase::createHibernator () ),
+		  m_interval ( 0 ),
+		  m_target_state ( HibernatorBase::NONE ),
+		  m_actual_state ( HibernatorBase::NONE )
 {
 	update ();
 }
@@ -80,21 +81,62 @@ HibernationManager::update( void )
 }
 
 bool
-HibernationManager::setState ( HibernatorBase::SLEEP_STATE state )
+HibernationManager::isStateSupported( HibernatorBase::SLEEP_STATE state ) const
 {
-    m_state = state;
-    return true;
+	if ( m_hibernator ) {
+		return m_hibernator->isStateSupported( state );
+	}
+	return false;
 }
 
 bool
-HibernationManager::doHibernate (void) const
+HibernationManager::setTargetState( HibernatorBase::SLEEP_STATE state )
 {
-	if ( m_hibernator ) {
-		return m_hibernator->doHibernate (
-			HibernatorBase::intToSleepState ( m_state ),
-			true /* force */ );
+	if ( state == m_target_state ) {
+		return true;
 	}
-	return false;
+	if ( !validateState( state ) ) {
+		return false;
+	}
+	m_target_state = state;
+	return true;
+}
+
+bool
+HibernationManager::validateState( HibernatorBase::SLEEP_STATE state ) const
+{
+	if ( ! isStateValid( state ) ) {
+		dprintf( D_ALWAYS,
+				 "Attempt to set invalid sleep state %d\n", (int)state );
+		return false;
+	}
+	if ( ! isStateSupported(state) ) {
+		dprintf( D_ALWAYS,
+				 "Attempt to set unsupported sleep state %s\n",
+				 sleepStateToString(state)  );
+		return false;
+	}
+	return true;
+}
+
+bool
+HibernationManager::switchToTargetState ( void )
+{
+	return switchToState( m_target_state );
+}
+
+bool
+HibernationManager::switchToState (HibernatorBase::SLEEP_STATE state )
+{
+	if ( !validateState( state ) ) {
+		return false;
+	}
+	if ( NULL == m_hibernator ) {
+		dprintf( D_ALWAYS, "Can't switch to state %s: no hibernator\n",
+				 sleepStateToString( state ) );
+		return false;
+	}
+	return m_hibernator->switchToState ( state, m_actual_state, true );
 }
 
 bool
@@ -133,6 +175,15 @@ int HibernationManager::getHibernateCheckInterval (void) const
 	return m_interval;
 }
 
+const char *
+HibernationManager::getHibernationMethod ( void ) const
+{
+	if ( m_hibernator ) {
+		return m_hibernator->getMethod( );
+	}
+	return "NONE";
+}
+
 void
 HibernationManager::publish ( ClassAd &ad )
 {
@@ -140,7 +191,7 @@ HibernationManager::publish ( ClassAd &ad )
     that is, it's always "running" if it is up. We still hold
     this in a variable, as we will publish the sleep state in
     the last ad that is sent to the Collector*/
-    ad.Assign ( ATTR_HIBERNATION_LEVEL, m_state );
+    ad.Assign ( ATTR_HIBERNATION_LEVEL, m_target_state );
 
     /* publish whether or not we can enter a state of hibernation */
     ad.Assign ( ATTR_CAN_HIBERNATE, canHibernate () );

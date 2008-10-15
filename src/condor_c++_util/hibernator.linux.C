@@ -19,6 +19,8 @@
  
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_config.h"
+#include "condor_uid.h"
 #include "stat_wrapper.h"
 #include "hibernator.h"
 #include "hibernator.linux.h"
@@ -50,7 +52,18 @@ public:
 	};
 	virtual ~BaseLinuxHibernator(void) { };
 
-	bool isDetected( void ) { return m_detected; };
+	// Logical name
+	virtual const char *getName(void) const = 0;
+
+	// Name match?
+	bool nameMatch( const char *name ) const {
+		if (NULL == name) return true;
+		return strcasecmp( name, getName() ) == 0;
+	}
+
+	// Is it detected?
+	bool isDetected( void ) const { return m_detected; };
+	void setDetected( bool detected ) { m_detected = detected; };
 
 	// Detect if interface is available
 	virtual bool Detect( void ) = 0;
@@ -82,11 +95,14 @@ public:
 			: BaseLinuxHibernator( hibernator ) { };
 	virtual ~PmUtilLinuxHibernator(void) { };
 
+	const char *getName( void ) const { return "PMUtils"; };
 	bool Detect( void );
 	//HibernatorBase::SLEEP_STATE StandBy ( bool force ) const ;
 	HibernatorBase::SLEEP_STATE Suspend ( bool force ) const;
 	HibernatorBase::SLEEP_STATE Hibernate ( bool force ) const;
 	//HibernatorBase::SLEEP_STATE PowerOff ( bool force ) const;
+private:
+	bool RunCmd ( const char *command ) const;
 };
 
 class SysIfLinuxHibernator : public BaseLinuxHibernator
@@ -96,6 +112,7 @@ public:
 			: BaseLinuxHibernator( hibernator ) { };
 	~SysIfLinuxHibernator(void) { };
 
+	const char *getName( void ) const { return "/sys"; };
 	bool Detect( void );
 	//HibernatorBase::SLEEP_STATE StandBy ( bool force ) const;
 	HibernatorBase::SLEEP_STATE Suspend ( bool force ) const;
@@ -110,6 +127,7 @@ public:
 			: BaseLinuxHibernator( hibernator ) { };
 	virtual ~ProcIfLinuxHibernator(void) { };
 
+	const char *getName( void ) const { return "/proc"; };
 	bool Detect( void );
 	//HibernatorBase::SLEEP_STATE StandBy ( bool force ) const;
 	HibernatorBase::SLEEP_STATE Suspend ( bool force ) const;
@@ -129,6 +147,15 @@ LinuxHibernator::~LinuxHibernator ( void) throw ()
 {
 }
 
+const char *
+LinuxHibernator::getMethod( void ) const
+{
+	if ( m_real_hibernator ) {
+		return m_real_hibernator->getName();
+	}
+	return "NONE";
+}
+
 void
 LinuxHibernator::initStates( void )
 {
@@ -137,93 +164,90 @@ LinuxHibernator::initStates( void )
 	setStates ( NONE );
 	m_real_hibernator = NULL;
 
+	// Specific method configured?
+	const char	*method = param( "LINUX_HIBERNATION_METHOD" );
+
 	// Do we have "pm-utils" installed?
-	if ( NULL == m_real_hibernator ) {
-		BaseLinuxHibernator	*hibernator = new PmUtilLinuxHibernator( *this );
-		if ( hibernator->Detect()  &&  hibernator->isDetected() ) {
-			m_real_hibernator = hibernator;
-			dprintf( D_FULLDEBUG, "hibernator: PMUtils detected\n" );
+	char	methods[128] = "";
+	for ( int type = 0;  type < 3;  type++ ) {
+		BaseLinuxHibernator	*lh = NULL;
+		if      ( 0 == type ) {
+			lh = new PmUtilLinuxHibernator( *this );
 		}
+		else if ( 1 == type ) {
+			lh = new SysIfLinuxHibernator( *this );
+		}
+		else if ( 2 == type ) {
+			lh = new ProcIfLinuxHibernator( *this );
+		}
+		ASSERT( lh != NULL );
+
+		const char *name = lh->getName();
+		if ( methods[0] != '\0' ) {
+			strcat( methods, "," );
+		}
+		strcat( methods, name );
+
+		// If method name specified, does this one match?
+		if ( ! lh->nameMatch(method) ) {
+			dprintf( D_FULLDEBUG,
+					 "hibernator: skipping %s\n", name );
+			delete lh;
+		}
+
+		// Try to detect the usability of it
+		else if ( lh->Detect() ) {
+			lh->setDetected( true );
+			m_real_hibernator = lh;
+			dprintf( D_FULLDEBUG,
+					 "hibernator: %s detected\n", name );
+			return;
+		}
+
+		// We failed to detect it... go on to the next one
 		else {
-			delete hibernator;
-			dprintf( D_FULLDEBUG, "hibernator: PMUtils not detected\n" );
+			delete lh;
+			if ( method ) {
+				dprintf( D_ALWAYS,
+						 "hibernator: %s not detected; hibernation disabled\n",
+						 name );
+				return;
+			}
+			dprintf( D_FULLDEBUG,
+					 "hibernator: %s not detected\n", name );
 		}
 	}
-
-	// Check for the "/sys" interface
-	if ( NULL == m_real_hibernator ) {
-		BaseLinuxHibernator	*hibernator = new SysIfLinuxHibernator( *this );
-		if ( hibernator->Detect()  &&  hibernator->isDetected() ) {
-			m_real_hibernator = hibernator;
-			dprintf( D_FULLDEBUG, "hibernator: /sys i/f detected\n" );
-		}
-		else {
-			delete hibernator;
-			dprintf( D_FULLDEBUG, "hibernator: /sys i/f not detected\n" );
-		}
+	if ( method ) {
+		dprintf( D_ALWAYS, "hibernator: %s not detected\n", method );
 	}
-
-	// Check for the "/proc" interface
-	if ( NULL == m_real_hibernator ) {
-		BaseLinuxHibernator	*hibernator = new ProcIfLinuxHibernator( *this );
-		if ( hibernator->Detect()  &&  hibernator->isDetected() ) {
-			m_real_hibernator = hibernator;
-			dprintf( D_FULLDEBUG, "hibernator: /proc i/f detected\n" );
-		}
-		else {
-			delete hibernator;
-			dprintf( D_FULLDEBUG, "hibernator: /proc i/f detected\n" );
-		}
-	}
-
+	dprintf( D_ALWAYS,
+			 "No hibernation methods detected; hibernation disabled\n" );
 }
 
-bool 
-LinuxHibernator::enterState ( SLEEP_STATE level, bool force ) const
+HibernatorBase::SLEEP_STATE
+LinuxHibernator::enterStateStandBy( bool force ) const
 {
-	MyString	command;
-	SLEEP_STATE	new_state = NONE;
-
-	bool ok = ( level == ( getStates () & level ) ); /* 1 and only 1 state */
-	if ( !ok ) {
-		dprintf ( D_ALWAYS, "Programmer Error: Unknown power "
-			"state: 0x%x\n", level );
-		return false;
-	}
-
-
-	switch ( level ) {
-		/* S[1-3] will all be treated as "suspend to RAM" */
-	case S1:
-		new_state = m_real_hibernator->StandBy( force );
-		break;
-
-	case S2:
-	case S3:
-		new_state = m_real_hibernator->Suspend( force );
-		break;
-		
-		/* S4 will all be treated as hibernate */
-	case S4:
-		new_state = m_real_hibernator->Hibernate( force );
-		break;
-
-		/* S5 will be treated as shutdown (soft-off) */		
-	case S5:
-		new_state = m_real_hibernator->PowerOff( force );
-		break;
-
-	default:
-		/* should never happen */
-		ok = false;
-	}
-
-	if ( new_state != level ) {
-		ok = false;
-	}
-
-	return ok;
+	return m_real_hibernator->StandBy( force );
 }
+
+HibernatorBase::SLEEP_STATE
+LinuxHibernator::enterStateSuspend( bool force ) const
+{
+	return m_real_hibernator->Suspend( force );
+}
+
+HibernatorBase::SLEEP_STATE
+LinuxHibernator::enterStateHibernate( bool force ) const
+{
+	return m_real_hibernator->Hibernate( force );
+}
+
+HibernatorBase::SLEEP_STATE
+LinuxHibernator::enterStatePowerOff( bool force ) const
+{
+	return m_real_hibernator->PowerOff( force );
+}
+
 
 // *****************************************
 // Linux hibernator "base" class methods
@@ -262,18 +286,27 @@ BaseLinuxHibernator::PowerOff ( bool force ) const
 bool 
 BaseLinuxHibernator::writeSysFile ( const char *file, const char *str ) const
 {
-	FILE	*fp;
-
-	// Look at the "/sys" file(s)
-	fp = safe_fopen_wrapper( file, "w" );
-	if ( NULL == fp ) {
+	// Write to the "/sys or /proc" file(s)
+	dprintf( D_FULLDEBUG,
+			 "LinuxHibernator: Writing '%s' to '%s'\n", str, file );
+	priv_state p = set_root_priv( );
+	int fd = safe_open_wrapper( file, O_WRONLY );
+	set_priv( p );
+	if ( fd < 0 ) {
+		dprintf( D_ALWAYS,
+				 "LinuxHibernator: Error writing '%s' to '%s': %s\n",
+				 str, file, strerror(errno) );
 		return false;
 	}
-	if ( fputs( str, fp ) == EOF ) {
-		fclose( fp );
+	int len = strlen(str);
+	if ( write( fd, str, len ) != len ) {
+		close( fd );
+		dprintf( D_ALWAYS,
+				 "LinuxHibernator: Error writing '%s' to '%s': %s\n",
+				 str, file, strerror(errno) );
 		return false;
 	}
-	fclose( fp );
+	close( fd );
 	return true;
 }
 
@@ -309,8 +342,6 @@ PmUtilLinuxHibernator::Detect ( void )
 	MyString	command;
 	int			status;
 
-	m_detected = true;
-
 	command = PM_UTIL_CHECK;
 	command += " --suspend";
 	status = system( command.GetCStr() );
@@ -328,13 +359,29 @@ PmUtilLinuxHibernator::Detect ( void )
 	return true;
 }
 
+bool
+PmUtilLinuxHibernator::RunCmd ( const char *command ) const
+{
+	dprintf( D_FULLDEBUG, "LinuxHibernator: running '%s'\n", command );
+
+	int status = system( command );
+	if ( (status >= 0)  &&  (WEXITSTATUS(status) == 0 ) ) {
+		dprintf( D_FULLDEBUG, "LinuxHibernator: '%s' success!\n", command );
+		return true;
+	}
+	else {
+		dprintf( D_ALWAYS, "LinuxHibernator: '%s' failed: %s exit=%d!\n",
+				 command, strerror(errno), WEXITSTATUS(status) );
+		return false;
+	}
+
+}
+
 HibernatorBase::SLEEP_STATE
 PmUtilLinuxHibernator::Suspend ( bool force ) const
 {
 	(void) force;
-	MyString command = PM_UTIL_SUSPEND;
-	int status = system( command.GetCStr() );
-	if ( (status >= 0)  &&  (WEXITSTATUS(status) == 0 ) ) {
+	if ( RunCmd( PM_UTIL_SUSPEND ) ) {
 		return HibernatorBase::S3;
 	}
 	else {
@@ -346,10 +393,9 @@ HibernatorBase::SLEEP_STATE
 PmUtilLinuxHibernator::Hibernate ( bool force ) const
 {
 	(void) force;
-	MyString command = PM_UTIL_HIBERNATE;
-	int status = system( command.GetCStr() );
-	if ( (status >= 0)  &&  (WEXITSTATUS(status) == 0 ) ) {
-		return HibernatorBase::S4;
+
+	if ( RunCmd( PM_UTIL_HIBERNATE ) ) {
+		return HibernatorBase::S3;
 	}
 	else {
 		return HibernatorBase::NONE;
@@ -408,6 +454,7 @@ SysIfLinuxHibernator::Detect ( void )
 			else if ( strcmp( token, "shutdown" ) == 0 ) {
 				m_hibernator->addState( HibernatorBase::S5 );
 			}
+			token = strtok_r( NULL, " ", &save );
 		}
 	}
 	fclose( fp );
@@ -419,7 +466,7 @@ HibernatorBase::SLEEP_STATE
 SysIfLinuxHibernator::Suspend ( bool force ) const
 {
 	(void) force;
-	if ( ! writeSysFile( SYS_POWER_FILE, "mem\n" ) ) {
+	if ( ! writeSysFile( SYS_POWER_FILE, "mem" ) ) {
 		return HibernatorBase::NONE;
 	}
 	return HibernatorBase::S3;
@@ -432,7 +479,7 @@ SysIfLinuxHibernator::Hibernate ( bool force ) const
 	if ( ! writeSysFile( SYS_DISK_FILE, "platform" ) ) {
 		return HibernatorBase::NONE;
 	}
-	if ( ! writeSysFile( SYS_POWER_FILE, "disk\n" ) ) {
+	if ( ! writeSysFile( SYS_POWER_FILE, "disk" ) ) {
 		return HibernatorBase::NONE;
 	}
 	return HibernatorBase::S4;
@@ -454,7 +501,6 @@ ProcIfLinuxHibernator::Detect ( void )
 	if ( NULL == fp ) {
 		return false;
 	}
-	m_detected = true;
 	if ( fgets( buf, sizeof(buf)-1, fp ) ) {
 		char	*token, *save = NULL;
 
@@ -472,7 +518,7 @@ HibernatorBase::SLEEP_STATE
 ProcIfLinuxHibernator::Suspend ( bool force ) const
 {
 	(void) force;
-	if ( ! writeSysFile( PROC_POWER_FILE, "S3\n" ) ) {
+	if ( ! writeSysFile( PROC_POWER_FILE, "3" ) ) {
 		return HibernatorBase::NONE;
 	}
 	return HibernatorBase::S3;
@@ -482,7 +528,7 @@ HibernatorBase::SLEEP_STATE
 ProcIfLinuxHibernator::Hibernate ( bool force ) const
 {
 	(void) force;
-	if ( ! writeSysFile( PROC_POWER_FILE, "S4\n" ) ) {
+	if ( ! writeSysFile( PROC_POWER_FILE, "4" ) ) {
 		return HibernatorBase::NONE;
 	}
 	return HibernatorBase::S4;
@@ -492,7 +538,7 @@ HibernatorBase::SLEEP_STATE
 ProcIfLinuxHibernator::PowerOff ( bool force ) const
 {
 	(void) force;
-	if ( ! writeSysFile( PROC_POWER_FILE, "S5\n" ) ) {
+	if ( ! writeSysFile( PROC_POWER_FILE, "5" ) ) {
 		return HibernatorBase::NONE;
 	}
 	return HibernatorBase::S5;

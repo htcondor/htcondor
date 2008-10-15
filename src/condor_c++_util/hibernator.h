@@ -66,9 +66,12 @@ public:
 	/** Signal the OS to enter hibernation.
 		@return true if the machine will enter hibernation; otherwise, false.
 		@param State of hibernation to enter.
+		@param Actual state entered
 		@param Should the computer be forced into the hibernation state?
 		*/
-	bool doHibernate ( SLEEP_STATE state, bool force = true ) const;
+	bool switchToState ( SLEEP_STATE state,
+						 SLEEP_STATE &new_state,
+						 bool force = true ) const;
 
 	//@}
 
@@ -83,6 +86,11 @@ public:
 		*/
 	unsigned short getStates ( void ) const;
 
+	/** Is the given state supported?
+		@return true / false */
+	bool isStateSupported( SLEEP_STATE state ) const
+		{ return (m_states & state) ? true : false; };
+
     /** Set the supported sleep states 
         */
     void setStates ( unsigned short states );
@@ -92,6 +100,9 @@ public:
         */
     void addState ( SLEEP_STATE state );
 	void addState ( const char *statestr );
+
+	/** Get the name of the hibernation method used */
+	virtual const char *getMethod( void ) const { return "default"; };
 
 	//@}
 
@@ -110,6 +121,8 @@ public:
 		and vice versa 
 	*/
 	//@{
+
+	static bool isStateValid( SLEEP_STATE state );
 	
 	static SLEEP_STATE intToSleepState ( int x );
 	static int sleepStateToInt ( SLEEP_STATE state );
@@ -122,17 +135,19 @@ protected:
 
 	/* Override this to enter the given sleep state on a 
 	   particular OS */
-	virtual bool enterState ( SLEEP_STATE state, bool force ) const = 0;
+	virtual SLEEP_STATE enterStateStandBy(   bool force ) const = 0;
+	virtual SLEEP_STATE enterStateSuspend(   bool force ) const = 0;
+	virtual SLEEP_STATE enterStateHibernate( bool force ) const = 0;
+	virtual SLEEP_STATE enterStatePowerOff(  bool force ) const = 0;
 
 	static const HibernatorBase::StateLookup &Lookup( int n );
 	static const HibernatorBase::StateLookup &Lookup( SLEEP_STATE state );
 	static const HibernatorBase::StateLookup &Lookup( const char *name );
 
 private:
-	
+
 	/* OS agnostic sleep state representation */
 	unsigned short m_states;
-
 };
 
 #endif // _HIBERNATER_H_

@@ -74,7 +74,8 @@ MsWindowsHibernator::initStates () {
 }
 
 bool
-MsWindowsHibernator::tryShutdown ( bool force ) const {
+MsWindowsHibernator::tryShutdown ( bool force ) const
+{
 	bool ok = ( TRUE == InitiateSystemShutdownEx (
 		NULL	/* local computer */, 
 		NULL	/* no warning message */, 
@@ -93,34 +94,31 @@ MsWindowsHibernator::tryShutdown ( bool force ) const {
 	return ok;
 }
 
-bool 
-MsWindowsHibernator::enterState ( SLEEP_STATE level, bool force ) const {
-	bool ok = ( level == ( getStates () & level ) ); /* 1 and only 1 state */
-	if ( ok ) {
-		switch ( level ) {
-			/* S[1-3] will all be treated as sleep */
-		case S1:
-		case S2:
-		case S3: 		
-			ok = ( 0 != SetSuspendState ( FALSE, force, FALSE ) );
-			break;
-			/* S4 will all be treated as hibernate */
-		case S4:
-			ok = ( 0 != SetSuspendState ( TRUE, force, FALSE ) );
-			break;
-			/* S5 will be treated as shutdown (soft-off) */		
-		case S5:
-			ok = tryShutdown ( force );
-			break;
-		default:
-			/* should never happen */
-			ok = false;
-		}
-	} 
-	if ( !ok ) {
-		dprintf ( D_ALWAYS, "Programmer Error: Unknown power "
-			"state: 0x%x\n", level );
-	}
-	return ok;
+HibernatorBase::SLEEP_STATE
+MsWindowsHibernator::enterStateStandBy ( bool force ) const
+{
+	SetSuspendState ( FALSE, force, FALSE );
+	return TODO;
+}
+
+HibernatorBase::SLEEP_STATE
+MsWindowsHibernator::enterStateSuspend ( bool force ) const
+{
+	SetSuspendState ( FALSE, force, FALSE );
+	return TODO;
+}
+
+HibernatorBase::SLEEP_STATE
+MsWindowsHibernator::enterStateHibernate ( bool force ) const
+{
+	SetSuspendState ( TRUE, force, FALSE );
+	return TODO;
+}
+
+HibernatorBase::SLEEP_STATE
+MsWindowsHibernator::enterStatePowerOff ( bool force ) const
+{
+	tryShutdown ( force );
+	return TODO;
 }
 

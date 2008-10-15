@@ -26,9 +26,9 @@
 #include "internet.h"
 #include "network_adapter.h"
 #if defined ( WIN32 )
-# include "network_adapter.WINDOWS.h"
+#  include "network_adapter.WINDOWS.h"
 #elif defined ( LINUX )
-# include "network_adapter.linux.h"
+#  include "network_adapter.linux.h"
 #endif
 #include <ctype.h>
 

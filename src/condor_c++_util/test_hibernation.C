@@ -22,6 +22,7 @@
 #include "network_adapter.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "condor_uid.h"
 #include "condor_distribution.h"
 #include "hibernation_manager.h"
 #include "MyString.h"
@@ -36,14 +37,13 @@ struct Options
 
 	const char						*m_if_name;
 	const char						*m_address;
-	bool			 				 m_is_primary;
 
 	HibernatorBase::SLEEP_STATE		 m_state;
-	const char						*m_state_str;
 };
 
 bool
 CheckArgs(int argc, const char **argv, Options &opts);
+const char *BoolString( bool tf ) { return tf ? "True" : "False"; }
 
 int
 main(int argc, const char **argv)
@@ -59,7 +59,7 @@ main(int argc, const char **argv)
 	dprintf_config("TEST_NETWORK_ADAPTER");
 
 	const char	*tmp;
-	int			 result = 0;
+	int			 status = 0;
 	Options		 opts;
 
 	if ( CheckArgs(argc, argv, opts) ) {
@@ -123,24 +123,33 @@ main(int argc, const char **argv)
 	HibernationManager	hman;
 	hman.addInterface( *net );
 
-	bool tf;
-	tf = hman.canHibernate( );
-	printf( "Can hibernate: %s\n", tf?"True":"False" );
-	tf = hman.canWake( );
-	printf( "Can wake: %s\n", tf?"True":"False" );
+	printf( "Hibernation method used: %s\n", hman.getHibernationMethod() );
 
-	if ( result != 0 && opts.m_verbosity >= 1 ) {
-		fprintf(stderr, "test_network_adapter FAILED\n");
+	hman.canHibernate( );
+	printf( "Can hibernate: %s\n", BoolString(hman.canHibernate()) );
+	hman.canWake( );
+	printf( "Can wake: %s\n", BoolString(hman.canWake()) );
+
+	if ( hman.canHibernate() && opts.m_state != HibernatorBase::NONE ) {
+		printf( "Setting state %s\n", hman.sleepStateToString(opts.m_state) );
+		if ( ! hman.switchToState( opts.m_state ) ) {
+			printf( "Failed to switch states\n" );
+			status = 1;
+		}
 	}
 
-	return result;
+	if ( status != 0 && opts.m_verbosity >= 1 ) {
+		fprintf(stderr, "test_hibernation FAILED\n");
+	}
+
+	return status;
 }
 
 bool
 CheckArgs(int argc, const char **argv, Options &opts)
 {
 	const char *	usage =
-		"Usage: test_hibernation [options] <IP address|IF name> <state>\n"
+		"Usage: test_hibernation [options] <IP address|IF name> [state]\n"
 		"  -d <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  --debug <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  --usage|--help|-h: print this message and exit\n"
@@ -150,10 +159,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 	opts.m_if_name = NULL;
 	opts.m_address = "127.0.0.1";
-	opts.m_is_primary = false;
 
 	opts.m_state = HibernatorBase::NONE;
-	opts.m_state_str = "";
 	opts.m_verbosity = 1;
 
 	int		fixed = 0;
@@ -206,17 +213,12 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.m_if_name = arg.getOptStr();
 			fixed++;
 
-		} else if ( !arg.ArgIsOpt()  &&  (fixed == 1)  &&  arg.isOptBool() ) {
-			fixed++;
-			opts.m_is_primary = arg.getOptBool();
-
 		} else if ( !arg.ArgIsOpt() && (fixed == 1) ) {
 			fixed++;
-			opts.m_state_str = arg.getOptStr();
-			opts.m_state =
-				HibernatorBase::stringToSleepState( opts.m_state_str );
+			const char *s = arg.getOptStr();
+			opts.m_state = HibernatorBase::stringToSleepState( s );
 			if ( opts.m_state == HibernatorBase::NONE ) {
-				fprintf( stderr, "Unknown state '%s'\n", arg.Arg() );
+				fprintf( stderr, "Unknown state '%s'\n", s );
 				return true;
 			}
 

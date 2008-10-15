@@ -64,6 +64,16 @@ public:
 
 	//@{
 
+    /** Is the specified state supported?
+        @param the hibernation state to check
+        @return true if state is valid
+        @see setTargetState()
+        @see switchToTargetState()
+        @see switchToState()
+        @see canWake()
+        */
+    bool isStateSupported ( HibernatorBase::SLEEP_STATE state ) const;
+
     /** Set which hibernation level the computer should enter
         @param the hibernation state to place machine into
         @return true if the internal state ha changed; otherwise, false.
@@ -72,15 +82,24 @@ public:
         @see wantsHibernate
         @see canWake
         */
-    bool setState ( HibernatorBase::SLEEP_STATE state );
+    bool setTargetState ( HibernatorBase::SLEEP_STATE state );
 
-	/** Signals the OS to enter hibernation.
+	/** Switch to the target state specified by setTargetState()
 		@return true if the machine will enter hibernation; otherwise, false.
 		@see canHibernate
 		@see wantsHibernate
         @see canWake
 		*/
-	bool doHibernate () const;
+	bool switchToTargetState ( void );
+
+	/** Switch to the specified state
+		@param The target state
+		@return true if the machine will enter hibernation; otherwise, false.
+		@see canHibernate
+		@see wantsHibernate
+        @see canWake
+		*/
+	bool switchToState ( HibernatorBase::SLEEP_STATE state );
 
 	/** Determines if the power manager is capable of hibernating the machine.
 		@return true if the machine can be hibernated; otherwise, false.
@@ -128,14 +147,34 @@ public:
         the given ad */
     void publish ( ClassAd &ad );
 
+	/** Get the hibernation method used
+	 */
+	const char *getHibernationMethod( void ) const;
+
+	/** Sleep state converions convienience methods
+	 */
+	HibernatorBase::SLEEP_STATE intToSleepState ( int n ) const
+		{ return HibernatorBase::intToSleepState(n); };
+	int sleepStateToInt ( HibernatorBase::SLEEP_STATE state ) const
+		{ return HibernatorBase::sleepStateToInt(state); };
+	char const* sleepStateToString ( HibernatorBase::SLEEP_STATE state ) const
+		{ return HibernatorBase::sleepStateToString(state); };
+	HibernatorBase::SLEEP_STATE stringToSleepState ( char const* name ) const
+		{ return HibernatorBase::stringToSleepState(name); };
+
+
 private:
 
 	ExtArray<NetworkAdapterBase *>	 m_adapters;
 	NetworkAdapterBase			 	*m_primary_adapter;
 	HibernatorBase					*m_hibernator;
-	int								 m_interval;	
-    HibernatorBase::SLEEP_STATE		 m_state;	
+	int								 m_interval;
+    HibernatorBase::SLEEP_STATE		 m_target_state;
+    HibernatorBase::SLEEP_STATE		 m_actual_state;
 
+	bool validateState( HibernatorBase::SLEEP_STATE state ) const;
+	bool isStateValid( HibernatorBase::SLEEP_STATE state ) const
+		{ return HibernatorBase::isStateValid(state); };
 };
 
 #endif // _HIBERNATION_MANAGER_H_

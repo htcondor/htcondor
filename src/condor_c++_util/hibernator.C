@@ -26,9 +26,9 @@
 #include "hibernator.h"
 
 #if defined ( WIN32 )
-#   include "hibernator.WINDOWS.h"
+#  include "hibernator.WINDOWS.h"
 #elif defined ( LINUX )
-#   include "hibernator.linux.h"
+#  include "hibernator.linux.h"
 #endif
 
 /***************************************************************
@@ -45,18 +45,73 @@ HibernatorBase::~HibernatorBase ( void ) throw ()
 {
 }
 
-bool 
-HibernatorBase::doHibernate ( SLEEP_STATE level, bool force ) const
+bool
+HibernatorBase::isStateValid ( SLEEP_STATE state )
 {
-	if ( level == ( m_states & level ) ) {
-		dprintf ( D_FULLDEBUG, "Hibernator: Entering sleep "
-			"state '%s'.\n", sleepStateToString ( level ) );
-		return enterState ( level, force );
-	} else {
-		dprintf ( D_FULLDEBUG, "Hibernator: This machine does not "
-			"support low power state: x%x\n", level );
+	switch ( state ) {
+	case NONE:	// Do nothing
+		return true;
+	case S1:
+		return true;
+	case S2:
+		return true;
+	case S3:
+		return true;
+	case S4:
+		return true;
+	case S5:
+		return true;
+	default:
+		return false;
 	}
-	return false;
+}
+
+bool
+HibernatorBase::switchToState ( SLEEP_STATE level,
+								SLEEP_STATE &new_level,
+								bool force ) const
+{
+	if ( ! isStateValid( level ) ) {
+		dprintf ( D_ALWAYS, "Hibernator: Invalid power state 0x%02x\n",
+				  level );
+		return false;
+	}
+	if ( ! isStateSupported( level )  ) {
+		dprintf ( D_ALWAYS, "Hibernator: This machine does not "
+			"support low power state: %s\n", sleepStateToString(level) );
+		return false;
+	}
+	dprintf ( D_FULLDEBUG, "Hibernator: Entering sleep "
+			  "state '%s'.\n", sleepStateToString ( level ) );
+
+	new_level = NONE;
+	switch ( level ) {
+		/* S[1-3] will all be treated as "suspend to RAM" */
+	case S1:
+		new_level = enterStateStandBy( force );
+		break;
+
+	case S2:
+	case S3:
+		new_level = enterStateSuspend( force );
+		break;
+		
+		/* S4 will all be treated as hibernate */
+	case S4:
+		new_level = enterStateHibernate( force );
+		break;
+
+		/* S5 will be treated as shutdown (soft-off) */		
+	case S5:
+		new_level = enterStatePowerOff( force );
+		break;
+
+	default:
+		/* should never happen */
+		return false;
+	}
+
+	return true;
 }
 
 unsigned short 
@@ -110,12 +165,12 @@ struct HibernatorBase::StateLookup
 	const char					**strings;
 };
 static const char *s0names[] = { "NONE", NULL };
-static const char *s1names[] = {"S1", "standby", "sleep", NULL };
-static const char *s2names[] = {"S2", NULL};
-static const char *s3names[] = {"S3", "ram", "mem", NULL };
-static const char *s4names[] = {"S4", "disk", "hibernate", NULL };
-static const char *s5names[] = {"S5", "shutdown", NULL };
-static const char *sxnames[] = {NULL };
+static const char *s1names[] = { "S1", "standby", "sleep", NULL };
+static const char *s2names[] = { "S2", NULL};
+static const char *s3names[] = { "S3", "ram", "mem", NULL };
+static const char *s4names[] = { "S4", "disk", "hibernate", NULL };
+static const char *s5names[] = { "S5", "shutdown", NULL };
+static const char *sxnames[] = { NULL };
 static const HibernatorBase::StateLookup states[] =
 {
 	{ 0,  HibernatorBase::NONE, s0names, },
@@ -179,7 +234,7 @@ HibernatorBase::Lookup( const char *name )
 		const HibernatorBase::StateLookup	&state = states[i];
 
 		for( int j = 0;  state.strings[j];  j++ ) {
-			if ( strcmp(state.strings[j], name ) == 0 ) {
+			if ( strcasecmp(state.strings[j], name ) == 0 ) {
 				return state;
 			}
 		}

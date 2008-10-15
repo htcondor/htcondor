@@ -54,6 +54,9 @@ public:
 		int c = toupper(*m_opt);
 		return ( c=='T' || c=='Y' );
 	};
+	const char *getOptBoolStr( void ) const {
+		return getOptBool() ? "True" : "False";
+	}
 
 	int ConsumeOpt( void ) { return ++m_index; };
 	int Index( void ) const { return m_index; };

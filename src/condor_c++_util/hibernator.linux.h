@@ -46,11 +46,16 @@ class LinuxHibernator : public HibernatorBase
 	LinuxHibernator () throw ();
 	virtual ~LinuxHibernator () throw ();
 
+	virtual const char *getMethod(void) const;
+
 protected:
 
-	/* Enter the given sleep state.  Can be any of S[1-5],
-	   but only S[3-5] truly exist on Windows */
-	bool enterState ( SLEEP_STATE state, bool force ) const;
+	/* Override this to enter the given sleep state on a 
+	   particular OS */
+	HibernatorBase::SLEEP_STATE enterStateStandBy(   bool force ) const;
+	HibernatorBase::SLEEP_STATE enterStateSuspend(   bool force ) const;
+	HibernatorBase::SLEEP_STATE enterStateHibernate( bool force ) const;
+	HibernatorBase::SLEEP_STATE enterStatePowerOff(  bool force ) const;
 
 private:
 
