@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -239,10 +239,10 @@ void CollectorDaemon::Init()
 				     (CommandHandler)receive_update,
 				     "receive_update", NULL, DAEMON);
 
-    // install command handlers for updates with acknowledgement 
+    // install command handlers for updates with acknowledgement
 
     daemonCore->Register_Command(UPDATE_STARTD_AD_WITH_ACK,"UPDATE_STARTD_AD_WITH_ACK",
-		(CommandHandler)receive_update_expect_ack,"receive_update",NULL,ADVERTISE_STARTD_PERM);				     
+		(CommandHandler)receive_update_expect_ack,"receive_update",NULL,ADVERTISE_STARTD_PERM);
 
 	// ClassAd evaluations use this function to resolve names
 	// ClassAdLookupRegister( process_global_query, this );
@@ -290,11 +290,11 @@ int CollectorDaemon::receive_query_cedar(Service* s,
 	ClassAd *curr_ad = NULL;
 	int more = 1;
 	
-	while ( (curr_ad=results.Next()) ) 
+	while ( (curr_ad=results.Next()) )
     {
         if (!sock->code(more) || !curr_ad->put(*sock))
         {
-            dprintf (D_ALWAYS, 
+            dprintf (D_ALWAYS,
                     "Error sending query result to client -- aborting\n");
             return_status = 0;
 			goto END;
@@ -420,7 +420,7 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	sock->timeout(ClientTimeout);
     if( !cad.initFromStream(*sock) || !sock->eom() )
     {
-        dprintf( D_ALWAYS, 
+        dprintf( D_ALWAYS,
 				 "Failed to receive invalidation on %s: aborting\n",
 				 sock->type() == Stream::reli_sock ? "TCP" : "UDP" );
         return FALSE;
@@ -495,11 +495,11 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 		break;
 
 	  default:
-		dprintf(D_ALWAYS,"Unknown command %d in receive_invalidation()\n", 
+		dprintf(D_ALWAYS,"Unknown command %d in receive_invalidation()\n",
 			command);
 		whichAds = (AdTypes) -1;
     }
-   
+
     if (whichAds != (AdTypes) -1)
 		process_invalidation (whichAds, cad, sock);
 
@@ -510,12 +510,12 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 
     /* let the off-line plug-in invalidate the given ad */
     offline_plugin_.invalidate ( command, cad );
-    
+
 #if HAVE_DLOPEN
 	CollectorPluginManager::Invalidate(command, cad);
 #endif
 
-	if(View_Collector && ((command == INVALIDATE_STARTD_ADS) || 
+	if(View_Collector && ((command == INVALIDATE_STARTD_ADS) ||
 		(command == INVALIDATE_SUBMITTOR_ADS)) ) {
 		send_classad_to_sock(command, View_Collector, &cad);
 	}	
@@ -542,7 +542,7 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 
   		// unless the collector has been configured to use a socket
   		// cache for TCP updates, refuse any update commands that come
-  		// in via TCP... 
+  		// in via TCP...
 	if( ! sock_cache && sock->type() == Stream::reli_sock ) {
 		// update via tcp; sorry buddy, use udp or you're outa here!
 		dprintf(D_ALWAYS,"Received UPDATE command via TCP; ignored\n");
@@ -580,7 +580,7 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 	CollectorPluginManager::Update(command, *cad);
 #endif
 
-	if(View_Collector && ((command == UPDATE_STARTD_AD) || 
+	if(View_Collector && ((command == UPDATE_STARTD_AD) ||
 			(command == UPDATE_SUBMITTOR_AD)) ) {
 		send_classad_to_sock(command, View_Collector, cad);
 	}	
@@ -602,13 +602,13 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
     Sock        *socket = (Sock*) stream;
     ClassAd     updateAd;
     const int   timeout = 5;
-    
+
     socket->decode ();
     socket->timeout ( timeout );
-    
-    if ( !updateAd.initFromStream ( *socket ) ) {
 
-        dprintf ( 
+	if ( !updateAd.initFromStream ( *socket ) ) {
+
+        dprintf (
             D_ALWAYS,
             "receive_update_expect_ack: "
             "Failed to read class ad off the wire, aborting\n" );
@@ -619,15 +619,15 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
 
     /* assume the ad is malformed */
     int insert = -3;
-    
+
     /* get peer's IP/port */
     sockaddr_in *from = socket->endpoint ();
 
     /* "collect" the ad */
-    ClassAd *ad = collector.collect ( 
-        command, 
-        &updateAd, 
-        from, 
+    ClassAd *ad = collector.collect (
+        command,
+        &updateAd,
+        from,
         insert );
 
     if ( !ad ) {
@@ -643,9 +643,9 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
 				command );
 		}
 
-        /* this happens when we get a classad for which a hash key 
-        could not been made. This occurs when certain attributes are 
-        needed for the particular catagory the ad is destined for, 
+        /* this happens when we get a classad for which a hash key
+        could not been made. This occurs when certain attributes are
+        needed for the particular catagory the ad is destined for,
         but they are not present in the ad. */
 		if ( -3 == insert ) {
 			
@@ -666,14 +666,14 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
 
         /* send an acknowledgment that we received the ad */
         if ( !socket->code ( ok ) ) {
-        
-            dprintf ( 
+
+            dprintf (
                 D_ALWAYS,
                 "receive_update_expect_ack: "
                 "Failed to send acknowledgement to host %s, "
                 "aborting\n",
                 socket->sender_ip_str () );
-        
+
             /* it's ok if we fail here, since we won't drop the ad,
             it's only on the client side that any error should be
             treated as fatal */
@@ -681,15 +681,15 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
         }
 
         if ( !socket->eom () ) {
-        
-            dprintf ( 
-                D_FULLDEBUG, 
+
+            dprintf (
+                D_FULLDEBUG,
                 "receive_update_expect_ack: "
-                "Failed to send update EOM to host %s.\n", 
+                "Failed to send update EOM to host %s.\n",
                 socket->sender_ip_str () );
-            
-	    }   
-        
+
+	    }
+
     }
 
     if( View_Collector && UPDATE_STARTD_AD_WITH_ACK == command ) {
@@ -717,16 +717,16 @@ CollectorDaemon::stashSocket( Stream* sock )
 			// daemons.
 		if( sock_cache->isFull() ) {
 			dprintf( D_ALWAYS, "WARNING: socket cache (size: %d) "
-					 "is full - NOT caching TCP updates from %s\n", 
+					 "is full - NOT caching TCP updates from %s\n",
 					 sock_cache->size(), addr );
 			return TRUE;
-		} 
+		}
 		sock_cache->addReliSock( addr, (ReliSock*)sock );
 
 			// now that it's in our socket, we want to register this
 			// socket w/ DaemonCore so we wake up if there's more data
 			// to read...
-		daemonCore->Register_Socket( sock, "TCP Cached Socket", 
+		daemonCore->Register_Socket( sock, "TCP Cached Socket",
 									 (SocketHandler)sockCacheHandler,
 									 "sockCacheHandler", NULL, DAEMON );
 	}
@@ -745,8 +745,8 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	int cmd;
 	char* addr = sin_to_string( ((Sock*)sock)->endpoint() );
 	sock->decode();
-	dprintf( D_FULLDEBUG, "Activity on stashed TCP socket from %s\n", 
-			 addr ); 
+	dprintf( D_FULLDEBUG, "Activity on stashed TCP socket from %s\n",
+			 addr );
 
 	if( ! sock->code(cmd) ) {
 			// can't read an int, the other side probably closed the
@@ -978,7 +978,7 @@ void CollectorDaemon::reportToDevelopers (void)
 
     // If we don't have any machines reporting to us, bail out early
     if(machinesTotal == 0) 	
-        return; 
+        return;
 
 	if( ( normalTotals = new TrackTotals( PP_STARTD_NORMAL ) ) == NULL ) {
 		dprintf( D_ALWAYS, "Didn't send monthly report (failed totals)\n" );
@@ -988,7 +988,7 @@ void CollectorDaemon::reportToDevelopers (void)
 	// Accumulate our monthly maxes
 	ustatsMonthly.setMax( ustatsAccum );
 
-	sprintf( buffer, "Collector (%s):  Monthly report", 
+	sprintf( buffer, "Collector (%s):  Monthly report",
 			 my_full_hostname() );
 	if( ( mailer = email_developers_open(buffer) ) == NULL ) {
 		dprintf (D_ALWAYS, "Didn't send monthly report (couldn't open mailer)\n");		
@@ -1071,7 +1071,7 @@ void CollectorDaemon::Config()
 		if( updateCollector ) {
 				// we should just delete it.  since we never use TCP
 				// for these updates, we don't really loose anything
-				// by destroying the object and recreating it...  
+				// by destroying the object and recreating it...
 			delete updateCollector;
 			updateCollector = NULL;
         }
@@ -1135,13 +1135,13 @@ void CollectorDaemon::Config()
           dprintf(D_ALWAYS, "Not forwarding to View Server %s, because that's me!\n", tmp);
           delete View_Collector;
           View_Collector = NULL;
-       } 
+       }
        else {
           dprintf(D_ALWAYS, "Will forward ads on to View Server %s\n", tmp);
        }
        free(tmp);
        if(View_Collector) {
-           view_sock = View_Collector->safeSock(); 
+           view_sock = View_Collector->safeSock();
        }
     }
 
@@ -1164,7 +1164,7 @@ void CollectorDaemon::Config()
 		}
 	}
 	if( sock_cache ) {
-		dprintf( D_FULLDEBUG, 
+		dprintf( D_FULLDEBUG,
 				 "Using a SocketCache for TCP updates (size: %d)\n",
 				 sock_cache->size() );
 	} else {
@@ -1222,7 +1222,7 @@ int CollectorDaemon::sendCollectorAd()
     // see people run a collector on each macnine in their pool. Duh.
     if(machinesTotal == 0) {
 		return 1;
-	} 
+	}
     // insert values into the ad
     char line[100];
     sprintf(line,"%s = %d",ATTR_RUNNING_JOBS,submittorRunningJobs);
@@ -1259,7 +1259,7 @@ int CollectorDaemon::sendCollectorAd()
     }
     return 1;
 }
- 
+
 void CollectorDaemon::init_classad(int interval)
 {
     if( ad ) delete( ad );
@@ -1292,7 +1292,7 @@ void CollectorDaemon::init_classad(int interval)
 	daemonCore->publish(ad);
 }
 
-void 
+void
 CollectorDaemon::send_classad_to_sock(int cmd, Daemon * d, ClassAd* theAd)
 {
     // view_sock is static
@@ -1302,7 +1302,7 @@ CollectorDaemon::send_classad_to_sock(int cmd, Daemon * d, ClassAd* theAd)
         return;
     }
     if(!theAd) {
-	dprintf(D_ALWAYS, "Trying to forward ad on, but ad is NULL!!!\n"); 
+	dprintf(D_ALWAYS, "Trying to forward ad on, but ad is NULL!!!\n");
         return;
     }
     if (! d->startCommand(cmd, view_sock)) {
