@@ -68,6 +68,13 @@ WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR ip_addr,
     initialize (); 
 }
 
+WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR description ) throw ()
+: _wake_able ( false ), _exists ( false ) {
+    strncpy ( _description, description, 
+        MAX_ADAPTER_DESCRIPTION_LENGTH + 4 );
+    initialize (); 
+}
+
 WindowsNetworkAdapter::~WindowsNetworkAdapter (void) throw () {
 }
 
@@ -116,9 +123,11 @@ WindowsNetworkAdapter::initialize (void) {
 
 	        while ( current ) {
                 
-                char *other = current->IpAddressList.IpAddress.String;
+                char *ip = current->IpAddressList.IpAddress.String,
+                     *description = current->Description;
                 
-                if ( MATCH == strcmp ( _ip_address, other ) ) {
+                if ( MATCH == strcmp ( _ip_address, ip ) ||
+                     MATCH == strcmp ( _description, description ) ) {
                     
                     /* record the adpater GUID */
                     strncpy (
