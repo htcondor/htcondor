@@ -1339,7 +1339,8 @@ parse_splice(
 		directory = strtok( NULL, DELIMITERS );
 		if ( directory == "" ) {
 			debug_printf( DEBUG_QUIET,
-						"ERROR: DIR requires a directory specification\n");
+						"ERROR: %s (line %d): DIR requires a directory "
+						"specification\n", filename, lineNumber);
 			debug_printf( DEBUG_QUIET, "%s\n", example );
 			return false;
 		}
@@ -1379,8 +1380,12 @@ parse_splice(
 							dag->StorkRmExe(),
 							dag->DAGManJobId(),
 							dag->ProhibitMultiJobs(),
-							dag->SubmitDepthFirst() );
+							dag->SubmitDepthFirst(),
+							false);
 	
+	// initialize whatever the DIR line was, or defaults to, here.
+	splice_dag->SetDirectory(directory);
+
 	dprintf(D_ALWAYS, "Parsing Splice %s in directory %s with file %s\n", 
 		spliceName.Value(), directory.Value(), spliceFile.Value());
 
@@ -1409,7 +1414,7 @@ parse_splice(
 		return false;
 	}
 
-	// munge the splice name XXX???
+	// munge the splice name
 	spliceName = munge_job_name(spliceName.Value());
 
 	// XXX I'm not sure this goes here quite yet....
