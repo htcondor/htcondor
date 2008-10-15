@@ -239,6 +239,12 @@ void CollectorDaemon::Init()
 				     (CommandHandler)receive_update,
 				     "receive_update", NULL, DAEMON);
 
+        // // // // // // // // // // // // // // // // // // // // //
+        // WARNING!!!! If you add other update commands here, you
+        // also need to add them to the switch statement in the
+        // sockCacheHandler() method!!!
+		// // // // // // // // // // // // // // // // // // // // //
+
     // install command handlers for updates with acknowledgement
 
     daemonCore->Register_Command(UPDATE_STARTD_AD_WITH_ACK,"UPDATE_STARTD_AD_WITH_ACK",
@@ -557,7 +563,7 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 }
 
 
-int CollectorDaemon::receive_update(Service */*s*/, int command, Stream* sock)
+int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 {
     int	insert;
 	sockaddr_in *from;
@@ -624,7 +630,7 @@ int CollectorDaemon::receive_update(Service */*s*/, int command, Stream* sock)
 	return TRUE;
 }
 
-int CollectorDaemon::receive_update_expect_ack( Service */*s*/,
+int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 												int command,
 												Stream *stream )
 {
@@ -813,6 +819,9 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	case UPDATE_AD_GENERIC:
 		return receive_update( NULL, cmd, sock );
 		break;
+
+    case UPDATE_STARTD_AD_WITH_ACK:
+        return receive_update_expect_ack ( NULL, cmd, sock );
 
 #ifdef WANT_QUILL
 	case INVALIDATE_QUILL_ADS:
