@@ -247,10 +247,10 @@ void CollectorDaemon::Init()
     // add all persisted ads back into the collector's store
     // process the given command
     int     insert = -3;
-    ClassAd ad;
+    ClassAd cad;
     offline_plugin_.rewind ();
-    while ( offline_plugin_.iterate ( ad ) ) {
-	    if ( !collector.collect ( UPDATE_STARTD_AD, &ad, NULL, insert ) ) {
+    while ( offline_plugin_.iterate ( cad ) ) {
+	    if ( !collector.collect ( UPDATE_STARTD_AD, &cad, NULL, insert ) ) {
 		    
             if ( -3 == insert ) {
 			    
@@ -274,7 +274,7 @@ void CollectorDaemon::Init()
 	forkQuery.Initialize( );
 }
 
-int CollectorDaemon::receive_query_cedar(Service* s,
+int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 										 int command,
 										 Stream* sock)
 {
@@ -432,7 +432,9 @@ CollectorDaemon::receive_query_public( int command )
 	return whichAds;
 }
 
-int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
+int CollectorDaemon::receive_invalidation(Service* /*s*/,
+										  int command,
+										  Stream* sock)
 {
     struct sockaddr_in *from;
 	AdTypes whichAds;
@@ -555,7 +557,7 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 }
 
 
-int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
+int CollectorDaemon::receive_update(Service */*s*/, int command, Stream* sock)
 {
     int	insert;
 	sockaddr_in *from;
@@ -622,7 +624,9 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 	return TRUE;
 }
 
-int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream *stream )
+int CollectorDaemon::receive_update_expect_ack( Service */*s*/,
+												int command,
+												Stream *stream )
 {
 
     Sock        *socket = (Sock*) stream;
@@ -651,13 +655,13 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
     sockaddr_in *from = socket->endpoint ();
 
     /* "collect" the ad */
-    ClassAd *ad = collector.collect ( 
+    ClassAd *cad = collector.collect ( 
         command, 
         &updateAd, 
         from, 
         insert );
 
-    if ( !ad ) {
+    if ( !cad ) {
 
         /* attempting to "collect" a QUERY or INVALIDATE command?!? */
 		if ( -2 == insert ) {
@@ -719,15 +723,15 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
     }
 
     /* let the off-line plug-in have at it */
-    offline_plugin_.update ( command, *ad );
+    offline_plugin_.update ( command, *cad );
 
 #if HAVE_DLOPEN
     CollectorPluginManager::Update ( command, *cad );
 #endif
 
     if( View_Collector && UPDATE_STARTD_AD_WITH_ACK == command ) {
-		send_classad_to_sock ( command, View_Collector, ad );
-	}	
+		send_classad_to_sock ( command, View_Collector, cad );
+	}
 
 	// let daemon core clean up the socket
 	return TRUE;
@@ -1073,9 +1077,8 @@ void CollectorDaemon::Config()
 {
 	dprintf(D_ALWAYS, "In CollectorDaemon::Config()\n");
 
-    char *tmp;
+    char	*tmp;
     int     ClassadLifetime;
-    int     MasterCheckInterval;
 
     ClientTimeout = param_integer ("CLIENT_TIMEOUT",30);
     QueryTimeout = param_integer ("QUERY_TIMEOUT",60);
