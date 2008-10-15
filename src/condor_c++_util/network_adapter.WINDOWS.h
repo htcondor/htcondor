@@ -51,9 +51,6 @@ public:
 	/// Alternate
 	WindowsNetworkAdapter ( LPCSTR description ) throw ();
 
-	/// Constructor -- not implemented
-	WindowsNetworkAdapter ( const char * /*name*/ ) throw () { };
-
 	/// Destructor
 	virtual ~WindowsNetworkAdapter () throw (); 
 
