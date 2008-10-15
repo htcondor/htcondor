@@ -61,11 +61,9 @@ NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
 		adapter = new NetworkAdapter ( string_to_ipstr(sinful_or_name),
 									   string_to_ip(sinful_or_name)  );
 	}
-#if !defined ( WIN32 )
 	else {
 		adapter = new NetworkAdapter ( sinful_or_name );
 	}
-#endif
 
 	// Try to initialize it; delete it if it fails
 	if ( !adapter->doInitialize( ) ) {
