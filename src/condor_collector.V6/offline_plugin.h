@@ -43,7 +43,7 @@ public:
     /** Reconfigures the plug-in (also used in construction, to
         initialize the plug-in) .
         */
-    void update ();
+    void configure ();
 
     /** Receive a ClassAd sent as part of an UPDATE_ command,
 	    command int is provided.
@@ -54,6 +54,14 @@ public:
 	    provided.
 	    */
 	void invalidate ( int command, const ClassAd &ad );
+
+    /** Start iterations on all class-ads in the repository.
+        */
+    void rewind ();
+
+    /** Get the next class-ad in the repository and its key.
+        */
+    bool iterate ( ClassAd &ad );
 
     /* Attributes */
 
@@ -68,7 +76,7 @@ private:
     ClassAdCollection   *ads_;
 
     /** Storage destination for persistent ads */
-    char                *persistent_store_;
+    char                *persistent_store_;    
 
 };
 

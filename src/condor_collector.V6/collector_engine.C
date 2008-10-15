@@ -1006,6 +1006,54 @@ updateClassAd (CollectorHashTable &hashTable,
 	}
 }
 
+#if 0
+void
+CollectorEngine::updateAd ( ClassAd *ad ) {
+
+
+
+    updateClassAd ( StartdAds)
+
+    const char      *label = "Start";
+    AdNameHashKey   hashKey;
+    MyString	    key;
+    ClassAd		    *old_ad;    
+    time_t		    now;
+    
+    /* get the current time */
+    time ( &now );
+    
+    if ( (time_t) -1 == now ) {
+        EXCEPT ("Error reading system time!");
+    }
+
+    buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int) now );
+	ad->Insert ( buf.GetCStr () );
+    
+    /* update statistics */
+    collectorStats->update ( label, NULL, ad );
+    
+    /* make a hash key for the ad */
+    if ( !makeStartdAdHashKey ( hashKey, (ClassAd*) &ad, NULL ) ) {
+        
+        dprintf ( 
+            D_FULLDEBUG,
+            "OfflineCollectorPlugin::update: "
+            "failed to hash class ad. Ignoring.\n" );
+        
+        return;
+        
+    }
+
+    /* store it the ad */
+    hashKey.sprint ( key );
+    if ( -1 == StartdAds.insert ( key, ad ) ) {
+        EXCEPT ( "Error inserting ad (out of memory)" );
+	}
+
+}
+#endif 
+
 int 
 CollectorEngine::
 housekeeper()

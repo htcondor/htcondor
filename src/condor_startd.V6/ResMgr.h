@@ -315,7 +315,7 @@ private:
 #endif /* HAVE_JOB_HOOKS */
 
 #if HAVE_HIBERNATE
-	NetworkAdapter		*m_netif;
+	NetworkAdapterBase  *m_netif;
 	HibernationManager	*m_hibernation_manager;
 	int					m_hibernate_tid;
 	void checkHibernate() /* const -- should be */;

@@ -42,14 +42,14 @@ public:
 	*/
 	//@{
 
-    /// Constructor
+	/// Constructor
 	WindowsNetworkAdapter () throw ();
 
 	/// Constructor
 	WindowsNetworkAdapter ( LPCSTR ip_addr, unsigned int ) throw ();
 
-    /// Alternate
-    WindowsNetworkAdapter ( LPCSTR description ) throw ();
+	/// Alternate
+	WindowsNetworkAdapter ( LPCSTR description ) throw ();
 
 	/// Constructor -- not implemented
 	WindowsNetworkAdapter ( const char * /*name*/ ) throw () { };

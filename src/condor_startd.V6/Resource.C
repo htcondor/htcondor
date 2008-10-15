@@ -2373,5 +2373,24 @@ Resource::getHookKeyword()
 	return m_hook_keyword;
 }
 
+void Resource::enable()
+{
+    /* let the negotiator match jobs to this slot */
+	r_reqexp->restore ();
+    
+}
+
+void Resource::disable()
+{
+
+    /* kill the claim */
+	kill_claim ();
+
+	/* let the negotiator know not to match any new jobs to 
+    this slot */
+	r_reqexp->unavail ();
+    
+}
+
 
 #endif /* HAVE_JOB_HOOKS */

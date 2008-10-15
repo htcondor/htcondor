@@ -46,10 +46,10 @@ ResMgr::ResMgr()
 #endif
 
 #if HAVE_HIBERNATE
-	m_netif = new NetworkAdapterBase::createNetworkAdapter(
+	m_netif = NetworkAdapterBase::createNetworkAdapter(
 		daemonCore->InfoCommandSinfulString (), true );
 	m_hibernation_manager = new HibernationManager( );
-	m_hibernation_manager->addInterface( m_netif );
+	m_hibernation_manager->addInterface( *m_netif );
 	m_hibernate_tid = -1;
 #endif
 
@@ -1568,24 +1568,24 @@ ResMgr::compute( amask_t how_much )
 	}
 
 		// Now that everything has actually been computed, we can
-		// refresh our internal classad with all the current values of
+		// refresh our interval classad with all the current values of
 		// everything so that when we evaluate our state or any other
 		// expressions, we've got accurate data to evaluate.
 	walk( &Resource::refresh_classad, how_much );
 
-		// Now that we have an updated internal classad for each
+		// Now that we have an updated interval classad for each
 		// resource, we can "compute" anything where we need to 
 		// evaluate classad expressions to get the answer.
 	walk( &Resource::compute, A_EVALUATED );
 
-		// Next, we can publish any results from that to our internal
+		// Next, we can publish any results from that to our interval
 		// classads to make sure those are still up-to-date
 	walk( &Resource::refresh_classad, A_EVALUATED );
 
-		// Finally, now that all the internal classads are up to date
+		// Finally, now that all the interval classads are up to date
 		// with all the attributes they could possibly have, we can
 		// publish the cross-slot attributes desired from
-		// STARTD_SLOT_ATTRS into each slots's internal ClassAd.
+		// STARTD_SLOT_ATTRS into each slots's interval ClassAd.
 	walk( &Resource::refresh_classad, A_SHARED_SLOT );
 
 		// Now that we're done, we can display all the values.
@@ -1937,13 +1937,13 @@ ResMgr::processAllocList( void )
 #if HAVE_HIBERNATE
 
 HibernationManager const& ResMgr::getHibernationManager() const {
-	return m_hibernation_manager;
+	return *m_hibernation_manager;
 }
 
 
 void ResMgr::updateHibernateConfiguration() {
-	m_hibernation_manager.update();
-	if ( m_hibernation_manager.wantsHibernate() ) {
+	m_hibernation_manager->update();
+	if ( m_hibernation_manager->wantsHibernate() ) {
 		if ( -1 == m_hibernate_tid ) {
 			startHibernateTimer();
 		}
@@ -1960,7 +1960,7 @@ ResMgr::allHibernating() {
     	// fail if there is no resource or if we are
 		// configured not to hibernate
 	if (   !resources
-		|| !m_hibernation_manager.wantsHibernate() ) {
+		|| !m_hibernation_manager->wantsHibernate() ) {
 		return 0;
 	}
 		// The following may evaluate to true even if there
@@ -1989,14 +1989,14 @@ ResMgr::checkHibernate() {
 	int level = allHibernating();
 	if( level > 0 ) {
 
-        if( !m_hibernation_manager.canHibernate() ) {
+        if( !m_hibernation_manager->canHibernate() ) {
             dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
                 "HIBERNATE: Machine does not support any "
                 "sleep states.\n" );
             return;
         }
 
-        if( !m_hibernation_manager.canWake() ) {
+        if( !m_hibernation_manager->canWake() ) {
             dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
           	    "HIBERNATE: Machine cannot be worken by its "
             	"public network adapter.\n" );
@@ -2020,7 +2020,7 @@ ResMgr::checkHibernate() {
 	    // Collector invalidates it.
 	    //
         if ( disableResources( level ) ) {
-	        m_hibernation_manager.doHibernate();
+	        m_hibernation_manager->doHibernate();
         }
 
     }
@@ -2030,7 +2030,7 @@ ResMgr::checkHibernate() {
 
 int
 ResMgr::startHibernateTimer() {
-	int interval = m_hibernation_manager.getHibernateCheckInterval();
+	int interval = m_hibernation_manager->getCheckInterval();
 	m_hibernate_tid = daemonCore->Register_Timer( 
 		interval, interval,
 		(TimerHandlercpp)&ResMgr::checkHibernate,
@@ -2045,12 +2045,12 @@ ResMgr::startHibernateTimer() {
 
 void
 ResMgr::resetHibernateTimer() {
-	if ( m_hibernation_manager.wantsHibernate() ) {
+	if ( m_hibernation_manager->wantsHibernate() ) {
 		if( m_hibernate_tid != -1 ) {
-			int internal = m_hibernation_manager.getHibernateCheckInterval();
+			int interval = m_hibernation_manager->getCheckInterval();
 			daemonCore->Reset_Timer( 
 				m_hibernate_tid, 
-				internal, internal );
+				interval, interval );
 		}
 	}
 }
@@ -2274,37 +2274,41 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 
 #if HAVE_HIBERNATE
 
-int 
-disable_resource_claims ( Resource *resource )
-{
-	/* THIS SUCKS and should be fixed in the second go around. When
-	doing a blocking update we send the updates for each resource
-	serially with a small contrived timeout between them so that we
-	do not overwhelm the poor Collector. */
-
-	/* kill the claim */
-	resource->kill_claim ();
-
-	/* let the negotiator know not to match any new jobs
-	to this slot */
-	resource->r_reqexp->unavail ();
-
-	/* finally, send the staggered blocking updates */
-	return resource->update_with_ack ();
-}
-
 int
 ResMgr::disableResources( int level )
 {
-	/* set the sleep state so the green plugin will pickup on the
-	fact that we are */
-	m_hibernation_manager->setState (
+
+    int i; /* stupid VC6 */
+
+	/* set the sleep state so the plugin will pickup on the
+	fact that we are sleeping */	
+    m_hibernation_manager->setState (
 		(HibernatorBase::SLEEP_STATE) level );
-	for ( int i = 0; i < nresources; ++i ) {
-		if ( !disable_resource_claims ( resources[i] ) ) {
-			return FALSE;
-		}
+	
+    /* disable all resource on this machine */
+    for ( i = 0; i < nresources; ++i ) {
+        resources[i]->disable();
 	}
+
+    /* update the CM */
+    bool ok = true;
+    for ( i = 0; i < nresources && ok; ++i ) {
+        ok = resources[i]->update_with_ack();
+	}
+    
+    /* if any of the updates failed, then renable all the 
+    resources and try again later (next time HIBERNATE evaluates 
+    to an value>0) */
+    if ( !ok ) {
+        m_hibernation_manager->setState ( HibernatorBase::NONE );
+        for ( i = 0; i < nresources; ++i ) {
+            resources[i]->enable();
+            resources[i]->update();
+	    }
+    }
+    
+    return ok;
+
 }
 
 #endif

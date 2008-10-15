@@ -48,8 +48,8 @@ int __cdecl expiration ( const char *ad, time_t *ttl );
 OfflineCollectorPlugin::OfflineCollectorPlugin () throw () 
 : ads_ ( NULL), persistent_store_ ( NULL ) { 
 
-    /* update the plug-in for first use */
-    update ();
+    /* configure the plug-in for first use */
+    configure ();
 
 }
 
@@ -73,7 +73,7 @@ OfflineCollectorPlugin::~OfflineCollectorPlugin () {
  ***************************************************************/
 
 void 
-OfflineCollectorPlugin::update () {
+OfflineCollectorPlugin::configure () {
 
     dprintf ( 
         D_FULLDEBUG,
@@ -120,7 +120,8 @@ OfflineCollectorPlugin::update (
     }
     
     /* make sure the command is relevant to us */
-    if ( UPDATE_STARTD_AD_WITH_ACK == command ) {
+    if ( UPDATE_STARTD_AD_WITH_ACK == command ||
+         UPDATE_STARTD_AD == command ) {
 
         AdNameHashKey hashKey;
         if ( !makeStartdAdHashKey ( hashKey, (ClassAd*) &ad, NULL ) ) {
@@ -134,6 +135,7 @@ OfflineCollectorPlugin::update (
 
         }
 
+        /* determine if this ad is "off-line" or not */
         int offline = 0;
         if ( 0 == ad.EvalInteger ( 
             ATTR_OFFLINE, 
@@ -151,22 +153,62 @@ OfflineCollectorPlugin::update (
 
         ads_->BeginTransaction ();
 
-        MyString key;
-        hashKey.sprint ( key );
-        if ( !ads_->NewClassAd ( key.GetCStr (), (ClassAd*) &ad ) ) {
+        ClassAd *p;
+        MyString s;
+        hashKey.sprint ( s );
+        const char *key = s.GetCStr ();
 
-            dprintf ( 
-                D_FULLDEBUG,
-                "OfflineCollectorPlugin::update: "
-                "failed add offline ad to the persistent store.\n" );
+        /* if it is off-line then add it to the list; ortherwise, 
+        remove it */
+        if ( TRUE == offline ) {
+
+            bool add = true;
+
+            /* don't try to add duplicate ads */
+            if ( ads_->LookupClassAd ( key, p ) ) {
+
+                ads_->AbortTransaction ();
+                return;
+
+            }
+
+            /* try to add the new ad */
+            if ( !ads_->NewClassAd ( key, (ClassAd*) &ad ) ) {
+
+                dprintf ( 
+                    D_FULLDEBUG,
+                    "OfflineCollectorPlugin::update: "
+                    "failed add off-line ad to the persistent "
+                    "store.\n" );
             
-            ads_->AbortTransaction ();
+                ads_->AbortTransaction ();
 
-            return;
+            }
+
+        } else {
+
+            /* can't remove ads that do not exist */
+            if ( !ads_->LookupClassAd ( key, p ) ) {
+
+                ads_->AbortTransaction ();
+                return;
+                
+            }
+
+            /* try to remove the ad */
+            if ( !ads_->DestroyClassAd ( key ) ) {
+                
+                dprintf ( 
+                    D_FULLDEBUG,
+                    "OfflineCollectorPlugin::update: "
+                    "failed remove off-line ad from the persistent "
+                    "store.\n" );
+                
+                ads_->AbortTransaction ();
+                
+            }
 
         }
-
-        ads_->CommitTransaction ();
         
     }
 
@@ -206,27 +248,50 @@ OfflineCollectorPlugin::invalidate (
 
         ads_->BeginTransaction ();
 
+        ClassAd *ad;
         MyString key;
         hashKey.sprint ( key );
+
+        /* can't remove ads that do not exist */
+        if ( !ads_->LookupClassAd ( key.GetCStr (), ad ) ) {
+            
+            ads_->AbortTransaction ();
+            return;
+            
+        }
+
+        /* try to remove the ad */
         if ( !ads_->DestroyClassAd ( key.GetCStr () ) ) {
             
             dprintf ( 
                 D_FULLDEBUG,
                 "OfflineCollectorPlugin::invalidate: "
-                "failed remove offline ad from the persistent "
+                "failed remove off-line ad from the persistent "
                 "store.\n" );
             
             ads_->AbortTransaction ();
             
-            return;
-            
         }
-        
-        ads_->CommitTransaction ();
 
     }
 
 }
+
+void 
+OfflineCollectorPlugin::rewind () {
+    
+    ads_->StartIterateAllClassAds ();
+
+}
+
+bool 
+OfflineCollectorPlugin::iterate ( ClassAd &ad ) {
+    
+    ClassAd *p = &ad;
+    return ads_->IterateAllClassAds ( p );
+
+}
+
 
 bool
 OfflineCollectorPlugin::enabled () const {
@@ -234,4 +299,5 @@ OfflineCollectorPlugin::enabled () const {
     return ( NULL != persistent_store_ && NULL != ads_ );
 
 }
+
 
