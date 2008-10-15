@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,16 +45,16 @@ int __cdecl expiration ( const char *ad, time_t *ttl );
  * OfflineCollectorPlugin [c|d]tors
  ***************************************************************/
 
-OfflineCollectorPlugin::OfflineCollectorPlugin () throw () 
-: ads_ ( NULL), persistent_store_ ( NULL ) { 
+OfflineCollectorPlugin::OfflineCollectorPlugin () throw ()
+: ads_ ( NULL), persistent_store_ ( NULL ) {
 
     /* update the plug-in for first use */
     update ();
 
 }
 
-OfflineCollectorPlugin::~OfflineCollectorPlugin () { 
-    
+OfflineCollectorPlugin::~OfflineCollectorPlugin () {
+
     if ( ads_ ) {
         delete ads_;
         ads_ = NULL;
@@ -72,10 +72,10 @@ OfflineCollectorPlugin::~OfflineCollectorPlugin () {
  * OfflineCollectorPlugin Methods
  ***************************************************************/
 
-void 
+void
 OfflineCollectorPlugin::update () {
 
-    dprintf ( 
+    dprintf (
         D_FULLDEBUG,
         "In OfflineCollectorPlugin::reconfigure ()\n" );
 
@@ -89,7 +89,7 @@ OfflineCollectorPlugin::update () {
 
     if ( persistent_store_ ) {
 
-        dprintf ( 
+        dprintf (
             D_ALWAYS,
             "Off-line ad persistent store: %s\n",
             persistent_store_ );
@@ -98,19 +98,19 @@ OfflineCollectorPlugin::update () {
             delete ads_;
             ads_ = NULL;
         }
-        
+
         ads_ = new ClassAdCollection ( persistent_store_ );
 
     }
 
 }
 
-void 
-OfflineCollectorPlugin::update ( 
-    int             command, 
+void
+OfflineCollectorPlugin::update (
+    int             command,
     const ClassAd   &ad ) {
 
-    dprintf ( 
+    dprintf (
         D_FULLDEBUG,
         "In OfflineCollectorPlugin::update ()\n" );
 
@@ -118,14 +118,14 @@ OfflineCollectorPlugin::update (
     if ( !enabled ( ) ) {
         return;
     }
-    
+
     /* make sure the command is relevant to us */
     if ( UPDATE_STARTD_AD_WITH_ACK == command ) {
 
         AdNameHashKey hashKey;
-        if ( !makeStartdAdHashKey ( hashKey, (ClassAd*) &ad, NULL ) ) {
+        if ( !makeStartdAdHashKey(hashKey,const_cast<ClassAd*>(&ad),NULL) ) {
 
-            dprintf ( 
+            dprintf (
                 D_FULLDEBUG,
                 "OfflineCollectorPlugin::update: "
                 "failed to hash class ad. Ignoring.\n" );
@@ -135,31 +135,31 @@ OfflineCollectorPlugin::update (
         }
 
         int offline = 0;
-        if ( 0 == ad.EvalInteger ( 
-            ATTR_OFFLINE, 
-            &ad, 
+        if ( 0 == ad.EvalInteger (
+            ATTR_OFFLINE,
+            &ad,
             offline ) ) {
-            
-            dprintf ( 
+
+            dprintf (
                 D_FULLDEBUG,
                 "OfflineCollectorPlugin::update: "
                 "failed evaluate and determine offline status.\n" );
-            
+
             return;
-            
+
         }
 
         ads_->BeginTransaction ();
 
         MyString key;
         hashKey.sprint ( key );
-        if ( !ads_->NewClassAd ( key.GetCStr (), (ClassAd*) &ad ) ) {
+        if ( !ads_->NewClassAd (key.GetCStr(),const_cast<ClassAd*>(&ad) ) ) {
 
-            dprintf ( 
+            dprintf (
                 D_FULLDEBUG,
                 "OfflineCollectorPlugin::update: "
                 "failed add offline ad to the persistent store.\n" );
-            
+
             ads_->AbortTransaction ();
 
             return;
@@ -167,20 +167,20 @@ OfflineCollectorPlugin::update (
         }
 
         ads_->CommitTransaction ();
-        
+
     }
 
 }
 
 void
-OfflineCollectorPlugin::invalidate ( 
-    int             command, 
+OfflineCollectorPlugin::invalidate (
+    int             command,
     const ClassAd   &ad ) {
 
-    dprintf ( 
+    dprintf (
         D_FULLDEBUG,
         "In OfflineCollectorPlugin::invalidate ()\n" );
-    
+
     /* bail out if the plug-in is not enabled */
     if ( !enabled () ) {
         return;
@@ -188,20 +188,20 @@ OfflineCollectorPlugin::invalidate (
 
     /* make sure the command is relevant to us */
     if ( INVALIDATE_STARTD_ADS == command ) {
-        
+
         AdNameHashKey hashKey;
-        if ( !makeStartdAdHashKey ( 
-            hashKey, 
-            (ClassAd*) &ad, 
+        if ( !makeStartdAdHashKey (
+            hashKey,
+            const_cast<ClassAd*>(&ad),
             NULL ) ) {
-            
-            dprintf ( 
+
+            dprintf (
                 D_FULLDEBUG,
                 "OfflineCollectorPlugin::invalidate: "
                 "failed to hash class ad. Ignoring.\n" );
-            
+
             return;
-            
+
         }
 
         ads_->BeginTransaction ();
@@ -209,19 +209,19 @@ OfflineCollectorPlugin::invalidate (
         MyString key;
         hashKey.sprint ( key );
         if ( !ads_->DestroyClassAd ( key.GetCStr () ) ) {
-            
-            dprintf ( 
+
+            dprintf (
                 D_FULLDEBUG,
                 "OfflineCollectorPlugin::invalidate: "
                 "failed remove offline ad from the persistent "
                 "store.\n" );
-            
+
             ads_->AbortTransaction ();
-            
+
             return;
-            
+
         }
-        
+
         ads_->CommitTransaction ();
 
     }
