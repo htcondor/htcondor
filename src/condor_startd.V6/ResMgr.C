@@ -2020,7 +2020,7 @@ ResMgr::checkHibernate() {
 	    // Collector invalidates it.
 	    //
         if ( disableResources( level ) ) {
-	        m_hibernation_manager.switchToTargetState();
+	        m_hibernation_manager->switchToTargetState();
         }
 
     }
@@ -2300,7 +2300,8 @@ ResMgr::disableResources( int level )
     resources and try again later (next time HIBERNATE evaluates
     to an value>0) */
     if ( !ok ) {
-        m_hibernation_manager->setState ( HibernatorBase::NONE );
+        m_hibernation_manager->setTargetState ( 
+            HibernatorBase::NONE );
         for ( i = 0; i < nresources; ++i ) {
             resources[i]->enable();
             resources[i]->update();

@@ -97,28 +97,36 @@ MsWindowsHibernator::tryShutdown ( bool force ) const
 HibernatorBase::SLEEP_STATE
 MsWindowsHibernator::enterStateStandBy ( bool force ) const
 {
-	SetSuspendState ( FALSE, force, FALSE );
-	return TODO;
+    if ( !SetSuspendState ( FALSE, force, FALSE ) ) {
+        return SLEEP_STATE::S3;
+    }
+	return SLEEP_STATE::NONE;
 }
 
 HibernatorBase::SLEEP_STATE
 MsWindowsHibernator::enterStateSuspend ( bool force ) const
 {
-	SetSuspendState ( FALSE, force, FALSE );
-	return TODO;
+    if ( !SetSuspendState ( FALSE, force, FALSE ) ) {
+        return SLEEP_STATE::S3;
+    }
+	return SLEEP_STATE::NONE;
 }
 
 HibernatorBase::SLEEP_STATE
 MsWindowsHibernator::enterStateHibernate ( bool force ) const
 {
-	SetSuspendState ( TRUE, force, FALSE );
-	return TODO;
+    if ( !SetSuspendState ( TRUE, force, FALSE ) ) {
+        return SLEEP_STATE::S4;
+    }
+	return SLEEP_STATE::NONE;
 }
 
 HibernatorBase::SLEEP_STATE
 MsWindowsHibernator::enterStatePowerOff ( bool force ) const
 {
-	tryShutdown ( force );
-	return TODO;
+    if ( !tryShutdown ( force ) ) {
+        return SLEEP_STATE::S4;
+    }
+	return SLEEP_STATE::NONE;
 }
 
