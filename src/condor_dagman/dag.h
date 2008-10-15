@@ -111,6 +111,10 @@ class Dag {
 			   job procs are prohibited
 		@param submitDepthFirst whether ready nodes should be submitted
 			   in depth-first (as opposed to breadth-first) order
+		@param fundUserLogs whether or not log files for the submit files
+				should be recursively dug out of the dag file and any
+				splices it contains. Usually this is true for the root
+				dag, and false for any splices brought in by the root dag.
     */
 
     Dag( /* const */ StringList &dagFiles,
