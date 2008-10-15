@@ -2300,7 +2300,7 @@ ResMgr::disableResources( int level )
     resources and try again later (next time HIBERNATE evaluates
     to an value>0) */
     if ( !ok ) {
-        m_hibernation_manager->setTargetState ( 
+        m_hibernation_manager->setTargetState (
             HibernatorBase::NONE );
         for ( i = 0; i < nresources; ++i ) {
             resources[i]->enable();
