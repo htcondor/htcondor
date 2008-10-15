@@ -108,11 +108,16 @@ struct SubmitDagOptions
 };
 
 int printUsage(); // NOTE: printUsage calls exit(1), so it doesn't return
-void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[]);
+void parseCommandLine(SubmitDagOptions &opts, int argc,
+			const char * const argv[]);
+bool parsePreservedArgs(int argc, const char * const argv[],
+			MyString &strArg, int &iArg, SubmitDagOptions &opts);
 int doRecursion( SubmitDagOptions &opts );
 int setUpOptions( SubmitDagOptions &opts );
 void ensureOutputFilesExist(const SubmitDagOptions &opts);
 int checkLogFiles( SubmitDagOptions &opts );
+int getOldSubmitFlags( SubmitDagOptions &opts );
+int parseArgumentsLine( const MyString &subLine , SubmitDagOptions &opts );
 void writeSubmitFile(/* const */ SubmitDagOptions &opts);
 int submitDag( SubmitDagOptions &opts );
 
@@ -160,6 +165,13 @@ int main(int argc, char *argv[])
 		// aren't on NFS, etc.
 	tmpResult = checkLogFiles( opts );
 	if ( tmpResult != 0 ) return tmpResult;
+
+	//TEMPTEMP -- is this the right place?  if updateSubmit, get relevant options from existing submit file, if any...
+	//TEMPTEMP -- this has to come *after* recursion
+	if ( opts.updateSubmit ) {
+		//TEMPTEMP -- check return value
+		getOldSubmitFlags( opts );
+	}
 
 		// Write the actual submit file for DAGMan.
 	writeSubmitFile( opts );
@@ -518,6 +530,97 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 }
 
 //---------------------------------------------------------------------------
+//TEMPTEMP -- void?
+/** TEMPTEMP
+	@return 0 if successful, 1 if failed
+*/
+int
+getOldSubmitFlags(SubmitDagOptions &opts)
+{
+printf( "DIAG getOldSubmitFlags()\n" );//TEMPTEMP
+// printf( "  DIAG opts.strSubFile: %s\n", opts.strSubFile.Value() );//TEMPTEMP
+MyString currentDir;//TEMPTEMP
+condor_getcwd( currentDir );//TEMPTEMP
+// printf( "  DIAG currentDir: %s\n", currentDir.Value() );//TEMPTEMP
+		// It's not an error for the submit file to not exist.
+	if ( fileExists( opts.strSubFile ) ) {
+// printf("  DIAG file exists\n");
+		FILE *subFile = safe_fopen_wrapper(opts.strSubFile.Value(), "r");
+		if ( !subFile ) {
+			fprintf( stderr, "ERROR: unable to open submit file %s\n",
+				 	opts.strSubFile.Value() );
+			return 1;
+		} else {
+			MyString subLine;
+			while ( subLine.readLine( subFile ) ) {
+				subLine.chomp();
+				// printf( "DIAG subLine: <%s>\n", subLine.Value() );//TEMPTEMP
+				//TEMPTEMP -- make sure delimiters are right
+				StringList tokens( subLine.Value(), " \t" );
+				tokens.rewind();
+				const char *first = tokens.next();
+				if ( first && !strcmp( first, "arguments" ) ) {
+					printf( "DIAG got arguments: <%s>\n", subLine.Value() );//TEMPTEMP
+					printf("DIAG tokens.number(): %d\n", tokens.number());//TEMPTEMP
+
+					tokens.next();//TEMPTEMP -- bypass =
+					//TEMPTEMP -- check for =?
+
+					//TEMPTEMP -- check return value
+					parseArgumentsLine( subLine, opts );
+				}
+			}
+
+			//TEMPTEMP -- check return value?
+			fclose( subFile );
+		}
+	}
+
+	return 0;//TEMPTEMP?
+}
+
+//---------------------------------------------------------------------------
+//TEMPTEMP -- document
+int
+parseArgumentsLine( const MyString &subLine , SubmitDagOptions &opts )
+{
+	const char *line = subLine.Value();
+	const char *start = strchr( line, '"' );
+	const char *end = strrchr( line, '"' );
+
+	MyString arguments;
+	if ( start && end ) {
+		//TEMPTEMP -- check for off-by-one
+		arguments = subLine.Substr( start - line, end - line );
+printf( "DIAG arguments: <%s>\n", arguments.Value() );//TEMPTEMP
+	} else {
+		fprintf( stderr, "TEMPTEMP -- error at %s:%d\n", __FILE__, __LINE__ );//TEMPTEMP
+		return 1;
+	}
+
+	ArgList arglist;
+	MyString error;
+	if ( !arglist.AppendArgsV2Quoted( arguments.Value(),
+				&error ) ) {
+		fprintf( stderr, "TEMPTEMP -- error at %s:%d\n", __FILE__, __LINE__ );//TEMPTEMP
+		return 1;
+	}
+printf( "DIAG argument count: %d\n", arglist.Count() );//TEMPTEMP
+
+	for ( int argNum = 0; argNum < arglist.Count(); argNum++ ) {
+		MyString strArg = arglist.GetArg( argNum );
+		strArg.lower_case();
+printf( "DIAG strArg: <%s>\n", strArg.Value() );//TEMPTEMP
+		//TEMPTEMP -- check return value?
+		parsePreservedArgs( arglist.Count(),
+					arglist.GetStringArray(), strArg, argNum,
+					opts);
+	}
+
+	return 0;//TEMPTEMP
+}
+
+//---------------------------------------------------------------------------
 void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 {
 	FILE *pSubFile = safe_fopen_wrapper(opts.strSubFile.Value(), "w");
@@ -694,12 +797,13 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
     fprintf(pSubFile, "queue\n");
 
 	fclose(pSubFile);
-	
 }
 
 //---------------------------------------------------------------------------
-void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
+void
+parseCommandLine(SubmitDagOptions &opts, int argc, const char * const argv[])
 {
+printf("DIAG parseCommandLine()\n");//TEMPTEMP
 	for (int iArg = 1; iArg < argc; iArg++)
 	{
 		MyString strArg = argv[iArg];
@@ -722,6 +826,7 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 		else
 		{
 			strArg.lower_case();
+printf("  DIAG strArg: <%s>\n", strArg.Value());//TEMPTEMP
 
 			// Note: in checking the argument names here, we only check for
 			// as much of the full name as we need to unambiguously define
@@ -745,38 +850,6 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 					printUsage();
 				}
 				opts.strNotification = argv[++iArg];
-			}
-			else if (strArg.find("-maxi") != -1) // -maxidle
-			{
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-maxidle argument needs a value\n");
-					printUsage();
-				}
-				opts.iMaxIdle = atoi(argv[++iArg]);
-			}
-			else if (strArg.find("-maxj") != -1) // -maxjobs
-			{
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-maxjobs argument needs a value\n");
-					printUsage();
-				}
-				opts.iMaxJobs = atoi(argv[++iArg]);
-			}
-			else if (strArg.find("-maxpr") != -1) // -maxpre
-			{
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-maxpre argument needs a value\n");
-					printUsage();
-				}
-				opts.iMaxPre = atoi(argv[++iArg]);
-			}
-			else if (strArg.find("-maxpo") != -1) // -maxpost
-			{
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-maxpost argument needs a value\n");
-					printUsage();
-				}
-				opts.iMaxPost = atoi(argv[++iArg]);
 			}
 			else if (strArg.find("-r") != -1) // submit to remote schedd
 			{
@@ -835,7 +908,7 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 				MyString	errMsg;
 				if (!MakePathAbsolute(opts.strConfigFile, errMsg)) {
 					fprintf( stderr, "%s\n", errMsg.Value() );
-	    			exit( 1 );
+   					exit( 1 );
 				}
 			}
 			else if (strArg.find("-app") != -1) // -append
@@ -896,6 +969,10 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 			{
 				opts.updateSubmit = true;
 			}
+			else if ( parsePreservedArgs( argc, argv, strArg, iArg, opts) )
+			{
+				// No-op here
+			}
 			else
 			{
 				fprintf( stderr, "ERROR: unknown option %s\n", strArg.Value() );
@@ -922,6 +999,55 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 		fprintf( stderr, "-dorescuefrom value must be non-negative; aborting.\n");
 		printUsage();
 	}
+}
+
+//---------------------------------------------------------------------------
+//TEMPTEMP -- returns true if arg found
+//TEMPTEMP -- sometimes called on actual command line, sometimes on command line from old .condor.sub
+bool
+parsePreservedArgs(int argc, const char * const argv[], MyString &strArg,
+			int &iArg, SubmitDagOptions &opts)
+{
+	bool result = false;
+
+	if (strArg.find("-maxi") != -1) // -maxidle
+	{
+		if (iArg + 1 >= argc) {
+			fprintf(stderr, "-maxidle argument needs a value\n");
+			printUsage();
+		}
+		opts.iMaxIdle = atoi(argv[++iArg]);
+		result = true;
+	}
+	else if (strArg.find("-maxj") != -1) // -maxjobs
+	{
+		if (iArg + 1 >= argc) {
+			fprintf(stderr, "-maxjobs argument needs a value\n");
+			printUsage();
+		}
+		opts.iMaxJobs = atoi(argv[++iArg]);
+		result = true;
+	}
+	else if (strArg.find("-maxpr") != -1) // -maxpre
+	{
+		if (iArg + 1 >= argc) {
+			fprintf(stderr, "-maxpre argument needs a value\n");
+			printUsage();
+		}
+		opts.iMaxPre = atoi(argv[++iArg]);
+		result = true;
+	}
+	else if (strArg.find("-maxpo") != -1) // -maxpost
+	{
+		if (iArg + 1 >= argc) {
+			fprintf(stderr, "-maxpost argument needs a value\n");
+			printUsage();
+		}
+		opts.iMaxPost = atoi(argv[++iArg]);
+		result = true;
+	}
+
+	return result;
 }
 
 //---------------------------------------------------------------------------
