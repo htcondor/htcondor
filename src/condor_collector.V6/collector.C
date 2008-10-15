@@ -622,113 +622,6 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 	return TRUE;
 }
 
-
-int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream *stream )
-{
-
-    Sock        *socket = (Sock*) stream;
-    ClassAd     updateAd;
-    const int   timeout = 5;
-
-    socket->decode ();
-    socket->timeout ( timeout );
-
-	if ( !updateAd.initFromStream ( *socket ) ) {
-
-        dprintf (
-            D_ALWAYS,
-            "receive_update_expect_ack: "
-            "Failed to read class ad off the wire, aborting\n" );
-
-        return FALSE;
-
-    }
-
-    /* assume the ad is malformed */
-    int insert = -3;
-
-    /* get peer's IP/port */
-    sockaddr_in *from = socket->endpoint ();
-
-    /* "collect" the ad */
-    ClassAd *ad = collector.collect (
-        command,
-        &updateAd,
-        from,
-        insert );
-
-    if ( !ad ) {
-
-        /* attempting to "collect" a QUERY or INVALIDATE command?!? */
-		if ( -2 == insert ) {
-
-			dprintf (
-                D_ALWAYS,
-                "receive_update_expect_ack: "
-                "Got QUERY or INVALIDATE command (%d); these are "
-                "not supported.\n",
-				command );
-		}
-
-        /* this happens when we get a classad for which a hash key
-        could not been made. This occurs when certain attributes are
-        needed for the particular catagory the ad is destined for,
-        but they are not present in the ad. */
-		if ( -3 == insert ) {
-			
-			dprintf (
-                D_ALWAYS,
-                "receive_update_expect_ack: "
-				"Received malformed ad from command (%d).\n",
-				command );
-
-		}
-
-    } else {
-
-        int ok = TRUE;
-
-        socket->encode ();
-        socket->timeout ( timeout );
-
-        /* send an acknowledgment that we received the ad */
-        if ( !socket->code ( ok ) ) {
-
-            dprintf (
-                D_ALWAYS,
-                "receive_update_expect_ack: "
-                "Failed to send acknowledgement to host %s, "
-                "aborting\n",
-                socket->sender_ip_str () );
-
-            /* it's ok if we fail here, since we won't drop the ad,
-            it's only on the client side that any error should be
-            treated as fatal */
-
-        }
-
-        if ( !socket->eom () ) {
-
-            dprintf (
-                D_FULLDEBUG,
-                "receive_update_expect_ack: "
-                "Failed to send update EOM to host %s.\n",
-                socket->sender_ip_str () );
-
-	    }
-
-    }
-
-    if( View_Collector && UPDATE_STARTD_AD_WITH_ACK == command ) {
-		send_classad_to_sock ( command, View_Collector, ad );
-	}	
-
-	// let daemon core clean up the socket
-	return TRUE;
-=======
-}
-
-
 int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream *stream )
 {
 
@@ -838,7 +731,6 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
 
 	// let daemon core clean up the socket
 	return TRUE;
->>>>>>> Plug-in now adds/removes ads as necessary and if a startd cannot update a CM, then the changes are properly backed out.:src/condor_collector.V6/collector.C
 }
 
 
