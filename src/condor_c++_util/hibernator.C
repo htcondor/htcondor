@@ -38,7 +38,6 @@
 HibernatorBase::HibernatorBase ( void ) throw () 
 :   m_states ( NONE )
 {
-	printf( "HB::HB\n" );
 }
 
 

@@ -45,6 +45,9 @@ public:
 	/// Constructor
 	UnixNetworkAdapter ( unsigned int ip_addr ) throw ();
 
+	/// Constructor
+	UnixNetworkAdapter ( const char *name ) throw ();
+
 	/// Destructor
 	virtual ~UnixNetworkAdapter ( void ) throw (); 
 
@@ -92,10 +95,8 @@ protected:
 	bool				 m_found;
 
 	unsigned			 m_ip_addr;
+    const struct in_addr m_in_addr;
 	const char			*m_if_name;
-
-	bool				 m_wol_supported;
-	bool				 m_wol_enabled;
 
 	// HW address & string rep of it
     const char			 m_hw_addr[32];
@@ -108,19 +109,24 @@ protected:
 	// Very UNIX specific definitions
 
 	// Internal methods
-	virtual bool findAdapter( void );
+	virtual bool findAdapter( unsigned int ip_addr );
+	virtual bool findAdapter( const char *if_name );
+	virtual bool getAdapterInfo( void );
 	virtual bool detectWOL( void );
 
 	void setName( const char * );
-
-#  if defined(HAVE_STRUCT_IFREQ)
-	void getName( struct ifreq &ifr );
+	void setIpAddr( unsigned int ip_addr );
 
 	void resetName( bool init = false );
+	void resetIpAddr( bool init = false );
 	void resetHwAddr( bool init = false );
 	void resetNetMask( bool init = false );
+	
+#  if defined(HAVE_STRUCT_IFREQ)
+	void getName( struct ifreq &ifr, const char *name = NULL ) const;
 
 	void setName( const struct ifreq &ifr );
+	void setIpAddr( const struct ifreq &ifr );
 	void setHwAddr( const struct ifreq &ifr );
 	void setNetMask( const struct ifreq &ifr );
 #  endif

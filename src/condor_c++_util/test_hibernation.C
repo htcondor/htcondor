@@ -34,6 +34,7 @@ struct Options
 {
 	int								 m_verbosity;
 
+	const char						*m_if_name;
 	const char						*m_address;
 	bool			 				 m_is_primary;
 
@@ -65,10 +66,23 @@ main(int argc, const char **argv)
 		exit( 1 );
 	}
 
-	MyString	sinful;
-	sinful.sprintf( "<%s:1234>", opts.m_address );
-	NetworkAdapterBase	*net =
-		NetworkAdapterBase::createNetworkAdapter( sinful.GetCStr() );
+	NetworkAdapterBase	*net = NULL;
+
+	if ( opts.m_if_name ) {
+		printf( "Creating network adapter object for name %s\n",
+				opts.m_if_name );
+		net = NetworkAdapterBase::createNetworkAdapter( opts.m_if_name );
+	}
+	else {
+		MyString	sinful;
+		sinful.sprintf( "<%s:1234>", opts.m_address );
+		printf( "Creating network adapter object for %s\n", sinful.GetCStr() );
+		net = NetworkAdapterBase::createNetworkAdapter( sinful.GetCStr() );
+	}
+	if ( !net ) {
+		printf( "Error creating adapter\n" );
+		exit(1);
+	}
 
 	// Initialize it
 	if ( !net->getInitStatus() ) {
@@ -109,8 +123,11 @@ main(int argc, const char **argv)
 	HibernationManager	hman;
 	hman.addInterface( *net );
 
-	bool ch = hman.canHibernate( );
-	printf( "Can hibernate: %s\n", ch?"True":"False" );
+	bool tf;
+	tf = hman.canHibernate( );
+	printf( "Can hibernate: %s\n", tf?"True":"False" );
+	tf = hman.canWake( );
+	printf( "Can wake: %s\n", tf?"True":"False" );
 
 	if ( result != 0 && opts.m_verbosity >= 1 ) {
 		fprintf(stderr, "test_network_adapter FAILED\n");
@@ -123,7 +140,7 @@ bool
 CheckArgs(int argc, const char **argv, Options &opts)
 {
 	const char *	usage =
-		"Usage: test_hibernation [options] <IP address> <state>\n"
+		"Usage: test_hibernation [options] <IP address|IF name> <state>\n"
 		"  -d <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  --debug <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  --usage|--help|-h: print this message and exit\n"
@@ -131,6 +148,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --verbosity <number>: set verbosity level (default is 1)\n"
 		"  --version: print the version number and compile date\n";
 
+	opts.m_if_name = NULL;
 	opts.m_address = "127.0.0.1";
 	opts.m_is_primary = false;
 
@@ -183,6 +201,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		} else if ( !arg.ArgIsOpt()  &&  (fixed == 0)  &&  arg.isOptInt() ) {
 			fixed++;
 			opts.m_address = arg.getOptStr();
+
+		} else if ( !arg.ArgIsOpt()  &&  (fixed == 0) ) {
+			opts.m_if_name = arg.getOptStr();
+			fixed++;
 
 		} else if ( !arg.ArgIsOpt()  &&  (fixed == 1)  &&  arg.isOptBool() ) {
 			fixed++;

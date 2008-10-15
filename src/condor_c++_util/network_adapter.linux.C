@@ -58,14 +58,20 @@ LinuxNetworkAdapter::LinuxNetworkAdapter ( const char */*ip_string*/,
 {
 }
 
+LinuxNetworkAdapter::LinuxNetworkAdapter ( const char *name ) throw()
+		: UnixNetworkAdapter( name )
+{
+}
+
 /// Destructor
 LinuxNetworkAdapter::~LinuxNetworkAdapter ( void ) throw()
 {
 }
 
 bool
-LinuxNetworkAdapter::findAdapter( void )
+LinuxNetworkAdapter::findAdapter( unsigned int ip_addr )
 {
+	bool			found = false;
 # if (HAVE_STRUCT_IFCONF) && (HAVE_STRUCT_IFREQ) && (HAVE_DECL_SIOCGIFCONF)
 	struct ifconf	ifc;
 	int				sock;
@@ -82,7 +88,7 @@ LinuxNetworkAdapter::findAdapter( void )
 	// Loop 'til we've read in all the interfaces, keep increasing
 	// the number that we try to read each time
 	struct sockaddr_in	in_addr;
-	bool				found = false;
+	ifc.ifc_buf = NULL;
 	while( !found ) {
 		int size	= num_req * sizeof(struct ifreq);
 		ifc.ifc_buf	= (char *) calloc( num_req, sizeof(struct ifreq) );
@@ -101,7 +107,8 @@ LinuxNetworkAdapter::findAdapter( void )
 			struct sockaddr_in *in = (struct sockaddr_in*)&(ifr->ifr_addr);
 			MemCopy( &in_addr, in, sizeof(struct sockaddr_in) );
 
-			if ( in->sin_addr.s_addr == m_ip_addr ) {
+			if ( in->sin_addr.s_addr == ip_addr ) {
+				setIpAddr( *ifr );
 				setName( *ifr );
 				found = true;
 				break;
@@ -113,78 +120,140 @@ LinuxNetworkAdapter::findAdapter( void )
 		if ( (!found) && (ifc.ifc_len == size) ) {
 			num_req += 2;
 			free( ifc.ifc_buf );
+			ifc.ifc_buf = NULL;
 		}
 		else {
 			break;
 		}
 	}
 
-	// Get the hardware address
-	if ( found ) {
-		printf( "LNA::fA getting HW address\n" );
-		struct ifreq	ifr;
-		getName( ifr );
-		int status = ioctl( sock, SIOCGIFHWADDR, &ifr );
-		if ( status < 0 ) {
-			derror( "ioctl(SIOCGIFHWADDR)" );
-		}
-		else {
-			setHwAddr( ifr );
-		}
+	// Make sure we free up the buffer memory
+	if ( ifc.ifc_buf ) {
+		free( ifc.ifc_buf );
 	}
 
-	// Get the net mask
-	if ( found ) {
-		printf( "LNA::fA getting net mask\n" );
-		struct ifreq	ifr;
-		getName( ifr );
-		ifr.ifr_addr.sa_family = AF_INET;
-		int status = ioctl( sock, SIOCGIFNETMASK, &ifr );
-		if ( status < 0 ) {
-			derror( "ioctl(SIOCGIFNETMASK)" );
-		}
-		else {
-			setNetMask( ifr );
-		}
-	}
-
-	// Don't forget to close the socket!
-	printf( "LNA::fA closing socket\n" );
-	close( sock );
-
-	// Did we succeed?
 	if ( found ) {
 		dprintf( D_FULLDEBUG,
-				 "Found interface %s (%s) that matches %s\n",
+				 "Found interface %s that matches %s\n",
 				 interfaceName( ),
-				 hardwareAddress( ),
 				 sin_to_string( &in_addr )
 				 );
 	}
-	else {
+	else
+	{
+		m_if_name = NULL;
 		dprintf( D_FULLDEBUG,
 				 "No interface for address %s\n",
 				 sin_to_string( &in_addr )
 				 );
-		m_if_name = NULL;
 	}
 
-	// Make sure we free up the buffer memory
-	free( ifc.ifc_buf );
+	// Don't forget to close the socket!
+	close( sock );
+
+#endif
+	return found;
+
+}
+
+bool
+LinuxNetworkAdapter::findAdapter( const char *name )
+{
+	bool			found = false;
+# if (HAVE_STRUCT_IFCONF) && (HAVE_STRUCT_IFREQ) && (HAVE_DECL_SIOCGIFCONF)
+	struct ifreq	ifr;
+	int				sock;
+
+	// Get a 'control socket' for the operations
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0) {
+		derror( "Cannot get control socket for WOL detection" );
+		return false;
+	}
+
+	// Loop 'til we've read in all the interfaces, keep increasing
+	// the number that we try to read each time
+	getName( ifr, name );
+	int status = ioctl( sock, SIOCGIFADDR, &ifr );
+	if ( status < 0 ) {
+		derror( "ioctl(SIOCGIFADDR)" );
+	}
+	else {
+		found = true;
+		setIpAddr( ifr );
+	}
+
+	if ( found ) {
+		dprintf( D_FULLDEBUG,
+				 "Found interface %s with ip %s\n",
+				 name,
+				 inet_ntoa( m_in_addr )
+				 );
+	}
+	else
+	{
+		m_if_name = NULL;
+		dprintf( D_FULLDEBUG, "No interface for name %s\n", name );
+	}
+
+	// Don't forget to close the socket!
+	close( sock );
+
+#endif
+	return found;
+
+}
+
+bool
+LinuxNetworkAdapter::getAdapterInfo( void )
+{
+	bool			ok = true;
+# if (HAVE_STRUCT_IFCONF) && (HAVE_STRUCT_IFREQ) && (HAVE_DECL_SIOCGIFCONF)
+	struct ifreq	ifr;
+	int				sock;
+	int				status;
+
+	// Get a 'control socket' for the operations
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0) {
+		derror( "Cannot get control socket for WOL detection" );
+		return false;
+	}
+
+	// Get the hardware address
+	getName( ifr );
+	status = ioctl( sock, SIOCGIFHWADDR, &ifr );
+	if ( status < 0 ) {
+		derror( "ioctl(SIOCGIFHWADDR)" );
+	}
+	else {
+		setHwAddr( ifr );
+	}
+
+	// Get the net mask
+	getName( ifr );
+	ifr.ifr_addr.sa_family = AF_INET;
+	status = ioctl( sock, SIOCGIFNETMASK, &ifr );
+	if ( status < 0 ) {
+		derror( "ioctl(SIOCGIFNETMASK)" );
+	}
+	else {
+		setNetMask( ifr );
+	}
 
 	// And, we're done
-	return found;
 # endif
+	return ok;
 }
 
 bool
 LinuxNetworkAdapter::detectWOL ( void )
 {
+	bool					ok = false;
 #if (HAVE_DECL_SIOCETHTOOL) && (HAVE_STRUCT_IFREQ)
 	int						err;
 	struct ethtool_wolinfo	wolinfo;
 	struct ifreq			ifr;
-	bool					ok = false;
 
 	// Open control socket.
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -216,15 +285,13 @@ LinuxNetworkAdapter::detectWOL ( void )
 	setWolBits( NetworkAdapterBase::WOL_HW_SUPPORT, m_wol_support_mask );
 	setWolBits( NetworkAdapterBase::WOL_HW_ENABLED, m_wol_enable_mask );
 	dprintf( D_FULLDEBUG, "%s supports Wake-on: %s (raw: 0x%02x)\n",
-			 m_if_name, m_wol_supported ? "yes" : "no", m_wol_support_mask );
+			 m_if_name, isWakeSupported() ? "yes" : "no", m_wol_support_mask );
 	dprintf( D_FULLDEBUG, "%s enabled Wake-on: %s (raw: 0x%02x)\n",
-			 m_if_name, m_wol_enabled ? "yes" : "no", m_wol_enable_mask );
+			 m_if_name, isWakeEnabled() ? "yes" : "no", m_wol_enable_mask );
 
 	close( sock );
-	return ok;
-#  else
-	return false;
 #  endif
+	return ok;
 }
 
 struct WolTable

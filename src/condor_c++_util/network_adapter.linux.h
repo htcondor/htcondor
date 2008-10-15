@@ -44,6 +44,10 @@ public:
 						  unsigned int ip_addr )
 		throw ();
 
+	// Alternate
+	LinuxNetworkAdapter ( const char *name )
+		throw ();
+
 	/// Destructor
 	virtual ~LinuxNetworkAdapter ( void ) throw();
 
@@ -61,7 +65,9 @@ private:
 	unsigned	m_wol_enable_mask;
 
 	// Internal methods
-	virtual bool findAdapter( void );
+	virtual bool findAdapter( unsigned int /*ip_addr*/ );
+	virtual bool findAdapter( const char * /*if_name*/ );
+	bool getAdapterInfo( void );
 	virtual bool detectWOL( void );
 
 	void setWolBits ( WOL_TYPE type, unsigned bits );

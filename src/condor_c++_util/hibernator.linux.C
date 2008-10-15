@@ -371,18 +371,15 @@ SysIfLinuxHibernator::Detect ( void )
 	// Look at the "/sys" file(s)
 	fp = safe_fopen_wrapper( SYS_POWER_FILE, "r" );
 	if ( NULL == fp ) {
-		printf( "failed to open %s\n", SYS_POWER_FILE );
 		return false;
 	}
 
 	if ( fgets( buf, sizeof(buf)-1, fp ) ) {
 		strip(buf);
 		char	*token, *save = NULL;
-		printf( "read '%s' from %s\n", buf, SYS_POWER_FILE );
 
 		token = strtok_r( buf, " ", &save );
 		while( token ) {
-			printf( "  <%s>\n", token );
 			m_hibernator->addState( token );
 			token = strtok_r( NULL, " ", &save );
 		}
@@ -392,14 +389,12 @@ SysIfLinuxHibernator::Detect ( void )
 	// If we can't read the disk file, we've had at least some success, right?
 	fp = safe_fopen_wrapper( SYS_DISK_FILE, "r" );
 	if ( NULL == fp ) {
-		printf( "failed to open %s\n", SYS_DISK_FILE );
 		return true;
 	}
 	if ( fgets( buf, sizeof(buf)-1, fp ) ) {
 		strip(buf);
 		char	*token, *save = NULL;
 
-		printf( "read '%s' from %s\n", buf, SYS_DISK_FILE );
 		token = strtok_r( buf, " ", &save );
 		while( token ) {
 			int len = strlen( token );
@@ -407,7 +402,6 @@ SysIfLinuxHibernator::Detect ( void )
 				token[len] = '\0';
 				token++;
 			}
-			printf( "  <%s>\n", token );
 			if ( strcmp( token, "platform" ) == 0 ) {
 				m_hibernator->addState( HibernatorBase::S4 );
 			}

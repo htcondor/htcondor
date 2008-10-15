@@ -40,13 +40,13 @@ public:
 	*/
 	enum WOL_BITS {
 		WOL_NONE		= 0,		// No WOL cababilities
-		WOL_PHYSICAL	= (1 << 0),	// Supports physical packet
-		WOL_UCAST		= (1 << 1),	// Supports unicast packet
-		WOL_MCAST		= (1 << 2),	// Supports multicast packet
-		WOL_BCAST		= (1 << 3),	// Supports broadcast packet
-		WOL_ARP			= (1 << 4),	// Supports ARP packet
-		WOL_MAGIC		= (1 << 5),	// Supports UDD "magic" packet
-		WOL_MAGICSECURE	= (1 << 6),	// only meaningful if WOL_MAGIC
+		WOL_PHYSICAL	= (1 << 0),	// 0x01 Supports physical packet
+		WOL_UCAST		= (1 << 1),	// 0x02 Supports unicast packet
+		WOL_MCAST		= (1 << 2),	// 0x04 Supports multicast packet
+		WOL_BCAST		= (1 << 3),	// 0x08 Supports broadcast packet
+		WOL_ARP			= (1 << 4),	// 0x10 Supports ARP packet
+		WOL_MAGIC		= (1 << 5),	// 0x20 Supports UDD "magic" packet
+		WOL_MAGICSECURE	= (1 << 6),	// 0x40 only meaningful if WOL_MAGIC
 
 		WOL_SUPPORTED	= ( WOL_MAGIC )	// Our currently supported mask
 	};
@@ -104,7 +104,7 @@ public:
 		false.
 	*/
 	bool isWakeSupported (void) const
-		{ return m_wol_support_bits & WOL_SUPPORTED; };
+		{ return (m_wol_support_bits & WOL_SUPPORTED) ? true : false; };
 
 	/** Returns the mask of WOL bits that the hardware supports
 		@return the bit mask (0==none)
@@ -130,7 +130,7 @@ public:
 		@return true if the adapter waking is enabled; otherwise, false.
 	*/
 	bool isWakeEnabled (void) const
-		{ return m_wol_enable_bits & WOL_SUPPORTED; };
+		{ return (m_wol_enable_bits & WOL_SUPPORTED) ? true : false; };
 
 	/** Returns the mask of WOL bits that are enabled
 		@return the bit mask (0==none)

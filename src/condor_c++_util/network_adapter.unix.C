@@ -33,9 +33,25 @@
 /// Constructor
 UnixNetworkAdapter::UnixNetworkAdapter ( unsigned int ip_addr ) throw ()
 {
-	m_ip_addr = ip_addr;
 	m_found = false;
+	resetIpAddr( true );
 	resetName( true );
+	setIpAddr( ip_addr );
+
+	// IFR specific things
+#  if HAVE_STRUCT_IFREQ
+	resetNetMask( true );
+	resetHwAddr( true );
+#  endif
+}
+
+/// Constructor
+UnixNetworkAdapter::UnixNetworkAdapter ( const char *name ) throw ()
+{
+	m_found = false;
+	resetIpAddr( true );
+	resetName( true );
+	setName( name );
 
 	// IFR specific things
 #  if HAVE_STRUCT_IFREQ
@@ -54,10 +70,16 @@ UnixNetworkAdapter::~UnixNetworkAdapter (void) throw ()
 bool
 UnixNetworkAdapter::initialize ( void )
 {
-	if ( !findAdapter() ) {
+	if ( m_ip_addr && !findAdapter(m_ip_addr) ) {
+		return false;
+	}
+	else if ( !findAdapter(m_if_name ) ) {
 		return false;
 	}
 	m_found = true;
+
+	// learn basic info about the adapter
+	getAdapterInfo( );
 
 	// Detect if it supports Wake On Lan
 	detectWOL( );
@@ -67,7 +89,17 @@ UnixNetworkAdapter::initialize ( void )
 }
 
 bool
-UnixNetworkAdapter::findAdapter( void )
+UnixNetworkAdapter::findAdapter( unsigned int /*ip_addr*/ )
+{
+	return false;
+}
+bool
+UnixNetworkAdapter::findAdapter( const char * /*if_name*/ )
+{
+	return false;
+}
+bool
+UnixNetworkAdapter::getAdapterInfo ( void )
 {
 	return false;
 }
@@ -98,6 +130,37 @@ UnixNetworkAdapter::MemCopy( const void *dest, const void *src, unsigned size )
 	void *p = const_cast<void *>( dest );
 	memcpy( p, src, size );
 	return p;
+}
+
+// Set the IP address
+void
+UnixNetworkAdapter::resetIpAddr( bool /*init*/ )
+{
+	m_ip_addr = 0;
+	MemZero( &m_in_addr, sizeof(m_in_addr) );
+}
+void
+UnixNetworkAdapter::setIpAddr( unsigned int ip )
+{
+	m_ip_addr = ip;
+	struct in_addr	*in = const_cast<struct in_addr *>(&m_in_addr);
+	in->s_addr = ip;
+}
+
+// Reset hardware address
+void
+UnixNetworkAdapter::resetHwAddr( bool /*init*/ )
+{
+	MemZero( m_hw_addr, sizeof(m_hw_addr) );
+	StrZero( m_hw_addr_str, sizeof(m_hw_addr_str) );
+}
+
+// Reset the net mask
+void
+UnixNetworkAdapter::resetNetMask( bool /*init*/ )
+{
+	MemZero( &m_netmask, sizeof(m_netmask) );
+	StrZero( m_netmask_str, sizeof(m_netmask_str) );
 }
 
 // Set interface name methods
@@ -132,19 +195,16 @@ UnixNetworkAdapter::setName( const struct ifreq &ifr )
 }
 // Fill in the name field of an ifreq
 void
-UnixNetworkAdapter::getName( struct ifreq &ifr )
+UnixNetworkAdapter::getName( struct ifreq &ifr, const char *name ) const
 {
-	strncpy( ifr.ifr_name, m_if_name, IFNAMSIZ );
+	if ( NULL == name ) {
+		name = m_if_name;
+	}
+	strncpy( ifr.ifr_name, name, IFNAMSIZ );
 	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 }
 
 // Set the hardware address from the ifreq
-void
-UnixNetworkAdapter::resetHwAddr( bool /*init*/ )
-{
-	MemZero( m_hw_addr, sizeof(m_hw_addr) );
-	StrZero( m_hw_addr_str, sizeof(m_hw_addr_str) );
-}
 void
 UnixNetworkAdapter::setHwAddr( const struct ifreq &ifr )
 {
@@ -161,14 +221,19 @@ UnixNetworkAdapter::setHwAddr( const struct ifreq &ifr )
 		strcat( str, tmp );
 	}
 }
+void
+UnixNetworkAdapter::setIpAddr( const struct ifreq &ifr )
+{
+	resetIpAddr( );
+
+	const struct sockaddr_in *in = (const struct sockaddr_in*)&(ifr.ifr_addr);
+	struct sockaddr_in	sin_addr;
+	MemCopy( &sin_addr, in, sizeof(struct sockaddr_in) );
+	MemCopy( &m_in_addr, &sin_addr.sin_addr, sizeof(struct in_addr) );
+	m_ip_addr = in->sin_addr.s_addr;
+}
 
 // Set the net mask from the ifreq
-void
-UnixNetworkAdapter::resetNetMask( bool /*init*/ )
-{
-	MemZero( &m_netmask, sizeof(m_netmask) );
-	StrZero( m_netmask_str, sizeof(m_netmask_str) );
-}
 void
 UnixNetworkAdapter::setNetMask( const struct ifreq &ifr )
 {

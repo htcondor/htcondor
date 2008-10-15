@@ -32,6 +32,8 @@ static const char *	VERSION = "0.1";
 struct Options
 {
 	int				 m_verbosity;
+
+	const char		*m_if_name;
 	const char		*m_address;
 	bool			 m_is_primary;
 };
@@ -60,10 +62,23 @@ main(int argc, const char **argv)
 		exit( 1 );
 	}
 
-	MyString	sinful;
-	sinful.sprintf( "<%s:1234>", opts.m_address );
-	NetworkAdapterBase	*net =
-		NetworkAdapterBase::createNetworkAdapter( sinful.GetCStr() );
+	NetworkAdapterBase	*net = NULL;
+
+	if ( opts.m_if_name ) {
+		printf( "Creating network adapter object for name %s\n",
+				opts.m_if_name );
+		net = NetworkAdapterBase::createNetworkAdapter( opts.m_if_name );
+	}
+	else {
+		MyString	sinful;
+		sinful.sprintf( "<%s:1234>", opts.m_address );
+		printf( "Creating network adapter object for %s\n", sinful.GetCStr() );
+		net = NetworkAdapterBase::createNetworkAdapter( sinful.GetCStr() );
+	}
+	if ( !net ) {
+		printf( "Error creating adapter\n" );
+		exit(1);
+	}
 
 	// Initialize it
 	if ( !net->getInitStatus() ) {
@@ -92,14 +107,16 @@ main(int argc, const char **argv)
 
 	MyString	tmpstr;
 	net->wakeSupportedString( tmpstr );
-	printf( "wake support flags: %s\n", tmpstr.GetCStr() );
+	printf( "wake support flags: %s\n", tmpstr.Value() );
 
 	net->wakeEnabledString( tmpstr );
-	printf( "wake enable flags: %s\n", tmpstr.GetCStr() );
+	printf( "wake enable flags: %s\n", tmpstr.Value() );
 
 	ClassAd	ad;
 	net->publish( ad );
 	ad.fPrint( stdout );
+
+	delete net;
 
 	if ( result != 0 && opts.m_verbosity >= 1 ) {
 		fprintf(stderr, "test_network_adapter FAILED\n");
@@ -112,7 +129,7 @@ bool
 CheckArgs(int argc, const char **argv, Options &opts)
 {
 	const char *	usage =
-		"Usage: test_network_adapter [options] <IP address>\n"
+		"Usage: test_network_adapter [options] <IP address|IF name>\n"
 		"  -d <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  --debug <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  --usage|--help|-h: print this message and exit\n"
@@ -122,6 +139,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 	opts.m_verbosity = 1;
 
+	opts.m_if_name = NULL;
 	opts.m_address = "127.0.0.1";
 	opts.m_is_primary = false;
 
@@ -170,6 +188,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( !arg.ArgIsOpt()  &&  (optno == 0)  &&  arg.isOptInt() ) {
 			opts.m_address = arg.getOptStr();
+			optno++;
+
+		} else if ( !arg.ArgIsOpt()  &&  (optno == 0) ) {
+			opts.m_if_name = arg.getOptStr();
 			optno++;
 
 		} else if ( !arg.ArgIsOpt()  &&  (optno == 1)  &&  arg.isOptBool() ) {

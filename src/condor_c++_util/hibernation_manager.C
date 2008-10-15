@@ -40,6 +40,7 @@ template class ExtArray<NetworkAdapterBase *>;
 HibernationManager::HibernationManager ( void ) throw ()
 		:	m_hibernator ( HibernatorBase::createHibernator () ),
 			m_interval ( 0 ),
+			m_primary_adapter( NULL ),
 			m_state ( HibernatorBase::NONE )
 {
 	update ();

@@ -30,6 +30,7 @@
 #elif defined ( LINUX )
 # include "network_adapter.linux.h"
 #endif
+#include <ctype.h>
 
 
 /***************************************************************
@@ -50,21 +51,31 @@ NetworkAdapterBase::~NetworkAdapterBase (void) throw ()
  * NetworkAdapterBase static members 
  ***************************************************************/
 NetworkAdapterBase* 
-NetworkAdapterBase::createNetworkAdapter ( const char *sinful,
+NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
 										   bool is_primary )
 {
     NetworkAdapterBase *adapter = NULL;
 
 # if defined ( NETWORK_ADAPTER_TYPE_DEFINED )
-	adapter = new NetworkAdapter (
-		string_to_ipstr(sinful),
-		string_to_ip(sinful)  );
-	adapter->doInitialize( );
+	if ( is_valid_sinful( sinful_or_name ) ) {
+		adapter = new NetworkAdapter ( string_to_ipstr(sinful_or_name),
+									   string_to_ip(sinful_or_name)  );
+	}
+	else {
+		adapter = new NetworkAdapter ( sinful_or_name );
+	}
+
+	// Try to initialize it; delete it if it fails
+	if ( !adapter->doInitialize( ) ) {
+		delete adapter;
+		return NULL;
+	}
 	adapter->setIsPrimary( is_primary );
 # endif
 
 	return adapter;
 }
+
 
 /***************************************************************
  * NetworkAdapterBase members 
@@ -143,6 +154,9 @@ NetworkAdapterBase::getWolString ( unsigned bits, MyString &s ) const
 			}
 			s += wol_table[bit].string;
 		}
+	}
+	if ( !count ) {
+		s = "NONE";
 	}
 	return s;
 }
