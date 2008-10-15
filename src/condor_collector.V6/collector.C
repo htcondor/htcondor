@@ -92,6 +92,8 @@ int CollectorDaemon::UpdateTimerId;
 ClassAd *CollectorDaemon::query_any_result;
 ClassAd CollectorDaemon::query_any_request;
 
+OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
+
 //---------------------------------------------------------
 
 // prototypes of library functions
@@ -281,12 +283,6 @@ int CollectorDaemon::receive_query_cedar(Service* s,
 			process_query_public (whichAds, &cad, &results);
 		}
 	}
-
-/*
-#if defined ( HAVE_GREEN_PLUGIN )
-    green_plugin_.query ( command, cad );
-#endif
-*/
 
 	// send the results via cedar
 	sock->encode();
@@ -512,12 +508,9 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	if (command == INVALIDATE_STARTD_ADS)
 		process_invalidation (STARTD_PVT_AD, cad, sock);
 
-/*
-#if defined ( HAVE_GREEN_PLUGIN )
-    green_plugin_.invalidate ( command, cad );
-#endif
-*/
-
+    /* let the off-line plug-in invalidate the given ad */
+    offline_plugin_.invalidate ( command, cad );
+    
 #if HAVE_DLOPEN
 	CollectorPluginManager::Invalidate(command, cad);
 #endif
@@ -583,11 +576,8 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 		}
 	}
 
-/*
-#if defined ( HAVE_GREEN_PLUGIN )
-    green_plugin_.update ( command, cad );
-#endif
-*/
+    /* update the off-line plug-in with the new ad */
+    offline_plugin_.update ( command, *cad );
 
 #if HAVE_DLOPEN
 	CollectorPluginManager::Update(command, *cad);
@@ -622,7 +612,8 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
     if ( !updateAd.initFromStream ( *socket ) ) {
 
         dprintf ( 
-            D_ALWAYS, 
+            D_ALWAYS,
+            "receive_update_expect_ack: "
             "Failed to read class ad off the wire, aborting\n" );
 
         return FALSE;
@@ -632,7 +623,7 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
     /* assume the ad is malformed */
     int insert = -3;
     
-    /* get endpoint */
+    /* get peer's IP/port */
     sockaddr_in *from = socket->endpoint ();
 
     /* "collect" the ad */
@@ -649,6 +640,7 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
 
 			dprintf (
                 D_ALWAYS,
+                "receive_update_expect_ack: "
                 "Got QUERY or INVALIDATE command (%d); these are "
                 "not supported.\n",
 				command );
@@ -660,9 +652,12 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
         but they are not present in the ad. */
 		if ( -3 == insert ) {
 			
-			dprintf (D_ALWAYS,
-				"Received malformed ad from command (%d). Ignoring.\n",
-				command);
+			dprintf (
+                D_ALWAYS,
+                "receive_update_expect_ack: "
+				"Received malformed ad from command (%d).\n",
+				command );
+
 		}
 
     } else {
@@ -672,11 +667,12 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
         socket->encode ();
         socket->timeout ( timeout );
 
-        /* send an acknowledgment of receipt */
+        /* send an acknowledgment that we received the ad */
         if ( !socket->code ( ok ) ) {
         
             dprintf ( 
-                D_ALWAYS, 
+                D_ALWAYS,
+                "receive_update_expect_ack: "
                 "Failed to send acknowledgement to host %s, "
                 "aborting\n",
                 socket->sender_ip_str () );
@@ -689,6 +685,7 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
         
             dprintf ( 
                 D_FULLDEBUG, 
+                "receive_update_expect_ack: "
                 "Failed to send update EOM to host %s.\n", 
                 socket->sender_ip_str () );
         
@@ -696,9 +693,8 @@ int CollectorDaemon::receive_update_expect_ack( Service *s, int command, Stream 
         
     }
 
-	if(View_Collector && ((command == UPDATE_STARTD_AD) || 
-			(command == UPDATE_SUBMITTOR_AD)) ) {
-		send_classad_to_sock(command, View_Collector, ad);
+    if( View_Collector && UPDATE_STARTD_AD_WITH_ACK == command ) {
+		send_classad_to_sock ( command, View_Collector, ad );
 	}	
 
 	// let daemon core clean up the socket

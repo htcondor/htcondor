@@ -120,14 +120,6 @@ SOURCE=..\src\condor_includes\condor_collector.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_collector.V6\green_plugin.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_collector.V6\green_plugin.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_collector.V6\hashkey.C
 # End Source File
 # Begin Source File
@@ -137,6 +129,14 @@ SOURCE=..\src\condor_collector.V6\hashkey.h
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\HashTable.h"
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_collector.V6\offline_plugin.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_collector.V6\offline_plugin.h
 # End Source File
 # Begin Source File
 
