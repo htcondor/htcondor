@@ -117,7 +117,7 @@ public:
 		@see canHibernate
 		@see wantsHibernate
 		*/
-	int getHibernateCheckInterval ( void ) const;
+	int getCheckInterval ( void ) const;
 
 	/** Reset all the internal values based on what the values in the
 	    configuration file.

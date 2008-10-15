@@ -144,7 +144,7 @@ private:
 };
 
 #define NETWORK_ADAPTER_TYPE_DEFINED	1
-typedef WindowsNetworkAdapter	NetworkAdapter;
+typedef WindowsNetworkAdapter NetworkAdapter;
 
 
 #endif //  _NETWORK_ADAPTER_WINDOWS_H_
