@@ -42,11 +42,14 @@ public:
 	*/
 	//@{
 
-    /// Constructor
+	/// Constructor
 	WindowsNetworkAdapter () throw ();
 
 	/// Constructor
 	WindowsNetworkAdapter ( LPCSTR ip_addr, unsigned int ) throw ();
+
+	/// Alternate
+	WindowsNetworkAdapter ( LPCSTR description ) throw ();
 
 	/// Constructor -- not implemented
 	WindowsNetworkAdapter ( const char * /*name*/ ) throw () { };
@@ -113,6 +116,7 @@ private:
 
     /** Data members */
     CHAR _ip_address[IP_STRING_BUF_SIZE],
+         _description[MAX_ADAPTER_DESCRIPTION_LENGTH + 4],
          _hardware_address[32],
          _subnet[IP_STRING_BUF_SIZE],
          _adapter_name[MAX_ADAPTER_NAME_LENGTH + 4];
@@ -140,7 +144,7 @@ private:
 };
 
 #define NETWORK_ADAPTER_TYPE_DEFINED	1
-typedef WindowsNetworkAdapter	NetworkAdapter;
+typedef WindowsNetworkAdapter NetworkAdapter;
 
 
 #endif //  _NETWORK_ADAPTER_WINDOWS_H_

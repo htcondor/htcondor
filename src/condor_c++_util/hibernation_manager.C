@@ -170,7 +170,7 @@ HibernationManager::wantsHibernate (void) const
 	return does;
 }
 
-int HibernationManager::getHibernateCheckInterval (void) const
+int HibernationManager::getCheckInterval (void) const
 {
 	return m_interval;
 }

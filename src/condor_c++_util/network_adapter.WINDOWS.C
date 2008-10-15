@@ -38,8 +38,8 @@
 
 /*    Guid for Lan Class. (From DDK)
 */
-CONDOR_DEFINE_GUID(CONDOR_GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f, 
-                    0x11d0, 0x8d, 0xcb, 0x00, 0xc0, 0x4f, 0xc3, 
+CONDOR_DEFINE_GUID(CONDOR_GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f,
+                    0x11d0, 0x8d, 0xcb, 0x00, 0xc0, 0x4f, 0xc3,
                     0x35, 0x8c);
 
 /***************************************************************
@@ -66,6 +66,13 @@ WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR ip_addr,
 : _wake_able ( false ), _exists ( false ) {
     strncpy ( _ip_address, ip_addr, IP_STRING_BUF_SIZE );
     initialize (); 
+}
+
+WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR description ) throw ()
+: _wake_able ( false ), _exists ( false ) {
+    strncpy ( _description, description,
+        MAX_ADAPTER_DESCRIPTION_LENGTH + 4 );
+    initialize ();
 }
 
 WindowsNetworkAdapter::~WindowsNetworkAdapter (void) throw () {
@@ -116,9 +123,11 @@ WindowsNetworkAdapter::initialize (void) {
 
 	        while ( current ) {
                 
-                char *other = current->IpAddressList.IpAddress.String;
-                
-                if ( MATCH == strcmp ( _ip_address, other ) ) {
+                char *ip = current->IpAddressList.IpAddress.String,
+                     *description = current->Description;
+
+                if ( MATCH == strcmp ( _ip_address, ip ) ||
+                     MATCH == strcmp ( _description, description ) ) {
                     
                     /* record the adpater GUID */
                     strncpy (
@@ -181,17 +190,17 @@ WindowsNetworkAdapter::hardwareAddress (void) const {
     return _hardware_address;
 }
 
-unsigned 
+unsigned
 WindowsNetworkAdapter::ipAddress (void) const {
     return 0; /* not used on Windows */
 }
 
-const char* 
+const char*
 WindowsNetworkAdapter::subnet (void) const {
     return _subnet;
 }
 
-bool 
+bool
 WindowsNetworkAdapter::wakeAble (void) const {
     return _wake_able;
 }
