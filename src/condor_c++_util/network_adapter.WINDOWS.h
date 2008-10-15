@@ -48,6 +48,9 @@ public:
 	/// Constructor
 	WindowsNetworkAdapter ( LPCSTR ip_addr, unsigned int ) throw ();
 
+	/// Constructor -- not implemented
+	WindowsNetworkAdapter ( const char * /*name*/ ) throw () { };
+
 	/// Destructor
 	virtual ~WindowsNetworkAdapter () throw (); 
 
@@ -67,7 +70,7 @@ public:
 		@return the adapter's's IP address
 	*/
 	virtual unsigned ipAddress (void) const;
-    
+
     /** Returns the adapter's hardware address
 		@return a string representation of the subnet mask
 	*/
