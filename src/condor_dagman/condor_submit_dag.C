@@ -1,5 +1,4 @@
 //TEMPTEMP -- refactoring needs a little more testing
-//TEMPTEMP -- preserve -maxjobs, etc., values in lower-level .condor.sub files when regenerating them
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -110,8 +109,8 @@ struct SubmitDagOptions
 int printUsage(); // NOTE: printUsage calls exit(1), so it doesn't return
 void parseCommandLine(SubmitDagOptions &opts, int argc,
 			const char * const argv[]);
-bool parsePreservedArgs(int argc, const char * const argv[],
-			MyString &strArg, int &iArg, SubmitDagOptions &opts);
+bool parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
+			const char * const argv[], SubmitDagOptions &opts);
 int doRecursion( SubmitDagOptions &opts );
 int setUpOptions( SubmitDagOptions &opts );
 void ensureOutputFilesExist(const SubmitDagOptions &opts);
@@ -166,11 +165,10 @@ int main(int argc, char *argv[])
 	tmpResult = checkLogFiles( opts );
 	if ( tmpResult != 0 ) return tmpResult;
 
-	//TEMPTEMP -- is this the right place?  if updateSubmit, get relevant options from existing submit file, if any...
-	//TEMPTEMP -- this has to come *after* recursion
+		// Note that this MUST come after recursion...
 	if ( opts.updateSubmit ) {
-		//TEMPTEMP -- check return value
-		getOldSubmitFlags( opts );
+		tmpResult = getOldSubmitFlags( opts );
+		if ( tmpResult != 0 ) return tmpResult;
 	}
 
 		// Write the actual submit file for DAGMan.
@@ -530,21 +528,19 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 }
 
 //---------------------------------------------------------------------------
-//TEMPTEMP -- void?
-/** TEMPTEMP
+/** Get the command-line options we want to preserve from the .condor.sub
+    file we're overwriting, and plug them into the opts structure.  Note
+	that it's *not* an error for the .condor.sub file to not exist.
+	@param opts: the condor_submit_dag options
 	@return 0 if successful, 1 if failed
 */
 int
 getOldSubmitFlags(SubmitDagOptions &opts)
 {
 printf( "DIAG getOldSubmitFlags()\n" );//TEMPTEMP
-// printf( "  DIAG opts.strSubFile: %s\n", opts.strSubFile.Value() );//TEMPTEMP
-MyString currentDir;//TEMPTEMP
-condor_getcwd( currentDir );//TEMPTEMP
-// printf( "  DIAG currentDir: %s\n", currentDir.Value() );//TEMPTEMP
+
 		// It's not an error for the submit file to not exist.
 	if ( fileExists( opts.strSubFile ) ) {
-// printf("  DIAG file exists\n");
 		FILE *subFile = safe_fopen_wrapper(opts.strSubFile.Value(), "r");
 		if ( !subFile ) {
 			fprintf( stderr, "ERROR: unable to open submit file %s\n",
@@ -554,8 +550,6 @@ condor_getcwd( currentDir );//TEMPTEMP
 			MyString subLine;
 			while ( subLine.readLine( subFile ) ) {
 				subLine.chomp();
-				// printf( "DIAG subLine: <%s>\n", subLine.Value() );//TEMPTEMP
-				//TEMPTEMP -- make sure delimiters are right
 				StringList tokens( subLine.Value(), " \t" );
 				tokens.rewind();
 				const char *first = tokens.next();
@@ -563,24 +557,27 @@ condor_getcwd( currentDir );//TEMPTEMP
 					printf( "DIAG got arguments: <%s>\n", subLine.Value() );//TEMPTEMP
 					printf("DIAG tokens.number(): %d\n", tokens.number());//TEMPTEMP
 
-					tokens.next();//TEMPTEMP -- bypass =
-					//TEMPTEMP -- check for =?
-
-					//TEMPTEMP -- check return value
-					parseArgumentsLine( subLine, opts );
+					if ( parseArgumentsLine( subLine, opts ) != 0 ) {
+						(void)fclose( subFile );
+						return 1;
+					}
 				}
 			}
 
-			//TEMPTEMP -- check return value?
 			fclose( subFile );
 		}
 	}
 
-	return 0;//TEMPTEMP?
+	return 0;
 }
 
 //---------------------------------------------------------------------------
-//TEMPTEMP -- document
+/** Parse the arguments line of an existing .condor.sub file, extracing
+    the arguments we want to preserve when updating the .condor.sub file.
+	@param subLine: the arguments line from the .condor.sub file
+	@param opts: the condor_submit_dag options
+	@return 0 if successful, 1 if failed
+*/
 int
 parseArgumentsLine( const MyString &subLine , SubmitDagOptions &opts )
 {
@@ -590,11 +587,11 @@ parseArgumentsLine( const MyString &subLine , SubmitDagOptions &opts )
 
 	MyString arguments;
 	if ( start && end ) {
-		//TEMPTEMP -- check for off-by-one
 		arguments = subLine.Substr( start - line, end - line );
 printf( "DIAG arguments: <%s>\n", arguments.Value() );//TEMPTEMP
 	} else {
-		fprintf( stderr, "TEMPTEMP -- error at %s:%d\n", __FILE__, __LINE__ );//TEMPTEMP
+		fprintf( stderr, "Missing quotes in arguments line: <%s>\n",
+					subLine.Value() );
 		return 1;
 	}
 
@@ -602,7 +599,7 @@ printf( "DIAG arguments: <%s>\n", arguments.Value() );//TEMPTEMP
 	MyString error;
 	if ( !arglist.AppendArgsV2Quoted( arguments.Value(),
 				&error ) ) {
-		fprintf( stderr, "TEMPTEMP -- error at %s:%d\n", __FILE__, __LINE__ );//TEMPTEMP
+		fprintf( stderr, "Error parsing arguments: %s\n", error.Value() );
 		return 1;
 	}
 printf( "DIAG argument count: %d\n", arglist.Count() );//TEMPTEMP
@@ -611,13 +608,11 @@ printf( "DIAG argument count: %d\n", arglist.Count() );//TEMPTEMP
 		MyString strArg = arglist.GetArg( argNum );
 		strArg.lower_case();
 printf( "DIAG strArg: <%s>\n", strArg.Value() );//TEMPTEMP
-		//TEMPTEMP -- check return value?
-		parsePreservedArgs( arglist.Count(),
-					arglist.GetStringArray(), strArg, argNum,
-					opts);
+		(void)parsePreservedArgs( strArg, argNum, arglist.Count(),
+					arglist.GetStringArray(), opts);
 	}
 
-	return 0;//TEMPTEMP
+	return 0;
 }
 
 //---------------------------------------------------------------------------
@@ -969,7 +964,7 @@ printf("  DIAG strArg: <%s>\n", strArg.Value());//TEMPTEMP
 			{
 				opts.updateSubmit = true;
 			}
-			else if ( parsePreservedArgs( argc, argv, strArg, iArg, opts) )
+			else if ( parsePreservedArgs( strArg, iArg, argc, argv, opts) )
 			{
 				// No-op here
 			}
@@ -1002,48 +997,59 @@ printf("  DIAG strArg: <%s>\n", strArg.Value());//TEMPTEMP
 }
 
 //---------------------------------------------------------------------------
-//TEMPTEMP -- returns true if arg found
-//TEMPTEMP -- sometimes called on actual command line, sometimes on command line from old .condor.sub
+/** Parse arguments that are to be preserved when updating a .condor.sub
+	file.  If the given argument such an argument, parse it and update the
+	opts structure accordingly.  (This function is meant to be called both
+	when parsing "normal" command-line arguments, and when parsing the
+	existing arguments line of a .condor.sub file we're overwriting.)
+	@param strArg: the argument we're parsing
+	@param argNum: the argument number of the current argument
+	@param argc: the argument count (passed to get value for flag)
+	@param argv: the argument vector (passed to get value for flag)
+	@param opts: the condor_submit_dag options
+	@return true iff the argument vector contained any arguments
+		processed by this function
+*/
 bool
-parsePreservedArgs(int argc, const char * const argv[], MyString &strArg,
-			int &iArg, SubmitDagOptions &opts)
+parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
+			const char * const argv[], SubmitDagOptions &opts)
 {
 	bool result = false;
 
 	if (strArg.find("-maxi") != -1) // -maxidle
 	{
-		if (iArg + 1 >= argc) {
+		if (argNum + 1 >= argc) {
 			fprintf(stderr, "-maxidle argument needs a value\n");
 			printUsage();
 		}
-		opts.iMaxIdle = atoi(argv[++iArg]);
+		opts.iMaxIdle = atoi(argv[++argNum]);
 		result = true;
 	}
 	else if (strArg.find("-maxj") != -1) // -maxjobs
 	{
-		if (iArg + 1 >= argc) {
+		if (argNum + 1 >= argc) {
 			fprintf(stderr, "-maxjobs argument needs a value\n");
 			printUsage();
 		}
-		opts.iMaxJobs = atoi(argv[++iArg]);
+		opts.iMaxJobs = atoi(argv[++argNum]);
 		result = true;
 	}
 	else if (strArg.find("-maxpr") != -1) // -maxpre
 	{
-		if (iArg + 1 >= argc) {
+		if (argNum + 1 >= argc) {
 			fprintf(stderr, "-maxpre argument needs a value\n");
 			printUsage();
 		}
-		opts.iMaxPre = atoi(argv[++iArg]);
+		opts.iMaxPre = atoi(argv[++argNum]);
 		result = true;
 	}
 	else if (strArg.find("-maxpo") != -1) // -maxpost
 	{
-		if (iArg + 1 >= argc) {
+		if (argNum + 1 >= argc) {
 			fprintf(stderr, "-maxpost argument needs a value\n");
 			printUsage();
 		}
-		opts.iMaxPost = atoi(argv[++iArg]);
+		opts.iMaxPost = atoi(argv[++argNum]);
 		result = true;
 	}
 
