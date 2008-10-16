@@ -145,8 +145,6 @@ GLOBUS_LIBS = \
 	$(GLOBUS_LIB)/libglobus_gssapi_gsi_$(GlobusFlavor).a \
 	$(GLOBUS_LIB)/libglobus_openssl_$(GlobusFlavor).a \
 	$(GLOBUS_LIB)/libglobus_common_$(GlobusFlavor).a \
-	$(GLOBUS_LIB)/libssl_$(GlobusFlavor).a \
-	$(GLOBUS_LIB)/libcrypto_$(GlobusFlavor).a \
 	$(GLOBUS_LIB)/libglobus_gsi_sysconfig_$(GlobusFlavor).a \
 	$(GSI_LIB) \
 	$(OPENSSL_LIB)

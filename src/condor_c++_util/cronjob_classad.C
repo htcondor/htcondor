@@ -19,10 +19,10 @@
 
 
 #include "condor_common.h"
-#include "get_mysubsystem.h"
 #include "condor_cronjob.h"
 #include "condor_cronjob_classad.h"
 #include "condor_string.h"
+#include "subsystem_info.h"
 
 // Interface version number
 #define	INTERFACE_VERSION	"1"
@@ -53,7 +53,7 @@ ClassAdCronJob::ClassAdCronJob( const char *mgrName,
 		EnvName += "_INTERFACE_VERSION";
 		classad_env.SetEnv( EnvName, INTERFACE_VERSION );
 
-		EnvName = get_mySubSystem( );
+		EnvName = mySubSystem->getName( );
 		EnvName += "_CRON_NAME";
 		classad_env.SetEnv( EnvName, mgrName );
 

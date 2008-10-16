@@ -23,7 +23,7 @@
 #include <errno.h>
 #include <string.h>
 #include "file_xml.h"
-#include "get_mysubsystem.h"
+#include "subsystem_info.h"
 #include <sys/stat.h>
 
 #define FILESIZELIMT 1900000000L
@@ -145,7 +145,7 @@ FILEXML::createInstanceXML() {
         ptr = new FILEXML();
         return ptr;
     }
-	daemon_name = get_mySubSystem();
+	daemon_name = mySubSystem->getName();
 
 	tmpParamName = (char *)malloc(10+strlen(daemon_name));
 

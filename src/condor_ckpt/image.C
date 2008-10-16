@@ -33,6 +33,7 @@
 #include "condor_debug.h"
 #include "condor_ckpt_mode.h"
 #include "signals_control.h"
+#include "subsystem_info.h"
 #include "gtodc.h"
 
 extern int _condor_in_file_stream;
@@ -107,8 +108,8 @@ int condor_slow_ckpt = 0;
 /* these are the remote system calls we use in this file */
 extern "C" int REMOTE_CONDOR_send_rusage(struct rusage *use_p);
 
-// set mySubSystem for Condor components which expect it
-char *mySubSystem = "JOB";
+// set SubSystem for Condor components which expect it
+DECL_SUBSYSTEM("JOB", SUBSYSTEM_TYPE_TOOL );
 
 static int
 net_read(int fd, void *buf, int size)

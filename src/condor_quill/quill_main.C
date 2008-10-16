@@ -21,6 +21,7 @@
 #include "condor_daemon_core.h"
 #include "condor_config.h"
 #include "condor_debug.h"
+#include "subsystem_info.h"
 
 #include "classadlogentry.h"
 #include "jobqueuedbmanager.h"
@@ -37,7 +38,8 @@
 //-------------------------------------------------------------
 
 // about self
-char* mySubSystem = "QUILL";		// used by Daemon Core
+DECL_SUBSYSTEM( "QUILL" );		// used by Daemon Core
+
 // global objects;
 JobQueueDBManager jqDBManager;
 

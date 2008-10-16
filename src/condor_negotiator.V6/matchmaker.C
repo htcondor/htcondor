@@ -703,12 +703,12 @@ static ClassAd * lookup_global( const char *constraint, void *arg )
 
 char *
 Matchmaker::
-compute_signficant_attrs(ClassAdList & startdAds)
+compute_significant_attrs(ClassAdList & startdAds)
 {
 	char *result = NULL;
 
 	// Figure out list of all external attribute references in all startd ads
-	dprintf(D_FULLDEBUG,"Entering compute_signficant_attrs()\n");
+	dprintf(D_FULLDEBUG,"Entering compute_significant_attrs()\n");
 	ClassAd *startd_ad = NULL;
 	ClassAd *sample_startd_ad = NULL;
 	startdAds.Open ();
@@ -741,7 +741,7 @@ compute_signficant_attrs(ClassAdList & startdAds)
 				extlen = strlen(result);
 				dprintf(D_FULLDEBUG,"CHANGE: Startd being considered in compute_significant_attrs() is:\n");
 				startd_ad->dPrint(D_FULLDEBUG);
-				dprintf(D_FULLDEBUG,"CHANGE: In compute_signficant_attrs() attr=%s - result=%s\n",
+				dprintf(D_FULLDEBUG,"CHANGE: In compute_significant_attrs() attr=%s - result=%s\n",
 						attr_name, result ? result : "(none)" );
 				if ( result ) {
 					free(result);
@@ -793,7 +793,7 @@ compute_signficant_attrs(ClassAdList & startdAds)
 	external_references.remove_anycase(ATTR_SUBMITTOR_PRIO);
 		// Note: print_to_string mallocs memory on the heap
 	result = external_references.print_to_string();
-	dprintf(D_FULLDEBUG,"Leaving compute_signficant_attrs() - result=%s\n",
+	dprintf(D_FULLDEBUG,"Leaving compute_significant_attrs() - result=%s\n",
 					result ? result : "(none)" );
 	return result;
 }
@@ -862,12 +862,12 @@ negotiationTime ()
 	// Register a lookup function that passes through the list of all ads.
 	// ClassAdLookupRegister( lookup_global, &allAds );
 
-	// Compute the signficant attributes to pass to the schedd, so
+	// Compute the significant attributes to pass to the schedd, so
 	// the schedd can do autoclustering to speed up the negotiation cycles.
 	if ( job_attr_references ) {
 		free(job_attr_references);
 	}
-	job_attr_references = compute_signficant_attrs(startdAds);
+	job_attr_references = compute_significant_attrs(startdAds);
 
 	// ----- Recalculate priorities for schedds
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
@@ -1212,11 +1212,6 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 				 dprintf(D_ALWAYS, "%d seconds so far\n", totalTime);
 			}
 
-			// should we send the startd ad to this schedd?
-			send_ad_to_schedd = FALSE;
-			schedd->LookupBool( ATTR_WANT_RESOURCE_AD, send_ad_to_schedd);
-	
-
 			// store the verison of the schedd, so we can take advantage of
 			// protocol improvements in newer versions while still being
 			// backwards compatible.
@@ -1284,6 +1279,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 			// in case we never actually call negotiate() below.
 			rejForNetwork = 0;
 			rejForNetworkShare = 0;
+			rejForConcurrencyLimit = 0;
 			rejPreemptForPrio = 0;
 			rejPreemptForPolicy = 0;
 			rejPreemptForRank = 0;
@@ -1322,7 +1318,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 					result=negotiate( scheddName,scheddAddr,scheddPrio,
 								  scheddAbsShare, scheddLimit,
 								  startdAds, startdPvtAds, 
-								  send_ad_to_schedd, scheddVersion, ignore_schedd_limit,
+								  scheddVersion, ignore_schedd_limit,
 								  startTime, numMatched);
 					updateNegCycleEndTime(startTime, schedd);
 
@@ -1638,7 +1634,7 @@ obtainAdsFromCollector (
 					EvalResult er;
 					int evalRet = expr->EvalTree(oldAd, ad, &er);
 
-					if( !evalRet || er.type != LX_BOOL) {
+					if( !evalRet || (er.type != LX_BOOL && er.type != LX_INTEGER)) {
 							// Something went wrong
 						dprintf(D_ALWAYS, "Can't evaluate STARTD_AD_REEVAL_EXPR %s as a bool, treating as TRUE\n", exprStr);
 						replace = true;
@@ -1722,7 +1718,7 @@ int Matchmaker::
 negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		   int scheddLimit,
 		   ClassAdList &startdAds, ClassAdList &startdPvtAds, 
-		   int send_ad_to_schedd, const CondorVersionInfo & scheddVersion,
+		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, int &numMatched)
 {
 	ReliSock	*sock;
@@ -1951,6 +1947,9 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 				} else {
 					if (rejForNetworkShare) {
 						diagnostic_message = "network share exceeded";
+					} else if (rejForConcurrencyLimit) {
+						diagnostic_message =
+							"concurrency limit reached";
 					} else if (rejPreemptForPolicy) {
 						diagnostic_message =
 							"PREEMPTION_REQUIREMENTS == False";
@@ -2009,7 +2008,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 
 			// 2e(ii).  perform the matchmaking protocol
 			result = matchmakingProtocol (request, offer, startdPvtAds, sock, 
-					scheddName, scheddAddr, send_ad_to_schedd);
+					scheddName, scheddAddr);
 
 			// 2e(iii). if the matchmaking protocol failed, do not consider the
 			//			startd again for this negotiation cycle.
@@ -2122,6 +2121,46 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		// request attributes
 	int				requestAutoCluster = -1;
 
+
+		// Check resource constraints requested by request
+	rejForConcurrencyLimit = 0;
+	MyString limits;
+	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
+		limits.strlwr();
+		StringList list(limits.GetCStr());
+		char *limit;
+		MyString str;
+		list.rewind();
+		while ((limit = list.next())) {
+			str = limit;
+			int count = accountant.GetLimit(str);
+
+			str += "_LIMIT";
+			int max =
+				param_integer(str.GetCStr(),
+							  param_integer("CONCURRENCY_LIMIT_DEFAULT",
+											2308032));
+
+			dprintf(D_FULLDEBUG,
+					"Concurrency Limit: %s is %d\n",
+					limit, count);
+
+			if (count < 0) {
+ 				EXCEPT("ERROR: Concurrency Limit %s is %d (below 0)",
+					   limit, count);
+			}
+
+			if (count >= max) {
+				dprintf(D_FULLDEBUG,
+						"Concurrency Limit %s is %d, cannot exceed %d\n",
+						limit, count, max);
+
+				rejForConcurrencyLimit++;
+				return NULL;
+			}
+		}
+	}
+
 	request.LookupInteger(ATTR_AUTO_CLUSTER_ID, requestAutoCluster);
 
 		// If this incoming job is from the same user, same schedd,
@@ -2154,6 +2193,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 			MatchList->get_diagnostics(
 				rejForNetwork,
 				rejForNetworkShare,
+				rejForConcurrencyLimit,
 				rejPreemptForPrio,
 				rejPreemptForPolicy,
 				rejPreemptForRank);
@@ -2446,6 +2486,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 
 	if ( MatchList ) {
 		MatchList->set_diagnostics(rejForNetwork, rejForNetworkShare, 
+		    rejForConcurrencyLimit,
 			rejPreemptForPrio, rejPreemptForPolicy, rejPreemptForRank);
 			// only bother sorting if there is more than one entry
 		if ( MatchList->length() > 1 ) {
@@ -2604,8 +2645,7 @@ insertNegotiatorMatchExprs(ClassAd *ad)
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
 						ClassAdList &startdPvtAds, Sock *sock,
-					    char* scheddName, char* scheddAddr,
-						int send_ad_to_schedd)
+					    char* scheddName, char* scheddAddr)
 {
 	int  cluster, proc;
 	char startdAddr[32];
@@ -2678,6 +2718,27 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		free(savedReqStr);
 	}	
 
+		// Stash the Concurrency Limits in the offer, they are part of
+		// what's being provided to the request after all. The limits
+		// will be available to the Accountant when the match is added
+		// and also to the Schedd when considering to reuse a
+		// claim. Both are key, first so the Accountant can properly
+		// recreate its state on startup, and second so the Schedd has
+		// the option of checking if a claim should be reused for a
+		// job incase it has different limits. The second part is
+		// because the limits are not in the Requirements.
+		//
+		// NOTE: Because the Concurrency Limits should be available to
+		// the Schedd, they must be stashed before PERMISSION_AND_AD
+		// is sent.
+	MyString limits;
+	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
+		limits.strlwr();
+		offer->Assign(ATTR_MATCHED_CONCURRENCY_LIMITS, limits);
+	} else {
+		offer->Delete(ATTR_MATCHED_CONCURRENCY_LIMITS);
+	}
+
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 
 	if (want_claiming && want_inform_startd) {
@@ -2700,23 +2761,13 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	sock->encode();
 	send_failed = false;	
 
-	if ( send_ad_to_schedd ) 
-	{
-		dprintf(D_FULLDEBUG,
-			"      Sending PERMISSION, capability, startdAd to schedd\n");
-		if (!sock->put(PERMISSION_AND_AD) 	|| 
-			!sock->put(capability)	||
-			!offer->put(*sock)		||	// send startd ad to schedd
-			!sock->end_of_message())
-				send_failed = true;
-	} else {
-		dprintf(D_FULLDEBUG,
-			"      Sending PERMISSION with capability to schedd\n");
-		if (!sock->put(PERMISSION) 	|| 
-			!sock->put(capability)	||
-			!sock->end_of_message())
-				send_failed = true;
-	}
+	dprintf(D_FULLDEBUG,
+		"      Sending PERMISSION, capability, startdAd to schedd\n");
+	if (!sock->put(PERMISSION_AND_AD) 	|| 
+		!sock->put(capability)	||
+		!offer->put(*sock)		||	// send startd ad to schedd
+		!sock->end_of_message())
+			send_failed = true;
 
 	if ( send_failed )
 	{
@@ -3068,6 +3119,7 @@ MatchListType(int maxlen)
 	adListHead = 0;
 	m_rejForNetwork = 0; 
 	m_rejForNetworkShare = 0;
+	m_rejForConcurrencyLimit = 0;
 	m_rejPreemptForPrio = 0;
 	m_rejPreemptForPolicy = 0; 
 	m_rejPreemptForRank = 0;
@@ -3098,12 +3150,14 @@ pop_candidate()
 void Matchmaker::MatchListType::
 get_diagnostics(int & rejForNetwork,
 					int & rejForNetworkShare,
+					int & rejForConcurrencyLimit,
 					int & rejPreemptForPrio,
 					int & rejPreemptForPolicy,
 					int & rejPreemptForRank)
 {
 	rejForNetwork = m_rejForNetwork;
 	rejForNetworkShare = m_rejForNetworkShare;
+	rejForConcurrencyLimit = m_rejForConcurrencyLimit;
 	rejPreemptForPrio = m_rejPreemptForPrio;
 	rejPreemptForPolicy = m_rejPreemptForPolicy;
 	rejPreemptForRank = m_rejPreemptForRank;
@@ -3112,12 +3166,14 @@ get_diagnostics(int & rejForNetwork,
 void Matchmaker::MatchListType::
 set_diagnostics(int rejForNetwork,
 					int rejForNetworkShare,
+					int rejForConcurrencyLimit,
 					int rejPreemptForPrio,
 					int rejPreemptForPolicy,
 					int rejPreemptForRank)
 {
 	m_rejForNetwork = rejForNetwork;
 	m_rejForNetworkShare = rejForNetworkShare;
+	m_rejForConcurrencyLimit = rejForConcurrencyLimit;
 	m_rejPreemptForPrio = rejPreemptForPrio;
 	m_rejPreemptForPolicy = rejPreemptForPolicy;
 	m_rejPreemptForRank = rejPreemptForRank;

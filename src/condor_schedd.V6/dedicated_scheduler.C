@@ -999,7 +999,6 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 {
 	char	temp[512];
 	char	*claim_id = NULL;	// ClaimId for each match made
-	char	*tmp;
 	char	*sinful;
 	char	*machine_name;
 	int		perm_rval;
@@ -1117,9 +1116,14 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 		}
 
 		case PERMISSION:
+				// No negotiator since 7.1.3 should ever send this
+				// command, and older ones should not send it either,
+				// since we advertise WantResAd=True.
+			dprintf( D_ALWAYS, "Negotiator sent PERMISSION rather than expected PERMISSION_AND_AD!  Aborting.\n");
+			return NR_ERROR;
 		case PERMISSION_AND_AD:
 				// If things are cool, contact the startd.
-			dprintf ( D_FULLDEBUG, "In case PERMISSION\n" );
+			dprintf ( D_FULLDEBUG, "In case PERMISSION_AND_AD\n" );
 
 #if 0
 			SetAttributeInt( id.cluster, id.proc,
@@ -1131,16 +1135,16 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				return NR_ERROR;
 			}
 			my_match_ad = NULL;
-			if ( op == PERMISSION_AND_AD ) {
-					// get startd ad from negotiator as well
-				my_match_ad = new ClassAd();
-				if( !my_match_ad->initFromStream(*s) ) {
-					dprintf( D_ALWAYS, "Can't get my match ad from mgr\n" ); 
-					delete my_match_ad;
-					free( claim_id );
-					return NR_ERROR;
-				}
+
+				// get startd ad from negotiator as well
+			my_match_ad = new ClassAd();
+			if( !my_match_ad->initFromStream(*s) ) {
+				dprintf( D_ALWAYS, "Can't get my match ad from mgr\n" ); 
+				delete my_match_ad;
+				free( claim_id );
+				return NR_ERROR;
 			}
+
 			if( !s->end_of_message() ) {
 				dprintf( D_ALWAYS, "Can't receive eom from mgr\n" );
 				if( my_match_ad ) {
@@ -1156,31 +1160,18 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 						 idp.publicClaimId() ); 
 			}
 
-			if ( my_match_ad ) {
-				dprintf( D_PROTOCOL, "Received match ad\n" );
-			}
-
-				// ClaimId is in the form
-				// "<xxx.xxx.xxx.xxx:xxxx>#xxxxxxx" 
-				// where everything upto the # is the sinful
-				// string of the startd
-			sinful = strdup( claim_id );
-			tmp = strchr( sinful, '#');
-			if( tmp ) {
-				*tmp = '\0';
-			} else {
-				dprintf( D_ALWAYS, "Can't find '#' in ClaimId!\n" );
-					// What else should we do here?
-				free( sinful );
-				free( claim_id );
-				sinful = NULL;
-				claim_id = NULL;
-				if( my_match_ad ) {
+			{
+				Daemon startd(my_match_ad,DT_STARTD,NULL);
+				if( !startd.addr() ) {
+					dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
+					my_match_ad->dPrint(D_ALWAYS);
 					delete my_match_ad;
 					my_match_ad = NULL;
+					break;
 				}
-				break;
+				sinful = strdup( startd.addr() );
 			}
+
 				// sinful should now point to the sinful string of the
 				// startd we were matched with.
 			
@@ -2036,8 +2027,7 @@ DedicatedScheduler::sortResources( void )
 
 			// If it is active, or on its way to becoming active,
 			// mark it as busy
-		if( (mrec->status == M_ACTIVE) ||
-			(mrec->status == M_CONNECTING) ){
+		if( (mrec->status == M_ACTIVE) ){
 			busy_resources->Append( res );
 			continue;
 		}
@@ -3420,6 +3410,9 @@ DedicatedScheduler::publishRequestAd( void )
 	ad.InsertOrUpdate( tmp );
 
 		// Tell negotiator to send us the startd ad
+		// As of 7.1.3, the negotiator no longer pays attention to this
+		// attribute; it _always_ sends the resource request ad.
+		// For backward compatibility with older negotiators, we still set it.
 	sprintf( tmp, "%s = True", ATTR_WANT_RESOURCE_AD );
 	ad.InsertOrUpdate( tmp );
 
@@ -3757,7 +3750,6 @@ DedicatedScheduler::getUnusedTime( match_rec* mrec )
 	}
 	switch( mrec->status ) {
 	case M_UNCLAIMED:
-	case M_CONNECTING:
 	case M_STARTD_CONTACT_LIMBO:
     case M_ACTIVE:
 		return 0;
@@ -4099,6 +4091,17 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		while ( (host = hosts.next()) ) {
 
 			claim = claimList.next();
+			if( !claim ) {
+				dprintf(D_ALWAYS,"Dedicated Scheduler:: failed to reconnect "
+						"job %d.%d to %s, because claimid is missing: "
+						"(hosts=%s,claims=%s).\n",
+						id.cluster, id.proc,
+						host ? host : "(null host)",
+						remote_hosts ? remote_hosts : "(null)",
+						claims ? claims : "(null)");
+				job->dPrint(D_ALWAYS);
+					// we will break out of the loop below
+			}
 
 			machines.Rewind();
 
@@ -4118,9 +4121,26 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			}
 
 			
+			char *sinful=NULL;
+			if( machineAd ) {
+				Daemon startd(machineAd,DT_STARTD,NULL);
+				if( !startd.addr() ) {
+					dprintf( D_ALWAYS, "Can't find address of startd in ad:\n" );
+					machineAd->dPrint(D_ALWAYS);
+						// we will break out of the loop below
+				}
+				else {
+					sinful = strdup(startd.addr());
+				}
+			}
+
 			if (machineAd == NULL) {
-					// Uh oh...
 				dprintf( D_ALWAYS, "Dedicated Scheduler:: couldn't find machine %s to reconnect to\n", host);
+					// we will break out of the loop below
+			}
+
+			if (machineAd == NULL || sinful == NULL || claim == NULL) {
+					// Uh oh...
 				machinesToAllocate.Rewind();
 				while( machinesToAllocate.Next() ) {
 					machinesToAllocate.DeleteCurrent();
@@ -4129,13 +4149,12 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 				while( jobsToAllocate.Next() ) {
 					jobsToAllocate.DeleteCurrent();
 				}
+				free(sinful);
+				sinful = NULL;
 				continue;
 			}
 
-			char *sinful;
-			machineAd->LookupString(ATTR_MY_ADDRESS, &sinful);
-
-			dprintf(D_FULLDEBUG, "Target address is %s\n", sinful);
+			dprintf(D_FULLDEBUG, "Dedicated Scheduler:: reconnect target address is %s; claim is %s\n", sinful, claim);
 
 			match_rec *mrec = 
 				new match_rec(claim, sinful, &id,
@@ -4149,6 +4168,8 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			jobsToAllocate.Append(job);
 
 			machinesToAllocate.Append(machineAd);
+			free(sinful);
+			sinful = NULL;
 		}
 	}
 
@@ -4253,7 +4274,6 @@ findAvailTime( match_rec* mrec )
 		// First, switch on the status of the mrec
 	switch( mrec->status ) {
 	case M_UNCLAIMED:
-	case M_CONNECTING:
 	case M_STARTD_CONTACT_LIMBO:
 			// Not yet claimed, so not yet available. 
 			// TODO: Be smarter here.

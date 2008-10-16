@@ -32,7 +32,7 @@ soapobjs(startd)
 
 OBJ = LoadQueue.o claim.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
 	Resource.o Starter.o command.o startd_main.o util.o \
-	startd_cronmgr.o startd_cronjob.o starter_mgr.o mds.o \
+	startd_cronmgr.o startd_cronjob.o starter_mgr.o \
 	setsyscalls.o startd_instantiate.o AvailStats.o cod_mgr.o \
 	vm_common.o VMManager.o VMRegister.o VMMachine.o vmuniverse_mgr.o \
 	$(BACKFILL_OBJS) $(GLEXEC_OBJ) $(JOB_HOOKS_OBJS) $(SOAP_OBJS)
@@ -51,7 +51,6 @@ public_c_plus_nowrap_target(condor_glexec_wrapper, \
                             libexec, \
                             glexec_wrapper.o, \
                             $(STD_LIBS))
-c_plus_nowrap_target(fdpass_test,fdpass_test.o fdpass.o,$(STD_LIBS))
 #endif
 #endif
 

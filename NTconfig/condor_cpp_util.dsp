@@ -490,6 +490,14 @@ SOURCE="..\src\condor_c++_util\directory.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\directory.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\directory.WINDOWS.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\distribution.C"
 # End Source File
 # Begin Source File
@@ -907,11 +915,11 @@ SOURCE="..\src\condor_c++_util\process_control.WINDOWS.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c++_util\profile_helpers.WINDOWS.C"
+SOURCE="..\src\condor_c++_util\profile.WINDOWS.C"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c++_util\profile_helpers.WINDOWS.h"
+SOURCE="..\src\condor_c++_util\profile.WINDOWS.h"
 # End Source File
 # Begin Source File
 
@@ -944,6 +952,22 @@ SOURCE="..\src\condor_c++_util\read_user_log_state.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\Regex.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\remote_close.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\remote_close.WINDOWS.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\security.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\security.WINDOWS.h"
 # End Source File
 # Begin Source File
 

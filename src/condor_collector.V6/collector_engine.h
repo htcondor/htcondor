@@ -113,7 +113,6 @@ class CollectorEngine : public Service
 	CollectorHashTable *findOrCreateTable(MyString &str);
 
 	bool ValidateClassAd(int command,ClassAd *clientAd,Sock *sock);
-	bool ValidatePvtStartdClassAd(ClassAd *publicAd,ClassAd *privateAd,Sock *sock);
 
 	// Statistics
 	CollectorStats	*collectorStats;

@@ -816,7 +816,8 @@ sub find_os( $$$ )
 	return undef;
 }
 
-sub install( $ ) {
+sub install( $ )
+{
     my $release_dir=shift(@_);
 
     my @release_dirs = qw( etc include src lib libexec bin sbin sql man );
@@ -1208,7 +1209,7 @@ sub install( $ ) {
     }
 
     chomp (my $network_interface=`host $host | grep \"has address\" | awk \'\{print \$4\}\'`);
-    
+
     if ($? == 0 && 
 		($network_interface =~ m/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/ )) {
 		#$local_config{NETWORK_INTERFACE}=$network_interface;
@@ -1217,7 +1218,7 @@ sub install( $ ) {
 					 ." might not work propertly until you set "
 					 ." NETWORK_INTERFACE=<machine IP address>\n");
     }  
-    
+
     return $release_dir;
 
 }	# sub install()
@@ -1229,7 +1230,7 @@ sub find_release_dir( $ ) {
     if ($path && check_release_dir ($path)) {
 		return $path;
     }
-    
+
     chomp($_ = `which condor_config_val 2>/dev/null`);
     if( /^\/.*$/ && !$?) {
 		chomp($path = `condor_config_val RELEASE_DIR 2>/dev/null`);
@@ -1237,11 +1238,11 @@ sub find_release_dir( $ ) {
 			return $path;
 		}
     }
-    
+
     if( check_release_dir("/usr/local/condor") ) {
 		return "/usr/local/condor";
     } 
-    
+
     die "Unable to find directory where Condor is installed! \
 Please specify it with --install-dir=<dir>\n";
 }

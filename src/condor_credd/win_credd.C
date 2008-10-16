@@ -29,7 +29,7 @@
 
 //-------------------------------------------------------------
 
-char* mySubSystem = "CREDD";		// used by Daemon Core
+DECL_DAEMON_INFO( "CREDD" );	// used by Daemon Core
 
 CredDaemon *credd;
 

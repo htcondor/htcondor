@@ -23,13 +23,13 @@
 #include "condor_daemon_core.h"
 #include "basename.h"
 #include "my_username.h"
+#include "subsystem_info.h"
 
 #include "globus_utils.h"
 
 #include "gridmanager.h"
 
-
-char *mySubSystem = "GRIDMANAGER";	// used by Daemon Core
+DECL_SUBSYSTEM( "GRIDMANAGER", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
 
 char *myUserName = NULL;
 

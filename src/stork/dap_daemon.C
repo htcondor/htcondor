@@ -29,9 +29,10 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "dap_server.h"
+#include "subsystem_info.h"
 
 // --------------
-char* mySubSystem = "STORK";		// used by Daemon Core
+DECL_SUBSYSTEM( "STORK", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 // --------------
 
 // command line arguments are read into these variables

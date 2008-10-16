@@ -1,0 +1,9 @@
+JOB  A  job_dagman_splice-H.cmd
+VARS A job="$(JOB)"
+
+JOB  B  job_dagman_splice-H.cmd
+VARS B job="$(JOB)"
+
+PARENT A CHILD B
+
+SPLICE S2 job_dagman_splice-H-splice2.dag

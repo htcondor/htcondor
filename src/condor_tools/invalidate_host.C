@@ -41,9 +41,10 @@
 #include "get_full_hostname.h"
 #include "daemon.h"
 #include "condor_attributes.h"
+#include "subsystem_info.h"
 
 char	*MyName;
-char	*mySubSystem = "TOOL";
+DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
 
 void
 usage( void )

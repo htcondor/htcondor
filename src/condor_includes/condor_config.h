@@ -117,9 +117,11 @@ class ParamValue {
 	odd since if a .c file includes this, these prototypes technically don't
 	exist.... */
 extern "C" {
-	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false, bool wantsExtra = false );
+	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false, bool wantsExtra = true );
 	void config_host( char* host=NULL );
 	void config_fill_ad( ClassAd*, const char* prefix=NULL );
+	void config_fill_ad_subsys( ClassAd* ad, const char *subsystem,
+								const char *prefix = NULL );
 	void condor_net_remap_config( bool force_param=false );
 	int param_integer_c( const char *name, int default_value,
 					   int min_value, int max_value);
@@ -245,6 +247,12 @@ BEGIN_C_DECLS
 	value is owned by the table; do not free it.
 	*/
 	char * lookup_macro ( const char *name, BUCKET *table[], int table_size );
+
+	/* These allow the application to change the subsystem and local
+	   names that are used by param, et.el.
+	*/
+	const char *config_set_subsystem_name( const char *name );
+	const char *config_set_local_name( const char *name );
 
 	/*
 	As expand_macro() (above), but assumes the table 'ConfigTab' which is

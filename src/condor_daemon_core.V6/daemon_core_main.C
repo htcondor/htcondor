@@ -33,6 +33,7 @@
 #include "condor_environ.h"
 #include "setenv.h"
 #include "time_offset.h"
+#include "subsystem_info.h"
 #include "exit.h"
 
 #if HAVE_EXT_GCB
@@ -51,12 +52,8 @@
 #if HAVE_EXT_COREDUMPER
 #include "google/coredumper.h"
 #endif
-#if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
-#include <resolv.h>
-#endif
 
 // Externs to Globals
-extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
 extern DLL_IMPORT_MAGIC char **environ;
 
 
@@ -78,7 +75,6 @@ static const char*	myName;			// set to basename(argv[0])
 char *_condor_myServiceName;		// name of service on Win32 (argv[0] from SCM)
 static char*	myFullName;		// set to the full path to ourselves
 DaemonCore*	daemonCore;
-static int is_master = 0;
 char*	logDir = NULL;
 char*	pidFile = NULL;
 char*	addrFile = NULL;
@@ -279,7 +275,7 @@ DC_Exit( int status )
 		  cleared out our config hashtable, too.  Derek 2004-11-23
 		*/
 	dprintf( D_ALWAYS, "**** %s (%s_%s) EXITING WITH STATUS %d\n",
-			 myName, myDistro->Get(), mySubSystem, exit_status );
+			 myName, myDistro->Get(), mySubSystem->getName(), exit_status );
 
 		// Finally, exit with the appropriate status.
 	exit( exit_status );
@@ -292,6 +288,20 @@ DC_Skip_Auth_Init()
 	doAuthInit = false;
 }
 
+static void
+kill_daemon_ad_file()
+{
+	MyString param_name;
+	param_name.sprintf( "%s_DAEMON_AD_FILE", mySubSystem->getName() );
+	char *ad_file = param(param_name.Value());
+	if( !ad_file ) {
+		return;
+	}
+
+	unlink(ad_file);
+
+	free(ad_file);
+}
 
 void
 drop_addr_file()
@@ -299,7 +309,7 @@ drop_addr_file()
 	FILE	*ADDR_FILE;
 	char	addr_file[100];
 
-	sprintf( addr_file, "%s_ADDRESS_FILE", mySubSystem );
+	sprintf( addr_file, "%s_ADDRESS_FILE", mySubSystem->getName() );
 
 	if( addrFile ) {
 		free( addrFile );
@@ -307,7 +317,9 @@ drop_addr_file()
 	addrFile = param( addr_file );
 
 	if( addrFile ) {
-		if( (ADDR_FILE = safe_fopen_wrapper(addrFile, "w")) ) {
+		MyString newAddrFile;
+		newAddrFile.sprintf("%s.new",addrFile);
+		if( (ADDR_FILE = safe_fopen_wrapper(newAddrFile.Value(), "w")) ) {
 			// Always prefer the local, private address if possible.
 			const char* addr = daemonCore->privateNetworkIpAddr();
 			if (!addr) {
@@ -318,10 +330,16 @@ drop_addr_file()
 			fprintf( ADDR_FILE, "%s\n", CondorVersion() );
 			fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
 			fclose( ADDR_FILE );
+			if( rotate_file(newAddrFile.Value(),addrFile)!=0 ) {
+				dprintf( D_ALWAYS,
+						 "DaemonCore: ERROR: failed to rotate %s to %s\n",
+						 newAddrFile.Value(),
+						 addrFile);
+			}
 		} else {
 			dprintf( D_ALWAYS,
 					 "DaemonCore: ERROR: Can't open address file %s\n",
-					 addrFile );
+					 newAddrFile.Value() );
 		}
 	}
 }
@@ -456,7 +474,7 @@ handle_log_append( char* append_str )
 	}
 	char *tmp1, *tmp2;
 	char buf[100];
-	sprintf( buf, "%s_LOG", mySubSystem );
+	sprintf( buf, "%s_LOG", mySubSystem->getName() );
 	if( !(tmp1 = param(buf)) ) { 
 		EXCEPT( "%s not defined!", buf );
 	}
@@ -660,7 +678,7 @@ drop_core_in_log( void )
 		// give our Win32 exception handler a filename for the core file
 		char pseudoCoreFileName[MAX_PATH];
 		sprintf(pseudoCoreFileName,"%s\\core.%s.WIN32",ptmp,
-			mySubSystem);
+				mySubSystem->getName() );
 		g_ExceptionHandler.SetLogFileName(pseudoCoreFileName);
 
 		// set the path where our Win32 exception handler can find
@@ -1099,10 +1117,8 @@ unix_sigusr2(int)
 void
 dc_reconfig( bool is_full )
 {
-#if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
-		// re-initialize dns info (e.g. IP addresses of nameservers)
-	res_init();
-#endif
+		// do this first in case anything else depends on DNS
+	daemonCore->refreshDNS();
 
 		// Actually re-read the files...  Added by Derek Wright on
 		// 12/8/97 (long after this function was first written... 
@@ -1133,20 +1149,18 @@ dc_reconfig( bool is_full )
 	}
 
 	// Reinitialize logging system; after all, LOG may have been changed.
-	dprintf_config(mySubSystem);
+	dprintf_config(mySubSystem->getName() );
 	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
 	drop_core_in_log();
 
 	// Re-read everything from the config file DaemonCore itself cares about.
+	// This also cleares the DNS cache.
 	daemonCore->reconfig();
 
-	// If we're doing a full reconfig, also call ReInit to clear out
-	// the DNS info we have cashed for the IP verify code. Also clear
-	// out the passwd cache.
+	// Clear out the passwd cache.
 	if( is_full ) {
-		daemonCore->ReInit();
 		clear_passwd_cache();
 	}
 
@@ -1346,19 +1360,21 @@ int main( int argc, char** argv )
 	if( ! mySubSystem ) {
 		EXCEPT( "Programmer error: mySubSystem is NULL!" );
 	}
-
-		// Figure out if we're the master or not.  The master is a
-		// special case daemon in many ways, so we want to just set a
-		// flag that we can check instead of doing this strcmp all the
-		// time.  -Derek Wright 1/13/98
-	if( strcmp(mySubSystem,"MASTER") == 0 ) {
-		is_master = 1;
+	if( !mySubSystem->isValid() ) {
+		mySubSystem->printf( );
+		EXCEPT( "Programmer error: mySubSystem info is invalid(%s,%d,%s)!",
+				mySubSystem->getName(),
+				mySubSystem->getType(),
+				mySubSystem->getTypeName() );
 	}
+
 
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.
 	i = 0;
 	bool done = false;
+	const char	*subsys_config = mySubSystem->getName();
+	const char  *local_config  = "<NONE>";
 
 	for(ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++) {
 		if(ptr[0][0] != '-') {
@@ -1439,17 +1455,65 @@ int main( int argc, char** argv )
 			}
 			break;
 #endif
-		case 'l':		// specify Log directory 
-			ptr++;
-			if( ptr && *ptr ) {
-				logDir = *ptr;
-				dcargs += 2;
-			} else {
-				fprintf( stderr, "DaemonCore: ERROR: -log needs another "
-						 "argument\n" );
-				exit( 1 );
-			}				  
+		case 'l':	// -local-config or -log
+			// specify local config
+			if ( strcmp( &ptr[0][1], "local-config" ) == 0 ) {
+				ptr++;
+				if( ptr && *ptr ) {
+					local_config = *ptr;
+					config_set_local_name( local_config );
+					dcargs += 2;
+				}
+				else {
+					fprintf( stderr, "DaemonCore: ERROR: "
+							 "-local-name needs another argument.\n" );
+					fprintf( stderr, 
+							 "   Please specify the local config to use.\n" );
+					exit( 1 );
+				}
+			}
+
+			// specify Log directory 
+			else {
+				ptr++;
+				if( ptr && *ptr ) {
+					logDir = *ptr;
+					dcargs += 2;
+				} else {
+					fprintf( stderr, "DaemonCore: ERROR: -log needs another "
+							 "argument\n" );
+					exit( 1 );
+				}
+			}
 			break;
+
+		case 's':	// -subsys-config
+			// specify subsystem configuration name
+			if ( strcmp( &ptr[0][1], "subsys-config" ) == 0 ) {
+				ptr++;
+				if( ptr && *ptr ) {
+					subsys_config = *ptr;
+					config_set_subsystem_name( subsys_config );
+					dcargs += 2;
+				}
+				else {
+					fprintf( stderr, "DaemonCore: ERROR: "
+							 "-subsys-config needs another argument.\n" );
+					fprintf( stderr, 
+							 "   Please specify subsystem name to use.\n" );
+					fprintf( stderr, 
+							 "   !!!USE WITH CAUTION!!!\n" );
+					exit( 1 );
+				}
+			}
+			else {
+					// it's not -subsys-config, so do NOT consume this arg!!
+					// in fact, we're done w/ DC args, since it's the
+					// first option we didn't recognize.
+				done = true;
+			}
+			break;
+
 		case 'h':		// -http <port> : specify port for HTTP and SOAP requests
 			if ( ptr[0][2] && ptr[0][2] == 't' ) {
 					// specify an HTTP port
@@ -1547,13 +1611,14 @@ int main( int argc, char** argv )
 	}
 
 		// call config so we can call param.  
-	if ( strcmp(mySubSystem,"SHADOW") == 0 ) {
+	if ( mySubSystem->isType(SUBSYSTEM_TYPE_SHADOW) ) {
 			// Try to minimize shadow footprint by not loading
 			// the "extra" info from the config file
 			config( wantsQuiet, false, false );
 	} else {
 			config( wantsQuiet, false, true );
 	}
+
 
     // call dc_config_GSI to set GSI related parameters so that all
     // the daemons will know what to do.
@@ -1593,7 +1658,7 @@ int main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(mySubSystem);
+		dprintf_config(mySubSystem->getName() );
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -1629,9 +1694,9 @@ int main( int argc, char** argv )
 		// with it.  Unfortunately, some 3rd party tools were writing
 		// directly to these FDs.  Now, you might not that that this
 		// would be a problem, right?  Unfortunately, once you close
-		// an FD (say, 1 or 2), then next safe_open_wrapper() or socket() call can
-		// / will now return 1 (or 2).  So, when libfoo.a thinks it
-		// fprintf()ing an error message to fd 2 (the FD behind
+		// an FD (say, 1 or 2), then next safe_open_wrapper() or socket()
+		// call can / will now return 1 (or 2).  So, when libfoo.a thinks
+		// it fprintf()ing an error message to fd 2 (the FD behind
 		// stderr), it's actually sending that message over a socket
 		// to a process that has no idea how to handle it.
 		//
@@ -1653,7 +1718,7 @@ int main( int argc, char** argv )
 		// it seems safest to just leave them open but attached to
 		// /dev/null.
 
-		if ( is_master ) {
+		if ( mySubSystem->isType( SUBSYSTEM_TYPE_MASTER ) ) {
 			int	fd_null = safe_open_wrapper( NULL_FILE, O_RDWR );
 			if ( fd_null < 0 ) {
 				fprintf( stderr, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );
@@ -1681,7 +1746,7 @@ int main( int argc, char** argv )
 
 	// See if the config tells us to wait on startup for a debugger to attach.
 	MyString debug_wait_param;
-	debug_wait_param.sprintf("%s_DEBUG_WAIT", mySubSystem);
+	debug_wait_param.sprintf("%s_DEBUG_WAIT", mySubSystem->getName() );
 	if (param_boolean(debug_wait_param.Value(), false, false)) {
 		int debug_wait = 1;
 		dprintf(D_ALWAYS,
@@ -1696,7 +1761,7 @@ int main( int argc, char** argv )
 		// we can instantiate a daemon core and it'll have the right
 		// pid.  Have lots of pid table hash buckets if we're the
 		// SCHEDD, since the SCHEDD could have lots of children... 
-	if ( strcmp(mySubSystem,"SCHEDD") == 0 ) {
+	if ( mySubSystem->isType( SUBSYSTEM_TYPE_SCHEDD ) ) {
 		daemonCore = new DaemonCore(503);
 	} else {
 		daemonCore = new DaemonCore();
@@ -1714,7 +1779,7 @@ int main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(mySubSystem);
+		dprintf_config(mySubSystem->getName() );
 	}
 
 		// Now that we have the daemonCore object, we can finally
@@ -1723,11 +1788,18 @@ int main( int argc, char** argv )
 		// configured now, so the dprintf()s will work.
 	dprintf(D_ALWAYS,"******************************************************\n");
 	dprintf(D_ALWAYS,"** %s (%s_%s) STARTING UP\n",
-			myName,myDistro->GetUc(),mySubSystem);
+			myName,myDistro->GetUc(), mySubSystem->getName() );
 	if( myFullName ) {
 		dprintf( D_ALWAYS, "** %s\n", myFullName );
 		free( myFullName );
 		myFullName = NULL;
+	}
+	dprintf(D_ALWAYS,"** %s\n", mySubSystem->getString() );
+	dprintf(D_ALWAYS,"** Configuration: subsystem:%s / local:%s\n",
+			subsys_config, local_config );
+	if ( ! mySubSystem->nameMatch(subsys_config) ) {
+		dprintf(D_ALWAYS, "** WARNING: %s will use %s for configuration\n",
+				mySubSystem->getName(), subsys_config );
 	}
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
@@ -1792,6 +1864,11 @@ int main( int argc, char** argv )
 	AllocConsole();
 #endif
 
+		// Avoid possibility of stale info sticking around from previous run.
+		// For example, we had problems in 7.0.4 and earlier with reconnect
+		// shadows in parallel universe reading the old schedd ad file.
+	kill_daemon_ad_file();
+
 		// Now that we have our pid, we could dump our pidfile, if we
 		// want it. 
 	if( pidFile ) {
@@ -1853,7 +1930,7 @@ int main( int argc, char** argv )
 		// This timer checks if our parent is dead; if so, we shutdown.
 		// We only do this on Unix; on NT we watch our parent via a different mechanism.
 		// Also note: we do not want the master to exibit this behavior!
-	if ( ! is_master ) {
+	if ( ! mySubSystem->isType(SUBSYSTEM_TYPE_MASTER) ) {
 		daemonCore->Register_Timer( 15, 120, 
 				(TimerHandler)check_parent, "check_parent" );
 	}
@@ -1877,9 +1954,10 @@ int main( int argc, char** argv )
 	daemonCore->Register_Timer( 0, cookie_refresh, 
 				(TimerHandler)handle_cookie_refresh, "handle_cookie_refresh");
  
-	if( !  strcmp(mySubSystem, "MASTER")
-        || strcmp(mySubSystem, "SCHEDD")
-        || strcmp(mySubSystem, "STARTD")) {
+
+	if( mySubSystem->isType( SUBSYSTEM_TYPE_MASTER ) ||
+		mySubSystem->isType( SUBSYSTEM_TYPE_SCHEDD ) ||
+		mySubSystem->isType( SUBSYSTEM_TYPE_STARTD ) ) {
         daemonCore->monitor_data.EnableMonitoring();
     }
 
@@ -1948,15 +2026,7 @@ int main( int argc, char** argv )
 								  (CommandHandler)time_offset_receive_cedar_stub,
 								  "time_offset_cedar_stub", 0, DAEMON );
 
-	// Call daemonCore's ReInit(), which clears the cached DNS info.
-	// It also initializes some stuff, which is why we call it now. 
-	// This function will set a timer to call itself again 8 hours
-	// after it's been called, so that even after an asynchronous
-	// reconfig, we still wait 8 hours instead of just using a
-	// periodic timer.  -Derek Wright <wright@cs.wisc.edu> 1/28/99 
-	daemonCore->ReInit();
-
-	// Call daemonCore's reconfig(), which reads everything else from
+	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes
 	// private data members, etc.
 	daemonCore->reconfig();
@@ -2054,11 +2124,7 @@ main( int argc, char** argv)
 			break;		// break out of for loop
 		}
 	}
-	if ( (Foreground != 1) && 
-			// the starter sets mySubSystem in main_pre_dc_init(), so 
-			// be careful when handling it this early in the game.
-			( mySubSystem != NULL && 
-			(strcmp(mySubSystem,"MASTER") == 0)) ) {
+	if ( (Foreground != 1) && mySubSystem->isType(SUBSYSTEM_TYPE_MASTER) ) {
 		main_init(-1,NULL);	// passing the master main_init a -1 will register as an NT service
 		return 1;
 	} else {

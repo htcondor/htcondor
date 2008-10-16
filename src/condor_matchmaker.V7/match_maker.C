@@ -30,6 +30,7 @@
 #include "conversion.h"
 using namespace std;
 
+#include "subsystem_info.h"
 #include "match_maker.h"
 #include "match_maker_resources.h"
 #include "newclassad_stream.h"
@@ -47,16 +48,16 @@ public:
 		TimerHandlercpp	 handler );
 	~MatchMakerIntervalTimer( void );
 	bool Config( void );
-	
+
 private:
 	const char		*m_Name;
 	const char		*m_ParamName;
-	int				m_Initial;
-	int				m_Default;
+	int				 m_Initial;
+	int				 m_Default;
 	MatchMaker		*m_MatchMaker;
 	TimerHandlercpp	 m_Handler;
-	int				m_TimerId;
-	int				m_Interval;
+	int				 m_TimerId;
+	int				 m_Interval;
 };
 
 MatchMakerIntervalTimer::MatchMakerIntervalTimer(
@@ -151,24 +152,11 @@ MatchMaker::~MatchMaker( void )
 	if ( m_collectorList ) {
 		delete m_collectorList;
 	}
-	if ( m_myName ) {
-		delete m_myName;
-	}
-
 }
 
 int
-MatchMaker::init( const char *name )
+MatchMaker::init( void )
 {
-	if ( name && strlen(name) ) {
-		dprintf( D_ALWAYS, "Setting my name to '%s'\n", name );
-		int len = strlen(name);
-		m_myName = new char[len+1];
-		strcpy( m_myName, name );
-	}
-	else {
-		m_myName = NULL;
-	}
 
 	// Read our Configuration parameters
 	config( );
@@ -221,12 +209,8 @@ MatchMaker::config( void )
 
 	// Get the classad log file
 	tmp = NULL;
-	if ( m_myName ) {
-		name.sprintf( "MATCHMAKER_%s_CLASSAD_LOG", m_myName );
-		tmp = param( name.GetCStr() );
-	}
 	if ( NULL == tmp ) {
-		tmp = param( "MATCHMAKER_CLASSAD_LOG" );
+		tmp = param( "CLASSAD_LOG" );
 	}
 	if ( tmp ) {
 		m_resources.setCollectionLog( tmp );
@@ -234,13 +218,7 @@ MatchMaker::config( void )
 	}
 
 	// Enable verbose logging of ads?
-	if ( m_myName ) {
-		name.sprintf( "MATCHMAKER_%s_DEBUG_ADS", m_myName );
-		tmp = param( name.GetCStr() );
-	}
-	if ( NULL == tmp ) {
-		tmp = param( "MATCHMAKER_DEBUG_ADS" );
-	}
+	tmp = param( "DEBUG_ADS" );
 	if ( tmp ) {
 		if ( ( *tmp == 't' ) || ( *tmp == 'T' ) ) {
 			m_resources.setAdDebug( true );
@@ -268,13 +246,7 @@ MatchMaker::config( void )
 	}
 
 	// Query type
-	if ( m_myName ) {
-		name.sprintf( "MATCHMAKER_%s_QUERY_ADTYPE", m_myName );
-		tmp = param( name.GetCStr() );
-	}
-	if ( NULL == tmp ) {
-		tmp = param( "MATCHMAKER_QUERY_ADTYPE");
-	}
+	tmp = param( "QUERY_ADTYPE");
 	if ( tmp ) {
 		AdTypes	type = AdTypeFromString( tmp );
 		if ( type == NO_AD ) {
@@ -291,14 +263,7 @@ MatchMaker::config( void )
 	}
 
 	// Query constraints
-	tmp = NULL;
-	if ( m_myName ) {
-		name.sprintf( "MATCHMAKER_%s_QUERY_CONSTRAINTS", m_myName );
-		tmp = param( name.GetCStr() );
-	}
-	if ( NULL == tmp ) {
-		tmp = param( "MATCHMAKER_QUERY_CONSTRAINTS" );
-	}
+	tmp = param( "QUERY_CONSTRAINTS" );
 	if ( tmp ) {
 		m_queryConstraints = tmp;
 		free( tmp );
@@ -321,22 +286,9 @@ bool
 MatchMaker::ParamInt( const char *param_name, int &value,
 					  int default_value, int min_value, int max_value )
 {
-	MyString	full_name;
-	bool		found = false;
-
-	if ( m_myName ) {
-		full_name.sprintf( "MATCH_MAKER_%s_%s", m_myName, param_name );
-		found = param_integer( full_name.GetCStr(), value,
-							   true, default_value,
-							   true, min_value, max_value );
-	}
-	if ( ! found ) {
-		full_name.sprintf( "MATCH_MAKER_%s", param_name );
-		found = param_integer( full_name.GetCStr(), value,
-							   true, default_value,
-							   true, min_value, max_value );
-	}
-	return found;
+	return param_integer( param_name, value,
+						  true, default_value,
+						  true, min_value, max_value );
 }
 
 int
@@ -578,11 +530,11 @@ MatchMaker::initPublicAd( void )
 
 	m_publicAd.Assign( ATTR_MACHINE, my_full_hostname() );
 
-	char* defaultName = NULL;
-	if( m_myName ) {
-		m_publicAd.Assign( ATTR_NAME, m_myName );
+	const char *local = NULL;
+	if ( local ) {
+		m_publicAd.Assign( ATTR_NAME, local );
 	} else {
-		defaultName = default_daemon_name( );
+		const char *defaultName = default_daemon_name( );
 		if( ! defaultName ) {
 			EXCEPT( "default_daemon_name() returned NULL" );
 		}

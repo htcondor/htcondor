@@ -1102,6 +1102,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				rip->r_pre->loadAccountingInfo();
 				rip->r_pre->setrank( rank );
 				rip->r_pre->setoldrank( rip->r_cur->rank() );
+				rip->r_pre->loadRequestInfo();
 
 					// Create a new claim id for preempting this preempting
 					// claim (in case of long retirement).
@@ -1322,6 +1323,8 @@ accept_request_claim( Resource* rip )
 		free( acct_grp );
 		acct_grp = NULL;
 	}
+
+	rip->r_cur->loadRequestInfo();
 
 		// Since we're done talking to this schedd, delete the stream.
 	rip->r_cur->setRequestStream( NULL );

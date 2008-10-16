@@ -81,6 +81,12 @@
 #include "condor_getcwd.h"
 #include "set_user_priv_from_ad.h"
 #include "classad_visa.h"
+#include "subsystem_info.h"
+#include "../condor_privsep/condor_privsep.h"
+
+#if HAVE_DLOPEN
+#include "ScheddPlugin.h"
+#endif
 
 #define DEFAULT_SHADOW_SIZE 125
 #define DEFAULT_JOB_START_COUNT 1
@@ -112,7 +118,6 @@ extern char * Name;
 static char * NameInEnv = NULL;
 extern char * JobHistoryFileName;
 extern char * PerJobHistoryDir;
-extern char * mySubSystem;
 
 extern bool        DoHistoryRotation; 
 extern filesize_t  MaxHistoryFileSize;
@@ -259,7 +264,6 @@ match_rec::~match_rec()
 		claim_requester->setMiscDataPtr( NULL );
 		claim_requester->cancelMessage();
 		claim_requester = NULL;
-		scheduler.rescheduleContactQueue();
 	}
 }
 
@@ -556,6 +560,11 @@ Scheduler::timeout()
 		dprintf(D_ALWAYS,"Negotiator gone, trying to use our local startd\n");
 	}
 
+		// In case we were not able to drain the startd contact queue
+		// because of too many registered sockets or something, give it
+		// a spin.
+	scheduler.rescheduleContactQueue();
+
 	SchedDInterval.setFinishTimeNow();
 
 	/* Reset our timer */
@@ -778,6 +787,9 @@ Scheduler::count_jobs()
 	m_ad->Insert (tmp);
 
         // Tell negotiator to send us the startd ad
+		// As of 7.1.3, the negotiator no longer pays attention to this
+		// attribute; it _always_ sends the resource request ad.
+		// For backward compatibility with older negotiators, we still set it.
 	sprintf(tmp, "%s = True", ATTR_WANT_RESOURCE_AD );
 	m_ad->InsertOrUpdate(tmp);
 
@@ -785,6 +797,10 @@ Scheduler::count_jobs()
 
 		// log classad into sql log so that it can be updated to DB
 	FILESQL::daemonAdInsert(m_ad, "ScheddAd", FILEObj, prevLHF);
+
+#if HAVE_DLOPEN
+	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, m_ad);
+#endif
 	
 		// Update collectors
 	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, m_ad, NULL, true);
@@ -844,6 +860,9 @@ Scheduler::count_jobs()
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   Owners[i].Name, UidDomain );
 
+#if HAVE_DLOPEN
+	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, m_ad);
+#endif
 		// Update collectors
 	  num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, m_ad, NULL, true);
 	  dprintf( D_ALWAYS, "Sent ad to %d collectors for %s@%s\n", 
@@ -4517,7 +4536,6 @@ Scheduler::negotiate(int command, Stream* s)
 	char*	claim_id = NULL;			// claim_id for each match made
 	char*	host = NULL;
 	char*	sinful = NULL;
-	char*	tmp;
 	int		jobs;						// # of jobs that CAN be negotiated
 	int		cur_cluster = -1;
 	int		cur_hosts;
@@ -4540,6 +4558,8 @@ Scheduler::negotiate(int command, Stream* s)
 	char buffer[1024];
 	bool cant_spawn_shadow = false;
 	bool skip_negotiation = false;
+	match_rec *pre_existing_match = NULL;
+	int num_pre_existing_matches_received = 0;
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
@@ -4848,7 +4868,7 @@ Scheduler::negotiate(int command, Stream* s)
 			}
 		}
 
-		for (host_cnt = cur_hosts; host_cnt < max_hosts;) {
+		for (host_cnt = cur_hosts; host_cnt < max_hosts && !skip_negotiation;) {
 
 			/* Wait for manager to request job info */
 
@@ -4934,13 +4954,19 @@ Scheduler::negotiate(int command, Stream* s)
 					break;
 				}
 				case PERMISSION:
+						// No negotiator since 7.1.3 should ever send this
+						// command, and older ones should not send it either,
+						// since we advertise WantResAd=True.
+					dprintf( D_ALWAYS, "Negotiator sent PERMISSION rather than expected PERMISSION_AND_AD!  Aborting.\n");
+					return !(KEEP_STREAM);
+					break;
 				case PERMISSION_AND_AD:
 					/*
 					 * If things are cool, contact the startd.
 					 * But... of the claim_id is the string "null", that means
 					 * the resource does not support the claiming protocol.
 					 */
-					dprintf ( D_FULLDEBUG, "In case PERMISSION\n" );
+					dprintf ( D_FULLDEBUG, "In case PERMISSION_AND_AD\n" );
 
 					sprintf(buffer,"%s = %d",
 									ATTR_LAST_MATCH_TIME,(int)time(0));
@@ -4952,16 +4978,15 @@ Scheduler::negotiate(int command, Stream* s)
 						return (!(KEEP_STREAM));
 					}
 					my_match_ad = NULL;
-					if ( op == PERMISSION_AND_AD ) {
-						// get startd ad from negotiator as well
-						my_match_ad = new ClassAd();
-						if( !my_match_ad->initFromStream(*s) ) {
-							dprintf( D_ALWAYS,
-								"Can't get my match ad from mgr\n" );
-							delete my_match_ad;
-							FREE( claim_id );
-							return (!(KEEP_STREAM));
-						}
+
+					// get startd ad from negotiator as well
+					my_match_ad = new ClassAd();
+					if( !my_match_ad->initFromStream(*s) ) {
+						dprintf( D_ALWAYS,
+							"Can't get my match ad from mgr\n" );
+						delete my_match_ad;
+						FREE( claim_id );
+						return (!(KEEP_STREAM));
 					}
 					if( !s->end_of_message() ) {
 						dprintf( D_ALWAYS,
@@ -4971,10 +4996,6 @@ Scheduler::negotiate(int command, Stream* s)
 						FREE( claim_id );
 						return (!(KEEP_STREAM));
 					}
-						// claim_id is in the form
-						// "<xxx.xxx.xxx.xxx:xxxx>#xxxxxxx" 
-						// where everything upto the # is the sinful
-						// string of the startd
 
 					{
 						ClaimIdParser idp(claim_id);
@@ -4982,8 +5003,7 @@ Scheduler::negotiate(int command, Stream* s)
 						         "## 4. Received ClaimId %s\n", idp.publicClaimId() );
 					}
 
-					if ( my_match_ad ) {
-						dprintf(D_PROTOCOL,"Received match ad\n");
+					{
 
 							// Look to see if the job wants info about 
 							// old matches.  If so, store info about old
@@ -5078,36 +5098,65 @@ Scheduler::negotiate(int command, Stream* s)
 					////// CLAIMING LOGIC  
 					/////////////////////////////////////////////
 
-						// First pull out the sinful string from ClaimId,
-						// so we know whom to contact to claim.
-					sinful = strdup( claim_id );
-					tmp = strchr( sinful, '#');
-					if( tmp ) {
-						*tmp = '\0';
-					} else {
-						dprintf( D_ALWAYS, "Can't find '#' in ClaimId!\n" );
-							// What else should we do here?
-						FREE( sinful );
-						FREE( claim_id );
-						sinful = NULL;
-						claim_id = NULL;
-						if( my_match_ad ) {
+					{
+						Daemon startd(my_match_ad,DT_STARTD,NULL);
+						if( !startd.addr() ) {
+							dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
+							my_match_ad->dPrint(D_ALWAYS);
 							delete my_match_ad;
 							my_match_ad = NULL;
+							break;
 						}
-						break;
+						sinful = strdup( startd.addr() );
 					}
+
 						// sinful should now point to the sinful string
 						// of the startd we were matched with.
+					pre_existing_match = NULL;
 					mrec = AddMrec( claim_id, sinful, &id, my_match_ad,
-									owner, negotiator_name );
+									owner,negotiator_name,&pre_existing_match);
 
 						/* if AddMrec returns NULL, it means we can't
 						   use that match.  in that case, we'll skip
 						   over the attempt to stash the info, go
 						   straight to deallocating memory we used in
 						   this protocol, and break out of this case
+
+						   One reason this can happen is that the
+						   negotiator handed us a claim id that we
+						   already have.  If that happens a lot, it
+						   probably means the negotiator has a lot of
+						   stale info about the startds.  One
+						   pathalogical case where that can happen is
+						   when the negotiatior is configured to not
+						   send match info to the startds, so the
+						   startds keep advertising the same claimid
+						   until they get the claim request from the
+						   schedd.  If this schedd is behind on
+						   requesting claims and it starts negotiating
+						   for more jobs, only to receive a lot of
+						   stale claim ids, it will have wasted more
+						   than the usual amount of time in
+						   negotiation and so may fall even further
+						   behind in requesting claims.
+
+						   Therefore, if we get more than a handfull
+						   of claimids for startds we have not yet
+						   requested, abort this round of negotiation.
 						*/
+
+					if( !mrec && pre_existing_match &&
+						(pre_existing_match->status==M_UNCLAIMED ||
+						 pre_existing_match->status==M_STARTD_CONTACT_LIMBO))
+					{
+						if( ++num_pre_existing_matches_received > 10 ) {
+							dprintf(D_ALWAYS,"Too many pre-existing matches "
+							        "received (due to stale info in "
+							        "negotiator), so ending this round of "
+							        "negotiation.\n");
+							skip_negotiation = true;
+						}
+					}
 
 						// clear this out so we know if we use it...
 					args = NULL;
@@ -5377,6 +5426,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	ClaimStartdMsg *msg = (ClaimStartdMsg *)cb->getMessage();
 
 	this->num_pending_startd_contacts--;
+	scheduler.rescheduleContactQueue();
 
 	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED ) {
 			// do nothing, because misc_data points to a deleted match_rec
@@ -5432,8 +5482,6 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	else {
 		scheduler.StartJob( match );
 	}
-
-	scheduler.rescheduleContactQueue();
 }
 
 
@@ -5457,6 +5505,9 @@ Scheduler::enqueueStartdContact( ContactStartdArgs* args )
 void
 Scheduler::rescheduleContactQueue()
 {
+	if( startdContactQueue.IsEmpty() ) {
+		return; // nothing to do
+	}
 		 /*
 		   If we haven't already done so, register a timer to go off
            in zero seconds to call checkContactQueue().  This will
@@ -5597,11 +5648,19 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		free( owner );
 		return;
 	}
+	if( GetAttributeStringNew(cluster, proc, ATTR_STARTD_IP_ADDR, &startd_addr) < 0 ) {
+			// We only expect to get here when reading a job queue created
+			// by a version of Condor older than 7.1.3, because we no longer
+			// rely on the claim id to tell us how to connect to the startd.
+		dprintf( D_ALWAYS, "WARNING: %s not in job queue for %d.%d, "
+				 "so using claimid.\n", ATTR_STARTD_IP_ADDR, cluster, proc );
+		startd_addr = getAddrFromClaimId( claim_id );
+		SetAttributeString(cluster, proc, ATTR_STARTD_IP_ADDR, startd_addr);
+	}
 	
 	int universe;
 	GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &universe );
 
-	startd_addr = getAddrFromClaimId( claim_id );
 	if( GetAttributeStringNew(cluster, proc, ATTR_REMOTE_POOL,
 							  &pool) < 0 ) {
 		free( pool );
@@ -5971,9 +6030,6 @@ Scheduler::StartJob(match_rec *rec)
 	case M_UNCLAIMED:
 		dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->description());
 		return;
-	case M_CONNECTING:
-		dprintf(D_FULLDEBUG, "match (%s) waiting for connection\n", rec->description());
-		return;
 	case M_STARTD_CONTACT_LIMBO:
 		dprintf ( D_FULLDEBUG, "match (%s) waiting for startd contact\n", 
 				  rec->description() );
@@ -6238,7 +6294,7 @@ Scheduler::StartJobHandler()
 			continue;
 		}
 
-		if ( param_boolean("PRIVSEP_ENABLED", false) ) {
+		if ( privsep_enabled() ) {
 			// If there is no available transferd for this job (and it 
 			// requires it), then start one and put the job back into the queue
 			if ( jobNeedsTransferd(cluster, proc, srec->universe) ) {
@@ -6659,7 +6715,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	// send the location of the transferd the shadow should use for
 	// this user. Due to the nasty method of command line argument parsing
 	// by the shadow, this should be first on the command line.
-	if ( param_boolean("PRIVSEP_ENABLED", false) && 
+	if ( privsep_enabled() && 
 			jobNeedsTransferd(job_id->cluster, job_id->proc, universe) )
 	{
 		TransferDaemon *td = NULL;
@@ -7919,14 +7975,15 @@ add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false)
 
 		// Update the job's counter for the number of times a shadow
 		// was started (if this job has a shadow at all, that is).
+		// For the local universe, "shadow" means local starter.
 	int num;
 	switch (job_univ) {
 	case CONDOR_UNIVERSE_SCHEDULER:
-	case CONDOR_UNIVERSE_LOCAL:
 			// CRUFT: ATTR_JOB_RUN_COUNT is deprecated
 		if (GetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, &num) < 0) {
 			num = 0;
 		}
+		num++;
 		SetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, num);
 		break;
 
@@ -8000,6 +8057,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 
 		SetAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->claimId() );
 		SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->publicClaimId() );
+		SetAttributeString( cluster, proc, ATTR_STARTD_IP_ADDR, mrec->peer );
 		SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL,
 						 (int)time(0) ); 
 
@@ -8290,6 +8348,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_CLAIM_IDS );
 		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_IDS );
+		DeleteAttribute( cluster, proc, ATTR_STARTD_IP_ADDR );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_HOST );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_SLOT_ID );
@@ -10958,10 +11017,13 @@ Scheduler::sendReschedule( bool checkRecent /* = true */ )
 
 match_rec*
 Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match_ad,
-				   char *user, char *pool)
+				   char *user, char *pool, match_rec **pre_existing)
 {
 	match_rec *rec;
 
+	if( pre_existing ) {
+		*pre_existing = NULL;
+	}
 	if(!id || !peer)
 	{
 		dprintf(D_ALWAYS, "Null parameter --- match not added\n"); 
@@ -10978,8 +11040,11 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 	if( matches->lookup( HashKey( id ), tempRec ) == 0 ) {
 		dprintf( D_ALWAYS,
 				 "attempt to add pre-existing match \"%s\" ignored\n",
-				 id ? id : "(null)" );
+				 rec->publicClaimId() ? rec->publicClaimId() : "(null)" );
 		delete rec;
+		if( pre_existing ) {
+			*pre_existing = tempRec;
+		}
 		return NULL;
 	}
 	if( matches->insert( HashKey( id ), rec ) != 0 ) {
@@ -12811,7 +12876,7 @@ WriteCompletionVisa(ClassAd* ad)
 
 	prev_priv_state = set_user_priv_from_ad(*ad);
 	classad_visa_write(ad,
-	                   mySubSystem,
+	                   mySubSystem->getName(),
 	                   daemonCore->InfoCommandSinfulString(),
 	                   iwd.Value(),
 	                   NULL);

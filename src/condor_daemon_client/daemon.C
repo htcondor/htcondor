@@ -39,11 +39,9 @@
 #include "time_offset.h"
 #include "condor_netdb.h"
 #include "daemon_core_sock_adapter.h"
+#include "subsystem_info.h"
 
 #include "counted_ptr.h"
-
-extern char *mySubSystem;
-
 
 void
 Daemon::common_init() {
@@ -68,7 +66,7 @@ Daemon::common_init() {
 	_cmd_str = NULL;
 	m_daemon_ad_ptr = NULL;
 	char buf[200];
-	sprintf(buf,"%s_TIMEOUT_MULTIPLIER",mySubSystem);
+	sprintf(buf,"%s_TIMEOUT_MULTIPLIER",mySubSystem->getName() );
 	Sock::set_timeout_multiplier( param_integer(buf,0) );
 }
 

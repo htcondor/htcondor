@@ -23,13 +23,13 @@
 #include "condor_config.h"
 #include "condor_perms.h"
 #include "condor_netdb.h"
+#include "subsystem_info.h"
 
 #include "HashTable.h"
 #include "sock.h"
 #include "condor_secman.h"
 
 // Externs to Globals
-extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
 
 const char TotallyWild[] = "*";
 
@@ -62,6 +62,7 @@ IpVerify::IpVerify()
 	DCpermission perm;
 	for (perm=FIRST_PERM; perm<LAST_PERM; perm=NEXT_PERM(perm)) {
 		PermTypeArray[perm] = NULL;
+		PunchedHoleArray[perm] = NULL;
 	}
 
 	PermHashTable = new PermHashTable_t(797, compute_perm_hash);
@@ -86,12 +87,14 @@ IpVerify::~IpVerify()
 		delete PermHashTable;
 	}
 
-	// Clear the Permission Type Array
+	// Clear the Permission Type Array and Punched Hole Array
 	DCpermission perm;
 	for (perm=FIRST_PERM; perm<LAST_PERM; perm=NEXT_PERM(perm)) {
 		if ( PermTypeArray[perm] )
 			delete PermTypeArray[perm];
-	}
+		if ( PunchedHoleArray[perm] )
+			delete PunchedHoleArray[perm];
+	}	
 }
 
 
@@ -138,10 +141,12 @@ IpVerify::Init()
 
 		MyString allow_param, deny_param;
 
-		pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param,mySubSystem);
+		pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param,
+										  mySubSystem->getName() );
 
         // This is the old stuff, eventually it will be gone
-		pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param,mySubSystem);
+		pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param,
+										  mySubSystem->getName() );
 
         // Treat a "*", "*/*" for USERALLOW_XXX as if it's just
         // undefined. 
@@ -159,9 +164,11 @@ IpVerify::Init()
 		// concat the two
 		pAllow = merge(pNewAllow, pOldAllow);
 
-		pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param,mySubSystem);
+		pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param,
+										 mySubSystem->getName() );
 
-		pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param,mySubSystem);
+		pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param,
+										 mySubSystem->getName() );
 
 		// concat the two
 		pDeny = merge(pNewDeny, pOldDeny);
@@ -480,6 +487,8 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 			continue;
 		}
 		split_entry(entry, &host, &user);
+		ASSERT( host );
+		ASSERT( user );
 
 			// If this is a hostname, get all IP addresses for it and
 			// add them to the list.  This ensures that if we are given
@@ -503,12 +512,8 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 			}
 		}
 
-		if (host) {
-			free(host);
-		}
-		if (user) {
-			free(user);
-		}
+		free(host);
+		free(user);
 	}
 
     if (allow) {
@@ -606,6 +611,21 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 	free( permbuf );
 }
 
+void
+IpVerify::reconfig()
+{
+	did_init = false;
+}
+
+void
+IpVerify::refreshDNS() {
+		// NOTE: this may be called when the daemon is starting a reconfig.
+		// The new configuration may not have been read yet, but we do
+		// not care, because this just sets a flag and we do the actual
+		// work later.
+	reconfig();
+}
+
 int
 IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char * user )
 {
@@ -614,6 +634,10 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 	char *thehost;
 	char **aliases;
     const char * who = user;
+
+	if( !did_init ) {
+		Init();
+	}
 
 	/*
 	 * Be Warned:  careful about parameter "sin" being NULL.  It could be, in
@@ -632,6 +656,8 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		return TRUE;
 		break;
 
+	default:
+		break;
 	}
 
 	memcpy(&sin_addr,&sin->sin_addr,sizeof(sin_addr));
@@ -656,8 +682,8 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		// This is important, because we do not want holes to find
 		// there way into the authorization cache.
 		//
-	if ( PermTypeArray[perm]->hole_punch_table != NULL ) {
-		HolePunchTable_t* hpt = PermTypeArray[perm]->hole_punch_table;
+	if ( PunchedHoleArray[perm] != NULL ) {
+		HolePunchTable_t* hpt = PunchedHoleArray[perm];
 		char* ip_str = inet_ntoa(sin->sin_addr);
 		MyString id;
 		int count;
@@ -817,25 +843,26 @@ IpVerify::lookup_user(NetStringList *hosts, UserHash_t *users, char const *user,
 	ASSERT( !ip || !hostname );
 	ASSERT( ip || hostname);
 
-	char const * hostmatch = NULL;
+	StringList hostmatches;
 	if( ip ) {
-		hostmatch = hosts->string_withnetwork(ip);
+		hosts->find_matches_withnetwork(ip,&hostmatches);
 	}
 	else if( hostname ) {
-		hostmatch = hosts->string_anycase_withwildcard(hostname);
+		hosts->find_matches_anycase_withwildcard(hostname,&hostmatches);
 	}
 
-	if( !hostmatch ) {
-		return false;
-	}
-	StringList *userlist;
-	ASSERT( users->lookup(hostmatch,userlist) != -1 );
+	char const * hostmatch;
+	hostmatches.rewind();
+	while( (hostmatch=hostmatches.next()) ) {
+		StringList *userlist;
+		ASSERT( users->lookup(hostmatch,userlist) != -1 );
 
-	if (userlist->contains_anycase_withwildcard(user)) {
-		dprintf ( D_SECURITY, "IPVERIFY: matched user %s from %s to %s list\n",
-				  user, hostmatch, is_allow_list ? "allow" : "deny" );
-		return true;
-    }
+		if (userlist->contains_anycase_withwildcard(user)) {
+			dprintf ( D_SECURITY, "IPVERIFY: matched user %s from %s to %s list\n",
+					  user, hostmatch, is_allow_list ? "allow" : "deny" );
+			return true;
+		}
+	}
 
 	return false;
 }
@@ -852,19 +879,18 @@ IpVerify::PunchHole(DCpermission perm, MyString& id)
 	if (PermTypeArray[perm] == NULL) {
 		return false;
 	}
-	PermTypeEntry* pte = PermTypeArray[perm];
 
 	int count = 0;
-	if (pte->hole_punch_table == NULL) {
-		pte->hole_punch_table =
+	if (PunchedHoleArray[perm] == NULL) {
+		PunchedHoleArray[perm] =
 			new HolePunchTable_t(compute_host_hash);
-		ASSERT(pte->hole_punch_table != NULL);
+		ASSERT(PunchedHoleArray[perm] != NULL);
 	}
 	else {
 		int c;
-		if (pte->hole_punch_table->lookup(id, c) != -1) {
+		if (PunchedHoleArray[perm]->lookup(id, c) != -1) {
 			count = c;
-			if (pte->hole_punch_table->remove(id) == -1) {
+			if (PunchedHoleArray[perm]->remove(id) == -1) {
 				EXCEPT("IpVerify::PunchHole: "
 				           "table entry removal error");
 			}
@@ -872,7 +898,7 @@ IpVerify::PunchHole(DCpermission perm, MyString& id)
 	}
 
 	count++;
-	if (pte->hole_punch_table->insert(id, count) == -1) {
+	if (PunchedHoleArray[perm]->insert(id, count) == -1) {
 		EXCEPT("IpVerify::PunchHole: table entry insertion error");
 	}
 
@@ -910,24 +936,24 @@ IpVerify::FillHole(DCpermission perm, MyString& id)
 	if (PermTypeArray[perm] == NULL) {
 		return false;
 	}
-	PermTypeEntry* pte = PermTypeArray[perm];
 
-	if (pte->hole_punch_table == NULL) {
+	HolePunchTable_t* table = PunchedHoleArray[perm];
+	if (table == NULL) {
 		return false;
 	}
 
 	int count;
-	if (pte->hole_punch_table->lookup(id, count) == -1) {
+	if (table->lookup(id, count) == -1) {
 		return false;
 	}
-	if (pte->hole_punch_table->remove(id) == -1) {
+	if (table->remove(id) == -1) {
 		EXCEPT("IpVerify::FillHole: table entry removal error");
 	}
 
 	count--;
 
 	if (count != 0) {
-		if (pte->hole_punch_table->insert(id, count) == -1) {
+		if (table->insert(id, count) == -1) {
 			EXCEPT("IpVerify::FillHole: "
 			           "table entry insertion error");
 		}
@@ -983,14 +1009,11 @@ IpVerify::PermTypeEntry::~PermTypeEntry() {
 		}
 		delete deny_users;
 	}
-	if (hole_punch_table) {
-		delete hole_punch_table;
-	}
 }
 
 
 #ifdef WANT_STANDALONE_TESTING
-char *mySubSystem = "COLLECTOR";
+DECL_SUBSYSTEM( "COLLECTOR", SUBSYSTEM_TYPE_COLLECTOR );
 #include "condor_io.h"
 #ifdef WIN32
 #	include <crtdbg.h>

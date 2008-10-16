@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include "subsystem_info.h"
 #include "condor_io.h"
 #include "condor_attributes.h"
 #include "condor_version.h"
@@ -173,8 +174,10 @@ printClassAd( void )
 }
 
 
-char *mySubSystem = NULL;
 static char* orig_cwd = NULL;
+
+/* For daemonCore, etc. */
+DECL_SUBSYSTEM( NULL, SUBSYSTEM_TYPE_STARTER );
 
 void
 main_pre_dc_init( int argc, char* argv[] )
@@ -185,7 +188,7 @@ main_pre_dc_init( int argc, char* argv[] )
 	char const *tmp;
 	tmp = strrchr(base, '_' );
 	if( tmp && strincmp(tmp, "_gridshell", 10) == MATCH ) {
-		mySubSystem = "GRIDSHELL";
+		mySubSystem->setName( "GRIDSHELL" );
 		is_gridshell = true;
 	} else { 
 		int i, len;
@@ -197,14 +200,14 @@ main_pre_dc_init( int argc, char* argv[] )
 				continue;
 			}
 			if( strincmp(argv[i], "-gridshell", MIN(len,10)) == MATCH ) {
-				mySubSystem = "GRIDSHELL";
+				mySubSystem->setName( "GRIDSHELL" );
 				is_gridshell = true;
 				break;
 			}
 		}
 	}
 	if( ! is_gridshell ) {
-		mySubSystem = "STARTER";
+		mySubSystem->setName( "STARTER" );
 	}
 
 		// if we were passed "-classad", just print our classad and
@@ -227,7 +230,7 @@ main_pre_dc_init( int argc, char* argv[] )
 
 		//Termlog = 1;
 
-		dprintf_config(mySubSystem);
+		dprintf_config(mySubSystem->getName() );
 
 		printClassAd();
 		exit(0);

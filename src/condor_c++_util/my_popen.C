@@ -23,6 +23,7 @@
 #include "condor_debug.h"
 #include "condor_arglist.h"
 #include "my_popen.h"
+#include "sig_install.h"
 
 #ifdef WIN32
 typedef HANDLE child_handle_t;
@@ -345,6 +346,14 @@ my_popenv( char *const args[], const char * mode, int want_stderr )
 		setgroups( 1, &egid );
 		setgid( egid );
 		setuid( euid );
+
+			/* before we exec(), clear the signal mask and reset SIGPIPE
+			   to SIG_DFL
+			*/
+		install_sig_handler(SIGPIPE, SIG_DFL);
+		sigset_t sigs;
+		sigfillset(&sigs);
+		sigprocmask(SIG_UNBLOCK, &sigs, NULL);
 
 		execvp(args[0], args);
 		_exit( ENOEXEC );		/* This isn't safe ... */

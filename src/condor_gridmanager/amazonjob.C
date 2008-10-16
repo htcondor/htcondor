@@ -148,7 +148,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	MyString error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
-	char *gahp_min_workers = NULL;
+	int gahp_worker_cnt = NULL;
 	char *gahp_debug = NULL;
 	ArgList args;
 	
@@ -261,15 +261,12 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	}
 
 	args.AppendArg("-w");
-	gahp_min_workers = param( "AMAZON_GAHP_WORKER_MIN_NUM" );
-	if (!gahp_min_workers) {
-		args.AppendArg("1");
-	} else {
-		args.AppendArg(gahp_min_workers);
-		free(gahp_min_workers);
-	}
+	gahp_worker_cnt = param_integer( "AMAZON_GAHP_WORKER_MIN_NUM", 1 );
+	args.AppendArg(gahp_worker_cnt);
 
-		// FIXME: Change amazon-gahp to accept AMAZON_GAHP_WORKER_MAX_NUM
+	args.AppendArg("-m");
+	gahp_worker_cnt = param_integer( "AMAZON_GAHP_WORKER_MAX_NUM", 5 );
+	args.AppendArg(gahp_worker_cnt);
 
 	args.AppendArg("-d");
 	gahp_debug = param( "AMAZON_GAHP_DEBUG" );
@@ -452,6 +449,19 @@ int AmazonJob::doEvaluateState()
 				// in EC2 and save it in GridJobId in the schedd. This
 				// will be our handle to the job until we get the instance
 				// id at the end of the submission process.
+
+				if ( (condorState == REMOVED) ||
+					 (condorState == HELD) ) {
+
+					gmState = GM_DELETE;
+				}
+
+				// Once RequestSubmit() is called at least once, you must
+				// CancelSubmit() once the submission process is complete
+				// or aborted.
+				if ( myResource->RequestSubmit( this ) == false ) {
+					break;
+				}
 
 				if ( m_key_pair == "" ) {
 					SetKeypairId( build_keypair().Value() );
@@ -912,17 +922,43 @@ int AmazonJob::doEvaluateState()
 
 			case GM_CREATE_KEYPAIR:
 				{
+				// Once RequestSubmit() is called at least once, you must
+				// CancelSubmit() once the submission process is complete
+				// or aborted.
+				if ( myResource->RequestSubmit( this ) == false ) {
+					// If we haven't started the CREATE_KEYPAIR call yet,
+					// we can abort the submission here for held and
+					// removed jobs.
+					if ( (condorState == REMOVED) ||
+						 (condorState == HELD) ) {
+
+						gmState = GM_DELETE;
+					}
+					break;
+				}
+
 				// now create and register this keypair by using amazon_vm_create_keypair()
 				rc = gahp->amazon_vm_create_keypair(m_public_key_file, m_private_key_file, 
 													m_key_pair.Value(), m_key_pair_file.Value(), gahp_error_code);
 
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+				if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				} else if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ) {
+					if ( (condorState == REMOVED) ||
+						 (condorState == HELD) ) {
+						gmState = GM_DELETE;
+					}
 					break;
 				}
 
 				if (rc == 0) {
-					gmState = GM_START_VM;
+					if ( (condorState == REMOVED) ||
+						 (condorState == HELD) ) {
 
+						gmState = GM_DESTROY_KEYPAIR;
+					} else {
+						gmState = GM_START_VM;
+					}
 				} else {
 					if ( strcmp(gahp_error_code, "NEED_CHECK_SSHKEY" ) == 0 ) {
 						

@@ -46,7 +46,7 @@ class MatchMaker : public Service
 	// ctor/dtor
 	MatchMaker( void );
 	~MatchMaker( void );
-	int init( const char *name = NULL );
+	int init( void );
 	int config( void );
 	int shutdownFast(void);
 	int shutdownGraceful(void);
@@ -80,25 +80,24 @@ class MatchMaker : public Service
 		list<MatchMakerLease *>			&lease_list
 		);
 
-	CollectorList*				m_collectorList;
-	MatchMakerResources			m_resources;
-	ClassAd						m_publicAd;
-	char						*m_myName;
+	CollectorList*				 m_collectorList;
+	MatchMakerResources			 m_resources;
+	ClassAd						 m_publicAd;
 
 	// Details on how to query the collector
-	AdTypes						m_queryAdtypeNum;
-	string						m_queryAdtypeStr;
-	string						m_queryConstraints;
+	AdTypes						 m_queryAdtypeNum;
+	string						 m_queryAdtypeStr;
+	string						 m_queryConstraints;
 
 	MatchMakerIntervalTimer		*m_GetAdsTimer;
 	MatchMakerIntervalTimer		*m_UpdateTimer;
 	MatchMakerIntervalTimer		*m_PruneTimer;
-	int							m_TimerId_GetAds;
-	int							m_Interval_GetAds;
-	int							m_TimerId_Update;
-	int							m_Interval_Update;
-	int							m_TimerId_Prune;
-	int							m_Interval_Prune;
+	int							 m_TimerId_GetAds;
+	int							 m_Interval_GetAds;
+	int							 m_TimerId_Update;
+	int							 m_Interval_Update;
+	int							 m_TimerId_Prune;
+	int							 m_Interval_Prune;
 };
 
 

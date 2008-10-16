@@ -20,8 +20,8 @@
 
 #include "condor_common.h"
 #include "condor_ver_info.h"
+#include "subsystem_info.h"
 
-extern char *mySubSystem;
 extern "C" char *CondorVersion(void);
 extern "C" char *CondorPlatform(void);
 
@@ -47,7 +47,7 @@ CondorVersionInfo::CondorVersionInfo(const char *versionstring,
 	if ( subsystem ) {
 		mysubsys = strdup(subsystem);
 	} else {
-		mysubsys = strdup(mySubSystem);
+		mysubsys = strdup(mySubSystem->getName());
 	}
 }
 

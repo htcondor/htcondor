@@ -310,7 +310,7 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 	// via getAuthenticatedName().
 
 	if(authenticator_) {
-		dprintf (D_ALWAYS, "ZKM: setting default map to %s\n",
+		dprintf (D_SECURITY, "ZKM: setting default map to %s\n",
 				 authenticator_->getRemoteFQU()?authenticator_->getRemoteFQU():"(null)");
 	}
 
@@ -394,7 +394,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		dprintf (D_SECURITY, "ZKM: map file already loaded.\n");
 	}
 
-	dprintf (D_ALWAYS, "ZKM: attempting to map '%s'\n", authentication_name);
+	dprintf (D_SECURITY, "ZKM: attempting to map '%s'\n", authentication_name);
 
 	if (global_map_file) {
 		MyString canonical_user;
@@ -426,7 +426,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 				return;
 			} else {
 
-				dprintf (D_ALWAYS, "ZKM: found user %s, splitting.\n", canonical_user.Value());
+				dprintf (D_SECURITY, "ZKM: found user %s, splitting.\n", canonical_user.Value());
 
 				MyString user;
 				MyString domain;

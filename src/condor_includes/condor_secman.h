@@ -179,7 +179,6 @@ public:
 	static char*		_my_parent_unique_id;
 	static bool			_should_check_env_for_unique_id;
 
-	static bool m_ipverify_initialized;
 	static IpVerify m_ipverify;
 
 	friend class SecManStartCommand;

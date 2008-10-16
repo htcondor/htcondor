@@ -38,7 +38,6 @@
 #include "directory.h"
 #include "nullfile.h"
 #include "stream_handler.h"
-#include "starter_privsep_helper.h"
 #include "condor_vm_universe_types.h"
 
 extern CStarter *Starter;
@@ -364,11 +363,6 @@ JICShadow::transferOutput( void )
 		char* filename;
 		while ((filename = m_added_output_files.next()) != NULL) {
 			filetrans->addOutputFile(filename);
-		}
-
-			// make sure we can access the files
-		if (privsep_enabled()) {
-			privsep_helper.chown_sandbox_to_condor();
 		}
 	
 			// true if job exited on its own
@@ -849,11 +843,6 @@ JICShadow::uploadWorkingFiles(void)
 		return false;
 	}
 
-	// make sure we can access the files
-	if( privsep_enabled() ){
-		privsep_helper.chown_sandbox_to_condor();
-	}
-
 	// The shadow may block on disk I/O for long periods of
 	// time, so set a big timeout on the starter's side of the
 	// file transfer socket.
@@ -957,6 +946,8 @@ JICShadow::initUserPriv( void )
 		}
 	}
 
+	CondorPrivSepHelper* privsep_helper = Starter->condorPrivSepHelper();
+
 	if( run_as_owner ) {
 			// Cool, we can try to use ATTR_OWNER directly.
 			// NOTE: we want to use the "quiet" version of
@@ -965,8 +956,8 @@ JICShadow::initUserPriv( void )
 			// possible this call will fail.  We don't want to fill up
 			// the logs with scary and misleading error messages.
 		if( init_user_ids_quiet(owner.Value()) ) {
-			if (privsep_enabled()) {
-				privsep_helper.initialize_user(owner.Value());
+			if (privsep_helper != NULL) {
+				privsep_helper->initialize_user(owner.Value());
 			}
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
 			         owner.Value() );
@@ -1057,8 +1048,8 @@ JICShadow::initUserPriv( void )
 				return false;
 			}
 
-			if (privsep_enabled()) {
-				privsep_helper.initialize_user((uid_t)user_uid);
+			if (privsep_helper != NULL) {
+				privsep_helper->initialize_user((uid_t)user_uid);
 			}
 		}
 	} 
@@ -1125,8 +1116,8 @@ JICShadow::initUserPriv( void )
 			free( nobody_user );
 			return false;
 		} else {
-			if (privsep_enabled()) {
-				privsep_helper.initialize_user(nobody_user);
+			if (privsep_helper != NULL) {
+				privsep_helper->initialize_user(nobody_user);
 			}
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n",
 				  nobody_user );
@@ -1744,10 +1735,6 @@ JICShadow::beginFileTransfer( void )
 			filetrans->setPeerVersion( *shadow_version );
 		}
 
-		if (privsep_enabled()) {
-			privsep_helper.chown_sandbox_to_condor();
-		}
-
 		if( ! filetrans->DownloadFiles(false) ) { // do not block
 				// Error starting the non-blocking file transfer.  For
 				// now, consider this a fatal error
@@ -1763,13 +1750,11 @@ JICShadow::beginFileTransfer( void )
 int
 JICShadow::transferCompleted( FileTransfer *ftrans )
 {
-		// Make certain the file transfer succeeded.  
-		// Until "multi-starter" has meaning, it's ok to EXCEPT here,
-		// since there's nothing else for us to do.
 	if ( ftrans ) {
-		if (privsep_enabled()) {
-			privsep_helper.chown_sandbox_to_user();
-		}
+			// Make certain the file transfer succeeded.
+			// Until "multi-starter" has meaning, it's ok to
+			// EXCEPT here, since there's nothing else for us
+			// to do.
 		FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
 		if ( !ft_info.success ) {
 			if(!ft_info.try_again) {
@@ -1780,6 +1765,20 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 			}
 
 			EXCEPT( "Failed to transfer files" );
+		}
+			// If we transferred the executable, make sure it
+			// has its execute bit set.
+		MyString cmd;
+		if (job_ad->LookupString(ATTR_JOB_CMD, cmd) &&
+		    (cmd == CONDOR_EXEC))
+		{
+			if (chmod(CONDOR_EXEC, 0755) == -1) {
+				dprintf(D_ALWAYS,
+				        "warning: unable to chmod %s to "
+				            "ensure execute bit is set: %s\n",
+				        CONDOR_EXEC,
+				        strerror(errno));
+			}
 		}
 	}
 

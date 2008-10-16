@@ -27,6 +27,7 @@
 #include "condor_ast.h"
 #include "condor_attrlist.h"
 #include "condor_attributes.h"
+#include "subsystem_info.h"
 #include "iso_dates.h"
 #include "condor_xml_classads.h"
 #include "condor_string.h" // for strnewp()
@@ -36,8 +37,6 @@
 
 extern void evalFromEnvironment (const char *, EvalResult *);
 
-// ugly, ugly hack.  remove for v6.1.9 -Todd
-extern char* mySubSystem;
 
 // Chris Torek's world famous hashing function
 // Modified to be case-insensitive
@@ -2300,7 +2299,7 @@ int AttrList::put(Stream& s)
 		}
 	}
 
-	if ( mySubSystem && (strcmp(mySubSystem,"SCHEDD")==0) ) {
+	if ( mySubSystem->isType( SUBSYSTEM_TYPE_SCHEDD) ) {
 		// add one for the ATTR_SERVER_TIME expr
 		numExprs++;
 		send_server_time = true;

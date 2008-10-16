@@ -447,82 +447,6 @@ collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 	return rval;
 }
 
-bool CollectorEngine::ValidatePvtStartdClassAd(ClassAd *publicAd,ClassAd *privateAd,Sock *sock)
-{
-	if( !m_collector_requirements ) {
-			// If the admin has not configured COLLECTOR_REQUIREMENTS, then
-			// we do not waste any time validating ClassAds, because
-			// (presumably) the admin has used some other method for
-			// making things secure (such as strong authentication).
-		return true;
-	}
-
-		// We don't directly evaluate COLLECTOR_REQUIREMENTS on the
-		// private ad, because we don't want admins to have to
-		// carefully craft their expressions to apply to both public
-		// and private ads.  We only get here if the public ad has
-		// already passed through the filter, so the only remaining
-		// thing to do is apply some hard-coded tests to make sure the
-		// private ad isn't spoofed: As of 6.8.5, the address in the
-		// claim id is used by the shadow when connecting to the
-		// startd, so ATTR_CAPABILITY and/or ATTR_CLAIM_ID (if present)
-		// in the private ad MUST contain the same IP address as
-		// advertised for the startd in the public startd ad.
-
-	MyString public_addr;
-	publicAd->LookupString(ATTR_MY_ADDRESS,public_addr);
-
-	MyString private_addr;
-	char const *attr = ATTR_MY_ADDRESS;
-	privateAd->LookupString(attr,private_addr);
-
-	if( public_addr != private_addr ) {
-		goto failed;
-	}
-
-	private_addr = "";
-	attr = ATTR_STARTD_IP_ADDR;
-	if( privateAd->LookupString(attr,private_addr) ) {
-		if( private_addr != public_addr ) {
-			goto failed;
-		}
-	}
-
-	private_addr = "";
-	attr = ATTR_CAPABILITY;
-	if( privateAd->LookupString(attr,private_addr) ) {
-		char *claim_addr = getAddrFromClaimId( private_addr.Value() );
-		if( public_addr != claim_addr ) {
-			free(claim_addr);
-			goto failed;
-		}
-		free(claim_addr);
-	}
-
-	private_addr = "";
-	attr = ATTR_CLAIM_ID;
-	if( privateAd->LookupString(attr,private_addr) ) {
-		char *claim_addr = getAddrFromClaimId( private_addr.Value() );
-		if( public_addr != claim_addr ) {
-			free(claim_addr);
-			goto failed;
-		}
-		free(claim_addr);
-	}
-
-	return true;
-failed:
-	dprintf(D_ALWAYS,
-			"%s VIOLATION: Invalid startd private ad from %s: "
-			"%s=%s (expecting address %s)\n",
-			COLLECTOR_REQUIREMENTS,
-			sock->get_sinful_peer(),
-			attr,
-			private_addr.Value(),
-			public_addr.Value());
-	return false;
-}
-
 bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 {
 
@@ -671,11 +595,6 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			if( !pvtAd->initFromStream(*sock) )
 			{
 				dprintf(D_FULLDEBUG,"\t(Could not get startd's private ad)\n");
-				delete pvtAd;
-				break;
-			}
-
-			if( !ValidatePvtStartdClassAd(retVal,pvtAd,sock) ) {
 				delete pvtAd;
 				break;
 			}

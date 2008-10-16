@@ -116,7 +116,7 @@ StarterUserPolicy::doAction( int action, bool is_periodic )
 		// HOLD_IN_QUEUE
 		// ---------------------------------
 		case HOLD_IN_QUEUE:
-			this->jic->holdJob( reason.Value() );
+			this->jic->holdJob( reason.Value(), CONDOR_HOLD_CODE_JobPolicy, 0 );
 			break;
 		// ---------------------------------
 		// REMOVE_FROM_QUEUE

@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_debug.h"
+#include "subsystem_info.h"
 
 #include "match_maker.h"
 
@@ -35,7 +36,7 @@
 //-------------------------------------------------------------
 
 // about self
-char* mySubSystem = "MatchMaker";		// used by Daemon Core
+DECL_SUBSYSTEM("MatchMaker", SUBSYSTEM_TYPE_DAEMON);	// used by Daemon Core
 MatchMaker	*match_maker;
 
 //-------------------------------------------------------------
@@ -44,13 +45,8 @@ main_init(int argc, char *argv[])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
-	const char	*name = NULL;
-	if ( (argc > 1)  &&  (*argv[1] != '-') ) {
-		name = argv[1];
-	}
-
 	match_maker = new MatchMaker;
-	match_maker->init( name );
+	match_maker->init( );
 
 
 	return TRUE;
