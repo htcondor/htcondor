@@ -41,7 +41,7 @@ MatchMaker	*match_maker;
 
 //-------------------------------------------------------------
 int
-main_init(int argc, char *argv[])
+main_init(int /*argc*/, char */*argv*/[])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
@@ -54,10 +54,8 @@ main_init(int argc, char *argv[])
 
 //-------------------------------------------------------------
 int
-main_config( bool is_full )
+main_config( bool /*is_full*/ )
 {
-	(void) is_full;
-
 	dprintf(D_ALWAYS, "main_config() called\n");
 	match_maker->config( );
 	return TRUE;
@@ -65,7 +63,7 @@ main_config( bool is_full )
 
 //-------------------------------------------------------------
 int
-main_shutdown_fast()
+main_shutdown_fast(void)
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 	match_maker->shutdownFast();
@@ -76,7 +74,7 @@ main_shutdown_fast()
 
 //-------------------------------------------------------------
 int
-main_shutdown_graceful()
+main_shutdown_graceful(void)
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 	match_maker->shutdownGraceful();
@@ -87,15 +85,13 @@ main_shutdown_graceful()
 
 //-------------------------------------------------------------
 void
-main_pre_dc_init( int argc, char* argv[] )
+main_pre_dc_init( int /*argc*/, char* /*argv*/[] )
 {
-	(void) argc;
-	(void) argv;
 	// dprintf isn't safe yet...
 }
 
 //-------------------------------------------------------------
 void
-main_pre_command_sock_init( )
+main_pre_command_sock_init( void )
 {
 }
