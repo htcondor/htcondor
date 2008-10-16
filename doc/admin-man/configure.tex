@@ -196,6 +196,7 @@ using the \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} configuration
 variables.
 If the range of intended ports is different for specific
 daemons, this syntax may be used.
+
 \begin{verbatim}
   MASTER.LOWPORT   = 20000
   MASTER.HIGHPORT  = 20100
@@ -220,6 +221,76 @@ correctly with a definition such as
 The \Condor{master} uses this configuration variable,
 and the prefix of \MacroNI{MASTER.} causes this configuration
 to be specific to the \Condor{master} daemon.
+
+% the local functionality added in 7.1.4
+This has been further expanded (in Condor 7.1.4) to allow for the
+specification of a ``local'' name on the command line (via the
+``-local-name $<$name$>$'' command-line parameter).  This allows for
+multiple instances of a daemon to be run by the same \Condor{master},
+each with it's own local configuration parameters.
+
+The following order is used to look up a parameter named $<$parameter name$>$:
+
+1. $<$subsystem name$>$.$<$local name$>$.$<$parameter name$>$
+
+2. $<$local name$>$.$<$parameter name$>$
+
+3. $<$subsystem name$>$.$<$parameter name$>$
+
+4. $<$parameter name$>$
+
+If this local name is not specified on the command line, steps 1
+and 2 above are skipped.  As soon as the first match is found, the
+search is completed, and the corresponding value is used.
+
+As an example, let's configure a \Condor{master} to run 2
+\Condor{schedd}'s.  First, let's define things in the master to
+accommodate this.
+
+\begin{verbatim}
+  XYZZY            = $(SCHEDD)
+  XYZZY_ARGS       = -local-name xyzzy
+  DAEMON_LIST      = $(DAEMON_LIST) XYZZY
+  DC_DAEMON_LIST   = $(DC_DAEMON_LIST) XYZZY
+  XYZZY_LOG        = $(LOG)/SchedLog.xyzzy
+\end{verbatim}
+
+Now, when the \Condor{master} starts up daemons, it'll start up an
+extra \Condor{schedd}, the second being passed ``-local-name xyzzy''
+on the command line.
+
+Note that, by default, \MacroNI{DC\_DAEMON\_LIST} isn't
+defined in the configuration file, so you can't just append to it as
+in this example; you must uncomment the ``original'' version of it in
+the configuration file, and then append to it as above (or just add
+the ``SCHEDD2'' to it's definition).
+
+Next, let's configure the ``xyzzy'' \Condor{schedd}:
+This schedd will share all parameters with the ``main'' schedd, except
+for those specified separately (thus, it'll pick up
+\MacroNI{MAX\_JOBS\_RUNNING}
+and all other parameters not explicitly specified).
+
+\begin{verbatim}
+  SCHEDD.XYZZY.SCHEDD_NAME = XYZZY
+  SCHEDD.XYZZY.SCHEDD_LOG  = $(XYZZY_LOG)
+  SCHEDD.XYZZY.SPOOL       = $(SPOOL).XYZZY
+\end{verbatim}
+
+Note that the above \MacroNI{SCHEDD\_NAME} and \MacroNI{SPOOL} are
+specific to the \Condor{schedd} (as opposed to a different daemon
+(i.e. \Condor{startd}).  Other Condor daemons will
+have different requirements as to which parameters would need to be
+specified individually.  The above is just an example for a schedd,
+and more local configuration can, and likely would, be specified.
+
+Also note that each daemon's log macro (in this case,
+\MacroNI{SCHEDD\_LOG}) needs to be specified individually,
+and in two places -- one for the \Condor{master}'s use, and the other
+for the daemon itself.  Also note that, in the above example, the
+new \Condor{schedd} (named ``XYZZY'') log macro
+\MacroNI{SCHEDD.XYZZY.SCHEDD\_LOG} definition references the
+\Condor{master}'s \MacroNI{XYZZY\_LOG}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

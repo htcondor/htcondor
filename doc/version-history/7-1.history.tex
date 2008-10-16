@@ -29,7 +29,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item You can now specify ``local'' entries in your condor\_config file
+by pre-pending a local name and a period to the normal name.  The
+local settings take precedence over the regular settings.  This
+``local'' name can be specified on the command line to all daemons via
+the new ``-local-name'' command line parameter. 
+
+See section 3.3 ``Configuration'' under ``Configuration File Macros''
+for more details on how this ``local name'' will be used in the
+configuration, and 3.9.2 ``DaemonCore and Command-Line Arguments'' for
+more details on the command line parameter itself.
 
 \end{itemize}
 
@@ -37,7 +46,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Local versions of configuration parameters can now be specified
+  via the use of the ``-local-name'' command line parameters (see the
+  above ``New Features'' entry).
 
 \end{itemize}
 
