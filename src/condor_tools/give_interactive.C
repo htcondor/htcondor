@@ -250,8 +250,13 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 	requestAd.SetMyTypeName (JOB_ADTYPE);
 	requestAd.SetTargetTypeName (STARTD_ADTYPE);
 
-	config_fill_ad_subsys( &requestAd, "SUBMIT" );
-	config_fill_ad( &requestAd, "TOOL" );
+	mySubSystem->setTempName( "SUBMIT" );
+	config_fill_ad( &requestAd );
+	mySubSystem->resetTempName( );
+
+	mySubSystem->setTempName( "TOOL" );
+	config_fill_ad( &requestAd );
+	mySubSystem->resetTempName( );
 
 	requestAd.Assign(ATTR_INTERACTIVE, true);
 	requestAd.Assign(ATTR_SUBMITTOR_PRIO, priority);

@@ -1373,8 +1373,6 @@ int main( int argc, char** argv )
 	// from the front of the command line.
 	i = 0;
 	bool done = false;
-	const char	*subsys_config = mySubSystem->getName();
-	const char  *local_config  = "<NONE>";
 
 	for(ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++) {
 		if(ptr[0][0] != '-') {
@@ -1455,13 +1453,12 @@ int main( int argc, char** argv )
 			}
 			break;
 #endif
-		case 'l':	// -local-config or -log
-			// specify local config
-			if ( strcmp( &ptr[0][1], "local-config" ) == 0 ) {
+		case 'l':	// -local-name or -log
+			// specify local name
+			if ( strcmp( &ptr[0][1], "local-name" ) == 0 ) {
 				ptr++;
 				if( ptr && *ptr ) {
-					local_config = *ptr;
-					config_set_local_name( local_config );
+					mySubSystem->setLocalName( *ptr );
 					dcargs += 2;
 				}
 				else {
@@ -1484,33 +1481,6 @@ int main( int argc, char** argv )
 							 "argument\n" );
 					exit( 1 );
 				}
-			}
-			break;
-
-		case 's':	// -subsys-config
-			// specify subsystem configuration name
-			if ( strcmp( &ptr[0][1], "subsys-config" ) == 0 ) {
-				ptr++;
-				if( ptr && *ptr ) {
-					subsys_config = *ptr;
-					config_set_subsystem_name( subsys_config );
-					dcargs += 2;
-				}
-				else {
-					fprintf( stderr, "DaemonCore: ERROR: "
-							 "-subsys-config needs another argument.\n" );
-					fprintf( stderr, 
-							 "   Please specify subsystem name to use.\n" );
-					fprintf( stderr, 
-							 "   !!!USE WITH CAUTION!!!\n" );
-					exit( 1 );
-				}
-			}
-			else {
-					// it's not -subsys-config, so do NOT consume this arg!!
-					// in fact, we're done w/ DC args, since it's the
-					// first option we didn't recognize.
-				done = true;
 			}
 			break;
 
@@ -1795,12 +1765,11 @@ int main( int argc, char** argv )
 		myFullName = NULL;
 	}
 	dprintf(D_ALWAYS,"** %s\n", mySubSystem->getString() );
-	dprintf(D_ALWAYS,"** Configuration: subsystem:%s / local:%s\n",
-			subsys_config, local_config );
-	if ( ! mySubSystem->nameMatch(subsys_config) ) {
-		dprintf(D_ALWAYS, "** WARNING: %s will use %s for configuration\n",
-				mySubSystem->getName(), subsys_config );
-	}
+	dprintf(D_ALWAYS,"** Configuration: subsystem:%s local:%s class:%s\n",
+			mySubSystem->getName(),
+			mySubSystem->getLocalName("<NONE>"),
+			mySubSystem->getClassName( )
+			);
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
 	dprintf(D_ALWAYS,"** PID = %lu\n", (unsigned long) daemonCore->getpid());
