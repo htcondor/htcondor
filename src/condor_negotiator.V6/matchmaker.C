@@ -36,6 +36,10 @@
 #include "condor_claimid_parser.h"
 #include "misc_utils.h"
 
+#if HAVE_DLOPEN
+#include "NegotiatorPlugin.h"
+#endif
+
 // the comparison function must be declared before the declaration of the
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
 // is forced to be extern.)
@@ -194,6 +198,11 @@ initialize ()
 			(TimerHandlercpp) &Matchmaker::updateCollector,
 			"Update Collector", this );
 
+
+#if HAVE_DLOPEN
+	NegotiatorPluginManager::Load();
+	NegotiatorPluginManager::Initialize();
+#endif
 }
 
 int Matchmaker::
@@ -803,7 +812,7 @@ int Matchmaker::
 negotiationTime ()
 {
 	ClassAdList startdAds;
-	ClassAdList startdPvtAds;
+	ClaimIdHash claimIds(MyStringHash);
 	ClassAdList scheddAds;
 	ClassAdList allAds;
 
@@ -845,7 +854,7 @@ negotiationTime ()
 	// ----- Get all required ads from the collector
 	dprintf( D_ALWAYS, "Phase 1:  Obtaining ads from collector ...\n" );
 	if( !obtainAdsFromCollector( allAds, startdAds, scheddAds,
-		startdPvtAds ) )
+		claimIds ) )
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
 		// should send email here
@@ -1033,7 +1042,7 @@ negotiationTime ()
 			dprintf(D_ALWAYS,"Group %s - negotiating\n",
 				groupArray[i].groupName);
 			negotiateWithGroup( untrimmed_num_startds, startdAds, 
-				startdPvtAds, groupArray[i].submitterAds, 
+				claimIds, groupArray[i].submitterAds, 
 				groupArray[i].maxAllowed, groupArray[i].groupName );
 		}
 
@@ -1070,7 +1079,7 @@ negotiationTime ()
 	} // if (groups)
 	
 		// negotiate w/ all users who do not belong to a group.
-	negotiateWithGroup(untrimmed_num_startds, startdAds, startdPvtAds, scheddAds);
+	negotiateWithGroup(untrimmed_num_startds, startdAds, claimIds, scheddAds);
 	
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
@@ -1096,7 +1105,7 @@ Matchmaker::SimpleGroupEntry::
 
 int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
-					 ClassAdList& startdPvtAds, 
+					 ClaimIdHash& claimIds, 
 					 ClassAdList& scheddAds, 
 					 int groupQuota, const char* groupAccountingName)
 {
@@ -1120,7 +1129,6 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 	int			MaxscheddLimit;
 	int			hit_schedd_prio_limit;
 	int			hit_network_prio_limit;
-	int 		send_ad_to_schedd;	
 	bool ignore_schedd_limit;
 	int			num_idle_jobs;
 	time_t		startTime;
@@ -1317,7 +1325,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 					startTime = time(NULL);
 					result=negotiate( scheddName,scheddAddr,scheddPrio,
 								  scheddAbsShare, scheddLimit,
-								  startdAds, startdPvtAds, 
+								  startdAds, claimIds, 
 								  scheddVersion, ignore_schedd_limit,
 								  startTime, numMatched);
 					updateNegCycleEndTime(startTime, schedd);
@@ -1478,7 +1486,7 @@ obtainAdsFromCollector (
 						ClassAdList &allAds,
 						ClassAdList &startdAds, 
 						ClassAdList &scheddAds, 
-						ClassAdList &startdPvtAds )
+						ClaimIdHash &claimIds )
 {
 	CondorQuery privateQuery(STARTD_PVT_AD);
 	QueryResult result;
@@ -1508,15 +1516,17 @@ obtainAdsFromCollector (
 		}
 
 		dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
-		result = collects->query(privateQuery,startdPvtAds);
+		ClassAdList startdPvtAdList;
+		result = collects->query(privateQuery,startdPvtAdList);
 		if( result!=Q_OK ) {
 			dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 			return false;
 		}
+		MakeClaimIdHash(startdPvtAdList,claimIds);
 
 		dprintf(D_ALWAYS, 
 			"Got ads (simple matching): %d startd, %d submittor, %d private\n",
-	        startdAds.MyLength(),scheddAds.MyLength(),startdPvtAds.MyLength());
+	        startdAds.MyLength(),scheddAds.MyLength(),claimIds.getNumElements());
 
 		return true;
 	}
@@ -1698,14 +1708,17 @@ obtainAdsFromCollector (
 	allAds.Close();
 
 	dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
-	result = collects->query (privateQuery, startdPvtAds);
+	ClassAdList startdPvtAdList;
+	result = collects->query (privateQuery, startdPvtAdList);
 	if( result!=Q_OK ) {
 		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 		return false;
 	}
 
+	MakeClaimIdHash(startdPvtAdList,claimIds);
+
 	dprintf(D_ALWAYS, "Got ads: %d public and %d private\n",
-	        allAds.MyLength(),startdPvtAds.MyLength());
+	        allAds.MyLength(),claimIds.getNumElements());
 
 	dprintf(D_ALWAYS, "Public ads include %d submitter, %d startd\n",
 		scheddAds.MyLength(), startdAds.MyLength() );
@@ -1713,11 +1726,49 @@ obtainAdsFromCollector (
 	return true;
 }
 
+void
+Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
+{
+	ClassAd *ad;
+	startdPvtAdList.Open();
+	while( (ad = startdPvtAdList.Next()) ) {
+		MyString name;
+		MyString ip_addr;
+		MyString claim_id;
+
+		if( !ad->LookupString(ATTR_NAME, name) ) {
+			continue;
+		}
+			// As of 7.1.3, we look up MY_ADDRESS first and STARTD_IP_ADDR
+			// second.  Eventually, STARTD_IP_ADDR may be phased out.
+		if( !ad->LookupString(ATTR_MY_ADDRESS, ip_addr) &&
+			!ad->LookupString(ATTR_STARTD_IP_ADDR, ip_addr) )
+		{
+			continue;
+		}
+			// As of 7.1.3, we look up CLAIM_ID first and CAPABILITY
+			// second.  Someday CAPABILITY can be phased out.
+		if( !ad->LookupString(ATTR_CLAIM_ID, claim_id) &&
+			!ad->LookupString(ATTR_CAPABILITY, claim_id) )
+		{
+			continue;
+		}
+
+			// hash key is name + ip_addr
+		name += ip_addr;
+		if( claimIds.insert(name,claim_id)!=0 ) {
+			dprintf(D_ALWAYS,
+					"WARNING: failed to insert claim id hash table entry "
+					"for '%s'\n",name.Value());
+		}
+	}
+	startdPvtAdList.Close();
+}
 
 int Matchmaker::
 negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		   int scheddLimit,
-		   ClassAdList &startdAds, ClassAdList &startdPvtAds, 
+		   ClassAdList &startdAds, ClaimIdHash &claimIds, 
 		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, int &numMatched)
 {
@@ -2007,7 +2058,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 			}
 
 			// 2e(ii).  perform the matchmaking protocol
-			result = matchmakingProtocol (request, offer, startdPvtAds, sock, 
+			result = matchmakingProtocol (request, offer, claimIds, sock, 
 					scheddName, scheddAddr);
 
 			// 2e(iii). if the matchmaking protocol failed, do not consider the
@@ -2135,11 +2186,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 			str = limit;
 			int count = accountant.GetLimit(str);
 
-			str += "_LIMIT";
-			int max =
-				param_integer(str.GetCStr(),
-							  param_integer("CONCURRENCY_LIMIT_DEFAULT",
-											2308032));
+			int max = accountant.GetLimitMax(str);
 
 			dprintf(D_FULLDEBUG,
 					"Concurrency Limit: %s is %d\n",
@@ -2524,20 +2571,20 @@ public:
 	MyString m_startdName;
 	MyString m_startdAddr;
 	int m_timeout;
-	MyString m_capability;
+	MyString m_claim_id;
 	DCStartd m_startd;
 	bool m_nonblocking;
 
-	NotifyStartdOfMatchHandler(char const *startdName,char const *startdAddr,int timeout,char const *capability,bool nonblocking):
+	NotifyStartdOfMatchHandler(char const *startdName,char const *startdAddr,int timeout,char const *claim_id,bool nonblocking):
 		
 		m_startdName(startdName),
 		m_startdAddr(startdAddr),
 		m_timeout(timeout),
-		m_capability(capability),
+		m_claim_id(claim_id),
 		m_startd(startdAddr),
 		m_nonblocking(nonblocking) {}
 
-	static void startCommandCallback(bool success,Sock *sock,CondorError *errstack,void *misc_data)
+	static void startCommandCallback(bool success,Sock *sock,CondorError * /*errstack*/,void *misc_data)
 	{
 		NotifyStartdOfMatchHandler *self = (NotifyStartdOfMatchHandler *)misc_data;
 		ASSERT(misc_data);
@@ -2557,22 +2604,23 @@ public:
 
 	bool WriteMatchInfo(Sock *sock)
 	{
-		ClaimIdParser idp( m_capability.Value() );
+		ClaimIdParser idp( m_claim_id.Value() );
 		ASSERT(sock);
 
-		// pass the startd MATCH_INFO and capability string
-		dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability to %s\n",
+		// pass the startd MATCH_INFO and claim id string
+		dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/claim id to %s\n",
 		         m_startdName.Value());
-		dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n",
+		dprintf (D_FULLDEBUG, "      (Claim ID is \"%s\" )\n",
 		         idp.publicClaimId() );
 
-		if ( !sock->put ((char *)m_capability.Value()) || !sock->end_of_message())
+		if ( !sock->put_secret (m_claim_id.Value()) ||
+			 !sock->end_of_message())
 		{
 			dprintf (D_ALWAYS,
-			        "      Could not send MATCH_INFO/capability to %s\n",
+			        "      Could not send MATCH_INFO/claim id to %s\n",
 			        m_startdName.Value() );
 			dprintf (D_FULLDEBUG,
-			        "      (Capability is \"%s\")\n",
+			        "      (Claim ID is \"%s\")\n",
 			        idp.publicClaimId() );
 			return false;
 		}
@@ -2644,7 +2692,7 @@ insertNegotiatorMatchExprs(ClassAd *ad)
 
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
-						ClassAdList &startdPvtAds, Sock *sock,
+						ClaimIdHash &claimIds, Sock *sock,
 					    char* scheddName, char* scheddAddr)
 {
 	int  cluster, proc;
@@ -2653,7 +2701,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	char accountingGroup[256];
 	char remoteOwner[256];
     MyString startdName;
-	char *capability;
+	char const *claim_id;
 	SafeSock startdSock;
 	bool send_failed;
 	int want_claiming = -1;
@@ -2686,16 +2734,17 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		}
 	}
 
-	// find the startd's capability from the private ad
+	// find the startd's claim id from the private ad
+	MyString claim_id_buf;
 	if ( want_claiming ) {
-		if (!(capability = getCapability (startdName.Value(), startdAddr, startdPvtAds)))
+		if (!(claim_id = getClaimId (startdName.Value(), startdAddr, claimIds, claim_id_buf)))
 		{
-			dprintf(D_ALWAYS,"      %s has no capability\n", startdName.Value());
+			dprintf(D_ALWAYS,"      %s has no claim id\n", startdName.Value());
 			return MM_BAD_MATCH;
 		}
 	} else {
 		// Claiming is *not* desired
-		capability = "null";
+		claim_id = "null";
 	}
 
 	savedRequirements = NULL;
@@ -2750,29 +2799,32 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 		NotifyStartdOfMatchHandler *h =
 			new NotifyStartdOfMatchHandler(
-				startdName.Value(),startdAddr,NegotiatorTimeout,capability,want_nonblocking_startd_contact);
+				startdName.Value(),startdAddr,NegotiatorTimeout,claim_id,want_nonblocking_startd_contact);
 
 		if(!h->startCommand()) {
 			return MM_BAD_MATCH;
 		}
 	}	// end of if want_claiming
 
-	// 3.  send the match and capability to the schedd
+	// 3.  send the match and claim_id to the schedd
 	sock->encode();
 	send_failed = false;	
 
 	dprintf(D_FULLDEBUG,
-		"      Sending PERMISSION, capability, startdAd to schedd\n");
-	if (!sock->put(PERMISSION_AND_AD) 	|| 
-		!sock->put(capability)	||
+		"      Sending PERMISSION, claim id, startdAd to schedd\n");
+	if (!sock->put(PERMISSION_AND_AD) ||
+		!sock->put_secret(claim_id) ||
 		!offer->put(*sock)		||	// send startd ad to schedd
 		!sock->end_of_message())
+	{
 			send_failed = true;
+	}
 
 	if ( send_failed )
 	{
+		ClaimIdParser cidp(claim_id);
 		dprintf (D_ALWAYS, "      Could not send PERMISSION\n" );
-		dprintf( D_FULLDEBUG, "      (Capability is \"%s\")\n", capability);
+		dprintf( D_FULLDEBUG, "      (Claim ID is \"%s\")\n", cidp.publicClaimId());
 		sockCache->invalidateSock( scheddAddr );
 		return MM_ERROR;
 	}
@@ -2990,31 +3042,15 @@ calculateNormalizationFactor (ClassAdList &scheddAds,
 }
 
 
-char *Matchmaker::
-getCapability (const char *startdName, const char *startdAddr, ClassAdList &startdPvtAds)
+char const *
+Matchmaker::getClaimId (const char *startdName, const char *startdAddr, ClaimIdHash &claimIds, MyString &claim_id_buf)
 {
-	ClassAd *pvtAd;
-	static char	capability[80];
-	char	*name;
-	char	addr[64];
-
-	startdPvtAds.Open();
-	while ((pvtAd = startdPvtAds.Next()))
-	{
-		if (pvtAd->LookupString (ATTR_NAME, &name)			&&
-			strcmp (name, startdName) == 0					&&
-			pvtAd->LookupString (ATTR_STARTD_IP_ADDR, addr)	&&
-			strcmp (addr, startdAddr) == 0					&&
-			pvtAd->LookupString (ATTR_CAPABILITY, capability))
-		{
-            free(name);
-			startdPvtAds.Close ();
-			return capability;
-		}
-        free(name);
+	MyString key = startdName;
+	key += startdAddr;
+	if( claimIds.lookup(key,claim_id_buf)!=0 ) {
+		return NULL;
 	}
-	startdPvtAds.Close();
-	return NULL;
+	return claim_id_buf.Value();
 }
 
 void Matchmaker::
@@ -3343,8 +3379,11 @@ Matchmaker::updateCollector() {
 
 		// log classad into sql log so that it can be updated to DB
 	FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
-   
+
 	if (publicAd) {
+#if HAVE_DLOPEN
+		NegotiatorPluginManager::Update(*publicAd);
+#endif
 		daemonCore->sendUpdates(UPDATE_NEGOTIATOR_AD, publicAd, NULL, true);
 	}
 

@@ -70,6 +70,7 @@ public:
   void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
 
   int GetLimit(const MyString& limit);
+  int GetLimitMax(const MyString& limit);
   void ReportLimits(AttrList *attrList);
 
   AttrList* ReportState();

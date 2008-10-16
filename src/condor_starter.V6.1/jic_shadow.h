@@ -349,6 +349,10 @@ private:
 		/// If the job ad says so, initialize our IO proxy
 	bool initIOProxy( void );
 
+		// If we are supposed to specially create a security session
+		// for file transfer and reconnect, do it.
+	void initMatchSecuritySession();
+
 		/** Compare our own UIDDomain vs. where the job came from.  We
 			check in the job ClassAd for ATTR_UID_DOMAIN and compare
 			it to info we have about the shadow and the local machine.
@@ -386,6 +390,11 @@ private:
 	IOProxy io_proxy;
 
 	FileTransfer *filetrans;
+
+		// specially made security sessions if we are doing
+		// SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION
+	char *m_filetrans_sec_session;
+	char *m_reconnect_sec_session;
 
 	/// if true, transfer files at vacate time (in addtion to job exit)
 	bool transfer_at_vacate;

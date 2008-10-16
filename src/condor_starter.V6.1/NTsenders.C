@@ -956,4 +956,58 @@ REMOTE_CONDOR_constrain( char *  expr)
 	return rval;
 }
 
+int REMOTE_CONDOR_get_sec_session_info(
+	char const *starter_reconnect_session_info,
+	MyString &reconnect_session_id,
+	MyString &reconnect_session_info,
+	MyString &reconnect_session_key,
+	char const *starter_filetrans_session_info,
+	MyString &filetrans_session_id,
+	MyString &filetrans_session_info,
+	MyString &filetrans_session_key)
+{
+	int	rval;
+	condor_errno_t	terrno;
+
+	CurrentSysCall = CONDOR_get_sec_session_info;
+
+	syscall_sock->encode();
+	ASSERT( syscall_sock->code(CurrentSysCall) );
+
+	bool socket_default_crypto = syscall_sock->get_encryption();
+	if( !socket_default_crypto ) {
+			// always encrypt; we are exchanging super secret session keys
+		syscall_sock->set_crypto_mode(true);
+	}
+
+	ASSERT( syscall_sock->put(starter_reconnect_session_info) );
+	ASSERT( syscall_sock->put(starter_filetrans_session_info) );
+	ASSERT( syscall_sock->end_of_message() );
+
+	syscall_sock->decode();
+	ASSERT( syscall_sock->code(rval) );
+	if( rval < 0 ) {
+		ASSERT( syscall_sock->code(terrno) );
+		ASSERT( syscall_sock->end_of_message() );
+		errno = (int)terrno;
+	}
+	else {
+		ASSERT( syscall_sock->code(reconnect_session_id) );
+		ASSERT( syscall_sock->code(reconnect_session_info) );
+		ASSERT( syscall_sock->code(reconnect_session_key) );
+
+		ASSERT( syscall_sock->code(filetrans_session_id) );
+		ASSERT( syscall_sock->code(filetrans_session_info) );
+		ASSERT( syscall_sock->code(filetrans_session_key) );
+
+		ASSERT( syscall_sock->end_of_message() );
+	}
+
+	if( !socket_default_crypto ) {
+		syscall_sock->set_crypto_mode( false );  // restore default
+	}
+	return rval;
+}
+
+
 } // extern "C"

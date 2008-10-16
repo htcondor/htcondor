@@ -176,7 +176,6 @@ extendTransaction(const struct condor__Transaction *transaction)
 		}
 
 		daemonCore->Reset_Timer(trans_timer_id, transaction->duration);
-//		daemonCore->Only_Allow_Soap(transaction->duration);
 	}
 
 	return 0;
@@ -427,8 +426,6 @@ condor__beginTransaction(struct soap *soap,
 		duration = 1;
 	}
 
-//	daemonCore->Only_Allow_Soap(duration);
-
 	
 	if (transactionManager.createTransaction(owner,
 											 id,
@@ -520,7 +517,6 @@ condor__commitTransaction(struct soap *soap,
 		daemonCore->Cancel_Timer(trans_timer_id);
 		trans_timer_id = -1;
 	}
-//	daemonCore->Only_Allow_Soap(0);
 
 	result.response.code = SUCCESS;
 	result.response.message = "Success";
@@ -564,7 +560,6 @@ condor__abortTransaction(struct soap *soap,
 		daemonCore->Cancel_Timer(trans_timer_id);
 		trans_timer_id = -1;
 	}
-//	daemonCore->Only_Allow_Soap(0);
 
 	result.response.code = SUCCESS;
 	result.response.message = "Success";

@@ -349,7 +349,7 @@ config_host( char* host )
    is_daemon=true or vice versa are equivalent.
 */
 void
-condor_auth_config(int /*is_daemon*/)
+condor_auth_config(int is_daemon)
 {
 #if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_GLOBUS)
 
@@ -1466,6 +1466,19 @@ int param_integer_c( const char *name, int default_value,
 					   int min_value, int max_value)
 {
 	return param_integer( name, default_value, min_value, max_value );
+}
+
+// require that the attribute I'm looking for is defined in the config file.
+char* param_or_except(const char *attr)
+{
+	char *tmp = NULL;
+
+	tmp = param(attr);
+	if (tmp == NULL || strlen(tmp) <= 0) {
+		EXCEPT("Please define config file entry to non-null value: %s", attr);
+	}
+
+	return tmp;
 }
 
 

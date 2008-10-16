@@ -1009,6 +1009,7 @@ class DaemonCore : public Service
 	static const int ERRNO_EXEC_AS_ROOT;
 	static const int ERRNO_PID_COLLISION;
 	static const int ERRNO_REGISTRATION_FAILED;
+	static const int ERRNO_EXIT;
 
     /** Methods for operating on a process family
     */
@@ -1199,12 +1200,6 @@ class DaemonCore : public Service
 	*/
 	void RegisterTimeSkipCallback(TimeSkipFunc fnc, void * data);
 	void UnregisterTimeSkipCallback(TimeSkipFunc fnc, void * data);
-
-	/** Disable all daemon core callbacks for duration seconds, except for the
-		processing of SOAP calls.
-		@param seconds The number of seconds to only permit SOAP callbacks
-	*/
-	void Only_Allow_Soap(int duration);
 	
         // A little info on the "soap_ssl_sock"... There once was a
         // bug known as the "single transaction problem" and it made
@@ -1475,7 +1470,6 @@ class DaemonCore : public Service
     ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
     int               initial_command_sock;  
   	struct soap		  *soap;
-	time_t			  only_allow_soap;
 
 		// number of file descriptors in use past which we should start
 		// avoiding the creation of new persistent sockets.  Do not use

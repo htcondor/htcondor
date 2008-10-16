@@ -37,7 +37,6 @@ SimpleList<HOOK_RUN_INFO*> JobRouterHookMgr::m_job_hook_list;
 JobRouterHookMgr::JobRouterHookMgr()
 	: HookClientMgr()
 {
-	m_hook_keyword = NULL;
 	m_hook_translate = NULL;
 	m_hook_update_job_info = NULL;
 	m_hook_job_exit = NULL;
@@ -53,12 +52,6 @@ JobRouterHookMgr::~JobRouterHookMgr()
 
 	// Delete our copies of the paths for each hook.
 	clearHookPaths();
-
-	if (m_hook_keyword)
-	{
-		free(m_hook_keyword);
-		m_hook_keyword = NULL;
-	}
 
 	JobRouterHookMgr::removeAllKnownHooks();
 }
@@ -93,17 +86,6 @@ JobRouterHookMgr::clearHookPaths()
 bool
 JobRouterHookMgr::initialize()
 {
-	char* tmp = param("JOB_HOOK_KEYWORD");
-	if (tmp)
-	{
-		m_hook_keyword = tmp;
-		dprintf(D_FULLDEBUG, "Using JOB_HOOK_KEYWORD value from config file: \"%s\"\n", m_hook_keyword);
-	}
-	else
-	{
-		dprintf(D_FULLDEBUG, "No JOB_HOOK_HEYWORD defined so job router hooks will not be invoked.\n");
-		return false;
-	}
 	reconfig();
 	return HookClientMgr::initialize();
 }
@@ -125,25 +107,10 @@ JobRouterHookMgr::reconfig()
 
 
 char*
-JobRouterHookMgr::getHookKeyword()
-{
-	if (!m_hook_keyword_initialized) {
-		m_hook_keyword = param("JOB_HOOK_KEYWORD");
-		m_hook_keyword_initialized = true;
-	}
-	return m_hook_keyword;
-}
-
-
-char*
 JobRouterHookMgr::getHookPath(HookType hook_type)
 {
-	if (!m_hook_keyword)
-	{
-		return NULL;
-	}
 	MyString _param;
-	_param.sprintf("%s_HOOK_%s", m_hook_keyword, getHookTypeString(hook_type));
+	_param.sprintf("JOB_ROUTER_HOOK_%s", getHookTypeString(hook_type));
 
 	return validateHookPath(_param.Value());
 }

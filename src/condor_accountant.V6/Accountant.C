@@ -1273,6 +1273,13 @@ int Accountant::GetLimit(const MyString& limit)
 	return count;
 }
 
+int Accountant::GetLimitMax(const MyString& limit)
+{
+	return param_integer((limit + "_LIMIT").GetCStr(),
+						 param_integer("CONCURRENCY_LIMIT_DEFAULT",
+									   2308032));
+}
+
 void Accountant::DumpLimits()
 {
 	MyString limit;

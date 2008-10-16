@@ -803,7 +803,6 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 	int		max_reqs;
 	int		reqs_rejected = 0;
 	int		reqs_matched = 0;
-	int		serviced_other_commands = 0;	
 	int		op = -1;
 	PROC_ID	id;
 	NegotiationResult result;
@@ -823,26 +822,9 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 
 	while( resource_requests->dequeue(id) >= 0 ) {
 
-		// This may be a cause of schedd crashes, so leave
-		// it commented out
-
-		//serviced_other_commands += daemonCore->ServiceCommandSocket();
-
 			// TODO: All of this is different for these resource
 			// request ads.  We should try to handle rm or hold, but
 			// we can't do it with this mechanism.
-
-		if ( serviced_other_commands ) {
-			// we have run some other schedd command, like condor_rm
-			// or condor_q, while negotiating.  check and make certain
-			// the job is still runnable, since things may have
-			// changed since we built the prio_rec array (like,
-			// perhaps condor_hold or condor_rm was done).
-			if ( Runnable(&id) == FALSE ) {
-				continue;
-			}
-		}
-
 
 		ClassAd *job = GetJobAd(id.cluster, id.proc);
 
@@ -2272,6 +2254,17 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 					// Grab the claim from the mrec
 				char const *claim = (*(*allocation->matches)[p])[i]->claimId();
 				char const *publicClaim = (*(*allocation->matches)[p])[i]->publicClaimId();
+
+				MyString claim_buf;
+				if( strchr(claim,',') ) {
+						// the claimid contains a comma, which is the delimiter
+						// in the list of claimids, so we must escape it
+					claim_buf = claim;
+					ASSERT( !strstr(claim_buf.Value(),"$(COMMA)") );
+					claim_buf.replaceString(",","$(COMMA)");
+					claim = claim_buf.Value();
+				}
+
 				claims.append(claim);
 				public_claims.append(publicClaim);
 
@@ -4079,14 +4072,23 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		char *claims = NULL;
 		GetAttributeStringNew(id.cluster, id.proc, ATTR_CLAIM_IDS, &claims);
 
+		StringList escapedClaimList(claims,",");
+		StringList claimList;
 		StringList hosts(remote_hosts);
-		StringList claimList(claims);
+
+		char *host;
+		char *claim;
+
+		escapedClaimList.rewind();
+		while( (claim = escapedClaimList.next()) ) {
+			MyString buf = claim;
+			buf.replaceString("$(COMMA)",",");
+			claimList.append(buf.Value());
+		}
 
 			// Foreach host in the stringlist, find matching machine by name
 		hosts.rewind();
 		claimList.rewind();
-		char *host;
-		char *claim;
 
 		while ( (host = hosts.next()) ) {
 

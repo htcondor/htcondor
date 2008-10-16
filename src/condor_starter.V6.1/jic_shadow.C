@@ -39,6 +39,7 @@
 #include "nullfile.h"
 #include "stream_handler.h"
 #include "condor_vm_universe_types.h"
+#include "authentication.h"
 
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
@@ -54,6 +55,8 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 	shadow = NULL;
 	shadow_version = NULL;
 	filetrans = NULL;
+	m_filetrans_sec_session = NULL;
+	m_reconnect_sec_session = NULL;
 	
 	trust_uid_domain = false;
 	uid_domain = NULL;
@@ -112,6 +115,8 @@ JICShadow::~JICShadow()
 	if( fs_domain ) {
 		free( fs_domain );
 	}
+	free(m_reconnect_sec_session);
+	free(m_filetrans_sec_session);
 }
 
 
@@ -155,6 +160,10 @@ JICShadow::init( void )
 		// to, we can register information about ourselves with the
 		// shadow in a method that it understands.
 	registerStarterInfo();
+
+		// If we are supposed to specially create a security session
+		// for file transfer and reconnect, do that now.
+	initMatchSecuritySession();
 
 		// Grab all the interesting stuff out of the ClassAd we need
 		// to know about the job itself, like are we doing file
@@ -532,6 +541,19 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 		*/
 	m_shadow_name = strdup( shadow->addr() );
 
+		// switch over to the new syscall_sock
+	dprintf( D_FULLDEBUG, "Closing old syscall sock <%s:%d>\n",
+			 syscall_sock->endpoint_ip_str(), 
+			 syscall_sock->endpoint_port() );
+	delete syscall_sock;
+	syscall_sock = s;
+	syscall_sock->timeout(param_integer( "STARTER_UPLOAD_TIMEOUT", 300));
+	dprintf( D_FULLDEBUG, "Using new syscall sock <%s:%d>\n",
+			 syscall_sock->endpoint_ip_str(), 
+			 syscall_sock->endpoint_port() );
+
+	initMatchSecuritySession();
+
 		// tell our FileTransfer object to point to the new 
 		// shadow using the transsock and key in the ad from the
 		// reconnect request
@@ -559,18 +581,8 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 		} else {
 			filetrans->setPeerVersion( *shadow_version );
 		}
+		filetrans->setSecuritySession(m_filetrans_sec_session);
 	}
-
-		// switch over to the new syscall_sock
-	dprintf( D_FULLDEBUG, "Closing old syscall sock <%s:%d>\n",
-			 syscall_sock->endpoint_ip_str(), 
-			 syscall_sock->endpoint_port() );
-	delete syscall_sock;
-	syscall_sock = s;
-	syscall_sock->timeout(param_integer( "STARTER_UPLOAD_TIMEOUT", 300));
-	dprintf( D_FULLDEBUG, "Using new syscall sock <%s:%d>\n",
-			 syscall_sock->endpoint_ip_str(), 
-			 syscall_sock->endpoint_port() );
 
 	StreamHandler::ReconnectAll();
 
@@ -1726,6 +1738,7 @@ JICShadow::beginFileTransfer( void )
 
 		filetrans = new FileTransfer();
 		ASSERT( filetrans->Init(job_ad, false, PRIV_USER) );
+		filetrans->setSecuritySession(m_filetrans_sec_session);
 		filetrans->RegisterCallback(
 				  (FileTransferHandler)&JICShadow::transferCompleted,this );
 
@@ -1862,4 +1875,104 @@ JICShadow::initIOProxy( void )
 		return true;
 	}
 	return false;
+}
+
+void
+JICShadow::initMatchSecuritySession()
+{
+	if( !param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+		return;
+	}
+
+	if( shadow_version && !shadow_version->built_since_version(7,1,3) ) {
+		return;
+	}
+
+	MyString reconnect_session_id;
+	MyString reconnect_session_info;
+	MyString reconnect_session_key;
+
+	MyString filetrans_session_id;
+	MyString filetrans_session_info;
+	MyString filetrans_session_key;
+
+		// For possible future use.  We could set security session
+		// options here if we wanted to get an effect similar to
+		// security negotiation, but currently we just take the
+		// defaults from the shadow.
+	char *starter_reconnect_session_info = "";
+	char *starter_filetrans_session_info = "";
+
+	int rc = REMOTE_CONDOR_get_sec_session_info(
+		starter_reconnect_session_info,
+		reconnect_session_id,
+		reconnect_session_info,
+		reconnect_session_key,
+		starter_filetrans_session_info,
+		filetrans_session_id,
+		filetrans_session_info,
+		filetrans_session_key);
+
+	if( rc < 0 ) {
+		dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to get security "
+				"session info from shadow.  Skipping creation of match "
+				"security session.\n");
+		return;
+	}
+
+	if( m_reconnect_sec_session ) {
+			// Already have one (must be reconnecting with shadow).
+			// Continue using the one we have.  We cannot destroy it
+			// and create a new one, because the syscall socket is
+			// already using the session key from it.
+	}
+	else if( reconnect_session_id.Length() ) {
+		rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+			WRITE,
+			reconnect_session_id.Value(),
+			reconnect_session_key.Value(),
+			reconnect_session_info.Value(),
+			SUBMIT_SIDE_MATCHSESSION_FQU,
+			NULL,
+			0 /*don't expire*/ );
+
+		if( !rc ) {
+			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create "
+					"reconnect security session.  "
+					"Will fall back on auto-negotiated session instead.\n");
+		}
+		else {
+			m_reconnect_sec_session = strdup(reconnect_session_id.Value());
+		}
+	}
+
+	if( m_filetrans_sec_session ) {
+			// Already have one (must be reconnecting with shadow).
+			// Destroy it and create a new one in its place, since
+			// the shadow may have changed how it wants this to be
+			// set up.
+		daemonCore->getSecMan()->invalidateKey( m_filetrans_sec_session );
+		free( m_filetrans_sec_session );
+		m_filetrans_sec_session = NULL;
+	}
+
+	if( filetrans_session_id.Length() ) {
+		rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+			WRITE,
+			filetrans_session_id.Value(),
+			filetrans_session_key.Value(),
+			filetrans_session_info.Value(),
+			SUBMIT_SIDE_MATCHSESSION_FQU,
+			shadow->addr(),
+			0 /*don't expire*/ );
+
+		if( !rc ) {
+			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create file "
+					"transfer security session.  "
+					"Will fall back on auto-negotiated session instead.\n");
+		}
+		else {
+			m_filetrans_sec_session = strdup(filetrans_session_id.Value());
+		}
+	}
 }

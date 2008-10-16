@@ -68,12 +68,6 @@ public:
 
 private:
 
-	// Hook keyword for all hooks
-	char* m_hook_keyword;
-
-	// Only allow the hook heyword to be initialized once
-	bool m_hook_keyword_initialized;
-
 	// Hook definitions
 	char* m_hook_translate;
 	char* m_hook_update_job_info;
@@ -82,7 +76,6 @@ private:
 
 	char* getHookPath(HookType hook_type);
 	void clearHookPaths(void);
-	char* getHookKeyword(void);
 
 };
 

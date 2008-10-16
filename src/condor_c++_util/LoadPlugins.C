@@ -67,7 +67,7 @@ LoadPlugins()
 					dprintf(D_FULLDEBUG,
 							"PLUGIN_DIR, found: %s\n",
 							plugin_file);
-					plugins.append((plugin_dir + plugin_file).GetCStr());
+					plugins.append((plugin_dir + DIR_DELIM_STRING + plugin_file).GetCStr());
 				} else {
 					dprintf(D_FULLDEBUG,
 							"PLUGIN_DIR, ignoring: %s\n",

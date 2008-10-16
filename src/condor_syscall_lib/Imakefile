@@ -176,10 +176,12 @@ UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
 	internet.o $(PLATFORM_UTIL_OBJ) mkargv.o filename_tools.o \
 	strupr.o
 
-CPP_UTIL_OBJ = condor_version.o stat_wrapper.o stat_wrapper_internal.o \
-	subsystem_info.o \
+CPP_UTIL_OBJ = \
+	condor_version.o condor_ver_info.o \
+	stat_wrapper.o stat_wrapper_internal.o \
 	condor_open.o selector.o \
-	MyString.o
+	MyString.o subsystem_info.o
+
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
 IO_OBJ = stream.o sock.o safe_sock.o reli_sock.o buffers.o $(CONDOR_TYPE_OBJ) condor_rw.o SafeMsg.o

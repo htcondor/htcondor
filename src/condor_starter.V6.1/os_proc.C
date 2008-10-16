@@ -567,6 +567,7 @@ OsProc::JobExit( void )
 	}
 
 #if defined ( WIN32 )
+    
     /* If we loaded the user's profile, then we should dump it now */
     if ( owner_profile_.loaded () ) {
         owner_profile_.unload ();
@@ -574,13 +575,20 @@ OsProc::JobExit( void )
         /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
         owner_profile_.destroy ();
         /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
-
+        
     }
 
-    /* at this point too, we can revoke the user's logion's session's
-    permission to the visible desktop */
-    int RevokeDesktopAccess(HANDLE); // prototype
-    RevokeDesktopAccess ( priv_state_get_handle () );
+    priv_state old = set_user_priv ();
+    HANDLE user_token = priv_state_get_handle ();
+    ASSERT ( user_token );
+    
+    /* at this point we can revoke the user's access to
+    the visible desktop */
+    int RevokeDesktopAccess ( HANDLE ); // prototype
+    RevokeDesktopAccess ( user_token );
+
+    set_priv ( old );
+
 #endif
 
 	return Starter->jic->notifyJobExit( exit_status, reason, this );

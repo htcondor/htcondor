@@ -141,6 +141,7 @@ extern const char * ATTR_GLOBAL_JOB_ID;
 extern const char * ATTR_GZIP;
 extern const char * ATTR_GLOBUS_CONTACT_STRING;
 extern const char * ATTR_GLOBUS_DELEGATION_URI;
+// Deprecated (cruft) -- no longer used
 extern const char * ATTR_GLOBUS_GRAM_VERSION;
 extern const char * ATTR_GLOBUS_RESOURCE;
 extern const char * ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME;
@@ -602,7 +603,9 @@ extern const char * ATTR_SEC_PACKET_COUNT;
 extern const char * ATTR_SEC_NEGOTIATION;
 extern const char * ATTR_SEC_VALID_COMMANDS;
 extern const char * ATTR_SEC_SESSION_DURATION;
+extern const char * ATTR_SEC_SESSION_EXPIRES;
 extern const char * ATTR_SEC_USER;
+extern const char * ATTR_SEC_MY_REMOTE_USER_NAME;
 extern const char * ATTR_SEC_NEW_SESSION;
 extern const char * ATTR_SEC_USE_SESSION;
 extern const char * ATTR_SEC_COOKIE;

@@ -876,10 +876,6 @@ IpVerify::lookup_user(NetStringList *hosts, UserHash_t *users, char const *user,
 bool
 IpVerify::PunchHole(DCpermission perm, MyString& id)
 {
-	if (PermTypeArray[perm] == NULL) {
-		return false;
-	}
-
 	int count = 0;
 	if (PunchedHoleArray[perm] == NULL) {
 		PunchedHoleArray[perm] =
@@ -933,10 +929,6 @@ IpVerify::PunchHole(DCpermission perm, MyString& id)
 bool
 IpVerify::FillHole(DCpermission perm, MyString& id)
 {
-	if (PermTypeArray[perm] == NULL) {
-		return false;
-	}
-
 	HolePunchTable_t* table = PunchedHoleArray[perm];
 	if (table == NULL) {
 		return false;
