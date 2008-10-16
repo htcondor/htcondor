@@ -57,6 +57,12 @@
 #define TTProgs
 #endif
 
+#if WANT_MATCHMAKER
+#define MatchMakerProgs matchmaker.V7
+#else
+#define MatchMakerProgs
+#endif
+
 #if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP
 #define EC2 amazon
 #else
