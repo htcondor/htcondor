@@ -875,6 +875,9 @@ XenType::CreateVirshConfigFile(const char* filename)
 	if( fprintf(fp, "<memory>%d</memory>", m_vm_mem) < 0 ) {
 		goto virshwriteerror;
 	}
+	if( fprintf(fp, "<vcpu>%d</vcpu>", m_vcpus) < 0 ) {
+	  goto virshwriteerror;
+	}
 
 	if( fprintf(fp, "<os>") < 0 ) {
 		goto virshwriteerror;
@@ -966,6 +969,12 @@ XenType::CreateVirshConfigFile(const char* filename)
 					goto virshwriteerror;
 				}
 			}
+			if(!m_vm_job_mac.IsEmpty())
+			  {
+			    if(fprintf(fp, "<mac address=\'%s\'/>", m_vm_job_mac.Value()) < 0) {
+			      goto virshwriteerror;
+			    }
+			  }
 			if( fprintf(fp, "</interface>") < 0 ) {
 				goto virshwriteerror;
 			}

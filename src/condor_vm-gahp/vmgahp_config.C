@@ -129,8 +129,8 @@ VMGahpConfig::init(const char* vmtype)
 			}
 		}
 
-		/*
-		 * Future work
+		/*		
+		// Why only a prefix? 
 		// Read VM_NETWORKING_MAC_PREFIX
 		config_value = param("VM_NETWORKING_MAC_PREFIX");
 		if( config_value ) {

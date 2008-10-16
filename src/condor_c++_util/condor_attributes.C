@@ -331,6 +331,8 @@ const char *ATTR_JOB_VM_CHECKPOINT			= "JobVMCheckpoint";
 const char *ATTR_JOB_VM_NETWORKING			= "JobVMNetworking";
 const char *ATTR_JOB_VM_NETWORKING_TYPE		= "JobVMNetworkingType";
 const char *ATTR_JOB_VM_HARDWARE_VT			= "JobVMHardwareVT";
+const char * ATTR_JOB_VM_VCPUS = "JobVM_VCPUS";
+const char * ATTR_JOB_VM_MACADDR = "JobVM_MACADDR";
 // End VM universe
 const char *ATTR_KEYBOARD_IDLE            = "KeyboardIdle";
 const char *ATTR_KEYSTORE_FILE            = "KeystoreFile";
@@ -745,6 +747,7 @@ const char *ATTR_VM_GUEST_IP = "VM_Guest_IP";
 const char *ATTR_VM_GUEST_MEM = "VM_Guest_Mem";
 const char *ATTR_VM_CKPT_MAC = "VM_CkptMac";
 const char *ATTR_VM_CKPT_IP = "VM_CkptIP";
+
 // End VM universe
 
 // Valid settings for ATTR_JOB_MANAGED.

@@ -160,6 +160,8 @@ char* RunAsOwnerCredD = NULL;
 // For vm universe
 MyString VMType;
 int VMMemory = 0;
+int VMVCPUS = 0;
+MyString VMMACAddr;
 bool VMCheckpoint = false;
 bool VMNetworking = false;
 MyString VMNetworkType;
@@ -349,6 +351,8 @@ char	*LoadUserProfile = "load_user_profile";
 //
 char    *VM_Type = "vm_type";
 char    *VM_Memory = "vm_memory";
+char    *VM_VCPUS = "vm_vcpus";
+char    *VM_MACAddr = "vm_macaddr";
 char    *VM_Checkpoint = "vm_checkpoint";
 char    *VM_Networking = "vm_networking";
 char    *VM_Networking_Type = "vm_networking_type";
@@ -7325,6 +7329,33 @@ SetVMParams()
 	}
 	buffer.sprintf( "%s = %d", ATTR_JOB_VM_MEMORY, VMMemory);
 	InsertJobExpr( buffer, false );
+
+	/* 
+	 * Set the number of VCPUs for this virtual machine
+	 */
+	tmp_ptr = condor_param(VM_VCPUS, ATTR_JOB_VM_VCPUS);
+	if(tmp_ptr)
+	  {
+	    VMVCPUS = (int)strtol(tmp_ptr, (char**)NULL,10);
+	    dprintf(D_FULLDEBUG, "VCPUS = %s", tmp_ptr);
+	    free(tmp_ptr);
+	  }
+	if(VMVCPUS <= 0)
+	  {
+	    VMVCPUS = 1;
+	  }
+	buffer.sprintf("%s = %d", ATTR_JOB_VM_VCPUS, VMVCPUS);
+	InsertJobExpr(buffer, false);
+
+	/*
+	 * Set the MAC address for this VM.
+	 */
+	tmp_ptr = condor_param(VM_MACAddr, ATTR_JOB_VM_MACADDR);
+	if(tmp_ptr)
+	  {
+	    buffer.sprintf("%s = %d", ATTR_JOB_VM_MACADDR, tmp_ptr);
+	    InsertJobExpr(buffer, false);
+	  }
 
 	/* 
 	 * When the parameter of "vm_no_output_vm" is TRUE, 

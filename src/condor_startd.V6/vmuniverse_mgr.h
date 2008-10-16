@@ -48,6 +48,7 @@ private:
 
 	pid_t m_pid;
 	int m_memory;
+	int m_vcpus;
 	ClassAd m_job_ad;
 
 	pid_t m_vm_pid;

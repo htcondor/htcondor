@@ -153,7 +153,8 @@ protected:
 
 	UtcTime m_last_status_time;
 	MyString m_last_status_result;
-
+	int m_vcpus;
+	MyString m_vm_job_mac;
 private:
 	void createInitialFileList();
 };

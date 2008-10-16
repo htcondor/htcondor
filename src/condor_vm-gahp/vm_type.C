@@ -59,6 +59,8 @@ VMType::VMType(const char* prog_for_script, const char* scriptname, const char* 
 	m_cpu_time = 0;
 	m_delete_working_files = false;
 
+	vmprintf(D_FULLDEBUG, "Constructed VM_Type.\n");
+
 	// Use the script program to create a configuration file for VM ?
 	m_use_script_to_create_config = 
 		param_boolean("USE_SCRIPT_TO_CREATE_CONFIG", false);
@@ -107,6 +109,17 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 			return false;
 		}
 	}
+	vmprintf(D_FULLDEBUG, "Memory: %d\n", m_vm_mem);
+
+	vmprintf(D_FULLDEBUG, "Looking up number of vcpus.\n");
+	// Read the number of vcpus
+	if( m_classAd.LookupInteger( ATTR_JOB_VM_VCPUS, m_vcpus) != 1) {
+	  vmprintf(D_FULLDEBUG, "No VCPUS defined or VCPUS definition is bad.\n");
+	}
+	else {
+	  if(m_vcpus < 1) m_vcpus = 1;
+	  vmprintf(D_FULLDEBUG, "Setting up %d CPUS\n", m_vcpus);
+	}
 
 	// Read parameter for networking
 	m_vm_networking = false;
@@ -143,6 +156,7 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 				m_vm_networking_type = "nat";
 			}
 		}
+		m_classAd.LookupString( ATTR_JOB_VM_MACADDR, m_vm_job_mac);
 	}
 
 	// Read parameter for checkpoint

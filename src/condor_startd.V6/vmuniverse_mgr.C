@@ -161,7 +161,7 @@ VMStarterInfo::VMStarterInfo()
 {
 	m_pid = 0;
 	m_memory = 0;
-
+	m_vcpus = 1;
 	m_vm_pid = 0;
 	memset(&m_vm_exited_pinfo, 0, sizeof(m_vm_exited_pinfo));
 	memset(&m_vm_alive_pinfo, 0, sizeof(m_vm_alive_pinfo));
@@ -299,6 +299,7 @@ VMStarterInfo::publishVMInfo(ClassAd* ad, amask_t mask )
 	if( m_memory > 0 ) {
 		ad->Assign(ATTR_VM_GUEST_MEM, m_memory); 
 	}
+	ad->Assign(ATTR_JOB_VM_VCPUS, m_vcpus);
 }
 
 VMUniverseMgr::VMUniverseMgr()
@@ -770,6 +771,13 @@ VMUniverseMgr::allocVM(pid_t s_pid, ClassAd &ad, char const *execute_dir)
 		return false;
 	}
 
+	int vcpus = 0;
+	if(ad.LookupInteger(ATTR_JOB_VM_VCPUS, vcpus) != 1)
+	  {
+	    dprintf(D_FULLDEBUG, "Defaulting to one CPU\n");
+	    vcpus = 1;
+	  }
+
 	// check whether this pid already exists
 	VMStarterInfo *oldinfo = findVMStarterInfoWithStarterPid(s_pid);
 	if( oldinfo ) {
@@ -787,6 +795,7 @@ VMUniverseMgr::allocVM(pid_t s_pid, ClassAd &ad, char const *execute_dir)
 	newinfo->m_memory = vm_mem;
 	newinfo->m_job_ad = ad; 
 	newinfo->m_execute_dir = execute_dir;
+	newinfo->m_vcpus = vcpus;
 
 	// If there exists MAC or IP address for a checkpointed VM,
 	// we use them as initial values.

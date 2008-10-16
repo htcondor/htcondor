@@ -116,6 +116,7 @@ VMGahp::VMGahp(VMGahpConfig* config, const char* iwd)
 	m_max_vm_id = 0;
 
 	m_need_output_for_quit = false;
+	vmprintf(D_FULLDEBUG, "Constructed VMGahp\n");
 }
 
 VMGahp::~VMGahp()
@@ -1017,6 +1018,7 @@ VMGahp::executeSupportVMS(void)
 		i++;
 	}
 
+	vmprintf(D_FULLDEBUG, "Execute commands: %s\n", result.Value());
 	write_to_daemoncore_pipe("%s\n", result.Value());
 }
 
