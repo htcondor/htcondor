@@ -25,7 +25,6 @@
 #include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "condor_ckpt_name.h"
-#include "globus_utils.h" // for GRAM_V_1_5
 
 #include "gridmanager.h"
 #include "basejob.h"
@@ -1257,7 +1256,6 @@ bool
 WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	int version;
 	MyString contact;
 	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
@@ -1286,9 +1284,7 @@ WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 	}
 	event.jmContact = strnewp(contact.GetNextToken( " ", false ));
 
-	version = 0;
-	job_ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, version );
-	event.restartableJM = version >= GRAM_V_1_5;
+	event.restartableJM = true;
 
 	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;

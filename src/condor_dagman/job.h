@@ -310,6 +310,13 @@ class Job {
 	*/
 	void ResolveVarsInterpolations(void);
 
+	/** Add a prefix to the Directory setting for this job. If the prefix
+		is ".", then do nothing.
+		@param prefix: the prefix to be joined to the directory using "/"
+		@return void
+	*/
+	void PrefixDirectory(MyString &prefix);
+
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 

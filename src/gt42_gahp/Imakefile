@@ -8,3 +8,5 @@ static_recursive_copy_target($(GLOBUS_DIR)/gt42-java,lib/gt42)
 strip_recursive_copy_target($(GLOBUS_DIR)/gt42-java,lib/gt42)
 
 testbin::
+
+clean::

@@ -99,6 +99,7 @@ class ParamValue {
 	extern StringList local_config_sources;
 
 	ExtArray<ParamValue>* param_all(void);
+	char* param_or_except( const char *name );
     int param_integer( const char *name, int default_value,
 					   int min_value = INT_MIN, int max_value = INT_MAX );
 	// Alternate param_integer():

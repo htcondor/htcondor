@@ -33,18 +33,9 @@ sendCAReply( Stream* s, const char* cmd_str, ClassAd* reply )
 	reply->SetMyTypeName( REPLY_ADTYPE );
 	reply->SetTargetTypeName( COMMAND_ADTYPE );
 
-	MyString line;
-	line = ATTR_VERSION;
-	line += " = \"";
-	line += CondorVersion();
-	line += '"';
-	reply->Insert( line.Value() );
+	reply->Assign( ATTR_VERSION, CondorVersion() );
 
-	line = ATTR_PLATFORM;
-	line += " = \"";
-	line += CondorPlatform();
-	line += '"';
-	reply->Insert( line.Value() );
+	reply->Assign( ATTR_PLATFORM, CondorPlatform() );
 
 	s->encode();
 	if( ! reply->put(*s) ) {
@@ -70,19 +61,10 @@ sendErrorReply( Stream* s, const char* cmd_str, CAResult result,
 	dprintf( D_ALWAYS, "%s\n", err_str );
 
 	ClassAd reply;
-	MyString line;
 
-	line = ATTR_RESULT;
-	line += " = \"";
-	line += getCAResultString( result );
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign( ATTR_RESULT, getCAResultString( result ) );
 
-	line = ATTR_ERROR_STRING;
-	line += " = \"";
-	line += err_str;
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign( ATTR_ERROR_STRING, err_str );
 	
 	return sendCAReply( s, cmd_str, &reply );
 }

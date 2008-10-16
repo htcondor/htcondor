@@ -542,6 +542,12 @@ AC_ARG_WITH(buildid,
   [BUILDID=$withval],
   [BUILDID=no])
 
+AC_ARG_ENABLE(bgd-support,
+  [AS_HELP_STRING([--enable-bgd-support],
+     [Enable support for HTC mode on the BlueGene machine.])],
+  [],
+  [enable_bgd_support=no])
+
 AC_ARG_ENABLE(proper,
   [AS_HELP_STRING([--enable-proper],
      [Force this configure script to work in the proper (non-Condor) way (default: disabled)])],
@@ -2754,11 +2760,11 @@ else
   pgsql_ver="8.0.2";
 fi
 
-CHECK_EXTERNAL([postgresql], [$pgsql_ver], [hard],
+CHECK_EXTERNAL([postgresql], [$pgsql_ver], [soft],
                [use PostgreSQL (provides Quill and other support)],
                MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
-#AC_MSG_CHECKING([postgresql])
-#AC_MSG_RESULT([$_cv_ext_postgresql_version])
+AC_MSG_CHECKING([postgresql])
+AC_MSG_RESULT([$_cv_ext_postgresql_version])
 #AC_SUBST(ext_postgresql_version,$_cv_ext_postgresql_version)
 AC_SUBST(POSTGRESQL_LDFLAGS, $POSTGRESQL_LDFLAGS)
 AC_SUBST(POSTGRESQL_CFLAGS, $POSTGRESQL_CFLAGS)

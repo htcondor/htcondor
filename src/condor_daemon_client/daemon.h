@@ -326,6 +326,7 @@ public:
 		  @param sec The timeout you want to use on your Sock.
 		  @param errstack NULL or error stack to dump errors into.
 		  @param raw_protocol to bypass all security negotiation, set to true
+		  @param sec_session_id use specified session if available
 		  @return NULL on error, or the Sock object to use for the
 		  rest of the command on success.
 		  */
@@ -333,7 +334,7 @@ public:
 				Stream::stream_type st = Stream::reli_sock,
 				int sec = 0, CondorError* errstack = NULL,
 				char const *cmd_description = NULL,
-				bool raw_protocol=false );
+				bool raw_protocol=false, char const *sec_session_id=NULL );
 	
 		/** Start sending the given command to the daemon.  The caller
 		  gives the command they want to send, and a pointer to the
@@ -346,12 +347,13 @@ public:
 		  @param sec The timeout you want to use on your Sock.
 		  @param errstack NULL or error stack to dump errors into.
 		  @param raw_protocol to bypass all security negotiation, set to true
+		  @param sec_session_id use specified session if available
 		  @return false on error, true on success.
 		*/
 	bool startCommand( int cmd, Sock* sock,
 			int sec = 0, CondorError* errstack = NULL,
 			char const *cmd_description=NULL,
-			bool raw_protocol=false );
+			bool raw_protocol=false, char const *sec_session_id=NULL );
 			
 		/** Start sending the given command to the daemon.  This
 			command claims to be nonblocking, but currently it only
@@ -380,9 +382,10 @@ public:
 			                   Must be non-NULL
 			@param misc_data any data caller wants passed to callback_fn
 			@param raw_protocol to bypass all security negotiation, set to true
+			@param sec_session_id use specified session if available
 			@return see definition of StartCommandResult enumeration.
 		  */
-	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false );
+	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL );
 
 		/** Start sending the given command to the daemon.  This
 			command claims to be nonblocking, but currently it only
@@ -410,9 +413,10 @@ public:
 							   setup is in progress.
 			@param misc_data any data caller wants passed to callback_fn
 			@param raw_protocol to bypass all security negotiation, set to true
+			@param sec_session_id use specified session if available
 			@return see definition of StartCommandResult enumeration.
 		*/
-	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false );
+	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL );
 
 		/**
 		 * Asynchronously send a message (command + whatever) to the
@@ -658,12 +662,13 @@ protected:
 		   @param reply Pointer to the reply ad (from the server)
 		   @param force_auth Should we force authentication for this cmd?
 		   @param timeout Network timeout to use (ignored if < 0 )
+		   @param sec_session_id Security session to use.
 		   @return false if there were any network errors, if
 		   ATTR_ERROR_STRING is defined, and/or if ATTR_RESULT is not
 		   CA_SUCCESS.  Otherwise, true.   
 		*/
 	bool sendCACmd( ClassAd* req, ClassAd* reply, bool force_auth,
-					int timeout = -1 );
+					int timeout = -1, char const *sec_session_id=NULL );
 
 		/** Same as above, except the socket for the command is passed
 			in as an argument.  This way, you can keep the ReliSock
@@ -672,7 +677,8 @@ protected:
 			call the above version.
 		*/
 	bool sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* sock,
-					bool force_auth, int timeout = -1 );
+					bool force_auth, int timeout = -1,
+					char const *sec_session_id=NULL );
 
 		/** 
 		   Helper method for commands to see if we've already got the
@@ -694,7 +700,7 @@ protected:
 		   It may be either blocking or nonblocking, depending on the
 		   nonblocking flag.  This version uses an existing socket.
 		 */
-	static StartCommandResult startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *version, SecMan *sec_man, bool raw_protocol );
+	static StartCommandResult startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *version, SecMan *sec_man, bool raw_protocol, char const *sec_session_id );
 
 		/**
 		   Internal function used by public versions of startCommand().
@@ -702,7 +708,7 @@ protected:
 		   nonblocking flag.  This version creates a socket of the
 		   specified type and connects it.
 		 */
-	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description=NULL, bool raw_protocol=false );
+	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL );
 
 		/**
 		   Class used internally to handle non-blocking connects for

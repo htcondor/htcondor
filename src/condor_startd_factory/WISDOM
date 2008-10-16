@@ -1,0 +1,36 @@
+BG/P Machine Wisdom
+-------------------
+
+Using the mmcs_db_console. The mmcs_db_console does not provide variables like
+how I'm using them in these examples. They are only there to show the 
+parameterizability of the commands.
+
+Listing generated partitions:
+	?
+
+Listing a booted partition's info
+	$name = R0-N0-N01
+	getblockinfo $name
+
+Listing all booted partitions
+	list_blocks
+
+Generating a partition:
+	$name = R0-N0-N01
+	$sub = R0-M0
+	$node = N00
+	$size = 32
+	gensmallblock $name $sub BGP $size $size $node
+
+Destroying a partition:
+	$name = R0-N0-N01
+	?
+
+Booting a partition:
+	$name = R00-N0-N01
+	$type = SMP
+	allocate $name htc=$type
+
+Shutting down a partition:
+	$name = R00-N0-N01
+	free $name

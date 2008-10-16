@@ -118,9 +118,6 @@ static char *GMStateNames[] = {
 	"GM_CLEANUP_WAIT",
 };
 
-#define MIN_SUPPORTED_GRAM_V GRAM_V_1_6
-#define MIN_SUPPORTED_GRAM_V_STRING "1.6"
-
 // TODO: once we can set the jobmanager's proxy timeout, we should either
 // let this be set in the config file or set it to
 // GRIDMANAGER_MINIMUM_PROXY_TIME + 60
@@ -620,7 +617,6 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	globusStateBeforeFailure = 0;
 	callbackGlobusState = 0;
 	callbackGlobusStateErrorCode = 0;
-	jmVersion = GRAM_V_UNKNOWN;
 	restartingJM = false;
 	restartWhen = 0;
 	gmState = GM_INIT;
@@ -704,8 +700,6 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
-	jobAd->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, jmVersion );
-
 	jobAd->LookupString( ATTR_GRID_RESOURCE, grid_resource );
 	if ( grid_resource.Length() ) {
 		const char *token;
@@ -735,12 +729,6 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 	jobAd->LookupString( ATTR_GRID_JOB_ID, grid_job_id );
 	if ( grid_job_id.Length() ) {
-		if ( jmVersion == GRAM_V_UNKNOWN ) {
-			dprintf(D_ALWAYS,
-					"(%d.%d) Non-NULL contact string and unknown gram version!\n",
-					procID.cluster, procID.proc);
-		}
-
 		const char *token;
 
 		grid_job_id.Tokenize();
@@ -939,17 +927,6 @@ int GlobusJob::doEvaluateState()
 			// do in the constructor because they could block (the
 			// constructor is called while we're connected to the schedd).
 			int err;
-
-			if ( jmVersion != GRAM_V_UNKNOWN &&
-				 jmVersion < MIN_SUPPORTED_GRAM_V ) {
-				const char * OLD_GRAM_ERROR 
-					= "Job is attempting to use obsolete GRAM protocol.";
-				dprintf(D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc,
-						OLD_GRAM_ERROR);
-				errorString = OLD_GRAM_ERROR;
-				gmState = GM_HOLD;
-				break;
-			}
 
 			if ( !jobProxy ) {
 				jobAd->Assign( ATTR_HOLD_REASON,
@@ -1230,29 +1207,15 @@ int GlobusJob::doEvaluateState()
 				jmProxyExpireTime = jobProxy->expiration_time;
 				if ( rc == GLOBUS_SUCCESS ) {
 					// Previously this supported GRAM 1.0
-					dprintf(D_ALWAYS, "(%d.%d) Unexpected remote response.  GRAM %s is now required.\n", procID.cluster, procID.proc, MIN_SUPPORTED_GRAM_V_STRING);
-					errorString.sprintf("Unexpected remote response.  Remote server must speak GRAM %s", MIN_SUPPORTED_GRAM_V_STRING);
+					dprintf(D_ALWAYS, "(%d.%d) Unexpected remote response.  GRAM 1.6 is now required.\n", procID.cluster, procID.proc);
+					errorString.sprintf("Unexpected remote response.  Remote server must speak GRAM 1.6");
 					myResource->JMComplete( this );
 					gmState = GM_HOLD;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
-					if ( jmVersion == GRAM_V_UNKNOWN ) {
-						jmVersion = GRAM_V_1_6;
-						jobAd->Assign( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_6 );
-					}
 					callbackRegistered = true;
 					SetRemoteJobId( job_contact );
 					gahp->globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
-				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_RSL_EVALUATION_FAILED &&
-							(jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6) ) {
-					// Previously this supported GRAM 1.5
-					// There shouldn't be a special case for this.
-					// It should be handled with all the other errors below.
-					// Talk to Alan about it.
-					dprintf(D_ALWAYS, "(%d.%d) Unexpected remote response.  GRAM %s is now required.\n", procID.cluster, procID.proc, MIN_SUPPORTED_GRAM_V_STRING);
-					errorString.sprintf("Unexpected remote response.  Remote server must speak GRAM %s", MIN_SUPPORTED_GRAM_V_STRING);
-					myResource->JMComplete( this );
-					gmState = GM_HOLD;
 				} else {
 					// unhandled error
 					myResource->JMComplete( this );
@@ -2057,9 +2020,6 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				myResource->JMComplete( this );
 				jmDown = false;
 				SetRemoteJobId( NULL );
-				jmVersion = GRAM_V_UNKNOWN;
-				jobAd->Assign( ATTR_GLOBUS_GRAM_VERSION,
-								jmVersion );
 				requestScheddUpdate( this );
 
 				if ( condorState == REMOVED ) {
@@ -2123,7 +2083,6 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			globusError = 0;
 			lastRestartReason = 0;
 			numRestartAttemptsThisSubmit = 0;
-			jmVersion = GRAM_V_UNKNOWN;
 			errorString = "";
 			ClearCallbacks();
 			useGridJobMonitor = true;

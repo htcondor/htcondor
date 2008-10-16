@@ -389,7 +389,9 @@ handleGlobalLogRotation()
 	current_filesize = swrap.GetBuf()->st_size;
 
 	int global_max_filesize = param_integer("MAX_EVENT_LOG",1000000);
-	if ( current_filesize > global_max_filesize ) {
+	if ( global_max_filesize && 	// do not rotate if MAX_EVENT_LOG==0
+		 (current_filesize > global_max_filesize) ) 
+	{
 		MyString old_name(m_global_path);
 		old_name += ".old";
 #ifdef WIN32

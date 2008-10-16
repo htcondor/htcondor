@@ -1088,4 +1088,3 @@ ClassAd* ClassAd::FindNext()
 {
 	return (ClassAd*)next;
 }
-

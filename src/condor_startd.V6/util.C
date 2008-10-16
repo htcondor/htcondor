@@ -458,7 +458,7 @@ stream_to_rip( Stream* stream )
 	Resource* rip;
 
 	stream->decode();
-	if( ! stream->code(id) ) {
+	if( ! stream->get_secret(id) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		free( id );
 		return NULL;

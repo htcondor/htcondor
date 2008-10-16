@@ -164,7 +164,6 @@ class GlobusJob : public BaseJob
 	bool stageError;
 	int globusError;
 
-	int jmVersion;
 	bool restartingJM;
 	time_t restartWhen;
 

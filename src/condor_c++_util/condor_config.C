@@ -1497,6 +1497,19 @@ int param_integer_c( const char *name, int default_value,
 	return param_integer( name, default_value, min_value, max_value );
 }
 
+// require that the attribute I'm looking for is defined in the config file.
+char* param_or_except(const char *attr)
+{
+	char *tmp = NULL;
+
+	tmp = param(attr);
+	if (tmp == NULL || strlen(tmp) <= 0) {
+		EXCEPT("Please define config file entry to non-null value: %s", attr);
+	}
+
+	return tmp;
+}
+
 
 /*
  * Return the [single precision] floating point value associated with the named

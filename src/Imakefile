@@ -19,7 +19,7 @@
 #define CreddProgs
 #endif
 
-#if HAVE_EXT_CLASSADS
+#if HAVE_EXT_CLASSADS && WANT_QUILL
 #define JobRouterProgs schedd.V7
 #else
 #define JobRouterProgs
@@ -49,19 +49,11 @@
 
 #ifdef WANT_QUILL
 #define QuillProgs quill
-#else
-#define QuillProgs
-#endif
-
-#if WANT_MATCHMAKER
-#define MatchMakerProgs matchmaker.V7
-#else
-#define MatchMakerProgs
-#endif
-
-#ifdef WANT_TT
+#define LibQuill condor_quill/libquill.a 
 #define TTProgs tt dbmsd
 #else
+#define QuillProgs
+#define LibQuill
 #define TTProgs
 #endif
 
@@ -86,7 +78,7 @@
 		CreddProgs StorkProgs MatchMakerProgs \
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
-		JobRouterProgs GlobusGahps
+		EC2 JobRouterProgs GlobusGahps startd_factory
 
 #define Libraries \
 		util_lib daemon_core.V6 daemon_client classad c++_util	\
@@ -95,8 +87,9 @@
 		condor_schedd.V6/libqmgmt.a				\
 		condor_accountant.V6/libacct.a StdUnvLibs NetmanLibs	\
 		condor_procd/procd_client.a \
-		condor_privsep/privsep_client.a condor_quill/libquill.a \
+		condor_privsep/privsep_client.a LibQuill \
 		chirp AnalysisLibs
+
 
 #if HAS_STATIC
 #define StaticDirectories \
@@ -241,9 +234,6 @@ condor_object_target(starter.V5)
 
 #ifdef WANT_QUILL
 condor_object_target(quill)
-#endif
-
-#ifdef WANT_TT
 condor_object_target(tt)
 condor_object_target(dbmsd)
 #endif
@@ -292,6 +282,7 @@ condor_object_target(c-gahp)
 condor_object_target(procd)
 condor_object_target(privsep)
 condor_object_target(dcskel)
+condor_object_target(startd_factory)
 condor_object_target(vm-gahp)
 
 #if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP
@@ -400,8 +391,6 @@ pure_target(condor_starter.V6.1,condor_starter.pure)
 pure_target(condor_collector.V6,condor_collector.pure)
 pure_target(condor_negotiator.V6,condor_negotiator.pure)
 pure_target(condor_dagman,condor_dagman.pure)
-
-pure_target(condor_tt,condor_tt.pure)
 
 #if HAS_EXTERNALS
 

@@ -408,6 +408,10 @@ ProcFamilyMonitor::signal_process(pid_t pid, int sig)
 proc_family_error_t
 ProcFamilyMonitor::signal_family(pid_t pid, int sig)
 {
+	// get as up to date as possible
+	//
+	snapshot();
+
 	// find the family
 	//
 	Tree<ProcFamily*>* tree;
@@ -418,10 +422,6 @@ ProcFamilyMonitor::signal_family(pid_t pid, int sig)
 		        pid);
 		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
 	}
-
-	// get as up to date as possible
-	//
-	snapshot();
 	
 	// now send the signal and return
 	//

@@ -1268,17 +1268,19 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 	 
 	MyString bulk;
 	if (dt == T_PGSQL) {
-		QuillErrCode err = DBObj->execCommand("truncate ad");
-		if (err == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Error running truncate ad\n");
-			errorSqlStmt = "truncate ad";
-			return QUILL_FAILURE;
-		}
-		err = DBObj->execCommand("COPY ad from STDIN");
-		if (err == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Error running COPY ad from STDIN\n");
-			errorSqlStmt = "Copy ad";
-			return QUILL_FAILURE;
+		if (useTempTable) {
+			QuillErrCode err = DBObj->execCommand("truncate ad");
+			if (err == QUILL_FAILURE) {
+				dprintf(D_ALWAYS, "Error running truncate ad\n");
+				errorSqlStmt = "truncate ad";
+				return QUILL_FAILURE;
+			}
+			err = DBObj->execCommand("COPY ad from STDIN");
+			if (err == QUILL_FAILURE) {
+				dprintf(D_ALWAYS, "Error running COPY ad from STDIN\n");
+				errorSqlStmt = "Copy ad";
+				return QUILL_FAILURE;
+			}
 		}
 	}
 	 
