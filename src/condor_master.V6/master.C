@@ -43,6 +43,10 @@
 #include "store_cred.h"
 #include "setenv.h"
 
+#if HAVE_DLOPEN
+#include "MasterPlugin.h"
+#endif
+
 #if HAVE_EXT_GCB
 #include "GCB.h"
 void gcbBrokerDownCallback();
@@ -284,6 +288,12 @@ main_init( int argc, char* argv[] )
 	check_uid_for_privsep();
 		// open up the windows firewall 
 	init_firewall_exceptions();
+
+#if HAVE_DLOPEN
+	MasterPluginManager::Load();
+
+	MasterPluginManager::Initialize();
+#endif
 
 		// Register admin commands
 	daemonCore->Register_Command( RECONFIG, "RECONFIG",
