@@ -530,7 +530,7 @@ MatchMaker::initPublicAd( void )
 
 	m_publicAd.Assign( ATTR_MACHINE, my_full_hostname() );
 
-	const char *local = NULL;
+	const char *local = mySubSystem->getLocalName();
 	if ( local ) {
 		m_publicAd.Assign( ATTR_NAME, local );
 	} else {

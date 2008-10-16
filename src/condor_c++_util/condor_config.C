@@ -349,7 +349,7 @@ config_host( char* host )
    is_daemon=true or vice versa are equivalent.
 */
 void
-condor_auth_config(int /*is_daemon*/)
+condor_auth_config(int is_daemon)
 {
 #if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_GLOBUS)
 
