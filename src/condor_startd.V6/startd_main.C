@@ -31,6 +31,10 @@
 #include "VMManager.h"
 #include "VMRegister.h"
 
+#if HAVE_DLOPEN
+#include "StartdPlugin.h"
+#endif
+
 // Define global variables
 
 // windows-specific: notifier for the condor "birdwatcher" (system tray icon)
@@ -399,6 +403,12 @@ main_init( int, char* argv[] )
 		// We don't just call eval_and_update_all() b/c we don't need
 		// to recompute anything.
 	resmgr->first_eval_and_update_all();
+
+#if HAVE_DLOPEN
+   StartdPluginManager::Load();
+
+   StartdPluginManager::Initialize();
+#endif
 
 	return TRUE;
 }
