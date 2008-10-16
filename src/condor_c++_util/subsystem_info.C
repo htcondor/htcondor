@@ -196,6 +196,9 @@ static const SubsystemInfoTable *infoTable = new SubsystemInfoTable( );
 
 SubsystemInfo::SubsystemInfo( const char *_name, SubsystemType _type )
 {
+	m_Name = NULL;
+	m_TempName = NULL;
+	m_LocalName = NULL;
 	setName( _name );
 	if ( _type == SUBSYSTEM_TYPE_AUTO ) {
 		setTypeFromName( _name );
@@ -207,6 +210,10 @@ SubsystemInfo::SubsystemInfo( const char *_name, SubsystemType _type )
 
 SubsystemInfo::~SubsystemInfo( void )
 {
+	if ( m_Name ) {
+		free( const_cast<char *>( m_Name ) );
+		m_Name = NULL;
+	}
 }
 
 bool
@@ -218,15 +225,35 @@ SubsystemInfo::nameMatch( const char *_name ) const
 const char *
 SubsystemInfo::setName( const char *_name )
 {
-	if ( _name ) {
-		m_Name = _name;
+	if ( _name != NULL ) {
+		m_Name = strdup(_name);
 		m_NameValid = true ;
 	}
 	else {
-		m_Name = "UNKNOWN";		// Fill in a value so it's not NULL
+		m_Name = strdup("UNKNOWN");		// Fill in a value so it's not NULL
 		m_NameValid = false;
 	}
 	return m_Name;
+}
+
+// Temp name handling
+const char *
+SubsystemInfo::setTempName( const char *_name )
+{
+	resetTempName( );
+	if ( _name ) {
+		m_TempName = strdup( _name );
+	}
+	return m_TempName;
+}
+
+void
+SubsystemInfo::resetTempName( void )
+{
+	if ( m_TempName ) {
+		free( const_cast<char*>(m_TempName) );
+		m_TempName = NULL;
+	}
 }
 
 // Public interface to set the type from a name
@@ -296,6 +323,28 @@ SubsystemInfo::setClass( const SubsystemInfoLookup *info )
 	ASSERT ( ( m_Class >= 0 ) && ( m_Class <= _num ) );
 	m_ClassName = _class_names[m_Class];
 	return m_Class;
+}
+
+// Methods to get/set the local name
+const char *
+SubsystemInfo::getLocalName( const char * _default ) const
+{
+	if ( m_LocalName ) {
+		return m_LocalName;
+	}
+	else {
+		return _default;
+	}
+}
+const char *
+SubsystemInfo::setLocalName( const char * _name )
+{
+	if ( m_LocalName ) {
+		free( const_cast<char *>( m_LocalName ) );
+		m_LocalName = NULL;
+	}
+	m_LocalName = strdup(_name);
+	return m_LocalName;
 }
 
 // Public dprintf / printf methods

@@ -101,40 +101,52 @@ class SubsystemInfo
 	bool isValid( void ) const
 		{ return (  (m_Type != SUBSYSTEM_TYPE_INVALID) && m_NameValid ); };
 
-	// Accessors
+	// Accessors for the subsystem name
 	const char *setName( const char *subsystem_name );
-	const char *getName( void ) const { return m_Name; };
+	const char *getName( void ) const
+		{ return (m_TempName == NULL) ? m_Name : m_TempName; };
 	bool nameMatch( const char *name ) const;
 	bool isNameValid( void ) const { return m_NameValid; };
 
+	// Temporarily override the subsystem name
+	const char *setTempName( const char *subsystem_name );
+	void resetTempName( void );
+
+	// Accessors for the subsystem type
 	SubsystemType setType( SubsystemType type );
-
-	// Guess at the type from the name -- pass NULL to use current name
-	SubsystemType setTypeFromName( const char *_type_name = NULL );
-
 	SubsystemType getType( void ) const { return m_Type; };
 	const char *getTypeName( void ) const { return m_TypeName; };
 	bool isType( SubsystemType _type ) const { return m_Type == _type; };
+	// Guess at the type from the name -- pass NULL to use current name
+	SubsystemType setTypeFromName( const char *_type_name = NULL );
 
-	// Get class info
+	// Subsystem class accessors
 	bool isClass( SubsystemClass _class ) const { return m_Class == _class; };
 	bool isDaemon( void ) const { return m_Class == SUBSYSTEM_CLASS_DAEMON; };
 	bool isJob( void ) const { return m_Class == SUBSYSTEM_CLASS_JOB; };
 	bool isClient( void ) const { return m_Class == SUBSYSTEM_CLASS_CLIENT; };
 	const char *getClassName( void ) const { return m_ClassName; };
 
+	// Accessors for the local name
+	const char *setLocalName( const char * );
+	const char *getLocalName( const char *_default = NULL ) const;
+	bool hasLocalName( void ) const { return (m_LocalName != NULL); };
+
+	// Debug & related
 	const char *getString( void ) const;
 	void dprintf( int level ) const;
 	void printf( void ) const;
-	
+
   private:
 	const char					*m_Name;
+	const char					*m_TempName;
 	bool						 m_NameValid;
 	SubsystemType				 m_Type;
 	const char					*m_TypeName;
 	SubsystemClass				 m_Class;
 	const SubsystemInfoLookup	*m_Info;
 	const char					*m_ClassName;
+	const char					*m_LocalName;
 
 	// Internal only methods
 	SubsystemType setType( SubsystemType _type, const char *_type_name );
