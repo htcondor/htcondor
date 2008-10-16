@@ -1,4 +1,3 @@
-//TEMPTEMP -- refactoring needs a little more testing
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -212,14 +211,12 @@ doRecursion( SubmitDagOptions &opts )
 	while ( (submitFile = submitFiles.next()) ) {
 		MyString subFile( submitFile );
 
-//TEMPTEMP -- is it worth worrying about having more than one .condor.sub?
 			// If submit file ends in ".condor.sub", we assume it refers
 			// to a sub-DAG.
 		int start = subFile.find( DAG_SUBMIT_FILE_SUFFIX );
 		if ( start >= 0 && start + (int)strlen( DAG_SUBMIT_FILE_SUFFIX) ==
 					subFile.Length() ) {
 			subFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
-			printf( "DIAG run condor_submit_dag -no_submit on %s\n", subFile.Value() );//TEMPTEMP
 
 			MyString cmdLine = "condor_submit_dag -no_submit -update_submit ";
 
@@ -232,7 +229,6 @@ doRecursion( SubmitDagOptions &opts )
 			if ( opts.strDagmanPath != "" ) cmdLine += MyString( "-dagman " ) +
 						opts.strDagmanPath.Value() + " ";
 			cmdLine += MyString( "-debug " ) + opts.iDebugLevel + " ";
-			if ( opts.bNoEventChecks ) cmdLine += "-noeventchecks ";
 			if ( opts.bAllowLogError ) cmdLine += "-allowlogerror ";
 			if ( opts.useDagDir ) cmdLine += "-usedagdir ";
 			if ( opts.strDebugDir != "" ) cmdLine +=
@@ -246,7 +242,6 @@ doRecursion( SubmitDagOptions &opts )
 			if ( opts.allowVerMismatch ) cmdLine += "-allowver ";
 
 			cmdLine += subFile;
-printf( "DIAG cmdLine <%s>\n", cmdLine.Value() );//TEMPTEMP
 
 			int retval = system( cmdLine.Value() );
 			if ( retval != 0 ) {
@@ -521,8 +516,10 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 	{
 	    fprintf( stderr, "\nSome file(s) needed by %s already exist.  ",
 				 dagman_exe );
-	    fprintf( stderr, "Either rename them,\nor use the \"-f\" option to "
-				 "force them to be overwritten.\n" );
+	    fprintf( stderr, "Either rename them,\nuse the \"-f\" option to "
+				 "force them to be overwritten, or use\n"
+				 "the \"-update_submit\" option to update the submit "
+				 "file and continue.\n" );
 	    exit( 1 );
 	}
 }
@@ -537,8 +534,6 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 int
 getOldSubmitFlags(SubmitDagOptions &opts)
 {
-printf( "DIAG getOldSubmitFlags()\n" );//TEMPTEMP
-
 		// It's not an error for the submit file to not exist.
 	if ( fileExists( opts.strSubFile ) ) {
 		FILE *subFile = safe_fopen_wrapper(opts.strSubFile.Value(), "r");
@@ -554,8 +549,6 @@ printf( "DIAG getOldSubmitFlags()\n" );//TEMPTEMP
 				tokens.rewind();
 				const char *first = tokens.next();
 				if ( first && !strcmp( first, "arguments" ) ) {
-					printf( "DIAG got arguments: <%s>\n", subLine.Value() );//TEMPTEMP
-					printf("DIAG tokens.number(): %d\n", tokens.number());//TEMPTEMP
 
 					if ( parseArgumentsLine( subLine, opts ) != 0 ) {
 						(void)fclose( subFile );
@@ -588,7 +581,6 @@ parseArgumentsLine( const MyString &subLine , SubmitDagOptions &opts )
 	MyString arguments;
 	if ( start && end ) {
 		arguments = subLine.Substr( start - line, end - line );
-printf( "DIAG arguments: <%s>\n", arguments.Value() );//TEMPTEMP
 	} else {
 		fprintf( stderr, "Missing quotes in arguments line: <%s>\n",
 					subLine.Value() );
@@ -602,12 +594,10 @@ printf( "DIAG arguments: <%s>\n", arguments.Value() );//TEMPTEMP
 		fprintf( stderr, "Error parsing arguments: %s\n", error.Value() );
 		return 1;
 	}
-printf( "DIAG argument count: %d\n", arglist.Count() );//TEMPTEMP
 
 	for ( int argNum = 0; argNum < arglist.Count(); argNum++ ) {
 		MyString strArg = arglist.GetArg( argNum );
 		strArg.lower_case();
-printf( "DIAG strArg: <%s>\n", strArg.Value() );//TEMPTEMP
 		(void)parsePreservedArgs( strArg, argNum, arglist.Count(),
 					arglist.GetStringArray(), opts);
 	}
@@ -798,7 +788,6 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 void
 parseCommandLine(SubmitDagOptions &opts, int argc, const char * const argv[])
 {
-printf("DIAG parseCommandLine()\n");//TEMPTEMP
 	for (int iArg = 1; iArg < argc; iArg++)
 	{
 		MyString strArg = argv[iArg];
@@ -821,7 +810,6 @@ printf("DIAG parseCommandLine()\n");//TEMPTEMP
 		else
 		{
 			strArg.lower_case();
-printf("  DIAG strArg: <%s>\n", strArg.Value());//TEMPTEMP
 
 			// Note: in checking the argument names here, we only check for
 			// as much of the full name as we need to unambiguously define
@@ -1065,7 +1053,6 @@ int printUsage()
 	printf("    -dagman <path>      (Full path to an alternate condor_dagman executable)\n");
     printf("    -no_submit          (DAG is not submitted to Condor)\n");
     printf("    -verbose            (Verbose error messages from condor_submit_dag)\n");
-	//TEMPTEMP -- make a note about rescue DAGs w/ -force
     printf("    -force              (Overwrite files condor_submit_dag uses if they exist)\n");
     printf("    -r <schedd_name>    (Submit to the specified remote schedd)\n");
 	printf("    -maxidle <number>   (Maximum number of idle nodes to allow)\n");
@@ -1091,6 +1078,8 @@ int printUsage()
 	printf("    -AutoRescue 0|1     (whether to automatically run newest rescue DAG;\n");
 	printf("         0 = false, 1 = true)\n");
 	printf("    -DoRescueFrom <number>  (run rescue DAG of given number)\n");
+	printf("    -AllowVersionMismatch (allow version mismatch between the\n");
+	printf("         .condor.sub file and the condor_dagman binary)\n");
 	printf("    -no_recurse         (don't recurse in nested DAGs)\n");
 	printf("    -update_submit      (update submit file if it exists)\n");
 	exit(1);
