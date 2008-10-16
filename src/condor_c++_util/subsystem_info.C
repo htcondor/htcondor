@@ -199,6 +199,7 @@ SubsystemInfo::SubsystemInfo( const char *_name, SubsystemType _type )
 	m_Name = NULL;
 	m_TempName = NULL;
 	m_LocalName = NULL;
+	setName( _name );
 	if ( _type == SUBSYSTEM_TYPE_AUTO ) {
 		setTypeFromName( _name );
 	}
@@ -224,7 +225,7 @@ SubsystemInfo::nameMatch( const char *_name ) const
 const char *
 SubsystemInfo::setName( const char *_name )
 {
-	if ( _name ) {
+	if ( _name != NULL ) {
 		m_Name = strdup(_name);
 		m_NameValid = true ;
 	}
