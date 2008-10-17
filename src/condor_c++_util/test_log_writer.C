@@ -214,8 +214,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --fork-cluster-step <number>: with --fork: step # of cluster #"
 		" (default = 1000)\n"
 		"\n"
-		"  --numexec <number>: number of execute events to write / proc\n"
-		"  -n|--numprocs <number>: Number of procs (default = 10)\n"
+		"  --num-exec <number>: number of execute events to write / proc\n"
+		"  -n|--num-procs <number>: Number of procs (default = 10)\n"
 		"\n"
 		"  --generic <string>: Write generic event\n"
 		"  --persist <file>: persist writer state to file (for jobid gen)\n"
@@ -308,22 +308,22 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				status = true;
 			}
 
-		} else if ( arg.Match('n', "numexec") ) {
+		} else if ( arg.Match('n', "num-exec") ) {
 			if ( arg.OptIsNumber() ) {
 				opts.numExec = atoi( arg.Opt() );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --numexec argument\n");
+				fprintf(stderr, "Value needed for --num-exec argument\n");
 				printf("%s", usage);
 				status = true;
 			}
 
-		} else if ( arg.Match("numprocs") ) {
+		} else if ( arg.Match("num-procs") ) {
 			if ( arg.OptIsNumber() ) {
 				opts.numProcs = atoi( arg.Opt() );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --numprocs argument\n");
+				fprintf(stderr, "Value needed for --num-procs argument\n");
 				printf("%s", usage);
 				status = true;
 			}
