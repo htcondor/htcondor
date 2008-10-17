@@ -2679,7 +2679,9 @@ if test "x$_cv_ext_openssl_version" != x; then
 fi
 
 if test -z "$_cv_ext_globus_version"; then
-  _cv_has_globus=no;
+  _cv_has_globus=no
+else
+  _cv_has_globus=yes
 fi
 
 _cv_has_unicoregahp=$_cv_has_globus
