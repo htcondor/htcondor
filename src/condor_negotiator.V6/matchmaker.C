@@ -35,6 +35,7 @@
 #include "condor_netdb.h"
 #include "condor_claimid_parser.h"
 #include "misc_utils.h"
+#include "ConcurrencyLimitUtils.h"
 
 #if HAVE_DLOPEN
 #include "NegotiatorPlugin.h"
@@ -2183,24 +2184,29 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		MyString str;
 		list.rewind();
 		while ((limit = list.next())) {
-			str = limit;
-			int count = accountant.GetLimit(str);
+			double increment;
 
-			int max = accountant.GetLimitMax(str);
+			ParseConcurrencyLimit(limit, increment);
+
+			str = limit;
+			double count = accountant.GetLimit(str);
+
+			double max = accountant.GetLimitMax(str);
 
 			dprintf(D_FULLDEBUG,
-					"Concurrency Limit: %s is %d\n",
+					"Concurrency Limit: %s is %f\n",
 					limit, count);
 
 			if (count < 0) {
- 				EXCEPT("ERROR: Concurrency Limit %s is %d (below 0)",
+ 				EXCEPT("ERROR: Concurrency Limit %s is %f (below 0)",
 					   limit, count);
 			}
 
-			if (count >= max) {
+			if (count + increment > max) {
 				dprintf(D_FULLDEBUG,
-						"Concurrency Limit %s is %d, cannot exceed %d\n",
-						limit, count, max);
+						"Concurrency Limit %s is %f, requesting %f, "
+						"but cannot exceed %f\n",
+						limit, count, increment, max);
 
 				rejForConcurrencyLimit++;
 				return NULL;

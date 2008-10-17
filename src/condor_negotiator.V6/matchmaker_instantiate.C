@@ -23,3 +23,4 @@
 
 template class HashTable<MyString, MapEntry *>;
 template class HashTable<MyString, ClassAd *>;
+template class HashTable<MyString, double>;
