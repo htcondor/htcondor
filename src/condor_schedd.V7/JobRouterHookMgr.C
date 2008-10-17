@@ -160,7 +160,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 			"failed to create translation client");
 		return -1;
 	}
-	if (0 == spawn(translate_client, NULL, &hook_stdin))
+	if (0 == spawn(translate_client, NULL, &hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookTranslateJob: "
@@ -225,7 +225,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 			"failed to create status update client");
 		return -1;
 	}
-	if (0 == spawn(status_client, NULL, &hook_stdin))
+	if (0 == spawn(status_client, NULL, &hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
@@ -292,7 +292,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job, const char* sandbox)
 			"failed to create status exit client");
 		return -1;
 	}
-	if (0 == spawn(exit_client, &args, &hook_stdin))
+	if (0 == spawn(exit_client, &args, &hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookJobExit: "
@@ -356,7 +356,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 			"failed to create status update client");
 		return -1;
 	}
-	if (0 == spawn(cleanup_client, NULL, &hook_stdin))
+	if (0 == spawn(cleanup_client, NULL, &hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::JobCleanup: "

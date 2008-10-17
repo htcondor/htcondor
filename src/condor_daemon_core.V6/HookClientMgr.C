@@ -64,7 +64,7 @@ HookClientMgr::initialize() {
 
 
 bool
-HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin) {
+HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, priv_state priv) {
 	int reaper_id;
 	bool wants_output = client->wantsOutput();
 	const char* hook_path = client->path();
@@ -94,7 +94,7 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin) {
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
 
 	int pid = daemonCore->
-		Create_Process(hook_path, final_args, PRIV_CONDOR_FINAL,
+		Create_Process(hook_path, final_args, priv,
 					  reaper_id, FALSE, NULL, NULL, &fi,
 					  NULL, std_fds);
 	client->setPid(pid);
