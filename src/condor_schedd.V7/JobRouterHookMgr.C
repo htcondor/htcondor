@@ -143,7 +143,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 			"ERROR in JobRouterHookMgr::hookTranslateJob: "
-			"failed to convert classad");
+			"failed to convert classad\n");
 		return -1;
 	}
 
@@ -157,7 +157,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 	{
 		dprintf(D_ALWAYS|D_FAILURE, 
 			"ERROR in JobRouterHookMgr::hookTranslateJob: "
-			"failed to create translation client");
+			"failed to create translation client\n");
 		return -1;
 	}
 	if (0 == spawn(translate_client, NULL, &hook_stdin, PRIV_USER_FINAL))
@@ -210,7 +210,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 			"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
-			"failed to convert classad");
+			"failed to convert classad\n");
 		return -1;
 	}
 
@@ -222,7 +222,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	{
 		dprintf(D_ALWAYS|D_FAILURE, 
 			"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
-			"failed to create status update client");
+			"failed to create status update client\n");
 		return -1;
 	}
 	if (0 == spawn(status_client, NULL, &hook_stdin, PRIV_USER_FINAL))
@@ -274,7 +274,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job, const char* sandbox)
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 			"ERROR in JobRouterHookMgr::hookJobExit: "
-			"failed to convert classad");
+			"failed to convert classad\n");
 		return -1;
 	}
 
@@ -289,7 +289,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job, const char* sandbox)
 	{
 		dprintf(D_ALWAYS|D_FAILURE, 
 			"ERROR in JobRouterHookMgr::hookJobExit: "
-			"failed to create status exit client");
+			"failed to create status exit client\n");
 		return -1;
 	}
 	if (0 == spawn(exit_client, &args, &hook_stdin, PRIV_USER_FINAL))
@@ -341,7 +341,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 			"ERROR in JobRouterHookMgr::hookJobCleanup: "
-			"failed to convert classad");
+			"failed to convert classad\n");
 		return -1;
 	}
 
@@ -353,7 +353,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 	{
 		dprintf(D_ALWAYS|D_FAILURE, 
 			"ERROR in JobRouterHookMgr::hookJobCleanup: "
-			"failed to create status update client");
+			"failed to create status update client\n");
 		return -1;
 	}
 	if (0 == spawn(cleanup_client, NULL, &hook_stdin, PRIV_USER_FINAL))
@@ -588,7 +588,7 @@ StatusClient::hookExited(int exit_status)
 	}
 	else
 	{
-		dprintf(D_ALWAYS, "StatusClient::hookExited: Hook %s (pid %d) returned no data.\n",
+		dprintf(D_FULLDEBUG, "StatusClient::hookExited: Hook %s (pid %d) returned no data.\n",
 				m_hook_path, (int)m_pid);
 	}
 	job_router->UpdateJobStatus(m_routed_job);
