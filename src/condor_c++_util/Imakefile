@@ -215,6 +215,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	$(PLUGIN_OBJ) \
 	forkwork.o filename_tools_cpp.o condor_getcwd.o \
 	set_user_priv_from_ad.o hook_utils.o classad_visa.o \
+	ConcurrencyLimitUtils.o \
 	simple_arg.o
 
 library_target(cplus_lib.a,$(OBJ))
