@@ -23,6 +23,7 @@
 #include "string_list.h"
 #include "condor_debug.h"
 #include "internet.h"
+#include "string_func.h"
 
 // initialize the List<char> from the VALID_*_FILES variable in the
 // config file; the files are separated by commas
@@ -30,22 +31,6 @@
 //#define isSeparator(x) (isspace(x) || x == ',' )
 
 char *strnewp( const char * );
-
-// Like strstr(), but case-insensitive
-char *
-strcasestr( const char *string, const char *pattern )
-{
-	char	*str;
-	int			n;
-
-	n = strlen( pattern );
-	for( str=(char *)string; *str; str++ ) {
-		if( strncasecmp(str,pattern,n) == 0 ) {
-			return str;
-		}
-	}
-	return NULL;
-}
 
 int
 StringList::isSeparator( char x )
