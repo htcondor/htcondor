@@ -144,6 +144,7 @@ CONLIBAPI_OBJ = \
 	../condor_util_lib/strupr.o \
 	../condor_util_lib/lock_file.NON_POSIX.o \
 	../condor_util_lib/rotate_file.o \
+	../condor_util_lib/string_funcs.o \
 	strnewp.o \
 	condor_environ.o \
 	../condor_util_lib/setsyscalls.o \
