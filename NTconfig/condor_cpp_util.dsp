@@ -638,14 +638,6 @@ SOURCE="..\src\condor_c++_util\get_full_hostname.C"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c++_util\get_mysubsystem.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\get_mysubsystem.h"
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\condor_c++_util\HashTable.C"
 # End Source File
 # Begin Source File
@@ -1084,6 +1076,14 @@ SOURCE="..\src\condor_c++_util\stringSpace.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\strnewp.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\subsystem_info.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\subsystem_info.h"
 # End Source File
 # Begin Source File
 
