@@ -748,7 +748,6 @@ MultiLogFiles::getQueueCountFromSubmitFile(const MyString &strSubFilename,
 // getJobLogsFromSubmitFiles() were to use getValuesFromFile(),
 // getValuesFromFile() would have to have another argument to specify
 // the number of tokens to skip between the keyword and the value.
-//TEMPTEMP --  use getValuesFromFile() now that I'm adding the token skipping thing
 
 MyString
 MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,

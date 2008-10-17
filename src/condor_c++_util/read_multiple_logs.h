@@ -115,7 +115,6 @@ public:
 		*/
 	static bool logFileOnNFS(const char *fileName, bool nfsIsError);
 
-private:
 		/** Reads in the specified file, breaks it into lines, and
 			combines the lines into "logical" lines (joins continued
 			lines).
@@ -126,6 +125,7 @@ private:
 	static MyString fileNameToLogicalLines(const MyString &filename,
 				StringList &logicalLines);
 
+private:
 	    /** Read the entire contents of the given file into a MyString.
 		 * @param The name of the file.
 		 * @return The contents of the file.

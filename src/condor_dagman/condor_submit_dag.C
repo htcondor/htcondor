@@ -32,6 +32,7 @@
 #include "condor_getcwd.h"
 #include "condor_string.h" // for getline()
 #include "condor_version.h"
+#include "tmp_dir.h"
 
 
 #ifdef WIN32
@@ -113,6 +114,8 @@ void parseCommandLine(SubmitDagOptions &opts, int argc,
 bool parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
 			const char * const argv[], SubmitDagOptions &opts);
 int doRecursion( SubmitDagOptions &opts );
+int runSubmit( const SubmitDagOptions &opts, const char *dagFile,
+			const char *directory );
 int setUpOptions( SubmitDagOptions &opts );
 void ensureOutputFilesExist(const SubmitDagOptions &opts);
 int checkLogFiles( SubmitDagOptions &opts );
@@ -183,7 +186,6 @@ int main(int argc, char *argv[])
 }
 
 //---------------------------------------------------------------------------
-//TEMPTEMP -- need to look for DIR!!
 /** Recursively call condor_submit_dag on nested DAGs.
 	@param opts: the condor_submit_dag options
 	@return 0 if successful, 1 if failed
@@ -195,100 +197,176 @@ doRecursion( SubmitDagOptions &opts )
 
 	opts.dagFiles.rewind();
 
+		// Go through all DAG files specified on the command line...
 	StringList submitFiles;
 	const char *dagFile;
 	while ( (dagFile = opts.dagFiles.next()) ) {
-		StringList tmpSubmitFiles;
-		MyString tmpResult = MultiLogFiles::getValuesFromFile(dagFile, "JOB",
-					tmpSubmitFiles, 1);
-		if ( tmpResult != "" ) {
-			fprintf( stderr, "Error in condor_submit_dag recursion: %s\n",
-						tmpResult.Value() );
-			result = 1;
-		} else {
-			submitFiles.create_union( tmpSubmitFiles, false );
+
+			// Get logical lines from this DAG file.
+		StringList logicalLines;
+		MyString error = MultiLogFiles::fileNameToLogicalLines(
+					dagFile, logicalLines );
+		if ( error != "" ) {
+			fprintf( stderr, "Error reading DAG file: %s\n",
+						error.Value() );
+			return 1;
+		}
+
+			// Find and parse JOB lines.
+		logicalLines.rewind();
+		const char *dagLine;
+		while ( (dagLine = logicalLines.next()) ) {
+			StringList tokens( dagLine, " \t" );
+			tokens.rewind();
+			const char *first = tokens.next();
+			if ( first && !strcasecmp( first, "JOB" ) ) {
+
+				const char *nodeName = tokens.next();
+				if ( !nodeName) {
+					fprintf( stderr, "No node name specified in "
+								"line: <%s>\n", dagLine );
+					return 1;
+				}
+
+				const char *subFile = tokens.next();
+				if ( !subFile ) {
+					fprintf( stderr, "No submit file specified in "
+								"line: <%s>\n", dagLine );
+					return 1;
+				}
+
+				const char *directory = NULL;
+				const char *dirKeyword = tokens.next();
+				if ( dirKeyword && !strcasecmp( dirKeyword, "DIR" ) ) {
+					directory = tokens.next();
+					if ( !directory ) {
+						fprintf( stderr, "No directory specified in "
+									"line: <%s>\n", dagLine );
+						return 1;
+					}
+				}
+
+					// Now figure out whether JOB line is a nested DAG.
+				const char *DAG_SUBMIT_FILE_SUFFIX = ".condor.sub";
+				MyString submitFile( subFile );
+
+					// If submit file ends in ".condor.sub", we assume it
+					// refers to a sub-DAG.
+				int start = submitFile.find( DAG_SUBMIT_FILE_SUFFIX );
+				if ( start >= 0 &&
+							start + (int)strlen( DAG_SUBMIT_FILE_SUFFIX) ==
+							submitFile.Length() ) {
+
+						// Change submit file name to DAG file name.
+					submitFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
+
+						// Now run condor_submit_dag on the DAG file.
+					if ( runSubmit( opts, submitFile.Value(),
+								directory ) == 1 ) {
+						result = 1;
+					}
+				}
+			}
 		}
 	}
 
-	opts.dagFiles.rewind();
+	return result;
+}
 
-	const char *DAG_SUBMIT_FILE_SUFFIX = ".condor.sub";
-	submitFiles.rewind();
-	const char *submitFile;
-	while ( (submitFile = submitFiles.next()) ) {
-		MyString subFile( submitFile );
+//---------------------------------------------------------------------------
+/** Run condor_submit_dag on the given DAG file.
+	@param opts: the condor_submit_dag options
+	@param dagFile: the DAG file to process
+	@param directory: the directory from which the DAG file should
+		be processed (ignored if NULL)
+	@return 0 if successful, 1 if failed
+*/
+int
+runSubmit( const SubmitDagOptions &opts, const char *dagFile,
+			const char *directory )
+{
+	int result = 0;
 
-			// If submit file ends in ".condor.sub", we assume it refers
-			// to a sub-DAG.
-		int start = subFile.find( DAG_SUBMIT_FILE_SUFFIX );
-		if ( start >= 0 && start + (int)strlen( DAG_SUBMIT_FILE_SUFFIX) ==
-					subFile.Length() ) {
-				// Change submit file name to DAG file name.
-			subFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
-
-				// Build up the command line for the recursive run of
-				// condor_submit_dag.  We need -no_submit so we don't
-				// actually run the subdag now; we need -update_submit
-				// so the lower-level .condor.sub file will get
-				// updated, in case it came from an earlier version
-				// of condor_submit_dag.
-			MyString cmdLine = "condor_submit_dag -no_submit -update_submit ";
-
-				// Add in arguments we're passing along.
-			if ( opts.bVerbose ) {
-				cmdLine += "-verbose ";
-			}
-
-			if ( opts.bForce ) {
-				cmdLine += "-force ";
-			}
-
-			if ( opts.strNotification != "" ) {
-				cmdLine += MyString( "-notification " ) +
-							opts.strNotification.Value() + " ";
-			}
-
-			if ( opts.strDagmanPath != "" ) {
-				cmdLine += MyString( "-dagman " ) +
-						opts.strDagmanPath.Value() + " ";
-			}
-
-			cmdLine += MyString( "-debug " ) + opts.iDebugLevel + " ";
-
-			if ( opts.bAllowLogError ) {
-				cmdLine += "-allowlogerror ";
-			}
-
-			if ( opts.useDagDir ) {
-				cmdLine += "-usedagdir ";
-			}
-
-			if ( opts.strDebugDir != "" ) {
-				cmdLine += MyString( "-outfile_dir " ) + 
-						opts.strDebugDir.Value() + " ";
-			}
-
-			cmdLine += MyString( "-oldrescue " ) + opts.oldRescue + " ";
-
-			cmdLine += MyString( "-autorescue " ) + opts.autoRescue + " ";
-
-			if ( opts.doRescueFrom != 0 ) {
-				cmdLine += MyString( "-dorescuefrom " ) +
-						opts.doRescueFrom + " ";
-			}
-
-			if ( opts.allowVerMismatch ) {
-				cmdLine += "-allowver ";
-			}
-
-			cmdLine += subFile;
-
-			int retval = system( cmdLine.Value() );
-			if ( retval != 0 ) {
-				fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
-				result = 1;
-			}
+		// Change to the appropriate directory if necessary.
+	TmpDir tmpDir;
+	MyString errMsg;
+	if ( directory ) {
+		if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
+			fprintf( stderr, "Error (%s) changing to node directory\n",
+						errMsg.Value() );
+			result = 1;
+			return result;
 		}
+	}
+
+		// Build up the command line for the recursive run of
+		// condor_submit_dag.  We need -no_submit so we don't
+		// actually run the subdag now; we need -update_submit
+		// so the lower-level .condor.sub file will get
+		// updated, in case it came from an earlier version
+		// of condor_submit_dag.
+	MyString cmdLine = "condor_submit_dag -no_submit -update_submit ";
+
+		// Add in arguments we're passing along.
+	if ( opts.bVerbose ) {
+		cmdLine += "-verbose ";
+	}
+
+	if ( opts.bForce ) {
+		cmdLine += "-force ";
+	}
+
+	if ( opts.strNotification != "" ) {
+		cmdLine += MyString( "-notification " ) +
+					opts.strNotification.Value() + " ";
+	}
+
+	if ( opts.strDagmanPath != "" ) {
+		cmdLine += MyString( "-dagman " ) +
+				opts.strDagmanPath.Value() + " ";
+	}
+
+	cmdLine += MyString( "-debug " ) + opts.iDebugLevel + " ";
+
+	if ( opts.bAllowLogError ) {
+		cmdLine += "-allowlogerror ";
+	}
+
+	if ( opts.useDagDir ) {
+		cmdLine += "-usedagdir ";
+	}
+
+	if ( opts.strDebugDir != "" ) {
+		cmdLine += MyString( "-outfile_dir " ) + 
+				opts.strDebugDir.Value() + " ";
+	}
+
+	cmdLine += MyString( "-oldrescue " ) + opts.oldRescue + " ";
+
+	cmdLine += MyString( "-autorescue " ) + opts.autoRescue + " ";
+
+	if ( opts.doRescueFrom != 0 ) {
+		cmdLine += MyString( "-dorescuefrom " ) +
+				opts.doRescueFrom + " ";
+	}
+
+	if ( opts.allowVerMismatch ) {
+		cmdLine += "-allowver ";
+	}
+
+	cmdLine += dagFile;
+
+		// Now actually run the command.
+	int retval = system( cmdLine.Value() );
+	if ( retval != 0 ) {
+		fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
+		result = 1;
+	}
+
+		// Change back to the directory we started from.
+	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
+		fprintf( stderr, "Error (%s) changing back to original directory\n",
+					errMsg.Value() );
 	}
 
 	return result;
@@ -576,28 +654,26 @@ getOldSubmitFlags(SubmitDagOptions &opts)
 {
 		// It's not an error for the submit file to not exist.
 	if ( fileExists( opts.strSubFile ) ) {
-		FILE *subFile = safe_fopen_wrapper(opts.strSubFile.Value(), "r");
-		if ( !subFile ) {
-			fprintf( stderr, "ERROR: unable to open submit file %s\n",
-				 	opts.strSubFile.Value() );
+		StringList logicalLines;
+		MyString error = MultiLogFiles::fileNameToLogicalLines(
+					opts.strSubFile, logicalLines );
+		if ( error != "" ) {
+			fprintf( stderr, "Error reading submit file: %s\n",
+						error.Value() );
 			return 1;
-		} else {
-			MyString subLine;
-			while ( subLine.readLine( subFile ) ) {
-				subLine.chomp();
-				StringList tokens( subLine.Value(), " \t" );
-				tokens.rewind();
-				const char *first = tokens.next();
-				if ( first && !strcmp( first, "arguments" ) ) {
+		}
 
-					if ( parseArgumentsLine( subLine, opts ) != 0 ) {
-						(void)fclose( subFile );
-						return 1;
-					}
+		logicalLines.rewind();
+		const char *subLine;
+		while ( (subLine = logicalLines.next()) ) {
+			StringList tokens( subLine, " \t" );
+			tokens.rewind();
+			const char *first = tokens.next();
+			if ( first && !strcasecmp( first, "arguments" ) ) {
+				if ( parseArgumentsLine( subLine, opts ) != 0 ) {
+					return 1;
 				}
 			}
-
-			fclose( subFile );
 		}
 	}
 
