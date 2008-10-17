@@ -181,7 +181,6 @@ class UserLog {
 				   bool log_as_user,
 				   bool use_lock,
 				   bool append,
-				   const char *lock_file,
 				   FileLock* & lock, 
 				   FILE* & fp );
 
@@ -216,13 +215,16 @@ class UserLog {
     /** Copy of path to global log   */  char     * m_global_path;
     /** The global log file          */  FILE     * m_global_fp;
     /** The global log file lock     */  FileLock * m_global_lock;
-    /** Copy of path to global lock  */  char     * m_global_lock_path;
 	/** Whether we use XML or not    */  bool       m_global_use_xml;
 	/** The log file uniq ID base    */  char     * m_global_uniq_base;
 	/** The current sequence number  */  int        m_global_sequence;
 	/** Count event log events?      */  bool       m_global_count_events;
 	/** Max size of event log        */  int		m_global_max_filesize;
 	/** Max event log rotations      */  int		m_global_max_rotations;
+
+    /** Copy of path to rotation lock*/  char     * m_rotation_lock_path;
+    /** FD of the rotation lock      */  int        m_rotation_lock_fd;
+    /** The global log file lock     */  FileLock * m_rotation_lock;
 
 	/** Whether we use XML or not    */  bool       m_use_xml;
 

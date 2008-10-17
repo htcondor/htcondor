@@ -108,10 +108,13 @@ UserLog::~UserLog()
 	if (m_fp != NULL) fclose( m_fp );
 
 	if (m_global_path) free(m_global_path);
-	if (m_global_lock_path) free(m_global_lock_path);
 	if (m_global_lock) delete m_global_lock;
 	if (m_global_fp != NULL) fclose(m_global_fp);
 	if (m_global_uniq_base != NULL) free( m_global_uniq_base );
+
+	if (m_rotation_lock_path) free(m_rotation_lock_path);
+	if (m_rotation_lock_fd) close(m_rotation_lock_fd);
+	if (m_rotation_lock) delete m_rotation_lock;
 }
 
 
@@ -135,7 +138,7 @@ UserLog::initialize( const char *file, int c, int p, int s, const char *gjid)
 	}
 
 	if ( m_write_user_log &&
-		 !openFile(file, true, m_enable_locking, true, file, m_lock, m_fp) ) {
+		 !openFile(file, true, m_enable_locking, true, m_lock, m_fp) ) {
 		return false;
 	}
 
@@ -196,12 +199,24 @@ bool
 UserLog::Configure( void )
 {
 	m_global_path = param( "EVENT_LOG" );
-	m_global_lock_path = param( "EVENT_LOG_LOCK" );
-	if ( NULL == m_global_lock_path ) {
+	m_rotation_lock_path = param( "EVENT_ROTATION_LOCK" );
+	if ( NULL == m_rotation_lock_path ) {
 		int len = strlen(m_global_path) + 6;
 		char *tmp = (char*) malloc(len);
 		snprintf( tmp, len, "%s.lock", m_global_path );
-		m_global_lock_path = tmp;
+		m_rotation_lock_path = tmp;
+
+		// Make sure the global lock exists
+		int fd = safe_open_wrapper( m_rotation_lock_path, O_WRONLY|O_CREAT );
+		if ( fd < 0 ) {
+			dprintf( D_ALWAYS,
+					 "Unable to open event rotation lock file %s\n",
+					 m_rotation_lock_path );
+		}
+		m_rotation_lock_fd = fd;
+		m_rotation_lock = new FileLock( fd, NULL, m_rotation_lock_path );
+		dprintf( D_FULLDEBUG, "Created rotation lock %s @ %p\n",
+				 m_rotation_lock_path, m_rotation_lock );
 	}
 	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
@@ -228,6 +243,9 @@ UserLog::Reset( void )
 	m_global_path = NULL;
 	m_global_fp = NULL; 
 	m_global_lock = NULL;
+
+	m_rotation_lock = NULL;
+	m_rotation_lock_path = NULL;
 
 	m_use_xml = XML_USERLOG_DEFAULT;
 	m_gjid = NULL;
@@ -263,7 +281,6 @@ UserLog::openFile(
 	bool		  log_as_user,	// if false, we are logging to the global file
 	bool		  use_lock,		// use the lock
 	bool		  append,		// append mode?
-	const char	 *lock_file, 
 	FileLock*    &lock, 
 	FILE		*&fp )
 {
@@ -322,7 +339,7 @@ UserLog::openFile(
 
 	// prepare to lock the file.	
 	if ( use_lock ) {
-		lock = new FileLock( fd, fp, lock_file );
+		lock = new FileLock( fd, fp, file );
 	} else {
 		lock = new FileLock( -1, NULL, NULL );
 	}
@@ -351,7 +368,7 @@ UserLog::initializeGlobalLog( UserLogHeader &header )
 
 	priv_state priv = set_condor_priv();
 	ret_val = openFile( m_global_path, false, m_enable_locking, true,
-						m_global_lock_path, m_global_lock, m_global_fp);
+						m_global_lock, m_global_fp);
 
 	if ( ! ret_val ) {
 		set_priv( priv );
@@ -409,9 +426,17 @@ UserLog::handleGlobalLogRotation( void )
 		dprintf( D_ALWAYS, "checking for event log rotation, but no lock\n" );
 	}
 
+	// Get the rotation lock
+	if ( !m_rotation_lock->obtain( WRITE_LOCK ) ) {
+		dprintf( D_ALWAYS, "Failed to get rotation lock\n" );
+		return false;
+	}
+
+	// Check the size of the log file
 	StatWrapper	swrap( m_global_path );
 	UtcTime	stat_time( true );
 	if ( swrap.Stat() ) {
+		m_rotation_lock->release( );
 		return false;			// What should we do here????
 	}
 	current_filesize = swrap.GetBuf()->st_size;
@@ -465,7 +490,7 @@ UserLog::handleGlobalLogRotation( void )
 		FILE		*header_fp = NULL;
 		FileLock	*fake_lock = NULL;
 		if( !openFile( m_global_path, false, false, false,
-					   m_global_lock_path, fake_lock, header_fp ) ) {
+					   fake_lock, header_fp ) ) {
 			dprintf( D_ALWAYS,
 					 "UserLog: failed to open %s for header rewrite:"
 					 " %d (%s)\n", 
@@ -535,6 +560,7 @@ UserLog::handleGlobalLogRotation( void )
 			dprintf( D_FULLDEBUG,
 					 "Done rotating files (inode = %ld) @ %.6f\n",
 					 (long)swrap.GetBuf()->st_ino, end_time.combined() );
+			//sleep( 5 );
 		}
 		double	elapsed = end_time.difference( time1 );
 		double	rps = ( num_rotations / elapsed );
@@ -561,6 +587,9 @@ UserLog::handleGlobalLogRotation( void )
 	}
 
 	previous_filesize = current_filesize;
+
+	// Finally, release the rotation lock
+	m_rotation_lock->release( );
 
 	return rotated;
 

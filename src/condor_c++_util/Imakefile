@@ -285,8 +285,8 @@ USERLOG_LIBAPI_TESTS = $(addsuffix _api, $(USERLOG_TESTS) )
 
 userlog-tests: $(USERLOG_TESTS) $(USERLOG_LIBAPI_TESTS)
 
-test_log_reader: $(LIB) Makefile $(LIBCONDORAPI)
-test_log_writer: $(LIB) Makefile $(LIBCONDORAPI)
+test_log_reader: all $(LIB) Makefile $(LIBCONDORAPI)
+test_log_writer: all $(LIB) Makefile $(LIBCONDORAPI)
 
 $(USERLOG_LIBAPI_TESTS): %_api : %.o $(LIBCONDORAPI) Makefile
 	$(CPlusPlus) $< -L. -Wl,-Bstatic -lcondorapi -Wl,-Bdynamic -ldl -o $@
