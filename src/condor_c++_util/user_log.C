@@ -30,6 +30,9 @@
 #include "stat_wrapper.h"
 #include "user_log_header.h"
 
+// Set to non-zero to enable fine-grained rotation debugging / timing
+#define ROTATION_TRACE	0
+
 static const char SynchDelimiter[] = "...\n";
 
 // Simple class to normalize use of 64 bit ints
@@ -256,6 +259,7 @@ UserLog::Reset( void )
 	m_enable_locking = true;
 	m_global_max_filesize = 1000000;
 	m_global_max_rotations = 1;
+	m_global_filesize = 0;
 
 	MyString	base;
 	base = "";
@@ -281,8 +285,8 @@ UserLog::openFile(
 	bool		  log_as_user,	// if false, we are logging to the global file
 	bool		  use_lock,		// use the lock
 	bool		  append,		// append mode?
-	FileLock*    &lock, 
-	FILE		*&fp )
+	FileLockBase *&lock, 
+	FILE		 *&fp )
 {
 	(void)  log_as_user;	// Quiet warning
 	int 	fd = 0;
@@ -301,7 +305,10 @@ UserLog::openFile(
 	
 # if !defined(WIN32)
 	// Unix
-	int	flags = O_WRONLY | O_CREAT | O_APPEND;
+	int	flags = O_WRONLY | O_CREAT;
+	if ( append ) {
+		flags |= O_APPEND;
+	}
 	mode_t mode = 0664;
 	fd = safe_open_wrapper( file, flags, mode );
 	if( fd < 0 ) {
@@ -341,7 +348,7 @@ UserLog::openFile(
 	if ( use_lock ) {
 		lock = new FileLock( fd, fp, file );
 	} else {
-		lock = new FileLock( -1, NULL, NULL );
+		lock = new FakeFileLock( );
 	}
 
 	return true;
@@ -412,11 +419,9 @@ UserLog::initializeGlobalLog( UserLogHeader &header )
 	// be locked, seeked to the end of the file, and in condor priv state.
 	// return true if log was rotated, either by us or someone else.
 bool
-UserLog::handleGlobalLogRotation( void )
+UserLog::checkGlobalLogRotation( void )
 {
-	bool rotated = false;
-	static long previous_filesize = 0L;
-	long current_filesize = 0L;
+	long		current_filesize = 0L;
 
 	if (!m_global_fp) return false;
 	if (!m_global_path) return false;
@@ -426,6 +431,28 @@ UserLog::handleGlobalLogRotation( void )
 		dprintf( D_ALWAYS, "checking for event log rotation, but no lock\n" );
 	}
 
+	// Check the size of the log file
+	current_filesize = getGlobalLogSize( );
+	if ( current_filesize < 0 ) {
+		return false;			// What should we do here????
+	}
+
+	// Header reader for later use
+	ReadUserLogHeader	reader;
+
+	// File has shrunk?  Another process rotated it
+	if ( current_filesize < m_global_filesize ) {
+		globalLogRotated( reader );
+		return true;
+	}
+	// Less than the size limit -- nothing to do
+	else if ( current_filesize <= m_global_max_filesize ) {
+		return false;
+	}
+
+	// Here, it appears that the file is over the limit
+	// Grab the rotation lock and check again
+
 	// Get the rotation lock
 	if ( !m_rotation_lock->obtain( WRITE_LOCK ) ) {
 		dprintf( D_ALWAYS, "Failed to get rotation lock\n" );
@@ -433,167 +460,218 @@ UserLog::handleGlobalLogRotation( void )
 	}
 
 	// Check the size of the log file
-	StatWrapper	swrap( m_global_path );
+#if ROTATION_TRACE
 	UtcTime	stat_time( true );
-	if ( swrap.Stat() ) {
-		m_rotation_lock->release( );
+#endif
+	current_filesize = getGlobalLogSize( );
+	if ( current_filesize < 0 ) {
 		return false;			// What should we do here????
 	}
-	current_filesize = swrap.GetBuf()->st_size;
 
-	ReadUserLogHeader	reader;
-	if ( current_filesize > m_global_max_filesize ) {
-		UtcTime	start_time( true );
-		dprintf( D_FULLDEBUG, "Rotating inode #%ld @ %.6f (stat @ %.6f)\n",
-				 (long)swrap.GetBuf()->st_ino, start_time.combined(),
-				 stat_time.combined() );
-		m_global_lock->display();
+	// File has shrunk?  Another process rotated it
+	if ( current_filesize < m_global_filesize ) {
+		globalLogRotated( reader );
+		return true;
+	}
+	// Less than the size limit -- nothing to do
+	else if ( current_filesize <= m_global_max_filesize ) {
+		m_rotation_lock->release( );
+		return false;
+	}
 
-		// Read the old header, use it to write an updated one
-		FILE *fp = safe_fopen_wrapper( m_global_path, "r" );
-		if ( !fp ) {
-			dprintf( D_ALWAYS,
-					 "UserLog: "
-					 "safe_fopen_wrapper(\"%s\") failed - errno %d (%s)\n", 
-					 m_global_path, errno, strerror(errno) );
-		}
-		else {
-			ReadUserLog	log_reader( fp, m_global_use_xml );
-			reader.Read( log_reader );
 
-			if ( m_global_count_events ) {
-				int		events = 0;
-				UtcTime	time1( true );
-				while( 1 ) {
-					ULogEvent		*event = NULL;
-					ULogEventOutcome outcome = log_reader.readEvent( event );
-					if ( ULOG_OK != outcome ) {
-						break;
-					}
-					events++;
-					delete event;
+	// Now, we have the rotation lock *and* the file is over the limit
+	// Let's get down to the business of rotating it
+#if ROTATION_TRACE
+	StatWrapper	swrap( m_global_path );
+	UtcTime	start_time( true );
+	dprintf( D_FULLDEBUG, "Rotating inode #%ld @ %.6f (stat @ %.6f)\n",
+			 (long)swrap.GetBuf()->st_ino, start_time.combined(),
+			 stat_time.combined() );
+	m_global_lock->display();
+#endif
+
+	// Read the old header, use it to write an updated one
+	FILE *fp = safe_fopen_wrapper( m_global_path, "r" );
+	if ( !fp ) {
+		dprintf( D_ALWAYS,
+				 "UserLog: "
+				 "safe_fopen_wrapper(\"%s\") failed - errno %d (%s)\n", 
+				 m_global_path, errno, strerror(errno) );
+	}
+	else {
+		ReadUserLog	log_reader( fp, m_global_use_xml );
+		reader.Read( log_reader );
+
+		if ( m_global_count_events ) {
+			int		events = 0;
+#         if ROTATION_TRACE
+			UtcTime	time1( true );
+#         endif
+			while( 1 ) {
+				ULogEvent		*event = NULL;
+				ULogEventOutcome outcome = log_reader.readEvent( event );
+				if ( ULOG_OK != outcome ) {
+					break;
 				}
-				UtcTime	time2( true );
-				double	elapsed = time2.difference( time1 );
-				double	eps = ( events / elapsed );
-
-				reader.setNumEvents( events );
-				dprintf( D_ALWAYS,
-						 "UserLog: Read %d events in %.4fs = %.0f/s\n",
-						 events, elapsed, eps );
+				events++;
+				delete event;
 			}
-			fclose( fp );
-		}
-		reader.setSize( current_filesize );
+#         if ROTATION_TRACE
+			UtcTime	time2( true );
+			double	elapsed = time2.difference( time1 );
+			double	eps = ( events / elapsed );
+#         endif
 
-		// Craft a header writer object from the reader
-		FILE		*header_fp = NULL;
-		FileLock	*fake_lock = NULL;
-		if( !openFile( m_global_path, false, false, false,
-					   fake_lock, header_fp ) ) {
+			reader.setNumEvents( events );
+#         if ROTATION_TRACE
 			dprintf( D_ALWAYS,
-					 "UserLog: failed to open %s for header rewrite:"
-					 " %d (%s)\n", 
-					 m_global_path, errno, strerror(errno) );
+					 "UserLog: Read %d events in %.4fs = %.0f/s\n",
+					 events, elapsed, eps );
+#         endif
 		}
+		fclose( fp );
+	}
+	reader.setSize( current_filesize );
 
-		WriteUserLogHeader	writer( reader );
+	// Craft a header writer object from the reader
+	FILE			*header_fp = NULL;
+	FileLockBase	*fake_lock = NULL;
+	if( !openFile(m_global_path, false, false, false, fake_lock, header_fp) ) {
+		dprintf( D_ALWAYS,
+				 "UserLog: failed to open %s for header rewrite: %d (%s)\n", 
+				 m_global_path, errno, strerror(errno) );
+	}
+	WriteUserLogHeader	writer( reader );
 
-		// And write the updated header
-		{
-			UtcTime	now( true );
-			dprintf( D_ALWAYS, "UserLog: Writing header @ %.6f\n",
-					 now.combined() );
-		}
+	// And write the updated header
+# if ROTATION_TRACE
+	UtcTime	now( true );
+	dprintf( D_ALWAYS, "UserLog: Writing header to %s (%p) @ %.6f\n",
+			 m_global_path, header_fp, now.combined() );
+# endif
+	if ( header_fp ) {
+		rewind( header_fp );
 		writer.Write( *this, header_fp );
-		if ( header_fp ) {
-			fclose( header_fp );
-		}
-		if ( fake_lock ) {
-			delete fake_lock;
-		}
+		fclose( header_fp );
+	}
+	if ( fake_lock ) {
+		delete fake_lock;
+	}
 
-		// Now, rotate files
-		UtcTime	time1( true );
-		dprintf( D_ALWAYS, "UserLog: Bulk rotation @ %.6f\n",
-				 time1.combined() );
-		int		num_rotations = 0;
-		MyString old_name(m_global_path);
-		if ( 1 == m_global_max_rotations ) { 
-			old_name += ".old";
-		}
-		else {
-			int			i;
-			old_name += ".1";
-			for( i=m_global_max_rotations; i>1; i--) {
-				MyString old1(m_global_path);
-				old1.sprintf_cat(".%d", i-1 );
+	// Now, rotate files
+# if ROTATION_TRACE
+	UtcTime	time1( true );
+	dprintf( D_ALWAYS,
+			 "UserLog: Starting bulk rotation @ %.6f\n", time1.combined() );
+# endif
 
-				StatWrapper	s( old1, StatWrapper::STATOP_STAT );
-				if ( 0 == s.GetRc() ) {
-					MyString old2(m_global_path);
-					old2.sprintf_cat(".%d", i );
-					rename( old1.GetCStr(), old2.GetCStr() );
-					num_rotations++;
-				}
-			}
-		}
-#     ifdef WIN32
-		if ( m_global_fp) {
-			fclose(m_global_fp);	// on win32, cannot rename an open file
-			m_global_fp = NULL;
-		}
-#     endif
-		UtcTime before(true);
-		if ( rotate_file(m_global_path,old_name.Value()) == 0 ) {
-			UtcTime after(true);
-			dprintf(D_FULLDEBUG, "before .1 rot: %.6f\n", before.combined() );
-			dprintf(D_FULLDEBUG, "after  .1 rot: %.6f\n", after.combined() );
-			rotated = true;
-			dprintf(D_ALWAYS,"Rotated event log %s at size %ld bytes\n",
-					m_global_path, current_filesize);
-			num_rotations++;
-		}
+	MyString	rotated;
+	int num_rotations = doRotation( m_global_path, m_global_fp,
+									rotated, m_global_max_rotations );
+	if ( num_rotations ) {
+		dprintf(D_ALWAYS, "Rotated event log %s to %s at size %ld bytes\n",
+				m_global_path, rotated.Value(), current_filesize);
+	}
 
-		UtcTime	end_time( true );
-		if ( rotated ) {
-			dprintf( D_FULLDEBUG,
-					 "Done rotating files (inode = %ld) @ %.6f\n",
-					 (long)swrap.GetBuf()->st_ino, end_time.combined() );
-			//sleep( 5 );
-		}
-		double	elapsed = end_time.difference( time1 );
-		double	rps = ( num_rotations / elapsed );
+# if ROTATION_TRACE
+	UtcTime	end_time( true );
+	if ( num_rotations ) {
 		dprintf( D_FULLDEBUG,
-				 "Rotated %d files in %.4fs = %.0f/s\n",
-				 num_rotations, elapsed, rps );
-
+				 "Done rotating files (inode = %ld) @ %.6f\n",
+				 (long)swrap.GetBuf()->st_ino, end_time.combined() );
 	}
+	double	elapsed = end_time.difference( time1 );
+	double	rps = ( num_rotations / elapsed );
+	dprintf( D_FULLDEBUG,
+			 "Rotated %d files in %.4fs = %.0f/s\n",
+			 num_rotations, elapsed, rps );
+# endif
 
-	if  ( rotated == true ||						// we rotated the log
-		  current_filesize < previous_filesize )	// someone else rotated it
-	{
-			// log was rotated, so we need to reopen/create it and also
-			// recreate our lock.
-
-		// this will re-open and re-create locks
-		initializeGlobalLog( reader );
-		rotated = true;
-		if ( m_global_lock ) {
-			m_global_lock->obtain(WRITE_LOCK);
-			fseek (m_global_fp, 0, SEEK_END);
-			current_filesize = ftell(m_global_fp);
-		}
-	}
-
-	previous_filesize = current_filesize;
+	globalLogRotated( reader );
 
 	// Finally, release the rotation lock
 	m_rotation_lock->release( );
 
-	return rotated;
+	return true;
 
 }
+
+long
+UserLog::getGlobalLogSize( void ) const
+{
+	StatWrapper	swrap( m_global_path );
+	if ( swrap.Stat() ) {
+		return -1L;			// What should we do here????
+	}
+	return swrap.GetBuf()->st_size;
+}
+
+bool
+UserLog::globalLogRotated( ReadUserLogHeader &reader )
+{
+	// log was rotated, so we need to reopen/create it and also
+	// recreate our lock.
+
+	// this will re-open and re-create locks
+	initializeGlobalLog( reader );
+	if ( m_global_lock ) {
+		m_global_lock->obtain(WRITE_LOCK);
+		fseek (m_global_fp, 0, SEEK_END);
+		m_global_filesize = ftell(m_global_fp);
+	}
+	return true;
+}
+
+int
+UserLog::doRotation( const char *path, FILE *&fp,
+					 MyString &rotated, int max_rotations )
+{
+
+	int  num_rotations = 0;
+	rotated = path;
+	if ( 1 == max_rotations ) { 
+		rotated += ".old";
+	}
+	else {
+		rotated += ".1";
+		for( int i=max_rotations;  i>1;  i--) {
+			MyString old1( path );
+			old1.sprintf_cat(".%d", i-1 );
+
+			StatWrapper	s( old1, StatWrapper::STATOP_STAT );
+			if ( 0 == s.GetRc() ) {
+				MyString old2( path );
+				old2.sprintf_cat(".%d", i );
+				rename( old1.GetCStr(), old2.GetCStr() );
+				num_rotations++;
+			}
+		}
+	}
+
+# ifdef WIN32
+	// on win32, cannot rename an open file
+	if ( fp) {
+		fclose( fp );
+		fp = NULL;
+	}
+# else
+	(void) fp;		// Quiet compiler warnings
+# endif
+
+	// Before time
+	UtcTime before(true);
+
+	if ( rotate_file( path, rotated.Value()) == 0 ) {
+		UtcTime after(true);
+		dprintf(D_FULLDEBUG, "before .1 rot: %.6f\n", before.combined() );
+		dprintf(D_FULLDEBUG, "after  .1 rot: %.6f\n", after.combined() );
+		num_rotations++;
+	}
+
+	return num_rotations;
+}
+
 
 int
 UserLog::writeGlobalEvent( ULogEvent &event, FILE *fp, bool is_header_event )
@@ -602,11 +680,8 @@ UserLog::writeGlobalEvent( ULogEvent &event, FILE *fp, bool is_header_event )
 		fp = m_global_fp;
 	}
 
-	if ( is_header_event && fseek( fp, 0, SEEK_SET ) ) {
-		dprintf( D_ALWAYS,
-				 "Failed to seek to end of global log file: %d / %s\n",
-				 errno, strerror( errno ) );
-		return -1;
+	if ( is_header_event ) {
+		rewind( fp );
 	}
 
 	return doWriteEvent( fp, &event, m_global_use_xml );
@@ -620,7 +695,7 @@ UserLog::doWriteEvent( ULogEvent *event,
 {
 	int success;
 	FILE* fp;
-	FileLock* lock;
+	FileLockBase* lock;
 	bool use_xml;
 	priv_state priv;
 
@@ -656,7 +731,7 @@ UserLog::doWriteEvent( ULogEvent *event,
 
 		// rotate the global event log if it is too big
 	if ( is_global_event ) {
-		if ( handleGlobalLogRotation() ) {
+		if ( checkGlobalLogRotation() ) {
 				// if we rotated the log, we have a new fp and lock
 			fp = m_global_fp;
 			lock = m_global_lock;
@@ -712,6 +787,7 @@ UserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 			}
 		}
 	} else {
+		printf( "Writing event to %p @ %ld\n", fp, ftell(fp) );
 		success = event->putEvent ( fp);
 		if (!success) {
 			fputc ('\n', fp);

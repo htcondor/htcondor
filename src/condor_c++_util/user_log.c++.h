@@ -30,6 +30,7 @@
 #include "proc.h"
 #endif
 #include "condor_event.h"
+#include "MyString.h"
 
 #define XML_USERLOG_DEFAULT 0
 
@@ -42,6 +43,7 @@ class MyString;
 class UserLogHeader;
 class FileLockBase;
 class FileLock;
+class ReadUserLogHeader;
 
 
 /** API for writing a log file.  Since an API for reading a log file
@@ -181,8 +183,8 @@ class UserLog {
 				   bool log_as_user,
 				   bool use_lock,
 				   bool append,
-				   FileLock* & lock, 
-				   FILE* & fp );
+				   FileLockBase *& lock, 
+				   FILE *& fp );
 
 	bool doWriteEvent( ULogEvent *event,
 					   bool is_global_event,
@@ -192,7 +194,11 @@ class UserLog {
 	bool doWriteEvent( FILE *fp, ULogEvent *event, bool do_use_xml );
 	void GenerateGlobalId( MyString &id );
 
-	bool handleGlobalLogRotation();
+	bool checkGlobalLogRotation(void);
+	long getGlobalLogSize( void ) const;
+	bool globalLogRotated( ReadUserLogHeader &reader );
+	int doRotation( const char *path, FILE *&fp,
+					MyString &rotated, int max_rotations );
 
     
     /// Deprecated.  condorID cluster of the next event.
@@ -207,20 +213,21 @@ class UserLog {
 	/** Write to the user log? */		 bool		m_write_user_log;
     /** Copy of path to the log file */  char     * m_path;
     /** The log file                 */  FILE     * m_fp;
-    /** The log file lock            */  FileLock * m_lock;
+    /** The log file lock            */  FileLockBase *m_lock;
 
     /** Enable locking?              */  bool		m_enable_locking;
 
 	/** Write to the global log? */		 bool		m_write_global_log;
     /** Copy of path to global log   */  char     * m_global_path;
     /** The global log file          */  FILE     * m_global_fp;
-    /** The global log file lock     */  FileLock * m_global_lock;
+    /** The global log file lock     */  FileLockBase *m_global_lock;
 	/** Whether we use XML or not    */  bool       m_global_use_xml;
 	/** The log file uniq ID base    */  char     * m_global_uniq_base;
 	/** The current sequence number  */  int        m_global_sequence;
 	/** Count event log events?      */  bool       m_global_count_events;
-	/** Max size of event log        */  int		m_global_max_filesize;
+	/** Max size of event log        */  long		m_global_max_filesize;
 	/** Max event log rotations      */  int		m_global_max_rotations;
+	/** Current global log file size */  long		m_global_filesize;
 
     /** Copy of path to rotation lock*/  char     * m_rotation_lock_path;
     /** FD of the rotation lock      */  int        m_rotation_lock_fd;
