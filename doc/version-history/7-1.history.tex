@@ -44,15 +44,15 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Added a new mechanism termed \Term{Concurrency Limits}.  This
-	mechanism allows the Condor pool administrator to define an arbitrary
-	number of consumable resources in the configuration file of the
-	matchmaker.  The availability of these consumable resources will be taken
-	into account during the matchmaking process.  Individual jobs can specify
-	how many of each type of consumable resource is required.  
-	Typical applications of Concurrency Limits could include management of
-	software licenses, database connections, or any other consumable resource
-	that is external to Condor.  NOTE: Documentation still being written on
-	this feature.
+mechanism allows the Condor pool administrator to define an arbitrary
+number of consumable resources in the configuration file of the
+matchmaker.  The availability of these consumable resources will be taken
+into account during the matchmaking process.  Individual jobs can specify
+how many of each type of consumable resource is required.  
+Typical applications of Concurrency Limits could include management of
+software licenses, database connections, or any other consumable resource
+external to Condor.  
+See section~\ref{sec:Concurrency-Limits}) for documentation.
 
 \item Added support for Condor to manage serial high throughput computing
 	workloads on the IBM Blue Gene supercomputer.  The IBM Blue Gene/P is now
