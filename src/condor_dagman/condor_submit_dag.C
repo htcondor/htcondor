@@ -1,5 +1,3 @@
-//TEMPTEMP -- test splice w/ subdag, subdag w/ splice
-//TEMPTEMP -- preserved values in current .condor.sub will override command line...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
