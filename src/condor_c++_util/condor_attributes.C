@@ -201,6 +201,7 @@ const char *ATTR_GLOBAL_JOB_ID            = "GlobalJobId";
 const char *ATTR_GZIP					 = "GZIP";
 const char *ATTR_GLOBUS_CONTACT_STRING	 = "GlobusContactString";
 const char *ATTR_GLOBUS_DELEGATION_URI	 = "GlobusDelegationUri";
+// Deprecated (cruft) -- no longer used
 const char *ATTR_GLOBUS_GRAM_VERSION		 = "GlobusGramVersion";
 const char *ATTR_GLOBUS_RESOURCE			 = "GlobusResource";
 const char *ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME = "GlobusResourceUnavailableTime";

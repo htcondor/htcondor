@@ -69,8 +69,8 @@ public:
 
   void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
 
-  int GetLimit(const MyString& limit);
-  int GetLimitMax(const MyString& limit);
+  double GetLimit(const MyString& limit);
+  double GetLimitMax(const MyString& limit);
   void ReportLimits(AttrList *attrList);
 
   AttrList* ReportState();
@@ -119,7 +119,7 @@ private:
   ClassAdLog* AcctLog;
   int LastUpdateTime;
 
-  HashTable<MyString, int> concurrencyLimits;
+  HashTable<MyString, double> concurrencyLimits;
 
   //--------------------------------------------------------
   // Static values

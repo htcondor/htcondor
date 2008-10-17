@@ -34,6 +34,7 @@
 #include "basename.h" // for condor_dirname
 #include "match_prefix.h"
 #include "condor_xml_classads.h"
+#include "subsystem_info.h"
 
 #include "history_utils.h"
 
@@ -45,7 +46,7 @@
 #define NUM_PARAMETERS 3
 
 
-char    *mySubSystem = "TOOL";
+DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
 
 static void Usage(char* name) 
 {

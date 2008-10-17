@@ -28,8 +28,7 @@
 #include "string_list.h"
 #include "CondorError.h"
 #include "condor_netdb.h"
-
-extern char* mySubSystem;
+#include "subsystem_info.h"
 
 const char STR_KERBEROS_SERVER_KEYTAB[]   = "KERBEROS_SERVER_KEYTAB";
 const char STR_KERBEROS_SERVER_PRINCIPAL[]= "KERBEROS_SERVER_PRINCIPAL";
@@ -108,9 +107,7 @@ int Condor_Auth_Kerberos :: authenticate(const char * /* remoteHost */, CondorEr
 		// initialize everything if needed.
 		if (init_kerberos_context() && init_server_info()) {
             
-			if (isDaemon() ||
-				((strcmp(mySubSystem, "TOOL") != 0) &&
-				(strcmp(mySubSystem, "SUBMIT") != 0))) {
+			if (isDaemon() || mySubSystem->isDaemon() ) {
 				status = init_daemon();
 			} else {
 				status = init_user();

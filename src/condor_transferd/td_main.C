@@ -21,11 +21,12 @@
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
 #include "condor_td.h"
+#include "subsystem_info.h"
 
 // The transferd object which does the work requested by the parent
 TransferD g_td;
 
-char* mySubSystem = "TRANSFERD";		// used by Daemon Core
+DECL_SUBSYSTEM( "TRANSFERD", SUBSYSTEM_TYPE_DAEMON );
 
 int main_init(int argc, char *argv[])
 {

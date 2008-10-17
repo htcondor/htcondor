@@ -2224,6 +2224,7 @@ AC_CHECK_TYPES([id_t])
 ############################################################
 
 AC_CHECK_FUNCS([strsignal				\
+		strcasestr				\
 		lstat					\
 		stat64					\
 		lstat64					\

@@ -26,6 +26,10 @@
 #include "VMRegister.h"
 #include "file_sql.h"
 
+#if HAVE_DLOPEN
+#include "StartdPlugin.h"
+#endif
+
 extern FILESQL *FILEObj;
 
 Resource::Resource( CpuAttributes* cap, int rid )
@@ -906,6 +910,10 @@ Resource::do_update( void )
 		FILESQL::daemonAdInsert(&public_ad, "Machines", FILEObj, prevLHF);
 	}	
 
+#if HAVE_DLOPEN
+	StartdPluginManager::Update(&public_ad, &private_ad);
+#endif
+
 		// Send class ads to collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
 								&private_ad, true ); 
@@ -937,6 +945,10 @@ Resource::final_update( void )
 	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, 
 			 r_name );
 	invalidate_ad.Insert( line );
+
+#if HAVE_DLOPEN
+	StartdPluginManager::Invalidate(&invalidate_ad);
+#endif
 
 	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
 }

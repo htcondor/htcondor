@@ -26,6 +26,7 @@
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "condor_socket_types.h"
+#include "subsystem_info.h"
 #include "httpget.h"
 #include "directory.h"
 #include "stdsoap2.h"
@@ -34,8 +35,6 @@
 extern int soap_serve(struct soap *);
 
 extern DaemonCore *daemonCore;
-
-extern char *mySubSystem;
 
 struct soap ssl_soap;
 
@@ -46,7 +45,7 @@ extern SOAP_NMAC struct Namespace namespaces[];
 void
 init_soap(struct soap *soap)
 {
-	MyString subsys = MyString(mySubSystem);
+	MyString subsys = MyString(mySubSystem->getName() );
 
 		// KEEP-ALIVE should be turned OFF, not ON.
 	soap_init(soap);

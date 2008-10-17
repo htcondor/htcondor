@@ -23,13 +23,13 @@
 #include "condor_config.h"
 #include "condor_perms.h"
 #include "condor_netdb.h"
+#include "subsystem_info.h"
 
 #include "HashTable.h"
 #include "sock.h"
 #include "condor_secman.h"
 
 // Externs to Globals
-extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
 
 const char TotallyWild[] = "*";
 
@@ -141,10 +141,12 @@ IpVerify::Init()
 
 		MyString allow_param, deny_param;
 
-		pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param,mySubSystem);
+		pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param,
+										  mySubSystem->getName() );
 
         // This is the old stuff, eventually it will be gone
-		pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param,mySubSystem);
+		pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param,
+										  mySubSystem->getName() );
 
         // Treat a "*", "*/*" for USERALLOW_XXX as if it's just
         // undefined. 
@@ -162,9 +164,11 @@ IpVerify::Init()
 		// concat the two
 		pAllow = merge(pNewAllow, pOldAllow);
 
-		pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param,mySubSystem);
+		pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param,
+										 mySubSystem->getName() );
 
-		pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param,mySubSystem);
+		pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param,
+										 mySubSystem->getName() );
 
 		// concat the two
 		pDeny = merge(pNewDeny, pOldDeny);
@@ -1001,7 +1005,7 @@ IpVerify::PermTypeEntry::~PermTypeEntry() {
 
 
 #ifdef WANT_STANDALONE_TESTING
-char *mySubSystem = "COLLECTOR";
+DECL_SUBSYSTEM( "COLLECTOR", SUBSYSTEM_TYPE_COLLECTOR );
 #include "condor_io.h"
 #ifdef WIN32
 #	include <crtdbg.h>

@@ -25,6 +25,7 @@
 #include "condor_network.h"
 #include "condor_string.h"
 #include "condor_ckpt_name.h"
+#include "subsystem_info.h"
 #include "env.h"
 #include "basename.h"
 #include "condor_getcwd.h"
@@ -101,7 +102,8 @@ HashTable<MyString,int> ClusterAdAttrs( 31, hashFunction );
 template class HashTable<AttrKey, MyString>;
 template class HashBucket<AttrKey, MyString>;
 
-char* mySubSystem = "SUBMIT";	/* Used for SUBMIT_EXPRS */
+/* For daemonCore, etc. */
+DECL_SUBSYSTEM( "SUBMIT", SUBSYSTEM_TYPE_SUBMIT );
 
 ClassAd  *job = NULL;
 

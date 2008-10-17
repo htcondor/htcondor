@@ -23,6 +23,7 @@
 #include "condor_attributes.h"
 #include "condor_version.h"
 #include "condor_distribution.h"
+#include "subsystem_info.h"
 
 #include "proto.h"
 #include "name_tab.h"
@@ -53,8 +54,8 @@ void display_startup_info( const STARTUP_INFO *s, int flags );
 #include "sdpro.h"
 #endif
 
-
-char* mySubSystem = "STARTER";
+/* For daemonCore, etc. */
+DECL_SUBSYSTEM( "STARTER", SUBSYSTEM_TYPE_STARTER );
 
 #undef ASSERT
 #define ASSERT(cond) \

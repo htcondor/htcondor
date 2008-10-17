@@ -220,16 +220,6 @@ int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
 bool InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock,
 						bool fatal);
 
-/** This global should be defined in your subsystems's main.C file.
-    Here are some examples:<p>
-
-    <UL>
-      <LI><tt>char* mySubSystem = "DAGMAN";</tt>
-      <LI><tt>char* mySubSystem = "SHADOW";</tt>
-      <LI><tt>char* mySubSystem = "SCHEDD";</tt>
-    </UL>
-*/
-extern char *mySubSystem;
 
 class DCSignalMsg: public DCMsg {
  public:

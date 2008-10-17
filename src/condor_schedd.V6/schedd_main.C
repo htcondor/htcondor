@@ -38,6 +38,7 @@
 #include "condor_uid.h"
 #include "grid_universe.h"
 #include "condor_netdb.h"
+#include "subsystem_info.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -56,13 +57,14 @@ extern "C"
 extern	void	mark_jobs_idle();
 extern  int     clear_autocluster_id( ClassAd *job );
 
+/* For daemonCore, etc. */
+DECL_SUBSYSTEM( "SCHEDD", SUBSYSTEM_TYPE_SCHEDD );
 
 // global variables to control the daemon's running and logging
 char*		Spool = NULL;							// spool directory
 char* 		JobHistoryFileName = NULL;
 char*		PerJobHistoryDir = NULL;
 char*		Name = NULL;
-char*		mySubSystem = "SCHEDD";
 char*		X509Directory = NULL;
 bool        DoHistoryRotation = true;
 filesize_t  MaxHistoryFileSize = 20 * 1024 * 1024; // 20MB
@@ -101,6 +103,9 @@ main_init(int argc, char* argv[])
 			usage(argv[0]);
 		}
 	}
+
+		// Tell Attrlist to publish the server time
+	AttrList_setPublishServerTime( true );
 
 		// Initialize DaemonCore's use of ProcFamily. We do this so that we
 		// launch a ProcD if necessary so that any Starters that we launch

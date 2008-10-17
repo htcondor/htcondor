@@ -24,13 +24,13 @@
 #include "basename.h"
 #include "globus_utils.h"
 #include "condor_config.h"
+#include "subsystem_info.h"
 
 #include "schedd_client.h"
 #include "io_loop.h"
 #include "PipeBuffer.h"
 
-
-char *mySubSystem = "C_GAHP_WORKER_THREAD";	// used by Daemon Core
+DECL_SUBSYSTEM( "C_GAHP_WORKER_THREAD", SUBSYSTEM_TYPE_GAHP );
 
 char * myUserName = NULL;
 

@@ -24,10 +24,13 @@
 #include "condor_config.h"
 #include "condor_distribution.h"
 #include "MyString.h"
+#include "subsystem_info.h"
 #include "simple_arg.h"
 #include <stdio.h>
 
 static const char *	VERSION = "0.9.3";
+
+DECL_SUBSYSTEM( "TEST_LOG_READER", SUBSYSTEM_TYPE_TOOL );
 
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 

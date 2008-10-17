@@ -39,9 +39,9 @@
 #include "classad_merge.h"
 #include "daemon.h"
 #include "daemon_core_sock_adapter.h"
+#include "subsystem_info.h"
 #include "setenv.h"
 
-extern char* mySubSystem;
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
 template class HashTable<MyString, classy_counted_ptr<SecManStartCommand> >;
@@ -483,7 +483,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 
 
 	// subsystem
-	ad->Assign ( ATTR_SEC_SUBSYSTEM, mySubSystem );
+	ad->Assign ( ATTR_SEC_SUBSYSTEM, mySubSystem->getName() );
 
     char * parent_id = my_parent_unique_id();
     if (parent_id) {
@@ -507,7 +507,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// if that does not exist, fall back to old form of
 	// SEC_<authlev>_SESSION_DURATION.
 	char fmt[128];
-	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", mySubSystem);
+	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", mySubSystem->getName() );
 	paramer = SecMan::getSecSetting(fmt, auth_level);
 	if (!paramer) {
 		paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
@@ -520,10 +520,10 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		paramer = NULL;
 	} else {
 		// no value defined, use defaults.
-		if (strcmp(mySubSystem, "TOOL") == 0) {
+		if ( mySubSystem->isType(SUBSYSTEM_TYPE_TOOL) ) {
 			// default for tools is 1 minute.
 			ad->Assign ( ATTR_SEC_SESSION_DURATION, "60" );
-		} else if (strcmp(mySubSystem, "SUBMIT") == 0) {
+		} else if ( mySubSystem->isType(SUBSYSTEM_TYPE_SUBMIT) ) {
 			// default for submit is 1 hour.  yeah, that's a long submit
 			// but you never know with file transfer and all.
 			ad->Assign ( ATTR_SEC_SESSION_DURATION, "3600" );
@@ -1606,6 +1606,18 @@ SecManStartCommand::receiveAuthInfo_inner()
 				auth_response.dPrint( D_SECURITY );
 			}
 
+				// Get rid of our sinful address in what will become
+				// the session policy ad.  It's there because we sent
+				// it to our peer, but no need to keep it around in
+				// our copy of the session.  In fact, if we did, this
+				// would cause performance problems in the KeyCache
+				// index, which would contain a lot of (useless) index
+				// entries for our own sinful address.
+			m_auth_info.Delete( ATTR_SEC_SERVER_COMMAND_SOCK );
+				// Ditto for our pid info.
+			m_auth_info.Delete( ATTR_SEC_SERVER_PID );
+			m_auth_info.Delete( ATTR_SEC_PARENT_UNIQUE_ID );
+
 			// it makes a difference if the version is empty, so we must
 			// explicitly delete it before we copy it.
 			m_auth_info.Delete(ATTR_SEC_REMOTE_VERSION);
@@ -2208,84 +2220,41 @@ SecManStartCommand::SocketCallback( Stream *stream )
 
 
 // Given a sinful string, clear out any associated sessions (incoming or outgoing)
-bool SecMan :: invalidateHost(const char * sin)
+void
+SecMan::invalidateHost(const char * sin)
 {
-    bool removed = true;
+	StringList *keyids = session_cache->getKeysForPeerAddress(sin);
+	if( !keyids ) {
+		return;
+	}
 
-    if (sin && sin[0]) {
-        KeyCacheEntry * keyEntry = NULL;
-        MyString  addr(sin), id;
-
-        if (session_cache) {
-            session_cache->key_table->startIterations();
-            while (session_cache->key_table->iterate(id, keyEntry)) {
-				char * remote_sinful = sin_to_string(keyEntry->addr());
-					// if this is an outgoing session, we need to check against the keyEntry->addr()
-				if (remote_sinful && remote_sinful[0] &&  (addr == MyString(remote_sinful))) {
-					if (DebugFlags & D_FULLDEBUG) {
-						dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), remote_sinful);
-					}
-					remove_commands(keyEntry);	// removing mapping from DC command int to session entry
-					session_cache->remove(id.Value());	// remove session entry
-				} else {
-						// if it did not match, it might be an incoming session, so check against the
-						// ServerCommandSock that is in the cached policy classad.
-					char * local_sinful = NULL;
-					keyEntry->policy()->LookupString( ATTR_SEC_SERVER_COMMAND_SOCK, &local_sinful);
-					if (local_sinful && local_sinful[0] && (addr == MyString(local_sinful))) {
-						if (DebugFlags & D_FULLDEBUG) {
-							dprintf (D_SECURITY, "KEYCACHEX: removing session %s for %s\n", id.Value(), local_sinful);
-						}
-						// remove_commands shouldn't be necessary for incoming connections
-						// remove_commands(keyEntry);
-						session_cache->remove(id.Value());
-					}
-					if (local_sinful) {
-						free(local_sinful);
-					}
-				}
-            }
-        }
-    }
-    else {
-        // sock is NULL!
-    }
-
-    return removed;
+	keyids->rewind();
+	char const *keyid;
+	while( (keyid=keyids->next()) ) {
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", keyid, sin);
+		}
+		invalidateKey(keyid);
+	}
+	delete keyids;
 }
 
-bool SecMan :: invalidateByParentAndPid(const char * parent, int pid) {
-	if (parent && parent[0]) {
-
-    	KeyCacheEntry * keyEntry = NULL;
-        MyString  id;
-
-		if (session_cache) {
-			session_cache->key_table->startIterations();
-			while (session_cache->key_table->iterate(id, keyEntry)) {
-
-				char * parent_unique_id = NULL;
-				int    tpid = 0;
-
-				keyEntry->policy()->LookupString( ATTR_SEC_PARENT_UNIQUE_ID, &parent_unique_id);
-				keyEntry->policy()->LookupInteger( ATTR_SEC_SERVER_PID, tpid);
-
-				if (parent_unique_id && parent_unique_id[0] && (strcmp(parent, parent_unique_id) == 0) && (pid == tpid)) {
-					if (DebugFlags & D_FULLDEBUG) {
-						dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), parent_unique_id);
-					}
-					// remove_commands shouldn't be necessary for incoming connections
-					// remove_commands(keyEntry);
-					session_cache->remove(id.Value());
-				}
-				if (parent_unique_id) {
-					free(parent_unique_id);
-					parent_unique_id = 0;
-				}
-			}
-        }
+void
+SecMan::invalidateByParentAndPid(const char * parent, int pid) {
+	StringList *keyids = session_cache->getKeysForProcess(parent,pid);
+	if( !keyids ) {
+		return;
 	}
-	return true;
+
+	keyids->rewind();
+	char const *keyid;
+	while( (keyid=keyids->next()) ) {
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s pid %d\n", keyid, parent, pid);
+		}
+		invalidateKey(keyid);
+	}
+	delete keyids;
 }
 
 bool SecMan :: invalidateKey(const char * key_id)
