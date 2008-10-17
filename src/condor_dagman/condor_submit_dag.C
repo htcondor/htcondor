@@ -1,3 +1,5 @@
+//TEMPTEMP -- test splice w/ subdag, subdag w/ splice
+//TEMPTEMP -- preserved values in current .condor.sub will override command line...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -140,7 +142,9 @@ int main(int argc, char *argv[])
 
 	int tmpResult;
 
-		// Recursively run ourself on nested DAGs.
+		// Recursively run ourself on nested DAGs.  We need to do this
+		// depth-first so all of the lower-level .condor.sub files already
+		// exist when we check for log files.
 	if ( opts.recurse ) {
 		tmpResult = doRecursion( opts );
 		if ( tmpResult != 0) {
@@ -164,7 +168,9 @@ int main(int argc, char *argv[])
 	tmpResult = checkLogFiles( opts );
 	if ( tmpResult != 0 ) return tmpResult;
 
-		// Note that this MUST come after recursion...
+		// Note that this MUST come after recursion, otherwise we'd
+		// pass down the "preserved" values from the current .condor.sub
+		// file.
 	if ( opts.updateSubmit ) {
 		tmpResult = getOldSubmitFlags( opts );
 		if ( tmpResult != 0 ) return tmpResult;
@@ -177,6 +183,7 @@ int main(int argc, char *argv[])
 }
 
 //---------------------------------------------------------------------------
+//TEMPTEMP -- need to look for DIR!!
 /** Recursively call condor_submit_dag on nested DAGs.
 	@param opts: the condor_submit_dag options
 	@return 0 if successful, 1 if failed
@@ -216,30 +223,63 @@ doRecursion( SubmitDagOptions &opts )
 		int start = subFile.find( DAG_SUBMIT_FILE_SUFFIX );
 		if ( start >= 0 && start + (int)strlen( DAG_SUBMIT_FILE_SUFFIX) ==
 					subFile.Length() ) {
+				// Change submit file name to DAG file name.
 			subFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
 
+				// Build up the command line for the recursive run of
+				// condor_submit_dag.  We need -no_submit so we don't
+				// actually run the subdag now; we need -update_submit
+				// so the lower-level .condor.sub file will get
+				// updated, in case it came from an earlier version
+				// of condor_submit_dag.
 			MyString cmdLine = "condor_submit_dag -no_submit -update_submit ";
 
 				// Add in arguments we're passing along.
-			if ( opts.bVerbose ) cmdLine += "-verbose ";
-			if ( opts.bForce ) cmdLine += "-force ";
-			if ( opts.strNotification != "" ) cmdLine +=
-						MyString( "-notification " ) +
-						opts.strNotification.Value() + " ";
-			if ( opts.strDagmanPath != "" ) cmdLine += MyString( "-dagman " ) +
+			if ( opts.bVerbose ) {
+				cmdLine += "-verbose ";
+			}
+
+			if ( opts.bForce ) {
+				cmdLine += "-force ";
+			}
+
+			if ( opts.strNotification != "" ) {
+				cmdLine += MyString( "-notification " ) +
+							opts.strNotification.Value() + " ";
+			}
+
+			if ( opts.strDagmanPath != "" ) {
+				cmdLine += MyString( "-dagman " ) +
 						opts.strDagmanPath.Value() + " ";
+			}
+
 			cmdLine += MyString( "-debug " ) + opts.iDebugLevel + " ";
-			if ( opts.bAllowLogError ) cmdLine += "-allowlogerror ";
-			if ( opts.useDagDir ) cmdLine += "-usedagdir ";
-			if ( opts.strDebugDir != "" ) cmdLine +=
-						MyString( "-outfile_dir " ) + 
+
+			if ( opts.bAllowLogError ) {
+				cmdLine += "-allowlogerror ";
+			}
+
+			if ( opts.useDagDir ) {
+				cmdLine += "-usedagdir ";
+			}
+
+			if ( opts.strDebugDir != "" ) {
+				cmdLine += MyString( "-outfile_dir " ) + 
 						opts.strDebugDir.Value() + " ";
+			}
+
 			cmdLine += MyString( "-oldrescue " ) + opts.oldRescue + " ";
+
 			cmdLine += MyString( "-autorescue " ) + opts.autoRescue + " ";
-			if ( opts.doRescueFrom != 0 ) cmdLine +=
-						MyString( "-dorescuefrom " ) +
+
+			if ( opts.doRescueFrom != 0 ) {
+				cmdLine += MyString( "-dorescuefrom " ) +
 						opts.doRescueFrom + " ";
-			if ( opts.allowVerMismatch ) cmdLine += "-allowver ";
+			}
+
+			if ( opts.allowVerMismatch ) {
+				cmdLine += "-allowver ";
+			}
 
 			cmdLine += subFile;
 
@@ -679,22 +719,22 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 		args.AppendArg("-Rescue");
 		args.AppendArg(opts.strRescueFile.Value());
 	}
-    if(opts.iMaxIdle) 
+    if(opts.iMaxIdle != 0) 
 	{
 		args.AppendArg("-MaxIdle");
 		args.AppendArg(opts.iMaxIdle);
     }
-    if(opts.iMaxJobs) 
+    if(opts.iMaxJobs != 0) 
 	{
 		args.AppendArg("-MaxJobs");
 		args.AppendArg(opts.iMaxJobs);
     }
-    if(opts.iMaxPre) 
+    if(opts.iMaxPre != 0) 
 	{
 		args.AppendArg("-MaxPre");
 		args.AppendArg(opts.iMaxPre);
     }
-    if(opts.iMaxPost) 
+    if(opts.iMaxPost != 0) 
 	{
 		args.AppendArg("-MaxPost");
 		args.AppendArg(opts.iMaxPost);
