@@ -183,6 +183,14 @@ SOURCE="..\src\condor_c++_util\command_strings.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\ConcurrencyLimitUtils.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\ConcurrencyLimitUtils.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_arglist.C"
 # End Source File
 # Begin Source File
