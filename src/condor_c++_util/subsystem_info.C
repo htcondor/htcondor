@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "subsystem_info.h"
+#include <string.h>
 
 //
 // Simple class to manage a single lookup item
