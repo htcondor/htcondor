@@ -23,7 +23,7 @@
 #include "string_list.h"
 #include "condor_debug.h"
 #include "internet.h"
-#include "string_func.h"
+#include "string_funcs.h"
 
 // initialize the List<char> from the VALID_*_FILES variable in the
 // config file; the files are separated by commas
