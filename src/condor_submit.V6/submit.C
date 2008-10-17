@@ -25,6 +25,7 @@
 #include "condor_network.h"
 #include "condor_string.h"
 #include "condor_ckpt_name.h"
+#include "subsystem_info.h"
 #include "env.h"
 #include "basename.h"
 #include "condor_getcwd.h"
@@ -101,7 +102,8 @@ HashTable<MyString,int> ClusterAdAttrs( 31, hashFunction );
 template class HashTable<AttrKey, MyString>;
 template class HashBucket<AttrKey, MyString>;
 
-char* mySubSystem = "SUBMIT";	/* Used for SUBMIT_EXPRS */
+/* For daemonCore, etc. */
+DECL_SUBSYSTEM( "SUBMIT", SUBSYSTEM_TYPE_SUBMIT );
 
 ClassAd  *job = NULL;
 
@@ -341,7 +343,11 @@ char	*CronPrepTime	= "cron_prep_time";
 
 #if defined(WIN32)
 char	*RunAsOwner = "run_as_owner";
+char	*LoadProfile = "load_profile";
 #endif
+
+// Concurrency Limit parameters
+char    *ConcurrencyLimits = "concurrency_limits";
 
 //
 // VM universe Parameters
@@ -352,6 +358,17 @@ char    *VM_Checkpoint = "vm_checkpoint";
 char    *VM_Networking = "vm_networking";
 char    *VM_Networking_Type = "vm_networking_type";
 
+//
+// Amazon EC2 Parameters
+//
+char* AmazonPublicKey = "amazon_public_key";
+char* AmazonPrivateKey = "amazon_private_key";
+char* AmazonAmiID = "amazon_ami_id";
+char* AmazonUserData = "amazon_user_data";
+char* AmazonUserDataFile = "amazon_user_data_file";
+char* AmazonSecurityGroups = "amazon_security_groups";
+char* AmazonKeyPairFile = "amazon_keypair_file";
+char* AmazonInstanceType = "amazon_instance_type";
 
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
@@ -400,6 +417,7 @@ void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void 	SetTDP();
 #if defined(WIN32)
 void	SetRunAsOwner();
+void    SetLoadProfile();
 #endif
 void	SetRank();
 void 	SetIWD();
@@ -454,6 +472,7 @@ void SetParallelStartupScripts(); //JDB
 void SetMaxJobRetirementTime();
 bool mightTransfer( int universe );
 bool isTrue( const char* attr );
+void SetConcurrencyLimits();
 void SetVMParams();
 void SetVMRequirements();
 bool parse_vm_option(char *value, bool& onoff);
@@ -602,10 +621,20 @@ init_job_ad()
 	InsertJobExpr (buffer);
 
 	// Publish the version of Windows we are running
-	OSVERSIONINFO os_version_info;
-	ZeroMemory ( &os_version_info, sizeof ( OSVERSIONINFO ) );
-	os_version_info.dwOSVersionInfoSize = sizeof ( OSVERSIONINFO );	
-	if ( GetVersionEx ( &os_version_info ) > 0 ) {
+	OSVERSIONINFOEX os_version_info;
+	ZeroMemory ( &os_version_info, sizeof ( OSVERSIONINFOEX ) );
+	os_version_info.dwOSVersionInfoSize = sizeof ( OSVERSIONINFOEX );
+	BOOL ok = GetVersionEx ( (OSVERSIONINFO*) &os_version_info );
+	if ( !ok ) {
+		os_version_info.dwOSVersionInfoSize =
+			sizeof ( OSVERSIONINFO );
+		ok = GetVersionEx ( (OSVERSIONINFO*) &os_version_info );
+		if ( !ok ) {
+			dprintf ( D_ALWAYS, "Submit: failed to "
+				"get Windows version information\n" );
+		}
+	}
+	if ( ok ) {
 		buffer.sprintf( "%s = %u", ATTR_WINDOWS_MAJOR_VERSION, 
 			os_version_info.dwMajorVersion );
 		InsertJobExpr ( buffer );
@@ -615,16 +644,23 @@ init_job_ad()
 		buffer.sprintf( "%s = %u", ATTR_WINDOWS_BUILD_NUMBER, 
 			os_version_info.dwBuildNumber );
 		InsertJobExpr ( buffer );
-	} else {
-		buffer.sprintf( "%s = \"Undefined\"", 
-			ATTR_WINDOWS_MAJOR_VERSION );
-		InsertJobExpr ( buffer );
-		buffer.sprintf( "%s = \"Undefined\"", 
-			ATTR_WINDOWS_MINOR_VERSION );
-		InsertJobExpr ( buffer );
-		buffer.sprintf( "%s = \"Undefined\"", 
-			ATTR_WINDOWS_BUILD_NUMBER );
-		InsertJobExpr ( buffer );
+		// publish the extended Windows version information if we
+		// have it at our disposal
+		if ( sizeof ( OSVERSIONINFOEX ) ==
+			os_version_info.dwOSVersionInfoSize ) {
+			buffer.sprintf ( "%s = %lu",
+				ATTR_WINDOWS_SERVICE_PACK_MAJOR,
+				os_version_info.wServicePackMajor );
+			InsertJobExpr ( buffer );
+			buffer.sprintf ( "%s = %lu",
+				ATTR_WINDOWS_SERVICE_PACK_MINOR,
+				os_version_info.wServicePackMinor );
+			InsertJobExpr ( buffer );
+			buffer.sprintf ( "%s = %lu",
+				ATTR_WINDOWS_PRODUCT_TYPE,
+				os_version_info.wProductType );
+			InsertJobExpr ( buffer );
+		}
 	}
 #endif
 
@@ -1486,8 +1522,10 @@ SetExecutable()
 	IckptName = gen_ckpt_name(0,ClusterId,ICKPT,0);
 
 	// ensure the executables exist and spool them only if no 
-	// $$(arch).$$(opsys) are specified
-	if ( !strstr(ename,"$$") && transfer_it ) {
+	// $$(arch).$$(opsys) are specified  (note that if we are simply
+	// dumping the class-ad to a file, we won't actually transfer
+	// or do anything [nothing that follows will affect the ad])
+	if ( !strstr(ename,"$$") && transfer_it && !DumpClassAdToFile ) {
 
 		StatInfo si(ename);
 		if ( SINoFile == si.Error () && 
@@ -1661,6 +1699,7 @@ SetUniverse()
 				(stricmp (JobGridType, "naregi") == MATCH) ||
 				(stricmp (JobGridType, "condor") == MATCH) ||
 				(stricmp (JobGridType, "nordugrid") == MATCH) ||
+				(stricmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
 				(stricmp (JobGridType, "unicore") == MATCH) ||
 				(stricmp (JobGridType, "oracle") == MATCH) ||
 				(stricmp (JobGridType, "cream") == MATCH)){
@@ -4229,6 +4268,36 @@ SetRunAsOwner()
 		exit(1);
 	}
 }
+
+void 
+SetLoadProfile()
+{
+    char *load_profile_param = condor_param (
+        LoadProfile, 
+        ATTR_JOB_LOAD_PROFILE );
+
+    if ( NULL == load_profile_param ) {
+        return;
+    }
+
+    if ( !isTrue ( load_profile_param ) ) {
+        free ( load_profile_param );
+        return;
+    }
+    
+    MyString buffer;
+    buffer.sprintf ( "%s = True", ATTR_JOB_LOAD_PROFILE );
+    InsertJobExpr ( buffer );
+
+    /* If we've been called it means that SetRunAsOwner() has already 
+    made sure we have a CredD.  This will become more important when
+    we allow random users to load their profile (which will only at 
+    that point be the user's registry).  The limitation is to stop
+    heavy weight users profiles; you know the ones: they have20+ GBs 
+    of music, thousands of pictures and a few random movies from 
+    caching their profile on the local machine (which may be someone's
+    laptop, which may already be running low on disk-space). */
+}
 #endif
 
 void
@@ -4627,14 +4696,23 @@ SetGlobusParams()
 	char *tmp;
 	bool unified_syntax;
 	MyString buffer;
+	FILE* fp;
 
 	if ( JobUniverse != CONDOR_UNIVERSE_GRID )
 		return;
 
-		// Does the schedd support the new unified syntax for grid universe
-		// jobs (i.e. GridResource and GridJobId used for all types)?
-	CondorVersionInfo vi( MySchedd->version() );
-	unified_syntax = vi.built_since_version(6,7,11);
+		// If we are dumping to a file we can't call
+		// MySchedd->version(), because MySchedd is NULL. Instead we
+		// assume we'd be talking to a Schedd just as current as we
+		// are.
+	if ( DumpClassAdToFile ) {
+		unified_syntax = true;
+	} else {
+			// Does the schedd support the new unified syntax for grid universe
+			// jobs (i.e. GridResource and GridJobId used for all types)?
+		CondorVersionInfo vi( MySchedd->version() );
+		unified_syntax = vi.built_since_version(6,7,11);
+	}
 
 	tmp = condor_param( GridResource, ATTR_GRID_RESOURCE );
 	if ( tmp ) {
@@ -4996,6 +5074,111 @@ SetGlobusParams()
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
 	}
+	
+	//
+	// Amazon grid-type submit attributes
+	//
+	if ( (tmp = condor_param( AmazonPublicKey, ATTR_AMAZON_PUBLIC_KEY )) ) {
+		// check public key file can be opened
+		if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+			exit(1);
+		}
+		fclose(fp);
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_PUBLIC_KEY, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && stricmp( JobGridType, "amazon" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonPublicKey );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	if ( (tmp = condor_param( AmazonPrivateKey, ATTR_AMAZON_PRIVATE_KEY )) ) {
+		// check private key file can be opened
+		if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+			exit(1);
+		}
+		fclose(fp);
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_PRIVATE_KEY, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && stricmp( JobGridType, "amazon" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonPrivateKey );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	// AmazonKeyPairFile is not a necessary parameter
+	if( (tmp = condor_param( AmazonKeyPairFile, ATTR_AMAZON_KEY_PAIR_FILE )) ) {
+		// for the relative path, the keypair output file will be written to the IWD
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_KEY_PAIR_FILE, full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	// AmazonGroupName is not a necessary parameter
+	if( (tmp = condor_param( AmazonSecurityGroups, ATTR_AMAZON_SECURITY_GROUPS )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_SECURITY_GROUPS, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	if ( (tmp = condor_param( AmazonAmiID, ATTR_AMAZON_AMI_ID )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_AMI_ID, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && stricmp( JobGridType, "amazon" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonAmiID );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	// AmazonInstanceType is not a necessary parameter
+	if( (tmp = condor_param( AmazonInstanceType, ATTR_AMAZON_INSTANCE_TYPE )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_INSTANCE_TYPE, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	// AmazonUserData and AmazonUserDataFile cannot exist in the same submit file
+	bool has_userdata = false;
+	bool has_userdatafile = false;
+	
+	// AmazonUserData is not a necessary parameter
+	if( (tmp = condor_param( AmazonUserData, ATTR_AMAZON_USER_DATA )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_USER_DATA, tmp);
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+		has_userdata = true;
+	}	
+
+	// AmazonUserDataFile is not a necessary parameter
+	if( (tmp = condor_param( AmazonUserDataFile, ATTR_AMAZON_USER_DATA_FILE )) ) {
+		// check user data file can be opened
+		if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+			exit(1);
+		}
+		fclose(fp);
+		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_USER_DATA_FILE, 
+				full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+		has_userdatafile = true;
+	}
+	
+	if (has_userdata && has_userdatafile) {
+		// two attributes appear in the same submit file
+		fprintf(stderr, "\nERROR: Parameters \"%s\" and \"%s\" exist in same Amazon job\n", 
+						AmazonUserData, AmazonUserDataFile);
+		DoCleanup( 0, 0, NULL );
+		exit(1);
+	}
 }
 
 void
@@ -5049,22 +5232,27 @@ SetGSICredentials()
 				// versions and daemon core's CreateProcess() can't
 				// handle spaces in command line arguments. So if
 				// we're talking to an older schedd, use the old format.
-			CondorVersionInfo vi( MySchedd->version() );
+			CondorVersionInfo *vi = NULL;
+			if ( !DumpClassAdToFile ) {
+				vi = new CondorVersionInfo( MySchedd->version() );
+			}
 
 			if ( check_x509_proxy(proxy_file) != 0 ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				if ( vi ) delete vi;
 				exit( 1 );
 			}
 
 			/* Insert the proxy subject name into the ad */
 			char *proxy_subject;
-			if ( !vi.built_since_version(6,7,3) ) {
+			if ( vi && !vi->built_since_version(6,7,3) ) {
 				proxy_subject = x509_proxy_subject_name(proxy_file);
 			} else {
 				proxy_subject = x509_proxy_identity_name(proxy_file);
 			}
 			if ( !proxy_subject ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				if ( vi ) delete vi;
 				exit( 1 );
 			}
 			/* Dreadful hack: replace all the spaces in the cert subject
@@ -5073,7 +5261,7 @@ SetGSICredentials()
 			* daemoncore handles command-line args w/ an argv array, spaces
 			* will cause trouble.  
 			*/
-			if ( !vi.built_since_version(6,7,3) ) {
+			if ( vi && !vi->built_since_version(6,7,3) ) {
 				char *space_tmp;
 				do {
 					if ( (space_tmp = strchr(proxy_subject,' ')) ) {
@@ -5081,6 +5269,8 @@ SetGSICredentials()
 					}
 				} while (space_tmp);
 			}
+			if ( vi ) delete vi;
+
 			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
 						   proxy_subject);
 			InsertJobExpr(buffer);	
@@ -5645,6 +5835,7 @@ queue(int num)
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
 #if defined(WIN32)
 		SetRunAsOwner();
+        SetLoadProfile();
 #endif
 		SetPerFileEncryption();  // must be called _before_ SetRequirements()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
@@ -5685,6 +5876,7 @@ queue(int num)
 		SetJarFiles();
 		SetJavaVMArgs();
 		SetParallelStartupScripts(); //JDB
+		SetConcurrencyLimits();
 		SetVMParams();
 
 			// SetForcedAttributes should be last so that it trumps values
@@ -7079,6 +7271,29 @@ void SetVMRequirements()
 	buffer.sprintf( "%s = %s", ATTR_REQUIREMENTS, vmanswer.Value());
 	JobRequirements = vmanswer;
 	InsertJobExpr (buffer);
+}
+
+
+void
+SetConcurrencyLimits()
+{
+	MyString tmp = condor_param_mystring(ConcurrencyLimits, NULL);
+
+	if (!tmp.IsEmpty()) {
+		char *str;
+
+		tmp.strlwr();
+
+		StringList list(tmp.GetCStr());
+
+		list.qsort();
+
+		str = list.print_to_string();
+		tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
+		InsertJobExpr(tmp.GetCStr());
+
+		free(str);
+	}
 }
 
 // this function must be called after SetUniverse

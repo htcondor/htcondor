@@ -8,7 +8,7 @@ all_target( $(PROGRAMS) )
 CFLAGS = $(STD_C_FLAGS)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 
 soapobjs(cgahp)
 
@@ -27,7 +27,7 @@ public_c_plus_target($(IO_THREAD),sbin,$(IO_THREAD_OBJ),$(LIB))
 html:
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_util_lib, setsyscalls.o )
+import_objs(../condor_util_lib, setsyscalls.o )
 
 gen_soapfiles(cgahp,condorCgahp)
 

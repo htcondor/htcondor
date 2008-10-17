@@ -31,10 +31,11 @@
 #include <string.h>
 #include <limits.h>
 #include <sys/utsname.h>
-#include "x_my_bogokips.h"
+#include <time.h>
 
 int main( int argc, char* argv[] ) {
 	int i, j, s, num_k_iter, num_secs = 1;
+	time_t old_time, new_time;
 	float x = 45;
 	float y = 23;
 	float z = 256;
@@ -48,30 +49,20 @@ int main( int argc, char* argv[] ) {
 		num_secs = 1;
 	}
 
-		/*
-		  unfortunately, our "BOGOKIPS" is timed for no-op iterations,
-		  and we're doing this extra floating point addition and
-		  comparison, so our timing is therefore off.  a
-		  "fudge-factor" of 2/5 seems to give roughly accurate timings
-		  on linux, while on solaris, the extra floating point ops
-		  don't seem to matter and we can use the BOGOKIPS directly.
-		*/
-	uname( &uname_s );
-	if( ! strcmp(uname_s.sysname, "SunOS") ) { 
-		num_k_iter = BOGOKIPS;
-	} else {
-		num_k_iter = (int) ((BOGOKIPS/5)*2);
-	}
-
-	for( s=0; s<num_secs; s++ ) {
-		for( i=0; i<num_k_iter; i++ ) {
-			for( j=0; j<1000; j++ ) {
-				if( (x+y)>=z ) {
-					printf( "error: floating point comparison failed on "
-							"sec: %d, i: %d, j: %d\n", s, i, j );
-					success=0;
-				}
+	old_time = time( NULL );
+	s = 0;
+	while ( s < num_secs ) {
+		for( j=0; j<10000; j++ ) {
+			if( (x+y)>=z ) {
+				printf( "error: floating point comparison failed on "
+						"sec: %d, i: %d, j: %d\n", s, i, j );
+				success=0;
 			}
+		}
+		new_time = time( NULL );
+		if ( new_time > old_time ) {
+			old_time = new_time;
+			s++;
 		}
 	}
 	if (success) {

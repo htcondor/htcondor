@@ -99,6 +99,7 @@ class ParamValue {
 	extern StringList local_config_sources;
 
 	ExtArray<ParamValue>* param_all(void);
+	char* param_or_except( const char *name );
     int param_integer( const char *name, int default_value,
 					   int min_value = INT_MIN, int max_value = INT_MAX );
     double param_double( const char *name, double default_value,
@@ -112,9 +113,9 @@ class ParamValue {
 	odd since if a .c file includes this, these prototypes technically don't
 	exist.... */
 extern "C" {
-	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false );
+	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false, bool wantsExtra = true );
 	void config_host( char* host=NULL );
-	void config_fill_ad( ClassAd*, const char* prefix=NULL );
+	void config_fill_ad( ClassAd*, const char *prefix = NULL );
 	void condor_net_remap_config( bool force_param=false );
 	int param_integer_c( const char *name, int default_value,
 					   int min_value, int max_value);
@@ -246,7 +247,7 @@ BEGIN_C_DECLS
 	of size TABLESIZE.
 	*/
 	char * macro_expand ( const char *name );
-	void init_config ( void );
+	void init_config ( bool );
 	void clear_config ( void );
 	void set_debug_flags( char * );
 	void config_insert( const char*, const char* );

@@ -44,6 +44,10 @@ PERS_OBJ = condor_pers.o
 PERS_OBJ = 
 #endif
 
+#if IS_LINUX
+FDPASS_OBJ = fdpass.o
+#endif
+
 #define ObjectFiles \
 	blankline.o do_connect.o except.o \
 	dprintf.o dprintf_common.o dprintf_config.o \
@@ -64,7 +68,8 @@ PERS_OBJ =
 	condor_snutils.o printf_format.o nullfile.o copy_file.o \
 	get_exec_path.o exit_utils.o condor_blkng_full_disk_io.o \
 	condor_full_io.o condor_pidenvid.o condor_create_id.o \
-	condor_netdb.o fs_util.o condor_mkstemp.o $(PERS_OBJ)
+	condor_netdb.o fs_util.o condor_mkstemp.o $(PERS_OBJ) \
+	$(FDPASS_OBJ)
 
 test: test.o util_lib.a
 	$(CC) $(CFLAGS) -o test test.o util_lib.a
@@ -114,10 +119,14 @@ clean::
 	rm -f y.tab.c y.tab.h
 
 IMPORT_LINKS = ../../config/import_links
-import(../h,syscall_numbers.c)
+import_objs(../h,syscall_numbers.c)
 
 release:: all
 stripped:: all
 static:: all
 html:
 testbin::
+
+#if IS_LINUX
+c_plus_nowrap_target(fdpass_test,fdpass_test.o fdpass.o,$(STD_LIBS))
+#endif

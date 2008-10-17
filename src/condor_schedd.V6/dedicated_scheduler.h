@@ -201,10 +201,6 @@ class DedicatedScheduler : public Service {
 	void listDedicatedResources( int debug_level, ClassAdList* resources );
 
 		// Used for claiming/releasing startds we control
-	void contactStartd( ContactStartdArgs* args );
-	bool requestClaim( ClassAd* r );
-	int startdContactConnectHandler( Stream *sock );
-	int	startdContactSockHandler( Stream* sock );
 	bool releaseClaim( match_rec* m_rec, bool use_tcp = true );
 	bool deactivateClaim( match_rec* m_rec );
 	void sendAlives( void );
@@ -271,6 +267,11 @@ class DedicatedScheduler : public Service {
 	bool enqueueReconnectJob(PROC_ID id);
 
     match_rec *FindMRecByJobID(PROC_ID job_id);
+
+	match_rec *FindMrecByClaimID(char const *claim_id);
+
+		// it is caller's responsibility to delete returned ClassAd
+	ClassAd *GetMatchRequestAd( match_rec *mrec );
 
 	void			checkReconnectQueue( void );
 

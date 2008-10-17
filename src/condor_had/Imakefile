@@ -3,7 +3,7 @@ all_target($(HAD_NAME))
 
 CFLAGS = $(STD_C_FLAGS) -D_POSIX_PTHREAD_SEMANTICS
 C_PLUS_FLAGS =  $(STD_C_PLUS_FLAGS) -D_POSIX_PTHREAD_SEMANTICS
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 
 HAD_OBJ =  StateMachine.o HAD.o Utils.o $(SOAP_OBJS)
 #HAD_OBJ =  StateMachine.o HAD.o Utils.o soap_hadC.o soap_hadServer.o soap_hadStub.o

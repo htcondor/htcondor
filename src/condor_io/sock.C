@@ -32,6 +32,7 @@
 #include "condor_netdb.h"
 #include "daemon_core_sock_adapter.h"
 #include "selector.h"
+#include "authentication.h"
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -50,6 +51,10 @@ Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
 	_timeout = 0;
+	_fqu = NULL;
+	_fqu_user_part = NULL;
+	_fqu_domain_part = NULL;
+	_tried_authentication = false;
 	ignore_timeout_multiplier = false;
 	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
 	connect_state.host = NULL;
@@ -64,6 +69,10 @@ Sock::Sock(const Sock & orig) : Stream() {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
 	_timeout = 0;
+	_fqu = NULL;
+	_fqu_user_part = NULL;
+	_fqu_domain_part = NULL;
+	_tried_authentication = false;
 	ignore_timeout_multiplier = orig.ignore_timeout_multiplier;
 	connect_state.host = NULL;
 	connect_state.connect_failure_reason = NULL;
@@ -109,6 +118,18 @@ Sock::~Sock()
 	if ( connect_state.host ) free(connect_state.host);
 	if ( connect_state.connect_failure_reason) {
 		free(connect_state.connect_failure_reason);
+	}
+	if (_fqu) {
+		free(_fqu);
+		_fqu = NULL;
+	}
+	if (_fqu_user_part) {
+		free(_fqu_user_part);
+		_fqu_user_part = NULL;
+	}
+	if (_fqu_domain_part) {
+		free(_fqu_domain_part);
+		_fqu_domain_part = NULL;
 	}
 }
 
@@ -1268,6 +1289,23 @@ Sock::bytes_available_to_read()
 	return ret_val;
 }
 
+bool
+Sock::readReady() {
+	Selector selector;
+
+	if ( (_state != sock_assigned) &&  
+		 (_state != sock_connect) &&
+		 (_state != sock_bound) )  {
+		return false;
+	}
+
+	selector.add_fd( _sock, Selector::IO_READ );
+	selector.set_timeout( 0 );
+	selector.execute();
+
+	return selector.has_ready();
+}
+
 /* NOTE: on timeout() we return the previous timeout value, or a -1 on an error.
  * Once more: we do _not_ return FALSE on Error like most other CEDAR functions;
  * we return a -1 !! 
@@ -1353,7 +1391,7 @@ char * Sock::serializeCryptoInfo() const
     const unsigned char * kserial = NULL;
     int len = 0;
 
-    if (get_encryption()) {
+    if (crypto_) {
         kserial = get_crypto_key().getKeyData();
         len = get_crypto_key().getKeyLength();
     }
@@ -1363,7 +1401,8 @@ char * Sock::serializeCryptoInfo() const
     if (len > 0) {
         int buflen = len*2+32;
         outbuf = new char[buflen];
-        sprintf(outbuf,"%d*%d*", len*2, (int)get_crypto_key().getProtocol());
+        sprintf(outbuf,"%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
+				(int)get_encryption());
 
         // Hex encode the binary key
         char * ptr = outbuf + strlen(outbuf);
@@ -1438,6 +1477,13 @@ char * Sock::serializeCryptoInfo(char * buf)
 		ASSERT( ptmp );
         ptmp++;
 
+        // read the encryption mode
+        int encryption_mode = 0;
+        sscanf(ptmp, "%d*", &encryption_mode);
+        ptmp = strchr(ptmp, '*');
+        ASSERT( ptmp );
+        ptmp++;
+
         // Now, convert from Hex back to binary
         unsigned char * ptr = kserial;
         unsigned int hex;
@@ -1450,7 +1496,7 @@ char * Sock::serializeCryptoInfo(char * buf)
 
         // Initialize crypto info
         KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol);
-        set_crypto_key(true, &k, 0);
+        set_crypto_key(encryption_mode==1, &k, 0);
         free(kserial);
 		ASSERT( *ptmp == '*' );
         // Now, skip over this one
@@ -1514,27 +1560,86 @@ char * Sock::serializeMdInfo(char * buf)
 char * Sock::serialize() const
 {
 	// here we want to save our state into a buffer
+	size_t fqu_len = _fqu ? strlen(_fqu) : 0;
+
+	size_t verstring_len = 0;
+	char * verstring = NULL;
+	CondorVersionInfo const *peer_version = get_peer_version();
+	if( peer_version ) {
+		verstring = peer_version->get_version_string();
+		if( verstring ) {
+			verstring_len = strlen(verstring);
+		}
+			// daemoncore does not like spaces in our serialized string
+		char *s;
+		while( (s=strchr(verstring,' ')) ) {
+			*s = '_';
+		}
+	}
+
 	char * outbuf = new char[500];
     if (outbuf) {
         memset(outbuf, 0, 500);
-        sprintf(outbuf,"%u*%d*%d",_sock,_state,_timeout);
+        sprintf(outbuf,"%u*%d*%d*%d*%u*%u*%s*%s*",_sock,_state,_timeout,triedAuthentication(),fqu_len,verstring_len,_fqu ? _fqu : "",verstring ? verstring : "");
     }
     else {
         dprintf(D_ALWAYS, "Out of memory!\n");
     }
+	free( verstring );
 	return( outbuf );
 }
 
 char * Sock::serialize(char *buf)
 {
-	char *ptmp;
 	int i;
 	SOCKET passed_sock;
+	size_t fqulen = 0;
+	size_t verstring_len = 0;
+	int pos;
+	int tried_authentication = 0;
 
 	ASSERT(buf);
 
 	// here we want to restore our state from the incoming buffer
-	sscanf(buf,"%u*%d*%d*",&passed_sock,(int*)&_state,&_timeout);
+	i = sscanf(buf,"%u*%d*%d*%d*%u*%u*%n",&passed_sock,(int*)&_state,&_timeout,&tried_authentication,&fqulen,&verstring_len,&pos);
+	if (i!=6) {
+		EXCEPT("Failed to parse serialized socket information (%d,%d): '%s'\n",i,pos,buf);
+	}
+	buf += pos;
+
+	setTriedAuthentication(tried_authentication);
+
+	char *fqubuf = (char *)malloc(fqulen+1);
+	ASSERT(fqubuf);
+	memset(fqubuf,0,fqulen+1);
+	strncpy(fqubuf,buf,fqulen);
+	setFullyQualifiedUser(fqubuf);
+	free(fqubuf);
+	buf += fqulen;
+	if( *buf != '*' ) {
+		EXCEPT("Failed to parse serialized socket fqu (%d): '%s'\n",fqulen,buf);
+	}
+	buf++;
+
+	char *verstring = (char *)malloc(verstring_len+1);
+	ASSERT(verstring);
+	memset(verstring,0,verstring_len+1);
+	strncpy(verstring,buf,verstring_len);
+	if( verstring_len ) {
+			// daemoncore does not like spaces in our serialized string
+		char *s;
+		while( (s=strchr(verstring,'_')) ) {
+			*s = ' ';
+		}
+		CondorVersionInfo peer_version(verstring);
+		set_peer_version( &peer_version );
+	}
+	free( verstring );
+	buf += verstring_len;
+	if( *buf != '*' ) {
+		EXCEPT("Failed to parse serialized peer version string (%d): '%s'\n",verstring_len,buf);
+	}
+	buf++;
 
 	// replace _sock with the one from the buffer _only_ if _sock
 	// is currently invalid.  if it is not invalid, it has already
@@ -1569,16 +1674,7 @@ char * Sock::serialize(char *buf)
 	// setsockopt() and/or ioctl() is restored.
 	timeout_no_timeout_multiplier(_timeout);
 
-	// set our return value to a pointer beyond the 3 state values...
-	ptmp = buf;
-	for (i=0;i<3;i++) {
-		if ( ptmp ) {
-			ptmp = strchr(ptmp,'*');
-			ptmp++;
-		}
-	}
-
-	return ptmp;
+	return buf;
 }
 
 
@@ -1667,7 +1763,7 @@ Sock::get_sinful_peer()
 }
 
 char const *
-Sock::peer_description()
+Sock::default_peer_description()
 {
 	char const *retval = get_sinful_peer();
 	if( !retval ) {
@@ -1870,14 +1966,31 @@ int Sock::set_async_handler( CedarHandler *handler )
 #endif  /* of ifndef WIN32 for the async support */
 
 
-void Sock :: setFullyQualifiedUser(char const *)
+void Sock :: setFullyQualifiedUser(char const *fqu)
 {
-	return;
-}
-
-const char * Sock :: getFullyQualifiedUser() const
-{
-	return NULL;
+	if( fqu == _fqu ) { // special case
+		return;
+	}
+	if( fqu && fqu[0] == '\0' ) {
+			// treat empty string identically to NULL to avoid subtlties
+		fqu = NULL;
+	}
+	if( _fqu ) {
+		free( _fqu );
+		_fqu = NULL;
+	}
+	if (_fqu_user_part) {
+		free(_fqu_user_part);
+		_fqu_user_part = NULL;
+	}
+	if (_fqu_domain_part) {
+		free(_fqu_domain_part);
+		_fqu_domain_part = NULL;
+	}
+	if( fqu ) {
+		_fqu = strdup(fqu);
+		Authentication::split_canonical_name(_fqu,&_fqu_user_part,&_fqu_domain_part);
+	}
 }
 
 int Sock :: encrypt(bool)
@@ -1894,12 +2007,12 @@ bool Sock :: is_hdr_encrypt(){
 	return FALSE;
 }
 
-int Sock :: authenticate(KeyInfo *&, const char * /* methods */, CondorError* /* errstack */)
+int Sock :: authenticate(KeyInfo *&, const char * /* methods */, CondorError* /* errstack */, int /*timeout*/)
 {
 	return -1;
 }
 
-int Sock :: authenticate(const char * /* methods */, CondorError* /* errstack */)
+int Sock :: authenticate(const char * /* methods */, CondorError* /* errstack */, int /*timeout*/)
 {
 	/*
 	errstack->push("AUTHENTICATE", AUTHENTICATE_ERR_NOT_BUILT,
@@ -1908,14 +2021,6 @@ int Sock :: authenticate(const char * /* methods */, CondorError* /* errstack */
 	return -1;
 }
 
-int Sock :: isAuthenticated() const
-{
-	return -1;
-}
-
-void Sock :: unAuthenticate()
-{}
-	
 bool Sock :: is_encrypt()
 {
     return FALSE;

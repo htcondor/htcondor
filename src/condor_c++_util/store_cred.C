@@ -290,7 +290,8 @@ char* getStoredCredential(const char *username, const char *domain)
 	SecureZeroMemory(w_pw, wcslen(w_pw)*sizeof(wchar_t));
 	delete[](w_pw);
 
-	dprintf(D_FULLDEBUG, "Found credential for user '%s'\n", username);
+	dprintf(D_FULLDEBUG, "Found credential for user '%s@%s'\n",
+		username, domain );
 	return strdup(pw);
 }
 
@@ -431,7 +432,7 @@ void store_cred_handler(void *, int i, Stream *s)
 
 	if ( user ) {
 			// ensure that the username has an '@' delimteter
-		char *tmp = strchr(user, '@');
+		char const *tmp = strchr(user, '@');
 		if ((tmp == NULL) || (tmp == user)) {
 			dprintf(D_ALWAYS, "store_cred_handler: user not in user@domain format\n");
 			answer = FAILURE;
@@ -513,8 +514,7 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 	);
 	LogonUserError = GetLastError();
 
-	if ( (retval == 0) && ((LogonUserError == ERROR_PRIVILEGE_NOT_HELD ) || 
-		 (LogonUserError == ERROR_LOGON_TYPE_NOT_GRANTED )) ) {
+	if ( 0 == retval ) {
 		
 		dprintf(D_FULLDEBUG, "NETWORK logon failed. Attempting INTERACTIVE\n");
 
@@ -670,7 +670,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 
 			// first see if we're operating on the pool password
 		int cmd = STORE_CRED;
-		char *tmp = strchr(user, '@');
+		char const *tmp = strchr(user, '@');
 		if (tmp == NULL || tmp == user || *(tmp + 1) == '\0') {
 			dprintf(D_ALWAYS, "store_cred: user not in user@domain format\n");
 			return FAILURE;
@@ -708,7 +708,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 		// for remote updates (which send the password), verify we have a secure channel,
 		// unless "force" is specified
 		if (((mode == ADD_MODE) || (mode == DELETE_MODE)) && !force && (d != NULL) &&
-			((sock->type() != Stream::reli_sock) || !((ReliSock*)sock)->isAuthenticated() || !sock->get_encryption())) {
+			((sock->type() != Stream::reli_sock) || !((ReliSock*)sock)->triedAuthentication() || !sock->get_encryption())) {
 			dprintf(D_ALWAYS, "STORE_CRED: blocking attempt to update over insecure channel\n");
 			delete sock;
 			return FAILURE_NOT_SECURE;

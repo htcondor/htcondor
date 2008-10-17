@@ -1,0 +1,4 @@
+
+ALLOW_WRITE = */127.0.0.1
+ALLOW_READ = B@domain/127.0.0.1
+DENY_WRITE = B@domain/127.0.0.1

@@ -29,10 +29,17 @@
 // Disable warnings about multiple template instantiations (done for gcc)
 #pragma warning( disable : 4660 )  
 
+// Disable warnings about deprecated ISO confirming names (for some 
+// reason defining fileno and fdopen to the right ones does not work 
+// in new versions of Visual Studio)
+#pragma warning( disable : 4996 )
+
 // #define NOGDI
 #define NOSOUND
 
-#define _WIN32_WINNT 0x0500 // ray's stupid kludge to get jobobject stuff to build
+// Make it official that Windows 2000 is our target
+#define _WIN32_WINNT 0x0500
+#define WINVER       0x0500
 
 // Make sure to define this *before* we include winsock2.h
 #define FD_SETSIZE 1024
@@ -67,7 +74,13 @@ typedef unsigned __int32 uint32_t;
 #define fstat _fixed_windows_fstat
 #define MAXPATHLEN 1024
 #define MAXHOSTNAMELEN 64
-#define	_POSIX_PATH_MAX 255
+#if _MSC_VER > 1200 // i.e. not VC6
+#ifndef _POSIX_PATH_MAX
+# define _POSIX_PATH_MAX 512
+# define PATH_MAX _POSIX_PATH_MAX
+#endif
+#endif
+#define	_POSIX_ARG_MAX 4096
 #define pipe(fds) _pipe(fds,2048,_O_BINARY)
 #define popen _popen
 #define pclose _pclose
@@ -78,7 +91,6 @@ typedef unsigned __int32 uint32_t;
 #define strupr _strupr
 #define strlwr _strlwr
 #define snprintf _snprintf
-#define vsnprintf _vsnprintf
 #define chdir _chdir
 #define fsync _commit
 #define access _access
@@ -124,7 +136,7 @@ typedef unsigned __int32 uint32_t;
 #define S_IRWXO 2
 #define S_ISDIR(mode) (((mode)&_S_IFDIR) == _S_IFDIR)
 #define S_ISREG(mode) (((mode)&_S_IFREG) == _S_IFREG)
-#define rint(num) floor(num + .5)
+#define rint(num) ((num<0.)? -floor(-num+.5):floor(num+.5))
 
 #define ETIMEDOUT ERROR_TIMEOUT
 

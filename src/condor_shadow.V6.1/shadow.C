@@ -195,6 +195,15 @@ UniShadow::getExitReason( void )
 	return -1;
 }
 
+bool
+UniShadow::claimIsClosing( void )
+{
+	if( remRes ) {
+		return remRes->claimIsClosing();
+	}
+	return false;
+}
+
 
 void
 UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
@@ -418,4 +427,19 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 	if( !uLog.writeEvent(&event,getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
 	}
+}
+
+bool
+UniShadow::getMachineName( MyString &machineName )
+{
+	if( remRes ) {
+		char *name = NULL;
+		remRes->getMachineName(name);
+		if( name ) {
+			machineName = name;
+			delete [] name;
+			return true;
+		}
+	}
+	return false;
 }

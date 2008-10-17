@@ -28,6 +28,10 @@
 #include "util_lib_proto.h"
 #include "classad_merge.h"
 
+#if HAVE_DLOPEN
+#include "ClassAdLogPlugin.h"
+#endif
+
 // explicitly instantiate the HashTable template
 template class HashTable<HashKey, ClassAd*>;
 template class HashBucket<HashKey,ClassAd*>;
@@ -81,10 +85,17 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 	// Read all of the log records
 	LogRecord		*log_rec;
 	unsigned long count = 0;
+	bool is_clean = true; // was cleanly closed (until we find out otherwise)
+	bool requires_successful_cleaning = false;
+	long next_log_entry_pos = 0;
 	while ((log_rec = ReadLogEntry(log_fp, InstantiateLogEntry)) != 0) {
+		next_log_entry_pos = ftell(log_fp);
 		count++;
 		switch (log_rec->get_op_type()) {
 		case CondorLogOp_BeginTransaction:
+			// this file contains transactions, so it must not
+			// have been cleanly shut down
+			is_clean = false;
 			if (active_transaction) {
 				dprintf(D_ALWAYS, "Warning: Encountered nested transactions in %s, "
 						"log may be bogus...", filename);
@@ -121,14 +132,40 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 			}
 		}
 	}
+	long final_log_entry_pos = ftell(log_fp);
+	if( next_log_entry_pos != final_log_entry_pos ) {
+		// The log file has a broken line at the end so we _must_
+		// _not_ write anything more into this log.
+		// (Alternately, we could try to clear out the broken entry
+		// and continue writing into this file, but since we are about to
+		// rotate the log anyway, we may as well just require the rotation
+		// to be successful.  In the case where rotation fails, we will
+		// probably soon fail to write to the log file anyway somewhere else.)
+		dprintf(D_ALWAYS,"Detected unterminated log entry in ClassAd Log %s."
+				" Forcing rotation.\n", logFilename());
+		requires_successful_cleaning = true;
+	}
 	if (active_transaction) {	// abort incomplete transaction
 		delete active_transaction;
 		active_transaction = NULL;
+
+		if( !requires_successful_cleaning ) {
+			// For similar reasons as with broken log entries above,
+			// we need to force rotation.
+			dprintf(D_ALWAYS,"Detected unterminated transaction in ClassAd Log"
+					"%s. Forcing rotation.\n", logFilename());
+			requires_successful_cleaning = true;
+		}
 	}
 	if(!count) {
 		log_rec = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
 		if (log_rec->Write(log_fp) < 0) {
 			EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
+		}
+	}
+	if( !is_clean || requires_successful_cleaning ) {
+		if( !TruncLog() && requires_successful_cleaning ) {
+			EXCEPT("Failed to rotate ClassAd log %s.\n", logFilename());
 		}
 	}
 }
@@ -228,33 +265,33 @@ ClassAdLog::GetMaxHistoricalLogs() {
 	return max_historical_logs;
 }
 
-void
+bool
 ClassAdLog::TruncLog()
 {
 	MyString	tmp_log_filename;
 	int new_log_fd;
 	FILE *new_log_fp;
 
-	dprintf(D_FULLDEBUG,"About to truncate log %s\n",logFilename());
+	dprintf(D_ALWAYS,"About to rotate ClassAd log %s\n",logFilename());
 
 	if(!SaveHistoricalLogs()) {
-		dprintf(D_ALWAYS,"Skipping log truncation, because saving of historical log failed.\n");
-		return;
+		dprintf(D_ALWAYS,"Skipping log rotation, because saving of historical log failed for %s.\n",logFilename());
+		return false;
 	}
 
 	tmp_log_filename.sprintf( "%s.tmp", logFilename());
 	new_log_fd = safe_open_wrapper(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE, 0600);
 	if (new_log_fd < 0) {
-		dprintf(D_ALWAYS, "failed to truncate log: safe_open_wrapper(%s) returns %d\n",
+		dprintf(D_ALWAYS, "failed to rotate log: safe_open_wrapper(%s) returns %d\n",
 				tmp_log_filename.Value(), new_log_fd);
-		return;
+		return false;
 	}
 
 	new_log_fp = fdopen(new_log_fd, "r+");
 	if (new_log_fp == NULL) {
-		dprintf(D_ALWAYS, "failed to truncate log: fdopen(%s) returns NULL\n",
+		dprintf(D_ALWAYS, "failed to rotate log: fdopen(%s) returns NULL\n",
 				tmp_log_filename.Value());
-		return;
+		return false;
 	}
 
 
@@ -263,9 +300,10 @@ ClassAdLog::TruncLog()
 
 	LogState(new_log_fp);
 	fclose(log_fp);
+	log_fp = NULL;
 	fclose(new_log_fp);	// avoid sharing violation on move
 	if (rotate_file(tmp_log_filename.Value(), logFilename()) < 0) {
-		dprintf(D_ALWAYS, "failed to truncate job queue log!\n");
+		dprintf(D_ALWAYS, "failed to rotate job queue log!\n");
 
 		// Beat a hasty retreat into the past.
 		historical_sequence_number--;
@@ -280,22 +318,21 @@ ClassAdLog::TruncLog()
 			EXCEPT("failed to refdopen log %s, errno = %d after failing to rotate log.",logFilename(),errno);
 		}
 
-		return;
+		return false;
 	}
 	int log_fd = safe_open_wrapper(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE, 0600);
 	if (log_fd < 0) {
-		dprintf(D_ALWAYS, "failed to open log in append mode: "
+		EXCEPT( "failed to open log in append mode: "
 			"safe_open_wrapper(%s) returns %d\n", logFilename(), log_fd);
-		return;
 	}
 	log_fp = fdopen(log_fd, "a+");
 	if (log_fp == NULL) {
 		close(log_fd);
-		dprintf(D_ALWAYS, "failed to fdopen log in append mode: "
+		EXCEPT("failed to fdopen log in append mode: "
 			"fdopen(%s) returns %d\n", logFilename(), log_fd);
-		return;
 	}
 
+	return true;
 }
 
 int
@@ -666,11 +703,18 @@ LogNewClassAd::~LogNewClassAd()
 int
 LogNewClassAd::Play(void *data_structure)
 {
+	int result;
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	ClassAd	*ad = new ClassAd();
 	ad->SetMyTypeName(mytype);
 	ad->SetTargetTypeName(targettype);
-	return table->insert(HashKey(key), ad);
+	result = table->insert(HashKey(key), ad);
+
+#if HAVE_DLOPEN
+	ClassAdLogPluginManager::NewClassAd(key);
+#endif
+
+	return result;
 }
 
 int
@@ -729,9 +773,15 @@ LogDestroyClassAd::Play(void *data_structure)
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	HashKey hkey(key);
 	ClassAd *ad;
+
 	if (table->lookup(hkey, ad) < 0) {
 		return -1;
 	}
+
+#if HAVE_DLOPEN
+	ClassAdLogPluginManager::DestroyClassAd(key);
+#endif
+
 	delete ad;
 	return table->remove(hkey);
 }
@@ -748,7 +798,11 @@ LogSetAttribute::LogSetAttribute(const char *k, const char *n, const char *val)
 	op_type = CondorLogOp_SetAttribute;
 	key = strdup(k);
 	name = strdup(n);
-	value = strdup(val);
+	if (val && strlen(val)) {
+		value = strdup(val);
+	} else {
+		value = strdup("UNDEFINED");
+	}
 }
 
 
@@ -772,6 +826,11 @@ LogSetAttribute::Play(void *data_structure)
 	sprintf(tmp_expr, "%s = %s", name, value);
 	rval = ad->Insert(tmp_expr);
 	delete [] tmp_expr;
+
+#if HAVE_DLOPEN
+	ClassAdLogPluginManager::SetAttribute(key, name, value);
+#endif
+
 	return rval;
 }
 
@@ -864,6 +923,11 @@ LogDeleteAttribute::Play(void *data_structure)
 	ClassAd *ad;
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
+
+#if HAVE_DLOPEN
+	ClassAdLogPluginManager::DeleteAttribute(key, name);
+#endif
+
 	return ad->Delete(name);
 }
 

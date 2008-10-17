@@ -47,9 +47,6 @@ void SafeSock::init()
 {
 	_special_state = safesock_none;
 
-	// initialize username
-	_fqu = NULL;
-
 	for(int i=0; i<SAFE_SOCK_HASH_BUCKET_SIZE; i++)
 		_inMsgs[i] = NULL;
 	_msgReady = false;
@@ -64,7 +61,6 @@ void SafeSock::init()
 		_outMsgID.msgNo = (unsigned long)get_random_int();
 	}
 
-    _authenticated = false;
     mdChecker_     = NULL;
 }
 
@@ -107,9 +103,6 @@ SafeSock::~SafeSock()
 		_inMsgs[i] = NULL;
 	}
 	close();
-	if (_fqu) {
-		delete []_fqu;
-	}
 
     delete mdChecker_;
 }
@@ -182,12 +175,12 @@ int SafeSock::end_of_message()
 				ret_val = TRUE;
 			}
             resetCrypto();
-            _authenticated = false;
+			setTriedAuthentication(false);
 			break;
 
 		default:
             resetCrypto();
-            _authenticated = false;
+            setTriedAuthentication(false);
 			break;
 	}
 			
@@ -725,20 +718,11 @@ char * SafeSock::serialize() const
 	char * parent_state = Sock::serialize();
 	// now concatenate our state
 	char outbuf[50];
-    int len = 0;
 
     memset(outbuf, 0, 50);
-    if (_fqu) {
-        len = strlen(_fqu);
-    }
 
-	sprintf(outbuf,"*%d*%s*%d*",_special_state,sin_to_string(&_who), len);
+	sprintf(outbuf,"%d*%s*",_special_state,sin_to_string(&_who));
 	strcat(parent_state,outbuf);
-
-    if (_fqu) {
-        strcat(parent_state, _fqu);
-        strcat(parent_state, "*");
-    }
 
 	return( parent_state );
 }
@@ -748,12 +732,7 @@ char * SafeSock::serialize(char *buf)
 	char sinful_string[28];
 	char usernamebuf[128];
 	char *ptmp, *ptr = NULL;
-    int len;
     
-    if (_fqu) {
-        delete[] _fqu;
-        _fqu = NULL;
-    }   
 	ASSERT(buf);
     memset(sinful_string, 0, 28);
     memset(usernamebuf, 0, 128);
@@ -772,24 +751,12 @@ char * SafeSock::serialize(char *buf)
         // We are 6.3
         memcpy(sinful_string, ptmp, ptr - ptmp);
         ptmp = ++ptr;
-        sscanf(ptmp,"%d*", &len);
-        ptmp = strchr(ptmp, '*');
-        ptmp++;
-        if ( len > 0 ) {
-            memcpy(usernamebuf, ptmp, len);
-        }
     }
     else {
         sscanf(ptmp,"%s",sinful_string);
     }
 
 	string_to_sin(sinful_string, &_who);
-
-	if( usernamebuf[0] ) {
-		_fqu = strnewp(usernamebuf);
-	} else {
-		_fqu = NULL;
-	}
 
 	return NULL;
 }
@@ -910,27 +877,3 @@ void SafeSock::dumpSock()
 	_outMsg.dumpMsg(_outMsgID);
 }
 #endif
-
-const char* SafeSock::getFullyQualifiedUser() const {
-	return _fqu;
-}
-
-void SafeSock::setFullyQualifiedUser(char const * u) {
-	if (_fqu) {
-		delete []_fqu;
-		_fqu = NULL;
-	}
-	if (u) {
-		_fqu = strnewp(u);
-	}
-}
-
-int SafeSock :: isAuthenticated() const
-{
-    return _authenticated;
-}
-
-void SafeSock :: setAuthenticated(bool authenticated)
-{
-    _authenticated = authenticated;
-}

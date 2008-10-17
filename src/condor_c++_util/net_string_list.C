@@ -32,20 +32,20 @@ NetStringList::NetStringList(const char *s, const char *delim )
 }
 
 
-// contains_withnetmask() is just like the contains() method except that
-// list members can be IP addresses with netmasks in them, and anything on
-// the subnet is a match.  two forms are allowed:
+// string_withnetmask() handles the following four forms:
 //
+// 192.168.10.1
+// 192.168.*
 // 192.168.0.0/24 
 // 192.168.0.0/255.255.255.0
 //
-// this only checks against strings which are in netmask form.  so, just an
-// IP address or hostname will not match in this function.
+// this only checks against strings which are in the above form.  so, just a
+// hostname will not match in this function.
 //
 // function returns a string pointer to the pattern it matched against.
 
-const char *
-NetStringList::string_withnetwork(const char *ip_address)
+bool
+NetStringList::find_matches_withnetwork(const char *ip_address,StringList *matches)
 {
 	char *x;
 	struct in_addr test_ip, base_ip, mask;
@@ -53,7 +53,7 @@ NetStringList::string_withnetwork(const char *ip_address)
 	// fill in test_ip
 	if (!is_ipaddr(ip_address, &test_ip)) {
 		// not even a valid IP
-		return NULL;
+		return false;
 	}
 
 	strings.Rewind();
@@ -66,11 +66,19 @@ NetStringList::string_withnetwork(const char *ip_address)
 			// test_ip and base_ip.  so, AND both of them with the mask,
 			// and then compare them.
 			if ((base_ip.s_addr & mask.s_addr) == (test_ip.s_addr & mask.s_addr)) {
-				return x;
+				if( matches ) {
+					matches->append( x );
+				}
+				else {
+					return true;
+				}
 			}
 		}
 	}
 
-	return NULL;
+	if( matches ) {
+		return !matches->isEmpty();
+	}
+	return false;
 }
 

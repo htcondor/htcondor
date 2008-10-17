@@ -30,12 +30,6 @@
 
 #define MAX_USERNAMELEN 128
 
-enum transfer_mode {
-  NORMAL = 1,
-  ENCRYPT,
-  ENCRYPT_HDR
-};
-
 class Authentication {
 	
     friend class ReliSock;
@@ -46,15 +40,17 @@ class Authentication {
     
     ~Authentication();
     
-    int authenticate( char *hostAddr, const char* auth_methods, CondorError* errstack);
+    int authenticate( char *hostAddr, const char* auth_methods, CondorError* errstack, int timeout);
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr     -- host to authenticate
 	//          auth_methods -- protocols to use
+	//          timeout      -- 0 for none, o.w. seconds before timing out
+	//                          -1 means use existing timeout
     // RETURNS: -1 -- failure
     //------------------------------------------
 
-    int authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack);
+    int authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack, int timeout);
     //------------------------------------------
     // PURPOSE: To send the secret key over. this method
     //          is written to keep compatibility issues
@@ -176,6 +172,12 @@ class Authentication {
 	static void split_canonical_name(char const *can_name,char **user,char **domain);
 #endif
 
+	enum transfer_mode {
+		NORMAL = 1,
+		ENCRYPT,
+		ENCRYPT_HDR
+	};
+
  private:
 #if !defined(SKIP_AUTHENTICATION)
     Authentication() {}; //should never be called, make private to help that!
@@ -190,8 +192,9 @@ class Authentication {
 
 	void map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name);
 
-    
 #endif /* !SKIP_AUTHENTICATION */
+    
+    int authenticate_inner( char *hostAddr, const char* auth_methods, CondorError* errstack, int timeout);
     
     //------------------------------------------
     // Data (private)
@@ -208,6 +211,17 @@ class Authentication {
 };
 
 extern char const *UNMAPPED_DOMAIN;
+extern char const *MATCHSESSION_DOMAIN;
+
+/* This is the hard-coded name of the startd (and starter) as seen by
+   the schedd and shadow when using non-negotiated security sessions
+   based on the claim id. */
+extern char const *EXECUTE_SIDE_MATCHSESSION_FQU;
+
+/* This is the hard-coded name of the shadow as seen by the starter
+   when using non-negotiated security sessions based on the claim
+   id. */
+extern char const *SUBMIT_SIDE_MATCHSESSION_FQU;
 
 #endif /* AUTHENTICATION_H */
 

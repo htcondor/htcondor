@@ -95,6 +95,10 @@
 /* The job missed its deferred execution time */
 #define JOB_MISSED_DEFERRAL_TIME (14 + EXIT_CODE_OFFSET)
 
+/* Same as JOB_EXITED, but also inform schedd that the claim will
+   not accept any more jobs. */
+#define JOB_EXITED_AND_CLAIM_CLOSING (15 + EXIT_CODE_OFFSET)
+
 /*
   WARNING: don't go above 27 with these, or we run out of bits in the
   exit status code

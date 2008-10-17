@@ -20,44 +20,50 @@
 
 /* 
 
-   This method is used by a few of the tests to waste a second.  it
-   used to be defined seperately in each test.  Aside from code
-   duplication, b/c of the platform-specific nature of it, it was a
-   total pain to maintain.  Additionally, it was incredibly
-   inaccurate, since all the values used were last calibrated in about
-   1995, and processors have gotten, um, a little faster since
-   then. :) All these seperate versions were difficult to maintain
-   each time we tried to port to a new architecture, or to clean up
-   the platform-identifying symbols we use.
+   This method is used by a few of the tests to waste a second. It
+   used to spin through the for loop a pre-defined number of times
+   that should take about a second. This number was calculated by a
+   separate program (x_compute_bogokips) that was executed just before
+   this file was compiled. However, I've seen execution times vary by
+   an order of magnitude. I believe this was caused by heavy load on
+   the machine.
 
-   Instead of relying on hard-coded limits for how many times we
-   should increment a variable to waste a second, we compute a
-   reasonable value using a seperate program, compute_bogokips.  To
-   avoid overflowing an int, we use a nested for() loop, and to try to
-   have a fairly accurate number, we use kilo-instructions-per-second
-   ("KIPS") instead of the more common mega-instructions-per-second
-   ("MIPS").  However, these aren't really instructions, they're
-   bogus, hence "compute_bogokips".  This program outputs a header
-   file we can include here with "BOGOKIPS" #define'ed to the right
-   value.  See compute_bogokips.c for more details.
+   Now, we call gettimeofday() periodically while spinning in the for
+   loop until a full second has passed. This adds a new dependency on
+   the syscall library's gettimeofday(), which goes back to the shadow
+   on the first call. I think that's better than occassionally returning
+   after one tenth of a second instead of one second, which causes
+   tests to fail when the code isn't broken.
 
-   Author: Derek Wright <wright@cs.wisc.edu> 2003-11-23
+       Jaime Frey (June 16, 2008)
 
 */
-
-#include "x_my_bogokips.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include <stdio.h>
+#include <sys/time.h>
+
 void
 x_waste_a_second()
 {
-	int	i, j;
+	int i;
+	struct timeval old_tv;
+	struct timeval new_tv;
 
-	for( i=0; i<BOGOKIPS; i++ ) {
-		for(j=0; j<1000; j++ );
+	gettimeofday( &old_tv, NULL );
+
+	while ( 1 ) {
+		for ( i = 0; i < 10000; i++ ) {
+		}
+		gettimeofday( &new_tv, NULL );
+		if ( ( new_tv.tv_sec > old_tv.tv_sec + 1 ) ||
+			 ( new_tv.tv_sec == old_tv.tv_sec + 1 &&
+			   new_tv.tv_usec > old_tv.tv_usec ) ) {
+			break;
+		}
 	}
 }
 

@@ -25,7 +25,6 @@
 #include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "condor_ckpt_name.h"
-#include "globus_utils.h" // for GRAM_V_1_5
 
 #include "gridmanager.h"
 #include "basejob.h"
@@ -892,8 +891,6 @@ InitializeUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	MyString userLogFile;
-	MyString owner;
-	MyString domain;
 	MyString gjid;
 	bool use_xml = false;
 
@@ -904,13 +901,11 @@ InitializeUserLog( ClassAd *job_ad )
 
 	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
 	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-	job_ad->LookupString( ATTR_OWNER, owner );
-	job_ad->LookupString( ATTR_NT_DOMAIN, domain );
 	job_ad->LookupString( ATTR_GLOBAL_JOB_ID, gjid );
 	job_ad->LookupBool( ATTR_ULOG_USE_XML, use_xml );
 
 	UserLog *ULog = new UserLog();
-	ULog->initialize(owner.Value(), domain.Value(), userLogFile.Value(), cluster, proc, 0, gjid.Value());
+	ULog->initialize(userLogFile.Value(), cluster, proc, 0, gjid.Value());
 	ULog->setUseXML( use_xml );
 	return ULog;
 }
@@ -1261,7 +1256,6 @@ bool
 WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	int version;
 	MyString contact;
 	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
@@ -1290,9 +1284,7 @@ WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 	}
 	event.jmContact = strnewp(contact.GetNextToken( " ", false ));
 
-	version = 0;
-	job_ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, version );
-	event.restartableJM = version >= GRAM_V_1_5;
+	event.restartableJM = true;
 
 	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;

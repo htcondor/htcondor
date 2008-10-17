@@ -39,11 +39,9 @@
 #include "time_offset.h"
 #include "condor_netdb.h"
 #include "daemon_core_sock_adapter.h"
+#include "subsystem_info.h"
 
 #include "counted_ptr.h"
-
-extern char *mySubSystem;
-
 
 void
 Daemon::common_init() {
@@ -68,7 +66,7 @@ Daemon::common_init() {
 	_cmd_str = NULL;
 	m_daemon_ad_ptr = NULL;
 	char buf[200];
-	sprintf(buf,"%s_TIMEOUT_MULTIPLIER",mySubSystem);
+	sprintf(buf,"%s_TIMEOUT_MULTIPLIER",mySubSystem->getName() );
 	Sock::set_timeout_multiplier( param_integer(buf,0) );
 }
 
@@ -348,22 +346,23 @@ Daemon::idStr( void )
 	} else {
 		dt_str = daemonString(_type);
 	}
-	char buf[128];
+	MyString buf;
 	if( _is_local ) {
-		sprintf( buf, "local %s", dt_str );
+		ASSERT( dt_str );
+		buf.sprintf( "local %s", dt_str );
 	} else if( _name ) {
-		sprintf( buf, "%s %s", dt_str, _name );
+		ASSERT( dt_str );
+		buf.sprintf( "%s %s", dt_str, _name );
 	} else if( _addr ) {
-		sprintf( buf, "%s at %s", dt_str, _addr );
+		ASSERT( dt_str );
+		buf.sprintf( "%s at %s", dt_str, _addr );
 		if( _full_hostname ) {
-			strcat( buf, " (" );
-			strcat( buf, _full_hostname );
-			strcat( buf, ")" );
+			buf.sprintf_cat( " (%s)", _full_hostname );
 		}
 	} else {
 		return "unknown daemon";
 	}
-	_id_str = strnewp( buf );
+	_id_str = strnewp( buf.Value() );
 	return _id_str;
 }
 
@@ -416,6 +415,7 @@ Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking, bool ignore
 	}
 	ReliSock* reli;
 	reli = new ReliSock();
+	reli->set_peer_description(idStr());
 	if( sec ) {
 		reli->timeout( sec );
 		if( ignore_timeout_multiplier ) {
@@ -445,6 +445,7 @@ Daemon::safeSock( int sec, CondorError* errstack, bool non_blocking )
 	}
 	SafeSock* safe;
 	safe = new SafeSock();
+	safe->set_peer_description(idStr());
 	if( sec ) {
 		safe->timeout( sec );
 	}
@@ -462,43 +463,8 @@ Daemon::safeSock( int sec, CondorError* errstack, bool non_blocking )
 }
 
 
-//This struct is used to hold the manditory error stack for calls to
-//SecMan::startCommand(), in case the caller of Daemon::startCommand()
-//did not provide one.
-
-struct StartCommandErrorStackCallback {
-	StartCommandCallbackType *callback_fn;
-	void *misc_data;
-	CondorError errstack;
-
-	StartCommandErrorStackCallback(StartCommandCallbackType *callbackfn, void *miscdata) {
-		this->callback_fn = callbackfn;
-		this->misc_data = miscdata;
-	}
-
-	static void CallbackFn(bool success,Sock *sock,CondorError *errstack,void *miscdata) {
-		// We get here when the caller of startCommand() didn't provide
-		// any error stack.  Therefore, the error stack is ours, and we
-		// should just print it out before calling the final callback.
-
-		if(!success && errstack) {
-			char const *error_msg = errstack->getFullText();
-			if(error_msg && *error_msg) {
-				dprintf(D_ALWAYS, "ERROR: %s\n",error_msg);
-			}
-		}
-
-		// Call the final callback and deallocate ourselves.
-		StartCommandErrorStackCallback *cb = (StartCommandErrorStackCallback *)miscdata;
-		if(cb->callback_fn) {
-			(*cb->callback_fn)(success,sock,NULL,cb->misc_data);
-		}
-		delete cb;
-	}
-};
-
 StartCommandResult
-Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char *version, SecMan *sec_man )
+Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *version, SecMan *sec_man, bool raw_protocol, char const *sec_session_id )
 {
 	// This function may be either blocking or non-blocking, depending
 	// on the flag that is passed in.  All versions of Daemon::startCommand()
@@ -508,7 +474,6 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 	// eventually called in all code paths.
 
 	StartCommandResult start_command_result = StartCommandFailed;
-	StartCommandErrorStackCallback *cb_errstack = NULL;
 	bool other_side_can_negotiate = true; //default assumption
 
 	ASSERT(sock);
@@ -516,25 +481,6 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 	// If caller wants non-blocking with no callback function,
 	// we _must_ be using UDP.
 	ASSERT(!nonblocking || callback_fn || sock->type() == Stream::safe_sock);
-
-	if(!errstack) {
-		// The caller did not provide their own error stack, so we need
-		// to provide one of our own.
-
-		cb_errstack = new StartCommandErrorStackCallback(callback_fn,misc_data);
-		ASSERT(cb_errstack);
-
-		errstack = &cb_errstack->errstack;
-		misc_data = cb_errstack;
-		if(callback_fn) {
-			// Instead of calling the caller's function directly,
-			// we will call an intermediate function that prints
-			// out the contents of the error stack.
-			callback_fn = &StartCommandErrorStackCallback::CallbackFn;
-		}
-	}
-
-	dprintf ( D_SECURITY, "STARTCOMMAND: starting %i to %s on %s port %i.\n", cmd, sin_to_string(sock->endpoint()), (sock->type() == Stream::safe_sock) ? "UDP" : "TCP", sock->get_port());
 
 	// set up the timeout
 	if( timeout ) {
@@ -553,7 +499,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 		}
 	}
 
-	start_command_result = sec_man->startCommand(cmd, sock, other_side_can_negotiate, errstack, 0, callback_fn, misc_data, nonblocking);
+	start_command_result = sec_man->startCommand(cmd, sock, other_side_can_negotiate, raw_protocol, errstack, 0, callback_fn, misc_data, nonblocking, cmd_description, sec_session_id);
 
 	if(callback_fn) {
 		// SecMan::startCommand() called the callback function, so we just return here
@@ -561,87 +507,12 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 	}
 	else {
 		// There is no callback function.
-
-		if(cb_errstack) {
-			// Print out the error stack.
-			bool success = start_command_result == StartCommandSucceeded;
-			cb_errstack->CallbackFn(success,sock,&cb_errstack->errstack,cb_errstack);
-		}
-
 		return start_command_result;
 	}
 }
 
-struct StartCommandConnectCallback: public Service {
-	int m_cmd;
-	Sock *m_sock;
-	int m_timeout;
-	CondorError *m_errstack;
-	StartCommandCallbackType *m_callback_fn;
-	void *m_misc_data;
-	char *m_version;
-	SecMan m_sec_man;
-
-	StartCommandConnectCallback(int cmd,Sock *sock,int timeout,CondorError *errstack,StartCommandCallbackType *callback_fn,void *misc_data,char *version,SecMan *sec_man):
-	m_sec_man(*sec_man) {
-		m_cmd = cmd;
-		m_sock = sock;
-		m_timeout = timeout;
-		m_errstack = errstack;
-		m_callback_fn = callback_fn;
-		m_misc_data = misc_data;
-		m_version = NULL;
-		if(version) {
-			m_version = strdup(version);
-		}
-	}
-	~StartCommandConnectCallback() {
-		free(m_version);
-	}
-
-	int CallbackFn( Stream *sock );
-};
-
-int
-StartCommandConnectCallback::CallbackFn( Stream *stream )
-{
-	Sock *sock = (Sock *)stream;
-	StartCommandConnectCallback *cb = (StartCommandConnectCallback *)daemonCoreSockAdapter.GetDataPtr();
-	ASSERT(cb);
-
-	daemonCoreSockAdapter.Cancel_Socket( stream );
-
-	if(!sock->is_connected()) {
-		dprintf(D_ALWAYS,"Failed to connect to %s.\n",sock->get_sinful_peer());
-		if(cb->m_errstack) {
-			cb->m_errstack->pushf("CEDAR", CEDAR_ERR_CONNECT_FAILED,
-			                      "Failed to connect to %s",sock->get_sinful_peer());
-		}
-		const bool success = false;
-		ASSERT(cb->m_callback_fn);
-		(*cb->m_callback_fn)(success,sock,cb->m_errstack,cb->m_misc_data);
-		delete cb;
-		return KEEP_STREAM;
-	}
-
-	// Now that we are connected, go ahead with the rest of startCommand().
-	const bool nonblocking = true;
-	Daemon::startCommand (
-		cb->m_cmd,
-		sock,
-		cb->m_timeout,
-		cb->m_errstack,
-		cb->m_callback_fn,
-		cb->m_misc_data,
-		nonblocking,
-		cb->m_version,
-		&cb->m_sec_man);
-	delete cb;
-	return KEEP_STREAM;
-}
-
 StartCommandResult
-Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking )
+Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
 {
 	// This function may be either blocking or non-blocking, depending on
 	// the flag that was passed in.
@@ -672,59 +543,6 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 		}
 	}
 
-	if(nonblocking && (*sock)->is_connect_pending()) {
-		ASSERT(callback_fn);
-
-		StartCommandConnectCallback *cb =
-			new StartCommandConnectCallback(
-				cmd,
-				*sock,
-				timeout,
-				errstack,
-				callback_fn,
-				misc_data,
-				_version,
-				&_sec_man);
-
-		ASSERT(cb);
-
-		int reg_rc = daemonCoreSockAdapter.Register_Socket(
-			*sock,
-			"<StartCommand Socket>",
-			(SocketHandlercpp)&StartCommandConnectCallback::CallbackFn,
-			(*sock)->get_sinful_peer(),
-			cb,
-			ALLOW);
-
-		if(reg_rc < 0) {
-			MyString msg;
-			msg.sprintf("Failed to register socket for non-blocking "
-			            "connection to %s.  "
-			            "Register_Socket returned %d.",
-			            (*sock)->get_sinful_peer(),reg_rc);
-
-			if(errstack) {
-				errstack->pushf("CEDAR", CEDAR_ERR_CONNECT_FAILED,
-				                "%s", msg.Value());
-			}
-			else {
-				dprintf(D_ALWAYS,"%s\n",msg.Value());
-			}
-			delete cb;
-
-			if ( callback_fn ) {
-				(*callback_fn)( false, *sock, errstack, misc_data );
-				return StartCommandSucceeded;
-			} else {
-				return StartCommandFailed;
-			}
-		}
-
-		ASSERT(daemonCoreSockAdapter.Register_DataPtr( cb ));
-
-		return StartCommandInProgress;
-	}
-
 	return startCommand (
 						 cmd,
 						 *sock,
@@ -733,17 +551,20 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 						 callback_fn,
 						 misc_data,
 						 nonblocking,
+						 cmd_description,
 						 _version,
-						 &_sec_man);
+						 &_sec_man,
+						 raw_protocol,
+						 sec_session_id);
 }
 
 Sock*
-Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError* errstack )
+Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
 {
 	// This is a blocking version of startCommand.
 	const bool nonblocking = false;
 	Sock *sock = NULL;
-	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,NULL,NULL,nonblocking);
+	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,NULL,NULL,nonblocking,cmd_description,raw_protocol,sec_session_id);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return sock;
@@ -754,6 +575,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError*
 		return NULL;
 	case StartCommandInProgress:
 	case StartCommandWouldBlock: //impossible!
+	case StartCommandContinue: //impossible!
 		break;
 	}
 	EXCEPT("startCommand(blocking=true) returned an unexpected result: %d\n",rc);
@@ -761,30 +583,30 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError*
 }
 
 StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data )
+Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
 {
 	// This is a nonblocking version of startCommand.
 	const int nonblocking = true;
 	Sock *sock = NULL;
 	// We require that callback_fn be non-NULL. The startCommand() we call
 	// here does that check.
-	return startCommand(cmd,st,&sock,timeout,errstack,callback_fn,misc_data,nonblocking);
+	return startCommand(cmd,st,&sock,timeout,errstack,callback_fn,misc_data,nonblocking,cmd_description,raw_protocol,sec_session_id);
 }
 
 StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data )
+Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
 {
 	// This is the nonblocking version of startCommand().
 	const bool nonblocking = true;
-	return startCommand(cmd,sock,timeout,errstack,callback_fn,misc_data,nonblocking,_version,&_sec_man);
+	return startCommand(cmd,sock,timeout,errstack,callback_fn,misc_data,nonblocking,cmd_description,_version,&_sec_man,raw_protocol,sec_session_id);
 }
 
 bool
-Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack )
+Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id )
 {
 	// This is a blocking version of startCommand().
 	const bool nonblocking = false;
-	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,NULL,NULL,nonblocking,_version,&_sec_man);
+	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,NULL,NULL,nonblocking,cmd_description,_version,&_sec_man,raw_protocol,sec_session_id);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return true;
@@ -792,6 +614,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack )
 		return false;
 	case StartCommandInProgress:
 	case StartCommandWouldBlock: //impossible!
+	case StartCommandContinue: //impossible!
 		break;
 	}
 	EXCEPT("startCommand(nonblocking=false) returned an unexpected result: %d\n",rc);
@@ -799,17 +622,17 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack )
 }
 
 bool
-Daemon::sendCommand( int cmd, Sock* sock, int sec, CondorError* errstack )
+Daemon::sendCommand( int cmd, Sock* sock, int sec, CondorError* errstack, char const *cmd_description )
 {
 	
-	if( ! startCommand( cmd, sock, sec, errstack )) {
+	if( ! startCommand( cmd, sock, sec, errstack, cmd_description )) {
 		return false;
 	}
 	if( ! sock->eom() ) {
-		char err_buf[256];
-		sprintf( err_buf, "Can't send eom for %d to %s", cmd,  
+		MyString err_buf;
+		err_buf.sprintf( "Can't send eom for %d to %s", cmd,  
 				 idStr() );
-		newError( CA_COMMUNICATION_ERROR, err_buf );
+		newError( CA_COMMUNICATION_ERROR, err_buf.Value() );
 		return false;
 	}
 	return true;
@@ -817,17 +640,17 @@ Daemon::sendCommand( int cmd, Sock* sock, int sec, CondorError* errstack )
 
 
 bool
-Daemon::sendCommand( int cmd, Stream::stream_type st, int sec, CondorError* errstack )
+Daemon::sendCommand( int cmd, Stream::stream_type st, int sec, CondorError* errstack, char const *cmd_description )
 {
-	Sock* tmp = startCommand( cmd, st, sec, errstack );
+	Sock* tmp = startCommand( cmd, st, sec, errstack, cmd_description );
 	if( ! tmp ) {
 		return false;
 	}
 	if( ! tmp->eom() ) {
-		char err_buf[256];
-		sprintf( err_buf, "Can't send eom for %d to %s", cmd,  
+		MyString err_buf;
+		err_buf.sprintf( "Can't send eom for %d to %s", cmd,  
 				 idStr() );
-		newError( CA_COMMUNICATION_ERROR, err_buf );
+		newError( CA_COMMUNICATION_ERROR, err_buf.Value() );
 		delete tmp;
 		return false;
 	}
@@ -838,16 +661,16 @@ Daemon::sendCommand( int cmd, Stream::stream_type st, int sec, CondorError* errs
 
 bool
 Daemon::sendCACmd( ClassAd* req, ClassAd* reply, bool force_auth,
-				   int timeout )
+				   int timeout, char const *sec_session_id )
 {
 	ReliSock cmd_sock;
-	return sendCACmd( req, reply, &cmd_sock, force_auth, timeout );
+	return sendCACmd( req, reply, &cmd_sock, force_auth, timeout, sec_session_id );
 }
 
 
 bool
 Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
-				   bool force_auth, int timeout )
+				   bool force_auth, int timeout, char const *sec_session_id )
 {
 	if( !req ) {
 		newError( CA_INVALID_REQUEST,
@@ -892,7 +715,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 		cmd = CA_CMD;
 	}
 	CondorError errstack;
-	if( ! startCommand(cmd, cmd_sock, 20, &errstack) ) {
+	if( ! startCommand(cmd, cmd_sock, 20, &errstack, NULL, false, sec_session_id) ) {
 		MyString err_msg = "Failed to send command (";
 		if( cmd == CA_CMD ) {
 			err_msg += "CA_CMD";
@@ -2100,7 +1923,7 @@ Daemon::forceAuthentication( ReliSock* rsock, CondorError* errstack )
 	}
 
 		// If we're already authenticated, return success...
-	if( rsock->isAuthenticated() ) {
+	if( rsock->triedAuthentication() ) {
 		return true;
 	}
 
@@ -2266,16 +2089,20 @@ Daemon::getTimeOffsetRange( long &min_range, long &max_range )
 										   min_range, max_range ) );
 }
 
-void Daemon::sendMsg( classy_counted_ptr<DCMsg> msg, Stream::stream_type st, int timeout, bool blocking )
+void Daemon::sendMsg( classy_counted_ptr<DCMsg> msg )
 {
 		// DCMessenger is garbage collected via ClassyCountedPtr.
 		// Ditto for the daemon and message objects.
 	DCMessenger *messenger = new DCMessenger(this);
 
-	if(blocking) {
-		messenger->sendBlockingMsg( msg, st, blocking );
-	}
-	else {
-		messenger->startCommand( msg, st, timeout );
-	}
+	messenger->startCommand( msg );
+}
+
+void Daemon::sendBlockingMsg( classy_counted_ptr<DCMsg> msg )
+{
+		// DCMessenger is garbage collected via ClassyCountedPtr.
+		// Ditto for the daemon and message objects.
+	DCMessenger *messenger = new DCMessenger(this);
+
+	messenger->sendBlockingMsg( msg );
 }

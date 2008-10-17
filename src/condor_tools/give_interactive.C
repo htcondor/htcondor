@@ -37,6 +37,7 @@
 #include "MyString.h"
 #include "basename.h"
 #include "condor_distribution.h"
+#include "subsystem_info.h"
 #include "dc_collector.h"
 
 // Globals
@@ -57,7 +58,7 @@ ExprTree *rankCondPrioPreempt;// prio preemption (Rank >= CurrentRank)
 ExprTree *PreemptionReq;	// only preempt if true
 ExprTree *PreemptionRank; 	// rank preemption candidates
 
-char *mySubSystem;
+DECL_SUBSYSTEM("TOOL", SUBSYSTEM_TYPE_TOOL);
 
 bool
 obtainAdsFromCollector (ClassAdList &startdAds, const char *constraint)
@@ -249,10 +250,13 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 	requestAd.SetMyTypeName (JOB_ADTYPE);
 	requestAd.SetTargetTypeName (STARTD_ADTYPE);
 
-	mySubSystem = "SUBMIT";
-	config_fill_ad(&requestAd);
-	mySubSystem = "INTERACTIVE";
-	config_fill_ad(&requestAd);
+	mySubSystem->setTempName( "SUBMIT" );
+	config_fill_ad( &requestAd );
+	mySubSystem->resetTempName( );
+
+	mySubSystem->setTempName( "TOOL" );
+	config_fill_ad( &requestAd );
+	mySubSystem->resetTempName( );
 
 	requestAd.Assign(ATTR_INTERACTIVE, true);
 	requestAd.Assign(ATTR_SUBMITTOR_PRIO, priority);
@@ -417,7 +421,6 @@ main(int argc, char *argv[])
 	HashTable<HashKey, int>	*slot_counts;
 
 	slot_counts = new HashTable <HashKey, int> (25, hashFunction); 
-	mySubSystem = "INTERACTIVE";
 	myDistro->Init( argc, argv );
 	config();
 

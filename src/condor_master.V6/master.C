@@ -26,6 +26,7 @@
 #include "condor_string.h"
 #include "basename.h"
 #include "master.h"
+#include "subsystem_info.h"
 #include "condor_daemon_core.h"
 #include "condor_collector.h"
 #include "condor_attributes.h"
@@ -41,6 +42,10 @@
 #include "condor_environ.h"
 #include "store_cred.h"
 #include "setenv.h"
+
+#if HAVE_DLOPEN
+#include "MasterPlugin.h"
+#endif
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -69,6 +74,7 @@ void	init_params();
 int		init_daemon_list();
 void	init_classad();
 void	init_firewall_exceptions();
+void	check_uid_for_privsep();
 void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
@@ -133,14 +139,13 @@ char	*default_daemon_list[] = {
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
 "VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, "
-"QUILL, JOB_ROUTER";
+"DBMSD, QUILL, JOB_ROUTER";
 
 // create an object of class daemons.
 class Daemons daemons;
 
 // for daemonCore
-char *mySubSystem = "MASTER";
-
+DECL_SUBSYSTEM( "MASTER", SUBSYSTEM_TYPE_MASTER );
 
 // called at exit to deallocate stuff so that memory checking tools are
 // happy and don't think we leaked any of this...
@@ -279,8 +284,16 @@ main_init( int argc, char* argv[] )
 	init_classad();  
 		// Initialize the master entry in the daemons data structure.
 	daemons.InitMaster();
+		// Make sure if PrivSep is on we're not running as root
+	check_uid_for_privsep();
 		// open up the windows firewall 
 	init_firewall_exceptions();
+
+#if HAVE_DLOPEN
+	MasterPluginManager::Load();
+
+	MasterPluginManager::Initialize();
+#endif
 
 		// Register admin commands
 	daemonCore->Register_Command( RECONFIG, "RECONFIG",
@@ -842,7 +855,7 @@ lock_or_except( const char* file_name )
 
 	// This must be a global so that it doesn't go out of scope
 	// cause the destructor releases the lock.
-	MasterLock = new FileLock( MasterLockFD );
+	MasterLock = new FileLock( MasterLockFD, NULL, file_name );
 	MasterLock->setBlocking( FALSE );
 	if( !MasterLock->obtain(WRITE_LOCK) ) {
 		EXCEPT( "Can't get lock on \"%s\"", file_name );
@@ -1314,6 +1327,29 @@ void init_firewall_exceptions() {
 					"Condor will not be excepted from the Windows firewall.\n");
 		}
 		
+	}
+#endif
+}
+
+void
+check_uid_for_privsep()
+{
+#if !defined(WIN32)
+	if (param_boolean("PRIVSEP_ENABLED", false) && (getuid() == 0)) {
+		uid_t condor_uid = get_condor_uid();
+		if (condor_uid == 0) {
+			EXCEPT("PRIVSEP_ENABLED set, but current UID is 0 "
+			           "and condor UID is also set to root");
+		}
+		dprintf(D_ALWAYS,
+		        "PRIVSEP_ENABLED set, but UID is 0; "
+		            "will drop to UID %u and restart\n",
+		        (unsigned)condor_uid);
+		daemons.CleanupBeforeRestart();
+		set_condor_priv_final();
+		daemons.ExecMaster();
+		EXCEPT("attempt to restart (via exec) failed (%s)",
+		       strerror(errno));
 	}
 #endif
 }

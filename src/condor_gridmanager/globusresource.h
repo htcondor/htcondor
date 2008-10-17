@@ -28,8 +28,6 @@
 #include "baseresource.h"
 #include "gahp-client.h"
 
-#define GM_RESOURCE_UNLIMITED	1000000000
-
 class GlobusJob;
 class GlobusResource;
 

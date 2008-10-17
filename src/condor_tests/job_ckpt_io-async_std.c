@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
 #endif
 
 int		Data[ 4096 ];
@@ -58,7 +59,8 @@ main( int argc, char *argv[] )
 	int		count;
 
 	if( argc != 2 ) {
-		fprintf( stderr, "Usage %s seconds\n", argv[0] );
+		fprintf( stderr, "Usage %s [seconds willing to wait for ckpt signal]\n",
+			argv[0] );
 		exit( 1 );
 	}
 
@@ -75,10 +77,22 @@ main( int argc, char *argv[] )
 
 	init_data( Data, sizeof(Data) );
 
-	for( i=0; i < count; i++ ) {
+	/* ok, running for X seconds is a bit disingenuous because the program
+		could run for 5 seconds, checkpoint and be idle for > count seconds,
+		and when it restarts, immediately terminate. Since this test really
+		needs us to wait around for a checkpoint signal, the seconds count
+		is really the time we're willing to wait for a checkpoint signal
+		before stopping the io loop and exiting.
+	*/
+
+	{
+	time_t b4 = time(0);
+	i = 0;
+	while ((time(0) - b4) < count) {
 		do_it( Data, fd, sizeof(Data) );
-		printf( "%d ", i );
+		printf( "%d ", i++ );
 		fflush( stdout );
+	}
 	}
 	printf( "\nNormal End Of Job\n" );
 	exit( 0 );
@@ -102,7 +116,7 @@ do_it( int data[], int fd, unsigned len )
 	int		i, bytes_read;
 	unsigned count;
 
-	for( i=0; i<100; i++ ) {
+	for( i=0; i<1000; i++ ) {
 		if( lseek(fd,0,0) < 0 ) {
 			perror( "lseek" );
 			exit( 1 );

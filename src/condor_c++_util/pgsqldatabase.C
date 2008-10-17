@@ -892,3 +892,22 @@ QuillErrCode PGSQLDatabase::execQueryWithBind(const char* sql,
 	return QUILL_FAILURE;
 }
 
+QuillErrCode		
+PGSQLDatabase::sendBulkData(const char *buffer) {
+	int result = ::PQputCopyData(connection, buffer, strlen(buffer));
+	if (result == -1) {
+		return QUILL_FAILURE;
+	}
+
+	return QUILL_SUCCESS;
+}
+
+QuillErrCode
+PGSQLDatabase::sendBulkDataEnd() {
+	int result = ::PQputCopyEnd(connection, NULL);
+	if (result == -1) {
+		return QUILL_FAILURE;
+	}
+
+	return QUILL_SUCCESS;
+}

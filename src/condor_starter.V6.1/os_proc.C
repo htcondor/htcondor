@@ -36,9 +36,9 @@
 #include "condor_uid.h"
 #include "filename_tools.h"
 #include "my_popen.h"
-#include "starter_privsep_helper.h"
 #ifdef WIN32
 #include "perm.h"
+#include "profile.WINDOWS.h"
 #endif
 
 extern CStarter *Starter;
@@ -87,38 +87,32 @@ OsProc::StartJob(FamilyInfo* family_info)
 	const char* job_iwd = Starter->jic->jobRemoteIWD();
 	dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
 
+		// some operations below will require a PrivSepHelper if
+		// PrivSep is enabled (if it's not, privsep_helper will be
+		// NULL)
+	PrivSepHelper* privsep_helper = Starter->privSepHelper();
+
 		// // // // // // 
 		// Arguments
 		// // // // // // 
 
-	// if name is condor_exec, we transferred it, so make certain
-	// it is executable.
-	//
-	// unless we're in PrivSep mode, since we won't be able to
-	// do the chmod. this should NOT be a problem though, since
-	// the file should have been transferred with the execute
-	// bit set
-	//
-	if ( (strcmp(CONDOR_EXEC,JobName.Value()) == 0) && !privsep_enabled() ) {
-			// also, prepend the full path to this name so that we
-			// don't have to rely on the PATH inside the
-			// USER_JOB_WRAPPER or for exec().
-		JobName.sprintf( "%s%c%s", Starter->GetWorkingDir(),
-				 DIR_DELIM_CHAR, CONDOR_EXEC );
-
-		priv_state old_priv = set_user_priv();
-		int retval = chmod( JobName.Value(), 0755 );
-		set_priv( old_priv );
-		if( retval != 0 ) {
-			dprintf ( D_ALWAYS, "Failed to chmod %s!\n",JobName.Value() );
-			return 0;
-		}
-	}
-	else if(is_relative_to_cwd(JobName.Value()) && job_iwd && *job_iwd) {
-		// prepend full path to executable name
+		// prepend the full path to this name so that we
+		// don't have to rely on the PATH inside the
+		// USER_JOB_WRAPPER or for exec().
+	if ( strcmp(CONDOR_EXEC,JobName.Value()) == 0 ) {
+		JobName.sprintf( "%s%c%s",
+		                 Starter->GetWorkingDir(),
+		                 DIR_DELIM_CHAR,
+		                 CONDOR_EXEC );
+        }
+	else if (is_relative_to_cwd(JobName.Value()) && job_iwd && *job_iwd) {
 		MyString full_name;
-		full_name.sprintf("%s%c%s",job_iwd,DIR_DELIM_CHAR,JobName.Value());
+		full_name.sprintf("%s%c%s",
+		                  job_iwd,
+		                  DIR_DELIM_CHAR,
+		                  JobName.Value());
 		JobName = full_name;
+
 	}
 
 	if( Starter->isGridshell() ) {
@@ -243,7 +237,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 	MyString privsep_stdin_name;
 	MyString privsep_stdout_name;
 	MyString privsep_stderr_name;
-	if (privsep_enabled()) {
+	if (privsep_helper != NULL) {
 		stdin_ok = getStdFile(SFT_IN,
 		                      NULL,
 		                      true,
@@ -400,25 +394,52 @@ OsProc::StartJob(FamilyInfo* family_info)
 		core_size_ptr = &core_size;
 	}
 
+#if defined ( WIN32 )
+    owner_profile_.update ();
+    /*************************************************************
+    NOTE: We currently *ONLY* support loading slot-user profiles.
+    This limitation will be addressed shortly, by allowing regular 
+    users to load their registry hive - Ben [2008-09-31]
+    **************************************************************/
+    bool load_profile = false,
+         run_as_owner = false;
+    JobAd->LookupBool ( ATTR_JOB_LOAD_PROFILE, load_profile );
+    JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
+    if ( load_profile && !run_as_owner ) {
+        if ( owner_profile_.load () ) {
+            /* publish the users environment into that of the main 
+
+            job's environment */
+            if ( !owner_profile_.environment ( job_env ) ) {
+                dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to "
+                    "export owner's environment.\n" );
+            }            
+        } else {
+            dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to load "
+                "owner's profile.\n" );
+        }
+    }
+#endif
+
 	set_priv ( priv );
 
-	if (privsep_enabled()) {
+	if (privsep_helper != NULL) {
 		const char* std_file_names[3] = {
 			privsep_stdin_name.Value(),
 			privsep_stdout_name.Value(),
 			privsep_stderr_name.Value()
 		};
-		JobPid = privsep_helper.create_process(JobName.Value(),
-		                                       args,
-		                                       job_env,
-		                                       job_iwd,
-		                                       fds,
-		                                       std_file_names,
-		                                       nice_inc,
-		                                       core_size_ptr,
-		                                       1,
-		                                       job_opt_mask,
-		                                       family_info);
+		JobPid = privsep_helper->create_process(JobName.Value(),
+		                                        args,
+		                                        job_env,
+		                                        job_iwd,
+		                                        fds,
+		                                        std_file_names,
+		                                        nice_inc,
+		                                        core_size_ptr,
+		                                        1,
+		                                        job_opt_mask,
+		                                        family_info);
 	}
 	else {
 		JobPid = daemonCore->Create_Process( JobName.Value(),
@@ -431,7 +452,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 		                                     family_info,
 		                                     NULL,
 		                                     fds,
-											 NULL,
+		                                     NULL,
 		                                     nice_inc,
 		                                     NULL,
 		                                     job_opt_mask, 
@@ -545,6 +566,31 @@ OsProc::JobExit( void )
 		reason = JOB_EXITED;
 	}
 
+#if defined ( WIN32 )
+    
+    /* If we loaded the user's profile, then we should dump it now */
+    if ( owner_profile_.loaded () ) {
+        owner_profile_.unload ();
+        
+        /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
+        owner_profile_.destroy ();
+        /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
+        
+    }
+
+    priv_state old = set_user_priv ();
+    HANDLE user_token = priv_state_get_handle ();
+    ASSERT ( user_token );
+    
+    /* at this point we can revoke the user's access to
+    the visible desktop */
+    int RevokeDesktopAccess ( HANDLE ); // prototype
+    RevokeDesktopAccess ( user_token );
+
+    set_priv ( old );
+
+#endif
+
 	return Starter->jic->notifyJobExit( exit_status, reason, this );
 }
 
@@ -565,15 +611,11 @@ OsProc::checkCoreFile( void )
 	MyString name_with_pid;
 	name_with_pid.sprintf( "core.%d", JobPid );
 
-	if (privsep_enabled()) {
+	if (Starter->privSepHelper() != NULL) {
 
 #if defined(WIN32)
 		EXCEPT("PrivSep not yet available on Windows");
 #else
-		// shouldn't strictly be necessary, but i'm ascared to
-		// take it out on the eve of 7.0.0
-		privsep_helper.chown_sandbox_to_condor();
-
 		struct stat stat_buf;
 		if (stat(name_with_pid.Value(), &stat_buf) != -1) {
 			Starter->jic->addToOutputFiles(name_with_pid.Value());

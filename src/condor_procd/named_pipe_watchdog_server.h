@@ -40,15 +40,15 @@ public:
 	// init a new watchdog server with the given "watchdog address"
 	//
 	bool initialize(const char*);
-
-	// chown the watchdog pipe
-	//
-	bool change_owner(uid_t);
 	
 	// clean up open FDs, file system droppings, and
 	// dynamically allocated memory
 	//
 	~NamedPipeWatchdogServer();
+
+	// get the named pipe path
+	//
+	char* get_path();
 
 private:
 

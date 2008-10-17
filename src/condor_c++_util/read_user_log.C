@@ -448,7 +448,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 			m_lock_rot = m_state->Rotation( );
 		}
 		else {
-			m_lock->SetFdFp( m_fd, m_fp );
+			m_lock->SetFdFpFile( m_fd, m_fp, m_state->CurPath() );
 		}
 	}
 	else {
@@ -1053,8 +1053,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 
 					// allocate event object; check if allocated
 					// successfully
-					event =
-						instantiateEvent( (ULogEventNumber)eventnumber );
+					event = instantiateEvent( (ULogEventNumber)eventnumber );
 					if( !event ) { 
 						dprintf( D_FULLDEBUG, "ReadUserLog: unable to "
 								 "instantiate event\n" );
@@ -1082,28 +1081,29 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 			}
 			else
 			{
-			  // finally got the event successfully --
-			  // synchronize the log
-			  if( synchronize() ) {
-			    if( m_lock->isUnlocked() ) {
-			      m_lock->release();
-			    }
-			    return ULOG_OK;
-			  }
-			  else
-			  {
-			    // got the event, but could not synchronize!!
-			    // treat as incomplete event
-				dprintf( D_FULLDEBUG, "ReadUserLog: got event on second try "
-						"but synchronize() failed\n");
-			    delete event;
-			    event = NULL;  // To prevent FMR: Free memory read
-			    clearerr( m_fp );
-			    if( m_lock->isUnlocked() ) {
-			      m_lock->release();
-			    }
-			    return ULOG_NO_EVENT;
-			  }
+				// finally got the event successfully --
+				// synchronize the log
+				if( synchronize() ) {
+					if( m_lock->isUnlocked() ) {
+						m_lock->release();
+					}
+					return ULOG_OK;
+				}
+				else
+				{
+					// got the event, but could not synchronize!!
+					// treat as incomplete event
+					dprintf( D_FULLDEBUG,
+							 "ReadUserLog: got event on second try "
+							 "but synchronize() failed\n");
+					delete event;
+					event = NULL;  // To prevent FMR: Free memory read
+					clearerr( m_fp );
+					if( m_lock->isUnlocked() ) {
+						m_lock->release();
+					}
+					return ULOG_NO_EVENT;
+				}
 			}
 		}
 		else

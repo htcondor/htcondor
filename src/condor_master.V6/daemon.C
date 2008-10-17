@@ -37,6 +37,10 @@
 #include "condor_netdb.h"
 #include "file_sql.h"
 
+#if HAVE_DLOPEN
+#include "MasterPlugin.h"
+#endif
+
 // these are defined in master.C
 extern int 		MasterLockFD;
 extern FileLock*	MasterLock;
@@ -384,7 +388,7 @@ daemon::DoConfig( bool init )
 	// Default to on_hold = false, set to true of state eq "off"
 	if ( init ) {
 		sprintf(buf, "MASTER_%s_CONTROLLER", name_in_config_file );
-		controller_name = strupr( param( buf ) );
+		controller_name = param( buf );
 		controller = NULL;		// Setup later in Daemons::CheckDaemonConfig()
 		on_hold = true;
 		if ( controller_name ) {
@@ -1763,12 +1767,9 @@ Daemons::FinishRestartMaster()
 	}
 }
 
-// Function that actually does the restart of the master.
 void
-Daemons::FinalRestartMaster()
+Daemons::CleanupBeforeRestart()
 {
-	int i;
-
 		// Tell DaemonCore to cleanup the ProcFamily subsystem. We need
 		// to do this here since we are about to restart without calling
 		// DC_Exit
@@ -1790,7 +1791,7 @@ Daemons::FinalRestartMaster()
 		// condor_master does not inherit them.
 		// Note: Not needed (or wanted) on Win32, as CEDAR creates 
 		//		Winsock sockets as non-inheritable by default.
-	for (i=0; i < max_fds; i++) {
+	for (int i=0; i < max_fds; i++) {
 		close(i);
 	}
 #endif
@@ -1803,6 +1804,27 @@ Daemons::FinalRestartMaster()
 	char	tmps[256];
 	sprintf( tmps, "%s=", EnvGetName( ENV_INHERIT ) );
 	putenv( tmps );
+}
+
+void
+Daemons::ExecMaster()
+{
+	if( MasterName ) {
+		(void)execl(daemon_ptr[master]->process_name, 
+					"condor_master", "-f", "-n", MasterName, 0);
+	} else {
+		(void)execl(daemon_ptr[master]->process_name, 
+					"condor_master", "-f", 0);
+	}
+}
+
+// Function that actually does the restart of the master.
+void
+Daemons::FinalRestartMaster()
+{
+	int i;
+
+	CleanupBeforeRestart();
 
 #ifdef WIN32
 	dprintf(D_ALWAYS,"Running as NT Service = %d\n", NT_ServiceFlag);
@@ -1841,13 +1863,7 @@ Daemons::FinalRestartMaster()
 				// root rather than effective uid condor.
 			priv_state saved_priv = set_priv(PRIV_ROOT);
 
-			if( MasterName ) {
-				(void)execl(daemon_ptr[master]->process_name, 
-							"condor_master", "-f", "-n", MasterName, 0);
-			} else {
-				(void)execl(daemon_ptr[master]->process_name, 
-							"condor_master", "-f", 0);
-			}
+			ExecMaster();
 
 			set_priv(saved_priv);
 		}
@@ -2123,6 +2139,10 @@ Daemons::UpdateCollector()
     daemonCore->publish(ad);
     daemonCore->monitor_data.ExportData(ad);
 	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true);
+
+#if HAVE_DLOPEN
+	MasterPluginManager::Update(ad);
+#endif
 
 		// log classad into sql log so that it can be updated to DB
 	FILESQL::daemonAdInsert(ad, "MasterAd", FILEObj, prevLHF);

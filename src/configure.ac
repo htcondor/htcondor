@@ -136,14 +136,25 @@ os=`uname -s`
 if test "$os" = "HP-UX"; then
   _cv_op_sys="HPUX"
   _cv_opsys="HPUX"
-  _cv_arch="HPPA"
   if test "$osrelease" = "B.10.20" ; then
     _cv_opsys_vers="HPUX10"
     _cv_sysname="hp_ux102"
   elif test "$osrelease" = "B.11.11" ; then
     _cv_opsys_vers="HPUX11"
     _cv_sysname="hp_ux110"
+  elif test "$osrelease" = "B.11.31" ; then
+    _cv_opsys_vers="HPUX11"
+    _cv_sysname="hp_ux113"
   fi
+
+  hpux_arch=`uname -m`
+  if test "x$hpux_arch" = "xia64" ; then
+    _cv_arch="IA64"
+  else
+    _cv_arch="HPPA"
+  fi
+
+  _cv_kernel_rev=`uname -r | sed -e 's#^B\.##'`;
 
 elif test $os = "Linux" ; then
   # linux is a big mess, since we have different distributions,
@@ -160,6 +171,8 @@ elif test $os = "Linux" ; then
     _cv_arch="CONDOR_PPC"
   elif test $arch = "x86_64" ; then
     _cv_arch="X86_64"
+  elif test $arch = "mips64" ; then
+    _cv_arch="MIPS64"
   fi
 
   # next, figure out what linux distribution this is
@@ -190,6 +203,18 @@ elif test $os = "Linux" ; then
        _cv_linux_distro="YD_UNKNOWN"
        ;;
     esac
+  elif test -f "/etc/gentoo-release" ; then
+    _gentoo_vers=`cat /etc/gentoo-release|$PERL -ne '/Gentoo Base System release (.*)/;print $1;'`
+    case "$_gentoo_vers" in
+     "1.12.11.1" )
+       _cv_linux_distro="GENTOO1.12.11.1"
+       ;;
+     * )
+       AC_MSG_WARN([Condor is not yet ported to gentoo version $_gentoo_vers])
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor])
+       _cv_linux_distro="GENTOO_UNKNOWN"
+       ;;
+    esac
   elif test -f "/etc/redhat-release" ; then
     _rh_vers=`cat /etc/redhat-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
     case "$_rh_vers" in
@@ -210,10 +235,20 @@ elif test $os = "Linux" ; then
        ;;
      "5" )
        _cv_linux_distro="RHEL5"
+	   # Hack hack hack
+	   # We should just switch on the code name in parens
+	   # I don't have time to look them all up
+	   if grep -q ^Fedora /etc/redhat-release
+	   then
+	   		_cv_linux_distro="FC5"
+	   fi
        ;;
      "5.1" )
        _cv_linux_distro="RHEL5"
       ;;
+     "5.2" )
+       _cv_linux_distro="RHEL5"
+       ;;
      "4.2" )
        _cv_linux_distro="CENTOS42"
       ;;
@@ -387,8 +422,14 @@ elif test $os = "FreeBSD" ; then
       _cv_arch="IA64"
    elif test $arch = "ppc" -o $arch = "ppc64" ; then
       _cv_arch="CONDOR_PPC"
-   elif test $arch = "x86_64" ; then
-      _cv_arch="X86_64"
+   ##
+   ## Globus does not work on 64-bit
+   ## We will use the i386 build until this gets fixed (hopefully not by me!)
+   ## Andy - 01/25/2008
+   ##
+   elif test $arch = "amd64" -o $arch = "x86_64" ; then
+      _cv_arch="I386"
+      #_cv_arch="X86_64"
    fi
 
    ##
@@ -501,6 +542,12 @@ AC_ARG_WITH(buildid,
   [BUILDID=$withval],
   [BUILDID=no])
 
+AC_ARG_ENABLE(bgd-support,
+  [AS_HELP_STRING([--enable-bgd-support],
+     [Enable support for HTC mode on the BlueGene machine.])],
+  [],
+  [enable_bgd_support=no])
+
 AC_ARG_ENABLE(proper,
   [AS_HELP_STRING([--enable-proper],
      [Force this configure script to work in the proper (non-Condor) way (default: disabled)])],
@@ -518,6 +565,12 @@ AC_ARG_ENABLE(gcc-version-check,
      [Disable the gcc version check])],
   [],
   [enable_gcc_version_check=yes])
+
+AC_ARG_ENABLE(glibc-version-check,
+  [AS_HELP_STRING([--disable-glibc-version-check],
+     [Disable the glibc version check])],
+  [],
+  [enable_glibc_version_check=yes])
 
 AC_ARG_ENABLE(soft-is-hard,
   [AS_HELP_STRING([--enable-soft-is-hard],
@@ -851,6 +904,24 @@ case "$gcc_vers" in
     CompilerMinor="1"
     CompilerPatch="2"
     ;;
+ "4.2.3" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="2"
+    CompilerPatch="3"
+    ;;
+ "4.2.1" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="2"
+    CompilerPatch="1"
+    ;;
+ "4.3.1" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="3"
+    CompilerPatch="1"
+    ;;
  * )
     if test "x$enable_gcc_version_check" = "xyes"; then
       AC_MSG_RESULT([ERROR])
@@ -891,6 +962,8 @@ case "$os" in
     elif test $os = "HP-UX" && test "$osversion" = "B.11.00" ; then
       # we support only 64-bit compilations of condor on hpux 11.00
       CRT_BEGIN=/usr/ccs/lib/pa20_64/crt0.o
+    elif test $os = "HP-UX" && test "$osversion" = "B.11.31" ; then
+      CRT_BEGIN=/usr/ccs/lib/hpux32/crt0.o
     fi
     ;;
   "AIX" )
@@ -973,7 +1046,23 @@ else
   else
     AC_SUBST([gcc_static_ld_flag],[$gcc_static_ld_flag])
   fi
+
+  # Now test for the -Wl,--hash-type=both flag
+  AC_MSG_CHECKING([hash-style flag])
+  echo "main() { return 0; }" > link_test.c
+  _test_output=`gcc -Wl,--hash-style=both -o link_test link_test.c > /dev/null 2>&1`
+  _test_status=$?
+  if test $_test_status -eq 0 && test "x$_test_output" = "x"; then
+    gcc_hash_style_flag=-Wl,--hash-style=both
+    AC_MSG_RESULT([yes])
+  else
+    AC_MSG_RESULT([no])
+  fi
+  rm -f link_test link_test.c 
+  AC_SUBST([gcc_hash_style_flag],[$gcc_hash_style_flag])
+
 fi
+
 
 #########
 # determine if gcc has a collection of particular warning flags we desire.
@@ -1546,7 +1635,6 @@ AS_IF([test "x$_cv_libc_kind" = xGLIBC],
   [_cv_glibc_flag="-DGLIBC=GLIBC -DGLIBC$_cv_libc_major$_cv_libc_minor=GLIBC$_cv_libc_major$_cv_libc_minor"])
 AC_SUBST([_cv_glibc_flag], [$_cv_glibc_flag])
 
-
 # PlatformFlags logic has been moved here from .cf files, primarily
 # HPUX11.cf and LINUX.cf.
 case "$_cv_opsys" in
@@ -1582,6 +1670,15 @@ case "$_cv_opsys" in
   * ) _cv_purify_platform_ld_flags="" ;;
 esac
 AC_SUBST([_cv_purify_platform_ld_flags], [$_cv_purify_platform_ld_flags])
+
+
+# Check to see if the confidential test suite is present
+AC_CHECK_FILE(../config/CONDOR_TEST_CNFDTL, 
+	AC_DEFINE(HAVE_CONDOR_TEST_CNFDTL,[1],[Do we have the confidential test suite available to us?]))
+
+# Check to see if the large test suite is present
+AC_CHECK_FILE(../config/CONDOR_TEST_LRG, 
+	AC_DEFINE(HAVE_CONDOR_TEST_LRG,[1],[Do we have the large test suite available to us?]))
 
 
 #####################
@@ -1792,7 +1889,7 @@ _cv_objcopy_debuglink_flag=""
 if test ! $ac_objcopy = "no"; then
 	AC_MSG_CHECKING([if objcopy supports --add-gnu-debuglink])
 	`$ac_objcopy --help 2>&1 | $GREP add-gnu-debuglink > /dev/null 2>&1`
-	if test $? = 0; then
+	if test $? = 0 -a ! \( "x$_cv_sysname" = "xhp_ux113" \)  ; then
 		# If this flag exists, then the other ones I need should exist as well.
 		_cv_objcopy_keepdebug_flag="--only-keep-debug"
 		_cv_objcopy_stripunneeded_flag="--strip-unneeded"
@@ -1939,6 +2036,14 @@ if test "$ac_purify" = "purify"; then
       AC_MSG_RESULT( created )
    fi
 fi
+
+AC_PATH_PROG(ac_vmware,vmware,no,[$PATH])
+if test $ac_vmware = "no"; then
+  AC_MSG_WARN( [vmware not found] )
+else
+  AC_DEFINE([HAVE_VMWARE],[1],[Define if vmware is available])
+fi
+AC_SUBST(VMWARE,$ac_vmware)
 
 AC_PATH_PROG(ac_javac,javac,no,[$PATH])
 if test $ac_javac = "no"; then
@@ -2094,6 +2199,7 @@ AC_CHECK_HEADERS([sys/vfs.h])
 AC_CHECK_HEADERS([sys/mount.h])
 AC_CHECK_HEADERS([ustat.h])
 AC_CHECK_HEADERS([dlfcn.h])
+AC_CHECK_HEADERS([valgrind.h])
 AC_CHECK_HEADERS([resolv.h],[],[],[
 #include<sys/types.h>
 #include<netinet/in.h>
@@ -2145,10 +2251,13 @@ AC_CHECK_FUNCS([strsignal				\
 		snprintf				\
 		setenv					\
 		unsetenv					\
+		vasprintf				\
 		clearenv])
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 AC_SEARCH_LIBS([dlopen], [dl],
   AC_DEFINE([HAVE_DLOPEN], [1], [dlopen function is available]))
+
+AC_CHECK_FUNCS(backtrace)
 
 # If we can't find clone() on linux (for fast forking from large
 # processes), then somebody better understand why; so produce a fatal
@@ -2366,22 +2475,28 @@ AC_MSG_NOTICE([determining availability of external packages])
 # or not.  for example, the test suite needs to know these things,
 # even though it's being configured using --without-externals.
 #-----------------------------------------------------------------
-# determine whether we will be using globus on this platform. this
-# logic used to be in the individual <platform>.cf files;
-AC_MSG_CHECKING([if globus is supported])
+# determine whether we will be using openssl and globus on this platform.
+# This logic used to be in the individual <platform>.cf files;
+AC_MSG_CHECKING([if openssl is supported])
 case "$os" in
-  HP-UX ) _cv_has_globus=no ;;
-  Linux|SunOS|Darwin|FreeBSD|AIX ) _cv_has_globus=yes ;;
+  HP-UX ) _cv_has_openssl=no ;;
+  Linux|SunOS|Darwin|FreeBSD|AIX ) _cv_has_openssl=yes ;;
   * )
     AC_MSG_RESULT([error])
     AC_MSG_ERROR([Unrecognized platform: $os])
   ;;
 esac
-AC_MSG_RESULT([$_cv_has_globus])
+AC_MSG_RESULT([$_cv_has_openssl])
 
 AC_MSG_CHECKING([if gsoap is supported])
 case "$os" in
-  HP-UX ) _cv_has_gsoap=yes ;;
+  HP-UX )
+	if  test "x$_cv_sysname" = "xhp_ux113" ; then
+  	   _cv_has_gsoap=no
+	else
+  	   _cv_has_gsoap=yes
+	fi
+	;;
   Linux|SunOS|Darwin|FreeBSD|AIX ) _cv_has_gsoap=yes ;;
   * )
     AC_MSG_RESULT([error])
@@ -2406,23 +2521,6 @@ AC_MSG_CHECKING([if classads is supported])
 _cv_has_classads=yes
 AC_MSG_RESULT([$_cv_has_classads])
 
-AC_MSG_CHECKING([if blahp is supported])
-AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_has_globus" = xyes -a "x$_cv_has_classads" = xyes],
-  [_cv_has_blahp=yes],
-  [_cv_has_blahp=no])
-AC_MSG_RESULT([$_cv_has_blahp])
-
-# This check is a bit of a hack. We need to checkout the OpenSSL
-# external on platforms other than Windows. OpenSSL is only checked
-# when Globus is not available, so when Globus is not available then
-# OpenSSL must be (artificially) turned off, since it is not checked
-# out as part of the externals. This breaks --with-proper on HP-UX,
-# since OpenSSL is available on the system but Globus is not
-# supported, which begs the question: Should _cv_has_EXT only apply to
-# the --without-proper case? Probably. - matt 2 oct 2007
-AC_MSG_CHECKING([if openssl is supported])
-_cv_has_openssl=$_cv_has_globus
-AC_MSG_RESULT([$_cv_has_openssl])
 
 #
 # Figure out if I need to use the linuclibcheaders package to build glibc.
@@ -2508,9 +2606,9 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
     ;;
   "2.5." ) # RHEL 5.0/5.1
     if test "x$_cv_arch" = "xI386" ; then
-       CHECK_EXTERNAL([glibc],[2.5-20061008T1257], [soft])
+       CHECK_EXTERNAL([glibc],[2.5-20061008T1257-p0], [soft])
 	else # x86_64
-       CHECK_EXTERNAL([glibc],[2.5-20061008T1257-x86_64], [soft])
+       CHECK_EXTERNAL([glibc],[2.5-20061008T1257-x86_64-p0], [soft])
 	fi
     ;;
   "2.6." ) # F7 uses glibc 2.6-4
@@ -2520,9 +2618,15 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
     including_glibc_ext=NO
     ;;
   * )
-    AC_MSG_CHECKING(glibc)
-    AC_MSG_RESULT([ERROR])
-    AC_MSG_ERROR([Condor does NOT know what glibc external to use with glibc-$_cv_libc_full_vers])
+    if test "x$enable_glibc_version_check" = "xyes"; then
+      AC_MSG_CHECKING(glibc)
+      AC_MSG_RESULT([ERROR])
+      AC_MSG_ERROR([Condor does NOT know what glibc external to use with glibc-$_cv_libc_full_vers])
+    else
+      AC_MSG_CHECKING(glibc)
+      AC_MSG_RESULT([glibc-$_cv_libc_full_vers (UNSUPPORTED)])
+      including_glibc_ext=NO
+    fi
   esac
   if test "x$including_glibc_ext" = "xYES"; then
     AC_SUBST(want_ext_glibc,YES)
@@ -2548,7 +2652,7 @@ fi
 
 # Build drmaa on any platform with pthreads available, except for the following
 # platforms where the build is known to fail
-if test x$_cv_sysname != "xppc_aix52" -a x$_cv_linux_distro != "xRH72" -a  x$_cv_sysname != "xsun4x_58" -a x$_cv_sysname != "xsun4x_59" -a x$_cv_sysname != "xalpha_dux51" ; then
+if test x$_cv_sysname != "xppc_aix52" -a x$_cv_linux_distro != "xRH72" -a  x$_cv_sysname != "xsun4x_58" -a x$_cv_sysname != "xsun4x_59" -a x$_cv_sysname != "xalpha_dux51" -a x$_cv_sysname != "xhp_ux113" ; then
   if test x$_cv_sysname = "xppc_macosx" -o $ac_pthreads = "yes"; then
    CHECK_EXTERNAL([drmaa],[1.5.1], [soft])
   fi
@@ -2564,17 +2668,27 @@ CHECK_EXTERNAL([krb5], [1.4.3], [soft],
                MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
 fi
 
-_cv_has_gahp=$_cv_has_globus
-CHECK_EXTERNAL([gahp],[1.0.15], [soft])
+# CHECK_EXTERNAL([openssl],[0.9.8h],[soft])
+CHECK_EXTERNAL([openssl], [0.9.8h], [soft],
+               [use OpenSSL (provides authentication and encryption support)],
+               MF_LIB_CHECK([openssl],
+                            [[ssl SSL_connect], [crypto BF_encrypt]]))
 
-_cv_has_gt4gahp=$_cv_has_globus
-CHECK_EXTERNAL([gt4gahp],[1.7], [soft])
+if test "x$_cv_ext_openssl_version" != x; then
+  # If we have openssl, we define HAVE_OPENSSL_SSL_H (meaning we
+  # have ssl.h) to make gsoap happy
+  AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl])
+
+  # Globus 4.2.0 is dependent on an external version of openssl
+  CHECK_EXTERNAL([globus],[4.2.0], [soft])
+fi
+
+if test -z "$_cv_ext_globus_version"; then
+  _cv_has_globus=no;
+fi
 
 _cv_has_unicoregahp=$_cv_has_globus
 CHECK_EXTERNAL([unicoregahp],[1.2.0], [soft])
-
-_cv_has_nordugridgahp=$_cv_has_globus
-CHECK_EXTERNAL([nordugridgahp],[1.1.2], [soft])
 
 if test "x$CLIPPED" = xyes; then
   _cv_zlib_requirement=soft
@@ -2585,9 +2699,12 @@ CHECK_EXTERNAL([zlib], [1.2.3], [$_cv_zlib_requirement],
                [use zlib (provides compression support)],
                MF_LIB_CHECK([zlib], [[z deflate]]))
 
-CHECK_EXTERNAL([classads], [1.0rc5], [soft])
+CHECK_EXTERNAL([classads], [1.0rc5], [soft],
+               [use new ClassAds (provides -better-analyze and more)],
+	       # This REALLY should test for headers, like most checks...
+               MF_LIB_CHECK([classads], [[classad cclassad_create]]))	       
 
-CHECK_EXTERNAL([srb], [3.2.1], [soft])
+CHECK_EXTERNAL([srb], [3.2.1-p1], [soft])
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
@@ -2595,7 +2712,11 @@ CHECK_EXTERNAL([pcre], [7.6], [hard],
 AS_IF([test "x$cv_ext_pcre" = xyes],
   [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
 
-CHECK_EXTERNAL([blahp], [1.7.0-p1], [soft])
+AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_has_globus" = xyes -a -n "$_cv_ext_classads_version"],
+  [_cv_has_blahp=yes],
+  [_cv_has_blahp=no])
+AC_MSG_RESULT([$_cv_has_blahp])
+CHECK_EXTERNAL([blahp], [1.7.0-p2], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what
@@ -2621,7 +2742,7 @@ AC_DEFINE(HAVE_BOINC,1,[are we compiling support for backfill with BOINC])
 
 # GCB only matters and works if we have GNU ld...
 if test x$_cv_ld_is_gnu = xyes; then
-  CHECK_EXTERNAL([gcb], [1.5.5], [soft])
+  CHECK_EXTERNAL([gcb], [1.5.6], [soft])
 fi
 
 AX_LIB_ORACLE_OCI("10.0.0")
@@ -2629,28 +2750,25 @@ if test $HAVE_ORACLE_OCI = yes; then
   AC_DEFINE(HAVE_ORACLE,1,[Do we have Oracle support])
 fi
 
-CHECK_EXTERNAL([postgresql], [8.0.2], [hard],
-               [use PostgreSQL (provides Quill and other support)],
-               MF_LIB_CHECK([postgresql], [[pq PQconnectdb]]))
-#AC_MSG_CHECKING([postgresql])
-#AC_MSG_RESULT([$_cv_ext_postgresql_version])
-#AC_SUBST(ext_postgresql_version,$_cv_ext_postgresql_version)
+# Figure out which postgresql we need.
 
-CHECK_EXTERNAL([globus],[4.0.5], [soft])
+if test "x$_cv_sysname" = "xhp_ux113" ; then
+  pgsql_ver="8.3.0";
+else
+  pgsql_ver="8.0.2";
+fi
+
+CHECK_EXTERNAL([postgresql], [$pgsql_ver], [soft],
+               [use PostgreSQL (provides Quill and other support)],
+               MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
+AC_MSG_CHECKING([postgresql])
+AC_MSG_RESULT([$_cv_ext_postgresql_version])
+#AC_SUBST(ext_postgresql_version,$_cv_ext_postgresql_version)
+AC_SUBST(POSTGRESQL_LDFLAGS, $POSTGRESQL_LDFLAGS)
+AC_SUBST(POSTGRESQL_CFLAGS, $POSTGRESQL_CFLAGS)
 
 # if globus is available on this platform and we actually have it
-if test "x$_cv_has_globus" = xyes -a "x$cv_ext_globus" = xyes; then
-  # currently, if we are using globus (and the openssl
-  # within), we define HAVE_OPENSSL_SSL_H (meaning we
-  # have ssl.h) to make gsoap happy
-  AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl (via globus)])
-
-  # ALSO, since OpenSSL isn't really an external yet we need to make
-  # sure HAVE_EXT_OPENSSL is defined, basically having Globus gives us
-  # OpenSSL. -matt 082107
-  AC_DEFINE([HAVE_EXT_OPENSSL], [1], [if openssl external])
-  AC_DEFINE([USE_GLOBUS_OPENSSL], [1], [if openssl is from globus])
-
+if test "x$cv_ext_globus" = xyes; then
   AC_MSG_CHECKING([globus flavor])
   _cv_globus_flavor=gcc32dbg
   if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" -o "$_cv_arch" = "X86_64"; then
@@ -2660,16 +2778,11 @@ if test "x$_cv_has_globus" = xyes -a "x$cv_ext_globus" = xyes; then
   fi
   AC_MSG_RESULT([$_cv_globus_flavor])
   AC_SUBST(globus_flavor,$_cv_globus_flavor)
-else # else if no globus
-  CHECK_EXTERNAL([openssl], [0.9.8], [soft],
-                 [use OpenSSL (provides authentication and encryption support)],
-                 MF_LIB_CHECK([openssl],
-                              [[ssl SSL_connect], [crypto BF_encrypt]]))
 fi
 
 # The test for gsoap needs to happen after the openssl check, so
 # openssl libs, if found, will be in LIBS. Also, if we do not have
-# openssl or globus, which gives us openssl, then we need to link with
+# openssl, then we need to link with
 # a non ssl version of the gSOAP libraries.
 
 # The gsoap shared libraries contain unresolved symbols they expect
@@ -2679,17 +2792,19 @@ fi
 # NOTE: We don't need the --unresolved-symbols flag in the non-proper
 # case because in that case Condor links with the static libraries,
 # and the linker does not complain as much.
-CHECK_EXTERNAL([gsoap], [2.7.6c-p2], [soft],
+CHECK_EXTERNAL([gsoap], [2.7.10-p2], [soft],
                [use gSOAP (enables Birdbath interface)],
                [_ldflags_save="$LDFLAGS"
                 LDFLAGS="$LDFLAGS -Wl[,]--unresolved-symbols=ignore-in-shared-libs"
                 AS_IF([test "x$cv_ext_globus" = xyes -o "x$cv_ext_openssl" = xyes],
                   [MF_LIB_CHECK([gsoap],
-                                [[gsoapssl++ soap_ssl_accept]])],
+                                [[gsoapssl++ soap_ssl_accept]], [gsoap])],
                   [MF_LIB_CHECK([gsoap],
-                                [[gsoap++ soap_accept]])])
+                                [[gsoap++ soap_accept]], [gsoap])])
                 AS_IF([test "x$cv_ext_gsoap" = xno],
                   [LDFLAGS="$_ldflags_save"])])
+AC_SUBST(GSOAP_LDFLAGS, $GSOAP_LDFLAGS)
+AC_SUBST(GSOAP_CFLAGS, $GSOAP_CFLAGS)
 
 # We need to make sure HAVE_OPENSSL_SSL_H is defined otherwise
 # programs will not link properly as stdsoap2.h will not include ssl

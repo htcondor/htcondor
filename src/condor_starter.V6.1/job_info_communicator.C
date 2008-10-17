@@ -29,6 +29,8 @@
 #include "../condor_privsep/condor_privsep.h"
 #include "condor_vm_universe_types.h"
 #include "hook_utils.h"
+#include "classad_visa.h"
+#include "subsystem_info.h"
 
 
 extern CStarter *Starter;
@@ -447,7 +449,7 @@ JobInfoCommunicator::initUserPrivNoOwner( void )
 #endif
 
 		// if we're using PrivSep, we need ATTR_OWNER
-	if (privsep_enabled()) {
+	if (Starter->privSepHelper() != NULL) {
 		return false;
 	}
 
@@ -722,6 +724,35 @@ JobInfoCommunicator::checkForStarterDebugging( void )
 
 
 void
+JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
+{
+	int value;
+	if (!job_ad->EvalBool(ATTR_WANT_STARTER_EXECUTION_VISA, NULL, value) ||
+	    !value)
+	{
+		return;
+	}
+	MyString iwd;
+	if (!job_ad->LookupString(ATTR_JOB_IWD, iwd)) {
+		dprintf(D_ALWAYS,
+		        "writeExecutionVisa error: no IWD in job ad!\n");
+		return;
+	}
+	priv_state priv = set_user_priv();
+	MyString filename;
+	bool ok = classad_visa_write(&visa_ad,
+	                             mySubSystem->getName(),
+	                             daemonCore->InfoCommandSinfulString(),
+	                             iwd.Value(),
+	                             &filename);
+	set_priv(priv);
+	if (ok) {
+		addToOutputFiles(filename.Value());
+	}
+}
+
+
+void
 JobInfoCommunicator::setupJobEnvironment( void )
 {
 #if HAVE_JOB_HOOKS
@@ -771,15 +802,18 @@ JobInfoCommunicator::startUpdateTimer( void )
 		return;
 	}
 
-	// default interval is 5 minutes, with 8 seconds as the initial value.
-	int update_interval = param_integer( "STARTER_UPDATE_INTERVAL", 300 );
-	int initial_interval = param_integer( "STARTER_INITIAL_UPDATE_INTERVAL", 8 );
+	Timeslice interval;
 
-	if( update_interval < initial_interval ) {
-		initial_interval = update_interval;
+	// default interval is 5 minutes, with 8 seconds as the initial value.
+	interval.setDefaultInterval( param_integer( "STARTER_UPDATE_INTERVAL", 300, 0 ) );
+	interval.setTimeslice( param_double( "STARTER_UPDATE_INTERVAL_TIMESLICE", 0.1, 0, 1 ) );
+	interval.setInitialInterval( param_integer( "STARTER_INITIAL_UPDATE_INTERVAL", 8 ) );
+
+	if( interval.getDefaultInterval() < interval.getInitialInterval() ) {
+		interval.setInitialInterval( interval.getDefaultInterval() );
 	}
 	m_periodic_job_update_tid = daemonCore->
-		Register_Timer(initial_interval, update_interval,
+		Register_Timer(interval,
 	      (TimerHandlercpp)&JobInfoCommunicator::periodicJobUpdateTimerHandler,
 		  "JobInfoCommunicator::periodicJobUpdateTimerHandler", this);
 	if( m_periodic_job_update_tid < 0 ) {

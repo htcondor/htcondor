@@ -33,7 +33,7 @@ $interval = 120;
 $jobcount = 5;
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");

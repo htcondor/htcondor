@@ -49,7 +49,7 @@ main( int argc, char *argv[] )
 			cin >> arg;
 			fd = open_file( arg );
 			delete lock;
-			lock = new FileLock(fd);
+			lock = new FileLock(fd, NULL, arg);
 			continue;
 		}
 

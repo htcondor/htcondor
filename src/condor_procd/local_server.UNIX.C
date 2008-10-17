@@ -28,7 +28,6 @@
 
 LocalServer::LocalServer() :
 	m_initialized(false),
-	m_pipe_addr(NULL),
 	m_watchdog_server(NULL),
 	m_reader(NULL),
 	m_writer(NULL)
@@ -65,12 +64,6 @@ LocalServer::initialize(const char* pipe_addr)
 		return false;
 	}
 
-	// and stash a copy of our address, since its used as a
-	// component in the addresses of our clients
-	//
-	m_pipe_addr = strdup(pipe_addr);
-	ASSERT(m_pipe_addr != NULL);
-
 	m_initialized = true;
 	return true;
 }
@@ -82,8 +75,6 @@ LocalServer::~LocalServer()
 	if (!m_initialized) {
 		return;
 	}
-
-	free(m_pipe_addr);
 
 	// it's important to delete the watchdog server after
 	// the reader
@@ -126,14 +117,18 @@ LocalServer::set_client_principal(const char* uid_str)
 	// so they can connect
 	//
 	if (my_uid == 0) {
-		if (!m_reader->change_owner(client_uid)) {
+		if (chown(m_reader->get_path(), client_uid, (gid_t)-1) == -1) {
 			dprintf(D_ALWAYS,
-			        "LocalServer: error changing ownership on command pipe\n");
+			        "LocalServer: chown error on %s: %s\n",
+			        m_reader->get_path(),
+			        strerror(errno));
 			return false;
 		}
-		if (!m_watchdog_server->change_owner(client_uid)) {
+		if (chown(m_watchdog_server->get_path(), client_uid, (gid_t)-1) == -1) {
 			dprintf(D_ALWAYS,
-			        "LocalServer: error changing ownership on watchdog pipe\n");
+			        "LocalServer: chown error on %s: %s\n",
+			        m_watchdog_server->get_path(),
+			        strerror(errno));
 			return false;
 		}
 		return true;
@@ -191,7 +186,7 @@ LocalServer::accept_connection(int timeout, bool &accepted)
 	//
 	m_writer = new NamedPipeWriter;
 	ASSERT(m_writer != NULL);
-	char* client_addr = named_pipe_make_client_addr(m_pipe_addr,
+	char* client_addr = named_pipe_make_client_addr(m_reader->get_path(),
 	                                                client_pid,
 	                                                client_sn);
 	if (!m_writer->initialize(client_addr)) {
@@ -232,4 +227,21 @@ LocalServer::write_data(void* buffer, int len)
 {
 	ASSERT(m_writer != NULL);
 	return m_writer->write_data(buffer, len);
+}
+
+void
+LocalServer::touch()
+{
+	if (utimes(m_reader->get_path(), NULL) == -1) {
+		dprintf(D_ALWAYS,
+		        "LocalServer: utimes error on %s: %s\n",
+		        m_reader->get_path(),
+		        strerror(errno));
+	}
+	if (utimes(m_watchdog_server->get_path(), NULL) == -1) {
+		dprintf(D_ALWAYS,
+		        "LocalServer: utimes error on %s: %s\n",
+		        m_watchdog_server->get_path(),
+		        strerror(errno));
+	}
 }

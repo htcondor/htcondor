@@ -93,6 +93,11 @@ class UniShadow : public BaseShadow
 		*/
 	int getExitReason( void );
 
+		/** Return true if the startd is not accepting more jobs on
+			this claim.
+		*/
+	bool claimIsClosing( void );
+
 	float bytesSent();
 	float bytesReceived();
 
@@ -137,6 +142,8 @@ class UniShadow : public BaseShadow
 	virtual void resourceReconnected( RemoteResource* rr );
 
 	virtual void logDisconnectedEvent( const char* reason );
+
+	virtual bool getMachineName( MyString &machineName );
 
  protected:
 

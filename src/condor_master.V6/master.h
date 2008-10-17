@@ -157,6 +157,9 @@ public:
 	void	FinishRestartMaster();
 	void	FinalRestartMaster();
 
+	void	CleanupBeforeRestart();
+	void	ExecMaster();
+
 	char*	DaemonLog(int pid);			// full log file path name
 #if 0
 	void	SignalAll(int signal);		// send signal to all children

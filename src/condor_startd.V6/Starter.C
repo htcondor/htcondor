@@ -34,6 +34,10 @@
 #include "my_popen.h"
 #include "basename.h"
 
+#if defined(LINUX)
+#include "glexec_starter.h"
+#endif
+
 #ifdef WIN32
 extern dynuser *myDynuser;
 #endif
@@ -508,6 +512,7 @@ Starter::reallykill( int signo, int type )
 			dprintf(D_ALWAYS,
 			        "error killing process family of starter with pid %u\n",
 				s_pid);
+			ret = -1;
 		}
 		break;
 	}
@@ -601,7 +606,7 @@ Starter::exited()
 	ASSERT( executeDir() );
 	cleanup_execute_dir( s_pid, executeDir() );
 
-#if !defined(WIN32)
+#if defined(LINUX)
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
 		cleanupAfterGlexec();
 	}
@@ -808,21 +813,32 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		EXCEPT("Failed to register ClassAd update socket.");
 	}
 
-#if !defined(WIN32)
+#if defined(LINUX)
 	// see if we should be using glexec to spawn the starter.
-	// if we are, the cmd, args, and env to use will be modified
+	// if we are, the cmd, args, env, and stdin to use will be
+	// modified
 	ArgList glexec_args;
 	Env glexec_env;
+	int glexec_std_fds[3];
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
-		if( ! prepareForGlexec( args, env, glexec_args, glexec_env ) ) {
+		if( ! glexec_starter_prepare( s_path,
+		                              s_claim->client()->proxyFile(),
+		                              args,
+		                              env,
+		                              std_fds,
+		                              glexec_args,
+		                              glexec_env,
+		                              glexec_std_fds ) )
+		{
 			// something went wrong; prepareForGlexec will
 			// have already logged it
 			cleanupAfterGlexec();
 			return 0;
 		}
+		final_path = glexec_args.GetArg(0);
 		final_args = &glexec_args;
 		env = &glexec_env;
-		final_path = glexec_args.GetArg(0);
+		std_fds = glexec_std_fds;
 	}
 #endif
 								   
@@ -850,6 +866,23 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
 	}
+
+#if defined(LINUX)
+	if( param_boolean( "GLEXEC_STARTER", false ) ) {
+		// if we used glexec to spawn the Starter, we now need to send
+		// the Starter's environment to our glexec wrapper script so it
+		// can exec the Starter with all the environment variablew we rely
+		// on it inheriting
+		//
+		if ( !glexec_starter_handle_env(s_pid) ) {
+			// something went wrong; handleGlexecEnvironment will
+			// have already logged it
+			cleanupAfterGlexec();
+			return 0;
+		}
+	}
+#endif
+
 	return s_pid;
 }
 
@@ -969,222 +1002,7 @@ Starter::execOldStarter( void )
 #endif
 }
 
-#if !defined(WIN32)
-bool
-Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
-                           ArgList& glexec_args, Env& glexec_env )
-{
-	// if GLEXEC_STARTER is set, use glexec to invoke the
-	// starter (or fail if we can't). this involves:
-	//   - verifying that we have a delegated proxy from
-	//     the user stored, since we need to hand it to
-	//     glexec so it can look up the UID/GID
-	//   - invoking 'glexec_starter_setup.sh' via glexec to
-	//     setup the starter's "private directory" for a copy
-	//     of the job's proxy to go into, as well as the StarterLog
-	//     and execute dir
-	//   - adding the contents of the GLEXEC config param
-	//     to the front of the command line
-	//   - setting up glexec's environment (setting the
-	//     mode, handing off the proxy, etc.)
-
-	// verify that we have a stored proxy
-	if( s_claim->client()->proxyFile() == NULL ) {
-		dprintf( D_ALWAYS,
-		         "cannot use glexec to spawn starter: no proxy "
-		         "(is GLEXEC_STARTER set in the shadow?)\n" );
-		return false;
-	}
-
-	// read the cert into a string
-	FILE* fp = safe_fopen_wrapper( s_claim->client()->proxyFile(), "r" );
-	if( fp == NULL ) {
-		dprintf( D_ALWAYS,
-		         "cannot use glexec to spawn starter: "
-		         "couldn't open proxy: %s (%d)\n",
-		         strerror(errno), errno );
-		return false;
-	}
-	MyString pem_str;
-	while( pem_str.readLine( fp, true ) );
-	fclose( fp );
-
-	// using the file name of the proxy that was stashed ealier, construct
-	// the name of the starter's "private directory". the naming scheme is
-	// (where XXXXXX is randomly generated via condor_mkstemp):
-	//   - $(GLEXEC_USER_DIR)/startd-tmp-proxy-XXXXXX
-	//       - startd's copy of the job's proxy
-	//   - $(GLEXEC_USER_DIR)/starter-tmp-dir-XXXXXX
-	//       - starter's private dir
-	//
-	MyString glexec_private_dir;
-	char* dir_part = condor_dirname(s_claim->client()->proxyFile());
-	ASSERT(dir_part != NULL);
-	glexec_private_dir = dir_part;
-	free(dir_part);
-	glexec_private_dir += "/starter-tmp-dir-";
-	char* random_part = s_claim->client()->proxyFile();
-	random_part += strlen(random_part) - 6;
-	glexec_private_dir += random_part;
-	dprintf(D_ALWAYS,
-	        "GLEXEC: starter private dir is '%s'\n",
-	        glexec_private_dir.Value());
-
-	// get the glexec command line prefix from config
-	char* glexec_argstr = param( "GLEXEC" );
-	if ( ! glexec_argstr ) {
-		dprintf( D_ALWAYS,
-		         "cannot use glexec to spawn starter: "
-		         "GLEXEC not given in config\n" );
-		return false;
-	}
-
-	// cons up a command line for my_system. we'll run the
-	// script $(LIBEXEC)/glexec_starter_setup.sh, which
-	// will create the starter's "private directory" (and
-	// its log and execute subdirectories). the value of
-	// glexec_private_dir will be passed as an argument to
-	// the script
-
-	// parse the glexec args for invoking glexec_starter_setup.sh.
-	// do not free them yet, except on an error, as we use them
-	// again below.
-	MyString setup_err;
-	ArgList  glexec_setup_args;
-	glexec_setup_args.SetArgV1SyntaxToCurrentPlatform();
-	if( ! glexec_setup_args.AppendArgsV1RawOrV2Quoted( glexec_argstr,
-	                                                   &setup_err ) ) {
-		dprintf( D_ALWAYS,
-		         "GLEXEC: failed to parse GLEXEC from config: %s\n",
-		         setup_err.Value() );
-		free( glexec_argstr );
-		return 0;
-	}
-
-	// set up the rest of the arguments for the glexec setup script
-	char* libexec = param("LIBEXEC");
-	if (libexec == NULL) {
-		dprintf( D_ALWAYS,
-		         "GLEXEC: LIBEXEC not defined; can't find setup script\n" );
-		free( glexec_argstr );
-	}
-	MyString setup_script = libexec;
-	free(libexec);
-	setup_script += "/glexec_starter_setup.sh";
-	glexec_setup_args.AppendArg(setup_script.Value());
-	glexec_setup_args.AppendArg(glexec_private_dir.Value());
-
-	// debug info.  this display format totally screws up the quoting, but
-	// my_system gets it right.
-	MyString disp_args;
-	glexec_setup_args.GetArgsStringForDisplay(&disp_args, 0);
-	dprintf (D_ALWAYS, "GLEXEC: about to glexec: ** %s **\n",
-			disp_args.Value());
-
-	// the only thing actually needed by glexec at this point is the cert, so
-	// that it knows who to map to.  the pipe outputs the username that glexec
-	// ended up using, on a single text line by itself.
-	SetEnv( "SSL_CLIENT_CERT", pem_str.Value() );
-
-	// create the starter's private dir
-	int ret = my_system(glexec_setup_args);
-
-	// clean up, since there's private info in there.  i wish we didn't have to
-	// put this in the environment to begin with, but alas, that's just how
-	// glexec works.
-	UnsetEnv( "SSL_CLIENT_CERT");
-
-	if ( ret != 0 ) {
-		dprintf(D_ALWAYS,
-		        "GLEXEC: error creating private dir: my_system returned %d\n",
-		        ret);
-		free( glexec_argstr );
-		return 0;
-	}
-
-	// now prepare the starter command line, starting with glexec and its
-	// options (if any).
-	MyString err;
-	if( ! glexec_args.AppendArgsV1RawOrV2Quoted( glexec_argstr,
-	                                             &err ) ) {
-		dprintf( D_ALWAYS,
-		         "failed to parse GLEXEC from config: %s\n",
-		         err.Value() );
-		free( glexec_argstr );
-		return 0;
-	}
-	free( glexec_argstr );
-
-	// complete the command line by adding in the original
-	// arguments. we also make sure that the full path to the
-	// starter is given
-	int starter_path_pos = glexec_args.Count();
-	glexec_args.AppendArgsFromArgList( orig_args );
-	glexec_args.RemoveArg( starter_path_pos );
-	glexec_args.InsertArg( s_path, starter_path_pos );
-
-	// set up the environment stuff
-	if( orig_env ) {
-		// first merge in the original
-		glexec_env.MergeFrom( *orig_env );
-	}
-
-	// GLEXEC_MODE - get account from lcmaps
-	glexec_env.SetEnv( "GLEXEC_MODE", "lcmaps_get_account" );
-
-	// SSL_CLIENT_CERT - cert to use for the mapping
-	glexec_env.SetEnv( "SSL_CLIENT_CERT", pem_str.Value() );
-
-#if defined(HAVE_EXT_GLOBUS) && !defined(SKIP_AUTHENTICATION)
-	// GLEXEC_SOURCE_PROXY -  proxy to provide to the child
-	//                        (file is owned by us)
-	glexec_env.SetEnv( "GLEXEC_SOURCE_PROXY", s_claim->client()->proxyFile() );
-	dprintf (D_ALWAYS, "GLEXEC: setting GLEXEC_SOURCE_PROXY to %s\n",
-		s_claim->client()->proxyFile());
-
-	// GLEXEC_TARGET_PROXY - child-owned file to copy its proxy to.
-	// this needs to be in a directory owned by that user, and not world
-	// writable.  glexec enforces this.  hence, all the whoami/mkdir mojo
-	// above.
-	MyString child_proxy_file = glexec_private_dir;
-	child_proxy_file += "/glexec_starter_proxy";
-	dprintf (D_ALWAYS, "GLEXEC: setting GLEXEC_TARGET_PROXY to %s\n",
-		child_proxy_file.Value());
-	glexec_env.SetEnv( "GLEXEC_TARGET_PROXY", child_proxy_file.Value() );
-
-	// _CONDOR_GSI_DAEMON_PROXY - starter's proxy
-	MyString var_name = "_CONDOR_";
-	var_name += STR_GSI_DAEMON_PROXY;
-	glexec_env.SetEnv( var_name.Value(), child_proxy_file.Value() );
-#endif
-
-	// the EXECUTE dir should be owned by the mapped user.  we created this
-	// earlier, and now we override it in the condor_config via the
-	// environment.
-	MyString execute_dir = glexec_private_dir;
-	execute_dir += "/execute";
-	glexec_env.SetEnv ( "_CONDOR_EXECUTE", execute_dir.Value());
-
-	// the LOG dir should be owned by the mapped user.  we created this
-	// earlier, and now we override it in the condor_config via the
-	// environment.
-	MyString log_dir = glexec_private_dir;
-	log_dir += "/log";
-	glexec_env.SetEnv ( "_CONDOR_LOG", log_dir.Value());
-
-	// PROCD_ADDRESS: the Starter that we are about to create will
-	// not have access to our ProcD. we'll explicitly set PROCD_ADDRESS
-	// to be in its LOG directory. the Starter will see that its
-	// PROCD_ADDRESS knob is different from what it inherits in
-	// CONDOR_PROCD_ADDRESS, and know it needs to create its own ProcD
-	//
-	MyString procd_address = log_dir;
-	procd_address += "/procd_pipe";
-	glexec_env.SetEnv( "_CONDOR_PROCD_ADDRESS", procd_address.Value() );
-
-	return true;
-}
-
+#if defined(LINUX)
 void
 Starter::cleanupAfterGlexec()
 {
@@ -1201,7 +1019,7 @@ Starter::cleanupAfterGlexec()
 		s_claim->client()->setProxyFile(NULL);
 	}
 }
-#endif // !WIN32
+#endif
 
 ClaimType
 Starter::claimType()
@@ -1374,9 +1192,11 @@ Starter::startKillTimer( void )
 		}
 	}
 
+		// Create a periodic timer so that if the kill attempt fails,
+		// we keep trying.
 	s_kill_tid = 
 		daemonCore->Register_Timer( tmp_killing_timeout,
-						0, 
+						tmp_killing_timeout, 
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );
 	if( s_kill_tid < 0 ) {
@@ -1408,8 +1228,8 @@ Starter::cancelKillTimer( void )
 bool
 Starter::sigkillStarter( void )
 {
-		// Now that the timer has gone off, clear out the tid.
-	s_kill_tid = -1;
+		// In case the kill fails for some reason, we are on a periodic
+		// timer that will keep trying.
 
 	if( active() ) {
 		dprintf( D_ALWAYS, "starter (pid %d) is not responding to the "

@@ -82,6 +82,7 @@ static QmgmtPeer *Q_SOCK = NULL;
 int		do_Q_request(ReliSock *,bool &may_fork);
 void	FindPrioJob(PROC_ID &);
 
+static bool qmgmt_was_initialized = false;
 static ClassAdCollection *JobQueue = 0;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
@@ -89,6 +90,9 @@ static int active_cluster_num = -1;	// client is restricted to only insert jobs 
 static int old_cluster_num = -1;	// next_cluster_num at start of transaction
 static bool JobQueueDirty = false;
 static time_t xact_start_time = 0;	// time at which the current transaction was started
+static int cluster_initial_val = 1;		// first cluster number to use
+static int cluster_increment_val = 1;	// increment for cluster numbers of successive submissions 
+
 
 class Service;
 
@@ -599,7 +603,7 @@ int
 QmgmtPeer::isAuthenticated() const
 {
 	if ( sock ) {
-		return sock->isAuthenticated();
+		return sock->triedAuthentication();
 	} else {
 		if ( qmgmt_all_users_trusted ) {
 			return TRUE;
@@ -618,6 +622,9 @@ InitQmgmt()
 	StringList s_users;
 	char* tmp;
 	int i;
+
+	qmgmt_was_initialized = true;
+
 	if( super_users ) {
 		for( i=0; i<num_super_users; i++ ) {
 			delete [] super_users[i];
@@ -662,6 +669,9 @@ InitQmgmt()
 	forker.Initialize();
 	int max_forkers = param_integer ("SCHEDD_QUERY_WORKERS",3,0);
 	forker.setMaxWorkers( max_forkers );
+
+	cluster_initial_val = param_integer("SCHEDD_CLUSTER_INITIAL_VALUE",1,1);
+	cluster_increment_val = param_integer("SCHEDD_CLUSTER_INCREMENT_VALUE",1,1);
 }
 
 void
@@ -680,7 +690,8 @@ GetOriginalJobQueueBirthdate()
 void
 InitJobQueue(const char *job_queue_name,int max_historical_logs)
 {
-	assert(!JobQueue);
+	ASSERT(qmgmt_was_initialized);	// make certain our parameters are setup
+	ASSERT(!JobQueue);
 	JobQueue = new ClassAdCollection(job_queue_name,max_historical_logs);
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(37,compute_clustersize_hash);
 	TotalJobsCount = 0;
@@ -725,16 +736,16 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// it, and we don't want to confuse things any further.
 	correct_scheduler.sprintf( "DedicatedScheduler!%s", Name );
 
-	next_cluster_num = 1;
+	next_cluster_num = cluster_initial_val;
 	JobQueue->StartIterateAllClassAds();
 	while (JobQueue->IterateAllClassAds(ad,key)) {
 		const char *tmp = key.value();
 		if ( *tmp == '0' ) continue;	// skip cluster & header ads
 		if ( (cluster_num = atoi(tmp)) ) {
 
-			// find highest cluster, set next_cluster_num to one higher
+			// find highest cluster, set next_cluster_num to one increment higher
 			if (cluster_num >= next_cluster_num) {
-				next_cluster_num = cluster_num + 1;
+				next_cluster_num = cluster_num + cluster_increment_val;
 			}
 
 			// link all proc ads to their cluster ad, if there is one
@@ -1379,7 +1390,8 @@ NewCluster()
 	}
 
 	next_proc_num = 0;
-	active_cluster_num = next_cluster_num++;
+	active_cluster_num = next_cluster_num;
+	next_cluster_num += cluster_increment_val;
 	sprintf(cluster_str, "%d", next_cluster_num);
 //	log = new LogSetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
 //	JobQueue->AppendLog(log);
@@ -1430,13 +1442,15 @@ NewProc(int cluster_id)
 		// also insert the appropriate GlobalJobId while we're at it.
 	MyString gjid = "\"";
 	gjid += Name;             // schedd's name
-	int now = (int)time(0);
-	gjid += "#";
-	gjid += now;
 	gjid += "#";
 	gjid += cluster_id;
 	gjid += ".";
 	gjid += proc_id;
+	if (param_boolean("GLOBAL_JOB_ID_WITH_TIME", true)) {
+		int now = (int)time(0);
+		gjid += "#";
+		gjid += now;
+	}
 	gjid += "\"";
 	JobQueue->SetAttribute( key, ATTR_GLOBAL_JOB_ID, gjid.Value() );
 
@@ -1707,6 +1721,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		return -1;
 	}
 
+	// If someone is trying to do something funny with an invalid
+	// attribute name, bail out early
+	if (!AttrList::IsValidAttrName(attr_name)) {
+		dprintf(D_ALWAYS, "SetAttribute got invalid attribute named %s for job %d.%d\n", 
+			attr_name ? attr_name : "(null)", cluster_id, proc_id);
+		return -1;
+	}
+
 	IdToStr(cluster_id,proc_id,key);
 
 	if (JobQueue->LookupClassAd(key, ad)) {
@@ -1927,8 +1949,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				}
 				else {
 						// find the closest power of 10
-					int magnitude = (int)(log(fabs(fvalue/5))/log(10) + 1);
-					double roundto = pow(10,magnitude) * percent/100.0;
+					int magnitude = (int)(log(fabs((double)fvalue/5))/log((double)10) + 1);
+					double roundto = pow((double)10,magnitude) * percent/100.0;
 					fvalue = ceil( fvalue/roundto )*roundto;
 
 					if( token.type == LX_INTEGER ) {
@@ -2610,6 +2632,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 		// want to expand the ad we have in memory.
 		expanded_ad = new ClassAd(*ad);  
 
+		// Copy attributes from chained parent ad into the expanded ad
+		// so if parent is deleted before caller is finished with this
+		// ad, things will still be ok.
+		expanded_ad->ChainCollapse(true);
+
 			// Make a stringlist of all attribute names in job ad.
 			// Note: ATTR_JOB_CMD must be first in AttrsToExpand...
 		StringList AttrsToExpand;
@@ -2632,9 +2659,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 
 		index = -1;	
 		AttrsToExpand.rewind();
-		bool no_startd_ad = false;
 		bool attribute_not_found = false;
-		while ( !no_startd_ad && !attribute_not_found ) 
+		while ( !attribute_not_found ) 
 		{
 			index++;
 			curr_attr_to_expand = AttrsToExpand.next();
@@ -2642,6 +2668,29 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 			if ( curr_attr_to_expand == NULL ) {
 				// all done; no more attributes to try and expand
 				break;
+			}
+
+			MyString cachedAttrName = MATCH_EXP;
+			cachedAttrName += curr_attr_to_expand;
+
+			if( !startd_ad ) {
+					// No startd ad, so try to find cached value from back
+					// when we did have a startd ad.
+				ExprTree *cached_value = ad->Lookup(cachedAttrName.Value());
+				if( cached_value ) {
+					char *cached_value_buf = NULL;
+					ASSERT( cached_value->RArg() );
+					cached_value->RArg()->PrintToNewStr(&cached_value_buf);
+					ASSERT(cached_value_buf);
+					expanded_ad->AssignExpr(curr_attr_to_expand,cached_value_buf);
+					free(cached_value_buf);
+					continue;
+				}
+
+					// No cached value, so try to expand the attribute
+					// without the cached value.  If it is an
+					// expression that refers only to job attributes,
+					// it can succeed, even without the startd.
 			}
 
 			if (attribute_value != NULL) {
@@ -2710,10 +2759,6 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 					get_var(attribute_value,&left,&name,&right,NULL,true,search_pos) )
 			{
 				expanded_something = true;
-				if (!startd_ad && job_universe != CONDOR_UNIVERSE_GRID) {
-					no_startd_ad = true;
-				}
-
 				
 				size_t namelen = strlen(name);
 				if(name[0] == '[' && name[namelen-1] == ']') {
@@ -2878,13 +2923,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 				// Cache the expanded string so that we still
 				// have it after, say, a restart and the collector
 				// is no longer available.
-				MyString attrName = MATCH_EXP;
-				attrName += curr_attr_to_expand;
 
-				if ( SetAttribute(cluster_id,proc_id,attrName.Value(),attribute_value) < 0 )
+				if ( SetAttribute(cluster_id,proc_id,cachedAttrName.Value(),attribute_value) < 0 )
 				{
 					EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
-						attrName.Value(), attribute_value, cluster_id, proc_id);
+						cachedAttrName.Value(), attribute_value, cluster_id, proc_id);
 				}
 			}
 
@@ -3096,12 +3139,16 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			 	mrec = scheduler.FindMrecByJobID( job_id );
 			}
 
-			if( !mrec ) {
-				// pretty weird... no match rec, nothing we can do
-				// could be a PVM job?
-				return new ClassAd(*ad);
+			if( mrec ) {
+				startd_ad = mrec->my_match_ad;
+			} else {
+				// no match rec, probably a local universe type job.
+				// set startd_ad to NULL and continue on - after all,
+				// the expression we are expanding may not even reference
+				// a startd attribute.
+				startd_ad = NULL;
 			}
-			startd_ad = mrec->my_match_ad;
+			
 		}
 
 		return dollarDollarExpand(cluster_id, proc_id, ad, startd_ad);
@@ -3737,6 +3784,39 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 							if( new_startd_rank < current_startd_rank ) {
 								continue;
 							}
+						}
+					}
+
+						// If Concurrency Limits are in play it is
+						// important not to reuse a claim from one job
+						// that has one set of limits for a job that
+						// has a different set. This is because the
+						// Accountant is keeping track of limits based
+						// on the matches that are being handed out.
+						//
+						// A future optimization here may be to allow
+						// jobs with a subset of the limits given to
+						// the current match to reuse it.
+						//
+						// Ohh, indented sooo far!
+					MyString jobLimits, recordedLimits;
+					if (param_boolean("CLAIM_RECYCLING_CONSIDER_LIMITS", true)) {
+						ad->LookupString(ATTR_CONCURRENCY_LIMITS, jobLimits);
+						my_match_ad->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS,
+												  recordedLimits);
+						jobLimits.strlwr();
+						recordedLimits.strlwr();
+						
+						if (jobLimits == recordedLimits) {
+							dprintf(D_FULLDEBUG,
+									"ConcurrencyLimits match, can reuse claim\n");
+						} else {
+							dprintf(D_FULLDEBUG,
+									"ConcurrencyLimits do not match, cannot "
+									"reuse claim\n");
+							PrioRecAutoClusterRejected->
+								insert(PrioRec[i].auto_cluster_id, 1);
+							continue;
 						}
 					}
 

@@ -38,6 +38,8 @@
 // something happens).
 #define TIMER_UNSET -1
 
+#define GM_RESOURCE_UNLIMITED	1000000000
+
 extern char *ScheddAddr;
 extern DCSchedd *ScheddObj;
 extern char *ScheddJobConstraint;

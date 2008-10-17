@@ -55,6 +55,11 @@ static int not_impl(void)
 }
 
 BEGIN_C_DECLS
+void
+config( int, bool )
+{
+}
+
 char* param(const char *str)
 {
 	if(strcmp(str, "LOG") == 0) {
@@ -87,6 +92,7 @@ bool param_boolean( const char *, const bool default_value )
 
 bool param_boolean( const char *, const bool default_value, bool do_log )
 {
+	(void) do_log;
 	return default_value;
 }
 
@@ -148,6 +154,14 @@ int Stream::put(char const *){ return not_impl(); }
 int Stream::get(char *&){ return not_impl(); }
 int Stream::get(char *,int ){ return not_impl(); }
 int Stream::get_string_ptr(char const *&){ return not_impl(); }
+
+void Stream::prepare_crypto_for_secret(){not_impl();}
+void Stream::restore_crypto_after_secret(){not_impl();}
+bool Stream::prepare_crypto_for_secret_is_noop(){not_impl();return true;}
+void Stream::set_crypto_mode(bool enabled){not_impl();}
+bool Stream::get_encryption() const{not_impl();return false;}
+int Stream::put_secret( char const *s ){not_impl();return 0;}
+int Stream::get_secret( char *&s ){not_impl();return 0;}
 
 /* stubs for generic query object */
 GenericQuery::GenericQuery(void) {}
@@ -226,4 +240,12 @@ bool Regex::compile(MyString const& , char const** , int* , int ) {not_impl();re
 bool Regex::match(MyString const& , ExtArray<MyString>* ) {not_impl();return false;}
 
 bool privsep_enabled() { return false; }
-int privsep_open(uid_t, gid_t, const char*, int, mode_t) { not_impl();}
+int privsep_open(uid_t, gid_t, const char*, int, mode_t) { not_impl(); return 0;}
+
+// GCB me harder
+BEGIN_C_DECLS
+void Generic_set_log_va(void(*app_log_va)(int level,char*fmt,va_list args))
+{
+	(void) app_log_va;
+};
+END_C_DECLS

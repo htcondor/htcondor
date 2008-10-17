@@ -27,18 +27,80 @@
 
 DCMsg::DCMsg(int cmd) {
 	m_cmd = cmd;
+	m_cmd_str = NULL;
 	m_msg_success_debug_level = D_FULLDEBUG;
 	m_msg_failure_debug_level = (D_ALWAYS|D_FAILURE);
 	m_delivery_status = DELIVERY_PENDING;
+	m_stream_type = Stream::reli_sock;
+	m_timeout = DEFAULT_CEDAR_TIMEOUT;
+	m_raw_protocol = false;
 }
 
 DCMsg::~DCMsg() {
 }
 
+void
+DCMsg::setCallback(classy_counted_ptr<DCMsgCallback> cb)
+{
+	if( cb.get() ) {
+		cb->setMessage( this );
+	}
+	m_cb = cb;
+}
+
+void
+DCMsg::doCallback()
+{
+	if( m_cb.get() ) {
+			// get rid of saved reference to callback object now, so it
+			// can be garbage collected
+		classy_counted_ptr<DCMsgCallback> cb = m_cb;
+		m_cb = NULL;
+
+		cb->doCallback();
+	}
+}
+
 char const *
 DCMsg::name()
 {
-	return getCommandString( m_cmd );
+	if( m_cmd_str ) {
+		return m_cmd_str;
+	}
+	m_cmd_str = getCommandString( m_cmd );
+	if( !m_cmd_str ) {
+		m_cmd_str_buf.sprintf("command %d",m_cmd);
+		m_cmd_str = m_cmd_str_buf.Value();
+	}
+	return m_cmd_str;
+}
+
+void
+DCMsg::deliveryStatus(DeliveryStatus s)
+{
+		// if it was canceled, leave it canceled
+	if( m_delivery_status != DELIVERY_CANCELED ) {
+		m_delivery_status = s;
+	}
+}
+
+void
+DCMsg::setMessenger(DCMessenger *messenger)
+{
+	m_messenger = messenger;
+}
+
+void
+DCMsg::cancelMessage()
+{
+	deliveryStatus( DELIVERY_CANCELED );
+	addError( CEDAR_ERR_CANCELED, "operation was canceled" );
+
+	if( m_messenger.get() ) {
+		m_messenger->cancelMessage( this );
+			// we now expect to be called via one of the message closure
+			// functions: callMessageSendFailed(), callMessageReceiveFailed()
+	}
 }
 
 void
@@ -46,6 +108,7 @@ DCMsg::callMessageSendFailed( DCMessenger *messenger )
 {
 	deliveryStatus( DELIVERY_FAILED );
 	messageSendFailed( messenger );
+	doCallback();
 }
 
 void
@@ -53,6 +116,7 @@ DCMsg::callMessageReceiveFailed( DCMessenger *messenger )
 {
 	deliveryStatus( DELIVERY_FAILED );
 	messageReceiveFailed( messenger );
+	doCallback();
 }
 
 DCMsg::MessageClosureEnum
@@ -60,7 +124,11 @@ DCMsg::callMessageSent(
 				DCMessenger *messenger, Sock *sock )
 {
 	deliveryStatus( DELIVERY_SUCCEEDED );
-	return messageSent( messenger, sock );
+	MessageClosureEnum closure = messageSent( messenger, sock );
+	if( closure == MESSAGE_FINISHED ) {
+		doCallback();
+	}
+	return closure;
 }
 
 DCMsg::MessageClosureEnum
@@ -68,7 +136,11 @@ DCMsg::callMessageReceived(
 				DCMessenger *messenger, Sock *sock )
 {
 	deliveryStatus( DELIVERY_SUCCEEDED );
-	return messageReceived( messenger, sock );
+	MessageClosureEnum closure = messageReceived( messenger, sock );
+	if( closure == MESSAGE_FINISHED ) {
+		doCallback();
+	}
+	return closure;
 }
 
 DCMsg::MessageClosureEnum
@@ -103,7 +175,7 @@ void
 DCMsg::reportSuccess( DCMessenger *messenger )
 {
 	dprintf( m_msg_success_debug_level, "Sent %s to %s\n",
-			 getCommandString( m_cmd),
+			 name(),
 			 messenger->peerDescription() );
 }
 
@@ -111,7 +183,7 @@ void
 DCMsg::reportFailure( DCMessenger *messenger )
 {
 	dprintf( m_msg_failure_debug_level, "Failed to send %s to %s: %s\n",
-			 getCommandString( m_cmd ),
+			 name(),
 			 messenger->peerDescription(),
 			 m_errstack.getFullText() );
 }
@@ -146,19 +218,25 @@ DCMessenger::DCMessenger( classy_counted_ptr<Daemon> daemon )
 {
 	m_daemon = daemon;
 	m_sock = NULL;
-	m_current_msg = NULL;
+	m_callback_msg = NULL;
+	m_callback_sock = NULL;
+	m_pending_operation = NOTHING_PENDING;
 }
 
 DCMessenger::DCMessenger( Sock *sock )
 {
 	m_sock = sock;
-	m_current_msg = NULL;
+	m_callback_msg = NULL;
+	m_callback_sock = NULL;
+	m_pending_operation = NOTHING_PENDING;
 }
 
 DCMessenger::~DCMessenger()
 {
 		// should never get deleted in the middle of a pending operation
-	ASSERT(!m_current_msg.get());
+	ASSERT(!m_callback_msg.get());
+	ASSERT(!m_callback_sock);
+	ASSERT(m_pending_operation == NOTHING_PENDING);
 
 	if( m_sock ) {
 		delete m_sock;
@@ -171,18 +249,26 @@ char const *DCMessenger::peerDescription()
 		return m_daemon->idStr();
 	}
 	if( m_sock ) {
-		return m_sock->get_sinful_peer();
+		return m_sock->peer_description();
 	}
 	EXCEPT("No daemon or sock object in DCMessenger::peerDescription()");
 	return NULL;
 }
 
-void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg, Stream::stream_type st, int timeout )
+void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 {
 	MyString error;
+	msg->setMessenger( this );
+
+	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED ) {
+		msg->callMessageSendFailed( this );
+		return;
+	}
+
 		// For a UDP message, we may need to register two sockets, one for
 		// the SafeSock and another for a ReliSock to establish the
 		// security session.
+	Stream::stream_type st = msg->getStreamType();
 	if( daemonCoreSockAdapter.TooManyRegisteredSockets(-1,&error,st==Stream::safe_sock?2:1) ) {
 			// Try again in a sec
 			// Eventually, it would be better to queue this centrally
@@ -191,33 +277,46 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg, Stream::stream_ty
 			// priority of different messages etc.
 		dprintf(D_FULLDEBUG, "Delaying delivery of %s to %s, because %s\n",
 				msg->name(),peerDescription(),error.Value());
-		startCommandAfterDelay( 1, msg, st, timeout );
+		startCommandAfterDelay( 1, msg );
 		return;
 	}
 
 		// Currently, there may be only one pending operation per messenger.
-	ASSERT(!m_current_msg.get());
+	ASSERT(!m_callback_msg.get());
+	ASSERT(!m_callback_sock);
+	ASSERT(m_pending_operation == NOTHING_PENDING);
 
-	m_current_msg = msg;
+	m_pending_operation = START_COMMAND_PENDING;
+	m_callback_msg = msg;
 
 	incRefCount();
-	m_daemon->startCommand_nonblocking (
+	const bool nonblocking = true;
+	m_daemon->startCommand (
 		msg->m_cmd,
 		st,
-		timeout,
+		&m_callback_sock,
+		msg->getTimeout(),
 		&msg->m_errstack,
 		&DCMessenger::connectCallback,
-		this );
+		this,
+		nonblocking,
+		msg->name(),
+		msg->getRawProtocol(),
+		msg->getSecSessionId());
 }
 
 void
-DCMessenger::sendBlockingMsg( classy_counted_ptr<DCMsg> msg, Stream::stream_type st, int timeout )
+DCMessenger::sendBlockingMsg( classy_counted_ptr<DCMsg> msg )
 {
+	msg->setMessenger( this );
 	Sock *sock = m_daemon->startCommand (
 		msg->m_cmd,
-		st,
-		timeout,
-		&msg->m_errstack);
+		msg->getStreamType(),
+		msg->getTimeout(),
+		&msg->m_errstack,
+		msg->name(),
+		msg->getRawProtocol(),
+		msg->getSecSessionId());
 
 	if( !sock ) {
 		msg->callMessageSendFailed( this );
@@ -245,8 +344,11 @@ DCMessenger::connectCallback(bool success, Sock *sock, CondorError *, void *misc
 	ASSERT(misc_data);
 
 	DCMessenger *self = (DCMessenger *)misc_data;
-	classy_counted_ptr<DCMsg> msg = self->m_current_msg;
-	self->m_current_msg = NULL;
+	classy_counted_ptr<DCMsg> msg = self->m_callback_msg;
+
+	self->m_callback_msg = NULL;
+	self->m_callback_sock = NULL;
+	self->m_pending_operation = NOTHING_PENDING;
 
 	if(!success) {
 		msg->callMessageSendFailed( self );
@@ -265,6 +367,7 @@ void DCMessenger::writeMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 	ASSERT( msg.get() );
 	ASSERT( sock );
 
+	msg->setMessenger( this );
 	incRefCount();
 
 		/* Some day, we may send message asynchronously and call
@@ -273,7 +376,11 @@ void DCMessenger::writeMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 
 	sock->encode();
 
-	if( !msg->writeMsg( this, sock ) ) {
+	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED ) {
+		msg->callMessageSendFailed( this );
+		doneWithSock(sock);
+	}
+	else if( !msg->writeMsg( this, sock ) ) {
 		msg->callMessageSendFailed( this );
 		doneWithSock(sock);
 	}
@@ -301,10 +408,14 @@ void DCMessenger::writeMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 void DCMessenger::startReceiveMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 {
 		// Currently, only one pending message per messenger.
-	ASSERT( !m_current_msg.get() );
+	ASSERT( !m_callback_msg.get() );
+	ASSERT( !m_callback_sock );
+	ASSERT( m_pending_operation == NOTHING_PENDING );
+
+	msg->setMessenger( this );
 
 	MyString name;
-	name.sprintf("<%s>", msg->name());
+	name.sprintf("DCMessenger::receiveMsgCallback %s", msg->name());
 
 	incRefCount();
 
@@ -317,36 +428,31 @@ void DCMessenger::startReceiveMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 			CEDAR_ERR_REGISTER_SOCK_FAILED,
 			"failed to register socket (Register_Socket returned %d)",
 			reg_rc );
-		msg->callMessageSendFailed( this );
+		msg->callMessageReceiveFailed( this );
 		doneWithSock(sock);
 		decRefCount();
 		return;
 	}
 
-	m_current_msg = msg; // prevent msg from going out of reference
-	ASSERT(daemonCoreSockAdapter.Register_DataPtr( msg.get() ));
+	m_callback_msg = msg; // prevent msg from going out of reference
+	m_callback_sock = sock;
+	m_pending_operation = RECEIVE_MSG_PENDING;
 }
 
 int
 DCMessenger::receiveMsgCallback(Stream *sock)
 {
-	classy_counted_ptr<DCMsg> msg = (DCMsg *) daemonCoreSockAdapter.GetDataPtr();
+	classy_counted_ptr<DCMsg> msg = m_callback_msg;
 	ASSERT(msg.get());
-	DCMessenger *self = msg->m_messenger_callback_ref;
-	ASSERT(self);
 
-	m_current_msg = NULL;
+	m_callback_msg = NULL;
+	m_callback_sock = NULL;
+	m_pending_operation = NOTHING_PENDING;
 
 	daemonCoreSockAdapter.Cancel_Socket( sock );
 
-	if( !msg->readMsg( this, (Sock *)sock ) ) {
-		msg->callMessageReceiveFailed( this );
-		doneWithSock(sock);
-	}
-	else {
-		ASSERT( sock );
-		readMsg( msg, (Sock *)sock );
-	}
+	ASSERT( sock );
+	readMsg( msg, (Sock *)sock );
 
 	decRefCount();
 	return KEEP_STREAM;
@@ -358,11 +464,16 @@ DCMessenger::readMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 	ASSERT( msg.get() );
 	ASSERT( sock );
 
+	msg->setMessenger( this );
+
 	incRefCount();
 
 	sock->decode();
 
-	if( !msg->readMsg( this, sock ) ) {
+	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED ) {
+		msg->callMessageReceiveFailed( this );
+	}
+	else if( !msg->readMsg( this, sock ) ) {
 		msg->callMessageReceiveFailed( this );
 	}
 	else if( !sock->eom() ) {
@@ -385,20 +496,35 @@ DCMessenger::readMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 	decRefCount();
 }
 
+void
+DCMessenger::cancelMessage( classy_counted_ptr<DCMsg> msg )
+{
+	if( msg.get() != m_callback_msg.get() ) {
+		return;
+	}
+
+	if( m_pending_operation == NOTHING_PENDING ) {
+		return;
+	}
+
+	if( m_callback_sock && m_callback_sock->get_file_desc() != INVALID_SOCKET ) {
+		m_callback_sock->close();
+			// force callback now so everything gets cleaned up properly
+		daemonCoreSockAdapter.CallSocketHandler( m_callback_sock );
+	}
+}
+
+
 struct QueuedCommand {
 	classy_counted_ptr<DCMsg> msg;
-	Stream::stream_type stream_type;
-	int timeout;
 	int timer_handle;
 };
 
 void
-DCMessenger::startCommandAfterDelay( unsigned int delay, classy_counted_ptr<DCMsg> msg, Stream::stream_type st, int timeout )
+DCMessenger::startCommandAfterDelay( unsigned int delay, classy_counted_ptr<DCMsg> msg )
 {
 	QueuedCommand *qc = new QueuedCommand;
 	qc->msg = msg;
-	qc->stream_type = st;
-	qc->timeout = timeout;
 
 	incRefCount();
 	qc->timer_handle = daemonCoreSockAdapter.Register_Timer(
@@ -415,12 +541,10 @@ int DCMessenger::startCommandAfterDelay_alarm()
 	QueuedCommand *qc = (QueuedCommand *)daemonCoreSockAdapter.GetDataPtr();
 	ASSERT(qc);
 
-	startCommand(qc->msg,qc->stream_type,qc->timeout);
+	startCommand(qc->msg);
 
 	delete qc;
 	decRefCount();
-
-
 
 	return TRUE;
 }
@@ -451,4 +575,25 @@ bool DCStringMsg::readMsg( DCMessenger *, Sock *sock )
 	free(str);
 
 	return true;
+}
+
+void
+DCMsgCallback::doCallback()
+{
+	(m_service->*m_fn_cpp)(this);
+}
+
+DCMsgCallback::DCMsgCallback(CppFunction fn,Service *service,void *misc_data)
+{
+	m_fn_cpp = fn;
+	m_service = service;
+	m_misc_data = misc_data;
+}
+
+void
+DCMsgCallback::cancelMessage()
+{
+	if( m_msg.get() ) {
+		m_msg->cancelMessage();
+	}
 }

@@ -23,6 +23,10 @@
 #include "proc_family_monitor.h"
 #include "procd_common.h"
 
+#if !defined(WIN32)
+#include "glexec_kill.h"
+#endif
+
 ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
                        pid_t              root_pid,
                        birthday_t         root_birthday,
@@ -35,9 +39,12 @@ ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
 	m_max_snapshot_interval(max_snapshot_interval),
 	m_exited_user_cpu_time(0),
 	m_exited_sys_cpu_time(0),
-	m_exited_max_image_size(0),
+	m_max_image_size(0),
 	m_member_list(NULL)
 {
+#if !defined(WIN32)
+	m_proxy = NULL;
+#endif
 }
 
 ProcFamily::~ProcFamily()
@@ -55,6 +62,50 @@ ProcFamily::~ProcFamily()
 		delete member;
 		member = next_member;
 	}
+
+#if !defined(WIN32)
+	// delete the proxy if we've been given one
+	//
+	if (m_proxy != NULL) {
+		free(m_proxy);
+	}
+#endif
+}
+
+unsigned long
+ProcFamily::update_max_image_size(unsigned long children_imgsize)
+{
+	// add image sizes from our processes to the total image size from
+	// our child families
+	//
+	unsigned long imgsize = children_imgsize;
+	ProcFamilyMember* member = m_member_list;
+	while (member != NULL) {
+#if defined(WIN32)
+		// comment copied from the older process tracking logic
+		// (before the ProcD):
+		//    On Win32, the imgsize from ProcInfo returns exactly
+		//    what it says.... this means we get all the bytes mapped
+		//    into the process image, incl all the DLLs. This means
+		//    a little program returns at least 15+ megs. The ProcInfo
+		//    rssize is much closer to what the TaskManager reports,
+		//    which makes more sense for now.
+		imgsize += member->m_proc_info->rssize;
+#else
+		imgsize += member->m_proc_info->imgsize;
+#endif
+		member = member->m_next;
+	}
+
+	// update m_max_image_size if we have a new max
+	//
+	if (imgsize > m_max_image_size) {
+		m_max_image_size = imgsize;
+	}
+
+	// finally, return our _current_ total image size
+	//
+	return imgsize;
 }
 
 void
@@ -73,12 +124,8 @@ ProcFamily::aggregate_usage(ProcFamilyUsage* usage)
 		usage->sys_cpu_time += member->m_proc_info->sys_time;
 		usage->percent_cpu += member->m_proc_info->cpuusage;
 
-		// mage size
+		// current total image size
 		//
-		unsigned long image_size = get_image_size(member->m_proc_info);
-		if (image_size > usage->max_image_size) {
-			usage->max_image_size = image_size;
-		}
 		usage->total_image_size += member->m_proc_info->imgsize;
 
 		// number of alive processes
@@ -88,22 +135,38 @@ ProcFamily::aggregate_usage(ProcFamilyUsage* usage)
 		member = member->m_next;
 	}
 
-	// factor in usage from processes that have exited
+	// factor in CPU usage from processes that have exited
 	//
 	usage->user_cpu_time += m_exited_user_cpu_time;
 	usage->sys_cpu_time += m_exited_sys_cpu_time;
-	if (m_exited_max_image_size > usage->max_image_size) {
-		usage->max_image_size = m_exited_max_image_size;
+}
+
+void
+ProcFamily::signal_root(int sig)
+{
+#if !defined(WIN32)
+	if (m_proxy != NULL) {
+		glexec_kill(m_proxy, m_root_pid, sig);
+		return;
 	}
+#endif
+	send_signal(m_root_pid, sig);
 }
 
 void
 ProcFamily::spree(int sig)
 {
-	ProcFamilyMember* member = m_member_list;
-	while (member != NULL) {
-		send_signal(member->m_proc_info, sig);
-		member = member->m_next;
+	ProcFamilyMember* member;
+	for (member = m_member_list; member != NULL; member = member->m_next) {
+#if !defined(WIN32)
+		if (m_proxy != NULL) {
+			glexec_kill(m_proxy,
+			            member->m_proc_info->pid,
+			            sig);
+			continue;
+		}
+#endif
+		send_signal(member->m_proc_info->pid, sig);
 	}
 }
 
@@ -163,17 +226,12 @@ ProcFamily::remove_exited_processes()
 				        member->m_proc_info->pid);
 			}
 
-			// account for usage from this process
+			// save CPU usage from this process
 			//
 			m_exited_user_cpu_time +=
 				member->m_proc_info->user_time;
 			m_exited_sys_cpu_time +=
 				member->m_proc_info->sys_time;
-			unsigned long image_size =
-				get_image_size(member->m_proc_info);
-			if (image_size > m_exited_max_image_size) {
-				m_exited_max_image_size = image_size;
-			}
 
 			// keep our monitor's hash table up to date!
 			//
@@ -215,13 +273,10 @@ ProcFamily::remove_exited_processes()
 void
 ProcFamily::fold_into_parent(ProcFamily* parent)
 {
-	// fold in usage info from our dead processes
+	// fold in CPU usage info from our dead processes
 	//
 	parent->m_exited_user_cpu_time += m_exited_user_cpu_time;
 	parent->m_exited_sys_cpu_time += m_exited_sys_cpu_time;
-	if (m_exited_max_image_size > parent->m_exited_max_image_size) {
-		parent->m_exited_max_image_size = m_exited_max_image_size;
-	}
 
 	// nothing left to do if our member list is empty
 	//
@@ -253,6 +308,18 @@ ProcFamily::fold_into_parent(ProcFamily* parent)
 	parent->m_member_list = m_member_list;
 	m_member_list = NULL;
 }
+
+#if !defined(WIN32)
+void
+ProcFamily::set_proxy(char* proxy)
+{
+	if (m_proxy != NULL) {
+		free(m_proxy);
+	}
+	m_proxy = strdup(proxy);
+	ASSERT(m_proxy != NULL);
+}
+#endif
 
 #if defined(PROCD_DEBUG)
 

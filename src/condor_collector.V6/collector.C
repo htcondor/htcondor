@@ -47,9 +47,12 @@
 
 #include "collector.h"
 
+#if HAVE_DLOPEN
+#include "CollectorPlugin.h"
+#endif
+
 //----------------------------------------------------------------
 
-extern char* mySubSystem;
 extern "C" char* CondorVersion( void );
 extern "C" char* CondorPlatform( void );
 
@@ -498,6 +501,10 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	if (command == INVALIDATE_STARTD_ADS)
 		process_invalidation (STARTD_PVT_AD, cad, sock);
 
+#if HAVE_DLOPEN
+	CollectorPluginManager::Invalidate(command, cad);
+#endif
+
 	if(View_Collector && ((command == INVALIDATE_STARTD_ADS) || 
 		(command == INVALIDATE_SUBMITTOR_ADS)) ) {
 		send_classad_to_sock(command, View_Collector, &cad);
@@ -558,6 +565,10 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 				command);
 		}
 	}
+
+#if HAVE_DLOPEN
+	CollectorPluginManager::Update(command, *cad);
+#endif
 
 	if(View_Collector && ((command == UPDATE_STARTD_AD) || 
 			(command == UPDATE_SUBMITTOR_AD)) ) {
@@ -683,8 +694,6 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 
 int CollectorDaemon::query_scanFunc (ClassAd *cad)
 {
-	if (cad < CollectorEngine::THRESHOLD) return 1;
-
     if ((*cad) >= (*__query__))
     {
 		// Found a match --- append to our results list
@@ -703,10 +712,6 @@ Otherwise, return 1.
 
 int CollectorDaemon::select_by_match( ClassAd *cad )
 {
-	if(cad<CollectorEngine::THRESHOLD) {
-		return 1;
-	}
-
 	if( query_any_request <= *cad ) {
 		query_any_result = cad;
 		return 0;
@@ -762,8 +767,6 @@ int CollectorDaemon::invalidation_scanFunc (ClassAd *cad)
 	static char buffer[64];
 	
 	sprintf( buffer, "%s = -1", ATTR_LAST_HEARD_FROM );
-
-	if (cad < CollectorEngine::THRESHOLD) return 1;
 
     if ((*cad) >= (*__query__))
     {
@@ -929,7 +932,6 @@ void CollectorDaemon::Config()
     ClientTimeout = param_integer ("CLIENT_TIMEOUT",30);
     QueryTimeout = param_integer ("QUERY_TIMEOUT",60);
     ClassadLifetime = param_integer ("CLASSAD_LIFETIME",900);
-    MasterCheckInterval = param_integer ("MASTER_CHECK_INTERVAL",0);
 
     if (CollectorName) free (CollectorName);
     CollectorName = param("COLLECTOR_NAME");
@@ -995,7 +997,6 @@ void CollectorDaemon::Config()
     // set the appropriate parameters in the collector engine
     collector.setClientTimeout( ClientTimeout );
     collector.scheduleHousekeeper( ClassadLifetime );
-    if (MasterCheckInterval>0) collector.scheduleDownMasterCheck( MasterCheckInterval );
 
     // if we're not the View Collector, let's set something up to forward
     // all of our ads to the view collector.
@@ -1067,7 +1068,7 @@ void CollectorDaemon::Config()
 	time_t garbage_interval = param_integer( "COLLECTOR_STATS_SWEEP", DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL );
 	collectorStats.setGarbageCollectionInterval( garbage_interval );
 
-    size = param_integer ("COLLECTOR_QUERY_WORKERS",0);
+    size = param_integer ("COLLECTOR_QUERY_WORKERS", 32);
     forkQuery.setMaxWorkers( size );
 
     return;

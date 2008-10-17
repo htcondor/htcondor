@@ -115,6 +115,9 @@ void NordugridJobReconfig()
 	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
 	NordugridJob::setProbeInterval( tmp_int );
 
+	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
+	NordugridJob::setGahpCallTimeout( tmp_int );
+
 	// Tell all the resource objects to deal with their new config values
 	NordugridResource *next_resource;
 
@@ -241,6 +244,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
 	if ( strrchr( buff, ' ' ) ) {
 		SetRemoteJobId( strrchr( buff, ' ' ) + 1 );
+		myResource->AlreadySubmitted( this );
 	} else {
 		SetRemoteJobId( NULL );
 	}
@@ -285,6 +289,7 @@ NordugridJob::~NordugridJob()
 void NordugridJob::Reconfig()
 {
 	BaseJob::Reconfig();
+	gahp->setTimeout( gahpCallTimeout );
 }
 
 int NordugridJob::doEvaluateState()
@@ -402,6 +407,7 @@ int NordugridJob::doEvaluateState()
 			} break;
 		case GM_SUBMIT: {
 			if ( condorState == REMOVED || condorState == HELD ) {
+				myResource->CancelSubmit( this );
 				gmState = GM_UNSUBMITTED;
 				break;
 			}
@@ -416,6 +422,12 @@ int NordugridJob::doEvaluateState()
 			if ( now >= lastSubmitAttempt + submitInterval ) {
 
 				char *job_id = NULL;
+
+				// Once RequestSubmit() is called at least once, you must
+				// CancelRequest() once you're done with the request call
+				if ( myResource->RequestSubmit( this ) == false ) {
+					break;
+				}
 
 				if ( RSL == NULL ) {
 					RSL = buildSubmitRSL();
@@ -440,12 +452,14 @@ int NordugridJob::doEvaluateState()
 					ASSERT( job_id != NULL );
 					SetRemoteJobId( job_id );
 					free( job_id );
+					myResource->SubmitComplete( this );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					errorString = gahp->getErrorString();
 					dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s\n",
 							procID.cluster, procID.proc,
 							errorString.Value() );
+					myResource->CancelSubmit( this );
 					gmState = GM_UNSUBMITTED;
 				}
 
@@ -633,6 +647,7 @@ int NordugridJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
+			myResource->CancelSubmit( this );
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
@@ -660,6 +675,7 @@ int NordugridJob::doEvaluateState()
 			}
 			} break;
 		case GM_FAILED: {
+			myResource->CancelSubmit( this );
 			SetRemoteJobId( NULL );
 
 			if ( condorState == REMOVED ) {
@@ -724,6 +740,7 @@ int NordugridJob::doEvaluateState()
 					evictLogged = true;
 				}
 			}
+			myResource->CancelSubmit( this );
 			
 			if ( wantRematch ) {
 				dprintf(D_ALWAYS,

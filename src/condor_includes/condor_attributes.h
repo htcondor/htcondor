@@ -74,6 +74,9 @@ extern const char * ATTR_CLUSTER_ID;
 extern const char * ATTR_AUTO_CLUSTER_ID;
 extern const char * ATTR_AUTO_CLUSTER_ATTRS;
 extern const char * ATTR_COMPLETION_DATE;
+extern const char * ATTR_MATCHED_CONCURRENCY_LIMITS;
+extern const char * ATTR_CONCURRENCY_LIMITS;
+extern const char * ATTR_PREEMPTING_CONCURRENCY_LIMITS;
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
 #define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
 extern const char * ATTR_CONSOLE_IDLE;
@@ -138,6 +141,7 @@ extern const char * ATTR_GLOBAL_JOB_ID;
 extern const char * ATTR_GZIP;
 extern const char * ATTR_GLOBUS_CONTACT_STRING;
 extern const char * ATTR_GLOBUS_DELEGATION_URI;
+// Deprecated (cruft) -- no longer used
 extern const char * ATTR_GLOBUS_GRAM_VERSION;
 extern const char * ATTR_GLOBUS_RESOURCE;
 extern const char * ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME;
@@ -164,6 +168,7 @@ extern const char * ATTR_MYPROXY_CRED_NAME;
 extern const char * ATTR_MYPROXY_REFRESH_THRESHOLD;
 extern const char * ATTR_MYPROXY_NEW_PROXY_LIFETIME;
 // END ckireyev myproxy
+extern const char * ATTR_HARDWARE_ADDRESS;
 extern const char * ATTR_HAS_CHECKPOINTING;
 extern const char * ATTR_HAS_FILE_TRANSFER;
 extern const char * ATTR_HAS_PER_FILE_ENCRYPTION;
@@ -227,7 +232,9 @@ extern const char * ATTR_JOB_JAVA_VM_ARGS1;
 extern const char * ATTR_JOB_JAVA_VM_ARGS2;
 extern const char * ATTR_ORIG_JOB_IWD;
 extern const char * ATTR_JOB_REMOTE_IWD;
+extern const char * ATTR_JOB_LOAD_PROFILE;
 extern const char * ATTR_JOB_RUNAS_OWNER;
+extern const char * ATTR_JOB_LOAD_USER_PROFILE;
 extern const char * ATTR_JOB_LOCAL_CPU;
 extern const char * ATTR_JOB_LOCAL_SYS_CPU;
 extern const char * ATTR_JOB_LOCAL_USER_CPU;
@@ -497,6 +504,11 @@ extern const char * ATTR_USER;
 extern const char * ATTR_VACATE;
 extern const char * ATTR_VACATE_TYPE;
 extern const char * ATTR_VIRTUAL_MEMORY;
+extern const char * ATTR_VISA_TIMESTAMP;
+extern const char * ATTR_VISA_DAEMON_TYPE;
+extern const char * ATTR_VISA_DAEMON_PID;
+extern const char * ATTR_VISA_HOSTNAME;
+extern const char * ATTR_VISA_IP;
 extern const char * ATTR_WANT_CHECKPOINT;
 extern const char * ATTR_WANT_CLAIMING;
 extern const char * ATTR_WANT_IO_PROXY;
@@ -504,6 +516,8 @@ extern const char * ATTR_WANT_MATCH_DIAGNOSTICS;
 extern const char * ATTR_WANT_PARALLEL_SCHEDULING_GROUPS;
 extern const char * ATTR_WANT_REMOTE_SYSCALLS;
 extern const char * ATTR_WANT_REMOTE_IO;
+extern const char * ATTR_WANT_SCHEDD_COMPLETION_VISA;
+extern const char * ATTR_WANT_STARTER_EXECUTION_VISA;
 extern const char * ATTR_WANT_SUBMIT_NET_STATS;
 extern const char * ATTR_WANT_LAST_CKPT_SERVER_NET_STATS;
 extern const char * ATTR_WANT_CKPT_SERVER_NET_STATS;
@@ -589,11 +603,14 @@ extern const char * ATTR_SEC_PACKET_COUNT;
 extern const char * ATTR_SEC_NEGOTIATION;
 extern const char * ATTR_SEC_VALID_COMMANDS;
 extern const char * ATTR_SEC_SESSION_DURATION;
+extern const char * ATTR_SEC_SESSION_EXPIRES;
 extern const char * ATTR_SEC_USER;
+extern const char * ATTR_SEC_MY_REMOTE_USER_NAME;
 extern const char * ATTR_SEC_NEW_SESSION;
 extern const char * ATTR_SEC_USE_SESSION;
 extern const char * ATTR_SEC_COOKIE;
 extern const char * ATTR_SEC_AUTHENTICATED_USER;
+extern const char * ATTR_SEC_TRIED_AUTHENTICATION;
 
 extern const char * ATTR_MULTIPLE_TASKS_PER_PVMD;
 
@@ -658,6 +675,20 @@ extern const char *ATTR_VM_GUEST_IP;
 extern const char *ATTR_VM_GUEST_MEM;
 extern const char *ATTR_VM_CKPT_MAC;
 extern const char *ATTR_VM_CKPT_IP;
+
+
+//************* Added for Amazon Jobs ***************************//
+extern const char *ATTR_AMAZON_PUBLIC_KEY;
+extern const char *ATTR_AMAZON_PRIVATE_KEY;
+extern const char *ATTR_AMAZON_AMI_ID;
+extern const char *ATTR_AMAZON_KEY_PAIR_FILE;
+extern const char *ATTR_AMAZON_SECURITY_GROUPS;
+extern const char *ATTR_AMAZON_USER_DATA;
+extern const char *ATTR_AMAZON_USER_DATA_FILE;
+extern const char *ATTR_AMAZON_REMOTE_VM_NAME;
+extern const char *ATTR_AMAZON_INSTANCE_TYPE;
+//************* End of changes for Amamzon Jobs *****************//
+
 
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending

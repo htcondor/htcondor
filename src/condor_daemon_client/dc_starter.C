@@ -96,7 +96,7 @@ DCStarter::locate( void )
 
 bool
 DCStarter::reconnect( ClassAd* req, ClassAd* reply, ReliSock* rsock,
-					  int timeout )
+					  int timeout, char const *sec_session_id )
 {
 	setCmdStr( "reconnectJob" );
 
@@ -109,14 +109,14 @@ DCStarter::reconnect( ClassAd* req, ClassAd* reply, ReliSock* rsock,
 	line += '"';
 	req->Insert( line.Value() );
 
-	return sendCACmd( req, reply, rsock, false, timeout );
+	return sendCACmd( req, reply, rsock, false, timeout, sec_session_id );
 	
 
 }
 
 // Based on dc_schedd.C's updateGSIcredential
 DCStarter::X509UpdateStatus
-DCStarter::updateX509Proxy( const char * filename)
+DCStarter::updateX509Proxy( const char * filename, char const *sec_session_id)
 {
 	ReliSock rsock;
 	rsock.timeout(60);
@@ -127,7 +127,7 @@ DCStarter::updateX509Proxy( const char * filename)
 	}
 
 	CondorError errstack;
-	if( ! startCommand(UPDATE_GSI_CRED, &rsock, 0, &errstack) ) {
+	if( ! startCommand(UPDATE_GSI_CRED, &rsock, 0, &errstack, NULL, false, sec_session_id) ) {
 		dprintf( D_ALWAYS, "DCStarter::updateX509Proxy: "
 				 "Failed send command to the starter: %s\n",
 				 errstack.getFullText());
@@ -162,7 +162,7 @@ DCStarter::updateX509Proxy( const char * filename)
 }
 
 DCStarter::X509UpdateStatus
-DCStarter::delegateX509Proxy( const char * filename)
+DCStarter::delegateX509Proxy( const char * filename, char const *sec_session_id)
 {
 	ReliSock rsock;
 	rsock.timeout(60);
@@ -173,7 +173,7 @@ DCStarter::delegateX509Proxy( const char * filename)
 	}
 
 	CondorError errstack;
-	if( ! startCommand(DELEGATE_GSI_CRED_STARTER, &rsock, 0, &errstack) ) {
+	if( ! startCommand(DELEGATE_GSI_CRED_STARTER, &rsock, 0, &errstack, NULL, false, sec_session_id) ) {
 		dprintf( D_ALWAYS, "DCStarter::delegateX509Proxy: "
 				 "Failed send command to the starter: %s\n",
 				 errstack.getFullText());

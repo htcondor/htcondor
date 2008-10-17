@@ -514,13 +514,20 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 			 "Attempting to send update via UDP to collector %s\n",
 			 udp_update_destination );
 
+	bool raw_protocol = false;
+	if( cmd == UPDATE_COLLECTOR_AD || cmd == INVALIDATE_COLLECTOR_ADS ) {
+			// we *never* want to do security negotiation with the
+			// developer collector.
+		raw_protocol = true;
+	}
+
 	if(nonblocking) {
 		UpdateData *ud = new UpdateData(ad1,ad2,this);
-		startCommand_nonblocking(cmd, Sock::safe_sock, 20, NULL, UpdateData::startUpdateCallback, ud );
+		startCommand_nonblocking(cmd, Sock::safe_sock, 20, NULL, UpdateData::startUpdateCallback, ud, NULL, raw_protocol );
 		return true;
 	}
 
-	Sock *ssock = startCommand(cmd, Sock::safe_sock, 20);
+	Sock *ssock = startCommand(cmd, Sock::safe_sock, 20, NULL, NULL, raw_protocol);
 	if(!ssock) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "Failed to send UDP update command to collector" );

@@ -41,13 +41,13 @@ public:
 		RESET_FILE, RESET_FULL, RESET_INIT,
 	};
 
+	ReadUserLogState( void );
 	ReadUserLogState( const char *path,
 					  int max_rotations,
 					  int recent_thresh );
 	ReadUserLogState( const ReadUserLog::FileState &state,
 					  int recent_thresh );
 	~ReadUserLogState( void );
-	ReadUserLogState( void );
 
 	// Reset parameters about the current file (offset, stat info, etc.)
 	void Reset( ResetType type = RESET_FILE );

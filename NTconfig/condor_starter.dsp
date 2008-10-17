@@ -88,6 +88,14 @@ LINK32=link.exe
 # Name "condor_starter - Win32 Release"
 # Begin Source File
 
+SOURCE=..\src\condor_starter.V6.1\condor_privsep_helper.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\condor_privsep_helper.WINDOWS.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_starter.V6.1\io_proxy.C
 # End Source File
 # Begin Source File
@@ -252,10 +260,6 @@ SOURCE=..\src\condor_starter.V6.1\starter_class.C
 # Begin Source File
 
 SOURCE=..\src\condor_starter.V6.1\starter_privsep_helper.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_starter.V6.1\starter_privsep_helper.WINDOWS.C
 # End Source File
 # Begin Source File
 

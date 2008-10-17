@@ -20,30 +20,49 @@ if not exist %1\etc\NUL mkdir %1\etc
 if not exist %1\sql\NUL mkdir %1\sql
 if not exist %1\src\NUL mkdir %1\src
 if not exist %1\src\chirp\NUL mkdir %1\src\chirp
-echo Copying files...
+if not exist %1\examples\NUL mkdir %1\examples
+if not exist %1\examples\cpusoak\NUL mkdir %1\examples\cpusoak
+if not exist %1\examples\printname\NUL mkdir %1\examples\printname
+if not exist %1\examples\rc5\NUL mkdir %1\examples\rc5
+
+echo. & echo Copying root Condor files...
 copy ..\Release\*.exe %1\bin
 copy ..\Release\*.dll %1\bin
-copy ..\src\condor_starter.V6.1\*.class %1\lib
-copy ..\src\condor_starter.V6.1\*.jar %1\lib
-copy ..\src\condor_chirp\Chirp.jar %1\lib
-copy ..\src\condor_examples\condor_config.* %1\etc
-copy ..\src\condor_examples\condor_vmgahp_config.vmware %1\etc
+copy msvcrt.dll %1\bin
+copy msvcirt.dll %1\bin
 copy ..\src\condor_vm-gahp\condor_vm_vmware.pl %1\bin
 copy ..\src\condor_vm-gahp\*.dll %1\bin
 copy ..\src\condor_vm-gahp\mkisofs.exe %1\bin
+
+echo. & echo Copying Chirp files...
+copy ..\src\condor_starter.V6.1\*.class %1\lib
+copy ..\src\condor_starter.V6.1\*.jar %1\lib
+copy ..\src\condor_chirp\Chirp.jar %1\lib
 copy ..\src\condor_chirp\chirp_* %1\src\chirp
 copy ..\src\condor_chirp\PROTOCOL %1\src\chirp
 copy ..\src\condor_chirp\chirp\LICENSE %1\src\chirp
 copy ..\src\condor_chirp\chirp\doc\Condor %1\src\chirp\README
-copy msvcrt.dll %1\bin
-copy msvcirt.dll %1\bin
-copy pdh.dll %1\bin
+
+echo. & echo Copying example configurations...
+copy ..\src\condor_examples\condor_config.* %1\etc
+copy ..\src\condor_examples\condor_vmgahp_config.vmware %1\etc
+
+echo. & echo Copying example submit files...
+copy installer\examples\*.* %1\examples
+copy installer\examples\cpusoak\*.* %1\examples\cpusoak
+copy installer\examples\printname\*.* %1\examples\printname
+copy installer\examples\rc5\*.* %1\examples\rc5
+
+echo. & echo Copying SQL files...
 copy ..\src\condor_tt\*.sql %1\sql
+
+echo. & echo Copying WSDL files...
 pushd .
 cd ..\src
 for /R %%f in (*.wsdl) do copy %%f %1\lib\webservice
 popd
-echo Stripping out debug symbols from files...
+
+echo. & echo Stripping out debug symbols from files...
 pushd %1\bin
 echo %VC_DIR%
 for %%f in (*.exe) do "%VC_DIR%\rebase" -b 0x400000 -x . -a %%f
@@ -60,6 +79,8 @@ copy condor.exe condor_reconfig.exe
 copy condor.exe condor_reschedule.exe
 copy condor.exe condor_vacate.exe
 copy condor_cod.exe condor_cod_request.exe
+
+echo. & echo Copying DRMAA files...
 cd ..
 if not exist include\NUL mkdir include
 copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\include\* include

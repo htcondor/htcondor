@@ -31,7 +31,6 @@
 #include "dynuser.h"
 #include "condor_config.h"
 #include "domain_tools.h"
-#include "../condor_privsep/condor_privsep.h"
 
 #ifdef WIN32
 extern dynuser* myDynuser;
@@ -59,7 +58,15 @@ VanillaProc::StartJob()
 			  (stricmp(".cmd",&(jobtmp[joblen-4])) == 0) ) ) {
 		// executable name ends in .bat or .cmd
 
-		// first change executable to be cmd.exe
+		// pull out pathname to executable and save
+		MyString JobName;
+		if ( JobAd->LookupString( ATTR_JOB_CMD, JobName ) != 1 ) {
+			// really strange it is not there.  fall back
+			// on the origJobName.
+			JobName = jobtmp;
+		}
+
+		// now  change executable to be cmd.exe
 		::GetSystemDirectory(systemshell,MAX_PATH);
 		MyString tmp;
 		tmp.sprintf("%s\\cmd.exe",systemshell);
@@ -80,7 +87,17 @@ VanillaProc::StartJob()
 
 		args.AppendArg("/Q");
 		args.AppendArg("/C");
-		args.AppendArg("condor_exec.bat");
+			// If we transferred the job, it may have been
+			// renamed to condor_exec.exe even though it is a batch file.
+			// We will have to rename it back to a .bat before it will run.
+		if ( stricmp(CONDOR_EXEC,condor_basename(JobName.Value()))==0 ) {
+				// we also must rename file condor_exec.exe to condor_exec.bat
+			args.AppendArg("condor_exec.bat");				
+			rename(CONDOR_EXEC,"condor_exec.bat");
+		} else {
+				// Wasn't renamed
+			args.AppendArg(JobName);
+		}
 
 		if(!args.AppendArgsFromClassAd(JobAd,&arg_errors) ||
 		   !args.InsertArgsIntoClassAd(JobAd,NULL,&arg_errors)) {
@@ -89,8 +106,6 @@ VanillaProc::StartJob()
 			return FALSE;
 		}
 
-		// finally we must rename file condor_exec to condor_exec.bat
-		rename(CONDOR_EXEC,"condor_exec.bat");
 
 		if(DebugFlags & D_FULLDEBUG) {
 			MyString args_desc;
@@ -130,7 +145,9 @@ VanillaProc::StartJob()
 	//
 	gid_t tracking_gid;
 	if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
-		if (!can_switch_ids() && !privsep_enabled()) {
+		if (!can_switch_ids() &&
+		    (Starter->condorPrivSepHelper() == NULL))
+		{
 			EXCEPT("USE_GID_PROCESS_TRACKING enabled, but can't modify "
 			           "the group list of our children unless running as "
 			           "root or using PrivSep");

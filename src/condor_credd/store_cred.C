@@ -31,6 +31,7 @@
 #include "dc_credd.h"
 #include "credential.h"
 #include "condor_version.h"
+#include "openssl/ui_compat.h"
 
 char Myproxy_pw[512];	// pasaword for credential access from MyProxy
 // Read MyProxy password from terminal, or stdin.

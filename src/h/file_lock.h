@@ -21,6 +21,7 @@
 #define FILE_LOCK_H
 
 #include "condor_constants.h"
+#include <stdio.h>	// for FILE
 
 typedef enum { READ_LOCK, WRITE_LOCK, UN_LOCK } LOCK_TYPE;
 
@@ -48,7 +49,7 @@ int lock_file_plain( int fd, LOCK_TYPE lock_type, BOOLEAN do_block );
 #if defined(__cplusplus)
 
 	// C++ wrapper for lock_file.  Note that the constructor takes 
-	// the path to the file - if the path is supplied, then this class
+	// the path to the file, which must be supplied. This class
 	// will attempt to use a mutex instead of a filesystem lock unless
 	// the config file says otherwise.  We do this because (a) filesystem
 	// locks are often broken over NFS, and (b) filesystem locks are often
@@ -56,9 +57,8 @@ int lock_file_plain( int fd, LOCK_TYPE lock_type, BOOLEAN do_block );
 class FileLockBase
 {
   public:
-	FileLockBase( void )
-		{ m_state = UN_LOCK, m_blocking = true; };
-	virtual ~FileLockBase(void) { };
+	FileLockBase( void );
+	virtual ~FileLockBase(void);
 
 		// Read only access functions
 	bool isBlocking(void) const			// whether or not operations will block
@@ -74,7 +74,9 @@ class FileLockBase
 		// Control functions
 	virtual bool obtain( LOCK_TYPE t ) = 0;		// get a lock
 	virtual bool release(void) = 0;				// release a lock
-	virtual void SetFdFp( int fd, FILE *fp = NULL ) = 0;
+	void SetFdFp( int fd, FILE *fp = NULL )
+		{ SetFdFpFile( fd, fp, NULL ); };
+	virtual void SetFdFpFile( int fd, FILE *fp, const char *file ) = 0;
 
 		// Set lock mode
 	void setBlocking( bool val )		// set blocking TRUE or FALSE
@@ -84,11 +86,55 @@ class FileLockBase
 	virtual void display(void) const = 0;
 	const char *getStateString( LOCK_TYPE state ) const;
 
+	// An internal static list of lock objects associated with files
+	// is walked and each lock object is told to update the timestamp
+	// on its lockfile.  This makes it easy for daemoncore to
+	// periodically update the timestamps on the lock files regardless
+	// of the daemon using it.
+	static void	updateAllLockTimestamps(void);
+
+	// when the object is created or the lock file changed with
+	// SetFdFpFile(), this is invoked on the filename to ensure it has
+	// a current timestamp.  This prevents things like linux's
+	// tmpwatch from deleting a valid lock file.
+	virtual void updateLockTimestamp(void) { };
+
+
   protected:
 	bool		m_blocking;				// Whether or not to block
 	LOCK_TYPE	m_state;				// Type of lock we are holding
-};
 
+  private:
+	// When the lock object is instantiated, it keeps track of itself in
+	// a statically available master list--but only if it has a valid path
+	// which can also be adjusted by SetFdFpFile()()
+	void		recordExistence(void);
+	void		eraseExistence(void);
+
+	// used for the static linked list of all valid locks.
+	struct FileLockEntry
+	{
+		FileLockBase	*fl;
+		FileLockEntry	*next;
+	};
+
+	// Keep track of all valid FileLock objects allocated
+	// anywhere. This allows daemoncore to ask them to touch the atime
+	// of their lock files so programs like tmpwatch under linux don't
+	// get rid of in use lock files. A constraint is that a filelock
+	// is only recorded into this list if it has a non-null filename
+	// pointer associated with it.
+	// WARNING: I could not use a structure like the HashTable here
+	// because this file is included with user_log.c++.h and
+	// distributed with libcondorapi. Using HashTable would have
+	// caused many dependancies to be brought in header file-wise and
+	// things will get very ugly.
+	static FileLockEntry *m_all_locks;
+
+};	// FileLockBase
+
+
+// Real file lock class
 class FileLock : public FileLockBase
 {
   public:
@@ -98,9 +144,9 @@ class FileLock : public FileLockBase
 
 		// Not a fake lock
 	bool isFakeLock(void) const { return false; };
-	
-		// Set the file descriptor  & pointer
-	void SetFdFp( int fd, FILE *fp = NULL );
+
+		// Set the file descriptor, pointer, and file (which may not be NULL)
+	void SetFdFpFile( int fd, FILE *fp, const char *file );
 
 		// Control functions
 	bool obtain( LOCK_TYPE t );		// get a lock
@@ -109,15 +155,23 @@ class FileLock : public FileLockBase
 		// Read only access functions
 	virtual void display(void) const;
 
+	void updateLockTimestamp(void);
+
   private:
-	int			 m_fd;			// File descriptor to deal with
+
+	unsigned int m_id;		// the ID number for this object
+	int			 m_fd;		// File descriptor to deal with
 	FILE		*m_fp;
 	char		*m_path;		// Path to the file being locked, or NULL
 	int			 m_use_kernel_mutex;	// -1=unitialized,0=false,1=true
 
+	//
 	// Private methods
+	//
 	void		Reset( void );
-	int			lock_via_mutex( LOCK_TYPE type );
+
+	// Windows specific, actually
+	int			lockViaMutex( LOCK_TYPE type );
 # ifdef WIN32
 	HANDLE		m_debug_win32_mutex;
 # endif
@@ -134,8 +188,8 @@ class FakeFileLock : public FileLockBase
 	bool isFakeLock(void) const { return true; };
 
 		// Set the file descriptor  & pointer
-	void SetFdFp( int fd, FILE *fp = NULL )
-		{ (void) fd; (void) fp; };
+	void SetFdFpFile( int /*fd*/, FILE * /*fp*/, const char */*file*/ )
+		{ };
 
 		// Read only access functions
 	void display(void) const
@@ -146,9 +200,6 @@ class FakeFileLock : public FileLockBase
 		{ m_state = t; return true; };
 	bool release( void )				// release the lock
 		{ m_state = UN_LOCK; return true; };
-
-  private:
-
 };
 
 #endif	/* cpluscplus */

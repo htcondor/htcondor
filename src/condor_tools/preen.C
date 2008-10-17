@@ -79,6 +79,7 @@ BOOLEAN is_v2_ckpt( const char *name );
 BOOLEAN is_v3_ckpt( const char *name );
 BOOLEAN cluster_exists( int );
 BOOLEAN proc_exists( int, int );
+BOOLEAN is_myproxy_file( const char *name );
 
 /*
   Tell folks how to use this program.
@@ -234,6 +235,8 @@ check_spool_dir()
 	well_known_list.append( "Accountantnew.log" );
 	well_known_list.append( "local_univ_execute" );
 	well_known_list.append( "EventdShutdownRate.log" );
+		// SCHEDD.lock: High availability lock file.  Current
+		// manual recommends putting it in the spool, so avoid it.
 	well_known_list.append( "SCHEDD.lock" );
 
 	// connect to the Q manager
@@ -270,6 +273,12 @@ check_spool_dir()
 
 			// see if it's a legitimate checkpoint
 		if( is_ckpt_file(f) ) {
+			good_file( Spool, f );
+			continue;
+		}
+
+			// See if it's a legimate MyProxy password file
+		if ( is_myproxy_file( f ) ) {
 			good_file( Spool, f );
 			continue;
 		}
@@ -323,7 +332,7 @@ is_ckpt_file( const char *name )
 inline int
 grab_val( const char *str, const char *pattern )
 {
-	char	*ptr;
+	char const *ptr;
 
 	if( (ptr = strstr(str,pattern)) ) {
 		return atoi(ptr + strlen(pattern) );
@@ -384,6 +393,24 @@ is_v3_ckpt( const char *name )
 	} else {
 		return proc_exists( cluster, proc );
 	}
+}
+
+/*
+  Check whether the given file could be a valid MyProxy password file
+  for a queued job.
+*/
+BOOLEAN
+is_myproxy_file( const char *name )
+{
+	int cluster, proc;
+
+		// TODO This will accept files that look like a valid MyProxy
+		//   password file with extra characters on the end of the name.
+	int rc = sscanf( name, "mpp.%d.%d", &cluster, &proc );
+	if ( rc != 2 ) {
+		return FALSE;
+	}
+	return proc_exists( cluster, proc );
 }
 
 /*

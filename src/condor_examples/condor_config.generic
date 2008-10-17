@@ -886,6 +886,15 @@ JOB_ROUTER_LOG  = $(LOG)/JobRouterLog
 ##  Lock files
 SHADOW_LOCK	= $(LOCK)/ShadowLock
 
+## This setting controls how often any lock files currently in use have their
+## timestamp updated. Updating the timestamp prevents administrative programs 
+## like 'tmpwatch' from deleting long lived lock files. The parameter is
+## an integer in seconds with a minimum of 60 seconds. The default if not
+## specified is 28800 seconds, or 8 hours.
+## This attribute only takes effect on restart of the daemons or at the next
+## update time.
+# LOCK_FILE_UPDATE_INTERVAL = 28800
+
 ##  This setting primarily allows you to change the port that the
 ##  collector is listening on.  By default, the collector uses port
 ##  9618, but you can set the port with a ":port", such as:
@@ -984,11 +993,10 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 
 ##  Which daemons use the Condor DaemonCore library (i.e., not the
 ##  checkpoint server or custom user daemons)?
-##  Note: Daemons in this list cannot use a static command port.
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
 #VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
-#QUILL, JOB_ROUTER
+#DBMSD, QUILL, JOB_ROUTER
 
 
 ##  Where are the binaries for these daemons?
@@ -1755,17 +1763,6 @@ C_GAHP_WORKER_THREAD_LOCK = /tmp/CGAHPWorkerLock.$(USERNAME)
 
 ##
 ## The location of the wrapper for invoking
-## GT3 GAHP server
-##
-GT3_GAHP = $(SBIN)/gt3_gahp
-
-##
-## The location of GT3 files. This should normally be lib/gt3
-##
-GT3_LOCATION = $(LIB)/gt3
-
-##
-## The location of the wrapper for invoking
 ## GT4 GAHP server
 ##
 GT4_GAHP = $(SBIN)/gt4_gahp
@@ -1774,6 +1771,17 @@ GT4_GAHP = $(SBIN)/gt4_gahp
 ## The location of GT4 files. This should normally be lib/gt4
 ##
 GT4_LOCATION = $(LIB)/gt4
+
+##
+## The location of the wrapper for invoking
+## GT4 GAHP server
+##
+GT42_GAHP = $(SBIN)/gt42_gahp
+
+##
+## The location of GT4 files. This should normally be lib/gt4
+##
+GT42_LOCATION = $(LIB)/gt42
 
 ##
 ## gt4 gram requires a gridftp server to perform file transfers.
@@ -1807,6 +1815,32 @@ NORDUGRID_GAHP = $(SBIN)/nordugrid_gahp
 ## Condor-G and CredD can use MyProxy to refresh GSI proxies which are
 ## about to expire.
 #MYPROXY_GET_DELEGATION = /path/to/myproxy-get-delegation
+
+##
+## EC2: Universe = Grid, Grid_Resource = Amazon
+##
+
+## The location of the amazon-gahp programs, required
+AMAZON_GAHP = $(SBIN)/amazon-gahp
+
+## Location of log files, useful for debugging, must be in
+## a directory writable by any user, such as /tmp
+#AMAZON_GAHP_DEBUG = D_FULLDEBUG
+AMAZON_GAHP_LOG = /tmp/AmazonGahpLog.$(USERNAME)
+
+## The number of seconds between status update requests to EC2. You can
+## make this short (5 seconds) if you want Condor to respond quickly to
+## instances as they terminate, or you can make it long (300 seconds = 5
+## minutes) if you know your instances will run for awhile and don't mind
+## delay between when they stop and when Condor responds to them
+## stopping.
+GRIDMANAGER_JOB_PROBE_INTERVAL = 300
+
+## As of this writing Amazon EC2 has a hard limit of 20 concurrently
+## running instances, so a limit of 20 is imposed so the GridManager
+## does not waste its time sending requests that will be rejected.
+#GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE = 20
+
 
 ##
 ##--------------------------------------------------------------------
@@ -1973,12 +2007,17 @@ QUILL_ADDRESS_FILE = $(LOG)/.quill_address
 
 # What kind of database server is this?
 # For now, only PGSQL is supported
-#QUILL_DB_TYPE = "PGSQL"
+#QUILL_DB_TYPE = PGSQL
 
 # The machine and port of the postgres server.
 # Although this says IP Addr, it can be a DNS name. 
 # It must match whatever format you used for the .pgpass file, however
 #QUILL_DB_IP_ADDR = machine.domain.com:5432
+
+# The login to use to attach to the database for updating information.
+# There should be an entry in file $SPOOL/.pgpass that gives the password 
+# for this login id.
+#QUILL_DB_USER = quillwriter
 
 # Polling period, in seconds, for when quill reads transactions out of the
 # schedd's job queue log file and puts them into the database.

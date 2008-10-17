@@ -7,7 +7,7 @@ all_target( $(PROGRAMS) condor_vm_xen.sh condor_vm_vmware.pl)
 CFLAGS = $(STD_C_FLAGS)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 
 soapobjs(vmgahp)
 
@@ -27,6 +27,6 @@ html:
 testbin:: all
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_util_lib, setsyscalls.o)
+import_objs(../condor_util_lib, setsyscalls.o)
 
 gen_soapfiles(vmgahp,condorVMgahp)

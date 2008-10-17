@@ -24,7 +24,9 @@
 
 #include "condor_common.h"
 #include "condor_crypt.h"             // For now, we include it
+#include "MyString.h"
 #include "CryptKey.h"                 // KeyInfo
+#include "condor_ver_info.h"
 // This #define is a desperate move. GNU g++ seems to choke at runtime on our
 // inline function for eom.  Someday not needed ?
 #define eom end_of_message
@@ -236,6 +238,8 @@ public:
     ///
 	int code(char *&);
     ///
+	int code(MyString &);
+    ///
 	int code(char *&, int &);
     ///
 	int code_bytes(void *, int);
@@ -388,6 +392,7 @@ public:
 	int put(float);
 	int put(double);
 	int put(char const *);
+	int put(const MyString &);
 	int put(char const *, int);
 
 
@@ -409,6 +414,8 @@ public:
 	int get(float &);
 	int get(double &);
 
+	int get(MyString &);
+
 		// This function assigns the argument to a freshly mallocated string
 		// or NULL.  The caller should free the string.
 		// NOTE: arg MUST be NULL when this function is called.
@@ -425,6 +432,32 @@ public:
 		// ONLY valid until the next function call on this stream.
 		// Caller should NOT free the buffer or modify its contents.
 	int get_string_ptr( char const *&s );
+
+		// This is just like get(char const *&), but it calls
+		// prepare_crypto_for_secret() before and
+		// restore_crypto_after_secret() after.
+	int get_secret( char *&s );
+		// This is just like put(char const *), but it calls
+		// prepare_crypto_for_secret() before and
+		// restore_crypto_after_secret() after.
+	int put_secret(char const *);
+
+		// Checks configuration parameter ENCRYPT_SECRETS and forces
+		// encryption on if necessary (and if possible).  After
+		// writing the secret, this MUST be followed by
+		// exactly one call to restore_crypto_after_secret.
+	void prepare_crypto_for_secret();
+
+		// Restores encryption state to what it was before
+		// prepare_crypto_for_secret.  This should NEVER be called
+		// unless prepare_crypto_for_secret was called previously.
+	void restore_crypto_after_secret();
+
+		// returns true if we are not configured to encrypt secrets
+		// or this socket is already encrypting everything
+		// or this socket is not capable of encrypting
+		// or our peer is too old to read secrets correctly.
+	bool prepare_crypto_for_secret_is_noop();
 
 	/*
 	**	Stream protocol
@@ -494,9 +527,22 @@ public:
 	/// For stream types that support it, this returns the ip address we are connecting to.
 	virtual char const *endpoint_ip_str() = 0;
 
+	/// For stream types that support it, this is the sinful address of peer.
+	virtual char const *default_peer_description() = 0;
+
 	/// For stream types that support it, this is the sinful address of peer
+	/// or a more descriptive string assigned by set_peer_description().
 	/// This is suitable for passing to dprintf() (never NULL).
-	virtual char const *peer_description() = 0;
+	char const *peer_description();
+
+	void set_peer_description(char const *str);
+
+	/// If we know the peer's version (e.g. from security handshake),
+	/// return it.  Otherwise, return NULL.
+	CondorVersionInfo const *get_peer_version() const;
+
+	/// Set the peer's version.
+	void set_peer_version(CondorVersionInfo const *version);
 
 	/** Get this stream's type.
         @return the type of this stream
@@ -645,6 +691,9 @@ protected:
 
 	char *decrypt_buf;
 	int decrypt_buf_len;
+	char *m_peer_description_str;
+	bool m_crypto_state_before_secret;
+	CondorVersionInfo *m_peer_version;
 };
 
 

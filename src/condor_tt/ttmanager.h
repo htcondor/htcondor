@@ -25,6 +25,7 @@
 #include "daemon.h"
 #include "jobqueuedbmanager.h"
 #include "quill_enums.h"
+#include "counted_ptr.h"
 
 #define CONDOR_TT_MAXLOGNUM 7
 #define CONDOR_TT_MAXLOGPATHLEN 1024
@@ -48,6 +49,12 @@ class TTManager : public Service
 	
 		// timer handler for maintaining job queue
 	void	pollingTime();
+
+
+	typedef HashTable<MyString, MyString> AttributeHash;
+	typedef counted_ptr<AttributeHash> AttributeHashSmartPtrType;
+	typedef enum {MACHINE_HASH, SCHEDD_HASH, MASTER_HASH, NEGOTIATOR_HASH} 
+			AttrHashType;
 
  private:
 
@@ -106,6 +113,35 @@ class TTManager : public Service
 	MyString  currentSqlLog;
 	MyString  errorSqlStmt;
 	bool      maintain_db_conn;
+
+	class AttributeCache {
+	 public:
+		AttributeCache();
+		~AttributeCache();
+		AttributeHashSmartPtrType newAttributeHash();
+		void insertTransaction(AttrHashType aType, const MyString & id);
+		bool alreadyCommitted(const MyString& aName, const MyString& aVal);
+		void commitAttributesTransaction();		
+		void clearAttributesTransaction();	
+		bool setMaintainSoftState(bool b);
+	 private:		
+		AttributeHashSmartPtrType m_currentCommittedAdHash;
+		AttributeHashSmartPtrType m_currentTransactionAdHash;
+		AttributeHashSmartPtrType m_currentAdHash;
+		AttributeHashSmartPtrType m_nullAdHash;
+		typedef HashTable<MyString, AttributeHashSmartPtrType> NamedAdHashType;
+		NamedAdHashType *MachineHash, *ScheddHash, *MasterHash, 
+						*NegotiatorHash,
+						*temp_MachineHash, *temp_ScheddHash, *temp_MasterHash, 
+						*temp_NegotiatorHash, 
+						*currentNamedAdHash;
+		bool maintain_soft_state;
+		void clear(NamedAdHashType* & p);
+		void commit(NamedAdHashType*, NamedAdHashType*);
+	} AttributeCache;
+
+	int totalSqlProcessed;
+	int lastBatchSqlProcessed;
 };
 
 #endif /* _TTMANAGER_H_ */

@@ -281,14 +281,6 @@ static bool is_sender_ip_attr(char const *attr_name)
 {
     if(strcmp(attr_name,ATTR_MY_ADDRESS) == 0) return true;
     if(strcmp(attr_name,ATTR_TRANSFER_SOCKET) == 0) return true;
-		// We would not have to rewrite the IP in capability strings, but
-		// some schedd/shadow code assumes that the capability contains
-		// a valid contact address.  Therefore, we rewrite the IP in the
-		// capability, and the startd has to ignore differences in the IP
-		// portion of the capability when comparing to capability strings
-		// submitted by the schedd/shadow.
-    if(strcmp(attr_name,ATTR_CAPABILITY) == 0) return true;
-    if(strcmp(attr_name,ATTR_CLAIM_ID) == 0) return true;
 	size_t attr_name_len = strlen(attr_name);
     if(attr_name_len >= 6 && stricmp(attr_name+attr_name_len-6,"IpAddr") == 0)
 	{
@@ -339,7 +331,15 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
             return;
         }
 
-        char *ref = strstr(old_expr_string,my_default_ip);
+        char const *ref = strstr(old_expr_string,my_default_ip);
+		if(ref) {
+				// the match must not be followed by any trailing digits
+				// GOOD: <MMM.MMM.M.M:port>   (where M is a matching digit)
+				// BAD:  <MMM.MMM.M.MN:port>  (where N is a non-matching digit)
+			if( isdigit(ref[strlen(my_default_ip)]) ) {
+				ref = NULL;
+			}
+		}
         if(ref) {
             // Replace the default IP address with the one I am actually using.
 

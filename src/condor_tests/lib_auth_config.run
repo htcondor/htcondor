@@ -1,0 +1,69 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+
+my @got;
+$testname = 'lib_auth_config - runs tests of IpVerify';
+$test = "../testbin_dir/condor_test_auth";
+$inputdir = "lib_auth_config_tests";
+
+system("date");
+
+my $input;
+foreach $input ( glob($inputdir . "/test_auth_*_input") ) {
+  my $config = $input;
+  $config =~ s/_input/_config/;
+
+  $ENV{CONDOR_CONFIG} = "$config";
+
+  print "\n";
+  print "Running authorization test $input with the following configuration:\n";
+  print "########## BEGIN CONFIGURATION #############\n";
+
+  open( config_fp, "< $config" ) or die "Can't open $config: $!";
+  while( <config_fp> ) {
+    print;
+  }
+  close config_fp;
+
+  print "########### END CONFIGURATION ##############\n";
+  print "\n";
+  print "########## BEGIN TEST #############\n";
+
+  open( input_pipe, "|$test -debug 2>&1");
+  open( input_fp, "<$input");
+  while ( <input_fp> ) {
+      print input_pipe $_;
+  }
+  close input_fp;
+  close input_pipe;
+  my $result=$?;
+  print "########### END TEST ##############\n";
+
+  if ( $result != 0 ) {
+    print "Authorization test Failure: condor_test_auth < $input\n";
+    exit(1);
+  }
+}
+
+print "\n";
+print "Authorization test Success\n";
+
+exit(0);

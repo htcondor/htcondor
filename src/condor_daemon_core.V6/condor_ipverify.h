@@ -79,11 +79,17 @@ public:
 	///
 	~IpVerify();
 
-	/** Params information out of the condor_config file and
-		sets up the initial permission hash table
-		@return Not_Yet_Ducumented
-	*/
-	int Init();
+	/** Tell IpVerify() to reconfigure itself.
+	 *  This also happens to clear cached authorization information,
+	 *  which serves as our "DNS cache".
+	 */
+	void reconfig();
+
+	/** Tell IpVerify() to get rid of cached DNS information.
+	 *  This just exists to make it clear what the caller wants.
+	 *  It is currently just a synonymn for reconfig().
+	 */
+	void refreshDNS();
 
 	/** Verify() method returns whether connection should be allowed or
 		refused.
@@ -93,13 +99,6 @@ public:
                 USER_ID_REQUIRED -- if user id is required but the caller did not pass in
 	*/
 	int Verify( DCpermission perm, const struct sockaddr_in *sin, const char * user = NULL );
-
-	/** Not_Yet_Ducumented
-		@param flag TRUE or FALSE.	TRUE means cache resolver lookups in our
-			   hashtable cache, FALSE means do a gethostbyaddr() lookup
-			   every time.
-	*/
-	void CacheDnsResults(int flag) { cache_DNS_results = flag; }
 
 	/** Dynamically opens a hole in the authorization settings for the
 	    given (user, IP) at the given perm level.
@@ -144,32 +143,44 @@ private:
 		~PermTypeEntry(); 
 	};
 
+	/** Params information out of the condor_config file and
+		sets up the initial permission hash table
+		@return Not_Yet_Ducumented
+	*/
+	int Init();
+
     bool has_user(UserPerm_t * , const char *, perm_mask_t &);
+	bool LookupCachedVerifyResult( DCpermission perm, const struct in_addr &sin, const char * user, perm_mask_t & mask);
 	int add_hash_entry(const struct in_addr & sin_addr, const char * user, perm_mask_t new_mask);
-	void fill_table( PermTypeEntry * pentry, perm_mask_t mask, char * list, bool allow);
-	int cache_DNS_results;
+	void fill_table( PermTypeEntry * pentry, char * list, bool allow);
     void split_entry(const char * entry, char ** host, char ** user);
-	inline perm_mask_t allow_mask(DCpermission perm) { return (1 << (1+2*perm)); }
-	inline perm_mask_t deny_mask(DCpermission perm) { return (1 << (2+2*perm)); }
+	perm_mask_t allow_mask(DCpermission perm);
+	perm_mask_t deny_mask(DCpermission perm);
 
 	void PermMaskToString(perm_mask_t mask, MyString &mask_str);
 	void UserHashToString(UserHash_t *user_hash, MyString &result);
 	void AuthEntryToString(const struct in_addr & host, const char * user, perm_mask_t mask, MyString &result);
 	void PrintAuthTable(int dprintf_level);
 
-	bool lookup_user(StringList * list, const char * user);
-	char * merge(char * newPerm, char * oldPerm);
-	int did_init;
+		// See if there is an authorization policy entry for a specific user at
+		// a specific ip/hostname.
+	bool lookup_user_ip_allow(DCpermission perm, char const *user, char const *ip);
+	bool lookup_user_ip_deny(DCpermission perm, char const *user, char const *ip);
+	bool lookup_user_host_allow(DCpermission perm, char const *user, char const *hostname);
+	bool lookup_user_host_deny(DCpermission perm, char const *user, char const *hostname);
 
-	bool add_host_entry( const char* addr, perm_mask_t new_mask );
+		// This is the low-level function called by the other lookup_user functions.
+	bool lookup_user(NetStringList *hosts, UserHash_t *users, char const *user, char const *ip, char const *hostname, bool is_allow_list);
+
+	char * merge(char * newPerm, char * oldPerm);
+	bool did_init;
 
 	PermTypeEntry* PermTypeArray[LAST_PERM];
 
+	HolePunchTable_t* PunchedHoleArray[LAST_PERM];
+
 	typedef HashTable <struct in_addr, UserPerm_t *> PermHashTable_t;
 	PermHashTable_t* PermHashTable;
-
-	typedef HashTable <MyString, perm_mask_t> HostHashTable_t; // <host, mask> pair
-	HostHashTable_t* AllowHostsTable;
 };
 	
 

@@ -803,7 +803,6 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 	int		max_reqs;
 	int		reqs_rejected = 0;
 	int		reqs_matched = 0;
-	int		serviced_other_commands = 0;	
 	int		op = -1;
 	PROC_ID	id;
 	NegotiationResult result;
@@ -823,26 +822,9 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 
 	while( resource_requests->dequeue(id) >= 0 ) {
 
-		// This may be a cause of schedd crashes, so leave
-		// it commented out
-
-		//serviced_other_commands += daemonCore->ServiceCommandSocket();
-
 			// TODO: All of this is different for these resource
 			// request ads.  We should try to handle rm or hold, but
 			// we can't do it with this mechanism.
-
-		if ( serviced_other_commands ) {
-			// we have run some other schedd command, like condor_rm
-			// or condor_q, while negotiating.  check and make certain
-			// the job is still runnable, since things may have
-			// changed since we built the prio_rec array (like,
-			// perhaps condor_hold or condor_rm was done).
-			if ( Runnable(&id) == FALSE ) {
-				continue;
-			}
-		}
-
 
 		ClassAd *job = GetJobAd(id.cluster, id.proc);
 
@@ -999,7 +981,6 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 {
 	char	temp[512];
 	char	*claim_id = NULL;	// ClaimId for each match made
-	char	*tmp;
 	char	*sinful;
 	char	*machine_name;
 	int		perm_rval;
@@ -1117,9 +1098,14 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 		}
 
 		case PERMISSION:
+				// No negotiator since 7.1.3 should ever send this
+				// command, and older ones should not send it either,
+				// since we advertise WantResAd=True.
+			dprintf( D_ALWAYS, "Negotiator sent PERMISSION rather than expected PERMISSION_AND_AD!  Aborting.\n");
+			return NR_ERROR;
 		case PERMISSION_AND_AD:
 				// If things are cool, contact the startd.
-			dprintf ( D_FULLDEBUG, "In case PERMISSION\n" );
+			dprintf ( D_FULLDEBUG, "In case PERMISSION_AND_AD\n" );
 
 #if 0
 			SetAttributeInt( id.cluster, id.proc,
@@ -1131,16 +1117,16 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				return NR_ERROR;
 			}
 			my_match_ad = NULL;
-			if ( op == PERMISSION_AND_AD ) {
-					// get startd ad from negotiator as well
-				my_match_ad = new ClassAd();
-				if( !my_match_ad->initFromStream(*s) ) {
-					dprintf( D_ALWAYS, "Can't get my match ad from mgr\n" ); 
-					delete my_match_ad;
-					free( claim_id );
-					return NR_ERROR;
-				}
+
+				// get startd ad from negotiator as well
+			my_match_ad = new ClassAd();
+			if( !my_match_ad->initFromStream(*s) ) {
+				dprintf( D_ALWAYS, "Can't get my match ad from mgr\n" ); 
+				delete my_match_ad;
+				free( claim_id );
+				return NR_ERROR;
 			}
+
 			if( !s->end_of_message() ) {
 				dprintf( D_ALWAYS, "Can't receive eom from mgr\n" );
 				if( my_match_ad ) {
@@ -1156,31 +1142,18 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 						 idp.publicClaimId() ); 
 			}
 
-			if ( my_match_ad ) {
-				dprintf( D_PROTOCOL, "Received match ad\n" );
-			}
-
-				// ClaimId is in the form
-				// "<xxx.xxx.xxx.xxx:xxxx>#xxxxxxx" 
-				// where everything upto the # is the sinful
-				// string of the startd
-			sinful = strdup( claim_id );
-			tmp = strchr( sinful, '#');
-			if( tmp ) {
-				*tmp = '\0';
-			} else {
-				dprintf( D_ALWAYS, "Can't find '#' in ClaimId!\n" );
-					// What else should we do here?
-				free( sinful );
-				free( claim_id );
-				sinful = NULL;
-				claim_id = NULL;
-				if( my_match_ad ) {
+			{
+				Daemon startd(my_match_ad,DT_STARTD,NULL);
+				if( !startd.addr() ) {
+					dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
+					my_match_ad->dPrint(D_ALWAYS);
 					delete my_match_ad;
 					my_match_ad = NULL;
+					break;
 				}
-				break;
+				sinful = strdup( startd.addr() );
 			}
+
 				// sinful should now point to the sinful string of the
 				// startd we were matched with.
 			
@@ -1189,7 +1162,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				// "DedicatedScheduler" owner, which is why we call
 				// owner() here...
 			mrec = new match_rec( claim_id, sinful, &id,
-			                       my_match_ad, owner(), negotiator_name );
+			                       my_match_ad, owner(), negotiator_name, true );
 
 			machine_name = NULL;
 			if( ! mrec->my_match_ad->LookupString(ATTR_NAME, &machine_name) ) {
@@ -1288,136 +1261,6 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 	EXCEPT( "while(1) loop exited!" );
 	return NR_ERROR;
 }
-
-
-/*
-  This function is used to request a claim on a startd we're supposed
-  to be able to control.  It creates a match record for it, stores
-  that in our table, then calls claimStartd() to actually do the
-  work of the claiming protocol.
-*/
-void
-DedicatedScheduler::contactStartd( ContactStartdArgs *args )
-{
-	HashKey mrec_key(args->claimId());
-	match_rec *mrec = NULL;
-	all_matches_by_id->lookup(mrec_key, mrec);
-
-	dprintf( D_FULLDEBUG, "In DedicatedScheduler::contactStartd()\n" );
-
-	if(!mrec) {
-		// The match must have gotten deleted during the time this
-		// operation was queued.
-		dprintf( D_FULLDEBUG, "no match record found for %s", args->claimId() );
-		return;
-	}
-
-
-    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", mrec->publicClaimId(), 
-			 mrec->user, mrec->peer, mrec->cluster,
-			 mrec->proc ); 
-
-	if( !claimStartd(mrec, true) ) {
-		DelMrec(mrec);
-	}
-}
-
-
-int
-DedicatedScheduler::startdContactConnectHandler( Stream *sock )
-{
-	match_rec *mrec = (match_rec *)daemonCore->GetDataPtr();
-
-	ASSERT( mrec );
-	ASSERT( mrec->request_claim_sock == sock );
-
-	if(!claimStartdConnected( (Sock *)sock, mrec, &dummy_job, true )) {
-		DelMrec(mrec);
-		return KEEP_STREAM; // socket was already deleted in DelMrec()
-	}
-
-	// The stream will be closed when we get a callback
-	// in startdContactSockHandler.  Keep it open for now.
-	return KEEP_STREAM;
-}
-
-// Before each bad return we check to see if there's a pending call in
-// the contact queue.
-#define BAILOUT                         \
-		DelMrec(mrec);					\
-		return KEEP_STREAM; // sock was already deleted in DelMrec()
-
-int
-DedicatedScheduler::startdContactSockHandler( Stream *sock )
-{
-	int reply;
-		// all return values are non - KEEP_STREAM.  
-		// Therefore, DaemonCore will cancel this socket at the
-		// end of this function, which is exactly what we want!
-
-	match_rec *mrec = (match_rec *) daemonCore->GetDataPtr();
-
-	ASSERT( mrec );
-	ASSERT( mrec->request_claim_sock == sock );
-
-		// since all possible returns from here result in the socket being
-		// cancelled, we begin by decrementing the # of contacts.
-	scheduler.delRegContact();
-
-	dprintf ( D_FULLDEBUG,
-			  "Reading response for request to claim %s for job %d.%d.\n",
-			  mrec->publicClaimId(), mrec->cluster, mrec->proc );
-
-	mrec->setStatus( M_CLAIMED ); // we assume things will work out.
-
-	// Now, we set the timeout on the socket to 1 second.  Since we 
-	// were called by as a Register_Socket callback, this should not 
-	// block if things are working as expected.  
-	// However, if the Startd wigged out and sent a 
-	// partial int or some such, we cannot afford to block. -Todd 3/2000
-	sock->timeout(1);
-
- 	if( !sock->rcv_int(reply, TRUE) ) {
-		dprintf( D_ALWAYS, "Response problem from startd on %s (match %s).\n",mrec->peer,mrec->publicClaimId() );	
-		BAILOUT;
-	}
-
-	if( reply == OK ) {
-		dprintf (D_PROTOCOL, "(Request was accepted)\n");
-		if( !mrec->sent_alive_interval ) {
-	 		sock->encode();
-			if( !sock->put(scheduler.dcSockSinful()) ) {
-				dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n");
-				BAILOUT;
-			}
-			if( !sock->snd_int(scheduler.aliveInterval(), TRUE) ) {
-				dprintf( D_ALWAYS, "Couldn't send aliveInterval to startd.\n");
-				BAILOUT;
-			}
-		}
-	} else if( reply == NOT_OK ) {
-		dprintf( D_PROTOCOL, "(Request was NOT accepted)\n" );
-		BAILOUT;
-	} else {
-		dprintf( D_ALWAYS, "Unknown reply from startd.\n");
-		BAILOUT;
-	}
-
-	scheduler.checkContactQueue();
-
-		// Set a timer to call handleDedicatedJobs() when we return,
-		// since we might be able to spawn something now.
-	handleDedicatedJobTimer( 0 );
-
-		// The claim has been successfully requested, and this sock is
-		// about to be closed, so remove the saved reference to it
-		// from the match_rec.
-	mrec->request_claim_sock = NULL;
-
-	return TRUE;
-}
-#undef BAILOUT
-
 
 void
 DedicatedScheduler::handleDedicatedJobTimer( int seconds )
@@ -2166,8 +2009,7 @@ DedicatedScheduler::sortResources( void )
 
 			// If it is active, or on its way to becoming active,
 			// mark it as busy
-		if( (mrec->status == M_ACTIVE) ||
-			(mrec->status == M_CONNECTING) ){
+		if( (mrec->status == M_ACTIVE) ){
 			busy_resources->Append( res );
 			continue;
 		}
@@ -2412,6 +2254,17 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 					// Grab the claim from the mrec
 				char const *claim = (*(*allocation->matches)[p])[i]->claimId();
 				char const *publicClaim = (*(*allocation->matches)[p])[i]->publicClaimId();
+
+				MyString claim_buf;
+				if( strchr(claim,',') ) {
+						// the claimid contains a comma, which is the delimiter
+						// in the list of claimids, so we must escape it
+					claim_buf = claim;
+					ASSERT( !strstr(claim_buf.Value(),"$(COMMA)") );
+					claim_buf.replaceString(",","$(COMMA)");
+					claim = claim_buf.Value();
+				}
+
 				claims.append(claim);
 				public_claims.append(publicClaim);
 
@@ -3425,6 +3278,8 @@ DedicatedScheduler::DelMrec( char const* id )
 		return false;
 	}
 
+	ASSERT( rec->is_dedicated );
+
 	if (all_matches_by_id->remove(key) < 0) {
 		dprintf(D_ALWAYS, "DelMrec::all_matches_by_id->remove < 0\n");	
 	}
@@ -3548,6 +3403,9 @@ DedicatedScheduler::publishRequestAd( void )
 	ad.InsertOrUpdate( tmp );
 
 		// Tell negotiator to send us the startd ad
+		// As of 7.1.3, the negotiator no longer pays attention to this
+		// attribute; it _always_ sends the resource request ad.
+		// For backward compatibility with older negotiators, we still set it.
 	sprintf( tmp, "%s = True", ATTR_WANT_RESOURCE_AD );
 	ad.InsertOrUpdate( tmp );
 
@@ -3885,7 +3743,6 @@ DedicatedScheduler::getUnusedTime( match_rec* mrec )
 	}
 	switch( mrec->status ) {
 	case M_UNCLAIMED:
-	case M_CONNECTING:
 	case M_STARTD_CONTACT_LIMBO:
     case M_ACTIVE:
 		return 0;
@@ -4215,18 +4072,38 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		char *claims = NULL;
 		GetAttributeStringNew(id.cluster, id.proc, ATTR_CLAIM_IDS, &claims);
 
+		StringList escapedClaimList(claims,",");
+		StringList claimList;
 		StringList hosts(remote_hosts);
-		StringList claimList(claims);
+
+		char *host;
+		char *claim;
+
+		escapedClaimList.rewind();
+		while( (claim = escapedClaimList.next()) ) {
+			MyString buf = claim;
+			buf.replaceString("$(COMMA)",",");
+			claimList.append(buf.Value());
+		}
 
 			// Foreach host in the stringlist, find matching machine by name
 		hosts.rewind();
 		claimList.rewind();
-		char *host;
-		char *claim;
 
 		while ( (host = hosts.next()) ) {
 
 			claim = claimList.next();
+			if( !claim ) {
+				dprintf(D_ALWAYS,"Dedicated Scheduler:: failed to reconnect "
+						"job %d.%d to %s, because claimid is missing: "
+						"(hosts=%s,claims=%s).\n",
+						id.cluster, id.proc,
+						host ? host : "(null host)",
+						remote_hosts ? remote_hosts : "(null)",
+						claims ? claims : "(null)");
+				job->dPrint(D_ALWAYS);
+					// we will break out of the loop below
+			}
 
 			machines.Rewind();
 
@@ -4246,9 +4123,26 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			}
 
 			
+			char *sinful=NULL;
+			if( machineAd ) {
+				Daemon startd(machineAd,DT_STARTD,NULL);
+				if( !startd.addr() ) {
+					dprintf( D_ALWAYS, "Can't find address of startd in ad:\n" );
+					machineAd->dPrint(D_ALWAYS);
+						// we will break out of the loop below
+				}
+				else {
+					sinful = strdup(startd.addr());
+				}
+			}
+
 			if (machineAd == NULL) {
-					// Uh oh...
 				dprintf( D_ALWAYS, "Dedicated Scheduler:: couldn't find machine %s to reconnect to\n", host);
+					// we will break out of the loop below
+			}
+
+			if (machineAd == NULL || sinful == NULL || claim == NULL) {
+					// Uh oh...
 				machinesToAllocate.Rewind();
 				while( machinesToAllocate.Next() ) {
 					machinesToAllocate.DeleteCurrent();
@@ -4257,17 +4151,16 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 				while( jobsToAllocate.Next() ) {
 					jobsToAllocate.DeleteCurrent();
 				}
+				free(sinful);
+				sinful = NULL;
 				continue;
 			}
 
-			char *sinful;
-			machineAd->LookupString(ATTR_MY_ADDRESS, &sinful);
-
-			dprintf(D_FULLDEBUG, "Target address is %s\n", sinful);
+			dprintf(D_FULLDEBUG, "Dedicated Scheduler:: reconnect target address is %s; claim is %s\n", sinful, claim);
 
 			match_rec *mrec = 
 				new match_rec(claim, sinful, &id,
-						  machineAd, owner(), NULL);
+						  machineAd, owner(), NULL, true);
 
 			mrec->setStatus(M_CLAIMED);
 
@@ -4277,6 +4170,8 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			jobsToAllocate.Append(job);
 
 			machinesToAllocate.Append(machineAd);
+			free(sinful);
+			sinful = NULL;
 		}
 	}
 
@@ -4323,6 +4218,12 @@ DedicatedScheduler::FindMRecByJobID(PROC_ID job_id) {
 	
 }
 
+match_rec *
+DedicatedScheduler::FindMrecByClaimID(char const *claim_id) {
+	match_rec *rec = NULL;
+	all_matches_by_id->lookup(claim_id, rec);
+	return rec;
+}
 
 
 //////////////////////////////////////////////////////////////
@@ -4375,7 +4276,6 @@ findAvailTime( match_rec* mrec )
 		// First, switch on the status of the mrec
 	switch( mrec->status ) {
 	case M_UNCLAIMED:
-	case M_CONNECTING:
 	case M_STARTD_CONTACT_LIMBO:
 			// Not yet claimed, so not yet available. 
 			// TODO: Be smarter here.
@@ -4557,4 +4457,10 @@ RankSorter(const void *ptr1, const void *ptr2) {
 	return n1->cluster_id - n2->cluster_id;
 }
 
+ClassAd *
+DedicatedScheduler::GetMatchRequestAd( match_rec * /*mrec*/ ) {
+	ClassAd *ad = new ClassAd();
+	*ad = dummy_job;
+	return ad;
+}
 

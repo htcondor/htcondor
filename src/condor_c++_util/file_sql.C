@@ -25,7 +25,7 @@
 #include <string.h>
 #include "file_sql.h"
 #include "truncate.h"
-#include "get_mysubsystem.h"
+#include "subsystem_info.h"
 
 #include <sys/stat.h>
 
@@ -125,7 +125,17 @@ QuillErrCode FILESQL::file_open()
 	else
 	{
 		is_open = true;
-		lock = new FileLock(outfiledes,NULL); /* Create a lock object when opening the file */
+		
+		/* Create a lock object when opening the file.
+		 * Note: We very purposefully pass the "outfilename" to the
+		 * FileLock ctor here; doing so enables the FileLock object
+		 * to use kernel mutexes instead of on-disk file locks.  Not
+		 * only is this more efficient, but on Windows it is required
+		 * because later we will try to read from the locked file.  If
+		 * it is "really" locked -vs- using Condor's advisory locking
+		 * via the kernel mutexes, these reads will fail on Win32.
+		 */
+		lock = new FileLock(outfiledes,NULL,outfilename); 
 		return QUILL_SUCCESS;
 	}
 }
@@ -430,7 +440,7 @@ FILESQL::createInstance(bool use_sql_log) {
 	char *tmpParamName;
 	const char *daemon_name;
 	
-	daemon_name = get_mySubSystem();
+	daemon_name = mySubSystem->getName();
 
 	tmpParamName = (char *)malloc(10+strlen(daemon_name));
 

@@ -52,6 +52,8 @@ HashTable <HashKey, GahpServer *>
 
 const int GahpServer::m_buffer_size = 4096;
 
+int GahpServer::m_reaperid = -1;
+
 const char *escapeGahpString(const char * input);
 
 void GahpReconfig()
@@ -101,7 +103,6 @@ GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 {
 	m_gahp_pid = -1;
-	m_reaperid = -1;
 	m_gahp_readfd = -1;
 	m_gahp_writefd = -1;
 	m_gahp_errorfd = -1;
@@ -158,7 +159,9 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 
 GahpServer::~GahpServer()
 {
+	GahpServersById.remove( HashKey( my_id ) );
 	free( m_buffer );
+	delete m_commands_supported;
 	if ( globus_gass_server_url != NULL ) {
 		free( globus_gass_server_url );
 	}
@@ -173,6 +176,18 @@ GahpServer::~GahpServer()
 	}
 	if ( binary_path != NULL ) {
 		free(binary_path);
+	}
+	if ( m_gahp_readfd != -1 ) {
+		daemonCore->Close_Pipe( m_gahp_readfd );
+	}
+	if ( m_gahp_writefd != -1 ) {
+		daemonCore->Close_Pipe( m_gahp_writefd );
+	}
+	if ( m_gahp_errorfd != -1 ) {
+		daemonCore->Close_Pipe( m_gahp_errorfd );
+	}
+	if ( poll_tid != -1 ) {
+		daemonCore->Cancel_Timer( poll_tid );
 	}
 	if ( master_proxy != NULL ) {
 		ReleaseProxy( master_proxy->proxy );
@@ -256,21 +271,40 @@ GahpServer::write_line(const char *command, int req, const char *args)
 }
 
 void
-GahpServer::Reaper(int pid,int status)
+GahpServer::Reaper(Service *,int pid,int status)
 {
 	/* This should be much better.... for now, if our Gahp Server
 	   goes away for any reason, we EXCEPT. */
 
-	char buf2[800];
+	GahpServer *dead_server = NULL;
+	GahpServer *next_server = NULL;
 
-	if( WIFSIGNALED(status) ) {
-		sprintf( buf2, "died due to %s", 
-			daemonCore->GetExceptionString(status) );
-	} else {
-		sprintf( buf2, "exited with status %d", WEXITSTATUS(status) );
+	GahpServersById.startIterations();
+	while ( GahpServersById.iterate( next_server ) != 0 ) {
+		if ( pid == next_server->m_gahp_pid ) {
+			dead_server = next_server;
+			break;
+		}
 	}
 
-	EXCEPT("Gahp Server (pid=%d) %s\n",pid,buf2);
+	MyString buf;
+
+	buf.sprintf( "Gahp Server (pid=%d) ", pid );
+
+	if( WIFSIGNALED(status) ) {
+		buf.sprintf_cat( "died due to %s", 
+			daemonCore->GetExceptionString(status) );
+	} else {
+		buf.sprintf_cat( "exited with status %d", WEXITSTATUS(status) );
+	}
+
+	if ( dead_server ) {
+		buf.sprintf_cat( " unexpectedly" );
+		EXCEPT( buf.Value() );
+	} else {
+		buf.sprintf_cat( "\n" );
+		dprintf( D_ALWAYS, buf.Value() );
+	}
 }
 
 
@@ -300,14 +334,15 @@ GahpClient::~GahpClient()
 		// call clear_pending to remove this object from hash table,
 		// and deallocate any memory associated w/ a pending command.
 	clear_pending();
-	server->RemoveGahpClient();
-	server->m_reference_count--;
 	if ( normal_proxy != NULL ) {
 		server->UnregisterProxy( normal_proxy->proxy );
 	}
 	if ( deleg_proxy != NULL ) {
 		server->UnregisterProxy( deleg_proxy->proxy );
 	}
+	server->RemoveGahpClient();
+		// The GahpServer may have deleted itself in RemoveGahpClient().
+		// Don't refer to it below here!
 }
 
 
@@ -557,7 +592,10 @@ void
 GahpServer::RemoveGahpClient()
 {
 	m_reference_count--;
-		// TODO arrange to de-allocate GahpServer when this hits zero
+
+	if ( m_reference_count <= 0 ) {
+		delete this;
+	}
 }
 
 bool
@@ -635,6 +673,20 @@ GahpServer::Startup()
 		free( tmp_char );
 	}
 
+	// For amazon gahp proxy server
+	tmp_char = param("AMAZON_HTTP_PROXY");
+	if( tmp_char ) {
+		newenv.SetEnv( "AMAZON_HTTP_PROXY", tmp_char );
+		free( tmp_char );
+	}
+
+	// For amazon ec2 URL
+	tmp_char = param("AMAZON_EC2_URL");
+	if( tmp_char ) {
+		newenv.SetEnv( "AMAZON_EC2_URL", tmp_char );
+		free( tmp_char );
+	}
+
 		// Now register a reaper, if we haven't already done so.
 		// Note we use ReaperHandler instead of ReaperHandlercpp
 		// for the callback prototype, because our handler is 
@@ -642,9 +694,9 @@ GahpServer::Startup()
 	if ( m_reaperid == -1 ) {
 		m_reaperid = daemonCore->Register_Reaper(
 				"GAHP Server",					
-				(ReaperHandlercpp)&GahpServer::Reaper,	// handler
+				(ReaperHandler)&GahpServer::Reaper,	// handler
 				"GahpServer::Reaper",
-				this
+				NULL
 				);
 	}
 
@@ -5898,3 +5950,2564 @@ GahpClient::cream_job_lease(const char *service, const char *job_id, time_t &lea
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
+
+
+//************* Added for Amazon Jobs by fangcao ***************************//
+
+//  Start VM
+int GahpClient::amazon_vm_start( const char * publickeyfile,
+								 const char * privatekeyfile,
+								 const char * ami_id, 
+								 const char * keypair,
+								 const char * user_data,
+								 const char * user_data_file,
+								 const char * instance_type,
+								 StringList & groupnames,
+								 char * &instance_id,
+								 char * &error_code)
+{
+	// command line looks like:
+	// AMAZON_COMMAND_VM_START <req_id> <publickeyfile> <privatekeyfile> <ami-id> <keypair> <groupname> <groupname> ...
+	static const char* command = "AMAZON_VM_START";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check the input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (ami_id == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// Generate request line
+	
+	// keypair/user_data/user_data_file is a required field. when empty, need to be replaced by "NULL"
+	if ( !keypair ) keypair = NULLSTRING;
+	if ( !user_data ) user_data = NULLSTRING;
+	if ( !user_data_file ) user_data_file = NULLSTRING;
+	if ( !instance_type ) instance_type = NULLSTRING;
+	
+	// groupnames is optional, but since it is the last argument, don't need to set it as "NULL"
+	// XXX: You probably should specify a NULL for all "optional" parameters -matt
+							
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(ami_id) );
+	char* esc4 = strdup( escapeGahpString(keypair) );
+	char* esc5 = strdup( escapeGahpString(user_data) );
+	char* esc6 = strdup( escapeGahpString(user_data_file) );
+	
+	// currently we support the following instance type:
+	// 1. m1.small
+	// 2. m1.large
+	// 3. m1.xlarge
+	char* esc7 = strdup( escapeGahpString(instance_type) );
+	
+	bool x = reqline.sprintf("%s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+	free( esc5 );
+	free( esc6 );
+	free( esc7 );
+	ASSERT( x == true );
+	
+	const char * group_name;
+	int cnt = 0;
+	char * esc_groupname;
+
+	// get multiple group names from string list
+	groupnames.rewind();
+	if ( groupnames.number() > 0 ) {
+		while ( (group_name = groupnames.next()) ) {
+			esc_groupname = strdup( escapeGahpString(group_name) );
+			reqline.sprintf_cat(" %s", esc_groupname);
+			cnt++;
+			free( esc_groupname );
+		}
+	}
+	ASSERT( cnt == groupnames.number() );
+	const char *buf = reqline.Value();
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	// we expect the following return:
+	//		seq_id 0 instance_id
+	//		seq_id 1 error_code error_string
+	//		seq_id 1 
+	
+	if ( result ) {	
+		// command completed. 
+		int rc = 0;
+		if ( result->argc == 2 ) {
+			rc = atoi(result->argv[1]);
+			if ( rc == 0 ) {
+				EXCEPT( "Bad %s result", command );
+				rc = 1;
+			} else {
+				error_string = "";
+			}			
+		} else if ( result->argc == 3 ) {
+			rc = atoi(result->argv[1]);
+			instance_id = strdup(result->argv[2]);
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+ 			error_code = strdup(result->argv[2]);	
+ 			error_string = result->argv[3];		
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}
+
+
+// Stop VM
+int GahpClient::amazon_vm_stop( const char * publickeyfile, const char * privatekeyfile, 
+								const char * instance_id, char* & error_code )
+{	
+	// command line looks like:
+	// AMAZON_COMMAND_VM_STOP <req_id> <publickeyfile> <privatekeyfile> <instance-id>
+	static const char* command = "AMAZON_VM_STOP";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (instance_id == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// Generate request line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(instance_id) );
+	
+	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3 );
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// we expect the following return:
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1 
+	
+	if ( result ) {
+		// command completed. 
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) error_string = "";
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];			
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}							
+
+
+// Restart VM
+int GahpClient::amazon_vm_reboot( const char * publickeyfile, const char * privatekeyfile, 
+								  const char * instance_id, char* & error_code )		
+{
+	// command line looks like:
+	// AMAZON_COMMAND_VM_REBOOT <req_id> <publickeyfile> <privatekeyfile> <instance-id>
+	static const char* command = "AMAZON_VM_REBOOT";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (instance_id == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// Generate request line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(instance_id) );
+	
+	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3 );
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// we expect the following return:
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1 
+	
+	if ( result ) {
+		// command completed. 
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) error_string = "";
+		} 
+		else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];				
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}	
+
+
+// Check VM status
+int GahpClient::amazon_vm_status( const char * publickeyfile, const char * privatekeyfile,
+							  const char * instance_id, StringList &returnStatus, char* & error_code )
+{	
+	// command line looks like:
+	// AMAZON_COMMAND_VM_STATUS <return 0;"AMAZON_VM_STATUS";
+	static const char* command = "AMAZON_VM_STATUS";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (instance_id == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// Generate request line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(instance_id) );
+	
+	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3 );
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// we expect the following return:
+	//		seq_id 0 <instance_id> <status> <ami_id> <public_dns> <private_dns> <keypairname> <group> <group> <group> ... 
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+	// We use "NULL" to replace the empty items. and there at least has one group.
+	
+	if ( result ) {
+		// command completed.
+		int rc = 0;
+		
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if (result->argc == 4) {
+			rc = atoi( result->argv[1] );
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		}
+		else if (result->argc == 5)
+		{
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				EXCEPT( "Bad %s result", command );
+			}
+			else {
+				if ( strcmp(result->argv[3], "running") == 0) {
+					rc = 1;
+				}
+				else
+				{
+					// get the status info
+					for (int i=2; i<result->argc; i++) {
+						returnStatus.append( strdup(result->argv[i]) );
+					}
+				}
+				returnStatus.rewind();
+			}				
+		} 
+		else if (result->argc < 9) {
+			EXCEPT( "Bad %s result", command );
+		} else {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				EXCEPT( "Bad %s result", command );
+			}
+			else {
+				if ( (strcmp(result->argv[3], "pending")!=0) && 
+					 (strcmp(result->argv[3], "running")!=0) ) {
+					rc = 1;
+				}
+				else
+				{
+					// get the status info
+					for (int i=2; i<result->argc; i++) {
+						returnStatus.append( strdup(result->argv[i]) );
+					}
+				}
+				returnStatus.rewind();
+			}
+		}
+		
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+// List the status of all VMs
+int GahpClient::amazon_vm_status_all( const char * publickeyfile, const char * privatekeyfile, 
+									  StringList &returnStatus, char* & error_code )		
+{
+	// command line looks like:
+	// AMAZON_COMMAND_VM_STATUS_ALL <req_id> <publickeyfile> <privatekeyfile>
+	static const char* command = "AMAZON_VM_STATUS_ALL";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// Generate request line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	
+	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	
+	free( esc1 );
+	free( esc2 );
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// we expect the following return:
+	//		seq_id 0 <instance_id> <status> <ami_id> <instance_id> <status> <ami_id> ... 
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+	// We use NULL to replace the empty items.
+
+	if ( result ) {
+		// command completed and the return value looks like:
+		int rc = 0;
+		
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 0) {
+				EXCEPT("Bad %s Result",command);
+				rc = 1;
+			} else {
+				error_string = "";
+			}
+		}
+		else if (result->argc == 4) {
+			rc = atoi( result->argv[1] );
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		}
+		else if ( ((result->argc - 2)%3) != 0 ) {
+			EXCEPT("Bad %s Result",command);
+		}
+		else {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				EXCEPT("Bad %s Result",command);
+			}
+			else {
+				// get the status info
+				for (int i=2; i<result->argc; i++) {
+					returnStatus.append( strdup(result->argv[i]) );
+				}
+				returnStatus.rewind();
+			}
+		}
+		
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}		
+
+
+// Create group
+int GahpClient::amazon_vm_create_group( const char * publickeyfile, const char * privatekeyfile,
+									    const char * groupname, const char * group_description, char* & error_code )	
+{
+	// command line looks like:
+	// AMAZON_COMMAND_VM_CREATE_GROUP <req_id> <publickeyfile> <privatekeyfile> <groupname> <group description>
+	static const char* command = "AMAZON_VM_CREATE_GROUP";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || 
+		 (groupname == NULL) || (group_description == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// Generate request line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(groupname) );
+	char* esc4 = strdup( escapeGahpString(group_description) );
+	
+	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4 );
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	// we expect the following return:
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1 
+	
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}		
+
+
+// Delete given group
+int GahpClient::amazon_vm_delete_group( const char * publickeyfile, const char * privatekeyfile, 
+										const char * groupname, char* & error_code )		
+{
+	// command line looks like:
+	// AMAZON_COMMAND_VM_DELETE_GROUP <req_id> <publickeyfile> <privatekeyfile> <groupname>
+	static const char* command = "AMAZON_VM_DELETE_GROUP";
+
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (groupname == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// Generate request line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(groupname) );
+	
+	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3 );
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// we expect the following return:
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1 
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+//  Show group names
+int GahpClient::amazon_vm_group_names( const char * publickeyfile, const char * privatekeyfile, 
+									   StringList &group_names, char* & error_code )
+{
+	// command line looks like:
+	// AMAZON_COMMAND_VM_GROUP_NAMES <req_id> <publickeyfile> <privatekeyfile>
+	static const char* command = "AMAZON_VM_GROUP_NAMES";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// Generate request line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	
+	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	
+	free( esc1 );
+	free( esc2 );
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// we expect the following return:
+	//		seq_id 0 + <groupname> <groupname> ...
+	//		seq_id 1 error_code error_string
+	//		seq_id 1 
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			} 
+			else {
+				// maybe there is no group existed in the Amazon VM ...
+				// we cannot use EXCEPT() here
+			}
+		}
+		else if ( result->argc >= 4 ) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) { // returned msg is error message
+				error_code = strdup(result->argv[2]);
+				error_string = result->argv[3];
+			} else {
+				// get groups' names
+				for (int i=2; i<result->argc; i++) {
+					group_names.append( strdup(result->argv[i]) );
+				}
+				group_names.rewind();
+			}
+		}
+		else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+// Show group rules
+int GahpClient::amazon_vm_group_rules(const char * publickeyfile, const char * privatekeyfile, const char * groupname, 
+									  StringList & returnStatus, char* & error_code )
+{
+	// command line looks like:
+	// AMAZON_COMMAND_VM_GROUP_RULES <req_id> <publickeyfile> <privatekeyfile> <groupname>
+	static const char* command = "AMAZON_VM_GROUP_RULES";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (groupname == NULL)) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// Generate request line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(groupname) );
+	
+	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3 );
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	// we expect the following return:
+	//		seq_id 0 { <protocol> + <start_port> + <end_port> + <ip_range> }
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+
+	if ( result ) {
+		// command completed. 
+		int rc = 0;
+		
+		if ( result->argc == 2 ) {
+			rc = atoi(result->argv[1]);
+			if ( rc == 0 ) {
+				EXCEPT( "Bad %s result", command );
+				rc = 1;
+			} else {
+				error_string = "";
+			}			
+		}
+		else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		}
+		else if ( (result->argc - 2)%4 != 0 ) {
+			EXCEPT( "Bad %s result", command );
+		} 
+		else {
+			rc = atoi(result->argv[1]);
+			if ( rc == 1 ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			else {
+				for (int i=2; i<result->argc; i++) {
+					 returnStatus.append( strdup(result->argv[i]) );
+				}
+				returnStatus.rewind();
+			}
+		}
+			
+		delete result;
+		return rc;
+	}	
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}
+
+
+// Add group rule
+int GahpClient::amazon_vm_add_group_rule(const char * publickeyfile, const char * privatekeyfile, const char * groupname,
+							 const char * protocol, const char * start_port, const char * end_port, const char * ip_range, char* & error_code )
+{
+	// command line looks like:
+	// AMAZON_COMMAND_VM_ADD_GROUP_RULE <req_id> <publickeyfile> <privatekeyfile> 
+	// <groupname> <protocol> <start_port> <end_port> <ip_range>
+	// Notice: "ip_range" is optional but since it is the last argument, it should be replaced by ""
+	static const char* command = "AMAZON_VM_ADD_GROUP_RULE";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (groupname == NULL) ||
+		 (protocol == NULL) || (start_port == NULL) || (end_port == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// Generate request line
+	if ( !ip_range ) ip_range = "";
+	
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(groupname) );
+	char* esc4 = strdup( escapeGahpString(protocol) );
+	char* esc5 = strdup( escapeGahpString(start_port) );
+	char* esc6 = strdup( escapeGahpString(end_port) );
+	char* esc7 = strdup( escapeGahpString(ip_range) );
+	
+	bool x = reqline.sprintf("%s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+	free( esc5 );
+	free( esc6 );
+	free( esc7 );
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// we expect the following return:
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+	
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}
+
+
+// Delete group rule 
+int GahpClient::amazon_vm_del_group_rule(const char * publickeyfile, const char * privatekeyfile, const char * groupname,
+							 const char * protocol, const char * start_port, const char * end_port, const char * ip_range, char* & error_code )
+{
+	// command line looks like:
+	// AMAZON_COMMAND_VM_DEL_GROUP_RULE <req_id> <publickeyfile> <privatekeyfile> <groupname> 
+	// + <protocol> <start_port> <end_port> <ip_range>
+	// Notice: "ip_range" is optional but since it is the last argument, it should be replaced by ""
+	static const char* command = "AMAZON_VM_DEL_GROUP_RULE";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (groupname == NULL) ||
+		 (protocol == NULL) || (start_port == NULL) || (end_port == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// Generate request line
+	if ( !ip_range ) ip_range = "";
+	
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(groupname) );
+	char* esc4 = strdup( escapeGahpString(protocol) );
+	char* esc5 = strdup( escapeGahpString(start_port) );
+	char* esc6 = strdup( escapeGahpString(end_port) );
+	char* esc7 = strdup( escapeGahpString(ip_range) );
+	
+	bool x = reqline.sprintf("%s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+	free( esc5 );
+	free( esc6 );
+	free( esc7 );
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}
+
+
+// Ping to check if the server is alive
+int GahpClient::amazon_ping(const char * publickeyfile, const char * privatekeyfile)
+{
+	// we can use "Status All" command to make sure Amazon Server is alive.
+	static const char* command = "AMAZON_VM_STATUS_ALL";
+	
+	// Generate request line
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	
+	MyString reqline;
+	reqline.sprintf("%s %s", esc1, esc2 );
+	const char *buf = reqline.Value();
+	
+	free( esc1 );
+	free( esc2 );
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	if ( result ) {
+		int rc = atoi(result->argv[1]);
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+// Create and register SSH keypair
+int GahpClient::amazon_vm_create_keypair( const char * publickeyfile, const char * privatekeyfile,
+								   	      const char * keyname, const char * outputfile, char* & error_code)
+{
+	// command line looks like:
+	// AMAZON_COMMAND_VM_CREATE_KEYPAIR <req_id> <publickeyfile> <privatekeyfile> <groupname> <outputfile> 
+	static const char* command = "AMAZON_VM_CREATE_KEYPAIR";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (keyname == NULL) || (outputfile == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// construct command line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(keyname) );
+	char* esc4 = strdup( escapeGahpString(outputfile) );
+	
+	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// The result should look like:
+	//		seq_id 0
+	//		seq_id 1
+	//		seq_id error_code error_string
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 4 ) {
+			rc = atoi( result->argv[1] );
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}	
+
+
+
+// The destroy keypair function will delete the name of keypair, it will not touch the output file of 
+// keypair. So in Amazon Job, we should delete keypair output file manually. We don't need to care about
+// the keypair name/output file in Amazon, it will be removed automatically.
+int GahpClient::amazon_vm_destroy_keypair( const char * publickeyfile, const char * privatekeyfile, 
+										   const char * keyname, char* & error_code )
+{
+	// command line looks like:
+	// AMAZON_COMMAND_VM_DESTROY_KEYPAIR <req_id> <publickeyfile> <privatekeyfile> <groupname> 
+	static const char* command = "AMAZON_VM_DESTROY_KEYPAIR";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (keyname == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// construct command line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(keyname) );
+	
+	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+		
+	// The result should look like:
+	//		seq_id 0
+	//		seq_id 1
+	//		seq_id error_code error_string
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 4 ) {
+			rc = atoi( result->argv[1] );
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}
+
+
+//  List all existing SSH Keypair name
+int GahpClient::amazon_vm_keypair_names( const char * publickeyfile, const char * privatekeyfile, 
+										 StringList &keypair_names, char* & error_code )
+{
+	// command line looks like:
+	// AMAZON_COMMAND_VM_KEYPAIR_NAMES <req_id> <publickeyfile> <privatekeyfile> 
+	static const char* command = "AMAZON_VM_KEYPAIR_NAMES";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// construct command line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	
+	bool x = reqline.sprintf("%s %s", esc1, esc2);
+	
+	free( esc1 );
+	free( esc2 );
+
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+		
+	// The result should look like:
+	//		seq_id 0 <keypair_name> <keypair_name> <keypair_name> ...
+	//		seq_id 1
+	//		seq_id 1 error_code error_string
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+			else {
+				// maybe there is no keypair existed in the Amazon ...
+				// we cannot use EXCEPT() here
+			}
+		}
+		else if ( result->argc >= 3 ) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_code = strdup(result->argv[2]);	
+				error_string = result->argv[3];
+			} else {
+				// get keypairs' names
+				for (int i=2; i<result->argc; i++) {
+					keypair_names.append( strdup(result->argv[i]) );
+				}
+				keypair_names.rewind();
+			}
+		}
+		else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}
+
+
+// List all S3 Bucket names
+int GahpClient::amazon_vm_s3_all_buckets( const char * publickeyfile, const char * privatekeyfile, 
+										  StringList & bucket_names, char* & error_code )
+{
+	// command line looks like:
+	// AMAZON_COMMAND_S3_ALL_BUCKETS <req_id> <publickeyfile> <privatekeyfile>
+	static const char* command = "AMAZON_S3_ALL_BUCKETS";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// construct command line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	
+	bool x = reqline.sprintf("%s %s", esc1, esc2);
+	
+	free( esc1 );
+	free( esc2 );
+
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+		
+	// The result should look like:
+	//		seq_id 0 <bucket_name> <bucket_name> <bucket_name> ...
+	//		seq_id 1
+	//		seq_id 1 error_code error_string
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+			else {
+				// maybe there is no keypair existed in the Amazon ...
+				// we cannot use EXCEPT() here
+			}
+		}
+		else if ( result->argc >= 3 ) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_code = strdup(result->argv[2]);	
+				error_string = result->argv[3];
+			} else {
+				// get keypairs' names
+				for (int i=2; i<result->argc; i++) {
+					bucket_names.append( strdup(result->argv[i]) );
+				}
+				bucket_names.rewind();
+			}
+		}
+		else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+
+// Create Bucket in S3
+int GahpClient::amazon_vm_s3_create_bucket( const char * publickeyfile, const char * privatekeyfile, 
+											const char * bucketname, char* & error_code )
+{
+	// command line looks like:
+	// AMAZON_COMMAND_S3_CREATE_BUCKET <req_id> <publickeyfile> <privatekeyfile> <bucketname>
+	static const char* command = "AMAZON_S3_CREATE_BUCKET";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (bucketname == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(bucketname) );
+	
+	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// The result should look like:
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+// Delete Bucket in S3
+int GahpClient::amazon_vm_s3_delete_bucket( const char * publickeyfile, const char * privatekeyfile, 
+											const char * bucketname, char* & error_code )
+{
+	// command line looks like:
+	// AMAZON_COMMAND_S3_DELETE_BUCKET <req_id> <publickeyfile> <privatekeyfile> <bucketname>
+	// All the files saved in this bucket will be deleted by force.
+	static const char* command = "AMAZON_S3_DELETE_BUCKET";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (bucketname == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(bucketname) );
+	
+	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// The result should look like:
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+// List all entries in a given Bucket
+int GahpClient::amazon_vm_s3_list_bucket( const char * publickeyfile, const char * privatekeyfile, 
+	                                      const char * bucketname, StringList & entry_names, char* & error_code )
+{
+	// command line looks like:
+	// AMAZON_COMMAND_S3_LIST_BUCKET <req_id> <publickeyfile> <privatekeyfile> <bucketname> 
+	static const char* command = "AMAZON_S3_LIST_BUCKET";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (bucketname == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// construct command line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(bucketname) );
+	
+	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+		
+	// The result should look like:
+	//		seq_id 0 <bucket_name> <bucket_name> <bucket_name> ...
+	//		seq_id 1
+	//		seq_id 1 error_code error_string
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+			else {
+				// maybe there is no keypair existed in the Amazon ...
+				// we cannot use EXCEPT() here
+			}
+		}
+		else if ( result->argc >= 3 ) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_code = strdup(result->argv[2]);	
+				error_string = result->argv[3];
+			} else {
+				// get keypairs' names
+				for (int i=2; i<result->argc; i++) {
+					entry_names.append( strdup(result->argv[i]) );
+				}
+				entry_names.rewind();
+			}
+		}
+		else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+// Upload file into S3
+int GahpClient::amazon_vm_s3_upload_file( const char * publickeyfile, const char * privatekeyfile, const char * filename,
+							  const char * bucketname, const char * keyname, char* & error_code )
+{
+	// command line looks like:
+	// AMAZON_COMMAND_S3_UPLOAD_FILE <req_id> <publickeyfile> <privatekeyfile> <bucketname> <filename> <keyname>
+	static const char* command = "AMAZON_S3_UPLOAD_FILE";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || 
+		 (bucketname == NULL) || (filename == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(filename) );
+	char* esc4 = strdup( escapeGahpString(bucketname) );
+	char* esc5;
+	// keyname is optional. if client doesn't assign keyname, we
+	// should assign filename to it
+	if (keyname == NULL) {
+		esc5 = strdup( escapeGahpString(filename) );
+	} else {
+		esc5 = strdup( escapeGahpString(keyname) );
+	}
+	
+	bool x = reqline.sprintf("%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+	free( esc5 );
+
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// The result should look like:
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+// Download file from S3 to a local file
+int GahpClient::amazon_vm_s3_download_file( const char * publickeyfile, const char * privatekeyfile, const char * bucketname,
+								const char * keyname, const char * outputname, char* & error_code )
+{
+	// command line looks like:
+	// AMAZON_COMMAND_S3_DOWNLOAD_FILE <req_id> <publickeyfile> <privatekeyfile> <bucketname> <keyname> <outputname>
+	static const char* command = "AMAZON_S3_DOWNLOAD_FILE";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || 
+		 (bucketname == NULL) || (keyname == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(bucketname) );
+	char* esc4 = strdup( escapeGahpString(keyname) );
+	char* esc5;
+	// outputname is optional. if client doesn't assign keyname, we
+	// should assign keyname to it
+	if (outputname == NULL) {
+		esc5 = strdup( escapeGahpString(keyname) );
+	} else {
+		esc5 = strdup( escapeGahpString(outputname) );
+	}
+	
+	bool x = reqline.sprintf("%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+	free( esc5 );
+
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// The result should look like:
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+// Delete file from S3
+int GahpClient::amazon_vm_s3_delete_file( const char * publickeyfile, const char * privatekeyfile,
+									      const char * keyname, const char * bucketname, char* & error_code )
+{
+	// command line looks like:
+	//AMAZON_COMMAND_S3_DELETE_FILE <req_id> <publickeyfile> <privatekeyfile> <keyname> <bucketname>
+	static const char* command = "AMAZON_S3_DELETE_FILE";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || 
+		 (bucketname == NULL) || (keyname == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(keyname) );
+	char* esc4 = strdup( escapeGahpString(bucketname) );
+	
+	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// The result should look like:
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}
+
+
+// Register EC2 Image
+int GahpClient::amazon_vm_register_image( const char* publickeyfile, const char* privatekeyfile, 
+										  const char* imagename, char* & ami_id, char* & error_code )
+{
+	// command line looks like:
+	//AMAZON_COMMAND_VM_REGISTER_IMAGE <req_id> <publickeyfile> <privatekeyfile> <imagetname>
+	static const char* command = "AMAZON_VM_REGISTER_IMAGE";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (imagename == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(imagename) );
+	
+	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// The result should look like:
+	//		seq_id 0 ami_id
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 3 ) {
+			rc = atoi(result->argv[1]);
+			ami_id = strdup(result->argv[2]);
+		} else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+// Deregister EC2 Image
+int GahpClient::amazon_vm_deregister_image( const char* publickeyfile, const char* privatekeyfile, 
+											const char* ami_id, char* & error_code )
+{
+	// command line looks like:
+	//AMAZON_COMMAND_VM_REGISTER_IMAGE <req_id> <publickeyfile> <privatekeyfile> <imagetname>
+	static const char* command = "AMAZON_VM_DEREGISTER_IMAGE";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || (ami_id == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(ami_id) );
+	
+	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// The result should look like:
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+// Upload files in a directory to the S3
+int GahpClient::amazon_vm_s3_upload_dir( const char* publickeyfile, const char* privatekeyfile, 
+										 const char* dirname, const char* bucketname, char* & error_code )
+{
+	// command line looks like:
+	//AMAZON_COMMAND_S3_UPLOAD_DIR <req_id> <publickeyfile> <privatekeyfile> <dirname> <bucketname>
+	static const char* command = "AMAZON_S3_UPLOAD_DIR";
+
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || 
+		 (dirname == NULL) || (bucketname == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(dirname) );
+	char* esc4 = strdup( escapeGahpString(bucketname) );
+	
+	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4);
+
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+
+	ASSERT( x == true );
+
+	const char *buf = reqline.Value();
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	// The result should look like:
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+//  Download all files in a bucket to the local disk
+int GahpClient::amazon_vm_s3_download_bucket( const char* publickeyfile, const char* privatekeyfile,
+											  const char* bucketname, const char* localdirname, char* & error_code )
+{
+	// command line looks like:
+	//AMAZON_COMMAND_S3_DOWNLOAD_BUCKET <req_id> <publickeyfile> <privatekeyfile> <bucketname> <localdirname>
+	static const char* command = "AMAZON_S3_DOWNLOAD_BUCKET";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) || 
+	     (localdirname == NULL) || (bucketname == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	char* esc3 = strdup( escapeGahpString(bucketname) );
+	char* esc4 = strdup( escapeGahpString(localdirname) );
+	
+	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4);
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// The result should look like:
+	//		seq_id 0
+	//		seq_id 1 error_code error_string
+	//		seq_id 1
+		
+	if ( result ) {
+		// command completed
+		int rc = 0;
+		if (result->argc == 2) {
+			rc = atoi(result->argv[1]);
+			if (rc == 1) {
+				error_string = "";
+			}
+		} 
+		else if ( result->argc == 4 ) {
+			error_code = strdup(result->argv[2]);
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+	
+}
+
+
+// Check all the running VM instances and their corresponding keypair name
+int GahpClient::amazon_vm_vm_keypair_all( const char* publickeyfile, const char* privatekeyfile,
+										  StringList & returnStatus, char* & error_code )
+{
+	// command line looks like:
+	// AMAZON_COMMAND_VM_KEYPAIR_ALL <req_id> <publickeyfile> <privatekeyfile>
+	static const char* command = "AMAZON_VM_RUNNING_KEYPAIR";
+	
+	// check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// check input arguments
+	if ( (publickeyfile == NULL) || (privatekeyfile == NULL) ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	
+	// Generate request line
+	MyString reqline;
+	
+	char* esc1 = strdup( escapeGahpString(publickeyfile) );
+	char* esc2 = strdup( escapeGahpString(privatekeyfile) );
+	
+	bool x = reqline.sprintf("%s %s", esc1, esc2 );
+	
+	free( esc1 );
+	free( esc2 );
+	ASSERT( x == true );
+	
+	const char *buf = reqline.Value();
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	// we expect the following return:
+	//		seq_id 0 <instance_id> <keypair> <instance_id> <keypair> ... 
+	//		seq_id 1 <error_code> <error_string>
+	//		seq_id 1
+	
+	// Notice: the running VM instances without keypair name will not be ruturned by gahp_server
+
+	if ( result ) {
+		// command completed and the return value looks like:
+		int rc = atoi(result->argv[1]);
+		
+		if (rc == 1) {
+			
+			if (result->argc == 2) {
+				error_string = "";
+			} else if (result->argc == 4) {
+				error_code = strdup(result->argv[2]);
+				error_string = result->argv[3];
+			} else {
+				EXCEPT("Bad %s Result",command);
+			}
+			
+		} else {	// rc == 0
+			
+			if ( ( (result->argc-2) % 2) != 0 ) {
+				EXCEPT("Bad %s Result",command);
+			} else {
+				// get the status info
+				for (int i=2; i<result->argc; i++) {
+					returnStatus.append( strdup(result->argv[i]) );
+				}
+				returnStatus.rewind();
+			}
+		}		
+		
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+
+}
+				
+//************* End of changes for Amamzon Jobs by fangcao *****************//
+	

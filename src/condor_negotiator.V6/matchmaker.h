@@ -56,6 +56,8 @@ class Matchmaker : public Service
 		// reinitialization method (reconfig)
 		int reinitialize ();	
 
+		typedef HashTable<MyString, MyString> ClaimIdHash;
+
 		// command handlers
 		int RESCHEDULE_commandHandler (int, Stream*);
 		int RESET_ALL_USAGE_commandHandler(int, Stream*);
@@ -81,6 +83,8 @@ class Matchmaker : public Service
 		/// Invalidate our negotiator ad at the collector(s).
 		void invalidateNegotiatorAd( void );
 
+		Accountant & getAccountant() { return accountant; }
+
     protected:
 		char * NegotiatorName;
 		int update_interval;
@@ -94,8 +98,8 @@ class Matchmaker : public Service
 		void updateCollector();
 
 		// auxillary functions
-		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList& );	
-		char * compute_signficant_attrs(ClassAdList & startdAds);
+		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClaimIdHash& );	
+		char * compute_significant_attrs(ClassAdList & startdAds);
 		
 		/** Negotiate w/ one schedd for one user, for one 'pie spin'.
 			@param scheddName Name attribute from the submitter ad.
@@ -104,8 +108,7 @@ class Matchmaker : public Service
 			@param share Priority w/o up-down (just relative prio factor).
 			@param scheddLimit Give away this many matches max
 			@param startdAds
-			@param startdPvtAdss
-			@param send_ad_to_schedd
+			@param claimIds
 			@param scheddVersion
 			@param ignore_schedd_limit After hit scheddLimit, keep 
 					negotiating but only consider startd rank.
@@ -119,22 +122,21 @@ class Matchmaker : public Service
 		int negotiate( char *scheddName, char *scheddAddr, 
 		   double priority, double share,
 		   int scheddLimit,
-		   ClassAdList &startdAds, ClassAdList &startdPvtAds, 
-		   int send_ad_to_schedd, const CondorVersionInfo & scheddVersion,
+		   ClassAdList &startdAds, ClaimIdHash &claimIds, 
+		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, int &numMatched);
 
 		int negotiateWithGroup ( int untrimmed_num_startds,
 			ClassAdList& startdAds, 
-			ClassAdList& startdPvtAds, ClassAdList& scheddAds, 
+			ClaimIdHash& claimIds, ClassAdList& scheddAds, 
 			int groupQuota=INT_MAX, const char* groupAccountingName=NULL);
 
 		
 		ClassAd *matchmakingAlgorithm(char*,char*,ClassAd&,ClassAdList&,
 									  double=-1.0, double=1.0, bool=false);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
-						ClassAdList &startdPvtAds, Sock *sock,
-						char* scheddName, char* scheddAddr,
-						int send_ad_to_schedd);
+						ClaimIdHash &claimIds, Sock *sock,
+						char* scheddName, char* scheddAddr);
 		void calculateNormalizationFactor (ClassAdList &, double &, double &,
 										   double &, double &);
 
@@ -200,7 +202,8 @@ class Matchmaker : public Service
 		                                   /* result parameters: */
 		                              int &userprioCrumbs );
 
-		char *getCapability (const char *, const char *, ClassAdList &);
+		void MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds);
+		char const *getClaimId (const char *, const char *, ClaimIdHash &, MyString &);
 		void addRemoteUserPrios( ClassAdList& );
 		void insertNegotiatorMatchExprs(ClassAd *ad);
 		void insertNegotiatorMatchExprs( ClassAdList &cal );
@@ -248,7 +251,7 @@ class Matchmaker : public Service
 
 		typedef HashTable<MyString, MapEntry*> AdHash;
 		AdHash *stashedAds;			
-		
+
 #ifdef WANT_NETMAN
 		// allocate network capacity
 		NetworkManager netman;
@@ -281,6 +284,7 @@ class Matchmaker : public Service
 		// did we reject the last match b/c of...
 		int rejForNetwork; 		//   - limited network capacity?
 		int rejForNetworkShare;	//   - limited network fair-share?
+		int rejForConcurrencyLimit;	//   - limited concurrency?
 		int rejPreemptForPrio;	//   - insufficient prio to preempt?
 		int rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 		int rejPreemptForRank;	//   - startd RANKs new job lower?
@@ -325,11 +329,13 @@ class Matchmaker : public Service
 			ClassAd* pop_candidate();
 			void get_diagnostics(int & rejForNetwork,
 					int & rejForNetworkShare,
+					int & rejForConcurrencyLimit,
 					int & rejPreemptForPrio,
 					int & rejPreemptForPolicy,
 					int & rejPreemptForRank);
 			void set_diagnostics(int rejForNetwork,
 					int rejForNetworkShare,
+					int rejForConcurrencyLimit,
 					int rejPreemptForPrio,
 					int rejPreemptForPolicy,
 					int rejPreemptForRank);
@@ -355,6 +361,7 @@ class Matchmaker : public Service
 			// rejection reasons
 			int m_rejForNetwork; 		//   - limited network capacity?
 			int m_rejForNetworkShare;	//   - limited network fair-share?
+			int m_rejForConcurrencyLimit;	//   - limited concurrency?
 			int m_rejPreemptForPrio;	//   - insufficient prio to preempt?
 			int m_rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 			int m_rejPreemptForRank;	//   - startd RANKs new job lower?

@@ -25,7 +25,7 @@
 # ia64_rhas_3
 # hppa_hpux_11
 # sun4u_sol_5.9
-# ppc_aix_5.2
+# ppc_aix_5.2-pl5
 # ppc64_sles_9
 # ps3_ydl_5.0
 # x86_rhap_5
@@ -49,7 +49,7 @@ testargs = quick
 ########################################
 [
 platforms = \
-	  hppa_hpux_11, ppc_aix_5.2, \
+	  hppa_hpux_11, ppc_aix_5.2-pl5, \
 	  sun4u_sol_5.9, \
 	  x86_rhas_3, x86_deb_4.0
 
@@ -59,7 +59,7 @@ prereqs = tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, \
 
 # per-platform prereqs 
 prereqs_hppa_hpux_11     = binutils-2.16, coreutils-5.2.1, gcc-3.4.3, gzip-1.2.4
-prereqs_ppc_aix_5.2      = vac-6, vacpp-6, perl-5.8.5, gzip-1.3.3
+prereqs_ppc_aix_5.2-pl5      = vac-6, vacpp-6, perl-5.8.5, gzip-1.3.3
 prereqs_sun4u_sol_5.9    = gcc-2.95.3, binutils-2.16, perl-5.8.5, gzip-1.3.3
 prereqs_x86_rhas_3       = binutils-2.15, perl-5.8.5, gzip-1.3.3, autoconf-2.59
 x_test_platforms_x86_rhas_3 =  x86_rhas_4,  x86_fc_3, x86_fc_4, \
@@ -71,7 +71,7 @@ x_test_platforms_x86_rhas_3 =  x86_rhas_4,  x86_fc_3, x86_fc_4, \
 						#x86_64_rhas_3, x86_64_rhas_4, x86_64_fc_4, \
 						#x86_64_fc_5
 #x_test_platforms_sun4u_sol_5.9 = sun4u_sol_5.10(compiler mismatch)
-#x_test_platforms_ppc_aix_5.2 = ppc_aix_5.3
+#x_test_platforms_ppc_aix_5.2-pl5 = ppc_aix_5.2, ppc_aix_5.3
 ]   
 
 ########################################
@@ -89,6 +89,7 @@ prereqs   = tar-1.14, m4-1.4.1, flex-2.5.4a, make-3.80, bison-1.25, perl-5.8.5
 [
 platforms = \
             x86_winnt_5.1, ppc64_sles_9, ps3_ydl_5.0, x86_rhap_5, x86_64_rhap_5
+x_test_platforms_x86_rhap_5 = unmanaged-x86_rhap_5.1, x86_64_fc_5, x86_fc_5
 ]
 
 
@@ -98,13 +99,14 @@ platforms = \
 [
 platforms =   \
 	ia64_rhas_3, x86_64_rhas_3, \
-	ppc_aix_5.2, \
+	ppc_aix_5.2-pl5, \
 	sun4u_sol_5.9, \
 	x86_rhas_3
 test_append_prereqs = java-1.4.2_05
 x_test_platforms_ia64_rhas_3 = ia64_rhas_4
 x_test_platforms_x86_64_rhas_3 = x86_64_rhas_4, x86_64_fc_4
 #x_test_platforms_x86_64_rhas_3 = x86_64_fc_5
+x_test_platforms_ppc_aix_5.2-pl5 =  ppc_aix_5.3
 ]
 
 [
@@ -146,6 +148,7 @@ x_test_platforms_x86_rhap_5 = unmanaged-x86_rhap_5.1
 [
 platforms = x86_64_rhap_5
 test_append_prereqs = java-1.4.2_05
+#x_test_platforms_x86_64_rhap_5 = x86_64_fc_4
 ]
 
 [
@@ -157,7 +160,24 @@ testonly_append_prereqs = java-1.4.2_05
 ]
 
 [
-testplatforms = x86_fc_4
+testplatforms = x86_rh_9
+testprereqs = tar-1.14, make-3.80
+testonly_append_prereqs = java-1.5.0_08
+]
+
+[
+testplatforms = ppc_aix_5.3
+testprereqs = tar-1.14, make-3.80, patch-2.5.4, m4-1.4.1, flex-2.5.4a, \
+          byacc-1.9, bison-1.25
+testonly_append_prereqs = java-1.4.2_05
+]
+
+[
+testplatforms = unmanaged-x86_rhap_5.1
+]
+
+[
+testplatforms = x86_fc_4,  x86_fc_5, x86_rhap_5.1, x86_64_fc_5
 testprereqs = tar-1.14, make-3.80
 testonly_append_prereqs = java-1.5.0_08
 ]
@@ -169,5 +189,5 @@ testonly_append_prereqs = java-1.4.2_05
 ]
 
 [
-testplatforms = unmanaged-x86_rhap_5.1
+testplatforms =  unmanaged-x86_rhap_5.1
 ]

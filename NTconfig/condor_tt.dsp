@@ -90,11 +90,23 @@ SOURCE="..\src\condor_tt\condor_ttdb.C"
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_tt\condor_ttdb.h
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_tt\jobqueuecollection.C"
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_tt\jobqueuecollection.h
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_tt\jobqueuedbmanager.C"
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_tt\jobqueuedbmanager.h
 # End Source File
 # Begin Source File
 
@@ -103,6 +115,10 @@ SOURCE="..\src\condor_tt\tt_main.C"
 # Begin Source File
 
 SOURCE="..\src\condor_tt\ttmanager.C"
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_tt\ttmanager.h
 # End Source File
 # End Target
 # End Project

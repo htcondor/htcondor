@@ -30,7 +30,7 @@ $cmd = "job_core_basic_par.cmd";
 $corename = "job_core_basic_par";
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");
@@ -113,7 +113,7 @@ close(TPLATE);
 close(CSUB);
 
 
-my $result = system("./job_core_basic_par.pl $mysubmitnm");
+my $result = CondorPersonal::PersonalSystem("./job_core_basic_par.pl $mysubmitnm");
 print "Result of basic paarallel  job is  $result\n";
 
 

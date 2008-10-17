@@ -28,6 +28,7 @@
 #include "my_hostname.h"
 #include "condor_version.h"
 #include "condor_socket_types.h"
+#include "subsystem_info.h"
 #include "condor_netdb.h"
 #include "condor_fix_iostream.h"
 #include "condor_fix_fstream.h"
@@ -50,7 +51,9 @@ static bool ManageBandwidth = false;
 static int NetworkHorizon = 300;
 #endif
 
-char* mySubSystem = "CKPT_SERVER";
+/* For daemonCore, etc. */
+DECL_SUBSYSTEM( "CKPT_SERVER", SUBSYSTEM_TYPE_DAEMON );
+
 char* myName = NULL;
 
 extern "C" {
@@ -121,7 +124,7 @@ void Server::Init()
 	num_replicate_xfers = 0;
 
 	config();
-	dprintf_config( mySubSystem );
+	dprintf_config( mySubSystem->getName() );
 
 	set_condor_priv();
 
@@ -135,7 +138,7 @@ void Server::Init()
 	dprintf( D_ALWAYS,
 			 "******************************************************\n" );
 	dprintf( D_ALWAYS, "** %s (CONDOR_%s) STARTING UP\n", myName, 
-			 mySubSystem );
+			 mySubSystem->getName() );
 	dprintf( D_ALWAYS, "** %s\n", CondorVersion() );
 	dprintf( D_ALWAYS, "** %s\n", CondorPlatform() );
 	dprintf( D_ALWAYS, "** PID = %lu\n", (unsigned long) getpid() );
@@ -588,11 +591,12 @@ void Server::HandleRequest(int req_sd,
 			if (errno != EINTR) {
 				rt_alarm.ResetAlarm();
 				close(new_req_sd);
-				sprintf(log_msg, "Request from %s REJECTED:", 
+				sprintf(log_msg,
+						"Incomplete request packet from %s [REJECTING]",
 						inet_ntoa(shadow_sa.sin_addr));
 				Log(req_ID, log_msg);
-				Log("Incomplete request packet");
-				sprintf(log_msg, "DEBUG: %d bytes sent; %d bytes expected", 
+				sprintf(log_msg,
+						"DEBUG: %d bytes recieved; %d bytes expected",
 						bytes_recvd, req_len);
 				Log(-1, log_msg);
 				return;

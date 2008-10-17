@@ -25,6 +25,10 @@
 #include "environment_tracker.h"
 #include "parent_tracker.h"
 
+#if !defined(WIN32)
+#include "glexec_kill.h"
+#endif
+
 #if defined(LINUX)
 #include "group_tracker.h"
 #endif
@@ -341,6 +345,40 @@ ProcFamilyMonitor::unregister_subfamily(pid_t pid)
 	return PROC_FAMILY_ERROR_SUCCESS;
 }
 
+#if !defined(WIN32)
+proc_family_error_t
+ProcFamilyMonitor::use_glexec_for_family(pid_t pid, char* proxy)
+{
+	// only allow this is the glexec_kill module has been
+	// initialized
+	//
+	if (!glexec_kill_check()) {
+		dprintf(D_ALWAYS,
+		        "use_glexec_for_family failure: "
+		            "glexec_kill not initialized\n");
+		return PROC_FAMILY_ERROR_NO_GLEXEC;
+	}
+
+	// lookup the family
+	//
+	Tree<ProcFamily*>* tree;
+	int ret = m_family_table.lookup(pid, tree);
+	if (ret == -1) {
+		dprintf(D_ALWAYS,
+		        "use_glexec_for_family failure: "
+		            "family with root %u not found\n",
+		        pid);
+		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
+	}
+
+	// associate the proxy with the family
+	//
+	tree->get_data()->set_proxy(proxy);
+
+	return PROC_FAMILY_ERROR_SUCCESS;
+}
+#endif
+
 int
 ProcFamilyMonitor::get_snapshot_interval()
 {
@@ -361,21 +399,8 @@ ProcFamilyMonitor::signal_process(pid_t pid, int sig)
 		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
 	}
 
-	// look up the Member so we can get at the procInfo struct
-	//
-	ProcFamilyMember* pm;
-	ret = m_member_table.lookup(pid, pm);
-	if (ret == -1) {
-		dprintf(D_ALWAYS,
-		        "signal_process failure: family root pid %u not found\n",
-		        pid);
-		return PROC_FAMILY_ERROR_PROCESS_NOT_FOUND;
-	}
-	procInfo* pi = pm->get_proc_info();
-	ASSERT(pi);
-
 	dprintf(D_ALWAYS, "sending signal %d to process %u\n", sig, pid);
-	send_signal(pi, sig);
+	tree->get_data()->signal_root(sig);
 
 	return PROC_FAMILY_ERROR_SUCCESS;
 }
@@ -383,6 +408,10 @@ ProcFamilyMonitor::signal_process(pid_t pid, int sig)
 proc_family_error_t
 ProcFamilyMonitor::signal_family(pid_t pid, int sig)
 {
+	// get as up to date as possible
+	//
+	snapshot();
+
 	// find the family
 	//
 	Tree<ProcFamily*>* tree;
@@ -393,10 +422,6 @@ ProcFamilyMonitor::signal_family(pid_t pid, int sig)
 		        pid);
 		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
 	}
-
-	// get as up to date as possible
-	//
-	snapshot();
 	
 	// now send the signal and return
 	//
@@ -420,10 +445,6 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
 	}
 
-	// get as up to date as possible
-	//
-	snapshot();
-
 	// get usage from the requested family and all subfamilies
 	//
 	dprintf(D_ALWAYS,
@@ -433,10 +454,14 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 	usage->user_cpu_time = 0;
 	usage->sys_cpu_time = 0;
 	usage->percent_cpu = 0.0;
-	usage->max_image_size = 0;
 	usage->total_image_size = 0;
 	usage->num_procs = 0;
 	get_family_usage(tree, usage);
+
+	// max image size is handled separately; we request it directly from
+	// the top-level family
+	//
+	usage->max_image_size = tree->get_data()->get_max_image_size();
 
 	return PROC_FAMILY_ERROR_SUCCESS;
 }
@@ -561,6 +586,11 @@ ProcFamilyMonitor::snapshot()
 	//
 	delete_unwatched_families(m_tree);
 
+	// now walk the tree and update the families' maximum image size
+	// bookkeeping
+	//
+	update_max_image_sizes(m_tree);
+
 	dprintf(D_ALWAYS, "...snapshot complete\n");
 }
 
@@ -679,6 +709,26 @@ ProcFamilyMonitor::get_snapshot_interval(Tree<ProcFamily*>* tree)
 	return ret_value;
 }
 
+unsigned long
+ProcFamilyMonitor::update_max_image_sizes(Tree<ProcFamily*>* tree)
+{
+	// recurse on children, keeping sum of their total image
+	// size as we go
+	//
+	unsigned long sum = 0;
+	Tree<ProcFamily*>* child = tree->get_child();
+	while (child != NULL) {
+		sum += update_max_image_sizes(child);
+		child = child->get_sibling();
+	}
+
+	// now call update_image_size on the current node, passing
+	// it the sum of our children's image sizes, and return our
+	// own total image size
+	//
+	return tree->get_data()->update_max_image_size(sum);
+}
+
 void
 ProcFamilyMonitor::get_family_usage(Tree<ProcFamily*>* tree, ProcFamilyUsage* usage)
 {
@@ -701,7 +751,6 @@ ProcFamilyMonitor::signal_family(Tree<ProcFamily*>* tree, int sig)
 	// signal current tree node
 	//
 	tree->get_data()->spree(sig);
-
 
 	// recurse on children
 	//

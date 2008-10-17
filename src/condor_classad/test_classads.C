@@ -24,6 +24,7 @@
 #include "stringSpace.h"
 #include "condor_scanner.h" 
 #include "iso_dates.h"
+#define HAVE_DLOPEN 1
 #ifdef HAVE_DLOPEN // Used to be CLASSAD_FUNCTIONS
 #include "condor_config.h"
 #endif
@@ -141,12 +142,7 @@ public:
 
 	void PrintResults(void)
 	{
-		if (number_of_tests_failed == 0) {
-			printf("All %d tests passed.\n", number_of_tests);
-		} else {
-			printf("%d of %d tests failed.\n",
-				   number_of_tests_failed, number_of_tests);
-		}
+		printf("%d of %d tests passed.\n", number_of_tests_passed, number_of_tests);
 		return;
 	}
 
@@ -223,6 +219,7 @@ static void test_function_isinteger( TestResults  *results);
 static void test_function_isreal( TestResults  *results);
 static void test_function_isboolean( TestResults  *results);
 static void test_function_substr( TestResults  *results);
+static void test_function_formattime( TestResults  *results);
 static void test_function_strcmp( TestResults  *results);
 static void test_function_attrnm( TestResults  *results);
 static void test_function_regexp( TestResults  *results);
@@ -1701,6 +1698,7 @@ static void test_functions(
 
 		test_function_strcat(results);
 		test_function_substr(results);
+		test_function_formattime(results);
 		test_function_strcmp(results);
 		test_function_attrnm(results);
 		test_function_regexp(results);
@@ -3532,6 +3530,110 @@ static void test_function_isboolean(
 	}
 	return;
 }
+
+
+static void test_function_formattime(
+	TestResults  *results)     // OUT: Modified to reflect result of test
+{
+	char	big_string[1024];
+	char	i0[1024];
+	int 	integer;
+
+	char classad_string[] = 
+							"I0=formattime():"
+							"I1=formattime(CurrentTime):"
+							"I2=formattime(CurrentTime,\"%c\"):"
+							"I3=formattime(1174737600,\"%m/%d/%y\"):"
+							"I4=formattime(-231):"
+							"I5=formattime(1174694400,1174694400):"
+							"E0=isError(I4):"
+							"E1=isError(I5):"
+							"";
+
+	ClassAd  *classad;
+
+	config(0);
+
+	classad = new ClassAd(classad_string, ':');
+	if (classad == NULL) {
+		printf("Can't parse ClassAd for function formattime() in line %d\n", 
+			   __LINE__);
+		results->AddResult(false);
+	} else {
+		printf("Parsed ClassAd for << function formattime() >> in line %d\n", 
+			   __LINE__);
+		results->AddResult(true);
+
+		if (classad->EvalString("I0", NULL, i0)) {
+			printf("Passed: Evaluating formattime() gives: %s in line %d\n", 
+				   i0, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating formattime() gives: %s in line %d\n",
+				   i0, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("I1", NULL, big_string) && 
+				(strcmp(big_string, i0) == 0)) {
+			printf("Passed: Evaluating formattime(CurrentTime) gives: %s in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating formattime(CurrentTime) gives: %s in line %d\n",
+				   big_string, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("I2", NULL, big_string) && 
+				(strcmp(big_string, i0) == 0)) {
+			printf("Passed: Evaluating formattime(CurrentTime,\"%%c\") gives: %s in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating formattime(CurrentTime,\"%%c\") gives: %s in line %d\n",
+				   big_string, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("I3", NULL, big_string) && 
+				(strcmp(big_string, "03/24/07") == 0)) {
+			printf("Passed: Evaluating formattime(1174737600,\"%%m/%%d/%%y\") gives: %s in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating formattime(1174737600,\"%%m/%%d/%%y\") gives: %s in line %d\n",
+				   big_string, __LINE__);
+			results->AddResult(false);
+		}
+
+
+
+		if (classad->EvalBool("E0", NULL, integer) && (integer == 1)) {
+			printf("Passed: Caught error from a negative time : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: did not catch error from a negative time : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("E1", NULL, integer) && (integer == 1)) {
+			printf("Passed: Bad string caught : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Bad string missed : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+        delete classad;
+	}
+	return;
+}
+
 
 static void test_function_substr(
 	TestResults  *results)     // OUT: Modified to reflect result of test

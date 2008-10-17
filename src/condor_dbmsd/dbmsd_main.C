@@ -19,6 +19,8 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include "subsystem_info.h"
+#include "subsystem_info.h"
 #include "condor_debug.h"
 #include "DBMSManager.h"
 
@@ -34,7 +36,7 @@
 //-------------------------------------------------------------
 
 // about self
-char* mySubSystem = "DBMSD";		// used by Daemon Core
+DECL_SUBSYSTEM( "DBMSD", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
 DBMSManager dbmsd;
 

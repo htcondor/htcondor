@@ -60,13 +60,13 @@ TimerManager::~TimerManager()
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, char* event_descrip,
 						   unsigned period, int id)
 {
-	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,event_descrip,period,id,0) );
+	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,event_descrip,period,NULL,id,0) );
 }
 
 int TimerManager::NewTimer(unsigned deltawhen, Event event, char* event_descrip,
 						   unsigned period, int id)
 {
-	return( NewTimer((Service *)NULL,deltawhen,event,(Eventcpp)NULL,event_descrip,period,id,0) );
+	return( NewTimer((Service *)NULL,deltawhen,event,(Eventcpp)NULL,event_descrip,period,NULL,id,0) );
 }
 
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Eventcpp event, char* event_descrip,
@@ -76,13 +76,19 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Eventcpp event, char*
 		dprintf( D_DAEMONCORE,"DaemonCore NewTimer() called with c++ pointer & NULL Service*\n");
 		return -1;
 	}
-	return( NewTimer(s,deltawhen,(Event)NULL,event,event_descrip,period,id,1) );
+	return( NewTimer(s,deltawhen,(Event)NULL,event,event_descrip,period,NULL,id,1) );
 }
+
+int TimerManager::NewTimer (Service* s,Timeslice timeslice,Eventcpp event,char * event_descrip,int id)
+{
+	return NewTimer(s,0,(Event)NULL,event,event_descrip,0,&timeslice,id,1);
+}
+
 
 // Add a new event in the timer list. if period is 0, this event is a one time
 // event instead of periodical
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp eventcpp,
-		char *event_descrip, unsigned period, int id, int is_cpp)
+		char *event_descrip, unsigned period, Timeslice *timeslice,int id, int is_cpp)
 {
 	Timer*		new_timer;
 	Timer*		timer_ptr;
@@ -99,6 +105,22 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 	new_timer->period = period;
 	new_timer->service = s; 
 	new_timer->is_cpp = is_cpp;
+
+	if( timeslice ) {
+		new_timer->timeslice = *timeslice;
+		new_timer->has_timeslice = true;
+		int signed_delta = new_timer->timeslice.getTimeToNextRun();
+		if( signed_delta < 0 ) {
+			deltawhen = 0;
+		}
+		else {
+			deltawhen = (unsigned)signed_delta;
+		}
+	}
+	else {
+		new_timer->has_timeslice = false;
+	}
+
 	if ( TIMER_NEVER == deltawhen ) {
 		new_timer->when = TIME_T_NEVER;
 	} else {
@@ -109,6 +131,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 		new_timer->event_descrip = strdup(event_descrip);
 	else
 		new_timer->event_descrip = EMPTY_DESCRIP;
+
 
 	if(id >= 0)	{
 		if ( CancelTimer(id) == -1 ) {
@@ -207,7 +230,7 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 
 	// note that this call to NewTimer() will first call CancelTimer on the tid, 
 	// then create a new timer with the same tid.
-	if ( NewTimer(s, when, handler, handlercpp, event_descrip, period, 
+	if ( NewTimer(s, when, handler, handlercpp, event_descrip, period, NULL, 
 			id, is_cpp) != -1 ) {
 		// and dont forget to renew the users data_ptr
 		daemonCore->Register_DataPtr(data_ptr);
@@ -395,6 +418,8 @@ TimerManager::Timeout()
 		is_cpp = timer_list->is_cpp;
 		event_descrip = strdup(timer_list->event_descrip);
 		data_ptr = timer_list->data_ptr;
+		Timeslice timeslice = timer_list->timeslice;
+		bool has_timeslice = timer_list->has_timeslice;
 
 		// Update curr_dataptr for GetDataPtr()
 		daemonCore->curr_dataptr = &(timer_list->data_ptr);
@@ -409,6 +434,10 @@ TimerManager::Timeout()
 					current_id, event_descrip);
 		}
 
+		if( has_timeslice ) {
+			timeslice.setStartTimeNow();
+		}
+
 		// Now we call the registered handler.  If we were told that the handler
 		// is a c++ method, we call the handler from the c++ object referenced 
 		// by service*.  If we were told the handler is a c function, we call
@@ -419,9 +448,19 @@ TimerManager::Timeout()
 			(*handler)(s);				// typedef int (*Event)(Service*,int)
 		}
 
+		if( has_timeslice ) {
+			timeslice.setFinishTimeNow();
+		}
+
 		if (DebugFlags & D_FULLDEBUG) {
-			dprintf(D_COMMAND, "Return from Timer handler %d (%s)\n",
-					current_id, event_descrip);
+			if( has_timeslice ) {
+				dprintf(D_COMMAND, "Return from Timer handler %d (%s) - took %.3fs\n",
+						current_id, event_descrip, timeslice.getLastDuration() );
+			}
+			else {
+				dprintf(D_COMMAND, "Return from Timer handler %d (%s)\n",
+						current_id, event_descrip);
+			}
 		}
 
 		// Make sure we didn't leak our priv state
@@ -436,11 +475,11 @@ TimerManager::Timeout()
 			// here we remove the timer we just serviced, or renew it if it is 
 			// periodic.  note calls to CancelTimer are safe even if the user's
 			// handler called CancelTimer as well...
-			if ( period > 0 ) {
+			if ( period > 0 || has_timeslice ) {
 				// timer is periodic, renew it.  note that this call to NewTimer() 
 				// will first call CancelTimer on the expired timer, then renew it.
 				if ( NewTimer(s, period, handler, handlercpp, event_descrip, period, 
-						current_id, is_cpp) != -1 ) {
+						has_timeslice ? &timeslice : NULL, current_id, is_cpp) != -1 ) {
 					// and dont forget to renew the users data_ptr
 					daemonCore->Register_DataPtr(data_ptr);
 					// now clear curr_dataptr; the above NewTimer should appear "transparent"
@@ -502,10 +541,34 @@ void TimerManager::DumpTimerList(int flag, char* indent)
 		else
 			ptmp = "NULL";
 
+		MyString slice_desc;
+		if( !timer_ptr->has_timeslice ) {
+			slice_desc.sprintf("period = %d, ", timer_ptr->period);
+		}
+		else {
+			slice_desc.sprintf_cat("timeslice = %.3g, ",
+								   timer_ptr->timeslice.getTimeslice());
+			if( timer_ptr->timeslice.getDefaultInterval() ) {
+				slice_desc.sprintf_cat("period = %.1f, ",
+								   timer_ptr->timeslice.getDefaultInterval());
+			}
+			if( timer_ptr->timeslice.getInitialInterval() ) {
+				slice_desc.sprintf_cat("initial period = %.1f, ",
+								   timer_ptr->timeslice.getInitialInterval());
+			}
+			if( timer_ptr->timeslice.getMinInterval() ) {
+				slice_desc.sprintf_cat("min period = %.1f, ",
+								   timer_ptr->timeslice.getMinInterval());
+			}
+			if( timer_ptr->timeslice.getMaxInterval() ) {
+				slice_desc.sprintf_cat("max period = %.1f, ",
+								   timer_ptr->timeslice.getMaxInterval());
+			}
+		}
 		dprintf(flag, 
-			"%sid = %d, when = %ld, period = %d, handler_descrip=<%s>\n", 
-			indent, timer_ptr->id, (long)timer_ptr->when, 
-			timer_ptr->period,ptmp);
+				"%sid = %d, when = %ld, %shandler_descrip=<%s>\n", 
+				indent, timer_ptr->id, (long)timer_ptr->when, 
+				slice_desc.Value(),ptmp);
 	}
 	dprintf(flag, "\n");
 }

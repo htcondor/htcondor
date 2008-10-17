@@ -20,12 +20,15 @@
 
 #include "condor_common.h"
 #include "startd.h"
-#include "mds.h"
 #include "condor_environ.h"
 #include "classad_merge.h"
 #include "vm_common.h"
 #include "VMRegister.h"
 #include "file_sql.h"
+
+#if HAVE_DLOPEN
+#include "StartdPlugin.h"
+#endif
 
 extern FILESQL *FILEObj;
 
@@ -907,6 +910,10 @@ Resource::do_update( void )
 		FILESQL::daemonAdInsert(&public_ad, "Machines", FILEObj, prevLHF);
 	}	
 
+#if HAVE_DLOPEN
+	StartdPluginManager::Update(&public_ad, &private_ad);
+#endif
+
 		// Send class ads to collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
 								&private_ad, true ); 
@@ -938,6 +945,10 @@ Resource::final_update( void )
 	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, 
 			 r_name );
 	invalidate_ad.Insert( line );
+
+#if HAVE_DLOPEN
+	StartdPluginManager::Invalidate(&invalidate_ad);
+#endif
 
 	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
 }
@@ -1119,6 +1130,16 @@ void
 Resource::preemptIsTrue()
 {
 	if(r_cur) r_cur->preemptIsTrue();
+}
+
+bool
+Resource::curClaimIsClosing()
+{
+	return
+		hasPreemptingClaim() ||
+		activity() == retiring_act ||
+		state() == preempting_state ||
+		claimWorklifeExpired();
 }
 
 bool
@@ -1469,18 +1490,20 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// should get the ClaimId from r_cur.
 			// CRUFT: This shouldn't still be called ATTR_CAPABILITY
 			// in the ClassAd, but for backwards compatibility it is.
-			// When we finally remove all the evil startd private ad
-			// junk this can go away, too.
+			// As of 7.1.3, the negotiator accepts ATTR_CLAIM_ID
+			// ATTR_CAPABILITY, so once we no longer care about
+			// compatibility with negotiators older than that,
+			// we can ditch ATTR_CAPABILITY and switch the following
+			// over to ATTR_CLAIM_ID.  That will slightly simplify
+			// claimid-specific logic elsewhere, such as the private
+			// attributes in ClassAds.
 		if( r_pre_pre ) {
-			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre_pre->id() );
-			cap->Insert( line );
+			cap->Assign( ATTR_CAPABILITY, r_pre_pre->id() );
 		}
 		else if( r_pre ) {
-			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre->id() );
-			cap->Insert( line );
+			cap->Assign( ATTR_CAPABILITY, r_pre->id() );
 		} else if( r_cur ) {
-			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_cur->id() );
-			cap->Insert( line );
+			cap->Assign( ATTR_CAPABILITY, r_cur->id() );
 		}		
 	}
 
@@ -1558,29 +1581,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
     // Publish the monitoring information
     daemonCore->monitor_data.ExportData( cap );
-
-	// Build the MDS/LDIF file
-	char	*tmp;
-	if ( ( tmp = param( "STARTD_MDS_OUTPUT" ) ) != NULL ) {
-		if (  ( mask & ( A_PUBLIC | A_UPDATE ) ) == 
-			  ( A_PUBLIC | A_UPDATE )  ) {
-
-			int		mlen = 20 + strlen( tmp );
-			char	*fname = (char *) malloc( mlen );
-			if ( NULL == fname ) {
-				dprintf( D_ALWAYS, "Failed to malloc MDS fname (%d bytes)\n",
-						 mlen );
-			} else {
-				sprintf( fname, "%s-%s.ldif", tmp, r_id_str );
-				if (  ( MdsGenerate( cap, fname ) ) < 0 ) {
-					dprintf( D_ALWAYS, "Failed to generate MDS file '%s'\n",
-							 fname );
-				}
-				free(fname);
-			}
-		}
-		free(tmp);
-	}
 
 	if( IS_PUBLIC(mask) && IS_SHARED_SLOT(mask) ) {
 		resmgr->publishSlotAttrs( cap );

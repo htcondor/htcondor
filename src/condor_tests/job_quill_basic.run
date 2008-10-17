@@ -31,7 +31,7 @@ $topdir = getcwd();
 $ourtarfile = "";
 
 # where am I running
-$currenthost = `hostname`;
+$currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
 system("date");
@@ -111,6 +111,9 @@ print ">>>\n";
 
 $perlinstall = system("./x_quill_buildperlmods.pl");
 print "Perl module install result was $perlinstall\n";
+
+print "Current SysV IPC state\n";
+system("ipcs -a");
 
 print "About to install Postgres: <<<";
 system("date");
@@ -207,6 +210,8 @@ if($pgresult == 0) {
 }
 
 system("cp *quill_basic* $mysaveme");
+# catch the ads which were compared.... 
+system("cp quill_*_ads $mysaveme");
 
 if( -e "$mysubmitnm" )
 {

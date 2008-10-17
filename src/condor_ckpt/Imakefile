@@ -77,7 +77,7 @@ CFLAGS = $(STD_C_FLAGS) -DIN_CKPT_LIB $(DYNAMIC_FLAGS) $(DL_EXTRACT)
 
 OS = OperatingSystem
 
-CPP_UTIL_OBJ = condor_version.o
+CPP_UTIL_OBJ = condor_version.o subsystem_info.o
 
 UTIL_OBJ =  dprintf_common.o mkargv.o
 
@@ -304,7 +304,7 @@ clean::
 html:
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_c++_util,$(CPP_UTIL_OBJ))
-import(../condor_util_lib,$(UTIL_OBJ))
+import_objs(../condor_c++_util,$(CPP_UTIL_OBJ))
+import_objs(../condor_util_lib,$(UTIL_OBJ))
 
 testbin:: all

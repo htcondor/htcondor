@@ -94,6 +94,10 @@ char* calc_subnet_name(void);
 
 int is_ipaddr(const char *inbuf, struct in_addr *sin_addr);
 
+int is_ipaddr_no_wildcard(const char *inbuf, struct in_addr *sin_addr);
+
+int is_ipaddr_wildcard(const char *inbuf, struct in_addr *sin_addr, struct in_addr *mask_addr);
+
 int is_valid_network( const char *network, struct in_addr *ip, struct in_addr *mask);
 
 int is_valid_sinful( const char *sinful );
@@ -107,7 +111,12 @@ int getPortFromAddr( const char* addr );
    allocated string which must be de-allocated with free(). */ 
 char* getHostFromAddr( const char* addr );
 
-/* returns the address from a given ClaimId.  the string returned is a
+/* Deprecated!  The claim id should no longer be used to get the startd
+   address, except for cases where this is required for backward
+   compatibility.  The startd ClassAd should be fed into a DCDaemon
+   object to get the address of the startd, because this handles
+   private network addresses etc.
+   returns the address from a given ClaimId.  the string returned is a
    newly allocated string which must be de-allocated with free().
 */ 
 char* getAddrFromClaimId( const char* id );
@@ -125,6 +134,10 @@ char *prt_fds(int maxfd, fd_set *fds);
 /* Get the address that a socket is bound to */
 // @ret: NULL if failed; non-NULL if succeed
 struct sockaddr_in *getSockAddr(int sockfd);
+
+/* Using a string of the form "<xx.xx.xx.xx:pppp>" return a 
+the hardware adapter asociated with it */
+char* string_to_hardware_address(const char *sinful);
 
 #if defined(__cplusplus)
 }

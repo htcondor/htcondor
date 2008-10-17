@@ -44,7 +44,7 @@
 #include "directory.h"
 #include "exit.h"
 #include "condor_auth_x509.h"
-#include "starter_privsep_helper.h"
+#include "setenv.h"
 
 extern "C" int get_random_int();
 extern int main_shutdown_fast();
@@ -66,6 +66,8 @@ CStarter::CStarter()
 	starter_stderr_fd = -1;
 	deferral_tid = -1;
 	suspended = false;
+	m_privsep_helper = NULL;
+	m_configured = false;
 }
 
 
@@ -207,7 +209,7 @@ CStarter::StarterExit( int code )
 {
 	removeTempExecuteDir();
 #if !defined(WIN32)
-	if( param_boolean( "GLEXEC_STARTER", false ) ) {
+	if ( GetEnv( "CONDOR_GLEXEC_STARTER_CLEANUP_FLAG" ) ) {
 		exitAfterGlexec( code );
 	}
 #endif
@@ -232,8 +234,35 @@ CStarter::Config()
 		}
 	}
 
+	if (!m_configured) {
+		bool ps = privsep_enabled();
+		bool gl = param_boolean("GLEXEC_JOB", false);
+#if !defined(LINUX)
+		dprintf(D_ALWAYS,
+		        "GLEXEC_JOB not supported on this platform; "
+		            "ignoring\n");
+		gl = false;
+#endif
+		if (ps && gl) {
+			EXCEPT("can't support both "
+			           "PRIVSEP_ENABLED and GLEXEC_JOB");
+		}
+		if (ps) {
+			m_privsep_helper = new CondorPrivSepHelper;
+			ASSERT(m_privsep_helper != NULL);
+		}
+		else if (gl) {
+#if defined(LINUX)
+			m_privsep_helper = new GLExecPrivSepHelper;
+			ASSERT(m_privsep_helper != NULL);
+#endif
+		}
+	}
+
 		// Tell our JobInfoCommunicator to reconfig, too.
 	jic->config();
+
+	m_configured = true;
 }
 
 /**
@@ -522,27 +551,66 @@ CStarter::createTempExecuteDir( void )
 		return true;
 	}
 
-		// On Unix, be sure we're in user priv for this.
-		// But on NT (at least for now), we should be in Condor priv
-		// because the execute directory on NT is not wworld writable.
+		// On Unix, we stat() the execute directory to determine how
+		// the sandbox directory should be created. If it is world-
+		// writable, we do a mkdir() as the user. If it is not, we do
+		// the mkdir() as condor then chown() it over to the user.
+		//
+		// On NT (at least for now), we should be in Condor priv
+		// because the execute directory on NT is not world writable.
 #ifndef WIN32
 		// UNIX
-	priv_state priv = set_user_priv();
+	bool use_chown = false;
+	if (can_switch_ids()) {
+		struct stat st;
+		if (stat(Execute, &st) == -1) {
+			EXCEPT("stat failed on %s: %s",
+			       Execute,
+			       strerror(errno));
+		}
+		if (!(st.st_mode & S_IWOTH)) {
+			use_chown = true;
+		}
+	}
+	priv_state priv;
+	if (use_chown) {
+		priv = set_condor_priv();
+	}
+	else {
+		priv = set_user_priv();
+	}
 #else
 		// WIN32
 	priv_state priv = set_condor_priv();
 #endif
 
-	if (privsep_enabled()) {
-		privsep_helper.initialize_sandbox(WorkingDir.Value());
+	CondorPrivSepHelper* cpsh = condorPrivSepHelper();
+	if (cpsh != NULL) {
+		cpsh->initialize_sandbox(WorkingDir.Value());
 	}
 	else {
 		if( mkdir(WorkingDir.Value(), 0777) < 0 ) {
-			dprintf( D_FAILURE|D_ALWAYS, "couldn't create dir %s: %s\n", 
-					 WorkingDir.Value(), strerror(errno) );
+			dprintf( D_FAILURE|D_ALWAYS,
+			         "couldn't create dir %s: %s\n",
+			         WorkingDir.Value(),
+			         strerror(errno) );
 			set_priv( priv );
 			return false;
 		}
+#if !defined(WIN32)
+		if (use_chown) {
+			priv_state p = set_root_priv();
+			if (chown(WorkingDir.Value(),
+			          get_user_uid(),
+			          get_user_gid()) == -1)
+			{
+				EXCEPT("chown error on %s: %s",
+				       WorkingDir.Value(),
+				       strerror(errno));
+			}
+			set_priv(p);
+		}
+#endif
 	}
 
 #ifdef WIN32
@@ -649,6 +717,34 @@ CStarter::createTempExecuteDir( void )
 int
 CStarter::jobEnvironmentReady( void )
 {
+#if defined(LINUX)
+		//
+		// For the GLEXEC_JOB case, we should now be able to
+		// initialize our helper object.
+		//
+	GLExecPrivSepHelper* gpsh = glexecPrivSepHelper();
+	if (gpsh != NULL) {
+		MyString proxy_path;
+		if (!jic->jobClassAd()->LookupString(ATTR_X509_USER_PROXY,
+		                                     proxy_path))
+		{
+			EXCEPT("configuration specifies use of glexec, "
+			           "but job has no proxy");
+		}
+		const char* proxy_name = condor_basename(proxy_path.Value());
+		gpsh->initialize(proxy_name, WorkingDir.Value());
+	}
+#endif
+
+		//
+		// Now that we are done preparing the job's environment,
+		// change the sandbox ownership to the user before spawning
+		// any job processes.
+		//
+	if (m_privsep_helper != NULL) {
+		m_privsep_helper->chown_sandbox_to_user();
+	}
+
 		//
 		// The Starter will determine when the job 
 		// should be started. This method will always return 
@@ -1097,9 +1193,20 @@ CStarter::SpawnJob( void )
 int
 CStarter::RemoteSuspend(int)
 {
-		// notify our JobInfoCommunicator that the jobs are suspended
+	int retval = this->Suspend();
+
+		// Notify our JobInfoCommunicator that the jobs are suspended.
+		// Ideally, this would be done _before_ suspending the job, so
+		// that we commit information about this change of state
+		// reliably.  However, this would require additional changes
+		// to do it right, because before the job is suspended, the
+		// bookkeeping about the state of the job has not been updated yet,
+		// so the job info communicator won't advertise the imminent
+		// change of state.  For now, we have decided that it is acceptable
+		// to simply log suspend events after the change of state.
+
 	jic->Suspend();
-	return ( this->Suspend( ) );
+	return retval;
 }
 
 /**
@@ -1143,9 +1250,20 @@ CStarter::Suspend( void ) {
 int
 CStarter::RemoteContinue(int)
 {
-		// notify our JobInfoCommunicator that the job is being continued
+	int retval = this->Continue();
+
+		// Notify our JobInfoCommunicator that the job is being continued.
+		// Ideally, this would be done _before_ unsuspending the job, so
+		// that we commit information about this change of state
+		// reliably.  However, this would require additional changes
+		// to do it right, because before the job is unsuspended, the
+		// bookkeeping about the state of the job has not been updated yet,
+		// so the job info communicator won't advertise the imminent
+		// change of state.  For now, we have decided that it is acceptable
+		// to simply log unsuspend events after the change of state.
+
 	jic->Continue();
-	return ( this->Continue( ) );
+	return retval;
 }
 
 /**
@@ -1322,6 +1440,12 @@ CStarter::Reaper(int pid, int exit_status)
 bool
 CStarter::allJobsDone( void )
 {
+		// now that all user processes are complete, change the
+		// sandbox ownership back over to condor
+	if (m_privsep_helper != NULL) {
+		m_privsep_helper->chown_sandbox_to_condor();
+	}
+
 		// No more jobs, notify our JobInfoCommunicator.
 	if (jic->allJobsDone()) {
 			// JIC::allJobsDone returned true: we're ready to move on.
@@ -1533,7 +1657,7 @@ CStarter::getMySlotNumber( void )
 {
 	
 	char *logappend = param("STARTER_LOG");		
-	char *tmp = NULL;
+	char const *tmp = NULL;
 		
 	int slot_number = 0; // default to 0, let our caller decide how to 
 						 // interpret that.  
@@ -1654,7 +1778,7 @@ CStarter::removeTempExecuteDir( void )
 	dir_name += (int)daemonCore->getpid();
 
 #if !defined(WIN32)
-	if (privsep_enabled()) {
+	if (condorPrivSepHelper() != NULL) {
 		MyString path_name;
 		path_name.sprintf("%s/%s", Execute, dir_name.Value());
 		if (!privsep_remove_dir(path_name.Value())) {

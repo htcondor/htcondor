@@ -1,15 +1,21 @@
+#if WANT_QUILL
+#define QuillProgs condor_convert_history condor_dump_history condor_load_history
+#else
+#define QuillProgs 
+#endif
+
 PROGRAMS =  	condor_config_val condor_preen condor_stats \
 		condor_userprio condor_history condor test_calc condor_transfer_data \
 		view_collection condor_qedit condor_advertise condor_version \
 		condor_fetchlog condor_findhost condor_cod condor_wait \
-		condor_store_cred condor_convert_history condor_dump_history \
-		condor_load_history condor_ckpt_probe
+		condor_store_cred QuillProgs  \
+		condor_ckpt_probe condor_test_auth
 
 all_target( $(PROGRAMS) )
 
 CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(QUILL_INC) $(TT_INC) -I../condor_tt
-LIB = $(STD_LIBS) $(TT_LIB)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(QUILL_INC) $(TT_INC) $(CONFIGURE_POSTGRESQL_CFLAGS) -I../condor_tt
+LIB = $(STD_LIBS) $(TT_LIB) $(CONFIGURE_POSTGRESQL_LDFLAGS)
 
 LH_OBJ = load_history.o ../condor_tt/condor_ttdb.o \
 ../condor_tt/jobqueuecollection.o
@@ -91,6 +97,10 @@ public_c_plus_target(condor_stats,bin,stats.o,$(LIB))
 
 c_plus_target(test_calc,test_calc.o,$(LIB))
 
+c_plus_target(condor_test_auth,test_auth.o,../condor_daemon_core.V6/condor_ipverify.o ../condor_daemon_core.V6/daemon_core_instantiate.o $(LIB))
+
+testbin_target(condor_test_auth,755)
+
 c_plus_target(view_collection,view_collection.o,$(LIB))
 
 c_plus_target(condor_invalidate_host,invalidate_host.o,$(LIB))
@@ -106,7 +116,6 @@ clean::
 	rm -f condor_kill condor_master_on *.o
 
 html:
-testbin: all
 
 # The following bit runs condor_compile to make sure that it works
 # It is easy to have class file dependencies sneak into the standard

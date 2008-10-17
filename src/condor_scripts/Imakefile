@@ -121,6 +121,8 @@ public_copy_target(Condor.pm,lib,Condor.pm,OBJECT_MODE)
 
 public_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 
+public_copy_target(condor_glidein,bin,condor_glidein,EXECUTABLE_MODE)
+
 /* These Condor-C scripts are for EGEE gLite - eventually they 
    should go someplace other than BIN, but EGEE really wants 
    them there for the time being, until they can more easily

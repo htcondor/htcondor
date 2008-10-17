@@ -23,6 +23,7 @@
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_debug.h"
+#include "MyString.h"
 
 #ifdef HAVE_EXT_OPENSSL
 #include "condor_crypt_blowfish.h"
@@ -68,7 +69,9 @@ Stream :: Stream(stream_code c) :
     _coding(stream_encode),
 	allow_empty_message_flag(FALSE),
 	decrypt_buf(NULL),
-	decrypt_buf_len(0)
+	decrypt_buf_len(0),
+	m_peer_description_str(NULL),
+	m_peer_version(NULL)
 {
 }
 
@@ -86,6 +89,10 @@ Stream :: ~Stream()
     delete mdKey_;
 	if( decrypt_buf ) {
 		free( decrypt_buf );
+	}
+	free(m_peer_description_str);
+	if( m_peer_version ) {
+		delete m_peer_version;
 	}
 }
 
@@ -107,8 +114,6 @@ Stream::code( char	&c)
 
 	return FALSE;	/* will never get here	*/
 }
-
-
 
 int 
 Stream::code( unsigned char	&c)
@@ -350,6 +355,26 @@ Stream::code( char	*&s)
 			break;
 		default:
 			EXCEPT("ERROR: Stream::code(char *&s)'s _coding is illegal!");
+			break;
+	}
+
+	return FALSE;	/* will never get here	*/
+}
+
+
+int 
+Stream::code( MyString	&s)
+{
+	switch(_coding){
+		case stream_encode:
+			return put(s);
+		case stream_decode:
+			return get(s);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(MyString &s) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(MyString &s)'s _coding is illegal!");
 			break;
 	}
 
@@ -1329,7 +1354,39 @@ Stream::put( char const *s)
 	return TRUE;
 }
 
+int 
+Stream::put( const MyString &s)
+{
+	return put( s.Value() );
+}
 
+int
+Stream::put_secret( char const *s )
+{
+	int retval;
+
+	prepare_crypto_for_secret();
+
+	retval = put(s);
+
+	restore_crypto_after_secret();
+
+	return retval;
+}
+
+int
+Stream::get_secret( char *&s )
+{
+	int retval;
+
+	prepare_crypto_for_secret();
+
+	retval = get(s);
+
+	restore_crypto_after_secret();
+
+	return retval;
+}
 
 int 
 Stream::put( char const *s, int		l)
@@ -1932,6 +1989,34 @@ Stream::get_string_ptr( char const *&s ) {
 	return TRUE;
 }
 
+/* Get the next string on the stream.  This function copies the
+ * string into the passed in MyString object.
+ * When a message has not been received, its behaviour is dependent on
+ * the current value of 'timeout', which can be set by
+ * 'timeout(int)'. If 'timeout' is 0, it blocks until a message is
+ * ready at the port, otherwise, it returns FALSE after waiting that
+ * amount of time.
+ *
+ */
+int 
+Stream::get( MyString	&s)
+{
+	char const *ptr = NULL;
+	int result = get_string_ptr(ptr);
+	if( result == TRUE ) {
+		if( ptr ) {
+			s = ptr;
+		}
+		else {
+			s = NULL;
+		}
+	}
+	else {
+		s = NULL;
+	}
+	return result;
+}
+
 int 
 Stream::snd_int(
 	int val, 
@@ -2028,7 +2113,7 @@ Stream::unwrap(unsigned char* d_in,int l_in,
 void Stream::resetCrypto()
 {
 #ifdef HAVE_EXT_OPENSSL
-  if (get_encryption()) {
+  if (crypto_) {
     crypto_->resetState();
   }
 #endif
@@ -2119,55 +2204,60 @@ Stream::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
 
     // More check should be done here. what if keyId is NULL?
     if (inited) {
-        set_encryption_id(keyId);
+		if( enable ) {
+				// We do not set the encryption id if the default crypto
+				// mode is off, because setting the encryption id causes
+				// the UDP packet header to contain the encryption id,
+				// which causes a pre 7.1.3 receiver to think that encryption
+				// is turned on by default, even if that is not what was
+				// previously negotiated.
+			set_encryption_id(keyId);
+		}
 		set_crypto_mode(enable);
     }
 
-    /* 
-    // Now, if TCP, the first packet need to contain the key for verification purposes
-    // This key is encrypted with itself (along with rest of the packet).
-    if (type() == reli_sock) {
-        char * data = NULL;
-        int length;
-        static int PADDING_LEN = 24;
-        length = key->getKeyLength() + PADDING_LEN; // Pad with 24 bytes of random data
-        data = (char *)malloc(length + 1);
-        if (data == NULL) {
-            dprintf(D_NETWORK, "Out of memory!\n");
-            return false;
-        }
-    
-        if (_coding == stream_encode) {
-            // generate random data
-            unsigned char * ran = Condor_Crypt_Base::randomKey(PADDING_LEN);
-            memcpy(data, ran, PADDING_LEN);
-            memcpy(data+PADDING_LEN, key->getKeyData(), key->getKeyLength());
-            free(ran);
-            if (put_bytes(data, length) != length) {
-                // the crypto module is initialized, but send failed.
-                // For now, we also flag this as an error
-                inited = false;
-            }
-        }
-        else {
-            if (get_bytes(data, length) == length) {
-                // Only the first key->getKeyLength() are inspected
-                if (memcmp(data+PADDING_LEN, key->getKeyData(), key->getKeyLength()) != 0) {
-                    // this is definitely an error!
-                    inited = false;
-                }
-                else {
-                    inited = true;
-                }
-            }
-            else {
-                inited = false; 
-            }
-        } 
-    }
-    */
 #endif /* HAVE_EXT_OPENSSL */
 
     return inited;
 }
 
+char const *
+Stream::peer_description() {
+	if(m_peer_description_str) {
+		return m_peer_description_str;
+	}
+	char const *desc = default_peer_description();
+	if(!desc) {
+		return "(unknown peer)";
+	}
+	return desc;
+}
+
+void
+Stream::set_peer_description(char const *str) {
+	free(m_peer_description_str);
+	if(str) {
+		m_peer_description_str = strdup(str);
+	}
+	else {
+		m_peer_description_str = NULL;
+	}
+}
+
+CondorVersionInfo const *
+Stream::get_peer_version() const
+{
+	return m_peer_version;
+}
+
+void
+Stream::set_peer_version(CondorVersionInfo const *version)
+{
+	if( m_peer_version ) {
+		delete m_peer_version;
+		m_peer_version = NULL;
+	}
+	if( version ) {
+		m_peer_version = new CondorVersionInfo(*version);
+	}
+}

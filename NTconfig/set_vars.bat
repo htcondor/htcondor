@@ -8,15 +8,18 @@ REM exceeding 255 chars, so be careful when editing this file! It's
 REM totally lame but there's nothing we can do about it.
 REM ======================================================================
 
+rem We assume all software is installed on the main system drive, but
+rem in the case that it is not, change the variable bellow.
+set ROOT_DRIVE=%SystemDrive%
+
 REM Set paths to Visual C++, the Platform SDKs, and Perl
-set VC_DIR=C:\Program Files\Microsoft Visual Studio\VC98\Bin
-set SDK_DIR=C:\Program Files\Microsoft Platform SDK
-set SDK_XP_DIR=C:\Program Files\Microsoft Platform SDK for Windows XP SP2
-set PERL_DIR=C:\Perl\bin
-set DBG_DIR=C:\Program Files\Debugging Tools for Windows
+set VC_DIR=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio\VC98\Bin
+set SDK_DIR=%ROOT_DRIVE%\Program Files\Microsoft Platform SDK
+set PERL_DIR=%ROOT_DRIVE%\Perl\bin
+set DBG_DIR=%ROOT_DRIVE%\Program Files\Debugging Tools for Windows
 
 rem Specify symbol image path
-set _NT_SYMBOL_PATH=C:\Windows\Symbols
+if A%_NT_SYMBOL_PATH%==A set _NT_SYMBOL_PATH=SRV*%ROOT_DRIVE%\Symbols*http://msdl.microsoft.com/download/symbols
 
 REM Where do the completed externals live?
 if A%EXTERN_DIR%==A  set EXTERN_DIR=%cd%\..\externals
@@ -39,7 +42,19 @@ set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VER
 
 REM Put NTConfig in the PATH, since it's got lots of stuff we need
 REM like awk, gunzip, tar, bison, yacc...
-set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VC_DIR%;%SDK_DIR%;%SDK_XP_DIR%;%DBG_DIR%
+set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VC_DIR%;%SDK_DIR%;%DBG_DIR%
+
+REM ======================================================================
+REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
+REM Since we a still stuck in the past (i.e. supporting Win2K) we must
+REM lie to the setenv script, and pretend the DevEnvDir environment
+REM is alredy configured properly (yay! jump to VC2K8, but support
+REM Win2K... *sigh*) 
+set MSVCDir=%VC_DIR%
+set DevEnvDir=C:\Program Files\Microsoft Visual Studio\COMMON\MSDev98\Bin
+SET MSVCVer=6.0
+REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
+REM ======================================================================
 
 call vcvars32.bat
 if not defined INCLUDE ( echo . && echo *** Failed to run VCVARS32.BAT! Is Microsoft Visual Studio 6.0 installed? && exit /B 1 )
@@ -66,7 +81,7 @@ echo Using build-id: %BID% & echo.
 popd
 
 set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" /GR /DHAVE_BACKFILL /DHAVE_BOINC /DHAVE_JOB_HOOKS /DHAVE_HIBERNATE /DBUILDID=%BID%
-set CONDOR_LIB=Crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib advapi32.lib ws2_32.lib user32.lib oleaut32.lib ole32.lib powrprof.lib 
+set CONDOR_LIB=Crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib advapi32.lib ws2_32.lib user32.lib oleaut32.lib ole32.lib powrprof.lib iphlpapi.lib userenv.lib
 set CONDOR_LIBPATH=
 
 REM Tell VC makefiles that we do not wish to use external dependency

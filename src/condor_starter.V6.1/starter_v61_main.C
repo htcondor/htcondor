@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include "subsystem_info.h"
 #include "condor_io.h"
 #include "condor_attributes.h"
 #include "condor_version.h"
@@ -100,9 +101,6 @@ printClassAd( void )
 	printf( "%s = True\n", ATTR_HAS_JIC_LOCAL_CONFIG );
 	printf( "%s = True\n", ATTR_HAS_JIC_LOCAL_STDIN );
 
-		// Java stuff
-	config(true);
-
 	ClassAd *ad = java_detect();
 	if(ad) {
 		int gotone=0;
@@ -156,7 +154,12 @@ printClassAd( void )
 				if (sock->end_of_message()) {
 					printf("%s = \"%s\"\n", ATTR_LOCAL_CREDD, credd_host);
 				}
+			} else {
+				dprintf( D_ALWAYS, "Failed to communicate with the "
+					"credd host: '%s'\n", credd.name() );
 			}
+		} else {
+			dprintf( D_ALWAYS, "Failed to locate the credd host\n" );
 		}
 		free(credd_host);
 	}
@@ -171,8 +174,10 @@ printClassAd( void )
 }
 
 
-char *mySubSystem = NULL;
 static char* orig_cwd = NULL;
+
+/* For daemonCore, etc. */
+DECL_SUBSYSTEM( NULL, SUBSYSTEM_TYPE_STARTER );
 
 void
 main_pre_dc_init( int argc, char* argv[] )
@@ -180,10 +185,10 @@ main_pre_dc_init( int argc, char* argv[] )
 		// figure out what mySubSystem should be based on argv[0], or
 		// if we see "-gridshell" anywhere on the command-line
 	const char* base = condor_basename(argv[0]);
-	char* tmp;
+	char const *tmp;
 	tmp = strrchr(base, '_' );
 	if( tmp && strincmp(tmp, "_gridshell", 10) == MATCH ) {
-		mySubSystem = "GRIDSHELL";
+		mySubSystem->setName( "GRIDSHELL" );
 		is_gridshell = true;
 	} else { 
 		int i, len;
@@ -195,14 +200,14 @@ main_pre_dc_init( int argc, char* argv[] )
 				continue;
 			}
 			if( strincmp(argv[i], "-gridshell", MIN(len,10)) == MATCH ) {
-				mySubSystem = "GRIDSHELL";
+				mySubSystem->setName( "GRIDSHELL" );
 				is_gridshell = true;
 				break;
 			}
 		}
 	}
 	if( ! is_gridshell ) {
-		mySubSystem = "STARTER";
+		mySubSystem->setName( "STARTER" );
 	}
 
 		// if we were passed "-classad", just print our classad and
@@ -210,6 +215,23 @@ main_pre_dc_init( int argc, char* argv[] )
 		// need to do this *after* we set mySubSystem, since this ends
 		// up calling functions that rely on it being defined...  
 	if( argc == 2 && strincmp(argv[1],"-cla",4) == MATCH ) {
+			// needed for Java stuff
+		config(true);
+
+			// Would like to log errors to stderr if stderr is not
+			// /dev/null to make it easier for users to debug, but not
+			// sure how to do that on windows.  On Windows, when
+			// condor_starter is run by the startd, setting Termlog=1
+			// causes a dprintf to abort with an error if any calls to
+			// dprintf() are made in a debug level that is turned on.
+			// I have not found a way to detect when stderr is in this
+			// state, so I am just leaving Termlog turned off in all
+			// cases.
+
+		//Termlog = 1;
+
+		dprintf_config(mySubSystem->getName() );
+
 		printClassAd();
 		exit(0);
 	}

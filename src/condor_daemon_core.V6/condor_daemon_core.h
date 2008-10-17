@@ -170,6 +170,7 @@ struct FamilyInfo {
 #if defined(LINUX)
 	gid_t* group_ptr;
 #endif
+	const char* glexec_proxy;
 
 	FamilyInfo() {
 		max_snapshot_interval = -1;
@@ -177,6 +178,7 @@ struct FamilyInfo {
 #if defined(LINUX)
 		group_ptr = NULL;
 #endif
+		glexec_proxy = NULL;
 	}
 };
 
@@ -218,16 +220,6 @@ int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
 bool InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock,
 						bool fatal);
 
-/** This global should be defined in your subsystems's main.C file.
-    Here are some examples:<p>
-
-    <UL>
-      <LI><tt>char* mySubSystem = "DAGMAN";</tt>
-      <LI><tt>char* mySubSystem = "SHADOW";</tt>
-      <LI><tt>char* mySubSystem = "SCHEDD";</tt>
-    </UL>
-*/
-extern char *mySubSystem;
 
 class DCSignalMsg: public DCMsg {
  public:
@@ -291,16 +283,13 @@ class DaemonCore : public Service
     ~DaemonCore();
     void Driver();
 
-    /** Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int ReInit();
-
 		/**
 		   Re-read anything that the daemonCore object got from the
 		   config file that might have changed on a reconfig.
 		*/
     void reconfig();
+
+	void refreshDNS();
 
     /** Not_Yet_Documented
         @param perm Not_Yet_Documented
@@ -661,6 +650,13 @@ class DaemonCore : public Service
     */
     int Cancel_Socket ( Stream * insock );
 
+		// Call the registered socket handler for this socket
+		// sock - previously registered socket
+		// default_to_HandleCommand - true if HandleCommand() should be called
+		//                          if there is no other callback function
+		// it will index the next registered socket.
+	void CallSocketHandler( Stream *sock, bool default_to_HandleCommand=false );
+
 	/// Cancel and close all registed sockets.
 	int Cancel_And_Close_All_Sockets(void);
 
@@ -765,6 +761,13 @@ class DaemonCore : public Service
 	*/
 	int Close_Pipe(int pipe_end);
 
+#if !defined(WIN32)
+	/** Get the FD underlying the given pipe end. Returns FALSE
+	 *  if not given a valid pipe end.
+	*/
+	int Get_Pipe_FD(int pipe_end, int* fd);
+#endif
+
 	/**
 	   Gain access to data written to a given DC process's std(out|err) pipe.
 
@@ -849,6 +852,18 @@ class DaemonCore : public Service
                         Eventcpp  event,
                         char *    event_descrip,
                         Service * s);
+
+    /** 
+        @param timeslice       Timeslice object specifying interval parameters
+        @param event           Function to call when timer fires.
+        @param event_descrip   String describing the function.
+        @param s               Service object of which function is a member.
+        @return                Timer id or -1 on error
+    */
+    int Register_Timer (Timeslice timeslice,
+                        Eventcpp   event,
+                        char *     event_descrip,
+                        Service*   s);
 
     /** Not_Yet_Documented
         @param id The timer's ID
@@ -994,6 +1009,7 @@ class DaemonCore : public Service
 	static const int ERRNO_EXEC_AS_ROOT;
 	static const int ERRNO_PID_COLLISION;
 	static const int ERRNO_REGISTRATION_FAILED;
+	static const int ERRNO_EXIT;
 
     /** Methods for operating on a process family
     */
@@ -1055,6 +1071,7 @@ class DaemonCore : public Service
         @return Pointer to this daemon's SecMan
     */
     SecMan* getSecMan();
+	IpVerify* getIpVerify() {return getSecMan()->getIpVerify();}
     KeyCache* getKeyCache();
 	//@}
 
@@ -1183,12 +1200,6 @@ class DaemonCore : public Service
 	*/
 	void RegisterTimeSkipCallback(TimeSkipFunc fnc, void * data);
 	void UnregisterTimeSkipCallback(TimeSkipFunc fnc, void * data);
-
-	/** Disable all daemon core callbacks for duration seconds, except for the
-		processing of SOAP calls.
-		@param seconds The number of seconds to only permit SOAP callbacks
-	*/
-	void Only_Allow_Soap(int duration);
 	
         // A little info on the "soap_ssl_sock"... There once was a
         // bug known as the "single transaction problem" and it made
@@ -1301,6 +1312,7 @@ class DaemonCore : public Service
   private:      
 
 	bool m_wants_dc_udp; // do we want a udp comment socket at all?
+	bool m_invalidate_sessions_via_tcp;
 	ReliSock* dc_rsock;	// tcp command socket
 	SafeSock* dc_ssock;	// udp command socket
 
@@ -1381,7 +1393,8 @@ class DaemonCore : public Service
 	                     int max_snapshot_interval,
 	                     PidEnvID* penvid,
 	                     const char* login,
-	                     gid_t* group);
+	                     gid_t* group,
+	                     const char* glexec_proxy);
 
 	void CheckForTimeSkip(time_t time_before, time_t okay_delta);
 
@@ -1457,7 +1470,6 @@ class DaemonCore : public Service
     ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
     int               initial_command_sock;  
   	struct soap		  *soap;
-	time_t			  only_allow_soap;
 
 		// number of file descriptors in use past which we should start
 		// avoiding the creation of new persistent sockets.  Do not use
@@ -1475,6 +1487,7 @@ class DaemonCore : public Service
 	int maxPipeHandleIndex;
 	int pipeHandleTableInsert(PipeHandle);
 	void pipeHandleTableRemove(int);
+	int pipeHandleTableLookup(int, PipeHandle* = NULL);
 
 	// this table is for dispatching registered pipes
 	class PidEntry;  // forward reference
@@ -1549,6 +1562,8 @@ class DaemonCore : public Service
 			of this pid (where applicable) */
 		PidEnvID penvid;
     };
+
+	int m_refresh_dns_timer;
 
     typedef HashTable <pid_t, PidEntry *> PidHashTable;
     PidHashTable* pidTable;
@@ -1628,6 +1643,17 @@ class DaemonCore : public Service
 	// misc helper functions
 	void CheckPrivState( void );
 
+		// Call the registered socket handler for this socket
+		// i - index of registered socket
+		// default_to_HandleCommand - true if HandleCommand() should be called
+		//                          if there is no other callback function
+		// On return, i may be modified so that when incremented,
+		// it will index the next registered socket.
+	void CallSocketHandler( int &i, bool default_to_HandleCommand );
+
+		// Returns index of registered socket or -1 if not found.
+	int GetRegisteredSocketIndex( Stream *sock );
+
     // these need to be in thread local storage someday
     void **curr_dataptr;
     void **curr_regdataptr;
@@ -1683,6 +1709,8 @@ class DaemonCore : public Service
 		   themselves.
 		*/
 	void initCollectorList(void);
+
+	void send_invalidate_session ( char* sinful, char* sessid );
 
 	bool m_wants_restart;
 	bool m_in_daemon_shutdown;

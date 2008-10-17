@@ -206,6 +206,13 @@ sysapi_translate_arch( char *machine, char *sysname )
 	else if( !strcmp(machine, "x86_64") ) {
 		sprintf( tmp, "X86_64" );
 	}
+	//
+	// FreeBSD 64-bit reports themselves as "amd64"
+	// Andy - 01/25/2008
+	//
+	else if( !strcmp(machine, "amd64") ) {
+		sprintf( tmp, "X86_64" );
+	}
 	else if( !strncmp( sysname, "IRIX", 4 ) ) {
 		sprintf( tmp, "SGI" );
 	} 
@@ -412,8 +419,12 @@ get_hpux_arch( )
 		and if it is not the user can force the setting in the 
 		ARCH config file setting
    	*/
-	
+#if defined(IS_IA64_HPUX)	
+	return strdup("IA64");
+#else
 	return strdup("HPPA2");
+#endif
+
 }
 #endif /* HPUX */
 

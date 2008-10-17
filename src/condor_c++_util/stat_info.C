@@ -225,6 +225,7 @@ StatInfo::init( StatWrapper *statbuf )
 		access_time = 0;
 		modify_time = 0;
 		create_time = 0;
+		m_onlyLstatIfDir = false;
 		m_isDirectory = false;
 		m_isExecutable = false;
 		m_isSymlink = false;

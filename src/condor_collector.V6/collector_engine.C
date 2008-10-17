@@ -43,20 +43,12 @@ extern FILESQL *FILEObj;
 
 #include "collector_engine.h"
 
-
-// pointer values for representing master states
-ClassAd* CollectorEngine::RECENTLY_DOWN  = (ClassAd *) 0x1;
-ClassAd* CollectorEngine::DONE_REPORTING = (ClassAd *) 0x2;
-ClassAd* CollectorEngine::LONG_GONE	  = (ClassAd *) 0x3;
-ClassAd* CollectorEngine::THRESHOLD	  = (ClassAd *) 0x4;
-
 static void killHashTable (CollectorHashTable &);
 static int killGenericHashTable(CollectorHashTable *);
 static void purgeHashTable (CollectorHashTable &);
 
 int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
-char	*strStatus (ClassAd *);
 
 CollectorEngine::CollectorEngine (CollectorStats *stats ) : 
 	StartdAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
@@ -80,9 +72,7 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 {
 	clientTimeout = 20;
 	machineUpdateInterval = 30;
-	masterCheckInterval = 10800;
 	housekeeperTimerID = -1;
-	masterCheckTimerID = -1;
 
 	collectorStats = stats;
 	m_collector_requirements = NULL;
@@ -252,36 +242,6 @@ invokeHousekeeper (AdTypes adtype)
 	return 1;
 }
 
-
-int CollectorEngine::
-scheduleDownMasterCheck (int timeout)
-{
-	// cancel outstanding check requests
-	if (masterCheckTimerID != -1) {
-		(void) daemonCore->Cancel_Timer(masterCheckTimerID);
-	}
-
-	// reset for new timer
-	if (timeout < 0) {
-		return 0;
-	}
-
-	// set to new timeout
-	masterCheckInterval = timeout;
-
-	// if timeout interval was non-zero (i.e., master checks required) ...
-    if (timeout > 0) {
-        // schedule master checks
-		masterCheckTimerID = daemonCore->Register_Timer(masterCheckInterval,
-						masterCheckInterval,
-						(TimerHandlercpp)&CollectorEngine::masterCheck,
-						"CollectorEngine::masterCheck",this);
-        if (masterCheckTimerID == -1)
-            return 0;
-    }
-
-    return 1;
-}
 
 void CollectorEngine::
 toggleLogging (void)
@@ -464,82 +424,6 @@ collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 	return rval;
 }
 
-bool CollectorEngine::ValidatePvtStartdClassAd(ClassAd *publicAd,ClassAd *privateAd,Sock *sock)
-{
-	if( !m_collector_requirements ) {
-			// If the admin has not configured COLLECTOR_REQUIREMENTS, then
-			// we do not waste any time validating ClassAds, because
-			// (presumably) the admin has used some other method for
-			// making things secure (such as strong authentication).
-		return true;
-	}
-
-		// We don't directly evaluate COLLECTOR_REQUIREMENTS on the
-		// private ad, because we don't want admins to have to
-		// carefully craft their expressions to apply to both public
-		// and private ads.  We only get here if the public ad has
-		// already passed through the filter, so the only remaining
-		// thing to do is apply some hard-coded tests to make sure the
-		// private ad isn't spoofed: As of 6.8.5, the address in the
-		// claim id is used by the shadow when connecting to the
-		// startd, so ATTR_CAPABILITY and/or ATTR_CLAIM_ID (if present)
-		// in the private ad MUST contain the same IP address as
-		// advertised for the startd in the public startd ad.
-
-	MyString public_addr;
-	publicAd->LookupString(ATTR_MY_ADDRESS,public_addr);
-
-	MyString private_addr;
-	char const *attr = ATTR_MY_ADDRESS;
-	privateAd->LookupString(attr,private_addr);
-
-	if( public_addr != private_addr ) {
-		goto failed;
-	}
-
-	private_addr = "";
-	attr = ATTR_STARTD_IP_ADDR;
-	if( privateAd->LookupString(attr,private_addr) ) {
-		if( private_addr != public_addr ) {
-			goto failed;
-		}
-	}
-
-	private_addr = "";
-	attr = ATTR_CAPABILITY;
-	if( privateAd->LookupString(attr,private_addr) ) {
-		char *claim_addr = getAddrFromClaimId( private_addr.Value() );
-		if( public_addr != claim_addr ) {
-			free(claim_addr);
-			goto failed;
-		}
-		free(claim_addr);
-	}
-
-	private_addr = "";
-	attr = ATTR_CLAIM_ID;
-	if( privateAd->LookupString(attr,private_addr) ) {
-		char *claim_addr = getAddrFromClaimId( private_addr.Value() );
-		if( public_addr != claim_addr ) {
-			free(claim_addr);
-			goto failed;
-		}
-		free(claim_addr);
-	}
-
-	return true;
-failed:
-	dprintf(D_ALWAYS,
-			"%s VIOLATION: Invalid startd private ad from %s: "
-			"%s=%s (expecting address %s)\n",
-			COLLECTOR_REQUIREMENTS,
-			sock->get_sinful_peer(),
-			attr,
-			private_addr.Value(),
-			public_addr.Value());
-	return false;
-}
-
 bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 {
 
@@ -669,7 +553,6 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			retVal = 0;
 			break;
 		}
-		checkMasterStatus (clientAd);
 		hashString.Build( hk );
 		retVal=updateClassAd (StartdAds, "StartdAd     ", "Start",
 							  clientAd, hk, hashString, insert, from );
@@ -689,11 +572,6 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			if( !pvtAd->initFromStream(*sock) )
 			{
 				dprintf(D_FULLDEBUG,"\t(Could not get startd's private ad)\n");
-				delete pvtAd;
-				break;
-			}
-
-			if( !ValidatePvtStartdClassAd(retVal,pvtAd,sock) ) {
 				delete pvtAd;
 				break;
 			}
@@ -742,7 +620,6 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			retVal = 0;
 			break;
 		}
-		checkMasterStatus (clientAd);
 		hashString.Build( hk );
 		retVal=updateClassAd (QuillAds, "QuillAd     ", "Quill",
 							  clientAd, hk, hashString, insert, from );
@@ -757,7 +634,6 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			retVal = 0;
 			break;
 		}
-		checkMasterStatus (clientAd);
 		hashString.Build( hk );
 		retVal=updateClassAd (ScheddAds, "ScheddAd     ", "Schedd",
 							  clientAd, hk, hashString, insert, from );
@@ -816,7 +692,6 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			retVal = 0;
 			break;
 		}
-		checkMasterStatus (clientAd);
 		hashString.Build( hk );
 		retVal=updateClassAd (CkptServerAds, "CkptSrvrAd   ", "CkptSrvr",
 							  clientAd, hk, hashString, insert, from );
@@ -1118,65 +993,16 @@ updateClassAd (CollectorHashTable &hashTable,
 		// yes ... old ad must be updated
 		dprintf (D_FULLDEBUG, "%s: Updating ... \"%s\"\n", adType, hashString.GetCStr() );
 
-		// check if it has special status (master ads)
-		if (old_ad < CollectorEngine::THRESHOLD)
-		{
-			dprintf (D_ALWAYS, "** Master %s rejuvenated from %s\n",
-					 hashString.GetCStr(), strStatus(old_ad));
-			if (hashTable.remove (hk)==-1 || hashTable.insert (hk, new_ad)==-1)
-			{
-				EXCEPT ("Error updating ad (probably out of memory)");
-			}
+		// Update statistics
+		collectorStats->update( label, old_ad, new_ad );
 
-			// Update statistics
-			collectorStats->update( label, NULL, new_ad );
-		}
-		else
-		{
-			// Update statistics
-			collectorStats->update( label, old_ad, new_ad );
+		// Now, finally, store the new ClassAd
+		old_ad->ExchangeExpressions (new_ad);
 
-			// Now, finally, store the new ClassAd
-			old_ad->ExchangeExpressions (new_ad);
-
-			delete new_ad;
-		}
+		delete new_ad;
 
 		insert = 0;
 		return old_ad;
-	}
-}
-
-void CollectorEngine::
-checkMasterStatus (ClassAd *ad)
-{
-	AdNameHashKey 	hk;
-	ClassAd		*old;
-
-	// make the master ad's hashkey
-	if (!makeMasterAdHashKey (hk, ad, NULL))
-	{
-		dprintf (D_ALWAYS, "Aborting check on master status\n");
-		return;
-	}
-
-	// check if the ad is absent
-	if (MasterAds.lookup (hk, old) == -1)
-	{
-		// ad was not there ... enter status as RECENTLY_DOWN
-		dprintf(D_ALWAYS,"WARNING:  No master ad for < %s >\n", hk.name.GetCStr() );
-		if (MasterAds.insert (hk, RECENTLY_DOWN) == -1)
-		{
-			EXCEPT ("Out of memory");
-		}
-	}
-	else
-	if (old == LONG_GONE)
-	{
-		if (MasterAds.remove(hk)==-1 || MasterAds.insert(hk,DONE_REPORTING)==-1)
-		{
-			EXCEPT ("Out of memory");
-		}
 	}
 }
 
@@ -1262,9 +1088,6 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 	hashTable.startIterations ();
 	while (hashTable.iterate (ad))
 	{
-		// ignore ads less than threshold
-		if (ad < THRESHOLD) continue;
-
 		// Read the timestamp of the ad
 		if (!ad->LookupInteger (ATTR_LAST_HEARD_FROM, timeStamp)) {
 			dprintf (D_ALWAYS, "\t\tError looking up time stamp on ad\n");
@@ -1289,10 +1112,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 			{
 				dprintf (D_ALWAYS, "\t\tError while removing ad\n");
 			}
-			if (ad > THRESHOLD)
-			{
-				delete ad;
-			}
+			delete ad;
 		}
 	}
 }
@@ -1308,112 +1128,8 @@ purgeHashTable( CollectorHashTable &table )
 		if( table.remove(hk) == -1 ) {
 			dprintf( D_ALWAYS, "\t\tError while removing ad\n" );
 		}		
-		if( ad > CollectorEngine::THRESHOLD ) {
-			delete ad;
-		}
+		delete ad;
 	}
-}
-
-int CollectorEngine::
-masterCheck ()
-{
-	ClassAd		*ad;
-	ClassAd		*nextStatus;
-	AdNameHashKey		hk;
-	MyString	hkString;
-	MyString	buffer;
-	FILE*		mailer = NULL;
-	int		more;
-
-	char *tmp = param("COLLECTOR_PERFORM_MASTERCHECK");
-	bool do_check = true;	// default should be to do the check
-	if ( tmp ) {
-		if ( tmp[0] == 'F' || tmp[0] == 'f' ) {
-			do_check = false;
-		}
-		free(tmp);
-	}
-	if ( do_check == false ) {
-		// User explicitly asked for no checking... all done.
-		return TRUE;
-	}
-
-	dprintf (D_ALWAYS, "MasterCheck:  Checking for down masters ...\n");
-
-	MasterAds.startIterations ();
-	more = MasterAds.iterate (ad);
-	while (more) 
-	{
-		// process the current ad
-		if (MasterAds.getCurrentKey (hk) == -1) 
-		{
-			dprintf (D_ALWAYS, "Master entry exists, but could not get key");
-			more = MasterAds.iterate (ad);
-			continue;
-		}
-		hk.sprint (hkString);
-
-		nextStatus = NULL;
-
-		// don't need to process regular ads
-		if (ad > THRESHOLD) {
-			more = MasterAds.iterate (ad);
-			continue;
-		}
-
-		// if the master has been dead for a while and children are dead ...
-		if (ad == LONG_GONE) {
-			dprintf (D_ALWAYS,"\tMaster %s: purging dead entry\n", hkString.GetCStr() );
-			if (MasterAds.remove (hk) == -1) 
-			{
-				dprintf (D_ALWAYS, "\tError while removing LONG_GONE ad\n");
-			}
-			more = MasterAds.iterate (ad);
-			continue;
-		} 
-
-		// need to report for recently down masters (children still alive)
-		if (ad == RECENTLY_DOWN) {
-			if (mailer == NULL) {
-				buffer.sprintf( "Collector (%s): Dead condor_masters", 
-								my_full_hostname() );
-				if ((mailer = email_admin_open(buffer.GetCStr())) == NULL) {
-					dprintf (D_ALWAYS, "Error sending email --- aborting\n");
-					return FALSE;
-				}
-				fprintf (mailer, "The following masters are dead, leaving"
-							" orphaned daemons\n\n");
-			}
-			fprintf (mailer, "\t\t%s\n", hkString.GetCStr() );
-			dprintf (D_ALWAYS, "\tMaster %s: recently went down\n", hkString.GetCStr() );
-			nextStatus = DONE_REPORTING;
-		}	
-		else 
-		// the master is dead, but we've already sent mail about it
-		if (ad == DONE_REPORTING) {
-			dprintf(D_ALWAYS,"\tMaster %s: death already reported\n",hkString.GetCStr() );
-			nextStatus = LONG_GONE;
-		}
-
-		// We will soon modify the data structure that we are iterating
-		// over.  This causes the same "entry" to be traversed more than once
-		// Therefore, we first perform the reinitialization of the iteration
-		// before modifying the hashtable
-		more = MasterAds.iterate (ad);
-
-		// need to change the status of the ad
-		if (nextStatus != NULL) {
-			if (MasterAds.remove(hk)==-1||MasterAds.insert(hk,nextStatus)==-1) {
-				EXCEPT ("Could not change status of master ad");
-			}
-		}
-	}
-
-	// close the mailer if necessary
-	if (mailer) email_close(mailer);
-
-	dprintf (D_ALWAYS, "MasterCheck:  Done checking for down masters\n");
-	return TRUE;
 }
 
 static void
@@ -1423,7 +1139,7 @@ killHashTable (CollectorHashTable &table)
 
 	while (table.iterate (ad))
 	{
-		if (ad > CollectorEngine::THRESHOLD) delete ad;
+		delete ad;
 	}
 }
 
@@ -1434,14 +1150,4 @@ killGenericHashTable(CollectorHashTable *table)
 	killHashTable(*table);
 	delete table;
 	return 0;
-}
-
-char *
-strStatus (ClassAd *ad)
-{
-	if (ad == CollectorEngine::RECENTLY_DOWN) return "recently down";
-	if (ad == CollectorEngine::DONE_REPORTING) return "done reporting";
-	if (ad == CollectorEngine::LONG_GONE) return "long gone";
-
-	return "(unknown master state)";
 }

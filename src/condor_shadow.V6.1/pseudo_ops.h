@@ -36,5 +36,14 @@ int pseudo_get_job_attr( const char *name, char *expr );
 int pseudo_get_job_attr( const char *name, MyString &expr );
 int pseudo_set_job_attr( const char *name, const char *expr );
 int pseudo_constrain( const char *expr );
+int pseudo_get_sec_session_info(
+	char const *starter_reconnect_session_info,
+	MyString &reconnect_session_id,
+	MyString &reconnect_session_info,
+	MyString &reconnect_session_key,
+	char const *starter_filetrans_session_info,
+	MyString &filetrans_session_id,
+	MyString &filetrans_session_info,
+	MyString &filetrans_session_key);
 
 #endif

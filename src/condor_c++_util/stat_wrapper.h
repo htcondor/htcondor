@@ -129,7 +129,7 @@ private:
 	// Which did we do last?
 	StatOpType			 m_last_which;
 	StatWrapperOp		*m_last_op;
-	StatWrapperOp		*m_ops[ STATOP_MAX ];
+	StatWrapperOp		*m_ops[ STATOP_NUM ];
 	StatWrapperIntBase	*m_last_stat;
 };
 

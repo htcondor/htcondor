@@ -40,6 +40,7 @@
 #include "filename_tools.h"
 #include "condor_holdcodes.h"
 #include "file_transfer_db.h"
+#include "subsystem_info.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
 
@@ -143,6 +144,7 @@ FileTransfer::FileTransfer()
 	simple_init = true;
 	simple_sock = NULL;
 	m_use_file_catalog = true;
+	m_sec_session_id = NULL;
 }
 
 FileTransfer::~FileTransfer()
@@ -201,6 +203,7 @@ FileTransfer::~FileTransfer()
 #ifdef WIN32
 	if (perm_obj) delete perm_obj;
 #endif
+	free(m_sec_session_id);
 }
 
 int
@@ -822,11 +825,11 @@ FileTransfer::DownloadFiles(bool blocking)
 			return FALSE;
 		}
 
-		d.startCommand(FILETRANS_UPLOAD, &sock, 0);
+		d.startCommand(FILETRANS_UPLOAD, &sock, 0, NULL, NULL, false, m_sec_session_id);
 
 		sock.encode();
 
-		if ( !sock.code(TransKey) ||
+		if ( !sock.put_secret(TransKey) ||
 			!sock.end_of_message() ) {
 			return 0;
 		}
@@ -886,6 +889,12 @@ FileTransfer::ComputeFilesToSend()
 			// object treats that just like we do: don't switch... 
 		Directory dir( Iwd, desired_priv_state );
 
+		const char *proxy_file = NULL;
+		MyString proxy_file_buf;		
+		if(jobAd.LookupString(ATTR_X509_USER_PROXY, proxy_file_buf)) {			
+			proxy_file = condor_basename(proxy_file_buf.Value());
+		}
+
 		const char *f;
 		while( (f=dir.Next()) ) {
 			// don't send back condor_exec.exe
@@ -894,6 +903,11 @@ FileTransfer::ComputeFilesToSend()
 				continue;
 			}
 			if ( file_strcmp(f,"condor_exec.bat")==MATCH ) {
+				dprintf( D_FULLDEBUG, "Skipping %s\n", f );
+				continue;
+			}
+
+			if( proxy_file && file_strcmp(f, proxy_file) == MATCH ) {
 				dprintf( D_FULLDEBUG, "Skipping %s\n", f );
 				continue;
 			}
@@ -924,12 +938,18 @@ FileTransfer::ComputeFilesToSend()
 						 f, dir.GetModifyTime(), (long) dir.GetFileSize() );
 				send_it = true;
 			}
-			else if(final_files_to_send.file_contains(f)) {
+			else if (final_files_to_send.file_contains(f)) {
 				dprintf( D_FULLDEBUG, 
 						 "Sending previously changed file %s\n", f);
 				send_it = true;
 			}
-			else if(filesize == -1) {
+			else if (OutputFiles && OutputFiles->file_contains(f)) {
+				dprintf(D_FULLDEBUG, 
+				        "Sending dynamically added output file %s\n",
+				        f);
+				send_it = true;
+			}
+			else if (filesize == -1) {
 				// this is a special block of code that should eventually go
 				// away.  essentially, setting the filesize to -1 means that
 				// we only transfer the file if the timestamp is newer than
@@ -949,12 +969,12 @@ FileTransfer::ComputeFilesToSend()
 					// if filesize was -1 but the timestamp was earlier than
 					// modification_time, do NOT include the file.
 					dprintf( D_FULLDEBUG,
-					 	"Not sending file %s, t: %ld<=%ld, s: N/A\n",
+					 	"Skipping file %s, t: %ld<=%ld, s: N/A\n",
 					 	f, dir.GetModifyTime(), modification_time);
 					continue;
 				}
 			}
-			else if((filesize != dir.GetFileSize()) ||
+			else if ((filesize != dir.GetFileSize()) ||
 					(modification_time != dir.GetModifyTime()) ) {
 				// file has changed in size or modification time.  this
 				// doesn't catch the case where the file was modified
@@ -970,7 +990,7 @@ FileTransfer::ComputeFilesToSend()
 			}
 			else {
 				dprintf( D_FULLDEBUG,
-					 "Not sending file %s, t: %ld==%ld, s: %lld==%lld\n",
+					 "Skipping file %s, t: %ld==%ld, s: %lld==%lld\n",
 					 f, dir.GetModifyTime(), modification_time,
 					 dir.GetFileSize(), filesize );
 				continue;
@@ -1140,11 +1160,11 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 			return FALSE;
 		}
 
-		d.startCommand(FILETRANS_DOWNLOAD, &sock);
+		d.startCommand(FILETRANS_DOWNLOAD, &sock, clientSockTimeout, NULL, NULL, false, m_sec_session_id);
 
 		sock.encode();
 
-		if ( !sock.code(TransKey) ||
+		if ( !sock.put_secret(TransKey) ||
 			!sock.end_of_message() ) {
 			return 0;
 		}
@@ -1183,7 +1203,7 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 	sock->timeout(0);
 
 	// code() allocates memory for the string if the pointer is NULL.
-	if (!sock->code(transkey) ||
+	if (!sock->get_secret(transkey) ||
 		!sock->end_of_message() ) {
 		dprintf(D_FULLDEBUG,
 			    	"FileTransfer::HandleCommands failed to read transkey\n");
@@ -1255,6 +1275,7 @@ int
 FileTransfer::Reaper(Service *, int pid, int exit_status)
 {
 	FileTransfer *transobject;
+	bool read_failed = false;
 	if ( TransThreadTable->lookup(pid,transobject) < 0) {
 		dprintf(D_ALWAYS, "unknown pid %d in FileTransfer::Reaper!\n", pid);
 		return FALSE;
@@ -1265,9 +1286,11 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	transobject->Info.duration = time(NULL)-transobject->TransferStart;
 	transobject->Info.in_progress = false;
 	if( WIFSIGNALED(exit_status) ) {
-		dprintf( D_ALWAYS, "File transfer failed (killed by signal=%d)\n",
-				 WTERMSIG(exit_status) );
 		transobject->Info.success = false;
+		transobject->Info.try_again = true;
+		transobject->Info.error_desc.sprintf("File transfer failed (killed by signal=%d)", WTERMSIG(exit_status));
+		read_failed = true; // do not try to read from the pipe
+		dprintf( D_ALWAYS, "%s\n", transobject->Info.error_desc.Value() );
 	} else {
 		if( WEXITSTATUS(exit_status) != 0 ) {
 			dprintf( D_ALWAYS, "File transfer completed successfully.\n" );
@@ -1279,7 +1302,15 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		}
 	}
 
-	bool read_failed = false;
+		// Close the write end of the pipe so we don't block trying
+		// to read from it if the child closes it prematurely.
+		// We don't do this until this late stage in the game, because
+		// in windows everything currently happens in the main thread.
+	if( transobject->TransferPipe[1] != -1 ) {
+		close(transobject->TransferPipe[1]);
+		transobject->TransferPipe[1] = -1;
+	}
+
 	int n;
 
 	if(!read_failed) {
@@ -1337,13 +1368,14 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	if(read_failed) {
 		transobject->Info.success = false;
 		transobject->Info.try_again = true;
-		transobject->Info.error_desc.sprintf("Failed to read status report from file transfer pipe (errno %d): %s",errno,strerror(errno));
-		dprintf(D_ALWAYS,"%s\n",transobject->Info.error_desc.Value());
+		if( transobject->Info.error_desc.IsEmpty() ) {
+			transobject->Info.error_desc.sprintf("Failed to read status report from file transfer pipe (errno %d): %s",errno,strerror(errno));
+			dprintf(D_ALWAYS,"%s\n",transobject->Info.error_desc.Value());
+		}
 	}
 
 	close(transobject->TransferPipe[0]);
-	close(transobject->TransferPipe[1]);
-	transobject->TransferPipe[0] = transobject->TransferPipe[1] = -1;
+	transobject->TransferPipe[0] = -1;
 
 	// If Download was successful (it returns 1 on success) and
 	// upload_changed_files is true, then we must record the current
@@ -1669,7 +1701,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		if( rc < 0 ) {
 			int the_error = errno;
 			error_buf.sprintf("%s at %s failed to receive file %s",
-			                  mySubSystem,s->sender_ip_str(),fullname.Value());
+			                  mySubSystem->getName(),
+							  s->sender_ip_str(),fullname.Value());
 			download_success = false;
 			if(rc == GET_FILE_OPEN_FAILED || rc == GET_FILE_WRITE_FAILED) {
 				// errno is well defined in this case, and transferred data
@@ -1732,7 +1765,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		record.elapsed  = elapsed;
     
 			// Get the name of the daemon calling DoDownload
-		strncpy(daemon, mySubSystem, 15);
+		strncpy(daemon, mySubSystem->getName(), 15);
 		record.daemon = daemon;
 
 		record.sockp =s;
@@ -1768,7 +1801,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		error_buf.sprintf("%s failed to receive file(s) from %s",
-						  mySubSystem,peer_ip_str);
+						  mySubSystem->getName(),peer_ip_str);
 		dprintf(D_ALWAYS,"DoDownload: %s; %s\n",
 				error_buf.Value(),upload_error_buf.Value());
 
@@ -2672,7 +2705,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 			MyString error_desc_to_send;
 			if(!upload_success) {
 				error_desc_to_send.sprintf("%s at %s failed to send file(s) to %s",
-										   mySubSystem,
+										   mySubSystem->getName(),
 										   s->sender_ip_str(),
 										   s->get_sinful_peer());
 				if(upload_error_desc) {
@@ -2704,7 +2737,9 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 			receiver_ip_str = "unknown recipient";
 		}
 
-		error_buf.sprintf("%s at %s failed to send file(s) to %s",mySubSystem,s->sender_ip_str(),receiver_ip_str);
+		error_buf.sprintf("%s at %s failed to send file(s) to %s",
+						  mySubSystem->getName(),
+						  s->sender_ip_str(),receiver_ip_str);
 		if(upload_error_desc) {
 			error_buf.sprintf_cat(": %s",upload_error_desc);
 		}
@@ -2772,9 +2807,10 @@ bool
 FileTransfer::addOutputFile( const char* filename )
 {
 	if( ! OutputFiles ) {
-		return false;
+		OutputFiles = new StringList;
+		ASSERT(OutputFiles != NULL);
 	}
-	if( OutputFiles->file_contains(filename) ) {
+	else if( OutputFiles->file_contains(filename) ) {
 		return true;
 	}
 	OutputFiles->append( filename );
@@ -2973,3 +3009,8 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 	return true;
 }
 
+void FileTransfer::setSecuritySession(char const *session_id) {
+	free(m_sec_session_id);
+	m_sec_session_id = NULL;
+	m_sec_session_id = session_id ? strdup(session_id) : NULL;
+}

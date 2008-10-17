@@ -1710,6 +1710,8 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 			successful_eval = FunctionRegexp(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "regexps")) {
 			successful_eval = FunctionRegexps(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "formattime")) {
+			successful_eval = FunctionFormatTime(number_of_args, evaluated_args, result);
 		}
 #ifdef HAVE_DLOPEN
         else {
@@ -3255,5 +3257,83 @@ int Function::FunctionRegexps(
 		input++;
 	}
 	result->s    = strnewp(output.GetCStr());
+	return TRUE;
+}
+
+int Function::FunctionFormatTime(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+
+	/* 
+	formatTime([int t], [string s]) returns string.
+
+    This function creates a formatted string that is a representation of time t.
+
+	The argument t is interpreted as an epoch time (seconds since 1/1/1970 GMT). 
+    The argument s is interpreted similarly to the format argument of 
+	the ANSI C strftime function. It consists of arbitary text plus placeholders 
+	for elements of the time. These placeholders are percent signs (%) followed 
+	by a single letter. To have a percent sign in your output, you must use a 
+	double percent sign (%%).  
+	If t is not specified, it defaults to the current time as reported by the OS.
+	If s is not specified, it defaults to "%c".
+	*/
+
+	time_t epoch_time;		// parameter one
+	char *format_string;	// parameter two		
+
+	if ( number_of_args >  2 ) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+		// grab optional paramter 1, the time
+	if ( number_of_args > 0 ) {
+			// caller provided a time
+		if( (evaluated_args[0].type != LX_INTEGER) ||
+			(evaluated_args[0].i < 0) ) 
+		{
+			result->type = LX_ERROR;
+			return FALSE;
+		}
+		epoch_time = evaluated_args[0].i;
+	} else {
+			// no time specified, default to current time		
+		time(&epoch_time);	// yuck.
+	}
+
+		// grab optional paramter 2, the format string
+	if( number_of_args == 2 ) {
+			// caller provided a format string 
+		if ( evaluated_args[1].type != LX_STRING ) {
+			result->type = LX_ERROR;
+			return FALSE;
+		}
+		format_string = evaluated_args[1].s;
+	} else {
+			// no format string specified, default to %c
+		format_string = "%c";
+	}
+
+	struct tm * time_components = localtime(&epoch_time); // not thread safe
+
+		// the crux of this function is just a  call to strftime().
+	int ret = 0;
+	char output[1024]; // yuck!!
+	if ( time_components ) {
+		ret = strftime(output,sizeof(output),format_string,time_components);
+	}
+
+	result->type = LX_STRING;
+
+		// if strftime wrote something, use that as the result.
+	if ( ret > 0 ) {
+		result->s = strnewp(output);
+	} else {
+		result->s = strnewp("");
+	}
+
 	return TRUE;
 }

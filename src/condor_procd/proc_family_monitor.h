@@ -84,6 +84,13 @@ public:
 	//
 	proc_family_error_t unregister_subfamily(pid_t);
 
+#if !defined(WIN32)
+	// associate a proxy with a family for cases when we need to use
+	// glexec to signal processes
+	//
+	proc_family_error_t use_glexec_for_family(pid_t, char* proxy);
+#endif
+
 	// for sending signals to a single process
 	//
 	proc_family_error_t signal_process(pid_t, int);
@@ -157,6 +164,13 @@ private:
 	// snapshot intervals"
 	//
 	int get_snapshot_interval(Tree<ProcFamily*>*);
+
+	// since we maintain the tree of process families in this class,
+	// each ProcFamily object needs our help in maintaining the maximum
+	// image size seen for its family of processes (in order to take
+	// into account processes that are in child families)
+	//
+	unsigned long update_max_image_sizes(Tree<ProcFamily*>*);
 	
 	// aggregate usage information from the given family and all
 	// subfamilies

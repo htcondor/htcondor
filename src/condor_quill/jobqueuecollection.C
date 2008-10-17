@@ -405,7 +405,8 @@ JobQueueCollection::hashfunction(char* str)
 	unsigned long 	hash_val = 0;
 
 	for (i = 0; i < str_len; i++) {
-		hash_val += (long)((int)str[i] - (int)first_char) * (long)::pow(37, i);
+		hash_val += (long)((int)str[i] - (int)first_char) * 
+			(long)::pow((double)37, i);
 	}
 
 	return (int)(hash_val % _iBucketSize);

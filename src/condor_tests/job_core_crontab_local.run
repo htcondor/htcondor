@@ -19,14 +19,61 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorPersonal;
 
 $testname = 'Condor CronTab Test - Local Universe';
+$corename = "job_core_crontab_local";
+
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
+CondorTest::fullchomp($currenthost);
+CondorPersonal::DebugOff();
+
+system("date");
+
+$mypid = CondorPersonal::SaveMeSetup($corename);
+$mysaveme = $corename . ".saveme/$mypid";
+
+if($mypid == 0) {
+    die "Saveme setup for test failed\n";
+}
+
+# get a remote scheduler running (side b)
+my $configrem = CondorPersonal::StartCondor("x_param.vancrontab" ,"crontab_van");
+my @personal = split /\+/, $configrem;
+my $personalconfig = shift @personal;
+my $personalport = shift @personal;
+
+print "---personal config is $personalconfig and personal port is $personalport---\n";
+
+
+#Run in this newly created pool
+$ENV{CONDOR_CONFIG} = $personalconfig;
 
 ##
 ## We need to pass what universe we would like to test
 ##
 my $result = CondorTest::verbose_system("./job_core_crontab.pl local");
 if ( $result != 0 ) {
+	$mybad = 1;
+}
+
+#save key files
+system("cp $corename* $mysaveme");
+
+#kill personal condor
+my @adarray;
+my $status = 1;
+my $cmd = "condor_off -fast -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+    print "Test failure due to Condor Tool Failure<$cmd>\n";
+    exit(1)
+}
+
+if($mybad == 1) {
 	die( "$testname FAILED!\n" );
 }
+
 exit(0);

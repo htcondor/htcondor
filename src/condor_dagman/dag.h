@@ -35,6 +35,7 @@
 #include "condor_id.h"
 #include "prioritysimplelist.h"
 #include "throttle_by_category.h"
+#include "MyString.h"
 
 // NOTE: must be kept in sync with Job::job_type_t
 enum Log_source{
@@ -87,15 +88,12 @@ class Dag {
   
     /** Create a DAG
 		@param dagFile the DAG file name
-		@param condorLogName the log file name specified by the -Condorlog
-		       command line argument
         @param maxJobsSubmitted the maximum number of jobs to submit to Condor
                at one time
         @param maxPreScripts the maximum number of PRE scripts to spawn at
 		       one time
         @param maxPostScripts the maximum number of POST scripts to spawn at
 		       one time
-		@param dapLogName the name of the Stork (DaP) log file
 		@param allowLogError whether to allow the DAG to run even if we
 			   have an error determining the job log files
 		@param useDagDir run DAGs in directories from DAG file paths
@@ -113,16 +111,21 @@ class Dag {
 			   job procs are prohibited
 		@param submitDepthFirst whether ready nodes should be submitted
 			   in depth-first (as opposed to breadth-first) order
+		@param fundUserLogs whether or not log files for the submit files
+				should be recursively dug out of the dag file and any
+				splices it contains. Usually this is true for the root
+				dag, and false for any splices brought in by the root dag.
     */
 
-    Dag( /* const */ StringList &dagFiles, char *condorLogName,
+    Dag( /* const */ StringList &dagFiles,
 		 const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
-		 const char *dapLogName, bool allowLogError,
+		 bool allowLogError,
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const char *storkRmExe, const CondorID *DAGManJobId,
-		 bool prohibitMultiJobs, bool submitDepthFirst );
+		 bool prohibitMultiJobs, bool submitDepthFirst,
+		 bool findUserLogs = true );
 
     ///
     ~Dag();
@@ -385,38 +388,6 @@ class Dag {
     void WriteRescue (const char * rescue_file,
 				const char * datafile) /* const */;
 
-	/** Finds the number of the last existing rescue DAG file for the
-		given "primary" DAG.
-		@param primaryDagFile The primary DAG file name
-		@param multiDags Whether we have multiple DAGs
-		@param maxRescueDagNum the maximum legal rescue DAG number
-		@return The number of the last existing rescue DAG (0 if there
-			is none)
-	*/
-	static int FindLastRescueDagNum(const char *primaryDagFile,
-				bool multiDags, int maxRescueDagNum);
-
-	/** Creates a rescue DAG name, given a primary DAG name and rescue
-		DAG number
-		@param primaryDagFile The primary DAG file name
-		@param multiDags Whether we have multiple DAGs
-		@param rescueDagNum The rescue DAG number
-		@return The full name of the rescue DAG
-	*/
-	static MyString RescueDagName(const char *primaryDagFile,
-				bool multiDags, int rescueDagNum);
-
-	/** Renames all rescue DAG files for this primary DAG after the
-		given one (as long as the numbers are contiguous).  For example,
-		if rescueDagNum is 3, we will rename .rescue4, .rescue5, etc.
-		@param primaryDagFile The primary DAG file name
-		@param multiDags Whether we have multiple DAGs
-		@param rescueDagNum The rescue DAG number to rename *after*
-		@param maxRescueDagNum the maximum legal rescue DAG number
-	*/
-	static void RenameRescueDagsAfter(const char *primaryDagFile,
-				bool multiDags, int rescueDagNum, int maxRescueDagNum);
-
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );
 
@@ -502,9 +473,6 @@ class Dag {
 
 	int MaxJobsSubmitted(void) { return _maxJobsSubmitted; }
 
-	// do not free this pointer
-	const char* DapLogName(void) { return _dapLogName; }
-
 	bool AllowLogError(void) { return _allowLogError; }
 
 	bool UseDagDir(void) { return _useDagDir; }
@@ -528,9 +496,6 @@ class Dag {
 	bool SubmitDepthFirst(void) { return _submitDepthFirst; }
 
 	StringList& DagFiles(void) { return _dagFiles; }
-
-	// do not free this pointer
-	const char* CondorLogName(void) {return _condorLogName; }
 
 		// The absolute maximum allowed rescue DAG number (the real maximum
 		// is normally configured lower).
@@ -578,7 +543,22 @@ class Dag {
 	// of the VARS attribute.
 	void ResolveVarsInterpolations(void);
 
+	// When parsing a splice (which is itself a dag), there must always be a
+	// DIR concept associated with it. If DIR is left off, then it is ".",
+	// otherwise it is whatever specified.
+	void SetDirectory(MyString &dir);
+	void SetDirectory(char *dir);
+
+	// After the nodes in the dag have been made, we take our DIR setting,
+	// and if it isn't ".", we prefix it to the directory setting for each
+	// node, unless it is an absolute path, in which case we ignore it.
+	void PropogateDirectoryToAllNodes(void);
+
   protected:
+
+	// If this DAG is a splice, then this is what the DIR was set to, it 
+	// defaults to ".".
+ 	MyString m_directory;
 
 	// move the nodes from the splice into the parent
 	void LiftSplice(Dag *parent, Dag *splice);
@@ -717,10 +697,6 @@ class Dag {
 	// run DAGs in directories from DAG file paths if true
 	bool _useDagDir;
 
-		// The log file name specified by the -Condorlog command line
-		// argument (not used for much anymore).
-	char *		_condorLogName;
-
     // name of consolidated condor log
 	StringList _condorLogFiles;
 
@@ -731,10 +707,6 @@ class Dag {
     bool          _condorLogInitialized;
 
     //-->DAP
-		// The log file name specified by the -Storklog command line
-		// argument.
-    const char* _dapLogName;
-
 		// The list of all Stork log files (generated from the relevant
 		// submit files).
 	StringList	_storkLogFiles;

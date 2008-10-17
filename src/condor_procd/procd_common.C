@@ -20,47 +20,29 @@
 
 #include "condor_common.h"
 #include "procd_common.h"
+#include "condor_debug.h"
 
 #if defined(WIN32)
 #include "process_control.WINDOWS.h"
 #endif
 
-birthday_t
-procd_atob(char* str)
-{
-#if defined(WIN32)
-	return _atoi64(str);
-#else
-	return atol(str);
-#endif
-}
-
-unsigned long get_image_size(procInfo* pi)
-{
-#if defined(WIN32)
-	return pi->rssize;
-#else
-	return pi->imgsize;
-#endif
-}
-
 void
-send_signal(procInfo* pi, int sig)
+send_signal(pid_t pid, int sig)
 {
 #if defined(WIN32)
 	bool result;
 	switch (sig) {
 		case SIGTERM:
-			result = windows_soft_kill(pi->pid);
+			result = windows_soft_kill(pid);
 			break;
 		case SIGKILL:
-			result = windows_hard_kill(pi->pid);
+			result = windows_hard_kill(pid);
 			break;
 		case SIGSTOP:
-			result = windows_suspend(pi->pid);
+			result = windows_suspend(pid);
 			break;
 		case SIGCONT:
-			result = windows_continue(pi->pid);
+			result = windows_continue(pid);
 			break;
 		default:
 			EXCEPT("invalid signal in send_signal: %d", sig);
@@ -68,13 +50,13 @@ send_signal(procInfo* pi, int sig)
 	if (!result) {
 		dprintf(D_ALWAYS,
 		        "send_signal error; pid = %u, sig = %d\n",
-		        pi->pid,
+		        pid,
 		        sig);
 	}
 #else
-	if (kill(pi->pid, sig) == -1) {
+	if (kill(pid, sig) == -1) {
 		dprintf(D_ALWAYS, "kill(%d, %d) error: %s (%d)\n",
-		        pi->pid, sig, strerror(errno), errno);
+		        pid, sig, strerror(errno), errno);
 	}
 #endif
 }

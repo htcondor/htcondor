@@ -25,18 +25,73 @@
 #include "daemon.h"
 #include "../condor_privsep/condor_privsep.h"
 
+// helper method to determine whether the given execute directory
+// is root-squashed. this function assumes that the given directory
+// is owned and writable by condor, and that our real UID is 0. it
+// returns true if we can verify that root squash is NOT in effect,
+// false if not (i.e. false is returned if we detemine root squash
+// is in effect or we hit an error)
+//
+static bool
+not_root_squashed( char const *exec_path )
+{
+	MyString test_dir;
+	test_dir.sprintf("%s/.root_squash_test", exec_path);
+
+	if (rmdir(test_dir.Value()) == -1) {
+		if (errno != ENOENT) {
+			dprintf(D_FULLDEBUG,
+			        "not_root_squashed: rmdir of %s failed: %s\n",
+			        test_dir.Value(),
+			        strerror(errno));
+			return false;
+		}
+	}
+	priv_state priv = set_root_priv();
+	int rv = mkdir(test_dir.Value(), 0755);
+	set_priv(priv);
+	if (rv == -1) {
+		if (errno == EACCES) {
+			dprintf(D_FULLDEBUG,
+			        "execute directory %s root-squashed\n",
+			        exec_path);
+		}
+		else {
+			dprintf(D_FULLDEBUG,
+			        "not_root_squashed: mkdir of %s failed: %s\n",
+			        test_dir.Value(),
+			        strerror(errno));
+		}
+		return false;
+	}
+	struct stat st;
+	if (stat(test_dir.Value(), &st) == -1) {
+		dprintf(D_FULLDEBUG,
+		        "not_root_squashed: stat of %s failed: %s\n",
+		        test_dir.Value(),
+		        strerror(errno));
+		return false;
+	}
+	if (rmdir(test_dir.Value()) == -1) {
+		dprintf(D_FULLDEBUG,
+		        "rmdir of %s failed: %s\n",
+		        test_dir.Value(),
+		        strerror(errno));
+		return false;
+	}
+
+	bool not_squashed = (st.st_uid == 0);
+	dprintf(D_FULLDEBUG,
+	        "execute directory %s %s root-squashed\n",
+	        exec_path,
+		not_squashed ? "not" : "");
+	return not_squashed;
+}
+
 static void
 check_execute_dir_perms( char const *exec_path )
 {
 	struct stat st;
-	mode_t mode;
-#ifdef WIN32
-	mode_t desired_mode = _S_IREAD | _S_IWRITE;
-#else
-	mode_t desired_mode = (0777 | S_ISVTX);
-#endif
-		// We want execute to be world-writable w/ the sticky bit set.  
-
 	if (stat(exec_path, &st) < 0) {
 		EXCEPT( "stat exec path (%s), errno: %d (%s)", exec_path, errno,
 				strerror( errno ) ); 
@@ -52,10 +107,60 @@ check_execute_dir_perms( char const *exec_path )
 		return;
 	}
 
+	// the following logic sets up the new_mode variable, depending
+	// on the execute dir's current perms. if new_mode is set non-zero,
+	// it means we need to do a chmod
+	//
+	mode_t new_mode = 0;
+#if defined(WIN32)
+	mode_t desired_mode = _S_IREAD | _S_IWRITE;
 	if ((st.st_mode & desired_mode) != desired_mode) {
+		new_mode = st.st_mode | desired_mode;
+	}
+#else
+	// we want to avoid having our execute directory world-writable
+	// if possible. it's possible if the execute directory is owned
+	// by condor and either:
+	//   - we're not switching UIDs. in this case, job sandbox dirs
+	//     will just be owned by the condor UID, so we just need
+	//     owner-writability
+	//   - there's no root squash on the execute dir (since then we
+	//     can do a mkdir as the condor UID then a chown to the job
+	//     owner UID)
+	//
+	// additionally, the GLEXEC_JOB feature requires world-writability
+	// on the execute dir
+	//
+	bool glexec_job = param_boolean("GLEXEC_JOB", false);
+	if ((st.st_uid == get_condor_uid()) &&
+	    (!can_switch_ids() || not_root_squashed(exec_path)) &&
+	    !glexec_job)
+	{
+		// do the chown unless the current mode is exactly 755
+		//
+		if ((st.st_mode & 07777) != 0755) {
+			new_mode = 0755;
+		}
+	}
+	else {
+		// do the chown if the mode doesn't already include 1777
+		//
+		if ((st.st_mode & 01777) != 01777) {
+			new_mode = 01777;
+		}
+		if (!glexec_job) {
+			dprintf(D_ALWAYS,
+			        "WARNING: %s root-squashed or not condor-owned: "
+			            "requiring world-writability\n",
+			        exec_path);
+		}
+	}
+#endif
+	// now do a chmod if needed
+	//
+	if (new_mode != 0) {
 		dprintf(D_FULLDEBUG, "Changing permission on %s\n", exec_path);
-		mode = st.st_mode | desired_mode;
-		if (chmod(exec_path, mode) < 0) {
+		if (chmod(exec_path, new_mode) < 0) {
 			EXCEPT( "chmod exec path (%s), errno: %d (%s)", exec_path,
 					errno, strerror( errno ) );
 		}
@@ -353,7 +458,7 @@ stream_to_rip( Stream* stream )
 	Resource* rip;
 
 	stream->decode();
-	if( ! stream->code(id) ) {
+	if( ! stream->get_secret(id) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		free( id );
 		return NULL;

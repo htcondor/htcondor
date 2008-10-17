@@ -20,7 +20,6 @@
 
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.25 2008-03-05 21:12:50 gquinn Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -183,6 +182,16 @@ system("rm -rf $version*");
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	# save the configure.cf command for platform refernces to defines(bt)
 	safe_copy("config/configure.cf","$BaseDir/results/configure.cf");
+	safe_copy("config/externals.cf","$BaseDir/results/externals.cf");
+	safe_copy("config/config.sh","$BaseDir/results/config.sh");
+	safe_copy("$SrcDir/config.h","$BaseDir/results/config.h");
+	safe_copy("$SrcDir/configure.ac","$BaseDir/results/configure.ac");
+	print "************************* configure.cf says.. ***************************\n";
+	system("cat config/configure.cf");
+	print "************************* configure.cf DONE.. ***************************\n";
+	print "************************* config.h says.. ***************************\n";
+	system("cat $SrcDir/config.h");
+	print "************************* config.h DONE.. ***************************\n";
 
 	chdir( "$SrcDir" ) || die "Can't chdir($SrcDir): $!\n";
 	mkdir( "$SrcDir/release_dir", 0777 );  # don't die, it might already exist...

@@ -23,6 +23,7 @@
 #include "condor_classad.h"
 #include "java_detect.h"
 #include "java_config.h"
+#include "my_popen.h"
 
 ClassAd * java_detect()
 {
@@ -39,18 +40,10 @@ ClassAd * java_detect()
 	if(!java_config(path,&args,0)) return 0;
 	int benchmark_time = param_integer("JAVA_BENCHMARK_TIME",0);
 
-	// NOTE: this is not quite right.  If any of the jvm arguments
-	// contain spaces, then V1 syntax cannot handle it, and we
-	// need to pass something more sophisticated to popen that
-	// works under both unix and windows.
-
-	if(!args.GetArgsStringV1Raw(&args_string,&args_error)) {
-		dprintf(D_ALWAYS,"java_detect: failed to produce jvm arguments: %s\n",
-				args_error.Value());
-		return 0;
-	}
-
-	command.sprintf("%s %s CondorJavaInfo old %d",path.Value(),args_string.Value(),benchmark_time);
+	args.InsertArg(path.Value(),0);
+	args.AppendArg("CondorJavaInfo");
+	args.AppendArg("old");
+	args.AppendArg(benchmark_time);
 
 	/*
 	N.B. Certain version of Java do not set up their own signal
@@ -67,13 +60,24 @@ ClassAd * java_detect()
 	sigprocmask(SIG_SETMASK,&mask,0);
 #endif
 
-	FILE *stream = popen(command.Value(),"r");
-	if(!stream) return 0;
+	FILE *stream = my_popen(args,"r",0);
+	if(!stream) {
+		MyString arg_str;
+		args.GetArgsStringForDisplay(&arg_str);
+		dprintf(D_ALWAYS,"JavaDetect: failed to execute %s\n",arg_str.Value());
+		return 0;
+	}
 
 	int eof=0,error=0,empty=0;
 	ClassAd *ad = new ClassAd(stream,"***",eof,error,empty);
 
-	pclose(stream);
+	int rc = my_pclose(stream);
+	if( rc!=0 ) {
+		MyString arg_str;
+		args.GetArgsStringForDisplay(&arg_str);
+		dprintf(D_ALWAYS,"JavaDetect: failure status %d when executing %s\n",rc,arg_str.Value());
+		error = 1;
+	}
 
 	if(error || empty) {
 		delete ad;

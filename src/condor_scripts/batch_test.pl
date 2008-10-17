@@ -49,6 +49,7 @@
 #	path, we can assume it is a nightly test run.
 # Nov 07 : Added repaeating a test n times by adding "-a n" to args
 # Nov 07 : Added condor_personal setup only by adding -p (pretest work);
+# Mar 17 : Added condor cleanup functionality by adding -c option.
 #
 
 #require 5.0;
@@ -75,6 +76,7 @@ $hush = 0;
 $timestamp = 0;
 $kindwait = 1; # run tests one at a time
 $repeat = 1; # run test/s repeatedly
+$cleanupcondor = 0;
 $nightly;
 $testpersonalcondorlocation = "$BaseDir/TestingPersonalCondor";
 $wintestpersonalcondorlocation = "";
@@ -86,6 +88,10 @@ $wintestpersonalcondorlocation = "";
 
 $targetconfig = $testpersonalcondorlocation . "/condor_config";
 $targetconfiglocal = $testpersonalcondorlocation . "/condor_config.local";
+$condorpidfile = "/tmp/condor.pid.$$";
+@extracondorargs;
+@corefiles = ();
+$logdir = "";
 
 $localdir = $testpersonalcondorlocation . "/local";
 $installdir;
@@ -97,6 +103,8 @@ $testdirrunning;
 $configmain;
 $configlocal;
 $iswindows = 0;
+@corefiles = ();
+$logdir = "";
 
 $wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/TestingPersonalCondor
 $pretestsetuponly = 0; # only get the personal condor in place
@@ -128,6 +136,7 @@ $ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
 # -b[buildandtest]: set up a personal condor and generic configs
 # -a[again]: how many times do we run each test?
 # -p[pretest]: get are environment set but run no tests
+# -c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.
 #
 while( $_ = shift( @ARGV ) ) {
   SWITCH: {
@@ -181,6 +190,12 @@ while( $_ = shift( @ARGV ) ) {
         }
         if( /-m.*/ ) {
                 $timestamp = 1;
+                next SWITCH;
+        }
+        if( /-c.*/ ) {
+                # This is not used on windows systems at the moment.
+                $cleanupcondor = 1;
+                push (@extracondorargs, "-pidfile $condorpidfile");
                 next SWITCH;
         }
   }
@@ -250,7 +265,7 @@ if(!($wantcurrentdaemons)) {
 			debug( "\"$mcmd\"\n");
 			system("$mcmd");
 		} else {
-			system("$installdir/sbin/condor_master -f &");
+			system("$installdir/sbin/condor_master @extracondorargs -f &");
 		}
 		print "Done Starting Personal Condor\n";
 	}
@@ -568,6 +583,19 @@ for $test_name (@failed_tests)
 close OUTF;
 close SUMOUTF;
 
+if ( $cleanupcondor )
+{
+   if ( $iswindows ) 
+   {
+      # Currently not implemented.
+   }
+   else
+   {
+      $pid=`cat $condorpidfile`;
+      system("kill $pid");
+      system("rm -f $condorpidfile");
+   }
+}
 exit $num_failed;
 
 sub CleanFromPath
@@ -705,7 +733,7 @@ sub CreateConfig
 	# The only change we need to make to the generic configuration
 	# file is to set the release-dir and local-dir. (non-windows)
 	# change RELEASE_DIR and LOCAL_DIR    
-	$currenthost = `hostname`;
+	$currenthost = CondorTest::getFqdnHost();
 	chomp($currenthost);
 
 	debug( "Set RELEASE_DIR and LOCAL_DIR\n");    
@@ -1221,6 +1249,8 @@ sub DoChild
  	eval {
             alarm($test_retirement);
 			debug( "Child Starting:perl $test_program > $test_program.out\n");
+			CoreCheck("shush");
+			CoreClear();
 			$res = system("perl $test_program > $test_program.out 2>&1");
 
 			# if not build and test move key files to saveme/pid directory
@@ -1250,12 +1280,12 @@ sub DoChild
 			$newcmdout =  $piddir . "/" . $cmdout;
 
 			if( $nightly == 0) {
-				move($log, $newlog);
+				copy($log, $newlog);
 				copy($cmd, $newcmd);
-				move($out, $newout);
-				move($err, $newerr);
+				copy($out, $newout);
+				copy($err, $newerr);
 				copy($runout, $newrunout);
-				move($cmdout, $newcmdout);
+				copy($cmdout, $newcmdout);
 			} else {
 				copy($log, $newlog);
 				copy($cmd, $newcmd);
@@ -1271,7 +1301,14 @@ sub DoChild
 
 			if($res != 0) { 
 				#print "Perl test($test_program) returned <<$res>>!!! \n"; 
+				CoreClear();
 				exit(1); 
+			}
+			my $corecount = CoreCheck();
+			CoreClear();
+			if($corecount != 0) {
+				print "-Core(s) found- ";
+				exit(1);
 			}
 			exit(0);
 		};
@@ -1318,4 +1355,35 @@ sub safe_copy {
         print "Copied $src to $dest\n";
         return 1;
     }
+}
+
+sub CoreCheck {
+	$quiet = shift;
+	my $count = 0;
+	$cmd = "condor_config_val log";
+	$log = `$cmd`;
+	CondorTest::fullchomp($log);
+	$logdir = $log;
+	#print "Log directory is <$log>\n";
+	opendir LD, $log or die "Can not open log directory<$log>:$!\n";
+	@corefiles = ();
+	foreach $file (readdir LD) {
+		if( $file =~ /^core.*$/) {
+			$count += 1;
+			push (@corefiles, $file);
+			if( ! defined $quiet ) {
+				print " core($$): $file ";
+			}
+		}
+	}
+	return($count);
+}
+
+sub CoreClear {
+	#print "Clearing core files.......\n";
+	foreach $core (@corefiles) {
+		system("mv $logdir/$core $logdir/$$.$core");
+		#print "Found core: $core\n";
+	}
+	return(0);
 }

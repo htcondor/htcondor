@@ -20,7 +20,6 @@
 
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.9 2008-03-05 21:12:50 gquinn Exp $
 # generate list of all tests to run
 ######################################################################
 
@@ -100,6 +99,21 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) )
     	die "Can't open configure as a pipe: $!\n";
 	while ( <TESTCONFIG> ) {
     	print $_;
+	}
+	close (TESTCONFIG);
+	$configstat = $?;
+	print "CONFIGURE returned a code of $configstat\n"; 
+	print "Lets try without gcc version check!\n";
+	if($configstat != 0) {
+		print "****************************************************\n";
+		print "**** running CONFIGURE ...\n"; 
+		print "****************************************************\n";
+		$extra_try_args =  " --disable-gcc-version_check --disable-full-port ";
+		open( TESTCONFIG, "./configure --without-externals  $extra_try_args $opt_configure 2>&1 |") ||
+    		die "Can't open configure as a pipe: $!\n";
+		while ( <TESTCONFIG> ) {
+    		print $_;
+		}
 	}
 	close (TESTCONFIG);
 	$configstat = $?;

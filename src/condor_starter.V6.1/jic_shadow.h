@@ -91,7 +91,7 @@ public:
 		 * JICShadow does not need to implement these 
 		 * at this time
 		 **/ 
-	virtual bool holdJob( const char* ) { return ( false ); }
+	virtual bool holdJob( const char*, int /*hold_reason_code*/, int /*hold_reason_subcode*/ ) { return ( false ); }
 	virtual bool removeJob( const char* ) { return ( false ); }
 	virtual bool terminateJob( const char* ) { return ( false ); }
 	virtual bool requeueJob( const char* ) { return ( false ); }
@@ -349,6 +349,10 @@ private:
 		/// If the job ad says so, initialize our IO proxy
 	bool initIOProxy( void );
 
+		// If we are supposed to specially create a security session
+		// for file transfer and reconnect, do it.
+	void initMatchSecuritySession();
+
 		/** Compare our own UIDDomain vs. where the job came from.  We
 			check in the job ClassAd for ATTR_UID_DOMAIN and compare
 			it to info we have about the shadow and the local machine.
@@ -387,6 +391,11 @@ private:
 
 	FileTransfer *filetrans;
 
+		// specially made security sessions if we are doing
+		// SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION
+	char *m_filetrans_sec_session;
+	char *m_reconnect_sec_session;
+
 	/// if true, transfer files at vacate time (in addtion to job exit)
 	bool transfer_at_vacate;
 
@@ -405,6 +414,11 @@ private:
 	bool job_cleanup_disconnected;
 
 	Stream *m_job_startd_update_sock;
+
+		/** A list of output files that have been dynamically added
+		    (e.g. a core file dumped by the job)
+		*/
+	StringList m_added_output_files;
 };
 
 

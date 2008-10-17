@@ -20,7 +20,6 @@
 
 
 ######################################################################
-# $Id: remote_post.pl,v 1.13 2008-03-05 21:12:50 gquinn Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -47,10 +46,20 @@ if( defined $ENV{_NMI_STEP_FAILED} ) {
 ######################################################################
 
 
+print "Seeing if personal condor needs killing\n";
+
 if( -f "$SrcDir/condor_tests/TestingPersonalCondor/local/log/.scheduler_address" ) {
     #  Came up and had a scheduler running. good
 	$ENV{"CONDOR_CONFIG"} = "$SrcDir/condor_tests/TestingPersonalCondor/condor_config";
-	system("$BaseDir/userdir/condor/sbin/condor_off -master");
+	if( defined $ENV{_NMI_STEP_FAILED} ) { 
+		print "not calling condor_off for $SrcDir/condor_tests/TestingPersonalCondor/condor_config\n";
+	} else {
+		print "calling condor_off for $SrcDir/condor_tests/TestingPersonalCondor/condor_config\n";
+		system("$BaseDir/userdir/condor/sbin/condor_off -master");
+		# give some time for condor to shutdown
+		sleep(30);
+		print "done calling condor_off for $SrcDir/condor_tests/TestingPersonalCondor/condor_config\n";
+	}
 } else {
     # if there's no pid_file, there must be no personal condor running
     # which we'd have to kill.  this would be caused by an empty
@@ -79,7 +88,42 @@ if( ! -f "tasklist.nmi" || -z "tasklist.nmi" ) {
     exit $exit_status;
 }
 
+print "cding to $BaseDir \n";
 chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
+
+#----------------------------------------
+# final tar and exit
+#----------------------------------------
+
+$results = "results.tar.gz";
+print "Tarring up all results\n";
+chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
+system( "tar zcf $results --exclude *.exe src/condor_tests local" );
+# don't care if condor is still running or sockets
+# are being skipped. Save what we can and don't bitch
+#if( $? >> 8 ) {
+    #print "Can't tar zcf src/condor_tests local\n";
+    #$exit_status = 1;
+#}
+
+exit $exit_status;
+
+#----------------------------------------
+# final tar and exit
+#----------------------------------------
+
+$results = "results.tar.gz";
+print "Tarring up all results\n";
+chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
+system( "tar zcf $results src/condor_tests local" );
+# don't care if condor is still running or sockets
+# are being skipped. Save what we can and don't bitch
+#if( $? >> 8 ) {
+    #print "Can't tar zcf src/condor_tests local\n";
+    #$exit_status = 1;
+#}
+
+exit $exit_status;
 
 my $etc_dir = "$BaseDir/results/etc";
 my $log_dir = "$BaseDir/results/log";
@@ -123,6 +167,7 @@ if( ! -d $log_dir ) {
 }
 if( -d $log_dir ) {
     print "Copying log files to $log_dir\n";
+    system( "cp $SrcDir/condor_tests/TestingPersonalCondor/local/log/core* $log_dir" );
     system( "cp $SrcDir/condor_tests/TestingPersonalCondor/local/log/*Log* $log_dir" );
     if( $? >> 8 ) {
         print "Can't copy $SrcDir/condor_tests/TestingPersonalCondor/local/log/ to $log_dir\n";
@@ -135,6 +180,7 @@ if( -d $log_dir ) {
 # save output from tests
 #----------------------------------------
 
+print "Saving test output \n";
 system( "cp tasklist.nmi $BaseDir/results/" );
 if( $? ) {
     print "Can't copy tasklist.nmi to $BaseDir/results\n";
@@ -182,12 +228,22 @@ while( <TASKFILE> ) {
 	# keep disk use lower.
 	# Except, 5/15/08, if the test is timed out the saveme never
 	# gets tared up. So if it is still there, tar it up now
-	if( -d "$testname.saveme") {
+
+	# Except, 8/12/08, if the test didn't time out, but the
+	# remove wasn't able to remove all the files in the saveme dir, say
+	# because they were still in use.  In _that_ case, the .tar.gz exists
+	# so don't overwrite it.
+
+	if (! -f "$testname.saveme.tar.gz" && ( -d "$testname.saveme")) {
 		system("tar -zcvf $testname.saveme.tar.gz $testname.saveme");
 	}
     if( (-f "$testname.saveme.tar.gz") && ($testcopy == 1) ) {
             print "Saving $testname.saveme.tar.gz.\n";
             copy_file( "$testname.saveme.tar.gz", $resultdir, true );
+			if( $testname eq "lib_auth_protocol-negot" ) {
+				print "lib_auth_protocol-negot.tar.gz contains:\n";
+				system("tar -ztvf lib_auth_protocol-negot.saveme.tar.gz");
+			}
     }
 }
 

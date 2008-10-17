@@ -42,8 +42,6 @@ $ENV{CONDOR_CONFIG} = $condor_config;
 $ENV{PATH} = $path;
 $ENV{UNIVERSE} = "vanilla";
 
-print "join(` `,keys %ENV)";
-
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "$testname: SUCCESS\n";
 	exit(0);

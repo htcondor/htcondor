@@ -74,6 +74,7 @@ CRT_BEGIN = @crt_begin@
 GCC_STATIC_LD_FLAG = @gcc_static_ld_flag@
 GCC_STATIC_LIBS = $(GCC_STATIC_LD_FLAG) -lstdc++ -lgcc
 GCC_RDYNAMIC_FLAG = @gcc_rdynamic_flag@
+GCC_HASH_STYLE_FLAG = @gcc_hash_style_flag@
 
 /* Debugging flags common to C and C++ */
 COMP_DEBUG_FLAGS = -g @DEBUG_FLAGS@ @comp_option_Wall@ @comp_option_W@ @comp_option_Wextra@ @comp_option_Wfloat_equal@ @comp_option_Wshadow@ @comp_option_Wendif_labels@ @comp_option_Wpointer_arith@ @comp_option_Wcast_qual@ @comp_option_Wcast_align@ @comp_option_Wvolatile_register_var@ @comp_option_stack_protector@
@@ -132,8 +133,12 @@ VENDOR_CPLUS_NAME = @_cv_vendor_cplus_name@
 CONFIGURE_DEFS = @DEFS@
 CONFIGURE_LIBS = @LIBS@
 CONFIGURE_CFLAGS = @CFLAGS@
-CONFIGURE_CPPFLAGS = @CPPFLAGS@
+CONFIGURE_GSOAP_CFLAGS = @GSOAP_CFLAGS@
+CONFIGURE_POSTGRESQL_CFLAGS = @POSTGRESQL_CFLAGS@
+CONFIGURE_CPPFLAGS = @CPPFLAGS@ @GSOAP_CFLAGS@
 CONFIGURE_LDFLAGS = @LDFLAGS@
+CONFIGURE_GSOAP_LDFLAGS = @GSOAP_LDFLAGS@
+CONFIGURE_POSTGRESQL_LDFLAGS = @POSTGRESQL_LDFLAGS@
 
 LEX = @LEX@
 LEXLIB = @LEXLIB@
@@ -141,6 +146,7 @@ YACC = @YACC@
 STRIP = @STRIP@
 TRUE = @TRUE@
 JAVAC = @JAVAC@
+VMWARE = @VMWARE@
 JAR = @JAR@
 FIND = @FindCmd@
 

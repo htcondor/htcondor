@@ -20,7 +20,6 @@
 
 
 ######################################################################
-# $Id: remote_task.pl,v 1.11 2008-03-05 21:12:50 gquinn Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -36,11 +35,15 @@
 ######################################################################
 
 use File::Copy;
+use File::Find;
 
 if( ! defined $ENV{_NMI_TASKNAME} ) {
     die "_NMI_TASKNAME not in environment, can't test anything!\n";
 }
 my $fulltestname = $ENV{_NMI_TASKNAME};
+
+my $testenvtst =   $ENV{GCBTARGET};
+print "Test for test environment variable GCBTARGET yields <$testenvtst>\n";
 
 if( $fulltestname =~ /remote_task/) {
 	die "_NMI_TASKNAME set to remote_task meaning 0 tests seen!\n";
@@ -170,6 +173,28 @@ if( $batchteststatus != 0 ) {
     $teststatus = 0;
 }
 
+# Oh dear.  This hack is needed because results aren't coming back
+# on windows, and we don't know why, and need to get the log files
+# back asap.
+
+sub wanted {
+    if (/core\.[A-Z]+\.WIN32/) {
+        print "Condor dropped Windows core file named $File::Find::name\n";
+    	open(CORE, $_);
+    	while(<CORE>) {
+       	 print "core $_";
+    	}
+		close(CORE);
+    	open(SCHEDLOG, "SchedLog");
+    	while(<SCHEDLOG>) {
+       	 print "schedlog $_";
+    	}
+		close(SCHEDLOG);
+	}
+}
+
+find(\&wanted, ".");
+
 ######################################################################
 # tar up any saveme directories pull full dir
 ######################################################################
@@ -178,8 +203,12 @@ $saveme = $testname . ".saveme";
 if( -d $saveme ) {
 	$tarfile = $testname . ".saveme.tar.gz";
 	system("tar -zcvf $tarfile $saveme");
+	print "Contents of SAVEME tar follows.....\n";
+	system("tar -ztvf $tarfile $saveme");
 	system("rm -rf $saveme");
 }
+
+
 
 ######################################################################
 # print output from .run script to stdout of this task, and final exit

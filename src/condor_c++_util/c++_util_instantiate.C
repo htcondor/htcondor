@@ -39,6 +39,7 @@
 #include "killfamily.h"
 #include "passwd_cache.h"
 #include "proc_family_direct.h"
+
 #if HAVE_EXT_CLASSADS 
 #include "credential.h"
 #endif
@@ -69,6 +70,8 @@ template class HashBucket<MyString,int>;
 template class HashTable<MyString, MyString>;
 template class HashBucket<MyString, MyString>;
 template class HashTable<MyString, KeyCacheEntry*>;
+template class SimpleList<KeyCacheEntry*>;
+template class HashTable<MyString, SimpleList<KeyCacheEntry*>*>;
 template class Queue<char *>;
 template class HashTable<int, FileTransfer *>;
 template class HashTable<MyString, FileTransfer *>;
@@ -85,7 +88,7 @@ template class Item<LogRecord>;
 template class HashTable<YourSensitiveString,LogRecordList *>;
 template class HashTable<pid_t, ProcFamilyDirectContainer*>;
 
-#if HAVE_EXT_CLASSADS 
+#if HAVE_EXT_CLASSADS
 template class SimpleList <Credential*>;
 #endif
 

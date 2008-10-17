@@ -59,9 +59,6 @@ ReliSock::init()
 	is_client = 0;
 	authob = NULL;
 	hostAddr = NULL;
-    _fqu = NULL;
-	_user = NULL;
-	_domain = NULL;
 	snd_msg.buf.reset();                                                    
 	rcv_msg.buf.reset();   
 	rcv_msg.init_parent(this);
@@ -103,15 +100,6 @@ ReliSock::~ReliSock()
 		free( hostAddr );
 		hostAddr = NULL;
 	}
-
-	free( _fqu );
-	_fqu = NULL;
-
-	free( _user );
-	_user = NULL;
-
-	free( _domain );
-	_domain = NULL;
 }
 
 
@@ -1178,7 +1166,7 @@ ReliSock::serialize() const
     // now concatenate our state
 	char * outbuf = new char[50];
     memset(outbuf, 0, 50);
-	sprintf(outbuf,"*%d*%s*",_special_state,sin_to_string(&_who));
+	sprintf(outbuf,"%d*%s*",_special_state,sin_to_string(&_who));
 	strcat(parent_state,outbuf);
 
     // Serialize crypto stuff
@@ -1190,21 +1178,6 @@ ReliSock::serialize() const
     char * md = serializeMdInfo();
     strcat(parent_state, md);
     strcat(parent_state, "*");
-
-    const char * tmp = getFullyQualifiedUser();
-    char buf[5];
-    int len = 0;
-    if (tmp) {
-        len = strlen(tmp);
-        sprintf(buf, "%d*", len);
-        strcat(parent_state, buf);
-        strcat(parent_state, tmp);
-        strcat(parent_state, "*");
-    }
-    else {
-        sprintf(buf, "%d*", 0);
-        strcat(parent_state, buf);
-    }
 
 	delete []outbuf;
     delete []crypto;
@@ -1220,11 +1193,7 @@ ReliSock::serialize(char *buf)
 	int len = 0;
 
     ASSERT(buf);
-    memset(fqu, 0, 256);
     memset(sinful_string, 0 , 28);
-
-	// here we want to restore our state from the incoming buffer
-	setFullyQualifiedUser(NULL);
 
 	// first, let our parent class restore its state
     ptmp = Sock::serialize(buf);
@@ -1322,12 +1291,14 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 }
 
 int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key, 
-								   const char* methods, CondorError* errstack)
+								   const char* methods, CondorError* errstack,
+								   int auth_timeout)
 {
 	int in_encode_mode;
 	int result;
 
-    if (!isAuthenticated()) {
+    if (!triedAuthentication()) {
+		setTriedAuthentication(true);
         if ( !authob ) {
             authob = new Authentication( this );
         }
@@ -1337,9 +1308,9 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 
 				// actually perform the authentication
 			if ( with_key ) {
-				result = authob->authenticate( hostAddr, key, methods, errstack );
+				result = authob->authenticate( hostAddr, key, methods, errstack, auth_timeout );
 			} else {
-				result = authob->authenticate( hostAddr, methods, errstack );
+				result = authob->authenticate( hostAddr, methods, errstack, auth_timeout );
 			}
 				// restore stream mode (either encode or decode)
 			if ( in_encode_mode && is_decode() ) {
@@ -1350,8 +1321,10 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 				}
 			}
 
+			setFullyQualifiedUser(authob->getFullyQualifiedUser());
 			return result;
         }
+		setFullyQualifiedUser(NULL);
         return( 0 );  
     }
     else {
@@ -1359,73 +1332,16 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
     }
 }
 
-int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* errstack)
+int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* errstack, int auth_timeout)
 {
-	return perform_authenticate(true,key,methods,errstack);
+	return perform_authenticate(true,key,methods,errstack,auth_timeout);
 }
 
 int 
-ReliSock::authenticate(const char* methods, CondorError* errstack ) 
+ReliSock::authenticate(const char* methods, CondorError* errstack,int auth_timeout ) 
 {
 	KeyInfo *key = NULL;
-	return perform_authenticate(false,key,methods,errstack);
-}
-
-
-const char *
-ReliSock::getOwner() {
-	if ( authob ) {
-		return( authob->getOwner() );
-	}
-	return _user;
-}
-
-const char *
-ReliSock::getFullyQualifiedUser() const {
-	if ( authob ) {
-		return( authob->getFullyQualifiedUser() );
-	}
-	return _fqu;
-}
-
-void
-ReliSock::setFullyQualifiedUser(char const * u) {
-	if( u && authob && authob->getFullyQualifiedUser() != NULL ) {
-		if( strcmp(u,authob->getFullyQualifiedUser()) == 0 ) {
-			return; // ignore, because setting it to the same value
-		}
-		EXCEPT("ReliSock::setFullyQualifiedUser(%s) called when authob is "
-			   "already present: authob->getFullyQualifiedUser() = %s",
-			   u, authob->getFullyQualifiedUser());
-	}
-	if( u && authob ) {
-			// there is an authob, but it doesn't have an fqu, so delete it
-		delete authob;
-		authob = NULL;
-	}
-
-	free(_fqu);
-	_fqu = NULL;
-
-	free( _user );
-	_user = NULL;
-
-	free( _domain );
-	_domain = NULL;
-
-	if (u) {
-		Authentication::split_canonical_name(u,&_user,&_domain);
-
-		_fqu = strdup(u);
-	}
-}
-
-const char * ReliSock::getDomain()
-{
-    if (authob) {
-        return ( authob->getDomain() );
-    }
-    return _domain;
+	return perform_authenticate(false,key,methods,errstack,auth_timeout);
 }
 
 const char * ReliSock::getHostAddress() {
@@ -1433,32 +1349,6 @@ const char * ReliSock::getHostAddress() {
         return ( authob->getRemoteAddress() );
     }
     return NULL;
-}
-
-int
-ReliSock::isAuthenticated() const
-{
-	if( _fqu && *_fqu ) {
-			// authenticated external to this socket instance
-			// (e.g. using a cached security session)
-		return 1;
-	}
-
-	if ( !authob ) {
-		return 0;
-	}
-	return( authob->isAuthenticated() );
-}
-
-void
-ReliSock::unAuthenticate()
-{
-	free( _fqu );
-	_fqu = NULL;
-
-	if ( authob ) {
-		authob->unAuthenticate();
-	}
 }
 
 int ReliSock :: encrypt(bool flag)

@@ -18,7 +18,6 @@
  ***************************************************************/
 
 
-
 #ifndef _MyString_H_
 #define _MyString_H_
 
@@ -79,6 +78,9 @@ class MyString
 
 	/** Returns string. Note that it may return NULL */
 	const char *GetCStr() const { return Data;               }
+
+	/** Returns a strdup()ed C string. */
+	char *StrDup() const { return strdup( Value() );         }
 
 	/** Returns string. 
 		Note that it never returns NULL, but will return an 

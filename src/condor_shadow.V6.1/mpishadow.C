@@ -339,9 +339,6 @@ MPIShadow::startMaster()
 		// file transfer stuff, command line args to specify the
 		// procgroup file, etc, etc.
 
-    char mach[128];
-    char *sinful = new char[128];
-    struct sockaddr_in sin;
     FILE *pg;
 
         /* We use the list of resources to build a procgroup file, 
@@ -377,6 +374,10 @@ MPIShadow::startMaster()
 		return;
     }
         
+    char mach[128];
+    char *sinful = new char[128];
+    struct sockaddr_in sin;
+
         // get the machine name (using string_to_sin and sin_to_hostname)
     rr = ResourceList[0];
     rr->getStartdAddress( sinful );
@@ -1143,6 +1144,12 @@ MPIShadow::getExitReason( void )
 		return ResourceList[0]->getExitReason();
 	}
 	return -1;
+}
+
+bool
+MPIShadow::claimIsClosing( void )
+{
+	return false;
 }
 
 

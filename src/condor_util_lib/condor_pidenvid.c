@@ -29,13 +29,11 @@ void pidenvid_init(PidEnvID *penvid)
 {
 	int i;
 
+	/* zero out the whole struct */
+	memset(penvid, 0, sizeof(PidEnvID));
+
 	/* all of these structures in Condor will be of this size */
 	penvid->num = PIDENVID_MAX;
-
-	for (i = 0; i < penvid->num; i++) {
-		penvid->ancestors[i].active = FALSE;
-		memset(penvid->ancestors[i].envid, '\0', PIDENVID_ENVID_SIZE);
-	}
 }
 
 /* overwrite the pidenv with the family tree specific environment variables

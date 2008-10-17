@@ -26,6 +26,7 @@
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "condor_socket_types.h"
+#include "subsystem_info.h"
 #include "httpget.h"
 #include "directory.h"
 #include "stdsoap2.h"
@@ -34,8 +35,6 @@
 extern int soap_serve(struct soap *);
 
 extern DaemonCore *daemonCore;
-
-extern char *mySubSystem;
 
 struct soap ssl_soap;
 
@@ -46,7 +45,7 @@ extern SOAP_NMAC struct Namespace namespaces[];
 void
 init_soap(struct soap *soap)
 {
-	MyString subsys = MyString(mySubSystem);
+	MyString subsys = MyString(mySubSystem->getName() );
 
 		// KEEP-ALIVE should be turned OFF, not ON.
 	soap_init(soap);
@@ -450,13 +449,6 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 	}
 
 	dprintf(D_FULLDEBUG, "SOAP SSL connection completed\n");
-
-		// BIG WARNING: The line below is a hack to get around the
-		// single transaction bug "fix" hack. It should be removed
-		// ASAP as it reverts the reliability of a daemon (mostly the
-		// Schedd) to that of a wet paper bag.
-// *** This can be commented out because of the soap_ssl_sock! ***
-		// daemonCore->Only_Allow_Soap(0);
 
 	return KEEP_STREAM;
 #else // No COMPILE_SOAP_SSL

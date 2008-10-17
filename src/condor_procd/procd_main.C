@@ -28,6 +28,10 @@
 #include "process_control.WINDOWS.h"
 #endif
 
+#if !defined(WIN32)
+#include "glexec_kill.h"
+#endif
+
 // our "local server address"
 // (set with the "-A" option)
 //
@@ -65,6 +69,14 @@ static gid_t max_tracking_gid = 0;
 // via the -K option
 //
 static char* windows_softkill_binary = NULL;
+#endif
+
+#if !defined(WIN32)
+// when the GLEXEC_JOB feature is used, we will be configured with
+// paths to glexec and a helper script to use for killing processes
+//
+static char* glexec_kill_path = NULL;
+static char* glexec_path = NULL;
 #endif
 
 static inline void
@@ -176,6 +188,20 @@ parse_command_line(int argc, char* argv[])
 				break;
 #endif
 
+#if !defined(WIN32)
+			// glexec and kill script paths
+			//
+			case 'I':
+				if (index + 2 >= argc) {
+					fail_option_args("-I", 2);
+				}
+				index++;
+				glexec_kill_path = argv[index];
+				index++;
+				glexec_path = argv[index];
+				break;
+#endif
+
 			// default case
 			//
 			default:
@@ -245,7 +271,7 @@ main(int argc, char* argv[])
 	//
 	extern FILE* debug_fp;
 	if (log_file_name != NULL) {
-		debug_fp = safe_fopen_wrapper(log_file_name, "w");
+		debug_fp = safe_fopen_wrapper(log_file_name, "a");
 		if (debug_fp == NULL) {
 			fprintf(stderr,
 			        "error: couldn't open file \"%s\" for logging: %s (%d)",
@@ -254,6 +280,9 @@ main(int argc, char* argv[])
 			        errno);
 			exit(1);
 		}
+		dprintf(D_ALWAYS, "***********************************\n");
+		dprintf(D_ALWAYS, "* condor_procd STARTING UP\n");
+		dprintf(D_ALWAYS, "***********************************\n");
 	}
 
 	// if a maximum snapshot interval was given, it needs to be either
@@ -271,6 +300,15 @@ main(int argc, char* argv[])
 	//
 	if (windows_softkill_binary != NULL) {
 		set_windows_soft_kill_binary(windows_softkill_binary);
+	}
+#endif
+
+#if !defined(WIN32)
+	// if we were given arguments for using glexec to kill processes,
+	// initialize the glexec_kill module
+	//
+	if (glexec_kill_path != NULL) {
+		glexec_kill_init(glexec_kill_path, glexec_path);
 	}
 #endif
 

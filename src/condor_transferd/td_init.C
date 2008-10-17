@@ -275,7 +275,7 @@ TransferD::setup_transfer_request_handler(int cmd, Stream *sock)
 	///////////////////////////////////////////////////////////////
 	// make sure we are authenticated
 	///////////////////////////////////////////////////////////////
-	if( ! rsock->isAuthenticated() ) {
+	if( ! rsock->triedAuthentication() ) {
 		CondorError errstack;
 		if( ! SecMan::authenticate_sock(rsock, WRITE, &errstack) ) {
 			// we failed to authenticate, we should bail out now

@@ -51,6 +51,7 @@ static char *priv_state_name[] = {
 	"PRIV_UNKNOWN",
 	"PRIV_ROOT",
 	"PRIV_CONDOR",
+	"PRIV_CONDOR_FINAL",
 	"PRIV_USER",
 	"PRIV_USER_FINAL",
 	"PRIV_FILE_OWNER"
@@ -496,11 +497,19 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 		return PRIV_USER_FINAL;
 	}
 
+	if (CurrentPrivState == PRIV_CONDOR_FINAL) {
+		if ( dologging ) {
+			dprintf(D_ALWAYS,
+				"warning: attempted switch out of PRIV_CONDOR_FINAL\n");
+		}
+		return PRIV_CONDOR_FINAL;
+	}
 	CurrentPrivState = s;
 	if (can_switch_ids()) {
 		switch (s) {
 		case PRIV_ROOT:
 		case PRIV_CONDOR:
+		case PRIV_CONDOR_FINAL:
 			RevertToSelf();
 			break;
 		case PRIV_USER:
@@ -672,11 +681,8 @@ static int set_owner_egid();
 static int set_user_ruid();
 static int set_user_rgid();
 static int set_root_euid();
-
-#if 0 // these are not used, probably could be removed...
 static int set_condor_ruid();
 static int set_condor_rgid();
-#endif
 
 /* We don't use EXCEPT here because this file is used in
    condor_syscall_lib.a.  -Jim B. */
@@ -1152,6 +1158,10 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 			set_user_rgid();
 			set_user_ruid();
 			break;
+		case PRIV_CONDOR_FINAL:
+			set_root_euid();	/* must be root to switch */
+			set_condor_rgid();
+			set_condor_ruid();
 		case PRIV_UNKNOWN:		/* silently ignore */
 			break;
 		default:
@@ -1448,7 +1458,6 @@ set_owner_egid()
 }
 
 
-#if 0   // these functions not needed... probably could be removed completely
 int
 set_condor_ruid()
 {
@@ -1469,7 +1478,6 @@ set_condor_rgid()
 
 	return SET_REAL_GID(CondorGid);
 }
-#endif
 
 int
 is_root( void ) 

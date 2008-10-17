@@ -36,6 +36,8 @@ if( ! $vers ) {
 }
 print "Condor version: $vers\n";
 $src_file = "condor-$vers.tar.gz";
+print "looking for $src_file\n";
+system("ls -l");
 system("rm -f $src_file");
 
 exit(0);

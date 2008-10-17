@@ -89,7 +89,7 @@ extern int (*DebugId)(FILE *);		/* set header message */
 
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 
-void dprintf_config( char *subsys );
+void dprintf_config( const char *subsys );
 void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
@@ -113,8 +113,14 @@ void dprintf_init_fork_child( void );
  */
 void dprintf_wrapup_fork_child( void );
 
+void dprintf_dump_stack(void);
+
 time_t dprintf_last_modification(void);
 void dprintf_touch_log(void);
+
+/* wrapper for fclose() that soaks up EINTRs up to maxRetries number of times.
+ */
+int fclose_wrapper( FILE *stream, int maxRetries );
 
 /*
 **	Definition of exception macro
@@ -131,7 +137,9 @@ void dprintf_touch_log(void);
 #if !( defined(LINUX) && defined(GLIBC) || defined(Darwin) || defined(CONDOR_FREEBSD) )
 extern DLL_IMPORT_MAGIC int		errno;
 extern DLL_IMPORT_MAGIC int		sys_nerr;
-extern DLL_IMPORT_MAGIC char		*sys_errlist[];
+#if _MSC_VER < 1400 /* VC++ 2005 version */
+extern DLL_IMPORT_MAGIC char	*sys_errlist[];
+#endif
 #endif
 
 extern int	_EXCEPT_Line;			/* Line number of the exception    */

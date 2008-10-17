@@ -36,8 +36,6 @@
 
 extern void evalFromEnvironment (const char *, EvalResult *);
 
-// ugly, ugly hack.  remove for v6.1.9 -Todd
-extern char* mySubSystem;
 
 // Chris Torek's world famous hashing function
 // Modified to be case-insensitive
@@ -54,6 +52,14 @@ static unsigned int torekHash(const YourString &s) {
 }
 
 static const int hash_size = 79; // prime research
+
+static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
+static bool publish_server_time = false;
+void AttrList_setPublishServerTime( bool publish )
+{
+	publish_server_time = publish;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // AttrListElem constructor.
@@ -2066,76 +2072,47 @@ void AttrListList::Insert(AttrList* AttrList)
 ////////////////////////////////////////////////////////////////////////////////
 int AttrListList::Delete(AttrList* attrList)
 {
+
+		// optimization: if attrList is in this list directly
+		// (i.e. not as an AttrListRep), then avoid searching
+		// through the list
+	if( attrList->inList == this ) {
+		if( attrList == ptr ) {
+			ptr = ptr->next;
+		}
+
+		if( attrList == head && attrList == tail ) {
+			head = tail = NULL;
+		}
+		else if( attrList == head ) {
+			head = head->next;
+			if( head ) {
+				head->prev = NULL;
+			}
+		}
+		else if( attrList == tail ) {
+			tail = attrList->prev;
+			if( tail ) {
+				tail->next = NULL;
+			}
+		}
+		else {
+			attrList->prev->next = attrList->next;
+			attrList->next->prev = attrList->prev;
+		}
+
+		delete attrList;
+		this->length--;
+		return TRUE;
+	}
+
+
     AttrListAbstract*	cur;
     AttrListRep*		tmpRep;
     
     for(cur = head; cur; cur = cur->next)
     {
-		if(cur->Type() == ATTRLISTENTITY) // this AttrList has no replicant
-		{
-			if(cur == attrList) // this is the AttrList to be deleted
-			{
-				if(cur == ptr) ptr = ptr->next;
-				if(cur == head && cur == tail)
-				// AttrList to be deleted is the only entry in the list
-				{
-					head = NULL;
-					tail = NULL;
-				}
-				else if(cur == head)
-				// AttrList to be deleted is at the head of the list
-				{
-					head = head->next;
-					if(head)
-					{
-						head->prev = NULL;
-					}
-				}
-				else if(cur == tail)
-				// AttrList to be deleted is at the tail of the list
-				{
-					tail = cur->prev;
-					if(tail)
-					{
-						tail->next = NULL;
-					}
-				}
-				else
-				// AttrList deleted is at neither the head nor the tail
-				{
-					// we should be able to say 
-					//    cur->prev->next = cur->next
-					// but sometimes cur->prev is NULL!!!!  since
-					// v6.1 will be completely replacing classads
-					// and I've spent quite some time and failed to
-					// find the bug, I've just patched the bug
-					// here.  -Todd 1/98
-					if ( cur->prev == NULL ) {
-						// this should not happen, but it did.
-						// figure out what cur->prev should be
-						// by traversing the next pointers.
-						// if we cannot figure it out by 
-						// traversing all the next pointers,
-						// we'll fall through and SEGV - this is
-						// better than an EXCEPT since we'll get a core
-						AttrListAbstract *cur1;
-						for (cur1=head; cur1; cur1=cur1->next ) {
-							if ( cur1->next == cur ) {
-								cur->prev = cur1;
-								break;
-							}
-						}
-					}
-					cur->prev->next = cur->next;
-					cur->next->prev = cur->prev;
-				}
-
-				delete cur;
-    			this->length--;
-				break;
-			}
-		}
-		else // a rep is used
+		if(cur->Type() == ATTRLISTREP)
 		{
 			if(((AttrListRep *)cur)->attrList == attrList)
 			{
@@ -2300,7 +2277,7 @@ int AttrList::put(Stream& s)
 		}
 	}
 
-	if ( mySubSystem && (strcmp(mySubSystem,"SCHEDD")==0) ) {
+	if ( publish_server_time ) {
 		// add one for the ATTR_SERVER_TIME expr
 		numExprs++;
 		send_server_time = true;
@@ -2312,37 +2289,43 @@ int AttrList::put(Stream& s)
         return 0;
 
 	char *line;
-	// copy chained attrs first, so if there are duplicates, the get()
-	// method will overide the attrs from the chained ad with attrs
-	// from this ad.
-	if ( chainedAttrs ) {
-		for(elem = *chainedAttrs; elem; elem = elem->next) {
+	int pass;
+	for( pass=0; pass<2; pass++ ) {
+		if( pass==0 ) {
+				// copy chained attrs first, so if there are
+				// duplicates, the get() method will overide the attrs
+				// from the chained ad with attrs from this ad.
+			if( !chainedAttrs ) {
+				continue;
+			}
+			elem = *chainedAttrs;
+		}
+		else {
+			elem = exprList;
+		}
+
+		for(; elem; elem = elem->next) {
 			if( elem->tree->invisible ) {
 				continue;
 			}
 			line = NULL;
 			elem->tree->PrintToNewStr(&line);
 			ConvertDefaultIPToSocketIP(elem->name,&line,s);
-			if(!s.code(line)) {
+
+			if( ! s.prepare_crypto_for_secret_is_noop() &&
+				ClassAdAttributeIsPrivate(elem->name) )
+			{
+				s.put(SECRET_MARKER); // tell other side we are sending secret
+				s.put_secret(line);   // send the secret
+			}
+			else if(!s.code(line)) {
 				free(line);
 				return 0;
 			}
 			free(line);
 		}
 	}
-    for(elem = exprList; elem; elem = elem->next) {
-		if( elem->tree->invisible ) {
-			continue;
-		}
-        line = NULL;
-        elem->tree->PrintToNewStr(&line);
-		ConvertDefaultIPToSocketIP(elem->name,&line,s);
-        if(!s.code(line)) {
-			free(line);
-            return 0;
-        }
-		free(line);
-    }
+
 	if ( send_server_time ) {
 		// insert in the current time from the server's (schedd)
 		// point of view.  this is used so condor_q can compute some
@@ -2449,7 +2432,7 @@ bool AttrList::IsExternalReference(const char *name, char **simplified_name) con
 		is_external = false;
 	}
 
-	seperator = strchr(name,'.');
+	seperator = (char*)strchr(name,'.');
 
 	// We have a prefix, so we examine it. 
 	if (seperator) {
@@ -2510,6 +2493,8 @@ AttrList::initFromStream(Stream& s)
 		dprintf(D_FULLDEBUG,"Failed to read ClassAd size.\n");
         return 0;
 	}
+
+	char *secret_line = NULL;
     
     for(int i = 0; i < numExprs; i++) {
 
@@ -2519,6 +2504,18 @@ AttrList::initFromStream(Stream& s)
             succeeded = 0;
 			break;
         }
+
+		if( strcmp(line,SECRET_MARKER)==0 ) {
+			free(secret_line);
+			secret_line = NULL;
+			if( !s.get_secret(secret_line) ) {
+				dprintf(D_FULLDEBUG,"Failed to read encrypted ClassAd expression.\n");
+				succeeded = 0;
+				break;
+			}
+			line = secret_line;
+		}
+
 		if (!Insert(line)) {
 				// this debug message for tracking down initFromStream() bug
 			dprintf(D_FULLDEBUG,"Failed to parse ClassAd expression: '%s'\n",
@@ -2527,6 +2524,7 @@ AttrList::initFromStream(Stream& s)
 			break;
 		}
     }
+	free(secret_line);
 
     return succeeded;
 }
@@ -2696,6 +2694,10 @@ AssignExpr(char const *variable,char const *value)
 {
 	MyString buf;
 
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
 	buf += variable;
 
 	if(!value) {
@@ -2708,50 +2710,59 @@ AssignExpr(char const *variable,char const *value)
 	return Insert(buf.GetCStr());
 }
 
+char const *
+AttrList::EscapeStringValue(char const *val,MyString &buf) {
+	if( !val || !strchr(val,'"') ) {
+		return val;
+	}
+	buf = val;
+	buf.replaceString("\"","\\\"");
+	return buf.Value();
+}
+
 /* This is used for %s = "%s" style constructs */
 int AttrList::
 Assign(char const *variable, MyString &value)
 {
-	return Assign(variable, value.Value());
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
+	return Assign(variable,value.Value());
 }
 
 /* This is used for %s = "%s" style constructs */
 int AttrList::
 Assign(char const *variable,char const *value)
 {
-	MyString buf;
-
-	buf += variable;
-
-	if(!value) {
-		buf += " = UNDEFINED";
-	}
-	else {
-		buf += " = \"";
-		while(*value) {
-			// NOTE: in old classads, we do not escape backslashes.
-			// There is a hacky provision for dealing with the case
-			// where a backslash comes at the end of the string.
-			size_t len = strcspn(value,"\"");
-
-			buf.sprintf_cat("%.*s",len,value);
-			value += len;
-
-			if(*value) {
-				//escape special characters
-				buf += '\\';
-				buf += *(value++);
-			}
-		}
-		buf += '\"';
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
 	}
 
-	return Insert(buf.GetCStr());
+	MyString buf(variable);
+	MyString escape_buf;
+
+	if (!value) {
+		buf += "=UNDEFINED";
+	} else {
+		value = EscapeStringValue(value,escape_buf);
+
+		buf += "=\"";
+		buf += value;
+		buf += "\"";
+	}
+
+	return Insert(buf.Value());
 }
+
 int AttrList::
 Assign(char const *variable,int value)
 {
 	MyString buf;
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
 	buf.sprintf("%s = %d",variable,value);
 	return Insert(buf.GetCStr());
 }
@@ -2759,6 +2770,10 @@ int AttrList::
 Assign(char const *variable,float value)
 {
 	MyString buf;
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
 	buf.sprintf("%s = %f",variable,value);
 	return Insert(buf.GetCStr());
 }
@@ -2766,6 +2781,10 @@ int AttrList::
 Assign(char const *variable,double value)
 {
 	MyString buf;
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
 	/* WARNING: The internal representation may only store float sized 
 		quantities. but if this is ever fixed, the whole source base doesn't
 		need to be updated to deal with assigning double values due to the
@@ -2777,6 +2796,10 @@ int AttrList::
 Assign(char const *variable,bool value)
 {
 	MyString buf;
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
 	buf.sprintf("%s = %s",variable,value?"TRUE":"FALSE");
 	return Insert(buf.GetCStr());
 }
@@ -2808,8 +2831,16 @@ bool AttrList::ClassAdAttributeIsPrivate( char const *name )
 			// This attribute contains the secret capability cookie
 		return true;
 	}
+	if( stricmp(name,ATTR_CAPABILITY) == 0 ) {
+			// This attribute contains the secret capability cookie
+		return true;
+	}
 	if( stricmp(name,ATTR_CLAIM_IDS) == 0 ) {
 			// This attribute contains secret capability cookies
+		return true;
+	}
+	if( stricmp(name,ATTR_TRANSFER_KEY) == 0 ) {
+			// This attribute contains the secret file transfer cookie
 		return true;
 	}
 	return false;
@@ -2820,4 +2851,37 @@ void AttrList::SetPrivateAttributesInvisible(bool make_invisible)
 		// keep this in sync with ClassAdAttributeIsPrivate()
 	SetInvisible(ATTR_CLAIM_ID,make_invisible);
 	SetInvisible(ATTR_CLAIM_IDS,make_invisible);
+	SetInvisible(ATTR_CAPABILITY,make_invisible);
+	SetInvisible(ATTR_TRANSFER_KEY,make_invisible);
+}
+
+//	Decides if a string is a valid attribute name, the LHS
+//  of an expression.  As per the manual, valid names:
+//
+//  Attribute names are sequences of alphabetic characters, digits and 
+//  underscores, and may not begin with a digit
+
+/* static */ bool
+AttrList::IsValidAttrName(const char *name) {
+		// NULL pointer certainly false
+	if (!name) {
+		return false;
+	}
+
+		// Must start with alpha or _
+	if (!isalpha(*name) && *name != '_') {
+		return false;
+	}
+
+	name++;
+
+		// subsequent letters must be alphanum or _
+	while (*name) {
+		if (!isalnum(*name) && *name != '_') {
+			return false;
+		}
+		name++;
+	}
+
+	return true;
 }

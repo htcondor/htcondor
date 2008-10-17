@@ -50,10 +50,6 @@
 
 const CondorID Dag::_defaultCondorId;
 
-	// The absolute maximum allowed rescue DAG number (the real maximum
-	// is normally configured lower).
-const int Dag::ABS_MAX_RESCUE_DAG_NUM = 999;
-
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
     int fd = safe_open_wrapper(filename, O_RDWR | O_CREAT, 0600);
@@ -66,14 +62,14 @@ void touch (const char * filename) {
 static const int NODE_HASH_SIZE = 10007; // prime, allow for big DAG...
 
 //---------------------------------------------------------------------------
-Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
+Dag::Dag( /* const */ StringList &dagFiles,
 		  const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
-		  const char* dapLogName, bool allowLogError,
+		  bool allowLogError,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const char *storkRmExe, const CondorID *DAGManJobID,
-		  bool prohibitMultiJobs, bool submitDepthFirst) :
+		  bool prohibitMultiJobs, bool submitDepthFirst, bool findUserLogs) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	DAG_ERROR_CONDOR_SUBMIT_FAILED (-1001),
@@ -82,9 +78,7 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	_splices              (200, hashFuncMyString, rejectDuplicateKeys),
 	_dagFiles             (dagFiles),
 	_useDagDir            (useDagDir),
-	_condorLogName		  (NULL),
     _condorLogInitialized (false),
-    _dapLogName           (NULL),
     _dapLogInitialized    (false),             //<--DAP
 	_nodeNameHash		  (NODE_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
 	_nodeIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
@@ -112,21 +106,25 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	_prohibitMultiJobs	  (prohibitMultiJobs),
 	_submitDepthFirst	  (submitDepthFirst)
 {
-	ASSERT( dagFiles.number() >= 1 );
 
-	_condorLogName = strnewp( condorLogName );
-	ASSERT( _condorLogName );
+	// If this dag is a splice, then it may have been specified with a DIR
+	// directive. If so, then this records what it was so we can later
+	// propogate this information to all contained nodes in the DAG--effectively
+	// giving all nodes in the DAG a DIR definition with this directory
+	// as a prefix to what is already there (except in the case of absolute
+	// paths, in which case nothing is done).
+	m_directory = ".";
 
-	if( dapLogName ) {
-		_dapLogName = strnewp( dapLogName );
-		ASSERT( _dapLogName );
+	// We only find the log files for the root dag file. FindLogFile is
+	// smart enough to already walk the parse tree of splices and find the
+	// log files. So we only want to do that once and not for each splice.
+	if (findUserLogs == true) {
+		ASSERT( dagFiles.number() >= 1 );
+		PrintDagFiles( dagFiles );
+
+		FindLogFiles( dagFiles, _useDagDir );
+		ASSERT( TotalLogFileCount() > 0 ) ;
 	}
-
-	PrintDagFiles( dagFiles );
-
-	FindLogFiles( dagFiles, _useDagDir );
-
-	ASSERT( TotalLogFileCount() > 0 ) ;
 
  	_readyQ = new PrioritySimpleList<Job*>;
 	_preScriptQ = new ScriptQ( this );
@@ -163,15 +161,6 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 //-------------------------------------------------------------------------
 Dag::~Dag() {
 		// remember kids, delete is safe *even* if ptr == NULL...
-
-	delete[] _condorLogName;
-
-    // NOTE: we cast this to char* because older MS compilers
-    // (contrary to the ISO C++ spec) won't allow you to delete a
-    // const.  This has apparently been fixed in Visual C++ .NET, but
-    // as of 6/2004 we don't yet use that.  For details, see:
-    // http://support.microsoft.com/support/kb/articles/Q131/3/22.asp
-    delete[] (char*) _dapLogName;
 
     // delete all jobs in _jobs
     Job *job = NULL;
@@ -230,8 +219,6 @@ Dag::InitializeDagFiles( bool deleteOldLogs )
 
 	MultiLogFiles::TruncateLogs( _condorLogFiles );
 	MultiLogFiles::TruncateLogs( _storkLogFiles );
-
-	if ( _condorLogName != NULL ) touch (_condorLogName);  //<-- DAP
 	}
 }
 
@@ -256,15 +243,27 @@ bool Dag::Bootstrap (bool recovery) {
     if (recovery) {
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
 
+		// as we read the event log files, we emit lots of imformation into
+		// the logfile. If this is on NFS, then we pay a *very* large price
+		// for the open/close of each line in the log file.
+		// Whether or not this caching is honored is dependant on if the
+		// cache was originally enabled or not. If the cache is not
+		// enabled, then debug_cache_start_caching() and 
+		// debug_cache_stop_caching() are effectively noops.
+
+		debug_cache_start_caching();
+
 		if( _condorLogFiles.number() > 0 ) {
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
 				_recovery = false;
+				debug_cache_stop_caching();
 				return false;
 			}
 		}
 		if( _storkLogFiles.number() > 0 ) {
 			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
 				_recovery = false;
+				debug_cache_stop_caching();
 				return false;
 			}
 		}
@@ -276,6 +275,8 @@ bool Dag::Bootstrap (bool recovery) {
 				_postScriptQ->Run( job->_scriptPost );
 			}
 		}
+
+		debug_cache_stop_caching();
     }
 	
     if( DEBUG_LEVEL( DEBUG_DEBUG_2 ) ) {
@@ -1179,10 +1180,6 @@ void
 Dag::FindLogFiles( /* const */ StringList &dagFiles, bool useDagDir )
 {
 
-	if ( _dapLogName ) {
-		_storkLogFiles.append( _dapLogName );
-	}
-
 	MyString	msg;
 	if ( !GetLogFiles( dagFiles, useDagDir, _condorLogFiles, _storkLogFiles,
 				msg ) ) {
@@ -1869,82 +1866,6 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 	_catThrottles.PrintThrottles( fp );
 
     fclose(fp);
-}
-
-//-------------------------------------------------------------------------
-int
-Dag::FindLastRescueDagNum( const char *primaryDagFile, bool multiDags,
-			int maxRescueDagNum )
-{
-	int lastRescue = 0;
-	bool done = false;
-
-	for ( int test = 1; test <= maxRescueDagNum; test++ ) {
-		MyString testName = RescueDagName( primaryDagFile, multiDags,
-					test );
-		if ( access( testName.Value(), F_OK ) == 0 ) {
-			if ( test > lastRescue + 1 ) {
-				debug_printf( DEBUG_QUIET, "Warning: found rescue DAG "
-							"number %d, but not rescue DAG number %d\n",
-							test, test - 1);
-			}
-			lastRescue = test;
-		}
-	}
-	
-	if ( lastRescue >= maxRescueDagNum ) {
-		debug_printf( DEBUG_QUIET,
-					"Warning: Dag::FindLastRescueDagNum() hit maximum "
-					"rescue DAG number: %d\n", maxRescueDagNum );
-		done = true;
-	}
-
-	return lastRescue;
-}
-
-//-------------------------------------------------------------------------
-MyString
-Dag::RescueDagName(const char *primaryDagFile, bool multiDags,
-			int rescueDagNum)
-{
-	ASSERT( rescueDagNum >= 1 );
-
-	MyString fileName(primaryDagFile);
-	if ( multiDags ) {
-		fileName += "_multi";
-	}
-	fileName += ".rescue";
-	fileName.sprintf_cat( "%.3d", rescueDagNum );
-
-	return fileName;
-}
-
-//-------------------------------------------------------------------------
-void
-Dag::RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags,
-			int rescueDagNum, int maxRescueDagNum)
-{
-	ASSERT( rescueDagNum >= 1 );
-
-	debug_printf( DEBUG_QUIET, "Renaming rescue DAGs newer than number %d\n",
-				rescueDagNum );
-
-	int firstToDelete = rescueDagNum + 1;
-	int lastToDelete = FindLastRescueDagNum( primaryDagFile, multiDags,
-				maxRescueDagNum );
-
-	for ( int rescueNum = firstToDelete; rescueNum <= lastToDelete;
-				rescueNum++ ) {
-		MyString rescueDagName = RescueDagName( primaryDagFile, multiDags,
-					rescueNum );
-		debug_printf( DEBUG_QUIET, "Renaming %s\n", rescueDagName.Value() );
-		MyString newName = rescueDagName + ".old";
-		if ( rename( rescueDagName.Value(), newName.Value() ) != 0 ) {
-			EXCEPT( "Fatal error: unable to rename old rescue file "
-						"%s: error %d (%s)\n", rescueDagName.Value(),
-						errno, strerror( errno ) );
-		}
-	}
 }
 
 //===========================================================================
@@ -3155,6 +3076,46 @@ Dag::UpdateJobCounts( Job *node, int change )
 	}
 }
 
+
+//---------------------------------------------------------------------------
+void
+Dag::SetDirectory(MyString &dir)
+{
+	m_directory = dir;
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::SetDirectory(char *dir)
+{
+	m_directory = dir;
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::PropogateDirectoryToAllNodes(void)
+{
+    Job *job = NULL;
+	MyString key;
+
+	if (m_directory == ".") {
+		return;
+	}
+
+	// Propogate the directory setting to all nodes in the DAG.
+	_jobs.Rewind();
+	while( (job = _jobs.Next()) ) {
+		ASSERT( job != NULL );
+		job->PrefixDirectory(m_directory);
+	}
+
+	// I wipe out m_directory here. If this gets called multiple
+	// times for a specific DAG, it'll prefix multiple times, and that is most
+	// likely wrong.
+
+	m_directory = ".";
+}
+
 //---------------------------------------------------------------------------
 void
 Dag::PrefixAllNodeNames(const MyString &prefix)
@@ -3309,6 +3270,9 @@ Dag::LiftSplices(SpliceLayer layer)
 		_splices.remove(key);
 		delete splice;
 	}
+
+	// and prefix them if there was a DIR for the dag.
+	PropogateDirectoryToAllNodes();
 
 	// base case is above.
 	return NULL;

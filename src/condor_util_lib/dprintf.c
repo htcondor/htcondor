@@ -39,11 +39,14 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "subsystem_info.h"
 #include "exit.h"
 #include "condor_uid.h"
 #include "basename.h"
-#include "get_mysubsystem.h"
 #include "file_lock.h"
+#if HAVE_BACKTRACE
+#include "execinfo.h"
+#endif
 
 FILE *debug_lock(int debug_level);
 FILE *open_debug_file( int debug_level, char flags[] );
@@ -128,6 +131,8 @@ extern char *_condor_DebugFlagNames[];
 int InDBX = 0;
 
 #define DPRINTF_ERR_MAX 255
+
+#define FCLOSE_RETRY_MAX 10
 
 /*
 ** Print a nice log message, but only if "flags" are included in the
@@ -229,7 +234,11 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 		   PRIV_USER_FINAL.  So, we check here and simply don't try to
 		   log anything when we're in PRIV_USER_FINAL, to avoid
 		   exit(DPRINTF_ERROR). */
-	if (get_priv() == PRIV_USER_FINAL) return;
+	if (get_priv() == PRIV_USER_FINAL) {
+		/* Ensure to undo the signal blocking/umask code for unix and
+			leave the critical section for windows. */
+		goto cleanup;
+	}
 
 		/* avoid priv macros so we can bypass priv logging */
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
@@ -305,6 +314,8 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 
 		/* restore privileges */
 	_set_priv(priv, __FILE__, __LINE__, 0);
+
+	cleanup:
 
 	errno = saved_errno;
 	DebugFlags = saved_flags;
@@ -475,7 +486,7 @@ debug_lock(int debug_level)
 			/* Seek to the end */
 		if( (length=lseek(fileno(DebugFP),0,2)) < 0 ) {
 			if (debug_level > 0) {
-				fclose( DebugFP );
+				fclose_wrapper( DebugFP, FCLOSE_RETRY_MAX );
 				DebugFP = NULL;
 				return NULL;
 			}
@@ -539,7 +550,7 @@ debug_unlock(int debug_level)
 
 	if( DebugFile[debug_level] ) {
 		if (DebugFP) {
-			int close_result = fclose( DebugFP );
+			int close_result = fclose_wrapper( DebugFP, FCLOSE_RETRY_MAX );
 			if (close_result < 0) {
 				DebugUnlockBroken = 1;
 				_condor_dprintf_exit(errno, "Can't fclose debug log file\n");
@@ -575,7 +586,7 @@ preserve_log_file(int debug_level)
 	fprintf( DebugFP, "Saving log file to \"%s\"\n", old );
 	(void)fflush( DebugFP );
 
-	fclose( DebugFP );
+	fclose_wrapper( DebugFP, FCLOSE_RETRY_MAX );
 	DebugFP = NULL;
 
 #if defined(WIN32)
@@ -826,7 +837,8 @@ _condor_dprintf_exit( int error_code, const char* msg )
 
 	tmp = param( "LOG" );
 	if( tmp ) {
-		snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s", tmp, get_mySubSystem() );
+		snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s",
+				  tmp, get_mySubSystem() );
 		fail_fp = safe_fopen_wrapper( buf, "w",0644 );
 		if( fail_fp ) {
 			fprintf( fail_fp, "%s", header );
@@ -834,7 +846,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 			if( tail[0] ) {
 				fprintf( fail_fp, "%s", tail );
 			}
-			fclose( fail_fp );
+			fclose_wrapper( fail_fp, FCLOSE_RETRY_MAX );
 			wrote_warning = TRUE;
 		} 
 		free( tmp );
@@ -903,6 +915,58 @@ dprintf_touch_log()
 #endif
 		}
 	}
+}
+
+BOOLEAN dprintf_retry_errno( int value );
+
+BOOLEAN dprintf_retry_errno( int value )
+{
+#ifdef WIN32
+	return FALSE;
+#else
+	return value == EINTR;
+#endif
+}
+
+/* This function calls fclose(), soaking up EINTRs up to maxRetries times.
+   The motivation for this function is Gnats PR 937 (DAGMan crashes if
+   straced).  Psilord investigated this and found that, because LIGO
+   had their dagman.out files on NFS, stracing DAGMan could interrupt
+   an fclose() on the dagman.out file.  So hopefully this will fix the
+   problem...   wenger 2008-07-01.
+ */
+int
+fclose_wrapper( FILE *stream, int maxRetries )
+{
+
+	int		result = 0;
+
+	int		retryCount = 0;
+	BOOLEAN	done = FALSE;
+
+	ASSERT( maxRetries >= 0 );
+	while ( !done ) {
+		if ( ( result = fclose( stream ) ) != 0 ) {
+			if ( dprintf_retry_errno( errno ) && retryCount < maxRetries ) {
+				retryCount++;
+			} else {
+				fprintf( stderr, "fclose_wrapper() failed after %d retries; "
+							"errno: %d (%s)\n",
+							retryCount, errno, strerror( errno ) );
+				done = TRUE;
+			}
+		} else {
+			done = TRUE;
+		}
+	}
+
+	return result;
+}
+
+int
+mkargv( int* argc, char* argv[], char* line )
+{
+	return( _condor_mkargv(argc, argv, line) );
 }
 
 static void
@@ -1093,5 +1157,55 @@ dprintf_wrapup_fork_child( ) {
 		LockFd = -1;
 	}
 }
+
+#if HAVE_BACKTRACE
+void
+dprintf_dump_stack(void) {
+	priv_state	priv;
+	int fd;
+	void *trace[50];
+	int trace_size;
+	char notice[100];
+
+		/* In case we are dumping stack in the segfault handler, we
+		   want this to be a simple as possible.  Calling malloc()
+		   could be fatal, since the heap may be trashed.  Therefore,
+		   we dispense with some of the formalities... */
+
+	if (DprintfBroken || !_condor_dprintf_works || !DebugFile[0]) {
+			// Note that although this would appear to enable
+			// backtrace printing to stderr before dprintf is
+			// configured, the backtrace sighandler is only installed
+			// when dprintf is configured, so we won't even get here
+			// in that case.  Therefore, most command-line tools need
+			// -debug to enable the backtrace.
+		fd = 2;
+	}
+	else {
+		priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
+		fd = safe_open_wrapper(DebugFile[0],O_APPEND|O_WRONLY|O_CREAT,0644);
+		_set_priv(priv, __FILE__, __LINE__, 0);
+		if( fd==-1 ) {
+			fd=2;
+		}
+	}
+
+	trace_size = backtrace(trace,50);
+
+	sprintf(notice,"Stack dump for process %d at timestamp %ld (%d frames)\n",getpid(),(long)time(NULL),trace_size);
+	write(fd,notice,strlen(notice));
+
+	backtrace_symbols_fd(trace,trace_size,fd);
+
+	if (fd!=2) {
+		close(fd);
+	}
+}
+#else
+void
+dprintf_dump_stack(void) {
+		// this platform does not support backtrace()
+}
+#endif
 
 #endif

@@ -50,9 +50,13 @@
 #include "condor_distribution.h"
 #include "string_list.h"
 #include "simplelist.h"
+#include "subsystem_info.h"
 
 char	*MyName;
-char	*mySubSystem = NULL;
+
+/* For daemonCore, etc. */
+DECL_SUBSYSTEM( NULL, SUBSYSTEM_TYPE_TOOL );
+
 StringList params;
 daemon_t dt = DT_MASTER;
 bool	mixedcase = false;
@@ -228,8 +232,8 @@ main( int argc, char* argv[] )
 
 		// If we didn't get told what subsystem we should use, set it
 		// to "TOOL".
-	if( !mySubSystem ) {
-		mySubSystem = strdup( "TOOL" );
+	if( ! mySubSystem->isValid() ) {
+		mySubSystem->setName( "TOOL" );
 	}
 
 		// We need to do this before we call config().  A) we don't
@@ -587,10 +591,6 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 	if( set ) {
 		if( !s.code(param_value) ) {
 			fprintf( stderr, "Can't send config setting (%s)\n", param_value );
-			my_exit(1);
-		}
-		if( !s.put('\n') ) {
-			fprintf( stderr, "Can't send newline\n" );
 			my_exit(1);
 		}
 	} else {

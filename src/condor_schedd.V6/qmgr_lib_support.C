@@ -99,7 +99,7 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
 
     /* Get rid of all the code below */
 
-    if (!qmgmt_sock->isAuthenticated()) {
+    if (!qmgmt_sock->triedAuthentication()) {
         if ( read_only ) {
             rval = InitializeReadOnlyConnection( username );
         } else {

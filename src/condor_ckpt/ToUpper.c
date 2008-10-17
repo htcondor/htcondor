@@ -42,9 +42,7 @@ int IsName(void);
 void put_one(char ch);
 void NextChar(void);
 
-main( argc, argv )
-int argc;
-char **argv;
+int main( int argc, char *argv[] )
 {
 	int i;
 
@@ -88,7 +86,7 @@ char **argv;
 	}
 }
 
-DoCleanup()
+void DoCleanup(void)
 {
 	(void) fclose( InFP );
 	(void) fclose( OutFP );
@@ -102,7 +100,7 @@ DoCleanup()
 }
 
 char
-get_one()
+get_one(void)
 {
 	int ch = fgetc(InFP);
 

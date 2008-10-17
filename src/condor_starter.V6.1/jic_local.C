@@ -33,7 +33,6 @@
 #include "directory.h"
 #include "nullfile.h"
 #include "basename.h"
-#include "starter_privsep_helper.h"
 
 extern CStarter *Starter;
 
@@ -58,6 +57,10 @@ JICLocal::init( void )
 				 "Failed to get local job ClassAd!\n" );
 		return false;
 	}
+
+		// stash a copy of the unmodified job ad in case we decide
+		// below that we want to write out an execution visa
+	ClassAd orig_ad = *job_ad;	
 
 		// now that we have the job ad, see if we should go into an
 		// infinite loop, waiting for someone to attach w/ the
@@ -97,6 +100,10 @@ JICLocal::init( void )
 	if( ! initLocalUserLog() ) {
 		return false;
 	}
+
+		// Drop a job ad "visa" into the job's IWD now if the job
+		// requested it
+	writeExecutionVisa(orig_ad);
 
 	return true;
 }
@@ -304,8 +311,9 @@ JICLocal::initUserPriv( void )
 		dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
 				 "passwd database for a local job\n", owner ); 
 	} else {
-		if (privsep_enabled()) {
-			privsep_helper.initialize_user(owner);
+		CondorPrivSepHelper* psh = Starter->condorPrivSepHelper();
+		if (psh != NULL) {
+			psh->initialize_user(owner);
 		}
 		rval = true;
 		dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
@@ -350,9 +358,9 @@ JICLocal::initJobInfo( void )
 
 		// stash the iwd name in orig_job_iwd
 	if( ! job_ad->LookupString(ATTR_JOB_IWD, &orig_job_iwd) ) {
-		dprintf( D_ALWAYS, "Error in JICLocal::initJobInfo(): "
-				 "Can't find %s in job ad\n", ATTR_JOB_IWD );
-		return false;
+		dprintf(D_ALWAYS, "%s not found in job ad, setting to %s\n",
+				ATTR_JOB_IWD, Starter->GetWorkingDir());
+		job_ad->Assign(ATTR_JOB_IWD, Starter->GetWorkingDir());
 	} else {
 			// put the orig job iwd in class ad
 		dprintf(D_ALWAYS, "setting the orig job iwd in starter\n");

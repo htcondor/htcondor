@@ -67,7 +67,7 @@ public:
 		 * @param reason - why the job is going on hold
 		 * @return true if the jobs were told to be put on hold
 		 */
-	virtual bool holdJob( const char* );
+	virtual bool holdJob( const char*, int hold_reason_code, int hold_reason_subcode );
 	
 		/**
 		 * The job needs to be removed from the Starter. This
@@ -149,7 +149,11 @@ public:
 	virtual bool notifyJobExit( int exit_status, int reason, 
 								UserProc* user_proc );  
 
+	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode );
+
 protected:
+
+	void setExitCodeToRequeue();
 
 		/// This version confirms we're handling a "local" universe job. 
 	virtual bool getUniverse( void );
@@ -191,6 +195,7 @@ protected:
 		/// at exit policy evaluations
 	StarterUserPolicy *starter_user_policy;
 
+	bool m_tried_notify_job_exit;
 };
 
 #endif /* _CONDOR_JIC_LOCAL_SCHEDD_H */

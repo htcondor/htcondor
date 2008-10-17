@@ -52,6 +52,9 @@ MapFile* Authentication::global_map_file = NULL;
 bool Authentication::global_map_file_load_attempted = false;
 
 char const *UNMAPPED_DOMAIN = "unmappeduser";
+char const *MATCHSESSION_DOMAIN = "matchsession";
+extern char const *EXECUTE_SIDE_MATCHSESSION_FQU = "execute-side@matchsession";
+extern char const *SUBMIT_SIDE_MATCHSESSION_FQU = "submit-side@matchsession";
 
 Authentication::Authentication( ReliSock *sock )
 {
@@ -80,9 +83,9 @@ Authentication::~Authentication()
 }
 
 int Authentication::authenticate( char *hostAddr, KeyInfo *& key, 
-								  const char* auth_methods, CondorError* errstack)
+								  const char* auth_methods, CondorError* errstack, int timeout)
 {
-    int retval = authenticate(hostAddr, auth_methods, errstack);
+    int retval = authenticate(hostAddr, auth_methods, errstack, timeout);
     
 #if !defined(SKIP_AUTHENTICATION)
     if (retval) {        // will always try to exchange key!
@@ -101,7 +104,25 @@ int Authentication::authenticate( char *hostAddr, KeyInfo *& key,
 }
 
 int Authentication::authenticate( char *hostAddr, const char* auth_methods,
-		CondorError* errstack)
+		CondorError* errstack, int timeout)
+{
+	int retval;
+	int old_timeout=0;
+	if (timeout>=0) {
+		old_timeout=mySock->timeout(timeout);
+	}
+
+	retval = authenticate_inner(hostAddr,auth_methods,errstack,timeout);
+
+	if (timeout>=0) {
+		mySock->timeout(old_timeout);
+	}
+
+	return retval;
+}
+
+int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods,
+		CondorError* errstack, int timeout)
 {
 #if defined(SKIP_AUTHENTICATION)
 	dprintf(D_ALWAYS, "Skipping....\n");
@@ -111,7 +132,8 @@ int Authentication::authenticate( char *hostAddr, const char* auth_methods,
 	*/
 	return 0;
 #else
-Condor_Auth_Base * auth = NULL;
+	Condor_Auth_Base * auth = NULL;
+	int auth_timeout_time = time(0) + timeout;
 
 	if (DebugFlags & D_FULLDEBUG) {
 		if (hostAddr) {
@@ -129,6 +151,12 @@ Condor_Auth_Base * auth = NULL;
 	method_used = NULL;
  
 	while (auth_status == CAUTH_NONE ) {
+		if (timeout>0 && auth_timeout_time <= time(0)) {
+			dprintf(D_SECURITY, "AUTHENTICATE: exceeded %ds timeout\n",
+					timeout);
+			errstack->pushf( "AUTHENTICATE", AUTHENTICATE_ERR_TIMEOUT, "exceeded %ds timeout during authentication", timeout );
+			break;
+		}
 		if (DebugFlags & D_FULLDEBUG) {
 			dprintf(D_SECURITY, "AUTHENTICATE: can still try these methods: %s\n", methods_to_try.Value());
 		}
@@ -285,7 +313,7 @@ Condor_Auth_Base * auth = NULL;
 	// via getAuthenticatedName().
 
 	if(authenticator_) {
-		dprintf (D_ALWAYS, "ZKM: setting default map to %s\n",
+		dprintf (D_SECURITY, "ZKM: setting default map to %s\n",
 				 authenticator_->getRemoteFQU()?authenticator_->getRemoteFQU():"(null)");
 	}
 
@@ -369,7 +397,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		dprintf (D_SECURITY, "ZKM: map file already loaded.\n");
 	}
 
-	dprintf (D_ALWAYS, "ZKM: attempting to map '%s'\n", authentication_name);
+	dprintf (D_SECURITY, "ZKM: attempting to map '%s'\n", authentication_name);
 
 	if (global_map_file) {
 		MyString canonical_user;
@@ -401,7 +429,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 				return;
 			} else {
 
-				dprintf (D_ALWAYS, "ZKM: found user %s, splitting.\n", canonical_user.Value());
+				dprintf (D_SECURITY, "ZKM: found user %s, splitting.\n", canonical_user.Value());
 
 				MyString user;
 				MyString domain;

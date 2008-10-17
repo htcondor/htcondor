@@ -48,6 +48,7 @@ CLEAN :"condor_classad - Win32 DebugCLEAN" "condor_cpp_util - Win32 DebugCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
+	-@erase "$(INTDIR)\condor_privsep_helper.WINDOWS.obj"
 	-@erase "$(INTDIR)\io_proxy.obj"
 	-@erase "$(INTDIR)\io_proxy_handler.obj"
 	-@erase "$(INTDIR)\java_detect.obj"
@@ -69,7 +70,6 @@ CLEAN :
 	-@erase "$(INTDIR)\soap_starterServer.obj"
 	-@erase "$(INTDIR)\soap_starterStub.obj"
 	-@erase "$(INTDIR)\starter_class.obj"
-	-@erase "$(INTDIR)\starter_privsep_helper.WINDOWS.obj"
 	-@erase "$(INTDIR)\starter_user_policy.obj"
 	-@erase "$(INTDIR)\starter_v61_main.obj"
 	-@erase "$(INTDIR)\StarterHookMgr.obj"
@@ -151,7 +151,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\soap_starterServer.obj" \
 	"$(INTDIR)\soap_starterStub.obj" \
 	"$(INTDIR)\starter_class.obj" \
-	"$(INTDIR)\starter_privsep_helper.WINDOWS.obj" \
 	"$(INTDIR)\starter_user_policy.obj" \
 	"$(INTDIR)\starter_v61_main.obj" \
 	"$(INTDIR)\StarterHookMgr.obj" \
@@ -162,6 +161,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\vm_gahp_request.obj" \
 	"$(INTDIR)\vm_gahp_server.obj" \
 	"$(INTDIR)\vm_proc.obj" \
+	"$(INTDIR)\condor_privsep_helper.WINDOWS.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -201,6 +201,7 @@ CLEAN :"condor_classad - Win32 ReleaseCLEAN" "condor_cpp_util - Win32 ReleaseCLE
 !ELSE 
 CLEAN :
 !ENDIF 
+	-@erase "$(INTDIR)\condor_privsep_helper.WINDOWS.obj"
 	-@erase "$(INTDIR)\io_proxy.obj"
 	-@erase "$(INTDIR)\io_proxy_handler.obj"
 	-@erase "$(INTDIR)\java_detect.obj"
@@ -222,7 +223,6 @@ CLEAN :
 	-@erase "$(INTDIR)\soap_starterServer.obj"
 	-@erase "$(INTDIR)\soap_starterStub.obj"
 	-@erase "$(INTDIR)\starter_class.obj"
-	-@erase "$(INTDIR)\starter_privsep_helper.WINDOWS.obj"
 	-@erase "$(INTDIR)\starter_user_policy.obj"
 	-@erase "$(INTDIR)\starter_v61_main.obj"
 	-@erase "$(INTDIR)\StarterHookMgr.obj"
@@ -302,7 +302,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\soap_starterServer.obj" \
 	"$(INTDIR)\soap_starterStub.obj" \
 	"$(INTDIR)\starter_class.obj" \
-	"$(INTDIR)\starter_privsep_helper.WINDOWS.obj" \
 	"$(INTDIR)\starter_user_policy.obj" \
 	"$(INTDIR)\starter_v61_main.obj" \
 	"$(INTDIR)\StarterHookMgr.obj" \
@@ -313,6 +312,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\vm_gahp_request.obj" \
 	"$(INTDIR)\vm_gahp_server.obj" \
 	"$(INTDIR)\vm_proc.obj" \
+	"$(INTDIR)\condor_privsep_helper.WINDOWS.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -603,6 +603,12 @@ LINK32_OBJS= \
 
 !ENDIF 
 
+SOURCE=..\src\condor_starter.V6.1\condor_privsep_helper.WINDOWS.C
+
+"$(INTDIR)\condor_privsep_helper.WINDOWS.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE=..\src\condor_starter.V6.1\io_proxy.C
 
 "$(INTDIR)\io_proxy.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -780,12 +786,6 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D
 SOURCE=..\src\condor_starter.V6.1\starter_class.C
 
 "$(INTDIR)\starter_class.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_starter.V6.1\starter_privsep_helper.WINDOWS.C
-
-"$(INTDIR)\starter_privsep_helper.WINDOWS.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

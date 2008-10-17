@@ -515,14 +515,35 @@ MyString::replaceString(
 bool
 MyString::vsprintf_cat(const char *format,va_list args) 
 {
+	char *buffer = NULL;
+	int s_len;
+
     if( !format || *format == '\0' ) {
 		return true;
 	}
-    int s_len = vprintf_length(format,args);
+#if HAVE_VASPRINTF
+	s_len = vasprintf(&buffer, format, args);
+	if (-1 == s_len) { // if alloc not possible or other error
+		return false;
+	}
+#else
+    s_len = vprintf_length(format,args);
+#endif
     if( Len + s_len > capacity || !Data ) {
-		if(!reserve_at_least( Len + s_len )) return false;
+		if(!reserve_at_least( Len + s_len )) {
+			free(buffer);
+			return false;
+		}
     }
+#if HAVE_VASPRINTF
+		// Ideally this would not be necessary, instead we'd just
+		// asprintf into Data. However, we manage Data with
+		// new/delete.
+	memcpy(Data + Len, buffer, s_len + 1);
+	free(buffer);
+#else
 	::vsprintf(Data + Len, format, args);
+#endif
 	Len += s_len;
     return true;
 }

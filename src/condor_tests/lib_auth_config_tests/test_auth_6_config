@@ -1,0 +1,6 @@
+
+# a bug in 7.0.4 caused B/127.0.0.1 not to be denied for WRITE
+DENY_WRITE = A/127.* B/127.0.*  C/*
+
+# a bug from pre-7.0.4 caused rB/condor.cs.wisc.edu not to be denied for READ
+DENY_READ = rA/*.edu rB/*.wisc.edu

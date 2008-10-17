@@ -97,7 +97,7 @@ isReservedWord( const char *token )
 
 bool
 isDelimiter( char c ) {
-	char* tmp = strchr( DELIMITERS, (int)c );
+	char const* tmp = strchr( DELIMITERS, (int)c );
 	return tmp ? true : false;
 }
 
@@ -1094,7 +1094,6 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 						"names cannot begin with \"queue\"\n", varName.Value() );
 			return false;
 		}
-
 		debug_printf(DEBUG_DEBUG_1, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", varName.Value(), varValue.Value());
 		job->varNamesFromDag->Append(new MyString(varName));
 		job->varValsFromDag->Append(new MyString(varValue));
@@ -1282,9 +1281,10 @@ parse_splice(
 	const char *filename,
 	int lineNumber)
 {
-	const char *example = "SPLICE SpliceName SpliceFileName";
+	const char *example = "SPLICE SpliceName SpliceFileName [DIR directory]";
 	Dag *splice_dag = NULL;
 	MyString spliceName, spliceFile;
+	MyString errMsg;
 
 	//
 	// Next token is the splice name
@@ -1326,6 +1326,39 @@ parse_splice(
 		return false;
 	}
 
+	//
+	// next token (if any) is "DIR"
+	//
+	TmpDir spliceDir;
+	MyString dirTok = strtok( NULL, DELIMITERS );
+	MyString directory = ".";
+
+	dirTok.upper_case();
+	if ( dirTok == "DIR" ) {
+		// parse the directory name
+		directory = strtok( NULL, DELIMITERS );
+		if ( directory == "" ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: %s (line %d): DIR requires a directory "
+						"specification\n", filename, lineNumber);
+			debug_printf( DEBUG_QUIET, "%s\n", example );
+			return false;
+		}
+
+	}
+
+	// 
+	// anything else is garbage
+	//
+	MyString garbage = strtok( 0, DELIMITERS );
+	if( garbage != "" ) {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
+						  "parameter \"%s\"\n", filename, lineNumber, 
+						  garbage.Value() );
+			debug_printf( DEBUG_QUIET, "%s\n", example );
+			return false;
+	}
+
 	/* make a new dag to put everything into */
 
 	/* parse increments this number, however, we want the splice nodes to
@@ -1335,11 +1368,9 @@ parse_splice(
 
 	// This "copy" is tailored to be correct according to Dag::~Dag()
 	splice_dag = new Dag(	dag->DagFiles(),
-							strnewp(dag->CondorLogName()), // freed by ~Dag
 							dag->MaxJobsSubmitted(),
 							dag->MaxPreScripts(),
 							dag->MaxPostScripts(),
-							strnewp(dag->DapLogName()), // freed by ~Dag
 							dag->AllowLogError(),
 							dag->UseDagDir(),
 							dag->MaxIdleJobProcs(),
@@ -1349,10 +1380,24 @@ parse_splice(
 							dag->StorkRmExe(),
 							dag->DAGManJobId(),
 							dag->ProhibitMultiJobs(),
-							dag->SubmitDepthFirst() );
+							dag->SubmitDepthFirst(),
+							false);
+	
+	// initialize whatever the DIR line was, or defaults to, here.
+	splice_dag->SetDirectory(directory);
 
-	dprintf(D_ALWAYS, "Parsing Splice %s with file %s\n", 
-		spliceName.Value(), spliceFile.Value());
+	dprintf(D_ALWAYS, "Parsing Splice %s in directory %s with file %s\n", 
+		spliceName.Value(), directory.Value(), spliceFile.Value());
+
+	// CD into the DIR directory so we can continue parsing.
+	// This must be done AFTER the DAG is created due to the DAG object
+	// doing its own chdir'ing while looking for log files.
+	if ( !spliceDir.Cd2TmpDir(directory.Value(), errMsg) ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: can't change to directory %s: %s\n",
+					directory.Value(), errMsg.Value() );
+		return false;
+	}
 
 	// parse the splice file into a separate dag.
 	if (!parse(splice_dag, spliceFile.Value(), _useDagDir)) {
@@ -1361,7 +1406,15 @@ parse_splice(
 		return false;
 	}
 
-	// munge the splice name XXX???
+	// CD back to main dir to keep processing.
+	if ( !spliceDir.Cd2MainDir(errMsg) ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: can't change to original directory: %s\n",
+					errMsg.Value() );
+		return false;
+	}
+
+	// munge the splice name
 	spliceName = munge_job_name(spliceName.Value());
 
 	// XXX I'm not sure this goes here quite yet....

@@ -94,11 +94,6 @@ public:
     const char * isIncomingDataMD5ed();
     const char * isIncomingDataEncrypted();
 
-	virtual void         setFullyQualifiedUser(char const * u);
-	virtual const char * getFullyQualifiedUser() const;
-    virtual int          isAuthenticated() const;
-    void                 setAuthenticated(bool authenticated = true);
-
 #ifdef DEBUG
 	int getMsgSize();
 	void dumpSock();

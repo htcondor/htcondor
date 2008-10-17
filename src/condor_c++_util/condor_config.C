@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,7 @@
  ***************************************************************/
 
 
-/* 
+/*
 
   This file implements config(), the function all daemons call to
   configure themselves.  It takes an optional argument which
@@ -33,7 +33,7 @@
   When looking for the global config source, config() checks the
   "CONDOR_CONFIG" environment variable to find its location.  If that
   doesn't exist, we look in the following locations:
-     
+
       1) /etc/condor/
       2) /usr/local/etc/
       3) ~condor/
@@ -45,9 +45,9 @@
   In each "global" config source, a list of "local" config files, or a single
   cmd whose output is to be piped in as the configuration settings can be
   specified.  If a cmd is specified, it is processed and its output used
-  as the configuration data.  If a file or list of files is specified, each 
-  file given in the list is read and processed in order.  These lists can 
-  be used to specify both platform-specific config files and machine-specific 
+  as the configuration data.  If a file or list of files is specified, each
+  file given in the list is read and processed in order.  These lists can
+  be used to specify both platform-specific config files and machine-specific
   config files, in addition to a single, pool-wide, platform-independent
   config file.
 
@@ -80,6 +80,7 @@
 #include "basename.h"
 #include "condor_random_num.h"
 #include "extArray.h"
+#include "subsystem_info.h"
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -88,7 +89,7 @@
 extern "C" {
 	
 // Function prototypes
-void real_config(char* host, int wantsQuiet);
+void real_config(char* host, int wantsQuiet, bool wantExtraInfo);
 int Read_config(const char*, BUCKET**, int, int, bool,
 				ExtraParamTable* = NULL);
 bool is_piped_command(const char* filename);
@@ -99,7 +100,6 @@ char* find_file(const char*, const char*);
 void init_tilde();
 void fill_attributes();
 void check_domain_attributes();
-void init_config();
 void clear_config();
 void reinsert_specials(char*);
 void process_config_source(char*, char*, char*, int);
@@ -111,8 +111,6 @@ void check_params();
 // External variables
 extern int	ConfigLineNo;
 }  /* End extern "C" */
-
-extern char* mySubSystem;
 
 // Global variables
 BUCKET	*ConfigTab[TABLESIZE];
@@ -138,30 +136,34 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 	MyString 	buffer;
 
 	if( !ad ) return;
-	
-	buffer.sprintf( "%s_EXPRS", mySubSystem );
+
+	if ( ( NULL == prefix ) && mySubSystem->hasLocalName() ) {
+		prefix = mySubSystem->getLocalName();
+	}
+
+	buffer.sprintf( "%s_EXPRS", mySubSystem->getName() );
 	tmp = param( buffer.Value() );
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
 		free (tmp);
 	}
 
-	buffer.sprintf( "%s_ATTRS", mySubSystem );
+	buffer.sprintf( "%s_ATTRS", mySubSystem->getName() );
 	tmp = param( buffer.Value() );
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
 		free (tmp);
 	}
-	
+
 	if(prefix) {
-		buffer.sprintf( "%s_%s_EXPRS", prefix, mySubSystem );
+		buffer.sprintf( "%s_%s_EXPRS", prefix, mySubSystem->getName() );
 		tmp = param( buffer.Value() );
 		if( tmp ) {
 			reqdExprs.initializeFromString (tmp);	
 			free (tmp);
 		}
 
-		buffer.sprintf( "%s_%s_ATTRS", prefix, mySubSystem );
+		buffer.sprintf( "%s_%s_ATTRS", prefix, mySubSystem->getName() );
 		tmp = param( buffer.Value() );
 		if( tmp ) {
 			reqdExprs.initializeFromString (tmp);	
@@ -187,7 +189,7 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 			if( !ad->Insert( buffer.Value() ) ) {
 				dprintf(D_ALWAYS,
 						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
-						buffer.Value(), mySubSystem );
+						buffer.Value(), mySubSystem->getName() );
 			}
 
 			free( expr );
@@ -289,7 +291,7 @@ param_all(void)
 		sort_array[i] = (*pvs)[i];
 	}
 
-	// sort it 
+	// sort it
 	qsort(sort_array, pvs->getlast() + 1, sizeof(ParamValue),
 		ParamValueNameAscendingSort);
 
@@ -321,12 +323,12 @@ static int ParamValueNameAscendingSort(const void *l, const void *r)
 
 
 void
-config( int wantsQuiet, bool ignore_invalid_entry )
+config( int wantsQuiet, bool ignore_invalid_entry, bool wantsExtraInfo )
 {
 #ifdef WIN32
 	setlocale( LC_ALL, "English" );
 #endif
-	real_config( NULL, wantsQuiet );
+	real_config( NULL, wantsQuiet, wantsExtraInfo );
 	validate_entries( ignore_invalid_entry );
 }
 
@@ -334,7 +336,7 @@ config( int wantsQuiet, bool ignore_invalid_entry )
 void
 config_host( char* host )
 {
-	real_config( host, 0 );
+	real_config( host, 0, true );
 }
 
 /* This function initialize GSI (maybe other) authentication related
@@ -351,10 +353,13 @@ condor_auth_config(int is_daemon)
 {
 #if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_GLOBUS)
 
-		// First, if there is X509_USER_PROXY, we clear it.
-	UnsetEnv( "X509_USER_PROXY" );
+		// First, if there is X509_USER_PROXY, we clear it
+		// (if we're a daemon).
+	if ( is_daemon ) {
+		UnsetEnv( "X509_USER_PROXY" );
+	}
 
-		// Next, we param the configuration file for GSI related stuff and 
+		// Next, we param the configuration file for GSI related stuff and
 		// set the corresponding environment variables for it
 
 	char *pbuf = 0;
@@ -367,22 +372,22 @@ condor_auth_config(int is_daemon)
 	MyString buffer;
 
 
-		// Here's how it works. If you define any of 
-		// GSI_DAEMON_CERT, GSI_DAEMON_KEY, GSI_DAEMON_PROXY, or 
+		// Here's how it works. If you define any of
+		// GSI_DAEMON_CERT, GSI_DAEMON_KEY, GSI_DAEMON_PROXY, or
 		// GSI_DAEMON_TRUSTED_CA_DIR, those will get stuffed into the
-		// environment. 
+		// environment.
 		//
-		// Everything else depends on GSI_DAEMON_DIRECTORY. If 
+		// Everything else depends on GSI_DAEMON_DIRECTORY. If
 		// GSI_DAEMON_DIRECTORY is not defined, then only settings that are
-		// defined above will be placed in the environment, so if you 
-		// want the cert and host in a non-standard location, but want to use 
-		// /etc/grid-security/certifcates as the trusted ca dir, only 
+		// defined above will be placed in the environment, so if you
+		// want the cert and host in a non-standard location, but want to use
+		// /etc/grid-security/certifcates as the trusted ca dir, only
 		// define GSI_DAEMON_CERT and GSI_DAEMON_KEY, and not
 		// GSI_DAEMON_DIRECTORY and GSI_DAEMON_TRUSTED_CA_DIR
 		//
-		// If GSI_DAEMON_DIRECTORY is defined, condor builds a "reasonable" 
-		// default out of what's already been defined and what it can 
-		// construct from GSI_DAEMON_DIRECTORY  - ie  the trusted CA dir ends 
+		// If GSI_DAEMON_DIRECTORY is defined, condor builds a "reasonable"
+		// default out of what's already been defined and what it can
+		// construct from GSI_DAEMON_DIRECTORY  - ie  the trusted CA dir ends
 		// up as in $(GSI_DAEMON_DIRECTORY)/certificates, and so on
 		// The proxy is not included in the "reasonable defaults" section
 
@@ -423,7 +428,7 @@ condor_auth_config(int is_daemon)
 		free( pbuf );
 	}
 
-	if(trustedca_buf) { 
+	if(trustedca_buf) {
 		SetEnv( STR_GSI_CERT_DIR, trustedca_buf );
 		free(trustedca_buf);
 	}
@@ -434,17 +439,17 @@ condor_auth_config(int is_daemon)
 	}
 
 	if( is_daemon ) {
-		if(proxy_buf) { 
+		if(proxy_buf) {
 			SetEnv( STR_GSI_USER_PROXY, proxy_buf );
 			free(proxy_buf);
 		}
 
-		if(cert_buf) { 
+		if(cert_buf) {
 			SetEnv( STR_GSI_USER_CERT, cert_buf );
 			free(cert_buf);
 		}
 
-		if(key_buf) { 
+		if(key_buf) {
 			SetEnv( STR_GSI_USER_KEY, key_buf );
 			free(key_buf);
 		}
@@ -574,21 +579,25 @@ condor_net_remap_config( bool force_param )
 
 
 void
-real_config(char* host, int wantsQuiet)
+real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 {
 	char* config_source = NULL;
 	char* tmp = NULL;
 	int scm;
 
-	static int first_time = TRUE;
+	static bool first_time = true;
 	if( first_time ) {
-		first_time = FALSE;
-		init_config();
+		first_time = false;
+		init_config(wantExtraInfo);
 	} else {
 			// Clear out everything in our config hash table so we can
 			// rebuild it from scratch.
 		clear_config();
-		extra_info = new ExtraParamTable();
+		if (wantExtraInfo) {
+			extra_info = new ExtraParamTable();
+		} else {
+			extra_info = new DummyExtraParamTable();
+		}
 	}
 
 		/*
@@ -607,12 +616,12 @@ real_config(char* host, int wantsQuiet)
 		extra_info->AddInternalParam("tilde");
 
 	} else {
-			// What about tilde if there's no ~condor? 
+			// What about tilde if there's no ~condor?
 	}
 
 		// Insert some default values for attributes we want even if
 		// they're not defined in the config sources: ARCH and OPSYS.
-		// We also want to insert the special "SUBSYSTEM" macro here. 
+		// We also want to insert the special "SUBSYSTEM" macro here.
 		// We do this now since if they are defined in the config
 		// files, these values will get overridden.  However, we want
 		// them defined to begin with so that people can use them in
@@ -633,7 +642,7 @@ real_config(char* host, int wantsQuiet)
 	if( have_config_source && ! (config_source = find_global()) ) {
 		if( wantsQuiet ) {
 			fprintf( stderr, "%s error: can't find config source.\n",
-					 myDistro->GetCap() ); 
+					 myDistro->GetCap() );
 			exit( 1 );
 		}
 		fprintf(stderr,"\nNeither the environment variable %s_CONFIG,\n",
@@ -675,7 +684,7 @@ real_config(char* host, int wantsQuiet)
 		// find the local config source if that's defined in terms of
 		// hostname or something.  However, we do this after reading
 		// the global config source so people can put the
-		// DEFAULT_DOMAIN_NAME parameter somewhere if they need it. 
+		// DEFAULT_DOMAIN_NAME parameter somewhere if they need it.
 		// -Derek Wright <wright@cs.wisc.edu> 5/11/98
 	if( host ) {
 		insert( "hostname", host, ConfigTab, TABLESIZE );
@@ -724,7 +733,7 @@ real_config(char* host, int wantsQuiet)
         condor_net_remap_config();
     }
 			
-		// Re-insert the special macros.  We don't want the user to 
+		// Re-insert the special macros.  We don't want the user to
 		// override them, since it's not going to work.
 	reinsert_specials( host );
 
@@ -777,7 +786,7 @@ real_config(char* host, int wantsQuiet)
 		free( varname );
 	}
 
-		// Re-insert the special macros.  We don't want the user to 
+		// Re-insert the special macros.  We don't want the user to
 		// override them, since it's not going to work.
 	reinsert_specials( host );
 
@@ -788,7 +797,7 @@ real_config(char* host, int wantsQuiet)
 	}
 
 		// Now that we're done reading files, if DEFAULT_DOMAIN_NAME
-		// is set, we need to re-initialize my_full_hostname(). 
+		// is set, we need to re-initialize my_full_hostname().
 	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
 		free( tmp );
 		init_full_hostname();
@@ -798,7 +807,7 @@ real_config(char* host, int wantsQuiet)
 		// parameter at this point, if it's set.
 	init_ipaddr( TRUE );
 
-		// Re-insert the special macros.  We don't want the user to 
+		// Re-insert the special macros.  We don't want the user to
 		// override them, since it's not going to work.
 	reinsert_specials( host );
 
@@ -807,7 +816,7 @@ real_config(char* host, int wantsQuiet)
 	check_domain_attributes();
 
 		// We have to do some platform-specific checking to make sure
-		// all the parameters we think are defined really are.  
+		// all the parameters we think are defined really are.
 	check_params();
 
 	condor_except_should_dump_core( param_boolean("ABORT_ON_EXCEPTION", false) );
@@ -824,12 +833,12 @@ process_config_source( char* file, char* name, char* host, int required )
 		if( !required) { return; }
 
 		if( !host ) {
-			fprintf( stderr, "ERROR: Can't read %s %s\n", 
+			fprintf( stderr, "ERROR: Can't read %s %s\n",
 					 name, file );
 			exit( 1 );
-		} 
+		}
 	} else {
-		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY, 
+		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY,
 							false, extra_info );
 		if( rval < 0 ) {
 			fprintf( stderr,
@@ -888,7 +897,7 @@ process_locals( char* param_name, char* host )
 						sources_to_process.initializeFromString(new_sources_value);
 					}
 
-					// remove all the ones we've finished from the old list 
+					// remove all the ones we've finished from the old list
                 	sources_done.rewind();
                 	while( (source = sources_done.next()) ) {
 						sources_to_process.remove(source);
@@ -937,8 +946,8 @@ process_directory( char* dirlist, char* host )
 		paths = (char **)calloc(65536, sizeof(char *));
 		files = new Directory(dirpath);
 		int i = 0;
-		if(files == NULL) { 
-			fprintf(stderr, "Cannot open %s\n", dirpath);	 
+		if(files == NULL) {
+			fprintf(stderr, "Cannot open %s\n", dirpath);
 		} else {
 			while( (file = files->Next()) && i < 65536) {
 				// don't consider directories
@@ -950,7 +959,7 @@ process_directory( char* dirlist, char* host )
 			}
 			delete files;
 		}
-		qsort(paths, i, sizeof(char *), compareFiles); 
+		qsort(paths, i, sizeof(char *), compareFiles);
 		char **pathCopy = paths;
 		while(*pathCopy) {
 			process_config_source( *pathCopy, "config source", host,
@@ -977,9 +986,9 @@ init_tilde()
 	struct passwd *pw;
 	if( (pw=getpwnam( myDistro->Get() )) ) {
 		tilde = strdup( pw->pw_dir );
-	} 
+	}
 # else
-	// On Windows, we'll just look in the registry for TILDE. 
+	// On Windows, we'll just look in the registry for TILDE.
 	HKEY	handle;
 	char regKey[1024];
 
@@ -997,16 +1006,16 @@ init_tilde()
 
 		the_path[0] = '\0';
 
-		if ( RegQueryValueEx(handle, "TILDE", 0, 
+		if ( RegQueryValueEx(handle, "TILDE", 0,
 			&valType, (unsigned char *)the_path, &valSize) == ERROR_SUCCESS ) {
 
 			if ( valType == REG_SZ && the_path[0] ) {
-				// got it! 
+				// got it!
 				tilde = strdup(the_path);
 			}
 		}
 		RegCloseKey(handle);
-	} 
+	}
 	
 # endif
 }
@@ -1037,7 +1046,7 @@ find_file(const char *env_name, const char *file_name)
 	char* env = NULL;
 	int fd = 0;
 
-		// If we were given an environment variable name, try that first. 
+		// If we were given an environment variable name, try that first.
 	if( env_name && (env = getenv( env_name )) ) {
 		config_source = strdup( env );
 		StatInfo si( config_source );
@@ -1047,7 +1056,7 @@ find_file(const char *env_name, const char *file_name)
 				fprintf( stderr, "File specified in %s environment "
 						 "variable:\n\"%s\" is a directory.  "
 						 "Please specify a file.\n", env_name,
-						 config_source );  
+						 config_source );
 				free( config_source );
 				config_source = NULL;
 				exit( 1 );
@@ -1062,7 +1071,7 @@ find_file(const char *env_name, const char *file_name)
 
 				fprintf( stderr, "File specified in %s environment "
 						 "variable:\n\"%s\" does not exist.\n",
-						 env_name, config_source );  
+						 env_name, config_source );
 				free( config_source );
 				exit( 1 );
 				break;
@@ -1072,7 +1081,7 @@ find_file(const char *env_name, const char *file_name)
 
 		case SIFailure:
 			fprintf( stderr, "Cannot stat file specified in %s "
-					 "environment variable:\n\"%s\", errno: %d\n", 
+					 "environment variable:\n\"%s\", errno: %d\n",
 					 env_name, config_source, si.Errno() );
 			free( config_source );
 			exit( 1 );
@@ -1113,7 +1122,7 @@ find_file(const char *env_name, const char *file_name)
 				} else {
 					close(fd);
 					dprintf(D_FULLDEBUG, "Reading condor configuration "
-							"from '%s'\n", config_source); 
+							"from '%s'\n", config_source);
 					break;
 				}
 			}
@@ -1130,8 +1139,8 @@ find_file(const char *env_name, const char *file_name)
 		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
 		// We have found a registry key for Condor, which
 		// means this user has a pulse and has actually run the
-		// installation program before trying to run Condor.  
-		// This user deserves a tax credit.  
+		// installation program before trying to run Condor.
+		// This user deserves a tax credit.
 
 		// So now that we found the key, read it.
 		char the_path[MAX_PATH];
@@ -1139,7 +1148,7 @@ find_file(const char *env_name, const char *file_name)
 		DWORD valSize = MAX_PATH - 2;
 
 		the_path[0] = '\0';
-		if ( RegQueryValueEx(handle, env_name, 0, 
+		if ( RegQueryValueEx(handle, env_name, 0,
 			&valType, (unsigned char *)the_path, &valSize) == ERROR_SUCCESS ) {
 
 			// confirm it is a string value with something there
@@ -1172,13 +1181,15 @@ find_file(const char *env_name, const char *file_name)
 							);
 						}
 
-						// whether it worked or not, we're gonna continue.
-						// The goal of running the WNetAddConnection2() is 
-						// to make a mapping to the UNC path. For reasons
-						// I don't fully understand, some sites need the 
-						// mapping, and some don't. If it works, great; if 
-						// not, try the safe_open_wrapper() anyways, and at worst we'll
-						// fail fast and the user can fix their file server.
+						// whether it worked or not, we're gonna
+						// continue.  The goal of running the
+						// WNetAddConnection2() is to make a mapping
+						// to the UNC path. For reasons I don't fully
+						// understand, some sites need the mapping,
+						// and some don't. If it works, great; if not,
+						// try the safe_open_wrapper() anyways, and at
+						// worst we'll fail fast and the user can fix
+						// their file server.
 					}
 
 					if (nr.lpRemoteName) {
@@ -1187,7 +1198,7 @@ find_file(const char *env_name, const char *file_name)
 				}
 
 				if( !(is_piped_command(config_source) &&
-					  is_valid_command(config_source)) && 
+					  is_valid_command(config_source)) &&
 					(fd = safe_open_wrapper( config_source, O_RDONLY)) < 0 ) {
 
 					free( config_source );
@@ -1246,7 +1257,7 @@ fill_attributes()
 		extra_info->AddInternalParam("UNAME_OPSYS");
 	}
 
-	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
+	insert( "subsystem", mySubSystem->getName(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("subsystem");
 }
 
@@ -1261,7 +1272,7 @@ check_domain_attributes()
 		   by the time we call this. -Derek Wright 10/20/98 */
 
 	char *uid_domain, *filesys_domain;
-		   
+
 	filesys_domain = param("FILESYSTEM_DOMAIN");
 	if( !filesys_domain ) {
 		filesys_domain = my_full_hostname();
@@ -1281,15 +1292,18 @@ check_domain_attributes()
 	}
 }
 
-
 void
-init_config()
+init_config(bool wantExtraInfo  /* = true */)
 {
-	memset( (char *)ConfigTab, 0, (TABLESIZE * sizeof(BUCKET*)) ); 
-	extra_info = new ExtraParamTable();
+	memset( (char *)ConfigTab, 0, (TABLESIZE * sizeof(BUCKET*)) );
+	if (wantExtraInfo) {
+		extra_info = new ExtraParamTable();
+	} else {
+		extra_info = new DummyExtraParamTable();
+	}
+
 	return;
 }
-
 
 void
 clear_config()
@@ -1328,28 +1342,47 @@ clear_config()
 char *
 param( const char *name )
 {
-	// prepend the subsystem and a period and check for that first.
+	char		*val = NULL;
+	MyString	 param_name;
 
-	MyString subsysparamname = mySubSystem;
-	subsysparamname += ".";
-	subsysparamname += name;
+	// Try in order to find the parameter
+	// As we walk through, any value (including empty string) will
+	// cause a 'match' since presumably it was set to empty
+	// specifically to clear this parameter for this specific
+	// subsystem / local.
 
-	char *val = lookup_macro( subsysparamname.GetCStr(), ConfigTab, TABLESIZE );
-
-	if( val == NULL ) {
-		// not present, so param for the actual name
+	// 1. "subsys.local.name"
+	const char	*local = mySubSystem->getLocalName();
+	if (  (NULL == val) && local ) {
+		param_name = mySubSystem->getName();
+		param_name += ".";
+		param_name += local;
+		param_name += ".";
+		param_name += name;
+		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
+	}
+	// 2. "local.name"
+	if (  (NULL == val) && local ) {
+		param_name = local;
+		param_name += ".";
+		param_name += name;
+		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
+	}
+	// 3. "subsys.name"
+	if ( NULL == val ) {
+		param_name = mySubSystem->getName();
+		param_name += ".";
+		param_name += name;
+		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
+	}
+	// 4. "name"
+	if ( NULL == val ) {
 		val = lookup_macro( name, ConfigTab, TABLESIZE );
+	}
 
-		// return NULL if not present or set to the empty string
-		if( val == NULL || val[0] == '\0' ) {
-			return( NULL );
-		}
-	} else if (val[0] == '\0' ) {
-		// the subsytem-specific setting was set to the empty string, so we
-		// return NULL without checking for the actual name since presumably
-		// it was set to empty specifically to clear this parameter for this
-		// specific subsystem.
-		return( NULL );
+	// Still nothing (or empty)?  Give up.
+	if ( (NULL == val) || (*val=='\0') ) {
+		return NULL;
 	}
 
 	// Ok, now expand it out...
@@ -1433,6 +1466,19 @@ int param_integer_c( const char *name, int default_value,
 					   int min_value, int max_value)
 {
 	return param_integer( name, default_value, min_value, max_value );
+}
+
+// require that the attribute I'm looking for is defined in the config file.
+char* param_or_except(const char *attr)
+{
+	char *tmp = NULL;
+
+	tmp = param(attr);
+	if (tmp == NULL || strlen(tmp) <= 0) {
+		EXCEPT("Please define config file entry to non-null value: %s", attr);
+	}
+
+	return tmp;
 }
 
 
@@ -1651,7 +1697,7 @@ reinsert_specials( char* host )
 		insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
 	}
 	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
-	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
+	insert( "subsystem", mySubSystem->getName(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("hostname");
 	extra_info->AddInternalParam("full_hostname");
 	extra_info->AddInternalParam("subsystem");
@@ -1699,7 +1745,7 @@ reinsert_specials( char* host )
 		
 	// Insert values for "pid" and "ppid".  Use static values since
 	// this is expensive to re-compute on Windows.
-	// Note: we have to resort to ifdef WIN32 junk even though 
+	// Note: we have to resort to ifdef WIN32 junk even though
 	// DaemonCore can nicely give us this information.  We do this
 	// because the config code is used by the tools as well as daemons.
 	if (!reinsert_pid) {
@@ -1756,7 +1802,7 @@ check_params()
 				 "/opt/langtools/lib/sched.models" );
 		fprintf( stderr, "This file lists all HP models and the "
 				 "corresponding CPU type.  However,\n" );
-		fprintf( stderr, "this file does not exist on your machine " 
+		fprintf( stderr, "this file does not exist on your machine "
 				 "or your model (%s)\n", sysapi_uname_arch() );
 		fprintf( stderr, "was not listed.  You should either explicitly "
 				 "set the ARCH parameter\n" );
@@ -1801,7 +1847,7 @@ static MyString toplevel_persistent_config;
   requires a restart to change any of these, but i think that's a
   reasonable burden on admins, considering the potential security
   implications.  -derek 2006-03-17
-*/ 
+*/
 static bool enable_runtime;
 static bool enable_persistent;
 
@@ -1829,7 +1875,7 @@ init_dynamic_config()
 		// if we're using runtime config, try a subsys-specific config
 		// knob for the root location
 	MyString filename_parameter;
-	filename_parameter.sprintf( "%s_CONFIG", mySubSystem );
+	filename_parameter.sprintf( "%s_CONFIG", mySubSystem->getName() );
 	tmp = param( filename_parameter.Value() );
 	if( tmp ) {
 		toplevel_persistent_config = tmp;
@@ -1840,11 +1886,8 @@ init_dynamic_config()
 	tmp = param( "PERSISTENT_CONFIG_DIR" );
 
 	if( !tmp ) {
-		if( strcmp(mySubSystem,"SUBMIT")==0 || 
-			strcmp(mySubSystem,"TOOL")==0 ||
-			! have_config_source)
-		{
-				/* 
+		if ( mySubSystem->isClient( ) || !have_config_source ) {
+				/*
 				   we are just a tool, not a daemon.
 				   or, we were explicitly told we don't have
 				   the usual config sources.
@@ -1862,12 +1905,13 @@ init_dynamic_config()
 		}
 	}
 	toplevel_persistent_config.sprintf( "%s%c.config.%s", tmp,
-										DIR_DELIM_CHAR, mySubSystem );
+										DIR_DELIM_CHAR,
+										mySubSystem->getName() );
 	free(tmp);
 }
 
 
-/* 
+/*
 ** Caller is responsible for allocating admin and config with malloc.
 ** Caller should not free admin and config after the call.
 */
@@ -1909,7 +1953,7 @@ set_persistent_config(char *admin, char *config)
 		do {
 			unlink( tmp_filename.Value() );
 			fd = safe_open_wrapper( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
-		} while (fd == -1 && errno == EEXIST); 
+		} while (fd == -1 && errno == EEXIST);
 		if( fd < 0 ) {
 			dprintf( D_ALWAYS, "safe_open_wrapper(%s) returned %d '%s' (errno %d) in "
 					 "set_persistent_config()\n", tmp_filename.Value(),
@@ -1961,7 +2005,7 @@ set_persistent_config(char *admin, char *config)
 	do {
 		unlink( tmp_filename.Value() );
 		fd = safe_open_wrapper( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
-	} while (fd == -1 && errno == EEXIST); 
+	} while (fd == -1 && errno == EEXIST);
 	if( fd < 0 ) {
 		dprintf( D_ALWAYS, "safe_open_wrapper(%s) returned %d '%s' (errno %d) in "
 				 "set_persistent_config()\n", tmp_filename.Value(),
@@ -2134,7 +2178,7 @@ process_runtime_configs()
 		tmp_file_tmpl += "/cndrtmpXXXXXX";
 
 		char* tmp_file = strdup(tmp_file_tmpl.Value());
-		fd = condor_mkstemp( tmp_file ); 
+		fd = condor_mkstemp( tmp_file );
 		if (fd < 0) {
 			dprintf( D_ALWAYS, "condor_mkstemp(%s) returned %d, '%s' (errno %d) in "
 				 "process_dynamic_configs()\n", tmp_file, fd,
@@ -2169,7 +2213,7 @@ process_runtime_configs()
 }
 
 
-/* 
+/*
 ** returns 1 if dynamic (runtime or persistent) configs were
 ** processed; 0 if no dynamic configs were defined, and -1 on error.
 */
@@ -2198,6 +2242,6 @@ process_dynamic_configs()
 	return 0;
 }
 
-} // end of extern "C" 
+} // end of extern "C"
 
 /* End code for runtime support for modifying a daemon's config source. */

@@ -4,7 +4,7 @@ all_target($(NAME))
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_schedd.V6
 
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 
 soapobjs(shadow)
 
@@ -17,8 +17,8 @@ html_target( baseshadow.h shadow.h mpishadow.h remoteresource.h )
 
 #if 0
 IMPORT_LINKS = ../../config/import_links
-import(../condor_syscall_lib,receivers.o)
-import(../condor_syscall_lib,extern_path.o)
+import_objs(../condor_syscall_lib,receivers.o)
+import_objs(../condor_syscall_lib,extern_path.o)
 #endif
 
 clean::

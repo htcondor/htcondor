@@ -48,13 +48,13 @@ public:
 	//
 	~NamedPipeReader();
 
+	// get the named pipe path
+	//
+	char* get_path();
+
 	// enable a watchdog on this reader
 	//
 	void set_watchdog(NamedPipeWatchdog*);
-
-	// change the owner of the named pipe file system node
-	//
-	bool change_owner(uid_t);
 
 	// read data off the pipe
 	//

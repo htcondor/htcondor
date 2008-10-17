@@ -646,6 +646,15 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	// email the user
 	emailTerminateEvent( reason );
 
+	if( reason == JOB_EXITED && claimIsClosing() ) {
+			// Startd not accepting any more jobs on this claim.
+			// We do this here to avoid having to treat this case
+			// identically to JOB_EXITED in the code leading up to
+			// this point.
+		dprintf(D_FULLDEBUG,"Startd is closing claim, so no more jobs can be run on it.\n");
+		reason = JOB_EXITED_AND_CLAIM_CLOSING;
+	}
+
 	// does not return.
 	DC_Exit( reason );
 }
@@ -654,8 +663,13 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 void
 BaseShadow::evictJob( int reason )
 {
-	dprintf( D_ALWAYS, "Job %d.%d is being evicted\n",
-			 getCluster(), getProc() );
+	MyString from_where;
+	MyString machine;
+	if( getMachineName(machine) ) {
+		from_where.sprintf(" from %s",machine.Value());
+	}
+	dprintf( D_ALWAYS, "Job %d.%d is being evicted%s\n",
+			 getCluster(), getProc(), from_where.Value() );
 
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In evictJob() w/ NULL JobAd!" );
@@ -1259,4 +1273,10 @@ display_dprintf_header(FILE *fp)
 	}	
 
 	return TRUE;
+}
+
+bool
+BaseShadow::getMachineName( MyString & /*machineName*/ )
+{
+	return false;
 }

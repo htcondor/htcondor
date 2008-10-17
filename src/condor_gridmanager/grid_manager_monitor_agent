@@ -489,7 +489,7 @@ sub ReadJobs( )
 		    $Jobs{$Contact} = $JobState;
 
 		    # And, update its mtime if we're not caching it
-		    if ( $Config{TouchState} )
+		    if ( $Config{TouchState} && $JobState != 4 )
 		    {
 			my $Now = time( );	
 			utime( $Now, $Now, $Job{FullPath} );

@@ -22,6 +22,7 @@
 #include "condor_config.h"
 #include "condor_daemon_core.h"
 #include "condor_string.h"
+#include "subsystem_info.h"
 #include "basename.h"
 #include "setenv.h"
 #include "dag.h"
@@ -31,8 +32,11 @@
 #include "condor_environ.h"
 #include "dagman_main.h"
 #include "dagman_commands.h"
+#include "dagman_multi_dag.h"
 #include "util.h"
 #include "condor_getcwd.h"
+#include "condor_version.h"
+#include "subsystem_info.h"
 
 void ExitSuccess();
 
@@ -45,7 +49,7 @@ extern "C" void process_config_source( char* file, char* name,
 extern "C" bool is_piped_command(const char* filename);
 
 //---------------------------------------------------------------------------
-char* mySubSystem = "DAGMAN";         // used by Daemon Core
+DECL_SUBSYSTEM( "DAGMAN", SUBSYSTEM_TYPE_DAEMON );
 
 static char* lockFileName = NULL;
 
@@ -54,25 +58,23 @@ static Dagman dagman;
 //---------------------------------------------------------------------------
 static void Usage() {
     debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
-            "\t\t[-Debug <level>]\n"
-            "\t\t-Condorlog <NAME.dag.condor.log>\n"
-	    "\t\t-Storklog <stork_userlog>\n"                       //-->DAP
             "\t\t-Lockfile <NAME.dag.lock>\n"
             "\t\t-Dag <NAME.dag>\n"
-            "\t\t-Rescue <Rescue.dag>\n"
-            "\t\t[-MaxIdle] <int N>\n\n"
-            "\t\t[-MaxJobs] <int N>\n\n"
-            "\t\t[-MaxPre] <int N>\n\n"
-            "\t\t[-MaxPost] <int N>\n\n"
-            "\t\t[-WaitForDebug]\n\n"
-            "\t\t[-NoEventChecks]\n\n"
-            "\t\t[-AllowLogError]\n\n"
-            "\t\t[-UseDagDir]\n\n"
-            "\t\t[-AutoRescue] <0|1>\n\n"
-            "\t\t[-DoRescueFrom] <int N>\n\n"
-            "\twherei NAME is the name of your DAG.\n"
-            "\twhere N is Maximum # of Jobs to run at once "
-            "(0 means unlimited)\n"
+            "\t\t-CsdVersion <version string>\n"
+            "\t\t[-Debug <level>]\n"
+            "\t\t[-Rescue <Rescue.dag>]\n"
+            "\t\t[-MaxIdle <int N>]\n"
+            "\t\t[-MaxJobs <int N>]\n"
+            "\t\t[-MaxPre <int N>]\n"
+            "\t\t[-MaxPost <int N>]\n"
+            "\t\t[-WaitForDebug]\n"
+            "\t\t[-NoEventChecks]\n"
+            "\t\t[-AllowLogError]\n"
+            "\t\t[-UseDagDir]\n"
+            "\t\t[-AutoRescue <0|1>]\n"
+            "\t\t[-DoRescueFrom <int N>]\n"
+			"\t\t[-AllowVersionMismatch]\n"
+            "\twhere NAME is the name of your DAG.\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
 	DC_Exit( EXIT_ERROR );
 }
@@ -113,7 +115,7 @@ Dagman::Dagman() :
 	_dagmanConfigFile (NULL), // so Coverity is happy
 	autoRescue(false),
 	doRescueFrom(0),
-	maxRescueDagNum(Dag::ABS_MAX_RESCUE_DAG_NUM),
+	maxRescueDagNum(ABS_MAX_RESCUE_DAG_NUM),
 	rescueFileToRun("")
 {
 }
@@ -140,6 +142,9 @@ Dagman::~Dagman()
 bool
 Dagman::Config()
 {
+	int debug_cache_size;
+	bool debug_cache_enabled;
+
 		// Note: debug_printfs are DEBUG_NORMAL here because when we
 		// get here we haven't processed command-line arguments yet.
 
@@ -162,6 +167,16 @@ Dagman::Config()
 					NULL, true );
 	}
 
+	debug_cache_size = 
+		param_integer( "DAGMAN_DEBUG_CACHE_SIZE", ((1024*1024)*5), 0, INT_MAX);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_SIZE setting: %d\n",
+				debug_cache_size );
+
+	debug_cache_enabled = 
+		param_boolean( "DAGMAN_DEBUG_CACHE_ENABLE", false );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_ENABLE setting: %s\n",
+				debug_cache_enabled?"True":"False" );
+
 	submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", 0, 0, 60 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DELAY setting: %d\n",
 				submit_delay );
@@ -177,6 +192,7 @@ Dagman::Config()
 		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL", 5, 1, 1000 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n",
 				max_submits_per_interval );
+
 
 		// Event checking setup...
 
@@ -299,10 +315,16 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %d\n",
 				autoRescue );
 	
-	maxRescueDagNum = param_integer( "DAGMAN_MAX_RESCUE_NUM", 100, 0,
-				Dag::ABS_MAX_RESCUE_DAG_NUM );
+	maxRescueDagNum = param_integer( "DAGMAN_MAX_RESCUE_NUM",
+				MAX_RESCUE_DAG_DEFAULT, 0, ABS_MAX_RESCUE_DAG_NUM );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n",
 				maxRescueDagNum );
+
+	// enable up the debug cache if needed
+	if (debug_cache_enabled) {
+		debug_cache_set_size(debug_cache_size);
+		debug_cache_enable();
+	}
 
 	return true;
 }
@@ -433,8 +455,9 @@ int main_init (int argc, char ** const argv) {
     debug_progname = condor_basename(argv[0]);
     debug_level = DEBUG_NORMAL;  // Default debug level is normal output
 
-    char *condorLogName  = NULL;
-    char *dapLogName  = NULL;                      //<--DAP
+		// condor_submit_dag version from .condor.sub
+	bool allowVerMismatch = false;
+	const char *csdVersion = "undefined";
 
 	int i;
     for (i = 0 ; i < argc ; i++) {
@@ -458,20 +481,6 @@ int main_init (int argc, char ** const argv) {
                 Usage();
             }
             debug_level = (debug_level_t) atoi (argv[i]);
-        } else if( !strcasecmp( "-Condorlog", argv[i] ) ) {
-            i++;
-            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
-                debug_printf( DEBUG_SILENT, "No condor log specified" );
-                Usage();
-           }
-            condorLogName = argv[i];
-		} else if( !strcasecmp( "-Storklog", argv[i] ) ) {
-            i++;
-            if (argc <= i) {
-                debug_printf( DEBUG_SILENT, "No stork log specified" );
-                Usage();
-           }
-            dapLogName = argv[i];        
         } else if( !strcasecmp( "-Lockfile", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -561,6 +570,17 @@ int main_init (int argc, char ** const argv) {
             }
             dagman.doRescueFrom = atoi (argv[i]);
 
+        } else if( !strcasecmp( "-CsdVersion", argv[i] ) ) {
+            i++;
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+                debug_printf( DEBUG_SILENT, "No CsdVersion value specified\n" );
+                Usage();
+            }
+			csdVersion = argv[i];
+
+        } else if( !strcasecmp( "-AllowVersionMismatch", argv[i] ) ) {
+			allowVerMismatch = true;
+
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );
@@ -575,14 +595,22 @@ int main_init (int argc, char ** const argv) {
     //
     // Check the arguments
     //
+	if( strcmp( CondorVersion(), csdVersion ) != 0 ) {
+		if ( allowVerMismatch ) {
+        	debug_printf( DEBUG_NORMAL, "Warning: version mismatch: "
+						"condor_submit_dag (%s) vs. condor_dagman (%s); "
+						"continuing because of -AllowVersionMismatch flag\n",
+						csdVersion, CondorVersion() );
+		} else {
+        	debug_printf( DEBUG_SILENT, "Version mismatch: condor_submit_dag "
+						"(%s) vs. condor_dagman (%s)\n", csdVersion,
+						CondorVersion() );
+			DC_Exit( EXIT_ERROR );
+		}
+	}
 
     if( dagman.primaryDagFile == "" ) {
         debug_printf( DEBUG_SILENT, "No DAG file was specified\n" );
-        Usage();
-    }
-    if( !condorLogName && !dapLogName ) {
-        debug_printf( DEBUG_SILENT,
-					  "ERROR: no Condor or DaP log files were specified\n" );
         Usage();
     }
     if (lockFileName == NULL) {
@@ -662,11 +690,11 @@ int main_init (int argc, char ** const argv) {
 	if ( dagman.doRescueFrom != 0 ) {
 		rescueDagNum = dagman.doRescueFrom;
 		rescueDagMsg.sprintf( "Rescue DAG number %d specified", rescueDagNum );
-		Dag::RenameRescueDagsAfter( dagman.primaryDagFile.Value(),
+		RenameRescueDagsAfter( dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum, dagman.maxRescueDagNum );
 
 	} else if ( dagman.autoRescue ) {
-		rescueDagNum = Dag::FindLastRescueDagNum(
+		rescueDagNum = FindLastRescueDagNum(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, dagman.maxRescueDagNum );
 		rescueDagMsg.sprintf( "Found rescue DAG number %d", rescueDagNum );
@@ -677,28 +705,38 @@ int main_init (int argc, char ** const argv) {
 		// files list accordingly.
 		//
 	if ( rescueDagNum > 0 ) {
-		dagman.rescueFileToRun = Dag::RescueDagName(
+		dagman.rescueFileToRun = RescueDagName(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum );
 		debug_printf ( DEBUG_QUIET, "%s; running %s instead of normal "
 					"DAG file%s\n", rescueDagMsg.Value(),
 					dagman.rescueFileToRun.Value(),
 					dagman.multiDags ? "s" : "");
+		debug_printf ( DEBUG_QUIET,
+					"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+		debug_printf ( DEBUG_QUIET, "RUNNING RESCUE DAG %s\n",
+					dagman.rescueFileToRun.Value() );
 			// Note: if we ran multiple DAGs and they failed, the
 			// whole thing is condensed into a single rescue DAG.
 			// wenger 2007-02-27
 		dagman.dagFiles.clearAll();
 		dagman.dagFiles.append( dagman.rescueFileToRun.Value() );
 		dagman.dagFiles.rewind();
+
+		if ( dagman.useDagDir ) {
+			debug_printf ( DEBUG_NORMAL,
+						"Unsetting -useDagDir flag because we're running "
+						"a rescue DAG\n" );
+			dagman.useDagDir = false;
+		}
 	}
 
     //
     // Create the DAG
     //
 
-    dagman.dag = new Dag( dagman.dagFiles, condorLogName, dagman.maxJobs,
+    dagman.dag = new Dag( dagman.dagFiles, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
-						  dapLogName, //<-- DaP
 						  dagman.allowLogError, dagman.useDagDir,
 						  dagman.maxIdle, dagman.retrySubmitFirst,
 						  dagman.retryNodeFirst, dagman.condorRmExe,
@@ -747,6 +785,7 @@ int main_init (int argc, char ** const argv) {
 	// fix up any use of $(JOB) in the vars values for any node
 	dagman.dag->ResolveVarsInterpolations();
 
+
 /*	debug_printf(DEBUG_QUIET, "COMPLETED DAG!\n");*/
 /*	dagman.dag->PrintJobList();*/
 
@@ -772,10 +811,7 @@ int main_init (int argc, char ** const argv) {
     // mode
   
     {
-      bool recovery = ( (access(lockFileName,  F_OK) == 0 &&
-			 access(condorLogName, F_OK) == 0) 
-			|| (access(lockFileName,  F_OK) == 0 &&
-			    access(dapLogName, F_OK) == 0) ) ; //--> DAP
+      bool recovery = access(lockFileName,  F_OK) == 0;
       
         if (recovery) {
             debug_printf( DEBUG_VERBOSE, "Lock file %s detected, \n",
@@ -808,9 +844,6 @@ int main_init (int argc, char ** const argv) {
             debug_error( 1, DEBUG_QUIET, "ERROR while bootstrapping\n");
         }
     }
-
-
-	ASSERT( condorLogName || dapLogName );
 
     dprintf( D_ALWAYS, "Registering condor_event_timer...\n" );
     daemonCore->Register_Timer( 1, 5, (TimerHandler)condor_event_timer,

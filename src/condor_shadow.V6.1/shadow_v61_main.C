@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include "subsystem_info.h"
 #include "baseshadow.h"
 #include "shadow.h"
 #include "mpishadow.h"
@@ -63,7 +64,7 @@ ExceptCleanup(int, int, char *buf)
 
 /* DaemonCore interface implementation */
 
-char *mySubSystem = "SHADOW";
+DECL_SUBSYSTEM( "SHADOW", SUBSYSTEM_TYPE_SHADOW );
 
 int
 dummy_reaper(Service *,int pid,int)
@@ -293,7 +294,7 @@ main_init(int argc, char *argv[])
 		//
 	MyString auth_hole_id;
 	if (ad->LookupString(ATTR_STARTD_PRINCIPAL, auth_hole_id)) {
-		IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
+		IpVerify* ipv = daemonCore->getIpVerify();
 		if (!ipv->PunchHole(DAEMON, auth_hole_id)) {
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::PunchHole error for %s: "

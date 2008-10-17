@@ -205,7 +205,7 @@ ParallelShadow::getResources( void )
 
 		// First, contact the schedd and send the command, the
 		// cluster, and the ClaimId
-	Daemon my_schedd (DT_SCHEDD, NULL, NULL);
+	Daemon my_schedd (DT_SCHEDD, getScheddAddr(), NULL);
 
 	if(!(sock = (ReliSock*)my_schedd.startCommand(GIVE_MATCHES))) {
 		EXCEPT( "Can't connect to schedd at %s", getScheddAddr() );
@@ -398,6 +398,11 @@ ParallelShadow::cleanUp( void )
 	}		
 }
 
+bool
+ParallelShadow::claimIsClosing( void )
+{
+	return false;
+}
 
 void 
 ParallelShadow::gracefulShutDown( void )

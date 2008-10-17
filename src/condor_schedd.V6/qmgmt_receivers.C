@@ -64,7 +64,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		bool authenticated = true;
 	
 			// Authenticate socket, if not already done by daemonCore
-		if( !syscall_sock->isAuthenticated() ) {
+		if( !syscall_sock->triedAuthentication() ) {
 			if( DebugFlags & D_SECURITY ) {
 				MyString methods;
 				SecMan::getAuthenticationMethods( WRITE, &methods );

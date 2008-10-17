@@ -167,6 +167,14 @@ SOURCE="..\src\condor_c++_util\classad_namedlist.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\classad_visa.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\classad_visa.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\command_strings.C"
 # End Source File
 # Begin Source File
@@ -479,6 +487,14 @@ SOURCE="..\src\condor_c++_util\directory.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\directory.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\directory.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\directory.WINDOWS.h"
 # End Source File
 # Begin Source File
 
@@ -883,11 +899,27 @@ SOURCE="..\src\condor_c++_util\proc_id.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\procd_config.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\procd_config.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\process_control.WINDOWS.C"
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\process_control.WINDOWS.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\profile.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\profile.WINDOWS.h"
 # End Source File
 # Begin Source File
 
@@ -920,6 +952,22 @@ SOURCE="..\src\condor_c++_util\read_user_log_state.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\Regex.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\remote_close.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\remote_close.WINDOWS.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\security.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\security.WINDOWS.h"
 # End Source File
 # Begin Source File
 
@@ -1011,6 +1059,14 @@ SOURCE="..\src\condor_c++_util\store_cred.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\string_conversion.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\string_conversion.WINDOWS.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\string_list.C"
 # End Source File
 # Begin Source File
@@ -1028,6 +1084,14 @@ SOURCE="..\src\condor_c++_util\stringSpace.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\strnewp.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\system_info.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\system_info.WINDOWS.h"
 # End Source File
 # Begin Source File
 

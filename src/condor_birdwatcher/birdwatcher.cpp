@@ -65,12 +65,6 @@ BOOL CBirdwatcherApp::InitInstance()
 	//  of your final executable, you should remove from the following
 	//  the specific initialization routines you do not need.
 
-#ifdef _AFXDLL
-	Enable3dControls();			// Call this when using MFC in a shared DLL
-#else
-	Enable3dControlsStatic();	// Call this when linking to MFC statically
-#endif
-
 	HICON hFlying2 = LoadIcon(IDI_CONDOR_FLYING2);
 	HICON hClaimed = LoadIcon(IDI_CONDOR_CLAIMED);
 

@@ -27,18 +27,16 @@ EXT_CONFIG_SH = @_cv_ext_config_sh@
 #if HAS_EXTERNALS /* XXX && !defined(PROPER) ? */
 
 EXT_KERBEROS_VERSION = @ext_krb5_version@
+EXT_OPENSSL_VERSION = @ext_openssl_version@
 EXT_GLOBUS_VERSION = @ext_globus_version@
-EXT_GAHP_VERSION = @ext_gahp_version@
 EXT_ZLIB_VERSION = @ext_zlib_version@
 EXT_MAN_VERSION = man-current
-EXT_GT4GAHP_VERSION = @ext_gt4gahp_version@
 EXT_CLASSADS_VERSION = @ext_classads_version@
 EXT_SRB_VERSION = @ext_srb_version@
 EXT_GSOAP_VERSION = @ext_gsoap_version@
 EXT_PCRE_VERSION = @ext_pcre_version@
 EXT_POSTGRESQL_VERSION = @ext_postgresql_version@
 EXT_UNICOREGAHP_VERSION = @ext_unicoregahp_version@
-EXT_NORDUGRIDGAHP_VERSION = @ext_nordugridgahp_version@
 EXT_COREDUMPER_VERSION = @ext_coredumper_version@
 EXT_BLAHP_VERSION = @ext_blahp_version@
 
@@ -60,10 +58,12 @@ DRMAA_LIB = $(DRMAA_DIR)/lib
 DRMAA_INC = $(DRMAA_DIR)/include
 #endif 
 
+#if HAVE_EXT_OPENSSL
+OPENSSL_DIR = $(EXT_INSTALL)/$(EXT_OPENSSL_VERSION)
+#endif
+
 MAN_DIR = $(EXT_INSTALL)/$(EXT_MAN_VERSION)/man
-OPENSSL_DIR = $(EXT_INSTALL)/$(EXT_GLOBUS_VERSION)
 GLOBUS_DIR = $(EXT_INSTALL)/$(EXT_GLOBUS_VERSION)
-GAHP_DIR = $(EXT_INSTALL)/$(EXT_GAHP_VERSION)/bin
 KERBEROS_DIR = $(EXT_INSTALL)/$(EXT_KERBEROS_VERSION)
 
 #ifdef WANT_NEST
@@ -117,17 +117,15 @@ GCB_INC = $(GCB_DIR)/include
 GCB_BIN = $(GCB_DIR)/bin
 #endif
 
-#if HAVE_EXT_GT4GAHP
-GT4GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT4GAHP_VERSION)
-#endif
-
 #if HAVE_EXT_GSOAP
 GSOAP_DIR = $(EXT_INSTALL)/$(EXT_GSOAP_VERSION)
+GSOAP_SHARE = $(GSOAP_DIR)/share/gsoap
 SOAPCPP2 = $(GSOAP_DIR)/bin/soapcpp2
+WSDL2H = $(GSOAP_DIR)/bin/wsdl2h
 #if HAVE_EXT_OPENSSL
-GSOAP_LIB = $(GSOAP_DIR)/lib/libgsoapssl++.a
+GSOAP_LIB = $(GSOAP_DIR)/lib/libgsoapssl++.a $(ZLIB_LIB)/libz.a
 #else
-GSOAP_LIB = $(GSOAP_DIR)/lib/libgsoap++.a
+GSOAP_LIB = $(GSOAP_DIR)/lib/libgsoap++.a $(ZLIB_LIB)/libz.a
 #endif
 #endif
 
@@ -138,10 +136,6 @@ PCRE_INC = $(PCRE_DIR)/include
 
 #if HAVE_EXT_UNICOREGAHP
 UNICOREGAHP_DIR = $(EXT_INSTALL)/$(EXT_UNICOREGAHP_VERSION)
-#endif
-
-#if HAVE_EXT_NORDUGRIDGAHP
-NORDUGRIDGAHP_DIR = $(EXT_INSTALL)/$(EXT_NORDUGRIDGAHP_VERSION)
 #endif
 
 #if HAVE_EXT_BLAHP
@@ -168,12 +162,14 @@ ZLIB_DIR =
 ZLIB_LIB =
 ZLIB_INC =
 NEW_CLASSADS_DIR = 
-NEW_CLASSADS_LIB = 
-NEW_CLASSADS_INC = 
+NEW_CLASSADS_LIB = /usr/lib
+NEW_CLASSADS_INC = /usr/include
 SRB_DIR =
 SRB_LIB =
 SRB_INC =
 GSOAP_DIR = /usr
+GSOAP_SHARE = $(GSOAP_DIR)/share/gsoap
 SOAPCPP2 = soapcpp2
+WSDL2H = wsdl2h
 
 #endif

@@ -249,6 +249,7 @@ my %opsysname = (
   "x86_64_rhel3"  => "linux",
   "x86_64_rhel5"  => "linux",
   "x86_64_debian40" => "linux",
+  "mips64_gentoo1.12.11.1" => "linux",
   "alpha_dux40"   => "dux40",
   "alpha_dux51"   => "dux51",
   "sgi_65"        => "irix65",
@@ -258,11 +259,13 @@ my %opsysname = (
   "ppc_macosx104"    => "MacOSX10.4",
   "hp_ux102"      => "hpux10.20",
   "hp_ux110"      => "hpux11.00",
+  "hp_ux113"      => "hpux11.31",
   "ppc_aix51"	  => "aix5.1",
   "ppc_aix52"	  => "aix5.2",
   "i386_freebsd4" => "freebsd4",
   "i386_freebsd5" => "freebsd5",
-  "i386_freebsd6" => "freebsd6"
+  "i386_freebsd6" => "freebsd6",
+  "i386_freebsd7" => "freebsd7"
 );
 
 my %archname = (
@@ -295,6 +298,7 @@ my %archname = (
   "x86_64_rhel3"  => "x86_64",
   "x86_64_rhel5"  => "x86_64",
   "x86_64_debian40" => "x86_64",
+  "mips64_gentoo1.12.11.1" => "mips64",
   "alpha_dux40"   => "Alpha",
   "alpha_dux51"   => "Alpha",
   "sgi_65"        => "SGI",
@@ -302,13 +306,15 @@ my %archname = (
   "i386_macosx104"   => "x86",
   "ppc_macosx103"    => "PPC",
   "ppc_macosx104"    => "PPC",
-  "hp_ux102"      => "HPPAR",
+  "hp_ux102"      => "HPPAR",	# This needs fixing to put arch into name.
   "hp_ux110"      => "HPPAR",
+  "hp_ux113"      => "IA64",
   "ppc_aix51"	  => "aix",
   "ppc_aix52"	  => "aix",
   "i386_freebsd4" => "x86",
   "i386_freebsd5" => "x86",
-  "i386_freebsd6" => "x86"
+  "i386_freebsd6" => "x86",
+  "i386_freebsd7" => "x86"
 );
 
 
@@ -331,6 +337,7 @@ my %libcname = (
   "x86_64_rhel3"  => "rhel3",
   "x86_64_rhel5"  => "rhel5",
   "x86_64_debian40"  => "debian40",
+  "mips64_gentoo1.12.11.1" => "gentoo112",
   "i386_rhel3"  => "rhel3",
   "i386_rhel5"  => "rhel5",
   "ia64_rh72"   => "glibc22",

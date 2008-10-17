@@ -69,10 +69,7 @@ const struct Translation DCTranslation[] = {
 	{ "MATCH_INFO", MATCH_INFO },
 	{ "ALIVE", ALIVE },
 	{ "REQUEST_CLAIM", REQUEST_CLAIM },
-	{ "REQUEST_SERVICE", REQUEST_SERVICE },
 	{ "RELEASE_CLAIM", RELEASE_CLAIM },
-	{ "RELINQUISH_SERVICE", RELINQUISH_SERVICE },
-	{ "VACATE_SERVICE", VACATE_SERVICE },
 	{ "ACTIVATE_CLAIM", ACTIVATE_CLAIM },
 	{ "PRIORITY_INFO", PRIORITY_INFO },
 	{ "PCKPT_ALL_JOBS", PCKPT_ALL_JOBS },
@@ -141,6 +138,7 @@ const struct Translation DCTranslation[] = {
 	{ "DC_CONFIG_VAL", DC_CONFIG_VAL },
 	{ "DC_CHILDALIVE", DC_CHILDALIVE },
 	{ "DC_FETCH_LOG", DC_FETCH_LOG },
+	{ "DC_INVALIDATE_KEY", DC_INVALIDATE_KEY },
 	{ "FILETRANS_UPLOAD", FILETRANS_UPLOAD },
 	{ "FILETRANS_DOWNLOAD", FILETRANS_DOWNLOAD },
 	{ "PW_SETPASS", PW_SETPASS },
@@ -238,14 +236,22 @@ const struct Translation CAResultTranslation[] = {
 const char*
 getCommandString( int num )
 {
-	return getNameFromNum( num, DCTranslation );
+	char const *result = getNameFromNum( num, DCTranslation );
+	if( !result ) {
+		return getCollectorCommandString(num);
+	}
+	return result;
 }
 
 
 int
 getCommandNum( const char* command )
 {
-	return getNumFromName( command, DCTranslation );
+	int result = getNumFromName( command, DCTranslation );
+	if( !result ) {
+		return getCollectorCommandNum(command);
+	}
+	return result;
 }
 
 const char*

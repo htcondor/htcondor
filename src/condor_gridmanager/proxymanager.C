@@ -788,7 +788,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 
 	int arrIO[3];
 	arrIO[0]=myProxyEntry->get_delegation_password_pipe[0]; //stdin
-	arrIO[1]=-1; //myProxyEntry->get_delegation_err_fd;
+	arrIO[1]=myProxyEntry->get_delegation_err_fd;
 	arrIO[2]=myProxyEntry->get_delegation_err_fd; // stderr
 
 	char * myproxy_get_delegation_pgm = param ("MYPROXY_GET_DELEGATION");
@@ -896,23 +896,36 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 
 		char buff[500];
 		buff[0]='\0';
+		MyString output;
 		int fd = safe_open_wrapper(matched_entry->get_delegation_err_filename, O_RDONLY);
 		if (fd != -1) {
-			int bytes_read = read (fd, buff, 499);
+			int bytes_read;
+			do {
+				bytes_read = read( fd, buff, 499 );
+				if ( bytes_read > 0 ) {
+					buff[bytes_read] = '\0';
+					output += buff;
+				} else if ( bytes_read < 0 ) {
+					dprintf( D_ALWAYS, "WEIRD! Cannot read err file %s, "
+							 "errno=%d (%s)\n",
+							 matched_entry->get_delegation_err_filename,
+							 errno, strerror( errno ) );
+				}
+			} while ( bytes_read > 0 );
 			close (fd);
-			if (bytes_read >= 0) {
-				buff[bytes_read]='\0';
-			}
 		} else {
-			dprintf (D_ALWAYS, "WEIRD! Cannot read err file %s\n", matched_entry->get_delegation_err_filename);
+			dprintf( D_ALWAYS, "WEIRD! Cannot open err file %s, "
+					 "errno=%d (%s)\n",
+					 matched_entry->get_delegation_err_filename,
+					 errno, strerror( errno ) );
 		}
 
-		dprintf (D_ALWAYS, "myproxy-get-delegation for proxy %s, for job (%d,%d) exited with code %d, output (top):\n%s\n\n",
+		dprintf (D_ALWAYS, "myproxy-get-delegation for proxy %s, for job (%d.%d) exited with code %d, output (top):\n%s\n",
 			proxy->proxy_filename,
 			matched_entry->cluster_id,
 			matched_entry->proc_id,
 			WEXITSTATUS(exitStatus),
-			buff);
+			output.Value());
 
 	}
 

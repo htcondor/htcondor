@@ -31,6 +31,7 @@
 #include "dc_starter.h"
 #include "directory.h"
 #include "condor_claimid_parser.h"
+#include "authentication.h"
 
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
@@ -40,9 +41,6 @@ extern int do_REMOTE_syscall();
 // for remote syscalls...
 ReliSock *syscall_sock;
 RemoteResource *thisRemoteResource;
-
-// 90 seconds to wait for a socket timeout:
-const int RemoteResource::SHADOW_SOCK_TIMEOUT = 90;
 
 static char *Resource_State_String [] = {
 	"PRE", 
@@ -71,6 +69,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	claim_sock = NULL;
 	last_job_lease_renewal = 0;
 	exit_reason = -1;
+	claim_is_closing = false;
 	exited_by_signal = false;
 	exit_value = -1;
 	memset( &remote_rusage, 0, sizeof(struct rusage) );
@@ -179,8 +178,8 @@ RemoteResource::activateClaim( int starterVersion )
 		switch( reply ) {
 		case OK:
 			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s was ACCEPTED\n",
-							 dc_startd->addr() );
+							 "Request to run on %s %s was ACCEPTED\n",
+							 machineName ? machineName:"", dc_startd->addr() );
 				// first, set a timeout on the socket 
 			claim_sock->timeout( 300 );
 				// Now, register it for remote system calls.
@@ -194,8 +193,8 @@ RemoteResource::activateClaim( int starterVersion )
 			break;
 		case CONDOR_TRY_AGAIN:
 			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s was DELAYED (previous job still being vacated)\n",
-							 dc_startd->addr() ); 
+							 "Request to run on %s %s was DELAYED (previous job still being vacated)\n",
+							 machineName ? machineName:"", dc_startd->addr() );
 			num_retries++;
 			if( num_retries > max_retries ) {
 				dprintf( D_ALWAYS, "activateClaim(): Too many retries, "
@@ -209,22 +208,22 @@ RemoteResource::activateClaim( int starterVersion )
 			break;
 
 		case CONDOR_ERROR:
-			shadow->dprintf( D_ALWAYS, "%s\n", dc_startd->error() );
+			shadow->dprintf( D_ALWAYS, "%s: %s\n", machineName ? machineName:"", dc_startd->error() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
 
 		case NOT_OK:
 			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s was REFUSED\n",
-							 dc_startd->addr() );
+							 "Request to run on %s %s was REFUSED\n",
+							 machineName ? machineName:"", dc_startd->addr() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
 		default:
 			shadow->dprintf( D_ALWAYS, "Got unknown reply(%d) from "
-							 "request to run on %s\n", reply,
-							 dc_startd->addr() );
+							 "request to run on %s %s\n", reply,
+							 machineName ? machineName:"", dc_startd->addr() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
@@ -251,7 +250,7 @@ RemoteResource::killStarter( bool graceful )
 		return false;
 	}
 
-	if( ! dc_startd->deactivateClaim(graceful) ) {
+	if( ! dc_startd->deactivateClaim(graceful,&claim_is_closing) ) {
 		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
 						 "Could not send command to startd\n" );
 		return false;
@@ -514,6 +513,12 @@ RemoteResource::getExitReason()
 	return exit_reason;
 }
 
+bool
+RemoteResource::claimIsClosing()
+{
+	return claim_is_closing;
+}
+
 
 int
 RemoteResource::exitSignal( void )
@@ -543,6 +548,7 @@ RemoteResource::setStartdInfo( ClassAd* ad )
 	if( ! name ) {
 		ad->LookupString( ATTR_NAME, &name );
 		if( ! name ) {
+			ad->dPrint(D_ALWAYS);
 			EXCEPT( "ad includes neither %s nor %s!", ATTR_NAME,
 					ATTR_REMOTE_HOST );
 		}
@@ -558,9 +564,17 @@ RemoteResource::setStartdInfo( ClassAd* ad )
 		EXCEPT( "ad does not include %s!", ATTR_CLAIM_ID );
 	}
 
-	char* addr = getAddrFromClaimId( claim_id );
+		// Delete the claim id from the shadow's copy of the job ad,
+		// now that we have extracted it.  When we send this ad over
+		// the wire to the starter, there is no need for the claimid
+		// to be in the job ad, so better to remove it than to have
+		// to worry about encrypting that transmission.
+	ad->Delete( ATTR_CLAIM_ID );
+
+	char* addr = NULL;
+	ad->LookupString( ATTR_STARTD_IP_ADDR, &addr );
 	if( ! addr ) {
-		EXCEPT( "invalid %s in ad (%s)", ATTR_CLAIM_ID, claim_id );
+		EXCEPT( "missing %s in ad", ATTR_STARTD_IP_ADDR);
 	}
 
 	initStartdInfo( name, pool, addr, claim_id );
@@ -596,6 +610,82 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 		setMachineName( addr );
 	} else {
 		EXCEPT( "in RemoteResource::setStartdInfo() without name or addr" );
+	}
+
+	m_claim_session = ClaimIdParser(claim_id);
+	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+		if( m_claim_session.secSessionId() == NULL ) {
+			dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session from claim id, because claim id does not contain session information: %s\n",m_claim_session.publicClaimId());
+		}
+		else {
+			bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+				DAEMON,
+				m_claim_session.secSessionId(),
+				m_claim_session.secSessionKey(),
+				m_claim_session.secSessionInfo(),
+				EXECUTE_SIDE_MATCHSESSION_FQU,
+				dc_startd->addr(),
+				0 /*don't expire*/ );
+
+			if( !rc ) {
+				dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session for %s, so will fall back on security negotiation\n",m_claim_session.publicClaimId());
+			}
+
+				// For the file transfer session, we do not want to use the
+				// same claim session used for other DAEMON traffic to the
+				// execute node, because file transfer is normally done at
+				// WRITE level, giving at least some level of indepenent
+				// control for file transfers for settings such as encryption
+				// and integrity checking.  Also, the session attributes
+				// (e.g. encryption, integrity) for the claim session were set
+				// by the startd, but for file transfer, it makes more sense
+				// to use the shadow's policy.
+
+			MyString filetrans_claimid;
+				// prepend something to the claim id so that the session id
+				// is different for file transfer than for the claim session
+			filetrans_claimid.sprintf("filetrans.%s",claim_id);
+			m_filetrans_session = ClaimIdParser(filetrans_claimid.Value());
+
+				// Get rid of session parameters set by startd.
+				// We will set our own based on the shadow WRITE policy.
+			m_filetrans_session.setSecSessionInfo(NULL);
+
+				// Since we just removed the session info, we must
+				// set ignore_session_info=true in the following call or
+				// we will get NULL for the session id.
+			MyString filetrans_session_id =
+				m_filetrans_session.secSessionId(/*ignore_session_info=*/ true);
+
+			rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+				WRITE,
+				filetrans_session_id.Value(),
+				m_filetrans_session.secSessionKey(),
+				NULL,
+				EXECUTE_SIDE_MATCHSESSION_FQU,
+				NULL,
+				0 /*don't expire*/ );
+
+			if( !rc ) {
+				dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session for %s, so will fall back on security negotiation\n",m_filetrans_session.publicClaimId());
+			}
+			else {
+					// fill in session_info so that starter will have
+					// enough info to create a security session
+					// compatible with the one we just created.
+				MyString session_info;
+				rc = daemonCore->getSecMan()->ExportSecSessionInfo(
+					filetrans_session_id.Value(),
+					session_info );
+
+				if( !rc ) {
+					dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to get session info for claim id %s\n",m_filetrans_session.publicClaimId());
+				}
+				else {
+					m_filetrans_session.setSecSessionInfo( session_info.Value() );
+				}
+			}
+		}
 	}
 }
 
@@ -1584,9 +1674,6 @@ RemoteResource::requestReconnect( void )
 		// We want this on the heap, since if this works, we're going
 		// to hold onto it and don't want it on the stack...
 	ReliSock* rsock = new ReliSock;
-		// we don't want to block forever trying to connect and
-		// reestablish contact.  We'll retry if we have to.
-	rsock->timeout(30);
 	ClassAd req;
 	ClassAd reply;
 	MyString msg;
@@ -1625,9 +1712,12 @@ RemoteResource::requestReconnect( void )
 			ATTR_TRANSFER_SOCKET );
 	}
 
+		// Use 30s timeout, because we don't want to block forever
+		// trying to connect and reestablish contact.  We'll retry if
+		// we have to.
 
 		// try the command itself...
-	if( ! starter.reconnect(&req, &reply, rsock) ) {
+	if( ! starter.reconnect(&req, &reply, rsock, 30, m_claim_session.secSessionId()) ) {
 		dprintf( D_ALWAYS, "Attempt to reconnect failed: %s\n", 
 				 starter.error() );
 		delete rsock;
@@ -1728,10 +1818,10 @@ RemoteResource::updateX509Proxy(const char * filename)
 
 	DCStarter::X509UpdateStatus ret = DCStarter::XUS_Error;
 	if ( param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) == true ) {
-		ret = starter.delegateX509Proxy(filename);
+		ret = starter.delegateX509Proxy(filename, m_claim_session.secSessionId());
 	}
 	if ( ret != DCStarter::XUS_Okay ) {
-		ret = starter.updateX509Proxy(filename);
+		ret = starter.updateX509Proxy(filename, m_claim_session.secSessionId());
 	}
 	switch(ret) {
 		case DCStarter::XUS_Error:
@@ -1772,3 +1862,35 @@ RemoteResource::checkX509Proxy( void )
 	updateX509Proxy(proxy_path.Value());
 }
 
+bool
+RemoteResource::getSecSessionInfo(
+	char const *starter_reconnect_session_info,
+	MyString &reconnect_session_id,
+	MyString &reconnect_session_info,
+	MyString &reconnect_session_key,
+	char const *starter_filetrans_session_info,
+	MyString &filetrans_session_id,
+	MyString &filetrans_session_info,
+	MyString &filetrans_session_key)
+{
+	if( !param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+		dprintf(D_ALWAYS,"Request for security session info from starter, but SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION is not True, so ignoring.\n");
+		return false;
+	}
+
+		// For the reconnect session, we have to use something stable that
+		// is guaranteed to be the same when the shadow restarts later
+		// and tries to reconnect to the starter.  Therefore, we use the
+		// main session created from the claim id that is already being
+		// used to talk to the startd.
+
+	reconnect_session_id = m_claim_session.secSessionId();
+	reconnect_session_info = m_claim_session.secSessionInfo();
+	reconnect_session_key = m_claim_session.secSessionKey();
+
+	filetrans_session_id = m_filetrans_session.secSessionId();
+	filetrans_session_info = m_filetrans_session.secSessionInfo();
+	filetrans_session_key = m_filetrans_session.secSessionKey();
+
+	return true;
+}

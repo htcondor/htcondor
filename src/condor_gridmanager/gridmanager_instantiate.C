@@ -26,6 +26,7 @@
 #include "simplelist.h"
 
 #include "gridmanager.h"
+#include "amazonresource.h"	// added by fangcao
 #include "basejob.h"
 #include "condorjob.h"
 #include "condorresource.h"
@@ -46,6 +47,7 @@
 template class List<NordugridJob>;
 template class Item<NordugridJob>;
 template class HashTable<HashKey, NordugridResource *>;
+template class HashTable<HashKey, AmazonResource *>;		// added by fangcao
 template class HashBucket<HashKey, NordugridResource *>;
 
 #if defined(ORACLE_UNIVERSE)
@@ -94,6 +96,8 @@ template class Item<GlobusJob>;
 
 template class HashTable<HashKey, GT4Resource *>;
 template class HashBucket<HashKey, GT4Resource *>;
+template class List<GT4Job>;
+template class Item<GT4Job>;
 
 template class HashTable<HashKey, CreamResource *>;
 template class HashBucket<HashKey, CreamResource *>;

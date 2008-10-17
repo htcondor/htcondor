@@ -134,6 +134,9 @@ const char *ATTR_CLUSTER_ID               = "ClusterId";
 const char *ATTR_AUTO_CLUSTER_ID			 = "AutoClusterId";
 const char *ATTR_AUTO_CLUSTER_ATTRS		 = "AutoClusterAttrs";
 const char *ATTR_COMPLETION_DATE			 = "CompletionDate";
+const char *ATTR_MATCHED_CONCURRENCY_LIMITS = "MatchedConcurrencyLimits";
+const char *ATTR_CONCURRENCY_LIMITS = "ConcurrencyLimits";
+const char *ATTR_PREEMPTING_CONCURRENCY_LIMITS = "PreemptingConcurrencyLimits";
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
 #define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
 const char *ATTR_CONSOLE_IDLE			 = "ConsoleIdle";
@@ -198,6 +201,7 @@ const char *ATTR_GLOBAL_JOB_ID            = "GlobalJobId";
 const char *ATTR_GZIP					 = "GZIP";
 const char *ATTR_GLOBUS_CONTACT_STRING	 = "GlobusContactString";
 const char *ATTR_GLOBUS_DELEGATION_URI	 = "GlobusDelegationUri";
+// Deprecated (cruft) -- no longer used
 const char *ATTR_GLOBUS_GRAM_VERSION		 = "GlobusGramVersion";
 const char *ATTR_GLOBUS_RESOURCE			 = "GlobusResource";
 const char *ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME = "GlobusResourceUnavailableTime";
@@ -224,6 +228,7 @@ const char *ATTR_MYPROXY_CRED_NAME		 = "MyProxyCredentialName";
 const char *ATTR_MYPROXY_REFRESH_THRESHOLD = "MyProxyRefreshThreshold";
 const char *ATTR_MYPROXY_NEW_PROXY_LIFETIME = "MyProxyNewProxyLifetime";
 // END ckireyev myproxy
+const char *ATTR_HARDWARE_ADDRESS         = "HardwareAddress";
 const char *ATTR_HAS_CHECKPOINTING        = "HasCheckpointing";
 const char *ATTR_HAS_FILE_TRANSFER        = "HasFileTransfer";
 const char *ATTR_HAS_PER_FILE_ENCRYPTION  = "HasPerFileEncryption";
@@ -287,7 +292,9 @@ const char *ATTR_JOB_JAVA_VM_ARGS1        = "JavaVMArgs";
 const char *ATTR_JOB_JAVA_VM_ARGS2        = "JavaVMArguments";
 const char *ATTR_ORIG_JOB_IWD				 = "OrigIwd";
 const char *ATTR_JOB_REMOTE_IWD			 = "RemoteIwd";
+const char *ATTR_JOB_LOAD_PROFILE           = "LoadProfile";
 const char *ATTR_JOB_RUNAS_OWNER			 = "RunAsOwner";
+const char *ATTR_JOB_LOAD_USER_PROFILE   = "LoadUserProfile";
 const char *ATTR_JOB_LOCAL_CPU			 = "LocalCpu";
 const char *ATTR_JOB_LOCAL_SYS_CPU		 = "LocalSysCpu";
 const char *ATTR_JOB_LOCAL_USER_CPU		 = "LocalUserCpu";
@@ -561,6 +568,11 @@ const char *ATTR_USER					 = "User";
 const char *ATTR_VACATE                   = "Vacate";
 const char *ATTR_VACATE_TYPE              = "VacateType";
 const char *ATTR_VIRTUAL_MEMORY           = "VirtualMemory";
+const char *ATTR_VISA_TIMESTAMP           = "VisaTimestamp";
+const char *ATTR_VISA_DAEMON_TYPE         = "VisaDaemonType";
+const char *ATTR_VISA_DAEMON_PID          = "VisaDaemonPID";
+const char *ATTR_VISA_HOSTNAME            = "VisaHostname";
+const char *ATTR_VISA_IP                  = "VisaIpAddr";
 const char *ATTR_WANT_CHECKPOINT		 	 = "WantCheckpoint";
 const char *ATTR_WANT_CLAIMING			 = "WantClaiming";
 const char *ATTR_WANT_IO_PROXY		= "WantIOProxy";
@@ -568,6 +580,8 @@ const char *ATTR_WANT_MATCH_DIAGNOSTICS	 = "WantMatchDiagnostics";
 const char *ATTR_WANT_PARALLEL_SCHEDULING_GROUPS	 = "WantParallelSchedulingGroups";
 const char *ATTR_WANT_REMOTE_SYSCALLS 	 = "WantRemoteSyscalls";
 const char *ATTR_WANT_REMOTE_IO 			 = "WantRemoteIO";
+const char *ATTR_WANT_SCHEDD_COMPLETION_VISA = "WantCompletionVisaFromSchedD";
+const char *ATTR_WANT_STARTER_EXECUTION_VISA = "WantExecutionVisaFromStarter";
 const char *ATTR_WANT_SUBMIT_NET_STATS	 = "WantSubmitNetStats";
 const char *ATTR_WANT_LAST_CKPT_SERVER_NET_STATS= "WantLastCkptServerNetStats";
 const char *ATTR_WANT_CKPT_SERVER_NET_STATS= "WantCkptServerNetStats";
@@ -653,11 +667,13 @@ const char *ATTR_SEC_PACKET_COUNT         = "PacketCount";
 const char *ATTR_SEC_NEGOTIATION          = "OutgoingNegotiation";
 const char *ATTR_SEC_VALID_COMMANDS       = "ValidCommands";
 const char *ATTR_SEC_SESSION_DURATION     = "SessionDuration";
+const char *ATTR_SEC_SESSION_EXPIRES      = "SessionExpires";
 const char *ATTR_SEC_USER                 = "User";
+const char *ATTR_SEC_MY_REMOTE_USER_NAME  = "MyRemoteUserName";
 const char *ATTR_SEC_NEW_SESSION          = "NewSession";
 const char *ATTR_SEC_USE_SESSION          = "UseSession";
 const char *ATTR_SEC_COOKIE               = "Cookie";
-extern const char * ATTR_SEC_AUTHENTICATED_USER = "AuthenticatedUser";
+const char * ATTR_SEC_TRIED_AUTHENTICATION = "TriedAuthentication";
 
 const char *ATTR_MULTIPLE_TASKS_PER_PVMD  = "MultipleTasksPerPvmd";
 
@@ -750,3 +766,18 @@ const char *ATTR_PREV_LAST_HEARD_FROM	= "PrevLastHeardFrom";
 const char *ATTR_TRY_AGAIN = "TryAgain";
 const char *ATTR_DOWNLOADING = "Downloading";
 const char *ATTR_TIMEOUT = "Timeout";
+
+
+//************* Added for Amazon Jobs ***************************//
+const char *ATTR_AMAZON_PUBLIC_KEY = "AmazonPublicKey";
+const char *ATTR_AMAZON_PRIVATE_KEY = "AmazonPrivateKey";
+const char *ATTR_AMAZON_AMI_ID = "AmazonAmiID";
+const char *ATTR_AMAZON_SECURITY_GROUPS = "AmazonSecurityGroups";
+const char *ATTR_AMAZON_KEY_PAIR_FILE = "AmazonKeyPairFile";
+const char *ATTR_AMAZON_USER_DATA = "AmazonUserData";
+const char *ATTR_AMAZON_USER_DATA_FILE = "AmazonUserDataFile";
+const char *ATTR_AMAZON_REMOTE_VM_NAME = "AmazonRemoteVirtualMachineName";
+const char *ATTR_AMAZON_INSTANCE_TYPE = "AmazonInstanceType";
+//************* End of changes for Amamzon Jobs *****************//
+
+

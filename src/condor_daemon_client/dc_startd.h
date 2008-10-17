@@ -63,11 +63,33 @@ public:
 		*/
 	char* getClaimId( void ) { return claim_id; };
 
+		/** This is the old-style way of requesting a claim, not the
+			"generic ClassAd" way, which currently only supports COD
+			claims.  In the terminology of the "generic ClassAd" way,
+			all non-COD claims are "opportunistic" claims, so that is
+			why this function is named the way it is.
+
+			You MUST call setClaimId() before calling this function.
+
+		    @param req_ad The initial job ad for this claim
+		    @param description for informative logging
+		    @param scheduler_addr Address to tell startd for contacting schedd
+		    @param alive_interval Seconds
+		    @param timeout Socket timeout.
+		    @param cb - callback object
+
+			To see the result of the request, check claimed_startd_success()
+			in the DCStartdMsg object, which may be obtained from the callback
+			object at callback time.
+		*/
+	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, classy_counted_ptr<DCMsgCallback> cb );
+
 		/** Send the command to this startd to deactivate the claim 
 			@param graceful Should we be graceful or forcful?
+			@param claim_is_closing startd indicates if not accepting more jobs
 			@return true on success, false on failure
 		 */
-	bool deactivateClaim( bool graceful = true );
+	bool deactivateClaim( bool graceful = true, bool *claim_is_closing=NULL );
 
 		/** Try to activate the claim on this started with the given
 			job ClassAd and version of the starter we want to use. 
@@ -142,5 +164,53 @@ public:
 	DCStartd& operator = ( const DCStartd& );
 
 };
+
+class ClaimStartdMsg: public DCMsg {
+public:
+	ClaimStartdMsg( char const *claim_id, ClassAd const *job_ad, char const *description, char const *scheduler_addr, int alive_interval );
+
+		// Functions that override DCMsg
+	bool writeMsg( DCMessenger *messenger, Sock *sock );
+	bool readMsg( DCMessenger *messenger, Sock *sock );
+	MessageClosureEnum messageSent(DCMessenger *messenger, Sock *sock );
+	void cancelMessage();
+
+	char const *description() {return m_description.Value();}
+	char const *claim_id() {return m_claim_id.Value();}
+
+		// Message results:
+	bool claimed_startd_success() { return m_reply == OK; }
+	char const *startd_ip_addr() {return m_startd_ip_addr.Value();}
+	char const *startd_fqu() {return m_startd_fqu.Value();}
+
+private:
+	MyString m_claim_id;
+	ClassAd m_job_ad;
+	MyString m_description;
+	MyString m_scheduler_addr;
+	int m_alive_interval;
+
+		// the startd's reply:
+	int m_reply;
+
+	MyString m_startd_ip_addr;
+	MyString m_startd_fqu;
+};
+
+
+/*
+ * DCClaimIdMsg is used in cases where we are sending a single claim id
+ */
+class DCClaimIdMsg: public DCMsg {
+public:
+	DCClaimIdMsg( int cmd, char const *claim_id );
+
+	bool writeMsg( DCMessenger *messenger, Sock *sock );
+	bool readMsg( DCMessenger *messenger, Sock *sock );
+
+private:
+	MyString m_claim_id;
+};
+
 
 #endif /* _CONDOR_DC_STARTD_H */

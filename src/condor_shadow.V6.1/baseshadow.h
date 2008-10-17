@@ -129,6 +129,12 @@ class BaseShadow : public Service
 		 */
 	virtual void gracefulShutDown( void ) = 0;
 
+		/** Get name of resource job is running on.  This is for
+			informational purposes only.  It may be empty if there
+			is no appropriate answer (and function will return false).
+		*/
+	virtual bool getMachineName( MyString &machineName );
+
 		/** Put this job on hold, if requested, notify the user about
 			it, and exit with the appropriate status so that the
 			schedd actually puts the job on hold.<p>
@@ -206,6 +212,8 @@ class BaseShadow : public Service
 	virtual float bytesReceived() { return 0.0; }
 
 	virtual int getExitReason( void ) = 0;
+
+	virtual bool claimIsClosing( void ) = 0;
 
 		/** Initializes the user log.  'Nuff said. 
 		 */

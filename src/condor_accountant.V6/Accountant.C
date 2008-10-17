@@ -31,6 +31,7 @@
 #include "enum_utils.h"
 #include "classad_log.h"
 #include "string_list.h"
+#include "HashTable.h"
 
 #define MIN_PRIORITY_FACTOR (1.0)
 
@@ -56,7 +57,8 @@ MyString Accountant::StartTimeAttr="StartTime";
 // Constructor - One time initialization
 //------------------------------------------------------------------
 
-Accountant::Accountant()
+Accountant::Accountant():
+	concurrencyLimits(256, MyStringHash, updateDuplicateKeys)
 {
   MinPriority=0.5;
   AcctLog=NULL;
@@ -460,11 +462,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   // Get resource name and the time
   MyString ResourceName=GetResourceName(ResourceAd);
   time_t T=time(0);
-  AddMatch(CustomerName,ResourceName,T);
-}
 
-void Accountant::AddMatch(const MyString& CustomerName, const MyString& ResourceName, time_t T)
-{
   // dprintf(D_ACCOUNTANT,"Accountant::AddMatch - CustomerName=%s, ResourceName=%s\n",CustomerName.Value(),ResourceName.Value());
 
   // Check if the resource is used
@@ -527,6 +525,13 @@ void Accountant::AddMatch(const MyString& CustomerName, const MyString& Resource
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
 
+  char *str;
+  if (ResourceAd->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS, &str)) {
+    SetAttributeString(ResourceRecord+ResourceName,ATTR_MATCHED_CONCURRENCY_LIMITS,str);
+    IncrementLimits(str);
+    free(str);
+  }    
+
   AcctLog->CommitTransaction();
 
   dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Added match between customer %s and resource %s\n",CustomerName.Value(),ResourceName.Value());
@@ -573,7 +578,6 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 			GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
 	  }
 	}
-
 
 	AcctLog->BeginTransaction();
     // Update customer's resource usage count
@@ -801,6 +805,9 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
   }
   ResourceList.Close();
 
+	  // Recalculate limits from the set of resources that are reporting
+  LoadLimits(ResourceList);
+
   return;
 }
 
@@ -912,6 +919,8 @@ AttrList* Accountant::ReportState() {
     OwnerNum++;
   }
 
+  ReportLimits(ad);
+
   sprintf(tmp,"NumSubmittors = %d", OwnerNum-1);
   ad->Insert(tmp, false);
   return ad;
@@ -945,18 +954,36 @@ MyString Accountant::GetResourceName(ClassAd* ResourceAd)
 }
 
 //------------------------------------------------------------------
+// Extract the resource's state
+//------------------------------------------------------------------
+
+bool Accountant::GetResourceState(ClassAd* ResourceAd, State& state)
+{
+  char *str;
+
+  if (!ResourceAd->LookupString(ATTR_STATE, &str)) {
+    return false;
+  }
+
+  state = string_to_state(str);
+
+  free(str);
+  return true;
+}
+
+//------------------------------------------------------------------
 // Check class ad of startd to see if it's claimed
 // return 1 if it is (and set CustomerName to its remote_user), otherwise 0
 //------------------------------------------------------------------
 
 int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
-  char state[16];
-  if (!ResourceAd->LookupString(ATTR_STATE, state)) {
+  State state;
+  if (!GetResourceState(ResourceAd, state)) {
     dprintf (D_ALWAYS, "Could not lookup state --- assuming not claimed\n");
     return 0;
   }
 
-  if (string_to_state(state)!=claimed_state) return 0;
+  if (state!=claimed_state && state!=preempting_state) return 0;
   
   char RemoteUser[512];
   if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser)) {
@@ -988,15 +1015,16 @@ int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
 //------------------------------------------------------------------
 
 int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName) {
-  char state[16];
-  if (!ResourceAd->LookupString(ATTR_STATE, state)) {
+  State state;
+  if (!GetResourceState(ResourceAd, state)) {
     dprintf (D_ALWAYS, "Could not lookup state --- assuming not claimed\n");
     return 0;
   }
 
-  if (string_to_state(state)==matched_state) return 1;
-  if (string_to_state(state)!=claimed_state) {
-    dprintf(D_ACCOUNTANT,"State was %s - not claimed or matched\n",state);
+  if (state==matched_state) return 1;
+  if (state!=claimed_state && state!=preempting_state) {
+	  dprintf(D_ACCOUNTANT,"State was %s - not claimed or matched\n",
+              state_to_string(state));
     return 0;
   }
 
@@ -1182,4 +1210,141 @@ MyString Accountant::GetDomain(const MyString& CustomerName)
   if (pos==-1) return S;
   S=CustomerName.Substr(pos+1,CustomerName.Length()-1);
   return S;
+}
+
+//------------------------------------------------------------------
+// Functions for accessing and changing Concurrency Limits
+//------------------------------------------------------------------
+
+void Accountant::LoadLimits(ClassAdList &resourceList)
+{
+	ClassAd *resourceAd;
+
+		// Wipe out all the knowledge of limits we think we know
+	dprintf(D_ACCOUNTANT, "Previous Limits --\n");
+	ClearLimits();
+
+		// Record all the limits that are actually in use in the pool
+	resourceList.Open();
+	while (NULL != (resourceAd = resourceList.Next())) {
+		char *limits = NULL;
+
+		if (resourceAd->LookupString(ATTR_CONCURRENCY_LIMITS, &limits)) {
+			IncrementLimits(limits);
+			free(limits); limits = NULL;
+		}
+
+		if (resourceAd->LookupString(ATTR_PREEMPTING_CONCURRENCY_LIMITS,
+									  &limits)) {
+			IncrementLimits(limits);
+			free(limits); limits = NULL;
+		}
+
+			// If the resource is just in the Matched state it will
+			// not have information about Concurrency Limits
+			// associated, but we have that information in the log.
+		State state;
+		if (GetResourceState(resourceAd, state) && matched_state == state) {
+			MyString name = GetResourceName(resourceAd);
+			MyString str;
+			GetAttributeString(ResourceRecord+name,ATTR_MATCHED_CONCURRENCY_LIMITS,str);
+			IncrementLimits(str);
+		}
+	}
+	resourceList.Close();
+
+		// Print out the new limits, at D_ACCOUNTANT. This is useful
+		// because the list printed from ClearLimits can be compared
+		// to see if anything may be going wrong
+	dprintf(D_ACCOUNTANT, "Current Limits --\n");
+	DumpLimits();
+}
+
+int Accountant::GetLimit(const MyString& limit)
+{
+	int count = 0;
+
+	if (-1 == concurrencyLimits.lookup(limit, count)) {
+		dprintf(D_ACCOUNTANT,
+				"Looking for Limit '%s' count, which does not exist\n",
+				limit.GetCStr());
+	}
+
+	return count;
+}
+
+int Accountant::GetLimitMax(const MyString& limit)
+{
+	return param_integer((limit + "_LIMIT").GetCStr(),
+						 param_integer("CONCURRENCY_LIMIT_DEFAULT",
+									   2308032));
+}
+
+void Accountant::DumpLimits()
+{
+	MyString limit;
+ 	int count;
+	concurrencyLimits.startIterations();
+	while (concurrencyLimits.iterate(limit, count)) {
+		dprintf(D_ACCOUNTANT, "  Limit: %s = %d\n", limit.GetCStr(), count);
+	}
+}
+
+void Accountant::ReportLimits(AttrList *attrList)
+{
+	MyString attr;
+	MyString limit;
+ 	int count;
+	concurrencyLimits.startIterations();
+	while (concurrencyLimits.iterate(limit, count)) {
+		attr.sprintf("ConcurrencyLimit.%s = %d\n", limit.GetCStr(), count);
+		attrList->Insert(attr.GetCStr());
+	}
+}
+
+void Accountant::ClearLimits()
+{
+	MyString limit;
+ 	int count;
+	concurrencyLimits.startIterations();
+	while (concurrencyLimits.iterate(limit, count)) {
+		concurrencyLimits.insert(limit, 0);
+		dprintf(D_ACCOUNTANT, "  Limit: %s = %d\n", limit.GetCStr(), count);
+	}
+}
+
+void Accountant::IncrementLimit(const MyString& limit)
+{
+	dprintf(D_ACCOUNTANT, "IncrementLimit(%s)\n", limit.GetCStr());
+	concurrencyLimits.insert(limit, GetLimit(limit) + 1);
+}
+
+void Accountant::DecrementLimit(const MyString& limit)
+{
+	dprintf(D_ACCOUNTANT, "DecrementLimit(%s)\n", limit.GetCStr());
+	concurrencyLimits.insert(limit, GetLimit(limit) - 1);
+}
+
+void Accountant::IncrementLimits(const MyString& limits)
+{
+	StringList list(limits.GetCStr());
+	char *limit;
+	MyString str;
+	list.rewind();
+	while ((limit = list.next())) {
+		str = limit;
+		IncrementLimit(str);
+	}
+}
+
+void Accountant::DecrementLimits(const MyString& limits)
+{
+	StringList list(limits.GetCStr());
+	char *limit;
+	MyString str;
+	list.rewind();
+	while ((limit = list.next())) {
+		str = limit;
+		DecrementLimit(str);
+	}
 }

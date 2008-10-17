@@ -229,3 +229,81 @@ MakePathAbsolute(MyString &filePath, MyString &errMsg)
 
 	return result;
 }
+
+//-------------------------------------------------------------------------
+int
+FindLastRescueDagNum( const char *primaryDagFile, bool multiDags,
+			int maxRescueDagNum )
+{
+	int lastRescue = 0;
+	bool done = false;
+
+	for ( int test = 1; test <= maxRescueDagNum; test++ ) {
+		MyString testName = RescueDagName( primaryDagFile, multiDags,
+					test );
+		if ( access( testName.Value(), F_OK ) == 0 ) {
+			if ( test > lastRescue + 1 ) {
+				dprintf( D_ALWAYS, "Warning: found rescue DAG "
+							"number %d, but not rescue DAG number %d\n",
+							test, test - 1);
+			}
+			lastRescue = test;
+		}
+	}
+	
+	if ( lastRescue >= maxRescueDagNum ) {
+		dprintf( D_ALWAYS,
+					"Warning: FindLastRescueDagNum() hit maximum "
+					"rescue DAG number: %d\n", maxRescueDagNum );
+		done = true;
+	}
+
+	return lastRescue;
+}
+
+//-------------------------------------------------------------------------
+MyString
+RescueDagName(const char *primaryDagFile, bool multiDags,
+			int rescueDagNum)
+{
+	ASSERT( rescueDagNum >= 1 );
+
+	MyString fileName(primaryDagFile);
+	if ( multiDags ) {
+		fileName += "_multi";
+	}
+	fileName += ".rescue";
+	fileName.sprintf_cat( "%.3d", rescueDagNum );
+
+	return fileName;
+}
+
+//-------------------------------------------------------------------------
+void
+RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags,
+			int rescueDagNum, int maxRescueDagNum)
+{
+		// Need to allow 0 here so condor_submit_dag -f can rename all
+		// rescue DAGs.
+	ASSERT( rescueDagNum >= 0 );
+
+	dprintf( D_ALWAYS, "Renaming rescue DAGs newer than number %d\n",
+				rescueDagNum );
+
+	int firstToDelete = rescueDagNum + 1;
+	int lastToDelete = FindLastRescueDagNum( primaryDagFile, multiDags,
+				maxRescueDagNum );
+
+	for ( int rescueNum = firstToDelete; rescueNum <= lastToDelete;
+				rescueNum++ ) {
+		MyString rescueDagName = RescueDagName( primaryDagFile, multiDags,
+					rescueNum );
+		dprintf( D_ALWAYS, "Renaming %s\n", rescueDagName.Value() );
+		MyString newName = rescueDagName + ".old";
+		if ( rename( rescueDagName.Value(), newName.Value() ) != 0 ) {
+			EXCEPT( "Fatal error: unable to rename old rescue file "
+						"%s: error %d (%s)\n", rescueDagName.Value(),
+						errno, strerror( errno ) );
+		}
+	}
+}

@@ -79,7 +79,7 @@ store_cred_handler(Service * service, int i, Stream *stream) {
 
   CredentialWrapper * cred_wrapper;
 
-  if (!socket->isAuthenticated()) { 
+  if (!socket->triedAuthentication()) { 
     CondorError errstack;
     if( ! SecMan::authenticate_sock(socket, WRITE, &errstack) ) {
       dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
@@ -234,7 +234,7 @@ get_cred_handler(Service * service, int i, Stream *stream) {
   ReliSock * socket = (ReliSock*)stream;
 
   // Authenticate
-  if (!socket->isAuthenticated()) {
+  if (!socket->triedAuthentication()) {
     CondorError errstack;
     if( ! SecMan::authenticate_sock(socket, READ, &errstack) ) {
       dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
@@ -349,7 +349,7 @@ query_cred_handler(Service * service, int i, Stream *stream) {
   const char * user;
 
 
-  if (!socket->isAuthenticated()) {
+  if (!socket->triedAuthentication()) {
     CondorError errstack;
     if( ! SecMan::authenticate_sock(socket, READ, &errstack) ) {
       dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
@@ -424,7 +424,7 @@ rm_cred_handler(Service * service, int i, Stream *stream) {
 
   ReliSock * socket = (ReliSock*)stream;
 
-  if (!socket->isAuthenticated()) {
+  if (!socket->triedAuthentication()) {
     CondorError errstack;
     if( ! SecMan::authenticate_sock(socket, READ, &errstack) ) {
       dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");

@@ -116,6 +116,7 @@ Scheduler::config() {
 	char *update_interval_str = param("UPDATE_INTERVAL");
 	if(update_interval_str) {
 		update_interval = atoi(update_interval_str);
+		free(update_interval_str);
 	}
 	if(m_public_ad_update_interval != update_interval) {
 		m_public_ad_update_interval = update_interval;

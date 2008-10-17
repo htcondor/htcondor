@@ -400,7 +400,7 @@ Type="System" ;; run as the System account
 ;--- Set directory Permissions ----------------------------------------------
 ;-------- Set INSTALLDIR perms first ---
 #(
-<$ExeCa EXE=^[INSTALLDIR]condor_set_acls.exe^ Args=^[INSTALLDIR_NTS]^ 
+<$ExeCa EXE=^[INSTALLDIR]condor_set_acls.exe^ Args=^"[INSTALLDIR_NTS]"^ 
 WorkDir="INSTALLDIR" Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
 Seq="InstallServices-"
 Rc0="N"       ;; On Vista this app will not return any useful results

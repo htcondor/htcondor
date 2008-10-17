@@ -186,26 +186,12 @@ public:
     ///
 	virtual int peek(char &);
 
-	/// This is called when using an existing session.
-	virtual void setFullyQualifiedUser(char const * u);
-
     ///
-	int authenticate( const char* methods, CondorError* errstack );
+	int authenticate( const char* methods, CondorError* errstack, int auth_timeout );
     ///
-	int authenticate( KeyInfo *& key, const char* methods, CondorError* errstack );
-    ///
-    virtual const char * getFullyQualifiedUser() const;
-    ///
-	const char *getOwner();
-    ///
-	const char *getDomain();
+	int authenticate( KeyInfo *& key, const char* methods, CondorError* errstack, int auth_timeout );
     ///
     const char * getHostAddress();
-    ///
-	int isAuthenticated() const;
-    ///
-	void unAuthenticate();
-	///
 	
 	int encrypt(bool);
 	///
@@ -241,7 +227,8 @@ protected:
 
 	int prepare_for_nobuffering( stream_coding = stream_unknown);
 	int perform_authenticate( bool with_key, KeyInfo *& key, 
-							  const char* methods, CondorError* errstack );
+							  const char* methods, CondorError* errstack,
+							  int auth_timeout );
 
 	// This is used internally to recover sanity on the stream after
 	// failing to open a file in put_file().
@@ -300,13 +287,6 @@ protected:
 	Authentication * authob;
 	int is_client;
 	char *hostAddr;
-
-	// These user name variables are only set if authob is NULL.
-	// This means we got these values from our parent, or from an
-	// existing security session.
-    char * _fqu;
-	char * _user;
-	char * _domain;
 };
 
 #endif

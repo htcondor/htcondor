@@ -70,6 +70,7 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_get_job_attr: return "get_job_attr";
         case CONDOR_set_job_attr: return "set_job_attr";
         case CONDOR_constrain: return "constrain";
+        case CONDOR_get_sec_session_info: return "get_sec_session_info";
 	}
 	return "unknown";
 }
@@ -840,6 +841,60 @@ do_REMOTE_syscall()
 		}
 		free( (char *)expr );
 		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+	case CONDOR_get_sec_session_info:
+	{
+		MyString starter_reconnect_session_info;
+		MyString starter_filetrans_session_info;
+		MyString reconnect_session_id;
+		MyString reconnect_session_info;
+		MyString reconnect_session_key;
+		MyString filetrans_session_id;
+		MyString filetrans_session_info;
+		MyString filetrans_session_key;
+		bool socket_default_crypto = syscall_sock->get_encryption();
+		if( !socket_default_crypto ) {
+				// always encrypt; we are exchanging super secret session keys
+			syscall_sock->set_crypto_mode(true);
+		}
+		assert( syscall_sock->code(starter_reconnect_session_info) );
+		assert( syscall_sock->code(starter_filetrans_session_info) );
+		assert( syscall_sock->end_of_message() );
+
+		errno = (condor_errno_t)0;
+		rval = pseudo_get_sec_session_info(
+			starter_reconnect_session_info.Value(),
+			reconnect_session_id,
+			reconnect_session_info,
+			reconnect_session_key,
+			starter_filetrans_session_info.Value(),
+			filetrans_session_id,
+			filetrans_session_info,
+			filetrans_session_key );
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		else {
+			assert( syscall_sock->code(reconnect_session_id) );
+			assert( syscall_sock->code(reconnect_session_info) );
+			assert( syscall_sock->code(reconnect_session_key) );
+
+			assert( syscall_sock->code(filetrans_session_id) );
+			assert( syscall_sock->code(filetrans_session_info) );
+			assert( syscall_sock->code(filetrans_session_key) );
+		}
+
+		assert( syscall_sock->end_of_message() );
+
+		if( !socket_default_crypto ) {
+			syscall_sock->set_crypto_mode( false );  // restore default
+		}
 		return 0;
 	}
 

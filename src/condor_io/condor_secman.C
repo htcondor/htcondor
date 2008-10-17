@@ -39,13 +39,13 @@
 #include "classad_merge.h"
 #include "daemon.h"
 #include "daemon_core_sock_adapter.h"
+#include "subsystem_info.h"
 #include "setenv.h"
 
-extern char* mySubSystem;
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
-template class HashTable<MyString, class SecManStartCommand *>;
-template class SimpleList<class SecManStartCommand *>;
+template class HashTable<MyString, classy_counted_ptr<SecManStartCommand> >;
+template class SimpleList<classy_counted_ptr<SecManStartCommand> >;
 
 void SecMan::key_printf(int debug_levels, KeyInfo *k) {
 	if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
@@ -87,12 +87,11 @@ char* SecMan::sec_req_rev[] = {
 
 KeyCache* SecMan::session_cache = NULL;
 HashTable<MyString,MyString>* SecMan::command_map = NULL;
-HashTable<MyString,class SecManStartCommand *>* SecMan::tcp_auth_in_progress = NULL;
+HashTable<MyString,classy_counted_ptr<SecManStartCommand> >* SecMan::tcp_auth_in_progress = NULL;
 int SecMan::sec_man_ref_count = 0;
 char* SecMan::_my_unique_id = 0;
 char* SecMan::_my_parent_unique_id = 0;
 bool SecMan::_should_check_env_for_unique_id = true;
-bool SecMan::m_ipverify_initialized = false;
 IpVerify SecMan::m_ipverify;
 
 SecMan::sec_req
@@ -345,7 +344,7 @@ SecMan::getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level,
 
 bool
 SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad, 
-								bool other_side_can_negotiate )
+								bool peer_can_negotiate, bool raw_protocol )
 {
 	if( ! ad ) {
 		EXCEPT( "SecMan::FillInSecurityPolicyAd called with NULL ad!" );
@@ -379,6 +378,13 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 
 	sec_req sec_negotiation = sec_req_param ("SEC_%s_NEGOTIATION", auth_level, SEC_REQ_PREFERRED);
 
+	if( raw_protocol ) {
+		sec_negotiation = SEC_REQ_NEVER;
+		sec_authentication = SEC_REQ_NEVER;
+		sec_encryption = SEC_REQ_NEVER;
+		sec_integrity = SEC_REQ_NEVER;
+	}
+
 
 	if (!ReconcileSecurityDependency (sec_authentication, sec_encryption) ||
 		!ReconcileSecurityDependency (sec_authentication, sec_integrity) ||
@@ -402,7 +408,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// if we require negotiation and we know the other side can't speak
 	// security negotiation, may as well fail now (as opposed to later)
 	if( sec_negotiation == SEC_REQ_REQUIRED && 
-		other_side_can_negotiate == FALSE ) {
+		peer_can_negotiate == FALSE ) {
 		dprintf (D_SECURITY, "SECMAN: failure! SEC_NEGOTIATION "
 				"is REQUIRED and other daemon is pre 6.3.3.\n");
 		return false;
@@ -477,7 +483,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 
 
 	// subsystem
-	ad->Assign ( ATTR_SEC_SUBSYSTEM, mySubSystem );
+	ad->Assign ( ATTR_SEC_SUBSYSTEM, mySubSystem->getName() );
 
     char * parent_id = my_parent_unique_id();
     if (parent_id) {
@@ -501,7 +507,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// if that does not exist, fall back to old form of
 	// SEC_<authlev>_SESSION_DURATION.
 	char fmt[128];
-	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", mySubSystem);
+	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", mySubSystem->getName() );
 	paramer = SecMan::getSecSetting(fmt, auth_level);
 	if (!paramer) {
 		paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
@@ -514,17 +520,21 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		paramer = NULL;
 	} else {
 		// no value defined, use defaults.
-		if (strcmp(mySubSystem, "TOOL") == 0) {
+		if ( mySubSystem->isType(SUBSYSTEM_TYPE_TOOL) ) {
 			// default for tools is 1 minute.
 			ad->Assign ( ATTR_SEC_SESSION_DURATION, "60" );
-		} else if (strcmp(mySubSystem, "SUBMIT") == 0) {
+		} else if ( mySubSystem->isType(SUBSYSTEM_TYPE_SUBMIT) ) {
 			// default for submit is 1 hour.  yeah, that's a long submit
 			// but you never know with file transfer and all.
 			ad->Assign ( ATTR_SEC_SESSION_DURATION, "3600" );
 		} else {
-			// default for daemons is 100 days.  this is a temporary workaround
-			// for 6.6.X until automatic re-negotiation is implemented.
-			ad->Assign ( ATTR_SEC_SESSION_DURATION, "8640000" );
+			// default for daemons is one day.
+
+			// Note that pre 6.6 condors have bugs with re-negotiation
+			// of security sessions, so we used to set this to 100 days.
+			// That caused memory bloating for dynamic pools.  
+
+			ad->Assign ( ATTR_SEC_SESSION_DURATION, "86400" );
 		}
 	}
 
@@ -775,18 +785,18 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 
 }
 
-
-class SecManStartCommand: Service {
+class SecManStartCommand: Service, public ClassyCountedPtr {
  public:
 	SecManStartCommand (
-		int cmd,Sock *sock,bool can_negotiate,
+		int cmd,Sock *sock,bool peer_can_negotiate,bool raw_protocol,
 		CondorError *errstack,int subcmd,StartCommandCallbackType *callback_fn,
-		void *misc_data,bool nonblocking,SecMan *sec_man):
+		void *misc_data,bool nonblocking,char const *cmd_description,char const *sec_session_id_hint,SecMan *sec_man):
 
 		m_cmd(cmd),
 		m_subcmd(subcmd),
 		m_sock(sock),
-		m_can_negotiate(can_negotiate),
+		m_peer_can_negotiate(peer_can_negotiate),
+		m_raw_protocol(raw_protocol),
 		m_errstack(errstack),
 		m_callback_fn(callback_fn),
 		m_misc_data(misc_data),
@@ -794,25 +804,53 @@ class SecManStartCommand: Service {
 		m_pending_socket_registered(false),
 		m_sec_man(*sec_man)
 	{
-		m_refcount = 1;
+		m_sec_session_id_hint = sec_session_id_hint ? sec_session_id_hint : "";
 		m_already_tried_TCP_auth = false;
+		if( !m_errstack ) {
+			m_errstack = &m_internal_errstack;
+		}
+		m_is_tcp = (m_sock->type() == Stream::reli_sock);
+		m_have_session = false;
+		m_new_session = false;
+		m_state = SendAuthInfo;
+		m_enc_key = NULL;
+		m_private_key = NULL;
+		if(cmd_description) {
+			m_cmd_description = cmd_description;
+		}
+		else {
+			cmd_description = getCommandString(m_cmd);
+			if(cmd_description) {
+				m_cmd_description = cmd_description;
+			}
+			else {
+				m_cmd_description.sprintf("command %d",m_cmd);
+			}
+		}
+		m_already_logged_startcommand = false;
+		m_negotiation = SecMan::SEC_REQ_UNDEFINED;
+	}
+
+	~SecManStartCommand() {
+		if( m_pending_socket_registered ) {
+			m_pending_socket_registered = false;
+			daemonCoreSockAdapter.decrementPendingSockets();
+		}
+		if( m_private_key ) {
+			delete m_private_key;
+			m_private_key = NULL;
+		}
+			// The callback function _must_ have been called
+			// (and set to NULL) by now.
+		ASSERT( !m_callback_fn );
 	}
 
 		// This function starts a command, as specified by the data
 		// passed into the constructor.  The real work is done in
-		// startCommand_inner(), but this function exits to guarantee
+		// startCommand_inner(), but this function exists to guarantee
 		// correct cleanup (e.g. calling callback etc.)
 	StartCommandResult startCommand();
 
-	void IncRefCount() {
-		m_refcount++;
-	}
-	void DecRefCount() {
-		ASSERT(m_refcount > 0);
-		if(--m_refcount == 0) {
-			delete this;
-		}
-	}
 	void incrementPendingSockets() {
 			// This is called to let daemonCore know that we are holding
 			// onto a socket which is waiting for some callback other than
@@ -824,26 +862,22 @@ class SecManStartCommand: Service {
 		}
 	}
 
-	~SecManStartCommand() {
-		if( m_pending_socket_registered ) {
-			m_pending_socket_registered = false;
-			daemonCoreSockAdapter.decrementPendingSockets();
-		}
-		if(m_nonblocking && !m_callback_fn) {
-			DestructCallerData();
-		}
+	int operator== (const SecManStartCommand &other) {
+			// We do not care about a deep comparison.
+			// This is just to make the compiler happy on
+			// SimpleList< classy_counted_ptr< SecManStartCommand > >
+		return this == &other;
 	}
-
-		// This deletes sock and errstack.  It is called when in
-		// non-blocking mode when there is no callback function.
-	void DestructCallerData();
 
  private:
 	int m_cmd;
 	int m_subcmd;
+	MyString m_cmd_description;
 	Sock *m_sock;
-	bool m_can_negotiate;
-	CondorError* m_errstack;
+	bool m_peer_can_negotiate;
+	bool m_raw_protocol;
+	CondorError* m_errstack; // caller's errstack, if any, o.w. internal
+	CondorError m_internal_errstack;
 	StartCommandCallbackType *m_callback_fn;
 	void *m_misc_data;
 	bool m_nonblocking;
@@ -854,45 +888,71 @@ class SecManStartCommand: Service {
 
 	MyString m_session_key; // "addr,<cmd>"
 	bool m_already_tried_TCP_auth;
-	SimpleList<SecManStartCommand *> m_waiting_for_tcp_auth;
+	SimpleList<classy_counted_ptr<SecManStartCommand> > m_waiting_for_tcp_auth;
+	classy_counted_ptr<SecManStartCommand> m_tcp_auth_command;
 
-	int m_refcount;
+	bool m_is_tcp;
+	bool m_have_session;
+	bool m_new_session;
+	bool m_already_logged_startcommand;
+	ClassAd m_auth_info;
+	SecMan::sec_req m_negotiation;
+	MyString m_remote_version;
+	KeyCacheEntry *m_enc_key;
+	KeyInfo* m_private_key;
+	MyString m_sec_session_id_hint;
 
-		// This wraps startCommand_inner_noauth().  This function
-		// ensures that the client authorizes the server.  The caller
-		// of this function must ensure correct cleanup (e.g. callback
-		// function being called etc.)
-	StartCommandResult startCommand_inner();
+	enum StartCommandState {
+		SendAuthInfo,
+		ReceiveAuthInfo,
+		Authenticate,
+		ReceivePostAuthInfo,
+	} m_state;
+
+		// All functions that call _inner() functions must
+		// pass the result of the _inner() function to doCallback().
+		// This ensures that when SecManStartCommand is done, the
+		// registered callback function will be called in all cases.
+	StartCommandResult doCallback( StartCommandResult result );
 
 		// This does most of the work of the startCommand() protocol.
 		// It is called from within a wrapper function that guarantees
 		// correct cleanup (e.g. callback function being called etc.)
-	StartCommandResult startCommand_inner_noauth();
+	StartCommandResult startCommand_inner();
 
-		// This is called when the TCP auth socket is connected.
-		// This function guarantees correct cleanup.
-	int TCPAuthConnected( Stream *stream );
+		// When trying to start a UDP command, this is called to first
+		// get a security session via TCP.  It will continue with the
+		// rest of the startCommand protocol once the TCP auth attempt
+		// is completed.
+	StartCommandResult DoTCPAuth_inner();
 
-		// This is called to do the TCP auth command.
-		// It is called from within a wrapper function that guarantees
-		// correct cleanup (e.g. callback function being called etc.)
-	StartCommandResult TCPAuthConnected_inner( Sock *tcp_auth_sock, bool *auth_succeeded=NULL );
+		// These functions are called at successive stages in the protocol.
+	StartCommandResult sendAuthInfo_inner();
+	StartCommandResult receiveAuthInfo_inner();
+	StartCommandResult authenticate_inner();
+	StartCommandResult receivePostAuthInfo_inner();
+
+		// This is called when the TCP auth attempt completes.
+	static void TCPAuthCallback(bool success,Sock *sock,CondorError *errstack,void *misc_data);
+
+		// This is the _inner() function for TCPAuthCallback().
+	StartCommandResult TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_sock );
 
 		// This is called when we were waiting for another
-		// instance to finish a TCP auth session.  This
-		// function guarantees correct cleanup.
+		// instance to finish a TCP auth session.
 	void ResumeAfterTCPAuth(bool auth_succeeded);
 
-		// This is called either after finishing our own TCP auth
-		// session, or after waiting for another instance to finish a
-		// TCP auth session that we can use.  It is called from within
-		// a wrapper function that guarantees correct cleanup
-		// (e.g. callback function being called etc.)
-	StartCommandResult ResumeAfterTCPAuth_inner();
+		// This is called when we want to wait for a
+		// non-blocking socket operation to complete.
+	StartCommandResult WaitForSocketCallback();
+
+		// This is where we get called back when a
+		// non-blocking socket operation finishes.
+	int SocketCallback( Stream *stream );
 };
 
 StartCommandResult
-SecMan::startCommand( int cmd, Sock* sock, bool can_neg, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking)
+SecMan::startCommand( int cmd, Sock* sock, bool peer_can_negotiate, bool raw_protocol, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description,char const *sec_session_id_hint)
 {
 	// This function is simply a convenient wrapper around the
 	// SecManStartCommand class, which does the actual work.
@@ -901,66 +961,22 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_neg, CondorError* errstack, 
 	// The blocking case could avoid use of the heap, but for simplicity,
 	// we just do the same in both cases.
 
-	SecManStartCommand *sc = new SecManStartCommand(cmd,sock,can_neg,errstack,subcmd,callback_fn,misc_data,nonblocking,this);
+	classy_counted_ptr<SecManStartCommand> sc = new SecManStartCommand(cmd,sock,peer_can_negotiate, raw_protocol,errstack,subcmd,callback_fn,misc_data,nonblocking,cmd_description,sec_session_id_hint,this);
 
-	ASSERT(sc);
+	ASSERT(sc.get());
 
-	StartCommandResult rc = sc->startCommand();
-
-		// We are done with this instance of the StartCommand class,
-		// but someone else might be using it (i.e. a non-blocking
-		// operation may be in progress), so just release our reference
-		// to it, rather than deleting it.
-	sc->DecRefCount();
-
-	return rc;
-}
-
-
-StartCommandResult
-SecManStartCommand::startCommand()
-{
-	// NOTE: if there is a callback function, we _must_ guarantee that it is
-	// eventually called in all code paths.
-
-	// never deallocate this class until we release this reference
-	IncRefCount();
-
-	StartCommandResult rc = startCommand_inner();
-
-	if(rc == StartCommandInProgress) {
-		// do nothing
-	}
-	else if(m_callback_fn) {
-		bool success = rc == StartCommandSucceeded;
-		(*m_callback_fn)(success,m_sock,m_errstack,m_misc_data);
-
-		// We just called back with the success/failure code.  Therefore,
-		// we simply return success to indicate that we successfully
-		// called back.
-		rc = StartCommandSucceeded;
-	}
-
-	// we are done with this; if everyone else is too, then destruct
-	DecRefCount();
-
-	return rc;
+	return sc->startCommand();
 }
 
 StartCommandResult
-SecManStartCommand::startCommand_inner()
+SecManStartCommand::doCallback( StartCommandResult result )
 {
+		// StartCommandContinue is for internal use and should never be the
+		// final status returned to the caller.
+	ASSERT( result != StartCommandContinue );
 
-	// NOTE: the caller of this function must ensure that
-	// the m_callback_fn is called (if there is one).
-
-	ASSERT(m_sock);
-	ASSERT(m_errstack);
-
-	StartCommandResult rc = startCommand_inner_noauth();
-
-	if( rc == StartCommandSucceeded ) {
-			// Check out policy to make sure the server we have just
+	if( result == StartCommandSucceeded ) {
+			// Check our policy to make sure the server we have just
 			// connected to is authorized.
 
 		char const *server_fqu = m_sock->getFullyQualifiedUser();
@@ -978,107 +994,221 @@ SecManStartCommand::startCommand_inner()
 			server_fqu );
 
 		if( authorized != USER_AUTH_SUCCESS ) {
-			dprintf( D_ALWAYS,
+			m_errstack->pushf("SECMAN", SECMAN_ERR_CLIENT_AUTH_FAILED,
 			         "DENIED authorization of server '%s/%s' (I am acting as "
 			         "the client).\n",
 					 server_fqu ? server_fqu : "*",
 					 m_sock->endpoint_ip_str() );
-			rc = StartCommandFailed;
+			result = StartCommandFailed;
 		}
 	}
 
-	return rc;
+	if( result == StartCommandFailed && m_errstack == &m_internal_errstack ) {
+			// caller did not provide an errstack, so print out the
+			// internal one
+
+		char const *error_msg = m_internal_errstack.getFullText();
+		if(error_msg && *error_msg) {
+			dprintf(D_ALWAYS, "ERROR: %s\n",error_msg);
+		}
+	}
+
+
+
+	if(result == StartCommandInProgress) {
+			// Do nothing.
+			// We will (MUST) be called again in the future
+			// once the final result is known.
+
+		if(!m_callback_fn) {
+				// Caller wants us to go ahead and get a session key,
+				// but caller will try sending the UDP command later,
+				// rather than dealing with a callback.
+			result = StartCommandWouldBlock;
+		}
+	}
+	else if(m_callback_fn) {
+		bool success = result == StartCommandSucceeded;
+		CondorError *cb_errstack = m_errstack == &m_internal_errstack ?
+		                           NULL : m_errstack;
+		(*m_callback_fn)(success,m_sock,cb_errstack,m_misc_data);
+
+		m_callback_fn = NULL;
+		m_misc_data = NULL;
+
+			// Caller is responsible for deallocating the following
+			// in the callback, so do not point to them anymore.
+		m_errstack = &m_internal_errstack;
+		m_sock = NULL;
+
+			// We just called back with the success/failure code.
+			// Therefore, we simply return success to indicate that we
+			// successfully called back.
+		result = StartCommandSucceeded;
+	}
+
+	if( result == StartCommandWouldBlock ) {
+			// It is caller's responsibility to delete socket when we
+			// return StartCommandWouldBlock, so ensure that we never
+			// reference the socket again from now on.
+		m_sock = NULL;
+	}
+
+	return result;
 }
 
 StartCommandResult
-SecManStartCommand::startCommand_inner_noauth()
+SecManStartCommand::startCommand()
 {
+	// NOTE: if there is a callback function, we _must_ guarantee that it is
+	// eventually called in all code paths leading from here.
 
-	// NOTE: the caller of this function must ensure that
-	// the m_callback_fn is called (if there is one).
+	// prevent *this from being deleted while this function is executing
+	classy_counted_ptr<SecManStartCommand> self = this;
+
+	return doCallback( startCommand_inner() );
+}
+
+StartCommandResult
+SecManStartCommand::startCommand_inner()
+{
+	// NOTE: like all _inner() functions, the caller of this function
+	// must ensure that the m_callback_fn is called (if there is one).
 
 	ASSERT(m_sock);
 	ASSERT(m_errstack);
 
-	dprintf ( D_SECURITY, "SECMAN: %scommand %i to %s on %s port %i (%s).\n",
-			  m_already_tried_TCP_auth ? "resuming " : "",
+	dprintf ( D_SECURITY, "SECMAN: %scommand %i %s to %s from %s port %i (%s%s).\n",
+			  m_already_logged_startcommand ? "resuming " : "",
 			  m_cmd,
-			  sin_to_string(m_sock->endpoint()),
-			  (m_sock->type() == Stream::safe_sock) ? "UDP" : "TCP",
+			  m_cmd_description.Value(),
+			  m_sock->peer_description(),
+			  m_is_tcp ? "TCP" : "UDP",
 			  m_sock->get_port(),
-			  m_nonblocking ?  "non-blocking" : "blocking");
+			  m_nonblocking ?  "non-blocking" : "blocking",
+			  m_raw_protocol ? ", raw" : "");
+
+	m_already_logged_startcommand = true;
 
 
-	// get this value handy
-	bool is_tcp = (m_sock->type() == Stream::reli_sock);
+	if( m_nonblocking && m_sock->is_connect_pending() ) {
+		dprintf(D_SECURITY,"SECMAN: waiting for TCP connection to %s.\n",
+				m_sock->peer_description());
+		return WaitForSocketCallback();
+	}
+	else if( m_is_tcp && !m_sock->is_connected()) {
+		dprintf(D_SECURITY,"SECMAN: TCP connection to %s failed",
+				m_sock->peer_description());
+		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
+		                "TCP connection to %s failed\n",
+		                m_sock->peer_description());
 
+		return StartCommandFailed;
+	}
 
-	// need a temp buffer handy throughout.
-	char buf[1024];
+		// The following loop executes each part of the protocol in the
+		// correct order.  In non-blocking mode, one of the functions
+		// may return StartCommandInProgress, in which case we return
+		// and wait to be called back to resume where we left off.
 
-	// this one is a temp for storing key ids
-	char keybuf[128];
+	StartCommandResult result = StartCommandSucceeded;
+	do {
+		switch( m_state ) {
+		case SendAuthInfo:
+			result = sendAuthInfo_inner();
+			break;
+		case ReceiveAuthInfo:
+			result = receiveAuthInfo_inner();
+			break;
+		case Authenticate:
+			result = authenticate_inner();
+			break;
+		case ReceivePostAuthInfo:
+			result = receivePostAuthInfo_inner();
+			break;
+		default:
+			EXCEPT("Unexpected state in SecManStartCommand: %d\n",m_state);
+		}
+	} while( result == StartCommandContinue );
 
-	bool have_session = false;
-	bool new_session = false;
+	return result;
+}
 
+bool
+SecMan::LookupNonExpiredSession(char const *session_id, KeyCacheEntry *&session_key)
+{
+	if(!session_cache->lookup(session_id,session_key)) {
+		return false;
+	}
+
+		// check the expiration.
+	time_t cutoff_time = time(0);
+	if (session_key->expiration() && session_key->expiration() <= cutoff_time) {
+		session_cache->expire(session_key);
+		session_key = NULL;
+		return false;
+	}
+	return true;
+}
+
+StartCommandResult
+SecManStartCommand::sendAuthInfo_inner()
+{
 
 	// find out if we have a session id to use for this command
-	KeyCacheEntry *enc_key = NULL;
 
 	MyString sid;
-	sprintf (keybuf, "{%s,<%i>}", sin_to_string(m_sock->endpoint()), m_cmd);
-	m_session_key = keybuf;
-	bool found_map_ent = (m_sec_man.command_map->lookup(keybuf, sid) == 0);
-	if (found_map_ent) {
-		dprintf (D_SECURITY, "SECMAN: using session %s for %s.\n", sid.Value(), keybuf);
-		// we have the session id, now get the session from the cache
-		have_session = m_sec_man.session_cache->lookup(sid.Value(), enc_key);
 
-		if (have_session) {
-			// check the expiration.
-			time_t cutoff_time = time(0);
-			if (enc_key->expiration() && enc_key->expiration() <= cutoff_time) {
-				m_sec_man.session_cache->expire(enc_key);
-				have_session = false;
-				enc_key = NULL;
-			}
-		} else {
+	sid = m_sec_session_id_hint;
+	if( sid.Value()[0] && !m_raw_protocol ) {
+		m_have_session = m_sec_man.LookupNonExpiredSession(sid.Value(), m_enc_key);
+		if( m_have_session ) {
+			dprintf(D_SECURITY,"Using requested session %s.\n",sid.Value());
+		}
+		else {
+			dprintf(D_SECURITY,"Ignoring requested session, because it does not exist: %s\n",sid.Value());
+		}
+	}
+
+	m_session_key.sprintf ("{%s,<%i>}", m_sock->get_sinful_peer(), m_cmd);
+	bool found_map_ent = false;
+	if( !m_have_session && !m_raw_protocol ) {
+		found_map_ent = (m_sec_man.command_map->lookup(m_session_key, sid) == 0);
+	}
+	if (found_map_ent) {
+		dprintf (D_SECURITY, "SECMAN: using session %s for %s.\n", sid.Value(), m_session_key.Value());
+		// we have the session id, now get the session from the cache
+		m_have_session = m_sec_man.LookupNonExpiredSession(sid.Value(), m_enc_key);
+
+		if(!m_have_session) {
 			// the session is no longer in the cache... might as well
 			// delete this mapping to it.  (we could delete them all, but
 			// it requires iterating through the hash table)
-			if (m_sec_man.command_map->remove(keybuf) == 0) {
-				dprintf (D_SECURITY, "SECMAN: session id %s not found, removed %s from map.\n", sid.Value(), keybuf);
+			if (m_sec_man.command_map->remove(m_session_key.Value()) == 0) {
+				dprintf (D_SECURITY, "SECMAN: session id %s not found, removed %s from map.\n", sid.Value(), m_session_key.Value());
 			} else {
-				dprintf (D_SECURITY, "SECMAN: session id %s not found and failed to removed %s from map!\n", sid.Value(), keybuf);
+				dprintf (D_SECURITY, "SECMAN: session id %s not found and failed to removed %s from map!\n", sid.Value(), m_session_key.Value());
 			}
 		}
-	} else {
-		have_session = false;
-		enc_key = NULL;
 	}
-
-
-	// this classad will hold our security policy
-	ClassAd auth_info;
 
 	// if we have a private key, we will use the same security policy that
 	// was decided on when the key was issued.
 	// otherwise, get our security policy and work it out with the server.
-	if (have_session) {
-		MergeClassAds( &auth_info, enc_key->policy(), true );
+	if (m_have_session) {
+		MergeClassAds( &m_auth_info, m_enc_key->policy(), true );
 
 		if (DebugFlags & D_FULLDEBUG) {
 			dprintf (D_SECURITY, "SECMAN: found cached session id %s for %s.\n",
-					enc_key->id(), keybuf);
-			m_sec_man.key_printf(D_SECURITY, enc_key->key());
-			auth_info.dPrint( D_SECURITY );
+					m_enc_key->id(), m_session_key.Value());
+			m_sec_man.key_printf(D_SECURITY, m_enc_key->key());
+			m_auth_info.dPrint( D_SECURITY );
 		}
 
-		new_session = false;
+		m_new_session = false;
 	} else {
-		if( !m_sec_man.FillInSecurityPolicyAd( CLIENT_PERM, &auth_info,
-									 m_can_negotiate) ) {
+		if( !m_sec_man.FillInSecurityPolicyAd( CLIENT_PERM, &m_auth_info,
+									 m_peer_can_negotiate, m_raw_protocol) ) {
 				// security policy was invalid.  bummer.
 			dprintf( D_ALWAYS, 
 					 "SECMAN: ERROR: The security policy is invalid.\n" );
@@ -1088,35 +1218,34 @@ SecManStartCommand::startCommand_inner_noauth()
 		}
 
 		if (DebugFlags & D_FULLDEBUG) {
-			dprintf (D_SECURITY, "SECMAN: no cached key for %s.\n", keybuf);
+			dprintf (D_SECURITY, "SECMAN: no cached key for %s.\n", m_session_key.Value());
 		}
 
 		// no sessions in udp
-		if (is_tcp) {
+		if (m_is_tcp) {
 			// for now, always open a session for tcp.
-			new_session = true;
-			sprintf (buf, "%s=\"YES\"", ATTR_SEC_NEW_SESSION);
-			auth_info.Insert(buf);
+			m_new_session = true;
+			m_auth_info.Assign(ATTR_SEC_NEW_SESSION,"YES");
 		}
 	}
 
 	
 	if (DebugFlags & D_FULLDEBUG) {
 		dprintf (D_SECURITY, "SECMAN: Security Policy:\n");
-		auth_info.dPrint( D_SECURITY );
+		m_auth_info.dPrint( D_SECURITY );
 	}
 
 
 	// find out our negotiation policy.
-	SecMan::sec_req negotiation = m_sec_man.sec_lookup_req( auth_info, ATTR_SEC_NEGOTIATION );
-	if (negotiation == SecMan::SEC_REQ_UNDEFINED) {
+	m_negotiation = m_sec_man.sec_lookup_req( m_auth_info, ATTR_SEC_NEGOTIATION );
+	if (m_negotiation == SecMan::SEC_REQ_UNDEFINED) {
 		// this code never executes, as a default was already stuck into the
 		// classad.
-		negotiation = SecMan::SEC_REQ_PREFERRED;
+		m_negotiation = SecMan::SEC_REQ_PREFERRED;
 		dprintf(D_SECURITY, "SECMAN: missing negotiation attribute, assuming PREFERRED.\n");
 	}
 
-	SecMan::sec_feat_act negotiate = m_sec_man.sec_req_to_feat_act(negotiation);
+	SecMan::sec_feat_act negotiate = m_sec_man.sec_req_to_feat_act(m_negotiation);
 	if (negotiate == SecMan::SEC_FEAT_ACT_NO) {
 		// old way:
 		// code the int and be done.  there is no easy way to try the
@@ -1129,7 +1258,12 @@ SecManStartCommand::startCommand_inner_noauth()
 
 		// just code the command and be done
 		m_sock->encode();
-		m_sock->code(m_cmd);
+		if(!m_sock->code(m_cmd)) {
+			m_errstack->pushf( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+							   "Failed to send raw command to %s.",
+							   m_sock->peer_description());
+			return StartCommandFailed;
+		}
 
 		// we must _NOT_ do an eom() here!  Ques?  See Todd or Zach 9/01
 
@@ -1171,7 +1305,7 @@ SecManStartCommand::startCommand_inner_noauth()
 	// we set a cookie in daemoncore and put the cookie in the classad
 	// as proof that the message came from ourself.
 
-	MyString destsinful = sin_to_string(m_sock->endpoint());
+	MyString destsinful = m_sock->get_sinful_peer();
 	MyString oursinful = global_dc_sinful();
 	bool using_cookie = false;
 
@@ -1182,128 +1316,18 @@ SecManStartCommand::startCommand_inner_noauth()
 
 		global_dc_get_cookie (len, randomjunk);
 		
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_COOKIE, randomjunk);
+		m_auth_info.Assign(ATTR_SEC_COOKIE,randomjunk);
+		dprintf (D_SECURITY, "SECMAN: %s=\"%s\"\n", ATTR_SEC_COOKIE,randomjunk);
+
 		free(randomjunk);
 		randomjunk = NULL;
 
-		auth_info.Insert(buf);
-		dprintf (D_SECURITY, "SECMAN: %s\n", buf);
-
 		using_cookie = true;
 
-	} else if ((!have_session) && (!is_tcp) && (!m_already_tried_TCP_auth)) {
+	} else if ((!m_have_session) && (!m_is_tcp) && (!m_already_tried_TCP_auth)) {
 		// can't use a cookie, so try to start a session.
-
-		if(m_nonblocking) {
-				// Check if there is already a non-blocking TCP auth in progress
-			SecManStartCommand *sc = NULL;
-			if(m_sec_man.tcp_auth_in_progress->lookup(m_session_key,sc) == 0) {
-					// Rather than starting yet another TCP session for this session key,
-					// simply add ourselves to the list of things waiting for the
-					// pending session to be ready for use.
-
-					// Do not allow ourselves to be deleted until after
-					// ResumeAfterTCPAuth() is called.
-				IncRefCount();
-
-					// Make daemonCore aware that we are holding onto this
-					// UDP socket while waiting for other events to complete.
-				incrementPendingSockets();
-
-				sc->m_waiting_for_tcp_auth.Append(this);
-
-				if(DebugFlags & D_FULLDEBUG) {
-					dprintf( D_SECURITY, "SECMAN: waiting for pending session %s to be ready\n",
-							 m_session_key.Value());
-				}
-
-				if(!m_callback_fn) {
-						// Caller wants us to go ahead and get a session key,
-						// but caller will try sending the UDP command later,
-						// rather than dealing with a callback.
-					return StartCommandWouldBlock;
-				}
-				return StartCommandInProgress;
-			}
-		}
-
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: need to start a session via TCP\n");
-		}
-
-		// we'll have to authenticate via TCP
-		ReliSock *tcp_auth_sock = new ReliSock;
-
-		ASSERT(tcp_auth_sock);
-
-		// the timeout
-		int TCP_SOCK_TIMEOUT = param_integer("SEC_TCP_SESSION_TIMEOUT", 20);
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: setting timeout to %i seconds.\n", TCP_SOCK_TIMEOUT);
-		}
-		tcp_auth_sock->timeout(TCP_SOCK_TIMEOUT);
-
-		// we already know the address - condor uses the same TCP port as it does UDP port.
-		sprintf (buf, sin_to_string(m_sock->endpoint()));
-		if (!tcp_auth_sock->connect(buf,0,m_nonblocking)) {
-			dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", buf);
-			m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-					"TCP auth connection to %s failed\n", buf);
-			delete tcp_auth_sock;
-			return StartCommandFailed;
-		}
-
-		if(m_nonblocking && tcp_auth_sock->is_connect_pending()) {
-
-			int reg_rc = daemonCoreSockAdapter.Register_Socket(
-				tcp_auth_sock,
-				"<StartCommand TCP Auth Socket>",
-				(SocketHandlercpp)&SecManStartCommand::TCPAuthConnected,
-				tcp_auth_sock->get_sinful_peer(),
-				this,
-				ALLOW);
-
-			if(reg_rc < 0) {
-				MyString msg;
-				msg.sprintf("TCP auth connection to %s failed because "
-				            "Register_Socket returned %d",
-				            m_sock->get_sinful_peer(),
-				            reg_rc);
-				dprintf(D_SECURITY, "SECMAN: %s\n", msg.Value());
-				m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-				                  "%s\n", msg.Value());
-
-				delete tcp_auth_sock;
-				return StartCommandFailed;
-			}
-
-			ASSERT(daemonCoreSockAdapter.Register_DataPtr( this ));
-
-			// Do not allow ourselves to be deleted until after
-			// ConnectCallbackFn is called.
-			IncRefCount();
-
-				// Make daemonCore aware that we are holding onto this
-				// UDP socket while waiting for the (registered) TCP
-				// socket to connect etc.
-			incrementPendingSockets();
-
-				// Make note that this operation to do the TCP
-				// auth operation is in progress, so others
-				// wanting the same session key can wait for it.
-			SecMan::tcp_auth_in_progress->insert(m_session_key,this);
-
-			if(!m_callback_fn) {
-					// Caller wants us to go ahead and get a session key,
-					// but caller will try sending the UDP command later,
-					// rather than dealing with a callback.
-				return StartCommandWouldBlock;
-			}
-			return StartCommandInProgress;
-		}
-
-		return TCPAuthConnected_inner( tcp_auth_sock );
-	} else if ((!have_session) && (!is_tcp) && m_already_tried_TCP_auth) {
+		return DoTCPAuth_inner();
+	} else if ((!m_have_session) && (!m_is_tcp) && m_already_tried_TCP_auth) {
 			// there still is no session.
 			//
 			// this means when i sent them the NOP, no session was started.
@@ -1314,40 +1338,31 @@ SecManStartCommand::startCommand_inner_noauth()
 			dprintf ( D_SECURITY, "SECMAN: UDP has no session to use!\n");
 		}
 
-		ASSERT (enc_key == NULL);
+		ASSERT (m_enc_key == NULL);
 	}
 
 	// extract the version attribute current in the classad - it is
 	// the version of the remote side.
-	MyString remote_version;
-	char * rvtmp = NULL;
-	auth_info.LookupString ( ATTR_SEC_REMOTE_VERSION, &rvtmp );
-	if (rvtmp) {
-		remote_version = rvtmp;
-		free(rvtmp);
-	} else {
-		remote_version = "unknown";
+	if(m_auth_info.LookupString( ATTR_SEC_REMOTE_VERSION, m_remote_version )) {
+		CondorVersionInfo ver_info(m_remote_version.Value());
+		m_sock->set_peer_version(&ver_info);
 	}
 
 	// fill in our version
-	sprintf(buf, "%s=\"%s\"", ATTR_SEC_REMOTE_VERSION, CondorVersion());
-	auth_info.InsertOrUpdate(buf);
+	m_auth_info.Assign(ATTR_SEC_REMOTE_VERSION,CondorVersion());
 
 	// fill in return address, if we are a daemon
 	char* dcss = global_dc_sinful();
 	if (dcss) {
-		sprintf(buf, "%s=\"%s\"", ATTR_SEC_SERVER_COMMAND_SOCK, dcss);
-		auth_info.Insert(buf);
+		m_auth_info.Assign(ATTR_SEC_SERVER_COMMAND_SOCK, dcss);
 	}
 
 	// fill in command
-	sprintf(buf, "%s=%i", ATTR_SEC_COMMAND, m_cmd);
-	auth_info.Insert(buf);
+	m_auth_info.Assign(ATTR_SEC_COMMAND, m_cmd);
 
 	if (m_cmd == DC_AUTHENTICATE) {
 		// fill in sub-command
-		sprintf(buf, "%s=%i", ATTR_SEC_AUTH_COMMAND, m_subcmd);
-		auth_info.Insert(buf);
+		m_auth_info.Assign(ATTR_SEC_AUTH_COMMAND, m_subcmd);
 	}
 
 
@@ -1363,7 +1378,7 @@ SecManStartCommand::startCommand_inner_noauth()
 	*/
 
 
-	if (!using_cookie && !is_tcp) {
+	if (!using_cookie && !m_is_tcp) {
 
 		// udp works only with an already established session (gotten from a
 		// tcp connection).  if there's no session, there's no way to enable
@@ -1371,18 +1386,18 @@ SecManStartCommand::startCommand_inner_noauth()
 		// talking to.  in that case, send the command the old way, as long
 		// as that is permitted
 
-		dprintf ( D_SECURITY, "SECMAN: UDP, have_session == %i, can_neg == %i\n",
-				(have_session?1:0), (m_can_negotiate?1:0));
+		dprintf ( D_SECURITY, "SECMAN: UDP, m_have_session == %i, peer_can_negotiate == %i\n",
+				(m_have_session?1:0), (m_peer_can_negotiate?1:0));
 
-		if (have_session) {
+		if (m_have_session) {
 			// UDP w/ session
 			if (DebugFlags & D_FULLDEBUG) {
-				dprintf ( D_SECURITY, "SECMAN: UDP has session %s.\n", enc_key->id());
+				dprintf ( D_SECURITY, "SECMAN: UDP has session %s.\n", m_enc_key->id());
 			}
 
-			SecMan::sec_feat_act will_authenticate = m_sec_man.sec_lookup_feat_act( auth_info, ATTR_SEC_AUTHENTICATION );
-			SecMan::sec_feat_act will_enable_enc   = m_sec_man.sec_lookup_feat_act( auth_info, ATTR_SEC_ENCRYPTION );
-			SecMan::sec_feat_act will_enable_mac   = m_sec_man.sec_lookup_feat_act( auth_info, ATTR_SEC_INTEGRITY );
+			SecMan::sec_feat_act will_authenticate = m_sec_man.sec_lookup_feat_act( m_auth_info, ATTR_SEC_AUTHENTICATION );
+			SecMan::sec_feat_act will_enable_enc   = m_sec_man.sec_lookup_feat_act( m_auth_info, ATTR_SEC_ENCRYPTION );
+			SecMan::sec_feat_act will_enable_mac   = m_sec_man.sec_lookup_feat_act( m_auth_info, ATTR_SEC_INTEGRITY );
 
 			if (will_authenticate == SecMan::SEC_FEAT_ACT_UNDEFINED || 
 				will_authenticate == SecMan::SEC_FEAT_ACT_INVALID || 
@@ -1394,7 +1409,7 @@ SecManStartCommand::startCommand_inner_noauth()
 				// suck.
 
 				dprintf ( D_ALWAYS, "SECMAN: action attribute missing from classad\n");
-				auth_info.dPrint( D_SECURITY );
+				m_auth_info.dPrint( D_SECURITY );
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Protocol Error: Action attribute missing");
 				return StartCommandFailed;
@@ -1402,8 +1417,8 @@ SecManStartCommand::startCommand_inner_noauth()
 
 
 			KeyInfo* ki  = NULL;
-			if (enc_key->key()) {
-				ki  = new KeyInfo(*(enc_key->key()));
+			if (m_enc_key->key()) {
+				ki  = new KeyInfo(*(m_enc_key->key()));
 			}
 			
 			if (will_enable_mac == SecMan::SEC_FEAT_ACT_YES) {
@@ -1421,59 +1436,64 @@ SecManStartCommand::startCommand_inner_noauth()
 				}
 
 				// prepare the buffer to pass in udp header
-				sprintf(buf, "%s", enc_key->id());
+				MyString key_id = m_enc_key->id();
 
 				// stick our command socket sinful string in there
 				char* dcsss = global_dc_sinful();
 				if (dcsss) {
-					strcat (buf, ",");
-					strcat (buf, dcsss);
+					key_id += ",";
+					key_id += dcsss;
 				}
 
 				m_sock->encode();
-				m_sock->set_MD_mode(MD_ALWAYS_ON, ki, buf);
+				m_sock->set_MD_mode(MD_ALWAYS_ON, ki, key_id.Value());
 
 				dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
 			} // if (will_enable_mac)
 
-			if (will_enable_enc == SecMan::SEC_FEAT_ACT_YES) {
+			bool turn_encryption_on = will_enable_enc == SecMan::SEC_FEAT_ACT_YES;
+			if (turn_encryption_on && !ki) {
+				dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
+				m_errstack->push( "SECMAN", SECMAN_ERR_NO_KEY,
+						"Failed to establish a crypto key" );
+				return StartCommandFailed;
+			}
 
-				if (!ki) {
-					dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
-					m_errstack->push( "SECMAN", SECMAN_ERR_NO_KEY,
-							"Failed to establish a crypto key" );
-					return StartCommandFailed;
-				}
-
+			if( ki ) {
 				if (DebugFlags & D_FULLDEBUG) {
 					dprintf (D_SECURITY, "SECMAN: about to enable encryption.\n");
 					m_sec_man.key_printf(D_SECURITY, ki);
 				}
 
-				// prepare the buffer to pass in udp header
-				sprintf(buf, "%s", enc_key->id());
+					// prepare the buffer to pass in udp header
+				MyString key_id = m_enc_key->id();
 
-				// stick our command socket sinful string in there
+					// stick our command socket sinful string in there
 				char* dcsss = global_dc_sinful();
 				if (dcsss) {
-					strcat (buf, ",");
-					strcat (buf, dcsss);
+					key_id += ",";
+					key_id += dcsss;
 				}
 
 
 				m_sock->encode();
-				m_sock->set_crypto_key(true, ki, buf);
+				m_sock->set_crypto_key(turn_encryption_on, ki, key_id.Value());
 
-				dprintf ( D_SECURITY, "SECMAN: successfully enabled encryption!\n");
-			} // if (will_enable_enc)
+				dprintf ( D_SECURITY,
+						  "SECMAN: successfully enabled encryption%s.\n",
+						  turn_encryption_on ? "" : " (but encryption mode is off by default for this packet)");
 
-			if (ki) {
 				delete ki;
 			}
 		} else {
 			// UDP the old way...  who knows if they get it, we'll just assume they do.
 			m_sock->encode();
-			m_sock->code(m_cmd);
+			if( !m_sock->code(m_cmd) ) {
+				m_errstack->pushf( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+								   "Failed to send raw UDP command to %s.",
+								   m_sock->peer_description() );
+				return StartCommandFailed;
+			}
 			return StartCommandSucceeded;
 		}
 	}
@@ -1495,11 +1515,11 @@ SecManStartCommand::startCommand_inner_noauth()
 
 	if (DebugFlags & D_FULLDEBUG) {
 		dprintf ( D_SECURITY, "SECMAN: sending following classad:\n");
-		auth_info.dPrint ( D_SECURITY );
+		m_auth_info.dPrint ( D_SECURITY );
 	}
 
 	// send the classad
-	if (! auth_info.put(*m_sock)) {
+	if (! m_auth_info.put(*m_sock)) {
 		dprintf ( D_ALWAYS, "SECMAN: failed to send auth_info\n");
 		m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 						"Failed to send auth_info" );
@@ -1507,7 +1527,7 @@ SecManStartCommand::startCommand_inner_noauth()
 	}
 
 
-	if (is_tcp) {
+	if (m_is_tcp) {
 
 		if (! m_sock->end_of_message()) {
 			dprintf ( D_ALWAYS, "SECMAN: failed to end classad message\n");
@@ -1515,11 +1535,23 @@ SecManStartCommand::startCommand_inner_noauth()
 						"Failed to end classad message" );
 			return StartCommandFailed;
 		}
+	}
 
-		if (m_sec_man.sec_lookup_feat_act(auth_info, ATTR_SEC_ENACT) != SecMan::SEC_FEAT_ACT_YES) {
+	m_state = ReceiveAuthInfo;
+	return StartCommandContinue;
+}
+
+StartCommandResult
+SecManStartCommand::receiveAuthInfo_inner()
+{
+	if (m_is_tcp) {
+		if (m_sec_man.sec_lookup_feat_act(m_auth_info, ATTR_SEC_ENACT) != SecMan::SEC_FEAT_ACT_YES) {
 
 			// if we asked them what to do, get their response
-			ASSERT (is_tcp);
+
+			if( m_nonblocking && !m_sock->readReady() ) {
+				return WaitForSocketCallback();
+			}
 
 			ClassAd auth_response;
 			m_sock->decode();
@@ -1533,9 +1565,9 @@ SecManStartCommand::startCommand_inner_noauth()
 				// the old way, IF negotiation wasn't REQUIRED.
 
 				// set this input/output parameter to reflect
-				m_can_negotiate = false;
+				m_peer_can_negotiate = false;
 
-				if (negotiation == SecMan::SEC_REQ_REQUIRED) {
+				if (m_negotiation == SecMan::SEC_REQ_REQUIRED) {
 					dprintf ( D_ALWAYS, "SECMAN: no classad from server, failing\n");
 					m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 						"Failed to end classad message" );
@@ -1548,20 +1580,23 @@ SecManStartCommand::startCommand_inner_noauth()
 				// this is kind of ugly:  close and reconnect the socket.
 				// seems to work though! :)
 
-				char addrbuf[128];
-				sprintf (addrbuf, sin_to_string(m_sock->endpoint()));
+				MyString tcp_addr = m_sock->get_sinful_peer();
 				m_sock->close();
-				//sleep( 1 );
 
-				if (!m_sock->connect(addrbuf)) {
-					dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", addrbuf);
+				if (!m_sock->connect(tcp_addr.Value())) {
+					dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.Value());
 					m_errstack->pushf( "SECMAN", SECMAN_ERR_CONNECT_FAILED,
-						"TCP connection to %s failed\n", addrbuf);
+						"TCP connection to %s failed\n", tcp_addr.Value());
 					return StartCommandFailed;
 				}
 
 				m_sock->encode();
-				m_sock->code(m_cmd);
+				if( !m_sock->code(m_cmd) ) {
+					m_errstack->pushf( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+									   "Failed to send raw command after reconnecting to %s.",
+									   m_sock->peer_description());
+					return StartCommandFailed;
+				}
 				return StartCommandSucceeded;
 			}
 
@@ -1571,33 +1606,57 @@ SecManStartCommand::startCommand_inner_noauth()
 				auth_response.dPrint( D_SECURITY );
 			}
 
+				// Get rid of our sinful address in what will become
+				// the session policy ad.  It's there because we sent
+				// it to our peer, but no need to keep it around in
+				// our copy of the session.  In fact, if we did, this
+				// would cause performance problems in the KeyCache
+				// index, which would contain a lot of (useless) index
+				// entries for our own sinful address.
+			m_auth_info.Delete( ATTR_SEC_SERVER_COMMAND_SOCK );
+				// Ditto for our pid info.
+			m_auth_info.Delete( ATTR_SEC_SERVER_PID );
+			m_auth_info.Delete( ATTR_SEC_PARENT_UNIQUE_ID );
+
 			// it makes a difference if the version is empty, so we must
 			// explicitly delete it before we copy it.
-			auth_info.Delete(ATTR_SEC_REMOTE_VERSION);
-			m_sec_man.sec_copy_attribute( auth_info, auth_response, ATTR_SEC_REMOTE_VERSION );
-			m_sec_man.sec_copy_attribute( auth_info, auth_response, ATTR_SEC_ENACT );
-			m_sec_man.sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS_LIST );
-			m_sec_man.sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS );
-			m_sec_man.sec_copy_attribute( auth_info, auth_response, ATTR_SEC_CRYPTO_METHODS );
-			m_sec_man.sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION );
-			m_sec_man.sec_copy_attribute( auth_info, auth_response, ATTR_SEC_ENCRYPTION );
-			m_sec_man.sec_copy_attribute( auth_info, auth_response, ATTR_SEC_INTEGRITY );
-			// sec_copy_attribute( auth_info, auth_response, ATTR_SEC_VALID_COMMANDS );
-			// sec_copy_attribute( auth_info, auth_response, ATTR_SEC_USER );
-			// sec_copy_attribute( auth_info, auth_response, ATTR_SEC_SID );
+			m_auth_info.Delete(ATTR_SEC_REMOTE_VERSION);
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_REMOTE_VERSION );
+			m_auth_info.LookupString(ATTR_SEC_REMOTE_VERSION,m_remote_version);
+			if( !m_remote_version.IsEmpty() ) {
+				CondorVersionInfo ver_info(m_remote_version.Value());
+				m_sock->set_peer_version(&ver_info);
+			}
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ENACT );
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS_LIST );
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS );
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_CRYPTO_METHODS );
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION );
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ENCRYPTION );
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_INTEGRITY );
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_DURATION );
 
-			auth_info.Delete(ATTR_SEC_NEW_SESSION);
+			m_auth_info.Delete(ATTR_SEC_NEW_SESSION);
 
-			sprintf(buf, "%s=\"YES\"", ATTR_SEC_USE_SESSION);
-			auth_info.Insert(buf);
+			m_auth_info.Assign(ATTR_SEC_USE_SESSION, "YES");
 
 			m_sock->encode();
 
 		}
 
-		SecMan::sec_feat_act will_authenticate = m_sec_man.sec_lookup_feat_act( auth_info, ATTR_SEC_AUTHENTICATION );
-		SecMan::sec_feat_act will_enable_enc   = m_sec_man.sec_lookup_feat_act( auth_info, ATTR_SEC_ENCRYPTION );
-		SecMan::sec_feat_act will_enable_mac   = m_sec_man.sec_lookup_feat_act( auth_info, ATTR_SEC_INTEGRITY );
+	}
+
+	m_state = Authenticate;
+	return StartCommandContinue;
+}
+
+StartCommandResult
+SecManStartCommand::authenticate_inner()
+{
+	if( m_is_tcp ) {
+		SecMan::sec_feat_act will_authenticate = m_sec_man.sec_lookup_feat_act( m_auth_info, ATTR_SEC_AUTHENTICATION );
+		SecMan::sec_feat_act will_enable_enc   = m_sec_man.sec_lookup_feat_act( m_auth_info, ATTR_SEC_ENCRYPTION );
+		SecMan::sec_feat_act will_enable_mac   = m_sec_man.sec_lookup_feat_act( m_auth_info, ATTR_SEC_INTEGRITY );
 
 		if (will_authenticate == SecMan::SEC_FEAT_ACT_UNDEFINED || 
 			will_authenticate == SecMan::SEC_FEAT_ACT_INVALID || 
@@ -1609,7 +1668,7 @@ SecManStartCommand::startCommand_inner_noauth()
 			// missing some essential info.
 
 			dprintf ( D_SECURITY, "SECMAN: action attribute missing from classad, failing!\n");
-			auth_info.dPrint( D_SECURITY );
+			m_auth_info.dPrint( D_SECURITY );
 			m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Protocol Error: Action attribute missing");
 			return StartCommandFailed;
@@ -1622,16 +1681,16 @@ SecManStartCommand::startCommand_inner_noauth()
 		// necessary.
 		//
 		// so, as of 6.6.1, if we are resuming a session (as determined
-		// by the expression (!new_session), AND the other side is 6.6.1
+		// by the expression (!m_new_session), AND the other side is 6.6.1
 		// or higher, we will force will_authenticate to SEC_FEAT_ACT_NO.
 		//
 		// we can tell easily if the other side is 6.6.1 or higher by the
 		// mere presence of the version, since that is when it was added.
 
 		if ((will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
-			if ((!new_session)) {
-				if (remote_version != "unknown") {
-					dprintf( D_SECURITY, "SECMAN: resume, other side is %s, NOT reauthenticating.\n", remote_version.Value() );
+			if ((!m_new_session)) {
+				if( !m_remote_version.IsEmpty() ) {
+					dprintf( D_SECURITY, "SECMAN: resume, other side is %s, NOT reauthenticating.\n", m_remote_version.Value() );
 					will_authenticate = SecMan::SEC_FEAT_ACT_NO;
 				} else {
 					dprintf( D_SECURITY, "SECMAN: resume, other side is pre 6.6.1, reauthenticating.\n");
@@ -1649,9 +1708,6 @@ SecManStartCommand::startCommand_inner_noauth()
 
 
 
-		// the private key, if there is one.
-		KeyInfo* ki  = NULL;
-
 		if (will_authenticate == SecMan::SEC_FEAT_ACT_YES) {
 
 			ASSERT (m_sock->type() == Stream::reli_sock);
@@ -1660,14 +1716,14 @@ SecManStartCommand::startCommand_inner_noauth()
 				dprintf ( D_SECURITY, "SECMAN: authenticating RIGHT NOW.\n");
 			}
 			char * auth_methods = NULL;
-			auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods );
+			m_auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods );
 			if (auth_methods) {
 				if (DebugFlags & D_FULLDEBUG) {
 					dprintf (D_SECURITY, "SECMAN: AuthMethodsList: %s\n", auth_methods);
 				}
 			} else {
 				// lookup the 6.4 attribute name
-				auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &auth_methods );
+				m_auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &auth_methods );
 				if (DebugFlags & D_FULLDEBUG) {
 					dprintf (D_SECURITY, "SECMAN: AuthMethods: %s\n", auth_methods);
 				}
@@ -1683,10 +1739,8 @@ SecManStartCommand::startCommand_inner_noauth()
 				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods);
 			}
 
-			if (!m_sock->authenticate(ki, auth_methods, m_errstack)) {
-				if(ki) {
-					delete ki;
-				}
+			int auth_timeout = m_sec_man.getSecTimeout( CLIENT_PERM );
+			if (!m_sock->authenticate(m_private_key, auth_methods, m_errstack,auth_timeout)) {
             	if (auth_methods) {  
                 	free(auth_methods);
             	}
@@ -1696,13 +1750,13 @@ SecManStartCommand::startCommand_inner_noauth()
                 free(auth_methods);
             }
 		} else {
-			// !new_session is equivilant to use_session in this client.
-			if (!new_session) {
+			// !m_new_session is equivalent to use_session in this client.
+			if (!m_new_session) {
 				// we are using this key
-				if (enc_key && enc_key->key()) {
-					ki = new KeyInfo(*(enc_key->key()));
+				if (m_enc_key && m_enc_key->key()) {
+					m_private_key = new KeyInfo(*(m_enc_key->key()));
 				} else {
-					ASSERT (ki == NULL);
+					ASSERT (m_private_key == NULL);
 				}
 			}
 		}
@@ -1710,7 +1764,7 @@ SecManStartCommand::startCommand_inner_noauth()
 		
 		if (will_enable_mac == SecMan::SEC_FEAT_ACT_YES) {
 
-			if (!ki) {
+			if (!m_private_key) {
 				dprintf ( D_ALWAYS, "SECMAN: enable_mac has no key to use, failing...\n");
 				m_errstack->push ("SECMAN", SECMAN_ERR_NO_KEY,
 							"Failed to establish a crypto key" );
@@ -1719,23 +1773,23 @@ SecManStartCommand::startCommand_inner_noauth()
 
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf (D_SECURITY, "SECMAN: about to enable message authenticator.\n");
-				m_sec_man.key_printf(D_SECURITY, ki);
+				m_sec_man.key_printf(D_SECURITY, m_private_key);
 			}
 
 			m_sock->encode();
-			m_sock->set_MD_mode(MD_ALWAYS_ON, ki);
+			m_sock->set_MD_mode(MD_ALWAYS_ON, m_private_key);
 
 			dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
 		} else {
 			// we aren't going to enable MD5.  but we should still set the secret key
 			// in case we decide to turn it on later.
 			m_sock->encode();
-			m_sock->set_MD_mode(MD_OFF, ki);
+			m_sock->set_MD_mode(MD_OFF, m_private_key);
 		}
 
 		if (will_enable_enc == SecMan::SEC_FEAT_ACT_YES) {
 
-			if (!ki) {
+			if (!m_private_key) {
 				dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
 				m_errstack->push ("SECMAN", SECMAN_ERR_NO_KEY,
 							"Failed to establish a crypto key" );
@@ -1744,11 +1798,11 @@ SecManStartCommand::startCommand_inner_noauth()
 
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf (D_SECURITY, "SECMAN: about to enable encryption.\n");
-				m_sec_man.key_printf(D_SECURITY, ki);
+				m_sec_man.key_printf(D_SECURITY, m_private_key);
 			}
 
 			m_sock->encode();
-			m_sock->set_crypto_key(true, ki);
+			m_sock->set_crypto_key(true, m_private_key);
 
 			dprintf ( D_SECURITY, "SECMAN: successfully enabled encryption!\n");
 		} else {
@@ -1756,14 +1810,31 @@ SecManStartCommand::startCommand_inner_noauth()
 			// still have a secret key ready to go in case someone decides to turn
 			// it on later.
 			m_sock->encode();
-			m_sock->set_crypto_key(false, ki);
+			m_sock->set_crypto_key(false, m_private_key);
 		}
 		
-		if (new_session) {
-			// receive a classAd containing info such as: well, nothing yet
+	}
+
+	m_state = ReceivePostAuthInfo;
+	return StartCommandContinue;
+}
+
+StartCommandResult
+SecManStartCommand::receivePostAuthInfo_inner()
+{
+	if( m_is_tcp ) {
+		if (m_new_session) {
+			// There is no pending data to send, so the following is a no-op.
+			// Why is it being done?  Perhaps to ensure clean state of the
+			// socket?
 			m_sock->encode();
 			m_sock->eom();
 
+			if( m_nonblocking && !m_sock->readReady() ) {
+				return WaitForSocketCallback();
+			}
+
+			// receive a classAd containing info about new session
 			ClassAd post_auth_info;
 			m_sock->decode();
 			if (!post_auth_info.initFromStream(*m_sock) || !m_sock->eom()) {
@@ -1779,23 +1850,34 @@ SecManStartCommand::startCommand_inner_noauth()
 			}
 
 			// bring in the session ID
-			m_sec_man.sec_copy_attribute( auth_info, post_auth_info, ATTR_SEC_SID );
+			m_sec_man.sec_copy_attribute( m_auth_info, post_auth_info, ATTR_SEC_SID );
 
 			// other attributes
-			m_sec_man.sec_copy_attribute( auth_info, post_auth_info, ATTR_SEC_USER );
-			m_sec_man.sec_copy_attribute( auth_info, post_auth_info, ATTR_SEC_VALID_COMMANDS );
+			// Copy "User" to "MyRemoteUserName", since this is _not_ the name
+			// of our peer; it is our name as determined by our peer.
+			// We reserve "User" for the name of our peer so that an
+			// incoming/outgoing security session can be reversed and
+			// used as a full-duplex session if desired.
+			m_sec_man.sec_copy_attribute( m_auth_info, ATTR_SEC_MY_REMOTE_USER_NAME, post_auth_info, ATTR_SEC_USER );
+			m_sec_man.sec_copy_attribute( m_auth_info, post_auth_info, ATTR_SEC_VALID_COMMANDS );
 
 			if( m_sock->getFullyQualifiedUser() ) {
-				auth_info.Assign( ATTR_SEC_AUTHENTICATED_USER, m_sock->getFullyQualifiedUser() );
+				m_auth_info.Assign( ATTR_SEC_USER, m_sock->getFullyQualifiedUser() );
 			}
+			else {
+					// we did not authenticate peer, so this attribute
+					// should not be defined
+				ASSERT( !m_auth_info.Lookup( ATTR_SEC_USER ) );
+			}
+			m_sec_man.sec_copy_attribute( m_auth_info, post_auth_info, ATTR_SEC_TRIED_AUTHENTICATION );
 
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf (D_SECURITY, "SECMAN: policy to be cached:\n");
-				auth_info.dPrint(D_SECURITY);
+				m_auth_info.dPrint(D_SECURITY);
 			}
 
 			char *sesid = NULL;
-			auth_info.LookupString(ATTR_SEC_SID, &sesid);
+			m_auth_info.LookupString(ATTR_SEC_SID, &sesid);
 			if (sesid == NULL) {
 				dprintf (D_ALWAYS, "SECMAN: session id is NULL, failing\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
@@ -1804,7 +1886,7 @@ SecManStartCommand::startCommand_inner_noauth()
 			}
 
 			char *cmd_list = NULL;
-			auth_info.LookupString(ATTR_SEC_VALID_COMMANDS, &cmd_list);
+			m_auth_info.LookupString(ATTR_SEC_VALID_COMMANDS, &cmd_list);
 			if (cmd_list == NULL) {
 				dprintf (D_ALWAYS, "SECMAN: valid commands is NULL, failing\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
@@ -1814,23 +1896,27 @@ SecManStartCommand::startCommand_inner_noauth()
 			}
 
 
-			ASSERT (enc_key == NULL);
+			ASSERT (m_enc_key == NULL);
 
 
 			// extract the session duration
 			char *dur = NULL;
-			auth_info.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
+			m_auth_info.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
 
-			int expiration_time = time(0) + atoi(dur);
+			int expiration_time = 0;
+			if( dur ) {
+				expiration_time = time(0) + atoi(dur);
+			}
 
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
-			KeyCacheEntry tmp_key( sesid, m_sock->endpoint(), ki,
-								   &auth_info, expiration_time ); 
+			KeyCacheEntry tmp_key( sesid, m_sock->endpoint(), m_private_key,
+								   &m_auth_info, expiration_time ); 
 			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds.\n", sesid, dur);
 
             if (dur) {
                 free(dur);
+				dur = NULL;
             }
 
 			// stick the key in the cache
@@ -1845,62 +1931,40 @@ SecManStartCommand::startCommand_inner_noauth()
 
 			coms.rewind();
 			while ( (p = coms.next()) ) {
-				sprintf (keybuf, "{%s,<%s>}", sin_to_string(m_sock->endpoint()), p);
+				MyString keybuf;
+				keybuf.sprintf ("{%s,<%s>}", m_sock->get_sinful_peer(), p);
 
 				// NOTE: HashTable returns ZERO on SUCCESS!!!
 				if (m_sec_man.command_map->insert(keybuf, sesid) == 0) {
 					// success
 					if (DebugFlags & D_FULLDEBUG) {
-						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf, sesid);
+						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.Value(), sesid);
 					}
 				} else {
-					// perhaps there is an old entry under the same name.  we should
-					// delete the old one and insert the new one.
-
-					// NOTE: HashTable's remove returns ZERO on SUCCESS!!!
-					if (m_sec_man.command_map->remove(keybuf) == 0) {
-						// now let's try to insert again (zero on success)
-						if (m_sec_man.command_map->insert(keybuf, sesid) == 0) {
-							if (DebugFlags & D_FULLDEBUG) {
-								dprintf (D_SECURITY,
-										"SECMAN: command %s remapped to "
-										"session %s!\n",
-										keybuf, sesid);
-							}
-						} else {
-							if (DebugFlags & D_FULLDEBUG) {
-								dprintf (D_SECURITY, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf);
-							}
-						}
-					} else {
-						if (DebugFlags & D_FULLDEBUG) {
-							dprintf (D_SECURITY, "SECMAN: command %s NOT mapped (remove failed!)\n", keybuf);
-						}
-					}
+					dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.Value());
 				}
 			}
 			
 			free( sesid );
             free( cmd_list );
 
-		} // if (new_session)
+		} // if (m_new_session)
 
-		// clean up
-		if (ki) {
-			delete ki;
-		}
+	} // if (m_is_tcp)
 
-	} // if (is_tcp)
-
-	if( !new_session && have_session ) {
+	if( !m_new_session && m_have_session ) {
 		char *fqu = NULL;
-		if( auth_info.LookupString(ATTR_SEC_AUTHENTICATED_USER,&fqu) && fqu ) {
+		if( m_auth_info.LookupString(ATTR_SEC_USER,&fqu) && fqu ) {
 			if( DebugFlags & D_FULLDEBUG ) {
 				dprintf( D_SECURITY, "Getting authenticated user from cached session: %s\n", fqu );
 			}
 			m_sock->setFullyQualifiedUser( fqu );
 			free( fqu );
 		}
+
+		bool tried_authentication = false;
+		m_auth_info.LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
+		m_sock->setTriedAuthentication(tried_authentication);
 	}
 
 	m_sock->encode();
@@ -1910,46 +1974,158 @@ SecManStartCommand::startCommand_inner_noauth()
 	return StartCommandSucceeded;
 }
 
-int
-SecManStartCommand::TCPAuthConnected( Stream *stream )
+StartCommandResult
+SecManStartCommand::DoTCPAuth_inner()
 {
-	Sock *sock = (Sock *)stream;
+	ASSERT( !m_already_tried_TCP_auth );
+	m_already_tried_TCP_auth = true;
 
-	daemonCoreSockAdapter.Cancel_Socket( stream );
+	if(m_nonblocking) {
+			// Make daemonCore aware that we are holding onto this
+			// UDP socket while waiting for other events to complete.
+		incrementPendingSockets();
 
-	if(DebugFlags & D_FULLDEBUG) {
-		dprintf(D_SECURITY,"Non-blocking connection for TCP authentication to %s finished (connected=%d)\n",sock->get_sinful_peer(),sock->is_connected());
+			// Check if there is already a non-blocking TCP auth in progress
+		classy_counted_ptr<SecManStartCommand> sc;
+		if(m_sec_man.tcp_auth_in_progress->lookup(m_session_key,sc) == 0) {
+				// Rather than starting yet another TCP session for
+				// this session key, simply add ourselves to the list
+				// of things waiting for the pending session to be
+				// ready for use.
+
+			if(m_nonblocking && !m_callback_fn) {
+					// Caller wanted us to get a session key but did
+					// not want to bother about handling a
+					// callback. Since somebody else is already
+					// getting a session, we are done.
+				return StartCommandWouldBlock;
+			}
+
+			sc->m_waiting_for_tcp_auth.Append(this);
+
+			if(DebugFlags & D_FULLDEBUG) {
+				dprintf(D_SECURITY,
+						"SECMAN: waiting for pending session %s to be ready\n",
+						m_session_key.Value());
+			}
+
+			return StartCommandInProgress;
+		}
 	}
 
-	bool auth_succeeded = false;
-	StartCommandResult rc = TCPAuthConnected_inner(sock,&auth_succeeded);
+	if (DebugFlags & D_FULLDEBUG) {
+		dprintf ( D_SECURITY, "SECMAN: need to start a session via TCP\n");
+	}
 
-	if(m_callback_fn) {
-		bool success = rc == StartCommandSucceeded;
-		(*m_callback_fn)(success,m_sock,m_errstack,m_misc_data);
+		// we'll have to authenticate via TCP
+	ReliSock *tcp_auth_sock = new ReliSock;
 
-			// Caller is responsible for deallocating the following:
-		m_errstack = NULL;
-		m_sock = NULL;
+	ASSERT(tcp_auth_sock);
+
+		// the timeout
+	int TCP_SOCK_TIMEOUT = param_integer("SEC_TCP_SESSION_TIMEOUT", 20);
+	tcp_auth_sock->timeout(TCP_SOCK_TIMEOUT);
+
+		// we already know the address - condor uses the same TCP port as it does UDP port.
+	MyString tcp_addr = m_sock->get_sinful_peer();
+	if (!tcp_auth_sock->connect(tcp_addr.Value(),0,m_nonblocking)) {
+		dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.Value());
+		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
+						  "TCP auth connection to %s failed\n", tcp_addr.Value());
+		delete tcp_auth_sock;
+		return StartCommandFailed;
+	}
+
+		// Make note that this operation to do the TCP
+		// auth operation is in progress, so others
+		// wanting the same session key can wait for it.
+	SecMan::tcp_auth_in_progress->insert(m_session_key,this);
+
+	m_tcp_auth_command = new SecManStartCommand(
+		DC_AUTHENTICATE,
+		tcp_auth_sock,
+		m_peer_can_negotiate,
+		m_raw_protocol,
+		m_errstack,
+		m_cmd,
+		m_nonblocking ? SecManStartCommand::TCPAuthCallback : NULL,
+		m_nonblocking ? this : NULL,
+		m_nonblocking,
+		m_cmd_description.Value(),
+		m_sec_session_id_hint.Value(),
+		&m_sec_man);
+
+	StartCommandResult auth_result = m_tcp_auth_command->startCommand();
+
+	if( !m_nonblocking ) {
+			// We did not pass a callback function to the TCP
+			// startCommand(), because we need to pass back the final
+			// result to the caller directly.
+
+		return TCPAuthCallback_inner(
+			auth_result == StartCommandSucceeded,
+			tcp_auth_sock );
+	}
+
+	return StartCommandInProgress;
+}
+
+void
+SecManStartCommand::TCPAuthCallback(bool success,Sock *sock,CondorError * /*errstack*/,void * misc_data)
+{
+	classy_counted_ptr<SecManStartCommand> self = (SecManStartCommand *)misc_data;
+
+	self->doCallback( self->TCPAuthCallback_inner(success,sock) );
+}
+
+StartCommandResult
+SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_sock )
+{
+	// in case we discovered anything new about security negotiation
+	m_peer_can_negotiate = m_tcp_auth_command->m_peer_can_negotiate;
+	m_tcp_auth_command = NULL;
+
+		// close the TCP socket, the rest will be UDP.
+	tcp_auth_sock->eom();
+	tcp_auth_sock->close();
+	delete tcp_auth_sock;
+	tcp_auth_sock = NULL;
+
+	StartCommandResult rc;
+
+	if(m_nonblocking && !m_callback_fn) {
+		// Caller wanted us to get a session key but did not
+		// want to bother about handling a callback.  Therefore,
+		// we are done.  No need to start the command again.
+		rc = StartCommandWouldBlock;
+
+		// NOTE: m_sock is expected to be NULL, because caller may
+		// have deleted it by now.
+		ASSERT( m_sock == NULL );
+	}
+	else if( !auth_succeeded ) {
+		dprintf ( D_SECURITY,
+				  "SECMAN: unable to create security session to %s via TCP, "
+		          "failing.\n", m_sock->get_sinful_peer() );
+		m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
+		                 "Failed to create security session to %s with TCP",
+		                 m_sock->get_sinful_peer());
+		rc = StartCommandFailed;
 	}
 	else {
-		if ( DebugFlags & D_FULLDEBUG) {
-			dprintf( D_SECURITY,
-				"SECMAN: caller did not want a callback, "
-				"so aborting startCommand(%d) to %s\n",
-				 m_cmd,
-				 m_sock->get_sinful_peer());
+		if( (DebugFlags & D_FULLDEBUG) ) {
+			dprintf ( D_SECURITY,
+					  "SECMAN: succesfully created security session to %s via "
+					  "TCP!\n", m_sock->get_sinful_peer() );
 		}
-
-		// The original caller should have left one remaining
-		// reference count in order to assure this object would
-		// persist, but now we are done, so get rid of it.
-		DecRefCount();
+		rc = startCommand_inner();
 	}
 
 		// Remove ourselves from SecMan's list of pending TCP auth sessions.
-	SecManStartCommand *sc = NULL;
-	if(SecMan::tcp_auth_in_progress->lookup(m_session_key,sc) == 0 && sc == this) {
+	classy_counted_ptr<SecManStartCommand> sc;
+	if( SecMan::tcp_auth_in_progress->lookup(m_session_key,sc) == 0 &&
+	    sc.get() == this )
+	{
 		ASSERT(SecMan::tcp_auth_in_progress->remove(m_session_key) == 0);
 	}
 
@@ -1957,47 +2133,11 @@ SecManStartCommand::TCPAuthConnected( Stream *stream )
 		// to be done.
 	m_waiting_for_tcp_auth.Rewind();
 	while( m_waiting_for_tcp_auth.Next(sc) ) {
-		if(!auth_succeeded) {
-			sc->m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
-			                      "Was waiting for TCP auth session to %s, "
-			                      "but it failed.",
-			                      sc->m_sock->get_sinful_peer());
-		}
 		sc->ResumeAfterTCPAuth(auth_succeeded);
-
-			// This instance had IncRefCount() called when getting
-			// added to this list.  Now we are done with the
-			// reference.
-
-		sc->DecRefCount();
 	}
 	m_waiting_for_tcp_auth.Clear();
 
-	// We did IncRefCount() when registering this callback.
-	// Now we are done with the reference.
-	DecRefCount();
-
-	return KEEP_STREAM;
-}
-
-StartCommandResult
-SecManStartCommand::ResumeAfterTCPAuth_inner()
-{
-	// Now try again to initiate the UDP command.  This time,
-	// we should have a session key cached as a consequence
-	// of the TCP exchange we just did, but just in case
-	// we don't have one, disable the code path that landed us
-	// here so we don't get into an infinite loop.
-	m_already_tried_TCP_auth = true;
-
-	if(m_nonblocking && !m_callback_fn) {
-		// Caller wanted us to get a session key but did not
-		// want to bother about handling a callback.  Therefore,
-		// we are done.  No need to start the command again.
-		return StartCommandSucceeded;
-	}
-
-	return startCommand_inner();
+	return rc;
 }
 
 void
@@ -2008,213 +2148,113 @@ SecManStartCommand::ResumeAfterTCPAuth(bool auth_succeeded)
 		// of getting one that we could use.  When that object
 		// finished getting the session, it called us here.
 
-	StartCommandResult rc = StartCommandFailed;
-
-	if(DebugFlags & D_FULLDEBUG) {
-		dprintf(D_SECURITY,"SECMAN: done waiting for TCP auth to %s\n",
-		        m_sock->get_sinful_peer());
+	if( DebugFlags & D_FULLDEBUG ) {
+		dprintf(D_SECURITY,"SECMAN: done waiting for TCP auth to %s (%s)\n",
+		        m_sock->get_sinful_peer(),
+				auth_succeeded ? "succeeded" : "failed");
+	}
+	if(!auth_succeeded) {
+		m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
+						  "Was waiting for TCP auth session to %s, "
+						  "but it failed.",
+						  m_sock->get_sinful_peer());
 	}
 
+	StartCommandResult rc;
 	if(auth_succeeded) {
-		rc = ResumeAfterTCPAuth_inner();
-	}
-
-	if(m_callback_fn) {
-		bool success = rc == StartCommandSucceeded;
-		(*m_callback_fn)(success,m_sock,m_errstack,m_misc_data);
-
-			// Caller is responsible for deallocating the following:
-		m_errstack = NULL;
-		m_sock = NULL;
+		rc = startCommand_inner();
 	}
 	else {
-		if ( DebugFlags & D_FULLDEBUG) {
-			dprintf( D_SECURITY,
-				"SECMAN: caller did not want a callback, "
-				"so aborting startCommand(%d) to %s\n",
-				 m_cmd,
-				 m_sock->get_sinful_peer());
-		}
-
-		// The original caller should have left one remaining
-		// reference count in order to assure this object would
-		// persist, but now we are done, so get rid of it.
-		DecRefCount();
+		rc = StartCommandFailed;
 	}
-}
 
+	doCallback( rc );
+}
 
 StartCommandResult
-SecManStartCommand::TCPAuthConnected_inner( Sock *tcp_auth_sock, bool *auth_succeeded )
+SecManStartCommand::WaitForSocketCallback()
 {
+	MyString req_description;
+	req_description.sprintf("SecManStartCommand::WaitForSocketCallback %s",
+							m_cmd_description.Value());
+	int reg_rc = daemonCoreSockAdapter.Register_Socket(
+		m_sock,
+		m_sock->peer_description(),
+		(SocketHandlercpp)&SecManStartCommand::SocketCallback,
+		req_description.Value(),
+		this,
+		ALLOW);
 
-	// We are now connected to the TCP authentication socket.
-	// We got here because we wanted to start a UDP command,
-	// but we didn't have a session key.  We now get a session
-	// key and then resume with the UDP command.
-
-	// NOTE: the caller of this function must ensure that
-	// the m_callback_fn is called (if there is one).
-
-	if(auth_succeeded) {
-		*auth_succeeded = false; // set default result
-	}
-
-	if(!tcp_auth_sock->is_connected()) {
-		dprintf(D_SECURITY,"SECMAN: failed in non-blocking TCP connect to %s",
-				tcp_auth_sock->get_sinful_peer());
+	if(reg_rc < 0) {
+		MyString msg;
+		msg.sprintf("StartCommand to %s failed because "
+					"Register_Socket returned %d",
+					m_sock->get_sinful_peer(),
+					reg_rc);
+		dprintf(D_SECURITY, "SECMAN: %s\n", msg.Value());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-		                "TCP connection to %s failed\n",
-		                tcp_auth_sock->get_sinful_peer());
+						  "%s\n", msg.Value());
 
-		delete tcp_auth_sock;
 		return StartCommandFailed;
 	}
 
-	// For now, we do the TCP command as a blocking call,
-	// because it happens to use blocking read/writes anyway.
+		// Do not allow ourselves to be deleted until after
+		// SocketCallback is called.
+	incRefCount();
 
-	const bool auth_nonblocking = false;
-	// Since we're using it in blocking mode, no need for putting
-	// SecManStartCommand on the heap.
-	SecManStartCommand sc(
-		DC_AUTHENTICATE,
-		tcp_auth_sock,
-		m_can_negotiate,
-		m_errstack,
-		m_cmd,
-		NULL,
-		NULL,
-		auth_nonblocking,
-		&m_sec_man);
-
-	StartCommandResult auth_result = sc.startCommand();
-	if(auth_succeeded) {
-		*auth_succeeded = auth_result == StartCommandSucceeded;
-	}
-
-	// in case we discovered anything new about security negotiation
-	m_can_negotiate = sc.m_can_negotiate;
-
-	if (DebugFlags & D_FULLDEBUG) {
-		dprintf ( D_SECURITY, "SECMAN: sending eom() and closing TCP sock.\n");
-	}
-
-		// close the TCP socket, the rest will be UDP.
-	tcp_auth_sock->eom();
-	tcp_auth_sock->close();
-	delete tcp_auth_sock;
-	tcp_auth_sock = NULL;
-
-
-	if (auth_result != StartCommandSucceeded) {
-		dprintf ( D_SECURITY,"SECMAN: unable to start session to %s via TCP, "
-		          "failing.\n",m_sock->get_sinful_peer());
-		m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
-		                 "Failed to start a session to %s with TCP",
-		                 m_sock->get_sinful_peer());
-		return StartCommandFailed;
-	}
-	if (DebugFlags & D_FULLDEBUG) {
-		dprintf ( D_SECURITY, "SECMAN: succesfully sent NOP via TCP!\n");
-	}
-
-	return ResumeAfterTCPAuth_inner();
+	return StartCommandInProgress;
 }
 
-void
-SecManStartCommand::DestructCallerData()
+int
+SecManStartCommand::SocketCallback( Stream *stream )
 {
-	if(m_sock) {
-		delete m_sock;
-		m_sock = NULL;
-	}
-	if(m_errstack) {
-		delete m_errstack;
-		m_errstack = NULL;
-	}
+	daemonCoreSockAdapter.Cancel_Socket( stream );
+
+	doCallback( startCommand_inner() );
+
+		// get rid of ref counted when callback was registered
+	decRefCount();
+
+	return KEEP_STREAM;
 }
 
 
 // Given a sinful string, clear out any associated sessions (incoming or outgoing)
-bool SecMan :: invalidateHost(const char * sin)
+void
+SecMan::invalidateHost(const char * sin)
 {
-    bool removed = true;
+	StringList *keyids = session_cache->getKeysForPeerAddress(sin);
+	if( !keyids ) {
+		return;
+	}
 
-    if (sin && sin[0]) {
-        KeyCacheEntry * keyEntry = NULL;
-        MyString  addr(sin), id;
-
-        if (session_cache) {
-            session_cache->key_table->startIterations();
-            while (session_cache->key_table->iterate(id, keyEntry)) {
-				char * remote_sinful = sin_to_string(keyEntry->addr());
-					// if this is an outgoing session, we need to check against the keyEntry->addr()
-				if (remote_sinful && remote_sinful[0] &&  (addr == MyString(remote_sinful))) {
-					if (DebugFlags & D_FULLDEBUG) {
-						dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), remote_sinful);
-					}
-					remove_commands(keyEntry);	// removing mapping from DC command int to session entry
-					session_cache->remove(id.Value());	// remove session entry
-				} else {
-						// if it did not match, it might be an incoming session, so check against the
-						// ServerCommandSock that is in the cached policy classad.
-					char * local_sinful = NULL;
-					keyEntry->policy()->LookupString( ATTR_SEC_SERVER_COMMAND_SOCK, &local_sinful);
-					if (local_sinful && local_sinful[0] && (addr == MyString(local_sinful))) {
-						if (DebugFlags & D_FULLDEBUG) {
-							dprintf (D_SECURITY, "KEYCACHEX: removing session %s for %s\n", id.Value(), local_sinful);
-						}
-						// remove_commands shouldn't be necessary for incoming connections
-						// remove_commands(keyEntry);
-						session_cache->remove(id.Value());
-					}
-					if (local_sinful) {
-						free(local_sinful);
-					}
-				}
-            }
-        }
-    }
-    else {
-        // sock is NULL!
-    }
-
-    return removed;
+	keyids->rewind();
+	char const *keyid;
+	while( (keyid=keyids->next()) ) {
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", keyid, sin);
+		}
+		invalidateKey(keyid);
+	}
+	delete keyids;
 }
 
-bool SecMan :: invalidateByParentAndPid(const char * parent, int pid) {
-	if (parent && parent[0]) {
-
-    	KeyCacheEntry * keyEntry = NULL;
-        MyString  id;
-
-		if (session_cache) {
-			session_cache->key_table->startIterations();
-			while (session_cache->key_table->iterate(id, keyEntry)) {
-
-				char * parent_unique_id = NULL;
-				int    tpid = 0;
-
-				keyEntry->policy()->LookupString( ATTR_SEC_PARENT_UNIQUE_ID, &parent_unique_id);
-				keyEntry->policy()->LookupInteger( ATTR_SEC_SERVER_PID, tpid);
-
-				if (parent_unique_id && parent_unique_id[0] && (strcmp(parent, parent_unique_id) == 0) && (pid == tpid)) {
-					if (DebugFlags & D_FULLDEBUG) {
-						dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), parent_unique_id);
-					}
-					// remove_commands shouldn't be necessary for incoming connections
-					// remove_commands(keyEntry);
-					session_cache->remove(id.Value());
-				}
-				if (parent_unique_id) {
-					free(parent_unique_id);
-					parent_unique_id = 0;
-				}
-			}
-        }
+void
+SecMan::invalidateByParentAndPid(const char * parent, int pid) {
+	StringList *keyids = session_cache->getKeysForProcess(parent,pid);
+	if( !keyids ) {
+		return;
 	}
-	return true;
+
+	keyids->rewind();
+	char const *keyid;
+	while( (keyid=keyids->next()) ) {
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s pid %d\n", keyid, parent, pid);
+		}
+		invalidateKey(keyid);
+	}
+	delete keyids;
 }
 
 bool SecMan :: invalidateKey(const char * key_id)
@@ -2368,10 +2408,10 @@ SecMan::SecMan(int nbuckets) {
 		session_cache = new KeyCache(nbuckets);
 	}
 	if (command_map == NULL) {
-		command_map = new HashTable<MyString,MyString>(nbuckets, MyStringHash, rejectDuplicateKeys);
+		command_map = new HashTable<MyString,MyString>(nbuckets, MyStringHash, updateDuplicateKeys);
 	}
 	if (tcp_auth_in_progress == NULL) {
-		tcp_auth_in_progress = new HashTable<MyString,class SecManStartCommand *>(256, MyStringHash, rejectDuplicateKeys);
+		tcp_auth_in_progress = new HashTable<MyString,classy_counted_ptr<SecManStartCommand> >(256, MyStringHash, rejectDuplicateKeys);
 	}
 	sec_man_ref_count++;
 }
@@ -2421,16 +2461,12 @@ SecMan::~SecMan() {
 void
 SecMan::reconfig()
 {
-	m_ipverify_initialized = false;
+	m_ipverify.reconfig();
 }
 
 IpVerify *
 SecMan::getIpVerify()
 {
-	if( !m_ipverify_initialized ) {
-		m_ipverify_initialized = true;
-		m_ipverify.Init();
-	}
 	return &m_ipverify;
 }
 
@@ -2455,6 +2491,20 @@ SecMan::sec_copy_attribute( ClassAd &dest, ClassAd &source, const char* attr ) {
 	}
 }
 
+bool
+SecMan::sec_copy_attribute( ClassAd &dest, const char *to_attr, ClassAd &source, const char *from_attr ) {
+	ExprTree *e = source.Lookup(from_attr);
+	if (!e) {
+		return false;
+	}
+
+	ASSERT(e->MyType() == LX_ASSIGN && e->RArg());
+	char *buf = NULL;
+	e->RArg()->PrintToNewStr(&buf);
+	bool retval = dest.AssignExpr(to_attr,buf) != 0;
+	free(buf);
+	return retval;
+}
 
 
 void
@@ -2463,7 +2513,7 @@ SecMan::invalidateAllCache() {
 	session_cache = new KeyCache(209);
 
 	delete command_map;
-	command_map = new HashTable<MyString,MyString>(209, MyStringHash, rejectDuplicateKeys);
+	command_map = new HashTable<MyString,MyString>(209, MyStringHash, updateDuplicateKeys);
 }
 
 void 
@@ -2497,7 +2547,7 @@ SecMan :: invalidateExpiredCache()
 				dprintf (D_SECURITY, "SECMAN: unable to delete KeyCacheEntry.\n");
 			}
 			session_cache->remove(keybuf);
-			have_session = false;
+			m_have_session = false;
 
 			// close this connection and start a new one
 			if (!sock->close()) {
@@ -2555,27 +2605,6 @@ MyString SecMan::getDefaultCryptoMethods() {
 	return "";
 #endif
 }
-
-void SecMan::send_invalidate_packet ( char* sinful, char* sessid ) {
-	if ( sinful ) {
-		SafeSock s;
-		if (s.connect(sinful)) {
-			s.encode();
-			s.put(DC_INVALIDATE_KEY);
-			s.code(sessid);
-			s.eom();
-			s.close();
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: sent DC_INVALIDATE %s to %s.\n",
-				sessid, sinful);
-		} else {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't send DC_INVALIDATE %s to %s.\n",
-				sessid, sinful);
-		}
-	} else {
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't invalidate session %s... don't know who it is from!\n", sessid);
-	}
-}
-
 
 char* SecMan::my_unique_id() {
 
@@ -2643,7 +2672,8 @@ SecMan::authenticate_sock(Sock *s,DCpermission perm, CondorError* errstack)
 	MyString methods;
 	getAuthenticationMethods( perm, &methods );
 	ASSERT(s);
-	return s->authenticate(methods.Value(),errstack);
+	int auth_timeout = getSecTimeout(perm);
+	return s->authenticate(methods.Value(),errstack,auth_timeout);
 }
 
 int
@@ -2652,5 +2682,251 @@ SecMan::authenticate_sock(Sock *s,KeyInfo *&ki, DCpermission perm, CondorError* 
 	MyString methods;
 	getAuthenticationMethods( perm, &methods );
 	ASSERT(s);
-	return s->authenticate(ki,methods.Value(),errstack);
+	int auth_timeout = getSecTimeout(perm);
+	return s->authenticate(ki,methods.Value(),errstack,auth_timeout);
+}
+
+int
+SecMan::getSecTimeout(DCpermission perm)
+{
+	MyString param_name;
+	char *value = getSecSetting("SEC_%s_AUTHENTICATION_TIMEOUT",perm,&param_name);
+	int auth_timeout = -1;
+	if (value) {
+		auth_timeout = param_integer(param_name.Value(),-1);
+		free(value);
+	}
+	return auth_timeout;
+}
+
+Protocol CryptProtocolNameToEnum(char const *name) {
+	switch (toupper(*name)) {
+	case 'B': // blowfish
+		return CONDOR_BLOWFISH;
+	case '3': // 3des
+	case 'T': // Tripledes
+		return CONDOR_3DES;
+	default:
+		return CONDOR_NO_PROTOCOL;
+	}
+}
+
+bool
+SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,char const *peer_fqu, char const *peer_sinful, int duration)
+{
+	ClassAd policy;
+
+	ASSERT(sesid);
+
+	sockaddr_in peer_addr;
+	if(peer_sinful && !string_to_sin(peer_sinful,&peer_addr)) {
+		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
+				"string_to_sin(%s) failed\n",sesid,peer_sinful);
+		return false;
+	}
+
+	FillInSecurityPolicyAd( auth_level, &policy, true, false );
+
+	ClassAd *auth_info = ReconcileSecurityPolicyAds(policy,policy);
+	if(!auth_info) {
+		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
+				"ReconcileSecurityPolicyAds() failed.\n",sesid);
+		return false;
+	}
+	sec_copy_attribute(policy,*auth_info,ATTR_SEC_AUTHENTICATION);
+	sec_copy_attribute(policy,*auth_info,ATTR_SEC_INTEGRITY);
+	sec_copy_attribute(policy,*auth_info,ATTR_SEC_ENCRYPTION);
+	sec_copy_attribute(policy,*auth_info,ATTR_SEC_CRYPTO_METHODS);
+
+		// remove all but the first crypto method
+	MyString crypto_methods;
+	policy.LookupString(ATTR_SEC_CRYPTO_METHODS,crypto_methods);
+	if( crypto_methods.Length() ) {
+		int pos = crypto_methods.FindChar(',');
+		if( pos >= 0 ) {
+			crypto_methods.setChar(pos,'\0');
+			policy.Assign(ATTR_SEC_CRYPTO_METHODS,crypto_methods);
+		}
+	}
+
+	delete auth_info;
+	auth_info = NULL;
+
+	if( !ImportSecSessionInfo(exported_session_info,policy) ) {
+		return false;
+	}
+
+	policy.Assign(ATTR_SEC_USE_SESSION, "YES");
+	policy.Assign(ATTR_SEC_SID, sesid);
+	policy.Assign(ATTR_SEC_ENACT, "YES");
+
+	if( peer_fqu ) {
+		policy.Assign(ATTR_SEC_AUTHENTICATION, SecMan::sec_feat_act_rev[SEC_FEAT_ACT_NO]);
+		policy.Assign(ATTR_SEC_TRIED_AUTHENTICATION,true);
+		policy.Assign(ATTR_SEC_USER,peer_fqu);
+	}
+
+
+	MyString crypto_method;
+	policy.LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method);
+
+	Protocol crypt_protocol = CryptProtocolNameToEnum(crypto_method.Value());
+	const int keylen = MAC_SIZE;
+	unsigned char* keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
+	if(!keybuf) {
+		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
+				"oneWayHashKey() failed.\n",sesid);
+		return false;
+	}
+	KeyInfo *keyinfo = new KeyInfo(keybuf,keylen,crypt_protocol);
+
+		// extract the session duration from the (imported) policy
+	int expiration_time = 0;
+
+	if( policy.LookupInteger(ATTR_SEC_SESSION_EXPIRES,expiration_time) ) {
+		duration = expiration_time ? expiration_time - time(NULL) : 0;
+		if( duration < 0 ) {
+			dprintf(D_SECURITY,"SECMAN: failed to create non-negotiated security session %s because duration = %d\n",sesid,duration);
+			return false;
+		}
+	}
+	else if( duration > 0 ) {
+		expiration_time = time(NULL) + duration;
+			// store this in the policy so that when we export session info,
+			// it is there
+		policy.Assign(ATTR_SEC_SESSION_EXPIRES,expiration_time);
+	}
+
+	KeyCacheEntry key(sesid,peer_sinful ? &peer_addr : NULL,keyinfo,&policy,expiration_time);
+
+	if( !session_cache->insert(key) ) {
+		dprintf(D_SECURITY, "SECMAN: failed to create session %s.\n",
+				sesid);
+		return false;
+	}
+
+	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %d %sseconds."
+			"\n", sesid, duration, expiration_time == 0 ? "(inf) " : "");
+
+	if( DebugFlags & D_FULLDEBUG ) {
+		if( exported_session_info ) {
+			dprintf(D_SECURITY,"Imported session attributes: %s\n",
+					exported_session_info);
+		}
+		dprintf(D_SECURITY,"Caching non-negotiated security session ad:\n");
+		policy.dPrint(D_SECURITY);
+	}
+
+	return true;
+}
+
+bool
+SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
+		// expected format for session_info is the format produced by
+		// ExportSecSessionInfo()
+		// [param1=val1; param2=val2; ... ]
+		// To keep things simple, no parameters or values may contain ';'
+
+	if( !session_info || !*session_info) {
+		return true; // no exported session info
+	}
+
+	MyString buf = session_info+1;
+
+		// verify that the string is contained in []'s
+	if( session_info[0]!='[' || buf[buf.Length()-1]!=']' ) {
+		dprintf( D_ALWAYS, "ImportSecSessionInfo: invalid session info: %s\n",
+				session_info );
+		return false;
+	}
+
+		// get rid of final ']'
+	buf.setChar(buf.Length()-1,'\0');
+
+	StringList lines(buf.Value(),";");
+	lines.rewind();
+
+	char const *line;
+	ClassAd imp_policy;
+	while( (line=lines.next()) ) {
+		if( !imp_policy.Insert(line) ) {
+			dprintf( D_ALWAYS, "ImportSecSessionInfo: invalid imported session info: '%s' in %s\n", line, session_info );
+			return false;
+		}
+	}
+
+		// We could have just blindly inserted everything into our policy,
+		// but for safety, we explicitly copy over specific attributes
+		// from imp_policy to our policy.
+
+	sec_copy_attribute(policy,imp_policy,ATTR_SEC_INTEGRITY);
+	sec_copy_attribute(policy,imp_policy,ATTR_SEC_ENCRYPTION);
+	sec_copy_attribute(policy,imp_policy,ATTR_SEC_CRYPTO_METHODS);
+	sec_copy_attribute(policy,imp_policy,ATTR_SEC_SESSION_EXPIRES);
+
+	return true;
+}
+
+bool
+SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
+	ASSERT( session_id );
+
+	KeyCacheEntry *session_key = NULL;
+	if(!session_cache->lookup(session_id,session_key)) {
+		dprintf(D_ALWAYS,"SECMAN: ExportSecSessionInfo failed to find "
+				"session %s\n",session_id);
+		return false;
+	}
+	ClassAd *policy = session_key->policy();
+	ASSERT( policy );
+
+	ClassAd exp_policy;
+	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_INTEGRITY);
+	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_ENCRYPTION);
+	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_CRYPTO_METHODS);
+	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_SESSION_EXPIRES);
+
+	session_info += "[";
+	exp_policy.ResetExpr();
+	ExprTree *elem;
+	while( (elem=exp_policy.NextExpr()) ) {
+			// In the following, we attempt to avoid any spaces in the
+			// result string.  However, no code should depend on this.
+		session_info += ((Variable*)elem->LArg())->Name();
+		session_info += "=";
+
+        char *line = NULL;
+        elem->RArg()->PrintToNewStr(&line);
+
+			// none of the ClassAd values should ever contain ';'
+			// that makes things easier in ImportSecSessionInfo()
+		ASSERT( strchr(line,';') == NULL );
+
+		session_info += line;
+		session_info += ";";
+
+		free(line);
+    }
+	session_info += "]";
+
+	dprintf(D_SECURITY,"SECMAN: exporting session info for %s: %s\n",
+			session_id, session_info.Value());
+	return true;
+}
+
+bool
+SecMan::SetSessionExpiration(char const *session_id,time_t expiration_time) {
+	ASSERT( session_id );
+
+	KeyCacheEntry *session_key = NULL;
+	if(!session_cache->lookup(session_id,session_key)) {
+		dprintf(D_ALWAYS,"SECMAN: SetSessionExpiration failed to find "
+				"session %s\n",session_id);
+		return false;
+	}
+	session_key->setExpiration(expiration_time);
+
+	dprintf(D_SECURITY,"Set expiration time for security session %s to %ds\n",session_id,(int)(expiration_time-time(NULL)));
+
+	return true;
 }

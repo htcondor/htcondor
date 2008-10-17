@@ -20,7 +20,6 @@
 
 
 ######################################################################
-# $Id: platform_pre,v 1.7 2008-03-05 21:12:50 gquinn Exp $
 # Submit-side NMI build system infrastructure to setup platform
 # specific input for test jobs.  All we have to do is trim down the
 # architecture-dependent results.tar.gz file to remove all the
@@ -77,6 +76,7 @@ my $test_type = $ARGV[0];
 if( ! $test_type ) {
     $test_type = "dynamic";
 }
+my $testbin = "public/testbin";
 print "Preparing input for $test_type test job in $BaseDir\n";
 
 
@@ -86,8 +86,8 @@ print "Preparing input for $test_type test job in $BaseDir\n";
 
 if(!(-f $extractdone)) {
 	print "Searching in results.tar.gz for binaries that match '$test_type'\n";
-	open( LTAR, "tar -ztf $results|" ) || 
-    	die "Can't open tar -ztf $results: $!\n";
+	open( LTAR, "tar -xvzf $results $testbin '*/condor-*dynamic.tar.*' |" ) || 
+    	die "Can't open tar -xzvf $results '*/condor-*dynamic.tar.*' : $!\n";
 	my $saved_tarball;
 	while( <LTAR> ) {
     	chomp;
@@ -98,7 +98,7 @@ if(!(-f $extractdone)) {
 			if( /.*condor-.*$test_type.*\.tar\.(gz|Z)$/ ) {
 	    		$saved_tarball = $_;
 	    		print "Found tarball that matches '$test_type'!\n";
-	    		last;
+	    		# last;
 			}
     	}
     	# Someday, we can add cases for other kinds of $test_type here... 
@@ -114,26 +114,15 @@ if(!(-f $extractdone)) {
 #    move it to this parent directory.
 ######################################################################
 
-	print "Unpacking architecture-dependent results.tar.gz\n";
-	open( UNTAR, "tar -zxvf $results $saved_tarball|" ) || 
-    	die "Can't open tar -zxvf $results $saved_tarball: $!\n";
-	while( <UNTAR> ) {
-    	print;
-	}
-	close( UNTAR );
-	if( $? ) {
-    	die "'tar -zxvf $results $saved_tarball' failed with status $?\n";
-	}
-
 	@path_parts = split( '/', $saved_tarball );
 	$tar_name = pop( @path_parts );
 	print "TarName is: $tar_name\n";
 
 	# Now, copy it to the parent
-	print "Copying $tar_name to $BaseDir\n";
-	system( "cp $saved_tarball $BaseDir" );
+	print "Moving $tar_name to $BaseDir\n";
+	system( "mv $saved_tarball $BaseDir" );
 	if( $? ) {
-    	die "'cp $saved_tarball $BaseDir' failed with status $?\n";
+    	die "'mv $saved_tarball $BaseDir' failed with status $?\n";
 	}
 
 
@@ -142,18 +131,6 @@ if(!(-f $extractdone)) {
 # 2) Now that we found the binary we want, untar the pre-built test
 #	 programs from the tarball and move them to this parent directory.
 ######################################################################
-
-	$testbin = "public/testbin";
-	print "Unpacking testbin/testbin_dir from results.tar.gz\n";
-	open( UNTAR, "tar -zxvf $results $testbin |" ) || 
-    	die "Can't open tar -zxvf $results $testbin: $!\n";
-	while( <UNTAR> ) {
-    	print;
-	}
-	close( UNTAR );
-	if( $? ) {
-    	die "'tar -zxvf $results $testbin' failed with status $?\n";
-	}
 
 	# Now, copy it to the parent
 	print "Copying $testbin to $BaseDir\n";

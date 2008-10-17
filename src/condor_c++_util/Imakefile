@@ -10,6 +10,10 @@
 #define New_classads_lib
 #endif
 
+#if HAVE_DLOPEN
+PLUGIN_OBJ = ClassAdLogPlugin.o LoadPlugins.o
+#endif
+
 #if HAVE_CC_SHARED_FLAG
 LIBCONDORAPI = libcondorapi.a libcondorapi.so
 TEST_LIBCONDORAPI = test_libcondorapi test_libcondorapi_shared
@@ -83,11 +87,11 @@ TT_OBJS =
 #endif
 
 /* Bring in the old classad library because the user log parsing code
-	(which we form the condor api archive with) now can use xml logging and
-	classad representations of the events.
-	This brings in cedar, but we define stub functions in libcondorapi_stubs.C
-	to remedy the situation. If you're just reading log files, then you don't
-	need that functionality anyway. */
+ * (which we form the condor api archive with) now can use xml logging and
+ * classad representations of the events.
+ * This brings in cedar, but we define stub functions in libcondorapi_stubs.C
+ * to remedy the situation. If you're just reading log files, then you don't
+ * need that functionality anyway. */
 CLASSAD_OBJ = \
 	../condor_classad/ast.o \
 	../condor_classad/astbase.o \
@@ -110,10 +114,13 @@ CLASSAD_OBJ = \
 	MyString.o
 
 
-/* Construct a libcondorapi.a that includes enough stuff to read and write
-	log files. The libcondorapi_stubs.o object contains stubs for cedar, the
-	condor query object, and a few various other simple implementations for
-	functions we could not bring in from another place. */
+/*
+ * Construct a libcondorapi.a that includes enough stuff to read and write
+ * log files. The libcondorapi_stubs.o object contains stubs for cedar, the
+ * condor query object, and a few various other simple implementations for
+ * functions we could not bring in from another place.
+ */
+
 CONLIBAPI_OBJ = \
 	condor_event.o \
 	file_sql.o \
@@ -129,7 +136,9 @@ CONLIBAPI_OBJ = \
 	stat_wrapper.o \
 	stat_wrapper_internal.o \
 	../condor_util_lib/dprintf_common.o \
+	../condor_util_lib/dprintf_config.o \
 	../condor_util_lib/dprintf.o \
+	../condor_util_lib/sig_install.o \
 	../condor_util_lib/basename.o \
 	../condor_util_lib/mkargv.o \
 	../condor_util_lib/except.o \
@@ -142,7 +151,7 @@ CONLIBAPI_OBJ = \
 	passwd_cache.o \
 	uids.o \
 	../condor_util_lib/chomp.o \
-	get_mysubsystem.o \
+	subsystem_info.o \
 	my_subsystem.o \
 	distribution.o \
 	my_distribution.o \
@@ -154,7 +163,8 @@ CONLIBAPI_OBJ = \
 	$(SETEGID_OBJ) \
 	condor_open.o \
 	classad_merge.o \
-	condor_attributes.o
+	condor_attributes.o \
+	simple_arg.o
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
 	dc_schedd.o dc_collector.o dc_starter.o daemon_list.o \
@@ -176,13 +186,15 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o print_wrapped_text.o \
 	classad_helpers.o classad_merge.o classad_namedlist.o \
+	ClassAdReevaluator.o \
 	linebuffer.o cron.o cronmgr.o cronjob.o cronjob_classad.o \
 	distribution.o \
 	condor_attributes.o condor_environ.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
-	limit.o my_subsystem.o access.o get_mysubsystem.o \
+	limit.o my_subsystem.o access.o subsystem_info.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
-	uids.o passwd_cache.o metric_units.o condor_ver_info.o condor_cred_base.o \
+	uids.o passwd_cache.o \
+	metric_units.o condor_ver_info.o condor_cred_base.o \
 	condor_md.o condor_credential.o \
 	proc_id.o HashTable.o MyString.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
@@ -198,17 +210,22 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	exponential_backoff.o \
 	my_popen.o condor_open.o transfer_request.o condor_ftp.o \
 	proc_family_interface.o proc_family_proxy.o proc_family_direct.o \
+	procd_config.o \
 	killfamily.o $(TT_OBJS) file_xml.o  vm_univ_utils.o condor_url.o \
+	$(PLUGIN_OBJ) \
 	forkwork.o filename_tools_cpp.o condor_getcwd.o \
-	set_user_priv_from_ad.o hook_utils.o
-
+	set_user_priv_from_ad.o hook_utils.o classad_visa.o \
+	simple_arg.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
+
 library_target(libcondorapi.a,$(CONLIBAPI_OBJ))
+libcondorapi.a: Makefile
 
 #if HAVE_CC_SHARED_FLAG
 shared_library_target(libcondorapi.so,$(CONLIBAPI_OBJ))
+libcondorapi.so: Makefile
 #endif
 
 c_plus_target(test_mapfile,test_mapfile.o,$(LIB))
@@ -222,6 +239,7 @@ c_plus_target(test_condor_arglist,test_condor_arglist.o,$(LIB))
 c_plus_target(test_condor_crontab,test_condor_crontab.o,$(LIB))
 c_plus_target(test_spawn,test_spawn.o,$(LIB))
 c_plus_target(test_tree,test_tree.o,$(LIB))
+c_plus_target(test_ClassAdReevaluator,ClassAdReevaluatorTest.o,$(LIB))
 
 template_inst(test_stringSpace,test_stringSpace.o)
 
@@ -261,16 +279,22 @@ html_target( documentation )
 
 all-tests: access.t killfamily.t test_locks my_hostname.t
 
-userlog-tests: test_log_writer test_log_reader
-test_log_writer: $(LIB)
-test_log_reader: $(LIB)
+/* User log testing */
+USERLOG_TESTS = test_log_reader test_log_writer
+USERLOG_LIBAPI_TESTS = $(addsuffix _api, $(USERLOG_TESTS) )
 
-tester: tester.o $(LIB)
-	$(CC) $(CFLAGS) -Wl,-u._fpdata_size -o tester tester.o $(LIB)
+userlog-tests: $(USERLOG_TESTS) $(USERLOG_LIBAPI_TESTS)
+
+test_log_reader: $(LIB) Makefile $(LIBCONDORAPI)
+test_log_writer: $(LIB) Makefile $(LIBCONDORAPI)
+
+$(USERLOG_LIBAPI_TESTS): %_api : %.o $(LIBCONDORAPI) Makefile
+	$(CPlusPlus) $< -L. -Wl,-Bstatic -lcondorapi -Wl,-Bdynamic -ldl -o $@
+
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_util_lib,mkargv.o)
-import(../condor_daemon_client,$(DAEMON_CLIENT_OBJ))
+import_objs(../condor_util_lib,mkargv.o)
+import_objs(../condor_daemon_client,$(DAEMON_CLIENT_OBJ))
 
 public_library(libcondorapi.a,lib)
 libcondorapi-release:: $(RELEASE_DIR)/lib/libcondorapi.a

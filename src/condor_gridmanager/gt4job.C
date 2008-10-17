@@ -293,6 +293,7 @@ GT4Job::GT4Job( ClassAd *classad )
 	gahp = NULL;
 	delegatedCredentialURI = NULL;
 	gridftpServer = NULL;
+	m_isGram42 = false;
 
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -434,7 +435,7 @@ GT4Job::GT4Job( ClassAd *classad )
 			full_job_output += job_output;
 			localOutput = strdup( full_job_output.Value() );
 
-			bool_value = 1;
+			bool_value = 0;
 			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
 			streamOutput = (bool_value != 0);
 			stageOutput = !streamOutput;
@@ -455,7 +456,7 @@ GT4Job::GT4Job( ClassAd *classad )
 			full_job_error += job_error;
 			localError = strdup( full_job_error.Value() );
 
-			bool_value = 1;
+			bool_value = 0;
 			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );
 			streamError = (bool_value != 0);
 			stageError = !streamError;
@@ -586,6 +587,13 @@ int GT4Job::doEvaluateState()
 			}
 
 			gahp->setMode( saved_mode );
+
+			if ( m_isGram42 == false && myResource->IsGram42() == true ) {
+				if ( SwitchToGram42() == false ) {
+					gmState = GM_HOLD;
+					break;
+				}
+			}
 
 			gmState = GM_START;
 			} break;
@@ -1011,11 +1019,15 @@ int GT4Job::doEvaluateState()
 		case GM_DONE_COMMIT: {
 			// Tell the jobmanager it can clean up and exit.
 			CHECK_PROXY;
+			if ( myResource->RequestDestroy( this ) == false ) {
+				break;
+			}
 			rc = gahp->gt4_gram_client_job_destroy( jobContact );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
+			myResource->DestroyComplete( this );
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
 				LOG_GLOBUS_ERROR( "gt4_gram_client_job_destroy()", rc );
@@ -1045,11 +1057,15 @@ int GT4Job::doEvaluateState()
 			if ( globusState != GT4_JOB_STATE_DONE &&
 				 globusState != GT4_JOB_STATE_FAILED ) {
 				CHECK_PROXY;
+				if ( myResource->RequestDestroy( this ) == false ) {
+					break;
+				}
 				rc = gahp->gt4_gram_client_job_destroy( jobContact );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
+				myResource->DestroyComplete( this );
 				if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "gt4_gram_client_job_destroy()", rc );
@@ -1060,6 +1076,7 @@ int GT4Job::doEvaluateState()
 				myResource->CancelSubmit( this );
 				SetRemoteJobId( NULL );
 			}
+			myResource->DestroyComplete( this );
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
@@ -1075,11 +1092,15 @@ int GT4Job::doEvaluateState()
 			// isn't pending/running or the user has told us to
 			// forget lost job submissions.
 			CHECK_PROXY;
+			if ( myResource->RequestDestroy( this ) == false ) {
+				break;
+			}
 			rc = gahp->gt4_gram_client_job_destroy( jobContact );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
+			myResource->DestroyComplete( this );
 			if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 				LOG_GLOBUS_ERROR( "gt4_gram_client_job_destroy", rc );
@@ -1158,6 +1179,7 @@ int GT4Job::doEvaluateState()
 			jmLifetime = 0;
 			UpdateJobLeaseSent( -1 );
 			myResource->CancelSubmit( this );
+			myResource->DestroyComplete( this );
 			if ( jobContact != NULL ) {
 				SetRemoteJobId( NULL );
 			}
@@ -1509,16 +1531,20 @@ MyString *GT4Job::buildSubmitRSL()
 	MyString delegation_epr;
 	MyString delegation_uri = delegatedCredentialURI;
 	int pos = delegation_uri.FindChar( '?' );
-	delegation_epr.sprintf( "<ns1:Address xsi:type=\"ns1:AttributedURI\">%s</ns1:Address>", delegation_uri.Substr( 0, pos-1 ).Value() );
-	delegation_epr.sprintf_cat( "<ns1:ReferenceProperties xsi:type=\"ns1:ReferencePropertiesType\">" );
-	delegation_epr.sprintf_cat( "<ns1:DelegationKey xmlns:ns1=\"http://www.globus.org/08/2004/delegationService\">%s</ns1:DelegationKey>", delegation_uri.Substr( pos+1, delegation_uri.Length()-1 ).Value() );
-	delegation_epr.sprintf_cat( "</ns1:ReferenceProperties><ns1:ReferenceParameters xsi:type=\"ns1:ReferenceParametersType\"/>" );
-/*
-	delegation_epr.sprintf( "<Address>%s</Address>", delegation_uri.Substr( 0, pos-1 ).Value() );
-	delegation_epr.sprintf_cat( "<ReferenceProperties>" );
-	delegation_epr.sprintf_cat( "<DelegationKey>%s</DelegationKey>", delegation_uri.Substr( pos+1, delegation_uri.Length()-1 ).Value() );
-	delegation_epr.sprintf_cat( "</ReferenceProperties><ReferenceParameters/>" );
-*/
+	if ( m_isGram42 == false ) {
+			// GRAM 4.0
+		delegation_epr.sprintf( "<ns01:Address xmlns:ns01=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">%s</ns01:Address>", delegation_uri.Substr( 0, pos-1 ).Value() );
+		delegation_epr.sprintf_cat( "<ns01:ReferenceProperties xmlns:ns01=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">" );
+		delegation_epr.sprintf_cat( "<ns1:DelegationKey xmlns:ns1=\"http://www.globus.org/08/2004/delegationService\">%s</ns1:DelegationKey>", delegation_uri.Substr( pos+1, delegation_uri.Length()-1 ).Value() );
+		delegation_epr.sprintf_cat( "</ns01:ReferenceProperties>" );
+		delegation_epr.sprintf_cat( "<ns01:ReferenceParameters xmlns:ns01=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\"/>" );
+	} else {
+			// GRAM 4.2
+		delegation_epr.sprintf( "<ns01:Address xmlns:ns01=\"http://www.w3.org/2005/08/addressing\">%s</ns01:Address>", delegation_uri.Substr( 0, pos-1 ).Value() );
+		delegation_epr.sprintf_cat( "<ns01:ReferenceParameters xmlns:ns01=\"http://www.w3.org/2005/08/addressing\">" );
+		delegation_epr.sprintf_cat( "<ns1:DelegationKey xmlns:ns1=\"http://www.globus.org/08/2004/delegationService\">%s</ns1:DelegationKey>", delegation_uri.Substr( pos+1, delegation_uri.Length()-1 ).Value() );
+		delegation_epr.sprintf_cat( "</ns01:ReferenceParameters>" );
+	}
 
 		// Set our local job working directory
 	if ( jobAd->LookupString(ATTR_JOB_IWD, &attr_value) && *attr_value ) {
@@ -1766,7 +1792,7 @@ MyString *GT4Job::buildSubmitRSL()
 		*rsl += "<fileStageIn>";
 		*rsl += "<maxAttempts>5</maxAttempts>";
 
-		*rsl += "<transferCredentialEndpoint xsi:type=\"ns1:EndpointReferenceType\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns1=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">";
+		*rsl += "<transferCredentialEndpoint>";
 		*rsl += delegation_epr;
 		*rsl += "</transferCredentialEndpoint>";
 
@@ -1865,7 +1891,7 @@ MyString *GT4Job::buildSubmitRSL()
 		*rsl += "<fileStageOut>";
 		*rsl += "<maxAttempts>5</maxAttempts>";
 
-		*rsl += "<transferCredentialEndpoint xsi:type=\"ns1:EndpointReferenceType\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns1=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">";
+		*rsl += "<transferCredentialEndpoint>";
 		*rsl += delegation_epr;
 		*rsl += "</transferCredentialEndpoint>";
 
@@ -1954,7 +1980,7 @@ MyString *GT4Job::buildSubmitRSL()
 		// if we created one
 	if ( create_remote_iwd ) {
 		*rsl += "<fileCleanUp>";
-		*rsl += "<transferCredentialEndpoint xsi:type=\"ns1:EndpointReferenceType\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns1=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">";
+		*rsl += "<transferCredentialEndpoint>";
 		*rsl += delegation_epr;
 		*rsl += "</transferCredentialEndpoint>";
 		*rsl += "<deletion><file>file://" + remote_iwd +
@@ -1993,13 +2019,11 @@ MyString *GT4Job::buildSubmitRSL()
 		deleteStringArray(env_vec);
 	}
 
-	*rsl += "<jobCredentialEndpoint xsi:type=\"ns1:EndpointReferenceType\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns1=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">";
-//	*rsl += "<jobCredentialEndpoint>";
+	*rsl += "<jobCredentialEndpoint>";
 	*rsl += delegation_epr;
 	*rsl += "</jobCredentialEndpoint>";
 
-	*rsl += "<stagingCredentialEndpoint xsi:type=\"ns1:EndpointReferenceType\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns1=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">";
-//	*rsl += "<stagingCredentialEndpoint>";
+	*rsl += "<stagingCredentialEndpoint>";
 	*rsl += delegation_epr;
 	*rsl += "</stagingCredentialEndpoint>";
 
@@ -2160,4 +2184,75 @@ GT4Job::getDummyJobScratchDir() {
 		dirname = "";
 	}
 	return return_val;
+}
+
+bool
+GT4Job::SwitchToGram42()
+{
+	if ( m_isGram42 ) {
+		return true;
+	}
+
+dprintf(D_ALWAYS,"(%d.%d) JEF: Switching to Gram 42\n",procID.cluster,procID.proc);
+	GahpClient *new_gahp = NULL;
+
+	MyString gahp_name;
+	char *gahp_path = param("GT42_GAHP");
+	if ( gahp_path == NULL ) {
+		gmState = GM_HOLD;
+		jobAd->Assign( ATTR_HOLD_REASON, "GT42_GAHP not defined" );
+		SetEvaluateState();
+		return false;
+	}
+	gahp_name.sprintf( "GT42/%s", jobProxy->subject->subject_name );
+	new_gahp = new GahpClient( gahp_name.Value(), gahp_path );
+	free( gahp_path );
+
+	new_gahp->setNotificationTimerId( evaluateStateTid );
+	new_gahp->setTimeout( gahpCallTimeout );
+
+	if ( new_gahp->Initialize( jobProxy ) == false ) {
+		dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
+				 procID.cluster, procID.proc );
+		jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+		gmState = GM_HOLD;
+		SetEvaluateState();
+		delete new_gahp;
+		return false;
+	}
+
+	new_gahp->setDelegProxy( jobProxy );
+
+	new_gahp->setMode( GahpClient::blocking );
+
+	int err;
+	err = new_gahp->gt4_gram_client_callback_allow( gt4GramCallbackHandler,
+													NULL,
+													&gramCallbackContact );
+	if ( err != GLOBUS_SUCCESS ) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Error enabling GRAM callback, err=%d\n", 
+				 procID.cluster, procID.proc, err );
+		jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+		gmState = GM_HOLD;
+		delete new_gahp;
+		SetEvaluateState();
+		return false;
+	}
+
+	new_gahp->setMode( gahp->getMode() );
+
+	m_isGram42 = true;
+
+		// If we're trying to do a submit, we need to recreate the RSL,
+		// since the format is slightly different between 4.0 and 4.2.
+	delete RSL;
+	RSL = NULL;
+
+	delete gahp;
+	gahp = new_gahp;
+
+	SetEvaluateState();
+
+	return true;
 }
