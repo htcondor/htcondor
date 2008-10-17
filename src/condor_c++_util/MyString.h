@@ -208,7 +208,8 @@ class MyString
 
 	/** Returns the zero-based index of the first character of a
      *  substring, if it is contained within the MyString. Begins
-     *  looking at iStartPost */
+     *  looking at iStartPost.  Returns -1 if pszToFind is not
+	 *  found, 0 if pszToFind is empty. */
 	int find(const char *pszToFind, int iStartPos = 0) const;
 
 	/** Replaces a substring with another substring. It's okay for the
