@@ -431,6 +431,10 @@ finish_main_config( void )
 	Cronmgr->Reconfig(  );
 	resmgr->starter_mgr.init();
 
+#if HAVE_HIBERNATION
+	resmgr->updateHibernateConfiguration();
+#endif /* HAVE_HIBERNATION */
+
 		// Re-evaluate and update the CM for each resource (again, we
 		// don't need to recompute, since we just did that, so we call
 		// the special case version).

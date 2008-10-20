@@ -61,7 +61,8 @@ bool
 HibernationManager::addInterface( NetworkAdapterBase &adapter )
 {
 	m_adapters.add( &adapter );
-	if ( adapter.isPrimary()  ||  ( m_primary_adapter == NULL ) ) {
+	if (  (NULL == m_primary_adapter)  ||
+		  (m_primary_adapter->isPrimary() == false) ) {
 		m_primary_adapter = &adapter;
 	}
 	return true;
@@ -77,6 +78,20 @@ HibernationManager::update( void )
 	if ( change ) {
 		dprintf ( D_ALWAYS, "HibernationManager: Hibernation is %s\n",
 			( m_interval > 0 ? "enabled" : "disabled" ) );
+	}
+
+	// Check for network adapter
+	char	*name = param( "HIBERNATE_NETWORK_INTERFACE" );
+	if ( name ) {
+		 NetworkAdapterBase *netif =
+			 NetworkAdapterBase::createNetworkAdapter( name, true );
+		 if ( netif ) {
+			 addInterface( *netif );
+		 }
+		 else {
+			 dprintf( D_ALWAYS, "Can't find interface '%s'\n", name );
+		 }
+		 free( name );
 	}
 }
 

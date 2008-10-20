@@ -47,10 +47,13 @@ ResMgr::ResMgr()
 
 #if HAVE_HIBERNATION
 	m_netif = NetworkAdapterBase::createNetworkAdapter(
-		daemonCore->InfoCommandSinfulString (), true );
+		daemonCore->InfoCommandSinfulString (), false );
 	m_hibernation_manager = new HibernationManager( );
 	m_hibernation_manager->addInterface( *m_netif );
 	m_hibernate_tid = -1;
+	NetworkAdapterBase	*primary = m_hibernation_manager->getNetworkAdapter();
+	dprintf( D_FULLDEBUG, "Using network interface %s for hibernation\n",
+			 primary->interfaceName() );
 #endif
 
 	id_disp = NULL;
@@ -1936,7 +1939,8 @@ ResMgr::processAllocList( void )
 
 #if HAVE_HIBERNATION
 
-HibernationManager const& ResMgr::getHibernationManager() const {
+HibernationManager const& ResMgr::getHibernationManager(void) const
+{
 	return *m_hibernation_manager;
 }
 
@@ -1956,10 +1960,12 @@ void ResMgr::updateHibernateConfiguration() {
 
 
 int 
-ResMgr::allHibernating() {
+ResMgr::allHibernating( void )
+{
     	// fail if there is no resource or if we are
 		// configured not to hibernate
-	if (   !resources  ||  !m_hibernation_manager->wantsHibernate() ) {
+	if (   !resources  ||  !m_hibernation_manager->wantsHibernate()  ) {
+		dprintf( D_FULLDEBUG, "allHibernating: doesn't want hibernate\n" );
 		return 0;
 	}
 		// The following may evaluate to true even if there
@@ -1970,8 +1976,9 @@ ResMgr::allHibernating() {
 		// hibernation level for this machine
 	int max_level = 0;
 	for( int i = 0; i < nresources; i++ ) {
-	        int rval = resources[i]->evaluateHibernate();
-	        if( 0 == rval ) {
+		int rval = resources[i]->evaluateHibernate();
+		dprintf( D_FULLDEBUG, "allHibernating: %d -> %d\n", i, rval );
+		if( 0 == rval ) {
 			return 0;
 		}
 		max_level = MAX( max_level, rval );
@@ -1981,7 +1988,8 @@ ResMgr::allHibernating() {
 
 
 void 
-ResMgr::checkHibernate() {    
+ResMgr::checkHibernate( void )
+{
 
 		// If all resources have gone unused for some time	
 		// then put the machine to sleep
@@ -1996,9 +2004,12 @@ ResMgr::checkHibernate() {
         }
 
         if( !m_hibernation_manager->canWake() ) {
+			NetworkAdapterBase	*netif =
+				m_hibernation_manager->getNetworkAdapter();
             dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
-          	    "HIBERNATE: Machine cannot be worken by its "
-            	"public network adapter.\n" );
+					  "HIBERNATE: Machine cannot be woken by its "
+					  "public network adapter (%s).\n",
+					  netif->interfaceName() );
             return;
 		}        
 
@@ -2028,7 +2039,8 @@ ResMgr::checkHibernate() {
 
 
 int
-ResMgr::startHibernateTimer() {
+ResMgr::startHibernateTimer( void )
+{
 	int interval = m_hibernation_manager->getCheckInterval();
 	m_hibernate_tid = daemonCore->Register_Timer( 
 		interval, interval,
@@ -2043,7 +2055,8 @@ ResMgr::startHibernateTimer() {
 
 
 void
-ResMgr::resetHibernateTimer() {
+ResMgr::resetHibernateTimer( void )
+{
 	if ( m_hibernation_manager->wantsHibernate() ) {
 		if( m_hibernate_tid != -1 ) {
 			int interval = m_hibernation_manager->getCheckInterval();
@@ -2056,7 +2069,8 @@ ResMgr::resetHibernateTimer() {
 
 
 void
-ResMgr::cancelHibernateTimer() {
+ResMgr::cancelHibernateTimer( void )
+{
 	int rval;
 	if( m_hibernate_tid != -1 ) {
 		rval = daemonCore->Cancel_Timer( m_hibernate_tid );
