@@ -73,10 +73,10 @@ private:
 
     /** Persistent copies of machine class-ads to allow us
         to wake hibernating machines. */
-    ClassAdCollection   *ads_;
+    ClassAdCollection   *m_ads;
 
     /** Storage destination for persistent ads */
-    char                *persistent_store_;
+    char                *m_persistent_store;
 
 };
 
