@@ -105,6 +105,10 @@ void AmazonResource::Reconfig()
 	gahp->setTimeout( AmazonJob::gahpCallTimeout );
 }
 
+const char *AmazonResource::ResourceType()
+{
+	return "amazon";
+}
 
 // we will use amazon command "status_all" to do the Ping work
 void AmazonResource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_succeeded )

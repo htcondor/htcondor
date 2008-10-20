@@ -37,6 +37,7 @@ class NordugridResource : public BaseResource
 	NordugridResource( const char *resource_name, const char *proxy_subject );
 	~NordugridResource();
 
+	const char *ResourceType();
 	void Reconfig();
 
 	static const char *HashName( const char *resource_name,
