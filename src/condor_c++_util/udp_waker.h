@@ -36,7 +36,8 @@ class ClassAd;
  * UdpWakeOnLanWaker class
  ***************************************************************/
 
-class UdpWakeOnLanWaker : public WakerBase {
+class UdpWakeOnLanWaker : public WakerBase
+{
 
 public:
 
@@ -123,14 +124,14 @@ protected:
     
 private:
 
-	char		    _mac[STRING_MAC_ADDRESS_LENGTH],
-                    _subnet[MAX_IP_ADDRESS_LENGTH],
-                    _public_ip[MAX_IP_ADDRESS_LENGTH],
-                    _raw_mac[RAW_MAC_ADDRESS_LENGTH];
-	sockaddr_in     _boardcast;
-    unsigned short	_port;
-	unsigned char	_packet[WOL_PACKET_LENGTH];
-    bool            _can_wake;
+	char		    m_mac[STRING_MAC_ADDRESS_LENGTH];
+    char            m_subnet[MAX_IP_ADDRESS_LENGTH];
+    char            m_public_ip[MAX_IP_ADDRESS_LENGTH];
+    unsigned char   m_raw_mac[RAW_MAC_ADDRESS_LENGTH];
+	sockaddr_in     m_broadcast;
+    unsigned short	m_port;
+	unsigned char	m_packet[WOL_PACKET_LENGTH];
+    bool            m_can_wake;
 
 };
 

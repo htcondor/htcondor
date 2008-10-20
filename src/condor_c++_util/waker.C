@@ -29,10 +29,12 @@
  * Base WakerBase class
  ***************************************************************/
 
-WakerBase::WakerBase () {
+WakerBase::WakerBase () throw()
+{
 }
 
-WakerBase::~WakerBase () throw () {
+WakerBase::~WakerBase () throw ()
+{
 }
 
 /***************************************************************

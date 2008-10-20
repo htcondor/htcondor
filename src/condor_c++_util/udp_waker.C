@@ -32,11 +32,12 @@
 
 /* auto-detect port number */
 const int 
-UdpWakeOnLanWaker::detect_port = -1;
+UdpWakeOnLanWaker::detect_port = 0;
 
 /* default port number used when auto-detection fails */
 const int 
 UdpWakeOnLanWaker::default_port = 9;
+
 
 /***************************************************************
  * UdpWakeOnLanWaker [c|d]tors
@@ -45,18 +46,20 @@ UdpWakeOnLanWaker::default_port = 9;
 UdpWakeOnLanWaker::UdpWakeOnLanWaker ( 
     char const     *mac, 
 	char const     *subnet, 
-	unsigned short port )
-: _port ( port ) {
+	unsigned short port ) throw ()
+		: m_port ( port )
+{
     
-    strncpy ( _mac, mac, STRING_MAC_ADDRESS_LENGTH );
-    strncpy ( _subnet, subnet, MAX_IP_ADDRESS_LENGTH );
-    strncpy ( _public_ip, my_ip_string (), MAX_IP_ADDRESS_LENGTH );
-    _can_wake = initialize ();	
+    strncpy ( m_mac, mac, STRING_MAC_ADDRESS_LENGTH );
+    strncpy ( m_subnet, subnet, MAX_IP_ADDRESS_LENGTH );
+    strncpy ( m_public_ip, my_ip_string (), MAX_IP_ADDRESS_LENGTH );
+    m_can_wake = initialize ();	
 
 }
 
 UdpWakeOnLanWaker::UdpWakeOnLanWaker (
-    ClassAd *ad ) {
+    ClassAd *ad ) throw()
+{
 
     int     found   = 0;
     char    *start  = NULL,
@@ -65,12 +68,12 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     
     /* make sure we are only capable of sending the WOL 
     magic packet if all of the initialization succeds */
-    _can_wake = false;
+    m_can_wake = false;
 
     /* retrieve the hardware address from the ad */
     found = ad->LookupString (
         ATTR_HARDWARE_ADDRESS,
-        _mac,
+        m_mac,
         STRING_MAC_ADDRESS_LENGTH );
     
     if ( !found ) {
@@ -104,12 +107,12 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     start = sinful + 1;
     end = strchr ( sinful, ':' );
     *end = '\0';
-    strcpy ( _public_ip, start );
+    strcpy ( m_public_ip, start );
 
     /* retrieve the subnet from the ad */
     found = ad->LookupString (
         ATTR_SUBNET,
-        _subnet,
+        m_subnet,
         MAX_IP_ADDRESS_LENGTH );
 
     if ( !found ) {
@@ -123,7 +126,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     }
 
     /* auto-detect the port number to use */
-    _port = detect_port;
+    m_port = detect_port;
 
     /* initialize the internal structures */
     if ( !initialize () ) {
@@ -137,11 +140,12 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     }
 
     /* if we made it here, then initialization succeded */
-    _can_wake = true;
+    m_can_wake = true;
     
 }
 
-UdpWakeOnLanWaker::~UdpWakeOnLanWaker () throw () {
+UdpWakeOnLanWaker::~UdpWakeOnLanWaker (void) throw ()
+{
 }
 
 /***************************************************************
@@ -149,7 +153,8 @@ UdpWakeOnLanWaker::~UdpWakeOnLanWaker () throw () {
  ***************************************************************/
 
 bool
-UdpWakeOnLanWaker::initialize () {
+UdpWakeOnLanWaker::initialize (void)
+{
     
     if ( !initializePacket () ) {
 
@@ -190,37 +195,40 @@ UdpWakeOnLanWaker::initialize () {
 }
 
 bool
-UdpWakeOnLanWaker::initializePacket () {
+UdpWakeOnLanWaker::initializePacket (void)
+{
 	
 	int i, c, offset;
 
 	/* parse the hardware address */
-	c = sscanf ( _mac, 
+	unsigned	mac[6];
+	c = sscanf ( m_mac,
 		"%2x:%2x:%2x:%2x:%2x:%2x",
-		&_raw_mac[0], &_raw_mac[1], 
-		&_raw_mac[2], &_raw_mac[3], 
-		&_raw_mac[4], &_raw_mac[5] );
+		&mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5] );
 	
-	if ( c != 6 || strlen ( _mac ) < STRING_MAC_ADDRESS_LENGTH - 1) {
+	if ( c != 6 || strlen ( m_mac ) < STRING_MAC_ADDRESS_LENGTH - 1) {
 
         dprintf ( 
             D_ALWAYS, 
             "UdpWakeOnLanWaker::initializePacket: "
             "Malformed hardware address: %s\n",
-            _mac );
+            m_mac );
 
 		return false;
 
 	}
+	for ( i = 0;  i < 6;  i++ ) {
+		m_raw_mac[i] = (unsigned char)mac[i];
+	}
 	
 	/* pad the start of the packet */
-	memset ( _packet, 0xFF, 6 );
+	memset ( m_packet, 0xFF, 6 );
 	offset = 6;
 
 	/* create the body of packet: it contains the machine address 
 	   repeated 16 times */
 	for ( i = 0; i < 16; i++ ) {
-		memcpy ( _packet + offset, _raw_mac, 6 );
+		memcpy ( m_packet + offset, m_raw_mac, 6 );
 		offset += 6;
 	}
 
@@ -229,16 +237,17 @@ UdpWakeOnLanWaker::initializePacket () {
 }
 
 bool
-UdpWakeOnLanWaker::initializePort () {
+UdpWakeOnLanWaker::initializePort (void)
+{
 
-    /* if we've been given a negative value, then look-up the 
+    /* if we've been given a zero value, then look-up the 
        port number to use */
-    if ( _port < 0 ) {
+    if ( m_port == 0 ) {
         servent *sp = getservbyname ( "discard", "udp" );
         if ( sp ) {
-            _port = ntohs ( sp->s_port );
+            m_port = ntohs ( sp->s_port );
         } else {
-            _port = default_port;
+            m_port = default_port;
         }
 	}
 
@@ -247,58 +256,72 @@ UdpWakeOnLanWaker::initializePort () {
 }
 
 bool
-UdpWakeOnLanWaker::initializeBroadcastAddress () {
-
+UdpWakeOnLanWaker::initializeBroadcastAddress (void)
+{
     bool        ok = false;
     sockaddr_in public_ip_address;
 
-    memset ( &_boardcast, 0, sizeof ( sockaddr_in ) );
-    _boardcast.sin_family = AF_INET;
-    _boardcast.sin_port   = htons ( _port );
+    memset ( &m_broadcast, 0, sizeof ( sockaddr_in ) );
+    m_broadcast.sin_family = AF_INET;
+    m_broadcast.sin_port   = htons ( m_port );
     
     /* subnet address will always be provided in dotted notation */
-    if ( MATCH == strcmp ( _subnet, "255.255.255.255" ) ) {
+    if ( MATCH == strcmp ( m_subnet, "255.255.255.255" ) ) {
         
-        _boardcast.sin_addr.s_addr = htonl ( INADDR_BROADCAST );
+        m_broadcast.sin_addr.s_addr = htonl ( INADDR_BROADCAST );
         
     } else if ( INADDR_NONE == 
-        ( _boardcast.sin_addr.s_addr = inet_addr ( _subnet ) ) ) {
+        ( m_broadcast.sin_addr.s_addr = inet_addr ( m_subnet ) ) ) {
         
         dprintf ( 
             D_ALWAYS, 
             "UdpWakeOnLanWaker::doWake: Malformed subnet "
-            "'%s'\n", _subnet );
+            "'%s'\n", m_subnet );
         
         goto Cleanup;
         
     }
     
     /* log display subnet */
+# if defined ( WIN32 )
     dprintf ( 
         D_FULLDEBUG, 
         "UdpWakeOnLanWaker::doWake: "
         "Broadcasting on subnet: %d.%d.%d.%d\n", 
-        _boardcast.sin_addr.S_un.S_un_b.s_b1, 
-        _boardcast.sin_addr.S_un.S_un_b.s_b2, 
-        _boardcast.sin_addr.S_un.S_un_b.s_b3, 
-		_boardcast.sin_addr.S_un.S_un_b.s_b4 );
+        m_broadcast.sin_addr.S_un.S_un_b.s_b1, 
+        m_broadcast.sin_addr.S_un.S_un_b.s_b2, 
+        m_broadcast.sin_addr.S_un.S_un_b.s_b3, 
+		m_broadcast.sin_addr.S_un.S_un_b.s_b4 );
+# else
+    dprintf ( D_FULLDEBUG, 
+			  "UdpWakeOnLanWaker::doWake: "
+			  "Broadcasting on subnet: %s\n",
+			  inet_ntoa( m_broadcast.sin_addr ) );
+# endif
 
     /* invert the subnet mask (xor) */
-    _boardcast.sin_addr.s_addr ^= 0xffffffff;
+    m_broadcast.sin_addr.s_addr ^= 0xffffffff;
 
     /* logically or the IP address with the inverted subnet mast */
-    public_ip_address.sin_addr.s_addr = inet_addr ( _public_ip );
-    _boardcast.sin_addr.s_addr |= public_ip_address.sin_addr.s_addr;
+    public_ip_address.sin_addr.s_addr = inet_addr ( m_public_ip );
+    m_broadcast.sin_addr.s_addr |= public_ip_address.sin_addr.s_addr;
 
     /* log display broadcast address */
+# if defined ( WIN32 )
     dprintf ( 
         D_FULLDEBUG, 
         "UdpWakeOnLanWaker::doWake: "
-        "Broadcast address: %d.%d.%d.%d\n", 
-        _boardcast.sin_addr.S_un.S_un_b.s_b1, 
-        _boardcast.sin_addr.S_un.S_un_b.s_b2, 
-        _boardcast.sin_addr.S_un.S_un_b.s_b3, 
-		_boardcast.sin_addr.S_un.S_un_b.s_b4 );
+        "Broadcast address: %d.%d.%d.%d\n",
+		m_broadcast.sin_addr.S_un.S_un_b.s_b1, 
+        m_broadcast.sin_addr.S_un.S_un_b.s_b2, 
+        m_broadcast.sin_addr.S_un.S_un_b.s_b3, 
+		m_broadcast.sin_addr.S_un.S_un_b.s_b4 );
+# else
+    dprintf ( D_FULLDEBUG, 
+			  "UdpWakeOnLanWaker::doWake: "
+			  "Broadcast address: %s\n",
+			  inet_ntoa( m_broadcast.sin_addr ) );
+# endif
 
     /* if we made it here, then it all went perfectly */
     ok = true;
@@ -309,7 +332,8 @@ Cleanup:
 }
 
 void 
-UdpWakeOnLanWaker::printLastSocketError () const {
+UdpWakeOnLanWaker::printLastSocketError (void) const
+{
 
 #if defined ( WIN32 )
 
@@ -368,27 +392,33 @@ UdpWakeOnLanWaker::printLastSocketError () const {
 
 #else /* !WIN32 */
 	
-    dprintf ( 
-        D_ALWAYS,
-        "Reason: %s (errno = %d)\n", 
-        strerror ( errno ),
-        errno );
+    dprintf ( D_ALWAYS,
+			  "Reason: %s (errno = %d)\n", 
+			  strerror ( errno ),
+			  errno );
 
 #endif
 
 }
 
+#if !defined( WIN32 )
+#  define SOCKET_ERROR		-1
+#  define INVALID_SOCKET	-1
+#  define closesocket(_s_)	close(_s_)
+#endif
+
 bool
-UdpWakeOnLanWaker::doWake () const {
+UdpWakeOnLanWaker::doWake (void) const
+{
 
     /* bail-out early if we were not fully initialized */
-    if ( !_can_wake ) {
+    if ( !m_can_wake ) {
         return false;
     }
 
-	int  error	= SOCKET_ERROR, 
-		 sock	= INVALID_SOCKET,
-		 on		= 1;
+	int  error	= SOCKET_ERROR;
+	int	 sock	= INVALID_SOCKET;
+	int	 on		= 1;
 	bool ok		= false;
 	
 	/* create a datagram for our UDP broadcast WOL packet */
@@ -426,10 +456,10 @@ UdpWakeOnLanWaker::doWake () const {
 	/* broadcast the WOL packet to on the given subnet */
 	error = sendto ( 
         sock, 
-        (char const*) _packet, 
+        (char const*) m_packet,
         WOL_PACKET_LENGTH, 
 		0, 
-        (sockaddr*) &_boardcast, 
+        (const sockaddr*) &m_broadcast,
         sizeof ( sockaddr_in ) );
 	
     if ( SOCKET_ERROR == error ) {

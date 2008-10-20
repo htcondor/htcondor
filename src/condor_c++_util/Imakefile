@@ -62,7 +62,8 @@ SETEUID_OBJ = ../condor_util_lib/seteuid.o
 SETEUID_OBJ = 
 #endif
 
-HIBERNATION_OBJS = hibernation_manager.o hibernator.o network_adapter.o
+HIBERNATION_OBJS = hibernation_manager.o hibernator.o network_adapter.o \
+	udp_waker.o waker.o
 #if IS_LINUX
 HIBERNATION_OBJS += hibernator.linux.o \
 	network_adapter.unix.o network_adapter.linux.o
