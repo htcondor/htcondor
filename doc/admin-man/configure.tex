@@ -4103,6 +4103,20 @@ See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
   hand, if all slots evaluate to a non-zero value, but differ in value, 
   then the largest value is used as the representative power state.
 
+\item[\Macro{LINUX\_HIBERNATION\_METHOD}]
+\label{param:LinuxHibernationMethod}
+This macro can be used to override the default search used by
+Condor on Linux to detect the hibernation method to use.  The default
+behavior is to try:
+\begin{itemize}
+\item Detect and use the pm-utils command line tools ``pm-utils''
+\item Detect and use the /sys/power virtual files ``/sys''
+\item Detect and use the /proc/acpi virtual files ``/proc''
+\end{itemize}
+To override this behavior and force the use of a particular method,
+set \MacroNI{LINUX\_HIBERNATION\_METHOD} to one of the above names
+(``pm-utils'', ``/sys'', or ``/proc'').
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
