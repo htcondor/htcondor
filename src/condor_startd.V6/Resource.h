@@ -200,9 +200,9 @@ public:
 	char* getHookKeyword();
 #endif /* HAVE_JOB_HOOKS */
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	int	evaluateHibernate();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 	bool    claimWorklifeExpired();
 	int		retirementExpired( void );

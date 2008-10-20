@@ -1365,7 +1365,7 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 }
 
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 
 int
 Resource::evaluateHibernate() {
@@ -1380,7 +1380,7 @@ Resource::evaluateHibernate() {
 	return level;
 }
 
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 
 int

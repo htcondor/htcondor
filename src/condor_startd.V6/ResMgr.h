@@ -36,7 +36,7 @@
 #include "starter_mgr.h"
 #include "vmuniverse_mgr.h"
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 #  include "hibernation_manager.h"
 #endif
 
@@ -195,11 +195,11 @@ public:
 	void startdHookMgrDone();
 #endif /* HAVE_JOB_HOOKS */
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	HibernationManager const& getHibernationManager () const;
 	void updateHibernateConfiguration ();
     int disableResources ( int level );
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 	time_t	now( void ) { return cur_time; };
 
@@ -314,7 +314,7 @@ private:
 	bool m_startd_hook_shutdown_pending;
 #endif /* HAVE_JOB_HOOKS */
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	NetworkAdapterBase  *m_netif;
 	HibernationManager	*m_hibernation_manager;
 	int					m_hibernate_tid;
@@ -323,7 +323,7 @@ private:
 	int  startHibernateTimer();
 	void resetHibernateTimer();
 	void cancelHibernateTimer();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 };
 

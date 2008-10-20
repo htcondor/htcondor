@@ -45,7 +45,7 @@ ResMgr::ResMgr()
 	m_hook_mgr = NULL;
 #endif
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	m_netif = NetworkAdapterBase::createNetworkAdapter(
 		daemonCore->InfoCommandSinfulString (), true );
 	m_hibernation_manager = new HibernationManager( );
@@ -84,9 +84,9 @@ ResMgr::~ResMgr()
 	}
 #endif
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	cancelHibernateTimer();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 	if( resources ) {
 		for( i = 0; i < nresources; i++ ) {
@@ -141,9 +141,9 @@ ResMgr::init_config_classad( void )
 #if HAVE_JOB_HOOKS
 	configInsert( config_classad, ATTR_FETCH_WORK_DELAY, false );
 #endif /* HAVE_JOB_HOOKS */
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	configInsert( config_classad, "HIBERNATE", false );
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 		// Next, try the IS_OWNER expression.  If it's not there, give
 		// them a resonable default, instead of leaving it undefined. 
@@ -425,9 +425,9 @@ ResMgr::reconfig_resources( void )
 	m_hook_mgr->reconfig();
 #endif
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	updateHibernateConfiguration();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 		// Tell each resource to reconfig itself.
 	walk(&Resource::reconfig);
@@ -1606,7 +1606,7 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 	starter_mgr.publish( cp, how_much );
 	m_vmuniverse_mgr.publish(cp, how_much);
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
     m_hibernation_manager->publish( *cp );
 #endif
 
@@ -1787,9 +1787,9 @@ ResMgr::reset_timers( void )
 								 update_interval );
 	}
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	resetHibernateTimer();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 }
 
@@ -1934,7 +1934,7 @@ ResMgr::processAllocList( void )
 }
 
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 
 HibernationManager const& ResMgr::getHibernationManager() const {
 	return *m_hibernation_manager;
@@ -1959,8 +1959,7 @@ int
 ResMgr::allHibernating() {
     	// fail if there is no resource or if we are
 		// configured not to hibernate
-	if (   !resources
-		|| !m_hibernation_manager->wantsHibernate() ) {
+	if (   !resources  ||  !m_hibernation_manager->wantsHibernate() ) {
 		return 0;
 	}
 		// The following may evaluate to true even if there
@@ -1969,15 +1968,15 @@ ResMgr::allHibernating() {
 		// 
 		// We take largest value as the representative 
 		// hibernation level for this machine
-	int max = 0;
+	int max_level = 0;
 	for( int i = 0; i < nresources; i++ ) {
 	        int rval = resources[i]->evaluateHibernate();
 	        if( 0 == rval ) {
 			return 0;
 		}
-		max = max( max, rval );
+		max_level = MAX( max_level, rval );
 	}
-	return max;
+	return max_level;
 }
 
 
@@ -2073,7 +2072,7 @@ ResMgr::cancelHibernateTimer() {
 }
 
 
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 
 void
@@ -2272,7 +2271,7 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 	}
 }
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 
 int
 ResMgr::disableResources( int level )
