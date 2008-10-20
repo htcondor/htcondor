@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -67,7 +67,7 @@ static const char *errmsgs[] = {
 };
 
 /*
-Global Variables 
+Global Variables
 */
 
 static char      *program_name   = NULL; /* program name for error messages */
@@ -85,10 +85,10 @@ Functions
 
 static void
 usage () {
-    
-    fprintf ( stderr, "usage: %s [OPTIONS] [CLASS-AD-FILE]\n", 
+
+    fprintf ( stderr, "usage: %s [OPTIONS] [CLASS-AD-FILE]\n",
         program_name );
-    fprintf ( stderr, "%s - %s\n", program_name, DESCRIPTION );    
+    fprintf ( stderr, "%s - %s\n", program_name, DESCRIPTION );
     fprintf ( stderr, "\n" );
     fprintf ( stderr, "-h       this message\n" );
     fprintf ( stderr, "-m       hardware address (MAC address)\n" );
@@ -97,55 +97,55 @@ usage () {
     fprintf ( stderr, "-d       turns debugging on\n" );
     fprintf ( stderr, "\n" );
     fprintf ( stderr, "With no CLASS-AD-FILE, read standard input.\n" );
-    
+
     exit ( 0 );
 
 }
 
 static void
 enable_debug () {
-    
+
     Termlog = 1;
 	dprintf_config ( "TOOL" );
 
 }
 
-static void 
-error ( int code, ... ) {                              
-    
+static void
+error ( int code, ... ) {
+
     va_list    args;
     const char *msg;
-    
+
     assert ( program_name );
-    
+
     if ( code < E_UNKNOWN ) {
         code = E_UNKNOWN;
     }
-    
+
     if ( code < 0 ) {
-        
+
         msg = errmsgs[-code];
-        
+
         if ( !msg ) {
             msg = errmsgs[-E_UNKNOWN];
         }
-        
+
         fprintf ( stderr, "%s: ", program_name );
         va_start ( args, code );
         vfprintf ( stderr, msg, args );
         va_end ( args );
 
     }
-    
+
     if ( in  && ( in != stdin ) ) {
-        fclose ( in ); 
+        fclose ( in );
     }
 
     if ( waker ) {
         delete waker;
         waker = NULL;
     }
-    
+
     if ( ad ) {
         delete ad;
         ad = NULL;
@@ -157,26 +157,26 @@ error ( int code, ... ) {
 
 static void
 parse_command_line ( int argc, char *argv[] ) {
-    
+
     int     i, j = 0;
     char    *s;                 /* to traverse the options */
     char    **argument = NULL;  /* option argument */	
 
     for ( i = 1; i < argc; i++ ) {
-        
+
         s = argv[i];
-        
-        if ( argument ) { 
-            *argument = s; 
-            argument = NULL; 
-            continue; 
+
+        if ( argument ) {
+            *argument = s;
+            argument = NULL;
+            continue;
         }
-        
+
         if ( ( '-' == *s ) && *++s ) {
-        
+
             /* we're looking at an option */
             while ( *s ) {
-            
+
                 /* determine which one it is */
                 switch ( *s++ ) {
                     case 'd': enable_debug ();          break;
@@ -186,20 +186,20 @@ parse_command_line ( int argc, char *argv[] ) {
                     case 'p': port = (int) strtol ( s, &s, port ); break;
                     default : error ( E_OPTION, *--s ); break;
                 }
-                
+
                 /* if there is an argument to this option, stash it */
-                if ( argument && *s ) { 
-                    *argument = s; 
-                    argument = NULL; 
-                    break; 
+                if ( argument && *s ) {
+                    *argument = s;
+                    argument = NULL;
+                    break;
                 }
 
-            } 
+            }
 
         } else {
 
             /* we're looking at a file name */
-            switch ( j++ ) {            
+            switch ( j++ ) {
                 case  0: fn_in = s;          break;
                 default: error ( E_ARGCNT ); break;
             }
@@ -215,21 +215,21 @@ main ( int argc, char *argv[] ) {
 
     char    *name       = NULL,
             sinful[16 + 10];
-    int     found_eof   = 0, 
+    int     found_eof   = 0,
             found_error = 0,
             empty       = 0;
     bool    sent_wake   = false;
 
     my_ip_string ();
-    
+
     /* retrieve the program's name */
     name = strrchr ( argv[0], DIR_DELIM_CHAR );
     program_name = !name ? argv[0] : name + 1;
 
     /* parse the command line and populate the global state */
     parse_command_line ( argc, argv );
-    
-    /* determine if we are using the command-line options, a file, 
+
+    /* determine if we are using the command-line options, a file,
     or standard input as input */
     if ( mac && *mac ) {
 
@@ -237,7 +237,7 @@ main ( int argc, char *argv[] ) {
         sprintf ( sinful, "<%s:1234>", my_ip_string () );
 
         /* we were give all the raw data, so we're going to create
-        a fake machine ad that we will use when invoking the waking 
+        a fake machine ad that we will use when invoking the waking
         mechanism */
         ad = new ClassAd ();
         ad->SetMyTypeName ( STARTD_ADTYPE );
@@ -253,28 +253,28 @@ main ( int argc, char *argv[] ) {
             in = safe_fopen_wrapper ( fn_in, "r" );
         } else {
             in = stdin;
-            fn_in = "<stdin>"; 
+            fn_in = "<stdin>";
         }
 
         if ( !in ) {
-            error ( 
-                E_FOPEN, 
-                fn_in, 
-                strerror ( errno ), 
+            error (
+                E_FOPEN,
+                fn_in,
+                strerror ( errno ),
                 errno );
         }
-    
+
         /* serialize the machine ad from a file */
-        ad = new ClassAd ( 
+        ad = new ClassAd (
             in,
-            "?$#%^&*@", /* sufficiently random garbage? */ 
-            found_eof, 
-            found_error, 
+            "?$#%^&*@", /* sufficiently random garbage? */
+            found_eof,
+            found_error,
             empty );
 
         if ( found_error ) {
-            error ( 
-                E_CLASSAD, 
+            error (
+                E_CLASSAD,
                 found_error );
         }
 
@@ -286,24 +286,24 @@ main ( int argc, char *argv[] ) {
         waker = WakerBase::createWaker ( ad );
 
         if ( !waker ) {
-            error ( 
-                E_NOMEM, 
+            error (
+                E_NOMEM,
                 "waker object." );
         }
 
         sent_wake = waker->doWake ();
-    
-    }    
+
+    }
 
     if ( !sent_wake ) {
-        error ( 
+        error (
             E_NOWAKE );
-    } 
-    
-    fprintf ( 
-        stderr, 
+    }
+
+    fprintf (
+        stderr,
         "Packet sent.\n" );
-    
-    return 0;    
-    
+
+    return 0;
+
 }

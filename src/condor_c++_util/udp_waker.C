@@ -49,7 +49,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 	unsigned short port ) throw ()
 		: m_port ( port )
 {
-   
+
     strncpy ( m_mac, mac, STRING_MAC_ADDRESS_LENGTH );
     strncpy ( m_subnet, subnet, MAX_IP_ADDRESS_LENGTH );
     strncpy ( m_public_ip, my_ip_string (), MAX_IP_ADDRESS_LENGTH );
@@ -65,7 +65,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     char    *start  = NULL,
             *end    = NULL,
             sinful[MAX_IP_ADDRESS_LENGTH+10];
-   
+
     /* make sure we are only capable of sending the WOL
     magic packet if all of the initialization succeds */
     m_can_wake = false;
@@ -75,7 +75,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
         ATTR_HARDWARE_ADDRESS,
         m_mac,
         STRING_MAC_ADDRESS_LENGTH );
-   
+
     if ( !found ) {
 
         dprintf (
@@ -92,15 +92,15 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
         ATTR_PUBLIC_NETWORK_IP_ADDR,
         sinful,
         MAX_IP_ADDRESS_LENGTH );
-   
+
     if ( !found ) {
-       
+
         dprintf (
             D_ALWAYS,
             "UdpWakeOnLanWaker: no IP address defined\n" );
-       
+
         return;
-       
+
     }
 
     /* extract the IP from the public 'sinful' string */
@@ -116,13 +116,13 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
         MAX_IP_ADDRESS_LENGTH );
 
     if ( !found ) {
-       
+
         dprintf (
             D_ALWAYS,
             "UdpWakeOnLanWaker: no subnet defined\n" );
-           
+
         return;
-       
+
     }
 
     /* auto-detect the port number to use */
@@ -141,7 +141,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 
     /* if we made it here, then initialization succeded */
     m_can_wake = true;
-   
+
 }
 
 UdpWakeOnLanWaker::~UdpWakeOnLanWaker (void) throw ()
@@ -155,7 +155,7 @@ UdpWakeOnLanWaker::~UdpWakeOnLanWaker (void) throw ()
 bool
 UdpWakeOnLanWaker::initialize (void)
 {
-   
+
     if ( !initializePacket () ) {
 
         dprintf (
@@ -168,25 +168,25 @@ UdpWakeOnLanWaker::initialize (void)
     }
 
     if ( !initializePort () ) {
-       
+
         dprintf (
             D_ALWAYS,
             "UdpWakeOnLanWaker::initialize: "
             "Failed to initialize port number\n" );
-       
+
         return false;
-       
+
     }
-   
+
     if ( !initializeBroadcastAddress () ) {
-       
+
         dprintf (
             D_ALWAYS,
             "UdpWakeOnLanWaker::initialize: "
             "Failed to initialize broadcast address\n" );
-       
+
         return false;
-       
+
     }
 
     /* if we get here then we are fine */
@@ -264,24 +264,24 @@ UdpWakeOnLanWaker::initializeBroadcastAddress (void)
     memset ( &m_broadcast, 0, sizeof ( sockaddr_in ) );
     m_broadcast.sin_family = AF_INET;
     m_broadcast.sin_port   = htons ( m_port );
-   
+
     /* subnet address will always be provided in dotted notation */
     if ( MATCH == strcmp ( m_subnet, "255.255.255.255" ) ) {
-       
+
         m_broadcast.sin_addr.s_addr = htonl ( INADDR_BROADCAST );
-       
+
     } else if ( INADDR_NONE ==
         ( m_broadcast.sin_addr.s_addr = inet_addr ( m_subnet ) ) ) {
-       
+
         dprintf (
             D_ALWAYS,
             "UdpWakeOnLanWaker::doWake: Malformed subnet "
             "'%s'\n", m_subnet );
-       
+
         goto Cleanup;
-       
+
     }
-   
+
     /* log display subnet */
 # if defined ( WIN32 )
     dprintf (
@@ -443,7 +443,7 @@ UdpWakeOnLanWaker::doWake (void) const
         sizeof ( int ) );
 	
     if ( SOCKET_ERROR == error ) {
-       
+
         dprintf (
             D_ALWAYS,
             "UdpWakeOnLanWaker::doWake: "

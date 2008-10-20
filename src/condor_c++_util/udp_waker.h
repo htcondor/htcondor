@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,15 +45,15 @@ public:
 	*/
 	//@{
 	
-    /** @name detect_port Used to make the initialization find 
+    /** @name detect_port Used to make the initialization find
         the WOL port automatically.
         */
 	static const int detect_port  /* = -1 */,
                      default_port /* =  9 */;
 
 	//@}
-    
-    /** @name Instantiation and Initialization. 
+
+    /** @name Instantiation and Initialization.
 		*/
 	//@{
 
@@ -62,9 +62,9 @@ public:
 	    The subnet is of the form: x.x.x.x
 	    The port can be one of 0, 7, or 9
         */
-	UdpWakeOnLanWaker ( 
-        char const *mac, 
-		char const *subnet, 
+	UdpWakeOnLanWaker (
+        char const *mac,
+		char const *subnet,
         unsigned short port = default_port ) throw ();
 
     /** Constructor
@@ -74,21 +74,21 @@ public:
 	
     /** Destructor
         */
-    ~UdpWakeOnLanWaker () throw ();    
+    ~UdpWakeOnLanWaker () throw ();
     /** Initialize the internal structures (can be called multiple
-        times--such as in the case of a reconfiguration) 
+        times--such as in the case of a reconfiguration)
 		@return true if it was succesful; otherwise, false.
 		@see initializePacket
 		@see initializePort
 		*/
     bool initialize ();
-    
+
     //@}
 
 	/** @name Wake-up Mechanism.		
 		*/
 	//@{
-    
+
     /** Send the magic WOL packet.
         @return true if it was succesful; otherwise, false.
     */
@@ -110,16 +110,16 @@ protected:
     /* Print the system-specific socket error */
 	void printLastSocketError () const;
 
-	/* The WOL packet consists of 6 times 0xFF followed by 
+	/* The WOL packet consists of 6 times 0xFF followed by
 	   the hardware address repeated 16 times. The largest
        subnet is '255.255.255.255' plus the NULL character. */
-	enum { 
+	enum {
         RAW_MAC_ADDRESS_LENGTH    = 6,
 		STRING_MAC_ADDRESS_LENGTH = 3*RAW_MAC_ADDRESS_LENGTH,
         WOL_PACKET_LENGTH         = 17*RAW_MAC_ADDRESS_LENGTH,
         MAX_IP_ADDRESS_LENGTH     = 16
 	};
-    
+
 private:
 
 	char		    m_mac[STRING_MAC_ADDRESS_LENGTH];
