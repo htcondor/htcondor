@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
- 
+
 #include "condor_common.h"
 #include "udp_waker.h"
 
@@ -31,11 +31,11 @@
  ***************************************************************/
 
 /* auto-detect port number */
-const int 
+const int
 UdpWakeOnLanWaker::detect_port = 0;
 
 /* default port number used when auto-detection fails */
-const int 
+const int
 UdpWakeOnLanWaker::default_port = 9;
 
 
@@ -43,13 +43,13 @@ UdpWakeOnLanWaker::default_port = 9;
  * UdpWakeOnLanWaker [c|d]tors
  ***************************************************************/
 
-UdpWakeOnLanWaker::UdpWakeOnLanWaker ( 
-    char const     *mac, 
-	char const     *subnet, 
+UdpWakeOnLanWaker::UdpWakeOnLanWaker (
+    char const     *mac,
+	char const     *subnet,
 	unsigned short port ) throw ()
 		: m_port ( port )
 {
-    
+   
     strncpy ( m_mac, mac, STRING_MAC_ADDRESS_LENGTH );
     strncpy ( m_subnet, subnet, MAX_IP_ADDRESS_LENGTH );
     strncpy ( m_public_ip, my_ip_string (), MAX_IP_ADDRESS_LENGTH );
@@ -65,8 +65,8 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     char    *start  = NULL,
             *end    = NULL,
             sinful[MAX_IP_ADDRESS_LENGTH+10];
-    
-    /* make sure we are only capable of sending the WOL 
+   
+    /* make sure we are only capable of sending the WOL
     magic packet if all of the initialization succeds */
     m_can_wake = false;
 
@@ -75,11 +75,11 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
         ATTR_HARDWARE_ADDRESS,
         m_mac,
         STRING_MAC_ADDRESS_LENGTH );
-    
+   
     if ( !found ) {
 
-        dprintf ( 
-            D_ALWAYS, 
+        dprintf (
+            D_ALWAYS,
             "UdpWakeOnLanWaker: no hardware address "
             "(MAC) defined\n" );
 
@@ -92,15 +92,15 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
         ATTR_PUBLIC_NETWORK_IP_ADDR,
         sinful,
         MAX_IP_ADDRESS_LENGTH );
-    
+   
     if ( !found ) {
-        
-        dprintf ( 
-            D_ALWAYS, 
+       
+        dprintf (
+            D_ALWAYS,
             "UdpWakeOnLanWaker: no IP address defined\n" );
-        
+       
         return;
-        
+       
     }
 
     /* extract the IP from the public 'sinful' string */
@@ -116,13 +116,13 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
         MAX_IP_ADDRESS_LENGTH );
 
     if ( !found ) {
-        
-        dprintf ( 
-            D_ALWAYS, 
+       
+        dprintf (
+            D_ALWAYS,
             "UdpWakeOnLanWaker: no subnet defined\n" );
-            
+           
         return;
-        
+       
     }
 
     /* auto-detect the port number to use */
@@ -131,8 +131,8 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     /* initialize the internal structures */
     if ( !initialize () ) {
 
-        dprintf ( 
-            D_ALWAYS, 
+        dprintf (
+            D_ALWAYS,
             "UdpWakeOnLanWaker: failed to initialize\n" );
 
         return;
@@ -141,7 +141,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 
     /* if we made it here, then initialization succeded */
     m_can_wake = true;
-    
+   
 }
 
 UdpWakeOnLanWaker::~UdpWakeOnLanWaker (void) throw ()
@@ -155,11 +155,11 @@ UdpWakeOnLanWaker::~UdpWakeOnLanWaker (void) throw ()
 bool
 UdpWakeOnLanWaker::initialize (void)
 {
-    
+   
     if ( !initializePacket () ) {
 
-        dprintf ( 
-            D_ALWAYS, 
+        dprintf (
+            D_ALWAYS,
             "UdpWakeOnLanWaker::initialize: "
             "Failed to initialize magic WOL packet\n" );
 
@@ -168,25 +168,25 @@ UdpWakeOnLanWaker::initialize (void)
     }
 
     if ( !initializePort () ) {
-        
-        dprintf ( 
-            D_ALWAYS, 
+       
+        dprintf (
+            D_ALWAYS,
             "UdpWakeOnLanWaker::initialize: "
             "Failed to initialize port number\n" );
-        
+       
         return false;
-        
+       
     }
-    
+   
     if ( !initializeBroadcastAddress () ) {
-        
-        dprintf ( 
-            D_ALWAYS, 
+       
+        dprintf (
+            D_ALWAYS,
             "UdpWakeOnLanWaker::initialize: "
             "Failed to initialize broadcast address\n" );
-        
+       
         return false;
-        
+       
     }
 
     /* if we get here then we are fine */
@@ -208,8 +208,8 @@ UdpWakeOnLanWaker::initializePacket (void)
 	
 	if ( c != 6 || strlen ( m_mac ) < STRING_MAC_ADDRESS_LENGTH - 1) {
 
-        dprintf ( 
-            D_ALWAYS, 
+        dprintf (
+            D_ALWAYS,
             "UdpWakeOnLanWaker::initializePacket: "
             "Malformed hardware address: %s\n",
             m_mac );
@@ -225,7 +225,7 @@ UdpWakeOnLanWaker::initializePacket (void)
 	memset ( m_packet, 0xFF, 6 );
 	offset = 6;
 
-	/* create the body of packet: it contains the machine address 
+	/* create the body of packet: it contains the machine address
 	   repeated 16 times */
 	for ( i = 0; i < 16; i++ ) {
 		memcpy ( m_packet + offset, m_raw_mac, 6 );
@@ -240,7 +240,7 @@ bool
 UdpWakeOnLanWaker::initializePort (void)
 {
 
-    /* if we've been given a zero value, then look-up the 
+    /* if we've been given a zero value, then look-up the
        port number to use */
     if ( m_port == 0 ) {
         servent *sp = getservbyname ( "discard", "udp" );
@@ -264,36 +264,36 @@ UdpWakeOnLanWaker::initializeBroadcastAddress (void)
     memset ( &m_broadcast, 0, sizeof ( sockaddr_in ) );
     m_broadcast.sin_family = AF_INET;
     m_broadcast.sin_port   = htons ( m_port );
-    
+   
     /* subnet address will always be provided in dotted notation */
     if ( MATCH == strcmp ( m_subnet, "255.255.255.255" ) ) {
-        
+       
         m_broadcast.sin_addr.s_addr = htonl ( INADDR_BROADCAST );
-        
-    } else if ( INADDR_NONE == 
+       
+    } else if ( INADDR_NONE ==
         ( m_broadcast.sin_addr.s_addr = inet_addr ( m_subnet ) ) ) {
-        
-        dprintf ( 
-            D_ALWAYS, 
+       
+        dprintf (
+            D_ALWAYS,
             "UdpWakeOnLanWaker::doWake: Malformed subnet "
             "'%s'\n", m_subnet );
-        
+       
         goto Cleanup;
-        
+       
     }
-    
+   
     /* log display subnet */
 # if defined ( WIN32 )
-    dprintf ( 
-        D_FULLDEBUG, 
+    dprintf (
+        D_FULLDEBUG,
         "UdpWakeOnLanWaker::doWake: "
-        "Broadcasting on subnet: %d.%d.%d.%d\n", 
-        m_broadcast.sin_addr.S_un.S_un_b.s_b1, 
-        m_broadcast.sin_addr.S_un.S_un_b.s_b2, 
-        m_broadcast.sin_addr.S_un.S_un_b.s_b3, 
+        "Broadcasting on subnet: %d.%d.%d.%d\n",
+        m_broadcast.sin_addr.S_un.S_un_b.s_b1,
+        m_broadcast.sin_addr.S_un.S_un_b.s_b2,
+        m_broadcast.sin_addr.S_un.S_un_b.s_b3,
 		m_broadcast.sin_addr.S_un.S_un_b.s_b4 );
 # else
-    dprintf ( D_FULLDEBUG, 
+    dprintf ( D_FULLDEBUG,
 			  "UdpWakeOnLanWaker::doWake: "
 			  "Broadcasting on subnet: %s\n",
 			  inet_ntoa( m_broadcast.sin_addr ) );
@@ -308,16 +308,16 @@ UdpWakeOnLanWaker::initializeBroadcastAddress (void)
 
     /* log display broadcast address */
 # if defined ( WIN32 )
-    dprintf ( 
-        D_FULLDEBUG, 
+    dprintf (
+        D_FULLDEBUG,
         "UdpWakeOnLanWaker::doWake: "
         "Broadcast address: %d.%d.%d.%d\n",
-		m_broadcast.sin_addr.S_un.S_un_b.s_b1, 
-        m_broadcast.sin_addr.S_un.S_un_b.s_b2, 
-        m_broadcast.sin_addr.S_un.S_un_b.s_b3, 
+		m_broadcast.sin_addr.S_un.S_un_b.s_b1,
+        m_broadcast.sin_addr.S_un.S_un_b.s_b2,
+        m_broadcast.sin_addr.S_un.S_un_b.s_b3,
 		m_broadcast.sin_addr.S_un.S_un_b.s_b4 );
 # else
-    dprintf ( D_FULLDEBUG, 
+    dprintf ( D_FULLDEBUG,
 			  "UdpWakeOnLanWaker::doWake: "
 			  "Broadcast address: %s\n",
 			  inet_ntoa( m_broadcast.sin_addr ) );
@@ -331,7 +331,7 @@ Cleanup:
 
 }
 
-void 
+void
 UdpWakeOnLanWaker::printLastSocketError (void) const
 {
 
@@ -345,14 +345,14 @@ UdpWakeOnLanWaker::printLastSocketError (void) const
 
     __try {
 
-        length = FormatMessage ( 
+        length = FormatMessage (
             FORMAT_MESSAGE_ALLOCATE_BUFFER
-            | FORMAT_MESSAGE_FROM_SYSTEM, 
-            NULL, 
-            last_error, 
-            MAKELANGID ( LANG_NEUTRAL, SUBLANG_DEFAULT ), 
-            (PSTR) &buffer, 
-            0, 
+            | FORMAT_MESSAGE_FROM_SYSTEM,
+            NULL,
+            last_error,
+            MAKELANGID ( LANG_NEUTRAL, SUBLANG_DEFAULT ),
+            (PSTR) &buffer,
+            0,
             NULL );
 
         if ( 0 == length ) {
@@ -362,7 +362,7 @@ UdpWakeOnLanWaker::printLastSocketError (void) const
             dprintf (
                 D_ALWAYS,
                 "PrintFormatedErrorMessage: failed to retrieve error "
-                "message. (last-error = %u)\n", 
+                "message. (last-error = %u)\n",
                 last_error );
 
             __leave;
@@ -372,9 +372,9 @@ UdpWakeOnLanWaker::printLastSocketError (void) const
         message = (PSTR) buffer;
         message[length - 2] = '\0'; /* remove new-line */
 
-        dprintf ( 
-            D_ALWAYS, 
-            "Reason: %s\n", 
+        dprintf (
+            D_ALWAYS,
+            "Reason: %s\n",
             message );
 
         /* all went well */
@@ -393,7 +393,7 @@ UdpWakeOnLanWaker::printLastSocketError (void) const
 #else /* !WIN32 */
 	
     dprintf ( D_ALWAYS,
-			  "Reason: %s (errno = %d)\n", 
+			  "Reason: %s (errno = %d)\n",
 			  strerror ( errno ),
 			  errno );
 
@@ -426,8 +426,8 @@ UdpWakeOnLanWaker::doWake (void) const
 	
     if ( INVALID_SOCKET == sock ) {
 	
-        dprintf ( 
-            D_ALWAYS, 
+        dprintf (
+            D_ALWAYS,
             "UdpWakeOnLanWaker::::doWake: Failed to create socket" );
 		
         goto Cleanup;
@@ -435,16 +435,16 @@ UdpWakeOnLanWaker::doWake (void) const
 	}
 
 	/* make this a broadcast socket */
-	error = setsockopt ( 
-        sock, 
-        SOL_SOCKET, 
-        SO_BROADCAST, 
-		(char const*) &on, 
+	error = setsockopt (
+        sock,
+        SOL_SOCKET,
+        SO_BROADCAST,
+		(char const*) &on,
         sizeof ( int ) );
 	
     if ( SOCKET_ERROR == error ) {
-        
-        dprintf ( 
+       
+        dprintf (
             D_ALWAYS,
             "UdpWakeOnLanWaker::doWake: "
 			"Failed to set broadcast option\n" );
@@ -454,17 +454,17 @@ UdpWakeOnLanWaker::doWake (void) const
 	}
 
 	/* broadcast the WOL packet to on the given subnet */
-	error = sendto ( 
-        sock, 
+	error = sendto (
+        sock,
         (char const*) m_packet,
-        WOL_PACKET_LENGTH, 
-		0, 
+        WOL_PACKET_LENGTH,
+		0,
         (const sockaddr*) &m_broadcast,
         sizeof ( sockaddr_in ) );
 	
     if ( SOCKET_ERROR == error ) {
 		
-        dprintf ( 
+        dprintf (
             D_ALWAYS,
             "Failed to send packet\n" );
 
@@ -485,7 +485,7 @@ Cleanup:
 
 		if ( 0 != closesocket ( sock ) ) {
 
-            dprintf ( 
+            dprintf (
                 D_ALWAYS,
                 "UdpWakeOnLanWaker::doWake: "
 			    "Failed to close socket\n" );

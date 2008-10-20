@@ -74,9 +74,7 @@ public:
 	
     /** Destructor
         */
-    ~UdpWakeOnLanWaker () throw (); 
-
-    
+    ~UdpWakeOnLanWaker () throw ();    
     /** Initialize the internal structures (can be called multiple
         times--such as in the case of a reconfiguration) 
 		@return true if it was succesful; otherwise, false.
@@ -136,4 +134,3 @@ private:
 };
 
 #endif // _UDP_WAKER_H_
-
