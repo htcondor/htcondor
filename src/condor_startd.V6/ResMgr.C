@@ -1968,6 +1968,7 @@ ResMgr::allHibernating( void )
 		dprintf( D_FULLDEBUG, "allHibernating: doesn't want hibernate\n" );
 		return 0;
 	}
+
 		// The following may evaluate to true even if there
 		// is a claim on one or more of the resources, so we
 		// don't bother checking for claims first. 
@@ -2029,8 +2030,10 @@ ResMgr::checkHibernate( void )
 	    // plug-in will know the this ad belongs to it when the
 	    // Collector invalidates it.
 	    //
-        if ( disableResources( level ) ) {
-	        m_hibernation_manager->switchToTargetState();
+	  if ( disableResources( level ) ) {
+		  HibernatorBase::SLEEP_STATE	state =
+			  m_hibernation_manager->intToSleepState( level );
+	        m_hibernation_manager->switchToState( state );
         }
 
     }
