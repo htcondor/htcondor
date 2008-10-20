@@ -76,6 +76,11 @@ public:
 	*/
 	const char* subnet (void) const;
 
+	/** Returns the adapter's logical name
+		@return a string with the logical name
+	*/
+	const char *interfaceName( void ) const { return _adapter_name; };
+
     /** Returns the adapter's hardware address
 		@return a string representation of the addapter's hardware
         address

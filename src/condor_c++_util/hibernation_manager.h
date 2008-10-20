@@ -151,6 +151,10 @@ public:
 	 */
 	const char *getHibernationMethod( void ) const;
 
+	/** Get the network adapter being used
+	 */
+	NetworkAdapterBase * getNetworkAdapter( void ) const { return m_primary_adapter; };
+
 	/** Sleep state converions convienience methods
 	 */
 	HibernatorBase::SLEEP_STATE intToSleepState ( int n ) const

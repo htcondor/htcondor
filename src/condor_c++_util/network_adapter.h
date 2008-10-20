@@ -152,6 +152,11 @@ public:
 		return getWolString( m_wol_enable_bits, buf, sizeof(buf) );
 	};
 
+	/** Returns the adapter's logical name
+		@return a string with the logical name
+	*/
+	virtual const char *interfaceName( void ) const { return ""; };
+
 	/** Returns whether this whole combination is wakable or not
 		@return true if this adaptor is wakable as configured
 	*/

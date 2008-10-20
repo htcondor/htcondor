@@ -95,7 +95,7 @@ public:
 			: BaseLinuxHibernator( hibernator ) { };
 	virtual ~PmUtilLinuxHibernator(void) { };
 
-	const char *getName( void ) const { return "PMUtils"; };
+	const char *getName( void ) const { return "pm-utils"; };
 	bool Detect( void );
 	//HibernatorBase::SLEEP_STATE StandBy ( bool force ) const ;
 	HibernatorBase::SLEEP_STATE Suspend ( bool force ) const;
@@ -166,6 +166,12 @@ LinuxHibernator::initStates( void )
 
 	// Specific method configured?
 	const char	*method = param( "LINUX_HIBERNATION_METHOD" );
+	if ( method ) {
+		dprintf( D_FULLDEBUG, "LinuxHibernator: Trying method '%s'\n",method );
+	}
+	else {
+		dprintf( D_FULLDEBUG, "LinuxHibernator: Trying all methods\n" );
+	}
 
 	// Do we have "pm-utils" installed?
 	char	methods[128] = "";
@@ -191,7 +197,7 @@ LinuxHibernator::initStates( void )
 		// If method name specified, does this one match?
 		if ( ! lh->nameMatch(method) ) {
 			dprintf( D_FULLDEBUG,
-					 "hibernator: skipping %s\n", name );
+					 "hibernator: skipping '%s'\n", name );
 			delete lh;
 		}
 
@@ -200,7 +206,7 @@ LinuxHibernator::initStates( void )
 			lh->setDetected( true );
 			m_real_hibernator = lh;
 			dprintf( D_FULLDEBUG,
-					 "hibernator: %s detected\n", name );
+					 "hibernator: '%s' detected\n", name );
 			return;
 		}
 
@@ -209,16 +215,17 @@ LinuxHibernator::initStates( void )
 			delete lh;
 			if ( method ) {
 				dprintf( D_ALWAYS,
-						 "hibernator: %s not detected; hibernation disabled\n",
+						 "hibernator: '%s' not detected;"
+						 " hibernation disabled\n",
 						 name );
 				return;
 			}
 			dprintf( D_FULLDEBUG,
-					 "hibernator: %s not detected\n", name );
+					 "hibernator: '%s' not detected\n", name );
 		}
 	}
 	if ( method ) {
-		dprintf( D_ALWAYS, "hibernator: %s not detected\n", method );
+		dprintf( D_ALWAYS, "hibernator: '%s' not detected\n", method );
 	}
 	dprintf( D_ALWAYS,
 			 "No hibernation methods detected; hibernation disabled\n" );
