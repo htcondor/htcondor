@@ -640,6 +640,8 @@ CpuAttributes::operator+=( CpuAttributes& rhs )
 	c_virt_mem_fraction += rhs.c_virt_mem_fraction;
 	c_disk_fraction += rhs.c_disk_fraction;
 
+	compute( A_TIMEOUT | A_UPDATE ); // Re-compute
+
 	return *this;
 }
 
@@ -650,6 +652,8 @@ CpuAttributes::operator-=( CpuAttributes& rhs )
 	c_phys_mem -= rhs.c_phys_mem;
 	c_virt_mem_fraction -= rhs.c_virt_mem_fraction;
 	c_disk_fraction -= rhs.c_disk_fraction;
+
+	compute( A_TIMEOUT | A_UPDATE ); // Re-compute
 
 	return *this;
 }
