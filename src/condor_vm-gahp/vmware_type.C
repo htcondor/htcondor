@@ -1090,9 +1090,6 @@ VMwareType::Start()
 	char buffer[1024];
 	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
 	if( (file != NULL) && (fgets(buffer, sizeof(buffer), file) != NULL)) {
-		fclose(file);
-		unlink(tmpfilename.Value());
-
 		MyString tmp_pid;
 		tmp_pid = buffer;
 		tmp_pid.chomp();
@@ -1103,6 +1100,10 @@ VMwareType::Start()
 			m_vm_pid = 0;
 		}
 	}
+	if ( file != NULL ) {
+		fclose( file );
+	}
+	unlink( tmpfilename.Value() );
 
 	setVMStatus(VM_RUNNING);
 	m_start_time.getTime();
@@ -1399,9 +1400,6 @@ VMwareType::Resume()
 	char buffer[1024];
 	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
 	if( (file != NULL) && (fgets(buffer, sizeof(buffer), file) != NULL)) {
-		fclose(file);
-		unlink(tmpfilename.Value());
-
 		MyString tmp_pid;
 		tmp_pid = buffer;
 		tmp_pid.chomp();
@@ -1412,6 +1410,10 @@ VMwareType::Resume()
 			m_vm_pid = 0;
 		}
 	}
+	if ( file != NULL ) {
+		fclose( file );
+	}
+	unlink( tmpfilename.Value() );
 
 	setVMStatus(VM_RUNNING);
 	return true;
@@ -1650,6 +1652,7 @@ VMwareType::getPIDofVM(int &vm_pid)
 
 	int result = systemCommand(systemcmd, false);
 	if( result != 0 ) {
+		unlink( tmpfilename.Value() );
 		return false;
 	}
 
@@ -1672,6 +1675,10 @@ VMwareType::getPIDofVM(int &vm_pid)
 		}
 		return true;
 	}
+	if ( file != NULL ) {
+		fclose( file );
+	}
+	unlink( tmpfilename.Value() );
 	return false;
 }
 
