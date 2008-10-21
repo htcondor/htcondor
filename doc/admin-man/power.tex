@@ -86,16 +86,17 @@ This macro evaluates to \Expr{True} if
 The \MacroNI{HIBERNATE} expression becomes
 
 \begin{verbatim}
-HIBERNATE = ifThenElse($(ShouldHibernate), 3, 0)
+HIBERNATE = ifThenElse($(ShouldHibernate), ``RAM'', ``NONE'' )
 \end{verbatim}
 
 In words, this expresses:
-enter power state $3$,
+enter power state ''RAM'',
 if \MacroNI{ShouldHibernate} evaluates to \Expr{True}; 
-otherwise, enter power state $0$,
-which leaves the machine in its current state. 
+otherwise, enter power state ''NONE'',
+which leaves the machine in its current state.   Unknown names are
+treated as ``NONE''.
 
-If any slot returns $0$, 
+If any slot returns ''NONE'',
 it vetoes the decision to enter a low power state.
 Only when values returned by all slots are all non-zero 
 is there a decision to enter a low power state.

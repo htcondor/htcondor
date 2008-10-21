@@ -4073,17 +4073,19 @@ See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
 
 \item[\Macro{HIBERNATE}]
 \label{param:Hibernate}
-  An integer expression that, when non-zero, causes Condor to put the 
-  machine into a low power state given by the evaluation of the 
-  expression.  The following values are supported:
+  An string expression that represents lower power state.  When this
+  state name evaluates to a valid non-``NONE'' state (see below),
+  causes Condor to put the machine into a low power state given by the
+  evaluation of the expression.  The following names are supported
+  (and are not case sensative):
 
   \begin{itemize}
-  \item[] 0 - No-op: do not enter a low power state
-  \item[] 1 - On Windows, Sleep (standby)
-  \item[] 2 - On Windows, Sleep (standby)
-  \item[] 3 - Sleep (standby)
-  \item[] 4 - Hibernate
-  \item[] 5 - Shutdown (soft-off)
+  \item[] "NONE", "0": No-op: do not enter a low power state
+  \item[] "S1",   "1", "STANDBY", "SLEEP": On Windows, Sleep (standby)
+  \item[] "S2",   "2": On Windows, Sleep (standby)
+  \item[] "S3",   "3", "RAM", "MEM": Sleep (standby)
+  \item[] "S4",   "4", "DISK", "HIBERNATE": Hibernate
+  \item[] "S5",   "5", "SHUTDOWN": Shutdown (soft-off)
   \end{itemize}
   
   The \MacroNI{HIBERNATE} expression is written in terms of the S-states
@@ -4094,14 +4096,19 @@ See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
   $n$ from S$n$ notation was adopted because at this junction in time 
   it appears to be the standard naming scheme for power states on several
   popular Operating Systems, including various flavors of Windows and Linux
-  distributions.
+  distributions.  The other strings (``RAM'', ``DISK'', etc.) are
+  provided for ease of configuration.
 
   Since this expression is evaluated in the context of each slot on the
   machine, any one slot has veto power over the other slots.  If the 
-  evaluation of \MacroNI{HIBERNATE} in one slot evaluates to 0, then
-  the machine will not be placed into a low power state.  On the other
+  evaluation of \MacroNI{HIBERNATE} in one slot evaluates to ``NONE''
+  or ``0'', then the machine will not be placed into a low power
+  state.  On the other 
   hand, if all slots evaluate to a non-zero value, but differ in value, 
   then the largest value is used as the representative power state.
+
+  Strings that do not match any in the table above are treated as
+  ``NONE''.
 
 \item[\Macro{LINUX\_HIBERNATION\_METHOD}]
 \label{param:LinuxHibernationMethod}
