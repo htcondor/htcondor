@@ -26,10 +26,11 @@
 #include "store_cred.h"
 #include "internet.h"
 #include "get_daemon_name.h"
+#include "subsystem_info.h"
 
 //-------------------------------------------------------------
 
-DECL_DAEMON_INFO( "CREDD" );	// used by Daemon Core
+DECL_SUBSYSTEM( "CREDD", SUBSYSTEM_TYPE_DAEMON );
 
 CredDaemon *credd;
 

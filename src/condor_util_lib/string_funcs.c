@@ -17,42 +17,23 @@
  *
  ***************************************************************/
 
-
-#ifndef NORDUGRIDRESOURCE_H
-#define NORDUGRIDRESOURCE_H
-
 #include "condor_common.h"
-#include "condor_daemon_core.h"
+#include "string_funcs.h"
 
-#include "baseresource.h"
-#include "gahp-client.h"
-
-class NordugridJob;
-class NordugridResource;
-
-class NordugridResource : public BaseResource
+#if ( !HAVE_STRCASESTR )
+// Like strstr(), but case-insensitive
+char *
+strcasestr( const char *string, const char *pattern )
 {
- public:
+	char	*str;
+	int			n;
 
-	NordugridResource( const char *resource_name, const char *proxy_subject );
-	~NordugridResource();
-
-	const char *ResourceType();
-	void Reconfig();
-
-	static const char *HashName( const char *resource_name,
-								 const char *proxy_subject );
-	static NordugridResource *FindOrCreateResource( const char *resource_name,
-													const char *proxy_subject );
-
-	char *proxySubject;
-	GahpClient *gahp;
-
-	static HashTable <HashKey, NordugridResource *> ResourcesByName;
-
- private:
-	void DoPing( time_t& ping_delay, bool& ping_complete,
-				 bool& ping_succeeded  );
-};
-
+	n = strlen( pattern );
+	for( str=(char *)string; *str; str++ ) {
+		if( strncasecmp(str,pattern,n) == 0 ) {
+			return str;
+		}
+	}
+	return NULL;
+}
 #endif

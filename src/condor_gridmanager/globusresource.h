@@ -39,6 +39,7 @@ class GlobusResource : public BaseResource
 
  public:
 	bool Init();
+	const char *ResourceType();
 	void Reconfig();
 	void UnregisterJob( GlobusJob *job );
 

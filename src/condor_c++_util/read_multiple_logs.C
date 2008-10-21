@@ -896,7 +896,7 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 
 MyString
 MultiLogFiles::getValuesFromFile(const MyString &fileName, 
-			const MyString &keyword, StringList &values)
+			const MyString &keyword, StringList &values, int skipTokens)
 {
 
 	MyString	errorMsg;
@@ -917,6 +917,15 @@ MultiLogFiles::getValuesFromFile(const MyString &fileName,
 			tokens.rewind();
 
 			if ( !stricmp(tokens.next(), keyword.Value()) ) {
+					// Skip over unwanted tokens.
+				for ( int skipped = 0; skipped < skipTokens; skipped++ ) {
+					if ( !tokens.next() ) {
+						MyString result = MyString( "Improperly-formatted DAG "
+									"file: value missing after keyword <" ) +
+									keyword + ">";
+			    		return result;
+					}
+				}
 
 					// Get the value.
 				const char *newValue = tokens.next();

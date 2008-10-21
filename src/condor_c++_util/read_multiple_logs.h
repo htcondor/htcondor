@@ -54,10 +54,12 @@ public:
 			@param fileName: the name of the file to parse
 			@param keyword: the keyword string
 			@param values: the list of values found
+			@param skipTokens: number of tokens to skip between keyword
+				and value
 			@return "" if okay, an error message otherwise
 		*/
 	static MyString getValuesFromFile(const MyString &fileName,
-			const MyString &keyword, StringList &values);
+			const MyString &keyword, StringList &values, int skipTokens = 0);
 
 	    /** Gets the log file from a Condor submit file.
 		    on success, the return value will be the log file name
@@ -113,7 +115,6 @@ public:
 		*/
 	static bool logFileOnNFS(const char *fileName, bool nfsIsError);
 
-private:
 		/** Reads in the specified file, breaks it into lines, and
 			combines the lines into "logical" lines (joins continued
 			lines).
@@ -124,6 +125,7 @@ private:
 	static MyString fileNameToLogicalLines(const MyString &filename,
 				StringList &logicalLines);
 
+private:
 	    /** Read the entire contents of the given file into a MyString.
 		 * @param The name of the file.
 		 * @return The contents of the file.

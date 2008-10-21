@@ -30,6 +30,7 @@
 #include "condor_getcwd.h"
 #include "condor_string.h" // for getline()
 #include "condor_version.h"
+#include "tmp_dir.h"
 
 
 #ifdef WIN32
@@ -55,7 +56,7 @@ struct SubmitDagOptions
 	int iDebugLevel;
 	MyString primaryDagFile;
 	StringList	dagFiles;
-	MyString strDagmanPath;
+	MyString strDagmanPath; // path to dagman binary
 	bool useDagDir;
 	MyString strDebugDir;
 	MyString strConfigFile;
@@ -65,6 +66,8 @@ struct SubmitDagOptions
 	bool autoRescue;
 	int doRescueFrom;
 	bool allowVerMismatch;
+	bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
+	bool updateSubmit; // allow updating submit file w/o -force
 	
 	// non-command line options
 	MyString strLibOut;
@@ -97,14 +100,29 @@ struct SubmitDagOptions
 		autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
 		doRescueFrom = 0; // 0 means no rescue DAG specified
 		allowVerMismatch = false;
+		recurse = true;
+		updateSubmit = false;
 	}
 
 };
 
-int printUsage(); // NOTE: printUsage calls exit(1), so it doesnt return
-void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[]);
+int printUsage(); // NOTE: printUsage calls exit(1), so it doesn't return
+void parseCommandLine(SubmitDagOptions &opts, int argc,
+			const char * const argv[]);
+bool parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
+			const char * const argv[], SubmitDagOptions &opts);
+int doRecursion( SubmitDagOptions &opts );
+int runSubmit( const SubmitDagOptions &opts, const char *dagFile,
+			const char *directory );
+int setUpOptions( SubmitDagOptions &opts );
+void ensureOutputFilesExist(const SubmitDagOptions &opts);
+int checkLogFiles( SubmitDagOptions &opts );
+int getOldSubmitFlags( SubmitDagOptions &opts );
+int parseArgumentsLine( const MyString &subLine , SubmitDagOptions &opts );
+void writeSubmitFile(/* const */ SubmitDagOptions &opts);
 int submitDag( SubmitDagOptions &opts );
 
+//---------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
 	printf("\n");
@@ -116,10 +134,250 @@ int main(int argc, char *argv[])
 	DebugFlags = D_ALWAYS | D_NOHEADER;
 	config();
 
-	SubmitDagOptions opts;
+		// Initialize our Distribution object -- condor vs. hawkeye, etc.
 	myDistro->Init( argc, argv );
+
+		// Load command-line arguments into the opts structure.
+	SubmitDagOptions opts;
 	parseCommandLine(opts, argc, argv);
+
+	int tmpResult;
+
+		// Recursively run ourself on nested DAGs.  We need to do this
+		// depth-first so all of the lower-level .condor.sub files already
+		// exist when we check for log files.
+	if ( opts.recurse ) {
+		tmpResult = doRecursion( opts );
+		if ( tmpResult != 0) {
+			fprintf( stderr, "Recursive submit(s) failed; exiting without "
+						"attempting top-level submit\n" );
+			return tmpResult;
+		}
+	}
 	
+		// Further work to get the opts structure set up properly.
+	tmpResult = setUpOptions( opts );
+	if ( tmpResult != 0 ) return tmpResult;
+
+		// Check whether the output files already exist; if so, we may
+		// abort depending on the -f flag and whether we're running
+		// a rescue DAG.
+	ensureOutputFilesExist(opts);
+
+		// Make sure that all node jobs have log files, the files
+		// aren't on NFS, etc.
+	tmpResult = checkLogFiles( opts );
+	if ( tmpResult != 0 ) return tmpResult;
+
+		// Note that this MUST come after recursion, otherwise we'd
+		// pass down the "preserved" values from the current .condor.sub
+		// file.
+	if ( opts.updateSubmit ) {
+		tmpResult = getOldSubmitFlags( opts );
+		if ( tmpResult != 0 ) return tmpResult;
+	}
+
+		// Write the actual submit file for DAGMan.
+	writeSubmitFile( opts );
+
+	return submitDag( opts );
+}
+
+//---------------------------------------------------------------------------
+/** Recursively call condor_submit_dag on nested DAGs.
+	@param opts: the condor_submit_dag options
+	@return 0 if successful, 1 if failed
+*/
+int
+doRecursion( SubmitDagOptions &opts )
+{
+	int result = 0;
+
+	opts.dagFiles.rewind();
+
+		// Go through all DAG files specified on the command line...
+	StringList submitFiles;
+	const char *dagFile;
+	while ( (dagFile = opts.dagFiles.next()) ) {
+
+			// Get logical lines from this DAG file.
+		StringList logicalLines;
+		MyString error = MultiLogFiles::fileNameToLogicalLines(
+					dagFile, logicalLines );
+		if ( error != "" ) {
+			fprintf( stderr, "Error reading DAG file: %s\n",
+						error.Value() );
+			return 1;
+		}
+
+			// Find and parse JOB lines.
+		logicalLines.rewind();
+		const char *dagLine;
+		while ( (dagLine = logicalLines.next()) ) {
+			StringList tokens( dagLine, " \t" );
+			tokens.rewind();
+			const char *first = tokens.next();
+			if ( first && !strcasecmp( first, "JOB" ) ) {
+
+				const char *nodeName = tokens.next();
+				if ( !nodeName) {
+					fprintf( stderr, "No node name specified in "
+								"line: <%s>\n", dagLine );
+					return 1;
+				}
+
+				const char *subFile = tokens.next();
+				if ( !subFile ) {
+					fprintf( stderr, "No submit file specified in "
+								"line: <%s>\n", dagLine );
+					return 1;
+				}
+
+				const char *directory = NULL;
+				const char *dirKeyword = tokens.next();
+				if ( dirKeyword && !strcasecmp( dirKeyword, "DIR" ) ) {
+					directory = tokens.next();
+					if ( !directory ) {
+						fprintf( stderr, "No directory specified in "
+									"line: <%s>\n", dagLine );
+						return 1;
+					}
+				}
+
+					// Now figure out whether JOB line is a nested DAG.
+				const char *DAG_SUBMIT_FILE_SUFFIX = ".condor.sub";
+				MyString submitFile( subFile );
+
+					// If submit file ends in ".condor.sub", we assume it
+					// refers to a sub-DAG.
+				int start = submitFile.find( DAG_SUBMIT_FILE_SUFFIX );
+				if ( start >= 0 &&
+							start + (int)strlen( DAG_SUBMIT_FILE_SUFFIX) ==
+							submitFile.Length() ) {
+
+						// Change submit file name to DAG file name.
+					submitFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
+
+						// Now run condor_submit_dag on the DAG file.
+					if ( runSubmit( opts, submitFile.Value(),
+								directory ) == 1 ) {
+						result = 1;
+					}
+				}
+			}
+		}
+	}
+
+	return result;
+}
+
+//---------------------------------------------------------------------------
+/** Run condor_submit_dag on the given DAG file.
+	@param opts: the condor_submit_dag options
+	@param dagFile: the DAG file to process
+	@param directory: the directory from which the DAG file should
+		be processed (ignored if NULL)
+	@return 0 if successful, 1 if failed
+*/
+int
+runSubmit( const SubmitDagOptions &opts, const char *dagFile,
+			const char *directory )
+{
+	int result = 0;
+
+		// Change to the appropriate directory if necessary.
+	TmpDir tmpDir;
+	MyString errMsg;
+	if ( directory ) {
+		if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
+			fprintf( stderr, "Error (%s) changing to node directory\n",
+						errMsg.Value() );
+			result = 1;
+			return result;
+		}
+	}
+
+		// Build up the command line for the recursive run of
+		// condor_submit_dag.  We need -no_submit so we don't
+		// actually run the subdag now; we need -update_submit
+		// so the lower-level .condor.sub file will get
+		// updated, in case it came from an earlier version
+		// of condor_submit_dag.
+	MyString cmdLine = "condor_submit_dag -no_submit -update_submit ";
+
+		// Add in arguments we're passing along.
+	if ( opts.bVerbose ) {
+		cmdLine += "-verbose ";
+	}
+
+	if ( opts.bForce ) {
+		cmdLine += "-force ";
+	}
+
+	if ( opts.strNotification != "" ) {
+		cmdLine += MyString( "-notification " ) +
+					opts.strNotification.Value() + " ";
+	}
+
+	if ( opts.strDagmanPath != "" ) {
+		cmdLine += MyString( "-dagman " ) +
+				opts.strDagmanPath.Value() + " ";
+	}
+
+	cmdLine += MyString( "-debug " ) + opts.iDebugLevel + " ";
+
+	if ( opts.bAllowLogError ) {
+		cmdLine += "-allowlogerror ";
+	}
+
+	if ( opts.useDagDir ) {
+		cmdLine += "-usedagdir ";
+	}
+
+	if ( opts.strDebugDir != "" ) {
+		cmdLine += MyString( "-outfile_dir " ) + 
+				opts.strDebugDir.Value() + " ";
+	}
+
+	cmdLine += MyString( "-oldrescue " ) + opts.oldRescue + " ";
+
+	cmdLine += MyString( "-autorescue " ) + opts.autoRescue + " ";
+
+	if ( opts.doRescueFrom != 0 ) {
+		cmdLine += MyString( "-dorescuefrom " ) +
+				opts.doRescueFrom + " ";
+	}
+
+	if ( opts.allowVerMismatch ) {
+		cmdLine += "-allowver ";
+	}
+
+	cmdLine += dagFile;
+
+		// Now actually run the command.
+	int retval = system( cmdLine.Value() );
+	if ( retval != 0 ) {
+		fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
+		result = 1;
+	}
+
+		// Change back to the directory we started from.
+	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
+		fprintf( stderr, "Error (%s) changing back to original directory\n",
+					errMsg.Value() );
+	}
+
+	return result;
+}
+
+//---------------------------------------------------------------------------
+/** Set up things in opts that aren't directly specified on the command line.
+	@param opts: the condor_submit_dag options
+	@return 0 if successful, 1 if failed
+*/
+int
+setUpOptions( SubmitDagOptions &opts )
+{
 	opts.strLibOut = opts.primaryDagFile + ".lib.out";
 	opts.strLibErr = opts.primaryDagFile + ".lib.err";
 
@@ -162,16 +420,6 @@ int main(int argc, char *argv[])
 
 	opts.strLockFile = opts.primaryDagFile + ".lock";
 
-	return submitDag( opts );
-}
-
-// utility fcns for submitDag
-void ensureOutputFilesExist(const SubmitDagOptions &opts);
-void writeSubmitFile(/* const */ SubmitDagOptions &opts);
-
-int
-submitDag( SubmitDagOptions &opts )
-{
 	if (opts.strDagmanPath == "" ) {
 		opts.strDagmanPath = which( dagman_exe );
 	}
@@ -182,9 +430,26 @@ submitDag( SubmitDagOptions &opts )
 				 dagman_exe );
 		return 1;
 	}
-		
-	ensureOutputFilesExist(opts);
 
+	MyString	msg;
+	if ( !GetConfigFile( opts.dagFiles, opts.useDagDir,
+				opts.strConfigFile, msg) ) {
+		fprintf( stderr, "ERROR: %s\n", msg.Value() );
+		return 1;
+	}
+
+	return 0;
+}
+
+//---------------------------------------------------------------------------
+/** Make sure every node job has a log file, the log file isn't on
+    NFS, etc.
+	@param opts: the condor_submit_dag options
+	@return 0 if successful, 1 if failed
+*/
+int
+checkLogFiles( SubmitDagOptions &opts )
+{
 	printf("Checking all your submit files for log file names.\n");
 	printf("This might take a while... \n");
 
@@ -215,14 +480,17 @@ submitDag( SubmitDagOptions &opts )
 
 	printf("Done.\n");
 
-	if ( !GetConfigFile( opts.dagFiles, opts.useDagDir,
-				opts.strConfigFile, msg) ) {
-		fprintf( stderr, "ERROR: %s\n", msg.Value() );
-		return 1;
-	}
+	return 0;
+}
 
-	writeSubmitFile(opts);
-
+//---------------------------------------------------------------------------
+/** Submit the DAGMan submit file unless the -no_submit option was given.
+	@param opts: the condor_submit_dag options
+	@return 0 if successful, 1 if failed
+*/
+int
+submitDag( SubmitDagOptions &opts )
+{
 	printf("-----------------------------------------------------------------------\n");
 	printf("File for submitting this DAG to Condor           : %s\n", 
 			opts.strSubFile.Value());
@@ -238,7 +506,8 @@ submitDag( SubmitDagOptions &opts )
 
 	if (opts.bSubmit)
 	{
-		MyString strCmdLine = "condor_submit " + opts.strRemoteSchedd + " " + opts.strSubFile;
+		MyString strCmdLine = "condor_submit " + opts.strRemoteSchedd +
+					" " + opts.strSubFile;
 		int retval = system(strCmdLine.Value());
 		if( retval != 0 ) {
 			fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
@@ -247,7 +516,8 @@ submitDag( SubmitDagOptions &opts )
 	}
 	else
 	{
-		printf("-no_submit given, not submitting DAG to Condor.  You can do this with:\n");
+		printf("-no_submit given, not submitting DAG to Condor.  "
+					"You can do this with:\n");
 		printf("\"condor_submit %s\"\n", opts.strSubFile.Value());
 	}
 	printf("-----------------------------------------------------------------------\n");
@@ -255,13 +525,7 @@ submitDag( SubmitDagOptions &opts )
 	return 0;
 }
 
-MyString makeString(int iValue)
-{
-	char psToReturn[16];
-	sprintf(psToReturn,"%d",iValue);
-	return MyString(psToReturn);
-}
-
+//---------------------------------------------------------------------------
 bool fileExists(const MyString &strFile)
 {
 	int fd = safe_open_wrapper(strFile.Value(), O_RDONLY);
@@ -271,6 +535,7 @@ bool fileExists(const MyString &strFile)
 	return true;
 }
 
+//---------------------------------------------------------------------------
 void ensureOutputFilesExist(const SubmitDagOptions &opts)
 {
 	int maxRescueDagNum = param_integer("DAGMAN_MAX_RESCUE_NUM",
@@ -319,7 +584,7 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 	bool bHadError = false;
 		// If not running a rescue DAG, check for existing files
 		// generated by condor_submit_dag...
-	if (!autoRunningRescue && opts.doRescueFrom < 1) {
+	if (!autoRunningRescue && opts.doRescueFrom < 1 && !opts.updateSubmit) {
 		if (fileExists(opts.strSubFile))
 		{
 			fprintf( stderr, "ERROR: \"%s\" already exists.\n",
@@ -367,12 +632,94 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 	{
 	    fprintf( stderr, "\nSome file(s) needed by %s already exist.  ",
 				 dagman_exe );
-	    fprintf( stderr, "Either rename them,\nor use the \"-f\" option to "
-				 "force them to be overwritten.\n" );
+	    fprintf( stderr, "Either rename them,\nuse the \"-f\" option to "
+				 "force them to be overwritten, or use\n"
+				 "the \"-update_submit\" option to update the submit "
+				 "file and continue.\n" );
 	    exit( 1 );
 	}
 }
 
+//---------------------------------------------------------------------------
+/** Get the command-line options we want to preserve from the .condor.sub
+    file we're overwriting, and plug them into the opts structure.  Note
+	that it's *not* an error for the .condor.sub file to not exist.
+	@param opts: the condor_submit_dag options
+	@return 0 if successful, 1 if failed
+*/
+int
+getOldSubmitFlags(SubmitDagOptions &opts)
+{
+		// It's not an error for the submit file to not exist.
+	if ( fileExists( opts.strSubFile ) ) {
+		StringList logicalLines;
+		MyString error = MultiLogFiles::fileNameToLogicalLines(
+					opts.strSubFile, logicalLines );
+		if ( error != "" ) {
+			fprintf( stderr, "Error reading submit file: %s\n",
+						error.Value() );
+			return 1;
+		}
+
+		logicalLines.rewind();
+		const char *subLine;
+		while ( (subLine = logicalLines.next()) ) {
+			StringList tokens( subLine, " \t" );
+			tokens.rewind();
+			const char *first = tokens.next();
+			if ( first && !strcasecmp( first, "arguments" ) ) {
+				if ( parseArgumentsLine( subLine, opts ) != 0 ) {
+					return 1;
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+//---------------------------------------------------------------------------
+/** Parse the arguments line of an existing .condor.sub file, extracing
+    the arguments we want to preserve when updating the .condor.sub file.
+	@param subLine: the arguments line from the .condor.sub file
+	@param opts: the condor_submit_dag options
+	@return 0 if successful, 1 if failed
+*/
+int
+parseArgumentsLine( const MyString &subLine , SubmitDagOptions &opts )
+{
+	const char *line = subLine.Value();
+	const char *start = strchr( line, '"' );
+	const char *end = strrchr( line, '"' );
+
+	MyString arguments;
+	if ( start && end ) {
+		arguments = subLine.Substr( start - line, end - line );
+	} else {
+		fprintf( stderr, "Missing quotes in arguments line: <%s>\n",
+					subLine.Value() );
+		return 1;
+	}
+
+	ArgList arglist;
+	MyString error;
+	if ( !arglist.AppendArgsV2Quoted( arguments.Value(),
+				&error ) ) {
+		fprintf( stderr, "Error parsing arguments: %s\n", error.Value() );
+		return 1;
+	}
+
+	for ( int argNum = 0; argNum < arglist.Count(); argNum++ ) {
+		MyString strArg = arglist.GetArg( argNum );
+		strArg.lower_case();
+		(void)parsePreservedArgs( strArg, argNum, arglist.Count(),
+					arglist.GetStringArray(), opts);
+	}
+
+	return 0;
+}
+
+//---------------------------------------------------------------------------
 void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 {
 	FILE *pSubFile = safe_fopen_wrapper(opts.strSubFile.Value(), "w");
@@ -446,22 +793,22 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 		args.AppendArg("-Rescue");
 		args.AppendArg(opts.strRescueFile.Value());
 	}
-    if(opts.iMaxIdle) 
+    if(opts.iMaxIdle != 0) 
 	{
 		args.AppendArg("-MaxIdle");
 		args.AppendArg(opts.iMaxIdle);
     }
-    if(opts.iMaxJobs) 
+    if(opts.iMaxJobs != 0) 
 	{
 		args.AppendArg("-MaxJobs");
 		args.AppendArg(opts.iMaxJobs);
     }
-    if(opts.iMaxPre) 
+    if(opts.iMaxPre != 0) 
 	{
 		args.AppendArg("-MaxPre");
 		args.AppendArg(opts.iMaxPre);
     }
-    if(opts.iMaxPost) 
+    if(opts.iMaxPost != 0) 
 	{
 		args.AppendArg("-MaxPost");
 		args.AppendArg(opts.iMaxPost);
@@ -549,10 +896,11 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
     fprintf(pSubFile, "queue\n");
 
 	fclose(pSubFile);
-	
 }
 
-void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
+//---------------------------------------------------------------------------
+void
+parseCommandLine(SubmitDagOptions &opts, int argc, const char * const argv[])
 {
 	for (int iArg = 1; iArg < argc; iArg++)
 	{
@@ -599,38 +947,6 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 					printUsage();
 				}
 				opts.strNotification = argv[++iArg];
-			}
-			else if (strArg.find("-maxi") != -1) // -maxidle
-			{
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-maxidle argument needs a value\n");
-					printUsage();
-				}
-				opts.iMaxIdle = atoi(argv[++iArg]);
-			}
-			else if (strArg.find("-maxj") != -1) // -maxjobs
-			{
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-maxjobs argument needs a value\n");
-					printUsage();
-				}
-				opts.iMaxJobs = atoi(argv[++iArg]);
-			}
-			else if (strArg.find("-maxpr") != -1) // -maxpre
-			{
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-maxpre argument needs a value\n");
-					printUsage();
-				}
-				opts.iMaxPre = atoi(argv[++iArg]);
-			}
-			else if (strArg.find("-maxpo") != -1) // -maxpost
-			{
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-maxpost argument needs a value\n");
-					printUsage();
-				}
-				opts.iMaxPost = atoi(argv[++iArg]);
 			}
 			else if (strArg.find("-r") != -1) // submit to remote schedd
 			{
@@ -689,7 +1005,7 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 				MyString	errMsg;
 				if (!MakePathAbsolute(opts.strConfigFile, errMsg)) {
 					fprintf( stderr, "%s\n", errMsg.Value() );
-	    			exit( 1 );
+   					exit( 1 );
 				}
 			}
 			else if (strArg.find("-app") != -1) // -append
@@ -742,6 +1058,18 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 			{
 				opts.allowVerMismatch = true;
 			}
+			else if (strArg.find("-no_rec") != -1) // -no_recurse
+			{
+				opts.recurse = false;
+			}
+			else if (strArg.find("-updat") != -1) // -update_submit
+			{
+				opts.updateSubmit = true;
+			}
+			else if ( parsePreservedArgs( strArg, iArg, argc, argv, opts) )
+			{
+				// No-op here
+			}
 			else
 			{
 				fprintf( stderr, "ERROR: unknown option %s\n", strArg.Value() );
@@ -770,7 +1098,67 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 	}
 }
 
-// condor_submit_dag diamond.dag
+//---------------------------------------------------------------------------
+/** Parse arguments that are to be preserved when updating a .condor.sub
+	file.  If the given argument such an argument, parse it and update the
+	opts structure accordingly.  (This function is meant to be called both
+	when parsing "normal" command-line arguments, and when parsing the
+	existing arguments line of a .condor.sub file we're overwriting.)
+	@param strArg: the argument we're parsing
+	@param argNum: the argument number of the current argument
+	@param argc: the argument count (passed to get value for flag)
+	@param argv: the argument vector (passed to get value for flag)
+	@param opts: the condor_submit_dag options
+	@return true iff the argument vector contained any arguments
+		processed by this function
+*/
+bool
+parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
+			const char * const argv[], SubmitDagOptions &opts)
+{
+	bool result = false;
+
+	if (strArg.find("-maxi") != -1) // -maxidle
+	{
+		if (argNum + 1 >= argc) {
+			fprintf(stderr, "-maxidle argument needs a value\n");
+			printUsage();
+		}
+		opts.iMaxIdle = atoi(argv[++argNum]);
+		result = true;
+	}
+	else if (strArg.find("-maxj") != -1) // -maxjobs
+	{
+		if (argNum + 1 >= argc) {
+			fprintf(stderr, "-maxjobs argument needs a value\n");
+			printUsage();
+		}
+		opts.iMaxJobs = atoi(argv[++argNum]);
+		result = true;
+	}
+	else if (strArg.find("-maxpr") != -1) // -maxpre
+	{
+		if (argNum + 1 >= argc) {
+			fprintf(stderr, "-maxpre argument needs a value\n");
+			printUsage();
+		}
+		opts.iMaxPre = atoi(argv[++argNum]);
+		result = true;
+	}
+	else if (strArg.find("-maxpo") != -1) // -maxpost
+	{
+		if (argNum + 1 >= argc) {
+			fprintf(stderr, "-maxpost argument needs a value\n");
+			printUsage();
+		}
+		opts.iMaxPost = atoi(argv[++argNum]);
+		result = true;
+	}
+
+	return result;
+}
+
+//---------------------------------------------------------------------------
 int printUsage() 
 {
     printf("Usage: condor_submit_dag [options] dag_file [dag_file_2 ... dag_file_n]\n");
@@ -804,5 +1192,9 @@ int printUsage()
 	printf("    -AutoRescue 0|1     (whether to automatically run newest rescue DAG;\n");
 	printf("         0 = false, 1 = true)\n");
 	printf("    -DoRescueFrom <number>  (run rescue DAG of given number)\n");
+	printf("    -AllowVersionMismatch (allow version mismatch between the\n");
+	printf("         .condor.sub file and the condor_dagman binary)\n");
+	printf("    -no_recurse         (don't recurse in nested DAGs)\n");
+	printf("    -update_submit      (update submit file if it exists)\n");
 	exit(1);
 }

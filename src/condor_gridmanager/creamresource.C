@@ -215,6 +215,11 @@ void CreamResource::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
+const char *CreamResource::ResourceType()
+{
+	return "cream";
+}
+
 const char *CreamResource::CanonicalName( const char *name )
 {
 /*
