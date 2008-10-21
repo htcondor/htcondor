@@ -1367,17 +1367,18 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 
 #if HAVE_HIBERNATION
 
-int
-Resource::evaluateHibernate() {
+bool
+Resource::evaluateHibernate( MyString &state_str ) const
+{
 	ClassAd *ad = NULL;
 	if ( NULL != r_cur ) {
 		ad = r_cur->ad();
 	}
-    int level = 0;
-	if ( 0 == r_classad->EvalInteger( "HIBERNATE", ad, level ) ) {
-		return 0;
+
+	if ( r_classad->EvalString( "HIBERNATE", ad, state_str ) ) {
+		return true;
 	}
-	return level;
+	return false;
 }
 
 #endif /* HAVE_HIBERNATION */

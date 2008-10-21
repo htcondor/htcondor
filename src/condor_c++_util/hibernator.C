@@ -174,12 +174,12 @@ struct HibernatorBase::StateLookup
 	HibernatorBase::SLEEP_STATE	state;
 	const char					**strings;
 };
-static const char *s0names[] = { "NONE", NULL };
-static const char *s1names[] = { "S1", "standby", "sleep", NULL };
-static const char *s2names[] = { "S2", NULL};
-static const char *s3names[] = { "S3", "ram", "mem", NULL };
-static const char *s4names[] = { "S4", "disk", "hibernate", NULL };
-static const char *s5names[] = { "S5", "shutdown", NULL };
+static const char *s0names[] = { "NONE", "0", NULL };
+static const char *s1names[] = { "S1",   "1", "standby", "sleep", NULL };
+static const char *s2names[] = { "S2",   "2", NULL};
+static const char *s3names[] = { "S3",   "3", "ram", "mem", NULL };
+static const char *s4names[] = { "S4",   "4", "disk", "hibernate", NULL };
+static const char *s5names[] = { "S5",   "5", "shutdown", NULL };
 static const char *sxnames[] = { NULL };
 static const HibernatorBase::StateLookup states[] =
 {

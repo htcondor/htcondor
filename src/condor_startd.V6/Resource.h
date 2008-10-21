@@ -201,7 +201,7 @@ public:
 #endif /* HAVE_JOB_HOOKS */
 
 #if HAVE_HIBERNATION
-	int	evaluateHibernate();
+	bool	evaluateHibernate( MyString &state ) const;
 #endif /* HAVE_HIBERNATION */
 
 	bool    claimWorklifeExpired();

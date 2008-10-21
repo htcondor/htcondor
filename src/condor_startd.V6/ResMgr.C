@@ -1959,8 +1959,8 @@ void ResMgr::updateHibernateConfiguration() {
 }
 
 
-int 
-ResMgr::allHibernating( void )
+int
+ResMgr::allHibernating( MyString &target ) const
 {
     	// fail if there is no resource or if we are
 		// configured not to hibernate
@@ -1975,16 +1975,24 @@ ResMgr::allHibernating( void )
 		// 
 		// We take largest value as the representative 
 		// hibernation level for this machine
-	int max_level = 0;
+	target = "";
+	int level = 0;
 	for( int i = 0; i < nresources; i++ ) {
-		int rval = resources[i]->evaluateHibernate();
-		dprintf( D_FULLDEBUG, "allHibernating: %d -> %d\n", i, rval );
-		if( 0 == rval ) {
+
+		MyString	str;
+		if ( !resources[i]->evaluateHibernate(str) ) {
 			return 0;
 		}
-		max_level = MAX( max_level, rval );
+
+		int tmp = m_hibernation_manager->stringToSleepState( str.Value() );
+		dprintf( D_FULLDEBUG, "allHibernating: resource #%d: '%s' = %d\n",
+				 i, str.Value(), tmp );
+		if ( tmp > level ) {
+			target = str;
+			level = tmp;
+		}
 	}
-	return max_level;
+	return level;
 }
 
 
@@ -1994,7 +2002,8 @@ ResMgr::checkHibernate( void )
 
 		// If all resources have gone unused for some time	
 		// then put the machine to sleep
-	int level = allHibernating();
+	MyString	target;
+	int level = allHibernating( target );
 	if( level > 0 ) {
 
         if( !m_hibernation_manager->canHibernate() ) {
@@ -2030,7 +2039,7 @@ ResMgr::checkHibernate( void )
 	    // plug-in will know the this ad belongs to it when the
 	    // Collector invalidates it.
 	    //
-		if ( disableResources( level ) ) {
+		if ( disableResources( target ) ) {
 			m_hibernation_manager->switchToTargetState( );
 		}
 #     if !defined( WIN32 )
@@ -2296,14 +2305,14 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 #if HAVE_HIBERNATION
 
 int
-ResMgr::disableResources( int level )
+ResMgr::disableResources( const MyString &state_str )
 {
 
     int i; /* stupid VC6 */
 
 	/* set the sleep state so the plugin will pickup on the
 	fact that we are sleeping */
-	m_hibernation_manager->setTargetLevel ( level );
+	m_hibernation_manager->setTargetState ( state_str.Value() );
 
     /* disable all resource on this machine */
     for ( i = 0; i < nresources; ++i ) {
