@@ -357,12 +357,12 @@ JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *p
 
 	int offset = 0;
 	while(1) {
-		if(offset >= routing_string.size()) break;
+		if(offset >= (int)routing_string.size()) break;
 
 
 		JobRoute route;
 		JobRoute *existing_route;
-		unsigned this_offset = offset; //save offset before eating an ad.
+		int this_offset = offset; //save offset before eating an ad.
 		bool ignore_route = false;
 
 		if(!route.ParseClassAd(routing_string,offset,&router_defaults_ad,allow_empty_requirements))
@@ -384,7 +384,7 @@ JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *p
 			dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Ignoring the malformed route entry in %s, starting here: %s\n",param_name,routing_string.c_str() + this_offset);
 
 			// skip any junk and try parsing the next route in the list
-			while(routing_string.size() > offset && routing_string[offset] != '[') offset++;
+			while((int)routing_string.size() > offset && routing_string[offset] != '[') offset++;
 
 			ignore_route = true;
 		}
