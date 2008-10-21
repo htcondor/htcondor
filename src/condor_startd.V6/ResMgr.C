@@ -2032,6 +2032,7 @@ ResMgr::checkHibernate( void )
 	    //
 		if ( disableResources( level ) ) {
 			m_hibernation_manager->switchToTargetState( );
+			sleep(60);
 		}
     }
 }
@@ -2294,8 +2295,7 @@ ResMgr::disableResources( int level )
 
 	/* set the sleep state so the plugin will pickup on the
 	fact that we are sleeping */
-	m_hibernation_manager->setTargetLevel (
-		(HibernatorBase::SLEEP_STATE) level );
+	m_hibernation_manager->setTargetLevel ( level );
 
     /* disable all resource on this machine */
     for ( i = 0; i < nresources; ++i ) {
@@ -2303,10 +2303,13 @@ ResMgr::disableResources( int level )
 	}
 
     /* update the CM */
+	dprintf( D_FULLDEBUG, "Sending updates with ACK\n" );
     bool ok = true;
     for ( i = 0; i < nresources && ok; ++i ) {
         ok = resources[i]->update_with_ack();
+		sleep(5);
 	}
+	dprintf( D_FULLDEBUG, "Done sending updates with ACK (%d)\n", ok );
 
     /* if any of the updates failed, then renable all the
     resources and try again later (next time HIBERNATE evaluates

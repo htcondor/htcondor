@@ -157,7 +157,8 @@ public:
 
 	/** Get the network adapter being used
 	 */
-	NetworkAdapterBase * getNetworkAdapter( void ) const { return m_primary_adapter; };
+	NetworkAdapterBase * getNetworkAdapter( void ) const
+		{ return m_primary_adapter; };
 
 	/** Sleep state converions convienience methods
 	 */

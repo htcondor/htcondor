@@ -254,7 +254,12 @@ HibernationManager::publish ( ClassAd &ad )
     that is, it's always "running" if it is up. We still hold
     this in a variable, as we will publish the sleep state in
     the last ad that is sent to the Collector*/
-    ad.Assign ( ATTR_HIBERNATION_LEVEL, m_target_state );
+	int level = sleepStateToInt( m_target_state );
+	const char *state = sleepStateToString( m_target_state );
+    ad.Assign ( ATTR_HIBERNATION_LEVEL, level );
+    ad.Assign ( ATTR_HIBERNATION_STATE, state );
+	dprintf( D_FULLDEBUG,
+			 "Publishing hibernation state %s / level %d\n", state, level );
 
     /* publish whether or not we can enter a state of hibernation */
     ad.Assign ( ATTR_CAN_HIBERNATE, canHibernate () );

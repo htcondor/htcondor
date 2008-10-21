@@ -335,3 +335,11 @@ condor_version.o: condor_version.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c -DPLATFORM=$(PLATFORM) condor_version.C
 
 testbin:: all
+
+help:
+	@echo "Known targets:"
+	@echo "  all:           build all main targets"
+	@echo "  release:       all + populate ../release_dir"
+	@echo "  testbin:"
+	@echo "  userlog-tests: all + userlog tests"
+	@echo "  green-tests:   all + green computing tests"
