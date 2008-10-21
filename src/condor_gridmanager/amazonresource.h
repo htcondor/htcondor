@@ -55,6 +55,8 @@ public:
 	~AmazonResource();	
 
 	static HashTable <HashKey, AmazonResource *> ResourcesByName;
+
+	const char *ResourceType();
 	
 private:
 	void DoPing(time_t & ping_delay, 

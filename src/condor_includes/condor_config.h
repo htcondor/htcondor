@@ -247,12 +247,6 @@ BEGIN_C_DECLS
 	*/
 	char * lookup_macro ( const char *name, BUCKET *table[], int table_size );
 
-	/* These allow the application to change the subsystem and local
-	   names that are used by param, et.el.
-	*/
-	const char *config_set_subsystem_name( const char *name );
-	const char *config_set_local_name( const char *name );
-
 	/*
 	As expand_macro() (above), but assumes the table 'ConfigTab' which is
 	of size TABLESIZE.

@@ -516,7 +516,7 @@ int main (int argc, char **argv)
 		everythingOkay = false;
 	}
 
-	// Test random string generation
+	// ---- Test random string generation
 	MyString rnd;
 
 	rnd.randomlyGenerate("1", 5);
@@ -532,6 +532,47 @@ int main (int argc, char **argv)
 		printf("Ok: randomlyGenerate() worked in line %d.\n", __LINE__);
 	} else {
 	   	printf("FAILED: randomlyGenerate() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+
+    // ---- Test find().
+	MyString findIn("");
+
+	if ( findIn.find("") == -1 ) {
+		printf("Ok: find() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: find() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	findIn = "Alberto Contador";
+
+	if ( findIn.find("") == 0 ) {
+		printf("Ok: find() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: find() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	if ( findIn.find("Alberto") == 0 ) {
+		printf("Ok: find() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: find() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	if ( findIn.find("to Cont") == 5 ) {
+		printf("Ok: find() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: find() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	if ( findIn.find("Lance") == -1 ) {
+		printf("Ok: find() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: find() error in line %d.\n", __LINE__);
 		everythingOkay = false;
 	}
 

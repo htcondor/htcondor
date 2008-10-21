@@ -16,9 +16,9 @@
 
 #include "condor_common.h"
 
-#include "ClassAdLogPlugin.h"
+#include "MasterPlugin.h"
 
-struct ExampleClassAdLogPlugin : public ClassAdLogPlugin
+struct ExampleMasterPlugin : public MasterPlugin
 {
 	void
 	initialize()
@@ -26,32 +26,10 @@ struct ExampleClassAdLogPlugin : public ClassAdLogPlugin
 		printf("Init\n");
 	}
 
-	void
-	newClassAd(const char *key)
+	void update(const ClassAd *ad)
 	{
-		printf("newClassAd: %s\n", key);
-	}
-
-	void
-	destroyClassAd(const char *key)
-	{
-		printf("destroyClassAd: %s\n", key);
-	}
-
-	void
-	setAttribute(const char *key,
-				 const char *name,
-				 const char *value)
-	{
-		printf("setAttribute: %s[%s] = %s\n", key, name, value);
-	}
-
-	void
-	deleteAttribute(const char *key,
-					const char *name)
-	{
-		printf("deleteAttribute: %s[%s]\n", key, name);
+		printf("update(%s)\n", ad ? "Ad" : "(NULL)");
 	}
 };
 
-static ExampleClassAdLogPlugin instance;
+static ExampleMasterPlugin instance;

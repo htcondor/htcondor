@@ -16,42 +16,23 @@
 
 #include "condor_common.h"
 
-#include "ClassAdLogPlugin.h"
+#include "ConcurrencyLimitUtils.h"
 
-struct ExampleClassAdLogPlugin : public ClassAdLogPlugin
+void
+ParseConcurrencyLimit(char *&input, double &increment)
 {
-	void
-	initialize()
-	{
-		printf("Init\n");
+	char *sep = NULL;
+
+	increment = 1;
+
+	if (NULL != (sep = strchr(input, ':'))) {
+		*sep = '\0';
+		sep++;
+
+		increment = strtod(sep, NULL);
 	}
 
-	void
-	newClassAd(const char *key)
-	{
-		printf("newClassAd: %s\n", key);
+	if (increment <= 0) {
+		increment = 1;
 	}
-
-	void
-	destroyClassAd(const char *key)
-	{
-		printf("destroyClassAd: %s\n", key);
-	}
-
-	void
-	setAttribute(const char *key,
-				 const char *name,
-				 const char *value)
-	{
-		printf("setAttribute: %s[%s] = %s\n", key, name, value);
-	}
-
-	void
-	deleteAttribute(const char *key,
-					const char *name)
-	{
-		printf("deleteAttribute: %s[%s]\n", key, name);
-	}
-};
-
-static ExampleClassAdLogPlugin instance;
+}

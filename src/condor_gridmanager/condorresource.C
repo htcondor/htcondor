@@ -193,6 +193,11 @@ void CondorResource::Reconfig()
 	BaseResource::Reconfig();
 }
 
+const char *CondorResource::ResourceType()
+{
+	return "condor";
+}
+
 void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
 {
 	BaseResource::RegisterJob( job );

@@ -17,42 +17,18 @@
  *
  ***************************************************************/
 
-
-#ifndef NORDUGRIDRESOURCE_H
-#define NORDUGRIDRESOURCE_H
+#ifndef _STRING_FUNCS_H_
+#define _STRING_FUNCS_H_
 
 #include "condor_common.h"
-#include "condor_daemon_core.h"
+#include "condor_header_features.h"
 
-#include "baseresource.h"
-#include "gahp-client.h"
+BEGIN_C_DECLS
 
-class NordugridJob;
-class NordugridResource;
+#ifndef HAVE_STRCASESTR
+  char *strcasestr( const char *string, const char *pattern );
+#endif
 
-class NordugridResource : public BaseResource
-{
- public:
-
-	NordugridResource( const char *resource_name, const char *proxy_subject );
-	~NordugridResource();
-
-	const char *ResourceType();
-	void Reconfig();
-
-	static const char *HashName( const char *resource_name,
-								 const char *proxy_subject );
-	static NordugridResource *FindOrCreateResource( const char *resource_name,
-													const char *proxy_subject );
-
-	char *proxySubject;
-	GahpClient *gahp;
-
-	static HashTable <HashKey, NordugridResource *> ResourcesByName;
-
- private:
-	void DoPing( time_t& ping_delay, bool& ping_complete,
-				 bool& ping_succeeded  );
-};
+END_C_DECLS
 
 #endif

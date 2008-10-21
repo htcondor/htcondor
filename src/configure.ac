@@ -2232,6 +2232,7 @@ AC_CHECK_TYPES([id_t])
 ############################################################
 
 AC_CHECK_FUNCS([strsignal				\
+		strcasestr				\
 		lstat					\
 		stat64					\
 		lstat64					\
@@ -2686,7 +2687,9 @@ if test "x$_cv_ext_openssl_version" != x; then
 fi
 
 if test -z "$_cv_ext_globus_version"; then
-  _cv_has_globus=no;
+  _cv_has_globus=no
+else
+  _cv_has_globus=yes
 fi
 
 _cv_has_unicoregahp=$_cv_has_globus

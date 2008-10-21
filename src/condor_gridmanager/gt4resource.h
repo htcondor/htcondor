@@ -41,6 +41,7 @@ class GT4Resource : public BaseResource
 
  public:
 	bool Init();
+	const char *ResourceType();
 	void Reconfig();
 	void UnregisterJob( GT4Job *job );
 

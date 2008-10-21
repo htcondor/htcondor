@@ -77,12 +77,18 @@ void BaseResource::Reconfig()
 {
 	int tmp_int;
 	char *param_value;
+	MyString param_name;
 
 	tmp_int = param_integer( "GRIDMANAGER_RESOURCE_PROBE_INTERVAL", 5 * 60 );
 	setProbeInterval( tmp_int );
 
 	submitLimit = -1;
-	param_value = param( "GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE" );
+	param_name.sprintf( "GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE_%s",
+						ResourceType() );
+	param_value = param( param_name.Value() );
+	if ( param_value == NULL ) {
+		param_value = param( "GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE" );
+	}
 	if ( param_value == NULL ) {
 		// Check old parameter name
 		param_value = param( "GRIDMANAGER_MAX_PENDING_SUBMITS" );
@@ -107,7 +113,12 @@ void BaseResource::Reconfig()
 	}
 
 	jobLimit = -1;
-	param_value = param( "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE" );
+	param_name.sprintf( "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_%s",
+						ResourceType() );
+	param_value = param( param_name.Value() );
+	if ( param_value == NULL ) {
+		param_value = param( "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE" );
+	}
 	if ( param_value != NULL ) {
 		char *tmp1;
 		char *tmp2;

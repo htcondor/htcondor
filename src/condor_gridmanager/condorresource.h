@@ -42,6 +42,7 @@ class CondorResource : public BaseResource
 					const char *proxy_subject );
 	~CondorResource();
 
+	const char *ResourceType();
 	void Reconfig();
 	void RegisterJob( CondorJob *job, const char *submitter_id );
 	void UnregisterJob( CondorJob *job );

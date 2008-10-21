@@ -50,6 +50,11 @@ grid_monitor.sh: grid_monitor_wrapper grid_manager_monitor_agent
 release_recursive_copy_target($(BLAHP_DIR)/dynamic,lib/glite)
 static_recursive_copy_target($(BLAHP_DIR)/static,lib/glite)
 strip_recursive_copy_target($(BLAHP_DIR)/dynamic,lib/glite)
+public_copy_target(nqs_cancel,lib/glite/bin,nqs_cancel,EXECUTABLE_MODE)
+public_copy_target(nqs_hold,lib/glite/bin,nqs_hold,EXECUTABLE_MODE)
+public_copy_target(nqs_resume,lib/glite/bin,nqs_resume,EXECUTABLE_MODE)
+public_copy_target(nqs_status,lib/glite/bin,nqs_status,EXECUTABLE_MODE)
+public_copy_target(nqs_submit,lib/glite/bin,nqs_submit,EXECUTABLE_MODE)
 #endif
 
 #if HAVE_EXT_UNICOREGAHP

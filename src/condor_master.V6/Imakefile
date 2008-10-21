@@ -7,7 +7,14 @@ LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 
 soapobjs(master)
 
-OBJ = master.o daemon.o $(SOAP_OBJS)
+#if HAVE_DLOPEN
+PLUGIN_OBJ = MasterPlugin.o
+#endif
+
+%-plugin.so: %.C
+   $(CPlusPlus) $(C_PLUS_FLAGS) -shared -fPIC $< -o $@
+
+OBJ = master.o daemon.o $(SOAP_OBJS) $(PLUGIN_OBJ)
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 

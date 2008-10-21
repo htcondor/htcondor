@@ -14,22 +14,12 @@
  * limitations under the License.
  */
 
-#include "condor_common.h"
 
-#include "ScheddPlugin.h"
-
-struct ExampleScheddPlugin : public ScheddPlugin
-{
-	void
-	initialize()
-	{
-		printf("Init\n");
-	}
-
-	void update(int cmd, const ClassAd *ad)
-	{
-		printf("update(%d, %s)\n", cmd, ad ? "Ad" : "(NULL)");
-	}
-};
-
-static ExampleScheddPlugin instance;
+/*
+ * Parse the limit into a limit and its increment. The input limit is
+ * transformed and the increment is 1 if not specified or if < 0.
+ *
+ * An input limit is a limit plus, optionally, ':' + increment,
+ * e.g. m:3 or f.
+ */
+void ParseConcurrencyLimit(char *&limit, double &increment);

@@ -81,6 +81,7 @@ CLEAN :
 	-@erase "$(INTDIR)\signames.obj"
 	-@erase "$(INTDIR)\stat.WINDOWS.obj"
 	-@erase "$(INTDIR)\strcmp_until.obj"
+	-@erase "$(INTDIR)\string_funcs.obj"
 	-@erase "$(INTDIR)\truncate.WIN32.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
@@ -178,7 +179,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\stat.WINDOWS.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
 	"$(INTDIR)\truncate.WIN32.obj" \
-	"$(INTDIR)\win32_posix.obj"
+	"$(INTDIR)\win32_posix.obj" \
+	"$(INTDIR)\string_funcs.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -241,6 +243,7 @@ CLEAN :
 	-@erase "$(INTDIR)\signames.obj"
 	-@erase "$(INTDIR)\stat.WINDOWS.obj"
 	-@erase "$(INTDIR)\strcmp_until.obj"
+	-@erase "$(INTDIR)\string_funcs.obj"
 	-@erase "$(INTDIR)\truncate.WIN32.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\win32_posix.obj"
@@ -337,7 +340,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\stat.WINDOWS.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
 	"$(INTDIR)\truncate.WIN32.obj" \
-	"$(INTDIR)\win32_posix.obj"
+	"$(INTDIR)\win32_posix.obj" \
+	"$(INTDIR)\string_funcs.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -740,6 +744,12 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /Fo"$(INTDIR)\\"
 
 
 !ENDIF 
+
+SOURCE=..\src\condor_util_lib\string_funcs.c
+
+"$(INTDIR)\string_funcs.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
 
 SOURCE=..\src\condor_util_lib\truncate.WIN32.c
 

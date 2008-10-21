@@ -32,6 +32,7 @@
 #include "classad_log.h"
 #include "string_list.h"
 #include "HashTable.h"
+#include "ConcurrencyLimitUtils.h"
 
 #define MIN_PRIORITY_FACTOR (1.0)
 
@@ -1260,9 +1261,9 @@ void Accountant::LoadLimits(ClassAdList &resourceList)
 	DumpLimits();
 }
 
-int Accountant::GetLimit(const MyString& limit)
+double Accountant::GetLimit(const MyString& limit)
 {
-	int count = 0;
+	double count = 0;
 
 	if (-1 == concurrencyLimits.lookup(limit, count)) {
 		dprintf(D_ACCOUNTANT,
@@ -1273,20 +1274,20 @@ int Accountant::GetLimit(const MyString& limit)
 	return count;
 }
 
-int Accountant::GetLimitMax(const MyString& limit)
+double Accountant::GetLimitMax(const MyString& limit)
 {
-	return param_integer((limit + "_LIMIT").GetCStr(),
-						 param_integer("CONCURRENCY_LIMIT_DEFAULT",
+	return param_double((limit + "_LIMIT").GetCStr(),
+						 param_double("CONCURRENCY_LIMIT_DEFAULT",
 									   2308032));
 }
 
 void Accountant::DumpLimits()
 {
 	MyString limit;
- 	int count;
+ 	double count;
 	concurrencyLimits.startIterations();
 	while (concurrencyLimits.iterate(limit, count)) {
-		dprintf(D_ACCOUNTANT, "  Limit: %s = %d\n", limit.GetCStr(), count);
+		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.GetCStr(), count);
 	}
 }
 
@@ -1294,10 +1295,10 @@ void Accountant::ReportLimits(AttrList *attrList)
 {
 	MyString attr;
 	MyString limit;
- 	int count;
+ 	double count;
 	concurrencyLimits.startIterations();
 	while (concurrencyLimits.iterate(limit, count)) {
-		attr.sprintf("ConcurrencyLimit.%s = %d\n", limit.GetCStr(), count);
+		attr.sprintf("ConcurrencyLimit.%s = %f\n", limit.GetCStr(), count);
 		attrList->Insert(attr.GetCStr());
 	}
 }
@@ -1305,24 +1306,40 @@ void Accountant::ReportLimits(AttrList *attrList)
 void Accountant::ClearLimits()
 {
 	MyString limit;
- 	int count;
+ 	double count;
 	concurrencyLimits.startIterations();
 	while (concurrencyLimits.iterate(limit, count)) {
 		concurrencyLimits.insert(limit, 0);
-		dprintf(D_ACCOUNTANT, "  Limit: %s = %d\n", limit.GetCStr(), count);
+		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.GetCStr(), count);
 	}
 }
 
-void Accountant::IncrementLimit(const MyString& limit)
+void Accountant::IncrementLimit(const MyString& _limit)
 {
-	dprintf(D_ACCOUNTANT, "IncrementLimit(%s)\n", limit.GetCStr());
-	concurrencyLimits.insert(limit, GetLimit(limit) + 1);
+	char *limit = strdup(_limit.GetCStr());
+	double increment;
+
+	dprintf(D_ACCOUNTANT, "IncrementLimit(%s)\n", limit);
+
+	ParseConcurrencyLimit(limit, increment);
+
+	concurrencyLimits.insert(limit, GetLimit(limit) + increment);
+
+	free(limit);
 }
 
-void Accountant::DecrementLimit(const MyString& limit)
+void Accountant::DecrementLimit(const MyString& _limit)
 {
-	dprintf(D_ACCOUNTANT, "DecrementLimit(%s)\n", limit.GetCStr());
-	concurrencyLimits.insert(limit, GetLimit(limit) - 1);
+	char *limit = strdup(_limit.GetCStr());
+	double increment;
+
+	dprintf(D_ACCOUNTANT, "DecrementLimit(%s)\n", limit);
+
+	ParseConcurrencyLimit(limit, increment);
+
+	concurrencyLimits.insert(limit, GetLimit(limit) - increment);
+
+	free(limit);
 }
 
 void Accountant::IncrementLimits(const MyString& limits)
