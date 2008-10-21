@@ -2258,6 +2258,14 @@ DaemonCore::ReInit()
 	return TRUE;
 }
 
+#if !defined(WIN32)
+int
+DaemonCore::Get_Pipe_FD(int pipe_end, int* fd)
+{
+	int index = pipe_end - PIPE_INDEX_OFFSET;
+	return pipeHandleTableLookup(index, fd);
+}
+#endif
 
 void
 DaemonCore::reconfig(void) {

@@ -671,6 +671,13 @@ class DaemonCore : public Service
 	 */
 	bool TooManyRegisteredSockets(int fd=-1,MyString *msg=NULL,int num_fds=1);
 
+#if !defined(WIN32)
+	/** Get the FD underlying the given pipe end. Returns FALSE
+	 *  if not given a valid pipe end.
+	*/
+	int Get_Pipe_FD(int pipe_end, int* fd);
+#endif
+
 	/**
 	   @return Maximum number of persistent file descriptors that
 	           we should ever attempt having open at the same time.
