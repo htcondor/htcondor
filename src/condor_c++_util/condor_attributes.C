@@ -755,6 +755,10 @@ const char *ATTR_VM_CKPT_MAC = "VM_CkptMac";
 const char *ATTR_VM_CKPT_IP = "VM_CkptIP";
 // End VM universe
 
+const char *ATTR_REQUEST_CPUS = "RequestCpus";
+const char *ATTR_REQUEST_MEMORY = "RequestMemory";
+const char *ATTR_REQUEST_DISK = "RequestDisk";
+
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)
 const char *MANAGED_EXTERNAL				 = "External";

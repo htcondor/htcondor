@@ -134,16 +134,16 @@ Reqexp::compute( amask_t how_much )
 		} else {
 			tmp =
 				"("
-				 "ifThenElse(TARGET.MachineCount =!= UNDEFINED,"
-				           "TARGET.MachineCount <= MY.Cpus,"
+				 "ifThenElse(TARGET.RequestCpus =!= UNDEFINED,"
+				           "TARGET.RequestCpus <= MY.Cpus,"
 				           "1 <= MY.Cpus)"
 				" && "
-				 "ifThenElse(TARGET.ImageSize =!= UNDEFINED,"
-				           "TARGET.ImageSize <= MY.Memory,"
+				 "ifThenElse(TARGET.RequestMemory =!= UNDEFINED,"
+				           "TARGET.RequestMemory <= MY.Memory,"
 				           "FALSE)"
 				" && "
-				 "ifThenElse(TARGET.DiskUsage =!= UNDEFINED,"
-				           "TARGET.DiskUsage <= MY.Disk,"
+				 "ifThenElse(TARGET.RequestDisk =!= UNDEFINED,"
+				           "TARGET.RequestDisk <= MY.Disk,"
 				           "FALSE)"
 				")";
 			m_within_resource_limits_expr = strdup( tmp );

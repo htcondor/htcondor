@@ -692,6 +692,10 @@ extern const char *ATTR_AMAZON_INSTANCE_TYPE;
 //************* End of changes for Amamzon Jobs *****************//
 
 
+extern const char *ATTR_REQUEST_CPUS;
+extern const char *ATTR_REQUEST_MEMORY;
+extern const char *ATTR_REQUEST_DISK;
+
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending
 // feature. It has to be here because of rampant global variable usage in the
