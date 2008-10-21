@@ -182,6 +182,11 @@ void GlobusResource::Reconfig()
 	}
 }
 
+const char *GlobusResource::ResourceType()
+{
+	return "gt2";
+}
+
 const char *GlobusResource::CanonicalName( const char *name )
 {
 	static MyString canonical;

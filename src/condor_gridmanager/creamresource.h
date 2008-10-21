@@ -41,6 +41,7 @@ class CreamResource : public BaseResource
 
  public:
 	bool Init();
+	const char *ResourceType();
 	void Reconfig();
 	void UnregisterJob( CreamJob *job );
 

@@ -36,6 +36,7 @@
 #include "condor_common.h"
 #include "MyString.h"
 #include "env.h"
+#include "condor_blkng_full_disk_io.h"
 #include "fdpass.h"
 
 static char* read_env(int);
@@ -97,14 +98,18 @@ static char*
 read_env(int sock_fd)
 {
 	MyString err;
+	int bytes;
 	int env_len;
-	if (fread(&env_len, sizeof(env_len), 1, stdin) != 1) {
-		if (feof(stdin)) {
-			err = "unexpected EOF reading env size";
+	bytes = full_read(0, &env_len, sizeof(env_len));
+	if (bytes != sizeof(env_len)) {
+		if (bytes == -1) {
+			err.sprintf("read error getting env size: %s",
+			            strerror(errno));
 		}
 		else {
-			err.sprintf("fread error reading env size: %s",
-			            strerror(errno));
+			err.sprintf("short read of env size: %d of %d bytes",
+			            bytes,
+			            sizeof(env_len));
 		}
 		write(sock_fd, err.Value(), err.Length() + 1);
 		exit(1);
@@ -120,13 +125,16 @@ read_env(int sock_fd)
 		write(sock_fd, err.Value(), err.Length() + 1);
 		exit(1);
 	}
-	if (fread(env_buf, env_len, 1, stdin) != 1) {
-		if (feof(stdin)) {
-			err = "unexpected EOF reading env";
+	bytes = full_read(0, env_buf, env_len);
+	if (bytes != env_len) {
+		if (bytes == -1) {
+			err.sprintf("read error getting env: %s",
+			            strerror(errno));
 		}
 		else {
-			err.sprintf("fread error reading env: %s",
-			            strerror(errno));
+			err.sprintf("short read of env: %d of %d bytes",
+			            bytes,
+			            env_len);
 		}
 		write(sock_fd, err.Value(), err.Length() + 1);
 		exit(1);
@@ -138,14 +146,18 @@ static int
 read_fd(int sock_fd)
 {
 	MyString err;
+	int bytes;
 	int flag;
-	if (fread(&flag, sizeof(flag), 1, stdin) != 1) {
-		if (feof(stdin)) {
-			err = "unexpected EOF reading FD flag";
+	bytes = full_read(0, &flag, sizeof(flag));
+	if (bytes != sizeof(flag)) {
+		if (bytes == -1) {
+			err.sprintf("read error getting flag: %s",
+			            strerror(errno));
 		}
 		else {
-			err.sprintf("fread error reading FD flag: %s",
-			            strerror(errno));
+			err.sprintf("short read of flag: %d of %d bytes",
+			            bytes,
+			            sizeof(flag));
 		}
 		write(sock_fd, err.Value(), err.Length() + 1);
 		exit(1);
