@@ -350,7 +350,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		dprintf(D_FULLDEBUG, "Env = %s\n", env_str.Value());
 	}
 
-	vmgahp_priv = PRIV_ROOT;
+	priv_state vmgahp_priv = PRIV_ROOT;
 #if defined(WIN32)
 	// TODO.. 
 	// Currently vmgahp for VMware VM universe can't run as user on Windows.
