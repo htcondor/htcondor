@@ -188,7 +188,12 @@ SubsystemInfoTable::lookup( const char *_name ) const
 	// Return the invalid entry
 	return m_Invalid;
 }
-static const SubsystemInfoTable *infoTable = new SubsystemInfoTable( );
+
+const SubsystemInfoTable &infoTable( void )
+{
+	static const SubsystemInfoTable *table = new SubsystemInfoTable( );
+    return *table;
+} 
 
 
 //
@@ -269,7 +274,7 @@ SubsystemInfo::setTypeFromName( const char *_type_name )
 	}
 
 	// First, look for an exact match
-	const SubsystemInfoLookup	*match = infoTable->lookup( _type_name );
+	const SubsystemInfoLookup	*match = infoTable().lookup( _type_name );
 	if ( match ) {
 		return setType( match, _type_name );
 	}
@@ -287,7 +292,7 @@ SubsystemInfo::setType( SubsystemType _type )
 SubsystemType
 SubsystemInfo::setType( SubsystemType _type, const char *_type_name )
 {
-	return setType( infoTable->lookup(_type), _type_name );
+	return setType( infoTable().lookup(_type), _type_name );
 }
 
 // Internal set type method
