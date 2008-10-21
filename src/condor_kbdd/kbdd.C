@@ -23,6 +23,7 @@
 #include "my_hostname.h"
 #include "condor_query.h"
 #include "daemon.h"
+#include "subsystem_info.h"
 
 #include <utmp.h>
 #include <sys/file.h>
@@ -30,7 +31,7 @@
 #include <rpc/types.h>
 #include <X11/Xlib.h>
 
-char       *mySubSystem = "KBDD";
+DECL_SUBSYSTEM( "KBDD" );
 XInterface *xinter;
 
 

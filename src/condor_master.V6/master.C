@@ -26,6 +26,7 @@
 #include "condor_string.h"
 #include "basename.h"
 #include "master.h"
+#include "subsystem_info.h"
 #include "condor_daemon_core.h"
 #include "condor_collector.h"
 #include "condor_attributes.h"
@@ -41,6 +42,10 @@
 #include "condor_environ.h"
 #include "store_cred.h"
 #include "setenv.h"
+
+#if HAVE_DLOPEN
+#include "MasterPlugin.h"
+#endif
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -140,8 +145,7 @@ char	default_dc_daemon_list[] =
 class Daemons daemons;
 
 // for daemonCore
-char *mySubSystem = "MASTER";
-
+DECL_SUBSYSTEM( "MASTER", SUBSYSTEM_TYPE_MASTER );
 
 // called at exit to deallocate stuff so that memory checking tools are
 // happy and don't think we leaked any of this...
@@ -284,6 +288,12 @@ main_init( int argc, char* argv[] )
 	check_uid_for_privsep();
 		// open up the windows firewall 
 	init_firewall_exceptions();
+
+#if HAVE_DLOPEN
+	MasterPluginManager::Load();
+
+	MasterPluginManager::Initialize();
+#endif
 
 		// Register admin commands
 	daemonCore->Register_Command( RECONFIG, "RECONFIG",

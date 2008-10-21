@@ -27,7 +27,7 @@
 #include "condor_daemon_core.h"
 #include "eventd.h"
 
-char *mySubSystem = "EVENTD";
+DECL_SUBSYSTEM( "EVENTD", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
 int
 main_init(int, char *[])

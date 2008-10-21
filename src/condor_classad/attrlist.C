@@ -36,8 +36,6 @@
 
 extern void evalFromEnvironment (const char *, EvalResult *);
 
-// ugly, ugly hack.  remove for v6.1.9 -Todd
-extern char* mySubSystem;
 
 // Chris Torek's world famous hashing function
 // Modified to be case-insensitive
@@ -56,6 +54,12 @@ static unsigned int torekHash(const YourString &s) {
 static const int hash_size = 79; // prime research
 
 static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
+static bool publish_server_time = false;
+void AttrList_setPublishServerTime( bool publish )
+{
+	publish_server_time = publish;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // AttrListElem constructor.
@@ -2273,7 +2277,7 @@ int AttrList::put(Stream& s)
 		}
 	}
 
-	if ( mySubSystem && (strcmp(mySubSystem,"SCHEDD")==0) ) {
+	if ( publish_server_time ) {
 		// add one for the ATTR_SERVER_TIME expr
 		numExprs++;
 		send_server_time = true;

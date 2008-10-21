@@ -37,6 +37,9 @@
 
 #define		ATTRLIST_MAX_EXPRESSION		10240
 
+// Ugly hack for the schedd
+void AttrList_setPublishServerTime( bool );
+
 template <class Key, class Value> class HashTable; // forward declaration
 class YourString;
 

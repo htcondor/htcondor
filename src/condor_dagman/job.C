@@ -160,6 +160,32 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
 
 	return;
 }
+//---------------------------------------------------------------------------
+void
+Job::PrefixDirectory(MyString &prefix)
+{
+	MyString newdir;
+
+	// don't add an unnecessary prefix
+	if (prefix == ".") {
+		return;
+	}
+	
+	// If the job DIR is absolute, leave it alone
+	if (_directory[0] == '/') {
+		return;
+	}
+
+	// otherwise, prefix it.
+
+	newdir += prefix;
+	newdir += "/";
+	newdir += _directory;
+
+	delete [] _directory;
+
+	_directory = strnewp(newdir.Value());
+}
 
 //---------------------------------------------------------------------------
 bool Job::Remove (const queue_t queue, const JobID_t jobID) {
@@ -673,7 +699,7 @@ Job::ResolveVarsInterpolations(void)
 	MyString *val;
 
 	varValsFromDag->Rewind();
-	while( val = varValsFromDag->Next() ) {
+	while( (val = varValsFromDag->Next()) != NULL ) {
 		// XXX No way to escape $(JOB) in case, for some crazy reason, you
 		// want a filename component actually to be '$(JOB)'.
 		// It isn't hard to fix, I'll do it later.

@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "view_server.h"
+#include "subsystem_info.h"
 
 #if HAVE_DLOPEN
 #include "CollectorPlugin.h"
@@ -28,7 +29,7 @@
 //-------------------------------------------------------------
 
 // about self
-char* mySubSystem = "COLLECTOR";		// used by Daemon Core
+DECL_SUBSYSTEM("COLLECTOR", SUBSYSTEM_TYPE_COLLECTOR );
 
 // the heart of the collector ...
 CollectorDaemon* Daemon;

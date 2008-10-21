@@ -26,9 +26,9 @@ struct ExampleScheddPlugin : public ScheddPlugin
 		printf("Init\n");
 	}
 
-	void Update(int cmd, const ClassAd *ad)
+	void update(int cmd, const ClassAd *ad)
 	{
-		printf("Update(%d, %s)\n", cmd, ad ? "Ad" : "(NULL)");
+		printf("update(%d, %s)\n", cmd, ad ? "Ad" : "(NULL)");
 	}
 };
 

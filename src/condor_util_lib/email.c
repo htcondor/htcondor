@@ -25,6 +25,7 @@
 #include "condor_email.h"
 #include "my_hostname.h"
 #include "my_popen.h"
+#include "subsystem_info.h"
 
 #define EMAIL_SUBJECT_PROLOG "[Condor] "
 
@@ -50,7 +51,6 @@ extern DLL_IMPORT_MAGIC char **environ;
 #endif
 
 extern int Termlog;
-extern char *mySubSystem;
 
 FILE *
 email_open( const char *email_addr, const char *subject )
@@ -295,7 +295,7 @@ email_open_implementation(char *const final_args[])
 			before the exec.  -pete 03-05-2000
 		*/
 		Termlog = 1;
-		dprintf_config(mySubSystem);
+		dprintf_config(get_mySubSystem() );
 
 		/* this is a simple daemon that if it needs to stat . should be
 			able to. You might not be able to if the shadow's cwd is in the

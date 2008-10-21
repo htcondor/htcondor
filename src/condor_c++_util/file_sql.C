@@ -25,7 +25,7 @@
 #include <string.h>
 #include "file_sql.h"
 #include "truncate.h"
-#include "get_mysubsystem.h"
+#include "subsystem_info.h"
 
 #include <sys/stat.h>
 
@@ -440,7 +440,7 @@ FILESQL::createInstance(bool use_sql_log) {
 	char *tmpParamName;
 	const char *daemon_name;
 	
-	daemon_name = get_mySubSystem();
+	daemon_name = mySubSystem->getName();
 
 	tmpParamName = (char *)malloc(10+strlen(daemon_name));
 

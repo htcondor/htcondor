@@ -39,9 +39,9 @@
 #include "classad_merge.h"
 #include "daemon.h"
 #include "daemon_core_sock_adapter.h"
+#include "subsystem_info.h"
 #include "setenv.h"
 
-extern char* mySubSystem;
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
 template class HashTable<MyString, classy_counted_ptr<SecManStartCommand> >;
@@ -483,7 +483,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 
 
 	// subsystem
-	ad->Assign ( ATTR_SEC_SUBSYSTEM, mySubSystem );
+	ad->Assign ( ATTR_SEC_SUBSYSTEM, mySubSystem->getName() );
 
     char * parent_id = my_parent_unique_id();
     if (parent_id) {
@@ -507,7 +507,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// if that does not exist, fall back to old form of
 	// SEC_<authlev>_SESSION_DURATION.
 	char fmt[128];
-	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", mySubSystem);
+	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", mySubSystem->getName() );
 	paramer = SecMan::getSecSetting(fmt, auth_level);
 	if (!paramer) {
 		paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
@@ -520,10 +520,10 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		paramer = NULL;
 	} else {
 		// no value defined, use defaults.
-		if (strcmp(mySubSystem, "TOOL") == 0) {
+		if ( mySubSystem->isType(SUBSYSTEM_TYPE_TOOL) ) {
 			// default for tools is 1 minute.
 			ad->Assign ( ATTR_SEC_SESSION_DURATION, "60" );
-		} else if (strcmp(mySubSystem, "SUBMIT") == 0) {
+		} else if ( mySubSystem->isType(SUBSYSTEM_TYPE_SUBMIT) ) {
 			// default for submit is 1 hour.  yeah, that's a long submit
 			// but you never know with file transfer and all.
 			ad->Assign ( ATTR_SEC_SESSION_DURATION, "3600" );

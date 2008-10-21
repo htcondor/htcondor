@@ -108,6 +108,11 @@ void MirrorResource::Reconfig()
 	BaseResource::Reconfig();
 }
 
+const char *MirrorResource::ResourceType()
+{
+	return "mirror";
+}
+
 void MirrorResource::RegisterJob( MirrorJob *job, const char *submitter_id )
 {
 	BaseResource::RegisterJob( job );

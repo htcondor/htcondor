@@ -17,18 +17,23 @@
  *
  ***************************************************************/
 
-#ifndef GET_MY_SUBSYSTEM_H
-#define GET_MY_SUBSYSTEM_H
+#include "condor_common.h"
+#include "string_funcs.h"
 
-/* Helper function to retrieve the value of mySubSystem global variable
- * from C functions.  This is helpful because mySubSystem is decorated w/ C++
- * linkage.
- */
+#if ( !HAVE_STRCASESTR )
+// Like strstr(), but case-insensitive
+char *
+strcasestr( const char *string, const char *pattern )
+{
+	char	*str;
+	int			n;
 
-BEGIN_C_DECLS
-
-const char* get_mySubSystem(void);
-
-END_C_DECLS
-
-#endif /* GET_MY_SUBSYSTEM_H */
+	n = strlen( pattern );
+	for( str=(char *)string; *str; str++ ) {
+		if( strncasecmp(str,pattern,n) == 0 ) {
+			return str;
+		}
+	}
+	return NULL;
+}
+#endif

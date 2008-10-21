@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include "subsystem_info.h"
 #include "baseshadow.h"
 #include "shadow.h"
 #include "mpishadow.h"
@@ -63,7 +64,7 @@ ExceptCleanup(int, int, char *buf)
 
 /* DaemonCore interface implementation */
 
-char *mySubSystem = "SHADOW";
+DECL_SUBSYSTEM( "SHADOW", SUBSYSTEM_TYPE_SHADOW );
 
 int
 dummy_reaper(Service *,int pid,int)

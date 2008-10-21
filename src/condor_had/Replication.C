@@ -19,13 +19,15 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include "subsystem_info.h"
 
 #include "ReplicatorStateMachine.h"
 
 /* daemon core needs this variable to associate its entries
  * inside $CONDOR_CONFIG file
  */
-char* mySubSystem  = "REPLICATION";
+DECL_SUBSYSTEM( "Replication", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
+
 // replication daemon single object
 ReplicatorStateMachine* stateMachine = NULL;
 

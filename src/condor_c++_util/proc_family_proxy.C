@@ -50,7 +50,7 @@ public:
 
 int ProcFamilyProxy::s_instantiated = false;
 
-ProcFamilyProxy::ProcFamilyProxy(char* address_suffix) :
+ProcFamilyProxy::ProcFamilyProxy(const char* address_suffix) :
 	m_procd_pid(-1),
 	m_reaper_id(FALSE)
 {
