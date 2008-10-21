@@ -326,21 +326,6 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		vmgahp_condor_gid = get_condor_gid();
 	}
 
-	// Setup vmgahp condor uid/gid
-	if( vmgahp_condor_uid > 0 ) {
-		if( vmgahp_condor_gid <= 0 ) {
-			vmgahp_condor_gid = vmgahp_condor_uid;
-		}
-
-		// CONDOR_IDS is set for setuid-root vmgahp
-		MyString tmp_str;
-		const char *envName = EnvGetName(ENV_UG_IDS);
-		if( envName ) {
-			tmp_str.sprintf("%d.%d", (int)vmgahp_condor_uid, (int)vmgahp_condor_gid);
-			job_env->SetEnv(envName, tmp_str.Value());
-		}
-	}
-
 	// Setup vmgahp user uid/gid
 	if( vmgahp_user_uid > 0 ) {
 		if( vmgahp_user_gid <= 0 ) {
@@ -365,11 +350,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		dprintf(D_FULLDEBUG, "Env = %s\n", env_str.Value());
 	}
 
-	priv_state vmgahp_priv = PRIV_USER_FINAL;
-	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
-		// Xen requires root privilege
-		vmgahp_priv = PRIV_ROOT;
-	}
+	vmgahp_priv = PRIV_ROOT;
 #if defined(WIN32)
 	// TODO.. 
 	// Currently vmgahp for VMware VM universe can't run as user on Windows.
