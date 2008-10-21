@@ -1369,11 +1369,9 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 
 	// Send Working directory
 	MyString vmAttr;
-	vmAttr.sprintf("VM_WORKING_DIR = \"%s\"\r\n", workingdir);
+	vmAttr.sprintf("VM_WORKING_DIR = \"%s\"", workingdir);
 
-	if( daemonCore->Write_Pipe(m_vmgahp_writefd,
-				vmAttr.Value(),vmAttr.Length()) <= 0 ) {
-		dprintf( D_ALWAYS, "VMGAHP write line(%s) Error\n", vmAttr.Value());
+	if ( write_line( vmAttr.Value() ) == false ) {
 		return false;
 	}
 
@@ -1416,10 +1414,7 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 			continue;
 		}
 
-		vmAttr += "\r\n";
-		if( daemonCore->Write_Pipe(m_vmgahp_writefd,
-					vmAttr.Value(),vmAttr.Length()) <= 0 ) {
-			dprintf( D_ALWAYS, "VMGAHP write line(%s) Error\n", vmAttr.Value());
+		if ( write_line( vmAttr.Value() ) == false ) {
 			return false;
 		}
 		total_len += vmAttr.Length();
