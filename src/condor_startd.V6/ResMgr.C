@@ -2032,8 +2032,16 @@ ResMgr::checkHibernate( void )
 	    //
 		if ( disableResources( level ) ) {
 			m_hibernation_manager->switchToTargetState( );
-			sleep(60);
 		}
+#     if !defined( WIN32 )
+		sleep(10);
+        m_hibernation_manager->setTargetState ( HibernatorBase::NONE );
+        for ( int i = 0; i < nresources; ++i ) {
+            resources[i]->enable();
+            resources[i]->update();
+	    }
+		
+#     endif
     }
 }
 
@@ -2303,13 +2311,10 @@ ResMgr::disableResources( int level )
 	}
 
     /* update the CM */
-	dprintf( D_FULLDEBUG, "Sending updates with ACK\n" );
     bool ok = true;
     for ( i = 0; i < nresources && ok; ++i ) {
         ok = resources[i]->update_with_ack();
-		sleep(5);
 	}
-	dprintf( D_FULLDEBUG, "Done sending updates with ACK (%d)\n", ok );
 
     /* if any of the updates failed, then renable all the
     resources and try again later (next time HIBERNATE evaluates

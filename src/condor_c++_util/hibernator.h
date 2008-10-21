@@ -88,8 +88,7 @@ public:
 
 	/** Is the given state supported?
 		@return true / false */
-	bool isStateSupported( SLEEP_STATE state ) const
-		{ return (m_states & state) ? true : false; };
+	bool isStateSupported( SLEEP_STATE state ) const;
 
     /** Set the supported sleep states 
         */

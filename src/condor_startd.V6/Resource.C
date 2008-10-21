@@ -1028,7 +1028,7 @@ Resource::update_with_ack( void )
 	}
 
     socket->timeout ( timeout ); /* still more research... */
-	socket->encode ();
+	socket->decode ();
 
     int ack     = 0,
         success = TRUE;

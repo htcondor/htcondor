@@ -543,6 +543,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	switch (command)
 	{
 	  case UPDATE_STARTD_AD:
+	  case UPDATE_STARTD_AD_WITH_ACK:
 		if ( repeatStartdAds > 0 ) {
 			clientAdToRepeat = new ClassAd(*clientAd);
 		}

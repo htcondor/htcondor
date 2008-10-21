@@ -67,6 +67,16 @@ HibernatorBase::isStateValid ( SLEEP_STATE state )
 }
 
 bool
+HibernatorBase::isStateSupported( SLEEP_STATE state ) const
+{
+	if ( NONE == state ) {
+		return true;
+	}
+	return (m_states & state) ? true : false;
+}
+
+
+bool
 HibernatorBase::switchToState ( SLEEP_STATE level,
 								SLEEP_STATE &new_level,
 								bool force ) const

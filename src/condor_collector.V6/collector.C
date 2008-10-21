@@ -247,8 +247,11 @@ void CollectorDaemon::Init()
 
     // install command handlers for updates with acknowledgement
 
-    daemonCore->Register_Command(UPDATE_STARTD_AD_WITH_ACK,"UPDATE_STARTD_AD_WITH_ACK",
-		(CommandHandler)receive_update_expect_ack,"receive_update",NULL,ADVERTISE_STARTD_PERM);				     
+    daemonCore->Register_Command(
+		UPDATE_STARTD_AD_WITH_ACK,
+		"UPDATE_STARTD_AD_WITH_ACK",
+		(CommandHandler)receive_update_expect_ack,
+		"receive_update_expect_ack",NULL,ADVERTISE_STARTD_PERM);
 
     // add all persisted ads back into the collector's store
     // process the given command
@@ -521,7 +524,7 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 		whichAds = STORAGE_AD;
 		break;
 
-          case INVALIDATE_ADS_GENERIC:
+	  case INVALIDATE_ADS_GENERIC:
 		dprintf(D_ALWAYS, "Got INVALIDATE_ADS_GENERIC\n");
 		whichAds = GENERIC_AD;
 		break;
@@ -636,14 +639,14 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 {
 
     Sock        *socket = (Sock*) stream;
-    ClassAd     updateAd;
+    ClassAd     *updateAd = new ClassAd;
     const int   timeout = 5;
     int         ok      = 1;
     
     socket->decode ();
     socket->timeout ( timeout );
     
-    if ( !updateAd.initFromStream ( *socket ) ) {
+    if ( !updateAd->initFromStream ( *socket ) ) {
 
         dprintf ( 
             D_ALWAYS,
@@ -662,9 +665,9 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 
     /* "collect" the ad */
     ClassAd *cad = collector.collect ( 
-        command, 
-        &updateAd, 
-        from, 
+        command,
+        updateAd,
+        from,
         insert );
 
     if ( !cad ) {
