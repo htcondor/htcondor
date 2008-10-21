@@ -1895,6 +1895,8 @@ SetMachineCount()
 	if ((mach_count = condor_param(RequestCpus, ATTR_REQUEST_CPUS))) {
 		request_cpus = atoi(mach_count);
 		free(mach_count);
+	} else {
+		request_cpus = 1;
 	}
 
 	if (JobUniverse == CONDOR_UNIVERSE_PVM) {
