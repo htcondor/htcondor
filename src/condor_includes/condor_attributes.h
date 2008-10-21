@@ -420,6 +420,8 @@ extern const char * ATTR_SCHEDD_NAME;
 extern const char * ATTR_SCHEDULER;
 extern const char * ATTR_SHADOW_WAIT_FOR_DEBUG;
 extern const char * ATTR_SLOT_ID;
+extern const char * ATTR_SLOT_PARTITIONABLE;
+extern const char * ATTR_SLOT_DYNAMIC;
 extern const char * ATTR_SOURCE;
 extern const char * ATTR_STAGE_IN_START;
 extern const char * ATTR_STAGE_IN_FINISH;

@@ -1501,6 +1501,15 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		if (param_boolean("ALLOW_VM_CRUFT", true)) {
 			cap->Assign(ATTR_VIRTUAL_MACHINE_ID, r_id);
 		}
+
+		switch (get_feature()) {
+		case PARTITIONABLE_SLOT:
+			cap->AssignExpr(ATTR_SLOT_PARTITIONABLE, "TRUE");
+			break;
+		case DYNAMIC_SLOT:
+			cap->AssignExpr(ATTR_SLOT_DYNAMIC, "TRUE");
+			break;
+		}
 	}		
 
 	if( IS_PUBLIC(mask) && IS_UPDATE(mask) ) {
