@@ -83,6 +83,8 @@ public:
         @see canWake
         */
     bool setTargetState ( HibernatorBase::SLEEP_STATE state );
+    bool setTargetState ( const char *name );
+    bool setTargetLevel ( int level );
 
 	/** Switch to the target state specified by setTargetState()
 		@return true if the machine will enter hibernation; otherwise, false.
@@ -100,6 +102,8 @@ public:
         @see canWake
 		*/
 	bool switchToState ( HibernatorBase::SLEEP_STATE state );
+	bool switchToState ( const char *name );
+	bool switchToLevel ( int level );
 
 	/** Determines if the power manager is capable of hibernating the machine.
 		@return true if the machine can be hibernated; otherwise, false.

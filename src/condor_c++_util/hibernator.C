@@ -36,7 +36,7 @@
  ***************************************************************/
 
 HibernatorBase::HibernatorBase ( void ) throw () 
-:   m_states ( NONE )
+		: m_states ( NONE )
 {
 }
 

@@ -118,6 +118,30 @@ HibernationManager::setTargetState( HibernatorBase::SLEEP_STATE state )
 }
 
 bool
+HibernationManager::setTargetState( const char *name )
+{
+	HibernatorBase::SLEEP_STATE	state =
+		m_hibernator->stringToSleepState( name );
+	if ( state == HibernatorBase::NONE ) {
+		dprintf( D_ALWAYS, "Can't set invalid target state '%s'\n", name );
+		return false;
+	}
+	return setTargetState( state );
+}
+
+bool
+HibernationManager::setTargetLevel ( int level )
+{
+	HibernatorBase::SLEEP_STATE	state =
+		m_hibernator->intToSleepState( level );
+	if ( state == HibernatorBase::NONE ) {
+		dprintf( D_ALWAYS, "Can't switch to invalid level %d\n", level );
+		return false;
+	}
+	return setTargetState( state );
+}
+
+bool
 HibernationManager::validateState( HibernatorBase::SLEEP_STATE state ) const
 {
 	if ( ! isStateValid( state ) ) {
@@ -141,7 +165,7 @@ HibernationManager::switchToTargetState ( void )
 }
 
 bool
-HibernationManager::switchToState (HibernatorBase::SLEEP_STATE state )
+HibernationManager::switchToState ( HibernatorBase::SLEEP_STATE state )
 {
 	if ( !validateState( state ) ) {
 		return false;
@@ -152,6 +176,30 @@ HibernationManager::switchToState (HibernatorBase::SLEEP_STATE state )
 		return false;
 	}
 	return m_hibernator->switchToState ( state, m_actual_state, true );
+}
+
+bool
+HibernationManager::switchToState ( const char *name )
+{
+	HibernatorBase::SLEEP_STATE	state =
+		m_hibernator->stringToSleepState( name );
+	if ( state == HibernatorBase::NONE ) {
+		dprintf( D_ALWAYS, "Can't switch to invalid state '%s'\n", name );
+		return false;
+	}
+	return switchToState( state );
+}
+
+bool
+HibernationManager::switchToLevel ( int level )
+{
+	HibernatorBase::SLEEP_STATE	state =
+		m_hibernator->intToSleepState( level );
+	if ( state == HibernatorBase::NONE ) {
+		dprintf( D_ALWAYS, "Can't switch to invalid level '%d'\n", level );
+		return false;
+	}
+	return switchToState( state );
 }
 
 bool

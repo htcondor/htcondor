@@ -2030,14 +2030,10 @@ ResMgr::checkHibernate( void )
 	    // plug-in will know the this ad belongs to it when the
 	    // Collector invalidates it.
 	    //
-	  if ( disableResources( level ) ) {
-		  HibernatorBase::SLEEP_STATE	state =
-			  m_hibernation_manager->intToSleepState( level );
-	        m_hibernation_manager->switchToState( state );
-        }
-
+		if ( disableResources( level ) ) {
+			m_hibernation_manager->switchToTargetState( );
+		}
     }
-
 }
 
 
@@ -2298,7 +2294,7 @@ ResMgr::disableResources( int level )
 
 	/* set the sleep state so the plugin will pickup on the
 	fact that we are sleeping */
-	m_hibernation_manager->setTargetState (
+	m_hibernation_manager->setTargetLevel (
 		(HibernatorBase::SLEEP_STATE) level );
 
     /* disable all resource on this machine */
@@ -2325,7 +2321,6 @@ ResMgr::disableResources( int level )
     }
 
     return ok;
-
 }
 
 #endif
