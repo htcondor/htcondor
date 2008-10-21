@@ -26,6 +26,8 @@
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
 
+#define max(x,y) (((x) < (y)) ? (y) : (x))
+
 extern "C" int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 
 static int deactivate_claim(Stream *stream, Resource *rip, bool graceful);
@@ -1083,7 +1085,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 		if( req_classad->EvalInteger( ATTR_REQUEST_DISK, mach_classad, disk ) ) {
 			type.sprintf_cat( "disk=%d%%",
-							  (int) (((disk + 1) / (float) rip->r_attr->get_total_disk()) * 100) );
+							  max((int) ((disk / (float) rip->r_attr->get_total_disk()) * 100), 1) );
 		} else {
 				// some disk size must be available else we cannot
 				// match, plus a job ad without ATTR_DISK is sketchy
