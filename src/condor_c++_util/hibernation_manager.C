@@ -79,20 +79,6 @@ HibernationManager::update( void )
 		dprintf ( D_ALWAYS, "HibernationManager: Hibernation is %s\n",
 			( m_interval > 0 ? "enabled" : "disabled" ) );
 	}
-
-	// Check for network adapter
-	char	*name = param( "HIBERNATE_NETWORK_INTERFACE" );
-	if ( name ) {
-		 NetworkAdapterBase *netif =
-			 NetworkAdapterBase::createNetworkAdapter( name, true );
-		 if ( netif ) {
-			 addInterface( *netif );
-		 }
-		 else {
-			 dprintf( D_ALWAYS, "Can't find interface '%s'\n", name );
-		 }
-		 free( name );
-	}
 }
 
 bool
