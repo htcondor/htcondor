@@ -1066,12 +1066,12 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			ABORT;
 		}
 
-		if( req_classad->LookupInteger( ATTR_REQUEST_CPUS, cpus ) || 
+		if( req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) || 
 			(cpus = 1) ) { // reasonable default, for sure
 			type.sprintf_cat( "cpus=%d ", cpus );
 		}
 
-		if( req_classad->LookupInteger( ATTR_REQUEST_MEMORY, memory ) ) {
+		if( req_classad->EvalInteger( ATTR_REQUEST_MEMORY, mach_classad, memory ) ) {
 			type.sprintf_cat( "memory=%d ", memory );
 		} else {
 				// some memory size must be available else we cannot
@@ -1081,7 +1081,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			ABORT;
 		}
 
-		if( req_classad->LookupInteger( ATTR_REQUEST_DISK, disk ) ) {
+		if( req_classad->EvalInteger( ATTR_REQUEST_DISK, mach_classad, disk ) ) {
 			type.sprintf_cat( "disk=%d/%lu",
 							  disk + 1, rip->r_attr->get_total_disk() );
 		} else {

@@ -1890,14 +1890,7 @@ SetMachineCount()
 	char	*mach_count;
 	char	*ptr;
 	MyString buffer;
-	int		request_cpus;
-
-	if ((mach_count = condor_param(RequestCpus, ATTR_REQUEST_CPUS))) {
-		request_cpus = atoi(mach_count);
-		free(mach_count);
-	} else {
-		request_cpus = 1;
-	}
+	int		request_cpus = 1;
 
 	if (JobUniverse == CONDOR_UNIVERSE_PVM) {
 
@@ -1973,7 +1966,12 @@ SetMachineCount()
 		}
 	}
 
-	buffer.sprintf("%s = %d", ATTR_REQUEST_CPUS, request_cpus);
+	if ((mach_count = condor_param(RequestCpus, ATTR_REQUEST_CPUS))) {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
+		free(mach_count);
+	} else {
+		buffer.sprintf("%s = %d", ATTR_REQUEST_CPUS, request_cpus);
+	}
 	InsertJobExpr(buffer);
 }
 
@@ -2109,16 +2107,19 @@ SetImageSize()
 
 
 	if ((tmp = condor_param(RequestMemory, ATTR_REQUEST_MEMORY))) {
-		size = atoi(tmp);
+		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
 		free(tmp);
+	} else {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, ATTR_IMAGE_SIZE);
 	}
-	buffer.sprintf("%s = %d", ATTR_REQUEST_MEMORY, size);
 	InsertJobExpr(buffer);
 
 	if ((tmp = condor_param(RequestDisk, ATTR_REQUEST_DISK))) {
-		disk_usage = atoi(tmp);
+		buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
+		free(tmp);
+	} else {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, ATTR_DISK_USAGE);
 	}
-	buffer.sprintf("%s = %u", ATTR_REQUEST_DISK, disk_usage);
 	InsertJobExpr(buffer);
 }
 
