@@ -135,15 +135,15 @@ Reqexp::compute( amask_t how_much )
 			tmp =
 				"("
 				 "ifThenElse(TARGET.RequestCpus =!= UNDEFINED,"
-				           "TARGET.RequestCpus <= MY.Cpus,"
+				           "MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus,"
 				           "1 <= MY.Cpus)"
 				" && "
 				 "ifThenElse(TARGET.RequestMemory =!= UNDEFINED,"
-				           "TARGET.RequestMemory <= MY.Memory,"
+				           "MY.Memory > 0 && TARGET.RequestMemory <= MY.Memory,"
 				           "FALSE)"
 				" && "
 				 "ifThenElse(TARGET.RequestDisk =!= UNDEFINED,"
-				           "TARGET.RequestDisk <= MY.Disk,"
+				           "MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk,"
 				           "FALSE)"
 				")";
 			m_within_resource_limits_expr = strdup( tmp );
