@@ -98,7 +98,7 @@ if( $versarg ) {
     # If we weren't told on the command line, use the condor_master
     # binary with -version to find the version string.
     if( -f "strip_dir/sbin/condor_master" ) {
-        $vers_string=`strip_dir/sbin/condor_master -version`;
+        $vers_string=`./strip_dir/sbin/condor_master -version`;
     } elsif ( -f "static_dir/sbin/condor_master" ) {
         $vers_string=`./static_dir/sbin/condor_master -version`;
     } else {
