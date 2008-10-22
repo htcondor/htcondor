@@ -32,7 +32,6 @@
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
 
-#define XEN_STATUS_TMP_FILE "xen_status.condor"
 #define XEN_CONFIG_FILE_NAME "xen_vm.config"
 #define XEN_CKPT_TIMESTAMP_FILE_SUFFIX ".timestamp"
 #define XEN_MEM_SAVED_FILE "xen.mem.ckpt"
@@ -138,26 +137,22 @@ XenType::Start()
 		}
 	}
 
-	MyString tmpfilename;
-	tmpfilename.sprintf("%s%c%s", m_workingpath.Value(), 
-			DIR_DELIM_CHAR, XEN_STATUS_TMP_FILE);
-	unlink(tmpfilename.Value());
+	StringList cmd_out;
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
 	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("start");
 	systemcmd.AppendArg(m_configfile);
-	systemcmd.AppendArg(tmpfilename);
 
-	int result = systemCommand(systemcmd, true);
+	int result = systemCommand(systemcmd, true, &cmd_out);
 	if( result != 0 ) {
-		// Read error file
-		m_result_msg = getScriptErrorString(tmpfilename.Value());
-		unlink(tmpfilename.Value());
+		// Read error output
+		// TODO Should we grab more than just the first line?
+		cmd_out.rewind();
+		m_result_msg = cmd_out.next();
 		return false;
 	}
-	unlink(tmpfilename.Value());
 
 	setVMStatus(VM_RUNNING);
 	m_start_time.getTime();
@@ -499,10 +494,7 @@ XenType::Status()
 		return true;
 	}
 
-	MyString tmpfilename;
-	tmpfilename.sprintf("%s%c%s", m_workingpath.Value(), 
-			DIR_DELIM_CHAR, XEN_STATUS_TMP_FILE);
-	unlink(tmpfilename.Value());
+	StringList cmd_out;
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
@@ -513,25 +505,17 @@ XenType::Status()
 		systemcmd.AppendArg("status");
 	}
 	systemcmd.AppendArg(m_configfile);
-	systemcmd.AppendArg(tmpfilename);
 
 	int result = systemCommand(systemcmd, true);
 	if( result != 0 ) {
 		m_result_msg = VMGAHP_ERR_CRITICAL;
-		unlink(tmpfilename.Value());
 		return false;
 	}
 
 	// Got result
-	FILE *file;
-	char buffer[1024];
-	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
-	if( !file ) {
-		m_result_msg = VMGAHP_ERR_INTERNAL;
-		unlink(tmpfilename.Value());
-		return false;
-	}
+	cmd_out.rewind();
 
+	const char *next_line;
 	MyString one_line;
 	MyString name;
 	MyString value;
@@ -539,8 +523,8 @@ XenType::Status()
 	MyString vm_status;
 	float cputime = 0;
 
-	while( fgets(buffer, sizeof(buffer), file) != NULL ) {
-		one_line = buffer;
+	while( (next_line = cmd_out.next()) != NULL ) {
+		one_line = next_line;
 		one_line.chomp();
 		one_line.trim();
 
@@ -580,8 +564,6 @@ XenType::Status()
 			}
 		}
 	}
-	fclose(file);
-	unlink(tmpfilename.Value());
 
 	if( !vm_status.Length() ) {
 		m_result_msg = VMGAHP_ERR_INTERNAL;

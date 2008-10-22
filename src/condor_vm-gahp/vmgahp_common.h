@@ -58,7 +58,7 @@ void vmprintf( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 void write_to_daemoncore_pipe(int pipefd, const char* str, int len);
 void write_to_daemoncore_pipe(const char* fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 int write_stderr_to_pipe();
-int systemCommand(ArgList &args, bool is_root);
+int systemCommand( ArgList &args, bool is_root, StringList *stdout = NULL );
 MyString makeErrorMessage(const char* err_string);
 
 void initialize_uids(void);

@@ -1063,22 +1063,16 @@ VMwareType::Start()
 		}
 	}
 
-	MyString tmpfilename;
-	tmpfilename.sprintf("%s%c%s", m_workingpath.Value(), 
-			DIR_DELIM_CHAR, VMWARE_TMP_FILE);
-	unlink(tmpfilename.Value());
+	StringList cmd_out;
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_prog_for_script);
 	systemcmd.AppendArg(m_scriptname);
 	systemcmd.AppendArg("start");
 	systemcmd.AppendArg(m_configfile);
-	systemcmd.AppendArg(tmpfilename);
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, false, &cmd_out);
 	if( result != 0 ) {
-		unlink(tmpfilename.Value());
-
 		Unregister();
 		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
@@ -1086,24 +1080,14 @@ VMwareType::Start()
 
 	// Got Pid result
 	m_vm_pid = 0;
-	FILE *file = NULL;
-	char buffer[1024];
-	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
-	if( (file != NULL) && (fgets(buffer, sizeof(buffer), file) != NULL)) {
-		MyString tmp_pid;
-		tmp_pid = buffer;
-		tmp_pid.chomp();
-		tmp_pid.trim();
-
-		m_vm_pid = (int)strtol(tmp_pid.Value(), (char **)NULL, 10);
+	cmd_out.rewind();
+	const char *pid_line = cmd_out.next();
+	if ( pid_line ) {
+		m_vm_pid = (int)strtol(pid_line, (char **)NULL, 10);
 		if( m_vm_pid <= 0 ) {
 			m_vm_pid = 0;
 		}
 	}
-	if ( file != NULL ) {
-		fclose( file );
-	}
-	unlink( tmpfilename.Value() );
 
 	setVMStatus(VM_RUNNING);
 	m_start_time.getTime();
@@ -1375,45 +1359,30 @@ VMwareType::Resume()
 
 	m_is_checkpointed = false;
 
-	MyString tmpfilename;
-	tmpfilename.sprintf("%s%c%s", m_workingpath.Value(), 
-			DIR_DELIM_CHAR, VMWARE_TMP_FILE);
-	unlink(tmpfilename.Value());
+	StringList cmd_out;
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_prog_for_script);
 	systemcmd.AppendArg(m_scriptname);
 	systemcmd.AppendArg("resume");
 	systemcmd.AppendArg(m_configfile);
-	systemcmd.AppendArg(tmpfilename);
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, false, &cmd_out);
 	if( result != 0 ) {
-		unlink(tmpfilename.Value());
 		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
 	}
 
 	// Got Pid result
 	m_vm_pid = 0;
-	FILE *file = NULL;
-	char buffer[1024];
-	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
-	if( (file != NULL) && (fgets(buffer, sizeof(buffer), file) != NULL)) {
-		MyString tmp_pid;
-		tmp_pid = buffer;
-		tmp_pid.chomp();
-		tmp_pid.trim();
-
-		m_vm_pid = (int)strtol(tmp_pid.Value(), (char **)NULL, 10);
+	cmd_out.rewind();
+	const char *pid_line = cmd_out.next();
+	if ( pid_line ) {
+		m_vm_pid = (int)strtol(pid_line, (char **)NULL, 10);
 		if( m_vm_pid <= 0 ) {
 			m_vm_pid = 0;
 		}
 	}
-	if ( file != NULL ) {
-		fclose( file );
-	}
-	unlink( tmpfilename.Value() );
 
 	setVMStatus(VM_RUNNING);
 	return true;
@@ -1455,10 +1424,7 @@ VMwareType::Status()
 		return true;
 	}
 
-	MyString tmpfilename;
-	tmpfilename.sprintf("%s%c%s", m_workingpath.Value(), 
-			DIR_DELIM_CHAR, VMWARE_TMP_FILE);
-	unlink(tmpfilename.Value());
+	StringList cmd_out;
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_prog_for_script);
@@ -1469,33 +1435,24 @@ VMwareType::Status()
 		systemcmd.AppendArg("status");
 	}
 	systemcmd.AppendArg(m_configfile);
-	systemcmd.AppendArg(tmpfilename);
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, false, &cmd_out);
 	if( result != 0 ) {
 		m_result_msg = VMGAHP_ERR_CRITICAL;
-		unlink(tmpfilename.Value());
 		return false;
 	}
 
 	// Got result
-	FILE *file = NULL;
-	char buffer[1024];
-	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
-	if( !file ) {
-		m_result_msg = VMGAHP_ERR_CRITICAL;
-		unlink(tmpfilename.Value());
-		return false;
-	}
-
+	const char *next_line;
 	MyString one_line;
 	MyString name;
 	MyString value;
 
 	MyString vm_status;
 	int vm_pid = 0;
-	while( fgets(buffer, sizeof(buffer), file) != NULL ) {
-		one_line = buffer;
+	cmd_out.rewind();
+	while( (next_line = cmd_out.next()) != NULL ) {
+		one_line = next_line;
 		one_line.chomp();
 		one_line.trim();
 
@@ -1535,8 +1492,6 @@ VMwareType::Status()
 			}
 		}
 	}
-	fclose(file);
-	unlink(tmpfilename.Value());
 
 	if( !vm_status.Length() ) {
 		m_result_msg = VMGAHP_ERR_CRITICAL;
@@ -1638,47 +1593,29 @@ VMwareType::getPIDofVM(int &vm_pid)
 		return false;
 	}
 
-	MyString tmpfilename;
-	tmpfilename.sprintf("%s%c%s", m_workingpath.Value(), 
-			DIR_DELIM_CHAR, VMWARE_TMP_FILE);
-	unlink(tmpfilename.Value());
+	StringList cmd_out;
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_prog_for_script);
 	systemcmd.AppendArg(m_scriptname);
 	systemcmd.AppendArg("getpid");
 	systemcmd.AppendArg(m_configfile);
-	systemcmd.AppendArg(tmpfilename);
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, false, &cmd_out);
 	if( result != 0 ) {
-		unlink( tmpfilename.Value() );
 		return false;
 	}
 
 	// Got Pid result
-	FILE *file = NULL;
-	char buffer[1024];
-	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
-	if( (file != NULL) && (fgets(buffer, sizeof(buffer), file) != NULL)) {
-		fclose(file);
-		unlink(tmpfilename.Value());
-
-		MyString tmp_pid;
-		tmp_pid = buffer;
-		tmp_pid.chomp();
-		tmp_pid.trim();
-
-		vm_pid = (int)strtol(tmp_pid.Value(), (char **)NULL, 10);
+	cmd_out.rewind();
+	const char *pid_line = cmd_out.next();
+	if ( pid_line ) {
+		vm_pid = (int)strtol(pid_line, (char **)NULL, 10);
 		if( vm_pid <= 0 ) {
 			vm_pid = 0;
 		}
 		return true;
 	}
-	if ( file != NULL ) {
-		fclose( file );
-	}
-	unlink( tmpfilename.Value() );
 	return false;
 }
 

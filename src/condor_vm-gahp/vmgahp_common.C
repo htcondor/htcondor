@@ -568,10 +568,12 @@ _vmgahp_set_priv(priv_state s, char file[], int line, int dologging)
 	return PrevPrivState;
 }
 
-int
-systemCommand(ArgList &args, bool is_root)
+int systemCommand( ArgList &args, bool is_root, StringList *cmd_out )
 {
 	int result = 0;
+	FILE *fp = NULL;
+	MyString line;
+	char buff[1024];
 
 	priv_state prev = PRIV_UNKNOWN;
 	if( is_root ) {
@@ -579,13 +581,30 @@ systemCommand(ArgList &args, bool is_root)
 	}else {
 		prev = vmgahp_set_user_priv();
 	}
-	result = my_system(args);
-	vmgahp_set_priv(prev);
+	fp = my_popen( args, "r", 0 );
+	if ( fp == NULL ) {
+		MyString args_string;
+		args.GetArgsStringForDisplay( &args_string, 0 );
+		vmprintf( D_ALWAYS, "Failed to execute command: %s\n",
+				  args_string.Value() );
+		return -1;
+	}
+	vmgahp_set_priv( prev );
+
+	while ( cmd_out && fgets( buff, sizeof(buff), fp ) != NULL ) {
+		line += buff;
+		if ( line.chomp() ) {
+			cmd_out->append( line.Value() );
+			line = "";
+		}
+	}
+
+	result = my_pclose( fp );
 
 	if( result != 0 ) {
 		MyString args_string;
 		args.GetArgsStringForDisplay(&args_string,0);
-		vmprintf(D_ALWAYS, "Failed to execute my_system: %s\n", args_string.Value());
+		vmprintf(D_ALWAYS, "Command returned non-zero: %s\n", args_string.Value());
 	}
 	return result;
 }

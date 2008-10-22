@@ -142,16 +142,11 @@ find_virsh_domain_name() {
 
 start() {
 # $1: Config file 
-# $2: error file
 	if [ ! -f "$1" ]; then
 		echo "Usage: $PROG start <configfile>" 1>&2
 		return 1
 	fi
 	XEN_CONFIG_FILE="$1"
-
-	if [ -n "$2" ]; then
-		rm -f "$2" 2>/dev/null
-	fi
 
 	find_domain_name "$XEN_CONFIG_FILE"
 
@@ -164,12 +159,7 @@ start() {
 		echo "$XM create $XEN_CONFIG_FILE error" 1>&2
 		cat "$XM_ERROR_OUTPUT" 1>&2
 
-		if [ -n "$2" ]; then
-			cat "$XM_ERROR_OUTPUT" > "$2"
-			if [ -f "$2" ]; then
-				chown --reference="$XEN_CONFIG_FILE" "$2" 2>/dev/null
-			fi
-		fi
+		cat "$XM_ERROR_OUTPUT"
 
 		return 1
 	fi
@@ -388,15 +378,11 @@ unpause() {
 
 status() {
 # $1: config file
-# $2: result file
-	if [ ! -f "$1" ] || [ -z "$2" ] ; then
-		echo "Usage: $PROG status <configfile> <resultfile>" 1>&2
+	if [ ! -f "$1" ] ; then
+		echo "Usage: $PROG status <configfile>" 1>&2
 		return 1
 	fi
 	XEN_CONFIG_FILE="$1"
-	XEN_RESULT_FILE="$2"
-
-	rm -f "$XEN_RESULT_FILE" 2>/dev/null
 
 	find_domain_name "$XEN_CONFIG_FILE"
 
@@ -417,31 +403,28 @@ status() {
 	n=`grep -w "$DOMAINNAME" "$XM_STD_OUTPUT" | wc -l`
 	if [ $n -eq 1 ]; then
 		# domain is running
-		echo "STATUS=Running" > "$XEN_RESULT_FILE"
+		echo "STATUS=Running"
 
 		if [ "${CTRL_PROG}" = "xm" ]; then
 			CPUTIME=`grep -w "$DOMAINNAME" "$XM_STD_OUTPUT" | awk '{print $6}'`
 			if [ -n "$CPUTIME" ]; then
-				echo "CPUTIME=$CPUTIME" >> "$XEN_RESULT_FILE"
+				echo "CPUTIME=$CPUTIME"
 			fi
 		fi
 	else
 		# domain is stopped
-		echo "STATUS=Stopped" > "$XEN_RESULT_FILE"
+		echo "STATUS=Stopped"
 	fi
-	
-	chown --reference="$XEN_CONFIG_FILE" "$XEN_RESULT_FILE" 2>/dev/null
 }
 
 getvminfo() {
 # $1: config file
-# $2: result file
-	if [ ! -f "$1" ] || [ -z "$2" ] ; then
-		echo "Usage: $PROG getvminfo <configfile> <resultfile>" 1>&2
+	if [ ! -f "$1" ] ; then
+		echo "Usage: $PROG getvminfo <configfile>" 1>&2
 		return 1
 	fi
 
-	status $1 $2
+	status $1
 	RESULT=$?
 	return $RESULT
 }
@@ -550,7 +533,7 @@ fi
 
 case "$2" in
   start)
-	start "$3" "$4"
+	start "$3"
    	;;
   stop)
    	stop "$3"
@@ -568,10 +551,10 @@ case "$2" in
   	unpause "$3"
 	;;
   status)
-  	status "$3" "$4"
+  	status "$3"
 	;;
   getvminfo)
-  	getvminfo "$3" "$4"
+  	getvminfo "$3"
 	;;
   check)
   	check
