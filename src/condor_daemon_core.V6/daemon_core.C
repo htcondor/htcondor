@@ -1439,6 +1439,21 @@ void DaemonCore::pipeHandleTableRemove(int index)
 	}
 }
 
+int DaemonCore::pipeHandleTableLookup(int index, PipeHandle* ph)
+{
+	if ((index < 0) || (index > maxPipeHandleIndex)) {
+		return FALSE;
+	}
+	PipeHandle tmp_ph = (*pipeHandleTable)[index];
+	if (tmp_ph == (PipeHandle)-1) {
+		return FALSE;
+	}
+	if (ph != NULL) {
+		*ph = tmp_ph;
+	}
+	return TRUE;
+}
+
 int DaemonCore::Create_Pipe( int *pipe_ends,
 			     bool can_register_read,
 			     bool can_register_write,
@@ -2258,6 +2273,14 @@ DaemonCore::ReInit()
 	return TRUE;
 }
 
+#if !defined(WIN32)
+int
+DaemonCore::Get_Pipe_FD(int pipe_end, int* fd)
+{
+	int index = pipe_end - PIPE_INDEX_OFFSET;
+	return pipeHandleTableLookup(index, fd);
+}
+#endif
 
 void
 DaemonCore::reconfig(void) {
