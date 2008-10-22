@@ -1439,6 +1439,21 @@ void DaemonCore::pipeHandleTableRemove(int index)
 	}
 }
 
+int DaemonCore::pipeHandleTableLookup(int index, PipeHandle* ph)
+{
+	if ((index < 0) || (index > maxPipeHandleIndex)) {
+		return FALSE;
+	}
+	PipeHandle tmp_ph = (*pipeHandleTable)[index];
+	if (tmp_ph == (PipeHandle)-1) {
+		return FALSE;
+	}
+	if (ph != NULL) {
+		*ph = tmp_ph;
+	}
+	return TRUE;
+}
+
 int DaemonCore::Create_Pipe( int *pipe_ends,
 			     bool can_register_read,
 			     bool can_register_write,

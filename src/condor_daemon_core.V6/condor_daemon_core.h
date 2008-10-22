@@ -1434,6 +1434,7 @@ class DaemonCore : public Service
 	int maxPipeHandleIndex;
 	int pipeHandleTableInsert(PipeHandle);
 	void pipeHandleTableRemove(int);
+	int pipeHandleTableLookup(int, PipeHandle* = NULL);
 
 	// this table is for dispatching registered pipes
 	struct PidEntry;  // forward reference
