@@ -264,6 +264,38 @@ doRecursion( SubmitDagOptions &opts )
 						result = 1;
 					}
 				}
+
+			} else if ( first && !strcasecmp( first, "SUBDAG" ) ) {
+				//TEMPTEMP -- a bunch of duplicate code here -- how hard to eliminate? -- make it a function?
+				const char *nodeName = tokens.next();
+				if ( !nodeName) {
+					fprintf( stderr, "No node name specified in "
+								"line: <%s>\n", dagLine );
+					return 1;
+				}
+
+				const char *subDagFile = tokens.next();
+				if ( !subDagFile ) {
+					fprintf( stderr, "No DAG file specified in "
+								"line: <%s>\n", dagLine );
+					return 1;
+				}
+
+				const char *directory = NULL;
+				const char *dirKeyword = tokens.next();
+				if ( dirKeyword && !strcasecmp( dirKeyword, "DIR" ) ) {
+					directory = tokens.next();
+					if ( !directory ) {
+						fprintf( stderr, "No directory specified in "
+									"line: <%s>\n", dagLine );
+						return 1;
+					}
+				}
+
+					// Now run condor_submit_dag on the DAG file.
+				if ( runSubmit( opts, subDagFile, directory ) == 1 ) {
+					result = 1;
+				}
 			}
 		}
 	}

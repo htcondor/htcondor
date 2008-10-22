@@ -1,3 +1,4 @@
+//TEMPTEMP -- shit -- remember that for SUBDAG to work, we also have to write that out in the rescue DAG -- so we have to preserve that when we parse...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

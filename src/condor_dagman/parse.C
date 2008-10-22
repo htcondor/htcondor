@@ -1,3 +1,4 @@
+//TEMPTEMP -- make sure DAP DAG still works
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -208,6 +209,11 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 					   filename, lineNumber, tmpDirectory.Value() );
 		}
 
+		else if	(strcasecmp(token, "SUBDAG") == 0) {
+			parsed_line_successfully = parse_node( dag, Job::TYPE_CONDOR, token,
+					   filename, lineNumber, tmpDirectory.Value() );
+		}
+
 		// Handle a SCRIPT spec
 		// Example Syntax is:  SCRIPT (PRE|POST) JobName ScriptName Args ...
 		else if ( strcasecmp(token, "SCRIPT") == 0 ) {
@@ -351,7 +357,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 	nodeName = tmpNodeName.Value();
 
 		// next token is the submit file name
-	char *submitFile = strtok( NULL, DELIMITERS );
+	const char *submitFile = strtok( NULL, DELIMITERS );
 
 		// next token (if any) is "DIR" or "DONE"
 	const char *doneKey = NULL;
@@ -410,6 +416,14 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 			  "Node name '%s' must not also be a splice name.\n",
 			  dagFile, lineNum, nodeName );
 		return false;
+	}
+
+	// If this is a "SUBDAG" line, generate the real submit file name.
+	MyString dagSubmitFile;
+	if ( !strcasecmp( nodeTypeKeyword, "SUBDAG" ) ) {
+		dagSubmitFile = submitFile;
+		dagSubmitFile += ".condor.sub";
+		submitFile = dagSubmitFile.Value();
 	}
 
 	// looks ok, so add it
