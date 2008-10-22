@@ -87,7 +87,8 @@ typedef enum {
 // Declare C++ things
 #if defined(__cplusplus)
 
-struct SubsystemInfoLookup;		// pre declaration, internal only
+class SubsystemInfoLookup;		// pre declaration, internal only
+class SubsystemInfoTable;		// pre declaration, internal only
 class SubsystemInfo
 {
   public:
@@ -145,6 +146,7 @@ class SubsystemInfo
 	const char					*m_TypeName;
 	SubsystemClass				 m_Class;
 	const SubsystemInfoLookup	*m_Info;
+	const SubsystemInfoTable	*m_InfoTable;
 	const char					*m_ClassName;
 	const char					*m_LocalName;
 
