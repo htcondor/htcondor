@@ -2104,14 +2104,6 @@ AC_ARG_ENABLE([malloc-debug],
 AS_IF([test "x$enable_malloc_debug" = xyes],
   [CPPFLAGS="$CPPFLAGS -DMALLOC_DEBUG"])
 
-AC_ARG_ENABLE([matchmaker],
-  AC_HELP_STRING([--enable-matchmaker],
-    [enable lease-based match maker functionality (default: no)]),
-  [],
-  [enable_matchmaker=no])
-AS_IF([test "x$enable_matchmaker" = xyes],
-  [AC_DEFINE([WANT_MATCHMAKER], [1], [Define to enable leasing match maker])])
-
 AC_ARG_ENABLE([netman],
   AC_HELP_STRING([--enable-netman],
     [enable NETMAN functionality (default: no)]),
@@ -2917,6 +2909,20 @@ AC_ARG_ENABLE([stork],
    fi])
 AS_IF([test "x$enable_stork" = xyes],
   [AC_DEFINE([WANT_STORK], [1], [Define if enabling Stork])])
+
+# NRL: Similar logic for the lease-based match maker
+AC_ARG_ENABLE([matchmake],
+  AC_HELP_STRING([--enable-matchmaker],
+    [enable lease-based matchmaker functionality (default: platform dependent)]),
+  [],
+  [if test "$_cv_has_classads" = "yes" -a "$cv_ext_classads" = "yes" ; then
+    enable_matchmaker=yes;
+   else
+    enable_matchmaker=no;
+   fi])
+AS_IF([test "$enable_matchmaker" = "yes"],
+  [AC_DEFINE([WANT_MATCHMAKER], [1],[Define if enabling leasing match maker])])
+
 
 ############################################################
 # Configure-generated output
