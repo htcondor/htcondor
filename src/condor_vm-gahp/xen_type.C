@@ -525,7 +525,6 @@ XenType::Status()
 
 	while( (next_line = cmd_out.next()) != NULL ) {
 		one_line = next_line;
-		one_line.chomp();
 		one_line.trim();
 
 		if( one_line.Length() == 0 ) {
@@ -1765,7 +1764,6 @@ XenType::checkCkptSuspendFile(const char* file)
 		vmprintf(D_ALWAYS, "Invalid timestamp file\n");
 		return false;
 	}
-	tmp_str.chomp();
 	tmp_str.trim();
 
 	time_t timestamp; 

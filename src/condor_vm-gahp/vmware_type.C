@@ -223,7 +223,6 @@ change_snapshot_vmdk_file(const char* file, bool use_fullpath, const char* dirpa
 	while( fgets(linebuf, 2048, fp) ) {
 		total_read += strlen(linebuf);
 		one_line = linebuf;
-		one_line.chomp();
 		one_line.trim();
 
 		if( one_line.Length() == 0 ) {
@@ -331,7 +330,6 @@ static void change_snapshot_vmsd_file(const char *file, StringList *parent_filen
 
 	while( fgets(linebuf, 2048, fp) ) {
 		one_line = linebuf;
-		one_line.chomp();
 		one_line.trim();
 
 		if( one_line.Length() == 0 ) {
@@ -473,7 +471,6 @@ VMwareType::adjustConfigDiskPath()
 
 	while( fgets(linebuf, 2048, fp) ) {
 		one_line = linebuf;
-		one_line.chomp();
 		one_line.trim();
 
 		if( one_line.Length() == 0 || one_line[0] == '#' ) {
@@ -745,7 +742,6 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 	// We will find cdrom devices first.
 	while( fgets(linebuf, 2048, fp) ) {
 		MyString one_line(linebuf);
-		one_line.chomp();
 		one_line.trim();
 
 		LineNo++;
@@ -1453,7 +1449,6 @@ VMwareType::Status()
 	cmd_out.rewind();
 	while( (next_line = cmd_out.next()) != NULL ) {
 		one_line = next_line;
-		one_line.chomp();
 		one_line.trim();
 
 		if( one_line.Length() == 0 ) {
