@@ -71,6 +71,7 @@ SubsystemInfoLookup::matchSubstr( const char *_name ) const
 //
 // Simple class to manage the lookup table
 //
+const int MaxSubsystemInfoTableSize = 32;
 class SubsystemInfoTable
 {
 public:
@@ -85,10 +86,10 @@ public:
 	const SubsystemInfoLookup *Invalid( void ) const { return m_Invalid; };
 
 private:
-	static const int			 m_size = 32;
+	int							 m_size;
 	int							 m_count;
 	const SubsystemInfoLookup	*m_Invalid;
-	const SubsystemInfoLookup 	*m_Table[m_size];
+	const SubsystemInfoLookup 	*m_Table[MaxSubsystemInfoTableSize];
 };
 
 // -----------------------------------------------------------------
@@ -113,6 +114,7 @@ private:
 SubsystemInfoTable::SubsystemInfoTable( void )
 {
 	m_count = 0;
+	m_size = MaxSubsystemInfoTableSize;
 
 	addEntry( SUBSYSTEM_TYPE_MASTER,
 			  SUBSYSTEM_CLASS_DAEMON,
@@ -227,14 +229,6 @@ SubsystemInfoTable::lookup( const char *_name ) const
 	return m_Invalid;
 }
 
-// Function to instantiate the SubsystemInfoTable
-static const SubsystemInfoTable &
-infoTable( void )
-{
-	static const SubsystemInfoTable *table = new SubsystemInfoTable( );
-    return *table;
-}
-
 
 // *****************************************
 // C++ 'main' SubsystemInfo methods
@@ -245,6 +239,8 @@ SubsystemInfo::SubsystemInfo( const char *_name, SubsystemType _type )
 	m_Name = NULL;
 	m_TempName = NULL;
 	m_LocalName = NULL;
+	m_Info = NULL;
+	m_InfoTable = new SubsystemInfoTable( );
 	setName( _name );
 	if ( _type == SUBSYSTEM_TYPE_AUTO ) {
 		setTypeFromName( _name );
@@ -314,7 +310,7 @@ SubsystemInfo::setTypeFromName( const char *_type_name )
 	}
 
 	// First, look for an exact match
-	const SubsystemInfoLookup	*match = infoTable().lookup( _type_name );
+	const SubsystemInfoLookup	*match = m_InfoTable->lookup( _type_name );
 	if ( match ) {
 		return setType( match, _type_name );
 	}
@@ -332,7 +328,7 @@ SubsystemInfo::setType( SubsystemType _type )
 SubsystemType
 SubsystemInfo::setType( SubsystemType _type, const char *_type_name )
 {
-	return setType( infoTable().lookup(_type), _type_name );
+	return setType( m_InfoTable->lookup(_type), _type_name );
 }
 
 // Internal set type method
