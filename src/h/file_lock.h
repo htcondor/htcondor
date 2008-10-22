@@ -188,7 +188,7 @@ class FakeFileLock : public FileLockBase
 	bool isFakeLock(void) const { return true; };
 
 		// Set the file descriptor  & pointer
-	void SetFdFpFile( int /*fd*/, FILE * /*fp*/, const char */*file*/ )
+	void SetFdFpFile( int /*fd*/, FILE * /*fp*/, const char * /*file*/ )
 		{ };
 
 		// Read only access functions

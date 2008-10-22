@@ -179,6 +179,7 @@ CLEAN :
 	-@erase "$(INTDIR)\usagemon.obj"
 	-@erase "$(INTDIR)\user_job_policy.obj"
 	-@erase "$(INTDIR)\user_log.obj"
+	-@erase "$(INTDIR)\user_log_header.obj"
 	-@erase "$(INTDIR)\utc_time.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
@@ -375,6 +376,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\usagemon.obj" \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
+	"$(INTDIR)\user_log_header.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
@@ -540,6 +542,7 @@ CLEAN :
 	-@erase "$(INTDIR)\usagemon.obj"
 	-@erase "$(INTDIR)\user_job_policy.obj"
 	-@erase "$(INTDIR)\user_log.obj"
+	-@erase "$(INTDIR)\user_log_header.obj"
 	-@erase "$(INTDIR)\utc_time.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vm_univ_utils.obj"
@@ -735,6 +738,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\usagemon.obj" \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
+	"$(INTDIR)\user_log_header.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
@@ -1686,6 +1690,11 @@ SOURCE="..\src\condor_c++_util\user_job_policy.C"
 SOURCE="..\src\condor_c++_util\user_log.C"
 
 "$(INTDIR)\user_log.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+SOURCE="..\src\condor_c++_util\user_log_header.C"
+
+"$(INTDIR)\user_log_header.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

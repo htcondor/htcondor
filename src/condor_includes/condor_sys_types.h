@@ -38,6 +38,10 @@
 #  define HAVE_INT64_T 1
 # endif
 
+#if defined( HAVE_SYS_TYPES_H )
+# include <sys/types.h>
+#endif
+
 #if defined( HAVE_INTTYPES_H )
 # define __STDC_FORMAT_MACROS
 # include <inttypes.h>
