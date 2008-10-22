@@ -25,7 +25,6 @@
 #include "condor_uid.h"
 #include "basename.h"
 #include "exit.h"
-#include "starter_privsep_helper.h"
 
 
 LocalUserLog::LocalUserLog( JobInfoCommunicator* my_jic )

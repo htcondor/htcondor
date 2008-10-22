@@ -87,7 +87,7 @@ int main( int argc, char **argv )
 
 		oldbrk = curbrk;
 
-		for(k=j=0; j < 100000; k++,j++ );
+		for(k=j=0; j < 50000; k++,j++ );
 		if( j != k ) {
 			sprintf(buf, "j = %d, k (register) = %d\n", j, k);
 			if (write(2, buf, strlen(buf)) == -1)

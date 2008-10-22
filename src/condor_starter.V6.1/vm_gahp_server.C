@@ -35,7 +35,6 @@
 #include "vm_univ_utils.h"
 #include "vm_gahp_server.h"
 #include "vm_gahp_request.h"
-#include "starter_privsep_helper.h"
 
 VMGahpServer::VMGahpServer(const char *vmgahpserver,
                            const char *vmtype,
@@ -293,26 +292,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	uid_t vmgahp_condor_uid = (uid_t) -1;
 	gid_t vmgahp_condor_gid = (gid_t) -1;
 
-	if(privsep_enabled()) {
-		// vmgahp must have setuid-root
-		//
-		// TODO: better error propagation
-		//
-		vmgahp_user_uid = privsep_helper.get_uid();
-		char* user_name;
-		if (!pcache()->get_user_name(vmgahp_user_uid, user_name)) {
-			EXCEPT("VMGahpServer::startUp: "
-			           "cannot lookup user name for UID %u",
-			       (unsigned)vmgahp_user_uid);
-		}
-		if (!pcache()->get_user_gid(user_name, vmgahp_user_gid)) {
-			EXCEPT("VMGahpServer::startUp: "
-			           "cannot lookup GID for user name %s",
-			       user_name);
-		}
-		vmgahp_condor_uid = get_condor_uid();
-		vmgahp_condor_gid = get_condor_gid();
-	}else if( can_switch_ids() ) {
+	if( can_switch_ids() ) {
 		// Condor runs as root
 		vmgahp_user_uid = get_user_uid();
 		vmgahp_user_gid = get_user_gid();

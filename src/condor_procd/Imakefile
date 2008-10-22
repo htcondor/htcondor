@@ -18,6 +18,7 @@ PROCD_OBJ=procd_main.o procd_common.o \
           named_pipe_util.o \
           proc_family_monitor.o proc_family.o proc_family_member.o \
           proc_family_tracker.o parent_tracker.o login_tracker.o \
+          glexec_kill.o \
           procd_instantiate.o \
           dprintf_lite.o \
           $(IMPORT_OBJ)

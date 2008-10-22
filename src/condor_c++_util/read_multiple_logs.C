@@ -853,15 +853,38 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 			// here we recurse into a splice to discover logfiles that it might
 			// bring in.
 			} else if ( !stricmp(word, "splice") )  {
+				TmpDir spliceDir;
 				MyString spliceName = tokens.next();
 				MyString spliceDagFile = tokens.next();
+				MyString dirTok = tokens.next();
+				MyString directory = ".";
+				MyString errMsg;
+
+				dirTok.upper_case(); // case insensitive...
+				if (dirTok == "DIR") { 
+					directory = tokens.next();
+					if (directory == "") {
+						errorMsg = "Failed to parse DIR directory.";
+					}
+				}
 
 				dprintf(D_FULLDEBUG, "getJobLogsFromSubmitFiles(): "
 					"Processing SPLICE %s %s\n",
 					spliceName.Value(), spliceDagFile.Value());
+				
+				// cd into directory specified by DIR, if any
+				if ( !spliceDir.Cd2TmpDir(directory.Value(), errMsg) ) {
+					errorMsg = "Unable to chdir into DIR directory.";
+				}
 
+				// Find all of the logs entries from the submit files.
 				errorMsg = getJobLogsFromSubmitFiles( spliceDagFile, 
 					jobKeyword, dirKeyword, listLogFilenames);
+
+				// cd back out
+				if ( !spliceDir.Cd2MainDir(errMsg) ) {
+					errorMsg = "Unable to chdir back out of DIR directory.";
+				}
 
 				if (errorMsg != "") {
 					return "Splice[" + spliceName + ":" + 
@@ -878,7 +901,7 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 
 MyString
 MultiLogFiles::getValuesFromFile(const MyString &fileName, 
-			const MyString &keyword, StringList &values)
+			const MyString &keyword, StringList &values, int skipTokens)
 {
 
 	MyString	errorMsg;
@@ -899,6 +922,15 @@ MultiLogFiles::getValuesFromFile(const MyString &fileName,
 			tokens.rewind();
 
 			if ( !stricmp(tokens.next(), keyword.Value()) ) {
+					// Skip over unwanted tokens.
+				for ( int skipped = 0; skipped < skipTokens; skipped++ ) {
+					if ( !tokens.next() ) {
+						MyString result = MyString( "Improperly-formatted DAG "
+									"file: value missing after keyword <" ) +
+									keyword + ">";
+			    		return result;
+					}
+				}
 
 					// Get the value.
 				const char *newValue = tokens.next();

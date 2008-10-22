@@ -236,7 +236,6 @@ CronTab::validate( ClassAd *ad, MyString &error ) {
 			if ( !CronTab::validateParameter( ctr, buffer.Value(), curError ) ) {
 				ret = false;
 				error += curError;
-				error += "\n";
 			}
 		}
 	} // FOR
@@ -701,7 +700,6 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 			// the user to tell them that they goofed
 			//
 		CronTab::errorLog += error;
-		CronTab::errorLog += "\n";
 		return ( false );
 	}
 		//

@@ -301,7 +301,8 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 		this,
 		nonblocking,
 		msg->name(),
-		msg->getRawProtocol() );
+		msg->getRawProtocol(),
+		msg->getSecSessionId());
 }
 
 void
@@ -314,7 +315,8 @@ DCMessenger::sendBlockingMsg( classy_counted_ptr<DCMsg> msg )
 		msg->getTimeout(),
 		&msg->m_errstack,
 		msg->name(),
-		msg->getRawProtocol() );
+		msg->getRawProtocol(),
+		msg->getSecSessionId());
 
 	if( !sock ) {
 		msg->callMessageSendFailed( this );

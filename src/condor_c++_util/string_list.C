@@ -23,6 +23,7 @@
 #include "string_list.h"
 #include "condor_debug.h"
 #include "internet.h"
+#include "string_funcs.h"
 
 // initialize the List<char> from the VALID_*_FILES variable in the
 // config file; the files are separated by commas
@@ -30,22 +31,6 @@
 //#define isSeparator(x) (isspace(x) || x == ',' )
 
 char *strnewp( const char * );
-
-// Like strstr(), but case-insensitive
-char *
-strcasestr( const char *string, const char *pattern )
-{
-	char	*str;
-	int			n;
-
-	n = strlen( pattern );
-	for( str=(char *)string; *str; str++ ) {
-		if( strncasecmp(str,pattern,n) == 0 ) {
-			return str;
-		}
-	}
-	return NULL;
-}
 
 int
 StringList::isSeparator( char x )
@@ -263,9 +248,10 @@ StringList::contains_anycase_withwildcard(const char *string)
 }
 
 
-const char * StringList :: string_anycase_withwildcard( const char * string)
+bool
+StringList::find_matches_anycase_withwildcard( const char * string, StringList *matches)
 {
-    return contains_withwildcard(string, true);
+    return contains_withwildcard(string, true, matches)!=NULL;
 }
 
 
@@ -274,7 +260,7 @@ const char * StringList :: string_anycase_withwildcard( const char * string)
 // the string passed in is "pppmiron.cs.wisc.edu", and an entry in the
 // the list is "ppp*", then it will return TRUE.
 const char *
-StringList::contains_withwildcard(const char *string, bool anycase)
+StringList::contains_withwildcard(const char *string, bool anycase, StringList *matches)
 {
 	char *x;
 	char *matchstart;
@@ -298,10 +284,15 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 			} else {
 				temp = strcmp(x,string);
 			}
-			if ( temp == MATCH )
-				return x;
-			else
-				continue;
+			if ( temp == MATCH ) {
+				if( matches ) {
+					matches->append(x);
+				}
+				else {
+					return x;
+				}
+			}
+			continue;
 		}
 
 		if ( asterisk == x ) {
@@ -317,10 +308,14 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 				}
 				*asterisk2 = '*';
 				if ( pos ) {
-					return x;
-				} else {
-					continue;
+					if( matches ) {
+						matches->append( x );
+					}
+					else {
+						return x;
+					}
 				}
+				continue;
 			}
 			// asterisk at the start behavior
 			matchstart = NULL;
@@ -336,10 +331,14 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 				}
 				*asterisk = '*';	// replace asterisk
 				if ( temp == MATCH ) {
-					return x;
-				} else {
-					continue;
-				}				
+					if( matches ) {
+						matches->append( x );
+					}
+					else {
+						return x;
+					}
+				}
+				continue;
 			} else {
 				// asterisk must be in the middle somewhere				
 				matchstart = x;
@@ -379,11 +378,20 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 		}
 		*asterisk = '*';	// set asterisk back no matter what the result
 		if ( result == TRUE ) {
-			return x;
+			if( matches ) {
+				matches->append( x );
+			}
+			else {
+				return x;
+			}
 		}
 	
 	}	// end of while loop
 
+	if( matches && !matches->isEmpty() ) {
+		matches->rewind();
+		return matches->next();
+	}
 	return NULL;
 }
 
@@ -486,4 +494,29 @@ StringList::deleteCurrent() {
 		FREE( strings.Current() );
 	}
 	strings.DeleteCurrent();
+}
+
+
+static int string_compare(const void *x, const void *y) {
+	return strcmp(*(char * const *) x, *(char * const *) y);
+}
+
+void
+StringList::qsort() {
+	char *str;
+ 	int i;
+	int count = strings.Length();
+	char **list = (char **) calloc(count, sizeof(char *));
+
+	for (i = 0, strings.Rewind(); (str = strings.Next()); i++) {
+		list[i] = strdup(str); // If only we had InsertAt on List...
+	}
+
+	::qsort(list, count, sizeof(char *), string_compare);
+
+	for (i = 0, clearAll(); i < count; i++) {
+		strings.Append(list[i]);
+	}
+
+	free(list);
 }

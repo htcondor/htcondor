@@ -18,10 +18,11 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "subsystem_info.h"
 #include "matchmaker.h"
 
 // for daemon core
-char *mySubSystem = "NEGOTIATOR";
+DECL_SUBSYSTEM( "NEGOTIATOR", SUBSYSTEM_TYPE_NEGOTIATOR );
 
 // the matchmaker object
 Matchmaker matchMaker;

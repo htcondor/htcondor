@@ -187,7 +187,7 @@ UserLog::open_file(const char *file,
 	
 # if !defined(WIN32)
 	// Unix
-	int	flags = O_WRONLY | O_CREAT;
+	int	flags = O_WRONLY | O_CREAT | O_APPEND;
 	mode_t mode = 0664;
 	fd = safe_open_wrapper( file, flags, mode );
 	if( fd < 0 ) {
@@ -219,11 +219,6 @@ UserLog::open_file(const char *file,
 
 	fd = _fileno(fp);
 # endif
-
-		// set the stdio stream for line buffering
-	if( setvbuf( fp,NULL,_IOLBF,BUFSIZ) < 0 ) {
-		dprintf( D_ALWAYS, "setvbuf failed in UserLog::initialize\n" );
-	}
 
 	// prepare to lock the file.	
 	if ( param_boolean("ENABLE_USERLOG_LOCKING",true) ) {
@@ -394,7 +389,9 @@ handleGlobalLogRotation()
 	current_filesize = swrap.GetBuf()->st_size;
 
 	int global_max_filesize = param_integer("MAX_EVENT_LOG",1000000);
-	if ( current_filesize > global_max_filesize ) {
+	if ( global_max_filesize && 	// do not rotate if MAX_EVENT_LOG==0
+		 (current_filesize > global_max_filesize) ) 
+	{
 		MyString old_name(m_global_path);
 		old_name += ".old";
 #ifdef WIN32

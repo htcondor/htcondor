@@ -27,6 +27,7 @@
 #include "my_popen.h"
 #include "MyString.h"
 #include "setenv.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "fdpass.h"
 
 // data that needs to be preserved between calls to glexec_starter_prepare()
@@ -242,6 +243,8 @@ glexec_starter_prepare(const char* starter_path,
 	log_dir += "/log";
 	glexec_env.SetEnv ( "_CONDOR_LOG", log_dir.Value());
 	glexec_env.SetEnv ( "_condor_LOG", log_dir.Value());
+	glexec_env.SetEnv ( "_CONDOR_LOCK", log_dir.Value());
+	glexec_env.SetEnv ( "_condor_LOCK", log_dir.Value());
 
 	// PROCD_ADDRESS: the Starter that we are about to create will
 	// not have access to our ProcD. we'll explicitly set PROCD_ADDRESS
@@ -253,6 +256,13 @@ glexec_starter_prepare(const char* starter_path,
 	procd_address += "/procd_pipe";
 	glexec_env.SetEnv( "_CONDOR_PROCD_ADDRESS", procd_address.Value() );
 	glexec_env.SetEnv( "_condor_PROCD_ADDRESS", procd_address.Value() );
+
+	// CONDOR_GLEXEC_STARTER_CLEANUP_FLAG: this serves as a flag in the
+	// Starter's environment that it will check for in order to determine
+	// whether to do GLEXEC_STARTER-specific cleanup
+	//
+	glexec_env.SetEnv( "CONDOR_GLEXEC_STARTER_CLEANUP_FLAG",
+	                   "CONDOR_GLEXEC_STARTER_CLEANUP_FLAG" );
 
 	// now set up a socket pair for communication with
 	// condor_glexec_wrapper
@@ -354,7 +364,13 @@ glexec_starter_handle_env(pid_t pid)
 		return false;
 	}
 	if (flag) {
-		if (fdpass_send(sock_fd, s_saved_starter_stdin) == -1) {
+		int fd;
+		int rv = daemonCore->Get_Pipe_FD(s_saved_starter_stdin,
+		                                 &fd);
+		if (rv == FALSE) {
+			fd = s_saved_starter_stdin;
+		}
+		if (fdpass_send(sock_fd, fd) == -1) {
 			dprintf(D_ALWAYS, "GLEXEC: fdpass_send failed\n");
 			close(sock_fd);
 			return false;

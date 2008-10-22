@@ -28,6 +28,10 @@
 #include "util_lib_proto.h"
 #include "classad_merge.h"
 
+#if HAVE_DLOPEN
+#include "ClassAdLogPlugin.h"
+#endif
+
 // explicitly instantiate the HashTable template
 template class HashTable<HashKey, ClassAd*>;
 template class HashBucket<HashKey,ClassAd*>;
@@ -699,11 +703,18 @@ LogNewClassAd::~LogNewClassAd()
 int
 LogNewClassAd::Play(void *data_structure)
 {
+	int result;
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	ClassAd	*ad = new ClassAd();
 	ad->SetMyTypeName(mytype);
 	ad->SetTargetTypeName(targettype);
-	return table->insert(HashKey(key), ad);
+	result = table->insert(HashKey(key), ad);
+
+#if HAVE_DLOPEN
+	ClassAdLogPluginManager::NewClassAd(key);
+#endif
+
+	return result;
 }
 
 int
@@ -762,9 +773,15 @@ LogDestroyClassAd::Play(void *data_structure)
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	HashKey hkey(key);
 	ClassAd *ad;
+
 	if (table->lookup(hkey, ad) < 0) {
 		return -1;
 	}
+
+#if HAVE_DLOPEN
+	ClassAdLogPluginManager::DestroyClassAd(key);
+#endif
+
 	delete ad;
 	return table->remove(hkey);
 }
@@ -781,7 +798,11 @@ LogSetAttribute::LogSetAttribute(const char *k, const char *n, const char *val)
 	op_type = CondorLogOp_SetAttribute;
 	key = strdup(k);
 	name = strdup(n);
-	value = strdup(val);
+	if (val && strlen(val)) {
+		value = strdup(val);
+	} else {
+		value = strdup("UNDEFINED");
+	}
 }
 
 
@@ -805,6 +826,11 @@ LogSetAttribute::Play(void *data_structure)
 	sprintf(tmp_expr, "%s = %s", name, value);
 	rval = ad->Insert(tmp_expr);
 	delete [] tmp_expr;
+
+#if HAVE_DLOPEN
+	ClassAdLogPluginManager::SetAttribute(key, name, value);
+#endif
+
 	return rval;
 }
 
@@ -897,6 +923,11 @@ LogDeleteAttribute::Play(void *data_structure)
 	ClassAd *ad;
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
+
+#if HAVE_DLOPEN
+	ClassAdLogPluginManager::DeleteAttribute(key, name);
+#endif
+
 	return ad->Delete(name);
 }
 

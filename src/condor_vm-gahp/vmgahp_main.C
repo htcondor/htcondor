@@ -27,10 +27,11 @@
 #include "vmgahp.h"
 #include "vmware_type.h"
 #include "xen_type.h"
+#include "subsystem_info.h"
 
 const char *vmgahp_version = "$VMGahpVersion " CONDOR_VMGAHP_VERSION " May 1 2007 Condor\\ VMGAHP $";
 
-char *mySubSystem = "VM_GAHP";
+DECL_SUBSYSTEM( "VM_GAHP", SUBSYSTEM_TYPE_GAHP );
 
 VMGahp *vmgahp = NULL;
 int vmgahp_stdout_pipe = -1;

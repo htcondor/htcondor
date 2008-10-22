@@ -122,6 +122,7 @@ bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
 		 ( strncasecmp( resource.Value(), "blah", 4 ) == 0 ||
 		   strncasecmp( resource.Value(), "pbs", 4 ) == 0 ||
 		   strncasecmp( resource.Value(), "lsf", 4 ) == 0 ||
+		   strncasecmp( resource.Value(), "nqs", 4 ) == 0 ||
 		   strncasecmp( resource.Value(), "naregi", 6 ) == 0 ) ) {
 
 		return true;

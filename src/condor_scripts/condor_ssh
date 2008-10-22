@@ -37,26 +37,26 @@ fi
 
 doneParsing=false
 
-while [ $doneParsing == "false" ]
+while [ $doneParsing = "false" ]
 do
 
 doneParsing=true
 
-if [ "$1" == "-x" ]
+if [ "$1" = "-x" ]
 then
 	shift
 	hasx="-x"
 	doneParsing="false"
 fi
 
-if [ "$1" == "-l" ]
+if [ "$1" = "-l" ]
 then
 	shift
 	shift
 	doneParsing="false"
 fi
 
-if [ "$1" == "-n" ]
+if [ "$1" = "-n" ]
 then
 	shift
 	hasn="-n"
@@ -70,26 +70,26 @@ shift
 # The option can also appear _after_ the host
 doneParsing=false
 
-while [ $doneParsing == "false" ]
+while [ $doneParsing = "false" ]
 do
 
 doneParsing=true
 
-if [ "$1" == "-x" ]
+if [ "$1" = "-x" ]
 then
 	shift
 	hasx="-x"
 	doneParsing="false"
 fi
 
-if [ "$1" == "-l" ]
+if [ "$1" = "-l" ]
 then
 	shift
 	shift
 	doneParsing="false"
 fi
 
-if [ "$1" == "-n" ]
+if [ "$1" = "-n" ]
 then
 	shift
 	hasn="-n"

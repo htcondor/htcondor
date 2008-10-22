@@ -74,6 +74,9 @@ extern const char * ATTR_CLUSTER_ID;
 extern const char * ATTR_AUTO_CLUSTER_ID;
 extern const char * ATTR_AUTO_CLUSTER_ATTRS;
 extern const char * ATTR_COMPLETION_DATE;
+extern const char * ATTR_MATCHED_CONCURRENCY_LIMITS;
+extern const char * ATTR_CONCURRENCY_LIMITS;
+extern const char * ATTR_PREEMPTING_CONCURRENCY_LIMITS;
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
 #define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
 extern const char * ATTR_CONSOLE_IDLE;
@@ -138,6 +141,7 @@ extern const char * ATTR_GLOBAL_JOB_ID;
 extern const char * ATTR_GZIP;
 extern const char * ATTR_GLOBUS_CONTACT_STRING;
 extern const char * ATTR_GLOBUS_DELEGATION_URI;
+// Deprecated (cruft) -- no longer used
 extern const char * ATTR_GLOBUS_GRAM_VERSION;
 extern const char * ATTR_GLOBUS_RESOURCE;
 extern const char * ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME;
@@ -228,6 +232,7 @@ extern const char * ATTR_JOB_JAVA_VM_ARGS1;
 extern const char * ATTR_JOB_JAVA_VM_ARGS2;
 extern const char * ATTR_ORIG_JOB_IWD;
 extern const char * ATTR_JOB_REMOTE_IWD;
+extern const char * ATTR_JOB_LOAD_PROFILE;
 extern const char * ATTR_JOB_RUNAS_OWNER;
 extern const char * ATTR_JOB_LOAD_USER_PROFILE;
 extern const char * ATTR_JOB_LOCAL_CPU;
@@ -600,7 +605,9 @@ extern const char * ATTR_SEC_PACKET_COUNT;
 extern const char * ATTR_SEC_NEGOTIATION;
 extern const char * ATTR_SEC_VALID_COMMANDS;
 extern const char * ATTR_SEC_SESSION_DURATION;
+extern const char * ATTR_SEC_SESSION_EXPIRES;
 extern const char * ATTR_SEC_USER;
+extern const char * ATTR_SEC_MY_REMOTE_USER_NAME;
 extern const char * ATTR_SEC_NEW_SESSION;
 extern const char * ATTR_SEC_USE_SESSION;
 extern const char * ATTR_SEC_COOKIE;

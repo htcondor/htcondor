@@ -37,6 +37,10 @@
 #include "condor_netdb.h"
 #include "file_sql.h"
 
+#if HAVE_DLOPEN
+#include "MasterPlugin.h"
+#endif
+
 // these are defined in master.C
 extern int 		MasterLockFD;
 extern FileLock*	MasterLock;
@@ -2135,6 +2139,10 @@ Daemons::UpdateCollector()
     daemonCore->publish(ad);
     daemonCore->monitor_data.ExportData(ad);
 	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true);
+
+#if HAVE_DLOPEN
+	MasterPluginManager::Update(ad);
+#endif
 
 		// log classad into sql log so that it can be updated to DB
 	FILESQL::daemonAdInsert(ad, "MasterAd", FILEObj, prevLHF);

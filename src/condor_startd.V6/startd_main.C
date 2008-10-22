@@ -20,6 +20,8 @@
 
 #include "condor_common.h"
 #include "condor_parameters.h"
+#include "subsystem_info.h"
+
 /*
  * Main routine and function for the startd.
  */
@@ -28,6 +30,10 @@
 #include "vm_common.h"
 #include "VMManager.h"
 #include "VMRegister.h"
+
+#if HAVE_DLOPEN
+#include "StartdPlugin.h"
+#endif
 
 // Define global variables
 
@@ -81,7 +87,7 @@ char* Name = NULL;
 int		pid_snapshot_interval = DEFAULT_PID_SNAPSHOT_INTERVAL;
     // How often do we take snapshots of the pid families? 
 
-char*	mySubSystem = "STARTD";
+DECL_SUBSYSTEM( "STARTD", SUBSYSTEM_TYPE_STARTD );
 
 int main_reaper = 0;
 
@@ -397,6 +403,12 @@ main_init( int, char* argv[] )
 		// We don't just call eval_and_update_all() b/c we don't need
 		// to recompute anything.
 	resmgr->first_eval_and_update_all();
+
+#if HAVE_DLOPEN
+   StartdPluginManager::Load();
+
+   StartdPluginManager::Initialize();
+#endif
 
 	return TRUE;
 }

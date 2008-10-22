@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "transfer_queue.h"
 #include "condor_debug.h"
-#include "selector.h"
 #include "condor_daemon_core.h"
 #include "condor_commands.h"
 #include "condor_config.h"
@@ -55,23 +54,6 @@ TransferQueueRequest::Description() {
 					m_jobid.Value(),
 					m_fname.Value());
 	return m_description.Value();
-}
-
-bool
-TransferQueueRequest::Alive() {
-	ASSERT( m_sock );
-
-	Selector selector;
-	selector.add_fd( m_sock->get_file_desc(), Selector::IO_READ );
-	selector.set_timeout( 0 );
-	selector.execute();
-
-	if( selector.has_ready() ) {
-			// If the socket ever selects true for read, this means the
-			// client has either died or finished with the transfer.
-		return false;
-	}
-	return true;
 }
 
 bool

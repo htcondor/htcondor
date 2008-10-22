@@ -198,4 +198,19 @@ private:
 };
 
 
+/*
+ * DCClaimIdMsg is used in cases where we are sending a single claim id
+ */
+class DCClaimIdMsg: public DCMsg {
+public:
+	DCClaimIdMsg( int cmd, char const *claim_id );
+
+	bool writeMsg( DCMessenger *messenger, Sock *sock );
+	bool readMsg( DCMessenger *messenger, Sock *sock );
+
+private:
+	MyString m_claim_id;
+};
+
+
 #endif /* _CONDOR_DC_STARTD_H */

@@ -39,9 +39,9 @@
 #include "classad_merge.h"
 #include "daemon.h"
 #include "daemon_core_sock_adapter.h"
+#include "subsystem_info.h"
 #include "setenv.h"
 
-extern char* mySubSystem;
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
 template class HashTable<MyString, classy_counted_ptr<SecManStartCommand> >;
@@ -92,7 +92,6 @@ int SecMan::sec_man_ref_count = 0;
 char* SecMan::_my_unique_id = 0;
 char* SecMan::_my_parent_unique_id = 0;
 bool SecMan::_should_check_env_for_unique_id = true;
-bool SecMan::m_ipverify_initialized = false;
 IpVerify SecMan::m_ipverify;
 
 SecMan::sec_req
@@ -484,7 +483,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 
 
 	// subsystem
-	ad->Assign ( ATTR_SEC_SUBSYSTEM, mySubSystem );
+	ad->Assign ( ATTR_SEC_SUBSYSTEM, mySubSystem->getName() );
 
     char * parent_id = my_parent_unique_id();
     if (parent_id) {
@@ -508,7 +507,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// if that does not exist, fall back to old form of
 	// SEC_<authlev>_SESSION_DURATION.
 	char fmt[128];
-	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", mySubSystem);
+	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", mySubSystem->getName() );
 	paramer = SecMan::getSecSetting(fmt, auth_level);
 	if (!paramer) {
 		paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
@@ -521,10 +520,10 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		paramer = NULL;
 	} else {
 		// no value defined, use defaults.
-		if (strcmp(mySubSystem, "TOOL") == 0) {
+		if ( mySubSystem->isType(SUBSYSTEM_TYPE_TOOL) ) {
 			// default for tools is 1 minute.
 			ad->Assign ( ATTR_SEC_SESSION_DURATION, "60" );
-		} else if (strcmp(mySubSystem, "SUBMIT") == 0) {
+		} else if ( mySubSystem->isType(SUBSYSTEM_TYPE_SUBMIT) ) {
 			// default for submit is 1 hour.  yeah, that's a long submit
 			// but you never know with file transfer and all.
 			ad->Assign ( ATTR_SEC_SESSION_DURATION, "3600" );
@@ -791,7 +790,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	SecManStartCommand (
 		int cmd,Sock *sock,bool peer_can_negotiate,bool raw_protocol,
 		CondorError *errstack,int subcmd,StartCommandCallbackType *callback_fn,
-		void *misc_data,bool nonblocking,char const *cmd_description,SecMan *sec_man):
+		void *misc_data,bool nonblocking,char const *cmd_description,char const *sec_session_id_hint,SecMan *sec_man):
 
 		m_cmd(cmd),
 		m_subcmd(subcmd),
@@ -805,6 +804,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		m_pending_socket_registered(false),
 		m_sec_man(*sec_man)
 	{
+		m_sec_session_id_hint = sec_session_id_hint ? sec_session_id_hint : "";
 		m_already_tried_TCP_auth = false;
 		if( !m_errstack ) {
 			m_errstack = &m_internal_errstack;
@@ -900,6 +900,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	MyString m_remote_version;
 	KeyCacheEntry *m_enc_key;
 	KeyInfo* m_private_key;
+	MyString m_sec_session_id_hint;
 
 	enum StartCommandState {
 		SendAuthInfo,
@@ -951,7 +952,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 };
 
 StartCommandResult
-SecMan::startCommand( int cmd, Sock* sock, bool peer_can_negotiate, bool raw_protocol, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description)
+SecMan::startCommand( int cmd, Sock* sock, bool peer_can_negotiate, bool raw_protocol, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking,char const *cmd_description,char const *sec_session_id_hint)
 {
 	// This function is simply a convenient wrapper around the
 	// SecManStartCommand class, which does the actual work.
@@ -960,7 +961,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool peer_can_negotiate, bool raw_pro
 	// The blocking case could avoid use of the heap, but for simplicity,
 	// we just do the same in both cases.
 
-	classy_counted_ptr<SecManStartCommand> sc = new SecManStartCommand(cmd,sock,peer_can_negotiate, raw_protocol,errstack,subcmd,callback_fn,misc_data,nonblocking,cmd_description,this);
+	classy_counted_ptr<SecManStartCommand> sc = new SecManStartCommand(cmd,sock,peer_can_negotiate, raw_protocol,errstack,subcmd,callback_fn,misc_data,nonblocking,cmd_description,sec_session_id_hint,this);
 
 	ASSERT(sc.get());
 
@@ -1133,6 +1134,23 @@ SecManStartCommand::startCommand_inner()
 	return result;
 }
 
+bool
+SecMan::LookupNonExpiredSession(char const *session_id, KeyCacheEntry *&session_key)
+{
+	if(!session_cache->lookup(session_id,session_key)) {
+		return false;
+	}
+
+		// check the expiration.
+	time_t cutoff_time = time(0);
+	if (session_key->expiration() && session_key->expiration() <= cutoff_time) {
+		session_cache->expire(session_key);
+		session_key = NULL;
+		return false;
+	}
+	return true;
+}
+
 StartCommandResult
 SecManStartCommand::sendAuthInfo_inner()
 {
@@ -1140,22 +1158,29 @@ SecManStartCommand::sendAuthInfo_inner()
 	// find out if we have a session id to use for this command
 
 	MyString sid;
+
+	sid = m_sec_session_id_hint;
+	if( sid.Value()[0] && !m_raw_protocol ) {
+		m_have_session = m_sec_man.LookupNonExpiredSession(sid.Value(), m_enc_key);
+		if( m_have_session ) {
+			dprintf(D_SECURITY,"Using requested session %s.\n",sid.Value());
+		}
+		else {
+			dprintf(D_SECURITY,"Ignoring requested session, because it does not exist: %s\n",sid.Value());
+		}
+	}
+
 	m_session_key.sprintf ("{%s,<%i>}", m_sock->get_sinful_peer(), m_cmd);
-	bool found_map_ent = (m_sec_man.command_map->lookup(m_session_key, sid) == 0);
-	if (found_map_ent && !m_raw_protocol) {
+	bool found_map_ent = false;
+	if( !m_have_session && !m_raw_protocol ) {
+		found_map_ent = (m_sec_man.command_map->lookup(m_session_key, sid) == 0);
+	}
+	if (found_map_ent) {
 		dprintf (D_SECURITY, "SECMAN: using session %s for %s.\n", sid.Value(), m_session_key.Value());
 		// we have the session id, now get the session from the cache
-		m_have_session = m_sec_man.session_cache->lookup(sid.Value(), m_enc_key);
+		m_have_session = m_sec_man.LookupNonExpiredSession(sid.Value(), m_enc_key);
 
-		if (m_have_session) {
-			// check the expiration.
-			time_t cutoff_time = time(0);
-			if (m_enc_key->expiration() && m_enc_key->expiration() <= cutoff_time) {
-				m_sec_man.session_cache->expire(m_enc_key);
-				m_have_session = false;
-				m_enc_key = NULL;
-			}
-		} else {
+		if(!m_have_session) {
 			// the session is no longer in the cache... might as well
 			// delete this mapping to it.  (we could delete them all, but
 			// it requires iterating through the hash table)
@@ -1165,11 +1190,7 @@ SecManStartCommand::sendAuthInfo_inner()
 				dprintf (D_SECURITY, "SECMAN: session id %s not found and failed to removed %s from map!\n", sid.Value(), m_session_key.Value());
 			}
 		}
-	} else {
-		m_have_session = false;
-		m_enc_key = NULL;
 	}
-
 
 	// if we have a private key, we will use the same security policy that
 	// was decided on when the key was issued.
@@ -1322,13 +1343,9 @@ SecManStartCommand::sendAuthInfo_inner()
 
 	// extract the version attribute current in the classad - it is
 	// the version of the remote side.
-	char * rvtmp = NULL;
-	m_auth_info.LookupString ( ATTR_SEC_REMOTE_VERSION, &rvtmp );
-	if (rvtmp) {
-		m_remote_version = rvtmp;
-		free(rvtmp);
-	} else {
-		m_remote_version = "unknown";
+	if(m_auth_info.LookupString( ATTR_SEC_REMOTE_VERSION, m_remote_version )) {
+		CondorVersionInfo ver_info(m_remote_version.Value());
+		m_sock->set_peer_version(&ver_info);
 	}
 
 	// fill in our version
@@ -1434,24 +1451,24 @@ SecManStartCommand::sendAuthInfo_inner()
 				dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
 			} // if (will_enable_mac)
 
-			if (will_enable_enc == SecMan::SEC_FEAT_ACT_YES) {
+			bool turn_encryption_on = will_enable_enc == SecMan::SEC_FEAT_ACT_YES;
+			if (turn_encryption_on && !ki) {
+				dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
+				m_errstack->push( "SECMAN", SECMAN_ERR_NO_KEY,
+						"Failed to establish a crypto key" );
+				return StartCommandFailed;
+			}
 
-				if (!ki) {
-					dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
-					m_errstack->push( "SECMAN", SECMAN_ERR_NO_KEY,
-							"Failed to establish a crypto key" );
-					return StartCommandFailed;
-				}
-
+			if( ki ) {
 				if (DebugFlags & D_FULLDEBUG) {
 					dprintf (D_SECURITY, "SECMAN: about to enable encryption.\n");
 					m_sec_man.key_printf(D_SECURITY, ki);
 				}
 
-				// prepare the buffer to pass in udp header
+					// prepare the buffer to pass in udp header
 				MyString key_id = m_enc_key->id();
 
-				// stick our command socket sinful string in there
+					// stick our command socket sinful string in there
 				char* dcsss = global_dc_sinful();
 				if (dcsss) {
 					key_id += ",";
@@ -1460,12 +1477,12 @@ SecManStartCommand::sendAuthInfo_inner()
 
 
 				m_sock->encode();
-				m_sock->set_crypto_key(true, ki, key_id.Value());
+				m_sock->set_crypto_key(turn_encryption_on, ki, key_id.Value());
 
-				dprintf ( D_SECURITY, "SECMAN: successfully enabled encryption!\n");
-			} // if (will_enable_enc)
+				dprintf ( D_SECURITY,
+						  "SECMAN: successfully enabled encryption%s.\n",
+						  turn_encryption_on ? "" : " (but encryption mode is off by default for this packet)");
 
-			if (ki) {
 				delete ki;
 			}
 		} else {
@@ -1589,10 +1606,27 @@ SecManStartCommand::receiveAuthInfo_inner()
 				auth_response.dPrint( D_SECURITY );
 			}
 
+				// Get rid of our sinful address in what will become
+				// the session policy ad.  It's there because we sent
+				// it to our peer, but no need to keep it around in
+				// our copy of the session.  In fact, if we did, this
+				// would cause performance problems in the KeyCache
+				// index, which would contain a lot of (useless) index
+				// entries for our own sinful address.
+			m_auth_info.Delete( ATTR_SEC_SERVER_COMMAND_SOCK );
+				// Ditto for our pid info.
+			m_auth_info.Delete( ATTR_SEC_SERVER_PID );
+			m_auth_info.Delete( ATTR_SEC_PARENT_UNIQUE_ID );
+
 			// it makes a difference if the version is empty, so we must
 			// explicitly delete it before we copy it.
 			m_auth_info.Delete(ATTR_SEC_REMOTE_VERSION);
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_REMOTE_VERSION );
+			m_auth_info.LookupString(ATTR_SEC_REMOTE_VERSION,m_remote_version);
+			if( !m_remote_version.IsEmpty() ) {
+				CondorVersionInfo ver_info(m_remote_version.Value());
+				m_sock->set_peer_version(&ver_info);
+			}
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ENACT );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS_LIST );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS );
@@ -1601,9 +1635,6 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ENCRYPTION );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_INTEGRITY );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_DURATION );
-			// sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_VALID_COMMANDS );
-			// sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_USER );
-			// sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SID );
 
 			m_auth_info.Delete(ATTR_SEC_NEW_SESSION);
 
@@ -1658,7 +1689,7 @@ SecManStartCommand::authenticate_inner()
 
 		if ((will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
 			if ((!m_new_session)) {
-				if (m_remote_version != "unknown") {
+				if( !m_remote_version.IsEmpty() ) {
 					dprintf( D_SECURITY, "SECMAN: resume, other side is %s, NOT reauthenticating.\n", m_remote_version.Value() );
 					will_authenticate = SecMan::SEC_FEAT_ACT_NO;
 				} else {
@@ -1822,11 +1853,21 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, post_auth_info, ATTR_SEC_SID );
 
 			// other attributes
-			m_sec_man.sec_copy_attribute( m_auth_info, post_auth_info, ATTR_SEC_USER );
+			// Copy "User" to "MyRemoteUserName", since this is _not_ the name
+			// of our peer; it is our name as determined by our peer.
+			// We reserve "User" for the name of our peer so that an
+			// incoming/outgoing security session can be reversed and
+			// used as a full-duplex session if desired.
+			m_sec_man.sec_copy_attribute( m_auth_info, ATTR_SEC_MY_REMOTE_USER_NAME, post_auth_info, ATTR_SEC_USER );
 			m_sec_man.sec_copy_attribute( m_auth_info, post_auth_info, ATTR_SEC_VALID_COMMANDS );
 
 			if( m_sock->getFullyQualifiedUser() ) {
-				m_auth_info.Assign( ATTR_SEC_AUTHENTICATED_USER, m_sock->getFullyQualifiedUser() );
+				m_auth_info.Assign( ATTR_SEC_USER, m_sock->getFullyQualifiedUser() );
+			}
+			else {
+					// we did not authenticate peer, so this attribute
+					// should not be defined
+				ASSERT( !m_auth_info.Lookup( ATTR_SEC_USER ) );
 			}
 			m_sec_man.sec_copy_attribute( m_auth_info, post_auth_info, ATTR_SEC_TRIED_AUTHENTICATION );
 
@@ -1913,7 +1954,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 
 	if( !m_new_session && m_have_session ) {
 		char *fqu = NULL;
-		if( m_auth_info.LookupString(ATTR_SEC_AUTHENTICATED_USER,&fqu) && fqu ) {
+		if( m_auth_info.LookupString(ATTR_SEC_USER,&fqu) && fqu ) {
 			if( DebugFlags & D_FULLDEBUG ) {
 				dprintf( D_SECURITY, "Getting authenticated user from cached session: %s\n", fqu );
 			}
@@ -2011,6 +2052,7 @@ SecManStartCommand::DoTCPAuth_inner()
 		m_nonblocking ? this : NULL,
 		m_nonblocking,
 		m_cmd_description.Value(),
+		m_sec_session_id_hint.Value(),
 		&m_sec_man);
 
 	StartCommandResult auth_result = m_tcp_auth_command->startCommand();
@@ -2178,84 +2220,41 @@ SecManStartCommand::SocketCallback( Stream *stream )
 
 
 // Given a sinful string, clear out any associated sessions (incoming or outgoing)
-bool SecMan :: invalidateHost(const char * sin)
+void
+SecMan::invalidateHost(const char * sin)
 {
-    bool removed = true;
+	StringList *keyids = session_cache->getKeysForPeerAddress(sin);
+	if( !keyids ) {
+		return;
+	}
 
-    if (sin && sin[0]) {
-        KeyCacheEntry * keyEntry = NULL;
-        MyString  addr(sin), id;
-
-        if (session_cache) {
-            session_cache->key_table->startIterations();
-            while (session_cache->key_table->iterate(id, keyEntry)) {
-				char * remote_sinful = sin_to_string(keyEntry->addr());
-					// if this is an outgoing session, we need to check against the keyEntry->addr()
-				if (remote_sinful && remote_sinful[0] &&  (addr == MyString(remote_sinful))) {
-					if (DebugFlags & D_FULLDEBUG) {
-						dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), remote_sinful);
-					}
-					remove_commands(keyEntry);	// removing mapping from DC command int to session entry
-					session_cache->remove(id.Value());	// remove session entry
-				} else {
-						// if it did not match, it might be an incoming session, so check against the
-						// ServerCommandSock that is in the cached policy classad.
-					char * local_sinful = NULL;
-					keyEntry->policy()->LookupString( ATTR_SEC_SERVER_COMMAND_SOCK, &local_sinful);
-					if (local_sinful && local_sinful[0] && (addr == MyString(local_sinful))) {
-						if (DebugFlags & D_FULLDEBUG) {
-							dprintf (D_SECURITY, "KEYCACHEX: removing session %s for %s\n", id.Value(), local_sinful);
-						}
-						// remove_commands shouldn't be necessary for incoming connections
-						// remove_commands(keyEntry);
-						session_cache->remove(id.Value());
-					}
-					if (local_sinful) {
-						free(local_sinful);
-					}
-				}
-            }
-        }
-    }
-    else {
-        // sock is NULL!
-    }
-
-    return removed;
+	keyids->rewind();
+	char const *keyid;
+	while( (keyid=keyids->next()) ) {
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", keyid, sin);
+		}
+		invalidateKey(keyid);
+	}
+	delete keyids;
 }
 
-bool SecMan :: invalidateByParentAndPid(const char * parent, int pid) {
-	if (parent && parent[0]) {
-
-    	KeyCacheEntry * keyEntry = NULL;
-        MyString  id;
-
-		if (session_cache) {
-			session_cache->key_table->startIterations();
-			while (session_cache->key_table->iterate(id, keyEntry)) {
-
-				char * parent_unique_id = NULL;
-				int    tpid = 0;
-
-				keyEntry->policy()->LookupString( ATTR_SEC_PARENT_UNIQUE_ID, &parent_unique_id);
-				keyEntry->policy()->LookupInteger( ATTR_SEC_SERVER_PID, tpid);
-
-				if (parent_unique_id && parent_unique_id[0] && (strcmp(parent, parent_unique_id) == 0) && (pid == tpid)) {
-					if (DebugFlags & D_FULLDEBUG) {
-						dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), parent_unique_id);
-					}
-					// remove_commands shouldn't be necessary for incoming connections
-					// remove_commands(keyEntry);
-					session_cache->remove(id.Value());
-				}
-				if (parent_unique_id) {
-					free(parent_unique_id);
-					parent_unique_id = 0;
-				}
-			}
-        }
+void
+SecMan::invalidateByParentAndPid(const char * parent, int pid) {
+	StringList *keyids = session_cache->getKeysForProcess(parent,pid);
+	if( !keyids ) {
+		return;
 	}
-	return true;
+
+	keyids->rewind();
+	char const *keyid;
+	while( (keyid=keyids->next()) ) {
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s pid %d\n", keyid, parent, pid);
+		}
+		invalidateKey(keyid);
+	}
+	delete keyids;
 }
 
 bool SecMan :: invalidateKey(const char * key_id)
@@ -2462,16 +2461,12 @@ SecMan::~SecMan() {
 void
 SecMan::reconfig()
 {
-	m_ipverify_initialized = false;
+	m_ipverify.reconfig();
 }
 
 IpVerify *
 SecMan::getIpVerify()
 {
-	if( !m_ipverify_initialized ) {
-		m_ipverify_initialized = true;
-		m_ipverify.Init();
-	}
 	return &m_ipverify;
 }
 
@@ -2496,6 +2491,20 @@ SecMan::sec_copy_attribute( ClassAd &dest, ClassAd &source, const char* attr ) {
 	}
 }
 
+bool
+SecMan::sec_copy_attribute( ClassAd &dest, const char *to_attr, ClassAd &source, const char *from_attr ) {
+	ExprTree *e = source.Lookup(from_attr);
+	if (!e) {
+		return false;
+	}
+
+	ASSERT(e->MyType() == LX_ASSIGN && e->RArg());
+	char *buf = NULL;
+	e->RArg()->PrintToNewStr(&buf);
+	bool retval = dest.AssignExpr(to_attr,buf) != 0;
+	free(buf);
+	return retval;
+}
 
 
 void
@@ -2688,4 +2697,236 @@ SecMan::getSecTimeout(DCpermission perm)
 		free(value);
 	}
 	return auth_timeout;
+}
+
+Protocol CryptProtocolNameToEnum(char const *name) {
+	switch (toupper(*name)) {
+	case 'B': // blowfish
+		return CONDOR_BLOWFISH;
+	case '3': // 3des
+	case 'T': // Tripledes
+		return CONDOR_3DES;
+	default:
+		return CONDOR_NO_PROTOCOL;
+	}
+}
+
+bool
+SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,char const *peer_fqu, char const *peer_sinful, int duration)
+{
+	ClassAd policy;
+
+	ASSERT(sesid);
+
+	sockaddr_in peer_addr;
+	if(peer_sinful && !string_to_sin(peer_sinful,&peer_addr)) {
+		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
+				"string_to_sin(%s) failed\n",sesid,peer_sinful);
+		return false;
+	}
+
+	FillInSecurityPolicyAd( auth_level, &policy, true, false );
+
+	ClassAd *auth_info = ReconcileSecurityPolicyAds(policy,policy);
+	if(!auth_info) {
+		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
+				"ReconcileSecurityPolicyAds() failed.\n",sesid);
+		return false;
+	}
+	sec_copy_attribute(policy,*auth_info,ATTR_SEC_AUTHENTICATION);
+	sec_copy_attribute(policy,*auth_info,ATTR_SEC_INTEGRITY);
+	sec_copy_attribute(policy,*auth_info,ATTR_SEC_ENCRYPTION);
+	sec_copy_attribute(policy,*auth_info,ATTR_SEC_CRYPTO_METHODS);
+
+		// remove all but the first crypto method
+	MyString crypto_methods;
+	policy.LookupString(ATTR_SEC_CRYPTO_METHODS,crypto_methods);
+	if( crypto_methods.Length() ) {
+		int pos = crypto_methods.FindChar(',');
+		if( pos >= 0 ) {
+			crypto_methods.setChar(pos,'\0');
+			policy.Assign(ATTR_SEC_CRYPTO_METHODS,crypto_methods);
+		}
+	}
+
+	delete auth_info;
+	auth_info = NULL;
+
+	if( !ImportSecSessionInfo(exported_session_info,policy) ) {
+		return false;
+	}
+
+	policy.Assign(ATTR_SEC_USE_SESSION, "YES");
+	policy.Assign(ATTR_SEC_SID, sesid);
+	policy.Assign(ATTR_SEC_ENACT, "YES");
+
+	if( peer_fqu ) {
+		policy.Assign(ATTR_SEC_AUTHENTICATION, SecMan::sec_feat_act_rev[SEC_FEAT_ACT_NO]);
+		policy.Assign(ATTR_SEC_TRIED_AUTHENTICATION,true);
+		policy.Assign(ATTR_SEC_USER,peer_fqu);
+	}
+
+
+	MyString crypto_method;
+	policy.LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method);
+
+	Protocol crypt_protocol = CryptProtocolNameToEnum(crypto_method.Value());
+	const int keylen = MAC_SIZE;
+	unsigned char* keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
+	if(!keybuf) {
+		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
+				"oneWayHashKey() failed.\n",sesid);
+		return false;
+	}
+	KeyInfo *keyinfo = new KeyInfo(keybuf,keylen,crypt_protocol);
+
+		// extract the session duration from the (imported) policy
+	int expiration_time = 0;
+
+	if( policy.LookupInteger(ATTR_SEC_SESSION_EXPIRES,expiration_time) ) {
+		duration = expiration_time ? expiration_time - time(NULL) : 0;
+		if( duration < 0 ) {
+			dprintf(D_SECURITY,"SECMAN: failed to create non-negotiated security session %s because duration = %d\n",sesid,duration);
+			return false;
+		}
+	}
+	else if( duration > 0 ) {
+		expiration_time = time(NULL) + duration;
+			// store this in the policy so that when we export session info,
+			// it is there
+		policy.Assign(ATTR_SEC_SESSION_EXPIRES,expiration_time);
+	}
+
+	KeyCacheEntry key(sesid,peer_sinful ? &peer_addr : NULL,keyinfo,&policy,expiration_time);
+
+	if( !session_cache->insert(key) ) {
+		dprintf(D_SECURITY, "SECMAN: failed to create session %s.\n",
+				sesid);
+		return false;
+	}
+
+	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %d %sseconds."
+			"\n", sesid, duration, expiration_time == 0 ? "(inf) " : "");
+
+	if( DebugFlags & D_FULLDEBUG ) {
+		if( exported_session_info ) {
+			dprintf(D_SECURITY,"Imported session attributes: %s\n",
+					exported_session_info);
+		}
+		dprintf(D_SECURITY,"Caching non-negotiated security session ad:\n");
+		policy.dPrint(D_SECURITY);
+	}
+
+	return true;
+}
+
+bool
+SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
+		// expected format for session_info is the format produced by
+		// ExportSecSessionInfo()
+		// [param1=val1; param2=val2; ... ]
+		// To keep things simple, no parameters or values may contain ';'
+
+	if( !session_info || !*session_info) {
+		return true; // no exported session info
+	}
+
+	MyString buf = session_info+1;
+
+		// verify that the string is contained in []'s
+	if( session_info[0]!='[' || buf[buf.Length()-1]!=']' ) {
+		dprintf( D_ALWAYS, "ImportSecSessionInfo: invalid session info: %s\n",
+				session_info );
+		return false;
+	}
+
+		// get rid of final ']'
+	buf.setChar(buf.Length()-1,'\0');
+
+	StringList lines(buf.Value(),";");
+	lines.rewind();
+
+	char const *line;
+	ClassAd imp_policy;
+	while( (line=lines.next()) ) {
+		if( !imp_policy.Insert(line) ) {
+			dprintf( D_ALWAYS, "ImportSecSessionInfo: invalid imported session info: '%s' in %s\n", line, session_info );
+			return false;
+		}
+	}
+
+		// We could have just blindly inserted everything into our policy,
+		// but for safety, we explicitly copy over specific attributes
+		// from imp_policy to our policy.
+
+	sec_copy_attribute(policy,imp_policy,ATTR_SEC_INTEGRITY);
+	sec_copy_attribute(policy,imp_policy,ATTR_SEC_ENCRYPTION);
+	sec_copy_attribute(policy,imp_policy,ATTR_SEC_CRYPTO_METHODS);
+	sec_copy_attribute(policy,imp_policy,ATTR_SEC_SESSION_EXPIRES);
+
+	return true;
+}
+
+bool
+SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
+	ASSERT( session_id );
+
+	KeyCacheEntry *session_key = NULL;
+	if(!session_cache->lookup(session_id,session_key)) {
+		dprintf(D_ALWAYS,"SECMAN: ExportSecSessionInfo failed to find "
+				"session %s\n",session_id);
+		return false;
+	}
+	ClassAd *policy = session_key->policy();
+	ASSERT( policy );
+
+	ClassAd exp_policy;
+	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_INTEGRITY);
+	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_ENCRYPTION);
+	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_CRYPTO_METHODS);
+	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_SESSION_EXPIRES);
+
+	session_info += "[";
+	exp_policy.ResetExpr();
+	ExprTree *elem;
+	while( (elem=exp_policy.NextExpr()) ) {
+			// In the following, we attempt to avoid any spaces in the
+			// result string.  However, no code should depend on this.
+		session_info += ((Variable*)elem->LArg())->Name();
+		session_info += "=";
+
+        char *line = NULL;
+        elem->RArg()->PrintToNewStr(&line);
+
+			// none of the ClassAd values should ever contain ';'
+			// that makes things easier in ImportSecSessionInfo()
+		ASSERT( strchr(line,';') == NULL );
+
+		session_info += line;
+		session_info += ";";
+
+		free(line);
+    }
+	session_info += "]";
+
+	dprintf(D_SECURITY,"SECMAN: exporting session info for %s: %s\n",
+			session_id, session_info.Value());
+	return true;
+}
+
+bool
+SecMan::SetSessionExpiration(char const *session_id,time_t expiration_time) {
+	ASSERT( session_id );
+
+	KeyCacheEntry *session_key = NULL;
+	if(!session_cache->lookup(session_id,session_key)) {
+		dprintf(D_ALWAYS,"SECMAN: SetSessionExpiration failed to find "
+				"session %s\n",session_id);
+		return false;
+	}
+	session_key->setExpiration(expiration_time);
+
+	dprintf(D_SECURITY,"Set expiration time for security session %s to %ds\n",session_id,(int)(expiration_time-time(NULL)));
+
+	return true;
 }

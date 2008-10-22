@@ -1721,6 +1721,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		return -1;
 	}
 
+	// If someone is trying to do something funny with an invalid
+	// attribute name, bail out early
+	if (!AttrList::IsValidAttrName(attr_name)) {
+		dprintf(D_ALWAYS, "SetAttribute got invalid attribute named %s for job %d.%d\n", 
+			attr_name ? attr_name : "(null)", cluster_id, proc_id);
+		return -1;
+	}
+
 	IdToStr(cluster_id,proc_id,key);
 
 	if (JobQueue->LookupClassAd(key, ad)) {
@@ -3776,6 +3784,39 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 							if( new_startd_rank < current_startd_rank ) {
 								continue;
 							}
+						}
+					}
+
+						// If Concurrency Limits are in play it is
+						// important not to reuse a claim from one job
+						// that has one set of limits for a job that
+						// has a different set. This is because the
+						// Accountant is keeping track of limits based
+						// on the matches that are being handed out.
+						//
+						// A future optimization here may be to allow
+						// jobs with a subset of the limits given to
+						// the current match to reuse it.
+						//
+						// Ohh, indented sooo far!
+					MyString jobLimits, recordedLimits;
+					if (param_boolean("CLAIM_RECYCLING_CONSIDER_LIMITS", true)) {
+						ad->LookupString(ATTR_CONCURRENCY_LIMITS, jobLimits);
+						my_match_ad->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS,
+												  recordedLimits);
+						jobLimits.strlwr();
+						recordedLimits.strlwr();
+						
+						if (jobLimits == recordedLimits) {
+							dprintf(D_FULLDEBUG,
+									"ConcurrencyLimits match, can reuse claim\n");
+						} else {
+							dprintf(D_FULLDEBUG,
+									"ConcurrencyLimits do not match, cannot "
+									"reuse claim\n");
+							PrioRecAutoClusterRejected->
+								insert(PrioRec[i].auto_cluster_id, 1);
+							continue;
 						}
 					}
 

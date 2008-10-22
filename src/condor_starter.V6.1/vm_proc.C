@@ -36,7 +36,6 @@
 #include "filename_tools.h"
 #include "daemon.h"
 #include "daemon_types.h"
-#include "starter_privsep_helper.h"
 #include "vm_gahp_request.h"
 #include "../condor_vm-gahp/vmgahp_error_codes.h"
 #include "vm_univ_utils.h"
@@ -923,10 +922,6 @@ VMProc::ShutdownGraceful()
 	// we don't need to keep files in the working directory.
 	// So file transfer will not be called again.
 	if( delete_working_files ) {
-		// make sure we can access the files.
-		if( privsep_enabled() ) {
-			privsep_helper.chown_sandbox_to_condor();
-		}
 		Directory working_dir( Starter->GetWorkingDir(), PRIV_USER );
 		working_dir.Remove_Entire_Directory();
 	}
@@ -1098,13 +1093,6 @@ VMProc::Ckpt()
 	m_is_soft_suspended = false;
 	is_checkpointed = true;
 
-	// Now, ckpt files are created.
-	// If we are using privsep, we need to chown them to condor
-	// So Condor can access the files and upload them to shadow.
-	if( privsep_enabled() ) {
-		privsep_helper.chown_sandbox_to_condor();
-	}
-
 	return true;
 }
 
@@ -1124,12 +1112,6 @@ VMProc::CkptDone(bool success)
 		// update checkpoint counter and last ckpt timestamp
 		m_vm_ckpt_count++;
 		m_vm_last_ckpt_time.getTime();
-	}
-
-	// If we are using privsep, 
-	// we need to chown ckpt files from condor to user
-	if( privsep_enabled() ) {
-		privsep_helper.chown_sandbox_to_user();
 	}
 
 	if( m_is_vacate_ckpt ) {

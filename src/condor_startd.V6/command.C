@@ -90,6 +90,15 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 			// Anyway, failure to send it is not (currently) critical
 			// in any way.
 	}
+	else {
+		if( claim_is_closing && rip->r_cur ) {
+				// We told the submit-side this claim is closing, so there is
+				// no need to exchange RELEASE_CLAIM messages.  Behave as
+				// though the schedd has already sent us RELEASE_CLAIM.
+			rip->r_cur->scheddClosedClaim();
+			rip->release_claim();
+		}
+	}
 
 	return rval;
 }
@@ -100,7 +109,7 @@ command_activate_claim( Service*, int cmd, Stream* stream )
 	char* id = NULL;
 	Resource* rip;
 
-	if( ! stream->code(id) ) {
+	if( ! stream->get_secret(id) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		free( id );
 		return FALSE;
@@ -245,7 +254,7 @@ command_request_claim( Service*, int cmd, Stream* stream )
 	Resource* rip;
 	int rval;
 
-	if( ! stream->code(id) ) {
+	if( ! stream->get_secret(id) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		if( id ) { 
 			free( id );
@@ -313,7 +322,7 @@ command_release_claim( Service*, int cmd, Stream* stream )
 	char* id = NULL;
 	Resource* rip;
 
-	if( ! stream->code(id) ) {
+	if( ! stream->get_secret(id) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		if( id ) { 
 			free( id );
@@ -347,6 +356,7 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		// preempting claim is being canceled by schedd
 		rip->dprintf( D_ALWAYS, 
 		              "State change: received RELEASE_CLAIM command from preempting claim\n" );
+		rip->r_pre->scheddClosedClaim();
 		rip->removeClaim(rip->r_pre);
 		free(id);
 		return TRUE;
@@ -355,6 +365,7 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		// preempting preempting claim is being canceled by schedd
 		rip->dprintf( D_ALWAYS, 
 		              "State change: received RELEASE_CLAIM command from preempting preempting claim\n" );
+		rip->r_pre_pre->scheddClosedClaim();
 		rip->removeClaim(rip->r_pre_pre);
 		free(id);
 		return TRUE;
@@ -364,6 +375,7 @@ command_release_claim( Service*, int cmd, Stream* stream )
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received RELEASE_CLAIM command\n" );
 			free(id);
+			rip->r_cur->scheddClosedClaim();
 			return rip->release_claim();
 		} else {
 			rip->log_ignore( cmd, s );
@@ -463,7 +475,7 @@ command_match_info( Service*, int cmd, Stream* stream )
 	Resource* rip;
 	int rval;
 
-	if( ! stream->code(id) ) {
+	if( ! stream->get_secret(id) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		free( id );
 		return FALSE;
@@ -1102,6 +1114,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				rip->r_pre->loadAccountingInfo();
 				rip->r_pre->setrank( rank );
 				rip->r_pre->setoldrank( rip->r_cur->rank() );
+				rip->r_pre->loadRequestInfo();
 
 					// Create a new claim id for preempting this preempting
 					// claim (in case of long retirement).
@@ -1322,6 +1335,8 @@ accept_request_claim( Resource* rip )
 		free( acct_grp );
 		acct_grp = NULL;
 	}
+
+	rip->r_cur->loadRequestInfo();
 
 		// Since we're done talking to this schedd, delete the stream.
 	rip->r_cur->setRequestStream( NULL );
@@ -1839,7 +1854,6 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 	char* schedd_addr = NULL;
 	Claim* claim = NULL;
 	int rval = TRUE;
-	MyString line;
 	ClassAd reply;
 
 	req_ad->LookupString(ATTR_CLAIM_ID, &claimid);
@@ -1896,11 +1910,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 
 		// if we're still here, everything worked, so we can reply
 		// with success...
-	line = ATTR_RESULT;
-	line += " = \"";
-	line += getCAResultString( CA_SUCCESS );
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 
 	rval = sendCAReply( s, cmd_str, &reply );
 	if( ! rval ) {

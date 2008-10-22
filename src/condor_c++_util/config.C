@@ -1010,7 +1010,8 @@ lookup_macro( const char *name, BUCKET **table, int table_size )
 	register BUCKET	*ptr;
 	char			tmp_name[ 1024 ];
 
-	strcpy( tmp_name, name );
+	tmp_name[1023] = '\0';
+	strncpy( tmp_name, name, 1023 );
 	strlwr( tmp_name );
 	loc = condor_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {

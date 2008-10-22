@@ -160,6 +160,32 @@ ProcFamilyServer::track_family_via_supplementary_group()
 }
 #endif
 
+#if !defined(WIN32)
+void
+ProcFamilyServer::use_glexec_for_family()
+{
+	pid_t pid;
+	read_from_client(&pid, sizeof(pid_t));
+
+	int proxy_len;
+	read_from_client(&proxy_len, sizeof(int));
+
+	proc_family_error_t err;
+	if (proxy_len <= 0) {
+		err = PROC_FAMILY_ERROR_BAD_GLEXEC_INFO;
+	}
+	else {
+		char* proxy = new char[proxy_len];
+		ASSERT(proxy != NULL);
+		read_from_client(proxy, proxy_len);
+		err = m_monitor.use_glexec_for_family(pid, proxy);
+		delete[] proxy;
+	}
+
+	write_to_client(&err, sizeof(proc_family_error_t));
+}
+#endif
+
 void
 ProcFamilyServer::get_usage()
 {
@@ -349,6 +375,14 @@ ProcFamilyServer::wait_loop()
 				dprintf(D_ALWAYS,
 				        "PROC_FAMILY_TRACK_FAMILY_VIA_SUPPLEMENTARY_GROUP\n");
 				track_family_via_supplementary_group();
+				break;
+#endif
+
+#if !defined(WIN32)
+			case PROC_FAMILY_USE_GLEXEC_FOR_FAMILY:
+				dprintf(D_ALWAYS,
+				        "PROC_FAMILY_USE_GLEXEC_FOR_FAMILY\n");
+				use_glexec_for_family();
 				break;
 #endif
 

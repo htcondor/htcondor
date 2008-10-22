@@ -17,9 +17,6 @@
  *
  ***************************************************************/
 
-
- 
-
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_debug.h"
@@ -438,17 +435,3 @@ FileLock::erase_existence(void)
 	EXCEPT("FileLock::erase_existence(): Programmer error. A FileLock to "
 			"be erased was not found.");
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

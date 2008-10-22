@@ -20,11 +20,16 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "view_server.h"
+#include "subsystem_info.h"
+
+#if HAVE_DLOPEN
+#include "CollectorPlugin.h"
+#endif
 
 //-------------------------------------------------------------
 
 // about self
-char* mySubSystem = "COLLECTOR";		// used by Daemon Core
+DECL_SUBSYSTEM("COLLECTOR", SUBSYSTEM_TYPE_COLLECTOR );
 
 // the heart of the collector ...
 CollectorDaemon* Daemon;
@@ -49,6 +54,13 @@ int main_init(int argc, char *argv[])
 	
 	Daemon=new ViewServer();
 	Daemon->Init();
+
+#if HAVE_DLOPEN
+	CollectorPluginManager::Load();
+
+	CollectorPluginManager::Initialize();
+#endif
+
 	return TRUE;
 }
 

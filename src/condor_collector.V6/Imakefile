@@ -7,11 +7,20 @@ LIB = collector_engine.a $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS
 
 ENGINE_OBJ = hashkey.o collector_engine.o
 
+#if HAVE_DLOPEN
+# define PluginObj CollectorPlugin.o
+#else
+# define PluginObj
+#endif
+
+%-plugin.so: %.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -shared $< -o $@
+
 soapobjs(collector)
 
 OBJ = $(SOAP_OBJS) \
       collector_main.o collector.o view_server.o \
-      collector_instantiate.o totals.o collector_stats.o
+      collector_instantiate.o totals.o collector_stats.o PluginObj
 
 library_target(collector_engine.a, $(ENGINE_OBJ))
 

@@ -32,6 +32,7 @@
 #include "io_loop_pthread.h"
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
+#include "subsystem_info.h"
 
 #define MIN_WORKER_NUM 1
 #define AMAZON_GAHP_VERSION	"0.0.2"
@@ -41,7 +42,7 @@ int REQUEST_INBOX = 0; // stdin
 
 const char * version = "$GahpVersion " AMAZON_GAHP_VERSION " Feb 15 2008 Condor\\ AMAZONGAHP $";
 
-char *mySubSystem = "AMAZON_GAHP";	// used by Daemon Core
+DECL_SUBSYSTEM("AMAZON_GAHP", SUBSYSTEM_TYPE_GAHP);
 
 static IOProcess *ioprocess = NULL;
 

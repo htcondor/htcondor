@@ -36,6 +36,8 @@ class BaseResource
 
 	virtual void Reconfig();
 
+	virtual const char *ResourceType() = 0;
+
 	char *ResourceName();
 
 	virtual void RegisterJob( BaseJob *job );

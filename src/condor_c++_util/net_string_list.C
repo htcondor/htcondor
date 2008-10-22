@@ -44,8 +44,8 @@ NetStringList::NetStringList(const char *s, const char *delim )
 //
 // function returns a string pointer to the pattern it matched against.
 
-const char *
-NetStringList::string_withnetwork(const char *ip_address)
+bool
+NetStringList::find_matches_withnetwork(const char *ip_address,StringList *matches)
 {
 	char *x;
 	struct in_addr test_ip, base_ip, mask;
@@ -53,7 +53,7 @@ NetStringList::string_withnetwork(const char *ip_address)
 	// fill in test_ip
 	if (!is_ipaddr(ip_address, &test_ip)) {
 		// not even a valid IP
-		return NULL;
+		return false;
 	}
 
 	strings.Rewind();
@@ -66,11 +66,19 @@ NetStringList::string_withnetwork(const char *ip_address)
 			// test_ip and base_ip.  so, AND both of them with the mask,
 			// and then compare them.
 			if ((base_ip.s_addr & mask.s_addr) == (test_ip.s_addr & mask.s_addr)) {
-				return x;
+				if( matches ) {
+					matches->append( x );
+				}
+				else {
+					return true;
+				}
 			}
 		}
 	}
 
-	return NULL;
+	if( matches ) {
+		return !matches->isEmpty();
+	}
+	return false;
 }
 

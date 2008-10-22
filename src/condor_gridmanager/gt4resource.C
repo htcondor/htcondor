@@ -209,6 +209,11 @@ void GT4Resource::Reconfig()
 	}
 }
 
+const char *GT4Resource::ResourceType()
+{
+	return "gt4";
+}
+
 const char *GT4Resource::CanonicalName( const char *name )
 {
 /*

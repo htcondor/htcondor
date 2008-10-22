@@ -44,6 +44,7 @@
 #include "condor_ttdb.h"
 #include "jobqueuecollection.h"
 #include "dbms_utils.h"
+#include "subsystem_info.h"
 
 #if HAVE_ORACLE
 #undef ATTR_VERSION
@@ -52,7 +53,7 @@
 
 #define NUM_PARAMETERS 3
 
-char    *mySubSystem = "TOOL";
+DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
 
 static void Usage(char* name) 
 {

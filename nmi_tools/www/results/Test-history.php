@@ -255,11 +255,12 @@ while ($runidrow = mysql_fetch_array($results)) {
    			} // FOREACH 
       		echo "</tr>\n";
 			}
+		$gotests = "<a href=\"http://$host/results/Run-condor-details.php?runid=$runid&type=test&user=cndrauto\">";
       	echo "<tr>\n".
 				"<td>".
  			//"<td ".($task_status[$task] != PLATFORM_PASSED ? 
  				//"class=\"".$task_status[$task]."\"" : "").">".
- 				"<span title=\"$task\">".date("m/d/Y", $start)."</span></td>\n";
+ 				"<span title=\"$task\">$gotests".date("m/d/Y", $start)."</a></span></td>\n";
  				//"<span title=\"$task\">$runstart</span></td>\n";
       
       	foreach ($platforms AS $platform) {

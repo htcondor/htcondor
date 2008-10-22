@@ -70,6 +70,8 @@ template class HashBucket<MyString,int>;
 template class HashTable<MyString, MyString>;
 template class HashBucket<MyString, MyString>;
 template class HashTable<MyString, KeyCacheEntry*>;
+template class SimpleList<KeyCacheEntry*>;
+template class HashTable<MyString, SimpleList<KeyCacheEntry*>*>;
 template class Queue<char *>;
 template class HashTable<int, FileTransfer *>;
 template class HashTable<MyString, FileTransfer *>;
