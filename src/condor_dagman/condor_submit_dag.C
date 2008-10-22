@@ -112,6 +112,9 @@ void parseCommandLine(SubmitDagOptions &opts, int argc,
 bool parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
 			const char * const argv[], SubmitDagOptions &opts);
 int doRecursion( SubmitDagOptions &opts );
+int parseJobOrDagLine( const char *dagLine, StringList &tokens,
+			const char *fileType, const char *&submitOrDagFile,
+			const char *&directory );
 int runSubmit( const SubmitDagOptions &opts, const char *dagFile,
 			const char *directory );
 int setUpOptions( SubmitDagOptions &opts );
@@ -210,38 +213,23 @@ doRecursion( SubmitDagOptions &opts )
 			return 1;
 		}
 
-			// Find and parse JOB lines.
+			// Find and parse JOB and SUBDAG lines.
 		logicalLines.rewind();
 		const char *dagLine;
 		while ( (dagLine = logicalLines.next()) ) {
 			StringList tokens( dagLine, " \t" );
 			tokens.rewind();
 			const char *first = tokens.next();
+
 			if ( first && !strcasecmp( first, "JOB" ) ) {
 
-				const char *nodeName = tokens.next();
-				if ( !nodeName) {
-					fprintf( stderr, "No node name specified in "
-								"line: <%s>\n", dagLine );
+					// Get the submit file and directory from the DAG
+					// file line.
+				const char *subFile;
+				const char *directory;
+				if ( parseJobOrDagLine( dagLine, tokens, "submit",
+							subFile, directory ) != 0 ) {
 					return 1;
-				}
-
-				const char *subFile = tokens.next();
-				if ( !subFile ) {
-					fprintf( stderr, "No submit file specified in "
-								"line: <%s>\n", dagLine );
-					return 1;
-				}
-
-				const char *directory = NULL;
-				const char *dirKeyword = tokens.next();
-				if ( dirKeyword && !strcasecmp( dirKeyword, "DIR" ) ) {
-					directory = tokens.next();
-					if ( !directory ) {
-						fprintf( stderr, "No directory specified in "
-									"line: <%s>\n", dagLine );
-						return 1;
-					}
 				}
 
 					// Now figure out whether JOB line is a nested DAG.
@@ -260,40 +248,24 @@ doRecursion( SubmitDagOptions &opts )
 
 						// Now run condor_submit_dag on the DAG file.
 					if ( runSubmit( opts, submitFile.Value(),
-								directory ) == 1 ) {
+								directory ) != 0 ) {
 						result = 1;
 					}
 				}
 
 			} else if ( first && !strcasecmp( first, "SUBDAG" ) ) {
-				//TEMPTEMP -- a bunch of duplicate code here -- how hard to eliminate? -- make it a function?
-				const char *nodeName = tokens.next();
-				if ( !nodeName) {
-					fprintf( stderr, "No node name specified in "
-								"line: <%s>\n", dagLine );
-					return 1;
-				}
 
-				const char *subDagFile = tokens.next();
-				if ( !subDagFile ) {
-					fprintf( stderr, "No DAG file specified in "
-								"line: <%s>\n", dagLine );
+					// Get the nested DAG file and directory from the DAG
+					// file line.
+				const char *nestedDagFile;
+				const char *directory;
+				if ( parseJobOrDagLine( dagLine, tokens, "DAG",
+							nestedDagFile, directory ) != 0 ) {
 					return 1;
-				}
-
-				const char *directory = NULL;
-				const char *dirKeyword = tokens.next();
-				if ( dirKeyword && !strcasecmp( dirKeyword, "DIR" ) ) {
-					directory = tokens.next();
-					if ( !directory ) {
-						fprintf( stderr, "No directory specified in "
-									"line: <%s>\n", dagLine );
-						return 1;
-					}
 				}
 
 					// Now run condor_submit_dag on the DAG file.
-				if ( runSubmit( opts, subDagFile, directory ) == 1 ) {
+				if ( runSubmit( opts, nestedDagFile, directory ) != 0 ) {
 					result = 1;
 				}
 			}
@@ -301,6 +273,49 @@ doRecursion( SubmitDagOptions &opts )
 	}
 
 	return result;
+}
+
+//---------------------------------------------------------------------------
+/** Parse a JOB or SUBDAG line from a DAG file.
+	@param dagLine: the line we're parsing
+	@param tokens: tokens of this line
+	@param fileType: "submit" or "DAG" (to be used in error message)
+	@param submitOrDagFile: if successful, this will point to submit or
+		nested DAG file name
+	@param directory: if successful, this will point to directory (NULL
+		if not specified)
+	@return 0 if successful, 1 if failed
+*/
+int
+parseJobOrDagLine( const char *dagLine, StringList &tokens,
+			const char *fileType, const char *&submitOrDagFile,
+			const char *&directory )
+{
+	const char *nodeName = tokens.next();
+	if ( !nodeName) {
+		fprintf( stderr, "No node name specified in line: <%s>\n", dagLine );
+		return 1;
+	}
+
+	submitOrDagFile = tokens.next();
+	if ( !submitOrDagFile ) {
+		fprintf( stderr, "No %s file specified in "
+					"line: <%s>\n", fileType, dagLine );
+		return 1;
+	}
+
+	directory = NULL;
+	const char *dirKeyword = tokens.next();
+	if ( dirKeyword && !strcasecmp( dirKeyword, "DIR" ) ) {
+		directory = tokens.next();
+		if ( !directory ) {
+			fprintf( stderr, "No directory specified in "
+						"line: <%s>\n", dagLine );
+			return 1;
+		}
+	}
+
+	return 0;
 }
 
 //---------------------------------------------------------------------------
