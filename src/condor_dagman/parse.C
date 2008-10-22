@@ -418,8 +418,14 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 	}
 
 	// If this is a "SUBDAG" line, generate the real submit file name.
-	MyString dagSubmitFile;
+	MyString nestedDagFile("");
+	MyString dagSubmitFile(""); // must be outside if so it stays in scope
 	if ( !strcasecmp( nodeTypeKeyword, "SUBDAG" ) ) {
+			// Save original DAG file name (needed for rescue DAG).
+		nestedDagFile = submitFile;
+
+			// Generate the "real" submit file name (append ".condor.sub"
+			// to the DAG file name).
 		dagSubmitFile = submitFile;
 		dagSubmitFile += ".condor.sub";
 		submitFile = dagSubmitFile.Value();
@@ -433,6 +439,15 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 					  dagFile, lineNum, whynot.Value() );
 		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 		return false;
+	}
+
+	if ( nestedDagFile != "" ) {
+		if ( !SetNodeDagFile( dag, nodeName, nestedDagFile.Value(),
+					whynot ) ) {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
+					  	dagFile, lineNum, whynot.Value() );
+			return false;
+		}
 	}
 
 	MyString errMsg;

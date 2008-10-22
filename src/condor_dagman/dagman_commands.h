@@ -37,6 +37,16 @@ bool AddNode( Dag *dag, Job::job_type_t type, const char *name,
 			  const char *precmd, const char *postcmd, bool done,
 			  MyString &failReason );
 
+/** Set the DAG file (if any) for a node.
+	@param dag: the DAG this node is part of
+	@param nodeName: the name of the node
+	@param dagFile: the name of the DAG file
+	@param whynot: holds error message if something went wrong
+	@return true if successful, false otherwise
+*/
+bool SetNodeDagFile( Dag *dag, const char *nodeName, const char *dagFile,
+			MyString &whynot );
+
 bool IsValidNodeName( Dag *dm, const char *name, MyString &whynot );
 bool IsValidSubmitFileName( const char *name, MyString &whynot );
 
