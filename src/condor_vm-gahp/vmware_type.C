@@ -1153,7 +1153,9 @@ VMwareType::Shutdown()
 				// used basename because all parent disk files 
 				// were transferred. So we need to replace 
 				// the path with the path on submit machine.
+				priv_state old_priv = set_user_priv();
 				adjustConfigDiskPath();
+				set_priv( old_priv );
 			}
 			Unregister();
 
