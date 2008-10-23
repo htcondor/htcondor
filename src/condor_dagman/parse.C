@@ -208,6 +208,11 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 					   filename, lineNumber, tmpDirectory.Value() );
 		}
 
+		else if	(strcasecmp(token, "SUBDAG") == 0) {
+			parsed_line_successfully = parse_node( dag, Job::TYPE_CONDOR, token,
+					   filename, lineNumber, tmpDirectory.Value() );
+		}
+
 		// Handle a SCRIPT spec
 		// Example Syntax is:  SCRIPT (PRE|POST) JobName ScriptName Args ...
 		else if ( strcasecmp(token, "SCRIPT") == 0 ) {
@@ -351,7 +356,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 	nodeName = tmpNodeName.Value();
 
 		// next token is the submit file name
-	char *submitFile = strtok( NULL, DELIMITERS );
+	const char *submitFile = strtok( NULL, DELIMITERS );
 
 		// next token (if any) is "DIR" or "DONE"
 	const char *doneKey = NULL;
@@ -412,6 +417,20 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 		return false;
 	}
 
+	// If this is a "SUBDAG" line, generate the real submit file name.
+	MyString nestedDagFile("");
+	MyString dagSubmitFile(""); // must be outside if so it stays in scope
+	if ( !strcasecmp( nodeTypeKeyword, "SUBDAG" ) ) {
+			// Save original DAG file name (needed for rescue DAG).
+		nestedDagFile = submitFile;
+
+			// Generate the "real" submit file name (append ".condor.sub"
+			// to the DAG file name).
+		dagSubmitFile = submitFile;
+		dagSubmitFile += ".condor.sub";
+		submitFile = dagSubmitFile.Value();
+	}
+
 	// looks ok, so add it
 	if( !AddNode( dag, nodeType, nodeName, directory,
 				submitFile, NULL, NULL, done, whynot ) )
@@ -420,6 +439,15 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 					  dagFile, lineNum, whynot.Value() );
 		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 		return false;
+	}
+
+	if ( nestedDagFile != "" ) {
+		if ( !SetNodeDagFile( dag, nodeName, nestedDagFile.Value(),
+					whynot ) ) {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
+					  	dagFile, lineNum, whynot.Value() );
+			return false;
+		}
 	}
 
 	MyString errMsg;
