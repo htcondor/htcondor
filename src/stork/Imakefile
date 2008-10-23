@@ -6,16 +6,13 @@
 /* Specify Stork build configuration here. */
 #define WANT_STORK_API			YES
 #define WANT_STORK_GLOBUS		YES
-#if IS_LINUX_DEBIAN40
-/* SRB is not a free package, and so therefore not possible to release with
-	Debian. */
-#	define WANT_STORK_SRB		NO
-#else
-#	define WANT_STORK_SRB		YES
+#if HAVE_EXT_SRB
+#  define WANT_STORK_SRB		YES
 #endif
 #define WANT_STORK_UNITREE		YES
 #define WANT_STORK_SRM_CASTOR	YES
 #define WANT_STORK_SRM_DCACHE	YES
+
 /* Do not release NeST support publicly until NeST migrates from GPL to CPL
  * license.
  */
