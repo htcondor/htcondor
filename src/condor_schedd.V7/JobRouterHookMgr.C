@@ -23,6 +23,7 @@
 #include "JobRouterHookMgr.h"
 #include "status_string.h"
 #include "JobRouter.h"
+#include "condor_uid.h"
 
 extern JobRouter* job_router;
 
@@ -160,6 +161,8 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 			"failed to create translation client\n");
 		return -1;
 	}
+
+	set_user_from_ad(r_job->src_ad);
 	if (0 == spawn(translate_client, NULL, &hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
@@ -168,6 +171,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 		return -1;
 
 	}
+	uninit_user_ids();
 	
 	// Add our info to the list of hooks currently running for this job.
 	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_TRANSLATE_JOB))
@@ -225,6 +229,8 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 			"failed to create status update client\n");
 		return -1;
 	}
+
+	set_user_from_ad(r_job->src_ad);
 	if (0 == spawn(status_client, NULL, &hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
@@ -233,6 +239,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 		return -1;
 
 	}
+	uninit_user_ids();
 
 	// Add our info to the list of hooks currently running for this job.
 	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_UPDATE_JOB_INFO))
@@ -292,6 +299,8 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job, const char* sandbox)
 			"failed to create status exit client\n");
 		return -1;
 	}
+
+	set_user_from_ad(r_job->src_ad);
 	if (0 == spawn(exit_client, &args, &hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
@@ -300,6 +309,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job, const char* sandbox)
 		return -1;
 
 	}
+	uninit_user_ids();
 	
 	// Add our info to the list of hooks currently running for this job.
 	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_JOB_EXIT))
@@ -356,6 +366,8 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 			"failed to create status update client\n");
 		return -1;
 	}
+
+	set_user_from_ad(r_job->src_ad);
 	if (0 == spawn(cleanup_client, NULL, &hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
@@ -364,6 +376,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 		return -1;
 
 	}
+	uninit_user_ids();
 
 	// Add our info to the list of hooks currently running for this job.
 	if (false == JobRouterHookMgr::addKnownHook(key.c_str(), HOOK_JOB_CLEANUP))
@@ -697,4 +710,27 @@ CleanupClient::hookExited(int exit_status)
 			"HOOK_JOB_CLEANUP (%s) failed (%s)\n", m_hook_path, 
 			error_msg.Value());
 	}
+}
+
+
+void set_user_from_ad(classad::ClassAd const &ad)
+{
+        std::string owner;
+        std::string domain;
+        if( 0 == ad.EvaluateAttrString(ATTR_OWNER,owner) ) {
+                classad::ClassAd ad_copy;
+                ClassAd old_ad;
+                ad_copy = ad;
+                if(new_to_old(ad_copy,old_ad)) {
+                        old_ad.dPrint(D_ALWAYS);
+                }
+                EXCEPT("Failed to find %s in job ad.",ATTR_OWNER);
+        }
+        ad.EvaluateAttrString(ATTR_NT_DOMAIN,domain);
+
+        if( 0 == init_user_ids(owner.c_str(),domain.c_str()) ) {
+                EXCEPT("Failed in init_user_ids(%s,%s)",owner.c_str(),domain.c_str());
+        }
+
+        return;
 }

@@ -144,4 +144,7 @@ protected:
 };
 
 
+void set_user_from_ad(classad::ClassAd const &ad);
+
+
 #endif /* _CONDOR_JOB_ROUTER_HOOK_MGR_H */
