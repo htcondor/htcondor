@@ -317,6 +317,20 @@ class Job {
 	*/
 	void PrefixDirectory(MyString &prefix);
 
+	/** Set the DAG file (if any) for this node.  (This is set for nested
+			DAGs defined with the "SUBDAG" keyword.)
+		@param dagFile: the name of the DAG file
+	*/
+	void SetDagFile( const char *dagFile );
+
+	/** Get the DAG file name (if any) for this node.  (This is set for nested
+			DAGs defined with the "SUBDAG" keyword.)
+		@return the DAG file name, or NULL if none
+	*/
+	const char *GetDagFile() const {
+		return _dagFile;
+	}
+
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
@@ -405,9 +419,13 @@ private:
 
     // filename of condor submit file
     char * _cmdFile;
+
+	// Filename of DAG file (only for nested DAGs specified with "SUBDAG",
+	// otherwise NULL).
+	char *_dagFile;
   
     // name given to the job by the user
-    const char* _jobName;
+    char* _jobName;
   
     /*  Job queues
 	    NOTE: indexed by queue_t

@@ -60,12 +60,13 @@ const char* Job::_job_type_names[] = {
 Job::~Job() {
 	delete [] _directory;
 	delete [] _cmdFile;
+	delete [] _dagFile;
     // NOTE: we cast this to char* because older MS compilers
     // (contrary to the ISO C++ spec) won't allow you to delete a
     // const.  This has apparently been fixed in Visual C++ .NET, but
     // as of 6/2004 we don't yet use that.  For details, see:
     // http://support.microsoft.com/support/kb/articles/Q131/3/22.asp
-	delete [] (char*)_jobName;
+	delete [] _jobName;
 	delete [] _logFile;
 	delete varNamesFromDag;
 	delete varValsFromDag;
@@ -102,6 +103,7 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
     _jobName = strnewp (jobName);
 	_directory = strnewp (directory);
     _cmdFile = strnewp (cmdFile);
+	_dagFile = NULL;
 	_throttleInfo = NULL;
 
 	if ( (_jobType == TYPE_CONDOR) && prohibitMultiJobs ) {
@@ -685,7 +687,7 @@ Job::PrefixName(const MyString &prefix)
 
 	tmp = prefix + tmp;
 
-	delete[] (char*)_jobName;
+	delete[] _jobName;
 
 	_jobName = strnewp(tmp.Value());
 }
@@ -707,3 +709,10 @@ Job::ResolveVarsInterpolations(void)
 	}
 }
 
+//---------------------------------------------------------------------------
+void
+Job::SetDagFile(const char *dagFile)
+{
+	delete _dagFile;
+	_dagFile = strnewp( dagFile );
+}
