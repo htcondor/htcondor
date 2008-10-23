@@ -58,10 +58,4 @@ void parse_param_string(const char *line, MyString &name, MyString &value, bool 
 // name consists of user + cluster id + proc id
 bool create_name_for_VM(ClassAd *ad, MyString& vmname);
 
-// put a temporary value into current environment
-// Old value will stored into oldValue
-bool set_temporary_env(const char *envName, const char* envValue, MyString *oldValue);
-
-// If prog has setuid-root, true will be returned.
-bool has_root_setuid(const char *prog);
 #endif /* VM_UNIV_UTILS_H */

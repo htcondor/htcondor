@@ -1469,24 +1469,10 @@ VMGahpServer::killVM(void)
 	systemcmd.AppendArg(matchstring);
 
 #if !defined(WIN32)
-	MyString oldValue;
-	const char *envName = NULL;
-
-	if( !can_switch_ids() && has_root_setuid(m_vmgahp_server.Value()) ) {
-		// Condor runs as user and vmgahp has setuid-root
-		// We need to set CONDOR_IDS environment
-		envName = EnvGetName(ENV_UG_IDS);
-		if( envName ) {
-			MyString tmp_str;
-			tmp_str.sprintf("%d.%d", (int)get_condor_uid(), (int)get_condor_gid());
-			set_temporary_env(envName, tmp_str.Value(), &oldValue);
-		}
-	}
-
 	if( can_switch_ids() ) {
 		MyString tmp_str;
 		tmp_str.sprintf("%d", (int)get_condor_uid());
-		set_temporary_env("VMGAHP_USER_UID", tmp_str.Value(), &oldValue);
+		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
 	}
 #endif
 
@@ -1498,12 +1484,6 @@ VMGahpServer::killVM(void)
 	}
 	int ret = my_system(systemcmd);
 	set_priv(oldpriv);
-
-#if !defined(WIN32)
-	if( envName ) {
-		set_temporary_env(envName, oldValue.GetCStr(), NULL);
-	}
-#endif
 
 	if( ret == 0 ) {
 		dprintf( D_FULLDEBUG, "VMGahpServer::killVM() is called with "
