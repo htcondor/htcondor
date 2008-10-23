@@ -27,7 +27,7 @@
 #
 
 usage() {
-	echo $"Usage: $0 virsh {start|stop|suspend|resume|pause|unpause|status|getvminfo|check|killvm|createiso|createconfig}" 1>&2
+	echo $"Usage: $0 {start|stop|suspend|resume|pause|unpause|status|getvminfo|check|killvm|createiso|createconfig}" 1>&2
 	exit 1
 }
 
@@ -35,7 +35,7 @@ if [ -z "$1" ] ; then
 	usage;
 fi
 
-XM=$1
+XM="virsh"
 CTRL_PROG=`basename $XM`
 MKISOFS="mkisofs"
 PROG="$0"
@@ -445,42 +445,42 @@ if [ $ID != 0 ]; then
 	exit 1
 fi
 
-case "$2" in
+case "$1" in
   start)
-	start "$3"
+	start "$2"
    	;;
   stop)
-   	stop "$3"
+   	stop "$2"
    	;;
   suspend)
-  	suspend "$3" "$4"
+  	suspend "$2" "$3"
 	;;
   resume)
-  	resume "$3"
+  	resume "$2"
 	;;
   pause)
-  	pause "$3"
+  	pause "$2"
 	;;
   unpause)
-  	unpause "$3"
+  	unpause "$2"
 	;;
   status)
-  	status "$3"
+  	status "$2"
 	;;
   getvminfo)
-  	getvminfo "$3"
+  	getvminfo "$2"
 	;;
   check)
   	check
 	;;
   killvm)
-    killvm "$3"
+    killvm "$2"
 	;;
   createiso)
-  	createiso "$3" "$4"
+  	createiso "$2" "$3"
 	;;
   createconfig)
-  	createconfig "$3"
+  	createconfig "$2"
 	;;
    *)
    	usage

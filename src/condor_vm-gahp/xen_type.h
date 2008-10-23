@@ -40,7 +40,7 @@ class XenType : public VMType
 public:
 	static bool checkXenParams(VMGahpConfig* config);
 	static bool testXen(VMGahpConfig* config);
-	static bool killVMFast(const char* script, const char* vmname, const char* controller);
+	static bool killVMFast(const char* script, const char* vmname);
 
 	XenType(const char* scriptname, const char* workingpath, ClassAd* ad);
 
@@ -77,12 +77,11 @@ private:
 	bool findCkptConfigAndSuspendFile(MyString &config, MyString &suspendfile);
 	bool checkCkptSuspendFile(const char* file);
 	bool ResumeFromSoftSuspend(void);
-	bool CreateXenVMCofigFile(const char* controller, const char* filename);
+	bool CreateXenVMCofigFile(const char* filename);
 	bool CreateVirshConfigFile(const char* filename);
 
 	SimpleList<XenDisk*> m_disk_list;
 
-	MyString m_xen_controller;
 	MyString m_xen_cdrom_device;
 	MyString m_suspendfile;
 	float m_cputime_before_suspend;

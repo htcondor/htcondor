@@ -467,7 +467,7 @@ int main_init(int argc, char *argv[])
 #if defined(LINUX)
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN ) == 0 ) {
 			XenType::killVMFast(gahpconfig->m_vm_script.Value(), 
-					matchstring.Value(), gahpconfig->m_controller.Value());
+					matchstring.Value());
 		}else
 #endif
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {

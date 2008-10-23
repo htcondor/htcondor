@@ -141,7 +141,6 @@ XenType::Start()
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("start");
 	systemcmd.AppendArg(m_configfile);
 
@@ -217,7 +216,6 @@ XenType::Shutdown()
 	if( getVMStatus() == VM_RUNNING ) {
 		ArgList systemcmd;
 		systemcmd.AppendArg(m_scriptname);
-		systemcmd.AppendArg(m_xen_controller);
 		systemcmd.AppendArg("stop");
 		systemcmd.AppendArg(m_configfile);
 
@@ -294,7 +292,6 @@ XenType::ResumeFromSoftSuspend(void)
 	if( m_is_soft_suspended ) {
 		ArgList systemcmd;
 		systemcmd.AppendArg(m_scriptname);
-		systemcmd.AppendArg(m_xen_controller);
 		systemcmd.AppendArg("unpause");
 		systemcmd.AppendArg(m_configfile);
 
@@ -332,7 +329,6 @@ XenType::SoftSuspend()
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("pause");
 	systemcmd.AppendArg(m_configfile);
 
@@ -385,7 +381,6 @@ XenType::Suspend()
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("suspend");
 	systemcmd.AppendArg(m_configfile);
 	systemcmd.AppendArg(tmpfilename);
@@ -439,7 +434,6 @@ XenType::Resume()
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("resume");
 	systemcmd.AppendArg(m_suspendfile);
 
@@ -498,7 +492,6 @@ XenType::Status()
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg(m_xen_controller);
 	if( m_vm_networking ) {
 		systemcmd.AppendArg("getvminfo");
 	}else {
@@ -842,9 +835,9 @@ virshwriteerror:
 }
 
 bool
-XenType::CreateXenVMCofigFile(const char* controller, const char* filename)
+XenType::CreateXenVMCofigFile(const char* filename)
 {
-	if( !controller || !filename ) {
+	if( !filename ) {
 		return false;
 	}
 
@@ -865,29 +858,6 @@ XenType::CreateConfigFile()
 	if( m_vm_mem < 32 ) {
 		// Allocating less than 32MBs is not recommended in Xen.
 		m_vm_mem = 32;
-	}
-
-	// First try to read XEN_CONTROLLER
-	config_value = param("XEN_CONTROLLER");
-	if( !config_value ) {
-		vmprintf(D_ALWAYS, "\nERROR: You should define 'XEN_CONTROLLER' "
-				"in vmgahp config file\n");
-		m_result_msg = VMGAHP_ERR_CRITICAL;
-		return false;
-	}else {
-		m_xen_controller = delete_quotation_marks(config_value);
-		free(config_value);
-
-		// check if this xen controller is supported 
-		const char* tmp_base_name = condor_basename(m_xen_controller.Value());
-
-		if( strcmp(tmp_base_name, "xm") && strcmp(tmp_base_name, "virsh") ) {
-			vmprintf(D_ALWAYS, "\nERROR: Not supported xen controller(%s), "
-					"XEN_CONTROLLER should be either 'xm' or 'virsh'\n", 
-					m_xen_controller.Value());
-			m_result_msg = VMGAHP_ERR_CRITICAL;
-			return false;
-		}
 	}
 
 	// Read the parameter of Xen kernel
@@ -1065,7 +1035,7 @@ XenType::CreateConfigFile()
 	tmp_config_name.sprintf("%s%c%s",m_workingpath.Value(), 
 			DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME);
 
-	if( CreateXenVMCofigFile(m_xen_controller.Value(), tmp_config_name.Value()) 
+	if( CreateXenVMCofigFile(tmp_config_name.Value()) 
 			== false ) {
 		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
@@ -1344,26 +1314,6 @@ XenType::checkXenParams(VMGahpConfig* config)
 		return false;
 	}
 
-	// First try to read XEN_CONTROLLER
-	config_value = param("XEN_CONTROLLER");
-	if( !config_value ) {
-		vmprintf(D_ALWAYS,
-		         "\nERROR: 'XEN_CONTROLLER' not defined in configuration\n");
-		return false;
-	}
-	fixedvalue = delete_quotation_marks(config_value);
-	free(config_value);
-
-	// check if this xen controller is supported 
-	const char* tmp_base_name = condor_basename(fixedvalue.Value());
-	if( strcmp(tmp_base_name, "xm") && strcmp(tmp_base_name, "virsh") ) {
-		vmprintf(D_ALWAYS, "\nERROR: Not supported xen controller(%s), "
-				"XEN_CONTROLLER should be either 'xm' or 'virsh'\n", 
-				fixedvalue.Value());
-		return false;
-	}
-	config->m_controller = fixedvalue;
-
 	// find script program for Xen
 	config_value = param("XEN_SCRIPT");
 	if( !config_value ) {
@@ -1468,7 +1418,6 @@ XenType::testXen(VMGahpConfig* config)
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(config->m_vm_script);
-	systemcmd.AppendArg(config->m_controller);
 	systemcmd.AppendArg("check");
 
 	int result = systemCommand(systemcmd, true);
@@ -1619,12 +1568,11 @@ XenType::killVM()
 	// If a VM is soft suspended, resume it first.
 	ResumeFromSoftSuspend();
 
-	return killVMFast(m_scriptname.Value(), m_vm_name.Value(), 
-			m_xen_controller.Value());
+	return killVMFast(m_scriptname.Value(), m_vm_name.Value());
 }
 
 bool
-XenType::killVMFast(const char* script, const char* vmname, const char* controller)
+XenType::killVMFast(const char* script, const char* vmname)
 {
 	vmprintf(D_FULLDEBUG, "Inside XenType::killVMFast\n");
 	
@@ -1635,7 +1583,6 @@ XenType::killVMFast(const char* script, const char* vmname, const char* controll
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(script);
-	systemcmd.AppendArg(controller);
 	systemcmd.AppendArg("killvm");
 	systemcmd.AppendArg(vmname);
 
@@ -1669,7 +1616,6 @@ XenType::createISO()
 		systemcmd.AppendArg(m_prog_for_script);
 	}
 	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("createiso");
 	systemcmd.AppendArg(tmp_config);
 	systemcmd.AppendArg(tmp_file);
