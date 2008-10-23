@@ -262,9 +262,10 @@ SubsystemInfoTable::lookup( SubsystemClass _class ) const
 const SubsystemInfoLookup *
 SubsystemInfoTable::lookup( const char *_name ) const
 {
+	int		i;
 
 	// Pass 1: look for exact match
-	for ( int i=0;  i<m_Count;  i++ ) {
+	for ( i=0;  i<m_Count;  i++ ) {
 		const SubsystemInfoLookup *cur = getValidEntry(i);
 		if ( !cur ) {
 			break;
@@ -274,7 +275,7 @@ SubsystemInfoTable::lookup( const char *_name ) const
 		}
 	}
 	// Pass 2: look for substring match
-	for ( int i=0;  i<m_Count;  i++ ) {
+	for ( i=0;  i<m_Count;  i++ ) {
 		const SubsystemInfoLookup *cur = getValidEntry(i);
 		if ( !cur ) {
 			break;
