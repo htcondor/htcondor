@@ -20,6 +20,7 @@
 #ifndef STAT_WRAPPER_H
 #define STAT_WRAPPER_H
 
+#include "MyString.h"
 #include "stat_struct.h"
 #include "stat_wrapper_internal.h"
 

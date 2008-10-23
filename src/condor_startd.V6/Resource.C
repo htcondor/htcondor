@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,13 +33,13 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	MyString tmp;
 	char* tmpName;
 
-		// we need this before we instantiate any Claim objects... 
+		// we need this before we instantiate any Claim objects...
 	r_id = rid;
 	char* name_prefix = param( "STARTD_RESOURCE_PREFIX" );
 	if( name_prefix ) {
 		tmp.sprintf( "%s%d", name_prefix, rid );
 		free( name_prefix );
-	} else { 
+	} else {
 		tmp.sprintf( "slot%d", rid );
 	}
 	r_id_str = strdup( tmp.Value() );
@@ -105,9 +105,9 @@ Resource::Resource( CpuAttributes* cap, int rid )
 #endif
 
 	if( r_attr->type() ) {
-		dprintf( D_ALWAYS, "New machine resource of type %d allocated\n",  
+		dprintf( D_ALWAYS, "New machine resource of type %d allocated\n",
 				 r_attr->type() );
-	} else { 
+	} else {
 		dprintf( D_ALWAYS, "New machine resource allocated\n" );
 	}
 }
@@ -138,16 +138,16 @@ Resource::~Resource()
 
 	delete r_state;
 	delete r_classad;
-	delete r_cur;		
+	delete r_cur;
 	if( r_pre ) {
-		delete r_pre;		
+		delete r_pre;
 	}
 	if( r_pre_pre ) {
 		delete r_pre_pre;
 	}
 	delete r_cod_mgr;
-	delete r_reqexp;   
-	delete r_attr;		
+	delete r_reqexp;
+	delete r_attr;
 	delete r_load_queue;
 	free( r_name );
 	free( r_id_str );
@@ -176,7 +176,7 @@ Resource::retire_claim( void )
 #if HAVE_BACKFILL
 	case backfill_state:
 			// we don't want retirement to mean anything special for
-			// backfill jobs... they should be killed immediately 
+			// backfill jobs... they should be killed immediately
 		set_destination_state( owner_state );
 		return TRUE;
 #endif /* HAVE_BACKFILL */
@@ -286,7 +286,7 @@ Resource::request_new_proc( void )
 	} else {
 		return FALSE;
 	}
-}	
+}
 
 
 int
@@ -295,7 +295,7 @@ Resource::deactivate_claim( void )
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
 	if( state() == claimed_state ) {
 		return r_cur->deactivateClaim( true );
-	} 
+	}
 	return FALSE;
 }
 
@@ -306,7 +306,7 @@ Resource::deactivate_claim_forcibly( void )
 	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");
 	if( state() == claimed_state ) {
 		return r_cur->deactivateClaim( false );
-	} 
+	}
 	return FALSE;
 }
 
@@ -373,7 +373,6 @@ Resource::shutdownAllClaims( bool graceful )
 	return TRUE;
 }
 
-
 bool
 Resource::needsPolling( void )
 {
@@ -410,7 +409,7 @@ Resource::hasOppClaim( void )
 }
 
 
-// This one checks if the Resource has *any* claims 
+// This one checks if the Resource has *any* claims
 bool
 Resource::hasAnyClaim( void )
 {
@@ -434,8 +433,8 @@ Resource::suspendForCOD( void )
 	r_reqexp->unavail();
 
 	beginCODLoadHack();
-	
-	switch( r_cur->state() ) { 
+
+	switch( r_cur->state() ) {
 
     case CLAIM_RUNNING:
 		dprintf( D_ALWAYS, "State change: Suspending because a COD "
@@ -460,7 +459,7 @@ Resource::suspendForCOD( void )
 				 "claim is unavailable\n" );
 		break;
 	}
-	if( ! did_update ) { 
+	if( ! did_update ) {
 		update();
 	}
 }
@@ -485,7 +484,7 @@ Resource::resumeForCOD( void )
 
 	startTimerToEndCODLoadHack();
 
-	switch( r_cur->state() ) { 
+	switch( r_cur->state() ) {
 
     case CLAIM_RUNNING:
 		dprintf( D_ALWAYS, "ERROR: trying to resume opportunistic "
@@ -496,7 +495,7 @@ Resource::resumeForCOD( void )
     case CLAIM_VACATING:
     case CLAIM_KILLING:
 			// do we even want to print this one?
-		dprintf( D_FULLDEBUG, "No running COD job, but opportunistic " 
+		dprintf( D_FULLDEBUG, "No running COD job, but opportunistic "
 				 "claim is already preempting\n" );
 		break;
 
@@ -512,7 +511,7 @@ Resource::resumeForCOD( void )
 				 "claim is now available\n" );
 		break;
 	}
-	if( ! did_update ) { 
+	if( ! did_update ) {
 		update();
 	}
 }
@@ -521,7 +520,7 @@ Resource::resumeForCOD( void )
 void
 Resource::hackLoadForCOD( void )
 {
-	if( ! r_hack_load_for_cod ) { 
+	if( ! r_hack_load_for_cod ) {
 		return;
 	}
 
@@ -540,11 +539,11 @@ Resource::hackLoadForCOD( void )
 	if( DebugFlags & D_FULLDEBUG && DebugFlags & D_LOAD ) {
 		if( r_cod_mgr->isRunning() ) {
 			dprintf( D_LOAD, "COD job current running, using "
-					 "'%s', '%s' for internal policy evaluation\n",  
+					 "'%s', '%s' for internal policy evaluation\n",
 					 load.Value(), c_load.Value() );
 		} else {
 			dprintf( D_LOAD, "COD job recently ran, using '%s', '%s' "
-					 "for internal policy evaluation\n", 
+					 "for internal policy evaluation\n",
 					 load.Value(), c_load.Value() );
 		}
 	}
@@ -603,7 +602,7 @@ Resource::starterExited( Claim* cur_claim )
 		leave_preempting_state();
 		break;
 	default:
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 				 "Warning: starter exited while in unexpected state %s\n",
 				 state_to_string(s) );
 		change_state( owner_state );
@@ -616,7 +615,7 @@ Claim*
 Resource::findClaimByPid( pid_t starter_pid )
 {
 		// first, check our opportunistic claim (there's never a
-		// starter for r_pre, so we don't have to check that. 
+		// starter for r_pre, so we don't have to check that.
 	if( r_cur && r_cur->starterPidMatches(starter_pid) ) {
 		return r_cur;
 	}
@@ -656,7 +655,7 @@ Claim*
 Resource::findClaimByGlobalJobId( const char* id )
 {
 		// first, try our active claim, since that's the only one that
-		// should have it...  
+		// should have it...
 	if( r_cur && r_cur->globalJobIdMatches(id) ) {
 		return r_cur;
 	}
@@ -704,7 +703,7 @@ Resource::newCODClaim( int lease_duration )
 }
 
 
-/* 
+/*
    This function is called whenever we're in the preempting state
    without a starter.  This situation occurs b/c either the starter
    has finally exited after being told to go away, or we preempted a
@@ -719,7 +718,7 @@ Resource::leave_preempting_state( void )
 	int tmp;
 
 	r_cur->vacate();	// Send a vacate to the client of the claim
-	delete r_cur;		
+	delete r_cur;
 	r_cur = NULL;
 
 	// NOTE: all exit paths from this function should call remove_pre()
@@ -746,37 +745,37 @@ Resource::leave_preempting_state( void )
 		change_state( dest );
 		return;
 		break;
-	case no_state: 
+	case no_state:
 			// No destination set, use old logic.
 		break;
 	default:
-		EXCEPT( "Unexpected destination (%s) in leave_preempting_state()", 
+		EXCEPT( "Unexpected destination (%s) in leave_preempting_state()",
 				state_to_string(dest) );
 	}
 
 		// Old logic.  This can be ripped out once all the destination
 		// state stuff is fully used and implimented.
- 
+
 		// In english:  "If the machine is available and someone
-		// is waiting for it..." 
+		// is waiting for it..."
 	bool allow_it = false;
 	if( r_pre && r_pre->requestStream() ) {
 		allow_it = true;
-		if( (r_classad->EvalBool("START", r_pre->ad(), tmp)) 
+		if( (r_classad->EvalBool("START", r_pre->ad(), tmp))
 			&& !tmp ) {
 				// Only if it's defined and false do we consider the
 				// machine busy.  We have a job ad, so local
 				// evaluation gotchas don't apply here.
-			dprintf( D_ALWAYS, 
+			dprintf( D_ALWAYS,
 					 "State change: preempting claim refused - START is false\n" );
 			allow_it = false;
 		} else {
-			dprintf( D_ALWAYS, 
+			dprintf( D_ALWAYS,
 					 "State change: preempting claim exists - "
 					 "START is true or undefined\n" );
 		}
 	} else {
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 				 "State change: No preempting claim, returning to owner\n" );
 	}
 
@@ -807,7 +806,7 @@ Resource::init_classad( void )
 		// init_classad is being called, we don't necessarily have
 		// classads for the other slots, yet we'll publish the SHARED_SLOT
 		// attrs after this...
-	
+
 	return TRUE;
 }
 
@@ -844,7 +843,7 @@ Resource::reconfig( void )
 	m_hook_keyword_initialized = false;
 #endif /* HAVE_JOB_HOOKS */
 	// This bogus return makes the prototype happy for ResMgr::walk().
-	return TRUE;  
+	return TRUE;
 }
 
 
@@ -865,7 +864,7 @@ Resource::update( void )
 		}
 
 		// set a timer for the update
-		update_tid = daemonCore->Register_Timer( 
+		update_tid = daemonCore->Register_Timer(
 						timeout,
 						(TimerHandlercpp)&Resource::do_update,
 						"do_update",
@@ -877,7 +876,7 @@ Resource::update( void )
 		update_tid = -1;
 		ret_value = FALSE;
 	}
-		
+
 	return ret_value;
 }
 
@@ -888,29 +887,14 @@ Resource::do_update( void )
 	ClassAd private_ad;
 	ClassAd public_ad;
 
-	this->publish( &public_ad, A_ALL_PUB );
-	if( vmapi_is_usable_for_condor() == FALSE ) {
-		public_ad.InsertOrUpdate( "Start = False" );
-	}
-
-	if( vmapi_is_virtual_machine() == TRUE ) {
-		ClassAd* host_classad;
-		host_classad = vmapi_get_host_classAd();
-		MergeClassAds( &public_ad, host_classad, true);
-	}
-
-	this->publish( &private_ad, A_PRIVATE | A_ALL );
-
-		// log classad into sql log so that it can be updated to DB
-	if (FILEObj) {
-		FILESQL::daemonAdInsert(&public_ad, "Machines", FILEObj, prevLHF);
-	}	
+        // Get the public and private ads
+    publish_for_update( &public_ad, &private_ad );
 
 		// Send class ads to collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
-								&private_ad, true ); 
+								&private_ad, true );
 	if( rval ) {
-		dprintf( D_FULLDEBUG, "Sent update to %d collector(s)\n", rval ); 
+		dprintf( D_FULLDEBUG, "Sent update to %d collector(s)\n", rval );
 	} else {
 		dprintf( D_ALWAYS, "Error sending update to collector(s)\n" );
 	}
@@ -922,9 +906,31 @@ Resource::do_update( void )
 	return rval;
 }
 
+void
+Resource::publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad )
+{
+    this->publish( public_ad, A_ALL_PUB );
+    if( vmapi_is_usable_for_condor() == FALSE ) {
+        public_ad->InsertOrUpdate( "Start = False" );
+    }
+
+    if( vmapi_is_virtual_machine() == TRUE ) {
+        ClassAd* host_classad;
+        host_classad = vmapi_get_host_classAd();
+        MergeClassAds( public_ad, host_classad, true);
+    }
+
+    this->publish( private_ad, A_PRIVATE | A_ALL );
+
+    // log classad into sql log so that it can be updated to DB
+    if (FILEObj) {
+        FILESQL::daemonAdInsert(public_ad, "Machines", FILEObj, prevLHF);
+	}
+}
+
 
 void
-Resource::final_update( void ) 
+Resource::final_update( void )
 {
 	ClassAd invalidate_ad;
 	char line[256];
@@ -934,11 +940,119 @@ Resource::final_update( void )
 	invalidate_ad.SetTargetTypeName( STARTD_ADTYPE );
 
 		// We only want to invalidate this slot.
-	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, 
+	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME,
 			 r_name );
 	invalidate_ad.Insert( line );
 
 	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
+}
+
+
+int
+Resource::update_with_ack( void )
+{
+    const int timeout = 5;
+    Daemon    collector ( DT_COLLECTOR );
+
+    if ( !collector.locate () ) {
+
+        dprintf (
+            D_FULLDEBUG,
+            "Failed to locate collector host.\n" );
+
+        return FALSE;
+
+    }
+
+    char     *address = collector.addr ();
+    ReliSock *socket  = (ReliSock*) collector.startCommand (
+        UPDATE_STARTD_AD_WITH_ACK );
+
+    if ( !socket ) {
+
+        dprintf (
+            D_FULLDEBUG,
+            "update_with_ack: "
+            "Failed to send UPDATE_STARTD_AD_WITH_ACK command "
+            "to collector host %s.\n",
+            address );
+
+        return FALSE;
+
+	}
+
+    socket->timeout ( timeout );
+    socket->encode ();
+
+    ClassAd public_ad,
+            private_ad;
+
+    /* get the public and private ads */
+    publish_for_update( &public_ad, &private_ad );
+
+    if ( !public_ad.put ( *socket ) ) {
+
+        dprintf (
+            D_FULLDEBUG,
+            "update_with_ack: "
+            "Failed to send public ad to collector host %s.\n",
+            address );
+
+        return FALSE;
+
+    }
+
+    if ( !private_ad.put ( *socket ) ) {
+
+		dprintf (
+            D_FULLDEBUG,
+            "update_with_ack: "
+            "Failed to send private ad to collector host %s.\n",
+            address );
+
+        return FALSE;
+
+    }
+
+    if ( !socket->eom () ) {
+
+        dprintf (
+            D_FULLDEBUG,
+            "update_with_ack: "
+            "Failed to send update EOM to collector host %s.\n",
+            address );
+
+        return FALSE;
+
+	}
+
+    socket->timeout ( timeout ); /* still more research... */
+	socket->decode ();
+
+    int ack     = 0,
+        success = TRUE;
+
+    if ( !socket->code ( ack ) ) {
+
+        dprintf (
+            D_FULLDEBUG,
+            "update_with_ack: "
+            "Failed to send query EOM to collector host %s.\n",
+            address );
+
+        /* looks like we didn't get the ack, so we need to fail so
+        that we don't enter hibernation and eventually become
+        unreachable because our machine ad is invalidated by the
+        collector */
+
+        success = FALSE;
+
+    }
+
+    socket->eom ();
+
+    return success;
+
 }
 
 
@@ -978,25 +1092,25 @@ Resource::wants_vacate( void )
 	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
 		if( r_classad->EvalBool("WANT_VACATE_VANILLA",
 								r_cur->ad(),
-								want_vacate ) ) { 
+								want_vacate ) ) {
 			dprintf( D_ALWAYS, "State change: WANT_VACATE_VANILLA is %s\n",
 					 want_vacate ? "TRUE" : "FALSE" );
 			unknown = false;
 		}
-	} 
+	}
 	if( r_cur->universe() == CONDOR_UNIVERSE_VM ) {
 		if( r_classad->EvalBool("WANT_VACATE_VM",
 								r_cur->ad(),
-								want_vacate ) ) { 
+								want_vacate ) ) {
 			dprintf( D_ALWAYS, "State change: WANT_VACATE_VM is %s\n",
 					 want_vacate ? "TRUE" : "FALSE" );
 			unknown = false;
 		}
-	} 
+	}
 	if( unknown ) {
 		if( r_classad->EvalBool( "WANT_VACATE",
 								 r_cur->ad(),
-								 want_vacate ) == 0) { 
+								 want_vacate ) == 0) {
 
 			dprintf( D_ALWAYS,
 					 "In Resource::wants_vacate() with undefined WANT_VACATE\n" );
@@ -1009,7 +1123,7 @@ Resource::wants_vacate( void )
 				dprintf( D_ALWAYS, "ERROR! No job ad!!!!\n" );
 			}
 
-				// This should never happen, since we already check 
+				// This should never happen, since we already check
 				// when we're constructing the internal config classad
 				// if we've got this defined. -Derek Wright 4/12/00
 			EXCEPT( "WANT_VACATE undefined in internal ClassAd" );
@@ -1021,7 +1135,7 @@ Resource::wants_vacate( void )
 }
 
 
-int 
+int
 Resource::wants_suspend( void )
 {
 	int want_suspend;
@@ -1029,21 +1143,21 @@ Resource::wants_suspend( void )
 	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
 		if( r_classad->EvalBool("WANT_SUSPEND_VANILLA",
 								r_cur->ad(),
-								want_suspend) ) {  
+								want_suspend) ) {
 			unknown = false;
 		}
 	}
 	if( r_cur->universe() == CONDOR_UNIVERSE_VM ) {
 		if( r_classad->EvalBool("WANT_SUSPEND_VM",
 								r_cur->ad(),
-								want_suspend) ) {  
+								want_suspend) ) {
 			unknown = false;
 		}
 	}
-	if( unknown ) { 
+	if( unknown ) {
 		if( r_classad->EvalBool( "WANT_SUSPEND",
 								   r_cur->ad(),
-								   want_suspend ) == 0) { 
+								   want_suspend ) == 0) {
 				// This should never happen, since we already check
 				// when we're constructing the internal config classad
 				// if we've got this defined. -Derek Wright 4/12/00
@@ -1054,13 +1168,13 @@ Resource::wants_suspend( void )
 }
 
 
-int 
+int
 Resource::wants_pckpt( void )
 {
-	int want_pckpt; 
+	int want_pckpt;
 	bool unknown = true;
 
-	if( (r_cur->universe() != CONDOR_UNIVERSE_STANDARD) && 
+	if( (r_cur->universe() != CONDOR_UNIVERSE_STANDARD) &&
 			(r_cur->universe() != CONDOR_UNIVERSE_VM)) {
 		return FALSE;
 	}
@@ -1068,14 +1182,14 @@ Resource::wants_pckpt( void )
 	if( r_cur->universe() == CONDOR_UNIVERSE_VM ) {
 		if( r_classad->EvalBool("PERIODIC_CHECKPOINT_VM",
 					r_cur->ad(),
-					want_pckpt) ) {  
+					want_pckpt) ) {
 			unknown = false;
 		}
 	}
 	if( unknown ) {
 		if( r_classad->EvalBool( "PERIODIC_CHECKPOINT",
 					r_cur->ad(),
-					want_pckpt ) == 0) { 
+					want_pckpt ) == 0) {
 			// Default to no, if not defined.
 			want_pckpt = 0;
 		}
@@ -1233,7 +1347,7 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 		}
 			// otherwise, fall through and try the non-vm version
 	}
-	if( (r_classad->EvalBool(expr_name, r_cur->ad(), tmp) ) == 0 ) { 
+	if( (r_classad->EvalBool(expr_name, r_cur->ad(), tmp) ) == 0 ) {
 		if( fatal ) {
 			dprintf(D_ALWAYS, "Can't evaluate %s in the context of following ads\n", expr_name );
 			r_classad->dPrint(D_ALWAYS);
@@ -1250,22 +1364,23 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 }
 
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 
-int
-Resource::evaluateHibernate() {
+bool
+Resource::evaluateHibernate( MyString &state_str ) const
+{
 	ClassAd *ad = NULL;
 	if ( NULL != r_cur ) {
 		ad = r_cur->ad();
 	}
-	int level = 0;
-	if ( 0 == r_classad->EvalInteger( "HIBERNATE", ad, level ) ) {
-		return 0;
+
+	if ( r_classad->EvalString( "HIBERNATE", ad, state_str ) ) {
+		return true;
 	}
-	return level;
+	return false;
 }
 
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 
 int
@@ -1333,11 +1448,11 @@ Resource::eval_cpu_busy( void )
 	}
 		// not fatal, don't check vanilla
 	rval = eval_expr( ATTR_CPU_BUSY, false, false );
-	if( rval < 0 ) { 
+	if( rval < 0 ) {
 			// Undefined, try "cpu_busy"
 		rval = eval_expr( "CPU_BUSY", false, false );
 	}
-	if( rval < 0 ) { 
+	if( rval < 0 ) {
 			// Totally undefined, return false;
 		return 0;
 	}
@@ -1393,7 +1508,7 @@ Resource::hardkill_backfill( void )
 
 
 void
-Resource::publish( ClassAd* cap, amask_t mask ) 
+Resource::publish( ClassAd* cap, amask_t mask )
 {
 	char line[256];
 	MyString my_line;
@@ -1409,7 +1524,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 	if( IS_STATIC(mask) ) {
 			// We need these for both public and private ads
-		sprintf( line, "%s = \"%s\"", ATTR_STARTD_IP_ADDR, 
+		sprintf( line, "%s = \"%s\"", ATTR_STARTD_IP_ADDR,
 				 daemonCore->InfoCommandSinfulString() );
 		cap->Insert( line );
 
@@ -1434,7 +1549,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// insert it here, too.  This is just the expression that
 			// defines what "CpuBusy" means, not the current value of
 			// it and how long it's been true.  Those aren't static,
-			// and need to be re-published after they're evaluated. 
+			// and need to be re-published after they're evaluated.
 		if( !caInsert(cap, r_classad, ATTR_CPU_BUSY) ) {
 			EXCEPT( "%s not in internal resource classad, but default "
 					"should be added by ResMgr!", ATTR_CPU_BUSY );
@@ -1451,15 +1566,15 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		if (param_boolean("ALLOW_VM_CRUFT", true)) {
 			cap->Assign(ATTR_VIRTUAL_MACHINE_ID, r_id);
 		}
-	}		
+	}
 
 	if( IS_PUBLIC(mask) && IS_UPDATE(mask) ) {
-			// If we're claimed or preempting, handle anything listed 
+			// If we're claimed or preempting, handle anything listed
 			// in STARTD_JOB_EXPRS.
 			// Our current claim object might be gone though, so make
 			// sure we have the object before we try to use it.
 			// Also, our current claim object might not have a
-			// ClassAd, so be careful about that, too. 
+			// ClassAd, so be careful about that, too.
 		s = this->state();
 		if( s == claimed_state || s == preempting_state ) {
 			if( startd_job_exprs && r_cur && r_cur->ad() ) {
@@ -1473,7 +1588,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 		// Things you only need in private ads
 	if( IS_PRIVATE(mask) && IS_UPDATE(mask) ) {
-			// Add currently useful ClaimId.  If r_pre exists, we  
+			// Add currently useful ClaimId.  If r_pre exists, we
 			// need to advertise it's ClaimId.  Otherwise, we
 			// should get the ClaimId from r_cur.
 			// CRUFT: This shouldn't still be called ATTR_CAPABILITY
@@ -1490,28 +1605,28 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		} else if( r_cur ) {
 			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_cur->id() );
 			cap->Insert( line );
-		}		
+		}
 	}
 
 		// Put in cpu-specific attributes
 	r_attr->publish( cap, mask );
-	
-		// Put in machine-wide attributes 
+
+		// Put in machine-wide attributes
 	resmgr->m_attr->publish( cap, mask );
 
-		// Put in ResMgr-specific attributes 
+		// Put in ResMgr-specific attributes
 	resmgr->publish( cap, mask );
 
 		// If this is a public ad, publish anything we had to evaluate
 		// to "compute"
 	if( IS_PUBLIC(mask) && IS_EVALUATED(mask) ) {
 		sprintf( line, "%s=%d", ATTR_CPU_BUSY_TIME,
-				 (int)cpu_busy_time() ); 
-		cap->Insert(line); 
+				 (int)cpu_busy_time() );
+		cap->Insert(line);
 
-		sprintf( line, "%s=%s", ATTR_CPU_IS_BUSY, 
+		sprintf( line, "%s=%s", ATTR_CPU_IS_BUSY,
 				 r_cpu_busy ? "True" : "False" );
-		cap->Insert(line); 
+		cap->Insert(line);
 
         publishDeathTime( cap );
 	}
@@ -1601,10 +1716,10 @@ Resource::publishDeathTime( ClassAd* cap )
 
     if ( !have_death_time ) {
         // If we don't have a death time, we'll leave forever.
-        // Well, we'll live until Unix time runs out. 
+        // Well, we'll live until Unix time runs out.
         relative_death_time = INT_MAX;
     } else {
-        // We're publishing how much time we have to live. 
+        // We're publishing how much time we have to live.
         // If we don't have any time left, then we should have died
         // already, but something is wrong. That's okay, we'll tell people
         // not to expect anything, by telling them 0.
@@ -1653,7 +1768,7 @@ Resource::refreshSlotAttrs( void )
 
 
 void
-Resource::compute( amask_t mask ) 
+Resource::compute( amask_t mask )
 {
 	if( IS_EVALUATED(mask) ) {
 			// We need to evaluate some classad expressions to
@@ -1736,7 +1851,7 @@ Resource::compute_condor_load( void )
 	}
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-		dprintf( D_FULLDEBUG, "LoadQueue: Adding %d entries of value %f\n", 
+		dprintf( D_FULLDEBUG, "LoadQueue: Adding %d entries of value %f\n",
 				 num_since_last, cpu_usage );
 	}
 	r_load_queue->push( num_since_last, cpu_usage );
@@ -1745,9 +1860,9 @@ Resource::compute_condor_load( void )
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
 		r_load_queue->display( this );
-		dprintf( D_FULLDEBUG, 
+		dprintf( D_FULLDEBUG,
 				 "LoadQueue: Size: %d  Avg value: %.2f  "
-				 "Share of system load: %.2f\n", 
+				 "Share of system load: %.2f\n",
 				 r_load_queue->size(), r_load_queue->avg(), avg );
 	}
 
@@ -1774,11 +1889,11 @@ Resource::compute_cpu_busy( void )
 		r_cpu_busy_start_time = resmgr->now();
 	}
 	if( old_cpu_busy && ! r_cpu_busy ) {
-			// It was busy before, but isn't now, so clear the 
+			// It was busy before, but isn't now, so clear the
 			// start time
 		r_cpu_busy_start_time = 0;
 	}
-}	
+}
 
 
 time_t
@@ -1796,32 +1911,32 @@ Resource::cpu_busy_time( void )
 			return 0;
 		}
 		return val;
-	} 
+	}
 	return 0;
 }
 
 
 void
-Resource::log_ignore( int cmd, State s ) 
+Resource::log_ignore( int cmd, State s )
 {
-	dprintf( D_ALWAYS, "Got %s while in %s state, ignoring.\n", 
+	dprintf( D_ALWAYS, "Got %s while in %s state, ignoring.\n",
 			 getCommandString(cmd), state_to_string(s) );
 }
 
 
 void
-Resource::log_ignore( int cmd, State s, Activity a ) 
+Resource::log_ignore( int cmd, State s, Activity a )
 {
-	dprintf( D_ALWAYS, "Got %s while in %s/%s state, ignoring.\n", 
+	dprintf( D_ALWAYS, "Got %s while in %s/%s state, ignoring.\n",
 			 getCommandString(cmd), state_to_string(s),
 			 activity_to_string(a) );
 }
 
 
 void
-Resource::log_shutdown_ignore( int cmd ) 
+Resource::log_shutdown_ignore( int cmd )
 {
-	dprintf( D_ALWAYS, "Got %s while shutting down, ignoring.\n", 
+	dprintf( D_ALWAYS, "Got %s while shutting down, ignoring.\n",
 			 getCommandString(cmd) );
 }
 
@@ -1835,7 +1950,7 @@ Resource::remove_pre( void )
 		}
 		delete r_pre;
 		r_pre = NULL;
-	}	
+	}
 	if( r_pre_pre ) {
 		delete r_pre_pre;
 		r_pre_pre = NULL;
@@ -1849,7 +1964,7 @@ Resource::beginCODLoadHack( void )
 		// set our bool, so we use the pre-COD load for policy
 		// evaluations
 	r_hack_load_for_cod = true;
-	
+
 		// if we have a value for the pre-cod-load, we want to
 		// maintain it.  the only case where this would happen is if a
 		// COD job had finished in the last minute, we were still
@@ -1859,11 +1974,11 @@ Resource::beginCODLoadHack( void )
 		// just want to use the load from *before* any COD happened.
 		// only if we've been free of COD for over a minute (and
 		// therefore, we're completely out of COD-load hack), do we
-		// want to record the real system load as the "pre-COD" load. 
+		// want to record the real system load as the "pre-COD" load.
 	if( ! r_pre_cod_total_load ) {
 		r_pre_cod_total_load = r_attr->total_load();
 		r_pre_cod_condor_load = r_attr->condor_load();
-	} else { 
+	} else {
 		ASSERT( r_cod_load_hack_tid != -1 );
 	}
 
@@ -1883,7 +1998,7 @@ void
 Resource::startTimerToEndCODLoadHack( void )
 {
 	ASSERT( r_cod_load_hack_tid == -1 );
-	r_cod_load_hack_tid = daemonCore->Register_Timer( 60, 0, 
+	r_cod_load_hack_tid = daemonCore->Register_Timer( 60, 0,
 					(TimerHandlercpp)&Resource::endCODLoadHack,
 					"endCODLoadHack", this );
 	if( r_cod_load_hack_tid < 0 ) {
@@ -1948,7 +2063,7 @@ Resource::willingToRun(ClassAd* request_ad)
 		// requirements at all.
 	if (request_ad) {
 		r_reqexp->restore();
-		if (r_classad->EvalBool(ATTR_REQUIREMENTS, 
+		if (r_classad->EvalBool(ATTR_REQUIREMENTS,
 								request_ad, slot_requirements) == 0) {
 				// Since we have the request ad, treat UNDEFINED as FALSE.
 			slot_requirements = 0;
@@ -2063,7 +2178,7 @@ Resource::spawnFetchedWork(void)
 		change_state(owner_state);
 		return false;
 	}
-	
+
 		// Update the claim object with info from this job ClassAd now
 		// that we're actually activating it. By not passing any
 		// argument here, we tell saveJobInfo() to keep the copy of
@@ -2125,9 +2240,9 @@ Resource::evalNextFetchWorkDelay(void)
 	if (r_cur) {
 		job_ad = r_cur->ad();
 	}
-	if (r_classad->EvalInteger(ATTR_FETCH_WORK_DELAY, job_ad, value) == 0) { 
+	if (r_classad->EvalInteger(ATTR_FETCH_WORK_DELAY, job_ad, value) == 0) {
 			// If undefined, default to 5 minutes (300 seconds).
-		if (!warned_undefined) { 
+		if (!warned_undefined) {
 			dprintf(D_FULLDEBUG,
 					"%s is UNDEFINED, using 5 minute default delay.\n",
 					ATTR_FETCH_WORK_DELAY);
@@ -2233,6 +2348,25 @@ Resource::getHookKeyword()
 		m_hook_keyword_initialized = true;
 	}
 	return m_hook_keyword;
+}
+
+void Resource::enable()
+{
+    /* let the negotiator match jobs to this slot */
+	r_reqexp->restore ();
+
+}
+
+void Resource::disable()
+{
+
+    /* kill the claim */
+	kill_claim ();
+
+	/* let the negotiator know not to match any new jobs to
+    this slot */
+	r_reqexp->unavail ();
+
 }
 
 

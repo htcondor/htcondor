@@ -696,6 +696,15 @@ if test $JOB_HOOKS != no; then
   AC_DEFINE([HAVE_JOB_HOOKS], [1], [Define to 1 to support invoking hooks throughout the workflow of a job])
 fi
 
+AC_ARG_ENABLE(hibernation,
+  [AS_HELP_STRING([--enable-hibernation],
+     [Support for Condor-controlled hibernation])],
+  [HIBERNATION=$enableval],
+  [HIBERNATION=yes])
+if test $HIBERNATION != no; then
+  AC_DEFINE([HAVE_HIBERNATION], [1], [Define to 1 to support Condor-controlled hibernation])
+fi
+
 
 ############################################################
 # checks for programs
@@ -2179,6 +2188,8 @@ AC_CHECK_LIB([pthread], [pthread_create],
 # checks for header files
 ############################################################
 
+AC_CHECK_HEADERS([net/if.h],[],[],[
+#include<netinet/in.h>])
 AC_CHECK_HEADERS([sys/types.h])
 AC_CHECK_HEADERS([sys/param.h])
 AC_CHECK_HEADERS([stdint.h])
@@ -2187,6 +2198,8 @@ AC_CHECK_HEADERS([sys/personality.h])
 AC_CHECK_HEADERS([linux/personality.h])
 AC_CHECK_HEADERS([linux/magic.h])
 AC_CHECK_HEADERS([linux/nfsd/const.h])
+AC_CHECK_HEADERS([linux/sockios.h])
+AC_CHECK_HEADERS([linux/ethtool.h])
 AC_CHECK_HEADERS([sys/statfs.h])
 AC_CHECK_HEADERS([sys/statvfs.h])
 AC_CHECK_HEADERS([sys/vfs.h])
@@ -2364,6 +2377,12 @@ if test "$ac_cv_func_statfs" = yes ; then
       AC_MSG_RESULT(unknown)
       AC_MSG_ERROR([unable to determine number of arguments to statfs()])])])
 fi dnl test "$ac_cv_func_statfs" = yes
+
+# Do we have the "ethtool" and similar declarations?
+AC_CHECK_DECLS([SIOCETHTOOL,SIOCGIFCONF],,, [[#include <linux/sockios.h>]])
+
+# Does net/if.h define struct ifreq ?
+AC_CHECK_TYPES([struct ifreq,struct ifconf],[],[],[#include <net/if.h>])
 
 # we don't actually want to add -lgen to our link line, but we do want
 # HAVE_LIBGEN defined correctly for our test suite builds...

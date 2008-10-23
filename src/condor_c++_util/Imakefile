@@ -62,6 +62,13 @@ SETEUID_OBJ = ../condor_util_lib/seteuid.o
 SETEUID_OBJ = 
 #endif
 
+HIBERNATION_OBJS = hibernation_manager.o hibernator.o network_adapter.o \
+	udp_waker.o waker.o
+#if IS_LINUX
+HIBERNATION_OBJS += hibernator.linux.o \
+	network_adapter.unix.o network_adapter.linux.o
+#endif
+
 #if !HAVE_SETEGID
 SETEGID_OBJ = ../condor_util_lib/setegid.o
 #else
@@ -180,6 +187,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	user_log.o \
 	read_user_log.o read_user_log_state.o \
 	config.o condor_config.o \
+	simple_arg.o \
 	stringSpace.o condor_state.o \
 	$(API_OBJ) $(DAEMON_CLIENT_OBJ) \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
@@ -213,7 +221,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	$(PLUGIN_OBJ) \
 	forkwork.o filename_tools_cpp.o condor_getcwd.o \
 	set_user_priv_from_ad.o hook_utils.o classad_visa.o \
-	simple_arg.o
+	$(HIBERNATION_OBJS)
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
@@ -260,6 +268,8 @@ c_plus_target(test_log_reader,test_log_reader.o,$(LIB))
 c_plus_target(test_write_term,test_write_term.o,$(LIB))
 c_plus_target(test_prioritysimplelist,test_prioritysimplelist.o,)
 c_plus_target(test_binarysearch,test_binarysearch.o,)
+c_plus_target(test_network_adapter,test_network_adapter.o,$(LIB))
+c_plus_target(test_hibernation,test_hibernation.o,$(LIB))
 
 c_plus_target(cat_url,cat_url.o,liburl.a)
 c_plus_target(access.t,access.t.o,$(LIB))
@@ -280,10 +290,12 @@ all-tests: access.t killfamily.t test_locks my_hostname.t
 USERLOG_TESTS = test_log_reader test_log_writer
 USERLOG_LIBAPI_TESTS = $(addsuffix _api, $(USERLOG_TESTS) )
 
-userlog-tests: $(USERLOG_TESTS) $(USERLOG_LIBAPI_TESTS)
+userlog-tests: all $(USERLOG_TESTS) $(USERLOG_LIBAPI_TESTS)
 
 test_log_reader: $(LIB) Makefile $(LIBCONDORAPI)
 test_log_writer: $(LIB) Makefile $(LIBCONDORAPI)
+
+green-tests: all test_network_adapter test_hibernation
 
 $(USERLOG_LIBAPI_TESTS): %_api : %.o $(LIBCONDORAPI) Makefile
 	$(CPlusPlus) $< -L. -Wl,-Bstatic -lcondorapi -Wl,-Bdynamic -ldl -o $@
@@ -323,3 +335,11 @@ condor_version.o: condor_version.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c -DPLATFORM=$(PLATFORM) condor_version.C
 
 testbin:: all
+
+help:
+	@echo "Known targets:"
+	@echo "  all:           build all main targets"
+	@echo "  release:       all + populate ../release_dir"
+	@echo "  testbin:"
+	@echo "  userlog-tests: all + userlog tests"
+	@echo "  green-tests:   all + green computing tests"

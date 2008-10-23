@@ -368,7 +368,6 @@ main_init( int, char* argv[] )
 								"command_vm_universe", 0, DAEMON, 
 								D_FULLDEBUG );
 
-
 		//////////////////////////////////////////////////
 		// Reapers 
 		//////////////////////////////////////////////////
@@ -389,9 +388,9 @@ main_init( int, char* argv[] )
 
 	resmgr->start_update_timer();
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	resmgr->updateHibernateConfiguration();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 		// Evaluate the state of all resources and update CM 
 		// We don't just call eval_and_update_all() b/c we don't need
@@ -431,6 +430,10 @@ finish_main_config( void )
 	dprintf( D_FULLDEBUG, "MainConfig finish\n" );
 	Cronmgr->Reconfig(  );
 	resmgr->starter_mgr.init();
+
+#if HAVE_HIBERNATION
+	resmgr->updateHibernateConfiguration();
+#endif /* HAVE_HIBERNATION */
 
 		// Re-evaluate and update the CM for each resource (again, we
 		// don't need to recompute, since we just did that, so we call

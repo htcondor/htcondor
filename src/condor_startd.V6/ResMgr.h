@@ -36,19 +36,19 @@
 #include "starter_mgr.h"
 #include "vmuniverse_mgr.h"
 
-#if HAVE_HIBERNATE
-#include "power_hibernation_manager.h"
-#endif /* HAVE_HIBERNATE */
+#if HAVE_HIBERNATION
+#  include "hibernation_manager.h"
+#endif
 
 #if HAVE_JOB_HOOKS
-#include "StartdHookMgr.h"
+#  include "StartdHookMgr.h"
 #endif /* HAVE_JOB_HOOKS */
 
 #if HAVE_BACKFILL
-#include "backfill_mgr.h"
-#if HAVE_BOINC
-#include "boinc_mgr.h"
-#endif /* HAVE_BOINC */
+#  include "backfill_mgr.h"
+#  if HAVE_BOINC
+#     include "boinc_mgr.h"
+#  endif /* HAVE_BOINC */
 #endif /* HAVE_BACKFILL */
 
 
@@ -195,10 +195,11 @@ public:
 	void startdHookMgrDone();
 #endif /* HAVE_JOB_HOOKS */
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	HibernationManager const& getHibernationManager () const;
-	void updateHibernateConfiguration();
-#endif /* HAVE_HIBERNATE */
+	void updateHibernateConfiguration ();
+    int disableResources ( const MyString &state );
+#endif /* HAVE_HIBERNATION */
 
 	time_t	now( void ) { return cur_time; };
 
@@ -313,19 +314,16 @@ private:
 	bool m_startd_hook_shutdown_pending;
 #endif /* HAVE_JOB_HOOKS */
 
-#if HAVE_HIBERNATE
-	HibernationManager	m_hibernation_manager;
+#if HAVE_HIBERNATION
+	NetworkAdapterBase  *m_netif;
+	HibernationManager	*m_hibernation_manager;
 	int					m_hibernate_tid;
-	int					m_recovery_tid;
-	void checkHibernate() /* const -- should be */;
-	int	 allHibernating() /* const -- should be */;
+	void checkHibernate(void);
+	int	 allHibernating( MyString &state_str ) const;
 	int  startHibernateTimer();
 	void resetHibernateTimer();
 	void cancelHibernateTimer();
-	void doHibernateRecovery();
-	int  startRecoveryTimer();
-	void cancelRecoveryTimer();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 };
 

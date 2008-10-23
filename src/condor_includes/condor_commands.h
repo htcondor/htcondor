@@ -274,6 +274,8 @@ const int INVALIDATE_HAD_ADS = 57;
 const int UPDATE_AD_GENERIC = 58;
 const int INVALIDATE_ADS_GENERIC = 59;
 
+const int UPDATE_STARTD_AD_WITH_ACK = 60;
+
 /*
 *** Daemon Core Signals
 */

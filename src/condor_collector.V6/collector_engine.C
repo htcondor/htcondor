@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,7 +50,7 @@ static void purgeHashTable (CollectorHashTable &);
 int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
 
-CollectorEngine::CollectorEngine (CollectorStats *stats ) : 
+CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	StartdAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
 	StartdPrivateAds(GREATER_TABLE_SIZE, &adNameHashFunction),
 
@@ -150,7 +150,7 @@ scheduleHousekeeper (int timeout)
 	}
 
 	// reset for new timer
-	if (timeout < 0) 
+	if (timeout < 0)
 		return 0;
 
 	// set to new timeout interval
@@ -176,7 +176,7 @@ int CollectorEngine::
 invokeHousekeeper (AdTypes adtype)
 {
 	time_t now;
-   
+
 	(void) time (&now);
 	if (now == (time_t) -1)
 	{
@@ -186,12 +186,12 @@ invokeHousekeeper (AdTypes adtype)
 
 	switch (adtype)
 	{
-		case STARTD_AD: 
+		case STARTD_AD:
 			cleanHashTable (StartdAds, now, makeStartdAdHashKey);
 			break;
 
 #ifdef WANT_QUILL
-		case QUILL_AD: 
+		case QUILL_AD:
 			cleanHashTable (QuillAds, now, makeQuillAdHashKey);
 			break;
 #endif /* WANT_QUILL */
@@ -543,6 +543,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	switch (command)
 	{
 	  case UPDATE_STARTD_AD:
+	  case UPDATE_STARTD_AD_WITH_ACK:
 		if ( repeatStartdAds > 0 ) {
 			clientAdToRepeat = new ClassAd(*clientAd);
 		}
@@ -583,8 +584,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 								  from );
 		}
 
-		// create fake duplicates of this ad, each with a different name, if 
-		// we are told to do so.  this feature exists for developer 
+		// create fake duplicates of this ad, each with a different name, if
+		// we are told to do so.  this feature exists for developer
 		// scalability testing.
 		if ( repeatStartdAds > 0 && clientAdToRepeat ) {
 			ClassAd *fakeAd;
@@ -781,7 +782,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 					 hk, hashString, insert, from);
 		  break;
 	  }
-		  
+
 
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
@@ -945,10 +946,10 @@ remove (AdTypes adType, AdNameHashKey &hk)
 	
 				
 ClassAd * CollectorEngine::
-updateClassAd (CollectorHashTable &hashTable, 
+updateClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
 			   const char *label,
-			   ClassAd *ad, 
+			   ClassAd *ad,
 			   AdNameHashKey &hk,
 			   const MyString &hashString,
 			   int  &insert,
@@ -1006,16 +1007,64 @@ updateClassAd (CollectorHashTable &hashTable,
 	}
 }
 
-int 
+#if 0
+void
+CollectorEngine::updateAd ( ClassAd *ad ) {
+
+
+
+    updateClassAd ( StartdAds)
+
+    const char      *label = "Start";
+    AdNameHashKey   hashKey;
+    MyString	    key;
+    ClassAd		    *old_ad;
+    time_t		    now;
+
+    /* get the current time */
+    time ( &now );
+
+    if ( (time_t) -1 == now ) {
+        EXCEPT ("Error reading system time!");
+    }
+
+    buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int) now );
+	ad->Insert ( buf.GetCStr () );
+
+    /* update statistics */
+    collectorStats->update ( label, NULL, ad );
+
+    /* make a hash key for the ad */
+    if ( !makeStartdAdHashKey ( hashKey, (ClassAd*) &ad, NULL ) ) {
+
+        dprintf (
+            D_FULLDEBUG,
+            "OfflineCollectorPlugin::update: "
+            "failed to hash class ad. Ignoring.\n" );
+
+        return;
+
+    }
+
+    /* store it the ad */
+    hashKey.sprint ( key );
+    if ( -1 == StartdAds.insert ( key, ad ) ) {
+        EXCEPT ( "Error inserting ad (out of memory)" );
+	}
+
+}
+#endif
+
+int
 CollectorEngine::
 housekeeper()
 {
 	time_t now;
-   
+
 	(void) time (&now);
 	if (now == (time_t) -1)
 	{
-		dprintf (D_ALWAYS, 
+		dprintf (D_ALWAYS,
 				 "Housekeeper:  Error in reading system time --- aborting\n");
 		return FALSE;
 	}
@@ -1075,7 +1124,7 @@ housekeeper()
 }
 
 void CollectorEngine::
-cleanHashTable (CollectorHashTable &hashTable, time_t now, 
+cleanHashTable (CollectorHashTable &hashTable, time_t now,
 				bool (*makeKey) (AdNameHashKey &, ClassAd *, sockaddr_in *) )
 {
 	ClassAd  *ad;

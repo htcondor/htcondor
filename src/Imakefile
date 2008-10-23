@@ -80,7 +80,8 @@
 		CreddProgs StorkProgs \
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
-		JobRouterProgs GlobusGahps
+		JobRouterProgs GlobusGahps \
+		power
 
 #define Libraries \
 		util_lib daemon_core.V6 daemon_client classad c++_util	\
@@ -222,6 +223,7 @@ condor_object_target(procapi)
 condor_object_target(sysapi)
 condor_object_target(unit_tests)
 condor_object_target(tools)
+condor_object_target(power)
 condor_object_target(examples)
 #if WANT_NETMAN
 condor_object_target(eventd)

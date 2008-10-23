@@ -57,7 +57,6 @@ int writeJobReleasedEvent();
 int writeNodeExecuteEvent(); 
 */
 
-
 int
 main(int argc, char **argv)
 {

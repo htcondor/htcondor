@@ -35,13 +35,13 @@ char *strnewp( const char * );
 char *
 strcasestr( const char *string, const char *pattern )
 {
-	char	*str;
+	const char	*str;
 	int			n;
 
 	n = strlen( pattern );
-	for( str=(char *)string; *str; str++ ) {
+	for( str=string; *str; str++ ) {
 		if( strncasecmp(str,pattern,n) == 0 ) {
-			return str;
+			return const_cast<char*>(str);
 		}
 	}
 	return NULL;

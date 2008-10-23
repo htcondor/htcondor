@@ -65,7 +65,11 @@ public:
 	int		releaseAllClaims( void );
 	int		killAllClaims( void );
 
-		// Resource state methods
+        // Enable/Disable claims for hibernation
+    void    disable ();
+    void    enable ();
+
+    // Resource state methods
 	void	set_destination_state( State s ) { r_state->set_destination(s);};
 	State	destination_state( void ) {return r_state->destination();};
 	int		change_state( State s ) {return r_state->change(s);};
@@ -155,6 +159,8 @@ public:
 
 	int		update( void );		// Schedule to update the central manager.
 	int		do_update( void );			// Actually update the CM
+    int     update_with_ack( void );    // Actually update the CM and wait for an ACK
+    void    publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad );
 	int		eval_and_update( void );	// Evaluate state and update CM. 
 	void	final_update( void );		// Send a final update to the CM
 									    // with Requirements = False.
@@ -194,9 +200,9 @@ public:
 	char* getHookKeyword();
 #endif /* HAVE_JOB_HOOKS */
 
-#if HAVE_HIBERNATE
-	int	evaluateHibernate();
-#endif /* HAVE_HIBERNATE */
+#if HAVE_HIBERNATION
+	bool	evaluateHibernate( MyString &state ) const;
+#endif /* HAVE_HIBERNATION */
 
 	bool    claimWorklifeExpired();
 	int		retirementExpired( void );
