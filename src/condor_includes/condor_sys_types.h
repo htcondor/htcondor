@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,42 +22,20 @@
 
 
 /* Define 64 bit integer types */
-# if defined( HAVE_INT64_T )
+#if defined( HAVE_INT64_T )
    /* int64_t already defined; do nothing */
 
-# elif defined( HAVE___INT64 )
+#elif defined( HAVE___INT64 )
    /* Use the compiler's __int64 type for int64_t */
    typedef __int64 int64_t;
    typedef unsigned __int64 uint64_t;
 #  define HAVE_INT64_T 1
 
-# elif defined( HAVE_LONG_LONG )
+#elif defined( HAVE_LONG_LONG )
    /* Use the compiler's long long type for int64_t */
    typedef long long int64_t;
    typedef unsigned long long uint64_t;
 #  define HAVE_INT64_T 1
-# endif
-
-#if defined( HAVE_SYS_TYPES_H )
-# include <sys/types.h>
 #endif
-
-#if defined( HAVE_INTTYPES_H )
-# define __STDC_FORMAT_MACROS
-# include <inttypes.h>
-#endif
-
-/* If no inttypes, try to define our own (make a guess) */
-/* The win 32 include file defines the win32 versions */
-#if !defined( PRId64 )
-# define PRId64 "lld"
-#endif
-#if !defined( PRIi64 )
-# define PRIi64 "lli"
-#endif
-#if !defined( PRIu64 )
-# define PRIu64 "llu"
-#endif
-
 
 #endif /* CONDOR_SYS_TYPES_H */
