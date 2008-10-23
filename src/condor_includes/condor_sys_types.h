@@ -26,16 +26,18 @@
    /* int64_t already defined; do nothing */
 
 #elif defined( HAVE___INT64 )
-   /* Use the compiler's __int64 type for int64_t */
+   /* Use the compiler's __int64 type for int64_t (Win32) */
    typedef __int64 int64_t;
    typedef unsigned __int64 uint64_t;
 #  define HAVE_INT64_T 1
 
 #elif defined( HAVE_LONG_LONG )
-   /* Use the compiler's long long type for int64_t */
+   /* Use the compiler's long long type for int64_t (GCC) */
    typedef long long int64_t;
    typedef unsigned long long uint64_t;
 #  define HAVE_INT64_T 1
+
 #endif
+
 
 #endif /* CONDOR_SYS_TYPES_H */
