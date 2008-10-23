@@ -65,7 +65,6 @@ public:
 	virtual bool killVM();
 
 private:
-	MyString makeXMDiskString(void);
 	MyString makeVirshDiskString(void);
 	bool createISO();
 
@@ -80,7 +79,6 @@ private:
 	bool ResumeFromSoftSuspend(void);
 	bool CreateXenVMCofigFile(const char* controller, const char* filename);
 	bool CreateVirshConfigFile(const char* filename);
-	bool CreateXMConfigFile(const char* filename);
 
 	SimpleList<XenDisk*> m_disk_list;
 
