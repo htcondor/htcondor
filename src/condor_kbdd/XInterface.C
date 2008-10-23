@@ -24,6 +24,8 @@
  * 
  ***********/
 
+#define DEFAULT_DISPLAY_NAME ":0.0"
+
 #define _POSIX_SOURCE
 
 #include "XInterface.h"
@@ -164,6 +166,7 @@ XInterface::XInterface(int id)
 	char *tmp;
 	_daemon_core_timer = id;
 	logged_on_users = 0;
+	_display_name = NULL;
 
 	// We may need access to other user's home directories, so we must run
 	// as root.
@@ -187,6 +190,14 @@ XInterface::XInterface(int id)
 	} else {
 		_xauth_users = NULL;
 	}
+
+	_display_name = param( "X_CONSOLE_DISPLAY" );
+	
+	/* If there's no specified display name, we'll use the default... */
+	if (_display_name == NULL) {
+	  _display_name = strdup(DEFAULT_DISPLAY_NAME);
+	}
+
 	Connect();
 }
 
@@ -194,6 +205,10 @@ XInterface::~XInterface()
 {
 	if(_xauth_users != NULL) {
 		delete _xauth_users;
+	}
+
+	if(_display_name != NULL) {
+	  free(_display_name);
 	}
 }
 
@@ -269,7 +284,7 @@ XInterface::Connect()
 	}
 
 
-	while(!(_display = XOpenDisplay("localhost:0.0") ))
+	while(!(_display = XOpenDisplay(_display_name) ))
 	{
 		set_condor_priv();
 	
@@ -291,7 +306,7 @@ XInterface::Connect()
 		set_user_priv();
 	}
 
-	dprintf(D_ALWAYS, "Connected to X server: localhost:0.0\n");
+	dprintf(D_ALWAYS, "Connected to X server: %s\n", _display_name);
 	g_connected = true;
 
 	dprintf(D_FULLDEBUG, "Reset timer: %d\n", _daemon_core_timer);
