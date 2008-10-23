@@ -387,52 +387,52 @@ int main_init(int argc, char *argv[])
 	// create VMGahpConfig and fill it with vmgahp config parameters
 	VMGahpConfig *gahpconfig = new VMGahpConfig;
 	ASSERT(gahpconfig);
-	vmgahp_set_root_priv();
+	set_root_priv();
 	if( gahpconfig->init(vmtype.Value()) == false ) {
 		DC_Exit(1);
 	}
 
-	vmgahp_set_condor_priv();
+	set_condor_priv();
 
 	// Check if vm specific paramaters are valid in config file
 #if defined(LINUX)
 	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
-		priv_state priv = vmgahp_set_root_priv();
+		priv_state priv = set_root_priv();
 		if( XenType::checkXenParams(gahpconfig) == false ) {
 			DC_Exit(1);
 		}
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}else
 #endif
 	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
-		priv_state priv = vmgahp_set_user_priv();
+		priv_state priv = set_user_priv();
 		if( VMwareType::checkVMwareParams(gahpconfig) == false ) {
 			DC_Exit(1);
 		}
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}
 
 	if( vmgahp_mode == VMGAHP_TEST_MODE ) {
 		// Try to test
 #if defined(LINUX)
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
-			priv_state priv = vmgahp_set_root_priv();
+			priv_state priv = set_root_priv();
 			if( XenType::testXen(gahpconfig) == false ) {
 				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
 						"be used.\n", vmtype.Value());
 				DC_Exit(0);
 			}
-			vmgahp_set_priv(priv);
+			set_priv(priv);
 		}else
 #endif
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
-			priv_state priv = vmgahp_set_user_priv();
+			priv_state priv = set_user_priv();
 			if( VMwareType::testVMware(gahpconfig) == false ) {
 				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
 						"be used.\n", vmtype.Value());
 				DC_Exit(0);
 			}
-			vmgahp_set_priv(priv);
+			set_priv(priv);
 		}
 
 		// print information to stdout
@@ -462,7 +462,7 @@ int main_init(int argc, char *argv[])
 
 		// With root privilege, 
 		// we will try to kill the VM that matches with given "matchstring".
-		vmgahp_set_root_priv();
+		set_root_priv();
 
 #if defined(LINUX)
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN ) == 0 ) {

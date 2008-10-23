@@ -70,14 +70,4 @@ const char* get_caller_name(void);
 const char* get_job_user_name(void);
 bool canSwitchUid(void);
 
-#define vmgahp_set_priv(s) \
-   	_vmgahp_set_priv(s, __FILE__, __LINE__, 1)
-
-#define vmgahp_set_condor_priv() vmgahp_set_priv(PRIV_CONDOR)
-#define vmgahp_set_user_priv() vmgahp_set_priv(PRIV_USER)
-#define vmgahp_set_user_priv_final() vmgahp_set_priv(PRIV_USER_FINAL)
-#define vmgahp_set_root_priv() vmgahp_set_priv(PRIV_ROOT)
-
-priv_state _vmgahp_set_priv(priv_state s, char file[], int line, int dologging);
-
 #endif /* CONDOR_VMGAHP_COMMON_H */

@@ -609,7 +609,7 @@ VMGahp::executeCommand(VMRequest *req)
 {
 	char *command = req->m_args.argv[0];
 
-	priv_state priv = vmgahp_set_user_priv();
+	priv_state priv = set_user_priv();
 
 	if(strcasecmp(command, VMGAHP_COMMAND_VM_START) == 0 ) {
 		executeStart(req);
@@ -631,7 +631,7 @@ VMGahp::executeCommand(VMRequest *req)
 		vmprintf(D_ALWAYS, "Unknown command(%s)\n", command);
 	}
 
-	vmgahp_set_priv(priv);
+	set_priv(priv);
 }
 
 void
@@ -1085,7 +1085,7 @@ VMGahp::killAllProcess()
 #if defined(LINUX)
 	if( strcasecmp(m_gahp_config->m_vm_type.Value(), 
 				CONDOR_VM_UNIVERSE_XEN ) == 0 ) {
-		priv_state priv = vmgahp_set_root_priv();
+		priv_state priv = set_root_priv();
 		if( m_jobAd && XenType::checkXenParams(m_gahp_config) ) {
 			MyString vmname;
 			if( VMType::createVMName(m_jobAd, vmname) ) {
@@ -1094,17 +1094,17 @@ VMGahp::killAllProcess()
 				vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 			}
 		}
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}else
 #endif
 	if( strcasecmp(m_gahp_config->m_vm_type.Value(), 
 				CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
-		priv_state priv = vmgahp_set_user_priv();
+		priv_state priv = set_user_priv();
 		if( VMwareType::checkVMwareParams(m_gahp_config) ) {
 			VMwareType::killVMFast(m_gahp_config->m_prog_for_script.Value(), 
 					m_gahp_config->m_vm_script.Value(), m_workingdir.GetCStr());
 			vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 		}
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}
 }

@@ -129,11 +129,11 @@ check_vm_read_access_file(const char *file, bool is_root /*false*/)
 
 	priv_state priv = PRIV_UNKNOWN;
 	if( is_root ) {
-		priv = vmgahp_set_root_priv();
+		priv = set_root_priv();
 	}
 	int ret = access(file, R_OK);
 	if( is_root ) {
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}
 
 	if( ret < 0 ) {
@@ -152,11 +152,11 @@ check_vm_write_access_file(const char *file, bool is_root /*false*/)
 
 	priv_state priv = PRIV_UNKNOWN;
 	if( is_root ) {
-		priv = vmgahp_set_root_priv();
+		priv = set_root_priv();
 	}
 	int ret = access(file, W_OK);
 	if( is_root ) {
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}
 
 	if( ret < 0 ) {
@@ -175,11 +175,11 @@ check_vm_execute_file(const char *file, bool is_root /*false*/)
 
 	priv_state priv = PRIV_UNKNOWN;
 	if( is_root ) {
-		priv = vmgahp_set_root_priv();
+		priv = set_root_priv();
 	}
 	int ret = access(file, X_OK);
 	if( is_root ) {
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}
 
 	if( ret < 0 ) {
@@ -508,66 +508,6 @@ bool canSwitchUid(void)
 	return can_switch_ids();
 }
 
-static char* get_priv_state_name(priv_state s)
-{
-	switch(s) {
-		case PRIV_UNKNOWN:
-			return "PRIV_UNKNOWN";
-			break;
-		case PRIV_ROOT:
-			return "PRIV_ROOT";
-			break;
-		case PRIV_CONDOR: 
-			return "PRIV_CONDOR";
-			break;
-		case PRIV_USER:
-			return "PRIV_USER";
-			break;
-		case PRIV_USER_FINAL:
-			return "PRIV_USER_FINAL";
-			break;
-		case PRIV_FILE_OWNER:
-			return "PRIV_FILE_OWNER";
-			break;
-		default:
-			return "UNKNOWN_PRIV";
-			break;
-	}
-	return "";
-}
-
-static void 
-_priv_debug_log(priv_state prev, priv_state new_priv, char file[], int line)
-{
-#if !defined(WIN32)
-	if( prev == new_priv ) {
-		return;
-	}
-
-	vmprintf(D_PRIV, "%s --> %s at %s:%d "
-			"(uid/gid=%d/%d,euid/egid=%d/%d)\n", 
-			get_priv_state_name(prev), get_priv_state_name(new_priv),
-			file, line, (int)getuid(), (int)getgid(), 
-			(int)geteuid(), (int)getegid());
-#endif
-}
-
-
-priv_state 
-_vmgahp_set_priv(priv_state s, char file[], int line, int dologging)
-{
-	// We use daemonCore uid switch.
-	priv_state PrevPrivState = get_priv();
-	_set_priv(s, file, line, dologging);
-	priv_state CurrentPrivState = get_priv();
-
-	if(dologging) {
-		_priv_debug_log(PrevPrivState, CurrentPrivState, file, line);
-	}
-
-	return PrevPrivState;
-}
-
 int systemCommand( ArgList &args, bool is_root, StringList *cmd_out )
 {
 	int result = 0;
@@ -577,9 +517,9 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out )
 
 	priv_state prev = PRIV_UNKNOWN;
 	if( is_root ) {
-		prev = vmgahp_set_root_priv();
+		prev = set_root_priv();
 	}else {
-		prev = vmgahp_set_user_priv();
+		prev = set_user_priv();
 	}
 	fp = my_popen( args, "r", 0 );
 	if ( fp == NULL ) {
@@ -589,7 +529,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out )
 				  args_string.Value() );
 		return -1;
 	}
-	vmgahp_set_priv( prev );
+	set_priv( prev );
 
 	while ( cmd_out && fgets( buff, sizeof(buff), fp ) != NULL ) {
 		line += buff;
