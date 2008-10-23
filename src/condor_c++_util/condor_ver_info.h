@@ -42,6 +42,8 @@ public:
 	CondorVersionInfo(const char *versionstring = NULL, 
 		const char *subsystem = NULL, const char *platformstring = NULL);
 
+	CondorVersionInfo(CondorVersionInfo const &);
+
 	/// Destructor.
 	~CondorVersionInfo();
 
@@ -90,6 +92,11 @@ public:
 
 	bool is_valid(const char* VersionString = NULL) const;
 
+		// Constructs version string from version info.
+		// Caller should free returned string when done with it.
+		// Returns NULL on error.
+	char *get_version_string() const;
+
 	typedef struct VersionData {
 		int MajorVer;
 		int MinorVer;
@@ -108,6 +115,8 @@ private:
 
 	bool string_to_VersionData(const char *,VersionData_t &) const;
 	bool string_to_PlatformData(const char *,VersionData_t &) const;
+
+	char *VersionData_to_string(VersionData_t const &ver) const;
 };
 
 

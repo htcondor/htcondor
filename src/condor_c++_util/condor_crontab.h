@@ -94,6 +94,7 @@
 									CRONTAB_RANGE \
 									CRONTAB_STEP \
 									CRONTAB_WILDCARD \
+									"\\ " \
 									"\\/*]"
 
 /**

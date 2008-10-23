@@ -44,7 +44,7 @@
 #include "directory.h"
 #include "exit.h"
 #include "condor_auth_x509.h"
-#include "starter_privsep_helper.h"
+#include "setenv.h"
 
 extern "C" int get_random_int();
 extern int main_shutdown_fast();
@@ -66,6 +66,8 @@ CStarter::CStarter()
 	starter_stderr_fd = -1;
 	deferral_tid = -1;
 	suspended = false;
+	m_privsep_helper = NULL;
+	m_configured = false;
 }
 
 
@@ -207,7 +209,7 @@ CStarter::StarterExit( int code )
 {
 	removeTempExecuteDir();
 #if !defined(WIN32)
-	if( param_boolean( "GLEXEC_STARTER", false ) ) {
+	if ( GetEnv( "CONDOR_GLEXEC_STARTER_CLEANUP_FLAG" ) ) {
 		exitAfterGlexec( code );
 	}
 #endif
@@ -232,8 +234,35 @@ CStarter::Config()
 		}
 	}
 
+	if (!m_configured) {
+		bool ps = privsep_enabled();
+		bool gl = param_boolean("GLEXEC_JOB", false);
+#if !defined(LINUX)
+		dprintf(D_ALWAYS,
+		        "GLEXEC_JOB not supported on this platform; "
+		            "ignoring\n");
+		gl = false;
+#endif
+		if (ps && gl) {
+			EXCEPT("can't support both "
+			           "PRIVSEP_ENABLED and GLEXEC_JOB");
+		}
+		if (ps) {
+			m_privsep_helper = new CondorPrivSepHelper;
+			ASSERT(m_privsep_helper != NULL);
+		}
+		else if (gl) {
+#if defined(LINUX)
+			m_privsep_helper = new GLExecPrivSepHelper;
+			ASSERT(m_privsep_helper != NULL);
+#endif
+		}
+	}
+
 		// Tell our JobInfoCommunicator to reconfig, too.
 	jic->config();
+
+	m_configured = true;
 }
 
 /**
@@ -555,8 +584,9 @@ CStarter::createTempExecuteDir( void )
 	priv_state priv = set_condor_priv();
 #endif
 
-	if (privsep_enabled()) {
-		privsep_helper.initialize_sandbox(WorkingDir.Value());
+	CondorPrivSepHelper* cpsh = condorPrivSepHelper();
+	if (cpsh != NULL) {
+		cpsh->initialize_sandbox(WorkingDir.Value());
 	}
 	else {
 		if( mkdir(WorkingDir.Value(), 0777) < 0 ) {
@@ -687,6 +717,34 @@ CStarter::createTempExecuteDir( void )
 int
 CStarter::jobEnvironmentReady( void )
 {
+#if defined(LINUX)
+		//
+		// For the GLEXEC_JOB case, we should now be able to
+		// initialize our helper object.
+		//
+	GLExecPrivSepHelper* gpsh = glexecPrivSepHelper();
+	if (gpsh != NULL) {
+		MyString proxy_path;
+		if (!jic->jobClassAd()->LookupString(ATTR_X509_USER_PROXY,
+		                                     proxy_path))
+		{
+			EXCEPT("configuration specifies use of glexec, "
+			           "but job has no proxy");
+		}
+		const char* proxy_name = condor_basename(proxy_path.Value());
+		gpsh->initialize(proxy_name, WorkingDir.Value());
+	}
+#endif
+
+		//
+		// Now that we are done preparing the job's environment,
+		// change the sandbox ownership to the user before spawning
+		// any job processes.
+		//
+	if (m_privsep_helper != NULL) {
+		m_privsep_helper->chown_sandbox_to_user();
+	}
+
 		//
 		// The Starter will determine when the job 
 		// should be started. This method will always return 
@@ -1382,6 +1440,12 @@ CStarter::Reaper(int pid, int exit_status)
 bool
 CStarter::allJobsDone( void )
 {
+		// now that all user processes are complete, change the
+		// sandbox ownership back over to condor
+	if (m_privsep_helper != NULL) {
+		m_privsep_helper->chown_sandbox_to_condor();
+	}
+
 		// No more jobs, notify our JobInfoCommunicator.
 	if (jic->allJobsDone()) {
 			// JIC::allJobsDone returned true: we're ready to move on.
@@ -1714,7 +1778,7 @@ CStarter::removeTempExecuteDir( void )
 	dir_name += (int)daemonCore->getpid();
 
 #if !defined(WIN32)
-	if (privsep_enabled()) {
+	if (condorPrivSepHelper() != NULL) {
 		MyString path_name;
 		path_name.sprintf("%s/%s", Execute, dir_name.Value());
 		if (!privsep_remove_dir(path_name.Value())) {

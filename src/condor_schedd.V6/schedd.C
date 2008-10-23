@@ -81,6 +81,9 @@
 #include "condor_getcwd.h"
 #include "set_user_priv_from_ad.h"
 #include "classad_visa.h"
+#include "subsystem_info.h"
+#include "../condor_privsep/condor_privsep.h"
+#include "authentication.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -116,7 +119,6 @@ extern char * Name;
 static char * NameInEnv = NULL;
 extern char * JobHistoryFileName;
 extern char * PerJobHistoryDir;
-extern char * mySubSystem;
 
 extern bool        DoHistoryRotation; 
 extern filesize_t  MaxHistoryFileSize;
@@ -219,6 +221,41 @@ match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id,
 	auth_hole_id = NULL;
 
 	makeDescription();
+
+	bool suppress_sec_session = true;
+
+	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+		if( secSessionId() == NULL ) {
+			dprintf(D_FULLDEBUG,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: did not create security session from claim id, because claim id does not contain session information: %s\n",publicClaimId());
+		}
+		else {
+			bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+				DAEMON,
+				secSessionId(),
+				secSessionKey(),
+				secSessionInfo(),
+				EXECUTE_SIDE_MATCHSESSION_FQU,
+				peer,
+				0 );
+
+			if( rc ) {
+					// we're good to go; use the claimid security session
+				suppress_sec_session = false;
+			}
+			if( !rc ) {
+				dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session for %s, so will try to obtain a new security session\n",publicClaimId());
+			}
+		}
+	}
+	if( suppress_sec_session ) {
+		suppressSecSession( true );
+			// Now secSessionId() will always return NULL, so we will
+			// not try to do anything with the claimid security session.
+			// Most importantly, we will not try to delete it when this
+			// match rec is destroyed.  (If we failed to create the session,
+			// that may because it already exists, and this is a duplicate
+			// match record that will soon be thrown out.)
+	}
 }
 
 void
@@ -263,6 +300,15 @@ match_rec::~match_rec()
 		claim_requester->setMiscDataPtr( NULL );
 		claim_requester->cancelMessage();
 		claim_requester = NULL;
+	}
+
+	if( secSessionId() ) {
+			// Expire the session after enough time to let the final
+			// RELEASE_CLAIM command finish, in case it is still in
+			// progress.  This also allows us to more gracefully
+			// handle any final communication from the startd that may
+			// still be in flight.
+		daemonCore->getSecMan()->SetSessionExpiration(secSessionId(),time(NULL)+600);
 	}
 }
 
@@ -396,7 +442,9 @@ Scheduler::Scheduler() :
 
 	last_reschedule_request = 0;
 	jobThrottleNextJobDelay = 0;
+#ifdef WANT_QUILL
 	prevLHF = 0;
+#endif
 }
 
 
@@ -795,7 +843,9 @@ Scheduler::count_jobs()
 	daemonCore->UpdateLocalAd(m_ad);
 
 		// log classad into sql log so that it can be updated to DB
+#ifdef WANT_QUILL
 	FILESQL::daemonAdInsert(m_ad, "ScheddAd", FILEObj, prevLHF);
+#endif
 
 #if HAVE_DLOPEN
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, m_ad);
@@ -2886,7 +2936,6 @@ Scheduler::abort_job(int, Stream* s)
 		// any jobs which have a status = REMOVED or HELD
 		ClassAd *job_ad;
 		static bool already_removing = false;	// must be static!!!
-		unsigned int count=1;
 		char constraint[120];
 
 		// This could take a long time if the queue is large; do the
@@ -2919,24 +2968,8 @@ Scheduler::abort_job(int, Stream* s)
 
 			}
 			FreeJobAd(job_ad);
-			job_ad = NULL;
 
-			// users typically do a condor_q immediately after a condor_rm.
-			// if they condor_rm a lot of jobs, it could take a really long
-			// time since we need to twiddle the job_queue.log, move classads
-			// to the history file, and maybe write to the user log.  So, we
-			// service the command socket here so condor_q does not timeout.
-			// However, the command we service may start a new iteration
-			// thru the queue.  Thus if we serviced any commands we must
-			// start our iteration over from the beginning to make certain
-			// our iterator is not corrupt. -Todd <tannenba@cs.wisc.edu>
-			if ( (++count % 10 == 0) && daemonCore->ServiceCommandSocket() ) {
-				// we just handled a command, restart the iteration
-				job_ad = GetNextJobByConstraint(constraint,1);
-			} else {
-				// no command handled, iterator still safe - get next ad
-				job_ad = GetNextJobByConstraint(constraint,0);
-			}
+			job_ad = GetNextJobByConstraint(constraint,0);
 		}
 		already_removing = false;
 	}
@@ -4325,9 +4358,6 @@ Scheduler::actOnJobs(int, Stream* s)
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS:
 		 for( i=0; i<num_matches; i++ ) {
- 			if( i % 10 == 0 ) {
- 				daemonCore->ServiceCommandSocket();
- 			}
  			abort_job_myself( jobs[i], action, true, notify );		
 #ifdef WIN32
 			/*	This is a small patch so when DAGMan jobs are removed
@@ -4410,42 +4440,8 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 }
 
 int
-Scheduler::delayedNegotiatorHandler(Stream *stream)
-{
-	int rval;
-	int* iptr = NULL;
-
-	iptr = (int*)daemonCore->GetDataPtr();
-	ASSERT(iptr);
-	rval = negotiate(*iptr, stream);
-	if ( rval != KEEP_STREAM ) {
-		free(iptr);
-		iptr = NULL;
-		daemonCore->SetDataPtr(NULL);
-	}
-	// TODO if rval is KEEP_STREAM, shouldn't we be registering a socket?
-	return rval;
-}
-
-int
 Scheduler::doNegotiate (int i, Stream *s)
 {
-	if ( daemonCore->InServiceCommandSocket() == TRUE ) {
-		// We are currently in the middle of a negotiate with a
-		// different negotiator.  Stash this request to handle it later.
-		dprintf(D_FULLDEBUG,"Received Negotiate command while negotiating; stashing for later\n");
-		daemonCore->Register_Socket(s,"<Another-Negotiator-Socket>",
-			(SocketHandlercpp)&Scheduler::delayedNegotiatorHandler,
-			"delayedNegotiatorHandler()", this, ALLOW);
-		// Stash the command int as well, since we need to know later on what type
-		// of negotiate command we are dealing with
-		int* iptr = (int*)malloc(sizeof(int));
-		ASSERT(iptr);
-		*iptr = i;
-		daemonCore->Register_DataPtr( (void*)iptr );
-		return KEEP_STREAM;
-	}
-
 	int rval = negotiate(i, s);
 	if (rval == KEEP_STREAM)
 	{
@@ -4546,7 +4542,6 @@ Scheduler::negotiate(int command, Stream* s)
 	int		which_negotiator = 0; 		// >0 implies flocking
 	char*	negotiator_name = NULL;	// hostname of negotiator when flocking
 	Daemon*	neg_host = NULL;	
-	int		serviced_other_commands = 0;	
 	int		owner_num;
 	int		JobsRejected = 0;
 	Sock*	sock = (Sock*)s;
@@ -4786,8 +4781,6 @@ Scheduler::negotiate(int command, Stream* s)
 			continue;
 		}
 
-		serviced_other_commands += daemonCore->ServiceCommandSocket();
-
 		id = PrioRec[i].id;
 
 		int junk; // don't care about the value
@@ -4797,9 +4790,8 @@ Scheduler::negotiate(int command, Stream* s)
 			continue;
 		}
 
-		if ( serviced_other_commands || prio_rec_array_is_stale ) {
-			// we have run some other schedd command, like condor_rm or condor_q,
-			// while negotiating.  check and make certain the job is still
+		if ( prio_rec_array_is_stale ) {
+			// check and make certain the job is still
 			// runnable, since things may have changed since we built the 
 			// prio_rec array (like, perhaps condor_hold or condor_rm was done).
 			if ( Runnable(&id) == FALSE ) {
@@ -4971,7 +4963,7 @@ Scheduler::negotiate(int command, Stream* s)
 									ATTR_LAST_MATCH_TIME,(int)time(0));
 					cad->Insert(buffer);
 
-					if( !s->get(claim_id) ) {
+					if( !s->get_secret(claim_id) ) {
 						dprintf( D_ALWAYS,
 								"Can't receive ClaimId from mgr\n" );
 						return (!(KEEP_STREAM));
@@ -5311,15 +5303,15 @@ Scheduler::negotiate(int command, Stream* s)
 
 
 void
-Scheduler::vacate_service(int, Stream *sock)
+Scheduler::release_claim(int, Stream *sock)
 {
 	char	*claim_id = NULL;
 	match_rec *mrec;
 
-	dprintf( D_ALWAYS, "Got VACATE_SERVICE from %s\n", 
+	dprintf( D_ALWAYS, "Got RELEASE_CLAIM from %s\n", 
 			 sin_to_string(((Sock*)sock)->endpoint()) );
 
-	if (!sock->code(claim_id)) {
+	if (!sock->get_secret(claim_id)) {
 		dprintf (D_ALWAYS, "Failed to get ClaimId\n");
 		return;
 	}
@@ -5329,16 +5321,15 @@ Scheduler::vacate_service(int, Stream *sock)
 		dedicated_scheduler.DelMrec( claim_id );
 	}
 	else {
-			// The startd has sent us VACATE_SERVICE
-			// (a.k.a. RELEASE_CLAIM) because it has destroyed the
-			// claim.  There is therefore no need for us to send
-			// RELEASE_CLAIM to the startd.
+			// The startd has sent us RELEASE_CLAIM because it has
+			// destroyed the claim.  There is therefore no need for us
+			// to send RELEASE_CLAIM to the startd.
 		mrec->needs_release_claim = false;
 
 		DelMrec( mrec );
 	}
 	FREE (claim_id);
-	dprintf (D_PROTOCOL, "## 7(*)  Completed vacate_service\n");
+	dprintf (D_PROTOCOL, "## 7(*)  Completed release_claim\n");
 	return;
 }
 
@@ -6293,7 +6284,7 @@ Scheduler::StartJobHandler()
 			continue;
 		}
 
-		if ( param_boolean("PRIVSEP_ENABLED", false) ) {
+		if ( privsep_enabled() ) {
 			// If there is no available transferd for this job (and it 
 			// requires it), then start one and put the job back into the queue
 			if ( jobNeedsTransferd(cluster, proc, srec->universe) ) {
@@ -6714,7 +6705,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	// send the location of the transferd the shadow should use for
 	// this user. Due to the nasty method of command line argument parsing
 	// by the shadow, this should be first on the command line.
-	if ( param_boolean("PRIVSEP_ENABLED", false) && 
+	if ( privsep_enabled() && 
 			jobNeedsTransferd(job_id->cluster, job_id->proc, universe) )
 	{
 		TransferDaemon *td = NULL;
@@ -8382,7 +8373,18 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 			// for this shadow record anymore... 
 		rec->match->setStatus( M_CLAIMED );
 	}
-	RemoveShadowRecFromMrec(rec);
+
+	if( rec->keepClaimAttributes &&  rec->match ) {
+			// We are shutting down and detaching from this claim.
+			// Remove the claim record without sending RELEASE_CLAIM
+			// to the startd.
+		rec->match->needs_release_claim = false;
+		DelMrec(rec->match);
+	}
+	else {
+		RemoveShadowRecFromMrec(rec);
+	}
+
 	if( pid ) {
 		shadowsByPid->remove(pid);
 	}
@@ -8772,11 +8774,11 @@ void
 send_vacate(match_rec* match,int cmd)
 {
 	classy_counted_ptr<DCStartd> startd = new DCStartd( match->peer );
-	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg( cmd, match->claimId() );
+	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( cmd, match->claimId() );
 
 	msg->setSuccessDebugLevel(D_ALWAYS);
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
-
+	msg->setSecSessionId( match->secSessionId() );
 
 		// Eventually we should keep info in the match record about if 
 		// the startd is able to receive incoming UDP (it will know
@@ -9359,6 +9361,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		case JOB_EXITED_AND_CLAIM_CLOSING:
 			if( srec->match ) {
 					// startd is not accepting more jobs on this claim
+				srec->match->needs_release_claim = false;
 				DelMrec(srec->match);
 			}
 				// no break, fall through
@@ -10134,7 +10137,7 @@ Scheduler::Init()
 		// This avoids the schedd getting so busy authenticating with
 		// startds that it can't keep up with shadows.
 		// note: the special value 0 means 'unlimited'
-	max_pending_startd_contacts = param_integer( "MAX_PENDING_STARTD_CONTACTS", 10, 0 );
+	max_pending_startd_contacts = param_integer( "MAX_PENDING_STARTD_CONTACTS", 0, 0 );
 
 		//
 		// Start Local Universe Expression
@@ -10548,9 +10551,9 @@ Scheduler::Register()
 			"reschedule_negotiator", this, WRITE);
 	 daemonCore->Register_Command( RECONFIG, "RECONFIG", 
 			(CommandHandler)&dc_reconfig, "reconfig", 0, OWNER );
-	 daemonCore->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", 
-			(CommandHandlercpp)&Scheduler::vacate_service, 
-			"vacate_service", this, WRITE);
+	 daemonCore->Register_Command(RELEASE_CLAIM, "RELEASE_CLAIM", 
+			(CommandHandlercpp)&Scheduler::release_claim, 
+			"release_claim", this, WRITE);
 	 daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
 			(CommandHandlercpp)&Scheduler::abort_job, 
 			"abort_job", this, WRITE);
@@ -11028,24 +11031,26 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 		dprintf(D_ALWAYS, "Null parameter --- match not added\n"); 
 		return NULL;
 	} 
+	// spit out a warning and return NULL if we already have this mrec
+	match_rec *tempRec;
+	if( matches->lookup( HashKey( id ), tempRec ) == 0 ) {
+		char const *pubid = tempRec->publicClaimId();
+		dprintf( D_ALWAYS,
+				 "attempt to add pre-existing match \"%s\" ignored\n",
+				 pubid ? pubid : "(null)" );
+		if( pre_existing ) {
+			*pre_existing = tempRec;
+		}
+		return NULL;
+	}
+
+
 	rec = new match_rec(id, peer, jobId, my_match_ad, user, pool, false);
 	if(!rec)
 	{
 		EXCEPT("Out of memory!");
 	} 
 
-	// spit out a warning and return NULL if we already have this mrec
-	match_rec *tempRec;
-	if( matches->lookup( HashKey( id ), tempRec ) == 0 ) {
-		dprintf( D_ALWAYS,
-				 "attempt to add pre-existing match \"%s\" ignored\n",
-				 rec->publicClaimId() ? rec->publicClaimId() : "(null)" );
-		delete rec;
-		if( pre_existing ) {
-			*pre_existing = tempRec;
-		}
-		return NULL;
-	}
 	if( matches->insert( HashKey( id ), rec ) != 0 ) {
 		dprintf( D_ALWAYS, "match \"%s\" insert failed\n",
 				 id ? id : "(null)" );
@@ -11336,11 +11341,12 @@ bool
 sendAlive( match_rec* mrec )
 {
 	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->peer );
-	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg( ALIVE, mrec->claimId() );
+	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( ALIVE, mrec->claimId() );
 
 	msg->setSuccessDebugLevel(D_PROTOCOL);
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
 	msg->setStreamType( Stream::safe_sock );
+	msg->setSecSessionId( mrec->secSessionId() );
 
 	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", mrec->description());
 
@@ -11382,7 +11388,7 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 
 	s->decode();
 	s->timeout(1);	// its a short message so data should be ready for us
-	s->code(claim_id);	// must free this; CEDAR will malloc cuz claimid=NULL
+	s->get_secret(claim_id);	// must free this; CEDAR will malloc cuz claimid=NULL
 	if ( !s->end_of_message() ) {
 		if (claim_id) free(claim_id);
 		return FALSE;
@@ -12794,7 +12800,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			// message from that, otherwise look at the static 
 			// error log which will be populated on CronTab::validate()
 			//
-		MyString reason( "Invalid cron schedule parameters:\n" );
+		MyString reason( "Invalid cron schedule parameters: " );
 		if ( cronTab != NULL ) {
 			reason += cronTab->getError();
 		} else {
@@ -12875,7 +12881,7 @@ WriteCompletionVisa(ClassAd* ad)
 
 	prev_priv_state = set_user_priv_from_ad(*ad);
 	classad_visa_write(ad,
-	                   mySubSystem,
+	                   mySubSystem->getName(),
 	                   daemonCore->InfoCommandSinfulString(),
 	                   iwd.Value(),
 	                   NULL);

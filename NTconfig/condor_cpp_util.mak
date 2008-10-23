@@ -30,10 +30,10 @@ RSC=rc.exe
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-OUTDIR=..\Debug
-INTDIR=..\Debug
+OUTDIR=.\..\Debug
+INTDIR=.\..\Debug
 # Begin Custom Macros
-OutDir=..\Debug
+OutDir=.\..\Debug
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -53,6 +53,7 @@ CLEAN :
 	-@erase "$(INTDIR)\classad_namedlist.obj"
 	-@erase "$(INTDIR)\classad_visa.obj"
 	-@erase "$(INTDIR)\command_strings.obj"
+	-@erase "$(INTDIR)\ConcurrencyLimitUtils.obj"
 	-@erase "$(INTDIR)\condor_arglist.obj"
 	-@erase "$(INTDIR)\condor_attributes.obj"
 	-@erase "$(INTDIR)\condor_config.obj"
@@ -113,7 +114,6 @@ CLEAN :
 	-@erase "$(INTDIR)\generic_query.obj"
 	-@erase "$(INTDIR)\get_daemon_name.obj"
 	-@erase "$(INTDIR)\get_full_hostname.obj"
-	-@erase "$(INTDIR)\get_mysubsystem.obj"
 	-@erase "$(INTDIR)\HashTable.obj"
 	-@erase "$(INTDIR)\hibernation_manager.obj"
 	-@erase "$(INTDIR)\hibernator.obj"
@@ -176,6 +176,7 @@ CLEAN :
 	-@erase "$(INTDIR)\string_list.obj"
 	-@erase "$(INTDIR)\stringSpace.obj"
 	-@erase "$(INTDIR)\strnewp.obj"
+	-@erase "$(INTDIR)\subsystem_info.obj"
 	-@erase "$(INTDIR)\system_info.WINDOWS.obj"
 	-@erase "$(INTDIR)\time_offset.obj"
 	-@erase "$(INTDIR)\tmp_dir.obj"
@@ -283,7 +284,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\generic_query.obj" \
 	"$(INTDIR)\get_daemon_name.obj" \
 	"$(INTDIR)\get_full_hostname.obj" \
-	"$(INTDIR)\get_mysubsystem.obj" \
 	"$(INTDIR)\HashTable.obj" \
 	"$(INTDIR)\hibernation_manager.obj" \
 	"$(INTDIR)\hibernator.obj" \
@@ -342,6 +342,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\string_list.obj" \
 	"$(INTDIR)\stringSpace.obj" \
 	"$(INTDIR)\strnewp.obj" \
+	"$(INTDIR)\subsystem_info.obj" \
 	"$(INTDIR)\system_info.WINDOWS.obj" \
 	"$(INTDIR)\time_offset.obj" \
 	"$(INTDIR)\tmp_dir.obj" \
@@ -361,7 +362,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\network_adapter.WINDOWS.obj" \
 	"$(INTDIR)\network_adapter.obj" \
 	"$(INTDIR)\setup_api_dll.obj" \
-	"$(INTDIR)\load_dll.obj"
+	"$(INTDIR)\load_dll.obj"\
+	"$(INTDIR)\ConcurrencyLimitUtils.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -370,10 +372,10 @@ LIB32_OBJS= \
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-OUTDIR=..\Release
-INTDIR=..\Release
+OUTDIR=.\..\Release
+INTDIR=.\..\Release
 # Begin Custom Macros
-OutDir=..\Release
+OutDir=.\..\Release
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -393,6 +395,7 @@ CLEAN :
 	-@erase "$(INTDIR)\classad_namedlist.obj"
 	-@erase "$(INTDIR)\classad_visa.obj"
 	-@erase "$(INTDIR)\command_strings.obj"
+	-@erase "$(INTDIR)\ConcurrencyLimitUtils.obj"
 	-@erase "$(INTDIR)\condor_arglist.obj"
 	-@erase "$(INTDIR)\condor_attributes.obj"
 	-@erase "$(INTDIR)\condor_config.obj"
@@ -453,7 +456,6 @@ CLEAN :
 	-@erase "$(INTDIR)\generic_query.obj"
 	-@erase "$(INTDIR)\get_daemon_name.obj"
 	-@erase "$(INTDIR)\get_full_hostname.obj"
-	-@erase "$(INTDIR)\get_mysubsystem.obj"
 	-@erase "$(INTDIR)\HashTable.obj"
 	-@erase "$(INTDIR)\hibernation_manager.obj"
 	-@erase "$(INTDIR)\hibernator.obj"
@@ -516,6 +518,7 @@ CLEAN :
 	-@erase "$(INTDIR)\string_list.obj"
 	-@erase "$(INTDIR)\stringSpace.obj"
 	-@erase "$(INTDIR)\strnewp.obj"
+	-@erase "$(INTDIR)\subsystem_info.obj"
 	-@erase "$(INTDIR)\system_info.WINDOWS.obj"
 	-@erase "$(INTDIR)\time_offset.obj"
 	-@erase "$(INTDIR)\tmp_dir.obj"
@@ -622,7 +625,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\generic_query.obj" \
 	"$(INTDIR)\get_daemon_name.obj" \
 	"$(INTDIR)\get_full_hostname.obj" \
-	"$(INTDIR)\get_mysubsystem.obj" \
 	"$(INTDIR)\HashTable.obj" \
 	"$(INTDIR)\hibernation_manager.obj" \
 	"$(INTDIR)\hibernator.obj" \
@@ -681,6 +683,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\string_list.obj" \
 	"$(INTDIR)\stringSpace.obj" \
 	"$(INTDIR)\strnewp.obj" \
+	"$(INTDIR)\subsystem_info.obj" \
 	"$(INTDIR)\system_info.WINDOWS.obj" \
 	"$(INTDIR)\time_offset.obj" \
 	"$(INTDIR)\tmp_dir.obj" \
@@ -700,7 +703,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\network_adapter.WINDOWS.obj" \
 	"$(INTDIR)\network_adapter.obj" \
 	"$(INTDIR)\setup_api_dll.obj" \
-	"$(INTDIR)\load_dll.obj"
+	"$(INTDIR)\load_dll.obj"\
+	"$(INTDIR)\ConcurrencyLimitUtils.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -825,6 +829,12 @@ SOURCE="..\src\condor_c++_util\classad_visa.C"
 SOURCE="..\src\condor_c++_util\command_strings.C"
 
 "$(INTDIR)\command_strings.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\ConcurrencyLimitUtils.C"
+
+"$(INTDIR)\ConcurrencyLimitUtils.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -1248,12 +1258,6 @@ SOURCE="..\src\condor_c++_util\get_full_hostname.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE="..\src\condor_c++_util\get_mysubsystem.C"
-
-"$(INTDIR)\get_mysubsystem.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
 SOURCE="..\src\condor_c++_util\HashTable.C"
 
 "$(INTDIR)\HashTable.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -1641,6 +1645,12 @@ SOURCE="..\src\condor_c++_util\stringSpace.C"
 SOURCE="..\src\condor_c++_util\strnewp.C"
 
 "$(INTDIR)\strnewp.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\subsystem_info.C"
+
+"$(INTDIR)\subsystem_info.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

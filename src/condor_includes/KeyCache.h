@@ -27,12 +27,13 @@
 #include "MyString.h"
 #include "HashTable.h"
 #include "string_list.h"
+#include "simplelist.h"
 
 class SecMan;
 class KeyCacheEntry {
  public:
     KeyCacheEntry(
-			char * id,
+			char const * id,
 			struct sockaddr_in * addr,
 			KeyInfo * key,
 			ClassAd * policy,
@@ -48,6 +49,7 @@ class KeyCacheEntry {
     KeyInfo*              key();
     ClassAd*              policy();
     int                   expiration();
+	void                  setExpiration(int new_expiration);
 
  private:
 
@@ -77,12 +79,23 @@ public:
 	void expire(KeyCacheEntry*);
 
 	StringList * getExpiredKeys();
+	StringList * getKeysForPeerAddress(char const *addr);
+	StringList * getKeysForProcess(char const *parent_unique_id,int pid);
 
 private:
 	void copy_storage(const KeyCache &kc);
 	void delete_storage();
 
+	typedef HashTable<MyString, SimpleList<KeyCacheEntry *>* > KeyCacheIndex;
+
 	HashTable<MyString, KeyCacheEntry*> *key_table;
+	KeyCacheIndex *m_index;
+
+	void addToIndex(KeyCacheEntry *);
+	void removeFromIndex(KeyCacheEntry *);
+	void addToIndex(KeyCacheIndex *,MyString const &index,KeyCacheEntry *);
+	void removeFromIndex(KeyCacheIndex *,MyString const &index,KeyCacheEntry *);
+	void makeServerUniqueId(MyString const &parent_id,int server_pid,MyString *result);
 };
 
 

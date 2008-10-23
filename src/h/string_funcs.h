@@ -17,19 +17,18 @@
  *
  ***************************************************************/
 
+#ifndef _STRING_FUNCS_H_
+#define _STRING_FUNCS_H_
 
 #include "condor_common.h"
+#include "condor_header_features.h"
 
-extern char* mySubSystem;
+BEGIN_C_DECLS
 
-/* Helper function to retrieve the value of mySubSystem global variable
- * from C functions.  This is helpful because mySubSystem is decorated w/ C++
- * linkage.
- */
+#ifndef HAVE_STRCASESTR
+  char *strcasestr( const char *string, const char *pattern );
+#endif
 
-extern "C" {
+END_C_DECLS
 
-	const char* get_mySubSystem() { return mySubSystem; }
-
-}
-
+#endif

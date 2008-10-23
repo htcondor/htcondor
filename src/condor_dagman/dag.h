@@ -35,6 +35,7 @@
 #include "condor_id.h"
 #include "prioritysimplelist.h"
 #include "throttle_by_category.h"
+#include "MyString.h"
 
 // NOTE: must be kept in sync with Job::job_type_t
 enum Log_source{
@@ -110,6 +111,10 @@ class Dag {
 			   job procs are prohibited
 		@param submitDepthFirst whether ready nodes should be submitted
 			   in depth-first (as opposed to breadth-first) order
+		@param fundUserLogs whether or not log files for the submit files
+				should be recursively dug out of the dag file and any
+				splices it contains. Usually this is true for the root
+				dag, and false for any splices brought in by the root dag.
     */
 
     Dag( /* const */ StringList &dagFiles,
@@ -119,7 +124,8 @@ class Dag {
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const char *storkRmExe, const CondorID *DAGManJobId,
-		 bool prohibitMultiJobs, bool submitDepthFirst );
+		 bool prohibitMultiJobs, bool submitDepthFirst,
+		 bool findUserLogs = true );
 
     ///
     ~Dag();
@@ -537,7 +543,22 @@ class Dag {
 	// of the VARS attribute.
 	void ResolveVarsInterpolations(void);
 
+	// When parsing a splice (which is itself a dag), there must always be a
+	// DIR concept associated with it. If DIR is left off, then it is ".",
+	// otherwise it is whatever specified.
+	void SetDirectory(MyString &dir);
+	void SetDirectory(char *dir);
+
+	// After the nodes in the dag have been made, we take our DIR setting,
+	// and if it isn't ".", we prefix it to the directory setting for each
+	// node, unless it is an absolute path, in which case we ignore it.
+	void PropogateDirectoryToAllNodes(void);
+
   protected:
+
+	// If this DAG is a splice, then this is what the DIR was set to, it 
+	// defaults to ".".
+ 	MyString m_directory;
 
 	// move the nodes from the splice into the parent
 	void LiftSplice(Dag *parent, Dag *splice);

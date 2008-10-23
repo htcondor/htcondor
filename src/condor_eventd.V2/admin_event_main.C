@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include "subsystem_info.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "admin_event.h"
@@ -35,7 +36,7 @@
 //-------------------------------------------------------------
 
 // about self
-char* mySubSystem = "EVENTD";		// used by Daemon Core
+DECL_SUBSYSTEM( "EVENTD", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 AdminEvent	*admin_event;
 
 //-------------------------------------------------------------

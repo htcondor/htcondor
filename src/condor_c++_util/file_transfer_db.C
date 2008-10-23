@@ -28,8 +28,8 @@
 #include "my_hostname.h"
 #include "internet.h"
 #include "file_sql.h"
+#include "subsystem_info.h"
 
-extern char *mySubSystem;
 extern FILESQL *FILEObj;
 
 #define MAXSQLLEN 500
@@ -81,7 +81,7 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 		return;
 
 		// check if we are in starter process
-	if (mySubSystem && strcmp(mySubSystem, "STARTER") == 0)
+	if (mySubSystem->isType(SUBSYSTEM_TYPE_STARTER) )
 		inStarter = TRUE;
 
 	ad->LookupString(ATTR_GLOBAL_JOB_ID, globalJobId);

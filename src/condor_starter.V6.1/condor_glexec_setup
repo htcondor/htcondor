@@ -1,0 +1,44 @@
+#!/bin/sh
+
+if [ $# != 3 ]
+then
+	echo "usage: $0 <glexec> <proxy> <sandbox>" >&2
+	exit 1
+fi
+
+GLEXEC="$1"
+PROXY="$2"
+SANDBOX="$3"
+
+# move the condor-owned sandbox aside to make way for the job's
+#
+mv "$SANDBOX" "$SANDBOX.condor"
+
+# tar up the contents of the sandbox and pipe them over to
+# a process running as the job owner via glexec
+#
+SH=`readlink -f /bin/sh`
+GLEXEC_CLIENT_CERT="$SANDBOX.condor/$PROXY"
+export GLEXEC_CLIENT_CERT
+tar -C "$SANDBOX.condor" -c  . | \
+    "$GLEXEC" "$SH" -c "mkdir \"$SANDBOX\" && tar -C \"$SANDBOX\" -x" || exit 1
+
+# now get rid of everything in the condor-owned sandbox except
+# the proxy
+#
+for FILE in "$SANDBOX.condor"/* "$SANDBOX.condor"/.*
+do
+	if [ "$FILE" == "$SANDBOX.condor/." ]
+	then
+		continue
+	fi
+	if [ "$FILE" == "$SANDBOX.condor/.." ]
+	then
+		continue
+	fi
+	if [ "$FILE" == "$SANDBOX.condor/$PROXY" ]
+	then
+		continue
+	fi
+	rm -rf "$FILE"
+done

@@ -108,9 +108,16 @@ public:
 		m_raw_protocol=raw_protocol;
 	}
 
+	void setSecSessionId(char const *sesid=NULL) {
+		m_sec_session_id = sesid ? sesid : "";
+	}
+
 	Stream::stream_type getStreamType() {return m_stream_type;}
 	int getTimeout() {return m_timeout;}
 	bool getRawProtocol() {return m_raw_protocol;}
+	char const *getSecSessionId() {
+		return m_sec_session_id.Value()[0] ? m_sec_session_id.Value() : NULL;
+	}
 
 
 	enum MessageClosureEnum {
@@ -216,6 +223,7 @@ private:
 	Stream::stream_type m_stream_type;
 	int m_timeout;
 	bool m_raw_protocol;
+	MyString m_sec_session_id;
 
 
 	void connectFailure( DCMessenger *messenger );

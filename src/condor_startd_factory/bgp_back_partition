@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# We assume we'll make a execute directory in tmp
+mkdir /tmp/startd.$$
+cd /tmp/startd.$$
+
+echo 'bgd_back called with ' $@ >> /tmp/back.log
+
+CD=`/bin/pwd`
+PARTITION=$1
+NUM_CPUS=$2
+BGP_BLOCK_TYPE=$3
+
+cp /home/condor/etc/condor_config .
+echo "LOCAL_CONFIG_FILE = $CD/condor_config.local" >> condor_config
+
+cp /home/condor/condor_config.local .
+
+echo "STARTD_NOCLAIM_SHUTDOWN = 300" >> condor_config.local
+echo "LOCAL_DIR = $CD" >> condor_config.local
+echo "STARTD_NAME=$PARTITION" >> condor_config.local
+echo "PARTITION_NAME = \"$PARTITION\"" >> condor_config.local
+echo "NUM_CPUS = $NUM_CPUS" >> condor_config.local
+echo "BGP_BLOCK_SIZE = $NUM_CPUS" >> condor_config.local
+echo "BGP_BLOCK_TYPE = \"$BGP_BLOCK_TYPE\"" >> condor_config.local
+echo 'STARTER_JOB_ENVIRONMENT = "STARTD_NAME=$(STARTD_NAME) BGP_BLOCK_SIZE=$(BGP_BLOCK_SIZE) BGP_BLOCK_TYPE='$BGP_BLOCK_TYPE'"' >> condor_config.local 
+echo 'START = (Target.BGP_BLOCK_TYPE =?= My.BGP_BLOCK_TYPE)' >> condor_config.local
+
+mkdir execute log
+chmod 0777 log execute .
+chown condor execute log .
+
+CONDOR_CONFIG=$CD/condor_config
+export CONDOR_CONFIG
+
+PATH=/home/condor/bin:/home/condor/sbin:$PATH
+
+/home/condor/sbin/condor_startd 
+
+echo OK
+exit 0;

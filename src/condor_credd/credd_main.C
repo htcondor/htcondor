@@ -24,11 +24,12 @@
 #include "basename.h"
 #include "condor_config.h"
 #include "credd.h"
+#include "subsystem_info.h"
 
 void Init();
 void Register();
 
-char *mySubSystem = "CREDD";	// used by Daemon Core
+DECL_SUBSYSTEM( "CREDD", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
 char * myUserName = NULL;
 

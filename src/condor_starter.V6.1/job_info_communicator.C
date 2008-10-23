@@ -30,6 +30,7 @@
 #include "condor_vm_universe_types.h"
 #include "hook_utils.h"
 #include "classad_visa.h"
+#include "subsystem_info.h"
 
 
 extern CStarter *Starter;
@@ -448,7 +449,7 @@ JobInfoCommunicator::initUserPrivNoOwner( void )
 #endif
 
 		// if we're using PrivSep, we need ATTR_OWNER
-	if (privsep_enabled()) {
+	if (Starter->privSepHelper() != NULL) {
 		return false;
 	}
 
@@ -740,7 +741,7 @@ JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
 	priv_state priv = set_user_priv();
 	MyString filename;
 	bool ok = classad_visa_write(&visa_ad,
-	                             mySubSystem,
+	                             mySubSystem->getName(),
 	                             daemonCore->InfoCommandSinfulString(),
 	                             iwd.Value(),
 	                             &filename);

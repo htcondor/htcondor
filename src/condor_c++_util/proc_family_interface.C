@@ -26,7 +26,7 @@
 #include "proc_family_direct.h"
 #include "../condor_privsep/condor_privsep.h"
 
-ProcFamilyInterface* ProcFamilyInterface::create(char* subsys)
+ProcFamilyInterface* ProcFamilyInterface::create(const char* subsys)
 {
 	ProcFamilyInterface* ptr;
 
@@ -40,7 +40,7 @@ ProcFamilyInterface* ProcFamilyInterface::create(char* subsys)
 		// avoids address collisions in case we have multiple
 		// daemons that all want to spawn ProcDs
 		//
-		char* address_suffix = is_master ? NULL : subsys;
+		const char* address_suffix = is_master ? NULL : subsys;
 		ptr = new ProcFamilyProxy(address_suffix);
 	}
 	else if (privsep_enabled()) {
@@ -54,6 +54,13 @@ ProcFamilyInterface* ProcFamilyInterface::create(char* subsys)
 
 		dprintf(D_ALWAYS,
 		        "GID-based process tracking requires use of ProcD; "
+		            "ignoring USE_PROCD setting\n");
+		ptr = new ProcFamilyProxy;
+	}
+	else if (param_boolean("GLEXEC_JOB", false)) {
+
+		dprintf(D_ALWAYS,
+		        "GLEXEC_JOB requires use of ProcD; "
 		            "ignoring USE_PROCD setting\n");
 		ptr = new ProcFamilyProxy;
 	}

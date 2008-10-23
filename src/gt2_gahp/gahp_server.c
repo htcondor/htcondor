@@ -784,14 +784,15 @@ handle_gass_server_init(void * user_arg)
     if (result == GLOBUS_SUCCESS)
     {
       globus_gass_transfer_listener_struct_t *l0 = globus_handle_table_lookup(&globus_i_gass_transfer_listener_handles, gassServerListeners[0]);
-      int l0_fd = ((my_globus_l_server_t*)l0->proto->handle->xio_server->entry[1].server_handle)->listener_handle;
+      int l0_fd = ((my_globus_l_server_t*)l0->proto->handle->xio_server->entry[1].server_handle)->listener_fd;
 
       for(i=1;i<20;i++) {
         globus_gass_transfer_listener_struct_t *l =
           globus_handle_table_lookup(&globus_i_gass_transfer_listener_handles, gassServerListeners[i]);
 
-        globus_libc_close( ((my_globus_l_server_t*)l->proto->handle->xio_server->entry[1].server_handle)->listener_handle );
-        ((my_globus_l_server_t*)l->proto->handle->xio_server->entry[1].server_handle)->listener_handle = l0_fd;
+        globus_libc_close( ((my_globus_l_server_t*)l->proto->handle->xio_server->entry[1].server_handle)->listener_fd );
+        ((my_globus_l_server_t*)l->proto->handle->xio_server->entry[1].server_handle)->listener_fd = l0_fd;
+        ((my_globus_l_server_t*)l->proto->handle->xio_server->entry[1].server_handle)->listener_system->fd = l0_fd;
       }
       gassServerUrl = globus_gass_transfer_listener_get_base_url(gassServerListeners[0]);
     }

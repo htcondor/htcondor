@@ -112,6 +112,20 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 }
 
 bool
+SetNodeDagFile( Dag *dag, const char *nodeName, const char *dagFile, 
+            MyString &whynot )
+{
+	Job *job = dag->FindNodeByName( nodeName );
+	if ( job ) {
+		job->SetDagFile( dagFile );
+		return true;
+	} else {
+		whynot = MyString( "Node " ) + nodeName + " not found!";
+		return false;
+	}
+}
+
+bool
 IsValidNodeName( Dag *dag, const char *name, MyString &whynot )
 {
 	if( name == NULL ) {

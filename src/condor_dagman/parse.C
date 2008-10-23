@@ -208,6 +208,11 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 					   filename, lineNumber, tmpDirectory.Value() );
 		}
 
+		else if	(strcasecmp(token, "SUBDAG") == 0) {
+			parsed_line_successfully = parse_node( dag, Job::TYPE_CONDOR, token,
+					   filename, lineNumber, tmpDirectory.Value() );
+		}
+
 		// Handle a SCRIPT spec
 		// Example Syntax is:  SCRIPT (PRE|POST) JobName ScriptName Args ...
 		else if ( strcasecmp(token, "SCRIPT") == 0 ) {
@@ -351,7 +356,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 	nodeName = tmpNodeName.Value();
 
 		// next token is the submit file name
-	char *submitFile = strtok( NULL, DELIMITERS );
+	const char *submitFile = strtok( NULL, DELIMITERS );
 
 		// next token (if any) is "DIR" or "DONE"
 	const char *doneKey = NULL;
@@ -412,6 +417,20 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 		return false;
 	}
 
+	// If this is a "SUBDAG" line, generate the real submit file name.
+	MyString nestedDagFile("");
+	MyString dagSubmitFile(""); // must be outside if so it stays in scope
+	if ( !strcasecmp( nodeTypeKeyword, "SUBDAG" ) ) {
+			// Save original DAG file name (needed for rescue DAG).
+		nestedDagFile = submitFile;
+
+			// Generate the "real" submit file name (append ".condor.sub"
+			// to the DAG file name).
+		dagSubmitFile = submitFile;
+		dagSubmitFile += ".condor.sub";
+		submitFile = dagSubmitFile.Value();
+	}
+
 	// looks ok, so add it
 	if( !AddNode( dag, nodeType, nodeName, directory,
 				submitFile, NULL, NULL, done, whynot ) )
@@ -420,6 +439,15 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 					  dagFile, lineNum, whynot.Value() );
 		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 		return false;
+	}
+
+	if ( nestedDagFile != "" ) {
+		if ( !SetNodeDagFile( dag, nodeName, nestedDagFile.Value(),
+					whynot ) ) {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
+					  	dagFile, lineNum, whynot.Value() );
+			return false;
+		}
 	}
 
 	MyString errMsg;
@@ -1281,9 +1309,10 @@ parse_splice(
 	const char *filename,
 	int lineNumber)
 {
-	const char *example = "SPLICE SpliceName SpliceFileName";
+	const char *example = "SPLICE SpliceName SpliceFileName [DIR directory]";
 	Dag *splice_dag = NULL;
 	MyString spliceName, spliceFile;
+	MyString errMsg;
 
 	//
 	// Next token is the splice name
@@ -1325,6 +1354,39 @@ parse_splice(
 		return false;
 	}
 
+	//
+	// next token (if any) is "DIR"
+	//
+	TmpDir spliceDir;
+	MyString dirTok = strtok( NULL, DELIMITERS );
+	MyString directory = ".";
+
+	dirTok.upper_case();
+	if ( dirTok == "DIR" ) {
+		// parse the directory name
+		directory = strtok( NULL, DELIMITERS );
+		if ( directory == "" ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: %s (line %d): DIR requires a directory "
+						"specification\n", filename, lineNumber);
+			debug_printf( DEBUG_QUIET, "%s\n", example );
+			return false;
+		}
+
+	}
+
+	// 
+	// anything else is garbage
+	//
+	MyString garbage = strtok( 0, DELIMITERS );
+	if( garbage != "" ) {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
+						  "parameter \"%s\"\n", filename, lineNumber, 
+						  garbage.Value() );
+			debug_printf( DEBUG_QUIET, "%s\n", example );
+			return false;
+	}
+
 	/* make a new dag to put everything into */
 
 	/* parse increments this number, however, we want the splice nodes to
@@ -1346,10 +1408,24 @@ parse_splice(
 							dag->StorkRmExe(),
 							dag->DAGManJobId(),
 							dag->ProhibitMultiJobs(),
-							dag->SubmitDepthFirst() );
+							dag->SubmitDepthFirst(),
+							false);
+	
+	// initialize whatever the DIR line was, or defaults to, here.
+	splice_dag->SetDirectory(directory);
 
-	dprintf(D_ALWAYS, "Parsing Splice %s with file %s\n", 
-		spliceName.Value(), spliceFile.Value());
+	dprintf(D_ALWAYS, "Parsing Splice %s in directory %s with file %s\n", 
+		spliceName.Value(), directory.Value(), spliceFile.Value());
+
+	// CD into the DIR directory so we can continue parsing.
+	// This must be done AFTER the DAG is created due to the DAG object
+	// doing its own chdir'ing while looking for log files.
+	if ( !spliceDir.Cd2TmpDir(directory.Value(), errMsg) ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: can't change to directory %s: %s\n",
+					directory.Value(), errMsg.Value() );
+		return false;
+	}
 
 	// parse the splice file into a separate dag.
 	if (!parse(splice_dag, spliceFile.Value(), _useDagDir)) {
@@ -1358,7 +1434,15 @@ parse_splice(
 		return false;
 	}
 
-	// munge the splice name XXX???
+	// CD back to main dir to keep processing.
+	if ( !spliceDir.Cd2MainDir(errMsg) ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: can't change to original directory: %s\n",
+					errMsg.Value() );
+		return false;
+	}
+
+	// munge the splice name
 	spliceName = munge_job_name(spliceName.Value());
 
 	// XXX I'm not sure this goes here quite yet....

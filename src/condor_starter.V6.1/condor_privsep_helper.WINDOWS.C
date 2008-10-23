@@ -19,18 +19,15 @@
 
 
 #include "condor_common.h"
+#include "condor_privsep_helper.h"
 #include "condor_debug.h"
-#include "starter_privsep_helper.h"
 
 // the methods in this file are all stubbed out for now, until we
 // have support for privilege separation on Windows
-//
 
-StarterPrivSepHelper privsep_helper;
+bool CondorPrivSepHelper::s_instantiated = false;
 
-bool StarterPrivSepHelper::s_instantiated = false;
-
-StarterPrivSepHelper::StarterPrivSepHelper() :
+CondorPrivSepHelper::CondorPrivSepHelper() :
 	m_user_initialized(false),
 	m_sandbox_initialized(false),
 	m_sandbox_path(NULL)
@@ -39,7 +36,7 @@ StarterPrivSepHelper::StarterPrivSepHelper() :
 	s_instantiated = true;
 }
 
-StarterPrivSepHelper::~StarterPrivSepHelper()
+CondorPrivSepHelper::~CondorPrivSepHelper()
 {
 	if (m_sandbox_path != NULL) {
 		free(m_sandbox_path);
@@ -47,31 +44,31 @@ StarterPrivSepHelper::~StarterPrivSepHelper()
 }
 
 void
-StarterPrivSepHelper::initialize_user(const char* name)
+CondorPrivSepHelper::initialize_user(const char* name)
 {
-	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
+	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
 }
 
 void
-StarterPrivSepHelper::initialize_sandbox(const char* path)
+CondorPrivSepHelper::initialize_sandbox(const char* path)
 {
-	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
+	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
 }
 
 void
-StarterPrivSepHelper::chown_sandbox_to_user()
+CondorPrivSepHelper::chown_sandbox_to_user()
 {
-	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
+	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
 }
 
 void
-StarterPrivSepHelper::chown_sandbox_to_condor()
+CondorPrivSepHelper::chown_sandbox_to_condor()
 {
-	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
+	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
 }
 
 int
-StarterPrivSepHelper::create_process(const char*,
+CondorPrivSepHelper::create_process(const char*,
                                      ArgList&,
                                      Env&,
                                      const char*,
@@ -83,6 +80,6 @@ StarterPrivSepHelper::create_process(const char*,
                                      int,
                                      FamilyInfo*)
 {
-	EXCEPT("StarterPrivSepHelper: Windows support not implemented");
+	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
 	return 0;
 }

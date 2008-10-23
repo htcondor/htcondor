@@ -46,26 +46,15 @@ grid_monitor.sh: grid_monitor_wrapper grid_manager_monitor_agent
 	cat grid_monitor_wrapper grid_manager_monitor_agent > grid_monitor.sh
 	chmod 755 grid_monitor.sh
 
-#if HAVE_EXT_GT4GAHP
-public_copy_target($(GT4GAHP_DIR)/gt4-gahp.jar,lib,gt4-gahp.jar,TEXT_MODE)
-
-release_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
-static_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
-strip_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
-#endif
-
-#if HAVE_EXT_GT42GAHP
-public_copy_target($(GT42GAHP_DIR)/gt42-gahp.jar,lib,gt42-gahp.jar,TEXT_MODE)
-
-release_recursive_copy_target($(GT42GAHP_DIR)/gt42,lib/gt42)
-static_recursive_copy_target($(GT42GAHP_DIR)/gt42,lib/gt42)
-strip_recursive_copy_target($(GT42GAHP_DIR)/gt42,lib/gt42)
-#endif
-
 #if HAVE_EXT_BLAHP
 release_recursive_copy_target($(BLAHP_DIR)/dynamic,lib/glite)
 static_recursive_copy_target($(BLAHP_DIR)/static,lib/glite)
 strip_recursive_copy_target($(BLAHP_DIR)/dynamic,lib/glite)
+public_copy_target(nqs_cancel,lib/glite/bin,nqs_cancel,EXECUTABLE_MODE)
+public_copy_target(nqs_hold,lib/glite/bin,nqs_hold,EXECUTABLE_MODE)
+public_copy_target(nqs_resume,lib/glite/bin,nqs_resume,EXECUTABLE_MODE)
+public_copy_target(nqs_status,lib/glite/bin,nqs_status,EXECUTABLE_MODE)
+public_copy_target(nqs_submit,lib/glite/bin,nqs_submit,EXECUTABLE_MODE)
 #endif
 
 #if HAVE_EXT_UNICOREGAHP

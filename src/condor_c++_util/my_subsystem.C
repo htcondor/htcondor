@@ -20,6 +20,7 @@
 
 /* Dummy definition of mySubSystem string to be included in Condor
    libraries where needed. */
+#include "subsystem_info.h"
 
-char* mySubSystem = "TOOL";
-
+/* For daemonCore, etc. */
+DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );

@@ -40,6 +40,7 @@
 #include "filename_tools.h"
 #include "condor_holdcodes.h"
 #include "file_transfer_db.h"
+#include "subsystem_info.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
 
@@ -143,6 +144,7 @@ FileTransfer::FileTransfer()
 	simple_init = true;
 	simple_sock = NULL;
 	m_use_file_catalog = true;
+	m_sec_session_id = NULL;
 }
 
 FileTransfer::~FileTransfer()
@@ -201,6 +203,7 @@ FileTransfer::~FileTransfer()
 #ifdef WIN32
 	if (perm_obj) delete perm_obj;
 #endif
+	free(m_sec_session_id);
 }
 
 int
@@ -822,11 +825,11 @@ FileTransfer::DownloadFiles(bool blocking)
 			return FALSE;
 		}
 
-		d.startCommand(FILETRANS_UPLOAD, &sock, 0);
+		d.startCommand(FILETRANS_UPLOAD, &sock, 0, NULL, NULL, false, m_sec_session_id);
 
 		sock.encode();
 
-		if ( !sock.code(TransKey) ||
+		if ( !sock.put_secret(TransKey) ||
 			!sock.end_of_message() ) {
 			return 0;
 		}
@@ -1157,11 +1160,11 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 			return FALSE;
 		}
 
-		d.startCommand(FILETRANS_DOWNLOAD, &sock);
+		d.startCommand(FILETRANS_DOWNLOAD, &sock, clientSockTimeout, NULL, NULL, false, m_sec_session_id);
 
 		sock.encode();
 
-		if ( !sock.code(TransKey) ||
+		if ( !sock.put_secret(TransKey) ||
 			!sock.end_of_message() ) {
 			return 0;
 		}
@@ -1200,7 +1203,7 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 	sock->timeout(0);
 
 	// code() allocates memory for the string if the pointer is NULL.
-	if (!sock->code(transkey) ||
+	if (!sock->get_secret(transkey) ||
 		!sock->end_of_message() ) {
 		dprintf(D_FULLDEBUG,
 			    	"FileTransfer::HandleCommands failed to read transkey\n");
@@ -1698,7 +1701,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		if( rc < 0 ) {
 			int the_error = errno;
 			error_buf.sprintf("%s at %s failed to receive file %s",
-			                  mySubSystem,s->sender_ip_str(),fullname.Value());
+			                  mySubSystem->getName(),
+							  s->sender_ip_str(),fullname.Value());
 			download_success = false;
 			if(rc == GET_FILE_OPEN_FAILED || rc == GET_FILE_WRITE_FAILED) {
 				// errno is well defined in this case, and transferred data
@@ -1761,7 +1765,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		record.elapsed  = elapsed;
     
 			// Get the name of the daemon calling DoDownload
-		strncpy(daemon, mySubSystem, 15);
+		strncpy(daemon, mySubSystem->getName(), 15);
 		record.daemon = daemon;
 
 		record.sockp =s;
@@ -1797,7 +1801,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		error_buf.sprintf("%s failed to receive file(s) from %s",
-						  mySubSystem,peer_ip_str);
+						  mySubSystem->getName(),peer_ip_str);
 		dprintf(D_ALWAYS,"DoDownload: %s; %s\n",
 				error_buf.Value(),upload_error_buf.Value());
 
@@ -2701,7 +2705,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 			MyString error_desc_to_send;
 			if(!upload_success) {
 				error_desc_to_send.sprintf("%s at %s failed to send file(s) to %s",
-										   mySubSystem,
+										   mySubSystem->getName(),
 										   s->sender_ip_str(),
 										   s->get_sinful_peer());
 				if(upload_error_desc) {
@@ -2733,7 +2737,9 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 			receiver_ip_str = "unknown recipient";
 		}
 
-		error_buf.sprintf("%s at %s failed to send file(s) to %s",mySubSystem,s->sender_ip_str(),receiver_ip_str);
+		error_buf.sprintf("%s at %s failed to send file(s) to %s",
+						  mySubSystem->getName(),
+						  s->sender_ip_str(),receiver_ip_str);
 		if(upload_error_desc) {
 			error_buf.sprintf_cat(": %s",upload_error_desc);
 		}
@@ -3003,3 +3009,8 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 	return true;
 }
 
+void FileTransfer::setSecuritySession(char const *session_id) {
+	free(m_sec_session_id);
+	m_sec_session_id = NULL;
+	m_sec_session_id = session_id ? strdup(session_id) : NULL;
+}

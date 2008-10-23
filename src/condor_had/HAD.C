@@ -29,6 +29,7 @@
 #include "condor_version.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "subsystem_info.h"
 
 #define  USE_REPLICATION    (0)
 
@@ -43,7 +44,7 @@
 extern "C" int SetSyscalls(int val){return val;}
 extern char* myName;
 
-char *mySubSystem = "HAD";  // for daemon core
+DECL_SUBSYSTEM( "HAD", SUBSYSTEM_TYPE_DAEMON );		// used by Daemon Core
 
 HADStateMachine* stateMachine = NULL;
 

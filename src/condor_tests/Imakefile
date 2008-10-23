@@ -63,6 +63,14 @@ RUN(lib_chirpio_van)
 TESTCLASS(lib_chirpio_van,lib)
 TESTCLASS(lib_chirpio_van,quick)
 TESTCLASS(lib_chirpio_van,full)
+
+DESC(job_core_chirp_par,"Exercise the chirp I/O C library in Parallel Universe")
+BUILD_DEP_LIB($(CC),job_core_chirp_par,c,,../release_dir/lib/libchirp_client.a)
+DEPS(job_core_chirp_par,job_core_chirp_par.exe)
+RUN(job_core_chirp_par)
+TESTCLASS(job_core_chirp_par,lib)
+TESTCLASS(job_core_chirp_par,quick)
+TESTCLASS(job_core_chirp_par,full)
 #endif 
 
 /* User log and log reader used by dagman tests */
@@ -184,8 +192,8 @@ TESTCLASS(job_dagman_splice-H,btdebug)
 
 # vmuniverse smoke test in larg repository
 
-/* Test is timing out currently, need to investigate
 #if defined(HAVE_VMWARE) && defined(HAVE_CONDOR_TEST_LRG)
+/*
 DESC(job_vmu_basic,"VM Universe smoke test")
 RUN(job_vmu_basic)
 TESTCLASS(job_vmu_basic,core)
@@ -193,8 +201,8 @@ TESTCLASS(job_vmu_basic,quick)
 TESTCLASS(job_vmu_basic,full)
 TESTCLASS(job_vmu_basic,quicknolink)
 TESTCLASS(job_vmu_basic,btdebug)
-#endif 
 */
+#endif 
 
 DESC(job_flocking_to,"Simple flocking test")
 RUN(job_flocking_to)

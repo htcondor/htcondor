@@ -3,7 +3,7 @@ all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) 
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 
 XCOMM On Digital Unix 5.0, if we are linking against libX11.a, we need
 XCOMM -ldnet_stub.  libX11.a has hooks to support DecNet, and we must

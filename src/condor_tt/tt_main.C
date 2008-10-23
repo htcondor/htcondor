@@ -21,6 +21,7 @@
 #include "condor_daemon_core.h"
 #include "condor_config.h"
 #include "condor_debug.h"
+#include "subsystem_info.h"
 
 #include "ttmanager.h"
 
@@ -36,7 +37,8 @@
 //-------------------------------------------------------------
 
 // about self
-char* mySubSystem = "QUILL";		// used by Daemon Core
+DECL_SUBSYSTEM( "QUILL", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+
 // global objects;
 TTManager ttManager;
 

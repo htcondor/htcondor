@@ -28,6 +28,7 @@
 #include "reli_sock.h"
 #include "baseshadow.h"
 #include "file_transfer.h"
+#include "condor_claimid_parser.h"
 
 /** The states that a remote resource can be in.  If you add anything
 	here you must A) put it before _RR_STATE_THRESHOLD and B) add a
@@ -225,6 +226,20 @@ class RemoteResource : public Service {
 		*/
 	void setStarterInfo( ClassAd* ad );
 
+		/** If we are generating security sessions from the match
+			info (claim id), then this function provides the information
+			needed by the starter.
+		*/
+	bool getSecSessionInfo(
+		char const *starter_reconnect_session_info,
+		MyString &reconnect_session_id,
+		MyString &reconnect_session_info,
+		MyString &reconnect_session_key,
+		char const *starter_filetrans_session_info,
+		MyString &filetrans_session_id,
+		MyString &filetrans_session_info,
+		MyString &filetrans_session_key);
+
 		/** Set the reason this host exited.  
 			@param reason Why did it exit?  Film at 11.
 		*/
@@ -382,13 +397,24 @@ class RemoteResource : public Service {
 	int exit_value;
 	bool exited_by_signal;
 
+		// If we specially create a security session for file transfer,
+		// this records all the information we need to know about it.
+		// We use the ClaimIdParser class for convenience, because it
+		// already handles storing this kind of data.
+	ClaimIdParser m_filetrans_session;
+
+		// If we specially create a security session for this claim
+		// (SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION=TRUE), then this records all the
+		// information we need to know about it.  This is literally
+		// just a copy of the claim id string.  Many of the uses of
+		// this claim session happen implicitly in the DCStartd
+		// class, which has its own copy of the claim id.
+	ClaimIdParser m_claim_session;
+
 		/// Updates both the last_contact data member and the job ad
 	virtual void hadContact( void );
 	time_t last_job_lease_renewal;
 	bool supports_reconnect;
-
-		/// This is the timeout period to hear from a startd.  (90 seconds).
-	static const int SHADOW_SOCK_TIMEOUT;
 
 		// More resource-specific stuff goes here.
 

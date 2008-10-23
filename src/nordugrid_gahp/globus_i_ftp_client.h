@@ -1,13 +1,18 @@
-/* Modified from Globus 4.0.5 for use with the NorduGrid GAHP server. */
+/* Modified from Globus 4.2.0 for use with the NorduGrid GAHP server. */
 /*
- * Portions of this file Copyright 1999-2005 University of Chicago
- * Portions of this file Copyright 1999-2005 The University of Southern California.
- *
- * This file or a portion of this file is licensed under the
- * terms of the Globus Toolkit Public License, found at
- * http://www.globus.org/toolkit/download/license.html.
- * If you redistribute this file, with or without
- * modifications, you must include this notice in the file.
+ * Copyright 1999-2006 University of Chicago
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #ifndef GLOBUS_DONT_DOCUMENT_INTERNAL
@@ -16,14 +21,17 @@
  * Globus FTP Client Library
  *
  * $RCSfile: globus_i_ftp_client.h,v $
- * $Revision: 1.2 $
- * $Date: 2007/09/06 21:44:53 $
+ * $Revision: 1.45 $
+ * $Date: 2008/04/04 01:51:47 $
  */
 
 #include "globus_common.h"
 #include "globus_ftp_client.h"
 #include "globus_ftp_client_plugin.h"
 #include "globus_error_string.h"
+#include "globus_xio.h"
+
+#define SSH_EXEC_SCRIPT "gridftp-ssh"
 
 #ifndef GLOBUS_L_INCLUDE_FTP_CLIENT_H
 #define GLOBUS_L_INCLUDE_FTP_CLIENT_H
@@ -143,6 +151,12 @@ typedef struct globus_i_ftp_client_operationattr_t
     globus_bool_t                               allow_ipv6;
     globus_off_t                                allocated_size;
     globus_bool_t                               cwd_first;
+    char *                                      authz_assert;
+    globus_bool_t                               cache_authz_assert;
+    globus_bool_t                               delayed_pasv;
+    char *                                      net_stack_str;
+    char *                                      disk_stack_str;
+    char *                                      module_alg_str;
 }
 globus_i_ftp_client_operationattr_t;
 
@@ -190,6 +204,12 @@ typedef struct globus_i_ftp_client_handleattr_t
 
     globus_bool_t				rfc1738_url;
 
+    /**
+     * Use GRIDFTP2 if supported by the server
+     */
+
+    globus_bool_t				gridftp2;
+
     /** 
      * List of cached URLs.
      *
@@ -207,6 +227,11 @@ typedef struct globus_i_ftp_client_handleattr_t
      */
     globus_list_t *                             plugins;
 
+    globus_size_t                               outstanding_commands;
+    globus_ftp_client_pipeline_callback_t       pipeline_callback;
+    void *                                      pipeline_arg;
+    globus_bool_t                               pipeline_done;
+    
     /*
      *  NETLOGGER
      */
@@ -301,10 +326,17 @@ typedef enum
     GLOBUS_FTP_CLIENT_TARGET_REMOTE_RETR_OPTS,
     GLOBUS_FTP_CLIENT_TARGET_SETUP_LOCAL_RETR_OPTS,
     GLOBUS_FTP_CLIENT_TARGET_LOCAL_RETR_OPTS,
+    GLOBUS_FTP_CLIENT_TARGET_OPTS_PASV_DELAYED,
     GLOBUS_FTP_CLIENT_TARGET_SETUP_PASV,
     GLOBUS_FTP_CLIENT_TARGET_PASV,
     GLOBUS_FTP_CLIENT_TARGET_SETUP_PORT,
     GLOBUS_FTP_CLIENT_TARGET_PORT,
+    GLOBUS_FTP_CLIENT_TARGET_SETUP_AUTHZ_ASSERT,
+    GLOBUS_FTP_CLIENT_TARGET_AUTHZ_ASSERT,
+    GLOBUS_FTP_CLIENT_TARGET_SETUP_SETNETSTACK,
+    GLOBUS_FTP_CLIENT_TARGET_SETNETSTACK,
+    GLOBUS_FTP_CLIENT_TARGET_SETUP_SETDISKSTACK,
+    GLOBUS_FTP_CLIENT_TARGET_SETDISKSTACK,
     GLOBUS_FTP_CLIENT_TARGET_SETUP_ALLO,
     GLOBUS_FTP_CLIENT_TARGET_ALLO,
     GLOBUS_FTP_CLIENT_TARGET_SETUP_REST_STREAM,
@@ -326,12 +358,17 @@ typedef enum
     GLOBUS_FTP_CLIENT_TARGET_SETUP_MDTM,
     GLOBUS_FTP_CLIENT_TARGET_SETUP_MLST,
     GLOBUS_FTP_CLIENT_TARGET_SETUP_STAT,
+    GLOBUS_FTP_CLIENT_TARGET_SETUP_GETPUT_GET,
+    GLOBUS_FTP_CLIENT_TARGET_SETUP_GETPUT_PUT,
     GLOBUS_FTP_CLIENT_TARGET_MLST,
     GLOBUS_FTP_CLIENT_TARGET_STAT,
     GLOBUS_FTP_CLIENT_TARGET_LIST,
     GLOBUS_FTP_CLIENT_TARGET_RETR,
     GLOBUS_FTP_CLIENT_TARGET_STOR,
     GLOBUS_FTP_CLIENT_TARGET_MDTM,
+    GLOBUS_FTP_CLIENT_TARGET_GETPUT_PASV_GET,
+    GLOBUS_FTP_CLIENT_TARGET_GETPUT_PASV_PUT,
+    GLOBUS_FTP_CLIENT_TARGET_GETPUT_PASV_TRANSFER,
     GLOBUS_FTP_CLIENT_TARGET_READY_FOR_DATA,
     GLOBUS_FTP_CLIENT_TARGET_NEED_LAST_BLOCK,
     GLOBUS_FTP_CLIENT_TARGET_NEED_EMPTY_QUEUE,
@@ -344,6 +381,18 @@ typedef enum
     GLOBUS_FTP_CLIENT_TARGET_SETUP_CWD
 }
 globus_ftp_client_target_state_t;
+
+
+typedef struct globus_i_ftp_client_url_ent_s
+{
+    globus_i_ftp_client_operation_t             op;
+    char *                                      source_url;
+    globus_url_t                                src_url;
+    char *                                      dest_url;
+    globus_url_t                                dst_url;
+    
+} globus_i_ftp_client_url_ent_t;
+
 
 /**
  * FTP server features we are interested in. 
@@ -403,6 +452,9 @@ globus_i_ftp_client_feature_set(
     globus_i_ftp_client_features_t *             features,
     globus_ftp_client_probed_feature_t           feature,
     globus_ftp_client_tristate_t                 value);
+
+void
+globus_i_ftp_client_find_ssh_client_program();
 
 /**
  * Data connection caching information.
@@ -540,16 +592,6 @@ typedef struct globus_i_ftp_client_handle_t
     globus_off_t                                partial_end_offset;
 
     /**
-     * User-supplied algorithm choosing string for an ERET.
-     */
-    char *                                      eret_alg_str;
-    /**
-     * User-supplied algorithm choosing string for an ESTO.
-     */
-    char *                                      esto_alg_str;
-    /*** end add by bresnaha ***/
- 
-    /**
      * Base offset for a transfer, to be added to all offsets in
      * stream mode
      */
@@ -585,7 +627,14 @@ typedef struct globus_i_ftp_client_handle_t
     globus_off_t                                checksum_offset;
     globus_off_t                                checksum_length;
     char *                                      checksum_alg;
+    
+    /** piplining operation queue */
+    globus_fifo_t                               src_op_queue;
+    globus_fifo_t                               dst_op_queue;
+    globus_fifo_t                               src_response_pending_queue;
+    globus_fifo_t                               dst_response_pending_queue;
 
+    int                                         no_callback_count;
     /** User pointer
      * @see globus_ftp_client_handle_set_user_pointer(),
      *      globus_ftp_client_handle_get_user_pointer()
@@ -628,7 +677,11 @@ typedef struct globus_i_ftp_client_target_s
     globus_ftp_control_structure_t		structure;
     globus_ftp_control_layout_t			layout;
     globus_ftp_control_parallelism_t		parallelism;
-
+    char *                                      authz_assert;
+    char *                                      net_stack_str;
+    char *                                      disk_stack_str;
+    globus_bool_t                               delayed_pasv;
+    
     /** Requested settings */
     globus_i_ftp_client_operationattr_t *	attr;
 
@@ -643,6 +696,11 @@ typedef struct globus_i_ftp_client_target_s
     
     /* used for determining need for NOOP */
     globus_abstime_t                            last_access;
+    
+    globus_bool_t                               src_command_sent;
+    globus_bool_t                               dst_command_sent;
+    
+    globus_list_t *                             net_stack_list;
 } globus_i_ftp_client_target_t;
 
 /**
@@ -824,6 +882,11 @@ globus_i_ftp_client_count_digits(
 
 extern globus_ftp_control_auth_info_t globus_i_ftp_client_default_auth_info;
 extern globus_reltime_t                 globus_i_ftp_client_noop_idle;
+
+extern globus_xio_stack_t               ftp_client_i_popen_stack;
+extern globus_xio_driver_t              ftp_client_i_popen_driver;
+extern globus_bool_t                    ftp_client_i_popen_ready;
+
 
 /* globus_ftp_client_handle.c */
 globus_object_t *
@@ -1075,6 +1138,11 @@ globus_i_ftp_client_restart_register_oneshot(
 
 /* globus_ftp_client_transfer.c */
 
+globus_object_t *
+globus_l_ftp_client_url_parse(
+    const char *				url_string,
+    globus_url_t *				url,
+    globus_bool_t 				rfc1738_url);
 
 void
 globus_i_ftp_client_force_close_callback(

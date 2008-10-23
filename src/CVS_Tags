@@ -1,3 +1,6 @@
+09/22/2008 V7_1_3-branch
+  Branch for the V7_1_2 build, based from: master / BUILD-V7_1-trunk-2008-9-22
+
 09/04/2008 V7_1-profile-branch
   Branch for "Windows User Profile Loading," based on: master
 
@@ -20,6 +23,11 @@
 
 07/09/08 V7_1_1-branch
   Branch for the V7_1_1 build, based from: BUILD-V7_1-trunk-2008-7-8
+10/02/08 V7_0_5
+   The official tag for 7.0.5, from the V7_0_5-branch.
+   $CondorVersion: 7.0.5 Sep 20 2008 BuildID: 105846 $
+   Original build tag: V7_0_5-branch-2008-9-20
+
 09/05/08 V7_0_5-branch
 	The release branch for 7.0.5. Made at 10:45am on 09/05/08
 	off of the V7_0-branch.

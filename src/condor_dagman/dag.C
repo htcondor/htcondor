@@ -69,7 +69,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const char *storkRmExe, const CondorID *DAGManJobID,
-		  bool prohibitMultiJobs, bool submitDepthFirst) :
+		  bool prohibitMultiJobs, bool submitDepthFirst, bool findUserLogs) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	DAG_ERROR_CONDOR_SUBMIT_FAILED (-1001),
@@ -106,13 +106,25 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_prohibitMultiJobs	  (prohibitMultiJobs),
 	_submitDepthFirst	  (submitDepthFirst)
 {
-	ASSERT( dagFiles.number() >= 1 );
 
-	PrintDagFiles( dagFiles );
+	// If this dag is a splice, then it may have been specified with a DIR
+	// directive. If so, then this records what it was so we can later
+	// propogate this information to all contained nodes in the DAG--effectively
+	// giving all nodes in the DAG a DIR definition with this directory
+	// as a prefix to what is already there (except in the case of absolute
+	// paths, in which case nothing is done).
+	m_directory = ".";
 
-	FindLogFiles( dagFiles, _useDagDir );
+	// We only find the log files for the root dag file. FindLogFile is
+	// smart enough to already walk the parse tree of splices and find the
+	// log files. So we only want to do that once and not for each splice.
+	if (findUserLogs == true) {
+		ASSERT( dagFiles.number() >= 1 );
+		PrintDagFiles( dagFiles );
 
-	ASSERT( TotalLogFileCount() > 0 ) ;
+		FindLogFiles( dagFiles, _useDagDir );
+		ASSERT( TotalLogFileCount() > 0 ) ;
+	}
 
  	_readyQ = new PrioritySimpleList<Job*>;
 	_preScriptQ = new ScriptQ( this );
@@ -244,12 +256,14 @@ bool Dag::Bootstrap (bool recovery) {
 		if( _condorLogFiles.number() > 0 ) {
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
 				_recovery = false;
+				debug_cache_stop_caching();
 				return false;
 			}
 		}
 		if( _storkLogFiles.number() > 0 ) {
 			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
 				_recovery = false;
+				debug_cache_stop_caching();
 				return false;
 			}
 		}
@@ -1716,13 +1730,14 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 			// Print the JOB/DATA line.
 		const char *keyword = "";
         if( job->JobType() == Job::TYPE_CONDOR ) {
-			keyword = "JOB";
+			keyword = job->GetDagFile() ? "SUBDAG" : "JOB";
         } else if( job->JobType() == Job::TYPE_STORK ) {
 			keyword = "DATA";
         } else {
 			EXCEPT( "Illegal node type (%d)\n", job->JobType() );
 		}
         fprintf (fp, "%s %s %s ", keyword, job->GetJobName(),
+					job->GetDagFile() ? job->GetDagFile() :
 					job->GetCmdFile());
 		if ( strcmp( job->GetDirectory(), "" ) ) {
 			fprintf(fp, "DIR %s ", job->GetDirectory());
@@ -3062,6 +3077,46 @@ Dag::UpdateJobCounts( Job *node, int change )
 	}
 }
 
+
+//---------------------------------------------------------------------------
+void
+Dag::SetDirectory(MyString &dir)
+{
+	m_directory = dir;
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::SetDirectory(char *dir)
+{
+	m_directory = dir;
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::PropogateDirectoryToAllNodes(void)
+{
+    Job *job = NULL;
+	MyString key;
+
+	if (m_directory == ".") {
+		return;
+	}
+
+	// Propogate the directory setting to all nodes in the DAG.
+	_jobs.Rewind();
+	while( (job = _jobs.Next()) ) {
+		ASSERT( job != NULL );
+		job->PrefixDirectory(m_directory);
+	}
+
+	// I wipe out m_directory here. If this gets called multiple
+	// times for a specific DAG, it'll prefix multiple times, and that is most
+	// likely wrong.
+
+	m_directory = ".";
+}
+
 //---------------------------------------------------------------------------
 void
 Dag::PrefixAllNodeNames(const MyString &prefix)
@@ -3216,6 +3271,9 @@ Dag::LiftSplices(SpliceLayer layer)
 		_splices.remove(key);
 		delete splice;
 	}
+
+	// and prefix them if there was a DIR for the dag.
+	PropogateDirectoryToAllNodes();
 
 	// base case is above.
 	return NULL;

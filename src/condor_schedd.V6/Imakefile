@@ -16,7 +16,7 @@ soapobjs(schedd)
 ScheddPluginObj = ScheddPlugin.o
 
 %-plugin.so: %.C
-   $(CPlusPlus) $(C_PLUS_FLAGS) -shared $< -o $@
+	$(CPlusPlus) $(C_PLUS_FLAGS) -shared $< -o $@
 #endif
 
 #ifdef HAVE_EXT_GSOAP

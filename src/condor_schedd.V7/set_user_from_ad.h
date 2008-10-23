@@ -17,18 +17,9 @@
  *
  ***************************************************************/
 
-#ifndef GET_MY_SUBSYSTEM_H
-#define GET_MY_SUBSYSTEM_H
-
-/* Helper function to retrieve the value of mySubSystem global variable
- * from C functions.  This is helpful because mySubSystem is decorated w/ C++
- * linkage.
- */
-
-BEGIN_C_DECLS
-
-const char* get_mySubSystem(void);
-
-END_C_DECLS
-
-#endif /* GET_MY_SUBSYSTEM_H */
+// Set the user information based on the ATTR_OWNER and ATTR_NT_DOMAIN from
+// the given ClassAd
+//
+// EXCEPT is invoked if the given ad is missing its ATTR_OWNER or if
+// init_user_ids with the owner and domain from the ad fails
+void set_user_from_ad(classad::ClassAd const &ad);

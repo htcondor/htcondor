@@ -22,6 +22,7 @@
 #include "condor_config.h"
 #include "condor_daemon_core.h"
 #include "condor_string.h"
+#include "subsystem_info.h"
 #include "basename.h"
 #include "setenv.h"
 #include "dag.h"
@@ -35,6 +36,7 @@
 #include "util.h"
 #include "condor_getcwd.h"
 #include "condor_version.h"
+#include "subsystem_info.h"
 
 void ExitSuccess();
 
@@ -47,7 +49,7 @@ extern "C" void process_config_source( char* file, char* name,
 extern "C" bool is_piped_command(const char* filename);
 
 //---------------------------------------------------------------------------
-char* mySubSystem = "DAGMAN";         // used by Daemon Core
+DECL_SUBSYSTEM( "DAGMAN", SUBSYSTEM_TYPE_DAEMON );
 
 static char* lockFileName = NULL;
 

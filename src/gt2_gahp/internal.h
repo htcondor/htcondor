@@ -22,9 +22,19 @@
 // This comes from xio/src/builtins/tcp/globus_xio_tcp_driver.c
 typedef struct
 {
-    globus_xio_system_handle_t          listener_handle;
+    globus_xio_system_socket_handle_t   listener_system;
+    globus_xio_system_socket_t          listener_fd;
     globus_bool_t                       converted;
 } my_globus_l_server_t;
+
+// This comes from xio/src/globus_xio_system_select.c
+typedef struct globus_l_xio_system_s
+{
+    globus_xio_system_type_t            type;
+    int                                 fd;
+    globus_mutex_t                      lock; /* only used to protect below */
+    globus_off_t                        file_position;
+} globus_l_xio_system_t;
 
 // This comes from xio/src/globus_i_xio.h
 typedef struct globus_i_xio_monitor_s

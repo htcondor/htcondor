@@ -26,7 +26,7 @@
 #include "classad_helpers.h"
 #include "sig_name.h"
 #include "stream_handler.h"
-#include "starter_privsep_helper.h"
+#include "subsystem_info.h"
 
 extern CStarter *Starter;
 
@@ -317,17 +317,17 @@ UserProc::getStdFile( std_file_type type,
 		case SFT_IN:
 			*out_fd = Starter->starterStdinFd();
 			dprintf( D_ALWAYS, "%s: using STDIN of %s\n", log_header,
-					 mySubSystem );
+					 mySubSystem->getName() );
 			break;
 		case SFT_OUT:
 			*out_fd = Starter->starterStdoutFd();
 			dprintf( D_ALWAYS, "%s: using STDOUT of %s\n", log_header,
-					 mySubSystem );
+					 mySubSystem->getName() );
 			break;
 		case SFT_ERR:
 			*out_fd = Starter->starterStderrFd();
 			dprintf( D_ALWAYS, "%s: using STDERR of %s\n", log_header,
-					 mySubSystem );
+					 mySubSystem->getName() );
 			break;
 		}
 		return true;

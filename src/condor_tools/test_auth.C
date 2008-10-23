@@ -41,9 +41,10 @@
 #include "condor_distribution.h"
 #include "string_list.h"
 #include "simplelist.h"
+#include "subsystem_info.h"
 
 char	*MyName;
-char	*mySubSystem = NULL;
+DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
 
 void
 usage()
@@ -88,7 +89,8 @@ main( int argc, char* argv[] )
 	for( i=1; i<argc; i++ ) {
 		if( match_prefix( argv[i], "-daemontype" ) ) {
 			if( argv[i + 1] ) {
-				mySubSystem = strdup( argv[++i] );
+				mySubSystem->setName( argv[++i] );
+				mySubSystem->setTypeFromName( );
 			} else {
 				usage();
 			}
@@ -106,14 +108,13 @@ main( int argc, char* argv[] )
 
 		// If we didn't get told what subsystem we should use, set it
 		// to "TOOL".
-	if( !mySubSystem ) {
-		mySubSystem = strdup( "TOOL" );
+	if( !mySubSystem->isNameValid() ) {
+		mySubSystem->setName( "TOOL" );
 	}
 
 	config( 0, true );
 
 	IpVerify ipverify;
-	ipverify.Init();
 
 	MyString line;
 	while( line.readLine(input_fp) ) {

@@ -22,7 +22,6 @@
 #include "condor_random_num.h"
 #include "io_proxy.h"
 #include "io_proxy_handler.h"
-#include "starter_privsep_helper.h"
 
 #define IO_PROXY_COOKIE_SIZE 32
 

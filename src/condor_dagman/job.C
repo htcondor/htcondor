@@ -60,12 +60,13 @@ const char* Job::_job_type_names[] = {
 Job::~Job() {
 	delete [] _directory;
 	delete [] _cmdFile;
+	delete [] _dagFile;
     // NOTE: we cast this to char* because older MS compilers
     // (contrary to the ISO C++ spec) won't allow you to delete a
     // const.  This has apparently been fixed in Visual C++ .NET, but
     // as of 6/2004 we don't yet use that.  For details, see:
     // http://support.microsoft.com/support/kb/articles/Q131/3/22.asp
-	delete [] (char*)_jobName;
+	delete [] _jobName;
 	delete [] _logFile;
 	delete varNamesFromDag;
 	delete varValsFromDag;
@@ -102,6 +103,7 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
     _jobName = strnewp (jobName);
 	_directory = strnewp (directory);
     _cmdFile = strnewp (cmdFile);
+	_dagFile = NULL;
 	_throttleInfo = NULL;
 
 	if ( (_jobType == TYPE_CONDOR) && prohibitMultiJobs ) {
@@ -159,6 +161,32 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
 	snprintf( error_text, JOB_ERROR_TEXT_MAXLEN, "unknown" );
 
 	return;
+}
+//---------------------------------------------------------------------------
+void
+Job::PrefixDirectory(MyString &prefix)
+{
+	MyString newdir;
+
+	// don't add an unnecessary prefix
+	if (prefix == ".") {
+		return;
+	}
+	
+	// If the job DIR is absolute, leave it alone
+	if (_directory[0] == '/') {
+		return;
+	}
+
+	// otherwise, prefix it.
+
+	newdir += prefix;
+	newdir += "/";
+	newdir += _directory;
+
+	delete [] _directory;
+
+	_directory = strnewp(newdir.Value());
 }
 
 //---------------------------------------------------------------------------
@@ -659,7 +687,7 @@ Job::PrefixName(const MyString &prefix)
 
 	tmp = prefix + tmp;
 
-	delete[] (char*)_jobName;
+	delete[] _jobName;
 
 	_jobName = strnewp(tmp.Value());
 }
@@ -673,7 +701,7 @@ Job::ResolveVarsInterpolations(void)
 	MyString *val;
 
 	varValsFromDag->Rewind();
-	while( val = varValsFromDag->Next() ) {
+	while( (val = varValsFromDag->Next()) != NULL ) {
 		// XXX No way to escape $(JOB) in case, for some crazy reason, you
 		// want a filename component actually to be '$(JOB)'.
 		// It isn't hard to fix, I'll do it later.
@@ -681,3 +709,10 @@ Job::ResolveVarsInterpolations(void)
 	}
 }
 
+//---------------------------------------------------------------------------
+void
+Job::SetDagFile(const char *dagFile)
+{
+	delete _dagFile;
+	_dagFile = strnewp( dagFile );
+}

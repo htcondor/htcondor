@@ -21,13 +21,14 @@
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "subsystem_info.h"
 
 #include "JobLogReader.h"
 #include "Scheduler.h"
 #include "JobRouter.h"
 
 // about self
-char* mySubSystem = "JOB_ROUTER";		// used by Daemon Core
+DECL_SUBSYSTEM("JOB_ROUTER", SUBSYSTEM_TYPE_SCHEDD );	// used by Daemon Core
 
 
 Scheduler schedd;

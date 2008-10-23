@@ -68,6 +68,10 @@ public:
 
 	bool unregister_family(pid_t);
 
+	// this class currently doesn't support GLEXEC_JOB
+	//
+	bool use_glexec_for_family(pid_t, const char*) { return false; }
+
 private:
 
 	HashTable<pid_t, ProcFamilyDirectContainer*> m_table;

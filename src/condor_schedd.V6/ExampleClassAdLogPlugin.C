@@ -27,30 +27,30 @@ struct ExampleClassAdLogPlugin : public ClassAdLogPlugin
 	}
 
 	void
-	NewClassAd(const char *key)
+	newClassAd(const char *key)
 	{
-		printf("NewClassAd: %s\n", key);
+		printf("newClassAd: %s\n", key);
 	}
 
 	void
-	DestroyClassAd(const char *key)
+	destroyClassAd(const char *key)
 	{
-		printf("DestroyClassAd: %s\n", key);
+		printf("destroyClassAd: %s\n", key);
 	}
 
 	void
-	SetAttribute(const char *key,
+	setAttribute(const char *key,
 				 const char *name,
 				 const char *value)
 	{
-		printf("SetAttribute: %s[%s] = %s\n", key, name, value);
+		printf("setAttribute: %s[%s] = %s\n", key, name, value);
 	}
 
 	void
-	DeleteAttribute(const char *key,
+	deleteAttribute(const char *key,
 					const char *name)
 	{
-		printf("DeleteAttribute: %s[%s]\n", key, name);
+		printf("deleteAttribute: %s[%s]\n", key, name);
 	}
 };
 

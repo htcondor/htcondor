@@ -41,6 +41,7 @@ class MirrorResource : public BaseResource
 	MirrorResource( const char *resource_name );
 	~MirrorResource();
 
+	const char *ResourceType();
 	void Reconfig();
 	void RegisterJob( MirrorJob *job, const char *submitter_id );
 

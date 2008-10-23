@@ -23,12 +23,14 @@
 #include "user_log.c++.h"
 #include "condor_config.h"
 #include "condor_debug.h"
+#include "subsystem_info.h"
 #include "condor_random_num.h"
 #include "simple_arg.h"
 #include <stdio.h>
 #include <unistd.h>
 
 static const char *	VERSION = "0.9.3";
+DECL_SUBSYSTEM( "TEST_LOG_WRITER", SUBSYSTEM_TYPE_TOOL );
 
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
@@ -134,9 +136,6 @@ private:
 	bool GenIsLarge( void );
 	int GetSize( int mult = 4096 ) const;
 };
-
-
-char*	mySubSystem = "TEST_LOG_WRITER";
 
 bool
 CheckArgs(int argc, const char **argv, Options &opts);

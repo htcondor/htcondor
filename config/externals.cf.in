@@ -27,11 +27,10 @@ EXT_CONFIG_SH = @_cv_ext_config_sh@
 #if HAS_EXTERNALS /* XXX && !defined(PROPER) ? */
 
 EXT_KERBEROS_VERSION = @ext_krb5_version@
+EXT_OPENSSL_VERSION = @ext_openssl_version@
 EXT_GLOBUS_VERSION = @ext_globus_version@
 EXT_ZLIB_VERSION = @ext_zlib_version@
 EXT_MAN_VERSION = man-current
-EXT_GT4GAHP_VERSION = @ext_gt4gahp_version@
-EXT_GT42GAHP_VERSION = @ext_gt42gahp_version@
 EXT_CLASSADS_VERSION = @ext_classads_version@
 EXT_SRB_VERSION = @ext_srb_version@
 EXT_GSOAP_VERSION = @ext_gsoap_version@
@@ -59,8 +58,11 @@ DRMAA_LIB = $(DRMAA_DIR)/lib
 DRMAA_INC = $(DRMAA_DIR)/include
 #endif 
 
+#if HAVE_EXT_OPENSSL
+OPENSSL_DIR = $(EXT_INSTALL)/$(EXT_OPENSSL_VERSION)
+#endif
+
 MAN_DIR = $(EXT_INSTALL)/$(EXT_MAN_VERSION)/man
-OPENSSL_DIR = $(EXT_INSTALL)/$(EXT_GLOBUS_VERSION)
 GLOBUS_DIR = $(EXT_INSTALL)/$(EXT_GLOBUS_VERSION)
 KERBEROS_DIR = $(EXT_INSTALL)/$(EXT_KERBEROS_VERSION)
 
@@ -113,14 +115,6 @@ GCB_DIR = $(EXT_INSTALL)/$(EXT_GCB_VERSION)
 GCB_LIB = $(GCB_DIR)/lib/libGCB.a
 GCB_INC = $(GCB_DIR)/include
 GCB_BIN = $(GCB_DIR)/bin
-#endif
-
-#if HAVE_EXT_GT4GAHP
-GT4GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT4GAHP_VERSION)
-#endif
-
-#if HAVE_EXT_GT42GAHP
-GT42GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT42GAHP_VERSION)
 #endif
 
 #if HAVE_EXT_GSOAP

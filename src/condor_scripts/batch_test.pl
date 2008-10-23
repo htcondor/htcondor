@@ -90,6 +90,8 @@ $targetconfig = $testpersonalcondorlocation . "/condor_config";
 $targetconfiglocal = $testpersonalcondorlocation . "/condor_config.local";
 $condorpidfile = "/tmp/condor.pid.$$";
 @extracondorargs;
+@corefiles = ();
+$logdir = "";
 
 $localdir = $testpersonalcondorlocation . "/local";
 $installdir;
@@ -101,6 +103,8 @@ $testdirrunning;
 $configmain;
 $configlocal;
 $iswindows = 0;
+@corefiles = ();
+$logdir = "";
 
 $wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/TestingPersonalCondor
 $pretestsetuponly = 0; # only get the personal condor in place
@@ -1245,6 +1249,8 @@ sub DoChild
  	eval {
             alarm($test_retirement);
 			debug( "Child Starting:perl $test_program > $test_program.out\n");
+			CoreCheck("shush");
+			CoreClear();
 			$res = system("perl $test_program > $test_program.out 2>&1");
 
 			# if not build and test move key files to saveme/pid directory
@@ -1274,12 +1280,12 @@ sub DoChild
 			$newcmdout =  $piddir . "/" . $cmdout;
 
 			if( $nightly == 0) {
-				move($log, $newlog);
+				copy($log, $newlog);
 				copy($cmd, $newcmd);
-				move($out, $newout);
-				move($err, $newerr);
+				copy($out, $newout);
+				copy($err, $newerr);
 				copy($runout, $newrunout);
-				move($cmdout, $newcmdout);
+				copy($cmdout, $newcmdout);
 			} else {
 				copy($log, $newlog);
 				copy($cmd, $newcmd);
@@ -1295,7 +1301,14 @@ sub DoChild
 
 			if($res != 0) { 
 				#print "Perl test($test_program) returned <<$res>>!!! \n"; 
+				CoreClear();
 				exit(1); 
+			}
+			my $corecount = CoreCheck();
+			CoreClear();
+			if($corecount != 0) {
+				print "-Core(s) found- ";
+				exit(1);
 			}
 			exit(0);
 		};
@@ -1342,4 +1355,35 @@ sub safe_copy {
         print "Copied $src to $dest\n";
         return 1;
     }
+}
+
+sub CoreCheck {
+	$quiet = shift;
+	my $count = 0;
+	$cmd = "condor_config_val log";
+	$log = `$cmd`;
+	CondorTest::fullchomp($log);
+	$logdir = $log;
+	#print "Log directory is <$log>\n";
+	opendir LD, $log or die "Can not open log directory<$log>:$!\n";
+	@corefiles = ();
+	foreach $file (readdir LD) {
+		if( $file =~ /^core.*$/) {
+			$count += 1;
+			push (@corefiles, $file);
+			if( ! defined $quiet ) {
+				print " core($$): $file ";
+			}
+		}
+	}
+	return($count);
+}
+
+sub CoreClear {
+	#print "Clearing core files.......\n";
+	foreach $core (@corefiles) {
+		system("mv $logdir/$core $logdir/$$.$core");
+		#print "Found core: $core\n";
+	}
+	return(0);
 }
