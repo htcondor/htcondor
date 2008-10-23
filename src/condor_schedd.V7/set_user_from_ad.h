@@ -1,6 +1,7 @@
 /***************************************************************
  *
- * Copyright (C) 2008 Red Hat, Inc.
+ * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
