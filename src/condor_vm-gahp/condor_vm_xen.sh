@@ -65,11 +65,6 @@ run_virsh_command() {
 }
 
 find_domain_name() {
-	find_virsh_domain_name $@	
-}
-
-find_virsh_domain_name() {
-
 	TEMP_XEN_CONFIG="$1"
 	DOMAINNAME=""
 
