@@ -34,6 +34,7 @@
 #include "schedd_v7_utils.h"
 #include "util_lib_proto.h"
 #include "my_popen.h"
+#include "file_lock.h"
 
 template class HashTable<std::string,RoutedJob *>;
 template class HashTable<std::string,JobRoute *>;
