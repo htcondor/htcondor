@@ -28,6 +28,7 @@
 #include "condor_config.h"
 #include "utc_time.h"
 #include "stat_wrapper.h"
+#include "file_lock.h"
 #include "user_log_header.h"
 
 // Set to non-zero to enable fine-grained rotation debugging / timing

@@ -28,6 +28,7 @@
 #include "condor_config.h"
 #include "stat_wrapper.h"
 #include "../condor_privsep/condor_privsep.h"
+#include "file_lock.h"
 #include "read_user_log_state.h"
 #include "user_log_header.h"
 

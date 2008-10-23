@@ -34,6 +34,7 @@
 #include "setenv.h"
 #include "time_offset.h"
 #include "subsystem_info.h"
+#include "file_lock.h"
 #include "exit.h"
 
 #if HAVE_EXT_GCB

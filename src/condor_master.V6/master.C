@@ -42,6 +42,7 @@
 #include "condor_environ.h"
 #include "store_cred.h"
 #include "setenv.h"
+#include "file_lock.h"
 
 #if HAVE_DLOPEN
 #include "MasterPlugin.h"

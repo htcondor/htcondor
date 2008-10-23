@@ -81,7 +81,6 @@
 ** Files that need to be fixed on all (or nearly all) platforms 
 **********************************************************************/
 #include "condor_fix_access.h"
-#include "file_lock.h"
 #include "condor_fix_assert.h"
 
 #if defined(WIN32)
