@@ -21,6 +21,7 @@
 #include "condor_debug.h"
 #include "subsystem_info.h"
 #include "string_funcs.h"
+#include <stdio.h>
 
 //
 // Simple class to manage a single lookup item
@@ -41,7 +42,7 @@ public:
 	bool match( SubsystemClass _class ) const { return m_Class == _class; };
 	bool match( const char *_name ) const;
 	bool matchSubstr( const char *_name ) const;
-	bool isValid( ) const { return m_Type != SUBSYSTEM_TYPE_INVALID; };
+	bool isValid( void ) const { return (m_Type != SUBSYSTEM_TYPE_INVALID); };
 
 private:
 	SubsystemType	 m_Type;
@@ -76,18 +77,20 @@ class SubsystemInfoTable
 {
 public:
 	SubsystemInfoTable( void );
-	~SubsystemInfoTable( void ) { };
+	~SubsystemInfoTable( void );
 	void addEntry( SubsystemType _type, SubsystemClass _class,
 				   const char *_type_name, const char *_type_substr = NULL );
 	void addEntry( const SubsystemInfoLookup * );
+	const SubsystemInfoLookup *getEntry( int ) const;
+	const SubsystemInfoLookup *getValidEntry( int ) const;
 	const SubsystemInfoLookup *lookup( SubsystemType ) const;
 	const SubsystemInfoLookup *lookup( SubsystemClass ) const;
 	const SubsystemInfoLookup *lookup( const char * ) const;
 	const SubsystemInfoLookup *Invalid( void ) const { return m_Invalid; };
 
 private:
-	int							 m_size;
-	int							 m_count;
+	int							 m_Size;
+	int							 m_Count;
 	const SubsystemInfoLookup	*m_Invalid;
 	const SubsystemInfoLookup 	*m_Table[MaxSubsystemInfoTableSize];
 };
@@ -113,8 +116,8 @@ private:
 // -----------------------------------------------------------------
 SubsystemInfoTable::SubsystemInfoTable( void )
 {
-	m_count = 0;
-	m_size = MaxSubsystemInfoTableSize;
+	m_Count = 0;
+	m_Size = MaxSubsystemInfoTableSize;
 
 	addEntry( SUBSYSTEM_TYPE_MASTER,
 			  SUBSYSTEM_CLASS_DAEMON,
@@ -159,6 +162,25 @@ SubsystemInfoTable::SubsystemInfoTable( void )
 
 	ASSERT( m_Invalid != NULL );
 	ASSERT( m_Invalid->match(SUBSYSTEM_TYPE_INVALID) );
+
+	for ( int i=0;  i<m_Count;  i++ ) {
+		const SubsystemInfoLookup *cur = getValidEntry(i);
+		if ( !cur ) {
+			break;
+		}
+	}
+}
+
+SubsystemInfoTable::~SubsystemInfoTable( void )
+{
+	for ( int i=0;  i<m_Count;  i++ ) {
+		const SubsystemInfoLookup *cur = m_Table[i];
+		if ( !cur ) {
+			break;
+		}
+		delete cur;
+		m_Table[i] = NULL;
+	}
 }
 
 // Add a new entry
@@ -174,22 +196,46 @@ SubsystemInfoTable::addEntry(
 	if ( _type == SUBSYSTEM_TYPE_INVALID ) {
 		m_Invalid = entry;
 	}
+
 }
 
 void
 SubsystemInfoTable::addEntry( const SubsystemInfoLookup *entry )
 {
-	m_Table[m_count] = entry;
-	assert ( ++m_count < m_size );
+	m_Table[m_Count] = entry;
+	assert ( ++m_Count < m_Size );
 }
+
+const SubsystemInfoLookup *
+SubsystemInfoTable::getEntry( int num ) const
+{
+	if ( num >= m_Count ) {
+		return NULL;
+	}
+	return m_Table[num];
+}
+
+const SubsystemInfoLookup *
+SubsystemInfoTable::getValidEntry( int num ) const
+{
+	const SubsystemInfoLookup *entry = getEntry( num );
+	if ( ! entry->isValid() ) {
+		return NULL;
+	}
+	return entry;
+}
+
 
 // Lookup by SubsystemType
 const SubsystemInfoLookup *
 SubsystemInfoTable::lookup( SubsystemType _type ) const
 {
-	const SubsystemInfoLookup *cur;
-	for ( cur = m_Table[0];  cur->isValid();  cur++ ) {
-		if ( cur->match(_type) ) {
+	for ( int i=0;  i<m_Count;  i++ ) {
+		const SubsystemInfoLookup *cur = getValidEntry(i);
+		if ( !cur ) {
+			break;
+		}
+		else if ( cur->match(_type) ) {
 			return cur;
 		}
 	}
@@ -200,9 +246,12 @@ SubsystemInfoTable::lookup( SubsystemType _type ) const
 const SubsystemInfoLookup *
 SubsystemInfoTable::lookup( SubsystemClass _class ) const
 {
-	const SubsystemInfoLookup *cur;
-	for ( cur = m_Table[0];  cur->isValid();  cur++ ) {
-		if ( cur->match(_class) ) {
+	for ( int i=0;  i<m_Count;  i++ ) {
+		const SubsystemInfoLookup *cur = getValidEntry(i);
+		if ( !cur ) {
+			break;
+		}
+		else if ( cur->match(_class) ) {
 			return cur;
 		}
 	}
@@ -213,14 +262,24 @@ SubsystemInfoTable::lookup( SubsystemClass _class ) const
 const SubsystemInfoLookup *
 SubsystemInfoTable::lookup( const char *_name ) const
 {
-	const SubsystemInfoLookup *cur;
-	for ( cur = m_Table[0];  cur->isValid();  cur++ ) {
-		if ( cur->match(_name) ) {
+
+	// Pass 1: look for exact match
+	for ( int i=0;  i<m_Count;  i++ ) {
+		const SubsystemInfoLookup *cur = getValidEntry(i);
+		if ( !cur ) {
+			break;
+		}
+		else if ( cur->match(_name) ) {
 			return cur;
 		}
 	}
-	for ( cur = m_Table[0];  cur->isValid();  cur++ ) {
-		if ( cur->matchSubstr(_name) ) {
+	// Pass 2: look for substring match
+	for ( int i=0;  i<m_Count;  i++ ) {
+		const SubsystemInfoLookup *cur = getValidEntry(i);
+		if ( !cur ) {
+			break;
+		}
+		else if ( cur->matchSubstr(_name) ) {
 			return cur;
 		}
 	}
@@ -256,6 +315,12 @@ SubsystemInfo::~SubsystemInfo( void )
 		free( const_cast<char *>( m_Name ) );
 		m_Name = NULL;
 	}
+	if ( m_TempName ) {
+		free( const_cast<char *>( m_TempName ) );
+		m_TempName = NULL;
+	}
+	delete m_InfoTable;
+	m_InfoTable = NULL;
 }
 
 bool
@@ -267,6 +332,10 @@ SubsystemInfo::nameMatch( const char *_name ) const
 const char *
 SubsystemInfo::setName( const char *_name )
 {
+	if ( m_Name != NULL ) {
+		free( const_cast<char *>( m_Name ) );
+		m_Name = NULL;
+	}
 	if ( _name != NULL ) {
 		m_Name = strdup(_name);
 		m_NameValid = true ;

@@ -775,7 +775,11 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 			tokens.rewind();
 
 			char *word = tokens.next();
-			if ( !stricmp(word, jobKeyword.Value()) ) {
+				// Treat a SUBDAG line like a JOB line, unless we're
+				// looking for DATA nodes.
+			if ( !stricmp(word, jobKeyword.Value()) ||
+						(!stricmp(word, "subdag") &&
+						stricmp(jobKeyword.Value(), "data")) ) {
 
 					// Get the node submit file name.
 				const char *nodeName = tokens.next();
@@ -788,6 +792,13 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 			    	return result;
 				}
 				MyString strSubFile(submitFile);
+
+					// Deal with nested DAGs specified with the "SUBDAG"
+					// keyword.
+				if ( !stricmp(word, "subdag") ) {
+					strSubFile += ".condor.sub";
+				}
+
 				const char *directory = "";
 				const char *nextTok = tokens.next();
 				if ( nextTok ) {

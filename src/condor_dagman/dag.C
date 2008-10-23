@@ -1730,13 +1730,14 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 			// Print the JOB/DATA line.
 		const char *keyword = "";
         if( job->JobType() == Job::TYPE_CONDOR ) {
-			keyword = "JOB";
+			keyword = job->GetDagFile() ? "SUBDAG" : "JOB";
         } else if( job->JobType() == Job::TYPE_STORK ) {
 			keyword = "DATA";
         } else {
 			EXCEPT( "Illegal node type (%d)\n", job->JobType() );
 		}
         fprintf (fp, "%s %s %s ", keyword, job->GetJobName(),
+					job->GetDagFile() ? job->GetDagFile() :
 					job->GetCmdFile());
 		if ( strcmp( job->GetDirectory(), "" ) ) {
 			fprintf(fp, "DIR %s ", job->GetDirectory());
