@@ -23,7 +23,7 @@
 #include "JobRouterHookMgr.h"
 #include "status_string.h"
 #include "JobRouter.h"
-#include "condor_uid.h"
+#include "set_user_from_ad.h"
 
 extern JobRouter* job_router;
 
@@ -710,27 +710,4 @@ CleanupClient::hookExited(int exit_status)
 			"HOOK_JOB_CLEANUP (%s) failed (%s)\n", m_hook_path, 
 			error_msg.Value());
 	}
-}
-
-
-void set_user_from_ad(classad::ClassAd const &ad)
-{
-        std::string owner;
-        std::string domain;
-        if( 0 == ad.EvaluateAttrString(ATTR_OWNER,owner) ) {
-                classad::ClassAd ad_copy;
-                ClassAd old_ad;
-                ad_copy = ad;
-                if(new_to_old(ad_copy,old_ad)) {
-                        old_ad.dPrint(D_ALWAYS);
-                }
-                EXCEPT("Failed to find %s in job ad.",ATTR_OWNER);
-        }
-        ad.EvaluateAttrString(ATTR_NT_DOMAIN,domain);
-
-        if( 0 == init_user_ids(owner.c_str(),domain.c_str()) ) {
-                EXCEPT("Failed in init_user_ids(%s,%s)",owner.c_str(),domain.c_str());
-        }
-
-        return;
 }

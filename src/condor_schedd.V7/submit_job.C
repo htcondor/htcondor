@@ -36,6 +36,7 @@
 #define WANT_CLASSAD_NAMESPACE
 #undef open
 #include "classad/classad_distribution.h"
+#include "set_user_from_ad.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {
@@ -102,23 +103,7 @@ private:
 
 static priv_state set_user_priv_from_ad(classad::ClassAd const &ad)
 {
-	std::string owner;
-	std::string domain;
-	if( !ad.EvaluateAttrString(ATTR_OWNER,owner) ) {
-		classad::ClassAd ad_copy;
-		ClassAd old_ad;
-		ad_copy = ad;
-		if(new_to_old(ad_copy,old_ad)) {
-			old_ad.dPrint(D_ALWAYS);
-		}
-		EXCEPT("Failed to find %s in job ad.",ATTR_OWNER);
-	}
-	ad.EvaluateAttrString(ATTR_NT_DOMAIN,domain);
-
-	if( !init_user_ids(owner.c_str(),domain.c_str()) ) {
-		EXCEPT("Failed in init_user_ids(%s,%s)",owner.c_str(),domain.c_str());
-	}
-
+	set_user_from_ad(ad);
 	return set_user_priv();
 }
 
