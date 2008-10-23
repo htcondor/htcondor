@@ -27,7 +27,7 @@
 #
 
 usage() {
-	echo $"Usage: $0 {xm|virsh} {start|stop|suspend|resume|pause|unpause|status|getvminfo|check|killvm|createiso|createconfig}" 1>&2
+	echo $"Usage: $0 virsh {start|stop|suspend|resume|pause|unpause|status|getvminfo|check|killvm|createiso|createconfig}" 1>&2
 	exit 1
 }
 
@@ -49,13 +49,8 @@ unalias cp 2>/dev/null
 
 run_controller() {
 	CTRL_RESULT=0
-	if [ "${CTRL_PROG}" = "xm" ]; then
-		run_xm_command $@	
-		CTRL_RESULT=$?
-	elif [ "${CTRL_PROG}" = "virsh" ]; then
-		run_virsh_command $@	
-		CTRL_RESULT=$?
-	fi
+	run_virsh_command $@	
+	CTRL_RESULT=$?
 	return $CTRL_RESULT
 }
 
@@ -69,62 +64,8 @@ run_virsh_command() {
 	return $REALRESULT
 }
 
-run_xm_command() {
-	TMP_RESULT=0
-	ERR_COUNT=0
-	while [ $TMP_RESULT = 0 ] && [ $ERR_COUNT -lt 5 ]
-	do
-		rm -f "$XM_STD_OUTPUT" 2>/dev/null
-		rm -f "$XM_ERROR_OUTPUT" 2>/dev/null
-		# Because it is possible that some arguments have spaces,
-		# We do like this.
-		$XM $@ > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		REALRESULT=$?
-		if [ $REALRESULT != 0 ]; then
-			# command failed
-			grep "Device" "$XM_ERROR_OUTPUT" 2>/dev/null
-			TMP_RESULT=$?
-
-			if [ $TMP_RESULT = 0 ]; then
-				grep "connected" "$XM_ERROR_OUTPUT" 2>/dev/null
-				TMP_RESULT=$?
-			fi
-		else
-			# command succeeded
-			TMP_RESULT=1
-		fi
-
-		if [ $TMP_RESULT = 0 ]; then
-			# Error happens due to temporary Xen connection error
-			# So, we need to do again
-			echo "xm command $@ error found" 1>&2
-			ERR_COUNT=$((${ERR_COUNT}+1))
-			sleep 3
-		fi
-	done
-
-	return $REALRESULT
-}
-
 find_domain_name() {
-	if [ "${CTRL_PROG}" = "xm" ]; then
-		find_xm_domain_name $@	
-	elif [ "${CTRL_PROG}" = "virsh" ]; then
-		find_virsh_domain_name $@	
-	fi
-}
-
-find_xm_domain_name() {
-
-	TEMP_XEN_CONFIG="$1"
-	DOMAINNAME=""
-
-	if [ ! -f "$TEMP_XEN_CONFIG" ]; then
-		echo "$TEMP_XEN_CONFIG doesn't exist" 1>&2
-		return 1
-	fi
-
-	DOMAINNAME=`sed -n '/^name=/p' "$TEMP_XEN_CONFIG" | sed -e 's/name=//' | sed -e 's/\"//g'`
+	find_virsh_domain_name $@	
 }
 
 find_virsh_domain_name() {
@@ -302,22 +243,14 @@ pause() {
 	n=`grep -w "$DOMAINNAME" "$XM_STD_OUTPUT" | wc -l`
 	if [ $n -eq 1 ]; then
 
-		if [ "${CTRL_PROG}" = "xm" ]; then
-			run_xm_command pause "$DOMAINNAME"
-		elif [ "${CTRL_PROG}" = "virsh" ]; then
-			run_virsh_command suspend "$DOMAINNAME"
-		fi
+		run_virsh_command suspend "$DOMAINNAME"
 
 		RESULT=$?
 
 		cat "$XM_STD_OUTPUT" 1>&2
 		if [ $RESULT != 0 ]; then
 
-			if [ "${CTRL_PROG}" = "xm" ]; then
-				echo "$XM pause $DOMAINNAME error" 1>&2
-			elif [ "${CTRL_PROG}" = "virsh" ]; then
-				echo "$XM suspend $DOMAINNAME error" 1>&2
-			fi
+			echo "$XM suspend $DOMAINNAME error" 1>&2
 
 			cat "$XM_ERROR_OUTPUT" 1>&2
 			return 1
@@ -354,20 +287,12 @@ unpause() {
 
 	n=`grep -w "$DOMAINNAME" "$XM_STD_OUTPUT" | wc -l`
 	if [ $n -eq 1 ]; then
-		if [ "${CTRL_PROG}" = "xm" ]; then
-			run_xm_command unpause "$DOMAINNAME"
-		elif [ "${CTRL_PROG}" = "virsh" ]; then
-			run_virsh_command resume "$DOMAINNAME"
-		fi
+		run_virsh_command resume "$DOMAINNAME"
 		RESULT=$?
 
 		cat "$XM_STD_OUTPUT" 1>&2
 		if [ $RESULT != 0 ]; then
-			if [ "${CTRL_PROG}" = "xm" ]; then
-				echo "$XM unpause $DOMAINNAME error" 1>&2
-			elif [ "${CTRL_PROG}" = "virsh" ]; then
-				echo "$XM resume $DOMAINNAME error" 1>&2
-			fi
+			echo "$XM resume $DOMAINNAME error" 1>&2
 			cat "$XM_ERROR_OUTPUT" 1>&2
 			return 1
 		fi
@@ -405,12 +330,6 @@ status() {
 		# domain is running
 		echo "STATUS=Running"
 
-		if [ "${CTRL_PROG}" = "xm" ]; then
-			CPUTIME=`grep -w "$DOMAINNAME" "$XM_STD_OUTPUT" | awk '{print $6}'`
-			if [ -n "$CPUTIME" ]; then
-				echo "CPUTIME=$CPUTIME"
-			fi
-		fi
 	else
 		# domain is stopped
 		echo "STATUS=Stopped"
