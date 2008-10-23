@@ -289,21 +289,15 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 #if !defined(WIN32)
 	uid_t vmgahp_user_uid = (uid_t) -1;
 	gid_t vmgahp_user_gid = (gid_t) -1;
-	uid_t vmgahp_condor_uid = (uid_t) -1;
-	gid_t vmgahp_condor_gid = (gid_t) -1;
 
 	if( can_switch_ids() ) {
 		// Condor runs as root
 		vmgahp_user_uid = get_user_uid();
 		vmgahp_user_gid = get_user_gid();
-		vmgahp_condor_uid = get_user_uid();
-		vmgahp_condor_gid = get_user_gid();
 	}else {
 		// vmgahp may have setuid-root (e.g. vmgahp for Xen)
 		vmgahp_user_uid = get_condor_uid();
 		vmgahp_user_gid = get_condor_gid();
-		vmgahp_condor_uid = get_condor_uid();
-		vmgahp_condor_gid = get_condor_gid();
 	}
 
 	// Setup vmgahp user uid/gid
