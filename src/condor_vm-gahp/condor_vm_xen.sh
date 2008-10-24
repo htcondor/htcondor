@@ -55,12 +55,12 @@ run_controller() {
 }
 
 run_virsh_command() {
-		rm -f "$XM_STD_OUTPUT" 2>/dev/null
-		rm -f "$XM_ERROR_OUTPUT" 2>/dev/null
-		# Because it is possible that some arguments have spaces,
-		# We do like this.
-		$XM $@ > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
-		REALRESULT=$?
+	rm -f "$XM_STD_OUTPUT" 2>/dev/null
+	rm -f "$XM_ERROR_OUTPUT" 2>/dev/null
+	# Because it is possible that some arguments have spaces,
+	# We do like this.
+	$XM $@ > "$XM_STD_OUTPUT" 2> "$XM_ERROR_OUTPUT"
+	REALRESULT=$?
 	return $REALRESULT
 }
 
@@ -448,42 +448,42 @@ fi
 case "$1" in
   start)
 	start "$2"
-   	;;
+	;;
   stop)
-   	stop "$2"
-   	;;
+	stop "$2"
+	;;
   suspend)
-  	suspend "$2" "$3"
+	suspend "$2" "$3"
 	;;
   resume)
-  	resume "$2"
+	resume "$2"
 	;;
   pause)
-  	pause "$2"
+	pause "$2"
 	;;
   unpause)
-  	unpause "$2"
+	unpause "$2"
 	;;
   status)
-  	status "$2"
+	status "$2"
 	;;
   getvminfo)
-  	getvminfo "$2"
+	getvminfo "$2"
 	;;
   check)
-  	check
+	check
 	;;
   killvm)
-    killvm "$2"
+	killvm "$2"
 	;;
   createiso)
-  	createiso "$2" "$3"
+	createiso "$2" "$3"
 	;;
   createconfig)
-  	createconfig "$2"
+	createconfig "$2"
 	;;
    *)
-   	usage
+	usage
 esac
 
 RESULT=$?
