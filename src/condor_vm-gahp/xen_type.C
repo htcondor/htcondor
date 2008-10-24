@@ -75,7 +75,9 @@ XenType::XenType(const char* scriptname, const char* workingpath,
 
 XenType::~XenType()
 {
+	priv_state old_priv = set_user_priv();
 	Shutdown();
+	set_priv( old_priv );
 
 	if( getVMStatus() != VM_STOPPED ) {
 		// To make sure VM exits
