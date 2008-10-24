@@ -31,6 +31,9 @@
 #if HAVE_LINUX_TYPES_H
 #  include <linux/types.h>
 #endif
+#if HAVE_OS_TYPES_H
+#  include <os_types.h>
+#endif
 #if HAVE_LINUX_ETHTOOL_H
 #  include <linux/ethtool.h>
 #endif
