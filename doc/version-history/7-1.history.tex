@@ -40,6 +40,14 @@ for more details on how this ``local name'' will be used in the
 configuration, and 3.9.2 ``DaemonCore and Command-Line Arguments'' for
 more details on the command line parameter itself.
 
+% PR 947
+\item \Condor{submit\_dag} is now automatically run recursively on
+nested DAGs (unless the new \Opt{-no\_recurse} option is specified).
+
+% PR 947
+\item Added the new \MacroNI{SUBDAG} keyword (for specifying nested
+DAGs) to \Condor{dagman}.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -207,7 +215,7 @@ details.
 	functionality previously encapsulated in \Macro{GLEXEC\_STARTER}.  Using
 	\Macro{GLEXEC\_JOB} enables privilege separation in Condor via glexec in a
 	manner much more consistent with how Condor's own privilege separation
-	machanism works.  Specifically, the user identity switching will now occur
+	mechanism works.  Specifically, the user identity switching will now occur
 	between the \Condor{starter} and the actual user job.
 
 \item Added configuration parameter \Macro{AMAZON\_GAHP\_WORKER\_MAX\_NUM}
