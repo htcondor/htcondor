@@ -26,6 +26,10 @@
 #include "condor_adtypes.h"
 #include "my_hostname.h"
 
+#ifndef INADDR_NONE		/* Solaris */
+#  define INADDR_NONE	((in_addr_t) 0xffffffff)
+#endif
+
 /***************************************************************
  * UdpWakeOnLanWaker constants
  ***************************************************************/
