@@ -1951,7 +1951,29 @@ In this example the owner has a login of
 \verb@username@, and the machine's name is represented by
 \verb@hostname@.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Security-Debugging} Debugging Security Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+If the authorization policy denies a network request, an explanation
+of why the request was denied is printed in the log file of the daemon
+that denied the request.  The line in the log file contains the words
+\verb|PERMISSION DENIED|.
+
+To get Condor to generate a similar explanation of why requests are
+accepted, add \Macro{D\_SECURITY} to the daemon's debug options (and
+restart or reconfig the daemon).  The line in the log file for these
+cases will contain the words \verb|PERMISSION GRANTED|.  If you do not
+want to see a full explanation but just want to see when requests
+are made, add \Macro{D\_COMMAND} to the daemon's debug options.
+
+If the authorization policy makes use of host or domain names, then
+be aware that Condor depends on DNS to map IP addresses to names.  The
+security and accuracy of your DNS service is therefore a requirement.
+Typos in DNS mappings are an occasional source of unexpected behavior.
+If the authorization policy is not behaving as expected, carefully compare
+the names in the policy with the hostnames Condor mentions in the
+explanations of why requests are granted or denied.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Sessions}Security Sessions}

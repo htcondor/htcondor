@@ -163,6 +163,12 @@ This permits a Condor version mismatch between
 \item Streamlined the protocol between submit and execute machines; in some
 	instances less messages will be exchanged over the network.
 
+\item When network requests are denied because of the authorization
+policy, Condor now logs an explanation in the daemon log that denied
+the request.  This helps the administrator understand why the policy
+denied the request, in case it is not obvious.  A similar explanation
+may be logged for requests that are accepted.  This is only generated
+if \Macro{D\_SECURITY} is added to the daemon's debug options.
 
 \end{itemize}
 
