@@ -256,7 +256,7 @@ bool
 LinuxNetworkAdapter::detectWOL ( void )
 {
 	bool					ok = false;
-#if (HAVE_DECL_SIOCETHTOOL) && (HAVE_STRUCT_IFREQ)
+#if (HAVE_DECL_SIOCETHTOOL) && (HAVE_STRUCT_IFREQ) && (HAVE_LINUX_ETHTOOL_H)
 	int						err;
 	struct ethtool_wolinfo	wolinfo;
 	struct ifreq			ifr;
