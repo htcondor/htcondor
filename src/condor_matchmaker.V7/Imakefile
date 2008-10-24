@@ -45,4 +45,6 @@ html:
 
 tests: $(TESTS)
 
+testbin:: all
+
 -include Makelocal.i
