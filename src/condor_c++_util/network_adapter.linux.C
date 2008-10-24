@@ -23,13 +23,16 @@
 #include "network_adapter.linux.h"
 
 #if HAVE_NET_IF_H
-# include <net/if.h>
+#  include <net/if.h>
 #endif
 #if HAVE_LINUX_SOCKIOS_H
-# include <linux/sockios.h>
+#  include <linux/sockios.h>
+#endif
+#if HAVE_LINUX_TYPES_H
+#  include <linux/types.h>
 #endif
 #if HAVE_LINUX_ETHTOOL_H
-# include <linux/ethtool.h>
+#  include <linux/ethtool.h>
 #endif
 
 // For now, the only wake-on-lan type we use is UDP magic

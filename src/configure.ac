@@ -2199,7 +2199,11 @@ AC_CHECK_HEADERS([linux/personality.h])
 AC_CHECK_HEADERS([linux/magic.h])
 AC_CHECK_HEADERS([linux/nfsd/const.h])
 AC_CHECK_HEADERS([linux/sockios.h])
-AC_CHECK_HEADERS([linux/ethtool.h])
+AC_CHECK_HEADERS([linux/types.h])
+AC_CHECK_HEADERS([linux/ethtool.h],[],[],[
+#if HAVE_LINUX_TYPES_H
+# include<linux/types.h>
+#endif])
 AC_CHECK_HEADERS([sys/statfs.h])
 AC_CHECK_HEADERS([sys/statvfs.h])
 AC_CHECK_HEADERS([sys/vfs.h])
