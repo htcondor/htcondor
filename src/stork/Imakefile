@@ -8,7 +8,7 @@
 #define WANT_STORK_GLOBUS		YES
 
 #if HAVE_EXT_SRB
-#  define WANT_STORK_SRB		YES
+#  define WANT_STORK_SRB		NO
 #endif
 
 #define WANT_STORK_UNITREE		YES
