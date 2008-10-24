@@ -95,16 +95,16 @@ protected:
 	bool				 m_found;
 
 	unsigned			 m_ip_addr;
-    const struct in_addr m_in_addr;
-	const char			*m_if_name;
+    struct in_addr		 m_in_addr;
+	char				*m_if_name;
 
 	// HW address & string rep of it
-    const char			 m_hw_addr[32];
-	const char			 m_hw_addr_str[32];
+    char				 m_hw_addr[32];
+	char				 m_hw_addr_str[32];
 
 	// Network mask
-    const struct sockaddr m_netmask;
-    const char		 	 m_netmask_str[32];
+    struct sockaddr		 m_netmask;
+    char			 	 m_netmask_str[32];
 	
 	// Very UNIX specific definitions
 

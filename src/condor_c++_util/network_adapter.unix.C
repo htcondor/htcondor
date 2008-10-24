@@ -143,7 +143,7 @@ void
 UnixNetworkAdapter::setIpAddr( unsigned int ip )
 {
 	m_ip_addr = ip;
-	struct in_addr	*in = const_cast<struct in_addr *>(&m_in_addr);
+	struct in_addr	*in = (&m_in_addr);
 	in->s_addr = ip;
 }
 
@@ -177,7 +177,7 @@ UnixNetworkAdapter::resetName( bool init )
 		m_if_name = NULL;
 	}
 	else if ( m_if_name ) {
-		free( const_cast<char*>(m_if_name) );
+		free( m_if_name );
 		m_if_name = NULL;
 	}
 }
@@ -211,7 +211,7 @@ UnixNetworkAdapter::setHwAddr( const struct ifreq &ifr )
 	resetHwAddr( );
 	MemCopy( m_hw_addr, &(ifr.ifr_hwaddr.sa_data), 8 );
 
-	char *str = const_cast<char*>(m_hw_addr_str);
+	char *str = m_hw_addr_str;
 	for( int i = 0;  i < 6;  i++ ) {
 		char	tmp[3];
 		snprintf( tmp, sizeof(tmp), "%02x", m_hw_addr[i] );
@@ -239,13 +239,12 @@ UnixNetworkAdapter::setNetMask( const struct ifreq &ifr )
 {
 	resetNetMask( );
 
-	struct sockaddr *maskptr = const_cast<struct sockaddr *>(&m_netmask);
+	struct sockaddr *maskptr = &m_netmask;
 	MemCopy( maskptr, &(ifr.ifr_netmask), sizeof(m_netmask) );
 
 	const struct sockaddr_in *in_addr =
 		(const struct sockaddr_in *) &(m_netmask);
-	char *str = const_cast<char *>(m_netmask_str);
-	strncpy( str, sin_to_string(in_addr), sizeof(m_netmask_str) );
+	strncpy( m_netmask_str, sin_to_string(in_addr), sizeof(m_netmask_str) );
 }
 
 #endif
