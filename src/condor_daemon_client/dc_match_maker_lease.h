@@ -85,7 +85,7 @@ class DCMatchMakerLease {
 	int LeaseRemaining( time_t now = 0 ) const
 		{ return getNow( now ) - ( m_lease_time + m_lease_duration ); };
 	bool LeaseExpired( time_t now = 0 ) const
-		{ return ( LeaseRemaining() > 0 ); };
+		{ return ( LeaseRemaining(now) > 0 ); };
 
   private:
 	classad::ClassAd	*m_lease_ad;

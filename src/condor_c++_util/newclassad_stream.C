@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "newclassad_stream.h"
@@ -27,7 +28,7 @@ StreamPut( Stream *stream, const classad::ClassAd &ad )
 	classad::ClassAdUnParser	unparser;
 	string						str;
 	unparser.Unparse( str, &ad );
-	return stream->put( (char*)str.c_str() );
+	return stream->put( str.c_str() );
 }
 
 int

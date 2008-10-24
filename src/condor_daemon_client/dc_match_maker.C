@@ -21,6 +21,7 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
