@@ -86,21 +86,61 @@ This macro evaluates to \Expr{True} if
 The \MacroNI{HIBERNATE} expression becomes
 
 \begin{verbatim}
-HIBERNATE = ifThenElse($(ShouldHibernate), 3, 0)
+HIBERNATE = ifThenElse($(ShouldHibernate), ``RAM'', ``NONE'' )
 \end{verbatim}
 
 In words, this expresses:
-enter power state $3$,
+enter power state ''RAM'',
 if \MacroNI{ShouldHibernate} evaluates to \Expr{True}; 
-otherwise, enter power state $0$,
-which leaves the machine in its current state. 
+otherwise, enter power state ''NONE'',
+which leaves the machine in its current state.   Unknown names are
+treated as ``NONE''.
 
-If any slot returns $0$, 
+If any slot returns ''NONE'',
 it vetoes the decision to enter a low power state.
 Only when values returned by all slots are all non-zero 
 is there a decision to enter a low power state.
 If all agree to enter the low power state, but differ in which state to enter,
 then the largest magnitude value is chosen. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Linux}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Depending on the Linux distribution and version, there are 3 different
+methods for controlling the system's power state.  The methods are:
+\begin{itemize}
+\item pm-utils is a set of command-line tools which can be used to
+  detect and switch power states.  In Condor, this is named ``pm-utils''.
+\item The /sys/power virtual directory has sever virtual files that
+  can be used to detect / set the power states.  In Condor, this is
+  name ``/sys''.
+\item The /proc/acpi virtual directory has sever virtual files that
+  can be used to detect / set the power states.  In Condor, this is
+  name ``/proc''.
+\end{itemize}
+
+By default, the Condor Linux hibernator attempts to detect the method
+to use in the above order.  The first method that's detected as usable
+on the system will be used.
+
+This behavior can be overridden by specifying the
+\MacroNI{LINUX\_HIBERNATION\_METHOD} configuration parameter -- it
+should be set to one of the above names (``pm-utils'', ``/sys'', or
+``/proc'').
+See the description of \MacroNI{LINUX\_HIBERNATION\_METHOD} in
+section~\ref{param:LinuxHibernationMethod} on
+page~\pageref{param:LinuxHibernationMethod}
+for details on overriding this behavior.
+
+If no usable methods are detected, or the method specified by
+\MacroNI{LINUX\_HIBERNATION\_METHOD} be either not detected or
+invalid, hibernation will be disabled.
+
+The details of this selection process, and the final method selected
+can be logged via enabling \MacroNI{D\_FULLDEBUG} in the relevant
+subsystem's log configuration.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Returning From a Low Power State}
