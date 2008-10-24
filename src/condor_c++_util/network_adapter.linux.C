@@ -307,6 +307,7 @@ struct WolTable
 };
 static WolTable wol_table [] =
 {
+# if (HAVE_LINUX_ETHTOOL_H)
 	{ WAKE_PHY,			NetworkAdapterBase::WOL_PHYSICAL },
 	{ WAKE_UCAST,		NetworkAdapterBase::WOL_UCAST },
 	{ WAKE_MCAST,		NetworkAdapterBase::WOL_MCAST },
@@ -314,6 +315,7 @@ static WolTable wol_table [] =
 	{ WAKE_ARP,			NetworkAdapterBase::WOL_ARP }, 
 	{ WAKE_MAGIC,		NetworkAdapterBase::WOL_MAGIC },
 	{ WAKE_MAGICSECURE,	NetworkAdapterBase::WOL_MAGICSECURE },
+# endif
 	{ 0,				NetworkAdapterBase::WOL_NONE }
 };
 
