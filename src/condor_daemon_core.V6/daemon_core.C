@@ -2436,9 +2436,39 @@ DaemonCore::reconfig(void) {
 
 
 int
-DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin, const char * fqu )
+DaemonCore::Verify(char const *command_descrip,DCpermission perm, const struct sockaddr_in *sin, const char * fqu )
 {
-	return getSecMan()->Verify(perm, sin, fqu);
+	MyString deny_reason; // always get 'deny' reason, if there is one
+	MyString *allow_reason = NULL;
+	MyString allow_reason_buf;
+	if( (DebugFlags & D_SECURITY) ) {
+			// only get 'allow' reason if doing verbose debugging
+		allow_reason = &allow_reason_buf;
+	}
+
+	int result = getSecMan()->Verify(perm, sin, fqu, allow_reason, &deny_reason);
+
+	MyString *reason = result ? allow_reason : &deny_reason;
+	char const *result_desc = result ? "GRANTED" : "DENIED";
+
+	if( reason ) {
+		char ipstr[IP_STRING_BUF_SIZE];
+		sin_to_ipstring(sin,ipstr,IP_STRING_BUF_SIZE);
+
+			// Note that although this says D_ALWAYS, when the result is
+			// ALLOW, we only get here if D_SECURITY is on.
+		dprintf( D_ALWAYS,
+				 "PERMISSION %s to %s from host %s for %s, "
+				 "access level %s: reason: %s\n",
+				 result_desc,
+				 (fqu && *fqu) ? fqu : "unauthenticated user",
+				 ipstr,
+				 command_descrip ? command_descrip : "unspecified operation",
+				 PermString(perm),
+				 reason->Value() );
+	}
+
+	return result;
 }
 
 
@@ -3524,12 +3554,8 @@ int DaemonCore::HandleReq(Stream *insock)
 	if ( strstr(tmpbuf,"GET") ) {
 		if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
 			// mini-web server requires READ authorization.
-			if ( Verify(READ,((Sock*)stream)->endpoint(),NULL) ) {
+			if ( Verify("HTTP GET", READ,((Sock*)stream)->endpoint(),NULL) ) {
 				is_http_get = true;
-			} else {
-				dprintf(D_ALWAYS,"Received HTTP GET connection from %s -- "
-				             "DENIED because host not authorized for READ\n",
-							 sin_to_string(((Sock*)stream)->endpoint()));
 			}
 		} else {
 			dprintf(D_ALWAYS,"Received HTTP GET connection from %s -- "
@@ -3540,12 +3566,8 @@ int DaemonCore::HandleReq(Stream *insock)
 		if ( strstr(tmpbuf,"POST") ) {
 			if ( param_boolean("ENABLE_SOAP",false) ) {
 				// SOAP requires SOAP authorization.
-				if ( Verify(SOAP_PERM,((Sock*)stream)->endpoint(),NULL) ) {
+				if ( Verify("HTTP POST",SOAP_PERM,((Sock*)stream)->endpoint(),NULL) ) {
 					is_http_post = true;
-				} else {
-					dprintf(D_ALWAYS,"Received HTTP POST connection from %s -- "
-							"DENIED because host not authorized for SOAP\n",
-							 sin_to_string(((Sock*)stream)->endpoint()));
 				}
 			} else {
 				dprintf(D_ALWAYS,"Received HTTP POST connection from %s -- "
@@ -4335,17 +4357,16 @@ int DaemonCore::HandleReq(Stream *insock)
 			}
 		}
 
-		if ( (perm = Verify(comTable[index].perm, ((Sock*)stream)->endpoint(), user.Value())) != USER_AUTH_SUCCESS )
+		MyString command_desc;
+		command_desc.sprintf("command %d (%s)",req,comTable[index].command_descrip);
+
+		if ( (perm = Verify(command_desc.Value(),comTable[index].perm, ((Sock*)stream)->endpoint(), user.Value())) != USER_AUTH_SUCCESS )
 		{
 			// Permission check FAILED
 			reqFound = FALSE;	// so we do not call the handler function below
 			// make result != to KEEP_STREAM, so we blow away this socket below
 			result = 0;
-			dprintf( D_ALWAYS,
-                     "PERMISSION DENIED to %s from host %s for command %d (%s), access level %s\n",
-                     user.IsEmpty() ? "unauthenticated user" : user.Value(), sin_to_string(((Sock*)stream)->endpoint()), req,
-                     comTable[index].command_descrip,
-					 PermString(comTable[index].perm));
+
 			// if UDP, consume the rest of this message to try to stay "in-sync"
 			if ( !is_tcp)
 				stream->end_of_message();
@@ -9011,7 +9032,10 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 			// so, now see if the connection qualifies for this access
 			// level.
 
-		if( Verify((DCpermission)i, sock->endpoint(), sock->getFullyQualifiedUser())) {
+		MyString command_desc;
+		command_desc.sprintf("remote config %s",name);
+
+		if( Verify(command_desc.Value(),(DCpermission)i, sock->endpoint(), sock->getFullyQualifiedUser())) {
 				// now we can see if the specific attribute they're
 				// trying to set is in our list.
 			if( (SettableAttrsLists[i])->

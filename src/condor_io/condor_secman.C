@@ -988,17 +988,21 @@ SecManStartCommand::doCallback( StartCommandResult result )
 					m_sock->endpoint_ip_str() );
 		}
 
+		MyString deny_reason;
+
 		int authorized = m_sec_man.Verify(
 			CLIENT_PERM,
 			m_sock->endpoint(),
-			server_fqu );
+			server_fqu,
+			NULL,
+			&deny_reason );
 
 		if( authorized != USER_AUTH_SUCCESS ) {
 			m_errstack->pushf("SECMAN", SECMAN_ERR_CLIENT_AUTH_FAILED,
 			         "DENIED authorization of server '%s/%s' (I am acting as "
-			         "the client).\n",
+			         "the client): reason: %s\n",
 					 server_fqu ? server_fqu : "*",
-					 m_sock->endpoint_ip_str() );
+					 m_sock->endpoint_ip_str(), deny_reason.Value() );
 			result = StartCommandFailed;
 		}
 	}
@@ -2471,11 +2475,11 @@ SecMan::getIpVerify()
 }
 
 int
-SecMan::Verify(DCpermission perm, const struct sockaddr_in *sin, const char * fqu )
+SecMan::Verify(DCpermission perm, const struct sockaddr_in *sin, const char * fqu, MyString *allow_reason, MyString *deny_reason )
 {
 	IpVerify *ipverify = getIpVerify();
 	ASSERT( ipverify );
-	return ipverify->Verify(perm,sin,fqu);
+	return ipverify->Verify(perm,sin,fqu,allow_reason,deny_reason);
 }
 
 
