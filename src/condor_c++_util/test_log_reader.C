@@ -109,18 +109,20 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 	const char *	usage =
 		"Usage: test_log_reader [options] <filename>\n"
-		"  --debug <level>: debug level (e.g., D_FULLDEBUG)\n"
-		"  --maxexec <number>: maximum number of execute events to read\n"
-		"  --misscheck: Enable missed event checking "
+		"  --debug|-d <level>: debug level (e.g., D_FULLDEBUG)\n"
+		"  --max-exec <number>: maximum number of execute events to read\n"
+		"  --miss-check: Enable missed event checking "
 		"(valid only with test writer)\n"
-		"  --persist <filename>: file to persist to/from (implies -rotation)\n"
-		"  --persist-dump: dump the persistent file state after reading it\n"
+		"  --persist|-p <filename>: file to persist to/from "
+		"(implies --rotation)\n"
+		"  --dump-state: dump the persisted reader state after reading it\n"
 		"  --ro|--rw|--wo: Set persitent state to "
 		"read-only/read-write/write-only\n"
 		"  --init-only: exit after initialization\n"
-		"  --rotation <n>: enable rotation handling, set max #\n"
+		"  --rotation|-r <n>: enable rotation handling, set max #\n"
 		"  --no-rotation: disable rotation handling\n"
 		"  --sleep <number>: how many seconds to sleep between events\n"
+		"  --no-term: No limit on terminte events\n"
 		"  --term <number>: number of terminate events to exit after\n"
 		"  --usage|--help|-h: print this message and exit\n"
 		"  -v: Increase verbosity level by 1\n"
@@ -150,9 +152,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			status = STATUS_ERROR;
 		}
 
-		if ( arg.Match("debug") ) {
+		if ( arg.Match('d', "debug") ) {
 			if ( arg.HasOpt() ) {
-				set_debug_flags( const_cast<char *>(arg.Opt()) );
+				set_debug_flags( const_cast<char *>(arg.getOptStr()) );
 				index = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for --debug argument\n");
@@ -160,22 +162,23 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				status = STATUS_ERROR;
 			}
 
-		} else if ( arg.Match("maxexec") ) {
+		} else if ( arg.Match("max-exec") ) {
 			if ( arg.OptIsNumber() ) {
-				opts.maxExec = atoi(argv[index]);
+				opts.maxExec = arg.getOptInt( );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --maxexec argument\n");
+				fprintf(stderr, "Value needed for --max-exec argument\n");
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
 
-		} else if ( arg.Match("misscheck") ) {
+		} else if ( arg.Match("miss-check") ) {
 			opts.missedCheck = true;
 
-		} else if ( arg.Match("persist") ) {
+		} else if ( arg.Match('p', "persist") ) {
+			printf( "Persist options: %s", arg.getOptStr() );
 			if ( arg.HasOpt() ) {
-				opts.persistFile = argv[index];
+				opts.persistFile = arg.getOptStr();
 				opts.rotation = true;
 				opts.max_rotations = 0;
 				opts.readPersist = true;
@@ -187,7 +190,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				status = STATUS_ERROR;
 			}
 
-		} else if ( arg.Match("persist-dump") ) {
+		} else if ( arg.Match("dump-state") ) {
 			opts.dumpState = true;
 
 		} else if ( arg.Match("init-only") ) {
@@ -202,9 +205,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.writePersist = true;
 
 
-		} else if ( arg.Match("rotation") ) {
+		} else if ( arg.Match( 'r', "rotation") ) {
 			if ( arg.OptIsNumber() ) {
-				opts.max_rotations = atoi(argv[index]);
+				opts.max_rotations = arg.getOptInt( );
 				opts.rotation = opts.max_rotations > 0;
 				index = arg.ConsumeOpt( );
 			} else {
@@ -216,7 +219,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match("sleep") ) {
 			if ( arg.OptIsNumber() ) {
-				opts.sleep = atoi(argv[index]);
+				opts.sleep = arg.getOptInt( );
 				index = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for --sleep argument\n");
@@ -224,9 +227,12 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				status = STATUS_ERROR;
 			}
 
+		} else if ( arg.Match("no-term") ) {
+			opts.term = -1;
+
 		} else if ( arg.Match("term") ) {
 			if ( arg.OptIsNumber() ) {
-				opts.term = atoi(argv[index]);
+				opts.term = arg.getOptInt( );
 				index = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for --term argument\n");
@@ -245,7 +251,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match("verbosity") ) {
 			if ( arg.OptIsNumber() ) {
-				opts.verbosity = atoi(argv[index]);
+				opts.verbosity = arg.getOptInt( );
 				index = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for --verbosity argument\n");
