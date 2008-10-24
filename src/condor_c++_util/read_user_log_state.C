@@ -43,6 +43,7 @@ ReadUserLogState::ReadUserLogState(
 	if ( path ) {
 		m_base_path = path;
 	}
+	m_initialized = true;
 }
 
 ReadUserLogState::ReadUserLogState(
