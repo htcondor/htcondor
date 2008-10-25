@@ -56,7 +56,7 @@ private:
 template <class KeyType> 
 void OrderedSet<KeyType>::Add(const KeyType& Key) {
 
-  if (Curr==Head || Head==NULL) {
+  if (this->Curr==this->Head || this->Head==NULL) {
 	  Set<KeyType>::Add(Key);
 	  return;
   }
@@ -69,18 +69,18 @@ void OrderedSet<KeyType>::Add(const KeyType& Key) {
   // Save values for Prev and Curr, call Insert()
   // with the hints we got from our Find, then reset values.
 
-  SetElem<KeyType>* saved_Curr = Curr;
+  SetElem<KeyType>* saved_Curr = this->Curr;
 
-  Curr = LastFindCurr;
+  this->Curr = LastFindCurr;
   Insert(Key);
-  Curr = saved_Curr;
+  this->Curr = saved_Curr;
 }
 
 // Find the element of a key, taking into account that we can stop
 // searching the list once we hit an element that is greater than our key.
 template <class KeyType>
 SetElem<KeyType>* OrderedSet<KeyType>::Find(const KeyType& Key) {
-  SetElem<KeyType>* N=Head;
+  SetElem<KeyType>* N=this->Head;
   LastFindCurr = NULL;
   while(N) {
     if (*(N->Key) == *Key ) break;  // found it
