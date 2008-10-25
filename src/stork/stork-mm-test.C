@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "Set.h"
 #include "stork-mm.h"

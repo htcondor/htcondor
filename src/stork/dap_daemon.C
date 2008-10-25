@@ -25,6 +25,7 @@
  * March 2000
  * ==========================================================================*/
 
+#define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_daemon_core.h"

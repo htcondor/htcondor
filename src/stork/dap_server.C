@@ -25,6 +25,7 @@
  * February 2002 - ...
  * ==========================================================================*/
 
+#define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "env.h"
 #include "daemon.h"
