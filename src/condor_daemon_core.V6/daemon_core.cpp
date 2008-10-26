@@ -219,8 +219,8 @@ int ZZZ_always_increase() {
 
 static int _condor_exit_with_exec = 0;
 
-THREAD_LOCAL_STORAGE void **DaemonCore::curr_dataptr;
-THREAD_LOCAL_STORAGE void **DaemonCore::curr_regdataptr;
+THREAD_LOCAL_STORAGE void **curr_dataptr;
+THREAD_LOCAL_STORAGE void **curr_regdataptr;
 
 #ifdef HAVE_EXT_GSOAP
 extern int soap_serve(struct soap*);

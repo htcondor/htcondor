@@ -38,6 +38,9 @@ static	TimerManager*	_t = NULL;
 	*/	
 const int MAX_FIRES_PER_TIMEOUT = 3;
 
+extern THREAD_LOCAL_STORAGE void **curr_dataptr;
+extern THREAD_LOCAL_STORAGE void **curr_regdataptr;
+
 
 TimerManager::TimerManager()
 {
@@ -184,7 +187,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 	DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
 
 	// Update curr_regdataptr for SetDataPtr()
-	daemonCore->curr_regdataptr = &(new_timer->data_ptr);
+	curr_regdataptr = &(new_timer->data_ptr);
 
 	dprintf(D_DAEMONCORE,"leaving DaemonCore NewTimer, id=%d\n",new_timer->id);
 
@@ -229,7 +232,7 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 	is_cpp = timer_ptr->is_cpp;
 	event_descrip = timer_ptr->event_descrip;
 	data_ptr = timer_ptr->data_ptr;
-	if ( daemonCore->curr_dataptr == &(timer_ptr->data_ptr) )
+	if ( curr_dataptr == &(timer_ptr->data_ptr) )
 		reset_dataptr = TRUE;
 
 	// note that this call to NewTimer() will first call CancelTimer on the tid, 
@@ -240,10 +243,10 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 		daemonCore->Register_DataPtr(data_ptr);
 		// and if a handler was resetting _its own_ tid entry, reset curr_dataptr to new value
 		if ( reset_dataptr == TRUE )
-			daemonCore->curr_dataptr = daemonCore->curr_regdataptr;
+			curr_dataptr = curr_regdataptr;
 		// now clear curr_regdataptr; the above NewTimer should appear "transparent"
 		// as far as the user code/API is concerned
-		daemonCore->curr_regdataptr = NULL;
+		curr_regdataptr = NULL;
 		// set flag letting Timeout() know if a timer handler reset itself.  note
 		// this is probably redundant since our call to NewTimer above called
 		// CancelTimer, and CancelTimer already set the did_reset flag.  But
@@ -303,10 +306,10 @@ int TimerManager::CancelTimer(int id)
 	}
 
 	// set curr_dataptr to NULL if a handler is removing itself. 
-	if ( daemonCore->curr_dataptr == &(timer_ptr->data_ptr) )
-		daemonCore->curr_dataptr = NULL;
-	if ( daemonCore->curr_regdataptr == &(timer_ptr->data_ptr) )
-		daemonCore->curr_regdataptr = NULL;
+	if ( curr_dataptr == &(timer_ptr->data_ptr) )
+		curr_dataptr = NULL;
+	if ( curr_regdataptr == &(timer_ptr->data_ptr) )
+		curr_regdataptr = NULL;
 
 
 	delete timer_ptr;
@@ -426,7 +429,7 @@ TimerManager::Timeout()
 		bool has_timeslice = timer_list->has_timeslice;
 
 		// Update curr_dataptr for GetDataPtr()
-		daemonCore->curr_dataptr = &(timer_list->data_ptr);
+		curr_dataptr = &(timer_list->data_ptr);
 
 		// Initialize our flag so we know if ResetTimer was called.
 		did_reset = current_id;
@@ -471,7 +474,7 @@ TimerManager::Timeout()
 		daemonCore->CheckPrivState();
 
 		// Clear curr_dataptr
-		daemonCore->curr_dataptr = NULL;
+		curr_dataptr = NULL;
 
 		/* Watch out for cancel_timer() called in the users handler with only 
 		 * one item in list which makes timer_list go to NULL */
@@ -488,7 +491,7 @@ TimerManager::Timeout()
 					daemonCore->Register_DataPtr(data_ptr);
 					// now clear curr_dataptr; the above NewTimer should appear "transparent"
 					// as far as the user code/API is concerned
-					daemonCore->curr_dataptr = NULL;
+					curr_dataptr = NULL;
 				}
 			} else {
 				// timer is not perodic; it is just a one-time event.  we just called

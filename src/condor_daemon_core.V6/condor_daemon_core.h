@@ -1673,13 +1673,7 @@ class DaemonCore : public Service
 		// Returns index of registered socket or -1 if not found.
 	int GetRegisteredSocketIndex( Stream *sock );
 
-    // these need to be in thread local storage someday
-    static THREAD_LOCAL_STORAGE void **curr_dataptr;
-    static THREAD_LOCAL_STORAGE void **curr_regdataptr;
-	// end of thread local storage
-
     int inServiceCommandSocket_flag;
-    
         
 #ifndef WIN32
     static char **ParseArgsString(const char *env);
