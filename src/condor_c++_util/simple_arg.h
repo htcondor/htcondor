@@ -36,26 +36,23 @@ public:
 	bool Match( const char *long_arg ) const;
 	bool Match( const char short_arg, const char *long_arg ) const;
 
-	bool HasOpt( void ) const { return m_opt != NULL; };
-	const char *Opt( void ) const { return m_opt; };
-	bool OptIsNumber( void ) const { return m_opt && isdigit(*m_opt); };
+	bool hasOpt( void ) const { return m_opt != NULL; };
+
+	const char *getOpt( void ) const { return m_opt; };
 
 	bool isOptStr( void ) const { return m_opt != NULL; };
-	const char *getOptStr( void ) const { return m_opt; };
+	bool getOpt( const char *&, bool consume = true );
 
-	bool isOptInt( void ) const { return m_opt && isdigit(*m_opt); };
-	int getOptInt( void ) const { return m_opt && atoi(m_opt); };
+	bool isOptInt( void ) const;
+	bool getOpt( int &, bool consume = true );
 
-	bool isOptBool( void ) const {
-		int c = toupper(*m_opt);
-		return ( c=='T' || c=='F' || c=='Y' || c=='N' );
-	};
-	int getOptBool( void ) const {
-		int c = toupper(*m_opt);
-		return ( c=='T' || c=='Y' );
-	};
+	bool isOptDouble( void ) const { return isOptInt(); };
+	bool getOpt( double &, bool consume = true );
 
-	int ConsumeOpt( void ) { return ++m_index; };
+	bool isOptBool( void ) const;
+	bool getOpt( bool &, bool consume = true );
+
+	int ConsumeOpt( bool consume = true );
 	int Index( void ) const { return m_index; };
 
 private :

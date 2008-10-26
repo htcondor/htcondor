@@ -153,21 +153,18 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		}
 
 		if ( arg.Match('d', "debug") ) {
-			if ( arg.HasOpt() ) {
-				set_debug_flags( const_cast<char *>(arg.getOptStr()) );
+			if ( arg.hasOpt() ) {
+				set_debug_flags( const_cast<char *>(arg.getOpt()) );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --debug argument\n");
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
 
 		} else if ( arg.Match("max-exec") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.maxExec = arg.getOptInt( );
-				index = arg.ConsumeOpt( );
-			} else {
-				fprintf(stderr, "Value needed for --max-exec argument\n");
+			if ( !arg.getOpt( opts.maxExec ) ) {
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -176,16 +173,17 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.missedCheck = true;
 
 		} else if ( arg.Match('p', "persist") ) {
-			printf( "Persist options: %s", arg.getOptStr() );
-			if ( arg.HasOpt() ) {
-				opts.persistFile = arg.getOptStr();
+			if ( arg.hasOpt() ) {
+				arg.getOpt( opts.persistFile );
 				opts.rotation = true;
-				opts.max_rotations = 0;
+				if ( opts.max_rotations == 0 ) {
+					opts.max_rotations = 1;
+				}
 				opts.readPersist = true;
 				opts.writePersist = true;
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --persist argument\n");
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -206,23 +204,18 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 
 		} else if ( arg.Match( 'r', "rotation") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.max_rotations = arg.getOptInt( );
+			if ( arg.getOpt( opts.max_rotations ) ) {
 				opts.rotation = opts.max_rotations > 0;
-				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --rotation argument\n");
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 			}
 
 		} else if ( arg.Match("no-rotation") ) {
 			opts.rotation = false;
 
 		} else if ( arg.Match("sleep") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.sleep = arg.getOptInt( );
-				index = arg.ConsumeOpt( );
-			} else {
-				fprintf(stderr, "Value needed for --sleep argument\n");
+			if ( !arg.getOpt( opts.sleep ) ) {
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -231,11 +224,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.term = -1;
 
 		} else if ( arg.Match("term") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.term = arg.getOptInt( );
-				index = arg.ConsumeOpt( );
-			} else {
-				fprintf(stderr, "Value needed for --term argument\n");
+			if ( !arg.getOpt( opts.term ) ) {
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -250,11 +240,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.verbosity++;
 
 		} else if ( arg.Match("verbosity") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.verbosity = arg.getOptInt( );
-				index = arg.ConsumeOpt( );
-			} else {
-				fprintf(stderr, "Value needed for --verbosity argument\n");
+			if ( !arg.getOpt( opts.verbosity ) ) {
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}

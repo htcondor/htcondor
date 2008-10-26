@@ -262,18 +262,15 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		}
 
 		if ( arg.Match( "cluster") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.cluster = atoi( arg.Opt() );
-				index = arg.ConsumeOpt( );
-			} else {
+			if ( ! arg.getOpt(opts.cluster) ) {
 				fprintf(stderr, "Value needed for --cluster argument\n");
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match('d', "debug") ) {
-			if ( arg.HasOpt() ) {
-				set_debug_flags( const_cast<char *>(arg.Opt()) );
+			if ( arg.hasOpt() ) {
+				set_debug_flags( const_cast<char *>(arg.getOpt()) );
 				index = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for --debug argument\n");
@@ -282,8 +279,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			}
 
 		} else if ( arg.Match('j', "jobid") ) {
-			if ( arg.HasOpt() ) {
-				const char *opt = arg.Opt();
+			if ( arg.hasOpt() ) {
+				const char *opt = arg.getOpt();
 				index = arg.ConsumeOpt( );
 				if ( *opt == '.' ) {
 					sscanf( opt, ".%d.%d", &opts.proc, &opts.subproc );
@@ -299,62 +296,46 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			}
 
 		} else if ( arg.Match("generic") ) {
-			if ( arg.HasOpt() ) {
-				opts.genericEventStr = arg.Opt();
-				index = arg.ConsumeOpt( );
-			} else {
+			if ( !arg.getOpt(opts.genericEventStr) ) {
 				fprintf(stderr, "Value needed for --generic argument\n");
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match('n', "num-exec") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.numExec = atoi( arg.Opt() );
-				index = arg.ConsumeOpt( );
-			} else {
+			if ( ! arg.getOpt(opts.numExec) ) {
 				fprintf(stderr, "Value needed for --num-exec argument\n");
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("num-procs") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.numProcs = atoi( arg.Opt() );
-				index = arg.ConsumeOpt( );
-			} else {
+			if ( ! arg.getOpt(opts.numProcs) ) {
 				fprintf(stderr, "Value needed for --num-procs argument\n");
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("proc") ) {
-			if ( arg.OptIsNumber() ) {
-				index = arg.ConsumeOpt( );
-				opts.proc = atoi( arg.Opt() );
-			} else {
+			if ( ! arg.getOpt(opts.proc) ) {
 				fprintf(stderr, "Value needed for --proc argument\n");
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("persist") ) {
-			if ( arg.HasOpt() ) {
-				index = arg.ConsumeOpt( );
-				opts.persistFile = arg.Opt();
-			} else {
+			if ( !arg.getOpt(opts.persistFile) ) {
 				fprintf(stderr, "Value needed for --persist argument\n");
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("sleep") ) {
-			if ( arg.OptIsNumber() ) {
-				double	sec = atof(arg.Opt());
+			double	sec;
+			if ( arg.getOpt(sec) ) {
 				opts.sleep_seconds  = (int) trunc( sec );
 				opts.sleep_useconds =
 					(int) (1e6 * ( sec - opts.sleep_seconds ) );
-				index = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for --sleep argument\n");
 				printf("%s", usage);
@@ -369,30 +350,21 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.stork = true;
 
 		} else if ( arg.Match("subproc") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.subproc = atoi(arg.Opt());
-				index = arg.ConsumeOpt( );
-			} else {
+			if ( arg.getOpt(opts.subproc) ) {
 				fprintf(stderr, "Value needed for --subproc argument\n");
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match('f', "fork") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.num_forks = atoi(arg.Opt());
-				index = arg.ConsumeOpt( );
-			} else {
+			if ( !arg.getOpt(opts.num_forks) ) {
 				fprintf(stderr, "Value needed for --fork argument\n");
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("fork-cluster-step") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.fork_cluster_step = atoi(arg.Opt());
-				index = arg.ConsumeOpt( );
-			} else {
+			if ( !arg.getOpt(opts.fork_cluster_step) ) {
 				fprintf(stderr,
 						"Value needed for --fork-cluster-step argument\n");
 				printf("%s", usage);
@@ -400,9 +372,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			}
 
 		} else if ( arg.Match("random") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.randomProb = atof(arg.Opt()) / 100.0;
-				index = arg.ConsumeOpt( );
+			double	percent;
+			if ( arg.getOpt(percent) ) {
+				opts.randomProb = percent / 100.0;
 			} else {
 				fprintf(stderr, "Value needed for --random argument\n");
 				printf("%s", usage);
@@ -410,10 +382,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			}
 
 		} else if ( arg.Match("submit_note") ) {
-			if ( arg.HasOpt() ) {
-				opts.submitNote = arg.Opt();
-				index = arg.ConsumeOpt( );
-			} else {
+			if ( !arg.getOpt(opts.submitNote) ) {
 				fprintf(stderr, "Value needed for --submit_note argument\n");
 				printf("%s", usage);
 				status = true;
@@ -424,10 +393,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			status = STATUS_CANCEL;
 
 		} else if ( arg.Match("verbosity") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.verbosity = atoi(arg.Opt());
-				index = arg.ConsumeOpt( );
-			} else {
+			if ( !arg.getOpt(opts.verbosity) ) {
 				fprintf(stderr, "Value needed for --verbosity argument\n");
 				printf("%s", usage);
 				status = true;
