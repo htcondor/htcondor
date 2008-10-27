@@ -106,6 +106,19 @@ string_to_sin( const char *addr, struct sockaddr_in *sa_in )
 	return 1;
 }
 
+char *
+sin_to_ipstring(const struct sockaddr_in *sa_in,char *buf,size_t buflen)
+{
+	char const *ipstr = inet_ntoa(sa_in->sin_addr);
+	if( !ipstr || strlen(ipstr)>=buflen ) {
+		if( buflen > 0 ) {
+			buf[0] = '\0';
+		}
+		return NULL;
+	}
+	strcpy(buf,ipstr);
+	return buf;
+}
 
 /* This function has a unit test. */
 char *

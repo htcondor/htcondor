@@ -1005,10 +1005,8 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	// to the schedd.  we have to explicitly check here because all queue
 	// management commands come in via one sole daemon core command which
 	// has just READ permission.
-	if ( daemonCore->Verify(WRITE, Q_SOCK->endpoint(), Q_SOCK->getFullyQualifiedUser()) == FALSE ) {
+	if ( daemonCore->Verify("queue management", WRITE, Q_SOCK->endpoint(), Q_SOCK->getFullyQualifiedUser()) == FALSE ) {
 		// this machine does not have write permission; return failure
-		dprintf(D_ALWAYS,"QMGT command failed: no WRITE permission for %s\n",
-			Q_SOCK->endpoint_ip_str() );
 		return false;
 	}
 

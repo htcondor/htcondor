@@ -172,7 +172,7 @@ public:
 
 	void reconfig();
 	static IpVerify *getIpVerify();
-	static int Verify(DCpermission perm, const struct sockaddr_in *sin, const char * fqu );
+	static int Verify(DCpermission perm, const struct sockaddr_in *sin, const char * fqu, MyString *allow_reason=NULL, MyString *deny_reason=NULL );
 
 		// Create a security session from scratch (without doing any
 		// security negotation with the peer).  The session id and

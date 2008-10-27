@@ -48,6 +48,12 @@ int condor_inet_aton(const char *ipstr, struct in_addr *result);
 
 char *sin_to_string(const struct sockaddr_in *s_in);
 
+/* Convenience function for calling inet_ntoa().
+   Buffer must be big enough for address (IP_STRING_BUF_SIZE).
+   Returns NULL on failure; otherwise returns buf
+*/
+char *sin_to_ipstring(const struct sockaddr_in *sa_in,char *buf,size_t buflen);
+
 /* Extract the port from a string of the form "<xx.xx.xx.xx:pppp>" */
 int string_to_port( const char* addr );
 

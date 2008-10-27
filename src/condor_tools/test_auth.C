@@ -152,7 +152,8 @@ main( int argc, char* argv[] )
 		}
 
 		char const *result;
-		if( ipverify.Verify(perm,&sin,fqu) != USER_AUTH_SUCCESS ) {
+		MyString reason;
+		if( ipverify.Verify(perm,&sin,fqu,&reason,&reason) != USER_AUTH_SUCCESS ) {
 			result = "DENIED";
 		}
 		else {
@@ -160,7 +161,8 @@ main( int argc, char* argv[] )
 		}
 
 		if( expected && stricmp(expected,result) != 0 ) {
-			printf("Got wrong result '%s' for '%s'!\n",result,line.Value());
+			printf("Got wrong result '%s' for '%s': reason: %s!\n",
+				   result,line.Value(),reason.Value());
 			printf("Aborting.\n");
 			exit(1);
 		}

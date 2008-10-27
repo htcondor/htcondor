@@ -627,13 +627,14 @@ IpVerify::refreshDNS() {
 }
 
 int
-IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char * user )
+IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char * user, MyString *allow_reason, MyString *deny_reason )
 {
 	perm_mask_t mask;
 	struct in_addr sin_addr;
 	char *thehost;
 	char **aliases;
     const char * who = user;
+	MyString peer_description; // we build this up as we go along (DNS etc.)
 
 	if( !did_init ) {
 		Init();
@@ -690,11 +691,21 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		if ( who != TotallyWild ) {
 			id.sprintf("%s/%s", who, ip_str);
 			if ( hpt->lookup(id, count) != -1 ) {
+				if( allow_reason ) {
+					allow_reason->sprintf(
+						"%s authorization has been made automatic for %s",
+						PermString(perm), id.Value() );
+				}
 				return USER_AUTH_SUCCESS;
 			}
 		}
 		id = ip_str;
 		if ( hpt->lookup(id, count) != -1 ) {
+			if( allow_reason ) {
+				allow_reason->sprintf(
+					"%s authorization has been made automatic for %s",
+					PermString(perm), id.Value() );
+			}
 			return USER_AUTH_SUCCESS;
 		}
 	}
@@ -702,15 +713,37 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 	if ( PermTypeArray[perm]->behavior == USERVERIFY_ALLOW ) {
 			// allow if no HOSTALLOW_* or HOSTDENY_* restrictions 
 			// specified.
+		if( allow_reason ) {
+			allow_reason->sprintf(
+				"%s authorization policy allows access by anyone",
+				PermString(perm));
+		}
 		return USER_AUTH_SUCCESS;
 	}
 		
 	if ( PermTypeArray[perm]->behavior == USERVERIFY_DENY ) {
 			// deny
+		if( deny_reason ) {
+			deny_reason->sprintf(
+				"%s authorization policy denies all access",
+				PermString(perm));
+		}
 		return USER_AUTH_FAILURE;
 	}
 		
-	if( !LookupCachedVerifyResult(perm,sin_addr,who,mask) ) {
+	if( LookupCachedVerifyResult(perm,sin_addr,who,mask) ) {
+		if( deny_reason && (mask&deny_mask(perm)) ) {
+			deny_reason->sprintf(
+				"cached result for %s; see first case for the full reason",
+				PermString(perm));
+		}
+		else if( allow_reason && (mask&allow_mask(perm)) ) {
+			allow_reason->sprintf(
+				"cached result for %s; see first case for the full reason",
+				PermString(perm));
+		}
+	}
+	else {
 		mask = 0;
 
 			// if the deny bit is already set, skip further DENY analysis
@@ -721,16 +754,26 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 
 			// check for matching subnets in ip/mask style
 		char ipstr[IP_STRING_BUF_SIZE];
-		const unsigned char *byte_array = (const unsigned char *) &(sin->sin_addr);
-		sprintf(ipstr, "%u.%u.%u.%u", byte_array[0], byte_array[1],
-				byte_array[2], byte_array[3]);
+		sin_to_ipstring(sin,ipstr,IP_STRING_BUF_SIZE);
+
+		peer_description = ipstr;
 
 		if ( !(mask&deny_resolved) && lookup_user_ip_deny(perm,who,ipstr)) {
 			mask |= deny_mask(perm);
+			if( deny_reason ) {
+				deny_reason->sprintf(
+					"%s authorization policy denies IP address %s",
+					PermString(perm), ipstr );
+			}
 		}
 
 		if ( !(mask&allow_resolved) && lookup_user_ip_allow(perm,who,ipstr)) {
 			mask |= allow_mask(perm);
+			if( allow_reason ) {
+				allow_reason->sprintf(
+					"%s authorization policy allows IP address %s",
+					PermString(perm), ipstr );
+			}
 		}
 
 
@@ -742,12 +785,24 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			thehost = NULL;
 		}
 		while ( thehost ) {
+			peer_description.append_to_list(thehost);
+
 			if ( !(mask&deny_resolved) && lookup_user_host_deny(perm,who,thehost) ) {
 				mask |= deny_mask(perm);
+				if( deny_reason ) {
+					deny_reason->sprintf(
+						"%s authorization policy denies hostname %s",
+						PermString(perm), thehost );
+				}
 			}
 
 			if ( !(mask&allow_resolved) && lookup_user_host_allow(perm,who,thehost) ) {
 				mask |= allow_mask(perm);
+				if( allow_reason ) {
+					allow_reason->sprintf(
+						"%s authorization policy allows hostname %s",
+						PermString(perm), thehost );
+				}
 			}
                 
 				// check all aliases for this IP as well
@@ -762,9 +817,16 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			// authorization heirarchy.
 			// DAEMON and ADMINISTRATOR imply WRITE.
 			// WRITE, NEGOTIATOR, and CONFIG_PERM imply READ.
+		bool determined_by_parent = false;
 		if ( mask == 0 ) {
 			if ( PermTypeArray[perm]->behavior == USERVERIFY_ONLY_DENIES ) {
 				dprintf(D_SECURITY,"IPVERIFY: %s at %s not matched to deny list, so allowing.\n",who,sin_to_string(sin));
+				if( allow_reason ) {
+					allow_reason->sprintf(
+						"%s authorization policy does not deny, so allowing",
+						PermString(perm));
+				}
+
 				mask |= allow_mask(perm);
 			} else {
 				DCpermissionHierarchy hierarchy( perm );
@@ -772,9 +834,18 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 					hierarchy.getPermsIAmDirectlyImpliedBy();
 				bool parent_allowed = false;
 				for( ; *parent_perms != LAST_PERM; parent_perms++ ) {
-					if( Verify( *parent_perms, sin, user) == USER_AUTH_SUCCESS ) {
+					if( Verify( *parent_perms, sin, user, allow_reason, NULL ) == USER_AUTH_SUCCESS ) {
+						determined_by_parent = true;
 						parent_allowed = true;
 						dprintf(D_SECURITY,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who,sin_to_string(sin),PermString(perm),PermString(*parent_perms));
+						if( allow_reason ) {
+							MyString tmp = *allow_reason;
+							allow_reason->sprintf(
+								"%s is implied by %s; %s",
+								PermString(perm),
+								PermString(*parent_perms),
+								tmp.Value());
+						}
 						break;
 					}
 				}
@@ -783,7 +854,33 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 				}
 				else {
 					mask |= deny_mask(perm);
+
+					if( !determined_by_parent && deny_reason ) {
+							// We don't just allow anyone, and this request
+							// did not match any of the entries we do allow.
+							// In case the reason we didn't match is
+							// because of a typo or a DNS problem, record
+							// all the hostnames we searched for.
+						deny_reason->sprintf(
+							"%s authorization policy contains no matching "
+							"ALLOW entry for this request"
+							"; identifiers used for this host: %s",
+							PermString(perm),
+							peer_description.Value());
+					}
 				}
+			}
+		}
+
+		if( !determined_by_parent && (mask&allow_mask(perm)) ) {
+			// In case we are allowing because of not matching a DENY
+			// entry that the user expected us to match (e.g. because
+			// of typo or DNS problem), record all the hostnames we
+			// searched for.
+			if( allow_reason && !peer_description.IsEmpty() ) {
+				allow_reason->sprintf_cat(
+					"; identifiers used for this remote host: %s",
+					peer_description.Value());
 			}
 		}
 
