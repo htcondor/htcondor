@@ -361,6 +361,12 @@ bool
 ReadUserLog::CloseLogFile( void )
 {
 
+	// Remove any locks
+	if ( m_lock->isLocked() ) {
+		m_lock->release();
+		m_lock_rot = -1;
+	}
+
 	// Close the file pointer
     if ( m_fp && !m_never_close_fp ) {
 		fclose( m_fp );
@@ -372,12 +378,6 @@ ReadUserLog::CloseLogFile( void )
 	if ( m_fd >= 0 ) {
 	    close( m_fd );
 		m_fd = -1;
-	}
-
-	// And, unlock it
-	if ( m_lock->isLocked() ) {
-		m_lock->release();
-		m_lock_rot = -1;
 	}
 
 	return true;
