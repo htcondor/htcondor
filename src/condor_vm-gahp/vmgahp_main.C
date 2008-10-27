@@ -45,8 +45,6 @@ int	oriDebugFlags = 0;
 MyString workingdir;
 
 // This variables come from vmgahp_common.C
-extern bool SetUid;
-extern bool needchown;
 extern MyString caller_name;
 extern MyString job_user_name;
 extern uid_t caller_uid;
@@ -163,26 +161,6 @@ main_pre_dc_init(int argc, char* argv[])
 		}
 	}
 
-	// check setuid-root
-	if( SwitchUid && (caller_uid > 0) && (caller_euid > 0 ) )  {
-		// To make sure that daemonCore supports setuid-root
-		priv_state oldpriv = set_root_priv();
-		caller_euid = geteuid();
-		caller_egid = getegid();
-		set_priv(oldpriv);
-	}
-
-	if( (caller_uid > 0) && !caller_euid ) {
-		// This daemon has setuid-root
-		SetUid = true;
-
-		// check if vmgahp need to chown files 
-		// in working directory.
-		if( getenv("VMGAHP_NEED_CHOWN") ) {
-			needchown = true;
-		}
-	}
-
 	if( !SwitchUid ) {
 		// We cannot switch uids
 		// a job user uid is set to caller uid
@@ -245,17 +223,16 @@ usage( char *name)
 {
 	vmprintf(D_ALWAYS, 
 			"Usage: \n"
-			"\tTestMode: %s -f -t -M 0 gahpconfig <configfile> vmtype <vmtype> \n"
-			"\tIOMode: %s -f -t -M 1\n"
-			"\tWorkerMode: %s -f -t -M 2\n"
-			"\tStandAlone: %s -f -t -M 3\n", name, name, name, name);
+			"\tTestMode: %s -f -t -M 0 vmtype <vmtype> \n"
+			"\tStandAlone: %s -f -t -M 3\n"
+			"\tKillMode: %s -f -t -M 4 vmtype <vmtype> match <matchstring>\n",
+			name, name, name);
 	DC_Exit(1);
 
 }
 
 int main_init(int argc, char *argv[])
 {
-	MyString configfile;
 	MyString vmtype;
 	MyString matchstring;
 
@@ -273,7 +250,10 @@ int main_init(int argc, char *argv[])
 	}
 
 	vmgahp_mode = atoi(argv[2]);
-	if( vmgahp_mode >= VMGAHP_MODE_MAX ) {
+	if( vmgahp_mode == VMGAHP_IO_MODE ) {
+		vmgahp_mode = VMGAHP_STANDALONE_MODE;
+	} else if( vmgahp_mode >= VMGAHP_MODE_MAX || vmgahp_mode < 0 ||
+			   vmgahp_mode == VMGAHP_WORKER_MODE ) {
 		usage(argv[0]);
 	}
 
@@ -317,7 +297,7 @@ int main_init(int argc, char *argv[])
 	vmprintf(D_ALWAYS, "VM-GAHP initialized with run-mode %d\n", vmgahp_mode);
 
 	if( (vmgahp_mode == VMGAHP_TEST_MODE) || (vmgahp_mode == VMGAHP_KILL_MODE )) {
-		char _gahpconfig[] = "gahpconfig";
+
 		char _vmtype[] = "vmtype";
 		char _match[] = "match";
 
@@ -330,16 +310,6 @@ int main_init(int argc, char *argv[])
 			opt = tmp[0];
 			arg = tmp[1];
 			opt_len = strlen(opt);
-
-			if( ! strncmp(opt, _gahpconfig, opt_len) ) {
-				// path of config file
-				if( !arg ) {
-					usage(argv[0]);
-				}
-				configfile = arg;
-				tmp++; //consume the arg so we don't get confused
-				continue;
-			}
 
 			if( ! strncmp(opt, _vmtype, opt_len) ) {
 				// vm type
@@ -365,23 +335,17 @@ int main_init(int argc, char *argv[])
 		}
 
 		if( vmgahp_mode == VMGAHP_TEST_MODE ) {
-			if( ( configfile.Length() == 0 ) || ( vmtype.Length() == 0 ) ) {
+			if( vmtype.Length() == 0 ) {
 				usage(argv[0]);
 			}
 		}else if( vmgahp_mode == VMGAHP_KILL_MODE ) {
-			if( ( configfile.Length() == 0 ) || ( vmtype.Length() == 0 ) ||
-					( matchstring.Length() == 0 )) {
+			if( ( vmtype.Length() == 0 ) ||
+			    ( matchstring.Length() == 0 ) )
+			{
 				usage(argv[0]);
 			}
 		}
 	}else {
-		// Read parameters from environment variables
-		configfile = getenv("VMGAHP_CONFIG");
-		if( configfile.IsEmpty() ) {
-			vmprintf(D_ALWAYS, "cannot find gahp config file\n");
-			DC_Exit(1);
-		}
-
 		vmtype = getenv("VMGAHP_VMTYPE");
 		if( vmtype.IsEmpty() ) {
 			vmprintf(D_ALWAYS, "cannot find vmtype\n");
@@ -420,80 +384,55 @@ int main_init(int argc, char *argv[])
 	}
 #endif
 
-	// check permissions of vmgahp config file
-	vmgahp_set_root_priv();
-	if( check_vmgahp_config_permission(configfile.Value(), 
-				vmtype.Value()) == false ) {
-		DC_Exit(1);
-	}
-
-	// Read config file
-	vmgahp_set_root_priv();
-	if( read_vmgahp_configfile(configfile.Value()) < 0 ) {
-		vmprintf( D_ALWAYS, "\nERROR: Failed to parse vmgahp "
-				"config file(%s)\n", configfile.Value()); 
-		DC_Exit(1);
-	}
-
 	// create VMGahpConfig and fill it with vmgahp config parameters
 	VMGahpConfig *gahpconfig = new VMGahpConfig;
 	ASSERT(gahpconfig);
-	vmgahp_set_root_priv();
-	if( gahpconfig->init(vmtype.Value(), configfile.Value()) == false ) {
+	set_root_priv();
+	if( gahpconfig->init(vmtype.Value()) == false ) {
 		DC_Exit(1);
 	}
 
-	if( isSetUidRoot() ) {
-		// If vmgahp has setuid-root,  
-		// check if a local user calling this vmgahp is allowed
-		if( gahpconfig->isAllowUser(get_caller_name()) == false ) {
-			vmprintf( D_ALWAYS, "\nERROR: Local user(%s) is not allowed "
-					"to execute vmgahp server\n", get_caller_name());
-			DC_Exit(1);
-		}
-	}
+	set_condor_priv();
 
-	vmgahp_set_condor_priv();
-
-	// Check if vm specific paramaters are valid in vmgahp config file
+	// Check if vm specific paramaters are valid in config file
 #if defined(LINUX)
 	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
-		priv_state priv = vmgahp_set_root_priv();
+		priv_state priv = set_root_priv();
 		if( XenType::checkXenParams(gahpconfig) == false ) {
 			DC_Exit(1);
 		}
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}else
 #endif
 	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
-		priv_state priv = vmgahp_set_user_priv();
+		priv_state priv = set_user_priv();
 		if( VMwareType::checkVMwareParams(gahpconfig) == false ) {
 			DC_Exit(1);
 		}
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}
 
 	if( vmgahp_mode == VMGAHP_TEST_MODE ) {
 		// Try to test
 #if defined(LINUX)
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
-			priv_state priv = vmgahp_set_root_priv();
+			priv_state priv = set_root_priv();
 			if( XenType::testXen(gahpconfig) == false ) {
 				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
 						"be used.\n", vmtype.Value());
 				DC_Exit(0);
 			}
-			vmgahp_set_priv(priv);
+			set_priv(priv);
 		}else
 #endif
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
-			priv_state priv = vmgahp_set_user_priv();
+			priv_state priv = set_user_priv();
 			if( VMwareType::testVMware(gahpconfig) == false ) {
 				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
 						"be used.\n", vmtype.Value());
 				DC_Exit(0);
 			}
-			vmgahp_set_priv(priv);
+			set_priv(priv);
 		}
 
 		// print information to stdout
@@ -523,12 +462,12 @@ int main_init(int argc, char *argv[])
 
 		// With root privilege, 
 		// we will try to kill the VM that matches with given "matchstring".
-		vmgahp_set_root_priv();
+		set_root_priv();
 
 #if defined(LINUX)
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN ) == 0 ) {
 			XenType::killVMFast(gahpconfig->m_vm_script.Value(), 
-					matchstring.Value(), gahpconfig->m_controller.Value());
+					matchstring.Value());
 		}else
 #endif
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
@@ -541,16 +480,10 @@ int main_init(int argc, char *argv[])
 	vmgahp = new VMGahp(gahpconfig, workingdir.Value());
 	ASSERT(vmgahp);
 
-	if( vmgahp_mode == VMGAHP_IO_MODE ) {
-		vmgahp->startWorker();
-	}
-
 	/* Wait for command */
 	vmgahp->startUp();
 
-	if( vmgahp_mode != VMGAHP_WORKER_MODE ) {
-		write_to_daemoncore_pipe("%s\n", vmgahp_version);
-	}
+	write_to_daemoncore_pipe("%s\n", vmgahp_version);
 
 	return TRUE;
 }

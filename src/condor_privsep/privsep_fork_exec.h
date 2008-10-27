@@ -17,36 +17,27 @@
  *
  ***************************************************************/
 
+#ifndef _PRIVSEP_FORK_EXEC
+#define _PRIVSEP_FORK_EXEC
 
-#ifndef VM_GAHP_CONFIG_H
-#define VM_GAHP_CONFIG_H
+#include <stdio.h>
 
-#include "condor_common.h"
-#include "condor_classad.h"
-#include "gahp_common.h"
-#include "condor_vm_universe_types.h"
+class ArgList;
 
-class VMGahpConfig {
-	public:
-		VMGahpConfig();
-		VMGahpConfig(const VMGahpConfig& old); // copy constructor
-		VMGahpConfig& operator=(const VMGahpConfig& old);
+class PrivSepForkExec {
 
-		bool init(const char* vmtype);
-
-		MyString m_vm_type;
-		MyString m_vm_version;
-
-		int m_vm_max_memory;
-
-		bool m_vm_networking;
-		StringList m_vm_networking_types;
-		MyString m_vm_default_networking_type;
-
-		bool m_vm_hardware_vt;
-
-		MyString m_prog_for_script; // program to execute a below script(perl etc.)
-		MyString m_vm_script; // Script program for virtual machines
+public:
+	PrivSepForkExec();
+	~PrivSepForkExec();
+	bool init();
+	bool in_child(MyString&, ArgList&);
+	FILE* parent_begin();
+	bool parent_end();
+private:
+	FILE* m_in_fp;
+	FILE* m_err_fp;
+	int m_child_in_fd;
+	int m_child_err_fd;
 };
 
-#endif /* VM_GAHP_CONFIG_H */
+#endif

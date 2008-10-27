@@ -23,7 +23,9 @@
 
 BEGIN_C_DECLS
 
-FILE *my_popenv( char *const argv[], const char * mode, int want_stderr );
+FILE *my_popenv( char *const argv[],
+                 const char * mode,
+                 int want_stderr );
 int my_pclose( FILE *fp );
 
 int my_systemv( char *const argv[] );
@@ -40,10 +42,22 @@ int my_system( const char *cmd );
 END_C_DECLS
 
 #if defined(__cplusplus)
+
 // ArgList versions only available from C++
 #include "condor_arglist.h"
-FILE *my_popen( ArgList &args, const char * mode, int want_stderr );
+FILE *my_popen( ArgList &args,
+                const char * mode,
+                int want_stderr );
 int my_system( ArgList &args );
+
+// PrivSep version
+#if !defined(WIN32)
+FILE *privsep_popen( ArgList &args,
+                     const char * mode,
+                     int want_stderr,
+                     uid_t uid );
+#endif
+
 #endif
 
 #endif

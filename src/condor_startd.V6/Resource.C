@@ -1120,28 +1120,19 @@ int
 Resource::wants_pckpt( void )
 {
 	int want_pckpt; 
-	bool unknown = true;
 
 	if( (r_cur->universe() != CONDOR_UNIVERSE_STANDARD) && 
 			(r_cur->universe() != CONDOR_UNIVERSE_VM)) {
 		return FALSE;
 	}
 
-	if( r_cur->universe() == CONDOR_UNIVERSE_VM ) {
-		if( r_classad->EvalBool("PERIODIC_CHECKPOINT_VM",
-					r_cur->ad(),
-					want_pckpt) ) {  
-			unknown = false;
-		}
+	if( r_classad->EvalBool( "PERIODIC_CHECKPOINT",
+				r_cur->ad(),
+				want_pckpt ) == 0) { 
+		// Default to no, if not defined.
+		want_pckpt = 0;
 	}
-	if( unknown ) {
-		if( r_classad->EvalBool( "PERIODIC_CHECKPOINT",
-					r_cur->ad(),
-					want_pckpt ) == 0) { 
-			// Default to no, if not defined.
-			want_pckpt = 0;
-		}
-	}
+
 	return want_pckpt;
 }
 
