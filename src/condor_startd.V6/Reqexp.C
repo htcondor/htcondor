@@ -36,10 +36,15 @@ Reqexp::Reqexp( Resource* res_ip )
 	tmp.sprintf("%s = (%s) && (%s)", 
 		ATTR_REQUIREMENTS, "START", ATTR_IS_VALID_CHECKPOINT_PLATFORM );
 
+	if( Resource::STANDARD_SLOT != rip->get_feature() ) {
+		tmp.sprintf_cat( " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
+	}
+
 	origreqexp = strdup( tmp.Value() );
 	origstart = NULL;
 	rstate = ORIG_REQ;
 	m_origvalidckptpltfrm = NULL;
+	m_within_resource_limits_expr = NULL;
 }
 
 void
@@ -116,6 +121,33 @@ Reqexp::compute( amask_t how_much )
 
 			m_origvalidckptpltfrm = strdup( str.Value() );
 		}
+
+		if( m_within_resource_limits_expr != NULL ) {
+			free(m_within_resource_limits_expr);
+			m_within_resource_limits_expr = NULL;
+		}
+
+		char *tmp = param( ATTR_WITHIN_RESOURCE_LIMITS );
+		if( tmp != NULL ) {
+			m_within_resource_limits_expr = strdup( tmp );
+			free(tmp);
+		} else {
+			tmp =
+				"("
+				 "ifThenElse(TARGET.RequestCpus =!= UNDEFINED,"
+				           "MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus,"
+				           "1 <= MY.Cpus)"
+				" && "
+				 "ifThenElse(TARGET.RequestMemory =!= UNDEFINED,"
+				           "MY.Memory > 0 && TARGET.RequestMemory <= MY.Memory,"
+				           "FALSE)"
+				" && "
+				 "ifThenElse(TARGET.RequestDisk =!= UNDEFINED,"
+				           "MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk,"
+				           "FALSE)"
+				")";
+			m_within_resource_limits_expr = strdup( tmp );
+		}
 	}
 }
 
@@ -125,6 +157,7 @@ Reqexp::~Reqexp()
 	if( origreqexp ) free( origreqexp );
 	if( origstart ) free( origstart );
 	if( m_origvalidckptpltfrm ) free( m_origvalidckptpltfrm );
+	if( m_within_resource_limits_expr ) free( m_within_resource_limits_expr );
 }
 
 
@@ -190,6 +223,10 @@ Reqexp::publish( ClassAd* ca, amask_t how_much )
 		ca->Insert( tmp.Value() );
 		tmp.sprintf( "%s", m_origvalidckptpltfrm );
 		ca->Insert( tmp.Value() );
+		if( Resource::STANDARD_SLOT != rip->get_feature() ) {
+			ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
+							m_within_resource_limits_expr );
+		}
 		break;
 	case UNAVAIL_REQ:
 		tmp.sprintf( "%s = False", ATTR_REQUIREMENTS );

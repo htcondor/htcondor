@@ -225,6 +225,12 @@ char	*Requirements	= "requirements";
 char	*Preferences	= "preferences";
 char	*Rank				= "rank";
 char	*ImageSize		= "image_size";
+char	*DiskUsage		= "disk_usage";
+
+char	*RequestCpus	= "request_cpus";
+char	*RequestMemory	= "request_memory";
+char	*RequestDisk	= "request_disk";
+
 char	*Universe		= "universe";
 char	*Grid_Type		= "grid_type";
 char	*MachineCount	= "machine_count";
@@ -1887,6 +1893,7 @@ SetMachineCount()
 	char	*mach_count;
 	char	*ptr;
 	MyString buffer;
+	int		request_cpus = 1;
 
 	if (JobUniverse == CONDOR_UNIVERSE_PVM) {
 
@@ -1917,6 +1924,7 @@ SetMachineCount()
 			InsertJobExpr ("MaxHosts = 1");
 		}
 
+		request_cpus = 1;
 	} else if (JobUniverse == CONDOR_UNIVERSE_MPI ||
 			   JobUniverse == CONDOR_UNIVERSE_PARALLEL ) {
 
@@ -1941,7 +1949,33 @@ SetMachineCount()
 		buffer.sprintf( "%s = %d", ATTR_MAX_HOSTS, tmp);
 		InsertJobExpr (buffer);
 
+		request_cpus = 1;
+	} else {
+		mach_count = condor_param( MachineCount, "MachineCount" );
+		if( mach_count ) { 
+			int tmp = atoi(mach_count);
+			free(mach_count);
+
+			if( tmp < 1 ) {
+				fprintf(stderr, "\nERROR: machine_count must be >= 1\n" );
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+			}
+
+			buffer.sprintf( "%s = %d", ATTR_MACHINE_COUNT, tmp);
+			InsertJobExpr (buffer);
+
+			request_cpus = tmp;
+		}
 	}
+
+	if ((mach_count = condor_param(RequestCpus, ATTR_REQUEST_CPUS))) {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
+		free(mach_count);
+	} else {
+		buffer.sprintf("%s = %d", ATTR_REQUEST_CPUS, request_cpus);
+	}
+	InsertJobExpr(buffer);
 }
 
 struct SimpleExprInfo {
@@ -1986,11 +2020,13 @@ void
 SetImageSize()
 {
 	int		size;
+	unsigned int disk_usage = 0;
 	static int executablesize;
 	char	*tmp;
 	char	*p;
 	char    buff[2048];
 	MyString buffer;
+	int		request_memory;
 
 	tmp = condor_param( ImageSize, ATTR_IMAGE_SIZE );
 
@@ -2054,10 +2090,40 @@ SetImageSize()
 		}
 		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, vm_disk_space);
 	}else {
-		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, 
-				executablesize + TransferInputSize);
+		tmp = condor_param( DiskUsage, ATTR_DISK_USAGE );
+
+		if( tmp ) {
+			disk_usage = atoi(tmp);
+
+			if( disk_usage < 1 ) {
+				fprintf( stderr, "\nERROR: disk_usage must be >= 1\n" );
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+			}
+		} else {
+			disk_usage = executablesize + TransferInputSize;
+		}
+
+		buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, disk_usage );
 	}
 	InsertJobExpr (buffer);
+
+
+	if ((tmp = condor_param(RequestMemory, ATTR_REQUEST_MEMORY))) {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
+		free(tmp);
+	} else {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, ATTR_IMAGE_SIZE);
+	}
+	InsertJobExpr(buffer);
+
+	if ((tmp = condor_param(RequestDisk, ATTR_REQUEST_DISK))) {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
+		free(tmp);
+	} else {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, ATTR_DISK_USAGE);
+	}
+	InsertJobExpr(buffer);
 }
 
 void SetFileOptions()
