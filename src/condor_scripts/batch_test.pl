@@ -140,6 +140,21 @@ $ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
 #
 while( $_ = shift( @ARGV ) ) {
   SWITCH: {
+        if( /-h.*/ ) {
+	    print "the args:\n";
+	    print "-d[irectory <dir>: just test this directory\n";
+	    print "-f[ile] <filename>: use this file as the list of tests to run\n";
+	    print "-s[kip] <filename>: use this file as the list of tests to skip\n";
+	    print "-t[estname] <test-name>: just run this test\n";
+	    print "-q[uiet]: hush\n";
+	    print "-m[arktime]: time stamp\n";
+	    print "-k[ind]: be kind and submit slowly\n";
+	    print "-b[buildandtest]: set up a personal condor and generic configs\n";
+	    print "-a[again]: how many times do we run each test?\n";
+	    print "-p[pretest]: get are environment set but run no tests\n";
+	    print "-c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.\n";
+	    exit(0);
+        }
         if( /-d.*/ ) {
                 push(@compilers, shift(@ARGV));
                 next SWITCH;
