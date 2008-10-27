@@ -32,11 +32,13 @@
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
 
-#define XEN_STATUS_TMP_FILE "xen_status.condor"
 #define XEN_CONFIG_FILE_NAME "xen_vm.config"
 #define XEN_CKPT_TIMESTAMP_FILE_SUFFIX ".timestamp"
 #define XEN_MEM_SAVED_FILE "xen.mem.ckpt"
 #define XEN_CKPT_TIMESTAMP_FILE XEN_MEM_SAVED_FILE XEN_CKPT_TIMESTAMP_FILE_SUFFIX
+
+#define XEN_LOCAL_SETTINGS_PARAM "XEN_LOCAL_SETTINGS_FILE"
+#define XEN_LOCAL_VT_SETTINGS_PARAM "XEN_LOCAL_VT_SETTINGS_FILE"
 
 static MyString
 getScriptErrorString(const char* fname)
@@ -73,7 +75,9 @@ XenType::XenType(const char* scriptname, const char* workingpath,
 
 XenType::~XenType()
 {
+	priv_state old_priv = set_user_priv();
 	Shutdown();
+	set_priv( old_priv );
 
 	if( getVMStatus() != VM_STOPPED ) {
 		// To make sure VM exits
@@ -135,26 +139,21 @@ XenType::Start()
 		}
 	}
 
-	MyString tmpfilename;
-	tmpfilename.sprintf("%s%c%s", m_workingpath.Value(), 
-			DIR_DELIM_CHAR, XEN_STATUS_TMP_FILE);
-	unlink(tmpfilename.Value());
+	StringList cmd_out;
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("start");
 	systemcmd.AppendArg(m_configfile);
-	systemcmd.AppendArg(tmpfilename);
 
-	int result = systemCommand(systemcmd, true);
+	int result = systemCommand(systemcmd, true, &cmd_out);
 	if( result != 0 ) {
-		// Read error file
-		m_result_msg = getScriptErrorString(tmpfilename.Value());
-		unlink(tmpfilename.Value());
+		// Read error output
+		// TODO Should we grab more than just the first line?
+		cmd_out.rewind();
+		m_result_msg = cmd_out.next();
 		return false;
 	}
-	unlink(tmpfilename.Value());
 
 	setVMStatus(VM_RUNNING);
 	m_start_time.getTime();
@@ -219,7 +218,6 @@ XenType::Shutdown()
 	if( getVMStatus() == VM_RUNNING ) {
 		ArgList systemcmd;
 		systemcmd.AppendArg(m_scriptname);
-		systemcmd.AppendArg(m_xen_controller);
 		systemcmd.AppendArg("stop");
 		systemcmd.AppendArg(m_configfile);
 
@@ -296,7 +294,6 @@ XenType::ResumeFromSoftSuspend(void)
 	if( m_is_soft_suspended ) {
 		ArgList systemcmd;
 		systemcmd.AppendArg(m_scriptname);
-		systemcmd.AppendArg(m_xen_controller);
 		systemcmd.AppendArg("unpause");
 		systemcmd.AppendArg(m_configfile);
 
@@ -334,7 +331,6 @@ XenType::SoftSuspend()
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("pause");
 	systemcmd.AppendArg(m_configfile);
 
@@ -387,7 +383,6 @@ XenType::Suspend()
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("suspend");
 	systemcmd.AppendArg(m_configfile);
 	systemcmd.AppendArg(tmpfilename);
@@ -432,14 +427,7 @@ XenType::Resume()
 	}
 	m_restart_with_ckpt = false;
 
-	if( m_is_checkpointed ) {
-		if( m_is_chowned ) {
-			// Because files in the working directory were chowned to a caller.
-			// we need to restore ownership of files from caller uid to a job user
-			chownWorkingFiles(get_job_user_uid());
-		}
-		m_is_checkpointed = false;
-	}
+	m_is_checkpointed = false;
 
 	if( check_vm_read_access_file(m_suspendfile.Value(), true) == false ) {
 		m_result_msg = VMGAHP_ERR_VM_INVALID_SUSPEND_FILE;
@@ -448,7 +436,6 @@ XenType::Resume()
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("resume");
 	systemcmd.AppendArg(m_suspendfile);
 
@@ -503,39 +490,27 @@ XenType::Status()
 		return true;
 	}
 
-	MyString tmpfilename;
-	tmpfilename.sprintf("%s%c%s", m_workingpath.Value(), 
-			DIR_DELIM_CHAR, XEN_STATUS_TMP_FILE);
-	unlink(tmpfilename.Value());
+	StringList cmd_out;
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg(m_xen_controller);
 	if( m_vm_networking ) {
 		systemcmd.AppendArg("getvminfo");
 	}else {
 		systemcmd.AppendArg("status");
 	}
 	systemcmd.AppendArg(m_configfile);
-	systemcmd.AppendArg(tmpfilename);
 
 	int result = systemCommand(systemcmd, true);
 	if( result != 0 ) {
 		m_result_msg = VMGAHP_ERR_CRITICAL;
-		unlink(tmpfilename.Value());
 		return false;
 	}
 
 	// Got result
-	FILE *file;
-	char buffer[1024];
-	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
-	if( !file ) {
-		m_result_msg = VMGAHP_ERR_INTERNAL;
-		unlink(tmpfilename.Value());
-		return false;
-	}
+	cmd_out.rewind();
 
+	const char *next_line;
 	MyString one_line;
 	MyString name;
 	MyString value;
@@ -543,9 +518,8 @@ XenType::Status()
 	MyString vm_status;
 	float cputime = 0;
 
-	while( fgets(buffer, sizeof(buffer), file) != NULL ) {
-		one_line = buffer;
-		one_line.chomp();
+	while( (next_line = cmd_out.next()) != NULL ) {
+		one_line = next_line;
 		one_line.trim();
 
 		if( one_line.Length() == 0 ) {
@@ -584,8 +558,6 @@ XenType::Status()
 			}
 		}
 	}
-	fclose(file);
-	unlink(tmpfilename.Value());
 
 	if( !vm_status.Length() ) {
 		m_result_msg = VMGAHP_ERR_INTERNAL;
@@ -664,169 +636,6 @@ XenType::Status()
 }
 
 bool
-XenType::CreateXMConfigFile(const char* filename)
-{
-	MyString disk_string;
-
-	if( !filename ) {
-		return false;
-	}
-
-	FILE *fp = NULL;
-
-	fp = safe_fopen_wrapper(filename, "w");
-	if( !fp ) {
-		vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper vm config file "
-				"in write mode: safe_fopen_wrapper(%s) returns %s\n", 
-				filename, strerror(errno));
-		return false;
-	}
-
-	if( fprintf(fp, "name=\"%s\"\n", m_vm_name.Value()) < 0 ) {
-		goto xmwriteerror;
-	}
-
-	if( fprintf(fp, "memory=%d\n", m_vm_mem) < 0 ) {
-		goto xmwriteerror;
-	}
-
-	if( m_xen_kernel_file.IsEmpty() == false ) {
-		MyString tmp_fullname;
-		if( isTransferedFile(m_xen_kernel_file.Value(), 
-					tmp_fullname) ) {
-			// this file is transferred
-			// So we use basename
-			if( fprintf(fp, "kernel=\"%s\"\n", basename(tmp_fullname.Value())) < 0 ) {
-				goto xmwriteerror;
-			}
-			m_xen_kernel_file = tmp_fullname;
-		}else {
-			// this file is not transferred
-			if( fprintf(fp, "kernel=\"%s\"\n", m_xen_kernel_file.Value()) < 0 ) {
-				goto xmwriteerror;
-			}
-		}
-		if( m_xen_initrd_file.IsEmpty() == false ) {
-			if( isTransferedFile(m_xen_initrd_file.Value(), 
-						tmp_fullname) ) {
-				// this file is transferred
-				// So we use basename
-				if(fprintf(fp, "ramdisk=\"%s\"\n", basename(tmp_fullname.Value())) < 0) {
-					goto xmwriteerror;
-				}
-				m_xen_initrd_file = tmp_fullname;
-			}else {
-				// this file is not transferred
-				if( fprintf(fp, "ramdisk=\"%s\"\n", m_xen_initrd_file.Value()) < 0 ) {
-					goto xmwriteerror;
-				}
-			}
-		}
-		if( m_xen_root.IsEmpty() == false ) {
-			if( fprintf(fp,"root=\"%s\"\n", m_xen_root.Value()) < 0 ) {
-				goto xmwriteerror;
-			}
-		}
-	}
-
-	if( m_vm_networking ) {
-		MyString networking_type;
-		char* xen_vif_param = NULL;
-
-		if( fprintf(fp, "dhcp=\"dhcp\"\n") < 0 ) {
-			goto xmwriteerror;
-		}
-
-		if( m_xen_hw_vt ) {
-			xen_vif_param = vmgahp_param("XEN_VT_VIF");
-			if( xen_vif_param ) {
-				networking_type = delete_quotation_marks(xen_vif_param);
-				free(xen_vif_param);
-			}
-		}
-
-		if( networking_type.IsEmpty() ) {
-			MyString tmp_string; 
-			MyString tmp_string2;
-
-			tmp_string2 = m_vm_networking_type;
-			tmp_string2.strupr();
-
-			tmp_string.sprintf("XEN_%s_VIF_PARAMETER", tmp_string2.Value());
-			xen_vif_param = vmgahp_param(tmp_string.Value());
-
-			if( xen_vif_param) {
-				networking_type = delete_quotation_marks(xen_vif_param);
-				free(xen_vif_param);
-			}else {
-				xen_vif_param = vmgahp_param("XEN_VIF_PARAMETER");
-				if( xen_vif_param ) {
-					networking_type = delete_quotation_marks(xen_vif_param);
-					free(xen_vif_param);
-				}else {
-					networking_type = "['']";
-				}
-			}
-		}
-
-		if( fprintf(fp, "vif=%s\n", networking_type.Value()) < 0 ) {
-			goto xmwriteerror;
-		}
-	}
-
-	// Create disk parameter in Xen config file
-	disk_string = makeXMDiskString();
-	if( fprintf(fp,"disk=%s\n", disk_string.Value()) < 0 ) {
-		goto xmwriteerror;
-	}
-
-	if( strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0) {
-		if( fprintf(fp, "bootloader=\"%s\"\n", m_xen_bootloader.Value()) < 0 ) {
-			goto xmwriteerror;
-		}
-	}
-
-	if( m_xen_hw_vt ) {
-		if( write_specific_vm_params_to_file("XEN_VT_", fp) == false ) {
-			goto xmwriteerror;
-		}
-	}
-
-	if( m_xen_kernel_params.IsEmpty() == false ) {
-		if( fprintf(fp,"extra=\"%s\"\n", m_xen_kernel_params.Value()) < 0 ) {
-			goto xmwriteerror;
-		}
-	}
-
-	if( write_forced_vm_params_to_file(fp, NULL, NULL) == false ) {
-		goto xmwriteerror;
-	}
-	fclose(fp);
-	fp = NULL;
-
-	if( m_use_script_to_create_config ) {
-		// We will call the script program 
-		// to create a configuration file for VM
-		
-		if( createConfigUsingScript(filename) == false ) {
-			unlink(filename);
-			return false;
-		}
-	}
-
-	return true;
-
-xmwriteerror:
-	vmprintf(D_ALWAYS, "failed to fprintf in CreateXMConfigFile(%s:%s)\n",
-			filename, strerror(errno));
-	if( fp ) {
-		fclose(fp);
-	}
-	unlink(filename);
-	return false;
-}
-
-bool
 XenType::CreateVirshConfigFile(const char* filename)
 {
 	MyString disk_string;
@@ -847,7 +656,7 @@ XenType::CreateVirshConfigFile(const char* filename)
 		return false;
 	}
 
-	config_value = vmgahp_param( "XEN_BRIDGE_SCRIPT" );
+	config_value = param( "XEN_BRIDGE_SCRIPT" );
 	if( !config_value ) {
 		vmprintf(D_ALWAYS, "XEN_BRIDGE_SCRIPT is not defined in the "
 				 "vmgahp config file\n");
@@ -877,6 +686,9 @@ XenType::CreateVirshConfigFile(const char* filename)
 
 	if( fprintf(fp, "<memory>%d</memory>", m_vm_mem) < 0 ) {
 		goto virshwriteerror;
+	}
+	if( fprintf(fp, "<vcpu>%d</vcpu>", m_vcpus) < 0 ) {
+	  goto virshwriteerror;
 	}
 
 	if( fprintf(fp, "<os>") < 0 ) {
@@ -969,6 +781,12 @@ XenType::CreateVirshConfigFile(const char* filename)
 					goto virshwriteerror;
 				}
 			}
+			if(!m_vm_job_mac.IsEmpty())
+			  {
+			    if(fprintf(fp, "<mac address=\'%s\'/>", m_vm_job_mac.Value()) < 0) {
+			      goto virshwriteerror;
+			    }
+			  }
 			if( fprintf(fp, "</interface>") < 0 ) {
 				goto virshwriteerror;
 			}
@@ -989,9 +807,10 @@ XenType::CreateVirshConfigFile(const char* filename)
 		goto virshwriteerror;
 	}
 
-	if( write_forced_vm_params_to_file(fp, NULL, NULL) == false ) {
+	if (!write_local_settings_from_file(fp, XEN_LOCAL_SETTINGS_PARAM)) {
 		goto virshwriteerror;
 	}
+
 	fclose(fp);
 	fp = NULL;
 
@@ -1018,22 +837,13 @@ virshwriteerror:
 }
 
 bool
-XenType::CreateXenVMCofigFile(const char* controller, const char* filename)
+XenType::CreateXenVMCofigFile(const char* filename)
 {
-	if( !controller || !filename ) {
+	if( !filename ) {
 		return false;
 	}
 
-	if( !strcmp( condor_basename(controller), "xm") ) {
-		return CreateXMConfigFile(filename);
-	}else if( !strcmp( condor_basename(controller), "virsh") ) {
-		return CreateVirshConfigFile(filename);
-	}else {
-		vmprintf(D_ALWAYS, "Not supported xen controller(%s)\n", controller);
-		return false;
-	}
-
-	return false;
+	return CreateVirshConfigFile(filename);
 }
 
 bool
@@ -1052,29 +862,6 @@ XenType::CreateConfigFile()
 		m_vm_mem = 32;
 	}
 
-	// First try to read XEN_CONTROLLER
-	config_value = vmgahp_param("XEN_CONTROLLER");
-	if( !config_value ) {
-		vmprintf(D_ALWAYS, "\nERROR: You should define 'XEN_CONTROLLER' "
-				"in vmgahp config file\n");
-		m_result_msg = VMGAHP_ERR_CRITICAL;
-		return false;
-	}else {
-		m_xen_controller = delete_quotation_marks(config_value);
-		free(config_value);
-
-		// check if this xen controller is supported 
-		const char* tmp_base_name = condor_basename(m_xen_controller.Value());
-
-		if( strcmp(tmp_base_name, "xm") && strcmp(tmp_base_name, "virsh") ) {
-			vmprintf(D_ALWAYS, "\nERROR: Not supported xen controller(%s), "
-					"XEN_CONTROLLER should be either 'xm' or 'virsh'\n", 
-					m_xen_controller.Value());
-			m_result_msg = VMGAHP_ERR_CRITICAL;
-			return false;
-		}
-	}
-
 	// Read the parameter of Xen kernel
 	if( m_classAd.LookupString( VMPARAM_XEN_KERNEL, m_xen_kernel_submit_param) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
@@ -1086,7 +873,7 @@ XenType::CreateConfigFile()
 
 	if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_ANY) == 0) {
 		vmprintf(D_ALWAYS, "VMGahp will use default xen kernel\n");
-		config_value = vmgahp_param( "XEN_DEFAULT_KERNEL" );
+		config_value = param( "XEN_DEFAULT_KERNEL" );
 		if( !config_value ) {
 			vmprintf(D_ALWAYS, "Default xen kernel is not defined "
 					"in vmgahp config file\n");
@@ -1096,7 +883,7 @@ XenType::CreateConfigFile()
 			m_xen_kernel_file = delete_quotation_marks(config_value);
 			free(config_value);
 
-			config_value = vmgahp_param( "XEN_DEFAULT_INITRD" );
+			config_value = param( "XEN_DEFAULT_INITRD" );
 			if( config_value ) {
 				m_xen_initrd_file = delete_quotation_marks(config_value);
 				free(config_value);
@@ -1104,7 +891,7 @@ XenType::CreateConfigFile()
 		}
 	}else if(strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0) {
 		vmprintf(D_ALWAYS, "VMGahp will use xen bootloader\n");
-		config_value = vmgahp_param( "XEN_BOOTLOADER" );
+		config_value = param( "XEN_BOOTLOADER" );
 		if( !config_value ) {
 			vmprintf(D_ALWAYS, "xen bootloader is not defined "
 					"in vmgahp config file\n");
@@ -1122,7 +909,7 @@ XenType::CreateConfigFile()
 		}
 		m_xen_hw_vt = true;
 		m_allow_hw_vt_suspend = 
-			vmgahp_param_boolean("XEN_ALLOW_HARDWARE_VT_SUSPEND", false);
+			param_boolean("XEN_ALLOW_HARDWARE_VT_SUSPEND", false);
 	}else {
 		// A job user defined a customized kernel
 		// make sure that the file for xen kernel is readable
@@ -1250,7 +1037,7 @@ XenType::CreateConfigFile()
 	tmp_config_name.sprintf("%s%c%s",m_workingpath.Value(), 
 			DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME);
 
-	if( CreateXenVMCofigFile(m_xen_controller.Value(), tmp_config_name.Value()) 
+	if( CreateXenVMCofigFile(tmp_config_name.Value()) 
 			== false ) {
 		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
@@ -1361,77 +1148,6 @@ XenType::parseXenDiskParam(const char *format)
 	return true;
 }
 
-// This function should be called after parseXenDiskParam and createISO
-MyString
-XenType::makeXMDiskString(void)
-{
-	char* tmp_ptr = NULL;
-
-	MyString iostring;
-	tmp_ptr = vmgahp_param("XEN_IMAGE_IO_TYPE" );
-	if( !tmp_ptr ) {
-		//Default io type is file:
-		iostring = "file:";
-	}else {
-		iostring = delete_quotation_marks(tmp_ptr);
-		free(tmp_ptr);
-		if( iostring.FindChar(':') == -1 ) {
-			iostring += ":";
-		}
-	}
-
-	MyString devicestring;
-	tmp_ptr = vmgahp_param("XEN_DEVICE_TYPE_FOR_VT");
-	if( tmp_ptr ) {
-		devicestring = delete_quotation_marks(tmp_ptr);
-		free(tmp_ptr);
-		if( devicestring.FindChar(':') == -1 ) {
-			devicestring += ":";
-		}
-	}
-
-	MyString xendisk;
-	xendisk = "[ ";
-	bool first_disk = true;
-
-	XenDisk *vdisk = NULL;
-	m_disk_list.Rewind();
-	while( m_disk_list.Next(vdisk) ) {
-		if( !first_disk ) {
-			xendisk += ",";
-		}
-		first_disk = false;
-		xendisk += "'";
-		xendisk += iostring;
-		xendisk += vdisk->filename;
-		xendisk += ",";
-	
-		if( m_xen_hw_vt && !devicestring.IsEmpty() ) {
-			xendisk += devicestring;
-		}
-		xendisk += vdisk->device;
-		xendisk += ",";
-
-		xendisk += vdisk->permission;
-		xendisk += "'";
-	}
-
-	if( m_iso_file.IsEmpty() == false ) {
-		xendisk += ",";
-		xendisk += "'";
-		xendisk += iostring;
-		xendisk += m_iso_file;
-		xendisk += ",";
-		xendisk += m_xen_cdrom_device;
-		xendisk += ":cdrom";
-		xendisk += ",";
-		xendisk += "r";
-		xendisk += "'";
-	}
-
-	xendisk += " ]";
-	return xendisk;
-}
 
 // This function should be called after parseXenDiskParam and createISO
 MyString
@@ -1582,13 +1298,6 @@ XenType::createCkptFiles(void)
 		fclose(fp);
 		updateAllWriteDiskTimestamp(current_time);
 
-		if( m_is_chowned ) {
-			// Because files in the working directory were chowned to the user,
-			// we need to change ownership of files from a job user to caller uid
-			// So caller (aka Condor) can access these files.
-			chownWorkingFiles(get_caller_uid());
-		}
-
 		// checkpoint succeeds
 		m_is_checkpointed = true;
 		return true;
@@ -1607,32 +1316,11 @@ XenType::checkXenParams(VMGahpConfig* config)
 		return false;
 	}
 
-	// First try to read XEN_CONTROLLER
-	config_value = vmgahp_param("XEN_CONTROLLER");
-	if( !config_value ) {
-		vmprintf(D_ALWAYS, "\nERROR: You should define 'XEN_CONTROLLER' "
-				"in \"%s\"\n", config->m_configfile.Value());
-		return false;
-	}
-	fixedvalue = delete_quotation_marks(config_value);
-	free(config_value);
-
-	// check if this xen controller is supported 
-	const char* tmp_base_name = condor_basename(fixedvalue.Value());
-	if( strcmp(tmp_base_name, "xm") && strcmp(tmp_base_name, "virsh") ) {
-		vmprintf(D_ALWAYS, "\nERROR: Not supported xen controller(%s), "
-				"XEN_CONTROLLER should be either 'xm' or 'virsh' in \"%s\"\n", 
-				fixedvalue.Value(), config->m_configfile.Value());
-		return false;
-	}
-	config->m_controller = fixedvalue;
-
 	// find script program for Xen
-	config_value = vmgahp_param("XEN_SCRIPT");
+	config_value = param("XEN_SCRIPT");
 	if( !config_value ) {
-		vmprintf(D_ALWAYS, "\nERROR: You should define 'XEN_SCRIPT' for "
-				"the script program for Xen in \"%s\"\n", 
-				config->m_configfile.Value());
+		vmprintf(D_ALWAYS,
+		         "\nERROR: 'XEN_SCRIPT' not defined in configuration\n");
 		return false;
 	}
 	fixedvalue = delete_quotation_marks(config_value);
@@ -1675,7 +1363,7 @@ XenType::checkXenParams(VMGahpConfig* config)
 	config->m_vm_script = fixedvalue;
 
 	// Read XEN_DEFAULT_KERNEL (required parameter)
-	config_value = vmgahp_param("XEN_DEFAULT_KERNEL");
+	config_value = param("XEN_DEFAULT_KERNEL");
 	if( !config_value ) {
 		vmprintf(D_ALWAYS, "\nERROR: You should define the default "
 				"kernel for Xen\n");
@@ -1690,7 +1378,7 @@ XenType::checkXenParams(VMGahpConfig* config)
 	}
 	
 	// Read XEN_DEFAULT_INITRD (optional parameter)
-	config_value = vmgahp_param("XEN_DEFAULT_INITRD");
+	config_value = param("XEN_DEFAULT_INITRD");
 	if( config_value ) {
 		fixedvalue = delete_quotation_marks(config_value);
 		free(config_value);
@@ -1702,7 +1390,7 @@ XenType::checkXenParams(VMGahpConfig* config)
 	}
 
 	// Read XEN_BOOTLOADER (required parameter)
-	config_value = vmgahp_param("XEN_BOOTLOADER");
+	config_value = param("XEN_BOOTLOADER");
 	if( !config_value ) {
 		vmprintf(D_ALWAYS, "\nERROR: You should define Xen bootloader\n");
 		return false;
@@ -1732,7 +1420,6 @@ XenType::testXen(VMGahpConfig* config)
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(config->m_vm_script);
-	systemcmd.AppendArg(config->m_controller);
 	systemcmd.AppendArg("check");
 
 	int result = systemCommand(systemcmd, true);
@@ -1784,7 +1471,6 @@ XenType::checkCkptSuspendFile(const char* file)
 		vmprintf(D_ALWAYS, "Invalid timestamp file\n");
 		return false;
 	}
-	tmp_str.chomp();
 	tmp_str.trim();
 
 	time_t timestamp; 
@@ -1884,12 +1570,11 @@ XenType::killVM()
 	// If a VM is soft suspended, resume it first.
 	ResumeFromSoftSuspend();
 
-	return killVMFast(m_scriptname.Value(), m_vm_name.Value(), 
-			m_xen_controller.Value());
+	return killVMFast(m_scriptname.Value(), m_vm_name.Value());
 }
 
 bool
-XenType::killVMFast(const char* script, const char* vmname, const char* controller)
+XenType::killVMFast(const char* script, const char* vmname)
 {
 	vmprintf(D_FULLDEBUG, "Inside XenType::killVMFast\n");
 	
@@ -1900,7 +1585,6 @@ XenType::killVMFast(const char* script, const char* vmname, const char* controll
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(script);
-	systemcmd.AppendArg(controller);
 	systemcmd.AppendArg("killvm");
 	systemcmd.AppendArg(vmname);
 
@@ -1934,7 +1618,6 @@ XenType::createISO()
 		systemcmd.AppendArg(m_prog_for_script);
 	}
 	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg(m_xen_controller);
 	systemcmd.AppendArg("createiso");
 	systemcmd.AppendArg(tmp_config);
 	systemcmd.AppendArg(tmp_file);

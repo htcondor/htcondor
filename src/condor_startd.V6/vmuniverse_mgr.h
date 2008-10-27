@@ -48,6 +48,7 @@ private:
 
 	pid_t m_pid;
 	int m_memory;
+	int m_vcpus;
 	ClassAd m_job_ad;
 
 	pid_t m_vm_pid;
@@ -93,7 +94,7 @@ public:
 	const char *getIPForVM(pid_t s_pid);
 
 private:
-	bool testVMGahp(const char* vmgahppath, const char* gahp_config, const char* vmtype);
+	bool testVMGahp(const char* vmgahppath, const char* vmtype);
 	void docheckVMUniverse(void);
 	void killVM(VMStarterInfo *info);
 	VMStarterInfo* findVMStarterInfoWithStarterPid(pid_t s_pid);
@@ -107,7 +108,6 @@ private:
 	int m_check_interval;
 
 	MyString m_vmgahp_server;
-	MyString m_vmgahp_config;
 	ClassAd m_vmgahp_info;
 	MyString m_vm_type;
 

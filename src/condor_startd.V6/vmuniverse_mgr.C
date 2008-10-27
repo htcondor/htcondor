@@ -35,6 +35,7 @@
 #include "vmuniverse_mgr.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
+#include "setenv.h"
 
 static unsigned long get_image_size(procInfo& pi)
 {
@@ -45,162 +46,11 @@ static unsigned long get_image_size(procInfo& pi)
 #endif
 }
 
-static bool check_vmgahp_permissions(const char* vmgahp, const char* gahpconfig, const char* vmtype)
-{
-	if( !vmgahp || vmgahp[0] == '\0' || !gahpconfig || gahpconfig[0] == '\0' || 
-			!vmtype || vmtype[0] == '\0' ) {
-		return false;
-	}
-
-#if !defined(WIN32) 
-	bool vmgahp_has_setuid_root = false;
-	struct stat vmgahp_sbuf;
-	struct stat gahpconfig_sbuf;
-	if( stat(vmgahp, &vmgahp_sbuf) < 0 )  {
-		dprintf( D_ALWAYS, "ERROR: Failed to stat() for \"%s\":%s\n",
-				vmgahp, strerror(errno));
-		return false;
-	}
-	if( stat(gahpconfig, &gahpconfig_sbuf) < 0 )  {
-		dprintf( D_ALWAYS, "ERROR: Failed to stat() for \"%s\":%s\n",
-				gahpconfig, strerror(errno));
-		return false;
-	}
-
-	// Does vmgahp have setuid-root ?
-	if( (vmgahp_sbuf.st_uid == 0) && (vmgahp_sbuf.st_mode & S_ISUID)) { 
-		vmgahp_has_setuid_root = true;
-	}
-
-	// Other writable bit
-	if( vmgahp_sbuf.st_mode & S_IWOTH ) {
-		dprintf( D_ALWAYS, "ERROR: other writable bit is not allowed for \"%s\" "
-			   "due to security issues\n", vmgahp);
-		return false;
-	}
-	if( gahpconfig_sbuf.st_mode & S_IWOTH ) {
-		dprintf( D_ALWAYS, "ERROR: other writable bit is not allowed for \"%s\" "
-			   "due to security issues\n", gahpconfig);
-		return false;
-	}
-
-	if( can_switch_ids() ) {
-		// Condor runs as root
-		if( strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN ) != MATCH ) {
-			// check if vmgahp has setuid-root 
-			// Running Condor as root with setuid-root vmgahp
-			// causes problems.
-			if( vmgahp_sbuf.st_mode & S_ISUID ) { 
-				dprintf( D_ALWAYS, "ERROR: Condor is running as root. "
-						"However, vmgahp(\"%s\") has also setuid. "
-						"To run Condor as root with setuid vmgahp is not"
-						"allowed\n", vmgahp);
-				return false;
-			}
-		}
-	}else {
-		bool need_setuid_root = false;
-
-		// Condor runs as user
-		if( privsep_enabled() ) {
-
-			/* 
-			 * If we are using privsep, vmgahp must also have setuid-root.
-			 *
-			 * When we use privsep, we can kill processes with 
-			 * the help of procd. 
-			 * However, the process dealing with a VM may be unable to be 
-			 * tracked by procd. (e.g.) a VM process created by VMware.
-			 *
-			 * For example, when Startd forcedly killed Starter and all its child 
-			 * processes, VM process might still remain.
-			 * 
-			 * Therefore, vmgahp should deal with this situation. 
-			 * So when we use privsep, vmgahp executed by Startd need to 
-			 * have setuid-root. That is why vmgahp must have setuid-root.
-			 */
-
-			if( !vmgahp_has_setuid_root ) {
-				need_setuid_root = true;
-				dprintf( D_ALWAYS, "ERROR: In order to use vm universe "
-						"with privsep enabled, vmgahp('%s') must also have "
-						"setuid-root\n", vmgahp);
-			}
-		}
-
-		if( vmgahp_has_setuid_root || need_setuid_root ) {
-			// vmgahp has setuid-root
-			if( gahpconfig_sbuf.st_uid != 0 ) {
-				if( need_setuid_root ) {
-					dprintf(D_ALWAYS, "ERROR: Because vmgahp(\"%s\") need to have "
-							"setuid-root, the owner of both \"%s\" and script program "
-							"must be root\n", vmgahp, gahpconfig);
-				}else {
-					dprintf(D_ALWAYS, "ERROR: Because vmgahp(\"%s\") has setuid-root, "
-							"the owner of both \"%s\" and script program must be root\n",
-							vmgahp, gahpconfig);
-				}
-				return false;
-			}
-		}
-
-		if( need_setuid_root ) {
-			return false;
-		}
-	}
-#endif
-
-	if( !strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN)) {
-#if !defined(LINUX)
-		dprintf( D_ALWAYS, "ERROR: vmgahp for Xen is only supported on "
-				"Linux machines\n");
-		return false;
-#else
-		// Linux
-		if( !can_switch_ids() ) {
-			// Condor runs as user
-			// So vmgahp for Xen needs setuid-root
-			if( !vmgahp_has_setuid_root ) {
-				// No setuid-root bit
-				dprintf(D_ALWAYS, "ERROR: \"%s\" must have setuid-root bit\n", 
-						vmgahp);
-				return false;
-			}
-		}
-
-		if( gahpconfig_sbuf.st_uid != 0 ) {
-			dprintf(D_ALWAYS, "ERROR: For Xen vmgahp the owner of \"%s\" must be root\n", 
-					gahpconfig);
-			return false;
-		}
-#endif
-	}else if( !strcasecmp(vmtype, CONDOR_VM_UNIVERSE_VMWARE)) {
-#if !defined(WIN32) 
-		if( can_switch_ids() || privsep_enabled() ) {
-			// Condor runs as root
-			if( !(vmgahp_sbuf.st_mode & S_IXOTH) ) {
-				dprintf(D_ALWAYS, "ERROR: \"%s\" must be executable for anybody.\n", 
-						vmgahp); 
-				return false;
-			}
-			if( !(gahpconfig_sbuf.st_mode & S_IROTH) ) {
-				dprintf(D_ALWAYS, "ERROR: \"%s\" must be readable for anybody.\n", 
-						gahpconfig); 
-				return false;
-			}
-		}
-#endif
-	}
-
-	return true;
-}
-
-
 VMStarterInfo::VMStarterInfo()
 {
 	m_pid = 0;
 	m_memory = 0;
-
+	m_vcpus = 1;
 	m_vm_pid = 0;
 	memset(&m_vm_exited_pinfo, 0, sizeof(m_vm_exited_pinfo));
 	memset(&m_vm_alive_pinfo, 0, sizeof(m_vm_alive_pinfo));
@@ -338,6 +188,7 @@ VMStarterInfo::publishVMInfo(ClassAd* ad, amask_t mask )
 	if( m_memory > 0 ) {
 		ad->Assign(ATTR_VM_GUEST_MEM, m_memory); 
 	}
+	ad->Assign(ATTR_JOB_VM_VCPUS, m_vcpus);
 }
 
 VMUniverseMgr::VMUniverseMgr()
@@ -365,7 +216,6 @@ VMUniverseMgr::init( void )
 {
 	MyString vmtype;
 	MyString vmgahppath;
-	MyString vmgahpconfig;
 
 	m_vm_type = "";
 
@@ -401,15 +251,6 @@ VMUniverseMgr::init( void )
 	vmgahppath = tmp;
 	free(tmp);
 
-	tmp = param( "VM_GAHP_CONFIG" );
-	if( !tmp ) {
-		dprintf( D_ALWAYS, "To support vm universe, '%s' must be defined "
-				"in condor config file\n", "VM_GAHP_CONFIG"); 
-		return false;
-	}
-	vmgahpconfig = tmp;
-	free(tmp);
-
 	m_vm_max_num = 0;
 	tmp = param( "VM_MAX_NUMBER");
 	if( tmp ) {
@@ -421,11 +262,10 @@ VMUniverseMgr::init( void )
 	}
 
 	// now, we've got a path to a vmgahp server.  
-	// try to test it with given vmtype and gahp config file 
+	// try to test it with given vmtype 
 	// and grab the output (whose format should be a classad type), 
 	// and set the appropriate values for vm universe
-	if( testVMGahp(vmgahppath.Value(), vmgahpconfig.Value(), 
-				vmtype.Value()) == false ) {
+	if( testVMGahp(vmgahppath.Value(), vmtype.Value()) == false ) {
 		dprintf( D_ALWAYS, "Test of vmgahp for VM_TYPE('%s') failed. "
 				"So we disabled VM Universe\n", vmtype.Value());
 		m_vm_type = "";
@@ -519,7 +359,7 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t mask )
 }
 
 bool
-VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, const char* vmtype)
+VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 {
 	m_needCheck = false;
 
@@ -527,11 +367,7 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, cons
 		return false;
 	}
 
-	if( !gahppath || !gahpconfigfile || !vmtype ) {
-		return false;
-	}
-
-	if( !check_vmgahp_permissions(gahppath, gahpconfigfile, vmtype) ) {
+	if( !gahppath || !vmtype ) {
 		return false;
 	}
 
@@ -555,7 +391,7 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, cons
 
 	// vmgahp is daemonCore, so we need to add -f -t options of daemonCore.
 	// Then, try to execute vmgahp with 
-	// "gahpconfig <gahpconfigfile> vmtype <vmtype>"
+	// vmtype <vmtype>"
 	// and grab the output as a ClassAd
 	ArgList systemcmd;
 	systemcmd.AppendArg(gahppath);
@@ -568,30 +404,14 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, cons
 	}
 	systemcmd.AppendArg("-M");
 	systemcmd.AppendArg(VMGAHP_TEST_MODE);
-	systemcmd.AppendArg("gahpconfig");
-	systemcmd.AppendArg(gahpconfigfile);
 	systemcmd.AppendArg("vmtype");
 	systemcmd.AppendArg(vmtype);
 
 #if !defined(WIN32)
-	MyString oldValue;
-	const char *envName = NULL;
-
-	if( !can_switch_ids() && has_root_setuid(gahppath) ) {
-		// Condor runs as user and vmgahp has setuid-root
-		// We need to set CONDOR_IDS environment
-		envName = EnvGetName(ENV_UG_IDS);
-		if( envName ) {
-			MyString tmp_str;
-			tmp_str.sprintf("%d.%d", (int)get_condor_uid(),(int)get_condor_gid());
-			set_temporary_env(envName, tmp_str.Value(), &oldValue);
-		}
-	}
-
 	if( can_switch_ids() ) {
 		MyString tmp_str;
 		tmp_str.sprintf("%d", (int)get_condor_uid());
-		set_temporary_env("VMGAHP_USER_UID", tmp_str.Value(), &oldValue);
+		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
 	}
 #endif
 
@@ -606,12 +426,6 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, cons
 	FILE* fp = NULL;
 	fp = my_popen(systemcmd, "r", FALSE );
 	set_priv(prev_priv);
-
-#if !defined(WIN32)
-	if( envName ) {
-		set_temporary_env(envName, oldValue.GetCStr(), NULL);
-	}
-#endif
 
 	if( !fp ) {
 		dprintf( D_ALWAYS, "Failed to execute %s, ignoring\n", gahppath );
@@ -658,20 +472,9 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, cons
 
 			if( can_switch_ids() ) {
 				// Condor runs as root
-#if defined(WIN32)
-				err_msg2.sprintf("### - \"%s\" must be readable for anybody.\n", 
-						gahpconfigfile);
-				err_msg += err_msg2;
-#endif
-
 				err_msg += "### - The script program like 'condor_vm_vmware.pl'";
 				err_msg += " must be readable for anybody.\n";
 			}
-
-#if !defined(WIN32)
-			err_msg += "### - Other writable bit for the vmgahp config file and ";
-			err_msg += "script program is not allowed\n";
-#endif
 
 			err_msg += "### - Check the path of vmware-cmd, vmrun, and mkisofs ";
 			err_msg += "in 'condor_vm_vmware.pl\n'";
@@ -765,7 +568,6 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* gahpconfigfile, cons
 	// Now, we received correct information from vmgahp
 	m_vm_type = tmp_vmtype;
 	m_vmgahp_server = gahppath;
-	m_vmgahp_config = gahpconfigfile;
 
 	return true;
 }
@@ -834,6 +636,13 @@ VMUniverseMgr::allocVM(pid_t s_pid, ClassAd &ad, char const *execute_dir)
 		return false;
 	}
 
+	int vcpus = 0;
+	if(ad.LookupInteger(ATTR_JOB_VM_VCPUS, vcpus) != 1)
+	  {
+	    dprintf(D_FULLDEBUG, "Defaulting to one CPU\n");
+	    vcpus = 1;
+	  }
+
 	// check whether this pid already exists
 	VMStarterInfo *oldinfo = findVMStarterInfoWithStarterPid(s_pid);
 	if( oldinfo ) {
@@ -851,6 +660,7 @@ VMUniverseMgr::allocVM(pid_t s_pid, ClassAd &ad, char const *execute_dir)
 	newinfo->m_memory = vm_mem;
 	newinfo->m_job_ad = ad; 
 	newinfo->m_execute_dir = execute_dir;
+	newinfo->m_vcpus = vcpus;
 
 	// If there exists MAC or IP address for a checkpointed VM,
 	// we use them as initial values.
@@ -1030,8 +840,7 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 	if( !info ) {
 		return;
 	}
-	if( !m_vm_type.Length() || !m_vmgahp_server.Length() || 
-			!m_vmgahp_config.Length() ) {
+	if( !m_vm_type.Length() || !m_vmgahp_server.Length() ) {
 		return;
 	}
 
@@ -1061,7 +870,7 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 
 	// vmgahp is daemonCore, so we need to add -f -t options of daemonCore.
 	// Then, try to execute vmgahp with 
-	// "gahpconfig <gahpconfigfile> vmtype <vmtype> match <string>"
+	// vmtype <vmtype> match <string>"
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_vmgahp_server);
 	systemcmd.AppendArg("-f");
@@ -1073,32 +882,16 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 	}
 	systemcmd.AppendArg("-M");
 	systemcmd.AppendArg(VMGAHP_KILL_MODE);
-	systemcmd.AppendArg("gahpconfig");
-	systemcmd.AppendArg(m_vmgahp_config);
 	systemcmd.AppendArg("vmtype");
 	systemcmd.AppendArg(m_vm_type);
 	systemcmd.AppendArg("match");
 	systemcmd.AppendArg(matchstring);
 
 #if !defined(WIN32)
-	MyString oldValue;
-	const char *envName = NULL;
-
-	if( !can_switch_ids() && has_root_setuid(m_vmgahp_server.Value()) ) {
-		// Condor runs as user and vmgahp has setuid-root
-		// We need to set CONDOR_IDS environment
-		envName = EnvGetName(ENV_UG_IDS);
-		if( envName ) {
-			MyString tmp_str;
-			tmp_str.sprintf("%d.%d", (int)get_condor_uid(),(int)get_condor_gid());
-			set_temporary_env(envName, tmp_str.Value(), &oldValue);
-		}
-	}
-
 	if( can_switch_ids() ) {
 		MyString tmp_str;
 		tmp_str.sprintf("%d", (int)get_condor_uid());
-		set_temporary_env("VMGAHP_USER_UID", tmp_str.Value(), &oldValue);
+		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
 	}
 #endif
 
@@ -1107,12 +900,6 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 	int ret = my_system(systemcmd);
 	// restore privilege
 	set_priv(priv);
-
-#if !defined(WIN32)
-	if( envName ) {
-		set_temporary_env(envName, oldValue.GetCStr(), NULL);
-	}
-#endif
 
 	if( ret == 0 ) {
 		dprintf( D_ALWAYS, "VMUniverseMgr::killVM() is called with "
