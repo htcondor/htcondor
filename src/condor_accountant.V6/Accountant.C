@@ -53,6 +53,8 @@ MyString Accountant::LastUpdateTimeAttr="LastUpdateTime";
 MyString Accountant::RemoteUserAttr="RemoteUser";
 MyString Accountant::StartTimeAttr="StartTime";
 
+MyString Accountant::Cpus="Cpus";
+
 
 //------------------------------------------------------------------
 // Constructor - One time initialization
@@ -502,10 +504,13 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 	  }
   }
 
+  int cpusPerSlot = 1;
+  if (ResourceAd->LookupInteger(Cpus.GetCStr(), cpusPerSlot)==0) cpusPerSlot=1;
+
   AcctLog->BeginTransaction(); 
   
   // Update customer's resource usage count
-  ResourcesUsed++;
+  ResourcesUsed += cpusPerSlot;
   SetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
   // add negative "uncharged" time if match starts after last update
   UnchargedTime-=T-LastUpdateTime;
@@ -515,15 +520,16 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   // there is a group record to update
   if ( update_group_info ) {
 	  // Update customer's group resource usage count
-	  GroupResourcesUsed++;
+	  GroupResourcesUsed += cpusPerSlot;
 	  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
 	  // add negative "uncharged" time if match starts after last update 
 	  GroupUnchargedTime-=T-LastUpdateTime;
 	  SetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
   }
 
-  // Set reosurce's info: user, and start-time
+  // Set resource's info: user, and start-time
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
+  SetAttributeInt(ResourceRecord+ResourceName,Cpus,cpusPerSlot);
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
 
   char *str;
@@ -559,6 +565,8 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
     GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
     int UnchargedTime=0;
     GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+    int cpusPerSlot=1;
+    GetAttributeInt(CustomerRecord+CustomerName,Cpus,cpusPerSlot);
 
 	// Determine if we need to update a second customer record w/ the group name.
 	bool update_group_info = false;
@@ -582,7 +590,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 
 	AcctLog->BeginTransaction();
     // Update customer's resource usage count
-    if (ResourcesUsed>0) ResourcesUsed--;
+    if (ResourcesUsed>0) ResourcesUsed -= cpusPerSlot;
     SetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
     // update uncharged time
     if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
@@ -593,7 +601,8 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 	// there is a group record to update
 	if ( update_group_info ) {
 	  // Update customer's group resource usage count
-      if (GroupResourcesUsed>0) GroupResourcesUsed--;
+      GroupResourcesUsed -= cpusPerSlot;
+	  if (GroupResourcesUsed < 0) GroupResourcesUsed = 0;
 	  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
 	  // update uncharged time
 	  GroupUnchargedTime+=T-StartTime;

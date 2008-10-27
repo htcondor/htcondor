@@ -311,6 +311,7 @@ extern const char * ATTR_LOCAL_CREDD;
 extern const char * ATTR_LOCAL_FILES;
 extern const char * ATTR_LOAD_AVG;
 extern const char * ATTR_MACHINE;
+extern const char * ATTR_MACHINE_COUNT;
 extern const char * ATTR_MASTER_IP_ADDR;
 extern const char * ATTR_MAX_HOSTS;
 extern const char * ATTR_MAX_JOB_RETIREMENT_TIME;
@@ -420,6 +421,8 @@ extern const char * ATTR_SCHEDD_NAME;
 extern const char * ATTR_SCHEDULER;
 extern const char * ATTR_SHADOW_WAIT_FOR_DEBUG;
 extern const char * ATTR_SLOT_ID;
+extern const char * ATTR_SLOT_PARTITIONABLE;
+extern const char * ATTR_SLOT_DYNAMIC;
 extern const char * ATTR_SOURCE;
 extern const char * ATTR_STAGE_IN_START;
 extern const char * ATTR_STAGE_IN_FINISH;
@@ -633,6 +636,8 @@ extern const char * ATTR_CHECKPOINT_PLATFORM;
 extern const char * ATTR_LAST_CHECKPOINT_PLATFORM;
 extern const char * ATTR_IS_VALID_CHECKPOINT_PLATFORM;
 
+extern const char * ATTR_WITHIN_RESOURCE_LIMITS;
+
 extern const char * ATTR_HAD_IS_ACTIVE;
 extern const char * ATTR_HAD_LIST;
 extern const char * ATTR_HAD_INDEX;
@@ -689,6 +694,10 @@ extern const char *ATTR_AMAZON_REMOTE_VM_NAME;
 extern const char *ATTR_AMAZON_INSTANCE_TYPE;
 //************* End of changes for Amamzon Jobs *****************//
 
+
+extern const char *ATTR_REQUEST_CPUS;
+extern const char *ATTR_REQUEST_MEMORY;
+extern const char *ATTR_REQUEST_DISK;
 
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending

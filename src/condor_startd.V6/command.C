@@ -26,6 +26,8 @@
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
 
+#define max(x,y) (((x) < (y)) ? (y) : (x))
+
 extern "C" int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 
 static int deactivate_claim(Stream *stream, Resource *rip, bool graceful);
@@ -906,7 +908,9 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 #define ABORT \
 delete req_classad;						\
 if (client_addr) free(client_addr);		\
-return abort_claim(rip)
+return_code = abort_claim(rip);		\
+if( new_dynamic_slot ) rip->change_state( delete_state );	\
+return return_code;
 
 int
 abort_claim( Resource* rip )
@@ -967,12 +971,17 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 {
 		// Formerly known as "reqservice"
 
-	ClassAd	*req_classad = new ClassAd;
-	int cmd;
-	float rank = 0, oldrank = 0;
+	ClassAd	*req_classad = new ClassAd, *mach_classad = rip->r_classad;
+	int cmd, mach_requirements = 1;
+	float rank = 0;
+	float oldrank = 0;
 	char *client_addr = NULL;
 	int interval;
 	ClaimIdParser idp(id);
+
+		// Used in ABORT macro, yuck
+	bool new_dynamic_slot = false;
+	int return_code;
 
 	if( !rip->r_cur ) {
 		EXCEPT( "request_claim: no current claim object." );
@@ -1036,6 +1045,107 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		
 	rip->dprintf( D_FULLDEBUG,
 				  "Received ClaimId from schedd (%s)\n", idp.publicClaimId() );
+
+	if( Resource::PARTITIONABLE_SLOT == rip->get_feature() ) {
+		Resource *new_rip;
+		CpuAttributes *cpu_attrs;
+		MyString type;
+		StringList type_list;
+		int cpus, memory, disk;
+
+			// Make sure the partitionable slot itself is satisfied by
+			// the job. If not there is no point in trying to
+			// partition it. This check also prevents
+			// over-partitioning. The acceptability of the dynamic
+			// slot and job will be checked later, in the normal
+			// course of accepting the claim.
+		rip->r_reqexp->restore();
+		if( mach_classad->EvalBool( ATTR_REQUIREMENTS, 
+									req_classad, mach_requirements ) == 0 ) {
+			rip->dprintf( D_FAILURE|D_ALWAYS, 
+						  "Machine requirements not satisfied.\n" );
+			refuse( stream );
+			ABORT;
+		}
+
+		if( req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) || 
+			(cpus = 1) ) { // reasonable default, for sure
+			type.sprintf_cat( "cpus=%d ", cpus );
+		}
+
+		if( req_classad->EvalInteger( ATTR_REQUEST_MEMORY, mach_classad, memory ) ) {
+			type.sprintf_cat( "memory=%d ", memory );
+		} else {
+				// some memory size must be available else we cannot
+				// match, plus a job ad without ATTR_MEMORY is sketchy
+			rip->dprintf( D_FULLDEBUG,
+						  "No memory request in incoming ad, aborting...\n" );
+			ABORT;
+		}
+
+		if( req_classad->EvalInteger( ATTR_REQUEST_DISK, mach_classad, disk ) ) {
+			type.sprintf_cat( "disk=%d%%",
+							  max((int) ((disk / (float) rip->r_attr->get_total_disk()) * 100), 1) );
+		} else {
+				// some disk size must be available else we cannot
+				// match, plus a job ad without ATTR_DISK is sketchy
+			rip->dprintf( D_FULLDEBUG,
+						  "No disk request in incoming ad, aborting...\n" );
+			ABORT;
+		}
+
+		rip->dprintf( D_FULLDEBUG,
+					  "Match requesting resources: %s\n", type.GetCStr() );
+
+		type_list.initializeFromString( type.GetCStr() );
+		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -1, false );
+		if( ! cpu_attrs ) {
+			rip->dprintf( D_ALWAYS,
+						  "Failed to parse attributes for request, aborting\n" );
+			ABORT;
+		}
+
+		new_rip = new Resource( cpu_attrs, rip->r_id, rip );
+		if( ! new_rip ) {
+			rip->dprintf( D_ALWAYS,
+						  "Failed to build new resource for request, aborting\n" );
+			ABORT;
+		}
+
+			// Initialize the rest of the Resource
+		new_rip->compute( A_ALL );
+		new_rip->compute( A_TIMEOUT | A_UPDATE ); // Compute disk space
+		new_rip->init_classad();
+		new_rip->refresh_classad( A_EVALUATED ); 
+		new_rip->refresh_classad( A_SHARED_SLOT ); 
+
+			// The new resource needs the claim from its
+			// parititionable parent
+		delete new_rip->r_cur;
+		new_rip->r_cur = rip->r_cur;
+		new_rip->r_cur->setResource( new_rip );
+
+			// And the partitionable parent needs a new claim
+		rip->r_cur = new Claim( rip );
+
+			// Recompute the partitionable slot's resources
+		rip->change_state( unclaimed_state );
+		rip->update(); // in case we were never matched, i.e. no state change
+
+		resmgr->addResource( new_rip );
+
+			// Now we continue on with the newly spawned Resource
+			// getting claimed
+		rip = new_rip;
+
+			// This is, unfortunately, part of the ABORT macro. The
+			// idea is that if we are aborting a claim at the same
+			// time that we are creating a dynamic slot for that
+			// claim, we should already remove the dynamic slot. We
+			// don't want to do this everytime an ABORT happens on a
+			// dynamic slot because it may be useful to other jobs.
+		new_dynamic_slot = true;
+	}
 
 		// Make sure we're willing to run this job at all.
 	if (!rip->willingToRun(req_classad)) {
