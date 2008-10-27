@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_threads.h"
 #include "condor_debug.h"
-#include "basename.h"
 
 static mark_thread_func_t start_callback;
 static mark_thread_func_t stop_callback;
@@ -32,6 +31,34 @@ void _mark_thread_safe_callback(mark_thread_func_t start_routine,
 	stop_callback = stop_routine;
 	return;
 }
+
+
+/*
+ *   A basename() implementation.
+ *   This is essentially a stripped down version of condor_basename();
+ *   we reproduce it here so we don't need to suck all the rest of the stuff
+ *   folks littered into basename.c into the standard universe syscall libs.
+ */
+static const char *
+my_local_basename(const char *path)
+{
+	const char *s, *name;
+
+	if( ! path ) {
+		return "";
+	}
+
+	name = path;
+
+	for (s = path; s && *s != '\0'; s++) {
+		if (*s == '\\' || *s == '/') {
+			name = s+1;
+		}
+	}
+
+	return name;
+}
+
 
 void _mark_thread_safe(int start_or_stop, int dologging, const char* descrip, 
 					   const char* func, const char* file, int line)
@@ -71,14 +98,14 @@ void _mark_thread_safe(int start_or_stop, int dologging, const char* descrip,
 
 	if ( dologging && (DebugFlags & D_FULLDEBUG)) {
 		dprintf(D_THREADS,"Entering thread safe %s [%s] in %s:%d %s()\n",
-				mode, descrip, condor_basename(file), line, func);
+				mode, descrip, my_local_basename(file), line, func);
 	}
 
 	(*callback)();
 
 	if ( dologging && (DebugFlags & D_FULLDEBUG)) {
 		dprintf(D_THREADS,"Leaving thread safe %s [%s] in %s:%d %s()\n",
-				mode, descrip, condor_basename(file), line, func);
+				mode, descrip, my_local_basename(file), line, func);
 	}
 
 	return;
