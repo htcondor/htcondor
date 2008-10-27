@@ -147,6 +147,14 @@ SOURCE=..\src\condor_startd.V6\CondorSystrayNotifier.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_startd.V6\IdDispenser.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\IdDispenser.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_startd.V6\LoadQueue.C
 # End Source File
 # Begin Source File

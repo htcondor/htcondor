@@ -607,6 +607,32 @@ CpuAttributes::dprintf( int flags, char* fmt, ... )
 }
 
 
+CpuAttributes&
+CpuAttributes::operator+=( CpuAttributes& rhs )
+{
+	c_num_cpus += rhs.c_num_cpus;
+	c_phys_mem += rhs.c_phys_mem;
+	c_virt_mem_fraction += rhs.c_virt_mem_fraction;
+	c_disk_fraction += rhs.c_disk_fraction;
+
+	compute( A_TIMEOUT | A_UPDATE ); // Re-compute
+
+	return *this;
+}
+
+CpuAttributes&
+CpuAttributes::operator-=( CpuAttributes& rhs )
+{
+	c_num_cpus -= rhs.c_num_cpus;
+	c_phys_mem -= rhs.c_phys_mem;
+	c_virt_mem_fraction -= rhs.c_virt_mem_fraction;
+	c_disk_fraction -= rhs.c_disk_fraction;
+
+	compute( A_TIMEOUT | A_UPDATE ); // Re-compute
+
+	return *this;
+}
+
 AvailAttributes::AvailAttributes( MachAttributes* map ):
 	m_execute_partitions(500,MyStringHash,updateDuplicateKeys)
 {

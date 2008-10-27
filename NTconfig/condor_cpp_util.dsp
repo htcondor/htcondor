@@ -329,6 +329,14 @@ SOURCE="..\src\condor_c++_util\condor_state.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_threads.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_threads.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_url.C"
 # End Source File
 # Begin Source File
@@ -1140,6 +1148,10 @@ SOURCE="..\src\condor_c++_util\system_info.WINDOWS.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\system_info.WINDOWS.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\threads_implementation.h"
 # End Source File
 # Begin Source File
 

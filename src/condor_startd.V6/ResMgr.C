@@ -339,7 +339,7 @@ ResMgr::backfillConfig()
 void
 ResMgr::init_resources( void )
 {
-	int i;
+	int i, num_res;
 	CpuAttributes** new_cpu_attrs;
 
 		// These things can only be set once, at startup, so they
@@ -366,9 +366,9 @@ ResMgr::init_resources( void )
 	initTypes( 1 );
 
 		// First, see how many slots of each type are specified.
-	nresources = countTypes( &type_nums, true );
+	num_res = countTypes( &type_nums, true );
 
-	if( ! nresources ) {
+	if( ! num_res ) {
 			// We're not configured to advertise any nodes.
 		resources = NULL;
 		id_disp = new IdDispenser( num_cpus(), 1 );
@@ -378,16 +378,15 @@ ResMgr::init_resources( void )
 		// See if the config file allows for a valid set of
 		// CpuAttributes objects.  Since this is the startup-code
 		// we'll let it EXCEPT() if there is an error.
-	new_cpu_attrs = buildCpuAttrs( nresources, type_nums, true );
+	new_cpu_attrs = buildCpuAttrs( num_res, type_nums, true );
 	if( ! new_cpu_attrs ) {
 		EXCEPT( "buildCpuAttrs() failed and should have already EXCEPT'ed" );
 	}
 
 		// Now, we can finally allocate our resources array, and
 		// populate it.  
-	resources = new Resource*[nresources];
-	for( i=0; i<nresources; i++ ) {
-		resources[i] = new Resource( new_cpu_attrs[i], i+1 );
+	for( i=0; i<num_res; i++ ) {
+		addResource( new Resource( new_cpu_attrs[i], i+1 ) );
 	}
 
 		// We can now seed our IdDispenser with the right slot id. 
@@ -570,9 +569,8 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 	num = 0;
 	for( i=0; i<max_types; i++ ) {
 		if( type_num_array[i] ) {
-			m_current_slot_type = i;
 			for( j=0; j<type_num_array[i]; j++ ) {
-				cap = buildSlot( num+1, i, except );
+				cap = buildSlot( num+1, type_strings[i], i, except );
 				if( avail.decrement(cap) ) {
 					cap_array[num] = cap;
 					num++;
@@ -754,9 +752,8 @@ ResMgr::typeNumCmp( int* a, int* b )
 
 
 CpuAttributes*
-ResMgr::buildSlot( int slot_id, int type, bool except )
+ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 {
-	StringList* list = type_strings[type];
 	char *attr, *val;
 	int cpus=0, ram=0;
 	float disk=0, swap=0, share;
@@ -779,10 +776,10 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 				// percentage or fraction for all attributes.
 				// For example "1/4" or "25%".  So, we can just parse
 				// it as a percentage and use that for everything.
-			default_share = parse_value( attr, except );
+			default_share = parse_value( attr, type, except );
 			if( default_share <= 0 && !IS_AUTO_SHARE(default_share) ) {
 				dprintf( D_ALWAYS, "ERROR: Bad description of slot type %d: ",
-						 m_current_slot_type );
+						 type );
 				dprintf( D_ALWAYS | D_NOHEADER,  "\"%s\" is invalid.\n", attr );
 				dprintf( D_ALWAYS | D_NOHEADER, 
 						 "\tYou must specify a percentage (like \"25%%\"), " );
@@ -809,14 +806,14 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 		if( ! val[1] ) {
 			dprintf( D_ALWAYS, 
 					 "Can't parse attribute \"%s\" in description of slot type %d\n",
-					 attr, m_current_slot_type );
+					 attr, type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
 				return NULL;
 			}
 		}
-		share = parse_value( &val[1], except );
+		share = parse_value( &val[1], type, except );
 		if( ! share ) {
 				// Invalid share.
 		}
@@ -837,7 +834,7 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 			} else {
 				dprintf( D_ALWAYS,
 						 "You must specify a percent or fraction for swap in slot type %d\n", 
-						 m_current_slot_type ); 
+						 type ); 
 				if( except ) {
 					DC_Exit( 4 );
 				} else {	
@@ -851,7 +848,7 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 			} else {
 				dprintf( D_ALWAYS, 
 						 "You must specify a percent or fraction for disk in slot type %d\n", 
-						m_current_slot_type ); 
+						type ); 
 				if( except ) {
 					DC_Exit( 4 );
 				} else {	
@@ -861,7 +858,7 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 			break;
 		default:
 			dprintf( D_ALWAYS, "Unknown attribute \"%s\" in slot type %d\n", 
-					 attr, m_current_slot_type );
+					 attr, type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
@@ -939,7 +936,7 @@ ResMgr::GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *parti
    value, not a fraction.
 */
 float
-ResMgr::parse_value( const char* str, bool except )
+ResMgr::parse_value( const char* str, int type, bool except )
 {
 	char *tmp, *foo = strdup( str );
 	float val;
@@ -958,7 +955,7 @@ ResMgr::parse_value( const char* str, bool except )
 		*tmp = '\0';
 		if( ! tmp[1] ) {
 			dprintf( D_ALWAYS, "Can't parse attribute \"%s\" in description of slot type %d\n",
-					 foo, m_current_slot_type );
+					 foo, type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
@@ -1798,25 +1795,43 @@ ResMgr::reset_timers( void )
 
 
 void
-ResMgr::deleteResource( Resource* rip )
+ResMgr::addResource( Resource *rip )
 {
-		// First, find the rip in the resources array:
-	int i, j, dead = -1;
+	Resource** new_resources = NULL;
+
+	if( !rip ) {
+		EXCEPT("Error: attempt to add a NULL resource\n");
+	}
+
+	new_resources = new Resource*[nresources + 1];
+	if( !new_resources ) {
+		EXCEPT("Failed to allocate memory for new resource\n");
+	}
+
+		// Copy over the old Resource pointers.  If nresources is 0
+		// (b/c we used to be configured to have no slots), this won't
+		// copy anything (and won't seg fault).
+	memcpy( (void*)new_resources, (void*)resources, 
+			(sizeof(Resource*)*nresources) );
+
+	new_resources[nresources] = rip;
+
+
+	if( resources ) {
+		delete [] resources;
+	}
+
+	resources = new_resources;
+	nresources++;
+}
+
+
+bool
+ResMgr::removeResource( Resource* rip )
+{
+	int i, j;
 	Resource** new_resources = NULL;
 	Resource* rip2;
-
-	for( i = 0; i < nresources; i++ ) {
-		if( resources[i] == rip ) {
-			dead = i;
-			break;
-		}
-	}
-	if( dead < 0 ) {
-			// Didn't find it.  This is where we'll hit if resources
-			// is NULL.  We should never get here, anyway (we'll never
-			// call deleteResource() if we don't have any resources. 
-		EXCEPT( "ResMgr::deleteResource() failed: couldn't find resource" );
-	}
 
 	if( nresources > 1 ) {
 			// There are still more resources after this one is
@@ -1825,10 +1840,14 @@ ResMgr::deleteResource( Resource* rip )
 		new_resources = new Resource* [ nresources - 1 ];
 		j = 0;
 		for( i = 0; i < nresources; i++ ) {
-			if( i == dead ) {
-				continue;
-			} 
-			new_resources[j++] = resources[i];
+			if( resources[i] != rip ) {
+				new_resources[j++] = resources[i];
+			}
+		}
+
+		if ( j == nresources ) { // j == i would work too
+				// The resource was not found, which should never happen
+			return false;
 		}
 	} 
 
@@ -1849,7 +1868,11 @@ ResMgr::deleteResource( Resource* rip )
 	nresources--;
 	
 		// Return this Resource's ID to the dispenser.
-	id_disp->insert( rip->r_id );
+		// If it is a dynamic slot it's reusing its partitionable
+		// parent's id, so we don't want to free the id.
+	if( Resource::DYNAMIC_SLOT != rip->get_feature() ) {
+		id_disp->insert( rip->r_id );
+	}
 
 		// Tell the collector this Resource is gone.
 	rip->final_update();
@@ -1859,6 +1882,20 @@ ResMgr::deleteResource( Resource* rip )
 
 		// At last, we can delete the object itself.
 	delete rip;
+
+	return true;
+}
+
+
+void
+ResMgr::deleteResource( Resource* rip )
+{
+	if( ! removeResource( rip ) ) {
+			// Didn't find it.  This is where we'll hit if resources
+			// is NULL.  We should never get here, anyway (we'll never
+			// call deleteResource() if we don't have any resources. 
+		EXCEPT( "ResMgr::deleteResource() failed: couldn't find resource" );
+	}
 
 		// Now that a Resource is gone, see if we're done deleting
 		// Resources and see if we should allocate any. 
@@ -1904,31 +1941,15 @@ ResMgr::processAllocList( void )
 	}
 
 		// We're done destroying, and there's something to allocate.  
-	int i, new_size, new_num = alloc_list.Number();
-	new_size = nresources + new_num;
-	Resource** new_resources = new Resource* [ new_size ];
-	CpuAttributes* cap;
-
-		// Copy over the old Resource pointers.  If nresources is 0
-		// (b/c we used to be configured to have no slots), this won't
-		// copy anything (and won't seg fault).
-	memcpy( (void*)new_resources, (void*)resources, 
-			(sizeof(Resource*)*nresources) );
 
 		// Create the new Resource objects.
+	CpuAttributes* cap;
 	alloc_list.Rewind();
-	for( i=nresources; i<new_size; i++ ) {
-		alloc_list.Next(cap);
-		new_resources[i] = new Resource( cap, id_disp->next() );
+	while( alloc_list.Next(cap) ) {
+		addResource( new Resource( cap, nextId() ) );
 		alloc_list.DeleteCurrent();
 	}	
 
-		// Switch over to new_resources:
-	if( resources ) {
-		delete [] resources;
-	}
-	resources = new_resources;
-	nresources = new_size;
 	delete [] type_nums;
 	type_nums = new_type_nums;
 	new_type_nums = NULL;
@@ -2249,44 +2270,6 @@ newCODClaimCmp( const void* a, const void* b )
 	return 0;
 }
 
-
-
-
-
-
-IdDispenser::IdDispenser( int size, int seed ) :
-	free_ids(size+2)
-{
-	int i;
-	free_ids.setFiller(true);
-	free_ids.fill(true);
-	for( i=0; i<seed; i++ ) {
-		free_ids[i] = false;
-	}
-}
-
-
-int
-IdDispenser::next( void )
-{
-	int i;
-	for( i=1 ; ; i++ ) {
-		if( free_ids[i] ) {
-			free_ids[i] = false;
-			return i;
-		}
-	}
-}
-
-
-void
-IdDispenser::insert( int id )
-{
-	if( free_ids[id] ) {
-		EXCEPT( "IdDispenser::insert: %d is already free", id );
-	}
-	free_ids[id] = true;
-}
 
 void
 ResMgr::FillExecuteDirsList( class StringList *list )

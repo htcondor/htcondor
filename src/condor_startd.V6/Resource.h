@@ -28,12 +28,13 @@
 #include "LoadQueue.h"
 #include "AvailStats.h"
 #include "cod_mgr.h"
+#include "IdDispenser.h"
 
 
 class Resource : public Service
 {
 public:
-	Resource( CpuAttributes*, int );
+	Resource( CpuAttributes*, int, Resource* _parent = NULL);
 	~Resource();
 
 		// Public methods that can be called from command handlers
@@ -224,6 +225,7 @@ public:
 	LoadQueue*		r_load_queue;  // Holds 1 minute avg % cpu usage
 	char*			r_name;		// Name of this resource
 	int				r_id;		// CPU id of this resource (int form)
+	int				r_sub_id;	// Sub id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
 	AvailStats		r_avail_stats; // computes resource availability stats
 	int             prevLHF;
@@ -232,7 +234,29 @@ public:
 
 	char const *executeDir() { return r_attr->executeDir(); }
 
+		// Types: STANDARD is the slot everyone knows and loves;
+		// PARTITIONABLE is a slot that never runs jobs itself,
+		// instead it spawns off DYNAMIC slots as claims arrive;
+		// DYNAMIC is a slot that only runs jobs, it is created by a
+		// PARTITIONABLE slot
+	enum ResourceFeature {
+		STANDARD_SLOT,
+		PARTITIONABLE_SLOT,
+		DYNAMIC_SLOT
+	};
+
+	void	set_feature( ResourceFeature feature ) { m_resource_feature = feature; }
+	ResourceFeature	get_feature( void ) { return m_resource_feature; }
+
+	void set_parent( Resource* rip );
+
 private:
+	ResourceFeature m_resource_feature;
+
+	Resource*	m_parent;
+
+	IdDispenser* m_id_dispenser;
+
 	int			update_tid;	// DaemonCore timer id for update delay
 	unsigned	update_sequence;	// Update sequence number
 
