@@ -526,7 +526,7 @@ UserLog::checkGlobalLogRotation( void )
 
 			reader.setNumEvents( events );
 #         if ROTATION_TRACE
-			dprintf( D_ALWAYS,
+			dprintf( D_FULLDEBUG,
 					 "UserLog: Read %d events in %.4fs = %.0f/s\n",
 					 events, elapsed, eps );
 #         endif
@@ -548,7 +548,7 @@ UserLog::checkGlobalLogRotation( void )
 	// And write the updated header
 # if ROTATION_TRACE
 	UtcTime	now( true );
-	dprintf( D_ALWAYS, "UserLog: Writing header to %s (%p) @ %.6f\n",
+	dprintf( D_FULLDEBUG, "UserLog: Writing header to %s (%p) @ %.6f\n",
 			 m_global_path, header_fp, now.combined() );
 # endif
 	if ( header_fp ) {
@@ -563,7 +563,7 @@ UserLog::checkGlobalLogRotation( void )
 	// Now, rotate files
 # if ROTATION_TRACE
 	UtcTime	time1( true );
-	dprintf( D_ALWAYS,
+	dprintf( D_FULLDEBUG,
 			 "UserLog: Starting bulk rotation @ %.6f\n", time1.combined() );
 # endif
 
@@ -571,7 +571,8 @@ UserLog::checkGlobalLogRotation( void )
 	int num_rotations = doRotation( m_global_path, m_global_fp,
 									rotated, m_global_max_rotations );
 	if ( num_rotations ) {
-		dprintf(D_ALWAYS, "Rotated event log %s to %s at size %ld bytes\n",
+		dprintf(D_FULLDEBUG,
+				"Rotated event log %s to %s at size %ld bytes\n",
 				m_global_path, rotated.Value(), current_filesize);
 	}
 
@@ -788,7 +789,6 @@ UserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 			}
 		}
 	} else {
-		printf( "Writing event to %p @ %ld\n", fp, ftell(fp) );
 		success = event->putEvent ( fp);
 		if (!success) {
 			fputc ('\n', fp);
