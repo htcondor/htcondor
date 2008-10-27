@@ -75,6 +75,11 @@ AC_HEADER_TIME
 AC_STRUCT_TM
 AC_C_VOLATILE
 
+AC_CHECK_MEMBER([struct tm.tm_gmtoff],
+                [AC_DEFINE([HAVE_TM_GMTOFF], [1], [tm.tm_gmtoff available])],
+                [],
+                [[#include <time.h>]])
+
 # Checks for library functions.
 AC_FUNC_ERROR_AT_LINE
 
@@ -96,16 +101,6 @@ AC_CHECK_FUNC(dlopen,
     [LIBS="$LIBS -ldl"
      AC_DEFINE([HAVE_DLOPEN], [], [dlopen available])]))
 AC_CHECK_FUNC([regcomp], [HAVE_POSIX_REGEX=yes])
-
-# On BSD, a function named timezone() is defined in time.h.
-# On other platforms, extern long timezone exists.
-AC_MSG_CHECKING([if long timezone conflicts])
-AC_LANG(C)
-AC_COMPILE_IFELSE([#include <time.h>
-                   extern long timezone;],[
-                   AC_MSG_RESULT([no])
-                   AC_DEFINE([HAVE_LONG_TIMEZONE],[1],[long timezone does not conflict])],[
-                   AC_MSG_RESULT([yes])])
 
 # On HPUX11, localtime_r() and gmtime_r() are not defined unless
 # _REENTRANT is defined.  Test for that case here.

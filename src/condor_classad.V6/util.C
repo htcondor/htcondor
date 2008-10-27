@@ -28,10 +28,6 @@
 
 using namespace std;
 
-#if HAVE_LONG_TIMEZONE
-extern DLL_IMPORT_MAGIC long timezone;
-#endif
-
 // The following definitions of isnan() and isinf() are recommended here:
 // http://www.gnu.org/software/libtool/manual/autoconf/Function-Portability.html
 // We have observed isinf(HUGE_VAL) to return 0 on HPUX, but only apparently
@@ -97,25 +93,44 @@ double get_random_real(void)
 
 long timezone_offset(void)
 {
-#if HAVE_LONG_TIMEZONE
-    return ::timezone;
+    long tz_offset;
+    struct tm  tms;
+    time_t     clock;
+
+    time(&clock);
+    tms = *localtime(&clock);
+#ifdef HAVE_TM_GMTOFF
+    tz_offset = -tms.tm_gmtoff;
 #else
-    static long tz_offset = 0;
-    static bool have_tz_offset = false;
+    struct tm gtms;
+    gtms = *gmtime(&clock);
 
-    if (!have_tz_offset) {
-        struct tm  *tms;
-        time_t     clock;
+    tz_offset = (gtms.tm_hour - tms.tm_hour)*3600 +
+                (gtms.tm_min - tms.tm_min)*60 +
+                (gtms.tm_sec - tms.tm_sec);
 
-        time(&clock);
-        tms = localtime(&clock);
-        tz_offset = -tms->tm_gmtoff;
-        if (0 != tms->tm_isdst) {
-            tz_offset += 3600;
-        }
+    // Correct above for 24-hour wrap-around.
+    // Assume GM time and local time only differ by at most one day.
+    if( gtms.tm_year > tms.tm_year ) {
+        tz_offset += 24*3600;
     }
-    return tz_offset;
+    else if( gtms.tm_year < tms.tm_year ) {
+        tz_offset -= 24*3600;
+    }
+    else if( gtms.tm_yday > tms.tm_yday ) {
+        tz_offset += 24*3600;
+    }
+    else if( gtms.tm_yday < tms.tm_yday ) {
+        tz_offset -= 24*3600;
+    }
 #endif
+
+	// Correct for daylignt savings time.
+    if (0 != tms.tm_isdst) {
+        tz_offset += 3600;
+    }
+
+    return tz_offset;
 }
 
 void convert_escapes(string &text, bool &validStr)

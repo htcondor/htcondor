@@ -424,12 +424,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 			"SOAP SSL connection subject mapped to '%s'\n",
 			canonical_user.GetCStr());
 
-	if (!daemonCore->Verify(SOAP_PERM, &sockaddr, canonical_user.GetCStr())) {
-		dprintf(D_ALWAYS,
-				"Received SOAP SSL connection from %s/%s -- "
-				"DENIED because user and host not authorized for SOAP\n",
-				canonical_user.GetCStr(),
-				sin_to_string(&sockaddr));
+	if (!daemonCore->Verify("SOAP SSL",SOAP_PERM, &sockaddr, canonical_user.GetCStr())) {
 
 		soap_done(current_soap);
 		free(current_soap);
